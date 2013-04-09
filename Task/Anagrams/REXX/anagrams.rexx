@@ -14,20 +14,20 @@ wL.=0                                  /*number of words of length  L.  */
       @s.words=@@s.L._                 /*and also, sorted length L vers.*/
       end   /*j*/
 a.=                                    /*all the anagrams for word  X.  */
-say copies('â',30) words 'words in the dictionary file: ' ifid
+say copies('─',30) words 'words in the dictionary file: ' ifid
 n.=0                                   /*number of anagrams for word X. */
        do j=1  for words               /*process the usable words found.*/
        x=@.j;  Lx=length(x);  xs=@s.j  /*get some vital statistics for X*/
          do k=1  for wL.Lx             /*process all the words of len L.*/
          if xs\==@@s.Lx.k then iterate /*is this a true anagram of  X ? */
          if x==@@.Lx.k    then iterate /*skip doing anagram on itself.  */
-         n.j=n.j+1;  a.j=a.j  @@.Lx.k  /*bump counter, add âââº anagrams.*/
+         n.j=n.j+1;  a.j=a.j  @@.Lx.k  /*bump counter, add ──► anagrams.*/
          end         /*k*/
        end           /*j*/
 m=n.1                                  /*assume first (len=1) is largest*/
  do j=2 to words;  m=max(m,n.j);  end  /*find the maximum anagram count.*/
  do k=1 for words; if n.k==m then if word(a.k,1)>@.k then say @.k a.k; end
 exit                                   /*stick a fork in it, we're done.*/
-/*ââââââââââââââââââââââââââââââââââESORTâââââââââââââââââââââââââââââââ*/
+/*──────────────────────────────────ESORT───────────────────────────────*/
 esort:procedure expose !.;h=!.0;do while h>1;h=h%2;do i=1 for !.0-h;j=i;k=h+i
 do while !.k<!.j;t=!.j;!.j=!.k;!.k=t;if h>=j then leave;j=j-h;k=k-h;end;end;end;return

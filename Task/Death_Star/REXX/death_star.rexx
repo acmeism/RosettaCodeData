@@ -4,12 +4,12 @@ numeric digits 20                      /*use a fair amount of precision.*/
                              lightSource = norm('-50  30  50')
 call drawSphereM   2,  .5,   lightSource
 exit                                   /*stick a fork in it, we're done.*/
-/*ââââââââââââââââââââââââââââââââââdrawSphereM subroutineââââââââââââââ*/
+/*──────────────────────────────────drawSphereM subroutine──────────────*/
 drawSphereM: procedure;  parse arg k,ambient,lightSource
 z1=0; z2=0
 parse var  lightSource   s1 s2 s3      /*break-apart the light source.  */
 
-                 shading='Â·:!Âºoe@âââ'  /*shading chars for ASCI machines*/
+                 shading='·:!ºoe@░▒▓'  /*shading chars for ASCI machines*/
 if 1=='f1'x then shading='.:!*oe&#%@'  /*shading chars for EBCDIC machs.*/
 
 shadesLength=length(shading)
@@ -52,7 +52,7 @@ hole=' 1  1 -6 20';     parse var hole hole.cx hole.cy hole.cz hole.radius
   end       /*i*/
 
 return
-/*ââââââââââââââââââââââââââââââââââhitSphere subroutineââââââââââââââââ*/
+/*──────────────────────────────────hitSphere subroutine────────────────*/
 hitSphere: procedure expose z1 z2; parse arg $.cx $.cy $.cz $.radius, x0, y0
            x=x0-$.cx
            y=y0-$.cy
@@ -61,7 +61,7 @@ hitSphere: procedure expose z1 z2; parse arg $.cx $.cy $.cz $.radius, x0, y0
            z1=$.cz-_
            z2=$.cz+_
            return 1
-/*ââââââââââââââââââââââââââââââââââ"1-liner" subroutinesâââââââââââââââ*/
+/*──────────────────────────────────"1-liner" subroutines───────────────*/
 V3:      procedure; parse arg v; return norm(v)
 dot.:    procedure; parse arg x,y; d=dot(x,y); if d<0 then return -d; return 0
 dot:     procedure; parse arg x,y; s=0; do j=1 for words(x); s=s+word(x,j)*word(y,j); end; return s

@@ -19,7 +19,7 @@ a.civet="A.K.A.: toddycats"
   characters.   To illustrate:
 --------------------------------------------------------------------------*/
 
-stuff=')g.u.t.s(  or  Â½ of an intestine!'
+stuff=')g.u.t.s(  or  ½ of an intestine!'
 a.stuff=44
 
 /*--------------------------------------------------------------

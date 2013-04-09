@@ -31,6 +31,6 @@ fib.5 = 5
 fib.6 = 8
 fib.7 =17
 
-   do n=-5  to 5           /*define an array from  -5  âââº  5          */
+   do n=-5  to 5           /*define an array from  -5  ──►  5          */
    sawtooth.n=n
    end   /*n*/             /*eleven elements will be defined.          */

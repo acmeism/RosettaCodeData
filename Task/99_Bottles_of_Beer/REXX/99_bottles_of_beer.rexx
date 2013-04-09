@@ -15,5 +15,5 @@ say 'no more bottles of beer.'              /*so sad ...                */
 say 'Go to the store and buy some more,'    /*replenishment of the beer.*/
 say '99 bottles of beer on the wall.'       /*All is well in the tavern.*/
 exit                                        /*we're done & also sloshed.*/
-/*âââââââââââââââââââââââââââââââââââS subroutineâââââââââââââââââââââââ*/
+/*───────────────────────────────────S subroutine───────────────────────*/
 s: if arg(1)=1 then return ''; return 's'   /*a simple pluralizer funct.*/

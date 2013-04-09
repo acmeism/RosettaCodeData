@@ -62,7 +62,7 @@ calfill=left(copies(calfill,cw),cw)
 _yyyy=yyyy; calPuts=0; cv=1; _mm=mm+0; month=word(months,mm)
 dy.2=28+ly(_yyyy); dim=dy._mm; _dd=01; dow=dow(_mm,_dd,_yyyy); $dd=dd+0
 
-/*ââââââââââââââââââââââââââââânow: the business of the building the cal*/
+/*─────────────────────────────now: the business of the building the cal*/
 call calGen
                do _j=2 to mc
                if cv_\=='' then do
@@ -80,10 +80,10 @@ call calGen
 call fcalPuts
 return _
 
-/*âââââââââââââââââââââââââââââcalGen subroutineââââââââââââââââââââââââ*/
+/*─────────────────────────────calGen subroutine────────────────────────*/
 calGen: cellX=;cellJ=;cellM=;calCells=0;calline=0
 call calPut
-call calPutl copies('â',calwidth),"ââ"; call calHd
+call calPutl copies('─',calwidth),"┌┐"; call calHd
 call calPutl month ' ' _yyyy          ; call calHd
 if narrowest | narrower then call calPutl daysn
                         else do jw=1 for 3
@@ -97,23 +97,23 @@ calfb=1
 if sd>32 & \shorter then call calPut
 return
 
-/*âââââââââââââââââââââââââââââcellDraw subroutineââââââââââââââââââââââ*/
+/*─────────────────────────────cellDraw subroutine──────────────────────*/
 cellDraw: parse arg zz,cdDOY;zz=right(zz,2);calCells=calCells+1
 if calCells>7 then do
                    calLine=calLine+1
                    cellX=substr(cellX,2)
                    cellJ=substr(cellJ,2)
                    cellM=substr(cellM,2)
-                   cellB=translate(cellX,,")(â-"#)
+                   cellB=translate(cellX,,")(─-"#)
                    if calLine==1 then call cx
                    call calCsm; call calPutl cellX; call calCsj; call cx
                    cellX=; cellJ=; cellM=; calCells=1
                    end
-cdDOY=right(cdDOY,cw); cellM=cellM'â'center('',cw)
-cellX=cellX'â'centre(zz,cw); cellJ=cellJ'â'center('',cw)
+cdDOY=right(cdDOY,cw); cellM=cellM'│'center('',cw)
+cellX=cellX'│'centre(zz,cw); cellJ=cellJ'│'center('',cw)
 return
 
-/*âââââââââââââââââââââââââââââgeneral 1-line subsââââââââââââââââââââââ*/
+/*═════════════════════════════general 1-line subs══════════════════════*/
 abb: arg abbu; parse arg abb; return abbrev(abbu,_,abbl(abb))
 abbl: return verify(arg(1)'a',@abc,'M')-1
 abbn: parse arg abbn; return abb(abbn) | abb('NO'abbn)
@@ -121,8 +121,8 @@ calCsj: if sd>49 & \shorter then call calPutl cellB; if sd>24 & \short    then c
 calCsm: if sd>24 & \short   then call calPutl cellM; if sd>49 & \shorter  then call calPutl cellB; return
 calHd:  if sd>24 & \shorter then call calPutl      ; if sd>32 & \shortest then call calPutl      ; return
 calPb:  calPuts=calPuts+1; maxKalPuts=max(maxKalPuts,calPuts); if symbol('CT.'calPuts)\=='VAR' then ct.calPuts=; ct.calPuts=overlay(arg(1),ct.calPuts,cv); return
-calPutl: call calPut copies(' ',cindent)left(arg(2)"â",1)center(arg(1),calwidth)||right('â'arg(2),1);return
-cx:cx_='ââ¤';cx=copies(copies('â',cw)'â¼',7);if calft then do;cx=translate(cx,'â¬',"â¼");calft=0;end;if calfb then do;cx=translate(cx,'â´',"â¼");cx_='ââ';calfb=0;end;call calPutl cx,cx_;return
+calPutl: call calPut copies(' ',cindent)left(arg(2)"│",1)center(arg(1),calwidth)||right('│'arg(2),1);return
+cx:cx_='├┤';cx=copies(copies('─',cw)'┼',7);if calft then do;cx=translate(cx,'┬',"┼");calft=0;end;if calfb then do;cx=translate(cx,'┴',"┼");cx_='└┘';calfb=0;end;call calPutl cx,cx_;return
 dow: procedure; arg m,d,y; if m<3 then do; m=m+12; y=y-1; end; yl=left(y,2); yr=right(y,2); w=(d+(m+1)*26%10+yr+yr%4+yl%4+5*yl)//7; if w==0 then w=7; return w
 er :parse arg _1,_2; call '$ERR' "14"p(_1) p(word(_1,2) !fid(1)) _2;if _1<0 then return _1; exit result
 err: call er '-'arg(1),arg(2); return ''
@@ -142,4 +142,4 @@ numx: return num(arg(1),arg(2),1)
 p: return word(arg(1),1)
 put: _=arg(1);_=translate(_,,'_'chk);if \grid then _=ungrid(_);if lowerCase then _=lower(_);if upperCase then upper _;if shortest&_=' ' then return;call tell _;return
 tell: say arg(1);return
-ungrid: return translate(arg(1),,"âââââ¤âââ´â¬ââ¼ââââââââ¢ââ¡â«âªâ¤â§â¥â¨â â£")
+ungrid: return translate(arg(1),,"│║─═┤┐└┴┬├┼┘┌╔╗╚╝╟╢╞╡╫╪╤╧╥╨╠╣")

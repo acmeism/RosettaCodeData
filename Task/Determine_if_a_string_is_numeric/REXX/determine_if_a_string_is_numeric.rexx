@@ -33,14 +33,14 @@ zzz=' - 000008.201e-00000000000000002 '
 
 if \datatype(yyy,'n')       then say 'oops, not numeric:' yyy
 if \datatype(yyy,'N')       then say 'oops, not numeric:' yyy
-if Â¬datatype(yyy,'N')       then say 'oops, not numeric:' yyy
-if Â¬datatype(yyy,'numeric') then say 'oops, not numeric:' yyy
-if Â¬datatype(yyy,'nimrod.') then say 'oops, not numeric:' yyy
+if ¬datatype(yyy,'N')       then say 'oops, not numeric:' yyy
+if ¬datatype(yyy,'numeric') then say 'oops, not numeric:' yyy
+if ¬datatype(yyy,'nimrod.') then say 'oops, not numeric:' yyy
 if  datatype(yyy)\=='NUM'   then say 'oops, not numeric:' yyy
 if  datatype(yyy)/=='NUM'   then say 'oops, not numeric:' yyy
-if  datatype(yyy)Â¬=='NUM'   then say 'oops, not numeric:' yyy
-if  datatype(yyy)Â¬= 'NUM'   then say 'oops, not numeric:' yyy
+if  datatype(yyy)¬=='NUM'   then say 'oops, not numeric:' yyy
+if  datatype(yyy)¬= 'NUM'   then say 'oops, not numeric:' yyy
 
 /*note: REXX only looks at the first char for DATATYPE's  2nd arg. */
 
-/*note: some REXX interpreters don't support the Â¬ (not) character.*/
+/*note: some REXX interpreters don't support the ¬ (not) character.*/

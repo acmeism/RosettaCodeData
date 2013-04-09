@@ -6,7 +6,7 @@ numeric digits digs                    /*big digs, the slower the spits.*/
 pi=0;  s=16;  r=4;  v=5;  vs=v*v;  g=239;  gs=g*g;  old=;  spewed=0;  j=1
 call time 'E'
 
-/*âââââââââââââââââââââââââââââââââââââJohn Machin's formula for  pi.   */
+/*─────────────────────────────────────John Machin's formula for  pi.   */
   do n=1  by 2
   pi=pi + s/(n*v) - r/(n*g)
   if pi==old  then leave               /*no further with current DIGITS.*/

@@ -114,7 +114,7 @@ normalise(N, L1, L) :-
 % special case of number 0 !
 strip_nombre([48]) --> {!}, "0".
 
-% enlÃ¨ve les zÃ©ros inutiles
+% enlève les zéros inutiles
 strip_nombre([48 | L]) -->
 	strip_nombre(L).
 

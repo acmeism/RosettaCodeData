@@ -1,6 +1,6 @@
-/*REXX pgm converts decimal âââââº balanced ternary; also performs arith.*/
+/*REXX pgm converts decimal ◄───► balanced ternary; also performs arith.*/
 numeric digits 10000                   /*handle almost any size numbers.*/
-Ao = '+-0++0+'   ;   Abt =      Ao     /*   [â]  2 literals used by sub.*/
+Ao = '+-0++0+'   ;   Abt =      Ao     /*   [↓]  2 literals used by sub.*/
 Bo =    '-436'   ;   Bbt = d2bt(Bo)    ;     @ = '(decimal)'
 Co =   '+-++-'   ;   Cbt =      Co     ;    @@ = 'balanced ternary ='
                 call btShow  '[a]',        Abt
@@ -9,7 +9,7 @@ Co =   '+-++-'   ;   Cbt =      Co     ;    @@ = 'balanced ternary ='
                 say;                       $bt = btMul(Abt,btSub(Bbt,Cbt))
                 call btshow '[a*(b-c)]',   $bt
 exit                                   /*stick a fork in it, we're done.*/
-/*ââââââââââââââââââââââââââââââââââBT2D subroutineâââââââââââââââââââââ*/
+/*──────────────────────────────────BT2D subroutine─────────────────────*/
 d2bt: procedure; parse arg x 1;   p=0;   $.='-';    $.1='+';   $.0=0;   #=
 x=x/1
           do  until x==0;       _=(x//(3**(p+1)))%3**p
@@ -17,11 +17,11 @@ x=x/1
           x=x-_*(3**p);         p=p+1;                       #=$._ || #
           end   /*until*/
 return #
-/*ââââââââââââââââââââââââââââââââââBT2D subroutineâââââââââââââââââââââ*/
+/*──────────────────────────────────BT2D subroutine─────────────────────*/
 bt2d: procedure; parse arg x; r=reverse(x); #=0; $.=-1; $.0=0; _='+'; $._=1
           do j=1  for length(x);  _=substr(r,j,1);  #=#+$._*3**(j-1);  end
 return #
-/*ââââââââââââââââââââââââââââââââââBTADD subroutineââââââââââââââââââââ*/
+/*──────────────────────────────────BTADD subroutine────────────────────*/
 btAdd: procedure;  parse arg x,y;   rx=reverse(x);  ry=reverse(y); carry=0
 $.='-';   $.0=0;   $.1='+';   @.=0;   _='-';   @._=-1;  _="+";  @._=1;  #=
 
@@ -35,7 +35,7 @@ $.='-';   $.0=0;   $.1='+';   @.=0;   _='-';   @._=-1;  _="+";  @._=1;  #=
                                    #=$.s || #
                                    end   /*j*/
 if carry\==0  then #=$.carry || #;                        return btNorm(#)
-/*ââââââââââââââââââââââââââââââââââBTMUL subroutineââââââââââââââââââââ*/
+/*──────────────────────────────────BTMUL subroutine────────────────────*/
 btMul: procedure;  parse arg x,y;   if x==0 | y==0  then return 0;     S=1
 x=btNorm(x);       y=btNorm(y)                   /*handle: 0-xxx values.*/
 if left(x,1)=='-'        then do;   x=btNeg(x);  S=-S;  end  /*positate.*/
@@ -48,7 +48,7 @@ P=0
                              end   /*until*/
 if S==-1  then P=btNeg(P)                        /*adjust product sign. */
 return P                                         /*return the product P.*/
-/*âââââââââââââââââââââââââââââââone-line subroutinesâââââââââââââââââââ*/
+/*───────────────────────────────one-line subroutines───────────────────*/
 btNeg:  return translate(arg(1), '-+', "+-")     /*negate the bal_tern #*/
 btNorm: _=strip(arg(1),'L',0); if _==''  then _=0;  return _ /*normalize*/
 btSub:  return btAdd(arg(1), btNeg(arg(2)))      /*subtract two BT args.*/

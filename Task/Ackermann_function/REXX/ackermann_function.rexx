@@ -11,13 +11,13 @@ high=24
               end   /*k*/
          end        /*j*/
 exit                                   /*stick a fork in it, we're done.*/
-/*ââââââââââââââââââââââââââââââââââACKERMANN_TELL subroutineâââââââââââ*/
+/*──────────────────────────────────ACKERMANN_TELL subroutine───────────*/
 ackermann_tell: parse arg mm,nn;   calls=0    /*display an echo message.*/
 nnn=right(nn,length(high))
 say 'Ackermann('mm","nnn')='right(ackermann(mm,nn),high),
                              left('',12) 'calls='right(calls,high)
 return
-/*ââââââââââââââââââââââââââââââââââACKERMANN subroutineââââââââââââââââ*/
+/*──────────────────────────────────ACKERMANN subroutine────────────────*/
 ackermann: procedure expose calls      /*compute the Ackerman function. */
 parse arg m,n;      calls=calls+1
 if m==0 then return n+1

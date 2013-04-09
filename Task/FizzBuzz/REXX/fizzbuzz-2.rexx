@@ -1,4 +1,4 @@
-/*REXX program displays numbers  1 âââº 100  for the  FizzBuzz  problem. */
+/*REXX program displays numbers  1 ──► 100  for the  FizzBuzz  problem. */
 
   do n=1  for 100
       select

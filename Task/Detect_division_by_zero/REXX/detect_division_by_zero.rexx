@@ -6,9 +6,9 @@ y = x-x                                /*setting to zero the obtuse way.*/
 z = x/y                                /*this'll do it, furrrr shurrre. */
 exit                                   /*We're kaput.   Ja vohl !       */
 
-/*âââââââââââââââââââââââââââââââerror handling subroutines and others.â*/
+/*───────────────────────────────error handling subroutines and others.─*/
 err: if rc==42 then do;  say;  say     /*1st, check for a specific error*/
-                    say center(' division by zero is a no-no. ',79,'â')
+                    say center(' division by zero is a no-no. ',79,'═')
                          say;  say
                     exit 130
                     end

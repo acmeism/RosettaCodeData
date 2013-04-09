@@ -34,7 +34,7 @@ if found  then return j                /*return haystack index number.  */
           else say  needle  "wasn't found in the haystack!"
 return 0                               /*indicates needle wasn't found. */
 
-/*âââââââââââââââââââââââââââââââââââââââââââââââ incidentally, to find */
+/*─────────────────────────────────────────────── incidentally, to find */
                                        /* the number of haystack items: */
 hayItems=0
 

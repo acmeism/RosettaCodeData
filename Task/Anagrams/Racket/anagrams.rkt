@@ -9,13 +9,13 @@
 (define (hash-words words)
   (for/fold ([ws-hash (hash)]) ([w words])
     (hash-update ws-hash
-                 (list->string (sort (string->list w) < #:key (Î» (c) (char->integer c))))
-                 (Î» (ws) (cons w ws))
-                 (Î» () '()))))
+                 (list->string (sort (string->list w) < #:key (λ (c) (char->integer c))))
+                 (λ (ws) (cons w ws))
+                 (λ () '()))))
 
 (define (get-maxes h)
   (define max-ws (apply max (map length (hash-values h))))
-  (define max-keys (filter (Î» (k) (= (length (hash-ref h k)) max-ws)) (hash-keys h)))
-  (map (Î» (k) (hash-ref h k)) max-keys))
+  (define max-keys (filter (λ (k) (= (length (hash-ref h k)) max-ws)) (hash-keys h)))
+  (map (λ (k) (hash-ref h k)) max-keys))
 
 (get-maxes (hash-words (get-lines "http://www.puzzlers.org/pub/wordlists/unixdict.txt")))

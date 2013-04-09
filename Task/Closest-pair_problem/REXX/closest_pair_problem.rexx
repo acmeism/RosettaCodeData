@@ -23,12 +23,12 @@ minDD=(@.nearA.xx-@.nearB.xx)**2 + (@.nearA.yy-@.nearB.yy)**2
                        end     /*j*/
 
 say 'For' N "points:";   say
-say '                 'center('x',w,"â")' ' center('y',w,"â")
+say '                 'center('x',w,"═")' ' center('y',w,"═")
 say 'The points      ['right(@.nearA.xx,w)"," right(@.nearA.yy,w)"]" '  and'
 say '                ['right(@.nearB.xx,w)"," right(@.nearB.yy,w)"]";  say
 say 'the minimum distance between them is: '    sqrt(abs(minDD))
 exit                                   /*stick a fork in it, we're done.*/
-/*âââââââââââââââââââââââââââââââââââsqrt subroutineââââââââââââââââââââ*/
+/*───────────────────────────────────sqrt subroutine────────────────────*/
 sqrt: procedure; parse arg x; if x=0 then return 0;d=digits();numeric digits 11
       g=.sqrtG();             do j=0  while p>9;  m.j=p;  p=p%2+1;   end
       do k=j+5 to 0 by -1; if m.k>11 then numeric digits m.k; g=.5*(g+x/g); end

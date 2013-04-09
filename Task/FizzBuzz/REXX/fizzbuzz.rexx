@@ -1,4 +1,4 @@
-/*REXX program displays numbers  1 âââº 100  for the  FizzBuzz  problem. */
+/*REXX program displays numbers  1 ──► 100  for the  FizzBuzz  problem. */
 
   do j=1  to 100;      z=j
   if j//3    ==0  then z='Fizz'

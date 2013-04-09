@@ -27,5 +27,5 @@ tt=changestr('~~',other,";")           /*change 2 tildes to a semicolon.*/
 
 joined=dignsta || dingst2              /*join 2 strs together (concat). */
 exit                                   /*stick a fork in it, we're done.*/
-/*âââââââââââââââââââââââââââââââââC2B subroutineâââââââââââââââââââââââ*/
+/*─────────────────────────────────C2B subroutine───────────────────────*/
 c2b: return x2b(c2x(arg(1))) /*return the string as a binary string.    */

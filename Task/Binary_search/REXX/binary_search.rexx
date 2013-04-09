@@ -24,7 +24,7 @@ if loc==-1 then do
 say
 say 'arithmetic mean of the' high "values=" avg
 exit                                   /*stick a fork in it, we're done.*/
-/*âââââââââââââââââââââââââââââââââââââBINARYSEARCH subroutineââââââââââ*/
+/*─────────────────────────────────────BINARYSEARCH subroutine──────────*/
 binarySearch:  procedure expose @ ?;     parse arg low,high
 if high<low  then return -1
 mid=(low+high)%2

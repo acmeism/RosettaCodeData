@@ -23,13 +23,13 @@ q=']]][[[[]'           ; call checkBal q; say yesno.result q
        say yesno.result q
        end
 exit
-/*âââââââââââââââââââââââââââââââââââPAND subroutineââââââââââââââââââââ*/
+/*───────────────────────────────────PAND subroutine────────────────────*/
 pand: p=random(0,1);    return p || \p
-/*âââââââââââââââââââââââââââââââââââRAND subroutineââââââââââââââââââââ*/
+/*───────────────────────────────────RAND subroutine────────────────────*/
 rand: pp=pand();   pp=pand()pp;    pp=copies(pp,arg(1))
       i=random(2,length(pp));      pp=left(pp,i-1)substr(pp,i)
 return pp
-/*âââââââââââââââââââââââââââââââââââCHECKBAL subroutineââââââââââââââââ*/
+/*───────────────────────────────────CHECKBAL subroutine────────────────*/
 checkBal: procedure expose @.;  arg y  /*check for balanced brackets [] */
 nest=0;     if @.y then return '-1'    /*already done this expression ? */
 @.y=1                                  /*indicate expression processed. */

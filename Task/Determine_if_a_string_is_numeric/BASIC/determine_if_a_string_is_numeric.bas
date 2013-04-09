@@ -1,0 +1,6 @@
+10 INPUT "Enter a string";S$:GOSUB 1000
+20 IF R THEN PRINT "Is num" ELSE PRINT"Not num"
+99 END
+1000 T1=VAL(S$):T1$=STR$(T1)
+1010 R=T1$=S$ OR T1$=" "+S$
+1099 RETURN

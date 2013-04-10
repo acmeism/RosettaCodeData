@@ -1,6 +1,0 @@
-abracadabra, raababacdar, (0)
-seesaw, ewaess, (0)
-elk, lke, (0)
-grrrrrr, rrrrrgr, (5)
-up, pu, (0)
-a, a, (1)

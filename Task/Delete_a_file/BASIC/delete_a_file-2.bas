@@ -1,1 +1,0 @@
-ERASE "m"; 1; "INPUTTXT"

@@ -1,1 +1,0 @@
-color = point(x, y)

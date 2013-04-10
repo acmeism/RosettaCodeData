@@ -1,1 +1,0 @@
-file:delete("file.txt").

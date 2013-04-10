@@ -1,0 +1,157 @@
+        .cr  6800
+        .tf  beer6800.obj,AP1
+        .lf  beer6800
+;=====================================================;
+;    Beer Song for the Motorola 6800 microprocessor   ;
+;                 by barrym 2011-04-19                ;
+;-----------------------------------------------------;
+; Prints the correct, complete song lyrics to a full  ;
+;   ascii terminal (console) connected to a 1970s     ;
+;   vintage SWTPC 6800 system, which is the target    ;
+;   device for this assembly.                         ;
+; Many thanks to:                                     ;
+;   swtpc.com for hosting Michael Holley's documents! ;
+;   sbprojects.com for a very nice assembler!         ;
+;   swtpcemu.com for a very capable emulator!         ;
+; The 6800 microprocessor is the slightly older, less ;
+;   popular, and more expensive step-brother of the   ;
+;   6502.  Numerous similarities exist between the    ;
+;   assembly languages of the two, but the 6800 has   ;
+;   its own distinct flavor, which is (judging by how ;
+;   compact the code ended up) well suited to this    ;
+;   type of small program.  I am especially impressed ;
+;   with the two-byte 'bsr' instruction, and I make   ;
+;   extensive use of it here.                         ;
+; Effort was made to keep the code footprint as small ;
+;   as possible by re-using substrings and code in a  ;
+;   hacker-like style that makes the program flow a   ;
+;   bit strange to the human eye (the 6800 gobbles it ;
+;   up without complaint).  The final tally: 97 bytes ;
+;   of instructions, 108 bytes of text, and about 11  ;
+;   bytes of stack.  This includes integer-to-ascii   ;
+;   conversion, blank line between verses, removal of ;
+;   "s" from "1 bottles", substitution of "no more"   ;
+;   for "0", and proper capitalization of "No more".  ;
+; reg b is the beer counter                           ;
+; reg x is the string pointer                         ;
+; reg a handles everything else (with a little help   ;
+;                             from the system stack)  ;
+;-----------------------------------------------------;
+outeee   =   $e1d1      ROM: console putchar routine
+stbeer   =   99         Must be in the range [0..99]
+        .or  $0f00
+;=====================================================;
+; Initialize, sing the song, and exit                 ;
+;-----------------------------------------------------;
+main    ldab #stbeer    Beer count = stbeer
+        bsr  prsong     Sing the entire song
+        swi             Return to the monitor.
+;=====================================================;
+; Emit the entire song up to the last sentence        ;
+;-----------------------------------------------------;
+beerme  bsr  prbob2     Emit second sentence of verse
+prsong  ldx  #nline     Blank line between verses
+        ldaa #'N'       First sentence type = 'N'
+        bsr  prbob      Emit 1st sentence of verse
+        decb            Beer count -= 1
+        bpl  beerme     If beer count >= 0 then beerme
+;=====================================================;
+; Set up the last sentence and fall through to prbob2 ;
+;-----------------------------------------------------;
+        ldab #stbeer    Beer count = stbeer
+        ldx  #store     x$ = "Go to the store ..."
+;=====================================================;
+; Emit a properly punctuated bottle-of-beer sentence, ;
+;   using beer counter in reg b, pre-string pointer   ;
+;   in reg x, and the sentence type in reg a ('N' =   ;
+;   sentence 1, 'o' = sentence 1.5, 'n' = sentence 2) ;
+;-----------------------------------------------------;
+prbob2  ldaa #'n'       Second sentence type = 'n'
+prbob   psha            Stack sentence type for later
+        bsr  puts       Emit pre-string
+        pula            Check sentence type and use
+        psha              it to prepare the upper- or
+        anda #'n'         lower-case of "no more"
+        ldx  #omore     x$ = "o more bottle"
+        tstb            If beer count = 0 then
+        beq  prbott       skip over the i-to-a
+        ldx  #bottl     x$ = " bottle"
+;=====================================================;
+; I-to-A (inline): convert int in b to ascii and emit ;
+;    with leading zero suppression (0 <= # <= 99)!    ;
+;-----------------------------------------------------;
+        pshb            Stack beer count
+        ldaa #-1          (divten trashes it)
+divten  subb #10        b = ones digit - 10
+        inca            a = tens digit
+        bcc  divten     If a = 0 then
+        beq  onedig       suppress leading zero
+        adda #"0"       else translate tens digit to
+        bsr  putch        shifted ascii and emit
+onedig  addb #'0'+10    Translate ones digit to ascii
+        tba               and leave it in a for putch
+        pulb            Restore beer count
+;-----------------------------------------------------;
+prbott  bsr  putch      Emit a;x$;
+        cmpb #1         If beer count = 1
+        bne  plural     then
+        inx               skip over the "s"
+plural  bsr  puts       Emit " ... beer";
+        pula            Restore sentence type
+        cmpa #'o'       If type <> 'o'
+        beq  putdot     then
+        psha              emit " on the wall";
+        bsr  puts         if type = 'N' then loop
+        pula                back to finish the
+        adda #33            first sentence with
+        bpl  prbob          type = 'o', x$ = ", "
+putdot  ldx  #dotnl     x$ = ".\n"
+;=====================================================;
+; Emit string @ x and leave x @ start of next string  ;
+;-----------------------------------------------------;
+puts    ldaa 0,x        a = raw character removed
+        inx               from the beginning of x$
+;=====================================================;
+; Emit a as ascii and loop into x$ if hi-bit is clear ;
+;-----------------------------------------------------;
+putch   psha            Stack raw char
+        anda #$7f       Mask off the hi-bit
+        jsr  outeee     Emit a as 7-bit ascii
+        pula            Restore raw char
+        tsta            If hi-bit is clear then
+        bpl  puts         loop back into x$
+        rts             All 8 'bsr's use this 'rts'!
+;=====================================================;
+; Optimized song lyric strings, carefully arranged to ;
+;   allow the prbob subroutine to take full advantage ;
+;   of the x register side-effects of puts            ;
+;-----------------------------------------------------;
+omore   .as  "o more"
+bottl   .at  " bottle"
+        .at  "s of beer"
+        .at  " on the wall"
+        .at  ", "
+dotnl   .as  "."
+nline   .at  #13,#10
+        .at  "Take one down and pass it around, "
+store   .at  "Go to the store and buy some more, "
+        .en
+;=====================================================;
+; The following is a hex dump of the object file,     ;
+;   suitable for copying and pasting into the 6800    ;
+;   emulator available at swtpcemu.com!               ;
+;-----------------------------------------------------;
+e0F00 C6 63 8D 03 3F 8D 0F CE 0F 86 86 4E 8D 0A 5A 2A
+e0F10 F4 C6 63 CE 0F AA 86 6E 36 8D 38 32 36 84 6E CE
+e0F20 0F 61 5D 27 15 CE 0F 67 37 86 FF C0 0A 4C 24 FB
+e0F30 27 04 8B B0 8D 20 17 8B 3A 33 8D 1A C1 01 26 01
+e0F40 08 8D 10 32 81 6F 27 08 36 8D 08 32 8B 21 2A C8
+e0F50 CE 0F 85 A6 00 08 36 84 7F BD E1 D1 32 4D 2A F3
+e0F60 39 6F 20 6D 6F 72 65 20 62 6F 74 74 6C E5 73 20
+e0F70 6F 66 20 62 65 65 F2 20 6F 6E 20 74 68 65 20 77
+e0F80 61 6C EC 2C A0 2E 0D 8A 54 61 6B 65 20 6F 6E 65
+e0F90 20 64 6F 77 6E 20 61 6E 64 20 70 61 73 73 20 69
+e0FA0 74 20 61 72 6F 75 6E 64 2C A0 47 6F 20 74 6F 20
+e0FB0 74 68 65 20 73 74 6F 72 65 20 61 6E 64 20 62 75
+e0FC0 79 20 73 6F 6D 65 20 6D 6F 72 65 2C A0
+j0F00

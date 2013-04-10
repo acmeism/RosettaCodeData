@@ -1,0 +1,4 @@
+OPEN "output.txt" FOR OUTPUT AS 1
+CLOSE
+OPEN "\output.txt" FOR OUTPUT AS 1
+CLOSE

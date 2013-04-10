@@ -1,0 +1,7 @@
+aCallToACommandWithNoArguments
+aCallToACommandWithOne argument
+aCallToACommandWith arbitrarily many arguments
+aCallToACommandWith {*}$manyArgumentsComingFromAListInAVariable
+aCallToACommandWith -oneNamed argument -andAnother namedArgument
+aCallToACommandWith theNameOfAnotherCommand
+aCallToOneCommand [withTheResultOfAnother]

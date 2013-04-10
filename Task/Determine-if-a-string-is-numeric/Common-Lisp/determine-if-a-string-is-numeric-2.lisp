@@ -1,0 +1,5 @@
+(defun numeric-string-p (string)
+  (handler-case (progn (parse-number:parse-number string)
+                       t)  ; parse succeeded, discard it and return true (t)
+    (parse-number::invalid-number ()
+      nil)))  ; parse failed, return false (nil)

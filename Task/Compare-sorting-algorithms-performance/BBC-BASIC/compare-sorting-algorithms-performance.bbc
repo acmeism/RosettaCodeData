@@ -1,0 +1,163 @@
+      HIMEM = PAGE + 2000000
+      INSTALL @lib$+"SORTLIB"
+      INSTALL @lib$+"TIMERLIB"
+      Sort% = FN_sortinit(0,0)
+      Timer% = FN_ontimer(1000, PROCtimer, 1)
+
+      PRINT "Array size:", 1000, 10000, 100000
+      @% = &2020A
+
+      FOR patt% = 1 TO 4
+        CASE patt% OF
+          WHEN 1: PRINT '"Data set to all ones:"
+          WHEN 2: PRINT '"Data ascending sequence:"
+          WHEN 3: PRINT '"Data randomly shuffled:"
+          WHEN 4: PRINT '"Data descending sequence:"
+        ENDCASE
+
+        FOR type% = 1 TO 6
+          CASE type% OF
+            WHEN 1: PRINT "Internal (lib)";
+            WHEN 2: PRINT "Quicksort   ";
+            WHEN 3: PRINT "Radix sort  ";
+            WHEN 4: PRINT "Shellsort   ";
+            WHEN 5: PRINT "Bubblesort  ";
+            WHEN 6: PRINT "Insertion sort";
+          ENDCASE
+
+          FOR power% = 3 TO 5
+            PROCsorttest(patt%, type%, 10^power%)
+          NEXT
+          PRINT
+
+        NEXT type%
+      NEXT patt%
+      END
+
+      DEF PROCsorttest(patt%, type%, size%)
+      LOCAL a%(), C%, I%
+      DIM a%(size%-1)
+
+      CASE patt% OF
+        WHEN 1: a%() = 1 : a%() = 1
+        WHEN 2: FOR I% = 0 TO size%-1 : a%(I%) = I% : NEXT
+        WHEN 3: FOR I% = 0 TO size%-1 : a%(I%) = I% : NEXT
+          C% = RND(-123456) : REM Seed
+          FOR I% = size% TO 2 STEP -1 : SWAP a%(I%-1),a%(RND(I%)-1) : NEXT
+        WHEN 4: FOR I% = 0 TO size%-1 : a%(I%) = size%-1-I% : NEXT
+      ENDCASE
+
+      Start% = TIME
+      ON ERROR LOCAL PRINT , "   >100.00" ; : ENDPROC
+      CASE type% OF
+        WHEN 1: C% = size% : CALL Sort%, a%(0)
+        WHEN 2: PROCquicksort(a%(), 0, size%)
+        WHEN 3: PROCradixsort(a%(), size%, 10)
+        WHEN 4: PROCshellsort(a%(), size%)
+        WHEN 5: PROCbubblesort(a%(), size%)
+        WHEN 6: PROCinsertionsort(a%(), size%)
+      ENDCASE
+      PRINT , (TIME - Start%)/100;
+
+      FOR I% = 0 TO size%-2
+        IF a%(I%) > a%(I%+1) ERROR 100, "Sort failed!"
+      NEXT
+      ENDPROC
+
+      DEF PROCtimer
+      Start% += 0
+      IF (TIME - Start%) > 10000 ERROR 111, ""
+      ENDPROC
+
+      DEF PROCbubblesort(a%(), n%)
+      LOCAL i%, l%
+      REPEAT
+        l% = 0
+        FOR i% = 1 TO n%-1
+          IF a%(i%-1) > a%(i%) THEN
+            SWAP a%(i%-1),a%(i%)
+            l% = i%
+          ENDIF
+        NEXT
+        n% = l%
+      UNTIL l% = 0
+      ENDPROC
+
+      DEF PROCinsertionsort(a%(), n%)
+      LOCAL i%, j%, t%
+      FOR i% = 1 TO n%-1
+        t% = a%(i%)
+        j% = i%
+        WHILE j%>0 AND t%<a%(ABS(j%-1))
+          a%(j%) = a%(j%-1)
+          j% -= 1
+        ENDWHILE
+        a%(j%) = t%
+      NEXT
+      ENDPROC
+
+      DEF PROCquicksort(a%(), s%, n%)
+      LOCAL l%, p%, r%, t%
+      IF n% < 2 THEN ENDPROC
+      t% = s% + n% - 1
+      l% = s%
+      r% = t%
+      p% = a%((l% + r%) DIV 2)
+      REPEAT
+        WHILE a%(l%) < p% l% += 1 : ENDWHILE
+        WHILE a%(r%) > p% r% -= 1 : ENDWHILE
+        IF l% <= r% THEN
+          SWAP a%(l%), a%(r%)
+          l% += 1
+          r% -= 1
+        ENDIF
+      UNTIL l% > r%
+      IF s% < r% PROCquicksort(a%(), s%, r% - s% + 1)
+      IF l% < t% PROCquicksort(a%(), l%, t% - l% + 1 )
+      ENDPROC
+
+      DEF PROCshellsort(a%(), n%)
+      LOCAL h%, i%, j%, k%
+      h% = n%
+      WHILE h%
+        IF h% = 2 h% = 1 ELSE h% DIV= 2.2
+        FOR i% = h% TO n% - 1
+          k% = a%(i%)
+          j% = i%
+          WHILE j% >= h% AND k% < a%(ABS(j% - h%))
+            a%(j%) = a%(j% - h%)
+            j% -= h%
+          ENDWHILE
+          a%(j%) = k%
+        NEXT
+      ENDWHILE
+      ENDPROC
+
+      DEF PROCradixsort(a%(), n%, r%)
+      LOCAL d%, e%, i%, l%, m%, b%(), bucket%()
+      DIM b%(DIM(a%(),1)), bucket%(r%-1)
+      FOR i% = 0 TO n%-1
+        IF a%(i%) < l% l% = a%(i%)
+        IF a%(i%) > m% m% = a%(i%)
+      NEXT
+      a%() -= l%
+      m% -= l%
+      e% = 1
+      WHILE m% DIV e%
+        bucket%() = 0
+        FOR i% = 0 TO n%-1
+          bucket%(a%(i%) DIV e% MOD r%) += 1
+        NEXT
+        FOR i% = 1 TO r%-1
+          bucket%(i%) += bucket%(i% - 1)
+        NEXT
+        FOR i% = n%-1 TO 0 STEP -1
+          d% = a%(i%) DIV e% MOD r%
+          bucket%(d%) -= 1
+          b%(bucket%(d%)) = a%(i%)
+        NEXT
+        a%() = b%()
+        e% *= r%
+      ENDWHILE
+      a%() += l%
+      ENDPROC

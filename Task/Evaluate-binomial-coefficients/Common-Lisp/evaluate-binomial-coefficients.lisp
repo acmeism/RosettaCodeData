@@ -1,0 +1,5 @@
+(defun choose (n k)
+  (labels ((prod-enum (s e)
+	     (do ((i s (1+ i)) (r 1 (* i r))) ((> i e) r)))
+	   (fact (n) (prod-enum 1 n)))
+    (/ (prod-enum (- (1+ n) k) n) (fact k))))

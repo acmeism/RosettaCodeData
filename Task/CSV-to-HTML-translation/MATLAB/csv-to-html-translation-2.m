@@ -1,0 +1,1 @@
+fprintf(1,['<table>\n\t<tr>\n\t\t<th>',regexprep(regexprep(regexprep(regexprep(regexprep(regexprep(regexprep(regexprep(fileread(cvsFileName),'&','&amp;'),'"','&quot;'),'<','&lt;'),'>','&gt;'),'(?<=(^[^\n\r]*)),','</th>\n\t\t<th>'),'(?<!>)(\r\n|\r|\n)','</td>\n\t<tr>\n\t</tr>\n\t\t<td>'),'</td>\n','</th>\n','once'),',','</td>\n\t\t<td>'),'</td>\n\t</tr>\n</table>\n'])

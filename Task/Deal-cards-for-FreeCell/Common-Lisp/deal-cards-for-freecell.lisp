@@ -1,0 +1,26 @@
+(defun make-rng (seed)
+    #'(lambda ()
+	(ash (setf seed (mod (+ (* 214013 seed) 2531011) (expt 2 31))) -16)))
+
+(defun split (s) (map 'list #'string s))
+
+(defun make-deck (seed)
+  (let ((hand (make-array 52 :fill-pointer 0))
+	(rng (make-rng seed)))
+    (dolist (d (split "A23456789TJQK"))
+      (dolist (s (split "♣♦♥♠"))
+	(vector-push (concatenate 'string d s) hand)))
+    (dotimes (i 52)
+	(rotatef (aref hand (- 51 i))
+		 (aref hand (mod (funcall rng) (- 52 i)))))
+    (nreverse hand)))
+
+(defun show-deck (seed)
+  (let ((hand (make-deck seed)))
+    (format t "~%Hand ~d~%" seed)
+    (dotimes (i 52)
+      (format t "~A " (aref hand i))
+      (if (= (mod i 8) 7) (write-line "")))))
+
+(show-deck 1)
+(show-deck 617)

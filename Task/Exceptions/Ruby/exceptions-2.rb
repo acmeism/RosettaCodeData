@@ -1,0 +1,2 @@
+class MyInvalidArgument < ArgumentError
+end

@@ -1,0 +1,17 @@
+      iter                          best   fitness
+         0  PACQXJB CQPWEYKSVDCIOUPKUOJY       459
+         5  PACDXJBRCQP EYKSVDK OAPKGOJY       278
+        10  PAPDJJBOCQP EYCDKDK A PHGQJF       177
+        15  PAUDJJBO FP FY VKBL A PEGQJF       100
+        20  PEUDJMOO KP FY IKLD A YECQJF        57
+        25  PEUHJMOT KU FS IKLD A YECQJL        35
+        30  PEUHJMIT KU GS LKJD A YEAQFL        23
+        35  MERHJMIT KT IS LHJD A YEASFL        15
+        40  MERHJMKS IT IS LIJD A WEASFL         7
+        45  MERHINKS IT IS LIJD A WEASFL         5
+        50  MERHINKS IT IS LIJD A WEASEL         4
+        55  MERHINKS IT IS LIKD A WEASEL         3
+        60  MESHINKS IT IS LIKD A WEASEL         2
+        65  MESHINKS IT IS LIKD A WEASEL         2
+        70  MESHINKS IT IS LIKE A WEASEL         1
+        75  METHINKS IT IS LIKE A WEASEL         0

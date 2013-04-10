@@ -1,0 +1,1 @@
+asciiNumber = double(character)

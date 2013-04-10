@@ -1,0 +1,57 @@
+Class Utils.Net [ Abstract ]
+{
+
+ClassMethod QueryDNS(pHost As %String, Output ip As %List) As %Status
+{
+	// some initialisation
+	Set ip=$ListBuild()
+	
+	// check input and host operating system
+	If $Match(pHost, "^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}$")=0 {
+		Quit $$$ERROR($$$GeneralError, "Invalid host name.")
+	}
+	Set os=$Case($ZVersion(1), 1: "vms", 2: "win", 3: "*nx", : "")
+	If (os="vms")||(os="") Quit $$$ERROR($$$GeneralError, "Not implemented.")
+	If os="win" Set cmd="nslookup "_pHost
+	If os="*nx" Set cmd="host "_pHost
+	
+	// enable end-of-file flagging
+	Do $System.Process.SetZEOF(1)
+	
+	// invoke command	
+	Open cmd:"QR":15
+	If $Test {
+		For i=1:1 {
+			If i>100 Quit
+			Use cmd Read row
+			If $ZEOF Quit
+			If os="win" Set os=$Select(row["Name:": "", 1: os) Continue
+			Set ipv4=..GetIPAddr("ipv4", row)
+			If $Length(ipv4) Set $List(ip, 4)=ipv4
+			Set ipv6=..GetIPAddr("ipv6", row)
+			If $Length(ipv6) Set $List(ip, 6)=ipv6
+		}
+		Close cmd
+	}
+
+	// disable end-of-file flagging
+	Do $System.Process.SetZEOF(0)
+	
+	// finished
+	If $ListData(ip, 4)=0, $ListData(ip, 6)=0 Quit $$$ERROR($$$GeneralError, "Lookup failed.")
+	Quit $$$OK
+}
+
+ClassMethod GetIPAddr(pType As %String = "", pRow As %String = "") As %String
+{
+	If pType="ipv4" {
+		Set pos=$Locate(pRow, "((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}")
+		If pos Quit $Piece($Extract(pRow, pos, *), " ")
+	} ElseIf pType="ipv6" {
+		Set pos=$Locate(pRow, "([0-9A-Fa-f]{0,4}:){2,7}([0-9A-Fa-f]{1,4}$|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4})")
+		If pos Quit $Piece($Extract(pRow, pos, *), " ")
+	}
+	Quit ""
+}
+
+}

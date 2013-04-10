@@ -1,0 +1,8 @@
+(defun ethiopian-multiply (l r)
+  (flet ((halve (n) (floor n 2))
+         (double (n) (* n 2))
+         (even-p (n) (zerop (mod n 2))))
+    (do ((product 0 (if (even-p l) product (+ product r)))
+         (l l (halve l))
+         (r r (double r)))
+        ((zerop l) product))))

@@ -1,0 +1,2 @@
+PROC main()
+ENDPROC

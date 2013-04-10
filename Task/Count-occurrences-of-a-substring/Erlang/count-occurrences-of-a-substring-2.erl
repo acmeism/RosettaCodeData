@@ -1,0 +1,1 @@
+substrings:main("ababababab","abab").

@@ -1,0 +1,285 @@
+#define std'dictionary'*.
+#define std'basic'*.
+#define std'patterns'*.
+#define ext'io'*.
+#define ext'convertors'*.
+
+#subject parse_order.
+
+#class Token
+{
+    #field theValue.
+
+    #initializer
+    [
+        theValue := String.
+    ]
+
+    #method parse_order'get = 0.
+
+    #method += aChar
+    [
+        theValue += aChar.
+    ]
+
+    #method + aNode
+    [
+        ^ aNode += self.
+    ]
+
+    #method numeric = Real64Value &&literal:theValue &:erealformatter.
+}
+
+
+#class Node
+{
+    #field theLeft.
+    #field theRight.
+
+    #role LeftAssigned
+    {
+        #method += aNode
+        [
+            theRight := aNode.
+
+            #shift.
+        ]
+    }
+    #role Empty
+    {
+        #method += aNode
+        [
+            theLeft := aNode.
+
+            #shift LeftAssigned.
+        ]
+    }
+    #initializer
+    [
+        #shift Empty.
+    ]
+
+    #method + aNode
+    [
+        #if (self parse_order > aNode parse_order)?
+        [
+            self += aNode.
+        ]
+        | [
+            aNode += self.
+
+            ^ aNode.
+        ].
+    ]
+
+    #method += aNode
+    [
+        #if (theRight parse_order > aNode parse_order)?
+        [
+            theRight += aNode.
+        ]
+        | [
+            theRight := aNode += theRight.
+        ].
+    ]
+}
+
+#class SummaryNode (Node)
+{
+    #method parse_order'get = 2.
+
+    #method numeric = theLeft numeric + theRight numeric.
+}
+#class DifferenceNode (Node)
+{
+    #method parse_order'get = 2.
+
+    #method numeric = theLeft numeric - theRight numeric.
+}
+#class ProductNode (Node)
+{
+    #method parse_order'get = 1.
+
+    #method numeric = theLeft numeric * theRight numeric.
+}
+#class FractionNode (Node)
+{
+    #method parse_order'get = 1.
+
+    #method numeric = theLeft numeric / theRight numeric.
+}
+#class SubExpression
+{
+    #field theParser.
+    #field theCounter.
+
+    #role EOF
+    {
+        #method available'is [ control fail. ]
+
+        #method += aChar [ $self fail. ]
+    }
+
+    #initializer
+    [
+        theParser := arithmeval'Parser.
+        theCounter := Integer << 1.
+    ]
+
+    #method available'is []
+
+    #method parse_order'get = 0.
+
+    #method + aNode
+    [
+        ^ aNode += self.
+    ]
+
+    #method append : aChar
+    [
+        #if control if:(aChar == 41)
+        [
+            theCounter -= 1.
+        ]
+        | if:(aChar == 40)
+        [
+            theCounter += 1.
+        ].
+
+        #if (theCounter == 0)?
+            [ #shift EOF. ^ $self. ].
+
+        theParser evaluate:aChar.
+    ]
+
+    #method numeric = theParser numeric.
+}
+#class Parser
+{
+    #field theToken.
+    #field theTopNode.
+
+    #role Brackets
+    {
+        #method evaluate : aChar
+        [
+            theToken += aChar.
+
+            #if theToken available'is
+            | [
+                #shift.
+            ].
+        ]
+    }
+    #role Start
+    {
+        #method evaluate : aChar
+        [
+            #if (40 == aChar)?
+            [
+                theToken := SubExpression.
+                theTopNode := theToken.
+
+                #shift Brackets.
+            ]
+            | [
+                theToken := Token.
+                theTopNode := theToken.
+
+                theToken += aChar.
+
+                #shift.
+            ].
+        ]
+    }
+    #role Operator
+    {
+        #method evaluate : aChar
+        [
+            #if Control if:(48 < aChar) if:(58 > aChar)
+            [
+                theToken := (Token += aChar).
+
+                theTopNode += theToken.
+
+                #shift.
+            ]
+            | if:(40 == aChar)
+            [
+                theToken := SubExpression.
+                theTopNode += theToken.
+
+                #shift Brackets.
+            ]
+            | [ $self fail. ].
+        ]
+    }
+
+    #initializer
+    [
+        #shift Start.
+    ]
+
+    #method numeric = theTopNode numeric.
+
+    #method evaluate : aChar
+    [
+        #if Control if:(48 < aChar) if:(58 > aChar)
+        [
+            theToken += aChar.
+        ]
+        | if:(42 == aChar)  // *
+        [
+            theTopNode := theTopNode + ProductNode.
+
+            #shift Operator.
+        ]
+        | if:(47 == aChar)  // /
+        [
+            theTopNode := theTopNode + FractionNode.
+
+            #shift Operator.
+        ]
+        | if:(43 == aChar)  // +
+        [
+            theTopNode := theTopNode + SummaryNode.
+
+            #shift Operator.
+        ]
+        | if:(45 == aChar)  // -
+        [
+            theTopNode := theTopNode + DifferenceNode.
+
+            #shift Operator.
+        ]
+        | if:(40 == aChar)
+        [
+            theToken := SubExpression.
+            theTopNode := theToken.
+
+            #shift Brackets.
+        ]
+        | [ $self fail. ].
+    ]
+
+    #method start : aProcess
+    [
+        aProcess run:self.
+
+        ^ self numeric.
+    ]
+}
+
+#symbol Program =
+[
+    #var aText := String.
+
+    #while ((Console >> aText) length > 0)?
+    [
+        #var aParser := Parser.
+
+        Console << "=" << aParser start:Scan::aText | ^^"Invalid Expression".
+
+        Console << "%n".
+    ].
+].

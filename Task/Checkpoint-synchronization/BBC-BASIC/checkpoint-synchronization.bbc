@@ -1,0 +1,59 @@
+      INSTALL @lib$+"TIMERLIB"
+      nWorkers% = 3
+      DIM tID%(nWorkers%)
+
+      tID%(1) = FN_ontimer(10, PROCworker1, 1)
+      tID%(2) = FN_ontimer(11, PROCworker2, 1)
+      tID%(3) = FN_ontimer(12, PROCworker3, 1)
+
+      DEF PROCworker1 : PROCtask(1) : ENDPROC
+      DEF PROCworker2 : PROCtask(2) : ENDPROC
+      DEF PROCworker3 : PROCtask(3) : ENDPROC
+
+      ON ERROR PROCcleanup : REPORT : PRINT : END
+      ON CLOSE PROCcleanup : QUIT
+
+      REPEAT
+        WAIT 0
+      UNTIL FALSE
+      END
+
+      DEF PROCtask(worker%)
+      PRIVATE cnt%()
+      DIM cnt%(nWorkers%)
+      CASE cnt%(worker%) OF
+        WHEN 0:
+          cnt%(worker%) = RND(30)
+          PRINT "Worker "; worker% " starting (" ;cnt%(worker%) " ticks)"
+        WHEN -1:
+        OTHERWISE:
+          cnt%(worker%) -= 1
+          IF cnt%(worker%) = 0 THEN
+            PRINT "Worker "; worker% " ready and waiting"
+            cnt%(worker%) = -1
+            PROCcheckpoint
+            cnt%(worker%) = 0
+          ENDIF
+      ENDCASE
+      ENDPROC
+
+      DEF PROCcheckpoint
+      PRIVATE checked%, sync%
+      IF checked% = 0 sync% = FALSE
+      checked% += 1
+      WHILE NOT sync%
+        WAIT 0
+        IF checked% = nWorkers% THEN
+          sync% = TRUE
+          PRINT "--Sync Point--"
+        ENDIF
+      ENDWHILE
+      checked% -= 1
+      ENDPROC
+
+      DEF PROCcleanup
+      LOCAL I%
+      FOR I% = 1 TO nWorkers%
+        PROC_killtimer(tID%(I%))
+      NEXT
+      ENDPROC

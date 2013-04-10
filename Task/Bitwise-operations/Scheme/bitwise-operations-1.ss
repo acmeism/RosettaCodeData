@@ -1,0 +1,13 @@
+(define (bitwise a b)
+  (display (bitwise-and a b))
+  (newline)
+  (display (bitwise-ior a b))
+  (newline)
+  (display (bitwise-xor a b))
+  (newline)
+  (display (bitwise-not a))
+  (newline)
+  (display (bitwise-arithmetic-shift-right a b))
+  (newline))
+
+(bitwise 255 5)

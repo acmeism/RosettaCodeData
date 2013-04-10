@@ -1,0 +1,27 @@
+(de midPtCircle (Img CX CY Rad)
+   (let (F (- 1 Rad)  DdFx 0  DdFy (* -2 Rad)  X 0  Y Rad)
+      (set (nth Img (+ CY Rad) CX) 1)
+      (set (nth Img (- CY Rad) CX) 1)
+      (set (nth Img CY (+ CX Rad)) 1)
+      (set (nth Img CY (- CX Rad)) 1)
+      (while (> Y X)
+         (when (ge0 F)
+            (dec 'Y)
+            (inc 'F (inc 'DdFy 2)) )
+         (inc 'X)
+         (inc 'F (inc (inc 'DdFx 2)))
+         (set (nth Img (+ CY Y) (+ CX X)) 1)
+         (set (nth Img (+ CY Y) (- CX X)) 1)
+         (set (nth Img (- CY Y) (+ CX X)) 1)
+         (set (nth Img (- CY Y) (- CX X)) 1)
+         (set (nth Img (+ CY X) (+ CX Y)) 1)
+         (set (nth Img (+ CY X) (- CX Y)) 1)
+         (set (nth Img (- CY X) (+ CX Y)) 1)
+         (set (nth Img (- CY X) (- CX Y)) 1) ) ) )
+
+(let Img (make (do 120 (link (need 120 0))))       # Create image 120 x 120
+   (midPtCircle Img 60 60 50)                      # Draw circle
+   (out "img.pbm"                                  # Write to bitmap file
+      (prinl "P1")
+      (prinl 120 " " 120)
+      (mapc prinl Img) ) )

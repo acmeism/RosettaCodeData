@@ -1,0 +1,2 @@
+>>> float('infinity')
+inf

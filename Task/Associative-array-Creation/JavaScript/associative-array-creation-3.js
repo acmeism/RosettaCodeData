@@ -1,0 +1,1 @@
+'foo' in assoc // true

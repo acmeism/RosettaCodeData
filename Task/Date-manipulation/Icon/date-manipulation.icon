@@ -1,0 +1,66 @@
+link datetime
+
+procedure main()
+write("input      = ",s := "March 7 2009 7:30pm EST" )
+write("+12 hours  = ",SecToTZDateLine(s := TZDateLineToSec(s) + 12*3600,"EST"))
+write("           = ",SecToTZDateLine(s,"UTC"))
+write("           = ",SecToTZDateLine(s,"NST"))
+end
+
+procedure SecToTZDateLine(s,tz)   #: returns dateline + time zone given seconds
+return NormalizedDate(SecToDateLine(s+\(_TZdata("table")[\tz|"UTC"]))||" "|| tz)
+end
+
+procedure TZDateLineToSec(s)  #: returns seconds given dateline (and time zone)
+   return (
+      NormalizedDate(s) ? (
+         d  := tab(find("am"|"pm")+2),tab(many('\t ,')),
+         tz := \_TZdata("table")[tab(0)]
+         ),
+      DateLineToSec(d) - tz)
+end
+
+procedure NormalizedDate(s)  #: returns a consistent dateline
+static D,M
+initial {
+   D := ["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"]
+   M := ["January","February","March","April","May","June",
+         "July","August","September","October","November","December"]
+   }
+
+map(s) ? {                               # parse and build consistent dateline
+   ds := 1(x := !D, =map(x)) | ""                                    # Weekday
+   ds ||:= 1(", ", tab(many('\t ,')|&pos))
+   ds ||:= 1(x := !M, =map(x))                 | fail                # Month
+   ds ||:= 1(" ", tab(many('\t ,')|&pos))
+   ds ||:= tab(many(&digits))                  | fail                # day
+   ds ||:= 1(", ", tab(many('\t ,')))          | fail
+   ds ||:= tab(many(&digits))                  | fail                # year
+   ds ||:= 1(" ", tab(many('\t ,')))           | fail
+   ds ||:= tab(many(&digits))||(=":"||tab(many(&digits))|&null) | fail # time
+   ds ||:= 1(" ", tab(many('\t ,')|&pos))
+   ds ||:= =("am"|"pm")                        | fail                # halfday
+   ds ||:= 1(" ", tab(many('\t ,')|&pos))
+   tz := map(=!_TZdata("list"),&lcase,&ucase)
+   }
+
+if ds[1] == "," then
+   ds := SecToDateLine(DateLineToSec("Sunday"||ds))   # get IPL to fix weekday
+
+return ds ||:=  " " || \tz|"UTC"
+end
+
+procedure _TZdata(x)    #: internal return TZ data (demo version incomplete)
+static TZ,AZ
+initial {
+   TZ := table()
+   AZ := []
+   "UTC/0;ACDT/+10.5;CET/1;EST/-5;NPT/+5.75;NST/-3.5;PST/-8;" ?
+      while (  a := tab(find("/")), move(1), o := tab(find(";")), move(1) ) do {
+         TZ[map(a)] := TZ[a] := integer(3600*o)
+         put(AZ,a,map(a))
+         }
+      every TZ[&null|""] := TZ["UTC"]
+   }
+return case x of { "list"  : AZ ; "table" : TZ }
+end

@@ -1,0 +1,1 @@
+(setq *LastKey (key))

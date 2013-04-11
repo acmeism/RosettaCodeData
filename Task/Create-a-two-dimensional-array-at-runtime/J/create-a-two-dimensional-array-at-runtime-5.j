@@ -1,0 +1,1 @@
+   erase'array1'

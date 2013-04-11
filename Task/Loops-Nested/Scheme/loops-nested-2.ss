@@ -1,0 +1,11 @@
+(let loop ((a array))
+  (if (pair? a)
+      (let loop2 ((b (car a)))
+	(cond ((null? b)
+	       (newline)
+	       (loop (cdr a)))
+	      ((= 20 (car b))
+	       (newline))
+	      (else
+	       (display " ")(display (car b))
+	       (loop2 (cdr b)))))))

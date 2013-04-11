@@ -1,0 +1,6 @@
+     FUNCTION FACT(N)
+     INTEGER N,I,FACT
+     FACT=1
+     DO 10 I=1,N
+  10 FACT=FACT*I
+     END

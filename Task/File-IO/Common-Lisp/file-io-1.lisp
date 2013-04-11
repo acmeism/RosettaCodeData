@@ -1,0 +1,5 @@
+(with-open-file (in #p"input.txt" :direction :input)
+  (with-open-file (out #p"output.txt" :direction :output)
+    (loop for line = (read-line in nil 'foo)
+          until (eq line 'foo)
+          do (write-line line out))))

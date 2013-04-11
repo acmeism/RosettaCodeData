@@ -1,0 +1,1 @@
+SendInput Goodbye, World{!}

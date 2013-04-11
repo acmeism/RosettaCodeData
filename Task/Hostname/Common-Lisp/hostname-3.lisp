@@ -1,0 +1,2 @@
+BOA> (get-hostname)
+"aurora"

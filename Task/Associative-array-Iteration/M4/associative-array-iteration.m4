@@ -1,0 +1,35 @@
+divert(-1)
+define(`for',
+   `ifelse($#,0,``$0'',
+   `ifelse(eval($2<=$3),1,
+   `pushdef(`$1',$2)$4`'popdef(`$1')$0(`$1',incr($2),$3,`$4')')')')
+define(`new',`define(`$1[size]key',0)')
+define(`asize',`defn(`$1[size]key')')
+define(`aget',`defn(`$1[$2]')')
+define(`akget',`defn(`$1[$2]key')')
+define(`avget',`aget($1,akget($1,$2))')
+define(`aset',
+   `ifdef($1[$2],
+      `',
+      `define(`$1[size]key',incr(asize(`$1')))`'define($1[asize(`$1')]key,$2)')`'define($1[$2],$3)')
+define(`dquote', ``$@'')
+define(`akeyvalue',`dquote(akget($1,$2),aget($1,akget($1,$2)))')
+define(`akey',`dquote(akget($1,$2))')
+define(`avalue',`dquote(aget($1,akget($1,$2)))')
+divert
+new(`a')
+aset(`a',`wow',5)
+aset(`a',`wow',flame)
+aset(`a',`bow',7)
+key-value pairs
+for(`x',1,asize(`a'),
+   `akeyvalue(`a',x)
+')
+keys
+for(`x',1,asize(`a'),
+   `akey(`a',x)
+')
+values
+for(`x',1,asize(`a'),
+   `avalue(`a',x)
+')

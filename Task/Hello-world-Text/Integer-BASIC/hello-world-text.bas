@@ -1,0 +1,2 @@
+   10 PRINT "GOODBYE, WORLD!"
+   20 END

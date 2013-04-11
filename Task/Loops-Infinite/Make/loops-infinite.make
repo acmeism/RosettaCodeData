@@ -1,0 +1,3 @@
+spam:
+   @echo SPAM
+   $(MAKE)

@@ -1,0 +1,1 @@
+MessageBox show: 'Goodbye, world.'

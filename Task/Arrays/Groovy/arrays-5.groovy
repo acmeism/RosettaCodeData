@@ -1,0 +1,1 @@
+println strings[-1]

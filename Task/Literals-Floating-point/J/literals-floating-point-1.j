@@ -1,0 +1,23 @@
+numeric-constant ::= number-constant | number-constant whitespace numeric-constant
+whitespace ::= whitespacecharacter | whitespacecharacter whitespace
+whitespacecharacter ::= ' ' | TAB
+TAB is ascii 9
+number-constant ::= arbitrary-constant | arbitrary-constant base-token base-constant
+base-token ::= 'b' | 'b-'
+base-constant ::= base-digits | base-digits '.' base-digits
+base-digits ::= base-digit | base-digit base-digits
+base-digit ::= digit | alpha1 | alpha2
+alpha1 ::= 'a'|'b'|'c'|'d'|'e'|'f'|'g'|'h'|'i'|'j'|'k'|'l'|'m'
+alpha2 ::= 'n'|'o'|'p'|'q'|'r'|'s'|'t'|'u'|'v'|'w'|'x'|'y'|'z'
+arbitrary-constant ::= complex-constant | pi-constant | euler-constant | extended-constant
+pi-constant ::= complex-constant 'p' complex-constant
+euler-constant ::= complex-constant 'x' complex-constant
+extended-constant ::= signed-digits 'x' | signed-digits 'r' signed-digits
+complex-constant ::= exponential-constant | exponential-constant complex-token exponential-constant
+complex-token ::= 'ad' | 'ar' | 'j'
+exponential-constant ::= signed-constant | signed-constant 'e' signed-constant
+signed-constant ::= decimal-constant | '_' decimal-constant
+decimal-constant ::= digits | digits '.' digits
+signed-digits ::= digits | '_' digits
+digits ::= digit | digit digits
+digit ::= '0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'

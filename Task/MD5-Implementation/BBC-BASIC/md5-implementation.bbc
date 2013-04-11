@@ -1,0 +1,109 @@
+      PRINT FN_MD5("")
+      PRINT FN_MD5("a")
+      PRINT FN_MD5("abc")
+      PRINT FN_MD5("message digest")
+      PRINT FN_MD5("abcdefghijklmnopqrstuvwxyz")
+      PRINT FN_MD5("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+      PRINT FN_MD5(STRING$(8,"1234567890"))
+      END
+
+      DEF FN_MD5(message$)
+      LOCAL a%, b%, c%, d%, f%, g%, h0%, h1%, h2%, h3%, i%, bits%, chunk%, temp%
+      LOCAL r&(), k%(), w%()
+      DIM r&(63), k%(63), w%(15)
+
+      REM r specifies the per-round shift amounts:
+      r&() = 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, \
+      \      5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20, \
+      \      4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, \
+      \      6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21
+
+      REM Use binary integer part of the sines of integers (Radians) as constants:
+      FOR i% = 0 TO 63
+        k%(i%) = FN32(INT(ABS(SIN(i% + 1.0#)) * 2^32))
+      NEXT
+
+      REM Initialize variables:
+      h0% = &67452301
+      h1% = &EFCDAB89
+      h2% = &98BADCFE
+      h3% = &10325476
+
+      bits% = LEN(message$)*8
+
+      REM Append '1' bit to message:
+      message$ += CHR$&80
+
+      REM Append '0' bits until message length in bits = 448 (mod 512):
+      WHILE (LEN(message$) MOD 64) <> 56
+        message$ += CHR$0
+      ENDWHILE
+
+      REM Append length of message (before pre-processing), in bits, as
+      REM 64-bit little-endian integer:
+      FOR i% = 0 TO 56 STEP 8
+        message$ += CHR$(bits% >>> i%)
+      NEXT
+
+      REM Process the message in successive 512-bit chunks:
+      FOR chunk% = 0 TO LEN(message$) DIV 64 - 1
+
+        REM Break chunk into sixteen 32-bit little-endian words:
+        FOR i% = 0 TO 15
+          w%(i%) = !(!^message$ + 64*chunk% + 4*i%)
+        NEXT i%
+
+        REM Initialize hash value for this chunk:
+        a% = h0%
+        b% = h1%
+        c% = h2%
+        d% = h3%
+
+        REM Main loop:
+        FOR i% = 0 TO 63
+          CASE TRUE OF
+            WHEN i% <= 15:
+              f% = d% EOR (b% AND (c% EOR d%))
+              g% = i%
+            WHEN 16 <= i% AND i% <= 31:
+              f% = c% EOR (d% AND (b% EOR c%))
+              g% = (5 * i% + 1) MOD 16
+            WHEN 32 <= i% AND i% <= 47:
+              f% = b% EOR c% EOR d%
+              g% = (3 * i% + 5) MOD 16
+            OTHERWISE:
+              f% = c% EOR (b% OR (NOT d%))
+              g% = (7 * i%) MOD 16
+          ENDCASE
+
+          temp% = d%
+          d% = c%
+          c% = b%
+          b% = FN32(b% + FNlrot(FN32(a% + f%) + FN32(k%(i%) + w%(g%)), r&(i%)))
+          a% = temp%
+
+        NEXT i%
+
+        REM Add this chunk's hash to result so far:
+        h0% = FN32(h0% + a%)
+        h1% = FN32(h1% + b%)
+        h2% = FN32(h2% + c%)
+        h3% = FN32(h3% + d%)
+
+      NEXT chunk%
+
+      = FNrevhex(h0%) + FNrevhex(h1%) + FNrevhex(h2%) + FNrevhex(h3%)
+
+      DEF FNrevhex(A%)
+      SWAP ?(^A%+0),?(^A%+3)
+      SWAP ?(^A%+1),?(^A%+2)
+      = RIGHT$("0000000"+STR$~A%,8)
+
+      DEF FNlrot(n#, r%)
+      n# = FN32(n#)
+      = (n# << r%) OR (n# >>> (32 - r%))
+
+      DEF FN32(n#)
+      WHILE n# > &7FFFFFFF : n# -= 2^32 : ENDWHILE
+      WHILE n# < &80000000 : n# += 2^32 : ENDWHILE
+      = n#

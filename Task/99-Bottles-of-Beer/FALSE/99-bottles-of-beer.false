@@ -1,0 +1,7 @@
+[$." bottle"$1-["s"]?" of beer"]b:
+99
+[$][b;!" on the wall
+"b;!"
+Take one down and pass it around
+"1-b;!" on the wall
+"]#%

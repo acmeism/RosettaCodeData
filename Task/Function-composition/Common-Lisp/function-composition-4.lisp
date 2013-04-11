@@ -1,0 +1,6 @@
+CL-USER> (defmacro compose (fn-name &rest args)
+	   (labels ((rec1 (args)
+		      (if (= (length args) 1)
+			  `(funcall ,@args x)
+			  `(funcall ,(first args) ,(rec1 (rest args))))))
+	     `(defun ,fn-name (x) ,(rec1 args))))

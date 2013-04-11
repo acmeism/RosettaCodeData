@@ -1,0 +1,1 @@
+coclass 'Animal'

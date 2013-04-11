@@ -1,0 +1,16 @@
+(de madlib (Template)
+   (setq Template (split (chop Template) "<" ">"))
+   (let (Reps () Text ())
+      (while Template
+         (push 'Text (pop 'Template))
+         (let? Rep (mapcar pack (split (pop 'Template) ":"))
+            (if (assoc (car Rep) Reps)
+               (push 'Text (cdr @))
+               (until (and
+                         (prin "Gimme a(n) " (or (cadr Rep) (car Rep)) ": ")
+                         (clip (in NIL (line)))
+                         (push 'Text @)
+                         (push 'Reps (cons (car Rep) @)) )
+                  (prinl "Huh? I got nothing.") ) ) ) )
+      (prinl (need 30 '-))
+      (prinl (flip Text)) ) )

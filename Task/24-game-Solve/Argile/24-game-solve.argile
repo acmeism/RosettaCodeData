@@ -1,0 +1,98 @@
+die "Please give 4 digits as argument 1\n" if argc < 2
+
+print a function that given four digits argv[1] subject to the rules of	\
+the _24_ game, computes an expression to solve the game if possible.
+
+use std, array
+
+let digits    be an array of 4 byte
+let operators be an array of 4 byte
+(: reordered arrays :)
+let (type of digits)    rdigits
+let (type of operators) roperators
+
+.: a function that given four digits <text digits> subject to
+   the rules of the _24_ game, computes an expression to solve
+   the game if possible.                                       :. -> text
+  if #digits != 4 {return "[error: need exactly 4 digits]"}
+  operators[0] = '+' ; operators[1] = '-'
+  operators[2] = '*' ; operators[3] = '/'
+  for each (val int d) from 0 to 3
+    if (digits[d] < '1') || (digits[d] > '9')
+      return "[error: non-digit character given]"
+    (super digits)[d] = digits[d]
+  let expr = for each operand order stuff
+  return "" if expr is nil
+  expr
+
+.:for each operand order stuff:. -> text
+  for each (val int a) from 0 to 3
+    for each (val int b) from 0 to 3
+      next if (b == a)
+      for each (val int c) from 0 to 3
+        next if (c == b) or (c == a)
+	for each (val int d) from 0 to 3
+	  next if (d == c) or (d == b) or (d == a)
+	  rdigits[0] = digits[a] ; rdigits[1] = digits[b]
+	  rdigits[2] = digits[c] ; rdigits[3] = digits[d]
+	  let found = for each operator order stuff
+	  return found unless found is nil
+  nil
+
+.:for each operator order stuff:. -> text
+  for each (val int i) from 0 to 3
+    for each (val int j) from 0 to 3
+      for each (val int k) from 0 to 3
+        roperators[0] = operators[i]
+	roperators[1] = operators[j]
+	roperators[2] = operators[k]
+	let found = for each RPN pattern stuff
+	return found if found isn't nil
+  nil
+
+our (raw array of text) RPN_patterns = Cdata
+  "xx.x.x."
+  "xx.xx.."
+  "xxx..x."
+  "xxx.x.."
+  "xxxx..."
+our (raw array of text) formats = Cdata
+  "((%c%c%c)%c%c)%c%c"
+  "(%c%c%c)%c(%c%c%c)"
+  "(%c%c(%c%c%c))%c%c"
+  "%c%c((%c%c%c)%c%c)"
+  "%c%c(%c%c(%c%c%c))"
+our (raw array of array of 3 int) rrop = Cdata
+  {0;1;2}; {0;2;1}; {1;0;2}; {2;0;1}; {2;1;0}
+
+.:for each RPN pattern stuff:. -> text
+  let RPN_stack be an array of 4 real
+  for each (val int rpn) from 0 to 4
+    let (nat) sp=0, op=0, dg=0.
+    let text p
+    for (p = RPN_patterns[rpn]) (*p != 0) (p++)
+      if *p == 'x'
+        if sp >= 4 {die "RPN stack overflow\n"}
+	if dg >  3 {die "RPN digits overflow\n"}
+	RPN_stack[sp++] = (rdigits[dg++] - '0') as real
+      if *p == '.'
+        if sp < 2 {die "RPN stack underflow\n"}
+	if op > 2 {die "RPN operators overflow\n"}
+	sp -= 2
+	let x = RPN_stack[sp]
+	let y = RPN_stack[sp + 1]
+	switch roperators[op++]
+	  case '+' {x += y}
+	  case '-' {x -= y}
+	  case '*' {x *= y}
+	  case '/' {x /= y}
+	  default  {die "RPN operator unknown\n"}
+	RPN_stack[sp++] = x
+    if RPN_stack[0] == 24.0
+      our array of 12 byte buffer (: 4 paren + 3 ops + 4 digits + null :)
+      snprintf (buffer as text) (size of buffer) (formats[rpn])		\
+         (rdigits[0]) (roperators[(rrop[rpn][0])]) (rdigits[1])		\
+                      (roperators[(rrop[rpn][1])]) (rdigits[2])		\
+                      (roperators[(rrop[rpn][2])]) (rdigits[3]);
+      return buffer as text
+  nil

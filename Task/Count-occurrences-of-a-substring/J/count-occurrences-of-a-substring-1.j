@@ -1,0 +1,2 @@
+require'strings'
+countss=: #@] %~ #@[ - [ #@rplc '';~]

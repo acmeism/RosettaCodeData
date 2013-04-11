@@ -1,0 +1,16 @@
+> coffee 24_game.coffee
+Solution for 8,3,1,8: ((1 + 8) * (8 / 3))
+Solution for 6,9,5,7: (6 - ((5 - 7) * 9))
+Solution for 4,2,1,1: no solution
+Solution for 3,5,1,3: (((3 + 5) * 1) * 3)
+Solution for 6,4,1,7: ((7 - (4 - 1)) * 6)
+Solution for 8,1,3,1: (((8 + 1) - 1) * 3)
+Solution for 6,1,3,3: (((6 + 1) * 3) + 3)
+Solution for 7,1,5,6: (((7 - 1) * 5) - 6)
+Solution for 4,2,3,1: ((3 + 1) * (4 + 2))
+Solution for 8,8,5,8: ((5 * 8) - (8 + 8))
+Solution for 3,8,4,1: ((1 - (3 - 8)) * 4)
+Solution for 6,4,3,8: ((8 - (6 / 3)) * 4)
+Solution for 2,1,8,7: (((2 * 8) + 1) + 7)
+Solution for 5,2,7,5: ((2 * 7) + (5 + 5))
+Solution for 2,4,8,9: ((9 - (2 + 4)) * 8)

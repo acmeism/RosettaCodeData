@@ -1,0 +1,1 @@
+ count=: (smoutput ] >:)^:_

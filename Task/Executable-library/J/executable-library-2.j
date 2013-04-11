@@ -1,0 +1,6 @@
+   load jpath '~temp/hailseq.ijs'
+Hailstone sequence for the number 27
+27 82 41 124 62 31 94 47 142 71 214 107 322 161 484 242 121 364 182 91 274 137 412 206 103 310 155 466 233 700 350 175 526 263 790 395 1186 593 1780 890 445 1336 668 334 167 502 251 754 377 1132 566 283 850 425 1276 638 319 958 479 1438 719 2158 1079 3238 ...
+Finding number with longest hailstone sequence which is
+less than 100000 (and finding that sequence length):
+77031 351

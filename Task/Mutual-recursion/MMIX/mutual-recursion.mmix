@@ -1,0 +1,78 @@
+	LOC	Data_Segment
+
+	GREG	@
+NL	BYTE	#a,0
+	GREG	@
+buf	OCTA	0,0
+
+t	IS	$128
+Ja	IS	$127
+
+	LOC #1000
+
+	GREG @
+// print 2 digits integer with trailing space to StdOut
+// reg $3 contains int to be printed
+bp	IS	$71
+0H	GREG	#0000000000203020
+prtInt	STO	0B,buf		% initialize buffer
+	LDA	bp,buf+7	% points after LSD
+				% REPEAT
+1H	SUB	bp,bp,1		%  move buffer pointer
+	DIV	$3,$3,10		%  divmod (x,10)
+	GET	t,rR		%  get remainder
+	INCL	t,'0'		%  make char digit
+	STB	t,bp		%  store digit
+	PBNZ	$3,1B		% UNTIL no more digits
+	LDA	$255,bp
+	TRAP	0,Fputs,StdOut	% print integer
+	GO	Ja,Ja,0		% 'return'
+
+// Female function
+F	GET	$1,rJ		% save return addr
+	PBNZ	$0,1F		% if N != 0 then F N
+	INCL	$0,1		% F 0 = 1
+	PUT	rJ,$1		% restore return addr
+	POP	1,0		% return 1
+1H	SUBU	$3,$0,1		% N1 = N - 1
+	PUSHJ	$2,F		% do F (N - 1)
+	ADDU	$3,$2,0		% place result in arg. reg.
+	PUSHJ	$2,M		% do M F ( N - 1)
+	PUT	rJ,$1		% restore ret addr
+	SUBU	$0,$0,$2
+	POP	1,0		% return N - M F ( N - 1 )
+
+// Male function
+M	GET	$1,rJ
+	PBNZ	$0,1F
+	PUT	rJ,$1
+	POP	1,0		% return M 0 = 0
+1H	SUBU	$3,$0,1
+	PUSHJ	$2,M
+	ADDU	$3,$2,0
+	PUSHJ	$2,F
+	PUT	rJ,$1
+	SUBU	$0,$0,$2
+	POP	1,0		$ return N - F M ( N - 1 )
+
+// do a female run
+Main	SET	$1,0		% for (i=0; i<25; i++){
+1H	ADDU	$4,$1,0		%
+	PUSHJ	$3,F		%  F (i)
+	GO	Ja,prtInt	%  print F (i)
+	INCL	$1,1
+	CMP	t,$1,25
+	PBNZ	t,1B		% }
+	LDA	$255,NL
+	TRAP	0,Fputs,StdOut
+// do a male run
+	SET	$1,0		% for (i=0; i<25; i++){
+1H	ADDU	$4,$1,0		%
+	PUSHJ	$3,M		%  M (i)
+	GO	Ja,prtInt	%  print M (i)
+	INCL	$1,1
+	CMP	t,$1,25
+	PBNZ	t,1B		% }
+	LDA	$255,NL
+	TRAP	0,Fputs,StdOut
+	TRAP	0,Halt,0

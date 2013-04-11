@@ -1,0 +1,1 @@
+Write "Goodbye, World!",!

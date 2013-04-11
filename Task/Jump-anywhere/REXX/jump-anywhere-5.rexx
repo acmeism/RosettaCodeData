@@ -1,0 +1,20 @@
+for i = 1 to 10
+ if i = 5 then goto [label5]
+next i
+end
+
+[label5]
+print i
+while i < 10
+ if i = 6 then  goto [label6]
+i = i + 1
+wend
+end
+
+[label6]
+print i
+if i = 6 then goto [finish]
+print "Why am I here"
+
+[finish]
+ print "done"

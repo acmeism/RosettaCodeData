@@ -1,0 +1,5 @@
+(de kaprekar (N)
+   (let L (cons 0 (chop (* N N)))
+      (for ((I . R) (cdr L) R (cdr R))
+         (NIL (gt0 (format R)))
+         (T (= N (+ @ (format (head I L)))) N) ) ) )

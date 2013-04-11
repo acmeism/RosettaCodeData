@@ -1,0 +1,3 @@
+   function Warnsdorff_Get_Tour(Start_X, Start_Y: Index) return Tour;
+   -- uses Warnsdorff heurisitic to find a tour faster
+   -- same interface as Get_Tour

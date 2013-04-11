@@ -1,0 +1,93 @@
+import gui
+$include "guih.icn"
+
+# some constants to define the display and pendulum
+$define HEIGHT 400
+$define WIDTH 500
+$define STRING_LENGTH 200
+$define HOME_X 250
+$define HOME_Y 21
+$define SIZE 30
+$define START_ANGLE 80
+
+class WindowApp : Dialog ()
+
+  # draw the pendulum on given context_window, at position (x,y)
+  method draw_pendulum (x, y)
+    # reference to current screen area to draw on
+    cw := Clone(self.cwin)
+
+    # clear screen
+    WAttrib (cw, "bg=grey")
+    EraseRectangle (cw, 0, 0, WIDTH, HEIGHT)
+
+    # draw the display
+    WAttrib (cw, "fg=dark gray")
+    DrawLine (cw, 10, 20, WIDTH-20, 20)
+    WAttrib (cw, "fg=black")
+    DrawLine (cw, HOME_X, HOME_Y, x, y)
+    FillCircle (cw, x, y, SIZE+2)
+    WAttrib (cw, "fg=yellow")
+    FillCircle (cw, x, y, SIZE)
+
+    # free reference to screen area
+    Uncouple (cw)
+  end
+
+  # find the average of given two arguments
+  method avg (a, b)
+    return (a + b) / 2
+  end
+
+  # this method gets called by the ticker
+  # it computes the next position of the pendulum and
+  # requests a redraw
+  method tick ()
+    static x, y
+    static theta := START_ANGLE
+    static d_theta := 0
+    # update x,y of pendulum
+    scaling := 3000.0 / (STRING_LENGTH * STRING_LENGTH)
+    # -- first estimate
+    first_dd_theta := -(sin (dtor (theta)) * scaling)
+    mid_d_theta := d_theta + first_dd_theta
+    mid_theta := theta + avg (d_theta, mid_d_theta)
+    # -- second estimate
+    mid_dd_theta := - (sin (dtor (mid_theta)) * scaling)
+    mid_d_theta_2 := d_theta + avg (first_dd_theta, mid_dd_theta)
+    mid_theta_2 := theta + avg (d_theta, mid_d_theta_2)
+    # -- again first
+    mid_dd_theta_2 := -(sin (dtor (mid_theta_2)) * scaling)
+    last_d_theta := mid_d_theta_2 + mid_dd_theta_2
+    last_theta := mid_theta_2 + avg (mid_d_theta_2, last_d_theta)
+    # -- again second
+    last_dd_theta := - (sin (dtor (last_theta)) * scaling)
+    last_d_theta_2 := mid_d_theta_2 + avg (mid_dd_theta_2, last_dd_theta)
+    last_theta_2 := mid_theta_2 + avg (mid_d_theta_2, last_d_theta_2)
+    # -- update stored angles
+    d_theta := last_d_theta_2
+    theta := last_theta_2
+    # -- update x, y
+    pendulum_angle := dtor (theta)
+    x := HOME_X + STRING_LENGTH * sin (pendulum_angle)
+    y := HOME_Y + STRING_LENGTH * cos (pendulum_angle)
+
+    # draw pendulum
+    draw_pendulum (x, y)
+  end
+
+  # set up the window
+  method component_setup ()
+    # some cosmetic settings for the window
+    attrib("size="||WIDTH||","||HEIGHT, "bg=light gray", "label=Pendulum")
+    # make sure we respond to window close event
+    connect (self, "dispose", CLOSE_BUTTON_EVENT)
+    # start the ticker, to update the display periodically
+    self.set_ticker (20)
+  end
+end
+
+procedure main ()
+  w := WindowApp ()
+  w.show_modal ()
+end

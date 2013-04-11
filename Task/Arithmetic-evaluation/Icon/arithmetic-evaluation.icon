@@ -1,0 +1,101 @@
+procedure main()                                                #: simple arithmetical parser / evaluator
+   write("Usage: Input expression = Abstract Syntax Tree = Value, ^Z to end.")
+   repeat {
+      writes("Input expression : ")
+      if not writes(line := read()) then break
+      if map(line) ? { (x := E()) & pos(0) } then
+         write(" = ", showAST(x), " = ", evalAST(x))
+      else
+         write(" rejected")
+   }
+end
+
+procedure evalAST(X)                                            #: return the evaluated AST
+   local x
+
+   if type(X) == "list" then {
+      x := evalAST(get(X))
+      while x := get(X)(x, evalAST(get(X) | stop("Malformed AST.")))
+   }
+   return \x | X
+end
+
+procedure showAST(X)                                            #: return a string representing the AST
+   local x,s
+
+   s := ""
+   every x := !X do
+      s ||:= if type(x) == "list" then "(" || showAST(x) || ")" else x
+   return s
+end
+
+########
+# When you're writing a big parser, a few utility recognisers are very useful
+#
+procedure ws()    # skip optional whitespace
+   suspend tab(many(' \t')) | ""
+end
+
+procedure digits()
+   suspend tab(many(&digits))
+end
+
+procedure radixNum(r)    # r sets the radix
+   static chars
+   initial chars := &digits || &lcase
+   suspend tab(many(chars[1 +: r]))
+end
+########
+
+global token
+record HansonsDevice(precedence,associativity)
+
+procedure opinfo()
+   static O
+   initial {
+      O := HansonsDevice([], table(&null))                         # parsing table
+      put(O.precedence, ["+", "-"], ["*", "/", "%"], ["^"])        # Lowest to Highest precedence
+      every O.associativity[!!O.precedence] := 1                   # default to 1 for LEFT associativity
+      O.associativity["^"] := 0                                    # RIGHT associativity
+   }
+   return O
+end
+
+procedure E(k)                                                  #: Expression
+   local lex, pL
+   static opT
+   initial opT := opinfo()
+
+   /k := 1
+   lex := []
+   if not (pL := opT.precedence[k]) then                        # this op at this level?
+      put(lex, F())
+   else {
+      put(lex, E(k + 1))
+      while ws() & put(lex, token := =!pL) do
+         put(lex, E(k + opT.associativity[token]))
+   }
+   suspend if *lex = 1 then lex[1] else lex                     # strip useless []
+end
+
+procedure F()                                                   #: Factor
+   suspend ws() & (    # skip optional whitespace, and ...
+      (="+" & F())              |          # unary + and a Factor, or ...
+      (="-" || V())             |          # unary - and a Value, or ...
+      (="-" & [-1, "*", F()])   |          # unary - and a Factor, or ...
+     2(="(", E(), ws(), =")")   |          # parenthesized subexpression, or ...
+       V()                                 # just a value
+   )
+end
+
+procedure V()                                                   #: Value
+   local r
+   suspend ws() & numeric(    # skip optional whitespace, and ...
+       =(r := 1 to 36) || ="r" || radixNum(r)             |     # N-based number, or ...
+       digits() || (="." || digits() | "") || exponent()        # plain number with optional fraction
+   )
+end
+
+procedure exponent()
+   suspend tab(any('eE')) || =("+" | "-" | "") || digits() | ""
+end

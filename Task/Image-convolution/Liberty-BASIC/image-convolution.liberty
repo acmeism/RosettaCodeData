@@ -1,0 +1,95 @@
+    dim result( 300, 300), image( 300, 300), mask( 100, 100)
+    w =128
+    h =128
+
+    nomainwin
+
+    WindowWidth  = 460
+    WindowHeight = 210
+
+    open "Convolution" for graphics_nsb_nf as #w
+
+    #w "trapclose [quit]"
+
+    #w "down ; fill darkblue"
+
+    hw = hwnd( #w)
+    calldll #user32,"GetDC", hw as ulong, hdc as ulong
+
+    loadbmp "img", "alpha25.bmp"'   128x128 pixels
+    #w "drawbmp img   20, 20"
+
+    #w "up ; color white ; goto 292 20 ; down ; box 420 148"
+    #w "up ; goto 180 60 ; down ; backcolor darkblue ; color cyan"
+    #w "\"; "Convolved with"
+
+    for y =0 to 127 '   fill in the input matrix
+        for x =0 to 127
+            xx =x + 20
+            yy =y + 20
+            CallDLL #gdi32, "GetPixel", hdc as uLong, xx as long, yy as long, pixcol as ulong
+            call getRGB pixcol, b, g, r
+            image( x, y) =b
+            '#w "color "; image( x, y); " 0 "; 255 -image( x, y)
+            '#w "set "; x + 20; " "; y +20 +140
+        next x
+    next y
+
+    #w "flush"
+    print " Input matrix filled."
+
+    #w "size 8"
+    for y =0 to 2  '   fill in the mask matrix
+        for x =0 to 2
+            read mask
+            mask( x, y) =mask
+            if mask = ( 0 -1) then #w "color yellow" else #w "color red"
+            #w "set "; 8 *x +200; " "; 8 *y +80
+        next x
+    next y
+    data -1,-1,-1,-1,9,-1,-1,-1,-1
+
+    #w "flush"
+    print " Mask matrix filled."
+
+    #w "size 1"
+    mxx =0: mnn =0
+
+    for x =0 to 127 -2 '   since any further overlaps image edge
+        for y =0 to 127 -2
+            result( x, y) =0
+            for kx =0 to 2
+                for ky =0 to 2
+                    result( x, y) =result( x, y) +image( x +kx, y +ky) *mask( kx, ky)
+                next ky
+                if mxx <result( x, y) then mxx =result( x, y)
+                if mnn >result( x, y) then mnn =result( x, y)
+            next kx
+            scan
+        next y
+    next x
+
+    range =mxx -mnn
+    for x =0 to 127 -2
+        for y =0 to 127 -2
+            c =int( 255 *( result( x, y) -mnn) /range)
+            '#w "color "; c; " "; c; " "; c
+            if c >128 then #w "color white" else #w "color black"
+            #w "set "; x +292 +1; " "; y +20 +1
+            scan
+        next y
+    next x
+    #w "flush"
+
+    wait
+
+    sub getRGB pixcol, byref r, byref g, byref b
+        b = int( pixcol / (256 *256))
+        g = int( ( pixcol - b *256 *256) / 256)
+        r = int( pixcol - b *256 *256 - g *256)
+    end sub
+
+    [quit]
+    close #w
+    CallDLL #user32, "ReleaseDC", hw as ulong, hdc as ulong
+    end

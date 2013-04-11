@@ -1,0 +1,1 @@
+Dialog information: 'Goodbye, world.'

@@ -1,0 +1,3 @@
+for i = 10 to 0 step -1
+   print i
+next i

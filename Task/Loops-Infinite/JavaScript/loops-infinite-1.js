@@ -1,0 +1,1 @@
+for (;;) print("SPAM");

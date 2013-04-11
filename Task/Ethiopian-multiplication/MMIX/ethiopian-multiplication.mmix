@@ -1,0 +1,51 @@
+A	IS	17
+B	IS	34
+
+pliar	IS 	$255		% designating main registers
+pliand	GREG
+acc	GREG
+str	IS	pliar		% reuse reg $255 for printing
+
+	LOC	Data_Segment
+	GREG	@
+BUF	OCTA	#3030303030303030 % reserve a buffer that is big enough to hold
+	OCTA	#3030303030303030 % a max (signed) 64 bit integer:
+	OCTA	#3030300a00000000 %   2^63 - 1 = 9223372036854775807
+				  % string is terminated with NL, 0
+
+	LOC	#1000		% locate program at address
+	GREG	@
+halve	SR	pliar,pliar,1
+	GO	$127,$127,0
+
+double	SL	pliand,pliand,1	
+	GO	$127,$127,0
+
+odd	DIV	$77,pliar,2
+	GET	$78,rR
+	GO	$127,$127,0
+
+				% Main is the entry point of the program
+Main 	SET	pliar,A		% initialize registers for calculation
+	SET	pliand,B
+	SET	acc,0
+1H	GO	$127,odd
+	BZ	$78,2F		% if pliar is even skip incr. acc with pliand
+	ADD	acc,acc,pliand	%
+2H	GO	$127,halve	% halve pliar
+	GO	$127,double	% and double pliand
+	PBNZ	pliar,1B	% repeat from 1H while pliar > 0
+// result: acc = 17 x 34
+// next: print result --> stdout
+// $0 is a temp register
+	LDA	str,BUF+19	% points after the end of the string
+2H	SUB	str,str,1	% update buffer pointer
+	DIV	acc,acc,10	% do a divide and mod
+	GET	$0,rR		% get digit from special purpose reg. rR
+				% containing the remainder of the division
+	INCL	$0,'0'		% convert to ascii
+	STBU	$0,str		% place digit in buffer
+	PBNZ	acc,2B		% next
+				% 'str' points to the start of the result
+	TRAP	0,Fputs,StdOut	% output answer to stdout
+	TRAP	0,Halt,0	% exit

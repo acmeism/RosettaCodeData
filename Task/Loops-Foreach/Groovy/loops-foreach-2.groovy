@@ -1,0 +1,3 @@
+beatles.each {
+    println it
+}

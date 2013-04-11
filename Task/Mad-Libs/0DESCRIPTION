@@ -1,0 +1,142 @@
+[[wp:Mad Libs|Mad Libs]] is a phrasal template word game where one player prompts another for a list of words to substitute for blanks in a story, usually with funny results.
+
+Write a program to create a Mad Libs like story. The program should read a multiline story from the input. The story will be terminated with a blank line. Then, find each replacement to be made within the story, ask the user for a word to replace it with, and make all the replacements. Stop when there are none left and print the final story.
+
+The input should be in the form:
+<pre>
+<name> went for a walk in the park. <he or she>
+found a <noun>. <name> decided to take it home.
+
+</pre>
+It should then ask for a <tt>name</tt>, a <tt>he or she</tt> and a <tt>noun</tt> (<tt><nowiki><name></nowiki></tt> gets replaced both times with the same value.)
+{{wikipedia}}
+== {{header|Ada}} ==
+
+The fun of Mad Libs is not knowing the story ahead of time, so the program reads the story template from a text file. The name of the text file is given as a command line argument.
+
+<lang Ada>with Ada.Text_IO, Ada.Command_Line, String_Helper;
+
+procedure Madlib is
+
+   use String_Helper;
+
+   Text: Vector := Get_Vector(Ada.Command_Line.Argument(1));
+   M, N: Natural;
+
+begin
+   -- search for templates and modify the text accordingly
+   for I in Text.First_Index .. Text.Last_Index loop
+      loop
+         Search_Brackets(Text.Element(I), "<", ">", M, N);
+      exit when M=0; -- "M=0" means "not found"
+         Ada.Text_IO.Put_Line("Replacement for " & Text.Element(I)(M .. N) & "?");
+         declare
+            Old: String := Text.Element(I)(M .. N);
+            New_Word: String := Ada.Text_IO.Get_Line;
+         begin
+            for J in I .. Text.Last_Index loop
+               Text.Replace_Element(J, Replace(Text.Element(J), Old, New_Word));
+            end loop;
+         end;
+      end loop;
+   end loop;
+
+   -- write the text
+   for I in Text.First_Index .. Text.Last_Index loop
+      Ada.Text_IO.Put_Line(Text.Element(I));
+   end loop;
+end Madlib;</lang>
+
+It uses an auxiliary package String_Helper for simple string functions;
+
+<lang Ada>with Ada.Containers.Indefinite_Vectors;
+
+package String_Helper is
+
+   function Index(Source: String; Pattern: String) return Natural;
+
+   procedure Search_Brackets(Source: String;
+                             Left_Bracket: String;
+                             Right_Bracket: String;
+                             First, Last: out Natural);
+      -- returns indices of first pair of brackets in source
+      -- indices are zero if no such brackets are found
+
+   function Replace(Source: String; Old_Word: String; New_Word: String)
+                   return String;
+
+   package String_Vec is new Ada.Containers.Indefinite_Vectors
+     (Index_Type   => Positive,
+      Element_Type => String);
+
+   type Vector is new String_Vec.Vector with null record;
+
+   function Get_Vector(Filename: String) return Vector;
+
+end String_Helper;</lang>
+
+Here is the implementation of String_Helper:
+
+<lang Ada>with Ada.Strings.Fixed, Ada.Text_IO;
+
+package body String_Helper is
+
+   function Index(Source: String; Pattern: String) return Natural is
+   begin
+      return Ada.Strings.Fixed.Index(Source => Source, Pattern => Pattern);
+   end Index;
+
+   procedure Search_Brackets(Source: String;
+                             Left_Bracket: String;
+                             Right_Bracket: String;
+                             First, Last: out Natural) is
+   begin
+      First := Index(Source, Left_Bracket);
+      if First = 0 then
+         Last := 0; -- not found
+      else
+         Last := Index(Source(First+1 .. Source'Last), Right_Bracket);
+         if Last = 0 then
+            First := 0; -- not found;
+         end if;
+      end if;
+   end Search_Brackets;
+
+   function Replace(Source: String; Old_Word: String; New_Word: String)
+                   return String is
+      L: Positive := Old_Word'Length;
+      I: Natural := Index(Source, Old_Word);
+   begin
+      if I = 0 then
+         return Source;
+      else
+         return Source(Source'First .. I-1) & New_Word
+           & Replace(Source(I+L .. Source'Last), Old_Word, New_Word);
+      end if;
+   end Replace;
+
+   function Get_Vector(Filename: String) return Vector is
+      F: Ada.Text_IO.File_Type;
+      T: Vector;
+   begin
+      Ada.Text_IO.Open(F, Ada.Text_IO.In_File, Filename);
+      while not Ada.Text_IO.End_Of_File(F) loop
+         T.Append(Ada.Text_IO.Get_Line(F));
+      end loop;
+      Ada.Text_IO.Close(F);
+      return T;
+   end Get_Vector;
+
+end String_Helper;</lang>
+
+A sample run (with the story template in t.txt):
+
+<pre>./madlib t.txt
+Replacement for <name>?
+Hilla, the hypohondraic,
+Replacement for <he or she>?
+She
+Replacement for <noun>?
+headache
+Hilla, the hypohondraic, went for a walk in the park. She
+found a headache. Hilla, the hypohondraic, decided to take it home.</pre>

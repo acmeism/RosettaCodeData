@@ -1,0 +1,138 @@
+-- a "pin" can be connected only to one component
+-- that "sets" it to 0 or 1, while it can be "read"
+-- ad libitum. (Tristate logic is not taken into account)
+-- This class does the proper checking, assuring the "circuit"
+-- and the connections are described correctly. Currently can make
+-- hard the implementation of a latch
+class PIN is
+  private attr v:INT;
+  readonly attr name:STR;
+  private attr connected:BOOL;
+
+  create(n:STR):SAME is -- n = conventional name for this "pin"
+    res ::= new;
+    res.name := n;
+    res.connected := false;
+    return res;
+  end;
+
+  val:INT is
+    if self.connected.not then
+       #ERR + "pin " + self.name + " is undefined\n";
+       return 0; -- could return a random bit to "simulate" undefined
+                 -- behaviour
+    else
+       return self.v;
+    end;
+  end;
+
+  -- connect ...
+  val(v:INT) is
+    if self.connected then
+       #ERR + "pin " + self.name + " is already 'assigned'\n";
+    else
+       self.connected := true;
+       self.v := v.band(1);
+    end;
+  end;
+
+  -- connect to existing pin
+  val(v:PIN) is
+     self.val(v.val);
+  end;
+end;
+
+-- XOR "block"
+class XOR is
+  readonly attr xor :PIN;
+
+  create(a, b:PIN):SAME is
+    res ::= new;
+    res.xor := #PIN("xor output");
+    l   ::= a.val.bnot.band(1).band(b.val);
+    r   ::= a.val.band(b.val.bnot.band(1));
+    res.xor.val := r.bor(l);
+    return res;
+  end;
+end;
+
+-- HALF ADDER "block"
+class HALFADDER is
+  readonly attr s, c:PIN;
+
+  create(a, b:PIN):SAME is
+    res ::= new;
+    res.s := #PIN("halfadder sum output");
+    res.c := #PIN("halfadder carry output");
+    res.s.val := #XOR(a, b).xor.val;
+    res.c.val := a.val.band(b.val);
+    return res;
+  end;
+end;
+
+-- FULL ADDER "block"
+class FULLADDER is
+  readonly attr s, c:PIN;
+
+  create(a, b, ic:PIN):SAME is
+    res ::= new;
+    res.s := #PIN("fulladder sum output");
+    res.c := #PIN("fulladder carry output");
+    halfadder1 ::= #HALFADDER(a, b);
+    halfadder2 ::= #HALFADDER(halfadder1.s, ic);
+    res.s.val := halfadder2.s;
+    res.c.val := halfadder2.c.val.bor(halfadder1.c.val);
+    return res;
+  end;
+end;
+
+-- FOUR BITS ADDER "block"
+class FOURBITSADDER is
+  readonly attr s0, s1, s2, s3, v :PIN;
+
+  create(a0, a1, a2, a3, b0, b1, b2, b3:PIN):SAME is
+    res ::= new;
+    res.s0  := #PIN("4-bits-adder sum outbut line 0");
+    res.s1  := #PIN("4-bits-adder sum outbut line 1");
+    res.s2  := #PIN("4-bits-adder sum outbut line 2");
+    res.s3  := #PIN("4-bits-adder sum outbut line 3");
+    res.v   := #PIN("4-bits-adder overflow output");
+    zero ::= #PIN("zero/mass pin");
+    zero.val := 0;
+    fa0 ::= #FULLADDER(a0, b0, zero);
+    fa1 ::= #FULLADDER(a1, b1, fa0.c);
+    fa2 ::= #FULLADDER(a2, b2, fa1.c);
+    fa3 ::= #FULLADDER(a3, b3, fa2.c);
+    res.v.val  := fa3.c;
+    res.s0.val := fa0.s;
+    res.s1.val := fa1.s;
+    res.s2.val := fa2.s;
+    res.s3.val := fa3.s;
+    return res;
+  end;
+end;
+
+-- testing --
+
+class MAIN is
+  main is
+    a0 ::= #PIN("a0 in"); b0 ::= #PIN("b0 in");
+    a1 ::= #PIN("a1 in"); b1 ::= #PIN("b1 in");
+    a2 ::= #PIN("a2 in"); b2 ::= #PIN("b2 in");
+    a3 ::= #PIN("a3 in"); b3 ::= #PIN("b3 in");
+    ov ::= #PIN("overflow");
+
+    a0.val := 1; b0.val := 1;
+    a1.val := 1; b1.val := 1;
+    a2.val := 0; b2.val := 0;
+    a3.val := 0; b3.val := 1;
+
+    fba ::= #FOURBITSADDER(a0,a1,a2,a3,b0,b1,b2,b3);
+    #OUT + #FMT("%d%d%d%d", a3.val, a2.val, a1.val, a0.val) +
+    	   " + " +
+           #FMT("%d%d%d%d", b3.val, b2.val, b1.val, b0.val) +
+           " = " +
+           #FMT("%d%d%d%d", fba.s3.val, fba.s2.val, fba.s1.val, fba.s0.val) +
+           ", overflow = " + fba.v.val + "\n";
+  end;
+end;

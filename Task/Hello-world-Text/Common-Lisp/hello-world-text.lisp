@@ -1,0 +1,1 @@
+(format t "Goodbye, World!~%")

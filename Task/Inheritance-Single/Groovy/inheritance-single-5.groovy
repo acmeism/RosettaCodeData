@@ -1,0 +1,3 @@
+class Collie extends Dog{
+   //contents go here...
+}

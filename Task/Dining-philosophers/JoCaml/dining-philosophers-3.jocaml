@@ -1,0 +1,77 @@
+#!/usr/bin/jocamlrun jocaml
+
+(* eating and thinking between 0 and this-1 *)
+let eating_max_interval = 10;;
+let thinking_max_interval = 10;;
+let number_of_philosophers = 5;;
+let random_wait n = Unix.sleep (Random.int n);;
+
+(* counter for unique timestamp, not related to time in seconds *)
+def get_current_time () & unique_ts_counter(n) = unique_ts_counter(n+1) & reply n to get_current_time;;
+spawn unique_ts_counter(0);;
+
+(* functions that wait and print diagnostics *)
+let name i = List.nth ["Aristotle"; "Kant"; "Spinoza"; "Marx"; "Russell"] i;;
+let message i m = Printf.printf "philosopher %s is %s\n" (name i) m; flush(stdout);;
+let eat i = message i "eating"; random_wait eating_max_interval;;
+let think i = message i "thinking"; random_wait thinking_max_interval;;
+
+type philosopher_state_t = Eating | Hungry of int | Thinking;;
+
+(* initial states *)
+let states = Array.make number_of_philosophers Thinking;;
+(* one philosopher's processes *)
+let make_philosopher i got_hungry done_eating =
+ def hungry() & forks() = eat i ; done_eating(i) & thinking()
+ and thinking() = think i; got_hungry(i) & hungry()
+ in spawn thinking(); forks
+;;
+
+(* deciding who will eat first *)
+let next_phil i = (i+1) mod number_of_philosophers;;
+let prev_phil i = (number_of_philosophers+i-1) mod number_of_philosophers;;
+let is_hungry p = match p with
+    | Hungry h -> true
+    | _ -> false;;
+let not_eating p = match p with
+    | Eating -> false
+    | _ -> true;;
+let is_more_hungry p q = match q with
+    | Hungry hj -> (
+    	match p with
+	    | Hungry hi -> hi <= hj
+	    | _ -> false
+    )
+    | _ -> true
+;;
+
+let may_eat_first i =
+  is_hungry states.(i)
+  && not_eating states.(next_phil i) && not_eating states.(prev_phil i)
+  && is_more_hungry states.(i) states.(next_phil i)
+  && is_more_hungry states.(i) states.(prev_phil i);;
+
+let decide_eating i =
+ if (may_eat_first i) then (states.(i) <- Eating; true)
+ else false;;
+
+def waiter(all_forks) & got_hungry(i) =
+ states.(i) <- Hungry (get_current_time());
+ let will_eat = decide_eating i in (
+ waiter(all_forks) & (if will_eat then all_forks.(i)() else 0)
+)
+or  waiter(all_forks) & done_eating(i) =
+  states.(i) <- Thinking;
+  let next_will_eat = decide_eating (next_phil i) in
+  let prev_will_eat = decide_eating (prev_phil i) in (
+ waiter(all_forks)
+  & (if next_will_eat then all_forks.(next_phil i)() else 0)
+  & (if prev_will_eat then all_forks.(prev_phil i)() else 0)
+ );;
+
+let all_forks = Array.init number_of_philosophers (fun i -> make_philosopher i got_hungry done_eating)
+in spawn waiter(all_forks);;
+
+(* now we need to wait and do nothing; nobody will be able to inject godot() *)
+
+def wait_forever() & godot() = reply () to wait_forever in wait_forever();;

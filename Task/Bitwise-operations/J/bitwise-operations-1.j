@@ -1,0 +1,9 @@
+bAND=:  17 b.  NB. 16+#.0 0 0 1
+bOR=:   23 b.  NB. 16+#.0 1 1 1
+bXOR=:  22 b.  NB. 16+#.0 1 1 0
+b1NOT=: 28 b.  NB. 16+#.1 1 0 0
+bLshift=:  33 b.~ NB. see http://www.jsoftware.com/help/release/bdot.htm
+bRshift=:  33 b.~ -
+bRAshift=: 34 b.~ -
+bLrot=:    32 b.~
+bRrot=:    32 b.~ -

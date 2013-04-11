@@ -1,13 +1,14 @@
-## RosettaCode GitHub Mirror
+## RosettaCode Data Project
 
-This Git Repository will eventually be a mirror of all the code samples
-available on http://rosettacode.org, along with instructions and supplemental
-tools to help get them running on your local machine.
+This Git Repository contains of all the code samples available on
+http://rosettacode.org, along with instructions and supplemental tools to help
+get them running on your local machine.
 
 ## Goals
 
-The primary goal here is to get the codes into the most easily usable format,
-so that more programmers are exposed to them and actually run them.
+The primary goal of this project is to get the code samples into the most
+easily usable format, so that more programmers are exposed to them and actually
+run them.
 
 * Extract all (or most) of the code samples from RosettaCode.
 * Give proper reference to their sources and authors.
@@ -29,6 +30,20 @@ is here:
 The tool accesses the RosettaCode wiki via the MediaWiki REST API, using the
 CPAN module: MediaWiki::Bot.
 
+## License Info
+
+This repository uses an Open Source tool (see above) to copy samples directly
+from rosettacode.org. Each directory contains a link back to its
+rosettacode.org source page. Please refer to rosettacode.org for the licensing
+of all source code examples.
+
+## Related Projects
+
+Andrew Cole is building an interactive RosettaCodeExplorer web utility for
+playing around with the code samples:
+
+    https://github.com/aocole/RosettaCodeExplorer
+
 ## About the Author and Project
 
 Ingy döt Net is an Acmeist (http://acmeism.org) hacker who likes programming
@@ -36,4 +51,4 @@ his ideas equivalently in multiple Open Source languages. His works are
 available at https://github.com/ingydotnet/.
 
 Ingy has been communicating with Mike Mol, the proprietor of RosettaCode,
-regarding this mirroring attempt.
+regarding this project.

@@ -7,7 +7,6 @@ in {
 } body {
     static struct P { int x, y; }
 
-    // Is enum slower than immutable here?
     immutable P[8] moves = [P(2,1), P(1,2), P(-1,2), P(-2,1),
                             P(-2,-1), P(-1,-2), P(1,-2), P(2,-1)];
     int[N][N] data;
@@ -22,12 +21,10 @@ in {
                     data[p.y][p.x] == 0)
                     c++;
             }
-            //counts[i] = [c, i]; // Slow.
-            counts[i][0] = c;
-            counts[i][1] = i;
+            counts[i] = [c, i];
         }
 
-        counts[].randomShuffle(); // Shuffle to randomly break ties.
+        counts[].randomShuffle; // Shuffle to randomly break ties.
         counts[].sort(); // Lexicographic sort.
 
         int[8] result = void;
@@ -71,9 +68,9 @@ in {
 }
 
 void main() {
-    foreach (immutable i, side; TypeTuple!(5, 8, 31)) {
-        immutable form = "%(%" ~ text(text(side ^^ 2).length) ~ "d %)";
-        foreach (ref row; knightTour!side(["c3", "b5", "a1"][i]))
+    foreach (immutable i, side; TypeTuple!(5, 8, 31, 101)) {
+        immutable form = "%(%" ~ text(side ^^ 2).length.text ~ "d %)";
+        foreach (ref row; ["c3", "b5", "a1", "a1"][i].knightTour!side)
             writefln(form, row);
         writeln();
     }

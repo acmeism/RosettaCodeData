@@ -1,31 +1,31 @@
 import core.stdc.stdio, core.stdc.stdlib,
        core.stdc.string, std.typetuple;
 
-template Range(int stop) { // for manual loop unroll
+template Range(uint stop) { // For loop unwinding.
     static if (stop <= 0)
         alias TypeTuple!() Range;
     else
-        alias TypeTuple!(Range!(stop-1), stop-1) Range;
+        alias TypeTuple!(Range!(stop - 1), stop - 1) Range;
 }
 
 enum int[2][4] dir = [[0, -1], [-1, 0], [0, 1], [1, 0]];
 
 __gshared ubyte[] grid;
-__gshared int w, h, len;
+__gshared uint w, h, len;
 __gshared ulong cnt;
-__gshared int[4] next;
+__gshared uint[4] next;
 
-void walk(in int y, in int x) nothrow {
+void walk(in uint y, in uint x) nothrow {
     if (!y || y == h || !x || x == w) {
         cnt += 2;
         return;
     }
 
-    immutable int t = y * (w + 1) + x;
+    immutable t = y * (w + 1) + x;
     grid[t]++;
     grid[len - t]++;
 
-    foreach (i; Range!4) // manual loop unroll
+    foreach (i; Range!4) // Manual loop unwinding.
         if (!grid[t + next[i]])
             walk(y + dir[i][0], x + dir[i][1]);
 
@@ -33,7 +33,7 @@ void walk(in int y, in int x) nothrow {
     grid[len - t]--;
 }
 
-ulong solve(in int hh, in int ww, in bool recur) nothrow {
+ulong solve(in uint hh, in uint ww, in bool recur) nothrow {
     h = (hh & 1) ? ww : hh;
     w = (hh & 1) ? hh : ww;
 
@@ -42,13 +42,14 @@ ulong solve(in int hh, in int ww, in bool recur) nothrow {
     if (w == 2) return h;
     if (h == 2) return w;
 
-    immutable int cy = h / 2;
-    immutable int cx = w / 2;
+    immutable cy = h / 2;
+    immutable cx = w / 2;
 
     len = (h + 1) * (w + 1);
     {
-        // grid = new ubyte[len]; // slower
-        ubyte* ptr = cast(ubyte*)alloca(len);
+        // grid.length = len; // Slower.
+        alias T = typeof(grid[0]);
+        auto ptr = cast(T*)alloca(len * T.sizeof);
         if (ptr == null)
             exit(1);
         grid = ptr[0 .. len];
@@ -56,16 +57,12 @@ ulong solve(in int hh, in int ww, in bool recur) nothrow {
     grid[] = 0;
     len--;
 
-    //next = [-1, -w - 1, 1, w + 1]; // slow
-    next[0] = -1;
-    next[1] = -w - 1;
-    next[2] = 1;
-    next[3] = w + 1;
+    next = [-1, -w - 1, 1, w + 1];
 
     if (recur)
         cnt = 0;
-    foreach (x; cx + 1 .. w) {
-        immutable int t = cy * (w + 1) + x;
+    foreach (immutable x; cx + 1 .. w) {
+        immutable t = cy * (w + 1) + x;
         grid[t] = 1;
         grid[len - t] = 1;
         walk(cy - 1, x);
@@ -81,8 +78,8 @@ ulong solve(in int hh, in int ww, in bool recur) nothrow {
 }
 
 void main() {
-    foreach (y; 1 .. 11)
-        foreach (x; 1 .. y + 1)
+    foreach (immutable uint y; 1 .. 11)
+        foreach (immutable uint x; 1 .. y + 1)
             if (!(x & 1) || !(y & 1))
                 printf("%d x %d: %llu\n", y, x, solve(y, x, true));
 }

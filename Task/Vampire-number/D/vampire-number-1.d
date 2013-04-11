@@ -8,7 +8,7 @@ immutable(long[2])[] vampireNumberFactors(in long n) {
             if (k % i == 0) {
                 immutable q = k / i;
                 if (q > i)
-                    pairs ~= [i, q]; // Heap-allocated pair.
+                    pairs ~= [i, q];
             }
         return pairs;
     }

@@ -1,3 +1,3 @@
-long long unsigned fib(unsigned n) {
-    return n < 2 ? n : fib(n - 1) + fib(n - 2);
+long long int fibb(long long int a, long long int b, int n) {
+return (--n>0)?(fibb(b, a+b, n)):(a);
 }

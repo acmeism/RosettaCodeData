@@ -1,7 +1,3 @@
-int
-gcd(int u, int v) {
-  if (v)
-    return gcd(v, u % v);
-  else
-    return u < 0 ? -u : u; /* abs(u) */
+int gcd(int u, int v) {
+return (v != 0)?gcd(v, u%v):u;
 }

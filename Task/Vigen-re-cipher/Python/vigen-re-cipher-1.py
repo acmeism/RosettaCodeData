@@ -11,7 +11,7 @@ def encrypt(message, key):
 
     return "".join(starmap(enc, zip(message, cycle(key))))
 
-def decrpyt(message, key):
+def decrypt(message, key):
 
     # single letter decryption.
     def dec(c,k): return chr(((ord(c) - ord(k)) % 26) + ord('A'))

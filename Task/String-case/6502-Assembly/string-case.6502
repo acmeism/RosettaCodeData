@@ -1,0 +1,101 @@
+	.lf  case6502.lst	
+	.cr  6502	
+	.tf  case6502.obj,ap1
+;------------------------------------------------------
+; String Case for the 6502 by barrym95838 2013.04.07
+; Thanks to sbprojects.com for a very nice assembler!
+; The target for this assembly is an Apple II with
+;   mixed-case output capabilities.  Apple IIs like to
+;   work in '+128' ascii, so this version leaves bit 7
+;   alone, and can be used with either flavor.
+; 6502s work best with data structures < 256 bytes;
+;   several instructions would have to be added to
+;   properly deal with longer strings.
+; Tested and verified on AppleWin 1.20.0.0
+;------------------------------------------------------
+; Constant Section	
+;			
+StrPtr	 =   $6		0-page temp pointer (2 bytes)
+Low	 =   $8		0-page temp low bound
+High	 =   $9		0-page temp high bound
+CharOut	 =   $fded	Specific to the Apple II
+BigA	 =   "A"	'A' for normal ascii
+BigZ	 =   "Z"	'Z'  "    "      "
+LittleA	 =   "a"	'a'  "    "      "
+LittleZ	 =   "z"	'z'  "    "      "
+;======================================================
+	.or  $0f00	
+;------------------------------------------------------
+; The main program	
+;			
+main	ldx  #sTest	Point to the test string	
+	lda  /sTest	
+	jsr  puts	print it to stdout
+	jsr  toUpper	convert to UPPER-case
+	jsr  puts	print it
+	jsr  toLower	convert to lower-case
+	jmp  puts	print it and return to caller
+;------------------------------------------------------
+toUpper	pha  		save A
+	lda  #LittleA
+	sta  Low	set up the flip range
+	lda  #LittleZ	
+	bne  toLow2	return via toLower's tail
+;------------------------------------------------------
+toLower	pha  		save A
+	lda  #BigA
+	sta  Low	set up the flip range
+	lda  #BigZ	
+toLow2	sta  High	
+	pla  		restore A
+	;		return via fall-thru to flip
+;------------------------------------------------------
+; Given a NUL-terminated string at A:X, flip the case
+;   of any chars in the range [Low..High], inclusive;
+;   only works on the first 256 bytes of a long string
+; Uses:  StrPtr, Low, High
+; Preserves:  A, X	
+; Trashes:  Y		
+;
+flip	stx  StrPtr	init string pointer
+	sta  StrPtr+1	
+	ldy  #0		
+	pha  		save A
+flip2	lda  (StrPtr),y	get string char
+	beq  flip5	done if NUL
+	cmp  Low	
+	bcc  flip4	if Low <= char <= High
+	cmp  High	
+	beq  flip3	
+	bcs  flip4	
+flip3	eor  #$20	  then flip the case
+	sta  (StrPtr),y	
+flip4	iny  		point to next char
+	bne  flip2	loop up to 255 times
+flip5	pla  		restore A
+	rts  		return
+;------------------------------------------------------
+; Output NUL-terminated string @ A:X; strings longer
+;   than 256 bytes are truncated there
+; Uses:  StrPtr
+; Preserves:  A, X	
+; Trashes:  Y		
+;			
+puts	stx  StrPtr	init string pointer
+	sta  StrPtr+1	
+	ldy  #0		
+	pha  		save A
+puts2	lda  (StrPtr),y	get string char
+	beq  puts3	done if NUL
+	jsr  CharOut	output the char
+	iny  		point to next char
+	bne  puts2	loop up to 255 times
+puts3	pla  		restore A
+	rts  		return
+;------------------------------------------------------
+; Test String (in '+128' ascii, Apple II style)
+;			
+sTest	.as	-"Alpha, BETA, gamma, {[(<123@_>)]}."
+	.az	-#13	
+;------------------------------------------------------
+	.en  		

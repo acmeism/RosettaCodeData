@@ -1,0 +1,1 @@
+$length = strlen('Hello, world!');

@@ -1,0 +1,1 @@
+$ awk 'BEGIN { print "Hello"; }'

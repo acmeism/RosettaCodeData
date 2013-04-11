@@ -1,0 +1,145 @@
+.586
+.model flat,stdcall
+option casemap:none
+
+include /masm32/include/windows.inc
+include /masm32/include/user32.inc
+include /masm32/include/kernel32.inc
+include /masm32/include/ws2_32.inc
+
+includelib /masm32/lib/user32.lib
+includelib /masm32/lib/kernel32.lib
+includelib /masm32/lib/ws2_32.lib
+
+WinMain proto :DWORD,:DWORD,:DWORD,:DWORD
+
+
+.data
+   	ClassName 	db "MainWinClass",0
+   	AppName  	db "Async Sockets",0
+   	szSockStr	db "Hello socket world!",13,10,0
+   	szIp		db "127.0.0.1",0
+   	port		dd 256
+   	
+   	wsa			WSADATA <>
+   	sa			sockaddr_in <>
+   	
+.data?
+   	hInstance 	dd ?
+   	CommandLine dd ?
+   	sock		dd ?
+   	
+.const
+WM_SOCK			equ WM_USER+100
+
+.code
+start:
+	invoke WSAStartup, 200h, addr wsa
+	.if eax!=NULL
+		invoke ExitProcess, eax
+	.else
+		invoke GetModuleHandle, NULL
+		mov    hInstance,eax
+		invoke GetCommandLine
+		mov    CommandLine,eax
+		invoke WinMain, hInstance,NULL,CommandLine, SW_SHOWDEFAULT
+		invoke ExitProcess,eax
+	.endif
+
+WinMain proc hInst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:DWORD
+	LOCAL wc:WNDCLASSEX
+	LOCAL msg:MSG
+	LOCAL hwnd:HWND
+	
+	mov   wc.cbSize,SIZEOF WNDCLASSEX
+	mov   wc.style, CS_HREDRAW or CS_VREDRAW
+	mov   wc.lpfnWndProc, OFFSET WndProc
+	mov   wc.cbClsExtra,NULL
+	mov   wc.cbWndExtra,NULL
+	push  hInstance
+	pop   wc.hInstance
+	mov   wc.hbrBackground,COLOR_BTNFACE+1
+	mov   wc.lpszMenuName,NULL
+	mov   wc.lpszClassName,OFFSET ClassName
+	
+	invoke LoadIcon,NULL,IDI_APPLICATION
+	mov   wc.hIcon,eax
+	mov   wc.hIconSm,eax
+	
+	invoke LoadCursor,NULL,IDC_ARROW
+	mov   wc.hCursor,eax
+	
+	invoke RegisterClassEx, addr wc
+	INVOKE CreateWindowEx,NULL,ADDR ClassName,ADDR AppName,\
+           WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,\
+           CW_USEDEFAULT,CW_USEDEFAULT,CW_USEDEFAULT,NULL,NULL,\
+           hInst,NULL
+	mov   hwnd,eax
+	
+	invoke ShowWindow, hwnd,SW_SHOWNORMAL
+	invoke UpdateWindow, hwnd
+	
+	.WHILE TRUE
+		invoke GetMessage, ADDR msg,NULL,0,0
+		.BREAK .IF (!eax)
+		invoke TranslateMessage, ADDR msg
+		invoke DispatchMessage, ADDR msg
+	.ENDW
+	
+	mov     eax,msg.wParam
+	ret
+WinMain endp
+
+WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
+	
+	.IF uMsg==WM_DESTROY
+		invoke PostQuitMessage,NULL
+	.ELSEIF uMsg==WM_CREATE
+		invoke socket, AF_INET,SOCK_STREAM, 0
+		.if eax==INVALID_SOCKET
+			;error
+		.endif
+		mov sock, eax
+		invoke WSAAsyncSelect, sock, hWnd, WM_SOCK, FD_CONNECT or FD_CLOSE
+		.if eax==INVALID_SOCKET
+			;error!
+		.endif
+		mov sa.sin_family, AF_INET
+		invoke inet_addr, addr szIp
+		mov sa.sin_addr, eax
+		invoke htons, port
+		mov sa.sin_port, ax
+		invoke connect, sock, addr sa, sizeof sa
+		.if eax==SOCKET_ERROR
+			invoke WSAGetLastError
+			.if eax!=WSAEWOULDBLOCK
+				;real error.
+			.endif
+		.endif
+	.elseif uMsg==WM_SOCK
+		mov edx, lParam
+		.if dx==FD_CONNECT
+			shr edx, 16
+			.if dx==NULL
+				invoke lstrlen, addr szSockStr
+				invoke send, sock, addr szSockStr, eax, 0
+			.else
+				;error
+			.endif
+		.elseif dx==FD_CLOSE
+			shr edx, 16
+			.if dx==NULL
+				invoke SendMessage, hWnd, WM_DESTROY, 0, 0
+			.endif
+		.endif
+	.ELSE
+		invoke DefWindowProc,hWnd,uMsg,wParam,lParam		
+		ret
+	.ENDIF
+	
+	xor eax,eax
+	ret
+WndProc endp
+
+
+end start

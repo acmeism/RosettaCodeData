@@ -1,0 +1,317 @@
+// (1) Copy text into tmp buffer and remove non-alpha chars.
+
+Chdir(PATH_ONLY)
+BOF
+Reg_Copy(10, ALL)                       // copy text to new buffer
+Buf_Switch(Buf_Free)
+Reg_Ins(10)
+BOF
+Replace ("|!|A", "", BEGIN+ALL+NOERR)   // remove non-alpha chars
+Reg_Copy_Block(10,0,EOB_pos)            // @10 = text to be analysed
+
+#20 = Buf_Num                           // buffer for text being analyzed
+#21 = Buf_Free                          // buffer for English frequency list (A-Z)
+Buf_Switch(#21)
+Ins_Text("8167 1492 2782 4253 12702 2228 2015 6094 6966 153 772 4025 2406 6749 7507 1929 95 5987 6327 9056 2758 978 2360 150 1974 74")
+File_Open("unixdict.txt")               // or use "|(MACRO_DIR)\scribe\english.vdf"
+#23 = Buf_Num                           // buffer for dictionary
+#24 = Buf_Free                          // buffer for key canditates
+
+Buf_Switch(#24)
+for (#1=0; #1<5; #1++) {                // Fill table for 5 keys of 50 chars
+    Ins_Char('.', COUNT, 50)
+    Ins_Newline
+}
+#22 = Buf_Free                          // buffer for results
+
+#25 = Reg_Size(10)                      // number of letters in the text
+#26 = 26                                // number of characters in the alphabet
+#61 = min(#25/10, 50)                   // max key length to try
+
+// (2) Check Index of coincidence (or Kp) for each key length
+
+Buf_Switch(#22)                         // buffer for results
+Ins_Text("KeyLen Kp   dist ") Ins_Newline
+Ins_Text("-----------------") Ins_Newline
+#13 = Cur_Pos
+#7 = 0                                  // no Caesar encryption
+for (#5=1; #5<=#61; #5++) {
+    Buf_Switch(#20)                     // text being analyzed
+    BOF
+    #54 = 0;                            // sum of Kp's
+    for (#6=0; #6<#5; #6++) {           // for each slide
+        Goto_Pos(#6)
+        Call("CHARACTER_FREQUENCIES")
+        Call("INDEX_OF_COINCIDENCE")    // #51 = Kp * 10000
+        #54 += #51
+    }
+    #54 /= #5                           // average of Kp's
+    Buf_Switch(#22)
+    Num_Ins(#5, COUNT, 3)               // write key length
+    IT(": ")
+    Num_Ins(#54, NOCR)                  // average Kp
+    Num_Ins(670-#54)                    // distance to English Kp
+}
+Buf_Switch(#22)
+Sort_Merge("5,12", #13, Cur_Pos, REVERSE)  // sort the results by Kp value
+Ins_Newline
+
+// (3) Check the best 4 key lengths to find which one gives the best decrypt result
+
+#38 = 0                                 // max number of correct characters found
+#19 = 1                                 // best key length
+for (#14 = 0; #14<4; #14++) {           // try 4 best key lengths
+    Buf_Switch(#22)                     // results buffer
+    Goto_Pos(#13) Line(#14)
+    #5 = Num_Eval(SUPPRESS)             // #5 = key length
+    Call("FIND_KEYS")                   // find Caesar key for each key character
+    #4 = -1                             // try best match key chars only
+    Call("BUILD_KEY")
+    EOF
+    Ins_Text("Key length ")
+    Num_Ins(#5, LEFT)
+    Reg_Ins(10)                         // encrypted text
+    BOL
+    Call("DECRYPT_LINE")
+    BOL
+    Call("FIND_ENGLISH_WORDS")          // #37 = number of English chars
+    EOL Ins_Newline
+    Ins_Text("Correct chars: ")
+    Num_Ins(#37)
+    if (#37 > #38) {
+        #38 = #37
+        #19 = #5
+    }
+    Update()
+}
+
+Ins_Text("Using key length: ") Num_Ins(#19) Ins_Newline
+#5 = #19
+Call("FIND_KEYS")                       // find Caesar key for each key character
+
+// (4) Decrypt with different key combinations and try to find English words.
+//     Try key combinations where max one char is taken from 2nd best Caesar key.
+
+#38 = 0                                 // max number of chars in English words found
+#39 = -1                                // best key number found
+for (#4 = -1; #4 < #19; #4++)
+{
+    Call("BUILD_KEY")
+    Buf_Switch(#22)                     // results
+    Reg_Ins(10)                         // encrypted text
+    BOL
+    Call("DECRYPT_LINE")
+    BOL
+    Update()
+    Call("FIND_ENGLISH_WORDS")          // #37 := number of correct letters in text
+    if (#37 > #38) {
+        #38 = #37                       // new highest number of correct chars
+        #39 = #4                        // new best key
+    }
+
+    EOL IT(" -- ")                      // display results
+    Num_Ins(#4, COUNT, 3)               // key number
+    Ins_Text(": ")
+    for (#6=0; #6<#19; #6++) {          // display key
+        #9 = 130 + #6
+        Ins_Char(#@9)
+    }
+    Ins_Text("  correct chars =")
+    Num_Ins(#37)
+}
+Ins_Text("Best key = ")
+Num_Ins(#39, LEFT)
+#4 = #39
+Ins_Newline
+
+// Display results
+//
+Buf_Switch(#24)                         // table for key canditates
+BOF
+Reg_Copy_Block(14, Cur_Pos, Cur_Pos+#19)  // best Caesar key chars
+Line(1)
+Reg_Copy_Block(15, Cur_Pos, Cur_Pos+#19)  // 2nd best Caesar key chars
+Call("BUILD_KEY")
+Buf_Switch(#22)
+Ins_Text("Key 1: ") Reg_Ins(14) Ins_Newline
+Ins_Text("Key 2: ") Reg_Ins(15) Ins_Newline
+Ins_Text("Key:   ")
+for (#6=0; #6 < #19; #6++) {
+    #9 = #6+130
+    Ins_Char(#@9)
+}
+Ins_Newline
+Ins_Newline
+
+// decrypt the text with selected key
+Ins_Text("Decrypted text:") Ins_Newline
+Reg_Ins(10)
+BOL
+Call("DECRYPT_LINE")
+BOL Reg_Copy(13,1)
+EOL Ins_Newline
+
+// Find English words from the text
+Reg_Ins(13)
+Call("FIND_ENGLISH_WORDS")
+EOL
+Ins_Newline
+Num_Ins(#37, NOCR) IT(" of ")
+Num_Ins(#25, NOCR) IT(" characters are English words. ")
+Ins_Newline
+
+Buf_Switch(#20) Buf_Quit(OK)
+Buf_Switch(#21) Buf_Quit(OK)
+Buf_Switch(#23) Buf_Quit(OK)
+Buf_Switch(#24) Buf_Quit(OK)
+
+Statline_Message("Done!")
+Return
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Caesar decrypt current line and count character frequencies.
+//   in: #5 = step size, #7 = encryption key, #26 = num of chars in alphabet
+//  out: #65...#90 = frequencies, #60 = number of chars
+
+:CHARACTER_FREQUENCIES:
+    Save_Pos
+    for (#8 = 'A'; #8<='Z'; #8++) {
+        #@8 = 0                         // reset frequency counters
+    }
+    #60 = 0                             // total number of chars
+    while (!At_EOL) {
+        if (Cur_Char >= 'A' && Cur_Char <= 'Z') {
+            #8 = (Cur_Char-'A'+#26-#7) % #26 + 'A'  // decrypted char
+            #@8++
+            #60++
+        }
+        Char(#5)
+    }
+    Restore_Pos
+Return
+
+// Calculate Index of Coincidence (Kp).
+//   in: character frequencies in #65...#90, #60 = num of chars
+//  out: #51 = IC * 10000
+//
+:INDEX_OF_COINCIDENCE:
+    Num_Push(10,15)
+    #10 = 0
+    for (#11 = 'A'; #11<='Z'; #11++) {
+        #10 += (#@11 * (#@11-1))        // Calculate sigma{ni * (ni-1)}
+    }
+    #12 = #60 * (#60-1)                 // #12 = N * (N-1)
+    #51 = #10 * 10000 / #12             // #51 = Kp * 10000
+    Num_Pop(10,15)
+Return
+
+// Find best and 2nd best Caesar key for each character position of Vigenère key.
+//   in: #5=step size (key length)
+//  out: keys in buffer #24
+//
+:FIND_KEYS:
+    for (#6 = 0; #6 < #5; #6++) {               // for each char position in the key
+        #30 = -1                                // best key char found so far
+        #31 = -1                                // 2nd best key char
+        #32 = MAXNUM                            // smallest error found so far
+        #33 = MAXNUM                            // 2nd smallest error found so far
+        for (#7 = 0; #7 < #26; #7++) {          // for each possible key value
+            #35 = 0                             // total frequency error compared to English
+            Buf_Switch(#20)                     // text being analyzed
+            Goto_Pos(#6)
+            Call("CHARACTER_FREQUENCIES")
+            Buf_Switch(#21)                     // English frequency table
+            BOF
+            for (#8 = 'A'; #8<='Z'; #8++) {     // calculate total frequency error
+                #34 = Num_Eval(SUPPRESS+ADVANCE)
+                #35 += abs((#@8*100000+50000)/#60-#34)
+            }
+
+            if (#35 < #32) {                    // found better match?
+                #33 = #32
+                #32 = #35
+                #31 = #30
+                #30 = #7
+            } else {
+                if (#35 < #33) {                // 2nd best match?
+                    #33 = #35
+                    #31 = #7
+                }
+            }
+        }
+        Buf_Switch(#24)                         // table for key canditates
+        BOF
+        Goto_Col(#6+1)
+        Ins_Char(#30+'A', OVERWRITE)            // save the best match
+        Line(1)
+        Goto_Col(#6+1)
+        Ins_Char(#31+'A', OVERWRITE)            // save 2nd best match
+    }
+    Buf_Switch(#22)                             // results buffer
+Return
+
+// Combine actual key from 1st and 2nd best Caesar key characters
+// Use 1st key chars and (possibly) one character from 2nd key.
+//  #4 = index of the char to be picked from 2nd key, -1 = none.
+//  #5 = key length
+//
+:BUILD_KEY:
+    Buf_Switch(#24)                     // table for key canditates
+    BOF
+    for (#6=0; #6<#5; #6++) {           // copy 1st key
+        #8 = 130 + #6
+        #@8 = Cur_Char
+        Char(1)
+    }
+    if (#4 >= 0) {
+        #8 = 130 + #4                   // pick one char from 2st key
+        Line(1)
+        Goto_Col(#4+1)
+        #@8 = Cur_Char
+    }
+    Buf_Switch(#22)                     // results buffer
+Return
+
+// Decrypt text on current line
+//   in: #5 = key length, #130...#189 = key
+//
+:DECRYPT_LINE:
+    Num_Push(6,9)
+    #6 = 0
+    While (!At_EOL) {
+       #9 = #6+130
+       #7 = #@9
+       #8 = (Cur_Char - #7 + #26) % #26 + 'A'   // decrypted char
+       Ins_Char(#8, OVERWRITE)
+       #6++
+       if (#6 >= #5) {
+           #6 = 0
+       }
+    }
+    Num_Pop(6,9)
+Return
+
+// Find English words from text on current line
+//  out: #37 = number of chars matched
+//
+:FIND_ENGLISH_WORDS:
+    Buf_Switch(#23)                     // dictionary
+    BOF
+    While (!At_EOF) {
+        Reg_Copy_Block(12, Cur_Pos, EOL_Pos)
+        if (Reg_Size(12) > 2) {
+            Buf_Switch(#22)             // buffer for results
+            BOL
+            while (Search_Block(@12, Cur_Pos, EOL_Pos, NOERR)) {
+                Reg_Ins(12, OVERWRITE)
+            }
+            Buf_Switch(#23)
+        }
+        Line(1, ERRBREAK)
+    }
+
+    Buf_Switch(#22)
+    BOL
+    #37 = Search_Block("|V", Cur_Pos, EOL_Pos, ALL+NOERR)
+Return

@@ -1,0 +1,5 @@
+(pilog '((match @House @Person @Drink @Pet @Cigarettes))
+   (let Fmt (-8 -11 -8 -7 -11)
+      (tab Fmt "HOUSE" "PERSON" "DRINKS" "HAS" "SMOKES")
+      (mapc '(@ (pass tab Fmt))
+         @House @Person @Drink @Pet @Cigarettes ) ) )

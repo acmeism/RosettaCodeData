@@ -1,0 +1,75 @@
+.586
+.model flat, stdcall
+option casemap:none
+
+include /masm32/include/windows.inc
+include /masm32/include/kernel32.inc
+include /masm32/include/user32.inc
+
+includelib /masm32/lib/kernel32.lib
+includelib /masm32/lib/user32.lib
+
+WinMain proto :dword,:dword,:dword,:dword
+
+.data
+   ClassName db "WndClass",0
+   AppName   db "Window!",0
+.data?
+   hInstance   dd ?
+   CommandLine dd ?
+
+.code
+start:
+   invoke GetModuleHandle, NULL
+   mov hInstance, eax
+   invoke GetCommandLine
+   mov CommandLine, eax
+   invoke WinMain, hInstance, NULL, CommandLine, SW_SHOWDEFAULT
+
+   WinMain proc hInst:dword, hPervInst:dword, CmdLine:dword, CmdShow:dword
+   LOCAL wc:WNDCLASSEX
+   LOCAL msg:MSG
+   LOCAL hwnd:HWND
+
+   wc.cbSize, sizeof WNDCLASSEX
+   wc.style, CS_HREDRAW or CS_VREDRAW
+   wc.lpfnWndPRoc, offset WndProc
+   wc.cbClsExtra,NULL
+   wc.cbWndExtra, NULL
+   push hInstance
+   pop wc.hInstance
+   mov wc.hbrBackground, COLOR_BTNFACE+1
+   mov wc.lpszMenuName NULL
+   mov wc.lpszClassName, offset ClassName
+   invoke LoadIcon, NULL, IDI_APPLICATION
+   mov wc.hIcon, eax
+   mov wc.hIconSm, eax
+   invoke LoadCursor, NULL, IDC_ARROW
+   mov wc.hCursor, eax
+   invoke RegisterClassEx, addr wc
+   invoke CreateWindowEx, NULL, addr ClassName, addr AppName, WS_OVERLAPPEDWINDOW, CS_USEDEFAULT, CW_USEDEFAUT,\
+   CW_USEDEFAUT, CW_USEDEFAUT, NULL, NULL, hInst, NULL
+   mov hwnd, eax
+   invoke ShowWindow, hwnd, SW_SHOWNORMAL
+   invoke UpdateWindow, hwnd
+   .while TRUE
+      invoke GetMessage, addr msg, NULL, 0,0
+      .break .if (!eax)
+      invoke TranslateMessage, addr msg
+      invoke DispatchMessage, addr msg
+   .endw
+   mov eax, msg.wParam
+   ret
+   WinMain endp
+
+   WndProc proc hWnd:dword, uMsg:dword, wParam:dword, lParam:dword
+   mov eax, uMsg
+   .if eax==WM_DESTROY
+      invoke PostQuitMessage, NULL
+   .else
+      invoke DefWindowProc, hWnd, uMsg, wParam, lParam
+   .endif
+   xor eax, eax
+   ret
+   WndProc endp
+end start

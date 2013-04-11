@@ -1,0 +1,92 @@
+link graphics
+
+$define EDGE  -1
+$define EMPTY 0
+$define HEAD 1
+$define TAIL 2
+$define COND 3
+
+global Colours,Width,Height,World,oldWorld
+
+procedure main()             # wire world modified from forestfire
+
+    Height := 400            # Window height
+    Width  := 400            # Window width
+    Rounds := 500            # max Rounds
+    Delay  := 5              # Runout Delay
+
+    setup_world(read_world())
+    every round := 1 to Rounds do {
+       show_world()
+       if \runout then
+          delay(Delay)
+       else
+          case Event() of {
+             "q" : break                            # q = quit
+             "r" : runout := 1                      # r = run w/o stepping
+             "s" : WriteImage("Wireworld-"||round)  # save
+              }
+       evolve_world()
+       }
+    WDone()
+end
+
+procedure read_world()  #: for demo in place of reading
+   return [ "tH.........",
+            ".   .",
+            "   ...",
+            ".   .",
+            "Ht.. ......"]
+end
+
+procedure setup_world(L)     #: setup the world
+
+    Colours := table()       # define colours
+    Colours[EDGE]  := "grey"
+    Colours[EMPTY] := "black"
+    Colours[HEAD]  := "blue"
+    Colours[TAIL]  := "red"
+    Colours[COND]  := "yellow"
+
+    States := table()
+    States["t"] := TAIL
+    States["H"] := HEAD
+    States[" "] := EMPTY
+    States["."] := COND
+
+    WOpen("label=Wireworld", "bg=black",
+          "size=" || Width+2 || "," || Height+2) | # add for border
+             stop("Unable to open Window")
+    every !(World := list(Height)) := list(Width,EMPTY)  # default
+    every ( World[1,1 to Width]  | World[Height,1 to Width] |
+            World[1 to Height,1] | World[1 to Height,Width] ) := EDGE
+
+    every r := 1 to *L & c := 1 to *L[r] do {      # setup read in program
+       World[r+1, c+1] :=  States[L[r,c]]
+       }
+end
+
+procedure show_world()      #: show World - drawn changes only
+   every r := 2 to *World-1 & c := 2 to *World[r]-1 do
+      if /oldWorld | oldWorld[r,c] ~= World[r,c] then {
+         WAttrib("fg=" || Colours[tr := World[r,c]])
+         DrawPoint(r,c)
+      }
+end
+
+procedure evolve_world()    #: evolve world
+    old := oldWorld := list(*World)     # freeze copy
+    every old[i := 1 to *World] := copy(World[i])  # deep copy
+
+    every r := 2 to *World-1 & c := 2 to *World[r]-1 do
+       World[r,c] := case old[r,c] of {   # apply rules
+        # EMPTY : EMPTY
+          HEAD  : TAIL
+          TAIL  : COND
+          COND  : {
+              i := 0
+              every HEAD = ( old[r-1,c-1 to c+1] | old[r,c-1|c+1] | old[r+1,c-1 to c+1] ) do i +:= 1
+              if i := 1 | 2 then HEAD
+          }
+       }
+end

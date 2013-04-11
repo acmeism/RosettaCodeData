@@ -1,0 +1,70 @@
+MRGEPKG: package exports(MERGESORT,MERGE,RMERGE);
+
+DCL (T(4)) CHAR(20) VAR; /* scratch space of length N/2 */
+
+MERGE: PROCEDURE (A,LA,B,LB,C,CMPFN);
+   DECLARE (A(*),B(*),C(*)) CHAR(*) VAR;
+   DECLARE (LA,LB) FIXED BIN(31) NONASGN;
+   DECLARE (I,J,K) FIXED BIN(31);
+   DECLARE CMPFN ENTRY(
+          NONASGN CHAR(*) VAR,
+          NONASGN CHAR(*) VAR)
+          RETURNS (FIXED bin(31));
+
+   I=1; J=1; K=1;
+   DO WHILE ((I <= LA) & (J <= LB));
+      IF CMPFN(A(I),B(J)) <= 0 THEN
+         DO; C(K)=A(I); K=K+1; I=I+1; END;
+      ELSE
+         DO; C(K)=B(J); K=K+1; J=J+1; END;
+   END;
+   DO WHILE (I <= LA);
+      C(K)=A(I); I=I+1; K=K+1;
+   END;
+   return;
+END MERGE;
+
+MERGESORT: PROCEDURE (A,N,CMPFN) RECURSIVE ;
+     DECLARE (A(*))               CHAR(*) VAR;
+     DECLARE N                    FIXED BINARY(31) NONASGN;
+     DECLARE CMPFN                ENTRY(
+          NONASGN CHAR(*) VAR,
+          NONASGN CHAR(*) VAR)
+                                  RETURNS (FIXED bin(31));
+     DECLARE (M,I)                FIXED BINARY;
+     DECLARE AMP1(N)              CHAR(20) VAR BASED(P);
+     DECLARE P POINTER;
+
+   IF (N=1) THEN RETURN;
+   M = trunc((N+1)/2);
+   IF M > 1 THEN CALL MERGESORT(A,M,CMPFN);
+   P=ADDR(A(M+1));
+   IF (N-M > 1) THEN CALL MERGESORT(AMP1,N-M,CMPFN);
+   IF CMPFN(A(M),AMP1(1)) <= 0 THEN RETURN;
+   DO I=1 to M; T(I)=A(I); END;
+   CALL MERGE(T,M,AMP1,N-M,A,CMPFN);
+END MERGESORT;
+
+RMERGE: PROC OPTIONS(MAIN);
+DCL I FIXED BIN(31);
+DCL A(8) CHAR(20) VAR INIT("this","is","a","set","of","strings","to","sort");
+
+MyCMP: PROCEDURE(A,B) RETURNS (FIXED BIN(31));
+   DCL (A,B) CHAR(*) VAR NONASGN;
+   DCL (I,J) FIXED BIN(31);
+
+   I = length(trim(A)); J = length(trim(B));
+   IF I < J THEN RETURN(+1);
+   IF I > J THEN RETURN(-1);
+   IF lowercase(A) < lowercase(B) THEN RETURN(-1);
+   IF lowercase(A) > lowercase(B) THEN RETURN(+1);
+   RETURN (0);
+END MyCMP;
+
+CALL MERGESORT(A,8,MyCMP);
+DO I=1 TO 8;
+   put edit (I,A(I)) (F(5),X(2),A(10)) skip;
+END;
+
+put skip;
+END RMERGE;

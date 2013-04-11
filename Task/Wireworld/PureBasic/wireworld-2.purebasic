@@ -1,0 +1,145 @@
+CompilerIf #PB_Compiler_Unicode
+  CompilerError "The file handling in this small program is only in ASCII."
+CompilerEndIf
+
+Enumeration
+  #Empty
+  #Electron_head
+  #Electron_tail
+  #Conductor
+  #COL_Empty          = $000000
+  #COL_Electron_head  = $5100FE
+  #COL_Electron_tail  = $6A3595
+  #COL_Conductor      = $62C4FF
+  #WW_Window  = 0
+  #WW_IGadget = 0
+  #WW_Timer   = 0
+  #WW_Image   = 0
+EndEnumeration
+
+#Delay=100
+Global XSize, YSize
+
+Procedure Limit(n, min, max)
+  If     n<min: n=min
+  ElseIf n>max: n=max
+  EndIf
+  ProcedureReturn n
+EndProcedure
+
+Procedure Moore_neighborhood(Array World(2),x,y)
+  Protected cnt=0, i, j
+  For i=Limit(x-1, 0, XSize) To Limit(x+1, 0, XSize)
+    For j=Limit(y-1, 0, YSize) To Limit(y+1, 0, YSize)
+      If World(i,j)=#Electron_head
+        cnt+1
+      EndIf
+    Next
+  Next
+  ProcedureReturn cnt
+EndProcedure
+
+Procedure PresentWireWorld(Array World(2))
+  Protected x,y
+  StartDrawing(ImageOutput(#WW_Image))
+  For y=0 To YSize-1
+    For x=0 To XSize-1
+      Select World(x,y)
+        Case #Electron_head
+          Plot(x,y,#COL_Electron_head)
+        Case #Electron_tail
+          Plot(x,y,#COL_Electron_tail)
+        Case #Conductor
+          Plot(x,y,#COL_Conductor)
+        Default
+          Plot(x,y,#COL_Empty)
+      EndSelect
+    Next
+  Next
+  StopDrawing()
+  ImageGadget(#WW_IGadget,0,0,XSize,YSize,ImageID(#WW_Image))
+EndProcedure
+
+Procedure UpdateWireWorld(Array World(2))
+  Dim NewArray(XSize,YSize)
+  Protected i, j
+  For i=0 To XSize
+    For j=0 To YSize
+      Select World(i,j)
+        Case #Electron_head
+          NewArray(i,j)=#Electron_tail
+        Case #Electron_tail
+          NewArray(i,j)=#Conductor
+        Case #Conductor
+          Define m=Moore_neighborhood(World(),i,j)
+          If m=1 Or m=2
+            NewArray(i,j)=#Electron_head
+          Else
+            NewArray(i,j)=#Conductor
+          EndIf
+        Default ; e.g. should be Empty
+          NewArray(i,j)=#Empty
+      EndSelect
+    Next
+  Next
+  CopyArray(NewArray(),World())
+EndProcedure
+
+Procedure LoadDataFromFile(File$,Array A(2))
+  Define Line$, x, y, *c.Character
+  If OpenFile(0,File$)
+    ;
+    ; Count non-commented lines & length of the first line, e.g. get Array(x,y)
+    While Not Eof(0)
+      Line$=Trim(ReadString(0))
+      *c=@Line$
+      If Not PeekC(*c)=';'
+        y+1
+        If Not x
+          While PeekC(*c)>='0' And PeekC(*c)<='3'
+            x+1:  *c+1
+          Wend
+        EndIf
+      EndIf
+    Wend
+    XSize=x:  YSize=y
+    Dim A(XSize,YSize)
+    ;
+    ; Read in the Wire-World
+    y=0
+    FileSeek(0,0)
+    While Not Eof(0)
+      Line$=Trim(ReadString(0))
+      *c=@Line$
+      If Not PeekC(*c)=';'
+        x=0
+        While x<XSize
+          A(x,y)=PeekC(*c)-'0'
+          x+1: *c+1
+        Wend
+        y+1
+      EndIf
+    Wend
+    CloseFile(0)
+  EndIf
+EndProcedure
+
+#Title="WireWorld, PureBasic"
+If OpenWindow(#WW_Window,0,0,XSize,YSize,#Title,#PB_Window_SystemMenu)
+  Dim WW.i(0,0)
+  Define Pattern$ = "Text (*.txt)|*.txt", Pattern = 0
+  Define DefFile$ = "WireWorld.txt", Event
+  Define Title$   = "Please choose file To load"
+  Define File$ = OpenFileRequester(Title$, DefFile$, Pattern$, Pattern)
+  AddWindowTimer(#WW_Window,#WW_Timer,#Delay)
+  LoadDataFromFile(File$,WW())
+  ResizeWindow(#WW_Window,0,0,XSize,YSize)
+  CreateImage(#WW_Image,XSize,YSize)
+  Repeat
+    Event=WaitWindowEvent()
+    If Event=#PB_Event_Timer
+      PresentWireWorld(WW())
+      UpdateWireWorld (WW())
+    EndIf
+  Until Event=#PB_Event_CloseWindow
+EndIf

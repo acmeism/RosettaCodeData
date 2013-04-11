@@ -1,0 +1,72 @@
+Define filename.s = "readings.txt"
+#instrumentCount = 24
+
+Enumeration
+  #exp_date
+  #exp_instruments
+  #exp_instrumentStatus
+EndEnumeration
+
+Structure duplicate
+  date.s
+  firstLine.i
+  line.i
+EndStructure
+
+NewMap dates() ;records line date occurs first
+NewList duplicated.duplicate()
+NewList syntaxError()
+Define goodRecordCount, totalLines, line.s, i
+Dim inputDate.s(0)
+Dim instruments.s(0)
+
+If ReadFile(0, filename)
+  CreateRegularExpression(#exp_date, "\d+-\d+-\d+")
+  CreateRegularExpression(#exp_instruments, "(\t|\x20)+(\d+\.\d+)(\t|\x20)+\-?\d")
+  CreateRegularExpression(#exp_instrumentStatus, "(\t|\x20)+(\d+\.\d+)(\t|\x20)+")
+  Repeat
+    line = ReadString(0, #PB_Ascii)
+    If line = "": Break: EndIf
+    totalLines + 1
+
+    ExtractRegularExpression(#exp_date, line, inputDate())
+    If FindMapElement(dates(), inputDate(0))
+      AddElement(duplicated())
+      duplicated()\date = inputDate(0)
+      duplicated()\firstLine = dates()
+      duplicated()\line = totalLines
+    Else
+      dates(inputDate(0)) = totalLines
+    EndIf
+
+    ExtractRegularExpression(#exp_instruments, Mid(line, Len(inputDate(0)) + 1), instruments())
+    Define pairsCount = ArraySize(instruments()), containsBadValues = #False
+    For i =  0 To pairsCount
+      If Val(ReplaceRegularExpression(#exp_instrumentStatus, instruments(i), "")) < 1
+        containsBadValues = #True
+        Break
+      EndIf
+    Next
+
+    If pairsCount <> #instrumentCount - 1
+      AddElement(syntaxError()): syntaxError() = totalLines
+    EndIf
+    If Not containsBadValues
+      goodRecordCount + 1
+    EndIf
+  ForEver
+  CloseFile(0)
+
+  If OpenConsole()
+    ForEach duplicated()
+      PrintN("Duplicate date: " + duplicated()\date + " occurs on lines " + Str(duplicated()\line) + " and " + Str(duplicated()\firstLine) + ".")
+    Next
+    ForEach syntaxError()
+      PrintN( "Syntax error in line " + Str(syntaxError()))
+    Next
+    PrintN(#CRLF$ + Str(goodRecordCount) + " of " + Str(totalLines) + " lines read were valid records.")
+
+    Print(#CRLF$ + #CRLF$ + "Press ENTER to exit"): Input()
+    CloseConsole()
+  EndIf
+EndIf

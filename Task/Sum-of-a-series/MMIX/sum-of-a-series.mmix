@@ -1,0 +1,106 @@
+x	IS	$1	% flt calculations
+y	IS	$2	%   id
+z	IS	$3	% z = sum series
+t	IS	$4	% temp var
+
+	LOC	Data_Segment
+	GREG	@
+BUF	OCTA	0,0,0		% print buffer
+
+	LOC	#1000
+	GREG	@
+
+// print floating point number in scientific format: 0.xxx...ey..
+// most of this routine is adopted from:
+// http://www.pspu.ru/personal/eremin/emmi/rom_subs/printreal.html
+// float number in z
+	GREG	@
+NaN	BYTE	"NaN..",0
+NewLn	BYTE	#a,0
+1H	LDA	x,NaN
+	TRAP	0,Fputs,StdOut
+	GO	$127,$127,0
+
+prtFlt	FUN	x,z,z		% test if z == NaN
+	BNZ	x,1B
+	CMP	$73,z,0		% if necessary remember it is neg
+	BNN	$73,4F
+Sign	BYTE	'-'
+	LDA	$255,Sign
+	TRAP	0,Fputs,StdOut
+	ANDNH	z,#8000		% make number pos
+// normalizing float number
+4H	SETH	$74,#4024	% initialize mulfactor = 10.0
+	SETH	$73,#0023
+	INCMH	$73,#86f2
+	INCML	$73,#6fc1	%
+	FLOT	$73,$73		% $73 = float 10^16
+	SET	$75,16		% set # decimals to 16
+8H	FCMP	$72,z,$73	% while z >= 10^16 do
+	BN	$72,9F		%
+	FDIV	z,z,$74		%  z = z / 10.0
+	ADD	$75,$75,1	%  incr exponent
+	JMP	8B		% wend
+9H	FDIV	$73,$73,$74	% 10^16 / 10.0
+5H	FCMP	$72,z,$73	% while z < 10^15 do
+	BNN	$72,6F
+	FMUL	z,z,$74		%  z = z * 10.0
+	SUB	$75,$75,1	%  exp = exp - 1
+	JMP	5B
+NulPnt	BYTE	'0','.',#00
+6H	LDA	$255,NulPnt	% print '0.' to StdOut
+	TRAP	0,Fputs,StdOut
+	FIX	z,0,z		% convert float z to integer
+// print mantissa
+0H	GREG	#3030303030303030
+	STO	0B,BUF
+	STO	0B,BUF+8	% store print mask in buffer
+	LDA	$255,BUF+16	% points after LSD
+				% repeat
+2H	SUB	$255,$255,1	%   move pointer down
+	DIV	z,z,10		%   (q,r) = divmod z 10
+	GET	t,rR		%   get remainder
+	INCL	t,'0'		%   convert to ascii digit
+	STBU	t,$255,0	%   store digit in buffer
+	BNZ	z,2B		% until q == 0
+	TRAP	0,Fputs,StdOut	% print mantissa
+Exp	BYTE	'e',#00
+	LDA	$255,Exp	% print 'exponent' indicator
+	TRAP	0,Fputs,StdOut
+// print exponent
+0H	GREG	#3030300000000000
+	STO	0B,BUF
+	LDA	$255,BUF+2	% store print mask in buffer
+	CMP	$73,$75,0	% if exp neg then place - in buffer
+	BNN	$73,2F
+ExpSign	BYTE	'-'	
+	LDA	$255,ExpSign
+	TRAP	0,Fputs,StdOut
+	NEG	$75,$75		% make exp positive
+2H	LDA	$255,BUF+3	% points after LSD
+				% repeat
+3H	SUB	$255,$255,1	%   move pointer down
+	DIV	$75,$75,10	%   (q,r) = divmod exp 10
+	GET	t,rR
+	INCL	t,'0'
+	STBU	t,$255,0	%   store exp. digit in buffer
+	BNZ	$75,3B		% until q == 0
+	TRAP	0,Fputs,StdOut	% print exponent
+	LDA	$255,NewLn
+	TRAP	0,Fputs,StdOut	% do a NL
+	GO	$127,$127,0	% return
+
+i  IS $5 ;iu IS $6
+Main	SET	iu,1000
+	SETH	y,#3ff0     y = 1.0
+	SETH	z,#0000     z = 0.0
+	SET	i,1          for (i=1;i<=1000; i++ ) {
+1H	FLOT	x,i           x = int i
+	FMUL	x,x,x         x = x^2
+	FDIV	x,y,x         x = 1 / x
+	FADD	z,z,x         s = s + x
+	ADD	i,i,1
+	CMP	t,i,iu
+	PBNP	t,1B         } z = sum
+	GO	$127,prtFlt  print sum --> StdOut
+	TRAP	0,Halt,0

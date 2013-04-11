@@ -1,0 +1,5 @@
+(defun mapc-directory-tree (fn directory)
+  (dolist (entry (cl-fad:list-directory directory))
+    (when (cl-fad:directory-pathname-p entry)
+      (mapc-directory-tree fn entry))
+    (funcall fn entry)))

@@ -1,0 +1,8 @@
+println permutationSort([7,0,12,-45,-1])
+println ()
+println permutationSort([10, 10.0, 10.00, 1])
+println permutationSort([10, 10.00, 10.0, 1])
+println permutationSort([10.0, 10, 10.00, 1])
+println permutationSort([10.0, 10.00, 10, 1])
+println permutationSort([10.00, 10, 10.0, 1])
+println permutationSort([10.00, 10.0, 10, 1])

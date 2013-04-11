@@ -1,0 +1,8 @@
+(let* ((doc (dom:create-document 'rune-dom:implementation nil nil nil))
+       (root (dom:create-element doc "root"))
+       (element (dom:create-element doc "element"))
+       (text (dom:create-text-node doc "Some text here")))
+  (dom:append-child element text)
+  (dom:append-child root element)
+  (dom:append-child doc root)
+  (dom:map-document (cxml:make-rod-sink) doc))

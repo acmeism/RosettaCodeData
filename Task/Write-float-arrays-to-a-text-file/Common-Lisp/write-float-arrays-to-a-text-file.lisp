@@ -1,0 +1,8 @@
+(with-open-file (stream (make-pathname :name "filename") :direction :output)
+    (let* ((x (make-array 4 :initial-contents '(1 2 3 1e11)))
+              (y (map 'vector 'sqrt x))
+              (xprecision 3)
+              (yprecision 5)
+              (fmt (format nil "~~,1,~d,,G~~12t~~,~dG~~%" xprecision yprecision)))
+        (map nil (lambda (a b)
+                     (format stream fmt a b)) x y)))

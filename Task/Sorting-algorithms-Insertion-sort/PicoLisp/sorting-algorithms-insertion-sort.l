@@ -1,0 +1,6 @@
+(de insertionSort (Lst)
+   (for (I (cdr Lst)  I  (cdr I))
+      (for (J Lst  (n== J I)  (cdr J))
+         (T (> (car J) (car I))
+            (rot J (offset I J)) ) ) )
+   Lst )

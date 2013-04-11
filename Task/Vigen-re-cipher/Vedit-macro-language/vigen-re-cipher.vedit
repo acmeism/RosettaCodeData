@@ -1,0 +1,48 @@
+Get_Input(10, "Key: ", STATLINE+NOCR)		// @10 = key
+Reg_Copy_Block(11, Cur_Pos, EOL_Pos)		// @11 = copy of original text
+EOL Ins_Newline
+Ins_Text("Key = ") Reg_Ins(10) Ins_Newline
+
+// Prepare the key into numeric registers #130..:
+Buf_Switch(Buf_Free)
+Reg_Ins(10)
+Case_Upper_Block(0, Cur_Pos)
+BOF
+#2 = Reg_Size(10)				// #2 = key length
+for (#3=130; #3 < 130+#2; #3++) {
+    #@3 = Cur_Char
+    Char(1)
+}
+Buf_Quit(OK)
+
+Ins_Text("Encrypted: ")
+#4 = Cur_Pos
+Reg_Ins(11)					// copy of original text
+Replace_Block("|!|A", "", #4, EOL_Pos, BEGIN+ALL+NOERR) // remove non-alpha chars
+Case_Upper_Block(#4, EOL_Pos)			// convert to upper case
+Goto_Pos(#4)
+#1 = 1; Call("ENCRYPT_DECRYPT")			// Encrypt the line
+Reg_Copy_Block(11, #4, Cur_Pos)			// Copy encrypted text text to next line
+Ins_Newline
+Ins_Text("Decrypted: ")
+Reg_Ins(11, BEGIN)
+#1 = -1; Call("ENCRYPT_DECRYPT")		// Decrypt the line
+
+Return
+
+// Encrypt or decrypt text on current line in-place, starting from cursor position.
+//   in: #1 = direction (1=encrypt, -1=decrypt)
+//       #2 = key length,  #130...#189 = the key
+//
+:ENCRYPT_DECRYPT:
+    Num_Push(6,9)
+    #6 = 0
+    While (!At_EOL) {
+       #7 = #6+130				// pointer to key array
+       #8 = #@7					// get key character
+       #9 = (Cur_Char + #8*#1 + 26) % 26 + 'A'	// decrypt/encrypt
+       Ins_Char(#9, OVERWRITE)			// write the converted char
+       #6 = (#6+1) % #2
+    }
+    Num_Pop(6,9)
+Return

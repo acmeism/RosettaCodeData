@@ -1,0 +1,14 @@
+TOROMAN(INPUT)
+ ;Converts INPUT into a Roman numeral. INPUT must be an integer between 1 and 3999
+ ;OUTPUT is the string to return
+ ;I is a loop variable
+ ;CURRVAL is the current value in the loop
+ QUIT:($FIND(INPUT,".")>1)!(INPUT<=0)!(INPUT>3999) "Invalid input"
+ NEW OUTPUT,I,CURRVAL
+ SET OUTPUT="",CURRVAL=INPUT
+ SET:$DATA(ROMANNUM)=0 ROMANNUM="I^IV^V^IX^X^XL^L^XC^C^CD^D^CM^M"
+ SET:$DATA(ROMANVAL)=0 ROMANVAL="1^4^5^9^10^40^50^90^100^400^500^900^1000"
+ FOR I=$LENGTH(ROMANVAL,"^"):-1:1 DO
+ .FOR  Q:CURRVAL<$PIECE(ROMANVAL,"^",I)  SET OUTPUT=OUTPUT_$PIECE(ROMANNUM,"^",I),CURRVAL=CURRVAL-$PIECE(ROMANVAL,"^",I)
+ KILL I,CURRVAL
+ QUIT OUTPUT

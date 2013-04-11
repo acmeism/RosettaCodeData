@@ -1,0 +1,139 @@
+/* NetRexx */
+options replace format comments java crossref symbols nobinary
+
+import java.sql.
+
+-- =============================================================================
+class RParameterizedSQLSimple public
+
+  properties indirect
+    connexion = Connection
+
+  properties inheritable constant
+    DRIVER = "org.apache.derby.jdbc.EmbeddedDriver"
+    DBURL = "jdbc:derby:"
+    DBNAME = "/workspace/DB.DerbySamples/DB/TEAMS01"
+    DBMODE_CREATE   = ";create=true"
+    DBMODE_NOCREATE = ";create=false"
+    DBMODE_SHUTDOWN = ";shutdown=true"
+
+-- =============================================================================
+method RParameterizedSQLSimple()
+  setConnexion(null)
+  return
+
+-- =============================================================================
+method createConnexion() inheritable returns Connection signals ClassNotFoundException, InstantiationException, IllegalAccessException
+  if getConnexion() = null then do
+    props = Properties()
+    props.put("user", "user1")
+    props.put("password", "user1")
+
+    xURL = String DBURL || DBNAME || DBMODE_CREATE
+    loadDriver(DRIVER)
+    setConnexion(DriverManager.getConnection(xURL, props))
+    end
+
+  return getConnexion()
+
+-- =============================================================================
+method shutdownConnexion() inheritable returns boolean signals SQLException
+
+  dbState = boolean
+  xURL = String DBURL || DBNAME || DBMODE_SHUTDOWN
+
+  do
+    DriverManager.getConnection(xURL)
+    dbState = isTrue
+
+  catch se = SQLException
+    if (se.getErrorCode() = 50000) & ("XJ015".equals(se.getSQLState())) then do
+      say "Derby shut down normally"
+      dbState = isTrue
+      end
+    else if (se.getErrorCode() = 45000) & ("08006".equals(se.getSQLState())) then do
+      say "Derby database shut down normally"
+      dbState = isTrue
+      end
+    else do
+      say "Derby did not shut down normally"
+      dbState = isFalse
+      signal se
+      end
+  end
+
+  return dbState
+
+-- =============================================================================
+method loadDriver(xdriver = String) inheritable static signals ClassNotFoundException, InstantiationException, IllegalAccessException
+
+  do
+    Class.forName(xdriver).newInstance()
+    say "Loaded the appropriate driver"
+
+  catch cnfe = ClassNotFoundException
+    say "Unable to load the JDBC driver" xdriver
+    say "Please check your CLASSPATH."
+    signal cnfe
+
+  catch ie = InstantiationException
+    say "Unable to instantiate the JDBC driver" xdriver
+    signal ie
+
+  catch iae = IllegalAccessException
+    say "Not allowed to access the JDBC driver" xdriver
+    signal iae
+
+  end
+
+  return
+
+-- =============================================================================
+method updatePlayer(jerseyNum = int, name = String, score = int, active = boolean) binary inheritable returns int signals SQLException
+
+  updateSQL = "" -
+    || "UPDATE TEAM.PLAYERS" -
+    || "  SET NAME = ?, SCORE = ?, ACTIVE = ?" -
+    || "  WHERE JERSEYNUM = ?"
+
+  rowCt = int
+  ix = int 0
+
+  ps = getConnexion().prepareStatement(updateSQL)
+  ix = ix + 1; ps.setString(ix, name)
+  ix = ix + 1; ps.setInt(ix, score)
+  ix = ix + 1; ps.setBoolean(ix, active)
+  ix = ix + 1; ps.setInt(ix, jerseyNum)
+  rowCt = ps.executeUpdate()
+
+  return rowCt
+
+-- =============================================================================
+method main(args = String[]) public static
+
+  do
+    tda = RParameterizedSQLSimple()
+    tda.createConnexion()
+
+    if tda.getConnexion() \= null then do
+        updated = tda.updatePlayer(99, "Smith, Steve", 42, isTrue)
+        if updated > 0 then say "Update successful"
+        else say "Update failed"
+
+      finally
+        tda.shutdownConnexion()
+      end
+
+  catch ex = Exception
+    ex.printStackTrace
+  end
+
+  return
+
+-- =============================================================================
+method isTrue() public static returns boolean
+  return 1 == 1
+
+-- =============================================================================
+method isFalse() public static returns boolean
+  return \isTrue

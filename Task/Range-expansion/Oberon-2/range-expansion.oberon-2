@@ -1,0 +1,235 @@
+MODULE LIVector;
+IMPORT SYSTEM;
+TYPE
+	LIPool = POINTER TO ARRAY OF LONGINT;
+	LIVector*= POINTER TO LIVectorDesc;
+	LIVectorDesc = RECORD
+		cap-: INTEGER;
+		len-: INTEGER;
+		LIPool: LIPool;
+	END;
+	
+	PROCEDURE (v: LIVector) Init*(cap: INTEGER);
+	BEGIN
+		v.cap := cap;
+		v.len := 0;
+		NEW(v.LIPool,cap);
+	END Init;
+	
+	PROCEDURE (v: LIVector) Add*(x: LONGINT);
+	VAR
+		newLIPool: LIPool;
+	BEGIN
+		IF v.len = LEN(v.LIPool^) THEN
+			(* run out of space *)
+			v.cap := v.cap + (v.cap DIV 2);
+			NEW(newLIPool,v.cap);
+			SYSTEM.MOVE(SYSTEM.ADR(v.LIPool^),SYSTEM.ADR(newLIPool^),v.cap * SIZE(LONGINT));
+			v.LIPool := newLIPool
+		END;
+		v.LIPool[v.len] := x;
+		INC(v.len)
+	END Add;
+	
+	PROCEDURE (v: LIVector) At*(idx: INTEGER): LONGINT;
+	BEGIN
+		RETURN v.LIPool[idx];
+	END At;
+END LIVector.
+
+MODULE LIRange;
+IMPORT Out, LIV := LIVector;
+
+TYPE
+	Range* = POINTER TO RangeDesc;
+	RangeDesc = RECORD
+		l,r: POINTER TO ARRAY 1 OF LONGINT;
+	END;
+	
+	PROCEDURE (r: Range) Init*();
+	BEGIN
+		r.l := NIL;
+		r.r := NIL;
+	END Init;
+	
+	PROCEDURE (r: Range) IsEmpty*(): BOOLEAN;
+	BEGIN
+		RETURN (r.l = NIL) & (r.l = NIL);
+	END IsEmpty;
+	
+	PROCEDURE (r: Range) SetLeft*(v: LONGINT);
+	BEGIN
+		IF r.l = NIL THEN NEW(r.l) END;
+		r.l[0] := v;
+	END SetLeft;
+	
+	PROCEDURE (r: Range) SetRight*(v : LONGINT);
+	BEGIN
+		IF r.r = NIL THEN NEW(r.r) END;
+		r.r[0] := v;
+	END SetRight;
+	
+	PROCEDURE (r: Range) LeftPart*(): BOOLEAN;
+	BEGIN
+		RETURN r.l # NIL;
+	END LeftPart;
+	
+	PROCEDURE (r: Range) GetLeft(): LONGINT;
+	BEGIN
+		RETURN r.l[0];
+	END	GetLeft;
+	
+	PROCEDURE (r: Range) RightPart*(): BOOLEAN;
+	BEGIN
+		RETURN r.l # NIL;
+	END RightPart;
+	
+	PROCEDURE (r: Range) GetRight*(): LONGINT;
+	BEGIN
+		RETURN r.r[0];
+	END	GetRight;
+	
+	PROCEDURE (r: Range) Show*();
+	BEGIN
+		Out.Char('(');
+		IF r.l # NIL THEN Out.LongInt(r.l[0],10) END;
+		Out.String(" - ");
+		IF r.r # NIL THEN Out.LongInt(r.r[0],10); END;
+		Out.Char(')');Out.Ln
+	END Show;
+	
+	PROCEDURE (r: Range) Expand*(VAR liv: LIV.LIVector);
+	VAR
+		from, to : LONGINT;
+	BEGIN
+		IF r.l # NIL THEN from := r.l[0] ELSE from := 0 END;
+		IF r.r # NIL THEN to := r.r[0] ELSE to := from END;
+		WHILE (from <= to) DO
+			liv.Add(from);INC(from)
+		END
+	END Expand;
+END LIRange.
+
+MODULE Splitter;
+TYPE
+	Splitter* = POINTER TO SplitterDesc;
+	SplitterDesc = RECORD
+		from: INTEGER;
+		c: CHAR;
+		s: POINTER TO ARRAY OF CHAR;
+	END;
+	
+	PROCEDURE (s: Splitter) Init*;
+	BEGIN
+		s.c := ',';
+		s.from := 0;
+		s.s := NIL;
+	END Init;
+	
+	PROCEDURE (s: Splitter) On*(str: ARRAY OF CHAR);
+	BEGIN
+		s.from := 0;
+		NEW(s.s,LEN(str));
+		COPY(str,s.s^)
+	END On;
+	
+	PROCEDURE (s: Splitter) OnWithChar*(str: ARRAY OF CHAR;c: CHAR);
+	BEGIN
+		s.from := 0;
+		s.c := c;
+		NEW(s.s,LEN(str));
+		COPY(str,s.s^)
+	END OnWithChar;
+	
+	PROCEDURE (s: Splitter) Next*(VAR str: ARRAY OF CHAR);
+	VAR
+		k : INTEGER;	
+	BEGIN
+		k := 0;
+		IF (s.from < LEN(s.s^) - 1) & (s.s[s.from] = 0X) THEN str[0] := 0X END;
+		WHILE (k < LEN(str) - 1) & (s.from < LEN(s.s^) - 1) & (s.s[s.from] # s.c) DO
+			str[k] := s.s[s.from];
+			INC(k);INC(s.from)
+		END;
+		IF k < LEN(str) - 1 THEN str[k] := 0X ELSE str[LEN(str) - 1] := 0X END;
+		WHILE (s.from < LEN(s.s^) - 1) & (s.s[s.from] # s.c) DO INC(s.from) END;
+		INC(s.from)
+	END Next;
+END Splitter.
+
+MODULE ExpandRange;
+IMPORT Out, LIV := LIVector, LIR := LIRange, S := Splitter;
+
+PROCEDURE GetNumberFrom(s: ARRAY OF CHAR; VAR from: INTEGER; VAR done: BOOLEAN): LONGINT;
+VAR
+	d,i: INTEGER;
+	num,sign: LONGINT;
+BEGIN
+	i := from; num := 0;sign := 1;
+	CASE s[i] OF
+		 '-': sign := -1;INC(i)
+		|'+': INC(i);
+		ELSE
+	END;
+	WHILE (i < LEN(s) - 1) & (s[i] >= '0') & (s[i] <= '9') DO
+		d := ORD(s[i]) - ORD('0');
+		num := d + num * 10;
+		INC(i);
+	END;
+	IF i = from THEN done := FALSE ELSE done := TRUE; from := i END;
+	RETURN sign * num
+END GetNumberFrom;
+
+PROCEDURE GetRange(s: ARRAY OF CHAR): LIR.Range;
+VAR
+	r: LIR.Range;
+	i: INTEGER;
+	num: LONGINT;
+	done: BOOLEAN;
+BEGIN
+	i := 0;NEW(r);r.Init();
+	WHILE (i < LEN(s) - 1) & (s[i] = 20X) DO INC(i) END;
+	(* Left value *)
+	done := FALSE;
+	num := GetNumberFrom(s,i,done);
+	IF ~done THEN RETURN r END;
+	r.SetLeft(num);
+
+	WHILE (i < LEN(s) - 1) & (s[i] = 20X) DO INC(i) END;
+	CASE s[i] OF
+		 '-' : INC(i);
+		| 0X : RETURN r;
+		ELSE
+	END;
+	WHILE (i < LEN(s) - 1) & (s[i] = 20X) DO INC(i) END;
+	
+	(* Right Value *)
+	done := FALSE;
+	num := GetNumberFrom(s,i,done);
+	IF ~done THEN RETURN r END;
+	r.SetRight(num);
+	RETURN r;
+END GetRange;
+
+VAR
+	i: INTEGER;
+	r: LIR.Range;
+	sp: S.Splitter;
+	p : ARRAY 128 OF CHAR;
+	liv: LIV.LIVector;
+BEGIN
+	NEW(sp);sp.Init();
+	NEW(liv);liv.Init(128);
+
+	sp.On("-6,-3--1,3-5,7-11,14,15,17-20");
+	sp.Next(p);
+	WHILE (p[0] # 0X) DO
+		r := GetRange(p);
+		r.Expand(liv);
+		sp.Next(p);
+	END;
+	FOR i := 0 TO liv.len - 2 DO
+		Out.LongInt(liv.At(i),3);Out.Char(',');
+	END;
+	Out.LongInt(liv.At(liv.len - 1),3);Out.Ln;
+END ExpandRange.

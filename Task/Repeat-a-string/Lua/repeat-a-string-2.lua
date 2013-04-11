@@ -1,0 +1,1 @@
+string.rep(s,n)

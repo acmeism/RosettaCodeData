@@ -1,0 +1,97 @@
+      *FLOAT 64
+      @% = &2040A
+      INSTALL @lib$+"ARRAYLIB"
+
+      REM Test matrix for QR decomposition:
+      DIM A(2,2)
+      A() = 12, -51,   4, \
+      \      6, 167, -68, \
+      \     -4,  24, -41
+
+      REM Do the QR decomposition:
+      DIM Q(2,2), R(2,2)
+      PROCqrdecompose(A(), Q(), R())
+      PRINT "Q:"
+      PRINT Q(0,0), Q(0,1), Q(0,2)
+      PRINT Q(1,0), Q(1,1), Q(1,2)
+      PRINT Q(2,0), Q(2,1), Q(2,2)
+      PRINT "R:"
+      PRINT R(0,0), R(0,1), R(0,2)
+      PRINT R(1,0), R(1,1), R(1,2)
+      PRINT R(2,0), R(2,1), R(2,2)
+
+      REM Test data for least-squares solution:
+      DIM x(10) : x() = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+      DIM y(10) : y() = 1, 6, 17, 34, 57, 86, 121, 162, 209, 262, 321
+
+      REM Do the least-squares solution:
+      DIM a(10,2), q(10,10), r(10,2), t(10,10), b(10), z(2)
+      FOR i% = 0 TO 10
+        FOR j% = 0 TO 2
+          a(i%,j%) = x(i%) ^ j%
+        NEXT
+      NEXT
+      PROCqrdecompose(a(), q(), r())
+      PROC_transpose(q(),t())
+      b() = t() . y()
+      FOR k% = 2 TO 0 STEP -1
+        s = 0
+        IF k% < 2 THEN
+          FOR j% = k%+1 TO 2
+            s += r(k%,j%) * z(j%)
+          NEXT
+        ENDIF
+        z(k%) = (b(k%) - s) / r(k%,k%)
+      NEXT k%
+      PRINT '"Least-squares solution:"
+      PRINT z(0), z(1), z(2)
+      END
+
+      DEF PROCqrdecompose(A(), Q(), R())
+      LOCAL i%, k%, m%, n%, H()
+      m% = DIM(A(),1) : n% = DIM(A(),2)
+      DIM H(m%,m%)
+      FOR i% = 0 TO m% : Q(i%,i%) = 1 : NEXT
+      WHILE n%
+        PROCqrstep(n%, k%, A(), H())
+        A() = H() . A()
+        Q() = Q() . H()
+        k% += 1
+        m% -= 1
+        n% -= 1
+      ENDWHILE
+      R() = A()
+      ENDPROC
+
+      DEF PROCqrstep(n%, k%, A(), H())
+      LOCAL a(), h(), i%, j%
+      DIM a(n%,0), h(n%,n%)
+      FOR i% = 0 TO n% : a(i%,0) = A(i%+k%,k%) : NEXT
+      PROChouseholder(h(), a())
+      H() = 0  : H(0,0) = 1
+      FOR i% = 0 TO n%
+        FOR j% = 0 TO n%
+          H(i%+k%,j%+k%) = h(i%,j%)
+        NEXT
+      NEXT
+      ENDPROC
+
+      REM Create the Householder matrix for the supplied column vector:
+      DEF PROChouseholder(H(), a())
+      LOCAL e(), u(), v(), vt(), vvt(), I(), d()
+      LOCAL i%, n% : n% = DIM(a(),1)
+      REM Create the scaled standard basis vector e():
+      DIM e(n%,0) : e(0,0) = SGN(a(0,0)) * MOD(a())
+      REM Create the normal vector u():
+      DIM u(n%,0) : u() = a() + e()
+      REM Normalise with respect to the first element:
+      DIM v(n%,0) : v() = u() / u(0,0)
+      REM Get the transpose of v() and its dot product with v():
+      DIM vt(0,n%), d(0) : PROC_transpose(v(), vt()) : d() = vt() . v()
+      REM Get the product of v() and vt():
+      DIM vvt(n%,n%) : vvt() = v() . vt()
+      REM Create an identity matrix I():
+      DIM I(n%,n%) : FOR i% = 0 TO n% : I(i%,i%) = 1 : NEXT
+      REM Create the Householder matrix H() = I - 2/vt()v() v()vt():
+      vvt() *= 2 / d(0) : H() = I() - vvt()
+      ENDPROC

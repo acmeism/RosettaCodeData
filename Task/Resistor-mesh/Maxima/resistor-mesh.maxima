@@ -1,0 +1,62 @@
+/* Place a current souce between A and B, providing 1 A. Then we are really looking
+   for the potential at A and B, since I = R (V(B) - V(A)) where I is given and we want R.
+
+   Atually, we will compute potential at each node, except A where we assume it's 0.
+   Without with assumption, there would be infinitely many solutions since potential
+   is known up to a constant. For A we will simply write the equation V(A) = 0, to
+   keep the program simple.
+
+   Hence, for a general grid of p rows and q columns, there are n = p * q nodes,
+   so n unknowns, and n equations. Write Kirchhoff's current law at each node.
+   Be careful with the node A (equation A = 0) and the node B (there is a constant
+   current to add, from the source, that will go in the constant terms of the system).
+
+   Finally, we have a n x n linear system of equations to solve. Simply use Maxima's
+   builtin LU decomposition.
+
+   Since all computations are exact, the result will be also exact, written as a fraction.
+   Also, the program can work with any grid, and any two nodes on the grid.
+
+   For those who want more speed and less space, notice the system is sparse and necessarily
+   symmetric, so one can use conjugate gradient or any other sparse symmetric solver. */
+
+
+/* Auxiliary function to get rid of the borders */
+ongrid(i, j, p, q) := is(i >= 1 and i <= p and j >= 1 and j <= q)$
+
+grid_resistor(p, q, ai, aj, bi, bj) := block(
+   [n: p * q, A, B, M, k, c, V],
+   A: zeromatrix(n, n),
+   for i thru p do
+      for j thru q do (
+         k: (i - 1) * q + j,
+         if i = ai and j = aj then
+            A[k, k]: 1
+         else (
+            c: 0,
+            if ongrid(i + 1, j, p, q) then (c: c + 1, A[k, k + q]: -1),
+            if ongrid(i - 1, j, p, q) then (c: c + 1, A[k, k - q]: -1),
+            if ongrid(i, j + 1, p, q) then (c: c + 1, A[k, k + 1]: -1),
+            if ongrid(i, j - 1, p, q) then (c: c + 1, A[k, k - 1]: -1),
+            A[k, k]: c
+         )
+      ),
+   B: zeromatrix(n, 1),
+   B[k: (bi - 1) * q + bj, 1]: 1,
+   M: lu_factor(A),
+   V: lu_backsub(M, B),
+   V[k, 1]
+)$
+
+grid_resistor(10, 10, 2, 2, 8, 7);
+455859137025721 / 283319837425200
+
+bfloat(%), fpprec = 40;
+1.608991241730729655954495520510088761201b0
+
+/* Some larger example */
+grid_resistor(20, 20, 1, 1, 20, 20);
+129548954101732562831760781545158173626645023 / 33283688571680493510612137844679320717594861
+
+bfloat(%), fpprec = 40;
+3.89226554090400912102670691601064387507b0

@@ -1,0 +1,1 @@
+(lispworks:environment-variable "USER")

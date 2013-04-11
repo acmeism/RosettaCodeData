@@ -1,0 +1,86 @@
+link printf,numbers
+
+procedure main()
+x := [0., 1., 2., 3., 4., 5., 6., 7., 8., 9.]
+y := [2.7, 2.8, 31.4, 38.1, 58.0, 76.2, 100.5, 130.0, 149.3, 180.0]
+Plot(x,y,600,400)
+end
+
+$define POINTR 2                       # Point Radius
+$define POINTC "red"                   # Point Colour
+$define GRIDC  "grey"                  # grid colour
+$define AXISC  "black"                 # axis/label colour
+$define BORDER 60                      # per side border
+$define TICKS  5.                      # grid ticks per axis
+$define AXISFH 20                      # font height for axis labels
+
+procedure Plot(x,y,cw,ch)
+
+   /cw := 700                           # default dimensions
+   /ch := 400
+   uw := cw-BORDER*2                    # usable dimensions
+   uh := ch-BORDER*2
+
+   wparms  := ["Plot","g",
+               sprintf("size=%d,%d",cw,ch),
+               "bg=white"]             # base window parms
+
+   dx := sprintf("dx=%d",BORDER)       # grid origin
+   dy := sprintf("dy=%d",BORDER)
+
+   &window := open!wparms | stop("Unable to open window")
+   X := scale(x,uw)                    # scale data to usable space
+   Y := scale(y,uh,"invert")
+
+   WAttrib(dx,dy)                      # set origin=grid & draw grid
+   every x := (X.tickfrom to X.tickto by X.tick) * X.tickscale do {
+      if x = 0 then Fg(AXISC) else Fg(GRIDC)
+      DrawLine(x,Y.tickfrom*Y.tickscale,x,Y.tickto*Y.tickscale)
+      }
+   every y := (Y.tickfrom to Y.tickto by Y.tick) * Y.tickscale do {
+      if y = uh then Fg(AXISC) else Fg(GRIDC)
+      DrawLine(X.tickfrom*X.tickscale,y,X.tickto*X.tickscale,y)
+      }
+
+   Fg(POINTC)                          # draw data points ....
+   every i := 1 to *X.scaled do
+      FillCircle(X.scaled[i],Y.scaled[i],POINTR)
+
+   Fg(AXISC)                           # label grid
+   WAttrib(dx,"dy=0")                  # label X axis
+   Font(sprintf("Helvetica,%d",AXISFH))
+   ytxt := ch-BORDER+1+(WAttrib("ascent") - WAttrib("descent"))/2
+
+   every x := X.tickscale * (xv := X.tickfrom to X.tickto by X.tick) do
+      DrawString(x - TextWidth(xv)/2, ytxt + integer(AXISFH*1.5),xv)
+
+   WAttrib("dx=0",dy)                  # label Y axis
+   every y := Y.tickscale * (yv := Y.tickfrom to Y.tickto by Y.tick) do
+      DrawString(BORDER/2 - TextWidth(yv)/2, ytxt - BORDER - y,yv)
+
+   WriteImage(sprintf("PlotPoints-%d.gif",&now))   # save image
+
+   WAttrib("dx=0","dy=0")                          # close off nicely
+   Font("Helvetica,10")
+   DrawString(10,ch-5,"Right click to exit")
+   until Event() == &rpress            # wait for left mouse button
+   close(&window)
+end
+
+record scaledata(low,high,range,pix,raw,scaled,tick,tickfrom,tickto,tickscale)
+
+procedure scale(data,pix,opts[])
+   P :=scaledata( pmin := min!data, pmax := max!data,
+                  prange := real(pmax-pmin), pix,
+                  data,q :=[])
+
+   /ticks := TICKS
+   P.tick := ceil(prange/(10^(k:=floor(log(prange,10))))*(10^k)/ticks)
+   P.tickfrom := P.tick*floor(pmin/P.tick)
+   P.tickto   := P.tick*ceil(pmax/P.tick)
+   P.tickscale := real(pix)/(P.tickto-P.tickfrom)
+   every put(q,integer((!data-P.tickfrom)*P.tickscale))
+   if !opts == "invert" then           # invert is for y
+      every q[i := 1 to *q] := pix - q[i]
+   return P
+end

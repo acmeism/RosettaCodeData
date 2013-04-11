@@ -1,0 +1,82 @@
+cvt: procedure options (main);               /* 15 January 2012. */
+   declare (in, stack, out) character (100) varying;
+   declare (ch, chs) character (1);
+   declare display bit (1) static initial ('0'b);
+
+   in = '3 + 4 * 2 / ( 1 - 5 ) ^ 2 ^ 3';
+
+   in = '(' || in || ' ) ';             /* Initialize with parentheses */
+
+   put skip edit ('INPUT', 'STACK', 'OUTPUT') (a, col(37), a, col(47), a);
+
+   stack = ' '; out = ''; /* Initialize */
+   do while (length (in) > 0);
+      ch = substr(in, 1, 1);
+      select (ch);
+         when (' ') ;
+
+         when ('+', '-', '*', '/', '^')
+            do;
+               /* Copy any equal or higher-priority operators from the stack */
+               /* to the output string */
+               chs = substr(stack, 1, 1);
+               do while ((spriority(chs) >= priority(ch)) & ( chs ^= ')' ) );
+                  if display then put skip list ('unstacking: ' || chs);
+                  out = out || ' ' || chs;
+                  stack = substr(stack, 2);
+                  chs = substr(stack, 1, 1);
+               end;
+               /* Now copy the input to the TOS. */
+               if display then put skip list ('copying ' || ch || ' to TOS');
+               stack = ch || stack;
+            end;
+         when ( '(' )
+            do;
+               stack = '(' || stack;
+               if display then put skip list ('stacking the (' );
+            end;
+         when ( ')' )
+            do; /* copy all operators from the stack to the output, */
+                /* until a '(' is encountered. */
+               chs = substr(stack, 1, 1);
+               do while (chs ^= '(' );
+                  if display then put skip list ('copying stack ' || chs || ' to output');
+                  put skip edit (stack, out) (col(37), a, col(47), a);
+                  out = out || ' ' || chs;
+                  stack = substr(stack, 2);
+                  chs = substr(stack, 1, 1);
+               end;
+               /* Now delete the '(' from the input and */
+               /* the ')' from the top of the stack. */
+               if display then put skip edit ('Deleting ( from TOS') (col(30), a);
+               stack = substr(stack, 2);
+               /* The '(' on the input is removed at the end of the loop. */
+            end;
+         otherwise /* it's an operand. */
+            do;
+               out = out || ' ';
+               do while (ch ^= ' ');
+                  if display then put skip list ('copying ' || ch || ' to output');
+                  out = out || ch;
+                  in = substr(in, 2);
+                  ch = substr(in, 1, 1);
+               end;
+            end;
+      end;
+      in = substr(in, 2); /* Remove one character from the input */
+      put skip edit (in, stack, out) (a, col(37), a, col(47), a);
+   end;
+
+priority: procedure (ch) returns (character(1));
+   declare ch character (1);
+
+   return ( translate(ch, '1122335', '()+-*/^' ) );
+end priority;
+
+spriority: procedure (ch) returns (character(1));
+   declare ch character (1);
+
+   return ( translate(ch, '1122334', '()+-*/^' ) );
+end spriority;
+
+end cvt;

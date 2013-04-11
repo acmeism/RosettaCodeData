@@ -1,0 +1,12 @@
+(de rpnCalculator (Str)
+   (let (^ **  Stack)  # Define '^' from the built-in '**'
+      (prinl "Token  Stack")
+      (for Token (str Str "*+-/\^")
+         (if (num? Token)
+            (push 'Stack @)
+            (set (cdr Stack)
+               ((intern Token) (cadr Stack) (pop 'Stack)) ) )
+         (prin Token)
+         (space 6)
+         (println Stack) )
+      (println (car Stack)) ) )

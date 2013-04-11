@@ -1,0 +1,7 @@
+set c1 [circle new 0 0 1]
+set c2 [circle new 4 0 1]
+set c3 [circle new 2 4 2]
+set sA [solveApollonius $c1 $c2 $c3]
+set sB [solveApollonius $c1 $c2 $c3 -1 -1 -1]
+puts [$sA format]
+puts [$sB format]

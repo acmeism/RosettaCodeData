@@ -1,0 +1,108 @@
+Include %occSAX
+
+Class Utils.Net.RosettaCode Extends %ArrayOfDataTypes
+{
+
+ClassMethod GetTopLanguages(pHost As %String = "", pPath As %String = "", pTop As %Integer = 10) As %Status
+{
+	// check input parameters
+	If $Match(pHost, "^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}$")=0 {
+		Quit $$$ERROR($$$GeneralError, "Invalid host name.")
+	}
+	
+	// create http request and get page
+	Set req=##class(%Net.HttpRequest).%New()
+	Set req.Server=pHost
+	Do req.Get(pPath)
+	
+	// create xml stream with doc type
+	Set xml=##class(%Stream.GlobalCharacter).%New()
+	Set sc=xml.WriteLine("<!DOCTYPE doc_type [")
+	Set sc=xml.WriteLine($Char(9)_"<!ENTITY nbsp '&#160;'>")
+	Set sc=xml.WriteLine($Char(9)_"<!ENTITY amp '&#38;'>")
+	Set sc=xml.WriteLine("]>")
+	
+	// copy xhtml stream to xml stream
+	Set xhtml=req.HttpResponse.Data
+	Set xhtml.LineTerminator=$Char(10)
+	While 'xhtml.AtEnd {
+		Set line=xhtml.ReadLine()
+		If line["!DOCTYPE" Continue
+		Set sc=xml.WriteLine(line)
+	}
+	
+	// now parse xml stream
+	Set sc=##class(%XML.TextReader).ParseStream(xml, .hdlr,, $$$SAXDEFAULTS-$$$SAXNAMESPACES)
+	If $$$ISERR(sc) Quit sc
+
+	// get languages
+	Set array=..%New()
+	Set sc=array.GetLanguages(hdlr)
+	If array.Count()=0 Quit $$$ERROR($$$GeneralError, "No languages found.")
+
+	// show top entries
+	Write "Top "_pTop_" Languages (as at "_$ZDate($HoroLog, 2)_"):", !
+	For count=1:1:pTop {
+		Set members=array.GetPrevious(.key)
+		If key="" Quit
+		Write $Justify(count, 3), ". ", key, " - ", $ListToString(members, ", "), !
+	}
+
+	// finished
+	Quit $$$OK
+}
+
+Method GetLanguages(pHandler As %XML.SAX.ContentHandler, pDepth As %Integer) As %Status [ Internal, Private ]
+{
+	// iterate through xml document, node by node
+	While pHandler.Read() {
+
+		If '$Data(pDepth) {
+
+			// find 'bodyContent' div element
+			If pHandler.AttributeCount, pHandler.MoveToAttributeName("id") {
+				If pHandler.Value="bodyContent" {
+					Set sc=..GetLanguages(pHandler, pHandler.Depth)
+					Quit
+				}
+			}
+			
+		} Else {
+
+			// all done
+			If pDepth>pHandler.Depth Quit
+			
+			// get language name
+			If $Locate(pHandler.Path, "(/div/ul/li/a)$") {
+				If pHandler.AttributeCount, pHandler.MoveToAttributeName("href") {
+					If $Locate(pHandler.Value, "/Category:") {
+						Set sc=pHandler.MoveToContent()
+						Set lang=pHandler.Value
+						If $Locate(lang, "User|Tasks|Omit|attention|operations|Solutions by") Set lang=""
+					}
+				}
+			}
+
+			// get members
+			If $Locate(pHandler.Path, "(/div/ul/li)$") {
+				If pHandler.HasValue, $Get(lang)'="" {
+					Set pos=$Locate(pHandler.Value, "(\d+) member")
+					If pos {
+						Set members=+$Extract(pHandler.Value, pos, *)
+						Set list=..GetAt(members)
+						Set $List(list, $ListLength(list)+1)=lang
+						Set sc=..SetAt(list, members)
+						Set lang=""
+					}
+				}
+			}
+			
+		}
+			
+	}
+	
+	// finished
+	Quit $$$OK
+}
+
+}

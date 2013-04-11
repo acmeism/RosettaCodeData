@@ -1,0 +1,7 @@
+ISPRIME(N)
+ QUIT:(N=2) 1
+ NEW I,TP
+ SET TP=+'$PIECE((N/2),".",2)
+ IF 'TP FOR I=3:2:(N**.5) SET TP=+'$PIECE((N/I),".",2) Q:TP
+ KILL I
+ QUIT 'TP

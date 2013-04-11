@@ -1,0 +1,1 @@
+real, pointer :: pointertoreal

@@ -1,0 +1,1 @@
+(ns-unmap *ns* 'foo)

@@ -1,0 +1,3 @@
+true [
+   'SPAM' puts
+] while

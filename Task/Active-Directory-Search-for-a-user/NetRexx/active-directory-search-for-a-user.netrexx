@@ -1,0 +1,119 @@
+/* NetRexx */
+options replace format comments java crossref symbols binary
+
+import org.apache.directory.ldap.client.api.LdapConnection
+import org.apache.directory.ldap.client.api.LdapNetworkConnection
+import org.apache.directory.shared.ldap.model.cursor.EntryCursor
+import org.apache.directory.shared.ldap.model.entry.Entry
+import org.apache.directory.shared.ldap.model.exception.LdapException
+import org.apache.directory.shared.ldap.model.message.SearchScope
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+class RDirectorySearchLDAP public
+
+  properties constant
+    log_ = LoggerFactory.getLogger(RDirectorySearchLDAP.class)
+
+  properties private constant
+    ldapHostName = String 'localhost'
+    ldapPort = int 11389
+    ldapDnStr = String 'uid=admin,ou=system'
+    ldapCreds = String '********'
+
+    isTrue = boolean (1 == 1)
+    isFalse = boolean (1 \== 1)
+
+  properties private static
+    connection = LdapConnection
+
+  method main(args = String[]) public static
+
+    connected = isFalse
+    do
+      connected = setUp()
+      if connected then do
+        search('*mil*')
+        end
+
+    finally
+      if connected then do
+        tearDown()
+        end
+    end
+
+    return
+
+  method search(uid = String '*') static returns boolean
+
+    state      = isTrue
+    cursor     = EntryCursor
+    baseDn     = 'ou=users,o=mojo'
+    filter     = '(&(objectClass=person)(&(uid=' || uid || ')))'
+    scope      = SearchScope.SUBTREE
+    attributes = String[] [String 'dn', 'cn', 'sn', 'uid']
+    do
+      if log_.isTraceEnabled() then log_.trace('LDAP search')
+      if log_.isInfoEnabled() then do
+        log_.info('Begin search')
+        log_.info('  search base distinguished name:' baseDn)
+        log_.info('  search filter:' filter)
+        log_.info('  search attributes:' Arrays.asList(attributes))
+        end
+      cursor = connection.search(baseDn, filter, scope, attributes)
+      loop ksearch = 1 while cursor.next()
+        ev = cursor.get()
+        if log_.isInfoEnabled() then log_.info('Search cursor entry count:' ksearch)
+        if log_.isInfoEnabled() then log_.info(ev.toString())
+        end ksearch
+    catch lex = LdapException
+      state = isFalse
+      log_.error('LDAP Error in cursor loop: Iteration' ksearch, Throwable lex)
+    catch ex = Exception
+      state = isFalse
+      log_.error('I/O Error in cursor loop: Iteration' ksearch, Throwable ex)
+    end
+
+    return state
+
+  method setUp() static returns boolean
+
+    state = isFalse
+    do
+      if log_.isInfoEnabled() then log_.info('LDAP Connection to' ldapHostName 'on port' ldapPort)
+      connection = LdapNetworkConnection(ldapHostName, ldapPort)
+
+      if log_.isTraceEnabled() then log_.trace('LDAP bind')
+      connection.bind(ldapDnStr, ldapCreds)
+
+      state = isTrue
+    catch lex = LdapException
+      state = isFalse
+      log_.error('LDAP Error', Throwable lex)
+    catch iox = IOException
+      state = isFalse
+      log_.error('I/O Error', Throwable iox)
+    end
+
+    return state
+
+  method tearDown() static returns boolean
+
+    state = isFalse
+    do
+      if log_.isTraceEnabled() then log_.trace('LDAP unbind')
+      connection.unBind()
+      state = isTrue
+    catch lex = LdapException
+      state = isFalse
+      log_.error('LDAP Error', Throwable lex)
+    finally
+      do
+        connection.close()
+      catch iox = IOException
+        state = isFalse
+        log_.error('I/O Error on connection.close()', Throwable iox)
+      end
+    end
+
+    return state

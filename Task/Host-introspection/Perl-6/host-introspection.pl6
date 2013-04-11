@@ -1,0 +1,1 @@
+say $*VM<config><byteorder>

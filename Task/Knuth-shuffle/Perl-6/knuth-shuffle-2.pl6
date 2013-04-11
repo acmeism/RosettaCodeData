@@ -1,0 +1,1 @@
+my @deck = @cards.pick(*);

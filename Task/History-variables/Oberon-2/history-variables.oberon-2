@@ -1,0 +1,179 @@
+MODULE HVar;
+IMPORT Out, Conv;
+TYPE
+	(* Generic Object *)
+	Object* = POINTER TO ObjectDesc;
+	ObjectDesc = RECORD
+		Show: PROCEDURE(o:Object);
+		AsString: PROCEDURE(o: Object; VAR str: ARRAY OF CHAR);
+	END;
+	
+	(* Integers *)
+	Integer = POINTER TO IntegerDesc;
+	IntegerDesc = RECORD (ObjectDesc)
+		val: INTEGER;
+	END;
+	
+	(* Chars *)
+	Char = POINTER TO CharDesc;
+	CharDesc = RECORD (ObjectDesc)
+		val: CHAR;
+	END;
+	
+	Node = POINTER TO NodeDesc;
+	NodeDesc = RECORD
+		val: Object;
+		next: Node;
+	END;
+	
+	(* History Variable *)
+	HVar* = POINTER TO HVarDesc;
+	HVarDesc = RECORD
+		first, last: Node;
+		size-: INTEGER;
+	END;
+	
+	PROCEDURE CharAsString(o:Object; VAR dst: ARRAY OF CHAR);
+	BEGIN
+		IF LEN(dst) >= 2 THEN
+			dst[1] := 0X;
+		END;
+		dst[0] := o(Char)^.val
+	END CharAsString;
+	
+	PROCEDURE IntAsString(o:Object; VAR dst: ARRAY OF CHAR);
+	BEGIN
+		Conv.ConvInt(o(Integer)^.val,dst);
+	END IntAsString;
+	
+	PROCEDURE ShowInt(o:Object);
+	BEGIN
+		Out.Int(o(Integer)^.val,10);
+	END ShowInt;
+	
+	PROCEDURE ShowChar(o:Object);
+	BEGIN
+		Out.Char(o(Char)^.val);
+	END ShowChar;
+	
+	PROCEDURE BoxChar(val: CHAR): Char;
+	VAR
+		c: Char;
+	BEGIN
+		NEW(c);
+		c^.val := val;
+		c^.Show := ShowChar;
+		c^.AsString := CharAsString;
+		RETURN c;
+	END BoxChar;
+	
+	PROCEDURE BoxInt(val:INTEGER): Integer;
+	VAR
+		i: Integer;
+	BEGIN
+		NEW(i);
+		i^.val := val;
+		i^.Show := ShowInt;
+		i^.AsString := IntAsString;
+		RETURN i;
+	END BoxInt;
+	
+	PROCEDURE InitNode(): Node;
+	VAR
+		l: Node;
+	BEGIN
+		NEW(l);
+		l.val := NIL;
+		l.next := NIL;
+		RETURN l;
+	END InitNode;
+	
+	PROCEDURE InitHVar(): HVar;
+	VAR
+		hv: HVar;
+	BEGIN
+		NEW(hv);
+		hv.first := NIL;
+		hv.last := NIL;
+		hv.size := 0;
+		RETURN hv;
+	END InitHVar;
+	
+	PROCEDURE (v: HVar) Value(): Object;
+	BEGIN
+		RETURN v^.first^.val;
+	END Value;
+	
+	PROCEDURE (v: HVar) Set(o: Object);
+	VAR
+		l: Node;
+	BEGIN
+		l := InitNode();
+		l^.val := o;
+		IF (v^.first = v^.last) & (v^.first = NIL) THEN
+			v^.first := l;
+			v^.last := l;
+			INC(v^.size);
+		ELSIF (v^.first = v^.last) & (v^.first # NIL) THEN
+			v^.first^.next := l;
+			v^.last := v^.first.next;
+			INC(v^.size);
+		ELSIF (v^.first # v^.last) THEN
+			v^.last^.next := l;
+			v^.last := l;
+			INC(v^.size);
+		END
+	END Set;
+	
+	PROCEDURE (v: HVar) Undo(): Object;
+	VAR
+		o: Object;
+	BEGIN
+		IF (v^.first = v^.last) & (v^.first = NIL) THEN
+			o := NIL;
+		ELSIF (v^.first = v^.last) & (v^.first # NIL) THEN
+			o := v^.first^.val;
+			v^.first := NIL;
+			v^.last := NIL;
+			DEC(v^.size);
+		ELSE
+			o := v^.first^.val;
+			v^.first := v^.first^.next;
+			DEC(v^.size);
+		END;
+		RETURN o;
+	END Undo;
+	
+	PROCEDURE (v: HVar) Print();
+	VAR
+		iter : Node;
+	BEGIN
+		iter := v.first;
+		WHILE(iter # NIL) DO
+			iter^.val^.Show(iter^.val);
+			iter := iter^.next;
+		END;
+		Out.Ln;
+	END Print;
+	
+	PROCEDURE ShowVal(val: Object);
+	VAR
+		s: ARRAY 128 OF CHAR;
+	BEGIN
+		val^.AsString(val,s);
+		Out.String("> ");Out.String(s);Out.Ln;
+	END ShowVal;
+VAR
+	history: HVar;
+	
+BEGIN
+	history := InitHVar();
+	history.Set(BoxChar(64X));
+	history.Set(BoxInt(10));
+	history.Set(BoxInt(15));
+	history.Set(BoxInt(20));
+	history.Print();
+	ShowVal(history.Undo());
+	ShowVal(history.Undo());
+	ShowVal(history.Undo());
+END HVar.

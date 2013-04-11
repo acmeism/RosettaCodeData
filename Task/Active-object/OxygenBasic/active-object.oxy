@@ -1,0 +1,172 @@
+double MainTime
+
+'===============
+class RingMaster
+'===============
+'
+indexbase 1
+sys List[512] 'limit of 512 objects per ringmaster
+sys max,acts
+'
+method Register(sys meth,obj) as sys
+  sys i
+  for i=1 to max step 2
+    if list[i]=0 then exit for 'vacant slot
+  next
+  if i>=max then max+=2
+  List[i]<=meth,obj
+  return i 'token for deregistration etc
+end method
+'
+method Deregister(sys *i)
+  if i then List[i]<=0,0 : i=0
+end method
+'
+method Clear()
+  max=0
+end method
+'
+method Act() 'called by the timer
+  sys i,q
+  for i=1 to max step 2
+    q=List[i]
+    if q then
+      call q List[i+1] 'anon object
+    end if
+  next
+  acts++
+end method
+'
+end class
+
+
+'=================
+class ActiveObject
+'=================
+'
+double     s,freq,t1,t2,v1,v2
+sys        nfun,acts,RingToken
+RingMaster *Master
+'
+method fun0() as double
+end method
+'
+method fun1() as double
+  return sin(2*pi()*freq*MainTime)
+end method
+'
+method func() as double
+  select case nfun
+    case 0 : return fun0()
+    case 1 : return fun1()
+  end select
+  'error?
+end method
+'
+method TimeBasedDuties()
+  t1=t2
+  v1=v2
+  t2=MainTime
+  v2=func
+  s=s+(v2+v1)*(t2-t1)*0.5 'add slice to integral
+  acts++
+end method
+'
+method RegisterWith(RingMaster*r)
+  @Master=@r
+  if @Master then
+    RingToken=Master.register @TimeBasedDuties,@this
+  end if
+end method
+'
+method Deregister()
+  if @Master then
+    Master.Deregister RingToken 'this is set to null
+  end if
+end method
+'
+method Output() as double
+  return s
+end method
+'
+method Input(double fr=0,fun=0)
+  if fr then freq=fr
+  nfun=fun
+end method
+
+method ClearIntegral()
+  s=0
+end method
+'
+end class
+
+
+'SETUP TIMING SYSTEM
+'===================
+
+extern library "kernel32.dll"
+declare QueryPerformanceCounter (quad*c)
+declare QueryPerformanceFrequency(quad*f)
+declare Sleep(sys milliseconds)
+end extern
+'
+quad scount,tcount,freq
+QueryPerformanceFrequency freq
+double tscale=1/freq
+double t1,t2
+QueryPerformanceCounter scount
+
+macro PrecisionTime(time)
+  QueryPerformanceCounter tcount
+  time=(tcount-scount)*tscale
+end macro
+
+
+'====
+'TEST
+'====
+
+double       integral
+double       tevent1,tevent2
+RingMaster   Rudolpho
+ActiveObject A
+'
+A.RegisterWith Rudolpho
+A.input (fr=0.5, fun=1) 'start with the freqency function (1)
+'
+'SET EVENT TIMES
+'===============
+
+tEvent1=2.0 'seconds
+tEvent2=2.5 'seconds
+'
+PrecisionTime t1 'mark initial time
+MainTime=t1
+'
+'
+'EVENT LOOP
+'==========
+'
+do
+  PrecisionTime t2
+  MainTime=t2
+  if t2-t1>=0.020 'seconds interval
+    Rudolpho.Act 'service all active objects
+    t1=t2
+  end if
+  '
+  if tEvent1>=0 and MainTime>=tEvent1
+    A.input (fun=0) 'switch to null function (0)
+    tEvent1=-1      'disable this event from happening again
+  end if
+  if MainTime>=tEvent2
+    integral=A.output()
+    exit do 'end of session
+  end if
+  '
+  sleep 5 'hand control to OS for a while
+end do
+
+print str(integral,4)
+
+Rudolpho.clear

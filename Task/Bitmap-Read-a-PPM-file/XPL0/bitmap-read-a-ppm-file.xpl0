@@ -1,0 +1,45 @@
+include c:\cxpl\codes;          \intrinsic 'code' declarations
+
+func OpenInFile;                \Open for input the file typed on command line
+int  CpuReg, Handle;
+char CmdTail($80);
+[CpuReg:= GetReg;
+Blit(CpuReg(11), $81, CpuReg(12), CmdTail, $7F);       \get copy of command line
+Trap(false);                    \turn off error trapping
+Handle:= FOpen(CmdTail, 0);     \open named file for input
+FSet(Handle, ^I);               \assign file to input device 3
+OpenI(3);                       \initialize input buffer pointers
+if GetErr then return false;
+Trap(true);
+return true;
+];
+
+int  C, X, Y, Width, Height, Max, Lum;
+real Red, Green, Blue;
+[if not OpenInFile then [Text(0, "File not found");  exit];
+if ChIn(3)#^P or ChIn(3)#^6 then [Text(0, "Not P6 PPM file");  exit];
+repeat  loop    [C:= ChIn(3);
+                if C # ^# then quit;
+                repeat C:= ChIn(3) until C=$0A\EOL\;
+                ];
+until   C>=^0 & C<=^9;
+Backup;                         \back up so IntIn re-reads first digit
+Width:=  IntIn(3);              \(skips any whitespace)
+Height:= IntIn(3);
+Max:=    IntIn(3) + 1;          \(255/15=17; 256/16=16)
+case of
+  Width<= 640 & Height<=480: SetVid($112);
+  Width<= 800 & Height<=600: SetVid($115);
+  Width<=1024 & Height<=768: SetVid($118)
+other SetVid($11B);             \1280x1024
+for Y:= 0 to Height-1 do
+    for X:= 0 to Width-1 do
+        [Red  := float(ChIn(3)*256/Max) * 0.21; \convert color to grayscale
+         Green:= float(ChIn(3)*256/Max) * 0.72;
+         Blue := float(ChIn(3)*256/Max) * 0.07;
+         Lum:= fix(Red) + fix(Green) + fix(Blue);
+         Point(X, Y, Lum<<16 + Lum<<8 + Lum);
+        ];
+X:= ChIn(1);                    \wait for keystroke
+SetVid(3);                      \restore normal text display
+]

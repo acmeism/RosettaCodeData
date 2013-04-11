@@ -1,0 +1,165 @@
+{{stub}}{{language
+|site=http://www.nongnu.org/txr/}}
+
+TXR is a new text extraction language implemented in [[C]], running on [[Linux]] and [[Cygwin]] (and possibly other [[POSIX]] platforms) as well as Windows.
+
+The source of a TXR query is literal text except for directives and variables preceded by the <code>@</code> character.
+
+Computation evolves by textual pattern matching with implicit backtracking. Non-pattern matching activities are embedded into a pattern matching paradigm.  For instance, the line
+
+<pre>Four score and seven years ago,</pre>
+
+is a TXR directive which matches a line of that exact text, or else fails. The following is also a directive:
+
+<lang txr>@(bind foo "abc")</lang>
+
+which succeeds if <code>foo</code> has no prior binding, or already contains <code>"abc"</code>, but fails if <code>foo</code> has a binding to something other than <code>"abc"</code>.
+
+The success of a directive means that computation proceeds to the next directive (and, if this is a pattern match, the input position advances). Failure means that the enclosing query fails, triggering back-tracking behaviors and possibly failure of the entire query.
+
+==Extremely Simple Query==
+
+Extract first matching line from the password file. Of course, TXR matches are not restricted to single line!
+
+<lang bash>$ txr -c '@(skip)
+@user:@pw:@uid:@gid:@gecos:@home:@shell' /etc/passwd</lang>
+<pre>
+user="root"
+pw="x"
+uid="0"
+gid="0"
+gecos="root"
+home="/root"
+shell="/bin/bash"</pre>
+
+Now, pre-bind the <code>user</code> variable first to retrieve some other user. Now <code>@(skip)</code> kicks into action, skipping non-matching material:
+
+<lang bash>$ txr -Duser=sshd -c '@(skip)
+@user:@pw:@uid:@gid:@gecos:@home:@shell' /etc/passwd</lang>
+<pre>user="sshd"
+pw="x"
+uid="114"
+gid="65534"
+gecos=""
+home="/var/run/sshd"
+shell="/usr/sbin/nologin"</pre>
+
+
+==Simple Query==
+
+Re-implement the "free" utility on Linux, showing an overview of memory use:
+
+<lang txr>#!/usr/bin/txr -f
+@(next "/proc/meminfo")
+@(define num (n))@\
+  @(local numtok)@{numtok /[0-9]+/}@(bind n @(int-str numtok 10))@\
+@(end)
+@(gather)
+MemTotal: @(num TOTAL) kB
+MemFree: @(num FREE) kB
+Buffers: @(num BUFS) kB
+Cached: @(num CACHED) kB
+SwapTotal: @(num SWTOT) kB
+SwapFree: @(num SWFRE) kB
+@(end)
+@(bind USED @(- TOTAL FREE 10))
+@(bind RUSED @(- USED BUFS CACHED))
+@(bind RFREE @(+ FREE BUFS CACHED))
+@(bind SWUSE @(- SWTOT SWFRE))
+@(output)
+               TOTAL         USED         FREE      BUFFERS       CACHED
+Mem:    @{TOTAL -12} @{USED  -12} @{FREE  -12} @{BUFS  -12} @{CACHED -12}
++/- buffers/cache:   @{RUSED -12} @{RFREE -12}
+Swap:   @{SWTOT -12} @{SWUSE -12} @{SWFRE -12}
+@(end)</lang>
+
+Sample run:
+
+<pre>$ ./meminfo.txr
+               TOTAL         USED         FREE      BUFFERS       CACHED
+Mem:          769280       647752       121528       160108       286844
++/- buffers/cache:         200800       568480
+Swap:        1048568        18200      1030368
+</pre>
+
+Arithmetic is not implemented in TXR as of version 035. The above example simply continues the pattern matching across invocations of echo to borrow the shell to do math. The command
+
+<pre>@(next `!echo $(( @TOTAL - @FREE ))`)
+@USED
+</pre>
+
+means, "Next, please switch to scanning the output of this echo command with some variables substituted in. Then capture entire first line of this command into the USED variable."
+
+== Complex Query ==
+
+Here is a TXR query for computing the complete dependencies of a C source file (including system and compiler headers) on a typical GNU/Linux system, demonstrating features like parallel clauses, recursion and exception handling.
+
+<lang txr>@(define process_file (dir file already_visited visited_out))
+@  (local this_file next_file header_dir next_dir next_dir2 visited_out_next)
+@  (bind this_file `@dir@file`)
+@  (none)
+@    (bind already_visited this_file)
+@  (end)
+@  (merge already_visited already_visited this_file)
+@  (next this_file)
+@  (collect)
+@    (cases)
+#include "@*header_dir/@next_file"
+@      (bind next_dir `@dir@header_dir/`)
+@    (or)
+#include "@next_file"
+@      (bind next_dir dir)
+@    (or)
+#@/ */include <@*header_dir/@next_file>
+@      (bind next_dir `@sys_includes@header_dir/`)
+@      (bind next_dir2 `@gcc_includes@header_dir/`)
+@    (or)
+#@/ */include <@next_file>
+@      (bind next_dir sys_includes)
+@      (bind next_dir2 gcc_includes)
+@    (or)
+#@/ */include_next <@*header_dir/@next_file>
+@      (bind next_dir `@gcc_includes@header_dir/`)
+@    (or)
+#@/ */include_next <@next_file>
+@      (bind next_dir gcc_includes)
+@    (end)
+@    (try)
+@      (process_file next_dir next_file already_visited visited_out_next)
+@      (merge already_visited already_visited visited_out_next)
+@    (catch file_error)
+@      (try)
+@        (process_file next_dir2 next_file already_visited visited_out_next)
+@        (merge already_visited already_visited visited_out_next)
+@      (catch file_error)
+@      (end)
+@    (end)
+@  (end)
+@  (bind visited_out this_file)
+@  (try)
+@    (flatten visited_out_next)
+@    (merge visited_out visited_out visited_out_next)
+@  (catch)
+@  (end)
+@(end)
+@(next :args)
+@(cases)
+@*dir/@*file.@suffix
+@  (bind directory `@dir/`)
+@(or)
+@*file.@suffix
+@  (bind directory "")
+@(end)
+@(next `!gcc -print-search-dirs`)
+install: @gcc_install
+@(bind gcc_includes `@{gcc_install}include/`)
+@(bind sys_includes "/usr/include/")
+@(process_file directory `@file.@suffix` nil list_out)
+@(output)
+@(rep) @list_out@(first)@file.o:@(end)
+@(end)</lang>
+
+Sample run:
+
+<pre>$ txr dep.txr match.c
+match.o: /usr/include/stdio.h /usr/include/features.h /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h /usr/include/gnu/stubs-32.h /usr/lib/gcc/i586-redhat-linux/4.4.1/include/stddef.h /usr/include/bits/types.h /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h /usr/lib/gcc/i586-redhat-linux/4.4.1/include/stdarg.h /usr/include/bits/wchar.h /usr/include/wctype.h /usr/include/endian.h /usr/include/bits/endian.h /usr/include/bits/byteswap.h /usr/include/xlocale.h /usr/include/bits/wchar2.h /usr/include/bits/wchar-ldbl.h /usr/include/gconv.h /usr/include/bits/stdio-lock.h /usr/include/bits/libc-lock.h /usr/include/pthread.h /usr/include/sched.h /usr/include/time.h /usr/include/bits/time.h /usr/include/bits/sched.h /usr/include/signal.h /usr/include/bits/signum.h /usr/include/bits/siginfo.h /usr/include/bits/sigaction.h /usr/include/bits/sigcontext.h /usr/include/asm/sigcontext.h /usr/include/linux/types.h /usr/include/linux/posix_types.h /usr/include/linux/stddef.h /usr/include/asm/posix_types.h /usr/include/asm/types.h /usr/include/asm-generic/int-ll64.h /usr/include/bits/sigstack.h /usr/include/sys/ucontext.h /usr/include/bits/pthreadtypes.h /usr/include/bits/sigthread.h /usr/include/bits/setjmp.h /usr/include/bits/libio-ldbl.h /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h /usr/include/getopt.h /usr/include/ctype.h /usr/include/bits/stdio.h /usr/include/bits/stdio2.h /usr/include/bits/stdio-ldbl.h /usr/include/stdlib.h /usr/include/bits/waitflags.h /usr/include/bits/waitstatus.h /usr/include/alloca.h /usr/include/bits/stdlib.h /usr/include/bits/stdlib-ldbl.h /usr/include/string.h /usr/include/bits/string.h /usr/include/bits/string2.h /usr/include/bits/string3.h /usr/include/assert.h /usr/include/errno.h /usr/include/bits/errno.h /usr/include/linux/errno.h /usr/include/asm/errno.h /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h /usr/include/dirent.h /usr/include/bits/dirent.h /usr/include/bits/posix1_lim.h /usr/include/bits/local_lim.h /usr/include/linux/limits.h /usr/include/setjmp.h config.h lib.h gc.h unwind.h regex.h /usr/include/limits.h /usr/lib/gcc/i586-redhat-linux/4.4.1/include/limits.h /usr/lib/gcc/i586-redhat-linux/4.4.1/include/syslimits.h /usr/include/bits/posix2_lim.h /usr/include/bits/xopen_lim.h stream.h parser.h txr.h utf8.h filter.h match.h</pre>

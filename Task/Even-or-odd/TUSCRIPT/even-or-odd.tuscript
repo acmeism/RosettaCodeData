@@ -1,0 +1,10 @@
+$$ MODE TUSCRIPT
+LOOP n=-5,5
+x=MOD(n,2)
+SELECT x
+CASE 0
+PRINT n," is even"
+DEFAULT
+PRINT n," is odd"
+ENDSELECT
+ENDLOOP

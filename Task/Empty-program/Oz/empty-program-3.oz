@@ -1,0 +1,4 @@
+functor
+define
+   skip
+end

@@ -1,0 +1,1 @@
+NSLog(@"Goodbye, World!");

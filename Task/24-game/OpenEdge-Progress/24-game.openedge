@@ -1,0 +1,67 @@
+DEFINE TEMP-TABLE tt NO-UNDO FIELD ii AS INTEGER.
+
+DEFINE VARIABLE p_deanswer    AS DECIMAL     NO-UNDO.
+DEFINE VARIABLE idigits       AS INTEGER     NO-UNDO EXTENT 4.
+DEFINE VARIABLE ii            AS INTEGER     NO-UNDO.
+DEFINE VARIABLE Digits        AS CHARACTER   NO-UNDO FORMAT "x(7)".
+DEFINE VARIABLE Answer        AS CHARACTER   NO-UNDO FORMAT "x(7)".
+DEFINE VARIABLE cexpression   AS CHARACTER   NO-UNDO.
+DEFINE VARIABLE cmessage      AS CHARACTER   NO-UNDO.
+DEFINE VARIABLE cchar         AS CHARACTER   NO-UNDO.
+
+FUNCTION calculate RETURNS LOGICAL (
+   i_de AS DECIMAL
+):
+   p_deanswer = i_de.
+END FUNCTION.
+
+/* generate problem */
+DO ii = 1 TO 4:
+   ASSIGN
+      idigits [ii]   =  RANDOM( 1, 9 ).
+      Digits         =  Digits + STRING( idigits [ii] ) + " "
+      .
+END.
+
+/* ui */
+DISPLAY Digits.
+UPDATE Answer.
+
+/* check valid input */
+DO ii = 1 TO 7:
+   cchar = SUBSTRING( Answer, ii, 1 ).
+   IF cchar > "" THEN DO:
+      IF ii MODULO 2 = 1 THEN DO:
+         IF LOOKUP( cchar, Digits, " " ) = 0 THEN
+            cmessage = cmessage + SUBSTITUTE( "Invalid digit: &1.~r", cchar ).
+         ELSE
+            ENTRY( LOOKUP( cchar, Digits, " " ), Digits, " " ) = "".
+      END.
+      ELSE DO:
+         IF LOOKUP( cchar, "+,-,/,*" ) = 0 THEN
+            cmessage = cmessage + SUBSTITUTE( "&1 is not a valid operator.~r", cchar ).
+      END.
+   END.
+END.
+IF TRIM( Digits ) > "" THEN
+   cmessage = cmessage + SUBSTITUTE( "You did not use digits: &1":U, TRIM( Digits ) ).
+
+IF cmessage = "" THEN DO:
+   /* expressions need spacing */
+   DO ii = 1 TO 7:
+      cexpression = cexpression + SUBSTRING( Answer, ii, 1 ) + " ".
+   END.
+   /* use dynamic query to parse expression */
+   TEMP-TABLE tt:DEFAULT-BUFFER-HANDLE:FIND-FIRST(
+      SUBSTITUTE(
+         "WHERE NOT DYNAMIC-FUNCTION( 'calculate', DECIMAL( &1 ) )",
+         cexpression
+      )
+   ) NO-ERROR.
+   IF p_deanswer <> 24 THEN
+      cmessage = cmessage + SUBSTITUTE( "The expression evaluates to &1.", p_deanswer ).
+   ELSE
+      cmessage = "Solved!".
+END.
+
+MESSAGE cmessage VIEW-AS ALERT-BOX.

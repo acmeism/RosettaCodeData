@@ -1,0 +1,1 @@
+print system/network/host

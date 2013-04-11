@@ -1,0 +1,1 @@
+my $host = qx[hostname];

@@ -21,14 +21,13 @@ content via Pull Requests and such.
 
 ## Implementation
 
-The mirroring of RosettaCode.org is being perform by a program whose repository
-is here:
+The mirroring of RosettaCode.org is being performed by this program:
 
     https://github.com/ingydotnet/rosettacode-pm
     http://search.cpan.org/dist/RosettaCode
 
 The tool accesses the RosettaCode wiki via the MediaWiki REST API, using the
-CPAN module: MediaWiki::Bot.
+CPAN module: [MediaWiki::Bot](https://metacpan.org/release/MediaWiki-Bot).
 
 ## License Info
 
@@ -39,16 +38,18 @@ of all source code examples.
 
 ## Related Projects
 
-Andrew Cole is building an interactive RosettaCodeExplorer web utility for
-playing around with the code samples:
+[Andrew Cole](https://github.com/aocole?tab=repositories) is building an
+interactive RosettaCodeExplorer web utility for playing around with the code
+samples:
 
     https://github.com/aocole/RosettaCodeExplorer
 
 ## About the Author and Project
 
-Ingy döt Net is an Acmeist (http://acmeism.org) hacker who likes programming
-his ideas equivalently in multiple Open Source languages. His works are
-available at https://github.com/ingydotnet/.
+[Ingy döt Net](http://ingy.net) is an Acmeist (http://acmeism.org) hacker who
+likes programming his ideas equivalently in multiple Open Source languages. His
+works are available at https://github.com/ingydotnet/.
 
-Ingy has been communicating with Mike Mol, the proprietor of RosettaCode,
-regarding this project.
+Ingy has been communicating with
+[Mike Mol](http://rosettacode.org/wiki/User:Short_Circuit), the proprietor of
+RosettaCode, regarding this project.

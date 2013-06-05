@@ -2,69 +2,53 @@
 #
 #  Nigel_Galloway
 #  May 6th., 2012.
+
 class Cell
+  Adjust = [[-1,-2],[-2,-1],[-2,1],[-1,2],[1,2],[2,1],[2,-1],[1,-2]]
   def initialize(row=0, col=0, value=nil)
-    @adj = [[row-1,col-2],[row-2,col-1],[row-2,col+1],[row-1,col+2],[row+1,col+2],[row+2,col+1],[row+2,col-1],[row+1,col-2]]
+    @adj = Adjust.map{|r,c| [row+r,col+c]}
     @t = false
-    $zbl[value] = false unless value == nil
+    $zbl[value] = false unless value.nil?
     @value = value
   end
-  def try(value)
-    return false if @value == nil
-    return true if value > E
+  def try(value=1)
+    return true  if value > $e
     return false if @t
     return false if @value > 0 and @value != value
     return false if @value == 0 and not $zbl[value]
     @t = true
     h = Hash.new
-    n = 0
-    @adj.each{|x|
-      h[Board[x[0]][x[1]].wdof*10+n] = Board[x[0]][x[1]]
-      n += 1
+    @adj.each_with_index{|(row, col), n|
+      cell = $board[row][col]
+      h[cell.wdof*100+n] = cell  if cell.value
     }
     h.sort.each{|key,cell|
-      if (cell.try(value+1)) then
+      if cell.try(value+1)
         @value = value
         return true
       end
     }
     @t = false
-    return false
   end
   def wdon
-    return 0 if @value == nil
-    return 0 if @value > 0
-    return 0 if @t
-    return 1
+    (@value.nil? or @value > 0 or @t) ? 0 : 1
   end
   def wdof
-    res = 0
-    @adj.each{|x| res += Board[x[0]][x[1]].wdon}
-    return res
+    @adj.inject(0){|res, (row, col)| res += $board[row][col].wdon}
   end
-  def value
-    return @value
-  end
+  attr_reader :value
 end
 
-Rows = 9
-Cols = 9
-E = 64
-$zbl = Array.new(E+1,true)
-Board = [[Cell.new(),Cell.new(),Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()      ,Cell.new(),Cell.new()],
-         [Cell.new(),Cell.new(),Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()      ,Cell.new(),Cell.new()],
-         [Cell.new(),Cell.new(),Cell.new(2,2,0),Cell.new(2,3,0),Cell.new(2,4,0),Cell.new(2,5,0),Cell.new(2,6,0),Cell.new(2,7,0),Cell.new(2,8,0),Cell.new(2,9,0) ,Cell.new(),Cell.new()],
-         [Cell.new(),Cell.new(),Cell.new(3,2,0),Cell.new(3,3,0),Cell.new(3,4,0),Cell.new(3,5,0),Cell.new(3,6,0),Cell.new(3,7,0),Cell.new(3,8,0),Cell.new(3,9,0) ,Cell.new(),Cell.new()],
-         [Cell.new(),Cell.new(),Cell.new(4,2,0),Cell.new(4,3,0),Cell.new(4,4,0),Cell.new(4,5,0),Cell.new(4,6,0),Cell.new(4,7,0),Cell.new(4,8,0),Cell.new(4,9,0) ,Cell.new(),Cell.new()],
-         [Cell.new(),Cell.new(),Cell.new(5,2,0),Cell.new(5,3,1),Cell.new(5,4,0),Cell.new(5,5,0),Cell.new(5,6,0),Cell.new(5,7,0),Cell.new(5,8,0),Cell.new(5,9,0) ,Cell.new(),Cell.new()],
-         [Cell.new(),Cell.new(),Cell.new(6,2,0),Cell.new(6,3,0),Cell.new(6,4,0),Cell.new(6,5,0),Cell.new(6,6,0),Cell.new(6,7,0),Cell.new(6,8,0),Cell.new(6,9,0) ,Cell.new(),Cell.new()],
-         [Cell.new(),Cell.new(),Cell.new(7,2,0),Cell.new(7,3,0),Cell.new(7,4,0),Cell.new(7,5,0),Cell.new(7,6,0),Cell.new(7,7,0),Cell.new(7,8,0),Cell.new(7,9,0) ,Cell.new(),Cell.new()],
-         [Cell.new(),Cell.new(),Cell.new(8,2,0),Cell.new(8,3,0),Cell.new(8,4,0),Cell.new(8,5,0),Cell.new(8,6,0),Cell.new(8,7,0),Cell.new(8,8,0),Cell.new(8,9,0) ,Cell.new(),Cell.new()],
-         [Cell.new(),Cell.new(),Cell.new(9,2,0),Cell.new(9,3,0),Cell.new(9,4,0),Cell.new(9,5,0),Cell.new(9,6,0),Cell.new(9,7,0),Cell.new(9,8,0),Cell.new(9,9,0),Cell.new(),Cell.new()],
-         [Cell.new(),Cell.new(),Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()      ,Cell.new(),Cell.new()],
-         [Cell.new(),Cell.new(),Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()     ,Cell.new()      ,Cell.new(),Cell.new()]]
-require 'benchmark'
-puts Benchmark.measure {Board[5][3].try(1)}
-(1..Rows).each{|r|
-  (1..Cols).each{|c| printf("%3s",Board[r][c].value)}
-  puts ""}
+def knight_tour(rows, cols, x, y)
+  $e = rows * cols
+  $zbl = Array.new($e+1,true)
+  $board = Array.new(rows+2) do |i|
+    Array.new(cols+2) do |j|
+      (i<rows and j<cols) ? Cell.new(i,j,0) : Cell.new
+    end
+  end
+  $board[x][y].try
+  rows.times{|r| cols.times{|c| printf("%3s",$board[r][c].value)}; puts}
+end
+
+knight_tour(8,8,3,1)

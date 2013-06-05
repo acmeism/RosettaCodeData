@@ -1,5 +1,5 @@
-my Int $a = floor $*IN.get;
-my Int $b = floor $*IN.get;
+my Int $a = get.floor;
+my Int $b = get.floor;
 
 say 'sum:              ', $a + $b;
 say 'difference:       ', $a - $b;

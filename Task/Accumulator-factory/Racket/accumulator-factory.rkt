@@ -1,6 +1,4 @@
 #lang racket
-
-(define (accumulator n)
-    (lambda (i)
-      (set! n (+ n i))
-      n))
+(define ((accumulator n) i)
+  (set! n (+ n i))
+  n)

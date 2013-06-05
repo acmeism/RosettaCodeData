@@ -1,5 +1,5 @@
-import std.stdio, std.bigint;
-
 void main() {
-    writeln(BigInt(2) ^^ 64 * BigInt(2) ^^ 64);
+    import std.stdio, std.bigint;
+
+    writeln(2.BigInt ^^ 64 * 2.BigInt ^^ 64);
 }

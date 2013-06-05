@@ -1,19 +1,20 @@
 #lang racket
-(define memo (make-hash))
-(hash-set! memo 1 '((1) 1))
 
-(define (hailstone n)
-  (hash-ref memo n
-   (λ ()
-     (define h (hailstone (if (even? n) (/ n 2) (+ (* 3 n) 1))))
-     (hash-set! memo n (list (cons n (first h)) (+ (second h) 1)))
-     (hash-ref memo n))))
+(define hailstone
+  (let ([t (make-hasheq)])
+    (hash-set! t 1 '(1))
+    (λ(n) (hash-ref! t n
+            (λ() (cons n (hailstone (if (even? n) (/ n 2) (+ (* 3 n) 1)))))))))
 
-(define h27 (first (hailstone 27)))
+(define h27 (hailstone 27))
+(printf "h(27) = ~s, ~s items\n"
+        `(,@(take h27 4) ... ,@(take-right h27 4))
+        (length h27))
 
-(printf "first 4 elements of h(27): ~v\n" (take h27 4))
-(printf "last  4 elements of h(27): ~v\n" (take-right h27 4))
-
-(printf "x < 10000 such that h(x) gives the longest sequence: ")
-(for/fold ([m 0]) ([n (in-range 1 100000)])
-  (max m (second (hailstone n))))
+(define N 100000)
+(define longest
+  (for/fold ([m #f]) ([i (in-range 1 (add1 N))])
+    (define h (hailstone i))
+    (if (and m (> (cdr m) (length h))) m (cons i (length h)))))
+(printf "for x<=~s, ~s has the longest sequence with ~s items\n"
+        N (car longest) (cdr longest))

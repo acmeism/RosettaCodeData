@@ -12,17 +12,3 @@
 	(when (= (peek stack) \[)
 	  (recur coll (pop stack))))
       (zero? (count stack)))))
-
-user> (->> (range 10)
-     (map gen-brackets ,)
-     (map (juxt identity balanced?) ,) vec)
-[["" true]
- ["[]" true]
- ["[[]]" true]
- ["[][[]]" true]
- ["[]][][][" nil]
- ["[[[[[]]]]]" true]
- ["]][[][][[[]]" nil]
- ["[]]]][[[[]][][" nil]
- ["][][[]]][[][][][" nil]
- ["][][]]][]][[[][[[]" nil]

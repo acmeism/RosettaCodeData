@@ -7,7 +7,7 @@ sub leven {
         return length($t) if !$s;
         return length($s) if !$t;
 
-        $cache{"$s,$t"} //=          # try commenting out this line
+        $cache{$s}{$t} //=          # try commenting out this line
         do {
                 my ($s1, $t1) = (substr($s, 1), substr($t, 1));
 

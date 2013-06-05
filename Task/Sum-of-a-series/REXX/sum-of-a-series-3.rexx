@@ -3,7 +3,8 @@ parse arg N D .                        /*optional num of terms,  digits.*/
 if N=='' | N==','  then N=1000         /*Not specified?  Use the default*/
 if D==''           then D=60           /* "      "        "   "     "   */
 @sig = 'The significant sum of'        /*literal used in  SAY statement.*/
-numeric digits D                       /*use  D  digits  (9 is default).*/
+numeric digits D                       /*use D digits: 9 is default for */
+                                       /*REXX, 60 is this pgm's default.*/
 w = length(N)                          /*use max  width for nice output.*/
 sum = 0                                /*initialize the  SUM  to zero.  */
 old = 1                                /*the SUM to compared to the NEW.*/

@@ -1,78 +1,89 @@
-MODULE Qsort_Module
+module qsort_mod
 
-IMPLICIT NONE
+implicit none
 
-CONTAINS
+type group
+    integer :: order    ! original order of unsorted data
+    real :: value       ! values to be sorted by
+end type group
 
-RECURSIVE SUBROUTINE Qsort(a)
+contains
 
-  INTEGER, INTENT(IN OUT) :: a(:)
-  INTEGER :: split
+recursive subroutine QSort(a,na)
 
-  IF(size(a) > 1) THEN
-     CALL Partition(a, split)
-     CALL Qsort(a(:split-1))
-     CALL Qsort(a(split:))
-  END IF
+! DUMMY ARGUMENTS
+integer, intent(in) :: nA
+type (group), dimension(nA), intent(in out) :: A
 
-END SUBROUTINE Qsort
+! LOCAL VARIABLES
+integer :: left, right
+real :: random
+real :: pivot
+type (group) :: temp
+integer :: marker
 
-SUBROUTINE Partition(a, marker)
+    if (nA > 1) then
 
-  INTEGER, INTENT(IN OUT) :: a(:)
-  INTEGER, INTENT(OUT) :: marker
-  INTEGER :: left, right, pivot, temp
+        call random_number(random)
+        pivot = A(int(random*real(nA-1))+1)%value    ! random pivot (not best performance, but avoids worst-case)
+        left = 0
+        right = nA + 1
 
-  pivot = (a(1) + a(size(a))) / 2  ! Average of first and last elements to prevent quadratic
-  left = 0                         ! behavior with sorted or reverse sorted data
-  right = size(a) + 1
+        do while (left < right)
+            right = right - 1
+            do while (A(right)%value > pivot)
+                right = right - 1
+            end do
+            left = left + 1
+            do while (A(left)%value < pivot)
+                left = left + 1
+            end do
+            if (left < right) then
+                temp = A(left)
+                A(left) = A(right)
+                A(right) = temp
+            end if
+        end do
 
-  DO WHILE (left < right)
-     right = right - 1
-     DO WHILE (a(right) > pivot)
-        right = right-1
-     END DO
-     left = left + 1
-     DO WHILE (a(left) < pivot)
-        left = left + 1
-     END DO
-     IF (left < right) THEN
-        temp = a(left)
-        a(left) = a(right)
-        a(right) = temp
-     END IF
-  END DO
+        if (left == right) then
+            marker = left + 1
+        else
+            marker = left
+        end if
 
-  IF (left == right) THEN
-     marker = left + 1
-  ELSE
-     marker = left
-  END IF
+        call QSort(A(:marker-1),marker-1)
+        call QSort(A(marker:),nA-marker+1)
 
-END SUBROUTINE Partition
+    end if
 
-END MODULE Qsort_Module
+end subroutine QSort
 
-PROGRAM Quicksort
+end module qsort_mod
 
-  USE Qsort_Module
+! Test Qsort Module
+program qsort_test
+use qsort_mod
+implicit none
 
-  IMPLICIT NONE
-  INTEGER, PARAMETER :: n = 100
-  INTEGER :: array(n)
-  INTEGER :: i
-  REAL :: x
-    CALL RANDOM_SEED
-  DO i = 1, n
-     CALL RANDOM_NUMBER(x)
-     array(i) = INT(x * 10000)
-  END DO
+integer, parameter :: l = 8
+type (group), dimension(l) :: A
+integer, dimension(3) :: seed = [1, 2, 3]
+integer :: i
+real :: random
 
-  WRITE (*, "(A)") "array is :-"
-  WRITE (*, "(10I5)") array
-  CALL Qsort(array)
-  WRITE (*,*)
-  WRITE (*, "(A)") "sorted array is :-"
-  WRITE (*,"(10I5)") array
+    write (*,*) "Unsorted Values:"
+    call random_seed(put = seed)
+    do i = 1, l
+        call random_number(random)
+        A(i)%value = random
+        A(i)%order = i
+        if (mod(i,4) == 0) write (*,"(4(I5,1X,F8.6))") A(i-3:i)
+    end do
 
-END PROGRAM Quicksort
+    call QSort(A,l)
+    write (*,*) "Sorted Values:"
+    do i = 4, l, 4
+        if (mod(i,4) == 0) write (*,"(4(I5,1X,F8.6))") A(i-3:i)
+    end do
+
+end program qsort_test

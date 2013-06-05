@@ -7,4 +7,4 @@
      (cond
       (or (= x nil) (= y nil) ) nil
       (= x y) (cons x (lcs xs ys))
-      :else (longest (lcs xs  ys) (lcs xs ys))))))
+      :else (longest (lcs (cons x xs) ys) (lcs xs (cons y ys)))))))

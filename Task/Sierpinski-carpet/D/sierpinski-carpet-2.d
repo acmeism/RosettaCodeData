@@ -1,11 +1,14 @@
-import std.stdio, std.algorithm, std.range;
+import std.stdio, std.algorithm, std.range, std.functional;
 
 auto nextCarpet(in string[] c) /*pure nothrow*/ {
-    const b = c.map!q{a ~ a ~ a}().array();
-    return b ~ c.map!q{a ~ a.replace("#", " ") ~ a}().array() ~ b;
+    const b = c.map!q{a ~ a ~ a}.array;
+    return b ~ c.map!q{a ~ a.replace("#", " ") ~ a}.array ~ b;
 }
 
 void main() {
-    auto c = ["#"].recurrence!((a, n) => nextCarpet(a[n - 1]))();
-    writefln("%-(%s\n%)", c.dropExactly(3).front);
+    ["#"]
+    .recurrence!((a, n) => a[n - 1].nextCarpet)
+    .dropExactly(3)
+    .front
+    .binaryReverseArgs!writefln("%-(%s\n%)");
 }

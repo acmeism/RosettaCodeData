@@ -6,3 +6,5 @@
 [{'X',17}]
 4> {value, Value, _} = erl_eval:expr(Form, Bindings).
 {value,57,[{'X',17}]}
+5> Value.
+57

@@ -1,4 +1,4 @@
-double fib(const double n)
+double fib(double n)
 {
   if(n < 0)
   {
@@ -6,10 +6,9 @@ double fib(const double n)
   }
   else
   {
-    class actual_fib
+    struct actual_fib
     {
-      public:
-        static double calc(const double n)
+        static double calc(double n)
         {
           if(n < 2)
           {

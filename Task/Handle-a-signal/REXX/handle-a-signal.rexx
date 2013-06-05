@@ -8,7 +8,7 @@ signal on halt                         /*HALT is signaled via a  Ctrl─C.*/
   say right(j,20)                      /*display integer right-justified*/
   t=time('E')                          /*get the elapsed time in seconds*/
               do forever; u=time('E')  /*get the elapsed time in seconds./
-              if u◄t |,                /* ◄═══ means we passed midnight.*/
+              if u<t |,                /* ◄═══ means we passed midnight.*/
                  u>t+.5 then iterate j /* ◄═══ means we passed ½ second.*/
               end   /*forever*/
   end               /*j*/

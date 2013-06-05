@@ -3,6 +3,22 @@
 * Implements the task's description in a rather concise way
 * Instead of reverting the ccn work it backwards
 **********************************************************/
+numeric digits 20
+
+push 49927398716
+push 49927398717
+push 1234567812345678
+push 1234567812345670
+
+do while queued() > 0
+  parse pull ccnum
+  if luhn(ccnum) then ln = 'passed'
+  else                ln = 'failed'
+  say right(ccnum, 20) ln
+  end
+return
+exit
+
 luhn:
 Parse Arg ccn                /* credit card number       */
 sum=0                        /* initialize test sum      */

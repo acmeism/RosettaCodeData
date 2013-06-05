@@ -1,10 +1,8 @@
-import std.stdio, std.random, std.conv, std.string;
-
 void main() {
-    auto tnum = text(uniform(1, 10));
+    immutable num = uniform(1, 10).text;
 
-    do write("What's next guess? ");
-    while (readln().strip() != tnum);
+    do write("What's next guess (1 - 9)? ");
+    while (readln.strip != num);
 
-    writeln("Yep, you guessed my ", tnum);
+    writeln("Yep, you guessed my ", num);
 }

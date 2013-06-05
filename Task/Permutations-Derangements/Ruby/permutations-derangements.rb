@@ -13,13 +13,15 @@ def subfact(n)
   end
 end
 
+puts "derangements for n = 4"
+derangements(4).each{|d|p d}
+
+puts "\n n   derange  subfact"
 (0..9).each do |n|
-  s = subfact(n)
-  if n <= 4
-    d = derangements(n)
-    puts "n=%d, subfact=%d, num_derangements=%d, %s" % [n, s, d.length, d]
-  else
-    puts "n=%d, subfact=%d" % [n, s]
-  end
+  puts "%2d :%8d,%8d" % [n, derangements(n).size, subfact(n)]
 end
-puts "n=20, subfact=#{subfact(20)}"
+
+puts "\nNumber of derangements"
+(10..20).each do |n|
+  puts "#{n} : #{subfact(n)}"
+end

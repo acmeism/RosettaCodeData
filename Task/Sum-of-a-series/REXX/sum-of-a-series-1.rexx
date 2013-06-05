@@ -2,7 +2,8 @@
 parse arg N D .                        /*maybe get num of terms, digits.*/
 if N=='' | N==','  then N=1000         /*Not specified?  Use the default*/
 if D==''           then D=60           /* "      "        "   "     "   */
-numeric digits D                       /*use D digits (9 is the default)*/
+numeric digits D                       /*use D digits: 9 is default for */
+                                       /*REXX, 60 is this pgm's default.*/
 w = length(N)                          /*use max  width for nice output.*/
 sum = 0                                /*initialize the sum to zero.    */
           do j=1  for N                /*compute for   N   terms.       */

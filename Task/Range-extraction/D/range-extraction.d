@@ -1,26 +1,22 @@
-import std.stdio, std.conv, std.string, std.algorithm;
+import std.stdio, std.conv, std.string, std.algorithm, std.range;
 
-string extractRanges(in int[] items)
+string rangeExtraction(in int[] items)
 in {
-    assert(items.isSorted());
+    assert(items.isSorted);
 } body {
-    string[] ranges;
+    if (items.empty)
+        return null;
+    auto ranges = [[items[0].text]];
 
-    for (size_t i = 0; i < items.length; i++) {
-        immutable low = items[i];
-        while (i < (items.length - 1) && (items[i] + 1) == items[i + 1])
-            i++;
-        immutable hi = items[i];
-
-        if (hi - low >= 2)
-            ranges ~= text(low, '-', hi);
-        else if (hi - low == 1)
-            ranges ~= text(low, ',', hi);
+    foreach (immutable x, immutable y; items.zip(items[1 .. $]))
+        if (x + 1 == y)
+            ranges[$ - 1] ~= y.text;
         else
-            ranges ~= text(low);
-    }
+            ranges ~= [y.text];
 
-    return ranges.join(",");
+    return ranges
+           .map!(r => r.length > 2 ? r[0] ~ "-" ~ r.back : r.join(","))
+           .join(",");
 }
 
 void main() {
@@ -30,5 +26,5 @@ void main() {
                     [0, 1, 2, 4, 6, 7, 8, 11, 12, 14, 15, 16, 17, 18,
                      19, 20, 21, 22, 23, 24, 25, 27, 28, 29, 30, 31,
                      32, 33, 35, 36, 37, 38, 39]])
-        writeln(extractRanges(data));
+        data.rangeExtraction.writeln;
 }

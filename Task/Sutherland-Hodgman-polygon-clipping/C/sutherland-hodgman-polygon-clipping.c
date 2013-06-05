@@ -58,7 +58,7 @@ typedef struct { int len, alloc; vec v; } poly_t, *poly;
 
 poly poly_new()
 {
-	poly p = malloc(sizeof(poly_t));
+	poly p = (poly)malloc(sizeof(poly_t));
 	p->len = p->alloc = 0;
 	p->v = 0;
 	return p;
@@ -77,7 +77,7 @@ void poly_append(poly p, vec v)
 	if (p->len >= p->alloc) {
 		p->alloc *= 2;
 		if (!p->alloc) p->alloc = 4;
-		p->v = realloc(p->v, sizeof(vec_t) * p->alloc);
+		p->v = (vec)realloc(p->v, sizeof(vec_t) * p->alloc);
 	}
 	p->v[p->len++] = *v;
 }

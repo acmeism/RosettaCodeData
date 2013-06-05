@@ -1,12 +1,9 @@
 module queue_usage2;
 
-import std.traits: hasIndirections;
-
 struct GrowableCircularQueue(T) {
     public size_t length;
     private size_t head, tail;
     private T[] A = [T.init];
-    private uint power2 = 0;
 
     bool empty() const pure nothrow {
         return length == 0;
@@ -21,20 +18,21 @@ struct GrowableCircularQueue(T) {
                 A[(old.length - head) .. old.length] = old[0 .. head];
             head = 0;
             tail = length;
-            power2++;
         }
         A[tail] = item;
-        tail = (tail + 1) & ((cast(size_t)1 << power2) - 1);
+        tail = (tail + 1) & (A.length - 1);
         length++;
     }
 
     T pop() pure {
+        import std.traits: hasIndirections;
+
         if (length == 0)
             throw new Exception("GrowableCircularQueue is empty.");
         auto saved = A[head];
         static if (hasIndirections!T)
             A[head] = T.init; // Help for the GC.
-        head = (head + 1) & ((cast(size_t)1 << power2) - 1);
+        head = (head + 1) & (A.length - 1);
         length--;
         return saved;
     }

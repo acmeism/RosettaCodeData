@@ -1,10 +1,8 @@
--module(main).
--export([main/1]).
+-module(ack).
+-export([main/1, ack/2]).
 
-main( [ A | [ B |[]]]) ->
-   io:fwrite("~p~n",[ack(toi(A),toi(B))]).
-
-toi(E) -> element(1,string:to_integer(E)).
+main( [A, B] ) ->
+   io:fwrite( "~p~n",[ack(erlang:list_to_integer(A), erlang:list_to_integer(B))] ).
 
 ack(0,N) -> N + 1;
 ack(M,0) -> ack(M-1, 1);

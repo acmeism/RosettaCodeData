@@ -3,13 +3,13 @@
 #include <algorithm>
 #include <iterator>
 
-int main( ) {
-   std::vector< int > intVec( 10 ) ;
-   std::iota( intVec.begin( ) , intVec.end( ) , 1 ) ;//fill the vector
-   std::transform( intVec.begin( ) , intVec.end( ) , intVec.begin( ) ,
-	 [ ] ( int i ) { return i * i ; } ) ; //transform it with closures
-   std::copy( intVec.begin( ) , intVec.end( ) ,
-	 std::ostream_iterator<int> ( std::cout , " " ) ) ;
-   std::cout << std::endl ;
-   return 0 ;
+int main() {
+   std::vector<int> intVec(10);
+   std::iota(std::begin(intVec), std::end(intVec), 1 ); // Fill the vector
+   std::transform(std::begin(intVec) , std::end(intVec), std::begin(intVec),
+	 [](int i) { return i * i ; } ); // Transform it with closures
+   std::copy(std::begin(intVec), end(intVec) ,
+	 std::ostream_iterator<int>(std::cout, " "));
+   std::cout << std::endl;
+   return 0;
 }

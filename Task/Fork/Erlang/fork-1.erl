@@ -2,7 +2,7 @@
 -export([start/0]).
 
 start() ->
-    spawn(fork,child,[]),
+    erlang:spawn( fun() -> child() end ),
     io:format("This is the original process~n").
 
 child() ->

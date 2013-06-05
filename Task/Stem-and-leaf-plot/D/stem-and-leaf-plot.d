@@ -12,7 +12,7 @@ void main() {
     int[][int] histo;
     foreach (x; data)
         histo[x / 10] ~= x % 10;
-    immutable loHi = reduce!(min, max)(data);
+    immutable loHi = data.reduce!(min, max);
     foreach (i; loHi[0]/10 .. loHi[1]/10 + 1)
         writefln("%2d | %(%d %) ", i, histo.get(i, []).sort());
 }

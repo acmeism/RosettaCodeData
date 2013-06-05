@@ -6,7 +6,7 @@ def foo():
         try:
             bar(i)
         except U0:
-            print "Function foo caught exception U0"
+            print("Function foo caught exception U0")
 
 def bar(i):
     baz(i) # Nest those calls

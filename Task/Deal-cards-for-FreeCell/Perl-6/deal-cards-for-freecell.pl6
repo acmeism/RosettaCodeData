@@ -1,18 +1,22 @@
-my $game_number = @*ARGS.shift || 1;
+sub dealgame ($game-number = 1) {
+    sub ms-lcg-method($seed = $game-number) { ( 214013 * $seed + 2531011 ) % 2**31 }
 
-sub ms_lcg_method  ($seed) { ( 214013 * $seed + 2531011 ) % 2**31 };
+    # lazy list of the random sequence
+    my @ms-lcg := (&ms-lcg-method ... *).map: * +> 16;
 
-# lazy list of the random sequence
-my @ms_lcg := gather take $_ +> 16
-        for ( $game_number.&ms_lcg_method, -> $seed { $seed.&ms_lcg_method } ... * );
+    constant CardBlock = '🂠'.ord;
+    my @deck = gather for 1..11,13,14 X+ (48,32...0) -> $off {
+        take chr CardBlock + $off;
+    }
 
-my @deck = <A 2 3 4 5 6 7 8 9 T J Q K> X~ <♣ ♦ ♥ ♠>;
+    my @game = gather while @deck {
+        @deck[@ms-lcg.shift % @deck, @deck-1] .= reverse;
+        take @deck.pop;
+    }
 
-my @game = gather while @deck {
-        my $index = @ms_lcg.shift % @deck;
-        take @deck[$index];
-        @deck[$index] = @deck.pop;
+    say "Game #$game-number";
+    say @game.splice(0, 8 min +@game) while @game;
 }
 
-say "Game #$game_number";
-say @game.splice(0, min(@game.elems, 8)) while @game;
+dealgame;
+dealgame 617;

@@ -4,6 +4,6 @@
   // any instance variables
 }
 
-+ (SomeSingleton*)sharedInstance;
++ (SomeSingleton *)sharedInstance;
 
 @end

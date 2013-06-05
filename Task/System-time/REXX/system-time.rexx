@@ -7,5 +7,8 @@ say time('nitPick')     /*      (same as above)                     */
 say time('C')           /*  hh:mmam  or  hh:mmpm  (hh is 0 --> 12). */
 say time('Civil')       /*      (same as above)                     */
 
-say time('L')           /*  hh:mm:ss.ffffff  (hh is ---> 23).       */
+say time('L')           /*  hh:mm:ss.ffffff  (hh is 0 ---> 23).     */
 say time('Long')        /*      (same as above)                     */
+
+say time('S')           /*   sssss            (0 ---> 86399).       */
+say time('Seconds')     /*number of complete seconds since midnight.*/

@@ -1,28 +1,21 @@
--module(hello_world_server).
+-module( hello_world_web_server ).
 
--export([start/0, loop0/1]).
+-export( [do/1, httpd_start/2, httpd_stop/1, task/0] ).
 
--define(PORTNO, 8080).
+do( _Data ) ->
+	{proceed, [{response,{200,"Goodbye, World!"}}]}.
 
-start() ->
-    start(?PORTNO).
-start(Pno) ->
-    spawn(?MODULE, loop0, [Pno]).
+httpd_start( Port, Module ) ->
+	Arguments = [{bind_address, "localhost"}, {port, Port}, {ipfamily, inet},
+		{modules, [Module]},
+		{server_name,erlang:atom_to_list(Module)}, {server_root,"."}, {document_root,"."}],
+	{ok, Pid} = inets:start( httpd, Arguments, stand_alone ),
+	Pid.
+	
+httpd_stop( Pid ) ->
+	inets:stop( stand_alone, Pid ).
 
-loop0(Port) ->
-    case gen_tcp:listen(Port, [binary, {packet, 0}, {active, false}]) of
-	{ok, LSock} ->
-	    loop(LSock);
-	_ ->
-	    stop
-    end.
-
-loop(Listen) ->
-    case gen_tcp:accept(Listen) of
-	{ok, S} ->
-	    gen_tcp:send(S, io_lib:format("Goodbye, World!~n", [])),
-	    gen_tcp:close(S),
-	    loop(Listen);
-	_ ->
-	    loop(Listen)
-    end.
+task() ->
+	Pid = httpd_start( 8080, ?MODULE ),
+	timer:sleep( 30000 ),
+	httpd_stop( Pid ).

@@ -19,8 +19,11 @@ sub unbase58 {
 }
 
 sub check_bitcoin_address {
+    # does nothing if the address is valid
+    # dies otherwise
     use Digest::SHA qw(sha256);
     my @byte = unbase58 shift;
-    die unless join('', map { chr } @byte[21..24]) eq
+    die "wrong checksum" unless
+    join('', map { chr } @byte[21..24]) eq
     substr sha256(sha256 pack 'C*', @byte[0..20]), 0, 4;
 }

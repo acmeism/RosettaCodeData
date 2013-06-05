@@ -5,13 +5,13 @@ typedef struct { double v; int c; } vcount;
 
 int cmp_dbl(const void *a, const void *b)
 {
-	double x = *(double*)a - *(double*)b;
+	double x = *(const double*)a - *(const double*)b;
 	return x < 0 ? -1 : x > 0;
 }
 
 int vc_cmp(const void *a, const void *b)
 {
-	return ((vcount*)b)->c - ((vcount*)a)->c;
+	return ((const vcount*)b)->c - ((const vcount*)a)->c;
 }
 
 int get_mode(double* x, int len, vcount **list)

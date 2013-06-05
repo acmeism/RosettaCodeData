@@ -1,5 +1,4 @@
 /*REXX program demonstrates converting  decimal  ───►  binary.          */
-
 x.1 = 0
 x.2 = 5
 x.3 = 50

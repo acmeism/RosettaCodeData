@@ -47,7 +47,7 @@ int get_prime_factors(ulong n, prime_factor *lst)
 
 int ulong_cmp(const void *a, const void *b)
 {
-	return *(ulong*)a < *(ulong*)b ? -1 : *(ulong*)a > *(ulong*)b;
+	return *(const ulong*)a < *(const ulong*)b ? -1 : *(const ulong*)a > *(const ulong*)b;
 }
 
 int get_factors(ulong n, ulong *lst)

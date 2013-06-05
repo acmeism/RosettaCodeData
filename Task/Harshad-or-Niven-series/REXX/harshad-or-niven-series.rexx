@@ -1,5 +1,5 @@
 /*REXX program finds first X Niven numbers; also first Niven number > Y.*/
-parse arg X Y .                        /*get optional argyuments:  X  Y */
+parse arg X Y .                        /*get optional arguments:  X  Y  */
 if X==''  then X=20                    /*Not specified? Then use default*/
 if Y==''  then Y=1000                  /*Not specified? Then use default*/
 #=0;  $=                               /*Niven# count,  Niven# list.    */

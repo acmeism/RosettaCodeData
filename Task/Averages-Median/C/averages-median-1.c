@@ -7,9 +7,8 @@ typedef struct floatList {
 } *FloatList;
 
 int floatcmp( const void *a, const void *b) {
-    if  (*(float *)a > *(float *)b)  return 1;
-    else if (*(float *)a < *(float *)b) return -1;
-    else return 0;
+    if (*(const float *)a < *(const float *)b) return -1;
+    else return *(const float *)a > *(const float *)b;
 }
 
 float median( FloatList fl )

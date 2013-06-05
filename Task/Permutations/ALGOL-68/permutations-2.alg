@@ -1,23 +1,24 @@
-#!/usr/local/bin/a68g --script #
+#!/usr/bin/a68g --script #
+# -*- coding: utf-8 -*- #
 
-PR READ "Template_Permutations.a68" PR # n.b. READ is nonstandard #
-# USING( #
-  INT upb values := 4;
-  MODE VALUE = INT; # user defined #
-  FORMAT value fmt := $g(0)$
-# ) #;
+CO REQUIRED BY "prelude_permutations.a68" CO
+  MODE PERMDATA = INT;
+#PROVIDES:#
+# PERM*=INT* #
+# perm *=int list *#
+PR READ "prelude_permutations.a68" PR;
 
 main:(
-  VALVALUES test case := (1, 22, 333, 44444);
-  print(("Number of permutations: ", UPB test case P 1, new line));
+  FLEX[0]PERMDATA test case := (1, 22, 333, 44444);
 
-COMMENT # Use the generator: #
-  # FOR ARRAY values IN # test case DOPERM (
-  ##   (ARRAY values)VOID:(
-      printf((values fmt, values, $l$))
-  # OD #));
-END COMMENT
+  INT upb data list = UPB test case;
+  FORMAT
+    data fmt := $g(0)$,
+    data list fmt := $"("n(upb data list-1)(f(data fmt)", ")f(data fmt)")"$;
 
-# or simply the operator: #
-  printf(($f(values fmt)l$, PERM test case))
+# FOR DATALIST permutation IN # perm gen permutations(test case#) DO (#,
+##   (PERMDATALIST permutation)VOID:(
+    printf((data list fmt, permutation, $l$))
+# OD #))
+
 )

@@ -42,8 +42,8 @@ int action_merge(int size)
 
 int doublecompare( const void *a, const void *b )
 {
-  if ( *(double *)a == *(double *)b ) return 0;
-  if ( *(double *)a < *(double *)b ) return -1; else return 1;
+  if ( *(const double *)a < *(const double *)b ) return -1;
+  else return *(const double *)a > *(const double *)b;
 }
 int action_qsort(int size)
 {

@@ -1,12 +1,33 @@
-std::map<std::string, int> myDict;
-myDict["hello"] = 1;
-myDict["world"] = 2;
-myDict["!"] = 3;
+#include <map>
+#include <iostream>
+#include <algorithm>
+#include <vector>
 
-// iterating over key-value pairs:
-for (std::map<std::string, int>::iterator it = myDict.begin(); it != myDict.end(); it++) {
-    // the thing pointed to by the iterator is a pair<std::string, int>
-    std::string key = it->first;
-    int value = it->second;
-    std::cout << "key = " << key << ", value = " << value << std::endl;
+int main() {
+  using MyDict = std::map<std::string, int>;
+
+  MyDict dict = {
+    {"One", 1},
+    {"Two", 2},
+    {"Three", 7}
+  };
+
+  dict["Three"] = 3;
+
+  std::cout << "One: " << dict["One"] << std::endl;
+
+  // Make vector of the keys from our map
+  std::vector<std::string> keys;
+  std::transform(dict.begin(), dict.end(), std::back_inserter(keys),
+    [](MyDict::value_type& kv) { return kv.first; });
+
+  std::cout << "Keys: " << std::endl;
+  for(auto& key: keys) std::cout << "  " << key << std::endl;
+
+  std::cout << "Key/Value pairs: " << std::endl;
+  for(auto& kv: dict) {
+    std::cout << "  " << kv.first << ": " << kv.second << std::endl;
+  }
+
+  return 0;
 }

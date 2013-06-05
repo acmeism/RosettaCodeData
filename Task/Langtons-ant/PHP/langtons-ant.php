@@ -13,10 +13,10 @@ $step_count = 0;
 while(0 <= $x && $x <= width && 0 <= $y && $y <= height){
 	if(isset($field[$x][$y])){
 		unset($field[$x][$y]);
-		$dir = ($dir + 1) % 4;
+		$dir = ($dir + 3) % 4;
 	}else{
 		$field[$x][$y] = true;
-		$dir = ($dir + 3) % 4;
+		$dir = ($dir + 1) % 4;
 	}
 	switch($dir){
 		case 0: $y++; break;

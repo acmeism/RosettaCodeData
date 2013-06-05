@@ -2,7 +2,7 @@
 parse arg dir .                        /*allow specification: ant facing*/
                                        /*binary colors: 0=white, 1=black*/
 @.=0                                   /*define stem array  (all white).*/
-lb=1        ;  rb=100                  /* right boundry,  right boundry.*/
+lb=1        ;  rb=100                  /* left  boundry,  right boundry.*/
 bb=1        ;  tb=100                  /*bottom    "        top    "    */
 x=(rb-lb)%2 ;  y=(tb-bb)%2             /*approximate center (walk start)*/
 if dir==''     then dir=random(1,4)    /*ant is facing random direction,*/

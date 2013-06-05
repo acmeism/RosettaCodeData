@@ -1,20 +1,27 @@
-#include <vector>
-#include "boost/random.hpp"
-#include "boost/generator_iterator.hpp"
-#include <boost/random/normal_distribution.hpp>
-#include <algorithm>
+#include <cstdlib>   // for rand
+#include <cmath>     // for atan, sqrt, log, cos
+#include <algorithm> // for generate_n
 
-typedef boost::mt19937 RNGType; ///< mersenne twister generator
+double const pi = 4*std::atan(1.0);
 
-int main() {
-    RNGType rng;
-    boost::normal_distribution<> rdist(1.0,0.5); /**< normal distribution
-                           with mean of 1.0 and standard deviation of 0.5 */
+// simple functor for normal distribution
+class normal_distribution
+{
+public:
+  normal_distribution(double m, double s): mu(m), sigma(s) {}
+  double operator() const // returns a single normally distributed number
+  {
+    double r1 = (std::rand() + 1.0)/(RAND_MAX + 1.0); // gives equal distribution in (0, 1]
+    double r2 = (std::rand() + 1.0)/(RAND_MAX + 1.0);
+    return mu + sigma * std::sqrt(-2*std::log(r1))*std::cos(2*pi*r2);
+  }
+private:
+  const double mu, sigma;
+};
 
-    boost::variate_generator< RNGType, boost::normal_distribution<> >
-                    get_rand(rng, rdist);
-
-    std::vector<double> v(1000);
-    generate(v.begin(),v.end(),get_rand);
-    return 0;
+int main()
+{
+  double array[1000];
+  std::generate_n(array, 1000, normal_distribution(1.0, 0.5));
+  return 0;
 }

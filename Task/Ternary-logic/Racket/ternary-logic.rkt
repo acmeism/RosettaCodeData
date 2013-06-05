@@ -1,7 +1,7 @@
 #lang typed/racket
 
-; we can't add a maybe which is special in the same way as #t and #f,
-; so we'll just use symbols to make our own
+; to avoid the hassle of adding a maybe value that is as special as
+; the two standard booleans, we'll use symbols to make our own
 (define-type trit (U 'true 'false 'maybe))
 
 (: not (trit -> trit))

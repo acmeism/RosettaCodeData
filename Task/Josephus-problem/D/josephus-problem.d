@@ -8,7 +8,7 @@ T pop(T)(ref T[] items, in size_t i) pure {
 }
 
 string josephus(in int n, in int k) {
-    auto p = iota(n).array();
+    auto p = n.iota.array;
     int i;
     int[] seq;
     while (!p.empty) {
@@ -16,12 +16,13 @@ string josephus(in int n, in int k) {
         seq ~= p.pop(i);
     }
 
-    return xformat("Prisoner killing order: %(%d, %).\nSurvivor: %d",
-                   seq[0 .. $-1], seq[$ - 1]);
+    return format("Prisoner killing order:\n%(%(%d %)\n%)." ~
+                  "\nSurvivor: %d",
+                  std.range.chunks(seq[0 .. $ - 1], 20), seq[$ - 1]);
 }
 
 void main() {
-    writeln(josephus(5, 2));
-    writeln();
-    writeln(josephus(41, 3));
+    josephus(5, 2).writeln;
+    writeln;
+    josephus(41, 3).writeln;
 }

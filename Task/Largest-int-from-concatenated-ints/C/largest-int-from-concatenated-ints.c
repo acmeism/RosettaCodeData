@@ -5,8 +5,8 @@
 int catcmp(const void *a, const void *b)
 {
 	char ab[32], ba[32];
-	sprintf(ab, "%d%d", *(int*)a, *(int*)b);
-	sprintf(ba, "%d%d", *(int*)b, *(int*)a);
+	sprintf(ab, "%d%d", *(const int*)a, *(const int*)b);
+	sprintf(ba, "%d%d", *(const int*)b, *(const int*)a);
 	return strcmp(ba, ab);
 }
 

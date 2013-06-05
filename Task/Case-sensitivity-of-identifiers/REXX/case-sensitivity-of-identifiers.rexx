@@ -1,4 +1,4 @@
-/*demonstrate case insensative REXX variable names. (for the most part).*/
+/*demonstrate case insensitive REXX variable names. (for the most part).*/
 dog = 'Benjamin'
 Dog = 'Samba'
 DOG = 'Bernie'

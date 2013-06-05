@@ -6,10 +6,7 @@
     [(list p 1) (~a p)]
     [(list p n) (~a p "^" n)]))
 
-(define (factors fs)
-  (add-between (map ~ fs) " * "))
-
 (for ([x (in-range 2 20)])
   (display (~a x " = "))
-  (map display (factors (factorize x)))
+  (for-each display (add-between (map ~ (factorize x)) " * "))
   (newline))

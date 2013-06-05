@@ -1,7 +1,7 @@
 (defun cut-it (w h &optional (recur t))
   (if (oddp (* w h)) (return-from cut-it 0))
   (if (oddp h) (rotatef w h))
-  (if (= w 1) (return-from cut-it h))
+  (if (= w 1) (return-from cut-it 1))
 
   (let ((cnt 0)
 	(m (make-array (list (1+ h) (1+ w))

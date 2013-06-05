@@ -1,7 +1,6 @@
 #lang racket
 
-(require 2htdp/image
-         2htdp/universe)
+(require 2htdp/image 2htdp/universe)
 
 (define (pendulum)
   (define (accel θ) (- (sin θ)))

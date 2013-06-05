@@ -1,19 +1,30 @@
-with Ada.Text_IO; use Ada.Text_IO;
-with Ada.Calendar; use Ada.Calendar;
-with Ada.Command_Line; use Ada.Command_Line;
-with Ada.Calendar.Formatting; use Ada.Calendar.Formatting;
-procedure Fridays is
-   T : Ada.Calendar.Time;
-   Year : Year_Number := Integer'Value (Argument (1));
-   MLength : constant array (1 .. 12) of Positive :=
-      (4 | 6 | 9 | 11 => 30, 2 => 28, others => 31);
+with Ada.Text_IO, GNAT.Calendar.Time_IO, Ada.Command_Line,
+  Ada.Calendar.Formatting, Ada.Calendar.Arithmetic;
+
+procedure Last_Weekday_In_Month is
+
+   procedure Put_Line(T: Ada.Calendar.Time) is
+      use GNAT.Calendar.Time_IO;
+   begin
+      Ada.Text_IO.Put_Line(Image(Date => T, Picture => ISO_Date));
+   end Put_Line;
+
+   use Ada.Calendar, Ada.Calendar.Arithmetic;
+   subtype Day_Name is Formatting.Day_Name; use type Formatting.Day_Name;
+
+   T, Selected : Time;
+   Weekday: Day_Name  := Day_Name'Value(Ada.Command_Line.Argument (1));
+   Year : Year_Number := Integer'Value (Ada.Command_Line.Argument (2));
+
 begin
-   for month in 1 .. 12 loop
-      for day in reverse 1 .. MLength (month) loop
-         T := Ada.Calendar.Time_Of (Year, month, day);
-         if Day_Of_Week (T) = Friday then
-            Put_Line (Image (Date => T)(1 .. 10)); exit;
-         end if;
+   for Month in 1 .. 12 loop
+      T := Time_Of (Year => Year, Month => Month, Day => 01);
+      while Ada.Calendar.Month(T) = Month loop
+	 if Formatting.Day_Of_Week (T) = Weekday then
+	    Selected := T;
+	 end if;
+	 T := T + Day_Count(1);
       end loop;
+      Put_Line(Selected);
    end loop;
-end Fridays;
+end Last_Weekday_In_Month;

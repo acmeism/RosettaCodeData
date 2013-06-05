@@ -20,8 +20,8 @@ struct {
 
 int CmprRows( const void *aa, const void *bb)
 {
-   String *rA = *(String **)aa;
-   String *rB = *(String **)bb;
+   String *rA = *(String *const *)aa;
+   String *rB = *(String *const *)bb;
    int sortCol = sortSpec.column;
 
    String left = sortSpec.reversed ? rB[sortCol] : rA[sortCol];
@@ -66,7 +66,7 @@ int sortTable(Table tbl, const char* argSpec,... )
          }
       }
    va_end(vl);
-   qsort( tbl->rows, tbl->n_rows, sizeof(String *), &CmprRows);
+   qsort( tbl->rows, tbl->n_rows, sizeof(String *), CmprRows);
    return 0;
 }
 

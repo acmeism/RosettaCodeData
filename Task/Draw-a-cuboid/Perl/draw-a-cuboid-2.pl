@@ -1,5 +1,7 @@
 use 5.010;
 
+# usage: script X Y Z [S]
+
 sub cuboid {
 
     # Constant dimnesions of the cuboid
@@ -13,21 +15,12 @@ sub cuboid {
     # $s = space (inside the cuboid)
     my ($c, $h, $v, $d, $s) = ('+', '-', '|', '/', shift(@ARGV) // q{ });
 
-    # Some variables
-    my ($p, $o) = (0, 0);
-
     say q{ } x ($z + 1), $c, $h x $x, $c;
-    say q{ } x ($z - $_ + 1), $d, $s x $x, $d, $s x ($_ - 1 - $p),
-      $_ > $y ? !$p && ++$p ? do { $o = $z - $y; $c } : $p++ ? $d : $c : $v
-      for 1 .. $z;
-    say $c, $h x $x, $c, $p ? ($s x ($z - $o), $d) : ($s x $z, $z < $y ? $v : $c);
-    say $v, $s x $x, $v, $z - 1 >= $y
-      ? $_ >= $z
-          ? ($s x $x, $c)
-          : ($s x ($z - $_ - $o), $d)
-      : $y - $_ > $z ? ($s x $z, $v)
-      : ($s x ($y - $_), $y - $_ == $z ? $c : $d)
-      for 1 .. $y;
+    say q{ } x ($z - $_ + 1), $d, $s x $x, $d, $s x ($_ - ($_ > $y ? ($_ - $y) : 1)),
+      $_ - 1 == $y ? $c : $_ > $y ? $d : $v for 1 .. $z;
+    say $c, $h x $x, $c, ($s x ($z < $y ? $z : $y), $z < $y ? $v : $z == $y ? $c : $d);
+    say $v, $s x $x, $v, $z > $y ? $_ >= $z ? ($s x $x, $c) : ($s x ($y - $_), $d)
+      : $y - $_ > $z ? ($s x $z, $v) : ($s x ($y - $_), $y - $_ == $z ? $c : $d) for 1 .. $y;
     say $c, $h x $x, $c;
 }
 

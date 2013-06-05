@@ -6,9 +6,9 @@ term_regex = r'''(?mx)
     \s*(?:
         (?P<brackl>\()|
         (?P<brackr>\))|
-        (?P<num>\d+\.\d+|\d+)\b|
+        (?P<num>\-?\d+\.\d+|\-?\d+)|
         (?P<sq>"[^"]*")|
-        (?P<s>\S+)\b
+        (?P<s>[^(^)\s]+)
        )'''
 
 def parse_sexp(sexp):

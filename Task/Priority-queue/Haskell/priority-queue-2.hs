@@ -28,17 +28,16 @@ hLength Nil = 0
 hLength h = cnt h
 
 hFromList :: (Ord a) => [a] -> MinHeap a
-hFromList xs = hlist Nil xs where
-	hlist h [] = h
-	hlist h (x:xs) = hlist (hPush x h) xs
+hFromList = foldl (flip hPush) Nil
 
 hToList :: (Ord a) => MinHeap a -> [a]
-hToList Nil = []
-hToList h = x:hToList hh where (x,hh) = hPop h
+hToList = unfoldr f where
+  f Nil = Nothing
+  f h = Just $ hPop h
 
-main = mapM print $ (hToList (hFromList [
+main = mapM_ print $ hToList $ hFromList [
 	(3, "Clear drains"),
 	(4, "Feed cat"),
 	(5, "Make tea"),
 	(1, "Solve RC tasks"),
-	(2, "Tax return")]))
+	(2, "Tax return")]

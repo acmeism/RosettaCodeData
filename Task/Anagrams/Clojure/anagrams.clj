@@ -2,9 +2,9 @@
 
 (def groups
   (with-open [r (io/reader wordfile)]
-    (group-by sort (line-seq r)))
+    (group-by sort (line-seq r))))
 
-(let [wordlists (sort-by (comp - count) (vals groups)
+(let [wordlists (sort-by (comp - count) (vals groups))
       maxlength (count (first wordlists))]
   (doseq [wordlist (take-while #(= (count %) maxlength) wordlists)]
     (println wordlist))

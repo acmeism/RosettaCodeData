@@ -1,2 +1,2 @@
- (define (compose f g)
+(define (compose f g)
   (lambda (x) (f (g x))))

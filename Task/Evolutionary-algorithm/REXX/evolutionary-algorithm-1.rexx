@@ -1,54 +1,35 @@
-/* Weasel.rex - Me thinks thou art a weasel. - G,M.D. - 2/25/2011 */
-arg C M
-/* C is the number of children parent produces each generation. */
-/* M is the mutation rate of each gene (character) */
+/*REXX program demonstrates an evolutionary algorithm  (using mutation).*/
+parse arg  children  MR  seed .        /*get options (maybe) from  C.L. */
+if children=='' then children = 10     /*# of children produced each gen*/
+if MR      =='' then MR       = '4%'   /*the char Mutation Rate each gen*/
+if right(MR,1)=='%' then MR=strip(MR,,'%')/100  /*expressed as %? Adjust*/
+if seed\=='' then call random ,,seed   /*allow the runs to be repeatable*/
+abc   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ '  ;    Labc=length(abc)
+target= 'METHINKS IT IS LIKE A WEASEL' ;    Ltar=length(target)
+parent= mutate( left('',Ltar), 1)      /*gen rand str,same length as tar*/
+say center('target string',Ltar,'─') "children" 'mutationRate'
+say target center(children,8) center((MR*100/1)'%',12)             ;   say
+say center('new string',Ltar,'─') "closeness" 'generation'
 
-call initialize
-generation = 0
-do until parent = target
-   most_fitness = fitness(parent)
-   most_fit     = parent
-   do C
-      child = mutate(parent, M)
-      child_fitness = fitness(child)
-      if child_fitness > most_fitness then
-      do
-         most_fitness = child_fitness
-         most_fit = child
-         say "Generation" generation": most fit='"most_fit"', fitness="left(most_fitness,4)
-      end
-   end
-   parent = most_fit
-   generation = generation + 1
-end
-exit
-
-initialize:
-   target   = "METHINKS IT IS LIKE A WEASEL"
-   alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ "
-   c_length_target = length(target)
-   parent  = mutate(copies(" ", c_length_target), 1.0)
-   do i = 1 to c_length_target
-      target_ch.i = substr(target,i,1)
-   end
-return
-
-fitness: procedure expose target_ch. c_length_target
-   arg parm_string
-   fitness = 0
-   do i_target = 1 to c_length_target
-      if substr(parm_string,i_target,1) = target_ch.i_target then
-         fitness = fitness + 1
-   end
-return fitness
-
-mutate:procedure expose alphabet
-arg string, parm_mutation_rate
-   result = ""
-   do istr = 1 to length(string)
-      if random(1,1000)/1000 <= parm_mutation_rate then
-         result = result || substr(alphabet,random(1,length(alphabet)),1)
-      else
-         result = result || substr(string,istr,1)
-   end
-return result
+       do gen=0  until  parent==target;      close=fitness(parent)
+       almost=parent
+                         do  children;       child=mutate(parent,MR)
+                         _=fitness(child);   if _<=close then iterate
+                         close=_;            almost=child
+                         say almost right(close,9) right(gen,10)
+                         end   /*children*/
+       parent=almost
+       end   /*gen*/
+exit                                   /*stick a fork in it, we're done.*/
+/*───────────────────────────────────FITNESS subroutine─────────────────*/
+fitness: parse arg x; hit=0;   do k=1  for Ltar
+                               hit=hit+(substr(x,k,1)==substr(target,k,1))
+                               end   /*k*/
+return hit
+/*───────────────────────────────────MUTATE subroutine──────────────────*/
+mutate:  parse arg x,rate,?            /*set  ?  to a null,  x=string.  */
+            do j=1  for Ltar;              r=random(1,100000)
+            if .00001*r<=rate  then ?=? || substr(abc,r//Labc+1,1)
+                               else ?=? || substr(x,j,1)
+            end   /*j*/
+return ?

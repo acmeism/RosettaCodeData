@@ -1,0 +1,131 @@
+/// The <CLASS>Singleton</CLASS> class represents a global singleton object that can
+/// be instantiated by multiple processes.  The 'Get' class method is used to obtain
+/// an in-memory object reference and the 'Set' method is used to save any changes to
+/// state.  See below for an example.
+///
+/// <EXAMPLE>
+/// Set one=##class(Singleton).Get(,.sc)
+/// Set one.GlobalProperty="Some Value"
+/// Set sc=one.Set()
+/// </EXAMPLE>
+///
+/// This class can also be extended.
+Class User.Singleton Extends %SerialObject
+{
+
+Property GlobalProperty As %String;
+
+/// Refer to <LINK href=/AboutConcurrency.html>About Concurrency</LINK> for more details
+/// on the optional <var>pConcurrency</var> argument.
+ClassMethod Get(pConcurrency As %Integer = -1, Output pStatus As %Status = {$$$OK}) As Singleton [ Final ]
+{
+	// check if singleton object already instantiated
+	Set oRef = ""
+	For  {
+		Set oRef = $ZObjNext(oRef) If oRef = "" Quit
+		If oRef.%ClassName(1) = ..%ClassName(1) Quit
+	}
+	If $IsObject(oRef) Quit oRef
+	
+	// determine what lock needs to be applied
+	If '$IsValidNum(pConcurrency, 0, -1, 4) {
+		Set pStatus = $$$ERROR($$$LockTypeInvalid, pConcurrency)
+		Quit $$$NULLOREF
+	}
+	If pConcurrency = -1 Set pConcurrency = $Xecute("Quit "_..#DEFAULTCONCURRENCY)
+	
+	// acquire lock for global singleton object
+	Set lockTO = $ZUtil(115,4), lockOK = 1
+	If pConcurrency<4, pConcurrency {
+		Lock +^CacheTempUser("Singleton", ..%ClassName(1))#"S":lockTO Set lockOK = $Test
+	} ElseIf pConcurrency = 4 {
+		Lock +^CacheTempUser("Singleton", ..%ClassName(1)):lockTO Set lockOK = $Test
+	}
+	If 'lockOK {
+		If pConcurrency = 4 {
+			Set pStatus = $$$ERROR($$$LockFailedToAcquireExclusive, ..%ClassName(1))
+		} Else {
+			Set pStatus = $$$ERROR($$$LockFailedToAcquireRead, ..%ClassName(1))
+		}
+		Quit $$$NULLOREF
+	}
+	
+	// retrieve global singleton object and deserialise
+	Set oId = $Get(^CacheTempUser("Singleton", ..%ClassName(1)))
+	Set oRef = ..%Open(oId)  //,, .pStatus)
+	If '$IsObject(oRef) Set pStatus = $$$ERROR($$$GeneralError, "Failed to load singleton object.")
+	
+	// release temporary lock
+	If (pConcurrency = 1) || (pConcurrency = 2) {
+		Lock -^CacheTempUser("Singleton", ..%ClassName(1))#"S"
+	}
+	
+	// singleton object failed to load
+	If $$$ISERR(pStatus) {
+		// release retained lock
+		If pConcurrency = 3 {
+			Lock -^CacheTempUser("Singleton", ..%ClassName(1))#"S"
+		}
+		If pConcurrency = 4 {
+			Lock -^CacheTempUser("Singleton", ..%ClassName(1))
+		}
+		Quit $$$NULLOREF
+	}
+	
+	// store concurrency state and return in-memory object reference
+	Set oRef.Concurrency = pConcurrency
+	Quit oRef
+}
+
+Method Set() As %Status [ Final ]
+{
+	// check for version change
+	Set oId0 = $Get(^CacheTempUser("Singleton", ..%ClassName(1)))
+	Set oRef0 = ..%Open(oId0)  //,, .sc)
+	If '$IsObject(oRef0) Quit $$$ERROR($$$GeneralError, "Failed to load singleton object.")
+	If oRef0.Version = ..Version {
+		Set ..Version = ..Version + 1
+	} Else {
+		Quit $$$ERROR($$$ConcurrencyVersionMismatch, ..%ClassName(1))
+	}		
+	
+	// serialise local singleton object and check status code
+	Set sc = ..%GetSwizzleObject(,.oId) If $$$ISERR(sc) Quit sc
+	
+	// acquire exclusive lock on global singleton object
+	Set lockTO = $ZUtil(115,4)
+	Lock +^CacheTempUser("Singleton", ..%ClassName(1)):lockTO
+	If '$Test Quit $$$ERROR($$$LockFailedToAcquireExclusive, ..%ClassName(1))
+		
+	// update global singleton object and release lock
+	Set ^CacheTempUser("Singleton", ..%ClassName(1)) = oId
+	Lock -^CacheTempUser("Singleton", ..%ClassName(1))
+	Quit $$$OK
+}
+
+Method %OnNew() As %Status [ Final, Internal ]
+{
+	// do not allow constructor method to be called
+	Quit $$$ERROR($$$GeneralError, "Can't instantiate directly.")
+}
+
+Method %OnConstructClone() As %Status [ Final, Internal ]
+{
+	// do not allow singleton object to be cloned
+	Quit $$$ERROR($$$GeneralError, "Can't clone instance.")
+}
+
+Method %OnClose() As %Status [ Final, Internal ]
+{
+	// reference count for singleton object is now zero, so
+	// release lock on global singleton object, if applicable
+	If ..Concurrency = 3 Lock -^CacheTempUser("Singleton", ..%ClassName(1))#"S"
+	If ..Concurrency = 4 Lock -^CacheTempUser("Singleton", ..%ClassName(1))
+	Quit $$$OK
+}
+
+Property Concurrency As %Integer [ Final, Private, Transient ];
+
+Property Version As %Integer [ Final, Private ];
+
+}

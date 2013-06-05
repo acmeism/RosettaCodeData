@@ -1,28 +1,17 @@
 #lang racket
 
-;; Like "map", but the proc must take an index as well as the element.
-(define (map-index proc seq)
-  (for/list ([(elt i) (in-indexed seq)])
-    (proc elt i)))
-
-;; Applies PROC to every STEPth element of SEQ, leaving the others
-;; unchanged.
-(define (map-step proc step seq)
-  (map-index
-   (lambda (elt i)
-     ((if (zero? (remainder i step) )
-          proc
-          values) elt))
-   seq))
+;; Applies fun to every step-th element of seq, leaving the others unchanged.
+(define (map-step fun step seq)
+  (for/list ([elt seq] [i (in-naturals)])
+    ((if (zero? (modulo i step)) fun values) elt)))
 
 (define (toggle-nth n seq)
   (map-step not n seq))
 
 (define (solve seq)
-  (for/fold ([result seq])
-      ([(_ pass) (in-indexed  seq)])
-      (toggle-nth (add1 pass) result)))
+  (for/fold ([result seq]) ([_ seq] [pass (in-naturals 1)])
+    (toggle-nth pass result)))
 
-(for ([(door index) (in-indexed (solve (make-vector 100 #f)))])
-  (when door
-    (printf "~a is open~%" index)))
+(for ([door (solve (make-vector 101 #f))] [index (in-naturals)]
+      #:when (and door (> index 0)))
+  (printf "~a is open~%" index))

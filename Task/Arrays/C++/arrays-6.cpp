@@ -1,25 +1,8 @@
-#include <iostream>
-using std::cout;
-using std::endl;
+vector<int> myArray2;
 
-#include <boost/Array.hpp>
-#include <algorithm>
-#include <boost/foreach.hpp>
+myArray2.push_back(1);
+myArray2.push_back(3);
 
-int main()
-{
-   boost::array<int, 3> A;
-   A[0] = 5; // not bounds checked
-   A[1] = 2;
-   A.at(2) = 3; // this is bounds checked.
+myArray2[0] = 2;
 
-   cout << A[0] << endl; // not bounds checked
-
-   for (int i =0; i < 3; ++i) {
-       cout << A.at(i) << endl; // this is bounds checked
-   }
-
-   // use it as you would any STL ordered container.
-   std::reverse(A.begin(),A.end());
-   BOOST_FOREACH(int i, A){cout << i << endl;}
-}
+cout << myArray2[0] << endl;

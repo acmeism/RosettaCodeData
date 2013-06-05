@@ -1,8 +1,6 @@
 #lang racket
 
-(require net/url
-         net/url-connect
-         openssl)
+(require net/url net/url-connect openssl)
 
 (module+ main
   (parameterize ([current-https-protocol (ssl-make-client-context)])

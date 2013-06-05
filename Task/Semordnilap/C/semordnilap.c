@@ -15,7 +15,7 @@ static void reverse(char *s, int len)
 /* Wrap strcmp() for qsort(). */
 static int strsort(const void *s1, const void *s2)
 {
-    return strcmp(*(char **) s1, *(char **) s2);
+    return strcmp(*(char *const *) s1, *(char *const *) s2);
 }
 
 int main(void)

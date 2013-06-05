@@ -1,5 +1,6 @@
-import java.math.BigInteger;
-
 public static long gcd(long a, long b){
-   return BigInteger.valueOf(a).gcd(BigInteger.valueOf(b)).longValue();
+   if(a == 0) return b;
+   if(b == 0) return a;
+   if(a > b) return gcd(b, a % b);
+   return gcd(a, b % a);
 }

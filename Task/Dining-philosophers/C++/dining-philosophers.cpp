@@ -1,7 +1,6 @@
-#include <iostream>
 #include <vector>
 #include <string>
-
+#include <iostream>
 #include <boost/cstdint.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/locks.hpp>

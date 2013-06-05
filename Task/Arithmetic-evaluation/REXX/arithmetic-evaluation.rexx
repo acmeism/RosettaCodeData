@@ -15,7 +15,7 @@ j=0; do forever;  j=j+1;  if j>L  then leave;  _=substr(x,j,1);  _2=getX()
                         z=z _ $;  iterate
                         end
      if _=='+' | _=="-"  then do;  p_=word(z,words(z))   /*last  Z token*/
-                              if p_=='('   then z=z 0    /handle unary ±*/
+                              if p_=='('   then z=z 0    /*handle unary±*/
                               z=z _ $;     iterate
                               end
      lets=0;  sigs=0;  #=_
@@ -27,7 +27,7 @@ j=0; do forever;  j=j+1;  if j>L  then leave;  _=substr(x,j,1);  _2=getX()
                                                                end /*exp*/
             if pos(_,nchars)==0  then leave
             lets=lets+datatype(_,'M')  /*keep track of # of exponents.  */
-            #=# || translate(_,'EEEEE','eDdQq')  /*keep buildingthe num.*/
+            #=# || translate(_,'EEEEE','eDdQq')  /*keep building the num*/
             end   /*j*/
      j=j-1
      if \datatype(#,'N') then call serr 'invalid number: ' #

@@ -30,16 +30,43 @@ void fft(CArray& x)
     }
 }
 
+// inverse fft (in-place)
+void ifft(CArray& x)
+{
+    // conjugate the complex numbers
+    std::transform(&x[0], &x[x.size()], &x[0], std::conj<double>);
+
+    // forward fft
+    fft( x );
+
+    // conjugate the complex numbers again
+    std::transform(&x[0], &x[x.size()], &x[0], std::conj<double>);
+
+    // scale the numbers
+    x /= x.size();
+}
+
 int main()
 {
     const Complex test[] = { 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0 };
     CArray data(test, 8);
 
+    // forward fft
     fft(data);
 
+    std::cout << "fft" << std::endl;
     for (int i = 0; i < 8; ++i)
     {
-        std::cout << data[i] << "\n";
+        std::cout << data[i] << std::endl;
+    }
+
+    // inverse fft
+    ifft(data);
+
+    std::cout << std::endl << "ifft" << std::endl;
+    for (int i = 0; i < 8; ++i)
+    {
+        std::cout << data[i] << std::endl;
     }
     return 0;
 }

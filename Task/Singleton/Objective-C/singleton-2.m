@@ -1,10 +1,10 @@
 // SomeSingleton.m
 @implementation SomeSingleton
 
-+ (SomeSingleton*) sharedInstance
++ (SomeSingleton *) sharedInstance
 {
-   static sharedInstance = nil;
-   if(!sharedInstance) {
+   static SomeSingleton *sharedInstance = nil;
+   if (!sharedInstance) {
       sharedInstance = [[SomeSingleton alloc] init];
    }
    return sharedInstance;
@@ -25,7 +25,7 @@
     return UINT_MAX;
 }
 
-- (void)release
+- (oneway void)release
 {
     // prevent release
 }

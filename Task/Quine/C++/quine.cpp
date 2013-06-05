@@ -1,5 +1,4 @@
 #include <iostream>
-#include <ostream>
 
 void quote(char const* c)
 {
@@ -23,7 +22,7 @@ void quote(char const* c)
 int main()
 {
   char const* parts[] = {
-    "#include <iostream>\n#include <ostream>\n\nvoid quote(char const* c)\n{\n  while (*c)\n  {\n    switch(*c)\n    {\n    case '\\\\':\n      std::cout << \"\\\\\\\\\";break;\n    case '\\n':\n      std::cout << \"\\\\n\";break;\n    case '\\\"':\n      std::cout << \"\\\\\\\"\";break;\n    default:\n      std::cout << *c;\n    }\n    ++c;\n  }\n}\n\nint main()\n{\n  char const* parts[] = {\n    \"",
+    "#include <iostream>\n\nvoid quote(char const* c)\n{\n  while (*c)\n  {\n    switch(*c)\n    {\n    case '\\\\':\n      std::cout << \"\\\\\\\\\";break;\n    case '\\n':\n      std::cout << \"\\\\n\";break;\n    case '\\\"':\n      std::cout << \"\\\\\\\"\";break;\n    default:\n      std::cout << *c;\n    }\n    ++c;\n  }\n}\n\nint main()\n{\n  char const* parts[] = {\n    \"",
     "\",\n    \"",
     "\"\n  };\n  \n  std::cout << parts[0];\n  quote(parts[0]);\n  std::cout << parts[1];\n  quote(parts[1]);\n  std::cout << parts[1];\n  quote(parts[2]);\n  std::cout << parts[2];\n\n  return 0;\n}\n"
   };

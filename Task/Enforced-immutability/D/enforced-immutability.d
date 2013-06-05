@@ -20,14 +20,14 @@ immutable double pi = 3.1415;
 immutable int z;
 
 static this() {
-    z = uniform(0, 100); // Run-time inizialization.
+    z = uniform(0, 100); // Run-time initialization.
 }
 
 class Test1 {
     immutable int w;
 
     this() {
-        w = uniform(0, 100); // Run-time inizialization.
+        w = uniform(0, 100); // Run-time initialization.
     }
 }
 

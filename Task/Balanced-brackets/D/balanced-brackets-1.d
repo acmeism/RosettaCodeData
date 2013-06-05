@@ -1,10 +1,8 @@
-import std.stdio, std.algorithm, std.random;
+import std.stdio, std.algorithm, std.random, std.range;
 
 void main() {
-    foreach (i; 1 .. 9) {
-        string s;
-        foreach (_; 0 .. i * 2)
-            s ~= "[]"[uniform(0, 2)];
+    foreach (immutable i; 1 .. 9) {
+        immutable s = iota(i * 2).map!(_ => "[]"[uniform(0, 2)]).array;
         writeln(s.balancedParens('[', ']') ? " OK: " : "bad: ", s);
     }
 }

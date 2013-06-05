@@ -1,22 +1,9 @@
-/* Rexx */
-
-Do
-  Say stripchars("She was a soul stripper. She took my heart!", "aei")
-
-  Return
-End
-Exit
-
-stripchars:
-  Procedure
-Do
-  Parse arg haystack, chs
-
-  Do c_ = 1 to length(chs)
-    needle = substr(chs, c_, 1)
-    haystack = changestr(needle, haystack, '')
-    End c_
-
-  Return haystack
-End
-Exit
+/*REXX program to remove a set of characters from a string  (haystack). */
+say stripChars('She was a soul stripper. She took my heart!', "iea")
+exit                                   /*stick a fork in it, we're done.*/
+/*───────────────────────────────────STRIPCHARS subroutine──────────────*/
+stripChars: procedure;  parse arg haystack, remove
+                     do j=1 for length(remove)
+                     haystack=changestr(substr(remove,j,1), haystack, '')
+                     end   /*j*/
+return haystack

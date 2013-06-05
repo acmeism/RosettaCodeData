@@ -15,3 +15,6 @@
            but really @shout{any code}
 
        })
+
+(output @list|<<{And customizable delimiters
+                 so @foo{} is just plain text}>>|)

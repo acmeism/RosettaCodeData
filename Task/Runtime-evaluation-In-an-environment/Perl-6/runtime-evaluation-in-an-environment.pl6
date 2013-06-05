@@ -1,9 +1,4 @@
-sub eval_with_x {
-    my $code = @_.shift;
-    my $x = @_.shift;
-    my $first = eval $code;
-    $x = @_.shift;
-    return eval($code) - $first;
-}
+sub eval_with_x($code, *@x) { [R-] @x.map: -> \x { eval $code } }
 
-print eval_with_x('3 * $x', 5, 10), "\n"; # Prints "15".
+say eval_with_x('3 * x', 5, 10);      # Says "15".
+say eval_with_x('3 * x', 5, 10, 50);  # Says "135".

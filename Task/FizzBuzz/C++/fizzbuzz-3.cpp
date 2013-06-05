@@ -1,48 +1,25 @@
 #include <iostream>
-
-template <int n, int m3, int m5>
-struct fizzbuzz : fizzbuzz<n-1, (n-1)%3, (n-1)%5>
-{
-  fizzbuzz()
-  { std::cout << n << std::endl; }
-};
-
-template <int n>
-struct fizzbuzz<n, 0, 0> : fizzbuzz<n-1, (n-1)%3, (n-1)%5>
-{
-  fizzbuzz()
-  { std::cout << "FizzBuzz" << std::endl; }
-};
-
-template <int n, int p>
-struct fizzbuzz<n, 0, p> : fizzbuzz<n-1, (n-1)%3, (n-1)%5>
-{
-  fizzbuzz()
-  { std::cout << "Fizz" << std::endl; }
-};
-
-template <int n, int p>
-struct fizzbuzz<n, p, 0> : fizzbuzz<n-1, (n-1)%3, (n-1)%5>
-{
-  fizzbuzz()
-  { std::cout << "Buzz" << std::endl; }
-};
-
-template <>
-struct fizzbuzz<0,0,0>
-{
-  fizzbuzz()
-  { std::cout << 0 << std::endl; }
-};
-
-template <int n>
-struct fb_run
-{
-  fizzbuzz<n, n%3, n%5> fb;
-};
+#include <algorithm>
+#include <vector>
 
 int main()
 {
-  fb_run<100> fb;
+  std::vector<int> range(100);
+  std::iota(range.begin(), range.end(), 1);
+
+  std::vector<std::string> values;
+  values.resize(range.size());
+
+  auto fizzbuzz = [](int i) -> std::string {
+    if ((i%15) == 0) return "FizzBuzz";
+    if ((i%5) == 0)  return "Buzz";
+    if ((i%3) == 0)  return "Fizz";
+    return std::to_string(i);
+  };
+
+  std::transform(range.begin(), range.end(), values.begin(), fizzbuzz);
+
+  for (auto& str: values) std::cout << str << std::endl;
+
   return 0;
 }

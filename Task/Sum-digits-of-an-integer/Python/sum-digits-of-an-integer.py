@@ -1,29 +1,15 @@
 def toBaseX(num, base):
-	output = []
-	index = 0
-	while num:
-		num, rem = divmod(num, base)
-		output.append(str(rem))
-	return output
+    output = []
+    while num:
+        num, rem = divmod(num, base)
+        output.append(rem)
+    return output
 
-def sumDigits( *args ):
-	if len(args) == 1:
-		number = str(args[0])
-	else:
-		num = args[0]
-		base = args[1]
-		if base < 2:
-			print "Base must be between 2 and 36"
-			exit(1)
-		if num < base or num == base:
-			number = str(num)
-		else:
-			number = toBaseX(num,base)
-		
-	sumVal = 0
-	for x in number:
-		sumVal += int(x)
-	return sumVal
+def sumDigits(num, base=10):
+    if base < 2:
+        print "Error: Base must be at least 2"
+        return
+    return sum(toBaseX(num, base))
 
 print sumDigits(1)
 print sumDigits(12345)

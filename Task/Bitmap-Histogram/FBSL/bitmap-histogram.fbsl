@@ -1,0 +1,50 @@
+#DEFINE WM_CLOSE 16
+
+DIM colored = ".\LenaClr.bmp", grayscale = ".\LenaGry.bmp", blackwhite = ".\LenaBnw.bmp"
+DIM head, tail, r, g, b, l, m, ptr, blobsize = 54 ' sizeof BMP headers
+
+FILEGET(FILEOPEN(colored, BINARY), FILELEN(colored)): FILECLOSE(FILEOPEN) ' fill buffer
+head = @FILEGET + blobsize: tail = @FILEGET + FILELEN ' get buffer bounds
+
+ToGrayScale() ' derive grayscale image and save it to disk
+ToBlackAndWhite() ' ditto, black-and-white image
+
+FBSLSETTEXT(ME, "Clr") ' display colored image
+FBSLTILE(ME, FBSLLOADIMAGE(colored))
+RESIZE(ME, 0, 0, 136, 162): CENTER(ME): SHOW(ME)
+
+FBSLTILE(FBSLFORM("Gry"), FBSLLOADIMAGE(grayscale)) ' ditto, grayscale
+RESIZE(FBSLFORM, 0, 0, 136, 162): CENTER(FBSLFORM): SHOW(FBSLFORM)
+
+FBSLTILE(FBSLFORM("B/w"), FBSLLOADIMAGE(blackwhite)) ' ditto, black-and-white
+RESIZE(FBSLFORM, 0, 0, 136, 162): CENTER(FBSLFORM): SHOW(FBSLFORM)
+
+BEGIN EVENTS ' main message loop
+	IF CBMSG = WM_CLOSE THEN DESTROY(ME) ' click any [X] button to quit
+END EVENTS
+
+SUB ToGrayScale()
+	FOR ptr = head TO tail STEP 3
+		b = PEEK(ptr + 0, 1) ' Windows stores colors in BGR order
+		g = PEEK(ptr + 1, 1)
+		r = PEEK(ptr + 2, 1)
+		l = 0.2126 * r + 0.7152 * g + 0.0722 * b ' derive luminance
+		POKE(ptr + 0, CHR(l))(ptr + 1, CHR)(ptr + 2, CHR) ' set pixel to shade of gray
+		m = m + l
+	NEXT
+	FILEPUT(FILEOPEN(grayscale, BINARY_NEW), FILEGET): FILECLOSE(FILEOPEN) ' save grayscale image
+END SUB
+
+SUB ToBlackAndWhite()
+	STATIC b = CHR(0), w = CHR(255) ' initialize once
+	
+	m = m / (tail - head) * 3 ' derive median
+	FOR ptr = head TO tail STEP 3
+		IF PEEK(ptr + 0, 1) < m THEN ' set pixel black
+			POKE(ptr + 0, b)(ptr + 1, b)(ptr + 2, b)
+		ELSE ' set pixel white
+			POKE(ptr + 0, w)(ptr + 1, w)(ptr + 2, w)
+		END IF
+	NEXT
+	FILEPUT(FILEOPEN(blackwhite, BINARY_NEW), FILEGET): FILECLOSE(FILEOPEN) ' save b/w image
+END SUB

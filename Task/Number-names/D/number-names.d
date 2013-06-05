@@ -1,60 +1,78 @@
-import std.stdio, std.string;
+import std.stdio, std.array, std.algorithm, std.bigint, std.range;
 
-string spellInteger(in long n) pure nothrow {
-    static immutable tens = ["", "", "twenty", "thirty", "forty",
-        "fifty", "sixty", "seventy", "eighty", "ninety"];
+immutable tens = ["", "", "twenty", "thirty", "forty",
+                  "fifty", "sixty", "seventy", "eighty", "ninety"];
+immutable small = ["zero", "one", "two", "three", "four", "five",
+                   "six", "seven", "eight", "nine", "ten", "eleven",
+                   "twelve", "thirteen", "fourteen", "fifteen",
+                   "sixteen", "seventeen", "eighteen", "nineteen"];
+immutable huge = ["", ""] ~ ["m", "b", "tr", "quadr", "quint",
+                             "sext", "sept", "oct", "non", "dec"]
+                            .map!q{ a ~ "illion" }.array;
 
-    static immutable small = "zero one two three four five six
-        seven eight nine ten eleven twelve thirteen fourteen
-        fifteen sixteen seventeen eighteen nineteen".split();
-
-    static immutable bl = ["", "", "m", "b", "tr",
-        "quadr", "quint", "sext", "sept", "oct", "non", "dec"];
-
-    static string nonZero(in string c, in int n) pure nothrow {
-        return n == 0 ? "" : c ~ spellInteger(n);
+string spellBigInt(BigInt n) {
+    static string nonZero(string c, BigInt n, string connect="") {
+        return n == 0 ? "" : connect ~ c ~ n.spellBigInt;
     }
 
-    static string big(in int e, in int n) pure nothrow {
+    static string lastAnd(string num) {
+        if (num.canFind(",")) {
+            string pre = num.retro.find(",").retro[0 .. $ - 1];
+            string last = num[pre.length + 1 .. $];
+            if (!last.canFind(" and "))
+                last = " and" ~ last;
+            num = pre ~ "," ~ last;
+        }
+        return num;
+    }
+
+    static string big(in uint e, BigInt n) {
         switch (e) {
-            case 0: return spellInteger(n);
-            case 1: return spellInteger(n) ~ " thousand";
-            default: return spellInteger(n) ~ " " ~ bl[e] ~ "illion";
+            case 0:  return n.spellBigInt;
+            case 1:  return n.spellBigInt ~ " thousand";
+            default: return n.spellBigInt ~ " " ~ huge[e];
         }
-    }
-
-    /// Generates the value of the digits of n in
-    /// base 1000 (i.e. 3-digit chunks), in reverse.
-    static int[] base1000Reverse(in long nn) pure nothrow {
-        long n = nn;
-        int[] result;
-        while (n) {
-            result ~= n % 1000;
-            n /= 1000;
-        }
-        return result;
     }
 
     if (n < 0) {
-        return "negative " ~ spellInteger(-n);
+        return "minus " ~ spellBigInt(-n);
+    } else if (n < 20) {
+        return small[n.toInt];
+    } else if (n < 100) {
+        BigInt a = n / 10;
+        BigInt b = n % 10;
+        return tens[a.toInt] ~ nonZero("-", b);
     } else if (n < 1000) {
-        int ni = cast(int)n; // D doesn't infer this.
-        if (ni < 20) {
-            return small[ni];
-        } else if (ni < 100) {
-            return tens[ni / 10] ~ nonZero("-", ni % 10);
-        } else // ni < 1000
-            return small[ni / 100] ~ " hundred" ~
-                   nonZero(" ", ni % 100);
+        BigInt a = n / 100;
+        BigInt b = n % 100;
+        return small[a.toInt] ~ " hundred" ~ nonZero(" ", b, " and");
     } else {
-        string[] pieces;
-        foreach_reverse (e, x; base1000Reverse(n))
-            pieces ~= big(e, x);
-        return pieces.join(", ");
+        string[] bigs;
+        uint e = 0;
+        while (n != 0) {
+            BigInt r = n % 1000;
+            n /= 1000;
+            if (r != 0)
+                bigs ~= big(e, r);
+            e++;
+        }
+
+        return lastAnd(bigs.retro.join(", "));
     }
 }
 
-void main() {
-    foreach (i; -10 .. 1_000)
-        writeln(i, " ", spellInteger(i));
+version(number_names_main) {
+    void main() {
+        foreach (n; [0, -3, 5, -7, 11, -13, 17, -19, 23, -29])
+            writefln("%+4d -> %s", n, n.BigInt.spellBigInt);
+        writeln;
+
+        auto n = 2_0121_002_001;
+        while (n) {
+            writefln("%-12d -> %s", n, n.BigInt.spellBigInt);
+            n /= -10;
+        }
+        writefln("%-12d -> %s", n, n.BigInt.spellBigInt);
+        writeln;
+    }
 }

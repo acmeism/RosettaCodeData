@@ -1,15 +1,15 @@
 import std.stdio, std.algorithm, std.metastrings, std.range;
 
 // iterative
-int factorial(int n) {
-    int result = 1;
+long factorial(long n) {
+    long result = 1;
     foreach (i; 1 .. n + 1)
         result *= i;
     return result;
 }
 
 // recursive
-int recFactorial(int n) {
+long recFactorial(long n) {
     if (n == 0)
         return 1;
     else
@@ -17,13 +17,13 @@ int recFactorial(int n) {
 }
 
 // functional-style
-int fact(int n) {
+long fact(long n) {
     return iota(1, n + 1).reduce!q{a * b}();
 }
 
 // tail recursive (at run-time, with DMD)
-int tfactorial(int n) {
-    static int facAux(int n, int acc) {
+long tfactorial(long n) {
+    static long facAux(long n, long acc) {
         if (n < 1)
             return acc;
         else

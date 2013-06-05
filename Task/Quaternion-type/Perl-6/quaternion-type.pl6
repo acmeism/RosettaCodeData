@@ -1,4 +1,4 @@
-class Quaternion {
+class Qu {
     has Real ( $.r, $.i, $.j, $.k );
 
     multi method new ( Real $r, Real $i, Real $j, Real $k ) {
@@ -9,8 +9,6 @@ class Quaternion {
     method conj  (  ) { self.new: $.r, -$.i, -$.j, -$.k }
     method norm  (  ) { sqrt [+] self.reals X** 2 }
 }
-
-subset Qu of Quaternion; # Makes a short alias
 
 multi sub  infix:<eqv> ( Qu $a, Qu $b ) { [and] $a.reals Z== $b.reals }
 multi sub  infix:<+> ( Qu $a, Real $b ) { $a.new: $b+$a.r, $a.i, $a.j, $a.k }
@@ -28,9 +26,9 @@ multi sub  infix:<*> ( Qu $a,   Qu $b ) {
                    ( [+] @a_rijk Z* $k,  $j, -$i,  $r ); # k
 }
 
-my Quaternion $q  .= new: 1, 2, 3, 4;
-my Quaternion $q1 .= new: 2, 3, 4, 5;
-my Quaternion $q2 .= new: 3, 4, 5, 6;
+my Qu $q  .= new: 1, 2, 3, 4;
+my Qu $q1 .= new: 2, 3, 4, 5;
+my Qu $q2 .= new: 3, 4, 5, 6;
 my $r  = 7;
 
 say "1) q norm  = {$q.norm}";

@@ -6,7 +6,7 @@
 (hash-set! t 2 1)
 
 (define (Q n)
-  (hash-ref! t n ( () (+ (Q (- n (Q (- n 1))))
+  (hash-ref! t n (λ() (+ (Q (- n (Q (- n 1))))
                          (Q (- n (Q (- n 2))))))))
 
 (for/list ([i (in-range 1 11)]) (Q i))

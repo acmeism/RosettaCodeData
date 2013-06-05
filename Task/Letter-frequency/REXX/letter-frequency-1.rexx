@@ -1,4 +1,4 @@
-/*REXX program counts the occurrences of all characters in a file,       */
+/*REXX program counts the occurrences of all characters in a file,      */
 /* {all Latin alphabet letters are uppercased for counting letters}.    */
 
 parse arg fileID .                     /*That's not a middle dot:  ·    */

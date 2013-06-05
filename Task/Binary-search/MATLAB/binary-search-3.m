@@ -1,6 +1,6 @@
 function mid = binarySearchIter(list,value)
 
-    low = 0;
+    low = 1;
     high = numel(list) - 1;
 
     while( low <= high )

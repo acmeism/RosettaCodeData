@@ -3,7 +3,7 @@
 
 int icmp(const void *a, const void *b)
 {
-#define _I(x) *(int*)x
+#define _I(x) *(const int*)x
 	return _I(a) < _I(b) ? -1 : _I(a) > _I(b);
 #undef _I
 }

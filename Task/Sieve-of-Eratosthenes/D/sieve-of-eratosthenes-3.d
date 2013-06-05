@@ -5,10 +5,8 @@ struct IsPrime {
     //__gshared static BitArray multiples = [true, true, false];
     __gshared static BitArray multiples;
 
-    static this() {
-        multiples.length = 3;
-        multiples[0] = true;
-        multiples[1] = true;
+    /*nothrow*/ static this() {
+        multiples.init([true, true, false]);
     }
 
     static bool opCall(in size_t n) /*nothrow*/ {
@@ -27,14 +25,15 @@ struct IsPrime {
                     for (size_t j = i * 2; j < newMax + 1; j += i)
                         multiples[j] = true;
         }
+
         return !multiples[n];
     }
 }
 
-version (eratosthenes3_main) {
+version (sieve_of_eratosthenes3_main) {
     import std.stdio, std.range;
+
     void main() {
-        // iota(50).filter!IsPrime().writeln();
-        iota(50).filter!(i => IsPrime(i))().writeln();
+        50.iota.filter!IsPrime.writeln;
     }
 }

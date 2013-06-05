@@ -1,31 +1,20 @@
-/*REXX program to test range extraction. ******************************
-* 07.08.2012 Walter Pachl
-**********************************************************************/
-aaa='0 1 2 4 6 7 8 11 12 14 15 16 17 18 19 20 21 22 23 24 25 27 28 29',
-    '30 31 32 33 35 36 37 38 39'
-say 'old='aaa;
-aaa=aaa 1e99                        /* artificial number at the end  */
-i=0                                 /* initialize index              */
-ol=''                               /* initialize output string      */
-comma=''                            /* will become a ',' lateron     */
-inrange=0
-Do While i<=words(aaa)              /* loop for all numbers          */
-  i=i+1                             /* index of next number          */
-  n=word(aaa,i)                     /* the now current number        */
-  If n=1e99 Then Leave              /* we are at the end             */
-  If inrange Then Do                /* range was opened              */
-    If word(aaa,i+1)<>n+1 Then Do   /* following word not in range   */
-      ol=ol||n                      /* so this number is the end     */
-      inrange=0                     /* and the range is over         */
-      End                           /* else ignore current number    */
-    End
-  Else Do                           /* not in a range                */
-    ol=ol||comma||n                 /* add number (with comma)       */
-    comma=','                       /* to the output string          */
-    If word(aaa,i+2)=n+2 Then Do    /* if the nr after the next fits */
-      inrange=1                     /* open a range                  */
-      ol=ol'-'                      /* append the range connector    */
-      End
-    End
-  End
-Say 'new='ol
+/*REXX program  creates  a  range extraction  from a  list of integers. */
+old=0 1 2 4 6 7 8 11 12 14 15 16 17 18 19 20 21 22 23 24 25 27 28 29 30 31 32 33 35 36 37 38 39
+w=words(old);   j=0                    /*number of integers in the list.*/
+new=                                   /*new list  (maybe with ranges). */
+    do while j<w; j=j+1; x=word(old,j) /*get the Jth number in the list.*/
+    new=new',' x                       /*append  Jth number to new list.*/
+    inc=1;     g=                      /*start with an increment of one.*/
+        do k=j+1  to w; y=word(old,k)  /*get the Kth number in the list.*/
+        if y\=x+inc     then leave     /*is this number ¬> prev by inc ?*/
+        inc=inc+1;      g=y            /*increase range, assign g (good)*/
+        end   /*k*/
+    if k-1=j | g=x+1   then iterate    /*range= 0|1?  Then keep truckin'*/
+    new=new'-'g                        /*indicate a range of numbers.   */
+    j  =k-1                            /*which number to examine next.  */
+    end     /*while*/
+
+new=space(substr(new, 2), 0)           /*elide leading comma, all blanks*/
+say 'old:' old                         /*show the old range of numbers. */
+say 'new:' new                         /*display new list of numbers.   */
+                                       /*stick a fork in it, we're done.*/

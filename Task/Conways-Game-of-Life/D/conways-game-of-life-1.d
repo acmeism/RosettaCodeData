@@ -1,4 +1,5 @@
-import std.stdio,std.string,std.algorithm,std.typetuple,std.array;
+import std.stdio, std.string, std.algorithm, std.typetuple,
+       std.array, std.conv;
 
 struct GameOfLife {
   enum Cell : char { dead = ' ', alive = '#' }
@@ -10,13 +11,10 @@ struct GameOfLife {
   }
 
   void opIndexAssign(in string[] v, in size_t y, in size_t x)
-  pure nothrow {
-    foreach (nr, row; v)
-      foreach (nc, state; row) {
-        //grid[y + nr][x + nc] = to!Cell(state);
-        assert(state == Cell.dead || state == Cell.alive);
-        grid[y + nr][x + nc] = cast(Cell)state;
-      }
+  /*pure nothrow*/ {
+    foreach (immutable nr, row; v)
+      foreach (immutable nc, state; row)
+        grid[y + nr][x + nc] = state.to!Cell;
   }
 
   void iteration() pure nothrow {
@@ -25,15 +23,15 @@ struct GameOfLife {
     foreach (row; newGrid)
       row[0] = row[$ - 1] = Cell.dead;
 
-    foreach (r; 1 .. grid.length - 1)
-      foreach (c; 1 .. grid[0].length - 1) {
-        int count = 0;
-        foreach (i; -1 .. 2)
-          foreach (j; -1 .. 2)
+    foreach (immutable r; 1 .. grid.length - 1)
+      foreach (immutable c; 1 .. grid[0].length - 1) {
+        uint count = 0;
+        foreach (immutable i; -1 .. 2)
+          foreach (immutable j; -1 .. 2)
             if (i != 0 || j != 0)
               count += grid[r + i][c + j] == Cell.alive;
-        auto a = count == 3 ||
-                 (count == 2 && grid[r][c] == Cell.alive);
+        immutable a = count == 3 ||
+                      (count == 2 && grid[r][c] == Cell.alive);
         newGrid[r][c] = a ? Cell.alive : Cell.dead;
       }
 
@@ -41,12 +39,13 @@ struct GameOfLife {
   }
 
   string toString() const pure nothrow {
-    string ret = "-".replicate(grid[0].length - 1) ~ "\n";
-    foreach (row; grid[1 .. $ - 1])
-      ret ~= "|" ~ cast(char[])row[1 .. $-1] ~ "|\n";
+    auto ret = "-".replicate(grid[0].length - 1) ~ "\n";
+    foreach (const row; grid[1 .. $ - 1])
+      ret ~= "|" ~ cast(char[])row[1 .. $ - 1] ~ "|\n";
     return ret ~ "-".replicate(grid[0].length - 1);
   }
 }
+
 void main() {
   immutable glider1 = ["  #", "# #", " ##"];
   immutable glider2 = ["#  ", "# #", "## "];
@@ -59,7 +58,7 @@ void main() {
   uni[5, 50] = [" #  #", "#  ", "#   #", "#### "];
   writeln(uni);
 
-  foreach (i; 0 .. 20) {
+  foreach (immutable _; 0 .. 20) {
     uni.iteration();
     writeln(uni);
   }

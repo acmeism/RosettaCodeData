@@ -14,7 +14,7 @@ parse arg tList                        /*get specified temperature lists*/
                  end
             else u='k'                 /*assume  Kelvin as per task req.*/
 
-  uU=translate(u,'EE',"éÉ");  upper uU /*uppercase version of temp unit.*/
+  uU=translate(u,'eE',"éÉ");  upper uU /*uppercase version of temp unit.*/
   if left(uU,7)=='DEGREES' then uU=substr(uU,8)  /*redundant "degrees"? */
   if left(uU,5)=='DEGREE'  then uU=substr(uU,7)  /*   "      "degree" ? */
   uU=strip(uU)

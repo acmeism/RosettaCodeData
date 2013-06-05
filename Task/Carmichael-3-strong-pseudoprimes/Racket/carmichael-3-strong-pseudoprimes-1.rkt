@@ -1,0 +1,16 @@
+#lang racket
+(require math)
+
+(for ([p1 (in-range 3 62)] #:when (prime? p1))
+  (for ([h3 (in-range 2 p1)])
+    (define g (+ p1 h3))
+    (let next ([d 1])
+      (when (< d g)
+        (when (and (zero? (modulo (* g (- p1 1)) d))
+                   (= (modulo (- (sqr p1)) h3) (modulo d h3)))
+          (define p2 (+ 1 (quotient (* g (- p1 1)) d)))
+          (when (prime? p2)
+            (define p3 (+ 1 (quotient (* p1 p2) h3)))
+            (when (and (prime? p3) (= 1 (modulo (* p2 p3) (- p1 1))))
+              (displayln (list p1 p2 p3 '=> (* p1 p2 p3))))))
+        (next (+ d 1))))))

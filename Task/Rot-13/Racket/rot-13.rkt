@@ -14,4 +14,4 @@
  (for ([f (if (null? files) '("-") files)])
    (if (equal? f "-")
      (run (current-input-port) (current-output-port))
-     (call-with-input-file f ( (i) (run i (current-output-port)))))))
+     (call-with-input-file f (λ(i) (run i (current-output-port)))))))

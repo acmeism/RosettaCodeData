@@ -1,6 +1,6 @@
 /*REXX program to show how to strip leading and/or trailing spaces.     */
 
-yyy="   this is a string that has leading and trailing blanks,  fur shure.   "
+yyy="   this is a string that has leading/embedded/trailing blanks,  fur shure.   "
 
                              /*white space also includes tabs (VT & HT),*/
                              /*among other characters.                  */

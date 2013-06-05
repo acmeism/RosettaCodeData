@@ -1,1 +1,1 @@
-Rint = uniform(N),
+Rint = random:uniform(N),

@@ -5,12 +5,12 @@ auto radians(T)(in T d) pure nothrow { return d * PI / 180; }
 auto degrees(T)(in T r) pure nothrow { return r * 180 / PI; }
 
 real meanAngle(T)(in T[] D) /*pure nothrow*/ {
-    immutable t = reduce!((a,d) => a + expi(radians(d)))(complex(0),D);
-    return (t / D.length).arg().degrees();
+    immutable t = reduce!((a, d) => a + d.radians.expi)(0.complex, D);
+    return (t / D.length).arg.degrees;
 }
 
 void main() {
     foreach (angles; [[350, 10], [90, 180, 270, 360], [10, 20, 30]])
-    writefln("The mean angle of %s is: %.2f degrees",
-             angles, meanAngle(angles));
+        writefln("The mean angle of %s is: %.2f degrees",
+                 angles, angles.meanAngle);
 }

@@ -1,6 +1,4 @@
-Include %occSAX
-
-Class Utils.Net.RosettaCode Extends %ArrayOfDataTypes
+Class Utils.Net.RosettaCode [ Abstract ]
 {
 
 ClassMethod GetTopLanguages(pHost As %String = "", pPath As %String = "", pTop As %Integer = 10) As %Status
@@ -28,16 +26,43 @@ ClassMethod GetTopLanguages(pHost As %String = "", pPath As %String = "", pTop A
 	While 'xhtml.AtEnd {
 		Set line=xhtml.ReadLine()
 		If line["!DOCTYPE" Continue
+		If line["<g:plusone></g:plusone>" {
+			Continue
+			Set line="<g:plusone xmlns:g='http://base.google.com/ns/1.0'></g:plusone>"
+		}
 		Set sc=xml.WriteLine(line)
 	}
 	
-	// now parse xml stream
-	Set sc=##class(%XML.TextReader).ParseStream(xml, .hdlr,, $$$SAXDEFAULTS-$$$SAXNAMESPACES)
+	// create an instance of an %XML.XPATH.Document
+	Set sc=##class(%XML.XPATH.Document).CreateFromStream(xml, .xdoc)
 	If $$$ISERR(sc) Quit sc
+	
+	// evaluate following 'XPath' expression
+	Set sc=xdoc.EvaluateExpression("//div[@id='bodyContent']//li", "a[contains(@href, '/Category:')]/ancestor::li", .res)
 
-	// get languages
-	Set array=..%New()
-	Set sc=array.GetLanguages(hdlr)
+	// iterate through list elements
+	Set array=##class(%ArrayOfDataTypes).%New()
+	Do {
+		Set dom=res.GetNext(.key)
+		If '$IsObject(dom) Quit
+		
+		// get language name and members
+		Set lang=""
+		While dom.Read() {
+			If 'dom.HasValue Continue
+			If lang="" {
+				If $Locate(dom.Value, "User|Tasks|Omit|attention|operations|Solutions by") Quit
+				Set lang=dom.Value Continue
+			}
+			If dom.Value["members" {
+				Set members=+$ZStrip(dom.Value, "<>P")
+				Set list=array.GetAt(members)
+				Set $List(list, $ListLength(list)+1)=lang
+				Set sc=array.SetAt(list, members)
+				Quit
+			}
+		}
+	} While key'=""
 	If array.Count()=0 Quit $$$ERROR($$$GeneralError, "No languages found.")
 
 	// show top entries
@@ -48,59 +73,6 @@ ClassMethod GetTopLanguages(pHost As %String = "", pPath As %String = "", pTop A
 		Write $Justify(count, 3), ". ", key, " - ", $ListToString(members, ", "), !
 	}
 
-	// finished
-	Quit $$$OK
-}
-
-Method GetLanguages(pHandler As %XML.SAX.ContentHandler, pDepth As %Integer) As %Status [ Internal, Private ]
-{
-	// iterate through xml document, node by node
-	While pHandler.Read() {
-
-		If '$Data(pDepth) {
-
-			// find 'bodyContent' div element
-			If pHandler.AttributeCount, pHandler.MoveToAttributeName("id") {
-				If pHandler.Value="bodyContent" {
-					Set sc=..GetLanguages(pHandler, pHandler.Depth)
-					Quit
-				}
-			}
-			
-		} Else {
-
-			// all done
-			If pDepth>pHandler.Depth Quit
-			
-			// get language name
-			If $Locate(pHandler.Path, "(/div/ul/li/a)$") {
-				If pHandler.AttributeCount, pHandler.MoveToAttributeName("href") {
-					If $Locate(pHandler.Value, "/Category:") {
-						Set sc=pHandler.MoveToContent()
-						Set lang=pHandler.Value
-						If $Locate(lang, "User|Tasks|Omit|attention|operations|Solutions by") Set lang=""
-					}
-				}
-			}
-
-			// get members
-			If $Locate(pHandler.Path, "(/div/ul/li)$") {
-				If pHandler.HasValue, $Get(lang)'="" {
-					Set pos=$Locate(pHandler.Value, "(\d+) member")
-					If pos {
-						Set members=+$Extract(pHandler.Value, pos, *)
-						Set list=..GetAt(members)
-						Set $List(list, $ListLength(list)+1)=lang
-						Set sc=..SetAt(list, members)
-						Set lang=""
-					}
-				}
-			}
-			
-		}
-			
-	}
-	
 	// finished
 	Quit $$$OK
 }

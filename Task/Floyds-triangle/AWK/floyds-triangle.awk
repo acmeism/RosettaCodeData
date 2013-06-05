@@ -1,17 +1,15 @@
-# syntax: GAWK -f FLOYDS_TRIANGLE.AWK rows
+#!/bin/awk -f
+
 BEGIN {
-    rows = ARGV[1]
-    if (rows !~ /^[0-9]+$/) {
-      print("rows invalid or missing from command line")
-      exit(1)
-    }
-    width = length(rows * (rows + 1) / 2) + 1 # width of last n
-    for (i=1; i<=rows; i++) {
-      cols++
-      for (j=1; j<=cols; j++) {
-        printf("%*d",width,++n)
-      }
-      printf("\n")
-    }
-    exit(0)
+	if (rows !~ /^[0-9]+$/ || rows < 0) {
+		print "invalid rows or missing from command line"
+		print "syntax: awk -v rows=14 -f floyds_triangle.awk"
+		exit 1
+	}
+
+	for (row=cols=1; row<=rows; row++ cols++) {
+		width[row] = length(row + (rows * (rows-1))/2)
+		for (col=1; col<=cols; col++)
+			printf("%*d%c", width[col], ++n, row == col ? "\n" : " ")
+	}
 }

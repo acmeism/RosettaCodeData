@@ -9,8 +9,8 @@
 #define TRY2(a) if((a)<0) {perror(#a);exit(1);}
 #define FREE(a) if(a) {free(a);a=NULL;}
 #define sort_by(foo) \
-static int by_##foo (pdb_t *p1, pdb_t *p2) { \
-    return strcmp ((*p1)->foo, (*p2)->foo); }
+static int by_##foo (const void*p1, const void*p2) { \
+    return strcmp ((*(const pdb_t*)p1)->foo, (*(const pdb_t*)p2)->foo); }
 typedef struct db {
     char title[26];
     char first_name[26];
@@ -20,8 +20,7 @@ typedef struct db {
     struct db *next;
 }
 db_t,*pdb_t;
-typedef int (sort)(pdb_t*, pdb_t*);
-typedef int (*compfn)(const void*, const void*);
+typedef int (sort)(const void*, const void*);
 enum {CREATE,PRINT,TITLE,DATE,AUTH,READLINE,READ,SORT,DESTROY};
 static pdb_t dao (int cmd, FILE *f, pdb_t db, sort sortby);
 static char *time2str (time_t *time);
@@ -32,7 +31,8 @@ sort_by(title);
 static sort by_date;
 /* main */
 int main (int argc, char **argv) {
-    char buf[100], *commands[]={"-c", "-p", "-t", "-d", "-a", NULL};
+    char buf[100];
+    const char *commands[]={"-c", "-p", "-t", "-d", "-a", NULL};
     db_t db;
     db.next=NULL;
     pdb_t dblist;
@@ -153,7 +153,7 @@ static pdb_t dao (int cmd, FILE *f, pdb_t in_db, sort sortby) {
             pdb[i]=in_db;
             in_db=in_db->next;
         }
-        qsort (pdb,i,sizeof in_db,(compfn)sortby);
+        qsort (pdb,i,sizeof in_db,sortby);
         pdb[i-1]->next=NULL;
         for (;i;i--) {
             pdb[i-1]->next=pdb[i];

@@ -3,9 +3,10 @@ proto combine (Int, @) {*}
 multi combine (0,  @)  { [] }
 multi combine ($,  []) { () }
 multi combine ($n, [$head, *@tail]) {
-    map( { [$head, @^others] },
-            combine($n-1, @tail) ),
-    combine($n, @tail);
+    gather {
+	take [$head, @$_] for combine($n-1, @tail);
+	take [ @$_ ]      for combine($n  , @tail);
+    }
 }
 
-.say for combine(3, [^5]);
+say  combine(3, [^5]).perl;

@@ -2,7 +2,6 @@
 
 (define listener (tcp-listen 12321))
 (let echo-server ()
-  (define-values (in out) (tcp-accept listener))
-  (thread (λ () (copy-port in out)
-                (close-output-port out)))
+  (define-values [I O] (tcp-accept listener))
+  (thread (λ() (copy-port I O) (close-output-port O)))
   (echo-server))

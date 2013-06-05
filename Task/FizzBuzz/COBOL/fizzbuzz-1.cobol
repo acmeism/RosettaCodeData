@@ -1,6 +1,6 @@
-       * FIZZBUZZ.COB
-       * cobc -x -g FIZZBUZZ.COB
-       *
+      * FIZZBUZZ.COB
+      * cobc -x -g FIZZBUZZ.COB
+      *
        IDENTIFICATION        DIVISION.
        PROGRAM-ID.           fizzbuzz.
        DATA                  DIVISION.
@@ -9,7 +9,7 @@
        01 REM      PIC 9(03) VALUE 0.
        01 QUOTIENT PIC 9(03) VALUE 0.
        PROCEDURE             DIVISION.
-       *
+      *
        PERFORM UNTIL CNT > 100
          DIVIDE 15 INTO CNT GIVING QUOTIENT REMAINDER REM
          IF REM = 0

@@ -1,28 +1,19 @@
 class Array
   def pancake_sort!
     num_flips = 0
-    self.size.downto(2) do |i|
-      end_idx = i - 1
-      max_idx = self[0..end_idx].each_with_index.max_by {|e| e[0]}.last
+    (self.size-1).downto(1) do |end_idx|
+      max     = self[0..end_idx].max
+      max_idx = self[0..end_idx].index(max)
       next if max_idx == end_idx
 
       if max_idx > 0
         self[0..max_idx] = self[0..max_idx].reverse
-
-        if $DEBUG
-          num_flips += 1
-          p [num_flips, self]
-        end
+        p [num_flips += 1, self]  if $DEBUG
       end
 
       self[0..end_idx] = self[0..end_idx].reverse
-
-      if $DEBUG
-        num_flips += 1
-        p [num_flips, self]
-      end
+      p [num_flips += 1, self]  if $DEBUG
     end
-
     self
   end
 end

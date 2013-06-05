@@ -59,7 +59,9 @@ function clippedPolygon = sutherlandHodgman(subjectPolygon,clipPolygon)
         inputList = clippedPolygon;
 
         clippedPolygon = [];
-        previousVertex = inputList(end,:);
+        if ~isempty(inputList),
+            previousVertex = inputList(end,:);
+        end
 
         for subjectVertex = (1:size(inputList,1))
 

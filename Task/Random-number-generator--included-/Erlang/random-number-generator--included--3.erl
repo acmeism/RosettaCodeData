@@ -1,1 +1,1 @@
-Rfloat = uniform(),
+Rfloat = random:uniform(),

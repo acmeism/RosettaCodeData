@@ -9,9 +9,9 @@ dates = (start..stop).find_all do |day|
 end
 
 puts "There are #{dates.size} months with 5 weekends from 1900 to 2100:"
-puts dates[0, 5].map { |d| d.strftime("%b %Y") }.join("\n")
+puts dates.first(5).map { |d| d.strftime("%b %Y") }
 puts "..."
-puts dates[-5, 5].map { |d| d.strftime("%b %Y") }.join("\n")
+puts dates.last(5).map { |d| d.strftime("%b %Y") }
 
 years_with_5w = dates.map(&:year)
 

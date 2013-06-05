@@ -1,0 +1,6 @@
+(define (integrate f a b #:nodes (n 5))
+  (define m (/ (+ a b) 2))
+  (define d (/ (- b a) 2))
+  (define-values [x w] (Gauss-Legendre-quadrature n))
+  (define (g x) (f (+ m (* d x))))
+  (* d (+ (apply + (map * w (map g x))))))

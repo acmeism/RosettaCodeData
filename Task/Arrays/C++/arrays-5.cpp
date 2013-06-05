@@ -1,8 +1,7 @@
-vector<int> myArray2;
+int* myArray = new int[10];
 
-myArray2.push_back(1);
-myArray2.push_back(3);
+myArray[0] = 1;
+myArray[1] = 3;
 
-myArray2[0] = 2;
-
-cout << myArray2[0] << endl;
+cout << myArray[1] << endl;
+delete [] myArray;

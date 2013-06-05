@@ -1,9 +1,12 @@
-/*REXX program to remove a set of characters from a string  (haystack). */
-say stripChars('She was a soul stripper. She took my heart!', "iea")
-exit                                   /*stick a fork in it, we're done.*/
-/*───────────────────────────────────STRIPCGARS subroutine──────────────*/
-stripChars: procedure;  parse arg haystack, remove
-                     do j=1 for length(remove)
-                     haystack=changestr(substr(remove,j,1), haystack, '')
-                     end   /*j*/
-return haystack
+/* REXX ***************************************************************
+* If source and stripchars don't contain a hex 00 character, this works
+* 06.07.2012 Walter Pachl
+**********************************************************************/
+Say 'Sh ws  soul strppr. Sh took my hrt! -- expected'
+Say stripchars("She was a soul stripper. She took my heart!","aei")
+Exit
+stripchars: Parse Arg string,stripchars
+result=translate(string,'00'x,' ')      /* turn blanks into '00'x   */
+result=translate(result,' ',stripchars) /* turn stripchars into ' ' */
+result=space(result,0)                  /* remove all blanks        */
+Return translate(result,' ','00'x)      /* '00'x back to blanks     */

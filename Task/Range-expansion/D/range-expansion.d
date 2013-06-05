@@ -1,14 +1,12 @@
-import std.stdio, std.regex, std.string, std.conv, std.range;
+import std.stdio, std.regex, std.string, std.conv, std.range,
+       std.algorithm;
 
 int[] rangeExpand(in string txt) /*pure nothrow*/ {
-    typeof(return) result;
-
-    foreach (r; std.string.split(txt, ",")) {
+    return txt.split(",").map!((r) {
         const m = r.match(r"^(-?\d+)(-?(-?\d+))?$").captures.array;
-        result ~= m[2].empty ? [m[1].to!int] :
-                  iota(m[1].to!int, m[3].to!int + 1).array;
-    }
-    return result;
+        return m[2].empty ? [m[1].to!int] :
+                            iota(m[1].to!int, m[3].to!int + 1).array;
+    }).join.array;
 }
 
 void main() {

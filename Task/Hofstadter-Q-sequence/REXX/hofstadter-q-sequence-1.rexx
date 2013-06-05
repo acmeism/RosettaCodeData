@@ -7,7 +7,7 @@ downs=0;                       do j=2  to 100000;            jm=j-1
                                downs=downs + (q.j<q.jm)
                                end   /*j*/
 
-say downs 'terms are less then the previous term.'
+say downs 'terms are less than the previous term.'
 exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────HofstadterQ subroutine──────────────*/
 HofstadterQ: procedure expose q.; arg x 1 ox  /*get the # to gen through*/

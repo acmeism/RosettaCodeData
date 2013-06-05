@@ -1,19 +1,17 @@
-USING: fry grouping io io.encodings.utf8 io.files kernel math
-math.order sequences unicode.case ;
-IN: ordered-words
+USING: grouping http.client io io.encodings.utf8 io.files
+io.files.temp kernel math memoize sequences sequences.extras
+unicode.case urls ;
+IN: rosetta-code.ordered-words
 
-CONSTANT: dict-file "vocab:ordered-words/unixdict.txt"
-
-: word-list ( -- seq )
-    dict-file utf8 file-lines ;
+MEMO: word-list ( -- seq )
+    "unixdict.txt" temp-file dup exists? [
+        URL" http://puzzlers.org/pub/wordlists/unixdict.txt"
+        over download-to
+    ] unless utf8 file-lines ;
 
 : ordered-word? ( word -- ? )
-    >lower 2 <clumps> [ first2 <= ] all? ;
+    >lower [ <= ] monotonic? ;
 
-: filter-longest-words ( seq -- seq' )
-    dup [ length ] [ max ] map-reduce
-    '[ length _ = ] filter ;
-
-: main ( -- )
+: ordered-words-main ( -- )
     word-list [ ordered-word? ] filter
-    filter-longest-words [ print ] each ;
+    all-longest [ print ] each ;

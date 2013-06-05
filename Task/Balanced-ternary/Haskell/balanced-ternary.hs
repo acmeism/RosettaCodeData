@@ -29,9 +29,7 @@ strBt = Bt . zeroTrim.reverse.map (\c -> case c of '-' -> -1; '0' -> 0; '+' -> 1
 intBt :: Integral a => a -> BalancedTernary
 intBt = fromIntegral . toInteger
 
-btInt = f . btList where
-	f [] = 0
-	f (a:as) = a + 3 * f as
+btInt = foldr (\a z -> a + 3 * z) 0 . btList
 
 listAdd a b = take (max (length a) (length b)) $ zipWith (+) (a++[0,0..]) (b++[0,0..])
 
@@ -41,8 +39,7 @@ instance Num BalancedTernary where
 	(+) x y = btNormalize $ listAdd (btList x) (btList y)
 	(*) x y = btNormalize $ mul_ (btList x) (btList y) where
 		mul_ _ [] = []
-		mul_ [] _ = []
-		mul_ (a:as) b = listAdd (map (a*) b) (0:mul_ as b) where
+                mul_ as b = foldr (\a z -> listAdd (map (a*) b) (0:z)) [] as
 
 	-- we don't need to define binary "-" by hand
 

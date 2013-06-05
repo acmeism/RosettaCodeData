@@ -48,8 +48,10 @@ void optimal(int weight, int idx, solution *s)
                 return;
         }
 
-        if (weight < item[idx].weight)
-                return optimal(weight, idx - 1, s);
+        if (weight < item[idx].weight) {
+                optimal(weight, idx - 1, s);
+                return;
+         }
 
         optimal(weight, idx - 1, &v1);
         optimal(weight - item[idx].weight, idx - 1, &v2);
@@ -60,7 +62,7 @@ void optimal(int weight, int idx, solution *s)
         *s = (v1.value >= v2.value) ? v1 : v2;
 }
 
-int main()
+int main(void)
 {
         int i = 0, w = 0;
         solution s = {0, 0};

@@ -1,4 +1,4 @@
- #lang racket/gui
+#lang racket/gui
 (require sgl/gl)
 
 (define (resize w h)
@@ -29,21 +29,14 @@
 (define my-canvas%
   (class* canvas% ()
     (inherit with-gl-context swap-gl-buffers)
-
-   (define/override (on-paint)
-      (with-gl-context
-        (lambda ()
-          (draw-opengl)
-          (swap-gl-buffers))))
-
+    (define/override (on-paint)
+      (with-gl-context (λ() (draw-opengl) (swap-gl-buffers))))
     (define/override (on-size width height)
-      (with-gl-context
-        (lambda ()
-          (resize width height))))
-
+      (with-gl-context (λ() (resize width height))))
     (super-instantiate () (style '(gl)))))
 
-(define win (new frame% (label "Racket Rosetta Code OpenGL example") (min-width 200) (min-height 200)))
-(define gl  (new my-canvas% (parent win)))
+(define win (new frame% [label "Racket Rosetta Code OpenGL example"]
+                        [min-width 200] [min-height 200]))
+(define gl  (new my-canvas% [parent win]))
 
 (send win show #t)

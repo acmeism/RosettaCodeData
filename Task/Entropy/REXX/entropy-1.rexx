@@ -1,24 +1,38 @@
-/* Rexx ***************************************************************
+/* REXX ***************************************************************
 * 28.02.2013 Walter Pachl
 * 12.03.2013 Walter Pachl  typo in log corrected. thanx for testing
+* 22.05.2013 -"- extended the logic to accept other strings
+* 25.05.2013 -"- 'my' log routine is apparently incorrect
+* 25.05.2013 -"- problem identified & corrected
 **********************************************************************/
-s="1223334444"
+Numeric Digits 30
+Parse Arg s
+If s='' Then
+  s="1223334444"
 occ.=0
+chars=''
 n=0
+cn=0
 Do i=1 To length(s)
   c=substr(s,i,1)
+  If pos(c,chars)=0 Then Do
+    cn=cn+1
+    chars=chars||c
+    End
   occ.c=occ.c+1
   n=n+1
   End
-do c=1 To 4
+do ci=1 To cn
+  c=substr(chars,ci,1)
   p.c=occ.c/n
-  say c p.c
+  /* say c p.c */
   End
 e=0
-Do c=1 To 4
-  e=e+p.c*log(p.c,,2)
+Do ci=1 To cn
+  c=substr(chars,ci,1)
+  e=e+p.c*log(p.c,30,2)
   End
-Say 'Entropy of' s 'is' (-e)
+Say 'Version 1:' s 'Entropy' format(-e,,12)
 Exit
 
 log: Procedure
@@ -28,6 +42,8 @@ log: Procedure
 *                                                 0.5 to 1.5
 *                                                 1.5 to infinity
 * 03.09.1992 Walter Pachl
+* 25.05.2013 -"- 'my' log routine is apparently incorrect
+* 25.05.2013 -"- problem identified & corrected
 ***********************************************************************/
   Parse Arg x,prec,b
   If prec='' Then prec=9
@@ -78,7 +94,7 @@ log: Procedure
       End
     End
   If b<>'' Then
-    r=r/log(b)
+    r=r/log(b,prec)
   Numeric Digits (prec)
   r=r+0
   Return r

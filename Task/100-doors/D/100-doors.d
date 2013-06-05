@@ -1,36 +1,31 @@
-import std.stdio;
+import std.stdio, std.algorithm, std.range;
 
-enum DoorState { Closed, Open }
-alias DoorState[] Doors;
+enum DoorState : bool { closed, open }
+alias Doors = DoorState[];
 
-Doors flipUnoptimized(Doors doors) {
-    doors[] = DoorState.Closed;
-    foreach (i; 0 .. doors.length)
-        for (int j = i; j < doors.length; j += i+1)
-            if (doors[j] == DoorState.Open)
-                doors[j] = DoorState.Closed;
+Doors flipUnoptimized(Doors doors) pure nothrow {
+    doors[] = DoorState.closed;
+
+    foreach (immutable i; 0 .. doors.length)
+        for (int j = i; j < doors.length; j += i + 1)
+            if (doors[j] == DoorState.open)
+                doors[j] = DoorState.closed;
             else
-                doors[j] = DoorState.Open;
+                doors[j] = DoorState.open;
     return doors;
 }
 
-Doors flipOptimized(Doors doors) {
-    doors[] = DoorState.Closed;
-    for (int i = 1; i*i <= doors.length; i++)
-        doors[i*i - 1] = DoorState.Open;
+Doors flipOptimized(Doors doors) pure nothrow {
+    doors[] = DoorState.closed;
+    for (int i = 1; i ^^ 2 <= doors.length; i++)
+        doors[i ^^ 2 - 1] = DoorState.open;
     return doors;
 }
 
-// test program
 void main() {
     auto doors = new Doors(100);
-    foreach (i, door; flipUnoptimized(doors))
-        if (door == DoorState.Open)
-            write(i+1, " ");
-    writeln();
 
-    foreach (i, door; flipOptimized(doors))
-        if (door == DoorState.Open)
-            write(i+1, " ");
-    writeln();
+    foreach (const open; [doors.dup.flipUnoptimized,
+                          doors.dup.flipOptimized])
+        iota(1, open.length + 1).filter!(i => open[i - 1]).writeln;
 }

@@ -1,3 +1,4 @@
+// Use <functional> for C++11
 #include <tr1/functional>
 #include <iostream>
 

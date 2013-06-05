@@ -1,6 +1,5 @@
 package org.rosettacode;
 
-import java.util.Random;
 import java.util.Collections;
 import java.util.Arrays;
 
@@ -13,7 +12,6 @@ public class MazeGenerator {
 	private final int x;
 	private final int y;
 	private final int[][] maze;
-	private static final Random rand = new Random();
 
 	public MazeGenerator(int x, int y) {
 		this.x = x;

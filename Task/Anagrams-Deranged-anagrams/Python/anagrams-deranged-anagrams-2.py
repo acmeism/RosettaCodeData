@@ -2,17 +2,15 @@ from itertools import izip, ifilter
 from collections import defaultdict
 
 def find_deranged(words):
-    result = []
-    for i, w1 in enumerate(words):
-        for w2 in words[i+1:]:
-            if all(a != b for a,b in izip(w1, w2)):
-                result.append((w1, w2))
-    return result
+    return [(w1, w2) for i, w1 in enumerate(words)
+                     for w2 in words[i + 1:]
+                     if all(a != b for a,b in izip(w1, w2))]
 
 def main():
     wclasses = [[] for _ in xrange(30)]
     for word in open("unixdict.txt").read().split():
         wclasses[-len(word)].append(word)
+
     print "Longest deranged anagrams:"
     for words in ifilter(None, wclasses):
         anags = defaultdict(list)

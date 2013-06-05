@@ -1,4 +1,5 @@
 import Control.Arrow
+import Data.List (mapAccumR)
 
 bor, band :: Int -> Int -> Int
 bor = max

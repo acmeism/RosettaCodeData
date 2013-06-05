@@ -38,7 +38,7 @@ public class LZW {
             dictionary.put(i, "" + (char)i);
 
         String w = "" + (char)(int)compressed.remove(0);
-        String result = w;
+        StringBuffer result = new StringBuffer(w);
         for (int k : compressed) {
             String entry;
             if (dictionary.containsKey(k))
@@ -48,14 +48,14 @@ public class LZW {
             else
                 throw new IllegalArgumentException("Bad compressed k: " + k);
 
-            result += entry;
+            result.append(entry);
 
             // Add w+entry[0] to the dictionary.
             dictionary.put(dictSize++, w + entry.charAt(0));
 
             w = entry;
         }
-        return result;
+        return result.toString();
     }
 
     public static void main(String[] args) {

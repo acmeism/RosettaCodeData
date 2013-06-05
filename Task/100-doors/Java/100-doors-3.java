@@ -1,12 +1,8 @@
 public class Doors
 {
- public static void main(final String[] args)
- {
-  StringBuilder sb = new StringBuilder();
-
-  for (int i = 1; i <= 10; i++)
-   sb.append("Door #").append(i*i).append(" is open\n");
-
-  System.out.println(sb.toString());
- }
+	public static void main(String[] args)
+	{
+		for(int i=0;i<10;i++)
+			System.out.println("Door #"+(i*(i+2)+1)+" is open.");
+	}
 }

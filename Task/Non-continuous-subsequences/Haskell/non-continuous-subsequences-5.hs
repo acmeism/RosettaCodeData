@@ -1,9 +1,8 @@
 import Data.List (inits, tails)
 
-subseqs [] = []
-subseqs (x:xs) = [x] : map (x:) s ++ s where s = subseqs xs
+subseqs = foldr (\x s -> [x] : map (x:) s ++ s) []
 
-consecs x = concatMap (tail.inits) (tails x)
+consecs = concatMap (tail.inits) . tails
 
 minus [] [] = []
 minus (a:as) bb@(b:bs)

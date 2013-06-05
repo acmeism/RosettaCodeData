@@ -1,9 +1,11 @@
 /*REXX program to convert  Roman numerals ──► Arabic numerals (numbers).*/
-numeric digits 1000                            /*we can handle big nums.*/
-y = 'MCMXC'    ;      say right(y,9)':'  rom2dec(y)
-y = 'mmviii'   ;      say right(y,9)':'  rom2dec(y)
-y = 'MDCLXVI'  ;      say right(y,9)':'  rom2dec(y)
-y = 'MDQLXVI'  ;      say right(y,9)':'  rom2dec(y)
+numeric digits 1000                    /*so we can handle the big nums. */
+parse arg z                            /*get any optional argument(s).  */
+if z=''  then z='MCMXC mmviii IIXX LU MDCLXVI MDWLXVI ((mmm)) [[[[[D]]]]]'
+
+     do j=1  for words(z); y=word(z,j) /*process each Roman numeral.    */
+     say  right(y,20)':'   rom2dec(y)  /*show original & decimal version*/
+     end   /*j*/
 exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────ROM2DEC subroutine──────────────────*/
 rom2dec:  procedure;   h='0'x;   #=0;   $=1;   arg n .    /*uppercase N.*/

@@ -1,4 +1,4 @@
-       * Multiply in COBOL
+      * Multiply in COBOL
 
        IDENTIFICATION DIVISION.
        PROGRAM-ID. myTest.

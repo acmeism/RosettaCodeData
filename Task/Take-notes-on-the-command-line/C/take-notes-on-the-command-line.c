@@ -15,7 +15,7 @@ int main(int argc, char**argv)
 			while ((i = fgetc(note)) != EOF)
 				putchar(i);
 
-	} else if ((note = fopen(note_file, "a")))
+	} else if ((note = fopen(note_file, "a"))) {
 		tm = time(0);
 		p = ctime(&tm);
 

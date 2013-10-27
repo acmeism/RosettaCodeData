@@ -11,7 +11,7 @@ struct Stack(T) {
         throw new Exception("Stack Empty");
       auto top = data.back;
       static if (discard)
-        data.popBack();
+        data.popBack;
       return top;
     }
 }
@@ -53,8 +53,8 @@ final class AST {
   int xpHead, xpTail;
 
   void joinXP(XP x) pure {
-    x.RHS = num.pop();
-    x.LHS = num.pop();
+    x.RHS = num.pop;
+    x.LHS = num.pop;
     num.push(x);
   }
 
@@ -69,7 +69,7 @@ final class AST {
           xpTail++;
           return token;
         default: // Should be number.
-          if (token[0].isDigit()) {
+          if (token[0].isDigit) {
             while (xpTail < xpr.length && xpr[xpTail].isDigit())
               xpTail++;
             return xpr[xpHead .. xpTail];
@@ -89,18 +89,18 @@ final class AST {
       num = opr = null;
       root = null;
       opr.push(new XP); // CBkt, prevent evaluate null OP precedence.
-      while ((token = nextToken()) !is null) {
+      while ((token = nextToken) !is null) {
         XP tokenXP = new XP(token, xpHead);
         if (expectingOP) { // Process OP-alike XP.
           switch (token) {
             case ")":
-              while (opr.pop!false().type != Type.OBkt)
-                joinXP(opr.pop());
-              opr.pop();
+              while (opr.pop!false.type != Type.OBkt)
+                joinXP(opr.pop);
+              opr.pop;
               expectingOP = true;
               break;
             case "+", "-", "*", "/":
-              while (tokenXP <= opr.pop!false())
+              while (tokenXP <= opr.pop!false)
                 joinXP(opr.pop());
               opr.push(tokenXP);
               expectingOP = false;
@@ -127,7 +127,7 @@ final class AST {
       } // End while.
 
       while (opr.length > 1) // Join pending Op.
-        joinXP(opr.pop());
+        joinXP(opr.pop);
     } catch(Exception e) {
       writefln("%s\n%s\n%s^", e.msg, xpr, " ".replicate(xpHead));
       root = null;
@@ -135,10 +135,10 @@ final class AST {
     }
 
     if (num.length != 1) { // Should be one XP left.
-      writefln("Parse Error...");
+      "Parse Error...".writefln;
       root = null;
     } else {
-      root = num.pop();
+      root = num.pop;
     }
     return this;
   } // End Parse.
@@ -151,7 +151,7 @@ pure nothrow {
     s.length++;
   while (s[l].length < p + v.length + 1)
     s[l] ~= " ";
-  s[l][p .. p + v.length] = v;
+  s[l][p .. p + v.length] = v[];
 }
 
 final class CalcVis : Visitor {
@@ -179,10 +179,10 @@ final class CalcVis : Visitor {
         }
       }
       foreach (const t; c.Tree)
-        writefln(t);
+        t.writefln;
       writefln("\n%s ==>\n%s = %s", a.xpr, c.resultStr, c.result);
     } else
-      writefln("Evalute invalid or null Expression.");
+      "Evalute invalid or null Expression.".writefln;
   }
 
   // Calc. the value, display AST struct and eval order.
@@ -191,7 +191,7 @@ final class CalcVis : Visitor {
     level++;
     if (xp.type == Type.Num) {
       resultStr ~= xp.str;
-      result = to!int(xp.str);
+      result = xp.str.to!int;
     } else {
       resultStr ~= "(";
       xp.LHS.accept(this);
@@ -214,6 +214,6 @@ final class CalcVis : Visitor {
 void main(string[] args) {
   immutable exp0 = "1 + 2*(3 - 2*(3 - 2)*((2 - 4)*5" ~
                    " - 22/(7 + 2*(3 - 1)) - 1)) + 1";
-  immutable exp = args.length > 1 ? args[1 .. $].join(" ") : exp0;
-  (new AST).parse(exp).CalcVis(); // Should be 60.
+  immutable exp = (args.length > 1) ? args[1 .. $].join(" ") : exp0;
+  new AST().parse(exp).CalcVis; // Should be 60.
 }

@@ -1,15 +1,11 @@
 def encode(string)
-  encoding = []
-  for char, repeat in string.scan(/(.)(\1*)/)
-    encoding << [char, 1 + repeat.length]
+  string.scan(/(.)(\1*)/).inject("") do |encoding, (char, repeat)|
+    encoding << (1 + repeat.length).to_s << char
   end
-  encoding
 end
 
-def decode(encoding)
-  decoding = ""
-  for char, length in encoding
-    decoding << char * length
+def decode(string)
+  string.scan(/(\d+)(\D)/).inject("") do |decoding, (length, char)|
+    decoding << char * length.to_i
   end
-  decoding
 end

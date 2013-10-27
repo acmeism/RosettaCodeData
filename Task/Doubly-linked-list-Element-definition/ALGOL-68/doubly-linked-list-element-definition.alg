@@ -1,26 +1,15 @@
-MODE LINK = STRUCT (
-  REF LINK prev,
-  REF LINK next,
-  DATA value
+# -*- coding: utf-8 -*- #
+CO REQUIRES:
+  MODE OBJVALUE = ~ # Mode/type of actual obj to be queued #
+END CO
+
+MODE OBJLINK = STRUCT(
+  REF OBJLINK next,
+  REF OBJLINK prev,
+  OBJVALUE value # ... etc. required #
 );
 
-MODE DATA = STRUCT(INT year elected, STRING name);
+PROC obj link new = REF OBJLINK: HEAP OBJLINK;
 
-LINK previous, incumbent, elect;
-previous := (NIL, incumbent, DATA(1993, "Clinton"));
-incumbent:= (previous, elect,DATA(2001, "Bush"   ));
-elect    := (incumbent, NIL, DATA(2008, "Obama"  ));
-
-REF LINK node := previous;
-WHILE REF LINK(node) ISNT NIL DO
-  printf(($dddd": "g"; "$,value OF node));
-  node := next OF node
-OD;
-print(new line);
-
-node := elect;
-WHILE REF LINK(node) ISNT NIL DO
-  printf(($dddd": "g"; "$,value OF node));
-  node := prev OF node
-OD;
-print((newline))
+PROC obj link free = (REF OBJLINK free)VOID:
+   prev OF free := next OF free := obj queue empty # give the garbage collector a big hint #

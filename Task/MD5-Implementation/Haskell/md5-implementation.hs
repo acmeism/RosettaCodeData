@@ -7,7 +7,7 @@ import Data.Binary.Put
 import Data.Bits
 
 import Data.Array (Array, listArray, (!))
-import Data.List (foldl')
+import Data.List (foldl)
 import Data.Word (Word32)
 
 import Numeric (showHex)

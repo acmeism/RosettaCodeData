@@ -1,5 +1,5 @@
-Integer(dec1)     # => ArgumentError: invalid value for Integer: "0123459"
-Integer(dec1.sub(/^0+/,""))  # => 123459
-Integer("0x" + hex2)         # => 180154659
-Integer("0"  + oct3)         # => 4009
-Integer("0b" + bin4)         # => 345
+p dec1.to_i(10)         # => 123459
+p hex2.to_i(16)         # => 180154659
+p oct3.to_i(8)          # => 4009
+p bin4.to_i(2)          # => 345
+p "xyz9".to_i(10)       # => 0  If there is not a valid letter, 0 is returned.

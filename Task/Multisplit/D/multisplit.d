@@ -1,9 +1,9 @@
 import std.stdio, std.array, std.algorithm;
 
 string[] multiSplit(in string s, in string[] divisors)
-/*pure nothrow*/ {
+pure /*nothrow*/ {
     string[] result;
-    auto rest = s.idup;
+    auto rest = s.idup; // Not nothrow.
 
     while (true) {
 	    bool done = true;
@@ -11,7 +11,7 @@ string[] multiSplit(in string s, in string[] divisors)
         {
             string best;
             foreach (div; divisors) {
-                const maybe = find(rest, div);
+                const maybe = rest.find(div);
                 if (maybe.length > best.length) {
                     best = maybe;
                     delim = div;
@@ -21,18 +21,19 @@ string[] multiSplit(in string s, in string[] divisors)
         }
 	    result.length++;
 	    if (done) {
-		    result[$ - 1] = rest.idup;
+            result.back = rest.idup;
 		    return result;
 	    } else {
-		    const t = findSplit(rest, delim);
-		    result[$ - 1] = t[0].idup;
+            const t = rest.findSplit(delim);
+		    result.back = t[0].idup;
 		    rest = t[2];
 	    }
     }
 }
 
 void main() {
-    immutable s = "a!===b=!=c";
-    immutable divs = ["==", "!=", "="];
-    writeln(multiSplit(s, divs).join(" {} "));
+    "a!===b=!=c"
+    .multiSplit(["==", "!=", "="])
+    .join(" {} ")
+    .writeln;
 }

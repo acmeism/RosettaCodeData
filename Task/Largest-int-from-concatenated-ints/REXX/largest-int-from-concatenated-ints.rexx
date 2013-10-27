@@ -9,16 +9,16 @@
       do  while  z\==''                /*examine each number in the list*/
       big=word(z,1);  index=1          /*assume first number is biggest.*/
 
-         do k=2  to  words(z);         x=word(z,k)     /*get an integer.*/
-         L=max(length(big), length(x))                 /*get max length.*/
-         if left(x,L,left(x,1)) <<= left(big,L,left(big,1))  then iterate
-         big=x;      index=k           /*we found a new biggie (& index)*/
-         end   /*k*/
+          do k=2  to  words(z);        x=word(z,k)     /*get an integer.*/
+          L=max(length(big), length(x))                /*get max length.*/
+          if left(x,L,left(x,1)) <<= left(big,L,left(big,1))  then iterate
+          big=x;      index=k          /*we found a new biggie (& index)*/
+          end   /*k*/
 
-      z=strip(delword(z, index, 1))    /*remove the  "maximum" from list*/
+      z=space(delword(z, index, 1))    /*remove the  "maximum" from list*/
       $=$ || big                       /*append the  "maximum"  number. */
-      end      /*while*/
+      end       /*while z¬==''*/
 
   say right($,30)   ' max for: '   @.j /*show the "max" integer and list*/
-  end          /*j*/
+  end           /*j*/
                                        /*stick a fork in it, we're done.*/

@@ -1,11 +1,9 @@
 def eratosthenes(n)
-  nums = [0, 0] + (2..n).to_a
-  (2..Math.sqrt(n).to_i).each do |i|
-    if nums[i].nonzero?
-      (i**2..n).step(i) {|m| nums[m] = 0}
-    end
+  nums = [nil, nil, *2..n]
+  (2..Math.sqrt(n)).each do |i|
+    (i**2..n).step(i){|m| nums[m] = nil}  if nums[i]
   end
-  nums.find_all {|m| m.nonzero?}
+  nums.compact
 end
 
 p eratosthenes(100)

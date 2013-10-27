@@ -1,11 +1,11 @@
 use Math::Complex;
 
-foreach $n (2 .. 10) {
+foreach my $n (2 .. 10) {
   printf "%2d", $n;
-  foreach $k (0 .. $n-1) {
-    $ret = cplxe(1, 2 * pi * $k / $n);
-    $ret->display_format(style => 'cartesian', format => '%.3f');
-    print " $ret";
+  my @roots = root(1,$n);
+  foreach my $root (@roots) {
+    $root->display_format(style => 'cartesian', format => '%.3f');
+    print " $root";
   }
   print "\n";
 }

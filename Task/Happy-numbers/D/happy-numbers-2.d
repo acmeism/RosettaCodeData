@@ -1,10 +1,10 @@
 import std.stdio, std.algorithm, std.range, std.conv;
 
-bool isHappy(int n) /*pure nothrow*/ {
+bool isHappy(int n) pure /*nothrow*/ {
     int[int] seen;
 
     while (true) {
-        const t = n.text().map!q{(a - '0') ^^ 2}().reduce!q{a + b}();
+        immutable t = n.text.map!q{(a - '0') ^^ 2}.reduce!q{a + b};
         if (t == 1)
             return true;
         if (t in seen)
@@ -15,5 +15,5 @@ bool isHappy(int n) /*pure nothrow*/ {
 }
 
 void main() {
-    int.max.iota().filter!isHappy().take(8).writeln();
+    int.max.iota.filter!isHappy.take(8).writeln;
 }

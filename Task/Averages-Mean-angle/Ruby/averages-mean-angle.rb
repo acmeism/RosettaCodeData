@@ -1,4 +1,4 @@
-require 'complex'
+require 'complex' # Superfluous in Ruby >= 2.0; complex is added to core.
 
 def deg2rad(d)
   d * Math::PI / 180

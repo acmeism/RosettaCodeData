@@ -1,7 +1,7 @@
 require "rational"
 
 def play
-  digits = Array.new(4) {1+rand(9)}
+  digits = Array.new(4){rand(1..9)}
   loop do
     guess = get_guess(digits)
     result = evaluate(guess)
@@ -17,13 +17,13 @@ end
 
 def get_guess(digits)
   loop do
-    print "\nEnter your guess using #{digits.inspect}: "
-    guess = $stdin.gets.chomp
+    print "\nEnter your guess using #{digits}: "
+    guess = gets.chomp
 
     # ensure input is safe to eval
     invalid_chars = guess.scan(%r{[^\d\s()+*/-]})
     unless invalid_chars.empty?
-      puts "invalid characters in input: #{invalid_chars.inspect}"
+      puts "invalid characters in input: #{invalid_chars}"
       next
     end
 

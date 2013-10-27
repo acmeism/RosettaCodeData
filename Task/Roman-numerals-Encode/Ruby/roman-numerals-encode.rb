@@ -8,3 +8,7 @@ def roman(num)
     return roman(subtractor) + roman(num + subtractor)  if num >= cutPoint - subtractor and num < cutPoint
   end
 end
+
+[1990, 2008, 1666].each do |i|
+  puts "%4d => %s" % [i, roman(i)]
+end

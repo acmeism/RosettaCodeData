@@ -11,12 +11,12 @@ sub point (Int $index) {
 }
 
 sub test-angle ($ix) { $ix * 11.25 + (0, 5.62, -5.62)[ $ix % 3 ] }
-sub angle-to-point($𝜽) { floor $𝜽 / 360 * 32 + 0.5 }
+sub angle-to-point(\𝜽) { floor 𝜽 / 360 * 32 + 0.5 }
 
 for 0 .. 32 -> $ix {
-    my $𝜽 = test-angle($ix);
-    printf "  %2d %6.2f%s %s\n",
+    my \𝜽 = test-angle($ix);
+    printf "  %2d %6.2f° %s\n",
               $ix % 32 + 1,
-                  $𝜽, '°',
-                          ucfirst point angle-to-point $𝜽;
+                  𝜽,
+                         tc point angle-to-point 𝜽;
 }

@@ -1,0 +1,8 @@
+int8(8)
+uint8(8)
+int16(8)
+uint16(8)
+int32(8)
+uint32(8)
+int64(8)
+uint64(8)

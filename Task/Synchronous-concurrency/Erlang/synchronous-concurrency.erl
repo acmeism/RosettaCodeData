@@ -1,30 +1,24 @@
 -module(cc).
--export([start/0, reader/2]).
+
+-export([start/0]).
 
 start() ->
-   Pid = spawn(cc,reader,[self(), 0]),
-   case file:open("input.txt", read) of
-       {error, Any} -> io:fwrite("Error ~p~n",[Any]);
-       {ok, Io} ->
-           process(Io, Pid),
-           file:close(Io)
-   end,
-   ok.
+   My_pid = erlang:self(),
+   Pid = erlang:spawn( fun() -> reader(My_pid, 0) end ),
+   {ok, IO } = file:open( "input.txt", [read] ),
+   process( io:get_line(IO, ""), IO, Pid ),
+   file:close( IO ).
 
-process(Io, Pid) ->
-   case io:get_line(Io,"") of
-       eof ->
-           Pid ! count,
-           wait();
-       Any ->
-           Pid ! Any,
-           process(Io, Pid)
-   end.
 
-wait() ->
+
+process( eof, _IO, Pid ) ->
+   Pid ! count,
    receive
        I -> io:fwrite("Count:~p~n", [I])
-   end.
+   end;
+process( Any, IO, Pid ) ->
+   Pid ! Any,
+   process( io:get_line(IO, ""), IO, Pid ).
 
 reader(Pid, C) ->
    receive

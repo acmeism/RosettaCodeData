@@ -1,6 +1,7 @@
-(1 to 100) foreach {
-    case x if (x % 15 == 0) => println("FizzBuzz")
-    case x if (x % 3 == 0) => println("Fizz")
-    case x if (x % 5 == 0) => println("Buzz")
-    case x => println(x)
-}
+  for (x <- 1 to 100) println(
+    (x % 3, x % 5) match {
+      case (0, 0) => "FizzBuzz"
+      case (0, _) => "Fizz"
+      case (_, 0) => "Buzz"
+      case _      => x
+    })

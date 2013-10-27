@@ -1,7 +1,7 @@
-import std.stdio, std.algorithm, std.range, std.conv;
+import std.stdio, std.algorithm, std.range, std.conv, std.string;
 
 bool isSelfDescribing(in long n) /*pure nothrow*/ {
-    auto nu = n.text.map!q{a - '0'};
+    auto nu = n.text.representation.map!q{a - '0'};
     return nu.length.iota.map!(a => nu.count(a)).equal(nu);
 }
 

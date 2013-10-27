@@ -1,5 +1,4 @@
-import std.stdio, std.conv, std.algorithm, std.exception, std.ascii,
-       std.array;
+import std.stdio, std.algorithm, std.ascii, std.array;
 
 alias Digits = ubyte[];
 
@@ -12,24 +11,19 @@ Digits toBase(ulong number, in ubyte base) pure nothrow {
     return result;
 }
 
-ulong fromBase(in Digits digits, in ubyte base) pure nothrow {
-    return reduce!((n, k) => n * base + k)(0, digits);
-}
+enum fromBase = (in Digits digits, in ubyte base) pure nothrow =>
+    reduce!((n, k) => n * base + k)(0UL, digits);
 
-string fromDigits(in Digits digits) pure nothrow {
-    return digits
-           .map!(d => cast(char)(d < 10 ? d + '0' : d + 'a' - 10))
-           .array;
-}
+immutable myDigits = digits ~ lowercase;
 
-Digits toDigits(in string number) pure /*nothrow*/ {
-    static ubyte convert(in dchar d) pure nothrow {
-        if (d.isDigit) return cast(typeof(return))(d - '0');
-        if (d.isUpper) return cast(typeof(return))(d - 'A' + 10);
-        else           return cast(typeof(return))(d - 'a' + 10);
-    }
-    return number.map!convert.array;
-}
+enum fromDigits = (in Digits digits) pure nothrow =>
+    digits.map!(d => myDigits[d]).array;
+
+enum convert = (in dchar d) pure nothrow =>
+    cast(ubyte)(d.isDigit ? d - '0' : d.toLower - 'a' + 10);
+
+enum toDigits = (in string number) pure /*nothrow*/ =>
+    number.map!convert.array;
 
 void main() {
     "1ABcd".toDigits.fromBase(16).writeln;

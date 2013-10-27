@@ -14,7 +14,7 @@ contains
 
     N=size(x)
 
-    if(n.le.1) return
+    if(N .le. 1) return
 
     allocate(odd((N+1)/2))
     allocate(even(N/2))

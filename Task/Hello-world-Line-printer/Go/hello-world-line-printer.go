@@ -14,5 +14,5 @@ func main() {
 
 	defer lp0.Close()
 
-	fmt.Fprintln(lp0, "Hello world!")
+	fmt.Fprintln(lp0, "Hello World!")
 }

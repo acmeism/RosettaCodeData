@@ -24,7 +24,7 @@ public:
 	cout << endl << left
 	     << "TEMPERATURES:" << endl
 	     << "===============" << endl << setw( 13 )
-	     << "CELCIUS:" << cel << endl << setw( 13 )
+	     << "CELSIUS:" << cel << endl << setw( 13 )
 	     << "DELISLE:" << del << endl << setw( 13 )
 	     << "FAHRENHEIT:" << fah << endl << setw( 13 )
 	     << "KELVIN:" << kelvin << endl  << setw( 13 )

@@ -2,7 +2,7 @@
        PROGRAM-ID. Spam.
 
        PROCEDURE DIVISION.
-           PERFORM FOREVER
+           PERFORM UNTIL 1 <> 1
                DISPLAY "SPAM"
            END-PERFORM
 

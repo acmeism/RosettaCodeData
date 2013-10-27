@@ -1,11 +1,11 @@
-import std.stdio, std.ascii, std.algorithm, std.range;
+import std.stdio, std.ascii, std.algorithm, std.range, std.typetuple;
 
 void main() {
-    int[26] frequency;
+    uint[26] frequency;
 
-    foreach (ubyte[] buffer; File("unixdict.txt").byChunk(2 ^^ 15))
-        foreach (c; buffer.filter!isAlpha())
-            frequency[c.toLower() - 'a']++;
+    foreach (const buffer; "unixdict.txt".File.byChunk(2 ^^ 15))
+        foreach (immutable c; buffer.filter!isAlpha)
+            frequency[c.toLower - 'a']++;
 
-    writefln("%(%(%s, %),\n%)", std.range.chunks(frequency[], 10));
+    writefln("%(%(%s, %),\n%)", frequency[].chunks(10));
 }

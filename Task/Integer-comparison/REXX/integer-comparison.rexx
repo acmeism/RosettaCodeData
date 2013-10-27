@@ -18,7 +18,7 @@ getInt: procedure                      /*prompt the CBLF, get an integer*/
        when words(x)>1       then call serr 'Too many arguments entered.'
        when \datatype(x,'N') then call serr "Argument isn't numeric:" x
        when \datatype(x,'W') then call serr "Argument isn't an integer:" x
-       otherwise             return x  /*Eureka!  Return   X to invoker.*/
+       otherwise             return x  /*Eureka!  Return  X  to invoker.*/
        end   /*select*/
   end        /*forever*/
 /*──────────────────────────────────SERR subroutine─────────────────────*/

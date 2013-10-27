@@ -1,0 +1,2 @@
+int othervar;
+pointer = &othervar;

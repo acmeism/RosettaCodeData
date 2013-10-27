@@ -1,17 +1,9 @@
-#!/usr/bin/env python
-# Example of using doc strings
-"""My Doc-string example"""
+"""Un-assigned strings in triple-quotes might be used
+   as multi-line comments
+"""
 
-class Foo:
-     '''Some documentation for the Foo class'''
-     def __init__(self):
-        "Foo's initialization method's documentation"
-
-def bar():
-    """documentation for the bar function"""
-
-if __name__ == "__main__":
-    print (__doc__)
-    print (Foo.__doc__)
-    print (Foo.__init__.__doc__)
-    print (bar.__doc__)
+'''
+   "triple quoted strings" can be delimited by either 'single' or "double" quote marks; and they can contain mixtures
+   of other quote marks without any need to \escape\ them using any special characters.  They also may span multiple
+   lines without special escape characters.
+'''

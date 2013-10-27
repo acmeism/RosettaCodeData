@@ -1,8 +1,8 @@
 import std.stdio, std.algorithm, std.mathspecial;
 
-real x2Dist(T)(in T[] data) pure /*nothrow*/ {
+real x2Dist(T)(in T[] data) pure nothrow {
     immutable avg = reduce!q{a + b}(0.0L, data) / data.length;
-    immutable sqs = reduce!((a,b) => a + (b - avg) ^^ 2)(0.0L, data);
+    immutable sqs = reduce!((a, b) => a + (b - avg) ^^ 2)(0.0L, data);
     return sqs / avg;
 }
 
@@ -20,11 +20,11 @@ void main() {
                           [522573, 244456, 139979,  71531,  21461]];
     writefln(" %4s %12s  %12s %8s   %s",
              "dof", "distance", "probability", "Uniform?", "dataset");
-    foreach (immutable(int[]) ds; dataSets) {
+    foreach (immutable ds; dataSets) {
         immutable dof = ds.length - 1;
-        immutable dist = x2Dist(ds);
+        immutable dist = ds.x2Dist;
         immutable prob = x2Prob(dof, dist);
         writefln("%4d %12.3f  %12.8f    %5s    %6s",
-                 dof, dist, prob, x2IsUniform(ds) ? "YES" : "NO", ds);
+                 dof, dist, prob, ds.x2IsUniform ? "YES" : "NO", ds);
     }
 }

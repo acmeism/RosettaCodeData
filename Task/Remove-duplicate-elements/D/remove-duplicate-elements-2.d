@@ -1,10 +1,10 @@
-import std.stdio;
-
 void main() {
-    auto data = [1, 3, 2, 9, 1, 2, 3, 8, 8, 1, 0, 2];
+    import std.stdio;
 
-    int[int] hash;
+    immutable data = [1, 3, 2, 9, 1, 2, 3, 8, 8, 1, 0, 2];
+
+    bool[int] hash;
     foreach (el; data)
-        hash[el] = 0;
-    writeln(hash.keys);
+        hash[el] = true;
+    hash.byKey.writeln;
 }

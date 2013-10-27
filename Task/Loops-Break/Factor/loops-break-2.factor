@@ -1,1 +1,1 @@
-[ 20 random [ . ] [ 10 = not ] bi 20 random . ] loop
+[ 20 random [ . ] [ 10 = not ] bi dup [ 20 random . ] when ] loop

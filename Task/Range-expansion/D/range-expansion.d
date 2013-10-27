@@ -6,7 +6,7 @@ int[] rangeExpand(in string txt) /*pure nothrow*/ {
         const m = r.match(r"^(-?\d+)(-?(-?\d+))?$").captures.array;
         return m[2].empty ? [m[1].to!int] :
                             iota(m[1].to!int, m[3].to!int + 1).array;
-    }).join.array;
+    }).join;
 }
 
 void main() {

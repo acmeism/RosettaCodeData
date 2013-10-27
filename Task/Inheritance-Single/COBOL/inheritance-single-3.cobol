@@ -1,0 +1,5 @@
+(defstruct animal)
+(defstruct (dog    (:include animal)))
+(defstruct (lab    (:include dog)))
+(defstruct (collie (:include dog)))
+(defstruct (cat    (:include animal)))

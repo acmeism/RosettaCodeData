@@ -1,20 +1,32 @@
-def luhnTest(number: String): Boolean = {
-    var odd = true
-    var sum = 0
+object LuhnTest extends App {
 
-    for (int <- number.reverse.map{ i => i.toString.toInt }) {
-        if (odd)
-            sum = sum + int
-        else
-            sum = sum + (int * 2 % 10) + (int / 5)
+  def luhnChecksum(number: String) = { // This function can be used for Check digit generation
+    (number.reverse.map { _.toString.toShort }.grouped(2) map {
+      t => t(0) + (if (t.length > 1) (t(1) * 2) % 10 + t(1) / 5 else 0)
+    }).sum % 10
+  }
 
-        odd = !odd
-    }
+  // Bonus function Compute check digit and assemble it to a valid number
+  def luhnWithComputedCheckDigit(partialCardNumber: String): String = {
+    partialCardNumber +
+      ((10 - luhnChecksum((partialCardNumber.toLong * 10).toString)) % 10).toString
+  }
 
-    sum % 10 == 0
+  // Section of test
+  val (validNumbers, invalidNumbers) =
+    (List("49927398716", "1234567812345670"), List("49927398717", "1234567812345678"))
+
+  // Valid number test
+  assert(validNumbers.forall(x => luhnChecksum(x) == 0),
+    "Correct number signaled as invalid")
+  // Invalid number test
+  assert(invalidNumbers.forall(x => luhnChecksum(x) != 0),
+    "Incorrect number signaled as valid")
+
+  // Test Check digit computation, reuse the valid and invalid numbers
+  assert((validNumbers ++ invalidNumbers.
+    map(s => luhnWithComputedCheckDigit(s.init /*make partial*/ ))).forall(x => luhnChecksum(x) == 0),
+    "Error in computed checkdigit")
+
+  print("Successfully completed without errors.")
 }
-
-println(luhnTest("49927398716"))
-println(luhnTest("49927398717"))
-println(luhnTest("1234567812345678"))
-println(luhnTest("1234567812345670"))

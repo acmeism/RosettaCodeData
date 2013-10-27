@@ -1,5 +1,5 @@
 sub crc(
-    Buf $buf,
+    Blob $buf,
              # polynomial including leading term, default: ISO 3309/PNG/gzip
     :@poly = (1,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0,1,0,0,0,1,1,1,0,1,1,0,1,1,0,1,1,1),
     :$n = @poly.end,      # degree of polynomial

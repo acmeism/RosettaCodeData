@@ -1,34 +1,30 @@
 import std.algorithm, std.array, std.typecons, std.range;
 
-Tuple!(int[], int)[] sPermutations(in int n) /*pure nothrow*/ {
+auto sPermutations(in int n) /*pure nothrow*/ {
     static int[][] sPermu(in int items) /*pure nothrow*/ {
         if (items <= 0)
             return [[]];
         typeof(return) r;
-        foreach (i, item; sPermu(items - 1)) {
-            if (i % 2)
-                r ~= iota(cast(int)item.length, -1, -1)
-                     .map!(i => item[0..i] ~ (items-1) ~ item[i..$])()
-                     .array();
-            else
-                r ~= iota(item.length + 1)
-                     .map!(i => item[0..i] ~ (items-1) ~ item[i..$])()
-                     .array();
+        foreach (immutable i, item; sPermu(items - 1)) {
+            //r.put((i % 2 ? iota(cast(int)item.length, -1, -1) :
+            //               iota(item.length + 1))
+            //      .map!(i => item[0..i] ~ (items-1) ~ item[i..$]));
+            immutable f=(in int i)=>item[0..i] ~ (items-1) ~ item[i..$];
+            r ~= (i % 2) ?
+                 iota(cast(int)item.length, -1, -1).map!f.array :
+                 iota(item.length + 1).map!f.array;
         }
         return r;
     }
 
-    auto r = sPermu(n);
-    return iota(r.length)
-           .map!(i => tuple(r[i], i % 2 ? -1 : 1))()
-           .array();
+    return sPermu(n).zip([1, -1].cycle);
 }
 
 void main() {
     import std.stdio;
-    foreach (n; [3, 4]) {
+    foreach (immutable n; [3, 4]) {
         writefln("\nPermutations and sign of %d items", n);
-        foreach (tp; sPermutations(n))
-            writefln("Perm: %s Sign: %2d", tp.tupleof);
+        foreach (const tp; n.sPermutations)
+            writefln("Perm: %s Sign: %2d", tp[]);
     }
 }

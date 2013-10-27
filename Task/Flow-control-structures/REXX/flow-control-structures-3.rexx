@@ -13,16 +13,11 @@ signal off lostdigits
 signal off notready
 signal off novalue
 signal off syntax
- ∙
- ∙
- ∙
+...
 signal on novalue
- ∙
- ∙
+...
 x=oopsay+1
- ∙
- ∙
- ∙
+...
 novalue: say
 say '*** error! ***'
 say
@@ -34,6 +29,4 @@ say 'REXX source statement is:'
 say sourceline(sigl)
 say
 exit 13
- ∙
- ∙
- ∙
+...

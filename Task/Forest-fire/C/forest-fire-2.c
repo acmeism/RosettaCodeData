@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h> // For time
 
 enum { empty = 0, tree = 1, fire = 2 };
 const char *disp[] = {"  ", "\033[32m/\\\033[m", "\033[07;31m/\\\033[m"};
@@ -17,7 +18,7 @@ void evolve(int w, int h)
 
 show:	printf("\033[H");
 	for_y {
-		for_x printf(disp[univ[y][x]]);
+		for_x printf("%s",disp[univ[y][x]]);
 		printf("\033[E");
 	}
 	fflush(stdout);

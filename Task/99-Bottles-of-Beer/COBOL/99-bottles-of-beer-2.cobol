@@ -47,57 +47,75 @@ working-storage section.
 	05	filler	pic x(9) value "Eighteen".
 	05	filler	pic x(9) value "Nineteen".
 	05	filler	pic x(9) value spaces.
-	
+
 01	digit-array redefines digit-words.
 	05	adigits occurs 20 times 	pic x(9).
-	
+
 01	number-name pic x(15).
 
+01	stringified pic x(30).
+01	outline		pic x(50).
+01  other-numbers.
+	03	n	pic 999.
+	03	r	pic 999.
+	
 procedure division.
 100-main section.
 100-setup.
 	perform varying counter from 99 by -1 until no-bottles-left
+		move spaces to outline
 		perform 100-show-number
-		display " of beer on the wall"
-		perform 100-show-number
-		display " of beer"
-		display "Take " with no advancing
+		string stringified delimited by "|", space, "of beer on the wall" into outline end-string
+		display outline end-display
+		move spaces to outline
+		string stringified delimited by "|", space, "of beer" into outline end-string
+		display outline end-display
+		move spaces to outline
+		move "Take" to outline
 		if one-bottle-left
-			display "it " with no advancing
+			string outline delimited by space, space, "it" delimited by size, space, "|" into outline end-string
 		else
-			display "one " with no advancing
+			string outline delimited by space, space, "one" delimited by size, space, "|" into outline end-string
 		end-if
-		display "down and pass it round"
-		subtract 1 from counter giving counter
+		string outline delimited by "|", "down and pass it round" delimited by size into outline end-string
+		display outline end-display
+		move spaces to outline
+		subtract 1 from counter giving counter end-subtract
 		perform 100-show-number
-		display " of beer on the wall"
-		add 1 to counter giving counter
-		display space
+		string stringified delimited by "|", space, "of beer on the wall" into outline end-string
+		display outline end-display
+		add 1 to counter giving counter end-add
+		display space end-display
 	end-perform.
 	display "No more bottles of beer on the wall"
 	display "No more bottles of beer"
 	display "Go to the store and buy some more"
-	display "Ninety Nine bottles of beer on the wall"
+	display "Ninety-Nine bottles of beer on the wall"
 	stop run.
-	
+
 100-show-number.
 	if no-bottles-left
-		display "No more" with no advancing
+		move "No more|" to stringified
 	else
 		if counter < 20
-			display function trim( adigits( counter ) ) with no advancing
+			string function trim( adigits( counter ) ), "|" into stringified
 		else
 			if counter < 100
 				move spaces to number-name
-				string atens( tens ) delimited by space, space delimited by size, adigits( digits ) delimited by space into number-name
-				display function trim( number-name) with no advancing
+				string atens( tens ) delimited by space, space delimited by size, adigits( digits ) delimited by space into number-name end-string
+				move function trim( number-name) to stringified
+				divide counter by 10 giving n remainder r end-divide
+				if r not = zero
+					inspect stringified replacing first space by "-"
+				end-if
+				inspect stringified replacing first space by "|"
 			end-if
 		end-if
 	end-if.
 	if one-bottle-left
-		display " bottle" with no advancing
+		string stringified delimited by "|", space, "bottle|" delimited by size into stringified end-string
 	else
-		display " bottles" with no advancing
+		string stringified delimited by "|", space, "bottles|" delimited by size into stringified end-string
 	end-if.
 
 100-end.

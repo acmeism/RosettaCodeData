@@ -26,7 +26,7 @@ if __name__ == '__main__':
         factors = pfactor(n)
         if n <= 10 or n >= mx - 20:
             print( '%4i %5s %s' % (n,
-                                   '' if factors != [n] else 'prime',
+                                   '' if factors != [n] or n == 1 else 'prime',
                                    'x'.join(str(i) for i in factors)) )
         if n == 11:
             print('...')

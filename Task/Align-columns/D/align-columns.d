@@ -1,4 +1,4 @@
-import std.stdio, std.string, std.algorithm, std.range;
+import std.stdio, std.string, std.algorithm, std.range, std.typetuple;
 
 void main() {
     auto data =
@@ -11,13 +11,12 @@ justified,$right$justified,$or$center$justified$within$its$column."
     .splitLines.map!q{ a.chomp("$").split("$") };
 
     int[int] maxWidths;
-    foreach (line; data)
+    foreach (const line; data)
         foreach (i, word; line)
             maxWidths[i] = max(maxWidths.get(i, 0), word.length);
 
-    foreach (just; [&leftJustify!string, &center!string,
-                    &rightJustify!string])
-        foreach (line; data)
-            writefln("%-(%s %)", iota(line.length)
+    foreach (const just; TypeTuple!(leftJustify, center, rightJustify))
+        foreach (const line; data)
+            writefln("%-(%s %)", line.length.iota
                      .map!(i => just(line[i], maxWidths[i], ' ')));
 }

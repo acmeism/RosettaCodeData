@@ -110,7 +110,8 @@ function brownian(canvasId, messageId) {
                   test(x-1,y  ) || test(x,y  ) || test(x+1,y  ) ||
                   test(x-1,y+1) || test(x,y+1) || test(x+1,y+1)) && progress > 0);
         if (progress <= 0) {
-          document.getElementById(messageId).appendChild(document.createTextNode("Stopped for lack of room."));
+          document.getElementById(messageId).appendChild(
+              document.createTextNode("Stopped for lack of room."));
           clearInterval(animation);
           break;
         }

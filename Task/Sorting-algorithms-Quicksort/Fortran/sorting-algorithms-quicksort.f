@@ -25,7 +25,7 @@ integer :: marker
     if (nA > 1) then
 
         call random_number(random)
-        pivot = A(int(random*real(nA-1))+1)%value    ! random pivot (not best performance, but avoids worst-case)
+        pivot = A(int(random*real(nA-1))+1)%value   ! random pivor (not best performance, but avoids worst-case)
         left = 0
         right = nA + 1
 
@@ -67,7 +67,7 @@ implicit none
 
 integer, parameter :: l = 8
 type (group), dimension(l) :: A
-integer, dimension(3) :: seed = [1, 2, 3]
+integer, dimension(12) :: seed = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 integer :: i
 real :: random
 

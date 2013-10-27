@@ -1,10 +1,7 @@
-import std.stdio, std.datetime, std.conv, std.algorithm, std.range;
-
 void main() {
-    writeln("Christmas comes on a Sunday in the years:");
-    foreach (year; 2008 .. 2122) {
-        immutable d = text(year) ~ "-Dec-25";
-        if (Date.fromSimpleString(d).dayOfWeek() == DayOfWeek.sun)
-            writeln(year);
-    }
+    import std.stdio, std.range, std.algorithm, std.datetime;
+
+    writeln("Christmas comes on a Sunday in the years:\n",
+            iota(2008, 2122)
+            .filter!(y => Date(y, 12, 25).dayOfWeek == DayOfWeek.sun));
 }

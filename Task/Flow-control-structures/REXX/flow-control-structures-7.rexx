@@ -1,14 +1,10 @@
- ∙
- ∙
- ∙
+...
 prod=1
 a=7               /*or somesuch.*/
 b=3               /*  likewise. */
 
 op='**'           /*or whatever.*/
- ∙
- ∙
- ∙
+...
   select
   when op=='+'         then  r=a+b           /*add.                   */
   when op=='-'         then  r=a-b           /*subtract.              */

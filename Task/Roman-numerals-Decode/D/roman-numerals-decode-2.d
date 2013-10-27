@@ -1,7 +1,8 @@
-import std.regex, std.algorithm;
+import std.regex, std.algorithm, std.functional;
+
+alias sum = curry!(reduce!q{a + b}, 0);
 
 immutable int[string] w2s;
-
 nothrow static this() {
     w2s = ["IX":  9, "C":  100, "D":  500, "CM": 900, "I":   1,
            "XC": 90, "M": 1000, "L":   50, "CD": 400, "XL": 40,
@@ -9,8 +10,10 @@ nothrow static this() {
 }
 
 int toArabic(in string s) /*pure nothrow*/ {
-    auto ms = match(s, regex("CM|CD|XC|XL|IX|IV|[MDCLXVI]", "g"));
-    return reduce!((a, m) => a + w2s[m.hit])(0, ms);
+    return s
+           .matchAll("CM|CD|XC|XL|IX|IV|[MDCLXVI]".regex)
+           .map!(m => w2s[m.hit])
+           .sum;
 }
 
 void main() {

@@ -1,65 +1,53 @@
-import scala.math.BigInt
+/** Find factors of a Mersenne number
+ *
+ *  The implementation finds factors for M929 and further.
+ *
+ *  @example  M59 = 2^059 - 1 =             576460752303423487  (   2 msec)
+ *  @example        = 179951 × 3203431780337.
+ */
+object FactorMersenne extends App {
 
-def factorMersenne( p:BigInt ) : Option[BigInt] = {
+  val two: BigInt = 2
 
-  val two = BigInt("2")
+  def sieve(nums: Stream[Int]): Stream[Int] =
+    Stream.cons(nums.head, sieve((nums.tail) filter (_ % nums.head != 0)))
+  // An infinite stream of primes, lazy evaluation and memo-ized
+  val oddPrimes = sieve(Stream.from(3, 2))
+  def primes = sieve(2 #:: oddPrimes)
 
-  val factorLimit : BigInt = (two pow p.toInt) - 1
-  val limit = factorLimit min (math.sqrt(Long.MaxValue).toInt)
+  def mersenne(p: Int) = (two pow p) - 1
 
+  def factorMersenne(p: Int): Option[Long] = {
+    val limit = (mersenne(p) - 1 min Int.MaxValue).toLong
 
-  def factorTest( p : BigInt, q : BigInt ) : Boolean = {
+    def factorTest(p: Long, q: Long): Boolean = {
+      (List(1, 7) contains (q % 8)) && two.modPow(p, q) == 1 && BigInt(q).isProbablePrime(7)
+    }
 
-    // Is q an early factor?
-    if(
-      two.modPow(p,q) == 1 &&                                         // number divides 2**P-1
-      ((q % 8).toInt match {case 1 | 7 => true; case _ => false}) &&  // mod(8) is of 1 or 7
-      q.isProbablePrime(7)                                            // it is a prime number
-    )
-      {true}
-    else
-      {false}
+    // Build a stream of factors from (2*p+1) step-by (2*p)
+    def s(a: Long): Stream[Long] = a #:: s(a + (2 * p)) // Build stream of possible factors
+
+    // Limit and Filter Stream and then take the head element
+    val e = s(2 * p + 1).takeWhile(_ < limit).filter(factorTest(p, _))
+    e.headOption
   }
 
-  // Build a stream of factors from (2*p+1) step-by (2*p)
-  def s(a:BigInt) : Stream[BigInt] = a #:: s(a + (two * p))  // Build stream of possible factors
+  // Test
+  (primes takeWhile (_ <= 97)) ++ List(929, 937) foreach { p =>
+    { // Needs some intermediate results for nice formatting
+      val nMersenne = mersenne(p); val lit = f"${nMersenne}%30d"
+      val preAmble = f"${s"M${p}"}%4s = 2^$p%03d - 1 = ${lit}%s"
 
-  // Limit and Filter Stream and then take the head element
-  val e = s(two*p+1).takeWhile(_ < limit).filter(factorTest(p,_))
-  e.headOption
+      val datum = System.nanoTime
+      val result = factorMersenne(p)
+      val mSec = ((System.nanoTime - datum) / 1.e+6).round
+
+      def decStr = { if (lit.length > 30) f"(M has ${lit.length}%3d dec)" else "" }
+      def sPrime = { if (result.isEmpty) " is a Mersenne prime number." else " " * 28 }
+
+      println(f"$preAmble${sPrime} ${f"($mSec%,1d"}%13s msec)")
+      if (!result.isEmpty)
+        println(f"${decStr}%-17s = ${result.get} × ${nMersenne / result.get}")
+    }
+  }
 }
-
-val l = List(2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97,929)
-
-// Test
-l.foreach(p => println( "M" + p + ": " + (factorMersenne(p) getOrElse "prime") ))
-
-/*
-Results:
-M2: prime
-M3: prime
-M5: prime
-M7: prime
-M11: 23
-M13: prime
-M17: prime
-M19: prime
-M23: 47
-M29: 233
-M31: prime
-M37: 223
-M41: 13367
-M43: 431
-M47: 2351
-M53: 6361
-M59: 179951
-M61: prime
-M67: 193707721
-M71: 228479
-M73: 439
-M79: 2687
-M83: 167
-M89: prime
-M97: 11447
-M929: 13007
-*/

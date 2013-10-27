@@ -1,7 +1,10 @@
-% Fibonacci sequence generator
-fib(C, [P,S], C, N)  :- N is P + S.
-fib(C, [P,S], Cv, V) :- succ(C, Cn), N is P + S, !, fib(Cn, [S,N], Cv, V).
+take( 0, Next, Z-Z, Next).
+take( N, Next, [A|B]-Z, NZ):- N>0, !, next( Next, A, Next1),
+  N1 is N-1,
+  take( N1, Next1, B-Z, NZ).
 
-fib(0, 0).
-fib(1, 1).
-fib(C, N) :- fib(2, [0,1], C, N). % Generate from 3rd sequence on
+next( fib(A,B), A, fib(B,C)):- C is A+B.
+
+%% usage: ?- take(15, fib(0,1), _X-[], G), writeln(_X).
+%% [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377]
+%% G = fib(610, 987)

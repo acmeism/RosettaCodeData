@@ -1,16 +1,13 @@
-sub palin(Str $s --> Bool) {
-    my @chars = $s.lc.comb(/\w/);
-    while @chars > 1 {
-        return False unless @chars.shift eq @chars.pop;
-    }
-    return True;
+subset Palindrom of Str where {
+    .flip eq $_ given .comb(/\w+/).join.lc
 }
 
-my @tests =
-    "A man, a plan, a canal: Panama.",
-    "My dog has fleas",
-    "Madam, I'm Adam.",
-    "1 on 1",
-    "In girum imus nocte et consumimur igni";
+my @tests = q:to/END/.lines;
+    A man, a plan, a canal: Panama.
+    My dog has fleas
+    Madam, I'm Adam.
+    1 on 1
+    In girum imus nocte et consumimur igni
+    END
 
-for @tests { say (palin($_) ?? "Yes" !! "No"),"\t",$_ };
+for @tests { say $_ ~~ Palindrom, "\t", $_ }

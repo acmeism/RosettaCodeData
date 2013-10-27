@@ -1,37 +1,17 @@
-import std.stdio, std.math, std.traits, std.typetuple;
+import std.stdio, std.math, std.traits, std.typetuple, permutations1;
 
-const(T[N][]) permutationsFixed(T, size_t N)(in T[N] items)
-pure nothrow {
-  const(T[N])[] result;
-  T[N] row;
+enum Number { One,      Two,     Three,  Four,       Five   }
+enum Color  { Red,      Green,   Blue,   White,      Yellow }
+enum Drink  { Milk,     Coffee,  Water,  Beer,       Tea    }
+enum Smoke  { PallMall, Dunhill, Blend,  BlueMaster, Prince }
+enum Pet    { Dog,      Cat,     Zebra,  Horse,      Bird   }
+enum Nation { British,  Swedish, Danish, Norvegian,  German }
 
-  void perms(in T[] s, in T[] prefix=null) nothrow {
-    if (s.length)
-      foreach (immutable i, immutable c; s)
-         perms(s[0 .. i] ~ s[i+1 .. $], prefix ~ c);
-    else {
-      row[] = prefix[];
-      result ~= row;
-    }
-  }
-
-  perms(items);
-  return result;
-}
-
-enum Number : uint { One,      Two,     Three,  Four,       Five   }
-enum Color  : uint { Red,      Green,   Blue,   White,      Yellow }
-enum Drink  : uint { Milk,     Coffee,  Water,  Beer,       Tea    }
-enum Smoke  : uint { PallMall, Dunhill, Blend,  BlueMaster, Prince }
-enum Pet    : uint { Dog,      Cat,     Zebra,  Horse,      Bird   }
-enum Nation : uint { British,  Swedish, Danish, Norvegian,  German }
-
-bool isPossible(immutable(Number[5])* number,
-                immutable(Color[5])* color=null,
-                immutable(Drink[5])* drink=null,
-                immutable(Smoke[5])* smoke=null,
-                immutable(Pet[5])* pet=null
-                ) pure nothrow {
+bool isPossible(immutable Number[5]* number,
+                immutable  Color[5]* color=null,
+                immutable  Drink[5]* drink=null,
+                immutable  Smoke[5]* smoke=null,
+                immutable    Pet[5]* pet=null) pure nothrow {
   if ((number && (*number)[Nation.Norvegian] != Number.One) ||
       (color && (*color)[Nation.British] != Color.Red) ||
       (drink && (*drink)[Nation.Danish] != Drink.Tea) ||
@@ -71,14 +51,15 @@ bool isPossible(immutable(Number[5])* number,
 }
 
 void main() {
-  static immutable perms = permutationsFixed!(uint, 5)([0,1,2,3,4]);
-  // Not nice casts.
-  static permsNumber = cast(immutable(Number[5][]))perms;
-  static permsColor  = cast(immutable(Color[5][]))perms;
-  static permsDrink  = cast(immutable(Drink[5][]))perms;
-  static permsSmoke  = cast(immutable(Smoke[5][]))perms;
-  static permsPet  = cast(immutable(Pet[5][]))perms;
+  static immutable int[5][] perms = [0, 1, 2, 3, 4].permutations;
   immutable nation = [EnumMembers!Nation];
+
+  // Not nice casts:
+  static immutable permsNumber = cast(immutable Number[5][])perms,
+                   permsColor  = cast(immutable Color[5][])perms,
+                   permsDrink  = cast(immutable Drink[5][])perms,
+                   permsSmoke  = cast(immutable Smoke[5][])perms,
+                   permsPet    = cast(immutable Pet[5][])perms;
 
   foreach (immutable ref number; permsNumber)
     if (isPossible(&number))
@@ -91,11 +72,11 @@ void main() {
                   foreach (immutable ref pet; permsPet)
                     if (isPossible(&number,&color,&drink,&smoke,&pet)) {
                       writeln("Found a solution:");
-                      foreach (x; TypeTuple!(nation, number, color,
-                                             drink, smoke, pet))
+                      foreach (immutable x; TypeTuple!(nation, number,
+                                            color, drink, smoke, pet))
                         writefln("%6s: %12s%12s%12s%12s%12s",
-                                 (Unqual!(typeof(x[0]))).stringof,
+                                 Unqual!(typeof(x[0])).stringof,
                                  x[0], x[1], x[2], x[3], x[4]);
-                      writeln();
+                      writeln;
                   }
 }

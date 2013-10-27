@@ -1,34 +1,31 @@
-import std.stdio;
-
 class U0 : Exception {
-    this() nothrow { super("U0 error message"); }
+    this() @safe pure nothrow { super("U0 error message"); }
 }
 
 class U1 : Exception {
-    this() nothrow { super("U1 error message"); }
+    this() @safe pure nothrow { super("U1 error message"); }
 }
 
-void foo(in int i) pure {
-    if (i)
-        throw new U1;
-    else
-        throw new U0;
-}
+void foo() {
+    import std.stdio;
 
-void bar(in int i) pure {
-    foo(i);
-}
-
-void baz() {
-    foreach (i; 0 .. 2) {
+    foreach (immutable i; 0 .. 2) {
         try {
-            bar(i);
-        } catch (U0 e) {
-            writeln("Exception U0 caught");
+            i.bar;
+        } catch (U0) {
+            "Function foo caught exception U0".writeln;
         }
     }
 }
 
+void bar(in int i) @safe pure {
+    i.baz;
+}
+
+void baz(in int i) @safe pure {
+    throw i ? new U1 : new U0;
+}
+
 void main() {
-    baz();
+    foo;
 }

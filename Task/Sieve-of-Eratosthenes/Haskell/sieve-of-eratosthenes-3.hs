@@ -1,8 +1,9 @@
-import Data.Array.Unboxed
+primesTo m = 2 : eratos [3,5..m] where
+   eratos (p : xs) | p*p>m = p : xs
+                   | True  = p : eratos (xs `minus` [p*p, p*p+2*p..m])
 
-primesToA m = sieve 3 (array (3,m) [(i,odd i) | i<-[3..m]] :: UArray Int Bool)
-  where
-    sieve p a
-      | p*p > m   = 2 : [i | (i,True) <- assocs a]
-      | a!p       = sieve (p+2) $ a//[(i,False) | i <- [p*p, p*p+2*p..m]]
-      | otherwise = sieve (p+2) a
+minus a@(x:xs) b@(y:ys) = case compare x y of
+         LT -> x : minus  xs b
+         EQ ->     minus  xs ys
+         GT ->     minus  a  ys
+minus a        b        = a

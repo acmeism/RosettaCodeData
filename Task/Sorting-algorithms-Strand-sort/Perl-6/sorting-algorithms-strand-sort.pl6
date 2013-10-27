@@ -1,10 +1,10 @@
 sub infix:<M> (@x, @y) {
     gather {
 	while @x and @y {
-	    given @x[0] cmp @y[0] {
-		when Increase { take @x.shift }
-		when Decrease { take @y.shift }
-		when Same     { take @x.shift, @y.shift }
+	    take do given @x[0] cmp @y[0] {
+		when Increase { @x.shift }
+		when Decrease { @y.shift }
+		when Same     { @x.shift, @y.shift }
 	    }
 	}
 	take @x, @y;

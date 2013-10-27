@@ -1,15 +1,20 @@
 import std.stdio, std.random, std.algorithm;
 
-struct SOfN(int n) {
+double random01(ref Xorshift rng) {
+    immutable r = rng.front / cast(double)rng.max;
+    rng.popFront;
+    return r;
+}
+
+struct SOfN(size_t n) {
     size_t i;
     int[n] sample = void;
-    static rng = Xorshift(0);
 
-    int[] next(in int item) {
+    int[] next(in size_t item, ref Xorshift rng) {
         i++;
         if (i <= n)
             sample[i - 1] = item;
-        else if (uniform(0.0, 1.0, rng) < (cast(double)n / i))
+        else if (rng.random01 < (cast(double)n / i))
             sample[uniform(0, n, rng)] = item;
         return sample[0 .. min(i, $)];
     }
@@ -18,12 +23,13 @@ struct SOfN(int n) {
 void main() {
     enum nRuns = 100_000;
     size_t[10] bin;
+    auto rng = Xorshift(0);
 
-    foreach (trial; 0 .. nRuns) {
-        SOfN!(3) sofn;
-        foreach (item; 0 .. bin.length - 1)
-            sofn.next(item);
-        foreach (s; sofn.next(bin.length - 1))
+    foreach (immutable trial; 0 .. nRuns) {
+        SOfN!3 sofn;
+        foreach (immutable item; 0 .. bin.length - 1)
+            sofn.next(item, rng);
+        foreach (immutable s; sofn.next(bin.length - 1, rng))
             bin[s]++;
     }
     writefln("Item counts for %d runs:\n%s", nRuns, bin);

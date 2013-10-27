@@ -1,43 +1,68 @@
 import java.util.Arrays;
+import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.IntUnaryOperator;
+import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 
-public class PartialApplication {
-	// Original method fs(f, s).
-	static Integer[] fs(Function<Integer, Integer> f, Integer[] s) {
-		Integer[] r = new Integer[s.length];
-		for (int i = 0; i < s.length; i++)
-			r[i] = f.apply(s[i]);
-		return r;		
-	}
+@FunctionalInterface
+public interface PartialApplication<INPUT1, INPUT2, OUTPUT> extends BiFunction<INPUT1, INPUT2, OUTPUT> {
+  // Original method fs(f, s).
+  public static int[] fs(IntUnaryOperator f, int[] s) {
+    return Arrays.stream(s)
+      .parallel()
+      .map(f::applyAsInt)
+      .toArray()
+    ;
+  }
 
-	// Curried method fs(f).apply(s),
-	// necessary for partial application.
-	static Function<Integer[], Integer[]> fs(Function<Integer, Integer> f) {
-		return s -> fs(f, s);
-	}
+  // Currying method f.apply(a).apply(b),
+  // in lieu of f.apply(a, b),
+  // necessary for partial application.
+  public default Function<INPUT2, OUTPUT> apply(INPUT1 input1) {
+    return input2 -> apply(input1, input2);
+  }
 
-	static Function<Integer, Integer> f1 = i -> i * 2;
+  // Original method fs turned into a partially-applicable function.
+  public static final PartialApplication<IntUnaryOperator, int[], int[]> fs = PartialApplication::fs;
 
-	static Function<Integer, Integer> f2 = i -> i * i;
+  public static final IntUnaryOperator f1 = i -> i + i;
 
-	static Function<Integer[], Integer[]> fsf1 = fs(f1); // Partial application.
+  public static final IntUnaryOperator f2 = i -> i * i;
 
-	static Function<Integer[], Integer[]> fsf2 = fs(f2);
+  public static final UnaryOperator<int[]> fsf1 = fs.apply(f1)::apply; // Partial application.
 
-	public static void main(String[] args) {
-		Integer[][] sequences = {
-			{ 0, 1, 2, 3 },
-			{ 2, 4, 6, 8 },
-		};
+  public static final UnaryOperator<int[]> fsf2 = fs.apply(f2)::apply;
 
-		for (Integer[] array : sequences) {
-			System.out.printf(
-			    "array: %s\n" +
-			    "  fsf1(array): %s\n" +
-			    "  fsf2(array): %s\n",
-			    Arrays.toString(array),
-			    Arrays.toString(fsf1.apply(array)),
-			    Arrays.toString(fsf2.apply(array)));
-		}
-	}
+  public static void main(String... args) {
+    int[][] sequences = {
+      {0, 1, 2, 3},
+      {2, 4, 6, 8},
+    };
+
+    Arrays.stream(sequences)
+      .parallel()
+      .map(array ->
+        Stream.of(
+          array,
+          fsf1.apply(array),
+          fsf2.apply(array)
+        )
+          .parallel()
+          .map(Arrays::toString)
+          .toArray()
+      )
+      .map(array ->
+        String.format(
+          String.join("\n",
+            "array: %s",
+            "  fsf1(array): %s",
+            "  fsf2(array): %s"
+          ),
+          array
+        )
+      )
+      .forEachOrdered(System.out::println)
+    ;
+  }
 }

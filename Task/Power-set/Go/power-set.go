@@ -38,13 +38,19 @@ func (i intEle) String() string {
 type set []element
 
 // uniqueness of elements can be ensured by using add method
-func (s *set) add(e element) {
+func (s *set) addEle(e element) {
+    if !s.hasEle(e) {
+        *s = append(*s, e)
+    }
+}
+
+func (s *set) hasEle(e element) bool {
     for _, ex := range *s {
         if e.eq(ex) {
-            return
+            return true
         }
     }
-    *s = append(*s, e)
+    return false
 }
 
 // method to satify element interface
@@ -56,12 +62,8 @@ func (s set) eq(e element) bool {
     if len(s) != len(t) {
         return false
     }
-sLoop:
     for _, se := range s {
-        for _, te := range t {
-            if se.eq(te) {
-                continue sLoop
-            }
+        if !t.hasEle(se) {
             return false
         }
     }
@@ -95,8 +97,8 @@ func (s set) powerSet() set {
 
 func main() {
     var s set
-    for _, i := range []int{1, 2, 2, 3, 4, 4, 4} {
-        s.add(intEle(i))
+    for _, i := range []intEle{1, 2, 2, 3, 4, 4, 4} {
+        s.addEle(i)
     }
     fmt.Println(s)
     fmt.Println("length =", len(s))

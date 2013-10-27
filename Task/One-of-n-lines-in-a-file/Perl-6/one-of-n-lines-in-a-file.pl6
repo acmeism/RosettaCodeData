@@ -4,7 +4,7 @@ sub one_of_n($n) {
     $choice - 1;
 }
 
-sub one_of_n_test($n = 10, $trials = 1000000) {
+sub one_of_n_test($n = 10, $trials = 1_000_000) {
     my @bins;
     @bins[one_of_n($n)]++ for ^$trials;
     @bins;

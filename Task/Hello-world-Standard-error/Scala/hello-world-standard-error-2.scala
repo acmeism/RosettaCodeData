@@ -1,1 +1,1 @@
-Console.err.println("Goodbye, World!")
+System.err.println("Goodbye, World!")

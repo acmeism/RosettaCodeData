@@ -14,11 +14,11 @@ immutable texts = [
     "exactly 1 of statements 7, 8 and 9 are true",
     "exactly 4 of the preceding statements are true"];
 
-alias curry!(reduce!q{a + b}, 0) sumi;
+alias sumi = curry!(reduce!q{a + b}, 0);
 
 immutable bool function(in bool[])[] funcs = [
     s => s.length == 12,
-    s => sumi(s[$-6 .. $]) == 3,
+    s => sumi(s[$ - 6 .. $]) == 3,
     s => sumi(s[1 .. $].stride(2)) == 2,
     s => s[4] ? (s[5] && s[6]) : true,
     s => sumi(s[1 .. 4]) == 0,
@@ -32,15 +32,15 @@ immutable bool function(in bool[])[] funcs = [
 
 void main() {
     enum nStats = 12;
-    Tuple!(const bool[], const bool[])[] full, partial;
+    Tuple!(const(bool)[], const(bool)[])[] full, partial;
 
-    foreach (n; 0 .. 2 ^^ nStats) {
-        const st = iota(nStats).map!(i => !!(n & (2 ^^ i)))().array();
-        auto truths = funcs.map!(f => f(st))();
+    foreach (immutable n; 0 .. 2 ^^ nStats) {
+        const st = nStats.iota.map!(i => !!(n & (2 ^^ i))).array;
+        auto truths = funcs.map!(f => f(st));
         const matches = zip(st, truths)
-                        .map!(s_t => s_t[0] == s_t[1])()
-                        .array();
-        immutable mCount = matches.sumi();
+                        .map!(s_t => s_t[0] == s_t[1])
+                        .array;
+        immutable mCount = matches.sumi;
         if (mCount == nStats)
             full ~= tuple(st, matches);
         else if (mCount == nStats - 1)
@@ -48,7 +48,7 @@ void main() {
     }
 
     foreach (sols, isPartial; zip([full, partial], [false, true]))
-        foreach (stm; sols) {
+        foreach (const stm; sols) {
             if (isPartial) {
                 immutable pos = stm[1].countUntil(false);
                 writefln(`Missed by statement %d: "%s"`,
@@ -58,6 +58,6 @@ void main() {
             write("  ");
             foreach (i, t; stm[0])
                 writef("%d:%s  ", i + 1, t ? "T" : "F");
-            writeln();
+            writeln;
         }
 }

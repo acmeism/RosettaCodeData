@@ -3,8 +3,9 @@ import std.random, std.algorithm, std.range, bitmap;
 struct Point { int x, y; }
 
 Point[] randomPoints(in size_t nPoints, in size_t nx, in size_t ny) {
-    immutable RndPt = (int) => Point(uniform(0, nx), uniform(0, ny));
-    return iota(nPoints).map!RndPt().array();
+    return iota(nPoints)
+           .map!((int) => Point(uniform(0, nx), uniform(0, ny)))
+           .array;
 }
 
 Image!RGB generateVoronoi(in Point[] pts,
@@ -13,7 +14,7 @@ Image!RGB generateVoronoi(in Point[] pts,
     immutable RndRBG = (int) => RGB(cast(ubyte)uniform(0, 256),
                                     cast(ubyte)uniform(0, 256),
                                     cast(ubyte)uniform(0, 256));
-    const colors = iota(pts.length).map!RndRBG().array();
+    const colors = pts.length.iota.map!RndRBG.array;
 
     // Generate diagram by coloring pixels with color of nearest site.
     auto img = new typeof(return)(nx, ny);

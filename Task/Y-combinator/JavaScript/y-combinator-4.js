@@ -1,7 +1,11 @@
 function pseudoY(f) {
-    return function g() {
-        return f.apply(g, arguments);
-    };
+    return (function(h) {
+        return h(h);
+    })(function(h) {
+        return f.bind(function() {
+            return h(h).apply(null, arguments);
+        });
+    });
 }
 
 var fac = pseudoY(function(n) {

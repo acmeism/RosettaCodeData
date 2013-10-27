@@ -7,9 +7,7 @@ sum=0
 
            /*shows sum of 1k numbers except those divisible by 3 or 7.*/
 say 'sum='sum
- ∙
- ∙
- ∙
+...
 numeric digits 5000
 prod=0
 

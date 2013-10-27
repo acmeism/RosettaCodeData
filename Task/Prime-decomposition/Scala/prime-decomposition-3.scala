@@ -1,18 +1,25 @@
-import scala.math.BigInt
-	
-def primeStream(s: Stream[Int]): Stream[Int] = {
-  Stream.cons(s.head, primeStream(s.tail filter { _ % s.head != 0 }))
-}
+class PrimeFactors[N](n: N)(implicit num: Integral[N]) extends Iterator[N] {
+  import num._
+  val two = one + one
+  var currentN = n
+  var divisor = two
 
-// An infinite stream of primes
-val primes = primeStream(Stream.from(2))
+  def next = {
+    if (!hasNext)
+      throw new NoSuchElementException("next on empty iterator")
 
-	
-def primeFactor(n:BigInt) = { primes.takeWhile(_ <= n).find(i => n % i == 0) }
-	
-def decompose( n : BigInt ) : List[BigInt] = {
-  primeFactor(n) match {
-    case Some(a) => a.toInt :: decompose(n/a)
-    case None => Nil
+    while(currentN % divisor != zero) {
+      if (divisor == two)
+        divisor += one
+      else
+        divisor += two
+
+      if (divisor * divisor > currentN)
+        divisor = currentN
+    }
+    currentN /= divisor
+    divisor
   }
+
+  def hasNext = currentN != one && currentN > zero
 }

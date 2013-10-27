@@ -114,32 +114,34 @@ cellX=cellX'│'centre(zz,cw); cellJ=cellJ'│'center('',cw)
 return
 
 /*═════════════════════════════general 1-line subs══════════════════════*/
-abb: arg abbu; parse arg abb; return abbrev(abbu,_,abbl(abb))
-abbl: return verify(arg(1)'a',@abc,'M')-1
-abbn: parse arg abbn; return abb(abbn) | abb('NO'abbn)
-calCsj: if sd>49 & \shorter then call calPutl cellB; if sd>24 & \short    then call calPutl cellJ; return
-calCsm: if sd>24 & \short   then call calPutl cellM; if sd>49 & \shorter  then call calPutl cellB; return
-calHd:  if sd>24 & \shorter then call calPutl      ; if sd>32 & \shortest then call calPutl      ; return
-calPb:  calPuts=calPuts+1; maxKalPuts=max(maxKalPuts,calPuts); if symbol('CT.'calPuts)\=='VAR' then ct.calPuts=; ct.calPuts=overlay(arg(1),ct.calPuts,cv); return
-calPutl: call calPut copies(' ',cindent)left(arg(2)"│",1)center(arg(1),calwidth)||right('│'arg(2),1);return
+abb:arg abbu;parse arg abb;return abbrev(abbu,_,abbl(abb))
+abbl:return verify(arg(1)'a',@abc,'M')-1
+abbn:parse arg abbn;return abb(abbn)|abb('NO'abbn)
+calCsj:if sd>49&\shorter then call calPutl cellB;if sd>24&\short then call calPutl cellJ; return
+calCsm:if sd>24&\short then call calPutl cellM;if sd>49&\shorter then call calPutl cellB;return
+calHd:if sd>24&\shorter then call calPutl;if sd>32&\shortest then call calPutl;return
+calPb:if \grid&shortest then call put chk;return
+calPut:calPuts=calPuts+1;maxKalPuts=max(maxKalPuts,calPuts);if symbol('CT.'calPuts)\=='VAR' then ct.calPuts=;ct.calPuts=overlay(arg(1),ct.calPuts,cv);return
+calPutl:call calPut copies(' ',cindent)left(arg(2)"│",1)center(arg(1),calwidth)||right('│'arg(2),1);return
 cx:cx_='├┤';cx=copies(copies('─',cw)'┼',7);if calft then do;cx=translate(cx,'┬',"┼");calft=0;end;if calfb then do;cx=translate(cx,'┴',"┼");cx_='└┘';calfb=0;end;call calPutl cx,cx_;return
-dow: procedure; arg m,d,y; if m<3 then do; m=m+12; y=y-1; end; yl=left(y,2); yr=right(y,2); w=(d+(m+1)*26%10+yr+yr%4+yl%4+5*yl)//7; if w==0 then w=7; return w
-er :parse arg _1,_2; call '$ERR' "14"p(_1) p(word(_1,2) !fid(1)) _2;if _1<0 then return _1; exit result
-err: call er '-'arg(1),arg(2); return ''
-erx: call er '-'arg(1),arg(2); exit ''
-fcalPuts: do j=1 for maxKalPuts; call put ct.j; end; ct.=; maxKalPuts=0; calPuts=0; return
-int: int=numx(arg(1),arg(2));if \isint(int) then call erx 92,arg(1) arg(2); return int/1
-is#: return verify(arg(1),#)==0
-isint: return datatype(arg(1),'W')
+dow:procedure;arg m,d,y;if m<3 then do;m=m+12;y=y-1;end;yl=left(y,2);yr=right(y,2);w=(d+(m+1)*26%10+yr+yr%4+yl%4+5*yl)//7;if w==0 then w=7;return w
+er:parse arg _1,_2;call '$ERR' "14"p(_1) p(word(_1,2) !fid(1)) _2;if _1<0 then return _1;exit result
+err:call er '-'arg(1),arg(2);return ''
+erx:call er '-'arg(1),arg(2);exit ''
+fcalPuts: do j=1 for maxKalPuts;call put ct.j;end;ct.=;maxKalPuts=0;calPuts=0;return
+int:int=numx(arg(1),arg(2));if \isint(int) then call erx 92,arg(1) arg(2);return int/1
+is#:return verify(arg(1),#)==0
+isint:return datatype(arg(1),'W')
 lower:return translate(arg(1),@abc,@abcU)
-ly: if arg(1)\=='' then call erx 01,arg(2);parse var ops na ops;if na=='' then call erx 35,_o;return na
-nai: return int(na(),_o)
-nan: return numx(na(),_o)
-no: if arg(1)\=='' then call erx 01,arg(2); return left(_,2)\=='NO'
-num: procedure;parse arg x .,f,q;if x=='' then return x;if datatype(x,'N') then return x/1;x=space(translate(x,,','),0);if datatype(x,'N') then return x/1;return numnot()
-numnot: if q==1 then return x;if q=='' then call er 53,x f;call erx 53,x f
-numx: return num(arg(1),arg(2),1)
-p: return word(arg(1),1)
-put: _=arg(1);_=translate(_,,'_'chk);if \grid then _=ungrid(_);if lowerCase then _=lower(_);if upperCase then upper _;if shortest&_=' ' then return;call tell _;return
-tell: say arg(1);return
-ungrid: return translate(arg(1),,"│║─═┤┐└┴┬├┼┘┌╔╗╚╝╟╢╞╡╫╪╤╧╥╨╠╣")
+ly:arg _;if length(_)==2 then _=hyy||_;ly=_//4==0;if ly==0 then return 0;ly=((_//100\==0)|_//400==0);return ly
+na:if arg(1)\=='' then call erx 01,arg(2);parse var ops na ops;if na=='' then call erx 35,_o;return na
+nai:return int(na(),_o)
+nan:return numx(na(),_o)
+no:if arg(1)\=='' then call erx 01,arg(2);return left(_,2)\=='NO'
+num:procedure;parse arg x .,f,q;if x=='' then return x;if datatype(x,'N') then return x/1;x=space(translate(x,,','),0);if datatype(x,'N') then return x/1;return numnot()
+numnot:if q==1 then return x;if q=='' then call er 53,x f;call erx 53,x f
+numx:return num(arg(1),arg(2),1)
+p:return word(arg(1),1)
+put:_=arg(1);_=translate(_,,'_'chk);if \grid then _=ungrid(_);if lowerCase then _=lower(_);if upperCase then upper _;if shortest&_=' ' then return;call tell _;return
+tell:say arg(1);return
+ungrid:return translate(arg(1),,"│║─═┤┐└┴┬├┼┘┌╔╗╚╝╟╢╞╡╫╪╤╧╥╨╠╣")

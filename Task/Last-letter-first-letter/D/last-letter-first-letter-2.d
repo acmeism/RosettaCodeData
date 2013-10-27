@@ -1,49 +1,48 @@
-import std.stdio, std.algorithm, std.string,
-       std.range, std.typecons;
+import std.stdio, std.algorithm, std.string, std.range, std.typecons;
 
-alias Tuple!(string,"word", bool,"unused") Pair;
-int nSolutions;
+Tuple!(uint, string[]) findLongestChain(in string[] words)
+pure /*nothrow*/ {
+    static struct Pair { string word; bool unused; }
+    uint nSolutions;
 
-void search(Pair[][] sequences, in size_t minHead,
-            in string currWord, string[] currentPath,
-            size_t currentPathLen,
-            ref string[] longestPath) {
-    currentPath[currentPathLen] = currWord;
-    currentPathLen++;
+    void search(Pair[][] sequences, in size_t minHead,
+                in string currWord, string[] currentPath,
+                size_t currentPathLen,
+                ref string[] longestPath) /*nothrow*/ {
+        currentPath[currentPathLen] = currWord;
+        currentPathLen++;
 
-    if (currentPathLen == longestPath.length) {
-        nSolutions++;
-    }  else if (currentPathLen > longestPath.length) {
-        nSolutions = 1;
-        longestPath = currentPath[0 .. currentPathLen].dup;
+        if (currentPathLen == longestPath.length) {
+            nSolutions++;
+        }  else if (currentPathLen > longestPath.length) {
+            nSolutions = 1;
+            longestPath = currentPath[0 .. currentPathLen].dup;//Throw.
+        }
+
+        // Recursive search.
+        immutable size_t lastCharIndex = currWord[$ - 1] - minHead;
+        if (lastCharIndex < sequences.length)
+            foreach (ref pair; sequences[lastCharIndex])
+                if (pair.unused) {
+                    pair.unused = false;
+                    search(sequences, minHead, pair.word, currentPath,
+                           currentPathLen, longestPath);
+                    pair.unused = true;
+                }
     }
 
-    // recursive search
-    immutable size_t lastCharIndex = currWord[$ - 1] - minHead;
-    if (lastCharIndex < sequences.length)
-        foreach (ref pair; sequences[lastCharIndex])
-            if (pair.unused) {
-                pair.unused = false;
-                search(sequences, minHead, pair.word, currentPath,
-                       currentPathLen, longestPath);
-                pair.unused = true;
-            }
-}
-
-string[] findLongestChain(in string[] words) {
-    auto heads = map!q{ a[0] }(words);
-    immutable size_t minHead = reduce!min(heads);
-    immutable size_t maxHead = reduce!max(heads);
+    auto heads = words.map!q{ a[0] };
+    //immutable {minHead, maxHead} = heads.reduce!(min, max);
+    immutable minHead = heads.reduce!min;
+    immutable maxHead = heads.reduce!max;
     auto sequences = new Pair[][](maxHead - minHead + 1, 0);
-    foreach (word; words) {
-        const p = Pair(word, true); //*
-        sequences[word[0] - minHead] ~= p;
-    }
+    foreach (word; words)
+        sequences[word[0] - minHead] ~= Pair(word, true);
 
     auto currentPath = new string[words.length];
     string[] longestPath;
 
-    // try each item as possible start
+    // Try each item as possible start.
     foreach (seq; sequences)
         foreach (ref pair; seq) {
             pair.unused = false;
@@ -52,8 +51,9 @@ string[] findLongestChain(in string[] words) {
             pair.unused = true;
        }
 
-    return longestPath;
+    return typeof(return)(nSolutions, longestPath);
 }
+
 
 void main() {
     auto pokemon = "audino bagon baltoy banette bidoof braviary
@@ -65,15 +65,14 @@ petilil pidgeotto pikachu pinsir poliwrath poochyena porygon2
 porygonz registeel relicanth remoraid rufflet sableye scolipede
 scrafty seaking sealeo silcoon simisear snivy snorlax spoink starly
 tirtouga trapinch treecko tyrogue vigoroth vulpix wailord wartortle
-whismur wingull yamask".toLower().split();
+whismur wingull yamask".toLower.split;
 
-    // remove duplicates
-    pokemon.length -= pokemon.sort().uniq().copy(pokemon).length;
+    // Remove duplicates.
+    pokemon.length -= pokemon.sort().uniq.copy(pokemon).length;
 
-    const sol = findLongestChain(pokemon);
-    writeln("Maximum path length: ", sol.length);
-    writeln("Paths of that length: ", nSolutions);
+    const sol = pokemon.findLongestChain;
+    writeln("Maximum path length: ", sol[1].length);
+    writeln("Paths of that length: ", sol[0]);
     writeln("Example path of that length:");
-    foreach (ch; std.range.chunks(sol, 7))
-        writefln("  %-(%s %)", ch);
+    writefln("%(  %-(%s %)\n%)", sol[1].chunks(7));
 }

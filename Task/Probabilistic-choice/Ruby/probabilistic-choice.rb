@@ -1,4 +1,3 @@
-ordered_keys = ["aleph", "beth", "gimel", "daleth", "he", "waw", "zayin", "heth"]
 probabilities = {
   "aleph"  => 1/5.0,
   "beth"   => 1/6.0,
@@ -8,10 +7,11 @@ probabilities = {
   "waw"    => 1/10.0,
   "zayin"  => 1/11.0,
 }
-probabilities["heth"] = probabilities.each_value.inject(1) {|heth, value| heth -= value}
+probabilities["heth"] = 1.0 - probabilities.each_value.inject(:+)
+ordered_keys = probabilities.keys
 
-sums = {}
-ordered_keys.each.inject(0) do |sum, key|
+sum, sums = 0.0, {}
+ordered_keys.each do |key|
   sum += probabilities[key]
   sums[key] = sum
 end
@@ -29,7 +29,9 @@ samples.times do
   end
 end
 
-printf "%-6s  %-19s  %s\n", "key", "expected", "actual"
+puts  "key     expected    actual        diff"
 for k in ordered_keys
-  printf "%-6s  %.17f  %.6f\n", k, probabilities[k], Float(actual[k])/samples
+  act = Float(actual[k]) / samples
+  val = probabilities[k]
+  printf "%-8s%.8f  %.8f  %6.3f %%\n", k, val, act, 100*(act-val)/val
 end

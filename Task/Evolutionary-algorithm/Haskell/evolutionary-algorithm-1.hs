@@ -4,7 +4,7 @@ import Data.List
 import Data.Ord
 import Data.Array
 
-showNum :: (Num a) => Int -> a -> String
+showNum :: (Num a, Show a) => Int -> a -> String
 showNum w = until ((>w-1).length) (' ':) . show
 
 replace :: Int -> a -> [a] -> [a]

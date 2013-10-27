@@ -20,7 +20,7 @@ defer precedes ' < is precedes
   loop r> swap
 ;
                                        ( a n --)
-: shell dup begin 5 11 */ dup while (shell) repeat drop 2drop ;
+: shell dup begin dup 2 = if 2/ else 5 11 */ then dup while (shell) repeat drop 2drop ;
 
 create array 8 , 1 , 4 , 2 , 10 , 3 , 7 , 9 , 6 , 5 ,
 

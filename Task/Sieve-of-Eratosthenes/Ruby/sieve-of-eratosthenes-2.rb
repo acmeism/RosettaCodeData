@@ -8,8 +8,7 @@ def eratosthenes2(n)
   # Outer loop and both inner loops are skipping multiples of 2 and 3.
   # Outer loop checks i * i > n, same as i > Math.sqrt(n).
   i = 5
-  until(m = i * i
-        m > n) do
+  until (m = i * i) > n
     if nums[i >> 1]
       i_times_2 = i << 1
       i_times_4 = i << 2
@@ -38,7 +37,7 @@ def eratosthenes2(n)
   primes = [2]
   nums.each_index {|i| primes << (i * 2 + 1) if nums[i]}
   primes.pop while primes.last > n
-  return primes
+  primes
 end
 
 p eratosthenes2(100)

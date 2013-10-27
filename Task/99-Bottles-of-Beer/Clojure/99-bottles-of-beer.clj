@@ -12,3 +12,5 @@ Take one down, pass it around,
   [start]
   (doseq [n (range start 0 -1)]
     (verse n)))
+
+(sing 99)

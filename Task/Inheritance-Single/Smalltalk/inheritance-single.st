@@ -7,7 +7,7 @@ Object subclass: #Animal
 "* declare methods here, separated with '!' *"
 "* !Animal methodsFor: 'a category'! *"
 "* methodName *"
-"*    method body! !
+"*    method body! !"
 
 !Animal subclass: #Dog
    "* etc. *" !

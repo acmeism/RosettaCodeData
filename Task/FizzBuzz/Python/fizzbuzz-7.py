@@ -1,6 +1,14 @@
-import random
-
-for i in range(0, 100):
-    if not i % 15:
-        random.seed(1178741599)
-    print [i+1, "Fizz", "Buzz", "FizzBuzz"][random.randint(0,3)]
+>>> ' '.join(''.join(''.join(['' if i%3 else 'F',
+                                      '' if i%5 else 'B'])
+                             or str('00'))
+                     for i in range(1,16))
+'00 00 F 00 B F 00 00 F B 00 F 00 00 FB'
+>>> _
+'00 00 F 00 B F 00 00 F B 00 F 00 00 FB'
+>>> _.replace('FB','11').replace('F','01').replace('B','10').split()[::-1]
+['11', '00', '00', '01', '00', '10', '01', '00', '00', '01', '10', '00', '01', '00', '00']
+>>> '0b' + ''.join(_)
+'0b110000010010010000011000010000'
+>>> eval(_)
+810092048
+>>>

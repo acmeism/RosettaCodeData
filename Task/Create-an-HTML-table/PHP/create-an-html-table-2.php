@@ -1,7 +1,7 @@
 <?php
 /**
- * @author Elad Yosifon <elad.yosifon@gmail.com>
- * @desc HTML Table - spaghetti-code style
+ * @author Elad Yosifon
+ * @desc HTML Table - template engine style
  */
 $cols = array('', 'X', 'Y', 'Z');
 $rows = 3;

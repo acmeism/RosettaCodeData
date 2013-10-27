@@ -37,90 +37,90 @@
 ; reg a handles everything else (with a little help   ;
 ;                             from the system stack)  ;
 ;-----------------------------------------------------;
-outeee   =   $e1d1      ROM: console putchar routine
-stbeer   =   99         Must be in the range [0..99]
+outeee   =   $e1d1      ;ROM: console putchar routine
+stbeer   =   99         ;Must be in the range [0..99]
         .or  $0f00
 ;=====================================================;
 ; Initialize, sing the song, and exit                 ;
 ;-----------------------------------------------------;
-main    ldab #stbeer    Beer count = stbeer
-        bsr  prsong     Sing the entire song
-        swi             Return to the monitor.
+main    ldab #stbeer    ;Beer count = stbeer
+        bsr  prsong     ;Sing the entire song
+        swi             ;Return to the monitor.
 ;=====================================================;
 ; Emit the entire song up to the last sentence        ;
 ;-----------------------------------------------------;
-beerme  bsr  prbob2     Emit second sentence of verse
-prsong  ldx  #nline     Blank line between verses
-        ldaa #'N'       First sentence type = 'N'
-        bsr  prbob      Emit 1st sentence of verse
-        decb            Beer count -= 1
-        bpl  beerme     If beer count >= 0 then beerme
+beerme  bsr  prbob2     ;Emit second sentence of verse
+prsong  ldx  #nline     ;Blank line between verses
+        ldaa #'N'       ;First sentence type = 'N'
+        bsr  prbob      ;Emit 1st sentence of verse
+        decb            ;Beer count -= 1
+        bpl  beerme     ;If beer count >= 0 then beerme
 ;=====================================================;
 ; Set up the last sentence and fall through to prbob2 ;
 ;-----------------------------------------------------;
-        ldab #stbeer    Beer count = stbeer
-        ldx  #store     x$ = "Go to the store ..."
+        ldab #stbeer    ;Beer count = stbeer
+        ldx  #store     ;x$ = "Go to the store ..."
 ;=====================================================;
 ; Emit a properly punctuated bottle-of-beer sentence, ;
 ;   using beer counter in reg b, pre-string pointer   ;
 ;   in reg x, and the sentence type in reg a ('N' =   ;
 ;   sentence 1, 'o' = sentence 1.5, 'n' = sentence 2) ;
 ;-----------------------------------------------------;
-prbob2  ldaa #'n'       Second sentence type = 'n'
-prbob   psha            Stack sentence type for later
-        bsr  puts       Emit pre-string
-        pula            Check sentence type and use
-        psha              it to prepare the upper- or
-        anda #'n'         lower-case of "no more"
-        ldx  #omore     x$ = "o more bottle"
-        tstb            If beer count = 0 then
-        beq  prbott       skip over the i-to-a
-        ldx  #bottl     x$ = " bottle"
+prbob2  ldaa #'n'       ;Second sentence type = 'n'
+prbob   psha            ;Stack sentence type for later
+        bsr  puts       ;Emit pre-string
+        pula            ;Check sentence type and use
+        psha            ;  it to prepare the upper- or
+        anda #'n'       ;  lower-case of "no more"
+        ldx  #omore     ;x$ = "o more bottle"
+        tstb            ;If beer count = 0 then
+        beq  prbott     ;  skip over the i-to-a
+        ldx  #bottl     ;x$ = " bottle"
 ;=====================================================;
 ; I-to-A (inline): convert int in b to ascii and emit ;
 ;    with leading zero suppression (0 <= # <= 99)!    ;
 ;-----------------------------------------------------;
-        pshb            Stack beer count
-        ldaa #-1          (divten trashes it)
-divten  subb #10        b = ones digit - 10
-        inca            a = tens digit
-        bcc  divten     If a = 0 then
-        beq  onedig       suppress leading zero
-        adda #"0"       else translate tens digit to
-        bsr  putch        shifted ascii and emit
-onedig  addb #'0'+10    Translate ones digit to ascii
-        tba               and leave it in a for putch
-        pulb            Restore beer count
+        pshb            ;Stack beer count
+        ldaa #-1        ;  (divten trashes it)
+divten  subb #10        ;b = ones digit - 10
+        inca            ;a = tens digit
+        bcc  divten     ;If a = 0 then
+        beq  onedig     ;  suppress leading zero
+        adda #"0"       ;else translate tens digit to
+        bsr  putch      ;  shifted ascii and emit
+onedig  addb #'0'+10    ;Translate ones digit to ascii
+        tba             ;  and leave it in a for putch
+        pulb            ;Restore beer count
 ;-----------------------------------------------------;
-prbott  bsr  putch      Emit a;x$;
-        cmpb #1         If beer count = 1
-        bne  plural     then
-        inx               skip over the "s"
-plural  bsr  puts       Emit " ... beer";
-        pula            Restore sentence type
-        cmpa #'o'       If type <> 'o'
-        beq  putdot     then
-        psha              emit " on the wall";
-        bsr  puts         if type = 'N' then loop
-        pula                back to finish the
-        adda #33            first sentence with
-        bpl  prbob          type = 'o', x$ = ", "
-putdot  ldx  #dotnl     x$ = ".\n"
+prbott  bsr  putch      ;Emit a;x$;
+        cmpb #1         ;If beer count = 1
+        bne  plural     ;then
+        inx             ;  skip over the "s"
+plural  bsr  puts       ;Emit " ... beer";
+        pula            ;Restore sentence type
+        cmpa #'o'       ;If type <> 'o'
+        beq  putdot     ;then
+        psha            ;  emit " on the wall";
+        bsr  puts       ;  if type = 'N' then loop
+        pula            ;    back to finish the
+        adda #33        ;    first sentence with
+        bpl  prbob      ;    type = 'o', x$ = ", "
+putdot  ldx  #dotnl     ;x$ = ".\n"
 ;=====================================================;
 ; Emit string @ x and leave x @ start of next string  ;
 ;-----------------------------------------------------;
-puts    ldaa 0,x        a = raw character removed
-        inx               from the beginning of x$
+puts    ldaa 0,x        ;a = raw character removed
+        inx             ;  from the beginning of x$
 ;=====================================================;
 ; Emit a as ascii and loop into x$ if hi-bit is clear ;
 ;-----------------------------------------------------;
-putch   psha            Stack raw char
-        anda #$7f       Mask off the hi-bit
-        jsr  outeee     Emit a as 7-bit ascii
-        pula            Restore raw char
-        tsta            If hi-bit is clear then
-        bpl  puts         loop back into x$
-        rts             All 8 'bsr's use this 'rts'!
+putch   psha            ;Stack raw char
+        anda #$7f       ;Mask off the hi-bit
+        jsr  outeee     ;Emit a as 7-bit ascii
+        pula            ;Restore raw char
+        tsta            ;If hi-bit is clear then
+        bpl  puts       ;  loop back into x$
+        rts             ;All 8 'bsr's use this 'rts'!
 ;=====================================================;
 ; Optimized song lyric strings, carefully arranged to ;
 ;   allow the prbob subroutine to take full advantage ;

@@ -1,11 +1,11 @@
-#define std'dictionary'*.
-#define ext'convertors'*.
+#define system.
+#define extensions.
 
 // --- Program ---
 
-#symbol Program =
+#symbol program =
 [
-    'program'output write &numeric:5 &radix:2 &:eintformatter << "%n".
-    'program'output write &numeric:50 &radix:2 &:eintformatter << "%n".
-    'program'output write &numeric:9000 &radix:2 &:eintformatter << "%n".
+    console writeLine:(convertControl toLiteral:5 &radix:2).
+    console writeLine:(convertControl toLiteral:50 &radix:2).
+    console writeLine:(convertControl toLiteral:9000 &radix:2).
 ].

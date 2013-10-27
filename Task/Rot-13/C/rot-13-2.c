@@ -1,0 +1,1 @@
+cat filename | ./rot13

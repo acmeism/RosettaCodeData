@@ -1,8 +1,8 @@
 import std.stdio, std.string, std.math, std.array;
 
 struct SquareMat(T = creal) {
-    static public string fmt = "%8.3f";
-    private alias T[][] TM;
+    public static string fmt = "%8.3f";
+    private alias TM = T[][];
     private TM a;
 
     public this(in size_t side) pure nothrow
@@ -15,25 +15,25 @@ struct SquareMat(T = creal) {
     public this(in TM m) pure nothrow
     in {
         assert(!m.empty);
-        foreach (row; m)
+        foreach (const row; m)
             assert(m.length == m[0].length);
     } body {
         a.length = m.length;
-        foreach (i, row; m)
-            //a[i] = row.dup; // not nothrow
-            a[i] = row ~ []; // slower
+        foreach (immutable i, const row; m)
+            //a[i] = row.dup; // Not nothrow.
+            a[i] = row ~ []; // Slower.
     }
 
     string toString() const {
-        return xformat("<%(%(" ~ fmt ~ ", %)\n %)>", a);
+        return format("<%(%(" ~ fmt ~ ", %)\n %)>", a);
     }
 
     public static SquareMat identity(in size_t side) pure nothrow {
         SquareMat m;
         m.a.length = side;
-        foreach (r, ref row; m.a) {
+        foreach (immutable r, ref row; m.a) {
             row.length = side;
-            foreach (c; 0 .. side)
+            foreach (immutable c; 0 .. side)
                 row[c] = cast(T)(r == c ? 1 : 0);
         }
         return m;
@@ -46,10 +46,10 @@ struct SquareMat(T = creal) {
         immutable size_t side = other.a.length;
         SquareMat d;
         d.a = new TM(side, side);
-        foreach (r; 0 .. side)
-            foreach (c; 0 .. side) {
+        foreach (immutable r; 0 .. side)
+            foreach (immutable c; 0 .. side) {
                 d.a[r][c] = cast(T)0;
-                foreach (k, ark; a[r])
+                foreach (immutable k, immutable ark; a[r])
                     d.a[r][c] += ark * other.a[k][c];
             }
         return d;
@@ -70,12 +70,12 @@ struct SquareMat(T = creal) {
 }
 
 void main() {
-    alias SquareMat!() M;
+    alias M = SquareMat!();
     immutable real q = sqrt(0.5);
-    auto m = M([[   q + 0*1.0Li,    q + 0*1.0Li, 0.0L + 0.0Li],
-                [0.0L - q*1.0Li, 0.0L + q*1.0Li, 0.0L + 0.0Li],
-                [0.0L +   0.0Li, 0.0L +   0.0Li, 0.0L + 1.0Li]]);
+    immutable m = M([[   q + 0*1.0Li,    q + 0*1.0Li, 0.0L + 0.0Li],
+                     [0.0L - q*1.0Li, 0.0L + q*1.0Li, 0.0L + 0.0Li],
+                     [0.0L +   0.0Li, 0.0L +   0.0Li, 0.0L + 1.0Li]]);
     M.fmt = "%5.2f";
-    foreach (p; [0, 1, 23, 24])
+    foreach (immutable p; [0, 1, 23, 24])
         writefln("m ^^ %d =\n%s", p, m ^^ p);
 }

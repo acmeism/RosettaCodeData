@@ -18,7 +18,7 @@ Waldo:
          if Baker    == top                                    then return
          if Cooper   == bottom                                 then return
          if Fletcher == bottom      |  Fletcher == top         then return
-         if Miller   <= Cooper                                 then return
+         if Miller   \> Cooper                                 then return
          if Smith    == Fletcher-1  |  Smith    == Fletcher+1  then return
          if Fletcher == Cooper-1    |  Fletcher == Cooper+1    then return
 

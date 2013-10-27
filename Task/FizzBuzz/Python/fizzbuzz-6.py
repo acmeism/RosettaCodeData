@@ -1,14 +1,6 @@
->>> ' '.join(''.join(''.join(['' if i%3 else 'F',
-                                      '' if i%5 else 'B'])
-                             or str('00'))
-                     for i in range(1,16))
-'00 00 F 00 B F 00 00 F B 00 F 00 00 FB'
->>> _
-'00 00 F 00 B F 00 00 F B 00 F 00 00 FB'
->>> _.replace('FB','11').replace('F','01').replace('B','10').split()[::-1]
-['11', '00', '00', '01', '00', '10', '01', '00', '00', '01', '10', '00', '01', '00', '00']
->>> '0b' + ''.join(_)
-'0b110000010010010000011000010000'
->>> eval(_)
-810092048
->>>
+messages = [None, "Fizz", "Buzz", "FizzBuzz"]
+acc = 810092048
+for i in xrange(1, 101):
+    c = acc & 3
+    print messages[c] if c else i
+    acc = acc >> 2 | c << 28

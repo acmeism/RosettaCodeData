@@ -1,22 +1,19 @@
 #include <algorithm>
 #include <fstream>
-#include <functional>
 #include <iostream>
 #include <iterator>
 #include <string>
 #include <vector>
 
-// use adjacent_find to test for out-of-order letter pair
 bool ordered(const std::string &word)
 {
-    return std::adjacent_find(word.begin(), word.end(), std::greater<char>()) == word.end();
+    return std::is_sorted(word.begin(), word.end()); // C++11
 }
 
 int main()
 {
     std::ifstream infile("unixdict.txt");
-    if (!infile)
-    {
+    if (!infile) {
         std::cerr << "Can't open word file\n";
         return -1;
     }
@@ -25,15 +22,12 @@ int main()
     std::string word;
     int longest = 0;
 
-    while (std::getline(infile, word))
-    {
+    while (std::getline(infile, word)) {
         int length = word.length();
         if (length < longest) continue; // don't test short words
 
-        if (ordered(word))
-        {
-            if (length > longest)
-            {
+        if (ordered(word)) {
+            if (longest < length) {
                 longest = length; // set new minimum length
                 words.clear(); // reset the container
             }

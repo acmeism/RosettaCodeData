@@ -1,39 +1,34 @@
-import std.stdio, std.math, std.string, std.conv;
+import std.stdio, std.math, std.string, std.conv, std.algorithm,
+       std.range;
 
-bool isPrime(int n) {
-  if (n <= 1)
-    return false;
-  foreach (i; 2 .. cast(int)sqrt(cast(real)n) + 1)
-    if (!(n % i))
-      return false;
-  return true;
+bool isPrime(in int n) pure nothrow {
+    if (n <= 1)
+        return false;
+    foreach (immutable i; 2 .. cast(int)sqrt(cast(real)n) + 1)
+        if (!(n % i))
+            return false;
+    return true;
 }
 
-bool isTruncatablePrime(bool left)(int n) {
-  string s = to!string(n);
-  if (indexOf(s, '0') != -1)
-    return false;
-  foreach (i; 0 .. s.length)
-    static if (left) {
-      if (!isPrime(to!int(s[i .. $])))
+bool isTruncatablePrime(bool left)(in int n) pure {
+    immutable s = n.text;
+    if (s.canFind('0'))
         return false;
-    } else {
-      if (!isPrime(to!int(s[0 .. i+1])))
-        return false;
-    }
-  return true;
+    foreach (immutable i; 0 .. s.length)
+        static if (left) {
+            if (!s[i .. $].to!int.isPrime)
+                return false;
+        } else {
+            if (!s[0 .. i + 1].to!int.isPrime)
+                return false;
+        }
+    return true;
 }
 
 void main() {
-  enum int n = 1_000_000;
-  foreach_reverse (i; 2 .. n)
-    if (isTruncatablePrime!true(i)) {
-      writeln("Largest left-truncatable prime in 2 .. ", n, ": ", i);
-      break;
-    }
-  foreach_reverse (i; 2 .. n)
-    if (isTruncatablePrime!false(i)) {
-      writeln("Largest right-truncatable prime in 2 .. ", n, ": ", i);
-      break;
-    }
+    enum n = 1_000_000;
+    writeln("Largest left-truncatable prime in 2 .. ", n, ": ",
+            iota(n, 1, -1).filter!(isTruncatablePrime!true).front);
+    writeln("Largest right-truncatable prime in 2 .. ", n, ": ",
+            iota(n, 1, -1).filter!(isTruncatablePrime!false).front);
 }

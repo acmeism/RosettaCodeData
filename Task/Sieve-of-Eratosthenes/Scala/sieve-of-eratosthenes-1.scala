@@ -1,12 +1,10 @@
-def sieveOfEratosthenes(n: Int) = {
-  val primes = new scala.collection.mutable.BitSet(n)
-  primes ++= (2 to n)
-  val sqrt = Math.sqrt(n).toInt
+def sieveOfEratosthenes(nTo: Int) = {
+  val primes = collection.mutable.BitSet.empty.par ++ (2 to nTo)
   for {
-    candidate <- 2 to sqrt
+    candidate <- 2 until Math.sqrt(nTo).toInt
     if primes contains candidate
-  } primes --= candidate * candidate to n by candidate
+  } primes --= candidate * candidate to nTo by candidate
   primes
 }
-
-println( sieveOfEratosthenes(30) )
+// An effect of parallel processing cause the result is shuffled.
+println(sieveOfEratosthenes(101).toList.sorted)

@@ -1,6 +1,6 @@
-import std.stdio, std.algorithm;
-
 void main() {
-    writeln("the three truths".count("th"));
-    writeln("ababababab".count("abab"));
+    import std.stdio, std.algorithm;
+
+    "the three truths".count("th").writeln;
+    "ababababab".count("abab").writeln;
 }

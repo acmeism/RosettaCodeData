@@ -1,22 +1,51 @@
 class Ant
-  Directions = [:north, :east, :south, :west]
 
-  def initialize(plane, pos_x, pos_y)
-    @plane = plane
-    @position = Position.new(plane, pos_x, pos_y)
-    @direction = :south
+  class OutOfBoundsException < StandardError; end
+
+  class Plane
+    def initialize(x, y)
+      @size_x, @size_y = x, y
+      @cells = Array.new(y) {Array.new(x, :white)}
+    end
+
+    def white?(px, py)
+      @cells[py][px] == :white
+    end
+
+    def toggle_colour(px, py)
+      @cells[py][px] = (white?(px, py) ? :black : :white)
+    end
+
+    def check_bounds(px, py)
+      unless (0 <= px and px < @size_x) and (0 <= py and py < @size_y)
+        raise OutOfBoundsException, "(#@size_x, #@size_y)"
+      end
+    end
+
+    def to_s
+      @cells.collect {|row|
+        row.collect {|cell| cell == :white ? "." : "#"}.join + "\n"
+      }.join
+    end
   end
-  attr_reader :plane, :direction, :position
+
+  dir_move = [[:north, [0,-1]], [:east, [1,0]], [:south, [0,1]], [:west, [-1,0]]]
+  Move = Hash[dir_move]
+  directions = dir_move.map{|dir, move| dir}       # [:north, :east, :south, :west]
+  Right = Hash[ directions.zip(directions.rotate).to_a ]
+  Left  = Right.invert
+
+  def initialize(size_x, size_y, pos_x=size_x/2, pos_y=size_y/2)
+    @plane = Plane.new(size_x, size_y)
+    @pos_x, @pos_y = pos_x, pos_y
+    @direction = :south
+    @plane.check_bounds(@pos_x, @pos_y)
+  end
 
   def run
     moves = 0
     loop do
       begin
-        if $DEBUG and moves % 100 == 0
-          system "clear"
-          puts "%5d %s" % [moves, position]
-          puts plane
-        end
         moves += 1
         move
       rescue OutOfBoundsException
@@ -27,94 +56,35 @@ class Ant
   end
 
   def move
-    plane.at(position).toggle_colour
-    position.advance(direction)
-    if plane.at(position).white?
-      turn(:right)
+    @plane.toggle_colour(@pos_x, @pos_y)
+    advance
+    if @plane.white?(@pos_x, @pos_y)
+      @direction = Right[@direction]
     else
-      turn(:left)
+      @direction = Left[@direction]
     end
   end
 
-  def turn(left_or_right)
-    idx = Directions.index(direction)
-    case left_or_right
-    when :left  then @direction = Directions[(idx - 1) % Directions.length]
-    when :right then @direction = Directions[(idx + 1) % Directions.length]
-    end
+  def advance
+    dx, dy = Move[@direction]
+    @pos_x += dx
+    @pos_y += dy
+    @plane.check_bounds(@pos_x, @pos_y)
   end
-end
 
-class Plane
-  def initialize(x, y)
-    @x = x
-    @y = y
-    @cells = Array.new(y) {Array.new(x) {Cell.new}}
-  end
-  attr_reader :x, :y
-
-  def at(position)
-    @cells[position.y][position.x]
+  def position
+    "(#@pos_x, #@pos_y)"
   end
 
   def to_s
-    @cells.collect {|row|
-      row.collect {|cell| cell.white? ? "." : "#"}.join + "\n"
-    }.join
+    @plane.to_s
   end
 end
-
-class Cell
-  def initialize
-    @colour = :white
-  end
-  attr_reader :colour
-
-  def white?
-    colour == :white
-  end
-
-  def toggle_colour
-    @colour = (white? ? :black : :white)
-  end
-end
-
-class Position
-  def initialize(plane, x, y)
-    @plane = plane
-    @x = x
-    @y = y
-    check_bounds
-  end
-  attr_accessor :x, :y
-
-  def advance(direction)
-    case direction
-    when :north then @y -= 1
-    when :east  then @x += 1
-    when :south then @y += 1
-    when :west  then @x -= 1
-    end
-    check_bounds
-  end
-
-  def check_bounds
-    unless (0 <= @x and @x < @plane.x) and (0 <= @y and @y < @plane.y)
-      raise OutOfBoundsException, to_s
-    end
-  end
-
-  def to_s
-    "(%d, %d)" % [x, y]
-  end
-end
-
-class OutOfBoundsException < StandardError; end
 
 #
 # the simulation
 #
-ant = Ant.new(Plane.new(100, 100), 50, 50)
+ant = Ant.new(100, 100)
 moves = ant.run
 puts "out of bounds after #{moves} moves: #{ant.position}"
-puts ant.plane
+puts ant

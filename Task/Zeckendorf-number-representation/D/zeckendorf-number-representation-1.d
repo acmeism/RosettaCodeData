@@ -1,7 +1,10 @@
-import std.stdio, std.range, std.algorithm;
+import std.stdio, std.range, std.algorithm, std.functional;
 
 void main() {
-    writefln("%(%b\n%)", iota(size_t.max)
-                         .filter!q{ !(a & (a >> 1)) }
-                         .take(21));
+    size_t
+    .max
+    .iota
+    .filter!q{ !(a & (a >> 1)) }
+    .take(21)
+    .binaryReverseArgs!writefln("%(%b\n%)");
 }

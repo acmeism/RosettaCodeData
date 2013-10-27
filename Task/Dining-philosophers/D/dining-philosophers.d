@@ -31,7 +31,7 @@ void main() {
         fork = new Mutex();
 
     defaultPoolThreads = forks.length;
-    foreach (uint i, philo; taskPool.parallel(philosophers)) {
+    foreach (i, philo; taskPool.parallel(philosophers)) {
         foreach (_; 0 .. 100) {
             eat(i, philo, forks);
             think(philo);

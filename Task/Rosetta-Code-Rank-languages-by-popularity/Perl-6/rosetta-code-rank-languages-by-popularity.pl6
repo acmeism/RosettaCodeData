@@ -3,21 +3,18 @@ shell "wget -O categories.html 'http://www.rosettacode.org/mw/index.php?title=Sp
 
 my @lines = slurp('languages.html').lines;
 shift @lines until @lines[0] ~~ / '<h2>Subcategories</h2>' /;
-my @languages = gather for @lines {
+my \languages = set gather for @lines {
     last if / '/bodycontent' /;
     take ~$0 if
         / '<li><a href="/wiki/Category:' .*? '" title="Category:' .*? '">' (.*?) '</a></li>' /;
 }
 
-my %valid = @languages X=> 1;
-
 @lines = slurp('categories.html').lines;
-
 my @results = sort -*.[0], gather for @lines {
     take [+$1, ~$0] if
         / '<li><a href="/wiki/Category:' .*? '" title="Category:' .*? '">'
-        (.*?) <?{ %valid{ ~$0 } }>
-        '</a>' .*? '(' (\d+) ' members)' /;
+        (.*?) <?{ ~$0 ∈ languages }>
+        '</a>' .*? '(' (\d+) ' member' /;
 }
 
 for @results.kv -> $i, @l {

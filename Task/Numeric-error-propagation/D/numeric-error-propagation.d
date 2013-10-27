@@ -8,9 +8,7 @@ const struct Imprecise {
         this.delta = abs(d);
     }
 
-    template IsImprecise(T) {
-        enum IsImprecise = is(Unqual!T == Unqual!(typeof(this)));
-    }
+    enum IsImprecise(T) = is(Unqual!T == Unqual!(typeof(this)));
 
     I reciprocal() const pure nothrow {
         return I(1.0 / value, delta / (value ^^ 2));
@@ -83,7 +81,7 @@ const struct Imprecise {
     }
 }
 
-alias Imprecise I;
+alias I = Imprecise;
 
 auto distance(T1, T2)(in T1 p1, in T2 p2) pure nothrow {
     return ((p1[0] - p2[0]) ^^ 2 + (p1[1] - p2[1]) ^^ 2) ^^ 0.5;

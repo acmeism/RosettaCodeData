@@ -19,8 +19,8 @@ struct Permutations(bool doCopy=true, T) {
             this.stopped = true;
         } else {
             this.stopped = false;
-            this.indices = iota(n).array(); // not pure nothrow
-            this.cycles = iota(n, n_minus_r, -1).array();
+            this.indices = n.iota.array; // Not pure nothrow.
+            this.cycles = iota(n, n_minus_r, -1).array;
         }
 
         static if (!doCopy)
@@ -35,20 +35,20 @@ struct Permutations(bool doCopy=true, T) {
         @property T[] front() const pure nothrow {
             assert(!this.stopped);
             auto result = new T[r];
-            foreach (i, ref re; result)
+            foreach (immutable i, ref re; result)
                 re = items[indices[i]];
             return result;
         }
     } else {
         @property T[] front() pure nothrow {
             assert(!this.stopped);
-            foreach (i, ref re; this.result)
+            foreach (immutable i, ref re; this.result)
                 re = items[indices[i]];
             return this.result;
         }
     }
 
-    void popFront() pure nothrow {
+    void popFront() pure /*nothrow*/ {
         assert(!this.stopped);
         int i = r - 1;
         while (i >= 0) {
@@ -62,8 +62,9 @@ struct Permutations(bool doCopy=true, T) {
             immutable int n1 = indices.length - 1;
             assert(n1 >= 0);
             immutable int num = indices[i];
-            foreach (k; i .. n1)
-                indices[k] = indices[k + 1];
+
+            // copy isn't nothrow.
+            indices[i + 1 .. n1 + 1].copy(indices[i .. n1]);
             indices[n1] = num;
             i--;
         }
@@ -80,60 +81,59 @@ Permutations!(doCopy, T) permutations(bool doCopy=true, T)
 
 // ---------------------------------
 
-import std.stdio, std.typecons, std.conv, std.algorithm, std.array;
+import std.stdio, std.typecons, std.conv, std.algorithm, std.array,
+       std.exception, std.string;
 
 enum maxIters = 1_000_000;
 
-string A036058(string ns) {
-    return group(ns).map!(t => text(t[1]) ~ cast(char)t[0])().join();
+string A036058(in string ns) pure {
+    return ns.group.map!(t => t[1].text ~ cast(char)t[0]).join;
 }
 
 int A036058_length(bool doPrint=false)(string numberString="0") {
     int iterations = 1;
-    int queue_index;
-    string[3] last_three;
+    int queueIndex;
+    string[3] lastThree;
 
     while (true) {
         static if (doPrint)
             writefln("  %2d %s", iterations, numberString);
 
-        //numberString = cast(string)(cast(ubyte[])numberString.dup).sort().release();
-        // this is a workaround --------
-        int[10] digitsCounts;
-        foreach (char digit; numberString)
-            digitsCounts[digit - '0']++;
-        auto numb = new char[numberString.length];
-        int count = 0;
-        foreach (i, d; digitsCounts)
-            foreach (n; 0 .. d) {
-                numb[count] = cast(char)(i + '0');
-                count++;
-            }
-        numberString = cast(string)numb;
-        // end work-around --------
+        numberString = cast(string)(numberString
+                                    .dup
+                                    .representation
+                                    .sort()
+                                    .release
+                                    .assumeUnique);
 
-        if (last_three[].canFind(numberString))
+        if (lastThree[].canFind(numberString))
             break;
         assert(iterations < maxIters);
-        last_three[queue_index] = numberString;
-        numberString = A036058(numberString);
+        lastThree[queueIndex] = numberString;
+        numberString = numberString.A036058;
         iterations++;
-        queue_index++;
-        queue_index %= 3;
+        queueIndex++;
+        queueIndex %= 3;
     }
 
     return iterations;
 }
 
-Tuple!(int,int[]) max_A036058_length(R)(R start_range=iota(11)) {
-    bool[string] already_done;
+Tuple!(int,int[]) max_A036058_length(R)(R startRange = 11.iota) {
+    bool[string] alreadyDone;
     auto max_len = tuple(-1, (int[]).init);
 
-    foreach (n; start_range) {
-        string sns = cast(string)(cast(ubyte[])to!(char[])(n)).sort().release();
-        if (sns !in already_done) {
-            already_done[sns] = true;
-            int size = A036058_length(sns);
+    foreach (n; startRange) {
+        immutable string sns = cast(string)(n
+                                            .to!(char[])
+                                            .representation
+                                            .sort()
+                                            .release
+                                            .assumeUnique);
+
+        if (sns !in alreadyDone) {
+            alreadyDone[sns] = true;
+            const size = sns.A036058_length;
             if (size > max_len[0])
                 max_len = tuple(size, [n]);
             else if (size == max_len[0])
@@ -144,21 +144,23 @@ Tuple!(int,int[]) max_A036058_length(R)(R start_range=iota(11)) {
 }
 
 void main() {
-    auto lenMax_starts = max_A036058_length(iota(maxIters));
-    int lenMax = lenMax_starts[0];
-    int[] starts = lenMax_starts[1];
+    //const (lenMax, starts) = maxIters.iota.max_A036058_length;
+    const lenMax_starts = maxIters.iota.max_A036058_length;
+    immutable lenMax = lenMax_starts[0];
+    const starts = lenMax_starts[1];
 
-    // Expand
+    // Expand:
     int[] allStarts;
-    foreach (n; starts) {
+    foreach (immutable n; starts) {
         bool[string] set;
-        foreach (k; permutations!false(to!(char[])(n), 4))
+        foreach (const k; permutations!false(n.to!(char[]), 4))
             if (k[0] != '0')
                 set[k.idup] = true;
-        allStarts ~= set.byKey().map!(to!int)().array();
+        //allStarts ~= set.byKey.to!(int[]);
+        allStarts ~= set.byKey.map!(to!int).array;
     }
 
-    allStarts = allStarts.sort().release().filter!(x => x < maxIters)().array();
+    allStarts = allStarts.sort().filter!(x => x < maxIters).array;
 
     writefln("The longest length, followed by the number(s) with the
 longest sequence length for starting sequence numbers below maxIters
@@ -169,8 +171,8 @@ Iterations = %d and sequence-starts = %s.", lenMax, allStarts);
 digits is printed below. (The others will differ only in their first
 term).");
 
-    foreach (n; starts) {
-        writeln();
-        A036058_length!true(to!string(n));
+    foreach (immutable n; starts) {
+        writeln;
+        A036058_length!true(n.text);
     }
 }

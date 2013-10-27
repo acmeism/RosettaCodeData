@@ -1,4 +1,4 @@
-import std.stdio, std.array, std.range, std.typecons;
+import std.stdio, std.array, std.range, std.typecons, std.algorithm;
 
 struct Vec2 { // To be replaced with Phobos code.
     double x, y;
@@ -21,7 +21,7 @@ immutable(Vec2)[] clip(in Vec2[] subjectPolygon, in Vec2[] clipPolygon)
 } out(result) {
     assert(result.length > 1);
 } body {
-    alias Tuple!(Vec2,"p", Vec2,"q") Edge;
+    alias Edge = Tuple!(Vec2,"p", Vec2,"q");
 
     static bool isInside(in Vec2 p, in Edge cle) pure nothrow {
         return (cle.q.x - cle.p.x) * (p.y - cle.p.y) >
@@ -40,16 +40,16 @@ immutable(Vec2)[] clip(in Vec2[] subjectPolygon, in Vec2[] clipPolygon)
 
     // How much slower is this compared to lower-level code?
     static edges(in Vec2[] poly) /*pure nothrow*/ {
-        return poly[$ - 1 .. $].chain(poly).zip(poly);
+        // return poly[$ - 1 .. $].chain(poly).zip!Edge(poly);
+        return poly[$ - 1 .. $].chain(poly).zip(poly).map!Edge;
     }
 
-    // Not nothrow. Appender?
-    immutable(Vec2)[] result = subjectPolygon.idup;
+    immutable(Vec2)[] result = subjectPolygon.idup; // // Not nothrow.
 
-    foreach (immutable Edge clipEdge; edges(clipPolygon)) {
+    foreach (immutable clipEdge; edges(clipPolygon)) {
         immutable inputList = result;
-        result.clear();
-        foreach (immutable Edge inEdge; edges(inputList)) {
+        result.clear;
+        foreach (immutable inEdge; edges(inputList)) {
             if (isInside(inEdge.q, clipEdge)) {
                 if (!isInside(inEdge.p, clipEdge))
                     result ~= intersection(inEdge, clipEdge);

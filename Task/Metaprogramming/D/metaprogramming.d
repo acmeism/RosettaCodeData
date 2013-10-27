@@ -1,11 +1,8 @@
-template GenStruct(string name, string fieldName) {
-    enum GenStruct = "struct " ~ name ~ "{ int " ~ fieldName ~ "; }";
-}
+enum GenStruct(string name, string fieldName) =
+    "struct " ~ name ~ "{ int " ~ fieldName ~ "; }";
 
+// Equivalent to:  struct Foo { int bar; }
 mixin(GenStruct!("Foo", "bar"));
-
-// Is equivalent to:
-// struct Foo { int bar; }
 
 void main() {
     Foo f;

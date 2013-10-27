@@ -6,4 +6,4 @@ zeckendorf = map b $ filter ones [0..] where
 	ones x = 0 == x .&. (x `shiftR` 1)
 	b x = showIntAtBase 2 ("01"!!) x ""
 
-main = mapM putStrLn $ take 21 zeckendorf
+main = mapM_ putStrLn $ take 21 zeckendorf

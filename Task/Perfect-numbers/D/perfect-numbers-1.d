@@ -5,7 +5,7 @@ bool isPerfectNumber(in int n) pure nothrow {
         return false;
 
     int sum = 1;
-    foreach (i; 2 .. cast(int)sqrt(cast(real)n) + 1)
+    foreach (immutable i; 2 .. cast(int)sqrt(cast(real)n) + 1)
         if (n % i == 0) {
             immutable int q = n / i;
             sum += i;
@@ -17,5 +17,5 @@ bool isPerfectNumber(in int n) pure nothrow {
 }
 
 void main() {
-    iota(10_000).filter!isPerfectNumber().writeln();
+    10_000.iota.filter!isPerfectNumber.writeln;
 }

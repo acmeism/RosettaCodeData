@@ -1,101 +1,48 @@
-(defstruct (measurement
-	     (:conc-name "MEASUREMENT-")
-	     (:constructor make-measurement (counter line date flag value)))
-  (counter 0 :type (integer 0))
-  (line 0 :type (integer 0))
-  (date nil :type symbol)
-  (flag 0 :type integer)
-  (value 0 :type real))
+(defvar *invalid-count*)
+(defvar *max-invalid*)
+(defvar *max-invalid-date*)
+(defvar *total-sum*)
+(defvar *total-valid*)
 
-(defun measurement-valid-p (m)
-  (> (measurement-flag m) 0))
+(defun read-flag (stream date)
+  (let ((flag (read stream)))
+    (if (plusp flag)
+        (setf *invalid-count* 0)
+        (when (< *max-invalid* (incf *invalid-count*))
+          (setf *max-invalid* *invalid-count*)
+          (setf *max-invalid-date* date)))
+    flag))
 
-(defun map-data-stream (function stream)
-  (flet ((scan (&optional (errorp t)) (read stream errorp nil)))
-    (loop
-       :with global-count = 0
-       :for date = (scan nil) :then (scan nil)
-       :for line-number :upfrom 1
-       :while date
-       :do (loop
-	      :for count :upfrom 0 :below 24
-	      :do (let* ((value (scan)) (flag (scan)))
-		    (funcall function (make-measurement global-count line-number date flag value))
-		    (incf global-count)))
-       :finally (return global-count))))
+(defun parse-line (line)
+  (with-input-from-string (s line)
+    (let ((date (make-string 10)))
+      (read-sequence date s)
+      (cons date (loop repeat 24 collect (list (read s)
+                                               (read-flag s date)))))))
 
-(defun map-data-file (function pathname)
-  (with-open-file (stream pathname
-			  :element-type 'character
-			  :direction :input
-			  :if-does-not-exist :error)
-    (map-data-stream function stream)))
+(defun analyze-line (line)
+  (destructuring-bind (date &rest rest) line
+    (let* ((valid (remove-if-not #'plusp rest :key #'second))
+           (n (length valid))
+           (sum (apply #'+ (mapcar #'rationalize (mapcar #'first valid))))
+           (avg (if valid (/ sum n) 0)))
+      (incf *total-valid* n)
+      (incf *total-sum* sum)
+      (format t "Line: ~a  Reject: ~2d  Accept: ~2d  ~
+                 Line_tot: ~8,3f  Line_avg: ~7,3f~%"
+              date (- 24 n) n sum avg))))
 
-(defmacro do-data-stream ((variable stream) &body body)
-  `(map-data-stream
-     (lambda (,variable) ,@body)
-     ,stream))
-
-(defmacro do-data-file ((variable file) &body body)
-  `(map-data-file
-     (lambda (,variable) ,@body)
-     ,file))
-
-(let ((current-day nil)
-      (current-line 0)
-      (beginning-of-misreadings nil)
-      (current-length 0)
-      (worst-beginning nil)
-      (worst-length 0)
-      (sum-of-day 0)
-      (count-of-day 0))
-
-  (flet ((write-end-of-day-report ()
-	   (when current-day
-	     (format t "Line ~5D Date ~A: Accepted ~2D Total ~8,3F Average ~8,3F~%"
-		     current-line current-day count-of-day sum-of-day
-		     (if (> count-of-day 0) (/ sum-of-day count-of-day) sum-of-day)))))
-
-    (do-data-file (m #P"D:/Scratch/data.txt")
-
-      (let* ((date (measurement-date m))
-	     (line-number (measurement-line m))
-	     (validp (measurement-valid-p m))
-	     (day-changed-p (/= current-line line-number))
-	     (value (measurement-value m)))
-
-	(when day-changed-p
-	  (write-end-of-day-report)
-	  (setf current-day date)
-	  (setf current-line line-number)
-	  (setf sum-of-day 0)
-	  (setf count-of-day 0))
-
-	(if (not validp)
-	    (if beginning-of-misreadings
-		(incf current-length)
-		(progn
-		  (setf beginning-of-misreadings m)
-		  (setf current-length 1)))
-	    (progn
-	      (when beginning-of-misreadings
-		(if (> current-length worst-length)
-		    (progn
-		      (setf worst-beginning beginning-of-misreadings)
-		      (setf worst-length current-length))
-		    (progn
-		      (setf beginning-of-misreadings nil)
-		      (setf current-length 0))))
-	      (incf sum-of-day value)
-	      (incf count-of-day)))))
-
-    (when (and beginning-of-misreadings (> current-length worst-length))
-      (setf worst-beginning beginning-of-misreadings)
-      (setf worst-length current-length))
-
-    (write-end-of-day-report))
-
-  (format t "Worst run started ~A (~D) and has length ~D~%"
-	  (measurement-date worst-beginning)
-	  (measurement-counter worst-beginning)
-	  worst-length))
+(defun process (pathname)
+  (let ((*invalid-count* 0) (*max-invalid* 0) *max-invalid-date*
+        (*total-sum* 0) (*total-valid* 0))
+    (with-open-file (f pathname)
+      (loop for line = (read-line f nil nil)
+            while line
+            do (analyze-line (parse-line line))))
+    (format t "~%File     = ~a" pathname)
+    (format t "~&Total    = ~f" *total-sum*)
+    (format t "~&Readings = ~a" *total-valid*)
+    (format t "~&Average  = ~10,3f~%" (/ *total-sum* *total-valid*))
+    (format t "~%Maximum run(s) of ~a consecutive false readings ends at ~
+               line starting with date(s): ~a~%"
+            *max-invalid* *max-invalid-date*)))

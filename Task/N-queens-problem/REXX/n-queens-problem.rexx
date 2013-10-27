@@ -6,7 +6,7 @@ file=1;   rank=1;               q=0    /*starting place,  #  of queens. */
 /*═════════════════════════════════════find solution:  N queens problem.*/
   do  while q<N                        /*keep placing queens until done.*/
   @.file.rank=1                        /*place a queen on the chessboard*/
-  if safe?(file,rank) then do;   q=q+1 /*if not being attached, eureka! */
+  if safe?(file,rank) then do;   q=q+1 /*if not being attacked, eureka! */
                            file=1      /*another attempt at file #1,    */
                            rank=rank+1 /*and also bump the rank pointer.*/
                            end

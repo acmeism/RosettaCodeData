@@ -1,2 +1,2 @@
-Fileappend, Hallo World!, print.txt
+Fileappend, Hello World!, print.txt
 Run, print "print.txt"

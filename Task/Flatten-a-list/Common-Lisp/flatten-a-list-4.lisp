@@ -1,0 +1,5 @@
+(defun flatten-trf (x &optional stack out)
+  (cond ((consp x) (flatten-trf (rest x) (cons (first x) stack) out))
+        (x         (flatten-trf (first stack) (rest stack) (cons x out)))
+        (stack     (flatten-trf (first stack) (rest stack) out))
+        (t out)))

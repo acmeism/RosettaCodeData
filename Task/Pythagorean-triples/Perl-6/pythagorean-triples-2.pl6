@@ -1,20 +1,18 @@
-sub triples($limit) {
-    my $primitive = 0;
-    my $civilized = 0;
+my %triples;
+my $limit = 100;
 
-    sub oyako($a, $b, $c) {
-        my $perim = $a + $b + $c;
-        return if $perim > $limit;
-	++$primitive; $civilized += $limit div $perim;
-        oyako( $a - 2*$b + 2*$c,  2*$a - $b + 2*$c,  2*$a - 2*$b + 3*$c);
-        oyako( $a + 2*$b + 2*$c,  2*$a + $b + 2*$c,  2*$a + 2*$b + 3*$c);
-        oyako(-$a + 2*$b + 2*$c, -2*$a + $b + 2*$c, -2*$a + 2*$b + 3*$c);
-    }
-
-    oyako(3,4,5);
-    "$limit => ($primitive $civilized)";
+for 3 .. $limit/2 -> $c {
+   for 1 .. $c -> $a {
+       my $b = ($c * $c - $a * $a).sqrt;
+       last if $c + $a + $b > $limit;
+       last if $a > $b;
+       if $b == $b.Int {
+          my $key = "$a $b $c";
+          %triples{$key} = ([gcd] $c, $a, $b.Int) > 1 ?? 0  !! 1;
+          say $key, %triples{$key} ?? ' - primitive' !! '';
+       }
+   }
 }
 
-for 10,100,1000 ... * -> $limit {
-    say triples $limit;
-}
+say "There are {+%triples.keys} Pythagorean Triples with a perimeter <= $limit,"
+ ~"\nof which {[+] %triples.values} are primitive.";

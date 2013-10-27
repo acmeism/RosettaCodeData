@@ -1,4 +1,6 @@
-import std.stdio, std.bigint, std.algorithm, std.conv;
+import std.stdio, std.bigint, std.algorithm, std.conv, std.functional;
+
+alias sum = curry!(reduce!q{ a + b }, 0);
 
 struct Ucent { /// Simplified 128-bit integer (like ucent).
     ulong hi, lo;
@@ -11,22 +13,21 @@ struct Ucent { /// Simplified 128-bit integer (like ucent).
         this.lo += y.lo;
     }
 
-    const string toString() const {
-        return text((BigInt(this.hi) << 64) + this.lo);
+    const string toString() const /*pure nothrow*/ {
+        return text((this.hi.BigInt << 64) + this.lo);
     }
 }
 
-Ucent countChanges(in int amount, in int[] coins) pure /*nothrow*/ {
+Ucent countChanges(in int amount, in int[] coins) pure nothrow {
     immutable n = coins.length;
 
-    // points to a cyclic buffer of length coins[i]
-    auto p = (new Ucent*[n]).ptr;
-    auto q = (new Ucent*[n]).ptr; // iterates it.
-    //auto buf = new Ucent[sum(coins)];
-    auto buf = new Ucent[reduce!q{ a + b }(0, coins)]; // not nothrow
+    // Points to a cyclic buffer of length coins[i]
+    auto p = new Ucent*[n];
+    auto q = new Ucent*[n]; // iterates it.
+    auto buf = new Ucent[coins.sum];
 
     p[0] = buf.ptr;
-    foreach (i; 0 .. n) {
+    foreach (immutable i; 0 .. n) {
         if (i)
             p[i] = coins[i - 1] + p[i - 1];
         *p[i] = Ucent.one;
@@ -34,8 +35,8 @@ Ucent countChanges(in int amount, in int[] coins) pure /*nothrow*/ {
     }
 
     Ucent prev;
-    foreach (j; 1 .. amount + 1)
-        foreach (i; 0 .. n) {
+    foreach (immutable j; 1 .. amount + 1)
+        foreach (immutable i; 0 .. n) {
             q[i]--;
             if (q[i] < p[i])
                 q[i] = p[i] + coins[i] - 1;
@@ -51,10 +52,11 @@ void main() {
     immutable usCoins = [100, 50, 25, 10, 5, 1];
     immutable euCoins = [200, 100, 50, 20, 10, 5, 2, 1];
 
-    foreach (coins; [usCoins, euCoins]) {
-        writeln(countChanges(     1_00, coins[2 .. $]));
-        writeln(countChanges(  1000_00, coins));
-        writeln(countChanges( 10000_00, coins));
-        writeln(countChanges(100000_00, coins), "\n");
+    foreach (immutable coins; [usCoins, euCoins]) {
+        countChanges(     1_00, coins[2 .. $]).writeln;
+        countChanges(  1000_00, coins).writeln;
+        countChanges( 10000_00, coins).writeln;
+        countChanges(100000_00, coins).writeln;
+        writeln;
     }
 }

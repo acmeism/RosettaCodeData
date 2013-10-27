@@ -1,8 +1,10 @@
 import std.stdio: writefln;
-import std.bigint: BigInt, toDecimalString;
+import std.bigint: BigInt;
+import std.conv: text;
 import std.numeric: gcd;
 import std.algorithm: copy, map;
-import std.math; // log, ^^
+import core.stdc.stdlib: calloc;
+import std.math: log; // ^^
 
 // Number of factors.
 enum NK = 3;
@@ -10,44 +12,45 @@ enum NK = 3;
 enum MAX_HAM = 10_000_000;
 static assert(gcd(NK, MAX_HAM) == 1);
 
-enum int[NK] fac = [2, 3, 5];
+enum int[NK] factors = [2, 3, 5];
 
 
-/// k-smooth numbers (stored as their exponents of each factor).
+/// K-smooth numbers (stored as their exponents of each factor).
 struct Hamming {
-    double v; // log of the number, for convenience.
-    ushort[NK] e; // exponents of each factor.
+    double v; // Log of the number, for convenience.
+    ushort[NK] e; // Exponents of each factor.
 
-    // Compile-time constant, map!log(fac)
-    // log can't be used in CTFE yet
-    public static __gshared const double[fac.length] inc;
+    // log can't be used in CTFE yet.
+    //public static __gshared immutable double[factors.length] inc =
+    //    factors[].map!log.array;
+    public static __gshared immutable double[factors.length] inc;
 
     nothrow pure static this() {
-        //map!log(fac[]).copy(inc[]); // Not nothrow, not const.
-        foreach (i, f; fac)
-            inc[i] = log(f);
+        //factors[].map!log.copy(inc[]); // Not nothrow, not const.
+        foreach (immutable i, immutable f; factors)
+            inc[i] = f.log;
     }
 
     bool opEquals(in ref Hamming y) const pure nothrow {
-        //return this.e == y.e; // too much slow
-        foreach (size_t i; 0 .. this.e.length)
+        //return this.e == y.e; // Too much slow.
+        foreach (immutable i; 0 .. this.e.length)
             if (this.e[i] != y.e[i])
                 return false;
         return true;
     }
 
     void update() pure nothrow {
-        //this.v = dotProduct(inc, this.e); // too much slow
+        //this.v = dotProduct(inc, this.e); // Too much slow.
         this.v = 0.0;
-        foreach (size_t i; 0 .. this.e.length)
+        foreach (immutable i; 0 .. this.e.length)
             this.v += inc[i] * this.e[i];
     }
 
     string toString() const {
         BigInt result = 1;
-        foreach (size_t i, f; fac)
-            result *= BigInt(f) ^^ this.e[i];
-        return toDecimalString(result);
+        foreach (immutable i, immutable f; factors)
+            result *= f.BigInt ^^ this.e[i];
+        return result.text;
     }
 }
 
@@ -55,12 +58,16 @@ struct Hamming {
 __gshared Hamming[] hams;
 __gshared Hamming[NK] values;
 
-
 nothrow static this() {
-    // Slower than malloc if you don't use all the MAX_HAM items.
-    hams = new Hamming[MAX_HAM];
+    // Slower than calloc if you don't use all the MAX_HAM items.
+    //hams = new Hamming[MAX_HAM];
 
-    foreach (i, ref v; values) {
+    auto ptr = cast(Hamming*)calloc(MAX_HAM, Hamming.sizeof);
+    if (!ptr)
+        throw new Error("Not enough memory.");
+    hams = ptr[0 .. MAX_HAM];
+
+    foreach (immutable i, ref v; values) {
         v.e[i] = 1;
         v.v = Hamming.inc[i];
     }
@@ -80,20 +87,20 @@ in {
         {
             // Find the index of the minimum v.
             size_t ni = 0;
-            foreach (size_t i; 1 .. NK)
+            foreach (immutable i; 1 .. NK)
                 if (values[i].v < values[ni].v)
                     ni = i;
 
             hams[n_hams] = values[ni];
-            hams[n_hams].update();
+            hams[n_hams].update;
         }
 
-        foreach (size_t i; 0 .. NK)
+        foreach (immutable i; 0 .. NK)
             if (values[i] == hams[n_hams]) {
                 values[i] = hams[idx[i]];
                 idx[i]++;
                 values[i].e[i]++;
-                values[i].update();
+                values[i].update;
             }
     }
 
@@ -102,6 +109,6 @@ in {
 
 
 void main() {
-    foreach (n; [1691, 10 ^^ 6, MAX_HAM])
-        writefln("%8d: %s", n, getHam(n));
+    foreach (immutable n; [1691, 10 ^^ 6, MAX_HAM])
+        writefln("%8d: %s", n, n.getHam);
 }

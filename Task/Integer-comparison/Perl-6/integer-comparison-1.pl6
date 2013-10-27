@@ -1,5 +1,5 @@
-my Int $a = floor $*IN.get;
-my Int $b = floor $*IN.get;
+my $a = prompt("1st int: ").floor;
+my $b = prompt("2nd int: ").floor;
 
 if $a < $b {
     say 'Less';

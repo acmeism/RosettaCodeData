@@ -1,26 +1,27 @@
-import std.stdio, std.array, std.file, std.regex, std.string,
-       std.range;
-
 void main() {
-    string[][] rules = readText("markov_rules.txt").splitLines()
-                       .split("");
-    auto tests = readText("markov_tests.txt").splitLines();
-    auto re = ctRegex!(r"^([^#]*?)\s+->\s+(\.?)(.*)"); // 130 MB RAM.
+    import std.stdio, std.file, std.regex, std.string, std.range,
+           std.functional;
 
-    auto pairs = zip(StoppingPolicy.requireSameLength, tests, rules);
-    foreach (test, rule; pairs) {
-        auto origTest = test.dup;
+    const rules = "markov_rules.txt".readText.splitLines.split("");
+    auto tests = "markov_tests.txt".readText.splitLines;
+    auto re = ctRegex!(r"^([^#]*?)\s+->\s+(\.?)(.*)"); // 160 MB RAM.
+
+    alias slZip = curry!(zip, StoppingPolicy.requireSameLength);
+    foreach (test, const rule; slZip(tests, rules)) {
+        const origTest = test.dup;
 
         string[][] capt;
-        foreach (line; rule) {
+        foreach (const line; rule) {
             auto m = line.match(re);
-            if (!m.empty)
-                capt ~= m.captures.array()[1 .. $];
+            if (!m.empty) {
+                //capt.put(m.captures.dropOne);
+                capt ~= m.captures.dropOne.array;
+            }
         }
 
     REDO:
-        auto copy = test;
-        foreach (c; capt) {
+        const copy = test;
+        foreach (const c; capt) {
             test = test.replace(c[0], c[2]);
             if (c[1] == ".")
                 break;

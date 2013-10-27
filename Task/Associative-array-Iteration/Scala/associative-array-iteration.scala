@@ -1,13 +1,7 @@
-val m=Map("Hello"->13, "world"->31, "!"->71)
+  val m = Map("Amsterdam" -> "Netherlands", "New York" -> "USA", "Heemstede" -> "Netherlands")
 
-println("Keys:")
-m.keys foreach println
-
-println("\nValues:")
-m.values foreach println
-
-println("\nPairs:")
-m foreach println
-
-println("\nKey->Value:")
-for((k,v)<-m) println(k+"->"+v)
+  println(f"Key->Value: ${m.mkString(", ")}%s")
+  println(f"Pairs: ${m.toList.mkString(", ")}%s")
+  println(f"Keys: ${m.keys.mkString(", ")}%s")
+  println(f"Values: ${m.values.mkString(", ")}%s")
+  println(f"Unique values: ${m.values.toSet.mkString(", ")}%s")

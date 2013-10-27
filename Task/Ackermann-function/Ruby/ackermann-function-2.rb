@@ -1,4 +1,3 @@
 (0..3).each do |m|
-  (0..6).each { |n| print ack(m, n), ' ' }
-  puts
+  puts (0..6).map { |n| ack(m, n) }.join(' ')
 end

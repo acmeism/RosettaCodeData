@@ -26,6 +26,6 @@ void main() { // Demo code --------------------
       return self(m - 1, self(m, n - 1));
     });
 
-  writeln("factorial: ", map!factorial(iota(10)));
+  writeln("factorial: ", 10.iota.map!factorial);
   writeln("ackermann(3, 5): ", ackermann(3, 5));
 }

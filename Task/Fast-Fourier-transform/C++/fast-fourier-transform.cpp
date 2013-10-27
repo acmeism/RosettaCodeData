@@ -34,13 +34,13 @@ void fft(CArray& x)
 void ifft(CArray& x)
 {
     // conjugate the complex numbers
-    std::transform(&x[0], &x[x.size()], &x[0], std::conj<double>);
+    x = x.apply(std::conj);
 
     // forward fft
     fft( x );
 
     // conjugate the complex numbers again
-    std::transform(&x[0], &x[x.size()], &x[0], std::conj<double>);
+    x = x.apply(std::conj);
 
     // scale the numbers
     x /= x.size();

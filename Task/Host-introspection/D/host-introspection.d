@@ -1,6 +1,6 @@
-import std.stdio, std.system;
-
 void main() {
-  writefln("word size = ", size_t.sizeof * 8);
-  writefln(endian == Endian.LittleEndian ? "little" : "big", " endian");
+  import std.stdio, std.system;
+
+  writeln("Word size = ", size_t.sizeof * 8, " bits.");
+  writeln(endian == Endian.littleEndian ? "Little" : "Big", " endian.");
 }

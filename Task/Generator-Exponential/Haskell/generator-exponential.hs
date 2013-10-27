@@ -1,12 +1,10 @@
-powers m = map (^ m) [0..]
+import Data.List.Ordered
 
-filtered (x:xs) (y:ys) | x > y = filtered (x:xs) ys
-                       | x < y = x : filtered xs (y:ys)
-                       | otherwise = filtered xs (y:ys)
+powers m = map (^ m) [0..]
 
 squares = powers 2
 cubes = powers 3
-f = filtered squares cubes
+foo = filter (not . has cubes) squares
 
 main :: IO ()
-main = print $ take 10 $ drop 20 $ f
+main = print $ take 10 $ drop 20 $ foo

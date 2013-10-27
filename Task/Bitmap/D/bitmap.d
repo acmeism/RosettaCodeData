@@ -1,12 +1,15 @@
 module bitmap;
 
-import std.stdio, std.array, std.exception, std.string, std.conv;
+import std.stdio, std.array, std.exception, std.string, std.conv,
+       std.algorithm, std.ascii;
 
 final class Image(T) {
-    static if (__traits(compiles, { auto x = T.black; }))
-        T blackColor = T.black;
+    static if (is(typeof({ auto x = T.black; })))
+        const static T black = T.black;
     else
-        T blackColor = T.init;
+        const static T black = T.init;
+    static if (is(typeof({ auto x = T.white; })))
+        const static T white = T.white;
 
     T[] image;
     private size_t nx_, ny_;
@@ -73,16 +76,37 @@ final class Image(T) {
         mixin("image[x + y * nx_] " ~ op ~ ";");
     }
 
-    void clear(in T color=blackColor) pure nothrow {
+    void clear(in T color=this.black) pure nothrow {
         image[] = color;
     }
 
+    /// Convert a 2D array of chars to a binary Image.
+    static Image fromText(in string txt,
+                          in char one='#', in char zero='.')
+    pure
+    out(result) {
+        assert(result.image.all!(x => x == black || x == white));
+    } body {
+        auto M = txt
+                 .strip
+                 .split
+                 .map!(row => row
+                              .filter!(c => c == one || c == zero)
+                              .map!(c => cast(T)(c == one))
+                              .array)
+                 .array;
+        assert(M.join.length > 0); // Not empty.
+        foreach (row; M)
+            assert(row.length == M[0].length); // Rectangular
+        return Image.fromData(M.join, M[0].length, M.length);
+    }
+
     /// The axis origin is at the top left.
-    void textualShow() const {
+    void textualShow(in char bl='#', in char wh='.') const {
         size_t i = 0;
         foreach (immutable y; 0 .. ny_) {
             foreach (immutable x; 0 .. nx_)
-                putchar(image[i++] == blackColor ? '#' : '.');
+                putchar(image[i++] == black ? bl : wh);
             putchar('\n');
         }
     }
@@ -91,8 +115,8 @@ final class Image(T) {
 
 struct RGB {
     ubyte r, g, b;
-    enum black = RGB();
-    enum white = RGB(255, 255, 255);
+    static immutable black = typeof(this)();
+    static immutable white = typeof(this)(255, 255, 255);
 }
 
 

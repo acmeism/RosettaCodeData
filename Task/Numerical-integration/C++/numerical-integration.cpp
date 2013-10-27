@@ -53,7 +53,7 @@ public:
 };
 
 // sample usage
-double f(double x) { return x*x; )
+double f(double x) { return x*x; }
 
 // inside a function somewhere:
 double rl = integrate(f, 0.0, 1.0, 10, rectangular(rectangular::left));

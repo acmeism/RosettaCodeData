@@ -11,7 +11,7 @@ struct GameOfLife {
   }
 
   void opIndexAssign(in string[] v, in size_t y, in size_t x)
-  /*pure nothrow*/ {
+  pure /*nothrow*/ {
     foreach (immutable nr, row; v)
       foreach (immutable nc, state; row)
         grid[y + nr][x + nc] = state.to!Cell;

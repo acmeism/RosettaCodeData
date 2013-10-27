@@ -1,6 +1,4 @@
-template IsEdible(T) {
-    enum IsEdible = is(typeof(T.eat()));
-}
+enum IsEdible(T) = is(typeof(T.eat));
 
 struct FoodBox(T) if (IsEdible!T) {
     T[] food;

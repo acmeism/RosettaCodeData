@@ -8,12 +8,12 @@ say xxx 'or somesuch'
 exit
 
 novalue:                               /*this can be dressed up better. */
-badLine  =sigl                         /*REXX statement num that failed.*/
-badSource=sourceline(badLine)          /*REXX source statement ···      */
+badLine  =sigl                         /*REXX line number that failed.  */
+badSource=sourceline(badLine)          /*REXX source line ···           */
 badVar   =condition('D')               /*REXX var name that's ¬ defined.*/
 say
 say '*** error! ***'
-say 'undefined variable' badvar "at REXX statement number" badLine
+say 'undefined variable' badvar "at REXX line number" badLine
 say
 say badSource
 say

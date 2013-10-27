@@ -1,5 +1,11 @@
 scala> 'a' toInt
-res9: Int = 97
+res2: Int = 97
 
 scala> 97 toChar
-res10: Char = a
+res3: Char = a
+
+scala> '\u0061'
+res4: Char = a
+
+scala> "\uD869\uDEA5"
+res5: String = 𪚥

@@ -1,5 +1,6 @@
 from math import log as ln
 from math import sqrt, log, exp, sin, cos, tan, pi, e
+from ast import literal_eval
 
 """
 >>> # EXAMPLE USAGE
@@ -34,8 +35,6 @@ arity_dict = {'abs':1, 'sqrt':1, 'exp':1,  'log':1,  'ln':1,
 
 class Node:
     def __init__(self,x,op,y=None):
-        global prec_dict,assoc_dict,arity_dict
-
         self.precedence = prec_dict[op]
         self.assocright = assoc_dict[op]
         self.arity = arity_dict[op]
@@ -91,22 +90,16 @@ class Node:
         """
         return 'Node(%s,%s,%s)'%(repr(self.x), repr(self.op), repr(self.y))
 
-    def __cmp__(self, other):
-        """
-        polymorphic comparisons to determine precedence
-
-        >>> Node('3','+','4') < Node('6','*','7') < Node('3','**','4')
-        True
-        >>> Node('3','+','4') == Node('6','+','7')
-        True
-        >>> Node('3','+','4') == '-'
-        True
-        >>> Node('3','**','4') < '1'
-        True
-        """
+    def __lt__(self, other):
         if isinstance(other, Node):
-            return cmp(self.precedence, other.precedence)
-        return cmp(self.precedence, prec_dict.get(other,9))
+            return self.precedence < other.precedence
+        return self.precedence < prec_dict.get(other,9)
+
+    def __gt__(self, other):
+        if isinstance(other, Node):
+            return self.precedence > other.precedence
+        return self.precedence > prec_dict.get(other,9)
+
 
 
 def rpn_to_infix(s, VERBOSE=False):
@@ -168,8 +161,6 @@ def rpn_to_infix(s, VERBOSE=False):
     >>> rpn_to_infix('3 4 2 * 1 -5 - ln 2 3 ** ** / +')
     '3 + 4 * 2 / ln(1 + 5) ** 2 ** 3'
     """
-    global prec_dict, arity_dict
-
     if VERBOSE : print('TOKEN  STACK')
 
     stack=[]
@@ -203,21 +194,20 @@ def rpn_eval(s):
     True
     """
 
-    global prec_dict, arity_dict
-
     stack=[]
     for token in s.replace('^','**').split():
         if token in prec_dict:
             if arity_dict[token] == 1:
-                stack.append(eval('%s(%s)'%(token,stack.pop())))
+                stack.append(literal_eval('%s(%s)'%(token,stack.pop())))
             elif arity_dict[token] == 2:
                 x,y=stack.pop(),stack.pop()
-                stack.append(eval('(%s) %s %s'%(y,token,x)))
+                stack.append(literal_eval('(%s) %s %s'%(y,token,x)))
         else:
             stack.append(token)
 
     return stack[0]
 
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
+strTest = "3 4 2 * 1 -5 - ln 2 3 ** ** / +"
+strResult = rpn_to_infix(strTest)
+print ("Input: ",strTest)
+print ("Output:",strResult)

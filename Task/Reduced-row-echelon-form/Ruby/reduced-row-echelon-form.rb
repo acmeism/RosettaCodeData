@@ -1,11 +1,9 @@
-require 'rational'
-
 # returns an 2-D array where each element is a Rational
 def reduced_row_echelon_form(ary)
   lead = 0
   rows = ary.size
   cols = ary[0].size
-  rary = convert_to_rational(ary)  # use rational arithmetic
+  rary = convert_to(ary, :to_r)  # use rational arithmetic
   catch :done  do
     rows.times do |r|
       throw :done  if cols <= lead
@@ -22,7 +20,7 @@ def reduced_row_echelon_form(ary)
       rary[i], rary[r] = rary[r], rary[i]
       # normalize row r
       v = rary[r][lead]
-      rary[r].collect! {|x| x /= v}
+      rary[r].collect! {|x| x / v}
       # reduce other rows
       rows.times do |i|
         next if i == r
@@ -35,27 +33,24 @@ def reduced_row_echelon_form(ary)
   rary
 end
 
-def convert_to_rational(ary)
-  new = []
-  ary.each_index do |row|
-    new << ary[row].collect {|elem| Rational(elem)}
-  end
-  new
-end
-
 # type should be one of :to_s, :to_i, :to_f, :to_r
 def convert_to(ary, type)
-  new = []
-  ary.each_index do |row|
-    new << ary[row].collect {|elem| elem.send(type)}
+  ary.each_with_object([]) do |row, new|
+    new << row.collect {|elem| elem.send(type)}
   end
-  new
+end
+
+class Rational
+  alias _to_s to_s
+  def to_s
+    denominator==1 ? numerator.to_s : _to_s
+  end
 end
 
 def print_matrix(m)
   max = m[0].collect {-1}
   m.each {|row| row.each_index {|i| max[i] = [max[i], row[i].to_s.length].max}}
-  m.each {|row| row.each_index {|i| print "%#{max[i]}s " % row[i].to_s}; puts ""}
+  m.each {|row| row.each_index {|i| print "%#{max[i]}s " % row[i]}; puts}
 end
 
 mtx = [
@@ -63,8 +58,8 @@ mtx = [
   [ 2, 3, -1,-11],
   [-2, 0, -3, 22]
 ]
-print_matrix convert_to(reduced_row_echelon_form(mtx), :to_s)
-puts ""
+print_matrix reduced_row_echelon_form(mtx)
+puts
 
 mtx = [
   [ 1, 2, 3, 7],
@@ -72,5 +67,5 @@ mtx = [
   [ 3, 3, 0, 7]
 ]
 reduced = reduced_row_echelon_form(mtx)
-print_matrix convert_to(reduced, :to_r)
+print_matrix reduced
 print_matrix convert_to(reduced, :to_f)

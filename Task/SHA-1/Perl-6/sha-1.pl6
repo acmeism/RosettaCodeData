@@ -9,7 +9,7 @@ my \f = -> \B,\C,\D { (B +& C) +| ((+^B)mod2³² +& D)   },
 
 my \K = 0x5A827999, 0x6ED9EBA1, 0x8F1BBCDC, 0xCA62C1D6;
 
-sub sha1-pad(Buf $msg)
+sub sha1-pad(Blob $msg)
 {
     my \bits = 8 * $msg.elems;
     my @padded = $msg.list, 0x80, 0x00 xx (-(bits div 8 + 1 + 8) % 64);
@@ -29,7 +29,7 @@ sub sha1-block(@H is rw, @M)
     @H «⊕=» ($A,$B,$C,$D,$E);
 }
 
-sub sha1(Buf $msg)
+sub sha1(Blob $msg)
 {
     my @M = sha1-pad($msg);
     my @H = 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0;
@@ -37,7 +37,7 @@ sub sha1(Buf $msg)
     @H;
 }
 
-say sha1($_.encode('ascii'))».base(16), "  $_"
+say sha1(.encode('ascii'))».base(16), "  $_"
    for 'abc',
        'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq',
        'Rosetta Code',

@@ -10,7 +10,7 @@ Begin
   Repeat
     While pivot > X[i] Do i:=i+1;
     While pivot < X[j] Do j:=j-1;
-    If i<j Then Begin
+    If i<=j Then Begin
       tmp:=X[i];
       X[i]:=X[j];
       X[j]:=tmp;

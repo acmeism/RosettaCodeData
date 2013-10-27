@@ -71,16 +71,16 @@ struct Ball {
 
 void initializeBox() {
     // Set ceiling and floor:
-    box[0] = Cell.corner ~ [Cell.floor].replicate(boxW - 2)
-             ~ Cell.corner;
-    box[$ - 1] = box[0][];
+    box[0][] = (Cell.corner ~ [Cell.floor].replicate(boxW - 2)
+                ~ Cell.corner)[];
+    box[$ - 1][] = box[0][];
 
     // Set walls:
     foreach (r; 1 .. boxH - 1)
         box[r][0] = box[r][$ - 1] = Cell.wall;
 
     // Set pins:
-    foreach (nPins; 1 .. pinsBaseW + 1)
+    foreach (immutable nPins; 1 .. pinsBaseW + 1)
         foreach (pin; 0 .. nPins)
             box[boxH - 2 - nPins][centerH + 1 - nPins + pin * 2]
                 = Cell.pin;
@@ -92,7 +92,7 @@ void drawBox() {
 }
 
 void main() {
-    initializeBox();
+    initializeBox;
     Ball[] balls;
 
     foreach (const i; 0 .. nMaxBalls + boxH) {
@@ -104,6 +104,6 @@ void main() {
         // Next step for the simulation.
         // Frozen balls are kept in balls array for simplicity.
         foreach (ref b; balls)
-            b.doStep();
+            b.doStep;
     }
 }

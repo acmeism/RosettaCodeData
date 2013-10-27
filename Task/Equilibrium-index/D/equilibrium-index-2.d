@@ -1,10 +1,10 @@
 import std.stdio, std.algorithm;
 
-size_t[] equilibrium(T)(in T[] items) @safe pure /*nothrow*/ {
+size_t[] equilibrium(T)(in T[] items) @safe pure nothrow {
     size_t[] result;
     T left = 0, right = reduce!q{a + b}(cast(T)0, items);
 
-    foreach (i, e; items) {
+    foreach (immutable i, e; items) {
         right -= e;
         if (right == left)
             result ~= i;
@@ -14,5 +14,5 @@ size_t[] equilibrium(T)(in T[] items) @safe pure /*nothrow*/ {
 }
 
 void main() {
-    writeln(equilibrium([-7, 1, 5, 2, -4, 3, 0]));
+    [-7, 1, 5, 2, -4, 3, 0].equilibrium.writeln;
 }

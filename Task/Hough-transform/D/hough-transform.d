@@ -2,7 +2,7 @@ import std.math, grayscale_image;
 
 Image!Gray houghTransform(in Image!Gray im,
                           in size_t hx=460, in size_t hy=360)
-/*pure nothrow*/ in {
+pure nothrow in {
     assert(im !is null);
     assert(hx > 0 && hy > 0);
     assert((hy & 1) == 0, "hy argument must be even.");
@@ -16,8 +16,7 @@ Image!Gray houghTransform(in Image!Gray im,
 
     foreach (immutable y; 0 .. im.ny) {
         foreach (immutable x; 0 .. im.nx) {
-            // if (im[x, y] == Gray.max) // Not pure.
-            if (im[x, y] == Gray(255))
+            if (im[x, y] == Gray.white)
                 continue;
             foreach (immutable iTh; 0 .. hx) {
                 immutable double th = dTh * iTh;
@@ -32,8 +31,8 @@ Image!Gray houghTransform(in Image!Gray im,
 }
 
 void main() {
-    auto im = new Image!RGB;
-    loadPPM6(im, "Pentagon.ppm")
+    (new Image!RGB)
+    .loadPPM6("Pentagon.ppm")
     .rgb2grayImage()
     .houghTransform()
     .savePGM("Pentagon_hough.pgm");

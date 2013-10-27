@@ -2,7 +2,7 @@ defer less?   ' < is less?
 
 : shell { array len -- }
   1 begin dup len u<= while 2* 1+ repeat { gap }
-  begin gap 5 11 */ dup to gap while
+  begin gap 2 = if 1 else gap 5 11 */ then dup to gap while
     len gap do
       array i cells +
       dup @ swap         ( temp last )

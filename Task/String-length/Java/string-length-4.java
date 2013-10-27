@@ -1,3 +1,19 @@
-String str = "\uD834\uDD2A"; //U+1D12A
-int not_really__the_length = str.length(); // value is 2, which is not the length in characters
-int actual_length = str.codePointCount(0, str.length()); // value is 1, which is the length in characters
+import java.text.BreakIterator;
+
+public class Grapheme {
+  public static void main(String[] args) {
+    printLength("møøse");
+    printLength("𝔘𝔫𝔦𝔠𝔬𝔡𝔢");
+    printLength("J̲o̲s̲é̲");
+  }
+
+  public static void printLength(String s) {
+    BreakIterator it = BreakIterator.getCharacterInstance();
+    it.setText(s);
+    int count = 0;
+    while (it.next() != BreakIterator.DONE) {
+      count++;
+    }
+    System.out.println("Grapheme length: " + count+ " " + s);
+  }
+}

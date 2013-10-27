@@ -1,5 +1,7 @@
-dec1.to_i(0)      # => 5349 (which is 12345 in octal, the 9 is discarded)
-dec1.sub(/^0+/,"").to_i(0)   # => 123459
-("0x" + hex2).to_i(0)        # => 180154659
-("0"  + oct3).to_i(0)        # => 4009
-("0b" + bin4).to_i(0)        # => 345
+p ((Integer(dec1) rescue nil)) # => ArgumentError: invalid value for Integer: "0123459"
+p Integer(dec1.sub(/^0+/,""))  # => 123459
+p Integer("0d" + dec1)         # => 123459
+p Integer("0x" + hex2)         # => 180154659
+p Integer("0"  + oct3)         # => 4009
+p Integer("0o" + oct3)         # => 4009
+p Integer("0b" + bin4)         # => 345

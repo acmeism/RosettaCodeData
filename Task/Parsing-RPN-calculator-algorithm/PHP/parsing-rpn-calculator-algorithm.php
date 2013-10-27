@@ -1,24 +1,45 @@
 <?php
-// RPN Calculator
-//
-// Nigel Galloway - April 3rd., 2012
-//
-$WSb = '(?:^|\s+)';
-$WSa = '(?:\s+|$)';
-$num = '([+-]?(?:\.\d+|\d+(?:\.\d*)?))';
-$op = '([-+*\/^])';
+function rpn($postFix){
+    $stack = Array();
+    echo "Input\tOperation\tStack\tafter\n" ;
+	$token = explode(" ", trim($postFix));
+	$count = count($token);
+	
+    for($i = 0 ; $i<$count;$i++)
+	{
+        echo $token[$i] ." \t";
+        $tokenNum = "";
+		
+        if (is_numeric($token[$i])) {
+            echo  "Push";
+			array_push($stack,$token[$i]);
+        }
+        else
+        {
+            echo "Operate";
+            $secondOperand = end($stack);
+			array_pop($stack);
+            $firstOperand = end($stack);
+            array_pop($stack);
 
-function myE($m) {
-    return $m[3] == '^' ? ' ' . pow($m[1], $m[2]) . ' ' : ' ' . eval("return " . $m[1] . $m[3] . $m[2] . ";") . ' ';
+            if ($token[$i] == "*")
+				array_push($stack,$firstOperand * $secondOperand);
+            else if ($token[$i] == "/")
+                array_push($stack,$firstOperand / $secondOperand);
+            else if ($token[$i] == "-")
+                array_push($stack,$firstOperand - $secondOperand);
+            else if ($token[$i] == "+")
+                array_push($stack,$firstOperand + $secondOperand);
+            else if ($token[$i] == "^")
+                array_push($stack,pow($firstOperand,$secondOperand));
+            else {
+                die("Error");
+            }
+        }
+		echo "\t\t" . implode(" ", $stack) .  "\n";
+    }
+    return end($stack);
 }
 
-while (!feof(STDIN)) {
-    $s = trim(fgets(STDIN));
-    if ($s == '')
-        continue;
-    do {
-        $s = preg_replace_callback("/$WSb$num\\s+$num\\s+$op$WSa/", "myE", $s, -1, $n);
-    } while ($n);
-    echo floatval($s) . "\n";
-}
+echo "Compute Value: " . rpn("3 4 2 * 1 5 - 2 3 ^ ^ / + ");
 ?>

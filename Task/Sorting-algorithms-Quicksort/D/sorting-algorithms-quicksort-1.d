@@ -1,14 +1,14 @@
-import std.stdio;
+import std.stdio, std.algorithm, std.range, std.array;
 
-T[] quickSort(T)(T[] items) {
-    if (items.length <= 1)
+auto quickSort(T)(T[] items) /*pure*/ nothrow {
+    if (items.length < 2)
         return items;
-    T[] less, more;
-    foreach (x; items[1 .. $])
-        (x < items[0] ? less : more) ~= x;
-    return quickSort(less) ~ items[0] ~ quickSort(more);
+    auto pivot = items[0];
+    return items[1 .. $].filter!(x => x < pivot).array.quickSort ~
+           pivot ~
+           items[1 .. $].filter!(x => x >= pivot).array.quickSort;
 }
 
 void main() {
-    writeln(quickSort([4, 65, 2, -31, 0, 99, 2, 83, 782, 1]));
+    [4, 65, 2, -31, 0, 99, 2, 83, 782, 1].quickSort.writeln;
 }

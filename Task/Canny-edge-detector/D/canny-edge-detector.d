@@ -3,7 +3,7 @@ import core.stdc.stdio, std.math, std.typecons, std.string,
 
 enum maxBrightness = 255;
 
-alias short Pixel;
+alias Pixel = short;
 
 // If normalize is true, map pixels to range 0...maxBrightness.
 void convolution(bool normalize)(in Pixel[] inp, Pixel[] outp,
@@ -59,11 +59,11 @@ pure nothrow in {
 
 void gaussianFilter(in Pixel[] inp, Pixel[] outp,
                     in int nx, in int ny, in float sigma)
-/*pure*/ nothrow in {
+pure nothrow in {
     assert(inp.length == outp.length);
 } body {
     immutable int n = 2 * cast(int)(2 * sigma) + 3;
-    immutable float mean = cast(float)floor(n / 2.0); // Not pure.
+    immutable float mean = floor(n / 2.0);
     auto kernel = new float[n * n];
 
     debug fprintf(stderr,
@@ -87,7 +87,7 @@ void gaussianFilter(in Pixel[] inp, Pixel[] outp,
 Image!Pixel cannyEdgeDetection(in Image!Pixel inp,
                                in int tMin, in int tMax,
                                in float sigma)
-nothrow in {
+/*pure*/ nothrow in {
     assert(inp !is null);
 } body {
     immutable int nx = inp.nx;
@@ -129,6 +129,7 @@ nothrow in {
                           sw = ss + 1,
                           se = ss - 1;
 
+            // fmod is not pure.
             immutable float dir =
                 cast(float)(fmod(atan2(cast(double)after_Gy[c],
                                        cast(double)after_Gx[c]) + PI,
@@ -165,21 +166,20 @@ nothrow in {
                     nedges--;
                     immutable int t = edges[nedges];
 
-                    int[8] neighbours = void;
-                    neighbours[0] = t - nx;            // nn
-                    neighbours[1] = t + nx;            // ss
-                    neighbours[2] = t + 1;             // ww
-                    neighbours[3] = t - 1;             // ee
-                    neighbours[4] = neighbours[0] + 1; // nw
-                    neighbours[5] = neighbours[0] - 1; // ne
-                    neighbours[6] = neighbours[1] + 1; // sw
-                    neighbours[7] = neighbours[1] - 1; // se
+                    immutable int[8] neighbours = [
+                        t - nx,      // nn
+                        t + nx,      // ss
+                        t + 1,       // ww
+                        t - 1,       // ee
+                        t - nx + 1,  // nw
+                        t - nx - 1,  // ne
+                        t + nx + 1,  // sw
+                        t + nx - 1]; // se
 
-                    foreach (immutable k; 0 .. 8)
-                        if (nms[neighbours[k]] >= tMin &&
-                            outp[neighbours[k]] == 0) {
-                            outp[neighbours[k]] = maxBrightness;
-                            edges[nedges] = neighbours[k];
+                    foreach (immutable n; neighbours)
+                        if (nms[n] >= tMin && outp[n] == 0) {
+                            outp[n] = maxBrightness;
+                            edges[nedges] = n;
                             nedges++;
                         }
                 } while (nedges > 0);
@@ -195,7 +195,7 @@ nothrow in {
 void main(in string[] args) {
     immutable fileName = (args.length == 2) ? args[1] : "lena.pgm";
     Image!Pixel imIn;
-    imIn.loadPGM(fileName);
-    printf("Image sizes: %d x %d\n", imIn.nx, imIn.ny);
-    cannyEdgeDetection(imIn, 45, 50, 1.0f).savePGM("lena_canny.pgm");
+    imIn = imIn.loadPGM(fileName);
+    printf("Image size: %d x %d\n", imIn.nx, imIn.ny);
+    imIn.cannyEdgeDetection(45, 50, 1.0f).savePGM("lena_canny.pgm");
 }

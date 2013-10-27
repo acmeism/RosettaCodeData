@@ -14,9 +14,7 @@ T multiply2(T)(T a, T b) {
 }
 
 // Compile-time multiplication can also be done using templates:
-template multiply3(int a, int b) {
-    enum multiply3 = a * b;
-}
+enum multiply3(int a, int b) = a * b;
 
 pragma(msg, multiply3!(2, 3)); // Prints "6" during compilation.
 

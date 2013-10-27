@@ -15,7 +15,7 @@ let
     (5, "Make tea"),
     (1, "Solve RC tasks"),
     (2, "Tax return")]
-  val pq = foldr PQ.insert PQ.empty tasks
+  val pq = foldl PQ.insert PQ.empty tasks
   (* or val pq = PQ.fromList tasks *)
   fun aux pq' =
     case PQ.next pq' of

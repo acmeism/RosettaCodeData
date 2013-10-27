@@ -5,8 +5,8 @@ public import bitmap;
 
 struct Gray {
     ubyte c;
-    enum black = Gray(0);
-    enum white = Gray(255);
+    enum black = typeof(this)(0);
+    enum white = typeof(this)(255);
     alias c this;
 }
 

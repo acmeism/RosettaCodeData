@@ -1,43 +1,37 @@
 import std.stdio, std.math, std.algorithm, std.traits,
        std.typecons, std.numeric, std.range, std.conv;
 
-T[][] elementwiseMat(string op, T, U)(in T[][] A, in U B)
-pure /*nothrow*/ if (is(U == T) || is(U == T[][])) {
-    static if (is(U == T[][]))
-        assert(A.length == B.length);
-    if (A.empty)
-        return null;
-    auto R = new typeof(return)(A.length, A[0].length);
+template elementwiseMat(string op) {
+    T[][] elementwiseMat(T, U)(in T[][] A, in U B)
+    pure nothrow if (is(U == T) || is(U == T[][])) {
+        static if (is(U == T[][]))
+            assert(A.length == B.length);
+        if (A.empty)
+            return null;
+        auto R = new typeof(return)(A.length, A[0].length);
 
-    foreach (immutable r, const row; A)
-        static if (is(U == T)) {
-            R[r][] = mixin("row[] " ~ op ~ "B");
-        } else {
-            assert(row.length == B[r].length);
-            R[r][] = mixin("row[] " ~ op ~ "B[r][]");
-        }
+        foreach (immutable r, const row; A)
+            static if (is(U == T)) {
+                R[r][] = mixin("row[] " ~ op ~ "B");
+            } else {
+                assert(row.length == B[r].length);
+                R[r][] = mixin("row[] " ~ op ~ "B[r][]");
+            }
 
-    return R;
-}
-
-T[][] msum(T)(in T[][] A, in T[][] B) pure /*nothrow*/ {
-    return elementwiseMat!(q{ + }, T, T[][])(A, B);
-}
-T[][] msub(T)(in T[][] A, in T[][] B) pure /*nothrow*/ {
-    return elementwiseMat!(q{ - }, T, T[][])(A, B);
-}
-T[][] pmul(T)(in T[][] A, in T x) pure /*nothrow*/ {
-    return elementwiseMat!(q{ * }, T, T)(A, x);
-}
-T[][] pdiv(T)(in T[][] A, in T x) pure /*nothrow*/ {
-    return elementwiseMat!(q{ / }, T, T)(A, x);
+        return R;
+    }
 }
 
-bool isRectangular(T)(in T[][] mat) /*pure nothrow*/ {
+alias msum = elementwiseMat!q{ + },
+      msub = elementwiseMat!q{ - },
+      pmul = elementwiseMat!q{ * },
+      pdiv = elementwiseMat!q{ / };
+
+bool isRectangular(T)(in T[][] mat) pure nothrow {
     return mat.all!(r => r.length == mat[0].length);
 }
 
-T[][] matMul(T)(in T[][] a, in T[][] b) /*pure nothrow*/
+T[][] matMul(T)(in T[][] a, in T[][] b) pure nothrow
 in {
     assert(a.isRectangular && b.isRectangular &&
            a[0].length == b.length);
@@ -106,7 +100,7 @@ T[][] matEmbed(T)(in T[][] A, in T[][] B,
                   in size_t row, in size_t col) pure nothrow {
     auto C = new T[][](rows(A), cols(A));
     foreach (immutable i, const arow; A)
-        C[i][] = arow[]; // some wasted copies
+        C[i][] = arow[]; // Some wasted copies.
     foreach (immutable i, const brow; B)
         C[row + i][col .. col + brow.length] = brow[];
     return C;
@@ -125,8 +119,8 @@ T[][] makeHouseholder(T)(in T[][] a) {
 }
 
 Tuple!(T[][],"Q", T[][],"R") QRdecomposition(T)(T[][] A) {
-    immutable m = rows(A);
-    immutable n = cols(A);
+    immutable m = A.rows;
+    immutable n = A.cols;
     auto Q = matId!T(m);
 
     // Work on n columns of A.
@@ -173,7 +167,7 @@ T[][] solveUpperTriangular(T)(in T[][] R, in T[][] b) pure nothrow {
 }
 
 /// Solve a linear least squares problem by QR decomposition.
-T[][] lsqr(T)(T[][] A, in T[][] b) {
+T[][] lsqr(T)(T[][] A, in T[][] b) pure nothrow {
     const qr = QRdecomposition(A);
     immutable size_t n = cols(qr.R);
     return solveUpperTriangular(
@@ -181,7 +175,8 @@ T[][] lsqr(T)(T[][] A, in T[][] b) {
         slice2D(matMul(transpose(qr.Q), b), 0, n-1, 0, 0));
 }
 
-Unqual!T[][] polyFit(T)(in T[][] x, in T[][] y, in size_t n) {
+Unqual!T[][] polyFit(T)(in T[][] x, in T[][] y, in size_t n)
+pure nothrow {
     immutable size_t m = cols(x);
     auto A = new Unqual!T[][](m, n + 1);
     foreach (immutable i, row; A)

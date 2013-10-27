@@ -1,0 +1,1 @@
+(function(){str=["(function(){str=[F].join(String.fromCharCode(34));str=str.replace(/F/,String.fromCharCode(34)+str+String.fromCharCode(34));console.log(str)})()"].join(String.fromCharCode(34));str=str.replace(/F/,String.fromCharCode(34)+str+String.fromCharCode(34));console.log(str)})()

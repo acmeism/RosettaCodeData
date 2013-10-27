@@ -12,11 +12,11 @@ procedure Shared_Library_Call is
    --
    type HANDLE is new Unsigned_32;
    function LoadLibrary (lpFileName : char_array) return HANDLE;
-   pragma Import (stdcall, LoadLibrary, "LoadLibrary", "_LoadLibraryA@4");
+   pragma Import (stdcall, LoadLibrary, "LoadLibrary", "_LoadLibraryA"); -- Ada95 don't has @n.
 
    function GetProcAddress (hModule : HANDLE; lpProcName : char_array)
       return Address;
-   pragma Import (stdcall, GetProcAddress, "GetProcAddress", "_GetProcAddress@8");
+   pragma Import (stdcall, GetProcAddress, "GetProcAddress", "_GetProcAddress"); --
    --
    -- The interface of the function we want to call. It is a pointer (access type)
    -- because we will link it dynamically. The function is from User32.dll

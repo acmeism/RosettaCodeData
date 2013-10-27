@@ -18,7 +18,7 @@ stateC.ca='Sacramento'; stateN.ca='California'
 stateC.nd='Bismarck'  ; stateN.nd='North Dakota'
 stateC.mn='St. Paul'  ; stateN.mn='Minnesota'
 stateC.dc='Washington'; stateN.dc='District of Columbia'
-stateC.ri='Providence'; stateN.ri='Rhode Island and Providence Plantations
+stateC.ri='Providence'; stateN.ri='Rhode Island and Providence Plantations'
 
 say 'capital of California is' stateC.ca
 say 'capital of Oklahoma is' stateC.ok

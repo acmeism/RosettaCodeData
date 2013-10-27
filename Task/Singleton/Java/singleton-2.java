@@ -1,20 +1,13 @@
-class Singleton
-{
-    private static Singleton myInstance;
-    public static Singleton getInstance()
-    {
-        if (myInstance == null)
-        {
-            myInstance = new Singleton();
-        }
-
-        return myInstance;
-    }
-
-    protected Singleton()
-    {
+public class Singleton {
+    private Singleton() {
         // Constructor code goes here.
     }
 
-    // Any other methods
+    private static class LazyHolder {
+        private static final Singleton INSTANCE = new Singleton();
+    }
+
+    public static Singleton getInstance() {
+        return LazyHolder.INSTANCE;
+    }
 }

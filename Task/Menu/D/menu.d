@@ -1,34 +1,35 @@
-import std.stdio, std.conv, std.string, std.array;
+import std.stdio, std.conv, std.string, std.array, std.typecons;
 
 string menuSelect(in string[] entries) {
-    static int validChoice(in string input,
-                           in int nEntries) pure nothrow {
+    static Nullable!(int, -1) validChoice(in string input,
+                                          in int nEntries)
+    pure nothrow {
         try {
-            immutable n = to!int(input);
-            return (n >= 0 && n <= nEntries) ? n : -1;
-        } catch (Exception e) // very generic
-            return -1; // not valid
+            immutable n = input.to!int;
+            return typeof(return)((n >= 0 && n <= nEntries) ? n : -1);
+        } catch (Exception e) // Very generic
+            return typeof(return)(-1); // Not valid.
     }
 
     if (entries.empty)
         return "";
 
     while (true) {
-        writeln("Choose one:");
-        foreach (i, const string entry; entries)
+        "Choose one:".writeln;
+        foreach (immutable i, const entry; entries)
             writefln("  %d) %s", i, entry);
-        writef("> ");
-        immutable input = readln().chomp();
-        immutable choice = validChoice(input, entries.length-1);
-        if (choice != -1)
-            return entries[choice]; // we have a valid choice
+        "> ".write;
+        immutable input = readln.chomp;
+        immutable choice = validChoice(input, entries.length - 1);
+        if (choice.isNull)
+            "Wrong choice.".writeln;
         else
-            writeln("Wrong choice.");
+            return entries[choice]; // We have a valid choice.
     }
 }
 
 void main() {
     immutable items = ["fee fie", "huff and puff",
                        "mirror mirror", "tick tock"];
-    writeln("You chose '", menuSelect(items), "'.");
+    writeln("You chose '", items.menuSelect, "'.");
 }

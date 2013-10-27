@@ -1,0 +1,5 @@
+(defmacro recursive ((&rest parm-init-pairs) &body body)
+  (let ((hidden-name (gensym "RECURSIVE-")))
+    `(macrolet ((recurse (&rest args) `(,',hidden-name ,@args)))
+       (labels ((,hidden-name (,@(mapcar #'first parm-init-pairs)) ,@body))
+         (,hidden-name ,@(mapcar #'second parm-init-pairs))))))

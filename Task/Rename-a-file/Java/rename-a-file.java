@@ -1,4 +1,4 @@
-import java.util.File;
+import java.io.File;
 public class FileRenameTest {
    public static boolean renameFile(String oldname, String newname) {
        // File (or directory) with old name

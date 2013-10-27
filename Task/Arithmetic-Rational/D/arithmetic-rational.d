@@ -62,14 +62,17 @@ struct RationalT(T) {
         return den;
     }
 
-    string toString() /*const*/ {
-        if (den == 0) {
-            if (num == 0)
-                return "NaRat";
-            else
-                return ((num < 0) ? "-" : "+") ~ "infRat";
-        }
-        return text(num) ~ (den == 1 ? "" : ("/" ~ text(den)));
+    string toString() /*pure const*/ {
+        if (den != 0)
+            return num.text ~ (den == 1 ? "" : "/" ~ den.text);
+        if (num == 0)
+            return "NaRat";
+        else
+            return ((num < 0) ? "-" : "+") ~ "infRat";
+    }
+
+    real toReal() const {
+        return num.toLong / cast(real)den.toLong;
     }
 
     RationalT opBinary(string op)(/*in*/ RationalT r)
@@ -106,7 +109,7 @@ struct RationalT(T) {
         return RationalT(l).opBinary!op(RationalT(num, den));
     }
 
-    RationalT opOpAssign(string op, U)(in U l)
+    RationalT opOpAssign(string op, U)(/*in*/ U l)
     /*const pure nothrow*/ {
         mixin("this = this " ~ op ~ "l;");
         return this;

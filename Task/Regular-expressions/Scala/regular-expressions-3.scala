@@ -4,4 +4,3 @@
 Bottles4 findFirstMatchIn "99 bottles of beer" // returns a "Match" object, or None
 Bottles4 findPrefixMatchOf "99 bottles of beer" // same thing, for prefixes
 val bottles = (Bottles4 findFirstMatchIn "99 bottles of beer").get.group("bottles") // Getting a group by name
-val Bottles4(bottles) = "99 bottles of beer" // syntactic sugar (not using group name)

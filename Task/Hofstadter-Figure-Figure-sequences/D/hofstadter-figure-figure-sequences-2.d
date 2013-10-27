@@ -1,24 +1,25 @@
 import std.stdio, std.array, std.range, std.algorithm;
 
 struct ffr {
-    static int[] r = [int.min, 1];
+    static r = [int.min, 1];
 
-    static int opCall(in int n) {
+    static int opCall(in int n) /*nothrow*/ {
         assert(n > 0);
         if (n < r.length) {
             return r[n];
         } else {
-            int ffr_n_1 = ffr(n - 1);
-            int lastr = r[$ - 1];
-            // extend s up to, and one past, last r
-            ffs.s ~= array(iota(ffs.s[$ - 1] + 1, lastr));
+            immutable int ffr_n_1 = ffr(n - 1);
+            immutable int lastr = r[$ - 1];
+            // Extend s up to, and one past, last r.
+            ffs.s ~= iota(ffs.s[$ - 1] + 1, lastr).array;
             if (ffs.s[$ - 1] < lastr)
                 ffs.s ~= lastr + 1;
-            // access s[n-1] temporarily extending s if necessary
-            size_t len_s = ffs.s.length;
-            int ffs_n_1 = len_s > n ? ffs.s[n - 1] :
-                                      (n - len_s) + ffs.s[$-1];
-            int ans = ffr_n_1 + ffs_n_1;
+            // Access s[n - 1] temporarily extending s if necessary.
+            immutable size_t len_s = ffs.s.length;
+            immutable int ffs_n_1 = (len_s > n) ?
+                                    ffs.s[n - 1] :
+                                    (n - len_s) + ffs.s[$ - 1];
+            immutable int ans = ffr_n_1 + ffs_n_1;
             r ~= ans;
             return ans;
         }
@@ -26,25 +27,25 @@ struct ffr {
 }
 
 struct ffs {
-    static int[] s = [int.min, 2];
+    static s = [int.min, 2];
 
-    static int opCall(in int n) {
+    static int opCall(in int n) /*nothrow*/ {
         assert(n > 0);
         if (n < s.length) {
             return s[n];
         } else {
-            foreach (i; ffr.r.length .. n+2) {
+            foreach (immutable i; ffr.r.length .. n+2) {
                 ffr(i);
                 if (s.length > n)
                     return s[n];
             }
-            assert(0, "Whoops!");
+            assert(false, "Whoops!");
         }
     }
 }
 
 void main() {
-    writeln(map!ffr(iota(1, 11)));
-    auto t = chain(map!ffr(iota(1, 41)), map!ffs(iota(1, 961)));
-    writeln(equal(sort(array(t)), iota(1, 1001)));
+    map!ffr(iota(1, 11)).writeln;
+    auto t = iota(1, 41).map!ffr.chain(iota(1, 961).map!ffs);
+    t.array().sort().equal(iota(1, 1001)).writeln;
 }

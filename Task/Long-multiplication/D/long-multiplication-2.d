@@ -1,8 +1,8 @@
-import std.stdio, std.algorithm, std.range;
+import std.stdio, std.algorithm, std.range, std.ascii;
 
 auto longMult(in string x1, in string x2) /*pure nothrow*/ {
     auto digits1 = x1.retro.map!q{a - '0'};
-    const digits2 = x2.retro.map!q{a - '0'}.array;
+    immutable digits2 = x2.retro.map!q{a - '0'}.array;
     uint[] res;
 
     foreach (immutable i, immutable d1; uint.max.iota.zip(digits1)) {
@@ -21,7 +21,8 @@ auto longMult(in string x1, in string x2) /*pure nothrow*/ {
         }
     }
 
-    return res.retro.map!q{ cast(char)(a + '0') };
+    //return res.retro.map!digits;
+    return res.retro.map!(d => digits[d]);
 }
 
 void main() {

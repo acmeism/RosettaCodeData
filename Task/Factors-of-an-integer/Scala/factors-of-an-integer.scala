@@ -1,1 +1,5 @@
-def factor(n:Int) = (1 to Math.sqrt(n)).filter(n%_== 0).flatMap(x=>List(n/x,x)).toList.sort(_>_)
+  def factors(num: Int) = {
+    (1 to num).filter { divisor =>
+      num % divisor == 0
+    }
+  }

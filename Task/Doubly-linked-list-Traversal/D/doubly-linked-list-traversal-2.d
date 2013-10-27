@@ -1,9 +1,9 @@
 struct Node(T) {
     T data;
-    Node* prev, next;
+    typeof(this)* prev, next;
 }
 
-void prepend(T)(ref Node!T* head, T item) {
+void prepend(T)(ref Node!T* head, in T item) pure nothrow {
     auto newNode = new Node!T(item, null, head);
     if (head)
         head.prev = newNode;
@@ -13,7 +13,7 @@ void prepend(T)(ref Node!T* head, T item) {
 void main() {
     import std.stdio;
 
-    Node!(char)* head;
+    Node!char* head;
     foreach (char c; "DCBA")
         head.prepend(c);
 

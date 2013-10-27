@@ -1,58 +1,52 @@
-import std.string: toUpper, replace;
-import std.ascii: isUpper;
+import std.array, std.string, std.ascii, std.algorithm, std.range;
 
-/*****************************
+/**
 Soundex is a phonetic algorithm for indexing names by
 sound, as pronounced in English. See:
 http://en.wikipedia.org/wiki/Soundex
 */
-/*pure nothrow*/ string soundex(in string name)
-// Adapted from public domain Python code by Gregory Jorgensen:
-// http://code.activestate.com/recipes/52213/
-out(result) { // postcondition
+string soundex(in string name) pure /*nothrow*/
+out(result) {
     assert(result.length == 4);
-    assert(result[0] == '0' || isUpper(result[0]));
+    assert(result[0] == '0' || result[0].isUpper);
 
-    if (name.length == 0)
+    if (name.empty)
         assert(result == "0000");
-
-    // this is too much fiddly
-    int charCount = 0;
-    foreach (dchar c; name)
-        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
-            charCount++;
+    immutable charCount = name.filter!isAlpha.walkLength;
     assert((charCount == 0) == (result == "0000"));
 } body {
-    // digits holds the soundex values for the alphabet
+    // Adapted from public domain Python code by Gregory Jorgensen:
+    // http://code.activestate.com/recipes/52213/
+    // digits holds the soundex values for the alphabet.
     static immutable digits = "01230120022455012623010202";
     string firstChar, result;
 
-    // translate alpha chars in name to soundex digits
-    foreach (dchar c; name.toUpper()) {
-        if (c >= 'A' && c <= 'Z') {
-            if (!firstChar.length)
-                firstChar ~= c; // remember first letter
+    // Translate alpha chars in name to soundex digits.
+    foreach (immutable dchar c; name.toUpper) { // Not nothrow.
+        if (c.isUpper) {
+            if (firstChar.empty)
+                firstChar ~= c; // Remember first letter.
             immutable char d = digits[c - 'A'];
-            // duplicate consecutive soundex digits are skipped
-            if (!result.length || d != result[$ - 1])
+            // Duplicate consecutive soundex digits are skipped.
+            if (!result.length || d != result.back)
                 result ~= d;
         }
     }
 
-    // return 0000 if the name is empty
+    // Return 0000 if the name is empty.
     if (!firstChar.length)
         return "0000";
 
-    // replace first digit with first alpha character
-    assert(result.length > 0);
+    // Replace first digit with first alpha character.
+    assert(!result.empty);
     result = firstChar ~ result[1 .. $];
 
-    // remove all 0s from the soundex code
-    result = result.replace("0", ""); // not pure
+    // Remove all 0s from the soundex code.
+    result = result.replace("0", "");
 
-    // return soundex code padded to 4 zeros
+    // Return soundex code padded to 4 zeros.
     return (result ~ "0000")[0 .. 4];
-} unittest { // tests of soundex()
+} unittest { // Tests of soundex().
     auto tests = [["",         "0000"], ["12346",     "0000"],
                   ["he",       "H000"], ["soundex",   "S532"],
                   ["example",  "E251"], ["ciondecks", "C532"],
@@ -60,8 +54,8 @@ out(result) { // postcondition
                   ["Robert",   "R163"], ["Rupert",    "R163"],
                   ["Rubin",    "R150"], ["Ashcraft",  "A226"],
                   ["Ashcroft", "A226"]];
-    foreach (pair; tests)
-        assert(soundex(pair[0]) == pair[1]);
+    foreach (const pair; tests)
+        assert(pair[0].soundex == pair[1]);
 }
 
 void main() {}

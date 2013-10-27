@@ -29,10 +29,10 @@ void main() {
                   {"salami",  3.0, 95.0},
                   {"sausage", 5.9, 98.0}];
 
-    // reverse sorted by Value per amount
-    const items = raw.sort!q{a.valuePerKG > b.valuePerKG}().release();
+    // Reverse sorted by Value per amount.
+    const items = raw.sort!q{a.valuePerKG > b.valuePerKG}.release;
 
-    const(Item)[] chosen;
+    immutable(Item)[] chosen;
     real space = 15.0;
     foreach (item; items)
         if (item.amount < space) {
@@ -45,5 +45,5 @@ void main() {
 
     writefln("%10s %7s %7s %7s", "ITEM", "AMOUNT", "VALUE", "$/unit");
     writefln("%(%s\n%)", chosen);
-    writeln(Item("TOTAL", sum!"amount"(chosen), sum!"value"(chosen)));
+    Item("TOTAL", chosen.sum!"amount", chosen.sum!"value").writeln;
 }

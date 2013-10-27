@@ -7,8 +7,9 @@ main() ->
   	
 for() ->
 	K = random:uniform(19),
+        io:fwrite( "~p ", [K] ),
 	if  K==10 ->
-		io:format("~p~n",[K]);
+		ok;
 	true ->
 		M = random:uniform(19),
 		io:format("~p~n",[M]),

@@ -19,7 +19,7 @@ in {
     assert(m >= 0 && n >= 0);
 } out(result) {
     //assert(result >= 0);
-    assert(cast()result >= 0);
+    //assert(cast()result >= 0);
 } body {
     /*pure nothrow*/ static BigInt ack(in int m, /*in*/ BigInt n) {
         switch (m) {

@@ -11,7 +11,7 @@ void main() {
         vis[y][x] = true;
         static struct P { immutable uint x, y; } // Will wrap-around.
         auto d = [P(x-1, y), P(x, y+1), P(x+1, y), P(x, y-1)];
-        foreach (p; d.randomCover(unpredictableSeed.Random)) {
+        foreach (p; d.randomCover) {
             if (p.x >= w || p.y >= h || vis[p.y][p.x]) continue;
             if (p.x == x) hor[max(y, p.y)][x] = "+   ";
             if (p.y == y) ver[y][max(x, p.x)] = "    ";

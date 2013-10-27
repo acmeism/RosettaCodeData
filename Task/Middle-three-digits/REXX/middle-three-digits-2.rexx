@@ -9,8 +9,8 @@ n ='123 12345 1234567 987654321 10001 -10001 -123 -100 100 -12345',
 exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────MIDDLE3 subroutine──────────────────*/
 middle3: procedure;  arg x;   numeric digits 1e5;   er='    ***error!*** '
-if datatype(x,'N')   then x=abs(x)/1;               L=length(x)
+if datatype(x,'N')   then x=abs(x);                 L=length(x)
 if \datatype(x,'W')  then return  er  "arg isn't an integer"
-if L<3               then return  er  "arg is less then three digits"
+if L<3               then return  er  "arg is less than three digits"
 if L//2==0           then return  er  "arg isn't an odd number of digits"
                           return  substr(x, (L-3)%2+1, 3)

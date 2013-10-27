@@ -1,0 +1,1 @@
+IntVar := integer(MyPointer^);

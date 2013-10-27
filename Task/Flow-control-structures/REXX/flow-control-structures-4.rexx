@@ -4,9 +4,7 @@
   say 'negative j=' -j
   end
 say 'end of the DO loop for j.'
- ∙
- ∙
- ∙
+...
 ouch=60
 sum=0
 

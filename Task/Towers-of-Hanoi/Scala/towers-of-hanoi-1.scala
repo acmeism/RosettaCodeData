@@ -1,4 +1,4 @@
-def move(n: int, from: int, to: int, via: int) = {
+def move(n: Int, from: Int, to: Int, via: Int) : Unit = {
     if (n == 1) {
       Console.println("Move disk from pole " + from + " to pole " + to)
     } else {

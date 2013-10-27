@@ -1,5 +1,6 @@
 package io.utils
 
+import scala.language.implicitConversions
 import java.io.File
 
 /** A wrapper around file, allowing iteration either on direct children

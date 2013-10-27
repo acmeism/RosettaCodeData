@@ -2,6 +2,7 @@
 parse arg L H .                        /*get optional args:  low & high */
 if L=='' | L==',' then L=8             /*Not specified? Set L to default*/
 if H=='' | H==',' then do; H=L; L=1; end  /*use a range for the showing.*/
+#.0=0; #.1=1; #.2=4; #.3=9; #.4=16; #.5=25; #.6=36; #.7=49; #.8=64; #.9=81
 haps=0                                 /*count of happy numbers so far. */
 @.=0;     !.=0                         /*sparse array: happy&unhappy #s.*/
 
@@ -11,7 +12,8 @@ haps=0                                 /*count of happy numbers so far. */
     do  until q==1                     /*see if  Q  is a happy number.  */
     s=0                                /*prepare to add squares of digs.*/
             do j=1  for length(q)      /*sum the squares of the digits. */
-            s=s+substr(q,j,1)**2       /*add the square  of  a  digit.  */
+            _=substr(q,j,1)            /*get a single digit (in base 10)*/
+            s=s+#._                    /*add the square  of  a  digit.  */
             end   /*j*/
 
     if @.s  then do; q=1; iterate; end /*we have found a  happy  number.*/

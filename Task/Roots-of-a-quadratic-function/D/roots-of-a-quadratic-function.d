@@ -3,12 +3,12 @@ import std.math, std.traits;
 CommonType!(T1, T2, T3)[] naiveQR(T1, T2, T3)
                                  (in T1 a, in T2 b, in T3 c)
 pure nothrow if (isFloatingPoint!T1) {
-    alias typeof(typeof(return)[0]) ReturnT;
+    alias ReturnT = typeof(typeof(return).init[0]);
     if (a == 0)
-        return [cast(ReturnT)c / b]; // it's a linear function
+        return [cast(ReturnT)c / b]; // It's a linear function.
     immutable ReturnT det = b ^^ 2 - 4 * a * c;
     if (det < 0)
-        return []; // no real number root
+        return []; // No real number root.
     immutable SD = sqrt(det);
     return [(-b + SD) / 2 * a, (-b - SD) / 2 * a];
 }
@@ -16,12 +16,12 @@ pure nothrow if (isFloatingPoint!T1) {
 CommonType!(T1, T2, T3)[] cautiQR(T1, T2, T3)
                                  (in T1 a, in T2 b, in T3 c)
 pure nothrow if (isFloatingPoint!T1) {
-    alias typeof(typeof(return)[0]) ReturnT;
+    alias ReturnT = typeof(typeof(return).init[0]);
     if (a == 0)
-        return [cast(ReturnT)c / b]; // it's a linear function
+        return [cast(ReturnT)c / b]; // It's a linear function.
     immutable ReturnT det = b ^^ 2 - 4 * a * c;
     if (det < 0)
-        return []; // no real number root
+        return []; // No real number root.
     immutable SD = sqrt(det);
 
     if (b * a < 0) {
@@ -41,7 +41,7 @@ void main() {
     writeln("\nWith 64 bit double type:");
     writefln("   Naive: [%(%g, %)]", naiveQR(1.0, -10e5, 1.0));
     writefln("Cautious: [%(%g, %)]", cautiQR(1.0, -10e5, 1.0));
-    writeln("\nWith 80 bit real type:");
+    writeln("\nWith real type:");
     writefln("   Naive: [%(%g, %)]", naiveQR(1.0L, -10e5L, 1.0L));
     writefln("Cautious: [%(%g, %)]", cautiQR(1.0L, -10e5L, 1.0L));
 }

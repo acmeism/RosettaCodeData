@@ -42,8 +42,8 @@ struct Board {
         return value;
     }
 
-    string toString() const /*pure*/ {
-        return xformat("%-(%s\n%)", b);
+    string toString() const pure {
+        return format("%-(%s\n%)", b);
     }
 }
 
@@ -66,7 +66,7 @@ struct Turtle {
         t.heading = (t.heading + 8 + dir) % 8;
     }
 
-    void forward(ref Board b) pure /*nothrow*/ {
+    void forward(ref Board b) pure nothrow {
         with (t) {
             xy[] += dirs[heading][];
             b[xy[0], xy[1]] = trace[heading];
@@ -76,7 +76,7 @@ struct Turtle {
     }
 }
 
-void dragonX(in int n, ref Turtle t, ref Board b) pure /*nothrow*/ {
+void dragonX(in int n, ref Turtle t, ref Board b) pure nothrow {
     if (n >= 0) { // X -> X+YF+
         dragonX(n - 1, t, b);
         t.turn(2);
@@ -86,7 +86,7 @@ void dragonX(in int n, ref Turtle t, ref Board b) pure /*nothrow*/ {
     }
 }
 
-void dragonY(in int n, ref Turtle t, ref Board b) pure /*nothrow*/ {
+void dragonY(in int n, ref Turtle t, ref Board b) pure nothrow {
     if (n >= 0) { // Y -> -FX-Y
         t.turn(-2);
         t.forward(b);

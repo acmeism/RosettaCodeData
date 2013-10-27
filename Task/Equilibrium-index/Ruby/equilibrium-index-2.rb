@@ -1,7 +1,7 @@
-def eq_indicies *list
-  final = list.size - 1
+def eq_indices(list)
   result = []
   list.empty? and return result
+  final = list.size - 1
 
   helper = lambda do |left, current, right, index|
     left == right and result << index   # Push index to result?
@@ -9,6 +9,6 @@ def eq_indicies *list
     new = list[index + 1]
     helper.call(left + current, new, right - new, index + 1)
   end
-  helper.call 0, list.first, list.inject(&:+) - list.first, 0
-  return result
+  helper.call 0, list.first, list.drop(1).inject(:+), 0
+  result
 end

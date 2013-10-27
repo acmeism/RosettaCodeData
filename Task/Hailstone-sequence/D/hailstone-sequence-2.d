@@ -1,20 +1,23 @@
 import std.stdio, std.algorithm, std.range, std.typecons;
 
-struct Hail {
-  int n;
-  bool empty() { return n == 0; }
-  int front() { return n; }
-  void popFront() { n = n == 1 ? 0 : (n & 1 ? n*3 + 1 : n/2); }
+struct Hailstone {
+  uint n;
+  bool empty() const pure nothrow { return n == 0; }
+  uint front() const pure nothrow { return n; }
+  void popFront() pure nothrow {
+    n = n == 1 ? 0 : (n & 1 ? n*3 + 1 : n/2);
+  }
 }
 
 void main() {
   enum M = 27;
-  auto h = array(Hail(M));
-  writeln("hailstone(", M, ")= ", h[0 .. 4], " ... " , h[$-4 .. $]);
-  writeln("length hailstone(", M, ")= ", h.length);
+  immutable h = M.Hailstone.array;
+  writeln("hailstone(", M, ")= ", h[0 .. 4], " ... " , h[$ - 4 .. $]);
+  writeln("Length hailstone(", M, ")= ", h.length);
 
   enum N = 100_000;
-  auto s = map!(i => tuple(walkLength(Hail(i)), i))(iota(1, N));
-  auto p = reduce!max(s);
+  immutable p = iota(1, N)
+                .map!(i => tuple(i.Hailstone.walkLength, i))
+                .reduce!max;
   writeln("Longest sequence in [1,", N, "]= ",p[1]," with len ",p[0]);
 }

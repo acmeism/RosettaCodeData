@@ -9,7 +9,8 @@ procedure QR is
       for row in mat'Range (1) loop
          for col in mat'Range (2) loop
             FIO.Put (mat (row, col), Exp => 0, Aft => 4, Fore => 5);
-         end loop; New_Line;
+         end loop;
+         New_Line;
       end loop;
    end Show;
 

@@ -6,19 +6,12 @@ re = /\A     # beginning of string
   )*         # end group, zero or more such groups
 \z/x         # end of string
 
-(0..9).each do |i|
-  s = "[]" * i
-
-  # There is no String#shuffle! method.
-  # This is a Knuth shuffle.
-  (s.length - 1).downto(1) do |a; b|
-    b = rand(a + 1)
-    s[a], s[b] = s[b], s[a]
-  end
-
-  puts((s =~ re ? " OK: " : "bad: ") + s)
+10.times do |i|
+  s = (%w{[ ]} * i).shuffle.join
+  puts (s =~ re ? " OK: " : "bad: ") + s
 end
 
-["[[]", "[]]", "[letters]"].each do |s|
-  puts((s =~ re ? " OK: " : "bad: ") + s)
+["[[]", "[]]", "a[ letters[-1] ].xyz[0]"].each do |s|
+  t = s.gsub(/[^\[\]]/, "")
+  puts (t =~ re ? " OK: " : "bad: ") + s
 end

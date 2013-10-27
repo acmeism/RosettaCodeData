@@ -1,38 +1,43 @@
-import std.stdio, std.range, std.algorithm, std.typecons;
+import std.stdio, std.range, std.algorithm, std.typecons, std.array;
 
-Tuple!(double[],double[]) polyDiv(in double[] inN, in double[] inD)
-/*pure nothrow*/ {
-    // code smell: a function that does two things
-    static int trimAndDegree(T)(ref T[] poly) /*nothrow pure*/ {
-        poly.length -= poly.retro().countUntil!q{a != 0}();
+Tuple!(double[], double[]) polyDiv(in double[] inN, in double[] inD)
+pure /*nothrow*/ {
+    // Code smell: a function that does two things.
+    static int trimAndDegree(T)(ref T[] poly) nothrow pure {
+        poly = poly.retro.find!q{ a != b }(0.0).retro;
         return (cast(int)poly.length) - 1;
     }
 
-    double[] N = inN.dup;
+    double[] N = inN.dup; // Not nothrow.
     const(double)[] D = inD;
     const dD = trimAndDegree(D);
     auto dN = trimAndDegree(N);
-    double[] q, r;
+    double[] q;
     if (dD < 0)
-        throw new Exception("ZeroDivisionError");
+        throw new Error("ZeroDivisionError");
     if (dN >= dD) {
-        q = repeat(0.0).take(dN).array();
+        //q = [0.0].replicate(dN);
+        q = std.array.replicate([0.0], dN);
         while (dN >= dD) {
-            auto d = repeat(0.0).take(dN - dD).array() ~ D;
-            const mult = q[dN - dD] = N[$ - 1] / d[$ - 1];
+            auto d = std.array.replicate([0.0], dN - dD) ~ D;
+            immutable mult = q[dN - dD] = N[$ - 1] / d[$ - 1];
             d[] *= mult;
             N[] -= d[];
             dN = trimAndDegree(N);
         }
-    } else {
+    } else
         q = [0.0];
-    }
-    r = N;
-    return tuple(q, r);
+    return tuple(q, N);
+}
+
+
+int trimAndDegree1(T)(ref T[] poly) nothrow pure {
+    poly.length -= poly.retro.countUntil!q{ a != 0 };
+    return (cast(int)poly.length) - 1;
 }
 
 void main() {
     immutable N = [-42.0, 0.0, -12.0, 1.0];
     immutable D = [-3.0, 1.0, 0.0, 0.0];
-    writefln("%s / %s = %s  remainder %s", N, D, polyDiv(N,D).tupleof);
+    writefln("%s / %s = %s  remainder %s", N, D, polyDiv(N, D)[]);
 }

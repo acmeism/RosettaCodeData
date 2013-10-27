@@ -6,8 +6,7 @@
 import Data.List (sortBy)
 import Data.Function (on)
 
-main = do { let (r,t) = nthHam 1000000
-          ; sequence_ [print t, print $ trival t] }
+main = let (r,t) = nthHam 1000000 in print t >> print (trival t)
 
 lg3 = logBase 2 3;  lg5 = logBase 2 5
 logval (i,j,k)    = fromIntegral i + fromIntegral j*lg3 + fromIntegral k*lg5
@@ -20,6 +19,7 @@ rngval n
     | n > 1       = (2.2506 , 0.2887 )                  -- around (log $ sqrt 30),
     | otherwise   = (2.2506 , 0.5771 )                  --   says WP
 
+nthHam :: Int -> (Double, (Int, Int, Int))
 nthHam n                                                   -- n: 1-based: 1,2,3...
   | w >= 1   = error $ "Breach of contract: (w < 1):  " ++ show w
   | m <  0   = error $ "Not enough triples generated: " ++ show (c,n)
@@ -28,7 +28,7 @@ nthHam n                                                   -- n: 1-based: 1,2,3.
  where
   (d,w)   = rngval n                                     -- correction dist, width
   hi      = estval n - d                                 --   hi > logval > hi-w
-  (m,nb)  = ( fromInteger $ c - n, length b )            -- m 0-based from top, |band|
+  (m,nb)  = ( fromIntegral $ c - n, length b )           -- m 0-based from top, |band|
   (s,res) = ( sortBy (flip compare `on` fst) b, s!!m )   -- sorted decreasing, result
   (c,b)   = f 0                                          -- total count, the band
               [ ( i+1,                                   -- total triples w/ this (j,k)

@@ -8,11 +8,6 @@ template Range(size_t stop) { // For loop unrolling.
         alias TypeTuple!(Range!(stop - 1), stop - 1) Range;
 }
 
-
-enum size_t sudokuUnitSide = 3;
-enum size_t sudokuSide = sudokuUnitSide ^^ 2; // Sudoku grid side.
-
-
 struct Digit {
     immutable char d;
 
@@ -27,14 +22,16 @@ struct Digit {
     alias d this;
 }
 
+enum size_t sudokuUnitSide = 3;
+enum size_t sudokuSide = sudokuUnitSide ^^ 2; // Sudoku grid side.
 alias SudokuTable = Digit[sudokuSide ^^ 2];
 
 
 Nullable!SudokuTable sudokuSolver(in ref SudokuTable problem)
-/*pure nothrow*/ {
+pure /*nothrow*/ {
     alias Tgrid = uint;
     Tgrid[SudokuTable.length] grid = void;
-    problem[].map!(c => c - '0')().copy(grid[]); // Not pure.
+    problem[].map!(c => c - '0').copy(grid[]); // Not pure.
 
     // DMD doesn't inline this function. Performance loss.
     Tgrid access(in size_t x, in size_t y) nothrow {
@@ -77,12 +74,12 @@ Nullable!SudokuTable sudokuSolver(in ref SudokuTable problem)
         return false;
     }
 
-    if (canPlaceNumbers()) {
+    if (canPlaceNumbers) {
         //return typeof(return)(grid[]
-        //                      .map!(c => Digit(c + '0'))()
-        //                      .array());
+        //                      .map!(c => Digit(c + '0'))
+        //                      .array);
         Digit[] aux;
-        foreach (c; grid)
+        foreach (immutable c; grid)
             aux ~= Digit(c + '0');
         immutable SudokuTable result = aux;
         return typeof(return)(result);
@@ -90,15 +87,10 @@ Nullable!SudokuTable sudokuSolver(in ref SudokuTable problem)
         return typeof(return)();
 }
 
-
 string representSudoku(in ref SudokuTable sudo)
 pure nothrow out(result) {
-    // assert(result.countchars("1-9") == sudo.countchars("^0"));
-    uint nPosDigits;
-    foreach (c; sudo)
-        if (c >= '1' && c <= '9')
-            nPosDigits++;
-    assert(result.countchars("1-9") == nPosDigits);
+    assert(result.countchars("1-9") == sudo[].count!q{a != '0'});
+    assert(result.countchars(".") == sudo[].count!q{a == '0'});
 } body {
     static assert(sudo.length == 81,
         "representSudoku works only with a 9x9 Sudoku.");
@@ -106,9 +98,7 @@ pure nothrow out(result) {
 
     foreach (immutable i; 0 .. sudokuSide) {
         foreach (immutable j; 0 .. sudokuSide) {
-            // immutable digit = sudo[i * sudokuSide + j];
-            immutable char digit = sudo[i * sudokuSide + j];
-            result ~= (digit == '0') ? '.' : digit;
+            result ~= sudo[i * sudokuSide + j];
             result ~= ' ';
             if (j == 2 || j == 5)
                 result ~= "| ";
@@ -118,10 +108,8 @@ pure nothrow out(result) {
             result ~= "------+-------+------\n";
     }
 
-    //return result.replace("0", "."); // Not pure, not nothrow.
-    return result;
+    return result.replace("0", ".");
 }
-
 
 U[] validator(U, T)(in T[] items) pure nothrow {
     typeof(return) result;
@@ -130,10 +118,8 @@ U[] validator(U, T)(in T[] items) pure nothrow {
     return result;
 }
 
-template ValidateCells(string s) {
-    enum ValidateCells = validator!Digit(s);
-}
-
+//enum ValidateCells(string s) = items.map!Digit.array;
+enum ValidateCells(string s) = validator!Digit(s);
 
 void main() {
     immutable SudokuTable problem = ValidateCells!("
@@ -145,12 +131,12 @@ void main() {
         040000000
         000080070
         017000000
-        000036040".removechars(std.ascii.whitespace));
-    problem.representSudoku().writeln();
+        000036040".removechars(whitespace));
+    problem.representSudoku.writeln;
 
-    immutable solution = sudokuSolver(problem);
+    immutable solution = problem.sudokuSolver;
     if (solution.isNull)
         writeln("Unsolvable!");
     else
-        solution.get().representSudoku().writeln();
+        solution.get.representSudoku.writeln;
 }

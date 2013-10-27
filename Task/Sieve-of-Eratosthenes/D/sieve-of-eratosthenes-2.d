@@ -1,6 +1,6 @@
 import std.stdio, std.math, std.array;
 
-size_t[] sieve(in size_t m) /*pure nothrow*/ {
+size_t[] sieve(in size_t m) pure nothrow {
     if (m < 3)
         return null;
     immutable size_t n = m - 1;
@@ -35,5 +35,5 @@ size_t[] sieve(in size_t m) /*pure nothrow*/ {
 }
 
 void main() {
-    writeln(sieve(50));
+    50.sieve.writeln;
 }

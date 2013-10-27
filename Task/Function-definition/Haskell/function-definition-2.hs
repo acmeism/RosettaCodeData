@@ -1,1 +1,1 @@
-multiply = \ x y -> x*y
+multiply = (*)

@@ -1,8 +1,9 @@
-import std.stdio, std.algorithm, std.range, std.array, std.string;
+import std.stdio, std.algorithm, std.range, std.array, std.string,
+       std.typecons;
 
-int[] lensLCS(R)(R xs, R ys) /*pure nothrow*/ {
-    auto prev = new int[1 + ys.length];
-    auto curr = new int[1 + ys.length];
+uint[] lensLCS(R)(R xs, R ys) pure nothrow {
+    auto prev = new typeof(return)(1 + ys.length);
+    auto curr = new typeof(return)(1 + ys.length);
 
     foreach (immutable x; xs) {
         swap(curr, prev);
@@ -31,37 +32,21 @@ void calculateLCS(T)(in T[] xs, in T[] ys, bool[] xs_in_lcs,
             xs_in_lcs[idx] = true;
     } else {
         immutable mid = nx / 2;
-        auto xb = xs[0.. mid];
-        auto xe = xs[mid .. $];
-
-        auto ll_b = lensLCS(xb, ys);
+        const xb = xs[0.. mid];
+        const xe = xs[mid .. $];
+        immutable ll_b = lensLCS(xb, ys);
 
         // retro is slow with dmd.
-        auto ll_e = lensLCS(xe.retro, ys.retro);
+        const ll_e = lensLCS(xe.retro, ys.retro);
 
         //immutable k = iota(ny + 1)
         //              .reduce!(max!(j => ll_b[j] + ll_e[ny - j]));
+        immutable k = iota(ny + 1)
+                      .minPos!((i,j)=> tuple(ll_b[i] + ll_e[ny-i]) >
+                                       tuple(ll_b[j] + ll_e[ny-j]))[0];
 
-        // Disallows -inline.
-        // immutable k = iota(ny + 1)
-        //               .map!(j => tuple(ll_b[j] + ll_e[ny - j], j))
-        //               .reduce!max[1];
-
-        int maxSum = -1;
-        size_t k = 0;
-        foreach (immutable i; 0 .. ny + 1) {
-            immutable sum = ll_b[i] + ll_e[ny - i];
-            if (sum > maxSum) {
-                maxSum = sum;
-                k = i;
-            }
-        }
-
-        auto yb = ys[0 .. k];
-        auto ye = ys[k .. $];
-
-        calculateLCS(xb, yb, xs_in_lcs, idx);
-        calculateLCS(xe, ye, xs_in_lcs, idx + mid);
+        calculateLCS(xb, ys[0 .. k], xs_in_lcs, idx);
+        calculateLCS(xe, ys[k .. $], xs_in_lcs, idx + mid);
     }
 }
 
@@ -75,7 +60,8 @@ const(T)[] lcs(T)(in T[] xs, in T[] ys) /*pure nothrow*/ {
            .array;
 }
 
-string lcsString(in string s1, in string s2) {
+string lcsString(in string s1, in string s2) /*pure nothrow*/ {
+    //return lcs(s1.representation, s2.representation).assumeChars;
     return cast(string)lcs(s1.representation, s2.representation);
 }
 

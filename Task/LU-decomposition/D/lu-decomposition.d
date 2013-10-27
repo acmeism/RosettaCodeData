@@ -1,15 +1,15 @@
 import std.stdio, std.algorithm, std.typecons, std.numeric,
        std.array, std.conv, std.string, std.range;
 
-bool isRectangular(T)(in T[][] m) /*pure nothrow*/ {
+bool isRectangular(T)(in T[][] m) pure nothrow {
     return m.all!(r => r.length == m[0].length);
 }
 
-bool isSquare(T)(in T[][] m) /*pure nothrow*/ {
-    return isRectangular(m) && m[0].length == m.length;
+bool isSquare(T)(in T[][] m) pure nothrow {
+    return m.isRectangular && m[0].length == m.length;
 }
 
-T[][] matrixMul(T)(in T[][] A, in T[][] B) /*pure nothrow*/
+T[][] matrixMul(T)(in T[][] A, in T[][] B) pure nothrow
 in {
     assert(A.isRectangular && B.isRectangular &&
            !A.empty && !B.empty && A[0].length == B.length);
@@ -30,7 +30,7 @@ in {
 /// Creates the pivoting matrix for m.
 T[][] pivotize(T)(immutable T[][] m) /*pure nothrow*/
 in {
-    assert(isSquare(m));
+    assert(m.isSquare);
 } body {
     immutable n = m.length;
     auto id = iota(n)
@@ -38,7 +38,7 @@ in {
               .array;
 
     foreach (immutable i; 0 .. n) {
-        // immutable row = iota(i, n).max!(j => m[j][i])();
+        // immutable row = iota(i, n).reduce!(max!(j => m[j][i]));
         T maxm = m[i][i];
         size_t row = i;
         foreach (immutable j; i .. n)
@@ -58,7 +58,7 @@ in {
 Tuple!(T[][],"L", T[][],"U", const T[][],"P")
 lu(T)(immutable T[][] A) /*pure nothrow*/
 in {
-    assert(isSquare(A));
+    assert(A.isSquare);
 } body {
     immutable n = A.length;
     auto L = new T[][](n, n);
@@ -68,7 +68,7 @@ in {
         U[i][0 .. i] = 0;
     }
 
-    const P = pivotize!T(A);
+    const P = A.pivotize!T;
     const A2 = matrixMul!T(P, A);
 
     foreach (immutable j; 0 .. n) {
@@ -99,6 +99,7 @@ void main() {
                    [3.0, 17, 18, 1],
                    [2.0,  5,  7, 1]];
 
+    //auto f = "[%([%(%.1f, %)],\n %)]]\n\n".replicate(3);
     auto f = std.array.replicate("[%([%(%.1f, %)],\n %)]]\n\n", 3);
     foreach (m; [a, b])
         writefln(f, lu(m).tupleof);

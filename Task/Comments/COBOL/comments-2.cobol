@@ -1,1 +1,1 @@
-*> This comment syntax was defined in COBOL 2002.
+      D    DISPLAY "Debug"

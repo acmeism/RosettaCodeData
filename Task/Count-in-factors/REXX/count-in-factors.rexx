@@ -1,27 +1,28 @@
-/*REXX program finds and lists the prime factors of positive integer(s).*/
-numeric digits 12                      /*bump precision of the numbers. */
+/*REXX program lists the prime factors of a specified integer (or range)*/
 parse arg low high .                   /*get the argument(s) from the CL*/
-if high==''  then high=low             /*No HIGH?    Then make one up.  */
+if  low==''  then do;low=1;high=40;end /*No LOW&HIGH?  Then use default.*/
+if high==''  then high=low             /*No HIGH?      Then use the LOW.*/
 w=length(high)                         /*get max width for pretty tell. */
-blanks=1                               /*allow spaces around the  "x".  */
+numeric digits max(9,w+1)              /*maybe bump precision of numbers*/
+blanks=1                               /*1=allow spaces around the  "x".*/
          do n=low  to high             /*process single number | a range*/
-         say right(n,w) '=' space(factr(n),blanks) /*display N & factors*/
-         end   /*n*/                   /*if BLANKS=0, no spaces around X*/
+         y=space(factr(n),blanks)      /*squish  (or not)  the blanks.  */
+         say right(n,w) '=' left('',9*(words(y)\==1|n==1)) y  /*factors.*/
+                       /*   ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑  indentation.*/
+          end   /*n*/                   /*if BLANKS=0, no spaces around X*/
 exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────FACTR subroutine────────────────────*/
-factr:  procedure;     parse arg x 1 z /*defines  X and Z  from the arg.*/
-if x <1  then return ''                /*Invalid number?   Return null. */
-if x==1  then return 1                 /*handle special case for unity. */
-Xtimes= '∙'                            /*use round bullet for "times".  */
+factr: procedure;  parse arg x;  x=abs(x);  z=x  /*insure X is positive.*/
+if x<2  then return x                  /*handle a couple special cases. */
 Xtimes= 'x'                            /*character used for "times" (x).*/
-list=                                  /*nullify the list  (to empty).  */
-
-  do j=2 to 5; if j\==4  then call .buildF; end  /*fast builds for list.*/
+list=                                  /*nullify the list (empty string)*/
+                                       /* [↓]  process some low primes. */
+  do j=2 to 5; if j\==4  then call .buildF; end  /*factorize, put──►list*/
   j=5                                  /*start were we left off  (five).*/
        do y=0  by 2;     j=j+2+y//4    /*insure it's not divisible by 3.*/
        if right(j,1)==5  then iterate  /*fast check  for divisible by 5.*/
        if   j>z          then leave    /*number reduced to a small 'un? */
-       if j*j>x          then leave    /*are we higher than the √ of X ?*/
+       if j*j>x          then leave    /*are we higher than the  √X  ?  */
        call .buildF                    /*add a prime factor to list (J).*/
        end    /*y*/
 

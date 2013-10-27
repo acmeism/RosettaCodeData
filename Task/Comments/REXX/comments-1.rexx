@@ -18,7 +18,7 @@ via a continued line, as in the manner of:
            'would I be wearing this one?' ,
            '      --- Abraham Lincoln'
 
-Here come's the thingy that ends this REXX comment. ───┐
+ Here comes the thingy that ends this REXX comment. ───┐
                                                        │
                                                        │
                                                        ↓

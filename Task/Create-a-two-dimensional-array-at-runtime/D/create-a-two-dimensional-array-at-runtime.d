@@ -1,22 +1,21 @@
-import std.stdio, std.conv, std.string;
-
 void main() {
+    import std.stdio, std.conv, std.string;
     int nRow, nCol;
 
     write("Give me the numer of rows: ");
     try {
-        nRow = readln().strip().to!int();
-    } catch (StdioException e) {
+        nRow = readln.strip.to!int;
+    } catch (StdioException) {
         nRow = 3;
-        writeln();
+        writeln;
     }
 
     write("Give me the numer of columns: ");
     try {
-        nCol = to!int(readln().strip());
-    } catch (StdioException e) {
+        nCol = readln.strip.to!int;
+    } catch (StdioException) {
         nCol = 5;
-        writeln();
+        writeln;
     }
 
     auto array = new float[][](nRow, nCol);

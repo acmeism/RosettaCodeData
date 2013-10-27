@@ -17,3 +17,4 @@ for (;;) {
     }
     else usleep(100000); // limits CPU usage by sleeping after doing every request
 }
+?>

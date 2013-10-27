@@ -8,4 +8,4 @@ zeckendorf = map b z where
 	f x y = map (y+) (take x z)
 	b x = showIntAtBase 2 ("01"!!) x ""
 
-main = mapM putStrLn $ take 21 zeckendorf
+main = mapM_ putStrLn $ take 21 zeckendorf

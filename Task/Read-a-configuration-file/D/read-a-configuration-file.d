@@ -1,8 +1,6 @@
 import std.stdio, std.string, std.conv, std.regex, std.getopt;
 
-template VarName(alias var) {
-    enum VarName = var.stringof.toUpper();
-}
+enum VarName(alias var) = var.stringof.toUpper;
 
 void setOpt(alias Var)(in string line) {
     auto m = match(line, regex(`^` ~ VarName!Var ~ `(\s+(.*))?`));
@@ -16,13 +14,13 @@ void setOpt(alias Var)(in string line) {
     }
 }
 
-void main(string[] args) {
+void main(in string[] args) {
     string fullName, favouriteFruit, otherFamily;
     bool needsPeeling, seedsRemoved; // Default false.
-    auto f = File("readcfg.txt", "r");
+    auto f = "readcfg.txt".File;
 
-    foreach (line; f.byLine()) {
-        auto opt = line.strip().idup;
+    foreach (line; f.byLine) {
+        auto opt = line.strip.idup;
         setOpt!fullName(opt);
         setOpt!favouriteFruit(opt);
         setOpt!needsPeeling(opt);

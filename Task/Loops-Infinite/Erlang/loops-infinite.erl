@@ -1,6 +1,6 @@
 -module (main).
--export ([main/1]).
+-export ([main/0]).
 
-main(Any) ->
-  io:fwrite("SPAM~n",[]),
-  main(Any)
+main() ->
+  io:fwrite( "SPAM~n" ),
+  main().

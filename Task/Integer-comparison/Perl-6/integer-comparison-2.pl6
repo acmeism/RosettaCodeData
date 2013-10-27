@@ -1,1 +1,1 @@
-say <Less Equal Greater>[($a cmp $b) + 1];
+say <Less Equal Greater>[($a <=> $b) + 1];

@@ -1,9 +1,3 @@
-ggt = (x,y) ->
-  max_teiler = Math.min(x,y)
-  ggt = 0
-  for teiler in [1..max_teiler]
-    if x % teiler == 0 and y % teiler == 0
-      ggt = teiler
-  return ggt
-
-alert ggt(40902,24140)
+gcd = (x, y) ->
+  [1..(Math.min x, y)].reduce (acc, v) ->
+    if x % v == 0 and y % v == 0 then v else acc

@@ -1,17 +1,11 @@
 #!/bin/bash
 
-next() {
-    block="$1"
-    center="$(echo "$1" | tr '#' ' ')"
-    paste -d '' <(echo "$block") <(echo "$block" ) <(echo "$block")
-    paste -d '' <(echo "$block") <(echo "$center") <(echo "$block")
-    paste -d '' <(echo "$block") <(echo "$block" ) <(echo "$block")
+sierpinski_carpet() {
+    local -i n="${1:-3}"
+    local carpet="${2:-#}"
+    while (( n-- )); do
+       local center="${carpet//#/ }"
+       carpet="$(paste -d ' ' <(echo "$carpet"$'\n'"$carpet"$'\n'"$carpet")  <(echo "$carpet"$'\n'"$center"$'\n'"$carpet")  <(echo "$carpet"$'\n'"$carpet"$'\n'"$carpet"))"
+    done
+    echo "$carpet"
 }
-
-carpet="#"
-for _ in {1..3}
-do
-  carpet="$(next "$carpet")"
-done
-
-echo "$carpet"

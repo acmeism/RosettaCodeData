@@ -1,15 +1,24 @@
-WITH nums (n, fizzbuzz ) AS (
-	SELECT 1, CONVERT(nvarchar, 1) UNION ALL
-	SELECT
-		(n + 1) as n1,
-		CASE
-			WHEN (n + 1) % 15 = 0 THEN 'FizzBuzz'
-			WHEN (n + 1) % 3  = 0 THEN 'Fizz'
-			WHEN (n + 1) % 5  = 0 THEN 'Buzz'
-			ELSE CONVERT(nvarchar, (n + 1))
-		END
-	FROM nums WHERE n < 100
-)
-SELECT n, fizzbuzz FROM nums
-ORDER BY n ASC
-OPTION ( MAXRECURSION 100 )
+-- Load some numbers
+CREATE TABLE numbers(i INTEGER);
+INSERT INTO numbers VALUES(1);
+INSERT INTO numbers SELECT i + (SELECT MAX(i) FROM numbers) FROM numbers;
+INSERT INTO numbers SELECT i + (SELECT MAX(i) FROM numbers) FROM numbers;
+INSERT INTO numbers SELECT i + (SELECT MAX(i) FROM numbers) FROM numbers;
+INSERT INTO numbers SELECT i + (SELECT MAX(i) FROM numbers) FROM numbers;
+INSERT INTO numbers SELECT i + (SELECT MAX(i) FROM numbers) FROM numbers;
+INSERT INTO numbers SELECT i + (SELECT MAX(i) FROM numbers) FROM numbers;
+INSERT INTO numbers SELECT i + (SELECT MAX(i) FROM numbers) FROM numbers;
+-- Define the fizzes and buzzes
+CREATE TABLE fizzbuzz (message VARCHAR(8), divisor INTEGER);
+INSERT INTO fizzbuzz VALUES('fizz',      3);
+INSERT INTO fizzbuzz VALUES('buzz',      5);
+INSERT INTO fizzbuzz VALUES('fizzbuzz', 15);
+-- Play fizzbuzz
+SELECT COALESCE(max(message),CAST(i AS VARCHAR(99))) as result
+FROM numbers LEFT OUTER JOIN fizzbuzz ON MOD(i,divisor) = 0
+GROUP BY i
+HAVING i <= 100
+ORDER BY i;
+-- Tidy up
+DROP TABLE fizzbuzz;
+DROP TABLE numbers;

@@ -1,13 +1,12 @@
 #lang racket
 
-(define (get-tallies filename . patterns)
-  (for/fold ([totals (build-list (length patterns) (λ (p) 0))])
+(define (get-tallies filename line-parser . patterns)
+  (for/fold ([totals (make-list (length patterns) 0)])
     ([line (file->lines filename)])
-    (let* ([words (string-split line)]
-           [word (first words)]
-           [n (or (string->number (last words)) 1)])
+    (match-let ([(list word n) (line-parser line)])
       (for/list ([p patterns] [t totals])
-        (if (regexp-match? p word) (+ n t) t)))))
+        (if (regexp-match? p word)
+            (+ n t) t)))))
 
 (define (plausible test) (string-append (if test "" "IM") "PLAUSIBLE"))
 
@@ -17,13 +16,17 @@
             description (plausible result) examples counters)
     result))
 
-(define (plausibility description filename)
+(define (plausibility description filename parser)
   (printf "~a:\n" description)
-  (let-values ([(cei cie ie ei) (get-tallies filename)])
+  (match-let ([(list cei cie ie ei) (get-tallies filename parser "cei" "cie" "ie" "ei")])
     (let ([rule1 (subrule "I before E when not preceded by C" (- ie cie) (- ei cei))]
           [rule2 (subrule "E before I when preceded by C" cei cie)])
       (printf "\n  Overall, the rule \"I before E, except after C\" is ~a.\n"
               (plausible (and rule1 rule2))))))
 
-(plausibility "Dictionary" "unixdict.txt") (newline)
-(plausibility "Word frequencies (stretch goal)" "1_2_all_freq.txt")
+(define (parse-frequency-data line)
+  (let ([words (string-split line)])
+    (list (string-join (drop-right words 2)) (string->number (last words)))))
+
+(plausibility "Dictionary" "unixdict.txt" (λ (line) (list line 1))) (newline)
+(plausibility "Word frequencies (stretch goal)" "1_2_all_freq.txt" parse-frequency-data)

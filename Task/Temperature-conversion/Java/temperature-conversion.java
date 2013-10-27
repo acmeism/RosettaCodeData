@@ -5,7 +5,7 @@ public class TemperatureConversion {
                 double kelvin = Double.parseDouble(args[0]);
                 if (kelvin >= 0) {
                     System.out.printf("K  %2.2f\n", kelvin);
-                    System.out.printf("C  %2.2f\n", kelvinToCelcius(kelvin));
+                    System.out.printf("C  %2.2f\n", kelvinToCelsius(kelvin));
                     System.out.printf("F  %2.2f\n", kelvinToFahrenheit(kelvin));
                     System.out.printf("R  %2.2f\n", kelvinToRankine(kelvin));
                 } else {
@@ -17,7 +17,7 @@ public class TemperatureConversion {
         }
     }
 
-    public static double kelvinToCelcius(double k) {
+    public static double kelvinToCelsius(double k) {
         return k + 273.15;
     }
 

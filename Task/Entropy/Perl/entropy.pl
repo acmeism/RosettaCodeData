@@ -1,8 +1,10 @@
 sub entropy {
     my %count; $count{$_}++ for @_;
-    my @p = map $_/@_, values %count;
     my $entropy = 0;
-    $entropy += - $_ * log $_ for @p;
+    for (values %count) {
+        my $p = $_/@_;
+        $entropy -= $p * log $p;
+    }
     $entropy / log 2
 }
 

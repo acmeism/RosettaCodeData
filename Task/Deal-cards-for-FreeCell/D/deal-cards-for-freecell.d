@@ -14,27 +14,26 @@ struct Deck {
 
     void deal(in uint seed) /*pure nothrow*/ {
         enum int nc = cards.length; // Must be signed for iota.
-
-        copy(iota(nc - 1, -1, -1), cards[]); // not pure nothrow
+        iota(nc - 1, -1, -1).copy(cards[]); // iota not pure nothrow.
 
         auto rnd = RandomGenerator(seed);
-        foreach (i, ref c; cards)
-            swap(c, cards[(nc - 1) - rnd.next % (nc - i)]);
+        foreach (immutable i, ref c; cards)
+            c.swap(cards[(nc - 1) - rnd.next % (nc - i)]);
     }
 
-    void show() {
-        foreach (row; std.range.chunks(cards[], 8)) {
-            foreach (c; row)
-                write(" ", "A23456789TJQK"[c / 4], "CDHS"[c % 4]);
-            writeln();
-        }
+    void show() const {
+        writefln("%(%-( %s%)\n%)",
+                 cards[]
+                 .chunks(8)
+                 .map!(row => row.map!(c => ["A23456789TJQK"[c / 4]] ~
+                                            "CDHS"[c % 4])));
     }
 }
 
 void main(in string[] args) {
-    immutable seed = (args.length == 2) ? to!uint(args[1]) : 11_982;
+    immutable seed = (args.length == 2) ? args[1].to!uint : 11_982;
     writeln("Hand ", seed);
     Deck cards;
     cards.deal(seed);
-    cards.show();
+    cards.show;
 }

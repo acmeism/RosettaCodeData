@@ -10,7 +10,7 @@ x.length  # ==> 3
 
 # string comparison
 if x == "hello"
-  puts equal
+  puts "equal"
 else
   puts "not equal"
 end
@@ -30,16 +30,18 @@ if x.empty?
 end
 
 # append a byte
-x << "\07"
+p x << "\07"
 
 # substring
-xx = x[0..-2]
+p xx = x[0..-2]
+x[1,2] = "XYZ"
+p x
 
 # replace bytes
-y = "hello world".tr("l", "L")
+p y = "hello world".tr("l", "L")
 
 # join strings
 a = "hel"
 b = "lo w"
 c = "orld"
-d = a + b + c
+p d = a + b + c

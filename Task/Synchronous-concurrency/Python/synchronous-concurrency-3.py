@@ -5,12 +5,13 @@ def reader():
     print('Printed %d lines.' % count)
 
 r = reader()
+
 # printer
-count = 0
-while True:
-    line = next(r)
-    if not line:
+for count, line in enumerate(r):
+    if line is None:
         break
     print(line)
-    count += 1
-r.send(count)
+try:
+    r.send(count)
+except StopIteration:
+    pass

@@ -1,16 +1,16 @@
-import std.stdio, std.random, std.algorithm, std.string, std.conv;
+import std.stdio, std.random, std.algorithm, std.string, std.range;
 
 struct Card {
-    static immutable suits = ["Club", "Heart", "Diamond", "Spade"];
-    static immutable pips  = "Ace 2 3 4 5 6 7 8 9 10 J Q K".split();
+    static immutable suits = "Club Heart Diamond Spade".split;
+    static immutable pips  = "Ace 2 3 4 5 6 7 8 9 10 J Q K".split;
     enum nPack = suits.length * pips.length;
 
     static bool rankAceTop = true;
-    /*const*/ int pip, suit;
+    int pip, suit;
 
-    string toString() const {
-        return format("%3s of %-7s", pips[pip], suits[suit]).
-               rightJustify(15);
+    string toString() pure const {
+        return format("%3s of %-7s", pips[pip], suits[suit])
+               .rightJustify(15);
     }
 
     @property int order() const nothrow {
@@ -41,7 +41,7 @@ final class Deck {
                               c % Card.suits.length);
 
         if (initShuffle)
-            cards.randomShuffle();
+            cards.randomShuffle;
     }
 
     @property size_t length() const pure nothrow {
@@ -71,22 +71,22 @@ final class Deck {
     alias opIndex peek;
 
     Deck showDeck() {
-        writeln(this);
+        this.writeln;
         return this;
     }
 
     Deck shuffle() {
-        cards.randomShuffle();
+        cards.randomShuffle;
         return this;
     }
 
     Deck sortDeck() {
-        sort!q{a > b}(cards);
+        cards.sort!q{a > b};
         return this;
     }
 
-    override string toString() const {
-        return format("%(%(%s%)\n%)", std.range.chunks(cards, 4));
+    override string toString() pure const {
+        return format("%(%(%s%)\n%)", cards.chunks(4));
     }
 }
 
@@ -97,7 +97,7 @@ void main() {
 
     auto host = new Deck(false, 1);
     writeln("Host");
-    host.shuffle().showDeck();
+    host.shuffle.showDeck;
 
     while (host.length > 0)
         foreach (ref g; guests)
@@ -106,6 +106,6 @@ void main() {
 
     foreach (immutable i, g; guests) {
         writefln("Player #%d", i + 1);
-        g.sortDeck().showDeck();
+        g.sortDeck.showDeck;
     }
 }

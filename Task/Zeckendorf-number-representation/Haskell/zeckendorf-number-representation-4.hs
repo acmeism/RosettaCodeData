@@ -1,10 +1,10 @@
+import Data.List (mapAccumL)
+
 fib = 1 : 2 : zipWith (+) fib (tail fib)
 
 zeckendorf 0 = "0"
-zeckendorf n = f n (reverse $ takeWhile (<=n) fib) where
-	f _ [] = ""
-	f n (x:xs)
-		| n < x = '0' : f n xs
-		| True  = '1' : f (n - x) xs
+zeckendorf n = snd $ mapAccumL f n $ reverse $ takeWhile (<=n) fib where
+	f n x | n < x     = (n,   '0')
+              | otherwise = (n-x, '1')
 
-main = mapM (putStrLn . zeckendorf) [0..20]
+main = mapM_ (putStrLn . zeckendorf) [0..20]

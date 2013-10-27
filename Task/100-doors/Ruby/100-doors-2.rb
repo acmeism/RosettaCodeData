@@ -7,12 +7,12 @@ end
 def Closed.toggle
   Open
 end
-doors = [Closed] * (n+1)
+doors = [Closed] * (n + 1)
 for mul in 1..n
-  for x in 1..n/mul
-    doors[mul*x] = doors[mul*x].toggle
+  for x in 1..n / mul
+    doors[mul * x] = doors[mul * x].toggle
   end
 end
 doors.each_with_index { |b, i|
-  puts "Door #{i} is #{b}" if i>0
+  puts "Door #{i} is #{b}" if i > 0
 }

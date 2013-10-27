@@ -1,18 +1,10 @@
-DROP TABLE fizzbuzz;
-CREATE TABLE fizzbuzz(i int, fizz string, buzz string);
-INSERT INTO fizzbuzz VALUES(1,"","");
-INSERT INTO fizzbuzz SELECT i + (SELECT max(i) FROM fizzbuzz), fizz, buzz FROM fizzbuzz;
-INSERT INTO fizzbuzz SELECT i + (SELECT max(i) FROM fizzbuzz), fizz, buzz FROM fizzbuzz;
-INSERT INTO fizzbuzz SELECT i + (SELECT max(i) FROM fizzbuzz), fizz, buzz FROM fizzbuzz;
-INSERT INTO fizzbuzz SELECT i + (SELECT max(i) FROM fizzbuzz), fizz, buzz FROM fizzbuzz;
-INSERT INTO fizzbuzz SELECT i + (SELECT max(i) FROM fizzbuzz), fizz, buzz FROM fizzbuzz;
-INSERT INTO fizzbuzz SELECT i + (SELECT max(i) FROM fizzbuzz), fizz, buzz FROM fizzbuzz;
-INSERT INTO fizzbuzz SELECT i + (SELECT max(i) FROM fizzbuzz), fizz, buzz FROM fizzbuzz;
-DROP TABLE lookup;
-CREATE TABLE lookup (fizzy, buzzy, rem);
-INSERT INTO lookup VALUES("fizz", "buzz", 1);
-SELECT
- (SELECT i FROM lookup WHERE rem = (i%3<>0)&(i%5<>0)),
- (SELECT fizzy FROM lookup WHERE rem = (i%3=0)),
- (SELECT buzzy FROM lookup WHERE rem = (i%5=0))
-  FROM fizzbuzz WHERE i <= 100;
+select (CASE
+    WHEN MOD(lvl,15)=0 THEN 'FizzBuzz'
+    WHEN MOD(lvl,3)=0 THEN 'Fizz'
+    WHEN MOD(lvl,5)=0 THEN 'Buzz'
+    ELSE TO_CHAR(lvl)
+    END) FizzBuzz
+from (
+    select LEVEL lvl
+    from dual
+    connect by LEVEL <= 100)

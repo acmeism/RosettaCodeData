@@ -1,3 +1,3 @@
-println("knight" tail)               // strip first character
-println("socks" dropRight 1)         // strip last character
-println("brooms".tail dropRight 1)   // strip both first and last characters
+println("knight".tail)               // strip first character
+println("socks".init)         // strip last character
+println("brooms".tail.init)   // strip both first and last characters

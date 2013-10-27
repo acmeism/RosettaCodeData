@@ -6,6 +6,6 @@ say 'displaying a'  rows  "row Floyd's triangle in base 16:";   say
                       do #=#  for r;      i=i+1
                       _ = _ right(d2x(#),  length(d2x(mV-rows+i)))
                       end   /*#*/
-                  say _
+                  say substr(_,2)            /*suppress a leading blank.*/
                   end       /*r*/
                                        /*stick a fork in it, we're done.*/

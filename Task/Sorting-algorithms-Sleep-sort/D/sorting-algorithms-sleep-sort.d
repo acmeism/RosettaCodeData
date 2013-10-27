@@ -3,7 +3,7 @@ import std.stdio, std.conv, std.datetime, core.thread;
 final class SleepSorter: Thread {
     private immutable uint val;
 
-    this(in uint n) {
+    this(in uint n) /*pure nothrow*/ {
         super(&run);
         val = n;
     }
@@ -17,5 +17,5 @@ final class SleepSorter: Thread {
 void main(in string[] args) {
     if (args.length > 1)
         foreach (arg; args[1 .. $])
-            (new SleepSorter(to!uint(arg))).start();
+            new SleepSorter(arg.to!uint).start;
 }

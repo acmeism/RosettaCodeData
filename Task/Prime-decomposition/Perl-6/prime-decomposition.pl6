@@ -1,5 +1,6 @@
-constant @primes = 2, 3, 5, -> $n is copy {
-    repeat { $n += 2 } until $n %% none @primes ... { $_ * $_ >= $n }
+constant @primes = 2, 3, 5, -> *@p {
+    my $n = @p[*-1];
+    repeat { $n += 2 } while $n %% any @p.grep: * **2 <= $n;
     $n;
 } ... *;
 

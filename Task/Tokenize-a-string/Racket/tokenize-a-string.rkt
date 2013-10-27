@@ -1,5 +1,3 @@
 #lang racket
-
-(for ([s (regexp-split #rx"," "Hello,How,Are,You,Today")])
-  (printf "~a." s))
-(newline)
+(string-join (string-split "Hello,How,Are,You,Today" ",") ".")
+;; -> "Hello.How.Are.You.Today"

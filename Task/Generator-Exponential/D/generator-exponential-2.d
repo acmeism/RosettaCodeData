@@ -1,33 +1,12 @@
-import std.stdio, std.traits;
-
-auto powers(in double e) pure nothrow {
-    double i = 0.0;
-    return () => i++ ^^ e;
-}
-
-auto filter(D)(D af, D bf) if (isCallable!D) {
-    double a = af(), b = bf();
-    return {
-        double r;
-        while (true) {
-            if (a < b) {
-                r = a;
-                a = af();
-                break;
-            }
-            if (b == a)
-                a = af();
-            b = bf();
-        }
-        return r;
-    };
-}
-
 void main() {
-    auto fgen = filter(powers(2), powers(3));
-    foreach (i; 0 .. 20)
-        fgen();
-    foreach (i; 0 .. 10)
-        write(fgen(), " ");
-    writeln();
+    import std.stdio, std.bigint, std.range, std.algorithm;
+
+    auto squares = 0.sequence!"n".map!(i => i.BigInt ^^ 2);
+    auto cubes = 0.sequence!"n".map!(i => i.BigInt ^^ 3);
+
+    squares
+    .filter!(s => cubes.find!(c => c >= s).front != s)
+    .drop(20)
+    .take(10)
+    .writeln;
 }

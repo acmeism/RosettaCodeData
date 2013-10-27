@@ -1,6 +1,6 @@
 import std.stdio, std.conv;
 
-uint nQueens(in uint nn) pure nothrow
+ulong nQueens(in uint nn) pure nothrow
 in {
     assert(nn > 0 && nn <= 27,
            "'side' value must be in 1 .. 27.");
@@ -12,9 +12,9 @@ in {
     immutable uint full = uint.max - ((1 << (ulen - nn)) - 1);
     immutable n = nn - 3;
 
-    uint count;
+    typeof(return) count;
     uint[32] l=void, r=void, c=void;
-    uint[33] mm; // mm and mmi are a stack
+    uint[33] mm; // mm and mmi are a stack.
 
     // Require second queen to be left of the first queen, so
     // we ever only test half of the possible solutions. This
@@ -24,22 +24,22 @@ in {
             uint d = n;
             // c: columns occupied by previous queens.
             c[n] = b0 | b1;
-            // l: columns attacked by left diagonals
+            // l: columns attacked by left diagonals.
             l[n] = (b0 << 2) | (b1 << 1);
-            // r: by right diagnoals
+            // r: by right diagnoals.
             r[n] = (b0 >> 2) | (b1 >> 1);
 
-            // availabe columns on current row
+            // Availabe columns on current row.
             uint bits = full & ~(l[n] | r[n] | c[n]);
 
             uint mmi = 1;
             mm[mmi] = bits;
 
             while (bits) {
-                // d: depth, aka row. counting backwards
-                // because !d is often faster than d != n
+                // d: depth, aka row. counting backwards.
+                // Because !d is often faster than d != n.
                 while (d) {
-                    // pos is right most nonzero bit
+                    // immutable uint pos = 1U << bits.bsf; // Slower.
                     immutable uint pos = -(cast(int)bits) & bits;
 
                     // Mark bit used. Only put current bits on
@@ -53,9 +53,9 @@ in {
                     }
 
                     d--;
-                    l[d] = (l[d+1] | pos) << 1;
-                    r[d] = (r[d+1] | pos) >> 1;
-                    c[d] =  c[d+1] | pos;
+                    l[d] = (l[d + 1] | pos) << 1;
+                    r[d] = (r[d + 1] | pos) >> 1;
+                    c[d] =  c[d + 1] | pos;
 
                     bits = full & ~(l[d] | r[d] | c[d]);
 
@@ -84,7 +84,7 @@ in {
     return count * 2;
 }
 
-void main(string[] args) {
-    immutable int side = (args.length >= 2) ? to!int(args[1]) : 8;
-    writefln("N-queens(%d) = %d solutions.", side, nQueens(side));
+void main(in string[] args) {
+    immutable uint side = (args.length >= 2) ? args[1].to!uint : 8;
+    writefln("N-queens(%d) = %d solutions.", side, side.nQueens);
 }

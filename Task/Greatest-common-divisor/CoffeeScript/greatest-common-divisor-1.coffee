@@ -1,3 +1,2 @@
 gcd = (x, y) ->
-  return x if y == 0
-  gcd(y, x % y)
+  if y == 0 then x else gcd y, x % y

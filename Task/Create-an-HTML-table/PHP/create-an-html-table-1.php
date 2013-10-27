@@ -1,7 +1,7 @@
 <?php
 /**
- * @author Elad Yosifon <elad.yosifon@gmail.com>
- * @desc HTML Table - native style
+ * @author Elad Yosifon
+ * @desc HTML Table - normal style
  */
 $cols = array('', 'X', 'Y', 'Z');
 $rows = 3;

@@ -1,8 +1,4 @@
-fib(X) :-
-    X=[0,1|Z],
-    ffib(Z,X).
-ffib(Z,X) :-
-    X=[A|Y],
-    Y=[B|_],
-    N is A+B,
-    freeze(Z, (Z=[N|W],ffib(W,Y)) ).
+fib([0,1|X]) :-
+    ffib(0,1,X).
+ffib(A,B,X) :-
+    freeze(X, (C is A+B, X=[C|Y], ffib(B,C,Y)) ).

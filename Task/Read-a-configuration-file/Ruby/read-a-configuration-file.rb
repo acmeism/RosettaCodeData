@@ -1,6 +1,8 @@
-fullname = favouritefruit = needspeeling = seedsremoved = false
+fullname = favouritefruit = ""
+needspeeling = seedsremoved = false
+otherfamily = []
 
-IO.foreach("fruit.conf") do |line|
+IO.foreach("config.file") do |line|
   line.chomp!
   key, value = line.split(nil, 2)
   case key
@@ -9,11 +11,15 @@ IO.foreach("fruit.conf") do |line|
   when "FAVOURITEFRUIT"; favouritefruit = value
   when "NEEDSPEELING"; needspeeling = true
   when "SEEDSREMOVED"; seedsremoved = true
+  when "OTHERFAMILY"; otherfamily = value.split(",").map(&:strip)
   when /^./; puts "#{key}: unknown key"
   end
 end
 
-puts "fullname = #{fullname}"
+puts "fullname       = #{fullname}"
 puts "favouritefruit = #{favouritefruit}"
-puts "needspeeling = #{needspeeling}"
-puts "seedsremoved = #{seedsremoved}"
+puts "needspeeling   = #{needspeeling}"
+puts "seedsremoved   = #{seedsremoved}"
+otherfamily.each_with_index do |name, i|
+  puts "otherfamily(#{i+1}) = #{name}"
+end

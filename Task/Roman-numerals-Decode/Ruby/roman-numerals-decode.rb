@@ -1,5 +1,5 @@
 def fromRoman(roman)
-  r = roman.dup.upcase
+  r = roman.upcase
   n = 0
   until r.empty? do
     case
@@ -20,9 +20,9 @@ def fromRoman(roman)
       raise ArgumentError.new("invalid roman numerals: " + roman)
     end
     n += v
-    r[0 .. len-1] = ""
+    r.slice!(0,len)
   end
   n
 end
 
-[ "MCMXC", "MMVIII", "MDCLXVI" ].each {|r| pp [r, fromRoman(r)]}
+[ "MCMXC", "MMVIII", "MDCLXVI" ].each {|r| p r => fromRoman(r)}

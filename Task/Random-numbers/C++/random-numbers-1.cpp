@@ -8,7 +8,7 @@ int main()
 {
   random_device seed;
   mt19937 engine(seed());
-  normal_distribution<> dist(1.0, 0.5);
+  normal_distribution<double> dist(1.0, 0.5);
   auto rnd = bind(dist, engine);
 
   vector<double> v(1000);

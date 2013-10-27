@@ -2,6 +2,7 @@ import std.stdio, std.string, std.conv, std.array, std.algorithm,
        std.exception;
 
 struct Hidato {
+    // alias Cell = RangedValue!(int, -2, int.max);
     alias Cell = int;
     enum : Cell { emptyCell = -2, unknownCell = -1 }
 
@@ -10,7 +11,8 @@ struct Hidato {
     immutable Cell boardMax;
     Cell[][] board;
 
-    this(in string input) /*pure nothrow*/ in {
+    this(in string input) pure
+    in {
         assert(!input.empty);
     } out {
         immutable nRows = board.length;
@@ -33,13 +35,13 @@ struct Hidato {
     } body {
         bool[Cell] pathSeen; // A set.
         KnownT knownMutable;
-        const lines = input.splitLines();
-        immutable nCols = lines[0].split().length;
+        const lines = input.splitLines;
+        immutable nCols = lines[0].split.length;
         foreach (immutable int r, immutable row; lines) {
-            assert(row.split().length == nCols,
-                   text("Wrong cols n.: ", row.split().length));
+            assert(row.split.length == nCols,
+                   text("Wrong cols n.: ", row.split.length));
             auto boardRow = new typeof(board[0])(nCols);
-            foreach (immutable int c, immutable cell; row.split()) {
+            foreach (immutable int c, immutable cell; row.split) {
                 switch (cell) {
                     case ".":
                         boardRow[c] = Hidato.emptyCell;
@@ -48,7 +50,7 @@ struct Hidato {
                         boardRow[c] = Hidato.unknownCell;
                         break;
                     default: // Known.
-                        immutable val = to!Cell(cell);
+                        immutable val = cell.to!Cell;
                         enforce(val > 0, "Path numbers must be > 0.");
                         enforce(val !in pathSeen,
                                 text("Duplicated path number: ", val));
@@ -61,10 +63,11 @@ struct Hidato {
             board ~= boardRow;
         }
 
-        known = assumeUnique(knownMutable); // Not verified.
+        known = knownMutable.assumeUnique; // Not verified.
     }
 
-    bool solve() pure nothrow in {
+    bool solve() pure nothrow
+    in {
         assert(1 in known);
     } body {
         bool fill(in int r, in int c, in Cell n) pure nothrow {
@@ -93,15 +96,15 @@ struct Hidato {
         return fill(known[1][0], known[1][1], 1);
     }
 
-    string toString() const {
+    string toString() const pure /*nothrow*/ {
         immutable d = [Hidato.emptyCell: ".",
                        Hidato.unknownCell: "_"];
-        immutable form = "%" ~ text(text(boardMax).length + 1) ~ "s";
+        immutable form = "%" ~ text(boardMax.text.length + 1) ~ "s";
 
         string result;
         foreach (const row; board) {
             foreach (immutable c; row)
-                result ~= format(form, d.get(c, text(c)));
+                result ~= format(form, d.get(c, c.text));
             result ~= "\n";
         }
         return result;
@@ -109,11 +112,11 @@ struct Hidato {
 }
 
 void solveHidato(in string problem) {
-    auto hi = Hidato(problem);
+    auto hi = problem.Hidato;
     writeln("Problem:\n", hi);
-    hi.solve();
+    hi.solve;
     writeln("Solution:\n", hi);
-    writeln();
+    writeln;
 }
 
 void main() {

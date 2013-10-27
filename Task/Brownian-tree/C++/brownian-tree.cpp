@@ -2,15 +2,15 @@
 #include <iostream>
 #include <string>
 
-//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------
 using namespace std;
 
-//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------
 enum states { SEED, GROWING, MOVING, REST };
 enum treeStates { NONE, MOVER, TREE };
 const int MAX_SIDE = 480, MAX_MOVERS = 511, MAX_CELLS = 15137;
 
-//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------
 class point
 {
 public:
@@ -20,7 +20,7 @@ public:
 
     int x, y;
 };
-//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------
 class movers
 {
 public:
@@ -28,7 +28,7 @@ public:
     bool moving;
     movers() : moving( false ){}
 };
-//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------
 class myBitmap
 {
 public:
@@ -107,7 +107,8 @@ public:
 
 	GetDIBits( hdc, bmp, 0, height, ( LPVOID )dwpBits, &infoheader, DIB_RGB_COLORS );
 
-	file = CreateFile( path.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
+	file = CreateFile( path.c_str(), GENERIC_WRITE, 0, NULL,
+                           CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL );
 	WriteFile( file, &fileheader, sizeof( BITMAPFILEHEADER ), &wb, NULL );
 	WriteFile( file, &infoheader.bmiHeader, sizeof( infoheader.bmiHeader ), &wb, NULL );
 	WriteFile( file, dwpBits, bitmap.bmWidth * bitmap.bmHeight * 4, &wb, NULL );
@@ -127,7 +128,7 @@ private:
     void    *pBits;
     int	    width, height;
 };
-//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------
 class brownianTree
 {
 public:
@@ -211,7 +212,11 @@ private:
 
 	COORD c = { 0, 1 };
 	SetConsoleCursorPosition( GetStdHandle( STD_OUTPUT_HANDLE ), c );
-	cout << "Cells added: " << _cellCount << " from " << MAX_CELLS << " => " <<  static_cast<float>( 100 * _cellCount ) / static_cast<float>( MAX_CELLS ) << "%              ";
+	cout << "Cells added: " << _cellCount
+             << " from " << MAX_CELLS << " => "
+             <<  static_cast<float>( 100 * _cellCount ) /
+                 static_cast<float>( MAX_CELLS )
+             << "%              ";
     }
 
     bool moveIt( movers* m )
@@ -265,7 +270,7 @@ private:
     int      _cellCount;
     movers   _movers[MAX_MOVERS];
 };
-//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------
 int main( int argc, char* argv[] )
 {
     ShowWindow( GetConsoleWindow(), SW_MAXIMIZE );
@@ -277,11 +282,14 @@ int main( int argc, char* argv[] )
     while( tree.mainLoop() );
 
     now = GetTickCount() - now;
-    cout << endl << endl << "It took " << now / 1000 << " seconds to complete the task!" << endl << endl;
+    cout << endl << endl << "It took "
+         << now / 1000
+         << " seconds to complete the task!" << endl << endl;
 
-    BitBlt( GetDC( GetConsoleWindow() ), 20, 90, MAX_SIDE, MAX_SIDE, tree.getBmp()->getDC(), 0, 0, SRCCOPY );
+    BitBlt( GetDC( GetConsoleWindow() ), 20, 90, MAX_SIDE, MAX_SIDE,
+            tree.getBmp()->getDC(), 0, 0, SRCCOPY );
 
     system( "pause" );
     return 0;
 }
-//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------

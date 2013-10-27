@@ -81,9 +81,9 @@ private:
 
       // attempt to grab forks
       if( can_grab_fork( fork_left ) ) {
-	ForkLock::lock_guard lock_left( *fork_left, boost::adopt_lock );
+	ForkLock lock_left( *fork_left, boost::adopt_lock );
 	if( can_grab_fork( fork_right ) ) {
-	  ForkLock::lock_guard lock_right( *fork_right, boost::adopt_lock );
+	  ForkLock lock_right( *fork_right, boost::adopt_lock );
 	  // eating
 	  mp_logger->log( boost::str( boost::format( "%1% is eating (%2%)..." ) % m_name % m_meals_left ) );
 	  wait();

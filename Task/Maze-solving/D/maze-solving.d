@@ -1,11 +1,9 @@
 import std.stdio, std.random, std.string, std.array, std.algorithm,
-       std.traits;
+       std.file;
 
-enum int cx = 4; // Cell size x.
-enum int cy = 2; // Cell size y.
-enum int cx2 = cx / 2;
-enum int cy2 = cy / 2;
-enum char pathSymbol = '.';
+enum int cx = 4, cy = 2; // Cell size x and y.
+enum int cx2 = cx / 2, cy2 = cy / 2;
+enum pathSymbol = '.';
 struct V2 { int x, y; }
 
 bool solveMaze(char[][] maze, in V2 s, in V2 end) pure nothrow {
@@ -25,15 +23,10 @@ bool solveMaze(char[][] maze, in V2 s, in V2 end) pure nothrow {
 }
 
 void main() {
-    auto maze = File("maze.txt")
-                .byLine()
-                .map!(r => r.strip().dup)()
-                .filter!(r => !r.empty)()
-                .array();
-
-    immutable int h = (maze.length - 1) / cy;
+    auto maze = "maze.txt".readText.splitLines.map!(r => r.dup).array;
+    immutable int h = ((cast(int)maze.length) - 1) / cy;
     assert (h > 0);
-    immutable int w = (maze[0].length - 1) / cx;
+    immutable int w = ((cast(int)maze[0].length) - 1) / cx;
 
     immutable start = V2(cx2 + cx * uniform(0, w),
                          cy2 + cy * uniform(0, h));
@@ -41,10 +34,9 @@ void main() {
                        cy2 + cy * uniform(0, h));
 
     maze[start.y][start.x] = pathSymbol;
-    if (solveMaze(maze, start, end)) {
-        maze[start.y][start.x] = 'S';
-        maze[end.y][end.x] = 'E';
-        writefln("%-(%s\n%)", maze);
-    } else
-        writeln("No solution path found.");
+    if (!solveMaze(maze, start, end))
+        return "No solution path found.".writeln;
+    maze[start.y][start.x] = 'S';
+    maze[end.y][end.x] = 'E';
+    writefln("%-(%s\n%)", maze);
 }

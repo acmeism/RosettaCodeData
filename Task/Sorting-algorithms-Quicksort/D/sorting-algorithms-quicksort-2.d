@@ -1,18 +1,14 @@
-import std.stdio;
-import std.algorithm;
+import std.stdio, std.array;
 
-void quickSort(T)(T[] items)
-{
-    if (items.length >= 2) {
-        auto parts = partition3(items, items[$ / 2]);
-        quickSort(parts[0]);
-        quickSort(parts[2]);
-    }
+T[] quickSort(T)(T[] items) pure nothrow {
+    if (items.empty)
+        return items;
+    T[] less, notLess;
+    foreach (x; items[1 .. $])
+        (x < items[0] ? less : notLess) ~= x;
+    return less.quickSort ~ items[0] ~ notLess.quickSort;
 }
 
-void main()
-{
-    auto items = [4, 65, 2, -31, 0, 99, 2, 83, 782, 1];
-    quickSort(items);
-    writeln(items);
+void main() {
+    [4, 65, 2, -31, 0, 99, 2, 83, 782, 1].quickSort.writeln;
 }

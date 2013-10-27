@@ -10,7 +10,7 @@ proc meanTime {times} {
 	set sumCos [expr {$sumCos + cos($s / $secsPerRad)}]
     }
     # Don't need to divide by counts; atan2() cancels that out
-    set a [expr {int(atan2($sumSin, $sumCos) * $secsPerRad)}]
+    set a [expr {round(atan2($sumSin, $sumCos) * $secsPerRad)}]
     # Convert back to human-readable
     format "%02d:%02d:%02d" [expr {$a / 60 / 60 % 24}] [expr {$a / 60 % 60}] [expr {$a % 60}]
 }

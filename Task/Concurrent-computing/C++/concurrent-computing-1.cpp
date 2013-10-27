@@ -11,14 +11,14 @@ int main()
   std::uniform_int_distribution<> dist(1,1000);
   std::vector<std::thread> threads;
 
-  for(auto& str: {"Enjoy\n", "Rosetta\n", "Code\n"}) {
+  for(const auto& str: {"Enjoy\n", "Rosetta\n", "Code\n"}) {
     // between 1 and 1000ms per our distribution
     std::chrono::milliseconds duration(dist(eng));
 
-    threads.push_back(std::thread([str, duration](){
+    threads.emplace_back([str, duration](){
       std::this_thread::sleep_for(duration);
       std::cout << str;
-    }));
+    });
   }
 
   for(auto& t: threads) t.join();

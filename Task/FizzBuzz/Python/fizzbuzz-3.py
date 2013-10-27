@@ -1,4 +1,3 @@
-print ('\n'.join(''.join(''.join(['' if i%3 else 'Fizz',
-                                  '' if i%5 else 'Buzz'])
-                         or str(i))
-                 for i in range(1,101)))
+for i in range(1, 101):
+    words = [word for n, word in ((3, 'Fizz'), (5, 'Buzz')) if not i % n]
+    print ''.join(words) or i

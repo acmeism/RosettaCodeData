@@ -1,20 +1,15 @@
 my $z1 = '1'; # glyph to use for a '1'
 my $z0 = '0'; # glyph to use for a '0'
 
-# helper sub to translate constants into the particular glyphs you used
-sub z($a) { $a.trans([<1 0>] => [$z1, $z0]) };
+sub zorder($a) { ($z0 lt $z1) ?? $a !! $a.trans([$z0, $z1] => [$z1, $z0]) };
 
 ######## Zeckendorf comparison operators #########
 
 # less than
-sub infix:<ltz>($a, $b) { ($z0 lt $z1) ?? ($a lt $b) !!
-    ($a.trans([$z1, $z0] => [<1 0>]) lt $b.trans([$z1, $z0] => [<1 0>]))
-};
+sub infix:<ltz>($a, $b) { $a.&zorder lt $b.&zorder };
 
 # greater than
-sub infix:<gtz>($a, $b) { ($z0 lt $z1) ?? ($a gt $b) !!
-    ($a.trans([$z1, $z0] => [<1 0>]) gt $b.trans([$z1, $z0] => [<1 0>]))
-};
+sub infix:<gtz>($a, $b) { $a.&zorder gt $b.&zorder };
 
 # equal
 sub infix:<eqz>($a, $b) { $a eq $b };
@@ -47,9 +42,9 @@ sub infix:<-z>($a is copy, $b is copy) { $a--z while $b--z nez $z0; $a };
 
 # multiplication
 sub infix:<*z>($a, $b) {
-    return $z0 if $a eq $z0 or $b eq $z0;
-    return $a if $b eq $z1;
-    return $b if $a eq $z1;
+    return $z0 if $a eqz $z0 or $b eqz $z0;
+    return $a if $b eqz $z1;
+    return $b if $a eqz $z1;
     my $c = $a;
     my $d = $z1;
     repeat {
@@ -76,6 +71,9 @@ sub infix:</z>($a is copy, $b is copy) {
 
 
 ###################### Testing ######################
+
+# helper sub to translate constants into the particular glyphs you used
+sub z($a) { $a.trans([<1 0>] => [$z1, $z0]) };
 
 say "Using the glyph '$z1' for 1 and '$z0' for 0\n";
 

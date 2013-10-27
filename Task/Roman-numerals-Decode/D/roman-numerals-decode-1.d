@@ -7,13 +7,13 @@ int toArabic(in string s) /*pure nothrow*/ {
                                 "L","XL","X","IX","V","IV","I"];
 
     int arabic;
-    foreach (m; s.match(regex(r"CM|CD|XC|XL|IX|IV|[MDCLXVI]", "g")))
+    foreach (m; s.matchAll("CM|CD|XC|XL|IX|IV|[MDCLXVI]".regex))
         arabic += weights[symbols.countUntil(m.hit)];
     return arabic;
 }
 
 void main() {
-    assert(toArabic("MCMXC") == 1990);
-    assert(toArabic("MMVIII") == 2008);
-    assert(toArabic("MDCLXVI") == 1666);
+    assert("MCMXC".toArabic == 1990);
+    assert("MMVIII".toArabic == 2008);
+    assert("MDCLXVI".toArabic == 1666);
 }

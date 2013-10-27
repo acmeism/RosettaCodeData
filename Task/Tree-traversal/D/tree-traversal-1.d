@@ -1,21 +1,21 @@
-import std.stdio;
+import std.stdio, std.traits;
 
-const class Node(T) {
+const final class Node(T) {
     T data;
     Node left, right;
 
     this(in T data, in Node left=null, in Node right=null)
-    pure nothrow {
+    const pure nothrow {
         this.data = data;
         this.left = left;
         this.right = right;
     }
 }
 
-// static templated opCall can't be used in Node
+// 'static' templated opCall can't be used in Node
 auto node(T)(in T data, in Node!T left=null, in Node!T right=null)
 pure nothrow {
-    return new Node!T(data, left, right);
+    return new const(Node!T)(data, left, right);
 }
 
 void show(T)(in T x) {
@@ -24,15 +24,12 @@ void show(T)(in T x) {
 
 enum Visit { pre, inv, post }
 
-// visitor can be any kind of callable or it uses a default visitor.
+// 'visitor' can be any kind of callable or it uses a default visitor.
 // TNode can be any kind of Node, with data, left and right fields,
 // so this is more generic than a member function of Node.
 void backtrackingOrder(Visit v, TNode, TyF=void*)
                       (in TNode node, TyF visitor=null) {
-    static if (is(TyF == void*))
-        auto trueVisitor = &show!(typeof(node.data));
-    else
-        auto trueVisitor = visitor;
+    alias trueVisitor = Select!(is(TyF == void*), show, visitor);
     if (node !is null) {
         static if (v == Visit.pre)
             trueVisitor(node.data);
@@ -48,37 +45,34 @@ void backtrackingOrder(Visit v, TNode, TyF=void*)
 void levelOrder(TNode, TyF=void*)
                (TNode node, TyF visitor=null,
                 const(TNode)[] more=[]) {
-    static if (is(TyF == void*))
-        auto trueVisitor = &show!(typeof(node.data));
-    else
-        auto trueVisitor = visitor;
+    alias trueVisitor = Select!(is(TyF == void*), show, visitor);
     if (node !is null) {
         more ~= [node.left, node.right];
         trueVisitor(node.data);
     }
     if (more.length)
-        levelOrder(more[0], trueVisitor, more[1 .. $]);
+        levelOrder(more[0], visitor, more[1 .. $]);
 }
 
 void main() {
-    alias node N;
-    auto tree = N(1,
-                     N(2,
-                          N(4,
-                               N(7)),
-                          N(5)),
-                     N(3,
-                          N(6,
-                               N(8),
-                               N(9))));
+    alias N = node;
+    const tree = N(1,
+                      N(2,
+                           N(4,
+                                N(7)),
+                           N(5)),
+                      N(3,
+                           N(6,
+                                N(8),
+                                N(9))));
 
     write("  preOrder: ");
-    backtrackingOrder!(Visit.pre)(tree);
+    tree.backtrackingOrder!(Visit.pre);
     write("\n   inorder: ");
-    backtrackingOrder!(Visit.inv)(tree);
+    tree.backtrackingOrder!(Visit.inv);
     write("\n postOrder: ");
-    backtrackingOrder!(Visit.post)(tree);
+    tree.backtrackingOrder!(Visit.post);
     write("\nlevelorder: ");
-    levelOrder(tree);
-    writeln();
+    tree.levelOrder;
+    writeln;
 }

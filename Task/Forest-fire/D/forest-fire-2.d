@@ -1,14 +1,13 @@
-import std.stdio, std.random, std.string, std.algorithm, simpledisplay;
+import std.stdio, std.random, std.algorithm, std.typetuple,
+       simpledisplay;
 
-enum double TREE_PROB = 0.55; // original tree probability
-enum double F_PROB =    0.01; // auto combustion probability
-enum double P_PROB =    0.01; // tree creation probability
+enum double TREE_PROB = 0.55; // Original tree probability.
+enum double F_PROB =    0.01; // Auto combustion probability.
+enum double P_PROB =    0.01; // Tree creation probability.
+enum worldSide = 600;
 
-template TypeTuple(T...) { alias T TypeTuple; }
-alias TypeTuple!(-1, 0, 1) sp;
-
-enum Cell : char { empty=' ', tree='T', burning='#' }
-alias Cell[][] World;
+enum Cell : ubyte { empty, tree, burning }
+alias World = Cell[worldSide][];
 
 immutable white = Color(255, 255, 255),
           red = Color(255, 0, 0),
@@ -16,37 +15,37 @@ immutable white = Color(255, 255, 255),
 
 void nextState(ref World world, ref World nextWorld,
                ref Xorshift rnd, Image img) {
-  enum double div = cast(double)typeof(rnd.front()).max;
+  enum double div = typeof(rnd.front).max;
   immutable nr = world.length;
   immutable nc = world[0].length;
-  foreach (r, row; world)
-    foreach (c, elem; row)
-      final switch (elem) {
-        case Cell.empty:
+  foreach (immutable r, const row; world)
+    foreach (immutable c, immutable elem; row)
+      START: final switch (elem) with (Cell) {
+        case empty:
           img.putPixel(c, r, white);
-          nextWorld[r][c] = (rnd.front()/div)<P_PROB ? Cell.tree : Cell.empty;
-          rnd.popFront();
+          nextWorld[r][c] = (rnd.front / div) < P_PROB ? tree : empty;
+          rnd.popFront;
           break;
 
-        case Cell.tree:
+        case tree:
           img.putPixel(c, r, green);
 
-          foreach (rowShift; sp)
-            foreach (colShift; sp)
+          foreach (immutable rowShift; TypeTuple!(-1, 0, 1))
+            foreach (immutable colShift; TypeTuple!(-1, 0, 1))
               if ((r + rowShift) >= 0 && (r + rowShift) < nr &&
                   (c + colShift) >= 0 && (c + colShift) < nc &&
                   world[r + rowShift][c + colShift] == Cell.burning) {
                 nextWorld[r][c] = Cell.burning;
-                goto END;
+                break START;
               }
 
-          nextWorld[r][c]=(rnd.front()/div)<F_PROB ? Cell.burning : Cell.tree;
-          rnd.popFront();
-          END: break;
+          nextWorld[r][c]= (rnd.front / div) < F_PROB ? burning : tree;
+          rnd.popFront;
+          break;
 
-        case Cell.burning:
+        case burning:
           img.putPixel(c, r, red);
-          nextWorld[r][c] = Cell.empty;
+          nextWorld[r][c] = empty;
           break;
       }
 
@@ -55,17 +54,17 @@ void nextState(ref World world, ref World nextWorld,
 
 void main() {
   auto rnd = Xorshift(1);
-  auto world = new World(600, 600); // create world
-  foreach (row; world)
+  auto world = new World(worldSide);
+  foreach (ref row; world)
     foreach (ref el; row)
       el = uniform(0.0, 1.0, rnd) < TREE_PROB ? Cell.tree : Cell.empty;
-  auto nextWorld = new World(world.length, world[0].length);
+  auto nextWorld = new World(world[0].length);
 
   auto w= new SimpleWindow(world.length,world[0].length,"ForestFire");
   auto img = new Image(w.width, w.height);
 
   w.eventLoop(1, {
-    auto painter = w.draw();
+    auto painter = w.draw;
     nextState(world, nextWorld, rnd, img);
     painter.drawImage(Point(0, 0), img);
   });

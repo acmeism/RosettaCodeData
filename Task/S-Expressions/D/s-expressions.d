@@ -1,55 +1,54 @@
-import std.stdio: write, writeln;
-import std.conv: text, parse;
-import std.algorithm: canFind;
-import std.variant: Variant;
-import std.uni: isAlpha, isNumber, isWhite;
+import std.stdio, std.conv, std.algorithm, std.variant, std.uni,
+       std.functional;
 
 alias Sexp = Variant;
 
 struct Symbol {
     private string name;
-    string toString() { return name; }
+    string toString() @safe const pure nothrow { return name; }
 }
 
-Sexp parseSexp(in string raw) {
+Sexp parseSexp(string txt) @safe pure /*nothrow*/ {
     static bool isIdentChar(in char c) @safe pure /*nothrow*/ {
         return c.isAlpha || "0123456789!@#-".canFind(c);
     }
 
     size_t pos = 0;
-    while (isWhite(raw[pos])) pos++;
-    Sexp _parse() {
-        size_t i = pos + 1;
+
+    Sexp _parse() /*nothrow*/ {
+        auto i = pos + 1;
         scope (exit)
             pos = i;
-        if (raw[pos] == '"') {
-            while (raw[i] != '"' && i < raw.length)
+        if (txt[pos] == '"') {
+            while (txt[i] != '"' && i < txt.length)
                 i++;
             i++;
-            return Sexp(raw[pos+1..i-1]);
-        } else if (isNumber(raw[pos])) {
-            while (isNumber(raw[i]) && i < raw.length)
+            return Sexp(txt[pos + 1 .. i - 1]);
+        } else if (txt[pos].isNumber) {
+            while (txt[i].isNumber && i < txt.length)
                 i++;
-            if (raw[i] == '.') {
+            if (txt[i] == '.') {
                 i++;
-                while (isNumber(raw[i]) && i < raw.length)
+                while (txt[i].isNumber && i < txt.length)
                     i++;
-                return Sexp(parse!double(raw[pos .. i]));
+                auto aux = txt[pos .. i]; //
+                return aux.parse!double.Sexp;
             }
-            return Sexp(parse!ulong(raw[pos .. i]));
-        } else if (isIdentChar(raw[pos])) {
-            while (isIdentChar(raw[i]) && i < raw.length)
+            auto aux = txt[pos .. i]; //
+            return aux.parse!ulong.Sexp;
+        } else if (isIdentChar(txt[pos])) {
+            while (isIdentChar(txt[i]) && i < txt.length)
                 i++;
-            return Sexp(Symbol(raw[pos .. i]));
-        } else if (raw[pos] == '(') {
+            return Sexp(Symbol(txt[pos .. i]));
+        } else if (txt[pos] == '(') {
             Sexp[] lst;
-            while (raw[i] != ')') {
-                while (isWhite(raw[i]))
+            while (txt[i] != ')') {
+                while (txt[i].isWhite)
                     i++;
                 pos = i;
-                lst ~= _parse();
+                lst ~= _parse;
                 i = pos;
-                while (isWhite(raw[i]))
+                while (txt[i].isWhite)
                     i++;
             }
             i = pos + 1;
@@ -57,34 +56,32 @@ Sexp parseSexp(in string raw) {
         }
         return Sexp(null);
     }
-    return _parse();
+
+    txt = txt.find!(not!isWhite);
+    return _parse;
 }
 
 void writeSexp(Sexp expr) {
     if (expr.type == typeid(string)) {
-        write("\"");
-        write(expr);
-        write("\"");
+        write('"', expr, '"');
     } else if (expr.type == typeid(Sexp[])) {
-        write("(");
+        '('.write;
         auto arr = expr.get!(Sexp[]);
         foreach (immutable i, e; arr) {
-            writeSexp(e);
+            e.writeSexp;
             if (i + 1 < arr.length)
-                write(" ");
+                ' '.write;
         }
-        write(")");
+        ')'.write;
     } else {
-        write(expr);
+        expr.write;
     }
 }
 
 void main() {
-    auto test = `((data "quoted data" 123 4.5)
-     (data (!@# (4.5) "(more" "data)")))`;
-    auto pTest = parseSexp(test);
+    auto pTest = `((data "quoted data" 123 4.5)
+                   (data (!@# (4.5) "(more" "data)")))`.parseSexp;
     writeln("Parsed: ", pTest);
-    write("Printed: ");
-    writeSexp(pTest);
-    writeln();
+    "Printed: ".write;
+    pTest.writeSexp;
 }

@@ -39,9 +39,8 @@ r.n=_;       rr._=1                    /*assign the value to  R  and RR.*/
 return _                               /*return the value to the invoker*/
 /*──────────────────────────────────FFS subroutine──────────────────────*/
 ffs: procedure expose r. s. rr. ss.;   parse arg n
-if s.n\==0  then return s.n            /*Defined? Then return the value.*/
            do k=1  for n  while s.n==0 /*search for not null  R │ S num.*/
-           if s.k\==0 & ffr(k)\==0  then iterate
+           if s.k\==0  then  if ffr(k)\==0  then iterate /*short circuit*/
            km=k-1;    _=s.km+1         /*the next  SS  number, possibly.*/
            _=_+rr._                    /*maybe adjust for the  FRR  num.*/
            s.k=_;     ss._=1           /*define couple of  FFS  numbers.*/

@@ -14,8 +14,7 @@ def distcheck(n, delta=1)
     end
   end
 
-  h.keys.sort.each {|k| print "#{k} #{h[k]} "}
-  puts
+  puts h.sort.map{|k, v| "#{k} #{v}"}
 end
 
 if __FILE__ == $0

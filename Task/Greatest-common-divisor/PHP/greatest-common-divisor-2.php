@@ -1,7 +1,7 @@
-function gcdRec($n, $m) {
-    if($m > 0) {
+function gcdRec($n, $m)
+{
+    if($m > 0)
         return gcdRec($m, $n % $m);
-    } else {
+    else
         return abs($n);
-    }
 }

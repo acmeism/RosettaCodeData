@@ -1,0 +1,13 @@
+(define-syntax-rule (for/max1 ([i sequence]) body ...)
+  (for/fold ([max -inf.0] [arg-max #f]) ([i sequence])
+    (define val (begin body ...))
+    (if (< max val)
+        (values val i)
+        (values max arg-max))))
+
+(for ([i (in-range 0 20)])
+  (define low-b (expt 2 i))
+  (define up-b (expt 2 (add1 i)))
+  (define-values (max arg-max) (for/max1 ([k (in-range low-b up-b)])
+                                 (/ (conway k) k)))
+  (printf "Max. between 2^~a and 2^~a is ~a at ~a ~n" i (add1 i) (real->decimal-string max 5) arg-max))

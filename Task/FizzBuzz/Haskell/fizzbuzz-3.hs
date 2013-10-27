@@ -1,12 +1,14 @@
-import Control.Monad.State
-import Control.Monad.Trans
-import Control.Monad.Writer
+main = mapM_ (putStrLn . fizzbuzz) [1..100]
 
-main = putStr $ execWriter $ mapM_ (flip execStateT True . fizzbuzz) [1..100]
+fizzbuzz n =
+    show n <|> [fizz| n `mod` 3 == 0] ++
+               [buzz| n `mod` 5 == 0]
 
-fizzbuzz :: Int -> StateT Bool (Writer String) ()
-fizzbuzz x = do
- when (x `mod` 3 == 0) $ tell "Fizz" >> put False
- when (x `mod` 5 == 0) $ tell "Buzz" >> put False
- get >>= (flip when $ tell $ show x)
- tell "\n"
+-- A simple default choice operator.
+-- Defaults if both fizz and buzz fail, concats if any succeed.
+infixr 0 <|>
+d <|> [] = d
+_ <|> x = concat x
+
+fizz = "Fizz"
+buzz = "Buzz"

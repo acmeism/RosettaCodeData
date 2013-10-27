@@ -1,6 +1,7 @@
 <?php
+
 /**
- * @author Elad Yosifon <elad.yosifon@gmail.com>
+ * @author Elad Yosifon
  */
 
 /**

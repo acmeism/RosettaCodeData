@@ -1,6 +1,12 @@
-alias immutable ubyte[16][8] SBox; // A matrix of nibbles.
+/// Rotate uint left.
+uint rol(in uint x, in uint nBits) @safe pure nothrow {
+    return (x << nBits) | (x >> (32 - nBits));
+}
 
-private bool _validateSBox(in SBox data) pure nothrow {
+alias Nibble = ubyte; // 4 bits used.
+alias SBox = immutable Nibble[16][8];
+
+private bool _validateSBox(in SBox data) @safe pure nothrow {
     foreach (ref row; data)
         foreach (ub; row)
             if (ub >= 16) // Verify it's a nibble.
@@ -8,25 +14,22 @@ private bool _validateSBox(in SBox data) pure nothrow {
     return true;
 }
 
-struct GOST(sBoxes...)
-if (sBoxes.length == 1 && _validateSBox(sBoxes[0])) {
-    private static immutable ubyte[256] k87, k65, k43, k21;
+struct GOST(s...) if (s.length == 1 && s[0]._validateSBox) {
+    private static generate(ubyte k)() @safe pure nothrow {
+        //return iota(k87.length)
+        //     .map!(i=> (s[0][k][i >> 4] << 4) | s[0][k - 1][i & 0xF])
+        //     .array;
+        uint[k87.length] result; // ubytes[...] should suffice.
+        foreach (immutable i, ref item; result)
+            item = (s[0][k][i >> 4] << 4) | s[0][k - 1][i & 0xF];
+        return result;
+    }
+
     private uint[2] buffer;
-
-    nothrow static this() {
-        alias sBoxes[0] s;
-        foreach (i; 0 .. k87.length) {
-            // Given validateSBox, the & 0xFF aren't necessary.
-            k87[i] = ((s[7][i >> 4] << 4) & 0xFF) | s[6][i & 0xF];
-            k65[i] = ((s[5][i >> 4] << 4) & 0xFF) | s[4][i & 0xF];
-            k43[i] = ((s[3][i >> 4] << 4) & 0xFF) | s[2][i & 0xF];
-            k21[i] = ((s[1][i >> 4] << 4) & 0xFF) | s[0][i & 0xF];
-        }
-    }
-
-    private static uint rol(in uint x, in uint y) pure nothrow {
-        return (x << y) | (x >> (32 - y));
-    }
+    private static immutable ubyte[256] k87 = generate!7,
+                                        k65 = generate!5,
+                                        k43 = generate!3,
+                                        k21 = generate!1;
 
     // Endianess problems?
     private static uint f(in uint x) pure nothrow {
@@ -60,11 +63,12 @@ void main() {
       [13, 11,  4,  1,  3, 15,  5,  9,  0, 10, 14,  7,  6,  8,  2, 12],
       [ 1, 15, 13,  0,  5,  7, 10,  4,  9,  2,  3, 14,  6, 11,  8, 12]];
 
+    GOST!cbrf g;
+
     // Example from the talk page (bytes swapped for endianess):
     immutable uint[2] input = [0x_04_3B_04_21, 0x_04_32_04_30];
     immutable uint key = 0x_E2_C1_04_F9;
 
-    GOST!cbrf g;
     g.mainStep(input, key);
     writefln("%(%08X %)", g.buffer);
 }

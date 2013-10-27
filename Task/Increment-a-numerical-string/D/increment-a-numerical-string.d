@@ -1,5 +1,6 @@
-import std.string;
-
 void main() {
-    string s = succ("12345");
+    import std.string;
+
+    immutable s = "12349".succ;
+    assert(s == "12350");
 }

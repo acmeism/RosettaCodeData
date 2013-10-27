@@ -1,5 +1,5 @@
 /*REXX program shuffles a deck of playing cards using the Knuth shuffle.*/
-rank='ace duece trey 4 5 6 7 8 9 10 jack queen king'
+rank='ace deuce trey 4 5 6 7 8 9 10 jack queen king'
 suit='club spade diamond heart'
 say '────────────────── getting a new deck out of the box...'
 deck.1='  color joker'                 /*good decks have a color joker, */

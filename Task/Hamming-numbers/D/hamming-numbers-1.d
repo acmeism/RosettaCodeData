@@ -1,4 +1,4 @@
-import std.stdio, std.bigint, std.algorithm, std.range;
+import std.stdio, std.bigint, std.algorithm, std.range, core.memory;
 
 auto hamming(in int n) {
     BigInt two = 2, three = 3, five = 5;
@@ -17,6 +17,7 @@ auto hamming(in int n) {
 }
 
 void main() {
+    GC.disable;
     iota(1, 21).map!hamming.writeln;
     1_691.hamming.writeln;
     1_000_000.hamming.writeln;

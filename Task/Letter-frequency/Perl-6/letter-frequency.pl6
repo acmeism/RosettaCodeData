@@ -1,0 +1,1 @@
+say bag lines».comb

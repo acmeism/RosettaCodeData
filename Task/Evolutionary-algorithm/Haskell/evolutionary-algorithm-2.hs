@@ -1,5 +1,4 @@
-import System
-import Random
+import System.Random
 import Data.List
 import Data.Ord
 import Data.Array

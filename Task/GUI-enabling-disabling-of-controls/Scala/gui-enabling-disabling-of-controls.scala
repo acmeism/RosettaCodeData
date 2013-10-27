@@ -6,14 +6,13 @@ object Enabling extends SimpleSwingApplication {
   def top = new MainFrame {
     title = "Rosetta Code >>> Task: GUI enabling/disabling of controls | Language: Scala"
 
-    val numberField = new TextField { text = "0" } // start at 0
-
-    val incButton  = new Button("Increment")
-
-    val decButton = new Button {
-      text = "Decrement"
-      enabled = false
+    val numberField = new TextField {
+      text = "0" // start at 0
+      horizontalAlignment = Alignment.Right
     }
+
+    val incButton = new Button("Increment")
+    val decButton = new Button { text = "Decrement"; enabled = false }
 
     // arrange buttons in a grid with 1 row, 2 columns
     val buttonPanel = new GridPanel(1, 2) {
@@ -21,9 +20,7 @@ object Enabling extends SimpleSwingApplication {
     }
 
     // arrange text field and button panel in a grid with 2 row, 1 column
-    contents = new GridPanel(2, 1) {
-      contents ++= List(numberField, buttonPanel)
-    }
+    contents = new GridPanel(2, 1) { contents ++= List(numberField, buttonPanel) }
 
     // backspace and delete don't cause a display of any Unicode char -
     // therefore we need to catch them apart from the others
@@ -38,36 +35,23 @@ object Enabling extends SimpleSwingApplication {
         else {
           Swing.onEDT(switching) // ensure GUI-updating
         }
-      case KeyPressed(_,kp,_,_) if (!specialKeys.filter(_==kp).isEmpty) =>
+      case KeyPressed(_, kp, _, _) if (!specialKeys.filter(_ == kp).isEmpty) =>
         Swing.onEDT(switching) // ensure GUI-updating
       case ButtonClicked(`incButton`) =>
-        numberField.text = "" + (java.lang.Long.valueOf(numberField.text)+1)
+        numberField.text = (numberField.text.toLong + 1).toString
         switching
       case ButtonClicked(`decButton`) =>
-        numberField.text = "" + (java.lang.Long.valueOf(numberField.text)-1)
+        numberField.text = (numberField.text.toLong - 1).toString
         switching
     }
 
-    def switching: Unit = {
-      val s = numberField.text match {
-      			case "" => "0"
-      			case _  => numberField.text
-      }
-      val n = java.lang.Long.valueOf(s)
-      numberField.text = "" + n
-      if (java.lang.Long.valueOf(numberField.text) <= 0) {
-        numberField.enabled = true
-        incButton.enabled = true
-        decButton.enabled = false
-      } else if (java.lang.Long.valueOf(numberField.text) >= 10) {
-               numberField.enabled = false
-               incButton.enabled = false
-               decButton.enabled = true
-    	     } else {
-               numberField.enabled = false	
-               incButton.enabled = true
-               decButton.enabled = true
-             }
+    def switching = {
+      val n = (if (numberField.text == "") "0" else numberField.text).toLong
+      numberField.text = n.toString
+      numberField.enabled = n <= 0
+      incButton.enabled = n < 10
+      decButton.enabled = n > 0
     }
-  }
+    centerOnScreen()
+  } // def top(
 }

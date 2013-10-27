@@ -2,25 +2,11 @@ import std.stdio;
 
 struct Node(T) {
     T data;
-    Node* prev, next;
-
-    this(T data_, Node* prev_=null, Node* next_=null) {
-        data = data_;
-        prev = prev_;
-        next = next_;
-    }
+    typeof(this)* prev, next;
 }
 
-void show(T)(Node!(T)* list) {
-    while (list) {
-        write(list.data, " ");
-        list = list.next;
-    }
-    writeln();
-}
-
-/// If prev is null, prev gets to point to a new node
-void insertAfter(T)(ref Node!(T)* prev, T item) {
+/// If prev is null, prev gets to point to a new node.
+void insertAfter(T)(ref Node!T* prev, T item) pure nothrow {
     if (prev) {
         auto newNode = new Node!T(item, prev, prev.next);
         prev.next = newNode;
@@ -30,12 +16,20 @@ void insertAfter(T)(ref Node!(T)* prev, T item) {
         prev = new Node!T(item);
 }
 
+void show(T)(Node!T* list) {
+    while (list) {
+        write(list.data, " ");
+        list = list.next;
+    }
+    writeln;
+}
+
 void main() {
     Node!(string)* list;
     insertAfter(list, "A");
-    show(list);
+    list.show;
     insertAfter(list, "B");
-    show(list);
+    list.show;
     insertAfter(list, "C");
-    show(list);
+    list.show;
 }

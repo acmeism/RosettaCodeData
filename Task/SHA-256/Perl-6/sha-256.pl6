@@ -8,11 +8,11 @@ sub init(&f) {
 sub infix:<m+> { ($^a + $^b) % 2**32 }
 sub rotr($n, $b) { $n +> $b +| $n +< (32 - $b) }
 
-proto sha256($) returns Buf {*}
+proto sha256($) returns Blob {*}
 multi sha256(Str $str where all($str.ords) < 128) {
     sha256 $str.encode: 'ascii'
 }
-multi sha256(Buf $data) {
+multi sha256(Blob $data) {
     constant K = init(* **(1/3))[^64];
     my $l = 8 * my @b = $data.list;
     push @b, 0x80; push @b, 0 until (8*@b-448) %% 512;
@@ -41,7 +41,7 @@ multi sha256(Buf $data) {
         }
         @H = @H Z[m+] @h;
     }
-    return Buf.new: map -> $word is rw {
+    return Blob.new: map -> $word is rw {
         reverse gather for ^4 { take $word % 256; $word div= 256 }
     }, @H;
 }

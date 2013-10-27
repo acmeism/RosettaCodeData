@@ -1,4 +1,9 @@
 struct Node(T) {
     T data;
-    Node* prev, next;
+    typeof(this)* prev, next;
+}
+
+void main() {
+    alias N = Node!int;
+    N* n = new N(10);
 }

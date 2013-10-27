@@ -1,1 +1,0 @@
-print "Goodbye, World!"

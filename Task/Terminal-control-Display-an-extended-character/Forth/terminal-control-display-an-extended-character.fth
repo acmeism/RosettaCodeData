@@ -1,2 +1,2 @@
-163 xemit    \ £, or
+163 xemit    \ , or
 s" £" type

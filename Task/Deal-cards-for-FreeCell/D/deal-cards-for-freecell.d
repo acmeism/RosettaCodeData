@@ -12,9 +12,9 @@ struct RandomGenerator {
 struct Deck {
     int[52] cards;
 
-    void deal(in uint seed) /*pure nothrow*/ {
+    void deal(in uint seed) pure /*nothrow*/ {
         enum int nc = cards.length; // Must be signed for iota.
-        iota(nc - 1, -1, -1).copy(cards[]); // iota not pure nothrow.
+        iota(nc - 1, -1, -1).copy(cards[]); // iota isn't nothrow.
 
         auto rnd = RandomGenerator(seed);
         foreach (immutable i, ref c; cards)

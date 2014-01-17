@@ -106,12 +106,12 @@ Image!RGB gray2rgbImage(in Image!Gray im) {
 
 version (grayscale_image_main) {
     void main() {
-        auto im1 = new Image!Gray();
+        auto im1 = new Image!Gray;
         im1.loadPGM("lena.pgm");
         gray2rgbImage(im1).savePPM6("lena_rgb.ppm");
 
-        auto img2 = new Image!RGB();
+        auto img2 = new Image!RGB;
         img2.loadPPM6("quantum_frog.ppm");
-        img2.rgb2grayImage().savePGM("quantum_frog_grey.pgm");
+        img2.rgb2grayImage.savePGM("quantum_frog_grey.pgm");
     }
 }

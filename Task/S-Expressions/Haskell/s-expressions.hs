@@ -5,10 +5,10 @@ import Text.ParserCombinators.Parsec.Language (haskellDef)
 
 
 data Val = Int Integer
-                   | Float Double
-                   | String String
-                   | Symbol String
-                   | List [Val] deriving (Eq, Show)
+         | Float Double
+         | String String
+         | Symbol String
+         | List [Val] deriving (Eq, Show)
 
 lexer = makeTokenParser haskellDef
 

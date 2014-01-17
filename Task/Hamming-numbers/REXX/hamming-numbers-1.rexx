@@ -2,8 +2,7 @@
 numeric digits 100                     /*ensure we have enough precision*/
 call hamming 1, 20                     /*show the first ──► twentieth #s*/
 call hamming 1691                      /*show the 1,691st Hamming number*/
-call hamming 1000000                   /*show the  one millionth  number*/
-call hamming 10000000                  /*show the 10th millionth  number*/
+call hamming 1000000                   /*show the  one millionth number.*/
 exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────HAMMING subroutine──────────────────*/
 hamming:  procedure;   parse arg x,y;   if y=='' then y=x;     w=length(y)

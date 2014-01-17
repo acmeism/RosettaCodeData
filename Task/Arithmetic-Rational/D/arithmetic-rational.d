@@ -1,16 +1,16 @@
 import std.bigint, std.traits, std.conv;
 
-T gcd(T)(/*in*/ T a, /*in*/ T b) /*pure nothrow*/ {
-    // std.numeric.gcd doesn't work with BigInt.
+// std.numeric.gcd doesn't work with BigInt.
+T gcd(T)(in T a, in T b) pure /*nothrow*/ {
     return (b != 0) ? gcd(b, a % b) : (a < 0) ? -a : a;
 }
 
-T lcm(T)(/*in*/ T a, /*in*/ T b) {
+T lcm(T)(in T a, in T b) pure /*nothrow*/ {
     return a / gcd(a, b) * b;
 }
 
 struct RationalT(T) {
-    /*const*/ private T num, den; // Numerator & denominator.
+    private T num, den; // Numerator & denominator.
 
     private enum Type { NegINF = -2,
                         NegDEN = -1,
@@ -28,10 +28,10 @@ struct RationalT(T) {
         den = 1UL;
     }
 
-    this(U, V)(/*in*/ U n, /*in*/ V d) /*pure nothrow*/ {
+    this(U, V)(in U n, in V d) pure /*nothrow*/ {
         num = toT(n);
         den = toT(d);
-        /*const*/ T common = gcd(num, den);
+        const common = gcd(num, den);
         if (common != 0) {
             num /= common;
             den /= common;
@@ -45,7 +45,7 @@ struct RationalT(T) {
         }
     }
 
-    static T toT(U)(/*in*/ ref U n) pure nothrow if (is(U == T)) {
+    static T toT(U)(in ref U n) pure nothrow if (is(U == T)) {
         return n;
     }
 
@@ -54,15 +54,15 @@ struct RationalT(T) {
         return result;
     }
 
-    T nomerator() /*const*/ pure nothrow @property {
+    T nomerator() const pure nothrow @property {
         return num;
     }
 
-    T denominator() /*const*/ pure nothrow @property {
+    T denominator() const pure nothrow @property {
         return den;
     }
 
-    string toString() /*pure const*/ {
+    string toString() const /*pure nothrow*/ {
         if (den != 0)
             return num.text ~ (den == 1 ? "" : "/" ~ den.text);
         if (num == 0)
@@ -71,52 +71,54 @@ struct RationalT(T) {
             return ((num < 0) ? "-" : "+") ~ "infRat";
     }
 
-    real toReal() const {
-        return num.toLong / cast(real)den.toLong;
+    real toReal() pure const /*nothrow*/ {
+        static if (is(T == BigInt))
+            return num.toLong / cast(real)den.toLong;
+        else
+            return num / cast(real)den;
     }
 
-    RationalT opBinary(string op)(/*in*/ RationalT r)
-    /*const pure nothrow*/ if (op == "+" || op == "-") {
+    RationalT opBinary(string op)(in RationalT r)
+    const pure /*nothrow*/ if (op == "+" || op == "-") {
         T common = lcm(den, r.den);
         T n = mixin("common / den * num" ~ op ~
                     "common / r.den * r.num" );
         return RationalT(n, common);
     }
 
-    RationalT opBinary(string op)(/*in*/ RationalT r)
-    /*const pure nothrow*/ if (op == "*") {
+    RationalT opBinary(string op)(in RationalT r)
+    const pure /*nothrow*/ if (op == "*") {
         return RationalT(num * r.num, den * r.den);
     }
 
-    RationalT opBinary(string op)(/*in*/ RationalT r)
-    /*const pure nothrow*/ if (op == "/") {
+    RationalT opBinary(string op)(in RationalT r)
+    const pure /*nothrow*/ if (op == "/") {
         return RationalT(num * r.den, den * r.num);
     }
 
     RationalT opBinary(string op, U)(in U r)
-    /*const pure nothrow*/ if (isIntegral!U && (op == "+" ||
-                               op == "-" || op == "*" || op == "/")) {
+    const pure /*nothrow*/ if (isIntegral!U && (op == "+" ||
+                           op == "-" || op == "*" || op == "/")) {
         return opBinary!op(RationalT(r));
     }
 
     RationalT opBinary(string op)(in size_t p)
-    /*const pure nothrow*/ if (op == "^^") {
+    const pure /*nothrow*/ if (op == "^^") {
         return RationalT(num ^^ p, den ^^ p);
     }
 
     RationalT opBinaryRight(string op, U)(in U l)
-    /*const pure nothrow*/ if (isIntegral!U) {
+    const pure /*nothrow*/ if (isIntegral!U) {
         return RationalT(l).opBinary!op(RationalT(num, den));
     }
 
-    RationalT opOpAssign(string op, U)(/*in*/ U l)
-    /*const pure nothrow*/ {
+    RationalT opOpAssign(string op, U)(in U l) pure /*nothrow*/ {
         mixin("this = this " ~ op ~ "l;");
         return this;
     }
 
     RationalT opUnary(string op)()
-    /*const pure nothrow*/ if (op == "+" || op == "-") {
+    const pure /*nothrow*/ if (op == "+" || op == "-") {
         return RationalT(mixin(op ~ "num"), den);
     }
 
@@ -124,14 +126,14 @@ struct RationalT(T) {
         return num != 0;
     }
 
-    int opEquals(U)(/*in*/ U r) /*const pure nothrow*/ {
+    int opEquals(U)(in U r) const pure nothrow {
         RationalT rhs = RationalT(r);
         if (type() == Type.NaRAT || rhs.type() == Type.NaRAT)
             return false;
         return num == rhs.num && den == rhs.den;
     }
 
-    int opCmp(U)(/*in*/ U r) /*const pure nothrow*/ {
+    int opCmp(U)(in U r) const pure nothrow {
         auto rhs = RationalT(r);
         if (type() == Type.NaRAT || rhs.type() == Type.NaRAT)
             throw new Exception("Compare involve a NaRAT.");
@@ -143,7 +145,7 @@ struct RationalT(T) {
         return (diff == 0) ? 0 : ((diff < 0) ? -1 : 1);
     }
 
-    Type type() /*const pure nothrow*/ {
+    Type type() const pure nothrow {
         if (den > 0) return Type.NORMAL;
         if (den < 0) return Type.NegDEN;
         if (num > 0) return Type.PosINF;

@@ -6,7 +6,7 @@
    (or
       ((equal @Expr (@Op1 (@Op2 @A @B) (@Op3 @C @D))))
       ((equal @Expr (@Op1 @A (@Op2 @B (@Op3 @C @D))))) )
-   (@ = 24 (catch '("Div/0") (eval (-> @Expr)))) )
+   (^ @ (= 24 (catch '("Div/0") (eval (-> @Expr))))) )
 
 (de play24 (A B C D)                   # Define PicoLisp function
    (pilog

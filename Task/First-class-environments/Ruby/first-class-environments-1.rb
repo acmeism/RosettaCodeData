@@ -4,13 +4,13 @@ envs = (1..12).map do |n|
 end
 
 # Until all values are 1:
-while envs.find {|e| e.instance_eval {@n} > 1}
+until envs.all? {|e| e.instance_eval{@n} == 1}
   envs.each do |e|
     e.instance_eval do          # Use environment _e_
       printf "%4s", @n
-      unless 1 == @n
+      if @n > 1
         @cnt += 1               # Increment step count
-        @n = if 1 & @n == 1     # Calculate next hailstone value
+        @n = if @n.odd?         # Calculate next hailstone value
                @n * 3 + 1
              else
                @n / 2

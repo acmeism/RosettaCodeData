@@ -1,4 +1,3 @@
-%% Implemented by Arjun Sunel
 -module(while).
 -export([loop/0]).
 

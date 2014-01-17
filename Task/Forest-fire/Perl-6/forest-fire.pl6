@@ -13,7 +13,7 @@ class Forest {
     has $.f;
 
     method new(Int $height, Int $width, $p=0.01, $f=0.001) {
-        my $c = self.bless(*, :$height, :$width, :$p, :$f);
+        my $c = self.bless(:$height, :$width, :$p, :$f);
         $c!init-grid;
         $c!init-neighbors;
         return $c;

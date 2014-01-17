@@ -1,18 +1,15 @@
 class Array
   def selectionsort!
-    0.upto(length - 2) do |i|
-      (min_idx = i + 1).upto(length - 1) do |j|
-        if self[j] < self[min_idx]
-          min_idx = j
-        end
+    for i in 0..length-2
+      min_idx = i
+      for j in (i+1)...length
+        min_idx = j  if self[j] < self[min_idx]
       end
-      if self[i] > self[min_idx]
-        self[i], self[min_idx] = self[min_idx], self[i]
-      end
+      self[i], self[min_idx] = self[min_idx], self[i]
     end
     self
   end
 end
 ary = [7,6,5,9,8,4,3,1,2,0]
-ary.selectionsort!
+p ary.selectionsort!
 # => [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]

@@ -6,7 +6,6 @@
        01  Numeric-Chars      PIC X(10) VALUE "0123456789".
 
        01  Success            CONSTANT 0.
-      *> By convention, a non-zero value is used to signify failure
        01  Failure            CONSTANT 128.
 
        LOCAL-STORAGE SECTION.
@@ -18,11 +17,9 @@
        LINKAGE SECTION.
        01  Str                PIC X(30).
 
-       PROCEDURE DIVISION USING BY VALUE Str.
-
+       PROCEDURE DIVISION USING Str.
            IF Str = SPACES
                MOVE Failure TO Return-Code
-
                GOBACK
            END-IF
 
@@ -31,7 +28,6 @@
            INSPECT Str TALLYING Num-Decimal-Points FOR ALL "."
            IF Num-Decimal-Points > 1
                MOVE Failure TO Return-Code
-
                GOBACK
            ELSE
                ADD Num-Decimal-Points TO Num-Valid-Chars

@@ -1,9 +1,3 @@
-multi sub postfix:<!>(Int $a) {
-    [*] 1..$a;
-}
+sub infix:<choose>($n, $k) { ([*] $n-$k+1 .. $n) / [*] 2 .. $k }
 
-sub binomialcoefficient($n, $k) {
-    $n! / (($n - $k)! * $k!);
-}
-
-say binomialcoefficient(5, 3);
+say 5 choose 3;

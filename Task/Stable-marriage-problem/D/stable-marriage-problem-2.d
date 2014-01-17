@@ -3,9 +3,9 @@ import std.stdio, std.algorithm, std.array;
 enum F { abi, bea, cath, dee, eve, fay, gay, hope, ivy, jan }
 enum M { abe, bob, col, dan, ed, fred, gav, hal, ian, jon }
 
-alias M[][F] PrefMapF;
-alias F[][M] PrefMapM;
-alias M[F] Couples;
+alias PrefMapF = M[][F];
+alias PrefMapM = F[][M];
+alias Couples = M[F];
 
 immutable PrefMapF womenPref;
 immutable PrefMapM menPref;
@@ -41,30 +41,27 @@ pure nothrow static this() {
 }
 
 /// Does 'first' appear before 'second' in preference list?
-bool prefers(T)(in T[] prefer, in T first, in T second)
+bool prefers(T)(in T[] preference, in T first, in T second)
 pure nothrow if (is(T == F) || is(T == M)) {
-    foreach (p; prefer) {
-        if (p == first) return true;
-        if (p == second) return false;
-    }
-    return false; // no preference
+    const found = preference.findAmong([first, second]);
+    return !(found.empty || found.front == second);
 }
 
 void checkStability(in Couples engaged, in PrefMapM menPref,
                     in PrefMapF womenPref) {
-    writeln("Stablility:");
+    "Stablility:".writeln;
     bool stable = true;
-    foreach (bride, groom; engaged) {
+    foreach (immutable bride, immutable groom; engaged) {
         const prefList = menPref[groom];
 
-        foreach (pr; prefList) {
-            if (pr == bride) // he prefers his bride
+        foreach (immutable pr; prefList) {
+            if (pr == bride) // He prefers his bride.
                 break;
 
             if (prefers(prefList, pr, bride) &&
-                // he prefers another woman
+                // He prefers another woman.
                 prefers(womenPref[pr], groom, engaged[pr])) {
-                // other woman prefers him
+                // Other woman prefers him.
                 writeln("\t", pr, " prefers ", groom, " over ",
                         engaged[pr], " and ", groom, " prefers ",
                         pr, " over ", bride);
@@ -74,23 +71,23 @@ void checkStability(in Couples engaged, in PrefMapM menPref,
     }
 
     if (stable)
-        writeln("\t(all marriages stable)");
+        "\t(all marriages stable)".writeln;
 }
 
 void main() {
-    M[] bachelors = menPref.keys.sort().release();// No queue in Phobos
+    auto bachelors = menPref.keys.sort().release;// No queue in Phobos.
     Couples engaged;
 
-    writeln("Matchmaking:");
+    "Matchmaking:".writeln;
     while (!bachelors.empty) {
         immutable suitor = bachelors[0];
-        bachelors.popFront();
+        bachelors.popFront;
         immutable prefList = menPref[suitor];
 
-        foreach (bride; prefList) {
-            if (bride !in engaged) { // she's available
+        foreach (immutable bride; prefList) {
+            if (bride !in engaged) { // She's available.
                 writeln("\t", bride, " and ", suitor);
-                engaged[bride] = suitor; // hook up
+                engaged[bride] = suitor; // Hook up.
                 break;
             }
 
@@ -98,21 +95,21 @@ void main() {
             if (prefers(womenPref[bride], suitor, groom)) {
                 writeln("\t", bride, " dumped ", groom,
                         " for ", suitor);
-                bachelors ~= groom; // dump that zero
-                engaged[bride] = suitor; // get a hero
+                bachelors ~= groom; // Dump that zero.
+                engaged[bride] = suitor; // Get a hero.
                 break;
             }
         }
     }
 
-    writeln("Engagements:");
-    foreach (first, second; engaged)
+    "Engagements:".writeln;
+    foreach (immutable first, immutable second; engaged)
         writeln("\t", first, " and ", second);
 
     checkStability(engaged, menPref, womenPref);
 
-    writeln("Perturb:");
-    swap(engaged[F.abi], engaged[F.bea]);
+    "Perturb:".writeln;
+    engaged[F.abi].swap(engaged[F.bea]);
     writeln("\tengage abi with ", engaged[F.abi],
             " and bea with ", engaged[F.bea]);
 

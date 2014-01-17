@@ -21,7 +21,7 @@ my $dir = int rand @dirs;
 my $move;
 for ($move = 0; $x >= 0 && $x < $size && $y >= 0 && $y < $size; $move++) {
   # toggle cell's value (white->black or black->white)
-  if ($plane[$x][$y] = 1 - $plane[$x][$y]) {
+  if ($plane[$x][$y] = 1 - ($plane[$x][$y] ||= 0)) {
         # if it's now true (black), then it was white, so turn right
         $dir = ($dir - 1) % @dirs;
   } else {

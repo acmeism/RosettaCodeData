@@ -1,20 +1,23 @@
-import java.util.Arrays;
-
 public class Equlibrium {
-	private static int[] sequence = {-7, 1, 5, 2, -4, 3, 0};
-
 	public static void main(String[] args) {
-		System.out.println("Equilibrium indices of " + Arrays.toString(sequence)+":");
+		int[] sequence = {-7, 1, 5, 2, -4, 3, 0};
+		equlibrium_indices(sequence);
+	}
+
+	public static void equlibrium_indices(int[] sequence){
+		//find total sum
+		int totalSum = 0;
+		for (int n : sequence) {
+			totalSum += n;
+		}
+		//compare running sum to remaining sum to find equlibrium indices
+		int runningSum = 0;
 		for (int i = 0; i < sequence.length; i++) {
-			int sum = 0;
-			for (int j = 0; j < sequence.length; j++) {
-				if (j < i)
-					sum += sequence[j];
-				if (j > i)
-					sum -= sequence[j];
-			}
-			if (sum == 0)
+			int n = sequence[i];
+			if (totalSum - runningSum - n == runningSum) {
 				System.out.println(i);
+			}
+			runningSum += n;
 		}
 	}
 }

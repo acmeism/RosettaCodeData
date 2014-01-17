@@ -1,4 +1,4 @@
-import std.stdio, std.file, std.string, std.datetime;
+import std.stdio, std.file, std.string, std.datetime, std.range;
 
 void main(string[] args) {
     immutable filename = "NOTES.TXT";
@@ -9,6 +9,6 @@ void main(string[] args) {
     } else {
         auto f = File(filename, "a+");
         f.writefln("%s", cast(DateTime)Clock.currTime);
-        f.writefln("\t%s", args[1 .. $].join(" "));
+        f.writefln("\t%s", args.dropOne.join(" "));
     }
 }

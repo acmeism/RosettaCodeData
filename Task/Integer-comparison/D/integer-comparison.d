@@ -1,10 +1,10 @@
-import std.stdio, std.conv, std.string;
-
 void main() {
+    import std.stdio, std.conv, std.string;
+
     int a = 10, b = 20;
     try {
-        a = to!int(readln().strip());
-        b = to!int(readln().strip());
+        a = readln.strip.to!int;
+        b = readln.strip.to!int;
     } catch (StdioException) {}
 
     if (a < b)

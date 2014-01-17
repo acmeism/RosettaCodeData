@@ -1,4 +1,4 @@
-import java.util.File;
+import java.io.File;
 public class FileDeleteTest {
    public static boolean deleteFile(String filename) {
        boolean exists = new File(filename).delete();

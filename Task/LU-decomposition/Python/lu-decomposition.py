@@ -9,7 +9,7 @@ def pivotize(m):
     n = len(m)
     ID = [[float(i == j) for i in xrange(n)] for j in xrange(n)]
     for j in xrange(n):
-        row = max(xrange(j, n), key=lambda i: m[i][j])
+        row = max(xrange(j, n), key=lambda i: abs(m[i][j]))
         if j != row:
             ID[j], ID[row] = ID[row], ID[j]
     return ID

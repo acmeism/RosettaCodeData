@@ -3,7 +3,7 @@ if testxyz() then say 'function XYZ not found.'
 exit
 
 testxyz: signal on syntax
-y='XYZ'(123)
+call XYZ
 return 0
 
 syntax: return 1

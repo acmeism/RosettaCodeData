@@ -14,9 +14,8 @@ $$ MODE TUSCRIPT
 COMPILE
 LOOP x = xmldata
 SET name=GET_TAG_NAME (x)
-IF (name=="student") THEN
-SET studentname=GET_ATTRIBUTE (x,"Name")
-IF (studentname!="") PRINT studentname
-ENDIF
+IF (name!="student") CYCLE
+ studentname=GET_ATTRIBUTE (x,"Name")
+ IF (studentname!="") PRINT studentname
 ENDLOOP
 ENDCOMPILE

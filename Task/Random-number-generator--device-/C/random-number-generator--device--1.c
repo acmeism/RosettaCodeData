@@ -8,15 +8,15 @@ int main(int argc, char **argv)
     FILE *r = fopen("/dev/urandom", "r");
     if (r == NULL)
     {
-	perror("/dev/urandom");
-	return 1;
+  perror("/dev/urandom");
+  return 1;
     }
 
     size_t br = fread(&v, sizeof v, 1, r);
     if (br < 1)
     {
-	fputs("/dev/urandom: Not enough bytes\n", stderr);
-	return 1;
+  fputs("/dev/urandom: Not enough bytes\n", stderr);
+  return 1;
     }
 
     printf("%" PRIu32 "\n", v);

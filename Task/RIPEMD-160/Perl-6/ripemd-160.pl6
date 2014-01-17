@@ -1,8 +1,7 @@
-=begin CREDITS
+=for CREDITS
 Crypto-JS v2.0.0
 http:#code.google.com/p/crypto-js/
 Copyright (c) 2009, Jeff Mott. All rights reserved.
-=end CREDITS
 
 sub rotl($n, $b) { $n +< $b +| $n +> (32 - $b) }
 sub prefix:<m^> { +^$^x % 2**32 }
@@ -46,9 +45,9 @@ constant F =
 constant K1 = <0x00000000 0x5a827999 0x6ed9eba1 0x8f1bbcdc 0xa953fd4e> »xx» 16;
 constant K2 = <0x50a28be6 0x5c4dd124 0x6d703ef3 0x7a6d76e9 0x00000000> »xx» 16;
 
-our proto rmd160($) returns Buf {*}
+our proto rmd160($) returns Blob {*}
 multi rmd160(Str $s) { rmd160 $s.encode: 'ascii' }
-multi rmd160(Buf $data) {
+multi rmd160(Blob $data) {
     my @b = $data.list, 0x80;
     push @b, 0 until (8*@b-448) %% 512;
     my $len = 8 * $data.elems;
@@ -60,22 +59,22 @@ multi rmd160(Buf $data) {
 
     my @h = 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0;
     loop (my $i = 0; $i < @word; $i += 16) {
-	my @X = my @Y = @h;
-	for ^80 -> $j {
-	    my $T = rotl(
-		@X[0] m+ F[$j div 16](|@X[1..3]) m+ (@word[$i+r1[$j]] // 0) m+ K1[$j],
-		s1[$j]
-	    ) m+ @X[4];
-	    @X = @X[4], $T, @X[1], rotl(@X[2], 10) % 2**32, @X[3];
-	    $T = rotl(
-		@Y[0] m+ F[(79-$j) div 16](|@Y[1..3]) m+ (@word[$i+r2[$j]] // 0) m+ K2[$j],
-		s2[$j]
-	    ) m+ @Y[4];
-	    @Y = @Y[4], $T, @Y[1], rotl(@Y[2], 10) % 2**32, @Y[3];
-	}
-	@h = @h[1..4,^1] Z[m+] @X[2..4,^2] Z[m+] @Y[3..4,^3];
+        my @X = my @Y = @h;
+        for ^80 -> $j {
+            my $T = rotl(
+                @X[0] m+ F[$j div 16](|@X[1..3]) m+ (@word[$i+r1[$j]] // 0) m+ K1[$j],
+                s1[$j]
+            ) m+ @X[4];
+            @X = @X[4], $T, @X[1], rotl(@X[2], 10) % 2**32, @X[3];
+            $T = rotl(
+                @Y[0] m+ F[(79-$j) div 16](|@Y[1..3]) m+ (@word[$i+r2[$j]] // 0) m+ K2[$j],
+                s2[$j]
+            ) m+ @Y[4];
+            @Y = @Y[4], $T, @Y[1], rotl(@Y[2], 10) % 2**32, @Y[3];
+        }
+        @h = @h[1..4,^1] Z[m+] @X[2..4,^2] Z[m+] @Y[3..4,^3];
     }
-    return Buf.new: gather for @h -> $word is rw {
+    return Blob.new: gather for @h -> $word is rw {
         for ^4 { take $word % 256; $word div= 256 }
     }
 }

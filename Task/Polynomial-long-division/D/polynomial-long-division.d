@@ -16,10 +16,9 @@ pure /*nothrow*/ {
     if (dD < 0)
         throw new Error("ZeroDivisionError");
     if (dN >= dD) {
-        //q = [0.0].replicate(dN);
-        q = std.array.replicate([0.0], dN);
+        q = [0.0].replicate(dN);
         while (dN >= dD) {
-            auto d = std.array.replicate([0.0], dN - dD) ~ D;
+            auto d = [0.0].replicate(dN - dD) ~ D;
             immutable mult = q[dN - dD] = N[$ - 1] / d[$ - 1];
             d[] *= mult;
             N[] -= d[];

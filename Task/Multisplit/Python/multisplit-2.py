@@ -1,24 +1,22 @@
->>> def ms(txt="a!===b=!=c", sep=["==", "!=", "="]):
-	if not txt or not sep:
-		return []
-	size = [len(s) for s in sep]
-	ans, pos0 = [], 0
-	def getfinds():
-		return [(-txt.find(s, pos0), -sepnum, size[sepnum])
-	 		 for sepnum, s in enumerate(sep)
-			 if s in txt[pos0:]]
+def multisplit(text, sep):
+    lastmatch = i = 0
+    matches = []
+    while i < len(text):
+        for j, s in enumerate(sep):
+            if text[i:].startswith(s):
+                if i > lastmatch:
+                    matches.append(text[lastmatch:i])
+                matches.append((j, i))  # Replace the string containing the matched separator with a tuple of which separator and where in the string the match occured
+                lastmatch = i + len(s)
+                i += len(s)
+                break
+        else:
+            i += 1
+    if i > lastmatch:
+        matches.append(text[lastmatch:i])
+    return matches
 
-	finds = getfinds()
-	while finds:
-		pos, snum, sz = max(finds)
-		pos, snum = -pos, -snum
-		ans += [ txt[pos0:pos], [snum, pos] ]
-		pos0 = pos+sz
-		finds = getfinds()
-	if txt[pos0:]: ans += [ txt[pos0:] ]
-	return ans
-
->>> ms()
-['a', [1, 1], '', [0, 3], 'b', [2, 6], '', [1, 7], 'c']
->>> ms(txt="a!===b=!=c", sep=["=", "!=", "=="])
-['a', [1, 1], '', [0, 3], '', [0, 4], 'b', [0, 6], '', [1, 7], 'c']
+>>> multisplit('a!===b=!=c', ['==', '!=', '='])
+['a', (1, 1), (0, 3), 'b', (2, 6), (1, 7), 'c']
+>>> multisplit('a!===b=!=c', ['!=', '==', '='])
+['a', (0, 1), (1, 3), 'b', (2, 6), (0, 7), 'c']

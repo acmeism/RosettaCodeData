@@ -1,0 +1,235 @@
+'[RC] Arithmetic evaluation.bas
+'Buld the tree (with linked nodes, in array 'cause LB has no pointers)
+'applying shunting yard algorythm.
+'Then evaluate tree
+
+global stack$   'operator/brakets stack
+stack$=""
+
+maxStack = 100
+dim stack(maxStack) 'nodes stack
+global SP 'stack pointer
+SP = 0
+
+'-------------------
+global maxNode,curFree
+global FirstOp,SecondOp,isNumber,NodeCont
+global opList$
+opList$ = "+-*/^"
+
+maxNode=100
+FirstOp=1   'pointers to other nodes; 0 means no pointer
+SecondOp=2
+isNumber=3  'like, 1 is number, 0 is operator
+NodeCont=4  'number if isNumber; or mid$("+-*/^", i, 1) for 1..5 operator
+
+dim node(NodeCont, maxNode)
+'will be used from 1, 0 plays null pointer (no link)
+
+curFree=1   'first free node
+'-------------------
+
+in$ = " 1 + 2 ^ 3 * 4 - 12 / 6 "
+print "Input: "
+print in$
+
+'read tokens
+token$ = "#"
+while 1
+    i=i+1
+    token$ = word$(in$, i)
+    if token$ = "" then i=i-1: exit while
+
+    select case
+    case token$ = "("
+        'If the token is a left parenthesis, then push it onto the stack.
+        call stack.push token$
+
+    case token$ = ")"
+        'If the token is a right parenthesis:
+        'Until the token at the top of the stack is a left parenthesis, pop operators off the stack onto the output queue.
+        'Pop the left parenthesis from the stack, but not onto the output queue.
+        'If the stack runs out without finding a left parenthesis, then there are mismatched parentheses.
+        while stack.peek$() <> "("
+            'if stack is empty
+            if stack$="" then print "Error: no matching '(' for token ";i: end
+            'add operator node to tree
+            child2=node.pop()
+            child1=node.pop()
+            call node.push addOpNode(child1,child2,stack.pop$())
+        wend
+        discard$=stack.pop$()   'discard "("
+
+    case isOperator(token$)
+        'If the token is an operator, o1, then:
+        'while there is an operator token, o2, at the top of the stack, and
+        'either o1 is left-associative and its precedence is equal to that of o2,
+        'or o1 has precedence less than that of o2,
+        '   pop o2 off the stack, onto the output queue;
+        'push o1 onto the stack
+        op1$=token$
+        while(isOperator(stack.peek$()))
+            op2$=stack.peek$()
+            if (op2$<>"^" and precedence(op1$) = precedence(op2$)) _
+                OR (precedence(op1$) < precedence(op2$)) then
+                '"^" is the only right-associative operator
+                'add operator node to tree
+                child2=node.pop()
+                child1=node.pop()
+                call node.push addOpNode(child1,child2,stack.pop$())
+            else
+                exit while
+            end if
+        wend
+        call stack.push op1$
+
+    case else   'number
+    'actually, wrohg operator could end up here, like say %
+        'If the token is a number, then
+        'add leaf node to tree (number)
+        call node.push addNumNode(val(token$))
+    end select
+
+wend
+
+'When there are no more tokens to read:
+'While there are still operator tokens in the stack:
+'   If the operator token on the top of the stack is a parenthesis, then there are mismatched parentheses.
+'   Pop the operator onto the output queue.
+while stack$<>""
+    if stack.peek$() = "(" then print "no matching ')'": end
+    'add operator node to tree
+    child2=node.pop()
+    child1=node.pop()
+    call node.push addOpNode(child1,child2,stack.pop$())
+wend
+
+root = node.pop()
+'call dumpNodes
+print "Tree:"
+call drawTree root, 1, 0, 3
+locate 1, 10
+print "Result: ";evaluate(root)
+
+end
+
+'------------------------------------------
+function isOperator(op$)
+    isOperator = instr(opList$, op$)<>0 AND len(op$)=1
+end function
+
+function precedence(op$)
+    if isOperator(op$) then
+        precedence = 1 _
+            + (instr("+-*/^", op$)<>0) _
+            + (instr("*/^", op$)<>0) _
+            + (instr("^", op$)<>0)
+    end if
+end function
+
+'------------------------------------------
+sub stack.push s$
+    stack$=s$+"|"+stack$
+end sub
+
+function stack.pop$()
+    'it does return empty on empty stack or queue
+    stack.pop$=word$(stack$,1,"|")
+    stack$=mid$(stack$,instr(stack$,"|")+1)
+end function
+
+function stack.peek$()
+    'it does return empty on empty stack or queue
+    stack.peek$=word$(stack$,1,"|")
+end function
+
+'---------------------------------------
+sub node.push s
+    stack(SP)=s
+    SP=SP+1
+end sub
+
+function node.pop()
+    'it does return -999999 on empty stack
+    if SP<1 then pop=-999999: exit function
+    SP=SP-1
+    node.pop=stack(SP)
+end function
+
+'=======================================
+sub dumpNodes
+    for i = 1 to curFree-1
+        print i,
+        for j = 1 to 4
+            print node(j, i),
+        next
+        print
+    next
+    print
+end sub
+
+function evaluate(node)
+    if node=0 then exit function
+    if node(isNumber, node) then
+        evaluate = node(NodeCont, node)
+        exit function
+    end if
+    'else operator
+    op1 = evaluate(node(FirstOp, node))
+    op2 = evaluate(node(SecondOp, node))
+    select case node(NodeCont, node)    'opList$, "+-*/^"
+    case 1
+        evaluate = op1+op2
+    case 2
+        evaluate = op1-op2
+    case 3
+        evaluate = op1*op2
+    case 4
+        evaluate = op1/op2
+    case 5
+        evaluate = op1^op2
+    end select
+end function
+
+sub drawTree node, level, leftRight, offsetY
+    if node=0 then exit sub
+    call drawTree node(FirstOp, node), level+1, leftRight-1/2^level, offsetY
+
+    'print node
+    'count on 80 char maiwin
+    x = 40*(1+leftRight)
+    y = level+offsetY
+    locate x, y
+    'print  x, y,">";
+    if node(isNumber, node) then
+        print node(NodeCont, node)
+    else
+        print  mid$(opList$, node(NodeCont, node),1)
+    end if
+
+    call drawTree node(SecondOp, node), level+1, leftRight+1/2^level, offsetY
+end sub
+
+function addNumNode(num)
+'returns new node
+    newNode=curFree
+    curFree=curFree+1
+    node(isNumber,newNode)=1
+    node(NodeCont,newNode)=num
+
+    addNumNode = newNode
+end function
+
+function addOpNode(firstChild, secondChild, op$)
+'returns new node
+'FirstOrSecond ignored if parent is 0
+    newNode=curFree
+    curFree=curFree+1
+    node(isNumber,newNode)=0
+    node(NodeCont,newNode)=instr(opList$, op$)
+
+    node(FirstOp,newNode)=firstChild
+    node(SecondOp,newNode)=secondChild
+
+    addOpNode = newNode
+end function

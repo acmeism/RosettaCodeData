@@ -1,2 +1,2 @@
-src = "string"
-dest = src
+src = "string";
+dest = src;

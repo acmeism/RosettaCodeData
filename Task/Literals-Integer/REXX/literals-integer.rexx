@@ -1,5 +1,6 @@
-thing=37
-thing='37'                      /*this is exactly the same as above.          */
+thing =  37
+thing = '37'                      /*this is exactly the same as above.          */
+thing = "37"                      /*this is exactly the same as above also.     */
 
 say 'base  10='        thing
 say 'base   2=' x2b(d2x(thing))

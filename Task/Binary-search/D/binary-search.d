@@ -1,27 +1,31 @@
-import std.stdio, std.array;
+import std.stdio, std.array, std.range, std.traits;
 
-// Recursive
-bool binarySearch(T)(in T[] data, in T item) pure nothrow {
+/// Recursive.
+bool binarySearch(R, T)(/*in*/ R data, in T x)
+pure nothrow if (isRandomAccessRange!R &&
+                 is(Unqual!T == Unqual!(ElementType!R))) {
     if (data.empty)
         return false;
     immutable i = data.length / 2;
     immutable mid = data[i];
-    if (mid > item)
-        return binarySearch(data[0 .. i], item);
-    if (mid < item)
-        return binarySearch(data[i+1 .. $], item);
+    if (mid > x)
+        return data[0 .. i].binarySearch(x);
+    if (mid < x)
+        return data[i + 1 .. $].binarySearch(x);
     return true;
 }
 
-// Iterative
-bool binarySearchIt(T)(const(T)[] data, in T item) pure nothrow {
+/// Iterative.
+bool binarySearchIt(R, T)(/*in*/ R data, in T x)
+pure nothrow if (isRandomAccessRange!R &&
+                 is(Unqual!T == Unqual!(ElementType!R))) {
     while (!data.empty) {
         immutable i = data.length / 2;
         immutable mid = data[i];
-        if (mid > item)
+        if (mid > x)
             data = data[0 .. i];
-        else if (mid < item)
-            data = data[i+1 .. $];
+        else if (mid < x)
+            data = data[i + 1 .. $];
         else
             return true;
     }
@@ -29,8 +33,11 @@ bool binarySearchIt(T)(const(T)[] data, in T item) pure nothrow {
 }
 
 void main() {
-    immutable items = [2, 4, 6, 8, 9];
+    /*const*/ auto items = [2, 4, 6, 8, 9].assumeSorted;
     foreach (x; [1, 8, 10, 9, 5, 2])
-        writefln("%2d %5s %5s", x, binarySearch(items, x),
-                 binarySearchIt(items, x));
+        writefln("%2d %5s %5s %5s", x,
+                 items.binarySearch(x),
+                 items.binarySearchIt(x),
+                 // Standard Binary Search:
+                 !items.equalRange(x).empty);
 }

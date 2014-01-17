@@ -1,10 +1,11 @@
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.util.Scanner;
 
 public class GetInput {
     public static void main(String[] args) throws Exception {
-        BufferedReader sysin = new BufferedReader(new InputStreamReader(System.in));
-        int number = Integer.parseInt(sysin.readLine());
-        String string = sysin.readLine();
+        Scanner s = new Scanner(System.in);
+        System.out.print("Enter a string: ");
+        String str = s.nextLine();
+        System.out.print("Enter an integer: ");
+        int i = Integer.parseInt(s.next());
     }
 }

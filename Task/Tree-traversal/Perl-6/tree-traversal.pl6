@@ -39,7 +39,7 @@ class TreeNode {
     }
 }
 
-my TreeNode $root = TreeNode.new( value => 1,
+my TreeNode $root .= new( value => 1,
                     left => TreeNode.new( value => 2,
                             left => TreeNode.new( value => 4, left => TreeNode.new(value => 7)),
                             right => TreeNode.new( value => 5)

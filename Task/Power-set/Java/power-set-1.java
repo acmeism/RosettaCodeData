@@ -7,7 +7,7 @@ public static ArrayList<String> getpowerset(int a[],int n,ArrayList<String> ps)
         if(n==0)
         {
             if(ps==null)
-                ps=new ArrayList();
+                ps=new ArrayList<String>();
             ps.add(" ");
             return ps;
         }

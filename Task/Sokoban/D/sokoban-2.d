@@ -1,66 +1,83 @@
 import core.stdc.stdio: printf, puts, fflush, stdout, putchar;
 import core.stdc.stdlib: malloc, calloc, realloc, free, alloca, exit;
-import core.stdc.string: memcpy, memset, memcmp;
 
-alias ushort cidx_t;
-alias uint hash_t;
+enum Cell : ubyte { space, wall, player, box }
+alias CellIndex = ushort;
+alias Thash = uint;
 
-// Board configuration is represented by an array of cell
-// indices of player and boxes.
-struct State {
-    hash_t h;
-    State* prev, next, qnext;
-    cidx_t[0] c;
-}
 
-__gshared int w, h, n_boxes;
-__gshared ubyte* board, goals, live;
-__gshared size_t state_size, block_size = 32;
-__gshared State* block_root, block_head;
+/// Board configuration is represented by an array of cell
+/// indices of player and boxes.
+struct State { // Variable length struct.
+    Thash h;
+    State* prev, next, qNext;
+    CellIndex[0] c_;
 
-State* newState(State* parent) nothrow {
-    static State* next_of(State *s) nothrow {
-        return cast(State*)(cast(ubyte*)s + state_size);
+    CellIndex get(in size_t i) inout pure nothrow {
+        return c_.ptr[i];
     }
 
-    State *ptr;
-    if (!block_head) {
-        block_size *= 2;
-        State* p = cast(State*)malloc(block_size * state_size);
-        if (p == null) exit(1);
-        State* q;
-        p.next = block_root;
-        block_root = p;
-        ptr = cast(State*)(cast(ubyte*)p + state_size * block_size);
-        p = block_head = next_of(p);
-        for (q = next_of(p); q < ptr; p = q, q = next_of(q))
+    void set(in size_t i, in CellIndex v) pure nothrow {
+        c_.ptr[i] = v;
+    }
+
+    CellIndex[] slice(in size_t i, in size_t j) pure nothrow {
+        return c_.ptr[i .. j];
+    }
+}
+
+
+__gshared Cell[] board;
+__gshared bool[] goals, live;
+__gshared size_t w, h, nBoxes, stateSize, blockSize = 32;
+__gshared State* blockRoot, blockHead, nextLevel, done;
+__gshared State*[] buckets;
+__gshared Thash hashSize, fillLimit, filled;
+
+
+State* newState(State* parent) nothrow {
+    static State* nextOf(State *s) nothrow {
+        return cast(State*)(cast(ubyte*)s + stateSize);
+    }
+
+    State* ptr;
+    if (!blockHead) {
+        blockSize *= 2;
+        auto p = cast(State*)malloc(blockSize * stateSize);
+        if (p == null)
+            exit(1);
+
+        p.next = blockRoot;
+        blockRoot = p;
+        ptr = cast(State*)(cast(ubyte*)p + stateSize * blockSize);
+        p = blockHead = nextOf(p);
+        for (auto q = nextOf(p); q < ptr; p = q, q = nextOf(q))
             p.next = q;
         p.next = null;
     }
 
-    ptr = block_head;
-    block_head = block_head.next;
-
+    ptr = blockHead;
+    blockHead = blockHead.next;
     ptr.prev = parent;
     ptr.h = 0;
     return ptr;
 }
 
+
 void unNewState(State* p) nothrow {
-    p.next = block_head;
-    block_head = p;
+    p.next = blockHead;
+    blockHead = p;
 }
 
-enum Cell { space, wall, player, box }
 
-// mark up positions where a box definitely should not be
-void markLive(in int c) nothrow {
-    immutable int y = c / w;
-    immutable int x = c % w;
+/// Mark up positions where a box definitely should not be.
+void markLive(in size_t c) nothrow {
+    immutable y = c / w;
+    immutable x = c % w;
     if (live[c])
         return;
 
-    live[c] = 1;
+    live[c] = true;
     if (y > 1 && board[c - w] != Cell.wall &&
         board[c - w * 2] != Cell.wall)
         markLive(c - w);
@@ -75,120 +92,100 @@ void markLive(in int c) nothrow {
         markLive(c + 1);
 }
 
-State* parseBoard(in int y, in int x, const char* s) nothrow {
-    w = x, h = y;
-    board = cast(ubyte*)calloc(w * h, ubyte.sizeof);
-    if (board == null) exit(2);
-    goals = cast(ubyte*)calloc(w * h, ubyte.sizeof);
-    if (goals == null) exit(3);
-    live = cast(ubyte*)calloc(w * h, ubyte.sizeof);
-    if (live == null) exit(4);
 
-    n_boxes = 0;
+State* parseBoard(in size_t y, in size_t x, in char* s) nothrow {
+    static T[] myCalloc(T)(in size_t n) nothrow {
+        auto ptr = cast(T*)calloc(n, T.sizeof);
+        if (ptr == null)
+            exit(1);
+        return ptr[0 .. n];
+    }
+
+    w = x, h = y;
+    board = myCalloc!Cell(w * h);
+    goals = myCalloc!bool(w * h);
+    live = myCalloc!bool(w * h);
+
+    nBoxes = 0;
     for (int i = 0; s[i]; i++) {
         switch(s[i]) {
             case '#':
                 board[i] = Cell.wall;
                 continue;
             case '.', '+':
-                goals[i] = 1;
+                goals[i] = true;
                 goto case;
             case '@':
                 continue;
             case '*':
-                goals[i] = 1;
+                goals[i] = true;
                 goto case;
             case '$':
-                n_boxes++;
+                nBoxes++;
                 continue;
             default:
                 continue;
         }
     }
 
-    enum int int_size = int.sizeof;
-    state_size = (State.sizeof +
-                  (1 + n_boxes) * cidx_t.sizeof +
-                  int_size - 1)
-                 / int_size * int_size;
+    enum int intSize = int.sizeof;
+    stateSize = (State.sizeof +
+                  (1 + nBoxes) * CellIndex.sizeof +
+                  intSize - 1)
+                 / intSize * intSize;
 
-    State* state = newState(null);
+    auto state = null.newState;
 
-    for (cidx_t i = 0, j = 0; i < w * h; i++) {
+    for (CellIndex i = 0, j = 0; i < w * h; i++) {
         if (goals[i])
-            markLive(i);
+            i.markLive;
         if (s[i] == '$' || s[i] == '*')
-            (cast(cidx_t*)&state.c)[++j] = i;
+            state.set(++j, i);
         else if (s[i] == '@' || s[i] == '+')
-            (cast(cidx_t*)&state.c)[0] = i;
+            state.set(0, i);
     }
 
     return state;
 }
 
-void showBoard(const State* s) nothrow {
-    static immutable char*[] glyph1 = [" ", "#", "@", "$"];
-    static immutable char*[] glyph2 = [".", "#", "@", "$"];
 
-    auto ptr = cast(char*)alloca(w * h * char.sizeof);
-    if (ptr == null) exit(5);
-    auto b = ptr[0 .. w * h];
-
-    memcpy(b.ptr, board, w * h);
-
-    b[(cast(cidx_t*)&s.c)[0]] = Cell.player;
-    for (int i = 1; i <= n_boxes; i++)
-        b[(cast(cidx_t*)&s.c)[i]] = Cell.box;
-
-    for (int i = 0; i < w * h; i++) {
-        printf((goals[i] ? glyph2 : glyph1)[b[i]]);
-        if (!((1 + i) % w))
-            putchar('\n');
-    }
-}
-
-// K&R hash function
-void hash(State* s) nothrow {
+/// K&R hash function.
+void hash(State* s, in size_t nBoxes) pure nothrow {
     if (!s.h) {
-        hash_t ha = 0;
-        cidx_t* p = cast(cidx_t*)&s.c;
-        for (int i = 0; i <= n_boxes; i++)
-            ha = p[i] + 31 * ha;
+        Thash ha = 0;
+        foreach (immutable i; 0 .. nBoxes + 1)
+            ha = s.get(i) + 31 * ha;
         s.h = ha;
     }
 }
 
-__gshared State** buckets;
-__gshared hash_t hash_size, fill_limit, filled;
 
 void extendTable() nothrow {
-    int old_size = hash_size;
+    int oldSize = hashSize;
 
-    if (!old_size) {
-        hash_size = 1024;
+    if (!oldSize) {
+        hashSize = 1024;
         filled = 0;
-        fill_limit = hash_size * 3 / 4; // 0.75 load factor
+        fillLimit = hashSize * 3 / 4; // 0.75 load factor.
     } else {
-        hash_size *= 2;
-        fill_limit *= 2;
+        hashSize *= 2;
+        fillLimit *= 2;
     }
 
-    buckets = cast(State**)realloc(buckets,
-                                   (State*).sizeof * hash_size);
-    if (buckets == null) exit(6);
+    auto ptr = cast(State**)realloc(buckets.ptr,
+                                    (State*).sizeof * hashSize);
+    if (ptr == null)
+        exit(6);
+    buckets = ptr[0 .. hashSize];
+    buckets[oldSize .. hashSize] = null;
 
-    // rehash
-    memset(buckets + old_size,
-           0,
-           (State*).sizeof * (hash_size - old_size));
-
-    immutable hash_t bits = hash_size - 1;
-    for (int i = 0; i < old_size; i++) {
-        State *head = buckets[i];
+    immutable Thash bits = hashSize - 1;
+    foreach (immutable i; 0 .. oldSize) {
+        auto head = buckets[i];
         buckets[i] = null;
         while (head) {
-            State* next = head.next;
-            immutable int j = head.h & bits;
+            auto next = head.next;
+            immutable j = head.h & bits;
             head.next = buckets[j];
             buckets[j] = head;
             head = next;
@@ -196,44 +193,47 @@ void extendTable() nothrow {
     }
 }
 
+
 State* lookup(State *s) nothrow {
-    hash(s);
-    State *f = buckets[s.h & (hash_size - 1)];
+    s.hash(nBoxes);
+    auto f = buckets[s.h & (hashSize - 1)];
     for (; f; f = f.next) {
-        if (!memcmp((cast(cidx_t*)&s.c), (cast(cidx_t*)&f.c),
-                    cidx_t.sizeof * (1 + n_boxes)))
+        if (s.slice(0, nBoxes + 1) == f.slice(0, nBoxes + 1))
             break;
     }
 
     return f;
 }
 
+
 bool addToTable(State* s) nothrow {
-    if (lookup(s)) {
-        unNewState(s);
+    if (s.lookup) {
+        s.unNewState;
         return false;
     }
 
-    if (filled++ >= fill_limit)
-        extendTable();
+    if (filled++ >= fillLimit)
+        extendTable;
 
-    immutable hash_t i = s.h & (hash_size - 1);
+    immutable Thash i = s.h & (hashSize - 1);
 
     s.next = buckets[i];
     buckets[i] = s;
     return true;
 }
 
-bool success(const State* s) nothrow {
-    for (int i = 1; i <= n_boxes; i++)
-        if (!goals[(cast(cidx_t*)&s.c)[i]])
+
+bool success(in State* s) nothrow {
+    foreach (immutable i; 1 .. nBoxes + 1)
+        if (!goals[s.get(i)])
             return false;
     return true;
 }
 
-State* moveMe(State* s, int dy, int dx) nothrow {
-    immutable int y = (cast(cidx_t*)&s.c)[0] / w;
-    immutable int x = (cast(cidx_t*)&s.c)[0] % w;
+
+State* moveMe(State* s, in int dy, in int dx) nothrow {
+    immutable int y = s.get(0) / w;
+    immutable int x = s.get(0) % w;
     immutable int y1 = y + dy;
     immutable int x1 = x + dx;
     immutable int c1 = y1 * w + x1;
@@ -241,41 +241,40 @@ State* moveMe(State* s, int dy, int dx) nothrow {
     if (y1 < 0 || y1 > h || x1 < 0 || x1 > w || board[c1] == Cell.wall)
         return null;
 
-    int at_box = 0;
-    for (int i = 1; i <= n_boxes; i++) {
-        if ((cast(cidx_t*)&s.c)[i] == c1) {
-            at_box = i;
+    int atBox = 0;
+    foreach (immutable i; 1 .. nBoxes + 1)
+        if (s.get(i) == c1) {
+            atBox = i;
             break;
         }
-    }
 
     int c2;
-    if (at_box) {
+    if (atBox) {
         c2 = c1 + dy * w + dx;
         if (board[c2] == Cell.wall || !live[c2])
             return null;
-        for (int i = 1; i <= n_boxes; i++)
-            if ((cast(cidx_t*)&s.c)[i] == c2)
+        foreach (immutable i; 1 .. nBoxes + 1)
+            if (s.get(i) == c2)
                 return null;
     }
 
-    State* n = newState(s);
-    memcpy((cast(cidx_t*)&n.c) + 1,
-           (cast(cidx_t*)&s.c) + 1,
-           cidx_t.sizeof * n_boxes);
+    auto n = s.newState;
+    n.slice(1, nBoxes + 1)[] = s.slice(1, nBoxes + 1);
 
-    cidx_t* p = (cast(cidx_t*)&n.c);
-    p[0] = cast(cidx_t)c1;
+    n.set(0, cast(CellIndex)c1);
 
-    if (at_box)
-        p[at_box] = cast(cidx_t)c2;
+    if (atBox)
+        n.set(atBox, cast(CellIndex)c2);
 
-    // Bubble sort
-    for (int i = n_boxes; --i; ) {
-        cidx_t t = 0;
-        for (int j = 1; j < i; j++) {
-            if (p[j] > p[j + 1])
-                t = p[j], p[j] = p[j+1], p[j+1] = t;
+    // Bubble sort.
+    for (size_t i = nBoxes; --i; ) {
+        CellIndex t = 0;
+        foreach (immutable j; 1 .. i) {
+            if (n.get(j) > n.get(j + 1)) {
+                t = n.get(j);
+                n.set(j, n.get(j + 1));
+                n.set(j + 1, t);
+            }
         }
         if (!t)
             break;
@@ -284,42 +283,65 @@ State* moveMe(State* s, int dy, int dx) nothrow {
     return n;
 }
 
-__gshared State* next_level, done;
 
 bool queueMove(State *s) nothrow {
-    if (!s || !addToTable(s))
+    if (!s || !s.addToTable)
         return false;
 
-    if (success(s)) {
-        puts("\nSuccess!");
+    if (s.success) {
+        "\nSuccess!".puts;
         done = s;
         return true;
     }
 
-    s.qnext = next_level;
-    next_level = s;
+    s.qNext = nextLevel;
+    nextLevel = s;
     return false;
 }
 
-bool do_move(State* s) nothrow {
-    return queueMove(moveMe(s,  1,  0)) ||
-           queueMove(moveMe(s, -1,  0)) ||
-           queueMove(moveMe(s,  0,  1)) ||
-           queueMove(moveMe(s,  0, -1));
+
+bool doMove(State* s) nothrow {
+    return s.moveMe( 1,  0).queueMove ||
+           s.moveMe(-1,  0).queueMove ||
+           s.moveMe( 0,  1).queueMove ||
+           s.moveMe( 0, -1).queueMove;
 }
+
+
+void showBoard(in State* s) nothrow {
+    static immutable glyphs1 = " #@$", glyphs2 = ".#@$";
+
+    auto ptr = cast(ubyte*)alloca(w * h * ubyte.sizeof);
+    if (ptr == null)
+        exit(5);
+    auto b = ptr[0 .. w * h];
+    b[] = cast(typeof(b))board[];
+
+    b[s.get(0)] = Cell.player;
+    foreach (immutable i; 1 .. nBoxes + 1)
+        b[s.get(i)] = Cell.box;
+
+    foreach (immutable i, immutable bi; b) {
+        putchar((goals[i] ? glyphs2 : glyphs1)[bi]);
+        if (!((1 + i) % w))
+            '\n'.putchar;
+    }
+}
+
 
 void showMoves(in State* s) nothrow {
     if (s.prev)
-        showMoves(s.prev);
-    printf("\n");
-    showBoard(s);
+        s.prev.showMoves;
+    "\n".printf;
+    s.showBoard;
 }
 
-int main() nothrow {
-    enum BIG = 0;
 
-    static if (BIG == 0) {
-        State* s = parseBoard(8, 7,
+int main() nothrow {
+    enum uint problem = 0;
+
+    static if (problem == 0) {
+        auto s = parseBoard(8, 7,
         "#######"~
         "#     #"~
         "#     #"~
@@ -329,16 +351,16 @@ int main() nothrow {
         "#.#  @#"~
         "#######");
 
-    } else static if (BIG == 1) {
-        State* s = parseBoard(5, 13,
+    } else static if (problem == 1) {
+        auto s = parseBoard(5, 13,
         "#############"~
         "#  #        #"~
         "# $$$$$$$  @#"~
         "#.......    #"
         "#############");
 
-    } else {
-        State* s = parseBoard(11, 19,
+    } else static if (problem == 2) {
+        auto s = parseBoard(11, 19,
         "    #####          "~
         "    #   #          "~
         "    #   #          "~
@@ -350,37 +372,39 @@ int main() nothrow {
         "##### ### #@##   .#"~
         "    #     #########"~
         "    #######        ");
+    } else {
+        asset(0, "Not present problem.");
     }
 
-    showBoard(s);
-    extendTable();
-    queueMove(s);
+    s.showBoard;
+    extendTable;
+    s.queueMove;
     for (int i = 0; !done; i++) {
         printf("depth %d\r", i);
-        fflush(stdout);
+        stdout.fflush;
 
-        State *head = next_level;
-        for (next_level = null; head && !done; head = head.qnext)
-            do_move(head);
+        auto head = nextLevel;
+        for (nextLevel = null; head && !done; head = head.qNext)
+            head.doMove;
 
-        if (!next_level) {
-            puts("No solution?");
+        if (!nextLevel) {
+            "No solution?".puts;
             return 1;
         }
     }
 
-    showMoves(done);
+    done.showMoves;
 
-    version (none) {
-        free(buckets);
-        free(board);
-        free(goals);
-        free(live);
+    version (none) { // Free all allocated memory.
+        buckets.ptr.free;
+        board.ptr.free;
+        goals.ptr.free;
+        live.ptr.free;
 
-        while (block_root) {
-            auto tmp = block_root.next;
-            free(block_root);
-            block_root = tmp;
+        while (blockRoot) {
+            auto tmp = blockRoot.next;
+            blockRoot.free;
+            blockRoot = tmp;
         }
     }
 

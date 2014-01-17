@@ -3,7 +3,7 @@ parse arg high .;  if high=='' then high=1000000     /*assume 1 million.*/
 !.=0;  Lp=0;  Rp=0;  w=length(high)    /*placeholders for primes, Lp, Rp*/
 p.1=2; p.2=3; p.3=5; p.4=7; p.5=11; p.6=13; p.7=17    /*some low primes.*/
 !.2=1; !.3=1; !.5=1; !.7=1; !.11=1; !.13=1; !.17=1    /*low prime flags.*/
-n=7;  s.7=17**2                        /*number of primes so far.       */
+n=7;  s.n=p.n**2                       /*number of primes so far.       */
 /*───────────────────────────────────────generate more primes ≤ high.   */
     do j=p.n+2  by 2  to high          /*only find odd primes from here.*/
     if j//3      ==0  then iterate     /*is  J  divisible by three?     */

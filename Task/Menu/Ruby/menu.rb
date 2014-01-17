@@ -1,21 +1,21 @@
 def select(prompt, items)
-  return "" if items.length == 0
-  while true
+  return "" if items.empty?
+  loop do
     items.each_index {|i| puts "#{i}. #{items[i]}"}
     print "#{prompt}: "
     begin
-      answer = Integer(gets())
+      answer = Integer(gets)
     rescue ArgumentError
       redo
     end
-    return items[answer] if answer.between?(0, items.length - 1)
+    return items[answer] if (0...items.length).cover?(answer)
   end
 end
 
 # test empty list
 response = select("Which is empty", [])
 puts "empty list returns: >#{response}<"
-puts ""
+puts
 
 # "real" test
 items = ['fee fie', 'huff and puff', 'mirror mirror', 'tick tock']

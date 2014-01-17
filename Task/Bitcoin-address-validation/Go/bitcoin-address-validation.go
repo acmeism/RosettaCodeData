@@ -44,7 +44,7 @@ func (a *A25) doubleSHA256() []byte {
 func (a *A25) ComputeChecksum() (c [4]byte) {
     copy(c[:], a.doubleSHA256())
     return
-}
+}/* {{header|Go}} */
 
 // Tmpl and Set58 are adapted from the C solution.
 // Go has big integers but this techinique seems better.

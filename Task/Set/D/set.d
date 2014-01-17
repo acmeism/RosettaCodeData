@@ -1,18 +1,21 @@
-import std.stdio, std.algorithm;
-
 void main() {
-    auto set1 = [1, 2, 3, 4, 5, 6];
-    auto set2 = [2, 5, 6, 3, 4, 8].sort; // [2, 3, 4, 5, 6, 8]
-    auto set3 = [1, 2, 5];
+    import std.stdio, std.algorithm, std.range;
 
-    assert(equal(setUnion(set1, set2), [1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 8]));
-    assert(equal(setIntersection(set1, set2), [2, 3, 4, 5, 6]));
-    assert(equal(setDifference(set1, set2), [1]));
-    assert(equal(setSymmetricDifference(set1, set2), [1, 8]));
-    assert(equal(setDifference(set3, set1), new int[](0)));  // subset
-    assert(set1 != set2);
+    // Not true sets, items can be repeated, but must be sorted.
+    auto s1 = [1, 2, 3, 4, 5, 6].assumeSorted;
+    auto s2 = [2, 5, 6, 3, 4, 8].sort(); // [2,3,4,5,6,8].
+    auto s3 = [1, 2, 5].assumeSorted;
 
-    auto set4 = [ [ 1, 4, 7, 8 ], [ 1, 7 ], [ 1, 7, 8], [ 4 ], [ 7 ], ];
-    auto set5 = [ 1, 1, 1, 4, 4, 7, 7, 7, 7, 8, 8 ];
-    assert(equal(nWayUnion(set4), set5));
+    assert(s1.canFind(4)); // Linear search.
+    assert(s1.contains(4)); // Binary search.
+    assert(s1.setUnion(s2).equal([1,2,2,3,3,4,4,5,5,6,6,8]));
+    assert(s1.setIntersection(s2).equal([2, 3, 4, 5, 6]));
+    assert(s1.setDifference(s2).equal([1]));
+    assert(s1.setSymmetricDifference(s2).equal([1, 8]));
+    assert(s3.setDifference(s1).empty); // It's a subset.
+    assert(!s1.equal(s2));
+
+    auto s4 = [[1, 4, 7, 8], [1, 7], [1, 7, 8], [4], [7]];
+    const s5 = [1, 1, 1, 4, 4, 7, 7, 7, 7, 8, 8];
+    assert(s4.nWayUnion.equal(s5));
 }

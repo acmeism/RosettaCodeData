@@ -49,7 +49,7 @@ struct VLQ {
         return res;
     }
 
-    string toString() const /*pure nothrow*/ {
+    string toString() const pure /*nothrow*/ {
         return format("(%(%02X:%))", this.toVLQ);
     }
 }

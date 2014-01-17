@@ -1,9 +1,8 @@
 @target = "METHINKS IT IS LIKE A WEASEL"
-Charset = " ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-Max_mutate_rate = 0.91
-C = 100
+Charset = [" ", *"A".."Z"]
+COPIES = 100
 
-def random_char; Charset[rand Charset.length].chr; end
+def random_char; Charset.sample end
 
 def fitness(candidate)
   sum = 0
@@ -31,10 +30,10 @@ while parent != @target
   iteration += 1
   rate = mutation_rate(parent)
   if prev != parent
-    log iteration, rate, parent
+    log(iteration, rate, parent)
     prev = parent
   end
-  copies = [parent] + Array.new(C) {mutate(parent, rate)}
+  copies = [parent] + Array.new(COPIES) {mutate(parent, rate)}
   parent = copies.max_by {|c| fitness(c)}
 end
-log iteration, rate, parent
+log(iteration, rate, parent)

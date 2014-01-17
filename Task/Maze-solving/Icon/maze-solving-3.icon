@@ -11,7 +11,7 @@ procedure main(A)
 
    mz := DisplayMaze(GenerateMaze(mh,mw))   # Build and show maze
 
-   QMouse(mz.maze,findStart(mz.maze))   # Start first quantum mouse
+   QMouse(mz.maze,findStart(mz.maze),&null,0)   # Start first quantum mouse
    waitForCompletion() # block until all quantum mice have finished
 
    # Mark the best path into the maze and display it.
@@ -44,9 +44,11 @@ $define SOUTH   2
 $define WEST    1
 $define EMPTY   0 # like new
 
-class QMouse(maze, loc, path, val)
+class QMouse(maze, loc, parent, len, val)
 
-   method getPath(); return path; end
+   method getLoc(); return loc; end
+   method getParent(); return \parent; end
+   method getLen(); return len; end
    method atEnd();   return EMPTY ~= iand(val, FINISH); end
    method goNorth(); if EMPTY ~= iand(val,NORTH) then return visit(loc.r-1, loc.c); end
    method goSouth(); if EMPTY ~= iand(val,SOUTH) then return visit(loc.r+1, loc.c); end
@@ -55,7 +57,7 @@ class QMouse(maze, loc, path, val)
 
    method visit(r,c)
        critical region[r,c]: if EMPTY = iand(maze[r,c],SEEN) then {
-           if /bestMouse | (*path <= *bestMouse.path) then { # Keep going?
+           if /bestMouse | (len <= bestMouse.getLen()) then { # Keep going?
                mark(maze, r,c)
                unlock(region[r,c])
                return Position(r,c)
@@ -63,7 +65,7 @@ class QMouse(maze, loc, path, val)
            }
    end
 
-initially (m, l, p)
+initially (m, l, p, n)
     initial {   # Construct critical region mutexes and completion condvar
         qMice := mutex(set())
         qMiceEmpty := condvar()
@@ -74,21 +76,20 @@ initially (m, l, p)
         }
     maze := m
     loc := l
+    parent := p
+    len := n+1
     val := maze[loc.r,loc.c] | fail   # Fail if outside maze
-    /path := []
-    if \p then path := copy(p)
-    put(path, loc)
     insert(qMice, self)
     thread {
         if atEnd() then {
             critical bestMouseLock:
-                if /bestMouse | (*path < bestMouse.path) then bestMouse := self
+                if /bestMouse | (len < bestMouse.getLen()) then bestMouse := self
             }
         else {         # Spawn more mice to look for finish
-            QMouse(maze, goNorth(), path)
-            QMouse(maze, goSouth(), path)
-            QMouse(maze, goEast(), path)
-            QMouse(maze, goWest(), path)
+            QMouse(maze, goNorth(), self, len)
+            QMouse(maze, goSouth(), self, len)
+            QMouse(maze, goEast(), self, len)
+            QMouse(maze, goWest(), self, len)
             }
 
         delete(qMice, self)
@@ -114,8 +115,12 @@ procedure findStart(maze)  # Anywhere in maze
 end
 
 procedure showPath(maze)
-    if \bestMouse then {   # Mark it in maze
-       every p := !bestMouse.path do maze[p.r,p.c] +:= PATH
+    if path := \bestMouse then {   # Mark it in maze
+       repeat {
+           loc := path.getLoc()
+           maze[loc.r,loc.c] +:= PATH
+           path := \path.getParent() | break
+           }
        return
        }
 end

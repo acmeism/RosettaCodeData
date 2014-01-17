@@ -6,6 +6,9 @@ i = Complex::I          # 2. use Complex::I
 b = 3.14159 + 1.25 * i
 c = '1/2+3/4i'.to_c     # 3. Use the .to_c method from String, result ((1/2)+(3/4)*i)
 
+#Ruby 2.1 introduced a suffix to create a complex:
+c =  1.0/2+3/4i         # (0.5-(3/4)*i)
+
 # Operations:
 puts a + b              # addition
 puts a * b              # multiplication

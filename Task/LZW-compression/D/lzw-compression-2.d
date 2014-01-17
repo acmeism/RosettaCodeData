@@ -1,6 +1,6 @@
-import std.array: empty;
-
 struct LZW {
+    import std.array: empty;
+
     // T is ubyte instead of char because D strings are UTF-8.
     alias T = ubyte;
     alias Tcomp = ushort;
@@ -11,12 +11,11 @@ struct LZW {
     static immutable ubyte[initDictSize] bytes;
     static this() {
         foreach (immutable i; 0 .. initDictSize)
-            bytes[i] = cast(T)i;
+            bytes[i] = cast(T)i; //*
     }
 
-    //static Tcomp[] compress(in T[] original)
-    static Tcomp[] compress(immutable scope T[] original)
-    /*pure nothrow*/ out(result) {
+    static Tcomp[] compress(immutable scope T[] original) pure nothrow
+    out(result) {
         if (!original.empty)
             assert(result[0] < initDictSize);
     } body {
@@ -26,7 +25,7 @@ struct LZW {
         foreach (immutable b; bytes)
             dict[[b]] = b;
 
-        // In this algorithm regular slices give lower efficiency.
+        // Here built-in slices give lower efficiency.
         struct Slice {
             size_t start, end;
             @property opSlice() const pure nothrow {
@@ -38,16 +37,13 @@ struct LZW {
         Slice w;
         Tcomp[] result;
         foreach (immutable i; 0 .. original.length) {
-            auto wc = Slice(w.start, w.end + 1);
+            auto wc = Slice(w.start, w.end + 1); // Extend slice.
             if (wc in dict) {
                 w = wc;
             } else {
                 result ~= dict[w];
-                // AA.length is not pure nor nothrow.
-                //assert(dict.length <= Tcomp.max);
-                //dict[wc] = cast(Tcomp)dict.length;
                 assert(dict.length < Tcomp.max); // Overflow guard.
-                dict[wc] = cast(Tcomp)(dict.length - 1);
+                dict[wc] = cast(Tcomp)dict.length;
                 w = Slice(i, i + 1);
             }
         }
@@ -90,10 +86,11 @@ struct LZW {
 }
 
 void main() {
-    import std.stdio;
+    import std.stdio, std.string;
+
     immutable txt = "TOBEORNOTTOBEORTOBEORNOT";
-    /*immutable*/ const compressed = LZW.compress(cast(LZW.Ta)txt);
-    writeln(compressed);
-    immutable decompressed = LZW.decompress(compressed);
-    writeln(cast(string)decompressed);
+    immutable compressed = LZW.compress(txt.representation);
+    compressed.writeln;
+    //LZW.decompress(compressed).unrepresentation.writeln;
+    writeln(cast(string)LZW.decompress(compressed));
 }

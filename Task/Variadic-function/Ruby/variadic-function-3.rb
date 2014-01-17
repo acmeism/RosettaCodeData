@@ -1,2 +1,2 @@
-args = ["Rosetta", "Code", "Is", "Awseome!"]
+args = ["Rosetta", "Code", "Is", "Awesome!"]
 print_all(*args)

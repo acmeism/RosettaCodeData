@@ -1,9 +1,9 @@
 sub binary_search {
-  ($array_ref, $value, $left, $right) = @_;
+  my ($array_ref, $value, $left, $right) = @_;
   if ($right < $left) {
     return 0;
   }
-  $middle = ($right + $left) / 2;
+  my $middle = int(($right + $left) / 2);
   if ($array_ref->[$middle] == $value) {
     return 1;
   }

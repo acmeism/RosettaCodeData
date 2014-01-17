@@ -1,7 +1,7 @@
 #define system.
 
 #symbol PrintSecondPower =
-    &&:n [ console writeLine:(n * n) ].
+    (:n) [ console writeLine:(n * n) ].
 
 #symbol program =
 [

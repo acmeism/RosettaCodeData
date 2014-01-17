@@ -1,6 +1,6 @@
 NSString *jsonString = @"{ \"foo\": 1, \"bar\": [10, \"apples\"] }";
 id obj = [NSJSONSerialization
-    JSONObjectWithData: [json_string dataUsingEncoding: NSUTF8StringEncoding]
+    JSONObjectWithData: [jsonString dataUsingEncoding: NSUTF8StringEncoding]
                options: 0
                  error: NULL];
 NSLog(@"%@", obj);

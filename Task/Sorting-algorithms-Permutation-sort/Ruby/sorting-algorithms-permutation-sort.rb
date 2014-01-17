@@ -1,10 +1,6 @@
 class Array
   def permutationsort
-    permutations = permutation
-    begin
-      perm = permutations.next
-    end until perm.sorted?
-    perm
+    permutation.each{|perm| return perm if perm.sorted?}
   end
 
   def sorted?

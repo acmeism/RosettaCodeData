@@ -1,8 +1,50 @@
-import std.stdio, std.regex, std.conv, std.string, std.typecons,
-       std.array, std.range;
-import arithmetic_rational: Rational;
+import std.stdio, std.regex, std.conv, std.string, std.range,
+       arithmetic_rational;
 
-immutable equationText =
+struct Pair { int x; Rational r; }
+
+Pair[][] parseEquations(in string text) /*pure nothrow*/ {
+    auto r = regex(r"\s*(?P<sign>[+-])?\s*(?:(?P<mul>\d+)\s*\*)?\s*" ~
+                   r"arctan\((?P<num>\d+)/(?P<denom>\d+)\)");
+    Pair[][] machins;
+    foreach (const line; text.splitLines) {
+        Pair[] formula;
+        foreach (/*const*/ part; line.split("=")[1].matchAll(r)) {
+            immutable mul = part["mul"],
+                      num = part["num"],
+                      denom = part["denom"];
+            formula ~= Pair((part["sign"] == "-" ? -1 : 1) *
+                            (mul.empty ? 1 : mul.to!int),
+                            Rational(num.to!int,
+                                     denom.empty ? 1 : denom.to!int));
+        }
+        machins ~= formula;
+    }
+    return machins;
+}
+
+
+Rational tans(in Pair[] xs) pure /*nothrow*/ {
+    static Rational tanEval(in int coef, in Rational f)
+    pure /*nothrow*/ {
+        if (coef == 1)
+            return f;
+        if (coef < 0)
+            return -tanEval(-coef, f);
+        immutable a = tanEval(coef / 2, f),
+                  b = tanEval(coef - coef / 2, f);
+        return (a + b) / (1 - a * b);
+    }
+
+    if (xs.length == 1)
+        return tanEval(xs[0].tupleof);
+    immutable a = xs[0 .. $ / 2].tans,
+              b = xs[$ / 2 .. $].tans;
+    return (a + b) / (1 - a * b);
+}
+
+void main() {
+    immutable equationText =
 "pi/4 = arctan(1/2) + arctan(1/3)
 pi/4 = 2*arctan(1/3) + arctan(1/7)
 pi/4 = 4*arctan(1/5) - arctan(1/239)
@@ -21,52 +63,9 @@ pi/4 = 44*arctan(1/57) + 7*arctan(1/239) - 12*arctan(1/682) + 24*arctan(1/12943)
 pi/4 = 88*arctan(1/172) + 51*arctan(1/239) + 32*arctan(1/682) + 44*arctan(1/5357) + 68*arctan(1/12943)
 pi/4 = 88*arctan(1/172) + 51*arctan(1/239) + 32*arctan(1/682) + 44*arctan(1/5357) + 68*arctan(1/12944)";
 
-alias Pair = Tuple!(int, Rational);
-
-Pair[][] parseEquations(in string text) {
-    auto r = regex(r"\s*(?P<sign>[+-])?\s*(?:(?P<mul>\d+)\s*\*)?\s*" ~
-                   r"arctan\((?P<num>\d+)/(?P<denom>\d+)\)", "g");
-    Pair[][] machins;
-    foreach (const line; text.splitLines()) {
-        Pair[] formula;
-        foreach (part; std.string.split(line, "=")[1].match(r)) {
-            immutable string mul = part["mul"];
-            immutable string num = part["num"];
-            immutable string denom = part["denom"];
-            formula ~= Pair((part["sign"] == "-" ? -1 : 1) *
-                            (mul.empty ? 1 : to!int(mul)),
-                            Rational(to!int(num),
-                                     denom.empty ? 1 : to!int(denom)));
-        }
-        machins ~= formula;
-    }
-    return machins;
-}
-
-
-Rational tans(/*in*/ Pair[] xs) /*pure nothrow*/ {
-    static Rational tanEval(in int coef, /*in*/ Rational f)
-    /*pure nothrow*/ {
-        if (coef == 1)
-            return f;
-        if (coef < 0)
-            return -tanEval(-coef, f);
-        /*const*/ auto a = tanEval(coef / 2, f);
-        /*const*/ auto b = tanEval(coef - coef / 2, f);
-        return (a + b) / (1 - a * b);
-    }
-
-    if (xs.length == 1)
-        return tanEval(xs[0].tupleof);
-    /*const*/ auto a = tans(xs[0 .. xs.length / 2]);
-    /*const*/ auto b = tans(xs[xs.length / 2 .. $]);
-    return (a + b) / (1 - a * b);
-}
-
-void main() {
-    /*const*/ auto machins = parseEquations(equationText);
-    foreach (machin, eqn; zip(machins, equationText.splitLines())) {
-        /*const*/ auto ans = tans(machin);
+    const machins = equationText.parseEquations;
+    foreach (const machin, const eqn; machins.zip(equationText.splitLines)) {
+        immutable ans = machin.tans;
         writefln("%5s: %s", ans == 1 ? "OK" : "ERROR", eqn);
     }
 }

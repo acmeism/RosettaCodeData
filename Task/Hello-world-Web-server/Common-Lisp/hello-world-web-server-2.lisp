@@ -19,19 +19,19 @@
 (defun serve (port &optional (log-stream *standard-output*))
   (let ((connections (list (socket-listen "127.0.0.1" port :reuse-address t))))
     (unwind-protect
-	 (loop (loop for ready in (wait-for-input connections :ready-only t)
-		  do (if (typep ready 'stream-server-usocket)
-			 (push (socket-accept ready) connections)
-			 (let* ((stream (socket-stream ready)))
-			   (read-all stream)
-			   (format log-stream "Got message...~%")
-			   (mapc (lambda (line) (ln line stream))
-				 (list "HTTP/1.1 200 OK"
-				       "Content-Type: text/plain; charset=UTF-8"
-				       ""
-				       "Hello world!"))
-			   (socket-close ready)
-			   (setf connections (remove ready connections))))))
+   (loop (loop for ready in (wait-for-input connections :ready-only t)
+      do (if (typep ready 'stream-server-usocket)
+       (push (socket-accept ready) connections)
+       (let* ((stream (socket-stream ready)))
+         (read-all stream)
+         (format log-stream "Got message...~%")
+         (mapc (lambda (line) (ln line stream))
+         (list "HTTP/1.1 200 OK"
+               "Content-Type: text/plain; charset=UTF-8"
+               ""
+               "Hello world!"))
+         (socket-close ready)
+         (setf connections (remove ready connections))))))
       (loop for c in connections do (loop while (socket-close c))))))
 
 (serve 8080)

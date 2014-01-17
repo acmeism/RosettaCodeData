@@ -1,21 +1,9 @@
-import std.stdio, std.array;
-
 void main() {
-    enum int max = 12;
-    write("  | ");
-    foreach (row; 1 .. max+1)
-        writef("%4d", row);
-    writeln();
-    writeln("--+-", "-".replicate(max * 4));
-    foreach (row; 1 .. max+1) {
-        writef("%2d", row);
-        write("| ");
-        foreach (column; 1 .. max+1) {
-            if (column < row)
-                write("    ");
-            else
-                writef("%4d", row * column);
-        }
-        writeln();
-    }
+    import std.stdio, std.array, std.range, std.algorithm;
+
+    enum n = 12;
+    writefln("    %(%4d%)\n%s", iota(1, n+1), "-".replicate(4*n + 4));
+    foreach (immutable y; 1 .. n + 1)
+        writefln("%4d" ~ " ".replicate(4 * (y - 1)) ~ "%(%4d%)", y,
+                 iota(y, n + 1).map!(x => x * y));
 }

@@ -4,13 +4,8 @@ def spiral(n)
   delta = [[1,0], [0,1], [-1,0], [0,-1]].cycle
   x, y, value = -1, 0, -1
   for run in runs
-    dx,dy = delta.next
-    run.times do |i|
-      x += dx
-      y += dy
-      value += 1
-      spiral[y][x] = value
-    end
+    dx, dy = delta.next
+    run.times { spiral[y+=dy][x+=dx] = (value+=1) }
   end
   spiral
 end

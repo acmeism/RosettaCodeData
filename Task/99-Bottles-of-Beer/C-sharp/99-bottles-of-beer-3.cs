@@ -1,28 +1,39 @@
-class songs
-{
-    static void Main(string[] args)
+    class Program
     {
-        beer(5);
-    }
+        const string Vessel = "bottle";
+        const string Beverage = "beer";
+        const string Location = "on the wall";
 
-    private static void beer(int bottles)
-    {
-        for (int i = bottles; i > 0; i--)
+        private static string DefaultAction(ref int bottles)
         {
-            if (i > 1)
+            bottles--;
+            return "take one down, pass it around,";
+        }
+
+        private static string FallbackAction(ref int bottles)
+        {
+            bottles += 99;
+            return "go to the store, buy some more,";
+        }
+
+        private static string Act(ref int bottles)
+        {
+            return bottles > 0 ? DefaultAction(ref bottles) : FallbackAction(ref bottles);
+        }
+
+        static void Main()
+        {
+            Func<int, string> plural = b => b == 1 ? "" : "s";
+            Func<int, string> describeCount = b => b == 0 ? "no more" : b.ToString();
+            Func<int, string> describeBottles = b => string.Format("{0} {1}{2} of {3}", describeCount(b), Vessel, plural(b), Beverage);
+            Action<string> write = s => Console.WriteLine(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(s));
+            int bottles = 99;
+            while (true)
             {
-                Console.Write("{0}\n{1}\n{2}\n{3}\n\n",
-                    i + " bottles of beer on the wall",
-                    i + " bottles of beer",
-                    "Take one down, pass it around",
-                    (i - 1) + " bottles of beer on the wall");
+                write(string.Format("{0} {1}, {0},", describeBottles(bottles), Location));
+                write(Act(ref bottles));
+                write(string.Format("{0} {1}.", describeBottles(bottles), Location));
+                write(string.Empty);
             }
-            else
-                Console.Write("{0}\n{1}\n{2}\n{3}\n\n",
-                    i + " bottle of beer on the wall",
-                    i + " bottle of beer",
-                    "Take one down, pass it around",
-                    (i - 1) + " bottles of beer on the wall....");
         }
     }
-}

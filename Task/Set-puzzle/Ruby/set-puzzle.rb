@@ -2,13 +2,7 @@ COLORS   = %i(red green purple) #use [:red, :green, :purple] in Ruby < 2.0
 SYMBOLS  = %i(oval squiggle diamond)
 NUMBERS  = %i(one two three)
 SHADINGS = %i(solid open striped)
-FEATURES = [COLORS, SYMBOLS, NUMBERS, SHADINGS]
-
-@hand_size = 9
-@num_sets_goal = 4
-
-#create an enumerator which deals all combinations of @hand_size cards
-@dealer = FEATURES[0].product(*FEATURES[1..-1]).shuffle.combination(@hand_size)
+DECK = COLORS.product(SYMBOLS, NUMBERS, SHADINGS)
 
 def get_all_sets(hand)
   hand.combination(3).select do |candidate|
@@ -17,22 +11,26 @@ def get_all_sets(hand)
   end
 end
 
-def get_puzzle_and_answer
-  sets = []
-  until sets.size == @num_sets_goal do
-    hand = @dealer.next
+def get_puzzle_and_answer(hand_size, num_sets_goal)
+  begin
+    hand = DECK.sample(hand_size)
     sets = get_all_sets(hand)
-  end
+  end until sets.size == num_sets_goal
   [hand, sets]
 end
 
 def print_cards(cards)
-  cards.each{|card| puts card.join(", ")}
+  puts cards.map{|card| "  %-8s" * 4 % card}
   puts
 end
 
-puzzle, sets =  get_puzzle_and_answer
-puts "Dealt #{puzzle.size} cards:"
-print_cards(puzzle)
-puts "Containing #{sets.size} sets:"
-sets.each{|set| print_cards(set)}
+def set_puzzle(deal, goal=deal/2)
+  puzzle, sets = get_puzzle_and_answer(deal, goal)
+  puts "Dealt #{puzzle.size} cards:"
+  print_cards(puzzle)
+  puts "Containing #{sets.size} sets:"
+  sets.each{|set| print_cards(set)}
+end
+
+set_puzzle(9)
+set_puzzle(12)

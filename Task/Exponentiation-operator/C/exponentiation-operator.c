@@ -36,8 +36,8 @@ double dpow(double base, int exp)
 
 int main()
 {
-    printf("2^6 = %d\n", (int)ipow(2,6));
-    printf("2^-6 = %lf\n", ipow(2,-6));
+    printf("2^6 = %d\n", ipow(2,6));
+    printf("2^-6 = %d\n", ipow(2,-6));
     printf("2.71^6 = %lf\n", dpow(2.71,6));
     printf("2.71^-6 = %lf\n", dpow(2.71,-6));
 }

@@ -6,7 +6,7 @@ struct Permutations(bool doCopy=true, T) if (isMutable!T) {
     private uint[31] indexes;
     private ulong tot;
 
-    this (/*in*/ T[] items) /*pure nothrow*/
+    this (in T[] items) pure /*nothrow*/
     in {
         static enum string L = text(indexes.length); // impure
         assert(items.length >= 0 && items.length <= indexes.length,
@@ -66,21 +66,18 @@ struct Permutations(bool doCopy=true, T) if (isMutable!T) {
 }
 
 Permutations!(doCopy,T) permutations(bool doCopy=true, T)
-                                    (/*in*/ T[] items)
-/*pure nothrow*/ if (isMutable!T) {
+                                    (in T[] items)
+pure /*nothrow*/ if (isMutable!T) {
     return Permutations!(doCopy, T)(items);
-} unittest {
-    import std.bigint;
-    foreach (p; permutations([BigInt(1), BigInt(2), BigInt(3)]))
-        assert((p[0] + 1) > 0);
 }
 
 version (permutations2_main) {
     void main() {
         import std.stdio, std.bigint;
-        foreach (p; permutations!false([1, 2, 3]))
-            writeln(p);
-        alias BigInt B;
-        foreach (p; permutations!false([B(1), B(2), B(3)])) {}
+        alias B = BigInt;
+        foreach (p; [B(1), B(2), B(3)].permutations)
+            assert((p[0] + 1) > 0);
+        [1, 2, 3].permutations!false.writeln;
+        [B(1), B(2), B(3)].permutations!false.writeln;
     }
 }

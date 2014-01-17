@@ -28,13 +28,13 @@ in {
 }
 
 /// Creates the pivoting matrix for m.
-T[][] pivotize(T)(immutable T[][] m) /*pure nothrow*/
+T[][] pivotize(T)(immutable T[][] m) pure nothrow
 in {
     assert(m.isSquare);
 } body {
     immutable n = m.length;
     auto id = iota(n)
-              .map!(j=> n.iota.map!(i => cast(T)(i == j)).array)
+              .map!((in j) => n.iota.map!(i => cast(T)(i == j)).array)
               .array;
 
     foreach (immutable i; 0 .. n) {
@@ -56,7 +56,7 @@ in {
 
 /// Decomposes a square matrix A by PA=LU and returns L, U and P.
 Tuple!(T[][],"L", T[][],"U", const T[][],"P")
-lu(T)(immutable T[][] A) /*pure nothrow*/
+lu(T)(immutable T[][] A) pure nothrow
 in {
     assert(A.isSquare);
 } body {
@@ -68,8 +68,8 @@ in {
         U[i][0 .. i] = 0;
     }
 
-    const P = A.pivotize!T;
-    const A2 = matrixMul!T(P, A);
+    immutable P = A.pivotize!T;
+    immutable A2 = matrixMul!T(P, A);
 
     foreach (immutable j; 0 .. n) {
         L[j][j] = 1;
@@ -99,8 +99,7 @@ void main() {
                    [3.0, 17, 18, 1],
                    [2.0,  5,  7, 1]];
 
-    //auto f = "[%([%(%.1f, %)],\n %)]]\n\n".replicate(3);
-    auto f = std.array.replicate("[%([%(%.1f, %)],\n %)]]\n\n", 3);
-    foreach (m; [a, b])
+    auto f = "[%([%(%.1f, %)],\n %)]]\n\n".replicate(3);
+    foreach (immutable m; [a, b])
         writefln(f, lu(m).tupleof);
 }

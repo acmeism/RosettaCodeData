@@ -1,6 +1,8 @@
-object TopRank extends Application {
-	import scala.io._
-	val data = """Tyler Bennett,E10297,32000,D101
+import scala.io._
+
+object TopRank extends App {
+  val data = """Employee Name,Employee ID,Salary,Department
+Tyler Bennett,E10297,32000,D101
 John Rappl,E21437,47000,D050
 George Woltman,E00127,53500,D101
 Adam Smith,E63535,18000,D202
@@ -14,12 +16,19 @@ Tim Sampair,E03033,27000,D101
 Kim Arlich,E10001,57000,D190
 Timothy Grove,E16398,29900,D190"""
 
-	class Employee(val name:String, val id:String, val salary:Int, val department:String) {
-		override def toString = id +"\t"+salary+"\t"+name
-	}
-	Source.fromString(data).getLines().map(_.split(",")).map(x => new Employee(x(0), x(1), x(2).toInt, x(3) )).toList // read data into list of employees
-		.sortBy(x => (x.department, -x.salary)).groupBy(_.department).foreach{ group =>  // sort and group by
-			println("Department: "+group._1)
-			group._2.take(3).foreach{x =>  println("\t"+x) }
-	}
+  class Employee(val name: String,
+                 val id: String,
+                 val salary: Int,
+                 val department: String) {
+    override def toString = s"$id\t$salary\t$name"
+  }
+
+  (for { x <- (Source.fromString(data).getLines().drop(1).map(_.split(","))) }
+    yield new Employee(x(0), x(1), x(2).toInt, x(3))) // read data into list of employees
+    .toList.sortBy(x => (x.department, -x.salary))
+    .groupBy(_.department) // sort and group by
+    .foreach {
+      case (dep, emps) => println(s"Department: $dep\n"
+        + emps.take(3).map(_.toString).mkString("\t", "\n\t", ""))
+    }
 }

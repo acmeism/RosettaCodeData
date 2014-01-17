@@ -8,12 +8,12 @@ sub my_draw_line
 
     my $steep = (abs($y1 - $y0) > abs($x1 - $x0));
     if ( $steep ) {
-	( $y0, $x0 ) = ( $x0, $y0);
-	( $y1, $x1 ) = ( $x1, $y1 );
+  ( $y0, $x0 ) = ( $x0, $y0);
+  ( $y1, $x1 ) = ( $x1, $y1 );
     }
     if ( $x0 > $x1 ) {
-	( $x1, $x0 ) = ( $x0, $x1 );
-	( $y1, $y0 ) = ( $y0, $y1 );
+  ( $x1, $x0 ) = ( $x0, $x1 );
+  ( $y1, $y0 ) = ( $y0, $y1 );
     }
     my $deltax = $x1 - $x0;
     my $deltay = abs($y1 - $y0);
@@ -23,16 +23,16 @@ sub my_draw_line
     my $x;
     $ystep = ( $y0 < $y1 ) ? 1 : -1;
     for( $x = $x0; $x <= $x1; $x += 1 ) {
-	if ( $steep ) {
-	    $img->draw_point($y, $x);
-	} else {
-	    $img->draw_point($x, $y);
-	}
-	$error -= $deltay;
-	if ( $error < 0 ) {
-	    $y += $ystep;
-	    $error += $deltax;
-	}
+  if ( $steep ) {
+      $img->draw_point($y, $x);
+  } else {
+      $img->draw_point($x, $y);
+  }
+  $error -= $deltay;
+  if ( $error < 0 ) {
+      $y += $ystep;
+      $error += $deltax;
+  }
     }
 }
 

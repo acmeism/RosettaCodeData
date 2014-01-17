@@ -18,7 +18,7 @@ set_puzzle=: verb define
    Hand=. y drawRandom Deck
  end.
  echo 'Dealt ',(": y),' Cards:'
- echo sayCards Hand
- echo 'Found ',(":target),' Sets:'
- echo sayCards getSets Hand
+ echo sayCards sort Hand
+ echo LF,'Found ',(":target),' Sets:'
+ echo sayCards sort"2 getSets Hand
 )

@@ -26,6 +26,5 @@ hailstone: procedure expose @.; parse arg n 1 s 1 o  /*N,S,O  = 1st arg.*/
                     else n=n%2         /* "  "   " even, perform fast ÷ */
            s=s n                       /*build a sequence list (append).*/
            end   /*forever*/
-@.o=s                                  /*memoization for this hailstone.*/
-@.o=subword(s,2)
+@.o=subword(s,2)                       /*memoization for this hailstone.*/
 return s

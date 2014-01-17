@@ -7,4 +7,4 @@ multiply() {
 
 # Call the function
 multiply 3 4    # The function is invoked in statement context
-echo $?         # The dollarhook special variable gives the return value
+echo $?        # The dollarhook special variable gives the return value

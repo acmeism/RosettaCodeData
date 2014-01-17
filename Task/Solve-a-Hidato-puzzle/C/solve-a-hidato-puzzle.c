@@ -5,7 +5,7 @@
 
 int *board, *flood, *known, top = 0, w, h;
 
-inline int idx(int y, int x) { return y * w + x; }
+static inline int idx(int y, int x) { return y * w + x; }
 
 int neighbors(int c, int *p)
 /*
@@ -69,11 +69,12 @@ void make_board(int x, int y, const char *s)
 	int i;
 
 	w = x, h = y;
+        top = 0;
 	x = w * h;
 
-	known = calloc(sizeof(int*), x + 1);
-	board = calloc(sizeof(int), x);
-	flood = calloc(sizeof(int), x);
+        known = calloc(x + 1, sizeof(int));
+        board = calloc(x,     sizeof(int));
+        flood = calloc(x,     sizeof(int));
 
 	while (x--) board[x] = -1;
 

@@ -6,18 +6,27 @@ enum Moves { roll, hold }
 
 abstract class Player {
   public:
-    final void addCurrScore() { current_score += round_score; }
-    final int getCurrScore() const { return current_score; }
-    final int getRoundScore() const { return round_score; }
-    final void addRoundScore(in int rs) { round_score += rs; }
-    final void zeroRoundScore() { round_score = 0; }
+    final void addCurrScore() pure nothrow {
+        current_score += round_score;
+    }
+    final int getCurrScore() const pure nothrow {
+        return current_score;
+    }
+    final int getRoundScore() const pure nothrow {
+        return round_score;
+    }
+    final void addRoundScore(in int rs) pure nothrow {
+        round_score += rs;
+    }
+    final void zeroRoundScore() pure nothrow {
+        round_score = 0;
+    }
     Moves getMove();
 
-  protected:
-    int current_score, round_score;
+  protected int current_score, round_score;
 }
 
-final class PlayerRand : Player {
+final class PlayerRand: Player {
     override Moves getMove() {
         if (round_score + current_score >= maxPoints)
             return Moves.hold;
@@ -30,7 +39,7 @@ final class PlayerRand : Player {
     }
 }
 
-final class PlayerQ2Win : Player {
+final class PlayerQ2Win: Player {
     override Moves getMove() {
         if (round_score + current_score >= maxPoints)
             return Moves.hold;
@@ -45,7 +54,7 @@ final class PlayerQ2Win : Player {
     }
 }
 
-final class PlayerAL20 : Player {
+final class PlayerAL20: Player {
     override Moves getMove() {
         if (round_score + current_score >= maxPoints)
             return Moves.hold;
@@ -55,7 +64,7 @@ final class PlayerAL20 : Player {
     }
 }
 
-final class PlayerAL20T : Player {
+final class PlayerAL20T: Player {
     override Moves getMove() {
         if (round_score + current_score >= maxPoints)
             return Moves.hold;
@@ -77,7 +86,7 @@ void main() {
     players[3] = new PlayerAL20T;
 
     void nextTurn(ref uint p) {
-        players[p].zeroRoundScore();
+        players[p].zeroRoundScore;
         p = (p + 1) % nPlayers;
     }
 
@@ -119,6 +128,5 @@ void main() {
     writeln("Player   I (Rand):  ", players[0].getCurrScore);
     writeln("Player  II (Q2Win): ", players[1].getCurrScore);
     writeln("Player III (AL20):  ", players[2].getCurrScore);
-    writeln("Player  IV (AL20T): ", players[3].getCurrScore,
-            "\n\n");
+    writeln("Player  IV (AL20T): ", players[3].getCurrScore, "\n\n");
 }

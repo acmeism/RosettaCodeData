@@ -1,7 +1,5 @@
-IsPalindrome( Str ){
-	StringLower, str, str
-	str := (RegexReplace(str,"\W+" ))
+IsPalindrome(Str){
 	Loop, Parse, Str
-		reversedStr := A_LoopField . ReversedStr
-	Return ( ReversedStr = Str )
+		ReversedStr := A_LoopField . ReversedStr
+	return, (ReversedStr == Str)?"Exact":(RegExReplace(ReversedStr,"\W")=RegExReplace(Str,"\W"))?"Inexact":"False"
 }

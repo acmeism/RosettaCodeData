@@ -5,7 +5,7 @@
 
 #symbol program =
 [
-    console writeLine:(convertControl toLiteral:5 &radix:2).
-    console writeLine:(convertControl toLiteral:50 &radix:2).
-    console writeLine:(convertControl toLiteral:9000 &radix:2).
+    console writeLine:(convertor toLiteral:5 &base:2).
+    console writeLine:(convertor toLiteral:50 &base:2).
+    console writeLine:(convertor toLiteral:9000 &base:2).
 ].

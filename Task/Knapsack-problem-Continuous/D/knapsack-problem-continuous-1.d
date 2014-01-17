@@ -1,10 +1,10 @@
-import std.stdio, std.algorithm, std.string, std.conv;
+import std.stdio, std.algorithm, std.string;
 
 struct Item {
     string name;
     real amount, value;
 
-    @property real valuePerKG() const pure nothrow {
+    @property real valuePerKG() @safe const pure nothrow {
         return value / amount;
     }
 
@@ -14,27 +14,26 @@ struct Item {
     }
 }
 
-real sum(string field)(in Item[] items) pure nothrow {
+real sumBy(string field)(in Item[] items) @safe pure nothrow {
     return reduce!("a + b." ~ field)(0.0L, items);
 }
 
 void main() {
-    Item[] raw = [{"beef",    3.8, 36.0},
-                  {"pork",    5.4, 43.0},
-                  {"ham",     3.6, 90.0},
-                  {"greaves", 2.4, 45.0},
-                  {"flitch",  4.0, 30.0},
-                  {"brawn",   2.5, 56.0},
-                  {"welt",    3.7, 67.0},
-                  {"salami",  3.0, 95.0},
-                  {"sausage", 5.9, 98.0}];
-
-    // Reverse sorted by Value per amount.
-    const items = raw.sort!q{a.valuePerKG > b.valuePerKG}.release;
+    const items = [Item("beef",    3.8, 36.0),
+                   Item("pork",    5.4, 43.0),
+                   Item("ham",     3.6, 90.0),
+                   Item("greaves", 2.4, 45.0),
+                   Item("flitch",  4.0, 30.0),
+                   Item("brawn",   2.5, 56.0),
+                   Item("welt",    3.7, 67.0),
+                   Item("salami",  3.0, 95.0),
+                   Item("sausage", 5.9, 98.0)]
+                  .schwartzSort!(it => -it.valuePerKG)
+                  .release;
 
     immutable(Item)[] chosen;
     real space = 15.0;
-    foreach (item; items)
+    foreach (const item; items)
         if (item.amount < space) {
             chosen ~= item;
             space -= item.amount;
@@ -45,5 +44,5 @@ void main() {
 
     writefln("%10s %7s %7s %7s", "ITEM", "AMOUNT", "VALUE", "$/unit");
     writefln("%(%s\n%)", chosen);
-    Item("TOTAL", chosen.sum!"amount", chosen.sum!"value").writeln;
+    Item("TOTAL", chosen.sumBy!"amount", chosen.sumBy!"value").writeln;
 }

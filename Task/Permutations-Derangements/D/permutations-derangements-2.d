@@ -1,29 +1,8 @@
-import std.stdio, std.algorithm, std.typecons, std.array,
-       std.conv, std.range, std.traits;
+import std.stdio, std.algorithm, std.typecons, std.conv, std.range;
 
-auto derangementsR(in size_t n, in bool countOnly=false) {
-    auto seq = iota(n).array();
-    immutable ori = seq.idup;
-    const(size_t[])[] res;
-    size_t cnt;
-
-    void perms(in size_t[] s, in size_t[] pre=null) nothrow {
-        if (s.length) {
-            foreach (i, c; s)
-               perms(s[0 .. i] ~ s[i + 1 .. $], pre ~ c);
-        } else if (mismatch!q{a != b}(pre, ori)[0].length == 0) {
-            if (countOnly) cnt++;
-            else res ~= pre;
-        }
-    }
-
-    perms(seq);
-    return tuple(res, cnt);
-}
-
-T fact(T)(in T n) pure nothrow {
+T factorial(T)(in T n) pure nothrow {
     Unqual!T result = 1;
-    for (Unqual!T i = 2; i <= n; i++)
+    foreach (immutable i; 2 .. n + 1)
         result *= i;
     return result;
 }
@@ -34,14 +13,35 @@ T subfact(T)(in T n) pure nothrow {
     return (n - 1) * (subfact(n - 1) + subfact(n - 2));
 }
 
+auto derangementsR(in size_t n, in bool countOnly=false)
+pure /*nothrow*/ {
+    auto seq = n.iota.array;
+    immutable ori = seq.idup; // Not nothrow.
+    const(size_t[])[] res;
+    size_t cnt;
+
+    void perms(in size_t[] s, in size_t[] pre=null) /*nothrow*/ {
+        if (s.length) {
+            foreach (immutable i, immutable c; s)
+               perms(s[0 .. i] ~ s[i + 1 .. $], pre ~ c);
+        } else if (zip(pre, ori).all!(po => po[0] != po[1])) {
+            if (countOnly) cnt++;
+            else res ~= pre;
+        }
+    }
+
+    perms(seq);
+    return tuple(res, cnt);
+}
+
 void main() {
-    writeln("derangements for n = 4\n");
-    foreach (const d; derangementsR(4)[0])
-        writeln(d);
+    "Derangements for n = 4:".writeln;
+    foreach (const d; 4.derangementsR[0])
+        d.writeln;
 
-    writeln("\ntable of n vs counted vs calculated derangements\n");
-    foreach (i; 0 .. 10)
-        writefln("%s  %-7s%-7s", i, derangementsR(i,1)[1], subfact(i));
+    "\nTable of n vs counted vs calculated derangements:".writeln;
+    foreach (immutable i; 0 .. 10)
+        writefln("%s  %-7s%-7s", i, derangementsR(i, 1)[1], i.subfact);
 
-    writefln("\n!20 = %s", subfact(20L));
+    writefln("\n!20 = %s", 20L.subfact);
 }

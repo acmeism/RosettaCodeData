@@ -1,6 +1,6 @@
-import std.traits: Unqual;
+import std.stdio, std.bigint, std.algorithm, std.traits;
 
-Unqual!T[] decompose(T)(T number) /*pure nothrow*/
+Unqual!T[] decompose(T)(in T number) pure /*nothrow*/
 in {
     assert(number > 1);
 } body {
@@ -25,13 +25,11 @@ in {
 }
 
 void main() {
-    import std.stdio, std.bigint, std.algorithm;
-
     foreach (immutable n; 2 .. 10)
-        writeln(decompose(n));
+        n.decompose.writeln;
 
-    writeln(decompose(1023 * 1024));
-    writeln(decompose(BigInt(2 * 3 * 5 * 7 * 11 * 11 * 13 * 17)));
-    writeln(decompose(BigInt(16860167264933UL) * 179951));
-    writeln(group(decompose(BigInt(2) ^^ 100_000)));
+    decompose(1023 * 1024).writeln;
+    BigInt(2 * 3 * 5 * 7 * 11 * 11 * 13 * 17).decompose.writeln;
+    decompose(16860167264933UL.BigInt * 179951).writeln;
+    decompose(2.BigInt ^^ 100_000).group.writeln;
 }

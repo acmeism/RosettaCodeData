@@ -9,10 +9,10 @@ def Closed.toggle
 end
 doors = [Closed] * (n + 1)
 for mul in 1..n
-  for x in 1..n / mul
-    doors[mul * x] = doors[mul * x].toggle
+  for x in (mul..n).step(mul)
+    doors[x] = doors[x].toggle
   end
 end
-doors.each_with_index { |b, i|
+doors.each_with_index do |b, i|
   puts "Door #{i} is #{b}" if i > 0
-}
+end

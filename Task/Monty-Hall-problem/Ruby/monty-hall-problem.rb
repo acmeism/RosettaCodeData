@@ -5,8 +5,7 @@ stay = switch = 0           #sum of each strategy's wins
 n.times do                  #play the game n times
 
   #the doors reveal 2 goats and a car
-  doors = [ :goat , :goat , :goat ]
-  doors[rand(3)] = :car
+  doors = [ :goat, :goat, :car ].shuffle
 
   #random guess
   guess = rand(3)
@@ -14,11 +13,13 @@ n.times do                  #play the game n times
   #random door shown, but it is neither the guess nor the car
   begin shown = rand(3) end while shown == guess || doors[shown] == :car
 
-  #staying with the initial guess wins if the initial guess is the car
-  stay += 1 if doors[guess] == :car
-
-  #switching guesses wins if the unshown door is the car
-  switch += 1 if doors[3-guess-shown] == :car
+  if doors[guess] == :car
+    #staying with the initial guess wins if the initial guess is the car
+    stay += 1
+  else
+    #switching guesses wins if the unshown door is the car
+    switch += 1
+  end
 
 end
 

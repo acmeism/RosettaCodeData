@@ -8,8 +8,11 @@ final class Image(T) {
         const static T black = T.black;
     else
         const static T black = T.init;
+
     static if (is(typeof({ auto x = T.white; })))
         const static T white = T.white;
+    else static if (is(typeof({ auto x = T.max; })))
+        const static T white = T.max;
 
     T[] image;
     private size_t nx_, ny_;
@@ -51,6 +54,8 @@ final class Image(T) {
     ref T opIndex(in size_t x, in size_t y) pure nothrow
     in {
         assert(x < nx_ && y < ny_);
+        debug assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
+        debug assert(y < ny_, format("opIndex, y=%d, ny=%d", y, ny));
     } body {
         return image[x + y * nx_];
     }
@@ -58,13 +63,17 @@ final class Image(T) {
     T opIndex(in size_t x, in size_t y) const pure nothrow
     in {
         assert(x < nx_ && y < ny_);
+        debug assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
+        debug assert(y < ny_, format("opIndex, y=%d, ny=%d", y, ny));
     } body {
         return image[x + y * nx_];
     }
 
-    T opIndexAssign(in T color, in size_t x, in size_t y) pure nothrow
+    T opIndexAssign(in T color, in size_t x, in size_t y) pure /*nothrow*/
     in {
         assert(x < nx_ && y < ny_);
+        debug assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
+        debug assert(y < ny_, format("opIndex, y=%d, ny=%d", y, ny));
     } body {
         return image[x + y * nx_] = color;
     }
@@ -72,6 +81,8 @@ final class Image(T) {
     void opIndexUnary(string op)(in size_t x, in size_t y) pure nothrow
     if (op == "++" || op == "--") in {
         assert(x < nx_ && y < ny_);
+        debug assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
+        debug assert(y < ny_, format("opIndex, y=%d, ny=%d", y, ny));
     } body {
         mixin("image[x + y * nx_] " ~ op ~ ";");
     }
@@ -122,23 +133,23 @@ struct RGB {
 
 Image!RGB loadPPM6(Image!RGB img, in string fileName) {
     if (img is null)
-        img = new Image!RGB();
+        img = new Image!RGB;
     auto f = File(fileName, "rb");
-    enforce(f.readln().strip() == "P6");
+    enforce(f.readln.strip == "P6");
     string line;
     do {
         line = f.readln();
     } while (line.length && line[0] == '#'); // Skip comments.
-    const size = line.split();
+    const size = line.split;
     enforce(size.length == 2);
-    img.allocate(size[0].to!uint(), size[1].to!uint());
+    img.allocate(size[0].to!uint, size[1].to!uint);
     enforce(f.readln().strip() == "255");
     auto l = new ubyte[img.nx * 3];
     size_t i = 0;
     foreach (immutable y; 0 .. img.ny) {
         f.rawRead!ubyte(l);
         foreach (immutable x; 0 .. img.nx)
-            img.image[i++] = RGB(l[x*3], l[x*3 + 1], l[x*3 + 2]);
+            img.image[i++] = RGB(l[x * 3], l[x * 3 + 1], l[x * 3 + 2]);
     }
     return img;
 }
@@ -163,6 +174,6 @@ version (bitmap_main) {
     void main() {
         auto img = new Image!RGB(30, 10);
         img[4, 5] = RGB.white;
-        img.textualShow();
+        img.textualShow;
     }
 }

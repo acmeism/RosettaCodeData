@@ -8,7 +8,7 @@ struct Permutations(bool doCopy=true, T) {
     static if (!doCopy)
         T[] result;
 
-    this(T)(T[] items, int r=-1) /*pure nothrow*/ {
+    this(T)(T[] items, int r=-1) pure /*nothrow*/ {
         this.items = items;
         immutable int n = items.length;
         if (r < 0)
@@ -19,7 +19,7 @@ struct Permutations(bool doCopy=true, T) {
             this.stopped = true;
         } else {
             this.stopped = false;
-            this.indices = n.iota.array; // Not pure nothrow.
+            this.indices = n.iota.array;
             this.cycles = iota(n, n_minus_r, -1).array;
         }
 
@@ -75,7 +75,7 @@ struct Permutations(bool doCopy=true, T) {
 
 Permutations!(doCopy, T) permutations(bool doCopy=true, T)
                                      (T[] items, int r=-1)
-/*pure nothrow*/ {
+pure /*nothrow*/ {
     return Permutations!(doCopy, T)(items, r);
 }
 

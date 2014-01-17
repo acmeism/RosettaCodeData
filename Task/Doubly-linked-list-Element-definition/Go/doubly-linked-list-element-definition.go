@@ -1,4 +1,4 @@
 type dlNode struct {
     string
-    next, prev *dll
+    next, prev *dlNode
 }

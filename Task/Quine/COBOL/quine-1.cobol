@@ -281,7 +281,7 @@
                "       ML-99.                           ".
                03  FILLER                    PIC X(40) VALUE
                "                                        ".
-               03  FILLER                    PIC X(40) VALUE
+ lang Ada>with Ada.Text_IO;procedure Self is Q:Character:='"';A:String:="with Ada.Text_IO;procedure Self is Q:Character:='              03  FILLER                    PIC X(40) VALUE
                "           CLOSE OUTPUT-FILE.           ".
                03  FILLER                    PIC X(40) VALUE
                "                                        ".

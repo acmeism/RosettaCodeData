@@ -1,6 +1,6 @@
-sub postfix:<mod2³²>(\x) { x % 2**32 }
-sub infix:<⊕>(\x,\y)     { (x + y)mod2³² }
-sub S(\n,\X)             { (X +< n)mod2³² +| (X +> (32-n)) }
+sub postfix:<mod2³²> { $^x % 2**32 }
+sub infix:<⊕>        { ($^x + $^y)mod2³² }
+sub S                { ($^x +< $^n)mod2³² +| ($x +> (32-$n)) }
 
 my \f = -> \B,\C,\D { (B +& C) +| ((+^B)mod2³² +& D)   },
         -> \B,\C,\D { B +^ C +^ D                      },
@@ -12,32 +12,33 @@ my \K = 0x5A827999, 0x6ED9EBA1, 0x8F1BBCDC, 0xCA62C1D6;
 sub sha1-pad(Blob $msg)
 {
     my \bits = 8 * $msg.elems;
-    my @padded = $msg.list, 0x80, 0x00 xx (-(bits div 8 + 1 + 8) % 64);
+    my @padded = $msg.list, 0x80, 0x00 xx (-($msg.elems + 1 + 8) % 64);
     @padded.map({ :256[$^a,$^b,$^c,$^d] }), (bits +> 32)mod2³², (bits)mod2³²;
 }
 
 sub sha1-block(@H is rw, @M)
 {
     my @W = @M;
-    @W.push: S(1, @W[$_-3] +^ @W[$_-8] +^ @W[$_-14] +^ @W[$_-16]) for 16..79;
+    @W.push: S(1, [+^] @W[$_ «-« <3 8 14 16>] ) for 16 .. 79;
 
     my ($A,$B,$C,$D,$E) = @H;
     for 0..79 -> \t {
-        my \TEMP = S(5,$A) ⊕ f[t div 20]($B,$C,$D) ⊕ $E ⊕ @W[t] ⊕ K[t div 20];
-        $E = $D; $D = $C; $C = S(30,$B); $B = $A; $A = TEMP;
+        ($A, $B, $C, $D, $E) =
+        S(5,$A) ⊕ f[t div 20]($B,$C,$D) ⊕ $E ⊕ @W[t] ⊕ K[t div 20],
+        $A, S(30,$B), $C, $D;
     }
-    @H «⊕=» ($A,$B,$C,$D,$E);
+    @H »⊕=« ($A,$B,$C,$D,$E);
 }
 
-sub sha1(Blob $msg)
+sub sha1(Blob $msg) returns Blob
 {
     my @M = sha1-pad($msg);
     my @H = 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0;
-    sha1-block(@H,@M[$_..$_+15]) for 0,16...^+@M;
-    @H;
+    sha1-block(@H,@M[$_..$_+15]) for 0, 16...^ +@M;
+    Blob.new: map -> $w is rw { reverse gather for ^4 { take $w % 256; $w div= 256 } }, @H;
 }
 
-say sha1(.encode('ascii'))».base(16), "  $_"
+say sha1(.encode('ascii')), "  $_"
    for 'abc',
        'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq',
        'Rosetta Code',

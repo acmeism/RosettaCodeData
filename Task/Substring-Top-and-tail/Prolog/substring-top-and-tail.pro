@@ -9,5 +9,4 @@ remove_first_last_chars :-
 	writef('Without first/last chars : %s\n', [L3]).
 
 remove_last(L, LR) :-
-	reverse(L, [_ | L1]),
-	reverse(L1, LR).
+	append(LR, [_], L).

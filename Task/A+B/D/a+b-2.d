@@ -1,8 +1,6 @@
-import std.stdio, std.conv, std.string;
-
 void main() {
-    auto fin = File("sum_input.txt", "r");
-    auto r = fin.readln().split();
-    auto fout = File("sum_output.txt", "w");
-    fout.writeln(to!int(r[0]) + to!int(r[1]));
+    import std.stdio, std.file;
+
+    immutable ab = "sum_input.txt".slurp!(int, int)("%d %d")[0];
+    "sum_output.txt".File("w").writeln(ab[0] + ab[1]);
 }

@@ -1,21 +1,28 @@
-using System;
-using System.Linq;
-
-class Program
+class songs
 {
-    static void Main()
+    static void Main(string[] args)
     {
-        BeerBottles().Take(99).ToList().ForEach(Console.WriteLine);	
+        beer(5);
     }
 
-    static IEnumerable<String> BeerBottles()
+    private static void beer(int bottles)
     {
-        int i = 100;
-        String f = "{0}, {1}. Take one down, pass it around, {2}";
-        Func<int, bool, String> booze = (c , b) =>
-            String.Format("{0} bottle{1} of beer{2}", c > 0 ? c.ToString() : "no more", (c == 1 ? "" : "s"), b ? " on the wall" : "");
-	
-        while (--i >= 1)
-            yield return String.Format(f, booze(i, true), booze(i, false), booze(i - 1, true));
+        for (int i = bottles; i > 0; i--)
+        {
+            if (i > 1)
+            {
+                Console.Write("{0}\n{1}\n{2}\n{3}\n\n",
+                    i + " bottles of beer on the wall",
+                    i + " bottles of beer",
+                    "Take one down, pass it around",
+                    (i - 1) + " bottles of beer on the wall");
+            }
+            else
+                Console.Write("{0}\n{1}\n{2}\n{3}\n\n",
+                    i + " bottle of beer on the wall",
+                    i + " bottle of beer",
+                    "Take one down, pass it around",
+                    (i - 1) + " bottles of beer on the wall....");
+        }
     }
 }

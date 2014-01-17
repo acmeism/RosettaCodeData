@@ -1,16 +1,16 @@
 def middle_three_digits(n)
-   # minus sign doesn't factor into digit count,
-   # and calling #abs acts as a duck-type assertion
-   n = n.abs
+  # minus sign doesn't factor into digit count,
+  # and calling #abs acts as a duck-type assertion
+  n = n.abs
 
-   # convert to string and find length
-   l = (s = n.to_s).length
+  # convert to string and find length
+  l = (s = n.to_s).length
 
-   # check validity
-   raise ArgumentError, "Number must have at least three digits" if l < 3
-   raise ArgumentError, "Number must have an odd number of digits" if l % 2 == 0
+  # check validity
+  raise ArgumentError, "Number must have at least three digits" if l < 3
+  raise ArgumentError, "Number must have an odd number of digits" if l.even?
 
-   return s[l/2-1,3].to_i
+  return s[l/2-1,3].to_i
 end
 
 samples = [
@@ -21,10 +21,10 @@ samples = [
 width = samples.map { |n| n.to_s.length }.max
 
 samples.each do |n|
-   print "%#{width}d: " % n
-   begin
-     puts "%03d" % middle_three_digits(n)
-   rescue ArgumentError => e
-     puts e.to_s
-   end
+  print "%#{width}d: " % n
+  begin
+    puts "%03d" % middle_three_digits(n)
+  rescue ArgumentError => e
+    puts e
+  end
 end

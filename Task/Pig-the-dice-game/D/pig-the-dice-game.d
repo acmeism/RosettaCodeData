@@ -1,6 +1,5 @@
-import std.stdio, std.string, std.algorithm, std.random;
-
 void main() {
+    import std.stdio, std.string, std.algorithm, std.random;
     enum maxScore = 100;
     enum playerCount = 2;
     immutable confirmations = ["yes", "y", ""];
@@ -12,8 +11,8 @@ void main() {
         writef(" Player %d: (%d, %d). Rolling? (y/n) ", player,
                safeScore[player], score);
         if (safeScore[player] + score < maxScore &&
-            confirmations.canFind(readln().strip().toLower())) {
-            immutable int rolled = uniform(1, 7);
+            confirmations.canFind(readln.strip.toLower)) {
+            immutable rolled = uniform(1, 7);
             writefln(" Rolled %d", rolled);
             if (rolled == 1) {
                 writefln(" Bust! You lose %d but keep %d\n",

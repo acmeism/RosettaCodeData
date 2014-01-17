@@ -12,7 +12,7 @@
 (defn smerge3 [xs ys zs]
   (smerge xs (smerge ys zs)))
 
-(defn map*n [n ks] (map #(* n %) ks))
+(defn map*n [n ks] (map #(*' n %) ks))
 
 (def hamming
   (lazy-seq

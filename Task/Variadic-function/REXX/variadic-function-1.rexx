@@ -1,5 +1,5 @@
-print_all:  procedure
+print_all:  procedure              /*   [↓]     is the # of args passed.*/
                            do j=1  for arg()
-                           say arg(j)
+                           say  arg(j)
                            end   /*j*/
 return

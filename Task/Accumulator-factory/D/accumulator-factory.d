@@ -1,3 +1,5 @@
+import std.stdio;
+
 void main() {
     auto x = acc(1);
     x(5);

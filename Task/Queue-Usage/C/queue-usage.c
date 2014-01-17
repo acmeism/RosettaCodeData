@@ -23,9 +23,9 @@ int main()
     printf("%d\n", i);
 
   fprintf(stderr, "FIFO list %s\n",
-	  ( m_dequeue(&i, &head) ) ?
-	  "had still an element" :
-	  "is void!");
+      ( m_dequeue(&i, &head) ) ?
+      "had still an element" :
+      "is void!");
 
   exit(0);
 }

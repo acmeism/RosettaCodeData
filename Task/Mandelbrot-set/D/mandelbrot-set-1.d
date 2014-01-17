@@ -1,15 +1,12 @@
 void main() {
-    import std.stdio, std.complex, std.range;
+    import std.stdio, std.complex;
 
-    enum maxIter = 100;
-    foreach (immutable y; iota(-1.2, 1.2, 0.05)) {
-        foreach (immutable x; iota(-2.05, 0.55, 0.03)) {
-            immutable c = complex(x, y);
-            auto z = complex(0),
-                 i = 0;
-            for (; i < maxIter && z.abs < 4; i++)
-                z = z ^^ 2 + c;
-            write(i == maxIter ? '#' : '.');
+    for (real y = -1.2; y < 1.2; y += 0.05) {
+        for (real x = -2.05; x < 0.55; x += 0.03) {
+            auto z = 0.complex;
+            foreach (_; 0 .. 100)
+                z = z ^^ 2 + complex(x, y);
+            write(z.abs < 2 ? '#' : '.');
         }
         writeln;
     }

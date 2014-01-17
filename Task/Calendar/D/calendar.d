@@ -1,20 +1,21 @@
-import std.stdio, std.datetime, std.string, std.exception, std.conv;
+import std.stdio, std.datetime, std.string, std.conv;
 
-void printCalendar(in int year, in int cols) {
-    enforce(1 <= cols && cols <= 12);
-
-    immutable rows = 12 / cols + (12 % cols != 0);
+void printCalendar(in uint year, in uint nCols)
+in {
+    assert(nCols > 0 && nCols <= 12);
+} body {
+    immutable rows = 12 / nCols + (12 % nCols != 0);
     auto date = Date(year, 1, 1);
-    auto offs = cast(int)date.dayOfWeek();
-    const monthNames = "January February March April May June "
-    "July August September October November December".split(" ");
+    auto offs = cast(int)date.dayOfWeek;
+    const months = "January February March April May June
+        July August September October November December".split;
 
     string[8][12] mons;
-    foreach (m; 0 .. 12) {
-        mons[m][0] = monthNames[m].center(21);
+    foreach (immutable m; 0 .. 12) {
+        mons[m][0] = months[m].center(21);
         mons[m][1] = " Su Mo Tu We Th Fr Sa";
-        immutable dim = date.daysInMonth();
-        foreach (d; 1 .. 43) {
+        immutable dim = date.daysInMonth;
+        foreach (immutable d; 1 .. 43) {
             immutable day = d > offs && d <= offs + dim;
             immutable str = day ? format(" %2s", d-offs) : "   ";
             mons[m][2 + (d - 1) / 7] ~= str;
@@ -23,16 +24,17 @@ void printCalendar(in int year, in int cols) {
         date.add!"months"(1);
     }
 
-    writeln("[Snoopy Picture]".center(cols * 24 + 4));
-    writeln(text(year).center(cols * 24 + 4), "\n");
-    foreach (r; 0 .. rows) {
-        auto s = new string[8];
-        foreach (c; 0 .. cols) {
-            if (r * cols + c > 11) break;
-            foreach (i, line; mons[r * cols + c])
+    "[Snoopy Picture]".center(nCols * 24 + 4).writeln;
+    writeln(year.text.center(nCols * 24 + 4), "\n");
+    foreach (immutable r; 0 .. rows) {
+        string[8] s;
+        foreach (immutable c; 0 .. nCols) {
+            if (r * nCols + c > 11)
+                break;
+            foreach (immutable i, line; mons[r * nCols + c])
                 s[i] ~= format("   %s", line);
         }
-        writeln(s.join("\n"), "\n");
+        writefln("%-(%s\n%)\n", s);
     }
 }
 

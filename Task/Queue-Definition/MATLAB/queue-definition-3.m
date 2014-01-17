@@ -2,7 +2,7 @@
 
 myQueue =
 
-	FIFOQueue
+    FIFOQueue
 
 >> push(myQueue,'jello')
 >> pop(myQueue)

@@ -6,6 +6,3 @@ WORKING-STORAGE SECTION.
 PROCEDURE DIVISION.
     DISPLAY initialized-data *> Shows 'Hello, World!'
     DISPLAY other-data       *> Will probably show 15 spaces.
-    ...
-    *> Sets initialized-data back to "Hello, World!" and fills other-data with spaces.
-    INITIALIZE initialized-data, other-data

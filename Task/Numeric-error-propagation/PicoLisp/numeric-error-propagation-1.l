@@ -91,4 +91,4 @@
       (pack
          (round (car N) 10)
          " ± "
-         (round (sqrt (* 1.0 (cdr N))) 8) ) ) )
+         (round (sqrt (cdr N) 1.0) 8) ) ) )

@@ -1,2 +1,2 @@
-args = ["Rosetta", "Code", "Is", "Awseome!"]
+args = ["Rosetta", "Code", "Is", "Awesome!"]
 printAll.apply(null, args)

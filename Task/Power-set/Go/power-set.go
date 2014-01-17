@@ -10,7 +10,7 @@ import (
 // element is an interface, allowing different kinds of elements to be
 // implemented and stored in sets.
 type element interface {
-    // an element must be disinguishable from other elements to satisfy
+    // an element must be distinguishable from other elements to satisfy
     // the mathematical definition of a set.  a.eq(b) must give the same
     // result as b.eq(a).
     eq(element) bool

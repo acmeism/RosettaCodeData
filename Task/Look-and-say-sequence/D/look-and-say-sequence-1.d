@@ -1,15 +1,7 @@
-import std.stdio, std.conv, std.algorithm;
+import std.stdio, std.algorithm, std.range;
 
-string lookAndSay(string input) {
-    string result;
-    foreach (digit, count; input.group())
-        result ~= text(count, digit);
-    return result;
-}
+enum say = (in string s) pure => s.group.map!q{ text(a[1],a[0]) }.join;
 
 void main() {
-    auto terms = ["1"];
-    foreach (_; 0 .. 7)
-        terms ~= terms[$ - 1].lookAndSay();
-    writeln(terms);
+    "1".recurrence!((t, n) => t[n - 1].say).take(8).writeln;
 }

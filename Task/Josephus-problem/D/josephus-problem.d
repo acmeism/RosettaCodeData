@@ -7,7 +7,7 @@ T pop(T)(ref T[] items, in size_t i) pure {
     return aux;
 }
 
-string josephus(in int n, in int k) /*pure*/ {
+string josephus(in int n, in int k) pure {
     auto p = n.iota.array;
     int i;
     int[] seq;

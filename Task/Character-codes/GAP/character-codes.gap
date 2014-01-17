@@ -1,5 +1,5 @@
 # Code must be in 0 .. 255.
-CHAR_INT(65);
+CharInt(65);
 # 'A'
-INT_CHAR('Z');
+IntChar('Z');
 # 90

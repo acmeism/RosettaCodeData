@@ -1,44 +1,39 @@
 import core.stdc.stdio, core.stdc.stdlib;
 
-struct MemoryPool(T, int MAX_BLOCK_BYTES=1 << 17) {
+struct MemoryPool(T, int MAX_BLOCK_BYTES = 1 << 17) {
     static assert(!is(T == class),
                   "MemoryPool is designed for native data.");
     static assert(MAX_BLOCK_BYTES >= 1,
                   "MemoryPool: MAX_BLOCK_BYTES must be >= 1 bytes.");
+    static assert(MAX_BLOCK_BYTES >= T.sizeof,
+                  "MemoryPool: MAX_BLOCK_BYTES must be" ~
+                  " bigger than a T.");
+    static if (T.sizeof * 5 > MAX_BLOCK_BYTES)
+        pragma(msg, "MemoryPool: Block is very small.");
 
-    static struct Block {
-        static assert(MAX_BLOCK_BYTES >= T.sizeof,
-                      "MemoryPool: MAX_BLOCK_BYTES must be" ~
-                      " bigger than a T.");
-        static if ((T.sizeof * 5) > MAX_BLOCK_BYTES)
-            pragma(msg, "MemoryPool: Block is very small.");
-
-        T[(MAX_BLOCK_BYTES / T.sizeof)] items;
-    }
-
-    __gshared static Block*[] blocks;
-
-    __gshared static T* nextFree, lastFree;
+    alias Block = T[MAX_BLOCK_BYTES / T.sizeof];
+    static __gshared Block*[] blocks;
+    static __gshared T* nextFree, lastFree;
 
     static T* newItem() nothrow {
         if (nextFree >= lastFree) {
             blocks ~= cast(Block*)calloc(1, Block.sizeof);
             if (blocks[$ - 1] == null)
                 exit(1);
-            nextFree = blocks[$ - 1].items.ptr;
-            lastFree = nextFree + Block.items.length;
+            nextFree = blocks[$ - 1].ptr;
+            lastFree = nextFree + Block.length;
         }
 
         return nextFree++;
     }
 
-    static void freeAll() nothrow {
-        foreach (block_ptr; blocks)
-            free(block_ptr);
-        blocks.length = 0;
-        nextFree = null;
-        lastFree = null;
-    }
+//    static void freeAll() nothrow {
+//        foreach (blockPtr; blocks)
+//            free(blockPtr);
+//        blocks.length = 0;
+//        nextFree = null;
+//        lastFree = null;
+//    }
 }
 
 struct Rec { // Tree node
@@ -135,5 +130,5 @@ void main() nothrow {
     }
 
     printf("Allocated %d Rec tree nodes.\n", nNodes);
-    //recPool.freeAll();
+    //recPool.freeAll;
 }

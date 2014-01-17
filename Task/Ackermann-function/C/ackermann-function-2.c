@@ -34,7 +34,7 @@ int main()
         memset(cache, 0, sizeof(int) * (1 << (m_bits + n_bits)));
 
         for (m = 0; m <= 4; m++)
-                for (n = 0; n < 6 - m; n++) {
+                for (n = 0; n < 6 - m; n++)
                         printf("A(%d, %d) = %d\n", m, n, ackermann(m, n));
 
         return 0;

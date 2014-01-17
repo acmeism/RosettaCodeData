@@ -10,7 +10,7 @@ N=  100;
 
   z  = sqrt(x.^2+y.^2);
   ix = (z+x+y<100) & (x < y) & (y < z);
-  p  = find(gcd(x(ix),y(ix))==1); 	% find primitive triples
+  p  = find(gcd(x(ix),y(ix))==1);   % find primitive triples
 
   printf('There are %i Pythagorean Triples and %i primitive triples with a perimeter smaller than %i.\n',...
          sum(ix), length(p), N);

@@ -5,7 +5,7 @@ struct Dynamic(T) {
         return vars[key];
     }
 
-    @property void opDispatch(string key, U)(U value)/*pure*/ nothrow {
+    @property void opDispatch(string key, U)(U value) pure nothrow {
         vars[key] = value;
     }
 }

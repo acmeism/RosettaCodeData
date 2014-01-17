@@ -9,8 +9,8 @@ subroutine cubic_bezier(img, p1, p2, p3, p4, color)
   do i = 0, N_SEG
      t = real(i) / real(N_SEG)
      a = (1.0 - t)**3.0
-     b = 3.0 * t * (1.0 - t)**2.0
-     c = 3.0 * (1.0 - t) * t**2.0
+     b = 3.0 * t * (1.0 - t)**2
+     c = 3.0 * (1.0 - t) * t**2
      d = t**3.0
      x = a * p1%x + b * p2%x + c * p3%x + d * p4%x
      y = a * p1%y + b * p2%y + c * p3%y + d * p4%y

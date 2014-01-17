@@ -1,2 +1,2 @@
-Object[] args = {"Rosetta", "Code", "Is", "Awseome!"};
+Object[] args = {"Rosetta", "Code", "Is", "Awesome!"};
 printAll(args);

@@ -1,4 +1,4 @@
--module( compare_sorting_algorithms_performance ).
+-module( compare_sorting_algorithms ).
 
 -export( [task/0] ).
 

@@ -13,7 +13,7 @@ class Queue[T] {
     if(isEmpty) head=Some(n) else tail.get.append(n)
     tail=Some(n)
   }
-	
+
   def dequeue:T=head match {
     case Some(item) => head=item.next; item.value
     case None => throw new java.util.NoSuchElementException()

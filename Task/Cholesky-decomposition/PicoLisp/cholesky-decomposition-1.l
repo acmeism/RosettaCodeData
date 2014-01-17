@@ -10,7 +10,7 @@
                   (dec 'S (*/ (get L I K) (get L J K) 1.0)) )
                (set (nth L I J)
                   (if (= I J)
-                     (sqrt (* 1.0 S))
+                     (sqrt S 1.0)
                      (*/ S 1.0 (get L J J)) ) ) ) ) )
       (for R L
          (for N R (prin (align 9 (round N 5))))

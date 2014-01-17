@@ -1,5 +1,5 @@
 /*REXX pgm does a fast Fourier transform (FFT) on a set of complex nums.*/
-numeric digits 85
+numeric digits length( pi() )   - 1    /*limited by PI function result. */
 arg data; if data='' then data='1 1 1 1 0'  /*no data?  Then use default*/
 data=translate(data, 'J', "I")         /*allow use of  i  as well as  j */
 size=words(data);    pad=left('',6)    /*PAD: for indenting/padding SAYs*/

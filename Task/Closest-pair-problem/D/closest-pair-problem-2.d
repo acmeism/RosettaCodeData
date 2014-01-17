@@ -1,49 +1,39 @@
-import core.stdc.stdio, core.stdc.stdlib, std.math; // for Phobos
-//import tango.stdc.stdio, tango.stdc.stdlib, tango.math.Math;
+import std.stdio, std.random, std.math, std.typecons, std.complex,
+       std.traits;
 
-int bfClosestPair2(cdouble[] points, out size_t i1, out size_t i2) {
-  auto minD = typeof(points[0].re).infinity;
-  if (points.length < 2) {
-    i1 = i2 = size_t.max;
-    return -1;
-  }
-  size_t minI, minJ;
-  for (int i = 0; i < points.length-1; i++) {
-    auto points_i_re = points[i].re;
-    auto points_i_im = points[i].im;
-    for (int j = i+1; j < points.length; j++) {
-      auto dre = points_i_re - points[j].re;
-      auto dist = dre * dre;
-      if (dist < minD) {
-        auto dim = points_i_im - points[j].im;
-        dist += dim * dim;
-        if (dist < minD) {
-          minD = dist;
-          minI = i;
-          minJ = j;
+Nullable!(Tuple!(size_t, size_t))
+bfClosestPair2(T)(in Complex!T[] points) pure nothrow {
+    auto minD = Unqual!(typeof(points[0].re)).infinity;
+    if (points.length < 2)
+        return typeof(return)();
+
+    size_t minI, minJ;
+    foreach (immutable i; 0 .. points.length - 1)
+        foreach (immutable j; i + 1 .. points.length) {
+            auto dist = (points[i].re - points[j].re) ^^ 2;
+            if (dist < minD) {
+                dist += (points[i].im - points[j].im) ^^ 2;
+                if (dist < minD) {
+                    minD = dist;
+                    minI = i;
+                    minJ = j;
+                }
+            }
         }
-      }
-    }
-  }
 
-  i1 = minI;
-  i2 = minJ;
-  return 0;
+    return typeof(return)(tuple(minI, minJ));
 }
 
 void main() {
-    srand(31415);
-    auto pts = new cdouble[10_000];
+    alias C = Complex!double;
+    auto rng = 31415.Xorshift;
+    C[10_000] pts;
     foreach (ref p; pts)
-        p = 1000.0 *  (cast(double)rand() / (RAND_MAX + 1.0)) +
-            1000.0i * (cast(double)rand() / (RAND_MAX + 1.0));
+        p = C(uniform(0.0, 1000.0, rng), uniform(0.0, 1000.0, rng));
 
-    size_t i, j;
-    int err = bfClosestPair2(pts, i, j);
-    if (err < 0)
+    immutable ij = pts.bfClosestPair2;
+    if (ij.isNull)
         return;
-    double d = sqrt((pts[i].re - pts[j].re) * (pts[i].re - pts[j].re) +
-                    (pts[i].im - pts[j].im) * (pts[i].im - pts[j].im));
-    printf("Closest pair: dist: %lf  p1, p2: (%lf, %lf), (%lf, %lf)\n",
-           d, pts[i].re, pts[i].im, pts[j].re, pts[j].im);
+    writefln("Closest pair: Distance: %f  p1, p2: %f, %f",
+             abs(pts[ij[0]] - pts[ij[1]]), pts[ij[0]], pts[ij[1]]);
 }

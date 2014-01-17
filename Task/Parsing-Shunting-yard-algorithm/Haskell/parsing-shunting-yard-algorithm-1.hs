@@ -9,7 +9,8 @@ prec "-" = 2
 leftAssoc "^" = False
 leftAssoc _ = True
 
-isOp t = t `elem` (map (:[]) "-+/*^")
+isOp (t:[]) = t `elem` "-+/*^"
+isOp _      = False
 
 simSYA xs = final ++ [lastStep]
   where final = scanl f ([],[],"") xs

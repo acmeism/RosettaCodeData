@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include <ucontext.h>
+#include <setjmp.h>
+#include <time.h>
 
-ucontext_t ctx;
+jmp_buf ctx;
 const char *msg;
 
 enum { OP_NONE = 0, OP_NUM, OP_ADD, OP_SUB, OP_MUL, OP_DIV };
@@ -49,7 +50,7 @@ void reset()
 void bail(const char *s)
 {
 	msg = s;
-	setcontext(&ctx);
+	longjmp(ctx, 1);
 }
 
 expr new_expr()
@@ -256,7 +257,7 @@ int main()
 	gen_digits();
 	while(1) {
 		get_input();
-		getcontext(&ctx); /* if parse error, jump back here with err msg set */
+		setjmp(ctx); /* if parse error, jump back here with err msg set */
 		if (msg) {
 			/* after error jump; announce, reset, redo */
 			printf("%s at '%.*s'\n", msg, pos, str);

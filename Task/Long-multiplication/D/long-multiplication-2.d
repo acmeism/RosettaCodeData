@@ -1,6 +1,6 @@
 import std.stdio, std.algorithm, std.range, std.ascii;
 
-auto longMult(in string x1, in string x2) /*pure nothrow*/ {
+auto longMult(in string x1, in string x2) pure /*nothrow*/ {
     auto digits1 = x1.retro.map!q{a - '0'};
     immutable digits2 = x2.retro.map!q{a - '0'}.array;
     uint[] res;

@@ -1,1 +1,0 @@
-myStrVar.length()

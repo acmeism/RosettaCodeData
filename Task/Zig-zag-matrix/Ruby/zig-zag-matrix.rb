@@ -8,8 +8,8 @@ def zigzag(n)
 end
 
 def print_matrix(m)
-  width = m.flatten.max.to_s.size
-  m.each {|row| row.each {|val| print "%#{width}d " % val}; puts}
+  format = "%#{m.flatten.max.to_s.size}d "
+  puts m.map {|row| row.map {|val| format % val}.join}
 end
 
 print_matrix zigzag(5)

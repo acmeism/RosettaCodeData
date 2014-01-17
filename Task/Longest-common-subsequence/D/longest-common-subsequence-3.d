@@ -20,7 +20,7 @@ uint[] lensLCS(R)(R xs, R ys) pure nothrow {
 }
 
 void calculateLCS(T)(in T[] xs, in T[] ys, bool[] xs_in_lcs,
-                     in size_t idx=0) /*pure nothrow*/ {
+                     in size_t idx=0) pure nothrow {
     immutable nx = xs.length;
     immutable ny = ys.length;
 
@@ -50,11 +50,11 @@ void calculateLCS(T)(in T[] xs, in T[] ys, bool[] xs_in_lcs,
     }
 }
 
-const(T)[] lcs(T)(in T[] xs, in T[] ys) /*pure nothrow*/ {
+const(T)[] lcs(T)(in T[] xs, in T[] ys) pure /*nothrow*/ {
     auto xs_in_lcs = new bool[xs.length];
     calculateLCS(xs, ys, xs_in_lcs);
 
-    return zip(xs, xs_in_lcs)
+    return zip(xs, xs_in_lcs) // Not nothrow.
            .filter!q{ a[1] }
            .map!q{ a[0] }
            .array;

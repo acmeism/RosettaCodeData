@@ -1,13 +1,10 @@
 #include <iostream>
 #include <string>
-#include <algorithm>
 
 int main( ) {
-   std::string original ( "This is the original" ) ;
-   std::string mycopy( original.length( ) , ' ' ) ;
-   std::copy ( original.begin( ) , original.end( ) , mycopy.begin( ) ) ;
-   std::cout << "This is the copy: " << mycopy << std::endl ;
-   original.assign( "Now we change the original! " ) ;
-   std::cout << "mycopy still is " << mycopy << std::endl ;
-   return 0 ;
+   std::string original ("This is the original");
+   std::string my_copy = original;
+   std::cout << "This is the copy: " << my_copy << std::endl;
+   original = "Now we change the original! ";
+   std::cout << "my_copy still is " << my_copy << std::endl;
 }

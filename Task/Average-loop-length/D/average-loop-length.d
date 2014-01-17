@@ -1,6 +1,6 @@
 import std.stdio, std.random, std.math, std.algorithm, std.range;
 
-real analytical(in int n) /*pure nothrow*/ {
+real analytical(in int n) pure nothrow {
     real total = 0.0;
     foreach (immutable k; 1 .. n + 1) {
         immutable x = reduce!q{a * b}(1.0L, iota(n - k + 1, n + 1))

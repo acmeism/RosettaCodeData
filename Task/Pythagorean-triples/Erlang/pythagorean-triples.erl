@@ -4,7 +4,7 @@
 -module(triples).
 -export([main/1]).
 
-%% Transformations t1, t2 and t3 to generate new triples	
+%% Transformations t1, t2 and t3 to generate new triples
 t1(A, B, C) ->
   {A-2*B+2*C, 2*A-B+2*C, 2*A-2*B+3*C}.
 t2(A, B, C) ->
@@ -17,10 +17,10 @@ count_triples(A, B, C, Tot_acc, Cnt_acc, Max_perimeter) when (A+B+C) =< Max_peri
   Tot1 = Tot_acc + Max_perimeter div (A+B+C),
   {A1, B1, C1} = t1(A, B, C),
   {Tot2, Cnt2} = count_triples(A1, B1, C1, Tot1, Cnt_acc+1, Max_perimeter),
-	
+
   {A2, B2, C2} = t2(A, B, C),
   {Tot3, Cnt3} = count_triples(A2, B2, C2, Tot2, Cnt2, Max_perimeter),
-	
+
   {A3, B3, C3} = t3(A, B, C),
   {Tot4, Cnt4} = count_triples(A3, B3, C3, Tot3, Cnt3, Max_perimeter),
   {Tot4, Cnt4};

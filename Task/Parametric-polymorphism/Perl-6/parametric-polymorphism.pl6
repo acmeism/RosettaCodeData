@@ -1,12 +1,12 @@
 role BinaryTree[::T] {
-    has T $!value;
+    has T $.value;
     has BinaryTree[T] $.left;
     has BinaryTree[T] $.right;
 
     method replace-all(T $value) {
         $!value = $value;
-        $.left.?replace-all($value);
-        $.right.?replace-all($value);
+        $!left.replace-all($value) if $!left.defined;
+        $!right.replace-all($value) if $!right.defined;
     }
 }
 

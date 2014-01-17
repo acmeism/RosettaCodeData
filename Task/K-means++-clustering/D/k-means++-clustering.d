@@ -15,7 +15,7 @@ in {
     assert(result.length == nPoints);
     foreach (const ref p; result) {
         assert(p.cluster == 0);
-        assert(!isNaN(p.x) && !isNaN(p.y));
+        assert(!p.x.isNaN && !p.y.isNaN);
     }
 } body {
     Point[] points;
@@ -23,10 +23,9 @@ in {
 
     // This is not a uniform 2D distribution.
     foreach (immutable i; 0 .. nPoints) {
-        immutable double r = uniform(0.0, radius, rnd);
-        immutable double ang = uniform(0.0, 2 * PI, rnd);
-        // Can't use normal array assign because x,y are immutable.
-        points ~= Point(r * cos(ang), r * sin(ang)); // sincos?
+        immutable r = uniform(0.0, radius, rnd);
+        immutable ang = uniform(0.0, 2 * PI, rnd);
+        points ~= Point(r * ang.cos, r * ang.sin); // Sincos?
     }
 
     return points;
@@ -49,11 +48,11 @@ in {
     assert(points.length >= nclusters);
     assert(nclusters > 0);
     foreach (const ref p; points)
-        assert(!isNaN(p.x) && !isNaN(p.y));
+        assert(!p.x.isNaN && !p.y.isNaN);
 } out(result) {
     assert(result.length == nclusters);
     foreach (const ref cc; result)
-        assert(!isNaN(cc.x) && !isNaN(cc.y));
+        assert(!cc.x.isNaN && !cc.y.isNaN);
 } body {
     /// Distance and index of the closest cluster center.
     static Tuple!(size_t, double)
@@ -64,20 +63,19 @@ in {
     } out(result) {
         assert(result[0] < centers.length);
         immutable ClusterCenter c = centers[result[0]];
-        /*immutable*/
-        double d = (c.x - point.x) ^^ 2  +  (c.y - point.y) ^^ 2;
-        assert(feqrel(cast(double)result[1], d) > 45); // Arbitrary.
+        immutable d = (c.x - point.x) ^^ 2  +  (c.y - point.y) ^^ 2;
+        assert(feqrel(cast()result[1], cast()d) > 45); // Arbitrary.
     } body {
         static double sqrDistance2D(in ref ClusterCenter a,
                                     in ref Point b) pure nothrow {
-            return (a.x - b.x) ^^ 2  +  (a.y - b.y) ^^ 2;
+            return (a.x - b.x) ^^ 2 + (a.y - b.y) ^^ 2;
         }
 
         size_t minIndex = point.cluster;
         double minDist = double.max;
 
         foreach (immutable i, const ref cc; centers) {
-            immutable double d = sqrDistance2D(cc, point);
+            immutable d = sqrDistance2D(cc, point);
             if (minDist > d) {
                 minDist = d;
                 minIndex = i;
@@ -162,16 +160,15 @@ in {
 
 
 void printEps(in Point[] points, in ClusterCenter[] centers,
-              immutable size_t W = 400,
-              immutable size_t H = 400) nothrow
+              in size_t W = 400, in size_t H = 400) nothrow
 in {
     assert(points.length >= centers.length);
     assert(centers.length > 0);
     assert(W > 0 && H > 0);
     foreach (const ref p; points)
-        assert(!isNaN(p.x) && !isNaN(p.y));
+        assert(!p.x.isNaN && !p.y.isNaN);
     foreach (const ref cc; centers)
-        assert(!isNaN(cc.x) && !isNaN(cc.y));
+        assert(!cc.x.isNaN && !cc.y.isNaN);
 } body {
     auto findBoundingBox() nothrow {
         double min_x, max_x, min_y, max_y;
@@ -187,8 +184,7 @@ in {
         assert(max_x > min_x && max_y > min_y);
 
         return tuple(min(W / (max_x - min_x), H / (max_y - min_y)),
-                     (max_x + min_x) / 2,
-                     (max_y + min_y) / 2);
+                     (max_x + min_x) / 2, (max_y + min_y) / 2);
     }
     //immutable (scale, cx, cy) = findBoundingBox();
     immutable sc_cx_cy = findBoundingBox();
@@ -231,14 +227,14 @@ in {
                (cc.y - cy) * scale + H / 2);
     }
 
-    printf("\n%%%%EOF");
+    "\n%%%%EOF".printf;
 }
 
 
 void main() {
     enum size_t nPoints = 100_000;
     enum size_t nClusters = 11; // k.
-    auto rnd = Xorshift(1); // For speed and repeatability.
+    auto rnd = 1.Xorshift; // For speed and repeatability.
 
     auto points = generatePoints(nPoints, 10, rnd);
     const clusterCenters = lloyd(points, nClusters, rnd);

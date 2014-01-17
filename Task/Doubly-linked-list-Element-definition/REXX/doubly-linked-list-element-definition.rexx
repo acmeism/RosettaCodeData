@@ -28,7 +28,7 @@ call sy 'displaying list size.'            ; say 'list size='@size()
 call sy 'forward list'                     ; call @show
 call sy 'backward list'                    ; call @show ,,-1
 call sy 'showing 4th item'                 ; call @show 4,1
-call sy 'showing 6th & 6th items'          ; call @show 5,2
+call sy 'showing 5th & 6th items'          ; call @show 5,2
 call sy 'adding item before item 4: black' ; call @put 'black',4
 call sy 'showing list'                     ; call @show
 call sy 'adding to tail: there, in the ...'; call @put 'there, in the shadows, stalking its prey (and next meal).'

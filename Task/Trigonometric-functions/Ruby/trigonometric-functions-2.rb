@@ -10,26 +10,26 @@ end
 
 # Arcsine of _y_, domain [-1, 1], range [-pi/2, pi/2].
 def asin(y, prec)
-	# Handle angles with no tangent.
-	return -PI / 2 if y == -1
-	return PI / 2 if y == 1
+  # Handle angles with no tangent.
+  return -PI / 2 if y == -1
+  return PI / 2 if y == 1
 
-	# Tangent of angle is y / x, where x^2 + y^2 = 1.
-	atan(y / sqrt(1 - y * y, prec), prec)
+  # Tangent of angle is y / x, where x^2 + y^2 = 1.
+  atan(y / sqrt(1 - y * y, prec), prec)
 end
 
 # Arccosine of _x_, domain [-1, 1], range [0, pi].
 def acos(x, prec)
-	# Handle angle with no tangent.
-	return PI / 2 if x == 0
+  # Handle angle with no tangent.
+  return PI / 2 if x == 0
 
-	# Tangent of angle is y / x, where x^2 + y^2 = 1.
-	a = atan(sqrt(1 - x * x, prec) / x, prec)
-	if a < 0
-		a + PI(prec)
-	else
-		a
-	end
+  # Tangent of angle is y / x, where x^2 + y^2 = 1.
+  a = atan(sqrt(1 - x * x, prec) / x, prec)
+  if a < 0
+    a + PI(prec)
+  else
+    a
+  end
 end
 
 

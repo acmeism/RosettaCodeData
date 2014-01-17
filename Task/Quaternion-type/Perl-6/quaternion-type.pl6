@@ -1,34 +1,47 @@
-class Qu {
+class Quaternion {
     has Real ( $.r, $.i, $.j, $.k );
 
     multi method new ( Real $r, Real $i, Real $j, Real $k ) {
-        self.bless: *, :$r, :$i, :$j, :$k;
+        self.bless: :$r, :$i, :$j, :$k;
     }
-    method Str   (  ) { "$.r + {$.i}i + {$.j}j + {$.k}k" }
-    method reals (  ) { $.r, $.i, $.j, $.k }
-    method conj  (  ) { self.new: $.r, -$.i, -$.j, -$.k }
-    method norm  (  ) { sqrt [+] self.reals X** 2 }
-}
+    multi qu(*@r) is export { Quaternion.new: |@r }
+    sub postfix:<j>(Real $x) is export { qu 0, 0, $x, 0 }
+    sub postfix:<k>(Real $x) is export { qu 0, 0, 0, $x }
 
-multi sub  infix:<eqv> ( Qu $a, Qu $b ) { [and] $a.reals Z== $b.reals }
-multi sub  infix:<+> ( Qu $a, Real $b ) { $a.new: $b+$a.r, $a.i, $a.j, $a.k }
-multi sub  infix:<+> ( Real $a, Qu $b ) { $b.new: $a+$b.r, $b.i, $b.j, $b.k }
-multi sub  infix:<+> ( Qu $a,   Qu $b ) { $a.new: |( $a.reals Z+ $b.reals ) }
-multi sub prefix:<-> ( Qu $a          ) { $a.new: |( $a.reals X* -1 ) }
-multi sub  infix:<*> ( Qu $a, Real $b ) { $a.new: |( $a.reals X* $b ) }
-multi sub  infix:<*> ( Real $a, Qu $b ) { $b.new: |( $b.reals X* $a ) }
-multi sub  infix:<*> ( Qu $a,   Qu $b ) {
-    my @a_rijk            = $a.reals;
-    my ( $r, $i, $j, $k ) = $b.reals;
-    return $a.new: ( [+] @a_rijk Z* $r, -$i, -$j, -$k ), # real
-                   ( [+] @a_rijk Z* $i,  $r,  $k, -$j ), # i
-                   ( [+] @a_rijk Z* $j, -$k,  $r,  $i ), # j
-                   ( [+] @a_rijk Z* $k,  $j, -$i,  $r ); # k
-}
+    method Str   () { "$.r + {$.i}i + {$.j}j + {$.k}k" }
+    method reals () { $.r, $.i, $.j, $.k }
+    method conj  () { qu $.r, -$.i, -$.j, -$.k }
+    method norm  () { sqrt [+] self.reals X** 2 }
 
-my Qu $q  .= new: 1, 2, 3, 4;
-my Qu $q1 .= new: 2, 3, 4, 5;
-my Qu $q2 .= new: 3, 4, 5, 6;
+    multi infix:<eqv> ( Quaternion $a, Quaternion $b ) is export { $a.reals eqv $b.reals }
+
+    multi infix:<+> ( Quaternion $a,       Real $b ) is export { qu $b+$a.r, $a.i, $a.j, $a.k }
+    multi infix:<+> (       Real $a, Quaternion $b ) is export { qu $a+$b.r, $b.i, $b.j, $b.k }
+    multi infix:<+> ( Quaternion $a,    Complex $b ) is export { qu $b.re + $a.r, $b.im + $a.i, $a.j, $a.k }
+    multi infix:<+> (    Complex $a, Quaternion $b ) is export { qu $a.re + $b.r, $a.im + $b.i, $b.j, $b.k }
+    multi infix:<+> ( Quaternion $a, Quaternion $b ) is export { qu $a.reals Z+ $b.reals }
+
+    multi prefix:<-> ( Quaternion $a ) is export { qu $a.reals X* -1 }
+
+    multi infix:<*> ( Quaternion $a,       Real $b ) is export { qu $a.reals X* $b }
+    multi infix:<*> (       Real $a, Quaternion $b ) is export { qu $b.reals X* $a }
+    multi infix:<*> ( Quaternion $a,    Complex $b ) is export { $a * qu $b.reals, 0, 0 }
+    multi infix:<*> ( Complex $a,    Quaternion $b ) is export { $b R* qu $a.reals, 0, 0 }
+
+    multi infix:<*> ( Quaternion $a, Quaternion $b ) is export {
+	my @a_rijk            = $a.reals;
+	my ( $r, $i, $j, $k ) = $b.reals;
+	return qu [+]( @a_rijk Z* $r, -$i, -$j, -$k ), # real
+		  [+]( @a_rijk Z* $i,  $r,  $k, -$j ), # i
+		  [+]( @a_rijk Z* $j, -$k,  $r,  $i ), # j
+		  [+]( @a_rijk Z* $k,  $j, -$i,  $r ); # k
+    }
+}
+import Quaternion;
+
+my $q  = 1 + 2i + 3j + 4k;
+my $q1 = 2 + 3i + 4j + 5k;
+my $q2 = 3 + 4i + 5j + 6k;
 my $r  = 7;
 
 say "1) q norm  = {$q.norm}";

@@ -1,18 +1,17 @@
-MsgBox % factor(8388607)  ; 47 * 178481
+MsgBox % factor(8388607)   ; 47 * 178481
 
 factor(n)
 {
-  If (n = 1)
-    Return
-  f = 2
-  While (f <= n)
-  {
-    If (Mod(n, f) = 0)
+    if (n = 1)
+        return
+    f = 2
+    while (f <= n)
     {
-      next := factor(n / f)
-      factors = %f%`n%next%
-      Return factors
+        if (Mod(n, f) = 0)
+        {
+            next := factor(n / f)
+            return, % f "`n" next
+        }
+        f++
     }
-    f++
-  }
 }

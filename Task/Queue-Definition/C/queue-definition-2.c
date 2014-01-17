@@ -8,36 +8,36 @@ struct node_t { int val; node prev, next; };
 #define TAIL(q) q->next
 queue q_new()
 {
-	node q = malloc(sizeof(node_t));
-	q->next = q->prev = 0;
-	return q;
+    node q = malloc(sizeof(node_t));
+    q->next = q->prev = 0;
+    return q;
 }
 
 int empty(queue q)
 {
-	return !HEAD(q);
+    return !HEAD(q);
 }
 
 void enqueue(queue q, int n)
 {
-	node nd = malloc(sizeof(node_t));
-	nd->val = n;
-	if (!HEAD(q)) HEAD(q) = nd;
-	nd->prev = TAIL(q);
-	if (nd->prev) nd->prev->next = nd;
-	TAIL(q) = nd;
-	nd->next = 0;
+    node nd = malloc(sizeof(node_t));
+    nd->val = n;
+    if (!HEAD(q)) HEAD(q) = nd;
+    nd->prev = TAIL(q);
+    if (nd->prev) nd->prev->next = nd;
+    TAIL(q) = nd;
+    nd->next = 0;
 }
 
 int dequeue(queue q, int *val)
 {
-	node tmp = HEAD(q);
-	if (!tmp) return 0;
-	*val = tmp->val;
+    node tmp = HEAD(q);
+    if (!tmp) return 0;
+    *val = tmp->val;
 
-	HEAD(q) = tmp->next;
-	if (TAIL(q) == tmp) TAIL(q) = 0;
-	free(tmp);
+    HEAD(q) = tmp->next;
+    if (TAIL(q) == tmp) TAIL(q) = 0;
+    free(tmp);
 
-	return 1;
+    return 1;
 }

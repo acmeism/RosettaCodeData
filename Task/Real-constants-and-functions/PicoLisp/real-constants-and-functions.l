@@ -5,7 +5,7 @@
 (prinl (format pi *Scl))               # pi
 
 (prinl (format (pow 2.0 0.5) *Scl))    # sqare root
-(prinl (format (sqrt (* 2.0 1.0)) *Scl))
+(prinl (format (sqrt 2.0 1.0) *Scl))
 
 (prinl (format (log 2.0) *Scl))        # logarithm
 (prinl (format (exp 4.0) *Scl))        # exponential

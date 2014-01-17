@@ -14,8 +14,7 @@ CONSTANT: theta0 0.5
 : theta ( -- theta ) current-time omega0 * cos theta0 * ;
 
 : relative-xy ( theta l -- xy )
-    [ [ sin ] [ cos ] bi ]
-    [ [ * ] curry ] bi* bi@ 2array ;
+    swap [ sin * ] [ cos * ] 2bi 2array ;
 : theta-to-xy ( origin theta l -- xy ) relative-xy v+ ;
 
 TUPLE: pendulum-gadget < gadget alarm ;

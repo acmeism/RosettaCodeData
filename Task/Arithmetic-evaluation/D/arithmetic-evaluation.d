@@ -31,10 +31,11 @@ final class XP {
   this(string s=")", int p = -1) nothrow {
     str = s;
     pos = p;
-    type = Type.Num;
+    auto localType = Type.Num;
     foreach_reverse (immutable t; [EnumMembers!Type[1 .. $]])
       if (opChar[t] == s)
-        type = t;
+        localType = t;
+    this.type = localType;
   }
 
   override int opCmp(Object other) pure {

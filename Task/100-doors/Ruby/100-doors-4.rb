@@ -4,4 +4,4 @@ doors = [false] * 100
     doors[j] = !doors[j]
   end
 end
-puts doors.map.with_index{|d, i| "Door #{i+1} is #{d ? 'open' : 'closed'}."}
+puts doors.map.with_index(1){|d,i| "Door #{i} is #{d ? 'open' : 'closed'}."}

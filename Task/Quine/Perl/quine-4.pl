@@ -1,1 +1,1 @@
-$_=q{print"\$_=q{$_};eval"};eval
+open 0; print <0>;

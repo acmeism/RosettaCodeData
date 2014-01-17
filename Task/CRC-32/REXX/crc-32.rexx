@@ -16,7 +16,7 @@ return
 /*──────────────────────────────────CRC_32 subroutine───────────────────*/
 CRC_32:  procedure;   parse arg !,$    /*2nd arg is for  multi-invokes. */
 
-  do i=0  to 255;     z=d2c(i)         /*build the  8-bit indexed table.*/
+  do i=0  for 256;    z=d2c(i)         /*build the  8-bit indexed table.*/
   r=right(z,4,'0'x)                    /*insure the  R  is 32 bits.     */
           do j=0  for 8                /*handle each bit of rightmost 8.*/
           rb=x2b(c2x(r))               /*convert char ──► hex ──► binary*/

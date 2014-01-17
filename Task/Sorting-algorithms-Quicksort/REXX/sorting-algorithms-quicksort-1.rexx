@@ -9,7 +9,7 @@ quickSort: procedure expose @.         /*access the caller's local var. */
 a.1=1;   b.1=arg(1);   $=1
 
   do while $\==0;   l=a.$;   t=b.$;   $=$-1
-  if t<2 then iterate
+  if t<2  then iterate
   h=l+t-1
   ?=l+t%2
   if @.h<@.l then if @.?<@.h then do; p=@.h; @.h=@.l; end
@@ -23,86 +23,86 @@ a.1=1;   b.1=arg(1);   $=1
         do forever
             do j=j       while j<=k & @.j<=p; end    /*a tinie-tiny loop*/
             do k=k by -1 while j <k & @.k>=p; end    /*another tiny loop*/
-        if j>=k then leave
+        if j>=k  then leave
         _=@.j; @.j=@.k; @.k=_
         end   /*forever*/
 
   k=j-1;  @.l=@.k;  @.k=p
   $=$+1
-  if j<=? then do;   a.$=j;  b.$=h-j+1;  $=$+1;  a.$=l;  b.$=k-l;     end
-          else do;   a.$=l;  b.$=k-l;    $=$+1;  a.$=j;  b.$=h-j+1;   end
+  if j<=?  then do;  a.$=j;  b.$=h-j+1;  $=$+1;  a.$=l;  b.$=k-l;     end
+           else do;  a.$=l;  b.$=k-l;    $=$+1;  a.$=j;  b.$=h-j+1;   end
   end   /*while $\==0*/
 
 return
 /*──────────────────────────────────GEN@ subroutine─────────────────────*/
-gen@: @.=''; maxL=0                    /*assign default value.     */
-@.1 =" Rivers that form part of a state's (USA) border "
-@.2 ='='
-@.3 ="Chattahoochee River:                Alabama, Georgia"
-@.4 ="Colorado River:                     Arizona, Nevada, California, Baja California (Mexico)"
-@.5 ="St. Francis River:                  Arkansas, Missouri"
-@.6 ="Poteau River:                       Arkansas, Oklahoma"
-@.7 ="Byram River:                        Connecticut, New York"
-@.8 ="Pawcatuck River:                    Connecticut, Rhode Island"
-@.9 ="Perdido River:                      Florida, Alabama"
-@.10="St. Marys River:                    Florida, Georgia"
-@.11="Chattooga River:                    Georgia, South Carolina"
-@.12="Tugaloo River:                      Georgia, South Carolina"
-@.13="Snake River:                        Idaho, Washington, Oregon"
-@.14="Wabash River:                       Illinois, Indiana"
-@.15="Ohio River:                         Illinois, Indiana, Ohio, Kentucky, West Virginia"
-@.16="Des Moines River:                   Iowa, Missouri"
-@.17="Tennessee River:                    Kentucky, Tennessee, Mississippi, Alabama"
-@.18="Big Sandy River:                    Kentucky, West Virginia"
-@.19="Tug Fork River:                     Kentucky, West Virginia, Virginia"
-@.20="Monument Creek:                     Maine, New Brunswick (Canda)"
-@.21="St. Croix River:                    Maine, New Brunswick (Canda)"
-@.22="Piscataqua River:                   Maine, New Hampshire"
-@.23="St. Francis River:                  Maine, Quebec (Canada)"
-@.24="St. John River:                     Maine, Quebec (Canada)"
-@.25="Pocomoke River:                     Maryland, Virginia"
-@.26="Potomac River:                      Maryland, Virginia, city of Washington (District of Columbia), West Virginia"
-@.27="Montreal River:                     Michigan (upper peninsula ), Wisconsin"
-@.28="Detroit River:                      Michigan, Ontario (Canada)"
-@.29="St. Clair River:                    Michigan, Ontario (Canada)"
-@.30="St. Marys River:                    Michigan, Ontario (Canada)"
-@.31="Brule River:                        Michigan, Wisconsin"
-@.32="Menominee River:                    Michigan, Wisconsin"
-@.33="Pigeon River:                       Minnesota, Ontario (Canada)"
-@.34="Rainy River:                        Minnesota, Ontario (Canada)"
-@.35="St. Croix River:                    Minnesota, Wisconsin"
-@.36="St. Louis River:                    Minnesota, Wisconsin"
-@.37="Mississippi River:                  Minnesota, Wisconsin, Iowa, Illinois, Missouri, Kentucky, Tennesse, Arkansas, Mississippi, Louisiana"
-@.38="Pearl River:                        Mississippi, Louisiana"
-@.39="Halls Stream:                       New Hampshire, Canada"
-@.40="Salmon Falls River:                 New Hampshire, Maine"
-@.41="Connecticut River:                  New Hampshire, Vermont"
-@.42="Hudson River (lower part only):     New Jersey, New York"
-@.43="Arthur Kill:                        New Jersey, New York (tidal strait)"
-@.44="Kill Van Kull:                      New Jersey, New York (tidal strait)"
-@.45="Rio Grande:                         New Mexico, Texas, Tamaulipas (Mexico), Nuevo Leon (Mexico), Coahuila De Zaragoza (Mexico), Chihuahua (Mexico)"
-@.46="Niagara River:                      New York, Ontario (Canada)"
-@.47="St. Lawrence River:                 New York, Ontario (Canada)"
-@.48="Delaware River:                     New York, Pennsylvania, New Jersey, Delaware"
-@.49="Catawba River:                      North Carolina, South Carolina"
-@.50="Red River of the North:             North Dakota, Minnesota"
-@.51="Great Miami River (mouth only):     Ohio, Indiana"
-@.52="Arkansas River:                     Oklahoma, Arkansas"
-@.53="Palmer River:                       Rhode Island, Massachusetts"
-@.54="Runnins River:                      Rhode Island, Massachusetts"
-@.55="Savannah River:                     South Carolina, Georgia"
-@.56="Big Sioux River:                    South Dakota, Iowa"
-@.57="Bois de Sioux River:                South Dakota, Minnesota, North Dakota"
-@.58="Missouri River:                     South Dakota, Nebraska, Iowa, Missouri, Kansas"
-@.59="Sabine River:                       Texas, Louisiana"
-@.60="Red River (Mississippi watershed):  Texas, Oklahoma, Arkansas"
-@.61="Poultney River:                     Vermont, New York"
-@.62="Blackwater River:                   Virginia, North Carolina"
-@.63="Columbia River:                     Washington, Oregon"
+gen@:  @.=;   maxL=0                   /*assign default value for array.*/
+@.1 =" Rivers that form part of a state's (USA) border "   /*adj. later,*/
+@.2 ='='                               /*this value is expanded later.  */
+@.3 ="Perdido River:                      Alabama, Florida"
+@.4 ="Chattahoochee River:                Alabama, Georgia"
+@.5 ="Tennessee River:                    Alabama, Kentucky, Mississippi, Tennessee"
+@.6 ="Colorado River:                     Arizona, California, Nevada, Baja California (Mexico)"
+@.7 ="Mississippi River:                  Arkansas, Illinois, Iowa, Kentucky, Minnesota, Mississippi, Missouri, Tennesse, Louisiana, Wisconsin"
+@.8 ="St. Francis River:                  Arkansas, Missouri"
+@.9 ="Poteau River:                       Arkansas, Oklahoma"
+@.10="Arkansas River:                     Arkansas, Oklahoma"
+@.11="Red River (Mississippi watershed):  Arkansas, Oklahoma, Texas"
+@.12="Byram River:                        Connecticut, New York"
+@.13="Pawcatuck River:                    Connecticut, Rhode Island"
+@.14="Delaware River:                     Delaware, New Jersey, New York, Pennsylvania"
+@.15="Potomac River:                      District of Columbia, Maryland, Virginia, West Virginia"
+@.16="St. Marys River:                    Florida, Georgia"
+@.17="Chattooga River:                    Georgia, South Carolina"
+@.18="Tugaloo River:                      Georgia, South Carolina"
+@.19="Savannah River:                     Georgia, South Carolina"
+@.20="Snake River:                        Idaho, Oregon, Washington"
+@.21="Wabash River:                       Illinois, Indiana"
+@.22="Ohio River:                         Illinois, Indiana, Kentucky, Ohio, West Virginia"
+@.23="Great Miami River (mouth only):     Indiana, Ohio"
+@.24="Des Moines River:                   Iowa, Missouri"
+@.25="Big Sioux River:                    Iowa, South Dakota"
+@.26="Missouri River:                     Kansas, Iowa, Missouri, Nebraska, South Dakota"
+@.27="Tug Fork River:                     Kentucky, Virginia, West Virginia"
+@.28="Big Sandy River:                    Kentucky, West Virginia"
+@.29="Pearl River:                        Louisiana, Mississippi"
+@.30="Sabine River:                       Louisiana, Texas"
+@.31="Monument Creek:                     Maine, New Brunswick (Canda)"
+@.32="St. Croix River:                    Maine, New Brunswick (Canda)"
+@.33="Piscataqua River:                   Maine, New Hampshire"
+@.34="St. Francis River:                  Maine, Quebec (Canada)"
+@.35="St. John River:                     Maine, Quebec (Canada)"
+@.36="Pocomoke River:                     Maryland, Virginia"
+@.37="Palmer River:                       Massachusetts, Rhode Island"
+@.38="Runnins River:                      Massachusetts, Rhode Island"
+@.39="Montreal River:                     Michigan (upper peninsula), Wisconsin"
+@.40="Detroit River:                      Michigan, Ontario (Canada)"
+@.41="St. Clair River:                    Michigan, Ontario (Canada)"
+@.42="St. Marys River:                    Michigan, Ontario (Canada)"
+@.43="Brule River:                        Michigan, Wisconsin"
+@.44="Menominee River:                    Michigan, Wisconsin"
+@.45="Red River of the North:             Minnesota, North Dakota"
+@.46="Bois de Sioux River:                Minnesota, North Dakota, South Dakota"
+@.47="Pigeon River:                       Minnesota, Ontario (Canada)"
+@.48="Rainy River:                        Minnesota, Ontario (Canada)"
+@.49="St. Croix River:                    Minnesota, Wisconsin"
+@.50="St. Louis River:                    Minnesota, Wisconsin"
+@.51="Halls Stream:                       New Hampshire, Canada"
+@.52="Salmon Falls River:                 New Hampshire, Maine"
+@.53="Connecticut River:                  New Hampshire, Vermont"
+@.54="Arthur Kill:                        New Jersey, New York (tidal strait)"
+@.55="Kill Van Kull:                      New Jersey, New York (tidal strait)"
+@.56="Hudson River (lower part only):     New Jersey, New York"
+@.57="Rio Grande:                         New Mexico, Texas, Tamaulipas (Mexico), Nuevo Leon (Mexico), Coahuila De Zaragoza (Mexico), Chihuahua (Mexico)"
+@.58="Niagara River:                      New York, Ontario (Canada)"
+@.59="St. Lawrence River:                 New York, Ontario (Canada)"
+@.60="Poultney River:                     New York, Vermont"
+@.61="Catawba River:                      North Carolina, South Carolina"
+@.62="Blackwater River:                   North Carolina, Virginia"
+@.63="Columbia River:                     Oregon, Washington"
 
-  do highItem=1 while @.highItem\==''  /*find how many entries, and also*/
+  do highItem=1  while @.highItem\=='' /*find how many entries, and also*/
   maxL=max(maxL,length(@.highItem))    /*  find the maximum width entry.*/
-  end
+  end   /*highItem*/
 
 highItem=highItem-1                    /*adjust highItem slightly.      */
 @.1=centre(@.1,maxL,'-')               /*adjust the header information. */
@@ -111,9 +111,9 @@ return
 /*──────────────────────────────────SHOW@ subroutine────────────────────*/
 show@: widthH=length(highItem)         /*maximum width of any line.     */
 
-                     do j=1 for highItem         /*show each array item.*/
-                     say  'element'  right(j,widthH)  arg(1)':'  @.j
-                     end
+                  do j=1 for highItem  /*display each item in the array.*/
+                  say  'element'    right(j,widthH)    arg(1)':'    @.j
+                  end   /*j*/
 
-say copies('█',maxL+widthH+22)              /*show a separator line.    */
+say copies('█',maxL+widthH+22)         /*display a  separator  line.    */
 return

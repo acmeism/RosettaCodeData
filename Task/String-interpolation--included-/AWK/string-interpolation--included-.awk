@@ -1,6 +1,6 @@
 #!/usr/bin/awk -f
 BEGIN {
-	str="Mary had a # lamb; # and blue.";
-	gsub(/#/,"big",str);
-	print str;
+	str="Mary had a # lamb."
+	gsub(/#/, "little", str)
+	print str
 }

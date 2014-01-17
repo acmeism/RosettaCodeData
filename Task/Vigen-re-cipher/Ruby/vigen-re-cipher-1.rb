@@ -1,34 +1,23 @@
-class VigenereCipher
+module VigenereCipher
 
   BASE = 'A'.ord
   SIZE = 'Z'.ord - BASE + 1
 
-  def key=(key)
-    @key = key.upcase.gsub(/[^A-Z]/, '')
+  def encrypt(text, key)
+    crypt(text, key, :+)
   end
 
-  def initialize(key)
-    self.key= key
+  def decrypt(text, key)
+    crypt(text, key, :-)
   end
 
-  def encrypt(text)
-    crypt(text, :+)
-  end
-
-  def decrypt(text)
-    crypt(text, :-)
-  end
-
-  def crypt(text, dir)
-    plaintext = text.upcase.gsub(/[^A-Z]/, '')
-    key_iterator = @key.chars.cycle
-    ciphertext = ''
-    plaintext.each_char do |plain_char|
-      offset = key_iterator.next.ord - BASE
-      ciphertext +=
-        ((plain_char.ord - BASE).send(dir, offset) % SIZE + BASE).chr
+  def crypt(text, key, dir)
+    text = text.upcase.gsub(/[^A-Z]/, '')
+    key_iterator = key.upcase.gsub(/[^A-Z]/, '').chars.map{|c| c.ord - BASE}.cycle
+    text.each_char.inject('') do |ciphertext, char|
+      offset = key_iterator.next
+      ciphertext << ((char.ord - BASE).send(dir, offset) % SIZE + BASE).chr
     end
-    return ciphertext
   end
 
 end

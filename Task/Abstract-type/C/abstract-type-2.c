@@ -1,6 +1,6 @@
 #ifndef SILLY_H
 #define SILLY_H
-#include intefaceAbs.h
+#include "intefaceAbs.h"
 
 typedef struct sillyStruct *Silly;
 extern Silly NewSilly( double, const char *);

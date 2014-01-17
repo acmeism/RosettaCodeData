@@ -4,7 +4,7 @@ public class Test {
     BufferedReader br = new BufferedReader(new FileReader("input.txt"));
     BufferedWriter bw = new BufferedWriter(new FileWriter("output.txt"));
     String line;
-    while (line = br.readLine() != null) {
+    while ((line = br.readLine()) != null) {
       bw.write(line);
       bw.newLine();
     }

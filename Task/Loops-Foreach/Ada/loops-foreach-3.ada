@@ -1,25 +1,25 @@
-with Ada.Integer_Text_IO, Ada.Containers.Vectors;
+with Ada.Integer_Text_IO, Ada.Containers.Doubly_Linked_Lists;
 use  Ada.Integer_Text_IO, Ada.Containers;
 
-procedure Vector_Example is
+procedure Doubly_Linked_List is
 
-   package Vector_Pkg is new Vectors (Natural, Integer);
-   use     Vector_Pkg;
+   package DL_List_Pkg is new Doubly_Linked_Lists (Integer);
+   use     DL_List_Pkg;
 
-   procedure Print_Element (Position : Cursor) is
+   procedure Print_Node (Position : Cursor) is
    begin
       Put (Element (Position));
-   end Print_Element;
+   end Print_Node;
 
-   V : Vector;
+   DL_List : List;
 
 begin
 
-   V.Append (1);
-   V.Append (2);
-   V.Append (3);
+   DL_List.Append (1);
+   DL_List.Append (2);
+   DL_List.Append (3);
 
-   -- Iterates through every element of the vector.
-   V.Iterate (Print_Element'Access);
+   -- Iterates through every node of the list.
+   DL_List.Iterate (Print_Node'Access);
 
-end Vector_Example;
+end Doubly_Linked_List;

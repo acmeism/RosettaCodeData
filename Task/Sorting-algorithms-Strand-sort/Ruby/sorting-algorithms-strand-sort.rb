@@ -2,32 +2,25 @@ class Array
   def strandsort
     a = self.dup
     result = []
-    while a.length > 0
+    until a.empty?
       sublist = [a.shift]
-      a.each_with_index .
-        inject([]) do |remove, (val, idx)|
-          if val > sublist[-1]
-            sublist << val
-            remove.unshift(idx)
-          end
-          remove
-        end .
-        each {|idx| a.delete_at(idx)}
+      a.each_with_index.each_with_object([]) { |(val, idx), remove|
+        next if val <= sublist.last
+        sublist << val
+        remove << idx
+      }.reverse_each {|idx| a.delete_at(idx)}
 
-      idx = 0
-      while idx < result.length and not sublist.empty?
-        if sublist[0] < result[idx]
-          result.insert(idx, sublist.shift)
-        end
-        idx += 1
+      result.each_index do |idx|
+        break if sublist.empty?
+        result.insert(idx, sublist.shift) if sublist[0] < result[idx]
       end
-      result += sublist if not sublist.empty?
+      result += sublist
     end
     result
   end
 
   def strandsort!
-    self.replace(strandsort)
+    replace(strandsort)
   end
 end
 

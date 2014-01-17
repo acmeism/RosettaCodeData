@@ -1,2 +1,2 @@
-(define args '("Rosetta" "Code" "Is" "Awseome!"))
+(define args '("Rosetta" "Code" "Is" "Awesome!"))
 (apply print-all args)

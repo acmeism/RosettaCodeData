@@ -1,285 +1,302 @@
-#define std'dictionary'*.
-#define std'basic'*.
-#define std'patterns'*.
-#define ext'io'*.
-#define ext'convertors'*.
+#define system.
+#define extensions.
 
-#subject parse_order.
+// --- Token ---
 
 #class Token
 {
     #field theValue.
 
-    #initializer
+    #constructor new
     [
-        theValue := String.
+        theValue := String new.
     ]
 
-    #method parse_order'get = 0.
+    #constructor new : aValue
+    [
+        theValue := String new:aValue.
+    ]
 
-    #method += aChar
+    #method ParseOrder = 0.
+
+    #method append : aChar
     [
         theValue += aChar.
     ]
 
-    #method + aNode
+    #method add : aNode
     [
         ^ aNode += self.
     ]
 
-    #method numeric = Real64Value &&literal:theValue &:erealformatter.
+    #method Number = convertor toReal:theValue.
 }
 
+// --- Node ---
 
 #class Node
 {
     #field theLeft.
     #field theRight.
+    #field theState.
 
-    #role LeftAssigned
-    {
-        #method += aNode
-        [
-            theRight := aNode.
-
-            #shift.
-        ]
-    }
-    #role Empty
-    {
-        #method += aNode
-        [
-            theLeft := aNode.
-
-            #shift LeftAssigned.
-        ]
-    }
-    #initializer
+    #method setRight : aNode
     [
-        #shift Empty.
+        theRight := aNode.
+
+        theState := %appendRight.
     ]
 
-    #method + aNode
+    #method setLeft : aNode
     [
-        #if (self parse_order > aNode parse_order)?
-        [
-            self += aNode.
-        ]
-        | [
-            aNode += self.
+        theLeft := aNode.
 
-            ^ aNode.
-        ].
+        theState := %setRight.
     ]
 
-    #method += aNode
+    #constructor new
     [
-        #if (theRight parse_order > aNode parse_order)?
-        [
+        theState := %setLeft.
+    ]
+
+    #method add : aNode
+        = (self ParseOrder > aNode ParseOrder)
+            ? [
+                self += aNode.
+
+                ^ self.
+            ]
+            ! [
+                aNode += self.
+
+                ^ aNode.
+            ].
+
+    #method appendRight : aNode
+    [
+        (theRight ParseOrder > aNode ParseOrder)
+        ? [
             theRight += aNode.
         ]
-        | [
+        ! [
             theRight := aNode += theRight.
         ].
     ]
+
+    #method append : anObject
+        = $self~theState eval:anObject.
+
+    #method => theState.
 }
 
-#class SummaryNode (Node)
+// --- SummaryNode
+
+#class SummaryNode : Node
 {
-    #method parse_order'get = 2.
+    #method ParseOrder = 2.
 
-    #method numeric = theLeft numeric + theRight numeric.
+    #method Number = theLeft Number + theRight Number.
 }
-#class DifferenceNode (Node)
+
+// --- DifferenceNode ---
+
+#class DifferenceNode : Node
 {
-    #method parse_order'get = 2.
+    #method ParseOrder = 2.
 
-    #method numeric = theLeft numeric - theRight numeric.
+    #method Number = theLeft Number - theRight Number.
 }
-#class ProductNode (Node)
+
+// --- ProductNode ---
+
+#class ProductNode : Node
 {
-    #method parse_order'get = 1.
+    #method ParseOrder = 1.
 
-    #method numeric = theLeft numeric * theRight numeric.
+    #method Number = theLeft Number * theRight Number.
 }
-#class FractionNode (Node)
+
+// --- FractionNode ---
+
+#class FractionNode : Node
 {
-    #method parse_order'get = 1.
+    #method ParseOrder = 1.
 
-    #method numeric = theLeft numeric / theRight numeric.
+    #method Number = theLeft Number / theRight Number.
 }
+
+// --- SubExpression ---
+
 #class SubExpression
 {
     #field theParser.
     #field theCounter.
 
-    #role EOF
-    {
-        #method available'is [ control fail. ]
-
-        #method += aChar [ $self fail. ]
-    }
-
-    #initializer
+    #constructor new
     [
-        theParser := arithmeval'Parser.
-        theCounter := Integer << 1.
+        theParser := arithmeval'Parser new.
+        theCounter := Integer new:1.
     ]
 
-    #method available'is []
+    #method ParseOrder = 0.
 
-    #method parse_order'get = 0.
-
-    #method + aNode
+    #method add : aNode
     [
         ^ aNode += self.
     ]
 
-    #method append : aChar
+    #method validate
     [
-        #if control if:(aChar == 41)
-        [
-            theCounter -= 1.
-        ]
-        | if:(aChar == 40)
-        [
-            theCounter += 1.
-        ].
+        (theCounter < 0)
+            ? [ #throw Exception new:"Invalid expression". ].
 
-        #if (theCounter == 0)?
-            [ #shift EOF. ^ $self. ].
-
-        theParser evaluate:aChar.
+        ^ (0 == theCounter).
     ]
 
-    #method numeric = theParser numeric.
+    #method append : aChar
+    [
+        aChar =>
+            41 ? [
+                theCounter -= 1.
+            ]
+            40 ? [ theCounter += 1 ]
+            ! [ theParser evaluate:aChar ].
+    ]
+
+    #method Number
+        = $self validate
+            ? [ theParser Number ]
+            ! [ #throw Exception new:"Invalid expression". ].
 }
-#class Parser
+
+// ---- Parser ----
+
+#class Parser : system'routines'BasePattern
 {
     #field theToken.
     #field theTopNode.
+    #field theState.
 
-    #role Brackets
-    {
-        #method evaluate : aChar
-        [
-            theToken += aChar.
+    #method onBrackets : aChar
+    [
+        theToken += aChar.
 
-            #if theToken available'is
-            | [
-                #shift.
-            ].
-        ]
-    }
-    #role Start
-    {
-        #method evaluate : aChar
-        [
-            #if (40 == aChar)?
-            [
-                theToken := SubExpression.
+        (theToken validate)
+          ? [
+              theState := %onDigit.
+          ].
+    ]
+
+    #method onStart : aChar
+    [
+        aChar =>
+             40 ? [ // (
+                theToken := SubExpression new.
                 theTopNode := theToken.
 
-                #shift Brackets.
+                theState := %onBrackets.
             ]
-            | [
-                theToken := Token.
+            45 ? [ // -
+                theToken := DifferenceNode new add:(Token new:"0").
+
                 theTopNode := theToken.
 
-                theToken += aChar.
+                theState := %onOperator.
+            ]
+            ! [
+                theToken := Token new.
+                theTopNode := theToken.
+                theState := %onDigit.
 
-                #shift.
+                $self appendDigit:aChar.
             ].
-        ]
-    }
-    #role Operator
-    {
-        #method evaluate : aChar
-        [
-            #if Control if:(48 < aChar) if:(58 > aChar)
-            [
-                theToken := (Token += aChar).
-
-                theTopNode += theToken.
-
-                #shift.
-            ]
-            | if:(40 == aChar)
-            [
-                theToken := SubExpression.
-                theTopNode += theToken.
-
-                #shift Brackets.
-            ]
-            | [ $self fail. ].
-        ]
-    }
-
-    #initializer
-    [
-        #shift Start.
     ]
 
-    #method numeric = theTopNode numeric.
-
-    #method evaluate : aChar
+    #method onOperator : aChar
     [
-        #if Control if:(48 < aChar) if:(58 > aChar)
-        [
+        aChar =>
+            40 ? [
+                theToken := SubExpression new.
+                theTopNode += theToken.
+                theState := %onBrackets.
+            ]
+            ! [
+                theToken := Token new.
+                theTopNode += theToken.
+                theState := %onDigit.
+
+                $self appendDigit:aChar.
+            ].
+    ]
+
+    #constructor new
+    [
+        theState := %onStart.
+    ]
+
+    #method Number = theTopNode Number.
+
+    #method appendDigit : aChar
+    [
+        (aChar >= 48) and:(aChar < 58)
+        ? [
             theToken += aChar.
         ]
-        | if:(42 == aChar)  // *
-        [
-            theTopNode := theTopNode + ProductNode.
-
-            #shift Operator.
+        ! [
+            #throw Exception new:"Invalid expression".
         ]
-        | if:(47 == aChar)  // /
-        [
-            theTopNode := theTopNode + FractionNode.
 
-            #shift Operator.
-        ]
-        | if:(43 == aChar)  // +
-        [
-            theTopNode := theTopNode + SummaryNode.
-
-            #shift Operator.
-        ]
-        | if:(45 == aChar)  // -
-        [
-            theTopNode := theTopNode + DifferenceNode.
-
-            #shift Operator.
-        ]
-        | if:(40 == aChar)
-        [
-            theToken := SubExpression.
-            theTopNode := theToken.
-
-            #shift Brackets.
-        ]
-        | [ $self fail. ].
     ]
 
-    #method start : aProcess
+    #method onDigit : aChar
     [
-        aProcess run:self.
+        aChar =>
+            40 ? [      // (
+                theToken := SubExpression new.
+                theTopNode := theToken.
+                theState := %onBrackets.
+            ]
+            42 ? [      // *
+                theTopNode := theTopNode + ProductNode new.
 
-        ^ self numeric.
+                theState := %onOperator.
+            ]
+            43 ? [      // +
+                theTopNode := theTopNode + SummaryNode new.
+
+                theState := %onOperator.
+            ]
+            45 ? [      // -
+                theTopNode := theTopNode + DifferenceNode new.
+
+                theState := %onOperator.
+            ]
+            47 ?       // /
+            [
+                theTopNode := theTopNode + FractionNode new.
+
+                theState := %onOperator.
+            ]
+            ! [
+                $self appendDigit:aChar.
+            ].
     ]
+
+    #method eval : aChar = $self~theState eval:aChar.
 }
 
-#symbol Program =
+#symbol program =
 [
-    #var aText := String.
+    #var aText := String new.
 
-    #while ((Console >> aText) length > 0)?
+    control while:(consoleEx readLine:aText length > 0) &do:
     [
-        #var aParser := Parser.
+        #var aParser := Parser new.
 
-        Console << "=" << aParser start:Scan::aText | ^^"Invalid Expression".
-
-        Console << "%n".
+        consoleEx writeLine:"=" :(aParser foreach:aText Number)
+            | ifFailed:
+                [
+                    consoleEx writeLine:"Invalid Expression".
+                ].
     ].
 ].

@@ -1,12 +1,12 @@
 class String
-  def digroot_persistance(base)
+  def digroot_persistence(base)
     num = self.to_i(base)
-    persistance = 0
+    persistence = 0
     until num < base do
       num = num.to_s(base).each_char.reduce(0){|m, c| m += c.to_i(base) }
-      persistance += 1
+      persistence += 1
     end
-    [num.to_s(base), persistance]
+    [num.to_s(base), persistence]
   end
 end
 
@@ -16,4 +16,4 @@ end
  ["5", 10],
  ["393900588225", 10],
  ["50YE8N29", 36]].each{|(str, base)| puts "#{str} base #{base} has a digital root \
-of %s and a resistance of %s." % str.digroot_persistance(base) }
+of %s and a persistence of %s." % str.digroot_persistence(base) }

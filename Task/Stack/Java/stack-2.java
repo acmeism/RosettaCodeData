@@ -1,27 +1,27 @@
-public class Stack<T>{
+public class Stack{
     private Node first = null;
     public boolean isEmpty(){
         return first == null;
     }
-    public T Pop(){
+    public Object Pop(){
         if(isEmpty())
             throw new Exception("Can't Pop from an empty Stack.");
         else{
-            T temp = first.value;
+            Object temp = first.value;
             first = first.next;
             return temp;
         }
     }
-    public void Push(T o){
+    public void Push(Object o){
         first = new Node(o, first);
     }
     class Node{
         public Node next;
-        public T value;
-        public Node(T value){
+        public Object value;
+        public Node(Object value){
             this(value, null);
         }
-        public Node(T value, Node next){
+        public Node(Object value, Node next){
             this.next = next;
             this.value = value;
         }

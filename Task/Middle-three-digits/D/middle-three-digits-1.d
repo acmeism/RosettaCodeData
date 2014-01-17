@@ -1,7 +1,7 @@
-import std.stdio, std.traits, std.conv;
+import std.stdio, std.traits, std.conv, std.range;
 
 string middleThreeDigits(T)(in T n) if (isIntegral!T) {
-    auto s = n < 0 ? n.text()[1 .. $] : n.text();
+    auto s = n < 0 ? n.text().dropOne : n.text();
     auto len = s.length;
     if (len < 3 || len % 2 == 0)
         return "Need odd and >= 3 digits";
@@ -15,7 +15,7 @@ void main() {
     foreach (n; passing)
         writefln("middleThreeDigits(%s): %s", n, middleThreeDigits(n));
 
-    immutable failing = [1, 2, -1, -10, 2002, -2002, 0,int.min,int.max];
+    immutable failing = [1, 2, -1, -10, 2002, -2002, 0, int.min, int.max];
     foreach (n; failing)
         writefln("middleThreeDigits(%s): %s", n, middleThreeDigits(n));
 }

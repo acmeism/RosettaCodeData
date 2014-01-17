@@ -2,15 +2,15 @@
        PROGRAM-ID. no-args PROTOTYPE.
        END PROGRAM no-args.
 
-       *> A subprogram taking two 8-digit numbers as arguments (passed by
-       *> value), and returning an 8-digit number.
+       *> A subprogram taking two 8-digit numbers as arguments, and returning
+       *> an 8-digit number.
        PROGRAM-ID. two-args PROTOTYPE.
        DATA DIVISION.
        LINKAGE SECTION.
        01  arg-1 PIC 9(8).
        01  arg-2 PIC 9(8).
        01  ret   PIC 9(8).
-       PROCEDURE DIVISION USING BY VALUE arg-1, arg-2 RETURNING ret.
+       PROCEDURE DIVISION USING arg-1, arg-2 RETURNING ret.
        END PROGRAM two-args.
 
        *> A subprogram taking two optional arguments which are 8-digit

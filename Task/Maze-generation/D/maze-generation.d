@@ -1,21 +1,18 @@
-import std.stdio, std.algorithm, std.range, std.random;
-alias R = std.array.replicate;
-
 void main() {
-    enum int w = 14, h = 10;
-    auto vis = new bool[][](h, w),
-         hor = iota(h + 1).map!(_ => ["+---"].R(w)).array,
-         ver = h.iota.map!(_ => ["|   "].R(w) ~ "|").array;
+    import std.stdio, std.algorithm, std.range, std.random;
 
-    void walk(in int x, in int y) /*nothrow*/ {
+    enum uint w = 14, h = 10;
+    auto vis = new bool[][](h, w),
+         hor = iota(h + 1).map!(_ => ["+---"].replicate(w)).array,
+         ver = h.iota.map!(_ => ["|   "].replicate(w) ~ "|").array;
+
+    void walk(in uint x, in uint y) /*nothrow*/ {
         vis[y][x] = true;
-        static struct P { immutable uint x, y; } // Will wrap-around.
-        auto d = [P(x-1, y), P(x, y+1), P(x+1, y), P(x, y-1)];
-        foreach (p; d.randomCover) {
-            if (p.x >= w || p.y >= h || vis[p.y][p.x]) continue;
-            if (p.x == x) hor[max(y, p.y)][x] = "+   ";
-            if (p.y == y) ver[y][max(x, p.x)] = "    ";
-            walk(p.tupleof);
+        foreach (p; [[x-1,y], [x,y+1], [x+1,y], [x,y-1]].randomCover) {
+            if (p[0] >= w || p[1] >= h || vis[p[1]][p[0]]) continue;
+            if (p[0] == x) hor[max(y, p[1])][x] = "+   ";
+            if (p[1] == y) ver[y][max(x, p[0])] = "    ";
+            walk(p[0], p[1]);
         }
     }
     walk(uniform(0, w), uniform(0, h));

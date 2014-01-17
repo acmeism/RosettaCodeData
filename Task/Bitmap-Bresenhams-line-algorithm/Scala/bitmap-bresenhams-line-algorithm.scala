@@ -19,6 +19,6 @@ object BitmapOps {
       }
 
       for((x,y) <- it)
-         bm.setPixel(x, y, c)		
+         bm.setPixel(x, y, c)
    }
 }

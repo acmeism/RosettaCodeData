@@ -1,53 +1,66 @@
-import std.stdio, std.string, std.conv, std.array, std.algorithm,
-       std.exception;
+import std.stdio, std.conv, std.ascii, std.array, std.string,
+       std.algorithm, std.exception, std.range, std.typetuple;
 
 struct Hidato {
-    // alias Cell = RangedValue!(int, -2, int.max);
+    // alias Cell = RangedValue!(int, -1, int.max);
     alias Cell = int;
-    enum : Cell { emptyCell = -2, unknownCell = -1 }
+    alias Pos = size_t;
+    enum : Cell { emptyCell = -1, unknownCell = 0 }
 
-    alias KnownT = int[2][Cell];
-    immutable KnownT known;
     immutable Cell boardMax;
-    Cell[][] board;
+    immutable size_t nCols, nRows;
+    Cell[] board;
+    Pos[] known;
+    bool[] flood;
 
-    this(in string input) pure
+    this(in string input) @safe pure
     in {
-        assert(!input.empty);
+        assert(!input.strip.empty);
     } out {
-        immutable nRows = board.length;
-        immutable nCols = board[0].length;
-        assert(boardMax > 0 && boardMax <= nRows * nCols);
-        assert(known.length >= 2 && known.length <= nRows * nCols);
-        assert(1 in known && boardMax in known);
+        assert(nCols > 0 && nRows > 0);
+        immutable size = nCols * nRows;
+        assert(board.length == size);
+        assert(known.length == size + 1);
+        assert(flood.length == size);
+        assert(boardMax > 0 && boardMax <= size);
+        assert(board.reduce!max == boardMax);
+        assert(board.canFind(1) && board.canFind(boardMax));
+        assert(flood.all!(f => f == 0));
+        assert(known.all!(rc => rc >= 0 && rc < size));
 
-        foreach (const row; board)
-            foreach (immutable cell; row)
-                assert(cell == Hidato.emptyCell ||
-                       cell == Hidato.unknownCell ||
-                       (cell >= 1 && cell <= nRows * nCols));
-
-        foreach (/*immutable*/ n, immutable rc; known) {
-            assert(n > 0 && n <= boardMax);
-            assert(rc[0] >= 0 && rc[0] < nRows);
-            assert(rc[1] >= 0 && rc[1] < nCols);
+        foreach (immutable i, immutable cell; board) {
+            assert(cell == Hidato.emptyCell ||
+                   cell == Hidato.unknownCell ||
+                   (cell >= 1 && cell <= size));
+            if (cell > 0)
+                assert(i == known[cast(size_t)cell]);
         }
     } body {
         bool[Cell] pathSeen; // A set.
-        KnownT knownMutable;
-        const lines = input.splitLines;
-        immutable nCols = lines[0].split.length;
-        foreach (immutable int r, immutable row; lines) {
+        /*immutable*/ const lines = input.splitLines;
+        this.nRows = lines.length;
+        this.nCols = lines[0].split.length;
+
+        immutable size = nCols * nRows;
+        this.board = new typeof(this.board[0])[size];
+        this.board[] = emptyCell;
+        this.known = new typeof(this.known[0])[size + 1];
+        this.flood = new typeof(this.flood[0])[size];
+
+        auto boardMaxMutable = Cell.min;
+        Pos i = 0;
+
+        foreach (immutable row; lines) {
             assert(row.split.length == nCols,
                    text("Wrong cols n.: ", row.split.length));
-            auto boardRow = new typeof(board[0])(nCols);
-            foreach (immutable int c, immutable cell; row.split) {
+
+            foreach (immutable cell; row.split) {
                 switch (cell) {
-                    case ".":
-                        boardRow[c] = Hidato.emptyCell;
-                        break;
                     case "_":
-                        boardRow[c] = Hidato.unknownCell;
+                        this.board[i] = Hidato.unknownCell;
+                        break;
+                    case ".":
+                        this.board[i] = Hidato.emptyCell;
                         break;
                     default: // Known.
                         immutable val = cell.to!Cell;
@@ -55,56 +68,118 @@ struct Hidato {
                         enforce(val !in pathSeen,
                                 text("Duplicated path number: ", val));
                         pathSeen[val] = true;
-                        boardRow[c] = val;
-                        knownMutable[val] = [r, c];
-                        boardMax = max(boardMax, val);
+                        this.board[i] = val;
+                        this.known[val] = i;
+                        boardMaxMutable = max(boardMaxMutable, val);
+                }
+                i++;
+            }
+        }
+
+        this.boardMax = boardMaxMutable;
+    }
+
+
+    private Pos idx(in size_t r, in size_t c) const pure nothrow {
+        return r * nCols + c;
+    }
+
+    private uint nNeighbors(in Pos pos, ref Pos[8] neighbours)
+    const pure nothrow {
+        immutable r = pos / nCols;
+        immutable c = pos % nCols;
+        typeof(return) n = 0;
+
+        foreach (immutable sr; TypeTuple!(-1, 0, 1)) {
+            immutable size_t i = r + sr; // Can wrap-around.
+            if (i >= nRows)
+                continue;
+            foreach (immutable sc; TypeTuple!(-1, 0, 1)) {
+                immutable size_t j = c + sc; // Can wrap-around.
+                if ((sc != 0 || sr != 0) && j < nCols) {
+                    immutable pos2 = idx(i, j);
+                    neighbours[n] = pos2;
+                    if (board[pos2] != Hidato.emptyCell)
+                        n++;
                 }
             }
-            board ~= boardRow;
         }
 
-        known = knownMutable.assumeUnique; // Not verified.
+        return n;
     }
 
-    bool solve() pure nothrow
-    in {
-        assert(1 in known);
-    } body {
-        bool fill(in int r, in int c, in Cell n) pure nothrow {
-            if (n > boardMax)
-                return true;
+    /// Fill all free cells around 'cell' with true and write
+    /// output to variable "flood".
+    private void floodFill(in Pos pos) pure nothrow {
+        Pos[8] n = void;
 
-            if (c < 0 || c >= board[0].length ||
-                r < 0 || r >= board.length)
+        // For all neighbours.
+        foreach (immutable i; 0 .. nNeighbors(pos, n)) {
+            // If pos is not free, choose another neighbour.
+            if (board[n[i]] || flood[n[i]])
+                continue;
+            flood[n[i]] = true;
+            floodFill(n[i]);
+        }
+    }
+
+    /// Check all empty cells are reachable from higher known cells.
+    private bool checkConnectity(in uint lowerBound) pure nothrow {
+        flood[] = false;
+
+        foreach (immutable i; lowerBound + 1 .. boardMax + 1)
+            if (known[i])
+                floodFill(known[i]);
+
+        foreach (immutable i; 0 .. nCols * nRows)
+            // If there are free cells which could not be
+            // reached from floodFill.
+            if (!board[i] && !flood[i])
                 return false;
+        return true;
+    }
 
-            if ((board[r][c] != Hidato.unknownCell &&
-                 board[r][c] != n) ||
-                (n in known && known[n] != [r, c]))
-                return false;
-
-            board[r][c] = n;
-            foreach (immutable i; -1 .. 2)
-                foreach (immutable j; -1 .. 2)
-                    if (fill(r + i, c + j, n + 1))
-                        return true;
-
-            board[r][c] = Hidato.unknownCell;
+    private bool fill(in Pos pos, in uint n) pure nothrow {
+        if ((board[pos] && board[pos] != n) ||
+            (known[n] && known[n] != pos))
             return false;
-        }
 
-        return fill(known[1][0], known[1][1], 1);
+        if (n == boardMax)
+            return true;
+
+        immutable ko = known[n];
+        immutable bo = board[pos];
+        board[pos] = n;
+
+        Pos[8] p = void;
+        if (checkConnectity(n))
+            foreach (immutable i; 0 .. nNeighbors(pos, p))
+                if (fill(p[i], n + 1))
+                    return true;
+
+        board[pos] = bo;
+        known[n] = ko;
+        return false;
     }
 
-    string toString() const pure /*nothrow*/ {
+    void solve() pure nothrow
+    in {
+        assert(!known.empty);
+    } body {
+        fill(known[1], 1);
+    }
+
+    string toString() const pure {
         immutable d = [Hidato.emptyCell: ".",
                        Hidato.unknownCell: "_"];
         immutable form = "%" ~ text(boardMax.text.length + 1) ~ "s";
 
         string result;
-        foreach (const row; board) {
-            foreach (immutable c; row)
-                result ~= format(form, d.get(c, c.text));
+        foreach (immutable r; 0 .. nRows) {
+            foreach (immutable c; 0 .. nCols) {
+                immutable cell = board[idx(r, c)];
+                result ~= format(form, d.get(cell, cell.text));
+            }
             result ~= "\n";
         }
         return result;
@@ -112,11 +187,10 @@ struct Hidato {
 }
 
 void solveHidato(in string problem) {
-    auto hi = problem.Hidato;
-    writeln("Problem:\n", hi);
-    hi.solve;
-    writeln("Solution:\n", hi);
-    writeln;
+    auto game = problem.Hidato;
+    writeln("Problem:\n", game);
+    game.solve;
+    writeln("Solution:\n", game);
 }
 
 void main() {
@@ -137,5 +211,5 @@ void main() {
 "1 _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . 74
  . . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ . _ .
  . . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ . . _ _ ."
-);
+    );
 }

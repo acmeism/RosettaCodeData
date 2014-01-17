@@ -2,7 +2,7 @@ import std.stdio, std.range;
 
 const struct CombRep {
     immutable uint nt, nc;
-    private immutable ulong[] combVal;
+    private const ulong[] combVal;
 
     this(in uint numType, in uint numChoice) pure nothrow
     in {
@@ -19,17 +19,19 @@ const struct CombRep {
         // a set bit is metaphored as a _type_ seperator.
         immutable limit = v << nc;
 
+        ulong[] localCombVal;
         // Limit is the largest nt-1 bit set number that has nc
         // zero-bit a zero-bit means a _choice_ between _type_
         // seperators.
         while (v <= limit) {
-            combVal ~= v;
+            localCombVal ~= v;
             if (v == 0)
                 break;
             // Get next nt-1 bit number.
             immutable t = (v | (v - 1)) + 1;
             v = t | ((((t & -t) / (v & -v)) >> 1) - 1);
         }
+        this.combVal = localCombVal;
     }
 
     uint length() @property const pure nothrow {

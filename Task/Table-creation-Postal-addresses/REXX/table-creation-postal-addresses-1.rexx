@@ -3,11 +3,11 @@
   │ Format of an entry in the USA address/city/state/zipcode structure.│
   │                                                                    │
   │ The "structure" name can be any legal variable name, but here the  │
-  │ name will be shorted to make these comments (and program) easier   │
-  │ to read; it's name will be    @USA     (in any case).  In addition,│
+  │ name will be shortened to make these comments (and program) easier │
+  │ to read; its name will be    @USA     (in any case).  In addition, │
   │ the following variables names (stemmed array tails) will need to   │
-  │ be kept unitialized  (that is, not used for any variable name).    │
-  │ To that end, each of these "hands-off" variable names will have a  │
+  │ be kept uninitialized  (that is, not used for any variable name).  │
+  │ To that end, each of these "hands-off" variable names will have an │
   │ underscore in the beginning of each name.  Other possibilities are │
   │ to have a trailing underscore (or both leading and trailing), some │
   │ other special eye-catching character such as:  ! @ # $ ?           │
@@ -30,9 +30,9 @@
   │  @USA.nnn._addr3    = 3rd street address                           │
   │  @USA.nnn._addrNN   =  ...  (any number, but in sequential order). │
   ├────────────────────────────────────────────────────────────────────┤
-  │  @USA.nnn._state    = US postal code for the state/terrority/etc.  │
+  │  @USA.nnn._state    = US postal code for the state/territory/etc.  │
   ├────────────────────────────────────────────────────────────────────┤
-  │  @USA.nnn._city     = offical city name, may include any char.     │
+  │  @USA.nnn._city     = official city name, may include any char.    │
   ├────────────────────────────────────────────────────────────────────┤
   │  @USA.nnn._zip      = US postal zipcode,  5 digit format or        │
   │                                              10 char format.       │

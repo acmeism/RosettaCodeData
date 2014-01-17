@@ -1,36 +1,44 @@
 import std.string, std.typecons, std.exception, std.algorithm;
-import queue_usage2; // No queue in Phobos 2.063.
+import queue_usage2; // No queue in Phobos 2.064.
 
 const struct Board {
-    private enum El : char { floor=' ', wall='#', goal='.',
-                             box='$', player='@', boxOnGoal='*' }
-    private alias string CTable;
+    private enum El { floor = ' ', wall = '#', goal = '.',
+                      box = '$', player = '@', boxOnGoal='*' }
+    private alias CTable = string;
     private immutable size_t ncols;
     private immutable CTable sData, dData;
     private immutable int playerx, playery;
 
     this(in string[] board) pure nothrow const
     in {
-        foreach (row; board) {
+        foreach (const row; board) {
             assert(row.length == board[0].length,
                    "Unequal board rows.");
-            foreach (c; row)
+            foreach (immutable c; row)
                 assert(c.inPattern(" #.$@*"), "Not valid input");
         }
     } body {
-        immutable sMap=[' ':' ', '.':'.', '@':' ', '#':'#', '$':' '];
-        immutable dMap=[' ':' ', '.':' ', '@':'@', '#':' ', '$':'*'];
+        immutable sMap = [' ':' ', '.':'.', '@':' ', '#':'#', '$':' '];
+        immutable dMap = [' ':' ', '.':' ', '@':'@', '#':' ', '$':'*'];
         ncols = board[0].length;
 
-        foreach (r, row; board)
-            foreach (c, ch; row) {
-                sData ~= sMap[ch];
-                dData ~= dMap[ch];
+        int plx = 0, ply = 0;
+        CTable sDataBuild, dDataBuild;
+
+        foreach (immutable r, const row; board)
+            foreach (immutable c, const ch; row) {
+                sDataBuild ~= sMap[ch];
+                dDataBuild ~= dMap[ch];
                 if (ch == El.player) {
-                    playerx = c;
-                    playery = r;
+                    plx = c;
+                    ply = r;
                 }
             }
+
+        this.sData = sDataBuild;
+        this.dData = dDataBuild;
+        this.playerx = plx;
+        this.playery = ply;
     }
 
     private bool move(in int x, in int y, in int dx,
@@ -72,7 +80,7 @@ const struct Board {
     string solve() pure {
         bool[immutable CTable] visitedSet = [dData: true];
 
-        alias Tuple!(CTable, string, int, int) Four;
+        alias Four = Tuple!(CTable, string, int, int);
         GrowableCircularQueue!Four open;
         open.push(Four(dData, "", playerx, playery));
 
@@ -84,16 +92,16 @@ const struct Board {
         while (open.length) {
             //immutable (cur, cSol, x, y) = open.pop;
             immutable item = open.pop;
-            immutable CTable cur = item[0];
-            immutable string cSol = item[1];
-            immutable int x = item[2];
-            immutable int y = item[3];
+            immutable cur = item[0];
+            immutable cSol = item[1];
+            immutable x = item[2];
+            immutable y = item[3];
 
-            foreach (di; dirs) {
+            foreach (immutable di; dirs) {
                 CTable temp = cur;
                 //immutable (dx, dy) = di[0 .. 2];
-                immutable int dx = di[0];
-                immutable int dy = di[1];
+                immutable dx = di[0];
+                immutable dy = di[1];
 
                 if (temp[(y + dy) * ncols + x + dx] == El.boxOnGoal) {
                     if (push(x, y, dx, dy, temp) && temp !in visitedSet) {

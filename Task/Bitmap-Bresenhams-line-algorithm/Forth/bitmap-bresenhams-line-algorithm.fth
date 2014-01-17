@@ -7,12 +7,12 @@ defer ystep         \ 1+ or 1-
   ( x0 x1 y0 y1 )
   2dup  - abs >r
   2over - abs r> <
-  if         ['] swap	\ swap use of x and y
+  if         ['] swap \ swap use of x and y
   else 2swap ['] noop
   then       is steep
   ( y0 y1 x0 x1 )
   2dup >
-  if swap 2swap swap	\ ensure x1 > x0
+  if swap 2swap swap  \ ensure x1 > x0
   else    2swap
   then
   ( x0 x1 y0 y1 )

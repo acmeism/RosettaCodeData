@@ -1,4 +1,3 @@
-require 'pp'
 # solve(source, via, target)
 # Example:
 # solve([5, 4, 3, 2, 1], [], [])
@@ -8,7 +7,7 @@ def solve(*towers)
   # total number of disks
   disks = towers.inject(0){|sum, tower| sum+tower.length}
   x=0 # sequence number
-  pp towers # initial trace
+  p towers # initial trace
   # have we solved the puzzle yet?
   while towers.last.length < disks do
     x+=1 # assume the next step
@@ -21,8 +20,10 @@ def solve(*towers)
       if !bottom || bottom > top
         # ok, do it!
         towers[to].push(towers[from].pop)
-        pp towers # trace
+        p towers # trace
       end
     end
   end
 end
+
+solve([5, 4, 3, 2, 1], [], [])

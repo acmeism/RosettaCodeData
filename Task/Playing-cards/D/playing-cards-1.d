@@ -1,43 +1,32 @@
-import std.stdio, std.random, std.string, std.array;
+import std.stdio, std.typecons, std.algorithm, std.traits, std.array,
+       std.range, std.random;
 
-struct Card {
-    enum suits = ["Clubs", "Hearts", "Spades", "Diamonds"];
-    enum pips = ["2", "3", "4", "5", "6", "7", "8", "9", "10",
-                 "Jack", "Queen", "King", "Ace"];
-    string pip, suit;
+enum Pip {Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten,
+          Jack, Queen, King, Ace}
+enum Suit {Diamonds, Spades, Hearts, Clubs}
+alias Card = Tuple!(Pip, Suit);
 
-    string toString() {
-        return pip ~ " of " ~ suit;
-    }
+Card[] newDeck() /*pure nothrow*/ {
+    return cartesianProduct([EnumMembers!Pip], [EnumMembers!Suit])
+           .array;
 }
 
-class Deck {
-    Card[] deck;
+alias shuffleDeck = randomShuffle;
 
-    this() {
-        foreach (suit; Card.suits)
-            foreach (pip; Card.pips)
-                deck ~= Card(pip, suit);
-    }
+Card dealCard(ref Card[] deck) pure nothrow {
+    immutable card = deck.back;
+    deck.popBack;
+    return card;
+}
 
-    void shuffle() {
-        deck.randomShuffle();
-    }
-
-    Card deal() {
-        auto card = deck.back;
-        deck.popBack();
-        return card;
-    }
-
-    override string toString() {
-        return format("%(%s\n%)", deck);
-    }
+void show(in Card[] deck) {
+    writefln("Deck:\n%(%s\n%)\n", deck);
 }
 
 void main() {
-    auto deck = new Deck; // Make A new deck.
-    deck.shuffle(); // Shuffle the deck.
-    writeln("Card: ", deck.deal()); // Deal from the deck.
-    writeln(deck); // Print the current contents of the deck.
+    auto d = newDeck;
+    d.show;
+    d.shuffleDeck;
+    while (!d.empty)
+        d.dealCard.writeln;
 }

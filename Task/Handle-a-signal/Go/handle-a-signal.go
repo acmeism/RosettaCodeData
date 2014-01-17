@@ -9,14 +9,14 @@ import (
 
 func main() {
     start := time.Now()
-    k := time.NewTicker(time.Second / 2)
+    k := time.Tick(time.Second / 2)
     sc := make(chan os.Signal, 1)
     signal.Notify(sc, os.Interrupt)
     for n := 1; ; {
         // not busy waiting, this blocks until one of the two
         // channel operations is possible
         select {
-        case <-k.C:
+        case <-k:
             fmt.Println(n)
             n++
         case <-sc:

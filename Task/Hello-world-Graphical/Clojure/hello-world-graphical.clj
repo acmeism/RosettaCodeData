@@ -1,6 +1,6 @@
 (ns experimentation.core
   (:import (javax.swing JOptionPane JFrame JTextArea JButton)
-	   (java.awt FlowLayout)))
+     (java.awt FlowLayout)))
 
 (JOptionPane/showMessageDialog nil "Goodbye, World!")
 (let [button (JButton. "Goodbye, World!")

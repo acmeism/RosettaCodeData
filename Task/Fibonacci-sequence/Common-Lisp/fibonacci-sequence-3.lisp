@@ -1,4 +1,1 @@
-(defun fibonacci-tail-recursive ( n &optional (a 0) (b 1))
-  (if (= n 0)
-      a
-      (fibonacci-tail-recursive (- n 1) b (+ a b))))
+(loop for x = 0 then y and y = 1 then (+ x y) do (print x))

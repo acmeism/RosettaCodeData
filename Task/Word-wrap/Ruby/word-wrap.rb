@@ -6,10 +6,10 @@ class String
     while i < txt.length
       j = i + width
       j -= 1 while txt[j] != " "
-      para << txt[i .. j-1]
+      para << txt[i ... j]
       i = j + 1
     end
-    para.join("\n")
+    para
   end
 end
 

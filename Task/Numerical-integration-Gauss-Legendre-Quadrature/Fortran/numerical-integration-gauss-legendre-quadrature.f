@@ -34,7 +34,6 @@ program gauss
   end do
   do i = 1, n
     x = cos(pi*(i-0.25_p)/(n+0.5_p))
-    iter = 0
     do iter = 1, 10
       f = p1(1); df = 0._p
       do k = 2, size(p1)

@@ -7,7 +7,7 @@
 #define max_digit 9
 
 typedef struct { int num, denom; } frac_t, *frac;
-typedef enum { C_NUM = 0, C_ADD, C_SUB, C_MUL, C_DIV, } op_type;
+typedef enum { C_NUM = 0, C_ADD, C_SUB, C_MUL, C_DIV } op_type;
 
 typedef struct expr_t *expr;
 typedef struct expr_t {

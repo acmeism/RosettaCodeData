@@ -1,4 +1,5 @@
 module TicTacToe
+  ROWS = [[1,2,3],[4,5,6],[7,8,9],[1,4,7],[2,5,8],[3,6,9],[1,5,9],[3,5,7]]
 
   class Game
     def initialize(player1Class, player2Class)
@@ -9,9 +10,8 @@ module TicTacToe
       puts "#{@players[@turn]} goes first."
       @players[@turn].marker = "X"
       @players[nextTurn].marker = "O"
-      @winning_rows = [[1,2,3],[4,5,6],[7,8,9],[1,4,7],[2,5,8],[3,6,9],[1,5,9],[3,5,7]]
     end
-    attr_reader :free_positions, :winning_rows, :board
+    attr_reader :free_positions, :board, :turn
 
     def play
       loop do
@@ -22,10 +22,10 @@ module TicTacToe
         @free_positions.delete(idx)
 
         # check for a winner
-        @winning_rows.each do |row|
+        ROWS.each do |row|
           if row.all? {|idx| @board[idx] == player.marker}
             puts "#{player} wins!"
-            print
+            print_board
             return
           end
         end
@@ -33,7 +33,7 @@ module TicTacToe
         # no winner, is board full?
         if @free_positions.empty?
           puts "It's a draw."
-          print
+          print_board
           return
         end
 
@@ -42,7 +42,7 @@ module TicTacToe
     end
 
     def nextTurn
-      (@turn + 1) % 2
+      1 - @turn
     end
 
     def nextTurn!
@@ -53,12 +53,9 @@ module TicTacToe
       @players[nextTurn]
     end
 
-    def print
-      puts [1,2,3].map {|i| @board[i].nil? ? i : @board[i]}.join("|")
-      puts "-+-+-"
-      puts [4,5,6].map {|i| @board[i].nil? ? i : @board[i]}.join("|")
-      puts "-+-+-"
-      puts [7,8,9].map {|i| @board[i].nil? ? i : @board[i]}.join("|")
+    def print_board
+      display =lambda{|row| row.map {|i| @board[i] ? @board[i] : i}.join("|")}
+      puts display[[1,2,3]], "-+-+-", display[[4,5,6]], "-+-+-", display[[7,8,9]]
     end
   end
 
@@ -71,20 +68,13 @@ module TicTacToe
   end
 
   class HumanPlayer < Player
-    def initialize(game)
-      super(game)
-    end
-
     def select
-      @game.print
+      @game.print_board
       loop do
         print "Select your #{marker} position: "
-        selection = $stdin.gets.to_i
-        if not @game.free_positions.include?(selection)
-          puts "Position #{selection} is not available. Try again."
-          next
-        end
-        return selection
+        selection = gets.to_i
+        return selection if @game.free_positions.include?(selection)
+        puts "Position #{selection} is not available. Try again."
       end
     end
 
@@ -94,50 +84,45 @@ module TicTacToe
   end
 
   class ComputerPlayer < Player
-    def initialize(game)
-      super(game)
-    end
-
-    def group_row(row, opponent)
-      markers = {self.marker => [], opponent.marker => [], nil => []} .
-                merge(row.group_by {|idx| @game.board[idx]})
-      #p [row, markers].inspect
+    def group_row(row)
+      markers = row.group_by {|idx| @game.board[idx]}
+      markers.default = []
       markers
     end
 
     def select
-      index = nil
-      opponent = @game.opponent
+      opponent_marker = @game.opponent.marker
 
       # look for winning rows
-      @game.winning_rows.each do |row|
-        markers = group_row(row, opponent)
-        if markers[self.marker].length == 2 and markers[nil].length == 1
+      for row in ROWS
+        markers = group_row(row)
+        next if markers[nil].length != 1
+        if markers[self.marker].length == 2
           return markers[nil].first
+        elsif markers[opponent_marker].length == 2
+          idx = markers[nil].first
         end
       end
 
       # look for opponent's winning rows to block
-      @game.winning_rows.each do |row|
-        markers = group_row(row, opponent)
-        if markers[opponent.marker].length == 2 and markers[nil].length == 1
-          return markers[nil].first
-        end
-      end
+      return idx if idx
 
       # need some logic here to get the computer to pick a smarter position
 
       # simply pick a position in order of preference
-      [5].concat([1,3,7,9].shuffle).concat([2,4,6,8].shuffle).each do |pos|
-        return pos if @game.free_positions.include?(pos)
+      ([5] + [1,3,7,9].shuffle + [2,4,6,8].shuffle).find do |pos|
+        @game.free_positions.include?(pos)
       end
     end
 
     def to_s
-      "Computer"
+      "Computer#{@game.turn}"
     end
   end
 end
 
-TicTacToe::Game.new(TicTacToe::ComputerPlayer, TicTacToe::ComputerPlayer).play
-TicTacToe::Game.new(TicTacToe::HumanPlayer,    TicTacToe::ComputerPlayer).play
+include TicTacToe
+
+Game.new(ComputerPlayer, ComputerPlayer).play
+puts
+Game.new(HumanPlayer,ComputerPlayer).play

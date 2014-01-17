@@ -1,7 +1,7 @@
 import std.algorithm, std.range, std.traits, permutations2,
        permutations_by_swapping1;
 
-auto prod(Range)(/*in*/ Range r) /*pure nothrow*/ {
+auto prod(Range)(Range r) /*pure*/ nothrow {
     return reduce!q{a * b}(cast(ForeachType!Range)1, r);
 }
 

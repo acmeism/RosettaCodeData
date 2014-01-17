@@ -1,6 +1,6 @@
 import std.stdio, std.bigint;
 
-uint sumDigits(T)(T n, in uint base=10) /*pure nothrow*/
+uint sumDigits(T)(T n, in uint base=10) pure /*nothrow*/
 in {
     assert(base > 1);
 } body {
@@ -11,9 +11,9 @@ in {
 }
 
 void main() {
-    sumDigits(1).writeln;
-    sumDigits(1_234).writeln;
+    1.sumDigits.writeln;
+    1_234.sumDigits.writeln;
     sumDigits(0xfe, 16).writeln;
     sumDigits(0xf0e, 16).writeln;
-    sumDigits(1_234.BigInt).writeln;
+    1_234.BigInt.sumDigits.writeln;
 }

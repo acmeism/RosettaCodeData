@@ -1,5 +1,5 @@
 (de lastFridays (Y)
-   (for M `(range 1 12)
+   (for M 12
       (prinl
          (dat$
             (find '((D) (= "Friday" (day D)))

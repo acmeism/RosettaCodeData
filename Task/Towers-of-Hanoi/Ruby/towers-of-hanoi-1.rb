@@ -1,10 +1,14 @@
-def move(num_disks, starting_stick, target_stick, using_stick)
+def move(num_disks, start=0, target=1, using=2)
   if num_disks == 1
-    target_stick << starting_stick.shift
-    status
+   @towers[target] << @towers[start].pop
+    puts "Move disk from #{start} to #{target} : #{@towers}"
   else
-    move(num_disks-1, starting_stick, using_stick, target_stick)
-    move(1, starting_stick, target_stick, using_stick)
-    move(num_disks-1, using_stick, target_stick, starting_stick)
+    move(num_disks-1, start, using, target)
+    move(1,           start, target, using)
+    move(num_disks-1, using, target, start)
   end
 end
+
+n = 5
+@towers = [[*1..n].reverse, [], []]
+move(n)

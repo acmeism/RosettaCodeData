@@ -40,13 +40,12 @@ sin: procedure; arg x;  x=r2r(x);  numeric fuzz min(5,digits()-3)
 .sinCos: parse arg z 1 p,_,i;  x=x*x
          do k=2 by 2; _=-_*x/(k*(k+i));z=z+_;if z=p then leave;p=z;end; return z
 
-sqrt: procedure; parse arg x; if x=0 then return 0; d=digits();numeric digits 11
-      g=.sqrtGuess();       do j=0 while p>9;  m.j=p;  p=p%2+1;   end
-      do k=j+5 to 0 by -1; if m.k>11 then numeric digits m.k; g=.5*(g+x/g); end
-      numeric digits d;  return g/1
-.sqrtGuess: if x<0 then call sqrtErr;   numeric form;   m.=11;   p=d+d%4+2
-      parse value format(x,2,1,,0) 'E0' with g 'E' _ .;   return g*.5'E'_%2
-
+sqrt: procedure; parse arg x; if x=0  then return 0;  m.=9; p=digits(); i=
+numeric digits 9; if x<0  then do; x=-x; i='i'; end;  numeric form;  m.0=p
+parse value format(x,2,1,,0) 'E0' with g 'E' _ .;     g=g*.5'E'_%2;  m.1=p
+      do j=2  while p>9;      m.j=p;   p=p%2+1;                  end /*j*/
+      do k=j+5  to 0  by -1;  numeric digits m.k; g=.5*(g+x/g);  end /*k*/
+                              numeric digits m.0;     return (g/1)i
 e: return,
 2.7182818284590452353602874713526624977572470936999595749669676277240766303535
            /*Note:  the "real: E subroutine returns  E's  accuracy that */
@@ -80,9 +79,8 @@ tellErr: say; say '*** error! ***'; say; say arg(1); say; exit 13
 tanErr:  call tellErr 'tan('||x") causes division by zero, X="||x
 AsinErr: call tellErr 'Asin(x),  X  must be in the range of  -1 ──► +1,  X='||x
 AcosErr: call tellErr 'Acos(x),  X  must be in the range of  -1 ──► +1,  X='||x
-sqrtErr: call tellErr "sqrt(x),  X  can't be negative,  X="||x
   /*  ┌───────────────────────────────────────────────────────────────┐
-      │ Not included here are:  (among others):                       │
+      │ Not included here are (among others):                         │
       │ some of the usual higher-math functions normally associated   │
       │  with trig functions:  POW, GAMMA, LGGAMMA, ERF, ERFC, ROOT,  │
       │                        LOG (LN), LOG2, LOG10, ATAN2,          │
@@ -90,7 +88,8 @@ sqrtErr: call tellErr "sqrt(x),  X  can't be negative,  X="||x
       │                                    (too many to name here).   │
       │ Angle conversions/normalizations: degrees/radians/grads/mils  │
       │ [a circle = 2 pi radians, 360 degrees, 400 grads,  6400 mils].│
-      │ Some of the other trig functions (hypens added intentially):  │
+      │ Some of the other trig functions are  (hyphens were added     │
+      │ intentionally):                                               │
       │  CHORD                                                        │
       │  COT  (co-tangent)                                            │
       │  CSC  (co-secant)                                             │

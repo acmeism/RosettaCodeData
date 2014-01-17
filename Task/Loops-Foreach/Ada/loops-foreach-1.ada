@@ -8,7 +8,7 @@ procedure For_Each is
 begin
 
    for Num in A'Range loop
-      put( A (Num) );
+      Put( A (Num) );
    end loop;
 
 end For_Each;

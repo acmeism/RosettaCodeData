@@ -11,6 +11,6 @@ Binary strings are also possible:
 
 jjj='01011011'B
 jjj='01011011'b
-jjj='0101 1011'b
+jjj="0101 1011"b
 jjj='0101 1011 1111'b
 longjjj='11110000 10100001 10110010 11100011 11100100'B

@@ -36,7 +36,7 @@ object Interact extends SimpleSwingApplication {
         numberField.text = showOptions(buttonPanel, message = "Are you sure?",
           title = "Choose an option!", entries = List("Yes", "No", "Cancel"),
           initial = 2) match {
-            case Result.Yes => (Long.MaxValue * Math.random).toLong.toString
+            case Result.Yes => (Long.MaxValue * math.random).toLong.toString
             case _          => numberField.text
           }
     }

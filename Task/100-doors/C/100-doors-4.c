@@ -2,9 +2,8 @@
 
 int main()
 {
-	int i;
-	for (i = 1; i * i <= 100; i++)
-		printf("door %d open\n", i * i);
-
-	return 0;
+  int door, square, increment;
+  for (door = 1, square = 1, increment = 1; door <= 100; door++ == square && (square += increment += 2))
+    printf("door #%d is %s.\n", door, (door == square? "open" : "closed"));
+  return 0;
 }

@@ -1,36 +1,19 @@
-import std.stdio, std.random, std.string, std.algorithm,
-       std.range, std.conv;
-
 void main() {
-  enum size = 4;
-  immutable ddigits = "123456789"d;
-  //immutable chosen = ddigits.randomCover.take(size).array;
-  const chosen = ddigits.randomCover(rndGen).take(size).array;
-  writeln("Guess a number composed of ", size,
-          " unique digits from 1 to 9 in random order.");
+    import std.stdio, std.random, std.string, std.algorithm,
+           std.range, std.conv, std.ascii;
 
-  uint nGuesses;
-  while (true) {
-    nGuesses++;
-    dstring guess;
+    immutable hidden = "123456789"d.randomCover.take(4).array;
     while (true) {
-      writef("\nNext guess (%d): ", nGuesses);
-      guess = readln.strip.dtext;
-      if (guess.countchars(ddigits) == size &&
-          guess.dup.sort().uniq.walkLength == size)
-        break;
-      writefln("I need %d unique digits from 1 to 9, no spaces", size);
+        "Next guess: ".write;
+        immutable d = readln.strip.dtext;
+        if (d.count == 4 && d.all!isDigit &&
+            d.dup.sort().uniq.count == 4) {
+            immutable bulls = d.zip(hidden).count!(p => p[0] == p[1]);
+            if (bulls == 4)
+                return " You guessed it!".writeln;
+            immutable cows = d.count!(g => hidden.canFind(g)) - bulls;
+            writefln("bulls %d, cows %d", bulls, cows);
+        }
+        " Bad guess! (4 unique digits, 1-9)".writeln;
     }
-
-    if (guess == chosen) {
-      writefln("\nYou guessed correctly in %d attempts.", nGuesses);
-      break;
-    }
-
-    immutable bulls = zip(guess, chosen).count!q{ a[0] == a[1] };
-    immutable cows = iota(size)
-                     .count!(i => guess[i] != chosen[i] &&
-                                  chosen.canFind(guess[i]));
-    writefln("  %d Bulls\n  %d Cows", bulls, cows);
-  }
 }

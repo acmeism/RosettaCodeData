@@ -5,6 +5,6 @@
 
 main() ->
 	inets:start(),
-	{ok, {_Status, _Header, HTML}} = http:request(?Url),
+	{ok, {_Status, _Header, HTML}} = httpc:request(?Url),
 	{match, [Time]} = re:run(HTML, ?Match, [{capture, all_but_first, binary}]),
 	io:format("~s~n",[Time]).

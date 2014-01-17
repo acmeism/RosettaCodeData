@@ -1,29 +1,21 @@
-public class Stack{
-    private Node first = null;
-    public boolean isEmpty(){
-        return first == null;
-    }
-    public Object Pop(){
-        if(isEmpty())
-            throw new Exception("Can't Pop from an empty Stack.");
-        else{
-            Object temp = first.value;
-            first = first.next;
-            return temp;
-        }
-    }
-    public void Push(Object o){
-        first = new Node(o, first);
-    }
-    class Node{
-        public Node next;
-        public Object value;
-        public Node(Object value){
-            this(value, null);
-        }
-        public Node(Object value, Node next){
-            this.next = next;
-            this.value = value;
-        }
+import java.util.Stack;
+
+public class StackTest {
+    public static void main( final String[] args ) {
+        final Stack<String> stack = new Stack<String>();
+
+        System.out.println( "New stack empty? " + stack.empty() );
+
+        stack.push( "There can be only one" );
+        System.out.println( "Pushed stack empty? " + stack.empty() );
+        System.out.println( "Popped single entry: " + stack.pop() );
+
+        stack.push( "First" );
+        stack.push( "Second" );
+        System.out.println( "Popped entry should be second: " + stack.pop() );
+
+        // Popping an empty stack will throw...
+        stack.pop();
+        stack.pop();
     }
 }

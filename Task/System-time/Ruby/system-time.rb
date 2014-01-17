@@ -1,10 +1,10 @@
 t = Time.now
 
 # textual
-puts t   # => Wed Aug 05 20:14:50 -0400 2009
+puts t        # => 2013-12-27 18:00:23 +0900
 
 # epoch time
-puts t.to_i   # => 1249517690
+puts t.to_i   # => 1388134823
 
 # epoch time with fractional seconds
-puts t.to_f   # => 1249517690.74388
+puts t.to_f   # => 1388134823.9801579

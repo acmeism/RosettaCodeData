@@ -3,7 +3,7 @@
 
        DATA DIVISION.
        WORKING-STORAGE SECTION.
-       01 Current        PIC 9(3).
+       01 Current-n      PIC 9(3).
        01 StepSize       PIC 9(3).
        01 DoorTable.
           02 Doors       PIC 9(1)   OCCURS 100 TIMES.
@@ -12,10 +12,11 @@
 
        PROCEDURE DIVISION.
        Begin.
+           INITIALIZE DoorTable
            PERFORM VARYING StepSize FROM 1 BY 1 UNTIL StepSize > 100
-             PERFORM VARYING Current FROM StepSize BY StepSize
-                     UNTIL Current > 100
-               SUBTRACT Doors (Current) FROM 1 GIVING Doors (Current)
+             PERFORM VARYING Current-n FROM StepSize BY StepSize
+                     UNTIL Current-n > 100
+               SUBTRACT Doors (Current-n) FROM 1 GIVING Doors (Current-n)
              END-PERFORM
            END-PERFORM
 

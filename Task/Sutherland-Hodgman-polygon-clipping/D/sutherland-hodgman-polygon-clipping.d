@@ -13,7 +13,7 @@ struct Vec2 { // To be replaced with Phobos code.
 }
 
 immutable(Vec2)[] clip(in Vec2[] subjectPolygon, in Vec2[] clipPolygon)
-/*pure nothrow*/ in {
+pure /*nothrow*/ in {
     assert(subjectPolygon.length > 1);
     assert(clipPolygon.length > 1);
     // Probably clipPolygon needs to be convex and probably
@@ -23,10 +23,9 @@ immutable(Vec2)[] clip(in Vec2[] subjectPolygon, in Vec2[] clipPolygon)
 } body {
     alias Edge = Tuple!(Vec2,"p", Vec2,"q");
 
-    static bool isInside(in Vec2 p, in Edge cle) pure nothrow {
-        return (cle.q.x - cle.p.x) * (p.y - cle.p.y) >
-               (cle.q.y - cle.p.y) * (p.x - cle.p.x);
-    }
+    static enum isInside = (in Vec2 p, in Edge cle) pure nothrow =>
+        (cle.q.x - cle.p.x) * (p.y - cle.p.y) >
+        (cle.q.y - cle.p.y) * (p.x - cle.p.x);
 
     static Vec2 intersection(in Edge se, in Edge cle) pure nothrow {
         immutable dc = cle.p - cle.q;
@@ -39,12 +38,11 @@ immutable(Vec2)[] clip(in Vec2[] subjectPolygon, in Vec2[] clipPolygon)
     }
 
     // How much slower is this compared to lower-level code?
-    static edges(in Vec2[] poly) /*pure nothrow*/ {
-        // return poly[$ - 1 .. $].chain(poly).zip!Edge(poly);
-        return poly[$ - 1 .. $].chain(poly).zip(poly).map!Edge;
-    }
+    static enum edges = (in Vec2[] poly) pure nothrow =>
+        // poly[$ - 1 .. $].chain(poly).zip!Edge(poly);
+        poly[$ - 1 .. $].chain(poly).zip(poly).map!Edge;
 
-    immutable(Vec2)[] result = subjectPolygon.idup; // // Not nothrow.
+    immutable(Vec2)[] result = subjectPolygon.idup; // Not nothrow.
 
     foreach (immutable clipEdge; edges(clipPolygon)) {
         immutable inputList = result;
@@ -101,7 +99,7 @@ in {
     eps.writefln("c 0.5 0 0.5 s gsave 0.7 0.3 0.8 s gs");
 
     eps.writefln("%%%%EOF");
-    eps.close();
+    eps.close;
     writeln(fileName, " written.");
 }
 

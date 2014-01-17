@@ -1,43 +1,20 @@
-import dfl.all;
-import std.math;
+import grayscale_image, turtle;
 
-class FractalTree: Form {
-
-    private immutable DEG_TO_RAD = PI / 180.0;
-
-    this() {
-        width = 600;
-        height = 500;
-        text = "Fractal Tree";
-        backColor = Color(0xFF, 0xFF, 0xFF);
-        startPosition = FormStartPosition.CENTER_SCREEN;
-        formBorderStyle = FormBorderStyle.FIXED_DIALOG;
-        maximizeBox = false;
-    }
-
-    private void drawTree(Graphics g, Pen p, int x1, int y1, double angle, int depth) {
-        if (depth == 0) return;
-        int x2 = x1 + cast(int) (cos(angle * DEG_TO_RAD) * depth * 10.0);
-        int y2 = y1 + cast(int) (sin(angle * DEG_TO_RAD) * depth * 10.0);
-        g.drawLine(p, x1, y1, x2, y2);
-        drawTree(g, p, x2, y2, angle - 20, depth - 1);
-        drawTree(g, p, x2, y2, angle + 20, depth - 1);
-    }
-
-    protected override void onPaint(PaintEventArgs ea){
-        super.onPaint(ea);
-        Pen p = new Pen(Color(0, 0xAA, 0));
-        drawTree(ea.graphics, p, 300, 450, -90, 9);
-    }
+void tree(Color)(Image!Color img, ref Turtle t, in uint depth,
+                 in real step, in real scale, in real angle) {
+    if (depth == 0) return;
+    t.forward(img, step);
+    t.right(angle);
+    img.tree(t, depth - 1, step * scale, scale, angle);
+    t.left(2 * angle);
+    img.tree(t, depth - 1, step * scale, scale, angle);
+    t.right(angle);
+    t.forward(img, -step);
 }
 
-int main() {
-    int result = 0;
-    try {
-        Application.run(new FractalTree);
-    } catch(Exception e) {
-        msgBox(e.msg, "Fatal Error", MsgBoxButtons.OK, MsgBoxIcon.ERROR);
-        result = 1;
-    }
-    return result;
+void main() {
+    auto img = new Image!Gray(330, 300);
+    auto t = Turtle(165, 270, -90);
+    img.tree(t, 10, 80, 0.7, 30);
+    img.savePGM("fractal_tree.pgm");
 }

@@ -14,4 +14,4 @@ printAll = process []
 main :: IO ()
 main = do printAll 5 "Mary" "had" "a" "little" "lamb"
           printAll 4 3 5
-          printAll "Rosetta" "Code" "Is" "Awseome!"
+          printAll "Rosetta" "Code" "Is" "Awesome!"

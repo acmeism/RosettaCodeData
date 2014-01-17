@@ -15,4 +15,4 @@ server :- http_server(http_dispatch, [port(8080)]).
 % In this case we're returning a page with the title "Howdy" and the content,
 % wrapped in <h1></h1> tags, "Goodbye, World!".
 say_goodbye(_Request) :- reply_html_page([title('Howdy')],
-	                                 [h1('Goodbye, World!')]).
+                                   [h1('Goodbye, World!')]).

@@ -6,7 +6,7 @@
 * 22.05.2013 Walter Pachl (I won't analyze the minor differences)
 * 25.05.2013 I did now analyze and had to discover that
 *            'my' log routine is apparently incorrect
-*            Correction is yet to come
+* 25.05.2013 problem identified & corrected
 *********************************************************************/
 Call both '1223334444'
 Call both '1223334444555555555'

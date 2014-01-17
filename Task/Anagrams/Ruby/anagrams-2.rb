@@ -1,14 +1,4 @@
 require 'open-uri'
 
-anagram = nil
-
-open('http://www.puzzlers.org/pub/wordlists/unixdict.txt') do |f|
-  anagram = f.read.split.group_by {|s| s.each_char.sort}
-end
-
-count = anagram.each_value.map {|ana| ana.length}.max
-anagram.each_value do |ana|
-  if ana.length >= count
-    p ana
-  end
-end
+anagrams = open('http://www.puzzlers.org/pub/wordlists/unixdict.txt'){|f| f.read.split.group_by{|w| w.each_char.sort} }
+anagrams.values.group_by(&:size).max.last.each{|group| puts group.join(", ") }

@@ -29,10 +29,10 @@ public class Triples{
 
     public static void main(String[] args){
         for(long i = 100; i <= 10000000; i*=10){
-    	    LIMIT = BigInteger.valueOf(i);
-    	    primCount = tripCount = 0;
-    	    parChild(THREE, FOUR, FIVE);
-    	    System.out.println(LIMIT + ": " + tripCount + " triples, " + primCount + " primitive.");
+            LIMIT = BigInteger.valueOf(i);
+            primCount = tripCount = 0;
+            parChild(THREE, FOUR, FIVE);
+            System.out.println(LIMIT + ": " + tripCount + " triples, " + primCount + " primitive.");
         }
     }
 }

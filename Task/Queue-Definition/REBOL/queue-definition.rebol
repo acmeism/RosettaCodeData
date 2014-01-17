@@ -8,12 +8,12 @@ rebol [
 ; Define fifo class:
 
 fifo: make object! [
-	queue: copy []
-	push:  func [x][append queue x]
-	pop:   func [/local x][   ; Make 'x' local so it won't pollute global namespace.
-		if empty [return none]
-		x: first queue  remove queue  x]
-	empty: does [empty? queue]
+    queue: copy []
+    push:  func [x][append queue x]
+    pop:   func [/local x][   ; Make 'x' local so it won't pollute global namespace.
+        if empty [return none]
+        x: first queue  remove queue  x]
+    empty: does [empty? queue]
 ]
 
 ; Create and populate a FIFO:

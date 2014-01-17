@@ -1,9 +1,9 @@
-/*REXX program demonstrates array usage. */
-a.='not found'               /*value for all    a.xxx     (so far).  */
+/*REXX program  demonstrates a  simple  array usage.                    */
+a.='not found'                         /*value for all  a.xxx  (so far).*/
+                do j=1  to 100         /*start at 1, define 100 elements*/
+                a.j=-j*100             /*define as negative J thousand. */
+                end   /*j*/            /*the above defines 100 elements.*/
 
-  do j=1 to 100              /*start at 1, define 100 array elements.*/
-  a.j=-j*100                 /*define element as negative J thousand.*/
-  end                        /*the above defines 100 elements.       */
-
-say 'element 50 is:' a.50
+say 'element 50 is:'   a.50
 say 'element 3000 is:' a.3000
+                                       /*stick a fork in it, we're done.*/

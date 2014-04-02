@@ -16,23 +16,21 @@
 
 int main()
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+  @autoreleasepool {
 
-  NSMutableArray *arr =
-     [NSMutableArray
-       arrayWithArray: [@"this is a set of strings to sort"
-                         componentsSeparatedByString: @" "]
-     ];
+    NSMutableArray *arr =
+       [NSMutableArray
+         arrayWithArray: [@"this is a set of strings to sort"
+                           componentsSeparatedByString: @" "]
+       ];
 
-  [arr sortUsingSelector: @selector(my_compare:)];
+    [arr sortUsingSelector: @selector(my_compare:)];
 
-  NSEnumerator *iter = [arr objectEnumerator];
-  NSString *str;
-  while( (str = [iter nextObject]) != nil )
-  {
-    NSLog(@"%@", str);
+    for ( NSString *str in arr )
+    {
+      NSLog(@"%@", str);
+    }
+
   }
-
-  [pool release];
   return EXIT_SUCCESS;
 }

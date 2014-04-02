@@ -1,5 +1,5 @@
 import std.stdio, std.conv, std.algorithm, std.variant, std.uni,
-       std.functional;
+       std.functional, std.string;
 
 alias Sexp = Variant;
 
@@ -9,8 +9,8 @@ struct Symbol {
 }
 
 Sexp parseSexp(string txt) @safe pure /*nothrow*/ {
-    static bool isIdentChar(in char c) @safe pure /*nothrow*/ {
-        return c.isAlpha || "0123456789!@#-".canFind(c);
+    static bool isIdentChar(in char c) @safe pure nothrow {
+        return c.isAlpha || "0123456789!@#-".representation.canFind(c);
     }
 
     size_t pos = 0;

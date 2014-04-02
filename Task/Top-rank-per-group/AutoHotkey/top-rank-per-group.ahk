@@ -16,12 +16,10 @@ Add_Employee("Tim Sampair    ", "E03033", 27000, "D101")
 Add_Employee("Kim Arlich     ", "E10001", 57000, "D190")
 Add_Employee("Timothy Grove  ", "E16398", 29900, "D190")
 
-
 ; display top 3 ranks for each department
 Loop, %Department_0% ; all departments
     MsgBox,, % "Department:  " Department_%A_Index%
            , % TopRank(3, Department_%A_Index%)
-
 
 ;---------------------------------------------------------------------------
 TopRank(N, Department) { ; find the top N salaries in each department
@@ -45,7 +43,6 @@ TopRank(N, Department) { ; find the top N salaries in each department
     }
     Return, Msg
 }
-
 
 ;---------------------------------------------------------------------------
 Add_Employee(Name, ID, Salary, Department) {

@@ -1,7 +1,7 @@
 @implementation MyClass
 
 // Was not declared because init is defined in NSObject
-- init
+- (id)init
 {
     if (self = [super init])
         variable = 0;

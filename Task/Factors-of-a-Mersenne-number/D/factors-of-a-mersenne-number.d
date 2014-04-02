@@ -10,7 +10,7 @@ ulong mersenneFactor(in ulong p) pure nothrow {
         return true;
     }
 
-    static long modPow(in long cb,in long ce,in long m) pure nothrow {
+    static long modPow(in long cb, in long ce,in long m) pure nothrow {
         long b = cb;
         long result = 1;
         for (long e = ce; e > 0; e >>= 1) {
@@ -21,7 +21,7 @@ ulong mersenneFactor(in ulong p) pure nothrow {
         return result;
     }
 
-    immutable ulong limit = cast(ulong)sqrt(cast(real)(2 ^^ p - 1));
+    immutable ulong limit = cast(ulong)real(2 ^^ p - 1).sqrt;
     for (ulong k = 1; (2 * p * k - 1) < limit; k++) {
         immutable ulong q = 2 * p * k + 1;
         if (isPrime(q) && (q % 8 == 1 || q % 8 == 7) &&
@@ -32,5 +32,5 @@ ulong mersenneFactor(in ulong p) pure nothrow {
 }
 
 void main() {
-    writefln("Factor of M929: %s", mersenneFactor(929));
+    writefln("Factor of M929: %s", 929.mersenneFactor);
 }

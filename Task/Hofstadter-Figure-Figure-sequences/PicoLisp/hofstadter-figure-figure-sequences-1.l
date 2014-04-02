@@ -1,13 +1,13 @@
 (setq *RNext 2)
 
 (de ffr (N)
-   (cache '(NIL) (pack (char (hash N)) N)
+   (cache '(NIL) N
       (if (= 1 N)
          1
          (+ (ffr (dec N)) (ffs (dec N))) ) ) )
 
 (de ffs (N)
-   (cache '(NIL) (pack (char (hash N)) N)
+   (cache '(NIL) N
       (if (= 1 N)
          2
          (let S (inc (ffs (dec N)))

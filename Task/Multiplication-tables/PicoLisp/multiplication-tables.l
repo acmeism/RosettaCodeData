@@ -1,4 +1,4 @@
-(de mulTable (N)
+sp>(de mulTable (N)
    (space 4)
    (for X N
       (prin (align 4 X)) )

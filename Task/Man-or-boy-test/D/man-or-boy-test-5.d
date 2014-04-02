@@ -10,7 +10,7 @@ BigInt A(in int k, in int x1, in int x2, in int x3,
             static immutable t = [0, 0, 0, 1, 2, 3];
             return t[k].BigInt;
         }
-        alias memoize!c1_ c1;
+        alias c1 = memoize!c1_;
 
         static BigInt c2_(in int k) {
             if (k > 5)
@@ -18,7 +18,7 @@ BigInt A(in int k, in int x1, in int x2, in int x3,
             static immutable t = [0, 0, 1, 1, 1, 2];
             return t[k].BigInt;
         }
-        alias memoize!c2_ c2;
+        alias c2 = memoize!c2_;
 
         static BigInt c3_(in int k) {
             if (k > 5)
@@ -26,7 +26,7 @@ BigInt A(in int k, in int x1, in int x2, in int x3,
             static immutable t = [0, 1, 1, 0, 0, 1];
             return t[k].BigInt;
         }
-        alias memoize!c3_ c3;
+        alias c3 = memoize!c3_;
 
         static BigInt c4_(in int k) {
             if (k > 5)
@@ -34,7 +34,7 @@ BigInt A(in int k, in int x1, in int x2, in int x3,
             static immutable t = [1, 1, 0, 0, 0, 0];
             return t[k].BigInt;
         }
-        alias memoize!c4_ c4;
+        alias c4 = memoize!c4_;
 
         static int c5(in int k) pure nothrow {
             return !!k;
@@ -48,6 +48,7 @@ BigInt A(in int k, in int x1, in int x2, in int x3,
 
 void main() {
     import std.stdio, std.conv, std.range;
+
     foreach (immutable i; 0 .. 40)
         writeln(i, " ", A(i, 1, -1, -1, 1, 0));
 

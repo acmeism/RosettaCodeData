@@ -1,4 +1,4 @@
-sub ethiopicmult {
+sub ethiopic-mult {
     my &halve  = * div= 2;
     my &double = * *= 2;
     my &even   = * %% 2;
@@ -11,3 +11,5 @@ sub ethiopicmult {
         double $b;
     }
 }
+
+say ethiopic-mult(17,34);

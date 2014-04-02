@@ -41,14 +41,15 @@
 
 int main()
 {
-  double v[] = { 2,4,4,4,5,5,7,9 };
+  @autoreleasepool {
 
-  SDAccum *sdacc = [SDAccum new];
+    double v[] = { 2,4,4,4,5,5,7,9 };
 
-  for(int i=0; i < sizeof(v)/sizeof(*v) ; i++)
-    printf("adding %f\tstddev = %f\n", v[i], [sdacc value: v[i]]);
+    SDAccum *sdacc = [[SDAccum alloc] init];
 
-  [sdacc release];
+    for(int i=0; i < sizeof(v)/sizeof(*v) ; i++)
+      printf("adding %f\tstddev = %f\n", v[i], [sdacc value: v[i]]);
 
+  }
   return 0;
 }

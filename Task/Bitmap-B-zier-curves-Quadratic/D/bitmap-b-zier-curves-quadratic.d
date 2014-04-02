@@ -9,7 +9,7 @@ pure nothrow if (nSegments > 0) {
     Pt[nSegments + 1] points = void;
 
     foreach (immutable i, ref p; points) {
-        immutable double t = i / cast(double)nSegments,
+        immutable double t = i / double(nSegments),
                          a = (1.0 - t) ^^ 2,
                          b = 2.0 * t * (1.0 - t),
                          c = t ^^ 2;

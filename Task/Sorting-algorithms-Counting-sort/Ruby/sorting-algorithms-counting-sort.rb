@@ -1,21 +1,13 @@
 class Array
-  def counting_sort
-    dup.counting_sort!
+  def counting_sort!
+    replace counting_sort
   end
 
-  def counting_sort!
+  def counting_sort
     min, max = minmax
     count = Array.new(max - min + 1, 0)
     each {|number| count[number - min] += 1}
-    z = 0
-    min.upto(max) do |i|
-      while count[i - min] > 0
-        self[z] = i
-        z += 1
-        count[i - min] -= 1
-      end
-    end
-    self
+    (min..max).each_with_object([]) {|i, ary| count[i - min].times {ary << i}}
   end
 end
 

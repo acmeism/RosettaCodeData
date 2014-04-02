@@ -3,17 +3,15 @@
 void runSystemCommand(NSString *cmd)
 {
     [[NSTask launchedTaskWithLaunchPath:@"/bin/sh"
-        arguments:[NSArray arrayWithObjects:@"-c", cmd, nil]]
+        arguments:@[@"-c", cmd]]
         waitUntilExit];
 }
 
 int main(int argc, const char **argv)
 {
-    NSAutoreleasePool *pool;
+    @autoreleasepool {
 
-    pool = [NSAutoreleasePool new];
-
-    runSystemCommand(@"ls");
-    [pool release];
+      runSystemCommand(@"ls");
+    }
     return 0;
 }

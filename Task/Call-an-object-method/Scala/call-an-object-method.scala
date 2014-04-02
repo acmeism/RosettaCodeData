@@ -1,10 +1,9 @@
-/** This class implicitly includes a constructor which accepts an Int and
+/* This class implicitly includes a constructor which accepts an Int and
  *  creates "val variable1: Int" with that value.
  */
-class MyClass(val variable1: Int) {
-  var variable2 = "asdf" // Another instance variable; a public var this time
+class MyClass(val memberVal: Int) { // Acts like a getter, getter automatically generated.
+  var variable2 = "asdf" // Another instance variable; a public mutable this time
   def this() = this(0) // An auxilliary constructor that instantiates with a default value
-  def myMethod = variable1 // A getter for variable1, getter of variable1 is auto-created
 }
 
 object HelloObject {
@@ -13,13 +12,13 @@ object HelloObject {
 
 /** Demonstrate use of our example class.
  */
-object Call_an_object_method extends Application {
+object Call_an_object_method extends App {
   val s = "Hello"
-  val m = new MyClass()
+  val m = new MyClass
   val n = new MyClass(3)
 
-  println(HelloObject.s) // prints "Hello" by object getterHelloObject
-
-  println(m.myMethod) // prints 0
-  println(n.myMethod) // prints 3
+  assert(HelloObject.s == "Hello") // "Hello" by object getterHelloObject
+  assert(m.memberVal == 0)
+  assert(n.memberVal == 3)
+  println("Successfully completed without error.")
 }

@@ -1,13 +1,13 @@
 #import <Foundation/Foundation.h>
 
 const void *PQRetain(CFAllocatorRef allocator, const void *ptr) {
-  return [(id)ptr retain];
+  return (__bridge_retained const void *)(__bridge id)ptr;
 }
 void PQRelease(CFAllocatorRef allocator, const void *ptr) {
-  [(id)ptr release];
+  (void)(__bridge_transfer id)ptr;
 }
 CFComparisonResult PQCompare(const void *ptr1, const void *ptr2, void *unused) {
-  return [(id)ptr1 compare:(id)ptr2];
+  return [(__bridge id)ptr1 compare:(__bridge id)ptr2];
 }
 
 @interface Task : NSObject {
@@ -26,10 +26,6 @@ CFComparisonResult PQCompare(const void *ptr1, const void *ptr2, void *unused) {
   }
   return self;
 }
-- (void)dealloc {
-  [name release];
-  [super dealloc];
-}
 - (NSString *)description {
   return [NSString stringWithFormat:@"%d, %@", priority, name];
 }
@@ -44,25 +40,25 @@ CFComparisonResult PQCompare(const void *ptr1, const void *ptr2, void *unused) {
 @end
 
 int main (int argc, const char *argv[]) {
-  NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
+  @autoreleasepool {
 
-  CFBinaryHeapCallBacks callBacks = {0, PQRetain, PQRelease, NULL, PQCompare};
-  CFBinaryHeapRef pq = CFBinaryHeapCreate(NULL, 0, &callBacks, NULL);
+    CFBinaryHeapCallBacks callBacks = {0, PQRetain, PQRelease, NULL, PQCompare};
+    CFBinaryHeapRef pq = CFBinaryHeapCreate(NULL, 0, &callBacks, NULL);
 
-  CFBinaryHeapAddValue(pq, [[[Task alloc] initWithPriority:3 andName:@"Clear drains"] autorelease]);
-  CFBinaryHeapAddValue(pq, [[[Task alloc] initWithPriority:4 andName:@"Feed cat"] autorelease]);
-  CFBinaryHeapAddValue(pq, [[[Task alloc] initWithPriority:5 andName:@"Make tea"] autorelease]);
-  CFBinaryHeapAddValue(pq, [[[Task alloc] initWithPriority:1 andName:@"Solve RC tasks"] autorelease]);
-  CFBinaryHeapAddValue(pq, [[[Task alloc] initWithPriority:2 andName:@"Tax return"] autorelease]);
+    CFBinaryHeapAddValue(pq, [[Task alloc] initWithPriority:3 andName:@"Clear drains"]);
+    CFBinaryHeapAddValue(pq, [[Task alloc] initWithPriority:4 andName:@"Feed cat"]);
+    CFBinaryHeapAddValue(pq, [[Task alloc] initWithPriority:5 andName:@"Make tea"]);
+    CFBinaryHeapAddValue(pq, [[Task alloc] initWithPriority:1 andName:@"Solve RC tasks"]);
+    CFBinaryHeapAddValue(pq, [[Task alloc] initWithPriority:2 andName:@"Tax return"]);
 
-  while (CFBinaryHeapGetCount(pq) != 0) {
-    Task *task = (id)CFBinaryHeapGetMinimum(pq);
-    NSLog(@"%@", task);
-    CFBinaryHeapRemoveMinimumValue(pq);
+    while (CFBinaryHeapGetCount(pq) != 0) {
+      Task *task = (id)CFBinaryHeapGetMinimum(pq);
+      NSLog(@"%@", task);
+      CFBinaryHeapRemoveMinimumValue(pq);
+    }
+
+    CFRelease(pq);
+
   }
-
-  CFRelease(pq);
-
-  [pool drain];
   return 0;
 }

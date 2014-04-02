@@ -2,27 +2,22 @@
     NSString *name;
     NSString *value;
 }
-+(id)pairWithName:(NSString *)n value:(NSString *)v;
--(id)initWithName:(NSString *)n value:(NSString *)v;
++(instancetype)pairWithName:(NSString *)n value:(NSString *)v;
+-(instancetype)initWithName:(NSString *)n value:(NSString *)v;
 -(NSString *)name;
 -(NSString *)value;
 @end
 
 @implementation Pair
-+(id)pairWithName:(NSString *)n value:(NSString *)v {
-    return [[[self alloc] initWithName:n value:v] autorelease];
++(instancetype)pairWithName:(NSString *)n value:(NSString *)v {
+    return [[self alloc] initWithName:n value:v];
 }
--(id)initWithName:(NSString *)n value:(NSString *)v {
+-(instancetype)initWithName:(NSString *)n value:(NSString *)v {
     if ((self = [super init])) {
-        name = [n retain];
-        value = [v retain];
+        name = n;
+        value = v;
     }
     return self;
-}
--(void)dealloc {
-    [name release];
-    [value release];
-    [super dealloc];
 }
 -(NSString *)name { return name; }
 -(NSString *)value { return value; }
@@ -32,9 +27,9 @@
 @end
 
 int main() {
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    @autoreleasepool {
 
-    NSArray *pairs = [NSArray arrayWithObjects:
+        NSArray *pairs = @[
                        [Pair pairWithName:@"06-07" value:@"Ducks"],
                        [Pair pairWithName:@"00-01" value:@"Avalanche"],
                        [Pair pairWithName:@"02-03" value:@"Devils"],
@@ -44,21 +39,17 @@ int main() {
                        [Pair pairWithName:@"05-06" value:@"Hurricanes"],
                        [Pair pairWithName:@"99-00" value:@"Devils"],
                        [Pair pairWithName:@"07-08" value:@"Red Wings"],
-                       [Pair pairWithName:@"08-09" value:@"Penguins"],
-                       nil];
+                       [Pair pairWithName:@"08-09" value:@"Penguins"]];
 
-    // optional 3rd arg: you can also specify a selector to compare the keys
-    NSSortDescriptor *sd = [[NSSortDescriptor alloc] initWithKey:@"name" ascending:YES];
+        // optional 3rd arg: you can also specify a selector to compare the keys
+        NSSortDescriptor *sd = [[NSSortDescriptor alloc] initWithKey:@"name" ascending:YES];
 
-    // it takes an array of sort descriptors, and it will be ordered by the
-    // first one, then if it's a tie by the second one, etc.
-    NSArray *sorted = [pairs sortedArrayUsingDescriptors:
-                         [NSArray arrayWithObject:sd]];
-    NSLog(@"%@", sorted);
+        // it takes an array of sort descriptors, and it will be ordered by the
+        // first one, then if it's a tie by the second one, etc.
+        NSArray *sorted = [pairs sortedArrayUsingDescriptors:@[sd]];
+        NSLog(@"%@", sorted);
 
-    [sd release];
-
-    [pool release];
+    }
 
     return 0;
 }

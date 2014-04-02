@@ -22,7 +22,7 @@ petilil pidgeotto pikachu pinsir poliwrath poochyena porygon2
 porygonz registeel relicanth remoraid rufflet sableye scolipede
 scrafty seaking sealeo silcoon simisear snivy snorlax spoink starly
 tirtouga trapinch treecko tyrogue vigoroth vulpix wailord wartortle
-whismur wingull yamask".split();
+whismur wingull yamask".split;
 
     string[] solution;
     foreach (ref name; pokemon) {

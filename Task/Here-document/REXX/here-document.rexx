@@ -31,7 +31,7 @@ binary  data  interchange.        │ 12◄─secondary carrier detect   [SCD]  
 │      (common return)            │ 21◄─signal quality detector    [SQD]  DCE │
 │ 8◄─carrier detect     [CD]  DCE │ 22◄─ring indicator             [RI]   DCE │
 │ 9◄─positive voltage   [-]       │ 23◄─data rate select       [DRS]  DCE/DTE │
-│10◄─negative voltate   [-]       │ 24◄─external clock             [XTC]  DTE │
+│10◄─negative voltage   [-]       │ 24◄─external clock             [XTC]  DTE │
 │11◄─unassigned                   │ 25◄─unassigned                            │
 └─────────────────────────────────┴───────────────────────────────────────────┘
 ◄◄.

@@ -1,21 +1,27 @@
-primelist = [2, 3]
-def is_prime(n):
-    if n in primelist: return True
-    if n < primelist[-1]: return False
+from math import floor, sqrt
+try:
+    long
+except NameError:
+    long = int
 
-    for y in primes():
-        if not n % y: return False
-        if n < y * y: return True
+def fac(n):
+    step = lambda x: 1 + x*4 - (x//2)*2
+    maxq = long(floor(sqrt(n)))
+    d = 1
+    q = n % 2 == 0 and 2 or 3
+    while q <= maxq and n % q != 0:
+        q = step(d)
+        d += 1
+    res = []
+    if q <= maxq:
+        res.extend(fac(n//q))
+        res.extend(fac(q))
+    else: res=[n]
+    return res
 
-def primes():
-    for n in primelist: yield n
-
-    n = primelist[-1]
-    while True:
-        n += 2
-        for x in primelist:
-            if not n % x: break
-            if x * x > n:
-                primelist.append(n)
-                yield n
-                break
+if __name__ == '__main__':
+    import time
+    start = time.time()
+    tocalc =  2**59-1
+    print("%s = %s" % (tocalc, fac(tocalc)))
+    print("Needed %ss" % (time.time() - start))

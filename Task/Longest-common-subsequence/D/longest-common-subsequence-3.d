@@ -60,7 +60,7 @@ const(T)[] lcs(T)(in T[] xs, in T[] ys) pure /*nothrow*/ {
            .array;
 }
 
-string lcsString(in string s1, in string s2) /*pure nothrow*/ {
+string lcsString(in string s1, in string s2) pure /*nothrow*/ {
     //return lcs(s1.representation, s2.representation).assumeChars;
     return cast(string)lcs(s1.representation, s2.representation);
 }

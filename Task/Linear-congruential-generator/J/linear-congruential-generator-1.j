@@ -1,7 +1,7 @@
 lcg=: adverb define
  0 m lcg y                     NB. default seed of 0
 :
- 'a c mod'=. m
+ 'a c mod'=. x: m
  }. (mod | c + a * ])^:(<y+1) x
 )
 

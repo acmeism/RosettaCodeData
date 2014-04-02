@@ -3,7 +3,7 @@ import std.stdio, std.math, std.bigint;
 bool isPrime(in int p) pure nothrow {
     if (p < 2 || p % 2 == 0)
         return p == 2;
-    foreach (immutable i; 3 .. cast(uint)(sqrt(cast(real)p)) + 1)
+    foreach (immutable i; 3 .. cast(uint)real(p).sqrt + 1)
         if (p % i == 0)
             return false;
     return true;

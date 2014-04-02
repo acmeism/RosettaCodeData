@@ -1,12 +1,11 @@
 #import <stdio.h>
-#import <objc/Object.h>
 
 BOOL iseven(int x)
 {
   return (x&1) == 0;
 }
 
-@interface EthiopicMult : Object
+@interface EthiopicMult : NSObject
 + (int)mult: (int)plier by: (int)plicand;
 + (int)halve: (int)a;
 + (int)double: (int)a;
@@ -37,6 +36,8 @@ BOOL iseven(int x)
 
 int main()
 {
-  printf("%d\n", [EthiopicMult mult: 17 by: 34]);
+  @autoreleasepool {
+    printf("%d\n", [EthiopicMult mult: 17 by: 34]);
+  }
   return 0;
 }

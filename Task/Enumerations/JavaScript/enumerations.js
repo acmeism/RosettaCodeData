@@ -1,1 +1,2 @@
-var fruits = { apple : 0, banana : 1, cherry : 2 };
+var fruits = { APPLE : 0, BANANA : 1, CHERRY : 2 };
+Object.freeze(fruits);

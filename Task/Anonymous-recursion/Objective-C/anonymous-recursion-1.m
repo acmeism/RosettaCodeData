@@ -15,19 +15,18 @@
   if (i < 2)
     result = 1;
   else
-    result = [[self performSelector:_cmd withObject:[NSNumber numberWithInt:i-1]] intValue]
-           + [[self performSelector:_cmd withObject:[NSNumber numberWithInt:i-2]] intValue];
-  return [NSNumber numberWithInt:result];
+    result = [[self performSelector:_cmd withObject:@(i-1)] intValue]
+           + [[self performSelector:_cmd withObject:@(i-2)] intValue];
+  return @(result);
 }
 @end
 
 int main (int argc, const char *argv[]) {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+  @autoreleasepool {
 
-  AnonymousRecursion *dummy = [[AnonymousRecursion alloc] init];
-  NSLog(@"%@", [dummy fibonacci:[NSNumber numberWithInt:8]]);
-  [dummy release];
+    AnonymousRecursion *dummy = [[AnonymousRecursion alloc] init];
+    NSLog(@"%@", [dummy fibonacci:@8]);
 
-  [pool release];
+  }
   return 0;
 }

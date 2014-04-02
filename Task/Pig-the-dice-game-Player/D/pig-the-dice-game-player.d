@@ -77,15 +77,10 @@ final class PlayerAL20T: Player {
 }
 
 void main() {
-    //Player[nPlayers] players = [new PlayerRand, new PlayerQ2Win,
-    //                            new PlayerAL20, new PlayerAL20T];
-    Player[nPlayers] players;
-    players[0] = new PlayerRand;
-    players[1] = new PlayerQ2Win;
-    players[2] = new PlayerAL20;
-    players[3] = new PlayerAL20T;
+    auto players = [new PlayerRand, new PlayerQ2Win,
+                    new PlayerAL20, new PlayerAL20T];
 
-    void nextTurn(ref uint p) {
+    void nextTurn(ref uint p) nothrow {
         players[p].zeroRoundScore;
         p = (p + 1) % nPlayers;
     }

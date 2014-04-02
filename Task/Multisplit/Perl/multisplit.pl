@@ -1,11 +1,11 @@
-#!/usr/bin/perl -w
-use strict ;
 sub multisplit {
-   my ( $string , $pattern ) = @_ ;
-   split( /($pattern)/, $string, -1 ) ;
+   my ($sep, $string, %opt) = @_ ;
+   $sep = join '|', map quotemeta($_), @$sep;
+   $sep = "($sep)" if $opt{keep_separators};
+   split /$sep/, $string, -1;
 }
 
-my $phrase = "a!===b=!=c" ;
-my $pattern = "==|!=|=" ;
-print "$_ ," foreach multisplit( $phrase , $pattern ) ;
-print "\n" ;
+print "'$_' " for multisplit ['==','!=','='], "a!===b=!=c";
+print "\n";
+print "'$_' " for multisplit ['==','!=','='], "a!===b=!=c", keep_separators => 1;
+print "\n";

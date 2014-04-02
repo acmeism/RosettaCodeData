@@ -1,11 +1,11 @@
 int main()
 {
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    @autoreleasepool {
 
-    NSString *test = [@"!A string to be reverted!" reverseString];
+        NSString *test = [@"!A string to be reverted!" reverseString];
 
-    NSLog(@"%@", test);
+        NSLog(@"%@", test);
 
-    [pool release];
+    }
     return 0;
 }

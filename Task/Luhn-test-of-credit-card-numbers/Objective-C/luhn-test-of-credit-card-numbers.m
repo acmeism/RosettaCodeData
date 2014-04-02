@@ -1,17 +1,17 @@
-- (NSMutableArray *) toCharArray {
+- (NSArray *) toCharArray {
 	
 	NSMutableArray *characters = [[NSMutableArray alloc] initWithCapacity:[self length]];
 	for (int i=0; i < [self length]; i++) {
-		NSString *ichar  = [NSString stringWithFormat:@"%c", [self characterAtIndex:i]];
+		NSString *ichar  = [NSString stringWithFormat:@"%C", [self characterAtIndex:i]];
 		[characters addObject:ichar];
 	}
 	
-	return [characters autorelease];
+	return characters;
 }
 
 + (BOOL) luhnCheck:(NSString *)stringToTest {
 	
-	NSMutableArray *stringAsChars = [stringToTest toCharArray];
+	NSArray *stringAsChars = [stringToTest toCharArray];
 	
 	BOOL isOdd = YES;
 	int oddSum = 0;
@@ -19,7 +19,7 @@
 	
 	for (int i = [stringToTest length] - 1; i >= 0; i--) {
 		
-		int digit = [(NSString *)[stringAsChars objectAtIndex:i] intValue];
+		int digit = [(NSString *)stringAsChars[i] intValue];
 		
 		if (isOdd)
 			oddSum += digit;

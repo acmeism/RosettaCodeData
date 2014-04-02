@@ -1,12 +1,12 @@
-import std.stdio, std.regex;
-
 void main() {
-    immutable string s = "I am a string";
+    import std.stdio, std.regex;
 
-    // Test:
-    if (!match(s, r"string$").empty)
-        writeln("Ends with 'string'.");
+    immutable s = "I am a string";
 
-    // Substitute:
-    replace(s, regex(" a "), " another ").writeln();
+    // Test.
+    if (!s.match(r"string$").empty)
+        "Ends with 'string'.".writeln;
+
+    // Substitute.
+    s.replace(" a ".regex, " another ").writeln;
 }

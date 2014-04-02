@@ -10,12 +10,17 @@
   (hash-set! memo (cons xs ys) r)
   r)
 
-(define (lcs sx sy)
+(define (lcs/list sx sy)
   (or (lookup sx sy)
       (store sx sy
              (match* (sx sy)
                [((cons x xs) (cons y ys))
                 (if (equal? x y)
-                    (cons x (lcs xs ys))
-                    (longest (lcs sx ys) (lcs xs sy)))]
+                    (cons x (lcs/list xs ys))
+                    (longest (lcs/list sx ys) (lcs/list xs sy)))]
                [(_ _) '()]))))
+
+(define (lcs sx sy)
+  (list->string (lcs/list (string->list sx) (string->list sy))))
+
+(lcs "thisisatest" "testing123testing")

@@ -8,10 +8,8 @@
 - (id)maximumValue
 {
   if ( [self count] == 0 ) return nil;
-  id maybeMax = [self objectAtIndex: 0];
-  NSEnumerator *en = [self objectEnumerator];
-  id el;
-  while ( (el=[en nextObject]) != nil ) {
+  id maybeMax = self[0];
+  for ( id el in self ) {
     if ( [maybeMax respondsToSelector: @selector(compare:)] &&
 	 [el respondsToSelector: @selector(compare:)]       &&
 	 [el isKindOfClass: [NSNumber class]]               &&

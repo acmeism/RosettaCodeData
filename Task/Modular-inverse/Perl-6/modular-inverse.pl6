@@ -5,7 +5,7 @@ sub inverse($n, :$modulo) {
         ($q, $c, $d) = ($d div $c, $d % $c, $c);
         ($uc, $vc, $ud, $vd) = ($ud - $q*$uc, $vd - $q*$vc, $uc, $vc);
     }
-    return $ud < 0 ?? $ud + $modulo !! $ud;
+    return $ud % $modulo;
 }
 
 say inverse 42, :modulo(2017)

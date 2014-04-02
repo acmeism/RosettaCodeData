@@ -1,6 +1,6 @@
 import std.stdio, std.algorithm, std.array, std.conv;
 
-void toReducedRowEchelonForm(T)(T[][] M) pure /*nothrow*/ {
+void toReducedRowEchelonForm(T)(T[][] M) pure nothrow {
     if (M.empty)
         return;
     immutable nrows = M.length;
@@ -23,10 +23,11 @@ void toReducedRowEchelonForm(T)(T[][] M) pure /*nothrow*/ {
             }
             swap(M[i], M[r]);
         }
-        M[r][] /= M[r][lead]; // not nothrow
+
+        M[r][] /= M[r][lead];
         foreach (j, ref mj; M)
             if (j != r)
-                mj[] -= M[r][] * mj[lead]; // not nothrow
+                mj[] -= M[r][] * mj[lead];
         lead++;
     }
 }
@@ -35,6 +36,7 @@ void main() {
     auto A = [[ 1, 2, -1,  -4],
               [ 2, 3, -1, -11],
               [-2, 0, -3,  22]];
-    toReducedRowEchelonForm(A);
+
+    A.toReducedRowEchelonForm;
     writefln("%(%(%2d %)\n%)", A);
 }

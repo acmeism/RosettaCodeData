@@ -1,6 +1,6 @@
-a = 'some value'
-b = 6
+a = 'I see you.'
+b = -6
 
-_temp_ = a
-     a = b
-     b = _temp_
+_temp_ = a                           /*swap ···     */
+     a = b                           /*     A ···   */
+     b = _temp_                      /*  and  B     */

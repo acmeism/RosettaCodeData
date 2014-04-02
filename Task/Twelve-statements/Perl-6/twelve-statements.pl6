@@ -1,14 +1,14 @@
-sub infix:<?> ($protasis,$apodosis) { !$protasis or $apodosis }
+sub infix:<→> ($protasis,$apodosis) { !$protasis or $apodosis }
 
 my @tests = { True },  # (there's no 0th statement)
-    { all(.[1..12]) === any(True, False) },
+    { .end == 12 and all(.[1..12]) === any(True, False) },
     { 3 == [+] .[7..12] },
     { 2 == [+] .[2,4...12] },
-    { .[5] ? all .[6,7] },
+    { .[5] → all .[6,7] },
     { none .[2,3,4] },
     { 4 == [+] .[1,3...11] },
     { one .[2,3] },
-    { .[7] ? all .[5,6] },
+    { .[7] → all .[5,6] },
     { 3 == [+] .[1..6] },
     { all .[11,12] },
     { one .[7,8,9] },

@@ -1,10 +1,10 @@
-import std.stdio, std.typecons, std.string, std.array, std.algorithm;
+import std.stdio, std.string, std.array, std.algorithm;
 
 void rpmToInfix(in string str) {
-    alias Exp = Tuple!(int,"p", string,"e");
+    static struct Exp { int p; string e; }
     immutable P = (in Exp pair, in int prec) pure =>
         pair.p < prec ? format("( %s )", pair.e) : pair.e;
-    immutable F = (string[] s...) pure nothrow => s.join(" ");
+    immutable F = (in string[] s...) pure nothrow => s.join(" ");
 
     writefln("=================\n%s", str);
     Exp[] stack;
@@ -24,7 +24,7 @@ void rpmToInfix(in string str) {
                 default: throw new Error("Wrong part: " ~ w);
             }
         }
-        stack.map!q{ a[1] }.writeln;
+        stack.map!q{ a.e }.writeln;
     }
     writeln("-----------------\n", stack.back.e);
 }

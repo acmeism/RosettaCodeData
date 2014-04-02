@@ -12,6 +12,4 @@ void logObjects(id firstObject, ...) // <-- there is always at least one arg, "n
 
 // This function can be called with any number or type of objects, as long as you terminate it with "nil":
 logObjects(@"Rosetta", @"Code", @"Is", @"Awesome!", nil);
-logObjects([NSNumber numberWithInt:4],
-           [NSNumber numberWithInt:3],
-           @"foo", nil);
+logObjects(@4, @3, @"foo", nil);

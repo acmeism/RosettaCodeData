@@ -1,3 +1,5 @@
+from __future__ import division
+
 import math
 from operator import mul
 from itertools import product
@@ -54,7 +56,7 @@ def divisors(n):
 def vampire(n):
     fangsets = set( frozenset([d, n//d])
                     for d in divisors(n)
-                    if (len(str(d)) == len(str(n))/2
+                    if (len(str(d)) == len(str(n))/2.
                         and sorted(str(d) + str(n//d)) == sorted(str(n))
                         and (str(d)[-1] == 0) + (str(n//d)[-1] == 0) <=1) )
     return sorted(tuple(sorted(fangs)) for fangs in fangsets)

@@ -13,7 +13,7 @@ void roman(char *s, unsigned int n)
 {
  if (n == 0)
  {
-  fputs(stderr, "Roman numeral for zero requested.");
+  fputs("Roman numeral for zero requested.", stderr);
   exit(EXIT_FAILURE);
  }
 

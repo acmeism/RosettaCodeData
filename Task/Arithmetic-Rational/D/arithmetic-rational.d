@@ -9,7 +9,7 @@ T lcm(T)(in T a, in T b) pure /*nothrow*/ {
     return a / gcd(a, b) * b;
 }
 
-struct RationalT(T) {
+struct RationalT(T) if (!isUnsigned!T) {
     private T num, den; // Numerator & denominator.
 
     private enum Type { NegINF = -2,
@@ -54,7 +54,7 @@ struct RationalT(T) {
         return result;
     }
 
-    T nomerator() const pure nothrow @property {
+    T numerator() const pure nothrow @property {
         return num;
     }
 
@@ -73,9 +73,9 @@ struct RationalT(T) {
 
     real toReal() pure const /*nothrow*/ {
         static if (is(T == BigInt))
-            return num.toLong / cast(real)den.toLong;
+            return num.toLong / real(den.toLong);
         else
-            return num / cast(real)den;
+            return num / real(den);
     }
 
     RationalT opBinary(string op)(in RationalT r)
@@ -126,14 +126,14 @@ struct RationalT(T) {
         return num != 0;
     }
 
-    int opEquals(U)(in U r) const pure nothrow {
+    bool opEquals(U)(in U r) const pure nothrow {
         RationalT rhs = RationalT(r);
         if (type() == Type.NaRAT || rhs.type() == Type.NaRAT)
             return false;
         return num == rhs.num && den == rhs.den;
     }
 
-    int opCmp(U)(in U r) const pure nothrow {
+    int opCmp(U)(in U r) const pure {
         auto rhs = RationalT(r);
         if (type() == Type.NaRAT || rhs.type() == Type.NaRAT)
             throw new Exception("Compare involve a NaRAT.");
@@ -154,6 +154,15 @@ struct RationalT(T) {
     }
 }
 
+RationalT!U rational(U)(in U n) pure /*nothrow*/ {
+    return typeof(return)(n);
+}
+
+RationalT!(CommonType!(U1, U2))
+rational(U1, U2)(in U1 n, in U2 d) pure /*nothrow*/ {
+    return typeof(return)(n, d);
+}
+
 alias Rational = RationalT!BigInt;
 
 version (arithmetic_rational_main) { // Test.
@@ -163,7 +172,7 @@ version (arithmetic_rational_main) { // Test.
 
         foreach (immutable p; 2 .. 2 ^^ 19) {
             auto sum = RatL(1, p);
-            immutable limit = 1 + cast(uint)sqrt(cast(real)p);
+            immutable limit = 1 + cast(uint)real(p).sqrt;
             foreach (immutable factor; 2 .. limit)
                 if (p % factor == 0)
                     sum += RatL(1, factor) + RatL(factor, p);

@@ -2,16 +2,16 @@
 
 int main()
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-  NSTimeInterval sleeptime;
+  @autoreleasepool {
 
-  printf("wait time in seconds: ");
-  scanf("%f", &sleeptime);
+    NSTimeInterval sleeptime;
+    printf("wait time in seconds: ");
+    scanf("%f", &sleeptime);
 
-  NSLog(@"sleeping...");
-  [NSThread sleepForTimeInterval: sleeptime];
-  NSLog(@"awakening...");
+    NSLog(@"sleeping...");
+    [NSThread sleepForTimeInterval: sleeptime];
+    NSLog(@"awakening...");
 
-  [pool release];
+  }
   return 0;
 }

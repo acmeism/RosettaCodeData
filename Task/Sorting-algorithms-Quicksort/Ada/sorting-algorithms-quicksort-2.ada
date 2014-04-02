@@ -33,9 +33,10 @@ begin
          end loop;
          exit when Left >= Right;
          Swap(Item(Left), Item(Right));
-         if Left < Item'Last and Right > Item'First then
-            Left := Index_Type'Succ(Left);
-            Right := Index_Type'Pred(Right);
+         if Pivot_Index = Left then
+             Pivot_Index := Right;
+         elsif Pivot_Index = Right then
+             Pivot_Index := Left;
          end if;
       end loop;
       if Right > Item'First then

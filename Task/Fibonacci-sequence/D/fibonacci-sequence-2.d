@@ -1,4 +1,4 @@
-import std.stdio, std.bigint;
+import std.bigint;
 
 T fibonacciMatrix(T=BigInt)(size_t n) {
     int[size_t.sizeof * 8] binDigits;
@@ -26,5 +26,5 @@ T fibonacciMatrix(T=BigInt)(size_t n) {
 }
 
 void main() {
-    writeln(fibonacciMatrix(1_000_000));
+    10_000_000.fibonacciMatrix;
 }

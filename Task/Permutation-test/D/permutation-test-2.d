@@ -4,7 +4,7 @@ void main() {
     immutable treatment = [85, 88, 75, 66, 25, 29, 83, 39, 97];
     immutable control = [68, 41, 10, 49, 16, 65, 32, 92, 28, 98];
     immutable both = treatment ~ control;
-    immutable sTreat = treatment.reduce!q{a + b};
+    immutable sTreat = treatment.sum;
 
     T pick(T)(in size_t at, in size_t remain, in T accu) pure nothrow {
         if (remain == 0)

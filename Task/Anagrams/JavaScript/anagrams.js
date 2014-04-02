@@ -1,20 +1,20 @@
-#!/usr/bin/env js
+var fs = require('fs');
 
 var anas = {};
-var words = read('unixdict.txt').split(/\n/g);
+var words = fs.readFileSync('unixdict.txt', 'UTF-8').split('\n');
+var max = 0;
 
 for (var w in words) {
-    var key = words[w].split("").sort().join('');
+    var key = words[w].split('').sort().join('');
     if (!(key in anas)) {
         anas[key] = [];
     }
-    anas[key].push(words[w]);
+    var count = anas[key].push(words[w]);
+    max = Math.max(count, max);
 }
 
 for (var a in anas) {
-    if (anas[a].length >= 2) {
-        print(anas[a]);
+    if (anas[a].length === max) {
+        console.log(anas[a]);
     }
 }
-
-quit();

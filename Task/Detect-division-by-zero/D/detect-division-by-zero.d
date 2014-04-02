@@ -28,14 +28,13 @@ if (isIntegral!T || isFloatingPoint!T) {
         }
     }
 
-    return format("%5s %s", format("%1.1g", cast(real)result), msg);
+    return format("%5s %s", format("%1.1g", real(result)), msg);
 }
 
 void main() {
     writeln("Division with check:");
     writefln("int     1/ 0:   %s", divCheck(1, 0));
-    writefln("ubyte   1/ 0:   %s",
-             divCheck(cast(ubyte)1, cast(ubyte)0));
+    writefln("ubyte   1/ 0:   %s", divCheck(ubyte(1), ubyte(0)));
     writefln("real    1/ 0:   %s", divCheck(1.0L, 0.0L));
     writefln("real   -1/ 0:   %s", divCheck(-1.0L, 0.0L));
     writefln("real    0/ 0:   %s", divCheck(0.0L, 0.0L));

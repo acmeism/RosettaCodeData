@@ -1,11 +1,11 @@
 int main()
 {
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    @autoreleasepool {
 
-    NSString *test = [@"as⃝df̅" reverseString];
+        NSString *test = [@"as⃝df̅" reverseString];
 
-    NSLog(@"%@", test);
+        NSLog(@"%@", test);
 
-    [pool release];
+    }
     return 0;
 }

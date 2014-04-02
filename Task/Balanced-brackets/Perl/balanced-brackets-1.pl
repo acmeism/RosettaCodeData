@@ -1,13 +1,15 @@
-use 5.10.0;  # for given ... when construct
-sub balanced {
-        my $depth = 0;
-        for (split //, shift) {
-            when('[') { ++$depth }
-            when(']') { return if --$depth < 0 }
-        }
-        return !$depth
+sub generate {
+    my $n = shift;
+    my $str = '[' x $n;
+    substr($str, rand($n + $_), 0) = ']' for 1..$n;
+    return $str;
 }
 
-for (']', '[', '[[]', '][]', '[[]]', '[[]]]][][]]', 'x[ y [ [] z ]][ 1 ][]abcd') {
-        print balanced($_) ? "" : "not ", "balanced:\t'$_'\n";
+sub balanced {
+    shift =~ /^ (\[ (?1)* \])* $/x;
+}
+
+for (0..8) {
+    my $input = generate($_);
+    print balanced($input) ? " ok:" : "bad:", " '$input'\n";
 }

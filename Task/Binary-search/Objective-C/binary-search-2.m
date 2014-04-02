@@ -12,7 +12,7 @@
   if (range.length == 0)
     return NSNotFound;
   NSInteger mid = range.location + range.length / 2;
-  id midVal = [self objectAtIndex:mid];
+  id midVal = self[mid];
   switch ([midVal compare:key]) {
   case NSOrderedAscending:
     return [self binarySearch:key
@@ -28,22 +28,11 @@
 
 int main()
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+  @autoreleasepool {
 
-  NSArray *a = [NSArray arrayWithObjects:
-		   [NSNumber numberWithInt: 1],
-		   [NSNumber numberWithInt: 3],
-		   [NSNumber numberWithInt: 4],
-		   [NSNumber numberWithInt: 5],
-		   [NSNumber numberWithInt: 6],
-		   [NSNumber numberWithInt: 7],
-		   [NSNumber numberWithInt: 8],
-		   [NSNumber numberWithInt: 9],
-		   [NSNumber numberWithInt: 10],
-		   nil];
-  NSLog(@"6 is at position %d", [a binarySearch:[NSNumber numberWithInt: 6]
-                                        inRange:NSMakeRange(0, [a count])]); // prints 4
+    NSArray *a = @[@1, @3, @4, @5, @6, @7, @8, @9, @10];
+    NSLog(@"6 is at position %d", [a binarySearch:@6]); // prints 4
 
-  [pool drain];
+  }
   return 0;
 }

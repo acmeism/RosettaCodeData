@@ -5,7 +5,7 @@ FP calc(FP, F)(in F fun, in int n) pure nothrow if (isCallable!F) {
 
     foreach_reverse (immutable ni; 1 .. n + 1) {
         immutable p = fun(ni);
-        temp = p[1] / (cast(FP)p[0] + temp);
+        temp = p[1] / (FP(p[0]) + temp);
     }
     return fun(0)[0] + temp;
 }

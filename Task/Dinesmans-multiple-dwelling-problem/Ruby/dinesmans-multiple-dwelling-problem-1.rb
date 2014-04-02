@@ -3,7 +3,7 @@ def solve( problem )
   names = lines.first.scan( /[A-Z]\w*/ )
   re_names = Regexp.union( names )
   # Later on, search for these keywords (the word "not" is handled separately).
-  words = %w(first second third fourth fifth sixth seventh eighth nineth tenth
+  words = %w(first second third fourth fifth sixth seventh eighth ninth tenth
   bottom top higher lower adjacent)
   re_keywords = Regexp.union( words )
 

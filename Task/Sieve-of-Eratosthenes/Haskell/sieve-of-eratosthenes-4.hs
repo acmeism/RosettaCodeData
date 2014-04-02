@@ -1,10 +1,9 @@
-primes = _Y $ ((2:) . minus [3..]
-                    . foldr (\x-> (x*x :) . union [x*x+x, x*x+2*x..]) [])
+primesTo m = 2 : eratos [3,5..m] where
+   eratos (p : xs) | p*p>m = p : xs
+                   | True  = p : eratos (xs `minus` [p*p, p*p+2*p..m])
 
-_Y g = g (_Y g)              -- non-sharing multistage fixpoint combinator
---   = let x = g x in g x    -- sharing two-stage fixpoint combinator
-
-union a@(x:xs) b@(y:ys) = case compare x y of
-         LT -> x : union  xs b
-         EQ -> x : union  xs ys
-         GT -> y : union  a  ys
+minus a@(x:xs) b@(y:ys) = case compare x y of
+         LT -> x : minus  xs b
+         EQ ->     minus  xs ys
+         GT ->     minus  a  ys
+minus a        b        = a

@@ -1,27 +1,13 @@
-#!/usr/bin/perl
-use strict ;
-use warnings ;
+my %scale = (
+    Celcius    => { factor => 1  , offset => -273.15 },
+    Rankine    => { factor => 1.8, offset =>    0    },
+    Fahrenheit => { factor => 1.8, offset => -459.67 },
+);
 
-sub kelvin_to_other_scales {
-   my $kelvin = shift ;
-   my $celsius = $kelvin - 273.15 ;
-   my $rankine = 9 * $kelvin / 5 ;
-   my $fahrenheit = $rankine - 459.67 ;
-   my @scales ;
-   push @scales , $kelvin , $celsius , $fahrenheit , $rankine ;
-   return @scales ;
-}
+print "Enter a temperature in Kelvin: ";
+chomp(my $kelvin = <STDIN>);
+die "No such temperature!\n" unless $kelvin > 0;
 
-print "Enter a temperature in Kelvin: " ;
-my $kelvin = <STDIN> ;
-chomp $kelvin ;
-while ( $kelvin < 0 ) {
-   print "Error! There are no negative kelvin degrees!\n" ;
-   $kelvin = <STDIN> ;
-   chomp $kelvin ;
+foreach (sort keys %scale) {
+    printf "%12s:%8.2f\n", $_, $kelvin * $scale{$_}{factor} + $scale{$_}{offset};
 }
-my @scales = kelvin_to_other_scales( $kelvin ) ;
-print "K $scales[ 0 ]\n" ;
-print "C $scales[ 1 ]\n" ;
-print "F $scales[ 2 ]\n" ;
-print "R $scales[ 3 ]\n" ;

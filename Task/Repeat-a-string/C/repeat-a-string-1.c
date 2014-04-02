@@ -15,7 +15,7 @@ char * string_repeat( int n, const char * s ) {
 }
 
 int main() {
-  char * result = string_repeat(5, "ha")
+  char * result = string_repeat(5, "ha");
   puts(result);
   free(result);
   return 0;

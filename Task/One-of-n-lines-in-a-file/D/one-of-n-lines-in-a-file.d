@@ -3,7 +3,7 @@ import std.stdio, std.random, std.algorithm;
 // Zero-based line numbers.
 int oneOfN(in int n) {
     int choice = 0;
-    foreach (i; 1 .. n)
+    foreach (immutable i; 1 .. n)
         if (!uniform(0, i + 1))
             choice = i;
     return choice;
@@ -11,9 +11,9 @@ int oneOfN(in int n) {
 
 void main() {
     int[10] bins;
-    foreach (i; 0 .. 1_000_000)
-        bins[oneOfN(10)]++;
+    foreach (immutable i; 0 .. 1_000_000)
+        bins[10.oneOfN]++;
 
-    writeln(bins);
-    writeln("Total of bins: ", reduce!q{a + b}(bins[]));
+    bins.writeln;
+    writeln("Total of bins: ", bins[].sum);
 }

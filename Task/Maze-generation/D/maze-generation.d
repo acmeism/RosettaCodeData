@@ -16,6 +16,6 @@ void main() {
         }
     }
     walk(uniform(0, w), uniform(0, h));
-    foreach (a, b; hor.zip(ver ~ []))
+    foreach (const a, const b; hor.zip(ver ~ []))
         join(a ~ ["+\n"] ~ b).writeln;
 }

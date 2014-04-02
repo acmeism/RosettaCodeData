@@ -1,30 +1,19 @@
 #import <Foundation/Foundation.h>
 
 CFComparisonResult myComparator(const void *x, const void *y, void *context) {
-  return [(id)x compare:(id)y];
+  return [(__bridge id)x compare:(__bridge id)y];
 }
 
-int main()
-{
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+int main(int argc, const char *argv[]) {
+  @autoreleasepool {
 
-  NSArray *a = [NSArray arrayWithObjects:
-		   [NSNumber numberWithInt: 1],
-		   [NSNumber numberWithInt: 3],
-		   [NSNumber numberWithInt: 4],
-		   [NSNumber numberWithInt: 5],
-		   [NSNumber numberWithInt: 6],
-		   [NSNumber numberWithInt: 7],
-		   [NSNumber numberWithInt: 8],
-		   [NSNumber numberWithInt: 9],
-		   [NSNumber numberWithInt: 10],
-		   nil];
-  NSLog(@"6 is at position %d", CFArrayBSearchValues((CFArrayRef)a,
-                                                     CFRangeMake(0, [a count]),
-                                                     [NSNumber numberWithInt: 6],
-                                                     myComparator,
-                                                     NULL)); // prints 4
+    NSArray *a = @[@1, @3, @4, @5, @6, @7, @8, @9, @10];
+    NSLog(@"6 is at position %ld", CFArrayBSearchValues((__bridge CFArrayRef)a,
+                                                        CFRangeMake(0, [a count]),
+                                                        (__bridge const void *)@6,
+                                                        myComparator,
+                                                        NULL)); // prints 4
 
-  [pool drain];
+  }
   return 0;
 }

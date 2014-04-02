@@ -1,7 +1,5 @@
 import std.stdio, std.algorithm, std.array, combinations3;
 
-alias sum = reduce!q{a + b};
-
 auto permutationTest(T)(in T[] a, in T[] b) /*pure nothrow*/ {
     immutable tObs = a.sum;
     //auto combs = combinations!false(a ~ b, a.length); // Not a Range.

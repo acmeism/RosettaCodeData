@@ -7,11 +7,10 @@
 		NSMutableArray *subset = [[NSMutableArray alloc] init];
 		for (int itemIndex = 0; itemIndex < array.count; itemIndex++) {
 			if((subsetIndex >> itemIndex) & 0x1) {
-				[subset addObject:[array objectAtIndex:itemIndex]];
+				[subset addObject:array[itemIndex]];
 			}
 		}		
 		[subsets addObject:subset];
-		[subset release];
 	}
 	return subsets;
 }

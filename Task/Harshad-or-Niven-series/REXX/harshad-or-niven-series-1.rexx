@@ -1,7 +1,7 @@
 /*REXX program finds first X Niven numbers; also first Niven number > Y.*/
 parse arg X Y .                        /*get optional arguments:   X  Y */
 if X==''  then X=20                    /*Not specified? Then use default*/
-if Y==''  then Y=1000                  /*Not specified? Then use default*/
+if Y==''  then Y=1000                  /* "      "        "   "     "   */
 #=0;  $=                               /*Niven# count;  Niven# list.    */
 
    do j=1  until #==X                  /*let's go Niven number hunting. */
@@ -11,7 +11,7 @@ if Y==''  then Y=1000                  /*Not specified? Then use default*/
 
 say 'first'  X  'Niven numbers:'  $
 
-   do t=1                              /*let's go Niven number searching*/
+   do t=Y+1                            /*let's go Niven number searching*/
    if t//sumDigs(t)\==0  then iterate  /*Not a Niven number?  Then skip.*/
    if t>Y  then leave                  /*if greater than Y, go & show it*/
    end   /*t*/

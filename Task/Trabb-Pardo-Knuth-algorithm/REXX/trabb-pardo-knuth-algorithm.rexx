@@ -1,10 +1,10 @@
-/*REXX program to implement the  Trabb-Pardo-Knuth  algorthm for N nums.*/
+/*REXX program to implement the  Trabb-Pardo-Knuth algorithm for N nums.*/
 N=11                                   /*N  is the number of numbers.   */
 maxValue=400                           /*the maximum value f(x) can have*/
 precDigs=200                           /*compute with this many digits. */
 showDigs=20                            /*...but only show this many digs*/
 numeric digits precDigs                /*the number of digits precision.*/
-prompt='enter' N "nunbers for the Trabb-Pardo-Knuth algorthm:   (or Quit)"
+prompt='enter' N "numbers for the Trabb-Pardo-Knuth algorithm:  (or Quit)"
 say '                           _____               '        /*vinculum.*/
 say 'function:        ƒ(x)  ≡  √ │x│   +   (5 * x^3)'
 /*██████████████████████████████████████████████████████████████████████*/

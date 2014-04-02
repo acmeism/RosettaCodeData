@@ -1,4 +1,3 @@
-from collections import Counter
 import random
 
 def count(w1,wnew):
@@ -15,6 +14,7 @@ def best_shuffle(w):
         for j in rangej:
             if i != j and wnew[j] != wnew[i] and w[i] != wnew[j] and w[j] != wnew[i]:
                 wnew[j], wnew[i] = wnew[i], wnew[j]
+                break
     wnew = ''.join(wnew)
     return wnew, count(w, wnew)
 

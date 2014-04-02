@@ -1,13 +1,8 @@
 (ql:quickload :ironclad)
+(defun string-to-digest (str digest)
+  "Return the specified digest for the ASCII string as a hex string."
+  (ironclad:byte-array-to-hex-string
+    (ironclad:digest-sequence digest
+                              (ironclad:ascii-string-to-byte-array str))))
 
-
-(defun write-seq-base-16 (seq &key ((:stream *standard-output*)
-                                    *standard-output*)
-                              &aux (*print-base* 16))
-  (map nil #'write seq))
-
-
-(write-seq-base-16
- (crypto:digest-sequence 'ironclad:crc32
-                         (crypto:ascii-string-to-byte-array
-                          "The quick brown fox jumps over the lazy dog")))
+(string-to-digest "The quick brown fox jumps over the lazy dog" :crc32)

@@ -1,5 +1,17 @@
 #include <stdio.h>
-main(){_=100;while(--_)printf("%i bottle%s of beer in the wall,\n%i bottle%"
-"s of beer.\nTake one down, pass it round,\n%s%s\n\n",_,_-1?"s":"",_,_-1?"s"
-:"",_-1?(char[]){(_-1)/10?(_-1)/10+48:(_-1)%10+48,(_-1)/10?(_-1)%10+48:2+30,
-(_-1)/10?32:0,0}:"",_-1?"bottles of beer in the wall":"No more beers");}
+
+int main(int argc, char *argv[])
+{
+        if(argc == 99)
+                return 99;
+        if(argv[0] != NULL){
+                argv[0] = NULL;
+                argc = 0;
+        }
+        argc = main(argc + 1, argv);
+        printf("%d bottle%c of beer on the wall\n", argc, argc == 1?'\0': 's');
+        printf("%d bottle%c of beer\n", argc, argc == 1?'\0': 's');
+        printf("Take one down, pass it around\n");
+        printf("%d bottle%c of beer on the wall\n\n", argc - 1, (argc - 1) == 1?'\0': 's');
+        return argc - 1;
+}

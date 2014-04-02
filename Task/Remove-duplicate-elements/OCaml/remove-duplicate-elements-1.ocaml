@@ -1,0 +1,7 @@
+let uniq lst =
+  let unique_set = Hashtbl.create (List.length lst) in
+  List.iter (fun x -> Hashtbl.replace unique_set x ()) lst;
+  Hashtbl.fold (fun x () xs -> x :: xs) unique_set []
+
+let _ =
+  uniq [1;2;3;2;3;4]

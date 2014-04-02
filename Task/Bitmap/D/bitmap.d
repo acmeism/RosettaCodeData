@@ -8,11 +8,8 @@ final class Image(T) {
         const static T black = T.black;
     else
         const static T black = T.init;
-
     static if (is(typeof({ auto x = T.white; })))
         const static T white = T.white;
-    else static if (is(typeof({ auto x = T.max; })))
-        const static T white = T.max;
 
     T[] image;
     private size_t nx_, ny_;
@@ -54,8 +51,8 @@ final class Image(T) {
     ref T opIndex(in size_t x, in size_t y) pure nothrow
     in {
         assert(x < nx_ && y < ny_);
-        debug assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
-        debug assert(y < ny_, format("opIndex, y=%d, ny=%d", y, ny));
+        //assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
+        //assert(y < ny_, format("opIndex, y=%d, ny=%d", y, ny));
     } body {
         return image[x + y * nx_];
     }
@@ -63,17 +60,17 @@ final class Image(T) {
     T opIndex(in size_t x, in size_t y) const pure nothrow
     in {
         assert(x < nx_ && y < ny_);
-        debug assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
-        debug assert(y < ny_, format("opIndex, y=%d, ny=%d", y, ny));
+        //assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
+        //assert(y < ny_, format("opIndex, y=%d, ny=%d", y, ny));
     } body {
         return image[x + y * nx_];
     }
 
-    T opIndexAssign(in T color, in size_t x, in size_t y) pure /*nothrow*/
+    T opIndexAssign(in T color, in size_t x, in size_t y) pure nothrow
     in {
         assert(x < nx_ && y < ny_);
-        debug assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
-        debug assert(y < ny_, format("opIndex, y=%d, ny=%d", y, ny));
+        //assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
+        //assert(y < ny_, format("opIndex, y=%d, ny=%d", y, ny));
     } body {
         return image[x + y * nx_] = color;
     }
@@ -81,8 +78,6 @@ final class Image(T) {
     void opIndexUnary(string op)(in size_t x, in size_t y) pure nothrow
     if (op == "++" || op == "--") in {
         assert(x < nx_ && y < ny_);
-        debug assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
-        debug assert(y < ny_, format("opIndex, y=%d, ny=%d", y, ny));
     } body {
         mixin("image[x + y * nx_] " ~ op ~ ";");
     }
@@ -93,11 +88,7 @@ final class Image(T) {
 
     /// Convert a 2D array of chars to a binary Image.
     static Image fromText(in string txt,
-                          in char one='#', in char zero='.')
-    pure
-    out(result) {
-        assert(result.image.all!(x => x == black || x == white));
-    } body {
+                          in char one='#', in char zero='.') pure {
         auto M = txt
                  .strip
                  .split

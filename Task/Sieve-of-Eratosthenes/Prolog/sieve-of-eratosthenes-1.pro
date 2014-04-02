@@ -1,22 +1,35 @@
-sieve(N, [2|PS]) :-       % PS is list of odd primes up to N
-    retractall(mult(_)),
-    sieve_O(3,N,PS).
+% %sieve( +N, -Primes ) is true if Primes is the list of consecutive primes
+% that are less than or equal to N
+sieve( N, [2|Rest]) :-
+  retractall( composite(_) ),
+  sieve( N, 2, Rest ) -> true.  % only one solution
 
-sieve_O(I,N,PS) :-        % sieve odds from I up to N to get PS
-    I =< N, !, I1 is I+2,
-    (   mult(I) -> sieve_O(I1,N,PS)
-    ;   (   I =< N / I ->
-            ISq is I*I, DI  is 2*I, add_mults(DI,ISq,N)
-        ;   true
-        ),
-        PS = [I|T],
-        sieve_O(I1,N,T)
-    ).
-sieve_O(I,N,[]) :- I > N.
+% sieve P, find the next non-prime, and then recurse:
+sieve( N, P, [I|Rest] ) :-
+  sieve_once(P, N),
+  (P = 2 -> P2 is P+1; P2 is P+2),
+  between(P2, N, I),
+  (composite(I) -> fail; sieve( N, I, Rest )).
 
-add_mults(DI,I,N) :-
-    I =< N, !,
-    ( mult(I) -> true ; assert(mult(I)) ),
-    I1 is I+DI,
-    add_mults(DI,I1,N).
-add_mults(_,I,N) :- I > N.
+% It is OK if there are no more primes less than or equal to N:
+sieve( N, P, [] ).
+
+sieve_once(P, N) :-
+  forall( between(P, N, P, IP),
+          (composite(IP) -> true ; assertz( composite(IP) )) ).
+
+
+% To avoid division, we use the iterator
+% between(+Min, +Max, +By, -I)
+% where we assume that By > 0
+% This is like "for(I=Min; I <= Max; I+=By)" in C.
+between(Min, Max, By, I) :-
+  Min =< Max,
+  A is Min + By,
+  (I = Min; between(A, Max, By, I) ).
+
+
+% Some Prolog implementations require the dynamic predicates be
+%  declared:
+
+:- dynamic( composite/1 ).

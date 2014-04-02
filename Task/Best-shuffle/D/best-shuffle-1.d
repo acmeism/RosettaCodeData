@@ -1,40 +1,41 @@
 import std.stdio, std.random, std.algorithm, std.conv, std.range,
-std.traits, std.typecons;
+       std.traits, std.typecons;
 
 auto bestShuffle(S)(in S orig) if (isSomeString!S) {
     static if (isNarrowString!S)
-        auto o = to!dstring(orig);
-    else alias orig o;
+        immutable o = orig.dtext;
+    else
+        alias o = orig;
 
     auto s = o.dup;
-    randomShuffle(s);
-    foreach (i, ref ci; s) {
+    s.randomShuffle;
+
+    foreach (immutable i, ref ci; s) {
         if (ci != o[i])
             continue;
-        foreach (j, ref cj; s)
+        foreach (immutable j, ref cj; s)
             if (ci != cj && ci != o[j] && cj != o[i]) {
                 swap(ci, cj);
                 break;
             }
     }
-    return tuple(s, count!"a[0] == a[1]"(zip(s, o)));
+
+    return tuple(s, s.zip(o).count!q{ a[0] == a[1] });
+} unittest {
+    assert("abracadabra".bestShuffle[1] == 0);
+    assert("immediately".bestShuffle[1] == 0);
+    assert("grrrrrr".bestShuffle[1] == 5);
+    assert("seesaw".bestShuffle[1] == 0);
+    assert("pop".bestShuffle[1] == 1);
+    assert("up".bestShuffle[1] == 0);
+    assert("a".bestShuffle[1] == 1);
+    assert("".bestShuffle[1] == 0);
 }
 
-unittest {
-    assert(bestShuffle("abracadabra"d)[1] == 0);
-    assert(bestShuffle("immediately"d)[1] == 0);
-    assert(bestShuffle("grrrrrr"d)[1] == 5);
-    assert(bestShuffle("seesaw"d)[1] == 0);
-    assert(bestShuffle("pop"d)[1] == 1);
-    assert(bestShuffle("up"d)[1] == 0);
-    assert(bestShuffle("a"d)[1] == 1);
-    assert(bestShuffle(""d)[1] == 0);
-}
-
-void main(string[] args) {
+void main(in string[] args) {
     if (args.length > 1) {
-        string entry = join(args[1 .. $], " ");
-        auto res = bestShuffle(entry);
-        writefln("%s : %s (%s)", entry, res[0], res[1]);
+        immutable entry = args.dropOne.join(" ");
+        const res = entry.bestShuffle;
+        writefln("%s : %s (%d)", entry, res[]);
     }
 }

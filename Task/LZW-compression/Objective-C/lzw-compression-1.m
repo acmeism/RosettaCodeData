@@ -9,8 +9,8 @@
     NSUInteger codemark;
 }
 
--(LZWCompressor *) init;
--(LZWCompressor *) initWithArray: (NSMutableArray *) stream;
+-(instancetype) init;
+-(instancetype) initWithArray: (NSMutableArray *) stream;
 -(BOOL) compressData: (NSData *) string;
 -(void) setArray: (NSMutableArray *) stream;
 -(NSArray *) getArray;
@@ -18,7 +18,7 @@
 
 @implementation LZWCompressor : NSObject
 
--(LZWCompressor *) init
+-(instancetype) init
 {
    self = [super init];
    if ( self )
@@ -30,7 +30,7 @@
    return self;
 }
 
--(LZWCompressor *) initWithArray: (NSMutableArray *) stream
+-(instancetype) initWithArray: (NSMutableArray *) stream
 {
    self = [self init];
    if ( self )
@@ -40,51 +40,40 @@
    return self;
 }
 
--(void) dealloc
-{
-   [dict release];
-   [iostream release];
-   [super dealloc];
-}
-
 -(void) setArray: (NSMutableArray *) stream
 {
-   iostream = [stream retain];
+   iostream = stream;
 }
 
 -(BOOL) compressData: (NSData *) string;
 {
-    NSUInteger i;
-    unsigned char j;
-
     // prepare dict
-    for(i=0; i < 256; i++)
+    for(NSUInteger i=0; i < 256; i++)
     {
-       j = i;
+       unsigned char j = i;
        NSData *s = [NSData dataWithBytes: &j length: 1];
-       [dict setObject: [NSNumber numberWithUnsignedInt: i] forKey: s];
+       dict[s] = @(i);
     }
 
-    NSMutableData *w = [NSMutableData data];
-    NSMutableData *wc = [NSMutableData data];
+    NSData *w = [NSData data];
 
-    for(i=0; i < [string length]; i++)
+    for(NSUInteger i=0; i < [string length]; i++)
     {
-       [wc setData: w];
+       NSMutableData *wc = [NSMutableData dataWithData: w];
        [wc appendData: [string subdataWithRange: NSMakeRange(i, 1)]];
-       if ( [dict objectForKey: wc] != nil )
+       if ( dict[wc] != nil )
        {
-          [w setData: wc];
+          w = wc;
        } else {
-          [iostream addObject: [dict objectForKey: w]];
-          [dict setObject: [NSNumber numberWithUnsignedInt: codemark] forKey: wc];
+          [iostream addObject: dict[w]];
+          dict[wc] = @(codemark);
           codemark++;
-          [w setData: [string subdataWithRange: NSMakeRange(i, 1)]];
+          w = [string subdataWithRange: NSMakeRange(i, 1)];
        }
     }
     if ( [w length] != 0 )
     {
-       [iostream addObject: [dict objectForKey: w]];
+       [iostream addObject: dict[w]];
     }
     return YES;
 }

@@ -1,0 +1,77 @@
+@(do
+    (defvar x-centre -0.5)
+    (defvar y-centre 0.0)
+    (defvar width 4.0)
+    (defvar i-max 800)
+    (defvar j-max 600)
+    (defvar n 100)
+    (defvar r-max 2.0)
+    (defvar file "mandelbrot.pgm")
+    (defvar colour-max 255)
+    (defvar pixel-size (/ width i-max))
+    (defvar x-offset (- x-centre (* 0.5 pixel-size (+ i-max 1))))
+    (defvar y-offset (+ y-centre (* 0.5 pixel-size (+ j-max 1))))
+
+    ;; with-output-to-file macro
+    (defmacro with-output-to-file (name . body)
+      ^(let ((*stdout* (open-file ,name "w")))
+         (unwind-protect (progn ,*body) (close-stream *stdout*))))
+
+    ;; complex number library
+    (defmacro cplx (x y) ^(cons ,x ,y))
+    (defmacro re (c) ^(car ,c))
+    (defmacro im (c) ^(cdr ,c))
+
+    (defsymacro c0 '(0 . 0))
+
+    (macro-time
+      (defun with-cplx-expand (specs body)
+        (tree-case specs
+           (((re im expr) . rest)
+            ^(tree-bind (,re . ,im) ,expr ,(with-cplx-expand rest body)))
+           (() (tree-case body
+                 ((a b . rest) ^(progn ,a ,b ,*rest))
+                 ((a) a)
+                 (x (error "with-cplx: invalid body ~s" body))))
+           (x (error "with-cplx: bad args ~s" x)))))
+
+    (defmacro with-cplx (specs . body)
+      (with-cplx-expand specs body))
+
+    (defun c+ (x y)
+      (with-cplx ((a b x) (c d y))
+        (cplx (+ a c) (+ b d))))
+
+    (defun c* (x y)
+      (with-cplx ((a b x) (c d y))
+        (cplx (- (* a c) (* b d)) (+ (* b c) (* a d)))))
+
+    (defun modulus (z)
+      (with-cplx ((a b z))
+        (sqrt (+ (* a a) (* b b)))))
+
+    ;; Mandelbrot routines
+    (defun inside-p (z0 : (z c0) (n n))
+      (and (< (modulus z) r-max)
+           (or (zerop n)
+               (inside-p z0 (c+ (c* z z) z0) (- n 1)))))
+
+    (defmacro int-bool (b)
+      ^(if ,b colour-max 0))
+
+    (defun pixel (i j)
+      (int-bool
+        (inside-p
+          (cplx (+ x-offset (* pixel-size i))
+                (- y-offset (* pixel-size j))))))
+
+    ;; Mandelbrot loop and output
+    (defun plot ()
+      (with-output-to-file file
+        (format t "P2\n~s\n~s\n~s\n" i-max j-max colour-max)
+        (each ((j (range 1 j-max)))
+          (each ((i (range 1 i-max)))
+            (format *stdout* "~s " (pixel i j)))
+          (put-line "" *stdout*))))
+
+    (plot))

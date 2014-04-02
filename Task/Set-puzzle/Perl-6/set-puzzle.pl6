@@ -6,7 +6,10 @@ enum Style (solid =>  0o1, open =>      0o2, striped =>   0o4);
 my @deck := (Color.enums X Count.enums X Shape.enums X Style.enums).tree;
 
 sub MAIN($DRAW = 9, $GOAL = $DRAW div 2) {
-    my @combinations = combine(3, [^$DRAW]);
+    sub show-cards(@c) { printf "    %-6s %-5s %-8s %s\n", $_».key for @c }
+
+    my @combinations = [^$DRAW].combinations(3);
+
     my @draw;
     repeat until (my @sets) == $GOAL {
         @draw = @deck.pick($DRAW);
@@ -15,6 +18,7 @@ sub MAIN($DRAW = 9, $GOAL = $DRAW div 2) {
             take @draw[@c].item when /^ <[1247]>+ $/ given ( [+|] @bits[@c] ).base(8);
         }
     }
+
     say "Drew $DRAW cards:";
     show-cards @draw;
     for @sets.kv -> $i, @cards {
@@ -22,5 +26,3 @@ sub MAIN($DRAW = 9, $GOAL = $DRAW div 2) {
         show-cards @cards;
     }
 }
-
-sub show-cards(@c) { for @c -> $c { printf "    %-6s %-5s %-8s %s\n", $c».key } }

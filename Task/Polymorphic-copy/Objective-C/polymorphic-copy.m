@@ -1,5 +1,4 @@
 @interface T : NSObject
-{ }
 - (void)identify;
 @end
 
@@ -17,7 +16,6 @@
 @end
 
 @interface S : T
-{ }
 @end
 
 @implementation S
@@ -29,11 +27,12 @@
 
 int main()
 {
-    T *original = [[S alloc] init];
-    T *another = [original copy];
-    [another identify]; // logs "I am an S"
+    @autoreleasepool {
 
-    [another release]; // like "alloc", the object returned by "copy" is "owned" by the caller, so we are responsible for releasing it
-    [original release];
+        T *original = [[S alloc] init];
+        T *another = [original copy];
+        [another identify]; // logs "I am an S"
+
+    }
     return 0;
 }

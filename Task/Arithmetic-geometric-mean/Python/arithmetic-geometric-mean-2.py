@@ -2,7 +2,7 @@ from decimal import Decimal, getcontext
 
 def agm(a, g, tolerance=Decimal("1e-65")):
     while True:
-        a, g = ((a + g) / 2, (a * g).sqrt())
+        a, g = (a + g) / 2, (a * g).sqrt()
         if abs(a - g) < tolerance:
             return a
 

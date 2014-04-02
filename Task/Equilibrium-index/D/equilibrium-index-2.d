@@ -2,7 +2,7 @@ import std.stdio, std.algorithm;
 
 size_t[] equilibrium(T)(in T[] items) @safe pure nothrow {
     size_t[] result;
-    T left = 0, right = reduce!q{a + b}(cast(T)0, items);
+    T left = 0, right = items.sum;
 
     foreach (immutable i, e; items) {
         right -= e;

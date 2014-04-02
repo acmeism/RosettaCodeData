@@ -2,7 +2,7 @@ BEGIN {
   FS="$"
   lcounter = 1
   maxfield = 0
-  # justistification; pick up one
+  # justification; pick one
   #justify = "left"
   justify = "center"
   #justify = "right"

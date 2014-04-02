@@ -1,2 +1,1 @@
-CONSTANT SECTION.
-01  Foo VALUE "Foo".
+78  Foo VALUE "Foo".

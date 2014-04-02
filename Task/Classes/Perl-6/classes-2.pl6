@@ -1,5 +1,5 @@
 class Butterfly {
-    has Int $!age;    # The ! twigil makes it private.
+    has Int $!age;   # With the ! twigil, no public accessor method is generated
     has Str $.name;
     has Str $.color;
     has Bool $.wings;

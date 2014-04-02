@@ -1,27 +1,9 @@
-use strict;
+sub ltrim { shift =~ s/^\s+//r }
+sub rtrim { shift =~ s/\s+$//r }
+sub trim { ltrim rtrim shift }
 
-sub ltrim
-{
-    my $c = shift;
-    $c =~ s/^\s+//;
-    return $c;
-}
-
-sub rtrim
-{
-    my $c = shift;
-    $c =~ s/\s+$//;
-    return $c;
-}
-
-sub trim
-{
-    my $c = shift;
-    return ltrim(rtrim($c));
-}
-
+# Usage:
 my $p = "       this is a string      ";
-
 print "'", $p, "'\n";
 print "'", trim($p), "'\n";
 print "'", ltrim($p), "'\n";

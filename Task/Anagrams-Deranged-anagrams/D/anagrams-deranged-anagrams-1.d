@@ -1,19 +1,15 @@
 void main() {
-    import std.stdio, std.file, std.algorithm, std.string, std.range,
-           std.functional, std.exception;
+    import std.stdio, std.file, std.algorithm, std.string, std.array;
 
-    string[][const ubyte[]] anags;
+    string[][dstring] anags;
     foreach (const w; "unixdict.txt".readText.split)
-        anags[w.dup.representation.sort().release.assumeUnique] ~= w;
+        anags[w.array.sort().release.idup] ~= w;
 
     anags
     .byValue
-    .map!(words => cartesianProduct(words, words)
-                   .filter!(ww => ww[].equal!q{ a != b })
-                   .array)
-    .filter!(not!empty)
-    .array
-    .schwartzSort!q{ a[0][0].length }
-    .back[0]
+    .map!(words => words.cartesianProduct(words)
+                   .filter!q{ a[].equal!q{ a != b }})
+    .join
+    .minPos!q{ a[0].length > b[0].length }[0]
     .writeln;
 }

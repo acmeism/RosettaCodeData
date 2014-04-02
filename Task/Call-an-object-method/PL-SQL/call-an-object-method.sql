@@ -24,5 +24,4 @@ BEGIN
     myInstance := myClass(null);
     DBMS_OUTPUT.put_line( myClass.static_method() );
     DBMS_OUTPUT.put_line( myInstance.instance_method() );
-END;
-/
+END;/

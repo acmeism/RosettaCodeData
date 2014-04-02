@@ -1,6 +1,10 @@
 use Date::Manip;
-Date_LeapYear($year);
+print Date_LeapYear(2000);
 
 use Date::Manip::Base;
 my $dmb = new Date::Manip::Base;
-$dmb->leapyear($year);
+print $dmb->leapyear(2000);
+
+use DateTime;
+my $date = DateTime->new(year => 2000);
+print $date->is_leap_year();

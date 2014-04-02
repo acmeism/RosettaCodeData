@@ -1,5 +1,5 @@
 (de q (N)
-   (cache '(NIL) (pack (char (hash N)) N)
+   (cache '(NIL) N
       (if (>= 2 N)
          1
          (+

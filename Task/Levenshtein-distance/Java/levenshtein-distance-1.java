@@ -1,40 +1,28 @@
-public class LevenshteinDistance {
+public class Levenshtein {
 
-  public static int computeDistance(String s1, String s2) {
-    s1 = s1.toLowerCase();
-    s2 = s2.toLowerCase();
-
-    int[] costs = new int[s2.length() + 1];
-    for (int i = 0; i <= s1.length(); i++) {
-      int lastValue = i;
-      for (int j = 0; j <= s2.length(); j++) {
-        if (i == 0)
-          costs[j] = j;
-        else {
-          if (j > 0) {
-            int newValue = costs[j - 1];
-            if (s1.charAt(i - 1) != s2.charAt(j - 1))
-              newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-            costs[j - 1] = lastValue;
-            lastValue = newValue;
-          }
+    public static int distance(String a, String b) {
+        a = a.toLowerCase();
+        b = b.toLowerCase();
+        // i == 0
+        int [] costs = new int [b.length() + 1];
+        for (int j = 0; j < costs.length; j++)
+            costs[j] = j;
+        for (int i = 1; i <= a.length(); i++) {
+            // j == 0; nw = lev(i - 1, j)
+            costs[0] = i;
+            int nw = i - 1;
+            for (int j = 1; j <= b.length(); j++) {
+                int cj = Math.min(1 + Math.min(costs[j], costs[j - 1]), a.charAt(i - 1) == b.charAt(j - 1) ? nw : nw + 1);
+                nw = costs[j];
+                costs[j] = cj;
+            }
         }
-      }
-      if (i > 0)
-        costs[s2.length()] = lastValue;
+        return costs[b.length()];
     }
-    return costs[s2.length()];
-  }
 
-  public static void printDistance(String s1, String s2) {
-    System.out.println(s1 + "-->" + s2 + ": " + computeDistance(s1, s2));
-  }
-
-  public static void main(String[] args) {
-    printDistance("kitten", "sitting");
-    printDistance("rosettacode", "raisethysword");
-    printDistance(new StringBuilder("rosettacode").reverse().toString(), new StringBuilder("raisethysword").reverse().toString());
-    for (int i = 1; i < args.length; i += 2)
-      printDistance(args[i - 1], args[i]);
-  }
+    public static void main(String [] args) {
+        String [] data = { "kitten", "sitting", "saturday", "sunday", "rosettacode", "raisethysword" };
+        for (int i = 0; i < data.length; i += 2)
+            System.out.println("distance(" + data[i] + ", " + data[i+1] + ") = " + distance(data[i], data[i+1]));
+    }
 }

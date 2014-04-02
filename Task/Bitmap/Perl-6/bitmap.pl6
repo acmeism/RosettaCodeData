@@ -5,7 +5,7 @@ class Pixel {
 }
 
 class Bitmap {
-	has Pixel @.data;
+	has @.data;
 	has Int $.width;
 	has Int $.height;
 

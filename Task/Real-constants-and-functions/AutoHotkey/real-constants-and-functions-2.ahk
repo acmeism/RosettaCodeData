@@ -1,4 +1,2 @@
-x**y ; x to the y power
-pi() { ; will return pi when custom function is called
-return 22/7
-}
+e:=exp(1)
+pi:=2*asin(1)

@@ -3,11 +3,11 @@ import std.stdio, std.algorithm, std.range, std.array;
 struct Q {
     __gshared static Appender!(uint[]) s;
 
-    /*nothrow*/ static this() {
+    nothrow static this() {
         s ~= [0, 1, 1];
     }
 
-    static uint opCall(in int n) /*nothrow*/
+    static uint opCall(in int n) nothrow
     in {
         assert(n > 0);
     } body {

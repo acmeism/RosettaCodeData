@@ -1,7 +1,7 @@
 import std.stdio, std.algorithm, std.mathspecial;
 
 real x2Dist(T)(in T[] data) pure nothrow {
-    immutable avg = reduce!q{a + b}(0.0L, data) / data.length;
+    immutable avg = data.sum / data.length;
     immutable sqs = reduce!((a, b) => a + (b - avg) ^^ 2)(0.0L, data);
     return sqs / avg;
 }

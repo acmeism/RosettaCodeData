@@ -3,7 +3,7 @@ import std.stdio, std.array, std.range, std.algorithm;
 struct ffr {
     static r = [int.min, 1];
 
-    static int opCall(in int n) /*nothrow*/ {
+    static int opCall(in int n) nothrow {
         assert(n > 0);
         if (n < r.length) {
             return r[n];
@@ -29,12 +29,12 @@ struct ffr {
 struct ffs {
     static s = [int.min, 2];
 
-    static int opCall(in int n) /*nothrow*/ {
+    static int opCall(in int n) nothrow {
         assert(n > 0);
         if (n < s.length) {
             return s[n];
         } else {
-            foreach (immutable i; ffr.r.length .. n+2) {
+            foreach (immutable i; ffr.r.length .. n + 2) {
                 ffr(i);
                 if (s.length > n)
                     return s[n];
@@ -45,7 +45,7 @@ struct ffs {
 }
 
 void main() {
-    map!ffr(iota(1, 11)).writeln;
+    iota(1, 11).map!ffr.writeln;
     auto t = iota(1, 41).map!ffr.chain(iota(1, 961).map!ffs);
-    t.array().sort().equal(iota(1, 1001)).writeln;
+    t.array.sort().equal(iota(1, 1001)).writeln;
 }

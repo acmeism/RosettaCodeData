@@ -2,8 +2,10 @@ sub halve  { $^n div 2 }
 sub double { $^n * 2   }
 sub even   { $^n %% 2  }
 
-sub ethiopicmult ($a, $b) {
-    [+]
-    map { $^column_2 if !even $^column_1 },
-    zip($a, &halve ... 0;  $b, &double ... *);
+sub ethiopic-mult ($a, $b) {
+    [+] ($b, &double ... *)
+        Z*
+        ($a, &halve ... 0).map: { not even $^n }
 }
+
+say ethiopic-mult(17,34);

@@ -9,9 +9,7 @@
     NSCountedSet *seen = [NSCountedSet setWithArray:self];
     int max = 0;
     NSMutableArray *maxElems = [NSMutableArray array];
-    NSEnumerator *enm = [seen objectEnumerator];
-    id obj;
-    while( (obj = [enm nextObject]) ) {
+    for ( obj in seen ) {
         int count = [seen countForObject:obj];
         if (count > max) {
             max = count;

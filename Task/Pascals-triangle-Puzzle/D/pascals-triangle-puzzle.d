@@ -1,12 +1,13 @@
 import std.stdio, std.algorithm;
 
-void iterate(bool doPrint=true)(double[] v, double[] diff) {
+void iterate(bool doPrint=true)(double[] v, double[] diff)
+/*pure nothrow*/ {
     static ref T E(T)(T[] x, in size_t row, in size_t col)
     pure nothrow {
         return x[row * (row + 1) / 2 + col];
     }
 
-    double sum = 0.0;
+    double tot = 0.0;
     do {
         // enforce boundary conditions
         E(v, 0, 0) = 151;
@@ -15,8 +16,8 @@ void iterate(bool doPrint=true)(double[] v, double[] diff) {
         E(v, 4, 3) = 4;
 
         // calculate difference from equilibrium
-        foreach (i; 1 .. 5) {
-            foreach (j; 0 .. i + 1) {
+        foreach (immutable i; 1 .. 5) {
+            foreach (immutable j; 0 .. i + 1) {
                 E(diff, i, j) = 0;
                 if (j < i)
                     E(diff, i, j) += E(v, i - 1, j) -
@@ -29,8 +30,8 @@ void iterate(bool doPrint=true)(double[] v, double[] diff) {
             }
         }
 
-        foreach (i; 1 .. 4)
-            foreach (j; 0 .. i)
+        foreach (immutable i; 1 .. 4)
+            foreach (immutable j; 0 .. i)
                 E(diff, i, j) += E(v, i + 1, j) +
                                  E(v, i + 1, j + 1) -
                                  E(v, i, j);
@@ -40,22 +41,22 @@ void iterate(bool doPrint=true)(double[] v, double[] diff) {
         // do feedback, check if we are close enough
         // 4: scale down the feedback to avoid oscillations
         v[] += diff[] / 4;
-        sum = reduce!q{a + b ^^ 2}(0.0, diff);
+        tot = diff.map!q{ a ^^ 2 }.sum;
 
         static if (doPrint)
-            writeln("dev: ", sum);
+            writeln("dev: ", tot);
 
-        // sum(dx^2) < 0.1 means each cell is no more than 0.5 away
+        // tot(dx^2) < 0.1 means each cell is no more than 0.5 away
         // from equilibrium. It takes about 50 iterations. After
-        // 700 iterations sum is < 1e-25, but that's overkill.
-    } while (sum >= 0.1);
+        // 700 iterations tot is < 1e-25, but that's overkill.
+    } while (tot >= 0.1);
 }
 
 void main() {
-    static void show(in double[] x) {
+    static void show(in double[] x) nothrow {
         int idx;
-        foreach (i; 0 .. 5)
-            foreach (j; 0 .. i+1) {
+        foreach (immutable i; 0 .. 5)
+            foreach (immutable j; 0 .. i+1) {
                 printf("%4d%c", cast(int)(0.5 + x[idx]),
                        j < i ? ' ' : '\n');
                 idx++;

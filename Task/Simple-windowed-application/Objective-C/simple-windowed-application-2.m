@@ -1,19 +1,15 @@
 @implementation ClickMe : NSWindow
--(id) init
+-(instancetype) init
 {
-  NSRect buttonRect;
-  int totalWindowHeight;
-
-  counter = 0;
-  button = [[NSButton alloc] init];
+  NSButton *button = [[NSButton alloc] init];
   [button setButtonType: NSToggleButton];
   [button setTitle: @"Click Me"];
   [button sizeToFit];
   [button setTarget: self];
   [button setAction: @selector(advanceCounter:)];
-  buttonRect = [button frame];
+  NSRect buttonRect = [button frame];
 
-  text = [[NSTextField alloc]
+  NSTextField *text = [[NSTextField alloc]
 	   initWithFrame: NSMakeRect(buttonRect.origin.x, buttonRect.size.height,
 				     buttonRect.size.width, buttonRect.size.height)];
   [text setAlignment: NSCenterTextAlignment];
@@ -25,31 +21,26 @@
   [button
     setFrameSize: NSMakeSize( [text frame].size.width, buttonRect.size.height ) ];
 
-  totalWindowHeight = buttonRect.size.height + [text frame].size.height;
+  int totalWindowHeight = buttonRect.size.height + [text frame].size.height;
 
-  [self
-    initWithContentRect: NSMakeRect(100, 100,
+  if ((self = [super initWithContentRect: NSMakeRect(100, 100,
 				    [text frame].size.width, totalWindowHeight)
-    styleMask: (NSTitledWindowMask | NSClosableWindowMask)
-    backing: NSBackingStoreBuffered
-    defer: NO];
+        styleMask: (NSTitledWindowMask | NSClosableWindowMask)
+      backing: NSBackingStoreBuffered
+      defer: NO])) {
+    _counter = 0;
+    _button = button;
+    _text = text;
 
-  [[self contentView] addSubview: text];   [text release];
-  [[self contentView] addSubview: button]; [button release];
+    [[self contentView] addSubview: _text];
+    [[self contentView] addSubview: _button];
 
-  [self setTitle: @"Click Me!"];
-  [self center];
-
+    [self setTitle: @"Click Me!"];
+    [self center];
+  }
   return self;
 }
 
-
--(void) dealloc
-{
-  [button release];
-  [text release];
-  [super dealloc];
-}
 
 - (void)applicationDidFinishLaunching: (NSNotification *)notification
 {
@@ -63,24 +54,18 @@
 
 - (void)advanceCounter: (id)sender
 {
-  counter++;
-  [text setStringValue: [NSString stringWithFormat: @"Clicked %d times", counter]];
+  [_text setStringValue: [NSString stringWithFormat: @"Clicked %d times", ++_counter]];
 }
 @end
 
 
 int main()
 {
-  ClickMe *clickme;
-  NSAutoreleasePool *pool;
-  NSApplication *app;
-
-  pool = [[NSAutoreleasePool alloc] init];
-  app =  [NSApplication sharedApplication];
-  clickme = [[ClickMe alloc] init];
-  [app setDelegate: clickme];
-  [app run];
-  [clickme release];
-  [pool release];
+  @autoreleasepool {
+    NSApplication *app =  [NSApplication sharedApplication];
+    ClickMe *clickme = [[ClickMe alloc] init];
+    [app setDelegate: clickme];
+    [app run];
+  }
   return 0;
 }

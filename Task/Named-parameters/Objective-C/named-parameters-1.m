@@ -1,4 +1,4 @@
-@interface Demo : Object {
+@interface Demo : NSObject {
     // Omitted ...
 }
 

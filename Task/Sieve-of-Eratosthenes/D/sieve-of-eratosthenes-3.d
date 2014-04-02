@@ -1,39 +1,35 @@
-import std.algorithm, std.bitmanip;
-
 /// Extensible Sieve of Eratosthenes.
-struct IsPrime {
-    //__gshared static BitArray multiples = [true, true, false];
-    __gshared static BitArray multiples;
+struct Prime {
+    uint[] a = [2];
 
-    /*nothrow*/ static this() {
-        multiples.init([true, true, false]);
-    }
+    private void grow() pure nothrow {
+        immutable p0 = a[$ - 1] + 1;
+        auto b = new bool[p0];
 
-    static bool opCall(in size_t n) /*nothrow*/ {
-        if (n >= multiples.length) {
-            // Extend the sieve.
-            immutable oldLen = multiples.length; // Not nothrow.
-            immutable newMax = max((oldLen - 1) * 2, n);
-            multiples.length = newMax + 1;
-            foreach (immutable p; 2 .. oldLen)
-                if (!multiples[p])
-                    for (size_t i = p * ((oldLen + p) / p);
-                         i < newMax + 1; i += p)
-                            multiples[i] = true;
-            foreach (immutable i; oldLen .. newMax + 1)
-                if (!multiples[i])
-                    for (size_t j = i * 2; j < newMax + 1; j += i)
-                        multiples[j] = true;
+        foreach (immutable di; a) {
+            immutable uint i0 = p0 / di * di;
+            uint i = (i0 < p0) ? i0 + di - p0 : i0 - p0;
+            for (; i < b.length; i += di)
+                b[i] = true;
         }
 
-        return !multiples[n];
+        foreach (immutable uint i, immutable bi; b)
+            if (!b[i])
+                a ~= p0 + i;
+    }
+
+    uint opCall(in uint n) pure nothrow {
+        while (n >= a.length)
+            grow;
+        return a[n];
     }
 }
 
 version (sieve_of_eratosthenes3_main) {
-    import std.stdio, std.range;
-
     void main() {
-        50.iota.filter!IsPrime.writeln;
+        import std.stdio, std.range, std.algorithm;
+
+        Prime prime;
+        uint.max.iota.map!prime.until!q{a > 50}.writeln;
     }
 }

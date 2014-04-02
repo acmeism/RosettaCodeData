@@ -1,4 +1,4 @@
-auto powerSet(T)(T[] xs) {
+auto powerSet(T)(T[] xs) pure nothrow {
     auto output = new T[xs.length];
     immutable size_t len = 1U << xs.length;
 

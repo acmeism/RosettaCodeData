@@ -27,17 +27,17 @@ void bar(int i) {
 
 void baz(int i) {
   if (i == 0)
-    @throw [[U0 new] autorelease];
+    @throw [U0 new];
   else
-    @throw [[U1 new] autorelease];
+    @throw [U1 new];
 }
 
 
 int main (int argc, const char * argv[]) {
-  NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
+  @autoreleasepool {
 
-  foo();
+    foo();
 
-  [pool drain];
+  }
   return 0;
 }

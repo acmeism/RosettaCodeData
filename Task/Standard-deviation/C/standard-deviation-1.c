@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-enum Action { STDDEV, MEAN, VAR, COUNT };
+typedef enum Action { STDDEV, MEAN, VAR, COUNT } Action;
 
 typedef struct stat_obj_struct {
    double sum, sum2;
@@ -12,6 +12,8 @@ typedef struct stat_obj_struct {
 
 StatObject NewStatObject( Action action )
 {
+  StatObject so;
+
   so = malloc(sizeof(sStatObject));
   so->sum = 0.0;
   so->sum2 = 0.0;
@@ -42,5 +44,5 @@ double stat_object_add(StatObject so, double v)
   so->num++;
   so->sum += v;
   so->sum2 += v*v;
-  return stat_obj_value(so->action);
+  return stat_obj_value(so, so->action);
 }

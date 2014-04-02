@@ -1,4 +1,4 @@
-module Miller_Rabin
+  module Miller_Rabin
   use PrimeDecompose
   implicit none
 

@@ -1,7 +1,7 @@
 my $HOR = 1280;
 my $VERT = 720;
 
-my @colors = map -> $r, $g, $b { Buf.new: ($r, $g, $b) xx $HOR div 8 },
+my @colors = map -> $r, $g, $b { Buf.new: |(($r, $g, $b) xx $HOR div 8) },
                   0,  0,  0,
                 255,  0,  0,
                   0,255,  0,

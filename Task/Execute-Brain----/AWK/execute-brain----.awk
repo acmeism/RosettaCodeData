@@ -1,5 +1,6 @@
 BEGIN {
-	compile(ARGV[1])
+	bf=ARGV[1]; ARGV[1] = ""
+	compile(bf)
 	execute()
 }
 
@@ -48,10 +49,30 @@ function execute(   pc,p,i) {
 		else if(i == ".")
 			printf("%c", arena[p])
 		else if(i == ",") {
-			"dd bs=1 count=1 2>/dev/null | xd -1d" | getline
-			sub(/^0*/, "", $2)
-			arena[p] = 0 + $2
-			close("dd bs=1 count=1 2>/dev/null | xd -1d")
+			while(1) {
+				if (goteof) break
+				if (!gotline) {
+					gotline = getline
+					if(!gotline) goteof = 1
+					if (goteof) break
+					line = $0
+				}
+				if (line == "") {
+					gotline=0
+					m[p]=10
+					break
+				}
+				if (!genord) {
+					for(i=1; i<256; i++)
+						ord[sprintf("%c",i)] = i
+					genord=1
+				}
+				c = substr(line, 1, 1)
+				line=substr(line, 2)
+				arena[p] = ord[c]
+				break
+			}
+
 		} else if((i == "[" && arena[p] == 0) ||
 		          (i == "]" && arena[p] != 0))
 			pc = jump[pc]

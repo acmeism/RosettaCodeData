@@ -5,13 +5,13 @@ if mk==''         then mk='*'          /*use the default of an asterisk.*/
 if length(mk)==2  then mk=x2c(mk)      /*MK was specified in hexadecimal*/
 if length(mk)==3  then mk=d2c(mk)      /*MK was specified in decimal.   */
 numeric digits 12000                   /*this otta handle the die-hards.*/
-
+                                       /* [↓]  the blood-'n-guts of pgm.*/
    do j=0  for n*4;  !=1;  z=left('',n*4-1-j)        /*indent the line. */
-             do k=0  to j              /*build the line with  J+1  parts*/
-             if !//2==0  then z=z'  '  /*it's either a blank,  or  ...  */
+             do k=0  for j+1           /*build the line with  J+1  parts*/
+             if !//2==0  then z=z'  '  /*it's either a blank,  or  ···  */
                          else z=z mk   /*it's one of them thar character*/
              !=!*(j-k)%(k+1)           /*calculate a handy-dandy thingy.*/
-             end   /*k*/
+             end   /*k*/               /* [↑]  finished building a line.*/
    say z                               /*display a line of the triangle.*/
-   end             /*j*/
+   end             /*j*/               /* [↑]  finished displaying tri. */
                                        /*stick a fork in it, we're done.*/

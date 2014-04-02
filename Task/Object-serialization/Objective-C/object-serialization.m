@@ -6,26 +6,18 @@
   NSString *animalName;
   int numberOfLegs;
 }
-- (id) initWithName: (NSString*)name andLegs: (NSInteger)legs;
+- (instancetype) initWithName: (NSString*)name andLegs: (NSInteger)legs;
 - (void) dump;
-// the following allows "(de)archiving" of the object
-- (void) encodeWithCoder: (NSCoder*)coder;
-- (id) initWithCoder: (NSCoder*)coder;
 @end
 
 @implementation Animal
-- (id) initWithName: (NSString*)name andLegs: (NSInteger)legs
+- (instancetype) initWithName: (NSString*)name andLegs: (NSInteger)legs
 {
   if ((self = [super init])) {
     animalName = [name retain];
     numberOfLegs = legs;
   }
   return self;
-}
-- (void) dealloc
-{
-  [animalName release];
-  [super dealloc];
 }
 - (void) dump
 {
@@ -52,16 +44,12 @@
   BOOL hasFur;
   NSMutableArray *eatenList;
 }
-- (id) initWithName: (NSString*)name hasFur: (BOOL)fur;
+- (instancetype) initWithName: (NSString*)name hasFur: (BOOL)fur;
 - (void) addEatenThing: (NSString*)thing;
-- (void) dump;
-// for archiving / dearchiving:
-- (void) encodeWithCoder: (NSCoder*)coder;
-- (id) initWithCoder: (NSCoder*)coder;
 @end
 
 @implementation Mammal
-- (id) init
+- (instancetype) init
 {
   if ((self = [super init])) {
     hasFur = NO;
@@ -69,7 +57,7 @@
   }
   return self;
 }
-- (id) initWithName: (NSString*)name hasFur: (BOOL)fur
+- (instancetype) initWithName: (NSString*)name hasFur: (BOOL)fur
 {
   if ((self = [super initWithName: name andLegs: 4])) {
     hasFur = fur;
@@ -81,21 +69,12 @@
 {
   [eatenList addObject: thing];
 }
-- (void) dealloc
-{
-  [eatenList release];
-  [super dealloc];
-}
 - (void) dump
 {
   [super dump];
   NSLog(@"has fur? %@", (hasFur) ? @"yes" : @"no" );
-  // fast enum not implemented yet in gcc 4.3, at least
-  // without a patch that it seems to exist...
-  NSEnumerator *en = [eatenList objectEnumerator];
-  id element;
   NSLog(@"it has eaten %d things:", [eatenList count]);
-  while( (element = [en nextObject]) != nil )
+  for ( id element in eatenList )
     NSLog(@"it has eaten a %@", element);
   NSLog(@"end of eaten things list");
 }
@@ -110,7 +89,7 @@
 {
   if ((self = [super initWithCoder: coder])) {
     hasFur = [coder decodeBoolForKey: @"Mammal.hasFur"];
-    eatenList = [[coder decodeObjectForKey: @"Mammal.eaten"] retain];
+    eatenList = [coder decodeObjectForKey: @"Mammal.eaten"];
   }
   return self;
 }
@@ -119,67 +98,59 @@
 
 int main()
 {
-  Mammal *aMammal;
-  Animal *anAnimal;
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+  @autoreleasepool {
 
-  // let us create a fantasy animal
-  anAnimal = [[Animal alloc]
-	       initWithName: @"Eptohippos"
-	       andLegs: 7
-	      ];
-  // for some reason an Eptohippos is not an horse with 7 legs,
-  // and it is not a mammal, of course...
+    // let us create a fantasy animal
+    Animal *anAnimal = [[Animal alloc]
+	         initWithName: @"Eptohippos"
+	         andLegs: 7
+	        ];
+    // for some reason an Eptohippos is not an horse with 7 legs,
+    // and it is not a mammal, of course...
 
-  // let us create a fantasy mammal (which is an animal too)
-  aMammal = [[Mammal alloc]
-	      initWithName: @"Mammaluc"
-	      hasFur: YES
-	     ];
-  // let us add some eaten stuff...
-  [aMammal addEatenThing: @"lamb"];
-  [aMammal addEatenThing: @"table"];
-  [aMammal addEatenThing: @"web page"];
+    // let us create a fantasy mammal (which is an animal too)
+    Mammal *aMammal = [[Mammal alloc]
+	        initWithName: @"Mammaluc"
+	        hasFur: YES
+	       ];
+    // let us add some eaten stuff...
+    [aMammal addEatenThing: @"lamb"];
+    [aMammal addEatenThing: @"table"];
+    [aMammal addEatenThing: @"web page"];
 
-  // dump anAnimal
-  NSLog(@"----- original Animal -----");
-  [anAnimal dump];
+    // dump anAnimal
+    NSLog(@"----- original Animal -----");
+    [anAnimal dump];
 
-  // dump aMammal...
-  NSLog(@"----- original Mammal -----");
-  [aMammal dump];
+    // dump aMammal...
+    NSLog(@"----- original Mammal -----");
+    [aMammal dump];
 
-  // now let us store the objects...
-  NSMutableData *data = [[NSMutableData alloc] init];
-  NSKeyedArchiver *arch = [[NSKeyedArchiver alloc]
-			    initForWritingWithMutableData: data];
-  [arch encodeObject: anAnimal forKey: @"Eptohippos"];
-  [arch encodeObject: aMammal forKey: @"Mammaluc"];
-  [anAnimal release];
-  [aMammal release];
-  [arch finishEncoding];
-  [arch release];
-  [data writeToFile: @"objects.dat" atomically: YES];
-  [data release];
+    // now let us store the objects...
+    NSMutableData *data = [[NSMutableData alloc] init];
+    NSKeyedArchiver *arch = [[NSKeyedArchiver alloc]
+			      initForWritingWithMutableData: data];
+    [arch encodeObject: anAnimal forKey: @"Eptohippos"];
+    [arch encodeObject: aMammal forKey: @"Mammaluc"];
+    [arch finishEncoding];
+    [data writeToFile: @"objects.dat" atomically: YES];
 
-  // now we want to retrieve the saved objects...
-  NSData *ldata = [[NSData alloc]
-		     initWithContentsOfFile: @"objects.dat"];
-  NSKeyedUnarchived *darch = [[NSKeyedUnarchiver alloc]
-	                       initForReadingWithData: ldata];
-  Animal *archivedAnimal = [darch decodeObjectForKey: @"Eptohippos"];
-  Mammal *archivedMammal = [darch decodeObjectForKey: @"Mammaluc"];
-  [darch finishDecoding];
-  [ldata release];
-  [darch release];
+    // now we want to retrieve the saved objects...
+    NSData *ldata = [[NSData alloc]
+		       initWithContentsOfFile: @"objects.dat"];
+    NSKeyedUnarchived *darch = [[NSKeyedUnarchiver alloc]
+	                         initForReadingWithData: ldata];
+    Animal *archivedAnimal = [darch decodeObjectForKey: @"Eptohippos"];
+    Mammal *archivedMammal = [darch decodeObjectForKey: @"Mammaluc"];
+    [darch finishDecoding];
 
-  // now let's dump/print the objects...
-  NSLog(@"\n");
-  NSLog(@"----- the archived Animal -----");
-  [archivedAnimal dump];
-  NSLog(@"----- the archived Mammal -----");
-  [archivedMammal dump];
+    // now let's dump/print the objects...
+    NSLog(@"\n");
+    NSLog(@"----- the archived Animal -----");
+    [archivedAnimal dump];
+    NSLog(@"----- the archived Mammal -----");
+    [archivedMammal dump];
 
-  [pool release];
+  }
   return EXIT_SUCCESS;
 }

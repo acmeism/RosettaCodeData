@@ -1,4 +1,4 @@
-/*REXX program demonstrates  (see the penultimate statment)  how to     */
+/*REXX program demonstrates  (see the penultimate statement)  how to    */
 /*     to find the  size  (length)  of the value of a REXX variable.    */
 
 /*REXX doesn't reserve any storage for any variables, as all variables  */

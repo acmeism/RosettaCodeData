@@ -28,12 +28,6 @@
   return self;
 }
 
--(void)dealloc {
-  [camera release];
-  [phone release];
-  [super dealloc];
-}
-
 -(void)forwardInvocation:(NSInvocation *)anInvocation {
   SEL aSelector = [anInvocation selector];
   if ([camera respondsToSelector:aSelector])

@@ -1,8 +1,6 @@
-import std.stdio, std.string, std.algorithm, std.range;
-
-alias sum = reduce!q{a + b};
-
 void main() {
+    import std.stdio, std.string, std.algorithm, std.range, std.conv;
+
     const perms = "ABCD CABD ACDB DACB BCDA ACBD ADCB CDAB DABC
                    BCAD CADB CDBA CBAD ABDC ADBC BDCA DCBA BACD
                    BADC BDAC CBDA DBCA DCAB".split;
@@ -25,12 +23,10 @@ void main() {
 
     // Version 3 : Sum ASCII values.
     immutable rowSum = perms[0].sum;
-    foreach (immutable i; 0 .. len) {
-        immutable sumCols = sum(0, perms.transversal(i));
-        // See how much it falls short.
-        write(cast(char)(rowSum - sumCols % rowSum));
-    }
-    writeln;
+    len
+    .iota
+    .map!(i => to!char(rowSum - perms.transversal(i).sum % rowSum))
+    .writeln;
 
     // Version 4: some sort of checksum, Java translation.
     // maxCode will be 36.

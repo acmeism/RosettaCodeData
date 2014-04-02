@@ -1,14 +1,14 @@
 (defn hailstone-seq [n]
-  (:pre [(pos? n)])
+  {:pre [(pos? n)]}
   (lazy-seq
    (cond (= n 1)   '(1)
          (even? n) (cons n (hailstone-seq (/ n 2)))
          :else     (cons n (hailstone-seq (+ (* n 3) 1))))))
 
-(def hseq27 (hailstone-seq 27))
-(assert (= (count hseq27) 112))
-(assert (= (take 4 hseq27) [27 82 41 124]))
-(assert (= (drop 108 hseq27) [8 4 2 1]))
+(let [hseq (hailstone-seq 27)]
+  (->  hseq count      (= 112)            assert)
+  (->> hseq (take 4)   (= [27 82 41 124]) assert)
+  (->> hseq (drop 108) (= [8 4 2 1])      assert))
 
 (let [{max-i :num, max-len :len}
       (reduce #(max-key :len %1 %2)

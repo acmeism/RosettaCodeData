@@ -12,22 +12,16 @@
 @implementation Win : NSWindow
 -(id) init
 {
-  [self
+  if ((self = [super
     initWithContentRect: NSMakeRect(0, 0, 800, 600)
     styleMask: (NSTitledWindowMask | NSClosableWindowMask)
     backing: NSBackingStoreBuffered
-    defer: NO];
+    defer: NO])) {
 
-  [self setTitle: @"A Window"];
-  [self center];
-
+    [self setTitle: @"A Window"];
+    [self center];
+  }
   return self;
-}
-
-
--(void) dealloc
-{
-  [super dealloc];
 }
 
 - (void)applicationDidFinishLaunching: (NSNotification *)notification
@@ -43,13 +37,13 @@
 
 int main()
 {
-  Win *mywin;
-  NSAutoreleasePool *pool;
+  @autoreleasepool {
 
-  pool = [[NSAutoreleasePool alloc] init];
-  [NSApplication sharedApplication];
-  mywin = [[Win alloc] init];
-  [NSApp setDelegate: mywin];
-  [NSApp runModalForWindow: mywin];
+    [NSApplication sharedApplication];
+    Win *mywin = [[Win alloc] init];
+    [NSApp setDelegate: mywin];
+    [NSApp runModalForWindow: mywin];
+
+  }
   return EXIT_SUCCESS;
 }

@@ -30,7 +30,7 @@ T[] maxSubseq(T)(T[] seq) pure nothrow {
                       .tails
                       .map!inits
                       .join
-                      .map!q{ tuple(reduce!q{a + b}(0, a), a) }
+                      .map!q{ tuple(a.sum, a) }
                       )[1];
 }
 

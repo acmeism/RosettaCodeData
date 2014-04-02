@@ -4,4 +4,3 @@ NSDateFormatter *dateFormatter = [[NSDateFormat alloc] init];
 NSLog(@"%@", [dateFormatter stringFromDate:[NSDate date]]);
 [dateFormatter setDateFormat:@"EEEE, MMMM d, yyyy"];
 NSLog(@"%@", [dateFormatter stringFromDate:[NSDate date]]);
-[dateFormatter release];

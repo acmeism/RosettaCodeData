@@ -1,6 +1,5 @@
 /*REXX program to add and separately multiply elements of an array. */
 numeric digits 30            /*allow 30-digit numbers (default is 9)*/
-
 m=20                         /*one method of indicating array size. */
           do j=1  for m      /*build an array of twenty elements.   */
           y.j=j              /*set 1st to 1, 3rd to 3, 9th to 9 ... */
@@ -14,5 +13,4 @@ prod=1                       /*initialize  PROD  to unity.          */
 
 say '    sum of'  m  "elements for the Y array is: "  sum
 say 'product of'  m  "elements for the Y array is: "  prod
-
                              /*stick a fork in it, we're done.      */

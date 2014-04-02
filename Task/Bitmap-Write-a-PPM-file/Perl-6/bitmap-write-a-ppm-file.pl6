@@ -7,7 +7,7 @@ sub MAIN ($filename = 'default.ppm') {
     $out.say("P6\n$width $height\n255");
 
     for ^$height X ^$width -> $r, $g {
-        $out.printf("%c%c%c", $r*2, $g*2, 255-$r*2);
+        $out.write(Buf.new($r*2,$g*2,255-$r*2));
     }
     $out.close;
 }

@@ -1,15 +1,16 @@
 class Array
   def radix_sort(base=10)
     ary = dup
-    rounds = (Math.log(self.max.abs)/Math.log(base)).ceil
+    rounds = (Math.log(ary.minmax.map(&:abs).max)/Math.log(base)).ceil
     rounds.times do |i|
-      buckets = Hash.new {|h,k| h[k] = []}
+      buckets = Array.new(2*base){[]}
+      base_i = base**i
       ary.each do |n|
-        digit = (n/base**i) % base
-        digit = digit + base unless n<0
+        digit = (n/base_i) % base
+        digit += base if 0<=n
         buckets[digit] << n
       end
-      ary = buckets.values_at(*(0..2*base)).compact.flatten
+      ary = buckets.flatten
       p [i, ary] if $DEBUG
     end
     ary

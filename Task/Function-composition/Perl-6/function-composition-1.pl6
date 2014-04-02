@@ -1,3 +1,3 @@
 sub infix:<∘> (&f, &g --> Block) {
-    -> $args { f g |$args }
+    -> |args { f g |args }
 }

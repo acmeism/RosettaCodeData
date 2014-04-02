@@ -32,16 +32,11 @@ typedef double (^mfunc)(double, double);
 
 int main()
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+  @autoreleasepool {
 
-  NSArray *coeff = [NSArray
-		     arrayWithObjects:
-		       [NSNumber numberWithDouble: -19.0],
-       		       [NSNumber numberWithDouble: 7.0],
-		       [NSNumber numberWithDouble: -4.0],
-		       [NSNumber numberWithDouble: 6.0], nil];
-  printf("%f\n", [coeff horner: 3.0]);
+    NSArray *coeff = @[@-19.0, @7.0, @-4.0, @6.0];
+    printf("%f\n", [coeff horner: 3.0]);
 
-  [pool release];
+  }
   return 0;
 }

@@ -3,24 +3,20 @@ package main
 import (
     "code.google.com/p/x-go-binding/ui"
     "code.google.com/p/x-go-binding/ui/x11"
-    "fmt"
-    "os"
+    "log"
 )
 
 func main() {
     win, err := x11.NewWindow()
     if err != nil {
-        fmt.Printf("Error: %v\n", err)
-        os.Exit(1)
+        log.Fatalf("Error: %v\n", err)
     }
     defer win.Close()
 
-    evchan := win.EventChan()
-    for ev := range evchan {
+    for ev := range win.EventChan() {
         switch e := ev.(type) {
         case ui.ErrEvent:
-            fmt.Printf("Error: %v\n", e.Err)
-            os.Exit(1)
+            log.Fatalf("Error: %v\n", e.Err)
         }
     }
 }

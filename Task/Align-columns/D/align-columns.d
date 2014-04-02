@@ -8,11 +8,11 @@ that$aligns$each$column$of$fields$by$ensuring$that$words$in$each$
 column$are$separated$by$at$least$one$space.
 Further,$allow$for$each$word$in$a$column$to$be$either$left$
 justified,$right$justified,$or$center$justified$within$its$column."
-    .splitLines.map!q{ a.chomp("$").split("$") };
+    .split.map!(r => r.chomp("$").split("$"));
 
     int[int] maxWidths;
     foreach (const line; data)
-        foreach (i, word; line)
+        foreach (immutable i, const word; line)
             maxWidths[i] = max(maxWidths.get(i, 0), word.length);
 
     foreach (const just; TypeTuple!(leftJustify, center, rightJustify))

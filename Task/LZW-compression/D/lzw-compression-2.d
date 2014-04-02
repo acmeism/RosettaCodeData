@@ -10,8 +10,8 @@ struct LZW {
     enum int initDictSize = 256;
     static immutable ubyte[initDictSize] bytes;
     static this() {
-        foreach (immutable i; 0 .. initDictSize)
-            bytes[i] = cast(T)i; //*
+        foreach (immutable T i; 0 .. initDictSize)
+            bytes[i] = i;
     }
 
     static Tcomp[] compress(immutable scope T[] original) pure nothrow

@@ -1,23 +1,22 @@
 #import <Foundation/Foundation.h>
 
-@interface Example : NSObject { }
+@interface Example : NSObject
 - (NSNumber *)foo;
 @end
 
 @implementation Example
 - (NSNumber *)foo {
-  return [NSNumber numberWithInt:42];
+  return @42;
 }
 @end
 
 int main (int argc, const char *argv[]) {
-  NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
+  @autoreleasepool {
 
-  id example = [[Example alloc] init];
-  SEL selector = @selector(foo); // or = NSSelectorFromString(@"foo");
-  NSLog(@"%@", [example performSelector:selector]);
-  [example release];
+    id example = [[Example alloc] init];
+    SEL selector = @selector(foo); // or = NSSelectorFromString(@"foo");
+    NSLog(@"%@", [example performSelector:selector]);
 
-  [pool release];
+  }
   return 0;
 }

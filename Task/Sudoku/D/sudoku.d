@@ -28,10 +28,10 @@ alias SudokuTable = Digit[sudokuSide ^^ 2];
 
 
 Nullable!SudokuTable sudokuSolver(in ref SudokuTable problem)
-pure /*nothrow*/ {
+pure nothrow {
     alias Tgrid = uint;
     Tgrid[SudokuTable.length] grid = void;
-    problem[].map!(c => c - '0').copy(grid[]); // Not pure.
+    problem[].map!(c => c - '0').copy(grid[]);
 
     // DMD doesn't inline this function. Performance loss.
     Tgrid access(in size_t x, in size_t y) nothrow {
@@ -78,10 +78,9 @@ pure /*nothrow*/ {
         //return typeof(return)(grid[]
         //                      .map!(c => Digit(c + '0'))
         //                      .array);
-        Digit[] aux;
-        foreach (immutable c; grid)
-            aux ~= Digit(c + '0');
-        immutable SudokuTable result = aux;
+        immutable SudokuTable result = grid[]
+                                       .map!(c => Digit(c + '0'))
+                                       .array;
         return typeof(return)(result);
     } else
         return typeof(return)();
@@ -111,17 +110,9 @@ pure nothrow out(result) {
     return result.replace("0", ".");
 }
 
-U[] validator(U, T)(in T[] items) pure nothrow {
-    typeof(return) result;
-    foreach (immutable item; items)
-        result ~= U(item);
-    return result;
-}
-
-//enum ValidateCells(string s) = items.map!Digit.array;
-enum ValidateCells(string s) = validator!Digit(s);
-
 void main() {
+    enum ValidateCells(string s) = s.map!Digit.array;
+
     immutable SudokuTable problem = ValidateCells!("
         850002400
         720000009

@@ -1,6 +1,6 @@
-fs f s = map f s
-f1 value = value * 2
-f2 value = value ^ 2
+fs = map
+f1 = (* 2)
+f2 = (^ 2)
 
 fsf1 = fs f1
 fsf2 = fs f2

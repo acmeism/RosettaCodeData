@@ -37,7 +37,8 @@ array make_month(object month, int field_width, void|string region)
     if (region)
         holidays = Calendar.Events.find_region(region)->scan_events(month);
 
-    array weekday_names = sprintf("%*.*s", field_width, field_width, month->week()->days()->week_day_shortname()[*]);
+    array weekday_names =
+        sprintf("%*.*s", field_width, field_width, month->week()->days()->week_day_shortname()[*]);
 
     out += ({ ({ month->month_name(), month->month_no(), month->year_name() }) });
     out += ({ weekday_names });

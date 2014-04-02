@@ -5,5 +5,5 @@ long long int fibb(int n) {
 		fnow = fnext;
 		fnext = tempf;
 		}
-		return fnow;	
+		return fnext;	
 }

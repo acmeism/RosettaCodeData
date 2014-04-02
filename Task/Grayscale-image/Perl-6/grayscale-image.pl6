@@ -1,11 +1,11 @@
 sub MAIN ($filename = 'default.ppm') {
 
-    my $in = open( $filename, :r , :bin ) or die "$!\n";
+    my $in = open($filename, :r, :enc<iso-8859-1>);
 
     my ($type, $dim, $depth) = $in.lines[^3];
 
     my $outfile = $filename.subst('.ppm', '.pgm');
-    my $out = open( $outfile, :w, :bin ) or die "$!\n";
+    my $out = open($outfile, :w, :enc<iso-8859-1>);
 
     $out.say("P5\n$dim\n$depth");
 

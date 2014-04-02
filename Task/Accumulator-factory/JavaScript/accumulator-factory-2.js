@@ -1,5 +1,5 @@
-function accumulator(sum) function(n) sum += n;
-var x = accumulator(1);
-x(5);
-console.log(accumulator(3).toSource());
+let accumulator = sum => (n => sum += n);
+let x = accumulator(1);
+console.log(x(5));
+accumulator(3);
 console.log(x(2.3));

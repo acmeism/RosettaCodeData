@@ -1,14 +1,14 @@
 import std.stdio, std.algorithm, std.range;
 
-/*auto*/ int male(in int n) pure nothrow {
-    return n ? (n - female(male(n - 1))) : 0;
+int male(in int n) pure nothrow {
+    return n ? n - male(n - 1).female : 0;
 }
 
-/*auto*/ int female(in int n) pure nothrow {
-    return n ? (n - male(female(n - 1))) : 1;
+int female(in int n) pure nothrow {
+    return n ? n - female(n - 1).male : 1;
 }
 
 void main() {
-    iota(20).map!female().writeln();
-    iota(20).map!male().writeln();
+    20.iota.map!female.writeln;
+    20.iota.map!male.writeln;
 }

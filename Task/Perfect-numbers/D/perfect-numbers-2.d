@@ -1,12 +1,21 @@
-import std.stdio, std.algorithm, std.range;
+import std.stdio, std.math, std.range, std.algorithm;
 
-bool isPerfect(in uint n) pure nothrow
-in {
-    assert(n > 0);
-} body {
-    return n == reduce!((s, i) => n % i ? s : s + i)(0, iota(1, n-1));
+bool isPerfectNumber2(in int n) pure nothrow {
+    if (n < 2)
+        return false;
+
+    int total = 1;
+    foreach (immutable i; 2 .. cast(int)real(n).sqrt + 1)
+        if (n % i == 0) {
+            immutable int q = n / i;
+            total += i;
+            if (q > i)
+                total += q;
+        }
+
+    return total == n;
 }
 
 void main() {
-    iota(1, 10_000).filter!isPerfect.writeln;
+    10_000.iota.filter!isPerfectNumber2.writeln;
 }

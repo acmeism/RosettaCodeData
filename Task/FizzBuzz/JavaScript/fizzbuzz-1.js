@@ -10,23 +10,12 @@ for (var i = 1; i <= 100; i++) {
   }
 }
 
-// ------------------
-// functional version
-// ------------------
-(function (n) {
-     var r = [];
-
-     while (n--) {
-         r.push(n + 1);
-     }
-
-     return r.reverse();
- })(100).map(function (n) {
-     return !(n % 15) ?
-         'FizzBuzz' :
-         !(n % 3) ?
-             'Fizz' :
-             !(n % 5) ?
-                 'Buzz' :
-                 n;
- }).join('\r\n');
+Array.apply(null, { length: 100 }).map(function(n, i) {
+  ++i;
+  return !(i % 15) ?
+    "FizzBuzz" :
+    !(i % 3) ?
+      "Fizz" :
+      !(i % 5) ?
+        "Buzz" : i;
+}).join("\r\n");

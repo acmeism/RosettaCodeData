@@ -1,7 +1,8 @@
 Sqrt(Number) ; square root
-Log(Number) ; returns logarithm (base 10)
-Ln(Number) ; returns natural logarithm (base e)
-Exp(N) ; returns e to the N power
+Log(Number) ; logarithm (base 10)
+Ln(Number) ; natural logarithm (base e)
+Exp(N) ; e to the power N
 Abs(Number) ; absolute value
-Floor(Number) ; floor value
-Ceil(Number) ; ceiling value
+Floor(Number) ; floor
+Ceil(Number) ; ceiling
+x**y ; x to the power y

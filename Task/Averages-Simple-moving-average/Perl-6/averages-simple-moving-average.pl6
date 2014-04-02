@@ -1,8 +1,7 @@
-sub sma(Int $period where * > 0) returns Sub {
+sub sma(Int \P where * > 0) returns Sub {
     sub ($x) {
-        state @a = 0 xx $period;
-        @a.push($x);
-        @a.shift;
-        $period R/ [+] @a;
+        state @a = 0 xx P;
+        @a.push($x).shift;
+        P R/ [+] @a;
     }
 }

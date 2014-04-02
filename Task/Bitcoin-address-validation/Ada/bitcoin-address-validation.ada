@@ -77,8 +77,8 @@ begin
             C := P - 1;
             for J in reverse A'Range loop
                 C    := C + Natural(A(J)) * 58;
-                A(J) := Stream_Element(Unsigned_32(C) and 255);         -- 0x0F
-                C    := Natural(Shift_Right(Unsigned_32(C),8) and 255); -- 0xF0
+                A(J) := Stream_Element(Unsigned_32(C) and 255);         -- 0x00FF
+                C    := Natural(Shift_Right(Unsigned_32(C),8) and 255); -- 0xFF00
             end loop;
             if C /= 0 then
                 raise Invalid_Address_Error;

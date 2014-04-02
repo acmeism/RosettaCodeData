@@ -56,7 +56,7 @@ Unqual!T[][] transpose(T)(in T[][] m) pure nothrow {
 }
 
 T norm(T)(in T[][] m) pure nothrow {
-    return reduce!q{ a + b ^^ 2 }(cast(T)0, transversal(m, 0)).sqrt;
+    return transversal(m, 0).map!q{ a ^^ 2 }.sum.sqrt;
 }
 
 T[][] makeUnitVector(T)(in size_t dim) pure nothrow {

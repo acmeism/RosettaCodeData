@@ -1,35 +1,30 @@
-      int b =99,u =1;
-     #include<stdio.h>
-      char *d[16],y[]
-      = "#:ottle/ of"
-      ":eer_ a_Go<o5"
-      "st>y\x20some6"
-      "_Take8;down4p"
-      "a=1rou7_17 _<"
-      "h;_ m?_nd_ on"
-      "_085wal" "l_ "
-      "b_e _ t_ss it"
-      "_?4bu_ore_9, "
-      "\060.""@, 9$";
-     # define x  c  ^=
-    #include <string.h>
-   #define or(t,z) else\
-  if(c==t && !(c = 0) &&\
- (c =! z)); int p(char *t)
-{ char *s = t; int c; for (
-d[c = 0] = y; !t && (d[c +1
-]= strchr(s = d[c], '_'));*
-(d[++c]++) = 0); for(t = s?
-s:t;(c= *s++); c && putchar
-(c)) { if (!((( x 48)& ~0xf
-) && ( x 48)) ) p(d[c]), c=
-0 ; or('$', p(b - 99?".\n":
-"." ) && p(b - 99? t : ""))
-or ('\x40', c && p( d[!!b--
-+ 2])) or('/', c && p( b^1?
-"s": "")) or ('\043', b++ ?
-p("So6" + --b):!printf("%d"
-, b ? --b : (b += 99))) or(
-'S',!(++u % 3) * 32+ 78) or
-('.', puts("."))}return c;}
- int main() {return p(0);}
+#include <stdlib.h>
+#include <stdio.h>
+
+#define BOTTLE(nstr) nstr " bottles of beer"
+
+#define WALL(nstr) BOTTLE(nstr) " on the wall"
+
+#define PART1(nstr) WALL(nstr) "\n" BOTTLE(nstr) \
+                    "\nTake one down, pass it around\n"
+
+#define PART2(nstr) WALL(nstr) "\n\n"
+
+#define MIDDLE(nstr) PART2(nstr) PART1(nstr)
+
+#define SONG PART1("100") CD2 PART2("0")
+
+#define CD2 CD3("9") CD3("8") CD3("7") CD3("6") CD3("5") \
+        CD3("4") CD3("3") CD3("2") CD3("1") CD4("")
+
+#define CD3(pre) CD4(pre) MIDDLE(pre "0")
+
+#define CD4(pre) MIDDLE(pre "9") MIDDLE(pre "8") MIDDLE(pre "7") \
+ MIDDLE(pre "6") MIDDLE(pre "5") MIDDLE(pre "4") MIDDLE(pre "3") \
+ MIDDLE(pre "2") MIDDLE(pre "1")
+
+int main(void)
+{
+  (void) printf(SONG);
+  return EXIT_SUCCESS;
+}

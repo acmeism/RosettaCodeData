@@ -1,1 +1,1 @@
-78  Foo VALUE "Foo".
+01  Foo CONSTANT AS "Foo".

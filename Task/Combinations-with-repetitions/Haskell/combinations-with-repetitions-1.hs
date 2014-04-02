@@ -1,6 +1,7 @@
 -- Return the combinations, with replacement, of k items from the
 -- list.  We ignore the case where k is greater than the length of
 -- the list.
+combsWithRep :: Int -> [a] -> [[a]]
 combsWithRep 0  _ = [[]]
 combsWithRep _ [] = []
 combsWithRep k xxs@(x:xs) = map (x:) (combsWithRep (k-1) xxs) ++ combsWithRep k xs

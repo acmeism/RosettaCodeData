@@ -7,9 +7,9 @@ Bin the answers to fn() and check bin counts are within
 void distCheck(TF)(in TF func, in int nRepeats, in double delta)
 if (isCallable!TF) {
     int[int] counts;
-    foreach (i; 0 .. nRepeats)
+    foreach (immutable i; 0 .. nRepeats)
         counts[func()]++;
-    immutable double target = nRepeats / cast(double)counts.length;
+    immutable double target = nRepeats / double(counts.length);
     immutable int deltaCount = cast(int)(delta / 100.0 * target);
 
     foreach (k, count; counts)
@@ -20,7 +20,7 @@ if (isCallable!TF) {
 
     foreach (k; counts.keys.sort())
         writeln(k, " ", counts[k]);
-    writeln();
+    writeln;
 }
 
 version (verify_distribution_uniformity_naive_main) {

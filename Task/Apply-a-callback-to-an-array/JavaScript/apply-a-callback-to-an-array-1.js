@@ -1,7 +1,9 @@
 function map(a, func) {
-  for (var i in a)
-    a[i] = func(a[i]);
+  var ret = [];
+  for (var i = 0; i < a.length; i++) {
+    ret[i] = func(a[i]);
+  }
+  return ret;
 }
 
-var a = [1, 2, 3, 4, 5];
-map(a, function(v) { return v * v; });
+map([1, 2, 3, 4, 5], function(v) { return v * v; });

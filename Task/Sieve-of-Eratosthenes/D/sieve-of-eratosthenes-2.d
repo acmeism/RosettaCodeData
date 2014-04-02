@@ -21,7 +21,7 @@ size_t[] sieve(in size_t m) pure nothrow {
             F[offset] = F[offset] ^ mask;
     }
 
-    for (size_t i = 3; i <= sqrt(cast(real)n); i += 2)
+    for (size_t i = 3; i <= sqrt(real(n)); i += 2)
         if (isSet((i - 3) / 2))
             for (size_t j = i * i; j <= n; j += 2 * i)
                 resetBit((j - 3) / 2);

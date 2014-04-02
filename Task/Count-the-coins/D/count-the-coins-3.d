@@ -1,7 +1,5 @@
 import std.stdio, std.bigint, std.algorithm, std.conv, std.functional;
 
-alias sum = curry!(reduce!q{ a + b }, 0);
-
 struct Ucent { /// Simplified 128-bit integer (like ucent).
     ulong hi, lo;
     static immutable one = Ucent(0, 1);

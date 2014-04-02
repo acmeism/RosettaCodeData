@@ -1,1 +1,1 @@
-var a = (1).to(10).collect(Math.pow.curry(undefined,2));
+[1, 2, 3, 4, 5].map(function(v) { return v * v; });

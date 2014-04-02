@@ -6,25 +6,25 @@ Func sdCreator() {
   __block int n = 0;
   __block double sum = 0;
   __block double sum2 = 0;
-  return [[^(double x) {
+  return ^(double x) {
     sum += x;
     sum2 += x*x;
     n++;
     return sqrt(sum2/n - sum*sum/n/n);
-  } copy] autorelease];
+  };
 }
 
 int main()
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+  @autoreleasepool {
 
-  double v[] = { 2,4,4,4,5,5,7,9 };
+    double v[] = { 2,4,4,4,5,5,7,9 };
 
-  Func sdacc = sdCreator();
+    Func sdacc = sdCreator();
 
-  for(int i=0; i < sizeof(v)/sizeof(*v) ; i++)
-    printf("adding %f\tstddev = %f\n", v[i], sdacc(v[i]));
+    for(int i=0; i < sizeof(v)/sizeof(*v) ; i++)
+      printf("adding %f\tstddev = %f\n", v[i], sdacc(v[i]));
 
-  [pool release];
+  }
   return 0;
 }

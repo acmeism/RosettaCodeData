@@ -1,3 +1,3 @@
-sub search (@a, Num $x --> Int) {
-    binary_search { $x <=> @a[$^i] }, 0, @a.end
+sub search (@a, $x --> Int) {
+    binary_search { $x cmp @a[$^i] }, 0, @a.end
 }

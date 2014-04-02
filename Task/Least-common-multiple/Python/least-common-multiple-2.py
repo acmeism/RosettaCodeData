@@ -1,7 +1,11 @@
-import operator
 from prime_decomposition import decompose
+try:
+    reduce
+except NameError:
+    from functools import reduce
 
 def lcm(a, b):
+    mul = int.__mul__
     if a and b:
         da = list(decompose(abs(a)))
         db = list(decompose(abs(b)))
@@ -9,7 +13,7 @@ def lcm(a, b):
         for d in da:
             if d in db: db.remove(d)
         merge += db
-        return reduce(operator.mul, merge, 1)
+        return reduce(mul, merge, 1)
     return 0
 
 if __name__ == '__main__':

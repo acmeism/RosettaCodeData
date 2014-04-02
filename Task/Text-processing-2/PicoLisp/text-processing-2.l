@@ -9,15 +9,13 @@
             (and
                (= 49 (length Lst))     # Check total length
                ($dat (car Lst) "-")    # Check for valid date
-               (not
-                  (find                # Check data format
-                     '((L F)
-                        (not
-                           (if F                            # Alternating:
-                              (format L 3)                  # Number
-                              (>= 9 (format L) -9) ) ) )    # or flag
-                     (cdr Lst)
-                     '(T NIL .) ) ) )
+               (fully                  # Check data format
+                  '((L F)
+                     (if F                         # Alternating:
+                        (format L 3)               # Number
+                        (>= 9 (format L) -9) ) )   # or flag
+                  (cdr Lst)
+                  '(T NIL .) ) )
             (prinl "Bad line format: " (glue " " Lst))
             (bye 1) ) ) ) )
 

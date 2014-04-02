@@ -1,11 +1,6 @@
-(function(){var doors = [], n = 100, i, j;
-
-for (i = 1; i <= n; i++) {
-	for (j = i; j <= n; j += i) {
-		doors[j] = !doors[j];
-	}
+for (var door = 1; door <= 100; i++) {
+  var sqrt = Math.sqrt(door);
+  if (sqrt === (sqrt | 0)) {
+    console.log("Door %d is open", door);
+  }
 }
-
-for (i = 1 ; i <= n ; i++) {
-	if (doors[i]) console.log("Door " + i + " is open");
-}}())

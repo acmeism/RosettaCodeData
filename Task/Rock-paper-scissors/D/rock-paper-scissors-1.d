@@ -6,7 +6,7 @@ immutable order = [EnumMembers!Choice];
 
 uint[order.length] choiceFrequency;
 
-Choice whatBeats(in Choice ch) pure /*nothrow*/ {
+Choice whatBeats(in Choice ch) pure nothrow {
     return order[(order.countUntil(ch) + 1) % $];
 }
 
@@ -22,7 +22,7 @@ pure /*nothrow*/ {
 }
 
 Choice getRandomChoice() /*nothrow*/ {
-    if (choiceFrequency[].reduce!q{a + b} == 0)
+    if (choiceFrequency[].sum == 0)
         return uniform!Choice;
     return order[choiceFrequency.dice].whatBeats;
 }

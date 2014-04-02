@@ -2,18 +2,17 @@
 #import <objc/runtime.h>
 
 int main (int argc, const char *argv[]) {
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    @autoreleasepool {
 
-    id e = [[NSObject alloc] init];
+        id e = [[NSObject alloc] init];
 
-    // set
-    objc_setAssociatedObject(e, @selector(foo), [NSNumber numberWithInt:1], OBJC_ASSOCIATION_RETAIN);
+        // set
+        objc_setAssociatedObject(e, @selector(foo), @1, OBJC_ASSOCIATION_RETAIN);
 
-    // get
-    NSNumber *associatedObject = objc_getAssociatedObject(e, @selector(foo));
-    NSLog(@"associatedObject: %@", associatedObject);
+        // get
+        NSNumber *associatedObject = objc_getAssociatedObject(e, @selector(foo));
+        NSLog(@"associatedObject: %@", associatedObject);
 
-    [e release];
-    [pool drain];
+    }
     return 0;
 }

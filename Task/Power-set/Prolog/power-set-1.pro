@@ -1,9 +1,6 @@
-power_set(T, PS) :-
-	bagof(PS1, power_set(T, [], PS1), PS).
+powerset(X,Y) :- bagof( S, subseq(S,X), Y).
 
-power_set(T, PS, PS1) :-
-	select(E, T, T1), !,
-	append(PS, [E], PST),
-	( PST = PS1;  power_set(T1, PS, PS1);  power_set(T1, PST, PS1)).
-
-power_set([], [], []).
+subseq( [], []).
+subseq( [], [_|_]).
+subseq( [X|Xs], [X|Ys] ) :- subseq(Xs, Ys).
+subseq( [X|Xs], [_|Ys] ) :- append(_, [X|Zs], Ys), subseq(Xs, Zs).

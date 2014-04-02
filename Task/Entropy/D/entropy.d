@@ -1,13 +1,13 @@
 import std.stdio, std.algorithm, std.math;
 
 double entropy(T)(T[] s)
-/*pure nothrow*/ if (__traits(compiles, sort(s))) {
+/*pure nothrow*/ if (__traits(compiles, s.sort())) {
     return s
            .sort()
            .group
-           .map!(g => g[1] / cast(double)s.length)
-           .map!(p => -p * log2(p))
-           .reduce!q{a + b};
+           .map!(g => g[1] / double(s.length))
+           .map!(p => -p * p.log2)
+           .sum;
 }
 
 void main() {

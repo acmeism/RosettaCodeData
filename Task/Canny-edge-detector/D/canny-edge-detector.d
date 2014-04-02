@@ -87,7 +87,7 @@ pure nothrow in {
 Image!Pixel cannyEdgeDetection(in Image!Pixel inp,
                                in int tMin, in int tMax,
                                in float sigma)
-/*pure*/ nothrow in {
+pure nothrow in {
     assert(inp !is null);
 } body {
     immutable int nx = inp.nx;
@@ -96,15 +96,15 @@ Image!Pixel cannyEdgeDetection(in Image!Pixel inp,
 
     gaussianFilter(inp.image, outp, nx, ny, sigma);
 
-    immutable float[] Gx = [-1, 0, 1,
-                            -2, 0, 2,
-                            -1, 0, 1];
+    static immutable float[] Gx = [-1, 0, 1,
+                                   -2, 0, 2,
+                                   -1, 0, 1];
     auto after_Gx = new Pixel[nx * ny];
     convolution!false(outp, after_Gx, Gx, nx, ny, 3);
 
-    immutable float[] Gy = [ 1, 2, 1,
-                             0, 0, 0,
-                            -1,-2,-1];
+    static immutable float[] Gy = [ 1, 2, 1,
+                                    0, 0, 0,
+                                   -1,-2,-1];
     auto after_Gy = new Pixel[nx * ny];
     convolution!false(outp, after_Gy, Gy, nx, ny, 3);
 
@@ -129,11 +129,9 @@ Image!Pixel cannyEdgeDetection(in Image!Pixel inp,
                           sw = ss + 1,
                           se = ss - 1;
 
-            // fmod is not pure.
-            immutable float dir =
-                cast(float)(fmod(atan2(cast(double)after_Gy[c],
-                                       cast(double)after_Gx[c]) + PI,
-                                       PI) / PI) * 8;
+            immutable aux = atan2(double(after_Gy[c]),
+                                  double(after_Gx[c])) + PI;
+            immutable float dir = float((aux % PI) / PI) * 8;
 
             if (((dir <= 1 || dir > 7) && G[c] > G[ee] &&
                  G[c] > G[ww]) || // 0 deg.

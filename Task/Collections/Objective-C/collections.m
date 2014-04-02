@@ -2,19 +2,12 @@
 
 void show_collection(id coll)
 {
-  id el;
-  NSEnumerator *en;
-  if ( [coll respondsToSelector: @selector(keyEnumerator)] ) {
-    en = [coll keyEnumerator];
-  } else {
-    en = [coll objectEnumerator];
-  }
-  while( (el = [en nextObject]) != nil)
+  for ( id el in coll )
   {
-    if ( [coll respondsToSelector: @selector(countForObject:)] ) {
-      NSLog(@"%@ appears %d times", el, [coll countForObject: el]);
+    if ( [coll isKindOfClass: [NSCountedSet class]] ) {
+      NSLog(@"%@ appears %lu times", el, [coll countForObject: el]);
     } else if ( [coll isKindOfClass: [NSDictionary class]] ) {
-      NSLog(@"%@ -> %@", el, [coll valueForKey: el]);
+      NSLog(@"%@ -> %@", el, coll[el]);
     } else {
       NSLog(@"%@", el);
     }
@@ -24,37 +17,34 @@ void show_collection(id coll)
 
 int main()
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+  @autoreleasepool {
 
-  // create an empty set
-  NSMutableSet *set = [[NSMutableSet alloc] init];
-  // populate it
-  [set addObject: @"one"];
-  [set addObject: [NSNumber numberWithInt: 10]];
-  [set addObjectsFromArray: [NSArray arrayWithObjects: @"one",
-				     [NSNumber numberWithInt: 20],
-				     [NSNumber numberWithInt: 10],
-				     @"two", nil] ];
-  // let's show it
-  show_collection(set);
+    // create an empty set
+    NSMutableSet *set = [[NSMutableSet alloc] init];
+    // populate it
+    [set addObject: @"one"];
+    [set addObject: @10];
+    [set addObjectsFromArray: @[@"one", @20, @10, @"two"] ];
+    // let's show it
+    show_collection(set);
 
-  // create an empty counted set (a bag)
-  NSCountedSet *cset = [[NSCountedSet alloc] init];
-  // populate it
-  [cset addObject: @"one"];
-  [cset addObject: @"one"];
-  [cset addObject: @"two"];
-  // show it
-  show_collection(cset);
+    // create an empty counted set (a bag)
+    NSCountedSet *cset = [[NSCountedSet alloc] init];
+    // populate it
+    [cset addObject: @"one"];
+    [cset addObject: @"one"];
+    [cset addObject: @"two"];
+    // show it
+    show_collection(cset);
 
-  // create a dictionary
-  NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-  // populate it
-  [dict setValue: [NSNumber numberWithInt: 4] forKey: @"four"];
-  [dict setValue: [NSNumber numberWithInt: 8] forKey: @"eight"];
-  // show it
-  show_collection(dict);
+    // create a dictionary
+    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+    // populate it
+    dict[@"four"] = @4;
+    dict[@"eight"] = @8;
+    // show it
+    show_collection(dict);
 
-  [pool release];
+  }
   return EXIT_SUCCESS;
 }

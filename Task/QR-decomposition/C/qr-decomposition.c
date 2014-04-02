@@ -5,7 +5,7 @@
 typedef struct {
 	int m, n;
 	double ** v;
-} mat_t, *mat;
+} mat_t, mat;
 
 mat matrix_new(int m, int n)
 {

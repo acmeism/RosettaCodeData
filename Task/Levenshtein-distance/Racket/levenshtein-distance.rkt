@@ -11,7 +11,10 @@
                (min (add1 (ls (sub1 a-index) b-index))
                     (add1 (ls a-index (sub1 b-index)))
                     (add1 (ls (sub1 a-index) (sub1 b-index)))))]))
-  (define memo (make-hasheq))
+  (define memo (make-hash))
   (define (ls a-i b-i)
     (hash-ref! memo (cons a-i b-i) (λ() (ls0 a-i b-i))))
   (ls (sub1 (string-length a)) (sub1 (string-length b))))
+
+(levenshtein "kitten" "sitting")
+(levenshtein "rosettacode" "raisethysword")

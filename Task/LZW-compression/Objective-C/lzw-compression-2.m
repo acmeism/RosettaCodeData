@@ -1,26 +1,21 @@
-const char *text = "TOBEORNOTTOBEORTOBEORNOT";
+NSString *text = @"TOBEORNOTTOBEORTOBEORNOT";
 
 int main()
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+  @autoreleasepool {
 
-  NSMutableArray *array = [[NSMutableArray alloc] init];
-  LZWCompressor *lzw = [[LZWCompressor alloc]
-                        initWithArray: array ];
-  if ( lzw )
-  {
-     [lzw compressData: [NSData dataWithBytes: text
-                         length: strlen(text)]];
-     NSEnumerator *en = [array objectEnumerator];
-     id obj;
-     while( (obj = [en nextObject]) )
-     {
-        printf("%u\n", [obj unsignedIntValue]);
-     }
-     [lzw release];
+    NSMutableArray *array = [[NSMutableArray alloc] init];
+    LZWCompressor *lzw = [[LZWCompressor alloc]
+                          initWithArray: array ];
+    if ( lzw )
+    {
+       [lzw compressData: [text dataUsingEncoding: NSUTF8StringEncoding]];
+       for ( id obj in array )
+       {
+          printf("%u\n", [obj unsignedIntValue]);
+       }
+    }
+
   }
-  [array release];
-
-  [pool release];
   return EXIT_SUCCESS;
 }

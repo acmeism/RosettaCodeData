@@ -4,7 +4,7 @@ import std.stdio, std.math, std.string, std.conv, std.algorithm,
 bool isPrime(in int n) pure nothrow {
     if (n <= 1)
         return false;
-    foreach (immutable i; 2 .. cast(int)sqrt(cast(real)n) + 1)
+    foreach (immutable i; 2 .. cast(int)sqrt(real(n)) + 1)
         if (!(n % i))
             return false;
     return true;

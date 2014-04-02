@@ -3,41 +3,36 @@
 
 int main(void)
 {
-  NSAutoreleasePool *pool;
-  NSArray *args;
-  id <ActionObjectProtocol> action;
-  NSString *msg, *backmsg;
+  @autoreleasepool {
 
-  pool = [[NSAutoreleasePool alloc] init];
+    id <ActionObjectProtocol> action = (id <ActionObjectProtocol>)
+      [NSConnection
+        rootProxyForConnectionWithRegisteredName: @"DistributedAction"
+        host: @"localhost"
+        usingNameServer: [NSSocketPortNameServer sharedInstance] ];
 
-  action = (id <ActionObjectProtocol>)
-    [NSConnection
-      rootProxyForConnectionWithRegisteredName: @"DistributedAction"
-      host: @"localhost"
-      usingNameServer: [NSSocketPortNameServer sharedInstance] ];
+    if (action == nil)
+    {
+      NSLog(@"can't connect to the server");
+      exit(EXIT_FAILURE);
+    }
 
-  if (action == nil)
-  {
-    NSLog(@"can't connect to the server");
-    exit(EXIT_FAILURE);
+    NSArray *args = [[NSProcessInfo processInfo] arguments];
+
+    if ([args count] == 1)
+    {
+      NSLog(@"specify a message");
+      exit(EXIT_FAILURE);
+    }
+
+    NSString *msg = args[1];
+
+    // "send" (call the selector "sendMessage:" of the (remote) object
+    // action) the first argument's text as msg, store the message "sent
+    // back" and then show it in the log
+    NSString *backmsg = [action sendMessage: msg];
+    NSLog("%@", backmsg);
+
   }
-
-  args = [[NSProcessInfo processInfo] arguments];
-
-  if ([args count] == 1)
-  {
-    NSLog(@"specify a message");
-    exit(EXIT_FAILURE);
-  }
-
-  msg = [args objectAtIndex: 1];
-
-  // "send" (call the selector "sendMessage:" of the (remote) object
-  // action) the first argument's text as msg, store the message "sent
-  // back" and then show it in the log
-  backmsg = [action sendMessage: msg];
-  NSLog("%@", backmsg);
-
-  [pool release];
   return 0;
 }

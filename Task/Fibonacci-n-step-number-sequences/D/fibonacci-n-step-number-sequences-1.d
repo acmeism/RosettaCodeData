@@ -1,7 +1,7 @@
-import std.stdio, std.algorithm, std.range, std.conv;
-
 void main() {
-    int[] memo;
+    import std.stdio, std.algorithm, std.range, std.conv;
+
+    const(int)[] memo;
     size_t addNum;
 
     void setHead(int[] head) nothrow {
@@ -9,21 +9,22 @@ void main() {
         addNum = head.length;
     }
 
-    int fibber(in size_t n) /*nothrow*/ {
+    int fibber(in size_t n) nothrow {
         if (n >= memo.length)
-            memo ~= iota(n - addNum, n).map!fibber().reduce!q{a + b}();
+            memo ~= iota(n - addNum, n).map!fibber.sum;
         return memo[n];
     }
 
     setHead([1, 1]);
-    iota(10).map!fibber().writeln();
+    10.iota.map!fibber.writeln;
     setHead([2, 1]);
-    iota(10).map!fibber().writeln();
+    10.iota.map!fibber.writeln;
 
-    auto prefixes = "fibo tribo tetra penta hexa hepta octo nona deca";
-    foreach (n, name; zip(iota(2, 11), prefixes.split())) {
-        setHead(1 ~ iota(n - 1).map!q{2 ^^ a}().array());
-        auto items = iota(15).map!(i => text(fibber(i)))().join(" ");
-        writefln("n=%2d, %5snacci -> %s ...", n, name, items);
+    const prefixes = "fibo tribo tetra penta hexa hepta octo nona deca";
+    //foreach (immutable n, const name; prefixes.split.enumerate(2)) {
+    foreach (immutable n, name; iota(2, 11).zip(prefixes.split)) {
+        setHead(1 ~ iota(n - 1).map!q{2 ^^ a}.array);
+        writefln("n=%2d, %5snacci -> %(%d %) ...", n, name,
+                 15.iota.map!fibber);
     }
 }

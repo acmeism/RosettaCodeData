@@ -2,34 +2,34 @@
 #import <stdint.h>
 #import <stdlib.h>
 #import <string.h>
-#import <objc/Object.h>
+#import <Foundation/Foundation.h>
 
 // this class exists to return a result between two
 // vectors: if vectors have different "size", valid
 // must be NO
-@interface VResult : Object
+@interface VResult : NSObject
 {
  @private
   double value;
   BOOL valid;
 }
-+(id)new: (double)v isValid: (BOOL)y;
--(id)init: (double)v isValid: (BOOL)y;
++(instancetype)new: (double)v isValid: (BOOL)y;
+-(instancetype)init: (double)v isValid: (BOOL)y;
 -(BOOL)isValid;
 -(double)value;
 @end
 
 @implementation VResult
-+(id)new: (double)v isValid: (BOOL)y
++(instancetype)new: (double)v isValid: (BOOL)y
 {
-  id s = [super new];
-  [s init: v isValid: y];
-  return s;
+  return [[self alloc] init: v isValid: y];
 }
--(id)init: (double)v isValid: (BOOL)y
+-(instancetype)init: (double)v isValid: (BOOL)y
 {
-  value = v;
-  valid = y;
+  if ((self == [super init])) {
+    value = v;
+    valid = y;
+  }
   return self;
 }
 -(BOOL)isValid { return valid; }
@@ -37,14 +37,14 @@
 @end
 
 
-@interface RCVector : Object
+@interface RCVector : NSObject
 {
  @private
   double *vec;
   uint32_t size;
 }
-+(id)newWithArray: (double *)v ofLength: (uint32_t)l;
--(id)initWithArray: (double *)v ofLength: (uint32_t)l;
++(instancetype)newWithArray: (double *)v ofLength: (uint32_t)l;
+-(instancetype)initWithArray: (double *)v ofLength: (uint32_t)l;
 -(VResult *)dotProductWith: (RCVector *)v;
 -(uint32_t)size;
 -(double *)array;
@@ -52,27 +52,24 @@
 @end
 
 @implementation RCVector
-+(id)newWithArray: (double *)v ofLength: (uint32_t)l
++(instancetype)newWithArray: (double *)v ofLength: (uint32_t)l
 {
-  id s = [super new];
-  [s initWithArray: v ofLength: l];
-  return s;
+  return [[self alloc] initWithArray: v ofLength: l];
 }
--(id)initWithArray: (double *)v ofLength: (uint32_t)l
+-(instancetype)initWithArray: (double *)v ofLength: (uint32_t)l
 {
-  size = l;
-  vec = malloc(sizeof(double) * l);
-  if ( vec != NULL ) {
+  if ((self = [super init])) {
+    size = l;
+    vec = malloc(sizeof(double) * l);
+    if ( vec == NULL )
+      return nil;
     memcpy(vec, v, sizeof(double)*l);
-    return self;
   }
-  [super free];
-  return nil;
+  return self;
 }
--(void)free
+-(void)dealloc
 {
   free(vec);
-  [super free];
 }
 -(uint32_t)size { return size; }
 -(double *)array { return vec; }
@@ -96,13 +93,15 @@ double val2[] = { 4,-2, -1 };
 
 int main()
 {
-  RCVector *v1 = [RCVector newWithArray: val1 ofLength: sizeof(val1)/sizeof(double)];
-  RCVector *v2 = [RCVector newWithArray: val2 ofLength: sizeof(val1)/sizeof(double)];
-  VResult *r = [v1 dotProductWith: v2];
-  if ( [r isValid] ) {
-    printf("%lf\n", [r value]);
-  } else {
-    fprintf(stderr, "length of vectors differ\n");
+  @autoreleasepool {
+    RCVector *v1 = [RCVector newWithArray: val1 ofLength: sizeof(val1)/sizeof(double)];
+    RCVector *v2 = [RCVector newWithArray: val2 ofLength: sizeof(val1)/sizeof(double)];
+    VResult *r = [v1 dotProductWith: v2];
+    if ( [r isValid] ) {
+      printf("%lf\n", [r value]);
+    } else {
+      fprintf(stderr, "length of vectors differ\n");
+    }
   }
   return 0;
 }

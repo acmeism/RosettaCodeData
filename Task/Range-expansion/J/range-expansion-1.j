@@ -1,6 +1,6 @@
 require'strings'
-to=: [ + i.@>:@-~
+thru=: <./ + i.@(+*)@-~
 num=: _&".
 normaliz=: rplc&(',-';',_';'--';'-_')@,~&','
-subranges=:<@(to/)@(num;._2)@,&'-';._1
+subranges=:<@(thru/)@(num;._2)@,&'-';._1
 rngexp=: ;@subranges@normaliz

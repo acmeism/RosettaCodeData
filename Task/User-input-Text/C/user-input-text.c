@@ -1,11 +1,22 @@
 #include <stdio.h>
-int main(int argc, char* argv[])
+#include <stdlib.h>
+
+int main(void)
 {
-        int input;
-        if((scanf("%d", &input))==1)
-        {
-                printf("Read in %d\n", input);
-                return 1;
-        }
-        return 0;
+    // Get a string from stdin
+    char str[BUFSIZ];
+    puts("Enter a string: ");
+    fgets(str, sizeof(str), stdin);
+
+    // Get 75000 from stdin
+    long num;
+    char buf[BUFSIZ];
+    do
+    {
+        puts("Enter 75000: ");
+        fgets(buf, sizeof(buf), stdin);
+        num = strtol(buf, NULL, 10);
+    } while (num != 75000);
+
+    return EXIT_SUCCESS;
 }

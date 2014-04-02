@@ -23,11 +23,11 @@ int main (int argc, const char * argv[])
             double userInput = 0.0;
             printf("%s", "Please enter a number: ");
             scanf("%lf", &userInput);
-            [input addObject: [NSNumber numberWithDouble: (double) userInput]];
+            [input addObject: @(userInput)];
         }
 
         for(int i = 10; i >= 0; i--) {
-            double x = [[input objectAtIndex: i] doubleValue];
+            double x = [input[i] doubleValue];
             double y = f(x);
             printf("f(%.2f) \t=\t", x);
             if(y < 400.0) {

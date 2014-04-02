@@ -16,7 +16,7 @@ haps=0                                 /*count of happy numbers so far. */
             s=s+#._                    /*add the square  of  a  digit.  */
             end   /*j*/
 
-    if @.s  then do; q=1; iterate; end /*we have found a  happy  number.*/
+    if @.s  then leave                 /*we have found a  happy  number.*/
     if !.s  then iterate n             /*Sum unhappy?  Then Q is unhappy*/
     if a.s  then do                    /*If already summed? Q is unhappy*/
                  !.q=1;   !.s=1        /*mark  Q & S  as unhappy numbers*/

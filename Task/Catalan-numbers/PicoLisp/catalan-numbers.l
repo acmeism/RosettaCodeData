@@ -12,7 +12,7 @@
 (de catalanRec (N)
    (if (=0 N)
       1
-      (cache '(NIL) (pack (char (hash N)) N)  # Memoize
+      (cache '(NIL) N  # Memoize
          (sum
             '((I) (* (catalanRec I) (catalanRec (- N I 1))))
             (range 0 (dec N)) ) ) ) )

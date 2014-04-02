@@ -3,7 +3,7 @@ import std.stdio, std.math, std.algorithm, std.array, std.traits;
 T[N] pows(T, size_t N)() {
     typeof(return) result;
     result[0] = 1;
-    foreach (i, ref r; result[1 .. $])
+    foreach (immutable i, ref r; result[1 .. $])
         r = result[i] * 10;
     return result;
 }
@@ -42,7 +42,7 @@ pure nothrow if (is(T == uint) || is(T == ulong)) {
 
     immutable lo = max(tenPows[nd - 1],
                        (x + tenPows[nd] - 2) / (tenPows[nd] - 1));
-    immutable hi = min(x / lo, cast(T)sqrt(cast(real)x));
+    immutable hi = min(x / lo, cast(T)sqrt(real(x)));
     immutable t = x.dTally;
 
     size_t n = 0;

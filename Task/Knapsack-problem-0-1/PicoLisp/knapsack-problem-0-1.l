@@ -14,7 +14,7 @@
 # Dynamic programming solution
 (de knapsack (Lst W)
    (when Lst
-      (cache '*KnapCache (pack (length Lst) ":" W)
+      (cache '*KnapCache (cons W Lst)
          (let X (knapsack (cdr Lst) W)
             (if (ge0 (- W (cadar Lst)))
                (let Y (cons (car Lst) (knapsack (cdr Lst) @))

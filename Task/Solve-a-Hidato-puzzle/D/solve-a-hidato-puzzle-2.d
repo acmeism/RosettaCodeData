@@ -33,19 +33,19 @@ struct Hidato {
                    cell == Hidato.unknownCell ||
                    (cell >= 1 && cell <= size));
             if (cell > 0)
-                assert(i == known[cast(size_t)cell]);
+                assert(i == known[size_t(cell)]);
         }
     } body {
         bool[Cell] pathSeen; // A set.
-        /*immutable*/ const lines = input.splitLines;
+        immutable lines = input.splitLines;
         this.nRows = lines.length;
         this.nCols = lines[0].split.length;
 
         immutable size = nCols * nRows;
-        this.board = new typeof(this.board[0])[size];
+        this.board.length = size;
         this.board[] = emptyCell;
-        this.known = new typeof(this.known[0])[size + 1];
-        this.flood = new typeof(this.flood[0])[size];
+        this.known.length = size + 1;
+        this.flood.length = size;
 
         auto boardMaxMutable = Cell.min;
         Pos i = 0;

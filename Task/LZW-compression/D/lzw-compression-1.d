@@ -1,31 +1,31 @@
 import std.stdio, std.array;
 
-auto compress(string original) {
+auto compress(in string original) pure nothrow {
     int[string] dict;
-    foreach (b; 0 .. 256)
-        dict[[cast(immutable char)b]] = b;
+    foreach (immutable char c; char.min .. char.max + 1)
+        dict[[c]] = c;
 
     string w;
     int[] result;
-    foreach (ch; original)
+    foreach (immutable ch; original)
         if (w ~ ch in dict)
             w = w ~ ch;
         else {
             result ~= dict[w];
-            dict[w ~ ch] = dict.length - 1;
+            dict[w ~ ch] = dict.length;
             w = [ch];
         }
     return w.empty ? result : (result ~ dict[w]);
 }
 
-auto decompress(int[] compressed) {
-    auto dict = new string[256];
-    foreach (b; 0 .. 256)
-        dict[b] = [cast(char)b];
+auto decompress(in int[] compressed) pure nothrow {
+    auto dict = new string[char.max - char.min + 1];
+    foreach (immutable char c; char.min .. char.max + 1)
+        dict[c] = [c];
 
     auto w = dict[compressed[0]];
     auto result = w;
-    foreach (k; compressed[1 .. $]) {
+    foreach (immutable k; compressed[1 .. $]) {
         auto entry = (k < dict.length) ? dict[k] : w ~ w[0];
         result ~= entry;
         dict ~= w ~ entry[0];
@@ -35,6 +35,6 @@ auto decompress(int[] compressed) {
 }
 
 void main() {
-    auto comp = compress("TOBEORNOTTOBEORTOBEORNOT");
-    writeln(comp, "\n", decompress(comp));
+    auto comp = "TOBEORNOTTOBEORTOBEORNOT".compress;
+    writeln(comp, "\n", comp.decompress);
 }

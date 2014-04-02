@@ -19,7 +19,7 @@ my @moves = ();
 foreach my $move (1..64) {
   # Record current move
   push @moves, to_algebraic($i,$j);
-  $board[$i][$j] = $move++;
+  $board[$i][$j] = $move;
 
   # Get list of possible next moves
   my @targets = possible_moves($i,$j);

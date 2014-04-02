@@ -1,6 +1,6 @@
-#import <objc/Object.h>
+#import <Foundation/Foundation.h>
 
-@interface Hofstadter : Object
+@interface Hofstadter : NSObject
 + (int)M: (int)n;
 + (int)F: (int)n;
 @end

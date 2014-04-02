@@ -2,18 +2,19 @@
 #import "TowersOfHanoi.h"
 
 int main( int argc, const char *argv[] ) {
-	TowersOfHanoi *tower = [[TowersOfHanoi alloc] init];
+	@autoreleasepool {
 
-	int from = 1;
-	int to = 3;
-	int via = 2;
-	int disks = 3;
+		TowersOfHanoi *tower = [[TowersOfHanoi alloc] init];
 
-	[tower setPegFrom: from andSetPegTo: to andSetPegVia: via andSetNumDisks: disks];
+		int from = 1;
+		int to = 3;
+		int via = 2;
+		int disks = 3;
 
-	[tower movePegFrom: from andMovePegTo: to andMovePegVia: via andWithNumDisks: disks];
+		[tower setPegFrom: from andSetPegTo: to andSetPegVia: via andSetNumDisks: disks];
 
-	[tower release];
+		[tower movePegFrom: from andMovePegTo: to andMovePegVia: via andWithNumDisks: disks];
 
+	}
 	return 0;
 }

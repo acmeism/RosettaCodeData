@@ -2,16 +2,24 @@ program TokenizeString;
 
 {$mode objfpc}{$H+}
 
+uses
+  SysUtils, Classes;
 const
-  CHelloStr = 'Hello,How,Are,You,Today';
+  TestString = 'Hello,How,Are,You,Today';
 var
+  Tokens: TStringList;
   I: Integer;
-  VResult: string = '';
 begin
-  for I := 1 to Length(CHelloStr) do
-    if CHelloStr[I] = ',' then
-      VResult += LineEnding
-    else
-      VResult += CHelloStr[I];
-  WriteLn(VResult);
+  // Uses FCL facilities, "harder" algorithm not implemented
+  Tokens := TStringList.Create;
+  try
+    Tokens.Delimiter := ',';
+    Tokens.DelimitedText := TestString;
+    Tokens.Delimiter := '.'; // For example
+    // To standard Output
+    WriteLn(Format('Tokenize from: "%s"', [TestString]));
+    WriteLn(Format('to:            "%s"',[Tokens.DelimitedText]));
+  finally
+    Tokens.Free;
+  end;
 end.

@@ -1,1 +1,1 @@
-.say for (^5).list.combinations(3).tree;
+.say for combinations(5,3);

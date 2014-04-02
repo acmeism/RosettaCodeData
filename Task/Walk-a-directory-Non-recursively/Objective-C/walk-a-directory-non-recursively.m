@@ -5,8 +5,6 @@ NSArray *contents = [[NSFileManager defaultManager] directoryContentsAtPath:dir]
 // OS X 10.5+
 NSArray *contents = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:dir error:NULL];
 
-NSEnumerator *enm = [contents objectEnumerator];
-NSString *file;
-while ((file = [enm nextObject]))
+for (NSString *file in contents)
   if ([[file pathExtension] isEqualToString:@"mp3"])
     NSLog(@"%@", file);

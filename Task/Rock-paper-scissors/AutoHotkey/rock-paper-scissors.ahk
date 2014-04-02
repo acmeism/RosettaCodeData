@@ -1,4 +1,3 @@
-#Warn
 DllCall("AllocConsole")
 Write("Welcome to Rock-Paper-Scissors`nMake a choice: ")
 

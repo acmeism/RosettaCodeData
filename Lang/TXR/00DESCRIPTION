@@ -1,168 +1,58 @@
-{{stub}}{{language
+{{language
 |site=http://www.nongnu.org/txr/}}
 
 TXR is a new language implemented in [[C]], running on POSIX platforms such as [[Linux]], [[Mac OS X]] and on Windows via [[Cygwin]] as well as more natively thanks to [[MinGW]].
+
+The Rosetta Code TXR solutions can be viewed in color, and all on one page with a convenient navigation pane [http://www.nongnu.org/txr/rosetta-solutions.html here].
 
 TXR started as a language for "reversing here-documents": evaluating a template of text containing variables, plus useful pattern matching directives, against some body of text and binding pieces of the text which matches variables. The variable bindings were output in POSIX shell variable assignment syntax, allowing for shell code like
 
 <code>eval $(txr <txr-program> <args> ...)</code>
 
-TXR remains close to these roots: its main language is the pattern-based text extraction notation well suited for matching large regions of
-entire text documents.  
+TXR remains close to these roots: its main language is the pattern-based text extraction notation well-suited for matching large regions of
+entire text documents.  That language has become powerful enough to neatly parse grammars, while the tool developed a Lisp dialect to round out the functionality and increase its power.
 
-About the <code>@</code> character: this serves as a multi-level escape in TXR. In the fundamental TXR syntax, which is literal text, this character is a signal which indicates that the object which follows is a variable or directive. Then inside a directive, the character indicates that the object which follows is a TXR Lisp expression to be evaluated as such, rather than according to the expression evaluation rules of the pattern language.  (And it is possible for TXR Lisp code to give this character additional meanings, since inside TXR Lisp, the notation expands to Lisp syntax: <code>@foo</code> denotes <code>(sys:var foo)</code>, and <code>@(foo ...)</code> denotes <code>(sys:expr foo>)</code>. In any context which needs to separate meta-variables and meta-expressions from variables and expressions, this may come in handy.)
+=== What's with all that <code>@</code> stuff? ===
 
-Thus, the source of a TXR query is literal text except for directives and variables preceded by the <code>@</code> character.
+About the <code>@</code> character: this serves as a multi-level escape in TXR. In the fundamental TXR syntax, which is literal text, this character is a signal which indicates that the object which follows is a variable or directive. Then inside a directive, the character indicates that the object which follows is a TXR Lisp expression to be evaluated as such, rather than according to the expression evaluation rules of the pattern language:
 
-In this pattern language, computation evolves by textual pattern matching with implicit backtracking. Non-pattern matching activities are embedded into a pattern matching paradigm.  For instance, the line
+<pre>This is some literal text to be matched.
+@# this is a comment in the pattern language.
+This text matches and binds @variable.
+@(bind y  ;; this is the start of a directive in the TXR pattern language
+   @(> x 42) ;; this is an expression in TXR Lisp
+)
+Back to text.</pre>
 
-<pre>Four score and seven years ago,</pre>
+In TXR Lisp, the <code>@</code> character has more "meta" piled on top of it: <code>@foo</code> denotes <code>(sys:var foo)</code>, and <code>@(foo ...)</code> denotes <code>(sys:expr foo>)</code>. In any context which needs to separate meta-variables and meta-expressions from variables and expressions, this may come in handy.  It's used by the <code>op</code> operator for currying, for instance <code>(op * @1 @1)</code> returns a function of one argument which returns the square of that argument. The implementation of the operator looks for syntax like <code>(sys:var 1)</code> and replaces it with the arguments of the generated lambda function.  The <code>@</code> character also appears in quasiliteral strings, where it interpolates the values of variables and expressions as text.
 
-is a TXR directive which matches a line of that exact text, or else fails. The following is also a directive:
+TXR is somewhat unusual in that the relationship between a domain-specific language (DSL) and general-purpose host language is reversed. Typically, at least in Lisp systems, DSL's are embedded into the parent language. In TXR, the "outer shell" is the domain-specific language for extracting text, and Lisp is embedded in it as "computational appliance".  It doesn't take much to reach the Lisp though: a TXR source file can just consist of a single <code>@(do ...)</code> directive which contains nothing but TXR Lisp forms. Also, TXR Lisp evaluation is available from program invocation via the <code>-e</code> and <code>-p</code> options.
 
-<lang txr>@(bind foo "abc")</lang>
+The second unusual feature in TXR Lisp is that the "tokens" in the pattern matching language are essentially themselves Lisp symbols and expressions. These "tokens" are used to create a block-structured language. This is quite odd. For instance a construct might begin with a <code>@(collect :vars (foo))</code>. This is a Lisp expression with interior structure, but to the parser of the pattern language, it's also basically just a token, like a giant keyword. IT begins a collect clause, and is followed by some optional material which may just be literal text, and must be terminated by the <code>@(end)</code> directive: another token-expression entity.
 
-which succeeds if <code>foo</code> has no prior binding, or already contains <code>"abc"</code>, but fails if <code>foo</code> has a binding to something other than <code>"abc"</code>.
+=== Dual Personality ===
 
-The success of a directive means that computation proceeds to the next directive (and, if this is a pattern match, the input position advances). Failure means that the enclosing query fails, triggering back-tracking behaviors and possibly failure of the entire query.
+From the solutions below, it is obvious that some of them make heavy use of the pattern language and little or no TXR Lisp. Others are quite the other way around, based entirely or almost entirely on Lisp, whereas others follow strategies of mixing the approaches.
 
-A bizarre feature of TXR is that the directives like <code>@(collect)</code> are independent pieces of Lisp. But, they are also de-facto "tokens" in a block-structure language. For instance <code>@(collect)</code> starts a block, which must be terminated by <code>@(end)</code>. Inside <code>@(collect)</code> there can be additional syntax, such as <code>@(collect :gap 0 :vars (a b c))</code>.
+=== Lisp Innovation ===
 
-==Extremely Simple Query==
+Although TXR Lisp is heavily based on prior work and strongly influenced by Common Lisp (for instance, there is a real <code>nil</code> symbol which is a list terminator and means "false", and it's primarily Lisp-2 dialect), TXR Lisp nevertheless manages to innovate within the world of Lisp.
 
-Extract first matching line from the password file. Of course, TXR matches are not restricted to single line!
+==== Can't We All Just Get Along? ====
 
-<lang bash>$ txr -c '@(skip)
-@user:@pw:@uid:@gid:@gecos:@home:@shell' /etc/passwd</lang>
-<pre>
-user="root"
-pw="x"
-uid="0"
-gid="0"
-gecos="root"
-home="/root"
-shell="/bin/bash"</pre>
+One major innovation is the way in which TXR Lisp closes the ages-old gap between Lisp-1 and Lisp-2, and the associated religious sectarian division it has caused. TXR Lisp recognizes that there are advantages both in having separate function and variable namespaces, and in having a single namespace: and it provides support for both approaches. The idea is devilishly simple. A special operator called "dwim" (do what I mean) is provided such that <code>(dwim forms ...)</code> basically denotes <code>(forms ...)</code>, but with Lisp-1 style evaluation: any of the forms which are symbols are resolved according to a flattened namespace that combines variable and function bindings (with conflicts resolved in favor of variables).  TXR Lisp programmers do not use the <code>dwim</code> operator directly, but rather the square bracket notation <code>[a b c ...] -> (dwim a b c)</code>.  So for instance, <code>[mapcar list '(1 2 3) '(a b c)]</code> zips together two lists. Using round brackets, it would have to be <code>(mapcar (fun list) '(1 2 3) '(a b c))</code>.  Moreover, if <code>foo</code> is a variable that holds a function of one argument, it has to be called using <code>(call foo arg)</code>. But with the "dwim brackets", it is just <code>[foo arg]</code>.  The "dwim brackets" also support various funcall-extensions, like indexing into arrays and slicing and so on. If <code>h</code> is a hash then <code>[h "a" 42]</code> looks up the string <code>a</code> in the hash and returns the value, or else returns 42 if the key is not found. If <code>a</code> is an array, list or string, then <code>[a 2..3]</code> extracts a slice. On the other hand, "dwim brackets" do not support operators: <code>[let (a b c) ...]</code> is not valid; or rather, it expects a variable or function <code>let</code> to exist, ignoring the <code>let</code> operator. Operators are strictly in the Lisp-2 domain, which is fine because Lisp-2 is a cleaner model with regard to operators anyway!
 
-Now, pre-bind the <code>user</code> variable first to retrieve some other user. Now <code>@(skip)</code> kicks into action, skipping non-matching material:
+==== Polymorphizing the Classics ====
 
-<lang bash>$ txr -Duser=sshd -c '@(skip)
-@user:@pw:@uid:@gid:@gecos:@home:@shell' /etc/passwd</lang>
-<pre>user="sshd"
-pw="x"
-uid="114"
-gid="65534"
-gecos=""
-home="/var/run/sshd"
-shell="/usr/sbin/nologin"</pre>
+In TXR Lisp, classic Lisp operations like <code>mapcar</code>, <code>cdr</code> or <code>append</code> work exactly like they are supposed to, when they operate on lists. Right down to improper lists like <code>(append 42) -> 42</code> and <code>(append '(1) 2) -> (1 . 2)</code>.
+However, most of the operations have been extended to also work with strings and vectors. So for instance, <code>(mapcar (op + 1) "abc")</code> nicely yields the string <code>"bcd"</code> where <code>1</code> has been added to every character code of the original string. <code>(car "abc")</code> yields <code>#\a</code>, a character, <code>(cdr "abc")</code> yields <code>"bc"</code>, and <code>(cdr "c")</code> yields <code>nil</code> (rather than the empty string!) (Almost) everything proceeds from there.
 
+==== Good Hackers Borrow; Great Ones Steal ====
 
-==Simple Query==
+TXR steals ideas from libraries and languages related to Lisp. The <code>op</code> operator is inspired by Goo's <code>op</code>, and the cl-op library for Common Lisp which is also inspired by Goo's <code>op</code>.
 
-Re-implement the "free" utility on Linux, showing an overview of memory use:
+Array and list slices are straight out of Python, right down to the half-open ranges (not including the upper endpoint), and negative values indexing from the tail of the array. The concept is further improved upon by allowing the Lisp symbols <code>nil</code> and <code>t</code> to be used as range indexes. 
 
-<lang txr>#!/usr/bin/txr -f
-@(next "/proc/meminfo")
-@(define num (n))@\
-  @(local numtok)@{numtok /[0-9]+/}@(bind n @(int-str numtok 10))@\
-@(end)
-@(gather)
-MemTotal: @(num TOTAL) kB
-MemFree: @(num FREE) kB
-Buffers: @(num BUFS) kB
-Cached: @(num CACHED) kB
-SwapTotal: @(num SWTOT) kB
-SwapFree: @(num SWFRE) kB
-@(end)
-@(bind USED @(- TOTAL FREE 10))
-@(bind RUSED @(- USED BUFS CACHED))
-@(bind RFREE @(+ FREE BUFS CACHED))
-@(bind SWUSE @(- SWTOT SWFRE))
-@(output)
-               TOTAL         USED         FREE      BUFFERS       CACHED
-Mem:    @{TOTAL -12} @{USED  -12} @{FREE  -12} @{BUFS  -12} @{CACHED -12}
-+/- buffers/cache:   @{RUSED -12} @{RFREE -12}
-Swap:   @{SWTOT -12} @{SWUSE -12} @{SWFRE -12}
-@(end)</lang>
+Slices, even empty ones, are assignable places in TXR Lisp: we can easily replace a possibly empty section of a string, lisp or vector, with a sequence that is of different length, also possibly empty: for instance, if <code>x</code> contains <code>"abc"</code> then <code>(set [x 1..2] "foo")</code> changes <code>x</code> to contain <code>"afooc"</code>.
 
-Sample run:
-
-<pre>$ ./meminfo.txr
-               TOTAL         USED         FREE      BUFFERS       CACHED
-Mem:          769280       647752       121528       160108       286844
-+/- buffers/cache:         200800       568480
-Swap:        1048568        18200      1030368
-</pre>
-
-== Complex Query ==
-
-Here is a TXR query for computing the complete dependencies of a C source file (including system and compiler headers) on a typical GNU/Linux system, demonstrating features like parallel clauses, recursion and exception handling.
-
-<lang txr>@(define process_file (dir file already_visited visited_out))
-@  (local this_file next_file header_dir next_dir next_dir2 visited_out_next)
-@  (bind this_file `@dir@file`)
-@  (none)
-@    (bind already_visited this_file)
-@  (end)
-@  (merge already_visited already_visited this_file)
-@  (next this_file)
-@  (collect)
-@    (cases)
-#include "@*header_dir/@next_file"
-@      (bind next_dir `@dir@header_dir/`)
-@    (or)
-#include "@next_file"
-@      (bind next_dir dir)
-@    (or)
-#@/ */include <@*header_dir/@next_file>
-@      (bind next_dir `@sys_includes@header_dir/`)
-@      (bind next_dir2 `@gcc_includes@header_dir/`)
-@    (or)
-#@/ */include <@next_file>
-@      (bind next_dir sys_includes)
-@      (bind next_dir2 gcc_includes)
-@    (or)
-#@/ */include_next <@*header_dir/@next_file>
-@      (bind next_dir `@gcc_includes@header_dir/`)
-@    (or)
-#@/ */include_next <@next_file>
-@      (bind next_dir gcc_includes)
-@    (end)
-@    (try)
-@      (process_file next_dir next_file already_visited visited_out_next)
-@      (merge already_visited already_visited visited_out_next)
-@    (catch file_error)
-@      (try)
-@        (process_file next_dir2 next_file already_visited visited_out_next)
-@        (merge already_visited already_visited visited_out_next)
-@      (catch file_error)
-@      (end)
-@    (end)
-@  (end)
-@  (bind visited_out this_file)
-@  (try)
-@    (flatten visited_out_next)
-@    (merge visited_out visited_out visited_out_next)
-@  (catch)
-@  (end)
-@(end)
-@(next :args)
-@(cases)
-@*dir/@*file.@suffix
-@  (bind directory `@dir/`)
-@(or)
-@*file.@suffix
-@  (bind directory "")
-@(end)
-@(next `!gcc -print-search-dirs`)
-install: @gcc_install
-@(bind gcc_includes `@{gcc_install}include/`)
-@(bind sys_includes "/usr/include/")
-@(process_file directory `@file.@suffix` nil list_out)
-@(output)
-@(rep) @list_out@(first)@file.o:@(end)
-@(end)</lang>
-
-Sample run:
-
-<pre>$ txr dep.txr match.c
-match.o: /usr/include/stdio.h /usr/include/features.h /usr/include/sys/cdefs.h /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h /usr/include/gnu/stubs-32.h /usr/lib/gcc/i586-redhat-linux/4.4.1/include/stddef.h /usr/include/bits/types.h /usr/include/libio.h /usr/include/_G_config.h /usr/include/wchar.h /usr/lib/gcc/i586-redhat-linux/4.4.1/include/stdarg.h /usr/include/bits/wchar.h /usr/include/wctype.h /usr/include/endian.h /usr/include/bits/endian.h /usr/include/bits/byteswap.h /usr/include/xlocale.h /usr/include/bits/wchar2.h /usr/include/bits/wchar-ldbl.h /usr/include/gconv.h /usr/include/bits/stdio-lock.h /usr/include/bits/libc-lock.h /usr/include/pthread.h /usr/include/sched.h /usr/include/time.h /usr/include/bits/time.h /usr/include/bits/sched.h /usr/include/signal.h /usr/include/bits/signum.h /usr/include/bits/siginfo.h /usr/include/bits/sigaction.h /usr/include/bits/sigcontext.h /usr/include/asm/sigcontext.h /usr/include/linux/types.h /usr/include/linux/posix_types.h /usr/include/linux/stddef.h /usr/include/asm/posix_types.h /usr/include/asm/types.h /usr/include/asm-generic/int-ll64.h /usr/include/bits/sigstack.h /usr/include/sys/ucontext.h /usr/include/bits/pthreadtypes.h /usr/include/bits/sigthread.h /usr/include/bits/setjmp.h /usr/include/bits/libio-ldbl.h /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h /usr/include/getopt.h /usr/include/ctype.h /usr/include/bits/stdio.h /usr/include/bits/stdio2.h /usr/include/bits/stdio-ldbl.h /usr/include/stdlib.h /usr/include/bits/waitflags.h /usr/include/bits/waitstatus.h /usr/include/alloca.h /usr/include/bits/stdlib.h /usr/include/bits/stdlib-ldbl.h /usr/include/string.h /usr/include/bits/string.h /usr/include/bits/string2.h /usr/include/bits/string3.h /usr/include/assert.h /usr/include/errno.h /usr/include/bits/errno.h /usr/include/linux/errno.h /usr/include/asm/errno.h /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h /usr/include/dirent.h /usr/include/bits/dirent.h /usr/include/bits/posix1_lim.h /usr/include/bits/local_lim.h /usr/include/linux/limits.h /usr/include/setjmp.h config.h lib.h gc.h unwind.h regex.h /usr/include/limits.h /usr/lib/gcc/i586-redhat-linux/4.4.1/include/limits.h /usr/lib/gcc/i586-redhat-linux/4.4.1/include/syslimits.h /usr/include/bits/posix2_lim.h /usr/include/bits/xopen_lim.h stream.h parser.h txr.h utf8.h filter.h match.h</pre>
+The <code>group-by</code> function is a straight rip-off from Ruby.

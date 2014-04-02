@@ -50,70 +50,53 @@ NUM_MINES = (WIDTH * HEIGHT * PCT).round
 
 def create_mines sx, sy
   arr = Array.new(WIDTH) { Array.new(HEIGHT, false) }
-
   NUM_MINES.times do
-    loop do
-      x, y = rand(WIDTH), rand(HEIGHT)
-
-      # place it if it isn't at (sx, sy) and we haven't already placed a mine
-      arr[x][y] = true and break if !arr[x][y] and (x != sx or y != sy)
-    end
+    x, y = rand(WIDTH), rand(HEIGHT)
+    # place it if it isn't at (sx, sy) and we haven't already placed a mine
+    redo if arr[x][y] or (x == sx and y == sy)
+    arr[x][y] = true
   end
-
   arr
 end
 
 def num_marks
-  $screen.inject(0) { |sum, row|
-    sum + row.count("?")
-  }
+  $screen.inject(0) { |sum, row| sum + row.count("?") }
 end
 
 def show_grid revealed = false
   if revealed
-    puts $mines.transpose.map { |row| row.map { |cell| cell ? "*" : " " }.join }.join("\n")
+    puts $mines.transpose.map { |row| row.map { |cell| cell ? "*" : " " }.join(" ") }
   else
     puts "Grid has #{NUM_MINES} mines, #{num_marks} marked."
-    puts $screen.transpose.map(&:join).join("\n")
+    puts $screen.transpose.map{ |row| row.join(" ") }
   end
 end
 
+SURROUND = [-1,0,1].product([-1,0,1]) - [[0,0]]     # surround 8
 def surrounding x, y
   # apply the passed block to each spot around (x, y)
-  (-1..1).each do |dx|
-    (-1..1).each do |dy|
-      # don't check if we're out of bounds, or at (0,0)
-      next if !(0...WIDTH).include?(x + dx) or !(0...HEIGHT).include?(y + dy)
-      next if dx == 0 and dy == 0
-
-      yield(dx, dy)
-    end
+  SURROUND.each do |dx, dy|
+    # don't check if we're out of bounds, or at (0,0)
+    yield(x+dx, y+dy) if (0...WIDTH).cover?(x+dx) and (0...HEIGHT).cover?(y+dy)
   end
 end
 
 def clear_space x, y
   return unless $screen[x][y] == "."
-
   # check nearby spaces
   count = 0
-
-  surrounding(x, y) do |dx, dy|
-    count += 1 if $mines[x + dx][y + dy]
-  end
-
+  surrounding(x, y) { |px, py| count += 1 if $mines[px][py] }
   if count == 0
     $screen[x][y] = " "
-    surrounding(x, y) do |dx, dy|
-      clear_space x + dx, y + dy
-    end
+    surrounding(x, y) { |px, py| clear_space px, py }
   else
     $screen[x][y] = count.to_s
   end
 end
 
 def victory?
-  return false if $mines == nil  # first one, don't need to check
-
+  return false if $mines.nil?  # first one, don't need to check
+  return false if num_marks != NUM_MINES
   mines_left = NUM_MINES
   WIDTH.times do |x|
     HEIGHT.times do |y|
@@ -122,6 +105,11 @@ def victory?
   end
 
   mines_left == 0
+end
+
+def check_input x, y
+  x, y = x.to_i - 1, y.to_i - 1
+  [x, y] if (0...WIDTH).cover?(x) and (0...HEIGHT).cover?(y)
 end
 
 $mines = nil
@@ -138,14 +126,15 @@ loop do
   when "quit", "exit", "x", "q"
     puts "Bye!"
     break
-  when /^m (\d) (\d)$/
+  when /^m (\d+) (\d+)$/
     # mark this cell
-    x, y = $1.to_i - 1, $2.to_i - 1
-
+    x, y = check_input $1, $2
+    next unless x
     if $screen[x][y] == "."
       # mark it
       $screen[x][y] = "?"
       if victory?
+        show_grid
         puts "You win!"
         break
       end
@@ -154,12 +143,12 @@ loop do
       $screen[x][y] = "."
     end
     show_grid
-  when /^c (\d) (\d)$/
-    x, y = $1.to_i - 1, $2.to_i - 1
+  when /^c (\d+) (\d+)$/
+    x, y = check_input $1, $2
+    next unless x
     $mines ||= create_mines(x, y)
     if $mines[x][y]
       puts "You hit a mine!"
-      $screen[x][y] = "*"
       show_grid true
       break
     else

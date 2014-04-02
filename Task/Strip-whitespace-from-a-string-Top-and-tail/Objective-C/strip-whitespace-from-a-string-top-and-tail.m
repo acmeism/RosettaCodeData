@@ -39,15 +39,15 @@
 
 int main()
 {
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-  NSString *s = @"     this is a string     ";
+  @autoreleasepool {
 
-  NSLog(@"'%@'", s);
-  NSLog(@"'%@'", [s ltrim]);
-  NSLog(@"'%@'", [s rtrim]);
-  NSLog(@"'%@'", [s trim]);
+    NSString *s = @"     this is a string     ";
 
+    NSLog(@"'%@'", s);
+    NSLog(@"'%@'", [s ltrim]);
+    NSLog(@"'%@'", [s rtrim]);
+    NSLog(@"'%@'", [s trim]);
 
-  [pool release];
+  }
   return 0;
 }

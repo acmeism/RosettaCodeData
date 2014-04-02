@@ -69,8 +69,9 @@ old.1='╬£C++'    ;  new.1=  "µC++"     /*Unicode ╬£C++ ──►ASCII-8: 
 old.2='UC++'     ;  new.2=  "µC++"     /*old      UC++ ──►ASCII-8: µC++ */
 old.3='╨£╨Ü-'    ;  new.3=  "MK-"      /*Unicode ╨£╨Ü- ──►ASCII-8: MK-  */
 old.4='D├⌐j├á'   ;  new.4=  'Déjá'     /*Unicode ├⌐j├á ──►ASCII-8: Déjá */
-old.5='Cach├⌐'   ;  new.5=  'Caché'    /*Unicode ach├⌐ ──►ASCII-8: Caché*/
-old.6='??-61/52' ;  new.6=  'MK-61/52' /*somewhere a mistranslated: MK- */
+old.5='D├⌐j├á'   ;  new.4=  'Dëjá'     /*Unicode ├½j├á ──►ASCII-8: Dëjá */
+old.6='Cach├⌐'   ;  new.5=  'Caché'    /*Unicode ach├⌐ ──►ASCII-8: Caché*/
+old.7='??-61/52' ;  new.6=  'MK-61/52' /*somewhere a mistranslated: MK- */
 
   do recs=0   while  lines(inFID)\==0  /*read a file,  1 line at a time.*/
   $=translate(linein(inFID),,'9'x)     /*handle any stray tab characters*/

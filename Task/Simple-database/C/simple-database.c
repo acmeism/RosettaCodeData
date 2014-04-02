@@ -28,7 +28,7 @@ static time_t str2time (char *date);
 /* qsort callbacks */
 sort_by(last_name);
 sort_by(title);
-static sort by_date;
+static int by_date(pdb_t *p1, pdb_t *p2);
 /* main */
 int main (int argc, char **argv) {
     char buf[100];
@@ -76,7 +76,7 @@ usage:  printf ("Usage: %s [commands]\n"
         case DATE:
         printf ("-d  Print all entries sorted by date.\n");
         dblist = dao (READ,f,&db,NULL);
-        dblist = dao (SORT,f,dblist,by_date);
+        dblist = dao (SORT,f,dblist,(int (*)(const void *,const  void *)) by_date);
         dao (PRINT,f,dblist,NULL);
         dao (DESTROY,f,dblist,NULL);
         break;
@@ -155,7 +155,7 @@ static pdb_t dao (int cmd, FILE *f, pdb_t in_db, sort sortby) {
         }
         qsort (pdb,i,sizeof in_db,sortby);
         pdb[i-1]->next=NULL;
-        for (;i;i--) {
+        for (i=i-1;i;i--) {
             pdb[i-1]->next=pdb[i];
         }
         rec=pdb[0];

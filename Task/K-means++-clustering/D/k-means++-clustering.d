@@ -1,5 +1,10 @@
 import std.stdio, std.math, std.random, std.typecons, std.algorithm;
 
+// On Windows this uses the printf from the Microsoft C runtime,
+// that doesn't handle real type and some of the C99 format
+// specifiers, but it's faster for blunk printing.
+extern(C) nothrow int printf(const char*, ...);
+
 struct Point {
     immutable double x, y; // Or float.
     size_t cluster;
@@ -198,9 +203,9 @@ in {
     Color[] colors;
     colors.reserve(centers.length);
     foreach (immutable i; 0 .. centers.length)
-        colors ~= Color((3 * (i + 1) % k) / cast(double)k,
-                        (7 * i % k) / cast(double)k,
-                        (9 * i % k) / cast(double)k);
+        colors ~= Color((3 * (i + 1) % k) / double(k),
+                        (7 * i % k) / double(k),
+                        (9 * i % k) / double(k));
 
     printf("%%!PS-Adobe-3.0\n%%%%BoundingBox: -5 -5 %d %d\n",
            W + 10, H + 10);

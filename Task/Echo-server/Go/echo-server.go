@@ -7,6 +7,8 @@ import (
 )
 
 func echo(s net.Conn, i int) {
+	defer s.Close();
+
 	fmt.Printf("%d: %v <-> %v\n", i, s.LocalAddr(), s.RemoteAddr())
 	b := bufio.NewReader(s)
 	for {

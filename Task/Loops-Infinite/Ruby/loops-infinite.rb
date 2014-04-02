@@ -1,3 +1,1 @@
-loop do
-   puts "SPAM"
-end
+loop {puts "SPAM"}

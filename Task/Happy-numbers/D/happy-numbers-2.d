@@ -4,7 +4,7 @@ bool isHappy(int n) pure /*nothrow*/ {
     int[int] seen;
 
     while (true) {
-        immutable t = n.text.map!q{(a - '0') ^^ 2}.reduce!q{a + b};
+        immutable t = n.text.map!q{(a - '0') ^^ 2}.sum;
         if (t == 1)
             return true;
         if (t in seen)

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	gl "github.com/chsc/gogl/gl21"
-	"github.com/mewmew/win"
+	"github.com/mewmew/glfw/win"
 )
 
 // Window dimensions.

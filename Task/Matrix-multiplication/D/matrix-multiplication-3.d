@@ -3,8 +3,7 @@ import std.stdio, std.range, std.numeric, std.algorithm;
 T[][] matMul(T)(immutable T[][] A, immutable T[][] B) pure nothrow {
     immutable Bt = B[0].length.iota.map!(i=> B.transversal(i).array)
                    .array;
-    return A.map!((immutable T[] a) => Bt.map!(b => a.dotProduct(b))
-                                       .array).array;
+    return A.map!((in a) => Bt.map!(b => a.dotProduct(b)).array).array;
 }
 
 void main() {

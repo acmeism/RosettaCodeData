@@ -1,14 +1,19 @@
->>> import math
->>> def haversine(lat1, lon1, lat2, lon2):
-  R = 6372.8
-  # In kilometers
-  dLat = math.radians(lat2 - lat1)
-  dLon = math.radians(lon2 - lon1)
-  lat1 = math.radians(lat1)
-  lat2 = math.radians(lat2)
+from math import radians, sin, cos, sqrt, atan2
 
-  a = math.sin(dLat / 2) * math.sin(dLat / 2) + math.sin(dLon / 2) * math.sin(dLon / 2) * math.cos(lat1) * math.cos(lat2)
-  c = 2 * math.asin(math.sqrt(a))
+def haversine(lat1, lon1, lat2, lon2):
+
+  R = 6372.8
+
+# In kilometers
+
+  dLat = radians(lat2 - lat1)
+  dLon = radians(lon2 - lon1)
+  lat1 = radians(lat1)
+  lat2 = radians(lat2)
+
+  a = sin(dLat/2.)*sin(dLat/2.) + sin(dLon/2.)*sin(dLon/2.)*cos(lat1)*cos(lat2)
+  c = 2.*atan2(sqrt(a),sqrt(1-a))
+
   return R * c
 
 >>> haversine(36.12, -86.67, 33.94, -118.40)

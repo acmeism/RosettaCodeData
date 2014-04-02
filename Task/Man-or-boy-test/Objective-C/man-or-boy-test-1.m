@@ -1,25 +1,25 @@
 #import <Foundation/Foundation.h>
 
-typedef NSInteger (^IntegerBlock)();
+typedef NSInteger (^IntegerBlock)(void);
 
 NSInteger A (NSInteger kParam, IntegerBlock x1, IntegerBlock x2, IntegerBlock x3, IntegerBlock x4, IntegerBlock x5) {
     __block NSInteger k = kParam;
-    __block IntegerBlock B; // due to a GCC bug, we have to initialize on a separate line
-    B = ^ {
-        return A(--k, B, x1, x2, x3, x4);
+    __block __weak IntegerBlock weak_B;
+    IntegerBlock B;
+    weak_B = B = ^ {
+        return A(--k, weak_B, x1, x2, x3, x4);
     };
     return k <= 0 ? x4() + x5() : B();
 }
 
 IntegerBlock K (NSInteger n) {
-    IntegerBlock result = ^{return n;};
-    return [[result copy] autorelease];
+    return ^{return n;};
 }
 
 int main (int argc, const char * argv[]) {
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    NSInteger result = A(10, K(1), K(-1), K(-1), K(1), K(0));
-    NSLog(@"%d\n", result);
-    [pool drain];
+    @autoreleasepool {
+        NSInteger result = A(10, K(1), K(-1), K(-1), K(1), K(0));
+        NSLog(@"%d\n", result);
+    }
     return 0;
 }

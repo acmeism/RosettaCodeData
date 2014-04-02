@@ -33,4 +33,4 @@ for i, _ in pairs( dep ) do
 	print( "", dep[i][l][1], dep[i][l][2], dep[i][l][3] )
     end
     print ""
-end	
+end

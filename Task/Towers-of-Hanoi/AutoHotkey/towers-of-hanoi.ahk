@@ -11,3 +11,4 @@ move(n, from, to, via)  ;n = # of disks, from = start pole, to = end pole, via =
     move(n-1, via, to, from)
   }
 }
+move(64, 1, 3, 2)

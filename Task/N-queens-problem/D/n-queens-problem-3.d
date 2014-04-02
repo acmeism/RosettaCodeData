@@ -1,5 +1,3 @@
-import std.stdio, std.conv;
-
 ulong nQueens(in uint nn) pure nothrow
 in {
     assert(nn > 0 && nn <= 27,
@@ -85,6 +83,8 @@ in {
 }
 
 void main(in string[] args) {
+    import std.stdio, std.conv;
+
     immutable uint side = (args.length >= 2) ? args[1].to!uint : 8;
     writefln("N-queens(%d) = %d solutions.", side, side.nQueens);
 }

@@ -3,8 +3,7 @@ import std.stdio, std.bigint, std.conv;
 BigInt ipow(BigInt base, BigInt exp) pure /*nothrow*/ {
     auto result = 1.BigInt;
     while (exp) {
-        //if (exp & 1)
-        if (exp % 2)
+        if (exp & 1)
             result *= base;
         exp >>= 1;
         base *= base;

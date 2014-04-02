@@ -5,10 +5,10 @@ if limit=='' | limit==',' then limit=1000   /*maybe assume LIMIT default*/
 if accur=='' | accur==',' then accur=10     /*  "      "   ACCUR    "   */
 numeric digits max(200,2*limit)        /*we're dealing with some biggies*/
 tell=accur<0                           /*show primes if  K  is negative.*/
-accur=abs(accur)                       /*now, make  K  postive.         */
+accur=abs(accur)                       /*now, make  K  positive.        */
 call suspenders                        /*suspenders now, belt later...  */
 primePi=#                              /*save the count of (real) primes*/
-say "They're" primePi 'primes ≤' limit /*might as well crow a wee bit.  */
+say "There are" primePi 'primes ≤' limit /*might as well crow a wee bit.*/
 say                                    /*nothing wrong with whitespace. */
       do a=2 to accur                  /*(skipping 1)  do range of  K's.*/
       say copies('─',79)               /*show separator for the eyeballs*/
@@ -48,7 +48,7 @@ s=0
 
               do r=1  for s-1
               x=(x*x) // n
-              if x==1  then return 0   /*it's definately not prime.     */
+              if x==1  then return 0   /*it's definitely not prime.     */
               if x==nL then leave
               end   /*r*/
 

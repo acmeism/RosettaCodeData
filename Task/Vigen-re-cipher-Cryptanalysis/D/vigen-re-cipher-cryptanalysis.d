@@ -9,7 +9,7 @@ string[2] vigenereDecrypt(in double[] targetFreqs, in string input) {
         uint[nAlpha] charCounts = 0;
         foreach (immutable c; txt)
             charCounts[c - 'A']++;
-        return charCounts[].sort().release().dotProduct(sTargets);
+        return charCounts[].sort().release.dotProduct(sTargets);
     }
 
     static frequency(in string txt) pure nothrow {
@@ -65,12 +65,12 @@ string[2] vigenereDecrypt(in double[] targetFreqs, in string input) {
             pieces[i % bestLength] ~= c;
 
         string key;
-        foreach (fr; map!frequency(pieces)) {
-            fr.sort!q{ a.d > b.d }();
+        foreach (fr; pieces.map!frequency) {
+            fr.sort!q{ a.d > b.d };
 
             size_t m;
             double maxCorr = 0.0;
-            foreach (immutable j, immutable c; std.ascii.uppercase) {
+            foreach (immutable j, immutable c; uppercase) {
                 double corr = 0.0;
                 foreach (immutable frc; fr) {
                     immutable di = (frc.c - c + nAlpha) % nAlpha;
@@ -89,10 +89,10 @@ string[2] vigenereDecrypt(in double[] targetFreqs, in string input) {
         return key;
     }
 
-    immutable cleaned = input.toUpper().removechars("^A-Z");
+    immutable cleaned = input.toUpper.removechars("^A-Z");
 
     //immutable sortedTargets = sorted(targetFreqs);
-    immutable sortedTargets = targetFreqs.dup.sort().release().idup;
+    immutable sortedTargets = targetFreqs.dup.sort().release.idup;
 
     immutable bestLength = findBestLength(cleaned, sortedTargets);
     if (bestLength == 0)

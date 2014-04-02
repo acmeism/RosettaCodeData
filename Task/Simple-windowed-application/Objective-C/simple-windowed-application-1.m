@@ -3,9 +3,9 @@
 
 @interface ClickMe : NSWindow
 {
-  NSButton *button;
-  NSTextField *text;
-  int counter;
+  NSButton *_button;
+  NSTextField *_text;
+  int _counter;
 }
 - (void)applicationDidFinishLaunching: (NSNotification *)notification;
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed: (NSNotification *)notification;

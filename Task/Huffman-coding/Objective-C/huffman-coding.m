@@ -5,7 +5,7 @@
 	int freq;
 }
 -(id)initWithFreq:(int)f;
-@property (readonly) int freq;
+@property (nonatomic, readonly) int freq;
 @end
 
 @implementation HuffmanTree
@@ -20,14 +20,14 @@
 
 
 const void *HuffmanRetain(CFAllocatorRef allocator, const void *ptr) {
-	return [(id)ptr retain];
+	return (__bridge_retained const void *)(__bridge id)ptr;
 }
 void HuffmanRelease(CFAllocatorRef allocator, const void *ptr) {
-	[(id)ptr release];
+	(void)(__bridge_transfer id)ptr;
 }
 CFComparisonResult HuffmanCompare(const void *ptr1, const void *ptr2, void *unused) {
-	int f1 = ((HuffmanTree *)ptr1).freq;
-	int f2 = ((HuffmanTree *)ptr2).freq;
+	int f1 = ((__bridge HuffmanTree *)ptr1).freq;
+	int f2 = ((__bridge HuffmanTree *)ptr2).freq;
 	if (f1 == f2)
 		return kCFCompareEqualTo;
 	else if (f1 > f2)
@@ -66,15 +66,10 @@ CFComparisonResult HuffmanCompare(const void *ptr1, const void *ptr2, void *unus
 @synthesize left, right;
 -(id)initWithLeft:(HuffmanTree *)l right:(HuffmanTree *)r {
 	if (self = [super initWithFreq:l.freq+r.freq]) {
-		left = [l retain];
-		right = [r retain];
+		left = l;
+		right = r;
 	}
 	return self;
-}
--(void)dealloc {
-	[left release];
-	[right release];
-	[super dealloc];
 }
 @end
 
@@ -89,24 +84,24 @@ HuffmanTree *buildTree(NSCountedSet *chars) {
 	for (NSNumber *ch in chars) {
 		int freq = [chars countForObject:ch];
 		if (freq > 0)
-			CFBinaryHeapAddValue(trees, [[[HuffmanLeaf alloc] initWithFreq:freq character:(char)[ch intValue]] autorelease]);
+			CFBinaryHeapAddValue(trees, (__bridge const void *)[[HuffmanLeaf alloc] initWithFreq:freq character:(char)[ch intValue]]);
 	}
 	
 	NSCAssert(CFBinaryHeapGetCount(trees) > 0, @"String must have at least one character");
 	// loop until there is only one tree left
 	while (CFBinaryHeapGetCount(trees) > 1) {
 		// two trees with least frequency
-		HuffmanTree *a = (HuffmanTree *)CFBinaryHeapGetMinimum(trees);
+		HuffmanTree *a = (__bridge HuffmanTree *)CFBinaryHeapGetMinimum(trees);
 		CFBinaryHeapRemoveMinimumValue(trees);
-		HuffmanTree *b = (HuffmanTree *)CFBinaryHeapGetMinimum(trees);
+		HuffmanTree *b = (__bridge HuffmanTree *)CFBinaryHeapGetMinimum(trees);
 		CFBinaryHeapRemoveMinimumValue(trees);
 		
 		// put into new node and re-insert into queue
-		CFBinaryHeapAddValue(trees, [[[HuffmanNode alloc] initWithLeft:a right:b] autorelease]);
+		CFBinaryHeapAddValue(trees, (__bridge const void *)[[HuffmanNode alloc] initWithLeft:a right:b]);
 	}
-	HuffmanTree *result = [(HuffmanTree *)CFBinaryHeapGetMinimum(trees) retain];
+	HuffmanTree *result = (__bridge HuffmanTree *)CFBinaryHeapGetMinimum(trees);
 	CFRelease(trees);
-	return [result autorelease];
+	return result;
 }
 
 void printCodes(HuffmanTree *tree, NSMutableString *prefix) {
@@ -133,7 +128,7 @@ void printCodes(HuffmanTree *tree, NSMutableString *prefix) {
 }
 
 int main(int argc, const char * argv[]) {
-    NSAutoreleasePool * pool = [[NSAutoreleasePool alloc] init];
+    @autoreleasepool {
 
 	NSString *test = @"this is an example for huffman encoding";
 	
@@ -141,16 +136,15 @@ int main(int argc, const char * argv[]) {
 	NSCountedSet *chars = [[NSCountedSet alloc] init];
 	int n = [test length];
 	for (int i = 0; i < n; i++)
-		[chars addObject:[NSNumber numberWithInt:[test characterAtIndex:i]]];
+		[chars addObject:@([test characterAtIndex:i])];
 	
 	// build tree
 	HuffmanTree *tree = buildTree(chars);
-	[chars release];
 	
 	// print out results
 	NSLog(@"SYMBOL\tWEIGHT\tHUFFMAN CODE");
 	printCodes(tree, [NSMutableString string]);
 	
-    [pool drain];
+    }
     return 0;
 }

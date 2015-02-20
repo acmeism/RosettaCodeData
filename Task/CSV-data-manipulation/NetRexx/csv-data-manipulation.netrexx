@@ -1,0 +1,122 @@
+/* NetRexx */
+options replace format comments java crossref symbols
+
+import org.apache.commons.csv.
+
+-- =============================================================================
+class RCsv public final
+
+properties private constant
+  NL           = String System.getProperty("line.separator")
+  COL_NAME_SUM = String 'SUM, "integers"'
+  CSV_IFILE    = 'data/csvtest_in.csv'
+  CSV_OFILE    = 'data/csvtest_sumRexx.csv'
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method main(args = String[]) public static
+  Arg  = Rexx(args)
+  iCvs = Reader null
+  oCvs = Writer null
+  parse arg ifile ofile .
+  if ifile = '', ifile = '.' then ifile = CSV_IFILE
+  if ofile = '', ofile = '.' then ofile = CSV_OFILE
+  say textFileContentsToString(ifile)
+  do
+    iCvs = BufferedReader(FileReader(ifile))
+    oCvs = BufferedWriter(FileWriter(ofile))
+    processCsv(iCvs, oCvs);
+  catch ex = IOException
+    ex.printStackTrace();
+  finally
+    do
+      if iCvs \= null then iCvs.close()
+      if oCvs \= null then oCvs.close()
+    catch ex = IOException
+      ex.printStackTrace()
+    end
+  end
+  say textFileContentsToString(ofile)
+  return
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method processCsv(iCvs = Reader, oCvs = Writer) public static binary signals IOException
+  printer = CSVPrinter null
+  do
+    printer = CSVPrinter(oCvs, CSVFormat.DEFAULT.withRecordSeparator(NL))
+    oCvsHeaders = java.util.List
+    oCvsRecord = java.util.List
+    records = CSVFormat.DEFAULT.withHeader(String[0]).parse(iCvs)
+    irHeader = records.getHeaderMap()
+    oCvsHeaders = ArrayList(Arrays.asList((irHeader.keySet()).toArray(String[0])))
+    oCvsHeaders.add(COL_NAME_SUM)
+    printer.printRecord(oCvsHeaders)
+    recordIterator = records.iterator()
+    record = CSVRecord
+    loop while recordIterator.hasNext()
+      record = CSVRecord recordIterator.next()
+      oCvsRecord = record2list(record, oCvsHeaders)
+      printer.printRecord(oCvsRecord)
+      end
+  finally
+    if printer \= null then printer.close()
+  end
+  return
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method record2list(record = CSVRecord, oCvsHeaders = java.util.List) private static binary returns java.util.List
+  cvsRecord = java.util.List
+  rMap = record.toMap()
+  recNo = record.getRecordNumber()
+  rMap = alterRecord(rMap, recNo)
+  sum = summation(record.iterator())
+  rMap.put(COL_NAME_SUM, sum)
+  cvsRecord = ArrayList()
+  loop ci = 0 to oCvsHeaders.size() - 1
+    key = oCvsHeaders.get(ci)
+    cvsRecord.add(rMap.get(key))
+    end ci
+  return cvsRecord
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method alterRecord(rMap = Map, recNo = long) private static binary returns Map
+    rv = int
+    rg = Random(recNo)
+    rv = rg.nextInt(50)
+    ks = rMap.keySet().toArray(String[0])
+    ix = rg.nextInt(ks.length)
+    yv = long 0
+    ky = ks[ix];
+    xv = String rMap.get(ky)
+    if xv \= null & xv.length() > 0 then do
+      yv = Long.valueOf(xv).longValue() + rv
+      rMap.put(ks[ix], String.valueOf(yv))
+      end
+    return rMap
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method summation(iColumn = Iterator) private static
+  sum = 0
+  loop while iColumn.hasNext()
+    nv = Rexx(String iColumn.next())
+    if nv = null, nv.length() = 0, \nv.datatype('n') then nv = 0
+    sum = sum + nv
+    end
+  return sum
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method textFileContentsToString(filename) private static
+    lineOut = ''
+    fs = Scanner null
+    do
+      fs = Scanner(File(filename))
+      lineOut = lineout || filename || NL
+      loop while fs.hasNextLine()
+        line = fs.nextLine()
+        lineOut = lineout || line || NL
+        end
+    catch ex = FileNotFoundException
+      ex.printStackTrace()
+    finally
+      if fs \= null then fs.close()
+    end
+    return lineOut

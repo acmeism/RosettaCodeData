@@ -1,0 +1,2 @@
+s = "Hello"
+s *= ", world!"

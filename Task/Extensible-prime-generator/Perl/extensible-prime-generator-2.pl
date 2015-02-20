@@ -1,0 +1,12 @@
+use Math::Prime::Util "prime_iterator_object";
+my $it = prime_iterator_object;
+say "First 20: ", join(" ", map { $it->iterate() } 1..20);
+$it->seek_to_value(100);
+print "Between 100 and 150:";
+print " ", $it->iterate() while $it->value() <= 150;
+print "\n";
+$it->seek_to_value(7700);
+my $c = 0;
+$c++ while $it->iterate() <= 8000;
+say "$c primes between 7700 and 8000";
+say "${_}th prime: ", $it->ith($_) for map { 10**$_ } 1..8;

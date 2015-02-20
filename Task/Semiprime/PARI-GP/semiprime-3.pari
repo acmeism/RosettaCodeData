@@ -1,0 +1,77 @@
+long
+issemiprime(GEN n)
+{
+  if (typ(n) != t_INT)
+    pari_err_TYPE("issemiprime", n);
+  if (signe(n) <= 0)
+    return 0;
+
+  ulong nn = itou_or_0(n);
+  if (nn)
+    return uissemiprime(nn);
+
+  pari_sp ltop = avma;
+  if (!mpodd(n)) {
+    long ret = mod4(n) && isprime(shifti(n, -1));
+    avma = ltop;
+    return ret;
+  }
+
+
+  long p;
+  forprime_t primepointer;
+  u_forprime_init(&primepointer, 3, 997);
+  while ((p = u_forprime_next(&primepointer))) {
+    if (dvdis(n, p)) {
+      long ret = isprime(diviuexact(n, p));
+      avma = ltop;
+      return ret;
+    }
+  }
+
+  if (isprime(n))
+    return 0;
+
+  if (DEBUGLEVEL > 3)
+    pari_printf("issemi: Number is a composite with no small prime factors; using general factoring mechanisms.");
+
+  GEN fac = Z_factor_until(n, shifti(n, -1));	/* Find a nontrivial factor -- returns just the factored part */
+  GEN expo = gel(fac, 2);
+  GEN pr = gel(fac, 1);
+  long len = glength(expo);
+  if (len > 2) {
+    avma = ltop;
+    return 0;
+  }
+  if (len == 2) {
+    if (cmpis(gel(expo, 1), 1) > 0 || cmpis(gel(expo, 2), 1) > 0) {
+      avma = ltop;
+      return 0;
+    }
+    GEN P = gel(pr, 1);
+    GEN Q = gel(pr, 2);
+    long ret = isprime(P) && isprime(Q) && equalii(mulii(P, Q), n);
+    avma = ltop;
+    return ret;
+  }
+  if (len == 1) {
+    long e = itos(gel(expo, 1));
+    if (e == 2) {
+      GEN P = gel(pr, 1);
+      long ret = isprime(P) && equalii(sqri(P), n);
+      avma = ltop;
+      return ret;
+    } else if (e > 2) {
+      avma = ltop;
+      return 0;
+    }
+    GEN P = gel(pr, 1);
+    long ret = isprime(P) && isprime(diviiexact(n, P));
+    avma = ltop;
+    return ret;
+  }
+
+  pari_err_BUG(pari_sprintf("Z_factor_until returned an unexpected value %Ps at n = %Ps, exiting...", fac, n));
+  avma = ltop;
+  return 0; /* never used */
+}

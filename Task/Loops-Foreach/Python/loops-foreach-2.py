@@ -5,6 +5,6 @@ for eachline in f:
     for eachword in eachline.split():
         words += 1
         for eachchar in eachword:
-            chracters += 1
+            characters += 1
 
 print lines, words, characters

@@ -17,8 +17,8 @@ distDeg radius p1 p2 = distRad radius (deg2rad p1) (deg2rad p2)
   where deg2rad (t, u) = (d2r t, d2r u)
         d2r t = t * pi / 180
 
--- The approximate distance, in kilometers, between two points on Earth.  The
--- latitude and longtitude are assumed to be in degrees.
+-- The approximate distance, in kilometers, between two points on Earth.
+-- The latitude and longtitude are assumed to be in degrees.
 earthDist = distDeg 6372.8
 
 main = do

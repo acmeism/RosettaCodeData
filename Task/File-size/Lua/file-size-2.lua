@@ -1,0 +1,1 @@
+FileTools:-Size( "/input.txt" )

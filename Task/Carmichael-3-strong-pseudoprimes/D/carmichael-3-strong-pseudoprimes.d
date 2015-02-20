@@ -1,6 +1,6 @@
-enum mod = (in int n, in int m) pure nothrow => ((n % m) + m) % m;
+enum mod = (in int n, in int m) pure nothrow @nogc=> ((n % m) + m) % m;
 
-bool isPrime(in uint n) pure nothrow {
+bool isPrime(in uint n) pure nothrow @nogc {
   if (n == 2 || n == 3)
     return true;
   else if (n < 2 || n % 2 == 0 || n % 3 == 0)

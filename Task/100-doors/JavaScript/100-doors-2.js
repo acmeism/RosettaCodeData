@@ -1,9 +1,6 @@
-Array.apply(null, { length: 100 })
-  .map(function(v, i) { return i + 1; })
-    .forEach(function(door) {
-      var sqrt = Math.sqrt(door);
-
-      if (sqrt === (sqrt | 0)) {
-        console.log("Door %d is open", door);
-      }
-    });
+for (var door = 1; door <= 100; door++) {
+  var sqrt = Math.sqrt(door);
+  if (sqrt === (sqrt | 0)) {
+    console.log("Door %d is open", door);
+  }
+}

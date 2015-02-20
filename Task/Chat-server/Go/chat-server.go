@@ -1,148 +1,181 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"net"
-	"flag"
 	"bufio"
-	"bytes"
+	"flag"
+	"fmt"
+	"log"
+	"net"
+	"strings"
+	"time"
 )
 
-// Quick and dirty error handling.
-func error_(err error, r int) {
-	fmt.Printf("Error: %v\n", err)
+func main() {
+	log.SetPrefix("chat: ")
+	addr := flag.String("addr", "localhost:4000", "listen address")
+	flag.Parse()
+	log.Fatal(ListenAndServe(*addr))
+}
 
-	if r >= 0 {
-		os.Exit(r)
+// A Server represents a chat server that accepts incoming connections.
+type Server struct {
+	add  chan *conn  // To add a connection
+	rem  chan string // To remove a connection by name
+	msg  chan string // To send a message to all connections
+	stop chan bool   // To stop early
+}
+
+// ListenAndServe listens on the TCP network address addr for
+// new chat client connections.
+func ListenAndServe(addr string) error {
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+	}
+	log.Println("Listening for connections on", addr)
+	defer ln.Close()
+	s := &Server{stop: make(chan bool)}
+	go s.handleConns()
+	for {
+		// TODO use AcceptTCP() so that we can get a TCPConn on which
+		// we can call SetKeepAlive() and SetKeepAlivePeriod()
+		rwc, err := ln.Accept()
+		if err != nil {
+			// TODO Could handle err.(net.Error).Temporary()
+			// here by adding a backoff delay.
+			close(s.stop)
+			return err
+		}
+		log.Println("New connection from", rwc.RemoteAddr())
+		go newConn(s, rwc).welcome()
 	}
 }
 
-// A type for storing the connections.
-type clientMap map[string]net.Conn
+// handleConns is run as a go routine to handle adding and removal of
+// chat client connections as well as broadcasting messages to them.
+func (s *Server) handleConns() {
+	s.add = make(chan *conn)
+	s.rem = make(chan string)
+	s.msg = make(chan string)
 
-// A method that makes clientMap compatible with io.Writer, allowing it to be
-// used with fmt.Fprintf().
-func (cm clientMap) Write(buf []byte) (n int, err error) {
-	for _, c := range cm {
-		// Write to each client in a seperate goroutine.
-		go c.Write(buf)
-	}
+	// We define the `conns` map here rather than within Server,
+	// and we use local function literals rather than methods to be
+	// extra sure that the only place that touches this map is this
+	// method. In this way we forgo any explicit locking needed as
+	// we're the only go routine that can see or modify this.
+	conns := make(map[string]*conn)
 
-	n = len(buf)
-
-	return
-}
-
-// Check if a name exists; if it doesn't, add it.
-func (cm clientMap) Add(name string, c net.Conn) bool {
-	for k := range cm {
-		if name == k {
-			return false
+	var dropConn func(string)
+	writeAll := func(str string) {
+		log.Printf("Broadcast: %q", str)
+		// TODO handle blocked connections
+		for name, c := range conns {
+			c.SetWriteDeadline(time.Now().Add(500 * time.Millisecond))
+			_, err := c.Write([]byte(str))
+			if err != nil {
+				log.Printf("Error writing to %q: %v", name, err)
+				c.Close()
+				delete(conns, name)
+				// Defer all the disconnect messages until after
+				// we've closed all currently problematic conns.
+				defer dropConn(name)
+			}
 		}
 	}
 
-	cm[name] = c
-
-	return true
-}
-
-// A clientMap variable.
-var clients clientMap
-
-func init() {
-	// Initialize the map.
-	clients = make(clientMap)
-}
-
-func client(c net.Conn) {
-	// Close the connection when this function returns.
-	defer c.Close()
-
-	br := bufio.NewReader(c)
-
-	fmt.Fprintf(c, "Please enter your name: ")
-
-	buf, err := br.ReadBytes('\n')
-	if err != nil {
-		error_(err, -1)
-		return
-	}
-	name := string(bytes.Trim(buf, " \t\n\r\x00"))
-
-	if name == "" {
-		fmt.Fprintf(c, "!!! %v is invalid !!!\n", name)
+	dropConn = func(name string) {
+		if c, ok := conns[name]; ok {
+			log.Printf("Closing connection with %q from %v",
+				name, c.RemoteAddr())
+			c.Close()
+			delete(conns, name)
+		} else {
+			log.Printf("Dropped connection with %q", name)
+		}
+		str := fmt.Sprintf("--- %q disconnected ---\n", name)
+		writeAll(str)
 	}
 
-	// Try to add the connection to the map.
-	if !clients.Add(name, c) {
-		fmt.Fprintf(c, "!!! %v is not available !!!\n", name)
-		return
-	}
-
-	// Send a message telling the clients who connected.
-	fmt.Fprintf(clients, "+++ %v connected +++\n", name)
-	// Send a disconnected message when the function returns.
-	defer fmt.Fprintf(clients, "--- %v disconnected ---\n", name)
-	// Remove the client from the list.
-	defer delete(clients, name)
+	defer func() {
+		writeAll("Server stopping!\n")
+		for _, c := range conns {
+			c.Close()
+		}
+	}()
 
 	for {
-		buf, err = br.ReadBytes('\n')
+		select {
+		case c := <-s.add:
+			if _, exists := conns[c.name]; exists {
+				fmt.Fprintf(c, "Name %q is not available\n", c.name)
+				go c.welcome()
+				continue
+			}
+			str := fmt.Sprintf("+++ %q connected +++\n", c.name)
+			writeAll(str)
+			conns[c.name] = c
+			go c.readloop()
+		case str := <-s.msg:
+			writeAll(str)
+		case name := <-s.rem:
+			dropConn(name)
+		case <-s.stop:
+			return
+		}
+	}
+}
+
+// A conn represents the server side of a single chat connection.
+// Note we embed the bufio.Reader and net.Conn (and specifically in
+// that order) so that a conn gets the appropriate methods from each
+// to be a full io.ReadWriteCloser.
+type conn struct {
+	*bufio.Reader         // buffered input
+	net.Conn              // raw connection
+	server        *Server // the Server on which the connection arrived
+	name          string
+}
+
+func newConn(s *Server, rwc net.Conn) *conn {
+	return &conn{
+		Reader: bufio.NewReader(rwc),
+		Conn:   rwc,
+		server: s,
+	}
+}
+
+// welcome requests a name from the client before attempting to add the
+// named connect to the set handled by the server.
+func (c *conn) welcome() {
+	var err error
+	for c.name = ""; c.name == ""; {
+		fmt.Fprint(c, "Enter your name: ")
+		c.name, err = c.ReadString('\n')
+		if err != nil {
+			log.Printf("Reading name from %v: %v", c.RemoteAddr(), err)
+			c.Close()
+			return
+		}
+		c.name = strings.TrimSpace(c.name)
+	}
+	// The server will take this *conn and do a final check
+	// on the name, possibly starting c.welcome() again.
+	c.server.add <- c
+}
+
+// readloop is started as a go routine by the server once the initial
+// welcome phase has completed successfully. It reads single lines from
+// the client and passes them to the server for broadcast to all chat
+// clients (including us).
+// Once done, we ask the server to remove our (and close) our connection.
+func (c *conn) readloop() {
+	for {
+		msg, err := c.ReadString('\n')
 		if err != nil {
 			break
 		}
-		buf = bytes.Trim(buf, " \t\n\r\x00")
-
-		// Ignore empty messages.
-		if len(buf) == 0 {
-			continue
-		}
-
-		switch {
-		// Support for '/me' type messages.
-		case string(buf[0:3]) == "/me":
-			buf = append([]byte(name), buf[3:]...)
-		default:
-			// Prepend the user-name and '> '.
-			buf = append([]byte(name+"> "), buf...)
-		}
-
-		// Send the message to all the clients.
-		fmt.Fprintf(clients, "%v\n", string(buf))
+		//msg = strings.TrimSpace(msg)
+		c.server.msg <- c.name + "> " + msg
 	}
-}
-
-func main() {
-	// Flags. Use -help for usage info.
-	var (
-		port int
-		help bool
-	)
-	flag.IntVar(&port, "port", 23, "Port to listen on")
-	flag.BoolVar(&help, "help", false, "Display this")
-	flag.Parse()
-
-	if help {
-		flag.Usage()
-		return
-	}
-
-	// Initialize a new listener.
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
-	if err != nil {
-		error_(err, 1)
-	}
-
-	// Begin the main loop.
-	for {
-		c, err := lis.Accept()
-		if err != nil {
-			error_(err, -1)
-			continue
-		}
-
-		// Launch a new goroutine to handle the connection.
-		go client(c)
-	}
+	c.server.rem <- c.name
 }

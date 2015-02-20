@@ -1,5 +1,3 @@
-let flatten = list => {
-  return list.reduce(
+let flatten = list => list.reduce(
     (a, b) => a.concat(Array.isArray(b) ? flatten(b) : b), []
-  );
-}
+);

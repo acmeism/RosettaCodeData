@@ -1,65 +1,55 @@
 # Solve a Hidato Puzzle
 #
-#  Nigel_Galloway
-#  May 5th., 2012.
-class Cell
-  def initialize(row=0, col=0, value=nil)
-    @adj = [[row-1,col-1],[row,col-1],[row+1,col-1],[row-1,col],[row+1,col],[row-1,col+1],[row,col+1],[row+1,col+1]]
-    @t = false
-    $zbl[value] = true unless value.nil?
-    @value = value
-  end
-  def try(value=1)
-    return false if @value.nil?
-    return true  if value > $end
-    return false if @t
-    return false if @value > 0 and @value != value
-    return false if @value == 0 and $zbl[value]
-    @t = true
-    @adj.each do |x,y|
-      if $board[x][y].try(value+1)
-        @value = value
-        return true
-      end
-    end
-    @t = false
-  end
-  attr_reader :value
-end
-
 class Hidato
+  Cell = Struct.new(:value, :used, :adj)
+  ADJUST = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]]
+
   def initialize(board, pout=true)
-    $end = 0
-    $zbl = []
-    $board = []
-    board.each_line.with_index do |line, x|
-      $board << line.split.each_with_index.map do |n,y|
-        begin
-          n = Integer(n)
-          @sx, @sy = x, y  if n == 1   # start position
-          $end += 1
-          Cell.new(x, y, n)
-        rescue
-          Cell.new                     # frame (Sentinel value)
+    @board = []
+    board.each_line do |line|
+      @board << line.split.map{|n| Cell[Integer(n), false] rescue nil} + [nil]
+    end
+    @board << []                                # frame (Sentinel value : nil)
+    @board.each_with_index do |row, x|
+      row.each_with_index do |cell, y|
+        if cell
+          @sx, @sy = x, y  if cell.value==1     # start position
+          cell.adj = ADJUST.map{|dx,dy| [x+dx,y+dy]}.select{|xx,yy| @board[xx][yy]}
         end
       end
     end
-    @xmax = $board.size - 2
-    @ymax = $board[1].size - 2
-    printout('Problem:') if pout
+    @xmax = @board.size - 1
+    @ymax = @board.map(&:size).max - 1
+    @end  = @board.flatten.compact.size
+    puts to_s('Problem:')  if pout
   end
+
   def solve
-    if $board[@sx][@sy].try(1)
-      printout('Solution:')
-    else
-      puts "no solution"
-    end
+    @zbl = Array.new(@end+1, false)
+    @board.flatten.compact.each{|cell| @zbl[cell.value] = true}
+    puts (try(@board[@sx][@sy], 1) ? to_s('Solution:') : "No solution")
   end
-  def printout(msg=nil)
-    puts msg if msg
-    (1..@xmax).each do |x|
-      puts (1..@ymax).map{|y| "%3s" % $board[x][y].value}.join
+
+  def try(cell, seq_num)
+    return true  if seq_num > @end
+    return false if cell.used
+    value = cell.value
+    return false if value > 0 and value != seq_num
+    return false if value == 0 and @zbl[seq_num]
+    cell.used = true
+    cell.adj.each do |x, y|
+      if try(@board[x][y], seq_num+1)
+        cell.value = seq_num
+        return true
+      end
     end
-    puts
+    cell.used = false
+  end
+
+  def to_s(msg=nil)
+    str = (0...@xmax).map do |x|
+      (0...@ymax).map{|y| "%3s" % ((c=@board[x][y]) ? c.value : c)}.join
+    end
+    (msg ? [msg] : []) + str + [""]
   end
 end

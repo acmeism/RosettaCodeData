@@ -1,11 +1,11 @@
 import std.stdio, std.traits, std.algorithm;
 
-auto sma(T, int period)() {
+auto sma(T, int period)() pure nothrow @safe {
     T[period] data = 0;
     T sum = 0;
     int index, nFilled;
 
-    return (in T v) nothrow {
+    return (in T v) nothrow @safe @nogc {
         sum += -data[index] + v;
         data[index] = v;
         index = (index + 1) % period;
@@ -19,6 +19,5 @@ void main() {
     immutable s5 = sma!(double, 5);
 
     foreach (immutable e; [1, 2, 3, 4, 5, 5, 4, 3, 2, 1])
-        writefln("Added %d, sma(3) = %f, sma(5) = %f",
-                 e, s3(e), s5(e));
+        writefln("Added %d, sma(3) = %f, sma(5) = %f", e, s3(e), s5(e));
 }

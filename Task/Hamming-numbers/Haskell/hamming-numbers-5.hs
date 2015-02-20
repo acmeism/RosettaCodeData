@@ -21,10 +21,10 @@ rngval n
 
 nthHam :: Int -> (Double, (Int, Int, Int))
 nthHam n                                                   -- n: 1-based: 1,2,3...
-  | w >= 1   = error $ "Breach of contract: (w < 1):  " ++ show w
-  | m <  0   = error $ "Not enough triples generated: " ++ show (c,n)
-  | m >= nb  = error $ "Generated band is too narrow: " ++ show (m,nb)
-  | True     = res
+  | w >= 1    = error $ "Breach of contract: (w < 1):  " ++ show w
+  | m <  0    = error $ "Not enough triples generated: " ++ show (c,n)
+  | m >= nb   = error $ "Generated band is too narrow: " ++ show (m,nb)
+  | otherwise = res
  where
   (d,w)   = rngval n                                     -- correction dist, width
   hi      = estval n - d                                 --   hi > logval > hi-w

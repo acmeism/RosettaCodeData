@@ -1,17 +1,9 @@
-(ns bogosort
-  (:use [clojure.contrib.seq-utils :only (shuffle)]))
-
-(defn in-order? [less xs]
+(defn in-order? [order xs]
   (or (empty? xs)
-      (empty? (next xs))
-      (and (less (first xs) (second xs))
-           (recur less (next xs)))))
+      (apply order xs)))
 
-(defn bogosort
-  ([xs]
-     (bogosort < xs))
-  ([less xs]
-     (if (in-order? less xs) xs
-	 (recur less (shuffle xs)))))
+(defn bogosort [order xs]
+  (if (in-order? order xs) xs
+    (recur order (shuffle xs))))
 
-(println (bogosort [7,5,12,1,4,2,23,18]))
+(println (bogosort < [7 5 12 1 4 2 23 18]))

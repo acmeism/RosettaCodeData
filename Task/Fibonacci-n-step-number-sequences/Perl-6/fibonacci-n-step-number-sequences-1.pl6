@@ -4,7 +4,7 @@ sub fibo ($n) {
 }
 
 sub nacci (*@starter) {
-    my &fun = eval join '+', '*' xx @starter;
+    my &fun = EVAL join '+', '*' xx @starter;
     @starter, &fun ... *;
 }
 

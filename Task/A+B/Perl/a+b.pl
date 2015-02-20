@@ -1,2 +1,2 @@
-my ($a,$b) = split(/\D+/,<STDIN>);
+my ($a,$b) = split(' ', scalar(<STDIN>));
 print "$a $b " . ($a + $b) . "\n";

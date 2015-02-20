@@ -10,4 +10,4 @@ loop (
     my $parent = alphabet.roll(target.chars).join;
     $parent ne target;
     $parent = max :by(&fitness), mutate($parent) xx C
-) { printf "%6d: '%s'\n", (state $)++, $parent }
+) { printf "%6d: '%s'\n", $++, $parent }

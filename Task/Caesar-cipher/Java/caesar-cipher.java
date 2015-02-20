@@ -1,26 +1,30 @@
 public class Cipher {
-	public static void main(String[] args) {
-		String enc = Cipher.encode(
-				"The quick brown fox Jumped over the lazy Dog", 12);
-		System.out.println(enc);
-		System.out.println(Cipher.decode(enc, 12));
-	}
+    public static void main(String[] args) {
 
-	public static String decode(String enc, int offset) {
-		return encode(enc, -offset);
-	}
+        String str = "The quick brown fox Jumped over the lazy Dog";
 
-	public static String encode(String enc, int offset) {
-		offset = offset % 26 + 26;
-		StringBuilder encoded = new StringBuilder();
-		for (char i : enc.toLowerCase().toCharArray()) {
-			if (Character.isLetter(i)) {
-				int j = (i - 'a' + offset) % 26;
-				encoded.append((char) (j + 'a'));
-			} else {
-				encoded.append(i);
-			}
-		}
-		return encoded.toString();
-	}
+        System.out.println( Cipher.encode( str, 12 ));
+        System.out.println( Cipher.decode( Cipher.encode( str, 12), 12 ));
+    }
+
+    public static String decode(String enc, int offset) {
+        return encode(enc, 26-offset);
+    }
+
+    public static String encode(String enc, int offset) {
+        offset = offset % 26 + 26;
+        StringBuilder encoded = new StringBuilder();
+        for (char i : enc.toCharArray()) {
+            if (Character.isLetter(i)) {
+                if (Character.isUpperCase(i)) {
+                    encoded.append((char) ('A' + (i - 'A' + offset) % 26 ));
+                } else {
+                    encoded.append((char) ('a' + (i - 'a' + offset) % 26 ));
+                }
+            } else {
+                encoded.append(i);
+            }
+        }
+        return encoded.toString();
+    }
 }

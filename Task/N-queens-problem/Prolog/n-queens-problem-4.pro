@@ -1,23 +1,16 @@
-% 8 queens problem.
-%  q(Row) represents a queen, allocated one per row. No rows ever clash.
-%  The columns are chosen iteratively from available columns held in a
-%  list, reduced with each allocation, so we need never check verticals.
-%  For diagonals, we check prior to allocation whether each newly placed
-%  queen will clash with any of the prior placements. This prevents
-%  most invalid permutations from ever being attempted.
-can_place(_, []) :- !.	   % success for empty board
-can_place(q(R,C),Board) :- % check diagonals against allocated queens
-	member(q(Ra,Ca), Board), abs(Ra-R) =:= abs(Ca-C), !, fail.
-can_place(_,_).            % succeed if no diagonals failed
+:- initialization(main).
 
-queens([], [], Board, Board).                            % found a solution
-queens([q(R)|Queens], Columns, Board, Solution) :-
-	nth0(_,Columns,C,Free), can_place(q(R,C),Board), % find all solutions
-	queens(Queens,Free,[q(R,C)|Board], Solution).    % recursively
 
-queens :-
-  findall(q(N), between(0,7,N), Queens), findall(N, between(0,7,N), Columns),
-  findall(B, queens(Queens, Columns, [], B), Boards),     % backtrack over all
-  length(Boards, Len), writef('%w solutions:\n', [Len]),  % Output solutions
-  member(R,Boards), reverse(R,Board), writef('  - %w\n', [Board]), fail.
-queens.
+queens(N,Qs) :- bagof(X, between(1,N,X), Xs), place(Xs,[],Qs).
+
+place(Xs,Qs,Res) :-
+    Xs = [] -> Res = Qs
+  ; select(Q,Xs,Ys), not_diag(Q,Qs,1), place(Ys,[Q|Qs],Res)
+  .
+
+not_diag(_, []     , _).
+not_diag(Q, [Qh|Qs], D) :-
+     abs(Q - Qh) =\= D, D1 is D + 1, not_diag(Q,Qs,D1).
+
+
+main :- findall(Qs, (queens(8,Qs), write(Qs), nl), _), halt.

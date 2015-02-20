@@ -11,7 +11,7 @@ io.write( "r*q1 = " ); Quaternion.print( r*q1 )
 io.write( "q1*r = " ); Quaternion.print( q1*r )
 io.write( "q1*q2 = " ); Quaternion.print( q1*q2 )
 io.write( "q2*q1 = " ); Quaternion.print( q2*q1 )
-Output:
+{{out}}
 norm(q1) = 5.4772255750517
 -q1 = -1.000000 -2.000000i -3.000000j -4.000000k
 conj(q1) = 1.000000 -2.000000i -3.000000j -4.000000k

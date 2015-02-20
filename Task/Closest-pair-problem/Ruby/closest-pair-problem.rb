@@ -6,36 +6,26 @@ end
 
 def closest_bruteforce(points)
   mindist, minpts = Float::MAX, []
-  points.length.times do |i|
-    (i+1).upto(points.length - 1) do |j|
-      dist = distance(points[i], points[j])
-      if dist < mindist
-        mindist = dist
-        minpts = [points[i], points[j]]
-      end
+  points.combination(2) do |pi,pj|
+    dist = distance(pi, pj)
+    if dist < mindist
+      mindist = dist
+      minpts = [pi, pj]
     end
   end
   [mindist, minpts]
 end
 
 def closest_recursive(points)
-  if points.length <= 3
-    return closest_bruteforce(points)
-  end
-  xP = points.sort_by {|p| p.x}
-  mid = (points.length / 2.0).ceil
-  pL = xP[0,mid]
-  pR = xP[mid..-1]
-  dL, pairL = closest_recursive(pL)
-  dR, pairR = closest_recursive(pR)
-  if dL < dR
-    dmin, dpair = dL, pairL
-  else
-    dmin, dpair = dR, pairR
-  end
-  yP = xP.find_all {|p| (pL[-1].x - p.x).abs < dmin}.sort_by {|p| p.y}
-  closest = Float::MAX
-  closestPair = []
+  return closest_bruteforce(points) if points.length <= 3
+  xP = points.sort_by(&:x)
+  mid = points.length / 2
+  xm = xP[mid].x
+  dL, pairL = closest_recursive(xP[0,mid])
+  dR, pairR = closest_recursive(xP[mid..-1])
+  dmin, dpair = dL<dR ? [dL, pairL] : [dR, pairR]
+  yP = xP.find_all {|p| (xm - p.x).abs < dmin}.sort_by(&:y)
+  closest, closestPair = dmin, dpair
   0.upto(yP.length - 2) do |i|
     (i+1).upto(yP.length - 1) do |k|
       break if (yP[k].y - yP[i].y) >= dmin
@@ -46,13 +36,8 @@ def closest_recursive(points)
       end
     end
   end
-  if closest < dmin
-    [closest, closestPair]
-  else
-    [dmin, dpair]
-  end
+  [closest, closestPair]
 end
-
 
 points = Array.new(100) {Point.new(rand, rand)}
 p ans1 = closest_bruteforce(points)

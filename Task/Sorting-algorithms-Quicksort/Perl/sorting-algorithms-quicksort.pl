@@ -1,7 +1,7 @@
 sub quick_sort {
     my @a = @_;
     return @a if @a < 2;
-    my $p = pop @a;
+    my $p = splice @a, int rand @a, 1;
     quick_sort(grep $_ < $p, @a), $p, quick_sort(grep $_ >= $p, @a);
 }
 

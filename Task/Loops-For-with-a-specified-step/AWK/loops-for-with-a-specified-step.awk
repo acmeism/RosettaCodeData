@@ -1,6 +1,6 @@
 BEGIN {
-  for (l= 2; l <= 8; l = l + 2) {
-    print l
+  for (i= 2; i <= 8; i = i + 2) {
+    print i
   }
-  print "Ain't never to late!"
+  print "Ain't never too late!"
 }

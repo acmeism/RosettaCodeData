@@ -1,3 +1,5 @@
+(import (rnrs arithmetic bitwise (6)))
+
 (define (bitwise a b)
   (display (bitwise-and a b))
   (newline)

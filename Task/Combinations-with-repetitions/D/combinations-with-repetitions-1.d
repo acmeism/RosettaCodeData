@@ -4,7 +4,7 @@ const struct CombRep {
     immutable uint nt, nc;
     private const ulong[] combVal;
 
-    this(in uint numType, in uint numChoice) pure nothrow
+    this(in uint numType, in uint numChoice) pure nothrow @safe
     in {
         assert(0 < numType && numType + numChoice <= 64,
                "Valid only for nt + nc <= 64 (ulong bit size)");
@@ -34,15 +34,16 @@ const struct CombRep {
         this.combVal = localCombVal;
     }
 
-    uint length() @property const pure nothrow {
+    uint length() @property const pure nothrow @safe {
         return combVal.length;
     }
 
-    uint[] opIndex(in uint idx) const pure nothrow {
+    uint[] opIndex(in uint idx) const pure nothrow @safe {
         return val2set(combVal[idx]);
     }
 
-    int opApply(immutable int delegate(in ref uint[]) dg) {
+    int opApply(immutable int delegate(in ref uint[]) pure nothrow @safe dg)
+    pure nothrow @safe {
         foreach (immutable v; combVal) {
             auto set = val2set(v);
             if (dg(set))
@@ -51,7 +52,7 @@ const struct CombRep {
         return 1;
     }
 
-    private uint[] val2set(in ulong v) const pure nothrow {
+    private uint[] val2set(in ulong v) const pure nothrow @safe {
         // Convert bit pattern to selection set
         immutable uint bitLimit = nt + nc - 1;
         uint typeIdx = 0;
@@ -66,7 +67,7 @@ const struct CombRep {
 }
 
 // For finite Random Access Range.
-auto combRep(R)(R types, in uint numChoice) /*pure nothrow*/
+auto combRep(R)(R types, in uint numChoice) /*pure*/ nothrow @safe
 if (hasLength!R && isRandomAccessRange!R) {
     ElementType!R[][] result;
 
@@ -80,7 +81,7 @@ if (hasLength!R && isRandomAccessRange!R) {
     return result;
 }
 
-void main() {
+void main() @safe {
     foreach (const e; combRep(["iced", "jam", "plain"], 2))
         writefln("%-(%5s %)", e);
     writeln("Ways to select 3 from 10 types is ",

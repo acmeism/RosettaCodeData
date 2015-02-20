@@ -1,5 +1,9 @@
-String.prototype.reverse = function(){ return this.split("").reverse().join(""); }
+function reverseString(str){
+  return str.split("").reverse().join("");
+}
 
-function palindrome(str) { return str == str.reverse(); }
+function isPalindrome(str) {
+  return str == reverseString(str);
+}
 
-alert(palindrome("ingirumimusnocteetconsumimurigni"));
+alert(isPalindrome("ingirumimusnocteetconsumimurigni"));

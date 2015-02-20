@@ -15,8 +15,8 @@ solutions = []
 0.upto(max_items[ichor]) do |i|
   0.upto(max_items[panacea]) do |p|
     0.upto(max_items[gold]) do |g|
-      next if i*ichor.weight + p*panacea.weight + g*gold.weight > maximum.weight
-      next if i*ichor.volume + p*panacea.volume + g*gold.volume > maximum.volume
+      break if i*ichor.weight + p*panacea.weight + g*gold.weight > maximum.weight
+      break if i*ichor.volume + p*panacea.volume + g*gold.volume > maximum.volume
       val = i*ichor.value + p*panacea.value + g*gold.value
       if val > maxval
         maxval = val

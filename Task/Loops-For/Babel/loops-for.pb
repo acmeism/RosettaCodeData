@@ -1,11 +1,11 @@
-star_triangle: { <- { { "*" << } iter times "\n" << } -> times }
-main: { 10 star_triangle }
-*
-**
-***
-****
-*****
-******
-*******
-********
-*********
+((main { 10 star_triangle ! })
+
+(star_triangle {
+    dup
+    <-
+    { dup { "*" << } <->
+            iter - 1 +
+        times
+        "\n" << }
+    ->
+    times }))

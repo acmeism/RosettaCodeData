@@ -1,14 +1,16 @@
+namespace ConsoleApplication1
+{
+    using System;
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-            bool[] doorStates = new bool[100];
-            int n = 0;
-            int d;
-            while ((d = (++n * n)) <= 100)
-                doorStates[d - 1] = true;
-            for (int i = 0; i < doorStates.Length; i++)
-                Console.WriteLine("Door {0}: {1}", i + 1, doorStates[i] ? "Open" : "Closed");
+            double n;
+
+            //If the current door number is the perfect square of an integer, say it is open, else say it is closed.
+            for (int d = 1; d <= 100; d++)
+                Console.WriteLine("Door #{0}: {1}", d, (n = Math.Sqrt(d)) == (int)n ? "Open" : "Closed");
             Console.ReadKey(true);
         }
     }
+}

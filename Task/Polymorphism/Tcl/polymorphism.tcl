@@ -42,7 +42,7 @@ oo::class create Circle {
 }
 # No destructors: unneeded by these classes
 
-set p [Point new 1.0 2.0]
+set p [Point  new 1.0 2.0]
 set c [Circle new 3.0 4.0 5.0]
 set cCopy [$c copy]
 puts "$p is at ([$p x],[$p y])"

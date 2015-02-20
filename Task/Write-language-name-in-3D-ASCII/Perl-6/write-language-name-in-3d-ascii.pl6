@@ -1,3 +1,23 @@
-print <T,cc^,cc^,cc^,^,,1ccTA,^/A,c_A,^/A-,,@1c:@6;666;`,6;6666,A-c^U-,c`-,c_
--,,`--,661,N66;`66;`,6,/66;_--_-U-_,--cc_-_O_-cc_CccD6@@,6@,,@@B,@@,.@@,D8`,,
-8cc`8`E`8cc@Lc`X>>>.ords>>.comb.map({(" |/\\\n_".comb)[$_-4]});
+my $text = q:to/END/;
+
+ @@@@@              @@
+ @    @              @     @@@
+ @    @              @    @@
+ @    @  @@@   @ @@  @    @@
+ @@@@@  @   @  @@  @ @    @@@@@
+ @      @@@@@  @     @    @@  @@
+ @      @      @     @    @@  @@
+ @       @@@   @     @@    @@@@
+
+END
+
+say '' for ^5;
+for $text.lines -> $_ is copy {
+    my $/;
+    my @chars = ｢-+ ., ;: '"｣.comb.pick(*) xx *;
+    s:g [' '] = @chars.shift;
+    print "                              $_  ";
+    s:g [('@'+)(.)] = @chars.shift ~ $0;
+    .say;
+}
+say '' for ^5;

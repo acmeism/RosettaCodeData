@@ -4,7 +4,7 @@ void main() {
     immutable s = "I am a string";
 
     // Test.
-    if (!s.match(r"string$").empty)
+    if (s.match("string$"))
         "Ends with 'string'.".writeln;
 
     // Substitute.

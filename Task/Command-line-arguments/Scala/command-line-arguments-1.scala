@@ -1,5 +1,3 @@
-object T {
-  def main(args: Array[String]) {
-    println("Received the following arguments": + args.mkString("", ", ", "."))
-  }
+object CommandLineArguments extends App {
+    println(s"Received the following arguments: + ${args.mkString("", ", ", ".")}")
 }

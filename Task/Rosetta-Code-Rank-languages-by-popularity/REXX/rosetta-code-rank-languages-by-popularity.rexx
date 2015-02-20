@@ -15,15 +15,18 @@ call reader 'cat'                                /*append to the catHeap*/
      cat.j=space(cat.j);     _=cat.j;   upper _  /*remove excess blanks.*/
      if _=='' | \L._         then iterate        /*blank or ¬ a language*/
      if \datatype(mems,'W')  then iterate        /*"members"  ¬ numeric.*/
+     #.0=#.0+mems                                /*bump #members found. */
      if u._\==0 then do                          /*[↓] handle duplicates*/
-                         do f=1  for #  until  _==@u.f;    end  /*f*/
-                     #.f=#.f+mems;  iterate j
+                            do f=1  for #  until  _==@u.f
+                            end   /*f*/
+                     #.f=#.f+mems;      iterate j
                      end   /* [↑] languages that are in different cases.*/
      u._=u._+1
      #=#+1;  #.#=#.#+mems;  @.#=cat.j;  @u.#=_   /*bump counter, assign.*/
      end   /*j=1 until ···*/
 !.=                                    /*array holds indication of TIED.*/
-call tell   right(#,9)   '(total) number of languages detected.',  ,  1
+call tell  right(comma(#)  ,9)  '(total) number of languages detected.'
+call tell  right(comma(#.0),9)  '(total) number of entries detected.', , 1
 call eSort #,0                         /*sort the languages along with #*/
 r=0                                    /*add true rank (tR) ──► entries.*/
 tied=;    do j=#  by -1  for #;   r=r+1;  tR=r;  !tR.j=r;  jp=j+1;  jm=j-1
@@ -36,15 +39,15 @@ tied=;    do j=#  by -1  for #;   r=r+1;  tR=r;  !tR.j=r;  jp=j+1;  jm=j-1
 call eSort #,1                         /*sort the languages along with @*/
 listed=0;  w=length(#);        rank=0  /* [↓]  show by ascending rank.  */
 
-  do j=#  by -1  for #  while  #.j>=cutoff;  listed=listed+1;  rank=rank+1
-  call   tell   right('rank:'       right(!tR.j,w),20-1)     right(!.j,7),
-                right('('#.j  left("entr"s(#.j,'ies',"y")')', 9),20)   @.j
-  end   /*j=# by ···*/              /*  [↑]    s(···)  pluralizes a word*/
+  do t=#  by -1  for #  while  #.t>=cutoff;  listed=listed+1;  rank=rank+1
+  call   tell   right('rank:'       right(!tR.t,w),20-1)     right(!.t,7),
+                right('('#.t  left("entr"s(#.t,'ies',"y")')', 9),20)   @.t
+  end   /*t=# by ···*/              /*  [↑]    s(···)  pluralizes a word*/
 
 call tell left('',27)     '☼  end-of-list.  ☼',  1,  2
-if cutoff==0  then exit                /*was there a CUTOFF speciified? */
-call tell '  Listing stopped due to a cutoff of'   cutoff".",   1
-call tell listed 'language's(#) "found with number of entries ≥" cutoff,1,1
+if cutoff==0  then exit                /*was there a  CUTOFF  specified?*/
+call tell '  Listing stopped due to a cutoff of'   comma(cutoff)".",   1
+call tell listed 'language's(listed) "found with number of entries ≥" cutoff,1,1
 exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────ESORT subroutine────────────────────*/
 eSort: procedure expose #. @. !tr.;  arg N,p2;  h=N  /*sort by # entries*/
@@ -76,9 +79,9 @@ old.7='??-61/52' ;  new.6=  'MK-61/52' /*somewhere a mistranslated: MK- */
   do recs=0   while  lines(inFID)\==0  /*read a file,  1 line at a time.*/
   $=translate(linein(inFID),,'9'x)     /*handle any stray tab characters*/
   $$=space($); if $$==''  then iterate /*ignore all blank lines.        */
-          do k=1  while old.k\==''     /*translate Unicode variations.  */
-          if pos(old.k, $$)  \==0  then  $$=changestr(old.k, $$, new.k)
-          end   /*k*/                  /* [↑] handle different spellings*/
+          do v=1  while old.v\==''     /*translate Unicode variations.  */
+          if pos(old.v, $$)  \==0  then  $$=changestr(old.v, $$, new.v)
+          end   /*v*/                  /* [↑] handle different spellings*/
   if ig_ast  then do; ig_ast=pos(' * ',$)==0;  if ig_ast then iterate; end
   $u=$$;        upper $u               /*get an uppercase version.      */
   if pos('RETRIEVED FROM',$u)\==0  then leave    /*a pseudo End-Of-Data.*/
@@ -92,12 +95,17 @@ old.7='??-61/52' ;  new.6=  'MK-61/52' /*somewhere a mistranslated: MK- */
   catHeap=catHeap $$                   /*append to the (CATegory) heap. */
   end   /*while lines···*/
 
-call   tell     right(recs,9)       'records read from file: '       inFID
+call  tell   right(comma(recs),9)     'records read from file: '     inFID
 return
-/*──────────────────────────────────S subroutine────────────────────────*/
-s: if arg(1)==1 then return arg(3);  return word(arg(2) 's',1)  /*plural*/
 /*──────────────────────────────────TELL subroutine─────────────────────*/
 tell:   do '0'arg(2);   call lineout outFID,' '     ;   say         ;  end
                         call lineout outFID,arg(1)  ;   say arg(1)
         do '0'arg(3);   call lineout outFID,' '     ;   say         ;  end
 return  /*show before blanks lines (if any), MSG, show after blank lines*/
+/*──────────────────────────────────one─liner subroutines───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────*/
+comma:     procedure; parse arg _,c,p,t; c=pickBlank(c,","); o=p(p 3); p=abs(o); t=p(t 999999999); if \isInt(p) | \isInt(t) | p==0 | arg()>4 then return _; n=_'.9'; #=123456789; k=0; return comma_()
+comma_:    if o<0 then do; b=verify(_,' '); if b==0 then return _; e=length(_)-verify(reverse(_),' ')+1; end; else do; b=verify(n,#,"M"); e=verify(n,#'0',,verify(n,#"0.",'M'))-p-1; end; do j=e to b by -p while k<t; _=insert(c,_,j); k=k+1;end;return _
+isInt:     return datatype(arg(1),'W')
+p:         return word(arg(1),1)
+pickBlank: procedure; parse arg x,y; arg xu; if xu=='BLANK'  then return ' '; return p(x y)
+s:         if arg(1)==1 then return arg(3);  return word(arg(2) 's',1)  /*plural*/

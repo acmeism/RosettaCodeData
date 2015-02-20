@@ -10,10 +10,10 @@
 @end
 
 @implementation Person
-+ (Person *)named:(NSString *)name {
-    return [[Person alloc] initWithName:name];
++ (instancetype)named:(NSString *)name {
+    return [[self alloc] initWithName:name];
 }
-- (id)initWithName:(NSString *)name {
+- (instancetype)initWithName:(NSString *)name {
     if ((self = [super init])) {
         _name = name;
         _prefs = nil;
@@ -98,7 +98,7 @@ void doMarriage() {
     ivy.prefs  = @[ ian, col, hal, gav, fred, bob, abe, ed, jon, dan ];
     jan.prefs  = @[ ed, hal, gav, abe, bob, jon, col, ian, fred, dan ];
 
-    NSArray *men = [NSArray arrayWithArray:abi.prefs];
+    NSArray *men = abi.prefs;
 
     NSUInteger freeMenCount = men.count;
     while (freeMenCount > 0) {

@@ -1,26 +1,19 @@
-import std.stdio, std.typetuple;
-
-template Range(int start, int stop) {
-    static if (stop <= start)
-        alias TypeTuple!() Range;
-    else
-        alias TypeTuple!(Range!(start, stop - 1), stop - 1) Range;
-}
+import std.stdio, std.typecons;
 
 __gshared uint[32] best;
 
-uint topswops(size_t n)() nothrow {
+uint topswops(size_t n)() nothrow @nogc {
     static assert(n > 0 && n < best.length);
     size_t d = 0;
 
     alias T = byte;
     alias Deck = T[n];
 
-    void trySwaps(in ref Deck deck, in uint f) nothrow {
+    void trySwaps(in ref Deck deck, in uint f) nothrow @nogc {
         if (d > best[n])
             best[n] = d;
 
-        foreach_reverse (immutable i; Range!(0, n)) {
+        foreach_reverse (immutable i; staticIota!(0, n)) {
             if ((deck[i] == i || (deck[i] == -1 && !(f & (1U << i))))
                 && (d + best[i] >= best[n] || deck[i] == -1))
             break;
@@ -29,17 +22,17 @@ uint topswops(size_t n)() nothrow {
         }
 
         Deck deck2 = void;
-        foreach (immutable i; Range!(0, n)) // Copy.
+        foreach (immutable i; staticIota!(0, n)) // Copy.
             deck2[i] = deck[i];
 
         d++;
-        foreach (immutable i; Range!(1, n)) {
+        foreach (immutable i; staticIota!(1, n)) {
             enum uint k = 1U << i;
             if (deck[i] != i && (deck[i] != -1 || (f & k)))
                 continue;
 
-            deck2[0] = cast(T)i;
-            foreach_reverse (immutable j; Range!(0, i))
+            deck2[0] = T(i);
+            foreach_reverse (immutable j; staticIota!(0, i))
                 deck2[i - j] = deck[j]; // Reverse copy.
             trySwaps(deck2, f | k);
         }
@@ -54,6 +47,6 @@ uint topswops(size_t n)() nothrow {
 }
 
 void main() {
-    foreach (i; Range!(1, 14))
+    foreach (immutable i; staticIota!(1, 14))
         writefln("%2d: %d", i, topswops!i());
 }

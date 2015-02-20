@@ -1,5 +1,9 @@
-str1 = "This is a string!"
-str2 = "string"
+test = "My name is Lua."
+pattern = ".*name is (%a*).*"
 
-print( str1:match( str2 ) )
-erg = str1:gsub( "a", "another" ); print( erg )
+if test:match(pattern) then
+    print("Name found.")
+end
+
+sub, num_matches = test:gsub(pattern, "Hello, %1!")
+print(sub)

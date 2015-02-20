@@ -45,6 +45,7 @@ var cbrf = sBox{
 
 func u32(b []byte) uint32 {
     return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
+}
 
 func b4(u uint32, b []byte) {
     b[0] = byte(u)

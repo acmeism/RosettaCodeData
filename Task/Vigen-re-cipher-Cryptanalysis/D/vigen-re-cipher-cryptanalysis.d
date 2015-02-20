@@ -5,14 +5,14 @@ string[2] vigenereDecrypt(in double[] targetFreqs, in string input) {
     enum nAlpha = std.ascii.uppercase.length;
 
     static double correlation(in string txt, in double[] sTargets)
-    /*pure nothrow*/ {
+    pure nothrow /*@safe*/ @nogc {
         uint[nAlpha] charCounts = 0;
         foreach (immutable c; txt)
             charCounts[c - 'A']++;
         return charCounts[].sort().release.dotProduct(sTargets);
     }
 
-    static frequency(in string txt) pure nothrow {
+    static frequency(in string txt) pure nothrow @safe {
         auto freqs = new Tuple!(char,"c", uint,"d")[nAlpha];
         foreach (immutable i, immutable c; std.ascii.uppercase)
             freqs[i] = tuple(c, 0);
@@ -22,8 +22,8 @@ string[2] vigenereDecrypt(in double[] targetFreqs, in string input) {
     }
 
     static string[2] decode(in string cleaned, in string key)
-    pure nothrow {
-        assert(key.length > 0);
+    pure nothrow @safe {
+        assert(!key.empty);
         string decoded;
         foreach (immutable i, immutable c; cleaned)
             decoded ~= (c - key[i % $] + nAlpha) % nAlpha + 'A';
@@ -32,7 +32,7 @@ string[2] vigenereDecrypt(in double[] targetFreqs, in string input) {
 
     static size_t findBestLength(in string cleaned,
                                  in double[] sTargets)
-    /*pure nothrow*/ {
+    pure nothrow /*@safe*/ {
         size_t bestLength;
         double bestCorr = -100.0;
 
@@ -59,7 +59,7 @@ string[2] vigenereDecrypt(in double[] targetFreqs, in string input) {
     }
 
     static string findKey(in string cleaned, in size_t bestLength,
-                          in double[] targetFreqs) /*pure*/ {
+                          in double[] targetFreqs) pure nothrow @safe {
         auto pieces = new string[bestLength];
         foreach (immutable i, immutable c; cleaned)
             pieces[i % bestLength] ~= c;
@@ -91,7 +91,7 @@ string[2] vigenereDecrypt(in double[] targetFreqs, in string input) {
 
     immutable cleaned = input.toUpper.removechars("^A-Z");
 
-    //immutable sortedTargets = sorted(targetFreqs);
+    //immutable sortedTargets = targetFreqs.sorted;
     immutable sortedTargets = targetFreqs.dup.sort().release.idup;
 
     immutable bestLength = findBestLength(cleaned, sortedTargets);

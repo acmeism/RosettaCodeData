@@ -35,7 +35,7 @@ sub sha1(Blob $msg) returns Blob
     my @M = sha1-pad($msg);
     my @H = 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0;
     sha1-block(@H,@M[$_..$_+15]) for 0, 16...^ +@M;
-    Blob.new: map -> $w is rw { reverse gather for ^4 { take $w % 256; $w div= 256 } }, @H;
+    Blob.new: map { reverse .polymod(256 xx 3) }, @H;
 }
 
 say sha1(.encode('ascii')), "  $_"

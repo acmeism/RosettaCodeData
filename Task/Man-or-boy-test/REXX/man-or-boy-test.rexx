@@ -1,0 +1,16 @@
+/*REXX program performs the "man or boy" test as far as possible for N. */
+     do n=0                            /*increment  N  from  0  forever.*/
+     say 'n='n   a(N,x1,x2,x3,x4,x5)   /*display the result to the term.*/
+     end  /*n*/                        /* [↑]  do until something breaks*/
+exit                                   /*stick a fork in it, we're done.*/
+/*──────────────────────────────────A subroutine────────────────────────*/
+a:   procedure; parse arg k,x1,x2,x3,x4,x5
+     if k<=0  then return f(x4)+f(x5)
+              else return f(b)
+/*──────────────────────────────────one─liner subroutines───────────────*/
+b:   k=k-1;                            return a(k,b,x1,x2,x3,x4)
+f:   interpret  'v='  arg(1)"()";      return v
+x1:  procedure; return  1
+x2:  procedure; return -1
+x3:  procedure; return -1
+x4:  procedure; return  1

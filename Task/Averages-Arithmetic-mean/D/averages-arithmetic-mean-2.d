@@ -1,6 +1,6 @@
 import std.stdio, std.algorithm, std.range;
 
-real mean(Range)(Range r) pure nothrow {
+real mean(Range)(Range r) pure nothrow @nogc {
     return r.sum / max(1.0L, r.count);
 }
 

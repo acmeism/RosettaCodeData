@@ -1,62 +1,75 @@
 module queue_usage2;
 
+import std.traits: hasIndirections;
+
 struct GrowableCircularQueue(T) {
     public size_t length;
-    private size_t head, tail;
+    private size_t first, last;
     private T[] A = [T.init];
 
-    bool empty() const pure nothrow {
+    this(T[] items...) pure nothrow @safe {
+        foreach (x; items)
+            push(x);
+    }
+
+    @property bool empty() const pure nothrow @safe @nogc {
         return length == 0;
     }
 
-    void push(immutable T item) pure nothrow {
+    @property T front() pure nothrow @safe @nogc {
+        assert(length != 0);
+        return A[first];
+    }
+
+    T opIndex(in size_t i) pure nothrow @safe @nogc {
+        assert(i < length);
+        return A[(first + i) & (A.length - 1)];
+    }
+
+    void push(T item) pure nothrow @safe {
         if (length >= A.length) { // Double the queue.
-            const old = A;
-            A = new T[A.length * 2];
-            A[0 .. (old.length - head)] = old[head .. $];
-            if (head)
-                A[(old.length - head) .. old.length] = old[0 .. head];
-            head = 0;
-            tail = length;
+            immutable oldALen = A.length;
+            A.length *= 2;
+            if (last < first) {
+                A[oldALen .. oldALen + last + 1] = A[0 .. last + 1];
+                static if (hasIndirections!T)
+                    A[0 .. last + 1] = T.init; // Help for the GC.
+                last += oldALen;
+            }
         }
-        A[tail] = item;
-        tail = (tail + 1) & (A.length - 1);
+        last = (last + 1) & (A.length - 1);
+        A[last] = item;
         length++;
     }
 
-    T pop() pure {
-        import std.traits: hasIndirections;
-
-        if (length == 0)
-            throw new Exception("GrowableCircularQueue is empty.");
-        auto saved = A[head];
+    @property T pop() pure nothrow @safe @nogc {
+        assert(length != 0);
+        auto saved = A[first];
         static if (hasIndirections!T)
-            A[head] = T.init; // Help for the GC.
-        head = (head + 1) & (A.length - 1);
+            A[first] = T.init; // Help for the GC.
+        first = (first + 1) & (A.length - 1);
         length--;
         return saved;
     }
 }
 
 version (queue_usage2_main) {
-    unittest {
-        auto q = new GrowableCircularQueue!int();
+    void main() {
+        GrowableCircularQueue!int q;
         q.push(10);
         q.push(20);
         q.push(30);
-        assert(q.pop() == 10);
-        assert(q.pop() == 20);
-        assert(q.pop() == 30);
-        assert(q.empty());
+        assert(q.pop == 10);
+        assert(q.pop == 20);
+        assert(q.pop == 30);
+        assert(q.empty);
 
         uint count = 0;
         foreach (immutable i; 1 .. 1_000) {
             foreach (immutable j; 0 .. i)
                 q.push(count++);
             foreach (immutable j; 0 .. i)
-                q.pop();
+                q.pop;
         }
     }
-
-    void main() {}
 }

@@ -5,19 +5,14 @@ except NameError:
     long = int
 
 def fac(n):
-    step = lambda x: 1 + x*4 - (x//2)*2
+    step = lambda x: 1 + (x<<2) - ((x>>1)<<1)
     maxq = long(floor(sqrt(n)))
     d = 1
     q = n % 2 == 0 and 2 or 3
     while q <= maxq and n % q != 0:
         q = step(d)
         d += 1
-    res = []
-    if q <= maxq:
-        res.extend(fac(n//q))
-        res.extend(fac(q))
-    else: res=[n]
-    return res
+    return q <= maxq and [q] + fac(n//q) or [n]
 
 if __name__ == '__main__':
     import time

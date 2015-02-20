@@ -1,8 +1,8 @@
-/*REXX program calculates the  digital root  and  additive persistence. */
+/*REXX program calculates the  digital root  and  additive persisteance. */
 numeric digits 1000                                /*lets handle biguns.*/
 say 'digital'                                      /*part of the header.*/
-say '  root  persistence' center('number',79)      /*  "   "  "     "   */
-say '═══════ ═══════════' center(''      ,79,'═')  /*  "   "  "     "   */
+say '  root  persistence' center('number',81)      /*  "   "  "     "   */
+say '═══════ ═══════════' center(''      ,81,'═')  /*  "   "  "     "   */
 call digRoot       627615
 call digRoot        39390
 call digRoot       588225
@@ -11,11 +11,11 @@ call digRoot 8999999999999999999999999999999999999999999999999999999999999999999
 exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────DIGROOT subroutine──────────────────*/
 digRoot: procedure;  parse arg x 1 ox  /*get the num, save as original. */
-  do pers=0 while length(x)\==1;  r=0  /*keep summing until digRoot=1dig*/
-       do j=1 for length(x)            /*add each digit in the number.  */
+  do pers=0  while length(x)\==1;  r=0 /*keep summing until digRoot=1dig*/
+       do j=1  for length(x)           /*add each digit in the number.  */
        r=r+substr(x,j,1)               /*add a digit to the digital root*/
        end   /*j*/
   x=r                                  /*'new' num, it may be multi-dig.*/
   end        /*pers*/
-say center(x,7) center(pers,11) ox     /*show a nicely formatted line.  */
+say center(x,7)  center(pers,11)  ox   /*show a nicely formatted line.  */
 return

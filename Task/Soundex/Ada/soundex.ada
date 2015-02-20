@@ -6,10 +6,10 @@ procedure Soundex is
    function "+"(S:String) return Unbounded_String renames To_Unbounded_String;
 
    function toSoundex (instr : String) return String is
-      str : String := To_Upper(instr);
+      str  : String := To_Upper(instr);
       output : String := "0000";
       spos : Integer := str'First+1;  opos : Positive := 2;
-      map : array(0..255) of Character := (others => ' ');
+      map  : array(0..255) of Character := (others => ' ');
       last : Integer := str'First;
    begin
       map(65..90) := " 123 12- 22455 12623 1-2 2";

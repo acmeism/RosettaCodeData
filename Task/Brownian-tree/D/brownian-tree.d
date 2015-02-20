@@ -1,12 +1,12 @@
-import core.stdc.stdio, std.random, grayscale_image;
-
-enum uint side = 600; // Square world side.
-enum uint num_particles = 1_000;
-static assert(side > 2 && num_particles < (side ^^ 2 * 0.7));
-
 void main() {
-    auto rng = Xorshift(unpredictableSeed);
-    ubyte[side][side] W; // World.
+    import core.stdc.stdio, std.random, grayscale_image;
+
+    enum uint side = 600; // Square world side.
+    enum uint num_particles = 10_000;
+    static assert(side > 2 && num_particles < (side ^^ 2 * 0.7));
+
+    auto rng = unpredictableSeed.Xorshift;
+    ubyte[side][side] W;       // World.
     W[side / 2][side / 2] = 1; // Set tree root.
 
     foreach (immutable _; 0 .. num_particles) {
@@ -34,5 +34,5 @@ void main() {
 
     ubyte[] data = (&W[0][0])[0 .. side ^^ 2]; // Flat view.
     data[] += 255;
-    Image!ubyte.fromData(data, side,side).savePGM("brownian_tree.pgm");
+    Image!ubyte.fromData(data, side, side).savePGM("brownian_tree.pgm");
 }

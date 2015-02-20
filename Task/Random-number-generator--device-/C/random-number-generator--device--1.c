@@ -1,25 +1,25 @@
-#include <inttypes.h>
 #include <stdio.h>
-#include <stdint.h>
+#include <stdlib.h>
 
-int main(int argc, char **argv)
+#define RANDOM_PATH "/dev/urandom"
+
+int main(void)
 {
-    uint32_t v;
-    FILE *r = fopen("/dev/urandom", "r");
-    if (r == NULL)
-    {
-  perror("/dev/urandom");
-  return 1;
-    }
+        unsigned char buf[4];
+        unsigned long v;
+        FILE *fin;
 
-    size_t br = fread(&v, sizeof v, 1, r);
-    if (br < 1)
-    {
-  fputs("/dev/urandom: Not enough bytes\n", stderr);
-  return 1;
-    }
-
-    printf("%" PRIu32 "\n", v);
-    fclose(r);
-    return 0;
+        if ((fin = fopen(RANDOM_PATH, "r")) == NULL) {
+                fprintf(stderr, "%s: unable to open file\n", RANDOM_PATH);
+                return EXIT_FAILURE;
+        }
+        if (fread(buf, 1, sizeof buf, fin) != sizeof buf) {
+                fprintf(stderr, "%s: not enough bytes (expected %u)\n",
+                        RANDOM_PATH, (unsigned) sizeof buf);
+                return EXIT_FAILURE;
+        }
+        fclose(fin);
+        v = buf[0] | buf[1] << 8UL | buf[2] << 16UL | buf[3] << 24UL;
+        printf("%lu\n", v);
+        return 0;
 }

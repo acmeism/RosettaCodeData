@@ -1,7 +1,7 @@
 import grayscale_image;
 
 Color findSingleChannelMedian(Color)(in Image!Color img)
-nothrow if (Color.tupleof.length == 1) // Hack.
+pure nothrow @nogc if (Color.tupleof.length == 1) // Hack.
 in {
     assert(img !is null);
 } body {
@@ -30,7 +30,7 @@ in {
 
 Image!Color binarizeInPlace(Color)(Image!Color img,
                                    in Color thresh)
-nothrow in {
+pure nothrow @nogc in {
     assert(img !is null);
 } body {
     foreach (immutable i, ref c; img.image)

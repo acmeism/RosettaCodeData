@@ -50,7 +50,7 @@ if add then do;  set_=_2;  t=_1;  s=_1;  end
     if (eq | subset) & \has  then return 0
     end    /*j*/
 
-if subset then return 1
-if eq then if arg()>3 then return 1
-                      else return set$('equal',_2,_1,1)
+if subset  then return 1
+if eq  then  if  arg()>3  then return 1
+                          else return set$('equal',_2,_1,1)
 return set.t

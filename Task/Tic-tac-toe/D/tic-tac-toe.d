@@ -6,7 +6,7 @@ struct GameBoard {
     enum : dchar { human = 'X', computer = 'O' }
     enum Game { going, humanWins, computerWins, draw }
 
-    const pure nothrow invariant() {
+    const pure nothrow @safe @nogc invariant() {
         int nHuman = 0, nComputer = 0;
         foreach (immutable i, immutable c; board)
             if (c.isDigit)
@@ -22,15 +22,15 @@ struct GameBoard {
         return format("%(%-(%s|%)\n-+-+-\n%)", board[].chunks(3));
     }
 
-    bool isAvailable(in int i) const pure nothrow {
+    bool isAvailable(in int i) const pure nothrow @safe @nogc {
         return i >= 0 && i < 9 && board[i].isDigit;
     }
 
-    int[] availablePositions() const pure nothrow {
-        return 9.iota.filter!(i => isAvailable(i)).array;
+    auto availablePositions() const pure nothrow @safe /*@nogc*/ {
+        return 9.iota.filter!(i => isAvailable(i));
     }
 
-    Game winner() const pure nothrow {
+    Game winner() const pure nothrow @safe /*@nogc*/ {
         static immutable wins = [[0, 1, 2], [3, 4, 5], [6, 7, 8],
                                  [0, 3, 6], [1, 4, 7], [2, 5, 8],
                                  [0, 4, 8], [2, 4, 6]];
@@ -49,7 +49,7 @@ struct GameBoard {
         return availablePositions.empty ? Game.draw: Game.going;
     }
 
-    bool isFinished() const pure nothrow {
+    bool isFinished() const pure nothrow @safe /*@nogc*/ {
         return winner != Game.going;
     }
 
@@ -57,8 +57,8 @@ struct GameBoard {
     out(res) {
         assert(res >= 0 && res < 9 && isAvailable(res));
     } body {
-        // return availablePositions.choice;
-        return availablePositions[uniform(0, $)];
+        // return availablePositions.array.choice;
+        return availablePositions.array[uniform(0, $)];
     }
 }
 

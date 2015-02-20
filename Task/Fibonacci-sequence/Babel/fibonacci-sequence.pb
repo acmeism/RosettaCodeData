@@ -1,17 +1,20 @@
-main:
-    { argv 0 th $d
-    fib
-    %d cr << }
+((main
+    {{iter fib !}
+    20 times
 
-fib!:
-    { dup zero?
-        { dup one?
-            { cp <- 2 - fib -> 1 - fib + }
-            { zap 1 }
-        if }
-        { zap 1 }
-    if }
+    collect !
+    rev
 
-zero?!: { 0 = }
+    {%d " " . <<}
+    each})
 
-one?!: { 1 = }
+(collect { -1 take })
+
+(fib
+  {{dup 2 <}
+        {fnord}
+        {dup
+            <- 2 - fib ! ->
+            1 - fib !
+            + }
+    ifte}))

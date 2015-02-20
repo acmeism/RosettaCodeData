@@ -1,17 +1,15 @@
-import std.stdio;
+void main() @safe {
+    import std.stdio, std.range, std.algorithm, std.typecons, std.numeric;
 
-ulong[2] tri(ulong lim, ulong a=3, ulong b=4, ulong c=5) {
-  immutable l = a + b + c;
-  if (l > lim)
-    return [0, 0];
-  typeof(return) r = [1, lim / l];
-  r[] += tri(lim,  a - 2*b + 2*c,  2*a - b + 2*c,  2*a - 2*b + 3*c)[];
-  r[] += tri(lim,  a + 2*b + 2*c,  2*a + b + 2*c,  2*a + 2*b + 3*c)[];
-  r[] += tri(lim, -a + 2*b + 2*c, -2*a + b + 2*c, -2*a + 2*b + 3*c)[];
-  return r;
-}
+    enum triples = (in uint n) pure nothrow @safe /*@nogc*/ =>
+        iota(1, n + 1)
+        .map!(z => iota(1, z + 1)
+                   .map!(x => iota(x, z + 1).map!(y => tuple(x, y, z))))
+        .joiner.joiner
+        .filter!(t => t[0] ^^ 2 + t[1] ^^ 2 == t[2] ^^ 2 && t[].only.sum <= n)
+        .map!(t => tuple(t[0 .. 2].gcd == 1, t[]));
 
-void main() {
-  foreach (immutable p; 1 .. 8)
-    writeln(10 ^^ p, " ", tri(10 ^^ p));
+    auto xs = triples(100);
+    writeln("Up to 100 there are ", xs.count, " triples, ",
+            xs.filter!q{ a[0] }.count, " are primitive.");
 }

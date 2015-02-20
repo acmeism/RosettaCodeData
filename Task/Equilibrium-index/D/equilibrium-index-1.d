@@ -1,7 +1,7 @@
 import std.stdio, std.algorithm, std.range, std.functional;
 
-auto equilibrium(Range)(Range r) pure nothrow {
-    return r.length.iota.filter!(i => r[0..i].sum == r[i+1 .. $].sum);
+auto equilibrium(Range)(Range r) pure nothrow @safe /*@nogc*/ {
+    return r.length.iota.filter!(i => r[0 .. i].sum == r[i + 1 .. $].sum);
 }
 
 void main() {

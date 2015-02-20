@@ -6,41 +6,46 @@ struct Permutations(bool doCopy=true, T) if (isMutable!T) {
     private uint[31] indexes;
     private ulong tot;
 
-    this (in T[] items) pure /*nothrow*/
+    this (T[] items) pure nothrow @safe @nogc
     in {
-        static enum string L = text(indexes.length); // impure
+        static enum string L = indexes.length.text;
         assert(items.length >= 0 && items.length <= indexes.length,
                "Permutations: items.length must be >= 0 && < " ~ L);
     } body {
-        static ulong factorial(in uint n) pure nothrow {
+        static ulong factorial(in size_t n) pure nothrow @safe @nogc {
             ulong result = 1;
-            foreach (i; 2 .. n + 1)
+            foreach (immutable i; 2 .. n + 1)
                 result *= i;
             return result;
         }
 
         this.num = items.length;
-        this.items = items.dup;
-        foreach (i; 0 .. cast(typeof(indexes[0]))this.num)
+        this.items = items;
+        foreach (immutable i; 0 .. cast(typeof(indexes[0]))this.num)
             this.indexes[i] = i;
         this.tot = factorial(this.num);
     }
 
-    @property T[] front() pure nothrow {
+    @property T[] front() pure nothrow @safe {
         static if (doCopy) {
-            //return items.dup; // Not nothrow.
-            auto items2 = new T[items.length];
-            items2[] = items[];
-            return items2;
+            return items.dup;
         } else
             return items;
     }
 
-    @property bool empty() const pure nothrow {
+    @property bool empty() const pure nothrow @safe @nogc {
         return tot == 0;
     }
 
-    void popFront() pure nothrow {
+    @property size_t length() const pure nothrow @safe @nogc {
+        // Not cached to keep the function pure.
+        typeof(return) result = 1;
+        foreach (immutable x; 1 .. items.length + 1)
+            result *= x;
+        return result;
+    }
+
+    void popFront() pure nothrow @safe @nogc {
         tot--;
         if (tot > 0) {
             size_t j = num - 2;
@@ -66,8 +71,8 @@ struct Permutations(bool doCopy=true, T) if (isMutable!T) {
 }
 
 Permutations!(doCopy,T) permutations(bool doCopy=true, T)
-                                    (in T[] items)
-pure /*nothrow*/ if (isMutable!T) {
+                                    (T[] items)
+pure nothrow if (isMutable!T) {
     return Permutations!(doCopy, T)(items);
 }
 

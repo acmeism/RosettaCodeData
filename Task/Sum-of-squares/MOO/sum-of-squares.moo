@@ -8,7 +8,7 @@ endfor
 player:tell(toliteral(list), " => ", sum);
 .
 
-Output:
+{{out}}
 ;#100:sum_squares({3,1,4,1,5,9})
 {3, 1, 4, 1, 5, 9} => 133
 ;#100:sum_squares({})

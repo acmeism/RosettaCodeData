@@ -1,32 +1,30 @@
 import std.algorithm, std.range, std.traits, permutations2,
        permutations_by_swapping1;
 
-auto prod(Range)(Range r) /*pure*/ nothrow {
-    return reduce!q{a * b}(cast(ForeachType!Range)1, r);
+auto prod(Range)(Range r) nothrow @safe @nogc {
+    return reduce!q{a * b}(ForeachType!Range(1), r);
 }
 
-T permanent(T)(in T[][] a) /*pure nothrow*/
+T permanent(T)(in T[][] a) nothrow @safe
 in {
-    foreach (const row; a)
-        assert(row.length == a[0].length);
+    assert(a.all!(row => row.length == a[0].length));
 } body {
     auto r = a.length.iota;
     T tot = 0;
-    foreach (sigma; r.array.permutations)
+    foreach (const sigma; r.array.permutations)
         tot += r.map!(i => a[i][sigma[i]]).prod;
     return tot;
 }
 
-T determinant(T)(in T[][] a) /*pure nothrow*/
+T determinant(T)(in T[][] a) nothrow
 in {
-    foreach (const row; a)
-        assert(row.length == a[0].length);
+    assert(a.all!(row => row.length == a[0].length));
 } body {
     immutable n = a.length;
     auto r = n.iota;
     T tot = 0;
     //foreach (sigma, sign; n.spermutations) {
-    foreach (sigma_sign; n.spermutations) {
+    foreach (const sigma_sign; n.spermutations) {
         const sigma = sigma_sign[0];
         immutable sign = sigma_sign[1];
         tot += sign * r.map!(i => a[i][sigma[i]]).prod;

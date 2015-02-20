@@ -1,1 +1,1 @@
-println("My arguments are: "+argv.mkString("", ", ", "."))
+println(s"Received the following arguments: + ${argv.mkString("", ", ", ".")}")

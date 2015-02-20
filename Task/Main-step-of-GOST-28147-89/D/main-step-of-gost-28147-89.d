@@ -1,13 +1,15 @@
+import std.stdio, std.range, std.algorithm;
+
 /// Rotate uint left.
-uint rol(in uint x, in uint nBits) @safe pure nothrow {
+uint rol(in uint x, in uint nBits) @safe pure nothrow @nogc {
     return (x << nBits) | (x >> (32 - nBits));
 }
 
 alias Nibble = ubyte; // 4 bits used.
 alias SBox = immutable Nibble[16][8];
 
-private bool _validateSBox(in SBox data) @safe pure nothrow {
-    foreach (ref row; data)
+private bool _validateSBox(in SBox data) @safe pure nothrow @nogc {
+    foreach (const ref row; data)
         foreach (ub; row)
             if (ub >= 16) // Verify it's a nibble.
                 return false;
@@ -16,13 +18,9 @@ private bool _validateSBox(in SBox data) @safe pure nothrow {
 
 struct GOST(s...) if (s.length == 1 && s[0]._validateSBox) {
     private static generate(ubyte k)() @safe pure nothrow {
-        //return iota(k87.length)
-        //     .map!(i=> (s[0][k][i >> 4] << 4) | s[0][k - 1][i & 0xF])
-        //     .array;
-        uint[k87.length] result; // ubytes[...] should suffice.
-        foreach (immutable i, ref item; result)
-            item = (s[0][k][i >> 4] << 4) | s[0][k - 1][i & 0xF];
-        return result;
+        return k87.length.iota
+               .map!(i=> (s[0][k][i >> 4] << 4) | s[0][k - 1][i & 0xF])
+               .array;
     }
 
     private uint[2] buffer;
@@ -32,7 +30,7 @@ struct GOST(s...) if (s.length == 1 && s[0]._validateSBox) {
                                         k21 = generate!1;
 
     // Endianess problems?
-    private static uint f(in uint x) pure nothrow {
+    private static uint f(in uint x) pure nothrow @nogc @safe {
         immutable uint y = (k87[(x >> 24) & 0xFF] << 24) |
                            (k65[(x >> 16) & 0xFF] << 16) |
                            (k43[(x >>  8) & 0xFF] <<  8) |
@@ -41,15 +39,14 @@ struct GOST(s...) if (s.length == 1 && s[0]._validateSBox) {
     }
 
     // This performs only a step of the encoding.
-    public void mainStep(in uint[2] input, in uint key) pure nothrow {
+    public void mainStep(in uint[2] input, in uint key)
+    pure nothrow @nogc @safe {
         buffer[0] = f(key + input[0]) ^ input[1];
         buffer[1] = input[0];
     }
 }
 
 void main() {
-    import std.stdio;
-
     // S-boxes used by the Central Bank of Russian Federation:
     // http://en.wikipedia.org/wiki/GOST_28147-89
     // (This is a matrix of nibbles).

@@ -23,9 +23,9 @@ end;
 
 
 # The first fifteen: 0 to 14 !
-List([0 .. 14], n -> Catalan1(n));
-List([0 .. 14], n -> Catalan2(n));
-List([0 .. 14], n -> Catalan3(n));
-List([0 .. 14], n -> Catalan4(n));
+List([0 .. 14], Catalan1);
+List([0 .. 14], Catalan2);
+List([0 .. 14], Catalan3);
+List([0 .. 14], Catalan4);
 # Same output for all four:
 # [ 1, 1, 2, 5, 14, 42, 132, 429, 1430, 4862, 16796, 58786, 208012, 742900, 2674440 ]

@@ -1,6 +1,6 @@
 fibsteps (a,b) n
-    | n <= 0 = (a,b)
-    | True   = fibsteps (b, a+b) (n-1)
+    | n <= 0    = (a,b)
+    | otherwise = fibsteps (b, a+b) (n-1)
 
 fibnums :: [Integer]
 fibnums = map fst $ iterate (`fibsteps` 1) (0,1)

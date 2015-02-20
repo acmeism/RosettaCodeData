@@ -5,7 +5,7 @@ import "fmt"
 type trit int8
 
 const (
-    trFalse = iota - 1
+    trFalse trit = iota - 1
     trMaybe
     trTrue
 )

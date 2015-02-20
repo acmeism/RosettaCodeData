@@ -1,6 +1,6 @@
 import std.stdio, std.math, std.algorithm, std.array, std.traits;
 
-T[N] pows(T, size_t N)() {
+T[N] pows(T, size_t N)() pure nothrow @safe @nogc {
     typeof(return) result;
     result[0] = 1;
     foreach (immutable i, ref r; result[1 .. $])
@@ -11,7 +11,7 @@ T[N] pows(T, size_t N)() {
 __gshared immutable tenPowsU = pows!(uint, 10);
 __gshared immutable tenPowsUL = pows!(ulong, 20);
 
-size_t nDigits(T)(in T x) pure nothrow {
+size_t nDigits(T)(in T x) pure nothrow @safe @nogc {
     Unqual!T y = x;
     size_t n = 0;
     while (y) {
@@ -21,7 +21,7 @@ size_t nDigits(T)(in T x) pure nothrow {
     return n;
 }
 
-T dTally(T)(in T x) pure nothrow {
+T dTally(T)(in T x) pure nothrow @safe @nogc {
     Unqual!T y = x;
     T t = 0;
     while (y) {
@@ -32,7 +32,7 @@ T dTally(T)(in T x) pure nothrow {
 }
 
 T[] fangs(T)(in T x, T[] f)
-pure nothrow if (is(T == uint) || is(T == ulong)) {
+pure nothrow @safe @nogc if (is(T == uint) || is(T == ulong)) {
     alias tenPows = Select!(is(T == ulong), tenPowsUL, tenPowsU);
 
     immutable nd0 = nDigits(x);
@@ -78,9 +78,9 @@ void main() {
     }
     writeln;
 
-    __gshared static immutable ulong[3] bigs = [16_758_243_290_880UL,
-                                                24_959_017_348_650UL,
-                                                14_593_825_548_650UL];
+    static immutable ulong[3] bigs = [16_758_243_290_880UL,
+                                      24_959_017_348_650UL,
+                                      14_593_825_548_650UL];
     ulong[fu.length] ful;
     foreach (immutable bi; bigs) {
         const fs = fangs(bi, ful);

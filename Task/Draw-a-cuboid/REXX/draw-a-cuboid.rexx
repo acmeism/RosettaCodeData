@@ -11,9 +11,9 @@ x=p(x 1);     y=p(y x);     z=p(z y);     indent=p(indent 0)
                    call sayer        ,       ,    "+-"
 
 exit                                   /*stick a fork in it, we're done.*/
-/*──────────────────────────────────P subroutjne────────────────────────*/
+/*──────────────────────────────────P subroutine────────────────────────*/
 p:  return word(arg(1),1)              /*pick the first word in the list*/
-/*──────────────────────────────────SAYER subroutjne────────────────────*/
+/*──────────────────────────────────SAYER subroutine────────────────────*/
 sayer:  parse arg times,a,_            /*get the arguments specified.   */
 say left('',indent)right(left(_,1),pick1(times 1)) || ,
        copies(substr(_,2,1),4*x)left(_,1)right(substr(_,3,1),pick1(a 0)+1)

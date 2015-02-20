@@ -1,14 +1,14 @@
 Sedol_char = "0123456789BCDFGHJKLMNPQRSTVWXYZ"
 
 def char2value(c)
-  raise "No vowels" unless Sedol_char.include?(c)
+  raise ArgumentError, "No vowels" unless Sedol_char.include?(c)
   c.to_i(36)
 end
 
 Sedolweight = [1,3,1,7,3,9]
 
 def checksum(sedol)
-  raise "Invalid length" unless sedol.size == Sedolweight.size
+  raise ArgumentError, "Invalid length" unless sedol.size == Sedolweight.size
   sum = sedol.split('').zip(Sedolweight).map { |ch, weight|
             char2value(ch) * weight }.inject(:+)
   ((10 - (sum % 10)) % 10).to_s

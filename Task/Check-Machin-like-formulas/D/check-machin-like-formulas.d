@@ -9,7 +9,7 @@ Pair[][] parseEquations(in string text) /*pure nothrow*/ {
     Pair[][] machins;
     foreach (const line; text.splitLines) {
         Pair[] formula;
-        foreach (/*const*/ part; line.split("=")[1].matchAll(r)) {
+        foreach (part; line.split("=")[1].matchAll(r)) {
             immutable mul = part["mul"],
                       num = part["num"],
                       denom = part["denom"];
@@ -24,9 +24,9 @@ Pair[][] parseEquations(in string text) /*pure nothrow*/ {
 }
 
 
-Rational tans(in Pair[] xs) pure /*nothrow*/ {
+Rational tans(in Pair[] xs) pure nothrow {
     static Rational tanEval(in int coef, in Rational f)
-    pure /*nothrow*/ {
+    pure nothrow {
         if (coef == 1)
             return f;
         if (coef < 0)

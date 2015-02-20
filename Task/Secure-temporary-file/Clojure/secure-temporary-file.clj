@@ -1,2 +1,3 @@
-user=> (doto (java.io.File/createTempFile "pre" ".suff") .deleteOnExit)
-#<File /tmp/pre8116759964152254766.suff>
+(let [temp-file (java.io.File/createTempFile "pre" ".suff")]
+  ; insert logic here that would use temp-file
+  (.delete temp-file))

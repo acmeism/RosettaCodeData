@@ -1,8 +1,8 @@
-def eratosthenes(n):
-    multiples = []
-    for i in xrange(2, n+1):
+def eratosthenes2(n):
+    multiples = set()
+    for i in range(2, n+1):
         if i not in multiples:
-            print i
-            multiples.extend(xrange(i*i, n+1, i))
+            print(i)
+            multiples.update(range(i*i, n+1, i))
 
-eratosthenes(100)
+eratosthenes2(100)

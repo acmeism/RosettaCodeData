@@ -1,8 +1,8 @@
 import std.stdio, std.algorithm;
 
 void pancakeSort(bool tutor=false, T)(T[] data) {
-    foreach_reverse (i; 2 .. data.length + 1) {
-        immutable maxIndex = i - data[0 .. i].minPos!q{a > b}().length;
+    foreach_reverse (immutable i; 2 .. data.length + 1) {
+        immutable maxIndex = i - data[0 .. i].minPos!q{a > b}.length;
         if (maxIndex + 1 != i) {
             if (maxIndex != 0) {
                 static if (tutor)
@@ -18,7 +18,7 @@ void pancakeSort(bool tutor=false, T)(T[] data) {
 }
 
 void main() {
-    char[] data = "769248135".dup;
-    pancakeSort!true(data);
-    writeln(data);
+    auto data = "769248135".dup;
+    data.pancakeSort!true;
+    data.writeln;
 }

@@ -4,17 +4,19 @@ import std.math, std.algorithm, grayscale_image;
 void aaLine(Color)(ref Image!Color img,
                    double x1, double y1,
                    double x2, double y2,
-                   in Color color) /*pure*/ nothrow {
+                   in Color color) pure nothrow @safe @nogc {
     // Straight translation of Wikipedia pseudocode.
-    static double round(in double x) pure nothrow {
+
+    // std.math.round is not pure. **
+    static double round(in double x) pure nothrow @safe @nogc {
         return floor(x + 0.5);
     }
 
-    static double fpart(in double x) pure nothrow {
+    static double fpart(in double x) pure nothrow @safe @nogc {
         return x - x.floor;
     }
 
-    static double rfpart(in double x) pure nothrow {
+    static double rfpart(in double x) pure nothrow @safe @nogc {
         return 1 - fpart(x);
     }
 
@@ -24,7 +26,7 @@ void aaLine(Color)(ref Image!Color img,
     immutable ay = dy.abs;
 
     static Color mixColors(in Color c1, in Color c2, in double p)
-    pure nothrow {
+    pure nothrow @safe @nogc {
         static if (is(Color == RGB))
             return Color(cast(ubyte)(c1.r * p + c2.r * (1 - p)),
                          cast(ubyte)(c1.g * p + c2.g * (1 - p)),
@@ -35,23 +37,23 @@ void aaLine(Color)(ref Image!Color img,
     }
 
     // Plot function set here to handle the two cases of slope.
-    void delegate(ref Image!Color img, in int, in int, in double)
-    pure nothrow plot;
+    void function(ref Image!Color, in int, in int, in double, in Color)
+    pure nothrow @safe @nogc plot;
 
     if (ax < ay) {
         swap(x1, y1);
         swap(x2, y2);
         swap(dx, dy);
-        //plot = (img, x, y, p) {
-        plot = (ref Image!Color img, x, y, p) {
+        //plot = (img, x, y, p, col) {
+        plot = (ref img, x, y, p, col) {
             assert(p >= 0.0 && p <= 1.0);
-            img[y, x] = mixColors(color, img[y, x], p);
+            img[y, x] = mixColors(col, img[y, x], p);
         };
     } else {
-        //plot = (img, x, y, p) {
-        plot = (ref Image!Color img, x, y, p) {
+        //plot = (img, x, y, p, col) {
+        plot = (ref img, x, y, p, col) {
             assert(p >= 0.0 && p <= 1.0);
-            img[x, y] = mixColors(color, img[x, y], p);
+            img[x, y] = mixColors(col, img[x, y], p);
         };
     }
 
@@ -62,31 +64,31 @@ void aaLine(Color)(ref Image!Color img,
     immutable gradient = dy / dx;
 
     // Handle first endpoint.
-    auto xEnd = x1.round; // Not pure.
+    auto xEnd = round(x1);
     auto yEnd = y1 + gradient * (xEnd - x1);
     auto xGap = rfpart(x1 + 0.5);
     // This will be used in the main loop.
     immutable xpxl1 = cast(int)xEnd;
     immutable ypxl1 = cast(int)yEnd.floor;
-    plot(img, xpxl1, ypxl1, rfpart(yEnd) * xGap);
-    plot(img, xpxl1, ypxl1 + 1, fpart(yEnd) * xGap);
+    plot(img, xpxl1, ypxl1, rfpart(yEnd) * xGap, color);
+    plot(img, xpxl1, ypxl1 + 1, fpart(yEnd) * xGap, color);
     // First y-intersection for the main loop.
     auto yInter = yEnd + gradient;
 
     // Handle second endpoint.
-    xEnd = x2.round;
+    xEnd = round(x2);
     yEnd = y2 + gradient * (xEnd - x2);
     xGap = fpart(x2 + 0.5);
     // This will be used in the main loop.
     immutable xpxl2 = cast(int)xEnd;
     immutable ypxl2 = cast(int)yEnd.floor;
-    plot(img, xpxl2, ypxl2, rfpart(yEnd) * xGap);
-    plot(img, xpxl2, ypxl2 + 1, fpart(yEnd) * xGap);
+    plot(img, xpxl2, ypxl2, rfpart(yEnd) * xGap, color);
+    plot(img, xpxl2, ypxl2 + 1, fpart(yEnd) * xGap, color);
 
     // Main loop.
     foreach (immutable x; xpxl1 + 1 .. xpxl2) {
-        plot(img, x, cast(int)yInter.floor, rfpart(yInter));
-        plot(img, x, cast(int)yInter.floor + 1, fpart(yInter));
+        plot(img, x, cast(int)yInter.floor, rfpart(yInter), color);
+        plot(img, x, cast(int)yInter.floor + 1, fpart(yInter), color);
         yInter += gradient;
     }
 }

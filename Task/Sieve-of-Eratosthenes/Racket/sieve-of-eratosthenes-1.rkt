@@ -1,6 +1,5 @@
 #lang racket
 
-;; ugly imperative version
 (define (sieve n)
   (define non-primes '())
   (define primes '())

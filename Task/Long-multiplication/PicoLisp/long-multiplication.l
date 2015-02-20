@@ -1,2 +1,5 @@
-: (* (** 2 64) (** 2 64))
--> 340282366920938463463374607431768211456
+(de multi (A B)
+   (setq A (format A) B (reverse (chop B)))
+   (let Result 0
+      (for (I . X) B
+         (setq Result (+ Result (* (format X) A (** 10 (dec I)))))) ) )

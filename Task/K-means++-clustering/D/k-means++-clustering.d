@@ -39,7 +39,7 @@ in {
 
 struct ClusterCenter {
     double x, y;
-    void opAssign(in ref Point p) pure nothrow {
+    void opAssign(in ref Point p) pure nothrow @nogc {
         this.x = p.x;
         this.y = p.y;
     }
@@ -62,7 +62,7 @@ in {
     /// Distance and index of the closest cluster center.
     static Tuple!(size_t, double)
     nearestClusterCenter(in ref Point point,
-                         in ClusterCenter[] centers) pure nothrow
+                         in ClusterCenter[] centers) pure nothrow @nogc
     in {
         assert(centers.length > 0);
     } out(result) {
@@ -72,7 +72,7 @@ in {
         assert(feqrel(cast()result[1], cast()d) > 45); // Arbitrary.
     } body {
         static double sqrDistance2D(in ref ClusterCenter a,
-                                    in ref Point b) pure nothrow {
+                                    in ref Point b) pure nothrow @nogc{
             return (a.x - b.x) ^^ 2 + (a.y - b.y) ^^ 2;
         }
 
@@ -175,7 +175,7 @@ in {
     foreach (const ref cc; centers)
         assert(!cc.x.isNaN && !cc.y.isNaN);
 } body {
-    auto findBoundingBox() nothrow {
+    auto findBoundingBox() nothrow @nogc {
         double min_x, max_x, min_y, max_y;
         max_x = max_y = -double.max;
         min_x = min_y = double.max;

@@ -1,0 +1,106 @@
+         START
+         PRINT DATA,GEN
+         YREGS ,                      REGISTER EQUATES (e.g. 0 = R0)
+SLEEP    CSECT
+SLEEP    AMODE 31                     addressing mode 31 bit
+SLEEP    RMODE ANY                    loader determines 31 or 24
+***********************************************************************
+* REENTRANT. Logically swap out a task for a number of seconds
+*            specified in PARM. Minimum 0, maximum 60 seconds
+*
+* MVS rexx (the original rexx) does not have a sleep function. This
+* program can be called from rexx, assuming this program is in
+* LINKLIST, as follows:
+*
+*         /* rexx */
+*         wait_time = '6' /* number of seconds to sleep */
+*         say 'Sleeping...'
+*         address LINKMVS "SLEEP wait_time"  /* invoke SLEEP */
+*         say 'Awake!
+***********************************************************************
+PROLOG   BAKR  R14,0                 satck caller's registers
+         LR    R4,R1                 save parm pointer
+         LR    R12,R15               entry point addr to R12
+         USING SLEEP,R12             tell assembler about that
+         B     AROUND                avoid abend S0C1
+         DC    C'SLEEP '             CSECT NAME
+         DC    C'C=2014.05.10 '      CHANGE DATE
+         DC    C'A=&SYSDATE '        ASSEMBLY DATE
+         DC    C'T=&SYSTIME '        CHANGE TIME
+         DC    C'MarcvdM. '          PROGRAMMER NAME
+AROUND   L     R10,0(0,R4)           load parm address in R10
+         XR    R15,R15               clear R15
+         LH    R15,0(0,R10)          load parm length in R15
+         LR    R6,R15                save length in R6
+         LTR   R15,R15               parm length 0?
+         BZ    NOPARM                yes, exit before getmain
+         C     R6,F2                 parmlength > 2 ?
+         BH    NOPARM                yes, exit before getmain
+        STORAGE OBTAIN,LENGTH=WALEN,LOC=ANY  get some storage
+         LR    R9,R1                 address of storage in R9
+         USING WAREAX,R9             base for data section (DSECT)
+         MVC   EYECAT,=C'**MARC**'   make storage easy to find in dump
+         MVC   SECONDS,C00           set field to F0F0
+         C     R6,F1                 parmlength = 1?
+         BNE   COPYSECS              no, copy both bytes
+         MVC   SECONDS+1(1),2(R10)   yes, just copy one byte.
+         B     TRTEST
+COPYSECS MVC   SECONDS,2(R10)
+* test supplied parameter for valid integer values
+TRTEST   TRT   SECONDS(1),VALINT6    first parm byte no higher as 6?
+         BNZ   NOPARM_REL            higher, release storage and return
+         TRT   SECONDS+1(1),VALINT9  second byte valid?
+         BNZ   NOPARM_REL            no, release storage and return
+         CLC   SECONDS(1),=C'6'      first parm byte < 6?
+         BNE   DOWAIT                yes, do wait
+         CLC   SECONDS+1(1),=C'0'    first eq. 6, second > 0?
+         BNE   NOPARM_REL            yes, release storage and return
+DOWAIT   DS    0H
+         MVC   WAWTO(DWTOL),DWTO     copy WTO list form to obtained st.
+         MVC   WAWTO+18(2),SECONDS   copy in nr. of seconds
+        WTO    MF=(E,WAWTO)          issue WTO, execute form
+         MVC   HOURS,C00             zero out hours
+         MVC   MINUTS,C00             and minutes
+         MVC   REST,C00                and milliseconds
+        STIMER WAIT,DINTVL=TIMEVAL   SVC 47: logical swap out (sleep)
+         B     EXIT                  done
+NOPARM_REL DS  0H
+        STORAGE RELEASE,ADDR=(R9),LENGTH=WALEN  free obtained storage
+         LA    R15,4                 set return code 4
+         B     RETURN                return to caller
+EXIT     DS    0H
+        STORAGE RELEASE,ADDR=(R9),LENGTH=WALEN  free obtained storage
+        WTO    ' Awake!',ROUTCDE=11   fixed wake-up string
+NOPARM   EQU   *
+RETURN   PR    ,                     return to caller
+*
+* --------------------------------------------------------------------
+* CONSTANTS
+* --------------------------------------------------------------------
+DWTO     WTO    ' Sleeping... (XX seconds)',ROUTCDE=11,MF=L
+DWTOL     EQU   *-DWTO             length of WTO list form
+F1        DC    F'1'
+F2        DC    F'2'
+C00       DC    C'00'
+VALINT6   DC    256XL1'01'
+          ORG   *-16
+VALOK6    DC    7XL1'00'           F0-F6: OFFSETS 240-246
+VALINT9   DC    256XL1'01'
+          ORG   *-16
+VALOK9    DC    10XL1'00'          F0-F9: OFFSETS 240-249
+          DS    0D
+         LTORG ,                   FORCE DISPLACEMENT LITERALS
+* --------------------------------------------------------------------
+* DSECT (data section)
+* --------------------------------------------------------------------
+WAREAX   DSECT ,
+WAWTO    DS    CL(DWTOL)           reentrant WTO area
+EYECAT   DS    CL8
+TIMEVAL  DS    0CL8
+HOURS    DS    CL2                 will be zeroed
+MINUTS   DS    CL2                 will be zeroed
+SECONDS  DS    CL2                 from parm
+REST     DS    CL2                 will be zeroed
+WALEN    EQU   *-WAREAX            length of DSECT
+* --------------------------------------------------------------------
+         END   SLEEP

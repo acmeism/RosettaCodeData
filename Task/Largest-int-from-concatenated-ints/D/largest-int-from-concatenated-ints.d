@@ -1,17 +1,17 @@
 import std.stdio, std.algorithm, std.conv, std.array, permutations2;
 
-auto maxCat1(in int[] arr) {
+auto maxCat1(in int[] arr) pure @safe {
     return arr.to!(string[]).permutations.map!join.reduce!max;
 }
 
-auto maxCat2(in int[] arr) {
+auto maxCat2(in int[] arr) pure nothrow @safe {
     return arr.to!(string[]).sort!q{b ~ a < a ~ b}.join;
 }
 
-auto maxCat3(in int[] arr) {
-    immutable maxl = arr.reduce!max.text.length;
+auto maxCat3(in int[] arr) /*pure nothrow @safe*/ {
+    immutable maxL = arr.reduce!max.text.length;
     return arr.to!(string[])
-           .schwartzSort!(s => s.replicate(maxl/s.length + 1), "a > b")
+           .schwartzSort!(s => s.replicate(maxL/s.length + 1), "a > b")
            .join;
 }
 

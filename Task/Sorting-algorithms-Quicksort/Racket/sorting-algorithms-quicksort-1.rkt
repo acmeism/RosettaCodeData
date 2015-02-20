@@ -1,9 +1,9 @@
 #lang racket
-(define (quicksort a-list (compare <))
-  (match a-list
-    ((list)
-     (list))
-    ((cons x xs)
-     (append (quicksort (filter (lambda (element) (compare element x)) xs) compare)
-             (list x)
-             (quicksort (filter (lambda (element) (not (compare element x))) xs) compare)))))
+(define (quicksort < l)
+  (match l
+    ['() '()]
+    [(cons x xs)
+     (let-values ([(xs-gte xs-lt) (partition (curry < x) xs)])
+       (append (quicksort < xs-lt)
+               (list x)
+               (quicksort < xs-gte)))]))

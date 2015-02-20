@@ -1,8 +1,8 @@
 import std.stdio, std.algorithm, std.array;
 
-dchar[][] consolidate(dchar[][] sets) {
+dchar[][] consolidate(dchar[][] sets) @safe {
     foreach (set; sets)
-        set.sort;
+        set.sort();
 
     dchar[][] consolidateR(dchar[][] s) {
         if (s.length < 2)
@@ -20,7 +20,7 @@ dchar[][] consolidate(dchar[][] sets) {
     return consolidateR(sets);
 }
 
-void main() {
+void main() @safe {
     [['A', 'B'], ['C','D']].consolidate.writeln;
 
     [['A','B'], ['B','D']].consolidate.writeln;

@@ -16,7 +16,7 @@ double pi(double tolerance)
 		}
 
 		val = (double) hit / sampled;
-		error = val * sqrt(val * (1 - val) / sampled) * 4;
+		error = sqrt(val * (1 - val) / sampled) * 4;
 		val *= 4;
 
 		/* some feedback, or user gets bored */

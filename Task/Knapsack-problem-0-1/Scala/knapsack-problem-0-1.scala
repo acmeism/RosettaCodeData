@@ -10,7 +10,14 @@ object Knapsack extends App {
     val tv:Set[Item]=>Int=ps=>(ps:\0)((a,b)=>a.value+b) //total value
     val pis = (loi.toSet.subsets).toList.filterNot(_==Set())
 
-    val res = pis.map(ss=>Pair(ss,tw(ss)))
+   #[test]
+fn test_dp_results() {
+    let dp_results = knap_01_dp(items, 400);
+    let dp_weights= dp_results.iter().fold(0, |a, &b| a + b.weight);
+    let dp_values = dp_results.iter().fold(0, |a, &b| a + b.value);
+    assert_eq!(dp_weights, 396);
+    assert_eq!(dp_values, 1030);
+} val res = pis.map(ss=>Pair(ss,tw(ss)))
       .filter(p=>p._2>350 && p._2<401).map(p=>Pair(p,tv(p._1)))
       .sortWith((s,t)=>s._2.compareTo(t._2) < 0)
       .last

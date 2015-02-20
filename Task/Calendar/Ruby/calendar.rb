@@ -63,7 +63,7 @@ columns = begin Integer(ENV["COLUMNS"] || "")
           rescue
             begin require 'io/console'; IO.console.winsize[1]
             rescue LoadError
-              begin Integer(`tput co`)
+              begin Integer(`tput cols`)
               rescue
                 80; end; end; end
 

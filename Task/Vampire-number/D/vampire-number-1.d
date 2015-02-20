@@ -1,9 +1,9 @@
 import std.stdio, std.range, std.algorithm, std.typecons, std.conv;
 
-auto fangs(in long n) {
+auto fangs(in long n) pure nothrow @safe {
     auto pairs = iota(2, cast(int)(n ^^ 0.5)) // n.isqrt
                  .filter!(x => !(n % x)).map!(x => [x, n / x]);
-    enum dLen = (long x) => x.text.length;
+    enum dLen = (in long x) => x.text.length;
     immutable half = dLen(n) / 2;
     enum halvesQ = (long[] p) => p.all!(u => dLen(u) == half);
     enum digits = (long[] p) => dtext(p[0], p[1]).dup.sort();

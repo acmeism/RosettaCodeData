@@ -1,7 +1,7 @@
-shell "wget -O languages.html 'http://rosettacode.org/wiki/Category:Programming_Languages'";
-shell "wget -O categories.html 'http://www.rosettacode.org/mw/index.php?title=Special:Categories&limit=5000'";
+my $languages =  qx{wget -O - 'http://rosettacode.org/wiki/Category:Programming_Languages'};
+my $categories = qx{wget -O - 'http://www.rosettacode.org/mw/index.php?title=Special:Categories&limit=5000'};
 
-my @lines = slurp('languages.html').lines;
+my @lines = $languages.lines;
 shift @lines until @lines[0] ~~ / '<h2>Subcategories</h2>' /;
 my \languages = set gather for @lines {
     last if / '/bodycontent' /;
@@ -9,7 +9,7 @@ my \languages = set gather for @lines {
         / '<li><a href="/wiki/Category:' .*? '" title="Category:' .*? '">' (.*?) '</a></li>' /;
 }
 
-@lines = slurp('categories.html').lines;
+@lines = $categories.lines;
 my @results = sort -*.[0], gather for @lines {
     take [+$1, ~$0] if
         / '<li><a href="/wiki/Category:' .*? '" title="Category:' .*? '">'

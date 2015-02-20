@@ -21,24 +21,18 @@ public:
 
     int w = 0;
     vector<string> data;
-    for(; iter != end; ++iter)
-    {
+    for(; iter != end; ++iter){
       data.push_back((*iter)[1]);
       w = max(w, (*iter)[1].length());
     }
 
-    for(int v = 0; v < data.size(); ++v)
-    {
+    for(int v = 0; v < data.size(); ++v){
       vector<char> sTemp, dTemp;
-      for(int u = 0; u < w; ++u)
-      {
-        if(u > data[v].size())
-        {
+      for(int u = 0; u < w; ++u){
+        if(u > data[v].size()){
           sTemp.push_back(' ');
           dTemp.push_back(' ');
-        }
-        else
-        {
+        }else{
           char s = ' ', d = ' ', c = data[v][u];
 
           if(c == '#')
@@ -46,13 +40,11 @@ public:
           else if(c == '.' || c == '*' || c == '+')
             s = '.';
 
-          if(c == '@' || c == '+')
-          {
+          if(c == '@' || c == '+'){
             d = '@';
             px = u;
             py = v;
-          }
-          else if(c == '$' || c == '*')
+          }else if(c == '$' || c == '*')
             d = '*';
 
           sTemp.push_back(s);
@@ -111,32 +103,26 @@ public:
     dirs[2] = make_tuple(0, 1, 'd', 'D');
     dirs[3] = make_tuple(-1, 0, 'l', 'L');
 
-    while(open.size() > 0)
-    {
+    while(open.size() > 0){
       vector<vector<char>> temp, cur = get<0>(open.front());
       string cSol = get<1>(open.front());
       int x = get<2>(open.front());
       int y = get<3>(open.front());
       open.pop();
 
-      for(int i = 0; i < 4; ++i)
-      {
+      for(int i = 0; i < 4; ++i){
         temp = cur;
         int dx = get<0>(dirs[i]);
         int dy = get<1>(dirs[i]);
 
-        if(temp[y+dy][x+dx] == '*')
-        {
-          if(push(x, y, dx, dy, temp) && (visited.find(temp) == visited.end()))
-          {
+        if(temp[y+dy][x+dx] == '*'){
+          if(push(x, y, dx, dy, temp) && (visited.find(temp) == visited.end())){
             if(isSolved(temp))
               return cSol + get<3>(dirs[i]);
             open.push(make_tuple(temp, cSol + get<3>(dirs[i]), x+dx, y+dy));
             visited.insert(temp);
           }
-        }
-        else if(move(x, y, dx, dy, temp) && (visited.find(temp) == visited.end()))
-        {
+        }else if(move(x, y, dx, dy, temp) && (visited.find(temp) == visited.end())){
           if(isSolved(temp))
             return cSol + get<2>(dirs[i]);
           open.push(make_tuple(temp, cSol + get<2>(dirs[i]), x+dx, y+dy));

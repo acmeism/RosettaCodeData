@@ -1,2 +1,1 @@
-   17 ethiop 34
-578
+ethio=: *@] * (ethiop |)

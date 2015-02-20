@@ -1,56 +1,60 @@
 /*REXX pgm does a fast Fourier transform (FFT) on a set of complex nums.*/
 numeric digits length( pi() )   - 1    /*limited by PI function result. */
-arg data; if data='' then data='1 1 1 1 0'  /*no data?  Then use default*/
-data=translate(data, 'J', "I")         /*allow use of  i  as well as  j */
+arg data                               /*the  ARG  verb uppercases DATA */
+if data=''  then data=1 1 1 1 0        /*No data?  Then use the default.*/
+data=translate(data, 'J', "I")         /*allow use of  I  as well as  J */
 size=words(data);    pad=left('',6)    /*PAD: for indenting/padding SAYs*/
-  do sig=0 until 2**sig>=size      ;end /* #  args exactly a power of 2?*/
-  do j=size+1 to 2**sig;data=data 0;end /*add zeroes until a power of 2.*/
-size=words(data);    call hdr          /*┌─────────────────────────────┐*/
+  do p=0  until  2**p>=size      ; end /* #  args exactly a power of 2? */
+  do j=size+1 to 2**p;data=data 0; end /*add zeroes until a power of 2. */
+size=words(data);   ph=p%2;   call hdr /*┌─────────────────────────────┐*/
                                        /*│ Numbers in  data  can be in │*/
   do j=0  for size                     /*│ 7 formats:   real           │*/
   _=word(data,j+1)                     /*│              real,imag      │*/
-  parse var  _  #.1.j  ','  #.2.j      /*│                  ,imag      │*/
-  if right(#.1.j,1)=='J'    then       /*│                   nnnJ      │*/
-      parse var #.1.j #2.j "J" @.1.j   /*│                   nnnj      │*/
-    do p=1  for 2     /*omitted?*/     /*│                   nnnI      │*/
-    #.p.j=word(#.p.j 0, 1)             /*│                   nnni      │*/
-    end   /*p*/                        /*└─────────────────────────────┘*/
+  parse  var  _   #.1.j  ','  #.2.j    /*│                  ,imag      │*/
+  if right(#.1.j,1)=='J'  then parse , /*│                   nnnJ      │*/
+              var #.1.j #2.j "J" @.1.j /*│                   nnnj      │*/
+    do m=1  for 2     /*omitted?*/     /*│                   nnnI      │*/
+    #.m.j=word(#.m.j 0, 1)             /*│                   nnni      │*/
+    end   /*m*/                        /*└─────────────────────────────┘*/
+
   say pad " FFT   in "    center(j+1,7)  pad  nice(#.1.j)  nice(#.2.j,'i')
   end     /*j*/
 
-say;             say;                       tran=2*pi()/2**sig;  !.=0
-hsig=2**sig%2;   counterA=2**(sig-sig%2);   pointer=counterA;    doubler=1
+say;             say;                       tran=2*pi()/2**p;    !.=0
+hp=2**p%2;       counterA=2**(p-ph);        pointer=counterA;    doubler=1
 
-  do sig-sig%2;  halfpointer=pointer%2
+  do p-ph;       halfpointer=pointer%2
+
             do i=halfpointer  by pointer  to counterA-halfpointer
-            _=i-halfpointer;  !.i=!._+doubler
+            _=i-halfpointer;              !.i=!._+doubler
             end   /*i*/
-  doubler=doubler*2;  pointer=halfpointer
-  end   /*sig-sig%2*/
 
-         do j=0 to 2**sig%4; cmp.j=cos(j*tran);  _m=hsig-j;  cmp._m=-cmp.j
-                                                 _p=hsig+j;  cmp._p=-cmp.j
-         end  /*j*/
+  doubler=doubler*2;       pointer=halfpointer
+  end   /*p-ph*/
 
-counterB=2**(sig%2)
+      do j=0  to 2**p%4;   cmp.j=cos(j*tran);   _m=hp-j;    cmp._m=-cmp.j
+                                                _p=hp+j;    cmp._p=-cmp.j
+      end  /*j*/
 
-  do i=0  for counterA;    p=i*counterB
-      do j=0 for counterB; h=p+j; _=!.j*counterB+!.i; if _<=h then iterate
+counterB=2**ph
+
+  do i=0     for counterA;        q=i  *counterB
+      do j=0 for counterB; h=q+j; _=!.j*counterB+!.i; if _<=h then iterate
       parse value  #.1._ #.1.h #.2._ #.2.h   with  #.1.h #.1._ #.2.h #.2._
-      end   /*j*/                      /* [↓]  switch two sets of values*/
+      end   /*j*/                      /* [↑]  switch two sets of values*/
   end       /*i*/
 
-double=1;       do sig               ;  w=2**sig%2%double
-                  do k=0  for double ;  lb=w*k           ; lh=lb+2**sig%4
-                    do j=0 for w     ;  a=j*double*2+k   ; b=a+double
-                    r=#.1.a; i=#.2.a ;  c1=cmp.lb*#.1.b  ; c4=cmp.lb*#.2.b
-                                        c2=cmp.lh*#.2.b  ; c3=cmp.lh*#.1.b
-                                        #.1.a=r+c1-c2    ; #.2.a=i+c3+c4
-                                        #.1.b=r-c1+c2    ; #.2.b=i-c3-c4
+double=1;       do p                 ;  w=hp%double
+                  do k=0   for double;  lb=w*k          ;  lh=lb+2**p%4
+                    do j=0 for w     ;  a=j*double*2+k  ;  b=a+double
+                    r=#.1.a; i=#.2.a ;  c1=cmp.lb*#.1.b ;  c4=cmp.lb*#.2.b
+                                        c2=cmp.lh*#.2.b ;  c3=cmp.lh*#.1.b
+                                        #.1.a=r+c1-c2   ;  #.2.a=i+c3+c4
+                                        #.1.b=r-c1+c2   ;  #.2.b=i-c3-c4
                     end              /*j*/
                   end                /*k*/
                 double=double+double
-                end                  /*sig*/
+                end                  /*p*/
 call hdr
         do i=0  for size
         say pad " FFT  out " center(i+1,7) pad nice(#.1.i) nice(#.2.i,'j')

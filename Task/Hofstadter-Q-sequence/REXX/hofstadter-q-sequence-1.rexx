@@ -12,9 +12,9 @@ exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────HofstadterQ subroutine──────────────*/
 HofstadterQ: procedure expose q.; arg x 1 ox  /*get the # to gen through*/
                                        /*(above)  OX  is the same as  X.*/
-x=abs(x)                               /*use the absolute value for  X. */
+x=abs(x)                                /*use the absolute value for  X. */
 L=length(x)                            /*use for right justified output.*/
-             do j=1 for x
+             do j=1  for x
              if j>2   then  if q.j==1  then  do;    jm1=j-1;    jm2=j-2
                                              _1=j-q.jm1; _2=j-q.jm2
                                              q.j=q._1+q._2

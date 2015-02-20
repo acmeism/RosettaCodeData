@@ -8,7 +8,7 @@ say x   ' has a hailstone sequence of '    words($)
 say '     and starts with: '       subword($, 1, 4)    " ∙∙∙"
 say '     and  ends  with:  ∙∙∙'   subword($, max(1, words($)-3))
 say
-if y==0 then exit   /*═══════════════════task 2═════════════════════════*/
+if y==0  then exit  /*═══════════════════task 2═════════════════════════*/
 w=0;         do j=1  for y             /*traipse through the numbers.   */
              call hailstone j          /*compute the hailstone sequence.*/
              if #hs<=w  then iterate   /*Not big 'nuff? Then keep going.*/

@@ -1,4 +1,4 @@
-ulong nQueens(in uint nn) pure nothrow
+ulong nQueens(in uint nn) pure nothrow @nogc @safe
 in {
     assert(nn > 0 && nn <= 27,
            "'side' value must be in 1 .. 27.");
@@ -38,7 +38,7 @@ in {
                 // Because !d is often faster than d != n.
                 while (d) {
                     // immutable uint pos = 1U << bits.bsf; // Slower.
-                    immutable uint pos = -(cast(int)bits) & bits;
+                    immutable uint pos = -int(bits) & bits;
 
                     // Mark bit used. Only put current bits on
                     // stack if not zero, so backtracking will

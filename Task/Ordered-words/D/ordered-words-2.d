@@ -1,5 +1,6 @@
 void main() {
     import std.stdio, std.algorithm, std.file, std.range;
+
     string[] result;
     size_t maxWalkLen;
 

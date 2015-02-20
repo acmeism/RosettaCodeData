@@ -1,32 +1,26 @@
-class Pixel {
-	has Int $.R;
-	has Int $.G;
-	has Int $.B;
-}
-
+class Pixel { has Int ($.R, $.G, $.B) }
 class Bitmap {
-	has @.data;
-	has Int $.width;
-	has Int $.height;
+    has Int ($.width, $.height);
+    has Pixel @.data;
 
-	method fill(Pixel $p) {
-		for ^$.width X ^$.height -> $i, $j {
-			@.data[$i][$j] = $p.clone;
-		}
+    method fill(Pixel $p) {
+	for ^$!width X ^$!height -> $i, $j {
+	    self.pixel($i, $j) = $p.clone;
 	}
+    }
+    method pixel(
+	$i where ^self.width,
+	$j where ^self.height
+	--> Pixel
+    ) is rw { @!data[$i*$!height + $j] }
 
-	method set-pixel ( $i, $j, Pixel $value) {
-		fail unless 0 <= $i <= $.width && 0 <= $j <= $.height;
-		@.data[$i][$j] = $value;
-	}
-
-	method get-pixel ($i, $j) {
-		fail unless 0 <= $i <= $.width && 0 <= $j <= $.height;
-		@.data[$i][$j];
-	}
+    method set-pixel ($i, $j, Pixel $p) {
+	self.pixel($i, $j) = $p.clone;
+    }
+    method get-pixel ($i, $j) returns Pixel {
+	self.pixel($i, $j);
+    }
 }
-
-# Usage:
 
 my Bitmap $b = Bitmap.new( width => 10, height => 10);
 

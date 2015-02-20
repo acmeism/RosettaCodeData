@@ -1,5 +1,5 @@
- /* Standard library header names are enclosed using chevron enclosures */
- #include <stdlib.h>
+/* Standard and other library header names are enclosed between chevrons */
+#include <stdlib.h>
 
- /* User library header names are enclosed using doublequotes */
- #include "mylib.h"
+/* User/in-project header names are usually enclosed between double-quotes */
+#include "myutil.h"

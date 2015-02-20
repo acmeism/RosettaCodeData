@@ -1,0 +1,138 @@
+*PROCESS MARGINS(1,120) LIBS(SINGLE,STATIC);
+*PROCESS OPTIMIZE(2) DFT(REORDER);
+
+
+ sudoku: proc(parms) options(main);
+   dcl parms char (100) var;
+
+   define alias bits bit (9) aligned;
+   dcl total (81) type bits;
+   dcl matrix (9, 9) type bits based(addr(total));
+   dcl box (9, 3, 3) type bits defined (total(trunc((1sub-1) /3) * 27 + mod(1sub-1, 3) * 3 + (2sub-1) * 9 + 3sub));
+
+   dcl posbit (0:9) type bits init('000000000'b, '100000000'b, '010000000'b, '001000000'b,
+                                   '000100000'b, '000010000'b, '000001000'b, '000000100'b,
+                                   '000000010'b, '000000001'b);
+
+   dcl (i, j, k) fixed bin(31);
+   dcl (start, finish) float(18);
+   dcl result fixed dec(5,3);
+
+   dcl buffer char(81);
+   dcl in file;
+
+   /* ON UNIT for the Sudoku data conversion */
+   on conversion
+     begin;
+       put skip
+         list('Sudoku data not valid.');
+       stop;
+     end;
+
+   /* ON UNIT to display info about the usage */
+   on undefinedfile(in)
+     begin;
+       put skip
+         list('Usage: ' || procedurename() || ' /filename');
+       stop;
+     end;
+
+   open file(in)
+     title ('/'||parms||',type(fixed), recsize(81)') record input;
+
+   /* Ignore the endfile condition */
+   on endfile(in);
+
+   /* Read the Sudoku data into buffer as one record */
+   read file(in) into(buffer);
+   close file(in);
+
+   /* Convert numbers -> position bit presentation and assign into the Sudoku board */
+   do k = 1 to 81;
+     total(k) = posbit(substr(buffer, k, 1));
+   end;
+
+   /* Start solving the Sudoku */
+   start = secs();
+   if solve() then
+     do;
+       finish = secs();
+       result = finish - start + 0.0005;
+       put skip list('Sudoku solved! Time: ' || trim(result) || ' seconds');
+       put skip(2);
+
+   /* display the solved Sudoku if solution exist */
+       do i = 1 to 9;
+         do j = 1 to 9;
+           put edit(trim(index(matrix(i, j), '1'b))) (a(3));
+         end;
+         put skip(2);
+       end;
+     end;
+   else put skip list('Impossible!');
+
+
+   /*************************************/
+   /* Simple backtracking sudoku solver */
+   /*************************************/
+   solve: proc recursive returns(bit(1));
+     dcl (i, j, k) fixed bin(31);
+     dcl result type bits;
+
+     /* find free cell */
+     do i = 1 to 9;
+       do j = 1 to 9;
+         if matrix(i, j) = posbit(0) then goto skip;
+       end;
+     end;
+
+     /* No more free cells. Check if the completed Sudoku is valid.      */
+     /* Number in the cell is valid if the matching position bit is set. */
+     do i = 1 to 9;
+       do j = 1 to 9;
+       k = index(matrix(i, j), '1'b);
+       matrix(i, j) = posbit(0);
+       result = ^(any(matrix(i, *)) | any(matrix(*, j)) | any(box(numbox(i, j), *, *)));
+       if substr(result, k, 1) = '0'b then return('0'b);
+       matrix(i, j) = posbit(k);
+       end;
+     end;
+
+     return('1'b);
+    skip:
+
+     /* Go through and test possible values for the free cell untill the Sudoku is completed */
+     result = ^(any(matrix(i, *)) | any(matrix(*, j)) | any(box(numbox(i, j), *, *)));
+     k = 0;
+     do forever;
+       k = search(result, '1'b, k+1);
+       if k = 0 then leave;
+       matrix(i, j) = posbit(k);
+       if solve() then return('1'b);
+       else matrix(i, j) = posbit(0);
+     end;
+
+     return('0'b);
+   end solve;
+
+
+   /********************************************/
+   /* Returns box number for the sudoku coords */
+   /********************************************/
+   numbox: proc(i, j) returns(fixed bin(31));
+     dcl (i, j) fixed bin(31);
+
+     dcl lookup (9, 9) fixed bin(31) static init( (3)1, (3)2, (3)3,
+                                                  (3)1, (3)2, (3)3,
+                                                  (3)1, (3)2, (3)3,
+                                                  (3)4, (3)5, (3)6,
+                                                  (3)4, (3)5, (3)6,
+                                                  (3)4, (3)5, (3)6,
+                                                  (3)7, (3)8, (3)9,
+                                                  (3)7, (3)8, (3)9,
+                                                  (3)7, (3)8, (3)9 );
+
+     return(lookup(i, j));
+   end numbox;
+
+ end sudoku;

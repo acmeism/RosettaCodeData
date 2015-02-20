@@ -18,8 +18,8 @@ def polynomial_long_division(numerator, denominator)
 end
 
 def degree(ary)
-  idx = ary.rindex {|x| x.nonzero?}
-  idx.nil? ? -1 : idx
+  idx = ary.rindex(&:nonzero?)
+  idx ? idx : -1
 end
 
 def shift_right(ary, n)
@@ -37,10 +37,10 @@ end
 f = [-42, 0, -12, 1]
 g = [-3, 1, 0, 0]
 q, r = polynomial_long_division(f, g)
-p [f, g, q, r]
-# => [[-42, 0, -12, 1], [-3, 1, 0, 0], [-27, -9, 1, 0, 0], [-123, 0, 0, 0, 0]]
+puts "#{f} / #{g} => #{q} remainder #{r}"
+# => [-42, 0, -12, 1] / [-3, 1, 0, 0] => [-27, -9, 1, 0] remainder [-123, 0, 0, 0]
 
 g = [-3, 1, 1, 0]
 q, r = polynomial_long_division(f, g)
-p [f, g, q, r]
-# => [[-42, 0, -12, 1], [-3, 1, 0, 0], [-13, 1, 0, 0, 0], [-81, 16, 0, 0, 0]]
+puts "#{f} / #{g} => #{q} remainder #{r}"
+# => [-42, 0, -12, 1] / [-3, 1, 1, 0] => [-13, 1, 0, 0] remainder [-81, 16, 0, 0]

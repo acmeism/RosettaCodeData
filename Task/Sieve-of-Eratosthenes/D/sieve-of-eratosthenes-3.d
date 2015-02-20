@@ -2,7 +2,7 @@
 struct Prime {
     uint[] a = [2];
 
-    private void grow() pure nothrow {
+    private void grow() pure nothrow @safe {
         immutable p0 = a[$ - 1] + 1;
         auto b = new bool[p0];
 
@@ -18,7 +18,7 @@ struct Prime {
                 a ~= p0 + i;
     }
 
-    uint opCall(in uint n) pure nothrow {
+    uint opCall(in uint n) pure nothrow @safe {
         while (n >= a.length)
             grow;
         return a[n];

@@ -1,7 +1,7 @@
 BEGIN {
 	# This requires 1e400 to overflow to infinity.
 	nzero = -0
-	nan = 0 * 1e400
+	nan  = 0 * 1e400
 	pinf = 1e400
 	ninf = -1e400
 

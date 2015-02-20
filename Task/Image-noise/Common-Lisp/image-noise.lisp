@@ -9,7 +9,6 @@
     (sdl-base::with-pixel (s (sdl:fp surface))
       (dotimes (h height)
 	(dotimes (w width)
-	  ;;(sdl:draw-pixel-* w h :surface s :color (if (zerop (random 2)) sdl:*white* sdl:*black*)))))
 	  (sdl-base::write-pixel s w h (if (zerop (random 2))
 					   i-white i-black ))))))
   surface)
@@ -21,7 +20,7 @@
 			     20 20 :surface s :color sdl:*magenta*)))
 
 (defun main ()
-  "main function, creates initializes the library and creates de display window"
+  "main function, initializes the library and creates de display window"
   (setf *random-state* (make-random-state))
   (sdl:with-init (SDL:SDL-INIT-VIDEO SDL:SDL-INIT-TIMER)
     (let ((main-window (sdl:window 320 240

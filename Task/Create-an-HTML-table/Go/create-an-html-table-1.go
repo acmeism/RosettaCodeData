@@ -12,10 +12,10 @@ type row struct {
 
 var tmpl = `<table>
     <tr><th></th><th>X</th><th>Y</th><th>Z</th></tr>
-{{range $ix, $row := .}}    <tr><td>{{$ix}}</td>` +
-    `<td>{{$row.X}}</td>` +
-    `<td>{{$row.Y}}</td>` +
-    `<td>{{$row.Z}}</td></tr>
+{{range $ix, $row := .}}    <tr><td>{{$ix}}</td>
+        <td>{{$row.X}}</td>
+        <td>{{$row.Y}}</td>
+        <td>{{$row.Z}}</td></tr>
 {{end}}</table>
 `
 

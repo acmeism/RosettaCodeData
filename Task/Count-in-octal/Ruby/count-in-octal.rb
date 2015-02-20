@@ -13,3 +13,8 @@ end
 0.upto(1/0.0) do |n|
   printf "%o\n", n
 end
+
+# version 2.1 later
+0.step do |n|
+  puts format("%o", n)
+end

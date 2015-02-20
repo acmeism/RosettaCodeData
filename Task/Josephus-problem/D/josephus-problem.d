@@ -1,16 +1,15 @@
 import std.stdio, std.algorithm, std.array, std.string, std.range;
 
-T pop(T)(ref T[] items, in size_t i) pure {
+T pop(T)(ref T[] items, in size_t i) pure /*nothrow*/ @safe /*@nogc*/ {
     auto aux = items[i];
-    items.remove(i);
-    items.length--;
+    items = items.remove(i);
     return aux;
 }
 
-string josephus(in int n, in int k) pure {
+string josephus(in int n, in int k) pure /*nothrow*/ @safe {
     auto p = n.iota.array;
     int i;
-    int[] seq;
+    immutable(int)[] seq;
     while (!p.empty) {
         i = (i + k - 1) % p.length;
         seq ~= p.pop(i);
@@ -21,7 +20,7 @@ string josephus(in int n, in int k) pure {
                   seq[0 .. $ - 1].chunks(20), seq[$ - 1]);
 }
 
-void main() {
+void main() /*@safe*/ {
     josephus(5, 2).writeln;
     writeln;
     josephus(41, 3).writeln;

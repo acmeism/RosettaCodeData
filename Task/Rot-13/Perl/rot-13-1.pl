@@ -1,7 +1,5 @@
 sub rot13 {
-  my $string = shift;
-  $string =~ tr/A-Za-z/N-ZA-Mn-za-m/;
-  return $string;
+  shift =~ tr/A-Za-z/N-ZA-Mn-za-m/r;
 }
 
 print rot13($_) while (<>);

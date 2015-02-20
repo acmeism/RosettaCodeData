@@ -1,75 +1,123 @@
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/mman.h>
-#include <errno.h>
-#include <err.h>
+#include <stdlib.h>	/* exit, malloc, realloc, free */
+#include <stdio.h>	/* fopen, fgetc, fputs, fwrite */
 
-int read_lines(const char * fname, int (*call_back)(const char*, const char*))
+struct line_reader {
+	/* All members are private. */
+	FILE	*f;
+	char	*buf;
+	size_t	 siz;
+};
+
+/*
+ * Initializes a line reader _lr_ for the stream _f_.
+ */
+void
+lr_init(struct line_reader *lr, FILE *f)
 {
-        int fd = open(fname, O_RDONLY);
-        struct stat fs;
-        char *buf, *buf_end;
-        char *begin, *end, c;
-
-        if (fd == -1) {
-                err(1, "open: %s", fname);
-                return 0;
-        }
-
-        if (fstat(fd, &fs) == -1) {
-                err(1, "stat: %s", fname);
-                return 0;
-        }
-
-        /* fs.st_size could have been 0 actually */
-        buf = mmap(0, fs.st_size, PROT_READ, MAP_SHARED, fd, 0);
-        if (buf == (void*) -1) {
-                err(1, "mmap: %s", fname);
-                close(fd);
-                return 0;
-        }
-
-        buf_end = buf + fs.st_size;
-
-        begin = end = buf;
-        while (1) {
-                if (! (*end == '\r' || *end == '\n')) {
-                        if (++end < buf_end) continue;
-                } else if (1 + end < buf_end) {
-                        /* see if we got "\r\n" or "\n\r" here */
-                        c = *(1 + end);
-                        if ( (c == '\r' || c == '\n') && c != *end)
-                                ++end;
-                }
-
-                /* call the call back and check error indication. Announce
-                   error here, because we didn't tell call_back the file name */
-                if (! call_back(begin, end)) {
-                        err(1, "[callback] %s", fname);
-                        break;
-                }
-
-                if ((begin = ++end) >= buf_end)
-                        break;
-        }
-
-        munmap(buf, fs.st_size);
-        close(fd);
-        return 1;
+	lr->f = f;
+	lr->buf = NULL;
+	lr->siz = 0;
 }
 
-int print_line(const char* begin, const char* end)
+/*
+ * Reads the next line. If successful, returns a pointer to the line,
+ * and sets *len to the number of characters, at least 1. The result is
+ * _not_ a C string; it has no terminating '\0'. The returned pointer
+ * remains valid until the next call to next_line() or lr_free() with
+ * the same _lr_.
+ *
+ * next_line() returns NULL at end of file, or if there is an error (on
+ * the stream, or with memory allocation).
+ */
+char *
+next_line(struct line_reader *lr, size_t *len)
 {
-        if (write(fileno(stdout), begin, end - begin + 1) == -1) {
-                return 0;
-        }
-        return 1;
+	size_t newsiz;
+	int c;
+	char *newbuf;
+
+	*len = 0;			/* Start with empty line. */
+	for (;;) {
+		c = fgetc(lr->f);	/* Read next character. */
+		if (ferror(lr->f))
+			return NULL;
+
+		if (c == EOF) {
+			/*
+			 * End of file is also end of last line,
+		`	 * unless this last line would be empty.
+			 */
+			if (*len == 0)
+				return NULL;
+			else
+				return lr->buf;
+		} else {
+			/* Append c to the buffer. */
+			if (*len == lr->siz) {
+				/* Need a bigger buffer! */
+				newsiz = lr->siz + 4096;
+				newbuf = realloc(lr->buf, newsiz);
+				if (newbuf == NULL)
+					return NULL;
+				lr->buf = newbuf;
+				lr->siz = newsiz;
+			}
+			lr->buf[(*len)++] = c;
+
+			/* '\n' is end of line. */
+			if (c == '\n')
+				return lr->buf;
+		}
+	}
 }
 
-int main()
+/*
+ * Frees internal memory used by _lr_.
+ */
+void
+lr_free(struct line_reader *lr)
 {
-        return read_lines("test.ps", print_line) ? 0 : 1;
+	free(lr->buf);
+	lr->buf = NULL;
+	lr->siz = 0;
+}
+
+/*
+ * Read a file line by line.
+ * http://rosettacode.org/wiki/Read_a_file_line_by_line
+ */
+int
+main()
+{
+	struct line_reader lr;
+	FILE *f;
+	size_t len;
+	char *line;
+
+	f = fopen("foobar.txt", "r");
+	if (f == NULL) {
+		perror("foobar.txt");
+		exit(1);
+	}
+
+	/*
+	 * This loop reads each line.
+	 * Remember that line is not a C string.
+	 * There is no terminating '\0'.
+	 */
+	lr_init(&lr, f);
+	while (line = next_line(&lr, &len)) {
+		/*
+		 * Do something with line.
+		 */
+		fputs("LINE: ", stdout);
+		fwrite(line, len, 1, stdout);
+	}
+	if (!feof(f)) {
+		perror("next_line");
+		exit(1);
+	}
+	lr_free(&lr);
+
+	return 0;
 }

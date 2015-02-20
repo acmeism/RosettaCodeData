@@ -3,12 +3,12 @@ import std.stdio, std.math, std.numeric, std.algorithm;
 struct V3 {
     double[3] v;
 
-    @property V3 normalize() pure nothrow const {
+    @property V3 normalize() pure nothrow const @nogc {
         immutable double len = dotProduct(v, v).sqrt;
         return [v[0] / len, v[1] / len, v[2] / len].V3;
     }
 
-    double dot(in ref V3 y) pure nothrow const {
+    double dot(in ref V3 y) pure nothrow const @nogc {
         immutable double d = dotProduct(v, y.v);
         return d < 0 ? -d : 0;
     }
@@ -23,7 +23,7 @@ void drawSphere(in double k, in double ambient, in V3 light) nothrow {
     static bool hitSphere(in ref Sphere sph,
                           in double x0, in double y0,
                           out double z1,
-                          out double z2) pure nothrow {
+                          out double z2) pure nothrow @nogc {
         immutable double x = x0 - sph.cx;
         immutable double y = y0 - sph.cy;
         immutable double zsq = sph.r ^^ 2 - (x ^^ 2 + y ^^ 2);

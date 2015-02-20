@@ -1,11 +1,5 @@
 import std.stdio, std.random, std.algorithm;
 
-double random01(ref Xorshift rng) {
-    immutable r = rng.front / double(rng.max);
-    rng.popFront;
-    return r;
-}
-
 struct SOfN(size_t n) {
     size_t i;
     int[n] sample = void;
@@ -14,7 +8,7 @@ struct SOfN(size_t n) {
         i++;
         if (i <= n)
             sample[i - 1] = item;
-        else if (rng.random01 < (double(n) / i))
+        else if (rng.uniform01 < (double(n) / i))
             sample[uniform(0, n, rng)] = item;
         return sample[0 .. min(i, $)];
     }

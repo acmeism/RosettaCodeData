@@ -1,17 +1,18 @@
-public class Binom {
+public class Binomial
+{
+    private static long binomial(int n, int k)
+    {
+        if (k>n-k)
+            k=n-k;
 
-	static long combinations(int n, int k) {
-		long coeff = 1;
-		for (int i = n - k + 1; i <= n; i++) {
-			coeff *= i;
-		}
-		for (int i = 1; i <= k; i++) {
-			coeff /= i;
-		}
-		return coeff;
-	}
+        long b=1;
+        for (int i=1, m=n; i<=k; i++, m--)
+            b=b*m/i;
+        return b;
+    }
 
-    public static void main(String[] args){
-        System.out.println(combinations(5, 3));
+    public static void main(String[] args)
+    {
+        System.out.println(binomial(5, 3));
     }
 }

@@ -1,7 +1,8 @@
 class PriorityQueueNaive
-  def initialize
-    @q = Hash.new { |h, k| h[k] = []}
-    @priorities = []
+  def initialize(data=nil)
+    @q = Hash.new {|h, k| h[k] = []}
+    data.each {|priority, item| @q[priority] << item}  if data
+    @priorities = @q.keys.sort
   end
 
   def push(priority, item)
@@ -20,13 +21,32 @@ class PriorityQueueNaive
   end
 
   def peek
-    if not empty?
+    unless empty?
       @q[@priorities[0]][0]
     end
   end
 
   def empty?
     @priorities.empty?
+  end
+
+  def each
+    @q.each do |priority, items|
+      items.each {|item| yield priority, item}
+    end
+  end
+
+  def dup
+    @q.each_with_object(self.class.new) do |(priority, items), obj|
+      items.each {|item| obj.push(priority, item)}
+    end
+  end
+
+  def merge(other)
+    raise TypeError  unless self.class == other.class
+    pq = dup
+    other.each {|priority, item| pq.push(priority, item)}
+    pq                  # return a new object
   end
 
   def inspect
@@ -49,3 +69,14 @@ test.each {|pr, str| pq.push(pr, str) }
 until pq.empty?
   puts pq.pop
 end
+
+puts
+test2 = test.shift(3)
+p pq1 = PriorityQueueNaive.new(test)
+p pq2 = PriorityQueueNaive.new(test2)
+p pq3 = pq1.merge(pq2)
+puts "peek : #{pq3.peek}"
+until pq3.empty?
+  puts pq3.pop
+end
+puts "peek : #{pq3.peek}"

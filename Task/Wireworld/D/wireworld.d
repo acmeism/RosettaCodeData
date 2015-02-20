@@ -1,8 +1,8 @@
 import std.stdio, std.algorithm;
 
-void wireworldStep(char[][] W1, char[][] W2) pure nothrow {
-    foreach (r; 1 .. W1.length - 1)
-        foreach (c; 1 .. W1[0].length - 1)
+void wireworldStep(char[][] W1, char[][] W2) pure nothrow @safe @nogc {
+    foreach (immutable r; 1 .. W1.length - 1)
+        foreach (immutable c; 1 .. W1[0].length - 1)
             switch (W1[r][c]) {
                 case 'H': W2[r][c] = 't'; break;
                 case 't': W2[r][c] = '.'; break;
@@ -28,10 +28,10 @@ void main() {
     foreach (row; world)
         world2 ~= row.dup;
 
-    foreach (step; 0 .. 7) {
+    foreach (immutable step; 0 .. 7) {
         writefln("\nStep %d: ------------", step);
-        foreach (row; world[1 .. $-1])
-            writeln(row[1 .. $-1]);
+        foreach (row; world[1 .. $ - 1])
+            row[1 .. $ - 1].writeln;
         wireworldStep(world, world2);
         swap(world, world2);
     }

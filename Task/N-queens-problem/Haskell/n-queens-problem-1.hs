@@ -15,11 +15,10 @@ queens n = map fst $ foldM oneMoreQueen ([],[1..n]) [1..n]  where
   -- given a safe arrangement y of queens in the first i rows, and a list of
   -- possible choices, "oneMoreQueen y _" returns a list of all the safe
   -- arrangements of queens in the first (i+1) rows along with remaining choices
-  oneMoreQueen (y,d) _ = [ (x:y, d\\[x]) | x <- d, safe x y]
+  oneMoreQueen (y,d) _ = [(x:y, delete x d) | x <- d, safe x]  where
 
--- "safe x y" tests whether a queen at column x is safe from previous
--- queens as recorded in y
-safe x y = and [ x /= c && x /= c + n && x /= c - n | (n,c) <- zip [1..] y]
+    -- "safe x" tests whether a queen at column x is safe from previous queens
+    safe x = and [x /= c + n && x /= c - n | (n,c) <- zip [1..] y]
 
 -- prints what the board looks like for a solution; with an extra newline
 printSolution y = do

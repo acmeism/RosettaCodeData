@@ -9,15 +9,15 @@
                    collect (read-char stream) into digits
                    finally (return (parse-integer (coerce digits 'string))))))
     (consume-whitespace)
-    (let ((c (peek-char nil stream nil nil)))
-      (let ((token (case c
-                     ((nil) nil)
-                     ((#\() :lparen)
-                     ((#\)) :rparen)
-                     ((#\*) '*)
-                     ((#\/) '/)
-                     ((#\+) '+)
-                     ((#\-) '-)
+    (let* ((c (peek-char nil stream nil nil)))
+           (token (case c
+                     (nil nil)
+                     (#\( :lparen)
+                     (#\) :rparen)
+                     (#\* '*)
+                     (#\/ '/)
+                     (#\+ '+)
+                     (#\- '-)
                      (otherwise
                        (unless (digit-char-p c)
                          (cerror "Skip it." "Unexpected character ~w." c)
@@ -27,7 +27,7 @@
                        (read-integer)))))
         (unless (or (null token) (integerp token))
           (read-char stream))
-        token))))
+        token)))
 
 (defun group-parentheses (tokens &optional (delimited nil))
   (do ((new-tokens '()))
@@ -37,12 +37,12 @@
        (values (nreverse new-tokens) '()))
     (let ((token (pop tokens)))
       (case token
-        ((:lparen)
+        (:lparen
          (multiple-value-bind (group remaining-tokens)
              (group-parentheses tokens t)
            (setf new-tokens (cons group new-tokens)
                  tokens remaining-tokens)))
-        ((:rparen)
+        (:rparen
          (if (not delimited)
            (cerror "Ignore it." "Unexpected right parenthesis.")
            (return (values (nreverse new-tokens) tokens))))

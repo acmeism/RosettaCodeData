@@ -1,4 +1,4 @@
-: prime? ( n -- ? )
+: prime? ( n -- f )
         dup 2 < if      drop false
     else dup 2 = if      drop true
     else dup 1 and 0= if drop false

@@ -1,13 +1,13 @@
 import std.stdio, std.algorithm, std.range, std.math, std.complex;
 
-auto fft(T)(in T[] x) /*pure nothrow*/ {
+auto fft(T)(in T[] x) pure /*nothrow @safe*/ {
     immutable N = x.length;
     if (N <= 1) return x;
     const ev = x.stride(2).array.fft;
     const od = x[1 .. $].stride(2).array.fft;
     alias E = std.complex.expi;
-    auto l = iota(N / 2).map!(k=> ev[k] + cast(T)E(-2*PI*k/N) * od[k]);
-    auto r = iota(N / 2).map!(k=> ev[k] - cast(T)E(-2*PI*k/N) * od[k]);
+    auto l = iota(N / 2).map!(k => ev[k] + T(E(-2* PI * k/N)) * od[k]);
+    auto r = iota(N / 2).map!(k => ev[k] - T(E(-2* PI * k/N)) * od[k]);
     return l.chain(r).array;
 }
 

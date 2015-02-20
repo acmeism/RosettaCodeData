@@ -1,6 +1,6 @@
 import std.stdio, std.container;
 
-void heapSort(T)(T[] data) /*pure nothrow*/ {
+void heapSort(T)(T[] data) /*pure nothrow @safe @nogc*/ {
     for (auto h = data.heapify; !h.empty; h.removeFront) {}
 }
 

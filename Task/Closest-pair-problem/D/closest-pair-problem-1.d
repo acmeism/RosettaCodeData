@@ -1,12 +1,9 @@
 import std.stdio, std.typecons, std.math, std.algorithm,
        std.random, std.traits, std.range, std.complex;
 
-//auto bfClosestPair(T)(in T[] points) pure nothrow {
+auto bruteForceClosestPair(T)(in T[] points) pure nothrow @nogc {
 //  return pairwise(points.length.iota, points.length.iota)
 //         .reduce!(min!((i, j) => abs(points[i] - points[j])));
-//}
-
-auto bruteForceClosestPair(T)(in T[] points) pure nothrow {
   auto minD = Unqual!(typeof(T.re)).infinity;
   T minI, minJ;
   foreach (immutable i, const p1; points.dropBackOne)
@@ -21,7 +18,7 @@ auto bruteForceClosestPair(T)(in T[] points) pure nothrow {
   return tuple(minD, minI, minJ);
 }
 
-auto closestPair(T)(T[] points) /*pure nothrow*/ {
+auto closestPair(T)(T[] points) pure nothrow {
   static Tuple!(typeof(T.re), T, T) inner(in T[] xP, /*in*/ T[] yP)
   pure nothrow {
     if (xP.length <= 3)

@@ -1,11 +1,13 @@
 require 'date'
+# The only case where the month has 5 weekends is when the last day
+# of the month falls on a Sunday and the month has 31 days.
 
-# if the last day of the month falls on a Sunday and the month has 31 days,
-# this is the only case where the month has 5 weekends.
-start = Date.parse("1900-01-01")
-stop  = Date.parse("2100-12-31")
-dates = (start..stop).find_all do |day|
-  day.mday == 31 and day.wday == 0 # Ruby 1.9: and day.sunday?
+dates = []
+1900.upto(2100) do |year|
+  1.upto(12) do |month|
+    d = Date.new(year, month, -1) # -1 is last day of month
+    dates << d if d.sunday? && d.day == 31
+  end
 end
 
 puts "There are #{dates.size} months with 5 weekends from 1900 to 2100:"

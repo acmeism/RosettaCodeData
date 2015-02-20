@@ -1,7 +1,7 @@
-import Data.List (unfoldr)
-
-selectionSort = unfoldr selectionSort' where
-   selectionSort' [] = Nothing
-   selectionSort' (first:lst) = Just $ foldl f (first, []) lst
-   f (small, output) x | x < small = (x, small:output)
-                       | otherwise = (small, x:output)
+selSort :: (Ord a) => [a] -> [a]
+selSort [] = []
+selSort xs = let x = maximum xs in selSort (remove x xs) ++ [x]
+  where remove _ [] = []
+        remove a (x:xs)
+          | x == a = xs
+          | otherwise = x : remove a xs

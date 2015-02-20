@@ -1,3 +1,4 @@
+var parseString = require('xml2js').parseString;
 var xmlstr = '<Students>' +
   '<Student Name="April" Gender="F" DateOfBirth="1989-01-02" />' +
   '<Student Name="Bob" Gender="M"  DateOfBirth="1990-03-04" />' +
@@ -7,14 +8,11 @@ var xmlstr = '<Students>' +
   '</Student>' +
   '<Student DateOfBirth="1993-09-10" Gender="F" Name="&#x00C9;mily" />' +
 '</Students>';
-var xml = XML(xmlstr);
-var list = xml.Student.@Name;
-var output = '';
-for (var i = 0; i < list.length(); i++) {
-  if (i > 0) {
-    output += ', ';
-  }
-  output += list[i];
-}
 
-alert(output);
+parseString(xmlstr, function (err, result) {
+   if (!err) {
+      result.Students.Student.forEach( function(student) {
+         console.log(student.$.Name);
+      } );
+   }
+});

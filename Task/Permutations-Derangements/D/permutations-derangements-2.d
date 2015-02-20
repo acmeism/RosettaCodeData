@@ -13,10 +13,10 @@ T subfact(T)(in T n) pure nothrow {
     return (n - 1) * (subfact(n - 1) + subfact(n - 2));
 }
 
-auto derangementsR(in size_t n, in bool countOnly=false)
-pure /*nothrow*/ {
+auto derangementsR(in size_t n, in bool countOnly=false) pure
+/*nothrow*/ {
     auto seq = n.iota.array;
-    immutable ori = seq.idup; // Not nothrow.
+    immutable ori = seq.idup;
     const(size_t[])[] res;
     size_t cnt;
 

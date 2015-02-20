@@ -9,12 +9,3 @@ main:
     dup nhword disp }
 
 disp! : { %d cr << }
-
-Output:
-38
-6
-14
-6
-7
-1
-4

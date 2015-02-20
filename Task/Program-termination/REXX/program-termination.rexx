@@ -5,7 +5,7 @@ exit
 
 
   /*─────2nd way────────────────────────────────────────────────────────*/
-exit  (expression)     /*Note:  the "expression" doen't need parenthesis*/
+exit  (expression)     /*Note: the "expression" doesn't need parentheses*/
                        /*"expression"  is any REXX expression.          */
 
 
@@ -16,7 +16,7 @@ return                 /*which returns to this program's invoker.  If   */
 
 
   /*─────4th way────────────────────────────────────────────────────────*/
-return (expression)    /* [See the note above concerning parenthesis.]  */
+return (expression)    /* [See the note above concerning parentheses.]  */
 
 
   /*─────5th way────────────────────────────────────────────────────────*/

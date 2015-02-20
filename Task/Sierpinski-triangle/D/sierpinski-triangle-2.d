@@ -1,19 +1,14 @@
-import std.string;
+import std.string, std.range, std.algorithm;
 
-string sierpinski(int n) {
-    auto parts = ["*"];
-    auto space = " ";
-    foreach (i; 0 .. n) {
-        string[] parts2;
-        foreach (x; parts)
-            parts2 ~= space ~ x ~ space;
-        foreach (x; parts)
-            parts2 ~= x ~ " " ~ x;
-        parts = parts2;
-        space ~= space;
+string sierpinski(int level) pure nothrow /*@safe*/ {
+    auto d = ["*"];
+    foreach (immutable i; 0 .. level) {
+        immutable sp = " ".replicate(2 ^^ i);
+        d = d.map!(a => sp ~ a ~ sp).array ~
+            d.map!(a => a ~ " " ~ a).array;
     }
-    return parts.join("\n");
+    return d.join('\n');
 }
 
-pragma(msg, sierpinski(4));
+pragma(msg, 4.sierpinski);
 void main() {}

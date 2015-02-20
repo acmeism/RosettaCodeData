@@ -1,19 +1,21 @@
 constant TRIALS = 1e4;
 
-my %ps = <aleph beth gimel daleth he waw zayin> Z=> 1 «/« (5 .. 11);
-%ps<heth> = 1 - [+] values %ps;
+my @event = <aleph beth gimel daleth he waw zayin heth>;
 
-my %results;
+my @P = 1 «/« (5 .. 11), 1759/27720;
+my @cP = [\+] @P;
+
+my @results;
 for ^TRIALS {
-    %results{.key}++ given
-    first { .value > state $ = rand },
-    state % = %ps.keys Z=> [\+] %ps.values;
+    @results[
+	first { @cP[$_] > state $ = rand }, ^@P;
+    ]++;
 }
 
-say 'Event   Occurred  Expected  Difference';
-for sort *.value, %results {
-    my ($occurred, $expected) = .value/TRIALS, %ps{.key};
-    printf "%-6s  %f  %f  %f\n",
-        .key, $occurred, $expected,
+say  'Event    Occurred Expected  Difference';
+for ^@results {
+    my ($occurred, $expected) = @results[$_], @P[$_]*TRIALS;
+    printf "%-9s%8.0f%9.1f%12.1f\n",
+        @event[$_], $occurred, $expected,
         abs( $occurred - $expected );
 }

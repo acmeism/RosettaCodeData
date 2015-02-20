@@ -48,7 +48,7 @@ d=5                           /*start with 5 digits accuracy.  When the */
                               /*then turning the volume all the way up. */
 
   do forever   /* ◄─────────────────┐    keep plugging as digs increases*/
-  d=min(d+d,a)                /*    │    limit the digits to orig digs┐5*/
+  d=min(d+d,a)                /*    │    limit the digits to orig digs+5*/
   numeric digits d            /*    │    keep increasing the accuracy.  */
   old=0                       /*    │    define  old (guess).           */
                               /*    │                                   */

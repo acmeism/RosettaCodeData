@@ -1,3 +1,3 @@
 if problem
-    abort # equivalent to exit(1)
+  exit!   # default value 1
 end

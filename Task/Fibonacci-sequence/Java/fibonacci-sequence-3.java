@@ -1,6 +1,4 @@
-public static long anFibN(final long n)
+public static long recFibN(final int n)
 {
- double p = (1 + Math.sqrt(5)) / 2;
- double q = 1 / p;
- return (long) ((Math.pow(p, n) + Math.pow(q, n)) / Math.sqrt(5));
+ return (n < 2) ? n : recFibN(n - 1) + recFibN(n - 2);
 }

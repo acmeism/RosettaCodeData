@@ -1,24 +1,15 @@
-create or replace
-PROCEDURE PROCEDURE1 AS
-    TYPE numsColl is TABLE OF NUMBER;
-    nums numsColl;
+DECLARE
+  --The desired collection
+  type t_coll is table of number index by binary_integer;
+  l_coll t_coll;
 
-    FUNCTION GenNums(n IN NUMBER) RETURN numsColl AS
-        PI NUMBER := ACOS (-1);
-    BEGIN
-        nums := numsColl();
-        nums.extend(n);
-
-        FOR i in 1 .. n LOOP
-            nums(i) := 1 + .5 * (sqrt(-2 * log(dbms_random.value, 10)) * cos(2 * PI * dbms_random.value));
-        END LOOP;
-
-        RETURN nums;
-    END GenNums;
-
+  c_max pls_integer := 1000;
 BEGIN
-    nums := GenNums(10);
-    FOR i in 1 .. 10 LOOP
-        DBMS_OUTPUT.PUT_LINE(nums(i));
-    END LOOP;
-END PROCEDURE1;
+   FOR l_counter IN 1 .. c_max
+   LOOP
+      -- dbms_random.normal delivers normal distributed random numbers with a mean of 0 and a variance of 1
+      -- We just adjust the values and get the desired result:
+      l_coll(l_counter) := DBMS_RANDOM.normal * 0.5 + 1;
+      DBMS_OUTPUT.put_line (l_coll(l_counter));
+   END LOOP;
+END;

@@ -8,7 +8,7 @@ require 'stringio'
 #++
 def sha1(string)
   # functions and constants
-  mask = (1 << 32) - 1        # ffffffff
+  mask = 0xffffffff
   s = proc{|n, x| ((x << n) & mask) | (x >> (32 - n))}
   f = [
     proc {|b, c, d| (b & c) | (b.^(mask) & d)},
@@ -21,41 +21,22 @@ def sha1(string)
   # initial hash
   h = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0]
 
+  bit_len = string.size << 3
+  string += "\x80"
+  while (string.size % 64) != 56
+    string += "\0"
+  end
+  string = string.force_encoding('ascii-8bit') + [bit_len >> 32, bit_len & mask].pack("N2")
+
+  if string.size % 64 != 0
+    fail "failed to pad to correct length"
+  end
+
   io = StringIO.new(string)
   block = ""
-  term = false  # appended "\x80" in second-last block?
-  last = false  # last block?
-  until last
-    # Read next block of 16 words (64 bytes, 512 bits).
-    io.read(64, block) or (
-      # Work around a bug in Rubinius 1.2.4. At eof,
-      # MRI and JRuby already replace block with "".
-      block.clear
-    )
 
-    # Unpack block into 32-bit words "N".
-    case len = block.length
-    when 64
-      # Unpack 16 words.
-      w = block.unpack("N16")
-    when 56..63
-      # Second-last block: append padding, unpack 16 words.
-      block.concat("\x80"); term = true
-      block.concat("\0" * (63 - len))
-      w = block.unpack("N16")
-    when 0..55
-      # Last block: append padding, unpack 14 words.
-      block.concat(term ? "\0" : "\x80")
-      block.concat("\0" * (55 - len))
-      w = block.unpack("N14")
-
-      # Append bit length, 2 words.
-      bit_len = string.length << 3
-      w.push(bit_len >> 32, bit_len & mask)
-      last = true
-    else
-      fail "impossible"
-    end
+  while io.read(64, block)
+    w = block.unpack("N16")
 
     # Process block.
     (16..79).each {|t| w[t] = s[1, w[t-3] ^ w[t-8] ^ w[t-14] ^ w[t-16]]}

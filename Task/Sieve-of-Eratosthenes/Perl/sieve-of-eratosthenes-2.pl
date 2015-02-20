@@ -1,16 +1,17 @@
-sub simple_sieve {
-  my($max) = @_;
-  return () if $max < 2;  return (2) if $max < 3;
+sub sieve2 {
+  my($n) = @_;
+  return @{([],[],[2],[2,3],[2,3])[$n]} if $n <= 4;
 
-  my @c;
-  for(my $t=3; $t*$t<=$max; $t+=2) {
-     if (!$c[$t]) {
-         for(my $s=$t*$t; $s<=$max; $s+=$t*2) { $c[$s]++ }
+  my @composite;
+  for (my $t = 3;  $t*$t <= $n;  $t += 2) {
+     if (!$composite[$t]) {
+        for (my $s = $t*$t;  $s <= $n;  $s += $t*2)
+           { $composite[$s]++ }
      }
   }
   my @primes = (2);
-  for(my $t=3; $t<=$max; $t+=2) {
-      $c[$t] || push @primes, $t;
+  for (my $t = 3;  $t <= $n;  $t += 2) {
+     $composite[$t] || push @primes, $t;
   }
   @primes;
 }

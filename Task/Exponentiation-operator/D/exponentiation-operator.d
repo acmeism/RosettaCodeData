@@ -1,12 +1,12 @@
 import std.stdio, std.conv;
 
 struct Number(T) {
-    T x; // Base.
+    T x; // base
     alias x this;
     string toString() const { return text(x); }
 
     Number opBinary(string op)(in int exponent)
-    const pure nothrow if (op == "^^") in {
+    const pure nothrow @nogc if (op == "^^") in {
         if (exponent < 0)
             assert (x != 0, "Division by zero");
     } body {
@@ -16,7 +16,7 @@ struct Number(T) {
         T factor;
         if (exponent < 0) {
             zerodir = +1;
-            factor = (cast(T)1) / x;
+            factor = T(1) / x;
         } else {
             zerodir = -1;
             factor = x;

@@ -1,10 +1,3 @@
-comb_Prolog(L, M, N) :-
-    length(L, M),
-    fill(L, 1, N).
-
-fill([], _, _).
-
-fill([H | T], Min, Max) :-
-    between(Min, Max, H),
-    H1 is H + 1,
-    fill(T, H1, Max).
+:- use_module(library(clpfd)).
+comb_lstcomp(N, M, V) :-
+	V <- {L	& length(L, N), L ins 1..M & all_distinct(L), chain(L, #<), label(L)}.

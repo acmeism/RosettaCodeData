@@ -1,1 +1,1 @@
-zzz=storage(xxx)
+zzz = storage(xxx)

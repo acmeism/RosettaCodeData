@@ -2,23 +2,22 @@ package main
 
 import (
 	"fmt"
-	"strings"
 )
 
-var m = map[string]int{
-	"I": 1,
-	"V": 5,
-	"X": 10,
-	"L": 50,
-	"C": 100,
-	"D": 500,
-	"M": 1000,
+var m = map[rune]int{
+	'I': 1,
+	'V': 5,
+	'X': 10,
+	'L': 50,
+	'C': 100,
+	'D': 500,
+	'M': 1000,
 }
 
 // function, per task description
 func from_roman(roman string) (arabic int) {
 	last_digit := 1000
-	for _, r := range strings.Split(roman, "") {
+	for _, r := range roman {
 		digit := m[r]
 		if last_digit < digit {
 			arabic -= 2 * last_digit

@@ -11,21 +11,26 @@ procedure Longest_String_Challenge is
                          S, T: String) is
       C: Character;
    begin
-      if S = T then
-         B := B & Separator & N;
-      else
-         C:= T(T'First); -- raises Constraint_Error if T is empty
-         begin
-            C := S(S'First); -- same if S is empty
-            Funny_Stuff(B,L,N,S(S'First+1 .. S'Last), T(T'First+1..T'Last)); --
-         exception
-            when Constraint_Error =>
-               B   := N;
-               L   := N;
-         end;
-      end if;
+      C:= T(T'First); -- (1) raises Constraint_Error if T is empty
+      begin
+	 C := S(S'First); -- (2) raises Constraint_Error if S is empty
+	   -- at this point, we know that neither S nor T are empty
+         Funny_Stuff(B,L,N,S(S'First+1 .. S'Last), T(T'First+1..T'Last));
+      exception
+         when Constraint_Error => -- come from (2), S is empty, T is not empty!
+	    B   := N;
+	    L   := N;
+      end;
    exception
-      when Constraint_Error => null;
+      when Constraint_Error => -- come from (1), T is empty
+	 begin
+	    C := S(S'First); -- (3) raises Constraint_Error if S is empty
+	    -- at this point, we know that T is empty and S isn't
+	    null;
+	exception
+	    when Constraint_Error => -- come from (3); both S and T are empty
+	    B := B & Separator & N;
+	end;
    end Funny_Stuff;
 
    Buffer: Unbounded_String := +"";
@@ -35,10 +40,11 @@ procedure Longest_String_Challenge is
 begin
    while True loop
       Next := + Ada.Text_IO.Get_Line;
+        -- (4) raises exception when trying to read beyond end of file
       Funny_Stuff(Buffer, Longest, Next, -Longest, -Next);
    end loop;
 exception
-   when others =>
+   when others => -- come from (4)
       for I in To_String(Buffer)'Range loop
          if To_String(Buffer)(I) = Separator then
             Ada.Text_IO.New_Line;

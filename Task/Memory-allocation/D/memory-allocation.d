@@ -10,18 +10,18 @@
 enum int nInts = 10; // Compile-time constant.
 
 // This is thread-local:
-int data1[nInts];
+int[nInts] data1;
 
 // This is global:
-__gshared int data2[nInts];
+__gshared int[nInts] data2;
 
 void main() {
     // Static memory, it's thread-local but its name is usable
     // only locally:
-    static int data3[nInts];
+    static int[nInts] data3;
 
     // Static memory, it's global but its name is usable only locally:
-    __gshared static int data4[nInts];
+    __gshared static int[nInts] data4;
 
     // ----------------------
     // D supports the functions that manage memory of the C heap:

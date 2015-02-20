@@ -12,7 +12,7 @@ int main()
        iter != end;
        ++iter)
   {
-    std::string name = iter->path().leaf();
+    std::string name = iter->path().filename().string();
     if (regex_match(name, pattern))
       std::cout << iter->path() << "\n";
   }

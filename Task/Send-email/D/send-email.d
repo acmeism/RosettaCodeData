@@ -1,10 +1,10 @@
-import std.net.curl;
-
 void main() {
-    auto smtp = SMTP("smtps://smtp.gmail.com");
-    smtp.setAuthentication("someuser@gmail.com", "somepassword");
-    smtp.mailTo = ["<friend@example.com>"];
-    smtp.mailFrom = "<someuser@gmail.com>";
-    smtp.message = "Subject:test\n\nExample Message";
-    smtp.perform();
+    import std.net.curl;
+
+    auto s = SMTP("smtps://smtp.gmail.com");
+    s.setAuthentication("someuser@gmail.com", "somepassword");
+    s.mailTo = ["<friend@example.com>"];
+    s.mailFrom = "<someuser@gmail.com>";
+    s.message = "Subject:test\n\nExample Message";
+    s.perform;
 }

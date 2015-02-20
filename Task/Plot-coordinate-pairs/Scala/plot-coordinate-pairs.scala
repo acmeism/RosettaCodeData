@@ -10,7 +10,7 @@ object PlotCoordPairs extends scala.swing.SimpleSwingApplication {
 
   val (prefSizeX, prefSizeY) = (720, 480)
 
-  lazy val ui = new Panel {
+  private def ui = new Panel {
 
     import math._
     val xmax = {
@@ -103,5 +103,4 @@ object PlotCoordPairs extends scala.swing.SimpleSwingApplication {
     title = "Rosetta Code >>> Task: Plot coordinate pairs | Language: Scala"
     contents = ui
   }
-
 }

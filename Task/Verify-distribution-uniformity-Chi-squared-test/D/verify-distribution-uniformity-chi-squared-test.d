@@ -1,17 +1,17 @@
 import std.stdio, std.algorithm, std.mathspecial;
 
-real x2Dist(T)(in T[] data) pure nothrow {
+real x2Dist(T)(in T[] data) pure nothrow @safe @nogc {
     immutable avg = data.sum / data.length;
     immutable sqs = reduce!((a, b) => a + (b - avg) ^^ 2)(0.0L, data);
     return sqs / avg;
 }
 
-real x2Prob(in real dof, in real distance) /*pure nothrow*/ {
+real x2Prob(in real dof, in real distance) pure nothrow @safe @nogc {
     return gammaIncompleteCompl(dof / 2, distance / 2);
 }
 
 bool x2IsUniform(T)(in T[] data, in real significance=0.05L)
-/*pure nothrow*/ {
+pure nothrow @safe @nogc {
     return x2Prob(data.length - 1.0L, x2Dist(data)) > significance;
 }
 

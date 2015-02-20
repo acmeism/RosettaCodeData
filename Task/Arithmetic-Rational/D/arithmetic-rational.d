@@ -1,11 +1,11 @@
 import std.bigint, std.traits, std.conv;
 
 // std.numeric.gcd doesn't work with BigInt.
-T gcd(T)(in T a, in T b) pure /*nothrow*/ {
+T gcd(T)(in T a, in T b) pure nothrow {
     return (b != 0) ? gcd(b, a % b) : (a < 0) ? -a : a;
 }
 
-T lcm(T)(in T a, in T b) pure /*nothrow*/ {
+T lcm(T)(in T a, in T b) pure nothrow {
     return a / gcd(a, b) * b;
 }
 
@@ -28,7 +28,7 @@ struct RationalT(T) if (!isUnsigned!T) {
         den = 1UL;
     }
 
-    this(U, V)(in U n, in V d) pure /*nothrow*/ {
+    this(U, V)(in U n, in V d) pure nothrow {
         num = toT(n);
         den = toT(d);
         const common = gcd(num, den);
@@ -71,7 +71,7 @@ struct RationalT(T) if (!isUnsigned!T) {
             return ((num < 0) ? "-" : "+") ~ "infRat";
     }
 
-    real toReal() pure const /*nothrow*/ {
+    real toReal() pure const nothrow {
         static if (is(T == BigInt))
             return num.toLong / real(den.toLong);
         else
@@ -79,7 +79,7 @@ struct RationalT(T) if (!isUnsigned!T) {
     }
 
     RationalT opBinary(string op)(in RationalT r)
-    const pure /*nothrow*/ if (op == "+" || op == "-") {
+    const pure nothrow if (op == "+" || op == "-") {
         T common = lcm(den, r.den);
         T n = mixin("common / den * num" ~ op ~
                     "common / r.den * r.num" );
@@ -87,28 +87,28 @@ struct RationalT(T) if (!isUnsigned!T) {
     }
 
     RationalT opBinary(string op)(in RationalT r)
-    const pure /*nothrow*/ if (op == "*") {
+    const pure nothrow if (op == "*") {
         return RationalT(num * r.num, den * r.den);
     }
 
     RationalT opBinary(string op)(in RationalT r)
-    const pure /*nothrow*/ if (op == "/") {
+    const pure nothrow if (op == "/") {
         return RationalT(num * r.den, den * r.num);
     }
 
     RationalT opBinary(string op, U)(in U r)
-    const pure /*nothrow*/ if (isIntegral!U && (op == "+" ||
+    const pure nothrow if (isIntegral!U && (op == "+" ||
                            op == "-" || op == "*" || op == "/")) {
         return opBinary!op(RationalT(r));
     }
 
     RationalT opBinary(string op)(in size_t p)
-    const pure /*nothrow*/ if (op == "^^") {
+    const pure nothrow if (op == "^^") {
         return RationalT(num ^^ p, den ^^ p);
     }
 
     RationalT opBinaryRight(string op, U)(in U l)
-    const pure /*nothrow*/ if (isIntegral!U) {
+    const pure nothrow if (isIntegral!U) {
         return RationalT(l).opBinary!op(RationalT(num, den));
     }
 
@@ -118,7 +118,7 @@ struct RationalT(T) if (!isUnsigned!T) {
     }
 
     RationalT opUnary(string op)()
-    const pure /*nothrow*/ if (op == "+" || op == "-") {
+    const pure nothrow if (op == "+" || op == "-") {
         return RationalT(mixin(op ~ "num"), den);
     }
 
@@ -133,10 +133,10 @@ struct RationalT(T) if (!isUnsigned!T) {
         return num == rhs.num && den == rhs.den;
     }
 
-    int opCmp(U)(in U r) const pure {
+    int opCmp(U)(in U r) const pure nothrow {
         auto rhs = RationalT(r);
         if (type() == Type.NaRAT || rhs.type() == Type.NaRAT)
-            throw new Exception("Compare involve a NaRAT.");
+            throw new Error("Compare involve a NaRAT.");
         if (type() != Type.NORMAL ||
             rhs.type() != Type.NORMAL) // for infinite
             return (type() == rhs.type()) ? 0 :
@@ -154,12 +154,12 @@ struct RationalT(T) if (!isUnsigned!T) {
     }
 }
 
-RationalT!U rational(U)(in U n) pure /*nothrow*/ {
+RationalT!U rational(U)(in U n) pure nothrow {
     return typeof(return)(n);
 }
 
 RationalT!(CommonType!(U1, U2))
-rational(U1, U2)(in U1 n, in U2 d) pure /*nothrow*/ {
+rational(U1, U2)(in U1 n, in U2 d) pure nothrow {
     return typeof(return)(n, d);
 }
 

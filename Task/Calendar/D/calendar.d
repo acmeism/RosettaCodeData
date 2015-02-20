@@ -6,7 +6,7 @@ in {
 } body {
     immutable rows = 12 / nCols + (12 % nCols != 0);
     auto date = Date(year, 1, 1);
-    auto offs = cast(int)date.dayOfWeek;
+    int offs = date.dayOfWeek;
     const months = "January February March April May June
         July August September October November December".split;
 

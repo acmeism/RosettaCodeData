@@ -12,9 +12,3 @@ def roman_value(roman):
 if __name__=='__main__':
     for value in "MCMXC", "MMVIII", "MDCLXVI":
         print('%s = %i' % (value, roman_value(value)))
-
-""" Output:
-MCMXC = 1990
-MMVIII = 2008
-MDCLXVI = 1666
-"""

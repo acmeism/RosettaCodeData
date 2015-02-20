@@ -1,10 +1,10 @@
 DECLARE
-    type assocArrayType is record (
+    type ThisIsNotAnAssocArrayType is record (
         myShape VARCHAR2(20),
         mySize number,
         isActive BOOLEAN
     );
-    assocArray assocArrayType;
+    assocArray ThisIsNotAnAssocArrayType ;
 BEGIN
     assocArray.myShape := 'circle';
 

@@ -4,10 +4,11 @@ MsgBox, % MeanAngle(Angles[1]) "`n"
 	. MeanAngle(Angles[3])
 
 MeanAngle(a, x=0, y=0) {
-	c := ATan(1) / 45
-	for k, v in a
+	static c := ATan(1) / 45
+	for k, v in a {
 		x += Cos(v * c) / a.MaxIndex()
-	,	y += Sin(v * c) / a.MaxIndex()
+		y += Sin(v * c) / a.MaxIndex()
+	}
 	return atan2(x, y) / c
 }
 

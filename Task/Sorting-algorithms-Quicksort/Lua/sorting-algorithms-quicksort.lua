@@ -2,7 +2,7 @@
 function quicksort(t, start, endi)
   start, endi = start or 1, endi or #t
   --partition w.r.t. first element
-  if(endi - start < 2) then return t end
+  if(endi - start < 1) then return t end
   local pivot = start
   for i = start + 1, endi do
     if t[i] <= t[pivot] then

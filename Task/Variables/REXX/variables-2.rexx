@@ -11,11 +11,8 @@ parse var xxx   nn oo pp qq rr
                                        /*assigns     ─5    ───►  QQ     */
                                        /*assigns   "null"  ───►  RR     */
 
-cat = 'A cat is a lion in a jungle of small bushes.'
-                                       /*assigns a literal ───►  CAT    */
+                           /*a  "null"  is a string of length zero (0), */
+                           /*and is not to be confused with a null char.*/
 
-call value 'CAT', "When the cat's away, the mice will play."
-                                       /*assigns a literal ───►  CAT    */
-yyy='CAT'
-call value yyy, "Honest as the Cat when the meat's out of reach."
+cat = 'A cat is a lion in a jungle of small bushes.'
                                        /*assigns a literal ───►  CAT    */

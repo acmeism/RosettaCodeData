@@ -1,6 +1,6 @@
 import std.stdio, std.algorithm, std.range, std.array;
 
-auto forwardDifference(Range)(Range d, in int level) {
+auto forwardDifference(Range)(Range d, in int level) pure {
     foreach (immutable _; 0 .. level)
         d = d.zip(d.dropOne).map!(a => a[0] - a[1]).array;
     return d;

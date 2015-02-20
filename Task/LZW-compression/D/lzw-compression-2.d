@@ -14,7 +14,7 @@ struct LZW {
             bytes[i] = i;
     }
 
-    static Tcomp[] compress(immutable scope T[] original) pure nothrow
+    static Tcomp[] compress(immutable scope T[] original) pure nothrow @safe
     out(result) {
         if (!original.empty)
             assert(result[0] < initDictSize);
@@ -28,7 +28,7 @@ struct LZW {
         // Here built-in slices give lower efficiency.
         struct Slice {
             size_t start, end;
-            @property opSlice() const pure nothrow {
+            @property opSlice() const pure nothrow @safe @nogc {
                 return original[start .. end];
             }
             alias opSlice this;
@@ -53,7 +53,7 @@ struct LZW {
         return result;
     }
 
-    static Ta decompress(in Tcomp[] compressed) pure
+    static Ta decompress(in Tcomp[] compressed) pure @safe
     in {
         if (!compressed.empty)
             assert(compressed[0] < initDictSize, "Bad compressed");
@@ -91,6 +91,5 @@ void main() {
     immutable txt = "TOBEORNOTTOBEORTOBEORNOT";
     immutable compressed = LZW.compress(txt.representation);
     compressed.writeln;
-    //LZW.decompress(compressed).unrepresentation.writeln;
-    writeln(cast(string)LZW.decompress(compressed));
+    LZW.decompress(compressed).assumeUTF.writeln;
 }

@@ -1,14 +1,14 @@
 import std.stdio, std.algorithm, std.string, std.range, std.typecons;
 
 Tuple!(uint, string[]) findLongestChain(in string[] words)
-pure /*nothrow*/ {
+pure nothrow {
     static struct Pair { string word; bool unused; }
     uint nSolutions;
 
     void search(Pair[][] sequences, in size_t minHead,
                 in string currWord, string[] currentPath,
                 size_t currentPathLen,
-                ref string[] longestPath) /*nothrow*/ {
+                ref string[] longestPath) nothrow {
         currentPath[currentPathLen] = currWord;
         currentPathLen++;
 
@@ -16,7 +16,7 @@ pure /*nothrow*/ {
             nSolutions++;
         }  else if (currentPathLen > longestPath.length) {
             nSolutions = 1;
-            longestPath = currentPath[0 .. currentPathLen].dup;//Throw.
+            longestPath = currentPath[0 .. currentPathLen].dup;
         }
 
         // Recursive search.
@@ -31,12 +31,16 @@ pure /*nothrow*/ {
                 }
     }
 
-    auto heads = words.map!q{ a[0] };
-    //immutable {minHead, maxHead} = heads.reduce!(min, max);
-    immutable minHead = heads.reduce!min;
-    immutable maxHead = heads.reduce!max;
+    if (words.empty)
+        typeof(return)(0, null);
+    immutable heads = words.map!q{ a[0] }.array;
+    immutable size_t minHead = reduce!min(heads[0],
+                                          heads[1.. $].representation);
+    immutable size_t maxHead = reduce!max(heads[0],
+                                          heads[1.. $].representation);
+
     auto sequences = new Pair[][](maxHead - minHead + 1, 0);
-    foreach (word; words)
+    foreach (const word; words)
         sequences[word[0] - minHead] ~= Pair(word, true);
 
     auto currentPath = new string[words.length];
@@ -53,6 +57,7 @@ pure /*nothrow*/ {
 
     return typeof(return)(nSolutions, longestPath);
 }
+
 
 void main() {
     auto pokemon = "audino bagon baltoy banette bidoof braviary

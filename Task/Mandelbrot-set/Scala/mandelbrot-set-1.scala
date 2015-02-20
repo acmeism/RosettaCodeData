@@ -1,4 +1,4 @@
-import rosettacode.ArithmeticComplex._
+import org.rosettacode.ArithmeticComplex._
 import java.awt.Color
 
 object Mandelbrot

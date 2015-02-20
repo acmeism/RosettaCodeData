@@ -5,8 +5,8 @@ REBOL [
 	URL: http://rosettacode.org/wiki/Formatted_Numeric_Output
 ]
 
-; REBOL has no built-in facilities for printing pictured
-; output. However, it's not too hard to cook something up using the
+; REBOL has no built-in facilities for printing pictured output.
+; However, it's not too hard to cook something up using the
 ; string manipulation facilities.
 
 zeropad: func [

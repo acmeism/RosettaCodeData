@@ -1,7 +1,7 @@
 package main
 
 import (
-    "code.google.com/p/go.crypto/md4"
+    "golang.org/x/crypto/md4"
     "fmt"
 )
 

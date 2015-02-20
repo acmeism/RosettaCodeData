@@ -1,5 +1,9 @@
-(map (fn [x] (cond (zero? (mod x 15)) "FizzBuzz"
-                   (zero? (mod x 5)) "Buzz"
-                   (zero? (mod x 3)) "Fizz"
-		     :else x))
-     (range 1 101))
+(defn fizzbuzz [start finish] (map (fn [n]
+	(cond
+		(zero? (mod n 3)) "Fizz"
+		(zero? (mod n 5)) "Buzz"
+		(zero? (mod n 15)) "FizzBuzz"
+		:else n))
+	(range start finish))
+)
+(fizzbuzz 1 100)

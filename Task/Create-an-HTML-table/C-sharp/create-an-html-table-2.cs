@@ -8,46 +8,35 @@ namespace N
 	{
 		public static void Main()
 		{
-			var headerNames = new [] { "", "X", "Y", "Z" };
+			var headers = new [] { "", "X", "Y", "Z" };
 			
-			var headerColumns = headerNames.Select(name =>
-				new XElement
-				(
+			var cols = headers.Select(name =>
+				new XElement(
 					"th",
 					name,
 					new XAttribute("text-align", "center")
 				)
 			);
 		
-			var rows = Enumerable.Range(0, 4)
-				.Select
-				(
-					rowIndex =>
-						new XElement
-						(
-							"tr",
-							new XElement("td", rowIndex),
-							Enumerable.Range(0, 4)
-							.Select
-							(
-								colIndex =>
-								new XElement
-								(
-									"td",
-									colIndex,
-									new XAttribute("text-align", "center")
-								)
-							)
+			var rows = Enumerable.Range(0, 4).Select(ri =>
+				new XElement(
+					"tr",
+					new XElement("td", ri),
+					Enumerable.Range(0, 4).Select(ci =>
+						new XElement(
+							"td",
+							ci,
+							new XAttribute("text-align", "center")
+						)
 					)
-				);
+				)
+			);
 				
-			var xml = new XElement
-			(
+			var xml = new XElement(
 				"table",
-				new XElement
-				(
+				new XElement(
 					"thead",
-					new XElement("tr", headerColumns),
+					new XElement("tr",    cols),
 					new XElement("tbody", rows)
 				)
 			);

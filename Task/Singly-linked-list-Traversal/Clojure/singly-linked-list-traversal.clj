@@ -1,1 +1,1 @@
-(doseq [x xs] (println x)
+(doseq [x xs] (println x))

@@ -4,8 +4,7 @@
   do j=0  to 10
     say right(j,3)   ' maps to '   mapRange(0,10,-1,0,j)
     end
-exit                                   /*stick a fork in it, we're done.*/
-
+exit
 /*──────────────────────────────────MAPRANGE subroutine─────────────────*/
 mapRange: return arg(3)+(arg(5)-arg(1))*(arg(4)-arg(3))/(arg(2)-arg(1))
 /* Arguments are arg a1,a2,b1,b2,x */

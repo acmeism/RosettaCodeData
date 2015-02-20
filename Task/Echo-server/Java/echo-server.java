@@ -56,7 +56,7 @@ class ClientHandler implements Runnable {
 			String inputLine, outputLine;
 			while((inputLine = in.readLine()) != null){
 				outputLine = inputLine;
-				System.out.println("recieved: " + outputLine);
+				System.out.println("received: " + outputLine);
 				out.write(outputLine+"\n");
 				out.flush();
 				if (outputLine.equals("exit"))

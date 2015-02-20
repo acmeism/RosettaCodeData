@@ -4,22 +4,22 @@ void fourBitsAdder(T)(in T a0, in T a1, in T a2, in T a3,
                       in T b0, in T b1, in T b2, in T b3,
                       out T o0, out T o1,
                       out T o2, out T o3,
-                      out T overflow) pure nothrow {
+                      out T overflow) pure nothrow @nogc {
 
     // A XOR using only NOT, AND and OR, as task requires.
-    static T xor(in T x, in T y) pure nothrow {
+    static T xor(in T x, in T y) pure nothrow @nogc {
         return (~x & y) | (x & ~y);
     }
 
     static void halfAdder(in T a, in T b,
-                          out T s, out T c) pure nothrow {
+                          out T s, out T c) pure nothrow @nogc {
         s = xor(a, b);
         // s = a ^ b; // The built-in D xor.
         c = a & b;
     }
 
     static void fullAdder(in T a, in T b, in T ic,
-                          out T s, out T oc) pure nothrow {
+                          out T s, out T oc) pure nothrow @nogc {
         T ps, pc, tc;
 
         halfAdder(/*in*/a, b,   /*out*/ps, pc);

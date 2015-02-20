@@ -14,8 +14,8 @@ j=0; do forever;  j=j+1;  if j>L  then leave;  _=substr(x,j,1);  _2=getX()
                                        end               /*  2nd symbol.*/
                         z=z _ $;  iterate
                         end
-     if _=='+' | _=="-"  then do;  p_=word(z,words(z))   /*last  Z token*/
-                              if p_=='('   then z=z 0    /*handle unary±*/
+     if _=='+' | _=="-"  then do;  p_=word(z,words(z))  /*last  Z  token*/
+                              if p_=='('   then z=z 0   /*handle unary ±*/
                               z=z _ $;     iterate
                               end
      lets=0;  sigs=0;  #=_
@@ -24,17 +24,17 @@ j=0; do forever;  j=j+1;  if j>L  then leave;  _=substr(x,j,1);  _2=getX()
             if lets==1 & sigs==0 then if _=='+' | _=='-'  then do;  sigs=1
                                                                #=# || _
                                                                iterate
-                                                               end /*exp*/
+                                                               end
             if pos(_,nchars)==0  then leave
             lets=lets+datatype(_,'M')  /*keep track of # of exponents.  */
-            #=# || translate(_,'EEEEE','eDdQq')  /*keep building the num*/
+            #=# || translate(_,'EEEEE','eDdQq')  /*keep buildingthe num.*/
             end   /*j*/
      j=j-1
-     if \datatype(#,'N') then call serr 'invalid number: ' #
+     if \datatype(#,'N')  then call  serr  'invalid number: '     #
      z=z # $
      end   /*forever*/
 
-_=word(z,1); if _=='+' | _=='-' then z=0 z         /*handle unary cases.*/
+_=word(z,1);  if _=='+' | _=='-'  then z=0 z       /*handle unary cases.*/
 x='(' space(z) ') ';  tokens=words(x)  /*force stacking for expression. */
   do i=1  for tokens;  @.i=word(x,i);  end /*i*/   /*assign input tokens*/
 L=max(20,length(x))                    /*use 20 for the min show width. */
@@ -104,7 +104,7 @@ z=space(z stack)                       /*append any residual entries.   */
 say 'answer──►' z                      /*display the answer (result).   */
 parse source upper . how .             /*invoked via  C.L.  or REXX pgm?*/
 if how=='COMMAND' | ,
-   \datatype(z,'W') then exit          /*stick a fork in it, we're done.*/
+   \datatype(z,'W')  then exit         /*stick a fork in it, we're done.*/
 return z                               /*return  Z ──► invoker (RESULT).*/
 /*──────────────────────────────────subroutines─────────────────────────*/
 isBit: return arg(1)==0 | arg(1)==1    /*returns  1  if arg1 is bin bit.*/
@@ -112,6 +112,6 @@ isOp:  return pos(arg(1),rOp)\==0      /*is argument1 a "real" operator?*/
 serr:  say; say e arg(1); say; exit 13 /*issue an error message with txt*/
 /*──────────────────────────────────GETX subroutine─────────────────────*/
 getX:  do Nj=j+1  to length(x);  _n=substr(x,Nj,1); if _n==$  then iterate
-       if _n==$   then iterate;  return  substr(x,Nj,1)  /*ignore blanks*/
+       return  substr(x,Nj,1)          /* [↑]  ignore any blanks in exp.*/
        end   /*Nj*/
 return $                               /*reached end-of-tokens, return $*/

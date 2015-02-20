@@ -13,41 +13,22 @@ def md4(string)
   # initial hash
   a, b, c, d = 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476
 
+  bit_len = string.size << 3
+  string += "\x80"
+  while (string.size % 64) != 56
+    string += "\0"
+  end
+  string = string.force_encoding('ascii-8bit') + [bit_len & mask, bit_len >> 32].pack("V2")
+
+  if string.size % 64 != 0
+    fail "failed to pad to correct length"
+  end
+
   io = StringIO.new(string)
   block = ""
-  term = false  # appended "\x80" in second-last block?
-  last = false  # last block?
-  until last
-    # Read next block of 16 words (64 bytes, 512 bits).
-    io.read(64, block) or (
-      # Work around a bug in Rubinius 1.2.4. At eof,
-      # MRI and JRuby already replace block with "".
-      block.replace("")
-    )
 
-    # Unpack block into 32-bit words "V".
-    case len = block.length
-    when 64
-      # Unpack 16 words.
-      x = block.unpack("V16")
-    when 56..63
-      # Second-last block: append padding, unpack 16 words.
-      block.concat("\x80"); term = true
-      block.concat("\0" * (63 - len))
-      x = block.unpack("V16")
-    when 0..55
-      # Last block: append padding, unpack 14 words.
-      block.concat(term ? "\0" : "\x80")
-      block.concat("\0" * (55 - len))
-      x = block.unpack("V14")
-
-      # Append bit length, 2 words.
-      bit_len = string.length << 3
-      x.push(bit_len & mask, bit_len >> 32)
-      last = true
-    else
-      fail "impossible"
-    end
+  while io.read(64, block)
+    x = block.unpack("V16")
 
     # Process this block.
     aa, bb, cc, dd = a, b, c, d

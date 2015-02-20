@@ -13,7 +13,7 @@ int main()
       cout << "Buzz";
     if (!fizz && !buzz)
       cout << i;
-    cout << endl;
+    cout << "\n";
   }
   return 0;
 }

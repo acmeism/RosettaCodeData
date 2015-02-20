@@ -1,6 +1,6 @@
 import std.stdio, std.algorithm;
 
-void permutationSort(T)(T[] items) pure nothrow {
+void permutationSort(T)(T[] items) pure nothrow @safe @nogc {
     while (items.nextPermutation) {}
 }
 

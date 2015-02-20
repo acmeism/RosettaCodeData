@@ -2,92 +2,96 @@ import std.math, std.numeric, std.traits, std.conv, std.complex;
 
 
 struct Quat(T) if (isFloatingPoint!T) {
-    alias Complex!T CT;
+    alias CT = Complex!T;
 
     union {
-        struct { T re, i, j, k; } // Default init to NaN
+        struct { T re, i, j, k; } // Default init to NaN.
         struct { CT x, y; }
         struct { T[4] vector; }
     }
 
-    string toString() const /*pure nothrow*/ {
-        return text(vector);
+    string toString() const pure /*nothrow*/ @safe {
+        return vector.text;
     }
 
-    @property T norm2() const pure nothrow { /// Norm squared
+    @property T norm2() const pure nothrow @safe @nogc { /// Norm squared.
         return re ^^ 2 + i ^^ 2 + j ^^ 2 + k ^^ 2;
     }
 
-    @property T abs() const pure nothrow { /// Norm
+    @property T abs() const pure nothrow @safe @nogc { /// Norm.
         return sqrt(norm2);
     }
 
-    @property T arg() const pure nothrow { /// Theta
+    @property T arg() const pure nothrow @safe @nogc { /// Theta.
         return acos(re / abs); // this may be incorrect...
     }
 
-    @property Quat!T conj() const pure nothrow { /// Conjugate
+    @property Quat!T conj() const pure nothrow @safe @nogc { /// Conjugate.
         return Quat!T(re, -i, -j, -k);
     }
 
-    @property Quat!T recip() const pure nothrow {  /// Reciprocal
+    @property Quat!T recip() const pure nothrow @safe @nogc {  /// Reciprocal.
         return Quat!T(re / norm2, -i / norm2, -j / norm2, -k / norm2);
     }
 
-    @property Quat!T pureim() const pure nothrow { /// Pure imagery
+    @property Quat!T pureim() const pure nothrow @safe @nogc { /// Pure imagery.
         return Quat!T(0, i, j, k);
     }
 
-    @property Quat!T versor() const pure nothrow { /// Unit versor
+    @property Quat!T versor() const pure nothrow @safe @nogc { /// Unit versor.
         return this / abs;
     }
 
-    /// Unit versor of imagery part
-    @property Quat!T iversor() const pure nothrow {
+    /// Unit versor of imagery part.
+    @property Quat!T iversor() const pure nothrow @safe @nogc {
         return pureim / pureim.abs;
     }
 
-    /// Assignment
-    Quat!T opAssign(U : T)(Quat!U z) pure nothrow {
+    /// Assignment.
+    Quat!T opAssign(U : T)(Quat!U z) pure nothrow @safe @nogc {
         x = z.x;  y = z.y;
         return this;
     }
 
-    Quat!T opAssign(U : T)(Complex!U c) pure nothrow {
+    Quat!T opAssign(U : T)(Complex!U c) pure nothrow @safe @nogc {
         x = c;  y = 0;
         return this;
     }
 
-    Quat!T opAssign(U : T)(U r) pure nothrow if (isNumeric!U) {
+    Quat!T opAssign(U : T)(U r) pure nothrow @safe @nogc
+    if (isNumeric!U) {
         re = r; i = 0; y = 0;
         return this;
     }
 
-    /// Test for equal, not ordered so no opCmp
-    bool opEquals(U : T)(Quat!U z) const pure nothrow {
+    /// Test for equal, not ordered so no opCmp.
+    bool opEquals(U : T)(Quat!U z) const pure nothrow @safe @nogc {
         return re == z.re && i == z.i && j == z.j && k == z.k;
     }
 
-    bool opEquals(U : T)(Complex!U c) const pure nothrow {
+    bool opEquals(U : T)(Complex!U c) const pure nothrow @safe @nogc {
         return re == c.re && i == c.im && j == 0 && k == 0;
     }
 
-    bool opEquals(U : T)(U r) const pure nothrow if (isNumeric!U) {
+    bool opEquals(U : T)(U r) const pure nothrow @safe @nogc
+    if (isNumeric!U) {
         return re == r && i == 0 && j == 0 && k == 0;
     }
 
-    /// Unary op
-    Quat!T opUnary(string op)() const pure nothrow if (op == "+") {
+    /// Unary op.
+    Quat!T opUnary(string op)() const pure nothrow @safe @nogc
+    if (op == "+") {
         return this;
     }
 
-    Quat!T opUnary(string op)() const pure nothrow if (op == "-") {
+    Quat!T opUnary(string op)() const pure nothrow @safe @nogc
+    if (op == "-") {
         return Quat!T(-re, -i, -j, -k);
     }
 
-    /// Binary op, Quaternion on left of op
+    /// Binary op, Quaternion on left of op.
     Quat!(CommonType!(T,U)) opBinary(string op, U)(Quat!U z)
-    const pure nothrow {
+    const pure nothrow @safe @nogc {
         alias typeof(return) C;
 
         static if (op == "+" ) {
@@ -104,15 +108,16 @@ struct Quat(T) if (isFloatingPoint!T) {
         }
     }
 
-    /// Extend complex to quaternion
+    /// Extend complex to quaternion.
     Quat!(CommonType!(T,U)) opBinary(string op, U)(Complex!U c)
-    const pure nothrow {
+    const pure nothrow @safe @nogc {
         return opBinary!op(typeof(return)(c.re, c.im, 0, 0));
     }
 
-    /// For scalar
+    /// For scalar.
     Quat!(CommonType!(T,U)) opBinary(string op, U)(U r)
-    const pure nothrow if (isNumeric!U) {
+    const pure nothrow @safe @nogc
+    if (isNumeric!U) {
         alias typeof(return) C;
 
         static if (op == "+" ) {
@@ -128,23 +133,25 @@ struct Quat(T) if (isFloatingPoint!T) {
         }
     }
 
-    /// Power function
+    /// Power function.
     Quat!(CommonType!(T,U)) pow(U)(U r)
-    const pure nothrow if (isNumeric!U) {
+    const pure nothrow @safe @nogc
+    if (isNumeric!U) {
         return (abs^^r) * exp(r * iversor * arg);
     }
 
     /// Handle binary op if Quaternion on right of op and left is
     /// not quaternion.
     Quat!(CommonType!(T,U)) opBinaryRight(string op, U)(Complex!U c)
-    const pure nothrow {
+    const pure nothrow @safe @nogc {
         alias typeof(return) C;
         auto w = C(c.re, c.im, 0, 0);
         return w.opBinary!(op)(this);
     }
 
     Quat!(CommonType!(T,U)) opBinaryRight(string op, U)(U r)
-    const pure nothrow if (isNumeric!U) {
+    const pure nothrow @safe @nogc
+    if (isNumeric!U) {
         alias typeof(return) C;
 
         static if (op == "+" || op == "*") {
@@ -159,20 +166,23 @@ struct Quat(T) if (isFloatingPoint!T) {
 }
 
 
-HT exp(HT)(HT z) pure nothrow if (is(HT T == Quat!T)) {
+HT exp(HT)(HT z) pure nothrow @safe @nogc
+if (is(HT T == Quat!T)) {
     immutable inorm = z.pureim.abs;
     return std.math.exp(z.re) * (cos(inorm) + z.iversor * sin(inorm));
 }
 
-HT log(HT)(HT z) pure nothrow if (is(HT T == Quat!T)) {
+HT log(HT)(HT z) pure nothrow @safe @nogc
+if (is(HT T == Quat!T)) {
     return std.math.log(z.abs) + z.iversor * acos(z.re / z.abs);
 }
 
 
-void main() { // Demo code
+void main() @safe { // Demo code.
     import std.stdio;
-    alias Quat!real QR;
-    immutable real r = 7;
+
+    alias QR = Quat!real;
+    enum real r = 7.0;
 
     immutable QR q  = QR(2, 3, 4, 5),
                  q1 = QR(2, 3, 4, 5),
@@ -207,7 +217,7 @@ void main() { // Demo code
     writeln("                 log(q): ", log(q));
     writeln("            exp(log(q)): ", exp(log(q)));
     writeln("            log(exp(q)): ", log(exp(q)));
-    immutable s = log(exp(q));
+    immutable s = q.exp.log;
     writeln("9.5 let s = log(exp(q)): ", s);
     writeln("                 exp(s): ", exp(s));
     writeln("                 log(s): ", log(s));

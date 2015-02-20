@@ -4,14 +4,14 @@
 @private
   NSString *_name;
 }
-- (id)initWithName:(NSString *)name;
+- (instancetype)initWithName:(NSString *)name;
 @end
 
 @implementation Example
 - (NSString *)description {
   return [NSString stringWithFormat:@"Hello, I am %@", _name];
 }
-- (id)initWithName:(NSString *)name {
+- (instancetype)initWithName:(NSString *)name {
   if ((self = [super init])) {
     _name = [name copy];
   }

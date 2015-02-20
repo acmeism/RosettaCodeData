@@ -1,55 +1,47 @@
 class RockPaperScissorsGame
+  CHOICES = %w[rock paper scissors quit]
+  BEATS = {
+    'rock'     => 'paper',
+    'paper'    => 'scissors',
+    'scissors' => 'rock',
+  }
+
   def initialize()
-    @pieces = %w[rock paper scissors]
-    @beats = {
-      'rock' => 'paper',
-      'paper' => 'scissors',
-      'scissors' => 'rock',
-    }
     @plays = {
-      'rock' => 1,
-      'paper' => 1,
+      'rock'     => 1,
+      'paper'    => 1,
       'scissors' => 1,
     }
-    @score = [0, 0]
+    @score = [0, 0, 0]          # [0]:Human wins, [1]:Computer wins, [2]:draw
 
     play
   end
 
-  def humanPlay()
-    answer = nil
+  def humanPlay
     loop do
-      print "\nYour choice: #@pieces? "
+      print "\nYour choice: #{CHOICES}? "
       answer = STDIN.gets.strip.downcase
       next if answer.empty?
-      if idx = @pieces.find_index {|piece| piece.match(/^#{answer}/)}
-        answer = @pieces[idx]
-        break
-      else
-        puts "invalid answer, try again"
-      end
+      idx = CHOICES.find_index {|choice| choice.match(/^#{answer}/)}
+      return CHOICES[idx] if idx
+      puts "invalid answer, try again"
     end
-    answer
   end
 
-  def computerPlay()
+  def computerPlay
     total = @plays.values.reduce(:+)
     r = rand(total) + 1
     sum = 0
-    humans_choice = nil
-    @pieces.each do |piece|
-      sum += @plays[piece]
-      if r <= sum
-        humans_choice = piece
-        break
-      end
+    CHOICES.each do |choice|
+      sum += @plays[choice]
+      return BEATS[choice] if r <= sum
     end
-    @beats[humans_choice]
   end
 
   def play
     loop do
       h = humanPlay
+      break if h == "quit"
       c = computerPlay
       print "H: #{h}, C: #{c} => "
 
@@ -58,16 +50,19 @@ class RockPaperScissorsGame
 
       if h == c
         puts "draw"
-      elsif h == @beats[c]
+        @score[2] += 1
+      elsif h == BEATS[c]
         puts "Human wins"
         @score[0] += 1
       else
         puts "Computer wins"
         @score[1] += 1
       end
-      puts "score: human=#{@score[0]}, computer=#{@score[1]}"
+      puts "score: human=%d, computer=%d, draw=%d" % [*@score]
     end
+    @plays.each_key{|k| @plays[k] -= 1}
+    puts "\nhumans chose #{@plays}"
   end
 end
 
-game = RockPaperScissorsGame.new
+RockPaperScissorsGame.new

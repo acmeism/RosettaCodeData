@@ -1,9 +1,6 @@
-primes :: [Int]
-primes = 2 : _Y ((3 :) . gaps 5 . _U . map(\p-> [p*p, p*p+2*p..]))
+primesEQ = after 4 [2..] (sieve primesEQ) -- faster, ~ n^1.5
+   where     -- q==p*p
+   sieve (p:t) q xs = after (head t^2) (minus xs [q,q+p..]) (sieve t)
 
-gaps k s@(x:xs) | k < x     = k : gaps (k+2) s    -- ~= ([k,k+2..] \\ s), when
-                | otherwise =     gaps (k+2) xs   --  k<=x && null(s \\ [k,k+2..])
-
-_U ((x:xs):t) = x : (union xs . _U . pairs) t     -- ~= nub . sort . concat
-  where
-    pairs (xs:ys:t) = union xs ys : pairs t
+after q (x:xs) k | x < q     = x : after q xs k
+                 | otherwise = k x xs

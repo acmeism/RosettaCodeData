@@ -147,7 +147,7 @@ changePlayer 'X' = 'O'
 -- first, the computer looks for two pieces of his opponent in a row
 -- and tries to block.
 -- otherwise, it tries to guess the best position for the next movement.
--- as a least ressource, it places a piece randomly.
+-- as a last resort, it places a piece randomly.
 autoTurn :: Bool -> (Int, Char, String) -> IO (Int, Char, String)
 autoTurn forceRandom (count, player, game) = do
     -- try a random position 'cause everything else failed

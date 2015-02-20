@@ -1,6 +1,2 @@
-sub approximate_pi (Int $sample_size) {
-    $sample_size R/ [+]
-        4 xx grep 0 ..^ 1/4,
-                (rand - 1/2)**2 + (rand - 1/2)**2 xx
-                    $sample_size;
-}
+my @pi := ([\+] 4 * (1 > [+] rand**2 xx 2) xx *) Z/ 1 .. *;
+say @pi[10, 1000, 10_000];

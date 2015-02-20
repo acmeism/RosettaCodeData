@@ -1,66 +1,23 @@
-#!/usr/bin/python
-from random import choice, randrange
-from bisect import bisect
-from collections import defaultdict
+from random import choice
 
-WHATBEATS = {   'paper' : 'scissors',
-                'scissors' : 'rock',
-                'rock' : 'paper'        }
-
-ORDER = ('rock', 'paper', 'scissors')
-
-CHOICEFREQUENCY = defaultdict(int)
-
-def probChoice(choices, probabilities):
-    total = sum(probabilities)
-    prob_accumulator = 0
-    accumulator = []
-    for p in probabilities:
-        prob_accumulator += p
-        accumulator.append(prob_accumulator)
-    r = randrange(total)
-    bsct = bisect(accumulator, r)
-    chc = choices[bsct]
-    return chc
-
-def checkWinner(a, b):
-    if b == WHATBEATS[a]:
-        return b
-    elif a == WHATBEATS[b]:
-        return a
-
-    return None
-
-def sanitizeChoice(a):
-    # Drop it to lower-case
-    return a.lower()
-
-def registerPlayerChoice(choice):
-    CHOICEFREQUENCY[choice] += 1
-
-def getRandomChoice():
-    if len(CHOICEFREQUENCY) == 0:
-        return choice(ORDER)
-    choices = CHOICEFREQUENCY.keys()
-    probabilities = CHOICEFREQUENCY.values()
-    return WHATBEATS[probChoice(choices, probabilities)]
+rules = {'rock': 'paper', 'scissors': 'rock', 'paper': 'scissors'}
+previous = ['rock', 'paper', 'scissors']
 
 while True:
-    humanChoice = raw_input()
-    humanChoice = sanitizeChoice(humanChoice)
-    if humanChoice not in ORDER:
-        continue
+    human = input('\nchoose your weapon: ')
+    computer = rules[choice(previous)]  # choose the weapon which beats a randomly chosen weapon from "previous"
 
-    compChoice = getRandomChoice()
-    print "Computer picked", compChoice+",",
+    if human in ('quit', 'exit'): break
 
-    # Don't register the player choice until after the computer has made
-    # its choice.
-    registerPlayerChoice(humanChoice)
+    elif human in rules:
+        previous.append(human)
+        print('the computer played', computer, end='; ')
 
-    winner = checkWinner(humanChoice, compChoice)
+        if rules[computer] == human:  # if what beats the computer's choice is the human's choice...
+            print('yay you win!')
+        elif rules[human] == computer:  # if what beats the human's choice is the computer's choice...
+            print('the computer beat you... :(')
+        else:
+            print("it's a tie!")
 
-    if winner == None:
-        winner = "nobody"
-
-    print winner, "wins!"
+    else: print("that's not a valid choice")

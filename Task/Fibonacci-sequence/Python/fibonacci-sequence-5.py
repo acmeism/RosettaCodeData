@@ -1,5 +1,5 @@
-def fibGen():
-    f0, f1 = 0, 1
-    while True:
-        yield f0
-        f0, f1 = f1, f0+f1
+def fibFastRec(n):
+    def fib(prvprv, prv, c):
+        if c < 1: return prvprv
+        else: return fib(prv, prvprv + prv, c - 1)
+    return fib(0, 1, n)

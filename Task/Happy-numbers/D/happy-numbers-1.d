@@ -1,5 +1,3 @@
-import std.stdio, std.algorithm, std.range;
-
 bool isHappy(int n) pure nothrow {
     int[int] past;
 
@@ -19,5 +17,7 @@ bool isHappy(int n) pure nothrow {
 }
 
 void main() {
-    int.max.iota().filter!isHappy().take(8).writeln();
+    import std.stdio, std.algorithm, std.range;
+
+    int.max.iota.filter!isHappy.take(8).writeln;
 }

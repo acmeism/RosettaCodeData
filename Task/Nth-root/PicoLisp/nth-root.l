@@ -12,6 +12,6 @@
                N ) ) )
       X2 ) )
 
-(prinl (format (nthroot 2  2.0) *Scl))
-(prinl (format (nthroot 3 12.3) *Scl))
-(prinl (format (nthroot 4 45.6) *Scl))
+(prinl (format (nthRoot 2  2.0) *Scl))
+(prinl (format (nthRoot 3 12.3) *Scl))
+(prinl (format (nthRoot 4 45.6) *Scl))

@@ -42,5 +42,4 @@ class ethiopian_multiply {
 }
 
 echo ethiopian_multiply::init(17, 34);
-
 ?>

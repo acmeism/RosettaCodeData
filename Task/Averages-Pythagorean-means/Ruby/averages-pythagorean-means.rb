@@ -1,6 +1,6 @@
 class Array
   def arithmetic_mean
-    inject(:+).to_f / length
+    inject(0.0, :+) / length
   end
 
   def geometric_mean
@@ -8,7 +8,7 @@ class Array
   end
 
   def harmonic_mean
-    length.to_f / inject(0) {|s, m| s += 1.0/m}
+    length / inject(0.0) {|s, m| s + 1.0/m}
   end
 end
 

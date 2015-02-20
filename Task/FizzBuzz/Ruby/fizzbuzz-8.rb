@@ -1,8 +1,5 @@
-class Integer
-  def fizzbuzz
-    v = "#{"Fizz" if self % 3 == 0}#{"Buzz" if self % 5 == 0}"
-    v.empty? ? self : v
-  end
+f = [nil, nil, :Fizz].cycle
+b = [nil, nil, nil, nil, :Buzz].cycle
+(1..100).each do |i|
+  puts "#{f.next}#{b.next}"[/.+/] || i
 end
-
-puts *(1..100).map(&:fizzbuzz)

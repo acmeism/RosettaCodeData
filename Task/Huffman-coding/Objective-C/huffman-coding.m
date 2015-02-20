@@ -4,13 +4,13 @@
 @interface HuffmanTree : NSObject {
 	int freq;
 }
--(id)initWithFreq:(int)f;
+-(instancetype)initWithFreq:(int)f;
 @property (nonatomic, readonly) int freq;
 @end
 
 @implementation HuffmanTree
 @synthesize freq; // the frequency of this tree
--(id)initWithFreq:(int)f {
+-(instancetype)initWithFreq:(int)f {
 	if (self = [super init]) {
 		freq = f;
 	}
@@ -41,12 +41,12 @@ CFComparisonResult HuffmanCompare(const void *ptr1, const void *ptr2, void *unus
 	char value; // the character this leaf represents
 }
 @property (readonly) char value;
--(id)initWithFreq:(int)f character:(char)c;
+-(instancetype)initWithFreq:(int)f character:(char)c;
 @end
 
 @implementation HuffmanLeaf
 @synthesize value;
--(id)initWithFreq:(int)f character:(char)c {
+-(instancetype)initWithFreq:(int)f character:(char)c {
 	if (self = [super initWithFreq:f]) {
 		value = c;
 	}
@@ -59,12 +59,12 @@ CFComparisonResult HuffmanCompare(const void *ptr1, const void *ptr2, void *unus
 	HuffmanTree *left, *right; // subtrees
 }
 @property (readonly) HuffmanTree *left, *right;
--(id)initWithLeft:(HuffmanTree *)l right:(HuffmanTree *)r;
+-(instancetype)initWithLeft:(HuffmanTree *)l right:(HuffmanTree *)r;
 @end
 
 @implementation HuffmanNode
 @synthesize left, right;
--(id)initWithLeft:(HuffmanTree *)l right:(HuffmanTree *)r {
+-(instancetype)initWithLeft:(HuffmanTree *)l right:(HuffmanTree *)r {
 	if (self = [super initWithFreq:l.freq+r.freq]) {
 		left = l;
 		right = r;

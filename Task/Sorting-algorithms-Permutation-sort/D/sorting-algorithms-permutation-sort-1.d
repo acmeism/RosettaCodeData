@@ -1,11 +1,9 @@
 import std.stdio, std.algorithm, permutations2;
 
-void permutationSort(T)(T[] items) pure /*nothrow*/ {
+void permutationSort(T)(T[] items) pure nothrow @safe @nogc {
     foreach (const perm; items.permutations!false)
-        if (perm.isSorted) {
-            items[] = perm[];
+        if (perm.isSorted)
             break;
-        }
 }
 
 void main() {

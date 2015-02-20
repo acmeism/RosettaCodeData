@@ -21,7 +21,7 @@ def vectortriplep(a, b, c):
 if __name__ == '__main__':
     a, b, c = (3, 4, 5), (4, 3, 5), (-5, -12, -13)
     print("a = %r;  b = %r;  c = %r" % (a, b, c))
-    print("a . b =", dotp(a,b))
-    print("a x b =", crossp(a,b))
-    print("a . (b x c) =", scalartriplep(a, b, c))
-    print("a x (b x c) =", vectortriplep(a, b, c))
+    print("a . b = %r" % dotp(a,b))
+    print("a x b = %r"  % (crossp(a,b),))
+    print("a . (b x c) = %r" % scalartriplep(a, b, c))
+    print("a x (b x c) = %r" % (vectortriplep(a, b, c),))

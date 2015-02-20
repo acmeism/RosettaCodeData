@@ -6,7 +6,7 @@ void drawLine(Color)(Image!Color img,
                         size_t x1,    size_t y1,
                      in size_t x2, in size_t y2,
                      in Color color)
-pure nothrow {
+pure nothrow @nogc {
     immutable int dx = x2 - x1;
     immutable int ix = (dx > 0) - (dx < 0);
     immutable size_t dx2 = abs(dx) * 2;

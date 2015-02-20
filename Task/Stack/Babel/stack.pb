@@ -15,7 +15,3 @@ check_foo! :
     {foo empty?) {nil} {"not " .} ifte
     "empty" .
     cr << }
-
-Output:
-foo is not empty
-foo is empty

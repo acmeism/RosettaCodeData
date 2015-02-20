@@ -13,5 +13,5 @@ let $long := for $value in $array
 return
   <result>
     <short>{$short}</short>
-    <long>{$short}</long>
+    <long>{$long}</long>
   </result>

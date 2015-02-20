@@ -1,6 +1,6 @@
 import std.stdio, std.bigint, std.algorithm, std.traits, std.range;
 
-Unqual!T[] decompose(T)(in T number) pure /*nothrow*/
+Unqual!T[] decompose(T)(in T number) pure nothrow
 in {
     assert(number > 1);
 } body {

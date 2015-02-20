@@ -11,4 +11,4 @@ tests = TestList[TestCase $ assertEqual "4 is a leap year" True $ isLeapYear 4
                 ,TestCase $ assertEqual "1 is not a leap year" False $ isLeapYear 1
                 ,TestCase $ assertEqual "64 is a leap year" True $ isLeapYear 64
                 ,TestCase $ assertEqual "2000 is a leap year" True $ isLeapYear 2000
-                ,TestCase $ assertEqual "1900 is not a leap year" False $ isLeapYear 1900
+                ,TestCase $ assertEqual "1900 is not a leap year" False $ isLeapYear 1900]

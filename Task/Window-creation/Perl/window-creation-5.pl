@@ -1,3 +1,8 @@
-use XUL::Gui;
+use strict;
+use warnings;
+use QtGui4;
 
-display Window;
+my $app = Qt::Application(\@ARGV);
+my $window = Qt::MainWindow;
+$window->show;
+exit $app->exec;

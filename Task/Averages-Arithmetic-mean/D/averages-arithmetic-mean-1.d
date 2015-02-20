@@ -1,6 +1,4 @@
-import std.stdio;
-
-real mean(Range)(Range r) {
+real mean(Range)(Range r) pure nothrow @nogc {
     real sum = 0.0;
     int count;
 
@@ -16,8 +14,10 @@ real mean(Range)(Range r) {
 }
 
 void main() {
+    import std.stdio;
+
     int[] data;
-    writeln("mean: ", data.mean());
+    writeln("Mean: ", data.mean);
     data = [3, 1, 4, 1, 5, 9];
-    writeln("mean: ", data.mean());
+    writeln("Mean: ", data.mean);
 }

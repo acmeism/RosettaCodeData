@@ -1,6 +1,6 @@
 import std.stdio, std.math, std.mathspecial;
 
-real taylorGamma(in real x) pure nothrow {
+real taylorGamma(in real x) pure nothrow @safe @nogc {
     static immutable real[30] table = [
      0x1p+0,                    0x1.2788cfc6fb618f4cp-1,
     -0x1.4fcf4026afa2dcecp-1,  -0x1.5815e8fa27047c8cp-5,
@@ -25,7 +25,7 @@ real taylorGamma(in real x) pure nothrow {
     return 1.0L / sm;
 }
 
-real lanczosGamma(real z) pure nothrow {
+real lanczosGamma(real z) pure nothrow @safe @nogc {
     // Coefficients used by the GNU Scientific Library.
     // http://en.wikipedia.org/wiki/Lanczos_approximation
     enum g = 7;

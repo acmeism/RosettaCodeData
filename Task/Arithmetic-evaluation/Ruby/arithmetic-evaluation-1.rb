@@ -1,11 +1,11 @@
 $op_priority = {"+" => 0, "-" => 0, "*" => 1, "/" => 1}
-$op_function = {
-  "+" => lambda {|x, y| x + y},
-  "-" => lambda {|x, y| x - y},
-  "*" => lambda {|x, y| x * y},
-  "/" => lambda {|x, y| x / y}}
 
 class TreeNode
+  OP_FUNCTION = {
+    "+" => lambda {|x, y| x + y},
+    "-" => lambda {|x, y| x - y},
+    "*" => lambda {|x, y| x * y},
+    "/" => lambda {|x, y| x / y}}
   attr_accessor :info, :left, :right
 
   def initialize(info)
@@ -23,10 +23,10 @@ class TreeNode
       left_s, right_s = @left.to_s(order), @right.to_s(order)
 
       strs = case order
-             when :prefix then [@info, left_s, right_s]
-             when :infix then [left_s, @info, right_s]
+             when :prefix  then [@info, left_s, right_s]
+             when :infix   then [left_s, @info, right_s]
              when :postfix then [left_s, right_s, @info]
-             else []
+             else               []
              end
 
       "(" + strs.join(" ") + ")"
@@ -35,7 +35,7 @@ class TreeNode
 
   def eval
     if !leaf? and operator?(@info)
-      $op_function[@info].call(@left.eval, @right.eval)
+      OP_FUNCTION[@info].call(@left.eval, @right.eval)
     else
       @info.to_f
     end
@@ -46,6 +46,10 @@ def tokenize(exp)
   exp
     .gsub('(', ' ( ')
     .gsub(')', ' ) ')
+    .gsub('+', ' + ')
+    .gsub('-', ' - ')
+    .gsub('*', ' * ')
+    .gsub('/', ' / ')
     .split(' ')
 end
 

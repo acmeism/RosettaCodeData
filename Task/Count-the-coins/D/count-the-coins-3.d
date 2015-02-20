@@ -1,49 +1,31 @@
-import std.stdio, std.bigint, std.algorithm, std.conv, std.functional;
+import std.stdio, std.bigint;
 
-struct Ucent { /// Simplified 128-bit integer (like ucent).
-    ulong hi, lo;
-    static immutable one = Ucent(0, 1);
-
-    void opOpAssign(string op="+")(in ref Ucent y) pure nothrow {
-        this.hi += y.hi;
-        if (this.lo >= ~y.lo)
-            this.hi++;
-        this.lo += y.lo;
-    }
-
-    const string toString() const /*pure nothrow*/ {
-        return text((this.hi.BigInt << 64) + this.lo);
-    }
-}
-
-Ucent countChanges(in int amount, in int[] coins) pure nothrow {
+BigInt countChanges(in int amount, in int[] coins) pure /*nothrow*/ {
     immutable n = coins.length;
+    int cycle;
+    foreach (immutable c; coins)
+        if (c <= amount && c >= cycle)
+            cycle = c + 1;
+    cycle *= n;
+    auto table = new BigInt[cycle];
+    table[0 .. n] = 1.BigInt;
 
-    // Points to a cyclic buffer of length coins[i]
-    auto p = new Ucent*[n];
-    auto q = new Ucent*[n]; // iterates it.
-    auto buf = new Ucent[coins.sum];
-
-    p[0] = buf.ptr;
-    foreach (immutable i; 0 .. n) {
-        if (i)
-            p[i] = coins[i - 1] + p[i - 1];
-        *p[i] = Ucent.one;
-        q[i] = p[i];
+    int pos = n;
+    foreach (immutable s; 1 .. amount + 1) {
+        foreach (immutable i; 0 .. n) {
+            if (i == 0 && pos >= cycle)
+                pos = 0;
+            if (coins[i] <= s) {
+                immutable int q = pos - (coins[i] * n);
+                table[pos] = (q >= 0) ? table[q] : table[q + cycle];
+            }
+            if (i)
+                table[pos] += table[pos - 1];
+            pos++;
+        }
     }
 
-    Ucent prev;
-    foreach (immutable j; 1 .. amount + 1)
-        foreach (immutable i; 0 .. n) {
-            q[i]--;
-            if (q[i] < p[i])
-                q[i] = p[i] + coins[i] - 1;
-            if (i)
-                *q[i] += prev;
-            prev = *q[i];
-        }
-
-    return prev;
+    return table[pos - 1];
 }
 
 void main() {

@@ -1,7 +1,7 @@
 import std.stdio, std.random, std.range, std.algorithm;
 
-bool isBalanced(in string s, in string pars="[]") pure nothrow {
-    bool bal(in string t, in int nb = 0) pure nothrow {
+bool isBalanced(in string s, in char[2] pars="[]") pure nothrow @safe @nogc {
+    bool bal(in string t, in int nb = 0) pure nothrow @safe @nogc {
         if (!nb && t.empty) return true;
         if (t.empty || nb < 0) return false;
         if (t[0] == pars[0]) return bal(t.dropOne, nb + 1);

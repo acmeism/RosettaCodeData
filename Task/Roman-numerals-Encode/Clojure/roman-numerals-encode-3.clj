@@ -1,8 +1,7 @@
-(defn a2r
-  [a]
-  (let [rv [1000 500 100 50 10 5 1]
+(defn a2r [a]
+  (let [rv '(1000 500 100 50 10 5 1)
         rm (zipmap rv "MDCLXVI")
-        dv (->> rv (take-nth 2) next (#(interleave % %)))]
+        dv (->> rv (take-nth 2) next #(interleave % %))]
     (loop [a a rv rv dv dv r nil]
       (if (<= a 0)
         r

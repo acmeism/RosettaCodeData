@@ -4,7 +4,7 @@ import scala.collection.immutable.HashSet;
 import scala.collection.mutable.ArrayBuffer;
 
 public class Collections {
-	
+
 	public static void main(String[] args) {
 		ArrayBuffer<Integer> myarrlist = new ArrayBuffer<Integer>();
 		ArrayBuffer<Integer> myarrlist2 = new ArrayBuffer<Integer>(20);
@@ -12,9 +12,6 @@ public class Collections {
 		myarrlist.$plus$eq(new Integer(42)); // $plus$eq is Scala += operator
 		myarrlist.$plus$eq(13); // to add an element.
 		myarrlist.$plus$eq(-1);
-
-		myarrlist2.$plus$plus$eq(myarrlist);// //$plus$plus$eq is Scala ++= operator
-		myarrlist2.$plus$plus$eq(myarrlist);
 
 		myarrlist2 = (ArrayBuffer<Integer>) myarrlist2.$minus(-1);
 

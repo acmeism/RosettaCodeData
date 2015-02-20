@@ -1,11 +1,10 @@
-def fs(f:Int=>Int, s:List[Int])=s map f
-def f1(x:Int)=x*2
-def f2(x:Int)=x*x
-		
-def fsf1=fs(f1,_:List[Int])
-def fsf2=fs(f2,_:List[Int])
+def fs[X](f:X=>X)(s:Seq[X]) = s map f
+def f1(x:Int) = x * 2
+def f2(x:Int) = x * x
 
-println(fsf1(List(0,1,2,3)))
-println(fsf1(List(2,4,6,8)))
-println(fsf2(List(0,1,2,3)))
-println(fsf2(List(2,4,6,8)))
+def fsf[X](f:X=>X) = fs(f) _
+val fsf1 = fsf(f1) // or without the fsf intermediary: val fsf1 = fs(f1) _
+val fsf2 = fsf(f2) // or without the fsf intermediary: val fsf2 = fs(f2) _
+
+assert(fsf1(List(0,1,2,3)) == List(0,2,4,6))
+assert(fsf2(List(0,1,2,3)) == List(0,1,4,9))

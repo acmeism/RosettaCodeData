@@ -28,18 +28,20 @@ def xor(a, b)
 end
 
 # "and", "or" and "not" are Ruby keywords
-def _and(a, b); a & b; end
-def _or(a, b);  a | b; end
-def _not(a);   ~a & 1; end
+def _and(a, b)  a & b  end
+def _or(a, b)   a | b  end
+def _not(a)    ~a & 1  end
 
 def int_to_binary_string(n, length)
-  ("0"*length + n.to_s(2))[-length .. -1]
+  "%0#{length}b" % n
 end
+
 def binary_string_to_bits(s, length)
-  (s.reverse + "0"*length)[0..length-1].chars.map(&:to_i)
+  ("%#{length}s" % s).reverse.chars.map(&:to_i)
 end
+
 def bits_to_binary_string(bits)
-  bits.map(&:to_s).reverse.join("")
+  bits.map(&:to_s).reverse.join
 end
 
 puts " A    B      A      B   C    S  sum"
@@ -48,8 +50,7 @@ puts " A    B      A      B   C    S  sum"
     bin_a = int_to_binary_string(a, 4)
     bin_b = int_to_binary_string(b, 4)
     sum, carry = four_bit_adder(bin_a, bin_b)
-    puts "%2d + %2d = %s + %s = %s %s = %2d" % [
-      a, b, bin_a, bin_b, carry, sum, (carry + sum).to_i(2)
-    ]
+    puts "%2d + %2d = %s + %s = %s %s = %2d" %
+         [a, b, bin_a, bin_b, carry, sum, (carry + sum).to_i(2)]
   end
 end

@@ -1,17 +1,13 @@
 package main
+
 import "fmt"
 
 type Item struct {
-	name string
+	name               string
 	weight, value, qty int
 }
 
-type Solution struct {
-	v, w int
-	qty []int
-}
-
-var items = []Item {
+var items = []Item{
 	{"map",			9,	150,	1},
 	{"compass",		13,	35,	1},
 	{"water",		153,	200,	2},
@@ -36,37 +32,62 @@ var items = []Item {
 	{"book",		30,	10,	2},
 }
 
-func choose(weight, pos int, cache map[string]*Solution) (int, int, []int) {
-	if pos < 0 || weight <= 0 {
-		return 0, 0, make([]int, len(items))
+type Chooser struct {
+	Items []Item
+	cache map[key]solution
+}
+
+type key struct {
+	w, p int
+}
+
+type solution struct {
+	v, w int
+	qty  []int
+}
+
+func (c Chooser) Choose(limit int) (w, v int, qty []int) {
+	c.cache = make(map[key]solution)
+	s := c.rchoose(limit, len(c.Items)-1)
+	c.cache = nil // allow cache to be garbage collected
+	return s.v, s.w, s.qty
+}
+
+func (c Chooser) rchoose(limit, pos int) solution {
+	if pos < 0 || limit <= 0 {
+		return solution{0, 0, nil}
 	}
 
-	str := fmt.Sprintf("%d,%d", weight, pos)
-	if s, ok := cache[str]; ok {
-		return s.v, s.w, s.qty
+	key := key{limit, pos}
+	if s, ok := c.cache[key]; ok {
+		return s
 	}
 
-	best_v, best_i, best_w, best_sol := 0, 0, 0, []int(nil)
-
-	for i := 0; i * items[pos].weight <= weight && i <= items[pos].qty; i++ {
-		v, w, sol := choose(weight - i * items[pos].weight, pos - 1, cache)
-		v += i * items[pos].value
-		if v > best_v {
-			best_i, best_v, best_w, best_sol = i, v, w, sol
+	best_i, best := 0, solution{0, 0, nil}
+	for i := 0; i*items[pos].weight <= limit && i <= items[pos].qty; i++ {
+		sol := c.rchoose(limit-i*items[pos].weight, pos-1)
+		sol.v += i * items[pos].value
+		if sol.v > best.v {
+			best_i, best = i, sol
 		}
 	}
 
-	taken := make([]int, len(items))
-	copy(taken, best_sol)
-	taken[pos] = best_i
-	v, w := best_v, best_w + best_i * items[pos].weight
-
-	cache[str] = &Solution{v, w, taken}
-	return v, w, taken
+	if best_i > 0 {
+		// best.qty is used in another cache entry,
+		// we need to duplicate it before modifying it to
+		// store as our cache entry.
+		old := best.qty
+		best.qty = make([]int, len(items))
+		copy(best.qty, old)
+		best.qty[pos] = best_i
+		best.w += best_i * items[pos].weight
+	}
+	c.cache[key] = best
+	return best
 }
 
 func main() {
-	v, w, s := choose(400, len(items) - 1, make(map[string]*Solution))
+	v, w, s := Chooser{Items: items}.Choose(400)
 
 	fmt.Println("Taking:")
 	for i, t := range s {

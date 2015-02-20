@@ -1,7 +1,7 @@
 package require Tcl 8.6;  # Or 8.5 with the TclOO package
 
-# This code is structured as a class with a little trivial DSL parser so it is
-# easy to change what problem is being worked on.
+# This code is structured as a class with a little trivial DSL parser
+# so it is easy to change what problem is being worked on.
 oo::class create ResistorMesh {
     variable forcePoints V fixed w h
 

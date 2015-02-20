@@ -15,7 +15,6 @@ immutable white = Color(255, 255, 255),
 
 void nextState(ref World world, ref World nextWorld,
                ref Xorshift rnd, Image img) {
-  enum double div = typeof(rnd.front).max;
   immutable nr = world.length;
   immutable nc = world[0].length;
   foreach (immutable r, const row; world)
@@ -23,8 +22,7 @@ void nextState(ref World world, ref World nextWorld,
       START: final switch (elem) with (Cell) {
         case empty:
           img.putPixel(c, r, white);
-          nextWorld[r][c] = (rnd.front / div) < P_PROB ? tree : empty;
-          rnd.popFront;
+          nextWorld[r][c] = rnd.uniform01 < P_PROB ? tree : empty;
           break;
 
         case tree:
@@ -39,8 +37,7 @@ void nextState(ref World world, ref World nextWorld,
                 break START;
               }
 
-          nextWorld[r][c]= (rnd.front / div) < F_PROB ? burning : tree;
-          rnd.popFront;
+          nextWorld[r][c]= rnd.uniform01 < F_PROB ? burning : tree;
           break;
 
         case burning:
@@ -57,7 +54,7 @@ void main() {
   auto world = new World(worldSide);
   foreach (ref row; world)
     foreach (ref el; row)
-      el = uniform(0.0, 1.0, rnd) < TREE_PROB ? Cell.tree : Cell.empty;
+      el = rnd.uniform01 < TREE_PROB ? Cell.tree : Cell.empty;
   auto nextWorld = new World(world[0].length);
 
   auto w= new SimpleWindow(world.length,world[0].length,"ForestFire");

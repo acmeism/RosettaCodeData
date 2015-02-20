@@ -2,7 +2,7 @@ class Wireworld {
     has @.line;
 
     multi method new(@line) { self.new: :@line }
-    multi method new($str ) { self.new: $str.split: "\n" }
+    multi method new($str ) { self.new: $str.lines }
 
     method gist { join "\n", @.line }
     method postcircumfix:<[ ]>($i) { @.line[$i].comb }

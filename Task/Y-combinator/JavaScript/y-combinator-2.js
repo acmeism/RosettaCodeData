@@ -1,14 +1,9 @@
 function Y(f) {
-    var g = f((function(h) {
-        return function() {
-            var g = f(h(h));
-            return g.apply(this, arguments);
-        }
+    return (function(h) {
+        return h(h);
     })(function(h) {
-        return function() {
-            var g = f(h(h));
-            return g.apply(this, arguments);
-        }
-    }));
-    return g;
+        return f(function() {
+            return h(h).apply(this, arguments);
+        });
+    });
 }

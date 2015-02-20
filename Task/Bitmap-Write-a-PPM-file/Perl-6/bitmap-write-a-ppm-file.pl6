@@ -1,13 +1,12 @@
-sub MAIN ($filename = 'default.ppm') {
-    my $width = my $height = 125;
-
-    # Since P6 is a binary format, open in binary mode
-    my $out = open( $filename, :w, :bin ) or die "$!\n";
-
-    $out.say("P6\n$width $height\n255");
-
-    for ^$height X ^$width -> $r, $g {
-        $out.write(Buf.new($r*2,$g*2,255-$r*2));
+role PPM {
+    method P6 returns Blob {
+	"P6\n{self.width} {self.height}\n255\n".encode('ascii')
+	~ Blob.new: flat map { .R, .G, .B }, self.data
     }
-    $out.close;
 }
+my Bitmap $b = Bitmap.new( width => 125, height => 125) but PPM;
+for ^$b.height X ^$b.width -> $i, $j {
+    $b.pixel($i, $j) = Pixel.new: :R($i*2), :G($j*2), :B(255-$i*2);
+}
+
+$*OUT.write: $b.P6;

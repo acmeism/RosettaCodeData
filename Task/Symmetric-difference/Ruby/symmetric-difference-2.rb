@@ -1,3 +1,4 @@
-a_not_b = a - b
-b_not_a = b - a
-sym_diff = a_not_b + b_not_a
+require 'set'
+a = Set["John", "Serena", "Bob", "Mary", "Serena"] #Set removes duplicates
+b = Set["Jim", "Mary", "John", "Jim", "Bob"]
+p sym_diff = a ^ b # => #<Set: {"Jim", "Serena"}>

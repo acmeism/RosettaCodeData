@@ -17,8 +17,8 @@ func main() {
             t[i] = s[r]
         }
         // algorithm of Icon solution
-        for i := 0; i < len(s); i++ {
-            for j := 0; j < len(s); j++ {
+        for i := range t {
+            for j := range t {
                 if i != j && t[i] != s[j] && t[j] != s[i] {
                     t[i], t[j] = t[j], t[i]
                     break

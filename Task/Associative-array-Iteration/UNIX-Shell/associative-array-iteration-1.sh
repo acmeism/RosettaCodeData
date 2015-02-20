@@ -1,4 +1,4 @@
-a=([key1]=value1 [key2]=value2)
+typeset -A a=([key1]=value1 [key2]=value2)
 
 # just keys
 printf '%s\n' "${!a[@]}"

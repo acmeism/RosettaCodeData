@@ -1,7 +1,6 @@
-5.times do |i|
-   # i goes from 0 to 4
-   (i+1).times do
-      print "*"
-   end
-   puts
+1.upto(5) do |i|
+  1.upto(i) do |j|
+    print "*"
+  end
+  puts
 end

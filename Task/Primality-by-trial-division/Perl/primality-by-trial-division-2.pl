@@ -1,6 +1,13 @@
 sub isprime {
-  ('1' x shift) !~ /^1?$|^(11+?)\1+$/
+  my $n = shift;
+  return ($n >= 2) if $n < 4;
+  return unless $n % 2  &&  $n % 3;
+  my $sqrtn = int(sqrt($n));
+  for (my $i = 5; $i <= $sqrtn; $i += 6) {
+    return unless $n % $i && $n % ($i+2);
+  }
+  1;
 }
-
-# A quick test
-print join(', ', grep(isprime($_), 0..39)), "\n";
+my $s = 0;
+$s += !!isprime($_) for 1..100000;
+print "Pi(100,000) = $s\n";

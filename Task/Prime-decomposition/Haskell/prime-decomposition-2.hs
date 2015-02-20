@@ -1,8 +1,6 @@
-factorize n | n > 1 = go n primesList
+factorize n = divs n primesList
    where
-     go n ds@(d:t)
-        | d*d > n    = [n]
-        | r == 0     =  d : go q ds
-        | otherwise =      go n t
-            where
-              (q,r) = quotRem n d
+     divs n ds@(d:t) | d*d > n    = [n | n > 1]
+                     | r == 0     =  d : divs q ds
+                     | otherwise  =      divs n t
+            where  (q,r) = quotRem n d

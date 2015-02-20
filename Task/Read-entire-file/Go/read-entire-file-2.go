@@ -1,3 +1,5 @@
+// +build !windows,!plan9,!nacl // These lack syscall.Mmap
+
 package main
 
 import (

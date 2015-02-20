@@ -1,32 +1,34 @@
-#include<math.h>
-#include<stdio.h>
-#include<stdlib.h>
+/*Arithmetic Geometric Mean of 1 and 1/sqrt(2)
 
-double agm( double a, double g ) {
-   /* arithmetic-geometric mean */
-   double iota = 1.0E-16;
-   double a1, g1;
+  Nigel_Galloway
+  February 7th., 2012.
+*/
 
-   if( a*g < 0.0 ) {
-      printf( "arithmetic-geometric mean undefined when x*y<0\n" );
-      exit(1);
-   }
+#include "gmp.h"
 
-   while( fabs(a-g)>iota ) {
-      a1 = (a + g) / 2.0;
-      g1 = sqrt(a * g);
-
-      a = a1;
-      g = g1;
-   }
-
-   return a;
+void agm (const mpf_t in1, const mpf_t in2, mpf_t out1, mpf_t out2) {
+	mpf_add (out1, in1, in2);
+	mpf_div_ui (out1, out1, 2);
+	mpf_mul (out2, in1, in2);
+	mpf_sqrt (out2, out2);
 }
 
-int main( void ) {
-   double x, y;
-   printf( "Enter two numbers: " );
-   scanf( "%lf%lf", &x, &y );
-   printf( "The arithmetic-geometric mean is %lf\n", agm(x, y) );
-   return 0;
+int main (void) {
+	mpf_set_default_prec (65568);
+	mpf_t x0, y0, resA, resB;
+
+	mpf_init_set_ui (y0, 1);
+	mpf_init_set_d (x0, 0.5);
+	mpf_sqrt (x0, x0);
+	mpf_init (resA);
+	mpf_init (resB);
+
+	for(int i=0; i<7; i++){
+		agm(x0, y0, resA, resB);
+		agm(resA, resB, x0, y0);
+	}
+	gmp_printf ("%.20000Ff\n", x0);
+	gmp_printf ("%.20000Ff\n\n", y0);
+
+	return 0;
 }

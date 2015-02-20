@@ -3,9 +3,9 @@ import std.stdio, std.algorithm;
 int distance(in string s1, in string s2) pure nothrow {
   auto costs = new int[s2.length + 1];
 
-  foreach (i; 0 .. s1.length + 1) {
+  foreach (immutable i; 0 .. s1.length + 1) {
     int lastValue = i;
-    foreach (j; 0 .. s2.length + 1) {
+    foreach (immutable j; 0 .. s2.length + 1) {
       if (i == 0)
         costs[j] = j;
       else {
@@ -27,6 +27,6 @@ int distance(in string s1, in string s2) pure nothrow {
 }
 
 void main() {
-  foreach(p; [["kitten", "sitting"], ["rosettacode", "raisethysword"]])
+  foreach (p; [["kitten", "sitting"], ["rosettacode", "raisethysword"]])
     writefln("distance(%s, %s): %d", p[0], p[1], distance(p[0], p[1]));
 }

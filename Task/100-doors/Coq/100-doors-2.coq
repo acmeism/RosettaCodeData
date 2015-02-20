@@ -10,4 +10,4 @@ Fixpoint prisoo' nd n k accu :=
                prisoo' nd' (snd (fst ra)) (snd ra) ((fst (fst ra))::accu)
   end.
 
-Definition prisoo n := prisoo' (S n) 1 0 nil.
+Definition prisoo cells := prisoo' cells 1 0 nil.

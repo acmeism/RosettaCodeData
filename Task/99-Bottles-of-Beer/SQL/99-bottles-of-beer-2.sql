@@ -1,46 +1,29 @@
-CREATE PROCEDURE bottles
-	@bottle_count int,
-	@song varchar(MAX)
-
-AS
+DELIMITER $$
+DROP PROCEDURE IF EXISTS bottles_$$
+CREATE pROCEDURE `bottles_`(inout bottle_count int, inout song  text)
 BEGIN
-
-declare @bottles_text VARCHAR(MAX);
-
-
-IF @bottle_count > 0
- BEGIN
-    IF @bottle_count != 1
-		BEGIN
-		SET @bottles_text =  ' bottles of beer ';
-    END
-    ELSE
-    BEGIN
-		SET @bottles_text = ' bottle of beer ';
-	END
+declare bottles_text varchar(30);
 
 
-
-    SET @song = @song + CAST(@bottle_count AS VARCHAR) + @bottles_text + '\n';
-
-    SET @song = @song + CAST(@bottle_count AS VARCHAR) + @bottles_text +  'on the wall\n'
-    SET @song = @song + 'Take one down, pass it around\n'
-    SET @song = @song + CAST((@bottle_count - 1) AS VARCHAR) + @bottles_text +  'on the wall\n'
+IF bottle_count > 0   THEN
 
 
-    SET @bottle_count = (@bottle_count - 1);
+    if bottle_count != 1 then
+    set bottles_text :=  ' bottles of beer ';
+    else set bottles_text = ' bottle of beer ';
+    end if;
 
+    SELECT concat(song, bottle_count, bottles_text, ' \n') INTO song;
+    SELECT concat(song, bottle_count, bottles_text,  'on the wall\n') INTO song;
+    SELECT concat(song, 'Take one down, pass it around\n') into song;
+    SELECT concat(song, bottle_count -1 , bottles_text,  'on the wall\n\n') INTO song;
+    set bottle_count := bottle_count -1;
+    CALL bottles_( bottle_count, song);
+  END IF;
+END$$
 
-
-
-   EXEC bottles @bottle_count, @song
-
-END
-ELSE
-	    select @song AS 'RESULT'
-END
-
-/*****
-AND IN ORDER TO CALL PROCEDURE:
-****/
-EXECUTE bottles  31, '';
+set @bottles=99;
+set max_sp_recursion_depth=@bottles;
+set @song='';
+call bottles_( @bottles, @song);
+select @song;

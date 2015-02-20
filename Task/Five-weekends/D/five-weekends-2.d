@@ -1,16 +1,16 @@
-import std.stdio, std.datetime, std.traits;
-
 void main() {
+    import std.stdio, std.datetime, std.traits;
+
     enum first_year = 1900;
     enum last_year = 2100;
 
-    int totalNo5Weekends;
-    const(Date)[] fiveWeekendMonths;
-    foreach (year; first_year .. last_year + 1) {
+    uint totalNo5Weekends;
+    immutable(Date)[] fiveWeekendMonths;
+    foreach (immutable year; first_year .. last_year + 1) {
         bool has5Weekends = false;
 
-        foreach (month; [EnumMembers!Month]) {
-            const firstDay = Date(year, month, 1);
+        foreach (immutable month; EnumMembers!Month) {
+            immutable firstDay = Date(year, month, 1);
             if (firstDay.daysInMonth == 31 &&
                 firstDay.dayOfWeek == DayOfWeek.fri) {
                 has5Weekends = true;
@@ -24,11 +24,11 @@ void main() {
 
     writefln("Total 5-weekend months between %d and %d: %d",
              first_year, last_year, fiveWeekendMonths.length);
-    foreach (date; fiveWeekendMonths[0 .. 5])
-        writeln(date.month, " ", date.year);
-    writeln("...");
-    foreach (date; fiveWeekendMonths[$ - 5 .. $])
-        writeln(date.month, " ", date.year);
+    foreach (immutable date; fiveWeekendMonths[0 .. 5])
+        writeln(date.month, ' ', date.year);
+    "...".writeln;
+    foreach (immutable date; fiveWeekendMonths[$ - 5 .. $])
+        writeln(date.month, ' ', date.year);
 
     writeln("\nTotal number of years with no 5-weekend months: ",
             totalNo5Weekends);

@@ -1,25 +1,16 @@
 #include <iostream>
-#include <algorithm>
-#include <vector>
 
 int main()
 {
-  std::vector<int> range(100);
-  std::iota(range.begin(), range.end(), 1);
+    int i, f = 2, b = 4;
 
-  std::vector<std::string> values;
-  values.resize(range.size());
+    for ( i = 1 ; i <= 100 ; ++i, --f, --b )
+    {
+        if ( f && b ) { std::cout << i;             }
+        if ( !f )     { std::cout << "Fizz"; f = 3; }
+        if ( !b )     { std::cout << "Buzz"; b = 5; }
+        std::cout << std::endl;
+    }
 
-  auto fizzbuzz = [](int i) -> std::string {
-    if ((i%15) == 0) return "FizzBuzz";
-    if ((i%5) == 0)  return "Buzz";
-    if ((i%3) == 0)  return "Fizz";
-    return std::to_string(i);
-  };
-
-  std::transform(range.begin(), range.end(), values.begin(), fizzbuzz);
-
-  for (auto& str: values) std::cout << str << std::endl;
-
-  return 0;
+    return 0;
 }

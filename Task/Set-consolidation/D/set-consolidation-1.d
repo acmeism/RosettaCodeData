@@ -1,8 +1,8 @@
 import std.stdio, std.algorithm, std.array;
 
-dchar[][] consolidate(dchar[][] sets) {
+dchar[][] consolidate(dchar[][] sets) @safe {
     foreach (set; sets)
-        set.sort;
+        set.sort();
 
     foreach (i, ref si; sets[0 .. $ - 1]) {
         if (si.empty)
@@ -17,7 +17,7 @@ dchar[][] consolidate(dchar[][] sets) {
     return sets.filter!"!a.empty".array;
 }
 
-void main() {
+void main() @safe {
     [['A', 'B'], ['C','D']].consolidate.writeln;
 
     [['A','B'], ['B','D']].consolidate.writeln;

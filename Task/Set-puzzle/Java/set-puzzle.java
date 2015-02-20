@@ -1,9 +1,9 @@
 import java.util.*;
-import org.apache.commons.lang3.ArrayUtils;
 
 public class SetPuzzle {
 
     enum Color {
+
         GREEN(0), PURPLE(1), RED(2);
 
         private Color(int v) {
@@ -13,6 +13,7 @@ public class SetPuzzle {
     }
 
     enum Number {
+
         ONE(0), TWO(1), THREE(2);
 
         private Number(int v) {
@@ -22,6 +23,7 @@ public class SetPuzzle {
     }
 
     enum Symbol {
+
         OVAL(0), DIAMOND(1), SQUIGGLE(2);
 
         private Symbol(int v) {
@@ -31,6 +33,7 @@ public class SetPuzzle {
     }
 
     enum Fill {
+
         OPEN(0), STRIPED(1), SOLID(2);
 
         private Fill(int v) {
@@ -40,20 +43,22 @@ public class SetPuzzle {
     }
 
     private static class Card implements Comparable<Card> {
+
         Color c;
         Number n;
         Symbol s;
         Fill f;
 
+        @Override
         public String toString() {
             return String.format("[Card: %s, %s, %s, %s]", c, n, s, f);
         }
 
+        @Override
         public int compareTo(Card o) {
             return (c.val - o.c.val) * 10 + (n.val - o.n.val);
         }
     }
-
     private static Card[] deck;
 
     public static void main(String[] args) {
@@ -79,7 +84,7 @@ public class SetPuzzle {
         int cnt;
         do {
             Collections.shuffle(Arrays.asList(deck));
-            cards = ArrayUtils.subarray(deck, 0, numCards);
+            cards = Arrays.copyOfRange(deck, 0, numCards);
             cnt = 0;
 
             outer:

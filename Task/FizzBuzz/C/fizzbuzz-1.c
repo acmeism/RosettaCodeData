@@ -1,20 +1,5 @@
-#include<stdio.h>
+#include <stdio.h>
 
-int main (void)
-{
-    int i;
-    for (i = 1; i <= 100; i++)
-    {
-        if (!(i % 15))
-            printf ("FizzBuzz");
-        else if (!(i % 3))
-            printf ("Fizz");
-        else if (!(i % 5))
-            printf ("Buzz");
-        else
-            printf ("%d", i);
-
-        printf("\n");
-    }
-    return 0;
+int main() {
+  for (int i=1; i<=105; i++) if (i%3 && i%5) printf("%3d ", i); else printf("%s%s%s", i%3?"":"Fizz", i%5?"":"Buzz", i%15?" ":"\n");
 }

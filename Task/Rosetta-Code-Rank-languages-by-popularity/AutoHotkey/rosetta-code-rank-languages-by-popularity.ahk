@@ -1,71 +1,86 @@
-StringCaseSense, On
-Progress, b2 w120 zh0 fs9, Please wait ...
-Sleep, 10
+MembsUrl = http://rosettacode.org/mw/index.php?title=Special:Categories&limit=5000
+ValidUrl = http://rosettacode.org/wiki/Category:Programming_Languages
+WebRequest := ComObjCreate("WinHttp.WinHttpRequest.5.1")
 
-Link = http://www.rosettacode.org/w/index.php?title=Special:Categories&limit=5000
-FileDelete, Cats.html
-URLDownloadToFile, %Link%, Cats.html
-FileRead, Cats, Cats.html
+; Get the webpages
+WebRequest.Open("GET", MembsUrl),WebRequest.Send()
+MembsPage := WebRequest.ResponseText
+WebRequest.Open("GET", ValidUrl),WebRequest.Send()
+ValidPage := WebRequest.ResponseText
 
-Link1 = http://rosettacode.org/wiki/Category:Programming_Languages
-FileDelete, lang1.htm
-URLDownloadToFile, %Link1%, Lang1.htm
-FileRead, Lang1, Lang1.htm
+; Replace special characters
+StringReplace, MembsPage, MembsPage, ΜC++, µC++, All
+StringReplace, MembsPage, MembsPage, МК-61/52, MK-61/52, All
+StringReplace, ValidPage, ValidPage, ΜC++, µC++, All
+StringReplace, ValidPage, ValidPage, МК-61/52, MK-61/52, All
 
-LookFor = (\(previous 200\) \(<a href=")(.+?)" title="Category:Programming Languages">next 200
-RegExMatch(Lang1, LookFor, Link) ; Link2
-StringReplace, Link2, Link2, &amp;, &
+ValidREx := "s)href=""([^""]+)"" title=""Category:([^""]+)"">(?=.*</table>)"
+MembsREx := "title=""Category:(.+?)"">.+?\((\d+) members?\)"
 
-FileDelete, lang2.htm
-URLDownloadToFile, http://www.rosettacode.org%Link2%, Lang2.htm
-FileRead, Lang2, Lang2.htm
-Languages := Lang1 Lang2
+; Iterate through all matches for valid languages
+ValidLangs := [], FoundPos := 0
+While FoundPos := RegExMatch(ValidPage, ValidREx, Match, FoundPos+1)
+	ValidLangs[Match2] := Match1
 
-; create list of categories with member count
-Loop, Parse, Cats, `n, `r
+; Iterate through all matches for categories with members
+MembsLangs := [], Dupes := [], Detected := 0, FoundPos := 0
+While FoundPos := RegExMatch(MembsPage, MembsREx, Match, FoundPos+1)
 {
-    If InStr(A_LoopField, "<li>") {
-        LookFor = title=\"Category:(.+?)"
-        RegExMatch(A_LoopField, LookFor, Name)
-        RegExMatch(A_LoopField, "(\d*)\smembers", Count)
-        CatsList .= Count1 "|" Name1 "`r`n"
-    }
+	; If it isn't a valid language or is a duplicate, skip it
+	if !ValidLangs.HasKey(Match1) || Dupes.HasKey(Match1)
+		continue
+	
+	Dupes.Insert(Match1, true)
+	Detected++
+	
+	; Initialize this member count
+	if !IsObject(MembsLangs[Match2])
+		MembsLangs[Match2] := [Match1]
+	else
+		MembsLangs[Match2].Insert(Match1)
 }
 
-; create list of languages
-RegExMatch(Languages, "(<h2>Subcategories</h2>)(.*)previous 200", Match)
-LookFor = <a href="/wiki/Category:.*?" title="Category:.*?">(.*?)</a>(.*)
-While RegExMatch(Match2, LookFor, Match)
-    LangList .= Match1 "`r`n"
+; Sort the languages with the highest member count first
+Sorted := []
+for Members, Languages in MembsLangs
+	Sorted.Insert(1, [Members, Languages])
 
-; create the final list
-Loop, Parse, CatsList, `n, `r
+; Initialize the GUI
+Gui, New, HwndGuiHwnd
+Gui, Add, Text, w300 Center, %Detected% languages detected
+Gui, Add, Edit, w300 vSearchText gSearch, Filter languages
+Gui, Add, ListView, w300 r20 Grid gOpen vMyListView, Rank|Members|Category
+
+; Populate the list view
+LV_ModifyCol(1, "Integer"), LV_ModifyCol(2, "Integer"), LV_ModifyCol(3, 186)
+for Rank, Languages in Sorted
+	for Key, Language in Languages[2]
+		LV_Add("", Rank, Languages[1], Language)
+
+Gui, Show,, Rosetta Code
+return
+
+Open:
+if (A_GuiEvent == "DoubleClick")
 {
-    StringSplit, out, A_LoopField, |
-    If RegExMatch(LangList, "m)^" out2 "$")
-        FinalList .= A_LoopField "`r`n"
+	LV_GetText(Language, A_EventInfo, 3)
+	Run, % "http://rosettacode.org" ValidLangs[Language]
 }
+return
 
-Sort, FinalList, RN
-Gui, -MinimizeBox
-Gui, Margin, 6
-Gui, Add, ListView, y10 w363 r20 Grid, Rank|Members|Category
-Loop, Parse, FinalList, `n, `r
-{
-    If A_LoopField {
-        StringSplit, Item, A_LoopField, |
-        LV_Add("", A_Index, Item1, Item2)
-    }
-}
+Search:
+GuiControlGet, SearchText
+GuiControl, -Redraw, MyListView
 
-LV_ModifyCol(1, "Integer")
-LV_ModifyCol(2, "Integer")
-LV_ModifyCol(3, 250)
-FormatTime, Timestamp,, dd MMM yyyy
-Progress, Off
-Gui, Show,, Rosetta Categories - %Timestamp%
-Return
+LV_Delete()
+for Rank, Languages in Sorted
+	for Key, Language in Languages[2]
+		if InStr(Language, SearchText)
+			LV_Add("", Rank, Languages[1], Language)
+
+GuiControl, +Redraw, MyListView
+return
 
 GuiClose:
-    ExitApp
-Return
+ExitApp
+return

@@ -1,5 +1,4 @@
 # creating an empty array and adding values
-
 a = []              #=> []
 a[0] = 1            #=> [1]
 a[3] = "abc"        #=> [1, nil, nil, "abc"]

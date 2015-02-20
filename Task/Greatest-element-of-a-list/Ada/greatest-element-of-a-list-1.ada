@@ -1,6 +1,6 @@
 with Ada.Text_Io;
 
-procedure Max_Test is
+procedure Max_Test isco
    -- substitute any array type with a scalar element
    type Flt_Array is array (Natural range <>) of Float;
 

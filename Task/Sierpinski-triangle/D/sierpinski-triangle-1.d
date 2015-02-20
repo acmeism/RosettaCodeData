@@ -1,6 +1,6 @@
-import std.stdio, std.algorithm, std.string, std.array;
+void main() /*@safe*/ {
+    import std.stdio, std.algorithm, std.string, std.array;
 
-void main() {
     enum level = 4;
     auto d = ["*"];
     foreach (immutable n; 0 .. level) {
@@ -8,5 +8,5 @@ void main() {
         d = d.map!(a => sp ~ a ~ sp).array ~
             d.map!(a => a ~ " " ~ a).array;
     }
-    d.join("\n").writeln;
+    d.join('\n').writeln;
 }

@@ -1,7 +1,8 @@
 import bitmap: Image, RGB;
 
 void circle(Color)(Image!Color img, in int x0, in int y0,
-                   in int radius, in Color color) pure nothrow {
+                   in int radius, in Color color)
+pure nothrow @nogc @safe {
     int f = 1 - radius;
     int ddfX = 1;
     int ddfY = -2 * radius;
@@ -32,9 +33,9 @@ void circle(Color)(Image!Color img, in int x0, in int y0,
     }
 }
 
-void main() {
+void main() @safe {
     auto img = new Image!RGB(25, 25);
     img.clear(RGB.white);
     circle(img, 12, 12, 12, RGB.black);
-    img.textualShow();
+    img.textualShow;
 }

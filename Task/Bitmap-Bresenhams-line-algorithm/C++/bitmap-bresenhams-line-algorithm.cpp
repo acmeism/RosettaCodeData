@@ -26,19 +26,19 @@ void Line( const float x1, const float y1, const float x2, const float y2, const
   for(int x=(int)x1; x<maxX; x++)
   {
     if(steep)
-                {
-                        SetPixel(y,x, color);
-                }
+    {
+        SetPixel(y,x, color);
+    }
     else
-                {
-                        SetPixel(x,y, color);
-                }
+    {
+        SetPixel(x,y, color);
+    }
 
-                error -= dy;
-          if(error < 0)
-          {
-            y += ystep;
-            error += dx;
-          }
+    error -= dy;
+    if(error < 0)
+    {
+        y += ystep;
+        error += dx;
+    }
   }
 }

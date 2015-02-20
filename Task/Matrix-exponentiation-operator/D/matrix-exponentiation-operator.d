@@ -1,63 +1,57 @@
-import std.stdio, std.string, std.math, std.array;
+import std.stdio, std.string, std.math, std.array, std.algorithm;
 
 struct SquareMat(T = creal) {
     public static string fmt = "%8.3f";
     private alias TM = T[][];
     private TM a;
 
-    public this(in size_t side) pure nothrow
+    public this(in size_t side) pure nothrow @safe
     in {
         assert(side > 0);
     } body {
         a = new TM(side, side);
     }
 
-    public this(in TM m) pure nothrow
+    public this(in TM m) pure nothrow @safe
     in {
         assert(!m.empty);
-        foreach (const row; m)
-            assert(m.length == m[0].length);
+        assert(m.all!(row => row.length == m.length)); // Is square.
     } body {
+        // 2D dup.
         a.length = m.length;
         foreach (immutable i, const row; m)
-            //a[i] = row.dup; // Not nothrow.
-            a[i] = row ~ []; // Slower.
+            a[i] = row.dup;
     }
 
-    string toString() const {
+    string toString() const @safe {
         return format("<%(%(" ~ fmt ~ ", %)\n %)>", a);
     }
 
-    public static SquareMat identity(in size_t side) pure nothrow {
-        SquareMat m;
-        m.a.length = side;
-        foreach (immutable r, ref row; m.a) {
-            row.length = side;
+    public static SquareMat identity(in size_t side) pure nothrow @safe {
+        auto m = SquareMat(side);
+        foreach (immutable r, ref row; m.a)
             foreach (immutable c; 0 .. side)
-                row[c] = cast(T)(r == c ? 1 : 0);
-        }
+                row[c] = (r == c) ? 1+0i : 0+0i;
         return m;
     }
 
     public SquareMat opBinary(string op:"*")(in SquareMat other)
-    const pure nothrow in {
+    const pure nothrow @safe in {
         assert (a.length == other.a.length);
     } body {
-        immutable size_t side = other.a.length;
-        SquareMat d;
-        d.a = new TM(side, side);
+        immutable side = other.a.length;
+        auto d = SquareMat(side);
         foreach (immutable r; 0 .. side)
             foreach (immutable c; 0 .. side) {
-                d.a[r][c] = cast(T)0;
+                d.a[r][c] = 0+0i;
                 foreach (immutable k, immutable ark; a[r])
                     d.a[r][c] += ark * other.a[k][c];
             }
         return d;
     }
 
-    // This is the task part ---------------
-    public SquareMat opBinary(string op:"^^")(int n) const pure nothrow
-    in {
+    public SquareMat opBinary(string op:"^^")(int n) // The task part.
+    const pure nothrow @safe in {
         assert(n >= 0, "Negative exponent not implemented.");
     } body {
         auto sq = SquareMat(this.a);
@@ -71,7 +65,7 @@ struct SquareMat(T = creal) {
 
 void main() {
     alias M = SquareMat!();
-    immutable real q = sqrt(0.5);
+    enum real q = 0.5.sqrt;
     immutable m = M([[   q + 0*1.0Li,    q + 0*1.0Li, 0.0L + 0.0Li],
                      [0.0L - q*1.0Li, 0.0L + q*1.0Li, 0.0L + 0.0Li],
                      [0.0L +   0.0Li, 0.0L +   0.0Li, 0.0L + 1.0Li]]);

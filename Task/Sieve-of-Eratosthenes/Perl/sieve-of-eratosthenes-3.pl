@@ -1,6 +1,6 @@
 sub dj_vector {
   my($end) = @_;
-  return () if $end < 2; return (2) if $end < 3;
+  return @{([],[],[2],[2,3],[2,3])[$end]} if $end <= 4;
   $end-- if ($end & 1) == 0; # Ensure end is odd
 
   my ($sieve, $n, $limit, $s_end) = ( '', 3, int(sqrt($end)), $end >> 1 );

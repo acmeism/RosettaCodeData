@@ -1,54 +1,72 @@
-# Solve a Knight's Tour
-#
-#  Nigel_Galloway
-#  May 6th., 2012.
+class Board
+  Cell = Struct.new(:value, :adj) do
+    def self.end=(end_val)
+      @@end = end_val
+    end
 
-class Cell
-  Adjust = [[-1,-2],[-2,-1],[-2,1],[-1,2],[1,2],[2,1],[2,-1],[1,-2]]
-  def initialize(row=0, col=0, value=nil)
-    @adj = Adjust.map{|r,c| [row+r,col+c]}
-    @t = false
-    $zbl[value] = false unless value.nil?
-    @value = value
-  end
-  def try(value=1)
-    return true  if value > $e
-    return false if @t
-    return false if @value > 0 and @value != value
-    return false if @value == 0 and not $zbl[value]
-    @t = true
-    h = Hash.new
-    @adj.each_with_index{|(row, col), n|
-      cell = $board[row][col]
-      h[cell.wdof*100+n] = cell  if cell.value
-    }
-    h.sort.each{|key,cell|
-      if cell.try(value+1)
-        @value = value
-        return true
+    def try(seq_num)
+      self.value = seq_num
+      return true  if seq_num==@@end
+      a = []
+      adj.each_with_index do |cell, n|
+        a << [wdof(cell.adj)*10+n, cell]  if cell.value.zero?
       end
-    }
-    @t = false
-  end
-  def wdon
-    (@value.nil? or @value > 0 or @t) ? 0 : 1
-  end
-  def wdof
-    @adj.inject(0){|res, (row, col)| res += $board[row][col].wdon}
-  end
-  attr_reader :value
-end
+      a.sort.each {|_, cell| return true  if cell.try(seq_num+1)}
+      self.value = 0
+      false
+    end
 
-def knight_tour(rows, cols, x, y)
-  $e = rows * cols
-  $zbl = Array.new($e+1,true)
-  $board = Array.new(rows+2) do |i|
-    Array.new(cols+2) do |j|
-      (i<rows and j<cols) ? Cell.new(i,j,0) : Cell.new
+    def wdof(adj)
+      adj.count {|cell| cell.value.zero?}
     end
   end
-  $board[x][y].try
-  rows.times{|r| cols.times{|c| printf("%3s",$board[r][c].value)}; puts}
+
+  def initialize(rows, cols)
+    @rows, @cols = rows, cols
+    unless defined? ADJACENT                      # default move (Knight)
+      eval("ADJACENT = [[-1,-2],[-2,-1],[-2,1],[-1,2],[1,2],[2,1],[2,-1],[1,-2]]")
+    end
+    frame = ADJACENT.flatten.map(&:abs).max
+    @board = Array.new(rows+frame) do |i|
+      Array.new(cols+frame) do |j|
+        (i<rows and j<cols) ? Cell.new(0) : nil   # frame (Sentinel value : nil)
+      end
+    end
+    rows.times do |i|
+      cols.times do |j|
+        @board[i][j].adj = ADJACENT.map{|di,dj| @board[i+di][j+dj]}.compact
+      end
+    end
+    Cell.end = rows * cols
+    @format = " %#{(rows * cols).to_s.size}d"
+  end
+
+  def solve(sx, sy)
+    if (@rows*@cols).odd? and (sx+sy).odd?
+      puts "No solution"
+    else
+      puts (@board[sx][sy].try(1) ? to_s : "No solution")
+    end
+  end
+
+  def to_s
+    (0...@rows).map do |x|
+      (0...@cols).map{|y| @format % @board[x][y].value}.join
+    end
+  end
+end
+
+def knight_tour(rows=8, cols=rows, sx=rand(rows), sy=rand(cols))
+  puts "\nBoard (%d x %d), Start:[%d, %d]" % [rows, cols, sx, sy]
+  Board.new(rows, cols).solve(sx, sy)
 end
 
 knight_tour(8,8,3,1)
+
+knight_tour(5,5,2,2)
+
+knight_tour(4,9,0,0)
+
+knight_tour(5,5,0,1)
+
+knight_tour(12,12,1,1)

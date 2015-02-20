@@ -1,3 +1,3 @@
 s = '123'
 if s.isdigit():
-    # numeric
+    print int(s)

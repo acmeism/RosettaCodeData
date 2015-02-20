@@ -1,20 +1,14 @@
 import std.stdio, std.algorithm, std.range, std.array;
 
-struct Q {
-    __gshared static Appender!(uint[]) s;
+uint Q(in int n) nothrow
+in {
+    assert(n > 0);
+} body {
+    __gshared static Appender!(int[]) s = [0, 1, 1];
 
-    nothrow static this() {
-        s ~= [0, 1, 1];
-    }
-
-    static uint opCall(in int n) nothrow
-    in {
-        assert(n > 0);
-    } body {
-        foreach (immutable i; s.data.length .. n + 1)
-            s ~= s.data[i - s.data[i - 1]] + s.data[i - s.data[i - 2]];
-        return s.data[n];
-    }
+    foreach (immutable i; s.data.length .. n + 1)
+        s ~= s.data[i - s.data[i - 1]] + s.data[i - s.data[i - 2]];
+    return s.data[n];
 }
 
 void main() {

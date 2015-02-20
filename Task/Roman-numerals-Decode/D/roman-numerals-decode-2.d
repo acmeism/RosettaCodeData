@@ -1,6 +1,6 @@
 import std.regex, std.algorithm;
 
-immutable int[string] w2s;
+immutable uint[string] w2s;
 
 pure nothrow static this() {
     w2s = ["IX":  9, "C":  100, "D":  500, "CM": 900, "I":   1,
@@ -8,7 +8,7 @@ pure nothrow static this() {
            "V":   5, "X":   10, "IV":   4];
 }
 
-int toArabic(in string s) /*pure nothrow*/ {
+uint toArabic(in string s) /*pure nothrow*/ @safe /*@nogc*/ {
     return s
            .matchAll("CM|CD|XC|XL|IX|IV|[MDCLXVI]".regex)
            .map!(m => w2s[m.hit])

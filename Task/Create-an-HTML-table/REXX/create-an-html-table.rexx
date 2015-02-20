@@ -1,32 +1,32 @@
-/*REXX program to create an HTML table of five rows and three columns.  */
+/*REXX program to create an  HTML table  of five rows and three columns.*/
+arg rows .;  if rows==''  then rows=5  /*no ROWS specified?  Use default*/
+      cols = 3                         /*specify three columns for table*/
+   maxRand = 9999                      /*4-digit numbers, allow negative*/
+headerInfo = 'X Y Z'                   /*column header information.     */
+      oFID = 'a_table.html'            /*name of the  output file.      */
+         w = 0                         /*number of writes to output file*/
 
-arg rows .; if rows=='' then rows=5    /*no ROWS specified?  Use default*/
-      cols=3
-   maxRand=9999                        /*4-digit numbers, allow negative*/
-headerInfo='X Y Z'                     /*column header information.     */
-      oFID='a_table.html'
+call wrt  "<html>"
+call wrt  "<head></head>"
+call wrt  "<body>"
+call wrt  "<table border=5  cellpadding=20  cellspace=0>"
 
-call lineout oFid,"<html>"
-call lineout oFid,"<head></head>"
-call lineout oFid,"<body>"
-call lineout oFid,"<table border=5  cellpadding=20  cellspace=0>"
+  do r=0  to rows                      /* [↓]  handle row zero special. */
+  if r==0  then call wrt  "<tr><th></th>"
+           else call wrt  "<tr><th>"   r   "</th>"
 
-  do r=0 to rows
-  if r==0 then call lineout oFid,"<tr><th></th>"
-          else call lineout oFid,"<tr><th>"   r   "</th>"
-
-      do c=1 for cols
-      if r==0 then call lineout oFid,"<th>" word(headerInfo,c) "</th>"
-              else call lineout oFid,"<td align=right>"  rnd() "</td>"
+      do c=1  for cols                 /* [↓]  for row zero, add hdrInfo*/
+      if r==0  then call wrt  "<th>" word(headerInfo,c) "</th>"
+               else call wrt  "<td align=right>"  rnd() "</td>"
       end   /*c*/
+  end       /*r*/
 
-  end        /*r*/
-
-call lineout oFid,"</table>"
-call lineout oFid,"</body>"
-call lineout oFid,"</html>"
-exit
-
-/*─────────────────────────────────────RND subroutine───────────────────*/
-           /*subroutine was subroutinized for better viewfulabilityness.*/
+call wrt  "</table>"
+call wrt  "</body>"
+call wrt  "</html>"
+say;         say  w    ' records were written to the output file: '   oFID
+exit                                   /*stick a fork in it, we're done.*/
+/*──────────────────────────────────one-liner subroutines───────────────*/
 rnd: return right(random(0,maxRand*2)-maxRand,5) /*REXX doesn't gen negs*/
+wrt: call lineout oFID,arg(1); say '══►' arg(1); w=w+1; return  /*write.*/
+        /* [↑]  functions were subroutinized for better viewabilityness.*/

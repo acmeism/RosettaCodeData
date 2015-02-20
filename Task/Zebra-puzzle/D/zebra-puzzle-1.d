@@ -8,11 +8,11 @@ enum Content { Beer, Coffee, Milk, Tea, Water,
 enum Test { Drink, Person, Color, Smoke, Pet }
 enum House { One, Two, Three, Four, Five }
 
-alias Content[EnumMembers!Test.length][EnumMembers!House.length] TM;
+alias TM = Content[EnumMembers!Test.length][EnumMembers!House.length];
 
-bool finalChecks(in ref TM M) pure nothrow {
+bool finalChecks(in ref TM M) pure nothrow @safe @nogc {
   int diff(in Content a, in Content b, in Test ca, in Test cb)
-  nothrow {
+  nothrow @safe @nogc {
     foreach (immutable h1; EnumMembers!House)
       foreach (immutable h2; EnumMembers!House)
         if (M[ca][h1] == a && M[cb][h2] == b)
@@ -20,16 +20,15 @@ bool finalChecks(in ref TM M) pure nothrow {
     assert(0); // Useless but required.
   }
 
-  with (Content) with (Test) { // Braces required (8414).
+  with (Content) with (Test)
     return abs(diff(Norwegian, Blue, Person, Color)) == 1 &&
            diff(Green, White, Color, Color) == -1 &&
            abs(diff(Horse, Dunhill, Pet, Smoke)) == 1 &&
            abs(diff(Water, Blend, Drink, Smoke)) == 1 &&
            abs(diff(Blend, Cat, Smoke, Pet)) == 1;
-  }
 }
 
-bool constrained(in ref TM M, in Test atest) pure nothrow {
+bool constrained(in ref TM M, in Test atest) pure nothrow @safe @nogc {
   with (Content) with (Test) with (House)
     final switch (atest) {
       case Drink:
@@ -67,7 +66,7 @@ void show(in ref TM M) {
     writef("%5s: ", h);
     foreach (immutable t; EnumMembers!Test)
       writef("%10s ", M[t][h]);
-    writeln();
+    writeln;
   }
 }
 

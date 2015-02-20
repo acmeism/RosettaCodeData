@@ -1,2 +1,4 @@
 (defn perfect? [n]
-  (= n (reduce + (for [i (range 1 n) :when (= 0 (mod n i))] i))))
+  (->> (for [i (range 1 n)] :when (zero? (rem n i))] i)
+       (reduce +)
+       (= n)))

@@ -12,9 +12,9 @@ void main() {
         //foreach (immutable i, immutable b; A) {
         foreach (immutable i; 1 .. A.length - 1) {
             "_#"[A[i]].write;
-            immutable val = (cast(uint)A[i - 1] << 2) |
-                            (cast(uint)A[i] << 1) |
-                             cast(uint)A[i + 1];
+            immutable val = (uint(A[i - 1]) << 2) |
+                            (uint(A[i])     << 1) |
+                             uint(A[i + 1]);
             B[i] = val == 3 || val == 5 || val == 6;
         }
 

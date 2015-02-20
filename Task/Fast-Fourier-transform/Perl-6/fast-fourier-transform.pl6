@@ -1,9 +1,8 @@
 sub fft {
     return @_ if @_ == 1;
-    my @evn = fft( @_[0,2...^* >= @_] );
-    my @odd = fft( @_[1,3...^* >= @_] );
-    my $twd = 2i * pi / @_; # twiddle factor
-    @odd[$_] *= exp( $_ * $twd ) for ^@odd;
+    my @evn = fft( @_[0, 2 ... *] );
+    my @odd = fft( @_[1, 3 ... *] ) Z*
+    (1, * * cis( 2 * pi / @_ ) ... *);
     return @evn »+« @odd, @evn »-« @odd;
 }
 

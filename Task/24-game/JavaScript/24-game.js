@@ -1,48 +1,51 @@
-String.prototype.replaceAll = function(patt,repl) { var that = this;
-              	                                    that     = that.replace(patt,repl);
-						    if (that.search(patt) != -1) {
-							that = that.replaceAll(patt,repl);
-						    }
-						    return that;
-						  };
+function twentyfour(numbers, input) {
+    var invalidChars = /[^\d\+\*\/\s-\(\)]/;
 
-function validChars(input) { var regInvalidChar = /[^\d\+\*\/\s-\(\)]/;
-                             return input.search(regInvalidChar) == -1;
-                           }
+    var validNums = function(str) {
+        // Create a duplicate of our input numbers, so that
+        // both lists will be sorted.
+        var mnums = numbers.slice();
+        mnums.sort();
 
-function validNums(str, nums) {
-    var arr, l;
-    arr = str.replaceAll(/[^\d\s]/," ").replaceAll("  "," ").trim().split(" ").sort();
-    l   = arr.length;
+        // Sort after mapping to numbers, to make comparisons valid.
+        return str.replace(/[^\d\s]/g, " ")
+            .trim()
+            .split(/\s+/)
+            .map(function(n) { return parseInt(n, 10); })
+            .sort()
+            .every(function(v, i) { return v === mnums[i]; });
+    };
 
-    while(l--) { arr[l] = Number(arr[l]); }
+    var validEval = function(input) {
+        try {
+            return eval(input);
+        } catch (e) {
+            return {error: e.toString()};
+        }
+    };
 
-    return _.isEqual(arr,nums.sort());
+    if (input.trim() === "") return "You must enter a value.";
+    if (input.match(invalidChars)) return "Invalid chars used, try again. Use only:\n + - * / ( )";
+    if (!validNums(input)) return "Wrong numbers used, try again.";
+    var calc = validEval(input);
+    if (typeof calc !== 'number') return "That is not a valid input; please try again.";
+    if (calc !== 24) return "Wrong answer: " + String(calc) + "; please try again.";
+    return input + " == 24.  Congratulations!";
+};
+
+// I/O below.
+
+while (true) {
+    var numbers = [1, 2, 3, 4].map(function() {
+        return Math.floor(Math.random() * 8 + 1);
+    });
+
+    var input = prompt(
+        "Your numbers are:\n" + numbers.join(" ") +
+        "\nEnter expression. (use only + - * / and parens).\n", +"'x' to exit.", "");
+
+    if (input === 'x') {
+        break;
+    }
+    alert(twentyfour(numbers, input));
 }
-
-function validEval(input) { try { eval(input); } catch (e) { return false; };
-			    return true;
-			  }
-
-var input;
-
-while(true){ var numbers = [];
-             var i = 4;
-             while(i--) { numbers.push(Math.floor(Math.random()*8+1));
-                        }
-
-             input = prompt("Your numbers are:\n"
-                           + numbers.join(" ")
-                           + "\nEnter expression. (use only + - * / and parens).\n"
-                           + "'x' to exit."
-                           );
-
-             if (input === 'x') break;
-
-               !validChars(input)                 ? alert("Invalid chars used, try again. Use only:\n + - * / ( )")
-             : !validNums(input,numbers)          ? alert("Wrong numbers used, try again.")
-	     : !validEval(input)                  ? alert("Could not evaluate input, try again.")
-             : eval(input) != 24                  ? alert("Wrong answer:" + eval(input) + "\nTry again.")
-             : alert(input + "== 24. Congrats!!")
-             ;
-           }

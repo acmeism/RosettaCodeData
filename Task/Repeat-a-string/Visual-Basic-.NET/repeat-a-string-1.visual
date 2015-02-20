@@ -1,0 +1,1 @@
+FileContents = "".PadRight(FileSizeBytes, "X")

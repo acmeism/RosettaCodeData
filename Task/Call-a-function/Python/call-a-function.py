@@ -8,6 +8,13 @@ def fixed_args(x, y):
 # call
 fixed_args(1, 2)        # x=1, y=2
 
+## Can also called them using the parameter names, in either order:
+fixed_args(y=2, x=1)
+
+## Can also "apply" fixed_args() to a sequence:
+myargs=(1,2) # tuple
+fixed_args(*myargs)
+
 def opt_args(x=1):
     print(x)
 # calls
@@ -40,6 +47,18 @@ def is_builtin(x):
 # calls
 is_builtin(pow)         # True
 is_builtin(is_builtin)  # False
+
+# Very liberal function definition
+
+def takes_anything(*args, **kwargs):
+    for each in args:
+        print(each)
+    for key, value in sorted(kwargs.items()):
+        print("%s:%s" % (key, value))
+    # Passing those to another, wrapped, function:
+    wrapped_fn(*args, **kwargs)
+    # (Function being wrapped can have any parameter list
+    # ... that doesn't have to match this prototype)
 
 ## A subroutine is merely a function that has no explicit
 ## return statement and will return None.

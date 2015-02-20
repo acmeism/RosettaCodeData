@@ -1,7 +1,7 @@
-import std.stdio, std.random, std.math, std.algorithm, std.range;
+import std.stdio, std.random, std.math, std.algorithm, std.range, std.format;
 
-real analytical(in int n) /*pure nothrow*/ {
-    enum aux = (int k)=> reduce!q{a * b}(1.0L, iota(n - k + 1, n + 1));
+real analytical(in int n) pure nothrow @safe /*@nogc*/ {
+    enum aux = (int k) => reduce!q{a * b}(1.0L, iota(n - k + 1, n + 1));
     return iota(1, n + 1)
            .map!(k => (aux(k) * k ^^ 2) / (real(n) ^^ (k + 1)))
            .sum;

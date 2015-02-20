@@ -1,6 +1,6 @@
 import std.stdio, std.bigint, std.math;
 
-T gcd(T)(T a, T b) pure /*nothrow*/ {
+T gcd(T)(T a, T b) pure nothrow {
     while (b) {
         immutable t = b;
         b = a % b;
@@ -9,7 +9,7 @@ T gcd(T)(T a, T b) pure /*nothrow*/ {
     return a;
 }
 
-T lcm(T)(T m, T n) pure /*nothrow*/ {
+T lcm(T)(T m, T n) pure nothrow {
     if (m == 0) return m;
     if (n == 0) return n;
     return abs((m * n) / gcd(m, n));

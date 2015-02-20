@@ -16,7 +16,7 @@ def ToReducedRowEchelonForm( M):
                     return
         M[i],M[r] = M[r],M[i]
         lv = M[r][lead]
-        M[r] = [ mrx / lv for mrx in M[r]]
+        M[r] = [ mrx / float(lv) for mrx in M[r]]
         for i in range(rowCount):
             if i != r:
                 lv = M[i][lead]

@@ -1,6 +1,6 @@
 import std.stdio, std.array;
 
-T[] lcs(T)(in T[] a, in T[] b) pure nothrow {
+T[] lcs(T)(in T[] a, in T[] b) pure nothrow @safe {
     if (a.empty || b.empty) return null;
     if (a[0] == b[0])
         return a[0] ~ lcs(a[1 .. $], b[1 .. $]);

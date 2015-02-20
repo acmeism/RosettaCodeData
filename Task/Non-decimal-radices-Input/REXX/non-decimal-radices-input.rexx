@@ -1,26 +1,17 @@
 /*REXX program demonstrates REXX's ability to handle non-decimal radices*/
-/*┌────────────────────────────────────────────────────────────────────┐
-┌─┘ In REXX, there are no numeric-type variables (integer, float, real,└─┐
-│ logical, complex, double, etc), only  character.  Everything is stored │
-│ as a character string.  Arithmetic is done almost exactly the way a    │
-│ schoolchild would perform it.  To add, align the two numbers up (right │
-│ justified, with the decimal being the pivot) and simply add the columns│
-│ up, noting carries and the signs.  Multiplication and division are     │
-└─┐ simarily performed.                                                ┌─┘
-  └────────────────────────────────────────────────────────────────────┘*/
 a=123                        /*all of these assignments are identical:  */
-b='123'                      /*there is no difference in the assignments*/
+b='123'
 c='1' || "2" || '3'
 d= 1  ||  2  ||  3
 e= 12        ||  3
 f=120 + 3
-g=substr(9912388,3,2)
+g=substr(9912388,3,3)
 h=left(123456,3)
 i=right(777.123,3)
-j=12 + '     3   '
-k=0000000123.0000/1          /*divison "normalizes the number (───► 123)*/
+j=120 + '     3   '
+k=0000000123.0000/1          /*division "normalizes the number (──► 123)*/
 
-                             /*parsing then, of a decimal number is no  */
+                             /*parsing of a  decimal number  is no      */
                              /*different then parsing a character string*/
                              /*because decimal numbers  ARE  character  */
                              /*strings.    As such, numbers may have    */
@@ -29,7 +20,7 @@ k=0000000123.0000/1          /*divison "normalizes the number (───► 123)
                              /*leading sign).                           */
 
 aa=' 123 '                   /*AA's  exact value is different the  A,   */
-                             /*but it's numerically equal to  A.        */
+                             /*but it's   numerically equal    to  A.   */
 bb=123.                      /*the same can be said for the rest of 'em.*/
 cc=+123
 dd=' +  123'
@@ -67,9 +58,9 @@ cyanF=c2b('copernicium')      /*some REXXes support this, others don't. */
 cyanG=c2d('nilla')            /*converts a character string to decimal. */
 cyanH=d2c(251)                /*converts a decimal number to character. */
 
-cyanI=x2d(fab)                /*converts a hexadcimal string to decinal.*/
-cyanJ=x2c(fab)                /*converts a hexadcimal string to chars.  */
-cyanK=x2b(fab)                /*converts a hexadcimal string to binary. */
+cyanI=x2d(fab)                /*converts a hexadecimal string to decimal*/
+cyanJ=x2c(fab)                /*converts a hexadecimal string to chars. */
+cyanK=x2b(fab)                /*converts a hexadecimal string to binary.*/
 
 befog=d2b(144)                /*there's no dec──►binary,  but see below.*/
 unfog=b2d(101)                /*there's no bin──►decimal, but see below.*/

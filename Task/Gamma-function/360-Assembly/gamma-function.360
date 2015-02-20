@@ -1,0 +1,159 @@
+GAMMAT   CSECT
+         USING GAMMAT,R13
+SAVEAR   B     STM-SAVEAR(R15)
+         DC    17F'0'
+         DC    CL8'GAMMAT'
+STM      STM   R14,R12,12(R13)
+         ST    R13,4(R15)
+         ST    R15,8(R13)
+         LR    R13,R15
+*        ----  CODE
+         LE    F4,=E'0'
+         LH    R2,NI
+LOOPI    EQU   *
+         AE    F4,=E'1'         xi=xi+1
+         LER   F0,F4
+         DE    F0,=E'10'        x=xi/10
+         STE   F0,X
+         LE    F6,X
+         SE    F6,=E'1'         xx=x-1.0
+         LH    R4,NT
+         BCTR  R4,0
+         SLA   R4,2
+         LE    F0,T(R4)
+         STE   F0,SUM           sum=t(nt)
+         LH    R3,NT
+         BCTR  R3,0
+         SH    R4,=H'4'
+LOOPJ    CH    R3,=H'1'         for j=nt-1 downto 1
+         BL    ENDLOOPJ
+         LE    F0,SUM
+         MER   F0,F6            sum*xx
+         LE    F2,T(R4)         t(j)
+         AER   F0,F2
+         STE   F0,SUM           sum=sum*xx+t(j)
+         BCTR  R3,0
+         SH    R4,=H'4'
+         B     LOOPJ
+ENDLOOPJ EQU   *
+         LE    F0,=E'1'
+         DE    F0,SUM
+         STE   F0,GAMMA         gamma=1/sum
+         LE    F0,X
+         BAL   R14,CONVERT
+         MVC   BUF(8),CONVERTM
+         LE    F0,GAMMA
+         BAL   R14,CONVERT
+         MVC   BUF+9(13),CONVERTM
+         WTO   MF=(E,WTOMSG)		
+         BCT   R2,LOOPI
+*        ----  END CODE
+         CNOP  0,4
+         L     R13,4(0,R13)
+         LM    R14,R12,12(R13)
+         XR    R15,R15
+         BR    R14
+*        ----  DATA
+NI       DC    H'30'
+NT       DC    AL2((TEND-T)/4)
+T        DC    E'1.00000000000000000000'
+         DC    E'0.57721566490153286061'
+         DC    E'-0.65587807152025388108'
+         DC    E'-0.04200263503409523553'
+         DC    E'0.16653861138229148950'
+         DC    E'-0.04219773455554433675'
+         DC    E'-0.00962197152787697356'
+         DC    E'0.00721894324666309954'
+         DC    E'-0.00116516759185906511'
+         DC    E'-0.00021524167411495097'
+         DC    E'0.00012805028238811619'
+         DC    E'-0.00002013485478078824'
+         DC    E'-0.00000125049348214267'
+         DC    E'0.00000113302723198170'
+         DC    E'-0.00000020563384169776'
+         DC    E'0.00000000611609510448'
+         DC    E'0.00000000500200764447'
+         DC    E'-0.00000000118127457049'
+         DC    E'0.00000000010434267117'
+         DC    E'0.00000000000778226344'
+         DC    E'-0.00000000000369680562'
+         DC    E'0.00000000000051003703'
+         DC    E'-0.00000000000002058326'
+         DC    E'-0.00000000000000534812'
+         DC    E'0.00000000000000122678'
+         DC    E'-0.00000000000000011813'
+         DC    E'0.00000000000000000119'
+         DC    E'0.00000000000000000141'
+         DC    E'-0.00000000000000000023'
+         DC    E'0.00000000000000000002'
+TEND     DS    0E
+X        DS    E
+SUM      DS    E
+GAMMA    DS    E
+WTOMSG   DS    0F
+         DC    AL2(L'BUF),XL2'0000'
+BUF      DC    CL80' '
+*        Subroutine             Convertion Float->Display
+CONVERT  CNOP  0,4
+         ME    F0,CONVERTC
+         STE   F0,CONVERTF
+         MVI   CONVERTS,X'00'
+         L     R9,CONVERTF
+         CH    R9,=H'0'
+         BZ    CONVERT7
+         BNL   CONVERT1         is negative?
+         MVI   CONVERTS,X'80'
+         N     R9,=X'7FFFFFFF'  sign bit
+CONVERT1 LR    R8,R9
+         N     R8,=X'00FFFFFF'
+         BNZ   CONVERT2
+         SR    R9,R9
+         B     CONVERT7
+CONVERT2 LR    R8,R9
+         N     R8,=X'FF000000'  characteristic
+         SRL   R8,24
+         CH    R8,=H'64'
+         BH    CONVERT3
+         SR    R9,R9
+         B     CONVERT7
+CONVERT3 CH    R8,=H'72'        2**32
+         BNH   CONVERT4
+         L     R9,=X'7FFFFFFF'  biggest
+         B     CONVERT6
+CONVERT4 SR    R8,R8
+         SLDL  R8,8
+         CH    R8,=H'72'
+         BL    CONVERT5
+         CH    R9,=H'0'
+         BP    CONVERT5
+         L     R9,=X'7FFFFFFF'
+         B     CONVERT6
+CONVERT5 SH    R8,=H'72'
+         LCR   R8,R8
+         SLL   R8,2
+         SRL   R9,0(R8)
+CONVERT6 SR    R8,R8
+         IC    R8,CONVERTS
+         CH    R8,=H'0'         sign bit set?
+         BZ    CONVERT7
+         LCR   R9,R9
+CONVERT7 ST    R9,CONVERTB
+         CVD   R9,CONVERTP
+         MVC   CONVERTD,=X'402020202120202020202020'
+         ED    CONVERTD,CONVERTP+2
+         MVC   CONVERTM(6),CONVERTD
+         MVI   CONVERTM+6,C'.'
+         MVC   CONVERTM+7(6),CONVERTD+6
+         BR    R14
+*
+CONVERTC DC    E'1E6'           X'45F42400'
+CONVERTF DS    F
+CONVERTB DS    F
+CONVERTS DS    X
+CONVERTM DS    CL13
+CONVERTD DS    CL12
+CONVERTP DS    PL8
+*
+         EQUREGS
+         EQUREGS REGS=FPR
+         END   GAMMAT

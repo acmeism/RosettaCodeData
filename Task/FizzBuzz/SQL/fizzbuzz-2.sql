@@ -1,2 +1,3 @@
-select nvl(decode(mod(n,3),0,'Fizz')||decode(mod(n,5),0,'Buzz'),n)
-from (select level n from dual connect by level<=100)
+SELECT nvl(decode(MOD(level,3),0,'Fizz')||decode(MOD(level,5),0,'Buzz'),level)
+FROM dual
+CONNECT BY level<=100;

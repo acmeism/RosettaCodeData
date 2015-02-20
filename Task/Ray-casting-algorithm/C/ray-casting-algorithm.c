@@ -71,12 +71,12 @@ double dist(vec x, vec y0, vec y1, double tol)
 int inside(vec v, polygon p, double tol)
 {
 	/* should assert p->n > 1 */
-	int i, k, crosses;
+	int i, k, crosses, intersectResult;
 	vec *pv;
 	double min_x, max_x, min_y, max_y;
 
 	for (i = 0; i < p->n; i++) {
-		k = i + 1 % p->n;
+		k = (i + 1) % p->n;
 		min_x = dist(v, p->v[i], p->v[k], tol);
 		if (min_x < tol) return 0;
 	}
@@ -107,13 +107,13 @@ int inside(vec v, polygon p, double tol)
 
 		for (i = 0; i < p->n; i++) {
 			k = (i + 1) % p->n;
-			k = intersect(v, e, p->v[i], p->v[k], tol, 0);
+			intersectResult = intersect(v, e, p->v[i], p->v[k], tol, 0);
 
 			/* picked a bad point, ray got too close to vertex.
 			   re-pick */
-			if (!k) break;
+			if (!intersectResult) break;
 
-			if (k == 1) crosses++;
+			if (intersectResult == 1) crosses++;
 		}
 		if (i == p->n) break;
 	}

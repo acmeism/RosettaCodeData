@@ -1,7 +1,7 @@
 grammar S-Exp {
   rule TOP    {^ <s-list> $};
 
-  token s-list { '(' ~ ')' [ <in_list> ** [\s+] | '' ] }
+  token s-list { '(' ~ ')' [ <in_list>+ % [\s+] | '' ] }
   token in_list { <s-token> | <s-list> }
 
   proto token s-token {*}

@@ -6,18 +6,18 @@ ELSE
 IF condition1 THEN
   BEGIN
     procedure1;
-    procedure2;
+    procedure2
   END
 ELSE
   procedure3;
 
-IF condition 1 THEN
+IF condition1 THEN
   BEGIN
     procedure1;
-    procedure2;
+    procedure2
   END
 ELSE
   BEGIN
     procedure3;
-    procedure4;
+    procedure4
   END;

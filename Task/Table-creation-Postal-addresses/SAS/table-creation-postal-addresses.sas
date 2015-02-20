@@ -1,4 +1,10 @@
-DATA address;
-   LENGTH addrID 8. street 50$ city 25$ state 2$ zip 20$;
-   STOP;
-RUN;
+PROC SQL;
+CREATE TABLE ADDRESS
+(
+ADDRID CHAR(8)
+,STREET CHAR(50)
+,CITY CHAR(25)
+,STATE CHAR(2)
+,ZIP  CHAR(20)
+)
+;QUIT;

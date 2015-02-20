@@ -14,12 +14,12 @@ CFComparisonResult PQCompare(const void *ptr1, const void *ptr2, void *unused) {
   int priority;
   NSString *name;
 }
-- (id)initWithPriority:(int)p andName:(NSString *)n;
+- (instancetype)initWithPriority:(int)p andName:(NSString *)n;
 - (NSComparisonResult)compare:(Task *)other;
 @end
 
 @implementation Task
-- (id)initWithPriority:(int)p andName:(NSString *)n {
+- (instancetype)initWithPriority:(int)p andName:(NSString *)n {
   if ((self = [super init])) {
     priority = p;
     name = [n copy];

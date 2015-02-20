@@ -1,23 +1,23 @@
-/*REXX program to prompt user for template substitutions within a story.*/
-@.=;   !.=0;   #=0;   @=               /*assign some defaults.          */
+/*REXX program prompts user for a template substitutions within a story.*/
+@.=;   !.=0;   #=0;    @=              /*assign some defaults.          */
 parse arg iFID .                       /*allow use to specify input file*/
-if iFID==''  then iFID="MAD_LIBS.TXT"  /*Not specified? Then use default*/
+if iFID==''  then iFID="MAD_LIBS.TXT"  /*Not specified?   Use a default.*/
 
-   do recs=1  while lines(iFID)\==0    /*read the input file 'til done. */
-   @.recs=linein(iFID);  @=@ @.recs    /*read a record, append it to  @ */
+   do recs=1  while  lines(iFID)\==0   /*read the input file 'til done. */
+   @.recs=linein(iFID);   @=@ @.recs   /*read a record, append it to  @ */
    if @.recs=''  then leave            /*Read a blank line?  We're done.*/
    end  /*recs*/
 
 recs=recs-1                            /*adjust for E─O─F or blank line.*/
 
-     do forever                        /*look for templates in the text.*/
+     do  forever                       /*look for templates in the text.*/
      parse var  @   '<'   ?   '>'   @  /*scan for  <ααα>  stuff in text.*/
      if ?=''   then leave              /*if no   ααα,  then we're done. */
      if !.?    then iterate            /*already asked?   Keep scanning.*/
      !.?=1                             /*mark this   ααα   as  "found". */
-            do forever                 /*prompt user for a replacement. */
+            do  forever                /*prompt user for a replacement. */
             say '─────────── please enter a word or phrase to replace: ' ?
-            parse pull ans;    if ans\=''  then leave
+            parse pull ans;         if ans\=''  then leave
             end   /*forever*/
      #=#+1                             /*bump the template counter.     */
      old.# = '<'?">";    new.# = ans   /*assign "old" name & "new" name.*/

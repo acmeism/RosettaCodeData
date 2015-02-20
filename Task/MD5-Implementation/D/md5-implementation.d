@@ -6,12 +6,13 @@ version (D_InlineAsm_X86) {} else {
 }
 
 // CTFE construction of transform expressions.
-uint S(in uint n) pure nothrow {
-    return [7u, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21]
-           [(n / 16) * 4 + (n % 4)];
+uint S(in uint n) pure nothrow @safe @nogc {
+    static immutable aux = [7u, 12, 17, 22, 5, 9, 14, 20, 4, 11,
+                            16, 23, 6, 10, 15, 21];
+    return aux[(n / 16) * 4 + (n % 4)];
 }
 
-uint K(in uint n) pure nothrow {
+uint K(in uint n) pure nothrow @safe @nogc {
     uint r = 0;
     if (n <= 15)
         r = n;
@@ -24,7 +25,7 @@ uint K(in uint n) pure nothrow {
     return r % 16;
 }
 
-uint T(in uint n) pure nothrow {
+uint T(in uint n) pure nothrow @nogc {
     return cast(uint)(abs(sin(n + 1.0L)) * (2UL ^^ 32));
 }
 
@@ -42,7 +43,7 @@ string SUB(in int n, in string s) pure nothrow {
 }
 
 // FF, GG, HH & II expressions part 1 (F, G, H, I).
-string fghi1(in int n) pure nothrow {
+string fghi1(in int n) pure nothrow @nogc {
     switch (n / 16) {
         case 0:
             // (bb & cc) | (~bb & dd)
@@ -104,14 +105,14 @@ string FGHI(in int n) pure nothrow {
                              });
 }
 
-string genExpr(uint n) pure {
+string genExpr(uint n) pure nothrow {
     return FGHI(n)
            .replace("SS", n.S.text)
            .replace("KK", n.K.text)
            .replace("TT", "0x" ~ to!string(n.T, 16));
 }
 
-string genTransformCode(int n) pure {
+string genTransformCode(int n) pure nothrow {
     return (n < 63) ? n.genExpr ~ genTransformCode(n + 1) : n.genExpr;
 }
 
@@ -128,13 +129,12 @@ struct ZMD5 {
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0];
 
-    private void transform(ubyte* block) pure nothrow {
+    private void transform(ubyte* block) pure nothrow @nogc {
         uint[16] x = void;
 
         version (BigEndian) {
-            foreach (immutable size_t i; 0 .. 16)
-                x[i] = littleEndianToNative!uint(
-                            *cast(ubyte[4]*)&block[i * 4]);
+            foreach (immutable i; 0 .. 16)
+                x[i] = littleEndianToNative!uint(*cast(ubyte[4]*)&block[i * 4]);
         } else {
             (cast(ubyte*)x.ptr)[0 .. 64] = block[0 .. 64];
         }
@@ -142,7 +142,7 @@ struct ZMD5 {
         auto pState = state.ptr;
         auto pBuffer = x.ptr;
 
-        asm {
+        asm pure nothrow @nogc {
             mov  ESI, pState[EBP];
             mov  EDX, [ESI + 3 * 4];
             mov  ECX, [ESI + 2 * 4];
@@ -154,9 +154,9 @@ struct ZMD5 {
             mov  EBP, pBuffer[EBP];
         }
 
-        mixin("asm { " ~ coreZMD5 ~ "}");
+        mixin("asm pure nothrow @nogc { " ~ coreZMD5 ~ "}");
 
-        asm {
+        asm pure nothrow @nogc {
             pop ESI;
             pop EBP;
             add [ESI + 0 * 4], EAX;
@@ -167,9 +167,9 @@ struct ZMD5 {
         x[] = 0;
     }
 
-    void update(in void[] input) pure nothrow {
+    void update(in void[] input) pure nothrow @nogc {
         auto inputLen = input.length;
-        uint index = (cast(uint)count >> 3) & (64 - 1);
+        uint index = (count >> 3) & 0b11_1111U;
         count += inputLen * 8;
         immutable uint partLen = 64 - index;
 
@@ -187,11 +187,11 @@ struct ZMD5 {
             memcpy(&buffer[index], &input[i], inputLen - i);
     }
 
-    void finish(ref ubyte[16] digest) pure nothrow {
-        ubyte bits[8] = void;
+    void finish(ref ubyte[16] digest) pure nothrow @nogc {
+        ubyte[8] bits = void;
         bits[0 .. 8] = nativeToLittleEndian(count)[];
 
-        immutable uint index = (cast(uint)count >> 3) & (64 - 1);
+        immutable uint index = (count >> 3) & 0b11_1111U;
         immutable uint padLen = (index < 56) ?
                                 (56 - index) : (120 - index);
         update(padding[0 .. padLen]);

@@ -1,17 +1,17 @@
 import std.stdio, std.string, std.algorithm, std.range;
 
-alias string[][string] TDependencies;
-
 final class ArgumentException : Exception {
-    this(string text) {
+    this(string text) pure nothrow @safe /*@nogc*/ {
         super(text);
     }
 }
 
-string[][] topoSort(TDependencies d) {
-    foreach (k, v; d)
-        d[k] = v.sort().uniq().filter!(s => s != k)().array();
-    foreach (s; d.values.join().sort().uniq())
+alias TDependencies = string[][string];
+
+string[][] topoSort(TDependencies d) pure /*nothrow @safe*/ {
+    foreach (immutable k, v; d)
+        d[k] = v.sort().uniq.filter!(s => s != k).array;
+    foreach (immutable s; d.byValue.join.sort().uniq)
         if (s !in d)
             d[s] = [];
 
@@ -19,22 +19,22 @@ string[][] topoSort(TDependencies d) {
     while (true) {
         string[] ordered;
 
-        foreach (item, dep; d)
+        foreach (immutable item, const dep; d)
             if (dep.empty)
                 ordered ~= item;
         if (!ordered.empty)
-            sorted ~= ordered.sort().release();
+            sorted ~= ordered.sort().release;
         else
             break;
 
         TDependencies dd;
-        foreach (item, dep; d)
-            if (!canFind(ordered, item))
-                dd[item] = dep.filter!(s => !ordered.canFind(s))()
-                           .array();
+        foreach (immutable item, const dep; d)
+            if (!ordered.canFind(item))
+                dd[item] = dep.filter!(s => !ordered.canFind(s)).array;
         d = dd;
     }
 
+    //if (!d.empty)
     if (d.length > 0)
         throw new ArgumentException(format(
             "A cyclic dependency exists amongst:\n%s", d));
@@ -59,16 +59,16 @@ std_cell_lib   ieee std_cell_lib
 synopsys";
 
     TDependencies deps;
-    foreach (line; data.splitLines())
-        deps[line.split()[0]] = line.split()[1 .. $];
+    foreach (immutable line; data.splitLines)
+        deps[line.split[0]] = line.split[1 .. $];
 
     auto depw = deps.dup;
-    foreach (idx, subOrder; topoSort(depw))
+    foreach (immutable idx, const subOrder; depw.topoSort)
         writefln("#%d : %s", idx + 1,  subOrder);
 
-    writeln();
+    writeln;
     depw = deps.dup;
     depw["dw01"] ~= "dw04";
-    foreach (subOrder; topoSort(depw)) // should throw
-        writeln(subOrder);
+    foreach (const subOrder; depw.topoSort) // Should throw.
+        subOrder.writeln;
 }

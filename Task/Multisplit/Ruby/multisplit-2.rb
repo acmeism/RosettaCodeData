@@ -1,5 +1,5 @@
 def multisplit(text, separators)
-  sep_regex = Regexp.new(separators.collect {|sep| Regexp.escape(sep)}.join('|'))
+  sep_regex = Regexp.union(separators)
   separator_info = []
   pieces = []
   i = prev = 0

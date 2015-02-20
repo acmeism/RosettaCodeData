@@ -1,4 +1,4 @@
-/*REXX pgmm computes avg loop length mapping a random field 1..N to 1..N*/
+/*REXX pgm computes avg loop length mapping a random field 1..N  to 1..N*/
 parse arg runs tests seed .
 if  runs ==','  |   runs ==''  then runs  =      40     /*num of runs.  */
 if tests ==','  |  tests ==''  then tests = 1000000     /*num of trials.*/

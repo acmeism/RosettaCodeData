@@ -1,4 +1,4 @@
-ulong ackermann(in ulong m, in ulong n) pure nothrow {
+ulong ackermann(in ulong m, in ulong n) pure nothrow @nogc {
     if (m == 0)
         return n + 1;
     if (n == 0)

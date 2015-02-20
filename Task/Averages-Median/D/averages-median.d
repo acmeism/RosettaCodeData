@@ -1,6 +1,6 @@
 import std.stdio, std.algorithm;
 
-T median(T)(T[] nums) /*pure nothrow*/ {
+T median(T)(T[] nums) pure nothrow {
     nums.sort();
     if (nums.length & 1)
         return nums[$ / 2];
@@ -10,8 +10,8 @@ T median(T)(T[] nums) /*pure nothrow*/ {
 
 void main() {
     auto a1 = [5.1, 2.6, 6.2, 8.8, 4.6, 4.1];
-    writeln("Even median: ", median(a1));
+    writeln("Even median: ", a1.median);
 
     auto a2 = [5.1, 2.6, 8.8, 4.6, 4.1];
-    writeln("Odd median:  ", median(a2));
+    writeln("Odd median:  ", a2.median);
 }

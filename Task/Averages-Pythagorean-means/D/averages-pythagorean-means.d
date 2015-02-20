@@ -1,14 +1,14 @@
 import std.stdio, std.algorithm, std.range, std.functional;
 
-auto aMean(T)(T data) {
+auto aMean(T)(T data) pure nothrow @nogc {
     return data.sum / data.length;
 }
 
-auto gMean(T)(T data) pure {
+auto gMean(T)(T data) pure /*@nogc*/ {
     return data.reduce!q{a * b} ^^ (1.0 / data.length);
 }
 
-auto hMean(T)(T data) pure {
+auto hMean(T)(T data) pure /*@nogc*/ {
     return data.length / data.reduce!q{ 1.0 / a + b };
 }
 

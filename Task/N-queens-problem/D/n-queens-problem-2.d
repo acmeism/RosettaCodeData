@@ -1,7 +1,7 @@
 enum side = 8;
 __gshared int[side] board;
 
-bool isUnsafe(in int y) nothrow {
+bool isUnsafe(in int y) nothrow @nogc {
     immutable int x = board[y];
     foreach (immutable i; 1 .. y + 1) {
         immutable int t = board[y - i];
@@ -12,7 +12,7 @@ bool isUnsafe(in int y) nothrow {
     return false;
 }
 
-void showBoard() nothrow {
+void showBoard() nothrow @nogc {
     import core.stdc.stdio;
 
     static int s = 1;
@@ -24,7 +24,7 @@ void showBoard() nothrow {
     }
 }
 
-void main() nothrow {
+void main() nothrow @nogc {
     int y = 0;
     board[0] = -1;
 

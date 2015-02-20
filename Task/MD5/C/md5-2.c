@@ -117,6 +117,10 @@ unsigned *md5( const char *msg, int mlen)
             h[p] += abcd[p];
         os += 64;
     }
+
+    if( msg2 )
+        free( msg2 );
+
     return h;
 }
 

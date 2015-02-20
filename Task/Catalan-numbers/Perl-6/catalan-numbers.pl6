@@ -1,3 +1,3 @@
-my @catalan := 1, { (state $n)++; 2*(2*$n-1)/($n+1) * $_ } ... *;
+constant Catalan = 1, [\*] (2, 6 ... *) Z/ 2 .. *;
 
-.say for @catalan[^15];
+.say for Catalan[^15];

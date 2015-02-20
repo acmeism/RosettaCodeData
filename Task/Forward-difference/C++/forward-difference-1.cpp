@@ -82,7 +82,7 @@ int main()
   std::vector<double> dest;
   nth_forward_difference(1, array, array+10, std::back_inserter(dest));
 
-  // outut dest
+  // output dest
   std::copy(dest.begin(), dest.end(), std::ostream_iterator<double>(std::cout, " "));
   std::cout << std::endl;
 

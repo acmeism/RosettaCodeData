@@ -3,35 +3,29 @@ import std.stdio, std.algorithm, std.range, std.typecons;
 mixin template InitsTails(T) {
     T[] data;
     size_t pos;
-    @property bool empty() pure nothrow {
+    @property bool empty() pure nothrow @nogc {
         return pos > data.length;
     }
-    void popFront() pure nothrow { pos++; }
+    void popFront() pure nothrow @nogc { pos++; }
 }
 
 struct Inits(T) {
     mixin InitsTails!T;
-    @property T[] front() pure nothrow { return data[0 .. pos]; }
+    @property T[] front() pure nothrow @nogc { return data[0 .. pos]; }
 }
 
-auto inits(T)(T[] seq) { return seq.Inits!T; }
+auto inits(T)(T[] seq) pure nothrow @nogc { return seq.Inits!T; }
 
 struct Tails(T) {
     mixin InitsTails!T;
-    @property T[] front() pure nothrow { return data[pos .. $]; }
+    @property T[] front() pure nothrow @nogc { return data[pos .. $]; }
 }
 
-auto tails(T)(T[] seq) pure nothrow { return seq.Tails!T; }
+auto tails(T)(T[] seq) pure nothrow @nogc { return seq.Tails!T; }
 
-T[] maxSubseq(T)(T[] seq) pure nothrow {
-    //return seq.tails.map!inits.join.reduce!(max!sum);
-    return reduce!max(tuple(0, T[].init),
-                      seq
-                      .tails
-                      .map!inits
-                      .join
-                      .map!q{ tuple(a.sum, a) }
-                      )[1];
+T[] maxSubseq(T)(T[] seq) pure nothrow /*@nogc*/ {
+    //return seq.tails.map!inits.joiner.reduce!(max!sum);
+    return seq.tails.map!inits.join.minPos!q{ a.sum > b.sum }[0];
 }
 
 void main() {

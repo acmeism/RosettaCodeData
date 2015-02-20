@@ -1,3 +1,1 @@
-(let* ((x (read))
-       (y (read)))
-  (write (+ x y)))
+(display (+ (read) (read)))

@@ -1,6 +1,6 @@
 import std.stdio, std.math, std.bigint;
 
-bool isPrime(in int p) pure nothrow {
+bool isPrime(in uint p) pure nothrow @safe @nogc {
     if (p < 2 || p % 2 == 0)
         return p == 2;
     foreach (immutable i; 3 .. cast(uint)real(p).sqrt + 1)
@@ -9,7 +9,7 @@ bool isPrime(in int p) pure nothrow {
     return true;
 }
 
-bool isMersennePrime(in int p) pure /*nothrow*/ {
+bool isMersennePrime(in uint p) pure nothrow /*@safe*/ {
     if (!p.isPrime)
         return false;
     if (p == 2)

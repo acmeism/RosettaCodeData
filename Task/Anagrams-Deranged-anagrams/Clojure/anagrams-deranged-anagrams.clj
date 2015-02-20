@@ -1,5 +1,9 @@
-(let
-  [words    (re-seq #"\w+" (slurp "unixdict.txt"))
-   anagrams (filter second (vals (group-by sort words)))
-   deranged (remove #(some true? (apply map = %)) anagrams)]
-  (prn (last (sort-by #(count (first %)) deranged))))
+(->> (slurp "unixdict.txt") ; words
+     (re-seq #"\w+")        ; |
+     (group-by sort)        ; anagrams
+     vals                   ; |
+     (filter second)        ; |
+     (remove #(some true? (apply map = %))) ; deranged
+     (sort-by #(count (first %)))
+     last
+     prn)

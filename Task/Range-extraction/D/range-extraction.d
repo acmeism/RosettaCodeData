@@ -15,8 +15,8 @@ in {
             ranges ~= [y.text];
 
     return ranges
-           .map!(r => r.length > 2 ? r[0] ~ "-" ~ r.back : r.join(","))
-           .join(",");
+           .map!(r => r.length > 2 ? r[0] ~ "-" ~ r.back : r.join(','))
+           .join(',');
 }
 
 void main() {

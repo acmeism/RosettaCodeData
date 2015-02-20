@@ -1,21 +1,21 @@
 import std.stdio, std.string;
 
-string encrypt(in string txt, in string key) pure
+string encrypt(in string txt, in string key) pure @safe
 in {
     assert(key.removechars("^A-Z") == key);
 } body {
     string res;
-    foreach (immutable i, immutable c; toUpper(txt).removechars("^A-Z"))
+    foreach (immutable i, immutable c; txt.toUpper.removechars("^A-Z"))
         res ~= (c + key[i % $] - 2 * 'A') % 26 + 'A';
     return res;
 }
 
-string decrypt(in string txt, in string key) pure
+string decrypt(in string txt, in string key) pure @safe
 in {
     assert(key.removechars("^A-Z") == key);
 } body {
     string res;
-    foreach (immutable i, immutable c; toUpper(txt).removechars("^A-Z"))
+    foreach (immutable i, immutable c; txt.toUpper.removechars("^A-Z"))
        res ~= (c - key[i % $] + 26) % 26 + 'A';
     return res;
 }

@@ -3,12 +3,12 @@ import std.stdio, std.range, std.array, std.algorithm, std.math;
 struct Domain {
     const real b, e, s;
 
-    auto range() const pure /*nothrow*/ {
+    auto range() const pure /*nothrow*/ @safe /*@nogc*/ {
         return iota(b, e + s, s);
     }
 }
 
-real eval0(alias RY, alias X, alias Y)(in real x) pure nothrow {
+real eval0(alias RY, alias X, alias Y)(in real x) pure nothrow @safe @nogc {
     real a = 0.0L;
     foreach_reverse (immutable i; 2 .. X.length - 3)
         a = (x - X[i]) / (RY[i] - RY[i-2] + a);
@@ -18,26 +18,26 @@ real eval0(alias RY, alias X, alias Y)(in real x) pure nothrow {
 immutable struct Thiele {
     immutable real[] Y, X, rhoY, rhoX;
 
-    this(real[] y, real[] x) immutable pure /*nothrow*/
+    this(real[] y, real[] x) immutable pure nothrow /*@safe*/
     in {
         assert(x.length > 2, "at leat 3 values");
         assert(x.length == y.length, "input arrays not of same size");
     } body {
-        this.Y = y.idup; // Not nothrow.
+        this.Y = y.idup;
         this.X = x.idup;
         rhoY = rhoN(Y, X);
         rhoX = rhoN(X, Y);
     }
 
-    this(in real function(real) pure nothrow f,
-         Domain d=Domain(0.0L, 1.55L, 0.05L))
-    immutable pure /*nothrow*/ {
+    this(in real function(real) pure nothrow @safe @nogc f,
+         Domain d = Domain(0.0L, 1.55L, 0.05L))
+    immutable pure /*nothrow @safe*/ {
         auto xrng = d.range.array;
         this(xrng.map!f.array, xrng);
     }
 
-    auto rhoN(immutable(real)[] y, immutable(real)[] x)
-    pure nothrow {
+    auto rhoN(immutable real[] y, immutable real[] x)
+    pure nothrow @safe {
         immutable int N = x.length;
         auto p = new real[][](N, N);
         p[0][] = y[];

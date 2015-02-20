@@ -67,7 +67,6 @@ Practical(TurnSum, SumMe, SumOpp, N=72) {
 	Return Roll := SumOpp > N or SumMe > N or TurnSum < 21+(SumOpp-SumMe)/8
 }
 ; Optimal play per http://cs.gettysburg.edu/~tneller/nsf/pig/pig.pdf
-; Requires additional file from [[Pig the dice game/Player/AutoHotkey]]
 Optimal(TurnSum, SumMe, SumOpp) {
 	Global Optimal
 	Roll := Optimal[SumMe,TurnSum,SumOpp+1]

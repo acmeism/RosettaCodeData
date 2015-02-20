@@ -5,9 +5,9 @@ import time
 
 
 try:
-    from msvcrt import getch
+    from msvcrt import getch  # try to import Windows version
 except ImportError:
-    def getch():
+    def getch():   # define non-Windows version
         import sys, tty, termios
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)

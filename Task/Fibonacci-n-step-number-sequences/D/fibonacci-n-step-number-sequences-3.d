@@ -11,7 +11,7 @@ struct Fiblike(T) {
                 return result;
         }
         foreach (immutable i; tail.length.iota.cycle) {
-            immutable x = cast(int)tail.sum;
+            immutable x = tail.sum;
             result = dg(x);
             if (result)
                 break;
@@ -37,8 +37,7 @@ void main() {
     Fiblike!int([2, 1]).takeApply(10).writeln;
 
     const prefixes = "fibo tribo tetra penta hexa hepta octo nona deca";
-    //foreach (immutable n, const name; prefixes.split.enumerate(2)) {
-    foreach (const n, name; iota(2, 11).zip(prefixes.split)) {
+    foreach (immutable n, const name; prefixes.split.enumerate(2)) {
         auto fib = Fiblike!int(1 ~ iota(n - 1).map!q{2 ^^ a}.array);
         writefln("n=%2d, %5snacci -> %s", n, name, fib.takeApply(15));
     }

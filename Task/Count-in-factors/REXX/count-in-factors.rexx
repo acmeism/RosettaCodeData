@@ -10,8 +10,8 @@ primes=0                               /*number of primes detected.     */
          do n=low  to high             /*process single number | a range*/
          y=factr(n);                   /*squish  (or not)  the blanks.  */
          #=words(translate(y,,'x')) - (n==1)      /*# of prime factors. */
-         if #==1  then primes=primes+1 /*bump primes counter (exlude 1).*/
-         if high\==oHigh  then iterate /*only show facters of HIGH is >0*/
+         if #==1  then primes=primes+1 /*bump primes counter (exclude 1)*/
+         if high\==oHigh  then iterate /*only show factors if HIGH is >0*/
          say right(n,w) '=' @.# space(y,blanks)   /*prime flag, factors.*/
          end   /*n*/                   /*if BLANKS=0, no spaces around X*/
 say
@@ -23,7 +23,7 @@ if x<2  then return x                  /*handle a couple special cases. */
 list=                                  /*nullify the list (empty string)*/
                                        /* [↓]  process some low primes. */
   do j=2 to 5; if j\==4  then call .buildF; end  /*factorize, put──►list*/
-  j=5                                  /*start were we left off  (five).*/
+  j=5                                  /*start where we left off (five).*/
        do y=0  by 2;     j=j+2+y//4    /*insure it's not divisible by 3.*/
        if right(j,1)==5  then iterate  /*fast check  for divisible by 5.*/
        if   j>z          then leave    /*number reduced to a small 'un? */

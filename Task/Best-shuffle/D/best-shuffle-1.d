@@ -1,7 +1,7 @@
 import std.stdio, std.random, std.algorithm, std.conv, std.range,
        std.traits, std.typecons;
 
-auto bestShuffle(S)(in S orig) if (isSomeString!S) {
+auto bestShuffle(S)(in S orig) @safe if (isSomeString!S) {
     static if (isNarrowString!S)
         immutable o = orig.dtext;
     else
@@ -32,9 +32,9 @@ auto bestShuffle(S)(in S orig) if (isSomeString!S) {
     assert("".bestShuffle[1] == 0);
 }
 
-void main(in string[] args) {
+void main(in string[] args) @safe {
     if (args.length > 1) {
-        immutable entry = args.dropOne.join(" ");
+        immutable entry = args.dropOne.join(' ');
         const res = entry.bestShuffle;
         writefln("%s : %s (%d)", entry, res[]);
     }

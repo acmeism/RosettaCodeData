@@ -8,7 +8,7 @@ struct Permutations(bool doCopy=true, T) {
     static if (!doCopy)
         T[] result;
 
-    this(T)(T[] items, int r=-1) pure /*nothrow*/ {
+    this(T)(T[] items, int r=-1) pure nothrow @safe {
         this.items = items;
         immutable int n = items.length;
         if (r < 0)
@@ -20,19 +20,20 @@ struct Permutations(bool doCopy=true, T) {
         } else {
             this.stopped = false;
             this.indices = n.iota.array;
-            this.cycles = iota(n, n_minus_r, -1).array;
+            //this.cycles = iota(n, n_minus_r, -1).array; // Not nothrow.
+            this.cycles = iota(n_minus_r + 1, n + 1).retro.array;
         }
 
         static if (!doCopy)
             result = new T[r];
     }
 
-    @property bool empty() const pure nothrow {
+    @property bool empty() const pure nothrow @safe @nogc {
         return this.stopped;
     }
 
     static if (doCopy) {
-        @property T[] front() const pure nothrow {
+        @property T[] front() const pure nothrow @safe {
             assert(!this.stopped);
             auto result = new T[r];
             foreach (immutable i, ref re; result)
@@ -40,7 +41,7 @@ struct Permutations(bool doCopy=true, T) {
             return result;
         }
     } else {
-        @property T[] front() pure nothrow {
+        @property T[] front() pure nothrow @safe @nogc {
             assert(!this.stopped);
             foreach (immutable i, ref re; this.result)
                 re = items[indices[i]];
@@ -48,14 +49,14 @@ struct Permutations(bool doCopy=true, T) {
         }
     }
 
-    void popFront() pure /*nothrow*/ {
+    void popFront() pure nothrow /*@safe*/ @nogc {
         assert(!this.stopped);
         int i = r - 1;
         while (i >= 0) {
             immutable int j = cycles[i] - 1;
             if (j > 0) {
                 cycles[i] = j;
-                swap(indices[i], indices[$ - j]);
+                indices[i].swap(indices[$ - j]);
                 return;
             }
             cycles[i] = indices.length - i;
@@ -63,7 +64,7 @@ struct Permutations(bool doCopy=true, T) {
             assert(n1 >= 0);
             immutable int num = indices[i];
 
-            // copy isn't nothrow.
+            // copy isn't @safe.
             indices[i + 1 .. n1 + 1].copy(indices[i .. n1]);
             indices[n1] = num;
             i--;
@@ -75,7 +76,7 @@ struct Permutations(bool doCopy=true, T) {
 
 Permutations!(doCopy, T) permutations(bool doCopy=true, T)
                                      (T[] items, int r=-1)
-pure /*nothrow*/ {
+pure nothrow @safe {
     return Permutations!(doCopy, T)(items, r);
 }
 
@@ -86,8 +87,8 @@ import std.stdio, std.typecons, std.conv, std.algorithm, std.array,
 
 enum maxIters = 1_000_000;
 
-string A036058(in string ns) pure {
-    return ns.group.map!(t => t[1].text ~ cast(char)t[0]).join;
+string A036058(in string ns) pure nothrow @safe {
+    return ns.representation.group.map!(t => t[1].text ~ char(t[0])).join;
 }
 
 int A036058_length(bool doPrint=false)(string numberString="0") {
@@ -99,12 +100,12 @@ int A036058_length(bool doPrint=false)(string numberString="0") {
         static if (doPrint)
             writefln("  %2d %s", iterations, numberString);
 
-        numberString = cast(string)(numberString
-                                    .dup
-                                    .representation
-                                    .sort()
-                                    .release
-                                    .assumeUnique);
+        numberString = numberString
+                       .dup
+                       .representation
+                       .sort()
+                       .release
+                       .assumeUTF;
 
         if (lastThree[].canFind(numberString))
             break;
@@ -124,12 +125,12 @@ Tuple!(int,int[]) max_A036058_length(R)(R startRange = 11.iota) {
     auto max_len = tuple(-1, (int[]).init);
 
     foreach (n; startRange) {
-        immutable string sns = cast(string)(n
-                                            .to!(char[])
-                                            .representation
-                                            .sort()
-                                            .release
-                                            .assumeUnique);
+        immutable sns = n
+                        .to!(char[])
+                        .representation
+                        .sort()
+                        .release
+                        .assumeUTF;
 
         if (sns !in alreadyDone) {
             alreadyDone[sns] = true;

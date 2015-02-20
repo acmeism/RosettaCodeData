@@ -1,6 +1,6 @@
-1.upto(5) do |i|
-   1.upto(i) do |j|
-      print "*"
-   end
-   puts
+(1..5).each do |i|
+  (1..i).each do |j|
+    print "*"
+  end
+  puts
 end

@@ -4,8 +4,8 @@ BEGIN {
 
   if (a == b) { print "The strings are equal" }
   if (a != b) { print "The strings are not equal" }
-  if (a > b) { print "The first string is lexically after than the second" }
-  if (a < b) { print "The first string is lexically before than the second" }
+  if (a  > b) { print "The first string is lexically after than the second" }
+  if (a  < b) { print "The first string is lexically before than the second" }
   if (a >= b) { print "The first string is not lexically before than the second" }
   if (a <= b) { print "The first string is not lexically after than the second" }
 

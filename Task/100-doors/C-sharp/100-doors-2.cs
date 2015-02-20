@@ -1,20 +1,30 @@
-using System;
-class Program
+namespace ConsoleApplication1
 {
-    static void Main()
+    using System;
+    class Program
     {
-        int door = 1, inrementer = 0;
-        for (int current = 1; current <= 100; current++)
+        static void Main()
         {
-            Console.Write("Door #{0} ", current);
-            if (current == door)
+            //The o variable stores the number of the next OPEN door.
+            int o = 1;
+
+            //The n variable is used to help calculate the next value of the o variable.
+            int n = 0;
+
+            //The d variable determines the door to be output next.
+            for (int d = 1; d <= 100; d++)
             {
-                Console.WriteLine("Open");
-                inrementer++;
-                door += 2 * inrementer + 1;
+                Console.Write("Door #{0}: ", d);
+                if (d == o)
+                {
+                    Console.WriteLine("Open");
+                    n++;
+                    o += 2 * n + 1;
+                }
+                else
+                    Console.WriteLine("Closed");
             }
-            else
-                Console.WriteLine("Closed");
+            Console.ReadKey(true);
         }
     }
 }

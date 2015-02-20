@@ -16,45 +16,44 @@ numeric digits 20                      /*use twenty digits precision.   */
       end   /*test*/
 exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────LEFT_RECT subroutine────────────────*/
-left_rect: procedure expose test;    parse arg a,b,n;     h=(b-a)/n
+left_rect: procedure expose test;      parse arg a,b,n;          h=(b-a)/n
 sum=0
                      do x=a  by h  for n
                      sum=sum+f(x)
-                     end
+                     end   /*x*/
 return sum*h
 /*──────────────────────────────────MIDPOINT_RECT subroutine────────────*/
-midpoint_rect: procedure expose test;  parse arg a,b,n;   h=(b-a)/n
+midpoint_rect: procedure expose test;  parse arg a,b,n;          h=(b-a)/n
 sum=0
                      do x=a+h/2  by h  for n
                      sum=sum+f(x)
-                     end
+                     end   /*x*/
 return sum*h
 /*──────────────────────────────────RIGHT_RECT subroutine───────────────*/
-right_rect: procedure expose test;   parse arg a,b,n;     h=(b-a)/n
+right_rect: procedure expose test;     parse arg a,b,n;          h=(b-a)/n
 sum=0
                      do x=a+h  by h  for n
                      sum=sum+f(x)
-                     end
+                     end   /*x*/
 return sum*h
 /*──────────────────────────────────SIMPSON subroutine──────────────────*/
-simpson: procedure expose test;      parse arg a,b,n;            h=(b-a)/n
+simpson: procedure expose test;        parse arg a,b,n;          h=(b-a)/n
 sum1=f(a+h/2)
-sum2=0
-                     do x=1  to n-1
+sum2=0;              do x=1  to n-1
                      sum1=sum1+f(a+h*x+h*.5)
                      sum2=sum2+f(a+x*h)
-                     end
+                     end   /*x*/
 
 return h*(f(a)+f(b)+4*sum1+2*sum2)/6
 /*──────────────────────────────────TRAPEZOID subroutine────────────────*/
-trapezoid: procedure expose test;    parse arg a,b,n;            h=(b-a)/n
+trapezoid: procedure expose test;      parse arg a,b,n;          h=(b-a)/n
 sum=0
                      do x=a  to b  by h
                      sum=sum+h*(f(x)+f(x+h))*.5
-                     end
+                     end   /*x*/
 return sum
 /*──────────────────────────────────F subroutine────────────────────────*/
-f: procedure expose test;    parse arg z
-if test==1 then return z**3
-if test==2 then return 1/z
-                return z
+f: procedure expose test;              parse arg z
+if test==1  then return z**3
+if test==2  then return 1/z
+                 return z

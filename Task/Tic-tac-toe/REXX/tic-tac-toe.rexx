@@ -2,7 +2,7 @@
 oops =$ '***error!*** ';   cell# ='cell number'   /*a couple of literals*/
 $=copies('─',9)                        /*eyecatcher literal for messages*/
 sing='│─┼';    jam='║';    bar='═';    junc='╬';    dbl=jam || bar || junc
-sw=80-1                                /*LINESIZE() bif would be better.*/
+sw=linesize()-1                        /*get the width of the terminal. */
 parse arg N hm cm .,@.; if N=='' then N=3; oN=N  /*specifying some args?*/
 N=abs(N);   NN=N*N;   middle=NN%2+N%2  /*if N < 0,  computer goes first.*/
 if N<2  then do; say oops 'tic-tac-toe grid is too small: ' N;  exit;  end

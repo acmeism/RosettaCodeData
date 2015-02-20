@@ -1,4 +1,4 @@
-import Data.List (elemIndex)
+import Data.List (elemIndex, unfoldr)
 import Data.Maybe (fromJust)
 import Numeric (readInt, showIntAtBase)
 
@@ -22,17 +22,16 @@ printDigRoot b s = do
 
 -- Convert a base b number to a list of digits, from least to most significant.
 toDigits :: Integral a => a -> a -> [a]
-toDigits b n = toDigits' n 0
-  where toDigits' 0 0 = [0]
-        toDigits' 0 _ = []
-        toDigits' m _ = let (q, r) = m `quotRem` b in r : toDigits' q r
+toDigits b = unfoldr f
+  where f 0 = Nothing
+        f n = Just (r,q) where (q,r) = n `quotRem` b
 
 -- A list of digits, for bases up to 36.
 digits :: String
 digits = ['0'..'9'] ++ ['A'..'Z']
 
 -- Return a number's base b string representation.
-intToStr :: Integral a => a -> a -> String
+intToStr :: (Integral a, Show a) => a -> a -> String
 intToStr b n | b < 2 || b > 36 = error "intToStr: base must be in [2..36]"
              | otherwise = showIntAtBase b (digits !!) n ""
 

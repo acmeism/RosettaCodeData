@@ -1,9 +1,13 @@
 #include <iostream>
-#include <cmath>
-#include <ext/functional>
+#include <math.h>
+
+template <class F, class G>
+decltype(auto) compose(F&& f, G&& g)
+{
+    return [=](auto x) { return f(g(x)); };
+}
 
 int main() {
-  std::cout << __gnu_cxx::compose1(std::ptr_fun(::sin), std::ptr_fun(::asin))(0.5) << std::endl;
-
+  std::cout << compose(sin, asin)(0.5) << "\n";
   return 0;
 }

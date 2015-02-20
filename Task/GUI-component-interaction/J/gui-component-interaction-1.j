@@ -1,32 +1,31 @@
-INTERACT=: 0 : 0
-pc interact closeok;
-xywh 6 6 48 12;cc Value edit;
-xywh 6 18 48 12;cc increment button;cn "+";
-xywh 6 30 48 12;cc random button;cn "?";
+INTERACT=: noun define
+pc interact;
+cc Value edit center;
+cc increment button;cn "Increment";
+cc random button;cn "Random";
 pas 6 6;pcenter;
-rem form end;
 )
 
-interact_run=: 3 : 0
+interact_run=: verb define
  wd INTERACT
- wd 'set Value 0;'
+ wd 'set Value text 0;'
  wd 'pshow;'
 )
 
-interact_close=: 3 : 0
+interact_cancel=: interact_close=: verb define
  wd'pclose'
 )
 
-interact_Value_button=: 3 : 0
- wd 'set Value ' , ": {. 0 ". Value
+interact_Value_button=: verb define
+ wd 'set Value text ' , ": {. 0 ". Value
 )
 
-interact_increment_button=: 3 : 0
- wd 'set Value ' , ": 1 + {. 0 ". Value
+interact_increment_button=: verb define
+ wd 'set Value text ' , ": 1 + {. 0 ". Value
 )
 
-interact_random_button=: 3 : 0
- if. 0 = 2 wdquery 'Confirm';'Reset to random number?' do.
-  wd 'set Value ' , ": ?100
+interact_random_button=: verb define
+ if. 2 = 2 3 wdquery 'Confirm';'Reset to random number?' do.
+  wd 'set Value text ' , ": ?100
  end.
 )

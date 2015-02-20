@@ -1,41 +1,34 @@
-import scala.swing._
-import scala.swing.Swing._
-import scala.swing.event._
+import swing.{ BoxPanel, Button, GridPanel, Orientation, Swing, TextField }
+import swing.event.{ ButtonClicked, Key, KeyPressed, KeyTyped }
 
-object Enabling extends SimpleSwingApplication {
-  def top = new MainFrame {
+object Enabling extends swing.SimpleSwingApplication {
+  def top = new swing.MainFrame {
     title = "Rosetta Code >>> Task: GUI enabling/disabling of controls | Language: Scala"
 
     val numberField = new TextField {
       text = "0" // start at 0
-      horizontalAlignment = Alignment.Right
+      horizontalAlignment = swing.Alignment.Right
     }
 
-    val incButton = new Button("Increment")
-    val decButton = new Button { text = "Decrement"; enabled = false }
+    val (incButton, decButton) = (new Button("Increment"), // Two variables initialized
+      new Button("Decrement") { enabled = false })
 
     // arrange buttons in a grid with 1 row, 2 columns
-    val buttonPanel = new GridPanel(1, 2) {
-      contents ++= List(incButton, decButton)
-    }
+    val buttonPanel = new GridPanel(1, 2) { contents ++= List(incButton, decButton) }
 
     // arrange text field and button panel in a grid with 2 row, 1 column
-    contents = new GridPanel(2, 1) { contents ++= List(numberField, buttonPanel) }
+    contents = new BoxPanel(Orientation.Vertical) { contents ++= List(numberField, buttonPanel) }
 
-    // backspace and delete don't cause a display of any Unicode char -
-    // therefore we need to catch them apart from the others
     val specialKeys = List(Key.BackSpace, Key.Delete)
 
     // listen for keys pressed in numberField and button clicks
     listenTo(numberField.keys, incButton, decButton)
     reactions += {
       case kt: KeyTyped =>
-        if (!kt.char.isDigit) // if the entered char isn't a digit ...
-          kt.consume // ... eat the event (i.e. stop it from being processed)
-        else {
+        if (kt.char.isDigit) // if the entered char is a digit ...
           Swing.onEDT(switching) // ensure GUI-updating
-        }
-      case KeyPressed(_, kp, _, _) if (!specialKeys.filter(_ == kp).isEmpty) =>
+        else kt.consume // ... eat the event (i.e. stop it from being processed)
+      case KeyPressed(_, kp, _, _) if (!specialKeys.contains(kp)) =>
         Swing.onEDT(switching) // ensure GUI-updating
       case ButtonClicked(`incButton`) =>
         numberField.text = (numberField.text.toLong + 1).toString
@@ -46,9 +39,9 @@ object Enabling extends SimpleSwingApplication {
     }
 
     def switching = {
-      val n = (if (numberField.text == "") "0" else numberField.text).toLong
+      val n = (if (numberField.text.isEmpty()) "0" else numberField.text).toLong
       numberField.text = n.toString
-      numberField.enabled = n <= 0
+      numberField.enabled = n == 0
       incButton.enabled = n < 10
       decButton.enabled = n > 0
     }

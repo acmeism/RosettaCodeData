@@ -1,20 +1,11 @@
-function csv_to_table(s) {
-	function ce(t) { return document.createElement(t); }
-	function ap(t) { document.body.appendChild(t); }
-	var t = ce('table'), f = 0; //1;
-	s.split('\n').map(function(l) {
-		var r = ce(f ? 'tr': 'thead');
-		l.split(',').map(function (w) {
-			var c = ce(f ? 'td' : 'th');
-			c.textContent = w;
-			r.appendChild(c);
-		});
-		t.appendChild(r);
-		f = 1; //0;
-	});
-	//return t.innerHTML;
-        return t.outerHTML;
-}
-/*
-but also with this changes is very dependent by javascript engine and/or browser version (in: IE>=9, chrome )
-*/
+<table>
+	<thead>
+		<tr><td>Character</td><td>Speech</td></tr>
+	</thead>
+	<tbody>
+		<tr><td>The multitude</td><td>The messiah! Show us the messiah!</td></tr>
+		<tr><td>Brians mother</td><td>&lt;angry&gt;Now you listen here! He's not the messiah; he's a very naughty boy! Now go away!&lt;/angry&gt;</td></tr>
+		<tr><td>The multitude</td><td>Who are you?</td></tr>
+		<tr><td>Brians mother</td><td>I'm his mother; that's who!</td></tr>
+		<tr><td>The multitude</td><td>Behold his mother! Behold his mother!</td></tr>	</tbody>
+</table>

@@ -17,7 +17,8 @@ immutable Item[] items = [
 struct Solution { uint bits; int value; }
 static assert(items.length <= Solution.bits.sizeof * 8);
 
-void solve(in int weight, in int idx, ref Solution s) pure nothrow {
+void solve(in int weight, in int idx, ref Solution s)
+pure nothrow @nogc @safe {
     if (idx < 0) {
         s.bits = s.value = 0;
         return;
@@ -38,8 +39,9 @@ void solve(in int weight, in int idx, ref Solution s) pure nothrow {
     s = (v1.value >= v2.value) ? v1 : v2;
 }
 
-void main() {
+void main() @safe {
     import std.stdio;
+
     auto s = Solution(0, 0);
     solve(400, items.length - 1, s);
 
@@ -50,5 +52,5 @@ void main() {
             writeln("  ", it.name);
             w += it.weight;
         }
-    writeln("\nTotal value: %d; weight: %d", s.value, w);
+    writefln("\nTotal value: %d; weight: %d", s.value, w);
 }

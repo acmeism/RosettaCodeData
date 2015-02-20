@@ -2,25 +2,43 @@ with Ada.Text_IO, Ada.Integer_Text_IO;
 
 package body Knights_Tour is
 
-   Visited: Tour;
-   -- Visited(I, J)=0: Not yet visited
-   -- Visited(I, J)=K: Visited during the k-th move
 
    type Pair is array(1..2) of Integer;
    type Pair_Array is array (Positive range <>) of Pair;
 
    Pairs: constant Pair_Array (1..8)
      := ((-2,1),(-1,2),(1,2),(2,1),(2,-1),(1,-2),(-1,-2),(-2,-1));
-   -- possible places to visit if Done
+   -- places for the night to go (relative to the current position)
 
-   function Get_Tour(Start_X, Start_Y: Index) return Tour is
+   function Count_Moves(Board: Tour) return Natural is
+      N: Natural := 0;
+   begin
+      for I in Index loop
+	 for J in Index loop
+	    if Board(I,J) < Natural'Last then
+	       N := N + 1;
+	    end if;
+	 end loop;
+      end loop;
+      return N;
+   end Count_Moves;
+
+   function Get_Tour(Start_X, Start_Y: Index; Scene: Tour := Empty)
+		    return Tour is
+      Done: Boolean;
+      Move_Count: Natural := Count_Moves(Scene);
+      Visited: Tour;
+
+      -- Visited(I, J) = 0: not yet visited
+      -- Visited(I, J) = K: visited at the k-th move
+      -- Visited(I, J) = Integer'Last: never visit
 
       procedure Visit(X, Y: Index; Move_Number: Positive; Found: out Boolean) is
          XX, YY: Integer;
       begin
          Found := False;
          Visited(X, Y) := Move_Number;
-         if Move_Number = Integer(Index'Last * Index'Last) then
+         if Move_Number = Move_Count then
             Found := True;
          else
             for P in Pairs'Range loop
@@ -38,28 +56,30 @@ package body Knights_Tour is
          end if;
       end Visit;
 
-      Done: Boolean;
    begin
-      Visited := (others => (others => 0));
+      Visited := Scene;
       Visit(Start_X, Start_Y, 1, Done);
       if not Done then
-         Visited := (others => (others => 0));
+         Visited := Scene;
       end if;
       return Visited;
    end Get_Tour;
 
-   procedure Tour_IO(The_Tour: Tour) is
+   procedure Tour_IO(The_Tour: Tour; Width: Natural := 4) is
    begin
-      if The_Tour(1, 1) /= 0 then
       for I in Index loop
          for J in Index loop
-            Ada.Integer_Text_IO.Put(The_Tour(I, J), 4);
+	    if The_Tour(I, J) < Integer'Last then
+	       Ada.Integer_Text_IO.Put(The_Tour(I, J), Width);
+	    else
+	       for W in 1 .. Width-1 loop
+		  Ada.Text_IO.Put(" ");
+	       end loop;
+	       Ada.Text_IO.Put("-"); -- deliberately not visited
+	    end if;
          end loop;
          Ada.Text_IO.New_Line;
       end loop;
-      else
-         Ada.Text_IO.Put_Line("No Solution");
-      end if;
    end Tour_IO;
 
 end Knights_Tour;

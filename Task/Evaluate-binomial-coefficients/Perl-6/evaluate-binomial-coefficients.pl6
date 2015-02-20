@@ -1,3 +1,2 @@
-sub infix:<choose>($n, $k) { ([*] $n-$k+1 .. $n) / [*] 2 .. $k }
-
+sub infix:<choose> { [*] ($^n ... 0) Z/ 1 .. $^p }
 say 5 choose 3;

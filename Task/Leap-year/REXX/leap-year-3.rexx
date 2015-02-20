@@ -1,4 +1,2 @@
-leapyear:  procedure;  parse arg y     /*year could be: Y, YY, YYY, YYYY*/
-if length(y)==2 then y=left(right(date(),4),2)y    /*adjust for YY year.*/
-if y//4\==0 then return 0              /* not ÷ by 4?   Not a leap year.*/
-return y//100\==0 | y//400==0          /*apply 100 and 400 year rule.   */
+leapyear: if arg(1)//4\==0  then return 0
+return arg(1)//400==0  |  arg(1)//100\==0

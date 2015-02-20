@@ -1,13 +1,13 @@
-import std.stdio, std.algorithm, std.range, std.string;
-
 void main() {
+    import std.stdio, std.algorithm, std.range, std.string;
+
     string[] result;
     size_t maxLen;
 
-    foreach (string word; File("unixdict.txt").lines()) {
-        word = word.chomp();
-        immutable len = walkLength(word);
-        if (len < maxLen || !isSorted(word))
+    foreach (string word; "unixdict.txt".File.lines) {
+        word = word.chomp;
+        immutable len = word.walkLength;
+        if (len < maxLen || !word.isSorted)
             continue;
         if (len > maxLen) {
             result = [word];
@@ -16,5 +16,5 @@ void main() {
             result ~= word;
     }
 
-    writeln(result.join("\n"));
+    writefln("%-(%s\n%)", result);
 }

@@ -4,12 +4,13 @@ import std.stdio, std.string, std.ascii, std.conv, std.array,
 struct Stack(T) {
     T[] data;
     alias data this;
-    void push(T top) pure nothrow { data ~= top; }
+    void push(T top) pure nothrow @safe { data ~= top; }
 
-    T pop(bool discard = true)() pure {
+    T pop(bool discard = true)() pure @nogc @safe {
+      immutable static exc = new immutable(Exception)("Stack Empty");
       if (data.empty)
-        throw new Exception("Stack Empty");
-      auto top = data.back;
+        throw exc;
+      auto top = data[$ - 1];
       static if (discard)
         data.popBack;
       return top;
@@ -20,7 +21,7 @@ enum Type {         Num, OBkt, CBkt, Add, Sub, Mul, Div }
 immutable opChar = ["#", "(",  ")",  "+", "-", "*", "/"];
 immutable opPrec = [ 0,  -9,   -9,    1,   1,   2,   2];
 
-abstract class Visitor { void visit(XP e); }
+abstract class Visitor { void visit(XP e) pure @safe; }
 
 final class XP {
   immutable Type type;
@@ -28,7 +29,7 @@ final class XP {
   immutable int pos; // Optional, to dispaly AST struct.
   XP LHS, RHS;
 
-  this(string s=")", int p = -1) nothrow {
+  this(string s=")", int p = -1) pure nothrow @safe {
     str = s;
     pos = p;
     auto localType = Type.Num;
@@ -38,13 +39,13 @@ final class XP {
     this.type = localType;
   }
 
-  override int opCmp(Object other) pure {
+  override int opCmp(Object other) pure @safe {
     auto rhs = cast(XP)other;
     enforce(rhs !is null);
     return opPrec[type] - opPrec[rhs.type];
   }
 
-  void accept(Visitor v) { v.visit(this); }
+  void accept(Visitor v) pure @safe { v.visit(this); }
 }
 
 final class AST {
@@ -53,13 +54,13 @@ final class AST {
   string xpr, token;
   int xpHead, xpTail;
 
-  void joinXP(XP x) pure {
+  void joinXP(XP x) pure @safe {
     x.RHS = num.pop;
     x.LHS = num.pop;
     num.push(x);
   }
 
-  string nextToken() pure {
+  string nextToken() pure @safe {
     while (xpHead < xpr.length && xpr[xpHead] == ' ')
       xpHead++; // Skip spc.
     xpTail = xpHead;
@@ -82,7 +83,7 @@ final class AST {
     return null;
   } // End nextToken.
 
-  AST parse(in string s) {
+  AST parse(in string s) /*@safe*/ {
     bool expectingOP;
     xpr = s;
     try {
@@ -147,7 +148,7 @@ final class AST {
 
 // To display AST fancy struct.
 void ins(ref char[][] s, in string v, in int p, in int l)
-pure nothrow {
+pure nothrow @safe {
   if (l + 1 > s.length)
     s.length++;
   while (s[l].length < p + v.length + 1)
@@ -160,7 +161,7 @@ final class CalcVis : Visitor {
   string resultStr;
   char[][] Tree;
 
-  static void opCall(AST a) {
+  static void opCall(AST a) @safe {
     if (a && a.root) {
       auto c = new CalcVis;
       a.root.accept(c);
@@ -187,7 +188,7 @@ final class CalcVis : Visitor {
   }
 
   // Calc. the value, display AST struct and eval order.
-  override void visit(XP xp) {
+  override void visit(XP xp) @safe {
     ins(Tree, xp.str, xp.pos, level);
     level++;
     if (xp.type == Type.Num) {
@@ -212,9 +213,9 @@ final class CalcVis : Visitor {
   }
 }
 
-void main(string[] args) {
+void main(string[] args) /*@safe*/ {
   immutable exp0 = "1 + 2*(3 - 2*(3 - 2)*((2 - 4)*5" ~
                    " - 22/(7 + 2*(3 - 1)) - 1)) + 1";
-  immutable exp = (args.length > 1) ? args[1 .. $].join(" ") : exp0;
+  immutable exp = (args.length > 1) ? args[1 .. $].join(' ') : exp0;
   new AST().parse(exp).CalcVis; // Should be 60.
 }

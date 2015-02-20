@@ -1,3 +1,4 @@
+# Usage:  awk -f primefac.awk
 function pfac(n,    r, f){
 	r = ""; f = 2
 	while (f <= n) {

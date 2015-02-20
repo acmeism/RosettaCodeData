@@ -1,12 +1,16 @@
-$max= $ARGV[0];
-@primes= ();
-@tested= (1);
-$j= 1;
-while ($j < $max) {
-   next if $tested[$j++];
-   push @primes, $j;
-   for ($k= $j; $k <= $max; $k+=$j) {
-      $tested[$k-1]= 1;
-   }
+sub sieve {
+  my $n = shift;
+  my @composite;
+  for my $i (2 .. int(sqrt($n))) {
+    if (!$composite[$i]) {
+      for (my $j = $i*$i; $j <= $n; $j += $i) {
+        $composite[$j] = 1;
+      }
+    }
+  }
+  my @primes;
+  for my $i (2 .. $n) {
+    $composite[$i] || push @primes, $i;
+  }
+  @primes;
 }
-print "@primes\n";

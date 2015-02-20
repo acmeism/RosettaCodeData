@@ -6,11 +6,11 @@ import (
     "time"
 )
 
-var (
-    number = []string{"1", "2", "3"}
-    color  = []string{"red", "green", "purple"}
-    shade  = []string{"solid", "open", "striped"}
-    shape  = []string{"oval", "squiggle", "diamond"}
+const (
+    number = [3]string{"1", "2", "3"}
+    color  = [3]string{"red", "green", "purple"}
+    shade  = [3]string{"solid", "open", "striped"}
+    shape  = [3]string{"oval", "squiggle", "diamond"}
 )
 
 type card int
@@ -25,15 +25,7 @@ func (c card) String() string {
 
 func main() {
     rand.Seed(time.Now().Unix())
-    basic()
-    advanced()
-}
-
-func basic() {
     game("Basic", 9, 4)
-}
-
-func advanced() {
     game("Advanced", 12, 6)
 }
 
@@ -59,7 +51,7 @@ func game(level string, cards, sets int) {
             l3:
                 for _, c3 := range d[:j] {
                     for f := card(1); f < 81; f *= 3 {
-                        if (c1/f%3+c2/f%3+c3/f%3)%3 != 0 {
+                        if (c1/f%3 + c2/f%3 + c3/f%3) % 3 != 0 {
                             continue l3 // not a set
                         }
                     }
@@ -77,9 +69,6 @@ func game(level string, cards, sets int) {
     }
     fmt.Println("Sets:")
     for _, s := range found {
-        fmt.Println("  ", s[0])
-        fmt.Println("  ", s[1])
-        fmt.Println("  ", s[2])
-        fmt.Println()
+        fmt.Printf("  %s\n  %s\n  %s\n",s[0],s[1],s[2])
     }
 }

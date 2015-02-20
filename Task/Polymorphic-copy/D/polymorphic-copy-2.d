@@ -20,7 +20,7 @@ class S : T {
     }
 
     override string toString() {
-        return "I'm the instance of S p: " ~ cast(string)str;
+        return "I'm the instance of S p: " ~ str.idup;
     }
 
     override T duplicate() { return new S(this); }
@@ -41,6 +41,6 @@ void main () {
     T copy = orig.duplicate();
     orig.custom('Y');
 
-    writeln(orig);
-    writeln(copy); // Should have 'X' at the beginning.
+    orig.writeln;
+    copy.writeln; // Should have 'X' at the beginning.
 }

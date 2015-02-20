@@ -3,6 +3,7 @@ import std.bigint: BigInt;
 import std.conv: text;
 import std.numeric: gcd;
 import std.algorithm: copy, map;
+import std.array: array;
 import core.stdc.stdlib: calloc;
 import std.math: log; // ^^
 
@@ -20,18 +21,10 @@ struct Hamming {
     double v; // Log of the number, for convenience.
     ushort[NK] e; // Exponents of each factor.
 
-    // log can't be used in CTFE yet.
-    //public static __gshared immutable double[factors.length] inc =
-    //    factors[].map!log.array;
-    public static __gshared immutable double[factors.length] inc;
+    public static __gshared immutable double[factors.length] inc =
+        factors[].map!log.array;
 
-    nothrow pure static this() {
-        //factors[].map!log.copy(inc[]); // Not nothrow, not const.
-        foreach (immutable i, immutable f; factors)
-            inc[i] = f.log;
-    }
-
-    bool opEquals(in ref Hamming y) const pure nothrow {
+    bool opEquals(in ref Hamming y) const pure nothrow @nogc {
         //return this.e == y.e; // Too much slow.
         foreach (immutable i; 0 .. this.e.length)
             if (this.e[i] != y.e[i])
@@ -39,7 +32,7 @@ struct Hamming {
         return true;
     }
 
-    void update() pure nothrow {
+    void update() pure nothrow @nogc {
         //this.v = dotProduct(inc, this.e); // Too much slow.
         this.v = 0.0;
         foreach (immutable i; 0 .. this.e.length)
@@ -58,13 +51,14 @@ struct Hamming {
 __gshared Hamming[] hams;
 __gshared Hamming[NK] values;
 
-nothrow static this() {
+nothrow @nogc static this() {
     // Slower than calloc if you don't use all the MAX_HAM items.
     //hams = new Hamming[MAX_HAM];
 
     auto ptr = cast(Hamming*)calloc(MAX_HAM, Hamming.sizeof);
+    static const err = new Error("Not enough memory.");
     if (!ptr)
-        throw new Error("Not enough memory.");
+        throw err;
     hams = ptr[0 .. MAX_HAM];
 
     foreach (immutable i, ref v; values) {
@@ -74,7 +68,7 @@ nothrow static this() {
 }
 
 
-ref Hamming getHam(in size_t n) nothrow
+ref Hamming getHam(in size_t n) nothrow @nogc
 in {
     assert(n <= MAX_HAM);
 } body {

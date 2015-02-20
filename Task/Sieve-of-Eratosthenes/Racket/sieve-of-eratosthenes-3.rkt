@@ -1,11 +1,17 @@
-#lang lazy
-
-;; infinite list using lazy racket (see the language above)
-(define nats (cons 1 (map add1 nats)))
-(define (sift n l) (filter (λ(x) (not (zero? (modulo x n)))) l))
-(define (sieve l) (cons (first l) (sieve (sift (first l) (rest l)))))
-(define primes (sieve (rest nats)))
-
-(define (take-upto n l)
-  (if (<= (car l) n) (cons (car l) (take-upto n (cdr l))) '()))
-(!! (take-upto 100 primes))
+#lang racket
+(require data/bit-vector)
+(define (eratosthenes limit)
+  " Returns a list of prime numbers up to natural number limit "
+  (let ((bv (make-bit-vector (+ limit 1) #f)))
+    (bit-vector-set! bv 0 #t)
+    (bit-vector-set! bv 1 #t)
+    (for ((i (in-range (sqrt limit))))
+      (when (false? (bit-vector-ref bv i))
+        (for ((j (in-range (+ i i) (bit-vector-length bv) i)))
+          (bit-vector-set! bv j #t))))
+    ;; Translate bit-vector into list of primes
+    ;; the following is extremely ugly/imperative and needs the result list reversed
+    (let ((to-return null))
+      (for ((i (bit-vector-length bv)))
+        (when (not (bit-vector-ref bv i)) (set! to-return (cons i to-return))))
+      (reverse to-return)))) ; NOTE: needs to be reversed

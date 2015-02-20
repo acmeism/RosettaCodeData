@@ -8,7 +8,7 @@ auto sofN_creator(in int n) {
         i++;
         if (i <= n)
             sample ~= item;
-        else if (uniform(0.0, 1.0) < (double(n) / i))
+        else if (uniform01 < (double(n) / i))
             sample[uniform(0, n)] = item;
         return sample;
     };

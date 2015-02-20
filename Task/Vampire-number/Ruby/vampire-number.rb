@@ -1,5 +1,5 @@
 def factor_pairs n
-  first = 10 ** ((n.to_s.size / 2) - 1)
+  first = n / (10 ** (n.to_s.size / 2) - 1)
   (first .. n ** 0.5).map { |i| [i, n / i] if n % i == 0 }.compact
 end
 
@@ -26,6 +26,6 @@ end
   if (vf = vampire_factors n).empty?
     puts "#{n} is not a vampire number!"
   else
-    puts "#{n}:\t#{vf}" unless (vf = vampire_factors n).empty?
+    puts "#{n}:\t#{vf}"
   end
 end

@@ -1,4 +1,2 @@
-$ cat print\(__file__\)
-print(__file__)
-$ python print\(__file__\)
-print(__file__)
+$ python print\(__file__\[\:-3\]\).py
+print(__file__[:-3])

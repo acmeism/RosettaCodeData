@@ -1,12 +1,13 @@
-hamming = Enumerator.new do |yielder|
-  next_ham = 1
-  queues = { 2 => [], 3 => [], 5 => [] }
+start = Time.now
 
-  loop do
-    yielder << next_ham   # or: yielder.yield(next_ham)
-
-    [2,3,5].each {|m| queues[m]<< (next_ham * m)}
-    next_ham = [2,3,5].collect {|m| queues[m][0]}.min
-    [2,3,5].each {|m| queues[m].shift if queues[m][0]== next_ham}
+hamming.each.with_index(1) do |ham, idx|
+  case idx
+  when (1..20), 1691
+    puts "#{idx} => #{ham}"
+  when 1_000_000
+    puts "#{idx} => #{ham}"
+    break
   end
 end
+
+puts "elapsed: #{Time.now - start} seconds"

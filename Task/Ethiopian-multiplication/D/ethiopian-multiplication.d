@@ -1,10 +1,10 @@
-int ethiopian(int n1, int n2) pure nothrow
+int ethiopian(int n1, int n2) pure nothrow @nogc
 in {
     assert(n1 >= 0, "Multiplier can't be negative");
 } body {
-    static enum doubleNum = (in int n) pure nothrow => n * 2;
-    static enum halveNum = (in int n) pure nothrow => n / 2;
-    static enum isEven = (in int n) pure nothrow => !(n & 1);
+    static enum doubleNum = (in int n) pure nothrow @nogc => n * 2;
+    static enum halveNum = (in int n) pure nothrow @nogc => n / 2;
+    static enum isEven = (in int n) pure nothrow @nogc => !(n & 1);
 
     int result;
     while (n1 >= 1) {

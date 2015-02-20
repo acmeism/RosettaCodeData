@@ -37,7 +37,7 @@ return #
 
       do j=i+1  while j<n;  parse value @.j @.n with @.n @.j;  n=n-1;  end
 
-if i==0 then return 0
+if i==0  then return 0
                                          do j=i+1  while @.j<@.i;   end
 parse  value   @.j @.i   with   @.i @.j
 return 1

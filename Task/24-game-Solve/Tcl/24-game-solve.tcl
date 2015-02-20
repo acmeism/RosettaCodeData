@@ -2,10 +2,10 @@ package require struct::list
 # Encoding the various expression trees that are possible
 set patterns {
     {((A x B) y C) z D}
-    {(A x (B y C)) z D}
-    {(A x B) y (C z D)}
-    {A x ((B y C) z D)}
-    {A x (B y (C z D))}
+     {(A x (B y C)) z D}
+     {(A x B) y (C z D)}
+      {A x ((B y C) z D)}
+      {A x (B y (C z D))}
 }
 # Encoding the various permutations of digits
 set permutations [struct::list map [struct::list permutations {a b c d}] \
@@ -13,8 +13,8 @@ set permutations [struct::list map [struct::list permutations {a b c d}] \
 # The permitted operations
 set operations {+ - * /}
 
-# Given a list of four integers (precondition not checked!) return a list of
-# solutions to the 24 game using those four integers.
+# Given a list of four integers (precondition not checked!)
+# return a list of solutions to the 24 game using those four integers.
 proc find24GameSolutions {values} {
     global operations patterns permutations
     set found {}

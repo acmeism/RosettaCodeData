@@ -1,6 +1,6 @@
 import std.stdio, std.traits;
 
-CommonType!(U, V) horner(U, V)(U[] p, V x) {
+CommonType!(U, V) horner(U, V)(U[] p, V x) pure nothrow @nogc {
     typeof(return) accumulator = 0;
     foreach_reverse (c; p)
         accumulator = accumulator * x + c;
@@ -8,5 +8,5 @@ CommonType!(U, V) horner(U, V)(U[] p, V x) {
 }
 
 void main() {
-    writeln([-19, 7, -4, 6].horner(3.0));
+    [-19, 7, -4, 6].horner(3.0).writeln;
 }

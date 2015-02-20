@@ -1,20 +1,8 @@
-/*REXX pgm to do a "bad" assignment  (with an unassigned REXX variable).*/
-
-signal on novalue                      /*usually, placed at pgm start.  */
-
-xxx=aaaaa                              /*tries to assign aaaaa ───► xxx */
-
-say xxx 'or somesuch'
-exit
-
-novalue:                               /*this can be dressed up better. */
-badLine  =sigl                         /*REXX line number that failed.  */
-badSource=sourceline(badLine)          /*REXX source line ···           */
-badVar   =condition('D')               /*REXX var name that's ¬ defined.*/
-say
-say '*** error! ***'
-say 'undefined variable' badvar "at REXX line number" badLine
-say
-say badSource
-say
-exit 13
+call value 'CAT', "When the cat's away, the mice will play."
+                                       /*assigns a literal ───►  CAT    */
+yyy='CA'
+call value yyy'T', "Honest as the Cat when the meat's out of reach."
+                                       /*assigns a literal ───►  CAT    */
+yyy = 'CA'
+call value yyy || 'T', "Honest as the Cat when the meat's out of reach."
+                                       /*assigns a literal ───►  CAT    */

@@ -8,17 +8,19 @@ var xmlstr = '<Students>' +
   '<Student DateOfBirth="1993-09-10" Gender="F" Name="&#x00C9;mily" />' +
 '</Students>';
 
-var list = xmlstr.match(/<Student .*? \/>/g);
-var output = '';
-for (var i = 0; i < list.length; i++) {
-  if (i > 0) {
-    output += ', ';
+if (window.DOMParser)
+  {
+  parser=new DOMParser();
+  xmlDoc=parser.parseFromString(xmlstr,"text/xml");
   }
-  var tmp = list[i].match(/Name="(.*?)"/);
-  output += tmp[1];
-}
+else // Internet Explorer
+  {
+  xmlDoc=new ActiveXObject("Microsoft.XMLDOM");
+  xmlDoc.async=false;
+  xmlDoc.loadXML(xmlstr);
+  }
 
-// Bounce it through a HTML element to handle Unicode for us
-var l = document.createElement('p');
-l.innerHTML = output;
-alert(l.innerHTML);
+var students=xmlDoc.getElementsByTagName('Student');
+for(var e=0; e<=students.length-1; e++) {
+  console.log(students[e].attributes.Name.value);
+}

@@ -6,7 +6,7 @@ void cubicBezier(size_t nSegments=20, Color)
                 (Image!Color im,
                  in Pt p1, in Pt p2, in Pt p3, in Pt p4,
                  in Color color)
-pure nothrow if (nSegments > 0) {
+pure nothrow @nogc if (nSegments > 0) {
     Pt[nSegments + 1] points = void;
 
     foreach (immutable i, ref p; points) {

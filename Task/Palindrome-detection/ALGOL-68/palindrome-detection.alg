@@ -2,7 +2,7 @@
 PROC palindrome = (STRING s)BOOL:(
    FOR i TO UPB s OVER 2 DO
      IF s[i] /= s[UPB s-i+1] THEN GO TO return false FI
-   OD;
+   OD;Power
    else: TRUE EXIT
    return false: FALSE
 );

@@ -23,7 +23,7 @@ program KNAPSACK_CONTINUOUS
   items(8) = Item("salami",  3.0, 95.0)
   items(9) = Item("sausage", 5.9, 98.0)
 
-  ! sort items in desending order of their value per unit weight
+  ! sort items in descending order of their value per unit weight
   do i = 2, size(items)
      j = i - 1
      temp = items(i)

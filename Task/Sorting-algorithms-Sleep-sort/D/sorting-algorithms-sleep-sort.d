@@ -1,9 +1,9 @@
-import std.stdio, std.conv, std.datetime, core.thread;
+import std.stdio, std.conv, std.datetime, std.array, core.thread;
 
 final class SleepSorter: Thread {
     private immutable uint val;
 
-    this(in uint n) /*pure nothrow*/ {
+    this(in uint n) /*pure nothrow @safe*/ {
         super(&run);
         val = n;
     }
@@ -15,7 +15,7 @@ final class SleepSorter: Thread {
 }
 
 void main(in string[] args) {
-    if (args.length > 1)
-        foreach (arg; args[1 .. $])
+    if (!args.empty)
+        foreach (const arg; args[1 .. $])
             new SleepSorter(arg.to!uint).start;
 }

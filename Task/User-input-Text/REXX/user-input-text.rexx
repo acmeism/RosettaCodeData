@@ -8,4 +8,5 @@ parse pull userString                  /*get the user text and store it.*/
        say 'Please enter the number 75000'       /*show the nice prompt.*/
        parse pull userNumber                     /*get the user text.   */
        end   /*until*/                           /*now, check if it's OK*/
+
                                        /*stick a fork in it, we're done.*/

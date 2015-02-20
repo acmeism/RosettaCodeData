@@ -1,13 +1,9 @@
-def y(&f)
-  lambda do |g|
-    f.call {|*args| g[g][*args]}
-  end.tap {|g| break g[g]}
-end
+y = ->(f) {->(g) {g.(g)}.(->(g) { f.(->(*args) {g.(g).(*args)})})}
 
-fac = y {|&f| lambda {|n| n < 2 ? 1 : n * f[n - 1]}}
-fib = y {|&f| lambda {|n| n < 2 ? n : f[n - 1] + f[n - 2]}}
+fac = ->(f) { ->(n) { n < 2 ? 1 : n * f.(n-1) } }
 
-p Array.new(10) {|i| fac[i]}
-# => [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880]
-p Array.new(10) {|i| fib[i]}
-# => [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+p 10.times.map {|i| y.(fac).(i)}
+
+fib = ->(f) { ->(n) { n < 2 ? n : f.(n-2) + f.(n-1) } }
+
+p 10.times.map {|i| y.(fib).(i)}

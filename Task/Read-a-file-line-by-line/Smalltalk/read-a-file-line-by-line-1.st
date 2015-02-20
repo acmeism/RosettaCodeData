@@ -1,1 +1,1 @@
-'foobar.txt' asFilename readingLinesDo:[:eachLine | eachLine printCR]
+(StandardFileStream oldFileNamed: 'test.txt') contents lines do: [  :each | Transcript show: each. ]

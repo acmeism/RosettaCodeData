@@ -16,7 +16,7 @@ char *strip(const char * str, const char *pat)
 	int i = 0, tbl[128] = {0};
 	while (*pat != '\0') tbl[(int)*(pat++)] = 1;
 
-	char *ret = malloc(strlen(str));
+	char *ret = malloc(strlen(str) + 1);
 	do {
 		if (!tbl[(int)*str])
 			ret[i++] = *str;

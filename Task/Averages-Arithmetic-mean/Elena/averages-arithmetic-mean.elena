@@ -21,12 +21,12 @@
         theValue += aValue.
     ]
 
-    #method number = theValue / theCount.
+    #method value = theValue / theCount.
 }
 
 // --- Program ---
 
 #symbol program =
 [
-    console writeLine:(MeanAction new foreach:(1, 2, 3, 4, 5, 6, 7, 8) number).
+    console writeLine:(MeanAction new foreach:(1, 2, 3, 4, 5, 6, 7, 8) value).
 ].

@@ -1,13 +1,14 @@
-import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 
-public class Semordnilaps {
+public class Semordnilap {
 
-    public static void main(String[] args) throws IOException {
-        List<String> lst = readLines("unixdict.txt");
+    public static void main(String[] args) throws Exception {
+        List<String> lst = Files.readAllLines(Paths.get("unixdict.txt"));
         Set<String> seen = new HashSet<>();
         int count = 0;
         for (String w : lst) {
+            w = w.toLowerCase();
             String r = new StringBuilder(w).reverse().toString();
             if (seen.contains(r)) {
                 if (count++ < 5)
@@ -15,16 +16,5 @@ public class Semordnilaps {
             } else seen.add(w);
         }
         System.out.println("\nSemordnilap pairs found: " + count);
-    }
-
-    private static List<String> readLines(String fn) throws IOException {
-        List<String> lines;
-        try (BufferedReader br = new BufferedReader(new FileReader(fn))) {
-            lines = new ArrayList<>();
-            String line;
-            while ((line = br.readLine()) != null)
-                lines.add(line.trim().toLowerCase());
-        }
-        return lines;
     }
 }

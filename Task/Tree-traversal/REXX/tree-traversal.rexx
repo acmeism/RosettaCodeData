@@ -12,10 +12,11 @@
 =
 = The correct output should look like this:
 =  preorder:    1 2 4 7 5 3 6 8 9
-=  inorder:     7 4 2 5 1 8 6 9 3
-=  postorder:   7 4 5 2 8 9 6 3 1
 =  level-order: 1 2 3 4 5 6 7 8 9
-* 17.06.2012 Walter Pachl not thorouggly tested
+=  postorder:   7 4 5 2 8 9 6 3 1
+=  inorder:     7 4 2 5 1 8 6 9 3
+
+* 17.06.2012 Walter Pachl not thoroughly tested
 **********************************************************************/
 debug=0
 wl_soll=1 2 4 7 5 3 6 8 9

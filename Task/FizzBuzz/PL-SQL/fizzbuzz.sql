@@ -1,17 +1,15 @@
-CREATE OR REPLACE PROCEDURE FIZZBUZZ AS
-  i NUMBER;
-BEGIN
-
-  FOR i in 1 .. 100 LOOP
-    IF MOD(i, 15) = 0 THEN
-      DBMS_OUTPUT.PUT_LINE('FizzBuzz');
-    ELSIF MOD(i, 5) = 0 THEN
-      DBMS_OUTPUT.PUT_LINE('Buzz');
-    ELSIF MOD(i, 3) = 0 THEN
-      DBMS_OUTPUT.PUT_LINE('Fizz');
-    ELSE
-      DBMS_OUTPUT.PUT_LINE(i);
-    END IF;
-  END LOOP;
-
-END FIZZBUZZ;
+begin
+  for i in 1 .. 100
+  loop
+    case
+    when mod(i, 15) = 0 then
+      dbms_output.put_line('FizzBuzz');
+    when mod(i, 5) = 0 then
+      dbms_output.put_line('Buzz');
+    when mod(i, 3) = 0 then
+      dbms_output.put_line('Fizz');
+    else
+      dbms_output.put_line(i);
+    end case;
+  end loop;
+end;

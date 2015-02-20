@@ -1,35 +1,53 @@
-import std.stdio: writeln;
+import std.stdio, std.algorithm, std.conv;
 
-// with if-else
-void fizzBuzz(int n) {
-    foreach (i; 1 .. n+1)
+/// With if-else.
+void fizzBuzz(in uint n) {
+    foreach (immutable i; 1 .. n + 1)
         if (!(i % 15))
-            writeln("FizzBuzz");
+            "FizzBuzz".writeln;
         else if (!(i % 3))
-            writeln("Fizz");
+            "Fizz".writeln;
         else if (!(i % 5))
-            writeln("Buzz");
+            "Buzz".writeln;
         else
-            writeln(i);
+            i.writeln;
 }
 
-// with switch case
-void fizzBuzzSwitch(int n) {
-    foreach (i; 1 .. n+1)
-        switch(i % 15) {
+/// With switch case.
+void fizzBuzzSwitch(in uint n) {
+    foreach (immutable i; 1 .. n + 1)
+        switch (i % 15) {
             case 0:
-                writeln("FizzBuzz"); break;
+                "FizzBuzz".writeln;
+                break;
             case 3, 6, 9, 12:
-                writeln("Fizz"); break;
+                "Fizz".writeln;
+                break;
             case 5, 10:
-                writeln("Buzz"); break;
+                "Buzz".writeln;
+                break;
             default:
-                writeln(i);
+                i.writeln;
         }
 }
 
+void fizzBuzzSwitch2(in uint n) {
+    foreach (immutable i; 1 .. n + 1)
+        (i % 15).predSwitch(
+        0,       "FizzBuzz",
+        3,       "Fizz",
+        5,       "Buzz",
+        6,       "Fizz",
+        9,       "Fizz",
+        10,      "Buzz",
+        12,      "Fizz",
+        /*else*/ i.text).writeln;
+}
+
 void main() {
-    fizzBuzz(100);
-    writeln();
-    fizzBuzzSwitch(100);
+    100.fizzBuzz;
+    writeln;
+    100.fizzBuzzSwitch;
+    writeln;
+    100.fizzBuzzSwitch2;
 }

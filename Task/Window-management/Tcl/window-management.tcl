@@ -53,10 +53,10 @@ proc resizeWin {} {
     }
 }
 
-grid [label .l -text "Window handle:"] [label .l2 -textvariable win]
+grid [label .l   -text "Window handle:"] [label .l2 -textvariable win]
 grid [button .b1 -text "Open/Reset" -command openWin] -
-grid [button .b2 -text "Close" -command closeWin] -
-grid [button .b3 -text "Minimize" -command minimizeWin] -
-grid [button .b4 -text "Maximize" -command maximizeWin] -
-grid [button .b5 -text "Move" -command moveWin] -
-grid [button .b6 -text "Resize" -command resizeWin] -
+grid [button .b2 -text "Close"      -command closeWin] -
+grid [button .b3 -text "Minimize"   -command minimizeWin] -
+grid [button .b4 -text "Maximize"   -command maximizeWin] -
+grid [button .b5 -text "Move"       -command moveWin] -
+grid [button .b6 -text "Resize"     -command resizeWin] -

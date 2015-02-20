@@ -27,7 +27,7 @@ contains
           lat1 = to_radian(deglat1)
           lat2 = to_radian(deglat2)
           a = (sin(dlat/2))**2 + cos(lat1)*cos(lat2)*(sin(dlon/2))**2
-          c = 2*atan2(sqrt(a),sqrt(1-a))
+          c = 2*asin(sqrt(a))
           dist = radius*c
       end function haversine
 

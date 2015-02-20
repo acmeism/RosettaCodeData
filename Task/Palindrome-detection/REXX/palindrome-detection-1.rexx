@@ -9,7 +9,6 @@ say
 if isPal(y)  then say 'The string is palindromic.'
              else say "The string isn't palindromic."
 exit                                   /*stick a fork in it, we're done.*/
-
 /*──────────────────────────────────ISPAL subroutine────────────────────*/
 isPal:  procedure;  arg x;  z=         /*uppercases the value of arg  X.*/
 

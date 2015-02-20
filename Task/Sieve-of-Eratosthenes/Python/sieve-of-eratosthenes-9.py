@@ -1,28 +1,20 @@
-import heapq
-
-# generates all prime numbers
-def sieve():
-    # priority queue of the sequences of non-primes
-    # the priority queue allows us to get the "next" non-prime quickly
-    nonprimes = []
-
-    i = 2
-    while True:
-        if nonprimes and i == nonprimes[0][0]: # non-prime
-            while nonprimes[0][0] == i:
-                # for each sequence that generates this number,
-                # have it go to the next number (simply add the prime)
-                # and re-position it in the priority queue
-                x = nonprimes[0]
-                x[0] += x[1]
-                heapq.heapreplace(nonprimes, x)
-
-        else: # prime
-            # insert a 2-element list into the priority queue:
-            # [current multiple, prime]
-            # the first element allows sorting by value of current multiple
-            # we start with i^2
-            heapq.heappush(nonprimes, [i*i, i])
-            yield i
-
-        i += 1
+from numpy import array, bool_, multiply, nonzero, ones, put, resize
+#
+def makepattern(smallprimes):
+    pattern = ones(multiply.reduce(smallprimes), dtype=bool_)
+    pattern[0] = 0
+    for p in smallprimes:
+        pattern[p::p] = 0
+    return pattern
+#
+def primes_upto3(limit, smallprimes=(2,3,5,7,11)):
+    sp = array(smallprimes)
+    if limit <= sp.max(): return sp[sp <= limit]
+    #
+    isprime = resize(makepattern(sp), limit + 1)
+    isprime[:2] = 0; put(isprime, sp, 1)
+    #
+    for n in range(sp.max() + 2, int(limit**0.5 + 1.5), 2):
+        if isprime[n]:
+            isprime[n*n::n] = 0
+    return nonzero(isprime)[0]

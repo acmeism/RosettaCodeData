@@ -1,67 +1,45 @@
-use std::iter::range_inclusive;
-use std::rand::{task_rng, Rng};
 use std::io;
-use std::str;
-use std::option::collect;
-use std::io::stdio::StdReader;
-use std::str::from_char;
-use std::iter::FromIterator;
-use std::hashmap::HashSet;
+use std::rand::{task_rng, Rng};
 
 static NUMBER_OF_DIGITS: uint = 4;
-static LOWEST_DIGIT: uint = 1;
-static HIGHEST_DIGIT: uint = 9;
 
-fn generate_digits() -> ~[uint] {
-  task_rng().sample(range_inclusive(LOWEST_DIGIT, HIGHEST_DIGIT), NUMBER_OF_DIGITS)
+static DIGITS: [char, ..9] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+fn generate_digits() -> Vec<char> {
+  let mut temp_digits = Vec::from_slice(DIGITS);
+  task_rng().shuffle(temp_digits.as_mut_slice());
+  return temp_digits.iter().take(NUMBER_OF_DIGITS).map(|&a| a).collect();
 }
 
-fn read_input(reader: &mut StdReader) -> ~str {
-  let mut buf = [0u8, ..32];
-  let num_bytes = reader.read(buf).unwrap();
-  return str::from_utf8(buf).slice_to(num_bytes).trim().to_owned();
-}
+fn parse_guess_string(guess: &String) -> Result<Vec<char>, String> {
+  let chars: Vec<char> = guess.as_slice().chars().collect();
 
-fn parse_guess_string(guess: &str) -> Option<~[uint]> {
-  let digit_chars = guess.chars();
-  let digit_options = digit_chars.map(|c| from_str::<uint>(from_char(c)));
-
-  // std::option::collect is a cool little function that goes through an iterator
-  // and returns a None if it hits a None. If not it will return a Some that
-  // contains a vector containing the unwrapped values of the iterator
-  let digits_maybe: Option<~[uint]> = collect(digit_options);
-
-  match digits_maybe {
-    Some(ref digits) => {
-      if digits.len() != NUMBER_OF_DIGITS {
-        println!("you need to guess with {:u} digits", NUMBER_OF_DIGITS);
-        return None;
-      }
-      if digits.iter().any(|&digit| digit < LOWEST_DIGIT || digit > HIGHEST_DIGIT) {
-        println("digit out of range");
-        return None;
-      }
-      let digits_set: HashSet<&uint> = FromIterator::from_iterator(&mut digits.iter());
-      if digits_set.len() != NUMBER_OF_DIGITS {
-        println("no duplicates!");
-        return None;
-      }
-    },
-    None => println("non-numeric input, please try again")
+  if !chars.iter().all(|c| DIGITS.contains(c)) {
+    return Err("only digits, please".to_string());
   }
-  return digits_maybe;
+
+  if chars.len() != NUMBER_OF_DIGITS {
+    return Err(format!("you need to guess with {:u} digits", NUMBER_OF_DIGITS));
+  }
+
+  let mut uniques: Vec<char> = chars.clone();
+  uniques.dedup();
+  if uniques.len() != chars.len() {
+    return Err("no duplicates, please".to_string());
+  }
+
+  return Ok(chars);
 }
 
-fn calculate_score(digits: &[uint], guess: &[uint]) -> (uint, uint) {
+fn calculate_score(given_digits: &Vec<char>, guessed_digits: &Vec<char>) -> (uint, uint) {
   let mut bulls = 0;
   let mut cows = 0;
-  for i in range(0, digits.len()) {
-    let mut j = guess.iter();
-    let pos_maybe: Option<uint> = j.position(|&a| -> bool {a == digits[i]});
-    match  pos_maybe {
-      None                  => (),
-      Some(pos) if pos == i => bulls += 1,
-      Some(_)               => cows += 1
+  for i in range(0, NUMBER_OF_DIGITS) {
+    let pos: Option<uint> = guessed_digits.iter().position(|&a| -> bool {a == given_digits[i]});
+    match  pos {
+      None              => (),
+      Some(p) if p == i => bulls += 1,
+      Some(_)           => cows += 1
     }
   }
   return (bulls, cows);
@@ -71,20 +49,26 @@ fn main() {
   let mut reader = io::stdin();
 
   loop {
-    let digits = generate_digits();
+    let given_digits = generate_digits();
     println!("I have chosen my {} digits. Please guess what they are", NUMBER_OF_DIGITS);
+
     loop {
-      let guess_string = read_input(&mut reader);
-      let digits_maybe = parse_guess_string(guess_string);
+
+      let guess_string = reader.read_line().unwrap().as_slice().trim().to_string();
+
+      let digits_maybe = parse_guess_string(&guess_string);
       match digits_maybe {
-        None => continue,
-        Some(guess_digits) => {
-          let (bulls, cows) = calculate_score(digits, guess_digits);
-          if bulls == NUMBER_OF_DIGITS {
-            println("you win!");
-            break;
-          } else {
-            println!("bulls: {:u}, cows: {:u}", bulls, cows);
+        Err(msg) => {
+          println!("{}", msg);
+          continue;
+        },
+        Ok(guess_digits) => {
+          match calculate_score(&given_digits, &guess_digits) {
+            (NUMBER_OF_DIGITS, _) => {
+              println!("you win!");
+              break;
+            },
+            (bulls, cows) => println!("bulls: {:u}, cows: {:u}", bulls, cows)
           }
         }
       }

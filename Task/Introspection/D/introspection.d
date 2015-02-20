@@ -25,7 +25,8 @@ void main() {
 
     int tot = 0;
     /*static*/ foreach (name; __traits(allMembers, mixin(__MODULE__)))
-        static if (is(int == Unqual!(typeof(mixin("." ~ name)))))
+        static if (name != "object" &&
+                   is(int == Unqual!(typeof(mixin("." ~ name)))))
             tot += mixin("." ~ name);
     writeln("Total of the module-level ints (could overflow): ", tot);
 }

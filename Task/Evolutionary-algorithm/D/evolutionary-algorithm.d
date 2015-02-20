@@ -5,7 +5,7 @@ enum C = 100;  // Number of children in each generation.
 enum P = 0.05; // Mutation probability.
 enum fitness = (dchar[] s) => target.zip(s).count!q{ a[0] != a[1] };
 dchar rnd() { return (uppercase ~ " ")[uniform(0, $)]; }
-enum mut= (dchar[] s) => s.map!(a=> uniform(0,1.) < P ? rnd : a).array;
+enum mut = (dchar[] s) => s.map!(a => uniform01 < P ? rnd : a).array;
 
 void main() {
     auto parent = target.length.iota.map!(_ => rnd).array;

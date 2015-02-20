@@ -1,22 +1,23 @@
-import std.stdio, std.algorithm, std.typecons, std.conv, std.range;
+import std.stdio, std.algorithm, std.typecons, std.conv,
+       std.range, std.traits;
 
-T factorial(T)(in T n) pure nothrow {
+T factorial(T)(in T n) pure nothrow @safe @nogc {
     Unqual!T result = 1;
     foreach (immutable i; 2 .. n + 1)
         result *= i;
     return result;
 }
 
-T subfact(T)(in T n) pure nothrow {
+T subfact(T)(in T n) pure nothrow @safe @nogc {
     if (0 <= n && n <= 2)
         return n != 1;
     return (n - 1) * (subfact(n - 1) + subfact(n - 2));
 }
 
 auto derangements(in size_t n, in bool countOnly=false)
-pure /*nothrow*/ {
+pure nothrow @safe {
     size_t[] seq = n.iota.array;
-    auto ori = seq.idup; // Not nothrow.
+    auto ori = seq.idup;
     size_t[][] all;
     size_t cnt = n == 0;
 
@@ -44,14 +45,14 @@ pure /*nothrow*/ {
             if (countOnly)
                 cnt++;
             else
-                all ~= seq.dup; // Not nothrow.
+                all ~= seq.dup;
         }
     }
 
     return tuple(all, cnt);
 }
 
-void main() {
+void main() @safe {
     "Derangements for n = 4:".writeln;
     foreach (const d; 4.derangements[0])
         d.writeln;

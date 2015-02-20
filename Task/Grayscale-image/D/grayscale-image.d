@@ -12,7 +12,7 @@ struct Gray {
 
 
 Image!Color loadPGM(Color)(Image!Color img, in string fileName) {
-    static int readNum(FILE* f) nothrow {
+    static int readNum(FILE* f) nothrow @nogc {
         int n;
         while (!fscanf(f, "%d ", &n)) {
             if ((n = fgetc(f)) == '#') {
@@ -25,11 +25,11 @@ Image!Color loadPGM(Color)(Image!Color img, in string fileName) {
         return n;
     }
 
-    scope(exit) if (fin) fclose(fin);
     if (img is null)
         img = new Image!Color();
 
     auto fin = fopen(fileName.toStringz(), "rb");
+    scope(exit) if (fin) fclose(fin);
     if (!fin)
         throw new Exception("Can't open input file.");
 
@@ -78,28 +78,28 @@ in {
 }
 
 
-Gray lumCIE(in RGB c) pure nothrow {
+Gray lumCIE(in RGB c) pure nothrow @nogc {
     return Gray(cast(ubyte)(0.2126 * c.r +
                             0.7152 * c.g +
                             0.0722 * c.b + 0.5));
 }
 
-Gray lumAVG(in RGB c) pure nothrow {
+Gray lumAVG(in RGB c) pure nothrow @nogc {
     return Gray(cast(ubyte)(0.3333 * c.r +
                             0.3333 * c.g +
                             0.3333 * c.b + 0.5));
 }
 
-Image!Gray rgb2grayImage(alias Conv=lumCIE)(in Image!RGB im) {
+Image!Gray rgb2grayImage(alias Conv=lumCIE)(in Image!RGB im) nothrow {
     auto result = new typeof(return)(im.nx, im.ny);
-    foreach (i, immutable rgb; im.image)
+    foreach (immutable i, immutable rgb; im.image)
         result.image[i] = Conv(rgb);
     return result;
 }
 
-Image!RGB gray2rgbImage(in Image!Gray im) {
+Image!RGB gray2rgbImage(in Image!Gray im) nothrow {
     auto result = new typeof(return)(im.nx, im.ny);
-    foreach (i, immutable gr; im.image)
+    foreach (immutable i, immutable gr; im.image)
         result.image[i] = RGB(gr, gr, gr);
     return result;
 }

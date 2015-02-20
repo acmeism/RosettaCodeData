@@ -1,7 +1,5 @@
 fib_iter = (n) ->
-    if n < 2
-        return n
-    [prev, curr] = 0, 1
-    for i in [1..n]
-       [prev, curr] = [curr, curr + prev]
-    return curr
+    return n if n < 2
+    [prev, curr] = [0, 1]
+    [prev, curr] = [curr, curr + prev] for i in [1..n]
+    curr

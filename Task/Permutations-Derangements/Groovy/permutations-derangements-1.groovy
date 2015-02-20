@@ -4,6 +4,6 @@ subfact = { BigInteger n -> (n == 0) ? 1 : (n == 1) ? 0 : ((n-1) * (subfact(n-1)
 
 def derangement = { List l ->
     def d = []
-    l.eachPermutation { p -> if ([p,l].transpose().every{ it[0] != it[1] }) d << p }
+  if (l) l.eachPermutation { p -> if ([p,l].transpose().every{ pp, ll -> pp != ll }) d << p }
     d
 }

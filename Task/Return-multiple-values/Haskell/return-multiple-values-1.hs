@@ -1,2 +1,1 @@
-addsub x y =
-  (x + y, x - y)
+  addsub x y = (x + y, x - y)

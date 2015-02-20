@@ -1,16 +1,19 @@
-constant RED = "\e[1;31m";
-constant CLEAR = "\e[0m";
+my $RED = "\e[1;31m";
+my $YELLOW = "\e[1;33m";
+my $GREEN = "\e[1;32m";
+my $CLEAR = "\e[0m";
 
-enum Cell-State <Empty Tree Burning>;
-my @show = ('  ', '木', RED ~ '木' ~ CLEAR);
+enum Cell-State <Empty Tree Heating Burning>;
+my @show = ('  ', $GREEN ~ '木', $YELLOW ~ '木', $RED ~ '木');
 
 class Forest {
-    has Cell-State @!grid;
+    has @!grid;
     has @!neighbors;
     has Int $.height;
     has Int $.width;
     has $.p;
     has $.f;
+    has @!cells = ^$!height X ^$!width;
 
     method new(Int $height, Int $width, $p=0.01, $f=0.001) {
         my $c = self.bless(:$height, :$width, :$p, :$f);
@@ -24,36 +27,35 @@ class Forest {
     }
 
     method !init-neighbors {
-        for ^$!height X ^$!width -> $i, $j {
-            @!neighbors[$i][$j] = gather for
+        for @!cells -> $i, $j {
+            @!neighbors[$i][$j] = eager gather for
                     [-1,-1],[+0,-1],[+1,-1],
                     [-1,+0],(     ),[+1,+0],
                     [-1,+1],[+0,+1],[+1,+1]
 	    {
 		take-rw @!grid[$i + .[0]][$j + .[1]] // next;
 	    }
-        }
+	}
     }
 
     method step {
-        my @new;
-        for ^$!height X ^$!width -> $i, $j {
+	my @heat;
+        for @!cells -> $i, $j {
             given @!grid[$i][$j] {
-                when Empty   { @new[$i][$j] = rand < $!p ?? Tree !! Empty }
-                when Tree    { @new[$i][$j] =
-                     (@!neighbors[$i][$j].any === Burning or rand < $!f) ?? Burning !! Tree;
-                }
-                when Burning { @new[$i][$j] = Empty }
+                when Empty   { @!grid[$i][$j] = rand < $!p ?? Tree !! Empty }
+                when Tree    { @!grid[$i][$j] = rand < $!f ?? Heating !! Tree }
+                when Heating { @!grid[$i][$j] = Burning; push @heat, $i, $j; }
+                when Burning { @!grid[$i][$j] = Empty }
             }
         }
-        for ^$!height X ^$!width -> $i, $j {
-            @!grid[$i][$j] = @new[$i][$j];
-        }
+	for @heat -> $i,$j {
+	    $_ = Heating for @!neighbors[$i][$j].grep(Tree);
+	}
     }
 
-    method Str {
-        join '', gather for ^$!height -> $i {
-            take @show[@!grid[$i].list], "\n";
+    method show {
+        for ^$!height -> $i {
+            say @show[@!grid[$i].list].join;
         }
     }
 }
@@ -64,7 +66,7 @@ print "\e[2J";      # ANSI clear screen
 my $i = 0;
 loop {
     print "\e[H";   # ANSI home
-    say $i++;
-    say $f.Str;
+    say $CLEAR, $i++;
+    $f.show;
     $f.step;
 }

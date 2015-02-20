@@ -1,6 +1,4 @@
-(0 to: 4)
-    combinations: 3 atATimeDo: [ :x |
-        ':-)' logCr: x ].
+(0 to: 4) combinations: 3 atATimeDo: [ :x | Transcript cr; show: x printString].
 
 "output on Transcript:
 #(0 1 2)

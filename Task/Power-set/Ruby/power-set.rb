@@ -1,5 +1,6 @@
 # Based on http://johncarrino.net/blog/2006/08/11/powerset-in-ruby/
-# See the link if you want a shorter version. This was intended to show the reader how the method works.
+# See the link if you want a shorter version.
+This was intended to show the reader how the method works.
 class Array
   # Adds a power_set method to every array, i.e.: [1, 2].power_set
   def power_set

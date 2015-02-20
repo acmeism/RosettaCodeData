@@ -1,8 +1,6 @@
-object Binomial extends App {
-  def binomialCoefficient(n: Int, k: Int) =
-    (BigInt(n - k + 1) to n).product /
-    (BigInt(1) to k).product
-
-  val Array(n, k) = args.map(_.toInt)
-  println("The Binomial Coefficient of %d and %d equals %,3d.".format(n, k, binomialCoefficient(n, k)))
-}
+  def bico(n: Long, k: Long): Long = (n, k) match {
+    case (n, 0) => 1
+    case (0, k) => 0
+    case (n, k) => bico(n - 1, k - 1) + bico(n - 1, k)
+  }
+  println("bico(5,3) = " + bico(5, 3))

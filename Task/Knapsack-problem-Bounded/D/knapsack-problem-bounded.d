@@ -18,16 +18,15 @@ immutable Item[] items = [
     {"sunglasses",    7,  20, 1}, {"towel",        18,  12, 2},
     {"socks",         4,  50, 1}, {"book",         30,  10, 2}];
 
-Tuple!(int,const(int)[]) chooseItem(in int iWeight, in int idx)
-nothrow {
-    alias memoize!chooseItem memoChooseItem;
+Tuple!(int, const(int)[]) chooseItem(in int iWeight, in int idx) nothrow @safe {
+    alias memoChooseItem = memoize!chooseItem;
     if (idx < 0)
-        return typeof(return).init;
+        return typeof(return)();
 
     int bestV;
     const(int)[] bestList;
     with (items[idx])
-        foreach (i; 0 .. quantity + 1) {
+        foreach (immutable i; 0 .. quantity + 1) {
             immutable wlim = iWeight - i * weight;
             if (wlim < 0)
                 break;
@@ -48,7 +47,7 @@ void main() {
     const v_lst = chooseItem(400, items.length - 1);
 
     int w;
-    foreach (i, cnt; v_lst[1])
+    foreach (immutable i, const cnt; v_lst[1])
         if (cnt > 0) {
             writeln(cnt, " ", items[i].name);
             w += items[i].weight * cnt;

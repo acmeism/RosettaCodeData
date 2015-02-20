@@ -1,9 +1,8 @@
 import std.stdio, std.algorithm, std.array, combinations3;
 
-auto permutationTest(T)(in T[] a, in T[] b) /*pure nothrow*/ {
+auto permutationTest(T)(in T[] a, in T[] b) pure nothrow @safe {
     immutable tObs = a.sum;
-    //auto combs = combinations!false(a ~ b, a.length); // Not a Range.
-    const combs = combinations(a ~ b, a.length).array; // Slow.
+    auto combs = combinations!false(a ~ b, a.length);
     immutable under = combs.count!(perm => perm.sum <= tObs);
     return under * 100.0 / combs.length;
 }

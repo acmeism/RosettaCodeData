@@ -46,12 +46,11 @@ int main()
   int f;
 
   for (f = 0; ; f = 1 - f) {
-#ifdef ANIMATE_VT100_POSIX
-    puts("\x1b[H");
-#endif
     puts(world_7x14[f]);
     next_world(world_7x14[f], world_7x14[1-f], 14, 7);
 #ifdef ANIMATE_VT100_POSIX
+    printf("\x1b[%dA", 8);
+    printf("\x1b[%dD", 14);
     {
       static const struct timespec ts = { 0, 100000000 };
       nanosleep(&ts, 0);

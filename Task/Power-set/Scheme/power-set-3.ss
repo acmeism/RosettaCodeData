@@ -1,7 +1,5 @@
-(1 2)
-(1 3)
-(1)
-(2 3)
-(2)
-(3)
-()
+(define (power_set_iter set)
+  (let loop ((res '(())) (s set))
+    (if (empty? s)
+        res
+        (loop (append (map (lambda (i) (cons (car s) i)) res) res) (cdr s)))))

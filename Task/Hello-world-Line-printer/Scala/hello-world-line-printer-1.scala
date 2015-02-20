@@ -1,12 +1,15 @@
 import java.awt.print.PrinterException
-import javax.swing.JTextPane
+import scala.swing.TextArea
 
-object LinePrinter0 extends App {
-  val show = false
-  val text = """Hello, World! in printing."""
+object LinePrinter extends App {
+  val (show, context) = (false, "Hello, World!")
   try // Default Helvetica, 12p
-    new JTextPane() { setText(text) }.print(null, null, show, null, null, show)
+    new TextArea(context) {
+      append(" in printing.")
+      peer.print(null, null, show, null, null, show)
+    }
   catch {
     case ex: PrinterException => ex.getMessage()
   }
+  println("Document printed.")
 }

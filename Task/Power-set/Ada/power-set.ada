@@ -1,84 +1,42 @@
-with Ada.Text_IO;  use Ada.Text_IO;
+with Ada.Text_IO, Ada.Command_Line;
 
 procedure Power_Set is
-   type Universe is (A,B,C,D,E);
 
-   -- The type Set are subsets of Universe
-   type Set is array (Universe) of Boolean;
-   Empty : constant Set := (others => False);
-   function Cardinality (X : Set) return Natural is
-      N : Natural := 0;
+   type List is array  (Positive range <>) of Positive;
+   Empty: List(1 .. 0);
+
+   procedure Print_All_Subsets(Set: List; Printable: List:= Empty) is
+	
+      procedure Print_Set(Items: List) is
+	 First: Boolean := True;
+      begin
+	 Ada.Text_IO.Put("{ ");
+	 for Item of Items loop
+	    if First then
+	       First := False; -- no comma needed
+	    else
+	       Ada.Text_IO.Put(", "); -- comma, to separate the items
+	    end if;
+	    Ada.Text_IO.Put(Ada.Command_Line.Argument(Item));
+	 end loop;
+	 Ada.Text_IO.Put_Line(" }");
+      end Print_Set;
+
+      Tail: List := Set(Set'First+1 .. Set'Last);
+
    begin
-      for I in X'Range loop
-         if X (I) then
-            N := N + 1;
-         end if;
-      end loop;
-      return N;
-   end Cardinality;
-   function Element (X : Set; Position : Positive) return Universe is
-      N : Natural := 0;
-   begin
-      for I in X'Range loop
-         if X (I) then
-            N := N + 1;
-            if N = Position then
-               return I;
-            end if;
-         end if;
-      end loop;
-      raise Constraint_Error;
-   end Element;
-   procedure Put (X : Set) is
-      Empty : Boolean := True;
-   begin
-      for I in X'Range loop
-         if X (I) then
-            if Empty then
-               Empty := False;
-               Put (Universe'Image (I));
-            else
-               Put ("," & Universe'Image (I));
-            end if;
-         end if;
-      end loop;
-      if Empty then
-         Put ("empty");
+      if Set = Empty then
+	 Print_Set(Printable);
+      else
+	 Print_All_Subsets(Tail, Printable & Set(Set'First));
+	 Print_All_Subsets(Tail, Printable);
       end if;
-   end Put;
+   end Print_All_Subsets;
 
-   -- Set_Of_Set are sets of subsets of Universe
-   type Set_Of_Sets is array (Positive range <>) of Set;
-
-   function Power (X : Set) return Set_Of_Sets is
-      Length : constant Natural := Cardinality (X);
-      Index  : array (1..Length) of Integer := (others => 0);
-      Result : Set_Of_Sets (1..2**Length)   := (others => Empty);
-   begin
-      for N in Result'Range loop
-         for I in 1..Length loop -- Index determines the sample N
-            exit when Index (I) = 0;
-            Result (N) (Element (X, Index (I))) := True;
-         end loop;
-  Next : for I in 1..Length loop -- Computing the index of the following sample
-            if Index (I) < Length then
-               Index (I) := Index (I) + 1;
-               if I = 1 or else Index (I - 1) > Index (I) then
-                  for J in reverse 2..I loop
-                     Index (J - 1) := Index (J) + 1;
-                  end loop;
-                  exit Next;
-               end if;
-            end if;
-         end loop Next;
-      end loop;
-      return Result;
-   end Power;
-
-   P : Set_Of_Sets := Power ((A|C|E => True, others => False));
+   Set: List(1 .. Ada.Command_Line.Argument_Count);
 begin
-   for I in P'Range loop
-      New_Line;
-      Put (P (I));
+   for I in Set'Range loop -- initialize set
+      Set(I) := I;
    end loop;
+   Print_All_Subsets(Set); -- do the work
 end Power_Set;

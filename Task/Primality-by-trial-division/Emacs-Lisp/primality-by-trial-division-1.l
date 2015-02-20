@@ -1,0 +1,5 @@
+(defun prime (a)
+  (not (or (< a 2)
+           (loop for x from 2 to (sqrt a)
+                 when (zerop (% a x))
+                 return t))))

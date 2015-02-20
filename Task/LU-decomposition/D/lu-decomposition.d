@@ -1,11 +1,11 @@
 import std.stdio, std.algorithm, std.typecons, std.numeric,
        std.array, std.conv, std.string, std.range;
 
-bool isRectangular(T)(in T[][] m) pure nothrow {
+bool isRectangular(T)(in T[][] m) pure nothrow @nogc {
     return m.all!(r => r.length == m[0].length);
 }
 
-bool isSquare(T)(in T[][] m) pure nothrow {
+bool isSquare(T)(in T[][] m) pure nothrow @nogc {
     return m.isRectangular && m[0].length == m.length;
 }
 
@@ -34,7 +34,7 @@ in {
 } body {
     immutable n = m.length;
     auto id = iota(n)
-              .map!((in j) => n.iota.map!(i => cast(T)(i == j)).array)
+              .map!((in j) => n.iota.map!(i => T(i == j)).array)
               .array;
 
     foreach (immutable i; 0 .. n) {

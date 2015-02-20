@@ -3,6 +3,10 @@ use warnings;
 use constant pi => 4*atan2(1, 1);
 use constant e  => exp(1);
 
+# Normally would be:  use Math::MPFR
+# but this will use it if it's installed and ignore otherwise
+my $have_MPFR = eval { require Math::MPFR; Math::MPFR->import(); 1; };
+
 sub Gamma {
     my $z = shift;
     my $method = shift // 'lanczos';
@@ -51,10 +55,15 @@ sub Gamma {
         no warnings qw(recursion);
         $z < 100 ? Gamma($z + 1, $method)/$z :
         sqrt(2*pi*$z)*($z/e + 1/(12*e*$z))**$z / $z;
+    } elsif ($method eq 'MPFR') {
+        my $result = Math::MPFR->new();
+        Math::MPFR::Rmpfr_gamma($result, Math::MPFR->new($z), 0);
+        $result;
     } else { die "unknown method '$method'" }
 }
 
-for my $method (qw(lanczos taylor stirling)) {
+for my $method (qw(MPFR lanczos taylor stirling)) {
+    next if $method eq 'MPFR' && !$have_MPFR;
     printf "%10s: ", $method;
     print join(' ', map { sprintf "%.12f", Gamma($_/3, $method) } 1 .. 10);
     print "\n";

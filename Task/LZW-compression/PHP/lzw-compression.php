@@ -11,7 +11,8 @@ class LZW
         }
         for ($i = 0; $i < strlen($unc); $i++) {
             $c = $unc[$i];
-            if (property_exists($dictionary, $w.$c)) {
+            $wc = $w.$c;
+            if (array_key_exists($w.$c, $dictionary)) {
                 $w = $w.$c;
             } else {
                 array_push($result,$dictionary[$w]);
@@ -22,7 +23,6 @@ class LZW
         if ($w !== "") {
             array_push($result,$dictionary[$w]);
         }
-        array_shift($result);
         return implode(",",$result);
     }
 

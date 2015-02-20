@@ -1,4 +1,4 @@
-require "rational"
+require "rational" # for Ruby versions before 2.0
 
 def play
   digits = Array.new(4){rand(1..9)}

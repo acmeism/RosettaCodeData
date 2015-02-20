@@ -1,34 +1,34 @@
-/*REXX program to create a list of character names & remarks. */
-charname.=
-charname.1="April"
-charname.2="Tam O'Shanter"
-charname.3="Emily"
-                           do i=1 while charname.i\==''
-                           say 'charname' i '=' charname.i
-                           end   /*i*/;     say
-remark.=
-remark.1="I'm > Tam and <= Emily"
-remark.2="When chapman billies leave the street ..."
-remark.3="Short & shift"
-                           do k=1 while remark.k\==''
-                           say '  remark' k '=' remark.k
-                           end   /*k*/;     say
-items=0
-header='CharacterRemarks'
-header=header'>'
+/*REXX program creates an  HTML  list of character names  and  remarks. */
+charname.  =
+charname.1 = "April"
+charname.2 = "Tam O'Shanter"
+charname.3 = "Emily"
+                              do i=1  while  charname.i\==''
+                              say 'charname'   i   '='   charname.i
+                              end   /*i*/;     say
+remark.  =
+remark.1 = "I'm > Tam and <= Emily"
+remark.2 = "When chapman billies leave the street ..."
+remark.3 = "Short & shift"
+                              do k=1  while  remark.k\==''
+                              say '  remark'   k   '='   remark.k
+                              end   /*k*/;     say
+items  = 0
+header = 'CharacterRemarks'
+header = header'>'
 
-    do j=1 while charname.j\==''
+    do j=1  while  charname.j\==''
     _=charname.j
-    if j==1 then call create '<'header
+    if j==1  then call create '<'header
     call create '    <Character name="' ||,
                 char2xml(_)'">"' ||,
                 char2xml(remark.j)'"</Character>'
     end   /*j*/
 
-if create.0\==0 then call create '</'header
+if create.0\==0  then call create '</'header
 
-        do m=1 for create.0
-        say create.m
+        do m=1  for create.0
+        say create.m                   /*display the  Mth  entry to term*/
         end   /*m*/
 exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────CREATE subroutine───────────────────*/
@@ -38,28 +38,26 @@ create.0=items                         /*indicate how many items in list*/
 return
 /*──────────────────────────────────XML_ subroutine─────────────────────*/
 xml_: parse arg _                      /*make an XML entity   (&xxxx;)  */
-if pos(_,x)\==0 then return changestr(_,x,"&"arg(2)";")
-return x
+if pos(_,x)\==0  then return changestr(_,x,"&"arg(2)";")
+                      return x
 /*──────────────────────────────────CHAR2XML subroutine─────────────────*/
-char2xml: procedure; parse arg x
-a=pos('&',x)\==0                /*ampersands have to be treated special.*/
-b=pos(';',x)\==0                /*semicolons have to be treated special.*/
+char2xml: procedure;  parse arg x
+a=pos('&',x)\==0                       /* &  have to be treated special.*/
+b=pos(';',x)\==0                       /* ;    "   "  "    "       "    */
 xml0=0
-
-if a\==0 then do
-              a=1    /*below, find a free character to translate freely.*/
-                do j=0 to 254; ?=d2c(j); if pos(?,x)==0 then leave; end
-              x=translate(x,?,"&");xml0=j+1
-              end
-
-if b\==0 then do
-              b=1    /*below, find a free character to translate freely.*/
-                do j=xml0 to 254; ??=d2c(j); if pos(??,x)==0 then leave; end
-              x=translate(x,??,";")
-              end
-                                /*Following are a few of the chars in   */
-                                /*the DOS (DOS under Windows)  codepage.*/
-
+                                       /* [↓]  find a free character ···*/
+if a  then do                          /*          ··· translate freely·*/
+              do j=0  to 254;   ?=d2c(j);  if pos(?,x)==0  then leave; end
+           x=translate(x,?,"&");        xml0=j+1
+           end
+                                       /* [↓]  find a free character ···*/
+if b  then do                          /*          ··· translate freely·*/
+              do j=xml0 to 254; ??=d2c(j); if pos(??,x)==0 then leave; end
+           x=translate(x,??,";")
+           end
+                                       /*Following are a few of the     */
+                                       /*characters in the DOS (or DOS  */
+                                       /*Windows)  codepage   437       */
 x=XML_('♥',"hearts")           ; x=XML_('â',"ETH")    ; x=XML_('ƒ',"fnof")  ; x=XML_('═',"boxH")
 x=XML_('♦',"diams")            ; x=XML_('â','#x00e2') ; x=XML_('á',"aacute"); x=XML_('╬',"boxVH")
 x=XML_('♣',"clubs")            ; x=XML_('â','#x00e9') ; x=XML_('á','#x00e1'); x=XML_('╧',"boxHu")
@@ -113,6 +111,6 @@ x=XML_('é',"eacute")           ; x=XML_('¢',"cent")   ; x=XML_('╩',"boxHU") 
 x=XML_('é','#x00e9')           ; x=XML_('£',"pound")  ; x=XML_('╦',"boxHD") ; x=XML_('²',"sup2")
 x=XML_('â',"acirc")            ; x=XML_('¥',"yen")    ; x=XML_('╠',"boxVR") ; x=XML_('■',"squart ")
 
-if a then x=xml_(?,"amp")    /*if we had an ampersand, translate it now.*/
-if b then x=xml_(??,"semi")  /*if we had a  semicolon, translate it now.*/
+if a  then x=xml_(?,"amp")     /*if there was an ampersand, translate it*/
+if b  then x=xml_(??,"semi")   /* "   "    "   " semicolon,     "      "*/
 return x

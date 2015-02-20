@@ -23,11 +23,11 @@ struct BalancedTernary {
         this.digits = inp.retro.map!(c => str2dig[c]).array;
     }
 
-    this(in long inp) const pure /*nothrow*/ {
+    this(in long inp) const pure nothrow {
         this.digits = _bint2ternary(inp.BigInt);
     }
 
-    this(in BigInt inp) const pure /*nothrow*/ {
+    this(in BigInt inp) const pure nothrow {
         this.digits = _bint2ternary(inp);
     }
 
@@ -36,12 +36,12 @@ struct BalancedTernary {
         this.digits = inp.digits;
     }
 
-    private this(in Dig[] inp) /*inout*/ pure nothrow {
+    private this(in Dig[] inp) pure nothrow {
         this.digits = inp;
     }
 
-    static Dig[] _bint2ternary(in BigInt n) pure /*nothrow*/ {
-        static py_div(T1, T2)(in T1 a, in T2 b) pure /*nothrow*/ {
+    static Dig[] _bint2ternary(in BigInt n) pure nothrow {
+        static py_div(T1, T2)(in T1 a, in T2 b) pure nothrow {
             if (a < 0) {
                 return (b < 0) ?
                        -a / -b :
@@ -62,7 +62,7 @@ struct BalancedTernary {
         }
     }
 
-    @property BigInt toBint() const pure /*nothrow*/ {
+    @property BigInt toBint() const pure nothrow {
         return reduce!((y, x) => x + 3 * y)(0.BigInt, digits.retro);
     }
 
@@ -139,6 +139,6 @@ void main() {
     immutable c = BalancedTernary("+-++-");
     writeln("c: ", c.toBint, ' ', c);
 
-    immutable r = a * (b - c);
+    const /*immutable*/ r = a * (b - c);
     writeln("a * (b - c): ", r.toBint, ' ', r);
 }

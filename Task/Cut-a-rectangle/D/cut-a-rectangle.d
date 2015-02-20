@@ -1,12 +1,4 @@
-import core.stdc.stdio, core.stdc.stdlib,
-       core.stdc.string, std.typetuple;
-
-template Range(uint stop) { // For loop unwinding.
-    static if (stop <= 0)
-        alias TypeTuple!() Range;
-    else
-        alias TypeTuple!(Range!(stop - 1), stop - 1) Range;
-}
+import core.stdc.stdio, core.stdc.stdlib, core.stdc.string, std.typecons;
 
 enum int[2][4] dir = [[0, -1], [-1, 0], [0, 1], [1, 0]];
 
@@ -15,7 +7,7 @@ __gshared uint w, h, len;
 __gshared ulong cnt;
 __gshared uint[4] next;
 
-void walk(in uint y, in uint x) nothrow {
+void walk(in uint y, in uint x) nothrow @nogc {
     if (!y || y == h || !x || x == w) {
         cnt += 2;
         return;
@@ -25,7 +17,7 @@ void walk(in uint y, in uint x) nothrow {
     grid[t]++;
     grid[len - t]++;
 
-    foreach (i; Range!4) // Manual loop unwinding.
+    foreach (immutable i; staticIota!(0, 4))
         if (!grid[t + next[i]])
             walk(y + dir[i][0], x + dir[i][1]);
 
@@ -33,7 +25,7 @@ void walk(in uint y, in uint x) nothrow {
     grid[len - t]--;
 }
 
-ulong solve(in uint hh, in uint ww, in bool recur) nothrow {
+ulong solve(in uint hh, in uint ww, in bool recur) nothrow @nogc {
     h = (hh & 1) ? ww : hh;
     w = (hh & 1) ? hh : ww;
 

@@ -21,7 +21,7 @@ r=abs(r);   x=abs(x)                   /*the absolute values of R and X.*/
 rm=r-1                                 /*just a fast version of  ROOT -1*/
 numeric form                           /*take a good guess at the root─┐*/
 parse value format(x,2,1,,0) 'E0' with ? 'E' _ .        /* ◄───────────┘*/
-g=(?/r'E'_%r)+(x>1)                    /*kinda uses a crude "logrithm". */
+g= (? / r'E'_ % r)  +  (x>1)           /*kinda uses a crude "logarithm".*/
 numeric fuzz 3                         /*fuzz digits for higher roots.  */
 d=5                                    /*start with only five digits.   */
      do until d==dm;   d=min(d+d,dm)   /*each interation doubles prec.  */

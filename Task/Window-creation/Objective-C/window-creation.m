@@ -10,7 +10,7 @@
 
 
 @implementation Win : NSWindow
--(id) init
+-(instancetype) init
 {
   if ((self = [super
     initWithContentRect: NSMakeRect(0, 0, 800, 600)

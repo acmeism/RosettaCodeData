@@ -1,27 +1,27 @@
 /*REXX program  evaluates  some expressions and verifies their veracity.*/
 parse arg digs .;  if digs=='' then digs=100     /*use default for digs?*/
-numeric digits digs+10;     numeric fuzz   3;    pi=pi();  !.=
- !.1 = 'pi/4 =    atan(1/2)    +    atan(1/3)'
- !.2 = 'pi/4 =  2*atan(1/3)    +    atan(1/7)'
- !.3 = 'pi/4 =  4*atan(1/5)    -    atan(1/239)'
- !.4 = 'pi/4 =  5*atan(1/7)    +  2*atan(3/79)'
- !.5 = 'pi/4 =  5*atan(29/278) +  7*atan(3/79)'
- !.6 = 'pi/4 =  atan(1/2)      +    atan(1/5)   +    atan(1/8)'
- !.7 = 'pi/4 =  4*atan(1/5)    -    atan(1/70)  +    atan(1/99)'
- !.8 = 'pi/4 =  5*atan(1/7)    +  4*atan(1/53)  +  2*atan(1/4443)'
- !.9 = 'pi/4 =  6*atan(1/8)    +  2*atan(1/57)  +    atan(1/239)'
-!.10 = 'pi/4 =  8*atan(1/10)   -    atan(1/239) -  4*atan(1/515)'
-!.11 = 'pi/4 = 12*atan(1/18)   +  8*atan(1/57)  -  5*atan(1/239)'
-!.12 = 'pi/4 = 16*atan(1/21)   +  3*atan(1/239) +  4*atan(3/1042)'
-!.13 = 'pi/4 = 22*atan(1/28)   +  2*atan(1/443) -  5*atan(1/1393) - 10*atan(1/11018)'
-!.14 = 'pi/4 = 22*atan(1/38)   + 17*atan(7/601) + 10*atan(7/8149)'
-!.15 = 'pi/4 = 44*atan(1/57)   +  7*atan(1/239) - 12*atan(1/682)  + 24*atan(1/12943)'
-!.16 = 'pi/4 = 88*atan(1/172)  + 51*atan(1/239) + 32*atan(1/682)  + 44*atan(1/5357)  + 68*atan(1/12943)'
-!.17 = 'pi/4 = 88*atan(1/172)  + 51*atan(1/239) + 32*atan(1/682)  + 44*atan(1/5357)  + 68*atan(1/12944)'
+numeric digits digs+10;     numeric fuzz   3;    pi=pi();  @.=
+ @.1 = 'pi/4 =    atan(1/2)    +    atan(1/3)'
+ @.2 = 'pi/4 =  2*atan(1/3)    +    atan(1/7)'
+ @.3 = 'pi/4 =  4*atan(1/5)    -    atan(1/239)'
+ @.4 = 'pi/4 =  5*atan(1/7)    +  2*atan(3/79)'
+ @.5 = 'pi/4 =  5*atan(29/278) +  7*atan(3/79)'
+ @.6 = 'pi/4 =  atan(1/2)      +    atan(1/5)   +    atan(1/8)'
+ @.7 = 'pi/4 =  4*atan(1/5)    -    atan(1/70)  +    atan(1/99)'
+ @.8 = 'pi/4 =  5*atan(1/7)    +  4*atan(1/53)  +  2*atan(1/4443)'
+ @.9 = 'pi/4 =  6*atan(1/8)    +  2*atan(1/57)  +    atan(1/239)'
+@.10 = 'pi/4 =  8*atan(1/10)   -    atan(1/239) -  4*atan(1/515)'
+@.11 = 'pi/4 = 12*atan(1/18)   +  8*atan(1/57)  -  5*atan(1/239)'
+@.12 = 'pi/4 = 16*atan(1/21)   +  3*atan(1/239) +  4*atan(3/1042)'
+@.13 = 'pi/4 = 22*atan(1/28)   +  2*atan(1/443) -  5*atan(1/1393) - 10*atan(1/11018)'
+@.14 = 'pi/4 = 22*atan(1/38)   + 17*atan(7/601) + 10*atan(7/8149)'
+@.15 = 'pi/4 = 44*atan(1/57)   +  7*atan(1/239) - 12*atan(1/682)  + 24*atan(1/12943)'
+@.16 = 'pi/4 = 88*atan(1/172)  + 51*atan(1/239) + 32*atan(1/682)  + 44*atan(1/5357)  + 68*atan(1/12943)'
+@.17 = 'pi/4 = 88*atan(1/172)  + 51*atan(1/239) + 32*atan(1/682)  + 44*atan(1/5357)  + 68*atan(1/12944)'
 
-        do j=1  while !.j\==''         /*evaluate each of the formulas. */
-        interpret  'answer='   "("   !.j   ")"      /*the heavy lifting.*/
-        say  right(word('bad OK',answer+1),3)": "     space(!.j,0)
+        do j=1  while  @.j\==''        /*evaluate each of the formulas. */
+        interpret  'answer='   "("   @.j   ")"      /*the heavy lifting.*/
+        say  right(word('bad OK',answer+1),3)": "     space(@.j,0)
         end   /*j*/                    /* [↑]  show OK | bad, formula.  */
 exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────subroutines─────────────────────────*/
@@ -29,9 +29,9 @@ Acos: procedure;  parse arg x;   if x<-1 | x>1  then call AcosErr
       return .5*pi()-Asin(x)
 
 Asin: procedure;  parse arg x;   if x<-1 | x>1  then call AsinErr;   s=x*x
-      if abs(x)>=.7  then return sign(x)*Acos(sqrt(1-s));  z=x;  o=x;  p=z
-      do j=2 by 2; o=o*s*(j-1)/j; z=z+o/(j+1); if z=p then leave; p=z; end
-      return z
+if abs(x)>=sqrt(2)*.5  then return sign(x)*Acos(sqrt(1-s)); z=x; o=x;  p=z
+    do j=2  by 2; o=o*s*(j-1)/j; z=z+o/(j+1); if z=p  then leave; p=z; end
+return z
 
 Atan: procedure; parse arg x; if abs(x)=1  then return pi()/4*sign(x)
                                                 return Asin(x/sqrt(1+x**2))

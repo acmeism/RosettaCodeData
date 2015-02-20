@@ -1,7 +1,7 @@
-Shoes.app(:height => 700, :width => 800) do
+Shoes.app(title: "Honeycombs", height: 700, width: 700) do
   C = Math::cos(Math::PI/3)
   S = Math::sin(Math::PI/3)
-  Radius = 60
+  Radius = 60.0
   letters = [
     %w[L A R N D 1 2],
     %w[G U I Y T 3 4],
@@ -11,11 +11,11 @@ Shoes.app(:height => 700, :width => 800) do
   ]
 
   def highlight(hexagon)
-    hexagon.style(:fill => magenta)
+    hexagon.style(fill: magenta)
   end
 
   def unhighlight(hexagon)
-    hexagon.style(:fill => yellow)
+    hexagon.style(fill: yellow)
   end
 
   def choose(hexagon)
@@ -25,8 +25,8 @@ Shoes.app(:height => 700, :width => 800) do
     if chosen.size == @hexagons.size
       @chosen.text = 'Every hexagon has been chosen.'
     else
-      @chosen.text = "Chosen: #{chosen.sort.join(',')}" +
-                     "\nLast Chosen: #{hexagon.letter}"
+      @chosen.text = "Chosen: #{chosen.sort.join(',')}\n" +
+                     "Last Chosen: #{hexagon.letter}"
     end
   end
 
@@ -36,23 +36,22 @@ Shoes.app(:height => 700, :width => 800) do
   letter_to_hex = {}
 
   # create the GUI
-  stack(:height => height, :width => width) do
+  stack(height: height, width: width) do
     @chosen = para("Chosen:\nLast chosen:")
 
     # draw the hexagrams
-    letters.size.times do |row|
-      letters[0].size.times do |column|
-        x = 60 + column * Radius * 0.75 + (1-S)*Radius
-        y = 80 + row * Radius * S + (column.odd? ? S * Radius * 0.5 : 0)
+    letters.each_index do |row|
+      letters[0].each_index do |column|
+        x = 60 + column * Radius * 0.75 + (1-S) * Radius
+        y = 80 + row * S * Radius + (column.odd? ? S * Radius * 0.5 : 0)
         h = shape(x-Radius, y-S*Radius) do
-          stroke red
           strokewidth 3
           move_to(x-C*Radius, y-S*Radius)
           line_to(x+C*Radius, y-S*Radius)
-          line_to(x+Radius, y)
+          line_to(x+Radius,   y)
           line_to(x+C*Radius, y+S*Radius)
           line_to(x-C*Radius, y+S*Radius)
-          line_to(x-Radius, y)
+          line_to(x-Radius,   y)
           line_to(x-C*Radius, y-S*Radius)
         end
 
@@ -65,26 +64,26 @@ Shoes.app(:height => 700, :width => 800) do
           def choose
             @state = :chosen
           end
-          def contains?(px,py)
+          def contains?(px, py)
             if @x-Radius < px and px <= @x-C*Radius
-              ratio = (px - @x + Radius).to_f/(Radius*(1-C))
-              return (@y - ratio*S*Radius < py and py <= @y + ratio*S*Radius)
+              ratio = (px - @x + Radius)/(Radius*(1-C))
+              @y - ratio*S*Radius < py and py <= @y + ratio*S*Radius
             elsif @x-C*Radius < px and px <= @x+C*Radius
-              return (@y - S*Radius < py and py < @y + S*Radius)
+              @y - S*Radius < py and py < @y + S*Radius
             elsif @x+C*Radius < px and px <= @x+Radius
-              ratio = (@x + Radius - px).to_f/(Radius*(1-C))
-              return (@y - ratio*S*Radius < py and py <= @y + ratio*S*Radius)
+              ratio = (@x + Radius - px)/(Radius*(1-C))
+              @y - ratio*S*Radius < py and py <= @y + ratio*S*Radius
             else
-              return false
+              false
             end
           end
           def inspect
-            '<%s,"%s",%s,%d@%d>' % [self.class, letter, chosen?, x, y]
+            %q(<%s,"%s",%s,%d@%d>) % [self.class, letter, chosen?, x, y]
           end
         end
 
-        h.x = x + x-Radius
-        h.y = y + y-S*Radius
+        h.x = x + x - Radius
+        h.y = y + y - S*Radius
         h.letter = letters[row][column]
         unhighlight h
 
@@ -93,30 +92,29 @@ Shoes.app(:height => 700, :width => 800) do
         letter_to_hex[h.letter.upcase] = h
 
         # add the letter to the hexagon
-        para(h.letter) \
-          .style(:size => 56, :stroke => red) \
-          .move(h.x - C*Radius, h.y - S*Radius)
+        para(h.letter).style(size:56, stroke:red) \
+                      .move(h.x - C*Radius, h.y - S*Radius)
       end
     end
 
     # highlight the hexagon under the mouse
-    @hex_over = nil
+    hex_over = nil
     motion do |x, y|
       hex = @hexagons.find {|h| h.contains?(x,y)}
       unless hex.nil? or hex.chosen?
         highlight hex
       end
-      unless @hex_over == hex or @hex_over.nil? or @hex_over.chosen?
-        unhighlight @hex_over
+      unless hex_over == hex or hex_over.nil? or hex_over.chosen?
+        unhighlight hex_over
       end
-      @hex_over = hex
+      hex_over = hex
     end
 
     # handle mouse clicks
     click do |button, x, y|
       info("button #{button} clicked at (#{x}, #{y})")
       hexagon = @hexagons.find {|h| h.contains?(x,y)}
-      unless hexagon.nil?
+      if hexagon
         info("clicked hexagon #{hexagon}")
         choose hexagon
       end

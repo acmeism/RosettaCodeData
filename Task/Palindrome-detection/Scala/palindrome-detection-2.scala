@@ -1,5 +1,5 @@
-  def isPalindromeSentence(s: String): Boolean = {
-    if (s.size < 2) return false
-    val p = s.replaceAll("[^\\p{L}]", "").toLowerCase;
-    p == p.reverse
-  }
+  def isPalindromeSentence(s: String): Boolean =
+    (s.size >= 2) && {
+      val p = s.replaceAll("[^\\p{L}]", "").toLowerCase
+      p == p.reverse
+    }

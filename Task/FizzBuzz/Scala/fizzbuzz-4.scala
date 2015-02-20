@@ -1,2 +1,1 @@
-def f(a:Int,b:Int,c:String, d:String):String = if(a % b == 0) c else d
-for(i <- 1 to 100) println(f(i,15,"FizzBuzz", f(i,3,"Fizz", f(i,5,"Buzz", i.toString))))
+for (n <- 1 to 100) println(List((15, "FizzBuzz"), (3, "Fizz"), (5, "Buzz")).find(t => n % t._1 == 0).getOrElse((0, n.toString))._2)

@@ -1,14 +1,13 @@
 import std.random;
 
-bool isProbablePrime(in ulong n, in int k) {
-    static long modPow(long b, long e, in long m)
-    pure nothrow {
-        long result = 1;
+bool isProbablePrime(in ulong n, in uint k=10) /*nothrow*/ @safe /*@nogc*/ {
+    static ulong modPow(ulong b, ulong e, in ulong m)
+    pure nothrow @safe @nogc {
+        ulong result = 1;
         while (e > 0) {
-            if ((e & 1) == 1) {
+            if ((e & 1) == 1)
                 result = (result * b) % m;
-            }
-            b = (b * b) % m;
+            b = (b ^^ 2) % m;
             e >>= 1;
         }
         return result;
@@ -26,15 +25,17 @@ bool isProbablePrime(in ulong n, in int k) {
     assert(2 ^^ s * d == n - 1);
 
     outer:
-    foreach (_; 0 .. k) {
-        ulong a = uniform(2, n);
+    foreach (immutable _; 0 .. k) {
+        immutable ulong a = uniform(2, n);
         ulong x = modPow(a, d, n);
         if (x == 1 || x == n - 1)
             continue;
-        foreach (__; 1 .. s) {
+        foreach (immutable __; 1 .. s) {
             x = modPow(x, 2, n);
-            if (x == 1) return false;
-            if (x == n - 1) continue outer;
+            if (x == 1)
+                return false;
+            if (x == n - 1)
+                continue outer;
         }
         return false;
     }
@@ -42,7 +43,8 @@ bool isProbablePrime(in ulong n, in int k) {
     return true;
 }
 
-void main() { // demo code
+void main() { // Demo code.
     import std.stdio, std.range, std.algorithm;
-    writeln(filter!(n => isProbablePrime(n, 10))(iota(2, 30)));
+
+    iota(2, 30).filter!isProbablePrime.writeln;
 }

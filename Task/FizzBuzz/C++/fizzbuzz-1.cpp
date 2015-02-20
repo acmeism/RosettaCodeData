@@ -1,18 +1,18 @@
 #include <iostream>
 
 using namespace std;
-int main () {
-
-       int i;
-       for (i = 0; i <= 100; i++) {
+int main ()
+{
+       for (int i = 1; i <= 100; i++)
+       {
                if ((i % 15) == 0)
-                       cout << "FizzBuzz" << endl;
+                       cout << "FizzBuzz\n";
                else if ((i % 3) == 0)
-                       cout << "Fizz" << endl;
+                       cout << "Fizz\n";
                else if ((i % 5) == 0)
-                       cout << "Buzz" << endl;
+                       cout << "Buzz\n";
                else
-                       cout << i << endl;
+                       cout << i << "\n";
        }
        return 0;
 }

@@ -1,5 +1,5 @@
-import std.stdio, std.string;
-
 void main() {
-    "Hello,How,Are,You,Today".split(",").join(".").writeln();
+    import std.stdio, std.string;
+
+    "Hello,How,Are,You,Today".split(',').join('.').writeln;
 }

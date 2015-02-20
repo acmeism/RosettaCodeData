@@ -1,9 +1,10 @@
- # printing the value
- print ${$scalar};
- print $arrayref->[1];          # this would print "array"
- print $hashref->{'secondkey'}; # this would print "hash"
+ # accessing the value
+ print $$scalarref;     # 'aa'
+ print @$arrayref;      # 'bbcc'
+ print $arrayref->[1];  # 'cc'
+ print $hashref->{ee};  # 'EE'
 
  # changing the value
- ${$scalar} = 'a new string';       # would change $scalar as well
- $arrayref->[0] = 'an altered';     # would change the first value of @array as well
- $hashref->{'firstkey'} = 'a good'; # would change the value of the firstkey name value pair in %hash
+ $$scalarref = 'a new string'; # changes $scalar
+ $arrayref->[0] = 'foo';       # changes the first value of @array
+ $hashref->{'dd'} = 'bar';     # changes the value with key 'dd' in %hash

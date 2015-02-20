@@ -5,7 +5,7 @@ extern(C) pure nothrow void* alloca(in size_t size);
 void bestShuffle(in char[] txt, ref char[] result) pure nothrow {
     // Assume alloca to be pure.
     //extern(C) pure nothrow void* alloca(in size_t size);
-    enum size_t NCHAR = cast(size_t)char.max + 1;
+    enum size_t NCHAR = size_t(char.max + 1);
     enum size_t MAX_VLA_SIZE = 1024;
     immutable size_t len = txt.length;
     if (len == 0)
@@ -19,7 +19,7 @@ void bestShuffle(in char[] txt, ref char[] result) pure nothrow {
     // how many of each character?
     size_t[NCHAR] counts;
     size_t fmax = 0;
-    foreach (char c; txt) {
+    foreach (immutable char c; txt) {
         counts[c]++;
         if (fmax < counts[c])
             fmax = counts[c];
@@ -38,7 +38,7 @@ void bestShuffle(in char[] txt, ref char[] result) pure nothrow {
     }
     {
         int pos = 0;
-        foreach (size_t ch; 0 .. NCHAR)
+        foreach (immutable size_t ch; 0 .. NCHAR)
            if (counts[ch])
                 foreach (j, char c; txt)
                     if (c == ch) {
@@ -57,7 +57,7 @@ void bestShuffle(in char[] txt, ref char[] result) pure nothrow {
     }
     {
         size_t n, m;
-        foreach (size_t i; 0 .. len) {
+        foreach (immutable size_t i; 0 .. len) {
             ndx2[i] = ndx1[n];
             n += fmax;
             if (n >= len) {
@@ -67,27 +67,27 @@ void bestShuffle(in char[] txt, ref char[] result) pure nothrow {
         }
     }
 
-    // how long can our cyclic groups be?
+    // How long can our cyclic groups be?
     immutable size_t grp = 1 + (len - 1) / fmax;
 
-    // how many of them are full length?
+    // How many of them are full length?
     immutable size_t lng = 1 + (len - 1) % fmax;
 
-    // rotate each group
+    // Rotate each group.
     {
         size_t j;
-        foreach (size_t i; 0 .. fmax) {
+        foreach (immutable size_t i; 0 .. fmax) {
             immutable size_t first = ndx2[j];
             immutable size_t glen = grp - (i < lng ? 0 : 1);
-            foreach (size_t k; 1 .. glen)
+            foreach (immutable size_t k; 1 .. glen)
                 ndx1[j + k - 1] = ndx2[j + k];
             ndx1[j + glen - 1] = first;
             j += glen;
         }
     }
 
-    // result is original permuted according to our cyclic groups
-    foreach (size_t i; 0 .. len)
+    // Result is original permuted according to our cyclic groups.
+    foreach (immutable size_t i; 0 .. len)
         result[ndx2[i]] = txt[ndx1[i]];
 }
 
@@ -97,7 +97,7 @@ void main() {
     foreach (txt; data) {
         auto result = txt.dup;
         bestShuffle(txt, result);
-        immutable nEqual = zip(txt, result).count!q{a[0] == a[1]}();
+        immutable nEqual = zip(txt, result).count!q{ a[0] == a[1] };
         writefln("%s, %s, (%d)", txt, result, nEqual);
     }
 }

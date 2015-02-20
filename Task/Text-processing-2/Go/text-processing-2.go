@@ -1,81 +1,75 @@
 package main
 
 import (
-    "bufio"
-    "fmt"
-    "io"
-    "os"
-    "strconv"
-    "strings"
+	"bufio"
+	"fmt"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+	"time"
 )
 
-var fn = "readings.txt"
+const (
+	filename   = "readings.txt"
+	readings   = 24             // per line
+	fields     = readings*2 + 1 // per line
+	dateFormat = "2006-01-02"
+)
 
 func main() {
-    f, err := os.Open(fn)
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
-    defer f.Close()
-    var allGood, uniqueGood int
-    // map records not only dates seen, but also if an all-good record was
-    // seen for the key date.
-    m := make(map[string]bool)
-    for lr := bufio.NewReader(f); ; {
-        line, pref, err := lr.ReadLine()
-        if err == io.EOF {
-            break
-        }
-        if err != nil {
-            fmt.Println(err)
-            return
-        }
-        if pref {
-            fmt.Println("Unexpected long line.")
-            return
-        }
-        f := strings.Fields(string(line))
-        if len(f) != 49 {
-            fmt.Println("unexpected format,", len(f), "fields.")
-            return
-        }
-        good := true
-        for i := 1; i < 49; i += 2 {
-            flag, err := strconv.Atoi(f[i+1])
-            if err != nil {
-                fmt.Println(err)
-                return
-            }
-            if flag > 0 { // value is good
-                _, err := strconv.ParseFloat(f[i], 64)
-                if err != nil {
-                    fmt.Println(err)
-                    return
-                }
-            } else { // value is bad
-                good = false
-            }
-        }
-        if good {
-            allGood++
-        }
-        previouslyGood, seen := m[f[0]]
-        if seen {
-            fmt.Println("Duplicate datestamp:", f[0])
-            if !previouslyGood && good {
-                m[string([]byte(f[0]))] = true
-                uniqueGood++
-            }
-        } else {
-            m[string([]byte(f[0]))] = good
-            if good {
-                uniqueGood++
-            }
-        }
-    }
-    fmt.Println("\nData format valid.")
-    fmt.Println(allGood, "records with good readings for all instruments.")
-    fmt.Println(uniqueGood,
-        "unique dates with good readings for all instruments.")
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	var allGood, uniqueGood int
+	// map records not only dates seen, but also if an all-good record was
+	// seen for the key date.
+	m := make(map[time.Time]bool)
+	s := bufio.NewScanner(file)
+	for s.Scan() {
+		f := strings.Fields(s.Text())
+		if len(f) != fields {
+			log.Fatal("unexpected format,", len(f), "fields.")
+		}
+		ts, err := time.Parse(dateFormat, f[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+		good := true
+		for i := 1; i < fields; i += 2 {
+			flag, err := strconv.Atoi(f[i+1])
+			if err != nil {
+				log.Fatal(err)
+			}
+			if flag > 0 { // value is good
+				_, err := strconv.ParseFloat(f[i], 64)
+				if err != nil {
+					log.Fatal(err)
+				}
+			} else { // value is bad
+				good = false
+			}
+		}
+		if good {
+			allGood++
+		}
+		previouslyGood, seen := m[ts]
+		if seen {
+			fmt.Println("Duplicate datestamp:", f[0])
+		}
+		m[ts] = previouslyGood || good
+		if !previouslyGood && good {
+			uniqueGood++
+		}
+	}
+	if err := s.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("\nData format valid.")
+	fmt.Println(allGood, "records with good readings for all instruments.")
+	fmt.Println(uniqueGood,
+		"unique dates with good readings for all instruments.")
 }

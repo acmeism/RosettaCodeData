@@ -1,9 +1,6 @@
-public static long fibTailRec(final int n)
+public static long anFibN(final long n)
 {
- return fibInner(0, 1, n);
-}
-
-private static long fibInner(final long a, final long b, final int n)
-{
- return n < 1 ? a : n == 1 ?  b : fibInner(b, a + b, n - 1);
+ double p = (1 + Math.sqrt(5)) / 2;
+ double q = 1 / p;
+ return (long) ((Math.pow(p, n) + Math.pow(q, n)) / Math.sqrt(5));
 }

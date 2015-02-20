@@ -1,29 +1,22 @@
-import scala.swing._
-import scala.swing.event._
-import scala.swing.Swing._
+import scala.swing.{ BorderPanel, Button, Label, MainFrame, SimpleSwingApplication }
+import scala.swing.event.ButtonClicked
 
 object SimpleApp extends SimpleSwingApplication {
   def top = new MainFrame {
-    var nClicks = 0
-
-    val button = new Button {
-      text = "click me"
-    }
-    val label = new Label {
-      text = "There have been no clicks yet"
-    }
     contents = new BorderPanel {
+      var nClicks = 0
+
+      val (button, label) = (new Button { text = "click me" },
+        new Label { text = "There have been no clicks yet" })
+
       layout(button) = BorderPanel.Position.South
       layout(label) = BorderPanel.Position.Center
-    }
-
-    preferredSize = ((300, 200): Dimension)
-
-    listenTo(button)
-    reactions += {
-      case ButtonClicked(_) =>
-        nClicks += 1
-        label.text = "There have been %d clicks" format nClicks
+      listenTo(button)
+      reactions += {
+        case ButtonClicked(_) =>
+          nClicks += 1
+          label.text = s"There have been ${nClicks} clicks"
+      }
     }
   }
 }

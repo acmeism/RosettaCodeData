@@ -1,27 +1,26 @@
 package main
 
 import (
-    "log"
-    "os"
-    "strconv"
-    "sync"
-    "time"
+	"fmt"
+	"log"
+	"os"
+	"strconv"
+	"time"
 )
 
 func main() {
-    lg := log.New(os.Stdout, "", 0)
-    var wg sync.WaitGroup
-    wg.Add(len(os.Args) - 1)
-    for _, a := range os.Args[1:] {
-        if i, err := strconv.ParseInt(a, 10, 64); err != nil {
-            lg.Print(err)
-            wg.Done()
-        } else {
-            time.AfterFunc(time.Duration(i*int64(time.Second)), func() {
-                lg.Print(i)
-                wg.Done()
-            })
-        }
-    }
-    wg.Wait()
+	out := make(chan uint64)
+	for _, a := range os.Args[1:] {
+		i, err := strconv.ParseUint(a, 10, 64)
+		if err != nil {
+			log.Fatal(err)
+		}
+		go func(n uint64) {
+			time.Sleep(time.Duration(n) * time.Millisecond)
+			out <- n
+		}(i)
+	}
+	for _ = range os.Args[1:] {
+		fmt.Println(<-out)
+	}
 }

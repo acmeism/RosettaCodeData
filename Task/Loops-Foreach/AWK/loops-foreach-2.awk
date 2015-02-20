@@ -1,3 +1,6 @@
-for(i=1; i <= length(strs); i++) {
-  print strs[i]
+BEGIN {
+  n = split("Mary had a little lamb", strs, " ")
+  for(i=1; i <= n; i++) {
+    print strs[i]
+  }
 }

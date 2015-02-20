@@ -36,7 +36,7 @@ if \datatype(yyy,'n')       then say 'oops, not numeric:' yyy
 if \datatype(yyy,'N')       then say 'oops, not numeric:' yyy
 if ¬datatype(yyy,'N')       then say 'oops, not numeric:' yyy
 if ¬datatype(yyy,'numeric') then say 'oops, not numeric:' yyy
-if ¬datatype(yyy,'nimrod.') then say 'oops, not numeric:' yyy
+if ¬datatype(yyy,'nim.') then say 'oops, not numeric:' yyy
 if  datatype(yyy)\=='NUM'   then say 'oops, not numeric:' yyy
 if  datatype(yyy)/=='NUM'   then say 'oops, not numeric:' yyy
 if  datatype(yyy)¬=='NUM'   then say 'oops, not numeric:' yyy

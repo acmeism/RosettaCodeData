@@ -1,1 +1,2 @@
-call lineout ,"Goodbye, World!"
+msgText = 'Goodbye, World!'
+call charout 'STDERR', msgText

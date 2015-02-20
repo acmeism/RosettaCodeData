@@ -3,7 +3,7 @@ with Ada.Text_IO;  use Ada.Text_IO;
 procedure String_Concatenation is
    S : String := "Hello";
 begin
-   Put_Line (S & " literal");
+   Put_Line (S);
    declare
       S1 : String := S & " literal";
    begin

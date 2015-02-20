@@ -1,23 +1,32 @@
-auto powerSet(T)(T[] xs) pure nothrow {
-    auto output = new T[xs.length];
-    immutable size_t len = 1U << xs.length;
-
-    struct Result {
+auto powerSet(T)(T[] xs) pure nothrow @safe {
+    static struct Result {
+        T[] xsLocal, output;
+        size_t len;
         size_t bits;
-        @property empty() const pure nothrow { return bits == len; }
-        void popFront() pure nothrow { bits++; }
-        @property save() pure nothrow { return this; }
 
-        T[] front() nothrow {
+        this(T[] xs_) pure nothrow @safe {
+            this.xsLocal = xs_;
+            this.output.length = xs_.length;
+            this.len = 1U << xs_.length;
+        }
+
+        @property empty() const pure nothrow @safe {
+            return bits == len;
+        }
+
+        void popFront() pure nothrow @safe { bits++; }
+        @property save() pure nothrow @safe { return this; }
+
+        T[] front() pure nothrow @safe {
             size_t pos = 0;
-            foreach (immutable size_t i; 0 .. xs.length)
+            foreach (immutable size_t i; 0 .. xsLocal.length)
                 if (bits & (1 << i))
-                    output[pos++] = xs[i];
+                    output[pos++] = xsLocal[i];
             return output[0 .. pos];
         }
     }
 
-    return Result();
+    return Result(xs);
 }
 
 version (power_set2_main) {

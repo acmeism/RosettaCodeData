@@ -1,6 +1,1 @@
-|s|
-s := 'foobar.txt' asFilename readStream.
-[ s atEnd ] whileFalse:[
-    s nextLine printCR.
-].
-s close
+'foobar.txt' asFilename readingLinesDo:[:eachLine | eachLine printCR]

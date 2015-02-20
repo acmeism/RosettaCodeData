@@ -1,39 +1,68 @@
-# Solve a Hidato Puzzle with Warnsdorff like logic applied
+# Solve a Hidato Like Puzzle with Warnsdorff like logic applied
 #
-#  Nigel_Galloway
-#  May 6th., 2012.
-class Cell
-  def initialize(row=0, col=0, value=nil)
-    @adj = [[row-1,col-1],[row,col-1],[row+1,col-1],[row-1,col],[row+1,col],[row-1,col+1],[row,col+1],[row+1,col+1]]
-    @t = false
-    $zbl[value] = true unless value.nil?
-    @value = value
-  end
-  def try(value=1)
-    return false if @value.nil?
-    return true  if value > $end
-    return false if @t
-    return false if @value > 0 and @value != value
-    return false if @value == 0 and $zbl[value]
-    @t = true
-    h = Hash.new
-    @adj.each_with_index do |(x,y), n|
-      cell = $board[x][y]
-      h[cell.wdof*10+n] = cell  if cell.value
+class HLPsolver
+  attr_reader :board
+  Cell = Struct.new(:value, :used, :adj)
+
+  def initialize(board, pout=true)
+    @board = []
+    frame = ADJACENT.flatten.map(&:abs).max
+    board.each_line do |line|
+      @board << line.split.map{|n| Cell[Integer(n), false] rescue nil} + [nil]*frame
     end
-    h.sort.each do |key, cell|
-      if (cell.try(value+1))
-        @value = value
+    frame.times {@board << []}                  # frame (Sentinel value : nil)
+    @board.each_with_index do |row, x|
+      row.each_with_index do |cell, y|
+        if cell
+          @sx, @sy = x, y  if cell.value==1     # start position
+          cell.adj = ADJACENT.map{|dx,dy| [x+dx,y+dy]}.select{|xx,yy| @board[xx][yy]}
+        end
+      end
+    end
+    @xmax = @board.size - frame
+    @ymax = @board.map(&:size).max - frame
+    @end  = @board.flatten.compact.size
+    @format = " %#{@end.to_s.size}s"
+    puts to_s('Problem:')  if pout
+  end
+
+  def solve
+    @zbl = Array.new(@end+1, false)
+    @board.flatten.compact.each{|cell| @zbl[cell.value] = true}
+    puts (try(@board[@sx][@sy], 1) ? to_s('Solution:') : "No solution")
+  end
+
+  def try(cell, seq_num)
+    value = cell.value
+    return false if value > 0 and value != seq_num
+    return false if value == 0 and @zbl[seq_num]
+    cell.used = true
+    if seq_num == @end
+      cell.value = seq_num
+      return true
+    end
+    a = []
+    cell.adj.each_with_index do |(x, y), n|
+      cl = @board[x][y]
+      a << [wdof(cl.adj)*10+n, x, y]  unless cl.used
+    end
+    a.sort.each do |key, x, y|
+      if try(@board[x][y], seq_num+1)
+        cell.value = seq_num
         return true
       end
     end
-    @t = false
+    cell.used = false
   end
-  def wdon
-    (@value.nil? or @value > 0 or @t) ? 0 : 1
+
+  def wdof(adj)
+    adj.count {|x,y| not @board[x][y].used}
   end
-  def wdof
-    @adj.inject(0){|res, (x,y)| res += $board[x][y].wdon}
+
+  def to_s(msg=nil)
+    str = (0...@xmax).map do |x|
+      (0...@ymax).map{|y| @format % ((c=@board[x][y]) ? c.value : c)}.join
+    end
+    (msg ? [msg] : []) + str + [""]
   end
-  attr_reader :value
 end

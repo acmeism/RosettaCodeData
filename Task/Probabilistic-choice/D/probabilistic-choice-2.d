@@ -12,11 +12,8 @@ void main() {
 
   double[pr.length] counts = 0.0;
   auto rnd = Xorshift(unpredictableSeed);
-  foreach (immutable _; 0 .. nTrials) {
-    immutable rnd01 = rnd.front / double(rnd.max);
-    rnd.popFront;
-    counts[cumulatives[].countUntil!(c => c >= rnd01)]++;
-  }
+  foreach (immutable _; 0 .. nTrials)
+    counts[cumulatives[].countUntil!(c => c >= rnd.uniform01)]++;
 
   writeln("Item    Target prob  Attained prob");
   foreach (name, p, co; zip(items, pr, counts[]))

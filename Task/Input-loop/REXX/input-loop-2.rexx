@@ -1,5 +1,4 @@
-/* -- AREXX -- */
-do until eof(stdin)
-  l = readln(stdin)
-  say l
-end
+Do Until input=''
+  input=linein(stdin)
+  Call lineout ,input
+  End

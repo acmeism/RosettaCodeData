@@ -1,0 +1,246 @@
+*process source attributes xref or(!);
+ arat: Proc Options(main);
+ /*--------------------------------------------------------------------
+ * Rational Arithmetic
+ * (Mis)use the Complex data type to represent fractions
+ * real(x) is used as numerator
+ * imag(x) is used as denominator
+ * Output:
+ * a=-3/7 b=9/2
+ * a*b=-27/14
+ * a+b=57/14
+ * a-b=-69/14
+ * a/b=-2/21
+ * -3/7<9/2
+ * 9/2>-3/7
+ * -3/7=-3/7
+ * 26.01.2015 handle 0/0
+ *-------------------------------------------------------------------*/
+ Dcl (abs,imag,mod,real,sign,trim) Builtin;
+ Dcl sysprint Print;
+ Dcl (candidate,max2,factor) Dec Fixed(15);
+ Dcl sum complex Dec Fixed(15);
+ Dcl one complex Dec Fixed(15);
+
+ one=mk_fr(1,1);
+ Put Edit('First solve the task at hand')(Skip,a);
+ Do candidate = 2 to 10000;
+   sum = mk_fr(1, candidate);
+   max2 = sqrt(candidate);
+   Do factor = 2 to max2;
+     If mod(candidate,factor)=0 Then Do;
+       sum=fr_add(sum,mk_fr(1,factor));
+       sum=fr_add(sum,mk_fr(1,candidate/factor));
+       End;
+     End;
+   If fr_cmp(sum,one)='=' Then Do;
+     Put Edit(candidate,' is a perfect number')(Skip,f(7),a);
+     Do factor = 2 to candidate-1;
+       If mod(candidate,factor)=0 Then
+         Put Edit(factor)(f(5));
+       End;
+     End;
+   End;
+
+ Put Edit('','Then try a few things')(Skip,a);
+ Dcl a Complex Dec Fixed(15);
+ Dcl b Complex Dec Fixed(15);
+ Dcl p Complex Dec Fixed(15);
+ Dcl s Complex Dec Fixed(15);
+ Dcl d Complex Dec Fixed(15);
+ Dcl q Complex Dec Fixed(15);
+ Dcl zero Complex Dec Fixed(15);
+ zero=mk_fr(0,1); Put Edit('zero=',fr_rep(zero))(Skip,2(a));
+ a=mk_fr(0,0);    Put Edit('a=',fr_rep(a))(Skip,2(a));
+ /*--------------------------------------------------------------------
+ a=mk_fr(-3333,0); Put Edit('a=',fr_rep(a))(Skip,2(a));
+ =>  Request mk_fr(-3333,0)
+     Denominator must not be 0
+     IBM0280I  ONCODE=0009  The ERROR condition was raised
+               by a SIGNAL statement.
+        At offset +00000276 in procedure with entry FT
+ *-------------------------------------------------------------------*/
+ a=mk_fr(0,3333); Put Edit('a=',fr_rep(a))(Skip,2(a));
+ Put Edit('-3,7')(Skip,a);
+ a=mk_fr(-3,7);
+ b=mk_fr(9,2);
+ p=fr_mult(a,b);
+ s=fr_add(a,b);
+ d=fr_sub(a,b);
+ q=fr_div(a,b);
+ r=fr_div(b,a);
+ Put Edit('a=',fr_rep(a))(Skip,2(a));
+ Put Edit('b=',fr_rep(b))(Skip,2(a));
+ Put Edit('a*b=',fr_rep(p))(Skip,2(a));
+ Put Edit('a+b=',fr_rep(s))(Skip,2(a));
+ Put Edit('a-b=',fr_rep(d))(Skip,2(a));
+ Put Edit('a/b=',fr_rep(q))(Skip,2(a));
+ Put Edit('b/a=',fr_rep(r))(Skip,2(a));
+ Put Edit(fr_rep(a),fr_cmp(a,b),fr_rep(b))(Skip,3(a));
+ Put Edit(fr_rep(b),fr_cmp(b,a),fr_rep(a))(Skip,3(a));
+ Put Edit(fr_rep(a),fr_cmp(a,a),fr_rep(a))(Skip,3(a));
+
+ mk_fr: Proc(n,d) Recursive Returns(Dec Fixed(15) Complex);
+ /*--------------------------------------------------------------------
+ * make a Complex number
+ * normalize and cancel
+ *-------------------------------------------------------------------*/
+ Dcl (n,d) Dec Fixed(15);
+ Dcl (na,da) Dec Fixed(15);
+ Dcl res Dec Fixed(15) Complex;
+ Dcl x   Dec Fixed(15);
+ na=abs(n);
+ da=abs(d);
+ Select;
+   When(n=0) Do;
+     real(res)=0;
+     imag(res)=1;
+     End;
+   When(d=0) Do;
+     Put Edit('Request mk_fr('!!n_rep(n)!!','!!n_rep(d)!!')')
+             (Skip,a);
+     Put Edit('Denominator must not be 0')(Skip,a);
+     Signal error;
+     End;
+   Otherwise Do;
+     x=gcd(na,da);
+     real(res)=sign(n)*sign(d)*na/x;
+     imag(res)=da/x;
+     End;
+   End;
+ Return(res);
+ End;
+
+ fr_add: Proc(a,b) Returns(Dec Fixed(15) Complex);
+ /*--------------------------------------------------------------------
+ * add 'fractions' a and b
+ *-------------------------------------------------------------------*/
+ Dcl (a,b,res)     Dec Fixed(15) Complex;
+ Dcl (an,ad,bn,bd) Dec Fixed(15);
+ Dcl (rd,rn)       Dec Fixed(15);
+ Dcl x             Dec Fixed(15);
+ an=real(a);
+ ad=imag(a);
+ bn=real(b);
+ bd=imag(b);
+ rd=ad*bd;
+ rn=an*bd+bn*ad;
+ x=gcd(rd,rn);
+ real(res)=rn/x;
+ imag(res)=rd/x;
+ Return(res);
+ End;
+
+ fr_sub: Proc(a,b) Returns(Dec Fixed(15) Complex);
+ /*--------------------------------------------------------------------
+ * subtract 'fraction' b from a
+ *-------------------------------------------------------------------*/
+ Dcl (a,b) Dec Fixed(15) Complex;
+ Dcl b2    Dec Fixed(15) Complex;
+ real(b2)=-real(b);
+ imag(b2)=imag(b);
+ Return(fr_add(a,b2));
+ End;
+
+ fr_mult: Proc(a,b) Returns(Dec Fixed(15) Complex);
+ /*--------------------------------------------------------------------
+ * multiply 'fractions' a and b
+ *-------------------------------------------------------------------*/
+ Dcl (a,b,res) Dec Fixed(15) Complex;
+ real(res)=real(a)*real(b);
+ imag(res)=imag(a)*imag(b);
+ Return(res);
+ End;
+
+ fr_div: Proc(a,b) Returns(Dec Fixed(15) Complex);
+ /*--------------------------------------------------------------------
+ * divide 'fraction' a by b
+ *-------------------------------------------------------------------*/
+ Dcl (a,b) Dec Fixed(15) Complex;
+ Dcl b2    Dec Fixed(15) Complex;
+ real(b2)=imag(b);
+ imag(b2)=real(b);
+ If real(a)=0 & real(b)=0 Then
+   Return(mk_fr(1,1));
+ Return(fr_mult(a,b2));
+ End;
+
+ fr_cmp: Proc(a,b) Returns(char(1));
+ /*--------------------------------------------------------------------
+ * compare 'fractions' a and b
+ *-------------------------------------------------------------------*/
+ Dcl (a,b)         Dec Fixed(15) Complex;
+ Dcl (an,ad,bn,bd) Dec Fixed(15);
+ Dcl (a2,b2)       Dec Fixed(15);
+ Dcl (rd)          Dec Fixed(15);
+ Dcl res           Char(1);
+ an=real(a);
+ ad=imag(a);
+ If ad=0 Then Do;
+   Put Edit('ad=',ad,'candidate=',candidate)(Skip,a,f(10));
+   Signal Error;
+   End;
+ bn=real(b);
+ bd=imag(b);
+ rd=ad*bd;
+ a2=abs(an*bd)*sign(an)*sign(ad);
+ b2=abs(bn*ad)*sign(bn)*sign(bd);
+ Select;
+   When(a2<b2) res='<';
+   When(a2>b2) res='>';
+   Otherwise Do;
+     res='=';
+     End;
+   End;
+ Return(res);
+ End;
+
+ fr_rep: Proc(f) Returns(char(15) Var);
+ /*--------------------------------------------------------------------
+ * Return the representation of 'fraction' f
+ *-------------------------------------------------------------------*/
+ Dcl f     Dec Fixed(15) Complex;
+ Dcl res   Char(15) Var;
+ Dcl (n,d) Pic'(14)Z9';
+ Dcl x     Dec Fixed(15);
+ Dcl s     Dec Fixed(15);
+ n=abs(real(f));
+ d=abs(imag(f));
+ x=gcd(n,d);
+ s=sign(real(f))*sign(imag(f));
+ res=trim(n/x)!!'/'!!trim(d/x);
+ If s<0 Then
+   res='-'!!res;
+ Return(res);
+ End;
+
+ n_rep: Proc(x) Returns(char(15) Var);
+ /*--------------------------------------------------------------------
+ * Return the representation of x
+ *-------------------------------------------------------------------*/
+ Dcl x     Dec Fixed(15);
+ Dcl res   Char(15) Var;
+ Put String(res) List(x);
+ res=trim(res);
+ Return(res);
+ End;
+
+ gcd: Proc(a,b) Returns(Dec Fixed(15)) Recursive;
+ /*--------------------------------------------------------------------
+ * Compute the greatest common divisor
+ *-------------------------------------------------------------------*/
+ Dcl (a,b) Dec Fixed(15) Nonassignable;
+ If b=0 then Return (abs(a));
+ Return(gcd(abs(b),mod(abs(a),abs(b))));
+ End gcd;
+
+ lcm: Proc(a,b) Returns(Dec Fixed(15));
+ /*--------------------------------------------------------------------
+ * Compute the least common multiple
+ *-------------------------------------------------------------------*/
+ Dcl (a,b) Dec Fixed(15) Nonassignable;
+ if a=0 ! b=0 then Return (0);
+ Return(abs(a*b)/gcd(a,b));
+ End lcm;
+
+ End;

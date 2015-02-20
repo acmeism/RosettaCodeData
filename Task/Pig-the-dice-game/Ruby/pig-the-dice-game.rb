@@ -2,35 +2,42 @@ class PigGame
   Player = Struct.new(:name, :safescore, :score) do
     def bust!() self.score = safescore end
     def stay!() self.safescore = score end
-    def roll!(die_sides) rand(1..die_sides) end
-    def wants_to_roll?
-      print("#{name} (#{safescore}, #{score})", ": Roll? (Y) ")
-      ['Y','y',''].include?(gets.chomp)
-    end
+    def to_s() "#{name} (#{safescore}, #{score})" end
   end
 
-  def bust?(roll) roll==1 ? (puts("Busted!",'') || true) : false end
+  def initialize(names, maxscore=100, die_sides=6)
+    rotation = names.map {|name| Player.new(name,0,0) }
 
-  def play(names, maxscore=100, die_sides=6)
-    rotation = names.map {|name| Player.new(name,0,0) }.cycle
-
-    while player = rotation.next
+    rotation.cycle do |player|
       loop do
-        if player.wants_to_roll?
-          puts "Rolled: #{roll=player.roll!(die_sides)}"
-          if bust?( roll )
-            player.bust! && break
+        if wants_to_roll?(player)
+          puts "Rolled: #{roll=roll_dice(die_sides)}"
+          if bust?(roll)
+            puts "Busted!",''
+            player.bust!
+            break
           else
             player.score += roll
-            return player if player.score >= maxscore
+            if player.score >= maxscore
+              puts player.name + " wins!"
+              return
+            end
           end
         else
-          player.stay! && puts("Staying with #{player.safescore}!", '')
+          player.stay!
+          puts "Staying with #{player.safescore}!", ''
           break
         end
       end
     end
   end
+
+  def roll_dice(die_sides) rand(1..die_sides) end
+  def bust?(roll) roll==1 end
+  def wants_to_roll?(player)
+    print "#{player}: Roll? (Y) "
+    ['Y','y',''].include?(gets.chomp)
+  end
 end
 
-print PigGame.new.play( %w|Samuel Elizabeth| ).name, " wins!"
+PigGame.new( %w|Samuel Elizabeth| )

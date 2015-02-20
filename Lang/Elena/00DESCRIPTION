@@ -19,22 +19,224 @@ Every object may be formed up with other objects characterizing its internal sta
 
 All referring entities in the language are objects. A variable is a reference to the object allocated in the program heap. The literal and numeric constants are references to the objects allocated in the static memory. 
 
-== Object model ==
+== Namespaces ==
 
-Any object is an instance of one or another class. The classes form the hierarchy tree on the principle of inheritance. There is the common super class - Object. The class parent may be explicitly declared. When the parent is not specified, the class inherits Object.
+Any ELENA program or library consists of modules (files with .NL extension) containing 
+classes and symbols. Every class or symbol may be referred by its namespace 
+(or to put it other way around a symbol namespace is a path to the symbol module). 
 
-A class is an abstract concept which means that no operations can be done with it except a declaration. So to create the object its symbol should be referenced. There are explicit and implicit, static and dynamic symbols.
+All source files (files with .L extension) located in the same folder are compiled into 
+the corresponding module. A project file (a file with .PRJ extension) defines the root 
+namespace and the output type (stand-alone executable, VM executable or a library). 
+The project may produce several modules if it contains the files located in sub folders 
+(the new module namespace consists of the root one plus the folder relative path)
 
-When a new class is declared simultaneously the appropriate explicit symbol is declared as well. The implicit symbol should be declared implicitly. In general the explicit symbol is the object in the initial state and the explicit one is the object in the particular state.
+== Messaging ==
 
-A static symbol is the class instance which state is preserved. A static symbol is always implicit one. There could be only one instance of static symbol.
+As in the most of dynamic object-oriented languages the main way to interact with objects in ELENA is sending a message. Unlike others the message name is structured and consists of a verb, a signature and a parameter counter. The verb defines a message action, for example read or write some data. There are only limited set of possible verbs (e.g. eval[uate], add, set, get, run, seek and so on). In general the signature is user defined and describes the message parameters. It can be used to define some custom 
+action as well (e.g. writeLine, which in fact is eval&writeLine(1)). If the signature is not provided the message is considered to be generic and can be qualified (for example by dispatching).
 
-The class declaration can be named or unnamed (inline declaration) public or private (when the class name is a private name). Its body contains member declarations: fields, roles and methods.
+If the object wants to handle the message it has to contain the method with the same name. If no method mapping was found the flow is considered to be broken and the control goes to the next alternative flow (exception handler) or the program is stopped.
 
-The fields can be accessed only within the class and its descendants. They can be a normal ones (references to another objects) or meta ones (raw data).
+The simple code to send a message looks like this:
 
-The roles are alternative sets of methods which could be used to implement context-dependant object behavior. When it is applied the role overrides the appropriate object methods with its own ones (static mutation).
+    console write:"Hello World".
 
-Methods maybe private or public depending on their name (public or private). All class methods are considered to be polymorphic. It is possible to dispatch the method call depending on its parameter (declarative multi-dispatching). The method has only one input (or nil) and output (or it should return itself) parameters. If the method requires several parameters a special proxy argument list object can be used.
+Note: "write" is a generic message; a literal constant is a parameter. 
 
-It is possible to declare a special "Any" handler. It is a method which redirects any unhandled message (i.e. messages which are not mapped in the class or its base classes) to the specified target. The target could be a single object (actually mutation) or collection (group object). A group object is a collection of the objects accessible through the common instance reference. The content of the group can be changed dynamically during the object life time (self-modification). The member objects can be a part of different groups or be single. The group can be persistent or temporally created to solve the particular task. The group objects are treated like "normal" ones and no special routines are required to work with them. If two or more members have duplicate methods either the first message mapping is resolved (exclusive mode) or all duplicate methods are executed (broadcast mode) depending on the group type.
+Several messages can be send in one statement, the parameter itself may be result of object interactions:
+
+    console write "2 + 2 =" write:(2 add:2).
+
+We could use operators to have the shorter code:
+
+    console << "2+2=" << 2 + 2.
+
+Note: In most cases "<<" is a synonym to "write" and "+" to "add".
+
+Several parameters can be passed in the message as well:
+
+    control foreach: (1,2,3) &do:printingLn.
+
+Ampersand is used to indicate that the signature has several arguments (subjects). The actual message name is eval&foreach&do(2).
+
+The generic message can have several parameters as well:
+
+    consoleEx writeLine:”a+b=”: (a + b).
+
+
+== Classes, Roles and Symbols ==
+
+ELENA is an object-oriented language, so to create a program we have to declare new classes.
+
+A class encapsulates data (fields) with code (methods) to access it. In most cases it is not possible to get a direct access to the class content (it makes sense for dynamic languages when in the most cases code is generic and can be applied for different "types"). Usually the fields refer to another classes and so on until we reach "primitive" ones which content are considered as raw data (e.g. numeric or literal values).
+
+To work with the class we have to create its instance with the help of the special methods - constructors. A constructor is used mostly to initialize the class fields. There are special type of classes which do not have fields and constructors and can be used directly (roles).
+
+Classes form the inheritance tree. There is the common super class - system'Object.
+ELENA does not support multiple inheritance, though it is possible to inherit the code using redirect handler (so called "horizontal inheritance"). When the parent is not provided the class inherits directly system'Object (the super class).
+
+    #class BaseClass
+    {
+      #field theField1.
+      #field theField2.
+      
+      #method field1 = theField1.
+    
+      #method field2 = theField.
+    
+    }
+    
+    #class DerivedClass : BaseClass
+    {
+      #constructor new &field1:aField2 &field2:aField2
+      [  
+         theField1 := aField1.
+         theField2 := aField2.
+      ]
+    
+      #method add &field1:aField2 &field2:aField2
+         = MyClass new &Field1:(theField1 + aField1) &Field2:(theField2 + aField2).
+    }
+    
+To create a class instance we have to send a message (usually new) to its symbol (a class symbol is declared implicitly for every class and can be used as a normal one)
+
+    #var anObject := DerivedClass new &field1:1 &field2:1. // DerivedClass is a symbol
+
+Roles cannot have constructors and their symbols can be used directly
+
+    #class(role)ClassHelper
+    {
+       #method sumOf:anObject1:anObject2
+          = anObject1 add &field1::anObject2 &field2::anObject1.
+    }
+    
+    ...
+    
+    #var aSum := ClassHelper sumOf:anObject1:anObject2.
+
+In general the symbol is a named expression and can be used to declare initialized objects, constants, reusable expressions and so on.
+
+    #symbol ZeroClass = DerivedClass new &field:0 &field:0.
+
+A static symbol is the class instance which state is preserved. There could be only one instance of static symbol.
+
+    #static SingletonClass = DerivedClass new &field:0 &field:0.
+
+== Code blocks ==
+
+ELENA code block consists of a sequence of statements. The block is enclosed in square brackets and may contain nested sub code blocks (which in fact are inline action classes). The statement terminator is a dot.
+
+    #method printAckermann &n:n &m:m
+    [
+        control forrange &int:0 &int:n &do: (&int:i)
+        [
+            control forrange &int:0 &int:m &do: (&int:j)
+            [
+                ...
+                
+                console writeLine.
+            ].
+        ].
+    ]
+
+When a method should return a result (other than self) return statement is used. It should be the last statement in the block.
+
+    [
+        ...
+    
+        ^ aRetVal / anArray length.
+    ]
+
+If the code block contains only return statement the simplified syntax can be used:
+
+    #method Number = convertor toReal:theValue.    
+
+or there is an alternative block expression
+
+    [ convertor toReal:theValue ]
+
+Note: it should not end with the terminator symbol
+
+It is possible to declare the block variable and assigns the value to it. The variable name must be unique within the code block scope.
+
+    #var aRetVal := Integer new:0.
+
+
+== Conditional branching ==
+
+ELENA like Smalltalk does not support any special language constructs to implement the conditional branching. Instead special Boolean symbols (system’true and system’false) are used. All conditional operations should return these symbols as a result.
+
+There are three branching methods : then[1] , then&else[2], else[1]
+
+    (m == 0) then:
+    [
+       n + 1
+    ]
+    &else: [
+       m + n
+    ].
+
+Note that code in square brackets are in fact nested action classes ( an action class is a class supporting evaluate message). So this code is can be written in this form:
+
+    (m == 0) then: 
+    {
+       eval
+       [
+          ^ n + 1.
+       ]
+    }
+    &else: 
+    {
+       eval
+       [
+          ^ m + n.
+       ]
+    }.
+
+This expression can be written using special operators
+
+    (m == 0) 
+      ? [ n + 1 ]
+      ! [ m + n ].
+
+Note: the main difference between using explicit messages and conditional operators is that the compiler may optimize the resulting code in the later case.
+
+We could omit true or else part
+
+    (m == 0) 
+       ! [ m / n ].
+
+Boolean symbols supports basic logical operations (AND, OR, XOR and NOT), so several conditions can be checked
+
+    (aChar >= 48) and:(aChar < 58)
+    ? [
+        theToken += aChar.
+    ]
+    ! [
+       #throw Exception new:"Invalid expression".
+    ]
+
+Note that in this case both condition will be evaluated even if the first one is false If we want to use short-circuit evaluation expression brackets should be used
+    (x >= 0)and:[ array@x != 0] ?
+    [
+        ...
+    ]
+
+A switch statement can be implemented using => operator
+
+    ^ aBulls =>
+         -1 ? [ consoleEx writeLine:"Not a valid guess.". ^ true. ]
+          4 ? [ 
+                  consoleEx writeLine:"Congratulations! You have won!". 
+                  ^ false. 
+              ]
+            ! [
+                 theAttempt += 1.
+                 
+                 consoleEx writeLine:
+                      "Your Score is " : aBulls 
+                      : " bulls and " : aCows : " cows".
+                 
+                 ^ true.
+            ].

@@ -1,10 +1,21 @@
-using System;
-class Program
+namespace ConsoleApplication1
 {
-    static void Main()
+    using System;
+    class Program
     {
-        double n;
-        for (int t = 1; t <= 100; ++t)
-                Console.WriteLine(t + ": " + (((n = Math.Sqrt(t)) == (int)n) ? "Open" : "Closed"));
+        static void Main(string[] args)
+        {
+            //Perform the operation.
+            bool[] doors = new bool[100];
+            int n = 0;
+            int d;
+            while ((d = (++n * n)) <= 100)
+                doors[d - 1] = true;
+
+            //Perform the presentation.
+            for (d = 0; d < doors.Length; d++)
+                Console.WriteLine("Door #{0}: {1}", d + 1, doors[d] ? "Open" : "Closed");
+            Console.ReadKey(true);
+        }
     }
 }

@@ -1,5 +1,5 @@
-import std.stdio, std.algorithm;
-
 void main() {
-    writeln(levenshteinDistance("kitten", "sitting"));
+    import std.stdio, std.algorithm;
+
+    levenshteinDistance("kitten", "sitting").writeln;
 }

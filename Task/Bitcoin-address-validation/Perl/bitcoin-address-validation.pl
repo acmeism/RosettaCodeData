@@ -8,22 +8,25 @@ my %b58 = map { $b58[$_] => $_ } 0 .. 57;
 sub unbase58 {
     use integer;
     my @out;
-    for my $c ( map { $b58{$_} } shift =~ /./g ) {
+    my $azeroes = length($1) if $_[0] =~ /^(1*)/;
+    for my $c ( map { $b58{$_} } $_[0] =~ /./g ) {
         for (my $j = 25; $j--; ) {
             $c += 58 * ($out[$j] // 0);
             $out[$j] = $c % 256;
             $c /= 256;
         }
     }
+    my $bzeroes = length($1) if join('', @out) =~ /^(0*)/;
+    die "not a 25 byte address\n" if $bzeroes != $azeroes;
     return @out;
 }
 
 sub check_bitcoin_address {
-    # does nothing if the address is valid
+    # Does nothing if address is valid
     # dies otherwise
     use Digest::SHA qw(sha256);
     my @byte = unbase58 shift;
-    die "wrong checksum" unless
-    join('', map { chr } @byte[21..24]) eq
+    die "wrong checksum\n" unless
+    (pack 'C*', @byte[21..24]) eq
     substr sha256(sha256 pack 'C*', @byte[0..20]), 0, 4;
 }

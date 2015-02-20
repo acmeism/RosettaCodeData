@@ -1,1 +1,1 @@
-main : { [1 2 3] [4 5 6] cat }
+main : { [val 1 2 3] [val 4 5 6] cat }

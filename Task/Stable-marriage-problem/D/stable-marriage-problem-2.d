@@ -10,7 +10,7 @@ alias Couples = M[F];
 immutable PrefMapF womenPref;
 immutable PrefMapM menPref;
 
-pure nothrow static this() {
+static this() pure nothrow @safe {
     with (F) with (M) {
         womenPref = [
              abi:  [bob, fred, jon, gav, ian, abe, dan, ed, col, hal],
@@ -42,13 +42,15 @@ pure nothrow static this() {
 
 /// Does 'first' appear before 'second' in preference list?
 bool prefers(T)(in T[] preference, in T first, in T second)
-pure nothrow if (is(T == F) || is(T == M)) {
-    const found = preference.findAmong([first, second]);
+pure nothrow @safe @nogc if (is(T == F) || is(T == M)) {
+    //const found = preference.findAmong([first, second]);
+    immutable T[2] two = [first, second];
+    const found = preference.findAmong(two[]);
     return !(found.empty || found.front == second);
 }
 
 void checkStability(in Couples engaged, in PrefMapM menPref,
-                    in PrefMapF womenPref) {
+                    in PrefMapF womenPref) @safe {
     "Stablility:".writeln;
     bool stable = true;
     foreach (immutable bride, immutable groom; engaged) {
@@ -74,7 +76,7 @@ void checkStability(in Couples engaged, in PrefMapM menPref,
         "\t(all marriages stable)".writeln;
 }
 
-void main() {
+void main() /*@safe*/ {
     auto bachelors = menPref.keys.sort().release;// No queue in Phobos.
     Couples engaged;
 

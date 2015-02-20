@@ -9,7 +9,7 @@ const struct Board {
     private immutable CTable sData, dData;
     private immutable int playerx, playery;
 
-    this(in string[] board) pure nothrow const
+    this(in string[] board) immutable pure nothrow @safe
     in {
         foreach (const row; board) {
             assert(row.length == board[0].length,
@@ -18,8 +18,10 @@ const struct Board {
                 assert(c.inPattern(" #.$@*"), "Not valid input");
         }
     } body {
-        immutable sMap = [' ':' ', '.':'.', '@':' ', '#':'#', '$':' '];
-        immutable dMap = [' ':' ', '.':' ', '@':'@', '#':' ', '$':'*'];
+        /*static*/ immutable sMap =
+            [' ':' ', '.':'.', '@':' ', '#':'#', '$':' '];
+        /*static*/ immutable dMap =
+            [' ':' ', '.':' ', '@':'@', '#':' ', '$':'*'];
         ncols = board[0].length;
 
         int plx = 0, ply = 0;
@@ -43,12 +45,12 @@ const struct Board {
 
     private bool move(in int x, in int y, in int dx,
                       in int dy, ref CTable data)
-    const pure /*nothrow*/ {
-        if (sData[(y+dy) * ncols + x + dx] == El.wall ||
-            data[(y+dy) * ncols + x + dx] != El.floor)
+    const pure nothrow /*@safe*/ {
+        if (sData[(y + dy) * ncols + x + dx] == El.wall ||
+            data[(y + dy) * ncols + x + dx] != El.floor)
             return false;
 
-        auto data2 = data.dup; // Not nothrow.
+        auto data2 = data.dup;
         data2[y * ncols + x] = El.floor;
         data2[(y + dy) * ncols + x + dx] = El.player;
         data = data2.assumeUnique; // Not enforced.
@@ -57,39 +59,40 @@ const struct Board {
 
     private bool push(in int x, in int y, in int dx,
                       in int dy, ref CTable data)
-    const pure /*nothrow*/ {
-        if (sData[(y + 2*dy) * ncols + x+2*dx] == El.wall ||
-            data[(y + 2*dy) * ncols + x+2*dx] != El.floor)
+    const pure nothrow /*@safe*/ {
+        if (sData[(y + 2 * dy) * ncols + x + 2 * dx] == El.wall ||
+            data[(y + 2 * dy) * ncols + x + 2 * dx] != El.floor)
             return false;
 
-        auto data2 = data.dup; // Not nothrow.
+        auto data2 = data.dup;
         data2[y * ncols + x] = El.floor;
         data2[(y + dy) * ncols + x + dx] = El.player;
-        data2[(y + 2*dy) * ncols + x + 2*dx] = El.boxOnGoal;
+        data2[(y + 2 * dy) * ncols + x + 2*dx] = El.boxOnGoal;
         data = data2.assumeUnique; // Not enforced.
         return true;
     }
 
-    private bool isSolved(in CTable data) const pure nothrow {
+    private bool isSolved(in CTable data)
+    const pure nothrow @safe @nogc {
         foreach (immutable i, immutable d; data)
             if ((sData[i] == El.goal) != (d == El.boxOnGoal))
                 return false;
         return true;
     }
 
-    string solve() pure {
+    string solve() pure nothrow /*@safe*/ {
         bool[immutable CTable] visitedSet = [dData: true];
 
         alias Four = Tuple!(CTable, string, int, int);
         GrowableCircularQueue!Four open;
         open.push(Four(dData, "", playerx, playery));
 
-        immutable dirs = [tuple( 0, -1, 'u', 'U'),
-                          tuple( 1,  0, 'r', 'R'),
-                          tuple( 0,  1, 'd', 'D'),
-                          tuple(-1,  0, 'l', 'L')];
+        static immutable dirs = [tuple( 0, -1, 'u', 'U'),
+                                 tuple( 1,  0, 'r', 'R'),
+                                 tuple( 0,  1, 'd', 'D'),
+                                 tuple(-1,  0, 'l', 'L')];
 
-        while (open.length) {
+        while (!open.empty) {
             //immutable (cur, cSol, x, y) = open.pop;
             immutable item = open.pop;
             immutable cur = item[0];
@@ -107,14 +110,13 @@ const struct Board {
                     if (push(x, y, dx, dy, temp) && temp !in visitedSet) {
                         if (isSolved(temp))
                             return cSol ~ di[3];
-                        open.push(Four(temp, cSol ~ di[3], x+dx, y+dy));
+                        open.push(Four(temp, cSol ~ di[3], x + dx, y + dy));
                         visitedSet[temp] = true;
                     }
-                } else if (move(x, y, dx, dy, temp) &&
-                           temp !in visitedSet) {
+                } else if (move(x, y, dx, dy, temp) && temp !in visitedSet) {
                     if (isSolved(temp))
                         return cSol ~ di[2];
-                    open.push(Four(temp, cSol ~ di[2], x+dx, y+dy));
+                    open.push(Four(temp, cSol ~ di[2], x + dx, y + dy));
                     visitedSet[temp] = true;
                 }
             }
@@ -126,7 +128,7 @@ const struct Board {
 
 void main() {
     import std.stdio, core.memory;
-    GC.disable; // Uses about twice the memory
+    GC.disable; // Uses about twice the memory.
 
     immutable level =
 "#######
@@ -138,6 +140,6 @@ void main() {
 #.#  @#
 #######";
 
-    const b = const(Board)(level.splitLines);
+    immutable b = immutable(Board)(level.splitLines);
     writeln(level, "\n\n", b.solve);
 }

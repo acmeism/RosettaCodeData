@@ -74,7 +74,7 @@ byte* lzw_encode(byte *in, int max_bits)
 	ushort code, c, nc, next_code = M_NEW;
 	lzw_enc_t *d = _new(lzw_enc_t, 512);
 
-	if (max_bits > 16) max_bits = 16;
+	if (max_bits > 15) max_bits = 15;
 	if (max_bits < 9 ) max_bits = 12;
 
 	byte *out = _new(ushort, 4);

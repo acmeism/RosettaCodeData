@@ -1,0 +1,1 @@
+/*this REXX program calculates if a date is a workday for the XYZ Company.*/

@@ -1,6 +1,6 @@
 import std.stdio, std.conv, std.algorithm, std.range;
 
-bool isKaprekar(in long n) pure /*nothrow*/
+bool isKaprekar(in long n) pure /*nothrow*/ @safe
 in {
     assert(n > 0, "isKaprekar(n) is defined for n > 0.");
 } body {
@@ -8,7 +8,7 @@ in {
         return true;
     immutable sn = text(n ^^ 2);
 
-    foreach (i; 1 .. sn.length) {
+    foreach (immutable i; 1 .. sn.length) {
         immutable a = sn[0 .. i].to!long;
         immutable b = sn[i .. $].to!long;
         if (b && a + b == n)

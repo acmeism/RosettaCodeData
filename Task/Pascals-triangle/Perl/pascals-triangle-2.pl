@@ -1,3 +1,7 @@
-use bignum;
-sub pascal { $_[0] ? unpack "A(A6)*", 1000001**$_[0] : 1 }
-print "@{[map -+-$_, pascal $_]}\n" for 0..22;
+use ntheory qw/binomial/;
+sub pascal {
+  my $rows = shift;
+  for my $n (0 .. $rows-1) {
+    print join(" ", map { binomial($n,$_) } 0 .. $n), "\n";
+  }
+}

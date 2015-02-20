@@ -23,4 +23,4 @@ Fixpoint flipwhile l n :=
     | S n' => flipwhile (flipeach l (S n')) n'
   end.
 
-Definition prison cells := flipwhile (rep false (S cells)) cells.
+Definition prison cells := flipwhile (rep false cells) cells.

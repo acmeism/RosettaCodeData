@@ -2,7 +2,7 @@ import std.array, bitmap;
 
 void floodFill(Color)(Image!Color img, in uint x, in uint y,
                       in Color color)
-pure nothrow in {
+/*pure*/ nothrow in {
     assert (y < img.ny && x < img.nx);
 } body {
     immutable target = img[x, y];
@@ -22,7 +22,8 @@ pure nothrow in {
 }
 
 void main() {
-    auto img = loadPPM6(null, "unfilled_circ.ppm");
+    Image!RGB img;
+    loadPPM6(img, "unfilled_circ.ppm");
     img.floodFill(200, 200, RGB(127, 0, 0));
     img.savePPM6("unfilled_circ_flooded.ppm");
 }

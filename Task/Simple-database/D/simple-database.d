@@ -12,7 +12,7 @@ private {
         if (item.length < 3)
             return printUsage();
         auto db = load();
-        const date = text(cast(DateTime)Clock.currTime);
+        const date = (cast(DateTime)Clock.currTime).toISOExtString;
         const cat = (item.length == 4) ? item[3] : "none";
         db ~= Item(item[2], date, cat);
         store(db);

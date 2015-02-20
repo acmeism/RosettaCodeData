@@ -1,3 +1,32 @@
+J2justifier = {'L' => :ljust,
+               'R' => :rjust,
+               'C' => :center}
+
+=begin
+Justify columns of textual tabular input where the record separator is the newline
+and the field separator is a 'dollar' character.
+justification can be L, R, or C; (Left, Right, or Centered).
+
+Return the justified output as a string
+=end
+def aligner(infile, justification = 'L')
+  fieldsbyrow = infile.map {|line| line.strip.split('$')}
+  # pad to same number of fields per record
+  maxfields = fieldsbyrow.map(&:length).max
+  fieldsbyrow.map! {|row| row + ['']*(maxfields - row.length)}
+  # calculate max fieldwidth per column
+  colwidths = fieldsbyrow.transpose.map {|column|
+    column.map(&:length).max
+  }
+  # pad fields in columns to colwidth with spaces
+  justifier = J2justifier[justification]
+  fieldsbyrow.map {|row|
+    row.zip(colwidths).map {|field, width|
+      field.send(justifier, width)
+    }.join(" ")
+  }.join("\n")
+end
+
 require 'stringio'
 
 textinfile = <<END
@@ -8,40 +37,6 @@ column$are$separated$by$at$least$one$space.
 Further,$allow$for$each$word$in$a$column$to$be$either$left$
 justified,$right$justified,$or$center$justified$within$its$column.
 END
-
-J2justifier = {'L' => String.instance_method(:ljust),
-               'R' => String.instance_method(:rjust),
-               'C' => String.instance_method(:center)}
-
-=begin
-Justify columns of textual tabular input where the record separator is the newline
-and the field separator is a 'dollar' character.
-justification can be L, R, or C; (Left, Right, or Centered).
-
-Return the justified output as a string
-=end
-def aligner(infile, justification = 'L')
-  justifier = J2justifier[justification]
-
-  fieldsbyrow = infile.map {|line| line.strip.split('$')}
-  # pad to same number of fields per record
-  maxfields = fieldsbyrow.map {|row| row.length}.max
-  fieldsbyrow.map! {|row|
-    row + ['']*(maxfields - row.length)
-  }
-  # calculate max fieldwidth per column
-  colwidths = fieldsbyrow.transpose.map {|column|
-    column.map {|field| field.length}.max
-  }
-  # pad fields in columns to colwidth with spaces
-  fieldsbyrow.map! {|row|
-    row.zip(colwidths).map {|field, width|
-      justifier.bind(field)[width]
-    }
-  }
-
-  fieldsbyrow.map {|row| row.join(" ")}.join("\n")
-end
 
 for align in %w{Left Right Center}
   infile = StringIO.new(textinfile)

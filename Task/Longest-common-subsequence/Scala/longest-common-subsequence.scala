@@ -65,5 +65,4 @@ object LCS extends App {
     println{val t = elapsed(s = lcsd(p._1,p._2))
             "lcsd(\""+p._1+"\",\""+p._2+"\") = \""+s+"\"   ("+t+" sec)"}
   }
-
 }

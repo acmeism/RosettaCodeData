@@ -1,4 +1,1 @@
-.say for
-  (('' xx 2, 'Fizz') xx * Z~
-   ('' xx 4, 'Buzz') xx *) Z||
-  1 .. 100;
+say "Fizz"x$_%%3~"Buzz"x$_%%5||$_ for 1..100

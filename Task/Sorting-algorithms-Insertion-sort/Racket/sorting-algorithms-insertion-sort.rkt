@@ -1,13 +1,9 @@
-(require racket/match)
+#lang racket
 
-(define (sort pred l)
+(define (sort < l)
   (define (insert x y)
-    (match (list x y)
-      [(list x '()) (list x)]
-      [(list x (cons y ys))
-       (if (pred x y)
-           (cons x (cons y ys))
-           (cons y (f x ys)))]))
-  (match l
-    ['() '()]
-    [(cons x xs) (insert x (sort pred xs))]))
+    (match* (x y)
+      [(x '()) (list x)]
+      [(x (cons y ys)) (cond [(< x y) (list* x y ys)]
+                             [else (cons y (insert x ys))])]))
+  (foldl insert '() l))

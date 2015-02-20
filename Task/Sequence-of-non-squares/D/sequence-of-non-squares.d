@@ -1,6 +1,6 @@
 import std.stdio, std.math, std.algorithm, std.range;
 
-int nonSquare(in int n) pure nothrow {
+int nonSquare(in int n) pure nothrow @safe @nogc {
     return n + cast(int)(0.5 + real(n).sqrt);
 }
 

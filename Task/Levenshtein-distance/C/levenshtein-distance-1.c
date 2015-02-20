@@ -38,7 +38,7 @@ int main()
 {
         const char *s1 = "rosettacode";
         const char *s2 = "raisethysword";
-        printf("distance betweeh `%s' and `%s': %d\n", s1, s2,
+        printf("distance between `%s' and `%s': %d\n", s1, s2,
                 levenshtein(s1, strlen(s1), s2, strlen(s2)));
 
         return 0;

@@ -1,10 +1,7 @@
-i = 1
-loop do
-   j = 1
-   loop do
-      print "*"
-      break if (j += 1) > i
-   end
-   puts
-   break if (i += 1) > 5
+5.times do |i|
+  # i goes from 0 to 4
+  (i+1).times do
+    print "*"
+  end
+  puts
 end

@@ -7,12 +7,12 @@ import (
 )
 
 // Go maps are an easy representation for sets as long as the element type
-// of the set is valid as a key type for maps.  Strings are easy.  We follow
-// the convention of always storing true for the value.
+// of the set is valid as a key type for maps.  Strings are easy.
+// We follow the convention of always storing true for the value.
 type set      map[string]bool
 
-// Multisets of strings are easy in the same way.  We store the multiplicity
-// of the element as the value.
+// Multisets of strings are easy in the same way.
+// We store the multiplicity of the element as the value.
 type multiset map[string]int
 
 // But multisets are not valid as a map key type so we must do something

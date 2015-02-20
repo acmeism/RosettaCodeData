@@ -1,11 +1,12 @@
 use List::Util qw(sum);
 
-sub is_happy ($)
- {for (my ($n, %seen) = shift ;; $n = sum map {$_**2} split //, $n)
-     {$n == 1 and return 1;
-      $seen{$n}++ and return 0;}}
+sub ishappy {
+  my $s = shift;
+  while ($s > 6 && $s != 89) {
+    $s = sum(map { $_*$_ } split(//,$s));
+  }
+  $s == 1;
+}
 
-for (my ($n, $happy) = (1, 0) ; $happy < 8 ; ++$n)
-   {is_happy $n or next;
-    print "$n\n";
-    ++$happy;}
+my $n = 0;
+print join(" ", map { 1 until ishappy(++$n); $n; } 1..8), "\n";

@@ -1,0 +1,1 @@
+IO.write "Goodbye, World!"

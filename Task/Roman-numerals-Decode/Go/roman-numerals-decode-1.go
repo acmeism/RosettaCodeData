@@ -27,7 +27,7 @@ func parseRoman(s string) (r int, err error) {
     for i := len(is) - 1; i >= 0; i-- {
         // read roman digit
         c := is[i]
-        k := c == 0x305 // unicode overbar combining character
+        k := c == '\u0305' // unicode overbar combining character
         if k {
             if i == 0 {
                 return 0, errors.New(
@@ -39,11 +39,11 @@ func parseRoman(s string) (r int, err error) {
         cv := m[c]
         if cv == 0 {
             if c == 0x0305 {
-                return 0, errors.New(fmt.Sprintf(
-                    "Overbar combining character invalid at position %d", i))
+                return 0, fmt.Errorf(
+                    "Overbar combining character invalid at position %d", i)
             } else {
-                return 0, errors.New(fmt.Sprintf(
-                    "Character unrecognized as Roman digit: %c", c))
+                return 0, fmt.Errorf(
+                    "Character unrecognized as Roman digit: %c", c)
             }
         }
         if k {

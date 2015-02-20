@@ -9,11 +9,9 @@
             :else   [x (rest xs) (rest ys)])]
       (cons z (smerge xs* ys*)))))
 
-(defn smerge3 [xs ys zs]
-  (smerge xs (smerge ys zs)))
-
-(defn map*n [n ks] (map #(*' n %) ks))
-
 (def hamming
   (lazy-seq
-    (cons 1 (smerge3 (map*n 2 hamming) (map*n 3 hamming) (map*n 5 hamming)))))
+    (->> (map #(*' 5 %) hamming)
+         (smerge (map #(*' 3 %) hamming))
+         (smerge (map #(*' 2 %) hamming))
+         (cons 1))))

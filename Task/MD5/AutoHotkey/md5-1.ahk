@@ -9,4 +9,3 @@ MD5( ByRef V, L=0 ) {
   N := NumGet( MD5_CTX,87+A_Index,"Char"), MD5 .= SubStr(Hex,N>>4,1) . SubStr(Hex,N&15,1)
 Return MD5
 }
-}

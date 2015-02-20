@@ -6,5 +6,4 @@ def characterRemarks(names: List[String], remarks: List[String]) = <CharacterRem
   { names zip remarks map { case (name, remark) => <Character name={name}>{remark}</Character> } }
 </CharacterRemarks>
 
-
 characterRemarks(names, remarks)

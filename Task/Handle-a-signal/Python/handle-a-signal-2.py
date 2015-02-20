@@ -1,29 +1,18 @@
-import signal, time, threading
-done = False
-n = 0
+import time
 
-def counter():
-   global n, timer
-   n += 1
-   print n
-   timer = threading.Timer(0.5, counter)
-   timer.start()
+def intrptWIN():
+   procDone = False
+   n = 0
 
-def sigIntHandler(signum, frame):
-   global done
-   timer.cancel()
-   done = True
-
-def intrptUNIX():
-   global timer
-   signal.signal(signal.SIGINT, sigIntHandler)
-
-   timer = threading.Timer(0.5, counter)
-   timer.start()
-   while not done:
-      signal.pause()
+   while not procDone:
+      try:
+         time.sleep(0.5)
+         n += 1
+         print n
+      except KeyboardInterrupt, e:
+         procDone = True
 
 t1 = time.time()
-intrptUNIX()
+intrptWIN()
 tdelt = time.time() - t1
 print 'Program has run for %5.3f seconds.' % tdelt

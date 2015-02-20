@@ -1,4 +1,4 @@
-(load "@lib/xm.l")
+(load "@lib/xml.l")
 
 (de characterRemarks (Names Remarks)
    (xml

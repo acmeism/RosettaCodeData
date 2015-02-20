@@ -1,32 +1,31 @@
 import std.stdio, std.algorithm, std.array, std.typecons,
        std.container, std.range;
 
-string[] findChain(in string[] seq) /*pure nothrow*/ {
+auto findChain(in string[] seq) pure nothrow /*@safe*/ {
     const adj = seq
-                .map!(item => tuple(item,
-                                    seq
-                                    .filter!(x => x[0] == item[$-1])
-                                    .array))
+                .map!(item => tuple(item, seq
+                                          .filter!(x => x[0] == item[$ - 1])
+                                          .array))
                 .assocArray;
-    string[] res;
+    SList!string res;
 
-    foreach (immutable item; adj.byKey) { // Not nothrow.
-        void inner(in string item, SList!string lst) nothrow {
-            lst.insertFront(item);
-            if (lst[].walkLength > res.length)
-                res = lst.array;
-            foreach (immutable x; adj[item])
+    foreach (immutable item; adj.byKey) {
+        void inner(in string it, SList!string lst) nothrow {
+            lst.insertFront(it);
+            if (lst[].walkLength > res[].walkLength)
+                res = lst;
+            foreach (immutable x; adj[it])
                 if (!lst[].canFind(x))
                     inner(x, lst);
         }
+
         inner(item, SList!string());
     }
 
-    res.reverse();
-    return res;
+    return res.array.retro;
 }
 
-void main() {
+void main() /*@safe*/ {
     "audino bagon baltoy banette bidoof braviary
     bronzor carracosta charmeleon cresselia croagunk darmanitan deino
     emboar emolga exeggcute gabite girafarig gulpin haxorus heatmor

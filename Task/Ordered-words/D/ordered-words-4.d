@@ -1,17 +1,14 @@
 import std.stdio, core.stdc.string, std.mmfile, std.algorithm;
 
-const(char)[] findWord(const char[] s) pure nothrow @safe {
-    // return s.takeWhile!(c => c !in "\n\r");
+const(char)[] findWord(const char[] s) pure nothrow @safe @nogc {
     size_t wordEnd = 0;
-    while (wordEnd < s.length && s[wordEnd] != '\n'
-           && s[wordEnd] != '\r')
+    while (wordEnd < s.length && s[wordEnd] != '\n' && s[wordEnd] != '\r')
         wordEnd++;
     return s[0 .. wordEnd];
 }
 
 void main() {
-    auto mmf = new MmFile("unixdict.txt",
-                          MmFile.Mode.readCopyOnWrite, 0, null);
+    auto mmf = new MmFile("unixdict.txt", MmFile.Mode.readCopyOnWrite, 0, null);
     auto txt = cast(char[])(mmf[]);
     size_t maxLen = 0, outStart = 0;
 
@@ -22,7 +19,7 @@ void main() {
         const word = findWord(txt[wordStart .. $]);
         wordStart += word.length;
 
-        if (word.length < maxLen || !word.isSorted())
+        if (word.length < maxLen || !word.isSorted)
             continue;
         if (word.length > maxLen) {
             // Longer ordered word found, reset the out buffer.
@@ -40,5 +37,5 @@ void main() {
         txt[outStart++] = '\n'; // Words separator in out buffer.
     }
 
-    write(txt[0 .. outStart]);
+    txt[0 .. outStart].write;
 }

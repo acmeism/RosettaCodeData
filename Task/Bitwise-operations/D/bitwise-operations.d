@@ -1,4 +1,4 @@
-T rot(T)(in T x, in int shift) pure nothrow {
+T rot(T)(in T x, in int shift) pure nothrow @nogc {
     return (x >>> shift) | (x << (T.sizeof * 8 - shift));
 }
 

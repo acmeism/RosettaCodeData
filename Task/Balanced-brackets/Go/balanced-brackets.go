@@ -21,17 +21,16 @@ func generate(n uint) string {
 }
 
 func testBalanced(s string) {
-    fmt.Printf("%s: ", s)
-    var open int
-    for i := 0; i < len(s); i++ {
-        switch s[i] {
+    fmt.Print(s + ": ")
+    open := 0
+    for _,c := range s {
+        switch c {
         case '[':
             open++
         case ']':
             if open == 0 {
                 fmt.Println("not ok")
                 return
-
             }
             open--
         default:

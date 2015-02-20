@@ -20,7 +20,7 @@ final class Image(T) {
     }
 
     void allocate(in int nxx=0, in int nyy=0, in bool inizialize=true)
-    pure nothrow in {
+    pure nothrow @safe in {
         assert(nxx >= 0 && nyy >= 0);
     } body {
         this.nx_ = nxx;
@@ -34,8 +34,16 @@ final class Image(T) {
         }
     }
 
+    @property Image dup() const pure nothrow @safe {
+        auto result = new Image();
+        result.image = this.image.dup;
+        result.nx_ = this.nx;
+        result.ny_ = this.ny;
+        return result;
+    }
+
     static Image fromData(T[] data, in size_t nxx=0, in size_t nyy=0)
-    pure nothrow in {
+    pure nothrow @safe in {
         assert(nxx >= 0 && nyy >= 0 && data.length == nxx * nyy);
     } body {
         auto result = new Image();
@@ -45,10 +53,10 @@ final class Image(T) {
         return result;
     }
 
-    @property size_t nx() const pure nothrow { return nx_; }
-    @property size_t ny() const pure nothrow { return ny_; }
+    @property size_t nx() const pure nothrow @safe @nogc { return nx_; }
+    @property size_t ny() const pure nothrow @safe @nogc { return ny_; }
 
-    ref T opIndex(in size_t x, in size_t y) pure nothrow
+    ref T opIndex(in size_t x, in size_t y) pure nothrow @safe @nogc
     in {
         assert(x < nx_ && y < ny_);
         //assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
@@ -57,7 +65,7 @@ final class Image(T) {
         return image[x + y * nx_];
     }
 
-    T opIndex(in size_t x, in size_t y) const pure nothrow
+    T opIndex(in size_t x, in size_t y) const pure nothrow @safe @nogc
     in {
         assert(x < nx_ && y < ny_);
         //assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
@@ -66,7 +74,8 @@ final class Image(T) {
         return image[x + y * nx_];
     }
 
-    T opIndexAssign(in T color, in size_t x, in size_t y) pure nothrow
+    T opIndexAssign(in T color, in size_t x, in size_t y)
+    pure nothrow @safe @nogc
     in {
         assert(x < nx_ && y < ny_);
         //assert(x < nx_, format("opIndex, x=%d, nx=%d", x, nx));
@@ -75,14 +84,15 @@ final class Image(T) {
         return image[x + y * nx_] = color;
     }
 
-    void opIndexUnary(string op)(in size_t x, in size_t y) pure nothrow
+    void opIndexUnary(string op)(in size_t x, in size_t y)
+    pure nothrow @safe @nogc
     if (op == "++" || op == "--") in {
         assert(x < nx_ && y < ny_);
     } body {
         mixin("image[x + y * nx_] " ~ op ~ ";");
     }
 
-    void clear(in T color=this.black) pure nothrow {
+    void clear(in T color=this.black) pure nothrow @safe @nogc {
         image[] = color;
     }
 
@@ -94,7 +104,7 @@ final class Image(T) {
                  .split
                  .map!(row => row
                               .filter!(c => c == one || c == zero)
-                              .map!(c => cast(T)(c == one))
+                              .map!(c => T(c == one))
                               .array)
                  .array;
         assert(M.join.length > 0); // Not empty.
@@ -104,7 +114,7 @@ final class Image(T) {
     }
 
     /// The axis origin is at the top left.
-    void textualShow(in char bl='#', in char wh='.') const {
+    void textualShow(in char bl='#', in char wh='.') const nothrow {
         size_t i = 0;
         foreach (immutable y; 0 .. ny_) {
             foreach (immutable x; 0 .. nx_)
@@ -122,7 +132,7 @@ struct RGB {
 }
 
 
-Image!RGB loadPPM6(Image!RGB img, in string fileName) {
+Image!RGB loadPPM6(ref Image!RGB img, in string fileName) {
     if (img is null)
         img = new Image!RGB;
     auto f = File(fileName, "rb");

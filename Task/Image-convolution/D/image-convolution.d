@@ -11,7 +11,7 @@ Image!Color convolve(Color)(in Image!Color im,
                             in ConvolutionFilter filter)
 pure nothrow in {
     assert(im !is null);
-    assert(!isnan(filter.divisor) && !isnan(filter.offset_));
+    assert(!filter.divisor.isNaN && !filter.offset_.isNaN);
     assert(filter.divisor != 0);
     assert(filter.kernel.length > 0 && filter.kernel[0].length > 0);
     foreach (const row; filter.kernel) // Is rectangular.

@@ -1,19 +1,20 @@
-function Levenshtein_Distance( s1, s2 )
-    if s1:len() == 0 then return s2:len() end
-    if s2:len() == 0 then return s1:len() end
+function leven(s,t)
+    if s == '' then return t:len() end
+    if t == '' then return s:len() end
 
-	if s1:sub( -1, -1 ) == s2:sub( -1, -1 ) then
-	    return Levenshtein_Distance( s1:sub( 1, -2 ), s2:sub( 1, -2 ) )
-	end
+    local s1 = s:sub(2, -1)
+    local t1 = t:sub(2, -1)
 
-	local a = Levenshtein_Distance( s1:sub( 1, -2 ), s2:sub( 1, -2 ) )
-	local b = Levenshtein_Distance( s1:sub( 1, -1 ), s2:sub( 1, -2 ) )
-	local c = Levenshtein_Distance( s1:sub( 1, -2 ), s2:sub( 1, -1 ) )
+    if s:sub(0, 1) == t:sub(0, 1) then
+        return leven(s1, t1)
+    end
 
-	if a > b then return b + 1 end
-	if a > c then return c + 1 end
-	return a + 1
+    return 1 + math.min(
+        leven(s1, t1),
+        leven(s,  t1),
+        leven(s1, t )
+      )
 end
 
-print( Levenshtein_Distance( "kitten", "sitting" ) )
-print( Levenshtein_Distance( "rosettacode", "raisethysword" ) )
+print(leven("kitten", "sitting"))
+print(leven("rosettacode", "raisethysword"))

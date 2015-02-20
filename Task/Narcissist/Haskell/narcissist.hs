@@ -1,0 +1,1 @@
+main = let fi t e c = if c then t else e in do ct <- getContents; putStrLn $ fi ['a','c','c','e','p','t'] ['r','e','j','e','c','t'] $ take (length ct - 1) ct == let q s = (s ++ show s) in q "main = let fi t e c = if c then t else e in do ct <- getContents; putStrLn $ fi ['a','c','c','e','p','t'] ['r','e','j','e','c','t'] $ take (length ct - 1) ct == let q s = (s ++ show s) in q "

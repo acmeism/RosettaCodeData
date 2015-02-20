@@ -3,7 +3,7 @@ import std.stdio, std.algorithm, std.range, std.typecons;
 auto hailstone(uint n) pure nothrow {
   auto result = [n];
   while (n != 1) {
-    n = n & 1 ? n*3 + 1 : n/2;
+    n = (n & 1) ? (n * 3 + 1) : (n / 2);
     result ~= n;
   }
   return result;

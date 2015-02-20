@@ -1,4 +1,4 @@
-import java.util.*;
+import java.util.Random;
 
 public class BestShuffle {
 
@@ -10,7 +10,7 @@ public class BestShuffle {
 
     public static String bestShuffle(final String s1) {
         char[] s2 = s1.toCharArray();
-        Collections.shuffle(Arrays.asList(s2));
+        shuffle(s2);
         for (int i = 0; i < s2.length; i++) {
             if (s2[i] != s1.charAt(i))
                 continue;
@@ -24,6 +24,16 @@ public class BestShuffle {
             }
         }
         return s1 + " " + new String(s2) + " (" + count(s1, s2) + ")";
+    }
+
+    public static void shuffle(char[] text) {
+        Random rand = new Random();
+        for (int i = text.length - 1; i > 0; i--) {
+            int r = rand.nextInt(i + 1);
+            char tmp = text[i];
+            text[i] = text[r];
+            text[r] = tmp;
+        }
     }
 
     private static int count(final String s1, final char[] s2) {

@@ -1,6 +1,6 @@
 class Array
   def quadratic_mean
-    Math.sqrt( self.inject(0) {|s, y| s += y*y}.to_f / self.length )
+    Math.sqrt( self.inject(0.0) {|s, y| s + y*y} / self.length )
   end
 end
 
@@ -10,4 +10,4 @@ class Range
   end
 end
 
-(1..10).quadratic_mean  # => 6.20483682299543
+(1..10).quadratic_mean  # => 6.2048368229954285

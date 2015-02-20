@@ -1,6 +1,5 @@
 #lang racket
 
-;; a little nicer, but still imperative
 (define (sieve n)
   (define primes (make-vector (add1 n) #t))
   (for* ([i (in-range 2 (add1 n))]

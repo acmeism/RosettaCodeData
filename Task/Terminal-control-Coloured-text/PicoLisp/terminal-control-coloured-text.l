@@ -1,4 +1,4 @@
-(unless (member (sys "TERM") '("linux" "xterm" "xterm-color" "rxvt"))
+(unless (member (sys "TERM") '("linux" "xterm" "xterm-color" "xterm-256color" "rxvt"))
    (quit "This application requires a colour terminal") )
 
 # Coloured text

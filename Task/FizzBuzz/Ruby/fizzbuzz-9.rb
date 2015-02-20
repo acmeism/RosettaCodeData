@@ -1,8 +1,3 @@
-fizzbuzz = ->(i) do
-  (i%15).zero? and next "FizzBuzz"
-  (i%3).zero?  and next "Fizz"
-  (i%5).zero?  and next "Buzz"
-  i
-end
-
-puts (1..100).map(&fizzbuzz).join("\n")
+seq = *0..100
+{Fizz:3, Buzz:5, FizzBuzz:15}.each{|k,n| n.step(100,n){|i|seq[i]=k}}
+puts seq.drop(1)

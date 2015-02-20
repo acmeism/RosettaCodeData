@@ -1,23 +1,22 @@
-import std.stdio, std.string, std.algorithm, std.typetuple,
-       std.array, std.conv;
+import std.stdio, std.string, std.algorithm, std.array, std.conv;
 
 struct GameOfLife {
   enum Cell : char { dead = ' ', alive = '#' }
   Cell[][] grid, newGrid;
 
-  this(in int x, in int y) pure nothrow {
+  this(in int x, in int y) pure nothrow @safe {
     grid = new typeof(grid)(y + 2, x + 2);
     newGrid = new typeof(grid)(y + 2, x + 2);
   }
 
   void opIndexAssign(in string[] v, in size_t y, in size_t x)
-  pure /*nothrow*/ {
+  pure /*nothrow*/ @safe /*@nogc*/ {
     foreach (immutable nr, row; v)
       foreach (immutable nc, state; row)
         grid[y + nr][x + nc] = state.to!Cell;
   }
 
-  void iteration() pure nothrow {
+  void iteration() pure nothrow @safe @nogc {
     newGrid[0][] = Cell.dead;
     newGrid[$ - 1][] = Cell.dead;
     foreach (row; newGrid)
@@ -35,18 +34,18 @@ struct GameOfLife {
         newGrid[r][c] = a ? Cell.alive : Cell.dead;
       }
 
-    swap(grid, newGrid);
+    grid.swap(newGrid);
   }
 
-  string toString() const pure nothrow {
+  string toString() const pure /*nothrow @safe*/ {
     auto ret = "-".replicate(grid[0].length - 1) ~ "\n";
     foreach (const row; grid[1 .. $ - 1])
-      ret ~= "|" ~ cast(char[])row[1 .. $ - 1] ~ "|\n";
+      ret ~= "|%(%c%)|\n".format(row[1 .. $ - 1]);
     return ret ~ "-".replicate(grid[0].length - 1);
   }
 }
 
-void main() {
+void main() /*@safe*/ {
   immutable glider1 = ["  #", "# #", " ##"];
   immutable glider2 = ["#  ", "# #", "## "];
 
@@ -56,10 +55,10 @@ void main() {
   uni[3, 19] = glider1;
   uni[3, 32] = glider2;
   uni[5, 50] = [" #  #", "#  ", "#   #", "#### "];
-  writeln(uni);
+  uni.writeln;
 
   foreach (immutable _; 0 .. 20) {
-    uni.iteration();
-    writeln(uni);
+    uni.iteration;
+    uni.writeln;
   }
 }

@@ -1,14 +1,18 @@
-import java.io.File
+import java.io.{File, FileWriter, IOException}
 
-try {
-    // Create temp file
-    val filename = File.createTempFile("prefix", ".suffix")
+  def writeStringToFile(file: File, data: String, appending: Boolean = false) =
+    using(new FileWriter(file, appending))(_.write(data))
 
-    // Delete temp file when program exits
-    filename.deleteOnExit
+  def using[A <: {def close() : Unit}, B](resource: A)(f: A => B): B =
+    try f(resource) finally resource.close()
 
-    System.out.println(filename)
-
-} catch {
-  case _: java.io.IOException =>
-}
+  try {
+    val file = File.createTempFile("_rosetta", ".passwd")
+    // Just an example how you can fill a file
+    using(new FileWriter(file))(writer => rawDataIter.foreach(line => writer.write(line)))
+    scala.compat.Platform.collectGarbage() // JVM Windows related bug workaround JDK-4715154
+    file.deleteOnExit()
+    println(file)
+  } catch {
+    case e: IOException => println(s"Running Example failed: ${e.getMessage}")
+  }

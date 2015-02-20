@@ -1,2 +1,1 @@
-i = 0
-puts(i += 1) while true
+1.step{|n| puts n}

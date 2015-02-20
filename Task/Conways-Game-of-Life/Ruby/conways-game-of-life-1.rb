@@ -1,18 +1,19 @@
 def game_of_life(name, size, generations, initial_life=nil)
   board = new_board size
   seed board, size, initial_life
-  print_board board, 0, name
+  print_board board, name, 0
   reason = generations.times do |gen|
     new = evolve board, size
-    print_board new, gen+1, name
+    print_board new, name, gen+1
     break :all_dead if barren? new, size
     break :static   if board == new
     board = new
   end
   if    reason == :all_dead then puts "no more life."
   elsif reason == :static   then puts "no movement"
-  else puts "specified lifetime ended"
+  else                           puts "specified lifetime ended"
   end
+  puts
 end
 
 def new_board(n)
@@ -22,7 +23,6 @@ end
 def seed(board, n, points=nil)
   if points.nil?
     # randomly seed board
-    srand
     indices = []
     n.times {|x| n.times {|y| indices << [x,y] }}
     indices.shuffle[0,10].each {|x,y| board[y][x] = 1}
@@ -54,13 +54,11 @@ def barren?(board, n)
   true
 end
 
-def print_board(m, generation, name)
+def print_board(m, name, generation)
   puts "#{name}: generation #{generation}"
   m.each {|row| row.each {|val| print "#{val == 1 ? '#' : '.'} "}; puts}
-  puts
 end
 
-
 game_of_life "blinker", 3, 2, [[1,0],[1,1],[1,2]]
-#game_of_life "glider", 4, 4, [[1,0],[2,1],[0,2],[1,2],[2,2]]
-#game_of_life "random", 5, 10
+game_of_life "glider", 4, 4, [[1,0],[2,1],[0,2],[1,2],[2,2]]
+game_of_life "random", 5, 10

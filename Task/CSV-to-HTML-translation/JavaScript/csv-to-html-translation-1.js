@@ -5,26 +5,14 @@ var csv = "Character,Speech\n" +
 	   "Brians mother,I'm his mother; that's who!\n" +
 	   "The multitude,Behold his mother! Behold his mother!";
 
-csv = csv.replace(/&/g, '&amp;')
-         .replace(/</g, '&lt;')
-         .replace(/>/g, '&gt;')
-         .replace(/"/g, '&quot;');
+var lines = csv.replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .split(/[\n\r]/)
+    .map(function(line) { return line.split(',')})
+    .map(function(row) {return '\t\t<tr><td>' + row[0] + '</td><td>' + row[1] + '</td></tr>';});
 
-var lines = csv.split(/[\n\r]+/g),
-    header = lines.shift().split(","),
-    line,
-    rows = "",
-    thead = '<tr>'+
-		'<th>'+header[0]+'</th>'+
-		'<th>'+header[1]+'</th>'+
-	    '</tr>\n';
-
-for (var i=0, len=lines.length; i<len; i++) {
-    line = lines[i].split(",");
-    rows += '<tr>'+
-		'<td>'+line[0]+'</td>'+
-		'<td>'+line[1]+'</td>'+
-	    '</tr>\n';
-}
-
-console.log('<table><thead>\n' + thead + '</thead><tbody>\n' + rows + '</tbody></table>' );
+console.log('<table>\n\t<thead>\n'      + lines[0] +
+            '\n\t</thead>\n\t<tbody>\n' + lines.slice(1).join('\n') +
+            '\t</tbody>\n</table>');

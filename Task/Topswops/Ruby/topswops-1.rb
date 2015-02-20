@@ -1,8 +1,6 @@
 def f1(a)
   i = 0
-  loop do
-    a0 = a[0]
-    break if a0 == 1
+  while (a0 = a[0]) > 1
     a[0...a0] = a[0...a0].reverse
     i += 1
   end

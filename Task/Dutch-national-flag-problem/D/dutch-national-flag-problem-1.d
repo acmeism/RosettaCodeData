@@ -2,7 +2,7 @@ import std.stdio, std.random, std.algorithm, std.traits, std.array;
 
 enum DutchColors { red, white, blue }
 
-void dutchNationalFlagSort(DutchColors[] items) pure nothrow {
+void dutchNationalFlagSort(DutchColors[] items) pure nothrow @nogc {
     int lo, mid, hi = items.length - 1;
 
     while (mid <= hi)
@@ -22,10 +22,10 @@ void dutchNationalFlagSort(DutchColors[] items) pure nothrow {
 void main() {
     DutchColors[12] balls;
     foreach (ref ball; balls)
-        ball = [EnumMembers!DutchColors][uniform(0, $)];
+        ball = uniform!DutchColors;
 
     writeln("Original Ball order:\n", balls);
-    balls.dutchNationalFlagSort();
+    balls.dutchNationalFlagSort;
     writeln("\nSorted Ball Order:\n", balls);
-    assert(balls[].isSorted(), "Balls not sorted");
+    assert(balls[].isSorted, "Balls not sorted.");
 }

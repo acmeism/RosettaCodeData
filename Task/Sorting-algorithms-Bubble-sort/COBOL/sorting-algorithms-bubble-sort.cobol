@@ -1,145 +1,54 @@
-       IDENTIFICATION DIVISION.
-       PROGRAM-ID.                      BUBBLESORT.
-       AUTHOR.                          DAVE STRATFORD.
-       DATE-WRITTEN.                    MARCH 2010.
-       INSTALLATION.                    HEXAGON SYSTEMS LIMITED.
-
-       ENVIRONMENT DIVISION.
-       CONFIGURATION SECTION.
-       SOURCE-COMPUTER.                 ICL VME.
-       OBJECT-COMPUTER.                 ICL VME.
-
-       INPUT-OUTPUT SECTION.
-       FILE-CONTROL.
-           SELECT FA-INPUT-FILE  ASSIGN FL01.
-           SELECT FB-OUTPUT-FILE ASSIGN FL02.
-
-       DATA DIVISION.
-       FILE SECTION.
-
-       FD  FA-INPUT-FILE.
-       01  FA-INPUT-REC.
-         03  FA-DATA                    PIC S9(6).
-
-       FD  FB-OUTPUT-FILE.
-       01  FB-OUTPUT-REC                PIC S9(6).
-
-       WORKING-STORAGE SECTION.
-       01  WA-IDENTITY.
-         03  WA-PROGNAME                PIC X(10) VALUE "BUBBLESORT".
-         03  WA-VERSION                 PIC X(6) VALUE "000001".
-
-       01  WB-TABLE.
-         03  WB-ENTRY                   PIC 9(8) COMP SYNC OCCURS 100000
-                                                  INDEXED BY WB-IX-1.
-
-       01  WC-VARS.
-         03  WC-SIZE                    PIC S9(8) COMP SYNC.
-         03  WC-TEMP                    PIC S9(8) COMP SYNC.
-         03  WC-END                     PIC S9(8) COMP SYNC.
-         03  WC-LAST-CHANGE             PIC S9(8) COMP SYNC.
-
-       01  WF-CONDITION-FLAGS.
-         03  WF-EOF-FLAG                PIC X.
-           88  END-OF-FILE              VALUE "Y".
-         03  WF-EMPTY-FILE-FLAG         PIC X.
-           88  EMPTY-FILE               VALUE "Y".
-
-       PROCEDURE DIVISION.
-       A-MAIN SECTION.
-       A-000.
-           PERFORM B-INITIALISE.
-           IF NOT EMPTY-FILE
-              PERFORM C-SORT.
-           PERFORM D-FINISH.
-
-       A-999.
-           STOP RUN.
-
-       B-INITIALISE SECTION.
-       B-000.
-           DISPLAY "*** " WA-PROGNAME " VERSION "
-                          WA-VERSION " STARTING ***".
-
-           MOVE ALL "N" TO WF-CONDITION-FLAGS.
-           OPEN INPUT FA-INPUT-FILE.
-           SET WB-IX-1 TO 0.
-
-           READ FA-INPUT-FILE AT END MOVE "Y" TO WF-EOF-FLAG
-                                                 WF-EMPTY-FILE-FLAG.
-
-           PERFORM BA-READ-INPUT UNTIL END-OF-FILE.
-
-           CLOSE FA-INPUT-FILE.
-
-           SET WC-SIZE TO WB-IX-1.
-
-       B-999.
-           EXIT.
-
-       BA-READ-INPUT SECTION.
-       BA-000.
-           SET WB-IX-1 UP BY 1.
-           MOVE FA-DATA TO WB-ENTRY(WB-IX-1).
-
-           READ FA-INPUT-FILE AT END MOVE "Y" TO WF-EOF-FLAG.
-
-       BA-999.
-           EXIT.
-
-       C-SORT SECTION.
-       C-000.
-           DISPLAY "SORT STARTING".
-
-           MOVE WC-SIZE TO WC-END.
-           PERFORM E-BUBBLE UNTIL WC-END = 1.
-
-           DISPLAY "SORT FINISHED".
-
-       C-999.
-           EXIT.
-
-       D-FINISH SECTION.
-       D-000.
-           OPEN OUTPUT FB-OUTPUT-FILE.
-           SET WB-IX-1 TO 1.
-
-           PERFORM DA-WRITE-OUTPUT UNTIL WB-IX-1 > WC-SIZE.
-
-           CLOSE FB-OUTPUT-FILE.
-
-           DISPLAY "*** " WA-PROGNAME " FINISHED ***".
-
-       D-999.
-           EXIT.
-
-       DA-WRITE-OUTPUT SECTION.
-       DA-000.
-           WRITE FB-OUTPUT-REC FROM WB-ENTRY(WB-IX-1).
-           SET WB-IX-1 UP BY 1.
-
-       DA-999.
-           EXIT.
-
-       E-BUBBLE SECTION.
-       E-000.
-           MOVE 1 TO WC-LAST-CHANGE.
-
-           PERFORM F-PASS VARYING WB-IX-1 FROM 1 BY 1
-                          UNTIL WB-IX-1 = WC-END.
-
-           MOVE WC-LAST-CHANGE TO WC-END.
-
-       E-999.
-           EXIT.
-
-       F-PASS SECTION.
-       F-000.
-           IF WB-ENTRY(WB-IX-1) > WB-ENTRY(WB-IX-1 + 1)
-              SET  WC-LAST-CHANGE        TO WB-IX-1
-              MOVE WB-ENTRY(WB-IX-1)     TO WC-TEMP
-              MOVE WB-ENTRY(WB-IX-1 + 1) TO WB-ENTRY(WB-IX-1)
-              MOVE WC-TEMP               TO WB-ENTRY(WB-IX-1 + 1).
-
-       F-999.
-           EXIT.
+       identification division.
+       program-id. BUBBLSRT.
+       data division.
+       working-storage section.
+       01 changed-flag      pic x.
+          88 hasChanged         value 'Y'.
+          88 hasNOTChanged      value 'N'.
+       01 itemCount         pic 99.
+       01 tempItem          pic 99.
+       01 itemArray.
+          03 itemArrayCount pic 99.
+          03 item           pic 99 occurs 99 times
+                                   indexed by itemIndex.
+      *
+       procedure division.
+       main.
+      * place the values to sort into itemArray
+           move 10 to itemArrayCount
+           move 28 to item (1)
+           move 44 to item (2)
+           move 46 to item (3)
+           move 24 to item (4)
+           move 19 to item (5)
+           move  2 to item (6)
+           move 17 to item (7)
+           move 11 to item (8)
+           move 24 to item (9)
+           move  4 to item (10)
+      * store the starting count in itemCount and perform the sort
+           move itemArrayCount to itemCount
+           perform bubble-sort
+      * output the results
+           perform varying itemIndex from 1 by 1
+              until itemIndex > itemArrayCount
+              display item (itemIndex) ';' with no advancing
+           end-perform
+      * thats it!
+           stop run.
+      *
+       bubble-sort.
+           perform with test after until hasNOTchanged
+              set hasNOTChanged to true
+              subtract 1 from itemCount
+              perform varying itemIndex from 1 by 1
+                 until itemIndex > itemCount
+                 if item (itemIndex) > item (itemIndex + 1)
+                    move item (itemIndex) to tempItem
+                    move item (itemIndex + 1) to item (itemIndex)
+                    move tempItem to item (itemIndex + 1)
+                    set hasChanged to true
+                 end-if
+              end-perform
+           end-perform
+           .

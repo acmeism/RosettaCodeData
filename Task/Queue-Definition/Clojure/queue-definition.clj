@@ -5,10 +5,8 @@
   (swap! q conj x))
 
 (defn dequeue [q]
-  (if (seq @q)
-    (let [x (first @q)]
-      (swap! q subvec 1)
-      x)
+  (if-let [[f & r] (seq @q)]
+    (do (reset! q r) f)
     (throw (IllegalStateException. "Can't pop an empty queue."))))
 
 (defn queue-empty? [q]

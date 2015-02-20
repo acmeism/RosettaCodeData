@@ -2,8 +2,8 @@ import std.stdio, std.algorithm, std.typecons, std.array, std.range;
 
 struct Item { string name; int weight, value; }
 
-Item[] knapsack01DinamicProgramming(in Item[] items, in int limit)
-pure nothrow {
+Item[] knapsack01DinamicProgramming(immutable Item[] items, in int limit)
+pure nothrow @safe {
     auto tab = new int[][](items.length + 1, limit + 1);
 
     foreach (immutable i, immutable it; items)
@@ -22,7 +22,7 @@ pure nothrow {
     return result;
 }
 
-void main() {
+void main() @safe {
     enum int limit = 400;
     immutable Item[] items = [
         {"apple",      39,  40}, {"banana",        27,  60},

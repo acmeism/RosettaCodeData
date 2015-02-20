@@ -1,7 +1,12 @@
-import numpy
-def primes_upto2(limit):
-    is_prime = numpy.ones(limit + 1, dtype=numpy.bool)
-    for n in xrange(2, int(limit**0.5 + 1.5)):
-        if is_prime[n]:
-            is_prime[n*n::n] = 0
-    return numpy.nonzero(is_prime)[0][2:]
+def iprimes2(limit):
+    yield 2
+    if limit < 3: return
+    lmtbf = (limit - 3) // 2
+    buf = [True] * (lmtbf + 1)
+    for i in range((int(limit ** 0.5) - 3) // 2 + 1):
+        if buf[i]:
+            p = i + i + 3
+            s = p * (i + 1) + i
+            buf[s::p] = [False] * ((lmtbf - s) // p + 1)
+    for i in range(lmtbf + 1):
+        if buf[i]: yield (i + i + 3)

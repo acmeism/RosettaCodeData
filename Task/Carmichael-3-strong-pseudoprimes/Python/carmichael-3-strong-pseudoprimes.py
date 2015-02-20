@@ -1,6 +1,6 @@
 class Isprime():
     '''
-    Extensible sieve of Erastosthenes
+    Extensible sieve of Eratosthenes
 
     >>> isprime.check(11)
     True

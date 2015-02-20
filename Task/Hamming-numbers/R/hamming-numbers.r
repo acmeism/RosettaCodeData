@@ -9,4 +9,6 @@ hamming=function(hamms,limit) {
   }
   hamms
 }
-sort(hamming(1,limit=2^31)[-1])
+h <- sort(hamming(1,limit=2^31-1))
+print(h[1:20])
+print(h[length(h)])

@@ -1,5 +1,5 @@
 /*REXX program performs bitwise operations on integers:  & | && ¬ «L »R */
-numeric digits 1000                    /*be able to handle bit integers.*/
+numeric digits 1000                    /*be able to handle big integers.*/
 
 say  center('decimal',9)   center("value",9)     center('bits',50)
 say  copies('─',9)         copies('─',9)         copies('─',50)
@@ -13,7 +13,6 @@ b =  3  ;      call show  b            ,  'B'          /* show & tell B */
                call show  bNot(a)      ,  '¬ A'        /*  not          */
                call show  bShiftL(a,b) ,  'A [«B]'     /* shift  left   */
                call show  bShiftR(a,b) ,  'A [»B]'     /* shirt right   */
-
      /*┌───────────────────────────────────────────────────────────────┐
        │ Since REXX stores numbers (indeed, all values) as characters, │
        │ it makes no sense to "rotate" a value, since there aren't any │

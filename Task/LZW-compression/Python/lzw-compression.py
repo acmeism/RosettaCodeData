@@ -27,13 +27,18 @@ def compress(uncompressed):
 
 def decompress(compressed):
     """Decompress a list of output ks to a string."""
+    from cStringIO import StringIO
 
     # Build the dictionary.
     dict_size = 256
     dictionary = dict((chr(i), chr(i)) for i in xrange(dict_size))
     # in Python 3: dictionary = {chr(i): chr(i) for i in range(dict_size)}
 
-    w = result = compressed.pop(0)
+    # use StringIO, otherwise this becomes O(N^2)
+    # due to string concatenation in a loop
+    result = StringIO()
+    w = compressed.pop(0)
+    result.write(w)
     for k in compressed:
         if k in dictionary:
             entry = dictionary[k]
@@ -41,14 +46,14 @@ def decompress(compressed):
             entry = w + w[0]
         else:
             raise ValueError('Bad compressed k: %s' % k)
-        result += entry
+        result.write(entry)
 
         # Add w+entry[0] to the dictionary.
         dictionary[dict_size] = w + entry[0]
         dict_size += 1
 
         w = entry
-    return result
+    return result.getvalue()
 
 
 # How to use:

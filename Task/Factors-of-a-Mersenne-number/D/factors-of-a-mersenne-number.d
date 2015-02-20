@@ -1,7 +1,7 @@
 import std.stdio, std.math, std.traits;
 
-ulong mersenneFactor(in ulong p) pure nothrow {
-    static bool isPrime(T)(in T n) pure nothrow {
+ulong mersenneFactor(in ulong p) pure nothrow @nogc {
+    static bool isPrime(T)(in T n) pure nothrow @nogc {
         if (n < 2 || n % 2 == 0)
             return n == 2;
         for (Unqual!T i = 3; i ^^ 2 <= n; i += 2)
@@ -10,7 +10,8 @@ ulong mersenneFactor(in ulong p) pure nothrow {
         return true;
     }
 
-    static long modPow(in long cb, in long ce,in long m) pure nothrow {
+    static long modPow(in long cb, in long ce,in long m)
+    pure nothrow @nogc {
         long b = cb;
         long result = 1;
         for (long e = ce; e > 0; e >>= 1) {

@@ -1,7 +1,7 @@
 import std.stdio, std.array, std.conv;
 
 // Similar to the 'look and say' function.
-string encode(in string input) pure /*nothrow*/ {
+string encode(in string input) pure nothrow @safe {
     if (input.empty)
         return input;
     char last = input[$ - 1];
@@ -21,7 +21,7 @@ string encode(in string input) pure /*nothrow*/ {
     return count.text ~ last ~ output;
 }
 
-string decode(in string input) pure {
+string decode(in string input) pure /*@safe*/ {
     string i, result;
 
     foreach (immutable c; input)

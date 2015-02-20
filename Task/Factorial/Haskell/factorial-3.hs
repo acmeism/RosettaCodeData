@@ -1,1 +1,1 @@
-factorials = scanl (*) 1 [1..]
+factorial n = foldl (*) 1 [1..n]

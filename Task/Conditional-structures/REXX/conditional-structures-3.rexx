@@ -8,7 +8,7 @@
      when g=='wolf'               then many='pack'
      otherwise  say
                 say '*** error! ***'
-                say g "isn't one of the known thingys."
+                say g  "isn't one of the known thingys."
                 say
                 exit 13
      end   /*select*/

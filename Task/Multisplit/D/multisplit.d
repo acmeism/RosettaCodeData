@@ -1,16 +1,15 @@
 import std.stdio, std.array, std.algorithm;
 
-string[] multiSplit(in string s, in string[] divisors)
-pure /*nothrow*/ {
+string[] multiSplit(in string s, in string[] divisors) pure nothrow {
     string[] result;
-    auto rest = s.idup; // Not nothrow.
+    auto rest = s.idup;
 
     while (true) {
 	    bool done = true;
         string delim;
         {
             string best;
-            foreach (div; divisors) {
+            foreach (const div; divisors) {
                 const maybe = rest.find(div);
                 if (maybe.length > best.length) {
                     best = maybe;

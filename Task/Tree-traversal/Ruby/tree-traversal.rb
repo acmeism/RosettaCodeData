@@ -1,9 +1,4 @@
-class BinaryTreeNode
-  def initialize(value, left=nil, right=nil)
-    @value, @left, @right = value, left, right
-  end
-  attr_reader :value, :left, :right
-
+BinaryTreeNode = Struct.new(:value, :left, :right) do
   def self.from_array(nested_list)
     value, left, right = nested_list
     if value
@@ -21,9 +16,9 @@ class BinaryTreeNode
     end
   end
 
-  def each_preorder(&b)  ; walk_nodes([:self, :left, :right], &b) ; end
-  def each_inorder(&b)   ; walk_nodes([:left, :self, :right], &b) ; end
-  def each_postorder(&b) ; walk_nodes([:left, :right, :self], &b) ; end
+  def each_preorder(&b)  walk_nodes([:self, :left, :right], &b) end
+  def each_inorder(&b)   walk_nodes([:left, :self, :right], &b) end
+  def each_postorder(&b) walk_nodes([:left, :right, :self], &b) end
 
   def each_levelorder
     queue = [self]
@@ -38,8 +33,8 @@ end
 
 root = BinaryTreeNode.from_array [1, [2, [4, 7], [5]], [3, [6, [8], [9]]]]
 
-%w{each_preorder each_inorder each_postorder each_levelorder}.each {|mthd|
+BinaryTreeNode.instance_methods.select{|m| m=~/.+order/}.each do |mthd|
   printf "%-11s ", mthd[5..-1] + ':'
   root.send(mthd) {|node| print "#{node.value} "}
   puts
-}
+end

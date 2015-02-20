@@ -1,6 +1,6 @@
 import std.stdio, std.array;
 
-char[][] sierpinskiCarpet(in size_t n) pure nothrow {
+char[][] sierpinskiCarpet(in size_t n) pure nothrow @safe {
     auto mat = uninitializedArray!(typeof(return))(3 ^^ n, 3 ^^ n);
 
     foreach (immutable r, row; mat) {

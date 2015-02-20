@@ -2,7 +2,7 @@ def merge_sort(m)
   return m if m.length <= 1
 
   middle = m.length / 2
-  left = m[0,middle]
+  left = m[0..middle - 1]
   right = m[middle..-1]
 
   left = merge_sort(left)

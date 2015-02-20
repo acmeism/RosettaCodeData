@@ -1,6 +1,6 @@
 import std.stdio, std.algorithm;
 
-void quickSort(T)(T[] items) pure nothrow {
+void quickSort(T)(T[] items) pure nothrow @safe @nogc {
     if (items.length >= 2) {
         auto parts = partition3(items, items[$ / 2]);
         parts[0].quickSort;

@@ -1,7 +1,6 @@
 package main
 
 import (
-    "bytes"
     "fmt"
     "math/big"
     "strconv"
@@ -15,27 +14,31 @@ func main() {
 
     // ParseInt handles arbitrary bases from 2 to 36, and returns
     // a result of the requested size (64 bits shown here.)
+    // If the base argument is zero the base is determined by prefix
+    // as with math/big below.
     x64, _ := strconv.ParseInt("3c2", 19, 64)
     fmt.Println(x64)
 
-    // package bytes+fmt:  allows direct conversion from strings
-    // to integer types for bases 2, 8, 10, and 16.
-    // (Fscanf and scanf are more common for reading from
-    // files or stdin than for reading from strings.)
-    fmt.Fscanf(bytes.NewBufferString("1101"), "%b", &x)
+    // package fmt:  allows direct conversion from strings, standard
+    // input, or from an io.Reader (file, buffer, etc) to integer types
+    // for bases 2, 8, 10, and 16 or to any type that implements the
+    // fmt.Scanner interface (e.g. a big.Int).
+    // (Fscanf and Scanf are more common for reading from
+    // an io.Reader or stdin than Sscanf for reading from strings.)
+    fmt.Sscanf("1101", "%b", &x)
     fmt.Println(x)
 
-    fmt.Fscanf(bytes.NewBufferString("15"), "%o", &x)
+    fmt.Sscanf("15", "%o", &x)
     fmt.Println(x)
 
-    fmt.Fscanf(bytes.NewBufferString("13"), "%d", &x)
+    fmt.Sscanf("13", "%d", &x)
     fmt.Println(x)
 
-    fmt.Fscanf(bytes.NewBufferString("d"), "%x", &x)
+    fmt.Sscanf("d", "%x", &x)
     fmt.Println(x)
 
-    // package big:  allows conversion from string to big integer.
-    // any base from 2 to 16 can be specified as second parameter.
+    // package math/big:  allows conversion from string to big integer.
+    // any base from 2 to 36 can be specified as second parameter.
     var z big.Int
     z.SetString("111", 3)
     fmt.Println(&z)
@@ -51,5 +54,10 @@ func main() {
     fmt.Println(&z)
 
     z.SetString("0xd", 0) // 0x -> base 16
+    fmt.Println(&z)
+
+    // As mentioned, a big.Int (or any type implementing fmt.Scanner)
+    // can also be use with any of the fmt scanning functions.
+    fmt.Sscanf("15", "%o", &z)
     fmt.Println(&z)
 }

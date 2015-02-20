@@ -1,7 +1,7 @@
 import std.stdio, std.algorithm, std.range;
 
-auto horner(T, U)(in T[] p, in U x) pure nothrow {
-    return reduce!((a, b) => a * x + b)(cast(U)0, p.retro);
+auto horner(T, U)(in T[] p, in U x) pure nothrow @nogc {
+    return reduce!((a, b) => a * x + b)(U(0), p.retro);
 }
 
 void main() {

@@ -1,7 +1,7 @@
-bool isPangram(in string text) pure nothrow {
+bool isPangram(in string text) pure nothrow @safe @nogc {
     uint bitset;
 
-    foreach (c; text) {
+    foreach (immutable c; text) {
         if (c >= 'a' && c <= 'z')
             bitset |= (1u << (c - 'a'));
         else if (c >= 'A' && c <= 'Z')
@@ -12,8 +12,8 @@ bool isPangram(in string text) pure nothrow {
 }
 
 void main() {
-    assert(isPangram("the quick brown fox jumps over the lazy dog"));
-    assert(!isPangram("ABCDEFGHIJKLMNOPQSTUVWXYZ"));
-    assert(!isPangram("ABCDEFGHIJKL.NOPQRSTUVWXYZ"));
-    assert(isPangram("ABC.D.E.FGHI*J/KL-M+NO*PQ R\nSTUVWXYZ"));
+    assert("the quick brown fox jumps over the lazy dog".isPangram);
+    assert(!"ABCDEFGHIJKLMNOPQSTUVWXYZ".isPangram);
+    assert(!"ABCDEFGHIJKL.NOPQRSTUVWXYZ".isPangram);
+    assert("ABC.D.E.FGHI*J/KL-M+NO*PQ R\nSTUVWXYZ".isPangram);
 }

@@ -1,5 +1,5 @@
 /*REXX program  demonstrates  array usage  with mimicry.                */
-a. = 'not found'                       /*value for all a.xxx  (so far). */
+a. = 00                                /*value for all a.xxx  (so far). */
                   do j=1  to 100       /*start at 1, define 100 elements*/
                   a.j = -j * 100       /*define element as  -J hundred. */
                   end   /*j*/          /*the above defines 100 elements.*/

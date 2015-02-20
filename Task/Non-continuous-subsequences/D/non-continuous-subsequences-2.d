@@ -1,29 +1,28 @@
 struct Ncsub(T) {
     T[] seq;
 
-    int opApply(int delegate(ref int[]) dg) const {
-        immutable int n = seq.length;
+    int opApply(int delegate(ref T[]) dg) const {
+        immutable n = seq.length;
         int result;
-        auto S = new int[n];
+        auto S = new T[n];
 
-        FOR_I:
-        foreach (i; 1 .. 1 << seq.length) {
-            int len_S;
+        OUTER: foreach (immutable i; 1 .. 1 << n) {
+            uint lenS;
             bool nc = false;
-            foreach (j; 0 .. seq.length + 1) {
-                immutable int k = i >> j;
+            foreach (immutable j; 0 .. n + 1) {
+                immutable k = i >> j;
                 if (k == 0) {
                     if (nc) {
-                        auto auxS = S[0 .. len_S];
+                        auto auxS = S[0 .. lenS];
                         result = dg(auxS);
                         if (result)
-                            break FOR_I;
+                            break OUTER;
                     }
                     break;
                 } else if (k % 2) {
-                    S[len_S] = seq[j];
-                    len_S++;
-                } else if (len_S)
+                    S[lenS] = seq[j];
+                    lenS++;
+                } else if (lenS)
                     nc = true;
             }
         }
@@ -34,9 +33,10 @@ struct Ncsub(T) {
 
 void main() {
     import std.array, std.range;
-    //assert(iota(24).array().Ncsub!int().walkLength() == 16_776_915);
-    auto r = array(iota(24));
-    int counter;
+
+    //assert(24.iota.array.Ncsub!int.walkLength == 16_776_915);
+    auto r = 24.iota.array;
+    uint counter = 0;
     foreach (s; Ncsub!int(r))
         counter++;
     assert(counter == 16_776_915);

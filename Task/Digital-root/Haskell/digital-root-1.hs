@@ -1,10 +1,10 @@
-digSum base = f 0 where
-	f a n = let (q,r) = n`divMod`base in
-		if q == 0 then a+r else f (a+r) q
+import Data.List (unfoldr)
 
-digRoot base = f 0 where
-	f p n	| n < base = (p,n)
-		| otherwise = f (p+1) (digSum base n)
+digSum base = sum . unfoldr f where
+        f 0 = Nothing
+	f n = Just (r,q) where (q,r) = n `divMod` base
+
+digRoot base = head . dropWhile ((>= base).snd) . zip [0..] . iterate (digSum base)
 
 main =	do
 	putStrLn "in base 10:"

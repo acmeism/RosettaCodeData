@@ -1,5 +1,6 @@
-   ".@(('utm=. '),,)@(];._2)@(noun=. ".@('(0 : 0)'"_))_ NB. Fixed tacit universal Turing machine code...
+   ". noun define -. CRLF     NB. Fixed tacit universal Turing machine code...
 
+utm=.
 (((":@:(]&:>)@:(6&({::)) ,: (":@] 9&({::))) ,. ':'"_) ,. 2&({::) >@:(((
 48 + ]) { a."_)@[ ; (] $ ' '"_) , '^'"_) 3&({::))@:([ (0 0 $ 1!:2&2)@:(
 'A changeless cycle was detected!'"_)^:(-.@:(_1"_ = 1&({::))))@:((((3&(

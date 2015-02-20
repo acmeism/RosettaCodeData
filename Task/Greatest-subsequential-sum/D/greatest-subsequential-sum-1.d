@@ -1,9 +1,9 @@
 import std.stdio;
 
-inout(T[]) maxSubseq(T)(inout T[] sequence) pure nothrow {
+inout(T[]) maxSubseq(T)(inout T[] sequence) pure nothrow @nogc {
     int maxSum, thisSum, i, start, end = -1;
 
-    foreach (j, x; sequence) {
+    foreach (immutable j, immutable x; sequence) {
         thisSum += x;
         if (thisSum < 0) {
             i = j + 1;
@@ -23,8 +23,8 @@ inout(T[]) maxSubseq(T)(inout T[] sequence) pure nothrow {
 
 void main() {
     const a1 = [-1, -2, 3, 5, 6, -2, -1, 4, -4, 2, -1];
-    writeln("Maximal subsequence: ", maxSubseq(a1));
+    writeln("Maximal subsequence: ", a1.maxSubseq);
 
     const a2 = [-1, -2, -3, -5, -6, -2, -1, -4, -4, -2, -1];
-    writeln("Maximal subsequence: ", maxSubseq(a2));
+    writeln("Maximal subsequence: ", a2.maxSubseq);
 }

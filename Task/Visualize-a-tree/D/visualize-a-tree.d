@@ -2,7 +2,7 @@ import std.stdio, std.conv, std.algorithm, std.array;
 
 struct Node(T) { T value; Node* left, right; }
 
-string[] treeIndent(T)(in Node!T* t) {
+string[] treeIndent(T)(in Node!T* t) pure nothrow @safe {
     if (!t) return ["-- (null)"];
     const tr = t.right.treeIndent;
     return "--" ~ t.value.text ~

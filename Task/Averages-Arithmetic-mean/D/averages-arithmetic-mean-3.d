@@ -1,10 +1,10 @@
 import std.stdio, std.conv, std.algorithm, std.math, std.traits;
 
-CommonType!(T, real) mean(T)(T[] n ...) if (isNumeric!(T)) {
-    alias CommonType!(T, real) E;
+CommonType!(T, real) mean(T)(T[] n ...) if (isNumeric!T) {
+    alias E = CommonType!(T, real);
     auto num = n.dup;
-    schwartzSort!(abs, "a > b")(num);
-    return reduce!q{a+b}(0.0L, map!(to!E)(num)) / max(1, num.length);
+    num.schwartzSort!(abs, "a > b");
+    return num.map!(to!E).sum(0.0L) / max(1, num.length);
 }
 
 void main() {

@@ -1,11 +1,11 @@
-sub encipher {
-        my ($_, $k, $decode) = @_;
-        $k = 26 - $k if $decode;
-        join('', map(chr(((ord(uc $_) - 65 + $k) % 26) + 65), /([a-z])/gi));
+sub caesar {
+        my ($message, $key, $decode) = @_;
+        $key = 26 - $key if $decode;
+        $message =~ s/([A-Z])/chr(((ord(uc $1) - 65 + $key) % 26) + 65)/geir;
 }
 
 my $msg = 'THE FIVE BOXING WIZARDS JUMP QUICKLY';
-my $enc = encipher($msg, 10);
-my $dec = encipher($enc, 10, 'decode');
+my $enc = caesar($msg, 10);
+my $dec = caesar($enc, 10, 'decode');
 
 print "msg: $msg\nenc: $enc\ndec: $dec\n";

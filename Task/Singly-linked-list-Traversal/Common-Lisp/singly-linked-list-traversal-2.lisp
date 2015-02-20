@@ -1,3 +1,1 @@
-(loop for ref = list then (rest ref)
-      until (null ref)
-      do (print (first ref)))
+(loop for x in list do (print x))

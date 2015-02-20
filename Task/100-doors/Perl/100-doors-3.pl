@@ -1,1 +1,1 @@
-print "Door $_ is ", qw"closed open"[int sqrt == sqrt], "\n" for 1..100;
+print "Door $_ is open\n" for map $_**2, 1 .. 10;

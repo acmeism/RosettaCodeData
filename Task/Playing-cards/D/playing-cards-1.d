@@ -6,25 +6,24 @@ enum Pip {Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten,
 enum Suit {Diamonds, Spades, Hearts, Clubs}
 alias Card = Tuple!(Pip, Suit);
 
-Card[] newDeck() /*pure nothrow*/ {
-    return cartesianProduct([EnumMembers!Pip], [EnumMembers!Suit])
-           .array;
+auto newDeck() pure nothrow @safe {
+    return cartesianProduct([EnumMembers!Pip], [EnumMembers!Suit]);
 }
 
 alias shuffleDeck = randomShuffle;
 
-Card dealCard(ref Card[] deck) pure nothrow {
+Card dealCard(ref Card[] deck) pure nothrow @safe @nogc {
     immutable card = deck.back;
     deck.popBack;
     return card;
 }
 
-void show(in Card[] deck) {
+void show(in Card[] deck) @safe {
     writefln("Deck:\n%(%s\n%)\n", deck);
 }
 
-void main() {
-    auto d = newDeck;
+void main() /*@safe*/ {
+    auto d = newDeck.array;
     d.show;
     d.shuffleDeck;
     while (!d.empty)

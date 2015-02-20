@@ -1,4 +1,4 @@
-bool isKaprekar(in uint n) pure nothrow {
+bool isKaprekar(in uint n) pure nothrow @nogc @safe {
     ulong powr = n ^^ 2UL;
     ulong r, l, tens = 10;
     while (r < n) {
@@ -13,8 +13,9 @@ bool isKaprekar(in uint n) pure nothrow {
 
 void main() {
     import std.stdio;
+
     int count = 1;
-    foreach (i; 1 .. 1_000_000)
-        if (isKaprekar(i))
+    foreach (immutable i; 1 .. 1_000_000)
+        if (i.isKaprekar)
             writefln("%d: %d", count++, i);
 }

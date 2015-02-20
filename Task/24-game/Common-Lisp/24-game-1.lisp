@@ -9,7 +9,7 @@
                        chosen-digits)
                (read))
              (lose () (error 'bad-equation))
-             (choose () (setf chosen-digits (loop repeat 4 collecting (random 10))))
+             (choose () (setf chosen-digits (loop repeat 4 collecting (1+ (random 9)))))
              (check (e)
                (typecase e
                  ((eql bye) (return-from 24-game))

@@ -2,7 +2,7 @@ import std.stdio, std.array, std.algorithm, std.string;
 
 
 string[string] matchmaker(string[][string] guyPrefers,
-                          string[][string] girlPrefers) {
+                          string[][string] girlPrefers) /*@safe*/ {
     string[string] engagedTo;
     string[] freeGuys = guyPrefers.keys;
 
@@ -36,7 +36,7 @@ string[string] matchmaker(string[][string] guyPrefers,
 
 bool check(bool doPrint=false)(string[string] engagedTo,
                                string[][string] guyPrefers,
-                               string[][string] galPrefers) {
+                               string[][string] galPrefers) @safe {
     enum MSG = "%s likes %s better than %s and %s " ~
                "likes %s better than their current partner";
     string[string] inverseEngaged;
@@ -77,7 +77,7 @@ bool check(bool doPrint=false)(string[string] engagedTo,
 }
 
 
-void main() {
+void main() /*@safe*/ {
     auto guyData = "abe  abi eve cath ivy jan dee fay bea hope gay
                     bob  cath hope abi dee eve fay bea jan ivy gay
                     col  hope eve abi dee bea fay ivy gay cath jan
@@ -111,7 +111,7 @@ void main() {
 
     writeln("\nCouples:");
     string[] parts;
-    foreach (k; engagedTo.keys.sort)
+    foreach (k; engagedTo.keys.sort())
         writefln("%s is engagedTo to %s", k, engagedTo[k]);
     writeln();
 
@@ -119,7 +119,7 @@ void main() {
     writeln("Marriages are ", c ? "stable" : "unstable");
 
     writeln("\n\nSwapping two fiances to introduce an error");
-    auto gals = galPrefers.keys.sort;
+    auto gals = galPrefers.keys.sort();
     swap(engagedTo[gals[0]], engagedTo[gals[1]]);
     foreach (gal; gals[0 .. 2])
         writefln("  %s is now engagedTo to %s", gal, engagedTo[gal]);

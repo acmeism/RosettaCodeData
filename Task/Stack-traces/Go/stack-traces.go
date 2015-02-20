@@ -2,13 +2,13 @@ package main
 
 import (
     "fmt"
-    "runtime/debug"
+    "runtime"
 )
 
 func main() {
-    // to print it to standard error
-    debug.PrintStack()
-    // alternately to get it in a variable:
-    stackTrace := debug.Stack()
+    stackTrace := make([]byte, 1024)
+    n := runtime.Stack(stackTrace, true)
+    stackTrace = stackTrace[:n]
+    fmt.Printf("%s\n", stackTrace)
     fmt.Printf("(%d bytes)\n", len(stackTrace))
 }

@@ -1,6 +1,12 @@
-gate :: Eq a => [a] -> [a] -> [Door]
-gate (x:xs) (y:ys) | x == y  =  Open   : gate xs ys
-gate (x:xs) ys               =  Closed : gate xs ys
-gate []     _                =  []
+data Door = Open | Closed deriving Show
 
-run n = gate [1..n] [k*k | k <- [1..]]
+toggle Open   = Closed
+toggle Closed = Open
+
+toggleEvery :: Int -> [Door] -> [Door]
+toggleEvery k = zipWith toggleK [1..]
+  where
+    toggleK n door | n `mod` k == 0 = toggle door
+                   | otherwise      = door
+
+run n = foldr toggleEvery (replicate n Closed) [1..n]

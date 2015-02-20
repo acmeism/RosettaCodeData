@@ -1,1 +1,3 @@
-    while (1), printf('SPAM\n'); end;
+while true
+    fprintf('SPAM\n')
+end

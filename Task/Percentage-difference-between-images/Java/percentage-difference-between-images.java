@@ -26,10 +26,10 @@ public class ImgDiffPercent
       System.exit(1);
     }
     long diff = 0;
-    for (int i = 0; i < height1; i++) {
-      for (int j = 0; j < width1; j++) {
-        int rgb1 = img1.getRGB(i, j);
-        int rgb2 = img2.getRGB(i, j);
+    for (int y = 0; y < height1; y++) {
+      for (int x = 0; x < width1; x++) {
+        int rgb1 = img1.getRGB(x, y);
+        int rgb2 = img2.getRGB(x, y);
         int r1 = (rgb1 >> 16) & 0xff;
         int g1 = (rgb1 >>  8) & 0xff;
         int b1 = (rgb1      ) & 0xff;

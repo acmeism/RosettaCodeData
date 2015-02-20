@@ -8,7 +8,6 @@ task() ->
     [io:fwrite("~p has additive persistence ~p and digital root of ~p~n", [X, Y, Z]) || {X, {Y, Z}} <- lists:zip(Ns, Persistances)].
 
 
-
 persistance_root( X ) -> persistance_root( sum_digits:sum_digits(X), 1 ).
 
 persistance_root( X, N ) when X	< 10 ->	{N, X};

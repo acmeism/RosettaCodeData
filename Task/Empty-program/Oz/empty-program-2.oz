@@ -1,1 +1,4 @@
-unit
+functor
+define
+   skip
+end

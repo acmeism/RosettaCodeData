@@ -5,7 +5,7 @@ CommonType!(T1, T2, T3)[] naiveQR(T1, T2, T3)
 pure nothrow if (isFloatingPoint!T1) {
     alias ReturnT = typeof(typeof(return).init[0]);
     if (a == 0)
-        return [cast(ReturnT)c / b]; // It's a linear function.
+        return [ReturnT(c / b)]; // It's a linear function.
     immutable ReturnT det = b ^^ 2 - 4 * a * c;
     if (det < 0)
         return []; // No real number root.
@@ -18,7 +18,7 @@ CommonType!(T1, T2, T3)[] cautiQR(T1, T2, T3)
 pure nothrow if (isFloatingPoint!T1) {
     alias ReturnT = typeof(typeof(return).init[0]);
     if (a == 0)
-        return [cast(ReturnT)c / b]; // It's a linear function.
+        return [ReturnT(c / b)]; // It's a linear function.
     immutable ReturnT det = b ^^ 2 - 4 * a * c;
     if (det < 0)
         return []; // No real number root.

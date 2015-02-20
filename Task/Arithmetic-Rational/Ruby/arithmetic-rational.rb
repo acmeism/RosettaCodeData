@@ -1,6 +1,6 @@
 require 'rational' #Only needed in Ruby < 1.9
 
-for candidate in 2 .. 2**19:
+for candidate in 2 .. 2**19
   sum = Rational(1, candidate)
   for factor in 2 ... candidate**0.5
     if candidate % factor == 0

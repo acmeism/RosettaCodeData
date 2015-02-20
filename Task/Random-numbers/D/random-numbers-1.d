@@ -10,8 +10,7 @@ struct NormalRandom {
     }
 
     double opCall() const /*nothrow*/ {
-        immutable r1 = uniform(0.0, 1.0), // Not nothrow.
-                  r2 = uniform(0.0, 1.0);
+        immutable r1 = uniform01, r2 = uniform01; // Not nothrow.
         return mean + stdDev * sqrt(-2 * r1.log) * cos(2 * PI * r2);
     }
 }

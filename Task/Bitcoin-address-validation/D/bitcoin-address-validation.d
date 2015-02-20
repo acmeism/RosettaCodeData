@@ -1,26 +1,26 @@
-import std.stdio, std.algorithm, std.array, std.string, sha_256;
+import std.stdio, std.algorithm, std.array, std.string, sha_256_2;
 
 struct A25 {
     // Type for a 25 ubyte (not base58 encoded) bitcoin address.
     ubyte[25] enc;
 
-    ubyte bitcoinVersion() const pure nothrow {
+    ubyte bitcoinVersion() const pure nothrow @safe @nogc {
         return enc[0];
     }
 
-    ubyte[4] embeddedChecksum() const pure nothrow {
+    ubyte[4] embeddedChecksum() return const pure nothrow @safe @nogc {
         return enc[$ - 4 .. $];
     }
 
     /** Computes a double sha256 hash of the first 21 bytes of
     the address. Returns the full 32 ubyte sha256 hash. */
-    ubyte[32] doubleSHA256() const pure nothrow {
+    ubyte[32] doubleSHA256() const pure nothrow @nogc {
         return SHA256.digest(SHA256.digest(enc[0 .. 21]));
     }
 
     /** Returns a four ubyte checksum computed from the first 21
     bytes of the address. */
-    ubyte[4] computeChecksum() const pure nothrow {
+    ubyte[4] computeChecksum() const pure nothrow @nogc {
         return doubleSHA256[0 .. 4];
     }
 
@@ -28,7 +28,7 @@ struct A25 {
     receiver. Errors are returned if the argument is not valid base58
     or if the decoded value does not fit in the 25 ubyte address.
     The address is not otherwise checked for validity. */
-    string set58(in ubyte[] s) pure nothrow {
+    string set58(in ubyte[] s) pure nothrow @safe @nogc {
         static immutable digits =
         "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
         .representation;
@@ -60,7 +60,7 @@ if it can be decoded into a 25 ubyte address, the Version number is 0,
 and the checksum validates.  Return value ok will be true for valid
 addresses.  If ok is false, the address is invalid and the error value
 may indicate why. */
-string isValidA58(in ubyte[] a58) pure nothrow {
+string isValidA58(in ubyte[] a58) pure nothrow @nogc {
     A25 a;
     immutable err = a.set58(a58);
     if (!err.empty)

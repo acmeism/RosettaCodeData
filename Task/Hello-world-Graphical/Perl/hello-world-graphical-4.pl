@@ -1,5 +1,8 @@
 use strict;
 use warnings;
-use XUL::Gui;
+use QtGui4;
 
-display Label 'Goodbye, World!';
+my $app = Qt::Application(\@ARGV);
+my $label = Qt::Label('Goodbye, World');
+$label->show;
+exit $app->exec;

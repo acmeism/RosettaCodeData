@@ -3,7 +3,7 @@ class Array
     return self if length <= 1
     comparitor ||= lambda {|a, b| a <=> b}
     middle = length / 2
-    left  = self[0,  middle].mergesort(&comparitor)
+    left  = self[0..middle - 1].mergesort(&comparitor)
     right = self[middle..-1].mergesort(&comparitor)
     merge(left, right, comparitor)
   end

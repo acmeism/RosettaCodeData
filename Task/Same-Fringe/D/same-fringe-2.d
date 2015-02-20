@@ -41,7 +41,7 @@ struct Fringe(T) {
     alias const(BinaryTreeNode!T)* BT;
     private Stack!BT stack;
 
-    pure nothrow invariant() {
+    pure nothrow invariant {
         assert(stack.empty || isLeaf(stack.head));
     }
 
@@ -49,9 +49,9 @@ struct Fringe(T) {
         if (t != null) {
             stack.push(t);
             if (!isLeaf(t)) {
-                // Here invariant() doesn't hold.
-                // invariant() isn't called for private methods.
-                nextLeaf();
+                // Here the invariant doesn't hold.
+                // invariant isn't called for private methods.
+                nextLeaf;
             }
         }
     }

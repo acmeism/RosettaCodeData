@@ -3,6 +3,6 @@ given = %w{
   CBAD ABDC ADBC BDCA DCBA BACD BADC BDAC CBDA DBCA DCAB
 }
 
-all = given[0].split(//).permutation.collect {|perm| perm.join('')}
+all = given[0].chars.permutation.collect(&:join)
 
-missing = all - given   # ["DBAC"]
+puts "missing: #{all - given}"

@@ -2,7 +2,7 @@ import std.stdio, std.random, std.math, std.typecons, std.complex,
        std.traits;
 
 Nullable!(Tuple!(size_t, size_t))
-bfClosestPair2(T)(in Complex!T[] points) pure nothrow {
+bfClosestPair2(T)(in Complex!T[] points) pure nothrow @nogc {
     auto minD = Unqual!(typeof(points[0].re)).infinity;
     if (points.length < 2)
         return typeof(return)();

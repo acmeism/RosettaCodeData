@@ -2,26 +2,18 @@
 #include <stdlib.h>
 int main(int argc, char **argv)
 {
-   int user1 = 0;
-   int space_needed;
-   int *a1, **array;
-   int row, col;
+   int user1 = 0, user2 = 0;
+   int *a1, **array, row;
 
-   printf("Enter size of array:  ");
-   scanf("%d",&user1);
+   printf("Enter two integers.  Space delimited, please:  ");
+   scanf("%d %d",&user1, &user2);
 
-   space_needed = (user1+1)*user1/2;
-   a1 = malloc(space_needed);
+   a1 = malloc(user1*user2*sizeof(int));
    array = malloc(user1*sizeof(int*));
-   for (row=0,offset=0; row<user1; offset+=(user1-row), row++) {
-      array[row]=a1+offset-row;
-      for (col=row; col<user1; col++)
-          array[row][col] = 1+col-row;
-   }
-   for (row=0; row<user1; row++)
-      printf("%d ", array[row][user1-1]);
-   printf("\n");
+   for (row=0; row<user1; row++) array[row]=a1+row*user2;
 
+   array[user1/2][user2/2] = user1 + user2;
+   printf("array[%d][%d] is %d\n",user1/2,user2/2,array[user1/2][user2/2]);
    free(array);
    free(a1);
    return 0;

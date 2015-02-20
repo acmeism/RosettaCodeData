@@ -1,5 +1,4 @@
 /*REXX program to show removal of 1st/last/1st&last chars from a string.*/
-
 z = 'abcdefghijk'
 
 say '                  the original string =' z

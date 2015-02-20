@@ -2,7 +2,7 @@ import System.Random
 import Control.Monad
 
 get_pi throws = do results <- replicateM throws one_trial
-                   return (4 * fromIntegral (foldl' (+) 0 results) / fromIntegral throws)
+                   return (4 * fromIntegral (foldl (+) 0 results) / fromIntegral throws)
   where
     one_trial = do rand_x <- randomRIO (-1, 1)
                    rand_y <- randomRIO (-1, 1)

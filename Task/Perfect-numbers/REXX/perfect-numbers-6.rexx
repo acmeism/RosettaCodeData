@@ -2,17 +2,17 @@
 parse arg low high .                   /*obtain the specified number(s).*/
 if high=='' & low==''  then high=34000000     /*if no args, use a range.*/
 if  low==''            then  low=1     /*if no   LOW, then assume unity.*/
+if low//2              then  low=low+1 /*if LOW is odd,  bump it by one.*/
 if high==''            then high=low   /*if no  HIGH, then assume  LOW. */
 w=length(high)                         /*use  W  for formatting output. */
 numeric digits max(9,w+2)              /*ensure enough digits to handle#*/
 @.=0;   @.1=2                          /*highest magic #  and its index.*/
-               do i=low  to high       /*process the single # or range. */
-               if isperfect(i)  then say right(i,w) 'is a perfect number.'
+               do i=low  to high  by 2 /*process the single # or range. */
+               if isPerfect(i)  then say right(i,w) 'is a perfect number.'
                end   /*i*/
 exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────ISPERFECT subroutine────────────────*/
-isperfect: procedure expose @.; parse arg x    /*get the # to be tested.*/
-if x//2  then return 0                 /*if it's an odd #, it ain't 'un.*/
+isPerfect: procedure expose @.; parse arg x    /*get the # to be tested.*/
                                        /*Lucas-Lehmer know that perfect */
                                        /*  numbers can be expressed as: */
                                        /*  [2**n - 1]  *  [2** (n-1) ]  */

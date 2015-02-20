@@ -1,5 +1,6 @@
-int[][] zigZag(in int n) pure nothrow {
-    static void move(in int n, ref int i, ref int j) pure nothrow {
+int[][] zigZag(in int n) pure nothrow @safe {
+    static void move(in int n, ref int i, ref int j)
+    pure nothrow @safe @nogc {
         if (j < n - 1) {
             if (i > 0) i--;
             j++;
@@ -18,5 +19,6 @@ int[][] zigZag(in int n) pure nothrow {
 
 void main() {
     import std.stdio;
-    writefln("%(%(%2d %)\n%)", zigZag(5));
+
+    writefln("%(%(%2d %)\n%)", 5.zigZag);
 }

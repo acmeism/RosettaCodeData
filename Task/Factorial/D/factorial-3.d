@@ -1,6 +1,6 @@
 import std.stdio, std.algorithm, std.range;
 
-uint factorial(in uint n) pure nothrow
+uint factorial(in uint n) pure nothrow @nogc
 in {
     assert(n <= 12);
 } body {

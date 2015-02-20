@@ -1,25 +1,21 @@
-import scala.util.Random
+import scala.util.Random.shuffle
 
-object BalancedParensApp extends App {
+object BalancedBracketsApp extends App {
 
-  val triesCount = 10
-
-  (0 until triesCount).foreach { i =>
-    val str = randomString(length = i)
-    val msg = if (isBalanced(str)) "ok" else "NOT ok"
-    println(s"$str - $msg")
+  for (length <- 0 until 10) {
+    val str = randomBrackets(length)
+    if (is_balanced(str))
+      println(s"$str - ok")
+    else
+      println(s"$str - NOT ok")
   }
 
-  def randomString(length: Int) = {
-    val parensPairs = ("[]" * length).toSeq
-    val parensOfGivenLength = parensPairs.take(length)
-    val shuffledParens = Random.shuffle(parensOfGivenLength)
-    shuffledParens.mkString
-  }
+  def randomBrackets(length: Int): String =
+    shuffle(("[]" * length).toSeq).mkString
 
-  def isBalanced(parensString: String): Boolean = {
+  def isBalanced(bracketString: String): Boolean = {
     var balance = 0
-    parensString.foreach { char =>
+    for (char <- bracketString) {
       char match {
         case '[' => balance += 1
         case ']' => balance -= 1

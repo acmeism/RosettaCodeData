@@ -58,7 +58,7 @@ Rec* findRec(char* s, Rec* root) nothrow {
         next = root.p[c];
         if (!next) {
             nNodes++;
-            next = recPool.newItem();
+            next = recPool.newItem;
             root.p[c] = next;
         }
         root = next;
@@ -66,7 +66,7 @@ Rec* findRec(char* s, Rec* root) nothrow {
     return root;
 }
 
-void nextNum(char* s) nothrow {
+void nextNum(char* s) nothrow @nogc {
     int[10] cnt;
     for (int i = 0; s[i]; i++)
         cnt[s[i] - '0']++;
@@ -105,7 +105,7 @@ void main() nothrow {
     char[32] buf;
     rec_root = recPool.newItem();
 
-    foreach (i; 0 .. MAXN) {
+    foreach (immutable i; 0 .. MAXN) {
         sprintf(buf.ptr, "%d", i);
         int l = getLen(buf.ptr, 0);
         if (l < ml)
@@ -119,10 +119,10 @@ void main() nothrow {
     }
 
     printf("seq leng: %d\n\n", ml);
-    foreach (i; 0 .. nLongest) {
+    foreach (immutable i; 0 .. nLongest) {
         sprintf(buf.ptr, "%d", longest[i]);
         // print len+1 so we know repeating starts from when
-        foreach (l; 0 .. ml + 1) {
+        foreach (immutable l; 0 .. ml + 1) {
             printf("%2d: %s\n", getLen(buf.ptr, 0), buf.ptr);
             nextNum(buf.ptr);
         }

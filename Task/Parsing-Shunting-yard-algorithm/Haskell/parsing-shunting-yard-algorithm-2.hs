@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 import Control.Applicative
 import Control.Lens
+import Control.Monad
 import Control.Monad.Error
 import Control.Monad.State
 import System.Console.Readline
@@ -60,13 +61,11 @@ pushVal n = _1 %= (OutVal n:)
 pushParen :: RPNComp ()
 pushParen = _2 %= (Paren:)
 
---Run StateT. `process` is effectively foldM_ with the base case to
---format the output string
+--Run StateT
 toRPN :: [InToken] -> Either String [OutToken]
-toRPN xs = evalStateT (process (return ()) xs) ([],[])
-    where process st [] = st >> get >>= \(a,b) -> (reverse a++) <$>
-                                                    (mapM toOut b)
-          process st (x:xs) = process (st >> processToken x) xs
+toRPN xs = evalStateT process ([],[])
+    where process = mapM_ processToken xs
+                      >> get >>= \(a,b) -> (reverse a++) <$> (mapM toOut b)
           toOut :: StackElem -> RPNComp OutToken
           toOut (StOp o) = return $ OutOp o
           toOut Paren    = throwError "Unmatched left parenthesis"

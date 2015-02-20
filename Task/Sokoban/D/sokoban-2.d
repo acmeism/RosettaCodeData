@@ -13,15 +13,15 @@ struct State { // Variable length struct.
     State* prev, next, qNext;
     CellIndex[0] c_;
 
-    CellIndex get(in size_t i) inout pure nothrow {
+    CellIndex get(in size_t i) inout pure nothrow @nogc {
         return c_.ptr[i];
     }
 
-    void set(in size_t i, in CellIndex v) pure nothrow {
+    void set(in size_t i, in CellIndex v) pure nothrow @nogc {
         c_.ptr[i] = v;
     }
 
-    CellIndex[] slice(in size_t i, in size_t j) pure nothrow {
+    CellIndex[] slice(in size_t i, in size_t j) pure nothrow @nogc return {
         return c_.ptr[i .. j];
     }
 }
@@ -35,8 +35,8 @@ __gshared State*[] buckets;
 __gshared Thash hashSize, fillLimit, filled;
 
 
-State* newState(State* parent) nothrow {
-    static State* nextOf(State *s) nothrow {
+State* newState(State* parent) nothrow @nogc {
+    static State* nextOf(State *s) nothrow @nogc {
         return cast(State*)(cast(ubyte*)s + stateSize);
     }
 
@@ -64,14 +64,14 @@ State* newState(State* parent) nothrow {
 }
 
 
-void unNewState(State* p) nothrow {
+void unNewState(State* p) nothrow @nogc {
     p.next = blockHead;
     blockHead = p;
 }
 
 
 /// Mark up positions where a box definitely should not be.
-void markLive(in size_t c) nothrow {
+void markLive(in size_t c) nothrow @nogc {
     immutable y = c / w;
     immutable x = c % w;
     if (live[c])
@@ -93,8 +93,8 @@ void markLive(in size_t c) nothrow {
 }
 
 
-State* parseBoard(in size_t y, in size_t x, in char* s) nothrow {
-    static T[] myCalloc(T)(in size_t n) nothrow {
+State* parseBoard(in size_t y, in size_t x, in char* s) nothrow @nogc {
+    static T[] myCalloc(T)(in size_t n) nothrow @nogc {
         auto ptr = cast(T*)calloc(n, T.sizeof);
         if (ptr == null)
             exit(1);
@@ -150,7 +150,7 @@ State* parseBoard(in size_t y, in size_t x, in char* s) nothrow {
 
 
 /// K&R hash function.
-void hash(State* s, in size_t nBoxes) pure nothrow {
+void hash(State* s, in size_t nBoxes) pure nothrow @nogc {
     if (!s.h) {
         Thash ha = 0;
         foreach (immutable i; 0 .. nBoxes + 1)
@@ -160,7 +160,7 @@ void hash(State* s, in size_t nBoxes) pure nothrow {
 }
 
 
-void extendTable() nothrow {
+void extendTable() nothrow @nogc {
     int oldSize = hashSize;
 
     if (!oldSize) {
@@ -194,7 +194,7 @@ void extendTable() nothrow {
 }
 
 
-State* lookup(State *s) nothrow {
+State* lookup(State *s) nothrow @nogc {
     s.hash(nBoxes);
     auto f = buckets[s.h & (hashSize - 1)];
     for (; f; f = f.next) {
@@ -206,7 +206,7 @@ State* lookup(State *s) nothrow {
 }
 
 
-bool addToTable(State* s) nothrow {
+bool addToTable(State* s) nothrow @nogc {
     if (s.lookup) {
         s.unNewState;
         return false;
@@ -223,7 +223,7 @@ bool addToTable(State* s) nothrow {
 }
 
 
-bool success(in State* s) nothrow {
+bool success(in State* s) nothrow @nogc {
     foreach (immutable i; 1 .. nBoxes + 1)
         if (!goals[s.get(i)])
             return false;
@@ -231,7 +231,7 @@ bool success(in State* s) nothrow {
 }
 
 
-State* moveMe(State* s, in int dy, in int dx) nothrow {
+State* moveMe(State* s, in int dy, in int dx) nothrow @nogc {
     immutable int y = s.get(0) / w;
     immutable int x = s.get(0) % w;
     immutable int y1 = y + dy;
@@ -284,7 +284,7 @@ State* moveMe(State* s, in int dy, in int dx) nothrow {
 }
 
 
-bool queueMove(State *s) nothrow {
+bool queueMove(State *s) nothrow @nogc {
     if (!s || !s.addToTable)
         return false;
 
@@ -300,7 +300,7 @@ bool queueMove(State *s) nothrow {
 }
 
 
-bool doMove(State* s) nothrow {
+bool doMove(State* s) nothrow @nogc {
     return s.moveMe( 1,  0).queueMove ||
            s.moveMe(-1,  0).queueMove ||
            s.moveMe( 0,  1).queueMove ||
@@ -308,7 +308,7 @@ bool doMove(State* s) nothrow {
 }
 
 
-void showBoard(in State* s) nothrow {
+void showBoard(in State* s) nothrow @nogc {
     static immutable glyphs1 = " #@$", glyphs2 = ".#@$";
 
     auto ptr = cast(ubyte*)alloca(w * h * ubyte.sizeof);
@@ -329,19 +329,21 @@ void showBoard(in State* s) nothrow {
 }
 
 
-void showMoves(in State* s) nothrow {
+void showMoves(in State* s) nothrow @nogc {
     if (s.prev)
         s.prev.showMoves;
     "\n".printf;
     s.showBoard;
 }
 
+int main() nothrow @nogc {
+    // Workaround for @nogc.
+    alias ctEval(alias expr) = expr;
 
-int main() nothrow {
     enum uint problem = 0;
 
     static if (problem == 0) {
-        auto s = parseBoard(8, 7,
+        auto s = parseBoard(8, 7, ctEval!(
         "#######"~
         "#     #"~
         "#     #"~
@@ -349,18 +351,18 @@ int main() nothrow {
         "#. $$ #"~
         "#.$$  #"~
         "#.#  @#"~
-        "#######");
+        "#######"));
 
     } else static if (problem == 1) {
-        auto s = parseBoard(5, 13,
+        auto s = parseBoard(5, 13, ctEval!(
         "#############"~
         "#  #        #"~
         "# $$$$$$$  @#"~
         "#.......    #"
-        "#############");
+        "#############"));
 
     } else static if (problem == 2) {
-        auto s = parseBoard(11, 19,
+        auto s = parseBoard(11, 19, ctEval!(
         "    #####          "~
         "    #   #          "~
         "    #   #          "~
@@ -371,7 +373,7 @@ int main() nothrow {
         "# $   $         ..#"~
         "##### ### #@##   .#"~
         "    #     #########"~
-        "    #######        ");
+        "    #######        "));
     } else {
         asset(0, "Not present problem.");
     }

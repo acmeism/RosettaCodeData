@@ -1,8 +1,22 @@
 #include <iostream>
 #include <gmpxx.h>
 
-mpz_class pow2(mpz_class exp);
-bool is_mersenne_prime(mpz_class p);
+static bool is_mersenne_prime(mpz_class p)
+{
+        if( 2 == p )
+                return true;
+        else
+        {
+                mpz_class s(4);
+                mpz_class div( (mpz_class(1) << p.get_ui()) - 1 );
+                for( mpz_class i(3);  i <= p;  ++i )
+                {
+                        s =  (s * s - mpz_class(2)) % div ;
+                }
+
+                return ( s == mpz_class(0) );
+        }
+}
 
 int main()
 {
@@ -20,38 +34,4 @@ int main()
                         std::cout << "M" << check << " " << std::flush;
                 }
         }
-}
-
-bool is_mersenne_prime(mpz_class p)
-{
-        if( 2 == p )
-                return true;
-        else
-        {
-                mpz_class div = pow2(p) - mpz_class(1);
-                mpz_class s(4);
-                mpz_class s(4);
-                for( mpz_class i(3);
-                         i <= p;
-                         ++i )
-                {
-                        s =  (s * s - mpz_class(2)) % div ;
-                }
-
-                return ( s == mpz_class(0) );
-        }
-}
-
-mpz_class pow2(mpz_class exp)
-{
-        // Unfortunately, GMP doesn't have a left-shift method.
-        // It also doesn't have a pow() equivalent that takes arbitrary-precision exponents.
-        // So we have to do it the hard (and presumably slow) way.
-        mpz_class ret(2);
-        mpz_class ret(2);
-        for(mpz_class i(1); i < exp; ++i)
-                ret *= mpz_class(2);
-                ret *= mpz_class(2);
-        //std::cout << "pow2( " << exp << " ) = " << ret << std::endl;
-        return ret;
 }

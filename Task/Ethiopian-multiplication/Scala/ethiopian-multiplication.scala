@@ -11,6 +11,8 @@ def ethiopian3(i:Int, j:Int):Int=
    res
 }
 
+def ethiopian4(i: Int, j: Int): Int = if (i == 1) j else ethiopian(halve(i), double(j)) + (if (isEven(i)) 0 else j)
+
 def isEven(x:Int)=(x&1)==0
 def halve(x:Int)=x>>>1
 def double(x:Int)=x<<1

@@ -1,5 +1,6 @@
 import std.stdio: File;
 import core.stdc.stdio: FILE, fputc, fgetc;
+import std.string: representation;
 
 /***********
 Bitwise I/O, the file must be in binary mode, and its FILE*
@@ -98,15 +99,16 @@ struct BitwiseFile {
     }
 
     nothrow ~this() {
-        detach();
+        detach;
     }
 }
 
 void main() { // Demo code.
     import core.stdc.stdio: fopen, fclose;
-    import std.stdio;
+    import std.string: assumeUTF;
+    import std.stdio: writeln;
 
-    immutable data = cast(immutable(ubyte)[])"abcdefghijk".dup;
+    immutable data = "abcdefghijk".representation;
     enum n = data.length;
 
     // For each ubyte in data, write 7 bits skipping 1.
@@ -127,5 +129,5 @@ void main() { // Demo code.
     fin.close();
 
     // Should be the same chars as 'data'.
-    writeln(cast(string)result);
+    result.assumeUTF.writeln;
 }

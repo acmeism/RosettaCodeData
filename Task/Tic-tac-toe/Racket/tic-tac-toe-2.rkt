@@ -25,7 +25,7 @@
 
     ;; optimal-move :: State -> Move
     ;; Choses the optimal move.
-    ;; If several equipollent moves exist -- choses one randomly.
+    ;; If several equivalent moves exist -- choses one randomly.
     (define/public ((optimal-move look-ahead) S)
       (! (argmax (λ (m) (! (minimax (game-tree S m look-ahead))))
                  (shuffle (possible-moves S)))))
@@ -36,7 +36,7 @@
                     [i 1]
                     [s (my-move S m)])
         (cond
-          [(my-win? s)        (/  1 i)] ; more close wins and looses
+          [(my-win? s)        (/  1 i)] ; more close wins and loses
           [(my-loss? s) (/ -1 i)] ; have bigger weights
           [(draw-game? s)     0]
           [(>= i look-ahead)  (/ 1 i)]

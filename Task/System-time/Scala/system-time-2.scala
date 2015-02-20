@@ -1,1 +1,1 @@
-println(new java.util.Date)
+println(java.time.LocalTime.now())

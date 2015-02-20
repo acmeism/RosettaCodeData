@@ -1,11 +1,3 @@
-#include<stdio.h>
-
-int main ()
-{
-	int i;
-	const char *s[] = { "%d\n", "Fizz\n", s[3] + 4, "FizzBuzz\n" };
-	for (i = 1; i <= 100; i++)
-		printf(s[!(i % 3) + 2 * !(i % 5)], i);
-
-	return 0;
-}
+#include <stdio.h>
+#define F(x,y) printf("%s",i%x?"":#y"zz")
+int main(int i){for(--i;i++^100;puts(""))F(3,Fi)|F(5,Bu)||printf("%i",i);return 0;}

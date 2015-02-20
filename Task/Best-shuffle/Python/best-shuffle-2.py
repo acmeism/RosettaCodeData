@@ -25,7 +25,7 @@ def best_shuffle(s):
         # Add character to list. Remove it from supply.
         r.append(best)
         count[best] -= 1
-        if count[best] == 0: del count[best]
+        if count[best] >= 0: del count[best]
 
     # If the final letter became stuck (as "ababcd" became "bacabd",
     # and the final "d" became stuck), then fix it.

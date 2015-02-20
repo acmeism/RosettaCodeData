@@ -1,7 +1,12 @@
-program fibTest
-    use fibonacci
+module fibonacci
+contains
+    recursive function fibR(n) result(fib)
+        integer, intent(in) :: n
+        integer             :: fib
 
-    do i = 0, 10
-        print *, fibr(i), fibi(i)
-    end do
-end program fibTest
+        select case (n)
+            case (:0);      fib = 0
+            case (1);       fib = 1
+            case default;   fib = fibR(n-1) + fibR(n-2)
+        end select
+    end function fibR

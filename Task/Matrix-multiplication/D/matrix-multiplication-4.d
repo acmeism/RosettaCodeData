@@ -5,9 +5,13 @@ alias TMMul_helper(M1, M2) = Unqual!(ForeachType!(ForeachType!M1))
 
 void matrixMul(T, T2, size_t k, size_t m, size_t n)
               (in ref T[m][k] A, in ref T[n][m] B,
-               /*out*/ ref T2[n][k] result) pure nothrow
+               /*out*/ ref T2[n][k] result) pure nothrow /*@safe*/ @nogc
 if (is(T2 == Unqual!T)) {
-    T2[m] aux;
+    static if (hasIndirections!T)
+        T2[m] aux;
+    else
+        T2[m] aux = void;
+
     foreach (immutable j; 0 .. n) {
         foreach (immutable i, const ref bi; B)
             aux[i] = bi[j];

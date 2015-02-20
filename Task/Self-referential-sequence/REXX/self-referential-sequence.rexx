@@ -1,14 +1,14 @@
-/*REXX program to generate a self-referential sequence and list the maxs*/
-parse arg low high .;    maxL=0;    seeds=;    max$$=
+/*REXX pgm generates a self-referential sequence and lists the maximums.*/
+parse arg low high .;      maxL=0;     seeds=;      max$$=
 if  low==''  then  low=1               /*no low?    Then use the default*/
-if high==''  then high=1000000         /*no high?     "   "   "     "   */
+if high==''  then high=1000000         /* " high?     "   "   "     "   */
 /*══════════════════════════════════════════════════traipse through #'s.*/
-  do seed=low to high;  n=seed;  $.=0;  $$=n;  $.n=1
+  do seed=low  to high;      n=seed;   $.=0;      $$=n;         $.n=1
 
-         do j=1  until x==n           /*generate interation sequence.  */
+         do j=1  until x==n            /*generate a self─referential seq*/
          x=n;    n=
-                             do k=9  to 0  by -1      /*gen new sequence*/
-                             _=countstr(k,x);  if _\==0 then n=n || _ || k
+                             do k=9  by -1  for 10    /*gen new sequence*/
+                             _=countstr(k,x);     if _\==0  then n=n||_||k
                              end   /*k*/
          if $.n  then leave            /*sequence been generated before?*/
          $$=$$'-'n;   $.n=1            /*add number to sequence & roster*/
@@ -28,8 +28,7 @@ hdr=copies('─',30);           say 'maximum sequence length =' maxL
   do j=1  for words(max$$);   say
   say hdr "iteration sequence for: " word(seeds,j) '  ('maxL "iterations)"
   q=translate(word(max$$,j),,'-')
-                                       do k=1  for words(q)
-                                       say  word(q,k)
-                                       end   /*k*/
+                                     do k=1  for words(q);  say  word(q,k)
+                                     end   /*k*/
   end   /*j*/
                                        /*stick a fork in it, we're done.*/

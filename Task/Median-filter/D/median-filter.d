@@ -1,12 +1,15 @@
 import grayscale_image;
 
 Image!Color medianFilter(uint radius=10, Color)(in Image!Color img)
-pure nothrow if (radius > 0) {
+pure nothrow @safe if (radius > 0) in {
+    assert(img.nx >= radius && img.ny >= radius);
+} body {
     alias Hist = uint[256];
 
-    static ubyte median(uint no)(in ref Hist cumulative) pure nothrow {
+    static ubyte median(uint no)(in ref Hist cumulative)
+    pure nothrow @safe @nogc {
         size_t localSum = 0;
-        foreach (immutable ubyte k, immutable v; cumulative)
+        foreach (immutable k, immutable v; cumulative)
             if (v) {
                 localSum += v;
                 if (localSum > no / 2)
@@ -19,8 +22,8 @@ pure nothrow if (radius > 0) {
     auto result = new Image!Color(img.nx, img.ny);
     foreach (immutable y; 0 .. img.ny)
         foreach (immutable x; 0 .. img.nx)
-            if (x < radius || x > img.nx - radius ||
-                y < radius || y > img.ny - radius)
+            if (x < radius || x > img.nx - radius - 1 ||
+                y < radius || y > img.ny - radius - 1)
                 result[x, y] = img[x, y];
 
     enum edge = 2 * radius + 1;
@@ -65,10 +68,9 @@ pure nothrow if (radius > 0) {
     return result;
 }
 
-version (median_filter_main) {
+version (median_filter_main)
     void main() { // Demo.
-        loadPGM!Gray(null, "lena.pgm")
-        .medianFilter!10()
+        loadPGM!Gray(null, "lena.pgm").
+        medianFilter!10
         .savePGM("lena_median_r10.pgm");
     }
-}

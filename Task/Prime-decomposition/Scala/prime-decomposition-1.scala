@@ -31,10 +31,10 @@ object PrimeFactors extends App {
 
       val datum = System.nanoTime
       val result = factorize(nMersenne)
-      val mSec = ((System.nanoTime - datum) / 1.e+6).round
+      val mSec = ((System.nanoTime - datum) / 1.0e+6).round
 
       def decStr = { if (lit.length > 30) f"(M has ${lit.length}%3d dec)" else "" }
-      def sPrime = { if (result.isEmpty) " is a Mersenne prime number." else "" }
+      def sPrime = { if (result.isEmpty) " is a prime number." else "" }
 
       println(
         f"$numM%4s = 2^$p%03d - 1 = ${lit}%s${sPrime} ($mSec%,4d msec) composed of ${result.mkString(" × ")}")

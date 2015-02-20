@@ -15,13 +15,13 @@ isOp _      = False
 simSYA xs = final ++ [lastStep]
   where final = scanl f ([],[],"") xs
         lastStep = (\(x,y,_) -> (reverse y ++ x, [], "")) $ last final
-        f (out,st,_) t | isOp t =
+        f (out,st,_) t | isOp t    =
                          (reverse (takeWhile testOp st) ++ out
                          , (t:) $ (dropWhile testOp st), t)
-                       | t == "(" = (out, "(":st, t)
-                       | t == ")" = (reverse (takeWhile (/="(") st) ++ out,
+                       | t == "("  = (out, "(":st, t)
+                       | t == ")"  = (reverse (takeWhile (/="(") st) ++ out,
                                      tail $ dropWhile (/="(") st, t)
-                       | True     = (t:out, st, t)
+                       | otherwise = (t:out, st, t)
           where testOp x = isOp x && (leftAssoc t && prec t == prec x
                                       || prec t < prec x)
 

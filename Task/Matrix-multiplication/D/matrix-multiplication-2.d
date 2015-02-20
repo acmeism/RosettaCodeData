@@ -1,6 +1,6 @@
 import std.stdio, std.range, std.array, std.numeric, std.algorithm;
 
-T[][] matMul(T)(in T[][] A, in T[][] B) /*pure*/ nothrow {
+T[][] matMul(T)(in T[][] A, in T[][] B) pure nothrow /*@safe*/ {
     const Bt = B[0].length.iota.map!(i=> B.transversal(i).array).array;
     return A.map!(a => Bt.map!(b => a.dotProduct(b)).array).array;
 }

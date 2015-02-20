@@ -7,7 +7,7 @@ for i = 1, 100 do
 		output = output.."Buzz"
 	end
 	if(output == "") then
-		output = output..i
+		output = i
 	end
 	print(output)
 end

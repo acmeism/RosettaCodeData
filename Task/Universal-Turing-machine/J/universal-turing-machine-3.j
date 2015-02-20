@@ -1,7 +1,7 @@
    NB. Three-state busy beaver..
    NB.        0         1     Tape Symbol Scan
    NB. S   p  m  g   p  m  g  (p,m,g) → (print,move,goto)
-   QS=. (noun _) ; 0          NB. Reading the transition table and setting the initial state
+   QS=. (Noun _) ; 0          NB. Reading the transition table and setting the initial state
        0   1  1  1   1 _1  2
        1   1 _1  0   1  1  1
        2   1 _1  1   1  0 _1

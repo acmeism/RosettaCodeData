@@ -1,3 +1,4 @@
+# usage: awk -f morse.awk [inputfile]
 BEGIN { FS="";
  m="A.-B-...C-.-.D-..E.F..-.G--.H....I..J.---K-.-L.-..M--N-.";
  m=m "O---P.--.Q--.-R.-.S...T-U..-V...-W.--X-..-Y-.--Z--..  ";
@@ -17,8 +18,3 @@ BEGIN { FS="";
   }
   printf("\n");
 }
-
-usage: awk -f morse.awk [inputfile]
-
-sos sos titanic
-...|---|...||...|---|...||-|..|-|.-|-.|..|-.-.|

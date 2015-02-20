@@ -2,7 +2,7 @@ uint factorial(in uint n) pure nothrow
 in {
     assert(n <= 12);
 } body {
-    static uint inner(uint n, uint acc) pure nothrow {
+    static uint inner(uint n, uint acc) pure nothrow @nogc {
         if (n < 1)
             return acc;
         else

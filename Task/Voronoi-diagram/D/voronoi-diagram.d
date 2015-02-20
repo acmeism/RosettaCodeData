@@ -10,9 +10,9 @@ enum randomPoints = (in size_t nPoints, in size_t nx, in size_t ny) =>
 Image!RGB generateVoronoi(in Point[] pts,
                           in size_t nx, in size_t ny) /*nothrow*/ {
     // Generate a random color for each centroid.
-    immutable rndRBG = (int) => RGB(cast(ubyte)uniform(0, 256),
-                                    cast(ubyte)uniform(0, 256),
-                                    cast(ubyte)uniform(0, 256));
+    immutable rndRBG = (int) => RGB(uniform!"[]"(ubyte.min, ubyte.max),
+                                    uniform!"[]"(ubyte.min, ubyte.max),
+                                    uniform!"[]"(ubyte.min, ubyte.max));
     const colors = pts.length.iota.map!rndRBG.array;
 
     // Generate diagram by coloring pixels with color of nearest site.

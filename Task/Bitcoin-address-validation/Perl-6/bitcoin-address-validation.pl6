@@ -18,7 +18,7 @@ sub unbase58(Str $str) {
 }
 
 sub check-bitcoin-address($addr) {
-    use Digest;
+    use Digest::SHA;
     my @byte = unbase58 $addr;
     !!! 'wrong checksum' unless @byte[21..24] ~~
     sha256(sha256 Buf.new: @byte[0..20]).subbuf(0, 4).list;

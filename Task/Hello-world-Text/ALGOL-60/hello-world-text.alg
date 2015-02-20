@@ -1,0 +1,4 @@
+'BEGIN'
+    OUTSTRING(1,'('GOODBYE, WORLD!')');
+    SYSACT(1,14,1)
+'END'

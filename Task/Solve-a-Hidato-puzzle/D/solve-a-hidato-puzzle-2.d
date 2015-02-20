@@ -13,7 +13,7 @@ struct Hidato {
     Pos[] known;
     bool[] flood;
 
-    this(in string input) @safe pure
+    this(in string input) pure @safe
     in {
         assert(!input.strip.empty);
     } out {
@@ -80,12 +80,12 @@ struct Hidato {
     }
 
 
-    private Pos idx(in size_t r, in size_t c) const pure nothrow {
+    private Pos idx(in size_t r, in size_t c) const pure nothrow @safe @nogc {
         return r * nCols + c;
     }
 
     private uint nNeighbors(in Pos pos, ref Pos[8] neighbours)
-    const pure nothrow {
+    const pure nothrow @safe @nogc {
         immutable r = pos / nCols;
         immutable c = pos % nCols;
         typeof(return) n = 0;
@@ -110,7 +110,7 @@ struct Hidato {
 
     /// Fill all free cells around 'cell' with true and write
     /// output to variable "flood".
-    private void floodFill(in Pos pos) pure nothrow {
+    private void floodFill(in Pos pos) pure nothrow @safe @nogc {
         Pos[8] n = void;
 
         // For all neighbours.
@@ -124,7 +124,7 @@ struct Hidato {
     }
 
     /// Check all empty cells are reachable from higher known cells.
-    private bool checkConnectity(in uint lowerBound) pure nothrow {
+    private bool checkConnectity(in uint lowerBound) pure nothrow @safe @nogc {
         flood[] = false;
 
         foreach (immutable i; lowerBound + 1 .. boardMax + 1)
@@ -139,7 +139,7 @@ struct Hidato {
         return true;
     }
 
-    private bool fill(in Pos pos, in uint n) pure nothrow {
+    private bool fill(in Pos pos, in uint n) pure nothrow @safe @nogc {
         if ((board[pos] && board[pos] != n) ||
             (known[n] && known[n] != pos))
             return false;
@@ -162,7 +162,7 @@ struct Hidato {
         return false;
     }
 
-    void solve() pure nothrow
+    void solve() pure nothrow @safe @nogc
     in {
         assert(!known.empty);
     } body {

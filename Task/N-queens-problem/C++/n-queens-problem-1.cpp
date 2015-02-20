@@ -1,100 +1,103 @@
-#include <windows.h>
+// Much shorter than the version below;
+// uses C++11 threads to parallelize the computation; also uses backtracking
+// Outputs all solutions for any table size
+#include <vector>
 #include <iostream>
-#include <string>
+#include <iomanip>
+#include <thread>
+#include <future>
 
-//--------------------------------------------------------------------------------------------------
-using namespace std;
-
-//--------------------------------------------------------------------------------------------------
-class point
+// Print table. 'pos' is a vector of positions – the index in pos is the row,
+// and the number at that index is the column where the queen is placed.
+static void print(const std::vector<int> &pos)
 {
-public:
-    int x, y;
-    point(){ x = y = 0; }
-    void set( int a, int b ){ x = a; y = b; }
-};
-//--------------------------------------------------------------------------------------------------
-class nQueens
-{
-public:
-    void solve( int c )
-    {
-        _count = c; int len = ( c + 1 ) * ( c + 1 ); _queens = new bool[len]; memset( _queens, 0, len );
-	_cl = new bool[c]; memset( _cl, 0, c ); _ln = new bool[c]; memset( _ln, 0, c );
-	point pt; pt.set( rand() % c, rand() % c ); putQueens( pt, c ); displayBoard();
-	delete [] _queens; delete [] _ln; delete [] _cl;
-    }
-
-private:
-    void displayBoard()
-    {
-	system( "cls" ); string t = "+---+", q = "| Q |", s = "|   |";
-	COORD c = { 0, 0 }; HANDLE h = GetStdHandle( STD_OUTPUT_HANDLE );
-	for( int y = 0, cy = 0; y < _count; y++ )
-	{
-	    int yy = y * _count;
-	    for( int x = 0; x < _count; x++ )
-	    {
-		SetConsoleCursorPosition( h, c ); cout << t;
-		c.Y++; SetConsoleCursorPosition( h, c );
-		if( _queens[x + yy] ) cout << q; else cout << s;
-		c.Y++; SetConsoleCursorPosition( h, c );
-		cout << t; c.Y = cy; c.X += 4;
-	    }
-	    cy += 2; c.X = 0; c.Y = cy;
-        }
-    }
-
-    bool checkD( int x, int y, int a, int b )
-    {
-	if( x < 0 || y < 0 || x >= _count || y >= _count ) return true;
-	if( _queens[x + y * _count] ) return false;
-	if( checkD( x + a, y + b, a, b ) ) return true;
-	return false;
-    }
-
-    bool check( int x, int y )
-    {
-	if( _ln[y] || _cl[x] )        return false;
-	if( !checkD( x, y, -1, -1 ) ) return false;
-	if( !checkD( x, y,  1, -1 ) ) return false;
-	if( !checkD( x, y, -1,  1 ) ) return false;
-	if( !checkD( x, y,  1,  1 ) ) return false;
-	return true;
-    }
-
-    bool putQueens( point pt, int cnt )
-    {
-	int it = _count;
-	while( it )
-	{
-	    if( !cnt ) return true;
-	    if( check( pt.x, pt.y ) )
-	    {
-		_queens[pt.x + pt.y * _count] = _cl[pt.x] = _ln[pt.y] = true;
-		point tmp = pt; if( ++tmp.x >= _count ) tmp.x = 0; if( ++tmp.y >= _count ) tmp.y = 0;
-		if( putQueens( tmp, cnt - 1 ) ) return true;
-		_queens[pt.x + pt.y * _count] = _cl[pt.x] = _ln[pt.y] = false;
-	    }
-	    if( ++pt.x >= _count ) pt.x = 0;
-	    it--;
+	// print table header
+	for (int i = 0; i < pos.size(); i++) {
+		std::cout << std::setw(3) << char('a' + i);
 	}
-	return false;
-    }
 
-    int          _count;
-    bool*        _queens, *_ln, *_cl;
-};
-//--------------------------------------------------------------------------------------------------
-int main( int argc, char* argv[] )
-{
-    nQueens n; int nq;
-    while( true )
-    {
-	system( "cls" ); cout << "Enter board size bigger than 3 (0 - 3 to QUIT): "; cin >> nq;
-	if( nq < 4 ) return 0; n.solve( nq ); cout << endl << endl;
-	system( "pause" );
-    }
-    return  0;
+	std::cout << '\n';
+
+	for (int row = 0; row < pos.size(); row++) {
+		int col = pos[row];
+		std::cout << row + 1 << std::setw(3 * col + 3) << " # ";
+		std::cout << '\n';
+	}
+
+	std::cout << "\n\n";
 }
-//--------------------------------------------------------------------------------------------------
+
+static bool threatens(int row_a, int col_a, int row_b, int col_b)
+{
+	return row_a == row_b // same row
+		or col_a == col_b // same column
+		or std::abs(row_a - row_b) == std::abs(col_a - col_b); // diagonal
+}
+
+// the i-th queen is in the i-th row
+// we only check rows up to end_idx
+// so that the same function can be used for backtracking and checking the final solution
+static bool good(const std::vector<int> &pos, int end_idx)
+{
+	for (int row_a = 0; row_a < end_idx; row_a++) {
+		for (int row_b = row_a + 1; row_b < end_idx; row_b++) {
+			int col_a = pos[row_a];
+			int col_b = pos[row_b];
+			if (threatens(row_a, col_a, row_b, col_b)) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+static std::mutex print_count_mutex; // mutex protecting 'n_sols'
+static int n_sols = 0; // number of solutions
+
+// recursive DFS backtracking solver
+static void n_queens(std::vector<int> &pos, int index)
+{
+	// if we have placed a queen in each row (i. e. we are at a leaf of the search tree), check solution and return
+	if (index >= pos.size()) {
+		if (good(pos, index)) {
+			std::lock_guard<std::mutex> lock(print_count_mutex);
+			print(pos);
+			n_sols++;
+		}
+
+		return;
+	}
+
+	// backtracking step
+	if (not good(pos, index)) {
+		return;
+	}
+
+	// optimization: the first level of the search tree is parallelized
+	if (index == 0) {
+		std::vector<std::future<void>> fts;
+		for (int col = 0; col < pos.size(); col++) {
+			pos[index] = col;
+			auto ft = std::async(std::launch::async, [=]{ auto cpos(pos); n_queens(cpos, index + 1); });
+			fts.push_back(std::move(ft));
+		}
+
+		for (const auto &ft : fts) {
+			ft.wait();
+		}
+	} else { // deeper levels are not
+		for (int col = 0; col < pos.size(); col++) {
+			pos[index] = col;
+			n_queens(pos, index + 1);
+		}
+	}
+}
+
+int main()
+{
+	std::vector<int> start(12); // 12: table size
+	n_queens(start, 0);
+	std::cout << n_sols << " solutions found.\n";
+	return 0;
+}

@@ -4,5 +4,4 @@
 set(['Jim', 'Serena'])
 >>> setA - setB # elements in A that are not in B
 set(['Serena'])
->>> setB - setA # elements in B that are not in A
-set(['Jim'])
+>>> # and so on...

@@ -1,9 +1,9 @@
 import std.stdio, std.math;
 
 real haversineDistance(in real dth1, in real dph1,
-                       in real dth2, in real dph2) pure nothrow {
-
-    enum real R = 6372.8;
+                       in real dth2, in real dph2)
+pure nothrow @nogc {
+    enum real R = 6371;
     enum real TO_RAD = PI / 180;
 
     alias imr = immutable real;

@@ -1,6 +1,6 @@
 import std.stdio, std.bigint, std.conv;
 
-BigInt ipow(BigInt base, BigInt exp) pure /*nothrow*/ {
+BigInt ipow(BigInt base, BigInt exp) pure nothrow {
     auto result = 1.BigInt;
     while (exp) {
         if (exp & 1)
@@ -12,23 +12,20 @@ BigInt ipow(BigInt base, BigInt exp) pure /*nothrow*/ {
     return result;
 }
 
-BigInt ackermann(in int m, in int n) pure /*nothrow*/
-in {
-    assert(m >= 0 && n >= 0);
-} out(result) {
+BigInt ackermann(in uint m, in uint n) pure nothrow
+out(result) {
     assert(result >= 0);
 } body {
-    static BigInt ack(in int m, in BigInt n) pure /*nothrow*/ {
+    static BigInt ack(in uint m, in BigInt n) pure nothrow {
         switch (m) {
             case 0: return n + 1;
             case 1: return n + 2;
             case 2: return 3 + 2 * n;
             //case 3: return 5 + 8 * (2 ^^ n - 1);
             case 3: return 5 + 8 * (ipow(2.BigInt, n) - 1);
-            default: if (n == 0)
-                        return ack(m - 1, 1.BigInt);
-                     else
-                        return ack(m - 1, ack(m, n - 1));
+            default: return (n == 0) ?
+                        ack(m - 1, 1.BigInt) :
+                        ack(m - 1, ack(m, n - 1));
         }
     }
 

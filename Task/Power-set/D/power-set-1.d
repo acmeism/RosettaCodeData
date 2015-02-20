@@ -1,4 +1,4 @@
-T[][] powerSet(T)(in T[] s) pure nothrow {
+T[][] powerSet(T)(in T[] s) pure nothrow @safe {
     auto r = new typeof(return)(1, 0);
     foreach (e; s) {
         typeof(return) rs;
@@ -11,5 +11,6 @@ T[][] powerSet(T)(in T[] s) pure nothrow {
 
 void main() {
     import std.stdio;
+
     [1, 2, 3].powerSet.writeln;
 }

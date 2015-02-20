@@ -7,7 +7,7 @@ int main(int argc, const char * argv[])
 
         NSLog(@"I'm thinking of a number between 1 - 10. Can you guess what it is?\n");
 
-        int rndNumber = (arc4random() % 10) + 1;
+        int rndNumber = arc4random_uniform(10) + 1;
 
         // Debug (Show rndNumber in console)
         //NSLog(@"Random number is %i", rndNumber);

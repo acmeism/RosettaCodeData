@@ -73,23 +73,23 @@ func expr_eval(x *Expr) (f frac) {
 
 	l, r := expr_eval(x.left), expr_eval(x.right)
 
-	switch {
-	case x.op == op_add:
+	switch x.op {
+	case op_add:
 		f.num = l.num*r.denom + l.denom*r.num
 		f.denom = l.denom * r.denom
 		return
 
-	case x.op == op_sub:
+	case op_sub:
 		f.num = l.num*r.denom - l.denom*r.num
 		f.denom = l.denom * r.denom
 		return
 
-	case x.op == op_mul:
+	case op_mul:
 		f.num = l.num * r.num
 		f.denom = l.denom * r.denom
 		return
 
-	case x.op == op_div:
+	case op_div:
 		f.num = l.num * r.denom
 		f.denom = l.denom * r.num
 		return

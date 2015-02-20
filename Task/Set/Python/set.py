@@ -1,49 +1,49 @@
 >>> s1, s2 = {1, 2, 3, 4}, {3, 4, 5, 6}
->>> s1 | s2; # Union
+>>> s1 | s2 # Union
 {1, 2, 3, 4, 5, 6}
->>> s1 & s2; # Intersection
+>>> s1 & s2 # Intersection
 {3, 4}
->>> s1 - s2; # Difference
+>>> s1 - s2 # Difference
 {1, 2}
->>> s1 < s1; # True subset
+>>> s1 < s1 # True subset
 False
->>> {3, 1} < s1; # True subset
+>>> {3, 1} < s1 # True subset
 True
->>> s1 <= s1; # Subset
+>>> s1 <= s1 # Subset
 True
->>> {3, 1} <= s1; # Subset
+>>> {3, 1} <= s1 # Subset
 True
->>> {3, 2, 4, 1} == s1; # Equality
+>>> {3, 2, 4, 1} == s1 # Equality
 True
->>> s1 == s2; # Equality
+>>> s1 == s2 # Equality
 False
->>> 2 in s1; # Membership
+>>> 2 in s1 # Membership
 True
->>> 10 not in s1; # Non-membership
+>>> 10 not in s1 # Non-membership
 True
->>> {1, 2, 3, 4, 5} > s1; # True superset
+>>> {1, 2, 3, 4, 5} > s1 # True superset
 True
->>> {1, 2, 3, 4} > s1; # True superset
+>>> {1, 2, 3, 4} > s1 # True superset
 False
->>> {1, 2, 3, 4} >= s1; # Superset
+>>> {1, 2, 3, 4} >= s1 # Superset
 True
->>> s1 ^ s2; # Symmetric difference
+>>> s1 ^ s2 # Symmetric difference
 {1, 2, 5, 6}
->>> len(s1); # Cardinality
+>>> len(s1) # Cardinality
 4
->>> s1.add(99); # Mutability
+>>> s1.add(99) # Mutability
 >>> s1
 {99, 1, 2, 3, 4}
->>> s1.discard(99); # Mutability
+>>> s1.discard(99) # Mutability
 >>> s1
 {1, 2, 3, 4}
->>> s1 |= s2; # Mutability
+>>> s1 |= s2 # Mutability
 >>> s1
 {1, 2, 3, 4, 5, 6}
->>> s1 -= s2; # Mutability
+>>> s1 -= s2 # Mutability
 >>> s1
 {1, 2}
->>> s1 ^= s2; # Mutability
+>>> s1 ^= s2 # Mutability
 >>> s1
 {1, 2, 3, 4, 5, 6}
 >>>

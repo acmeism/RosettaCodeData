@@ -9,5 +9,4 @@
 	if haystack.count(n) == 1:
 		assert hi == haystack.index(n), "index == hi_index if needle occurs only once"
 
-		
 >>>

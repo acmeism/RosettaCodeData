@@ -1,1 +1,1 @@
-main: { "Goodbye, World!" << }
+((main { "Goodbye, World!" << }))

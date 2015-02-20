@@ -1,3 +1,4 @@
+# usage: awk -f rot13.awk
 BEGIN {
   for(i=0; i < 256; i++) {
     amap[sprintf("%c", i)] = i

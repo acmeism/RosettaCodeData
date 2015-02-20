@@ -1,15 +1,13 @@
-import std.stdio, std.math, std.typecons;
+import std.stdio, std.math, std.typecons, std.typetuple;
 
-real agm(real a, real g, in int bitPrecision=60) pure nothrow {
+real agm(real a, real g, in int bitPrecision=60) pure nothrow @nogc @safe {
     do {
-        //(a, g) = tuple((a + g) / 2.0, sqrt(a * g));
-        immutable ag = tuple((a + g) / 2.0, sqrt(a * g));
-        a = ag[0];
-        g = ag[1];
+        //{a, g} = {(a + g) / 2.0, sqrt(a * g)};
+        TypeTuple!(a, g) = tuple((a + g) / 2.0, sqrt(a * g));
     } while (feqrel(a, g) < bitPrecision);
     return a;
 }
 
-void main() {
+void main() @safe {
     writefln("%0.19f", agm(1, 1 / sqrt(2.0)));
 }

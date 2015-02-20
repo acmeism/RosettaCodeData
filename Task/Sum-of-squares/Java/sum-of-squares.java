@@ -4,7 +4,7 @@ public class SumSquares
  {
   double sum = 0;
   int[] nums = {1,2,3,4,5};
-  for (int i : sum)
+  for (int i : nums)
    sum += i * i;
   System.out.println("The sum of the squares is: " + sum);
  }

@@ -2,7 +2,7 @@ SUBROUTINE Bubble_Sort(a)
   REAL, INTENT(in out), DIMENSION(:) :: a
   REAL :: temp
   INTEGER :: i, j
-  LOGICAL :: swapped = .TRUE.
+  LOGICAL :: swapped
 
   DO j = SIZE(a)-1, 1, -1
     swapped = .FALSE.

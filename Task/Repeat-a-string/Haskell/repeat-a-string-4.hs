@@ -1,1 +1,1 @@
-replicate 5 '*'
+cycle "ha"

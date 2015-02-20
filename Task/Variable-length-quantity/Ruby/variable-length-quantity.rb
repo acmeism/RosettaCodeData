@@ -1,4 +1,4 @@
-[2097152, 2097151].each do |i|
+[0x200000, 0x1fffff].each do |i|
   # Encode i => BER
   ber = [i].pack("w")
   hex = ber.unpack("C*").collect {|c| "%02x" % c}.join(":")

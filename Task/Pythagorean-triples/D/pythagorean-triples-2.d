@@ -1,40 +1,17 @@
-import std.stdio;
-
-alias uint xuint; // ulong if going over 1 billion.
-
-__gshared xuint nTriples, nPrimitives, limit;
-
-void countTriples(xuint x, xuint y, xuint z) nothrow {
-    while (true) {
-        immutable xuint p = x + y + z;
-        if (p > limit)
-            return;
-
-        nPrimitives++;
-        nTriples += limit / p;
-
-        xuint t0 = x - 2 * y + 2 * z;
-        xuint t1 = 2 * x - y + 2 * z;
-        xuint t2 = t1 - y + z;
-        countTriples(t0, t1, t2);
-
-        t0 += 4 * y;
-        t1 += 2 * y;
-        t2 += 4 * y;
-        countTriples(t0, t1, t2);
-
-        z = t2 - 4 * x;
-        y = t1 - 4 * x;
-        x = t0 - 2 * x;
-    }
+ulong[2] tri(ulong lim, ulong a=3, ulong b=4, ulong c=5)
+pure nothrow @safe @nogc {
+    immutable l = a + b + c;
+    if (l > lim)
+        return [0, 0];
+    typeof(return) r = [1, lim / l];
+    r[] += tri(lim,  a - 2*b + 2*c,  2*a - b + 2*c,  2*a - 2*b + 3*c)[];
+    r[] += tri(lim,  a + 2*b + 2*c,  2*a + b + 2*c,  2*a + 2*b + 3*c)[];
+    r[] += tri(lim, -a + 2*b + 2*c, -2*a + b + 2*c, -2*a + 2*b + 3*c)[];
+    return r;
 }
 
-void main() {
-    foreach (p; 1 .. 9) {
-        limit = (cast(xuint)10) ^^ p;
-        nTriples = nPrimitives = 0;
-        countTriples(3, 4, 5);
-        writefln("Up to %11d: %11d triples, %9d primitives.",
-                 limit, nTriples, nPrimitives);
-    }
+void main() /*@safe*/ {
+    import std.stdio;
+    foreach (immutable p; 1 .. 9)
+        writeln(10 ^^ p, ' ', tri(10 ^^ p));
 }

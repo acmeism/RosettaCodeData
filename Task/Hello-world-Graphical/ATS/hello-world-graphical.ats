@@ -1,35 +1,101 @@
+//
+#include
+"share/atspre_define.hats"
+#include
+"share/atspre_staload.hats"
+//
+(* ****** ****** *)
+
+staload UN = $UNSAFE
+
+(* ****** ****** *)
+
+staload "{$GLIB}/SATS/glib.sats"
+
+(* ****** ****** *)
+
+staload "{$GTK}/SATS/gdk.sats"
+staload "{$GTK}/SATS/gtk.sats"
+staload "{$GLIB}/SATS/glib-object.sats"
+
+(* ****** ****** *)
+
 %{^
-extern
-ats_void_type
-mainats (ats_int_type argc, ats_ptr_type argv);
-%}
+typedef char **charpp ;
+%} ;
+abstype charpp = $extype"charpp"
 
-staload "contrib/glib/SATS/glib.sats"
-staload "contrib/glib/SATS/glib-object.sats"
-staload "contrib/GTK/SATS/gtk.sats"
+(* ****** ****** *)
 
-extern fun main1 (): void = "main1"
+fun hello
+(
+  widget: !GtkWidget1, _: gpointer
+) : void = print ("Goodbye, world!\n")
 
-implement main1 () = () where {
-  val window = gtk_window_new (GTK_WINDOW_TOPLEVEL)
-  val (pf | title) = gstring_of_string ("Goodbye, World!")
-  val () = gtk_window_set_title (window, title)
-  prval () = pf (title)
-  val _sid = g_signal_connect
-    (window, (gsignal)"delete-event", (G_CALLBACK)gtk_main_quit, (gpointer)null)
-  val () = gtk_widget_show (window)
-  val () = gtk_main ()
-  val () = gtk_widget_destroy0 (window)
-}
+fun on_delete_event
+(
+  widget: !GtkWidget1
+, event: &GdkEvent, udata: gpointer
+) : gboolean = let
+  val () = print ("delete event occurred\n")
+in
+  GTRUE // handling of delete-event is finished
+end // end of [on_delete_event]
 
-implement main_dummy () = ()
+fun on_destroy
+  (widget: !GtkWidget1, _: gpointer): void = gtk_main_quit ()
+// end of [on_destroy]
 
-%{$
-ats_void_type
-mainats (ats_int_type argc, ats_ptr_type argv)
+(* ****** ****** *)
+
+macdef nullp = the_null_ptr
+
+(* ****** ****** *)
+
+implement
+main0 (argc, argv) =
 {
-  gtk_init ((int*)&argc, (char***)&argv);
-  main1 ();
-  return;
-}
-%}
+//
+var argc: int = argc
+var argv: charpp = $UN.castvwtp1{charpp}(argv)
+//
+val () = $extfcall (void, "gtk_init", addr@(argc), addr@(argv))
+//
+val window =
+  gtk_window_new (GTK_WINDOW_TOPLEVEL)
+val () = assertloc (ptrcast(window) > 0)
+//
+val _(*id*) =
+g_signal_connect (
+  window, (gsignal)"destroy", (G_CALLBACK)on_destroy, (gpointer)nullp
+) (* end of [val] *)
+val _(*id*) =
+g_signal_connect (
+  window, (gsignal)"delete_event", (G_CALLBACK)on_delete_event, (gpointer)nullp
+) (* end of [val] *)
+//
+val () = gtk_container_set_border_width (window, (guint)10)
+val button = gtk_button_new_with_label (gstring("Goodbye, world!"))
+val () = assertloc (ptrcast(button) > 0)
+//
+val () = gtk_widget_show (button)
+val () = gtk_container_add (window, button)
+val () = gtk_widget_show (window)
+//
+val _(*id*) =
+g_signal_connect
+(
+  button, (gsignal)"clicked", (G_CALLBACK)hello, (gpointer)nullp
+)
+val _(*id*) =
+g_signal_connect_swapped
+(
+  button, (gsignal)"clicked", (G_CALLBACK)gtk_widget_destroy, window
+)
+//
+val () = g_object_unref (button)
+val () = g_object_unref (window) // ref-count becomes 1!
+//
+val ((*void*)) = gtk_main ()
+//
+} (* end of [main0] *)

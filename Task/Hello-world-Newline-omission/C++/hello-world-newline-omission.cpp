@@ -1,5 +1,6 @@
-#include <iostreams>
+#include <iostream>
 
-int main(int argc, char *argv[]) {
+int main() {
   std::cout << "Goodbye, World!";
+  return 0;
 }

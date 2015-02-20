@@ -1,8 +1,6 @@
 import std.stdio, std.random, std.algorithm, std.range, std.functional;
 
-bool biased(in int n) /*nothrow*/ {
-    return uniform(0.0, 1.0) < (1.0 / n);
-}
+enum biased = (in int n) /*nothrow*/ => uniform01 < (1.0 / n);
 
 int unbiased(in int bias) /*nothrow*/ {
     int a;

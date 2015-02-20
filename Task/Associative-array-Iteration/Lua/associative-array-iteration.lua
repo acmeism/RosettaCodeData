@@ -1,8 +1,9 @@
-local table = {
+local t = {
     ["foo"] = "bar",
     ["baz"] = 6,
-    42 = 7,
+    fortytwo = 7
 }
-for key,val in pairs(table) do
-    print(string.format("%s: %s\n", key, val)
+
+for key,val in pairs(t) do
+    print(string.format("%s: %s", key, val))
 end

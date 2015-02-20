@@ -1,5 +1,4 @@
-import std.stdio, std.regex;
-import std.string: replace, split, format;
+import std.stdio, std.regex, std.string, std.array;
 
 immutable langs = "_div abap actionscript actionscript3 ada apache
 applescript apt_sources asm asp autoit avisynth bash basic4gl bf

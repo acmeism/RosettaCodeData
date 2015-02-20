@@ -1,5 +1,5 @@
-sub roots_of_unity (Int $n where { $n > 0 }) {
-    map { exp 2i * pi/$n * $_ }, ^$n
+sub roots-of-unity (Int \n where 1..*) {
+    map { exp 2i * pi/n * $_ }, ^n;
 }
 
-printf "% .5f + % .5fi\n", .re, .im for roots_of_unity 10;
+printf "%+.5f%+.5fi\n", .reals for roots-of-unity 10;

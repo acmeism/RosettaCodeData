@@ -1,7 +1,7 @@
 package main
 
 import (
-    "big"
+    "math/big"
     "fmt"
     "strconv"
 )
@@ -27,24 +27,24 @@ func main() {
     fmt.Println(err)
     _, err = strconv.Atoi("_1234")
     fmt.Println(err)
-    _, err = strconv.Atof64("12.D34")
+    _, err = strconv.ParseFloat("12.D34", 64)
     fmt.Println(err)
 
     // float
     fmt.Println()
     fs := "12.34"
     fmt.Println("original:   ", fs)
-    f, err := strconv.Atof64(fs)
+    f, err := strconv.ParseFloat(fs, 64)
     if err != nil {
         fmt.Println(err)
         return
     }
-    // various options on Ftoa64 produce different formats.  All are valid
-    // input to Atof64, so result format does not have to match original
-    // format.  (Matching original format would take a lot of code.)
-    fs = strconv.Ftoa64(f+1, 'g', -1)
+    // various options on FormatFloat produce different formats.  All are valid
+    // input to ParseFloat, so result format does not have to match original
+    // format.  (Matching original format would take more code.)
+    fs = strconv.FormatFloat(f+1, 'g', -1, 64)
     fmt.Println("incremented:", fs)
-    fs = strconv.Ftoa64(f+1, 'e', 4)
+    fs = strconv.FormatFloat(f+1, 'e', 4, 64)
     fmt.Println("what format?", fs)
 
     // complex

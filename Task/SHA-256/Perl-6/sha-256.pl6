@@ -1,4 +1,4 @@
-say .list».fmt("%02x").join given sha256 "Rosetta code";
+say sha256 "Rosetta code";
 
 constant primes = grep &is-prime, 2 .. *;
 sub init(&f) {
@@ -14,10 +14,9 @@ multi sha256(Str $str where all($str.ords) < 128) {
 }
 multi sha256(Blob $data) {
     constant K = init(* **(1/3))[^64];
-    my $l = 8 * my @b = $data.list;
-    push @b, 0x80; push @b, 0 until (8*@b-448) %% 512;
-
-    push @b, reverse gather for ^8 { take $l%256; $l div=256 }
+    my @b = $data.list, 0x80;
+    push @b, 0 until (8 * @b - 448) %% 512;
+    push @b, reverse (8 * $data).polymod(256 xx 7);
     my @word = :256[@b.shift xx 4] xx @b/4;
 
     my @H = init(&sqrt)[^8];
@@ -41,7 +40,5 @@ multi sha256(Blob $data) {
         }
         @H = @H Z[m+] @h;
     }
-    return Blob.new: map -> $word is rw {
-        reverse gather for ^4 { take $word % 256; $word div= 256 }
-    }, @H;
+    return Blob.new: map { reverse .polymod(256 xx 3) }, @H;
 }

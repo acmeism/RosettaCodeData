@@ -4,7 +4,7 @@ struct Spermutations(bool doCopy=true) {
     private immutable uint n;
     alias TResult = Tuple!(int[], int);
 
-    int opApply(in int delegate(in ref TResult) dg) {
+    int opApply(in int delegate(in ref TResult) nothrow dg) nothrow {
         int result;
 
         int sign = 1;
@@ -18,18 +18,16 @@ struct Spermutations(bool doCopy=true) {
         if (result)
             goto END;
 
-        while (p.canFind!q{ a[1] }) {
+        while (p.any!q{ a[1] }) {
             // Failed to use std.algorithm here, too much complex.
             auto largest = Int2(-100, -100);
             int i1 = -1;
-            foreach (immutable i, immutable pi; p) {
-                if (pi[1]) {
+            foreach (immutable i, immutable pi; p)
+                if (pi[1])
                     if (pi[0] > largest[0]) {
                         i1 = i;
                         largest = pi;
                     }
-                }
-            }
             immutable n1 = largest[0],
                       d1 = largest[1];
 

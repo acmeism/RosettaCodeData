@@ -14,7 +14,7 @@ HofstadterQ: procedure expose q.; arg x 1 ox  /*get the # to gen through*/
                                        /*(above)  OX  is the same as  X.*/
 x=abs(x)                               /*use the absolute value for  X. */
 L=length(x)                            /*use for right justified output.*/
-             do j=1 for x
+             do j=1  for x
              if j>2   then  if q.j==1  then  q.j=q(j-q(j-1)) + q(j-q(j-2))
              if ox>0  then  say right(j,L) right(q.j,L)   /*if X>0, tell*/
              end    /*j*/

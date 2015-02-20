@@ -17,11 +17,8 @@ var eth = {
 			if( !eth.isEven( a[i] ) ){
 				sum += b[i];
 			}
-		}
-		
+		}		
 		return sum + b[0];
-
 	}
 }
-
 // eth.mult(17,34) returns 578

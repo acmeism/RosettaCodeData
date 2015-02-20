@@ -10,11 +10,11 @@ function LevenshteinDistance(s, t: string): longint;
   begin
     n := length(t);
     m := length(s);
-    setlength(d, n+1, m+1);
+    setlength(d, m+1, n+1);
 
-    for i := 0 to n do
+    for i := 0 to m do
       d[i,0] := i;
-    for j := 0 to m do
+    for j := 0 to n do
       d[0,j] := j;
     for j := 1 to n do
       for i := 1 to m do

@@ -1,41 +1,19 @@
- using System;
-class Program
+namespace ConsoleApplication1
 {
- static void Main(string[] args)
+    using System;
+    class Program
+    {
+        static void Main()
         {
-            bool[] Doors = new bool[101];
+            bool[] doors = new bool[100];
 
-
-            //Close all doors to start
-            for (int g=1;g<101;g++) Doors[g] = false;
-
-            for (int i = 1; i < 101; i++)//number of passes
-            {
-                for (int d = 1; d < 101; d++)//door number
-                {
-                    if ((d % i) == 0)
-                    {
-                        if (Doors[d]) Doors[d] = false;
-                        else Doors[d] = true;
-                    }
-
-                }
-            }
-
-            Console.WriteLine("Passes Completed!!!  Here are the results: \r\n");
-            for (int p = 1; p < 101; p++)
-            {
-                if (Doors[p])
-                {
-                    string doorStatus = String.Format("Door #{0} is \'OPENED\'.", p.ToString());
-                    Console.WriteLine(doorStatus);
-                }
-                else
-                {
-                    string doorStatus = String.Format("Door #{0} is \'CLOSED\'.", p.ToString());
-                    Console.WriteLine(doorStatus);
-                 }
-
-            }
+            //The number of passes can be 1-based, but the number of doors must be 0-based.
+            for (int p = 1; p <= 100; p++)
+                for (int d = p - 1; d < 100; d += p)
+                    doors[d] = !doors[d];
+            for (int d = 0; d < 100; d++)
+                Console.WriteLine("Door #{0}: {1}", d + 1, doors[d] ? "Open" : "Closed");
+            Console.ReadKey(true);
         }
+    }
 }

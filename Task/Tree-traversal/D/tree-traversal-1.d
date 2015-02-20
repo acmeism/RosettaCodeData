@@ -43,8 +43,7 @@ void backtrackingOrder(Visit v, TNode, TyF=void*)
 }
 
 void levelOrder(TNode, TyF=void*)
-               (TNode node, TyF visitor=null,
-                const(TNode)[] more=[]) {
+               (in TNode node, TyF visitor=null, const(TNode)[] more=[]) {
     alias trueVisitor = Select!(is(TyF == void*), show, visitor);
     if (node !is null) {
         more ~= [node.left, node.right];

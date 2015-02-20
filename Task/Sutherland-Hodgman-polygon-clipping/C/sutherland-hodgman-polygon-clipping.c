@@ -58,18 +58,13 @@ typedef struct { int len, alloc; vec v; } poly_t, *poly;
 
 poly poly_new()
 {
-	poly p = (poly)malloc(sizeof(poly_t));
-	p->len = p->alloc = 0;
-	p->v = 0;
-	return p;
+	return (poly)calloc(1, sizeof(poly_t));
 }
 
 void poly_free(poly p)
 {
-	if (p->alloc) {
-		free(p->v);
-		free(p);
-	}
+	free(p->v);
+	free(p);
 }
 
 void poly_append(poly p, vec v)
@@ -126,6 +121,10 @@ poly poly_clip(poly sub, poly clip)
 	poly_edge_clip(sub, clip->v + clip->len - 1, clip->v, dir, p2);
 	for (i = 0; i < clip->len - 1; i++) {
 		tmp = p2; p2 = p1; p1 = tmp;
+		if(p1->len == 0) {
+			p2->len = 0;
+			break;
+		}
 		poly_edge_clip(p1, clip->v + i, clip->v + i + 1, dir, p2);
 	}
 

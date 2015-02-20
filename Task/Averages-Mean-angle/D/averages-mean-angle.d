@@ -1,10 +1,10 @@
 import std.stdio, std.algorithm, std.complex;
 import std.math: PI;
 
-auto radians(T)(in T d) pure nothrow { return d * PI / 180; }
-auto degrees(T)(in T r) pure nothrow { return r * 180 / PI; }
+auto radians(T)(in T d) pure nothrow @nogc { return d * PI / 180; }
+auto degrees(T)(in T r) pure nothrow @nogc { return r * 180 / PI; }
 
-real meanAngle(T)(in T[] D) pure nothrow {
+real meanAngle(T)(in T[] D) pure nothrow @nogc {
     immutable t = reduce!((a, d) => a + d.radians.expi)(0.complex, D);
     return (t / D.length).arg.degrees;
 }

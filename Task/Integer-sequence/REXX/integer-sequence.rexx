@@ -9,15 +9,15 @@
   │ where it started, and this computer program will still be counting.│
   │                                                                    │
   │                                                                    │
-  │ According to Sir Author Eddington in 1938 at his Tamer Lecture at  │
-  │ Trinity Collecge (Cambridge), he postulated that there are exactly │
+  │ According to Sir Arthur Eddington in 1938 at his Tamer Lecture at  │
+  │ Trinity College (Cambridge), he postulated that there are exactly  │
   │                                                                    │
-  │                              136 ∙ 2^245                           │
+  │                              136 ∙ 2^256                           │
   │                                                                    │
   │ protons in the universe and the same number of electrons, which is │
   │ equal to around  1.57477e+79.                                      │
   │                                                                    │
-  │ Although, a modern extimate is around  10^80.                      │
+  │ Although, a modern estimate is around  10^80.                      │
   │                                                                    │
   │                                                                    │
   │ One estimate of the age of the universe is  13.7  billion years,   │

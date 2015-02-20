@@ -1,22 +1,23 @@
-import core.stdc.stdio, std.math, std.typecons, std.string,
+import core.stdc.stdio, std.math, std.typecons, std.string, std.conv,
        std.algorithm, std.ascii, std.array, bitmap, grayscale_image;
 
 enum maxBrightness = 255;
 
 alias Pixel = short;
+alias IntT = typeof(size_t.init.signed);
 
 // If normalize is true, map pixels to range 0...maxBrightness.
 void convolution(bool normalize)(in Pixel[] inp, Pixel[] outp,
                                  in float[] kernel,
-                                 in int nx, in int ny, in int kn)
-pure nothrow in {
+                                 in IntT nx, in IntT ny, in IntT kn)
+pure nothrow @nogc in {
     assert(kernel.length == kn ^^ 2);
     assert(kn % 2 == 1);
     assert(nx > kn && ny > kn);
     assert(inp.length == outp.length);
 } body {
-    //immutable int kn = sqrti(kernel.length);
-    immutable int khalf = kn / 2;
+    //immutable IntT kn = sqrti(kernel.length);
+    immutable IntT khalf = kn / 2;
 
     static if (normalize) {
         float pMin = float.max, pMax = -float.max;
@@ -58,11 +59,11 @@ pure nothrow in {
 
 
 void gaussianFilter(in Pixel[] inp, Pixel[] outp,
-                    in int nx, in int ny, in float sigma)
+                    in IntT nx, in IntT ny, in float sigma)
 pure nothrow in {
     assert(inp.length == outp.length);
 } body {
-    immutable int n = 2 * cast(int)(2 * sigma) + 3;
+    immutable IntT n = 2 * cast(IntT)(2 * sigma) + 3;
     immutable float mean = floor(n / 2.0);
     auto kernel = new float[n * n];
 
@@ -85,13 +86,13 @@ pure nothrow in {
 
 
 Image!Pixel cannyEdgeDetection(in Image!Pixel inp,
-                               in int tMin, in int tMax,
+                               in IntT tMin, in IntT tMax,
                                in float sigma)
 pure nothrow in {
     assert(inp !is null);
 } body {
-    immutable int nx = inp.nx;
-    immutable int ny = inp.ny;
+    immutable IntT nx = inp.nx.signed;
+    immutable IntT ny = inp.ny.signed;
     auto outp = new Pixel[nx * ny];
 
     gaussianFilter(inp.image, outp, nx, ny, sigma);
@@ -119,15 +120,15 @@ pure nothrow in {
     auto nms = new Pixel[nx * ny];
     foreach (immutable i; 1 .. nx - 1)
         foreach (immutable j; 1 .. ny - 1) {
-            immutable int c = i + nx * j,
-                          nn = c - nx,
-                          ss = c + nx,
-                          ww = c + 1,
-                          ee = c - 1,
-                          nw = nn + 1,
-                          ne = nn - 1,
-                          sw = ss + 1,
-                          se = ss - 1;
+            immutable IntT c = i + nx * j,
+                           nn = c - nx,
+                           ss = c + nx,
+                           ww = c + 1,
+                           ee = c - 1,
+                           nw = nn + 1,
+                           ne = nn - 1,
+                           sw = ss + 1,
+                           se = ss - 1;
 
             immutable aux = atan2(double(after_Gy[c]),
                                   double(after_Gx[c])) + PI;
@@ -147,7 +148,7 @@ pure nothrow in {
         }
 
     // Reuse array used as a stack. nx*ny/2 elements should be enough.
-    int[] edges = (cast(int*)after_Gy.ptr)[0 .. after_Gy.length / 2];
+    IntT[] edges = (cast(IntT*)after_Gy.ptr)[0 .. after_Gy.length / 2];
     outp[] = Pixel.init;
     edges[] = 0;
 
@@ -157,14 +158,14 @@ pure nothrow in {
         foreach (immutable i; 1 .. nx - 1) {
             if (nms[c] >= tMax && outp[c] == 0) { // Trace edges.
                 outp[c] = maxBrightness;
-                int nedges = 1;
+                IntT nedges = 1;
                 edges[0] = c;
 
                 do {
                     nedges--;
-                    immutable int t = edges[nedges];
+                    immutable IntT t = edges[nedges];
 
-                    immutable int[8] neighbours = [
+                    immutable IntT[8] neighbours = [
                         t - nx,      // nn
                         t + nx,      // ss
                         t + 1,       // ww

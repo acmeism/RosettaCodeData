@@ -9,7 +9,7 @@ object LLT extends App {
 
   def s(mp: BigInt, p: Int): BigInt = { if (p == 1) 4 else ((s(mp, p - 1) pow 2) - 2) % mp }
 
-  val upbPrime = 9999
+  val upbPrime = 9941
   println(s"Finding Mersenne primes in M[2..$upbPrime]")
   ((primes takeWhile (_ <= upbPrime)).par map { p => (p, mersenne(p)) }
     map { p => if (p._1 == 2) (p, 0) else (p, s(p._2, p._1 - 1)) } filter { _._2 == 0 })

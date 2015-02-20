@@ -14,7 +14,7 @@ immutable texts = [
     "exactly 1 of statements 7, 8 and 9 are true",
     "exactly 4 of the preceding statements are true"];
 
-immutable pure bool function(in bool[])[12] predicates = [
+immutable pure @safe /*@nogc*/ bool function(in bool[])[12] predicates = [
     s => s.length == 12,
     s => s[$ - 6 .. $].sum == 3,
     s => s.dropOne.stride(2).sum == 2,

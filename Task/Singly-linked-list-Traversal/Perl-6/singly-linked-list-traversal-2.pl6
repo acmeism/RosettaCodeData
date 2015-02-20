@@ -1,7 +1,7 @@
 use MONKEY_TYPING;
 augment class Pair {
     method traverse () {
-        gather loop (my $l = self; $l; $l = $l.value) {
+        gather loop (my $l = self; $l; $l.=value) {
             take $l.key;
         }
     }

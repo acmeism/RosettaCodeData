@@ -5,7 +5,7 @@ immutable struct GaussLegendreQuadrature(size_t N, FP=double,
     immutable static double[N] lroots, weight;
     alias FP[N + 1][N + 1] CoefMat;
 
-    pure nothrow static this() {
+    pure nothrow @safe @nogc static this() {
         static FP legendreEval(in ref FP[N + 1][N + 1] lcoef,
                                in int n, in FP x) pure nothrow {
             FP s = lcoef[n][n];
@@ -15,34 +15,33 @@ immutable struct GaussLegendreQuadrature(size_t N, FP=double,
         }
 
         static FP legendreDiff(in ref CoefMat lcoef,
-                               in int n, in FP x) pure nothrow {
+                               in int n, in FP x)
+        pure nothrow @safe @nogc {
             return n * (x * legendreEval(lcoef, n, x) -
                         legendreEval(lcoef, n - 1, x)) /
                    (x ^^ 2 - 1);
         }
 
-        static void legendreRoots(in ref CoefMat lcoef) pure nothrow {
-            foreach (immutable i; 1 .. N + 1) {
-                FP x = cos(PI * (i - 0.25) / (N + 0.5));
-                FP x1;
-                do {
-                    x1 = x;
-                    x -= legendreEval(lcoef, N, x) /
-                         legendreDiff(lcoef, N, x);
-                } while (feqrel(x, x1) < NBITS);
-                lroots[i - 1] = x;
-                x1 = legendreDiff(lcoef, N, x);
-                weight[i - 1] = 2 / ((1 - x ^^ 2) * (x1 ^^ 2));
-            }
-        }
-
         CoefMat lcoef = 0.0;
         legendreCoefInit(/*ref*/ lcoef);
-        legendreRoots(lcoef);
+
+        // Legendre roots:
+        foreach (immutable i; 1 .. N + 1) {
+            FP x = cos(PI * (i - 0.25) / (N + 0.5));
+            FP x1;
+            do {
+                x1 = x;
+                x -= legendreEval(lcoef, N, x) /
+                     legendreDiff(lcoef, N, x);
+            } while (feqrel(x, x1) < NBITS);
+            lroots[i - 1] = x;
+            x1 = legendreDiff(lcoef, N, x);
+            weight[i - 1] = 2 / ((1 - x ^^ 2) * (x1 ^^ 2));
+        }
     }
 
     static private void legendreCoefInit(ref CoefMat lcoef)
-    pure nothrow {
+    pure nothrow @safe @nogc {
         lcoef[0][0] = lcoef[1][1] = 1;
         foreach (immutable int n; 2 .. N + 1) { // n must be signed.
             lcoef[n][0] = -(n - 1) * lcoef[n - 2][0] / n;
@@ -52,8 +51,9 @@ immutable struct GaussLegendreQuadrature(size_t N, FP=double,
         }
     }
 
-    static public FP integrate(in FP function(FP x) f,
-                               in FP a, in FP b) {
+    static public FP integrate(in FP function(/*in*/ FP x) pure nothrow @safe @nogc f,
+                               in FP a, in FP b)
+    pure nothrow @safe @nogc {
         immutable FP c1 = (b - a) / 2;
         immutable FP c2 = (b + a) / 2;
         FP sum = 0.0;
@@ -70,5 +70,5 @@ void main() {
     writefln("Integrating exp(x) over [-3, 3]: %10.12f",
              glq.integrate(&exp, -3, 3));
     writefln("Compred to actual:               %10.12f",
-             3.0.exp - -3.0.exp);
+             3.0.exp - exp(-3.0));
 }

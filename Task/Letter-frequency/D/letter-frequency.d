@@ -1,6 +1,6 @@
-import std.stdio, std.ascii, std.algorithm, std.range, std.typetuple;
-
 void main() {
+    import std.stdio, std.ascii, std.algorithm, std.range;
+
     uint[26] frequency;
 
     foreach (const buffer; "unixdict.txt".File.byChunk(2 ^^ 15))

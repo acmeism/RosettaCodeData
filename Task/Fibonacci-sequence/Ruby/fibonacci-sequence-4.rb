@@ -21,7 +21,7 @@ M = Matrix[[0, 1], [1,1]]
 # and then multiplying that by by M**(the remaining number of times).  E.g., to compute
 # M**19, compute partial = ((M**2)**2) = M**16, and then compute partial*(M**3) = M**19.
 # That's only 5 matrix multiplications of M to compute M*19.
-def self.fibMatrix(n)
+def self.fib_matrix(n)
   return 0 if n <= 0 # F(0)
   return 1 if n == 1 # F(1)
   # To get F(n >= 2), compute M**(n - 1) and extract the lower right element.

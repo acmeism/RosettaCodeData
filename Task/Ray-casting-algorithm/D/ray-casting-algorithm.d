@@ -7,8 +7,9 @@ immutable struct Figure {
     Edge[] edges;
 }
 
-bool contains(in Figure poly, in Point p) pure nothrow {
-    static bool raySegI(in Point p, in Edge edge) pure nothrow {
+bool contains(in Figure poly, in Point p) pure nothrow @safe @nogc {
+    static bool raySegI(in Point p, in Edge edge)
+    pure nothrow @safe @nogc {
         enum double epsilon = 0.00001;
         with (edge) {
             if (a.y > b.y)
@@ -31,7 +32,7 @@ bool contains(in Figure poly, in Point p) pure nothrow {
         }
     }
 
-    return poly.edges.count!(e => raySegI(p, e))() % 2;
+    return poly.edges.count!(e => raySegI(p, e)) % 2;
 }
 
 void main() {
@@ -54,6 +55,7 @@ void main() {
     {{10.0,  5.0}, { 7.0, 10.0}},  {{ 7.0, 10.0}, { 3.0, 10.0}},
     {{ 3.0, 10.0}, { 0.0,  5.0}},  {{ 0.0,  5.0}, { 3.0,  0.0}}]}
 ];
+
     immutable Point[] testPoints = [{ 5, 5}, {5, 8}, {-10,  5}, {0, 5},
                                     {10, 5}, {8, 5}, { 10, 10}];
 

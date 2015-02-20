@@ -22,7 +22,7 @@ test:
 n=arg()                             /* Number of arguments           */
 gcde=arg(n)                         /* Expected result               */
 gcdx=gcd(arg(1),arg(2))             /* gcd of the first 2 numbers    */
-Do i=2 To n-2                       /* proceed with all te others    */
+Do i=2 To n-2                       /* proceed with all the others   */
   If arg(i+1)<>0 Then
     gcdx=gcd(gcdx,arg(i+1))
   End
@@ -30,7 +30,7 @@ If gcdx=arg(arg()) Then             /* result is as expected         */
   tag='as expected'
 Else                                /* result is not correct         */
   Tag='*** wrong. expected:' gcde
-numbers=arg(1)                      /* build sting to show the input */
+numbers=arg(1)                      /* build string to show the input*/
 Do i=2 To n-1
   numbers=numbers 'and' arg(i)
   End

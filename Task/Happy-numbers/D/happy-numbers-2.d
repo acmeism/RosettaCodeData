@@ -1,10 +1,10 @@
-import std.stdio, std.algorithm, std.range, std.conv;
+import std.stdio, std.algorithm, std.range, std.conv, std.string;
 
-bool isHappy(int n) pure /*nothrow*/ {
+bool isHappy(int n) pure nothrow {
     int[int] seen;
 
     while (true) {
-        immutable t = n.text.map!q{(a - '0') ^^ 2}.sum;
+        immutable t = n.text.representation.map!q{(a - '0') ^^ 2}.sum;
         if (t == 1)
             return true;
         if (t in seen)

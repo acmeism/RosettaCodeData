@@ -1,26 +1,80 @@
 #include <iostream>
 #include <algorithm>
-#include <vector>
-#include <iterator>
+#include<cstdio>
+using namespace std;
+void Pascal_Triangle(int size) {
 
-void genPyrN(int rows) {
-  if (rows < 0) return;
-  // save the last row here
-  std::vector<int> last(1, 1);
-  std::cout << last[0] << std::endl;
+	int a[100][100];
+	int i, j;
 
-  for (int i = 1; i <= rows; i++) {
-    // work on the next row
-    std::vector<int> thisRow;
-    thisRow.reserve(i+1);
-    thisRow.push_back(last.front()); // beginning of row
-    std::transform(last.begin(), last.end()-1, last.begin()+1, std::back_inserter(thisRow), std::plus<int>()); // middle of row
-    thisRow.push_back(last.back()); // end of row
+	//first row and first coloumn has the same value=1
+	for (i = 1; i <= size; i++) {
+		a[i][1] = a[1][i] = 1;
+	}
+	
+	//Generate the full Triangle
+	for (i = 2; i <= size; i++) {
+		for (j = 2; j <= size - i; j++) {
+			if (a[i - 1][j] == 0 || a[i][j - 1] == 0) {
+				break;
+			}
+			a[i][j] = a[i - 1][j] + a[i][j - 1];
+		}
+	}
 
-    for (int j = 0; j <= i; j++)
-      std::cout << thisRow[j] << " ";
-    std::cout << std::endl;
+	/*
+	  1 1 1 1
+	  1 2 3
+	  1 3
+	  1
+	
+	first print as above format-->
+	
+	for (i = 1; i < size; i++) {
+		for (j = 1; j < size; j++) {
+			if (a[i][j] == 0) {
+					break;
+			}
+				printf("%8d",a[i][j]);
+		}
+			cout<<"\n\n";
+	}*/
+	
+	// standard Pascal Triangle Format
+	
+	int row,space;
+	for (i = 1; i < size; i++) {
+		space=row=i;
+		j=1;
+		
+		while(space<=size+(size-i)+1){
+			 cout<<" ";
+			 space++;
+		 }
+		
+		while(j<=i){
+			if (a[row][j] == 0){
+				   break;
+			   }
+			
+			if(j==1){
+				printf("%d",a[row--][j++]);
+			}
+			else
+				printf("%6d",a[row--][j++]);
+		}
+			cout<<"\n\n";
+	}
+	
+}
 
-    last.swap(thisRow);
-  }
+int main()
+{
+	//freopen("out.txt","w",stdout);
+	
+	int size;
+	cin>>size;
+	Pascal_Triangle(size);
+}
+
 }

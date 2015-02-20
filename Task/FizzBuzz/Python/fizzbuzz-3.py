@@ -1,3 +1,13 @@
-for i in range(1, 101):
-    words = [word for n, word in ((3, 'Fizz'), (5, 'Buzz')) if not i % n]
-    print ''.join(words) or i
+from itertools import cycle, izip, count, islice
+
+fizzes = cycle([""] * 2 + ["Fizz"])
+buzzes = cycle([""] * 4 + ["Buzz"])
+both = (f + b for f, b in izip(fizzes, buzzes))
+
+# if the string is "", yield the number
+# otherwise yield the string
+fizzbuzz = (word or n for word, n in izip(both, count(1)))
+
+# print the first 100
+for i in islice(fizzbuzz, 100):
+    print i

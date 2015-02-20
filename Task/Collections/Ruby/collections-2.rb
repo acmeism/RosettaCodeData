@@ -1,5 +1,4 @@
 # creating an empty hash
-
 h = {}              #=> {}
 h["a"] = 1          #=> {"a"=>1}
 h["test"] = 2.4     #=> {"a"=>1, "test"=>2.4}

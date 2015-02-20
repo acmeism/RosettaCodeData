@@ -1,36 +1,55 @@
 #include <stdio.h>
+#include <stdlib.h>
 
-typedef enum { t_F = -1, t_M, t_T } trit;
+typedef double half_truth, maybe;
 
-trit t_not  (trit a) { return -a; }
-trit t_and  (trit a, trit b) { return a < b ? a : b; }
-trit t_or   (trit a, trit b) { return a > b ? a : b; }
-trit t_eq   (trit a, trit b) { return a * b; }
-trit t_imply(trit a, trit b) { return -a > b ? -a : b; }
-char t_s(trit a) { return "F?T"[a + 1]; }
+inline maybe not3(maybe a) { return 1 - a; }
 
-#define forall(a) for(a = t_F; a <= t_T; a++)
-void show_op(trit (*f)(trit, trit), const char *name) {
-	trit a, b;
-	printf("\n[%s]\n    F ? T\n  -------", name);
-	forall(a) {
-		printf("\n%c |", t_s(a));
-		forall(b) printf(" %c", t_s(f(a, b)));
-	}
-	puts("");
-}
+inline maybe
+and3(maybe a, maybe b) { return a * b; }
 
-int main(void)
+inline maybe
+or3(maybe a, maybe b) { return a + b - a * b; }
+
+inline maybe
+eq3(maybe a, maybe b) { return 1 - a - b + 2 * a * b; }
+
+inline maybe
+imply3(maybe a, maybe b) { return or3(not3(a), b); }
+
+#define true3(x) ((x) * RAND_MAX > rand())
+#define if3(x) if (true3(x))
+
+int main()
 {
-	trit a;
+	maybe roses_are_red = 0.25; /* they can be white or black, too */
+	maybe violets_are_blue = 1; /* aren't they just */
+	int i;
 
-	puts("[Not]");
-	forall(a) printf("%c | %c\n", t_s(a), t_s(t_not(a)));
+	puts("Verifying flowery truth for 40 times:\n");
 
-	show_op(t_and,   "And");
-	show_op(t_or,    "Or");
-	show_op(t_eq,    "Equiv");
-	show_op(t_imply, "Imply");
+	puts("Rose is NOT red:"); /* chance: .75 */
+	for (i = 0; i < 40 || !puts("\n"); i++)
+		printf( true3( not3(roses_are_red) ) ? "T" : "_");
+
+	/* pick a rose and a violet; */
+	puts("Rose is red AND violet is blue:");
+	/* chance of rose being red AND violet being blue is .25 */
+	for (i = 0; i < 40 || !puts("\n"); i++)
+		printf( true3( and3(roses_are_red, violets_are_blue) )
+			? "T" : "_");
+
+	/* chance of rose being red OR violet being blue is 1 */
+	puts("Rose is red OR violet is blue:");
+	for (i = 0; i < 40 || !puts("\n"); i++)
+		printf( true3( or3(roses_are_red, violets_are_blue) )
+			? "T" : "_");
+
+	/* pick two roses; chance of em being both red or both not red is .625 */
+	puts("This rose is as red as that rose:");
+	for (i = 0; i < 40 || !puts("\n"); i++)
+		if3(eq3(roses_are_red, roses_are_red)) putchar('T');
+		else putchar('_');
 
 	return 0;
 }

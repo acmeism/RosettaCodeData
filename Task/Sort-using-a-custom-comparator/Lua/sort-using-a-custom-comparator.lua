@@ -1,7 +1,12 @@
-function pair(a, b) return a[1] < b[1] end
+test = { "Here", "we", "have", "some", "sample", "strings", "to", "be", "sorted" }
 
-t = {
-{2, 5}, {1, 6}, {4, 8}, {3, 2}
-}
-table.sort(t, pair)
-for i, v in ipairs(t) do print(unpack(v)) end
+function stringSorter(a, b)
+	if string.len(a) == string.len(b) then
+		return string.lower(a) < string.lower(b)
+	end
+	return string.len(a) > string.len(b)
+end
+table.sort(test, stringSorter)
+
+-- print sorted table
+for k,v in pairs(test) do print(v) end

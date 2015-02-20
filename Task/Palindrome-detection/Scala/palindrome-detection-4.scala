@@ -20,4 +20,4 @@
   assert(isPalindromeRec("1 2 1"))
   assert(!isPalindromeRec("A man a plan a canal Panama."))
 
-  println("Succesfully completed without errors.")
+  println("Successfully completed without errors.")

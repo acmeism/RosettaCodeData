@@ -1,10 +1,9 @@
 import std.stdio, std.algorithm, std.range;
 
-T[][] comb(T)(in T[] s, in int m) /*pure*/ nothrow {
+immutable(int)[][] comb(immutable int[] s, in int m) pure nothrow @safe {
   if (!m) return [[]];
   if (s.empty) return [];
-  return s[1 .. $].comb(m - 1).map!(x => s[0] ~ x).array ~
-         s[1 .. $].comb(m);
+  return s[1 .. $].comb(m - 1).map!(x => s[0] ~ x).array ~ s[1 .. $].comb(m);
 }
 
 void main() {

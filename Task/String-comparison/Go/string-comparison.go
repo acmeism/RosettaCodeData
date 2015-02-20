@@ -44,7 +44,7 @@ simple case folding rules.`
     // case folding functions interpret UTF-8, you might then ask about
     // other equality and inequality tests that interpret UTF-8.
     // Functions for this are not in the Go standard library but are in
-    // the Go "sub repository" at code.google.com/p/go.  There is support
+    // the Go "sub repository" at golang.org/x/text.  There is support
     // for Unicode normalization, collation tables, and locale sensitive
     // comparisons.
 }

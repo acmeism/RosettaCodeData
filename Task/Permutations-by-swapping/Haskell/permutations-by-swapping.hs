@@ -1,14 +1,10 @@
-insertEverywhere :: a -> [a] -> [[a]]
-insertEverywhere x [] = [[x]]
-insertEverywhere x l@(y:ys) = (x:l) : map (y:) (insertEverywhere x ys)
-
-s_perm :: [a] -> [[a]]
-s_perm = foldl aux [[]]
-  where aux items x = do (f, item) <- zip (cycle [reverse, id]) items
-                         f (insertEverywhere x item)
-
 s_permutations :: [a] -> [([a], Int)]
-s_permutations = flip zip (cycle [1, -1]) . s_perm
+s_permutations = flip zip (cycle [1, -1]) . (foldl aux [[]])
+  where aux items x = do
+          (f,item) <- zip (cycle [reverse,id]) items
+          f (insertEv x item)
+        insertEv x [] = [[x]]
+        insertEv x l@(y:ys) = (x:l) : map (y:) $ insertEv x ys
 
 main :: IO ()
 main = do

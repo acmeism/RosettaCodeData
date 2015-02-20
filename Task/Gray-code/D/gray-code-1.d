@@ -1,8 +1,8 @@
-uint grayEncode(in uint n) pure nothrow {
+uint grayEncode(in uint n) pure nothrow @nogc {
     return n ^ (n >> 1);
 }
 
-uint grayDecode(uint n) pure nothrow {
+uint grayDecode(uint n) pure nothrow @nogc {
     auto p = n;
     while (n >>= 1)
         p ^= n;

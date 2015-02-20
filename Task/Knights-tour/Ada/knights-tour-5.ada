@@ -1,5 +1,8 @@
-   function Warnsdorff_Get_Tour(Start_X, Start_Y: Index) return Tour is
+   function Warnsdorff_Get_Tour(Start_X, Start_Y: Index;  Scene: Tour := Empty)
+			       return Tour is
       Done: Boolean;
+      Visited: Tour; -- see comments from Get_Tour above
+      Move_Count: Natural := Count_Moves(Scene);
 
       function Neighbors(X, Y: Index) return Natural is
          Result: Natural := 0;
@@ -45,7 +48,7 @@
       begin
          Found := False;
          Visited(X, Y) := Move;
-         if Move = Integer(Index'Last * Index'Last) then
+         if Move = Move_Count then
             Found := True;
          else
             -- consider all possible places to go
@@ -74,10 +77,10 @@
       end Visit;
 
    begin
-      Visited := (others => (others => 0));
+      Visited := Scene;
       Visit(Start_X, Start_Y, 1, Done);
       if not Done then
-         Visited := (others => (others => 0));
+         Visited := Scene;
       end if;
       return Visited;
    end Warnsdorff_Get_Tour;

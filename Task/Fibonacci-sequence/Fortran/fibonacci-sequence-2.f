@@ -1,20 +1,11 @@
-    function fibI(n)
-        integer, intent(in) :: n
-        integer, parameter :: fib0 = 0, fib1 = 1
-        integer            :: fibI, back1, back2, i
-
-        select case (n)
-            case (:0);      fibI = fib0
-            case (1);       fibI = fib1
-
-            case default
-                fibI = fib1
-                back1 = fib0
-                do i = 2, n
-                    back2 = back1
-                    back1 = fibI
-                    fibI   = back1 + back2
-                end do
-         end select
-    end function fibI
-end module fibonacci
+      EXTERNAL IFIB
+      CHARACTER*10 LINE
+      PARAMETER ( LINE = '----------' )
+      WRITE(*,900) 'N', 'F[N]', 'F[-N]'
+      WRITE(*,900) LINE, LINE, LINE
+      DO 1 N = 0, 10
+        WRITE(*,901) N, IFIB(N), IFIB(-N)
+    1 CONTINUE
+  900 FORMAT(3(X,A10))
+  901 FORMAT(3(X,I10))
+      END

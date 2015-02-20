@@ -1,14 +1,14 @@
-import std.stdio, std.range, std.algorithm, std.typecons, std.array;
+import std.stdio, std.range, std.algorithm, std.typecons, std.conv;
 
 Tuple!(double[], double[]) polyDiv(in double[] inN, in double[] inD)
-pure /*nothrow*/ {
+nothrow pure @safe {
     // Code smell: a function that does two things.
-    static int trimAndDegree(T)(ref T[] poly) nothrow pure {
+    static int trimAndDegree(T)(ref T[] poly) nothrow pure @safe @nogc {
         poly = poly.retro.find!q{ a != b }(0.0).retro;
-        return (cast(int)poly.length) - 1;
+        return poly.length.signed - 1;
     }
 
-    double[] N = inN.dup; // Not nothrow.
+    auto N = inN.dup;
     const(double)[] D = inD;
     const dD = trimAndDegree(D);
     auto dN = trimAndDegree(N);
@@ -30,9 +30,9 @@ pure /*nothrow*/ {
 }
 
 
-int trimAndDegree1(T)(ref T[] poly) nothrow pure {
+int trimAndDegree1(T)(ref T[] poly) nothrow pure @safe @nogc {
     poly.length -= poly.retro.countUntil!q{ a != 0 };
-    return (cast(int)poly.length) - 1;
+    return poly.length.signed - 1;
 }
 
 void main() {

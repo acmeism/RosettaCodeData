@@ -5,13 +5,11 @@ struct UTM(State, Symbol, bool doShow=true)
 if (is(State == enum) && is(Symbol == enum)) {
     static assert(is(typeof({ size_t x = State.init; })),
                   "State must to be usable as array index.");
-    static assert([EnumMembers!State]
-                  .equal(EnumMembers!State.length.iota),
+    static assert([EnumMembers!State].equal(EnumMembers!State.length.iota),
                   "State must be a plain enum.");
     static assert(is(typeof({ size_t x = Symbol.init; })),
                   "Symbol must to be usable as array index.");
-    static assert([EnumMembers!Symbol]
-                  .equal(EnumMembers!Symbol.length.iota),
+    static assert([EnumMembers!Symbol].equal(EnumMembers!Symbol.length.iota),
                   "Symbol must be a plain enum.");
 
     enum Direction { right, left, stay }
@@ -23,16 +21,15 @@ if (is(State == enum) && is(Symbol == enum)) {
     // The first index of this 'rules' matrix is a subtype of State
     // because it can't contain H, but currently D can't enforce this,
     // statically unlike Ada language.
-    Rule[EnumMembers!Symbol.length]
-        [EnumMembers!State.length - 1] mRules;
+    Rule[EnumMembers!Symbol.length][EnumMembers!State.length - 1] mRules;
 
     static struct Rule {
         Symbol toWrite;
         Direction direction;
         State nextState;
 
-        this(in Symbol toWrite_, in Direction direction_,
-             in State nextState_) pure nothrow {
+        this(in Symbol toWrite_, in Direction direction_, in State nextState_)
+        pure nothrow @safe @nogc {
             this.toWrite = toWrite_;
             this.direction = direction_;
             this.nextState = nextState_;
@@ -57,18 +54,18 @@ if (is(State == enum) && is(Symbol == enum)) {
         const SymbolMap sMap;
         size_t nSteps;
 
-        this(in ref TuringMachine t) pure /*nothrow*/ {
+        this(in ref TuringMachine t) pure nothrow @safe {
             this.blank = EnumMembers!Symbol[0];
             //tapeRight = t.input.empty ? [this.blank] : t.input.dup;
             if (t.input.empty)
                 this.tapeRight = [this.blank];
             else
-                this.tapeRight = t.input.dup; // Not nothrow.
+                this.tapeRight = t.input.dup;
             this.position = 0;
             this.sMap = t.symbolMap;
         }
 
-        pure nothrow invariant() {
+        pure nothrow @safe @nogc invariant {
             assert(this.tapeRight.length > 0);
             if (this.position >= 0)
                 assert(this.position < this.tapeRight.length);
@@ -76,18 +73,18 @@ if (is(State == enum) && is(Symbol == enum)) {
                 assert(this.position.abs <= this.tapeLeft.length);
         }
 
-        Symbol readSymb() const pure nothrow {
+        Symbol readSymb() const pure nothrow @safe @nogc {
             if (this.position >= 0)
                 return this.tapeRight[this.position];
             else
                 return this.tapeLeft[this.position.abs - 1];
         }
 
-        void showSymb() const {
+        void showSymb() const @safe {
             this.write;
         }
 
-        void writeSymb(in Symbol symbol) {
+        void writeSymb(in Symbol symbol) @safe {
             static if (doShow)
                 showSymb;
             if (this.position >= 0)
@@ -96,19 +93,19 @@ if (is(State == enum) && is(Symbol == enum)) {
                 this.tapeLeft[this.position.abs - 1] = symbol;
         }
 
-        void goRight() pure nothrow {
+        void goRight() pure nothrow @safe {
             this.position++;
             if (position > 0 && position == tapeRight.length)
                 tapeRight ~= blank;
         }
 
-        void goLeft() pure nothrow {
+        void goLeft() pure nothrow @safe {
             this.position--;
             if (position < 0 && (position.abs - 1) == tapeLeft.length)
                 tapeLeft ~= blank;
         }
 
-        void move(in Direction dir) pure nothrow {
+        void move(in Direction dir) pure nothrow @safe {
             nSteps++;
             final switch (dir) with (Direction) {
                 case left:  goLeft;        break;
@@ -117,10 +114,9 @@ if (is(State == enum) && is(Symbol == enum)) {
             }
         }
 
-        string toString() const {
-            const pos = cast(int)tapeLeft.length + this.position + 4;
-            return format("...%-(%)...", tapeLeft.retro
-                                         .chain(tapeRight)
+        string toString() const @safe {
+            immutable pos = tapeLeft.length.signed + this.position + 4;
+            return format("...%-(%)...", tapeLeft.retro.chain(tapeRight)
                                          .map!(s => sMap[s])) ~
                    '\n' ~
                    format("%" ~ pos.text ~ "s", "^") ~
@@ -128,25 +124,22 @@ if (is(State == enum) && is(Symbol == enum)) {
         }
     }
 
-    void show() const {
+    void show() const @safe {
         head.showSymb;
     }
 
-    this(in ref TuringMachine tm_) {
-        static assert(__traits(compiles, State.H),
-                      "State needs a 'H' (Halt).");
+    this(in ref TuringMachine tm_) @safe {
+        static assert(__traits(compiles, State.H), "State needs a 'H' (Halt).");
         immutable errMsg = "Invalid input.";
-        auto runningStates = remove!(s => s == State.H)
-                             ([EnumMembers!State]);
+        auto runningStates = remove!(s => s == State.H)([EnumMembers!State]);
         enforce(!runningStates.empty, errMsg);
-        enforce(tm_.rules.length == EnumMembers!State.length - 1,
-                errMsg);
+        enforce(tm_.rules.length == EnumMembers!State.length - 1, errMsg);
         enforce(State.H !in tm_.rules, errMsg);
         enforce(runningStates.canFind(tm_.initialState), errMsg);
 
         // Create a matrix to reduce running time.
-        foreach (const State st, const rset; tm_.rules)
-            foreach (const Symbol sy, const rule; rset)
+        foreach (immutable State st, const rset; tm_.rules)
+            foreach (immutable Symbol sy, immutable rule; rset)
                 mRules[st][sy] = rule;
 
         this.tm = tm_;
@@ -165,7 +158,7 @@ if (is(State == enum) && is(Symbol == enum)) {
     }
 }
 
-void main() {
+void main() @safe {
     "Incrementer:".writeln;
     enum States1 : ubyte { A, H }
     enum Symbols1 : ubyte { s0, s1 }

@@ -1,7 +1,6 @@
 class Automaton {
     subset World of Str where {
-	.lines.pick.chars == all(.lines>>.chars)
-	    and m/^^<[.#\n]>+$$/
+	.lines>>.chars.uniq == 1 and m/^^<[.#\n]>+$$/
     }
     has Int ($.width, $.height);
     has @.a;

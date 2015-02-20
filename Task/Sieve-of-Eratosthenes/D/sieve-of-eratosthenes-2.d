@@ -1,6 +1,6 @@
 import std.stdio, std.math, std.array;
 
-size_t[] sieve(in size_t m) pure nothrow {
+size_t[] sieve(in size_t m) pure nothrow @safe {
     if (m < 3)
         return null;
     immutable size_t n = m - 1;
@@ -8,13 +8,13 @@ size_t[] sieve(in size_t m) pure nothrow {
     auto F = new size_t[((n + 2) / 2) / bpc + 1];
     F[] = size_t.max;
 
-    size_t isSet(in size_t i) nothrow {
+    size_t isSet(in size_t i) nothrow @safe @nogc {
         immutable size_t offset = i / bpc;
         immutable size_t mask = 1 << (i % bpc);
         return F[offset] & mask;
     }
 
-    void resetBit(in size_t i) nothrow {
+    void resetBit(in size_t i) nothrow @safe @nogc {
         immutable size_t offset = i / bpc;
         immutable size_t mask = 1 << (i % bpc);
         if ((F[offset] & mask) != 0)

@@ -3,17 +3,18 @@ import std.stdio, std.array, std.range, std.typecons, std.algorithm;
 struct Vec2 { // To be replaced with Phobos code.
     double x, y;
 
-    Vec2 opBinary(string op="-")(in Vec2 other) const pure nothrow {
+    Vec2 opBinary(string op="-")(in Vec2 other)
+    const pure nothrow @safe @nogc {
         return Vec2(this.x - other.x, this.y - other.y);
     }
 
-    typeof(x) cross(in Vec2 other) const pure nothrow {
+    typeof(x) cross(in Vec2 other) const pure nothrow @safe @nogc {
         return this.x * other.y - this.y * other.x;
     }
 }
 
 immutable(Vec2)[] clip(in Vec2[] subjectPolygon, in Vec2[] clipPolygon)
-pure /*nothrow*/ in {
+pure /*nothrow*/ @safe in {
     assert(subjectPolygon.length > 1);
     assert(clipPolygon.length > 1);
     // Probably clipPolygon needs to be convex and probably
@@ -23,11 +24,13 @@ pure /*nothrow*/ in {
 } body {
     alias Edge = Tuple!(Vec2,"p", Vec2,"q");
 
-    static enum isInside = (in Vec2 p, in Edge cle) pure nothrow =>
+    static enum isInside = (in Vec2 p, in Edge cle)
+    pure nothrow @safe @nogc =>
         (cle.q.x - cle.p.x) * (p.y - cle.p.y) >
         (cle.q.y - cle.p.y) * (p.x - cle.p.x);
 
-    static Vec2 intersection(in Edge se, in Edge cle) pure nothrow {
+    static Vec2 intersection(in Edge se, in Edge cle)
+    pure nothrow @safe @nogc {
         immutable dc = cle.p - cle.q;
         immutable dp = se.p - se.q;
         immutable n1 = cle.p.cross(cle.q);
@@ -38,7 +41,7 @@ pure /*nothrow*/ in {
     }
 
     // How much slower is this compared to lower-level code?
-    static enum edges = (in Vec2[] poly) pure nothrow =>
+    static enum edges = (in Vec2[] poly) pure nothrow @safe @nogc =>
         // poly[$ - 1 .. $].chain(poly).zip!Edge(poly);
         poly[$ - 1 .. $].chain(poly).zip(poly).map!Edge;
 
@@ -46,7 +49,7 @@ pure /*nothrow*/ in {
 
     foreach (immutable clipEdge; edges(clipPolygon)) {
         immutable inputList = result;
-        result.clear;
+        result.destroy;
         foreach (immutable inEdge; edges(inputList)) {
             if (isInside(inEdge.q, clipEdge)) {
                 if (!isInside(inEdge.p, clipEdge))

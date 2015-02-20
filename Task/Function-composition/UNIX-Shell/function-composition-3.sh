@@ -1,9 +1,9 @@
 fn compose f g {
-	result @ x {result <={$f <={$g $x}}}
+	result @ {$g | $f}
 }
 
-fn downvowel x {result `` '' {tr AEIOU aeiou <<< $x}}
-fn upcase x {result `` '' {tr a-z A-Z <<< $x}}
+fn downvowel {tr AEIOU aeiou}
+fn upcase {tr a-z A-Z}
 fn-c = <={compose $fn-downvowel $fn-upcase}
-echo <={c 'Cozy lummox gives smart squid who asks for job pen.'}
+echo 'Cozy lummox gives smart squid who asks for job pen.' | c
 # => CoZY LuMMoX GiVeS SMaRT SQuiD WHo aSKS FoR JoB PeN.

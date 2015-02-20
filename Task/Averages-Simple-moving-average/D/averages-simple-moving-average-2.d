@@ -5,7 +5,7 @@ struct SMA(T, int period) {
     T sum = 0;
     int index, nFilled;
 
-    auto opCall(in T v) pure nothrow {
+    auto opCall(in T v) pure nothrow @safe @nogc {
         sum += -data[index] + v;
         data[index] = v;
         index = (index + 1) % period;
@@ -19,6 +19,5 @@ void main() {
     SMA!(double, 5) s5;
 
     foreach (immutable e; [1, 2, 3, 4, 5, 5, 4, 3, 2, 1])
-        writefln("Added %d, sma(3) = %f, sma(5) = %f",
-                 e, s3(e), s5(e));
+        writefln("Added %d, sma(3) = %f, sma(5) = %f", e, s3(e), s5(e));
 }

@@ -38,7 +38,7 @@ public class Main {
 				if(rightTrunc == -1)
 				{
 					int right = prime;
-					while(right > 0 && primeList.get(right >> 1)) right /= 10;
+					while(right > 0 && right % 2 != 0 && primeList.get(right >> 1)) right /= 10;
 					if(right == 0) rightTrunc = prime;
 				}
 

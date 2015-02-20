@@ -1,19 +1,16 @@
-import itertools
+def spiral(n):
+    dat = [[None] * n for i in range(n)]
+    le = [[i + 1, i + 1] for i in reversed(range(n))]
+    le = sum(le, [])[1:]  # for n = 5 le will be [5, 4, 4, 3, 3, 2, 2, 1, 1]
+    dxdy = [[1, 0], [0, 1], [-1, 0], [0, -1]] * ((len(le) + 4) / 4)  # long enough
+    x, y, val = -1, 0, -1
+    for steps, (dx, dy) in zip(le, dxdy):
+        x, y, val = x + dx, y + dy, val + 1
+        for j in range(steps):
+            dat[y][x] = val
+            if j != steps-1:
+                x, y, val = x + dx, y + dy, val + 1
+    return dat
 
-concat = itertools.chain.from_iterable
-def partial_sums(items):
-    s = 0
-    for x in items:
-        s += x
-        yield s
-
-grade = lambda xs: sorted(range(len(xs)), key=xs.__getitem__)
-values = lambda n: itertools.cycle([1,n,-1,-n])
-counts = lambda n: concat([i,i-1] for i in range(n,0,-1))
-reshape = lambda n, xs: zip(*([iter(xs)] * n))
-
-spiral = lambda n: reshape(n, grade(list(partial_sums(concat(
-                       [v]*c for c,v in zip(counts(n), values(n)))))))
-
-for row in spiral(5):
-    print(' '.join('%3s' % x for x in row))
+for row in spiral(5): # calc spiral and print it
+    print ' '.join('%3s' % x for x in row)

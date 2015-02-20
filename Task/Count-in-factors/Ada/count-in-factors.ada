@@ -1,39 +1,8 @@
-with Ada.Command_Line;
-with Ada.Text_IO;
+with Ada.Command_Line, Ada.Text_IO, Prime_Numbers;
 
 procedure Count is
-   type Number_List is array (Positive range <>) of Positive;
-
-   function Decompose (N : Natural) return Number_List is
-      Size : Natural := 0;
-      M    : Natural := N;
-      K    : Natural := 2;
-   begin
-      if N = 1 then
-         return (1 => 1);
-      end if;
-      -- Estimation of the result length from above
-      while M >= 2 loop
-         M    := (M + 1) / 2;
-         Size := Size + 1;
-      end loop;
-      M := N;
-      -- Filling the result with prime numbers
-      declare
-         Result : Number_List (1 .. Size);
-         Index  : Positive := 1;
-      begin
-         while N >= K loop -- Divisors loop
-            while 0 = (M mod K) loop -- While divides
-               Result (Index) := K;
-               Index          := Index + 1;
-               M              := M / K;
-            end loop;
-            K := K + 1;
-         end loop;
-         return Result (1 .. Index - 1);
-      end;
-   end Decompose;
+   package Prime_Nums is new Prime_Numbers
+     (Number => Natural, Zero => 0, One => 1, Two => 2); use Prime_Nums;
 
    procedure Put (List : Number_List) is
    begin
@@ -46,11 +15,11 @@ procedure Count is
    end Put;
 
    N     : Natural := 1;
-   Max_N : Natural := 15;
+   Max_N : Natural := 15; -- the default for Max_N
 begin
-   if Ada.Command_Line.Argument_Count = 1 then
+   if Ada.Command_Line.Argument_Count = 1 then -- read Max_N from command line
       Max_N := Integer'Value (Ada.Command_Line.Argument (1));
-   end if;
+   end if; -- else use the default
    loop
       Ada.Text_IO.Put (Integer'Image (N) & ": ");
       Put (Decompose (N));

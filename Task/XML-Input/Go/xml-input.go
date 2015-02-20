@@ -5,7 +5,7 @@ import (
     "fmt"
 )
 
-const XML_DATA = `
+const XML_Data = `
 <Students>
    <Student Name="April" Gender="F" DateOfBirth="1989-01-02" />
    <Student Name="Bob" Gender="M"  DateOfBirth="1990-03-04" />
@@ -36,10 +36,10 @@ type Pet struct {
 // xml.Unmarshal quietly skips well formed input with no corresponding
 // member in the output data structure.  With Gender, DateOfBirth, and
 // Pets commented out of the Student struct, as above, Student contains
-// only Name, and this is the only value extracted from the input XML_DATA.
+// only Name, and this is the only value extracted from the input XML_Data.
 func main() {
-    data := new(Students)
-    err := xml.Unmarshal([]byte(XML_DATA), data)
+    var data Students
+    err := xml.Unmarshal([]byte(XML_Data), &data)
     if err != nil {
         fmt.Println(err)
         return

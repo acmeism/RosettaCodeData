@@ -16,16 +16,15 @@ permSets: procedure; parse arg x,y,between,uSyms /*X things Y at a time.*/
 
   do k=1  for x                        /*build a list of (perm) symbols.*/
   _=p(word(uSyms,k)  p(substr(@0abcS,k,1) k))   /*get|generate a symbol.*/
-  if length(_)\==1  then sep='_'       /*if not 1st char, then use sep. */
+  if length(_)\==1  then sep='_'       /*if not 1st char,  then use sep.*/
   $.k=_                                /*append it to the symbol list.  */
-  end
+  end   /*k*/
 
 if between==''  then between=sep       /*use the appropriate separator. */
-list='$. @. between x y'
-call .permset 1
+call .permset 1                        /*start with the first permuation*/
 return
 /*──────────────────────────────────.PERMSET subroutine─────────────────*/
-.permset:  procedure expose (list);    parse arg ?
+.permset:  procedure expose $. @. between x y;    parse arg ?
 if ?>y then do; _=@.1;   do j=2  to y;  _=_||between||@.j; end; say _; end
        else do q=1  for x              /*build permutation recursively. */
                 do k=1  for ?-1;  if @.k==$.q  then iterate q;  end  /*k*/

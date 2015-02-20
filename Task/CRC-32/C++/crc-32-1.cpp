@@ -1,49 +1,61 @@
-#include <string>
-#include <iostream>
 #include <algorithm>
-#include <numeric>
 #include <array>
 #include <cstdint>
+#include <numeric>
 
-class CRC32
+// These headers are only needed for main(), to demonstrate.
+#include <iomanip>
+#include <iostream>
+#include <string>
+
+// Generates a lookup table for the checksums of all 8-bit values.
+std::array<std::uint_fast32_t, 256> generate_crc_lookup_table() noexcept
 {
-public:
-    CRC32()
+  auto const reversed_polynomial = std::uint_fast32_t{0xEDB88320uL};
+
+  // This is a function object that calculates the checksum for a value,
+  // then increments the value, starting from zero.
+  struct byte_checksum
+  {
+    std::uint_fast32_t operator()() noexcept
     {
-        generateTable();
+      auto checksum = static_cast<std::uint_fast32_t>(n++);
+
+      for (auto i = 0; i < 8; ++i)
+        checksum = (checksum >> 1) ^ ((checksum & 0x1u) ? reversed_polynomial : 0);
+
+      return checksum;
     }
 
-    template<class T>
-    uint32_t get( T begin, T end )
-    {
-        uint32_t nCRC = ~static_cast<uint32_t>(0);
-        return ~std::accumulate( begin, end, 0xFFFFFFFF, [&](uint32_t nCRC, uint32_t nVal)
-            { return (nCRC >> 8) ^ m_pTable[(nCRC & 0xff) ^ nVal]; } );
-    }
+    unsigned n = 0;
+  };
 
-private:
-    void generateTable()
-    {
-        int nCount = 0;
-        // fill the table with 0..255
-        std::generate( m_pTable.begin(), m_pTable.end(), [&nCount](){ return nCount++; } );
+  auto table = std::array<std::uint_fast32_t, 256>{};
+  std::generate(table.begin(), table.end(), byte_checksum{});
 
-        // calculate the crc table
-        for (int j = 0; j < 8; j++)
-        {
-            std::transform( m_pTable.begin(), m_pTable.end(), m_pTable.begin(),
-                [] ( uint32_t &nValue ) { return (nValue>>1)^((nValue&1)*0xedb88320); } );
-        }
-    }
+  return table;
+}
 
-private:
-    std::array<uint32_t, 256> m_pTable;
-};
+// Calculates the CRC for any sequence of values. (You could use type traits and a
+// static assert to ensure the values can be converted to 8 bits.)
+template <typename InputIterator>
+std::uint_fast32_t crc(InputIterator first, InputIterator last)
+{
+  // Generate lookup table only on first use then cache it - this is thread-safe.
+  static auto const table = generate_crc_lookup_table();
+
+  // Calculate the checksum - make sure to clip to 32 bits, for systems that don't
+  // have a true (fast) 32-bit type.
+  return std::uint_fast32_t{0xFFFFFFFFuL} &
+    ~std::accumulate(first, last,
+      ~std::uint_fast32_t{0} & std::uint_fast32_t{0xFFFFFFFFuL},
+        [](std::uint_fast32_t checksum, std::uint_fast8_t value)
+          { return table[(checksum ^ value) & 0xFFu] ^ (checksum >> 8); });
+}
 
 int main()
 {
-    CRC32 oCrc;
-    std::string str( "The quick brown fox jumps over the lazy dog" );
-    std::cout << "Checksum: " << std::hex << oCrc.get( str.begin(), str.end() ) << std::endl;
-    return 0;
+  auto const s = std::string{"The quick brown fox jumps over the lazy dog"};
+
+  std::cout << std::hex << std::setw(8) << std::setfill('0') << crc(s.begin(), s.end()) << '\n';
 }

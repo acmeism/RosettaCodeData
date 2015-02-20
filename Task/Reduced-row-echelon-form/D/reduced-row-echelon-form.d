@@ -1,13 +1,13 @@
 import std.stdio, std.algorithm, std.array, std.conv;
 
-void toReducedRowEchelonForm(T)(T[][] M) pure nothrow {
+void toReducedRowEchelonForm(T)(T[][] M) pure nothrow @nogc {
     if (M.empty)
         return;
     immutable nrows = M.length;
     immutable ncols = M[0].length;
 
     size_t lead;
-    foreach (r; 0 .. nrows) {
+    foreach (immutable r; 0 .. nrows) {
         if (ncols <= lead)
             return;
         {

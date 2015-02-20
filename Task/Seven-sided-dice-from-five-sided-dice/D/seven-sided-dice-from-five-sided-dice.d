@@ -2,12 +2,12 @@ import std.random;
 import verify_distribution_uniformity_naive: distCheck;
 
 /// Generates a random number in [1, 5].
-int dice5() /*pure nothrow*/ {
+int dice5() /*pure nothrow*/ @safe {
     return uniform(1, 6);
 }
 
 /// Naive, generates a random number in [1, 7] using dice5.
-int fiveToSevenNaive() /*pure nothrow*/ {
+int fiveToSevenNaive() /*pure nothrow*/ @safe {
     immutable int r = dice5() + dice5() * 5 - 6;
     return (r < 21) ? (r % 7) + 1 : fiveToSevenNaive();
 }
@@ -16,7 +16,7 @@ int fiveToSevenNaive() /*pure nothrow*/ {
 Generates a random number in [1, 7] using dice5,
 minimizing calls to dice5.
 */
-int fiveToSevenSmart() {
+int fiveToSevenSmart() @safe {
     static int rem = 0, max = 1;
 
     while (rem / 7 == max / 7) {
@@ -39,7 +39,7 @@ int fiveToSevenSmart() {
     return result + 1;
 }
 
-void main() {
+void main() /*@safe*/ {
     enum int N = 400_000;
     distCheck(&dice5, N, 1);
     distCheck(&fiveToSevenNaive, N, 1);

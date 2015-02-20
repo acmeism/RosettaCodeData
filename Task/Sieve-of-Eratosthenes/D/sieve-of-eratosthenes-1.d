@@ -1,6 +1,6 @@
 import std.stdio, std.algorithm, std.range, std.functional;
 
-uint[] sieve(in uint limit) {
+uint[] sieve(in uint limit) nothrow @safe {
     if (limit < 2)
         return [];
     auto composite = new bool[limit];
@@ -10,10 +10,10 @@ uint[] sieve(in uint limit) {
             for (uint k = n * n; k < limit; k += n)
                 composite[k] = true;
 
-    //return iota(2, limit).filter!(not!composite)().array();
-    return iota(2, limit).filter!(i => !composite[i])().array();
+    //return iota(2, limit).filter!(not!composite).array;
+    return iota(2, limit).filter!(i => !composite[i]).array;
 }
 
 void main() {
-    writeln(sieve(50));
+    50.sieve.writeln;
 }

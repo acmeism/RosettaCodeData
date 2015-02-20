@@ -20,4 +20,4 @@
          ((num? X) X)
          ((= "+" X) (term))
          ((= "-" X) (list '- (term)))
-         ((= "(" X) (prog1 (aggregate) (pop '*L)))) ) ) )
+         ((= "(" X) (prog1 (aggregate) (pop '*L)))) ) )

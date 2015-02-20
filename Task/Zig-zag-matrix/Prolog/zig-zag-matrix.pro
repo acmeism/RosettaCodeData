@@ -69,8 +69,6 @@ compute_next(_NL, NC, Lig, Col, up, Lig1, Col, down) :-
 	Lig1 is Lig + 1.
 
 
-
-
 print_line(L) :-
 	maplist(print_val, L),
 	nl.

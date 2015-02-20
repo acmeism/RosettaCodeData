@@ -1,9 +1,8 @@
-import scala.language.postfixOps
-object BinaryDigits {
-  (5 toBinaryString).reverse.padTo(14, '0').reverse
-                                                  //> res0: String = 00000000000101
-  (50 toBinaryString).reverse.padTo(14, '0').reverse
-                                                  //> res1: String = 00000000110010
-  (9000 toBinaryString).reverse.padTo(14, '0').reverse
-                                                  //> res2: String = 10001100101000
-}
+scala> (5 toBinaryString)
+res0: String = 101
+
+scala> (50 toBinaryString)
+res1: String = 110010
+
+scala> (9000 toBinaryString)
+res2: String = 10001100101000

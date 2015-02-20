@@ -9,3 +9,4 @@ function mean(array)
 }
 
 alert( mean( [1,2,3,4,5] ) );   // 3
+alert( mean( [] ) );            // 0

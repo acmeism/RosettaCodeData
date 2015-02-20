@@ -1,3 +1,3 @@
-def is_palindrome(s)
+def palindrome?(s)
   s == s.reverse
 end

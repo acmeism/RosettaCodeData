@@ -20,7 +20,7 @@
 
 @implementation CameraPhone
 
--(id)init {
+-(instancetype)init {
   if ((self = [super init])) {
     camera = [[Camera alloc] init];
     phone = [[MobilePhone alloc] init];
@@ -36,6 +36,12 @@
     [anInvocation invokeWithTarget:phone];
   else
     [self doesNotRecognizeSelector:aSelector];
+}
+
+-(NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector {
+  return [camera methodSignatureForSelector:aSelector]
+  ?: [phone methodSignatureForSelector:aSelector]
+  ?: [super methodSignatureForSelector:aSelector];
 }
 
 -(BOOL)respondsToSelector:(SEL)aSelector {

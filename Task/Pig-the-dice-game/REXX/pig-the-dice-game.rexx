@@ -1,6 +1,6 @@
 /*REXX program plays pig the dice game (any # of CBLFs and/or silicons).*/
 signal on syntax; signal on novalue    /*handle REXX program errors.    */
-sw=80-1                                /*the LINESIZE bif would be nicer*/
+sw=linesize()-1                        /*get the width of the terminal. */
 parse arg hp cp win die _ . '(' names ")"   /*obtain optional arguments.*/
                                        /*names with blanks should use _ */
 if _\==''  then  call  err  'too many arguments were specified: ' _

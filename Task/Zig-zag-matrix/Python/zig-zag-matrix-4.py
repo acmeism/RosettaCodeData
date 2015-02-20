@@ -1,7 +1,3 @@
-#ZigZag
-#
-# Nigel Galloway: June 7th., 2012,
-#
 COLS = 9
 def CX(x, ran):
   while True:

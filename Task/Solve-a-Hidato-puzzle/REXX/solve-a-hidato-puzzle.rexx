@@ -1,9 +1,11 @@
 /*REXX pgm solves a Hidato or Numbrix puzzle, displays puzzle & solution*/
-maxr=0;  maxc=0;  maxx=0;  minr=9e9;  minc=9e9;  minx=9e9;  cells=0;  @.=
+maxr=0;  maxc=0;  maxx=0;  minr=9e9;   minc=9e9;  minx=9e9;  cells=0;  @.=
 parse arg xxx;    PZ='Hidato puzzle'   /*get cell definitions from C.L. */
+xxx=translate(xxx, , "/\;:_", ',')     /*also allow other chars as comma*/
+
                do  while xxx\='';  parse var  xxx    r  c  marks  ','  xxx
                    do  while marks\='';                    _=@.r.c
-                   parse var marks  x marks
+                   parse var marks  x  marks
                    if datatype(x,'N')  then do;  x=x/1     /*normalize X*/
                                             if x<0  then PZ='Numbrix puzzle'
                                             x=abs(x)       /*use  │x│   */
@@ -23,8 +25,9 @@ Nr = '0  1   0  -1    -1   1   1  -1'  /*possible row for the next move.*/
 Nc = '1  0  -1   0     1  -1   1  -1'  /*   "     col  "   "    "    "  */
 pMoves=words(Nr) -4*(left(PZ,1)=='N')  /*is this to be a Numbrix puzzle?*/
   do i=1  for pMoves; Nr.i=word(Nr,i); Nc.i=word(Nc,i); end /*fast moves*/
-if \next(2,!r,!c)  then call err 'No solution possible.'
-say;     say 'A solution for the' PZ "exists.";    say;      call showGrid
+if \next(2,!r,!c)  then say 'No solution possible for this' PZ "puzzle."
+                   else say 'A solution for the' PZ "exists."
+say;  call showGrid
 exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────ERR subroutine──────────────────────*/
 err:  say;    say '***error!*** (from' PZ"): "  arg(1);    say;    exit 13
@@ -48,8 +51,8 @@ return 0                                         /*This ain't working.  */
 showGrid: if maxr<1 | maxc<1  then call err 'no legal cell was specified.'
 if minx<1        then call err 'no  1  was specified for the puzzle start'
 if maxx\==cells  then call err 'no' cells "was specified for the puzzle end"
-w=length(maxx);   do r=maxr  to minr  by -1;  _=
+w=length(cells);  do r=maxr  to minr  by -1;  _=
                       do c=minc  to maxc;  _=_ right(@.r.c,w);  end  /*c*/
                   say _
                   end   /*r*/
-return
+say;  return

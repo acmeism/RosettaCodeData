@@ -17,10 +17,9 @@ class Integer
   end
 end
 
-
 (0..31).each do |number|
   encoded = number.to_gray
   decoded = encoded.from_gray
-  printf("%2d: %5b => %5b => %5b: %2d\n",
-         number, number, encoded, decoded, decoded)
+  printf "%2d : %5b => %5b => %5b : %2d\n",
+         number, number, encoded, decoded, decoded
 end

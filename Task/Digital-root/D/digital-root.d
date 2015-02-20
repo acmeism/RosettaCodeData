@@ -2,7 +2,7 @@ import std.stdio, std.typecons, std.conv, std.bigint, std.math,
        std.traits;
 
 Tuple!(uint, Unqual!T) digitalRoot(T)(in T inRoot, in uint base)
-pure /*nothrow*/
+pure nothrow
 in {
     assert(base > 1);
 } body {

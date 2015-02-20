@@ -1,113 +1,102 @@
 class Rational implements Comparable {
-    final BigInteger numerator, denominator
+    final BigInteger num, denom
 
-    static final Rational ONE = new Rational(1, 1)
-
-    static final Rational ZERO = new Rational(0, 1)
-
-    Rational(BigInteger whole) { this(whole, 1) }
+    static final Rational ONE = new Rational(1)
+    static final Rational ZERO = new Rational(0)
 
     Rational(BigDecimal decimal) {
         this(
-            decimal.scale() < 0 ? decimal.unscaledValue()*10**(-decimal.scale()) : decimal.unscaledValue(),
-            decimal.scale() < 0 ? 1 : 10**(decimal.scale())
-        )
+        decimal.scale() < 0 ? decimal.unscaledValue()*10**(-decimal.scale()) : decimal.unscaledValue(),
+        decimal.scale() < 0 ? 1                                              : 10**(decimal.scale()))
     }
 
-    Rational(num, denom) {
-        assert denom != 0 : "Denominator must not be 0"
-        def values = denom > 0 ? [num, denom] : [-num, -denom] //reduce(num, denom)
-
-        numerator = values[0]
-        denominator = values[1]
+    Rational(BigInteger n, BigInteger d = 1) {
+        if (!d || n == null) { n/d }
+        (num, denom) = reduce(n, d)
     }
 
-    private List reduce(BigInteger num, BigInteger denom) {
-        BigInteger sign = ((num < 0) != (denom < 0)) ? -1 : 1
-        num = num.abs()
-        denom = denom.abs()
-        BigInteger commonFactor = gcd(num, denom)
+    private List reduce(BigInteger n, BigInteger d) {
+        BigInteger sign = ((n < 0) != (d < 0)) ? -1 : 1
+        (n, d) = [n.abs(), d.abs()]
+        BigInteger commonFactor = gcd(n, d)
 
-        [num.intdiv(commonFactor) * sign, denom.intdiv(commonFactor)]
+        [n.intdiv(commonFactor) * sign, d.intdiv(commonFactor)]
     }
 
-    public Rational toLeastTerms() {
-        def reduced = reduce(numerator, denominator)
-        new Rational(reduced[0], reduced[1])
+    public Rational toLeastTerms() { reduce(num, denom) as Rational }
+
+    private BigInteger gcd(BigInteger n, BigInteger m) {
+        n == 0 ? m : { while(m%n != 0) { (n, m) = [m%n, n] }; n }()
     }
 
-    private BigInteger gcd(BigInteger n, BigInteger m) { n == 0 ? m : { while(m%n != 0) { def t=n; n=m%n; m=t }; n }() }
+    Rational plus(Rational r) { [num*r.denom + r.num*denom, denom*r.denom] }
+    Rational plus(BigInteger n) { [num + n*denom, denom] }
+    Rational plus(Number n) { this + ([n] as Rational) }
 
-    Rational plus (Rational r) { new Rational(numerator*r.denominator + r.numerator*denominator, denominator*r.denominator) }
+    Rational next() { [num + denom, denom] }
 
-    Rational plus (BigInteger n) { new Rational(numerator + n*denominator, denominator) }
+    Rational minus(Rational r) { [num*r.denom - r.num*denom, denom*r.denom] }
+    Rational minus(BigInteger n) { [num - n*denom, denom] }
+    Rational minus(Number n) { this - ([n] as Rational) }
 
-    Rational next () { new Rational(numerator + denominator, denominator) }
+    Rational previous() { [num - denom, denom] }
 
-    Rational minus (Rational r) { new Rational(numerator*r.denominator - r.numerator*denominator, denominator*r.denominator) }
+    Rational multiply(Rational r) { [num*r.num, denom*r.denom] }
+    Rational multiply(BigInteger n) { [num*n, denom] }
+    Rational multiply(Number n) { this * ([n] as Rational) }
 
-    Rational minus (BigInteger n) { new Rational(numerator - n*denominator, denominator) }
 
-    Rational previous () { new Rational(numerator - denominator, denominator) }
+    Rational div(Rational r) { new Rational(num*r.denom, denom*r.num) }
+    Rational div(BigInteger n) { new Rational(num, denom*n) }
+    Rational div(Number n) { this / ([n] as Rational) }
 
-    Rational multiply (Rational r) { new Rational(numerator*r.numerator, denominator*r.denominator) }
+    BigInteger intdiv(BigInteger n) { num.intdiv(denom*n) }
 
-    Rational multiply (BigInteger n) { new Rational(numerator*n, denominator) }
+    Rational negative() { [-num, denom] }
 
-    Rational div (Rational r) { new Rational(numerator*r.denominator, denominator*r.numerator) }
+    Rational abs() { [num.abs(), denom] }
 
-    Rational div (BigInteger n) { new Rational(numerator, denominator*n) }
+    Rational reciprocal() { new Rational(denom, num) }
 
-    BigInteger intdiv (BigInteger n) { numerator.intdiv(denominator*n) }
+    Rational power(BigInteger n) {
+        def (nu, de) = (n < 0 ? [denom, num] : [num, denom])*.power(n.abs())
+        new Rational (nu, de)
+    }
 
-    Rational negative () { new Rational(-numerator, denominator) }
+    boolean asBoolean() { num != 0 }
 
-    Rational abs () { new Rational(numerator.abs(), denominator) }
+    BigDecimal toBigDecimal() { (num as BigDecimal)/(denom as BigDecimal) }
 
-    Rational reciprocal() { new Rational(denominator, numerator) }
-
-    Rational power(BigInteger n) { new Rational(numerator ** n, denominator ** n) }
-
-    boolean asBoolean() { numerator != 0 }
-
-    BigDecimal toBigDecimal() { (numerator as BigDecimal)/(denominator as BigDecimal) }
-
-    BigInteger toBigInteger() { numerator.intdiv(denominator) }
+    BigInteger toBigInteger() { num.intdiv(denom) }
 
     Double toDouble() { toBigDecimal().toDouble() }
-
     double doubleValue() { toDouble() as double }
 
     Float toFloat() { toBigDecimal().toFloat() }
-
     float floatValue() { toFloat() as float }
 
     Integer toInteger() { toBigInteger().toInteger() }
-
     int intValue() { toInteger() as int }
 
     Long toLong() { toBigInteger().toLong() }
-
     long longValue() { toLong() as long }
 
     Object asType(Class type) {
         switch (type) {
-            case this.getClass():     return this
-            case Boolean.class:       return asBoolean()
-            case BigDecimal.class:    return toBigDecimal()
-            case BigInteger.class:    return toBigInteger()
-            case Double.class:        return toDouble()
-            case Float.class:         return toFloat()
-            case Integer.class:       return toInteger()
-            case Long.class:          return toLong()
-            case String.class:        return toString()
-            default:                  throw new ClassCastException("Cannot convert from type Rational to type " + type)
+            case this.getClass():              return this
+            case [Boolean.class,Boolean.TYPE]: return asBoolean()
+            case BigDecimal.class:             return toBigDecimal()
+            case BigInteger.class:             return toBigInteger()
+            case [Double.class,Double.TYPE]:   return toDouble()
+            case [Float.class,Float.TYPE]:     return toFloat()
+            case [Integer.class,Integer.TYPE]: return toInteger()
+            case [Long.class,Long.TYPE]:       return toLong()
+            case String.class:                 return toString()
+            default: throw new ClassCastException("Cannot convert from type Rational to type " + type)
         }
     }
 
-    boolean equals(o) {
-        compareTo(o) == 0
-    }
+    boolean equals(o) { compareTo(o) == 0 }
 
     int compareTo(o) {
         o instanceof Rational \
@@ -116,15 +105,12 @@ class Rational implements Comparable {
                 ? compareTo(o as Number)\
                 : (Double.NaN as int)
     }
+    int compareTo(Rational r) { num*r.denom <=> denom*r.num }
+    int compareTo(Number n) { num <=> denom*(n as BigInteger) }
 
-    int compareTo(Rational r) { numerator*r.denominator <=> denominator*r.numerator }
-
-    int compareTo(Number n) { numerator <=> denominator*(n as BigInteger) }
-
-    int hashCode() { [numerator, denominator].hashCode() }
+    int hashCode() { [num, denom].hashCode() }
 
     String toString() {
-        def reduced = reduce(numerator, denominator)
-        "${reduced[0]}//${reduced[1]}"
+        "${num}//${denom}"
     }
 }

@@ -1,2 +1,2 @@
-size1=$(stat -f %z input.txt)
-size2=$(stat -f %z /input.txt)
+size1=$(wc -c < input.txt | tr -d ' ')
+size2=$(wc -c < /input.txt | tr -d ' ')

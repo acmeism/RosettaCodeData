@@ -5,7 +5,7 @@ nsteps = 12000
 class Dir: up, right, down, left = range(4)
 class Turn: left, right = False, True
 class Color: white, black = '.', '#'
-M = [[Color.white] * width for _ in xrange(height)]
+M = [[Color.white] * width for _ in range(height)]
 
 x = width // 2
 y = height // 2
@@ -25,4 +25,4 @@ while i < nsteps and 0 <= x < width and 0 <= y < height:
     else: assert False
     i += 1
 
-print "\n".join("".join(row) for row in M)
+print ("\n".join("".join(row) for row in M))

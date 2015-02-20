@@ -1,6 +1,6 @@
 import std.stdio, std.math, std.algorithm;
 
-T[] factors(T)(in T n) /*pure nothrow*/ {
+T[] factors(T)(in T n) pure nothrow {
     if (n == 1)
         return [n];
 

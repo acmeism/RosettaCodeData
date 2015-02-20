@@ -1,5 +1,5 @@
 member1(X,[H|_]) :- X==H,!.
-member1(X,[_|T]) :- member1_(X,T).
+member1(X,[_|T]) :- member1(X,T).
 
 distinct([],[]).
 distinct([H|T],C) :- member1(H,T),!, distinct(T,C).

@@ -8,10 +8,10 @@ function mapn(f, ...)
   local c = {}
   local k = 1
   local aarg = {...}
-  local n = table.getn(aarg)
+  local n = #aarg
   while true do
     local a = map(function(b) return b[k] end, aarg)
-    if table.getn(a) < n then return c end
+    if #a < n then return c end
     c[k] = f(unpack(a))
     k = k + 1
   end

@@ -1,6 +1,6 @@
-import std.stdio, std.math, std.algorithm, permutations2;
-
 void main() {
+    import std.stdio, std.math, std.algorithm, permutations2;
+
     ["Baker", "Cooper", "Fletcher", "Miller", "Smith"]
     .permutations
     .filter!(s =>

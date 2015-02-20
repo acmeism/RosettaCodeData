@@ -4,7 +4,7 @@ import std.stdio, std.string, std.math, std.algorithm, std.traits;
 Bin the answers to fn() and check bin counts are within
 +/- delta % of repeats/bincount.
 */
-void distCheck(TF)(in TF func, in int nRepeats, in double delta)
+void distCheck(TF)(in TF func, in int nRepeats, in double delta) /*@safe*/
 if (isCallable!TF) {
     int[int] counts;
     foreach (immutable i; 0 .. nRepeats)
@@ -12,13 +12,13 @@ if (isCallable!TF) {
     immutable double target = nRepeats / double(counts.length);
     immutable int deltaCount = cast(int)(delta / 100.0 * target);
 
-    foreach (k, count; counts)
+    foreach (immutable k, const count; counts)
         if (abs(target - count) >= deltaCount)
             throw new Exception(format(
                 "distribution potentially skewed for '%s': '%d'\n",
                 k, count));
 
-    foreach (k; counts.keys.sort())
+    foreach (immutable k; counts.keys.sort())
         writeln(k, " ", counts[k]);
     writeln;
 }

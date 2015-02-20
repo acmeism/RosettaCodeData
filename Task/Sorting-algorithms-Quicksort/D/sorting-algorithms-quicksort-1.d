@@ -1,9 +1,9 @@
 import std.stdio, std.algorithm, std.range, std.array;
 
-auto quickSort(T)(T[] items) /*pure*/ nothrow {
+auto quickSort(T)(T[] items) pure nothrow @safe {
     if (items.length < 2)
         return items;
-    auto pivot = items[0];
+    immutable pivot = items[0];
     return items[1 .. $].filter!(x => x < pivot).array.quickSort ~
            pivot ~
            items[1 .. $].filter!(x => x >= pivot).array.quickSort;

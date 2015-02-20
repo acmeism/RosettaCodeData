@@ -1,9 +1,8 @@
 import std.stdio, std.array, std.range, std.traits;
 
 /// Recursive.
-bool binarySearch(R, T)(/*in*/ R data, in T x)
-pure nothrow if (isRandomAccessRange!R &&
-                 is(Unqual!T == Unqual!(ElementType!R))) {
+bool binarySearch(R, T)(/*in*/ R data, in T x) pure nothrow @nogc
+if (isRandomAccessRange!R && is(Unqual!T == Unqual!(ElementType!R))) {
     if (data.empty)
         return false;
     immutable i = data.length / 2;
@@ -16,9 +15,8 @@ pure nothrow if (isRandomAccessRange!R &&
 }
 
 /// Iterative.
-bool binarySearchIt(R, T)(/*in*/ R data, in T x)
-pure nothrow if (isRandomAccessRange!R &&
-                 is(Unqual!T == Unqual!(ElementType!R))) {
+bool binarySearchIt(R, T)(/*in*/ R data, in T x) pure nothrow @nogc
+if (isRandomAccessRange!R && is(Unqual!T == Unqual!(ElementType!R))) {
     while (!data.empty) {
         immutable i = data.length / 2;
         immutable mid = data[i];
@@ -34,7 +32,7 @@ pure nothrow if (isRandomAccessRange!R &&
 
 void main() {
     /*const*/ auto items = [2, 4, 6, 8, 9].assumeSorted;
-    foreach (x; [1, 8, 10, 9, 5, 2])
+    foreach (const x; [1, 8, 10, 9, 5, 2])
         writefln("%2d %5s %5s %5s", x,
                  items.binarySearch(x),
                  items.binarySearchIt(x),

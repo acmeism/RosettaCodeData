@@ -62,14 +62,12 @@ class SExpr
   end
 
   def symbol_or_number(word)
+    Integer(word)
+  rescue ArgumentError
     begin
-      Integer(word)
+      Float(word)
     rescue ArgumentError
-      begin
-        Float(word)
-      rescue ArgumentError
-        word.to_sym
-      end
+      word.to_sym
     end
   end
 
@@ -120,5 +118,5 @@ sexpr = SExpr.new <<END
 END
 
 puts "original sexpr:\n#{sexpr.original}"
-puts "\nruby data structure:\n#{sexpr.data.inspect}"
+puts "\nruby data structure:\n#{sexpr.data}"
 puts "\nand back to S-Expr:\n#{sexpr.to_sexpr}"

@@ -1,4 +1,4 @@
-sub compress(Str $uncompressed --> List)  {
+sub compress(Str $uncompressed --> Seq)  {
     my $dict-size = 256;
     my %dictionary = (.chr => .chr for ^$dict-size);
 

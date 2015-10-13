@@ -1,16 +1,14 @@
-class Pixel { has Int ($.R, $.G, $.B) }
+class Pixel { has UInt ($.R, $.G, $.B) }
 class Bitmap {
-    has Int ($.width, $.height);
-    has Pixel @.data;
+    has UInt ($.width, $.height);
+    has Pixel @!data;
 
     method fill(Pixel $p) {
-	for ^$!width X ^$!height -> $i, $j {
-	    self.pixel($i, $j) = $p.clone;
-	}
+        @!data = $p.clone xx ($!width*$!height)
     }
     method pixel(
-	$i where ^self.width,
-	$j where ^self.height
+	$i where ^$!width,
+	$j where ^$!height
 	--> Pixel
     ) is rw { @!data[$i*$!height + $j] }
 

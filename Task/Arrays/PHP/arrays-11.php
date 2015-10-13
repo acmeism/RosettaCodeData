@@ -1,1 +1,1 @@
-$BlankArray[] = "Not Blank Anymore";
+$BlankArray = array();

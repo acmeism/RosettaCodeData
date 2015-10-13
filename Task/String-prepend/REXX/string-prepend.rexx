@@ -1,17 +1,14 @@
-                        /*──────────────── using literal abuttal.       */
-                        /*──────────────── this won't work as the first */
-                        /*──────────────── variable name is   X  or  B  */
-zz='llo world!'
-zz='he'zz
+zz= 'llo world!'          /*─────────────── using literal abuttal.────────────*/
+zz= 'he'zz                /*This won't work if the variable name is  X  or  B */
 say zz
 
-                        /*──────────────── using literal concatenation. */
-gg = "llo world!"
+
+gg = "llo world!"         /*─────────────── using literal concatenation.──────*/
 gg = 'he' || gg
 say gg
 
-                        /*──────────────── using variable concatenation.*/
-aString = 'llo world!'
-bString = "he"
-aString = bString || aString
+
+aString= 'llo world!'     /*─────────────── using variable concatenation.─────*/
+bString= "he"
+aString= bString || aString
 say aString

@@ -5,9 +5,8 @@ def solve(tri):
         tri.append([max(t0[i], t0[i+1]) + t for i,t in enumerate(t1)])
     return tri[0][0]
 
-def main():
-    data = """\
-                          55
+
+data = """                55
                         94 48
                        95 30 96
                      77 71 26 67
@@ -26,6 +25,4 @@ def main():
   06 71 28 75 94 48 37 10 23 51 06 48 53 18 74 98 15
 27 02 92 23 08 71 76 84 15 52 92 63 81 10 44 10 69 93"""
 
-    print solve([map(int, row.split()) for row in data.splitlines()])
-
-main()
+print solve([map(int, row.split()) for row in data.splitlines()])

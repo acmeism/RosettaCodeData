@@ -1,7 +1,7 @@
 require "bigdecimal"
 
 LN2 = BigMath::log(2,16)  #Use LN2 = Math::log(2) to see the difference with floats
-FACTORIALS = Hash.new{|h,k,v| h[k]=k * h[k-1]}
+FACTORIALS = Hash.new{|h,k| h[k] = k * h[k-1]}
 FACTORIALS[0] = 1
 
 def hickerson(n)

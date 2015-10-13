@@ -10,8 +10,12 @@ MsgBox, % LoopMultiArrays()
 
 
 ;---------------------------------------------------------------------------
-LoopMultiArrays() { ; print the ith element of each
+LoopMultiArrays()
+
+ { ; print the ith element of each
 ;---------------------------------------------------------------------------
+
+
     local Result
     StringSplit, List1_, List1, `,
     StringSplit, List2_, List2, `,

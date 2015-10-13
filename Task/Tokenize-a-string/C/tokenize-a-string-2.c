@@ -1,12 +1,12 @@
 #include<stdio.h>
 
-typedef (void *callbackfunc)(const char *);
+typedef void (*callbackfunc)(const char *);
 
 void doprint(const char *s) {
 	printf("%s.", s);
 }
 
-void tokenize(char *s, char delim, callbackfunc *cb) {
+void tokenize(char *s, char delim, callbackfunc cb) {
 	char *olds = s;
 	char olddelim = delim;
 	while(olddelim && *s) {

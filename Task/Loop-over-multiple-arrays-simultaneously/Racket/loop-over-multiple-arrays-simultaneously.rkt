@@ -1,6 +1,7 @@
 #lang racket
 
-(for ([i-1 '(a b c)]
-      [i-2 '(A B C)]
-      [i-3 '(1 2 3)])
-  (printf "~a ~a ~a~n" i-1 i-2 i-3))
+(for ([x '(a b c)] ; list
+      [y #(A B C)] ; vector
+      [z "123"]
+      [i (in-naturals 1)]) ; 1, 2, ... infinitely
+  (printf "~s: ~s ~s ~s\n" i x y z))

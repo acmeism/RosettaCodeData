@@ -1,1 +1,1 @@
-$CustomKeyArray = array("d" => "A", "c" => "B", "b" =>"C", "a" =>"D");
+$StartIndexAtOne = array(1 => "A", "B", "C", "D");

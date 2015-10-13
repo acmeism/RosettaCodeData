@@ -1,2 +1,2 @@
 setlocal enableDelayedExpansion
-echo Goodbye, World^^^!
+echo Hello world!^^!

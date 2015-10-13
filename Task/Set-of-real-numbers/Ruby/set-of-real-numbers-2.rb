@@ -25,7 +25,7 @@ test_set = [["(0, 1]", "|", "[0, 2)"],
             ["[0, 3)", "-", "[0, 1]"] ]
 test_set.each do |sa,ope,sb|
   str = "#{sa} #{ope} #{sb}"
-  e = eval("Rset.from_s(sa) #{ope} Rset.from_s(sb)")
+  e = eval("Rset.parse(sa) #{ope} Rset.parse(sb)")
   puts "%s -> %s" % [str, e]
   (0..2).each{|i| puts "  #{i} : #{e.include?(i)}"}
 end
@@ -41,5 +41,5 @@ test_set.each {|str| puts "#{str} -> #{eval(str)}"}
 puts
 inf = 1.0 / 0.0             # infinity
 puts "a = #{a = Rset(-inf,inf)}"
-puts "b = #{b = Rset.from_s('[1/3,11/7)')}"
+puts "b = #{b = Rset.parse('[1/3,11/7)')}"
 puts "a - b -> #{a - b}"

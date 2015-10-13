@@ -1,4 +1,4 @@
 main() {
-    var bye = 'Goodbye, World!';
+    var bye = 'Hello world!';
     print("$bye");
 }

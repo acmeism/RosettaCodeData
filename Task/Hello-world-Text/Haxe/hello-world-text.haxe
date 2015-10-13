@@ -1,1 +1,1 @@
-trace("Goodbye, World!");
+trace("Hello world!");

@@ -1,0 +1,1 @@
+lists:seq($a,$z).

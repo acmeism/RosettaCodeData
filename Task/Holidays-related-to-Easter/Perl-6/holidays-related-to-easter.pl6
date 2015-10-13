@@ -35,6 +35,6 @@ sub cholidays($year) {
     }
 }
 
-for (400,500 ... 2000), (2010 ... 2020), 2100 -> $year {
+for flat (400,500 ... 2000), (2010 ... 2020), 2100 -> $year {
     cholidays($year);
 }

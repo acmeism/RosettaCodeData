@@ -1,6 +1,6 @@
 sub mmult(@a,@b) {
     my @p;
-    for ^@a X ^@b[0] -> $r, $c {
+    for ^@a X ^@b[0] -> ($r, $c) {
         @p[$r][$c] += @a[$r][$_] * @b[$_][$c] for ^@b;
     }
     @p;

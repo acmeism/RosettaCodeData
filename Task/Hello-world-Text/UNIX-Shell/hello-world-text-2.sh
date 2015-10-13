@@ -1,2 +1,2 @@
 #!/bin/csh -f
-echo "Goodbye, World\!"
+echo "Hello world!\!"

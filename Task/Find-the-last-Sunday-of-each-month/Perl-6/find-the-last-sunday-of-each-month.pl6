@@ -1,8 +1,6 @@
-for (1..12) -> $i {
-   my $lastDay = Date.days-in-month( @*ARGS[ 0 ].Int , $i ) ;
-   my $lastDate = Date.new( @*ARGS[ 0 ].Int , $i , $lastDay ) ;
-   while $lastDate.day-of-week != 7 {
-      $lastDate -= 1 ;
-   }
-   $lastDate.say ;
+sub MAIN ($year = Date.new.year) {
+    for 1..12 -> $mo {
+        my $month-end = Date.new($year, $mo, Date.days-in-month($year, $mo));
+        say $month-end - $month-end.day-of-week % 7;
+    }
 }

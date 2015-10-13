@@ -1,15 +1,21 @@
 #!/bin/bash
 
+# NAMES is a list of names.  It can be changed as needed.  It can be more than five names, or less.
 NAMES=(Baker Cooper Fletcher Miller Smith)
 
+# CRITERIA are the rules imposed on who lives where.  Each criterion must be a valid bash expression
+# that will be evaluated.  TOP is the top floor; BOTTOM is the bottom floor.
+
+# The CRITERIA can be changed to create different rules.
+
 CRITERIA=(
-  'Baker    != TOP'
-  'Cooper   != BOTTOM'
-  'Fletcher != TOP'
-  'Fletcher != BOTTOM'
-  'Miller   >  Cooper'
-  '$(abs $(( Smith    - Fletcher )) ) > 1'
-  '$(abs $(( Fletcher - Cooper   )) ) > 1'
+  'Baker    != TOP'            # Baker does not live on the top floor
+  'Cooper   != BOTTOM'         # Cooper does not live on the bottom floor
+  'Fletcher != TOP'            # Fletcher does not live on the top floor
+  'Fletcher != BOTTOM'         # and Fletch also does not live on the bottom floor
+  'Miller   >  Cooper'         # Miller lives above Cooper
+  '$(abs $(( Smith    - Fletcher )) ) > 1'   # Smith and Fletcher are not on adjacent floors
+  '$(abs $(( Fletcher - Cooper   )) ) > 1'   # Fletcher and Cooper are not on adjacent floors
 )
 
 # Code below here shouldn't need to change to vary parameters
@@ -17,11 +23,7 @@ let BOTTOM=0
 let TOP=${#NAMES[@]}-1
 
 # Not available as a builtin
-function abs {
-  let n=$1
-  if (( n < 0 )); then let n=-n; fi
-  echo "$n"
-}
+abs() { local n=$(( 10#$1 )) ; echo $(( n < 0 ? -n : n )) ; }
 
 # Algorithm we use to iterate over the permutations
 # requires that we start with the array sorted lexically

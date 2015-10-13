@@ -2,11 +2,14 @@ class Array
   def binary_search_iterative(val)
     low, high = 0, length - 1
     while low <= high
-      mid = (low + high) / 2
-      case
-        when self[mid] > val then high = mid - 1
-        when self[mid] < val then low = mid + 1
-        else return mid
+      mid = (low + high) >> 1
+      case var <=> self[mid]
+        when 1
+          low = mid + 1
+        when -1
+          high = mid - 1
+        else
+          return mid
       end
     end
     nil

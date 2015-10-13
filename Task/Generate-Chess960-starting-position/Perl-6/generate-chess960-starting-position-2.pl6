@@ -1,6 +1,7 @@
-constant chess960 =
-    map *.subst(:nth(2), /'♜'/, '♚'),
-        grep rx/ '♝' [..]* '♝' /,
-             < ♛ ♜ ♜ ♜ ♝ ♝ ♞ ♞ >.pick(*).join xx *;
+sub chess960 {
+    .subst(:nth(2), /'♜'/, '♚') given
+    first rx/ '♝' [..]* '♝' /,
+    < ♛ ♜ ♜ ♜ ♝ ♝ ♞ ♞ >.pick(*).join xx *;
+}
 
-.say for chess960[^10];
+say chess960;

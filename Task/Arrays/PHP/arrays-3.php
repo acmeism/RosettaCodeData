@@ -1,2 +1,3 @@
-echo $NumberArray[5]; // Returns 5
-echo $LetterArray[5]; // Returns f
+$arr = ['apple', 'orange'];
+array_push($arr, 'pear');
+print implode(',', $arr); // Returns apple,orange,pear

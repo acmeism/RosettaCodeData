@@ -14,7 +14,7 @@
 - (instancetype) initWithName: (NSString*)name andLegs: (NSInteger)legs
 {
   if ((self = [super init])) {
-    animalName = [name retain];
+    animalName = name;
     numberOfLegs = legs;
   }
   return self;
@@ -29,10 +29,10 @@
   [coder encodeObject: animalName forKey: @"Animal.name"];
   [coder encodeInt: numberOfLegs forKey: @"Animal.legs"];
 }
-- (id) initWithCoder: (NSCoder*)coder
+- (instancetype) initWithCoder: (NSCoder*)coder
 {
   if ((self = [super init])) {
-    animalName = [[coder decodeObjectForKey: @"Animal.name"] retain];
+    animalName = [coder decodeObjectForKey: @"Animal.name"];
     numberOfLegs = [coder decodeIntForKey: @"Animal.legs"];
   }
   return self;
@@ -85,7 +85,7 @@
   [coder encodeBool: numberOfLegs forKey: @"Mammal.hasFur"];
   [coder encodeObject: eatenList forKey: @"Mammal.eaten"];
 }
-- (id) initWithCoder: (NSCoder*)coder
+- (instancetype) initWithCoder: (NSCoder*)coder
 {
   if ((self = [super initWithCoder: coder])) {
     hasFur = [coder decodeBoolForKey: @"Mammal.hasFur"];

@@ -4,6 +4,10 @@
 -module(substrings).
 -export([main/2]).
 
+%% String and Sub exhausted, count a match and present result
+match([], [], _OrigSub, Acc) ->
+  Acc+1;
+
 %% String exhausted, present result
 match([], _Sub, _OrigSub, Acc) ->
   Acc;

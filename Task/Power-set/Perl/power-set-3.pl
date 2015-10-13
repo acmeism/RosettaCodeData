@@ -1,11 +1,7 @@
-use List::Util qw(reduce);
-
-sub powerset {
-    @{( reduce { [@$a, map { Set->new($_->elements, $b) } @$a ] }
-               [Set->new()], shift->elements )};
+use ntheory "forcomb";
+my @S=("a","b","c");
+for $k (0..@S) {
+  # Iterate over each $#S+1,$k combination.
+  forcomb { print "[@S[@_]]  " } @S,$k;
 }
-
-my $set = Set->new(1, 2, 3);
-my @subsets = powerset($set);
-
-print $_->as_string, "\n" for @subsets;
+print "\n";

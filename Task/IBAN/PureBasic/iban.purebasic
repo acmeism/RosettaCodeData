@@ -1,0 +1,92 @@
+EnableExplicit
+Enumeration IBAN
+  #IBAN_VAL
+  #IBAN_SUM
+  #IBAN_NOSPACE
+  #IBAN_VAL_FORM
+  #IBAN_SUM_FORM
+EndEnumeration
+
+NewMap CData.i()
+Macro CCD(SIGN,LENGTH)
+  CData(SIGN)=LENGTH
+EndMacro
+
+Procedure.s IBANForm(iban.s,form.i)
+  Define fn.s, c.i
+  fn=RemoveString(UCase(iban),Chr(32))
+  If form=#IBAN_NOSPACE   :   ProcedureReturn fn  :   EndIf
+  fn=Mid(fn,5)+Mid(fn,1,4)
+  For c=65 To 90
+    fn=ReplaceString(fn,Chr(c),Str(c-55))
+  Next c
+  If form=#IBAN_VAL_FORM  :   ProcedureReturn fn  :   EndIf
+  fn=Left(fn,Len(fn)-2)+"00"
+  If form=#IBAN_SUM_FORM  :   ProcedureReturn fn  :   EndIf
+EndProcedure
+
+Procedure.s m97iban(iban.s,calculate.i)
+  Define i.i, part.s, rest.s
+  Select calculate
+    Case #IBAN_VAL : iban=IBANForm(iban,#IBAN_VAL_FORM)
+    Case #IBAN_SUM : iban=IBANForm(iban,#IBAN_SUM_FORM)
+  EndSelect
+  For i=1 To Len(iban)  ; Validierung der Prüfsumme
+    part+Mid(iban,i,1)
+    If Val(rest+part)<97 : Continue : EndIf
+    rest=Str((Val(rest+part)) %97)  : part=""
+  Next
+  Select calculate
+    Case #IBAN_VAL : ProcedureReturn rest
+    Case #IBAN_SUM : ProcedureReturn RSet(Str(98-Val(rest+part)),2,"0")
+  EndSelect
+EndProcedure
+
+CCD("AL",28) : CCD("AD",24) : CCD("AT",20) : CCD("AZ",28) : CCD("BE",16) : CCD("BH",22) : CCD("BA",20)
+CCD("BR",29) : CCD("BG",22) : CCD("CR",21) : CCD("HR",21) : CCD("CY",28) : CCD("CZ",24) : CCD("DK",18)
+CCD("DO",28) : CCD("EE",20) : CCD("FO",18) : CCD("FI",18) : CCD("FR",27) : CCD("GE",22) : CCD("DE",22)
+CCD("GI",23) : CCD("GR",27) : CCD("GL",18) : CCD("GT",28) : CCD("HU",28) : CCD("IS",26) : CCD("IE",22)
+CCD("IL",23) : CCD("IT",27) : CCD("KZ",20) : CCD("KW",30) : CCD("LV",21) : CCD("LB",28) : CCD("LI",21)
+CCD("LT",20) : CCD("LU",20) : CCD("MK",19) : CCD("MT",31) : CCD("MR",27) : CCD("MU",30) : CCD("MC",27)
+CCD("MD",24) : CCD("ME",22) : CCD("NL",18) : CCD("NO",15) : CCD("PK",24) : CCD("PS",29) : CCD("PL",28)
+CCD("PT",25) : CCD("RO",24) : CCD("SM",27) : CCD("SA",24) : CCD("RS",22) : CCD("SK",24) : CCD("SI",19)
+CCD("ES",24) : CCD("SE",24) : CCD("CH",21) : CCD("TN",24) : CCD("TR",26) : CCD("AE",23) : CCD("GB",22)
+CCD("VG",24)
+
+DataSection
+  IBANData:
+  Data.s "GB82 WEST 1234 5698 7654 32"
+  Data.s "GB82WEST12345698765432"
+  Data.s "gb82 west 1234 5698 7654 32"
+  Data.s "GB82 TEST 1234 5698 7654 32"
+  Data.s "GR16 0110 1250 0000 0001 2300 695"
+  Data.s "GB29 NWBK 6016 1331 9268 19"
+  Data.s "SA03 8000 0000 6080 1016 7519"
+  Data.s "CH93 0076 2011 6238 5295 7"
+  Data.s "IL62 0108 0000 0009 9999 999"
+  Data.s "IL62-0108-0000-0009-9999-999"
+  Data.s "US12 3456 7890 0987 6543 210"
+  Data.s "GR16 0110 1250 0000 0001 2300 695X"
+  Data.s Chr(0)
+EndDataSection
+
+Define iban.s, cc.s
+OpenConsole()
+Restore IBANData
+Repeat
+  Read.s iban : If iban=Chr(0) : Break : EndIf
+  Print("IBAN"+#TAB$+": "+LSet(iban,35,Chr(32))+#TAB$)
+  cc=Left(IBANForm(iban,#IBAN_NOSPACE),2)
+  If CData(cc)
+    If Not CData()=Len(IBANForm(iban,#IBAN_NOSPACE)) : PrintN("[INCORRECT: LENGTH]") : Continue : EndIf
+  Else
+    PrintN("[INCORRECT: COUNTRY]") : Continue
+  EndIf
+  If Not Val(m97iban(iban,#IBAN_VAL))=1 : PrintN("[INCORRECT: MOD97]") : Continue : EndIf
+  If Not Right(IBANForm(iban,#IBAN_VAL_FORM),2)=m97iban(iban,#IBAN_SUM)
+    PrintN("[INCORRECT: CHECKSUM]") : Continue
+  EndIf
+  PrintN("[CORRECT]")
+ForEver
+Input()
+End

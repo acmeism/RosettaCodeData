@@ -1,12 +1,11 @@
-program fizzbuzz_select
-    integer :: i
+program FizzBuzz
+implicit none
+integer :: i = 1
 
-    do i = 1, 100
-       select case (mod(i,15))
-          case 0;        print *, 'FizzBuzz'
-          case 3,6,9,12; print *, 'Fizz'
-          case 5,10;     print *, 'Buzz'
-          case default;  print *, i
-       end select
-    end do
- end program fizzbuzz_select
+do i = 1, 100
+    if (Mod(i,3) == 0)write(*,"(A)",advance='no')  "Fizz"
+    if (Mod(i,5) == 0)write(*,"(A)",advance='no') "Buzz"
+    if (Mod(i,3) /= 0 .and. Mod(i,5) /=0 )write(*,"(I3)",advance='no') i
+    print *, ""
+end do
+end program FizzBuzz

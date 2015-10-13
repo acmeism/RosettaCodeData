@@ -1,9 +1,8 @@
-def fib_rec(n)
-  if n <= -2
-    (-1)**(n + 1) * fib_rec(n.abs)
-  elsif n <= 1
-    n.abs
-  else
-    fib_rec(n - 1) + fib_rec(n - 2)
-  end
+def fib(n, sequence=[1])
+  return sequence.last if n == 0
+
+  current_number, last_number = sequence.last(2)
+  sequence << current_number + (last_number or 0)
+
+  fib(n-1, sequence)
 end

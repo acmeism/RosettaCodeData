@@ -36,7 +36,7 @@ sub legendre-root(Int $n, Int $k) {
 sub weight(Int $n, $r) { 2 / ((1 - $r**2) * legendre-prime($n, $r)**2) }
 
 sub nodes(Int $n) {
-    gather {
+    flat gather {
         take 0 => weight($n, 0) if $n !%% 2;
         for 1 .. $n div 2 {
             my $r = legendre-root($n, $_);
@@ -52,4 +52,4 @@ sub quadrature(Int $n, &f, $a, $b, :@nodes = nodes($n)) {
 }
 
 say "Gauss-Legendre $_.fmt('%2d')-point quadrature ∫₋₃⁺³ exp(x) dx ≈ ",
-         quadrature($_, &exp, -3, +3) for 5 .. 10, 20;
+         quadrature($_, &exp, -3, +3) for flat 5 .. 10, 20;

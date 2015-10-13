@@ -1,33 +1,36 @@
 class
 	APPLICATION
 
-inherit
-	ARGUMENTS
-
 create
 	make
 
-feature {NONE} -- Initialization
+feature {NONE}
 
 	make
-			-- Run application.
 		local
-		    number : INTEGER_32 -- Number to guess
-		    random : RANDOM
+			number, seed: INTEGER_32
+			random: RANDOM
 		do
-		    create random.make
-                    number := (random.double_item*10.0).truncated_to_integer + 1
-                    print ("I'm thinking of a number between 1 and 10.%N")
-		    print ("Please guess the number!%N")
-
-		    from io.read_integer
-		    until io.last_integer = number
-		    loop
-			    print ("Sorry. Please guess again!%N")
-			    io.read_integer
-		    end
-			
-                    print ("Correct!%N")
+			from
+			until
+				seed > 0
+			loop
+				io.put_string ("Enter a positive integer.%NYour play will be generated from it.%N")
+				io.read_integer
+				seed := io.last_integer
+			end
+			create random.set_seed (seed)
+			number := (random.double_i_th (seed) * 10.0).truncated_to_integer + 1
+			io.put_string ("Please guess the number!%N")
+			from
+				io.read_integer
+			until
+				io.last_integer = number
+			loop
+				io.put_string ("Please guess again!%N")
+				io.read_integer
+			end
+			io.put_string ("Well guessed!%N")
 		end
 
 end

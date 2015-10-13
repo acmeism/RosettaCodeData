@@ -1,3 +1,3 @@
-sub pascal { [1], { [0, @^p Z+ @^p, 0] } ... * }
+sub pascal { [1], -> $prev { [0, |$prev Z+ |$prev, 0] } ... * }
 
 .say for pascal[^10];

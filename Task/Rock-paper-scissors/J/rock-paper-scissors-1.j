@@ -1,4 +1,4 @@
-require'misc strings'
+require'general/misc/prompt strings' NB. was 'misc strings' in older versions of J
 game=:3 :0
   outcomes=. rps=. 0 0 0
   choice=. 1+?3

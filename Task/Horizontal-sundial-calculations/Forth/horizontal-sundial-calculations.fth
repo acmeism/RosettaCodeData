@@ -8,12 +8,12 @@
   cr ." Enter longitude: "
   faccept
   cr ." Enter legal meridian: "
-  faccept f-   ( sin[latitude] longitude )
+  faccept f- fnegate   ( sin[latitude] -longitude )
 
   cr ." Hour : HourAngle , DialAngle"
   7 -6 do
-    cr i . ." : "
-    fover fover fnegate i 15 * s>d d>f f+
+    cr i 4 .r ." : "
+    fover fover i 15 * s>d d>f f+
     fdup f. ." , "
-    >radians ftan f* fatan >degrees f.
+    >radians fsincos fswap frot f* fswap fatan2 >degrees f.
   loop fdrop fdrop ;

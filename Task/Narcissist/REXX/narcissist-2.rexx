@@ -1,1 +1,1 @@
-/*REXX*/ say word('reject accept',1+(arg(1)=sourceline(1)))
+/*REXX*/    say word('reject accept',1+(arg(1)=sourceline(1)))

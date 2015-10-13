@@ -1,0 +1,34 @@
+type VLQ
+    q::Array{Uint8,1}
+end
+
+function VLQ{T<:Integer}(n::T)
+    q = uint8(digits(n, 128))
+    for i in 2:length(q)
+        q[i] |= 0x80
+    end
+    VLQ(reverse(q))
+end
+
+function Base.uint(vlq::VLQ)
+    q = reverse(vlq.q)
+    n = shift!(q)
+    p = one(Uint64)
+    for i in q
+        p *= 0x80
+        n += p*(i&0x7f)
+    end
+    return n
+end
+
+test = [0x00200000, 0x001fffff, 0x00000000, 0x0000007f,
+        0x00000080, 0x00002000, 0x00003fff, 0x00004000,
+        0x08000000, 0x0fffffff]
+
+for i in test
+    q = VLQ(i)
+    j = uint(q)
+    print(@sprintf "    0x%x => " i)
+    print(@sprintf "[%s]" join(["0x"*hex(r, 2) for r in q.q], ", "))
+    println(@sprintf " => 0x%x" j)
+end

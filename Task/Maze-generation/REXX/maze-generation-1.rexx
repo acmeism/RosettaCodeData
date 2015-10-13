@@ -98,5 +98,5 @@ if right(_,2)=='·┤'  then _=translate(_, '|', "┤")
        when le=='·' & ri=='~' & up=='│' & dw=='│'  then _=overlay('├',_,k)
        otherwise  nop
        end   /*select*/
-   end     /*k*/
+   end       /*k*/
 return

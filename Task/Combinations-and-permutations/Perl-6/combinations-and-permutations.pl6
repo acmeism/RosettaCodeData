@@ -32,7 +32,7 @@ for 10, 20 ... 60 -> $n {
     say "C($n, $p) = ", C($n, $p);
 }
 
-say;
+say '';
 say "Floating point approximations:";
 for 5, 50, 500, 1000, 5000, 15000 -> $n {
     my $p = $n div 3;

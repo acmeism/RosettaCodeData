@@ -4,7 +4,9 @@ fib=: 3 : 0 " 0
 )
 
 phi=: -:1+%:5
+
 fi =: 3 : 'n - y<fib n=. 0>.(1=y)-~>.(phi^.%:5)+phi^.y'
+
 fsum=: 3 : 0
  z=. 0$r=. y
  while. 3<r do.

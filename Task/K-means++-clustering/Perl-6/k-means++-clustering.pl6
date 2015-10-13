@@ -19,6 +19,6 @@ sub infix:«-means++»(Int $K, @data) {
 }
 
 my @centers = 0, 5, 3 + 2i;
-my @data = @centers.map: { ($_ + .5 - rand + (.5 - rand) * i) xx 100 }
+my @data = flat @centers.map: { ($_ + .5 - rand + (.5 - rand) * i) xx 100 }
 @data.=pick(*);
 .say for 3-means++ @data;

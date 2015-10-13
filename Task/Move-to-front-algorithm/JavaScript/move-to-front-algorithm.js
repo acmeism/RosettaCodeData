@@ -18,3 +18,14 @@ var decodeMTF = function (numList) {
     return acc;
   }, init).word;
 };
+
+//test our algorithms
+var words = ['broood', 'bananaaa', 'hiphophiphop'];
+var encoded = words.map(encodeMTF);
+var decoded = encoded.map(decodeMTF);
+
+//print results
+console.log("from encoded:");
+console.log(encoded);
+console.log("from decoded:");
+console.log(decoded);

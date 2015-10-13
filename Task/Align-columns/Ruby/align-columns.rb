@@ -1,15 +1,13 @@
-J2justifier = {'L' => :ljust,
-               'R' => :rjust,
-               'C' => :center}
+J2justifier = {Left: :ljust, Right: :rjust, Center: :center}
 
 =begin
 Justify columns of textual tabular input where the record separator is the newline
 and the field separator is a 'dollar' character.
-justification can be L, R, or C; (Left, Right, or Centered).
+justification can be Symbol; (:Left, :Right, or :Center).
 
 Return the justified output as a string
 =end
-def aligner(infile, justification = 'L')
+def aligner(infile, justification = :Left)
   fieldsbyrow = infile.map {|line| line.strip.split('$')}
   # pad to same number of fields per record
   maxfields = fieldsbyrow.map(&:length).max
@@ -38,8 +36,8 @@ Further,$allow$for$each$word$in$a$column$to$be$either$left$
 justified,$right$justified,$or$center$justified$within$its$column.
 END
 
-for align in %w{Left Right Center}
+for align in [:Left, :Right, :Center]
   infile = StringIO.new(textinfile)
   puts "\n# %s Column-aligned output:" % align
-  puts aligner(infile, align[0..0])
+  puts aligner(infile, align)
 end

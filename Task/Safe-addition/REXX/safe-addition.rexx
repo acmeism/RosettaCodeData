@@ -1,5 +1,5 @@
-numeric digits 1000      /*defines precision to be 1000 digits.  */
+numeric digits 1000           /*defines precision to be 1,000 decimal digits. */
 
-y=digits()               /*sets  Y  to existing number of digits.*/
+y=digits()                    /*sets  Y  to existing number of decimal digits.*/
 
-numeric digits digits()+digits()%10     /*increase digits by 10%.*/
+numeric digits y + y%10       /*increase the  (numeric) decimal digits by 10%.*/

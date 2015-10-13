@@ -55,16 +55,21 @@ init OF class stat := (REF STAT self)REF STAT:(
 
 main:
 (
-  printf(($"standard deviation operator = "g(0,6)l$, STDDEV value));
+#  printf(($"standard deviation operator = "g(0,6)l$, STDDEV value));
+#
 
   REF STAT stat = INIT LOC STAT;
 
   FOR i FROM LWB value TO UPB value DO
-    stat +:= value[i]
-  OD;
-
+    stat +:= value[i];
+    printf(($"value: "g(0,6)," standard dev := "g(0,6)l$, value[i], (stddev OF class stat)(stat)))
+  OD
+#
+;
   printf(($"standard deviation = "g(0,6)l$, (stddev OF class stat)(stat)));
   printf(($"mean = "g(0,6)l$, (mean OF class stat)(stat)));
   printf(($"variance = "g(0,6)l$, (variance OF class stat)(stat)));
   printf(($"count = "g(0,6)l$, (count OF class stat)(stat)))
+#
+
 )

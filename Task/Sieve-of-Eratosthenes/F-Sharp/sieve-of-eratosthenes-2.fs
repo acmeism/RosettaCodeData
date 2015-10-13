@@ -1,21 +1,21 @@
-type CIS<'T> = struct val v:'T val cont:unit->CIS<'T> //Co Inductive Stream for laziness
+type CIS<'T> = struct val v:'T val cont:unit->CIS<'T> //'Co Inductive Stream for laziness
                       new (v,cont) = { v = v; cont = cont } end
-let primes =
-  let rec pculls p cull = CIS(cull, fun() -> pculls p (cull + 2u * p))
-  let rec allculls (ps:CIS<_>) = //stream of streams of composite culls
-    CIS(pculls ps.v (ps.v * ps.v),fun() -> allculls (ps.cont()))
-  let rec (^^) (xs:CIS<uint32>) (ys:CIS<uint32>) = //union op for CIS<uint32>'s
-    match compare xs.v ys.v with
-      | -1 -> CIS(xs.v, fun() -> xs.cont() ^^ ys) // <
-      | 0 -> CIS(xs.v, fun() -> xs.cont() ^^ ys.cont()) // ==
-      | _ -> CIS(ys.v, fun() -> xs ^^ ys.cont()) //must be > (= 1)
-  let rec join (cmpsts:CIS<CIS<_>>) =
-    CIS(cmpsts.v.v, fun() -> cmpsts.v.cont() ^^ join (cmpsts.cont()))
-  let rec mkPrms cnd (cmpsts:CIS<_>) =
-    let ncnd = cnd + 2u
-    if cnd >= cmpsts.v then mkPrms ncnd (cmpsts.cont()) //implements 'minus'
-    else CIS(cnd,fun()->mkPrms ncnd cmpsts) //found a prime
-  let rec oddBasePrimes = CIS(3u, fun() -> mkPrms 5u initCmpsts)
-  and initCmpsts = join (allculls (oddBasePrimes))
-  let genseq cis = Seq.unfold (fun (cs:CIS<_>) -> Some(cs.v, cs.cont())) cis
-  seq { yield 2u; yield! genseq (mkPrms 3u initCmpsts) }
+type Prime = uint32
+
+let primesBirdOdds() =
+  let rec (^^) (xs: CIS<Prime>) (ys: CIS<Prime>) = // stream merge function
+    let x = xs.v in let y = ys.v
+    if x < y then CIS(x, fun() -> xs.cont() ^^ ys)
+    elif y < x then CIS(y, fun() -> xs ^^ ys.cont())
+    else CIS(x, fun() -> xs.cont() ^^ ys.cont()) // no duplications
+  let pmltpls p = let adv = p + p
+                  let rec nxt c = CIS(c, fun() -> nxt (c + adv)) in nxt (p * p)
+  let rec allmltps (ps: CIS<Prime>) = CIS(pmltpls ps.v, fun() -> allmltps (ps.cont()))
+  let rec cmpsts (css: CIS<CIS<Prime>>) =
+    CIS(css.v.v, fun() -> (css.v.cont()) ^^ (cmpsts (css.cont())))
+  let rec minusat n (cs: CIS<Prime>) =
+    if n < cs.v then CIS(n, fun() -> minusat (n + 2u) cs)
+    else minusat (n + 2u) (cs.cont())
+  let rec oddprms() = CIS(3u, fun() -> minusat 5u (cmpsts (allmltps (oddprms()))))
+  Seq.unfold (fun (ps: CIS<Prime>) -> Some(ps.v, ps.cont()))
+             (CIS(2u, fun() -> minusat 3u (cmpsts (allmltps (oddprms())))))

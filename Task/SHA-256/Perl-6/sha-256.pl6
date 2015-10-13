@@ -1,8 +1,8 @@
 say sha256 "Rosetta code";
 
-constant primes = grep &is-prime, 2 .. *;
 sub init(&f) {
-    map { my $f = $^p.&f; (($f - $f.Int)*2**32).Int }, primes
+    map { my $f = $^p.&f; (($f - $f.Int)*2**32).Int },
+    state @ = grep *.is-prime, 2 .. *;
 }
 
 sub infix:<m+> { ($^a + $^b) % 2**32 }
@@ -14,7 +14,7 @@ multi sha256(Str $str where all($str.ords) < 128) {
 }
 multi sha256(Blob $data) {
     constant K = init(* **(1/3))[^64];
-    my @b = $data.list, 0x80;
+    my @b = flat $data.list, 0x80;
     push @b, 0 until (8 * @b - 448) %% 512;
     push @b, reverse (8 * $data).polymod(256 xx 7);
     my @word = :256[@b.shift xx 4] xx @b/4;
@@ -36,9 +36,9 @@ multi sha256(Blob $data) {
             my $σ1 = [+^] map { rotr @h[4], $_ }, 6, 11, 25;
             my $t1 = [m+] @h[7], $σ1, $ch, K[$j], @w[$j];
             my $t2 = $σ0 m+ $maj;
-            @h = $t1 m+ $t2, @h[^3], @h[3] m+ $t1, @h[4..6];
+            @h = flat $t1 m+ $t2, @h[^3], @h[3] m+ $t1, @h[4..6];
         }
-        @H = @H Z[m+] @h;
+        @H [Z[m+]]= @h;
     }
     return Blob.new: map { reverse .polymod(256 xx 3) }, @H;
 }

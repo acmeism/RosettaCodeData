@@ -1,4 +1,4 @@
 (import (scheme base)
         (scheme write))
-(display "Hello, world!")
+(display "Hello world!")
 (newline)

@@ -10,8 +10,6 @@ begin
                         goto Continue;
                 end if;
                 Put (",");
-                -- label must be followed by a statement.
-                <<Continue>>
-                null;
+                <<Continue>>  --Ada 2012 no longer requires a statement after the label
         end loop;
 end Loop_Continue;

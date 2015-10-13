@@ -1,3 +1,14 @@
+use Set::Object qw(set);
+
 sub powerset {
-    @_ ? map { $_, [$_[0], @$_] } powerset(@_[1..$#_]) : [];
+    my $p = Set::Object->new( set() );
+    foreach my $i (shift->elements) {
+        $p->insert( map { set($_->elements, $i) } $p->elements );
+    }
+    return $p;
 }
+
+my $set = set(1, 2, 3);
+my $powerset = powerset($set);
+
+print $powerset->as_string, "\n";

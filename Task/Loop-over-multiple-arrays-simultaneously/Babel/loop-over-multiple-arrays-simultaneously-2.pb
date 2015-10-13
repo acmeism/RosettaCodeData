@@ -1,4 +1,5 @@
-main: { (('a' 'b' 'c')('A' 'B' 'C')('1' '2' '3')) simul_array }
+main: { (('a' 'b' 'c')('A' 'B' 'C')('1' '2' '3'))
+simul_array }
 
 simul_array!:
     {{ dup

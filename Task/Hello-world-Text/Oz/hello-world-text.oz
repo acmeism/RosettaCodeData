@@ -1,1 +1,1 @@
-{Show "Goodbye, World!"}
+{Show "Hello world!"}

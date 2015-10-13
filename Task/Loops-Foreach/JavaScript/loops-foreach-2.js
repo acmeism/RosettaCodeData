@@ -1,5 +1,5 @@
-for (var a in o) {
-    if (o.hasOwnProperty(a)) {
-        print(o[a]);
-    }
-}
+console.log("alpha beta gamma delta".split(' ').map(
+  function (x) {
+    return x.toUpperCase(x);
+  }
+).join('\n'));

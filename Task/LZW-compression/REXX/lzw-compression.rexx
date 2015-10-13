@@ -1,5 +1,5 @@
 /* REXX ---------------------------------------------------------------
-* 20.07.2014 Wakter Pachl translated from Java
+* 20.07.2014 Walter Pachl translated from Java
 * 21.07.2014 WP allow for blanks in the string
 *--------------------------------------------------------------------*/
 Parse Arg str

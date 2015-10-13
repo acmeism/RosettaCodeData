@@ -1,3 +1,14 @@
+# Python 2.7
+def chinese_remainder(n, a):
+    sum = 0
+    prod = reduce(lambda a, b: a*b, n)
+
+    for n_i, a_i in zip(n, a):
+        p = prod / n_i
+        sum += a_i * mul_inv(p, n_i) * p
+    return sum % prod
+
+
 def mul_inv(a, b):
     b0 = b
     x0, x1 = 0, 1
@@ -9,15 +20,7 @@ def mul_inv(a, b):
     if x1 < 0: x1 += b0
     return x1
 
-def chinese_remainder(n, a, lena):
-    p = i = prod = 1; sm = 0
-    for i in range(lena): prod *= n[i]
-    for i in range(lena):
-        p = prod / n[i]
-        sm += a[i] * mul_inv(p, n[i]) * p
-    return sm % prod
-
 if __name__ == '__main__':
     n = [3, 5, 7]
     a = [2, 3, 2]
-    print(chinese_remainder(n, a, len(n)))
+    print chinese_remainder(n, a)

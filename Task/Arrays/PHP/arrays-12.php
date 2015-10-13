@@ -1,1 +1,1 @@
-$AssignArray["CertainKey"] = "Value";
+$BlankArray[] = "Not Blank Anymore";

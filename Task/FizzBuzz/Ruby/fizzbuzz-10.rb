@@ -1,8 +1,3 @@
-class Integer
-  def fizzbuzz
-    v = "#{"Fizz" if self % 3 == 0}#{"Buzz" if self % 5 == 0}"
-    v.empty? ? self : v
-  end
-end
-
-puts *(1..100).map(&:fizzbuzz)
+seq = *0..100
+{Fizz:3, Buzz:5, FizzBuzz:15}.each{|k,n| n.step(100,n){|i|seq[i]=k}}
+puts seq.drop(1)

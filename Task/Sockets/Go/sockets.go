@@ -11,10 +11,9 @@ func main() {
         fmt.Println(err)
         return
     }
+    defer conn.Close()
     _, err = conn.Write([]byte("hello socket world"))
     if err != nil {
         fmt.Println(err)
-        return
     }
-    conn.Close()
 }

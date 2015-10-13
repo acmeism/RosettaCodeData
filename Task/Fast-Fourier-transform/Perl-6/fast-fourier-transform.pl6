@@ -2,7 +2,7 @@ sub fft {
     return @_ if @_ == 1;
     my @evn = fft( @_[0, 2 ... *] );
     my @odd = fft( @_[1, 3 ... *] ) Z*
-    (1, * * cis( 2 * pi / @_ ) ... *);
+    map &cis, (0, 2 * pi / @_ ... *);
     return @evn »+« @odd, @evn »-« @odd;
 }
 

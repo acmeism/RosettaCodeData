@@ -3,4 +3,4 @@ toComplex=: *.inv                                        NB. maps integer pairs 
 mean=: +/ % #                                            NB. calculate arithmetic mean
 roundComplex=: (* * |)&.+.                               NB. discard an extraneous least significant bit of precision from a complex value whose magnitude is in the vicinity of 1
 avgAngleR=: _1 { [: roundComplex@mean&.toComplex 1 ,. ]  NB. calculate average angle in radians
-avgAngleD=: avgAngleR&.rfd
+avgAngleD=: 360|avgAngleR&.rfd                           NB. calculate average angle in degrees

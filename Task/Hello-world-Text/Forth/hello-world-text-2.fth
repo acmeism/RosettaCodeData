@@ -1,1 +1,1 @@
-: goodbye ( -- )   ." Goodbye, World!" CR ;
+: goodbye ( -- )   ." Hello world!" CR ;

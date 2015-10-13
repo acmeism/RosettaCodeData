@@ -1,25 +1,15 @@
-/*REXX program encodes several text strings with the  ROT-13  algorithm.*/
-aa = 'foo'
-                                        say 'simple text = 'aa
-                                        say 'rot-13 text = 'rot13(aa)
-                                        say
-bb = 'bar'
-                                        say 'simple text = 'bb
-                                        say 'rot-13 text = 'rot13(bb)
-                                        say
-cc = "Noyr jnf V, 'rer V fnj Ryon."
-                                        say 'simple text = 'cc
-                                        say 'rot-13 text = 'rot13(cc)
-                                        say
-dd = 'abc?  ABC!'
-                                        say 'simple text = 'dd
-                                        say 'rot-13 text = 'rot13(dd)
-                                        say
-ee = 'abjurer NOWHERE'
-                                        say 'simple text = 'ee
-                                        say 'rot-13 text = 'rot13(ee)
-exit                                   /*stick a fork in it, we're done.*/
-/*──────────────────────────────────ROT13 subroutine────────────────────*/
+/*REXX program encodes several example text strings with the ROT-13 algorithm.*/
+@simple = 'simple text ='
+@rot_13 = 'rot-13 text ='
+
+$= 'foo'                          ;  say @simple $;  say @rot_13  rot13($);  say
+$= 'bar'                          ;  say @simple $;  say @rot_13  rot13($);  say
+$= "Noyr jnf V, 'rer V fnj Ryon." ;  say @simple $;  say @rot_13  rot13($);  say
+$= 'abc?  ABC!'                   ;  say @simple $;  say @rot_13  rot13($);  say
+$= 'abjurer NOWHERE'              ;  say @simple $;  say @rot_13  rot13($);  say
+
+exit                                   /*stick a fork in it,  we're all done. */
+/*────────────────────────────────────────────────────────────────────────────*/
 rot13: return translate(arg(1), ,
-              'abcdefghijklmABCDEFGHIJKLMnopqrstuvwxyzNOPQRSTUVWXYZ', ,
-              'nopqrstuvwxyzNOPQRSTUVWXYZabcdefghijklmABCDEFGHIJKLM')
+                       'abcdefghijklmABCDEFGHIJKLMnopqrstuvwxyzNOPQRSTUVWXYZ', ,
+                       'nopqrstuvwxyzNOPQRSTUVWXYZabcdefghijklmABCDEFGHIJKLM')

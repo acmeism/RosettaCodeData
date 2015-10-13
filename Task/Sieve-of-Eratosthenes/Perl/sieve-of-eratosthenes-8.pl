@@ -1,12 +1,6 @@
-sub sieve {
-	my ($s, $p) = "." . ("x" x shift);
-
-	1 while ++$p
-		and $s =~ /^(.{$p,}?)x/g
-		and $p = length($1)
-		and $s =~ s/(.{$p})./${1}./g
-		and substr($s, $p, 1) = "x";
-	$s
+sub erat {
+    my $p = shift;
+    return $p, $p**2 > $_[$#_] ? @_ : erat(grep $_%$p, @_)
 }
 
-print sieve(1000);
+print join ', ' => erat 2..100000;

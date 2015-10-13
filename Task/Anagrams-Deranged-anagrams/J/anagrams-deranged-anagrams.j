@@ -1,4 +1,4 @@
-   #words=: <;._2 ] 1!:1 <'unixdict.txt'
+   #words=: 'b' freads 'unixdict.txt'
 25104
    #anagrams=: (#~ 1 < #@>) (</.~ /:~&>) words
 1303

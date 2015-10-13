@@ -1,2 +1,2 @@
 REPORT zgoodbyeworld.
-  WRITE 'Goodbye, World!'.
+  WRITE 'Hello world!'.

@@ -4,6 +4,5 @@ proc pangram? {sentence} {
         [llength [lsort -unique $letters]] == 26
     }
 }
-
 puts [pangram? "This is a sentence"];  # ==> false
 puts [pangram? "The quick brown fox jumps over the lazy dog."]; # ==> true

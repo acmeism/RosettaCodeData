@@ -1,2 +1,2 @@
 import sys
-sys.stdout.write("Goodbye, World!\n")
+sys.stdout.write("Hello world!\n")

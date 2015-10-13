@@ -1,9 +1,7 @@
-a=:0&{"1
-b=:1&{"1
-c=:2&{"1
-s=:(a+b+c)%2:
-A=:2 %: s*(s-a)*(s-b)*(s-c)
-P=:+/"1
-isprimhero=:(0&~:*(=<.@+))@A*1=a+.b+.c
-
-tri=: (/: A,.P,.{:"1) (#~ isprimhero)~./:"1~1+200 200 200#:i.200^3
+a=: 0&{"1
+b=: 1&{"1
+c=: 2&{"1
+s=: (a+b+c) % 2:
+area=: 2 %: s*(s-a)*(s-b)*(s-c)                   NB. Hero's formula
+perim=: +/"1
+isPrimHero=: (0&~: * (= <.@:+))@area * 1 = a +. b +. c

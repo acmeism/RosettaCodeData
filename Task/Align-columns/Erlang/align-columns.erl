@@ -36,33 +36,3 @@ prepare_line(Words_line, Words_length, Alignment) ->
     Zipped = lists:zip (All_words, Words_length),
     [ apply(string, Alignment, [Word, Length + 1, $\s])
       || {Word, Length} <- Zipped].
-
-=== Output
-
-
-1> c(align_columns).
-{ok,align_columns}
-2> align_columns:align_center().
-   Given        a        text     file    of      many      lines     where   fields  within    a   line
-    are    delineated     by        a   single  'dollar' character,   write     a    program
-   that      aligns      each    column   of     fields      by     ensuring   that   words    in   each
-  column       are     separated   by     at     least       one     space.
- Further,     allow       for     each   word      in         a      column     to      be   either left
-justified,    right   justified,   or   center justified   within      its   column.
-ok
-3> align_columns:align_left().
-Given      a          text       file   of     many      lines      where    fields  within  a      line
-are        delineated by         a      single 'dollar'  character, write    a       program
-that       aligns     each       column of     fields    by         ensuring that    words   in     each
-column     are        separated  by     at     least     one        space.
-Further,   allow      for        each   word   in        a          column   to      be      either left
-justified, right      justified, or     center justified within     its      column.
-ok
-4> align_columns:align_right().
-      Given          a       text   file     of      many      lines    where  fields  within      a line
-        are delineated         by      a single  'dollar' character,    write       a program
-       that     aligns       each column     of    fields         by ensuring    that   words     in each
-     column        are  separated     by     at     least        one   space.
-   Further,      allow        for   each   word        in          a   column      to      be either left
- justified,      right justified,     or center justified     within      its column.
-ok

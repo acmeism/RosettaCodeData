@@ -1,4 +1,4 @@
-   (,&' ' ,  ('bad';'OK') {::~ checkBalanced)"1 genBracketPairs i. 10
+   (, ' ' ,  ('bad';'OK') {::~ checkBalanced)"1 genBracketPairs i. 10
                    OK
 ][                 bad
 ][[]               bad

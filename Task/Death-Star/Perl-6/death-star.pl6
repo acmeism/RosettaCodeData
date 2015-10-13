@@ -33,7 +33,7 @@ sub MAIN ($outfile = 'deathstar-perl6.pgm') {
     my $out = open( $outfile, :w, :bin ) or die "$!\n";
     $out.say("P5\n$x $y\n$depth"); # .pgm header
     say 'Calculating row:';
-    $out.print( draw_ds(3, .15)».chrs );
+    $out.write( Blob.new( draw_ds(3, .15) ) );
     $out.close;
 }
 
@@ -41,7 +41,7 @@ sub draw_ds ( $k, $ambient ) {
     my @pixels;
     my $bs = "\b" x 8;
     for ($pos.cy - $pos.r) .. ($pos.cy + $pos.r) -> $y {
-        note $bs, $y, ' '; # monitor progress
+        print $bs, $y, ' '; # monitor progress
         for ($pos.cx - $pos.r) .. ($pos.cx + $pos.r) -> $x {
             # black if we don't hit positive sphere, ignore negative sphere
             if not hit($pos, $x, $y, my $posz) {
@@ -69,10 +69,10 @@ sub draw_ds ( $k, $ambient ) {
 }
 
 # normalize a vector
-sub normalize (@vec) { return @vec »/» ([+] @vec Z* @vec).sqrt }
+sub normalize (@vec) { return @vec »/» ([+] @vec »*« @vec).sqrt }
 
 # dot product of two vectors
-sub dot (@x, @y) { return -([+] @x Z* @y) max 0 }
+sub dot (@x, @y) { return -([+] @x »*« @y) max 0 }
 
 # are the coordinates within the radius of the sphere?
 sub hit ($sphere, $x is copy, $y is copy, $z is rw) {

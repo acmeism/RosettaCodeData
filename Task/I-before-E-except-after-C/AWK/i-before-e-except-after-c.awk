@@ -13,14 +13,14 @@ function cnt(c) {
 
 END {
 	printf("cie: %i\nnie: %i\ncei: %i\nnei: %i\n",cie,nie-cie,cei,nei-cei);
-	v = "";
+	v = v2 = "";
 	if (nie < 3 * cie) {
-		v=" not";
+		v =" not";
 	}
 	print "I before E when not preceded by C: is"v" plausible";
-	v = "";
 	if (nei > 3 * cei)  {
-		v=" not";
+		v = v2 =" not";
 	}
-	print "E before I when preceded by C: is"v" plausible";
+	print "E before I when preceded by C: is"v2" plausible";
+        print "Overall rule is"v" plausible";
 }

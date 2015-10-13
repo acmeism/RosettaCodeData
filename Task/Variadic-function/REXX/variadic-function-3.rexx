@@ -1,4 +1,4 @@
-call print_all .1,5,2,4,-3, 4.7e1, 013.000 ,, 8**2 -3, sign(-66), abs(-71.00), 8 || 6, 'seven numbers are prime, 8th is null'
+call print_all .1,5,2,4,-3, 4.7e1, 013.000 ,, 8**2 -3, sign(-66), abs(-71.00), 8 || 9, 'seven numbers are prime, 8th is null'
 
 call print_all  "One ringy-dingy,",
                 "two ringy-dingy,",

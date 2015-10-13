@@ -1,5 +1,5 @@
 #lang racket
-(require racket/date)
+(require racket/date net/base64 file/gunzip)
 (define (calendar yr)
   (define (nsplit n l) (if (null? l) l (cons (take l n) (nsplit n (drop l n)))))
   (define months
@@ -18,14 +18,12 @@
                               ,@(for/list ([d days])
                                   (~a (+ d 1) #:width 2 #:align 'right))
                               ,@(make-list (- 42 pfx days) "  ")))))))
-  (let* ([s '(" 11,-~4-._3. 41-4! 10/ ()=(2) 3\\ 40~a! 9( 3( 80 39-4! 10\\._\\"
-              ", ,-4'! 5#2X3x7! 12/ 2-3'~2;! 11/ 4/~2|-! 9=( 3~4 2|! 3/~42\\! "
-              "2/_23\\! /_25\\!/_27\\! 3|_20|! 3|_20|! 3|_20|! 3| 20|!!")]
-         [s (regexp-replace* #rx"!" (string-append* s) "\n")]
-         [s (regexp-replace* #rx".(?:[1-7][0-9]*|[1-9])" s
-              (λ(m) (make-string (string->number (substring m 1))
-                                 (string-ref m 0))))])
-    (printf s yr))
+  (let ([s #"nZA7CsAgDED3nCLgoAU/3Uvv4SCE3qKD5OyNWvoBhdIHSswjMYp4YR2z80Tk8StOgP
+             sY0EyrMZOE6WsL3u4G5lyV+d8MyVOy8hZBt7RSMca9Ac/KUIs1L/BOysb50XMtMzEj
+             ZqiuRxIVqI+4kSpy7GqpXNsz+bfpfWIGOAA="]
+        [o (open-output-string)])
+    (inflate (open-input-bytes (base64-decode s)) o)
+    (display (regexp-replace #rx"~a" (get-output-string o) (~a yr))))
   (for-each displayln
     (dropf-right (for*/list ([3ms (nsplit 3 months)] [s (apply map list 3ms)])
                    (regexp-replace #rx" +$" (string-join s "   ") ""))

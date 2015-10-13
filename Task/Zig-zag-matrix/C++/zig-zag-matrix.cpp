@@ -16,6 +16,7 @@ auto_ptr< IntTable > getZigZagArray( int dimension )
 
 	// fill along diagonal stripes (oriented as "/")
 	int lastValue = dimension * dimension - 1;
+	int currNum = 0;
 	int currDiag = 0;
 	int loopFrom;
 	int loopTo;

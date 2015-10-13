@@ -1,5 +1,5 @@
-def selectionSort(lst):
-    for i in range(0,len(lst)-1):
+def selection_sort(lst):
+    for i, e in enumerate(lst):
         mn = min(range(i,len(lst)), key=lst.__getitem__)
-        lst[i],lst[mn] = lst[mn],lst[i]
+        lst[i], lst[mn] = lst[mn], e
     return lst

@@ -5,7 +5,7 @@ my $socket = IO::Socket::INET.new:
 
 while $socket.accept -> $conn {
     say "Accepted connection";
-    async {
+    start {
         while $conn.recv -> $stuff {
             say "Echoing $stuff";
             $conn.send($stuff);

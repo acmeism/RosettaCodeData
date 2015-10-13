@@ -1,5 +1,5 @@
 constant ln2 = [+] (1/2.FatRat, */2 ... *) Z/ 1 .. 100;
-constant h = [\*] 1/2, 1..* X/ ln2;
+constant h = [\*] 1/2, |(1..*) X/ ln2;
 
 use Test;
 plan *;

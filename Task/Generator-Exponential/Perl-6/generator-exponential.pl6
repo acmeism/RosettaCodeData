@@ -1,7 +1,7 @@
 sub powers($m) { 0..* X** $m }
 
-my @squares := powers(2);
-my @cubes   := powers(3);
+my @squares = powers(2);
+my @cubes   = powers(3);
 
 sub infix:<without> (@orig,@veto) {
     gather for @veto -> $veto {

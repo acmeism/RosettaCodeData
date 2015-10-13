@@ -6,23 +6,12 @@ import (
 )
 
 type matrix struct {
-    ele    []complex128
     stride int
-}
-
-func matrixFromRows(rows [][]complex128) *matrix {
-    if len(rows) == 0 {
-        return &matrix{nil, 0}
-    }
-    m := &matrix{make([]complex128, len(rows)*len(rows[0])), len(rows[0])}
-    for rx, row := range rows {
-        copy(m.ele[rx*m.stride:(rx+1)*m.stride], row)
-    }
-    return m
+    ele    []complex128
 }
 
 func like(a *matrix) *matrix {
-    return &matrix{make([]complex128, len(a.ele)), a.stride}
+    return &matrix{a.stride, make([]complex128, len(a.ele))}
 }
 
 func (m *matrix) print(heading string) {
@@ -62,17 +51,22 @@ func (a *matrix) choleskyDecomp() *matrix {
 }
 
 func main() {
-    demo("A:", matrixFromRows([][]complex128{
-        {25, 15, -5},
-        {15, 18, 0},
-        {-5, 0, 11},
-    }))
-    demo("A:", matrixFromRows([][]complex128{
-        {18, 22, 54, 42},
-        {22, 70, 86, 62},
-        {54, 86, 174, 134},
-        {42, 62, 134, 106},
-    }))
+    demo("A:", &matrix{3, []complex128{
+        25, 15, -5,
+        15, 18, 0,
+        -5, 0, 11,
+    }})
+    demo("A:", &matrix{4, []complex128{
+        18, 22, 54, 42,
+        22, 70, 86, 62,
+        54, 86, 174, 134,
+        42, 62, 134, 106,
+    }})
+    // one more example, from the Numpy manual, with a non-real
+    demo("A:", &matrix{2, []complex128{
+        1, -2i,
+        2i, 5,
+    }})
 }
 
 func demo(heading string, a *matrix) {

@@ -21,6 +21,6 @@ function compare (a, b) {
     }
   } else {
     // "1" and 1 are an example of this as the first is type string and the second is type number
-    print(a + "{" + (typeof a) + "} and " + b + "{" + (typeof b) + "} are not of the same type 4and cannot be compared.");
+    print(a + "{" + (typeof a) + "} and " + b + "{" + (typeof b) + "} are not of the same type and cannot be compared.");
   }
 }

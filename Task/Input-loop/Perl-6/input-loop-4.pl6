@@ -1,0 +1,3 @@
+for pipe("find -iname '*.txt' -print0", :nl«\0»).lines -> $filename {
+    ...
+}

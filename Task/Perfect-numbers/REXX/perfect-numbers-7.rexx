@@ -37,7 +37,7 @@ if r\==1  then return 0                /*Digital root ¬1? Then ¬perfect.*/
 s = 3 + x%2                            /*we know the following factors: */
                                        /*  1      ('cause Mama said so.)*/
                                        /*  2      ('cause it's even.)   */
-                                       /* x÷2     (   "     "    "  )   */
+                                       /* x÷2     (   "     "    "  )  _*/
              do j=3  while  j*j<=x     /*starting at 3, find factors ≤√X*/
              if x//j\==0  then iterate /*J  divides  X  evenly,  so ... */
              s = s + j + x%j           /*··· add it and the other factor*/

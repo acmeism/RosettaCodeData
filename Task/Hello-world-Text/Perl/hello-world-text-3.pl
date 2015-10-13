@@ -1,2 +1,2 @@
 use 5.010;
-say 'Goodbye, World!';
+say 'Hello world!';

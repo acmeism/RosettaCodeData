@@ -1,25 +1,34 @@
-#include <iostream>
 #include <set>
+#include <iostream>
 
-template<typename Set> std::set<Set> powerset(const Set& s, size_t n)
+template <class S>
+auto powerset(const S& s)
 {
-    typedef typename Set::const_iterator SetCIt;
-    typedef typename std::set<Set>::const_iterator PowerSetCIt;
-    std::set<Set> res;
-    if(n > 0) {
-        std::set<Set> ps = powerset(s, n-1);
-        for(PowerSetCIt ss = ps.begin(); ss != ps.end(); ss++)
-            for(SetCIt el = s.begin(); el != s.end(); el++) {
-                Set subset(*ss);
-                subset.insert(*el);
-                res.insert(subset);
-            }
-        res.insert(ps.begin(), ps.end());
-    } else
-        res.insert(Set());
-    return res;
+    std::set<S> ret;
+    ret.emplace();
+    for (auto&& e: s) {
+        std::set<S> rs;
+        for (auto x: ret) {
+            x.insert(e);
+            rs.insert(x);
+        }
+        ret.insert(begin(rs), end(rs));
+    }
+    return ret;
 }
-template<typename Set> std::set<Set> powerset(const Set& s)
+
+int main()
 {
-    return powerset(s, s.size());
+    std::set<int> s = {2, 3, 5, 7};
+    auto pset = powerset(s);
+
+    for (auto&& subset: pset) {
+        std::cout << "{ ";
+        char const* prefix = "";
+        for (auto&& e: subset) {
+            std::cout << prefix << e;
+            prefix = ", ";
+        }
+        std::cout << " }\n";
+    }
 }

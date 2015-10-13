@@ -1,8 +1,6 @@
-set -A a a b c
-set -A b A B C
-set -A c 1 2 3
-((i = 0))
-while ((i < ${#a[@]})); do
+a=(a b c)
+b=(A B C)
+c=(1 2 3)
+for ((i = 0; i < ${#a[@]}; i++)); do
   echo "${a[$i]}${b[$i]}${c[$i]}"
-  ((i++))
 done

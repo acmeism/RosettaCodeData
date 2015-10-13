@@ -1,16 +1,21 @@
 package main
 
 import (
-    "fmt"
-    "net/url"
+	"fmt"
+	"log"
+	"net/url"
 )
 
-const escaped = "http%3A%2F%2Ffoo%20bar%2F"
-
 func main() {
-    if u, err := url.QueryUnescape(escaped); err == nil {
-        fmt.Println(u)
-    } else {
-        fmt.Println(err)
-    }
+	for _, escaped := range []string{
+		"http%3A%2F%2Ffoo%20bar%2F",
+		"google.com/search?q=%60Abdu%27l-Bah%C3%A1",
+	} {
+		u, err := url.QueryUnescape(escaped)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		fmt.Println(u)
+	}
 }

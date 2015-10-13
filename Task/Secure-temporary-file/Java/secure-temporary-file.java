@@ -1,13 +1,15 @@
 import java.io.File;
+import java.io.IOException;
 
-try {
-    // Create temp file
-    File filename = File.createTempFile("prefix", ".suffix");
-
-    // Delete temp file when program exits
-    filename.deleteOnExit();
-
-    System.out.println(filename);
-
-} catch (IOException e) {
+public class CreateTempFile {
+    public static void main(String[] args)  {
+        try {
+            //create a temp file
+            File temp = File.createTempFile("temp-file-name", ".tmp");
+            System.out.println("Temp file : " + temp.getAbsolutePath());
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+    	}
+    }
 }

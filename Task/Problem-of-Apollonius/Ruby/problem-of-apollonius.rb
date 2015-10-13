@@ -5,9 +5,9 @@ class Circle
   attr_reader :x, :y, :r
 
   def self.apollonius(c1, c2, c3, s1=1, s2=1, s3=1)
-    x1, y1, r1 = [c1.x, c1.y, c1.r]
-    x2, y2, r2 = [c2.x, c2.y, c2.r]
-    x3, y3, r3 = [c3.x, c3.y, c3.r]
+    x1, y1, r1 = c1.x, c1.y, c1.r
+    x2, y2, r2 = c2.x, c2.y, c2.r
+    x3, y3, r3 = c3.x, c3.y, c3.r
 
     v11 = 2*x2 - 2*x1
     v12 = 2*y2 - 2*y1
@@ -41,14 +41,17 @@ class Circle
     xs = m + n*rs
     ys = p + q*rs
 
-    return self.new(xs, ys, rs)
+    self.new(xs, ys, rs)
+  end
+
+  def to_s
+    "Circle: x=#{@x}, y=#{@y}, r=#{@r}"
   end
 end
 
+puts c1 = Circle.new(0, 0, 1)
+puts c2 = Circle.new(2, 4, 2)
+puts c3 = Circle.new(4, 0, 1)
 
-p c1 = Circle.new(0, 0, 1)
-p c2 = Circle.new(2, 4, 2)
-p c3 = Circle.new(4, 0, 1)
-
-p Circle.apollonius(c1, c2, c3)
-p Circle.apollonius(c1, c2, c3, -1, -1, -1)
+puts Circle.apollonius(c1, c2, c3)
+puts Circle.apollonius(c1, c2, c3, -1, -1, -1)

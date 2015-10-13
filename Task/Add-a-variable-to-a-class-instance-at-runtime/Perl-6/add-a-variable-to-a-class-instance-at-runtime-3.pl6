@@ -1,4 +1,4 @@
-use MONKEY_TYPING;
+use MONKEY-TYPING;
 augment class Int {
     method answer { "Life, the Universe, and Everything" }
 }

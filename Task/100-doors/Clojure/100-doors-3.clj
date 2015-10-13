@@ -1,9 +1,9 @@
-(defn doors []
-	(reduce (fn [doors idx] (assoc doors idx true))
-	        (into [] (repeat 100 false))
-	        (map #(dec (* % %)) (range 1 11))))
-
-(defn open-doors [] (for [[d n] (map vector (doors) (iterate inc 1)) :when d] n))
+(defn open-doors []
+  (->> (for [step (range 1 101), occ (range step 101 step)] occ)
+       frequencies
+       (filter (comp odd? val))
+       (map first)
+       sort))
 
 (defn print-open-doors []
   (println

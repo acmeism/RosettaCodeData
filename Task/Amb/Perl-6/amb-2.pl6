@@ -4,15 +4,19 @@ sub amb($var,*@a) {
      }]";
 }
 
+sub joins ($word1, $word2) {
+    substr($word1,*-1,1) eq substr($word2,0,1)
+}
+
 '' ~~ m/
     :my ($a,$b,$c,$d);
     <{ amb '$a', <the that a> }>
     <{ amb '$b', <frog elephant thing> }>
-    <?{ substr($a,*-1,1) eq substr($b,0,1) }>
+    <?{ joins $a, $b }>
     <{ amb '$c', <walked treaded grows> }>
-    <?{ substr($b,*-1,1) eq substr($c,0,1) }>
+    <?{ joins $b, $c }>
     <{ amb '$d', <slowly quickly> }>
-    <?{ substr($c,*-1,1) eq substr($d,0,1) }>
+    <?{ joins $c, $d }>
     { say "$a $b $c $d" }
     <!>
 /;

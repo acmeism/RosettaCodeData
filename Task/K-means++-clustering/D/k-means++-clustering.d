@@ -2,7 +2,7 @@ import std.stdio, std.math, std.random, std.typecons, std.algorithm;
 
 // On Windows this uses the printf from the Microsoft C runtime,
 // that doesn't handle real type and some of the C99 format
-// specifiers, but it's faster for blunk printing.
+// specifiers, but it's faster for bulk printing.
 extern(C) nothrow int printf(const char*, ...);
 
 struct Point {
@@ -69,7 +69,7 @@ in {
         assert(result[0] < centers.length);
         immutable ClusterCenter c = centers[result[0]];
         immutable d = (c.x - point.x) ^^ 2  +  (c.y - point.y) ^^ 2;
-        assert(feqrel(cast()result[1], cast()d) > 45); // Arbitrary.
+        assert(feqrel(result[1], d) > 45); // Arbitrary.
     } body {
         static double sqrDistance2D(in ref ClusterCenter a,
                                     in ref Point b) pure nothrow @nogc{

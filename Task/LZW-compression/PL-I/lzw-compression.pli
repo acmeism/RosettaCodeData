@@ -1,0 +1,150 @@
+*process source xref attributes or(!);
+ lzwt: Proc Options(main);
+
+ Dcl (LEFT,LENGTH,SUBSTR,TRANSLATE,TRIM,UNSPEC) Builtin;
+ Dcl SYSPRINT Print;
+
+ Dcl str Char(50) Var Init('TOBEORNOTTOBEORTOBEORNOT');
+ Dcl compressed Char(80) Var;
+ Dcl decompressed Char(80) Var;
+
+ Dcl 1 dict(0:300),
+      2 key Char(5) Var,
+      2 inx Bin Fixed(16) Unsigned;
+ Dcl dict_size Bin Fixed(31) Init(256);
+ Dcl hi Bin Fixed(16) Unsigned Init(65535);
+
+ Put Edit('str=',str)(Skip,a,a);
+ compressed = compress(str);
+ Put Edit(compressed)(Skip,a);
+ decompressed = decompress(compressed);
+ Put Edit('dec=',decompressed)(Skip,a,a);
+ If decompressed=str Then
+   Put Edit('decompression ok')(Skip,a);
+ Else
+   Put Edit('decompression not ok')(Skip,a);
+
+ compress: Proc(s) Returns(Char(80) Var);
+ Dcl s Char(*) Var;
+ Dcl res Char(80) Var;
+ Dcl i Bin Fixed(31);
+ Dcl c  Char(1);
+ Dcl w  Char(5) Var;
+ Dcl wc Char(5) Var;
+ dict.key='';
+ Dcl ii Bin Fixed(8) Unsigned;
+ Do i=0 To 255;
+   ii=i;
+   Unspec(c)=unspec(ii);
+   dict.key(i)=c;
+   dict.inx(i)=i;
+   End;
+ res='[';
+ w='';
+ Do i=1 To length(s);
+   c=substr(s,i,1);
+   wc=w!!c;
+   If dicti(wc)^=hi Then Do;
+     w=wc;
+     End;
+   Else Do;
+     res=res!!trim(dicti(w))!!', ';
+     Call dict_add(wc,dict_size);
+     w=c;
+     End;
+   End;
+ If w^='' Then
+   res=res!!trim(dicti(w))!!', ';
+ substr(res,length(res)-1,1)=']';
+ Return(res);
+
+ dicti: Proc(needle) Returns(Bin Fixed(31));
+   Dcl needle Char(*) Var;
+   Dcl i Bin Fixed(31);
+   Do i=1 To dict_size;
+     If dict.key(i)=needle Then
+       Return(i);
+     End;
+   Return(hi);
+   End;
+
+ dict_add: Proc(needle,dict_size);
+   Dcl needle Char(*) Var;
+   Dcl dict_size Bin Fixed(31);
+   dict.key(dict_size)=needle;
+   dict.inx(dict_size)=dict_size;
+   dict_size+=1;
+   End;
+
+ End;
+
+ decompress: Proc(s) Returns(Char(80) Var);
+ Dcl s Char(80) Var;
+ Dcl ss Char(80) Var;
+ Dcl words(50) Char(5) Var;
+ Dcl wn Bin Fixed(31);
+ Dcl ww  Bin Fixed(31);
+ Dcl c  Char(1);
+ Dcl entry Char(5) Var;
+ Dcl w Char(5) Var;
+ Dcl res Char(80) Var;
+ ss=translate(s,'    ','[],');
+ Call mk_words(ss,words,wn);
+ dict.key='';
+ dict.inx=hi;
+ Dcl i Bin Fixed(31);
+ Dcl ii Bin Fixed(8) Unsigned;
+ Dcl dict(0:300) Char(5) Var;
+ Dcl dict_size Bin Fixed(31);
+ Do i=0 To 255;
+   ii=i;
+   Unspec(c)=unspec(ii);
+   dict(i)=c;
+   End;
+ dict_size=256;
+ ww=words(1);
+ w=dict(ww);
+ res=w;
+ Do i=2 To wn;
+   ww=words(i);
+   Select;
+     When(dict(ww)^='')
+       entry=dict(ww);
+     When(ww=dict_size)
+       entry=w!!substr(w,1,1);
+     Otherwise
+       Put Edit('Bad compressed k: ',ww)(Skip,a,a);
+     End;
+   res=res!!entry;
+   dict(dict_size)=w!!substr(entry,1,1);
+   dict_size+=1;
+   w=entry;
+   End;
+ Return(res);
+ End;
+
+ mk_words: Proc(st,arr,arrn);
+ Dcl st Char(*) Var;
+ Dcl sv Char(80) Var;
+ Dcl arr(*) Char(5) Var;
+ Dcl arrn Bin fixed(31);
+ Dcl elem Char(5) Var;
+ arrn=0;
+ sv=st!!' ';
+ elem='';
+ Do While(length(sv)>0);
+   If left(sv,1)=' ' Then Do;
+     If elem>'' Then Do;
+       arrn+=1;
+       arr(arrn)=elem;
+       elem='';
+       End;
+     End;
+   Else
+     elem=elem!!left(sv,1);
+   sv=substr(sv,2);
+   End;
+ End;
+ Return;
+
+ End;

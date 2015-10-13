@@ -1,7 +1,7 @@
-require 'complex'
+require 'cmath'
 
 def quadratic(a, b, c)
-  sqrt_discriminant = Math.sqrt(b**2 - 4*a*c)
+  sqrt_discriminant = CMath.sqrt(b**2 - 4*a*c)
   [(-b + sqrt_discriminant) / (2.0*a), (-b - sqrt_discriminant) / (2.0*a)]
 end
 

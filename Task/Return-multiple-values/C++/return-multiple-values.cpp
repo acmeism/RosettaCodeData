@@ -1,18 +1,19 @@
 #include <algorithm>
+#include <array>
+#include <cstdint>
 #include <iostream>
 #include <tuple>
 
-std::tuple<const int , const int> minmax ( const int * numbers , const int num ) {
-   const int *maximum = std::max_element ( numbers , numbers + num ) ;
-   const int *minimum = std::min_element ( numbers , numbers + num ) ;
-   return std::make_tuple( *maximum , *minimum ) ;
+std::tuple<int, int> minmax(const int * numbers, const std::size_t num) {
+   const auto maximum = std::max_element(numbers, numbers + num);
+   const auto minimum = std::min_element(numbers, numbers + num);
+   return std::make_tuple(*minimum, *maximum) ;
 }
 
 int main( ) {
-   const int numbers[ ] = { 17 , 88 , 9 , 33 , 4 , 987 , -10 , 2 } ;
-   int numbersize = sizeof( numbers ) / sizeof ( int ) ;
-   std::tuple<const int , const int> result = minmax( numbers , numbersize ) ;
-   std::cout << "The greatest number is " << std::get<0>( result )
-      << " , the smallest " << std::get<1>( result ) << " !\n" ;
-   return 0 ;
+   const auto numbers = std::array<int, 8>{{17, 88, 9, 33, 4, 987, -10, 2}};
+   int min{};
+   int max{};
+   std::tie(min, max) = minmax(numbers.data(), numbers.size());
+   std::cout << "The smallest number is " << min << ", the biggest " << max << "!\n" ;
 }

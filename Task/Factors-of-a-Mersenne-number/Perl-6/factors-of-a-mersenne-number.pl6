@@ -1,4 +1,4 @@
-my @primes := 2, 3, -> $n is copy {
+my @primes = 2, 3, -> $n is copy {
     repeat { $n += 2 } until $n %% none do for @primes -> $p {
         last if $p > sqrt($n);
         $p;
@@ -31,7 +31,7 @@ sub mtest($bits, $p) {
     $sq == 1;
 }
 
-for 2 .. 60, 929 -> $m {
+for flat 2 .. 60, 929 -> $m {
     next unless is_prime($m);
     my $f = 0;
     my $x = 2**$m - 1;

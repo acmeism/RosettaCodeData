@@ -2,6 +2,8 @@ import tango.io.device.File;
 
 void main()
 {
+    auto from = new File("input.txt");
     auto to = new File("output.txt", File.WriteCreate);
-    to.copy(new File("input.txt")).close;
+    to.copy(from).close;
+    from.close;
 }

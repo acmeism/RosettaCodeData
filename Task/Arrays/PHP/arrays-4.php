@@ -1,1 +1,2 @@
-echo $MultiArray[1][5]; // 2
+echo $NumberArray[5]; // Returns 5
+echo $LetterArray[5]; // Returns f

@@ -1,3 +1,5 @@
-for (var a in o) {
-    print(o[a]);
-}
+"alpha beta gamma delta".split(' ').forEach(
+  function (x) {
+    console.log(x);
+  }
+);

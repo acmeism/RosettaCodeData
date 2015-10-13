@@ -1,5 +1,5 @@
 using namespace System;
 int main()
 {
-  Console::WriteLine("Goodbye, World!");
+  Console::WriteLine("Hello world!");
 }

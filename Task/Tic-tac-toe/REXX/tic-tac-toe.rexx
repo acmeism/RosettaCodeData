@@ -1,6 +1,6 @@
 /*REXX program plays (with a human) the tic-tac-toe game on an NxN grid.*/
-oops =$ '***error!*** ';   cell# ='cell number'   /*a couple of literals*/
 $=copies('─',9)                        /*eyecatcher literal for messages*/
+oops =$ '***error!*** ';   cell# ='cell number'   /*a couple of literals*/
 sing='│─┼';    jam='║';    bar='═';    junc='╬';    dbl=jam || bar || junc
 sw=linesize()-1                        /*get the width of the terminal. */
 parse arg N hm cm .,@.; if N=='' then N=3; oN=N  /*specifying some args?*/

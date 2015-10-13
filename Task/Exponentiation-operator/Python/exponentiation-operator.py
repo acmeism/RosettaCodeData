@@ -1,22 +1,15 @@
->>> import operator
->>> class num(int):
+MULTIPLY = lambda x, y: x*y
+
+class num(float):
+    # the following method has complexity O(b)
+    # rather than O(log b) via the rapid exponentiation
     def __pow__(self, b):
-        print "Empowered"
-        return operator.__pow__(self+0, b)
+        return reduce(MULTIPLY, [self]*b, 1)
 
+# works with ints as function or operator
+print num(2).__pow__(3)
+print num(2) ** 3
 
->>> x = num(3)
->>> x**2
-Empowered
-9
->>> class num(float):
-    def __pow__(self, b):
-        print "Empowered"
-        return operator.__pow__(self+0, b)
-
-
->>> x = num(2.5)
->>> x**2
-Empowered
-6.25
->>>
+# works with floats as function or operator
+print num(2.3).__pow__(8)
+print num(2.3) ** 8

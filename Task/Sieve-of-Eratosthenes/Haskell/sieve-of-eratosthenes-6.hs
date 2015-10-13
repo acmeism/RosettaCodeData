@@ -1,6 +1,5 @@
-primesEQ = after 4 [2..] (sieve primesEQ) -- faster, ~ n^1.5
-   where     -- q==p*p
-   sieve (p:t) q xs = after (head t^2) (minus xs [q,q+p..]) (sieve t)
-
-after q (x:xs) k | x < q     = x : after q xs k
-                 | otherwise = k x xs
+primesPE = 2 : sieve [3..] 4 primesPE
+               where
+               sieve (x:xs) q (p:t)
+                 | x < q     = x : sieve xs q (p:t)
+                 | otherwise =     sieve (minus xs [q, q+p..]) (head t^2) t

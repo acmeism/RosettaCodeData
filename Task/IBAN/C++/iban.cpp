@@ -6,8 +6,8 @@
 #include <cctype>
 using namespace boost::algorithm ;
 
-bool isValid ( const std::string &ibanstring ) {
-
+bool isValid ( const std::string &ibanstring )
+{
    static std::map<std::string, int> countrycodes
                            { {"AL" , 28} , {"AD" , 24} , {"AT" , 20} , {"AZ" , 28 } ,
 			   {"BE" , 16} , {"BH" , 22} , {"BA" , 20} , {"BR" , 29 } ,
@@ -31,17 +31,18 @@ bool isValid ( const std::string &ibanstring ) {
       return false ;
    if ( teststring.length( ) != countrycodes[ teststring.substr( 0 , 2 ) ] )
       return false ;
-   if ( ! ( all ( teststring , is_alnum( ) ) ) )
+   if (!all(teststring, is_alnum()))
       return false ;
    to_upper( teststring ) ;
-   teststring = teststring.append( teststring.substr( 0 , 4 ) ) ;
-   teststring.assign( teststring.substr( 4 ) ) ;
+   std::rotate(teststring.begin(), teststring.begin() + 4, teststring.end());
+
    std::string numberstring ;//will contain the letter substitutions
-   for ( int i = 0 ; i < teststring.length( ) ; i++ ) {
-      if ( std::isdigit( teststring[ i ] ) )
-	 numberstring = numberstring +  teststring[ i ]  ;
-      if ( std::isupper( teststring[ i ] ) )
-	 numberstring = numberstring +  std::to_string( static_cast<int>( teststring[ i ] ) - 55 ) ;
+   for (const auto& c : teststring)
+   {
+      if (std::isdigit(c))
+	 numberstring += c  ;
+      if (std::isupper(c))
+	 numberstring += std::to_string(static_cast<int>(c) - 55);
    }
    //implements a stepwise check for mod 97 in chunks of 9 at the first time
    // , then in chunks of seven prepended by the last mod 97 operation converted
@@ -63,10 +64,14 @@ bool isValid ( const std::string &ibanstring ) {
    return ( number % 97 == 1 ) ;
 }
 
-int main( ) {
-   std::cout << "GB82 WEST 1234 5698 7654 32 is " << ( isValid( "GB82 WEST 1234 5698 7654 32" ) ? "" : "not " )
-      << "valid!" << std::endl ;
-   std::cout << "GB82TEST12345698765432 is " << ( isValid( "GB82TEST12345698765432" ) ? "" : "not " )
-	 << "valid!" << std::endl ;
+void SayValidity(const std::string& iban)
+{
+    std::cout << iban << (isValid(iban) ? " is " : " is not ") << "valid\n";
+}
+
+int main( )
+{
+   SayValidity("GB82 WEST 1234 5698 7654 32");
+   SayValidity("GB82TEST12345698765432");
    return 0 ;
 }

@@ -25,7 +25,9 @@ void enqueue(queue q, DATA n)
 {
     if (q->tail >= q->alloc) q->tail = 0;
     q->buf[q->tail++] = n;
-    if (q->tail == q->head) {  /* needs more room */
+
+    // Fixed bug where it failed to resizes
+    if (q->tail == q->alloc) {  /* needs more room */
         q->buf = realloc(q->buf, sizeof(DATA) * q->alloc * 2);
         if (q->head) {
             memcpy(q->buf + q->head + q->alloc, q->buf + q->head,

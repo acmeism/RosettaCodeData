@@ -8,7 +8,7 @@ The multitude,Behold his mother! Behold his mother!";
 # comment the next line out, if you want to read from standard input instead of the hard-coded $str above
 # my $str = $*IN.slurp;
 
-my &escape = *.trans([ <& < \>>] => [<&amp; &lt; &gt;> ]); # a function with one argument that escapes the entities
+my &escape = *.trans(« & < > » => « &amp; &lt; &gt; »); # a function with one argument that escapes the entities
 my &tag    = {"<$^tag>"~$^what~"</$^tag>"};
 
 printf

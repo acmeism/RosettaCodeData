@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# this solution will work only in Windows, as msvcrt is a Windows only package
+
 import thread
 import time
 

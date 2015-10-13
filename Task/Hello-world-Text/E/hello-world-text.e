@@ -1,3 +1,3 @@
-println("Goodbye, World!")
+println("Hello world!")
 
-stdout.println("Goodbye, World!")
+stdout.println("Hello world!")

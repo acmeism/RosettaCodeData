@@ -1,10 +1,10 @@
 sub lis(@deck is copy) {
-    my @S = [@deck.shift() => Mu].item;
+    my @S = [@deck.shift() => Nil].item;
     for @deck -> $card {
-        if defined my $i = first { @S[$_][*-1].key > $card }, ^@S {
-            @S[$i].push: $card => @S[$i-1][*-1] // Mu
+        with first { @S[$_][*-1].key > $card }, ^@S -> $i {
+            @S[$i].push: $card => @S[$i-1][*-1] // Nil
         } else {
-            @S.push: [ $card => @S[*-1][*-1] // Mu ].item
+            @S.push: [ $card => @S[*-1][*-1] // Nil ].item
         }
     }
     reverse map *.key, (

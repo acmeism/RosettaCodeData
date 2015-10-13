@@ -1,3 +1,3 @@
 main: func {
-  "Goodbye, World!" println()
+  "Hello world!" println()
 }

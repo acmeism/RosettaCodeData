@@ -1,4 +1,4 @@
-my @happy := gather for 1..* -> $number {
+my @happy = lazy gather for 1..* -> $number {
     my %stopper = 1 => 1;
     my $n = $number;
     repeat until %stopper{$n}++ {

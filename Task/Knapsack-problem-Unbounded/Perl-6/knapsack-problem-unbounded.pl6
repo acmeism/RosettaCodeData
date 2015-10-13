@@ -24,15 +24,15 @@ for $panacea, $ichor, $gold -> $item {
 }
 
 for 0..%max_items<panacea>
-      X 0..%max_items<ichor>
-          X 0..%max_items<gold>
- -> $p, $i, $g
+       X 0..%max_items<ichor>
+           X 0..%max_items<gold>
+ -> ($p, $i, $g)
 {
   next if $panacea.volume * $p + $ichor.volume * $i + $gold.volume * $g > $maximum.volume;
   next if $panacea.weight * $p + $ichor.weight * $i + $gold.weight * $g > $maximum.weight;
   given $panacea.value * $p + $ichor.value * $i + $gold.value * $g {
     if $_ > $max_val { $max_val = $_; @solutions = (); }
-    when $max_val    { @solutions.push: [$p,$i,$g] }
+    when $max_val    { @solutions.push: $[$p,$i,$g] }
   }
 }
 

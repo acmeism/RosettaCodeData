@@ -49,12 +49,12 @@ pi: return,                            /*a bit of overkill,  but hey !! */      
 /*─────────────────────────────SERR subroutine──────────────────────────*/
 serr:  say;    say '***error!***';    say;    say arg(1);     say;    exit
 /*─────────────────────────────SQRT subroutine──────────────────────────*/
-sqrt: procedure; parse arg x; if x=0 then return 0; d=digits();numeric digits 11
-      g=.sqrtGuess();       do j=0 while p>9;  m.j=p;  p=p%2+1;   end
-      do k=j+5 to 0 by -1; if m.k>11 then numeric digits m.k; g=.5*(g+x/g); end
-      numeric digits d;  return g/1
-.sqrtGuess: if x<0 then call sqrtErr;   numeric form;   m.=11;   p=d+d%4+2
-      parse value format(x,2,1,,0) 'E0' with g 'E' _ .;   return g*.5'E'_%2
+sqrt: procedure; parse arg x;   if x=0  then return 0;  d=digits();  i=;   m.=9
+      numeric digits 9; numeric form; h=d+6;  if x<0  then  do; x=-x; i='i'; end
+      parse value format(x,2,1,,0) 'E0'  with  g 'E' _ .;       g=g*.5'e'_%2
+         do j=0  while h>9;      m.j=h;              h=h%2+1;         end  /*j*/
+         do k=j+5  to 0  by -1;  numeric digits m.k; g=(g+x/g)*.5;    end  /*k*/
+      numeric digits d;     return (g/1)i            /*make complex if  X < 0.*/
 /*─────────────────────────────MAXFACT subroutine───────────────────────*/
 $maxFact: procedure;  parse arg x 1 _x,y;   y=10**(digits()-1);  b=0;  h=1
 a=1; g=0;    do while a<=y & g<=y; n=trunc(_x);  _=a;  a=n*a+b;  b=_;  _=g

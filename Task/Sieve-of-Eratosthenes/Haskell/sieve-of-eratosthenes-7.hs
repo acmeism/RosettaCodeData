@@ -1,10 +1,10 @@
-primes = _Y $ ((2:) . minus [3..]
-                    . foldr (\x-> (x*x :) . union [x*x+x, x*x+2*x..]) [])
+import Data.List (inits)
 
-_Y g = g (_Y g)              -- non-sharing multistage fixpoint combinator
---   = let x = g x in g x    -- sharing two-stage fixpoint combinator
-
-union a@(x:xs) b@(y:ys) = case compare x y of
-         LT -> x : union  xs b
-         EQ -> x : union  xs ys
-         GT -> y : union  a  ys
+primesSE = 2 : sieve 3 4 (tail primesSE) (inits primesSE)
+               where
+               sieve x q ps (fs:ft) =
+                  foldl minus [x..q-1] [[n, n+f..q-1] | f <- fs, let n=div x f * f]
+                          -- [i|(i,True) <- assocs ( accumArray (\ b c -> False)
+                          --     True (x,q-1) [(i,()) | f <- fs, let n=div(x+f-1)f*f,
+                          --         i <- [n, n+f..q-1]] :: UArray Int Bool )]
+                  ++ sieve q (head ps^2) (tail ps) ft

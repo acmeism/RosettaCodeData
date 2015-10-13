@@ -17,8 +17,8 @@ constant mapping = :OPEN(' '),
 		   :TODO< x >,
 	          :TRIED< · >;
 
-enum Code (mapping.map: *.key);
-my @code = mapping.map: *.value;
+enum Sym (mapping.map: *.key);
+my @ch = mapping.map: *.value;
 
 enum Direction <DeadEnd Up Right Down Left>;
 
@@ -28,13 +28,13 @@ sub gen_maze ( $X,
                $start_y = (^$Y).pick * 2 + 1 )
 {
     my @maze;
-    push @maze, [ ES, -N, (ESW, EW) xx $X - 1, SW ];
-    push @maze, [ (NS, TODO) xx $X, NS ];
+    push @maze, $[ flat ES, -N, (ESW, EW) xx $X - 1, SW ];
+    push @maze, $[ flat (NS, TODO) xx $X, NS ];
     for 1 ..^ $Y {
-	push @maze, [ NES, EW, (NESW, EW) xx $X - 1, NSW ];
-	push @maze, [ (NS, TODO) xx $X, NS ];
+	push @maze, $[ flat NES, EW, (NESW, EW) xx $X - 1, NSW ];
+	push @maze, $[ flat (NS, TODO) xx $X, NS ];
     }
-    push @maze, [ NE, (EW, NEW) xx $X - 1, -NS, NW ];
+    push @maze, $[ flat NE, (EW, NEW) xx $X - 1, -NS, NW ];
     @maze[$start_y][$start_x] = OPEN;
 
     my @stack;
@@ -75,12 +75,12 @@ sub gen_maze ( $X,
 
 sub display (@maze) {
     for @maze -> @y {
-	for @y -> $w, $c {
-	    print @code[abs $w];
-	    if $c >= 0 { print @code[$c] x 3 }
-	    else { print ' ', @code[abs $c], ' ' }
+	for @y.rotor(2) -> ($w, $c) {
+	    print @ch[abs $w];
+	    if $c >= 0 { print @ch[$c] x 3 }
+	    else { print ' ', @ch[abs $c], ' ' }
 	}
-	say @code[@y[*-1]];
+	say @ch[@y[*-1]];
     }
 }
 

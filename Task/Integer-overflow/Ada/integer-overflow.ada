@@ -43,9 +43,9 @@ begin
    P_UB; P_SB; P_UW; P_Th; P_SD; P_Cr;
    New_Line;
 
-   Put_Line("Forcing a variable to overflow:");
+   Put_Line("Forcing a variable of type Crazy to overflow:");
    loop -- endless loop
       Put("  " & Crazy'Image(A) &  "+1");
-      A := A + 1;
+      A := A + 1; -- line 49 -- this will later raise a CONSTRAINT_ERROR
    end loop;
 end Overflow;

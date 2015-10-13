@@ -11,5 +11,5 @@ assert 1002 -: nextHarshad 1000
    NB. next Harshad number in base 6.  Input and output are in base 6.
    NB. Verification left to you, gentle programmer.
    nextHarshad_base_6 =: (>: Until (6&isHarshad))@:>:
-   6#.inv nextHarshad_base_6 6b23235
-2 3 2 5 3
+   ' '-.~":6#.inv nextHarshad_base_6 6b23235
+23253

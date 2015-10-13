@@ -13,5 +13,5 @@ sub balanced($s) {
 }
 
 my $n = prompt "Number of brackets";
-my $s = (<[ ]> xx $n).pick(*).join;
+my $s = (<[ ]> xx $n).flat.pick(*).join;
 say "$s {balanced($s) ?? "is" !! "is not"} well-balanced"

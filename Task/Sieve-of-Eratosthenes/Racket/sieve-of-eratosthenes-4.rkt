@@ -1,17 +1,14 @@
-#lang racket
-(require data/bit-vector)
-(define (eratosthenes limit)
-    " Returns a list of prime numbers up to natural number limit "
-    (let ((bv (make-bit-vector (+ limit 1) #f)))
-      (bit-vector-set! bv 0 #t)
-      (bit-vector-set! bv 1 #t)
-      (for ((i (in-range (sqrt limit))))
-        (when (false? (bit-vector-ref bv i))
-          (for ((j (in-range (+ i i) (bit-vector-length bv) i)))
-            (bit-vector-set! bv j #t))))
-      ;; Translate bit-vector into list of primes using recursion
-      ;; may as well use the list comprehension from the second version, which does the same thing
-      (let recur ((i 2)) (cond ((> i limit) '())
-                               ((false? (bit-vector-ref bv i)) (cons i (recur (+ i 1))))
-                               (else (recur (+ i 1)))))))
-(eratosthenes 100)
+#lang lazy
+(define (ints-from i d) (cons i (ints-from (+ i d) d)))
+(define (after n l f)
+  (if (< (car l) n) (cons (car l) (after n (cdr l) f)) (f l)))
+(define (diff l1 l2)
+  (let ([x1 (car l1)] [x2 (car l2)])
+    (cond [(< x1 x2) (cons x1 (diff (cdr l1)      l2 ))]
+          [(> x1 x2)          (diff      l1  (cdr l2)) ]
+          [else               (diff (cdr l1) (cdr l2)) ])))
+(define (union l1 l2)        ; union of two lists
+  (let ([x1 (car l1)] [x2 (car l2)])
+    (cond [(< x1 x2) (cons x1 (union (cdr l1)      l2 ))]
+          [(> x1 x2) (cons x2 (union      l1  (cdr l2)))]
+          [else      (cons x1 (union (cdr l1) (cdr l2)))])))

@@ -1,10 +1,10 @@
 sub deconvolve (@g, @f) {
     my $h = 1 + @g - @f;
     my @m;
-    @m[^@g]>>.[^$h] >>+=>> 0;
-    @m[^@g]>>.[$h] >>=<< @g;
+    @m[^@g;^$h] >>+=>> 0;
+    @m[^@g;$h] >>=<< @g;
     for ^$h -> $j { for @f.kv -> $k, $v { @m[$j + $k][$j] = $v } }
-    return rref( @m )[^$h]>>.[$h];
+    return rref( @m )[^$h;$h];
 }
 
 sub convolve (@f, @h) {
@@ -16,7 +16,7 @@ sub convolve (@f, @h) {
 # Reduced Row Echelon Form simultaneous equation solver.
 # Can handle over-specified systems of equations.
 # (n unknowns in n + m equations)
-sub rref ($m is rw) {
+sub rref ($m is copy) {
     return unless $m;
     my ($lead, $rows, $cols) = 0, +$m, +$m[0];
 
@@ -41,7 +41,7 @@ sub rref ($m is rw) {
         $m[$r] >>/=>> $lv;
         for ^$rows -> $n {
             next if $n == $r;
-            $m[$n] >>-=>> $m[$r] >>*>> $m[$n][$lead];
+            $m[$n] >>-=>> $m[$r] >>*>> ($m[$n][$lead]//0);
         }
         ++$lead;
     }

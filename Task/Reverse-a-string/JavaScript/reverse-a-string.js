@@ -10,7 +10,6 @@ function reverseStr(s) {
 }
 
 //fast method using while loop (faster with long strings in some browsers when compared with for loop)
-
 function reverseStr(s) {
   var i = s.length, o = '';
   while (i--) o += s[i];

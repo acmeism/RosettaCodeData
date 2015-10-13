@@ -1,1 +1,1 @@
-print "Goodbye, World!\n";
+print "Hello world!\n";

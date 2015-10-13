@@ -13,7 +13,7 @@ sub int-name ($num) {
     if $num eq '0' { return @I[0] }
     my $m = 0;
     return join ', ', reverse gather for $num.flip.comb(/\d ** 1..3/) {
-        my ($i,$x,$c) = .comb;
+        my ($i,$x,$c) = .comb».Int;
         if $i or $x or $c {
             take join ' ', gather {
                 if $c { take @C[$c] }

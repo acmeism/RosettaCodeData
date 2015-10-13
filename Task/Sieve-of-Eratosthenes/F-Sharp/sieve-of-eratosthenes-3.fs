@@ -1,11 +1,24 @@
-let primes limit =
-  let buf = System.Collections.BitArray(int limit + 1, true)
-  let cull p = { p * p .. p .. limit } |> Seq.iter (fun c -> buf.[int c] <- false)
-  { 2u .. uint32 (sqrt (double limit)) } |> Seq.iter (fun c -> if buf.[int c] then cull c)
-  { 2u .. limit } |> Seq.map (fun i -> if buf.[int i] then i else 0u) |> Seq.filter ((<>) 0u)
+type CIS<'T> = struct val v:'T val cont:unit->CIS<'T> //'Co Inductive Stream for laziness
+                      new (v,cont) = { v = v; cont = cont } end
+type Prime = uint32
 
-[<EntryPoint>]
-let main argv =
-  if argv = null || argv.Length = 0 then failwith "no command line argument for limit!!!"
-  printfn "%A" (primes (System.UInt32.Parse argv.[0]) |> Seq.length)
-  0 // return an integer exit code
+let primesTreeFold() =
+  let rec (^^) (xs: CIS<Prime>) (ys: CIS<Prime>) = // merge streams; no duplicates
+    let x = xs.v in let y = ys.v
+    if x < y then CIS(x, fun() -> xs.cont() ^^ ys)
+    elif y < x then CIS(y, fun() -> xs ^^ ys.cont())
+    else CIS(x, fun() -> xs.cont() ^^ ys.cont())
+  let pmltpls p = let adv = p + p
+                  let rec nxt c = CIS(c, fun() -> nxt (c + adv)) in nxt (p * p)
+  let rec allmltps (ps: CIS<Prime>) = CIS(pmltpls ps.v, fun() -> allmltps (ps.cont()))
+  let rec pairs (css: CIS<CIS<Prime>>) =
+    let ncss = css.cont()
+    CIS(css.v ^^ ncss.v, fun() -> pairs (ncss.cont()))
+  let rec cmpsts (css: CIS<CIS<Prime>>) =
+    CIS(css.v.v, fun() -> (css.v.cont()) ^^ (cmpsts << pairs << css.cont)())
+  let rec minusat n (cs: CIS<Prime>) =
+    if n < cs.v then CIS(n, fun() -> minusat (n + 2u) cs)
+    else minusat (n + 2u) (cs.cont())
+  let rec oddprms() = CIS(3u, fun() -> (minusat 5u << cmpsts << allmltps) (oddprms()))
+  Seq.unfold (fun (ps: CIS<Prime>) -> Some(ps.v, ps.cont()))
+             (CIS(2u, fun() -> (minusat 3u << cmpsts << allmltps) (oddprms())))

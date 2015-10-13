@@ -1,18 +1,19 @@
 package main
 
-import "fmt"
+import (
+    "fmt"
 
-func main() {
-    fmt.Println(I(3))
-}
+    "github.com/gonum/matrix/mat64"
+)
 
-func I(n int) [][]float64 {
-    m := make([][]float64, n)
-    a := make([]float64, n*n)
+func eye(n int) *mat64.Dense {
+    m := mat64.NewDense(n, n, nil)
     for i := 0; i < n; i++ {
-        a[i] = 1
-        m[i] = a[:n]
-        a = a[n:]
+        m.Set(i, i, 1)
     }
     return m
+}
+
+func main() {
+    fmt.Println(mat64.Formatted(eye(3)))
 }

@@ -1,64 +1,41 @@
-note
-	description : "project application root class"
-	date        : "$Date$"
-	revision    : "$Revision$"
-
 class
 	APPLICATION
-
-inherit
-	ARGUMENTS
 
 create
 	make
 
 feature {NONE}
 
-	array : ARRAY[INTEGER]
-
 	make
-		do
-			create array.make_filled (0, 0, 4)
-			array.put (2, 0)
-			array.put (4, 1)
-			array.put (6, 2)
-			array.put (8, 3)
-			array.put (10, 4)
-
-			print("%NSum of the elements of the array: ")
-			print(sum(array))
-			print("%NProduct of the elements of the array: ")
-			print(product(array))
-		end
-
-	sum(ar : ARRAY[INTEGER]):INTEGER
 		local
-			s, i: INTEGER
+			test: ARRAY [INTEGER]
 		do
-			from
-				i := 0
-			until
-				i > 4
-			loop
-				s := s + ar[i]
-				i := i + 1
-			end
-			Result := s
+			create test.make_empty
+			test := <<5, 1, 9, 7>>
+			io.put_string ("Sum: " + sum (test).out)
+			io.new_line
+			io.put_string ("Product: " + product (test).out)
 		end
 
-	product(ar : ARRAY [INTEGER]):INTEGER
-		local
-			prod, i: INTEGER
+	sum (ar: ARRAY [INTEGER]): INTEGER
+			-- Sum of the items of the array 'ar'.
 		do
-			prod := 1
-			from
-				i := 0
-			until
-				i > 4
+			across
+				ar.lower |..| ar.upper as c
 			loop
-				prod := prod * ar[i]
-				i := i + 1
+				Result := Result + ar [c.item]
 			end
-			Result := prod
 		end
+
+	product (ar: ARRAY [INTEGER]): INTEGER
+			-- Product of the items of the array 'ar'.
+		do
+			Result := 1
+			across
+				ar.lower |..| ar.upper as c
+			loop
+				Result := Result * ar [c.item]
+			end
+		end
+
 end

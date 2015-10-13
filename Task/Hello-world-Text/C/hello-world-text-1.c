@@ -3,6 +3,6 @@
 
 int main(void)
 {
-  printf("Goodbye, World!\n");
+  printf("Hello world!\n");
   return EXIT_SUCCESS;
 }

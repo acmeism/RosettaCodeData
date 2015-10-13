@@ -1,87 +1,105 @@
 class
-	PANCAKE_SORT
-create
-	make
-feature{NONE}
-    arraymax(array: ARRAY [INTEGER]; upper: INTEGER):INTEGER
-        require
-		upper_index_positive: upper >=0
-		array_exists: array/= void
-        local
-                i, cur_max, index: INTEGER
-        do
-                from
-                        i:=1
-                        cur_max := array.item (i)
-                        index := i
-                until
-                        i+1 > upper
-                loop
-                        if  array.item(i+1) > cur_max then
-                                cur_max := array.item(i+1)
-                                index := i+1
-                        end
-                        i := i + 1
-                end
-                Result:=index
-        ensure
-       		Index_positive: Result > 0
-        end
+	PANCAKE_SORT [G -> COMPARABLE]
 
-    reverse_array(ar:ARRAY[INTEGER]; upper:INTEGER):ARRAY[INTEGER]
-        require
-    		upper_positive: upper >0
-    		ar_not_void: ar /= void
-    	local
-    		i,j:INTEGER
-    		new_array: ARRAY[INTEGER]
-    	do
-    		create new_array.make_empty
-			new_array.copy (ar)
+feature {NONE}
+
+	arraymax (array: ARRAY [G]; upper: INTEGER): INTEGER
+			--- Max item of 'array' between index 1 and 'upper'.
+		require
+			upper_index_positive: upper >= 0
+			array_not_void: array /= Void
+		local
+			i: INTEGER
+			cur_max: G
+		do
 			from
-				i:= 1
-				j:=upper
+				i := 1
+				cur_max := array.item (i)
+				Result := i
 			until
-				i>j
+				i + 1 > upper
 			loop
-				new_array[i]:=ar[j]
-				new_array[j]:=ar[i]
-				i:=i+1
-				j:=j-1
+				if array.item (i + 1) > cur_max then
+					cur_max := array.item (i + 1)
+					Result := i + 1
+				end
+				i := i + 1
 			end
-			Result:= new_array
-        ensure
-			same_length: ar.count = Result.count
-    	end
-
-   sort(ar:ARRAY[INTEGER]):ARRAY[INTEGER]
-    	local
-    		i:INTEGER
-    	do
-    		my_array:=ar
-		from
-			i:=ar.count
-		until
-			i=1
-		loop
-			my_array:=reverse_array(reverse_array(my_array, arraymax(my_array,i)),i)
-			i:=i-1
+		ensure
+			Index_positive: Result > 0
 		end
-    		Result := my_array
-        ensure
-    		same_length: ar.count= Result.count
-    	end
 
-    my_array:ARRAY[INTEGER]
+	reverse_array (ar: ARRAY [G]; upper: INTEGER): ARRAY [G]
+			-- Array reversed from index one to upper.
+		require
+			upper_positive: upper > 0
+			ar_not_void: ar /= Void
+		local
+			i, j: INTEGER
+			new_array: ARRAY [G]
+		do
+			create Result.make_empty
+			Result.deep_copy (ar)
+			from
+				i := 1
+				j := upper
+			until
+				i > j
+			loop
+				Result [i] := ar [j]
+				Result [j] := ar [i]
+				i := i + 1
+				j := j - 1
+			end
+		ensure
+			same_length: ar.count = Result.count
+		end
+
+	sort (ar: ARRAY [G]): ARRAY [G]
+			-- Sorted array in ascending order.
+		local
+			i: INTEGER
+		do
+			create Result.make_empty
+			Result.deep_copy (ar)
+			from
+				i := ar.count
+			until
+				i = 1
+			loop
+				Result := reverse_array (reverse_array (Result, arraymax (Result, i)), i)
+				i := i - 1
+			end
+		ensure
+			same_length: ar.count = Result.count
+			Result_sorted: is_sorted (Result)
+		end
+
+	is_sorted (ar: ARRAY [G]): BOOLEAN
+			--- Is 'ar' sorted in ascending order?
+		require
+			ar_not_empty: ar.is_empty = False
+		local
+			i: INTEGER
+		do
+			Result := True
+			from
+				i := ar.lower
+			until
+				i = ar.upper
+			loop
+				if ar [i] > ar [i + 1] then
+					Result := False
+				end
+				i := i + 1
+			end
+		end
 
 feature
-    make(ar:ARRAY[INTEGER])
-    	do
-    		create my_array.make_from_array(ar)
-    	end
 
-    pancake_sort:ARRAY[INTEGER]
-    	do
-    		Result:= sort(my_array)
-    	end
+	pancake_sort (ar: ARRAY [G]): ARRAY [G]
+		do
+			Result := sort (ar)
+		end
+
 end

@@ -1,14 +1,7 @@
-h = {"one":1, "two":2, "three":3}
-for (x in h) print(x);
-/*
-two
-one
-three
-*/
-
-for each (y in h) print(y);
-/*
-2
-1
-3
-*/
+console.log(
+  "alpha beta gamma delta".split(' ').reduce(
+    function (a, x, i, lst) {
+      return lst.length - i + '. ' + x + '\n' + a;
+    }, ''
+  )
+)

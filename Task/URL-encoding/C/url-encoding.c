@@ -5,7 +5,7 @@ char rfc3986[256] = {0};
 char html5[256] = {0};
 
 /* caller responsible for memory */
-void encode(unsigned char *s, char *enc, char *tb)
+void encode(const char *s, char *enc, char *tb)
 {
 	for (; *s; s++) {
 		if (tb[*s]) sprintf(enc, "%c", tb[*s]);
@@ -16,8 +16,8 @@ void encode(unsigned char *s, char *enc, char *tb)
 
 int main()
 {
-	unsigned char url[] = "http://foo bar/";
-	char enc[sizeof(url) * 3];
+	const char url[] = "http://foo bar/";
+	char enc[(strlen(url) * 3) + 1];
 
 	int i;
 	for (i = 0; i < 256; i++) {

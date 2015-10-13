@@ -1,3 +1,4 @@
 function countSubstring(str, subStr){
-	return str.match(new RegExp(subStr, "g")).length
+	var matches=str.match(new RegExp(subStr, "g"));
+	return matches?matches.length:0;
 }

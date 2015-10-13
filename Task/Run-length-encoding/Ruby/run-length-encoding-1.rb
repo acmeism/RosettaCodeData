@@ -1,9 +1,14 @@
-def encode(string)
-  string.scan(/(.)(\1*)/).collect do |char, repeat|
-    [1 + repeat.length, char]
-  end.join
+# run_encode("aaabbbbc") #=> [["a", 3], ["b", 4], ["c", 1]]
+def run_encode(string)
+  string
+    .chars
+    .chunk{|i| i}
+    .map {|kind, array| [kind, array.length]}
 end
 
-def decode(string)
-  string.scan(/(\d+)(\D)/).collect {|length, char| char * length.to_i}.join
+# run_decode([["a", 3], ["b", 4], ["c", 1]]) #=> "aaabbbbc"
+def run_decode(char_counts)
+  char_counts
+    .map{|char, count| char * count}
+    .join
 end

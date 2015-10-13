@@ -1,1 +1,0 @@
-say [+] .words for lines

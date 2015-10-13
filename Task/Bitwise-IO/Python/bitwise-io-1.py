@@ -5,7 +5,10 @@ class BitWriter:
         self.out = f
 
     def __del__(self):
-        self.flush()
+        try:
+            self.flush()
+        except ValueError:  # I/O operation on closed file
+            pass
 
     def writebit(self, bit):
         if self.bcount == 8 :

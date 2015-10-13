@@ -58,7 +58,10 @@ coinsert 'mineswpeng'        NB. insert game engine locale in copath
 
 Tiles=: ' 12345678**.?'
 
-create=: ] startgame@[ smoutput bind Instructions
+create=: verb define
+  smoutput Instructions
+  startgame y
+)
 destroy=: codestroy
 quit=: destroy
 

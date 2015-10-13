@@ -1,11 +1,7 @@
-/*REXX program calculates and displays   N-step  Fibonacci   sequences. */
-parse arg FibName values               /*allow user to specify which Fib*/
-
-if FibName\='' then do                 /*if specified, show that Fib.   */
-                    call  nStepFib  FibName, values
-                    exit               /*stick a fork in it, we're done.*/
-                    end
-                                       /*nothing given, so show a bunch.*/
+/*REXX program  calculates and displays a   N-step   Fibonacci   sequence(s). */
+parse arg FibName values               /*allows a Fibonacci name, starter vals*/
+if FibName\=''  then do;  call nStepFib  FibName,values;    signal done;    end
+                                       /* [↓]  no args specified, show a bunch*/
 call  nStepFib  'Lucas'       ,   2 1
 call  nStepFib  'fibonacci'   ,   1 1
 call  nStepFib  'tribonacci'  ,   1 1 2
@@ -19,22 +15,21 @@ call  nStepFib  'decanacci'   ,   1 1 2 4 8 16 32 64 128 256
 call  nStepFib  'undecanacci' ,   1 1 2 4 8 16 32 64 128 256 512
 call  nStepFib  'dodecanacci' ,   1 1 2 4 8 16 32 64 128 256 512 1024
 call  nStepFib  '13th-order'  ,   1 1 2 4 8 16 32 64 128 256 512 1024 2048
-exit                                   /*stick a fork in it, we're done.*/
-
-/*──────────────────────────────────NSTEPFIB subroutine─────────────────*/
-nStepFib:  procedure;  parse arg Fname,vals,m;   if m=='' then m=30;    L=
+done:  exit                            /*stick a fork in it,  we're all done. */
+/*────────────────────────────────────────────────────────────────────────────*/
+nStepFib:  procedure;  parse arg Fname,vals,m;    if m==''  then m=30;      L=
 N=words(vals)
-                            do pop=1  for N       /*use  N  initial vals*/
-                            @.pop=word(vals,pop)  /*populate initial #s.*/
-                            end   /*pop*/
-        do j=1  for m                  /*calculate  M  Fibonacci numbers*/
-        if j>N then do;  @.j=0                      /*inialize the sum. */
-                                do k=j-N  for N     /*sum the last N #.s*/
-                                @.j=@.j+@.k         /*add the [N-j]th #.*/
-                                end   /*k*/
-                    end
-        L=L  @.j                       /*append this Fib num to the list*/
+                             do pop=1  for N        /*use  N  initial values. */
+                             @.pop=word(vals,pop)   /*populate initial numbers*/
+                             end   /*pop*/
+        do j=1  for m                               /*calculate M Fib numbers.*/
+        if j>N  then do;  @.j=0                     /*initialize the sum to 0.*/
+                                 do k=j-N  for N    /*sum the last  N numbers.*/
+                                 @.j=@.j+@.k        /*add the  [N-j]th number.*/
+                                 end   /*k*/
+                     end
+        L=L  @.j                                    /*append Fib number──►list*/
         end   /*j*/
 
-say right(Fname,11)'[sum'right(N,3) "terms]:" strip(L) '...'   /*show #s*/
+say right(Fname,11)'[sum'right(N,3)    "terms]:"     strip(L)    '···'
 return

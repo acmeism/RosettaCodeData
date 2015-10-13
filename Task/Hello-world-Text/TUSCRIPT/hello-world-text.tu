@@ -1,2 +1,2 @@
 $$ MODE TUSCRIPT
-PRINT "Goodbye, World!"
+PRINT "Hello world!"

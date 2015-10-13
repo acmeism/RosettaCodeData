@@ -1,5 +1,5 @@
 gifts = "A partridge in a pear tree
-Two turtle doves
+Two turtle doves and
 Three french hens
 Four calling birds
 Five golden rings
@@ -19,5 +19,4 @@ days.each_with_index do |day, i|
   puts "My true love gave to me:"
   puts gifts[0, i+1].reverse
   puts
-  gifts[1] << " and" if i == 0
 end

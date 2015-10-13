@@ -1,28 +1,25 @@
-/*REXX program to display Pascal's triangle,  neatly centered/formatted.*/
-/*AKA:   Yang Hui's ▲,   Khayyam-Pascal ▲,   Kyayyam ▲,   Tartaglia's ▲ */
-numeric digits 1000                    /*let's be able to handle big ▲. */
-arg nn .;   if nn==''  then nn=10;     n=abs(nn)
-a. = 1                                 /*if NN < 0, output is to a file.*/
-mx = !(n-1) / !(n%2) / !(n-1-n%2)      /*MX =biggest number in triangle.*/
-w = length(mx)                         /* W =width of biggest number.   */
-line. = 1
-
-  do row=1  for n;    prev=row-1
-  a.row.1 = 1
-                      do j=2  to row-1;     jm=j-1
-                      a.row.j = a.prev.jm + a.prev.j
-                      line.row = line.row   right(a.row.j,w)
-                      end   /*j*/
-
-  if row\==1  then line.row=line.row right(1,w)   /*append the last "1".*/
-  end    /*row*/
-
-width=length(line.n)                   /*width of last line in triangle.*/
-
-        do L=1  for n                  /*show lines in Pascal's triangle*/
-        if nn>0 then say center(line.L,width)     /*either SAY or write.*/
-                else call  lineout  'PASCALS.'n, center(line.L,width)
-        end   /*L*/
-exit                                   /*stick a fork in it, we're done.*/
-/*─────────────────────────────────────! (factorial) subroutine─────────*/
-!: procedure; arg x;!=1;do j=2 to x;!=!*j;end;return ! /*calc. factorial*/
+/*REXX program displays Pascal's triangle (centered/formatted); also known as:*/
+/*────────── Yang Hui's, Khayyam─Pascal, Kyayyam, and/or Tartaglia's triangle.*/
+numeric digits 3000                    /*be able to handle gihugeic triangles.*/
+parse arg nn .;  if nn==''  then nn=10 /*use default if  NN  wasn't specified.*/
+N=abs(nn)                              /*N  is the number of rows in triangle.*/
+@.=1;    $.=@.                         /*default value for rows and for lines.*/
+w=length(!(N-1) / !(N%2) / !(N-1-N%2)) /*W  is the width of the biggest number*/
+                                       /* [↓]  build rows of Pascals' triangle*/
+  do   r=1  for N;     rm=r-1          /*Note:  the first column is always  1.*/
+    do c=2  to rm;     cm=c-1          /*build the rest of the columns in row.*/
+    @.r.c= @.rm.cm + @.rm.c            /*assign value to a specific row & col.*/
+    $.r  = $.r     right(@.r.c, w)     /*and construct a line for output (row)*/
+    end   /*c*/                        /* [↑]    C  is the column being built.*/
+  if r\==1  then $.r=$.r right(1, w)   /*for most rows, append a trailing "1".*/
+  end     /*r*/                        /* [↑]    R  is the  row   being built.*/
+                                       /* [↑]  WIDTH: for nicely looking line.*/
+width=length($.N)                      /*width of the last (output) line (row)*/
+                                       /*if NN<0, output is written to a file.*/
+        do r=1  for N                  /*show│write lines (rows) of triangle. */
+        if nn>0  then say  center($.r, width)                        /*SAY, or*/
+                 else call lineout  'PASCALS.'n, center($.r, width)  /*write. */
+        end   /*r*/
+exit                                   /*stick a fork in it,  we're all done. */
+/*──────────────────────────────────! subroutine  (factorial)─────────────────*/
+!: procedure;  parse arg x;  !=1;     do j=2  to x;  !=!*j;  end;       return !

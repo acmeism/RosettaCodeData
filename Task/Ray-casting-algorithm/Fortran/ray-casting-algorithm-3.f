@@ -20,7 +20,7 @@ program Pointpoly
   polys(3) = create_polygon(pts, (/ 1,5, 5,4, 4,8, 8,7, 7,3, 3,2, 2,5 /) )
   polys(4) = create_polygon(pts, (/ 11,12, 12,10, 10,13, 13,14, 14,9, 9,11 /) )
 
-  names = (/ "square", "square hole", "strange", "exagon" /)
+  names = (/ "square", "square hole", "strange", "hexagon" /)
 
   p = (/ point(5,5), point(5, 8), point(-10, 5), point(0,5), point(10,5), &
          point(8,5), point(10,10) /)

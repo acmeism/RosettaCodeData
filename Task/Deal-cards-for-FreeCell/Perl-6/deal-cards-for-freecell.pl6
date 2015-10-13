@@ -5,7 +5,7 @@ sub dealgame ($game-number = 1) {
     my @ms-lcg := (&ms-lcg-method ... *).map: * +> 16;
 
     constant CardBlock = '🂠'.ord;
-    my @deck = gather for 1..11,13,14 X+ (48,32...0) -> $off {
+    my @deck = gather for flat(1..11,13,14) X+ (48,32...0) -> $off {
         take chr CardBlock + $off;
     }
 

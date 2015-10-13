@@ -1,12 +1,14 @@
->>> import sys, math
->>> int(round(math.log(sys.maxint,2)+1)) # this only works in Python 2.x
-32
->>> import struct
->>> struct.calcsize('i') * 8
-32
+>>> import platform, sys, socket
+>>> platform.architecture()
+('64bit', 'ELF')
+>>> platform.machine()
+'x86_64'
+>>> platform.node()
+'yourhostname'
+>>> platform.system()
+'Linux'
 >>> sys.byteorder
 little
->>> import socket
 >>> socket.gethostname()
-'PADDY3118-RESTING'
+'yourhostname'
 >>>

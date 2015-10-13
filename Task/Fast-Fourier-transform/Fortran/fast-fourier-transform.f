@@ -29,9 +29,7 @@ contains
 
     ! combine
     do i=1,N/2
-
-
-t=exp(cmplx(0.0_dp,-2.0_dp*pi*real(i-1,dp)/real(N,dp),KIND=DP))*even(i)
+       t=exp(cmplx(0.0_dp,-2.0_dp*pi*real(i-1,dp)/real(N,dp),kind=dp))*even(i)
        x(i)     = odd(i) + t
        x(i+N/2) = odd(i) - t
     end do

@@ -1,37 +1,42 @@
-auto powerSet(T)(T[] xs) pure nothrow @safe {
-    static struct Result {
-        T[] xsLocal, output;
-        size_t len;
-        size_t bits;
+import std.range;
 
-        this(T[] xs_) pure nothrow @safe {
-            this.xsLocal = xs_;
-            this.output.length = xs_.length;
-            this.len = 1U << xs_.length;
-        }
+struct PowerSet(R)
+	if (isRandomAccessRange!R)
+{
+	R r;
+	size_t position;
 
-        @property empty() const pure nothrow @safe {
-            return bits == len;
-        }
+	struct PowerSetItem
+	{
+		R r;
+		size_t position;
 
-        void popFront() pure nothrow @safe { bits++; }
-        @property save() pure nothrow @safe { return this; }
+		private void advance()
+		{
+			while (!(position & 1))
+			{
+				r.popFront();
+				position >>= 1;
+			}
+		}
 
-        T[] front() pure nothrow @safe {
-            size_t pos = 0;
-            foreach (immutable size_t i; 0 .. xsLocal.length)
-                if (bits & (1 << i))
-                    output[pos++] = xsLocal[i];
-            return output[0 .. pos];
-        }
-    }
+		@property bool empty() { return position == 0; }
+		@property auto front()
+		{
+			advance();
+			return r.front;
+		}
+		void popFront()
+		{
+			advance();
+			r.popFront();
+			position >>= 1;
+		}
+	}
 
-    return Result(xs);
+	@property bool empty() { return position == (1 << r.length); }
+	@property PowerSetItem front() { return PowerSetItem(r.save, position); }
+	void popFront() { position++; }
 }
 
-version (power_set2_main) {
-    void main() {
-        import std.stdio;
-        [1, 2, 3].powerSet.writeln;
-    }
-}
+auto powerSet(R)(R r) { return PowerSet!R(r); }

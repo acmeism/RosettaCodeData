@@ -1,14 +1,11 @@
-/*REXX program sums the first   N   terms of    1/(i**2),    i=1 ──►  N.*/
-parse arg N D .                        /*maybe get num of terms, digits.*/
-if N=='' | N==','  then N=1000         /*Not specified?  Use the default*/
-if D==''           then D=60           /* "      "        "   "     "   */
-numeric digits D                       /*use D digits: 9 is default for */
-                                       /*REXX, 60 is this pgm's default.*/
-w = length(N)                          /*use max  width for nice output.*/
-sum = 0                                /*initialize the sum to zero.    */
-          do j=1  for N                /*compute for   N   terms.       */
-          sum = sum   +   1 / j**2     /*add another term to the sum.   */
-          end   /*j*/
+/*REXX program sums the first   N   terms of    1/(k**2),    k=1 ──►  N.      */
+parse arg N D .                        /*obtain optional arguments from C.L.  */
+if N=='' | N==','  then N=1000         /*Not specified?  Then use the default.*/
+if D=='' | D==','  then D=  60         /* "      "         "   "   "     "    */
+numeric digits D                       /*use  D  digits  (nine is the default)*/
+$=0                                    /*initialize the sum to zero.          */
+          do k=1  for N                /* [↓]  compute for   N   terms.       */
+          $=$  +  1/k**2               /*add a squared reciprocal to the sum. */
+          end   /*k*/
 
-say  'The sum of'   right(N,w)   "terms is:"   sum
-                                       /*stick a fork in it, we're done.*/
+say 'The sum of'   N   "terms is:"  $  /*stick a fork in it,  we're all done. */

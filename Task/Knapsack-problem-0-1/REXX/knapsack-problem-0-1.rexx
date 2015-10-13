@@ -1,4 +1,4 @@
-/*REXX pgm solves a knapsack problem (22 items with weight restriction).*/
+/*REXX program solves a knapsack problem (22 items with a weight restriction).*/
 @.=;                       @.1  = 'map                       9  150'
                            @.2  = 'compass                  13   35'
                            @.3  = 'water                   153  200'
@@ -22,7 +22,7 @@
                            @.21 = 'socks                     4   50'
                            @.22 = 'book                     30   10'
 maxWeight=400                          /*the maximum weight for knapsack*/
-say;  say 'maximum weight allowed for a knapsack:' comma(maxWeight);  say
+say;  say 'maximum weight allowed for a knapsack:' commas(maxWeight);  say
 maxL=length('item')                    /*maximum width for table names. */
 maxL=length('knapsack items')          /*maximum width for table names. */
 maxW=length('weight')                  /*   "      "    "    "   weights*/
@@ -30,10 +30,10 @@ maxV=length('value')                   /*   "      "    "    "   values.*/
 maxQ=length('pieces')                  /*   "      "    "    "   quant. */
 highQ=0                                /*max quantity specified (if any)*/
 items=0; i.=; w.=0; v.=0; q.=0; Tw=0; Tv=0; Tq=0     /*initialize stuff.*/
-/*────────────────────────────────sort the choices by decreasing weight.*/
+/*════════════════════════════════sort the choices by decreasing weight.*/
                                        /*this minimizes # combinations. */
          do j=1  while @.j\==''        /*process each choice and sort.  */
-         _=@.j;     _wt=word(_,2)      /*choose first item (arbitrary). */
+         _=space(@.j)   _wt=word(_,2)  /*choose first item (arbitrary). */
          _wt=word(_,2)
               do k=j+1  while @.k\=='' /*find a possible heavier item.  */
               ?wt=word(@.k,2)
@@ -41,10 +41,9 @@ items=0; i.=; w.=0; v.=0; q.=0; Tw=0; Tv=0; Tq=0     /*initialize stuff.*/
               end   /*k*/
          end        /*j*/
 obj=j-1                                /*adjust for the DO loop index.  */
-/*────────────────────────────────build list of choices.────────────────*/
+/*════════════════════════════════build list of choices.════════════════*/
       do j=1  for obj                  /*build a list of choices.       */
-      _=space(@.j)                     /*remove superfluous blanks.     */
-      parse var _ item w v q .         /*parse original choice for table*/
+      parse var  @.j  item  w  v  q .  /*parse original choice for table*/
       if w>maxWeight then iterate      /*if the weight > maximum, ignore*/
       Tw=Tw+w;  Tv=Tv+v;  Tq=Tq+1      /*add totals up (for alignment). */
       maxL=max(maxL,length(item))      /*find maximum width for item.   */
@@ -58,11 +57,11 @@ obj=j-1                                /*adjust for the DO loop index.  */
            end   /*k*/
       end        /*j*/
 
-maxW=max(maxW,length(comma(Tw)))       /*find maximum width for weight. */
-maxV=max(maxV,length(comma(Tv)))       /*  "     "      "    "  value.  */
-maxQ=max(maxQ,length(comma(Tq)))       /*  "     "      "    "  quantity*/
+maxW=max(maxW,length(commas(Tw)))      /*find maximum width for weight. */
+maxV=max(maxV,length(commas(Tv)))      /*  "     "      "    "  value.  */
+maxQ=max(maxQ,length(commas(Tq)))      /*  "     "      "    "  quantity*/
 maxL=maxL+maxL%4+4                     /*extend width of name for table.*/
-/*────────────────────────────────show the list of choices.─────────────*/
+/*════════════════════════════════show the list of choices.═════════════*/
 call hdr 'item';    do j=1  for obj    /*show all choices, nice format. */
                     parse var @.j item weight value q .
                     if highq==1  then  q=
@@ -71,9 +70,9 @@ call hdr 'item';    do j=1  for obj    /*show all choices, nice format. */
                     end   /*j*/
 
 say;    say 'number of items:' items;    say
-/*─────────────────────────────────────examine all the possible choices.*/
+/*═════════════════════════════════════examine all the possible choices.*/
 h=items;   ho=h+1;   m=maxWeight;   $=0;   call sim22
-/*─────────────────────────────────────show the best choice (weight,val)*/
+/*═════════════════════════════════════show the best choice (weight,val)*/
                               do h-1;    ?=strip(strip(?),"L",0);    end
 bestC=?;   bestW=0;   bestV=$;   highQ=0;   totP=words(bestC)
 call hdr 'best choice'
@@ -87,36 +86,34 @@ call hdr 'best choice'
                       call show i._,w._,v._,q;    bestW=bestw+w._
                       end         /*j*/
 call hdr2;  say
-call show 'best weight'   ,bestW       /*show a nicely formatted winnerW*/
-call show 'best value'    ,,bestV      /*show a nicely formatted winnerV*/
-call show 'knapsack items',,,totP      /*show a nicely formatted pieces.*/
-exit                                   /*stick a fork in it, we're done.*/
-/*────────────────────────────────COMMA subroutine───────────────────────────────────────────────*/
-comma: procedure; parse arg _,c,p,t;arg ,cu;c=word(c ",",1);if cu=='BLANK' then c=' ';o=word(p 3,1)
-k=0;p=abs(o);t=word(t 999999999,1);if \datatype(p,'W')|\datatype(t,'W')|p==0|arg()>4 then return _
-n=_'.9'; #=123456789; if o<0  then do;  b=verify(_,' ');  if b==0  then return _
-e=length(_)-verify(reverse(_),' ')+1;  end;     else  do;  b=verify(n,#,"M")
-e=verify(n,#'0',,verify(n,#"0.",'M'))-p-1;end;do j=e to b by -p while k<t;_=insert(c,_,j);k=k+1;end
-return _                               /* [↑]  adds commas to the 1st number found in the string.*/
-/*────────────────────────────────HDR subroutine─────────────────────────────────────────────────*/
-hdr:  parse arg _item_,_;       if highq\==1  then _=center('pieces',maxq)
-call show center(_item_ ,maxL),  center('weight',maxW),  center('value',maxV),  center(_,maxQ)
-call hdr2;  return
-/*────────────────────────────────HDR2 subroutine────────────────────────────────────────────────*/
+call show 'best weight'   ,bestW       /*show a nicely formatted winnerW.     */
+call show 'best value'    ,,bestV      /*show a nicely formatted winnerV.     */
+call show 'knapsack items',,,totP      /*show a nicely formatted pieces.      */
+exit                                   /*stick a fork in it,  we're all done. */
+/*────────────────────────────────COMMAS subroutine───────────────────────────*/
+commas: procedure;  parse arg _;   n=_'.9';    #=123456789;    b=verify(n,#,"M")
+        e=verify(n,#'0',,verify(n,#"0.",'M'))-4
+           do j=e  to b  by -3;   _=insert(',',_,j);    end  /*j*/;     return _
+/*────────────────────────────────HDR subroutine──────────────────────────────────────────*/
+hdr: parse arg _item_,_;        if highq\==1  then _=center('pieces',maxq)
+     call show center(_item_,maxL),center('weight',maxW),center('value',maxV),center(_,maxQ)
+     call hdr2;  return
+/*────────────────────────────────HDR2 subroutine─────────────────────────────*/
 hdr2: _=maxQ;    if highq==1  then _=0
-call show copies('=',maxL),copies('=',maxW),copies('=',maxV),copies('=',_)
-return
+      call show copies('=',maxL),copies('=',maxW),copies('=',maxV),copies('=',_)
+      return
 /*────────────────────────────────J? subroutine────────────────────────────────────────*/
 j?: parse arg _,?; $=value('V'_);   do j=1  for _;   ?=? value('J'j);   end;       return
-/*────────────────────────────────SHOW subroutine───────────────────────*/
+/*────────────────────────────────SHOW subroutine─────────────────────────────*/
 show:  parse arg _item,_weight,_value,_quant
        say translate(left(_item,maxL,'─'),,'_'),
-                     right(comma(_weight),maxW),
-                     right(comma(_value ),maxV),
-                     right(comma(_quant ),maxQ)
-return
+                     right(commas(_weight),maxW),
+                     right(commas(_value ),maxV),
+                     right(commas(_quant ),maxQ)
+       return
 /*────────────────────────────────SIM22 subroutine───────────────────────────────────────────────────────────*/
-sim22: do j1=0 for h+1;                                    w1=w.j1;      v1 =    v.j1; if v1>$  then call j?  1
+sim22:
+ do j1 =0 for h+1;                                         w1 =    w.j1; v1 =    v.j1; if v1>$  then call j?  1
  do j2 =j1 +(j1 \==0) to h;if w.j2 +w1>m  then iterate j1; w2 =w1 +w.j2; v2 =v1 +v.j2; if v2>$  then call j?  2
  do j3 =j2 +(j2 \==0) to h;if w.j3 +w2>m  then iterate j2; w3 =w2 +w.j3; v3 =v2 +v.j3; if v3>$  then call j?  3
  do j4 =j3 +(j3 \==0) to h;if w.j4 +w3>m  then iterate j3; w4 =w3 +w.j4; v4 =v3 +v.j4; if v4>$  then call j?  4
@@ -138,5 +135,5 @@ sim22: do j1=0 for h+1;                                    w1=w.j1;      v1 =   
  do j20=j19+(j19\==0) to h;if w.j20+w19>m then iterate j19;w20=w19+w.j20;v20=v19+v.j20;if v20>$ then call j? 20
  do j21=j20+(j20\==0) to h;if w.j21+w20>m then iterate j20;w21=w20+w.j21;v21=v20+v.j21;if v21>$ then call j? 21
  do j22=j21+(j21\==0) to h;if w.j22+w21>m then iterate j21;w22=w21+w.j22;v22=v21+v.j22;if v22>$ then call j? 22
- end; end; end; end; end; end; end; end; end; end; end; end; end; end; end; end; end; end; end; end; end; end
+ end;  end;  end; end; end; end; end; end; end; end; end; end; end; end; end; end; end; end; end; end; end; end
 return

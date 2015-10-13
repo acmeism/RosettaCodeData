@@ -1,3 +1,5 @@
+max({1, 2, 3, 4, 20, 6, 11, 3, 9, 7})
+
 on max(aList)
 	set _curMax to first item of aList
 	repeat with i in (rest of aList)

@@ -1,7 +1,7 @@
 var subject = "Hello world!";
 
 // Two different ways to create the RegExp object
-// Both examples use the exact same pattern... matching "hello"
+// Both examples use the exact same pattern... matching "hello "
 var re_PatternToMatch = /Hello (World)/i; // creates a RegExp literal with case-insensitivity
 var re_PatternToMatch2 = new RegExp("Hello (World)", "i");
 

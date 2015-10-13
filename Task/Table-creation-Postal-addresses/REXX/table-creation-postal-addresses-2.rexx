@@ -1,35 +1,38 @@
-/* REXX ***************************************************************
-* 17.05.2013 Walter Pachl
-* should work with every REXX.
-* I use 0xxx for the tail because this can't be modified
-**********************************************************************/
-USA.=''; USA.0=0
-Call add_usa 'Boston','MA','51 Franklin Street',,'FSF Inc.',,
-                                                           '02110-1301'
-Call add_usa 'Washington','DC','The Oval Office',,
-                  '1600 Pennsylvania Avenue NW','The White House',20500
-call list_usa
-Exit
-
-add_usa:
-z=usa.0+1
-Parse Arg usa.z.0city,,
-          usa.z.0state,,
-          usa.z.0addr,,
-          usa.z.0addr2,,
-          usa.z.0name,,
-          usa.z.0zip
-usa.0=z
-Return
-
-list_usa:
-Do z=1 To usa.0
-                           Say '  name -->' usa.z.0name
-                           Say '  addr -->' usa.z.0addr
-  If usa.z.0addr2<>'' Then Say ' addr2 -->' usa.z.0addr2
-                           Say '  city -->' usa.z.0city
-                           Say ' state -->' usa.z.0state
-                           Say '   zip -->' usa.z.0zip
-  Say copies('-',40)
-  End
-Return
+/*REXX program creates, builds, and lists a table of  U.S.A. postal addresses.*/
+@usa.=;  @usa.0=0                      /*initialize stemmed array & 1st value.*/
+@usa.0=@usa.0+1                        /*bump the unique number for usage.    */
+       call USA '_city'  ,  'Boston'
+       call USA '_state' ,  'MA'
+       call USA '_addr'  ,  "51 Franklin Street"
+       call USA '_name'  ,  "FSF Inc."
+       call USA '_zip'   ,  '02110-1301'
+@usa.0=@usa.0+1                        /*bump the unique number for usage.    */
+       call USA '_city'  ,  'Washington'
+       call USA '_state' ,  'DC'
+       call USA '_addr'  ,  "The Oval Office"
+       call USA '_addr2' ,  "1600 Pennsylvania Avenue NW"
+       call USA '_name'  ,  "The White House"
+       call USA '_zip'   ,  20500
+       call USA 'list'
+exit                                   /*stick a fork in it,  we're all done. */
+/*────────────────────────────────────────────────────────────────────────────*/
+USA: procedure expose @USA.;  parse arg what,txt;            arg ?;   nn=@usa.0
+if ?=='LIST'   then do nn=1  for @usa.0;  call lister;  end  /*nn*/
+               else do
+                    call value '@USA.'nn"."what  , txt
+                    call value '@USA.'nn".upHist", userid()  date()   time()
+                    end
+return
+/*────────────────────────────────────────────────────────────────────────────*/
+tell:      _=value('@USA.'nn"."arg(1))
+        if _\==''  then say  right(translate(arg(1), , '_'),  6)   "──►"   _
+        return
+/*────────────────────────────────────────────────────────────────────────────*/
+lister: call tell '_name'
+        call tell '_addr'
+                           do j=2  until _=='';  call tell '_addr'j;  end  /*j*/
+        call tell '_city'
+        call tell '_state'
+        call tell '_zip'
+        say copies('─', 40)
+        return

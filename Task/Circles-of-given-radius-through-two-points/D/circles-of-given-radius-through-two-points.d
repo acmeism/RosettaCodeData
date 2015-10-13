@@ -20,8 +20,8 @@ pure in {
     if (r.abs < (1.0 / (2.0 ^^ nBits)))
         throw new ValueException("radius of zero");
 
-    if (feqrel(cast()p1.x, cast()p2.x) >= nBits &&
-        feqrel(cast()p1.y, cast()p2.y) >= nBits)
+    if (feqrel(p1.x, p2.x) >= nBits &&
+        feqrel(p1.y, p2.y) >= nBits)
         throw new ValueException("coincident points give" ~
                                  " infinite number of Circles");
 

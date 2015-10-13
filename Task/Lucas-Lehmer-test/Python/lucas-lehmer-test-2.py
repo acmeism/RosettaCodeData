@@ -35,8 +35,31 @@ def lucas_lehmer_fast(n):
         s = 4
         for i in range(2, n):
             sqr = s*s
-            r = (sqr & m) + (sqr >> n)
-            if r >= m:
-                r -= m
-            s = r - 2
+            s = (sqr & m) + (sqr >> n)
+            if s >= m:
+                s -= m
+            s -= 2
         return s == 0
+
+# test taken from the previous rosetta implementation
+
+from math import log
+from sys import stdout
+
+precision = 20000   # maximum requested number of decimal places of 2 ** MP-1 #
+long_bits_width = precision * log(10, 2)
+upb_prime = int( long_bits_width - 1 ) / 2    # no unsigned #
+# upb_count = 45      # find 45 mprimes if int was given enough bits #
+upb_count = 15      # find 45 mprimes if int was given enough bits #
+
+print (" Finding Mersenne primes in M[2..%d]:"%upb_prime)
+
+count=0
+# for p in range(2, upb_prime+1):
+for p in range(2, int(upb_prime+1)):
+  if lucas_lehmer_fast(p):
+    print("M%d"%p),
+    stdout.flush()
+    count += 1
+  if count >= upb_count: break
+print

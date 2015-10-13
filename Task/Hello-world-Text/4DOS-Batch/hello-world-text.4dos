@@ -1,1 +1,1 @@
-echo Goodbye, World!
+echo Hello world!

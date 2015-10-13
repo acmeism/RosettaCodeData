@@ -1,2 +1,2 @@
-macro addem($a,$b) { "($a + $b)" }
-say addem(3,4);   # 7
+say "Foo = $foo\n";  # normal double quotes
+say Q:qq 【Foo = $foo\n】; # a more explicit derivation, new quotes

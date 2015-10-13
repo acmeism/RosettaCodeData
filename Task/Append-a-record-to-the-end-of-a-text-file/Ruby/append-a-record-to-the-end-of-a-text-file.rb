@@ -1,14 +1,14 @@
 Gecos = Struct.new :fullname, :office, :extension, :homephone, :email
 class Gecos
   def to_s
-    "%s,%s,%s,%s,%s" % [fullname, office, extension, homephone, email]
+    "%s,%s,%s,%s,%s" % to_a
   end
 end
 
 # Another way define 'to_s' method
 Passwd = Struct.new(:account, :password, :uid, :gid, :gecos, :directory, :shell) do
   def to_s
-    to_a.map(&:to_s).join(':')
+    to_a.join(':')
   end
 end
 

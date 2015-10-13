@@ -1,1 +1,1 @@
- cat("Goodbye, World!\n")
+ cat("Hello world!\n")

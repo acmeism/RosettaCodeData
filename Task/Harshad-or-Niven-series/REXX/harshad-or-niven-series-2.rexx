@@ -1,23 +1,21 @@
-/*REXX program finds first X Niven numbers; also first Niven number > Y.*/
-parse arg X Y .                        /*get optional arguments:   X  Y */
-if X==''  then X=20                    /*Not specified? Then use default*/
-if Y==''  then Y=1000                  /* "      "        "   "     "   */
-#=0;  $=                               /*Niven# count;  Niven# list.    */
+/*REXX program finds the first  A  Niven numbers; also first Niven number > B.*/
+parse arg A B .                        /*get optional arguments from the C.L. */
+if A=='' | A==','  then A=  20         /*Not specified?  Then use the default.*/
+if B=='' | B==','  then B=1000         /* "      "        "   "    "      "   */
+numeric digits 1+max(8, length(A), length(B))     /*enable use of any sized #s*/
+#=0;  $=                               /*set Niven numbers count;  Niven list.*/
 
-   do j=1  until #==X                  /*let's go Niven number hunting. */
-   if \isNiven(j)  then iterate        /*Not a Niven number?  Then skip.*/
-   #=#+1;  $=$ j                       /*bump Niven# count; add to list.*/
-   end   /*j*/
+  do j=1  until #==A                   /* [↓]  let's go Niven number hunting. */
+  if isNiven(j)  then do; #=#+1; $=$ j; end       /*bump count; append──►list.*/
+  end   /*j*/
 
-say 'first'  X  'Niven numbers:'  $
+say 'first'   A   'Niven numbers:'   $
 
-   do t=Y+1                            /*let's go Niven number searching*/
-   if isNiven(t)  &  t>y  then leave   /*is a Niven #  AND  > Y, show it*/
-   end   /*t*/
+   do t=B+1  until isNiven(t);  end    /*hunt for a Niven (or Harshad) number.*/
 
-say  'first Niven number >'    Y      " is: "      t
-exit                                   /*stick a fork in it, we're done.*/
-/*──────────────────────────────────isNiven subroutine──────────────────*/
-isNiven: procedure;  parse arg ?;      sum = left(?,1)
-             do k=2  to length(?);     sum = sum+substr(?,k,1);  end /*k*/
-return ?//sum==0
+say  'first Niven number >'    B      " is: "      t
+exit                                   /*stick a fork in it,  we're all done. */
+/*────────────────────────────────────────────────────────────────────────────*/
+isNiven: procedure;  parse arg x;                s=0
+                         do k=1  for length(x);  s=s+substr(x,k,1);   end  /*k*/
+         return x//s==0

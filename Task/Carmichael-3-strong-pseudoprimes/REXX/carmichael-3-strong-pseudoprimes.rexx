@@ -20,7 +20,6 @@ carms=0                                /*number of Carmichael #s so far.*/
                                if \isPrime(r)  then iterate
                 carms=carms+1; @.q=r   /*bump Carmichael #; add to array*/
                 if bot==0  then bot=q;   bot=min(bot,q);    top=max(top,q)
-   /*find the maximum.              */
                 end   /*d*/            /* [↑]  find minimum and maximum.*/
              end      /*h3*/
     $=0                                /*display a list of some Carm #s.*/

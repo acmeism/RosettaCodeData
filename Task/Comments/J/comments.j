@@ -9,3 +9,5 @@ Note 'example'
 Another way to record multi-line comments as text is to use 'Note', which is actually
 a simple program that makes it clearer when defined text is used only to provide comment.
 )
+
+'A simple string which is not used is legal, and will be discarded'

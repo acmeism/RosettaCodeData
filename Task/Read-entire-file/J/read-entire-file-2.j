@@ -1,2 +1,2 @@
-   require'jmf'
+   require 'jmf'
    JCHAR map_jmf_ 'var';'foo.txt'

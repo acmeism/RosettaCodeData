@@ -1,0 +1,44 @@
+use std::fs::File;
+use std::io::BufReader;
+use std::io::BufRead;
+
+use std::thread::spawn;
+use std::sync::mpsc::{SyncSender, Receiver, sync_channel};
+
+fn main() {
+    let (tx, rx): (SyncSender<String>, Receiver<String>) = sync_channel::<String>(0);
+
+    // Reader thread.
+    spawn(move || {
+        let file = File::open("input.txt").unwrap();
+        let reader = BufReader::new(file);
+
+        for line in reader.lines() {
+            match line {
+                Ok(msg) => tx.send(msg).unwrap(),
+                Err(e) => println!("{}", e)
+            }
+        }
+
+        drop(tx);
+    });
+
+    // Writer thread.
+    spawn(move || {
+        let mut loop_count: u16 = 0;
+
+        loop {
+            let recvd = rx.recv();
+
+            match recvd {
+                Ok(msg) => {
+                    println!("{}", msg);
+                    loop_count += 1;
+                },
+                Err(_) => break // rx.recv() will only err when tx is closed.
+            }
+        }
+
+        println!("Line count: {}", loop_count);
+    }).join().unwrap();
+}

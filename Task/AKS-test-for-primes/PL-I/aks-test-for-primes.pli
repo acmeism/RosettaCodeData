@@ -1,0 +1,135 @@
+AKS: procedure options (main, reorder); /* 16 September 2015, derived from Fortran */
+
+  /* Coefficients of polynomial expansion */
+  declare coeffs(*) fixed (31) controlled;
+  declare n fixed(3);
+
+
+  /* Point #2 */
+  do n = 0 to 7;
+    call polynomial_expansion(n, coeffs);
+    put edit ( '(x - 1)^', trim(n), ' =' ) (a);
+    call print_polynomial (coeffs);
+  end;
+
+  /* Point #4 */
+   put skip;
+  do n = 2 to 35;
+    if is_prime(n) then put edit ( trim (n) ) (x(1), a);
+  end;
+
+  /* Point #5 */
+  put skip;
+  do n = 2 to 97;
+    if is_prime(n) then put edit ( trim (n) ) (x(1), a);
+  end;
+  put skip;
+
+
+
+  /* Calculate coefficients of (x - 1)^n using binomial theorem */
+polynomial_expansion: procedure (n, coeffs);
+    declare n fixed binary;
+    declare coeffs (*) fixed (31) controlled;
+    declare i fixed binary;
+
+    if allocation(coeffs) > 0 then free coeffs;
+    allocate coeffs (n+1);
+
+    do i = 1 to n + 1;
+      coeffs(i) = binomial(n, i - 1);
+      if iand(n - i - 1, 1) = 1 then coeffs(i) = -coeffs(i);
+    end;
+  end polynomial_expansion;
+
+  /* Calculate binomial coefficient using recurrent relation, as calculation	*/
+  /* using factorial overflows too quickly.					*/
+binomial: procedure (n, k) returns (fixed(31));
+    declare (n, k) fixed;
+    declare i fixed;
+    declare result fixed (31) initial (n);
+
+    if k = 0 then return (1);
+
+    do i = 1 to k - 1;
+      result = (result*(n - i))/(i + 1);
+    end;
+    return (result);
+  end binomial;
+
+  /* Outputs polynomial with given coefficients */
+print_polynomial: procedure (coeffs);
+    declare coeffs (*) fixed (31) controlled;
+    declare ( i, p ) fixed binary;
+    declare non_zero bit (1) aligned;
+    declare (true initial ('1'b), false initial ('0'b)) bit (1);
+
+    if allocation(coeffs) = 0 then return;
+
+    non_zero = false;
+
+    do i = 1 to hbound(coeffs);
+      if coeffs(i) = 0 then iterate;
+
+      p = i - 1;
+
+      if non_zero then
+         do;
+            if coeffs(i) > 0 then
+               put edit ( ' + ' ) (a);
+            else
+               put edit ( ' - ' ) (a);
+         end;
+      else
+        do;
+           if coeffs(i) > 0 then
+              put edit ( '   ' ) (a);
+           else
+              put edit ( ' - ' ) (a);
+        end;
+
+      if p = 0 then
+        put edit ( trim(abs(coeffs(i))) ) (a);
+      else if p = 1 then
+         do;
+            if coeffs(i) = 1 then
+               put edit ( 'x' ) (a);
+            else
+               put edit ( trim(abs(coeffs(i))), 'x' ) (a);
+        end;
+      else
+        do;
+            if coeffs(i) = 1 then
+               put edit ( 'x^', trim(p) ) (a);
+            else
+               put edit (  trim(abs(coeffs(i)) ), 'x^', trim(p)) (a);
+        end;
+
+      non_zero = true;
+    end;
+
+    put skip;
+  end print_polynomial;
+
+  /* Test if n is prime using AKS test. Point #3. */
+is_prime: procedure (n) returns (bit (1));
+    declare n fixed (15);
+    declare result bit (1) aligned;
+    declare coeffs (*) fixed (31) controlled;
+    declare i fixed binary;
+
+    call polynomial_expansion(n, coeffs);
+    coeffs(1) = coeffs(1) + 1;
+    coeffs(n + 1) = coeffs(n + 1) - 1;
+
+    result = '1'b;
+
+    do i = 1 to n + 1;
+      result = result & (mod(coeffs(i), n) = 0);
+    end;
+
+    if allocation(coeffs) > 0 then free coeffs;
+    return (result);
+  end is_prime;
+
+end AKS;

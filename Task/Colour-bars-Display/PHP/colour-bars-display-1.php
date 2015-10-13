@@ -1,12 +1,12 @@
 <?php
-$colors = array(array(255, 255, 255),   // white
+$colors = array(array(  0,   0,   0),   // black
                 array(255,   0,   0),   // red
                 array(  0, 255,   0),   // green
                 array(  0,   0, 255),   // blue
                 array(255,   0, 255),   // magenta
-                array(255, 255,   0),   // yellow
                 array(  0, 255, 255),   // cyan
-                array(  0,   0,   0));  // black
+                array(255, 255,   0),   // yellow
+                array(255, 255, 255));  // white
 
 define('BARWIDTH', 640 / count($colors));
 define('HEIGHT',   480);

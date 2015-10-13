@@ -3,19 +3,8 @@ package main
 import "fmt"
 
 type matrix struct {
-    ele    []float64
     stride int
-}
-
-func matrixFromRows(rows [][]float64) *matrix {
-    if len(rows) == 0 {
-        return &matrix{nil, 0}
-    }
-    m := &matrix{make([]float64, len(rows)*len(rows[0])), len(rows[0])}
-    for rx, row := range rows {
-        copy(m.ele[rx*m.stride:(rx+1)*m.stride], row)
-    }
-    return m
+    ele    []float64
 }
 
 func (m *matrix) print(heading string) {
@@ -32,7 +21,7 @@ func (m1 *matrix) mul(m2 *matrix) (m3 *matrix, ok bool) {
     if m1.stride*m2.stride != len(m2.ele) {
         return nil, false
     }
-    m3 = &matrix{make([]float64, (len(m1.ele)/m1.stride)*m2.stride), m2.stride}
+    m3 = &matrix{m2.stride, make([]float64, (len(m1.ele)/m1.stride)*m2.stride)}
     for m1c0, m3x := 0, 0; m1c0 < len(m1.ele); m1c0 += m1.stride {
         for m2r0 := 0; m2r0 < m2.stride; m2r0++ {
             for m1x, m2x := m1c0, m2r0; m2x < len(m2.ele); m2x += m2.stride {
@@ -46,7 +35,7 @@ func (m1 *matrix) mul(m2 *matrix) (m3 *matrix, ok bool) {
 }
 
 func zero(rows, cols int) *matrix {
-    return &matrix{make([]float64, rows*cols), cols}
+    return &matrix{cols, make([]float64, rows*cols)}
 }
 
 func eye(n int) *matrix {
@@ -114,15 +103,15 @@ func (a *matrix) lu() (l, u, p *matrix) {
 }
 
 func main() {
-    showLU(matrixFromRows([][]float64{
-        {1, 3, 5},
-        {2, 4, 7},
-        {1, 1, 0}}))
-    showLU(matrixFromRows([][]float64{
-        {11, 9, 24, 2},
-        {1, 5, 2, 6},
-        {3, 17, 18, 1},
-        {2, 5, 7, 1}}))
+    showLU(&matrix{3, []float64{
+        1, 3, 5,
+        2, 4, 7,
+        1, 1, 0}})
+    showLU(&matrix{4, []float64{
+        11, 9, 24, 2,
+        1, 5, 2, 6,
+        3, 17, 18, 1,
+        2, 5, 7, 1}})
 }
 
 func showLU(a *matrix) {

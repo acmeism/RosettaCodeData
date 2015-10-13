@@ -8,8 +8,8 @@ def variable_counter(b)
     end
   end
 
-  Kernel.global_variables.each {|varname| check_var.call(varname, eval(varname))}
-  eval('local_variables', b).each {|varname| check_var.call(varname, eval(varname, b))}
+  global_variables.each {|varname| check_var.call(varname, eval(varname.to_s))}
+  eval('local_variables', b).each {|varname| check_var.call(varname, eval(varname.to_s, b))}
 
   puts "these #{int_vars.length} variables in the global scope are integers:"
   puts int_vars.inspect

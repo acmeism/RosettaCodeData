@@ -1,1 +1,1 @@
-'Goodbye, World!' printNl.
+'Hello world!' printNl.

@@ -1,55 +1,45 @@
-#lang racket
-(require xml/xml data/order)
+#lang at-exp racket
+(require data/order scribble/html)
 
-;; Returns the area of triangle sides a, b, c
-(define (A a b c)
-  (define s (/ (+ a b c) 2)) ; where s=\frac{a+b+c}{2}.
-  (sqrt (* s (- s a) (- s b) (- s c)))) ; A = \sqrt{s(s-a)(s-b)(s-c)}
-
-;; Returns same as A iff a, b, c and A are integers; #f otherwise
+;; Returns the area of a triangle iff the sides have gcd 1, and it is an
+;; integer; #f otherwise
 (define (heronian?-area a b c)
-  (and (integer? a) (integer? b) (integer? c)
-       (let ((h (A a b c))) (and (integer? h) h))))
-
-;; Returns same as heronian?-area, with the additional condition that (gcd a b c) = 1
-(define (primitive-heronian?-area a b c)
   (and (= 1 (gcd a b c))
-       (heronian?-area a b c)))
+       (let ([s (/ (+ a b c) 2)])  ; ** If s=\frac{a+b+c}{2}
+         (and (integer? s)         ; (s must be an integer for the area to b an integer)
+              (let-values ([[q r] (integer-sqrt/remainder ; (faster than sqrt)
+                                   ; ** Then the area is \sqrt{s(s-a)(s-b)(s-c)}
+                                   (* s (- s a) (- s b) (- s c)))])
+                (and (zero? r) q)))))) ; (return only integer areas)
 
 (define (generate-heronian-triangles max-side)
-  (for*/list
-      ((a (in-range 1 (add1 max-side)))
-       (b (in-range 1 (add1 a)))
-       (c (in-range 1 (add1 b)))
-       #:when (< a (+ b c))
-       (h (in-value (primitive-heronian?-area a b c)))
-       #:when h)
-    (define rv (vector h (+ a b c) (sort (list a b c) >))) ; datum-order can sort this for the tables
-    rv))
+  (for*/list ([c (in-range 1 (add1 max-side))]
+              [b (in-range 1 (add1 c))] ; b<=c
+              [a (in-range (add1 (- c b)) (add1 b))] ; ensures a<=b and c<a+b
+              [area (in-value (heronian?-area a b c))]
+              #:when area)
+    ;; datum-order can sort this for the tables (c is the max side length)
+    (list area (+ a b c) c (list a b c))))
 
 ;; Order the triangles by first increasing area, then by increasing perimeter,
 ;; then by increasing maximum side lengths
-(define (tri<? t1 t2)
-  (eq? '< (datum-order t1 t2)))
+(define (tri-sort triangles)
+  (sort triangles (λ(t1 t2) (eq? '< (datum-order t1 t2)))))
 
-(define triangle->tds (match-lambda [`#(,h ,p ,s) `((td ,(~a s)) (td ,(~a p)) (td ,(~a h)))]))
-
-(define (triangles->table ts)
-  `(table
-    (tr (th "#") (th "sides") (th "perimiter") (th "area")) "\n"
-    ,@(for/list ((i (in-naturals 1)) (t ts)) `(tr (td ,(~a i)) ,@(triangle->tds t) "\n"))))
-
-(define (sorted-triangles-table triangles)
-  (triangles->table (sort triangles tri<?)))
+(define (triangles->table triangles)
+  (table
+   (tr (map th '("#" sides perimeter area))) "\n"
+   (for/list ([i (in-naturals 1)] [triangle (in-list triangles)])
+     (match-define (list area perimeter max-side sides) triangle)
+     (tr (td i) (td (add-between sides ",")) (td perimeter) (td area) "\n"))))
 
 (module+ main
   (define ts (generate-heronian-triangles 200))
-  (define div-out
-    `(div
-      (p "number of primitive triangles found with perimeter "le" 200 = " ,(~a (length ts))) "\n"
-      ;; Show the first ten ordered triangles in a table of sides, perimeter, and area.
-      ,(sorted-triangles-table (take (sort ts tri<?) 10)) "\n"
-      ;; Show a similar ordered table for those triangles with area = 210
-      ,(sorted-triangles-table (sort (filter (match-lambda [(vector 210 _ _) #t] [_ #f]) ts) tri<?))))
-
-  (displayln (xexpr->string div-out)))
+  (output-xml
+   @div{@p{number of primitive triangles found with perimeter @entity{le} 200 = @(length ts)}
+        @; Show the first ten ordered triangles in a table of sides, perimeter,
+        @; and area.
+        @(triangles->table (take (tri-sort ts) 10))
+        @; Show a similar ordered table for those triangles with area = 210
+        @(triangles->table (tri-sort (filter (λ(t) (eq? 210 (car t))) ts)))
+        }))

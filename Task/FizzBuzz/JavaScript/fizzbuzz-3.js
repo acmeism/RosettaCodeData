@@ -1,1 +1,1 @@
-for(var i=1; i<=100; console.log((i%3?'':'Fizz')+(i%5?'':'Buzz')||i), i++);
+for(i=1;i<101;i++)console.log((x=(i%3?'':'Fizz')+(i%5?'':'Buzz'))?x:i);

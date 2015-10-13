@@ -10,8 +10,13 @@ int sum(int s)
   return s;
 }
 
-#define CLOCKTYPE CLOCK_MONOTONIC
+#ifdef CLOCK_PROCESS_CPUTIME_ID
+/* cpu time in the current process */
+#define CLOCKTYPE  CLOCK_PROCESS_CPUTIME_ID
+#else
 /* this one should be appropriate to avoid errors on multiprocessors systems */
+#define CLOCKTYPE  CLOCK_MONOTONIC
+#endif
 
 double time_it(int (*action)(int), int arg)
 {

@@ -29,9 +29,9 @@ printQueens(List q) {
     StringBuffer sb = new StringBuffer();
     for (int j=0; j<N; j++) {
       if (q[i] == j) {
-        sb.add("Q ");
+        sb.write("Q ");
       } else {
-        sb.add("* ");
+        sb.write("* ");
       }
     }
     print(sb.toString());

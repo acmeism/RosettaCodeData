@@ -45,8 +45,8 @@ main:
   LONG REAL sd;
 
   FOR i FROM LWB v TO UPB v DO
-    sd := stat object(v[i], LOC VALUE)
-  OD;
+    sd := stat object(v[i], LOC VALUE);
+    printf(($"value: "g(0,6)," standard dev := "g(0,6)l$, v[i], sd))
+  OD
 
-  printf(($"standard dev := "g(0,6)l$, sd))
 )

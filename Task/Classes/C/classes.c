@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 typedef struct sMyClass
 {
   int variable;
@@ -5,15 +7,14 @@ typedef struct sMyClass
 
 MyClass  MyClass_new()
 {
-  MyClass pthis = malloc( sizeof(struct sMyClass) );
-  //memset(pthis, 0, sizeof(struct sMyClass) );
+  MyClass pthis = malloc(sizeof *pthis);
   pthis->variable = 0;
   return pthis;
 }
 
 void MyClass_delete(MyClass* pthis)
 {
-  if(pthis && *pthis)
+  if (pthis)
   {
     free(*pthis);
     *pthis = NULL;

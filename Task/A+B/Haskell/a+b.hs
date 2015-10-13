@@ -1,1 +1,1 @@
-main = getLine >>= print . sum . map read . words
+main =  print . sum . map read . words =<< getLine

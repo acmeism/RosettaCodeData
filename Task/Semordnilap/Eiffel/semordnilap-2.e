@@ -1,16 +1,34 @@
 class
 	APPLICATION
-inherit
-	ARGUMENTS
+
 create
-    make
-feature
 	make
-	do
-	create se.make
-	across se.solution.subarray (27, 32)as s loop io.put_string (s.item.out+"%T"); s.item.mirror; io.put_string(s.item.out+"%N")  end
-	io.put_string ("There are "+se.solution.count.out+" pairs.")
-	end
+
+feature
+
+	make
+		local
+			test: ARRAY [STRING]
+			s: STRING
+		do
+			create se.make
+			test := se.solution
+			create sort.sort (test)
+			across
+				test.subarray (1, 5) as t
+			loop
+				s := t.item
+				io.put_string (t.item + "%T")
+				s.mirror
+				io.put_string (s)
+				io.new_line
+			end
+			io.put_string ("Total number of semordnilaps: ")
+			io.put_integer (test.count)
+		end
 
 	se: SEMORDNILAP
+
+	sort: MERGE_SORT [STRING]
+
 end

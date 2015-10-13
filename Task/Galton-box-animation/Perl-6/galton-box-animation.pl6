@@ -10,18 +10,18 @@ sub display-board(@positions, @stats is copy, $halfstep) {
         # precompute a board
         my @tmpl;
         sub out(*@stuff) {
-            @tmpl.push: @stuff>>.ords.item;
+            @tmpl.push: $[@stuff.join>>.ords.flat];
         }
         # three lines of space above
-        for (1..3) {
+        for 1..3 {
             out "  ", " " x (2 * $row-count);
         }
         # $row-count lines of pegs
-        for ($row-count...1) Z (1...$row-count) -> $spaces, $pegs {
+        for flat ($row-count...1) Z (1...$row-count) -> $spaces, $pegs {
             out "  ", " " x $spaces, ($peg xx $pegs).join(" "), " " x $spaces;
         }
         # four lines of space below
-        for (1..4) {
+        for 1..4 {
             out "  ", " " x (2 * $row-count);
         }
         @tmpl

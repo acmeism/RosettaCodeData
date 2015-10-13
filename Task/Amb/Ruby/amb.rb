@@ -1,3 +1,5 @@
+require "continuation"
+
 class Amb
   class ExhaustedError < RuntimeError; end
 

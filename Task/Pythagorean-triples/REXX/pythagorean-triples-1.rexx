@@ -1,30 +1,28 @@
-/*REXX pgm counts number of  Pythagorean triples that exist given a max */
-/*   perimeter of  N,   and also counts how many of them are primitives.*/
-trips=0;   prims=0                     /*zero # of triples, primatives. */
-parse arg N .;  if N==''  then n=100   /*get "N".  If none, then assume.*/
+/*REXX program counts number of  Pythagorean triples  that exist given a max  */
+/*────────── perimeter of  N, and also counts how many of them are primitives.*/
+trips=0;   prims=0                     /*set the number of triples, primitives*/
+parse arg N .;  if N==''  then n=100   /*N  specified?  No, then use default. */
 
-  do a=3  to N%3;   aa=a*a             /*limit side to 1/3 of perimeter.*/
+  do a=3  to N%3;   aa=a*a             /*limit  side  to 1/3 of the perimeter.*/
 
-     do b=a+1                          /*triangle can't be isosceles.   */
-     ab=a+b                            /*compute partial perimeter.     */
-     if ab>=N  then iterate a          /*a+b≥perimeter?  Try different A*/
-     aabb=aa+b*b                       /*compute sum of  a² + b² (cheat)*/
+     do b=a+1                          /*the triangle can't be isosceles.     */
+     ab=a+b                            /*compute a partial perimeter (2 sides)*/
+     if ab>=N  then iterate a          /*is  a+b ≥ perimeter?  Try different A*/
+     aabb=aa+b*b                       /*compute the sum of  a²+b²  (shortcut)*/
 
-        do c=b+1                       /*3rd side:   also compute  c²   */
-        if ab+c>N     then iterate a   /*a+b+c > perimeter?  Try diff A.*/
-        cc=c*c                         /*compute  C².                   */
-        if cc > aabb  then iterate b   /*c² >  a²+b² ?  Try different B.*/
-        if cc\==aabb  then iterate     /*c² ¬= a²+b² ?  Try different C.*/
-        trips=trips+1                  /*eureka.  We found a prim triple*/
-        prims=prims+(gcd(a,b)==1)      /*is this  triple  a  primitive? */
-        end   /*a*/
+        do c=b+1                       /*compute the value of the third side. */
+        if ab+c>N     then iterate a   /*is  a+b+c > perimeter?  Try diff.  A.*/
+        cc=c*c                         /*compute the value of  C².            */
+        if cc > aabb  then iterate b   /*is  c² >  a²+b² ?  Try a different B.*/
+        if cc\==aabb  then iterate     /*is  c² ¬= a²+b² ?  Try a different C.*/
+        trips=trips+1                  /*eureka. We found a Pythagorean triple*/
+        prims=prims+(gcd(a,b)==1)      /*is this  triple  a primitive triple? */
+        end   /*c*/
      end      /*b*/
-  end         /*c*/
+  end         /*a*/
 
-say 'max perimeter =' N,               /*show a single line of output.  */
-    left('',7)  "Pythagorean triples =" trips,    /*left('',7)≡7 blanks.*/
-    left('',7)  'primitives ='          prims
-exit                                   /*stick a fork in it, we're done.*/
-/*──────────────────────────────────GCD subroutine──────────────────────*/
-gcd: procedure; parse arg x,y
-       do  until y==0; parse  value  x//y  y   with    y x; end;  return x
+_=left('',7)                           /*for padding the output with 7 blanks.*/
+say 'max perimeter ='  N _ "Pythagorean triples ="  trips _ 'primitives =' prims
+exit                                   /*stick a fork in it,  we're all done. */
+/*────────────────────────────────────────────────────────────────────────────────────*/
+gcd: procedure; parse arg x,y; do until y==0; parse value x//y y with y x; end; return x

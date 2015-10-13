@@ -1,4 +1,4 @@
 program byeworld;
 begin
- writeln('Goodbye, World!');
+ writeln('Hello world!');
 end.

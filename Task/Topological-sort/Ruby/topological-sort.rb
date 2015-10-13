@@ -9,8 +9,7 @@ end
 
 depends = {}
 DATA.each do |line|
-  libs = line.split(' ')
-  key = libs.shift
+  key, *libs = line.split
   depends[key] = libs
   libs.each {|lib| depends[lib] ||= []}
 end
@@ -20,7 +19,7 @@ begin
   depends["dw01"] << "dw04"
   p depends.tsort
 rescue TSort::Cyclic => e
-  puts "cycle detected: #{e}"
+  puts "\ncycle detected: #{e}"
 end
 
 __END__

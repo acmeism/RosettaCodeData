@@ -1,4 +1,4 @@
-def levenshteinDistance(s1,s2):
+def minimumEditDistance(s1,s2):
     if len(s1) > len(s2):
         s1,s2 = s2,s1
     distances = range(len(s1) + 1)
@@ -14,5 +14,5 @@ def levenshteinDistance(s1,s2):
         distances = newDistances
     return distances[-1]
 
-print(levenshteinDistance("kitten","sitting"))
-print(levenshteinDistance("rosettacode","raisethysword"))
+print(minimumEditDistance("kitten","sitting"))
+print(minimumEditDistance("rosettacode","raisethysword"))

@@ -12,5 +12,5 @@
 ├─────┼─────┤
 │plain│plain│
 └─────┴─────┘
-   #3 rcomb i.10         NB. ways to choose 3 items from 10 with replacement
+   #3 rcomb i.10         NB. ways to choose 3 items from 10 with repetitions
 220

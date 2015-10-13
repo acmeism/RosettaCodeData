@@ -1,95 +1,129 @@
-program prime7;
+program prime;
 {$IFDEF FPC}
   {$MODE DELPHI}
   {$OPTIMIZATION ON,REGVAR,PEEPHOLE,CSE,ASMCSE}
-  {$Smartlink ON}
-  {$CODEALIGN proc=32}
+  {$CODEALIGN proc=8}
+//  {$R+,V+,O+}
 {$ELSE}
   {$APPLICATION CONSOLE}
 {$ENDIF}
 uses
-  popcount;
+  sysutils;
+type
+  tSievenum      = NativeUint;
 const
-
+  cBitSize       = SizeOf(tSievenum)*8;
+  cAndMask       = cBitSize-1;
   InitPrim      :array [0..9] of byte = (2,3,5,7,11,13,17,19,23,29);
 (*
   {MAXANZAHL     =  2*3*5*7*11*13*17*19;*PRIM}
   MAXANZAHL     :array [0..8] of Longint =(2,6,30,210,2310,30030,
                                          510510,9699690,223092870);
-  {WIFEMAXLAENGE =  1*2*4*6*10*12*16*18;*PRIM-1}
+  {WIFEMAXLAENGE =  1*2*4*6*10*12*16*18; *(PRIM-1)}
   WIFEMAXLAENGE :array [0..8] of longint =(1,2,8,48,480,5760,
                                          92160,1658880,36495360);
 *)
-  BIS           =    4;
-  cMaxZahl      = 2310;
-  cRepFldLen    =  480;
+//Don't sieve with primes that are multiples of 2..InitPrim[BIS]
+  BIS           =     5;
+  MaxMulFac     =    22; {array [0..9] of byte= (2,4,6,10,14,22,26,34,40,50);}
+  cMaxZahl      = 30030;
+  cRepFldLen    =  5760;
 
-{Sieve results:
- one billion   --  50,847,534
- two billion   --  98,222,287
- three billion -- 144,449,537
- four billion  -- 189,961,812
- ten  billion  -- 455.052.511
- }
-  MaxZahl       =  20*1000*1000;
-  //limit for 32 Bit calc   tSievenum      = LongWord; 20e9
-  //MaxZahl        = High(LongWord) DIV cRepFldLen *cMaxZahl;
-  MAXIMUM       = ((MaxZahl-1) DIV cMaxZahl+1)*cMaxZahl;
-                   // maximal distance  in number wheel
-  MaxMulFac  = 14; {array [0..9] of byte= (2,4,6,10,14,22,26,34,40,50);}
-                   {Auf  Mod 32 = 0 bringen}
- {MAXSUCHE      = MAXIMUM*WIFEMAXLAENGE[BIS]/MAXANZAHl[BIS]}
-(* div2,div3,*4div15,*8div35,*16div77,*192 div 1001,*3072div17017.. *)
-  MAXSUCHE      = ((((MAXIMUM-1) div cMaxZahl+1)*cRepFldLen-1)shr 5+1)shl 5;
+  MaxUpperLimit =  100*1000*1000*1000-1;
 
+  MAXIMUM       = ((MaxUpperLimit-1) DIV cMaxZahl+1)*cMaxZahl;
+  MAXSUCHE      = (((MAXIMUM-1) div cMaxZahl+1)*cRepFldLen-1)
+                    DIV cBitSize;
 
 type
-  tSievenum      = Uint32;// Uint64 doubles run-time in 32 Bit
+  tRpFldIdx  = 0..cRepFldLen-1;
+  pNativeUint = ^ NativeUint;
+  (* numberField as Bit array *)
+  tsearchFld   = array of tSievenum;
+
   tSegment       = record
                      dOfs,
-                     dSegment    :LongWord;
+                     dSegment    :tSievenum;
                   end;
   tpSegment     = ^tSegment;
   tMulFeld    = array [0..MaxMulFac shr 1 -1] of tSegment;
-  tnumberField= array [0..cMaxZahl-1] of Word;
-  tDiffFeld   = array [0..{WIFEMAXLAENGE[BIS]}cRepFldLen-1] of byte;
-  tRevIdx     = array [0..{WIFEMAXLAENGE[BIS]}cRepFldLen-1] of word;
-  (* numberField as Bit array *)
-  tsearchFld   = array [0..MAXSUCHE shr 5-1] of set of 0..31;
+  tnumberField= array [0..cMaxZahl-1] of word; //word->  0..cRepFldLen-1
+  tRevIdx     = array [tRpFldIdx] of word;//word->  0..cMaxZahl-1
+  tDiffFeld   = array [tRpFldIdx] of byte;
+  tNewPosFeld = array [tRpFldIdx] of Uint64;
 
   tRecPrime   = record
-                  rpPrime :tSievenum;
-                  rpsvPos,
+                  rpPrime,
+                  rpsvPos : Uint64;
                   rpOfs,
                   rpSeg   :LongWord;
                 end;
 
 var
+  BitSet,
+  BitClr : Array [0..cAndMask] Of NativeUint;
+  deltaNewPos : tNewPosFeld;
   MulFeld   : tMulFeld;
   searchFld : tsearchFld;
   number    : tnumberField;
   DiffFld   : tDiffFeld;
   RevIdx    : tRevIdx;
-  Quadrat   : Uint64;
-  MaxPos    : NativeUint;
+  actSquare   : Uint64;
+  NewStartPos,
+  MaxPos    : Uint64;
 
 const
-  two : Array [0..31] Of LongWord = (
-        $00000001 , $00000002 , $00000004 , $00000008
-      , $00000010 , $00000020 , $00000040 , $00000080
-      , $00000100 , $00000200 , $00000400 , $00000800
-      , $00001000 , $00002000 , $00004000 , $00008000
-      , $00010000 , $00020000 , $00040000 , $00080000
-      , $00100000 , $00200000 , $00400000 , $00800000
-      , $01000000 , $02000000 , $04000000 , $08000000
-      , $10000000 , $20000000 , $40000000 , $80000000
-      ) ;
+//K1  = $0101010101010101;
+  K55 = $5555555555555555;
+  K33 = $3333333333333333;
+  KF1 = $0F0F0F0F0F0F0F0F;
+  KF2 = $00FF00FF00FF00FF;
+  KF4 = $0000FFFF0000FFFF;
+  KF8 = $00000000FFFFFFFF;
 
-procedure BuildWheel;
-{simple sieve of erathothenes only eliminating small primes}
+function popcnt(n:Uint64):integer;overload;inline;
+var
+  c,b,k : NativeUint;
+begin
+  b := n;
+  k := NativeUint(K55);c :=  (b shr  1) AND k; b := (b AND k)+C;
+  k := NativeUint(K33);c := ((b shr  2) AND k);b := (b AND k)+C;
+  k := NativeUint(KF1);c := ((b shr  4) AND k);b := (b AND k)+c;
+  k := NativeUint(KF2);c := ((b shr  8) AND k);b := (b AND k)+c;
+  k := NativeUint(KF4);c := ((b shr 16) AND k);b := (b AND k)+c;
+  k := NativeUint(KF8);c :=  (b shr 32)+(b AND k);
+  result := c;
+end;
+
+function popcnt(n:LongWord):integer;overload;
+var
+  c,k : LongWord;
+begin
+  result  := n;
+  IF result = 0 then
+    EXIT;
+  k := LongWord(K55);c :=  (result  shr  1) AND k; result  := (result  AND k)+C;
+  k := LongWord(K33);c := ((result  shr  2) AND k);result  := (result  AND k)+C;
+  k := LongWord(KF1);c := ((result  shr  4) AND k);result  := (result  AND k)+c;
+  k := LongWord(KF2);c := ((result  shr  8) AND k);result  := (result  AND k)+c;
+  k := LongWord(KF4);
+  result :=  (result  shr 16) AND k +(result  AND k);
+end;
+
+procedure Init;
+{simple sieve of erathosthenes only eliminating small primes}
 var
   pr,i,j,Ofs : NativeUint;
 Begin
+  //Init Bitmasks
+  j := 1;
+  For i := 0 to cAndMask do
+  Begin
+    BitSet[i] := J;
+    BitClr[i] := NativeUint(NOT(J));
+    j:= j+j;
+  end;
+  //building number wheel excluding multiples of small primes
   Fillchar(number,SizeOf(number),#0);
   For i := 0 to BIS do
   Begin
@@ -101,6 +135,7 @@ Begin
     until j <= 0;
   end;
 
+  // build reverse Index and save distances
   i := 1;
   j := 0;
   RevIdx[0]:= 1;
@@ -122,24 +157,24 @@ Begin
   for i := 0 to cRepFldLen-2 do
   begin
     inc(Ofs,DiffFld[i]);
-    number[Ofs] := i+1;
+    number[ofs] := i+1;
   end;
 
+  //direct index into Mulfeld 2->0 ,4-> 1 ...
   For i := 0 to cRepFldLen-1 do
   Begin
-    //direct index to Mulfeld
     j := (DiffFld[i] shr 1) -1;
     DiffFld[i] := j;
   end;
 end;
 
-function CalcPos(m: Uint64): UINt32;
+function CalcPos(m: Uint64): Uint64;
 {search right position of m}
 var
-  i,res : Uint32;
+  i,res : NativeUint;
 Begin
   res := m div cMaxZahl;
-  i   := m mod cMaxzahl;
+  i   := m-res* Uint64(cMaxzahl);//m mod cMaxZahl
   while (number[i]= 0) and (i <>1) do
   begin
     iF i = 0 THEN
@@ -149,18 +184,26 @@ Begin
     end;
     dec(i);
   end; {while}
-  CalcPos := res *cRepFldLen +number[i];
+  CalcPos := res *Uint64(cRepFldLen) +number[i];
 end;
 
-procedure MulTab(searchPr:Nativeint);
+procedure CalcSqrOfs(out Segment,Ofs :Uint64);
+Begin
+  Segment  := actSquare div cMaxZahl;
+  Ofs      := actSquare-Segment*cMaxZahl; //ofs Mod cMaxZahl
+  Segment  := Segment*cRepFldLen;
+end;
+
+procedure MulTab(sievePr:Nativeint);
 var
  k,Segment,Segment0,Rest,Rest0: NativeUint;
 Begin
-  {Multiplikationstabelle der Differenzen}
-  searchPr := searchPr+searchPr;
-  Segment0 := searchPr div cMaxzahl;
+  {multiplication-table of differences}
+  {2* sievePr,4* ,6* ...MaxMulFac*sievePr }
+  sievePr := sievePr+sievePr;
+  Segment0 := sievePr div cMaxzahl;
 
-  Rest0    := searchPr-Segment0*cMaxzahl;
+  Rest0    := sievePr-Segment0*cMaxzahl;
   Segment0 := Segment0 * cRepFldLen;
 
   Segment := Segment0;
@@ -189,92 +232,139 @@ Begin
   end;
 end;
 
-procedure CalcSqrOfs(searchPr:NativeUint;out
-                     Segment,Ofs :tSievenum);
-Begin
-  Segment  := Quadrat div cMaxZahl;
-  Ofs      := Quadrat-Uint64(Segment)*cMaxZahl; //ofs Mod cMaxZahl
-  Segment  := Segment*cRepFldLen;
-end;
-
-procedure Sieben(var sf:tsearchFld;searchPr,MulPos:NativeUint);
-//for big sieve  Segment,Position,k need to be Uint64
+procedure CalcDeltaNewPos(sievePr,MulPos:NativeUint);
 var
-  Ofs,Segment,Position,k : tSievenum;//NativeUint;
-  p : pLongWord;
+  Ofs,Segment,prevPos,actPos : Uint64;
+  i: NativeInt;
 Begin
-  MulTab(searchPr);
-  CalcSqrOfs(searchPr,Segment,Ofs);
-  Position := Segment+number[ofs];
-
-  {Primzahlen ausstreichen}
-  repeat
-    k:= MulPos+1;
-    IF k >= cRepFldLen then
-      dec(k,k);//=0;
-    mulpos := k;
-    k := DiffFld[k];
-    With MulFeld[k] do
+  MulTab(sievePr);
+  //start at sqr sievePrime
+  CalcSqrOfs(Segment,Ofs);
+  NewStartPos := Segment+number[Ofs];
+  prevPos := NewStartPos;
+  deltaNewPos[0]:= prevPos;
+  For i := 0 to cRepFldLen-2 do
+  begin
+    inc(mulpos);
+    IF mulpos >= cRepFldLen then
+      mulpos := 0;
+    With MulFeld[DiffFld[mulpos]] do
     begin
-      k:= Ofs+dOfs;
+      Ofs:= Ofs+dOfs;
       Segment := Segment+dSegment;
     end;
-
-    If k >= cMaxZahl then
+    If Ofs >= cMaxZahl then
     begin
-      k := k-cMaxZahl;
+      Ofs := Ofs-cMaxZahl;
       Segment := Segment+cRepFldLen;
     end;
-    Ofs := k;
-    k := Segment+number[k];
-    p := @sf[Position shr 5];
-//   exclude(searchFld[Position shr 5],Position and 31);
-    p^ := p^ OR two[Position and 31];
-    IF k > Position then
-      Position := k//number[Ofs]+Segment;
+    actPos := Segment+number[Ofs];
+    deltaNewPos[i]:= actPos - prevPos;
+    IF actPos> maxPos then
+      BREAK;
+
+    prevPos := actPos;
+  end;
+  deltaNewPos[cRepFldLen-1] := NewStartPos+cRepFldLen*sievePr-prevPos;
+end;
+
+procedure SieveByOnePrime(var sf:tsearchFld;sievePr:NativeUint);
+var
+  pNewPos : ^Uint64;
+  pSiev0,
+  pSiev   : ^tSievenum;// dynamic arrays are slow
+  Ofs      : Int64;
+  Position : UINt64;
+  i: NativeInt;
+
+Begin
+  pSiev0 := @sf[0];
+  Ofs := MaxPos-sievePr *cRepFldLen;
+  Position := NewStartPos;
+  {unmark multiples of sieve prime}
+  repeat
+    IF Position < Ofs then
+    Begin
+      pNewPos:= @deltaNewPos[0];
+      For i := Low(deltaNewPos) to High(deltaNewPos) do
+      Begin
+        pSiev := pSiev0;
+        inc(pSiev,Position DIV cBitSize);
+        //pSiev^ == @sf[Position DIV cBitSize]
+        pSiev^ := pSiev^ AND BitCLR[Position AND cAndMask];
+        inc(Position,pNewPos^);
+        inc(pNewPos);
+      end
+    end
     else
-      //case of overflow try 2E10 with 32-Bit
-      Break;
+    Begin
+      pNewPos:= @deltaNewPos[0];
+      For i := Low(deltaNewPos) to High(deltaNewPos) do
+      Begin
+        IF Position >= MaxPos then
+          Break;
+        pSiev := pSiev0;
+        inc(pSiev,Position DIV cBitSize);
+        pSiev^ := pSiev^ AND BitCLR[Position AND cAndMask];
+        inc(Position,pNewPos^);
+        inc(pNewPos);
+      end
+    end;
   until Position >= MaxPos;
 end;
 
 procedure SieveAll;
 var
   i,
-  searchPr,
+  sievePr,
   PrimPos,
   srPrPos  : NativeUint;
+  l:   Uint64;
 Begin
-  BuildWheel;
-  MaxPos := CalcPos(MaxZahl);
+  Init;
+  MaxPos := CalcPos(MaxUpperLimit);
   {start of prime sieving}
-  fillchar(searchFld,SizeOf(searchFld),#0);
+  i := (MaxPos-1) DIV cBitSize+1;
+  setlength(searchFld,i);
+  IF Length(searchFld) <> i then
+  Begin
+    writeln('Not enough memory');
+    Halt(-227);
+  end;
+  For i := High(searchFld) downto 0 do
+     searchFld[i] := NativeUint(-1);
   {the first prime}
   srPrPos := 0;
   PrimPos := 0;
-  searchPr := 1;
-  Quadrat := searchPr;
+  sievePr := 1;
+  actSquare := sievePr;
   repeat
     {next prime}
     inc(srPrPos);
     i := 2*(DiffFld[PrimPos]+1);
     //binom (a+b)^2; a^2 already known
-    Quadrat := Quadrat+(2*searchPr+i)*i;
-    inc(searchPr,i);
-    IF Quadrat > MAXIMUM THEN
+    actSquare := actSquare+(2*sievePr+i)*i;
+    inc(sievePr,i);
+
+    IF actSquare > MaxUpperLimit THEN
       BREAK;
-    {if searchPr == prime then sieve with searchPr}
-    if NOT((srPrPos and 31) in searchFld[srPrPos shr 5] )then
-      Sieben(searchFld,searchPr,PrimPos);
+    {if sievePr == prime then sieve with sievePr}
+    if BitSet[srPrPos AND cAndMask] AND
+      searchFld[srPrPos DIV cBitSize] <> 0then
+    Begin
+      write(sievePr:8,#8#8#8#8#8#8#8#8);
+      CalcDeltaNewPos(sievePr,PrimPos);
+      SieveByOnePrime(searchFld,sievePr);
+    end;
     inc(PrimPos);
     if PrimPos = cRepFldLen then
       dec(PrimPos,PrimPos);// := 0;
   until false;
 end;
 
-function InitRecPrime(pr: tSievenum):tRecPrime;
+function InitRecPrime(pr: UInt64):tRecPrime;
 var
-  svPos,sg : LongWord;
+  svPos,sg : NativeUint;
 Begin
   svPos := CalcPos(pr);
   sg := svPos DIV cRepFldLen;
@@ -287,7 +377,7 @@ Begin
   end;
 end;
 
-function InitPrimeSvPos(svPos: LongWord):tRecPrime;
+function InitPrimeSvPos(svPos: Uint64):tRecPrime;
 var
   sg : LongWord;
 Begin
@@ -301,9 +391,10 @@ Begin
   end;
 end;
 
-Procedure NextPrime(var pr:  tRecPrime);
+function NextPrime(var pr:  tRecPrime):Boolean;
 var
-  ofs,svPos : LongWord;
+  ofs : LongWord;
+  svPos : Uint64;
 Begin
   with pr do
   Begin
@@ -312,45 +403,53 @@ Begin
     repeat
       inc(svPos);
       if svPos > MaxPos then
+      Begin
+        result := false;
         EXIT;
+      end;
       inc(Ofs);
       IF Ofs >= cRepFldLen then
       Begin
         ofs := 0;
-        inc(rpSeg,cRepFldLen);
+        inc(rpSeg);
       end;
-    until NOT((svPos and 31) in searchFld[svPos shr 5] );
-    rpPrime := rpSeg*cMaxZahl+RevIdx[Ofs];
+    until BitSet[svPos AND cAndMask] AND
+      searchFld[svPos DIV cBitSize] <> 0;
+    rpPrime := rpSeg*Uint64(cMaxZahl)+RevIdx[Ofs];
     rpSvPos := svPos;
     rpOfs := Ofs;
   end;
+  result := true;
 end;
 
-function GetNthPrime(n: LongWord):tRecPrime;
+function GetNthPrime(n: Uint64):tRecPrime;
 var
-  i,cnt : longWord;
+  i : longWord;
+  cnt: Uint64;
 Begin
   IF n > MaxPos then
     EXIT;
 
   i := 0;
   cnt := Bis;
-  For i := 0 to n shr 5 do
-    inc(cnt,PopCnt(NOT(Uint32(searchFld[i]))));
-  i := n shr 5+1;
+  For i := 0 to n DIV cBitSize do
+    inc(cnt,PopCnt(NativeUint(searchFld[i])));
+  i := n DIV cBitSize+1;
+
   while cnt < n do
   Begin
-    inc(cnt,PopCnt(NOT(Uint32(searchFld[i]))));
+    inc(cnt,PopCnt(NativeUint(searchFld[i])));
     inc(i);
   end;
   dec(i);
-  dec(cnt,PopCnt(NOT(Uint32(searchFld[i]))));
-  result := InitPrimeSvPos(i*32-1);
+
+  dec(cnt,PopCnt(NativeUint(searchFld[i])));
+  result := InitPrimeSvPos(i*Uint64(cBitSize)-1);
   while cnt < n do
-  Begin
-    NextPrime(Result);
-    inc(cnt);
-  end;
+    IF NextPrime(Result) then
+      inc(cnt)
+    else
+      Break;
 end;
 
 procedure ShowPrimes(loLmt,HiLmt: NativeInt);
@@ -361,10 +460,13 @@ Begin
     exit;
   p1 := InitRecPrime(loLmt);
   while p1.rpPrime < LoLmt do
-    NextPrime(p1);
+    IF Not(NextPrime(p1)) Then
+      EXIT;
+
   repeat
     write(p1.rpPrime,' ');
-    NextPrime(p1);
+    IF Not(NextPrime(p1)) Then
+      Break;
   until p1.rpPrime > HiLmt;
   writeln;
 end;
@@ -376,13 +478,14 @@ Begin
   result := 0;
   IF HiLmt < loLmt then
     exit;
-
   p1 := InitRecPrime(loLmt);
   while p1.rpPrime < LoLmt do
-    NextPrime(p1);
+    IF Not(NextPrime(p1)) Then
+      EXIT;
   repeat
     inc(result);
-    NextPrime(p1);
+    IF Not(NextPrime(p1)) Then
+      Break;
   until p1.rpPrime > HiLmt;
 end;
 
@@ -413,7 +516,7 @@ Begin
       {next prime}
       inc(svPos);
       inc(p,2*(DiffFld[prPos]+1));
-      if NOT((svPos and 31) in searchFld[svPos shr 5] )then
+      if BitSet[svPos AND cAndMask] AND searchFld[svPos DIV cBitSize] <>0 then
       Begin
         write(p,' ');
         dec(n);
@@ -426,34 +529,123 @@ Begin
   writeln;
 end;
 
+function RvsNumL(var n: Uint64):Uint64;
+//reverse and last digit, most of the time n > base therefor repeat
+const
+  base = 10;
 var
-  Anzahl :Uint64;
-  i : NativeUint;
+  q, c: Int64;
 Begin
-  SieveAll;
+  result := n;
+  q := 0;
+  repeat
+    c:= result div Base;
+    q := result+ (q-c)*Base;
+    result := c;
+  until result < Base;
+  n := q*Base+result;
+end;
 
-  i := 0;
-  Anzahl := BIS+1;
-  //MaxPos = res *cRepFldLen +number[i];
-  For i := 0 to MaxPos shr 5-1 do
-    inc(Anzahl,PopCnt(NOT(Uint32(searchFld[i]))));
-  i := MaxPos AND 31;
-  dec(i);
-  while i>0 do
+function IsEmirp(n:Uint64):boolean;
+var
+ lastDgt:NativeUint;
+ ofs: NativeUint;
+ seg : Uint64;
+Begin
+  seg := n;
+  lastDgt:= RvsNumL(n);
+  result:= false;
+  IF (seg = n) OR (n> MaxUpperLimit) then
+    EXIT;
+
+  IF lastDgt in [1,3,7,9] then
   Begin
-    IF Not(i in searchFld[MaxPos shr 5]) then
-      inc(Anzahl);
-    dec(i);
+    seg := n div cMaxZahl;
+    ofs := n-seg* cMaxzahl;//m mod cMaxZahl
+    IF (Number[ofs] <> 0) OR (ofs=1) then
+    begin
+      seg := seg *cRepFldLen+number[ofs];
+      result := BitSet[seg AND cAndMask]  AND searchFld[seg DIV cBitSize] <> 0;
+    end
   end;
-//  Writeln('Bis ',MaxZahl,' sind es ',Anzahl,' Primzahlen');
+end;
+
+procedure GetEmirps(loLmt,HiLmt: Uint64);
+var
+  p1 :tRecPrime;
+  cnt: NativeUint;
+Begin
+  cnt := 0;
+  IF HiLmt < loLmt then
+    exit;
+  IF loLmt > MaxUpperLimit then
+    Exit;
+  IF HiLmt > MaxUpperLimit then
+    HiLmt := MaxUpperLimit;
+
+  p1 := InitRecPrime(loLmt);
+  while p1.rpPrime < LoLmt do
+    IF Not(NextPrime(p1)) Then
+      EXIT;
+
+  repeat
+    if isEmirp(p1.rpPrime) then
+      inc(cnt);
+    iF not(NextPrime(p1)) then
+      BREAK;
+  until p1.rpPrime > HiLmt;
+
+  write(cnt:10);
+end;
+
+var
+  T1,T0: TDateTime;
+  Anzahl :Uint64;
+  i,j : Uint64;
+  n : LongInt;
+Begin
+  T0 := now;
+  SieveAll;
+  T1 := now;
+  writeln('         ');
+  Writeln('time for sieving ',FormatDateTime('NN:SS.ZZZ',T1-T0));
+  Anzahl := BIS;
+  For n := MaxPos DIV cBitSize-1 downto 0 do
+    inc(Anzahl,PopCnt(NativeUint(searchFld[n])));
+  n := MaxPos AND cAndMask;
+  IF n >0 then
+  Begin
+    dec(n);
+    repeat
+      IF BitSet[n] AND searchFld[MaxPos DIV cBitSize] <> 0 then
+        inc(Anzahl);
+      dec(n);
+    until n< 0;
+  end;
+
+  Writeln('there are ',Anzahl,' primes til ',MaxUpperLimit);
   WriteCntSmallPrimes(20);
-  write('Primes between 100 and 150: ');
+  write('primes between 100 and 150: ');
   ShowPrimes(100,150);
-  write('Number of primes between 7700 and 8000 ');
+  write('count of primes between 7700 and 8000 ');
   Writeln(CountPrimes(7700,8000));
   i := 100;
   repeat
     Writeln('the ',i, ' th prime ',GetNthPrime(i).rpPrime);
     i := i * 10;
-  until i> 1000000;
+  until i*25 > MaxUpperLimit;
+
+  writeln;
+  writeln('Count Emirps');
+  j := 10;
+  repeat
+   writeln(j:10);
+    GetEmirps(  j,  j+j-1);//10..00->19..99
+    GetEmirps(3*j,3*j+j-1);//30..00->39..99
+    GetEmirps(7*j,7*j+j-1);//70..00->79..99
+    GetEmirps(9*j,9*j+j-1);//90..00->99..99
+    writeln;
+    j:=j*10;
+  until j >= MaxUpperLimit;
+
 end.

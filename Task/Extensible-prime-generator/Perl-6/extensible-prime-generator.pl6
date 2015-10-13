@@ -1,4 +1,4 @@
-my @primes := gather for 1 .. * { .take if $_.is-prime }
+my @primes = lazy gather for 1 .. * { .take if $_.is-prime }
 
 say "The first twenty primes:\n   ", "[{@primes[^20].fmt("%d", ', ')}]";
 say "The primes between 100 and 150:\n   ", "[{@primes.&between(100, 150).fmt("%d", ', ')}]";

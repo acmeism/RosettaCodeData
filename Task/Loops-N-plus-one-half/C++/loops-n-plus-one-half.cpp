@@ -2,13 +2,9 @@
 
 int main()
 {
-  for (int i = 1; ; i++)
-  {
-    std::cout << i;
-    if (i == 10)
-      break;
-    std::cout << ", ";
-  }
-  std::cout << std::endl;
+  int i;
+  for (i = 1; i<10 ; i++)
+    std::cout << i << ", ";
+  std::cout<<i;
   return 0;
 }

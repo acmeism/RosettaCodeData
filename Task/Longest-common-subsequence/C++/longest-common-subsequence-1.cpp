@@ -50,11 +50,11 @@ protected:
       if (!it1->empty()) {
         auto dq2 = *it1;
         auto limit = threshold.end();
-        for (auto it2 = dq2.begin(); it2 != dq2.end(); it2++)
-        {
+        for (auto it2 = dq2.begin(); it2 != dq2.end(); it2++) {
           // Each of the index1, index2 pairs considered here correspond to a match
           auto index2 = *it2;
-          //
+
+	  //
           // Note: The index2 values are monotonically decreasing, which allows the
           // thresholds to be updated in place.  Montonicity allows a binary search,
           // implemented here by std::lower_bound()
@@ -111,13 +111,13 @@ protected:
   }
 
   //
-  // Match() avoids incurring m*n comparisons by using the associative memory
-  // implemented by CHAR2INDEXES to achieve O(m+n) performance, where m and n
-  // are the input lengths.
+  // Match() avoids incurring m*n comparisons by using the associative
+  // memory implemented by CHAR2INDEXES to achieve O(m+n) performance,
+  // where m and n are the input lengths.
   //
-  // The symbol space is sparse in the case of records; so, the lookup time is
-  // at most O(log(m+n)).  The lookup time can be assumed constant in the case
-  // of characters.
+  // The lookup time can be assumed constant in the case of characters.
+  // The symbol space is larger in the case of records; but the lookup
+  // time will be O(log(m+n)), at most.
   //
   void Match(CHAR2INDEXES& indexes, MATCHES& matches,
     const string& s1, const string& s2) {

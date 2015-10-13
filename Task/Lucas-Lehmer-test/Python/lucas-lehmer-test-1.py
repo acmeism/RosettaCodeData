@@ -27,7 +27,7 @@ upb_count = 45      # find 45 mprimes if int was given enough bits #
 print (" Finding Mersenne primes in M[2..%d]:"%upb_prime)
 
 count=0
-for p in range(2, upb_prime+1):
+for p in range(2, int(upb_prime+1)):
   if is_prime(p) and is_mersenne_prime(p):
     print("M%d"%p),
     stdout.flush()

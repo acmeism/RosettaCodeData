@@ -2,7 +2,7 @@ REBOL [
 	Title: "Retrieve Substring"
 	Author: oofoe
 	Date: 2009-12-06
-	URL: http://rosettacode.org/wiki/Retrieve_a_substring
+	URL: http://rosettacode.org/wiki/Substring#REBOL
 ]
 
 s: "abcdefgh"  n: 2  m: 3  char: #"d"  chars: "cd"

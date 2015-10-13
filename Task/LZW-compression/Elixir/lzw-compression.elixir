@@ -1,0 +1,48 @@
+defmodule LZW do
+  def encode(str), do: encode(to_char_list(str), init, 256, [])
+
+  defp encode([h], d, _, out), do: Enum.reverse([Dict.get(d, [h]) | out])
+  defp encode([h|t], d, free, out) do
+    val = Dict.get(d, [h])
+    find_match(t, [h], val, d, free, out)
+  end
+
+  defp find_match([h|t], l, lastval, d, free, out) do
+    case Dict.fetch(d, [h|l]) do
+      {:ok, val} -> find_match(t, [h|l], val, d, free, out)
+      :error ->
+        d1 = Dict.put(d, [h|l], free)
+        encode([h|t], d1, free+1, [lastval | out])
+    end
+  end
+  defp find_match([], _, lastval, _, _, out), do: Enum.reverse([lastval | out])
+
+  defp init, do: init(255, Map.new)
+
+  defp init(0, d), do: d
+  defp init(n, d), do: init(n-1, Dict.put(d,[n],n))
+
+  def decode([h|t]) do
+    d = init1(Map.new)
+    val = Dict.get(d, h)
+    decode(t, val, 256, d, val)
+  end
+
+  defp decode([], _, _, _, l), do: Enum.reverse(l) |> to_string
+  defp decode([h|t], old, free, d, l) do
+    val = Dict.get(d, h)
+    add = [List.last(val) | old]
+    d1  = Dict.put(d, free, add)
+    decode(t, val, free+1, d1, val++l)
+  end
+
+  defp init1(d), do: init1(255, d)
+
+  defp init1(0, d), do: d
+  defp init1(n, d), do: init1(n-1, Dict.put(d, n, [n]))
+end
+
+str = "TOBEORNOTTOBEORTOBEORNOT"
+IO.inspect enc = LZW.encode(str)
+IO.inspect dec = LZW.decode(enc)
+IO.inspect str == dec

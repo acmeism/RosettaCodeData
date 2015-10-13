@@ -4,19 +4,16 @@ import javax.swing.*;
 
 public class Honeycombs extends JFrame {
 
-    HoneycombsPanel panel;
-
     public static void main(String[] args) {
-        JFrame f = new Honeycombs();
-        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        f.setVisible(true);
+        SwingUtilities.invokeLater(() -> {
+            JFrame f = new Honeycombs();
+            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            f.setVisible(true);
+        });
     }
 
     public Honeycombs() {
-        Container content = getContentPane();
-        content.setLayout(new BorderLayout());
-        panel = new HoneycombsPanel();
-        content.add(panel, BorderLayout.CENTER);
+        add(new HoneycombsPanel(), BorderLayout.CENTER);
         setTitle("Honeycombs");
         setResizable(false);
         pack();

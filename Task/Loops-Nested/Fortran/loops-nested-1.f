@@ -35,10 +35,10 @@ C       makes everybody so comfortable.
  5000   FORMAT('A[', I2, '][', I2, '] is ', I2)
       END
 
-C FORTRAN 77 does not have come with a random number generator, but it
-C is easy enough to type "fortran 77 random number generator" into your
-C preferred search engine and to copy and paste what you find. The
-C following code is a slightly-modified version of:
+C FORTRAN 77 does not come with a random number generator, but it is
+C easy enough to type "fortran 77 random number generator" into your
+C preferred search engine and to copy and paste what you find.
+C The following code is a slightly-modified version of:
 C
 C     http://www.tat.physik.uni-tuebingen.de/
 C         ~kley/lehre/ftn77/tutorial/subprograms.html

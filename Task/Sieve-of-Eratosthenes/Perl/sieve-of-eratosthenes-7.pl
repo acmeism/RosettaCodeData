@@ -1,6 +1,7 @@
-sub erat {
-    my $p = shift;
-    return $p, $p**2 > $_[$#_] ? @_ : erat(grep $_%$p, @_)
+sub sieve{ my ($s, $i);
+	grep { not vec $s, $i  = $_, 1 and do
+		{ (vec $s, $i += $_, 1) = 1 while $i <= $_[0]; 1 }
+	} 2..$_[0]
 }
 
-print join ', ' => erat 2..100000;
+print join ", " => sieve 100;

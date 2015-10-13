@@ -1,41 +1,24 @@
-    butchers/mangles some of the characters in the documentation box. -->
-<lang>/*REXX program  computes the  forward difference  of a  list of numbers.
-  ╔════════════════════════════════════════════════════════════════════╗
-  ║             /\                     n     n         n-k             ║
-  ║            /  \  n  [ƒ] (x)   ≡    Σ    C   ∙  (-1)     ∙  ƒ(x+k)  ║
-  ║           /____\                  k=0    k                         ║
-  ║             ↑    ↑                      ↑                          ║
-  ║             │    │                      │                          ║
-  ║ {delta}─────┘   {n=order}              {C=comb or binomial coeff.} ║
-  ╚════════════════════════════════════════════════════════════════════╝*/
-numeric digits 100                     /*ensure enough accuracy (digits)*/
-parse arg xxx ',' N                    /*input:  ε1 ε2 ε3 ε4 ··· , order*/
-if xxx==''  then xxx='90 47 58 29 22 32 55 5 55 73'   /*default numbers.*/
-w=words(xxx)                           /*set W to  # of numbers in list.*/
-                                       /* [↓] validate the input numbers*/
-          do i=1  for w; _=word(xxx,i) /*process each number 1 at a time*/
-          if \datatype(_,'N')  then call ser   _   "isn't a valid number"
-          @.i=_/1                      /*normalize the #, prettify the #*/
-          end   /*i*/                  /* [↑]  removes superfluous stuff*/
-                                       /* [↓]  process (optional) order.*/
-if w==0           then call ser 'no numbers were specified.'
-if N\=='' & N<0   then call ser N  "(order) can't be negative."
-if N\=='' & N>w   then call ser N  "(order) can't be greater than"  w
-say right(w 'numbers:', 44)  xxx               /*display the header ··· */
-say left('', 44)copies('─', length(xxx)+2)     /*  and the header fence.*/
-if N==''  then do;  bot=0;  top=w;  end        /*define default orders. */
-          else do;  bot=N;  top=N;  end        /*just a specific order? */
-/*═════════════════════════════════════════where da rubber meets da road*/
-      do #=bot  to top;             do r=1  for w;  !.r=@.r;  end;      $=
-        do j=1  for #;   d=!.j;     do k=j+1  to w
-                                    parse  value  !.k !.k-d   with   d !.k
-                                    end   /*k*/
-        end   /*j*/
-                                    do i=#+1  to w;    $=$ !.i/1;    end
-      if $==''  then $='[null]'
-      say right(#, 7)th(#)'-order forward difference vector = '  strip($)
-      end      /*o*/
-exit                                   /*stick a fork in it, we're done.*/
-/*──────────────────────────────────one─liner subroutines───────────────*/
-ser:  say;       say '***error!***';      say arg(1);     say;     exit 13
-th:   arg ?;  return word('th st nd rd',1+?//10*(?//100%10\==1)*(?//10<4))
+/*REXX program  computes the   forward difference   of a  list of numbers.    */
+numeric digits 100                     /*ensure enough accuracy (decimal digs)*/
+parse arg e ',' N                      /*get a list:  ε1 ε2 ε3 ε4 ··· , order */
+if e==''  then e='90 47 58 29 22 32 55 5 55 73'   /*use some default numbers. */
+#=words(e)                             /*#  is the number of elements in list.*/
+                                       /* [↓]  assign list numbers to @ array.*/
+   do i=1  for #; @.i=word(e,i)/1; end /*process each number one at a time.   */
+                                       /* [↓]  process the optional order.    */
+if N==''  then parse value 0 # # with bot top N /*define default order range. */
+          else parse var N bot 1 top            /*Specified?  Use only 1 order*/
+say right(# 'numbers:', 44)  e         /*display the header (title)  and ···  */
+say left('',44)copies('─',length(e)+2) /*display the header fence.            */
+                                       /* [↓]  where da rubber meets da road. */
+  do o=bot to top;         do r=1   for #; !.r=@.r;    end;         $=
+    do j=1 for o; d=!.j;   do k=j+1  to #; parse value !.k !.k-d with d !.k; end
+    end   /*j*/
+                           do i=o+1  to #; $=$ !.i/1;  end
+  if $=='' then $='[null]'
+  say right(o,7)th(o)'─order forward difference vector ='   $
+  end     /*o*/
+
+exit                                   /*stick a fork in it,  we're all done. */
+/*────────────────────────────────────────────────────────────────────────────*/
+th:   arg ?;     return word('th st nd rd',1+?//10*(?//100%10\==1)*(?//10<4))

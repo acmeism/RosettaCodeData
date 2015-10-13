@@ -1,28 +1,26 @@
-/*REXX program gens 100 random points in an annulus: 10 ≤ √(x²+y²) ≤ 15 */
-parse arg points low high .            /*allow parms from command line. */
+/*REXX program generates 100 random points in an annulus:  10 ≤ √(x²≤y²) ≤ 15 */
+parse arg points low high .            /*obtain optional args from the C.L.   */
 if points==''  then points=100
-if    low==''  then  low=10;   low2= low**2  /*define a square shortcut.*/
-if   high==''  then high=15;  high2=high**2  /*   "   "    "       "    */
+if    low==''  then  low=10;   low2= low**2    /*define a shortcut for square.*/
+if   high==''  then high=15;  high2=high**2    /*   "   "    "      "     "   */
 $=
-   do x=-high;       x2=x*x            /*gen all possible annulus points*/
+   do x=-high;        x2=x*x           /*generate all possible annulus points.*/
    if x<0 & x2>high2  then iterate
    if x>0 & x2>high2  then leave
-         do y=-high;       y2=y*y;    s=x2+y2
+         do y=-high;          s=x2+y*y
          if (y<0 & s>high2) | s<low2  then iterate
          if  y>0 & s>high2            then leave
-         $=$ x','y                     /*add a point-set to the $ list. */
+         $=$ x','y                     /*add a point─set to the  $  list.     */
          end   /*y*/
    end         /*x*/
 
-plotChar='O';    minY=high2;    maxY=-minY;    ap=words($);   field.=
+plotChar='Θ';        minY=high2;       maxY=-minY;       ap=words($);      @.=
 
-   do j=1  for points                  /*"draw" the x,y points [char O].*/
-   parse value word($,random(1,ap))  with  x ',' y  /*pick random point.*/
-   field.y=overlay(plotChar, field.y, x+high+1)     /*"draw: the point. */
-   minY=min(minY,y);    maxY=max(maxY,y)            /*plot restricting. */
+   do j=1  for points                  /*define the  x,y points [character O].*/
+   parse value  word($,random(1,ap))   with   x ',' y   /*pick a random point.*/
+   @.y=overlay(plotChar, @.y, x+high+1)                 /*define:  the point. */
+   minY=min(minY,y);    maxY=max(maxY,y)                /*plot restricting.   */
    end   /*j*/
-
- do y=minY  to maxY                    /*display the annulus to screen. */
- if field\==''  then say field.y       /*Not blank?   Then display it.  */
- end   /*y*/
-                                       /*stick a fork in it, we're done.*/
+                                       /* [↓]  only show displayable section. */
+ do y=minY  to maxY;  say @.y;  end    /*display the annulus to the terminal. */
+                                       /*stick a fork in it,  we're all done. */

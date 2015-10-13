@@ -1,45 +1,25 @@
 #lang racket
-;; fib-n : Nat x Nat -> [List Nat]
-;; Outputs the first x numbers in the
-;; n-step fibonacci sequence
-;; n > 1
-(define (fib-n n x)
-  (cond
-        [(= x 0) empty]
-        [(= x 1) '(1)]
-        [(= x 2) '(1 1)]
-        [(<= x (add1 n)) (append '(1 1) (build-list (- x 2) (λ (y) (expt 2 (add1 y)))))]
-        [else (local ((define first-values (append '(1 1) (build-list (- n 1) (λ (x) (expt 2 (add1 x))))))
-                      (define (add-values lon y acc)
-                        (cond [(= y 0) acc]
-                              [else (add-values (rest lon) (sub1 y) (+ (first lon) acc))]))
-                      (define (acc lon y)
-                        (cond [(= y x) lon]
-                              [else (acc (cons (add-values lon n 0) lon) (add1 y))])))
-                (reverse (acc (reverse first-values) (add1 n))))]))
-;; fib-list : [List Nat] x Nat -> [List Nat]
-;; Given a list of natural numbers,
-;; the length of the list becomes the
-;; size of the step, and outputs
-;; the first x numbers of the sequence
-;; (len lon) > 1
-(define (fib-list lon x)
-  (local ((define step (length lon)))
-    (cond
-      [(= x step) lon]
-      [(< x step)
-       (local ((define (extract-values lon y)
-                 (cond [(= y 0) empty]
-                       [else (cons (first lon) (extract-values (rest lon) (sub1 y)))])))
-         (extract-values lon x))]
-      [else (local ((define (add-values lon y acc)
-                      (cond [(= y 0) acc]
-                            [else (add-values (rest lon) (sub1 y) (+ (first lon) acc))]))
-                    (define (acc lon y)
-                      (cond [(= y x) lon]
-                            [else (acc (cons (add-values lon step 0) lon) (add1 y))])))
-              (reverse (acc (reverse lon)  step)))])))
 
-; Now compute the series:
-(for/list ([n (in-range 2 11)])
-  (fib-list (fib-n n n) 20))
+;; fib-list : [Listof Nat] x Nat -> [Listof Nat]
+;; Given a non-empty list of natural numbers, the length of the list
+;; becomes the size of the step; return the first n numbers of the
+;; sequence; assume n >= (length lon)
+(define (fib-list lon n)
+  (define len (length lon))
+  (reverse (for/fold ([lon (reverse lon)]) ([_ (in-range (- n len))])
+             (cons (apply + (take lon len)) lon))))
+
+;; Show the series ...
+(define (show-fibs name l)
+  (printf "~a: " name)
+  (for ([n (in-list (fib-list l 20))]) (printf "~a, " n))
+  (printf "...\n"))
+
+;; ... with initial 2-powers lists
+(for ([n (in-range 2 11)])
+  (show-fibs (format "~anacci" (case n [(2) 'fibo] [(3) 'tribo] [(4) 'tetra]
+                                     [(5) 'penta] [(6) 'hexa] [(7) 'hepta]
+                                     [(8) 'octo] [(9) 'nona] [(10) 'deca]))
+             (cons 1 (build-list (sub1 n) (curry expt 2)))))
+;; and with an initial (2 1)
+(show-fibs "lucas" '(2 1))

@@ -1,8 +1,6 @@
 def countSubstrings str, subStr
-    return str.scan(subStr).length
+  str.scan(subStr).length
 end
 
-irb(main):001:0> "the three truths".scan("th").length
-=> 3
-irb(main):002:0> "ababababab".scan("abab").length
-=> 2
+p countSubstrings "the three truths", "th"      #=> 3
+p countSubstrings "ababababab", "abab"          #=> 2

@@ -1,0 +1,1 @@
+BWImage = edge(GrayscaleImage,'canny');

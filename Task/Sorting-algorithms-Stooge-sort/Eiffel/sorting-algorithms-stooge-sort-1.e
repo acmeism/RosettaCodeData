@@ -2,6 +2,7 @@ class
 	STOOGE_SORT
 feature
 	stoogesort (ar: ARRAY[INTEGER]; i,j: INTEGER)
+                -- Sorted array in ascending order.
 	require
 		ar_not_empty: ar.count >= 0
 		i_in_range: i>=1

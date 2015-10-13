@@ -1,5 +1,8 @@
 BEGIN {
   printf "" > "output.txt"
-  # try to create the file in the root (for *nix-like systems)
+  close("output.txt")
   printf "" > "/output.txt"
+  close("/output.txt")
+  system("mkdir docs")
+  system("mkdir /docs")
 }

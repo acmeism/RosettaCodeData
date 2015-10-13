@@ -1,3 +1,3 @@
 module: hello-world
 
-format-out("%s\n", "Goodbye, World!");
+format-out("%s\n", "Hello world!");

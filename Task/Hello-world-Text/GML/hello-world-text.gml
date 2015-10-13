@@ -1,2 +1,2 @@
-show_message("Goodbye, World!"); // displays a pop-up message
-show_debug_message("Goodbye, World!"); // sends text to the debug log or IDE
+show_message("Hello world!"); // displays a pop-up message
+show_debug_message("Hello world!"); // sends text to the debug log or IDE

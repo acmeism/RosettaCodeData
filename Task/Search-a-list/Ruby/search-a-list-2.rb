@@ -5,3 +5,4 @@ haystack.each do |item|
     break
   end
 end
+#=> Bush last appears at index 7

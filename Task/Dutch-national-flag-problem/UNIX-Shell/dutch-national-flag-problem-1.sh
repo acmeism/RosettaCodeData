@@ -1,7 +1,7 @@
 COLORS=(red white blue)
 
-# to go from name to number, we make variables out of the color names (e.g. the
-# variable "$red" has value "1").
+# to go from name to number, we make variables out of the color names
+# (e.g. the variable "$red" has value "1").
 for (( i=0; i<${#COLORS[@]}; ++i )); do
   eval ${COLORS[i]}=$i
 done

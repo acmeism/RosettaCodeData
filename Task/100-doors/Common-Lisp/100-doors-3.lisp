@@ -1,23 +1,13 @@
-(defun perfect-square-list (n)
-  "Generates a list of perfect squares from 0 up to n"
-  (loop for i from 1 to (isqrt n) collect (expt i 2)))
+(defun toggle (w m z)
+  (loop for a in w for n from 1 to z
+        collect (if (zerop (mod n m)) (not a) a)))
 
-(defun print-doors (doors)
-  "Pretty prints the doors list"
-  (format T "~{~A ~A ~A ~A ~A ~A ~A ~A ~A ~A~%~}~%" doors))
+(defun doors (z &optional (w (make-list z)) (n 1))
+  (if (> n z) w (doors z (toggle w n z) (1+ n))))
 
-(defun open-door (doors num open)
-  "Sets door at num to open"
-  (setf (nth (- num 1) doors) open))
-
-(defun visit-all (doors vlist open)
-  "Visits and opens all the doors indicated in vlist"
-  (dolist (dn vlist doors)
-    (open-door doors dn open)))
-
-(defun start2 (&optional (size 100))
-  "Start the program"
-  (print-doors
-   (visit-all (make-list size :initial-element '\#)
-              (perfect-square-list size)
-              '_)))
+> (doors 100)
+(T NIL NIL T NIL NIL NIL NIL T NIL NIL NIL NIL NIL NIL T NIL NIL NIL NIL NIL
+ NIL NIL NIL T NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL T NIL NIL NIL NIL NIL
+ NIL NIL NIL NIL NIL NIL NIL T NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL
+ NIL NIL T NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL T
+ NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL T)

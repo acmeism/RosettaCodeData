@@ -4,3 +4,7 @@
 0
    avgAngleD 10 20 30
 20
+   avgAngleD 20 350
+5
+   avgAngleD 10 340
+355

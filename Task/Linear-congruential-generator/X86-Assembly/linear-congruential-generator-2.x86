@@ -1,0 +1,244 @@
+;x86-64 assembly code for Microsoft Windows
+;Tested in windows 7 Enterprise Service Pack 1 64 bit
+;With the AMD FX(tm)-6300 processor
+;Assembled with NASM version 2.11.06
+;Linked to C library with gcc version 4.9.2 (x86_64-win32-seh-rev1, Built by MinGW-W64 project)
+
+;Assembled and linked with the following commands:
+;nasm -f win64 <filename>.asm -o <filename>.obj
+;gcc <filename>.obj -o <filename>
+
+;Takes number of iterations to run RNG loop as command line parameter.
+
+extern printf,puts,atoi,exit,time,_aligned_malloc
+
+section .data
+align 64
+errmsg_argnumber: db "There should be no more than one argument.",0
+align 64
+errmsg_noarg: db "Number of iterations was not specified.",0
+align 64
+errmsg_zeroiterations: db "Zero iterations of RNG loop specified.",0
+
+align 64
+errmsg_timefail: db "Unable to retrieve calender time.",0
+align 64
+errmsg_mallocfail: db "Unable to allocate memory for array of random numbers.",0
+
+align 64
+fmt_random: db "The %u number generated is %d",0xa,0xd,0
+
+align 16
+multiplier: dd 214013,17405,214013,69069
+align 16
+addend: dd 2531011, 10395331, 13737667, 1
+align 16
+mask: dd  0xffffffff,0,0xffffffff,0
+align 16
+masklo: dd 0x7fff,0x7fff,0x7fff,0x7fff
+
+section .bss
+
+section .text
+global main
+
+main:
+
+;check for argument
+cmp rcx,1
+jle err_noarg
+
+;ensure that only one argument was entered
+cmp rcx,2
+jg err_argnumber
+
+
+;get number of times to iterate get_random
+mov rcx,[rdx + 8]
+call atoi
+
+
+;ensure that number of iterations is greater than 0
+cmp rax,0
+jle err_zeroiterations
+mov rcx,rax
+
+
+;calculate space needed for an array containing the random numbers
+shl rcx,4
+
+;move size of array into r14
+mov r14,rcx
+
+;16 byte alignment boundary
+mov rdx,16
+
+;reserve memory aligned to 16 byte boundary for array with _aligned_malloc
+call _aligned_malloc
+
+cmp rax,0
+jz err_mallocfail
+
+;pointer to array in r15
+mov r15,rax
+
+
+;seed the RNG using time()
+xor rcx,rcx
+call time
+
+;ensure that time returns valid output
+cmp rax,-1
+jz err_timefail
+
+
+;pointer to array of random numbers in r15
+;address of end of array at in r14
+;states stored in xmm0
+
+;calculate address of end of array in r14
+add r14,r15
+
+;load seed,seed+1,seed,seed+1 into xmm0
+lea rbx,[rax - 1]
+shl rax,32
+or rax,rbx
+
+movq xmm0,rax
+vpslldq xmm1,xmm0,8
+vpor xmm0,xmm0,xmm1
+
+
+;pointer to array of random numbers in r15
+;address of end of array in r14
+;current address in array in rdi
+;current states in xmm0
+;multiplier in xmm1
+;addened in xmm2
+;mask in xmm3
+;masklo in xmm4
+;split seed in xmm5
+;current set of random numbers in xmm6
+
+;prepare random number generator
+
+mov rdi,r15
+
+vmovdqa xmm1,[multiplier]
+vmovdqa xmm2,[addend]
+vmovdqa xmm3,[mask]
+vmovdqa xmm4,[masklo]
+
+
+get_random:
+
+;arrange order of current states to 2,3,0,1 and store in split seed
+vpshufd xmm5,xmm0,10110001b
+
+;multiply current states by multiplier
+vpmulld xmm0,xmm0,xmm1
+
+;set order of multiplier to 2,3,0,1
+vpshufd xmm1,xmm1,10110001b
+
+;multiply split seed by multiplier
+vpmulld xmm5,xmm5,xmm1
+
+;and current states with mask
+vpand xmm0,xmm0,xmm3
+
+;and current split seed with mask
+vpand xmm5,xmm5,xmm3
+
+;set order of split seed to 2,3,0,1
+vpshufd xmm5,xmm5,10110001b
+
+;or current states with split seed
+vpor xmm0,xmm0,xmm5
+
+;add adder to current states
+vpaddd xmm0,xmm0,xmm2
+
+
+;shift vector right by two bytes
+vpsrldq xmm6,xmm0,2
+
+;and each state with 0x7fff
+vpand xmm6,xmm6,xmm4
+
+vmovdqa [rdi],xmm6
+
+add rdi,16
+cmp rdi,r14
+jl get_random
+
+
+;pointer to array of random numbers in r15
+;address of end of array in r14
+;current address in array in rdi
+;array index in rsi
+
+
+xor rsi,rsi
+mov rdi,r15
+
+print_random:
+
+mov rcx,fmt_random
+mov rdx,rsi
+mov r8d,[rdi]
+call printf
+
+add rsi,1
+add rdi,4
+cmp rdi,r14
+jl print_random
+
+xor rcx,rcx
+call exit
+
+
+;;;;;;;;;;ERROR MESSAGES;;;;;;;;;;;;;;;;
+
+err_argnumber:
+
+mov rcx,errmsg_argnumber
+call puts
+
+jmp exit_one
+
+
+err_noarg:
+
+mov rcx,errmsg_noarg
+call puts
+
+jmp exit_one
+
+
+err_zeroiterations:
+
+mov rcx,errmsg_zeroiterations
+call puts
+
+jmp exit_one
+
+
+err_timefail:
+
+mov rcx,errmsg_timefail
+call puts
+
+jmp exit_one
+
+
+err_mallocfail:
+
+mov rcx,errmsg_mallocfail
+call puts
+
+
+exit_one:
+
+mov rcx,1
+call exit

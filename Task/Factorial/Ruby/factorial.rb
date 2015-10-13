@@ -21,7 +21,7 @@ end
 
 # Iterative with Range#reduce, requires Ruby 1.8.7
 def factorial_reduce(n)
-  (1..n).reduce(:*)
+  (2..n).reduce(1, :*)
 end
 
 

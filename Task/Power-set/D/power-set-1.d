@@ -1,16 +1,27 @@
-T[][] powerSet(T)(in T[] s) pure nothrow @safe {
-    auto r = new typeof(return)(1, 0);
-    foreach (e; s) {
-        typeof(return) rs;
-        foreach (x; r)
-            rs ~= x ~ [e];
-        r ~= rs;
-    }
-    return r;
+import std.algorithm;
+import std.range;
+
+auto powerSet(R)(R r)
+{
+	return
+		(1L<<r.length)
+		.iota
+		.map!(i =>
+			r.enumerate
+			.filter!(t => (1<<t[0]) & i)
+			.map!(t => t[1])
+		);
 }
 
-void main() {
-    import std.stdio;
+unittest
+{
+	int[] emptyArr;
+	assert(emptyArr.powerSet.equal!equal([emptyArr]));
+	assert(emptyArr.powerSet.powerSet.equal!(equal!equal)([[], [emptyArr]]));
+}
 
-    [1, 2, 3].powerSet.writeln;
+void main(string[] args)
+{
+	import std.stdio;
+	args[1..$].powerSet.each!writeln;
 }

@@ -1,8 +1,6 @@
-let primes limit =
-  let lmtb,lmtbsqrt = (limit - 3u) / 2u, (uint32 (sqrt (double limit)) - 3u) / 2u
-  let buf = System.Collections.BitArray(int lmtb + 1, true)
-  let rec culltest i = if i <= lmtbsqrt then
-                         let p = i + i + 3u in let s = p * (i + 1u) + i in
-                         let rec cullp c = if c <= lmtb then buf.[int c] <- false; cullp (c + p)
-                         (if buf.[int i] then cullp s); culltest (i + 1u) in culltest 0u
-  seq {yield 2u; for i = 0u to lmtb do if buf.[int i] then yield i + i + 3u }
+type CIS<'T> = struct val v: 'T val cont: unit -> CIS<'T> new(v,cont) = {v=v;cont=cont} end
+type Prime = uint32
+let frstprm = 2u
+let frstoddprm = 3u
+let inc1 = 1u
+let inc = 2u

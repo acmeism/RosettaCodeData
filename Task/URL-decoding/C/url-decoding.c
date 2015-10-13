@@ -31,7 +31,7 @@ int decode(const char *s, char *dec)
 int main()
 {
 	const char *url = "http%3A%2F%2ffoo+bar%2fabcd";
-	char out[sizeof(url)];
+	char out[strlen(url) + 1];
 
 	printf("length: %d\n", decode(url, 0));
 	puts(decode(url, out) < 0 ? "bad string" : out);

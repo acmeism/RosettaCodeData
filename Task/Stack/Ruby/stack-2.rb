@@ -41,25 +41,15 @@ class Stack
   # If passing a number _n_, removes the top _n_ elements, and returns
   # an Array of them. If this Stack contains fewer than _n_ elements,
   # returns them all. If this Stack is empty, returns an empty Array.
-  nil
+  def_delegator :@ary, :pop
 
-  if ([].pop(0) rescue false)
-    # Ruby >= 1.8.7
-    def_delegator :@ary, :pop
-  else
-    # Ruby < 1.8.7
-    def pop(*args)  # :nodoc:
-      case len = args.length
-      when 0
-        @ary.pop
-      when 1
-        n = [@ary.length, args.first].min
-        @ary.slice!(-n, n)
-      else
-        raise ArgumentError, "wrong number of arguments (#{len} for 0..1)"
-      end
-    end
-  end
+  ##
+  # :method: top
+  # :call-seq:
+  #   top -> obj or nil
+  #   top(n) -> ary
+  # Returns the topmost element without modifying the stack.
+  def_delegator :@ary, :last, :top
 
   ##
   # :method: empty?

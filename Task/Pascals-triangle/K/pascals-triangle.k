@@ -1,6 +1,5 @@
-   pascal:{(x-1){1_ +':0,x,0}\1}
-
-   pascal 6
+pascal:{(x-1){+':x,0}\1}
+pascal 6
 (1
  1 1
  1 2 1

@@ -4,9 +4,10 @@
       (and
          (> N 1)
          (bit? 1 N)
-         (for (D 3  T  (+ D 2))
-            (T (> D (sqrt N)) T)
-            (T (=0 (% N D)) NIL) ) ) ) )
+         (let S (sqrt N)
+            (for (D 3  T  (+ D 2))
+               (T (> D S) T)
+               (T (=0 (% N D)) NIL) ) ) ) ) )
 
 (de mersenne? (P)
    (or

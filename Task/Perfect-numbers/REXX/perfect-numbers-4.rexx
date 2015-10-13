@@ -20,7 +20,7 @@ if x==6  then return 1                 /*handle special case of  six.   */
       end   /*DO until*/               /*wash, rinse, repeat ···        */
 
 if r\==1  then return 0                /*Digital root ¬1? Then ¬perfect.*/
-s=1                                    /*the first factor of  X.        */
+s=1                                    /*the first factor of  X.       _*/
              do j=2  while  j*j<=x     /*starting at 2, find factors ≤√X*/
              if x//j\==0  then iterate /*J isn't a factor of X, so skip.*/
              s = s + j + x%j           /*··· add it and the other factor*/

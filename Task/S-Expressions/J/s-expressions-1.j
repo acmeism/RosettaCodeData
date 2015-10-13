@@ -3,7 +3,7 @@ chrMap=: '()';'"';' ',LF,TAB,CR
 
 NB. state columns correspond to the above character classes
 NB. first digit chooses next state.
-NB. second digit is action 0: do nothing, 1: start word, 2: end word
+NB. second digit is action 0: do nothing, 1: start token, 2: end token
 states=: 10 10#: ".;._2]0 :0
   11  21  00  31  NB. state 0: initial state
   12  22  02  32  NB. state 1: after () or after closing "

@@ -1,8 +1,6 @@
-set a=(a b c)
-set b=(A B C)
-set c=(1 2 3)
-@ i = 1
-while ( $i <= $#a )
-	echo "$a[$i]$b[$i]$c[$i]"
-	@ i += 1
-end
+a=(a b c)
+b=(A B C)
+c=(1 2 3)
+for ((i = 1; i <= $#a; i++)); do
+  echo "$a[$i]$b[$i]$c[$i]"
+done

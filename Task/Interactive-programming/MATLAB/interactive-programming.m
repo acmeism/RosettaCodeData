@@ -1,5 +1,1 @@
-  function x=f(a,b,sep)
-    x = [a,sep,b];
-    return;
-  end;
-  f('Rosetta', 'Code', ':')
+>> f = @(str1, str2, delim) [str1, delim, delim, str2];

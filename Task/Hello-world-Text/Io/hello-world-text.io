@@ -1,1 +1,1 @@
-"Goodbye, World!" println
+"Hello world!" println

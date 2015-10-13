@@ -1,7 +1,7 @@
 ISPRIME(N)
  QUIT:(N=2) 1
- NEW I,TP
- SET TP=+'$PIECE((N/2),".",2)
- IF 'TP FOR I=3:2:(N**.5) SET TP=+'$PIECE((N/I),".",2) Q:TP
+ NEW I,R
+ SET R=N#2
+ IF R FOR I=3:2:(N**.5) SET R=N#I Q:'R
  KILL I
- QUIT 'TP
+ QUIT R

@@ -1,21 +1,21 @@
-/*REXX program generates  unbiased random numbers  and displays results.*/
-parse arg samples seed .               /*allow specification of options.*/
-if samples=='' | samples==','  then samples=1000    /*SAMPLES specified?*/
-if seed\==''  then call random ,,seed  /*if specified, use it for RANDOM*/
-w=14                                   /*width of most columnar output  */
-dash='─'                               /*filler character for column hdr*/
-say ct('N',3)  ct('biased')    ct('biased'),                 /*show the */
-               ct('unbiased')  ct('unbiased')  ct('samples') /*6col hdr.*/
+/*REXX program generates  unbiased random numbers  and displays the results.  */
+parse arg # R seed .                   /*get optional parameters from the CL. */
+if #=='' | #==','  then #=1000         /*#   the number of SAMPLES to be used.*/
+if R=='' | R==','  then R=6            /*R   the high number for the range.   */
+if seed\==''  then call random ,,seed  /*Not specified?  Use for RANDOM seed. */
+w=12;       pad=left('',5)             /*width of columnar output; indentation*/
+dash='─';   @b='biased';   @ub='un'@b  /*literals for the SAY column headers. */
+say pad c('N',5) c(@b) c(@b'%') c(@ub) c(@ub"%") c('samples')  /*6 col header.*/
 dash=
-       do N=3  to 6;     b=0;   u=0;                   do j=1 for  samples
-                                                       b=b + randN(N)
-                                                       u=u + unbiased()
-                                                       end   /*j*/
-       say ct(N,3) ct(b) pc(b) ct(u) pc(u) ct(samples)
-       end     /*N*/
-exit                                   /*stick a fork in it, we're done.*/
-/*───────────────────────────────────one─line subroutines───────────────*/
-ct:           return center(arg(1),  word(arg(2) w,1),   right(dash,1))
-pc:           return ct(format(arg(1)/samples*100, , 2)'%')
-randN:        parse arg z;          return random(1, z)==z
-unbiased:     do  until  x\==randN(N);   x=randN(N);   end;       return x
+      do N=3  to R;       b=0;   u=0;                            do j=1  for  #
+                                                                 b=b+randN(N)
+                                                                 u=u+unbiased()
+                                                                 end   /*j*/
+      say pad  c(N,5)  c(b)  pct(b)  c(u)  pct(u)  c(#)
+      end   /*N*/
+exit                                   /*stick a fork in it,  we're all done. */
+/*───────────────────────────────────one─liner subroutines────────────────────*/
+c:          return center(arg(1),    word(arg(2) w,1),    left(dash,1))
+pct:        return c(format(arg(1)/#*100,,2)'%')             /*2 decimal digs.*/
+randN:      parse arg z;             return random(1,z)==z
+unbiased:   do  until x\==randN(N);  x=randN(N);   end;                 return x

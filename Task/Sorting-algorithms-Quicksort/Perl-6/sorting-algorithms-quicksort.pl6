@@ -8,5 +8,5 @@
      my @after  := @rest.grep(* !before $pivot);
 
      # Sort the partitions.
-     (quicksort(@before), $pivot, quicksort(@after))
+     flat quicksort(@before), $pivot, quicksort(@after)
  }

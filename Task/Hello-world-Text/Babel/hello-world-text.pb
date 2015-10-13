@@ -1,1 +1,1 @@
-((main { "Goodbye, World!" << }))
+((main { "Hello world!" << }))

@@ -1,8 +1,8 @@
 sub poly_long_div ( @n is copy, @d ) {
-    return [0], @n if +@n < +@d;
+    return [0], |@n if +@n < +@d;
 
     my @q = gather while +@n >= +@d {
-        @n = @n Z- ( ( @d X* take ( @n[0] / @d[0] ) ), 0 xx * );
+        @n = @n Z- flat ( ( @d X* take ( @n[0] / @d[0] ) ), 0 xx * );
         @n.shift;
     }
 

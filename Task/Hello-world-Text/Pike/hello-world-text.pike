@@ -1,3 +1,3 @@
 int main(){
-   write("Goodbye, World!\n");
+   write("Hello world!\n");
 }

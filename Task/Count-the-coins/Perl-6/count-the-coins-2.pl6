@@ -1,6 +1,6 @@
 sub ways-to-make-change-slowly(\n, @coins) {
     my @table = [1 xx @coins], [0 xx @coins] xx n;
-    for 1..n X ^@coins -> \i, \j {
+    for 1..n X ^@coins -> (\i, \j) {
         my \c = @coins[j];
         @table[i][j] = [+]
             @table[i - c][j    ] // 0,

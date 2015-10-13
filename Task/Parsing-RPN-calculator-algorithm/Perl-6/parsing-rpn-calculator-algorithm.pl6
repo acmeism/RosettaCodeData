@@ -2,7 +2,7 @@ my $proggie = '3 4 2 * 1 5 - 2 3 ^ ^ / +';
 
 class RPN is Array {
 
-    method binop(&infix:<op>) { self.push: self.pop Rop self.pop }
+    method binop(&op) { self.push: self.pop R[&op] self.pop }
 
     method run($p) {
         for $p.words {

@@ -1,5 +1,5 @@
-var map = {};
-map['foo'] = 'xyz'; //equivalent to: map.foo = 'xyz';
-map['bar'] = new MyClass; //equivalent to: map.bar = new MyClass;
-map['1x; ~~:-b'] = 'text'; //no equivalent
-alert( map['1x; ~~:-b'] );
+var obj = {};
+obj['foo'] = 'xyz'; //equivalent to: obj.foo = 'xyz';
+obj['bar'] = new MyClass; //equivalent to: obj.bar = new MyClass;
+obj['1x; ~~:-b'] = 'text'; //no equivalent
+console.log(obj['1x; ~~:-b']);

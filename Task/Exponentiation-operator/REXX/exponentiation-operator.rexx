@@ -1,4 +1,4 @@
-/*REXX program to show  various   (integer)  exponentations.            */
+/*REXX program to show  various   (integer)  exponentiations.           */
                                 say center('digits='digits(),79,'─')
 say '17**65   is:'
 say  17**65

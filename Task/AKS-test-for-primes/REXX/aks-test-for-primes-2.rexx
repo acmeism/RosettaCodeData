@@ -1,42 +1,40 @@
-/*REXX pgm calculates primes via the Agrawal-Kayal-Saxena primality test*/
-parse arg top .; if top==''  then top=200  /*Not specified? Use default.*/
-oTop=top;  tell=top<0;  top=abs(top)   /*TOP negative?  Show expression.*/
-numeric digits max(9,top%3)            /*define a dynamic number of digs*/
-@.=1;   big=1                          /*set all coefficients to unity. */
-#=                                     /*define a list of prime numbers.*/
-  do p=3  for top;    pm=p-1;  pp=p+1  /*PM & PP: used as a convenience.*/
-      do m=2  to pp%2;         mm=m-1  /*calc. coefficients for a power.*/
-      @.p.m=@.pm.mm + @.pm.m;  mh=pp-m /*calculate left  side of  coeff.*/
-      @.p.mh=@.p.m                     /*    "     right   "   "    "   */
-      if @.p.m>big  then big=@.p.m     /*This coefficient the biggest?  */
-      end   /*m*/                      /* [↑]  The  M  DO loop does both*/
-  end       /*p*/                      /*      sides in the same loop,  */
-                                       /*      saving a bunch of time.  */
-if tell  then say '(x-1)^0:  1'        /*maybe show the first expression*/
-$.0='-';   $.1="+"                     /*$.x   is the  sign  to be used.*/
-                                       /* [↓]  test for primality by ÷  */
-  do n=2  for top;   nh=n%2;    nm=n-1 /*create expressions/find primes.*/
-    do k=3  to nh  until @.n.k//nm\==0 /*coefficients divisible by N-1 ?*/
-    end   /*k*/                        /* [↑]  skip the 1st & 2nd coeff.*/
-                                       /* [↓]  search for a good coeff. */
-  if k>nh & nm\==1 & n\==5 then #=# nm /*add a number to the prime list.*/
-  if \tell  then iterate               /*¬tell?  Don't show expressions.*/
-  s=1                                  /*S:     is the sign indicator.  */
-  y='(x-1)^'nm": "                     /*define first part of expression*/
-                                       /* [↓]  create higher powers 1st.*/
-    do j=n  to 2  by -1;   jm=j-1      /*JM    is used as a convenience.*/
-    if j==2  then exp='x'              /*if power=1, don't show the pow.*/
-             else exp='x^'jm           /* ··· else show the power with ^*/
-    if j==n  then y=y exp              /*no sign for the 1st expression.*/
-             else y=y $.s @.n.j'∙'exp  /*build the expression with sign.*/
-    s=\s                               /*flip the sign in the expression*/
-    end   /*j*/                        /* [↑]  the sign (now) is  0 | 1,*/
-                                       /*      and is shown as    - | + */
-  say  y  $.s  1                       /*just show first N expressions, */
-  end     /*n*/                        /* [↑]  ··· but only for neg TOP.*/
-                           say         /* [↓]  Has TOP a leading +? Show*/
-if left(oTop,1)=='+'  then say top  is  'prime.'       /*tell is/isn't. */
-                      else say 'primes:'  #     /*display prime # list. */
-say                                             /* [↓]  size of big 'un.*/
-say 'Found '   words(#)    ' primes and the largest coefficient has' ,
-    length(big)  "decimal digits."     /*stick a fork in it, we're done.*/
+/*REXX pgm calculates primes via the Agrawal-Kayal-Saxena (AKS) primality test*/
+parse arg Z .;   if Z==''  then Z=200  /*Z  not specified?   Then use default.*/
+OZ=Z;   tell=Z<0;   Z=abs(Z)           /*Is Z negative?  Then show expression.*/
+numeric digits max(9,Z%3)              /*define a dynamic # of decimal digits.*/
+$.0='-';      $.1="+";         @.=1    /*$.x: sign char; default coefficients.*/
+#=                                     /*define list of prime numbers (so far)*/
+  do p=3  for Z;      pm=p-1;  pp=p+1  /*PM & PP: used as a coding convenience*/
+      do m=2  for pp%2-1;      mm=m-1  /*calculate coefficients for a power.  */
+      @.p.m=@.pm.mm + @.pm.m;  h=pp-m  /*calculate left  side of  coefficients*/
+      @.p.h=@.p.m                      /*    "     right   "   "       "      */
+      end   /*m*/                      /* [↑]  The  M  DO loop creates both   */
+  end       /*p*/                      /*      sides in the same loop, saving */
+                                       /*      a bunch of execution time.     */
+if tell  then say  '(x-1)^0:  1'       /*possibly display the first expression*/
+                                       /* [↓]  test for primality by division.*/
+  do n=2  for Z;     nh=n%2;    d=n-1  /*create expressions;  find the primes.*/
+      do k=3  to nh  while @.n.k//d==0 /*are coefficients divisible by  N-1 ? */
+      end   /*k*/                      /* [↑]  skip the 1st & 2nd coefficients*/
+                                       /* [↓]  multiple THEN─IF faster than &s*/
+  if d\==1  then if d\==4 then if k>nh then #=# d  /*add number to prime list.*/
+  if \tell  then iterate               /*Don't tell?   Don't show expressions.*/
+  y='(x-1)^'d": "                      /*define first part of the expression. */
+  s=1                                  /*S:     is the sign indicator (-1│+1).*/
+      do j=n  to 2  by -1              /*create the higher powers first.      */
+      if j==2  then xp='x'             /*if power=1, then don't show the power*/
+               else xp='x^' || (j-1)   /*        ··· else show power with  ^  */
+      if j==n  then y=y xp             /*no sign (+│-) for the 1st expression.*/
+               else y=y $.s @.n.j'∙'xp /*build the expression with sign (+|-).*/
+      s=\s                             /*flip the sign for the next expression*/
+      end   /*j*/                      /* [↑]  the sign (now) is either 0 │ 1,*/
+                                       /*      and is displayed either  - │ + */
+  say  y  $.s  1                       /*just show the first  N  expressions, */
+  end       /*n*/                      /* [↑]  ··· but only for  negative  Z. */
+                           say         /* [↓]  Has Z a leading + ?  Then show.*/
+is="isn't";  if Z==word(. #,words(#)+1)  then is='is' /*is  or  isn't a prime.*/
+if left(OZ,1)=='+'  then say  Z  is  'prime.'         /*tell if  OZ  has a +. */
+                    else say 'primes:'  #             /*display prime # list. */
+say                                                   /* [↓]  size of big 'un.*/
+say 'Found '     words(#)      ' primes and the largest coefficient has' ,
+    length(@.pm.h)  "decimal digits."  /*stick a fork in it,  we're all done. */

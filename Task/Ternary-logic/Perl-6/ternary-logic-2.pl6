@@ -14,7 +14,7 @@ sub tbl (&op,$name) {
 
 tbl(&infix:<∧>, '∧');
 tbl(&infix:<∨>, '∨');
-tbl(&infix:<→>, '→');
+tbl(&infix:<⇒>, '⇒');
 tbl(&infix:<≡>, '≡');
 
 say '';
@@ -30,6 +30,6 @@ say ~(
     Too ∨ Too ∧ ¬Too ≡ Too,
     (Too ∨ Too) ∧ ¬Too ≡ ¬Too,
 
-    Foo ∧ Too ∨ Foo → Foo ≡ Too,
-    Foo ∧ Too ∨ Too → Foo ≡ Foo,
+    Foo ∧ Too ∨ Foo ⇒ Foo ≡ Too,
+    Foo ∧ Too ∨ Too ⇒ Foo ≡ Foo,
 );

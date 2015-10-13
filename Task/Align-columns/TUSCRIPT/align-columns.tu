@@ -12,7 +12,7 @@ SET nix=SPLIT (exampletext,":$:",c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12)
 LOOP l1=1,12
 SET colum=CONCAT ("c",l1)
 SET newcolum=CONCAT ("new",l1)
-SET @newcolum="", length=MAX LENGTH (@colum), space=length+2
+SET @newcolum="", length=MAX LENGTH (@colum), space=length+2
  LOOP n,l2=@colum
  SET newcell=CENTER (l2,space)
  SET @newcolum=APPEND (@newcolum,"~",newcell)

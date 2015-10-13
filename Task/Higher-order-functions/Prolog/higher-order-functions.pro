@@ -1,4 +1,4 @@
-first(Predicate):-Predicate.
-second(Argument):-print(Argument).
+first(Predicate) :- call(Predicate).
+second(Argument) :- write(Argument).
 
 :-first(second('Hello World!')).

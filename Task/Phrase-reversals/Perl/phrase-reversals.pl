@@ -1,9 +1,10 @@
-my $s      = "rosetta code phrase reversal";
-my $rev_s  = reverse($s);
-my $rev_ew = join(" ", reverse split(/ /,reverse $s));
-my $rev_wo = join(" ", reverse split(/ /,$s));
+use feature 'say';
+my $s = "rosetta code phrase reversal";
 
-printf "0. %-20s: %s\n", "input",               $s;
-printf "1. %-20s: %s\n", "string reversed",     $rev_s;
-printf "2. %-20s: %s\n", "each word reversed",  $rev_ew;
-printf "3. %-20s: %s\n", "word-order reversed", $rev_wo;
+say "0. Input               : ", $s;
+say "1. String reversed     : ", scalar reverse $s;
+say "2. Each word reversed  : ", join " ", reverse split / /, reverse $s;
+say "3. Word-order reversed : ", join " ", reverse split / /,$s;
+
+# Or, using a regex:
+say "2. Each word reversed  : ", $s =~ s/[^ ]+/reverse $&/gre;

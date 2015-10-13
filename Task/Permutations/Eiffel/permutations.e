@@ -1,34 +1,47 @@
-permute(a: ARRAY[INTEGER]; k: INTEGER)
-	require
-		 ar_not_void: a.count>=1
-		 k_valid_index: k>0
-	local
-		i,t: INTEGER
-	do
-	if k=a.count then
-		across a as ar loop io.put_string (ar.item.out)  end
-		io.put_string ("%N")
-	else
-		from
-			i:= k
-		until
-			i> a.count
-		loop
-			t:= a[k]
-			a[k]:= a[i]
-			a[i]:= t
-			permute(a,k+1)
-			t:= a[k]
-			a[k]:= a[i]
-			a[i]:= t
-			i:= i+1
+class
+	APPLICATION
+
+create
+	make
+
+feature {NONE}
+
+	make
+		do
+			test := <<2, 5, 1>>
+			permute (test, 1)
 		end
-	end
-make
-	do
-			test:= << 2,5,1>>
-			permute(test, 1)
-	end
-	test: ARRAY[INTEGER]
+
+	test: ARRAY [INTEGER]
+
+	permute (a: ARRAY [INTEGER]; k: INTEGER)
+			-- All permutations of 'a'.
+		require
+			count_positive: a.count > 0
+			k_valid_index: k > 0
+		local
+			t: INTEGER
+		do
+			if k = a.count then
+				across
+					a as ar
+				loop
+					io.put_integer (ar.item)
+				end
+				io.new_line
+			else
+				across
+					k |..| a.count as c
+				loop
+					t := a [k]
+					a [k] := a [c.item]
+					a [c.item] := t
+					permute (a, k + 1)
+					t := a [k]
+					a [k] := a [c.item]
+					a [c.item] := t
+				end
+			end
+		end
 
 end

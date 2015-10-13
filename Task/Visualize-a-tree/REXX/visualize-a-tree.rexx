@@ -19,7 +19,7 @@ tt: Procedure Expose node.
    c=node.k.i
    If st<>'' Then
      st=left(st,length(st)-2)'  '
-   st=repl(st,'  ','` ')
+   st=changestr('` ',st,'  ')
    Say st||s||node.c.0name
    Call tt c,st||s
    End

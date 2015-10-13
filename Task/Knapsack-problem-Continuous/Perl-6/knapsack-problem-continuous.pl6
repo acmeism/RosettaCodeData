@@ -15,10 +15,10 @@ class KnapsackItem {
     return True;
   }
 
-  method Str () { sprintf "%8s %1.2f   %3.2f",
-                           $.name,
-                               $.weight,
-                                       $.price }
+  method gist () { sprintf "%8s %1.2f   %3.2f",
+                            $.name,
+                                $.weight,
+                                        $.price }
 }
 
 my $max-w = 15;
@@ -34,7 +34,7 @@ say    "Item    Portion Value";
           welt    3.7 67
           salami  3.0 95
           sausage 5.9 98 >
-        ==> map { KnapsackItem.new($^a, $^b, $^c) }
+        ==> map({ KnapsackItem.new($^a, $^b, $^c) })
         ==> sort *.ppw
     {
         my $last-one = .cut-maybe($max-w);

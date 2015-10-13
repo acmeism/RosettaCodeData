@@ -1,10 +1,9 @@
-GUI, add, Edit,Number w50 vUserInput, 0          ; Number Specifies Numbers-only, but other characters can still be pasted in,
+GUI, add, Edit,Number w50 vUserInput gMakeSure, 0          ; Number Specifies Numbers-only, but other characters can still be pasted in,
 						 ; Making our own check necessary. (MakeSure)
 
 GUI, add, Button, gIncrement, Increment 	 ; Instead of an increment button, the UpDown control could be used, but this was not specified.
 GUI, add, Button, gRando, Random		
 Gui, Show, W200 y200, Title			 ; Shows the GUI with a width and height of 200px
-SetTimer, MakeSure, 1000 			 ; Runs MakeSure every second
 return 						 ; End Auto-Execute Section
 
 

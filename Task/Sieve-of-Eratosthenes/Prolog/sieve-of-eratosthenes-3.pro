@@ -20,3 +20,11 @@ add_mults(DI,I,N) :-
     I1 is I+DI,
     add_mults(DI,I1,N).
 add_mults(_,I,N) :- I > N.
+
+main(N) :- current_prolog_flag(verbose,F),
+  set_prolog_flag(verbose,normal),
+  time( sieve( N,P)), length(P,Len), last(P, LP), writeln([Len,LP]),
+  set_prolog_flag(verbose,F).
+
+:- dynamic( mult/1 ).
+:- main(100000), main(1000000).

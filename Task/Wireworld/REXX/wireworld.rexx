@@ -1,65 +1,65 @@
-/*REXX program displays a wire world cartesuab grid of four─state cells.*/
-signal on halt                         /*handle cell growth interruptus.*/
-parse arg iFID . '(' generations rows cols bare eHead eTail conductor clearScreen repeats
-if iFID==''  then iFID='WIREWORLD.TXT' /*use the default file for input?*/
-      blank = 'BLANK'                             /*the "name" for blank*/
-generations = p(generations            100)       /*#generations allowed*/
-       rows = p(rows                   3)         /*number of cell rows.*/
-       cols = p(cols                   3)         /*   "    "   "  cols.*/
-      bare = pickChar(bare             blank)     /*an empty cell thingy*/
-clearScreen = p(clearScreen            0)         /*1 = clear the screen*/
-     eHead = pickchar(eHead            'H')
-     eTail = pickchar(eTail            't')
- conductor = pickchar(conductor         . )
-    repeats = p(repeats                2)         /*stop if  2  repeats.*/
-fents=max(linesize()-1,cols)           /*fence width shown after display*/
-#repeats=0;   $.=bare                  /*the universe is new, and barren*/
-gens=abs(generations)                  /*use this for convenience.      */
-                                       /* [↓]     read the input file.  */
-         do r=1  while lines(iFID)\==0 /*keep reading until end-of-file.*/
-         q=strip(linein(iFID),'T')     /*get a single line from the file*/
-         _=length(q)                   /*obtain the length of this row. */
-         cols=max(cols,_)              /*calculate the maximum # of cols*/
-            do c=1  for _; $.r.c=substr(q,c,1); end   /*assign row cells*/
+/*REXX program displays a  wire world cartesian grid  of  four─state  cells.  */
+signal on halt                         /*handle any cell growth interruptus.  */
+parse arg iFID .  '(' generations rows cols bare head tail wire clearScreen reps
+if iFID==''  then iFID='WIREWORLD.TXT' /*should default input file  be used?  */
+      blank = 'BLANK'                           /*the "name" for a blank.     */
+generations = p(generations            100   )  /*number generations allowed. */
+       rows = p(rows                   3     )  /*the number of cell  rows.   */
+       cols = p(cols                   3     )  /* "     "    "   "   cols.   */
+       bare = pickChar(bare            blank )  /*an empty cell character.    */
+clearScreen = p(clearScreen            0     )  /*1  means to clear the screen*/
+       head = pickchar(head            'H'   )  /*pick the char for the  head.*/
+       tail = pickchar(tail            't'   )  /*  "   "    "   "   "   tail.*/
+       wire = pickchar(wire            .     )  /*  "   "    "   "   "   wire.*/
+       reps = p(reps                   2     )  /*stop program if two repeats.*/
+fents=max(linesize()-1,cols)           /*the fence width used after displaying*/
+#reps=0;    $.=bare                    /*at start, universe is new and barren.*/
+gens=abs(generations)                  /*use for convenience (and short name).*/
+                                       /* [↓]     read the input file.        */
+         do r=1  while lines(iFID)\==0 /*keep reading until the  End─Of─File. */
+         q=strip(linein(iFID),'T')     /*get single line from the input file. */
+         _=length(q)                   /*obtain the length of this (input) row*/
+         cols=max(cols,_)              /*calculate the maximum number of cols.*/
+            do c=1  for _;  $.r.c=substr(q,c,1);  end  /*assign the row cells.*/
          end   /*r*/
-rows=r-1
-cycle=0;      !.=0;    call showCells  /*show initial state of the cells*/
-/*─────────────────────────────────────watch cells evolve 4 poss. states*/
-  do cycle=1  for gens;      @.=bare
-               do   r=1  for rows
-                 do c=1  for cols;     ?=$.r.c;       ??=?
-                   select
-                   when ?==eHead       then ??=eTail
-                   when ?==eTail       then ??=conductor
-                   when ?==conductor   then do;       n=neighbors()
-                                            if n==1 | n==2  then ??=eHead
-                                            end
-                   otherwise           nop
-                   end   /*select*/
-                 @.r.c=??
-                 end       /*c*/
-               end         /*r*/
-  call assign$                         /*assign alternate cells ──► real*/
-  if generations>0 | cycle==gens  then call showCells
-  end   /*cycle*/
-/*─────────────────────────────────────stop watching the universe (life)*/
-halt: cycles=life-1; if cycles\==gens then say 'REXX program interrupted.'
-exit                                   /*stick a fork in it, we're done.*/
-/*───────────────────────────────SHOWCELLS subroutine───────────────────*/
-showCells: if clearScreen  then 'CLS'  /*  ◄─── change this for your OS.*/
-call showRows                          /*show the rows in proper order. */
-say right(copies('═',fents)cycle,fents) /*show&tell for a bunch of cells*/
-if _==''  then exit                    /*if no life, then stop the run. */
-if !._    then #repeats=#repeats+1     /*we detected a repeated pattern.*/
-!._=1                                  /*existence state & compare later*/
-if repeats\==0 & #repeats<=repeats  then return       /*so far, so good.*/
-say '"Wireworld" repeated itself'  repeats  "times,  program is stopping."
-exit                                   /*stick a fork in it, we're done.*/
-/*───────────────────────────────1─liner subroutines───────────────────────────────────────────────────────────────────────*/
-$:         parse arg _row,_col;          return $._row._col==eHead
-assign$:   do r=1 for rows; do c=1 for cols; $.r.c=@.r.c; end; end;  return
-err:       say;say;say center(' error! ',max(40,linesize()%2),"*");say;do j=1 for arg();say arg(j);say;end;say;exit 13
-neighbors: return $(r-1,c-1)+$(r-1,c)+$(r-1,c+1)+$(r,c-1)+$(r,c+1)+$(r+1,c-1)+$(r+1,c)+$(r+1,c+1)
-p:         return word(arg(1),1)
+rows=r-1                               /*adjust the row number (from DO loop).*/
+life=0;      !.=0;    call showCells   /*display initial state of the cells.  */
+                                       /*watch cells evolve, 4 possible states*/
+  do life=1  for gens;      @.=bare    /*perform for the number of generations*/
+
+     do   r=1  for rows                            /*process each of the rows.*/
+       do c=1  for cols;    ?=$.r.c;   ??=?        /*   "      "   "  "  cols.*/
+                 select                            /*determine type of cell.  */
+                 when ?==head  then ??=tail
+                 when ?==tail  then ??=wire
+                 when ?==wire  then do; n=hood(); if n==1|n==2 then ??=head; end
+                 otherwise     nop
+                 end   /*select*/
+       @.r.c=??
+       end             /*c*/
+     end               /*r*/
+
+  call assign$                         /*assign alternate cells ──► real world*/
+  if generations>0 | life==gens  then call showCells
+  end   /*life*/
+                                       /*stop watching the universe (or life).*/
+halt: if life-1\==gens  then say 'The ~~~Wireworld~~~  program was interrupted.'
+done: exit                             /*stick a fork in it,  we are all done.*/
+/*────────────────────────────────────────────────────────────────────────────*/
+showCells: if clearScreen  then 'CLS'             /*◄──change this for the OS.*/
+           call showRows                          /*show rows in proper order.*/
+           say right(copies('═',fents)life,fents) /*display a bunch of cells. */
+           if _==''  then signal done             /*No life?   Then stop run. */
+           if !._    then #reps=#reps+1           /*detected repeated pattern.*/
+           !._=1                                  /*it is now existence state.*/
+           if reps\==0 & #reps<=reps  then return /*so far, so good, no reps. */
+           say '"Wireworld" repeated itself' reps "times,  program is stopping."
+           signal done                            /*exit program, we're done. */
+/*───────────────────────────────one─liner subroutines─────────────────────────────────────────────────────────────────────*/
+$:         parse arg _row,_col;                      return ($._row._col==head)
+assign$:   do r=1  for rows;   do c=1  for cols;     $.r.c=@.r.c;     end;    end;        return
+err:       say; say center(' error! ',max(40,linesize()%2),"*"); say;  do j=1  for arg(); say arg(j); say; end;  say; exit 13
+hood:      return $(r-1,c-1)  +  $(r-1,c)  +  $(r-1,c+1)  +  $(r,c-1)  +  $(r,c+1)  +  $(r+1,c-1)  +  $(r+1,c)  +  $(r+1,c+1)
+p:         return word(arg(1), 1)
 pickChar:  _=p(arg(1));if translate(_)==blank then _=' ';if length(_)==3 then _=d2c(_);if length(_)==2 then _=x2c(_);return _
-showRows:  _=;   do r=1  for rows; z=;   do c=1 for cols; z=z||$.r.c; end;   z=strip(z,'T'); say z; _=_||z; end;   return
+showRows:  _=;   do r=1  for rows; z=;   do c=1 for cols; z=z || $.r.c; end;   z=strip(z,'T'); say z; _=_ || z; end;   return

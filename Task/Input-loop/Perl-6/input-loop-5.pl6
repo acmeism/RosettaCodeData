@@ -1,0 +1,3 @@
+for "filename.txt".IO.words -> $word {
+    ...
+}

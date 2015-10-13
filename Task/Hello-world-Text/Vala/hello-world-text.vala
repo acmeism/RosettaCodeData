@@ -1,3 +1,3 @@
 void main(){
-	stdout.printf("Goodbye, World!\n");
+	stdout.printf("Hello world!\n");
 }

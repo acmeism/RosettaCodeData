@@ -1,1 +1,1 @@
-echo $CustomKeyArray["b"]; // Returns C
+$CustomKeyArray = array("d" => "A", "c" => "B", "b" =>"C", "a" =>"D");

@@ -6,3 +6,5 @@ irb(main):003:0> f.path
 => "/tmp/foo20081226-307-10p746n-0"
 irb(main):004:0> f.close
 => nil
+irb(main):005:0> f.unlink
+=> #<Tempfile: (closed)>

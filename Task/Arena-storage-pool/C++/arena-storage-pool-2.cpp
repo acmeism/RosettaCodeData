@@ -1,4 +1,4 @@
-#include <csttdlib>
+#include <cstdlib>
 #include <cassert>
 #include <new>
 
@@ -28,7 +28,7 @@ Pool* pool::cur = 0;
 Pool::Pool(std::size_type size):
   memory(static_cast<char*>(::operator new(size))),
   free(memory),
-  end(memory))
+  end(memory + size))
 {
   prev = cur;
   cur = this;

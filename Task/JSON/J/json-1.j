@@ -18,7 +18,7 @@ words=:(0;(0 10#:10*".;._2]0 :0);classes)&;: NB. states:
 )
 
 tokens=. ;:'[ ] , { } :'
-actions=: lBra`rBracket`comma`lBra`rBracket`colon`value
+actions=: lBra`rBracket`comma`lBra`rBrace`colon`value
 
 NB. action verbs argument conventions:
 NB.   x -- boxed json word
@@ -32,7 +32,7 @@ jsonParse=: 0 {:: (,a:) ,&.> [: actions@.(tokens&i.@[)/ [:|.a:,words
 lBra=: a: ,~ ]
 rBracket=: _2&}.@], [:< _2&{::@], _1&{@]
 comma=: ]
-rBrace=: _2&}.@], [:< _2&{::@],  [:|: (2,~ [: -:@$ _1&{@]) $ _1&{@]
+rBrace=: _2&}.@], [:< _2&{::@](, <)  [:|: (2,~ [: -:@$ _1&{::@]) $ _1&{::@]
 colon=: ]
 value=: _1&}.@], [:< _1&{::@], jsonValue&.>@[
 
@@ -43,7 +43,8 @@ jsonValue=:]
 
 
 require'strings'
+jsonSer2=: jsonSer1@(<"_1^:(0>.#@$-1:))
 jsonSer1=: ']' ,~ '[' }:@;@; (',' ,~ jsonSerialize)&.>
 jsonSer0=: '"', jsonEsc@:":, '"'"_
 jsonEsc=: rplc&(<;._1' \ \\ " \"')
-jsonSerialize=:jsonSer0`jsonSer1@.(*@L.)
+jsonSerialize=:jsonSer0`jsonSer2@.(*@L.)

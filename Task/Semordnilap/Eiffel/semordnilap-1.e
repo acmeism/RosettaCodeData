@@ -1,80 +1,79 @@
-note
-	description: "Summary description for {SEMORDNILAP}."
-	author: ""
-	date: "$Date$"
-	revision: "$Revision$"
-
 class
 	SEMORDNILAP
+
 create
 	make
 
-	feature
+feature
+
 	make
-		--read wordlist "unixdict.txt", search across wordlist with binary_search
+			--Semordnilaps in 'solution'.
 		local
-			count,i,j, middle, upper, lower: INTEGER
+			count, i, middle, upper, lower: INTEGER
 			reverse: STRING
 		do
 			read_wordlist
 			create solution.make_empty
 			from
-				i:= 1
+				i := 1
 			until
-				i> word_array.count
+				i > word_array.count
 			loop
-				word_array[i].mirror
-				reverse:=word_array[i]
+				word_array [i].mirror
+				reverse := word_array [i]
 				from
-					lower:= i+1
-					upper:= word_array.count
+					lower := i + 1
+					upper := word_array.count
 				until
-					lower>=upper
+					lower >= upper
 				loop
-
-					middle:= (upper-lower)//2+lower
-					if reverse.is_case_insensitive_equal (word_array[middle]) then
-									count:= count+1
-									upper:= 0
-									lower:= 1
-									solution.force (word_array[middle],count)
-					elseif reverse.is_less (word_array[middle]) then
-						upper:= middle-1
+					middle := (upper - lower) // 2 + lower
+					if reverse.same_string (word_array [middle]) then
+						count := count + 1
+						upper := 0
+						lower := 1
+						solution.force (word_array [i], count)
+					elseif reverse.is_less (word_array [middle]) then
+						upper := middle - 1
 					else
-						lower:= middle+1
+						lower := middle + 1
 					end
 				end
-				if lower < word_array.count and then reverse.is_case_insensitive_equal (word_array[lower]) then
-									count:= count+1
-									upper:= 0
-									lower:= 1
-									solution.force (word_array[middle],count)
+				if lower < word_array.count and then reverse.same_string (word_array [lower]) then
+					count := count + 1
+					upper := 0
+					lower := 1
+					solution.force (word_array [i], count)
 				end
-				i:= i+1
+				i := i + 1
 			end
 		end
 
-	solution: ARRAY[STRING]
+	solution: ARRAY [STRING]
+
+	original_list: STRING = "unixdict.txt"
+
 
 feature {NONE}
+
 	read_wordlist
+			-- Preprocessed word_array for finding Semordnilaps.
 		local
 			l_file: PLAIN_TEXT_FILE
-			wordlist: LIST[STRING]
-			i: INTEGER
+			wordlist: LIST [STRING]
 		do
-			create l_file.make_open_read_write ("unixdict.txt")
+			create l_file.make_open_read_write (original_list)
 			l_file.read_stream (l_file.count)
-			wordlist:=l_file.last_string.split ('%N')
+			wordlist := l_file.last_string.split ('%N')
+			l_file.close
 			create word_array.make_empty
-			from
-				i:= 1
-			until
-				i> wordlist.count
+			across
+				1 |..| wordlist.count as i
 			loop
-				word_array.force( wordlist.at (i),i)
-				i:= i+1
+				word_array.force (wordlist.at (i.item), i.item)
 			end
 		end
-	word_array: ARRAY[STRING]
+
+	word_array: ARRAY [STRING]
+
 end

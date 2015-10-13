@@ -1,6 +1,6 @@
 constant target = "METHINKS IT IS LIKE A WEASEL";
 constant mutate_chance = .08;
-constant alphabet = 'A'..'Z',' ';
+constant alphabet = flat 'A'..'Z',' ';
 constant C = 100;
 
 sub mutate { $^string.comb.map({ rand < mutate_chance ?? alphabet.pick !! $_ }).join }

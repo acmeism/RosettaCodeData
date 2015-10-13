@@ -1,18 +1,14 @@
 class Array
   def strandsort
-    a = self.dup
+    a = dup
     result = []
     until a.empty?
-      sublist = [a.shift]
-      a.each_with_index.each_with_object([]) { |(val, idx), remove|
-        next if val <= sublist.last
-        sublist << val
-        remove << idx
-      }.reverse_each {|idx| a.delete_at(idx)}
+      v = a.first
+      sublist, a = a.partition{|val| v=val if v<=val}   # In case of v>val, it becomes nil.
 
       result.each_index do |idx|
         break if sublist.empty?
-        result.insert(idx, sublist.shift) if sublist[0] < result[idx]
+        result.insert(idx, sublist.shift) if sublist.first < result[idx]
       end
       result += sublist
     end

@@ -1,1 +1,1 @@
-(prinl "Goodbye, World!")
+(prinl "Hello world!")

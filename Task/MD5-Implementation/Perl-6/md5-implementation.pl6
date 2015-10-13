@@ -9,25 +9,29 @@ constant FGHI = -> \X, \Y, \Z { (X +& Y) +| (¬X +& Z) },
                 -> \X, \Y, \Z { X +^ Y +^ Z           },
                 -> \X, \Y, \Z { Y +^ (X +| ¬Z)        };
 
-constant S = (7, 12, 17, 22) xx 4,
-             (5,  9, 14, 20) xx 4,
-             (4, 11, 16, 23) xx 4,
-             (6, 10, 15, 21) xx 4;
+constant S = flat (7, 12, 17, 22) xx 4,
+		  (5,  9, 14, 20) xx 4,
+		  (4, 11, 16, 23) xx 4,
+		  (6, 10, 15, 21) xx 4;
 
 constant T = (floor(abs(sin($_ + 1)) * 2**32) for ^64);
 
-constant k = (   $_           for ^16),
-             ((5*$_ + 1) % 16 for ^16),
-             ((3*$_ + 5) % 16 for ^16),
-             ((7*$_    ) % 16 for ^16);
+constant k = flat (   $_           for ^16),
+		  ((5*$_ + 1) % 16 for ^16),
+		  ((3*$_ + 5) % 16 for ^16),
+		  ((7*$_    ) % 16 for ^16);
 
-sub little-endian($w, $n, *@v) { (@v X+> ($w X* ^$n)) X% (2 ** $w) }
+sub little-endian($w, $n, *@v) {
+    my \step1 = ($w X* ^$n).eager;  # temporary bug workaround
+    my \step2 = (@v X+> step1);
+    step2 X% (2 ** $w);
+}
 
 sub md5-pad(Blob $msg)
 {
     my \bits = 8 * $msg.elems;
-    my @padded = $msg.list, 0x80, 0x00 xx (-(bits div 8 + 1 + 8) % 64);
-    @padded.map({ :256[$^d,$^c,$^b,$^a] }), little-endian(32, 2, bits);
+    my @padded = flat $msg.list, 0x80, 0x00 xx (-(bits div 8 + 1 + 8) % 64);
+    flat @padded.map({ :256[$^d,$^c,$^b,$^a] }), little-endian(32, 2, bits);
 }
 
 sub md5-block(@H is rw, @X)

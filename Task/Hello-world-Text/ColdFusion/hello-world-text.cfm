@@ -1,1 +1,1 @@
-<cfoutput>Goodbye, World!</cfoutput>
+<cfoutput>Hello world!</cfoutput>

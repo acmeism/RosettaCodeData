@@ -1,6 +1,6 @@
 multi can-spell-word(Str $word, @blocks) {
     my @regex = @blocks.map({ EVAL "/{.comb.join('|')}/" }).grep: { .ACCEPTS($word.uc) }
-    can-spell-word $word.uc.comb, @regex;
+    can-spell-word $word.uc.comb.list, @regex;
 }
 
 multi can-spell-word([$head,*@tail], @regex) {
@@ -8,7 +8,7 @@ multi can-spell-word([$head,*@tail], @regex) {
         if $head ~~ $re {
             return True unless @tail;
             return False if @regex == 1;
-            return True if can-spell-word @tail, @regex.grep: * !=== $re;
+            return True if can-spell-word @tail, list @regex.grep: * !=== $re;
         }
     }
     False;

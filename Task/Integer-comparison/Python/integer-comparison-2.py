@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import sys
 try:
-   a = int(raw_input('Enter value of a: '))
-   b = int(raw_input('Enter value of b: '))
+   a = input('Enter value of a: ')
+   b = input('Enter value of b: ')
 except (ValueError, EnvironmentError), err:
    print sys.stderr, "Erroneous input:", err
    sys.exit(1)

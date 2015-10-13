@@ -3,6 +3,6 @@
 
 int main(void)
 {
-  puts("Goodbye, World!");
+  puts("Hello world!");
   return EXIT_SUCCESS;
 }

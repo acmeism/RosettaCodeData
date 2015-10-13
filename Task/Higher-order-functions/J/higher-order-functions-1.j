@@ -11,6 +11,14 @@
    +/\. 3 1 4 1 5 9  NB. sum suffix
 23 20 19 15 14 9
 
+   2&% 1 2 3         NB. divide 2 by
+2 1 0.666667
+
+   %&2 (1 2 3)       NB. divide by 2 (need parenthesis to break up list formation)
+0.5 1 1.5
+   -: 1 2 3          NB. but divide by 2 happens a lot so it's a primitive
+0.5 1 1.5
+
    f=: -:@(+ 2&%)    NB. one Newton iteration
    f 1
 1.5

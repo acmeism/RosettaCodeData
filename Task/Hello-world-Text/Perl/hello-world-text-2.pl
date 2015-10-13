@@ -1,2 +1,2 @@
 use feature 'say';
-say 'Goodbye, World!';
+say 'Hello world!';

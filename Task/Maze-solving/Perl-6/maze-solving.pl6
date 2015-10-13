@@ -17,8 +17,8 @@ constant mapping = :OPEN(' '),
 		   :TODO< x >,
 	          :TRIED< · >;
 
-enum Code (mapping.map: *.key);
-my @code = mapping.map: *.value;
+enum Sym (mapping.map: *.key);
+my @ch = mapping.map: *.value;
 
 enum Direction <DeadEnd Up Right Down Left>;
 
@@ -28,13 +28,13 @@ sub gen_maze ( $X,
                $start_y = (^$Y).pick * 2 + 1 )
 {
     my @maze;
-    push @maze, [ ES, -N, (ESW, EW) xx $X - 1, SW ];
-    push @maze, [ (NS, TODO) xx $X, NS ];
+    push @maze, $[ flat ES, -N, (ESW, EW) xx $X - 1, SW ];
+    push @maze, $[ flat (NS, TODO) xx $X, NS ];
     for 1 ..^ $Y {
-	push @maze, [ NES, EW, (NESW, EW) xx $X - 1, NSW ];
-	push @maze, [ (NS, TODO) xx $X, NS ];
+	push @maze, $[ flat NES, EW, (NESW, EW) xx $X - 1, NSW ];
+	push @maze, $[ flat (NS, TODO) xx $X, NS ];
     }
-    push @maze, [ NE, (EW, NEW) xx $X - 1, -NS, NW ];
+    push @maze, $[ flat NE, (EW, NEW) xx $X - 1, -NS, NW ];
     @maze[$start_y][$start_x] = OPEN;
 
     my @stack;
@@ -75,12 +75,12 @@ sub gen_maze ( $X,
 
 sub display (@maze) {
     for @maze -> @y {
-	for @y -> $w, $c {
-	    print @code[abs $w];
-	    if $c >= 0 { print @code[$c] x 3 }
-	    else { print ' ', @code[abs $c], ' ' }
+	for @y.rotor(2) -> ($w, $c) {
+	    print @ch[abs $w];
+	    if $c >= 0 { print @ch[$c] x 3 }
+	    else { print ' ', @ch[abs $c], ' ' }
 	}
-	say @code[@y[*-1]];
+	say @ch[@y[*-1]];
     }
 }
 
@@ -95,14 +95,14 @@ sub solve (@maze is copy, @from = [1, 1], @to = [@maze[0] - 2, @maze - 2]) {
     loop {
 	my $dir = pick_direction([$x,$y]);
 	if $dir {
-	    ($x, $y) =  move($dir, [$x,$y]);
+	    ($x, $y) = move($dir, [$x,$y]);
 	    return @maze if $x == $xto and $y == $yto;
 	}
 	else {
 	    @maze[$y][$x] = -TRIED;
-	    ($x,$y) = @stack.pop[];
+	    ($x,$y) = @stack.pop;
 	    @maze[$y][$x] = -TRIED;
-	    ($x,$y) = @stack.pop[];
+	    ($x,$y) = @stack.pop;
 	}
     }
 
@@ -118,10 +118,10 @@ sub solve (@maze is copy, @from = [1, 1], @to = [@maze[0] - 2, @maze - 2]) {
     sub move ($dir, @cur) {
 	my ($x,$y) = @cur;
 	given $dir {
-	    when Up    { for ^2 { push @stack, [$x,$y--]; drop-crumb $x,$y,S; } }
-	    when Down  { for ^2 { push @stack, [$x,$y++]; drop-crumb $x,$y,N; } }
-	    when Left  { for ^2 { push @stack, [$x--,$y]; drop-crumb $x,$y,E; } }
-	    when Right { for ^2 { push @stack, [$x++,$y]; drop-crumb $x,$y,W; } }
+	    when Up    { for ^2 { push @stack, $[$x,$y--]; drop-crumb $x,$y,S; } }
+	    when Down  { for ^2 { push @stack, $[$x,$y++]; drop-crumb $x,$y,N; } }
+	    when Left  { for ^2 { push @stack, $[$x--,$y]; drop-crumb $x,$y,E; } }
+	    when Right { for ^2 { push @stack, $[$x++,$y]; drop-crumb $x,$y,W; } }
 	}
 	$x,$y;
     }

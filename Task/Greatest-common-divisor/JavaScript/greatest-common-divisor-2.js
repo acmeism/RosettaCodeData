@@ -1,7 +1,3 @@
 function gcd_rec(a, b) {
-    if (b) {
-        return gcd_rec(b, a % b);
-    } else {
-        return Math.abs(a);
-    }
+  return b ? gcd_rec(b, a % b) : Math.abs(a);
 }

@@ -6,7 +6,7 @@ import Control.Arrow
 mkRands = mapM (randomRIO.(,)0 ). enumFromTo 1. pred
 
 replaceAt :: Int -> a -> [a] -> [a]
-replaceAt i c = let (a,b) = splitAt i l in a++x:(drop 1 b)
+replaceAt i c l = let (a,b) = splitAt i l in a++c:(drop 1 b)
 
 swapElems :: (Int, Int) -> [a] -> [a]
 swapElems (i,j) xs | i==j = xs

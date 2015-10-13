@@ -1,2 +1,2 @@
-width=72; char='='
-head -c ${width} < /dev/zero | tr '\0' "$char"
+len=12; str='='
+repeat $len printf "$str"

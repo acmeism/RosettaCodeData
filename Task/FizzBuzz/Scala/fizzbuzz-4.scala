@@ -1,1 +1,1 @@
-for (n <- 1 to 100) println(List((15, "FizzBuzz"), (3, "Fizz"), (5, "Buzz")).find(t => n % t._1 == 0).getOrElse((0, n.toString))._2)
+for (i <- 1 to 100) println(Seq(15 -> "FizzBuzz", 3 -> "Fizz", 5 -> "Buzz").find(i % _._1 == 0).map(_._2).getOrElse(i))

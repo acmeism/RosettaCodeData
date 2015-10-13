@@ -4,11 +4,6 @@
 : st-sum   ( stats -- sum )       float+   f@ ;
 : st-sumsq ( stats -- sum*sum ) 2 floats + f@ ;
 
-: st-add ( fnum stats -- )
-    1e dup f+!  float+
-  fdup dup f+!  float+
-  fdup f*  f+! ;
-
 : st-mean ( stats -- mean )
   dup st-sum st-count f/ ;
 
@@ -19,3 +14,10 @@
 
 : st-stddev ( stats -- stddev )
   st-variance fsqrt ;
+
+: st-add ( fnum stats -- )
+  dup
+    1e dup f+!  float+
+  fdup dup f+!  float+
+  fdup f*  f+!
+  std-stddev ;

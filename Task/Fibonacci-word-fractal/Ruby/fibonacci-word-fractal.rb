@@ -1,8 +1,6 @@
 def fibonacci_word(n)
   words = ["1", "0"]
-  (words.size..n).each do |i|
-    words << words[i-1] + words[i-2]
-  end
+  (n-1).times{ words << words[-1] + words[-2] }
   words[n]
 end
 
@@ -18,15 +16,11 @@ def print_fractal(word)
     dx,dy = n.even? ? [dy,-dx] : [-dy,dx]  if c=="0"
   end
 
-  xmin, xmax = area.each_key.map(&:first).minmax
-  ymin, ymax = area.each_key.map(&:last).minmax
+  (xmin, xmax), (ymin, ymax) = area.keys.transpose.map(&:minmax)
   for y in ymin..ymax
-    for x in xmin..xmax
-      print area[[x,y]]
-    end
-    puts
+    puts (xmin..xmax).map{|x| area[[x,y]]}.join
   end
 end
 
-word = fibonacci_word(11)
+word = fibonacci_word(16)
 print_fractal(word)

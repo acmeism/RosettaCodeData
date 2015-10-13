@@ -1,1 +1,1 @@
-:- write('Goodbye, World!'), nl.
+:- write('Hello world!'), nl.

@@ -1,1 +1,1 @@
-BEGIN{print "Goodbye, World!"}
+BEGIN{print "Hello world!"}

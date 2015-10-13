@@ -1,8 +1,11 @@
-my @set = (1, 2, 3);
-my @powerset = powerset(@set);
+use List::Util qw(reduce);
 
-sub set_to_string {
-    "{" . join(", ", map { ref $_ ? set_to_string(@$_) : $_ } @_) . "}"
+sub powerset {
+    @{( reduce { [@$a, map { Set->new($_->elements, $b) } @$a ] }
+               [Set->new()], shift->elements )};
 }
 
-print set_to_string(@powerset), "\n";
+my $set = Set->new(1, 2, 3);
+my @subsets = powerset($set);
+
+print $_->as_string, "\n" for @subsets;

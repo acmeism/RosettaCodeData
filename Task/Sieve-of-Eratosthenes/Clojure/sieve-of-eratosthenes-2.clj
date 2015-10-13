@@ -1,10 +1,11 @@
-(defn primes
-  "Computes all prime numbers up to a given number using sieve of Eratosthenes"
-  [n]
-  (loop [cs (range 2 n) ; candidates
-         ps [2]]             ; results
-    (let [lp  (last ps)
-          ncs (-> (range lp n lp) set (remove cs))]
-      (if (> lp (Math/sqrt n))
-        (concat ps ncs)
-        (recur ncs (concat ps [(first ncs)]))))))
+(defn primes-to
+  "Returns a lazy sequence of prime numbers less than lim"
+  [lim]
+  (let [refs (boolean-array (+ lim 1) true)
+        root (int (Math/sqrt lim))]
+    (do (doseq [i (range 2 lim)
+                :while (<= i root)
+                :when (aget refs i)]
+          (doseq [j (range (* i i) lim i)]
+            (aset refs j false)))
+        (filter #(aget refs %) (range 2 lim)))))

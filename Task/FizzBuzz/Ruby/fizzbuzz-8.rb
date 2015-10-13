@@ -1,5 +1,1 @@
-f = [nil, nil, :Fizz].cycle
-b = [nil, nil, nil, nil, :Buzz].cycle
-(1..100).each do |i|
-  puts "#{f.next}#{b.next}"[/.+/] || i
-end
+1.upto(100){|i|puts'FizzBuzz '[n=i**4%-15,n+13]||i}

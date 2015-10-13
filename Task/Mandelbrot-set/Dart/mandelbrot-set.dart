@@ -2,8 +2,8 @@ class Complex {
   double _r,_i;
 
   Complex(this._r,this._i);
-  double get r() => _r;
-  double get i() => _i;
+  double get r => _r;
+  double get i => _i;
   String toString() => "($r,$i)";
 
   Complex operator +(Complex other) => new Complex(r+other.r,i+other.i);
@@ -22,7 +22,7 @@ void main() {
     String line="";
     for(int x=0;x<70;x++) {
       Complex c=new Complex(start_x+step_x*x,start_y+step_y*y);
-      Complex z=new Complex(0,0);
+      Complex z=new Complex(0.0, 0.0);
       for(int i=0;i<100;i++) {
         z=z*(z)+c;
         if(z.abs()>2) {

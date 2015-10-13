@@ -5,5 +5,5 @@ say $str;
 my $huf = %enc{$str.comb}.join;
 say $huf;
 my $rx = join('|', map { "'" ~ .key ~ "'" }, %dec);
-$rx = eval '/' ~ $rx ~ '/';
+$rx = EVAL '/' ~ $rx ~ '/';
 say $huf.subst(/<$rx>/, -> $/ {%dec{~$/}}, :g);

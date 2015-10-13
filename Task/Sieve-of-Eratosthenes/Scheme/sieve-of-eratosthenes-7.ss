@@ -11,7 +11,7 @@
    (cond
      ((> n 1) (cons (head s) (take (- n 1) (tail s))))
      ((= n 1) (list (head s)))      ;; don't force it too soon!!
-     (else ())))     ;; so (take 4 (s-map / (from-By 4 -1))) works
+     (else '())))     ;; so (take 4 (s-map / (from-By 4 -1))) works
  (define (drop n s)
    (cond
      ((> n 0) (drop (- n 1) (tail s)))

@@ -1,1 +1,1 @@
-write (89,100) "Goodbye, World!"
+write (89,100) "Hello world!"

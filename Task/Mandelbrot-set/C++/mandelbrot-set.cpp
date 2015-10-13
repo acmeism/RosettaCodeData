@@ -21,8 +21,8 @@ template<typename ColorType, typename ImageType>
                       double cxmin, double cxmax, double cymin, double cymax,//the rect to draw in the complex plane
                       unsigned int max_iterations)                          //the maximum number of iterations
 {
-  std::size_t const ixsize = get_first_dimension(ImageType);
-  std::size_t const iysize = get_first_dimension(ImageType);
+  std::size_t const ixsize = get_first_dimension(image);
+  std::size_t const iysize = get_first_dimension(image);
   for (std::size_t ix = 0; ix < ixsize; ++ix)
     for (std::size_t iy = 0; iy < iysize; ++iy)
     {

@@ -1,9 +1,11 @@
- (define odd-primes
-   (s-cons 3 (s-diff (from-By 5 2)
-     (s-foldr (lambda (p r) (let ((q (* p p)))
-                 (s-cons q (s-union (from-By (+ q (* 2 p)) (* 2 p)) r))))
-             '() odd-primes))))
+ (define (primes-stream-ala-Bird)
+   (define (mults p) (from-By (* p p) (* 2 p)))
+   (define odd-primes                                          ;; primes are
+       (s-cons 3 (s-diff (from-By 5 2)                         ;;  odds, without
+                  (s-linear-join (s-map mults odd-primes)))))  ;;   multiples of primes
+   (s-cons 2 odd-primes))
 
- (define primes (s-cons 2 odd-primes))
-
- ;;;; TODO: implement s-foldr function
+ ;;;; join streams using linear structure
+ (define (s-linear-join sts)
+   (s-cons (head (head sts)) (s-union (tail (head sts))
+                               (s-linear-join (tail sts)))))

@@ -4,7 +4,7 @@
 **********************************************************************/
 beghelp=here()+1                  /* line where the docmentation begins
 Documentation
-any test explaining the program's invocaion and workings
+any text explaining the program's invocation and workings
 ---
                                      and where it ends               */
 endhelp=here()-2

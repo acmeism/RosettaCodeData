@@ -1,28 +1,30 @@
-/*REXX program finds/displays all  amicable pairs  up to a given number.*/
-parse arg H .; if H==''  then H=20000  /*get optional arg  (high limit).*/
-w=length(H)  ; H.=H || .               /*for  columnar  aligned output. */
-@.=0
-     do   k=1  for H;    _=Pdivs(k);   #=words(_)     /*gen proper divs.*/
-       do i=1  for #;    @.k=@.k + word(_,i)          /*gen Pdivs sums. */
-       end   /*i*/                     /* [↑]   sum the proper divisors.*/
-     end     /*k*/                     /* [↑]   process a range of ints.*/
-#=0                                    /*number of amicable pairs found.*/
-     do   m=220  for H-220+1           /*start search at lowest number. */
-       do n=m+1  for H-m
-       if m==@.n  then if n==@.m  then do;  #=#+1    /*bump the counter.*/
-                                       say right(m,w) ' and ' right(n,w) " are amicable pairs."
-                                       end
-       end   /*p*/
-     end     /*n*/                     /*DO loop FORs:  faster than TOs.*/
+/*REXX program finds and displays all  amicable pairs  up to  a given number. */
+parse arg H .; if H==''  then H=20000  /*get optional arguments  (high limit).*/
+w=length(H)  ; low=220                 /*W: used for columnar output alignment*/
+@.=.                                   /* [↑]  LOW is lowest amicable number. */
+    do k=low  for H-low;  _=sigma(k)   /*generate sigma sums for a range of #s*/
+    if _>=low  then @.k=_              /*only keep the pertinent sigma sums.  */
+    end   /*k*/                        /* [↑]   process a range of integers.  */
+#=0                                    /*number of amicable pairs found so far*/
+    do   m=low  to  H;    n=@.m        /*start the search at the lowest number*/
+    if n==.  then iterate              /*if not pertinent,  then ignore the #.*/
+    if m==@.n  then do                 /*If equal, might be an amicable number*/
+                    if m==n  then iterate        /*skip any perfect numbers.  */
+                    #=#+1                        /*bump amicable pair counter.*/
+                    say right(m,w)  ' and ' right(n,w)  " are an amicable pair."
+                    m=n                          /*start M (DO index)  from N.*/
+                    end
+    end    /*m*/
 say
-say # 'amicable pairs found up to' H.  /*display count of amicable pairs*/
-exit                                   /*stick a fork in it, we're done.*/
-/*──────────────────────────────────PDIVS subroutine────────────────────*/
-Pdivs: procedure; parse arg x,b;  odd=x//2  /* [↑] modified for amicable*/
-a=1                                    /* [↓] use only EVEN|ODD integers*/
-   do j=2+odd  by 1+odd  while j*j<x   /*divide by all integers up to √x*/
-   if x//j==0  then do; a=a j; b=x%j b; end /*add divs to α&ß lists if ÷*/
-   end   /*j*/                         /* [↑]  %  is REXX integer divide*/
-                                       /* [↓]  adjust for square.     _ */
-if j*j==x  then  return  a j b         /*Was X a square?  If so, add √x.*/
-                 return  a   b         /*return divisors  (both lists). */
+say # 'amicable pairs found up to'  H  /*display count of the amicable pairs. */
+exit                                   /*stick a fork in it,  we're all done. */
+/*────────────────────────────────────────────────────────────────────────────*/
+sigma: procedure; parse arg x; od=x//2 /*use either  EVEN  or  ODD  integers. */
+s=1                                    /*set initial sigma sum to one.     ___*/
+      do j=2+od  by 1+od  while  j*j<x /*divide by all integers up to the √ x */
+      if x//j==0  then  s=s + j + x%j  /*add the two divisors to the sum.     */
+      end   /*j*/                      /* [↑]  %  is REXX integer division.   */
+                                       /* [↓]  adjust for square.          ___*/
+            /*if j*j==x  then s=s+j*/  /*Was X a square?  If so, add the  √ x */
+                                       /* [↑]  not needed for amicable #s.    */
+return s                               /*return the sum of the divisors.      */

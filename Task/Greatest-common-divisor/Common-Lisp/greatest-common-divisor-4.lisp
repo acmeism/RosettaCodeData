@@ -1,4 +1,4 @@
-(defun gcd2 (a b)
+(defun gcd* (a b)
   (loop for x = a then y
         and y = b then (mod x y)
         until (zerop y)

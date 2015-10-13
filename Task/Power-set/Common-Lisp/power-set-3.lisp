@@ -1,3 +1,6 @@
-(defun powerset (xs)
-  (loop for i below (expt 2 (length xs)) collect
-       (loop for j below i for x in xs if (logbitp j i) collect x)))
+(defun powerset (l)
+  (if (null l)
+      (list nil)
+      (let ((prev (powerset (cdr l))))
+	(append (mapcar #'(lambda (elt) (cons (car l) elt)) prev)
+		prev))))

@@ -1,21 +1,21 @@
 sub leftrect(&f, $a, $b, $n) {
     my $h = ($b - $a) / $n;
-    $h * [+] do f($_) for $a, *+$h ... $b-$h;
+    $h * [+] do f($_) for $a, $a+$h ... $b-$h;
 }
 
 sub rightrect(&f, $a, $b, $n) {
     my $h = ($b - $a) / $n;
-    $h * [+] do f($_) for $a+$h, *+$h ... $b;
+    $h * [+] do f($_) for $a+$h, $a+$h+$h ... $b;
 }
 
 sub midrect(&f, $a, $b, $n) {
     my $h = ($b - $a) / $n;
-    $h * [+] do f($_) for $a+$h/2, *+$h ... $b-$h/2;
+    $h * [+] do f($_) for $a+$h/2, $a+$h+$h/2 ... $b-$h/2;
 }
 
 sub trapez(&f, $a, $b, $n) {
     my $h = ($b - $a) / $n;
-    $h / 2 * [+] f($a), f($b), do f($_) * 2 for $a+$h, *+$h ... $b-$h;
+    $h / 2 * [+] f($a), f($b), |do f($_) * 2 for $a+$h, $a+$h+$h ... $b-$h;
 }
 
 sub simpsons(&f, $a, $b, $n) {
@@ -33,7 +33,7 @@ sub simpsons(&f, $a, $b, $n) {
 
 sub tryem($f, $a, $b, $n, $exact) {
     say "\n$f\n   in [$a..$b] / $n";
-    eval "my &f = $f;
+    EVAL "my &f = $f;
     say '              exact result: ', $exact;
     say '     rectangle method left: ', leftrect  &f, $a, $b, $n;
     say '    rectangle method right: ', rightrect &f, $a, $b, $n;
@@ -46,6 +46,6 @@ tryem '{ $_ ** 3 }', 0, 1, 100, 0.25;
 
 tryem '1 / *', 1, 100, 1000, log(100);
 
-tryem '{$_}', 0, 5_000, 10_000, 12_500_000;
+tryem '*.self', 0, 5_000, 5_000_000, 12_500_000;
 
-tryem '{$_}', 0, 6_000, 12_000, 18_000_000;
+tryem '*.self', 0, 6_000, 6_000_000, 18_000_000;

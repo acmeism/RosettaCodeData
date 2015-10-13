@@ -1,3 +1,3 @@
 main: (
-  printf($"Goodbye, World!"l$)
+  printf($"Hello world!"l$)
 )

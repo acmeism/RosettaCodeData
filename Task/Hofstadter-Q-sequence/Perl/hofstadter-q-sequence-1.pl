@@ -1,21 +1,5 @@
-#!/usr/bin/perl
-use warnings;
-use strict;
-
-my @hofstadters = ( 1 , 1 );
-while ( @hofstadters < 100000 ) {
-   my $nextn = @hofstadters + 1;
-# array index counting starts at 0 , so we have to subtract 1 from the numbers!
-   push @hofstadters ,  $hofstadters [ $nextn - 1 - $hofstadters[ $nextn - 1 - 1 ] ]
-      + $hofstadters[ $nextn - 1 - $hofstadters[ $nextn - 2 - 1 ]];
-}
-for my $i ( 0..9 ) {
-   print "$hofstadters[ $i ]\n";
-}
-print "The 1000'th term is $hofstadters[ 999 ]!\n";
-my $less_than_preceding = 0;
-for my $i ( 0..99998 ) {
-   $less_than_preceding++ if $hofstadters[ $i + 1 ] < $hofstadters[ $i ];
-}
-print "Up to and including the 100000'th term, $less_than_preceding terms are less " .
-   "than their preceding terms!\n";
+my @Q = (0,1,1);
+push @Q, $Q[-$Q[-1]] + $Q[-$Q[-2]] for 1..100_000;
+say "First 10 terms: [@Q[1..10]]";
+say "Term 1000: $Q[1000]";
+say "Terms less than preceding in first 100k: ",scalar(grep { $Q[$_] < $Q[$_-1] } 2..100000);

@@ -1,22 +1,23 @@
-/*REXX program spits out digits of pi (one at a time) until  Ctrl-Break.*/
-arg digs .; if digs==''  then digs=1e6 /*allow the specification of digs*/
-fn = 'PI_DIGITS.OUT'                   /*file used for output: PI digits*/
-numeric digits digs                    /*big digs, the slower the spits.*/
-pi=0;   s=16;   r=4;   v=5;   vs=v*v;  g=239;  gg=g*g; j=1;  spit=0;  old=
-call time 'Reset'                      /*reset the REXX wall-clock timer*/
-                                       /*───calculate PI with increasing*/
-  do n=1  by 2                         /*───accuracy (up to DIGS digits)*/
-  pi=pi + s/(n*v) - r/(n*g)            /*───using John Machin's formula.*/
-  if pi==old  then leave               /*have exceeded DIGITS accuracy. */
-  s=-s;     r=-r;     v=v*vs;   g=g*gg /*set some variable for shortcuts*/
-  if n\==1  then do j=spit+1  to compare(pi,old)  /*spit out some π digs.*/
-                 spit=substr(pi,j,1)   /*obtain a digit of π to spit out*/
-                 call charout   ,spit  /*spit out one (new) digit of pi.*/
-                 call charout fn,spit  /* ···and also echo it to a file.*/
-                 end   /*j*/
-  spit=j-1                             /*adjust for  DO index increment.*/
-  old=pi                               /*use the "OLD" value next time. */
-  end   /*n*/
+/*REXX program spits out digits of  π (pi)  (one at a time)  until Ctrl-Break.*/
+parse arg digs .                       /*obtain optional argument from the CL.*/
+if digs==''  | digs=="," then digs=1e6 /*Not specified?  Then use one million.*/
+fn = 'PI_DIGITS.OUT'                   /*fileID used for output: the π digits.*/
+numeric digits digs                    /*with bigger digs, spitting is slower.*/
+call time 'Reset'                      /*reset the wall-clock (elapsed) timer.*/
+signal on halt                         /*───► HALT when Ctrl─Break is pressed.*/
+pi=0;    s=16;    r=4;    v=5;    vv=v*v;    g=239;    gg=g*g;    spit=0;   old=
 
-say;  say n%2+1  'iterations took'  format(time("Elapsed"),,2)  'seconds.'
-                                       /*stick a fork in it, we're done.*/
+    do n=1  by 2                       /*calculate π with increasing accuracy */
+    pi=pi + s/(n*v) - r/(n*g)          /*    ···  using John Machin's formula.*/
+    if pi==old  then leave             /*have we exceeded the DIGITS accuracy?*/
+    s=-s;   r=-r;    v=v*vv;   g=g*gg  /*compute some variables for shortcuts.*/
+       do j=spit+1  to compare(pi,old) /*spit out some (new)  digits of π (pi)*/
+       parse var  pi  =(j)  spit  +1   /*equivalent to:   spit=substr(pi,j,1) */
+       call charout   ,spit            /*display one (new) decimal digit of π.*/
+       call charout fn,spit            /*··· and also write π digit to a file.*/
+       end   /*j*/                     /* [↑]  0, 1, or 2 decimal dig are spit*/
+    spit=j-1                           /*adjust for  DO  loop index increment.*/
+    old=pi                             /*use "OLD" value for the next COMPARE.*/
+    end      /*n*/
+say                                    /*stick a fork in it,  we're all done. */
+halt:   say  n%2+1   'iterations took'   format(time("Elapsed"),,2)   'seconds.'

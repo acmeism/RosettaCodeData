@@ -1,6 +1,6 @@
 def euler(f,y0,a,b,h):
 	t,y = a,y0
-	while t < b:
+	while t <= b:
 		print "%6.3f %6.3f" % (t,y)
 		t += h
 		y += h * f(t,y)

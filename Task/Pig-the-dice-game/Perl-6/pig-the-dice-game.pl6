@@ -2,7 +2,7 @@ constant DIE = 1..6;
 
 sub MAIN (Int :$players = 2, Int :$goal = 100) {
     my @safe = 0 xx $players;
-    for ^$players xx * -> $player {
+    for |^$players xx * -> $player {
 	say "\nOK, player #$player is up now.";
 	my $safe = @safe[$player];
 	my $ante = 0;

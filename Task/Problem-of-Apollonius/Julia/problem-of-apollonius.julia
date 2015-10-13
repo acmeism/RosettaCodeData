@@ -1,0 +1,55 @@
+using Polynomials
+
+immutable Point{T<:Real}
+    x::T
+    y::T
+end
+
+immutable Circle{T<:Real}
+    c::Point{T}
+    r::T
+end
+Circle{T<:Real}(x::T, y::T, r::T) = Circle(Point(x,y), r)
+
+function apollonius{T<:Real}(ap::Array{Circle{T},1},
+                             enc::Array{Int,1}=Int[])
+    length(ap) == 3 || error("This Apollonius problem needs 3 circles.")
+    x = map(u->u.c.x, ap)
+    y = map(u->u.c.y, ap)
+    r = map(u->u in enc ? -1 : 1, 1:3) .* map(u->u.r, ap)
+    a = 2x[1] - 2x[2:3]
+    b = 2y[1] - 2y[2:3]
+    c = 2r[1] - 2r[2:3]
+    d = (x[1]^2 + y[1]^2 - r[1]^2)
+    d -= (map(u->u^2, x) + map(u->u^2, y) - map(u->u^2, r))[2:3]
+    u = Poly([-det(hcat(b,d)), det(hcat(b,c))]/det(hcat(a,b)))
+    v = Poly([det(hcat(a,d)), -det(hcat(a,c))]/det(hcat(a,b)))
+    w = Poly([r[1], 1.0])^2
+    s = (u - x[1])^2 + (v - y[1])^2 - w
+    r = filter(x->imag(x)==0 && 0<x, roots(s))
+    length(r) < 2 || error("The solution is not unique.")
+    length(r) == 1 || error("There is no solution.")
+    r = r[1]
+    Circle(polyval(u,r), polyval(v,r), r)
+end
+
+function detail(c::Circle)
+    x = @sprintf "%.4f" c.c.x
+    y = @sprintf "%.4f" c.c.y
+    r = @sprintf "%.4f" c.r
+    @sprintf "centered at (%s, %s) with radius %s" x y r
+end
+
+
+test = [Circle(0.,0.,1.),
+        Circle(4.,0.,1.),
+        Circle(2.,4.,2.)]
+
+println("The defining circles are:")
+for c in test
+    println("    ", detail(c))
+end
+println("The internal circle is:")
+println("    ", detail(apollonius(test)))
+println("The external circle is:")
+println("    ", detail(apollonius(test, [1:3])))

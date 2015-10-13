@@ -1,1 +1,2 @@
-.say for [Z~] [<a b c>], [<A B C>], [1,2,3]
+.say for [Z~] [<a b c>], [<A B C>],
+[1,2,3]

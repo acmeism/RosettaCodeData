@@ -1,9 +1,9 @@
 sub num_to_groups ( $num ) { $num.flip.comb(/.**1..4/)».flip     };
-sub groups_to_num ( @g   ) { [~] @g.pop, @g.reverse».fmt('%04d') };
+sub groups_to_num ( @g   ) { [~] flat @g.pop, @g.reverse».fmt('%04d') };
 
 sub long_multiply ( Str $x, Str $y ) {
     my @group_sums;
-    for num_to_groups($x).pairs X num_to_groups($y).pairs -> $xp, $yp {
+    for flat num_to_groups($x).pairs X num_to_groups($y).pairs -> $xp, $yp {
         @group_sums[ $xp.key + $yp.key ] += $xp.value * $yp.value;
     }
 

@@ -31,7 +31,7 @@ for unique permutations @digits -> @p {
         for @formats -> $format {
             my $string = sprintf $format, @p[0], @o[0],
                      @p[1], @o[1], @p[2], @o[2], @p[3];
-            my $result = try { eval($string) };
+            my $result = try { EVAL($string) };
             say "$string = 24" and last if $result and $result == 24;
         }
     }

@@ -1,4 +1,4 @@
-sub price_fraction ( Num $n where { $^n >= 0 and $^n <= 1 } ) {
+sub price_fraction ( Rat() $n where { $^n >= 0 and $^n <= 1 } ) {
        ( $n <  0.06 ) ?? 0.10
     !! ( $n <  0.11 ) ?? 0.18
     !! ( $n <  0.16 ) ?? 0.26

@@ -4,7 +4,7 @@
       (build-list-of-functions n (+ i 1) (cons (lambda () (* (- n i) (- n i))) list))
       list))
 
-(define list-of-functions (build-list-of-functions 11 1 '()))
+(define list-of-functions (build-list-of-functions 10 1 '()))
 
 (map (lambda (f) (f)) list-of-functions)
 

@@ -1,6 +1,9 @@
-# The Loop function will apply some function to every tuple built by taking
-# the i-th element of each list. If one of them is exhausted before the others,
-# the loop continues at its begining. Only the longests lists will be precessed only once.
+# The Loop function will apply some function to every tuple built by
+taking
+# the i-th element of each list. If one of them is exhausted before the
+others,
+# the loop continues at its begining. Only the longests lists will be
+precessed only once.
 Loop := function(a, f)
     local i, j, m, n, v;
     n := Length(a);

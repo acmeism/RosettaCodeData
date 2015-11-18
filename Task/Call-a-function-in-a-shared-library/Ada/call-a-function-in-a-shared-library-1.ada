@@ -7,12 +7,12 @@ with Ada.Unchecked_Conversion;
 
 procedure Shared_Library_Call is
    --
-   -- Interface to kernel32.dll which is resposible for loading DLLs under Windows.
-   -- There are ready to use Win32 binding. We don't want to use them here.
+   -- Interface to kernel32.dll which is responsible for loading DLLs under Windows.
+   -- There are ready to use Win32 bindings. We don't want to use them here.
    --
    type HANDLE is new Unsigned_32;
    function LoadLibrary (lpFileName : char_array) return HANDLE;
-   pragma Import (stdcall, LoadLibrary, "LoadLibrary", "_LoadLibraryA"); -- Ada95 don't has @n.
+   pragma Import (stdcall, LoadLibrary, "LoadLibrary", "_LoadLibraryA"); -- Ada95 does not have the @n suffix.
 
    function GetProcAddress (hModule : HANDLE; lpProcName : char_array)
       return Address;

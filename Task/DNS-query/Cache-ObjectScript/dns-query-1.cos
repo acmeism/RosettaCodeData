@@ -1,0 +1,48 @@
+Class Utils.Net Extends %RegisteredObject
+{
+
+ClassMethod QueryDNS(pHost As %String, Output ip As %List) As %Status
+{
+	// some initialisation
+	K ip S ip=""
+
+	// check host operating system and input parameters
+	S OS=$SYSTEM.Version.GetOS()
+	I '$LF($LB("Windows","UNIX"), OS) Q $$$ERROR($$$GeneralError, "Not implemented.")
+	I OS="Windows" S cmd="nslookup "_pHost
+	I OS="UNIX" S cmd="host "_pHost
+	I $MATCH(pHost, "^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}$")=0 {
+		Q $$$ERROR($$$GeneralError, "Invalid host name.")
+	}
+	
+	// invoke command
+	S list=##class(Utils.OS).Call(cmd, 0)
+	
+	// iterate through list
+	S ptr=0, skip=1
+    WHILE $LISTNEXT(list,ptr,value) {
+	    I value="" CONTINUE
+	    I skip, OS="Windows" S skip=$S(value["Name:": 0, 1: 1) CONTINUE
+	    S ipv4=..GetIPAddr("ipv4", value) I $L(ipv4) S $LI(ip, 4)=ipv4
+	    S ipv6=..GetIPAddr("ipv6", value) I $L(ipv6) S $LI(ip, 6)=ipv6
+    }
+	
+	// finished
+	I $LD(ip, 4)=0, $LD(ip, 6)=0 Q $$$ERROR($$$GeneralError, "Lookup failed.")
+	QUIT $$$OK
+}
+
+ClassMethod GetIPAddr(pType As %String = "", pValue As %String = "") As %String
+{
+	I pType="ipv4" {
+		S pos=$LOCATE(pValue, "((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}")
+		I pos Q $P($E(pValue, pos, *), " ")
+	}
+	I pType="ipv6" {
+		S pos=$LOCATE(pValue, "([0-9A-Fa-f]{0,4}:){2,7}([0-9A-Fa-f]{1,4}$|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4})")
+		I pos Q $P($E(pValue, pos, *), " ")
+	}
+	QUIT ""
+}
+
+}

@@ -2,7 +2,7 @@ sub encode ( Str $word ) {
     my @sym = 'a' .. 'z';
     gather for $word.comb -> $c {
 	die "Symbol '$c' not found in @sym" if $c eq @sym.none;
-        @sym[0 .. take (Nil, @sym ... $c).end] .= rotate(-1);
+        @sym[0 .. take (@sym ... $c).end] .= rotate(-1);
     }
 }
 

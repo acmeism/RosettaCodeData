@@ -1,9 +1,8 @@
 class Array
   def quick_sort
     return self if length <= 1
-    pivot = sample
-    find_all { |i| i <  pivot }.quick_sort +
-      find_all { |i| i == pivot } +
-      find_all { |i| i >  pivot }.quick_sort
+    pivot = self[0]
+    less, greatereq = self[1..-1].partition { |x| x < pivot }
+    less.quick_sort + [pivot] + greatereq.quick_sort
   end
 end

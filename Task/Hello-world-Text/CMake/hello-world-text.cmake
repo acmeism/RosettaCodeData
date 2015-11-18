@@ -1,1 +1,1 @@
-message(STATUS "Goodbye, World!")
+message(STATUS "Hello world!")

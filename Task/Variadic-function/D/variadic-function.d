@@ -16,7 +16,7 @@ void showSum2(int[4] items...) {
 }
 
 void main() {
-    printAll(4, 5.6, "Rosetta", "Code", "is", "awseome");
+    printAll(4, 5.6, "Rosetta", "Code", "is", "awesome");
     writeln;
     showSum1(1, 3, 50);
     showSum2(1, 3, 50, 10);

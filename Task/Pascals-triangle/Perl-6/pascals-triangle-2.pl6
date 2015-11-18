@@ -1,3 +1,3 @@
-constant Pascal = [1], { [0, @^p Z+ @^p, 0] } ... *;
+constant @pascal = [1], -> $prev { [0, |$prev Z+ |$prev, 0] } ... *;
 
-.say for Pascal[^10];
+.say for @pascal[^10];

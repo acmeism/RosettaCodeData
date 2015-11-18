@@ -1,5 +1,5 @@
 from math import hypot, pi, cos, sin
-import Image
+from PIL import Image
 
 
 def hough(im, ntx=460, mry=360):

@@ -1,1 +1,2 @@
-puts open("test.txt").each_line.group_by(&:size).max.last
+h = $stdin.group_by(&:size)
+puts h.max.last  unless h.empty?

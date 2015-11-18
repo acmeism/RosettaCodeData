@@ -51,3 +51,22 @@ o:
   Parse Arg v
   Say right(t,3) format(Tr+(T0-Tr)/exp(k*t),5,10) format(v,5,10)
   Return
+
+exp: Procedure
+  Parse Arg x,prec
+  If prec<9 Then prec=9
+  Numeric Digits (2*prec)
+  Numeric Fuzz   3
+  o=1
+  u=1
+  r=1
+  Do i=1 By 1
+    ra=r
+    o=o*x
+    u=u*i
+    r=r+(o/u)
+    If r=ra Then Leave
+    End
+  Numeric Digits (prec)
+  r=r+0
+  Return r

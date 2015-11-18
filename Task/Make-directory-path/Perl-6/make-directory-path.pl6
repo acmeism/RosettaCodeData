@@ -1,1 +1,1 @@
-mkdir 'path/to/dir'
+mkpath 'path/to/dir'

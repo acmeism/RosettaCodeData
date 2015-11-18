@@ -1,11 +1,11 @@
-String[] haystack = {"Zig","Zag","Wally","Ronald","Bush","Krusty","Charlie","Bush","Bozo"};
+import java.util.Arrays;
 
-OUTERLOOP:
+String[] haystack = { "Zig","Zag","Wally","Ronald","Bush","Krusty","Charlie","Bush","Bozo"};
+
 for (String needle : new String[]{"Washington","Bush"}) {
-    for (int i = 0; i < haystack.length; i++)
-        if (needle.equals(haystack[i])) {
-            System.out.println(i + " " + needle);
-            continue OUTERLOOP;
-        }
-    System.out.println(needle + " is not in haystack");
+    int index = Arrays.binarySearch(haystack, needle);
+    if (index < 0)
+        System.out.println(needle + " is not in haystack");
+    else
+        System.out.println(index + " " + needle);
 }

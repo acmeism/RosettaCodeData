@@ -1,3 +1,1 @@
-open my $fh, $filename;
-my $text = do { local( $/ ); <$fh> };
-close $fh;
+my $text = do { local( @ARGV, $/ ) = ( $filename ); <> };

@@ -5,6 +5,6 @@ create
 feature
     make
         do
-            print ("Goodbye, World!%N")
+            print ("Hello world!%N")
         end
 end

@@ -1,5 +1,5 @@
 my %m = ' ', '_ _ ',
-<
+|<
     !	---.
     "	.-..-.
     $	...-..-
@@ -58,7 +58,7 @@ my %m = ' ', '_ _ ',
 >.map: -> $c, $m is copy {
     $m.=subst(rx/'-'/, 'BGAAACK!!! ', :g);
     $m.=subst(rx/'.'/, 'buck ', :g);
-    $c => $m ~ '_ ';
+    $c => $m ~ '_';
 }
 
 say prompt("Gimme a string: ").uc.comb.map: { %m{$_} // "<scratch> " }

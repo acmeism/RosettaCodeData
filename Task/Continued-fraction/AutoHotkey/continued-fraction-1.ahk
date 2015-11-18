@@ -8,12 +8,12 @@ sqrt2_b(n)
 return 1.0
 }
 
-navier_a(n)
+napier_a(n)
 {
 return n?n:2.0
 }
 
-navier_b(n)
+napier_b(n)
 {
 return n>1.0?n-1.0:1.0
 }
@@ -44,4 +44,4 @@ i--
 return %f_a%(0)+r
 }
 
-Msgbox, % "sqrt 2 = " . calc("sqrt2", 1000) . "`ne = " . calc("navier", 1000) . "`npi = " . calc("pi", 1000)
+Msgbox, % "sqrt 2 = " . calc("sqrt2", 1000) . "`ne = " . calc("napier", 1000) . "`npi = " . calc("pi", 1000)

@@ -1,1 +1,1 @@
-Write "Goodbye, World!",!
+Write "Hello world!",!

@@ -8,11 +8,13 @@ uses
   sysutils; //for timing
 type
   tDataElem  =  record
+                  myText : AnsiString;
                   myX,
                   myY : double;
                   myTag,
                   myOrgIdx : LongInt;
                 end;
+
   tpDataElem = ^tDataElem;
   tData = array of tDataElem;
 
@@ -36,6 +38,7 @@ begin
     Sortdata[i] := @D[i];
     with D[i] do
     Begin
+      myText := Format('_%.9d',[random(cnt)+1]);
       myX := Random*k;
       myY := Random*k;
       myTag := Random(k);
@@ -51,9 +54,32 @@ begin
   Setlength(D,0);
 end;
 
+function CompLowercase(A,B:tpDataElem):integer;
+var
+  lcA,lcB: String;
+Begin
+  lcA := lowercase(A^.myText);
+  lcB := lowercase(B^.myText);
+  result := ORD(lcA > lcB)-ORD(lcA < lcB);
+end;
+
+function myCompText(A,B:tpDataElem):integer;
+{sort an array (or list) of strings in order of descending length,
+  and in ascending lexicographic order for strings of equal length.}
+var
+  lA,lB:integer;
+
+Begin
+  lA := Length(A^.myText);
+  lB := Length(B^.myText);
+  result := ORD(lA<lB)-ORD(lA>lB);
+  IF result = 0 then
+    result := CompLowercase(A,B);
+end;
+
 function myCompX(A,B:tpDataElem):integer;
 //same as sign without jumps in assembler code
-Begin
+begin
   result := ORD(A^.myX > B^.myX)-ORD(A^.myX < B^.myX);
 end;
 
@@ -146,9 +172,14 @@ Begin
   InitData(Data,1*1000*1000);
 
   T0 := Time;
+  mergesort(Low(SortData),High(SortData),SortData,@myCompText);
+  T1 := Time;
+  Writeln('myText ',FormatDateTime('NN:SS.ZZZ',T1-T0));
+//  For i := 0 to High(Data) do  Write(SortData[i].myText);  writeln;
+  T0 := Time;
   mergesort(Low(SortData),High(SortData),SortData,@myCompX);
   T1 := Time;
-  Writeln('myX ',FormatDateTime('NN:SS.ZZZ',T1-T0));
+  Writeln('myX    ',FormatDateTime('NN:SS.ZZZ',T1-T0));
  //check
   For i := 1 to High(Data) do
     IF myCompX(SortData[i-1],SortData[i]) = 1 then
@@ -157,7 +188,7 @@ Begin
   T0 := Time;
   mergesort(Low(SortData),High(SortData),SortData,@myCompY);
   T1 := Time;
-  Writeln('myY ',FormatDateTime('NN:SS.ZZZ',T1-T0));
+  Writeln('myY    ',FormatDateTime('NN:SS.ZZZ',T1-T0));
 
   T0 := Time;
   mergesort(Low(SortData),High(SortData),SortData,@myCompTag);

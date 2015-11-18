@@ -1,1 +1,1 @@
-log "Goodbye, World!"
+log "Hello world!"

@@ -1,15 +1,14 @@
-function primeList = sieveOfEratosthenes(lastNumber)
+function P = erato(x)        % Sieve of Eratosthenes: returns all primes between 2 and x
 
-    list = (2:lastNumber); %Construct list of numbers
-    primeList = []; %Preallocate prime list
+    P = [0 2:x] ;            % Create vector with all ints between 2 and x where
+                             %   position 1 is hard-coded as 0 since 1 is not a prime.
 
-    while( list(1)^2 <lastNumber )
+    for (n=2:sqrt(x))        % All primes factors lie between 2 and sqrt(x).
+       if P(n)               % If the current value is not 0 (i.e. a prime),
+          P((2*n):n:x) = 0 ; % then replace all further multiples of it with 0.
+       end
+    end                      % At this point P is a vector with only primes and zeroes.
 
-        primeList = [primeList list(1)]; %add prime to the prime list
-        list( mod(list,list(1))==0 ) = []; %filter out all multiples of the current prime
+    P = P(P ~= 0) ;          % Remove all zeroes from P, leaving only the primes.
 
-    end
-
-    primeList = [primeList list]; %The rest of the numbers in the list are primes
-
-end
+return

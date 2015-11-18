@@ -1,6 +1,6 @@
-   [data=. 'Goodbye, World!'
-Goodbye, World!
+   [data=. 'Hello world!'
+Hello world!
    data
-Goodbye, World!
+Hello world!
    smoutput data
-Goodbye, World!
+Hello world!

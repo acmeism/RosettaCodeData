@@ -1,5 +1,5 @@
 my $wininfo = qx[xwininfo -root];
-my ($width,$height) = ($wininfo ~~ /'Width: ' (\d+) .*? 'Height: ' (\d+)/)[];
+my ($width,$height) = ($wininfo ~~ /'Width: ' (\d+) .*? 'Height: ' (\d+)/).list;
 ($width,$height) = 1280,768 unless $width;
 
 my $PGM = open "greybars.pgm", :w or die "Can't create greybars.pgm: $!";
@@ -35,5 +35,5 @@ shell "eog -f greybars.pgm";
 
 sub divvy($all, $div) {
     my @marks = ((1/$div,2/$div ... 1) X* $all)».round;
-    @marks Z- 0,@marks;
+    @marks Z- 0,|@marks;
 }

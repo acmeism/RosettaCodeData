@@ -5,8 +5,6 @@
 task() ->
     sum( 1, 100, fun (I) -> 1 / I end ).
 
-
-
 sum( I, High, _Term ) when I > High -> 0;
 sum( I, High, Term ) ->
     Temp = Term( I ),

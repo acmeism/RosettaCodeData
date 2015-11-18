@@ -10,6 +10,7 @@ procedure Directory_List is
    function SName return String is (Simple_Name(Found));
 
 begin
+   -- search directory and store it in Result, a vector of strings
    Start_Search(Search, Directory => ".", Pattern =>"");
    while More_Entries(Search) loop
       Get_Next_Entry(Search, Found);
@@ -20,9 +21,11 @@ begin
             Result.Append(Name);
          end if; -- ingnore filenames beginning with "."
       end;
-   end loop; -- now Result holds the entire directory in arbitrary order
+   end loop; -- Result holds the entire directory in arbitrary order
 
-   Sort(Result); -- nor Result holds the directory in proper order
+   Sort(Result); -- Result holds the directory in proper order
+
+   -- print Result
    for I in Result.First_Index .. Result.Last_Index loop
       Put_Line(Result.Element(I));
    end loop;

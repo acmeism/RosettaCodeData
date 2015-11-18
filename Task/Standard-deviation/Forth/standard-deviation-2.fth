@@ -6,6 +6,7 @@
 : st-stddev ( stats -- stddev ) st-variance fsqrt ;
 
 : st-add ( x stats -- )
+  dup
   1e dup f+!			\ update count
   fdup dup st-mean f- fswap
   ( delta x )
@@ -13,4 +14,5 @@
   ( delta x delta/n )
   float+ dup f+!		\ update mean
   ( delta x )
-  dup f@ f-  f*  float+ f+! ;	\ update nvar
+  dup f@ f-  f*  float+ f+!	\ update nvar
+  st-stddev ;

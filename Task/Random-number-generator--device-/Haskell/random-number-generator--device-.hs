@@ -1,4 +1,4 @@
-#!/usr/bin/runhaskell
+#!/usr/bin/env runhaskell
 
 import System.Entropy
 import Data.Binary.Get

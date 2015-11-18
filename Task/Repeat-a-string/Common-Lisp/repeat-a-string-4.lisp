@@ -1,1 +1,1 @@
-(make-string 5 :initial-element #\X)
+(princ (repeat-string 5 "hi"))

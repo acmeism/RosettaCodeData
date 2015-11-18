@@ -1,9 +1,5 @@
-function reverseString(str){
-  return str.split("").reverse().join("");
-}
-
 function isPalindrome(str) {
-  return str == reverseString(str);
+  return str === str.split("").reverse().join("");
 }
 
-alert(isPalindrome("ingirumimusnocteetconsumimurigni"));
+console.log(isPalindrome("ingirumimusnocteetconsumimurigni"));

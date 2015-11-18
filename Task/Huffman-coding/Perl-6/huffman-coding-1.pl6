@@ -3,7 +3,7 @@ sub huffman ($s) {
     my @q = $s.comb.classify({$_}).map({[+.value / $de, .key]}).sort;
     while @q > 1 {
 	my ($a,$b) = @q.splice(0,2);
-	@q = sort [$a[0] + $b[0], [$a[1], $b[1]]], @q;
+	@q = sort flat $[$a[0] + $b[0], [$a[1], $b[1]]], @q;
     }
     sort *.value, gather walk @q[0][1], '';
 }

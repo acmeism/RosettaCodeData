@@ -14,19 +14,11 @@
 (define (node<=? x y)
   (<= (node-freq x) (node-freq y)))
 
-;; We keep a private sentinel-val under our own control.
-(define sentinel-val (cons 'sentinel 'sentinel))
-
 ;; make-huffman-tree: (listof leaf) -> interior-node
-;; Makes the huffman tree with basic priority-queue operations.
-;; Note: we ensure that make-huffman-tree always returns an interior node.
 (define (make-huffman-tree leaves)
   (define a-heap (make-heap node<=?))
   (heap-add-all! a-heap leaves)
-  ;; To ensure that we always get tree with at least one interior node,
-  ;; we also inject a sentinel leaf node with zero frequency.
-  (heap-add! a-heap (leaf 0 sentinel-val))
-  (for ([i (in-range (length leaves))])
+  (for ([i (sub1 (length leaves))])
     (define min-1 (heap-min a-heap))
     (heap-remove-min! a-heap)
     (define min-2 (heap-min a-heap))
@@ -42,7 +34,7 @@
   (define ht (make-hash))
   (define n (sequence-length str))
   (for ([ch str])
-    (hash-set! ht ch (add1 (hash-ref ht ch 0))))
+     (hash-update! ht ch add1 (λ () 0)))
   (make-huffman-tree
    (for/list ([(k v) (in-hash ht)])
      (leaf (/ v n) k))))
@@ -65,8 +57,8 @@
        (loop (interior-left a-node) (cons #f path/rev))
        (loop (interior-right a-node) (cons #t path/rev))]
       [(leaf? a-node)
-       (unless (eq? (leaf-val a-node) sentinel-val)
-         (hash-set! ht (reverse path/rev) (leaf-val a-node)))]))
+        (hash-set! ht (reverse path/rev) (leaf-val a-node))]))
+
   (for/hash ([(k v) ht])
     (values v k)))
 

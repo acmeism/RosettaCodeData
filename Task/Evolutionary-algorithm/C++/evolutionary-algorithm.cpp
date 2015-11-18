@@ -4,6 +4,7 @@
 #include <cassert>
 #include <algorithm>
 #include <vector>
+#include <ctime>
 
 std::string allowed_chars = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 

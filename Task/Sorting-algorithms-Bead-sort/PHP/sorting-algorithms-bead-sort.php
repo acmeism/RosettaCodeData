@@ -1,9 +1,9 @@
 <?php
 function columns($arr) {
-    if (count($m) == 0)
+    if (count($arr) == 0)
         return array();
-    else if (count($m) == 1)
-        return array_chunk($m[0], 1);
+    else if (count($arr) == 1)
+        return array_chunk($arr[0], 1);
 
     array_unshift($arr, NULL);
     // array_map(NULL, $arr[0], $arr[1], ...)

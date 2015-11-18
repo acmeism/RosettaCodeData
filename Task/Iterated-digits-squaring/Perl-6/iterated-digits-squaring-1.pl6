@@ -2,8 +2,7 @@ constant @sq = ^10 X** 2;
 my $cnt = 0;
 my %cache;
 
-sub Euler92($n) {
-    %cache{$n} //=
+sub Euler92($n) is cached {
     $n == any(1,89) ?? $n !!
     Euler92( [+] @sq[$n.comb] )
 }

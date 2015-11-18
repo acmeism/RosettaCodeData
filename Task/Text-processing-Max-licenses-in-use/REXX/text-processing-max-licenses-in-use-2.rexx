@@ -1,11 +1,13 @@
 /* REXX **************************************************************
-* 19.11.2012 Walter Pachl transscribed from PL/I
+* 19.11.2012 Walter Pachl transcribed from PL/I
 *                         and dual-coded (for PC (Windows) and TSO)
 **********************************************************************/
 Parse Source source
 call time 'R'
 Say source
-If left(source,7)='Windows' Then Do
+Parse Upper source system .
+If left(system,3)='WIN' |,  /* changed from 'Windows' (I see WIN64 in source) */
+   wordpos(system,'MSDOS PCDOS')>0 Then Do
   fid='mlijobs.txt'
   Do i=1 By 1 While lines(fid)>0
     l.i=linein(fid)

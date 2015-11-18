@@ -1,35 +1,28 @@
-/*REXX program solves the  odd word  problem  by just using  byte I/O.  */
-iFID_ = 'ODDWORD.IN'                   /*numeric suffix is added later. */
-oFID_ = 'ODDWORD.'                     /*   "       "    "   "     "    */
+/*REXX program solves the  odd word problem  by only using  byte input/output.*/
+iFID_ = 'ODDWORD.IN'                   /*Note:  numeric suffix is added later.*/
+oFID_ = 'ODDWORD.'                     /*  "       "       "    "   "     "   */
 
-     do case=1  for 2;   #=0           /*#:   number of characters read.*/
-     iFID=ifid_ || case                /*read ODDWORD.IN1 or ODDWORD.IN2*/
-     oFID=ofid_ || case                /*write ODDWORD.1  or ODDWORD.2  */
-     say;  say;   say '──────── reading file: '      iFID      "────────"
+     do case=1  for 2;   #=0           /*#:  is the number of characters read.*/
+     iFID=iFID_ || case                /*read   ODDWORD.IN1  or  ODDWORD.IN2  */
+     oFID=oFID_ || case                /*write  ODDWORD.1    o r ODDWORD.2    */
+     say;   say;    say '════════ reading file: '        iFID        "════════"
 
-              do  until x=='.'         /* [↓]    perform for odd words. */
-
-                 do      until \datatype(x,'M')
-                 call readChar;          call writeChar
-                 end   /*until \datatype···*/
-
-              if x=='.'  then leave    /*end─of─sentence?   (full stop) */
-              call readLetters;   punctuation_loc=#
-                                       /* [↓]    perform for even words.*/
-                 do j=#-1  by -1;                        call readChar j
-                 if \datatype(x,'M')  then leave;        call writeChar
-                 end   /*j*/
-
-              call readLetters;       call writeChar;    #=punctuation_loc
+              do  until x==.           /* [↓]   perform DO loop for odd words.*/
+                 do  until \isMix(x);  call readChar;   call writeChar;   end
+              if x==.  then leave      /*is this end─of─sentence?  (full stop)*/
+              call readLetters;             punctuation_location=#
+                 do j=#-1  by -1;           call readChar  j
+                 if \isMix(x)  then leave;  call writeChar
+                 end   /*j*/           /* [↑]    perform for the "even" words.*/
+              call readLetters;       call writeChar;    #=punctuation_location
               end      /*until x ···*/
-     end   /*case*/                    /* [↑]  process both input files.*/
-exit                                   /*stick a fork in it, we're done.*/
-/*──────────────────────────────────one─liner subroutines───────────────*/
-readLetters: do  until  \datatype(x,'M');   call readChar;  end;    return
-writeChar:   call charout ,x;               call charout oFID,x;    return
-serr:        say; say '***error!***' arg(1);  say;  exit 13   /*oops─ay.*/
-/*──────────────────────────────────readChar subroutine─────────────────*/
-readChar: if lines(iFID)==0  then call serr 'EOF reached.'    /*no file.*/
-if arg(1)==''  then do; x=charin(ifid); #=#+1; end  /*read the next char*/
-               else     x=charin(ifid, arg(1))      /*  "  specific   " */
-return
+     end   /*case*/                    /* [↑]  process both of the input files*/
+exit                                   /*stick a fork in it,  we're all done. */
+/*──────────────────────────────────one─liner subroutines─────────────────────*/
+isMix:       return datatype(arg(1),'M')    /*return   1   if arg is a letter.*/
+readLetters: do  until  \isMix(x);       call readChar;  end;          return
+writeChar:   call charout ,x;            call charout oFID,x;          return
+/*──────────────────────────────────readChar subroutine───────────────────────*/
+readChar: if arg(1)==''  then do; x=charin(iFID); #=#+1; end  /*read next char*/
+                         else     x=charin(iFID, arg(1))      /* "  specific "*/
+          return

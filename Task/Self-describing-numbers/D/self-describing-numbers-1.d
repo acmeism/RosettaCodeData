@@ -6,5 +6,5 @@ bool isSelfDescribing(in long n) pure nothrow @safe {
 }
 
 void main() {
-    4_000_.iota.filter!isSelfDescribing.writeln;
+    4_000_000.iota.filter!isSelfDescribing.writeln;
 }

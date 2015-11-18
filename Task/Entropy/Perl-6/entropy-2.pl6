@@ -1,4 +1,4 @@
-use MONKEY_TYPING;
+use MONKEY-TYPING;
 augment class Bag {
     method entropy {
 	[+] map -> \p { - p * log p },

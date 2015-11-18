@@ -1,0 +1,43 @@
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
+
+public privileged aspect HistoryHandling
+{
+    before() : execution(HistoryVariable.new(..))
+    {
+        history.put((HistoryVariable) thisJoinPoint.getTarget(), new LinkedList<>());
+    }
+
+    after() : execution(void HistoryVariable.dispose())
+    {
+        history.remove(thisJoinPoint.getTarget());
+    }
+
+    before(Object v) : execution(void HistoryVariable.update(Object)) && args(v)
+    {
+        final HistoryVariable hv = (HistoryVariable) thisJoinPoint.getThis();
+        history.get(hv).add(hv.value);
+    }
+
+    after() : execution(Object HistoryVariable.undo())
+    {
+        final HistoryVariable hv = (HistoryVariable) thisJoinPoint.getThis();
+        final Deque<Object> q = history.get(hv);
+        if (!q.isEmpty())
+            hv.value = q.pollLast();
+    }
+
+    String around() : this(HistoryVariable) && execution(String toString())
+    {
+        final HistoryVariable hv = (HistoryVariable) thisJoinPoint.getThis();
+        final Deque<Object> q = history.get(hv);
+        if (q == null)
+            return "<disposed>";
+        else
+            return "current: "+ hv.value + ", previous: " + q.toString();
+    }
+
+    private Map<HistoryVariable, Deque<Object>> history = new HashMap<>();
+}

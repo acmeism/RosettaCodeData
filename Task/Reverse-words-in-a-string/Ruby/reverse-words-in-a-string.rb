@@ -1,8 +1,4 @@
-def reverse_words(string)
-  string.each_line.map {|line| line.split.reverse.join(" ")}
-end
-
-str = <<'EOS'
+puts <<EOS
 ---------- Ice and Fire ------------
 
 fire, in end will world the say Some
@@ -14,5 +10,4 @@ fire. favor who those with hold I
 
 Frost Robert -----------------------
 EOS
-
-puts reverse_words(str)
+  .each_line.map {|line| line.split.reverse.join(' ')}

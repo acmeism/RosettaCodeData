@@ -1,21 +1,44 @@
-enum Mu<T> { Roll(@fn(Mu<T>) -> T) }
-fn unroll<T>(Roll(f): Mu<T>) -> @fn(Mu<T>) -> T { f }
+use std::sync::Arc;
+use std::boxed::Box;
+use std::clone::Clone;
 
-type RecFunc<A, B> = @fn(@fn(A) -> B) -> @fn(A) -> B;
-
-fn fix<A, B>(f: RecFunc<A, B>) -> @fn(A) -> B {
-    let g: @fn(Mu<@fn(A) -> B>) -> @fn(A) -> B =
-        |x| |a| f(unroll(x)(x))(a);
-    g(Roll(g))
+//Arc<Box<Closure>>
+#[macro_export]
+macro_rules! abc {
+    ($x:expr) => (Arc::new(Box::new($x)));
 }
 
-fn main() {
-    let fac: RecFunc<uint, uint> =
-        |f| |x| if (x==0) { 1 } else { f(x-1) * x };
-    let fib : RecFunc<uint, uint> =
-        |f| |x| if (x<2) { 1 } else { f(x-1) + f(x-2) };
+#[derive(Clone)]
+pub enum Mu<T> {
+    Roll(Arc<Box<Fn(Mu<T>)->T>>),
+}
 
-    let ns = std::vec::from_fn(20, |i| i);
-    println(fmt!("%?", ns.map(|&n| fix(fac)(n))));
-    println(fmt!("%?", ns.map(|&n| fix(fib)(n))));
+pub fn unroll<T>(Mu::Roll(f): Mu<T>) -> Arc<Box<Fn(Mu<T>)->T>> {f.clone()}
+
+pub type Func<A, B> = Arc<Box<Fn(A)->B>>;
+pub type RecFunc<A, B> = Arc<Box<Fn(Func<A, B>) -> Func<A, B>>>;
+
+pub fn y<A, B>(f: RecFunc<A, B>) -> Func<A, B> {
+    let g:Arc<Box<Fn(Mu<Func<A, B>>)->Func<A, B>>> = abc!(move |x : Mu<Func<A, B>>| -> Func<A, B> {
+        let f = f.clone();
+        abc!(move |a:A| -> B {
+            let f = f.clone();
+            f(unroll(x.clone())(x.clone()))(a)
+        })
+    });
+    g(Mu::Roll(g.clone()))
+}
+
+#[test]
+fn fib_test() {
+    let fib : RecFunc<i32, i32> = abc!(|f| abc!(move |x| if (x<2) { 1 } else { f(x-1) + f(x-2)}));
+    let b = y(fib)(10);
+    assert_eq!(b, 89);
+}
+
+#[test]
+fn fac_test() {
+    let fac : RecFunc<i32, i32> = abc!(|f| abc!(move |x| if (x==0) { 1 } else { f(x-1) * x }));
+    let c = y(fac)(10);
+    assert_eq!(c, 3628800);
 }

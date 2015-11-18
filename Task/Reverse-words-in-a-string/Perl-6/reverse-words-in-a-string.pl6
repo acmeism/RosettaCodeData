@@ -1,1 +1,1 @@
-say .words.reverse for lines
+say ~.words.reverse for lines

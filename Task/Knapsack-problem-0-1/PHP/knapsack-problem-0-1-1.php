@@ -12,7 +12,7 @@
 #
 #########################################################
 
-function knapSolveFast2($w,$v,$i,$aW,&$m) {
+function knapSolveFast2($w, $v, $i, $aW, &$m, &$pickedItems) {
 
 	global $numcalls;
 	$numcalls ++;
@@ -92,6 +92,7 @@ echo "<b>Array Indices:</b><br>".join(",",$pickedItems)."<br>";
 echo "<b>Chosen Items:</b><br>";
 echo "<table border cellspacing=0>";
 echo "<tr><td>Item</td><td>Value</td><td>Weight</td></tr>";
+$totalVal = $totalWt = 0;
 foreach($pickedItems as $key) {
 	$totalVal += $v4[$key];
 	$totalWt += $w4[$key];

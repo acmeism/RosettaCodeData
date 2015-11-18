@@ -11,10 +11,13 @@
 
  ;;;; join an ordered stream of streams (here, of primes' multiples)
  ;;;; into one ordered stream, via an infinite right-deepening tree
- (define (s-tree-join sts)                               ;; sts -> s
-   (define (join-With of-Tail sts)                       ;; sts -> s
-     (s-cons (head (head sts))
-              (s-union (tail (head sts)) (of-Tail (tail sts)))))
-   (define (pairs sts)                                   ;; sts -> sts
-     (s-cons (join-With head sts) (pairs (tail (tail sts)))))
-   (join-With (lambda (t) (s-tree-join (pairs t))) sts))
+ (define (s-tree-join sts)
+   (s-cons (head (head sts))
+           (s-union (tail (head sts))
+                    (s-tree-join (pairs (tail sts))))))
+
+ (define (pairs sts)                        ;; {a.(b.t)} -> (a+b).{t}
+     (s-cons (s-cons (head (head sts))
+                     (s-union (tail (head sts))
+                              (head (tail sts))))
+             (pairs (tail (tail sts)))))

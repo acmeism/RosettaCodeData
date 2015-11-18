@@ -13,7 +13,7 @@
 
             int lengthForCountryCode;
 
-            var countryCodeKnown = _lengths.TryGetValue(countryCode, out lengthForCountryCode);
+            var countryCodeKnown = Lengths.TryGetValue(countryCode, out lengthForCountryCode);
             if (!countryCodeKnown)
             {
                 return ValidationResult.CountryCodeNotKnown;
@@ -29,13 +29,12 @@
             value = value.ToUpper();
             var newIban = value.Substring(4) + value.Substring(0, 4);
 
-            newIban = Regex.Replace(newIban, @"\D", match => ((int) match.Value[0] - 55).ToString());
+            newIban = Regex.Replace(newIban, @"\D", match => (match.Value[0] - 55).ToString());
 
             var remainder = BigInteger.Parse(newIban) % 97;
 
             if (remainder != 1)
                 return ValidationResult.ValueFailsModule97Check;
-
 
             return ValidationResult.IsValid;
         }
@@ -50,7 +49,7 @@
             CountryCodeNotKnown
         }
 
-        private static Dictionary<string, int> _lengths = new Dictionary<string, int>
+        private static readonly IDictionary<string, int> Lengths = new Dictionary<string, int>
         {
             {"AL", 28},
             {"AD", 24},

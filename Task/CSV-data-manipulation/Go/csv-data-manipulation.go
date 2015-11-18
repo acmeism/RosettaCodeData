@@ -2,78 +2,57 @@ package main
 
 import (
 	"encoding/csv"
-	"io"
 	"log"
 	"os"
 	"strconv"
 )
 
-func init() {
-	log.SetFlags(log.Lshortfile)
+func main() {
+	rows := readSample()
+	appendSum(rows)
+	writeChanges(rows)
 }
 
-func main() {
-	// Open the sample file given.
-	csvFile, err := os.Open("sample.csv")
-
-	// Exit on error.
+func readSample() [][]string {
+	f, err := os.Open("sample.csv")
 	if err != nil {
-		log.Fatal("Error opening sample csv file:", err)
+		log.Fatal(err)
 	}
-
-	// Make sure the file is closed before the function returns.
-	defer csvFile.Close()
-
-	// Create a new csv reader for the file.
-	csvReader := csv.NewReader(csvFile)
-
-	// Create an output file.
-	outputFile, err := os.Create("output.csv")
+	rows, err := csv.NewReader(f).ReadAll()
+	f.Close()
 	if err != nil {
-		log.Fatal("Error creating output file:", err)
+		log.Fatal(err)
 	}
-	defer outputFile.Close()
+	return rows
+}
 
-	csvWriter := csv.NewWriter(outputFile)
-	defer csvWriter.Flush()
+func appendSum(rows [][]string) {
+	rows[0] = append(rows[0], "SUM")
+	for i := 1; i < len(rows); i++ {
+		rows[i] = append(rows[i], sum(rows[i]))
+	}
+}
 
-	// For each row in the data.
-	for i := 0; ; i++ {
-		record, err := csvReader.Read()
-		if err == io.EOF {
-			break
-		}
+func sum(row []string) string {
+	sum := 0
+	for _, s := range row {
+		x, err := strconv.Atoi(s)
 		if err != nil {
-			log.Fatal("Error reading record:", err)
+			return "NA"
 		}
+		sum += x
+	}
+	return strconv.Itoa(sum)
+}
 
-		// Skip header row.
-		if i == 0 {
-			err = csvWriter.Write(record)
-			if err != nil {
-				log.Fatal("Error writing record to output file:", err)
-			}
-			continue
-		}
-
-		// For each cell in the row.
-		for cell := range record {
-			// Convert value to integer for manipulation.
-			v, err := strconv.Atoi(record[cell])
-			if err != nil {
-				log.Fatal("Error parsing cell value:", err)
-			}
-
-			// Do something to the value.
-			v += 1
-			// Store the new value back in the record variable.
-			record[cell] = strconv.Itoa(v)
-		}
-
-		// Write modified record to disk.
-		err = csvWriter.Write(record)
-		if err != nil {
-			log.Fatal("Error writing record to output file:", err)
-		}
+func writeChanges(rows [][]string) {
+	f, err := os.Create("output.csv")
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = csv.NewWriter(f).WriteAll(rows)
+	f.Close()
+	if err != nil {
+		log.Fatal(err)
 	}
 }

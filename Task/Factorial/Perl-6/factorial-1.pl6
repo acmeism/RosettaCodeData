@@ -1,2 +1,2 @@
-sub postfix:<!>($n) { [*] 2..$n }
+sub postfix:<!> ( UInt:D $n ) is looser(&prefix:<->) { [*] 2..$n }
 say 5!;

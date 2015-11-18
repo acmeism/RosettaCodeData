@@ -1,9 +1,9 @@
-(defn std-dev [samples]
-  (let [n (count samples)
-	mean (/ (reduce + samples) n)
-	intermediate (map #(Math/pow (- %1 mean) 2) samples)]
-    (Math/sqrt
-     (/ (reduce + intermediate) n))))
-
-
-(println (std-dev  [2 4 4 4 5 5 7 9])) ;;2.0
+(defn stateful-std-deviation[x]
+  (letfn [(std-dev[x]
+            (let [v (deref (find-var (symbol (str *ns* "/v"))))]
+              (swap! v conj x)
+              (let [m (/ (reduce + @v) (count @v))]
+                (Math/sqrt (/ (reduce + (map #(* (- m %) (- m %)) @v)) (count @v))))))]
+    (when (nil? (resolve 'v))
+      (intern *ns* 'v (atom [])))
+    (std-dev x)))

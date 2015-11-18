@@ -18,9 +18,9 @@ triangle =
   06 71 28 75 94 48 37 10 23 51 06 48 53 18 74 98 15
 27 02 92 23 08 71 76 84 15 52 92 63 81 10 44 10 69 93"
 
-ar = triangle.each_line.map{|line| line.strip.split.map(&:to_i)}
-until ar.size == 1 do
-  maxes = ar.pop.each_cons(2).map(&:max)
-  ar[-1]= ar[-1].zip(maxes).map{|r1,r2| r1 + r2}.flatten
-end
-puts ar # => 1320
+ar = triangle.each_line.map{|line| line.split.map(&:to_i)}
+puts ar.inject([]){|res,x|
+  maxes = [0, *res, 0].each_cons(2).map(&:max)
+  x.zip(maxes).map{|a,b| a+b}
+}.max
+# => 1320

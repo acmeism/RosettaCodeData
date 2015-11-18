@@ -3,6 +3,8 @@ package main
 import (
     "fmt"
     "math"
+    "bytes"
+    "encoding/binary"
 )
 
 type testCase struct {
@@ -38,22 +40,17 @@ func init() {
 }
 
 func md5(s string) (r [16]byte) {
-    numBlocks := (len(s) + 72) >> 6
-    padded := make([]byte, numBlocks<<6)
-    copy(padded, s)
-    padded[len(s)] = 0x80
-    for i, messageLenBits := len(padded)-8, len(s)<<3; i < len(padded); i++ {
-        padded[i] = byte(messageLenBits)
-        messageLenBits >>= 8
+    padded := bytes.NewBuffer([]byte(s))
+    padded.WriteByte(0x80)
+    for padded.Len() % 64 != 56 {
+        padded.WriteByte(0)
     }
+    messageLenBits := uint64(len(s)) * 8
+    binary.Write(padded, binary.LittleEndian, messageLenBits)
 
     var a, b, c, d uint32 = 0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476
     var buffer [16]uint32
-    for i := 0; i < numBlocks; i++ {
-        index := i << 6
-        for j := 0; j < 64; j, index = j+1, index+1 {
-            buffer[j>>2] = (uint32(padded[index]) << 24) | (buffer[j>>2] >> 8)
-        }
+    for binary.Read(padded, binary.LittleEndian, buffer[:]) == nil { // read every 64 bytes
         a1, b1, c1, d1 := a, b, c, d
         for j := 0; j < 64; j++ {
             var f uint32
@@ -79,11 +76,6 @@ func md5(s string) (r [16]byte) {
         a, b, c, d = a+a1, b+b1, c+c1, d+d1
     }
 
-    for i, n := range []uint32{a, b, c, d} {
-        for j := 0; j < 4; j++ {
-            r[i*4+j] = byte(n)
-            n >>= 8
-        }
-    }
+    binary.Write(bytes.NewBuffer(r[:0]), binary.LittleEndian, []uint32{a, b, c, d})
     return
 }

@@ -22,14 +22,16 @@ sub infix:<nez>($a, $b) { $a ne $b };
 
 # post increment
 sub postfix:<++z>($a is rw) {
-    $a = ("$z0$z0"~$a).subst(/("$z0$z0")($z1+ %% $z0)?$/, -> $/ { "$z0$z1" ~ $z0 x $1.chars });
+    $a = ("$z0$z0"~$a).subst(/("$z0$z0")($z1+ %% $z0)?$/,
+      -> $/ { "$z0$z1" ~ ($1 ?? $z0 x $1.chars !! '') });
     $a ~~ s/^$z0+//;
     $a
 }
 
 # post decrement
 sub postfix:<--z>($a is rw) {
-    $a.=subst(/$z1($z0*)$/, -> $/ {$z0 ~ "$z1$z0" x $0.chars div 2 ~ $z1 x $0.chars mod 2});
+    $a.=subst(/$z1($z0*)$/,
+      -> $/ {$z0 ~ "$z1$z0" x $0.chars div 2 ~ $z1 x $0.chars mod 2});
     $a ~~ s/^$z0+(.+)$/$0/;
     $a
 }

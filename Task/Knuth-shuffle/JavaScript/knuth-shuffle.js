@@ -1,28 +1,25 @@
-function knuth_shuffle(a) {
-    var n = a.length,
-        r,
-        temp;
-    while (n > 1) {
-        r = Math.floor(n * Math.random());
-        n -= 1;
-        temp = a[n];
-        a[n] = a[r];
-        a[r] = temp;
+function knuthShuffle(arr) {
+    var rand, temp, i;
+
+    for (i = arr.length - 1; i > 0; i -= 1) {
+        rand = Math.floor((i + 1) * Math.random());//get random between zero and i (inclusive)
+        temp = arr[rand];//swap i and the zero-indexed number
+        arr[rand] = arr[i];
+        arr[i] = temp;
     }
-    return a;
+    return arr;
 }
 
-var res, i, key;
-
-res = {
+var res = {
     '1,2,3': 0, '1,3,2': 0,
     '2,1,3': 0, '2,3,1': 0,
     '3,1,2': 0, '3,2,1': 0
 };
 
-for (i = 0; i < 100000; i++) {
-    res[knuth_shuffle([1,2,3]).join(',')] += 1;
+for (var i = 0; i < 100000; i++) {
+    res[knuthShuffle([1,2,3]).join(',')] += 1;
 }
-for (key in res) {
+
+for (var key in res) {
     print(key + "\t" + res[key]);
 }

@@ -1,31 +1,41 @@
 @echo off
 setlocal enabledelayedexpansion
-if "%1" equ "" goto :eof
-call :hailstone %1 seq cnt
-echo %seq%
-goto :eof
+echo.
+::Task #1
+call :hailstone 111
+echo Task #1: (Start:!sav!)
+echo !seq!
+echo.
+echo Sequence has !cnt! elements.
+echo.
+::Task #2
+call :hailstone 27
+echo Task #2: (Start:!sav!)
+echo !seq!
+echo.
+echo Sequence has !cnt! elements.
+echo.
+pause>nul
+exit /b 0
 
+::The Function
 :hailstone
 set num=%1
-set %2=%1
+set seq=%1
+set sav=%1
+set cnt=0
 
 :loop
-if %num% equ 1 goto :eof
-call :iseven %num% res
-if %res% equ T goto divideby2
-set /a num = (3 * num) + 1
-set %2=!%2! %num%
-goto loop
-:divideby2
-set /a num = num / 2
-set %2=!%2! %num%
+set /a cnt+=1
+if !num! equ 1 goto :eof
+set /a isodd=%num%%%2
+if !isodd! equ 0 goto divideby2
+
+set /a num=(3*%num%)+1
+set seq=!seq! %num%
 goto loop
 
-:iseven
-set /a tmp = %1 %% 2
-if %tmp% equ 1 (
-	set %2=F
-) else (
-	set %2=T
-)
-goto :eof
+:divideby2
+set /a num/=2
+set seq=!seq! %num%
+goto loop

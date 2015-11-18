@@ -1,36 +1,16 @@
-luhn() {
-    reverse $1 | {
-        while read odd; do
-            (( s1 += odd ))
-            read even
-            e=0
-            for digit in $(digits $(( 2 * even)) ); do
-                (( e += digit ))
-            done
-            (( s2 += e ))
-        done
-        (( (s1+s2) % 10 == 0 ))
-    }
-}
-
-reverse() {
-    local i digits=( $(digits $1) )
-    for ((i=${#digits[@]}-1; i>=0; i--)); do
-        echo ${digits[i]}
-    done
-}
-
-digits() {
-    local i
-    for ((i=0; i<${#1}; i++)); do
-        echo ${1:i:1}
-    done
+function luhn {
+  typeset n p s t=('0123456789' '0516273849')
+  while ((-n<${#1})); do
+    p="${t[n--%2]%${1:n:1}*}"
+    ((s+=${#p}))
+  done
+  ((s%10))
 }
 
 for c in 49927398716 49927398717 1234567812345678 1234567812345670; do
     if luhn $c; then
-        echo $c is valid
-    else
         echo $c is invalid
+    else
+        echo $c is valid
     fi
 done

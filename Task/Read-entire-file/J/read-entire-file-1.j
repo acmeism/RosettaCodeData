@@ -1,1 +1,2 @@
-   var=: 1!:1<'foo.txt'
+   require 'files'         NB. not needed for J7 & later
+   var=: freads 'foo.txt'

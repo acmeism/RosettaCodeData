@@ -1,21 +1,17 @@
-   NB. Sorting stress test...
-   NB.        0         1         2         3     Tape Symbol Scan
-   NB. S   p  m  g   p  m  g   p  m  g   p  m  g  (p,m,g) ➜ (print,move,goto)
-   QS=. (Noun _) ; 0          NB. Reading the transition table and setting the initial state
-       0   0 _1  4   1  1  0   3  1  1   _  _  _
-       1   0 _1  2   1  1  1   2  1  1   _  _  _
-       2   _  _  _   2 _1  3   2 _1  2   2 _1  4
-       3   _  _  _   1 _1  3   2 _1  3   1  1  0
-       4   0  1 _1   1 _1  4   _  _  _   _  _  _
+   NB. Probable 5-state, 2-symbol busy beaver...
+   NB.        0         1      Tape Symbol Scan
+   NB. S   p  m  g   p  m  g  (p,m,g) → (print,move,goto)
+   QS=. (Noun _) ; 0          NB. Reading the transition table and setting the state
+       0   1  1  1   1 _1  2
+       1   1  1  2   1  1  1
+       2   1  1  3   0 _1  4
+       3   1 _1  0   1 _1  3
+       4   1  1 _1   0 _1  0
 )
-   TPF=. 1 2 2 1 2 2 1 2 1 2 1 2 1 2 ; 0 ; 50   NB. Setting the tape, its pointer and the display frequency
+   TPF=. 0 ; 0 ; _            NB. Setting the tape, its pointer and the display frequency
 
    TPF utm QS                 NB. Running the Turing machine...
-0 1:12212212121212
-0  :^
-3 2:113122121222220
-50 :    ^
-1 2:111111322222220
-100:            ^
-4 0:0111111222222220
-118: ^
+0 0:0
+0 :^
+4 0     :101001001001001001001001001001001001001001001001001001001001001001001001001001001001001001001001001001...
+47176870: ^

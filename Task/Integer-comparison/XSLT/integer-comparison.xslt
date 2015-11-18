@@ -8,3 +8,4 @@
     <xsl:when test="$a = $b">a = b</xsl:when>
   </xsl:choose>
   </fo:block>
+ </xsl:template>

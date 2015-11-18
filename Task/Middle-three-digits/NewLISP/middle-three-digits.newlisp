@@ -1,0 +1,11 @@
+(define (middle3 x)
+    (if (even? (length x))
+        (println "You entered " x ". I need an odd number of digits, not " (length x) ".")
+        (if (< (length x) 3)
+            (println "You entered " x ". Sorry, but I need 3 or more digits.")
+            (println "The middle 3 digits of " x " are " ((- (/ (- (length x) 1) 2) 1) 3 (string (abs x))) ".")
+        )
+    )
+)
+
+(map middle3 lst)

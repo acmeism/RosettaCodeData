@@ -1,6 +1,7 @@
 #include <bitset>
 #include <iostream>
 #include <string>
+#include <assert.h>
 
 uint32_t gray_encode(uint32_t b)
 {
@@ -30,8 +31,8 @@ int main()
     for (uint32_t n = 0; n < 32; ++n)
     {
         uint32_t g = gray_encode(n);
-        uint32_t b = gray_decode(g);
+        assert(gray_decode(g) == n);
 
-        std::cout << n << "\t" << to_binary(n) << "\t" << to_binary(g) << "\t" << b << "\n";
+        std::cout << n << "\t" << to_binary(n) << "\t" << to_binary(g) << "\t" << g << "\n";
     }
 }

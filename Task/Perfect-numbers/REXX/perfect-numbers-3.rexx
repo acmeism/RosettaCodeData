@@ -13,7 +13,7 @@ exit                                   /*stick a fork in it, we're done.*/
 /*──────────────────────────────────ISPERFECT subroutine────────────────*/
 isPerfect: procedure;  parse arg x     /*get the number to be tested.   */
 if x<6  then return 0                  /*perfect numbers can't be < six.*/
-s=1                                    /*the first factor of  X.        */
+s=1                                    /*the first factor of  X.       _*/
              do j=2  while  j*j<=x     /*starting at 2, find factors ≤√X*/
              if x//j\==0  then iterate /*J isn't a factor of X, so skip.*/
              s = s + j + x%j           /*··· add it and the other factor*/

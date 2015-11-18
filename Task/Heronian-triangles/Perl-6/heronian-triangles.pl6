@@ -13,15 +13,15 @@ sub primitive-heronian-area($a, $b, $c) {
         if 1 == [gcd] $a, $b, $c;
 }
 
-sub show {
+sub show(@measures) {
     say "   Area Perimeter   Sides";
-    for @_ -> [$area, $perim, $c, $b, $a] {
+    for @measures -> [$area, $perim, $c, $b, $a] {
 	printf "%6d %6d %12s\n", $area, $perim, "$a×$b×$c";
     }
 }
 
 sub MAIN ($maxside = 200, $first = 10, $witharea = 210) {
-    my \h = sort gather
+    my @h = sort gather
         for 1 .. $maxside -> $c {
             for 1 .. $c -> $b {
                 for $c - $b + 1 .. $b -> $a {
@@ -32,11 +32,11 @@ sub MAIN ($maxside = 200, $first = 10, $witharea = 210) {
             }
         }
 
-    say "Primitive Heronian triangles with sides up to $maxside: ", +h;
+    say "Primitive Heronian triangles with sides up to $maxside: ", +@h;
 
     say "\nFirst $first:";
-    show h[^$first];
+    show @h[^$first];
 
     say "\nArea $witharea:";
-    show h.grep: *[0] == $witharea;
+    show @h.grep: *[0] == $witharea;
 }

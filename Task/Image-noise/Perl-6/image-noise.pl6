@@ -26,8 +26,10 @@ sub render {
     SDL_SetRenderDrawColor($renderer, 0, 0, 0, 0);
     SDL_RenderClear($renderer);
     SDL_SetRenderDrawColor($renderer, 255, 255, 255, 0);
-    for ^$w X ^$h -> $i, $j {
-	SDL_RenderDrawPoint( $renderer, $i, $j ) if rand < .5;
+    loop (my int $i; $i < $w; $i = $i + 1) {
+        loop (my int $j; $j < $h; $j = $j + 1) {
+            SDL_RenderDrawPoint( $renderer, $i, $j ) if Bool.pick
+        }
     }
     SDL_RenderPresent($renderer);
 }

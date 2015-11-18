@@ -1,7 +1,7 @@
 (defun flatten (obj)
   (let (result)
     (labels ((grep (obj)
-               (cond ((null obj))
+               (cond ((null obj) nil)
                      ((atom obj) (push obj result))
                      (t (grep (rest obj))
                         (grep (first obj))))))

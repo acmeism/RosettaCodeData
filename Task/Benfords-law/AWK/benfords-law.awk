@@ -6,8 +6,8 @@ BEGIN {
     }
     print("digit expected observed deviation")
     for (i=1; i<=9; i++) {
-      expected = log10(i+1) - log10(i)
-      actual = arr[i] / n
+      expected  = log10(i+1) - log10(i)
+      actual    = arr[i] / n
       deviation = expected - actual
       printf("%5d %8.4f %8.4f %9.4f\n",i,expected*100,actual*100,abs(deviation*100))
     }

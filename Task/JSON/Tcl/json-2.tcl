@@ -1,4 +1,5 @@
 package require Tcl 8.6
+package require json::write
 
 proc tcl2json value {
     # Guess the type of the value; deep *UNSUPPORTED* magic!
@@ -7,25 +8,14 @@ proc tcl2json value {
 
     switch $type {
 	string {
-	    # Skip to the mapping code at the bottom
+	    return [json::write string $value]
 	}
 	dict {
-	    set result "{"
-	    set pfx ""
-	    dict for {k v} $value {
-		append result $pfx [tcl2json $k] ": " [tcl2json $v]
-		set pfx ", "
-	    }
-	    return [append result "}"]
+	    return [json::write object {*}[
+		dict map {k v} $value {tcl2json $v}]]
 	}
 	list {
-	    set result "\["
-	    set pfx ""
-	    foreach v $value {
-		append result $pfx [tcl2json $v]
-		set pfx ", "
-	    }
-	    return [append result "\]"]
+	    return [json::write array {*}[lmap v $value {tcl2json $v}]]
 	}
 	int - double {
 	    return [expr {$value}]
@@ -46,11 +36,7 @@ proc tcl2json value {
 	    } elseif {[string is boolean -strict $value]} {
 		return [expr {$value ? "true" : "false"}]
 	    }
+	    return [json::write string $value]
 	}
     }
-
-    # For simplicity, all "bad" characters are mapped to \u... substitutions
-    set mapped [subst -novariables [regsub -all {[][\u0000-\u001f\\""]} \
-	$value {[format "\\\\u%04x" [scan {& } %c]]}]]
-    return "\"$mapped\""
 }

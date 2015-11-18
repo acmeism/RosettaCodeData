@@ -1,6 +1,6 @@
 <?php
 
-function counting_sort($arr, $min, $max)
+function counting_sort(&$arr, $min, $max)
 {
   $count = array();
   for($i = $min; $i <= $max; $i++)

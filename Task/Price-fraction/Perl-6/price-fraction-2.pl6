@@ -1,4 +1,4 @@
-my @price = map *.value,
+my @price = map *.value, flat
     ( 0 ..^ 6  X=> 0.10),
     ( 6 ..^ 11 X=> 0.18),
     (11 ..^ 16 X=> 0.26),

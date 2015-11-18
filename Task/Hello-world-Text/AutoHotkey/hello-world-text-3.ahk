@@ -1,1 +1,1 @@
-SendInput Goodbye, World{!}
+SendInput Hello world!{!}

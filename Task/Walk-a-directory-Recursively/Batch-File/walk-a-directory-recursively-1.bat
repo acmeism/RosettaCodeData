@@ -1,1 +1,1 @@
-dir /a-d %1
+dir /s /b "%windir%\System32\*.exe"

@@ -19,7 +19,7 @@ sub comp([$q,$r,$s,$t], [$u,$v,$w,$x]) {
      $s * $v + $t * $x]
 }
 
-my @pi :=
+my $pi :=
     stream -> $z { extr($z, 3) },
            -> $z, $n { $n == extr($z, 4) },
            -> $z, $n { comp([10, -10*$n, 0, 1], $z) },
@@ -27,7 +27,7 @@ my @pi :=
            <1 0 0 1>,
            (1..*).map: { [$_, 4 * $_ + 2, 0, 2 * $_ + 1] }
 
-loop {
-    print @pi.shift;
+for ^Inf -> $i {
+    print $pi[$i];
     once print '.'
 }

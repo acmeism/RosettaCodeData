@@ -1,4 +1,4 @@
 : main[ -- ]
-me @ "Goodbye, World!" notify
+me @ "Hello world!" notify
 exit
 ;

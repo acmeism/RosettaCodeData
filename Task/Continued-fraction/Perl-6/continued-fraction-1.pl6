@@ -5,6 +5,6 @@ sub continued-fraction(:@a, :@b, Int :$n = 100)
     $x;
 }
 
-printf "√2 ≈ %.9f\n", continued-fraction(:a(1, 2 xx *), :b(*, 1 xx *));
-printf "e  ≈ %.9f\n", continued-fraction(:a(2, 1 .. *), :b(*, 1, 1 .. *));
-printf "π  ≈ %.9f\n", continued-fraction(:a(3, 6 xx *), :b(*, [\+] 1, (8, 16 ... *)), :n(1000));
+printf "√2 ≈%.9f\n", continued-fraction(:a(1, |(2 xx *)), :b(Nil, |(1 xx *)));
+printf "e  ≈%.9f\n", continued-fraction(:a(2, |(1 .. *)), :b(Nil, 1, |(1 .. *)));
+printf "π  ≈%.9f\n", continued-fraction(:a(3, |(6 xx *)), :b(Nil, |((1, 3, 5 ... *) X** 2)));

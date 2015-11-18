@@ -1,119 +1,73 @@
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import static java.lang.Integer.parseInt;
+import static java.nio.file.StandardOpenOption.APPEND;
+import static java.util.Arrays.asList;
+import static java.util.Arrays.stream;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
+
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.stream.Stream;
 
 public class RecordAppender {
-
-    public static class Record {
-
-        String account, password;
-        Integer uid, gid;
-        String[] gecos;
-        String directory, shell;
-
-        public Record(String account, String password, int uid, int gid,
-                String gecos[], String directory, String shell) {
-            this.account = account;
-            this.password = password;
-            this.uid = uid;
-            this.gid = gid;
-            this.gecos = gecos;
-            this.directory = directory;
-            this.shell = shell;
-        }
-
-        public Record(String line) {
-            String[] token = line.trim().split(":");
-            if ((token == null) || (token.length < 7)) {
-                throw new IllegalArgumentException(line);
-            }
-            this.account = token[0].trim();
-            this.password = token[1].trim();
-            this.uid = Integer.parseInt(token[2].trim());
-            this.gid = Integer.parseInt(token[3].trim());
-            this.gecos = token[4].trim().split(",");
-            this.directory = token[5].trim();
-            this.shell = token[6].trim();
-        }
-
-        public String asLine() {
-            StringBuilder sb = new StringBuilder();
-            sb.append(account + ":" + password + ":");
-            sb.append(uid + ":" + gid + ":");
-            for (int i = 0; i < gecos.length; i++) {
-                sb.append((i == 0 ? "" : ",") + gecos[i].trim());
-            }
-            sb.append(":" + directory + ":" + shell + "\n");
-            return sb.toString();
-        }
+  static class Record {
+    private final String account;
+    private final String password;
+    private final int uid;
+    private final int gid;
+    private final List<String> gecos;
+    private final String directory;
+    private final String shell;
+		
+    public Record(String account, String password, int uid, int gid, List<String> gecos, String directory, String shell) {
+      this.account = requireNonNull(account);
+      this.password = requireNonNull(password);
+      this.uid = uid;
+      this.gid = gid;
+      this.gecos = requireNonNull(gecos);
+      this.directory = requireNonNull(directory);
+      this.shell = requireNonNull(shell);
     }
-
-    public static void main(String[] args) {
-        File file = null;
-        FileWriter writer = null;
-        BufferedReader br = null;
-        String line = null;
-        Record record = null;
-        try {
-            file = File.createTempFile("_rosetta", ".passwd");
-
-            writer = new FileWriter(file);
-
-            writer.write(new Record("jsmith", "x", 1001, 1000, new String[] {
-                    "Joe Smith", "Room 1007", "(234)555-8917", "(234)555-0077",
-                    "jsmith@rosettacode.org" }, "/home/jsmith", "/bin/bash")
-                    .asLine());
-
-            writer.write(new Record("jdoe", "x", 1002, 1000, new String[] {
-                    "Jane Doe", "Room 1004", "(234)555-8914", "(234)555-0044",
-                    "jdoe@rosettacode.org" }, "/home/jdoe", "/bin/bash")
-                    .asLine());
-
-            writer.close();
-
-            // Setting the 'append'-Parameter to true writes data
-            // to the end of the file rather than the beginning
-
-            writer = new FileWriter(file, true);
-
-            writer.write(new Record("xyz", "x", 1003, 1000, new String[] {
-                    "X Yz", "Room 1003", "(234)555-8913", "(234)555-0033",
-                    "xyz@rosettacode.org" }, "/home/xyz", "/bin/bash")
-                    .asLine());
-
-            writer.close();
-
-            br = new BufferedReader(new FileReader(file));
-            while ((line = br.readLine()) != null) {
-                record = new Record(line);
-                if (record.account.equals("xyz")) {
-                    System.out.println("Appended Record: " + record.asLine());
-                }
-            }
-
-            br.close();
-
-        } catch (IOException e) {
-            System.err.println("Running Example failed: " + e.getMessage());
-        } finally {
-            try {
-                if (br != null) {
-                    br.close();
-                }
-            } catch (IOException ignored) {
-            }
-            try {
-                if (writer != null) {
-                    writer.close();
-                }
-            } catch (IOException ignored) {
-            }
-            if (file != null) {
-                file.delete();
-            }
-        }
+		
+    @Override
+    public String toString() {
+      return account + ':' + password + ':' + uid + ':' + gid + ':' + gecos.stream().collect(joining(",")) + ':' + directory + ':' + shell;
     }
-
+		
+    public static Record parse(String text) {
+      String[] tokens = text.split(":");
+      return new Record(
+          tokens[0],
+          tokens[1],
+          parseInt(tokens[2]),
+          parseInt(tokens[3]),
+          asList(tokens[4].split(",")),
+          tokens[5],
+          tokens[6]);
+    }
+  }
+	
+  public static void main(String[] args) throws IOException {
+    String[] rawData = {
+        "jsmith:x:1001:1000:Joe Smith,Room 1007,(234)555-8917,(234)555-0077,[email protected]:/home/jsmith:/bin/bash",
+        "jdoe:x:1002:1000:Jane Doe,Room 1004,(234)555-8914,(234)555-0044,[email protected]:/home/jdoe:/bin/bash",
+        "xyz:x:1003:1000:X Yz,Room 1003,(234)555-8913,(234)555-0033,[email protected]:/home/xyz:/bin/bash"
+    };
+		
+    List<Record> records = stream(rawData).map(Record::parse).collect(toList());
+		
+    Path tmp = Paths.get("_rosetta", ".passwd");
+    Files.createDirectories(tmp.getParent());
+    Files.write(tmp, (Iterable<String>)records.stream().limit(2).map(Record::toString)::iterator);
+		
+    Files.write(tmp, asList(records.get(2).toString()), APPEND);
+		
+    try(Stream<String> lines = Files.lines(tmp)) {
+      lines.map(Record::parse).forEach(System.out::println);
+    }
+  }
 }

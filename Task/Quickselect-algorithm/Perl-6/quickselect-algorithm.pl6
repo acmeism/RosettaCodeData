@@ -30,10 +30,10 @@ sub select( @vector,
             when Same {
                 return @vector[$pivot-new-index];
             }
-            when Decrease {
+            when More {
                 $right = $pivot-new-index - 1;
             }
-            when Increase {
+            when Less {
                 $k -= $pivot-dist;
                 $left = $pivot-new-index + 1;
             }

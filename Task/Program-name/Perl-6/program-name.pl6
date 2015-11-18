@@ -1,1 +1,1 @@
-say $*PROGRAM_NAME;
+say $*PROGRAM-NAME;

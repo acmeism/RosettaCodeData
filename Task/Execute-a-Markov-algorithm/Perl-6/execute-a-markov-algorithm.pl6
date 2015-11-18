@@ -46,7 +46,7 @@ multi sub MAIN(Bool :$verbose?) {
         my $ruleset = slurp($rulefile);
         say $start_value.perl();
         say run(:$ruleset, :$start_value, :$verbose).perl;
-        say;
+        say '';
     }
 }
 

@@ -65,6 +65,7 @@ return $solutions;
 
 // This is a function which will render the board
 function renderBoard($p,$boardX) {
+$img = 'data:image/png;base64,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';
 echo "<table border=1 cellspacing=0 style='text-align:center;display:inline'>";
 for ($y = 0; $y < $boardX; ++$y) {
 	echo '<tr>';
@@ -72,7 +73,7 @@ for ($y = 0; $y < $boardX; ++$y) {
 	if (($x+$y) & 1) { $cellCol = '#9C661F';}
 	else {$cellCol = '#FCE6C9';}
 	
-	if ($p[$y] == 1 << $x) { echo "<td bgcolor=".$cellCol."><img width=30 height=30 src='./images/blackqueen.png'></td>";}
+	if ($p[$y] == 1 << $x) { echo "<td bgcolor=".$cellCol."><img width=30 height=30 src='".$img."'></td>";}
 	else { echo "<td bgcolor=".$cellCol."> </td>";}
 	}
 	echo '<tr>';

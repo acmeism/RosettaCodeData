@@ -5,7 +5,7 @@ def ludic(nmax=100000):
         yield lst[0]
         del lst[::lst[0]]
 
-ludics = [l for i,l in zip(range(2005), ludic())]
+ludics = [l for l in ludic()]
 
 print('First 25 ludic primes:')
 print(ludics[:25])

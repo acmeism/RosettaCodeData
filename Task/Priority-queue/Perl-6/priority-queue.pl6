@@ -1,14 +1,13 @@
 class PriorityQueue {
-    has @!tasks is rw;
+    has @!tasks;
 
-    method insert ( Int $priority where { $priority >= 0 }, $task ) {
-        @!tasks[$priority] //= [];
+    method insert (Int $priority where * >= 0, $task) {
         @!tasks[$priority].push: $task;
     }
 
-    method get { @!tasks.first({$^_}).shift }
+    method get { @!tasks.first(?*).shift }
 
-    method is_empty { !?@!tasks.first({$^_}) }
+    method is-empty { ?none @!tasks }
 }
 
 my $pq = PriorityQueue.new;
@@ -26,4 +25,4 @@ for (
     $pq.insert( $priority, $task );
 }
 
-say $pq.get until $pq.is_empty;
+say $pq.get until $pq.is-empty;

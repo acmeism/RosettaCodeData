@@ -6,7 +6,7 @@ public class Shuffler {
 	
 	private String[] deck = {
 			"AC", "AD", "AH", "AS",
-			"2C", "2D", "2H", "AS",
+			"2C", "2D", "2H", "2S",
 			"3C", "3D", "3H", "3S",
 			"4C", "4D", "4H", "4S",
 			"5C", "5D", "5H", "5S",

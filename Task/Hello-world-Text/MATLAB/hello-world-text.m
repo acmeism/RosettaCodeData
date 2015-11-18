@@ -1,5 +1,1 @@
->> 'Goodbye, World!'
-
-ans =
-
-Goodbye, World!
+>> disp('Hello world!')

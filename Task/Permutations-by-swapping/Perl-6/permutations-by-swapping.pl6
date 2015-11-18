@@ -1,4 +1,4 @@
-sub insert($x, @xs) { [@xs[0..$_-1], $x, @xs[$_..*]] for 0..+@xs }
+sub insert($x, @xs) { ([flat @xs[0 ..^ $_], $x, @xs[$_ .. *]] for 0 .. +@xs) }
 sub order($sg, @xs) { $sg > 0 ?? @xs !! @xs.reverse }
 
 multi perms([]) {
@@ -6,7 +6,7 @@ multi perms([]) {
 }
 
 multi perms([$x, *@xs]) {
-    perms(@xs).map({ order($_.value, insert($x, $_.key)) }) Z=> (+1,-1) xx *
+    perms(@xs).map({ |order($_.value, insert($x, $_.key)) }) Z=> |(+1,-1) xx *
 }
 
 .say for perms([0..2]);

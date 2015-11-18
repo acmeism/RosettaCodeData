@@ -2,7 +2,7 @@
 #include <sstream>
 #include <iterator>
 #include <vector>
-#include <math.h>
+#include <cmath>
 
 using namespace std;
 
@@ -33,13 +33,13 @@ public:
 private:
     void exec( vector< pair<float, float> >* v )
     {
-	int cnt = 0; bool found; float r;
+	int cnt = 0;
 	while( cnt < limit )
 	{
 	    cout << cnt << " : " << start << "\n";
 	    cnt++;
 	    vector< pair<float, float> >::iterator it = v->begin();
-	    found = false;
+	    bool found = false; float r;
 	    while( it != v->end() )
 	    {
 		r  = start * ( ( *it ).first / ( *it ).second );
@@ -60,5 +60,6 @@ private:
 int main( int argc, char* argv[] )
 {
     fractran f; f.run( "17/91 78/85 19/51 23/38 29/33 77/29 95/23 77/19 1/17 11/13 13/11 15/14 15/2 55/1", 2, 15 );
-    return system( "pause" );
+    cin.get();
+    return 0;
 }

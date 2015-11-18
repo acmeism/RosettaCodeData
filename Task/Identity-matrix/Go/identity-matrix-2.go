@@ -1,18 +1,11 @@
 package main
 
-import "fmt"
+import (
+    "fmt"
 
-type matrix []float64
+    mat "github.com/skelterjohn/go.matrix"
+)
 
 func main() {
-    fmt.Println(I(3))
-}
-
-func I(n int) matrix {
-    m := make(matrix, n*n)
-    n++
-    for i := 0; i < len(m); i += n {
-        m[i] = 1
-    }
-    return m
+    fmt.Println(mat.Eye(3))
 }

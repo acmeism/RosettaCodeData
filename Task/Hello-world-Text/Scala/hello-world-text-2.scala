@@ -1,1 +1,1 @@
-System.out.println("Goodbye, World!")
+System.out.println("Hello world!")

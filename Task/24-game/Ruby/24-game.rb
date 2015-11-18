@@ -1,55 +1,42 @@
-require "rational" # for Ruby versions before 2.0
+def validate(guess, nums)
+  name, error =
+    {
+      invalid_character:  ->(str){ !str.scan(%r{[^\d\s()+*/-]}).empty? },
+      wrong_number:       ->(str){ str.scan(/\d/).map(&:to_i).sort != nums.sort },
+      multi_digit_number: ->(str){ str.match(/\d\d/) }
+    }
+      .find {|name, validator| validator[guess] }
+
+  error ? puts("Invalid input of a(n) #{name.to_s.tr('_',' ')}!") : true
+end
+
+class Guess < String
+  def self.get(nums)
+    loop do
+      print "\nEnter a guess using #{nums}: "
+      input = gets.chomp
+      return new(input) if validate(input, nums)
+    end
+  end
+
+  def evaluate!
+    as_rat = gsub(/(\d)/, 'Rational(\1,1)')
+    begin
+      eval "(#{as_rat}).to_f"
+    rescue SyntaxError
+      "[syntax error]"
+    end
+  end
+end
 
 def play
-  digits = Array.new(4){rand(1..9)}
+  nums = Array.new(4){rand(1..9)}
   loop do
-    guess = get_guess(digits)
-    result = evaluate(guess)
-    if result == 24.0
-      puts "yes!"
-      break
-    else
-      puts "nope: #{guess} = #{result}"
-      puts "try again"
-    end
+    result = Guess.get(nums).evaluate!
+    break if result == 24.0
+    puts "Try again! That gives #{result}!"
   end
-end
-
-def get_guess(digits)
-  loop do
-    print "\nEnter your guess using #{digits}: "
-    guess = gets.chomp
-
-    # ensure input is safe to eval
-    invalid_chars = guess.scan(%r{[^\d\s()+*/-]})
-    unless invalid_chars.empty?
-      puts "invalid characters in input: #{invalid_chars}"
-      next
-    end
-
-    guess_digits = guess.scan(/\d/).map {|ch| ch.to_i}
-    if guess_digits.sort != digits.sort
-      puts "you didn't use the right digits"
-      next
-    end
-
-    if guess.match(/\d\d/)
-      puts "no multi-digit numbers allowed"
-      next
-    end
-
-    return guess
-  end
-end
-
-# convert expression to use rational numbers, evaluate, then return as float
-def evaluate(guess)
-  as_rat = guess.gsub(/(\d)/, 'Rational(\1,1)')
-  begin
-    eval "(#{as_rat}).to_f"
-  rescue SyntaxError
-    "[syntax error]"
-  end
+  puts "You win!"
 end
 
 play

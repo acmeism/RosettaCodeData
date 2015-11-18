@@ -42,24 +42,36 @@ typedef struct {
 
 void optimal(int weight, int idx, solution *s)
 {
-        solution v1, v2;
-        if (idx < 0) {
-                s->bits = s->value = 0;
-                return;
-        }
+        function solve(itemArray, capacity){
+	matrix = create2DMatrix(itemArray.length, capacity);
+	keep_matrix = create2DMatrix(itemArray.length, capacity);
+	for(var c=0; c <= capacity; c++){
+		matrix[0][c] = 0;
+		keep_matrix[0][c] = 0;
+	}
+	for(var r=1; r<itemArray.length+1; ++r){//rows
+			for(var c=0; c<=capacity; ++c){
+				var toMatrix = 0;
+				//fit in itself?
+				var fit = items[r-1].weight<= c;
+				if(fit){//add remaining mini-knapsack if any, and compare to not putting it
+					var restCap = c-items[r-1].weight;
+					toMatrix = items[r-1].value+ matrix[r-1][restCap];
+					if( toMatrix > matrix[r-1][c])
+						keep_matrix[r][c] = 1;
+					else
+						keep_matrix[r][c] = 0;
+					toMatrix = Math.max(toMatrix, matrix[r-1][c]);
+				}else{//copy the knapsack from row above
+					toMatrix = matrix[r-1][c];
+					keep_matrix[r][c] = 0;
+				}				
+				matrix[r][c] = toMatrix;
+			}
+		}		
+	return matrix; 	
+}
 
-        if (weight < item[idx].weight) {
-                optimal(weight, idx - 1, s);
-                return;
-         }
-
-        optimal(weight, idx - 1, &v1);
-        optimal(weight - item[idx].weight, idx - 1, &v2);
-
-        v2.value += item[idx].value;
-        v2.bits |= (1 << idx);
-
-        *s = (v1.value >= v2.value) ? v1 : v2;
 }
 
 int main(void)

@@ -1,24 +1,22 @@
-/*REXX program sums the first   N   terms of    1/(i**2),    i=1 ──►  N.*/
-parse arg N D .                        /*optional num of terms,  digits.*/
-if N=='' | N==','  then N=1000         /*Not specified?  Use the default*/
-if D==''           then D=60           /* "      "        "   "     "   */
-@sig = 'The significant sum of'        /*literal used in  SAY statement.*/
-numeric digits D                       /*use D digits: 9 is default for */
-                                       /*REXX, 60 is this pgm's default.*/
-w = length(N)                          /*use max  width for nice output.*/
-sum = 0                                /*initialize the  SUM  to zero.  */
-old = 1                                /*the SUM to compared to the NEW.*/
-p = 0                                  /*significant precision so far.  */
-      do j=1  for N                    /*compute for   n   terms.       */
-      sum = sum   +   1 / j**2         /*add another term to the sum.   */
-      c = compare(sum,old)             /*see how we're doing with prec. */
-      if c>p  then do                  /*Got another significant digit? */
-                   say  @sig   right(j,w)    "terms is:"    left(sum,c)
-                   p = c               /*the new significant precision. */
-                   end
-      old = sum                        /*use "old" sum for next compare.*/
-      end   /*j*/
-say
-say  'The sum of'   right(N,w)   "terms is:"   /*display sum's preamble.*/
-say  sum                               /*display the sum on its own line*/
-                                       /*stick a fork in it, we're done.*/
+/*REXX program sums the first   N   terms of    1/(k**2),    k=1 ──►  N.      */
+parse arg N D .                        /*obtain optional arguments from C.L.  */
+if N=='' | N==','  then N=1000         /*Not specified?  Then use the default.*/
+if D=='' | D==','  then D=  60         /* "      "         "   "   "     "    */
+numeric digits D                       /*use  D  digits  (nine is the default)*/
+w=length(N)                            /*max width for the formatted output.  */
+$=0                                    /*initialize the sum to zero.          */
+old=1                                  /*the new sum to compared to the old.  */
+p=0                                    /*significant decimal precision so far.*/
+     do k=1  for N                     /* [↓]  compute for   N   terms.       */
+     $=$  +  1/k**2                    /*add a squared reciprocal to the sum. */
+     c=compare($,old)                  /*see how we're doing with precision.  */
+     if c>p  then do                   /*Got another significant decimal dig? */
+                  say 'The significant sum of'  right(k,w) "terms is:" left($,c)
+                  p=c                  /*use the new significant precision.   */
+                  end                  /* [↑]  display significant part of sum*/
+     old=$                             /*use "old" sum for the next compare.  */
+     end   /*k*/
+say                                              /*display blank line for sep.*/
+say 'The sum of'   right(N,w)    "terms is:"     /*display the sum's preamble.*/
+say $                                  /*display the sum on its own line.     */
+                                       /*stick a fork in it,  we're all done. */

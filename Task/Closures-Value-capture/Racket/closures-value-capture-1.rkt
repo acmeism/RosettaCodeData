@@ -1,3 +1,3 @@
 #lang racket
-(map (λ(f) (f))
-     (for/list ([i 10]) (λ () (* i i))))
+(define functions (for/list ([i 10]) (λ() (* i i))))
+(map (λ(f) (f)) functions)

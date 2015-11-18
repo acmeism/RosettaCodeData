@@ -10,18 +10,19 @@ end
 
 # Iterative with Range#each
 def factorial_iterative(n)
-  (2 .. n - 1).each {|i| n *= i}
-  n
+  (2...n).each { |i| n *= i }
+  n.zero? ? 1 : n
 end
 
 # Iterative with Range#inject
 def factorial_inject(n)
-  (1..n).inject {|prod, i| prod * i}
+  return 1 if n.zero?
+  (1..n).inject { |prod, i| prod * i }
 end
 
 # Iterative with Range#reduce, requires Ruby 1.8.7
 def factorial_reduce(n)
-  (1..n).reduce(:*)
+  (2..n).reduce(1, :*)
 end
 
 

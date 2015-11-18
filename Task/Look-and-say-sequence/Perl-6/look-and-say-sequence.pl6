@@ -1,4 +1,4 @@
-my @look-and-say := (
+my @look-and-say = (
     '1',
     *.comb(/(.)$0*/).map({ .chars ~ .substr(0,1) }).join
     ...

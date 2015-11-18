@@ -1,11 +1,9 @@
 def encode(string)
-  string.scan(/(.)(\1*)/).inject("") do |encoding, (char, repeat)|
-    encoding << (1 + repeat.length).to_s << char
-  end
+  string.scan(/(.)(\1*)/).collect do |char, repeat|
+    [1 + repeat.length, char]
+  end.join
 end
 
 def decode(string)
-  string.scan(/(\d+)(\D)/).inject("") do |decoding, (length, char)|
-    decoding << char * length.to_i
-  end
+  string.scan(/(\d+)(\D)/).collect {|length, char| char * length.to_i}.join
 end

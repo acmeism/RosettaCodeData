@@ -1,12 +1,5 @@
-get reverse_string("as⃝df̅")
+reverseString("Hello World!")
 
-on reverse_string(str)
-	set old_delim to (get AppleScript's text item delimiters)
-	set AppleScript's text item delimiters to ""
-	
-	set temp to (reverse of text items of str)
-	set temp to (text items of temp) as Unicode text
-	
-	set AppleScript's text item delimiters to old_delim
-	return temp
-end reverse_string
+on reverseString(str)
+	reverse of characters of str as string
+end reverseString

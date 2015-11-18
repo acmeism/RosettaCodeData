@@ -1,6 +1,7 @@
 import java.util.*;
 
 public class Game24 {
+    static Random r = new Random();
 
     public static void main(String[] args) {
 
@@ -53,7 +54,6 @@ public class Game24 {
     }
 
     static int[] randomDigits() {
-        Random r = new Random();
         int[] result = new int[4];
         for (int i = 0; i < 4; i++)
             result[i] = r.nextInt(9) + 1;

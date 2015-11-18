@@ -1,1 +1,1 @@
-/*MESSAGE Goodbye, World!
+/*MESSAGE Hello world!

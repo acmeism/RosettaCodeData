@@ -1,19 +1,10 @@
-;;; Fibonacci numbers using Edsger Dijkstra's algorithm
-;;; http://www.cs.utexas.edu/users/EWD/ewd06xx/EWD654.PDF
+(define (fib)
+  (define (nxt lv nv) (cons nv (lambda () (nxt nv (+ lv nv)))))
+  (cons 0 (lambda () (nxt 0 1))))
 
-(define (fib n)
-  (define (fib-aux a b p q count)
-    (cond ((= count 0) b)
-          ((even? count)
-           (fib-aux a
-                    b
-                    (+ (* p p) (* q q))
-                    (+ (* q q) (* 2 p q))
-                    (/ count 2)))
-          (else
-           (fib-aux (+ (* b q) (* a q) (* a p))
-                    (+ (* b p) (* a q))
-                    p
-                    q
-                    (- count 1)))))
-  (fib-aux 1 0 0 1 n))
+;;; test...
+(define (show-stream-take n strm)
+  (define (shw-nxt n strm) (begin (display (car strm))
+                                  (if (> n 1) (begin (display " ") (shw-nxt (- n 1) ((cdr strm)))) (display ")"))))
+  (begin (display "(") (shw-nxt n strm)))
+(show-stream-take 30 (fib))

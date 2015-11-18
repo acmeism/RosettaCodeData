@@ -1,6 +1,8 @@
-def fib_iter(n)
-  return 0 if n == 0
-  fib_prev, fib = 1, 1
-  (n.abs - 2).times { fib_prev, fib = fib, fib + fib_prev }
-  fib * (n < 0 ? (-1)**(n + 1) : 1)
+def fib(n, sequence=[1])
+  n.times do
+    current_number, last_number = sequence.last(2)
+    sequence << current_number + (last_number or 0)
+  end
+
+  sequence.last
 end

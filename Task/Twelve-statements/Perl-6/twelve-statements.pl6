@@ -20,7 +20,7 @@ my @ugly;
 
 for reverse 0 ..^ 2**12 -> $i {
     my @b = $i.fmt("%012b").comb;
-    my @assert = True, @b.map: { .so }
+    my @assert = True, | @b.map: { 1 == $_ }
     my @result = @tests.map: { .(@assert).so }
     my @s = ( $_ if $_ and @assert[$_] for 1..12 );
     if @result eqv @assert {

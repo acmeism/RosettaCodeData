@@ -86,7 +86,7 @@
         for k = (make-vector-with-elt (aref octets i) 't)
         for entry = (or (gethash k dictionary)
                         (if (equalp k dictionary-size)
-                            (coerce (list w (aref w 0)) '(vector octet))
+                            (vector-append1-new w (aref w 0))
                             (error "bad compresed entry at pos ~S" i)))
         do (vector-append result entry)
            (setf (gethash (make-vector-with-elt dictionary-size) dictionary)

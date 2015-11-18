@@ -1,14 +1,14 @@
 #import <Foundation/Foundation.h>
 
-@interface RCListElement : NSObject
+@interface RCListElement<T> : NSObject
 {
-  RCListElement *next;
-  id datum;
+  RCListElement<T> *next;
+  T datum;
 }
-- (RCListElement *)next;
-- (id)datum;
-- (RCListElement *)setNext: (RCListElement *)nx;
-- (void)setDatum: (id)d;
+- (RCListElement<T> *)next;
+- (T)datum;
+- (RCListElement<T> *)setNext: (RCListElement<T> *)nx;
+- (void)setDatum: (T)d;
 @end
 
 @implementation RCListElement
@@ -22,8 +22,7 @@
 }
 - (RCListElement *)setNext: (RCListElement *)nx
 {
-  RCListElement *p;
-  p = next;
+  RCListElement *p = next;
   next = nx;
   return p;
 }

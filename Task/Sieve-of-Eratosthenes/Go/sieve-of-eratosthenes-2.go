@@ -53,7 +53,6 @@ func primes() func()(xint) {
 	}
 }
 
-
 func main() {
 	for i, p := 0, primes(); i < 100000; i++ {
 		fmt.Println(p())

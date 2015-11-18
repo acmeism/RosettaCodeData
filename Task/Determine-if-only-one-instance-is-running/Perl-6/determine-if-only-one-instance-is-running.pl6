@@ -1,4 +1,4 @@
-my $name = $*PROGRAM_NAME;
+my $name = $*PROGRAM-NAME;
 my $pid = $*PID;
 
 my $lockdir = "/tmp";

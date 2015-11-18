@@ -1,13 +1,13 @@
 my $b = 99;
 
-sub b($b) {
-    "$b bottle{'s'.substr($b == 1)} of beer";
+repeat while --$b {
+    say "{b $b} on the wall";
+    say "{b $b}";
+    say "Take one down, pass it around";
+    say "{b $b-1} on the wall";
+    say "";
 }
 
-repeat while --$b {
-    .say for "&b($b) on the wall",
-             b($b),
-             'Take one down, pass it around',
-             "&b($b-1) on the wall",
-             '';
+sub b($b) {
+    "$b bottle{'s' if $b != 1} of beer";
 }

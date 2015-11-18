@@ -1,4 +1,4 @@
 	program-id. hello.
 	procedure division.
-		display "Goodbye, World!".
+		display "Hello world!".
 		stop run.

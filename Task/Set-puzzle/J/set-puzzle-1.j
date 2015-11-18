@@ -9,7 +9,7 @@ Deck=: > ; <"1 { i.@#&.> Features
 sayCards=: (', ' joinstring Features {&>~ ])"1
 drawRandom=: ] {~ (? #)
 isSet=: *./@:(1 3 e.~ [: #@~."1 |:)"2
-getSets=:  ([: (] #~ isSet) ] {~ 3 comb #)
+getSets=: [: (] #~ isSet) ] {~ 3 comb #
 countSets=: #@:getSets
 
 set_puzzle=: verb define

@@ -1,4 +1,4 @@
-e          ! Not available. Can be calculated EXP(1)
+e          ! Not available. Can be calculated EXP(1.0)
 pi         ! Not available. Can be calculated 4.0*ATAN(1.0)
 SQRT(x)    ! square root
 LOG(x)     ! natural logarithm

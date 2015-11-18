@@ -14,11 +14,16 @@ public class ShuntingYard {
         Stack<Integer> s = new Stack<>();
 
         for (String token : infix.split("\\s")) {
+            if (token.isEmpty())
+                continue;
             char c = token.charAt(0);
             int idx = ops.indexOf(c);
-            if (idx != -1 && token.length() == 1) {
+
+            // check for operator
+            if (idx != -1) {
                 if (s.isEmpty())
                     s.push(idx);
+
                 else {
                     while (!s.isEmpty()) {
                         int prec2 = s.peek() / 2;
@@ -29,13 +34,17 @@ public class ShuntingYard {
                     }
                     s.push(idx);
                 }
-            } else if (c == '(') {
-                s.push(-2);
-            } else if (c == ')') {
+            }
+            else if (c == '(') {
+                s.push(-2); // -2 stands for '('
+            }
+            else if (c == ')') {
+                // until '(' on stack, pop operators.
                 while (s.peek() != -2)
                     sb.append(ops.charAt(s.pop())).append(' ');
                 s.pop();
-            } else {
+            }
+            else {
                 sb.append(token).append(' ');
             }
         }

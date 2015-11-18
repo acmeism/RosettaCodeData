@@ -1,5 +1,5 @@
 # Contains only five floors. 5! = 120 permutations.
-for [1..5].permutations -> $b, $c, $f, $m, $s {
+for (flat (1..5).permutations) -> $b, $c, $f, $m, $s {
     say "Baker=$b Cooper=$c Fletcher=$f Miller=$m Smith=$s"
         if  $b != 5         # Baker    !live  on top floor.
         and $c != 1         # Cooper   !live  on bottom floor.

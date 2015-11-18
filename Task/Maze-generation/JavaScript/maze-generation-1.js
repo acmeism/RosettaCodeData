@@ -2,7 +2,7 @@ function maze(x,y) {
 	var n=x*y-1;
 	if (n<0) {alert("illegal maze dimensions");return;}
 	var horiz =[]; for (var j= 0; j<x+1; j++) horiz[j]= [],
-	    verti =[]; for (var j= 0; j<y+1; j++) verti[j]= [],
+	    verti =[]; for (var j= 0; j<x+1; j++) verti[j]= [],
 	    here = [Math.floor(Math.random()*x), Math.floor(Math.random()*y)],
 	    path = [here],
 	    unvisited = [];

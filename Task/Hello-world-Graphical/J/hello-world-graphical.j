@@ -1,1 +1,1 @@
-wdinfo'Goodbye, World!'
+wdinfo 'Goodbye, World!'

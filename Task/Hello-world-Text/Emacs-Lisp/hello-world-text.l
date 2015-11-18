@@ -1,1 +1,1 @@
-(insert "Goodbye, World!")
+(insert "Hello world!")

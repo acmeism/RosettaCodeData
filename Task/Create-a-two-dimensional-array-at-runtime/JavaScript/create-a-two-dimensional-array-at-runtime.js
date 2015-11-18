@@ -1,28 +1,17 @@
-var w = parseInt( get_input("Enter a width:") );
-var w = parseInt( get_input("Enter a height:") );
+var width = Number(prompt("Enter width: "));
+var height = Number(prompt("Enter height: "));
 
-// create the 2-D array
-var a = new Array(h);
-for (var i = 0; i < h; i++)
-  a[i] = new Array(w);
+//make 2D array
+var arr = new Array(height);
 
+for (var i = 0; i < h; i++) {
+  arr[i] = new Array(width);
+}
+
+//set value of element
 a[0][0] = 'foo';
-WScript.Echo('a[0][0] = ' + a[0][0]);
+//print value of element
+console.log('arr[0][0] = ' + arr[0][0]);
 
-a = null;
-
-function get_input(prompt) {
-    output(prompt);
-    try {
-        return WScript.StdIn.readLine();
-    } catch(e) {
-        return readline();
-    }
-}
-function output(prompt) {
-    try {
-        return WScript.echo(prompt);
-    } catch(e) {
-        return print(prompt);
-    }
-}
+//cleanup array
+arr = void(0);

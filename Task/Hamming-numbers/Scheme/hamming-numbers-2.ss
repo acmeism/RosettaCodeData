@@ -1,0 +1,22 @@
+(define (hamming)
+  (define (merge a b)
+    (let ((x (car a)) (y (car b)))
+      (if (< x y) (cons x (delay (merge (force (cdr a)) b)))
+                  (cons y (delay (merge a (force (cdr b))))))))
+  (define (smult m s) (cons (* m (car s))
+             (delay (smult m (force (cdr s)))))) ;; equiv to map (* m) s
+  (define s5 (cons 5 (delay (smult 5 s5))))
+  (define s35 (cons 3 (delay (merge s5 (smult 3 s35)))))
+  (define s235 (cons 2 (delay (merge s35 (smult 2 s235)))))
+  (cons 1 (delay s235)))
+
+;;; test...
+(define (stream-take->list n strm)
+  (if (= n 0) (list) (cons (car strm)
+    (stream-take->list (- n 1) (force (cdr strm))))))
+(define (stream-ref strm nth)
+  (do ((nxt strm (force (cdr nxt))) (cnt 0 (+ cnt 1)))
+      ((>= cnt nth) (car nxt))))
+(display (stream-take->list 20 (hamming))) (newline)
+(display (stream-ref (hamming) (- 1691 1))) (newline)
+(display (stream-ref (hamming) (- 1000000 1))) (newline)

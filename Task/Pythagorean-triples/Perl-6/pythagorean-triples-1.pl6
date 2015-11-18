@@ -1,5 +1,5 @@
-constant limit = 20;
+constant limit = 100;
 
-for [X] [^limit] xx 3 -> \a, \b, \c {
+for [X] [^limit] xx 3 -> (\a, \b, \c) {
     say [a, b, c] if a < b < c and a**2 + b**2 == c**2
 }

@@ -1,15 +1,14 @@
 constant MAX_ITERATIONS = 50;
-my $height = @*ARGS[0] // 31;
-$height = $height % 2 ?? +$height !! 1+$height;
-my $width = $height;
+my $width = my $height = +(@*ARGS[0] // 30);
 
-my $re = [ -2, 1/2 ];
-my $im = [-5/4, 5/4];
+sub cut(Range $r, Int $n where $n > 1) {
+    $r.min, * + ($r.max - $r.min) / ($n - 1) ... $r.max
+}
 
-my @re = $re.min, * + ($re.max - $re.min)/($height - 1) ... $re.max;
-my @im = 1i «*« ($im.min, * + ($im.max - $im.min)/($width  - 1) ... 0);
+my @re = cut(-2 .. 1/2, $height);
+my $im = [ cut( 0 .. 5/4, $width div 2 + 1) X* 1i ];
 
-my @color_map = map ~*.comb(/../).map({:16($_)}), <
+constant @color_map = map ~*.comb(/../).map({:16($_)}), <
 000000 0000fc 4000fc 7c00fc bc00fc fc00fc fc00bc fc007c fc0040 fc0000 fc4000
 fc7c00 fcbc00 fcfc00 bcfc00 7cfc00 40fc00 00fc00 00fc40 00fc7c 00fcbc 00fcfc
 00bcfc 007cfc 0040fc 7c7cfc 9c7cfc bc7cfc dc7cfc fc7cfc fc7cdc fc7cbc fc7c9c
@@ -32,14 +31,27 @@ b4fcc4 b4fcd8 b4fce8 b4fcfc b4e8fc b4d8fc b4c4fc 000070 1c0070 380070 540070
 2c402c 2c4030 2c4034 2c403c 2c4040 2c3c40 2c3440 2c3040
 >;
 
-sub Mandel (Complex $z) { 0, * **2 + $z ... *.abs > 2 }
+sub mandelbrot( Complex $c ) {
+    my $im2 = $c.im**2;
+    return 0 if ($c.re + 1)**2 + $im2 < 1/16;
+    my $q = ($c.re - 1/4)**2 + $im2;
+    return 0 if $q*($q + ($c.re - 1/4)) < $im2/4;
+    my $z = 0i;
+    for ^MAX_ITERATIONS -> $i {
+        return $i + 1 if $z.re**2 + $z.im**2 > 4;
+        $z = $z * $z + $c;
+    }
+    return 0;
+}
+
+my @promises = map -> $re {
+    start { [ mandelbrot($re + $_) for @$im ] }
+}, @re;
 
 say "P3";
 say "$width $height";
 say "255";
 
-for @re -> $re {
-    say @color_map[.[^.end], .reverse] given
-        map { +Mandel($^z)[^MAX_ITERATIONS] % MAX_ITERATIONS },
-            $re «+« @im;
+for @promises».result {
+    say @color_map[(flat .reverse, .[1..*])[^$width]];
 }

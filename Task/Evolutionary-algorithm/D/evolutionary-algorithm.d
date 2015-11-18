@@ -8,7 +8,7 @@ dchar rnd() { return (uppercase ~ " ")[uniform(0, $)]; }
 enum mut = (dchar[] s) => s.map!(a => uniform01 < P ? rnd : a).array;
 
 void main() {
-    auto parent = target.length.iota.map!(_ => rnd).array;
+    auto parent = generate!rnd.take(target.length).array;
     for (auto gen = 1; parent != target; gen++) {
         // parent = parent.repeat(C).map!mut.array.max!fitness;
         parent = parent.repeat(C).map!mut.array

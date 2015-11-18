@@ -1,25 +1,23 @@
 def foo
-  begin
-    bar
-  rescue U0
-    puts "captured exception U0"
+  2.times do |i|
+    begin
+      bar(i)
+    rescue U0
+      $stderr.puts "captured exception U0"
+    end
   end
 end
 
-def bar
-  baz
+def bar(i)
+  baz(i)
 end
 
-def baz
-  @bazcount = @bazcount.to_i + 1
-  raise @bazcount == 1 ? U0 : U1
+def baz(i)
+  raise i == 0 ? U0 : U1
 end
 
-class U0 < StandardError
-end
+class U0 < StandardError; end
 
-class U1 < StandardError
-end
+class U1 < StandardError; end
 
-foo
 foo

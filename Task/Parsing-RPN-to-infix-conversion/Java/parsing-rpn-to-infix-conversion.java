@@ -35,7 +35,7 @@ public class PostfixToInfix {
 
         Stack<Expression> expr = new Stack<>();
 
-        for (String token : postfix.split("\\s")) {
+        for (String token : postfix.split("\\s+")) {
             char c = token.charAt(0);
             int idx = Expression.ops.indexOf(c);
             if (idx != -1 && token.length() == 1) {

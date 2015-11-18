@@ -1,17 +1,24 @@
-test_data = [
+[
 'the cat sat on the mat', 'mat cat',
 'the cat sat on the mat', 'cat mat',
 'A B C A B C A B C'     , 'C A C A',
 'A B C A B D A B E'     , 'E A D A',
 'A B'                   , 'B',
 'A B'                   , 'B A',
-'A B B A'               , 'B A',
-'the cat sat on the chair', 'chair cat']
-
-test_data.each_slice(2) do |str, order|
-  result, order_items = str.dup, order.split
-  re = Regexp.union(order_items.uniq)
-  offsets = str.enum_for(:scan, re).map{ ($~.begin(0) ... $~.end(0)) }  # $~ is last MatchData object
-  order_items.zip(offsets).reverse_each{|item, offset| result[offset] = item}
-  puts "Data M: %-24s Order N: %-10s-> M' %-12s" % [str, order, result]
+'A B B A'               , 'B A'
+].each_slice(2) do |s, o|
+  s, o = s.split, o.split
+  print [s, '|' , o, ' -> '].join(' ')
+  from = 0
+  o.each_slice(2) do |x, y|
+    next unless y
+    if x > y && (s[from..-1].include? x) && (s[from..-1].include? y)
+      new_from = [s.index(x), s.index(y)].max+1
+      if s[from..-1].index(x) > s[from..-1].index(y)
+        s[s.index(x)+from], s[s.index(y)+from] = s[s.index(y)+from], s[s.index(x)+from]
+        from = new_from
+      end
+    end
+  end
+  puts s.join(' ')
 end

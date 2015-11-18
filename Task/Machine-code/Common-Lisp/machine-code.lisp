@@ -23,9 +23,10 @@
 
 (defparameter pointer (sb-alien:make-alien sb-alien:unsigned-char (length mmap)))
 
-(defparameter callp (loop FOR i FROM 0 BELOW (length mmap)
+(defparameter callp (loop for byte in mmap
+                          for i from 0
 		       do
-		       (setf (sb-alien:deref pointer i) (elt mmap i))
+		       (setf (sb-alien:deref pointer i) byte)
 		       finally
 		       (return (sb-alien:cast pointer (function integer integer integer)))))
 

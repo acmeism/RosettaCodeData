@@ -1,7 +1,7 @@
 // Standard input-output streams
 #include <iostream>
 using namespace std;
-void main()
+int main()
 {
    int a, b;
    cin >> a >> b;

@@ -5,7 +5,7 @@ say 'u=' u
 say 'L=' L
 _.=
        do k=1  for L                   /*keep truckin'  for  L  chars.  */
-       y = substr(u,k,1)               /*get the next character in  U.  */
+       parse var u =(k) y +1           /*get Kth character in U string. */
        xx = '?'y                       /*assign a prefixed char to  XX. */
        _.xx = _.xx || y                /*append it to all the  Y  chars.*/
        end   /*do k*/                  /*U  now has the first char gone.*/

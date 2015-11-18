@@ -6,6 +6,5 @@ import (
 )
 
 func main() {
-	host, _ := os.Hostname()
-	fmt.Printf("hostname: %s\n", host)
+	fmt.Println(os.Hostname())
 }

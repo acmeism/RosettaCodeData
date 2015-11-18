@@ -1,5 +1,6 @@
 say e;            # e
 say pi;           # pi
+say π,e;          # if you prefer unicode
 say sqrt 2;       # Square root
 say log 2;        # Natural logarithm
 say exp 42;       # Exponentiation base e

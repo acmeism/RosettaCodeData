@@ -37,8 +37,8 @@ func (x t) identify() string {
 }
 
 // the same method on s.  although s already satisfied i, calls to identify
-// will now find this method rather than the one defined on t.  in a sense
-// it "overrides" the method of the "base class."
+// will now find this method rather than the one defined on t.
+// in a sense it "overrides" the method of the "base class."
 func (x s) identify() string {
     return "I'm an s!"
 }

@@ -1,9 +1,3 @@
-Array.apply(null, { length: 100 })
-  .map((v, i) => i + 1)
-    .forEach(door => {
-      var sqrt = Math.sqrt(door);
-
-      if (sqrt === (sqrt | 0)) {
-        console.log("Door %d is open", door);
-      }
-    });
+for(var door=1;i<10/*Math.sqrt(100)*/;i++){
+ console.log("Door %d is open",i*i);
+}

@@ -1,5 +1,5 @@
 sub sieve( Int $limit ) {
-    my @is-prime = False, False, True xx $limit - 1;
+    my @is-prime = False, False, slip True xx $limit - 1;
 
     gather for @is-prime.kv -> $number, $is-prime {
         if $is-prime {

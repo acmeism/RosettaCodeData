@@ -1,6 +1,8 @@
-(defun powerset (l)
-  (if (null l)
-      (list nil)
-      (let ((prev (powerset (cdr l))))
-	(append (mapcar #'(lambda (elt) (cons (car l) elt)) prev)
-		prev))))
+(defun power-set (s)
+  (reduce #'(lambda (item ps)
+              (append (mapcar #'(lambda (e) (cons item e))
+                              ps)
+                      ps))
+          s
+          :from-end t
+          :initial-value '(())))

@@ -1,0 +1,3 @@
+for $*IN.lines -> $line {
+    ...
+}

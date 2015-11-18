@@ -1,1 +1,1 @@
-properSubset=: subset *. 1 - equality
+properSubset=: subset * 1 - equality

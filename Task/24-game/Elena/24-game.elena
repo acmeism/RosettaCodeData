@@ -1,0 +1,173 @@
+#define system.
+#define system'routines.
+#define system'collections.
+#define system'dynamic.
+#define extensions.
+
+#class ExpressionTree
+{
+    #field theTree.
+
+    #constructor new : aLiteral
+    [
+        #var aLevel := Integer new:0.
+
+        aLiteral run &each: ch
+        [
+            #var node := Dynamic new.
+
+            ch =>
+                #43 ? [ node set &level:(aLevel + 1) set &operation:%add. ]       // +
+                #45 ? [ node set &level:(aLevel + 1) set &operation:%subtract. ]  // -
+                #42 ? [ node set &level:(aLevel + 2) set &operation:%multiply. ]  // *
+                #47 ? [ node set &level:(aLevel + 2) set &operation:%divide. ]    // /
+                #40 ? [ aLevel += 10. ^ $self. ] // (
+                #41 ? [ aLevel -= 10. ^ $self. ] // )
+                ! [
+                    node set &leaf:(ch literal toReal) set &level:((aLevel + 3)).
+                ].
+
+            ($nil == theTree)
+                ? [ theTree := node. ]
+                ! [
+                    (theTree level >= node level)
+                        ? [
+                            node set &left:theTree set &right:$nil.
+
+                            theTree := node.
+                        ]
+                        ! [
+                            #var aTop := theTree.
+                            #loop (($nil != aTop right)and:[aTop right level < node level] )
+                                ? [ aTop := aTop right. ].
+
+                            node set &left:(aTop right) set &right:$nil.
+
+                            aTop set &right:node.
+                        ].
+                ].
+        ].
+    ]
+
+    #method eval : aNode
+    [
+        (aNode if &leaf)
+            ? [ ^ aNode leaf. ]
+            ! [
+                #var aLeft := $self eval:(aNode left).
+                #var aRight := $self eval:(aNode right).
+
+                ^ aLeft::(aNode operation) eval:aRight.
+            ]
+    ]
+
+    #method value
+        <= eval:theTree.
+
+    #method readLeaves : aList &at:aNode
+    [
+        ($nil == aNode)
+            ? [ #throw InvalidArgumentException new. ].
+
+        (aNode if &leaf)
+            ? [ aList += aNode leaf. ]
+            ! [
+                $self readLeaves:aList &at:(aNode left).
+                $self readLeaves:aList &at:(aNode right).
+            ].
+    ]
+
+    #method readLeaves : aList
+        <= readLeaves:aList &at:theTree.
+}
+
+#class TwentyFourGame
+{
+    #field theNumbers.
+
+    #constructor new
+    [
+        $self newPuzzle.
+    ]
+
+    #method newPuzzle
+    [
+        theNumbers := (
+            1 + randomGenerator eval:9,
+            1 + randomGenerator eval:9,
+            1 + randomGenerator eval:9,
+            1 + randomGenerator eval:9).
+    ]
+
+    #method help
+    [
+        console
+            writeLine:"------------------------------- Instructions ------------------------------"
+            writeLine:"Four digits will be displayed."
+            writeLine:"Enter an equation using all of those four digits that evaluates to 24"
+            writeLine:"Only * / + - operators and () are allowed"
+            writeLine:"Digits can only be used once, but in any order you need."
+            writeLine:"Digits cannot be combined - i.e.: 12 + 12 when given 1,2,2,1 is not allowed"
+            writeLine:"Submit a blank line to skip the current puzzle."
+            writeLine:"Type 'q' to quit"
+            writeLine
+            writeLine:"Example: given 2 3 8 2, answer should resemble 8*3-(2-2)"
+            writeLine:"------------------------------- --------------------------------------------".
+    ]
+
+    #method prompt
+    [
+        theNumbers run &each: n [ console writeLiteral:n:" ". ].
+
+        console write:": ".
+    ]
+
+    #method resolve : aLine
+    [
+        #var exp := ExpressionTree new:aLine.
+
+        #var Leaves := ArrayList new.
+        exp readLeaves:Leaves.
+
+        (Leaves ascendant equal &indexable:(theNumbers ascendant))
+            ! [ console writeLine:"Invalid input. Enter an equation using all of those four digits. Try again.". ^ $self. ].
+
+        #var aResult := exp value.
+        (aResult == 24)
+            ? [
+                console writeLine:"Good work. ":aLine:"=":aResult.
+
+                $self newPuzzle.
+            ]
+            ! [ console writeLine:"Incorrect. ":aLine:"=":aResult. ].
+    ]
+}
+
+#class(extension) gameOp
+{
+    #method playRound : aLine
+    [
+        (aLine == "q")
+            ? [ ^ false. ]
+            ! [
+                (aLine == "")
+                    ? [ console writeLine:"Skipping this puzzle". self newPuzzle. ]
+                    ! [
+                        self resolve:aLine
+                            | if &Error: e
+                                [
+                                    console writeLine:"An error occurred.  Check your input and try again.".
+                                ].
+                    ].
+
+                ^ true.
+            ].
+    ]
+}
+
+#symbol program =
+[
+    #var aGame := TwentyFourGame new help.
+
+    #loop (aGame prompt playRound:(console readLine)) ? [].
+].

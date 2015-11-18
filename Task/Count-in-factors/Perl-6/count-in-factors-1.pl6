@@ -1,4 +1,4 @@
-constant @primes = grep &is-prime, 2, (3, 5, 7 ... *);
+constant @primes = 2, |(3, 5, 7 ... *).grep: *.is-prime;
 
 multi factors(1) { 1 }
 multi factors(Int $remainder is copy) {

@@ -1,17 +1,20 @@
-  let nmrtr() =
-    let i = ref -2
-    let rec nxti() = i:=!i + 1;if !i <= int lmtb && not buf.[!i] then nxti() else !i <= int lmtb
-    let inline curr() = if !i < 0 then (if !i= -1 then 2u else failwith "Enumeration not started!!!")
-                        else let v = uint32 !i in v + v + 3u
-    { new System.Collections.Generic.IEnumerator<_> with
-        member this.Current = curr()
-      interface System.Collections.IEnumerator with
-        member this.Current = box (curr())
-        member this.MoveNext() = if !i< -1 then i:=!i+1;true else nxti()
-        member this.Reset() = failwith "IEnumerator.Reset() not implemented!!!"a
-      interface System.IDisposable with
-        member this.Dispose() = () }
-  { new System.Collections.Generic.IEnumerable<_> with
-      member this.GetEnumerator() = nmrtr()
-    interface System.Collections.IEnumerable with
-      member this.GetEnumerator() = nmrtr() :> System.Collections.IEnumerator }
+let primesPQx() =
+  let rec nxtprm n pq q (bps: CIS<Prime>) =
+    if n >= q then let bp = bps.v in let adv = bp + bp
+                   let nbps = bps.cont() in let nbp = nbps.v
+                   nxtprm (n + inc) (MinHeap.push (n + adv) adv pq) (nbp * nbp) nbps
+    else let ck, cv = match MinHeap.peekMin pq with
+                        | None -> (q, inc) // only happens until first insertion
+                        | Some kv -> kv
+         if n >= ck then let rec adjpq ck cv pq =
+                             let npq = MinHeap.replaceMin (ck + cv) cv pq
+                             match MinHeap.peekMin npq with
+                               | None -> npq // never happens
+                               | Some(nk, nv) -> if n >= nk then adjpq nk nv npq
+                                                 else npq
+                         nxtprm (n + inc) (adjpq ck cv pq) q bps
+         else CIS(n, fun() -> nxtprm (n + inc) pq q bps)
+  let rec oddprms() = CIS(frstoddprm, fun() ->
+      nxtprm (frstoddprm + inc) MinHeap.empty (frstoddprm * frstoddprm) (oddprms()))
+  Seq.unfold (fun (cis: CIS<Prime>) -> Some(cis.v, cis.cont()))
+             (CIS(frstprm, fun() -> (oddprms())))

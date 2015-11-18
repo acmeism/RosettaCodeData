@@ -1,2 +1,2 @@
-   disp=.[:smoutput [:,@:(":"0) 8&#.^:_1
-   (>:[disp)^:_ ]0
+   disp=.([smoutput) ' '(-.~":)8&#.inv
+   (1+disp)^:_]0x

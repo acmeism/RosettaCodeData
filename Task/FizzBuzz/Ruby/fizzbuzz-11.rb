@@ -1,8 +1,8 @@
-fizzbuzz = ->(i) do
-  (i%15).zero? and next "FizzBuzz"
-  (i%3).zero?  and next "Fizz"
-  (i%5).zero?  and next "Buzz"
-  i
+class Integer
+  def fizzbuzz
+    v = "#{"Fizz" if self % 3 == 0}#{"Buzz" if self % 5 == 0}"
+    v.empty? ? self : v
+  end
 end
 
-puts (1..100).map(&fizzbuzz).join("\n")
+puts *(1..100).map(&:fizzbuzz)

@@ -1,9 +1,11 @@
-primes :: [Int]
-primes = 2 : _Y ((3 :) . gaps 5 . _U . map(\p-> [p*p, p*p+2*p..]))
+primesB = _Y $ ((2:) . minus [3..]
+                     . foldr (\x-> (x*x :) . union [x*x+x, x*x+2*x..]) [])
 
-gaps k s@(x:xs) | k < x     = k : gaps (k+2) s        -- ~= ([k,k+2..] \\ s)
-                | otherwise =     gaps (k+2) xs       --   when null(s\\[k,k+2..])
+_Y g = g (_Y g)  -- = g . g . g . ...      non-sharing multistage fixpoint combinator
+--   = let x = g x in g x -- = g (fix g)   two-stage fixpoint combinator
+--   = let x = g x in x   -- = fix g       sharing fixpoint combinator
 
-_U ((x:xs):t) = x : (union xs . _U . pairs) t         -- ~= nub . sort . concat
-  where
-    pairs (xs:ys:t) = union xs ys : pairs t
+union a@(x:xs) b@(y:ys) = case compare x y of
+         LT -> x : union  xs b
+         EQ -> x : union  xs ys
+         GT -> y : union  a  ys

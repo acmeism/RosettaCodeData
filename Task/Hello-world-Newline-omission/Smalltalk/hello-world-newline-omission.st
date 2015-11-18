@@ -1,1 +1,1 @@
-Transcript show: 'Hello world'.
+Transcript show: 'Goodbye, World!'.

@@ -7,7 +7,7 @@ class Rset
       hi - lo
     end
     def to_s
-      "%s%s,%s%s" % [inc_lo ? "[" : "(", lo, hi, inc_hi ? "]" : ")"]
+      "#{inc_lo ? '[' : '('}#{lo},#{hi}#{inc_hi ? ']' : ')'}"
     end
   end
 
@@ -25,7 +25,7 @@ class Rset
     self.new(lo, hi, true, inc_hi)
   end
 
-  def self.from_s(str)
+  def self.parse(str)
     raise ArgumentError  unless str =~ /(\[|\()(.+),(.+)(\]|\))/
     b0, lo, hi, b1 = $~.captures        # $~ : Regexp.last_match
     lo = Rational(lo)
@@ -35,8 +35,9 @@ class Rset
     self.new(lo, hi, b0=='[', b1==']')
   end
 
-  def dup
-    new_Rset(@sets.map(&:dup))
+  def initialize_copy(obj)
+    super
+    @sets = @sets.map(&:dup)
   end
 
   def include?(x)
@@ -136,8 +137,7 @@ class Rset
   end
 
   def ==(other)
-    return false  if self.class != other.class
-    @sets == other.sets
+    self.class == other.class and @sets == other.sets
   end
 
   def length
@@ -145,7 +145,7 @@ class Rset
   end
 
   def to_s
-    "#{self.class}" + @sets.map(&:to_s).join(',')
+    "#{self.class}#{@sets.join}"
   end
   alias inspect to_s
 

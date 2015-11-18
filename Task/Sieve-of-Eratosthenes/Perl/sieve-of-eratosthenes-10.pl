@@ -3,52 +3,104 @@ use warnings;
 package Tie::SieveOfEratosthenes;
 
 sub TIEARRAY {
-  my $class = shift;
-  my @primes = (2,3,5,7);
-  return bless \@primes, $class;
+	my $class = shift;
+	bless \$class, $class;
 }
 
-sub prextend { # Extend the given list of primes using a segment sieve
-  my($primes, $to) = @_;
-  $to-- unless $to & 1; # Ensure end is odd
-  return if $to < $primes->[-1];
-  my $sqrtn = int(sqrt($to)+0.001);
-  prextend($primes, $sqrtn) if $primes->[-1] < $sqrtn;
-  my($segment, $startp) = ('', $primes->[-1]+1);
-  my($s_beg, $s_len) = ($startp >> 1, ($to>>1) - ($startp>>1));
-  for my $p (@$primes) {
-    last if $p > $sqrtn;
-    if ($p >= 3) {
-      my $p2 = $p*$p;
-      if ($p2 < $startp) {   # Bump up to next odd multiple of p >= startp
-        my $f = 1+int(($startp-1)/$p);
-        $p2 = $p * ($f | 1);
-      }
-      for (my $s = ($p2>>1)-$s_beg; $s <= $s_len; $s += $p) {
-        vec($segment, $s, 1) = 1;   # Mark composites in segment
-      }
-    }
-  }
-  # Now add all the primes found in the segment to the list
-  do { push @$primes, 1+2*($_+$s_beg) if !vec($segment,$_,1) } for 0 .. $s_len;
-}
+# If set to true, produces copious output.  Observing this output
+# is an excellent way to gain insight into how the algorithm works.
+use constant DEBUG => 0;
 
-sub FETCHSIZE { 0x7FFF_FFFF }  # Allows foreach to work
-sub FETCH {
-  my($primes, $n) = @_;
-  return if $n < 0;
-  # Keep expanding the list as necessary, 5% larger each time.
-  prextend($primes, 1000+int(1.05*$primes->[-1])) while $n > $#$primes;
-  return $primes->[$n];
+# If set to true, causes the code to skip over even numbers,
+# improving runtime.  It does not alter the output content, only the speed.
+use constant WHEEL2 => 0;
+
+BEGIN {
+
+	# This is loosely based on the Python implementation of this task,
+	# specifically the "Infinite generator with a faster algorithm"
+
+	my @primes = (2, 3);
+	my $ps = WHEEL2 ? 1 : 0;
+	my $p = $primes[$ps];
+	my $q = $p*$p;
+	my $incr = WHEEL2 ? 2 : 1;
+	my $candidate = $primes[-1] + $incr;
+	my %sieve;
+	
+	print "Initial: p = $p, q = $q, candidate = $candidate\n" if DEBUG;
+
+	sub FETCH {
+		my $n = pop;
+		return if $n < 0;
+		return $primes[$n] if $n <= $#primes;
+		OUTER: while( 1 ) {
+
+			# each key in %sieve is a composite number between
+			# p and p-squared.  Each value in %sieve is $incr x the prime
+			# which acted as a 'seed' for that key.  We use the value
+			# to step through multiples of the seed-prime, until we find
+			# an empty slot in %sieve.
+			while( my $s = delete $sieve{$candidate} ) {
+				print "$candidate a multiple of ".($s/$incr).";\t\t" if DEBUG;
+				my $composite = $candidate + $s;
+				$composite += $s while exists $sieve{$composite};
+				print "The next stored multiple of ".($s/$incr)." is $composite\n" if DEBUG;
+				$sieve{$composite} = $s;
+				$candidate += $incr;
+			}
+
+			print "Candidate $candidate is not in sieve\n" if DEBUG;
+
+			while( $candidate < $q ) {
+				print "$candidate is prime\n" if DEBUG;
+				push @primes, $candidate;
+				$candidate += $incr;
+				next OUTER if exists $sieve{$candidate};
+			}
+
+			die "Candidate = $candidate, p = $p, q = $q" if $candidate > $q;
+			print "Candidate $candidate is equal to $p squared;\t" if DEBUG;
+
+			# Thus, it is now time to add p to the sieve,
+			my $step = $incr * $p;
+			my $composite = $q + $step;
+			$composite += $step while exists $sieve{$composite};
+			print "The next multiple of $p is $composite\n" if DEBUG;
+			$sieve{$composite} = $step;
+		
+			# and fetch out a new value for p from our primes array.
+			$p = $primes[++$ps];
+			$q = $p * $p;	
+			
+			# And since $candidate was equal to some prime squared,
+			# it's obviously composite, and we need to increment it.
+			$candidate += $incr;
+			print "p is $p, q is $q, candidate is $candidate\n" if DEBUG;
+		} continue {
+			return $primes[$n] if $n <= $#primes;
+		}
+	}
+
 }
 
 if( !caller ) {
-  tie my @prime_list, 'Tie::SieveOfEratosthenes';
-  my $limit = $ARGV[0] || 100;
-  print $prime_list[0];
-  my $i = 1;
-  while ($prime_list[$i] < $limit) { print " ", $prime_list[$i++]; }
-  print "\n";
+	tie my (@prime_list), 'Tie::SieveOfEratosthenes';
+	my $limit = $ARGV[0] || 100;
+	my $line = "";
+	for( my $count = 0; $prime_list[$count] < $limit; ++$count ) {
+		$line .= $prime_list[$count]. ", ";
+		next if length($line) <= 70;
+		if( $line =~ tr/,// > 1 ) {
+			$line =~ s/^(.*,) (.*, )/$2/;
+			print $1, "\n";
+		} else {
+			print $line, "\n";
+			$line = "";
+		}
+	}
+	$line =~ s/, \z//;
+	print $line, "\n" if $line;
 }
 
 1;

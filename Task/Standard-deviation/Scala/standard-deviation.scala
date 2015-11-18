@@ -1,16 +1,18 @@
-import scala.math._
-import Numeric.Implicits._
+import scala.math.sqrt
 
 object StddevCalc extends App {
 
-  def avg[T](ts: Iterable[T])(implicit num: Fractional[T]): T = {
-    num.div(ts.sum, num.fromInt(ts.size)) // Leaving with type of function T
-  }
-
   def calcAvgAndStddev[T](ts: Iterable[T])(implicit num: Fractional[T]): (T, Double) = {
+    def avg(ts: Iterable[T])(implicit num: Fractional[T]): T = {
+      num.div(ts.sum, num.fromInt(ts.size)) // Leaving with type of function T
+    }
+
     val mean = avg(ts) // Leave val type of T
     val stdDev = // Root of mean diffs
-      sqrt(num.toDouble(ts.foldLeft(num.zero)((b, a) => num.plus(b, num.times(num.minus(a, mean), num.minus(a, mean))))) / ts.size)
+      sqrt(num.toDouble(
+        ts.foldLeft(num.zero)((b, a) =>
+          num.plus(b, num.times(num.minus(a, mean), num.minus(a, mean))))) /
+        ts.size)
     (mean, stdDev)
   }
 

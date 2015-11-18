@@ -1,9 +1,1 @@
-Array.apply(null, { length: 100 })
-  .map(function(v, i) { return i + 1; })
-    .forEach(function(door) {
-      var sqrt = Math.sqrt(door);
-
-      if (sqrt === (sqrt | 0)) {
-        console.log("Door %d is open", door);
-      }
-    });
+[{"door":1, "open":true}, {"door":4, "open":true}, {"door":9, "open":true}, {"door":16, "open":true}, {"door":25, "open":true}, {"door":36, "open":true}, {"door":49, "open":true}, {"door":64, "open":true}, {"door":81, "open":true}, {"door":100, "open":true}]

@@ -1,26 +1,13 @@
-# JS does not have extensive formatting support out of the box.  This code shows
-# how you could create a date formatter object.
-DateFormatter = ->
-  weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-  pad = (n) ->
-    if n < 10
-      "0" + n
-    else
-      n
+date = new Date
 
-  brief: (date) ->
-    month = 1 + date.getMonth()
-    "#{date.getFullYear()}-#{pad month}-#{pad date.getDate()}"
+console.log date.toLocaleDateString 'en-GB',
+    month:  '2-digit'
+    day:    '2-digit'
+    year:   'numeric'
+.split('/').reverse().join '-'
 
-  verbose: (date) ->
-    weekday = weekdays[date.getDay()]
-    month = months[date.getMonth()]
-    day = date.getDate()
-    year = date.getFullYear();
-    "#{weekday}, #{month} #{day}, #{year}"
-
-formatter = DateFormatter()
-date = new Date()
-console.log formatter.brief(date)
-console.log formatter.verbose(date)
+console.log date.toLocaleDateString 'en-US',
+    weekday: 'long'
+    month:   'long'
+    day:  'numeric'
+    year: 'numeric'

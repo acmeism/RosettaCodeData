@@ -1,1 +1,1 @@
-$BlankArray = array();
+echo $CustomKeyArray["b"]; // Returns C

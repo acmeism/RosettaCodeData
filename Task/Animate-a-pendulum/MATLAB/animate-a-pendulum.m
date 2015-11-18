@@ -54,7 +54,9 @@ for time = (deltaTime:deltaTime:endTime)
     acceleration = totalForce / mass; %F = ma
     velocity = velocity + acceleration * deltaTime;
     rodLength = rodLength + velocity(1) * deltaTime;
-    theta = theta + velocity(2) * deltaTime;
+    theta = theta + velocity(2) * deltaTime; % Attention!! Mistake here.
+    % Velocity needs to be divided by pendulum length and scaled to degrees:
+    % theta = theta + velocity(2) * deltaTime/rodLength/pi*180;
 
     position = rodPivotPoint - (rodLength*[-sind(theta) cosd(theta)]);
 

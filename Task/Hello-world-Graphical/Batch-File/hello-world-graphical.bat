@@ -1,13 +1,9 @@
 @echo off
 
-::Output to console
-echo Goodbye, World!
+::Output to message box [Does not work in Window 7 and later]
+msg * "Goodbye, World!" 2>nul
 
-::Output to message box
-msg * "Goodbye, World!"
-
-::Output to file and open it
-echo Goodbye, World!>temp.txt
-start temp.txt
-
-pause>nul
+::Using MSHTA.EXE Hack::
+@mshta javascript:alert("Goodbye, World!");code(close());
+@mshta vbscript:Execute("msgbox(""Goodbye, World!""):code close")
+pause

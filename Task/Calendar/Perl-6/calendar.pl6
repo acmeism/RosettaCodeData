@@ -11,8 +11,8 @@ sub fmt-year ($year) {
 
         my $str = (' ' x 30) ~ $year ~ "\n";
 
-        my @month-strs;
-        @month-strs[$_] = fmt-month($year, $_).lines for 1 .. 12;
+        my Array @month-strs;
+        @month-strs[$_] = fmt-month($year, $_).lines.Array for 1 .. 12;
 
         loop ( my $month = 1; $month <= 12; $month += $months-per-col ) {
                 while @month-strs[$month] {

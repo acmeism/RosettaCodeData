@@ -15,7 +15,7 @@ object BitmapOps {
             if (e2<dy) {err+=dx; y+=sy}
             res;
          }
-         def hasNext=(x<=x1 && y<=y1)
+         def hasNext = (sx*x <= sx*x1 && sy*y <= sy*y1)
       }
 
       for((x,y) <- it)

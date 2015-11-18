@@ -1,5 +1,4 @@
 #lang racket
-
 (define (sieve n)
   (define primes (make-vector (add1 n) #t))
   (for* ([i (in-range 2 (add1 n))]
@@ -9,5 +8,4 @@
   (for/list ([n (in-range 2 (add1 n))]
              #:when (vector-ref primes n))
     n))
-
 (sieve 100)

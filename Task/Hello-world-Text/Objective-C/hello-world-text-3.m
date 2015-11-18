@@ -1,1 +1,8 @@
-[@"Goodbye, World!" writeToFile:@"/dev/stdout" atomically:NO encoding:NSUTF8StringEncoding error:NULL];
+#import <Foundation/Foundation.h>
+
+int main() {
+    @autoreleasepool {
+        NSString *message = @"Hello, World!\n";
+        printf("%s", message.UTF8String);
+    }
+}

@@ -1,4 +1,4 @@
-NSLog(@"%@", [@"alphaBETA" uppercaseString]);
-NSLog(@"%@", [@"alphaBETA" lowercaseString]);
+NSLog(@"%@", @"alphaBETA".uppercaseString);
+NSLog(@"%@", @"alphaBETA".lowercaseString);
 
-NSLog(@"%@", [@"foO BAr" capitalizedString]); // "Foo Bar"
+NSLog(@"%@", @"foO BAr".capitalizedString); // "Foo Bar"

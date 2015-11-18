@@ -1,14 +1,6 @@
-    # $x can contain only Int objects
-    my Int $x;
+say ++$; # this is an anonymous state variable
+say ++$; # this is a different anonymous state variable, prefix:<++> forces it into numerical context and defaults it to 0
+say $+=2 for 1..10 # here we do something useful with another anonymous variable
 
-    # $x can only contain native integers (not integer objects)
-    my int $x;
-
-    #A variable may itself be bound to a container type that specifies how the container works, without specifying what kinds of things it contains.
-    # $x is implemented by the MyScalar class
-    my $x is MyScalar;
-
-    #Constraints and container types can be used together:
-    # $x can contain only Int objects,
-    # and is implemented by the MyScalar class
-    my Int $x is MyScalar;
+sub foo { $^a * $^b } # for positional arguments we often can't be bothered to declare them or to give them fancy names
+say foo 3, 4;

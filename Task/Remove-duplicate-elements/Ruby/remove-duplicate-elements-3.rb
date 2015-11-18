@@ -10,6 +10,5 @@ def unique(array)
     return pure
 end
 
-
 unique ["hi","hey","hello","hi","hey","heyo"]   # => ["hi", "hey", "hello", "heyo"]
 unique [1,2,3,4,1,2,3,5,1,2,3,4,5]              # => [1,2,3,4,5]

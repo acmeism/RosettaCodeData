@@ -1,0 +1,80 @@
+MODULE BitcoinAddress;
+IMPORT
+  Object,
+  NPCT:Tools,
+  Crypto:SHA256,
+  S := SYSTEM,
+  Out;
+
+CONST
+  BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+TYPE
+  BC_RAW = ARRAY 25 OF CHAR;
+  SHA256_HASH = ARRAY 32 OF CHAR;
+
+VAR
+  b58: Object.CharsLatin1;
+
+PROCEDURE IndexOfB58Char(c: CHAR): INTEGER;
+VAR
+  i: INTEGER;
+BEGIN
+  i := 0;
+  WHILE (b58[i] # 0X) & (b58[i] # c) DO INC(i) END;
+  IF b58[i] = 0X THEN RETURN -1 ELSE RETURN i END
+END IndexOfB58Char;
+
+PROCEDURE DecodeB58(s [NO_COPY]: ARRAY OF CHAR;VAR out: BC_RAW): BOOLEAN;
+VAR
+  i,j,k: LONGINT;
+
+BEGIN
+  FOR i := 0 TO LEN(out) - 1 DO; out[i] := CHR(0) END;
+  i := 0;
+  WHILE (s[i] # 0X) DO;
+    k := IndexOfB58Char(s[i]);
+    IF k < 0 THEN
+      Out.String("Error: Bad base58 character");Out.Ln;
+      RETURN FALSE
+    END;
+    FOR j := LEN(out) - 1 TO 0 BY -1 DO
+       k := k + 58 * ORD(out[j]);
+       out[j] := CHR(k MOD 256);
+       k := k DIV 256;
+    END;
+
+    IF k # 0 THEN Out.String("Error: Address to long");Out.Ln; RETURN FALSE END;
+    INC(i)
+  END;
+  RETURN TRUE
+END DecodeB58;
+
+PROCEDURE Valid(s [NO_COPY]: ARRAY OF CHAR): BOOLEAN;
+VAR
+  dec: BC_RAW;
+  d1, d2: SHA256.Hash;
+  d1Str, d2Str: SHA256_HASH;
+  x,y: LONGINT;
+BEGIN
+  Out.String(s);Out.String(" is valid? ");
+  IF ~DecodeB58(s,dec) THEN RETURN FALSE END;
+
+  d1 := SHA256.NewHash();d1.Initialize();
+  d2 := SHA256.NewHash();d2.Initialize();
+  d1.Update(dec,0,21);d1.GetHash(d1Str,0);
+  d2.Update(d1Str,0,d1.size);d2.GetHash(d2Str,0);
+
+  S.MOVE(S.ADR(dec) + 21,S.ADR(x),4);
+  S.MOVE(S.ADR(d2Str),S.ADR(y),4);
+
+  RETURN (x = y)
+END Valid;
+
+BEGIN
+  b58 := Tools.AsString(BASE58);
+
+  Out.Bool(Valid("1Q1pE5vPGEEMqRcVRMbtBK842Y6Pzo6nK9"));Out.Ln;
+  Out.Bool(Valid("1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i"));Out.Ln;
+  Out.Bool(Valid("1Q1pE5vPGEEMqRcVRMbtBK842Y6Pzo6nJ9"));Out.Ln;
+  Out.Bool(Valid("1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62I"));Out.Ln
+END BitcoinAddress.

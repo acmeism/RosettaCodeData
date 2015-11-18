@@ -1,16 +1,17 @@
 use GTK::Simple;
 
-my GTK::Simple::App $app .= new( title => 'Controls Enable \ Disable' );
-
-$app.border_width = 20;
+my GTK::Simple::App $app .= new( title => 'Controls Enable / Disable' );
 
 $app.set_content(
-    GTK::Simple::HBox.new(
+    my $box = GTK::Simple::HBox.new(
         my $inc   = GTK::Simple::Button.new( label => ' + ' ),
         my $value = GTK::Simple::Entry.new,
         my $dec   = GTK::Simple::Button.new( label => ' - ' )
     )
 );
+
+$app.border_width = 10;
+$box.spacing = 10;
 
 $value.changed.tap: {
     $value.text.=subst(/\D/, '');

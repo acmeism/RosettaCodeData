@@ -1,4 +1,3 @@
-# Solution in '''RPN'''
 Play24 := function()
 	local input, digits, line, c, chars, stack, stackptr, cur, p, q, ok, a, b, run;
 	input := InputTextUser();

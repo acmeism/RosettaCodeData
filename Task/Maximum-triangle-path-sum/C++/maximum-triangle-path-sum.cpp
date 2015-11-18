@@ -24,20 +24,14 @@ int main( int argc, char* argv[] )
 	27, 2, 92, 23, 8, 71, 76, 84, 15, 52, 92, 63, 81, 10, 44, 10, 69, 93
     };
 
-    int last = sizeof( triangle ) / sizeof( int ),
-	tn = 1;
-    while( ( tn * ( tn + 1 ) / 2 ) < last ) tn += 1;
+    const int size = sizeof( triangle ) / sizeof( int );
+    const int tn = static_cast<int>(sqrt(2.0 * size));
+    assert(tn * (tn + 1) == 2 * size);    // size should be a triangular number
 
-    last--;
-    for( int n = tn; n >= 2; n-- )
-    {
-	for( int i = 2; i <= n;  i++ )
-	{
-	    triangle[last - n] = triangle[last - n] + std::max( triangle[last - 1], triangle[last] );
-	    last--;
-	}
-	last--;
-    }
+    // walk backward by rows, replacing each element with max attainable therefrom
+    for (int n = tn - 1; n > 0; --n)   // n is size of row, note we do not process last row
+        for (int k = (n * (n-1)) / 2; k < (n * (n+2)) / 2; ++k)
+            triangle[k] += std::max(triangle[k + n], triangle[k + n + 1]);
+
     std::cout << "Maximum total: " << triangle[0] << "\n\n";
-    return system( "pause" );
 }

@@ -1,1 +1,1 @@
-say 'a'..'z'
+my @letters = 'a'..'z';

@@ -1,42 +1,43 @@
 class
 	APPLICATION
-inherit
-	ARGUMENTS
-create
-    make
-feature
-	make
-	do
-		non_square(22)
-	end
 
-	non_square(n:INTEGER)
-	require
-		n_positive: n>=1
-	local
-		i: INTEGER
-		non_sq, part: REAL_64
-		math: DOUBLE_MATH
-		square: BOOLEAN
-	do
-		create math
-		from
-			i:= 1
-		until
-			i> n
-		loop
-			part:=(0.5+math.sqrt (i.to_double))
-			non_sq:= i+part.floor
-			io.put_string (non_sq.out + " ")
-			if math.sqrt (non_sq)-math.sqrt (non_sq).floor=0 then
-				square:= True
+create
+	make
+
+feature
+
+	make
+		do
+			sequence_of_non_squares (22)
+			io.new_line
+			sequence_of_non_squares (1000000)
+		end
+
+	sequence_of_non_squares (n: INTEGER)
+                        -- Sequence of non-squares up to the n'th member.
+		require
+			n_positive: n >= 1
+		local
+			non_sq, part: REAL_64
+			math: DOUBLE_MATH
+			square: BOOLEAN
+		do
+			create math
+			across
+				1 |..| (n) as c
+			loop
+				part := (0.5 + math.sqrt (c.item.to_double))
+				non_sq := c.item + part.floor
+				io.put_string (non_sq.out + "%N")
+				if math.sqrt (non_sq) - math.sqrt (non_sq).floor = 0 then
+					square := True
+				end
 			end
-			i:= i+1
+			if square = True then
+				io.put_string ("There are squares for n equal to " + n.out + ".")
+			else
+				io.put_string ("There are no squares for n equal to " + n.out + ".")
+			end
 		end
-		if square=  TRUE then
-			io.put_string ("%NThere are squares for n equal to "+ n.out + "."  )
-		else
-			io.put_string ("%NThere are no squares for n equal to "+ n.out + ".")
-		end
-	end
+
 end

@@ -10,11 +10,11 @@ ulong mersenneFactor(in ulong p) pure nothrow @nogc {
         return true;
     }
 
-    static long modPow(in long cb, in long ce,in long m)
+    static ulong modPow(in ulong cb, in ulong ce,in ulong m)
     pure nothrow @nogc {
-        long b = cb;
-        long result = 1;
-        for (long e = ce; e > 0; e >>= 1) {
+        ulong b = cb;
+        ulong result = 1;
+        for (ulong e = ce; e > 0; e >>= 1) {
             if ((e & 1) == 1)
                 result = (result * b) % m;
             b = (b ^^ 2) % m;
@@ -22,16 +22,16 @@ ulong mersenneFactor(in ulong p) pure nothrow @nogc {
         return result;
     }
 
-    immutable ulong limit = cast(ulong)real(2 ^^ p - 1).sqrt;
-    for (ulong k = 1; (2 * p * k - 1) < limit; k++) {
+    immutable ulong limit = p <= 64 ? cast(ulong)(real(2.0) ^^ p - 1).sqrt : uint.max; // prevents silent overflows
+    for (ulong k = 1; (2 * p * k + 1) < limit; k++) {
         immutable ulong q = 2 * p * k + 1;
-        if (isPrime(q) && (q % 8 == 1 || q % 8 == 7) &&
+        if ((q % 8 == 1 || q % 8 == 7) && isPrime(q) &&
             modPow(2, p, q) == 1)
             return q;
     }
-    return 0;
+    return 1; // returns a sensible smallest factor
 }
 
 void main() {
-    writefln("Factor of M929: %s", 929.mersenneFactor);
+    writefln("Factor of M929: %d", 929.mersenneFactor);
 }

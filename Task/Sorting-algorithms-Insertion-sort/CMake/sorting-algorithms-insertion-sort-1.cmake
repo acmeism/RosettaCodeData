@@ -1,7 +1,7 @@
 # insertion_sort(var [value1 value2...]) sorts a list of integers.
 function(insertion_sort var)
   math(EXPR last "${ARGC} - 1")         # Sort ARGV[1..last].
-  foreach(i RANGE 2 ${last})
+  foreach(i RANGE 1 ${last})
     # Extend the sorted area to ARGV[1..i].
     set(b ${i})
     set(v ${ARGV${b}})

@@ -1,61 +1,49 @@
-program Test_Stddev
+program standard_deviation
   implicit none
+  integer(kind=4), parameter :: dp = kind(0.0d0)
 
-  real, dimension(8) :: v = (/ 2,4,4,4,5,5,7,9 /)
-  integer :: i
-  real :: sd
+  real(kind=dp), dimension(:), allocatable :: vals
+  integer(kind=4) :: i
 
-  do i = 1, size(v)
-     sd = stat_object(v(i))
+  real(kind=dp), dimension(8) :: sample_data = (/ 2, 4, 4, 4, 5, 5, 7, 9 /)
+
+  do i = lbound(sample_data, 1), ubound(sample_data, 1)
+    call sample_add(vals, sample_data(i))
+    write(*, fmt='(''#'',I1,1X,''value = '',F3.1,1X,''stddev ='',1X,F10.8)') &
+      i, sample_data(i), stddev(vals)
   end do
 
-  print *, "std dev = ", sd
-
+  if (allocated(vals)) deallocate(vals)
 contains
+  ! Adds value :val: to array :population: dynamically resizing array
+  subroutine sample_add(population, val)
+    real(kind=dp), dimension(:), allocatable, intent (inout) :: population
+    real(kind=dp), intent (in) :: val
 
-  recursive function stat_object(a, cmd) result(stddev)
-    real :: stddev
-    real, intent(in) :: a
-    character(len=*), intent(in), optional :: cmd
+    real(kind=dp), dimension(:), allocatable :: tmp
+    integer(kind=4) :: n
 
-    real, save :: summa = 0.0, summa2 = 0.0
-    integer, save :: num = 0
-
-    real :: m
-
-    if ( .not. present(cmd) ) then
-       num = num + 1
-       summa = summa + a
-       summa2 = summa2 + a*a
-       stddev = stat_object(0.0, "stddev")
+    if (.not. allocated(population)) then
+      allocate(population(1))
+      population(1) = val
     else
-       select case(cmd)
-       case("stddev")
-          stddev = sqrt(stat_object(0.0, "variance"))
-       case("variance")
-          m = stat_object(0.0, "mean")
-          if ( num > 0 ) then
-             stddev = summa2/real(num) - m*m
-          else
-             stddev = 0.0
-          end if
-       case("count")
-          stddev = real(num)
-       case("mean")
-          if ( num > 0 ) then
-             stddev = summa/real(num)
-          else
-             stddev = 0.0
-          end if
-       case("reset")
-          summa = 0.0
-          summa2 = 0.0
-          num = 0
-       case default
-          stddev = 0.0
-       end select
-    end if
+      n = size(population)
+      call move_alloc(population, tmp)
 
-  end function stat_object
+      allocate(population(n + 1))
+      population(1:n) = tmp
+      population(n + 1) = val
+    endif
+  end subroutine sample_add
 
-end program Test_Stddev
+  ! Calculates standard deviation for given set of values
+  real(kind=dp) function stddev(vals)
+    real(kind=dp), dimension(:), intent(in) :: vals
+    real(kind=dp) :: mean
+    integer(kind=4) :: n
+
+    n = size(vals)
+    mean = sum(vals)/n
+    stddev = sqrt(sum((vals - mean)**2)/n)
+  end function stddev
+end program standard_deviation

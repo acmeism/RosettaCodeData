@@ -1,5 +1,3 @@
-(defun power-set (list)
-    (let ((pow-set (list nil)))
-      (dolist (element (reverse list) pow-set)
-        (dolist (set pow-set)
-          (push (cons element set) pow-set)))))
+(defun powerset (xs)
+  (loop for i below (expt 2 (length xs)) collect
+       (loop for j below i for x in xs if (logbitp j i) collect x)))

@@ -35,20 +35,20 @@
   do L=0 to 255                      /* display nonzero letter counts */
     c=d2c(l)                         /* the character in question     */
     if c.c>0 &,                      /* was found in the file         */
-       datatype(c,'M')>0 Then Do     /* and is a latin letter         */
+       datatype(c,'M')>0 Then Do     /* and is a Latin letter         */
       say indent "(Latin) letter " c 'count:' right(c.c,w) /* tell    */
       totLetters=totLetters+c.c      /* increment number of letters   */
       End
     End
 
   say 'file -----' dsn "----- has" totLetters '(Latin) letters.'
-  say '                           other charactes follow'
+  say '                           other characters follow'
   other=0
   do m=0 to 255                      /* now for non-letters           */
     c=d2c(m)                         /* the character in question     */
     y=c2x(c)                         /* the hex representation        */
     if c.c>0 &,                      /* was found in the file         */
-       datatype(c,'M')=0 Then Do     /* and is not a latin letter     */
+       datatype(c,'M')=0 Then Do     /* and is not a Latin letter     */
       other=other+c.c                /* increment count               */
       _=right(c.c,w)                 /* prepare output of count       */
       select                         /*make the character viewable.   */

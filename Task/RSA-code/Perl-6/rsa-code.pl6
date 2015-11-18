@@ -5,7 +5,7 @@ constant $d = 5617843187844953170308463622230283376298685;
 my $secret-message = "ROSETTA CODE";
 
 package Message {
-    my @alphabet = 'A' .. 'Z', ' ';
+    my @alphabet = slip('A' .. 'Z'), ' ';
     my $rad = +@alphabet;
     my %code = @alphabet Z=> 0 .. *;
     subset Text of Str where /^^ @alphabet+ $$/;

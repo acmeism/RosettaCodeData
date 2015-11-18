@@ -1,8 +1,9 @@
 def lookandsay(str)
-  str.chars.chunk{|c| c}.map{|c,x| [x.size, c]}.join
+  str.gsub(/(.)\1*/) {$&.length.to_s + $1}
 end
 
-puts num = "1"
-9.times do
-  puts num = lookandsay(num)
+num = "1"
+10.times do
+  puts num
+  num = lookandsay(num)
 end

@@ -1,5 +1,5 @@
 PriorityQueue <- function() {
-  keys <<- values <<- NULL
+  keys <- values <- NULL
   insert <- function(key, value) {
     temp <- c(keys, key)
     ord <- order(temp)

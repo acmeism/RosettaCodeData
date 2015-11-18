@@ -28,7 +28,7 @@ C         beginning again.
         STOP
       END
 
-C FORTRAN 77 does not have come with a random number generator, but it
+C FORTRAN 77 does not come with a random number generator, but it
 C is easy enough to type "fortran 77 random number generator" into your
 C preferred search engine and to copy and paste what you find. The
 C following code is a slightly-modified version of:

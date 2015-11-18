@@ -1,140 +1,134 @@
-extern crate std;
+#![feature(iter_arith)]
 use std::cmp::max;
 use std::vec::Vec;
 
 
 // This struct is used to store our items that we want in our knap-sack.
-struct Want<'a> {
+#[derive(Clone, Debug)]
+struct Item<'a> {
     name: &'a str,
-    weight: uint,
-    value: uint
+    weight: usize,
+    value: usize
 }
-
-
-// Global, immutable allocation of our items.
-static items : &'static [Want<'static>] = &[
-    Want {name: "map",                    weight: 9,   value: 150},
-    Want {name: "compass",                weight: 13,  value: 35},
-    Want {name: "water",                  weight: 153, value: 200},
-    Want {name: "sandwich",               weight: 50,  value: 160},
-    Want {name: "glucose",                weight: 15,  value: 60},
-    Want {name: "tin",                    weight: 68,  value: 45},
-    Want {name: "banana",                 weight: 27,  value: 60},
-    Want {name: "apple",                  weight: 39,  value: 40},
-    Want {name: "cheese",                 weight: 23,  value: 30},
-    Want {name: "beer",                   weight: 52,  value: 10},
-    Want {name: "suntancream",            weight: 11,  value: 70},
-    Want {name: "camera",                 weight: 32,  value: 30},
-    Want {name: "T-shirt",                weight: 24,  value: 15},
-    Want {name: "trousers",               weight: 48,  value: 10},
-    Want {name: "umbrella",               weight: 73,  value: 40},
-    Want {name: "waterproof trousers",    weight: 42,  value: 70},
-    Want {name: "waterproof overclothes", weight: 43,  value: 75},
-    Want {name: "note-case",              weight: 22,  value: 80},
-    Want {name: "sunglasses",             weight: 7,   value: 20},
-    Want {name: "towel",                  weight: 18,  value: 12},
-    Want {name: "socks",                  weight: 4,   value: 50},
-    Want {name: "book",                   weight: 30,  value: 10}
-];
 
 
 // This is a bottom-up dynamic programming solution to the 0-1 knap-sack problem.
 //      maximize value
 //      subject to weights <= max_weight
-fn knap_01_dp<'a>(xs: &[Want<'a>], max_weight: uint) -> Vec<Want<'a>> {
-
-    // Save this value, so we don't have to make repeated calls.
-    let xs_len = xs.len();
-
+fn knapsack01_dyn<'a>(items: &[Item<'a>], max_weight: usize) -> Vec<Item<'a>> {
     // Imagine we wrote a recursive function(item, max_weight) that returns a
-    // uint corresponding to the maximum cumulative value by considering a
+    // usize corresponding to the maximum cumulative value by considering a
     // subset of items such that the combined weight <= max_weight.
     //
-    // fn best_value(item: uint, max_weight: uint) -> uint{
+    // fn best_value(item: usize, max_weight: usize) -> usize {
     //     if item == 0 {
     //         return 0;
     //     }
-    //     if xs[item - 1].weight > max_weight {
+    //     if items[item - 1].weight > max_weight {
     //         return best_value(item - 1, max_weight);
     //     }
     //     return max(best_value(item - 1, max_weight),
-    //                best_value(item - 1, max_weight - xs[item - 1].weight)
-    //                + xs[item - 1].value);
+    //                best_value(item - 1, max_weight - items[item - 1].weight)
+    //                + items[item - 1].value);
     //     }
+    // }
     //
-    // best_value(xs_len, max_weight) is equal to the maximum value that we
-    // can add to the bag.
+    // best_value(n_items, max_weight) is equal to the maximum value that
+    // we can add to the bag.
     //
     // The problem with using this function is that it performs redundant
     // calculations.
     //
-    // The dynamic programming solution is to precompute all of the values we
-    // need and put them into a 2D array.
+    // The dynamic programming solution is to precompute all of the values
+    // we need and put them into a 2D array.
     //
     // In a similar vein, the top-down solution would be to memoize the
     // function then compute the results on demand.
 
-    let zero_vec = Vec::from_elem(max_weight + 1, 0 as uint);
-    let mut best_value = Vec::from_elem(xs_len + 1, zero_vec);
+    let mut best_value = vec![vec![0usize; max_weight + 1]; items.len() + 1];
 
-    // loop over the items
-    for i in range(0, xs_len) {
-        // loop over the weights
-        for w in range(1, max_weight + 1) {
-            // do we have room in our knapsack?
-            if xs[i].weight > w {
-                // if we don't, then we'll say that the value doesn't change
-                // when considering this item
-                *best_value.get_mut(i + 1).get_mut(w) = best_value.get(i).get(w).clone();
-            } else {
-                // if we do, then we have to see if the value we gain by adding
-                // the item, given the weight, is better than not adding the item
-                *best_value.get_mut(i + 1).get_mut(w) =
-                    max(best_value.get(i).get(w).clone(),
-                        best_value.get(i).get(w - xs[i].weight) + xs[i].value);
-            }
+    // Loop over the items.
+    for (i, it) in items.iter().enumerate() {
+        // Loop over the weights.
+        for w in 1 .. max_weight + 1 {
+            best_value[i + 1][w] =
+                // do we have room in our knapsack?
+                if it.weight > w {
+                    // if we don't, then we'll say that the value doesn't change
+                    // when considering this item
+                    best_value[i][w].clone()
+                } else {
+                    // If we do, then we have to see if the value we gain by adding
+                    // the item, given the weight, is better than not adding the item.
+                    max(best_value[i][w].clone(), best_value[i][w - it.weight] + it.value)
+                }
         }
     }
 
-    // a variable representing the weight left in the bag
+    // A possibly over-allocated dynamically sized vector to push results to.
+    let mut result = Vec::with_capacity(items.len());
+
+    // Variable representing the weight left in the bag
     let mut left_weight = max_weight.clone();
 
-    // a possibly over-allocated dynamically sized vector to push results to
-    let mut result = Vec::with_capacity(xs_len);
-
-    // we built up the solution space through a forward pass over the data,
-    // now we have to traverse backwards to get the solution
-    for i in range(1, xs_len+1).rev() {
-        // We can check if an item should be added to the knap-sack by comparing
-        // best_value with and without this item. If best_value added this
-        // item then so should we.
-        if best_value.get(i).get(left_weight) != best_value.get(i - 1).get(left_weight) {
-            result.push(xs[i - 1]);
-            // we remove the weight of the object from the remaining weight
-            // we can add to the bag
-            left_weight -= xs[i - 1].weight;
+    // We built up the solution space through a forward pass over the data,
+    // now we have to traverse backwards to get the solution.
+    for (i, it) in items.iter().enumerate().rev() {
+        // We can check if an item should be added to the knap-sack by
+        // comparing best_value with and without this item. If best_value
+        // added this item then so should we.
+        if best_value[i + 1][left_weight] != best_value[i][left_weight] {
+            result.push(it.clone());
+            // We remove the weight of the object from the remaining weight
+            // we can add to the bag.
+            left_weight -= it.weight;
         }
     }
 
-    return result;
+    result
 }
 
 
 fn main () {
-    let xs = knap_01_dp(items, 400);
+    const MAX_WEIGHT: usize = 400;
 
-    // Print the items. We have to reverse the order because we solved the
-    // problem backward.
-    for i in xs.iter().rev() {
-        println!("Item: {}, Weight: {}, Value: {}", i.name, i.weight, i.value);
+    // Static immutable allocation of our items.
+    static ITEMS: &'static [Item<'static>] = &[
+        // Too much repetition of field names here!
+        Item { name: "map",                    weight: 9,   value: 150 },
+        Item { name: "compass",                weight: 13,  value: 35 },
+        Item { name: "water",                  weight: 153, value: 200 },
+        Item { name: "sandwich",               weight: 50,  value: 160 },
+        Item { name: "glucose",                weight: 15,  value: 60 },
+        Item { name: "tin",                    weight: 68,  value: 45 },
+        Item { name: "banana",                 weight: 27,  value: 60 },
+        Item { name: "apple",                  weight: 39,  value: 40 },
+        Item { name: "cheese",                 weight: 23,  value: 30 },
+        Item { name: "beer",                   weight: 52,  value: 10 },
+        Item { name: "suntancream",            weight: 11,  value: 70 },
+        Item { name: "camera",                 weight: 32,  value: 30 },
+        Item { name: "T-shirt",                weight: 24,  value: 15 },
+        Item { name: "trousers",               weight: 48,  value: 10 },
+        Item { name: "umbrella",               weight: 73,  value: 40 },
+        Item { name: "waterproof trousers",    weight: 42,  value: 70 },
+        Item { name: "waterproof overclothes", weight: 43,  value: 75 },
+        Item { name: "note-case",              weight: 22,  value: 80 },
+        Item { name: "sunglasses",             weight: 7,   value: 20 },
+        Item { name: "towel",                  weight: 18,  value: 12 },
+        Item { name: "socks",                  weight: 4,   value: 50 },
+        Item { name: "book",                   weight: 30,  value: 10 }
+    ];
+
+    let items = knapsack01_dyn(ITEMS, MAX_WEIGHT);
+
+    // We reverse the order because we solved the problem backward.
+    for it in items.iter().rev() {
+        println!("{:?}", it);
     }
 
-    // Print the sum of weights.
-    let weights = xs.iter().fold(0, |a, &b| a + b.weight);
-    println!("Total Weight: {}", weights);
+    let tot_weight: usize = items.iter().map(|w| w.weight).sum();
+    println!("Total weight: {}", tot_weight);
 
-    // Print the sum of the values.
-    let values = xs.iter().fold(0, |a, &b| a + b.value);
-    println!("Total Value: {}", values);
-
+    let tot_value: usize = items.iter().map(|w| w.value).sum();
+    println!("Total value: {}", tot_value);
 }

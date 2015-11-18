@@ -10,10 +10,10 @@ contains
       function to_radian(degree) result(rad)
           ! degrees to radians
           real,intent(in) :: degree
-          real :: rad,pi
+          real, parameter :: deg_to_rad = atan(1.0)/45 ! exploit intrinsic atan to generate pi/180 runtime constant
+          real :: rad
 
-          pi = 4*atan(1.0)  ! exploit intrinsic atan to generate pi
-          rad = degree*pi/180
+          rad = degree*deg_to_rad
       end function to_radian
 
       function haversine(deglat1,deglon1,deglat2,deglon2) result (dist)

@@ -1,1 +1,1 @@
-say 'møøse'.graphs;
+say 'møøse'.chars;

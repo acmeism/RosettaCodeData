@@ -5,3 +5,4 @@ puts ruby_obj.class
 puts ruby_obj["blue"].class
 ruby_obj["ocean"] = {"water" => %w{fishy salty}}
 puts JSON.generate(ruby_obj)
+puts JSON.pretty_generate(ruby_obj)

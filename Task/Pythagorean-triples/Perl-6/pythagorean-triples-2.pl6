@@ -1,5 +1,5 @@
 my %triples;
-my $limit = 100;
+my $limit = 10000;
 
 for 3 .. $limit/2 -> $c {
    for 1 .. $c -> $a {

@@ -1,6 +1,15 @@
 note
 	description: "Example of Ackerman function"
-	URI: "http://rosettacode.org/wiki/Ackermann_function"
+	synopsis: "[
+		The EIS link below (in Eiffel Studio) will launch in either an in-IDE browser or
+		and external browser (your choice). The protocol informs Eiffel Studio about what
+		program to use to open the `src' reference, which can be URI, PDF, or DOC. See
+		second EIS for more information.
+		]"
+	EIS: "name=Ackermann_function", "protocol=URI", "tag=rosetta_code",
+		"src=http://rosettacode.org/wiki/Ackermann_function"
+	EIS: "name=eis_protocols", "protocol=URI", "tag=eiffel_docs",
+		"src=https://docs.eiffel.com/book/eiffelstudio/protocols"
 
 class
 	APPLICATION

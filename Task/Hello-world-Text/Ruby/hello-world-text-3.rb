@@ -1,1 +1,1 @@
- STDOUT.write "Goodbye, World!\n"
+ STDOUT.write "Hello world!\n"

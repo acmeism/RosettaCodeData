@@ -15,7 +15,7 @@ sub dist-squared($a,$b) {
 
 sub closest_pair_simple(@arr is copy) {
     return Inf if @arr < 2;
-    my ($a, $b, $d) = @arr[0,1], dist-squared(|@arr[0,1]);
+    my ($a, $b, $d) = flat @arr[0,1], dist-squared(|@arr[0,1]);
     while  @arr {
         my $p = pop @arr;
         for @arr -> $l {

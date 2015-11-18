@@ -1,4 +1,4 @@
-constant @pascal = [1], -> @p { [0, @p Z+ @p, 0] } ... *;
+constant @pascal = [1], -> @p { [0, |@p Z+ |@p, 0] } ... *;
 
 constant @catalan = gather for 2, 4 ... * -> $ix {
     my @row := @pascal[$ix];

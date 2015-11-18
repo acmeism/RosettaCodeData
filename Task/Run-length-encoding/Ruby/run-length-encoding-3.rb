@@ -1,7 +1,11 @@
-def encode(str)
-    str.gsub(/(.)\1*/) {$&.length.to_s + $1}
+def encode(string)
+  string.scan(/(.)(\1*)/).inject("") do |encoding, (char, repeat)|
+    encoding << (1 + repeat.length).to_s << char
+  end
 end
 
-def decode(str)
-    str.gsub(/(\d+)(\D)/) {$2 * $1.to_i}
+def decode(string)
+  string.scan(/(\d+)(\D)/).inject("") do |decoding, (length, char)|
+    decoding << char * length.to_i
+  end
 end

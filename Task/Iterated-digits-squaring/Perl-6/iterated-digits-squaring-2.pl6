@@ -4,7 +4,7 @@ my @cache;
 
 sub Euler92(int $n) {
     $n < 649  # 99,999,999 sums to 648, so no point remembering more
-        ?? (@cache.at_pos($n) //= ids($n))
+        ?? (@cache.AT-POS($n) //= ids($n))
         !! ids($n)
 }
 
@@ -21,7 +21,7 @@ sub ids(int $num --> int) {
             $c = $n - $t * $ten;
             $sum = $sum + $c * $c;
         } while $n = $t;
-        $n = @cache.at_pos($sum) // $sum;
+        $n = @cache.AT-POS($sum) // $sum;
     }
     $n;
 }

@@ -1,4 +1,4 @@
-sub Execute(@prisoner is rw, $k) {
+sub Execute(@prisoner, $k) {
     until @prisoner == 1 {
 	@prisoner.=rotate($k - 1);
 	@prisoner.shift;

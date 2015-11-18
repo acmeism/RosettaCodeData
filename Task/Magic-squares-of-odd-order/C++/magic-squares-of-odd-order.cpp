@@ -56,7 +56,7 @@ private:
     }
 
     int magicNumber()
-    { return ( ( ( sz * sz + 1 ) / 2 ) * sz ); }
+    { return ( ( ( sz * sz + 1 ) / 2 ) * sz ); }    // as written, this will only work for odd order, because the truncating division precedes the multiplication. (sz * (1 + Square(sz)) / 2 would usually be better
 
     void inc( int& a )
     { if( ++a == sz ) a = 0; }

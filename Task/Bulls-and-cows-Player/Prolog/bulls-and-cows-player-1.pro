@@ -38,7 +38,7 @@ tirage(L, Ms) :-
 
 	digits(Digits),
 
-	% The guess continas only this numbers
+	% The guess contains only this numbers
         Ms ins 0..Digits,
 	all_different(Ms),
 

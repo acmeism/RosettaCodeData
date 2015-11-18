@@ -20,7 +20,7 @@ program list_comprehension
   real, dimension(m) :: b
   logical, dimension(m) :: c
   integer, dimension(3, m) :: d
-  a = (/ ( ( cmplx(i,j), i=j,n), j=1,n) /) ! list comprehension, implicit do loop
+  a = [ ( ( cmplx(i,j), i=j,n), j=1,n) ] ! list comprehension, implicit do loop
   b = abs(a)
   c = (b .eq. int(b)) .and. (b .le. n)
   i = sum(merge(1,0,c))

@@ -1,4 +1,4 @@
-my @random_distances := ([+] rand**2 xx 2) xx *;
+my @random_distances = ([+] rand**2 xx 2) xx *;
 
 sub approximate_pi(Int $n) {
     4 * @random_distances[^$n].grep(* < 1) / $n

@@ -1,10 +1,10 @@
 # Several ways to do it
-"Goodbye, World!";
+"Hello world!";
 
-Print("Goodbye, World!\n"); # No EOL appended
+Print("Hello world!\n"); # No EOL appended
 
-Display("Goodbye, World!");
+Display("Hello world!");
 
 f := OutputTextUser();
-WriteLine(f, "Goodbye, World!\n");
+WriteLine(f, "Hello world!\n");
 CloseStream(f);

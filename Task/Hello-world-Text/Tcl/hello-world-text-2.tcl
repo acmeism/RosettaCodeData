@@ -1,1 +1,1 @@
-puts $fileID "Goodbye, World!"
+puts $fileID "Hello world!"

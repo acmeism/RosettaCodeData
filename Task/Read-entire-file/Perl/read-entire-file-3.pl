@@ -1,2 +1,2 @@
-use File::Slurp;
-my $text = read_file($filename);
+use Path::Tiny;
+my $text = path($filename)->slurp;

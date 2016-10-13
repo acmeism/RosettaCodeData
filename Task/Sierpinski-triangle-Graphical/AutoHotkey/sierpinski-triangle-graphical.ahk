@@ -82,7 +82,8 @@ Loop, % n
 	UpdateLayeredWindow(hwnd1, hdc, (A_ScreenWidth-Width)/2, (A_ScreenHeight-Height)/2, Width, Height)
 	Sleep, 0.5*1000
 }
-SelectObject(hdc, obm)
+Gdip_DeleteBrush(pBrushBlue)
+, SelectObject(hdc, obm)
 , DeleteObject(hbm)
 , DeleteDC(hdc)
 , Gdip_DeleteGraphics(G)

@@ -1,0 +1,51 @@
+atom frThread,  -- file reader thread
+     lcThread   -- line counter thread
+
+sequence queue = {}
+integer qlock = init_cs()
+
+integer linecount = 1
+
+procedure readfile()
+object line
+integer fn = open("input.txt","r")
+    while 1 do
+        line = gets(fn)
+        enter_cs(qlock)
+        queue = append(queue,line)
+        line = atom(line)   -- kill refcount!
+        leave_cs(qlock)
+        if line then exit end if
+    end while
+    close(fn)
+    wait_thread(lcThread)
+    printf(1,"Lines read: %d\n",linecount)
+    exit_thread(0)
+end procedure
+
+procedure countlines()
+object line
+    linecount = 0
+    while 1 do
+        enter_cs(qlock)
+        if length(queue)=0 then
+            leave_cs(qlock)
+--          sleep(0.1)
+        else
+            line = queue[1]
+            queue = queue[2..$]
+            leave_cs(qlock)
+            if atom(line) then exit end if
+--          ?line
+            linecount += 1
+        end if
+    end while
+    exit_thread(0)
+end procedure
+
+frThread = create_thread(routine_id("readfile"),{})
+lcThread = create_thread(routine_id("countlines"),{})
+
+wait_thread(frThread)
+puts(1,"done")
+{} = wait_key()

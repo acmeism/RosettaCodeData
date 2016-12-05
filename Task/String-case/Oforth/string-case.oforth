@@ -1,0 +1,2 @@
+"alphaBETA" toUpper
+"alphaBETA" toLower

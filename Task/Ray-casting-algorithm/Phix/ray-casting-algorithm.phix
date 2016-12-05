@@ -1,0 +1,103 @@
+constant true = (1=1), false = not true
+constant inf = 1e300*1e300
+
+function rayIntersectsSegment(sequence point, sequence segment)
+atom {pX,pY} = point
+atom {{aX,aY},{bX,bY}} = segment
+atom m_red,m_blue
+    -- ensure {aX,aY} is the segment end-point with the smallest y coordinate
+    if aY>bY then
+        {{bX,bY},{aX,aY}} = segment
+    end if
+    if pY=aY or pY=bY then
+        --
+        -- Consider a ray passing through the top or left corner of a diamond:
+        --          /
+        --  --- or  -
+        --   ^      \
+        -- In both cases it touches both edges, but ends up outside in the
+        --  top case, whereas it ends up inside in the left case. Just move
+        --  the y co-ordinate down a smidge and it'll work properly, by
+        --  missing one line in the left/right cases and hitting both/none
+        --  in the top/bottom cases.
+        --
+        pY += 0.000001
+    end if
+    if pY<aY or pY>bY then return false end if
+    if pX>max(aX,bX) then return false end if
+    if pX<min(aX,bX) then return true end if
+    if aX!=bX then
+        m_red = (bY-aY)/(bX-aX)
+    else
+        m_red = inf
+    end if
+    if aX!=pX then
+        m_blue = (pY-aY)/(pX-aX)
+    else
+        m_blue = inf
+    end if
+    return m_blue >= m_red
+end function
+
+function inside(sequence point, sequence poly)
+integer in = 0
+    for i=1 to length(poly) do
+        if rayIntersectsSegment(point,poly[i]) then
+            in = not in
+        end if
+    end for
+    return in
+end function
+
+constant INOUT = {"in", "out"}
+function in(integer flag, integer expected)
+    if flag=expected then
+        return INOUT[2-flag]
+    end if
+    return INOUT[2-flag] & "*** ERROR ***"
+end function
+
+constant INSTAR = "* "
+function instar(integer flag)
+    return INSTAR[2-flag]
+end function
+
+constant test_points = {{5,5},{5,8},{-10,5},{0,5},{10,5},{8,5},{10,10}}
+
+--constant NAME = 1, POLY = 2, EXPECTED = 3
+constant test_polygons = {
+        {"square",      {{{0,0},{10,0}},{{10,0},{10,10}},{{10,10},{0,10}},{{0,10},{0,0}}},
+                        {true,true,false,false,true,true,false}},
+        {"square hole", {{{0,0},{10,0}},{{10,0},{10,10}},{{10,10},{0,10}},{{0,10},{0,0}},
+                         {{2.5,2.5},{7.5,2.5}},{{7.5,2.5},{7.5,7.5}},{{7.5,7.5},{2.5,7.5}},{{2.5,7.5},{2.5,2.5}}},
+                        {false,true,false,false,true,true,false}},
+        {"strange",     {{{0,5},{2.5,2.5}},{{2.5,2.5},{0,10}},{{0,10},{2.5,7.5}},{{2.5,7.5},{7.5,7.5}},
+                         {{7.5,7.5},{10,10}},{{10,10},{10,0}},{{10,0},{2.5,2.5}}},
+                        {true,false,false,false,true,true,false}},
+        {"exagon",      {{{3,0},{7,0}},{{7,0},{10,5}},{{10,5},{7,10}},{{7,10},{3,10}},{{3,10},{0,5}},{{0,5},{3,0}}},
+                        {true,true,false,false,true,true,false}}
+}
+
+sequence name, poly, expected, tp
+
+    for i=1 to length(test_polygons) do
+        {name,poly,expected} = test_polygons[i]
+        printf(1,"\n%12s:",{name})
+        for j=1 to length(test_points) do
+            tp = test_points[j]
+            printf(1," %s, %-4s",{sprint(tp),in(inside(tp,poly),expected[j])})
+        end for
+    end for
+
+    puts(1,"\n\n\n")
+
+    for i=0 to 10 do
+        for j=1 to length(test_polygons) do
+            puts(1,"     ")
+            poly = test_polygons[j][2]
+            for k=0 to 10 do
+                puts(1,instar(inside({k+0.5,10.5-i},poly)))
+            end for
+        end for
+        puts(1,"\n")
+    end for

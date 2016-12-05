@@ -1,0 +1,70 @@
+import Data.Vect
+
+-- Computes Binomial Coefficients
+binCoef : Nat -> Nat -> Nat
+binCoef _ Z = (S Z)
+binCoef (S n) (S k) =
+    if n == k then (S Z) else ((S n) * (binCoef n k)) `div` (S k)
+
+-- Binomial Expansion Of (x - 1)^p
+expansion : (n : Nat) -> Vect (S n) Integer
+expansion n = expansion' n 1
+  where
+    expansion' : (n : Nat) -> Integer -> Vect (S n) Integer
+    expansion' (S m) s = s * (toIntegerNat $ binCoef n (n `minus` (S m))) ::
+                            expansion' m (s * -1)
+    expansion' Z s = [s]
+
+
+showExpansion : Vect n Integer -> String
+showExpansion [] = " "
+showExpansion (x::xs) {n = S k} = (if x < 0 then "-" else "") ++
+        term x k ++ showExpansion' xs
+  where
+        term : Integer -> Nat -> String
+        term x n = if n == 0 then (show (abs x)) else
+                      (if (abs x) == 1 then "" else
+                          (show (abs x))) ++ "x" ++
+                            (if n == 1 then "" else "^" ++ show n)
+
+        sign : Integer -> String
+        sign x = if x >= 0 then " + " else " - "
+
+        showExpansion' : Vect m Integer -> String
+        showExpansion' [] = ""
+        showExpansion' (y::ys) {m = S k} = sign y ++ term y k ++
+                                                showExpansion' ys
+
+
+natToFin' : (m : Nat) -> Fin (S m)
+natToFin' n with (natToFin n (S n))
+    natToFin' n | Just y = y
+
+
+isPrime : Nat -> Bool
+isPrime Z = False
+isPrime (S Z ) = False
+isPrime n = foldl (\divs, term => divs && (term `mod` (toIntegerNat n)) == 0)
+              True (fullExpansion $ expansion n)
+
+    -- (x - 1)^p - ((x^p) - 1)
+    where fullExpansion : Vect (S m) Integer -> Vect (S m) Integer
+          fullExpansion (x::xs) {m} = updateAt (natToFin' m) (+1) $ (x-1)::xs
+
+
+printExpansions : Nat -> IO ()
+printExpansions n = do
+      putStrLn "-- p: (x-1)^p for small p"
+      sequence_ $ map printExpansion [0..n]
+  where printExpansion : Nat -> IO ()
+        printExpansion n = do
+            print n
+            putStr ": "
+            putStrLn $ showExpansion $ expansion n
+
+
+main : IO()
+main = do
+  printExpansions 10
+  putStrLn "\n-- Primes Up To 100:"
+  putStrLn $ show $ filter isPrime [0..100]

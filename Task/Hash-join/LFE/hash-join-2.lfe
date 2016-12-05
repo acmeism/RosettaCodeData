@@ -1,0 +1,11 @@
+> (set ss '((#(age 27) #(name "Jonah"))
+            (#(age 18) #(name "Alan"))
+            (#(age 28) #(name "Glory"))
+            (#(age 18) #(name "Popeye"))
+            (#(age 28) #(name "Alan"))))
+
+> (set rs '((#(nemesis "Whales") #(name "Jonah"))
+            (#(nemesis "Spiders") #(name "Jonah"))
+            (#(nemesis "Ghosts") #(name "Alan"))
+            (#(nemesis "Zombies") #(name "Alan"))
+            (#(nemesis "Buffy") #(name "Glory"))))

@@ -1,0 +1,1 @@
+: multiply2(a, b)   a b * ;

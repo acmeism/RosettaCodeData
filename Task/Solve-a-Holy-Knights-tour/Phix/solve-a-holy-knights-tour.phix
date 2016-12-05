@@ -1,0 +1,147 @@
+sequence board, warnsdorffs
+
+integer size, limit, nchars
+string fmt, blank
+
+constant ROW = 1, COL = 2
+constant moves = {{-1,-2},{-2,-1},{-2,1},{-1,2},{1,2},{2,1},{2,-1},{1,-2}}
+
+function onboard(integer row, integer col)
+    return row>=1 and row<=size and col>=nchars and col<=nchars*size
+end function
+
+procedure init_warnsdorffs()
+integer nrow,ncol
+    for row=1 to size do
+        for col=nchars to nchars*size by nchars do
+            for move=1 to length(moves) do
+                nrow = row+moves[move][ROW]
+                ncol = col+moves[move][COL]*nchars
+                if onboard(nrow,ncol) then
+                    -- (either of these would work)
+                    warnsdorffs[row][col] += 1
+--                  warnsdorffs[nrow][ncol] += 1
+                end if
+            end for
+        end for
+    end for
+end procedure
+
+atom t0 = time()
+integer tries = 0, backtracks = 0
+atom t1 = time()+1
+function solve(integer row, integer col, integer n)
+integer nrow, ncol
+    if time()>t1 then
+        ?{row,floor(col/nchars),n,tries}
+        puts(1,join(board,"\n"))
+        t1 = time()+1
+--      if wait_key()='!' then ?9/0 end if
+    end if
+    tries+= 1
+    if n>limit then return 1 end if
+    sequence wmoves = {}
+    for move=1 to length(moves) do
+        nrow = row+moves[move][ROW]
+        ncol = col+moves[move][COL]*nchars
+        if onboard(nrow,ncol)
+        and board[nrow][ncol]=' ' then
+            wmoves = append(wmoves,{warnsdorffs[nrow][ncol],nrow,ncol})
+        end if
+    end for
+    wmoves = sort(wmoves)
+    -- avoid creating orphans
+    if length(wmoves)<2 or wmoves[2][1]>1 then
+        for m=1 to length(wmoves) do
+            {?,nrow,ncol} = wmoves[m]
+            warnsdorffs[nrow][ncol] -= 1
+        end for
+        for m=1 to length(wmoves) do
+            {?,nrow,ncol} = wmoves[m]
+            board[nrow][ncol-nchars+1..ncol] = sprintf(fmt,n)
+            if solve(nrow,ncol,n+1) then return 1 end if
+            backtracks += 1
+            board[nrow][ncol-nchars+1..ncol] = blank
+        end for
+        for m=1 to length(wmoves) do
+            {?,nrow,ncol} = wmoves[m]
+            warnsdorffs[nrow][ncol] += 1
+        end for
+    end if
+    return 0
+end function
+
+procedure holyknight(sequence s)
+integer y, ch, sx, sy
+    s = split(s,'\n')
+    size = length(s)
+    nchars = length(sprintf(" %d",size*size))
+    fmt = sprintf(" %%%dd",nchars-1)
+    blank = repeat(' ',nchars)
+    board = repeat(repeat(' ',size*nchars),size)
+    limit = 1
+    for x=1 to size do
+        y = nchars
+        for j=1 to size do
+            if j>length(s[x]) then
+                ch = '-'
+            else
+                ch = s[x][j]
+            end if
+            if ch=' ' then
+                ch = '-'
+            elsif ch='0' then
+                ch = ' '
+                limit += 1
+            elsif ch='1' then
+                sx = x
+                sy = y
+            end if
+            board[x][y] = ch
+            y += nchars
+        end for
+    end for
+    warnsdorffs = repeat(repeat(0,size*nchars),size)
+    init_warnsdorffs()
+    t0 = time()
+    tries = 0
+    backtracks = 0
+    t1 = time()+1
+    if solve(sx,sy,2) then
+        puts(1,join(board,"\n"))
+        printf(1,"\nsolution found in %d tries, %d backtracks (%3.2fs)\n",{tries,backtracks,time()-t0})
+    else
+        puts(1,"no solutions found\n")
+    end if
+end procedure
+
+constant board1 = """
+ 000
+ 0 00
+ 0000000
+000  0 0
+0 0  000
+1000000
+  00 0
+   000"""
+
+holyknight(board1)
+
+constant board2 = """
+-----1-0-----
+-----0-0-----
+----00000----
+-----000-----
+--0--0-0--0--
+00000---00000
+--00-----00--
+00000---00000
+--0--0-0--0--
+-----000-----
+----00000----
+-----0-0-----
+-----0-0-----"""
+
+holyknight(board2)
+
+{} = wait_key()

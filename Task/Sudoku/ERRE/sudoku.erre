@@ -1,0 +1,404 @@
+!--------------------------------------------------------------------
+! risolve Sudoku: in input il file SUDOKU.TXT
+! Metodo seguito : cancellazioni successive e quando non possibile
+!                  ricerca combinatoria sulle celle con due valori
+!                  possibili - max. 30 livelli di ricorsione
+!                  Non risolve se,dopo l'analisi per la cancellazione,
+!                  restano solo celle a 4 valori
+!--------------------------------------------------------------------
+
+PROGRAM SUDOKU
+
+LABEL 76,77,88,91,97,99
+
+DIM TAV$[9,9]             ! 81 caselle in nove quadranti
+                          ! cella non definita --> 0/. nel file SUDOKU.TXT
+                          ! diventa 123456789 dopo LEGGI_SCHEMA
+
+!---------------------------------------------------------------------------
+! tabelle per gestire la ricerca combinatoria
+! (primo indice--> livelli ricorsione)
+!---------------------------------------------------------------------------
+DIM TAV2$[30,9,9],INFO[30,4]
+
+!$INCLUDE="PC.LIB"
+
+PROCEDURE MESSAGGI(MEX%)
+     CASE MEX% OF
+       1-> LOCATE(21,1) PRINT("Cancellazione successiva - liv. 1") END ->
+       2-> LOCATE(21,1) PRINT("Cancellazione successiva - liv. 2") END ->
+       3-> LOCATE(22,1) PRINT("Ricerca combinatoria - liv.";LIVELLO;"   ") END ->
+     END CASE
+END PROCEDURE
+
+PROCEDURE VISUALIZZA_SCHEMA
+   LOCATE(1,1)
+   PRINT("+---+---+---+---+---+---+---+---+----+")
+   FOR I=1 TO 9 DO
+       FOR J=1 TO 9 DO
+            PRINT("|";)
+            IF LEN(TAV$[I,J])=1 THEN
+                  PRINT(" ";TAV$[I,J];" ";)
+               ELSE
+                  PRINT("   ";)
+            END IF
+       END FOR
+       PRINT("³")
+       IF I<>9 THEN PRINT("+---+---+---+---+---+---+---+---+----+") END IF
+   END FOR
+   PRINT("+---+---+---+---+---+---+---+---+----+")
+END PROCEDURE
+
+!------------------------------------------------------------------------
+! in input  la cella (riga,colonna)
+! in output se ha un valore definito
+!------------------------------------------------------------------------
+PROCEDURE VALORE_DEFINITO
+   FLAG%=FALSE
+   IF LEN(TAV$[RIGA,COLONNA])=1 THEN FLAG%=TRUE END IF
+END PROCEDURE
+
+
+PROCEDURE SALVA_CONFIG
+     LIVELLO=LIVELLO+1
+     FOR R=1 TO 9 DO
+         FOR S=1 TO 9 DO
+             TAV2$[LIVELLO,R,S]=TAV$[R,S]
+         END FOR
+     END FOR
+     INFO[LIVELLO,0]=1 INFO[LIVELLO,1]=RIGA INFO[LIVELLO,2]=COLONNA
+     INFO[LIVELLO,3]=SECOND INFO[LIVELLO,4]=THIRD
+END PROCEDURE
+
+PROCEDURE RIPRISTINA_CONFIG
+91:
+     LIVELLO=LIVELLO-1
+     IF INFO[LIVELLO,0]=3 THEN GOTO 91 END IF
+     FOR R=1 TO 9 DO
+         FOR S=1 TO 9 DO
+             TAV$[R,S]=TAV2$[LIVELLO,R,S]
+         END FOR
+     END FOR
+     RIGA=INFO[LIVELLO,1] COLONNA=INFO[LIVELLO,2]
+     SECOND=INFO[LIVELLO,3] THIRD=INFO[LIVELLO,4]
+     IF INFO[LIVELLO,0]=1 THEN
+         TAV$[RIGA,COLONNA]=MID$(STR$(SECOND),2)
+     END IF
+     IF INFO[LIVELLO,0]=2 THEN
+         IF THIRD<>0 THEN
+                TAV$[RIGA,COLONNA]=MID$(STR$(THIRD),2)
+            ELSE
+                GOTO 91
+         END IF
+     END IF
+     INFO[LIVELLO,0]=INFO[LIVELLO,0]+1
+     VISUALIZZA_SCHEMA
+END PROCEDURE
+
+PROCEDURE VERIFICA_SE_FINITO
+    COMPLETO%=TRUE
+    FOR RIGA=1 TO 9 DO
+        PRD#=1
+        FOR COLONNA=1 TO 9 DO
+            PRD#=PRD#*VAL(TAV$[RIGA,COLONNA])
+        END FOR
+        IF PRD#<>362880 THEN COMPLETO%=FALSE EXIT END IF
+    END FOR
+    IF NOT COMPLETO% THEN EXIT PROCEDURE END IF
+    FOR COLONNA=1 TO 9 DO
+        PRD#=1
+        FOR RIGA=1 TO 9 DO
+            PRD#=PRD#*VAL(TAV$[RIGA,COLONNA])
+        END FOR
+        IF PRD#<>362880 THEN COMPLETO%=FALSE EXIT END IF
+    END FOR
+END PROCEDURE
+
+!-------------------------------------------------------------------
+! toglie i valore certi dalle celle sulla
+! stessa riga-stessa colonna-stesso quadrante
+!-------------------------------------------------------------------
+PROCEDURE TOGLI_VALORE
+
+!iniziamo a togliere il valore dalla stessa riga ....
+     FOR J=1 TO 9 DO
+         CH$=TAV$[RIGA,J] CH=VAL(Z$)
+         IF LEN(CH$)<>1 THEN
+            CHANGE(CH$,CH,"-"->CH$)
+            TAV$[RIGA,J]=CH$
+         END IF
+     END FOR
+!... iniziamo a togliere il valore dalla stessa colonna ...
+     FOR I=1 TO 9 DO
+         CH$=TAV$[I,COLONNA] CH=VAL(Z$)
+         IF LEN(CH$)<>1 THEN
+            CHANGE(CH$,CH,"-"->CH$)
+            TAV$[I,COLONNA]=CH$
+         END IF
+     END FOR
+!... iniziamo a togliere il valore dallo stesso quadrante
+     R=INT(RIGA/3.1)*3+1
+     S=INT(COLONNA/3.1)*3+1
+     FOR I=R TO R+2 DO
+        FOR J=S TO S+2 DO
+          CH$=TAV$[I,J] CH=VAL(Z$)
+          IF LEN(CH$)<>1 THEN
+             CHANGE(CH$,CH,"-"->CH$)
+             TAV$[I,J]=CH$
+          END IF
+        END FOR
+     END FOR
+     MESSAGGI(1)
+END PROCEDURE
+
+PROCEDURE ESAMINA_SCHEMA
+     FOR RIGA=1 TO 9 DO
+        FOR COLONNA=1 TO 9 DO
+           VALORE_DEFINITO
+           IF FLAG% THEN
+               Z$=TAV$[RIGA,COLONNA]
+               TOGLI_VALORE
+           END IF
+        END FOR
+     END FOR
+END PROCEDURE
+
+PROCEDURE IDENTIFICA_UNICO
+     FOR KL=1 TO 9 DO
+        KL$=MID$(STR$(KL),2)
+        NN=0
+        FOR H=1 TO LEN(ZZ$) DO
+           IF MID$(ZZ$,H,1)=KL$ THEN NN=NN+1 END IF
+        END FOR
+        IF NN=1 THEN Q=INSTR(ZZ$,KL$) KL=9 END IF
+     END FOR
+END PROCEDURE
+
+!----------------------------------------------------------------------------
+! intercetta i valori unici per le celle ancora non definite
+!----------------------------------------------------------------------------
+PROCEDURE TOGLI_VALORE2
+
+     MESSAGGI(2)
+! iniziamo dalle righe ....
+     OK%=FALSE
+     FOR RIGA=1 TO 9 DO
+        ZZ$=""
+        FOR COLONNA=1 TO 9 DO
+            IF LEN(TAV$[RIGA,COLONNA])<>1 THEN
+                 ZZ$=ZZ$+TAV$[RIGA,COLONNA]
+              ELSE
+                 ZZ$=ZZ$+STRING$(9," ")
+            END IF
+        END FOR
+        Q=0 IDENTIFICA_UNICO
+        IF Q<>0 THEN
+            COLONNA=INT(Q/9.1)+1
+            TAV$[RIGA,COLONNA]=KL$
+            OK%=TRUE EXIT
+        END IF
+     END FOR
+     IF OK% THEN GOTO 76 END IF
+
+! .... poi dalle colonne ....
+     FOR COLONNA=1 TO 9 DO
+        ZZ$=""
+        FOR RIGA=1 TO 9 DO
+            IF LEN(TAV$[RIGA,COLONNA])<>1 THEN
+                ZZ$=ZZ$+TAV$[RIGA,COLONNA]
+              ELSE
+                ZZ$=ZZ$+STRING$(9," ")
+            END IF
+        END FOR
+        Q=0 IDENTIFICA_UNICO
+        IF Q<>0 THEN
+            RIGA=INT(Q/9.1)+1
+            TAV$[RIGA,COLONNA]=KL$ OK%=TRUE EXIT
+        END IF
+     END FOR
+     IF OK% THEN GOTO 76 END IF
+
+!.... e infine i quadranti
+     FOR QUADRANTE=1 TO 9 DO
+         ZZ$=""
+         CASE QUADRANTE OF
+           1-> R=1 S=1 END ->
+           2-> R=1 S=4 END ->
+           3-> R=1 S=7 END ->
+           4-> R=4 S=1 END ->
+           5-> R=4 S=4 END ->
+           6-> R=4 S=7 END ->
+           7-> R=7 S=1 END ->
+           8-> R=7 S=4 END ->
+           9-> R=7 S=7 END ->
+         END CASE
+         FOR RIGA=R TO R+2 DO
+            FOR COLONNA=S TO S+2 DO
+                IF LEN(TAV$[RIGA,COLONNA])<>1 THEN
+                    ZZ$=ZZ$+TAV$[RIGA,COLONNA]
+                  ELSE
+                    ZZ$=ZZ$+STRING$(9," ")
+                END IF
+            END FOR
+         END FOR
+         Q=0 IDENTIFICA_UNICO
+         IF Q<>0 THEN
+            CASE Q OF
+              1..9->   ALFA=R   BETA=S   END ->
+              10..18-> ALFA=R   BETA=S+1 END ->
+              19..27-> ALFA=R   BETA=S+2 END ->
+              28..36-> ALFA=R+1 BETA=S   END ->
+              37..45-> ALFA=R+1 BETA=S+1 END ->
+              46..54-> ALFA=R+1 BETA=S+2 END ->
+              55..63-> ALFA=R+2 BETA=S   END ->
+              64..72-> ALFA=R+2 BETA=S+1 END ->
+              OTHERWISE
+                 ALFA=R+2 BETA=S+2
+            END CASE
+77:
+            TAV$[ALFA,BETA]=KL$ EXIT
+         END IF
+     END FOR
+76:
+     MESSAGGI(2)
+END PROCEDURE
+
+PROCEDURE CONVERTI_VALORE
+    FINE%=TRUE NESSUNO%=TRUE
+    FOR RIGA=1 TO 9 DO
+        FOR COLONNA=1 TO 9 DO
+           CH$=TAV$[RIGA,COLONNA]
+           IF LEN(CH$)<>1 THEN
+               FINE%=FALSE ! flag per fine partita -- trovati tutti
+               Q=0         ! conta i '-' nella stringa se ce ne sono 8,
+                           ! trovato valore
+               FOR Z=1 TO LEN(CH$) DO
+                  IF MID$(CH$,Z,1)="-" THEN Q=Q+1 ELSE LAST=Z END IF
+               END FOR
+               IF Q=8 THEN
+                   CH$=MID$(STR$(LAST),2)
+                   TAV$[RIGA,COLONNA]=CH$
+                   NESSUNO%=FALSE
+               END IF
+           END IF
+        END FOR
+    END FOR
+END PROCEDURE
+
+PROCEDURE LEGGI_SCHEMA
+    OPEN("I",1,"sudoku.txt")
+    FOR I=1 TO 9 DO
+       INPUT(LINE,#1,RIGA$)
+       FOR J=1 TO 9 DO
+           CH$=MID$(RIGA$,J,1)
+           IF CH$="0" OR CH$="." THEN
+                TAV$[I,J]="123456789"
+             ELSE
+                TAV$[I,J]=CH$
+           END IF
+       END FOR
+    END FOR
+CLOSE(1)
+END PROCEDURE
+
+!---------------------------------------------------------------------------
+! Praticamente - visita di un albero binario (caso con cella a 2 valori
+!                                             possibili)
+!---------------------------------------------------------------------------
+PROCEDURE RICERCA_COMBINATORIA
+   TRE%=TRUE
+   FOR RIGA=1 TO 9 DO
+       FOR COLONNA=1 TO 9 DO
+           CH$=TAV$[RIGA,COLONNA]
+           IF LEN(CH$)<>1 THEN
+               Q=0 FIRST=0 SECOND=0 THIRD=0
+               FOR Z=1 TO LEN(CH$) DO
+                  IF MID$(CH$,Z,1)="-" THEN
+                     Q=Q+1
+                    ELSE
+                     IF FIRST=0 THEN
+                         FIRST=Z
+                       ELSE
+                         SECOND=Z
+                     END IF
+                  END IF
+               END FOR
+               IF Q=7 THEN
+                  SALVA_CONFIG
+                  TAV$[RIGA,COLONNA]=MID$(STR$(FIRST),2)
+                  TRE%=FALSE
+                  GOTO 97
+               END IF
+           END IF
+       END FOR
+   END FOR
+   IF TRE% THEN GOTO 88 END IF
+97:
+   MESSAGGI(3)
+   EXIT PROCEDURE
+88:
+   QUATTRO%=TRUE
+   FOR RIGA=1 TO 9 DO
+       FOR COLONNA=1 TO 9 DO
+           CH$=TAV$[RIGA,COLONNA]
+           IF LEN(CH$)<>1 THEN
+               Q=0 FIRST=0 SECOND=0 THIRD=0
+               FOR Z=1 TO LEN(CH$) DO
+                  IF MID$(CH$,Z,1)="-" THEN
+                      Q=Q+1
+                    ELSE
+                      IF FIRST=0 THEN
+                          FIRST=Z
+                        ELSE
+                          IF SECOND=0 THEN
+                              SECOND=Z
+                            ELSE
+                              THIRD=Z
+                          END IF
+                      END IF
+                  END IF
+               END FOR
+               IF Q=6 THEN
+                   SALVA_CONFIG
+                   TAV$[RIGA,COLONNA]=MID$(STR$(FIRST),2)
+                   QUATTRO%=FALSE
+                   GOTO 97
+               END IF
+           END IF
+       END FOR
+  END FOR
+  IF QUATTRO% THEN
+      LIVELLO=LIVELLO+1
+      RIPRISTINA_CONFIG
+      GOTO 97
+  END IF
+  ! se restano solo celle con 4 valori,forza la chiusura del ramo dell'albero
+  !$RCODE="STOP"
+END PROCEDURE
+
+BEGIN
+   CLS
+   LIVELLO=1 NZ%=0
+   LEGGI_SCHEMA
+   WHILE TRUE DO
+      VISUALIZZA_SCHEMA
+99:
+      NZ%=NZ%+1
+      ESAMINA_SCHEMA
+      CONVERTI_VALORE
+      EXIT IF FINE%
+      IF NESSUNO% THEN
+          TOGLI_VALORE2
+          IF OK%=0 THEN
+             RICERCA_COMBINATORIA  ! cerca altri celle da assegnare
+          END IF
+      END IF
+   END WHILE
+   VISUALIZZA_SCHEMA
+   VERIFICA_SE_FINITO
+   IF NOT COMPLETO% THEN
+       LIVELLO=LIVELLO+1
+       RIPRISTINA_CONFIG
+       GOTO 99
+   END IF
+END PROGRAM

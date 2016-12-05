@@ -1,0 +1,94 @@
+\ RosettaCode challenge http://rosettacode.org/wiki/Evolutionary_algorithm
+\ Responding to the criticism that the implementation was too directed, this
+\ version does a completely random selection of chars to mutate
+
+var gen
+\ Convert a string of valid chars into an array of char-strings:
+"ABCDEFGHIJKLMNOPQRSTUVWXYZ " null s:/ var, valid-chars
+
+\ How many mutations each generation will handle; the larger, the slower each
+\ generation but the fewer generations required:
+300 var, #mutations
+23 var, mutability
+
+: get-random-char
+  valid-chars @
+  27 rand-pcg n:abs swap n:mod
+  a:@ nip ;
+
+: mutate-string \ s -- s'
+  (
+    rand-pcg mutability @ n:mod not if
+     drop get-random-char
+    then
+  ) s:map ;
+
+: mutate \ s n -- a
+  \ iterate 'n' times over the initial string, mutating it each time
+  \ save the original string, as the best of the previous generation:
+  >r [] over a:push swap
+  (
+  tuck mutate-string
+  a:push swap
+  ) r> times drop ;
+
+\ compute Hamming distance of two strings:
+: hamming \ s1 s2 -- n
+  0 >r
+  s:len n:1-
+  (
+   2 pick over s:@ nip
+   2 pick rot s:@ nip
+   n:- n:abs r> n:+ >r
+  ) 0 rot loop
+  2drop r> ;
+
+var best
+: fitness-check \ s a -- s t
+  10000 >r
+  -1 best !
+  (
+   \ ix s ix s'
+    2 pick hamming
+   r@
+   over n:> if
+      rdrop >r
+      best !
+   else
+      2drop
+   then
+  )
+  a:each
+  rdrop best @  a:@ nip  ;
+
+
+: add-random-char \ s -- s'
+  get-random-char s:+ ;
+
+\ take the target and make a random string of the same length
+: initial-string \ s -- s
+  s:len "" swap
+  ' add-random-char
+  swap times ;
+
+: done? \ s1 s2 -- s1 s2 | bye
+  2dup s:= if
+   "Done in " . gen @ . " generations" . cr ;;;
+  then ;
+
+: setup-random
+  rand rand rand-pcg-seed ;
+
+: evolve
+  1 gen n:+!
+  \ create an array of #mutations strings mutated from the random string, drop the random
+  #mutations @ mutate
+  \ iterate over the array and pick the closest fit:
+  fitness-check
+  \ show this generation's best match:
+  dup . cr
+  \ check for end condition and continue if not done:
+  done? evolve ;
+
+"METHINKS IT IS LIKE A WEASEL"
+setup-random initial-string evolve bye

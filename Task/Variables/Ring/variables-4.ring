@@ -1,0 +1,2 @@
+<NUMBER> + <STRING> --> <NUMBER>
+<STRING> + <NUMBER> --> <STRING>

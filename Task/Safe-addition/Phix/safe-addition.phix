@@ -1,0 +1,53 @@
+include builtins\VM\pFPU.e  -- :%down53 etc
+
+function safe_add(atom a, atom b)
+atom low,high
+    -- NB: be sure to restore the usual/default rounding!
+    #ilASM{
+        [32]
+            lea esi,[a]
+            call :%pLoadFlt
+            lea esi,[b]
+            call :%pLoadFlt
+            fld st0
+            call :%down53
+            fadd st0,st2
+            lea edi,[low]
+            call :%pStoreFlt
+            call :%up53
+            faddp
+            lea edi,[high]
+            call :%pStoreFlt
+            call :%near53       -- usual/default
+        [64]
+            lea rsi,[a]
+            call :%pLoadFlt
+            lea rsi,[b]
+            call :%pLoadFlt
+            fld st0
+            call :%down64
+            fadd st0,st2
+            lea rdi,[low]
+            call :%pStoreFlt
+            call :%up64
+            faddp
+            lea rdi,[high]
+            call :%pStoreFlt
+            call :%near64   -- usual/default
+        []
+          }
+    return {low,high}
+end function
+
+constant nums = {{1, 2},
+                 {0.1, 0.2},
+                 {1e100, 1e-100},
+                 {1e308, 1e308}}
+
+    for i=1 to length(nums) do
+        atom {a,b} = nums[i]
+        atom {low,high} = safe_add(a,b)
+        printf(1,"%.16g + %.16g =\n", {a, b});
+        printf(1,"    [%.16g, %.16g]\n", {low, high});
+        printf(1,"    size %.16g\n\n", high - low);
+    end for

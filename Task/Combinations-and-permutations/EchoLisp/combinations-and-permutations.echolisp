@@ -1,0 +1,20 @@
+;; rename native functions according to task
+(define-syntax-rule (Cnk n k) (Cnp n k))
+(define-syntax-rule (Ank n k) (Anp n k))
+
+
+(Cnk 10 1)
+    → 10
+(lib 'bigint) ;; no floating point needed : use large integers
+
+(Cnk 100 10)
+    → 17310309456440
+(Cnk 1000 42)
+    → 297242911333923795640059429176065863139989673213703918037987737481286092000
+(Ank 10 10)
+    → 3628800
+(factorial 10)
+    → 3628800
+(Ank 666 42)
+    → 1029024198692120734765388598788124551227594950478035495578451793852872815678512303375588360
+1398831219998720000000000000

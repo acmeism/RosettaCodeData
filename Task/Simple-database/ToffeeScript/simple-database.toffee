@@ -1,0 +1,85 @@
+#!/usr/local/bin/toffee
+
+prog = require 'commander'
+fs = require 'fs-extra'
+
+if not fs.exists! 'data.json'
+  fs.outputJson! 'data.json', {}
+
+prog
+  .command('add <name> <category> [date]')
+  .description('Add a new entry')
+  .option('-n <text>', 'notes')
+  .option('-t <tags>', 'tags')
+  .action addentry
+
+prog
+  .command('latest')
+  .description('Print the latest entry')
+  .action latest
+
+prog
+  .command('catlatest')
+  .description('Print the latest entry for each category')
+  .action catlatestout
+
+prog
+  .command('list')
+  .description('Print all entries sorted by date')
+  .action bydate
+
+
+addentry = (name, category, dt, options) ->
+  if dt? then dat = new Date(dt) else dat = new Date()
+  update =
+    name: name
+    category: category
+    tags: options?.T
+    notes: options?.N
+    date: dat.getTime()
+  e, data = fs.readJson! 'data.json'
+  if not data[category]?
+    data[category] = []
+  data[category].push update
+  fs.outputJson 'data.json', data
+
+byDateNew = (a, b) ->
+  if a.date<b.date then return 1
+  if b.date>a.date then return -1
+  return 0
+
+catlatest = (cb) ->
+  e, data = fs.readJson! 'data.json'
+  ret = []
+  for cat, list of data
+    list.sort byDateNew
+    ret.push list[0]
+  cb ret
+
+printFormatted = (entry) ->
+  tmp = entry.date
+  entry.date = new Date(entry.date).toDateString()
+  console.log entry
+  entry.date = tmp
+
+latest = ->
+  newpercat = catlatest!
+  newpercat.sort byDateNew
+  printFormatted newpercat[0]
+
+catlatestout = ->
+  items = catlatest!
+  for item in items
+    printFormatted item
+
+bydate = ->
+  e, data = fs.readJson! 'data.json'
+  entries = []
+  for cat, list of data
+    for item in list
+      entries.push item
+  entries.sort byDateNew
+  for entry in entries
+    printFormatted entry
+
+prog.parse process.argv

@@ -1,0 +1,17 @@
+(DEFUN INTEGER-ARITHMETIC ()
+    (DISPLAY "Enter two integers separated by a space.")
+    (NEWLINE)
+    (DISPLAY "> ")
+    (DEFINE A (READ))
+    (DEFINE B (READ))
+    (DISPLAY `(SUM ,(+ A B)))
+    (NEWLINE)
+    (DISPLAY `(DIFFERENCE ,(- A B)))
+    (NEWLINE)
+    (DISPLAY `(PRODUCT ,(* A B)))
+    (NEWLINE)
+    (DISPLAY `(QUOTIENT ,(QUOTIENT A B))) ; truncates towards zero
+    (NEWLINE)
+    (DISPLAY `(REMAINDER ,(REM A B))) ; takes sign of first operand
+    (NEWLINE)
+    (DISPLAY `(EXPONENTIATION ,(EXPT A B))))

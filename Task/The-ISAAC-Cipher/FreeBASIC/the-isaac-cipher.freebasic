@@ -1,0 +1,239 @@
+' version 03-11-2016
+' compile with: fbc -s console
+
+Dim Shared As UInteger<32> randrsl(256), randcnt
+Static Shared As UInteger<32> mm(256)
+Static Shared As UInteger<32> aa, bb ,cc
+
+Sub ISAAC()
+
+    Dim As UInteger<32> i, x, y
+
+    cc = cc + 1
+    bb = bb + cc
+
+    For i = 0 To 256 -1
+        x = mm(i)
+        Select Case (i Mod 4)
+            Case 0 : aa = aa Xor (aa Shl 13)
+            Case 1 : aa = aa Xor (aa Shr 6)
+            Case 2 : aa = aa Xor (aa Shl 2)
+            Case 3 : aa = aa Xor (aa Shr 16)
+        End Select
+        aa = mm((i+128) Mod 256) + aa
+        y = mm((x Shr 2) Mod 256) + aa + bb : mm(i) = y
+        bb = mm((y Shr 10) Mod 256) + x : randrsl(i) = bb
+    Next
+
+    randcnt = 0
+
+End Sub
+
+
+#Macro mix(a, b, c, d, e, f, g, h)
+
+    a Xor= b Shl 11 : d += a : b += c
+    b Xor= c Shr 2  : e += b : c += d
+    c Xor= d Shl 8  : f += c : d += e
+    d Xor= e Shr 16 : g += d : e += f
+    e Xor= f Shl 10 : h += e : f += g
+    f Xor= g Shr 4  : a += f : g += h
+    g Xor= h Shl 8  : b += g : h += a
+    h Xor= a Shr 9  : c += h : a += b
+
+#EndMacro
+
+Sub randinit(flag As Long)
+
+    Dim As Long i
+    Dim As UInteger<32> a = &H9e3779b9   '/* the golden ratio *
+    Dim As UInteger<32> b = &H9e3779b9
+    Dim As UInteger<32> c = &H9e3779b9
+    Dim As UInteger<32> d = &H9e3779b9
+    Dim As UInteger<32> e = &H9e3779b9
+    Dim As UInteger<32> f = &H9e3779b9
+    Dim As UInteger<32> g = &H9e3779b9
+    Dim As UInteger<32> h = &H9e3779b9
+    aa = 0 : bb = 0 : cc = 0
+
+    For i = 0 To 3
+        mix(a, b, c, d, e, f, g, h)
+    Next
+
+    For i = 0 To 255 Step 8
+        If flag = 1 Then
+            a += randrsl(i   ) : b += randrsl(i +1)
+            c += randrsl(i +2) : d += randrsl(i +3)
+            e += randrsl(i +4) : f += randrsl(i +5)
+            g += randrsl(i +6) : h += randrsl(i +7)
+
+            mix(a, b, c, d, e, f, g, h)
+            mm(i   ) = a : mm(i +1) = b : mm(i +2) = c : mm(i +3) = d
+            mm(i +4) = e : mm(i +5) = f : mm(i +6) = g : mm(i +7) = h
+        End If
+    Next
+
+    If flag = 1 Then
+        For i = 0 To 255 Step 8
+            a += mm(i   ) : b += mm(i +1)
+            c += mm(i +2) : d += mm(i +3)
+            e += mm(i +4) : f += mm(i +5)
+            g += mm(i +6) : h += mm(i +7)
+
+            mix(a, b, c, d, e, f, g, h)
+            mm(i   )= a : mm(i +1) = b : mm(i +2) = c : mm(i +3) = d
+            mm(i +4)= e : mm(i +5) = f : mm(i +6) = g : mm(i +7) = h
+        Next
+    End If
+
+    ISAAC()
+    randcnt = 0
+
+End Sub
+
+' // Get a random 32-bit value 0..MAXINT
+Function iRandom() As UInteger<32>
+
+Dim As UInteger<32> r = randrsl(randcnt)
+randcnt += 1
+If randcnt > 255 Then
+    ISAAC()
+    randcnt = 0
+End If
+
+Return r
+
+End Function
+
+' // Get a random character in printable ASCII range
+Function iRandA() As UByte
+
+Return iRandom() Mod 95 +32
+
+End Function
+
+' // Seed ISAAC with a string
+Sub iSeed(seed As String, flag As Long)
+
+Dim As ULong i, m = Len(seed) -1
+
+For i = 0 To 255
+    mm(i) = 0
+Next
+
+For i = 0 To 255
+
+    If i > m Then
+        randrsl(i) = 0
+    Else
+        randrsl(i) = seed[i]
+    End If
+
+Next
+
+randinit(flag)
+
+End Sub
+
+' // maximum length of message
+'#define MAXMSG 4096
+#Define _MOD_ 95      ' mod is FreeBASIC keyword
+#Define _START_ 32    ' start is used as variable name
+
+' // cipher modes for Caesar
+Enum ciphermode
+    mEncipher
+    mDecipher
+    mNone
+End Enum
+
+' // XOR cipher on random stream. Output: ASCII string
+' no maximum lenght for input and output string
+Function Vernam(msg As String) As String
+
+Dim As ULong i
+Dim As String v
+
+For i = 0 To Len(msg) -1
+    v += Chr(iRandA() Xor msg[i])
+Next
+
+Return v
+
+End Function
+
+' // Caesar-shift a printable character
+Function Ceasar(m As ciphermode, ch As UByte, shift As UByte, modulo As UByte, _
+                                                     start As UByte) As UByte
+
+' FreeBASIC Mod does not handle negative numbers correctly
+' also there is litte problem with shift (declared UByte)
+' the IIF() statement helps with shift
+' to avoid a negative n a 8 times modulo is added
+' modulo * 8 get translateted by FreeBASIC to modulo shl 3
+Dim As Long n = (ch - start) + IIf(m = mDecipher, -shift, shift) + modulo * 8
+n = n Mod modulo
+Return start + n
+
+End Function
+
+' // Caesar-shift a string on a pseudo-random stream
+Function CeasarStr(m As ciphermode, msg As String, modulo As UByte, _
+                                                    start As UByte) As String
+
+Dim As Long i
+Dim As String v
+
+For i = 0 To Len(msg) -1
+    v += Chr(Ceasar(m, msg[i], iRandA(), modulo, start))
+Next
+
+Return v
+
+End Function
+
+' ------=< MAIN >=------
+
+Dim As Long n, l
+Dim As String msg = "a Top Secret secret"
+Dim As String key = "this is my secret key"
+
+Dim As String vctx, vptx
+Dim As String cctx, cptx
+
+l = Len(msg)
+' // Encrypt: Vernam XOR
+iSeed(key, 1)
+vctx = Vernam(msg)
+' // Encrypt: Caesar
+cctx = CeasarStr(mEncipher, msg, _mod_, _start_)
+' // Decrypt: Vernam XOR
+iSeed(key, 1)
+vptx = Vernam(vctx)
+' // Decrypt: Caesar
+cptx = CeasarStr(mDecipher, cctx, _mod_, _start_)
+Print "message: "; msg
+Print "    key: "; key
+Print "    XOR: ";
+' // Output Vernam ciphertext as a string of hex digits
+For n = 0 To l -1
+    Print Hex(vctx[n], 2);
+Next
+Print
+' // Output Vernam decrypted plaintext
+Print "XOR dcr: "; vptx
+' // Caesar
+Print "    MOD: ";
+' // Output Caesar ciphertext as a string of hex digits
+For n= 0 To l -1
+    Print Hex(cctx[n], 2);
+Next
+Print
+' // Output Caesar decrypted plaintext
+Print "MOD dcr: " ; cptx
+
+' empty keyboard buffer
+While InKey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

@@ -1,0 +1,658 @@
+-- Working directly on 81-character strings ultimately proves easier: Originally I
+--  just wanted to simplify the final display, but later I realised that a 9x9 grid
+--  encourages laborious indexing/looping everwhere whereas using a flat 81-element
+--  approach encourages precomputation of index sets, and once you commit to that,
+--  the rest of the code starts to get a whole lot cleaner. Below we create 27+18
+--  sets and 5 tables of lookup indexes to locate them quickly.
+
+sequence nines = {},                -- will be 27 in total
+         cols = repeat(0,9*9),      -- remainder(i-1,9)+1
+         rows = repeat(0,9*9),      -- floor((i-1)/9)+10
+         squares = repeat(0,9*9),
+         sixes = {},                -- will be 18 in total
+         dotcol = repeat(0,9*9),    -- same col, diff square
+         dotrow = repeat(0,9*9)     -- same row, diff square
+
+procedure set_nines()
+sequence nine, six
+integer idx, ndx
+    for x=0 to 8 do                     -- columns
+        nine = {}
+        ndx = length(nines)+1
+        for y=1 to 81 by 9 do
+            idx = y+x
+            nine = append(nine,idx)
+            cols[idx] = ndx
+        end for
+        nines = append(nines,nine)
+    end for
+    for y=1 to 81 by 9 do               -- rows
+        nine = {}
+        ndx = length(nines)+1
+        for x=0 to 8 do
+            idx = y+x
+            nine = append(nine,idx)
+            rows[idx] = ndx
+        end for
+        nines = append(nines,nine)
+    end for
+    if length(nines)!=18 then ?9/0 end if
+    for y=0 to 8 by 3 do                -- small squares [19..27]
+        for x=0 to 8 by 3 do
+            nine = {}
+            ndx = length(nines)+1
+            for sy=y*9 to y*9+18 by 9 do
+                for sx=x to x+2 do
+                    idx = sy+sx+1
+                    nine = append(nine,idx)
+                    squares[idx] = ndx
+                end for
+            end for
+            nines = append(nines,nine)
+        end for
+    end for
+    if length(nines)!=27 then ?9/0 end if
+    for i=1 to 9*9 do
+        six = {}
+        nine = nines[cols[i]]           -- dotcol
+        for j=1 to length(nine) do
+            if squares[i]!=squares[nine[j]] then
+                six = append(six,nine[j])
+            end if
+        end for
+        ndx = find(six,sixes)
+        if ndx=0 then
+            sixes = append(sixes,six)
+            ndx = length(sixes)
+        end if
+        dotcol[i] = ndx
+        six = {}
+        nine = nines[rows[i]]           -- dotrow
+        for j=1 to length(nine) do
+            if squares[i]!=squares[nine[j]] then
+                six = append(six,nine[j])
+            end if
+        end for
+        ndx = find(six,sixes)
+        if ndx=0 then
+            sixes = append(sixes,six)
+            ndx = length(sixes)
+        end if
+        dotrow[i] = ndx
+    end for
+end procedure
+set_nines()
+
+integer improved = 0
+
+function eliminate_in(sequence valid, sequence set, integer ch)
+    for i=1 to length(set) do
+        integer idx = set[i]
+        if string(valid[idx]) then
+            integer k = find(ch,valid[idx])
+            if k!=0 then
+                valid[idx][k..k] = ""
+                improved = 1
+            end if
+        end if
+    end for
+    return valid
+end function
+
+function test_comb(sequence chosen, sequence pool, sequence valid)
+--
+-- (see deep_logic()/set elimination)
+-- chosen is a sequence of length 2..4 of integers 1..9: ordered elements of pool.
+-- pool is a set of elements of the sequence valid, each of which is a sequence.
+-- (note that elements of valid in pool not in chosen are not necessarily sequences)
+--
+sequence contains = repeat(0,9)
+integer ccount = 0, ch
+object set
+
+    for i=1 to length(chosen) do
+        set = valid[pool[chosen[i]]]
+        for j=1 to length(set) do
+            ch = set[j]-'0'
+            if contains[ch]=0 then
+                contains[ch] = 1
+                ccount += 1
+            end if
+        end for
+    end for
+    if ccount=length(chosen) then
+        for i=1 to length(pool) do
+            if find(i,chosen)=0 then
+                set = valid[pool[i]]
+                if sequence(set) then
+                    -- (reverse order so deletions don't foul indexes)
+                    for j=length(set) to 1 by -1 do
+                        ch = set[j]-'0'
+                        if contains[ch] then
+                            valid[pool[i]][j..j] = ""
+                            improved = 1
+                        end if
+                    end for
+                end if
+            end if
+        end for
+    end if
+    return valid
+end function
+
+-- from [[Combinations#Phix|Combinations]]
+-- from http://rosettacode.org/wiki/Combinations#Phix
+function comb(sequence pool, valid, integer needed, done=0, sequence chosen={})
+-- (used by deep_logic()/set elimination)
+    if needed=0 then    -- got a full set
+        return test_comb(chosen,pool,valid)
+    end if
+    if done+needed>length(pool) then return valid end if -- cannot fulfil
+    -- get all combinations with and without the next item:
+    done += 1
+    if sequence(valid[pool[done]]) then
+        valid = comb(pool,valid,needed-1,done,append(chosen,done))
+    end if
+    return comb(pool,valid,needed,done,chosen)
+end function
+
+function deep_logic(string board, sequence valid)
+--
+--  Create a grid of valid moves. Note this does not modify board, but instead creates
+--  sets of permitted values for each cell, which can also be and are used for hints.
+--  Apply standard eliminations of known cells, then try some more advanced tactics:
+--
+--  1) row/col elimination
+--      If in any of the 9 small squares a number can only occur in one row or column,
+--      then that number cannot occur in that row or column in two other corresponding
+--      small squares. Example (this one with significant practical benefit):
+--              000|000|036
+--              840|000|000
+--              000|000|020
+--              ---+---+---
+--              000|203|000
+--              010|000|700
+--              000|600|400
+--              ---+---+---
+--              000|410|050
+--              003|000|200
+--              600|000|000 <-- 3
+--                        ^-- 3
+--      Naively, the br can contain a 3 in the four corners, but looking at mid-right and
+--      mid-bottom leads us to eliminating 3s in column 9 and row 9, leaving 7,7 as the
+--      only square in the br that can be a 3. Uses dotcol and dotrow.
+--      Without this, brute force on the above takes ~8s, but with it ~0s
+--
+--  2) set elimination
+--      If in any 9-set there is a set of n blank squares that can only contain n digits,
+--      then no other squares can contain those digits. Example (with some benefit):
+--              75.|.9.|.46
+--              961|...|352
+--              4..|...|79.
+--              ---+---+---
+--              2..|6.1|..7
+--              .8.|...|.2.
+--              1..|328|.65
+--              ---+---+---
+--              ...|...|...     <-- [7,8] is {1,3,8}, [7,9] is {1,3,8}
+--              3.9|...|2.4     <-- [8,8] is {1,8}
+--              84.|.3.|.79
+--      The three cells above the br 479 can only contain {1,3,8}, so the .. of the .2.
+--      in column 7 of that square are {5,6} (not 1) and hence [9,4] must be a 1.
+--      (Relies on plain_logic to spot that "must be a 1", and serves as a clear example
+--       of why this routine should not bother to attempt updating the board itself - as
+--       it spends almost all of its time looking in a completely different place.)
+--      (One could argue that [7,7] and [9,7] are the only places that can hold {5,6} and
+--       therefore we should eliminate all non-{5,6} from those squares, as an alternative
+--       strategy. However I think that would be harder to code and cannot imagine a case
+--       said complementary logic covers, that the above does not, cmiiw.)
+--
+--  3) x-wings
+--      If a pair of rows or columns can only contain a given number in two matching places,
+--      then once filled they will occupy opposite diagonal corners, hence that said number
+--      cannot occur elsewhere in those two columns/rows. Example (with a benefit):
+--              .43|98.|25. <-- 6 in [1,{6,9}]
+--              6..|425|...
+--              2..|..1|.94
+--              ---+---+---
+--              9..|..4|.7.                     <-- hence 6 not in [4,9]
+--              3..|6.8|...
+--              41.|2.9|..3
+--              ---+---+---
+--              82.|5..|...                     <-- hence 6 not in [7,6],[7,9]
+--              ...|.4.|..5                     <-- hence 6 not in [8,6]
+--              534|89.|71. <-- 6 in [9,{6,9}]
+--      A 6 must be in [1,6] or [1,9] and [9,6] or [9,9], hence [7,9] is not 6 and must be 9.
+--      (we also eliminate 6 from [4,9], [7,6] and [8,6] to no great use)
+--      In practice this offers little benefit over a single trial-and-error step, as
+--       obviously trying either 6 in row 1 or 9 immediately pinpoints that 9 anyway.
+--
+--  4) swordfish (not attempted)
+--      There is an extension to x-wings known as swordfish: three (or more) pairs form
+--      a staggered pair (or more) of rectangles that exhibit similar properties, eg:
+--              8-1|-5-|-3-
+--              953|-68|---
+--              -4-|-*3|5*8
+--              ---+---+---
+--              6--|9-2|---
+--              -8-|-3-|-4-
+--              3*-|5-1|-*7     <-- hence [6,3] is not 9, must be 4
+--              ---+---+---
+--              5*2|-*-|-8-
+--              --8|37-|--9
+--              -3-|82-|1--
+--               ^---^---^-- 3 pairs of 9s (marked with *) on 3 rows (only)
+--      It is not a swordfish if the 3 pairs are on >3 rows, I trust that is obvious.
+--      Logically you can extend this to N pairs on N rows, however I cannot imagine a
+--      case where this is not immediately solved by a single trial-step being invalid.
+--      (eg above if you try [3,5]:=9 it is quickly proved to be invalid, and the same
+--       goes for [6,8]:=9 and [7,2]:=9, since they are all entirely inter-dependent.)
+--      Obviously where I have said rows, the same concept can be applied to columns.
+--      Likewise there are "Alternate Pairs" and "Hook or X-Y wing" strategies, which
+--      are easily solved with a single trial-and-error step, and of course the brute
+--      force algorithm is going to select pairs first anyway. [Erm, no it doesn't,
+--      it selects shortest - I've noted the possible improvement below.]
+--
+integer col, row
+sequence c, r
+sequence nine, prevsets, set
+object vj
+integer ch, k, idx, sx, sy, count
+
+    if length(valid)=0 then
+        -- initialise/start again from scratch
+        valid = repeat("123456789",9*9)
+    end if
+    --
+    -- First perform standard eliminations of any known cells:
+    --  (repeated every time so plain_logic() does not have to worry about it)
+    --
+    for i=1 to 9*9 do
+        ch = board[i]
+        if ch>'0'
+        and string(valid[i]) then
+            valid[i] = ch
+            valid = eliminate_in(valid,nines[cols[i]],ch)
+            valid = eliminate_in(valid,nines[rows[i]],ch)
+            valid = eliminate_in(valid,nines[squares[i]],ch)
+        end if
+    end for
+    --
+    -- 1) row/col elimination
+    --
+    for s=19 to 27 do
+        c = repeat(0,9) -- 0 = none seen, 1..9 this col only, -1: >1 col
+        r = repeat(0,9) -- ""                       row              row
+        nine = nines[s]
+        for n=1 to 9 do
+            k = nine[n]
+            vj = valid[k]
+            if string(vj) then
+                for i=1 to length(vj) do
+                    ch = vj[i]-'0'
+                    col = dotcol[k]
+                    row = dotrow[k]
+                    c[ch] = iff(find(c[ch],{0,col})!=0?col:-1)
+                    r[ch] = iff(find(r[ch],{0,row})!=0?row:-1)
+                end for
+            end if
+        end for
+        for i=1 to 9 do
+            ch = i+'0'
+            col = c[i]
+            if col>0 then
+                valid = eliminate_in(valid,sixes[col],ch)
+            end if
+            row = r[i]
+            if row>0 then
+                valid = eliminate_in(valid,sixes[row],ch)
+            end if
+        end for
+    end for
+    --
+    -- 2) set elimination
+    --
+    for i=1 to length(nines) do
+        --
+        --  Practical note: Meticulously counting empties to eliminate larger set sizes
+        --                  would at best reduce 6642 tests to 972, not deemed worth it.
+        --
+        for set_size=2 to 4 do
+            --if floor(count_empties(nines[i])/2)>=set_size then -- (untested)
+            valid = comb(nines[i],valid,set_size)
+            --end if
+        end for
+    end for
+    --
+    -- 3) x-wings
+    --
+    for ch='1' to '9' do
+        prevsets = repeat(0,9)
+        for x=1 to 9 do
+            count = 0
+            set = repeat(0,9)
+            for y=0 to 8 do
+                idx = y*9+x
+                if sequence(valid[idx]) and find(ch,valid[idx]) then
+                    set[y+1] = 1
+                    count += 1
+                end if
+            end for
+            if count=2 then
+                k = find(set,prevsets)
+                if k!=0 then
+                    for y=0 to 8 do
+                        if set[y+1]=1 then
+                            for sx=1 to 9 do
+                                if sx!=k and sx!=x then
+                                    valid = eliminate_in(valid,{y*9+sx},ch)
+                                end if
+                            end for
+                        end if
+                    end for
+                else
+                    prevsets[x] = set
+                end if
+            end if
+        end for
+        prevsets = repeat(0,9)
+        for y=0 to 8 do
+            count = 0
+            set = repeat(0,9)
+            for x=1 to 9 do
+                idx = y*9+x
+                if sequence(valid[idx]) and find(ch,valid[idx]) then
+                    set[x] = 1
+                    count += 1
+                end if
+            end for
+            if count=2 then
+                k = find(set,prevsets)
+                if k!=0 then
+                    for x=1 to 9 do
+                        if set[x]=1 then
+                            for sy=0 to 8 do
+                                if sy+1!=k and sy!=y then
+                                    valid = eliminate_in(valid,{sy*9+x},ch)
+                                end if
+                            end for
+                        end if
+                    end for
+                else
+                    prevsets[y+1] = set
+                end if
+            end if
+        end for
+    end for
+    return valid
+end function
+
+function permitted_in(string board, sequence sets, sequence valid, integer ch)
+sequence set
+integer pos, idx, bch
+    for i=1 to 9 do
+        set = nines[sets[i]]
+        pos = 0
+        for j=1 to 9 do
+            idx = set[j]
+            bch = board[idx]
+            if bch>'0' then
+                if bch=ch then pos = -1 exit end if
+            elsif find(ch,valid[idx]) then
+                if pos!=0 then pos = -1 exit end if
+                pos = idx
+            end if
+        end for
+        if pos>0 then
+            board[pos] = ch
+            improved = 1
+        end if
+    end for
+    return board
+end function
+
+enum INVALID = -1, INCOMPLETE = 0, SOLVED = 1, MULTIPLE = 2, BRUTE = 3
+
+function plain_logic(string board)
+--
+-- Responsible for:
+--  1) cells with only one option
+--  2) numbers with only one home
+--
+integer solved
+sequence valid = {}
+object vi
+
+    while 1 do
+        solved = SOLVED
+        improved = 0
+        valid = deep_logic(board,valid)
+
+        -- 1) cells with only one option:
+        for i=1 to length(valid) do
+            vi = valid[i]
+            if string(vi) then
+                if length(vi)=0 then return {board,{},INVALID} end if
+                if length(vi)=1 then
+                    board[i] = vi[1]
+                    improved = 1
+                end if
+            end if
+            if board[i]<='0' then
+                solved = INCOMPLETE
+            end if
+        end for
+        if solved=SOLVED then return {board,{},SOLVED} end if
+
+        -- 2) numbers with only one home
+        for ch='1' to '9' do
+            board = permitted_in(board,cols,valid,ch)
+            board = permitted_in(board,rows,valid,ch)
+            board = permitted_in(board,squares,valid,ch)
+        end for
+        if not improved then exit end if
+    end while
+    return {board,valid,solved}
+end function
+
+function validate(string board)
+-- (sum9 should be sufficient - if you want, get rid of nine/nines)
+integer ch, sum9
+sequence nine, nines = tagset(9)
+
+    for x=0 to 8 do                 -- columns
+        sum9 = 0
+        nine = repeat(0,9)
+        for y=1 to 81 by 9 do
+            ch = board[y+x]-'0'
+            if ch<1 or ch>9 then return 0 end if
+            sum9 += ch
+            nine[ch] = ch
+        end for
+        if sum9!=45 then return 0 end if
+        if nine!=nines then return 0 end if
+    end for
+    for y=1 to 81 by 9 do           -- rows
+        sum9 = 0
+        nine = repeat(0,9)
+        for x=0 to 8 do
+            ch = board[y+x]-'0'
+            sum9 += ch
+            nine[ch] = ch
+        end for
+        if sum9!=45 then return 0 end if
+        if nine!=nines then return 0 end if
+    end for
+    for y=0 to 8 by 3 do            -- small squares
+        for x=0 to 8 by 3 do
+            sum9 = 0
+            nine = repeat(0,9)
+            for sy=y*9 to y*9+18 by 9 do
+                for sx=x to x+2 do
+                    ch = board[sy+sx+1]-'0'
+                    sum9 += ch
+                    nine[ch] = ch
+                end for
+            end for
+            if sum9!=45 then return 0 end if
+            if nine!=nines then return 0 end if
+        end for
+    end for
+    return 1
+end function
+
+function solve(string board, sequence valid={})
+sequence solution, solutions
+integer solved
+integer minopt, mindx
+object vi
+    {solution,valid,solved} = plain_logic(board)
+    if solved=INVALID then return {{},INVALID} end if
+    if solved=SOLVED then return {{solution},SOLVED} end if
+    if solved=BRUTE then return {{solution},BRUTE} end if
+    if solved!=INCOMPLETE then ?9/0 end if
+    -- find the cell with the fewest options:
+    -- (a possible improvement here would be to select the shortest
+    --  with the "most pairs" set, see swordfish etc above.)
+    minopt = 10
+    for i=1 to 9*9 do
+        vi = valid[i]
+        if string(vi) then
+            if length(vi)<=1 then ?9/0 end if   -- should be caught above
+            if length(vi)<minopt then
+                minopt = length(vi)
+                mindx = i
+            end if
+        end if
+    end for
+    solutions = {}
+    for i=1 to minopt do
+        board[mindx] = valid[mindx][i]
+        {solution,solved} = solve(board,valid)
+        if solved=MULTIPLE then
+            return {solution,MULTIPLE}
+        elsif solved=SOLVED
+           or solved=BRUTE then
+            if not find(solution[1],solutions)
+            and validate(solution[1]) then
+                solutions = append(solutions,solution[1])
+            end if
+            if length(solutions)>1 then
+                return {solutions,MULTIPLE}
+            elsif length(solutions) then
+                return {solutions,BRUTE}
+            end if
+        end if
+    end for
+    if length(solutions)=1 then
+        return {solutions,BRUTE}
+    end if
+    return {{},INVALID}
+end function
+
+function test_one(string board)
+sequence solutions
+string solution, desc
+integer solved
+    {solutions,solved} = solve(board)
+    if solved=SOLVED then
+        desc = "(logic)"
+    elsif solved=BRUTE then
+        desc = "(brute force)"
+    else
+        desc = "???" -- INVALID/INCOMPLETE/MULTIPLE
+    end if
+    if length(solutions)=0 then
+        solution = board
+        desc = "*** NO SOLUTIONS ***"
+    elsif length(solutions)=1 then
+        solution = solutions[1]
+        if not validate(solution) then
+            desc = "*** ERROR ***"  -- (should never happen)
+        end if
+    else
+        solution = board
+        desc = "*** MULTIPLE SOLUTIONS ***"
+    end if
+    return {solution,desc}
+end function
+
+--NB Blank cells can be represented by any character <'1'. Spaces are not recommended since
+--   they can all too easily be converted to tabs by copy/paste/save. In particular, ? and
+--   _ are NOT valid characters for representing a blank square. Use any of .0-* instead.
+
+constant tests = {
+    "..............3.85..1.2.......5.7.....4...1...9.......5......73..2.1........4...9",    -- (0.01s, (logic))
+    -- row/col elimination (was 8s w/o logic first)
+    "000000036840000000000000020000203000010000700000600400000410050003000200600000000",    -- (0.04s, (brute force))
+    ".......39.....1..5..3.5.8....8.9...6.7...2...1..4.......9.8..5..2....6..4..7.....",    -- (1.12s, (brute force))
+    "000037600000600090008000004090000001600000009300000040700000800010009000002540000",    -- (0.00s, (logic))
+    "....839..1......3...4....7..42.3....6.......4....7..1..2........8...92.....25...6",    -- (0.04s, (brute force))
+    "..1..5.7.92.6.......8...6...9..2.4.1.........3.4.8..9...7...3.......7.69.1.8..7..",    -- (0.00s, (logic))
+    -- (the following takes ~8s when checking for multiple solutions)
+    "--3------4---8--36--8---1---4--6--73---9----------2--5--4-7--686--------7--6--5--",    -- (0.01s, (brute force))
+    "..3.2.6..9..3.5..1..18.64....81.29..7.......8..67.82....26.95..8..2.3..9..5.1.3..",    -- (0.00s, (logic))
+    "--4-5--6--6-1--8-93----7----8----5-----4-3-----6----7----2----61-5--4-3--2--7-1--",    -- (0.00s, (logic))
+    -- x-wings
+    ".4398.25.6..425...2....1.949....4.7.3..6.8...41.2.9..382.5.........4...553489.71.",    -- (0.00s, (logic))
+    ".9...4..7.....79..8........4.58.....3.......2.....97.6........4..35.....2..6...8.",    -- (0.00s, (logic))
+    -- "AL Escargot", so-called "hardest sudoku"
+    "1....7.9..3..2...8..96..5....53..9...1..8...26....4...3......1..4......7..7...3..",    -- (0.26s, (brute force))
+    "12.3....435....1....4........54..2..6...7.........8.9...31..5.......9.7.....6...8",    -- (0.48s, (brute force))
+    "12.4..3..3...1..5...6...1..7...9.....4.6.3.....3..2...5...8.7....7.....5.......98",    -- (1.07s, (brute force))
+    "394..267....3..4..5..69..2..45...9..6.......7..7...58..1..67..8..9..8....264..735",    -- (0.00s, (logic))
+    "4......6.5...8.9..3....1....2.7....1.9.....4.8....3.5....2....7..6.5...8.1......6",    -- (0.01s, (brute force))
+    "5...7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",    -- (0.00s, (logic))
+    "503600009010002600900000080000700005006804100200003000030000008004300050800006702",    -- (0.00s, (logic))
+    "53..247....2...8..1..7.39.2..8.72.49.2.98..7.79.....8.....3.5.696..1.3...5.69..1.",    -- (0.00s, (logic))
+    "530070000600195000098000060800060003400803001700020006060000280000419005000080079",    -- (0.00s, (logic))
+    -- set exclusion
+    "75..9..46961...3524.....79.2..6.1..7.8.....2.1..328.65.........3.9...2.484..3..79",    -- (0.00s, (logic))
+    -- Worlds hardest sudoku:
+    "800000000003600000070090200050007000000045700000100030001000068008500010090000400",    -- (0.21s, (brute force))
+    "819--5-----2---75--371-4-6-4--59-1--7--3-8--2--3-62--7-5-7-921--64---9-----2--438",    -- (0.00s, (logic))
+    "85...24..72......9..4.........1.7..23.5...9...4...........8..7..17..........36.4.",    -- (0.01s, (logic))
+    "9..2..5...4..6..3...3.....6...9..2......5..8...7..4..37.....1...5..2..4...1..6..9",    -- (0.17s, (brute force))
+    "97.3...6..6.75.........8.5.......67.....3.....539..2..7...25.....2.1...8.4...73..",    -- (0.00s, (logic))
+    -- "the beast" (an earlier algorithm took 318s (5min 18s) on this):
+    "000060080020000000001000000070000102500030000000000400004201000300700600000000050",    -- (0.03s, (brute force))
+    $},
+
+    lt = length(tests),
+    run_one_test = 0
+
+constant l = " x x x | x x x | x x x ",
+         s = "-------+-------+-------",
+         l3 = join({l,l,l},"\n"),
+         fmt = substitute(join({l3,s,l3,s,l3},"\n"),"x","%c")&"\n"
+
+procedure print_board(string board)
+    printf(1,fmt,board)
+end procedure
+
+procedure test()
+string board    -- (81 characters)
+string solution, desc
+atom t0 = time()
+    if run_one_test then
+        board = tests[run_one_test]
+        print_board(board)
+        {solution,desc} = test_one(board)
+        if length(solution)!=0 then
+            printf(1,"solution:\n")
+            print_board(solution)
+        end if
+        printf(1,"%s, %3.2fs\n",{desc,time()-t0})
+    else
+        for i=1 to lt do
+            atom t1 = time()
+            board = tests[i]
+            {solution,desc} = test_one(board)
+            printf(1,"    \"%s\",    -- (%3.2fs, %s)\n",{board,time()-t1,desc})
+--          printf(1,"    \"%s\",    -- (%3.2fs, %s)\n",{solution,time()-t1,desc})
+        end for
+        t0 = time()-t0
+        printf(1,"%d puzzles solved in %3.2fs (av %3.2fs)\n",{lt,t0,t0/lt})
+    end if
+end procedure
+test()

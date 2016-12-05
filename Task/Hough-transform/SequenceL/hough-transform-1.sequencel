@@ -1,0 +1,45 @@
+import <Utilities/Sequence.sl>;
+import <Utilities/Math.sl>;
+
+hough: int(2) * int * int * int -> int(2);
+hough(image(2), thetaAxisSize, rAxisSize, minContrast) :=
+    let
+        initialResult[r,theta] := 0 foreach r within 1 ... rAxisSize, theta within 1 ... thetaAxisSize;
+
+        result := houghHelper(image, minContrast, 1, 1, initialResult);
+
+        max := vectorMax(vectorMax(result));
+    in
+        255 - min(round((result * 255 / max)), 255);
+
+houghHelper(image(2), minContrast, x, y, result(2)) :=
+    let
+        thetaAxisSize := size(head(result));
+        rAxisSize := size(result);
+
+        width := size(head(image));
+        height := size(image);
+        maxRadius := ceiling(sqrt(width^2 + height^2));
+        halfRAxisSize := rAxisSize / 2;
+
+        rs[theta] := round((cos(theta) * x + sin(theta) * y) * halfRAxisSize / maxRadius) + halfRAxisSize
+                     foreach theta within (0 ... (thetaAxisSize-1)) * pi / thetaAxisSize;
+
+        newResult[r,theta] := result[r,theta] + 1 when rs[theta] = r-1 else result[r,theta];
+
+        nextResult := result when not checkContrast(image, x, y, minContrast) else newResult;
+
+        nextX := 1 when x = width else x + 1;
+        nextY := y + 1 when x = width else y;
+    in
+        nextResult when x = width and y = height
+    else
+        houghHelper(image, minContrast, nextX, nextY, nextResult);
+
+checkContrast(image(2), x, y, minContrast) :=
+    let
+        neighbors[i,j] := image[i,j] when i > 0 and i < size(image) and j > 0 and j < size(image[i])
+                          foreach i within y-1 ... y+1,
+                                  j within x-1 ... x+1;
+    in
+        some(some(abs(image[y,x] - neighbors) >= minContrast));

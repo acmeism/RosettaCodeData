@@ -1,0 +1,84 @@
+constant s_expr_str = """
+((data "quoted data" 123 4.5)
+ (data (!@# (4.5) "(more" "data)")))"""
+
+function skip_spaces(string s, integer sidx)
+    while sidx<=length(s) and find(s[sidx]," \t\r\n") do sidx += 1 end while
+    return sidx
+end function
+
+function get_term(string s, integer sidx)
+-- get a single quoted string, symbol, or number.
+integer ch = s[sidx]
+string res = ""
+    if ch='\"' then
+        res &= ch
+        while 1 do
+            sidx += 1
+            ch = s[sidx]
+            res &= ch
+            if ch='\\' then
+                sidx += 1
+                ch = s[sidx]
+                res &= ch
+            elsif ch='\"' then
+                sidx += 1
+                exit
+            end if
+        end while
+    else
+        integer asnumber = (ch>='0' and ch<='9')
+        while not find(ch,") \t\r\n") do
+            res &= ch
+            sidx += 1
+            if sidx>length(s) then exit end if
+            ch = s[sidx]
+        end while
+        if asnumber then
+            sequence scanres = scanf(res,"%f")
+            if length(scanres)=1 then return {scanres[1][1],sidx} end if
+            -- error? (failed to parse number)
+        end if
+    end if
+    return {res,sidx}
+end function
+
+function parse_s_expr(string s, integer sidx)
+integer ch = s[sidx]
+sequence res = {}
+object element
+    if ch!='(' then ?9/0 end if
+    sidx += 1
+    while 1 do
+        sidx = skip_spaces(s,sidx)
+        -- error? (if past end of string/missing ')')
+        ch = s[sidx]
+        if ch=')' then exit end if
+        if ch='(' then
+            {element,sidx} = parse_s_expr(s,sidx)
+        else
+            {element,sidx} = get_term(s,sidx)
+        end if
+        res = append(res,element)
+    end while
+    sidx = skip_spaces(s,sidx+1)
+    return {res,sidx}
+end function
+
+sequence s_expr
+integer sidx
+{s_expr,sidx} = parse_s_expr(s_expr_str,1)
+if sidx<=length(s_expr_str) then
+    printf(1,"incomplete parse(\"%s\")\n",{s_expr_str[sidx..$]})
+end if
+
+puts(1,"\nThe string:\n")
+?s_expr_str
+
+puts(1,"\nDefault pretty printing:\n")
+--?s_expr
+pp(s_expr)
+
+puts(1,"\nBespoke pretty printing:\n")
+--ppEx(s_expr,{pp_Nest,1,pp_StrFmt,-3,pp_Brkt,"()"})
+ppEx(s_expr,{pp_Nest,4,pp_StrFmt,-3,pp_Brkt,"()"})

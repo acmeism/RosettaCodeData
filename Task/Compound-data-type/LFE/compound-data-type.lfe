@@ -1,0 +1,3 @@
+(defrecord point
+  x
+  y)

@@ -1,0 +1,5 @@
+aBoolean ifTrue: [ ...]
+aBoolean ifFalse: [ ... ]
+aObject  ifNull: [ ... ]
+aObject  ifNotNull: [ ... ]
+aObject  ifZero: [ ... ]

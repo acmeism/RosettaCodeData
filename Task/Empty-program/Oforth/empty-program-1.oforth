@@ -1,0 +1,1 @@
+oforth empty.of

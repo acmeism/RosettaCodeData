@@ -1,0 +1,97 @@
+sequence morse = repeat(0,255)
+
+procedure setMorse(sequence data)
+-- data is a list of strings, first char of each is the letter to encode,
+--  with the rest being the actual morse code for that letter, eg "S..."
+    for i=1 to length(data) do
+        morse[data[i][1]] = data[i][2..$]   -- eg morse['S'] = "..."
+    end for
+end procedure
+
+setMorse({"0-----","1.----","2..---","3...--","4....-","5.....","6-....","7--...","8---..","9----.",
+          "A.-","B-...","C-.-.","D-..","E.","F..-.","G--.","H....","I..","J.---","K-.-","L.-..","M--",
+          "N-.","O---","P.--.","Q--.-","R.-.","S...","T-","U..-","V...-","W.--","X-..-","Y-.--","Z--..",
+          "!-.-.--","\".-..-.","$...-..-",":---...",";-.-.-.","=-...-","?..--..","@.--.-.","_..--.-",
+          "&.-...","'.----.","(-.--.",")-.--.-","+.-.-.",",--..--","--....-","..-.-.-","/-..-.",
+          "     "})
+
+    morse['a'..'z'] = morse['A'..'Z']
+    morse['['] = morse['(']
+    morse[']'] = morse[')']
+
+constant EOM = ".-.-."
+
+constant frequency = 1280,          -- (in Hz, 37..32767)
+         dit = 200,                 -- (in milliseconds)
+         dah = 3*dit,               -- ""
+         lettergap = 2*dit/1000,    -- (in seconds)
+         wordgap = 4*dit/1000       -- ""
+
+atom xBeep = 0
+
+procedure beep(integer duration)
+    if platform()=WIN32 then
+        if xBeep=0 then
+            atom kernel32 = open_dll("kernel32.dll")
+            xBeep = define_c_proc(kernel32, "Beep", {C_INT,C_INT})
+        end if
+        c_proc(xBeep,{frequency,duration})
+    end if
+end procedure
+
+procedure playAndRebuild(string line)
+-- line should only contain '.'/'-'/' ', like the example below
+string rebuilt = ""
+integer start = 1
+integer ch
+    if length(line)=0 then
+        line = "... --- ...      - .. - .- -. .. -.-. "
+        puts(1,line)
+    end if
+    for i=1 to length(line) do
+        ch = line[i]
+        if ch=' ' then
+            ch = find(line[start..i-1],morse)
+            if ch!=0 then
+                rebuilt &= ch
+                start = i+1
+                if ch=' ' then
+                    sleep(wordgap)
+                else
+                    sleep(lettergap)
+                end if
+            end if
+        elsif ch='.' then
+            beep(dit)
+        elsif ch='-' then
+            beep(dah)
+        end if
+    end for
+    puts(1,rebuilt)
+    puts(1,"\n")
+end procedure
+
+procedure main()
+integer key
+object code
+string line = ""
+
+    puts(1,"enter text, return to play/rebuild, escape to quit\n")
+    while 1 do
+        key = wait_key()
+        if key = 27 then exit end if    -- escape
+        if key = 13 then                -- return
+            playAndRebuild(line)
+            line = ""
+        else
+            code = morse[key]
+            if string(code) then
+                code &= ' '
+                puts(1,code)
+                line &= code
+            end if
+        end if
+    end while
+    puts(1,EOM)
+end procedure
+main()

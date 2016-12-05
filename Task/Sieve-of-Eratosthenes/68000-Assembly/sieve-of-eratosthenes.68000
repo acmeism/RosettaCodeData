@@ -1,0 +1,255 @@
+*-----------------------------------------------------------
+* Title      : BitSieve
+* Written by : G. A. Tippery
+* Date       : 2014-Feb-24, 2013-Dec-22
+* Description: Prime number sieve
+*-----------------------------------------------------------
+    	ORG    $1000
+
+**	---- Generic macros ----	**
+PUSH	MACRO
+	MOVE.L	\1,-(SP)
+	ENDM
+
+POP	MACRO
+	MOVE.L	(SP)+,\1
+	ENDM
+
+DROP	MACRO
+	ADDQ	#4,SP
+	ENDM
+	
+PUTS	MACRO
+	** Print a null-terminated string w/o CRLF **
+	** Usage: PUTS stringaddress
+	** Returns with D0, A1 modified
+	MOVEQ	#14,D0	; task number 14 (display null string)
+	LEA	\1,A1	; address of string
+	TRAP	#15	; display it
+	ENDM
+	
+GETN	MACRO
+	MOVEQ	#4,D0	; Read a number from the keyboard into D1.L.
+	TRAP	#15
+	ENDM
+
+**	---- Application-specific macros ----	**
+
+val	MACRO		; Used by bit sieve. Converts bit address to the number it represents.
+	ADD.L	\1,\1	; double it because odd numbers are omitted
+	ADDQ	#3,\1	; add offset because initial primes (1, 2) are omitted
+	ENDM
+
+* ** ================================================================================ **
+* ** Integer square root routine, bisection method **
+* ** IN: D0, should be 0<D0<$10000 (65536) -- higher values MAY work, no guarantee
+* ** OUT: D1
+*
+SquareRoot:
+*
+	MOVEM.L	D2-D4,-(SP)	; save registers needed for local variables
+*	DO == n
+*	D1 == a
+*	D2 == b
+*	D3 == guess
+*	D4 == temp
+*
+*		a = 1;
+*		b = n;
+	MOVEQ	#1,D1
+	MOVE.L	D0,D2
+*		do {
+	REPEAT
+*		guess = (a+b)/2;
+	MOVE.L	D1,D3
+	ADD.L	D2,D3
+	LSR.L	#1,D3
+*		if (guess*guess > n) {	// inverse function of sqrt is square
+	MOVE.L	D3,D4
+	MULU	D4,D4		; guess^2
+	CMP.L	D0,D4
+	BLS	.else
+*		b = guess;
+	MOVE.L	D3,D2
+	BRA	.endif
+*		} else {
+.else:
+*		a = guess;
+	MOVE.L	D3,D1
+*		} //if
+.endif:
+*		} while ((b-a) > 1);	; Same as until (b-a)<=1 or until (a-b)>=1
+	MOVE.L	D2,D4
+	SUB.L	D1,D4	; b-a
+	UNTIL.L	  D4 <LE> #1 DO.S
+*		return (a)	; Result is in D1
+*		} //LongSqrt()
+	MOVEM.L	(SP)+,D2-D4	; restore saved registers
+	RTS
+*
+* ** ================================================================================ **
+
+
+** ======================================================================= **
+*
+**  Prime-number Sieve of Eratosthenes routine using a big bit field for flags  **
+*  Enter with D0 = size of sieve (bit array)
+*  Prints found primes 10 per line
+*  Returns # prime found in D6
+*
+*   Register usage:
+*
+*	D0 == n
+*	D1 == prime
+*	D2 == sqroot
+*	D3 == PIndex
+*	D4 == CIndex
+*	D5 == MaxIndex
+*	D6 == PCount
+*
+*	A0 == PMtx[0]
+*
+*   On return, all registers above except D0 are modified. Could add MOVEMs to save and restore D2-D6/A0.
+*
+
+**	------------------------	**
+
+GetBit:		** sub-part of Sieve subroutine **
+		** Entry: bit # is on TOS
+		** Exit: A6 holds the byte number, D7 holds the bit number within the byte
+		** Note: Input param is still on TOS after return. Could have passed via a register, but
+                **  wanted to practice with stack. :)
+*		
+	MOVE.L	(4,SP),D7	; get value from (pre-call) TOS
+	ASR.L	#3,D7	; /8
+	MOVEA	D7,A6	; byte #
+	MOVE.L	(4,SP),D7	; get value from (pre-call) TOS
+	AND.L	#$7,D7	; bit #
+	RTS
+
+**	------------------------	**
+
+Sieve:
+	MOVE	D0,D5
+	SUBQ	#1,D5
+	JSR	SquareRoot	; sqrt D0 => D1
+	MOVE.L	D1,D2
+	LEA	PArray,A0
+	CLR.L	D3
+*
+PrimeLoop:
+	MOVE.L	D3,D1
+	val	D1
+	MOVE.L	D3,D4
+	ADD.L	D1,D4
+*
+CxLoop:		; Goes through array marking multiples of d1 as composite numbers
+	CMP.L	D5,D4
+	BHI	ExitCx
+	PUSH	D4	; set D7 as bit # and A6 as byte pointer for D4'th bit of array
+	JSR GetBit
+	DROP
+	BSET	D7,0(A0,A6.L)	; set bit to mark as composite number
+	ADD.L	D1,D4	; next number to mark
+	BRA	CxLoop
+ExitCx:
+	CLR.L	D1	; Clear new-prime-found flag
+	ADDQ	#1,D3	; Start just past last prime found
+PxLoop:		; Searches for next unmarked (not composite) number
+	CMP.L	D2,D3	; no point searching past where first unmarked multiple would be past end of array
+	BHI	ExitPx	; if past end of array
+	TST.L	D1
+	BNE	ExitPx	; if flag set, new prime found
+	PUSH D3		; check D3'th bit flag
+	JSR	GetBit	; sets D7 as bit # and A6 as byte pointer
+	DROP		; drop TOS
+	BTST	D7,0(A0,A6.L)	; read bit flag
+	BNE	IsSet	; If already tagged as composite
+	MOVEQ	#-1,D1	; Set flag that we've found a new prime
+IsSet:
+	ADDQ	#1,D3	; next PIndex
+	BRA	PxLoop
+ExitPx:
+	SUBQ	#1,D3	; back up PIndex
+	TST.L	D1	; Did we find a new prime #?
+	BNE	PrimeLoop	; If another prime # found, go process it
+*
+		; fall through to print routine
+
+**	------------------------	**
+
+* Print primes found
+*
+*	D4 == Column count
+*
+*	Print header and assumed primes (#1, #2)
+    	PUTS	Header	; Print string @ Header, no CR/LF
+	MOVEQ	#2,D6	; Start counter at 2 because #1 and #2 are assumed primes
+	MOVEQ	#2,D4
+*
+	MOVEQ	#0,D3
+PrintLoop:
+	CMP.L	D5,D3
+	BHS	ExitPL
+	PUSH	D3
+	JSR	GetBit	; sets D7 as bit # and A6 as byte pointer
+	DROP		; drop TOS
+	BTST	D7,0(A0,A6.L)
+	BNE		NotPrime
+*		printf(" %6d", val(PIndex)
+	MOVE.L	D3,D1
+	val	D1
+	AND.L	#$0000FFFF,D1
+	MOVEQ	#6,D2
+	MOVEQ	#20,D0	; display signed RJ
+	TRAP	#15
+	ADDQ	#1,D4
+	ADDQ	#1,D6
+*	*** Display formatting ***
+*		if((PCount % 10) == 0) printf("\n");
+	CMP	#10,D4
+	BLO	NoLF
+	PUTS	CRLF
+	MOVEQ	#0,D4
+NoLF:
+NotPrime:
+	ADDQ	#1,D3
+	BRA	PrintLoop
+ExitPL:
+	RTS
+
+** ======================================================================= **
+
+N	EQU	5000	; *** Size of boolean (bit) array ***
+SizeInBytes	EQU	(N+7)/8
+*
+START:                  	; first instruction of program
+	MOVE.L	#N,D0	; # to test
+	JSR	Sieve
+*		printf("\n %d prime numbers found.\n", D6); ***
+	PUTS	Summary1,A1
+	MOVE	#3,D0	; Display signed number in D1.L in decimal in smallest field.
+	MOVE.W	D6,D1
+	TRAP	#15
+	PUTS	Summary2,A1
+
+	SIMHALT             	; halt simulator
+
+** ======================================================================= **
+
+* Variables and constants here
+
+	ORG	$2000
+CR	EQU	13
+LF	EQU	10
+CRLF	DC.B	CR,LF,$00
+
+PArray:	DCB.B	SizeInBytes,0
+
+Header:	DC.B	CR,LF,LF,' Primes',CR,LF,' ======',CR,LF
+		DC.B	'     1     2',$00
+
+Summary1:	DC.B	CR,LF,' ',$00
+Summary2:	DC.B	' prime numbers found.',CR,LF,$00
+
+    END    START        	; last line of source

@@ -1,0 +1,218 @@
+sequence opstack = {}       -- atom elements are literals,
+                            -- sequence elements are subexpressions
+                            -- on completion length(opstack) should be 1
+object token
+
+constant op_p_p = 0         --  1: expressions stored as op,p1,p2
+    --   p_op_p             --  0: expressions stored as p1,op,p2
+    --   p_p_op             -- -1: expressions stored as p1,p2,op
+
+object op = 0   -- 0 if none, else "+", "-", "*", "/", "^", "%", or "u-"
+
+string s        -- the expression being parsed
+integer ch
+integer sidx
+
+procedure err(string msg)
+    printf(1,"%s\n%s^ %s\n\nPressEnter...",{s,repeat(' ',sidx-1),msg})
+    {} = wait_key()
+    abort(0)
+end procedure
+
+procedure nxtch(object msg="eof")
+    sidx += 1
+    if sidx>length(s) then
+        if string(msg) then err(msg) end if
+        ch = -1
+    else
+        ch = s[sidx]
+    end if
+end procedure
+
+procedure skipspaces()
+    while find(ch," \t\r\n")!=0 do nxtch(0) end while
+end procedure
+
+procedure get_token()
+atom n, fraction
+integer dec
+    skipspaces()
+    if ch=-1 then token = "eof" return end if
+    if ch>='0' and ch<='9' then
+        n = ch-'0'
+        while 1 do
+            nxtch(0)
+            if ch<'0' or ch>'9' then exit end if
+            n = n*10+ch-'0'
+        end while
+        if ch='.' then
+            dec = 1
+            fraction = 0
+            while 1 do
+                nxtch(0)
+                if ch<'0' or ch>'9' then exit end if
+                fraction = fraction*10 + ch-'0'
+                dec *= 10
+            end while
+            n += fraction/dec
+        end if
+--      if find(ch,"eE") then   -- you get the idea
+--      end if
+        token = n
+        return
+    end if
+    if find(ch,"+-/*()^%")=0 then err("syntax error") end if
+    token = s[sidx..sidx]
+    nxtch(0)
+    return
+end procedure
+
+procedure Match(string t)
+    if token!=t then err(t&" expected") end if
+    get_token()
+end procedure
+
+procedure PopFactor()
+object p2 = opstack[$]
+    if op="u-" then
+        if op_p_p=1 then                        -- op_p_p
+            opstack[$] = {op,0,p2}
+        elsif op_p_p=0 then                     -- p_op_p
+            opstack[$] = {0,op,p2}
+        else -- -1                              -- p_p_op
+            opstack[$] = {0,p2,op}
+        end if
+    else
+        opstack = opstack[1..$-1]
+        if op_p_p=1 then                        -- op_p_p
+            opstack[$] = {op,opstack[$],p2}
+        elsif op_p_p=0 then                     -- p_op_p
+            opstack[$] = {opstack[$],op,p2}
+        else -- -1                              -- p_p_op
+            opstack[$] = {opstack[$],p2,op}
+        end if
+    end if
+    op = 0
+end procedure
+
+procedure PushFactor(atom t)
+    if op!=0 then PopFactor() end if
+    opstack = append(opstack,t)
+end procedure
+
+procedure PushOp(string t)
+    if op!=0 then PopFactor() end if
+    op = t
+end procedure
+
+procedure Factor()
+    if atom(token) then
+        PushFactor(token)
+        if ch!=-1 then
+            get_token()
+        end if
+    elsif token="-" then
+        get_token()
+--      Factor()
+        Expr(3) -- makes "-3^2" yield -9 (ie -(3^2)) not 9 (ie (-3)^2).
+        if op!=0 then PopFactor() end if
+        if integer(opstack[$]) then
+            opstack[$] = -opstack[$]
+        else
+            PushOp("u-")
+        end if
+    elsif token="(" then
+        get_token()
+        Expr(0)
+        Match(")")
+    elsif token="+" then -- (ignore)
+        nxtch()
+        Factor()
+    else
+        err("syntax error")
+    end if
+end procedure
+
+constant {operators,
+          precedence,
+          associativity} = columnize({{"^",3,0},
+                                      {"%",2,1},
+                                      {"*",2,1},
+                                      {"/",2,1},
+                                      {"+",1,1},
+                                      {"-",1,1},
+                                      $})
+
+procedure Expr(integer p)
+--
+-- Parse an expression, using precedence climbing.
+--
+-- p is the precedence level we should parse to, eg/ie
+--      4: Factor only (may as well just call Factor)
+--      3: "" and ^
+--      2: "" and *,/,%
+--      1: "" and +,-
+--      0: full expression (effectively the same as 1)
+--  obviously, parentheses override any setting of p.
+--
+integer k, thisp
+    Factor()
+    while 1 do
+        k = find(token,operators) -- *,/,+,-
+        if k=0 then exit end if
+        thisp = precedence[k]
+        if thisp<p then exit end if
+        get_token()
+        Expr(thisp+associativity[k])
+        PushOp(operators[k])
+    end while
+end procedure
+
+function eval(object s)
+object lhs, rhs
+string op
+    if atom(s) then
+        return s
+    end if
+    if op_p_p=1 then            -- op_p_p
+        {op,lhs,rhs} = s
+    elsif op_p_p=0 then         -- p_op_p
+        {lhs,op,rhs} = s
+    else -- -1                  -- p_p_op
+        {lhs,rhs,op} = s
+    end if
+    if sequence(lhs) then lhs = eval(lhs) end if
+    if sequence(rhs) then rhs = eval(rhs) end if
+    if op="+" then
+        return lhs+rhs
+    elsif op="-" then
+        return lhs-rhs
+    elsif op="*" then
+        return lhs*rhs
+    elsif op="/" then
+        return lhs/rhs
+    elsif op="^" then
+        return power(lhs,rhs)
+    elsif op="%" then
+        return remainder(lhs,rhs)
+    elsif op="u-" then
+        return -rhs
+    else
+        ?9/0
+    end if
+end function
+
+s = "3+4+5+6*7/1*5^2^3"
+sidx = 0
+nxtch()
+get_token()
+Expr(0)
+if op!=0 then PopFactor() end if
+if length(opstack)!=1 then err("some error") end if
+puts(1,"AST (flat): ")
+?opstack[1]
+puts(1,"AST (tree):\n")
+ppEx(opstack[1],{pp_Nest,6})
+puts(1,"result: ")
+?eval(opstack[1])
+{} = wait_key()

@@ -1,0 +1,104 @@
+function bruteForceClosestPair(sequence s)
+atom {x1,y1} = s[1], {x2,y2} = s[2], dx = x1-x2, dy = y1-y2, mind = dx*dx+dy*dy
+sequence minp = s[1..2]
+    for i=1 to length(s)-1 do
+        {x1,y1} = s[i]
+        for j=i+1 to length(s) do
+            {x2,y2} = s[j]
+            dx = x1-x2
+            dx = dx*dx
+            if dx<mind then
+                dy = y1-y2
+                dx += dy*dy
+                if dx<mind then
+                    mind = dx
+                    minp = {s[i],s[j]}
+                end if
+            end if
+        end for
+    end for
+    return {sqrt(mind),minp}
+end function
+
+sequence testset = sq_rnd(repeat({1,1},10000))
+atom t0 = time()
+sequence points
+atom d
+{d,points} = bruteForceClosestPair(testset)
+-- (Sorting the final point pair makes brute/dc more likely to tally. Note however
+--  when >1 equidistant pairs exist, brute and dc may well return different pairs;
+--  it is only a problem if they decide to return different minimum distances.)
+atom {{x1,y1},{x2,y2}} = sort(points)
+printf(1,"Closest pair: {%f,%f} {%f,%f}, distance=%f (%3.2fs)\n",{x1,y2,x2,y2,d,time()-t0})
+
+t0 = time()
+constant X = 1, Y = 2
+sequence xP = sort(testset)
+
+function byY(sequence p1, p2)
+    return compare(p1[Y],p2[Y])
+end function
+sequence yP = custom_sort(routine_id("byY"),testset)
+
+function distsq(sequence p1,p2)
+atom {x1,y1} = p1, {x2,y2} = p2
+    x1 -= x2
+    y1 -= y2
+    return x1*x1 + y1*y1
+end function
+
+function closestPair(sequence xP, yP)
+--             where xP is P(1) .. P(N) sorted by x coordinate, and
+--                   yP is P(1) .. P(N) sorted by y coordinate (ascending order)
+integer N, midN, k, nS
+sequence xL, xR, yL, yR, pairL, pairR, pairMin, yS, cPair
+atom xm, dL, dR, dmin, closest
+
+    N = length(xP)
+    if length(yP)!=N then ?9/0 end if   -- (sanity check)
+    if N<=3 then
+        return bruteForceClosestPair(xP)
+    end if
+    midN = floor(N/2)
+    xL = xP[1..midN]
+    xR = xP[midN+1..N]
+    xm = xP[midN][X]
+    yL = {}
+    yR = {}
+    for i=1 to N do
+        if yP[i][X]<=xm then
+            yL = append(yL,yP[i])
+        else
+            yR = append(yR,yP[i])
+        end if
+    end for
+    {dL, pairL} = closestPair(xL, yL)
+    {dR, pairR} = closestPair(xR, yR)
+    {dmin, pairMin} = {dR, pairR}
+    if dL<dR then
+        {dmin, pairMin} = {dL, pairL}
+    end if
+    yS = {}
+    for i=1 to length(yP) do
+        if abs(xm-yP[i][X])<dmin then
+            yS = append(yS,yP[i])
+        end if
+    end for
+    nS = length(yS)
+    {closest, cPair} = {dmin*dmin, pairMin}
+    for i=1 to nS-1 do
+        k = i + 1
+        while k<=nS and (yS[k][Y]-yS[i][Y])<dmin do
+            d = distsq(yS[k],yS[i])
+            if d<closest then
+                {closest, cPair} = {d, {yS[k], yS[i]}}
+            end if
+            k += 1
+        end while
+    end for
+    return {sqrt(closest), cPair}
+end function
+
+{d,points} = closestPair(xP,yP)
+{{x1,y1},{x2,y2}} = sort(points)    -- (see note above)
+printf(1,"Closest pair: {%f,%f} {%f,%f}, distance=%f (%3.2fs)\n",{x1,y2,x2,y2,d,time()-t0})

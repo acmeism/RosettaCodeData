@@ -1,0 +1,81 @@
+integer word_count = 0
+sequence filenames = {}
+
+function is_ascii(string txt)
+    for i=1 to length(txt) do
+        integer ch = txt[i]
+        if ch='\0' or ch>=#7F then return 0 end if
+    end for
+    return 1
+end function
+
+procedure add_words(string name, sequence words)
+    filenames = append(filenames,name)
+    integer fn = length(filenames)
+    for i=1 to length(words) do
+        string word = words[i]
+        if word[1]>='a'         -- skip numbers
+        and word[1]<='z' then
+            integer node = getd_index(word)
+            if node=0 then  -- not present
+                setd(word,{fn})
+                word_count += 1
+            else
+                sequence val = getd_by_index(node)
+                if find(fn,val)=0 then
+                    setd(word,append(val,fn))
+                end if
+            end if
+        end if
+    end for
+end procedure
+
+procedure load_directory()
+sequence d = dir(".")
+    for i=1 to length(d) do
+        if not find('d',d[i][D_ATTRIBUTES])     -- skip directories
+        and d[i][D_SIZE]<1024*1024*1024 then    -- and files > 1GB
+            string name = d[i][D_NAME]
+            integer fn = open(name,"rb")
+            string txt = lower(get_text(fn))
+            close(fn)
+            if is_ascii(txt) then               -- skip any bitmaps etc
+                sequence words = split_any(txt,"\0\r\n\t !\"#$%&\'()*+,-./:;<=>?@[\\]^`{|}~",0,1)
+                add_words(name,words)
+            end if
+        end if
+    end for
+end procedure
+
+function lookup(sequence words)
+sequence files = {}     -- indexes to filenames
+    for i=1 to length(words) do
+        string word = words[i]
+        integer node = getd_index(word)
+        if node=0 then return {} end if
+        sequence val = getd_by_index(node)
+        if i=1 then
+            files = val
+        else
+            for j=length(files) to 1 by -1 do
+                if not find(files[j],val) then
+                    files[j..j] = {}
+                end if
+            end for
+            if length(files)=0 then return {} end if
+        end if
+    end for
+    for i=1 to length(files) do
+        files[i] = filenames[files[i]]
+    end for
+    return files
+end function
+
+load_directory()
+?word_count
+?lookup({"load_directory"})     -- should only be this file
+?lookup({"dir"})                -- currently two use this
+?lookup({"lower"})              -- currently four use this
+?lookup({"lower","dir"})        -- currently two use both
+?lookup({"dir","lower"})        -- should be the same two
+?lookup({"ban"&"anafish"})      -- should be none ({})

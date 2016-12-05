@@ -1,0 +1,3 @@
+infinity
+'<br />'
+infinity -> type

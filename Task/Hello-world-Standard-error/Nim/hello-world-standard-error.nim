@@ -1,0 +1,1 @@
+stderr.writeln "Hello World"

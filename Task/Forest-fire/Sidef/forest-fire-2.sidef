@@ -1,0 +1,72 @@
+define RED = "\e[1;31m"
+define YELLOW = "\e[1;33m"
+define GREEN = "\e[1;32m"
+ 
+define DIRS = [
+    [-1, -1], [0, -1], [1, -1],
+    [-1,  0],          [1,  0],
+    [-1,  1], [0,  1], [1,  1],
+]
+ 
+enum (Empty, Tree, Heating, Burning)
+define pix = [' ', GREEN + "*", YELLOW + "*", RED + "*"]
+ 
+class Forest(p=0.01, f=0.001, height, width) {
+ 
+    has coords = []
+    has spot = []
+    has neighbors = []
+ 
+    method init {
+        coords = (0..height ~X 0..width)
+        spot = height.of { width.of { [true, false].pick ? Tree : Empty } }
+        self.init_neighbors
+    }
+ 
+    method init_neighbors {
+        for i,j in coords {
+            neighbors[i][j] = gather {
+                for dir in DIRS {
+                    take(\(spot[i + dir[0]][j + dir[1]] \\ next))
+                 }
+            }
+        }
+    }
+ 
+    method step {
+        var heat = []
+ 
+        for i,j in coords {
+            given (spot[i][j]) {
+                when Empty   { spot[i][j] = Tree    if (1.rand < p) }
+                when Tree    { spot[i][j] = Heating if (1.rand < f) }
+                when Heating { spot[i][j] = Burning; heat << [i, j] }
+                when Burning { spot[i][j] = Empty }
+            }
+        }
+ 
+        for i,j in heat {
+            neighbors[i][j].each { |ref|
+                *ref = Heating if (*ref == Tree)
+            }
+        }
+    }
+ 
+    method show {
+        for i in ^height {
+            say pix[spot[i]]
+        }
+    }
+}
+
+STDOUT.autoflush(true)
+var(height, width) = `stty size`.nums.map{.dec}...
+ 
+var forest = Forest(height: height, width: width)
+print "\e[2J"
+
+loop {
+    print "\e[H"
+    forest.show
+    forest.step
+}

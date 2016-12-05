@@ -1,0 +1,86 @@
+on DecToVLQ
+   Ask "Enter base 10 value:" -- input dialog box
+   if it is not empty then
+      if it is a number then
+         put it into theString
+         if isWholeNumString(theString) is false then -- I think there is built in equivalent for this but I rolled my own!
+            answer "Only Whole Decimal Numbers Are Allowed!"
+            exit DecToVLQ
+         end if
+         if theString>4294967295 then
+            answer "This function fails with whole numbers over 4294967295!"&cr\
+            & "4294967295 is the maximum allowed value for 32bits (4 bytes)"
+            exit DecToVLQ
+         end if
+         if theString>268435455 then
+            answer "This function is not accurate with whole numbers over 268435455!"&cr\
+            & "268435455 is the maximum allowed value for 28bit (7bits per byte) MIDI delta-time VLQ"
+         end if
+         put "Original Whole Number="& theString & cr & \
+               "Original Whole Number in Hex="& baseConvert(theString,10,16) & cr & \ --- LC's built in baseConvert function
+               "Variable Length Quantity in Hex=" & wholeNumToVLQ(theString) into fld "Output"
+      else
+         answer "Only Whole Decimal Numbers Are Allowed!"
+      end if
+   end if
+end DecToVLQ
+
+function wholeNumToVLQ theWholeNum
+   -- baseConvert(number,originalBase,destinationBase) -- there is also bitwise operations in LC but I took the long road
+   if theWholeNum < 127 then -- if it fits into a single 7bit byte value and theres no need to process it
+      put baseConvert(theWholeNum,10,16) into VQLinHex
+      if the number of chars in VQLinHex=1 then put "0" before VQLinHex
+      return VQLinHex
+      exit wholeNumToVLQ
+   end if
+   put baseConvert(theWholeNum,10,2) into theBits
+   put number of chars in theBits into x
+   put 0 into bitCounter
+   put empty into the7bitBytes
+   repeat
+      if char x of theBits is not empty then
+         put char x theBits before the7bitBytes
+         delete char x of theBits
+         if theBits is empty then exit repeat
+         put number of chars in theBits into x
+         add 1 to bitCounter
+         if bitCounter=7 then
+            put "," before the7bitBytes
+            put 0 into bitCounter
+            next repeat
+         end if
+      else
+         exit repeat
+      end if
+   end repeat
+   get the number of chars in item 1 of the7bitBytes
+   if it<7 then
+      put 7 - it into x
+      repeat x
+         put "0" before item 1 of the7bitBytes
+      end repeat
+   end if
+   put the number of items in the7bitBytes into y
+   repeat with x = 1 to y
+      if x is not y then
+         put "1" before item x of the7bitBytes
+      else
+         put "0" before item x of the7bitBytes
+      end if
+      put baseConvert(item x of the7bitBytes,2,16) into item x of the7bitBytes
+      if the number of chars in item x of the7bitBytes<2 then put "0" before item x of the7bitBytes
+      put item x of the7bitBytes after VQLinHex
+   end repeat
+   return VQLinHex
+end wholeNumToVLQ
+
+function isWholeNumString theString
+   put the number of chars in theString into y
+   repeat with x = 1 to y
+      if char x of theString is not in "0123456789" then
+         return false
+         exit isWholeNumString
+      end if
+   end repeat
+   return true
+end isWholeNumString

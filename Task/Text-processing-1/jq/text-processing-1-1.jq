@@ -1,0 +1,1 @@
+foreach STREAM as $row ( INITIAL; EXPRESSION; VALUE ).

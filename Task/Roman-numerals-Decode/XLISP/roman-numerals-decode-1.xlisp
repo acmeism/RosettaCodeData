@@ -1,0 +1,10 @@
+(defun decode (r)
+    (define roman '((#\m 1000) (#\d 500) (#\c 100) (#\l 50) (#\x 10) (#\v 5) (#\i 1)))
+    (defun to-arabic (rn rs a)
+        (cond
+            ((null rn) a)
+            ((eqv? (car rn) (caar rs)) (to-arabic (cdr rn) roman (if (and (not (eqv? (car rn) (cadr rn))) (< (cadar rs) (to-arabic (cdr rn) roman 0)))
+                (- a (cadar rs))
+                (+ a (cadar rs)) ) ) )
+            (t (to-arabic rn (cdr rs) a)) ) )
+    (to-arabic (string->list r) roman 0) )

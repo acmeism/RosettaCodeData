@@ -1,0 +1,3 @@
+gui {
+    Goodbye, World!
+}

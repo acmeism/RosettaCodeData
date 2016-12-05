@@ -1,0 +1,48 @@
+constant nBuckets = 20
+sequence buckets = tagset(nBuckets)     -- {1,2,3,..,20}
+constant bucket_cs = init_cs()          -- critical section
+atom equals = 0, rands = 0              -- operation counts
+integer terminate = 0                   -- control flag
+
+procedure mythreads(integer eq)
+-- if eq then equalise else randomise
+integer b1,b2,amt
+    while not terminate do
+        b1 = rand(nBuckets)
+        b2 = rand(nBuckets)
+        if b1!=b2 then                  -- (test not actually needed)
+            enter_cs(bucket_cs)
+            if eq then
+                amt = floor((buckets[b1]-buckets[b2])/2)
+                equals += 1
+            else
+                amt = rand(buckets[b1]+1)-1
+                rands += 1
+            end if
+            buckets[b1] -= amt
+            buckets[b2] += amt
+            leave_cs(bucket_cs)
+        end if
+    end while
+    exit_thread(0)
+end procedure
+
+procedure display()
+    enter_cs(bucket_cs)
+    ?{sum(buckets),equals,rands,buckets}
+    leave_cs(bucket_cs)
+end procedure
+
+display()
+
+constant threads = {create_thread(routine_id("mythreads"),{1}), -- equalise
+                    create_thread(routine_id("mythreads"),{0})} -- randomise
+
+constant ESC = #1B
+while not find(get_key(),{ESC,'q','Q'}) do
+    sleep(1)
+    display()
+end while
+terminate = 1
+wait_thread(threads)
+delete_cs(bucket_cs)

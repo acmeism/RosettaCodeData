@@ -1,0 +1,177 @@
+-- Note this uses simple/strict left association, so for example:
+--  1+2*1*8 is ((1+2)*1)*8 not 1+((2*1)*8) [or 1+(2*(1*8))], and
+--  7-(2*2)*8 is (7-(2*2))*8 not 7-((2*2)*8)
+--  Does not allow unary minus on the first digit.
+-- Uses solve24() from the next task, when it can.
+--  (you may want to comment out the last 2 lines/uncomment the if 0, in that file)
+--
+--include 24_game_solve.exw
+
+--with trace
+forward function eval(string equation, sequence unused, integer idx=1)
+-- (the above definition is entirely optional, but good coding style)
+
+constant errorcodes = {"digit expected",                    -- 1
+                       "')' expected",                      -- 2
+                       "digit already used",                -- 3
+                       "digit not offered",                 -- 4
+                       "operand expected"}                  -- 5
+
+function card(integer idx)  -- (for error handling)
+    if idx=1 then return "1st" end if
+    if idx=2 then return "2nd" end if
+    -- (assumes expression is less than 21 characters)
+    return sprintf("%dth",idx)
+end function
+
+function errorchar(sequence equation, integer idx)
+    if idx>length(equation) then return "" end if
+    return sprintf("(%s)",equation[idx])
+end function
+
+sequence rset = repeat(0,4)
+
+procedure new_rset()
+    for i=1 to length(rset) do
+        rset[i] = rand(9)
+    end for
+end procedure
+
+function get_operand(string equation, integer idx, sequence unused)
+integer ch, k,
+        error = 1 -- "digit expected"
+atom res
+
+    if idx<=length(equation) then
+        ch = equation[idx]
+        if ch='(' then
+            {error,res,unused,idx} = eval(equation,unused,idx+1)
+            if error=0
+            and idx<=length(equation) then
+                ch = equation[idx]
+                if ch=')' then
+                    return {0,res,unused,idx+1}
+                end if
+            end if
+            if error=0 then
+                error = 2   -- "')' expected"
+            end if
+        elsif ch>='0' and ch<='9' then
+            res = ch-'0'
+            k = find(res,unused)
+            if k!=0 then
+                unused[k..k] = {}
+                return {0,res,unused,idx+1}
+            end if
+            if find(res,rset) then
+                error = 3  -- "digit already used"
+            else
+                error = 4  -- "digit not offered"
+            end if
+        end if
+    end if
+    return {error,0,unused,idx}
+end function
+
+function get_operator(string equation, integer idx)
+integer ch, error = 5 -- "operand expected"
+    if idx<=length(equation) then
+        ch = equation[idx]
+        if find(ch,"+-/*") then
+            return {0,ch,idx+1}
+        end if
+    end if
+    return {error,0,idx}
+end function
+
+function eval(string equation, sequence unused, integer idx=1)
+atom lhs, rhs
+integer ch, error
+    {error,lhs,unused,idx} = get_operand(equation,idx,unused)
+    if error=0 then
+        while 1 do
+            {error,ch,idx} = get_operator(equation,idx)
+            if error!=0 then exit end if
+            {error,rhs,unused,idx} = get_operand(equation,idx,unused)
+            if error!=0 then exit end if
+            if    ch='+' then       lhs += rhs
+            elsif ch='-' then       lhs -= rhs
+            elsif ch='/' then       lhs /= rhs
+            elsif ch='*' then       lhs *= rhs
+            else ?9/0 -- (should not happen)
+            end if
+            if idx>length(equation) then
+                return {0,lhs,unused,idx}
+            end if
+            ch = equation[idx]
+            if ch=')' then
+                return {0,lhs,unused,idx}
+            end if
+        end while
+    end if
+    return {error,0,unused,idx}
+end function
+
+function strip(string equation)
+    for i=length(equation) to 1 by -1 do
+        if find(equation[i]," \t\r\n") then
+            equation[i..i] = ""
+        end if
+    end for
+    return equation
+end function
+
+function strip0(atom a) -- (for error handling)
+string res = sprintf("%f",a)
+integer ch
+    for i=length(res) to 2 by -1 do
+        ch = res[i]
+        if ch='.' then return res[1..i-1] end if
+        if ch!='0' then return res[1..i] end if
+    end for
+    return res
+end function
+
+procedure play()
+sequence unused
+string equation
+integer error,idx
+atom res
+
+    new_rset()
+    printf(1,"Enter an expression which evaluates to exactly 24\n"&
+           "Use all of, and only, the digits %d, %d, %d, and %d\n"&
+           "You may only use the operators + - * /\n"&
+           "Parentheses and spaces are allowed\n",rset)
+    while 1 do
+        equation = strip(gets(0))
+        if upper(equation)="Q" then exit end if
+        if equation="?" then
+            puts(1,"\n")
+            integer r_solve24 = routine_id("solve24") -- see below
+            if r_solve24=-1 then -- (someone copied just this code out?)
+                puts(1,"no solve24 routine\n")
+            else
+                call_proc(r_solve24,{rset})
+            end if
+        else
+            {error,res,unused,idx} = eval(equation, rset)
+            if error!=0 then
+                printf(1,"  %s on the %s character%s\n",{errorcodes[error],card(idx),errorchar(equation,idx)})
+            elsif idx<=length(equation) then
+                printf(1,"\neval() returned only having processed %d of %d characters\n",{idx,length(equation)})
+            elsif length(unused) then
+                printf(1," not all the digits were used\n",error)
+            elsif res!=24 then
+                printf(1,"\nresult is %s, not 24\n",{strip0(res)})
+            else
+                puts(1," correct!  Press any key to quit\n")
+                if getc(0) then end if
+                exit
+            end if
+        end if
+        puts(1,"enter Q to give up and quit\n")
+    end while
+end procedure
+
+    play()

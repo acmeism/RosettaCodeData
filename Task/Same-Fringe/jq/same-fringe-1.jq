@@ -1,0 +1,1 @@
+(t|flatten) == (s|flatten)

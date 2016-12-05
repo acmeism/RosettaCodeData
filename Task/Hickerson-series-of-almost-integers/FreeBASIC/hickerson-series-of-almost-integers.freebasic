@@ -1,0 +1,86 @@
+' version 08-10-2016
+' compile with: fbc -s gui
+
+#Include Once "gmp.bi"
+
+#Macro init_float_size (big_float ,size)
+  Dim As Mpf_ptr big_float = Allocate( Len( __mpf_struct))
+  Mpf_init2( big_float,size)
+#EndMacro
+
+#Macro mpf_remove(big_float)
+  Mpf_clear(big_float)
+  DeAllocate (big_float)
+#EndMacro
+
+Screen 20
+
+init_float_size(tmp,1024)
+init_float_size(ln2,1024)
+init_float_size(pow_ln2,2048)
+init_float_size(answer,2048)
+
+Dim As UInteger n, num
+Dim As String st
+Dim As ZString Ptr text
+text = Allocate (1500) ' size 1500 char.
+
+' need to calculate ln(2)
+
+'     x    1     1         1           1
+' ln --- = - + ------ + ------ ... + ------
+'    x-1   x    2x^2     3x^3         nx^n
+
+Mpf_set_ui(answer, 1)
+Mpf_div_ui(answer, answer, 2)   ' answer = 1/2
+
+For n = 2 To 1024
+  Mpf_set_ui(tmp, 2)            ' tmp = x = 2
+  Mpf_pow_ui(tmp, tmp, n)       ' tmp = x ^ n
+  Mpf_mul_ui(tmp, tmp, n)       ' tmp = n * (x ^ n)
+  Mpf_ui_div(tmp, 1, tmp)       ' tmp = 1 / (n * (x ^ n))
+  Mpf_add(answer, answer, tmp)  ' answer += tmp
+Next
+
+/'  remove this line if you want to print ln(2)
+Gmp_sprintf(text,!"ln(2) =\t %2.100Ff ", answer)
+Print *text
+Print
+'/
+
+Mpf_set_ui(tmp, 1)
+Mpf_set(ln2, answer )
+Mpf_set(pow_ln2, ln2)
+
+Print
+For n = 1 To 40
+  Mpf_mul_ui(tmp, tmp, n)                           ' n!
+  Mpf_mul(pow_ln2, pow_ln2, ln2)                    ' ln(2)^(n+1)
+  Mpf_div_ui(answer, tmp , 2)                       ' / 2
+  Mpf_div(answer, answer, pow_ln2)                  ' / ln(2)^(n+1)
+  Gmp_sprintf(text,!"h(%i) =\t %65.5Ff ",n, answer)
+  st = *text
+  num = st[InStr(st,".")]  ' get the first character after the "."
+  If num = Asc("0") Or num = Asc("9") Then
+    Color 10
+    Print st;" is a almost integer"
+    Color 15
+  Else
+    Color 12
+    Print st;" not close enough"
+    Color 15
+  End If
+Next
+
+mpf_remove(answer)  'cleanup
+mpf_remove(pow_ln2)
+mpf_remove(ln2)
+mpf_remove(tmp)
+DeAllocate (text)
+
+
+' empty keyboard buffer
+While Inkey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

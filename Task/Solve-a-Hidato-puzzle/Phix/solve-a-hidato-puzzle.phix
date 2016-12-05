@@ -1,0 +1,174 @@
+sequence board, warnsdorffs, knownx, knowny
+
+integer width, height, limit, nchars, tries
+string fmt, blank
+
+constant ROW = 1, COL = 2
+constant moves = {{-1,-1},{-1,0},{-1,1},{0,-1},{0,1},{1,-1},{1,0},{1,1}}
+
+function onboard(integer row, integer col)
+    return row>=1 and row<=height and col>=nchars and col<=nchars*width
+end function
+
+procedure init_warnsdorffs()
+integer nrow,ncol
+    for row=1 to height do
+        for col=nchars to nchars*width by nchars do
+            for move=1 to length(moves) do
+                nrow = row+moves[move][ROW]
+                ncol = col+moves[move][COL]*nchars
+                if onboard(nrow,ncol)
+                and board[nrow][ncol]='_' then
+                    warnsdorffs[nrow][ncol] += 1
+                end if
+            end for
+        end for
+    end for
+end procedure
+
+function solve(integer row, integer col, integer n)
+integer nrow, ncol
+    tries+= 1
+    if n>limit then return 1 end if
+    if knownx[n] then
+        for move=1 to length(moves) do
+            nrow = row+moves[move][ROW]
+            ncol = col+moves[move][COL]*nchars
+            if nrow = knownx[n]
+            and ncol = knowny[n] then
+                if solve(nrow,ncol,n+1) then return 1 end if
+                exit
+            end if
+        end for
+        return 0
+    end if
+    sequence wmoves = {}
+    for move=1 to length(moves) do
+        nrow = row+moves[move][ROW]
+        ncol = col+moves[move][COL]*nchars
+        if onboard(nrow,ncol)
+        and board[nrow][ncol]='_' then
+            wmoves = append(wmoves,{warnsdorffs[nrow][ncol],nrow,ncol})
+        end if
+    end for
+    wmoves = sort(wmoves)
+    -- avoid creating orphans
+    if length(wmoves)<2 or wmoves[2][1]>1 then
+        for m=1 to length(wmoves) do
+            {?,nrow,ncol} = wmoves[m]
+            warnsdorffs[nrow][ncol] -= 1
+        end for
+        for m=1 to length(wmoves) do
+            {?,nrow,ncol} = wmoves[m]
+            board[nrow][ncol-nchars+1..ncol] = sprintf(fmt,n)
+            if solve(nrow,ncol,n+1) then return 1 end if
+            board[nrow][ncol-nchars+1..ncol] = blank
+        end for
+        for m=1 to length(wmoves) do
+            {?,nrow,ncol} = wmoves[m]
+            warnsdorffs[nrow][ncol] += 1
+        end for
+    end if
+    return 0
+end function
+
+procedure Hidato(sequence s, integer w, integer h, integer lim)
+integer y, ch, ch2, k
+atom t0 = time()
+    s = split(s,'\n')
+    width = w
+    height = h
+    nchars = length(sprintf(" %d",lim))
+    fmt = sprintf(" %%%dd",nchars-1)
+    blank = repeat('_',nchars)
+    board = repeat(repeat(' ',width*nchars),height)
+    knownx = repeat(0,lim)
+    knowny = repeat(0,lim)
+    limit = 0
+    for x=1 to height do
+        for y=nchars to width*nchars by nchars do
+            if y>length(s[x]) then
+                ch = '.'
+            else
+                ch = s[x][y]
+            end if
+            if ch='_' then
+                limit += 1
+            elsif ch!='.' then
+                k = ch-'0'
+                ch2 = s[x][y-1]
+                if ch2!=' ' then
+                    k += (ch2-'0')*10
+                    board[x][y-1] = ch2
+                end if
+                knownx[k] = x
+                knowny[k] = y
+                limit += 1
+            end if
+            board[x][y] = ch
+        end for
+    end for
+    warnsdorffs = repeat(repeat(0,width*nchars),height)
+    init_warnsdorffs()
+    tries = 0
+    if solve(knownx[1],knowny[1],2) then
+        puts(1,join(board,"\n"))
+        printf(1,"\nsolution found in %d tries (%3.2fs)\n",{tries,time()-t0})
+    else
+        puts(1,"no solutions found\n")
+    end if
+end procedure
+
+constant board1 = """
+ __ 33 35 __ __ .. .. ..
+ __ __ 24 22 __ .. .. ..
+ __ __ __ 21 __ __ .. ..
+ __ 26 __ 13 40 11 .. ..
+ 27 __ __ __  9 __  1 ..
+ .. .. __ __ 18 __ __ ..
+ .. .. .. .. __  7 __ __
+ .. .. .. .. .. ..  5 __"""
+Hidato(board1,8,8,40)
+
+constant board2 = """
+ . 4 .
+ _ 7 _
+ 1 _ _"""
+Hidato(board2,3,3,7)
+
+constant board3 = """
+  1  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  . 74
+  .  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .  _  .
+  .  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  .  .  _  _  ."""
+Hidato(board3,50,3,74)
+
+constant board4 = """
+ 54 __ 60 59 __ 67 __ 69 __
+ __ 55 __ __ 63 65 __ 72 71
+ 51 50 56 62 __ .. .. .. ..
+ __ __ __ 14 .. .. 17 __ ..
+ 48 10 11 .. 15 __ 18 __ 22
+ __ 46 __ ..  3 __ 19 23 __
+ __ 44 __  5 __  1 33 32 __
+ __ 43  7 __ 36 __ 27 __ 31
+ 42 __ __ 38 __ 35 28 __ 30"""
+Hidato(board4,9,9,72)
+
+constant board5 = """
+ __ 58 __ 60 __ __ 63 66 __
+ 57 55 59 53 49 __ 65 __ 68
+ __  8 __ __ 50 __ 46 45 __
+ 10  6 __ .. .. .. __ 43 70
+ __ 11 12 .. .. .. 72 71 __
+ __ 14 __ .. .. .. 30 39 __
+ 15  3 17 __ 28 29 __ __ 40
+ __ __ 19 22 __ __ 37 36 __
+  1 20 __ 24 __ 26 __ 34 33"""
+Hidato(board5,9,9,72)
+
+constant board6 = """
+  1 __ .. .. .. __ __ .. .. .. __ __ .. .. .. __ __ .. .. .. __ __ .. .. .. __ __ .. .. .. __ __ .. .. .. __ __ .. .. .. __ __ .. .. .. 82
+ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ ..
+ .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. .. __ .. __ .. ..
+ __ __ __ .. .. __ __ __ .. .. __ __ __ .. .. __ __ __ .. .. __ __ __ .. .. __ __ __ .. .. __ __ __ .. .. __ __ __ .. .. __ __ __ .. .. .."""
+Hidato(board6,46,4,82)

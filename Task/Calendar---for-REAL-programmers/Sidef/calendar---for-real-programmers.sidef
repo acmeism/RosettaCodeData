@@ -1,0 +1,59 @@
+-> DT { ('DATE'.("\LWC") + 'TIME'.("\LWC")).("\LREQUIRE") }
+
+-> MONTHS_PER_COL { 6 }
+-> WEEK_DAY_NAMES { <MO TU WE TH FR SA SU> }
+-> MONTH_NAMES    { <JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC> }
+
+-> FMT_MONTH (YEAR, MONTH, STR="", WEEK_DAY=0) {
+    STR  = "%11\LS\E%9\LS\E\12".("\LSPRINTF")(MONTH_NAMES()[MONTH-1],'')
+    STR += (WEEK_DAY_NAMES().("\LJOIN")(' ') + "\12")
+
+    -> DATE { DT().("\LNEW")("\LYEAR" => YEAR, "\LMONTH" => MONTH) }
+
+    WEEK_DAY = DATE().("\LDAY_OF_WEEK")
+    STR += (["  "] * WEEK_DAY-1 -> ("\LJOIN")(" "))
+
+    -> LAST_DAY {
+        DT().("\LLAST_DAY_OF_MONTH")(
+            "\LYEAR" => YEAR, "\LMONTH" => MONTH
+        ).("\LDAY")
+    }
+
+    (DATE().("\LDAY") .. LAST_DAY()).("\LEACH")({ |DAY|
+        (WEEK_DAY ~~ (2..7)) && (STR += " ")
+
+        (WEEK_DAY == 8) && (
+            STR += "\12"
+            WEEK_DAY = 1
+        )
+        STR += ("%2\LD" % DAY)
+        ++WEEK_DAY
+    })
+    (WEEK_DAY < 8) && (STR += " ")
+    STR += (["  "] * 8-WEEK_DAY -> ("\LJOIN")(" "))
+    STR += "\12"
+}
+
+-> FMT_YEAR (YEAR, STR="", MONTH_STRS=[]) {
+    MONTH_STRS = 12.("\LOF")({|I| FMT_MONTH(YEAR, I).("\LLINES") })
+
+    STR += (' '*(MONTHS_PER_COL()*10 + 2) + YEAR + "\12")
+    (0..11 -> ("\LBY")(MONTHS_PER_COL())).("\LEACH")({ |MONTH|
+        MONTH_STRS[MONTH] && ->() {
+            { |I|
+                MONTH_STRS[MONTH + I - 1] && (
+                    STR += MONTH_STRS[MONTH + I - 1].("\LSHIFT")
+                    STR += ' '*2
+                )
+            } * MONTHS_PER_COL()
+
+            STR += "\12"
+            MONTH_STRS[MONTH] && __FUNC__()
+        }()
+        STR += "\12"
+    })
+
+    STR
+}
+
+FMT_YEAR(ARGV ? ARGV[0].("\LTO_I") : 1969).("\LPRINT")

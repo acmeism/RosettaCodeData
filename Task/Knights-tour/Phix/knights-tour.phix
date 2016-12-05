@@ -1,0 +1,86 @@
+constant size = 8
+constant nchars = length(sprintf(" %d",size*size))
+constant fmt = sprintf(" %%%dd",nchars-1)
+constant blank = repeat(' ',nchars)
+
+-- to simplify output, each square is nchars
+sequence board = repeat(repeat(' ',size*nchars),size)
+-- keep current counts, immediately backtrack if any hit 0
+-- (in line with the above, we only use every nth entry)
+sequence warnsdorffs = repeat(repeat(0,size*nchars),size)
+
+constant ROW = 1, COL = 2
+constant moves = {{-1,-2},{-2,-1},{-2,1},{-1,2},{1,2},{2,1},{2,-1},{1,-2}}
+
+function onboard(integer row, integer col)
+    return row>=1 and row<=size and col>=nchars and col<=nchars*size
+end function
+
+procedure init_warnsdorffs()
+integer nrow,ncol
+    for row=1 to size do
+        for col=nchars to nchars*size by nchars do
+            for move=1 to length(moves) do
+                nrow = row+moves[move][ROW]
+                ncol = col+moves[move][COL]*nchars
+                if onboard(nrow,ncol) then
+                    warnsdorffs[row][col] += 1
+                end if
+            end for
+        end for
+    end for
+end procedure
+
+atom t0 = time()
+integer tries = 0
+atom t1 = time()+1
+function solve(integer row, integer col, integer n)
+integer nrow, ncol
+if time()>t1 then
+    ?{row,floor(col/nchars),n,tries}
+    puts(1,join(board,"\n"))
+    t1 = time()+1
+--  if wait_key()='!' then ?9/0 end if
+end if
+    tries+= 1
+    if n>size*size then return 1 end if
+    sequence wmoves = {}
+    for move=1 to length(moves) do
+        nrow = row+moves[move][ROW]
+        ncol = col+moves[move][COL]*nchars
+        if onboard(nrow,ncol)
+        and board[nrow][ncol]=' ' then
+            wmoves = append(wmoves,{warnsdorffs[nrow][ncol],nrow,ncol})
+        end if
+    end for
+    wmoves = sort(wmoves)
+    -- avoid creating orphans
+    if length(wmoves)<2 or wmoves[2][1]>1 then
+        for m=1 to length(wmoves) do
+            {?,nrow,ncol} = wmoves[m]
+            warnsdorffs[nrow][ncol] -= 1
+        end for
+        for m=1 to length(wmoves) do
+            {?,nrow,ncol} = wmoves[m]
+            board[nrow][ncol-nchars+1..ncol] = sprintf(fmt,n)
+            if solve(nrow,ncol,n+1) then return 1 end if
+            board[nrow][ncol-nchars+1..ncol] = blank
+        end for
+        for m=1 to length(wmoves) do
+            {?,nrow,ncol} = wmoves[m]
+            warnsdorffs[nrow][ncol] += 1
+        end for
+    end if
+    return 0
+end function
+
+init_warnsdorffs()
+board[1][nchars] = '1'
+if solve(1,nchars,2) then
+    puts(1,join(board,"\n"))
+    printf(1,"\nsolution found in %d tries (%3.2fs)\n",{tries,time()-t0})
+else
+    puts(1,"no solutions found\n")
+end if
+
+{} = wait_key()

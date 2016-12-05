@@ -1,0 +1,6 @@
+(defun ascii-lower ()
+    (defun add-chars (x y s)
+        (if (<= x y)
+            (add-chars (+ x 1) y (string-append s (string (integer->char x))))
+            s))
+    (add-chars 97 122 ""))

@@ -1,0 +1,1 @@
+OUTPUT('Hello world!');

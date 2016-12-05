@@ -1,0 +1,88 @@
+import <Utilities/Complex.sl>;
+import <Utilities/Sequence.sl>;
+import <Utilities/Math.sl>;
+
+COLOR_STRUCT ::= (R: int(0), G: int(0), B: int(0));
+rgb(r(0), g(0), b(0)) := (R: r, G: g, B: b);
+
+RESULT_STRUCT ::= (FinalValue: Complex(0), Iterations: int(0));
+makeResult(val(0), iters(0)) := (FinalValue: val, Iterations: iters);
+
+zSquaredOperation(startingNum(0), currentNum(0)) :=
+    complexAdd(startingNum, complexMultiply(currentNum, currentNum));
+
+zSquared(minX(0), maxX(0), resolutionX(0), minY(0), maxY(0), resolutionY(0), maxMagnitude(0), maxIters(0))[Y,X] :=
+    let
+        stepX := (maxX - minX) / resolutionX;
+        stepY := (maxY - minY) / resolutionY;
+
+        currentX := X * stepX + minX;
+        currentY := Y * stepY + minY;
+
+    in
+        operateUntil(zSquaredOperation, makeComplex(currentX, currentY), makeComplex(currentX, currentY), maxMagnitude, 0, maxIters)
+    foreach Y within 0 ... (resolutionY - 1),
+            X within 0 ... (resolutionX - 1);
+
+operateUntil(operation(0), startingNum(0), currentNum(0), maxMagnitude(0), currentIters(0), maxIters(0)) :=
+    let
+        operated := operation(startingNum, currentNum);
+    in
+        makeResult(currentNum, maxIters) when currentIters >= maxIters
+    else
+        makeResult(currentNum, currentIters) when complexMagnitude(currentNum) >= maxMagnitude
+    else
+        operateUntil(operation, startingNum, operated, maxMagnitude, currentIters + 1, maxIters);
+
+//region Smooth Coloring
+
+COLOR_COUNT := size(colorSelections);
+
+colorRange := range(0, 255, 1);
+
+colors :=
+    let
+        first[i] := rgb(0, 0, i) foreach i within colorRange;
+        second[i] := rgb(i, i, 255) foreach i within colorRange;
+        third[i] := rgb(255, 255, i) foreach i within reverse(colorRange);
+        fourth[i] := rgb(255, i, 0) foreach i within reverse(colorRange);
+        fifth[i] := rgb(i, 0, 0) foreach i within reverse(colorRange);
+
+        red[i] :=   rgb(i, 0, 0) foreach i within colorRange;
+        redR[i] :=  rgb(i, 0, 0) foreach i within reverse(colorRange);
+        green[i] := rgb(0, i, 0) foreach i within colorRange;
+        greenR[i] :=rgb(0, i, 0) foreach i within reverse(colorRange);
+        blue[i] :=  rgb(0, 0, i) foreach i within colorRange;
+        blueR[i] := rgb(0, 0, i) foreach i within reverse(colorRange);
+
+    in
+        //red ++ redR ++ green ++ greenR ++ blue ++ blueR;
+        first ++ second ++ third ++ fourth ++ fifth;
+        //first ++ fourth;
+
+colorSelections := range(1, size(colors), 30);
+
+getSmoothColorings(zSquaredResult(2), maxIters(0))[Y,X] :=
+    let
+        current := zSquaredResult[Y,X];
+
+        zn := complexMagnitude(current.FinalValue);
+        nu := ln(ln(zn) / ln(2)) / ln(2);
+
+        result := abs(current.Iterations + 1 - nu);
+
+        index := floor(result);
+        rem := result - index;
+
+        color1 := colorSelections[(index mod COLOR_COUNT) + 1];
+        color2 := colorSelections[((index + 1) mod COLOR_COUNT) + 1];
+    in
+        rgb(0, 0, 0) when current.Iterations = maxIters
+    else
+        colors[color1] when color2 < color1
+    else
+        colors[floor(linearInterpolate(color1, color2, rem))];
+
+linearInterpolate(v0(0), v1(0), t(0)) := (1 - t) * v0 + t * v1;
+
+//endregion

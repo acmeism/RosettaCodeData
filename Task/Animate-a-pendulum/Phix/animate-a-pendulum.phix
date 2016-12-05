@@ -1,0 +1,68 @@
+include ..\arwen\arwen.ew
+include ..\arwen\axtra.ew
+
+constant main = create(Window, "Animated Pendulum", 0, 0, 20, 20, 625, 690, 0),
+         mainDC = getPrivateDC(main),
+         backDC = c_func(xCreateCompatibleDC, {NULL}),  -- the background
+         viewDC = c_func(xCreateCompatibleDC, {NULL}),  -- with animation
+         grey = #909090
+
+constant MainTimer = createTimer()
+
+integer dw = 0, dh = 0      -- client area width and height
+atom bmBack, bmView
+integer bmX = 0, bmY = 0    -- actual size of the bitmaps
+
+constant dt = 1E-3
+constant g = 50
+
+integer sX = 0, sY = 0      -- suspension point of pendulum
+integer len
+atom alpha = PI/2,
+     omega = 0,
+     epsilon
+
+function mainHandler(integer id, integer msg, atom wParam, object lParam)
+integer eX, eY              -- moving end of pendulum
+    if msg=WM_SIZE then
+        {{},{},dw,dh} = getClientRect(main)
+        if dw>bmX or dh>bmY then
+            -- we need bigger bitmaps
+            bmBack = c_func(xCreateCompatibleBitmap, {mainDC, dw, dh})
+            {} = deleteObject(selectObject(backDC,bmBack))
+            -- clear the background
+            setPenColor(grey)
+            drawRectangleh(backDC, True, 0, 0, dw, dh)
+            bmView = c_func(xCreateCompatibleBitmap, {mainDC, dw, dh})
+            {} = deleteObject(selectObject(viewDC,bmView))
+            {bmX,bmY} = {dw,dh}
+        end if
+        -- new suspension point and length
+        sX = floor(dw/2)
+        sY = floor(dh/8)
+        len = sX-20
+    elsif msg=WM_PAINT then
+        -- start with a fresh copy of the background
+        void = c_func(xBitBlt,{viewDC,0,0,dw,dh,backDC,0,0,SRCCOPY})
+        eX = floor(len*sin(alpha)+sX)
+        eY = floor(len*cos(alpha)+sY)
+        drawLinesh(viewDC,{Red,{sX,sY,eX,eY},Yellow})
+        drawEllipseh(viewDC,eX-5,eY-5,eX+5,eY+5)
+        void = c_func(xBitBlt,{mainDC,0,0,dw,dh,viewDC,0,0,SRCCOPY})
+    elsif msg=WM_TIMER then
+        epsilon = -len*sin(alpha)*g
+        omega += dt*epsilon
+        alpha += dt*omega
+        repaintWindow(main)
+    elsif msg=WM_SHOWWINDOW then
+        startTimer(MainTimer,main,33)
+    elsif msg=WM_CHAR
+      and wParam=VK_ESCAPE then
+        closeWindow(main)
+        if id or object(lParam) then end if -- suppress warnings
+    end if
+    return 0
+end function
+setHandler({main},routine_id("mainHandler"))
+
+WinMain(main, SW_NORMAL)

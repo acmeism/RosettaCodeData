@@ -1,57 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
-#define NUM_MONTHS 12
-
-void LastSundays(int year)
+int main(int argc, char *argv[])
 {
-    time_t t;
-    struct tm* datetime;
+        int days[] = {31,29,31,30,31,30,31,31,30,31,30,31};
+        int m, y, w;
 
-    int sunday=0;
-    int dayOfWeek=0;
-    int month=0;
-    int monthDay=0;
-    int isLeapYear=0;
-    int daysInMonth[NUM_MONTHS]={
-        31,28,31,30,31,30,31,31,30,31,30,31
-    };
+        if (argc < 2 || (y = atoi(argv[1])) <= 1752) return 1;
+        days[1] -= (y % 4) || (!(y % 100) && (y % 400));
+        w = y * 365 + 97 * (y - 1) / 400 + 4;
 
-    isLeapYear=(year%4==0 || ((year%100==0) && (year%400==0)));
-
-    if(isLeapYear)
-    {
-        daysInMonth[1]=29;
-    }
-
-    time(&t);
-    datetime = localtime(&t);
-    datetime->tm_year=year-1900;
-    for(month=0; month<12;month++)
-    {
-        datetime->tm_mon=month;
-        monthDay=daysInMonth[month];
-        datetime->tm_mday=monthDay;
-
-        t = mktime(datetime);
-        dayOfWeek=datetime->tm_wday;
-
-        while(dayOfWeek!=sunday)
-        {
-            monthDay--;
-            datetime->tm_mday=monthDay;
-            t = mktime(datetime);
-            dayOfWeek=datetime->tm_wday;
-
+        for(m = 0; m < 12; m++) {
+                w = (w + days[m]) % 7;
+                printf("%d-%02d-%d\n", y, m + 1,
+                        days[m] + (w < 5 ? -2 : 5) - w);
         }
-        printf("%d-%02d-%02d\n",year,month+1,monthDay);
-    }
 
-}
-
-int main()
-{
-    LastSundays(2013);
-    return 0;
+        return 0;
 }

@@ -15,7 +15,7 @@ $PPM.print: qq:to/EOH/;
 my $vzones = $VERT div 4;
 for 1..4 -> $w {
     my $hzones = ceiling $HOR / $w / +@colors;
-    my $line = Buf.new: ((@colors Xxx $w) xx $hzones).splice(0,$HOR);
+    my $line = Buf.new: (flat((@colors Xxx $w) xx $hzones).Array).splice(0,$HOR);
     $PPM.write: $line for ^$vzones;
 }
 

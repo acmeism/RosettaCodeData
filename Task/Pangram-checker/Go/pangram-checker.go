@@ -17,27 +17,21 @@ func main() {
 }
 
 func pangram(s string) bool {
-    var rep [26]bool
-    var count int
-    for _, c := range s {
-        if c >= 'a' {
-            if c > 'z' {
-                continue
-            }
-            c -= 'a'
-        } else {
-            if c < 'A' || c > 'Z' {
-                continue
-            }
-            c -= 'A'
-        }
-        if !rep[c] {
-            if count == 25 {
-                return true
-            }
-            rep[c] = true
-            count++
-        }
-    }
-    return false
+	var missing uint32 = (1 << 26) - 1
+	for _, c := range s {
+		var index uint32
+		if 'a' <= c && c <= 'z' {
+			index = uint32(c - 'a')
+		} else if 'A' <= c && c <= 'Z' {
+			index = uint32(c - 'A')
+		} else {
+			continue
+		}
+
+		missing &^= 1 << index
+		if missing == 0 {
+			return true
+		}
+	}
+	return false
 }

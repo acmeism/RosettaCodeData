@@ -8,7 +8,7 @@ def sudokus = [
   //Used in Fortran solution:                           ~ 0.1 seconds
     '..3.2.6..9..3.5..1..18.64....81.29..7.......8..67.82....26.95..8..2.3..9..5.1.3..',
 
-  //Used in many other solutions, notably Ada:          ~ 0.1 seconds
+  //Used in many other solutions, notably Algol 68:     ~ 0.1 seconds
     '394..267....3..4..5..69..2..45...9..6.......7..7...58..1..67..8..9..8....264..735',
 
   //Used in C# solution:                                ~ 0.2 seconds

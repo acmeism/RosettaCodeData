@@ -1,6 +1,8 @@
 #lang racket
-(define (guess-number (number (add1 (random 10))))
-  (define guess (read))
-  (if (= guess number)
-      (display "Well guessed!\n")
-      (guess-number number)))
+(define (guess-number)
+  (define number (add1 (random 10)))
+  (let loop ()
+    (define guess (read))
+    (if (equal? guess number)
+        (display "Well guessed!\n")
+        (loop))))

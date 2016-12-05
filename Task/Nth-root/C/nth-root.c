@@ -1,31 +1,34 @@
 #include <stdio.h>
 #include <float.h>
 
-inline double abs_(double x) { return x >= 0 ? x : -x; }
-double pow_(double x, int e)
-{
-	double ret = 1;
-	for (ret = 1; e; x *= x, e >>= 1)
-		if ((e & 1)) ret *= x;
-	return ret;
+double pow_ (double x, int e) {
+    int i;
+    double r = 1;
+    for (i = 0; i < e; i++) {
+        r *= x;
+    }
+    return r;
 }
 
-double root(double a, int n)
-{
-	double d, x = 1;
-	if (!a) return 0;
-	if (n < 1 || (a < 0 && !(n&1))) return 0./0.; /* NaN */
-
-	do {	d = (a / pow_(x, n - 1) - x) / n;
-		x+= d;
-	} while (abs_(d) >= abs_(x) * (DBL_EPSILON * 10));
-
-	return x;
+double root (int n, double x) {
+    double d, r = 1;
+    if (!x) {
+        return 0;
+    }
+    if (n < 1 || (x < 0 && !(n&1))) {
+        return 0.0 / 0.0; /* NaN */
+    }
+    do {
+        d = (x / pow_(r, n - 1) - r) / n;
+        r += d;
+    }
+    while (d >= DBL_EPSILON * 10 || d <= -DBL_EPSILON * 10);
+    return r;
 }
 
-int main()
-{
-	double x = pow_(-3.14159, 15);
-	printf("root(%g, 15) = %g\n", x, root(x, 15));
-	return 0;
+int main () {
+    int n = 15;
+    double x = pow_(-3.14159, 15);
+    printf("root(%d, %g) = %g\n", n, x, root(n, x));
+    return 0;
 }

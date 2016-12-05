@@ -10,7 +10,7 @@ my @victims =
 
 my @history = "I guess she'll die...\n";
 
-for @victims».kv -> $victim, $_ is copy {
+for (flat @victims».kv) -> $victim, $_ is copy {
     say "There was an old lady who swallowed a $victim...";
 
     s/ «S» /she swallowed the $victim/;

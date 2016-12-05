@@ -34,7 +34,12 @@ func ListenAndServe(addr string) error {
 	}
 	log.Println("Listening for connections on", addr)
 	defer ln.Close()
-	s := &Server{stop: make(chan bool)}
+	s := &Server{
+		add:  make(chan *conn),
+		rem:  make(chan string),
+		msg:  make(chan string),
+		stop: make(chan bool),
+	}
 	go s.handleConns()
 	for {
 		// TODO use AcceptTCP() so that we can get a TCPConn on which
@@ -54,10 +59,6 @@ func ListenAndServe(addr string) error {
 // handleConns is run as a go routine to handle adding and removal of
 // chat client connections as well as broadcasting messages to them.
 func (s *Server) handleConns() {
-	s.add = make(chan *conn)
-	s.rem = make(chan string)
-	s.msg = make(chan string)
-
 	// We define the `conns` map here rather than within Server,
 	// and we use local function literals rather than methods to be
 	// extra sure that the only place that touches this map is this
@@ -167,7 +168,7 @@ func (c *conn) welcome() {
 // welcome phase has completed successfully. It reads single lines from
 // the client and passes them to the server for broadcast to all chat
 // clients (including us).
-// Once done, we ask the server to remove our (and close) our connection.
+// Once done, we ask the server to remove (and close) our connection.
 func (c *conn) readloop() {
 	for {
 		msg, err := c.ReadString('\n')

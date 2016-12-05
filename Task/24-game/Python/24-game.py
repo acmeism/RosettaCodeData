@@ -64,4 +64,5 @@ def main():
             if ans == 24:
                 print ("Thats right!")
     print ("Thank you and goodbye")
-main()
+
+if __name__ == '__main__': main()

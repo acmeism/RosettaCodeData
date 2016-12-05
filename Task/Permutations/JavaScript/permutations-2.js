@@ -1,30 +1,12 @@
-(function () {
+function perm(a) {
+    if (a.length < 2) return [a];
+    var c, d, b = [];
+    for (c = 0; c < a.length; c++) {
+        var e = a.splice(c, 1),
+            f = perm(a);
+        for (d = 0; d < f.length; d++) b.push([e].concat(f[d]));
+        a.splice(c, 0, e[0])
+    } return b
+}
 
-  // [a] -> [[a]]
-  function permutations(xs) {
-    return xs.length ? (
-               chain( xs,                            function (x)  {
-        return chain( permutations(deleted(x, xs)),  function (ys) {
-
-        return ( [[x].concat(ys)] );
-
-    })})) : [[]]
-  }
-
-  // monadic bind/chain for lists
-  function chain(xs, f) {
-    return [].concat.apply([], xs.map(f));
-  }
-
-  // drops first instance found
-  function deleted(x, xs) {
-    return xs.length ? (
-      x === xs[0] ? xs.slice(1) : [xs[0]].concat(
-        deleted(x, xs.slice(1))
-      )
-    ) : [];
-  }
-
-  return permutations(['Aardvarks', 'eat', 'ants'])
-
-})();
+console.log(perm(['Aardvarks', 'eat', 'ants']).join("\n"));

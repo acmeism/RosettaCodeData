@@ -19,6 +19,6 @@ my @polys = [ [     1, -12, 0, -42 ], [    1, -3 ] ],
 
 say '<math>\begin{array}{rr}';
 for @polys -> [ @a, @b ] {
-    printf "%s , & %s \\\\\n", poly_long_div( @a, @b ).map: { poly_print($_) };
+    printf Q"%s , & %s \\\\\n", poly_long_div( @a, @b ).map: { poly_print($_) };
 }
 say '\end{array}</math>';

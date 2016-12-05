@@ -1,3 +1,5 @@
+blockList = [ 'BO', 'XK', 'DQ', 'CP', 'NA', 'GT', 'RE', 'TG', 'QD', 'FS', 'JW', 'HU', 'VI', 'AN', 'OB', 'ER', 'FS', 'LY', 'PC', 'ZM' ]
+
 canMakeWord = (word="") ->
     # Create a shallow clone of the master blockList
     blocks = blockList.slice 0
@@ -7,9 +9,10 @@ canMakeWord = (word="") ->
         for block, idx in blocks
             # If letter is in block, blocks.splice will return an array, which will evaluate as true
             return blocks.splice idx, 1 if letter.toUpperCase() in block
-        return false
+        false
     # Return true if there are no falsy values
-    return false not in (checkBlocks letter for letter in word)
+    false not in (checkBlocks letter for letter in word)
 
 # Expect true, true, false, true, false, true, true, true
-console.log (canMakeWord word for word in ["A", "BARK", "BOOK", "TREAT", "COMMON", "squad", "CONFUSE", "STORM"])
+for word in ["A", "BARK", "BOOK", "TREAT", "COMMON", "squad", "CONFUSE", "STORM"]
+    console.log word + " -> " + canMakeWord(word)

@@ -76,8 +76,8 @@ public class Approx {
 
     public static void main(String[] args){
         Approx x1 = new Approx(100, 1.1);
-        Approx x2 = new Approx(50, 1.2);
-        Approx y1 = new Approx(200, 2.2);
+        Approx y1 = new Approx(50, 1.2);
+        Approx x2 = new Approx(200, 2.2);
         Approx y2 = new Approx(100, 2.3);
 
         x1.sub(x2).pow(2).add(y1.sub(y2).pow(2)).pow(0.5);

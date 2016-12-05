@@ -25,28 +25,25 @@ knapsack :-
 	     (   socks, 	4, 	50, 	1),
 	     (   book, 	30, 	10, 	2)],
 
-	% R is the list of the numbers of each items
+	% Takes is the list of the numbers of each items
 	% these numbers are between 0 and the 4th value of the tuples of the items
-	maplist(create_lists,L, R, LW, LV),
-	sum(LW, #=<, 400),
-	sum(LV, #=, VM),
+        maplist(collect, L, Ws, Vs, Takes),
+        scalar_product(Ws, Takes, #=<, 400),
+        scalar_product(Vs, Takes, #=, VM),
 
 	% to have statistics on the resolution of the problem.
-	time(labeling([max(VM)], R)),
-	sum(LW, #=, WM),
+	time(labeling([max(VM), down], Takes)),
+        scalar_product(Ws, Takes, #=, WM),
 
 	%% displayinf of the results.
 	compute_lenword(L, 0, Len),
 	sformat(A1, '~~w~~t~~~w|', [Len]),
 	sformat(A2, '~~t~~w~~~w|', [4]),
 	sformat(A3, '~~t~~w~~~w|', [5]),
-	print_results(A1,A2,A3, L, R, WM, VM).
+	print_results(A1,A2,A3, L, Takes, WM, VM).
 
-
-create_lists((_, W, V, N), C, LW, LV) :-
-	C in 0..N,
-	LW #= C * W,
-	LV #= C * V.
+collect((_, W, V, N), W, V, Take) :-
+	Take in 0..N.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %

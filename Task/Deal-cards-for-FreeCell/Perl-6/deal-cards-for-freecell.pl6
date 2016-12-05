@@ -2,7 +2,7 @@ sub dealgame ($game-number = 1) {
     sub ms-lcg-method($seed = $game-number) { ( 214013 * $seed + 2531011 ) % 2**31 }
 
     # lazy list of the random sequence
-    my @ms-lcg := (&ms-lcg-method ... *).map: * +> 16;
+    my @ms-lcg = |(&ms-lcg-method ... *).map: * +> 16;
 
     constant CardBlock = '🂠'.ord;
     my @deck = gather for flat(1..11,13,14) X+ (48,32...0) -> $off {

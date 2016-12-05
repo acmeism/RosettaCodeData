@@ -1,1 +1,1 @@
-my constant @fib = 0, 1, *+* ... *;
+constant @fib = 0, 1, *+* ... *;

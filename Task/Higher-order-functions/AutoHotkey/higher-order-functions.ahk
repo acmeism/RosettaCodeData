@@ -1,9 +1,15 @@
 f(x) {
-return x
+    return "This " . x
 }
-g(x, y) {
-msgbox %x%
-msgbox %y%
+
+g(x) {
+    return "That " . x
 }
-g(f("RC Function as an Argument AHK implementation"), "Non-function argument")
+
+show(fun) {
+    msgbox % %fun%("works")
+}
+
+show(Func("f")) ; either create a Func object
+show("g")       ; or just name the function
 return

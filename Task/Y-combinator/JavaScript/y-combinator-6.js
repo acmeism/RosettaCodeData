@@ -17,4 +17,4 @@ let
     opentailfact= // Open version of the tail call variant of the factorial function
         fact=>(n,m=1)=>n<2?m:fact(n-1,n*m);
     tailfact= // Tail call version of factorial function
-        Y(parttailfact);
+        Y(opentailfact);

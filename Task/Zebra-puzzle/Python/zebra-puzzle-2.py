@@ -1,89 +1,101 @@
-from itertools import permutations
-import psyco
-psyco.full()
+import psyco; psyco.full()
 
-class Number:elems= "One Two Three Four Five".split()
-class Color: elems= "Red Green Blue White Yellow".split()
-class Drink: elems= "Milk Coffee Water Beer Tea".split()
-class Smoke: elems= "PallMall Dunhill Blend BlueMaster Prince".split()
-class Pet:   elems= "Dog Cat Zebra Horse Bird".split()
-class Nation:elems= "British Swedish Danish Norvegian German".split()
+class Content: elems= """Beer Coffee Milk Tea Water
+                         Danish English German Norwegian Swedish
+                         Blue Green Red White Yellow
+                         Blend BlueMaster Dunhill PallMall Prince
+                         Bird Cat Dog Horse Zebra""".split()
+class Test: elems= "Drink Person Color Smoke Pet".split()
+class House: elems= "One Two Three Four Five".split()
 
-for c in (Number, Color, Drink, Smoke, Pet, Nation):
+for c in (Content, Test, House):
+  c.values = range(len(c.elems))
   for i, e in enumerate(c.elems):
     exec "%s.%s = %d" % (c.__name__, e, i)
 
-def is_possible(number, color, drink, smoke, pet):
-  if number and number[Nation.Norvegian] != Number.One:
-    return False
-  if color and color[Nation.British] != Color.Red:
-    return False
-  if drink and drink[Nation.Danish] != Drink.Tea:
-    return False
-  if smoke and smoke[Nation.German] != Smoke.Prince:
-    return False
-  if pet and pet[Nation.Swedish] != Pet.Dog:
-    return False
+def finalChecks(M):
+  def diff(a, b, ca, cb):
+    for h1 in House.values:
+      for h2 in House.values:
+        if M[ca][h1] == a and M[cb][h2] == b:
+          return h1 - h2
+    assert False
 
-  if not number or not color or not drink or not smoke or not pet:
-    return True
+  return abs(diff(Content.Norwegian, Content.Blue,
+                 Test.Person, Test.Color)) == 1 and \
+         diff(Content.Green, Content.White,
+              Test.Color, Test.Color) == -1 and \
+         abs(diff(Content.Horse, Content.Dunhill,
+                  Test.Pet, Test.Smoke)) == 1 and \
+         abs(diff(Content.Water, Content.Blend,
+                  Test.Drink, Test.Smoke)) == 1 and \
+         abs(diff(Content.Blend, Content.Cat,
+                  Test.Smoke, Test.Pet)) == 1
 
-  for i in xrange(5):
-    if color[i] == Color.Green and drink[i] != Drink.Coffee:
-      return False
-    if smoke[i] == Smoke.PallMall and pet[i] != Pet.Bird:
-      return False
-    if color[i] == Color.Yellow and smoke[i] != Smoke.Dunhill:
-      return False
-    if number[i] == Number.Three and drink[i] != Drink.Milk:
-      return False
-    if smoke[i] == Smoke.BlueMaster and drink[i] != Drink.Beer:
-       return False
-    if color[i] == Color.Blue and number[i] != Number.Two:
-      return False
+def constrained(M, atest):
+      if atest == Test.Drink:
+        return M[Test.Drink][House.Three] == Content.Milk
+      elif atest == Test.Person:
+        for h in House.values:
+          if ((M[Test.Person][h] == Content.Norwegian and
+               h != House.One) or
+              (M[Test.Person][h] == Content.Danish and
+               M[Test.Drink][h] != Content.Tea)):
+            return False
+        return True
+      elif atest == Test.Color:
+        for h in House.values:
+          if ((M[Test.Person][h] == Content.English and
+               M[Test.Color][h] != Content.Red) or
+              (M[Test.Drink][h] == Content.Coffee and
+               M[Test.Color][h] != Content.Green)):
+            return False
+        return True
+      elif atest == Test.Smoke:
+        for h in House.values:
+          if ((M[Test.Color][h] == Content.Yellow and
+               M[Test.Smoke][h] != Content.Dunhill) or
+              (M[Test.Smoke][h] == Content.BlueMaster and
+               M[Test.Drink][h] != Content.Beer) or
+              (M[Test.Person][h] == Content.German and
+               M[Test.Smoke][h] != Content.Prince)):
+            return False
+        return True
+      elif atest == Test.Pet:
+        for h in House.values:
+          if ((M[Test.Person][h] == Content.Swedish and
+               M[Test.Pet][h] != Content.Dog) or
+              (M[Test.Smoke][h] == Content.PallMall and
+               M[Test.Pet][h] != Content.Bird)):
+            return False
+        return finalChecks(M)
 
-    for j in xrange(5):
-      if (color[i] == Color.Green and
-          color[j] == Color.White and
-          number[j] - number[i] != 1):
-          return False
+def show(M):
+  for h in House.values:
+    print "%5s:" % House.elems[h],
+    for t in Test.values:
+      print "%10s" % Content.elems[M[t][h]],
+    print
 
-      diff = abs(number[i] - number[j])
-      if smoke[i] == Smoke.Blend and pet[j] == Pet.Cat and diff != 1:
-        return False
-      if pet[i]==Pet.Horse and smoke[j]==Smoke.Dunhill and diff != 1:
-        return False
-      if smoke[i]==Smoke.Blend and drink[j]==Drink.Water and diff!=1:
-        return False
+def solve(M, t, n):
+  if n == 1 and constrained(M, t):
+    if t < 4:
+      solve(M, Test.values[t + 1], 5)
+    else:
+      show(M)
+      return
 
-  return True
-
-def show_row(t, data):
-  print "%6s: %12s%12s%12s%12s%12s" % (
-    t.__name__, t.elems[data[0]],
-    t.elems[data[1]], t.elems[data[2]],
-    t.elems[data[3]], t.elems[data[4]])
+  for i in xrange(n):
+    solve(M, t, n - 1)
+    M[t][0 if n % 2 else i], M[t][n - 1] = \
+      M[t][n - 1], M[t][0 if n % 2 else i]
 
 def main():
-  perms = list(permutations(range(5)))
+  M = [[None] * len(Test.elems) for _ in xrange(len(House.elems))]
+  for t in Test.values:
+    for h in House.values:
+      M[t][h] = Content.values[t * 5 + h]
 
-  for number in perms:
-    if is_possible(number, None, None, None, None):
-      for color in perms:
-        if is_possible(number, color, None, None, None):
-          for drink in perms:
-            if is_possible(number, color, drink, None, None):
-              for smoke in perms:
-                if is_possible(number, color, drink, smoke, None):
-                  for pet in perms:
-                    if is_possible(number, color, drink, smoke, pet):
-                      print "Found a solution:"
-                      show_row(Nation, range(5))
-                      show_row(Number, number)
-                      show_row(Color, color)
-                      show_row(Drink, drink)
-                      show_row(Smoke, smoke)
-                      show_row(Pet, pet)
-                      print
+  solve(M, Test.Drink, 5)
 
 main()

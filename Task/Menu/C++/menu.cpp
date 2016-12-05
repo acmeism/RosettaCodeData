@@ -1,50 +1,49 @@
 #include <iostream>
-#include <boost/regex.hpp>
-#include <cstdlib>
 #include <string>
-using namespace std;
+#include <vector>
 
-void printMenu(const string *, int);
-//checks whether entered data is in required range
-bool checkEntry(string, const string *, int);
-
-string dataEntry(string prompt, const string *terms, int size) {
-   if (size == 0) { //we return an empty string when we call the function with an empty list
-      return "";
-   }
-
-   string entry;
-   do {
-      printMenu(terms, size);
-      cout << prompt;
-
-      cin >> entry;
-   }
-   while( !checkEntry(entry, terms, size) );
-
-   int number = atoi(entry.c_str());
-   return terms[number - 1];
+void print_menu(const std::vector<std::string>& terms)
+{
+    for (size_t i = 0; i < terms.size(); i++) {
+        std::cout << i + 1 << ") " << terms[i] << '\n';
+    }
 }
 
-void printMenu(const string *terms, int num) {
-   for (int i = 1 ; i < num + 1 ; i++) {
-      cout << i << ')' << terms[ i - 1 ] << '\n';
-   }
+int parse_entry(const std::string& entry, int max_number)
+{
+    int number = std::stoi(entry);
+    if (number < 1 || number > max_number) {
+        throw std::invalid_argument("");
+    }
+
+    return number;
 }
 
-bool checkEntry(string myEntry, const string *terms, int num) {
-   boost::regex e("^\\d+$");
-   if (!boost::regex_match(myEntry, e))
-      return false;
-   int number = atoi(myEntry.c_str());
-   if (number < 1 || number > num)
-      return false;
-   return true;
+std::string data_entry(const std::string& prompt, const std::vector<std::string>& terms)
+{
+    if (terms.empty()) {
+        return "";
+    }
+
+    int choice;
+    while (true) {
+        print_menu(terms);
+        std::cout << prompt;
+
+        std::string entry;
+        std::cin >> entry;
+
+        try {
+            choice = parse_entry(entry, terms.size());
+            return terms[choice - 1];
+        } catch (std::invalid_argument&) {
+            // std::cout << "Not a valid menu entry!" << std::endl;
+        }
+    }
 }
 
-int main( ) {
-   const string terms[ ] = { "fee fie" , "huff and puff" , "mirror mirror" , "tick tock" };
-   int size = sizeof terms / sizeof *terms;
-   cout << "You chose: " << dataEntry("Which is from the three pigs: ", terms, size);
-   return 0;
+int main()
+{
+    std::vector<std::string> terms = {"fee fie", "huff and puff", "mirror mirror", "tick tock"};
+    std::cout << "You chose: " << data_entry("> ", terms) << std::endl;
 }

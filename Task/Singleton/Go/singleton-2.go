@@ -1,14 +1,14 @@
-package main
+package singlep
 
-import (
-    "fmt"
-    "singlep"
-)
+// package level data declarations serve as singleton instance variables
+var X, Y int
 
-func main() {
-    // dot selector syntax references package variables and functions
-    singlep.X = 2
-    singlep.Y = 3
-    fmt.Println(singlep.X, singlep.Y)
-    fmt.Println(singlep.F())
+// package level initialization can serve as constructor code
+func init() {
+    X, Y = 2, 3
+}
+
+// package level functions serve as methods for a package-as-a-singleton
+func F() int {
+    return Y - X
 }

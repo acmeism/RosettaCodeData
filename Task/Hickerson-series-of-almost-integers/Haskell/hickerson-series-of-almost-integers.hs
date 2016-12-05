@@ -1,14 +1,18 @@
 import Data.Number.CReal -- from numbers
 
-hickerson :: Int -> CReal
+import qualified Data.Number.CReal as C
+
+hickerson :: Int -> C.CReal
 hickerson n = (fromIntegral $ product [1..n]) / (2 * (log 2 ^ (n + 1)))
 
+charAfter :: Char -> String -> Char
+charAfter ch string = ( dropWhile (/= ch) string ) !! 1
+
+isAlmostInteger :: C.CReal -> Bool
+isAlmostInteger = (`elem` ['0', '9']) . charAfter '.' . show
+
 checkHickerson :: Int -> String
-checkHickerson n  =
-   let h = hickerson n
-       postDecimalPointDigit = dropWhile (/='.') (show h) !! 1
-       almostIntegral = '0' == postDecimalPointDigit || '9' == postDecimalPointDigit
-   in "h(" ++ show n ++ ") = " ++ showCReal 4 h ++ " which is" ++ (if almostIntegral then "" else " NOT") ++ " almost integral."
+checkHickerson n  = show $ (n, hickerson n, isAlmostInteger $ hickerson n)
 
 main :: IO ()
-main = mapM_ putStrLn [checkHickerson n | n <- [1..18]]
+main = mapM_ putStrLn $ map checkHickerson [1..18]

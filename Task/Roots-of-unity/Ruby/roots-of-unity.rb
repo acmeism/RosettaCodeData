@@ -1,4 +1,5 @@
-for n in 2..10
-  printf "%2d: ", n
-  puts (0...n).map { |k| "%8.5f %+8.5fi" % Complex.polar(1, 2 * Math::PI * k / n).rect }.join(", ")
+def roots_of_unity(n)
+  (0...n).map {|k| Complex.polar(1, 2 * Math::PI * k / n)}
 end
+
+p roots_of_unity(3)

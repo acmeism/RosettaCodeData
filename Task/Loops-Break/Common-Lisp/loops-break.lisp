@@ -1,7 +1,4 @@
-(loop
-    (setq a (random 20))
-    (print a)
-    (if (= a 10)
-        (return))
-    (setq b (random 20))
-    (print b))
+(loop for a = (random 20)
+      do (print a)
+      until (= a 10)
+      do (print (random 20)))

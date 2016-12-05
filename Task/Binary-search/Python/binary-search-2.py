@@ -1,7 +1,7 @@
 def binary_search(l, value, low = 0, high = -1):
     if not l: return -1
     if(high == -1): high = len(l)-1
-    if low == high:
+    if low >= high:
         if l[low] == value: return low
         else: return -1
     mid = (low+high)//2

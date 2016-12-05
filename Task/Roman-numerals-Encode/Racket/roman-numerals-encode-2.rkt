@@ -1,8 +1,8 @@
 #lang racket
 (define (number->list n)
   (for/fold ([result null])
-    ([decimal '(1000 900 500 400 100 90 50 40 10 5 4  1)]
-     [roman   '(M    CM  D   CD  C   XC L  XL X  V IV I)])
+    ([decimal '(1000 900 500 400 100 90 50 40 10 9  5 4  1)]
+     [roman   '(M    CM  D   CD  C   XC L  XL X  IX V IV I)])
     #:break (= n 0)
     (let-values ([(q r) (quotient/remainder n decimal)])
       (set! n r)

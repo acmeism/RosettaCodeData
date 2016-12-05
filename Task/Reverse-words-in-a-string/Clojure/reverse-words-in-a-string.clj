@@ -10,5 +10,5 @@
 
    Frost Robert -----------------------")
 
-(doall
+(dorun
   (map println (map #(apply str (interpose " " (reverse (re-seq #"[^\s]+" %)))) (clojure.string/split poem #"\n"))))

@@ -30,8 +30,25 @@ void h(int a, ...)
 /* call it as: (if you feed it something it doesn't expect, don't count on it working) */
 h(1, 2, 3, 4, "abcd", (void*)0);
 
-/* named arguments: no such thing */
-/* statement context: is that a real phrase? */
+/* named arguments: this is only possible through some pre-processor abuse
+*/
+struct v_args {
+    int arg1;
+    int arg2;
+    char _sentinel;
+};
+
+void _v(struct v_args args)
+{
+    printf("%d, %d\n", args.arg1, args.arg2);
+}
+
+#define v(...) _v((struct v_args){__VA_ARGS__})
+
+v(.arg2 = 5, .arg1 = 17); // prints "17,5"
+/* NOTE the above implementation gives us optional typesafe optional arguments as well (unspecified arguments are initialized to zero)*/
+v(.arg2=1); // prints "0,1"
+v();  // prints "0,0"
 
 /* as a first-class object (i.e. function pointer) */
 printf("%p", f); /* that's the f() above */

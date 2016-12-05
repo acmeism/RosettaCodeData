@@ -1,1 +1,1 @@
-sed -i $start,${end}d $file
+sed -i "$start,${end}d" "$file"

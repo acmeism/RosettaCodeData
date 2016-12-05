@@ -1,7 +1,7 @@
 void runCode(string code)
 {
     int c_len = code.length();
-    int accumulator, bottles;
+    int accumulator=0, bottles;
     for(int i=0;i<c_len;i++)
     {
         switch(code[i])

@@ -15,8 +15,8 @@ write(*,fmt1) 'input a=',a,' b=',b
 write(*,fmt2) 'and : ', a,' &  ',b,' = ',iand(a, b),iand(a, b)
 write(*,fmt2) 'or  : ', a,' |  ',b,' = ',ior(a, b),ior(a, b)
 write(*,fmt2) 'xor : ', a,' ^  ',b,' = ',ieor(a, b),ieor(a, b)
-write(*,fmt2) 'lsh : ', a,' << ',b,' = ',ishft(a, abs(b)),ishft(a, abs(b))
-write(*,fmt2) 'rsh : ', a,' >> ',b,' = ',ishft(a, -abs(b)),ishft(a, -abs(b))
+write(*,fmt2) 'lsh : ', a,' << ',b,' = ',shiftl(a,b),shiftl(a,b) !since F2008, otherwise use ishft(a, abs(b))
+write(*,fmt2) 'rsh : ', a,' >> ',b,' = ',shiftr(a,b),shiftr(a,b) !since F2008, otherwise use ishft(a, -abs(b))
 write(*,fmt2) 'not : ', a,' ~  ',b,' = ',not(a),not(a)
 write(*,fmt2) 'rot : ', a,' r  ',b,' = ',ishftc(a,-abs(b)),ishftc(a,-abs(b))
 

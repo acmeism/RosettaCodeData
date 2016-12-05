@@ -1,1 +1,1 @@
-say [+] get.words
+get.words.sum.say;

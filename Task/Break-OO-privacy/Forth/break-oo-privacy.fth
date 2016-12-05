@@ -9,7 +9,7 @@ include FMS-SI.f
 ;class
 
 foo f1    \ instantiate a foo object
-f1 print  \ 10
+f1 print  \ 10 access the private x with the print message
 
 x .  \ 99  x is a globally scoped name
 

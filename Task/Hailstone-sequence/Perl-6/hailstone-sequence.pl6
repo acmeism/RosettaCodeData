@@ -4,5 +4,5 @@ my @h = hailstone(27);
 say "Length of hailstone(27) = {+@h}";
 say ~@h;
 
-my $m max= +hailstone($_) => $_ for 1..99_999;
-say "Max length $m.key() was found for hailstone($m.value()) for numbers < 100_000";
+my $m = max (+hailstone($_) => $_ for 1..99_999);
+say "Max length {$m.key} was found for hailstone({$m.value}) for numbers < 100_000";

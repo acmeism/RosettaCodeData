@@ -24,9 +24,6 @@ my %she-likes =
     jan  => < ed hal gav abe bob jon col ian fred dan >,
 ;
 
-my \guys = %he-likes.keys;
-my \gals = %she-likes.keys;
-
 my %fiancé;
 my %fiancée;
 my %proposed;
@@ -59,7 +56,7 @@ sub match'em {                                          #'
 }
 
 sub check-stability {
-    my @instabilities = gather for guys X gals -> $m, $w {
+    my @instabilities = gather for flat %he-likes.keys X %she-likes.keys -> $m, $w {
 	if he-prefers($m, $w) and she-prefers($w, $m) {
 	    take "\t$w prefers $m to %fiancé{$w} and $m prefers $w to %fiancée{$m}";
 	}
@@ -74,7 +71,7 @@ sub check-stability {
     }
 }
 
-sub unmatched-guy { guys.first: { not %fiancée{$_} } }
+sub unmatched-guy { %he-likes.keys.first: { not %fiancée{$_} } }
 
 sub preferred-choice($guy) { %he-likes{$guy}.first: { not %proposed{"$guy $_" } } }
 

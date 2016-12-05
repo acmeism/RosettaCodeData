@@ -6,7 +6,6 @@ import (
 )
 
 func createFile(fn string) {
-    // create new; don't overwrite an existing file.
     f, err := os.Create(fn)
     if err != nil {
         fmt.Println(err)

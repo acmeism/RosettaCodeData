@@ -1,16 +1,24 @@
 #include <algorithm>
 #include <cctype>
 #include <string>
-using namespace std;
+#include <iostream>
 
-const string alphabet("abcdefghijklmnopqrstuvwxyz"); // sorted, no duplicates
+const std::string alphabet("abcdefghijklmnopqrstuvwxyz");
 
-bool is_pangram(string s) {
-  // Convert to lower case.
-  transform(s.begin(), s.end(), s.begin(), ::tolower);
-  // Convert to a sorted sequence of (not necessarily unique) characters.
-  sort(s.begin(), s.end());
-  // Is the second sequence a subset of the first sequence?
-  // Repeated letters in "s" are okay, since it still "includes" the single letter
-  return includes(s.begin(), s.end(), alphabet.begin(), alphabet.end());
+bool is_pangram(std::string s)
+{
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    std::sort(s.begin(), s.end());
+    return std::includes(s.begin(), s.end(), alphabet.begin(), alphabet.end());
+}
+
+int main()
+{
+    const auto examples = {"The quick brown fox jumps over the lazy dog",
+                           "The quick white cat jumps over the lazy dog"};
+
+    std::cout.setf(std::ios::boolalpha);
+    for (auto& text : examples) {
+        std::cout << "Is \"" << text << "\" a pangram? - " << is_pangram(text) << std::endl;
+    }
 }

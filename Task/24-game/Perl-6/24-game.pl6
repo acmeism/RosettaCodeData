@@ -1,3 +1,5 @@
+use MONKEY-SEE-NO-EVAL;
+
 say "Here are your digits: ",
 constant @digits = (1..9).roll(4)».Str;
 
@@ -9,15 +11,16 @@ grammar Exp24 {
 }
 
 while my $exp = prompt "\n24? " {
-    if Exp24.parse: $exp {
-	say "You win :)";
-	last;
+    if try Exp24.parse: $exp {
+        say "You win :)";
+        last;
     } else {
-	say pick 1,
-	'Sorry.  Try again.' xx 20,
-	'Try harder.' xx 5,
-	'Nope.  Not even close.' xx 2,
-	'Are you five or something?',
-	'Come on, you can do better than that.';
+        say (
+            'Sorry.  Try again.' xx 20,
+            'Try harder.' xx 5,
+            'Nope.  Not even close.' xx 2,
+            'Are you five or something?',
+            'Come on, you can do better than that.'
+        ).flat.pick
     }
 }

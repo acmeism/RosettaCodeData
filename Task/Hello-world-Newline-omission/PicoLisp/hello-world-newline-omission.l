@@ -1,1 +1,1 @@
-(prin "Goodbye, world")
+(prin "Goodbye, World!")

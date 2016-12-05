@@ -1,37 +1,23 @@
-sub best-shuffle (Str $s) {
-    my @orig = $s.comb;
+sub best-shuffle(Str $orig) {
 
-    my @pos;
-    # Fill @pos with positions in the order that we want to fill
-    # them. (Once Rakudo has &roundrobin, this will be doable in
-    # one statement.)
-    {
-        my %pos = classify { @orig[$^i] }, keys @orig;
-        my @k = map *.key, sort *.value.elems, %pos;
-        while %pos {
-            for @k -> $letter {
-                %pos{$letter} or next;
-                push @pos, %pos{$letter}.pop;
-                %pos{$letter}.elems or %pos.delete: $letter;
+    my @s = $orig.comb;
+    my @t = @s.pick(*);
+
+    for ^@s -> $i {
+        for ^@s -> $j {
+            if $i != $j and @t[$i] ne @s[$j] and @t[$j] ne @s[$i] {
+                @t[$i, $j] = @t[$j, $i];
+                last;
             }
         }
-        @pos .= reverse;
     }
 
-    my @letters = @orig;
-    my @new = Any xx $s.chars;
-    # Now fill in @new with @letters according to each position
-    # in @pos, but skip ahead in @letters if we can avoid
-    # matching characters that way.
-    while @letters {
-        my ($i, $p) = 0, shift @pos;
-        ++$i while @letters[$i] eq @orig[$p] and $i < @letters.end;
-        @new[$p] = splice @letters, $i, 1;
+    my $count = 0;
+    for @t.kv -> $k,$v {
+        ++$count if $v eq @s[$k]
     }
 
-    my $score = elems grep ?*, map * eq *, do @new Z @orig;
-
-    @new.join, $score;
+    return (@t.join, $count);
 }
 
 printf "%s, %s, (%d)\n", $_, best-shuffle $_

@@ -1,14 +1,8 @@
-USING: kernel accessors smtp io.sockets namespaces ;
-IN: learn
-
-: send-mail ( from to cc subject body -- )
-    "smtp.gmail.com" 587 <inet> smtp-server set
-    smtp-tls? on
-    "noneofyourbuisness@gmail.com" "password" <plain-auth> smtp-auth set
-    <email>
-        swap >>from
-        swap >>to
-        swap >>cc
-        swap >>subject
-        swap >>body
-    send-email ;
+USING: accessors io.sockets locals namespaces smtp ;
+IN: scratchpad
+:: send-mail ( f t c s b -- )
+    default-smtp-config "smtp.gmail.com" 587 <inet> >>server
+    t >>tls?
+    "my.gmail.address@gmail.com" "qwertyuiasdfghjk" <plain-auth>
+    >>auth \ smtp-config set-global <email> f >>from t >>to
+    c >>cc s >>subject b >>body send-email ;

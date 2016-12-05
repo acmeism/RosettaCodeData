@@ -4,7 +4,7 @@
     (clim-stream-pane) ())
 
 (define-application-frame hello-world ()
-  ((greeting :initform "Hello World"
+  ((greeting :initform "Goodbye World"
              :accessor greeting))
   (:pane (make-pane 'hello-world-pane)))
 

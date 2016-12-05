@@ -1,9 +1,9 @@
 class Matrix is Array {
     method unscale_row ( @M: $scale, $row ) {
-        @M[$row] = @M[$row] X/ $scale;
+        @M[$row] = @M[$row] »/» $scale;
     }
     method unshear_row ( @M: $scale, $r1, $r2 ) {
-        @M[$r1] = @M[$r1] Z- ( @M[$r2] X* $scale );
+        @M[$r1] = @M[$r1] »-» ( @M[$r2] »*» $scale );
     }
     method reduce_row ( @M: $row, $col ) {
         @M.unscale_row( @M[$row][$col], $row );
@@ -32,7 +32,7 @@ class Matrix is Array {
     }
 }
 
-my $M = Matrix.new.push(
+my $M = Matrix.new(
     [<  1   2   -1    -4 >],
     [<  2   3   -1   -11 >],
     [< -2   0   -3    22 >],

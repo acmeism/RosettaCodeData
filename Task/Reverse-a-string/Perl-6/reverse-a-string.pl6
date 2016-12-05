@@ -1,4 +1,2 @@
-# Not transformative.
-my $reverse = flip $string;
-# or
 say "hello world".flip;
+say "as⃝df̅".flip

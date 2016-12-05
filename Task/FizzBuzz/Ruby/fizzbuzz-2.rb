@@ -1,11 +1,11 @@
-1.upto(100) do |n|
-  if (n % 15).zero?
-    puts "FizzBuzz"
+(1..100).each do |n|
+  puts if (n % 15).zero?
+    "FizzBuzz"
   elsif (n % 5).zero?
-    puts "Buzz"
+    "Buzz"
   elsif (n % 3).zero?
-    puts "Fizz"
+    "Fizz"
   else
-    puts n
+    n
   end
 end

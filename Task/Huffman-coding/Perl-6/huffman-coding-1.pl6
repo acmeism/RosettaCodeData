@@ -1,17 +1,13 @@
-sub huffman ($s) {
-    my $de = $s.chars;
-    my @q = $s.comb.classify({$_}).map({[+.value / $de, .key]}).sort;
-    while @q > 1 {
-	my ($a,$b) = @q.splice(0,2);
-	@q = sort flat $[$a[0] + $b[0], [$a[1], $b[1]]], @q;
+sub huffman (%frequencies) {
+    my @queue = %frequencies.map({ [.value, .key] }).sort;
+    while @queue > 1 {
+        given @queue.splice(0, 2) -> ([$freq1, $node1], [$freq2, $node2]) {
+            @queue = (|@queue, [$freq1 + $freq2, [$node1, $node2]]).sort;
+        }
     }
-    sort *.value, gather walk @q[0][1], '';
+    hash gather walk @queue[0][1], '';
 }
 
-multi walk (@node, $prefix) {
-    walk @node[0], $prefix ~ 1;
-    walk @node[1], $prefix ~ 0;
-}
-multi walk ($node, $prefix) { take $node => $prefix }
-
-say .perl for huffman('this is an example for huffman encoding');
+multi walk ($node,            $prefix) { take $node => $prefix; }
+multi walk ([$node1, $node2], $prefix) { walk $node1, $prefix ~ '0';
+                                         walk $node2, $prefix ~ '1'; }

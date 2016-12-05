@@ -1,6 +1,6 @@
 use NativeCall;
 
-sub crc32(int32 $crc, Str $buf, int32 $len --> int32) is native('/usr/lib/libz.dylib') { * }
+sub crc32(int32 $crc, Buf $buf, int32 $len --> int32) is native('z') { * }
 
-my $buf = 'The quick brown fox jumps over the lazy dog';
-say crc32(0, $buf, $buf.chars).fmt('%08x');
+my $buf = 'The quick brown fox jumps over the lazy dog'.encode;
+say crc32(0, $buf, $buf.bytes).fmt('%08x');

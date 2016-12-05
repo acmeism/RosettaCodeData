@@ -1,1 +1,0 @@
-mkpath 'path/to/dir'

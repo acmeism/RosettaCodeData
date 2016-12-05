@@ -3,6 +3,7 @@ Careful with phasing: each lunge's first number is the second placed along its d
        INTEGER START	!Usually 1.
        INTEGER ORDER	!MUST be an odd number, so there is a middle.
        INTEGER L,M,N	!Counters.
+       INTEGER STEP,LUNGE	!In some direction.
        COMPLEX WAY,PLACE	!Just so.
        CHARACTER*1 SPLOT(0:1)	!Tricks for output.
        PARAMETER (SPLOT = (/" ","*"/))	!Selected according to ISPRIME(n)

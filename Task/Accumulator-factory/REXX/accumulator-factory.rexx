@@ -1,13 +1,13 @@
-/*REXX pgm: acculation factory copied/modeled after the ooRexx program. */
-x=.accumulator(new(1))                 /*set accumulater with init val 1*/
+/*REXX program shows one method an   accumulator factory   could be implemented.        */
+x=.accumulator(1)                                /*initialize accumulator with a 1 value*/
 x=call(5)
 x=call(2.3)
-say "          X value is now"  x      /*displays current value of X.   */
-say "Accumulator value is now"  sum    /*displays current value of accum*/
-exit                                   /*stick a fork in it, we're done.*/
-/*──────────────────────────────────subroutines─────────────────────────*/
-.accumulator:  procedure expose sum
-               if symbol('SUM')=='LIT' then sum=0;     sum=sum+arg(1)
+say '          X value is now'   x               /*displays the current value of   X.   */
+say 'Accumulator value is now'  sum              /*displays the current value of  accum.*/
+exit                                             /*stick a fork in it,  we're all done. */
+/*──────────────────────────────────────────────────────────────────────────────────────*/
+.accumulator:  procedure expose sum;   if symbol('SUM')=="LIT"  then sum=0   /*1st time?*/
+               sum=sum + arg(1)                                              /*add──►sum*/
                return sum
-call: procedure expose sum; sum=sum+arg(1); return sum /*adds arg1──►sum*/
-new:  procedure;  return arg(1)        /*long way 'round of using one.  */
+/*──────────────────────────────────────────────────────────────────────────────────────*/
+call:  procedure expose sum;  sum=sum+arg(1);    return sum          /*add arg1 ──► sum.*/

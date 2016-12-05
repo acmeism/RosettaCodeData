@@ -1,12 +1,11 @@
 #lang racket
+(require math)
+
 (define (perfect? n)
-  (= n
-     (for/fold ((sum 0))
-       ((i (in-range 1 (add1 (floor (/ n 2))))))
-       (if (= (remainder n i) 0)
-           (+ sum i)
-           sum))))
+  (=
+   (* n 2)
+   (sum (divisors n))))
 
-
-(filter perfect? (build-list 1000 values))
-;-> '(0 6 28 496)
+; filtering to only even numbers for better performance
+(filter perfect? (filter even? (range 1e5)))
+;-> '(0 6 28 496 8128)

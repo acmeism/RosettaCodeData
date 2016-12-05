@@ -21,7 +21,8 @@ class DiscordianDate
       end
     end
 
-    @season, @day = @day_of_year.divmod(DAYS_PER_SEASON)
+    @season, @day = (@day_of_year-1).divmod(DAYS_PER_SEASON)
+    @day += 1     #←              ↑ fixes of-by-one error (only visible at season changes)
     @year = gregorian_date.year + YEAR_OFFSET
   end
   attr_reader :year, :day

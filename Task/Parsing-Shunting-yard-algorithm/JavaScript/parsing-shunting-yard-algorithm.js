@@ -36,7 +36,7 @@ var o1, o2;
 
 for (var i = 0; i < infix.length; i++) {
   token = infix[i];
-  if (token > "0" && token < "9") { // if token is operand (here limited to 0 <= x <= 9)
+  if (token >= "0" && token <= "9") { // if token is operand (here limited to 0 <= x <= 9)
     postfix += token + " ";
   }
   else if (ops.indexOf(token) != -1) { // if token is an operator

@@ -5,7 +5,7 @@
                "Seven swans a-swimming",           "Eight maids a-miling", "Nine ladies dancing",
                "Ten lords a-leaping",              "Eleven pipers piping", "Twelve drummers drumming"]
 
-       day     (fn [n] (printf "On the %s day of Christmas, my true love gave to me\n" (nth numbers n)))]
+       day     (fn [n] (printf "On the %s day of Christmas, my true love sent to me\n" (nth numbers n)))]
 
      (day 0)
      (println  (clojure.string/replace (first gifts) "And a" "A"))

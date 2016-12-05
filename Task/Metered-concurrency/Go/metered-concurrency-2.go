@@ -4,40 +4,41 @@ import (
     "log"
     "os"
     "sync"
-    "sync/atomic"
     "time"
 )
 
 var fmt = log.New(os.Stdout, "", 0)
 
 type countSem struct {
-    c    int32
-    cond *sync.Cond
+    int
+    sync.Cond
 }
 
 func newCount(n int) *countSem {
-    return &countSem{int32(n), sync.NewCond(new(sync.Mutex))}
+    return &countSem{n, sync.Cond{L: &sync.Mutex{}}}
 }
 
 func (cs *countSem) count() int {
-    return int(atomic.LoadInt32(&cs.c))
+    cs.L.Lock()
+    c := cs.int
+    cs.L.Unlock()
+    return c
 }
 
 func (cs *countSem) acquire() {
-    if atomic.AddInt32(&cs.c, -1) < 0 {
-        atomic.AddInt32(&cs.c, 1)
-        cs.cond.L.Lock()
-        for atomic.AddInt32(&cs.c, -1) < 0 {
-            atomic.AddInt32(&cs.c, 1)
-            cs.cond.Wait()
-        }
-        cs.cond.L.Unlock()
+    cs.L.Lock()
+    cs.int--
+    for cs.int < 0 {
+        cs.Wait()
     }
+    cs.L.Unlock()
 }
 
 func (cs *countSem) release() {
-    atomic.AddInt32(&cs.c, 1)
-    cs.cond.Signal()
+    cs.L.Lock()
+    cs.int++
+    cs.L.Unlock()
+    cs.Broadcast()
 }
 
 func main() {

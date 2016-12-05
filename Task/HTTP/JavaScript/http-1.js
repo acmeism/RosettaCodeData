@@ -1,4 +1,4 @@
-var req = new XMLHTTPRequest();
+var req = new XMLHttpRequest();
 req.onload = function() {
   console.log(this.responseText);
 };

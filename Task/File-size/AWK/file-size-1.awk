@@ -1,9 +1,11 @@
 @load "filefuncs"
-BEGIN {
-    printsize("input.txt")
-    printsize("/input.txt")
+function filesize(name         ,fd) {
+    if ( stat(name, fd) == -1)
+      return -1  # doesn't exist
+    else
+      return fd["size"]
 }
-function printsize(name         ,fd) {
-    stat(name, fd)
-    printf("%s\t%s\n", name, fd["size"])
+BEGIN {
+    print filesize("input.txt")
+    print filesize("/input.txt")
 }

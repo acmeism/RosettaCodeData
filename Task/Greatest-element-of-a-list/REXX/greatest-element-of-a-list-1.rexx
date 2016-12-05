@@ -7,5 +7,5 @@ big=word(y,1)                          /*choose a initial biggest number*/
               end   /*j*/
 
 say 'the biggest value in a list of '    words(y)    " numbers is: "   big
-                             /* [↓] list of first twenty reversed primes*/
+                             /* [↑] list of first twenty reversed primes*/
                                        /*stick a fork in it, we're done.*/

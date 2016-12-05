@@ -1,1 +1,1 @@
-[ptr 'foo' 'bar' 'baz' 'bop'] 1 3 slice
+[ptr 1 2 3 4 5 6] 1 3 slice ;

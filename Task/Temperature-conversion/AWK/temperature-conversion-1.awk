@@ -7,7 +7,7 @@ BEGIN {
         break
       }
       if (K < 0) {
-        print("K must be > 0")
+        print("K must be >= 0")
         continue
       }
       printf("K = %.2f\n",K)

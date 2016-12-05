@@ -12,21 +12,19 @@ function merge(left, right, arr) {
   }
 }
 
-function mSort(arr, tmp, len) {
+function mergeSort(arr) {
+  var len = arr.length;
+
   if (len === 1) { return; }
 
-  var m = Math.floor(len / 2),
-      tmp_l = tmp.slice(0, m),
-      tmp_r = tmp.slice(m);
+  var mid = Math.floor(len / 2),
+      left = arr.slice(0, mid),
+      right = arr.slice(mid);
 
-  mSort(tmp_l, arr.slice(0, m), m);
-  mSort(tmp_r, arr.slice(m), len - m);
-  merge(tmp_l, tmp_r, arr);
-}
-
-function merge_sort(arr) {
-  mSort(arr, arr.slice(), arr.length);
+  mergeSort(left);
+  mergeSort(right);
+  merge(left, right, arr);
 }
 
 var arr = [1, 5, 2, 7, 3, 9, 4, 6, 8];
-merge_sort(arr); // arr will now: 1, 2, 3, 4, 5, 6, 7, 8, 9
+mergeSort(arr); // arr will now: 1, 2, 3, 4, 5, 6, 7, 8, 9

@@ -2,7 +2,7 @@ sub sierpinski ($n) {
     my @down  = '*';
     my $space = ' ';
     for ^$n {
-        @down = flat @down.map({"$space$_$space"}), @down.map({"$_ $_"});
+        @down = |("$space$_$space" for @down), |("$_ $_" for @down);
         $space x= 2;
     }
     return @down;

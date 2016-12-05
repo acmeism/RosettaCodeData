@@ -1,6 +1,9 @@
+use MONKEY-SEE-NO-EVAL;
+
 sub parse_and_solve ($text) {
     my %ids;
     my $expr = (grammar {
+        state $c = 0;
         rule TOP { <fact>+ { make join ' && ', $<fact>>>.made } }
 
         rule fact { <name> (not)? <position>
@@ -19,7 +22,7 @@ sub parse_and_solve ($text) {
             || { note "Failed to parse line " ~ +$/.prematch.comb(/^^/); exit 1; }
         }
 
-        token name    { :i <[a..z]>+              { make %ids{~$/} //= (state $)++ } }
+        token name    { :i <[a..z]>+              { make %ids{~$/} //= $c++ } }
         token ordinal { [1st | 2nd | 3rd | \d+th] { make +$/.match(/(\d+)/)[0]     } }
     }).parse($text).made;
 

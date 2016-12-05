@@ -1,17 +1,17 @@
-function Y(dn) {
-    return (function(fn) {
-        return fn(fn);
-    }(function(fn) {
-        return dn(function() {
-            return fn(fn).apply(null, arguments);
-        });
-    }));
-}
-var fib = Y(function(fn) {
-    return function(n) {
-        if (n === 0 || n === 1) {
-            return n;
-        }
-        return fn(n - 1) + fn(n - 2);
-    };
-});
+(function () {
+    'use strict';
+
+    function fib(n) {
+        return Array.apply(null, Array(n + 1))
+            .map(function (_, i, lst) {
+                return lst[i] = (
+                    i ? i < 2 ? 1 :
+                    lst[i - 2] + lst[i - 1] :
+                    0
+                );
+            })[n];
+    }
+
+    return fib(32);
+
+})();

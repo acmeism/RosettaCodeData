@@ -6,19 +6,18 @@ constant BASE58 = <
     a b c d e f g h i j k   m n o p q r s t u v w x y z
 >;
 
-sub encode(Int $n) {
-    $n < BASE58 ??
-    BASE58[$n]  !!
-    encode($n div 58) ~ BASE58[$n % 58]
+sub encode( UInt $n ) {
+    [R~] BASE58[ $n.polymod: 58 xx * ]
 }
 
-sub public_point_to_address(Int $x is copy, Int $y is copy) {
-    my @bytes;
-    for 1 .. 32 { push @bytes, $y % 256; $y div= 256 }
-    for 1 .. 32 { push @bytes, $x % 256; $x div= 256 }
+sub public_point_to_address( UInt $x, UInt $y ) {
+    my @bytes = (
+        |$y.polymod( 256 xx 32 )[^32], # ignore the extraneous 33rd modulus
+        |$x.polymod( 256 xx 32 )[^32],
+    );
     my $hash = rmd160 sha256 Blob.new: 4, @bytes.reverse;
     my $checksum = sha256(sha256 Blob.new: 0, $hash.list).subbuf: 0, 4;
-    encode reduce * * 256 + * , 0, ($hash, $checksum)».list
+    encode reduce * * 256 + * , flat 0, ($hash, $checksum)».list
 }
 
 say public_point_to_address

@@ -3,7 +3,8 @@ procedure Firstclass is
    generic
       n1, n2 : Float;
    function Multiplier (m : Float) return Float;
-   function Multiplier (m : Float) return Float is begin
+   function Multiplier (m : Float) return Float is
+   begin
       return n1 * n2 * m;
    end Multiplier;
 
@@ -15,7 +16,7 @@ begin
       declare
          function new_function is new Multiplier (num (i), inv (i));
       begin
-         Ada.Text_IO.Put_Line (new_function (0.5)'Img);
+         Ada.Text_IO.Put_Line (Float'Image (new_function (0.5)));
       end;
    end loop;
 end Firstclass;

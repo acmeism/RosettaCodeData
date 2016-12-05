@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+
+public class Menu
+{
         static void Main(string[] args)
         {
             List<string> menu_items = new List<string>() { "fee fie", "huff and puff", "mirror mirror", "tick tock" };
@@ -23,3 +28,4 @@
             } while (!int.TryParse(input, out i) || i >= items.Count || i < 0);
             return items[i];
         }
+}

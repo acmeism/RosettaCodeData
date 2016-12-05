@@ -1,14 +1,26 @@
-yyy='c'               /*assign a lowercase   c to  YYY.*/
-yyy='34'x             /*assign hexadecimal  34 to  YYY.*/
-                      /*the  X  can be upper/lowercase.*/
-yyy=x2c(34)           /* (same as above)               */
-yyy='00110100'b       /* (same as above)               */
-yyy='0011 0100'b      /* (same as above)               */
-                      /*the  B  can be upper/lowercase.*/
-yyy=d2c(97)           /*assign decimal code 97 to  YYY.*/
+/*REXX program displays a char's ASCII code/value (or EBCDIC if run on an EBCDIC system)*/
+yyy= 'c'                               /*assign a lowercase       c        to   YYY.    */
+yyy= "c"                               /* (same as above)                               */
+say  'from char, yyy code=' yyy
 
-say yyy               /*displays the value of  YYY.                       */
-say c2x(yyy)          /*displays the value of  YYY in hexadecimal.        */
-say c2d(yyy)          /*displays the value of  YYY in decimal.            */
-say x2b(c2x(yyy))     /*displays the value of YYY in binary (bit string). */
-                      /*Note:  some REXXes support the    c2b    bif      */
+yyy= '63'x                             /*assign hexadecimal      63        to   YYY.    */
+yyy= '63'X                             /* (same as above)                               */
+say  'from  hex, yyy code=' yyy
+
+yyy= x2c(63)                           /*assign hexadecimal      63        to   YYY.    */
+say  'from  hex, yyy code=' yyy
+
+yyy= '01100011'b                       /*assign a binary      0011 0100    to   YYY.    */
+yyy= '0110 0011'b                      /* (same as above)                               */
+yyy= '0110 0011'B                      /*   "   "    "                                  */
+say  'from  bin, yyy code=' yyy
+
+yyy= d2c(99)                           /*assign decimal code     99        to   YYY.    */
+say  'from  dec, yyy code=' yyy
+
+say                                    /*     [↓]    displays the value of  YYY  in ··· */
+say  'char code: '   yyy               /* character code  (as an 8-bit ASCII character).*/
+say  ' hex code: '   c2x(yyy)          /*    hexadecimal                                */
+say  ' dec code: '   c2d(yyy)          /*        decimal                                */
+say  ' bin code: '   x2b( c2x(yyy) )   /*         binary  (as a bit string)             */
+                                       /*stick a fork in it, we're all done with display*/

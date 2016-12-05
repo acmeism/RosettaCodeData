@@ -1,9 +1,11 @@
 (defn primes-to
-  "Computes lazy sequence of prime numbers up to a given number using sieve of Eratosthenes"
-  [n]
-  (letfn [(nxtprm [cs] ; current candidates
-            (let [p (first cs)]
-              (if (> p (Math/sqrt n)) cs
-                (cons p (lazy-seq (nxtprm (-> (range (* p p) (inc n) p)
-                                              set (remove cs) rest)))))))]
-    (nxtprm (range 2 (inc n)))))
+  "Returns a lazy sequence of prime numbers less than lim"
+  [lim]
+  (let [refs (boolean-array (+ lim 1) true)
+        root (int (Math/sqrt lim))]
+    (do (doseq [i (range 2 lim)
+                :while (<= i root)
+                :when (aget refs i)]
+          (doseq [j (range (* i i) lim i)]
+            (aset refs j false)))
+        (filter #(aget refs %) (range 2 lim)))))

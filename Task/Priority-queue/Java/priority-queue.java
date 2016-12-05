@@ -17,7 +17,7 @@ class Task implements Comparable<Task> {
         return priority < other.priority ? -1 : priority > other.priority ? 1 : 0;
     }
 
-    public static final void main(String[] args) {
+    public static void main(String[] args) {
         PriorityQueue<Task> pq = new PriorityQueue<Task>();
         pq.add(new Task(3, "Clear drains"));
         pq.add(new Task(4, "Feed cat"));

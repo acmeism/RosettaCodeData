@@ -1,21 +1,17 @@
-# work around a gawk bug in the length extended use:
-# so this is a more non-gawk compliant way to get
-# how many elements are in an array
-function elength(v)
-{
-  l=0
-  for(el in v) l++
-  return l
-}
+cat mean.awk
+#!/usr/local/bin/gawk -f
 
-function mean(v)
-{
-  if (elength(v) < 1) { return 0 }
-  sum = 0
-  for(i=0; i < elength(v); i++) {
+# User defined function
+function mean(v,      i,n,sum) {
+  for (i in v) {
+    n++
     sum += v[i]
   }
-  return sum/elength(v)
+  if (n>0) {
+    return(sum/n)
+  } else {
+    return("zero-length input !")
+  }
 }
 
 BEGIN {
@@ -24,4 +20,5 @@ BEGIN {
     vett[i] = rand()*10
   }
   print mean(vett)
+  print mean(nothing)
 }

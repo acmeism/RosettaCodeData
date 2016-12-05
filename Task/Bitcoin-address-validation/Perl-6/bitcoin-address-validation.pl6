@@ -1,4 +1,4 @@
-my regex bitcoin-address {
+my $bitcoin-address = rx/
     <+alnum-[0IOl]> ** 26..*  # an address is at least 26 characters long
     <?{
         use Digest::SHA;
@@ -12,6 +12,6 @@ my regex bitcoin-address {
         .polymod(256 xx 24)
         .reverse;
     }>
-}
+/;
 
-say "Here is a bitcoin address: 1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i" ~~ /<bitcoin-address>/;
+say "Here is a bitcoin address: 1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i" ~~ $bitcoin-address;

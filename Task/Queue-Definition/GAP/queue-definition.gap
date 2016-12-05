@@ -1,20 +1,19 @@
 Enqueue := function(v, x)
-   Add(v[1], x);
+    Add(v[1], x);
 end;
 
 Dequeue := function(v)
-   local n, x;
-   n := Size(v[2]);
-   if n = 0 then
-      v[2] := Reversed(v[1]);
-      v[1] := [ ];
-      n := Size(v[2]);
-      if n = 0 then
-         return fail;
-      fi;
-   fi;
-   return Remove(v[2], n);
+    if IsEmpty(v[2]) then
+        if IsEmpty(v[1]) then
+            return fail;
+        else
+            v[2] := Reversed(v[1]);
+            v[1] := [];
+        fi;
+    fi;
+    return Remove(v[2]);
 end;
+
 
 # a new queue
 v := [[], []];

@@ -16,7 +16,7 @@ exit
 quibbling03:
 procedure
   parse arg '[' lst ']'
-  lst = changestr('"', changestr("'", lst, ''), '') -- remove double & single quotes
+  lst = changestr('"', changestr("'", lst, ''), '') /* remove double & single quotes */
   lc = lastpos(',', lst)
   if lc > 0 then
     lst = overlay(' ', insert('and', lst, lc), lc)

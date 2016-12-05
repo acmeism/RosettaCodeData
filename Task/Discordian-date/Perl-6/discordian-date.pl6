@@ -1,5 +1,5 @@
-my @seasons = ['Chaos', 'Discord', 'Confusion', 'Bureaucracy', 'The Aftermath'];
-my @days = ['Sweetmorn', 'Boomtime', 'Pungenday', 'Prickle-Prickle', 'Setting Orange'];
+my @seasons = << Chaos Discord Confusion Bureaucracy 'The Aftermath' >>;
+my @days = << Sweetmorn Boomtime Pungenday Prickle-Prickle 'Setting Orange' >>;
 sub ordinal ( Int $n ) { $n ~ ( $n % 100 == 11|12|13
     ?? 'th' !! < th st nd rd th th th th th th >[$n % 10] ) }
 

@@ -1,60 +1,48 @@
 package main
-import "fmt"
 
-type xint uint64
-type xgen func()(xint)
+import (
+	"fmt"
+	"math"
+)
 
-func primes() func()(xint) {
-	pp, psq := make([]xint, 0), xint(25)
-
-	var sieve func(xint, xint)xgen
-	sieve = func(p, n xint) xgen {
-		m, next := xint(0), xgen(nil)
-		return func()(r xint) {
-			if next == nil {
-				r = n
-				if r <= psq {
-					n += p
-					return
-				}
-
-				next = sieve(pp[0] * 2, psq) // chain in
-				pp = pp[1:]
-				psq = pp[0] * pp[0]
-
-				m = next()
+func primesOdds(top uint) func() uint {
+	topndx := int((top - 3) / 2)
+	topsqrtndx := (int(math.Sqrt(float64(top))) - 3) / 2
+	cmpsts := make([]uint, (topndx/32)+1)
+	for i := 0; i <= topsqrtndx; i++ {
+		if cmpsts[i>>5]&(uint(1)<<(uint(i)&0x1F)) == 0 {
+			p := (i << 1) + 3
+			for j := (p*p - 3) >> 1; j <= topndx; j += p {
+				cmpsts[j>>5] |= 1 << (uint(j) & 0x1F)
 			}
-			switch {
-			case n < m: r, n = n, n + p
-			case n > m: r, m = m, next()
-			default:    r, n, m = n, n + p, next()
-			}
-			return
 		}
 	}
-
-	f := sieve(6, 9)
-	n, p := f(), xint(0)
-
-	return func()(xint) {
-		switch {
-		case p < 2: p = 2
-		case p < 3: p = 3
-		default:
-			for p += 2; p == n; {
-				p += 2
-				if p > n {
-					n = f()
-				}
-			}
-			pp = append(pp, p)
+	i := -1
+	return func() uint {
+		oi := i
+		if i <= topndx {
+			i++
 		}
-		return p
+		for i <= topndx && cmpsts[i>>5]&(1<<(uint(i)&0x1F)) != 0 {
+			i++
+		}
+		if oi < 0 {
+			return 2
+		} else {
+			return (uint(oi) << 1) + 3
+		}
 	}
 }
 
 func main() {
-	for i, p := 0, primes(); i < 100000; i++ {
-		fmt.Println(p())
+	iter := primesOdds(100)
+	for v := iter(); v <= 100; v = iter() {
+		print(v, " ")
 	}
+	iter = primesOdds(1000000)
+	count := 0
+	for v := iter(); v <= 1000000; v = iter() {
+		count++
+	}
+	fmt.Printf("\r\n%v\r\n", count)
 }

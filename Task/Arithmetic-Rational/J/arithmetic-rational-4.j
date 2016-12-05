@@ -1,4 +1,4 @@
-   I.is_perfect_rational@"0 i.2^19
-6 28 496 8128
-   I.is_perfect_rational@x:@"0 i.2^19x
-6 28 496 8128
+   >: 3r4
+7r4
+   <: 3r4
+_1r4

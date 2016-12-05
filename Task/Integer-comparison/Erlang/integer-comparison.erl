@@ -9,3 +9,9 @@ main() ->
         N == M ->
             io:format("~b is equal to ~b~n",[N,M])
     end.
+    if
+       N =< M ->
+           io:format("~b is less than or equal to ~b~n",[N,M]);
+       N >= M ->
+           io:format("~b is greater than or equal to ~b~n",[N,M])
+    end.

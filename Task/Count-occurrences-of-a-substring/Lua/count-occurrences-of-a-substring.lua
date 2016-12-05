@@ -1,8 +1,8 @@
-function Count_Substring( s1, s2 )
- local magic =  "[%^%$%(%)%%%.%[%]%*%+%-%?]"
- local percent = function(s)return "%"..s end
-    return select( 2, s1:gsub( s2:gsub(magic,percent), "" ) )
+function countSubstring (s1, s2)
+    local count = 0
+    for eachMatch in s1:gmatch(s2) do count = count + 1 end
+    return count
 end
 
-print( Count_Substring( "the three truths", "th" ) )
-print( Count_Substring( "ababababab","abab" ) )
+print(countSubstring("the three truths", "th"))
+print(countSubstring("ababababab","abab"))

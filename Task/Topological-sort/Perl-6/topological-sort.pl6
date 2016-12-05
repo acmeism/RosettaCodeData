@@ -33,5 +33,5 @@ my %deps =
     synopsys       => <                                               >;
 
 print_topo_sort(%deps);
-%deps<dw01>.push: 'dw04'; # Add unresolvable dependency
+%deps<dw01> = <ieee dw01 dware gtech dw04>; # Add unresolvable dependency
 print_topo_sort(%deps);

@@ -8,7 +8,7 @@ http.use_ssl = true
 http.verify_mode = OpenSSL::SSL::VERIFY_NONE
 
 http.start do
-  content = http.get("/")
+  content = http.get(uri)
   p [content.code, content.message]
   pp content.to_hash
   puts content.body

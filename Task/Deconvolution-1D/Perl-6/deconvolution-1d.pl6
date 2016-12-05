@@ -22,11 +22,11 @@ sub rref ($m is copy) {
 
     # Trim off over specified rows if they exist.
     # Not strictly necessary, but can save a lot of
-    # redundant calculations.
-    if $rows >= $cols {
-        $m = trim_system($m);
-        $rows = +$m;
-    }
+    # redundant calculations. [remove until debugged]
+#    if $rows >= $cols {
+#        $m = trim_system($m);
+#        $rows = +$m;
+#    }
 
     for ^$rows -> $r {
         $lead < $cols or return $m;

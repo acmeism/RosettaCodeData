@@ -4,8 +4,8 @@ class KnapsackItem {
   has $.price is rw;
   has $.ppw;
 
-  method new (Str $n, $w, $p) {
-    KnapsackItem.bless(*, :name($n), :weight($w), :price($p), :ppw($w/$p))
+  method new (Str $n, Rat $w, Int $p) {
+    self.bless(:name($n), :weight($w), :price($p), :ppw($w/$p))
   }
 
   method cut-maybe ($max-weight) {

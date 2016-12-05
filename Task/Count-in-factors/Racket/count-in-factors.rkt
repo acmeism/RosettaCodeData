@@ -1,12 +1,22 @@
-#lang racket
-(require math)
+#lang typed/racket
 
-(define (~ f)
-  (match f
-    [(list p 1) (~a p)]
-    [(list p n) (~a p "^" n)]))
+(require math/number-theory)
 
-(for ([x (in-range 2 20)])
-  (display (~a x " = "))
-  (for-each display (add-between (map ~ (factorize x)) " * "))
-  (newline))
+(define (factorise-as-primes [n : Natural])
+  (if
+   (= n 1)
+   '(1)
+   (let ((F (factorize n)))
+     (append*
+      (for/list : (Listof (Listof Natural))
+        ((f (in-list F)))
+        (make-list (second f) (first f)))))))
+
+(define (factor-count [start-inc : Natural] [end-inc : Natural])
+  (for ((i : Natural (in-range start-inc (add1 end-inc))))
+    (define f (string-join (map number->string (factorise-as-primes i)) " × "))
+    (printf "~a:\t~a~%" i f)))
+
+(factor-count 1 22)
+(factor-count 2140 2150)
+; tb

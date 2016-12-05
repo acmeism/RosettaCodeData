@@ -1,4 +1,4 @@
-sub validate
+sub luhn_test
 {
         my @rev = reverse split //,$_[0];
         my ($sum1,$sum2,$i) = (0,0,0);
@@ -11,7 +11,7 @@ sub validate
         }
         return ($sum1+$sum2) % 10 == 0;
 }
-print validate('49927398716');
-print validate('49927398717');
-print validate('1234567812345678');
-print validate('1234567812345670');
+print luhn_test('49927398716');
+print luhn_test('49927398717');
+print luhn_test('1234567812345678');
+print luhn_test('1234567812345670');

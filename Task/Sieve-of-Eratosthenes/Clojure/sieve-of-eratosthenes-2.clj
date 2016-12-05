@@ -1,11 +1,13 @@
 (defn primes-to
-  "Returns a lazy sequence of prime numbers less than lim"
-  [lim]
-  (let [refs (boolean-array (+ lim 1) true)
-        root (int (Math/sqrt lim))]
-    (do (doseq [i (range 2 lim)
-                :while (<= i root)
-                :when (aget refs i)]
-          (doseq [j (range (* i i) lim i)]
-            (aset refs j false)))
-        (filter #(aget refs %) (range 2 lim)))))
+  "Computes lazy sequence of prime numbers up to a given number using sieve of Eratosthenes"
+  [n]
+  (let [root (-> n Math/sqrt long),
+        cmpsts (boolean-array (inc n)),
+        cullp (fn [p]
+                (loop [i (* p p)]
+                  (if (<= i n)
+                    (do (aset cmpsts i true)
+                        (recur (+ i p))))))]
+    (do (dorun (map #(cullp %) (filter #(not (aget cmpsts %))
+                                       (range 2 (inc root)))))
+        (filter #(not (aget cmpsts %)) (range 2 (inc n))))))

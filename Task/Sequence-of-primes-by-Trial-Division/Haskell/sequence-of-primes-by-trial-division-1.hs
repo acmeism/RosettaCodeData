@@ -1,1 +1,1 @@
-primesFromTo n m = filter isPrime [n..m]
+[n | n <- [2..], []==[i | i <- [2..n-1], rem n i == 0]]

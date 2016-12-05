@@ -1,1 +1,1 @@
-(concat (reverse (append "Hello World" nil)))
+(reverse "Hello World")

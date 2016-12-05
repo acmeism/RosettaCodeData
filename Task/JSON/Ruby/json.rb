@@ -1,8 +1,8 @@
 require 'json'
+
 ruby_obj = JSON.parse('{"blue": [1, 2], "ocean": "water"}')
-p ruby_obj
-puts ruby_obj.class
-puts ruby_obj["blue"].class
-ruby_obj["ocean"] = {"water" => %w{fishy salty}}
+puts ruby_obj
+
+ruby_obj["ocean"] = { "water" => ["fishy", "salty"] }
 puts JSON.generate(ruby_obj)
 puts JSON.pretty_generate(ruby_obj)

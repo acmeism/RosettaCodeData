@@ -1,20 +1,19 @@
 class Queen
-  def initialize(num=8)
-    @num = num
-  end
+  attr_reader :count
 
-  def solve(out=true)
+  def initialize(num=8, out=true)
+    @num   = num
     @out   = out
     @row   = *0...@num
     @frame = "+-" + "--" * @num + "+"
     @count = 0
-    add = Array.new(2 * @num - 1, true)
-    sub = Array.new(2 * @num - 1, true)
-    _solve([], add, sub)
-    @count
+    add = Array.new(2 * @num - 1, true)       # \ direction check
+    sub = Array.new(2 * @num - 1, true)       # / direction check
+    solve([], add, sub)
   end
 
-  def _solve(row, add, sub)
+  private
+  def solve(row, add, sub)
     y = row.size
     if y == @num
       print_out(row) if @out
@@ -23,7 +22,7 @@ class Queen
       (@row-row).each do |x|
         next unless add[x+y] and sub[x-y]
         add[x+y] = sub[x-y] = false
-        _solve(row+[x], add, sub)
+        solve(row+[x], add, sub)
         add[x+y] = sub[x-y] = true
       end
     end

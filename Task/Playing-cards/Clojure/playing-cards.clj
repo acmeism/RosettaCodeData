@@ -1,21 +1,12 @@
-(defrecord Card [pip suit]
-  Object
-  (toString [this] (str pip " of " suit)))
+(def suits [:club :diamond :heart :spade])
+(def pips [:ace 2 3 4 5 6 7 8 9 10 :jack :queen :king])
 
-(defprotocol pDeck
-  (deal [this n])
-  (shuffle [this])
-  (newDeck [this])
-  (print [this]))
+(defn deck [] (for [s suits p pips] [s p]))
 
-(deftype Deck [cards]
-  pDeck
-  (deal [this n] [(take n cards) (Deck. (drop n cards))])
-  (shuffle [this] (Deck. (shuffle cards)))
-  (newDeck [this] (Deck. (for [suit ["Clubs" "Hearts" "Spades" "Diamonds"]
-			       pip ["2" "3" "4" "5" "6" "7" "8" "9" "10" "Jack" "Queen" "King" "Ace"]]
-			   (Card. pip suit))))
-  (print [this] (dorun (map (comp println str) cards)) this))
-
-(defn new-deck []
-  (.newDeck (Deck. nil)))
+(def shuffle clojure.core/shuffle)
+(def deal first)
+(defn output [deck]
+  (doseq [[suit pip] deck]
+    (println (format "%s of %ss"
+                     (if (keyword? pip) (name pip) pip)
+                     (name suit)))))

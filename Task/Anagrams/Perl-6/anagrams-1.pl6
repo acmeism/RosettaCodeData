@@ -1,5 +1,5 @@
-my %anagram = slurp('unixdict.txt').words.classify( { .comb.sort.join } );
+my @anagrams = 'unixdict.txt'.IO.words.classify(*.comb.sort.join).values;
 
-my $max = [max] map { +@($_) }, %anagram.values;
+my $max = @anagrams».elems.max;
 
-%anagram.values.grep( { +@($_) >= $max } )».join(' ')».say;
+.put for @anagrams.grep(*.elems == $max);

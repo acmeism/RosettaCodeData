@@ -1,8 +1,7 @@
-/*REXX program reads a file and stores it as a continuous character str.*/
-iFID = 'a_file'                        /*name of the input file.        */
-aString =                              /*value of file's contents so far*/
-                                       /* [↓]  read file  line-by-line. */
-  do  while  lines(iFID) \== 0         /*read file's lines 'til finished*/
-  aString = aString || linein(iFID)    /*append a (file) line to aString*/
-  end   /*while*/
-                                       /*stick a fork in it, we're done.*/
+/*REXX program reads an entire file line-by-line  and  stores it as a continuous string.*/
+parse arg iFID .                                 /*obtain optional argument from the CL.*/
+if iFID==''  then iFID= 'a_file'                 /*Not specified?  Then use the default.*/
+$=                                               /*a string of file's contents (so far).*/
+             do  while lines(iFID)\==0           /*read the file's lines until finished.*/
+             $=$ || linein(iFID)                 /*append a (file's) line to the string,*/
+             end   /*while*/                     /*stick a fork in it,  we're all done. */

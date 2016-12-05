@@ -1,22 +1,15 @@
-PROGRAM DOORS
+program doors
+    implicit none
+    integer, allocatable :: door(:)
+    character(6), parameter :: s(0:1) = ["closed", "open  "]
+    integer :: i, n
 
-  INTEGER, PARAMETER :: n = 100    ! Number of doors
-  INTEGER :: i, j
-  LOGICAL :: door(n) = .TRUE.      ! Initially closed
-
-  DO i = 1, n
-    DO j = i, n, i
-      door(j) = .NOT. door(j)
-    END DO
-  END DO
-
-  DO i = 1, n
-    WRITE(*,"(A,I3,A)", ADVANCE="NO") "Door ", i, " is "
-    IF (door(i)) THEN
-      WRITE(*,"(A)") "closed"
-    ELSE
-      WRITE(*,"(A)") "open"
-    END IF
-  END DO
-
-END PROGRAM DOORS
+    print "(A)", "Number of doors?"
+    read *, n
+    allocate (door(n))
+    door = 1
+    do i = 1, n
+        door(i:n:i) = 1 - door(i:n:i)
+        print "(A,G0,2A)", "door ", i, " is ", s(door(i))
+    end do
+end program

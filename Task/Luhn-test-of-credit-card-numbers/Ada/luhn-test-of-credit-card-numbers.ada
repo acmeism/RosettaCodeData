@@ -1,25 +1,30 @@
-with Ada.Text_IO; use Ada.Text_IO;
-procedure luhn is
-	function luhn_test(num : String) return Boolean is
-	sum : Integer := 0;
-	odd : Boolean := True;
-	int : Integer;
-	begin
-	for p in reverse num'Range loop
-		int := Integer'Value(num(p..p));
-		if odd then
-			sum := sum + int;
-		else
-			sum := sum + (int*2 mod 10) + (int / 5);
-		end if;
-		odd := not odd;
-	end loop;
-	return (sum mod 10)=0;
-	end luhn_test;
+with Ada.Text_IO;
+use  Ada.Text_IO;
+
+procedure Luhn is
+
+  function Luhn_Test (Number: String) return Boolean is
+    Sum  : Natural := 0;
+    Odd  : Boolean := True;
+    Digit: Natural range 0 .. 9;
+  begin
+    for p in reverse Number'Range loop
+      Digit := Integer'Value (Number (p..p));
+      if Odd then
+        Sum := Sum + Digit;
+      else
+        Sum := Sum + (Digit*2 mod 10) + (Digit / 5);
+      end if;
+      Odd := not Odd;
+    end loop;
+    return (Sum mod 10) = 0;
+  end Luhn_Test;
 
 begin
-put_line(Boolean'Image(luhn_test("49927398716")));
-put_line(Boolean'Image(luhn_test("49927398717")));
-put_line(Boolean'Image(luhn_test("1234567812345678")));
-put_line(Boolean'Image(luhn_test("1234567812345670")));
-end luhn;
+
+  Put_Line (Boolean'Image (Luhn_Test ("49927398716")));
+  Put_Line (Boolean'Image (Luhn_Test ("49927398717")));
+  Put_Line (Boolean'Image (Luhn_Test ("1234567812345678")));
+  Put_Line (Boolean'Image (Luhn_Test ("1234567812345670")));
+
+end Luhn;

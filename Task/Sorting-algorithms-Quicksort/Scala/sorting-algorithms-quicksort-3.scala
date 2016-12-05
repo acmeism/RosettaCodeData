@@ -1,7 +1,9 @@
-def quicksortOrd[T <% Ordered[T]](coll: List[T]): List[T] =
-  if (coll.isEmpty) {
-    coll
-  } else {
-    val (smaller, bigger) = coll.tail partition (_ < coll.head)
-    quicksortOrd(smaller) ::: coll.head :: quicksortOrd(bigger)
+  def sort[T](xs: List[T])(implicit ord: Ordering[T]): List[T] = {
+    xs match {
+      case Nil => Nil
+      case x :: xx => {
+        val (lo, hi) = xx.partition(ord.lt(_, x))
+        sort[T](lo) ++ (x :: sort[T](hi))
+      }
+    }
   }

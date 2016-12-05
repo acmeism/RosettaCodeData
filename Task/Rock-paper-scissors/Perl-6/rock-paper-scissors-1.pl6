@@ -29,7 +29,7 @@ while my $player = (prompt "Round {++$round}: " ~ $prompt).lc {
     $player.=substr(0,2);
     say 'Invalid choice, try again.' and $round-- and next
       unless $player.chars == 2 and $player ~~ /<$keys>/;
-    my $computer = %weight.keys.map( { $_ xx %weight{$_} } ).pick;
+    my $computer = (flat %weight.keys.map( { $_ xx %weight{$_} } )).pick;
     %weight{$_.key}++ for %vs{$player}.grep( { $_.value[0] == 1 } );
     my $result = %vs{$player}{$computer}[0];
     @stats[$result]++;

@@ -2,7 +2,7 @@ with Ada.Text_IO;  use Ada.Text_IO;
 with Ada.Numerics.Discrete_Random;
 
 procedure Test_Loop_Break is
-   type Value_Type is range 1..20;
+   type Value_Type is range 0..19;
    package Random_Values is new Ada.Numerics.Discrete_Random (Value_Type);
    use Random_Values;
    Dice : Generator;

@@ -1,3 +1,1 @@
-import Data.List (nubBy)
-
-primes = nubBy (((>1).).gcd) [2..]
+[n | n <- [2..], []==[i | i <- [2..n-1], j <- [i,i+i..n], j==n]]

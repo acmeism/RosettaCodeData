@@ -1,12 +1,9 @@
 with Ada.Text_IO;  use Ada.Text_IO;
 
 procedure String_Concatenation is
-   S : String := "Hello";
+   S1 : constant String := "Hello";
+   S2 : constant String := S1 & " literal";
 begin
-   Put_Line (S);
-   declare
-      S1 : String := S & " literal";
-   begin
-      Put_Line (S1);
-   end;
+   Put_Line (S1);
+   Put_Line (S2);
 end String_Concatenation;

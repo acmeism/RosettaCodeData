@@ -1,5 +1,7 @@
-struct link {
+struct link
+{
   struct link *next;
   struct link *prev;
-  int data;
+  void  *data;
+  size_t type;
 };

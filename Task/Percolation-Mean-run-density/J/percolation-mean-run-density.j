@@ -1,6 +1,6 @@
 NB. translation of python
 
-NB.  'N P T' =: 100 0.5 500            NB. silliness
+NB.  'N P T' =: 100 0.5 500            NB. hypothetical example values, to aid comprehension...
 
 newv =: (> ?@(#&0))~                   NB. generate a random binary vector.  Use:  N newv P
 runs =: {: + [: +/ 1 0&E.              NB. add the tail to the sum of 1 0 occurrences  Use: runs V

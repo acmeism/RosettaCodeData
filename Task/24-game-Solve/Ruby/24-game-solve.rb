@@ -1,29 +1,22 @@
-class TwentyFourGamePlayer
+class TwentyFourGame
   EXPRESSIONS = [
-    '((%d %s %d) %s %d) %s %d',
-    '(%d %s (%d %s %d)) %s %d',
-    '(%d %s %d) %s (%d %s %d)',
-    '%d %s ((%d %s %d) %s %d)',
-    '%d %s (%d %s (%d %s %d))',
-  ].map{|expr| [expr, expr.gsub('%d', 'Rational(%d,1)')]}
+    '((%dr %s %dr) %s %dr) %s %dr',
+    '(%dr %s (%dr %s %dr)) %s %dr',
+    '(%dr %s %dr) %s (%dr %s %dr)',
+    '%dr %s ((%dr %s %dr) %s %dr)',
+    '%dr %s (%dr %s (%dr %s %dr))',
+  ]
 
-  OPERATORS = [:+, :-, :*, :/].repeated_permutation(3)
-
-  OBJECTIVE = Rational(24,1)
+  OPERATORS = [:+, :-, :*, :/].repeated_permutation(3).to_a
 
   def self.solve(digits)
     solutions = []
-    digits.permutation.to_a.uniq.each do |a,b,c,d|
-      OPERATORS.each do |op1,op2,op3|
-        EXPRESSIONS.each do |expr,expr_rat|
-          # evaluate using rational arithmetic
-          test = expr_rat % [a, op1, b, op2, c, op3, d]
-          value = eval(test) rescue -1  # catch division by zero
-          if value == OBJECTIVE
-            solutions << expr % [a, op1, b, op2, c, op3, d]
-          end
-        end
-      end
+    perms = digits.permutation.to_a.uniq
+    perms.product(OPERATORS, EXPRESSIONS) do |(a,b,c,d), (op1,op2,op3), expr|
+      # evaluate using rational arithmetic
+      text = expr % [a, op1, b, op2, c, op3, d]
+      value = eval(text)  rescue next                 # catch division by zero
+      solutions << text.delete("r")  if value == 24
     end
     solutions
   end
@@ -39,7 +32,7 @@ digits = ARGV.map do |arg|
 end
 digits.size == 4 or raise "error: need 4 digits, only have #{digits.size}"
 
-solutions = TwentyFourGamePlayer.solve(digits)
+solutions = TwentyFourGame.solve(digits)
 if solutions.empty?
   puts "no solutions"
 else

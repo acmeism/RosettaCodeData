@@ -29,10 +29,9 @@ processGuess digits xs = calc xs >>= check
           check x  = Left (show (fromRational (x :: Rational)) ++ " is wrong")
 
 -- A Reverse Polish Notation calculator with full error handling
-calc = result []
-    where result [n] [] = Right n
-          result _   [] = Left "Too few operators"
-          result ns  (x:xs) = simplify ns x >>= flip result xs
+calc xs = foldM simplify [] xs >>= \ns -> (case ns of
+                                             [n] -> Right n
+                                             _   -> Left "Too few operators")
 
 simplify (a:b:ns) s | isOp s = Right ((fromJust $ lookup s ops) b a : ns)
 simplify _        s | isOp s = Left ("Too few values before " ++ s)

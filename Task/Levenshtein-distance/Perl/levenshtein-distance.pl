@@ -4,8 +4,8 @@ my %cache;
 
 sub leven {
         my ($s, $t) = @_;
-        return length($t) if !$s;
-        return length($s) if !$t;
+        return length($t) if $s eq '';
+        return length($s) if $t eq '';
 
         $cache{$s}{$t} //=          # try commenting out this line
         do {

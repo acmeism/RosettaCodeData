@@ -1,7 +1,6 @@
-sub luhn-test ($cc-number --> Bool) {
-    my @digits = $cc-number.comb.reverse;
-    my $s1 = [+] @digits[0,2...@digits.end];
-    my $s2 = [+] @digits[1,3...@digits.end].map({[+] ($^a * 2).comb});
-
-    return ($s1 + $s2) %% 10;
+sub luhn-test ($number --> Bool) {
+    my @digits = $number.comb.reverse;
+    my $sum = @digits[0,2...*].sum
+            + @digits[1,3...*].map({ |($_ * 2).comb }).sum;
+    return $sum %% 10;
 }

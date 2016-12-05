@@ -1,0 +1,79 @@
+module FractalTree where
+
+import Java.IO
+import Prelude.Math
+
+data AffineTransform = native java.awt.geom.AffineTransform where
+  native new :: () -> STMutable s AffineTransform
+  native clone :: Mutable s AffineTransform -> STMutable s AffineTransform
+  native rotate :: Mutable s AffineTransform -> Double -> ST s ()
+  native scale :: Mutable s AffineTransform -> Double -> Double -> ST s ()
+  native translate :: Mutable s AffineTransform -> Double -> Double -> ST s ()
+
+data BufferedImage = native java.awt.image.BufferedImage where
+  pure native type_3byte_bgr "java.awt.image.BufferedImage.TYPE_3BYTE_BGR" :: Int
+  native new :: Int -> Int -> Int -> STMutable s BufferedImage
+  native createGraphics :: Mutable s BufferedImage -> STMutable s Graphics2D
+
+data Color = pure native java.awt.Color where
+  pure native black "java.awt.Color.black" :: Color
+  pure native green "java.awt.Color.green" :: Color
+  pure native white "java.awt.Color.white" :: Color
+  pure native new :: Int -> Color
+
+data BasicStroke = pure native java.awt.BasicStroke where
+  pure native new :: Float -> BasicStroke
+
+data RenderingHints = native java.awt.RenderingHints where
+  pure native key_antialiasing "java.awt.RenderingHints.KEY_ANTIALIASING" :: RenderingHints_Key
+  pure native value_antialias_on "java.awt.RenderingHints.VALUE_ANTIALIAS_ON" :: Object
+
+data RenderingHints_Key = pure native java.awt.RenderingHints.Key
+
+data Graphics2D = native java.awt.Graphics2D where
+  native drawLine :: Mutable s Graphics2D -> Int -> Int -> Int -> Int -> ST s ()
+  native drawOval :: Mutable s Graphics2D -> Int -> Int -> Int -> Int -> ST s ()
+  native fillRect :: Mutable s Graphics2D -> Int -> Int -> Int -> Int -> ST s ()
+  native setColor :: Mutable s Graphics2D -> Color -> ST s ()
+  native setRenderingHint :: Mutable s Graphics2D -> RenderingHints_Key -> Object -> ST s ()
+  native setStroke :: Mutable s Graphics2D -> BasicStroke -> ST s ()
+  native setTransform :: Mutable s Graphics2D -> Mutable s AffineTransform -> ST s ()
+
+data ImageIO = mutable native javax.imageio.ImageIO where
+  native write "javax.imageio.ImageIO.write" :: MutableIO BufferedImage -> String -> MutableIO File -> IO Bool throws IOException
+
+drawTree :: Mutable s Graphics2D -> Mutable s AffineTransform -> Int -> ST s ()
+drawTree g t i = do
+  let len = 10 -- ratio of length to thickness
+      shrink = 0.75
+      angle = 0.3 -- radians
+      i' = i - 1
+  g.setTransform t
+  g.drawLine 0 0 0 len
+  when (i' > 0) $ do
+    t.translate 0 (fromIntegral len)
+    t.scale shrink shrink
+    rt <- t.clone
+    t.rotate angle
+    rt.rotate (-angle)
+    drawTree g t i'
+    drawTree g rt i'
+
+main = do
+  let width = 900
+      height = 800
+      initScale = 20
+      halfWidth = fromIntegral width / 2
+  buffy <- BufferedImage.new width height BufferedImage.type_3byte_bgr
+  g <- buffy.createGraphics
+  g.setRenderingHint RenderingHints.key_antialiasing RenderingHints.value_antialias_on
+  g.setColor Color.black
+  g.fillRect 0 0 width height
+  g.setColor Color.green
+  t <- AffineTransform.new ()
+  t.translate halfWidth (fromIntegral height)
+  t.scale initScale initScale
+  t.rotate pi
+  drawTree g t 16
+  f <- File.new "FractalTreeFrege.png"
+  void $ ImageIO.write buffy "png" f

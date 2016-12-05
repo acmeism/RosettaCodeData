@@ -1,7 +1,9 @@
-sub nth_term (Int $n) { $n + round sqrt $n }
+sub nth-term (Int $n) { $n + round sqrt $n }
 
-say nth_term $_ for 1 .. 22;
+# Print the first 22 values of the sequence
+say (nth-term $_ for 1 .. 22);
 
-loop (my $i = 1; $i <= 1_000_000; $i++) {
-    $i.&nth_term.sqrt %% 1 and say "nth_term($i) is square.";
+# Check that the first million values of the sequence are indeed non-square
+for 1 .. 1_000_000 -> $i {
+    say "Oops, nth-term($i) is square!" if (sqrt nth-term $i) %% 1;
 }

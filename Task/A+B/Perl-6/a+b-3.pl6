@@ -1,2 +1,2 @@
-my ($a,$b) = $*IN.get.split(" ");
+my ($a, $b) = $*IN.get.split(" ");
 say $a + $b;

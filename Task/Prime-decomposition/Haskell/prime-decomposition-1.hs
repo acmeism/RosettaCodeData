@@ -1,3 +1,5 @@
-factorize n = concat [divs n p | p <- [2..n], isPrime p]
-  where
-    divs n p = if rem n p==0 then p:divs (quot n p) p else []
+factorize n = [ d | p <- [2..n], isPrime p, d <- divs n p ]
+           -- [2..n] >>= (\p-> [p|isPrime p]) >>= divs n
+    where
+    divs n p | rem n p == 0 = p : divs (quot n p) p
+             | otherwise    = []

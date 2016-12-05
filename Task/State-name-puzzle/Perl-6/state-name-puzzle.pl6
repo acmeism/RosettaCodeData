@@ -23,13 +23,13 @@ sub anastates (*@states) {
 	}
     }
 
-    my $equivs = hash @pairs.classify: *.lc.comb.sort.join.trim;
+    my $equivs = hash @pairs.classify: *.lc.comb.sort.join;
 
     gather for $equivs.values -> @c {
 	for ^@c -> $i {
 	    for $i ^..^ @c -> $j {
 		my $set = set @c[$i].list, @c[$j].list;
-		take $set.join(', ') if $set == 4;
+		take $set.keys.join(', ') if $set == 4;
 	    }
 	}
     }

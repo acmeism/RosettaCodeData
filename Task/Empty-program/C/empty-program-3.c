@@ -1,3 +1,1 @@
-main () {
-  return 0;
-}
+const main = 195;

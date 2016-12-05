@@ -1,5 +1,5 @@
 import Data.List
-import HFM.Primes(isPrime)
+import HFM.Primes (isPrime)
 import Control.Monad
 import Control.Arrow
 

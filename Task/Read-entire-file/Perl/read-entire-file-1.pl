@@ -1,1 +1,2 @@
-my $text = do { local( @ARGV, $/ ) = ( $filename ); <> };
+use File::Slurper 'read_text';
+my $text = read_text($filename, $data);

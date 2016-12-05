@@ -14,7 +14,7 @@ do
     exit
   end if
 end do
-call system('clear')
+call execute_command_line('cls')
 
 c_ang = s_ang*pi/180.0D0
 p_ang = c_ang
@@ -23,7 +23,7 @@ call display(c_ang)
 do
   call next_time_step(c_ang,p_ang,g,l,dt,n_ang)
   if(abs(c_ang-p_ang).ge.0.05D0) then
-    call system('clear')
+    call execute_command_line('cls')
     call display(c_ang)
   end if
 end do

@@ -1,17 +1,25 @@
-(defn primes-hashmap
-  "Infinite sequence of primes using an incremental Sieve or Eratosthenes with a Hashmap"
+(defn primes-treeFolding
+  "Computes the unbounded sequence of primes using a Sieve of Eratosthenes algorithm modified from Bird."
   []
-  (letfn [(nxtoddprm [c q bsprms cmpsts]
-            (if (>= c q) ;; only ever equal
-              (let [p2 (* (first bsprms) 2), nbps (next bsprms), nbp (first nbps)]
-                (recur (+ c 2) (* nbp nbp) nbps (assoc cmpsts (+ q p2) p2)))
-              (if (contains? cmpsts c)
-                (recur (+ c 2) q bsprms
-                       (let [adv (cmpsts c), ncmps (dissoc cmpsts c)]
-                         (assoc ncmps
-                                (loop [try (+ c adv)] ;; ensure map entry is unique
-                                  (if (contains? ncmps try)
-                                    (recur (+ try adv)) try)) adv)))
-                (cons c (lazy-seq (nxtoddprm (+ c 2) q bsprms cmpsts))))))]
-    (do (def baseoddprms (cons 3 (lazy-seq (nxtoddprm 5 9 baseoddprms {}))))
-        (cons 2 (lazy-seq (nxtoddprm 3 9 baseoddprms {}))))))
+  (letfn [(mltpls [p] (let [p2 (* 2 p)]
+                        (letfn [(nxtmltpl [c]
+                                  (cons c (lazy-seq (nxtmltpl (+ c p2)))))]
+                          (nxtmltpl (* p p))))),
+          (allmtpls [ps] (cons (mltpls (first ps)) (lazy-seq (allmtpls (next ps))))),
+          (union [xs ys] (let [xv (first xs), yv (first ys)]
+                           (if (< xv yv) (cons xv (lazy-seq (union (next xs) ys)))
+                             (if (< yv xv) (cons yv (lazy-seq (union xs (next ys))))
+                               (cons xv (lazy-seq (union (next xs) (next ys)))))))),
+          (pairs [mltplss] (let [tl (next mltplss)]
+                             (cons (union (first mltplss) (first tl))
+                                   (lazy-seq (pairs (next tl)))))),
+          (mrgmltpls [mltplss] (cons (first (first mltplss))
+                                     (lazy-seq (union (next (first mltplss))
+                                                      (mrgmltpls (pairs (next mltplss))))))),
+          (minusStrtAt [n cmpsts] (loop [n n, cmpsts cmpsts]
+                                    (if (< n (first cmpsts))
+                                      (cons n (lazy-seq (minusStrtAt (+ n 2) cmpsts)))
+                                      (recur (+ n 2) (next cmpsts)))))]
+    (do (def oddprms (cons 3 (lazy-seq (let [cmpsts (-> oddprms (allmtpls) (mrgmltpls))]
+                                         (minusStrtAt 5 cmpsts)))))
+        (cons 2 (lazy-seq oddprms)))))

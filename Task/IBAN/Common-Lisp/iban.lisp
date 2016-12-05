@@ -23,12 +23,13 @@
 ;; a built in function to verify for alphanumeric characters, but it includes characters beyond ASCII range.
 ;;
 (defun IBAN-characters (iban)
-  (flet ((valid-alphanum (ch) (or (and (char<= #\A ch) (char>= #\Z ch)) (and (char<= #\0 ch) (char>= #\9 ch)))))
-    (loop :for char :across iban
-          :finally (return t)
-          :do
-      (when (not (valid-alphanum char))
-        (return nil)))))
+  (flet ((valid-alphanum (ch)
+           (or (and (char<= #\A ch)
+                    (char>= #\Z ch))
+               (and (char<= #\0 ch)
+                    (char>= #\9 ch)))))
+    (loop for char across iban
+          always (valid-alphanum char))))
 
 ;;
 ;; The function IBAN-length verifies that the length of the number is correct. The code lengths

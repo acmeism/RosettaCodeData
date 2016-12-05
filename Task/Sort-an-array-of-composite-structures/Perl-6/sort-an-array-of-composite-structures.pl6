@@ -1,6 +1,6 @@
 my class Employee {
    has Str $.name;
-   has Num $.wage;
+   has Rat $.wage;
 }
 
 my $boss     = Employee.new( name => "Frank Myers"     , wage => 6755.85 );

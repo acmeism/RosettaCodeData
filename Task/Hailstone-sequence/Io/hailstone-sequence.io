@@ -7,6 +7,7 @@ makeItHail := method(n,
     )
     stones append(n)
   )
+  stones
 )
 
 out := makeItHail(27)

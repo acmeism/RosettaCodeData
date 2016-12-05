@@ -1,4 +1,4 @@
-#!/usr/bin/runhaskell
+#!/usr/bin/env runhaskell
 
 import Data.List
 
@@ -36,6 +36,6 @@ verse' ((anim, act, phrase):restAnims) prevAnim =
   in lns ++ verse' restAnims anim
 
 song :: [String]
-song = intercalate [""] $ map verse $ tail $ reverse $ tails animals
+song = concatMap verse $ tail $ reverse $ tails animals
 
 main = putStr $ unlines song

@@ -1,4 +1,5 @@
 import Data.Char (toUpper)
+import Data.Maybe (fromJust)
 
 validateIBAN :: String -> Either String String
 validateIBAN [] = Left "No IBAN number."
@@ -38,12 +39,9 @@ validateIBAN xs =
         -- convert the letters to numbers and
         -- convert the result to an integer
         p4 :: Integer
-        p4 = read $ concat $ convertLetters p3
-        convertLetters [] = []
-        convertLetters (x:xs)
-            | x `elem` digits = [x] : convertLetters xs
-            | otherwise = let (Just ys) = lookup x replDigits
-                          in  ys : convertLetters xs
+        p4 = read $ concat $ map convertLetter p3
+        convertLetter x | x `elem` digits = [x]
+                        | otherwise       = fromJust $ lookup x replDigits
         -- see if the number is valid
         check = if sane
                     then if p4 `mod` 97 == 1

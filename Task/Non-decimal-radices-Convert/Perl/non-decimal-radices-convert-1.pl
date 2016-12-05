@@ -1,5 +1,4 @@
-use POSIX;
-
-my ($num, $n_unparsed) = strtol('1a', 16);
-$n_unparsed == 0 or die "invalid characters found";
-print "$num\n"; # prints "26"
+sub to2  { sprintf "%b", shift; }
+sub to16 { sprintf "%x", shift; }
+sub from2  { unpack("N", pack("B32", substr("0" x 32 . shift, -32))); }
+sub from16 { hex(shift); }

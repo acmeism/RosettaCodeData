@@ -1,12 +1,12 @@
 package main
 
-import (
-    "fmt"
-    "math/big"
-)
+import "fmt"
 
-func gcd(x, y int64) int64 {
-    return new(big.Int).GCD(nil, nil, big.NewInt(x), big.NewInt(y)).Int64()
+func gcd(x, y int) int {
+    for y != 0 {
+        x, y = y, x%y
+    }
+    return x
 }
 
 func main() {

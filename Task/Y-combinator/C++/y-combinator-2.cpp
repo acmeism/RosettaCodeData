@@ -1,6 +1,21 @@
-template <typename A, typename B>
-std::function<B(A)> Y (std::function<std::function<B(A)>(std::function<B(A)>)> f) {
-	return [f](A x) {
-		return f(Y(f))(x);
-	};
+#include <iostream>
+#include <functional>
+int main () {
+  auto y = ([] (auto f) { return
+              ([] (auto x) { return x (x); }
+                 ([=] (auto y) -> std:: function <int (int)> { return
+                    f ([=] (auto a) { return
+                          (y (y)) (a) ;});}));});
+
+  auto almost_fib = [] (auto f) { return
+                       [=] (auto n) { return
+                         n < 2? n: f (n - 1) + f (n - 2) ;};};
+  auto almost_fac = [] (auto f) { return
+                       [=] (auto n) { return
+                         n <= 1? n: n * f (n - 1); };};
+
+  auto fib = y (almost_fib);
+  auto fac = y (almost_fac);
+  std:: cout << fib (10) << '\n'
+             << fac (10) << '\n';
 }

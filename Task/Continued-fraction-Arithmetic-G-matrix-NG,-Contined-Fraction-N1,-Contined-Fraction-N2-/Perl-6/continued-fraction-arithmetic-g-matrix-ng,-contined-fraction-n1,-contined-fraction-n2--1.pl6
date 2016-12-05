@@ -7,15 +7,15 @@ class NG2 {
     method apply(@cf1, @cf2, :$limit = 30) {
         my @cfs = [@cf1], [@cf2];
         gather {
-            while @cfs[0].elems or @cfs[1].elems {
+            while @cfs[0] or @cfs[1] {
                 my $term;
                 (take $term if $term = self!extract) unless self!needterm;
                 my $from = self!from;
-                $from = @cfs[$from].elems ?? $from !! $from +^ 1;
+                $from = @cfs[$from] ?? $from !! $from +^ 1;
                 self!inject($from, @cfs[$from].shift);
             }
             take self!drain while $!b;
-        }[ ^ $limit ];
+        }[ ^$limit ].grep: *.defined;
     }
 
     # Private methods

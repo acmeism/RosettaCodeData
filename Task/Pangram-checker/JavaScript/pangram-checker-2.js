@@ -1,36 +1,20 @@
-var _ = require("underscore");
+(() => {
+    'use strict';
 
-// Curried mixin function
-// Utility Methods
-_.mixin({
-  checkAToZ: function(s) {
-    return function(letter) {
-      if (s.indexOf(letter) != -1) { return true};
-    }
-  }
-});
+    // isPangram :: String -> Bool
+    let isPangram = s => {
+        let lc = s.toLowerCase();
 
-_.mixin({
-  toLower: function(str) {
-      return str.toLowerCase();
-  }
-});
+        return 'abcdefghijklmnopqrstuvwxyz'
+            .split('')
+            .filter(c => lc.indexOf(c) === -1)
+            .length === 0;
+    };
 
-_.mixin({
-  isPangram: function(lstr) {
-    var letters = "zqxjkvbpygfwmucldrhsnioate".split('');
-    return _.every(letters, _.checkAToZ(lstr));
-  }
-});
+    // TEST
+    return [
+        'is this a pangram',
+        'The quick brown fox jumps over the lazy dog'
+    ].map(isPangram);
 
-
-var panGramStr = "The quick brown fox jumps over the lazy dog";
-var IsPanGram = function(panGramStr) {
-    return _.chain(panGramStr).toLower().isPangram().value();
-};
-
-console.log("Result IsPanGram - \"", panGramStr,"\" - " , IsPanGram.call(this,panGramStr));
-console.log("Result IsPanGram - \"", "the World","\" - ", IsPanGram.call(this, "the World"));
-
-// Result IsPanGram - " The quick brown fox jumps over the lazy dog " -  true
-// Result IsPanGram - " the World " -  false
+})();

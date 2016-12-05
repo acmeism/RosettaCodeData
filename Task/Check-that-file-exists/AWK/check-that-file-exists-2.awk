@@ -15,7 +15,7 @@ function exists(file    ,line, msg)
         if ( (getline line < file) == -1 )
         {
                 # "Permission denied" is for MS-Windows
-                msg = (ERRNO ~ /Permission denied/ || ERRNO ~ /a directory/) ? "1" : "0"
+                msg = (ERRNO ~ /Permission denied/ || ERRNO ~ /a directory/) ? 1 : 0
                 close(file)
                 return msg
         }

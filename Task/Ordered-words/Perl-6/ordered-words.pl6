@@ -1,1 +1,1 @@
-say .value given max :by(*.key), classify *.chars, grep { [le] .comb }, lines;
+say lines.grep({ [le] .comb }).classify(*.chars).max(*.key).value

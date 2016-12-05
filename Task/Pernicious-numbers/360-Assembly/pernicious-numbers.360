@@ -1,0 +1,126 @@
+*        Pernicious numbers        04/05/2016
+PERNIC   CSECT
+         USING  PERNIC,R13         base register and savearea pointer
+SAVEAREA B      STM-SAVEAREA(R15)
+         DC     17F'0'
+STM      STM    R14,R12,12(R13)    save registers
+         ST     R13,4(R15)         link backward SA
+         ST     R15,8(R13)         link forward SA
+         LR     R13,R15            establish addressability
+         SR     R7,R7              n=0
+         MVC    PG,=CL80' '        clear buffer
+         LA     R10,PG             pgi
+         LA     R6,1               i=1
+LOOPI1   C      R7,=F'25'          do i=1 while(n<25)
+         BNL    ELOOPI1
+         LR     R1,R6              i
+         BAL    R14,POPCOUNT
+         LR     R1,R0              popcount(i)
+         BAL    R14,ISPRIME
+         C      R0,=F'1'           if isprime(popcount(i))=1
+         BNE    NOTPRIM1
+         XDECO  R6,XDEC            edit i
+         MVC    0(3,R10),XDEC+9    output i format I3
+         LA     R10,3(R10)         pgi=pgi+3
+         LA     R7,1(R7)           n=n+1
+NOTPRIM1 LA     R6,1(R6)           i=i+1
+         B      LOOPI1
+ELOOPI1  XPRNT  PG,80              print buffer
+         MVC    PG,=CL80' '        clear buffer
+         LA     R10,PG             pgi
+         L      R6,=F'888888877'   i=888888877
+LOOPI2   C      R6,=F'888888888'   do i to 888888888
+         BH     ELOOPI2
+         LR     R1,R6              i
+         BAL    R14,POPCOUNT
+         LR     R1,R0              popcount(i)
+         BAL    R14,ISPRIME
+         C      R0,=F'1'           if isprime(popcount(i))=1
+         BNE    NOTPRIM2
+         XDECO  R6,XDEC            edit i
+         MVC    0(10,R10),XDEC+2   output i format I10
+         LA     R10,10(R10)        pgi=pgi+10
+NOTPRIM2 LA     R6,1(R6)           i=i+1
+         B      LOOPI2
+ELOOPI2  XPRNT  PG,80              print buffer
+         L      R13,4(0,R13)       restore savearea pointer
+         LM     R14,R12,12(R13)    restore registers
+         XR     R15,R15            return code = 0
+         BR     R14 -------------- end main
+POPCOUNT CNOP   0,4 -------------- popcount(xx) [R8,R11]
+         ST     R14,POPCOUSA       save return address
+         ST     R1,XX              store argument
+         SR     R11,R11            rr=0
+         SR     R8,R8              ii=0
+LOOPII   C      R8,=F'31'          do ii=0 to 31
+         BH     ELOOPII
+         L      R1,XX              xx
+         LR     R2,R8              ii
+         BAL    R14,BTEST
+         C      R0,=F'1'           if btest(xx,ii)=1
+         BNE    NOTBTEST
+         LA     R11,1(R11)         rr=rr+1
+NOTBTEST LA     R8,1(R8)           ii=ii+1
+         B      LOOPII
+ELOOPII  LR     R0,R11             return(rr)
+         L      R14,POPCOUSA
+         BR     R14 -------------- end popcount
+ISPRIME  CNOP   0,4 -------------- isprime(number) [R9]
+         ST     R14,ISPRIMSA       save return address
+         ST     R1,NUMBER          store argument
+         C      R1,=F'2'           if number=2
+         BNE    ELSE1
+         MVC    ISPRIMEX,=F'1'     isprimex=1
+         B      ELOOPJJ
+ELSE1    L      R1,NUMBER
+         C      R1,=F'2'           if number<2
+         BL     EVEN
+         L      R4,NUMBER
+         SRDA   R4,32
+         D      R4,=F'2'           mod(number,2)
+         C      R4,=F'0'           if mod(number,2)=0
+         BNE    ELSE2
+EVEN     MVC    ISPRIMEX,=F'0'     isprimex=0
+         B      ELOOPJJ
+ELSE2    MVC    ISPRIMEX,=F'1'     isprimex=1
+         LA     R9,3               jj=3
+LOOPJJ   LR     R5,R9              jj
+         MR     R4,R9              jj*jj
+         C      R5,NUMBER          do jj=3 by 1 while jj*jj<=number
+         BH     ELOOPJJ
+         L      R4,NUMBER
+         SRDA   R4,32
+         DR     R4,R9              mod(number,jj)
+         LTR    R4,R4              if mod(number,jj)=0
+         BNZ    ITERJJ
+         MVC    ISPRIMEX,=F'0'     isprimex=0
+         L      R0,ISPRIMEX        return(isprimex)
+         B      ISPRIMRT
+ITERJJ   LA     R9,1(R9)           jj=jj+1
+         B      LOOPJJ
+ELOOPJJ  L      R0,ISPRIMEX        return(isprimex)
+ISPRIMRT L      R14,ISPRIMSA
+         BR     R14 -------------- end isprime
+BTEST    CNOP   0,4 -------------- btest(word,n) [R0:R3]
+         LA     R0,1               ok=1; return(1) if word(n)='1'b
+         LR     R3,R2              i=n
+LOOPB    LTR    R3,R3              if i=0
+         BZ     ELOOPB
+         SRL    R1,1               Shift Right Logical
+         BCTR   R3,0               i=i-1
+         B      LOOPB
+ELOOPB   STC    R1,BTESTX          x=word
+         TM     BTESTX,B'00000001' if bit(word,n)='1'b
+         BO     BTESTRET
+         LA     R0,0               ok=0; return(0) if word(n)='0'b
+BTESTRET BR     R14 -------------- end btest
+XX       DS     F                  paramter of popcount
+NUMBER   DS     F                  paramter of isprime
+ISPRIMEX DS     F                  return value of isprime
+BTESTX   DS     X                  byte to see in btest
+POPCOUSA DS     A                  return address of popcount
+ISPRIMSA DS     A                  return address of isprime
+PG       DS     CL80               buffer
+XDEC     DS     CL12               edit zone
+         YREGS
+         END    PERNIC

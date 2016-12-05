@@ -1,16 +1,33 @@
-function isPrime (n)  -- Function to test primality by trial division
-	if n < 2 then return false end
-	if n < 4 then return true end
-	if n % 2 == 0 then return false end
-	for d = 3, math.sqrt(n), 2 do
-		if n % d == 0 then return false end
-	end
-	return true
+-- Returns true if x is prime, and false otherwise
+function isprime (x)
+    if x < 2 then return false end
+    if x < 4 then return true end
+    if x % 2 == 0 then return false end
+    for d = 3, math.sqrt(x), 2 do
+        if x % d == 0 then return false end
+    end
+    return true
 end
 
-local start = arg[1] or 1	-- Default limits may be overridden with
-local bound = arg[2] or 100	-- command line arguments, for example:
-							-- lua primes.lua 1000 2000
-for i = start, bound do
-	if isPrime(i) then io.write(i .. " ") end
+-- Returns table of prime numbers (from lo, if specified) up to hi
+function primes (lo, hi)
+    local t = {}
+    if not hi then
+        hi = lo
+        lo = 2
+    end
+    for n = lo, hi do
+        if isprime(n) then table.insert(t, n) end
+    end
+    return t
 end
+
+-- Show all the values of a table in one line
+function show (x)
+    for _, v in pairs(x) do io.write(v .. " ") end
+    print()
+end
+
+-- Main procedure
+show(primes(100))
+show(primes(50, 150))

@@ -5,7 +5,7 @@ class TreeNode {
     has $.value;
 
     method pre-order {
-        gather {
+        flat gather {
             take $.value;
             take $.left.pre-order if $.left;
             take $.right.pre-order if $.right
@@ -13,7 +13,7 @@ class TreeNode {
     }
 
     method in-order {
-        gather {
+        flat gather {
             take $.left.in-order if $.left;
             take $.value;
             take $.right.in-order if $.right;
@@ -21,7 +21,7 @@ class TreeNode {
     }
 
     method post-order {
-        gather {
+        flat gather {
             take $.left.post-order if $.left;
             take $.right.post-order if $.right;
             take $.value;
@@ -30,7 +30,7 @@ class TreeNode {
 
     method level-order {
         my TreeNode @queue = (self);
-        gather while @queue.elems {
+        flat gather while @queue.elems {
             my $n = @queue.shift;
             take $n.value;
             @queue.push($n.left) if $n.left;

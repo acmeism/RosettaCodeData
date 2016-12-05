@@ -1,9 +1,9 @@
-sub rref (@m is rw) {
+sub rref (@m) {
     @m or return;
     my ($lead, $rows, $cols) = 0, +@m, +@m[0];
 
     for ^$rows -> $r {
-        $lead < $cols or return @m;
+        return @m if $lead >= $cols;
         my $i = $r;
 
         until @m[$i][$lead] {
@@ -23,18 +23,18 @@ sub rref (@m is rw) {
         }
         ++$lead;
     }
-    @m;
+    @m
 }
 
-sub rat_or_int ($num is rw) {
+sub rat-or-int ($num) {
     return $num unless $num ~~ Rat;
-    return $num.Int if $num.denominator == 1;
-    return $num.perl;
+    return $num.narrow if $num.narrow.WHAT ~~ Int;
+    $num.nude.join: '/';
 }
 
 sub say_it ($message, @array) {
     say "\n$message";
-    $_».&rat_or_int.fmt(" %5s").say for @array;
+    $_».&rat-or-int.fmt(" %5s").say for @array;
 }
 
 my @M = (

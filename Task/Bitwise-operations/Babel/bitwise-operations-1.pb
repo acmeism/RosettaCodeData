@@ -1,10 +1,1 @@
-((main { (5 9) foo ! })
-
-(foo {
-    ({cand} {cor} {cnor} {cxor} {cxnor} {cushl} {cushr} {cashr} {curol} {curor})
-    { <- dup give ->
-        eval
-        %x nl <<}
-    each
-    give zap
-    cnot %x nl <<}))
+({5 9}) ({cand} {cor} {cnor} {cxor} {cxnor} {shl} {shr} {ashr} {rol}) cart ! {give <- cp -> compose !} over ! {eval} over ! {;} each

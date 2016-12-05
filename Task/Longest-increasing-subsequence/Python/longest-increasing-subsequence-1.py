@@ -1,8 +1,8 @@
 def longest_increasing_subsequence(X):
     """Returns the Longest Increasing Subsequence in the Given List/Array"""
-    N = length(X)
-    P = [0 for i in range(N)]
-    M = [0 for i in range(N+1)]
+    N = len(X)
+    P = [0] * N
+    M = [0] * (N+1)
     L = 0
     for i in range(N):
        lo = 1
@@ -24,8 +24,8 @@ def longest_increasing_subsequence(X):
     S = []
     k = M[L]
     for i in range(L-1, -1, -1):
-    	S.append(X[k])
-   	k = P[k]
+        S.append(X[k])
+        k = P[k]
     return S[::-1]
 
 if __name__ == '__main__':

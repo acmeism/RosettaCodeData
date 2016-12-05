@@ -4,36 +4,45 @@ import (
     "bytes"
     "fmt"
     "math/rand"
+    "time"
 )
 
-type pt struct {
-    x, y int
-}
+const (
+    nPts = 100
+    rMin = 10
+    rMax = 15
+)
 
 func main() {
-    // generate possible points
-    all := make([]pt, 0, 404)
-    for x := -15; x <= 15; x++ {
-        for y := -15; y <= 15; y++ {
-            rs := x*x + y*y
-            if 100 <= rs && rs <= 225 {
-                all = append(all, pt{x, y})
+    rand.Seed(time.Now().Unix())
+    var poss []struct{ x, y int }
+    min2 := rMin * rMin
+    max2 := rMax * rMax
+    for y := -rMax; y <= rMax; y++ {
+        for x := -rMax; x <= rMax; x++ {
+            if r2 := x*x + y*y; r2 >= min2 && r2 <= max2 {
+                poss = append(poss, struct{ x, y int }{x, y})
             }
         }
     }
-    if len(all) != 404 {
-        panic(len(all))
+    fmt.Println(len(poss), "possible points")
+    span := rMax + 1 + rMax
+    rows := make([][]byte, span)
+    for r := range rows {
+        rows[r] = bytes.Repeat([]byte{' '}, span*2)
     }
-    // randomly order
-    rp := rand.Perm(404)
-    // plot 100 of them to a buffer
-    b := bytes.Repeat([]byte{' '}, 31*31*2)
-    for i := 0; i < 100; i++ {
-        p := all[rp[i]]
-        b[(p.x+15)*2+(p.y+15)*31*2] = '*'
+    u := 0
+    for n := 0; n < nPts; n++ {
+        i := rand.Intn(len(poss))
+        r := poss[i].y + rMax
+        c := (poss[i].x + rMax) * 2
+        if rows[r][c] == ' ' {
+            rows[r][c] = '*'
+            u++
+        }
     }
-    // print buffer to screen
-    for i := 0; i < 31; i++ {
-        fmt.Println(string(b[i*31*2 : (i+1)*31*2]))
+    for _, row := range rows {
+        fmt.Println(string(row))
     }
+    fmt.Println(u, "unique points")
 }

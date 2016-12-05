@@ -1,10 +1,10 @@
-sub insert( $x, @xs) { [@xs[0..$_-1], $x, @xs[$_..*]] for 0..@xs }
+sub insert ($x, @xs) { ([flat @xs[0 ..^ $_], $x, @xs[$_ .. *]] for 0 .. @xs) }
 sub order ($sg, @xs) { $sg > 0 ?? @xs !! @xs.reverse }
 
 multi σ_permutations ([]) { [] => 1 }
 
 multi σ_permutations ([$x, *@xs]) {
-    σ_permutations(@xs).map({ order($_.value, insert($x, $_.key)) }) Z=> (1,-1) xx *
+    σ_permutations(@xs).map({ |order($_.value, insert($x, $_.key)) }) Z=> |(1,-1) xx *
 }
 
 sub m_arith ( @a, $op ) {
@@ -41,7 +41,8 @@ my @tests = (
 );
 
 sub dump (@matrix) {
-    say $_».fmt: "%3s" for @matrix, '';
+    say $_».fmt: "%3s" for @matrix;
+    say '';
 }
 
 for @tests -> @matrix {

@@ -28,12 +28,12 @@ sub md4($str) {
 	    when 56..63 {
 	        $term = True;
 	        @block.push(0x80);
-	        @block.push(0 xx 63 - $_);
+	        @block.push(slip 0 xx 63 - $_);
 	        @x = pack-le @block;
 	    }
 	    when 0..55 {
 	        @block.push($term ?? 0 !! 0x80);
-	        @block.push(0 xx 55 - $_);
+	        @block.push(slip 0 xx 55 - $_);
 	        @x = pack-le @block;
 	
 	        my $bit_len = $buflen +< 3;

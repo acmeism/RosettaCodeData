@@ -1,6 +1,6 @@
 sub beadsort(*@list) {
     my @rods;
-    for ^«@list -> $x { @rods[$x].push(1) }
+    for words ^«@list -> $x { @rods[$x].push(1) }
     gather for ^@rods[0] -> $y {
         take [+] @rods.map: { .[$y] // last }
     }

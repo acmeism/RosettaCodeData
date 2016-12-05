@@ -1,6 +1,7 @@
 /* REXX ***************************************************************
-* If the list contains any character strings, the following will wotk
+* If the list contains any character strings, the following will work
 * Note the use of >> (instead of >) to avoid numeric comparison
+* Note that max() overrides the builtin function MAX
 * 30.07.2013 Walter Pachl
 **********************************************************************/
 list='Walter Pachl living in Vienna'

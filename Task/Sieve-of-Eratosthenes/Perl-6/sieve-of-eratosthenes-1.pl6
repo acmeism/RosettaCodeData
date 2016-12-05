@@ -4,7 +4,9 @@ sub sieve( Int $limit ) {
     gather for @is-prime.kv -> $number, $is-prime {
         if $is-prime {
             take $number;
-            @is-prime[$_] = False if $_ %% $number for $number**2 .. $limit;
+            loop (my $s = $number**2; $s <= $limit; $s += $number) {
+                @is-prime[$s] = False;
+            }
         }
     }
 }

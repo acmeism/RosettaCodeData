@@ -1,4 +1,4 @@
-; Solve Continuous Knapsdack Problem
+; Solve Continuous Knapsack Problem
 ; Nicolas Modrzyk
 ; January 2015
 

@@ -1,14 +1,18 @@
 #lang racket
-(define min 1)
-(define max 10)
 
-(define (guess-number (target (+ min (random (- max min)))))
-  (define guess (read))
-  (cond ((not (number? guess)) (display "That's not a number!\n" (guess-number target)))
-        ((or (> guess max) (> min guess)) (display "Out of range!\n") (guess-number target))
-        ((> guess target) (display "Too high!\n") (guess-number target))
-        ((< guess target) (display "Too low!\n") (guess-number target))
-        (else (display "Well guessed!\n"))))
+(define (guess-number min max)
+  (define target (+ min (random (- max min -1))))
+  (printf "I'm thinking of a number between ~a and ~a\n" min max)
+  (let loop ([prompt "Your guess"])
+    (printf "~a: " prompt)
+    (flush-output)
+    (define guess (read))
+    (define response
+      (cond [(not (exact-integer? guess)) "Please enter a valid integer"]
+            [(< guess target)             "Too low"]
+            [(> guess target)             "Too high"]
+            [else #f]))
+    (when response (printf "~a\n" response) (loop "Try again")))
+  (printf "Well guessed!\n"))
 
-(display (format "Guess a number between ~a and ~a\n" min max))
-(guess-number)
+(guess-number 1 100)

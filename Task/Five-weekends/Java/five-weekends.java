@@ -3,7 +3,6 @@ import java.util.GregorianCalendar;
 
 public class FiveFSS {
     private static boolean[] years = new boolean[201];
-    //dreizig tage habt september...
     private static int[] month31 = {Calendar.JANUARY, Calendar.MARCH, Calendar.MAY,
         Calendar.JULY, Calendar.AUGUST, Calendar.OCTOBER, Calendar.DECEMBER};
 

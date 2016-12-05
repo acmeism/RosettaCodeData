@@ -1,14 +1,9 @@
-(function () {
+// Array comprehension style
+[ for (i of Array.apply(null, { length: 100 })) i ].forEach((_, i) => {
+  var door = i + 1
+  var sqrt = Math.sqrt(door);
 
-  return rng(1, Math.sqrt(100)).map(function (x) {
-    return x * x;
-  });
-
-  // rng(1, 20) --> [1..20]
-  function rng(m, n) {
-    return Array.apply(null, Array(n - m + 1)).map(function (x, i) {
-      return m + i;
-    });
+  if (sqrt === (sqrt | 0)) {
+    console.log("Door %d is open", door);
   }
-
-})();
+});

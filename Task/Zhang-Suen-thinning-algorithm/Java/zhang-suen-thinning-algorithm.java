@@ -73,7 +73,7 @@ public class ZhangSuen {
                 grid[p.y][p.x] = ' ';
             toWhite.clear();
 
-        } while (hasChanged || firstStep);
+        } while (firstStep || hasChanged);
 
         printResult();
     }

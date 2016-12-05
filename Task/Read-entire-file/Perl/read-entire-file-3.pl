@@ -1,2 +1,2 @@
-use File::Slurp;
-my $text = read_file($filename);
+use IO::All;
+$text = io($filename)->utf8->all;

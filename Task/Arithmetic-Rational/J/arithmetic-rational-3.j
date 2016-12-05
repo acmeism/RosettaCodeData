@@ -1,2 +1,4 @@
-factors=: */&>@{@((^ i.@>:)&.>/)@q:~&__
-is_perfect_rational=: 2= +/@:%@,@factors
+   x: 3%4
+3r4
+   x:inv 3%4
+0.75

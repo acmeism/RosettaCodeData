@@ -14,8 +14,8 @@ my &δy = runge-kutta { $^t * sqrt($^y) };
 loop (
     my ($t, $y) = (0, 1);
     $t <= 10;
-    $t, $y Z[+=] δt, δy($t, $y, δt)
+    ($t, $y) »+=« (δt, δy($t, $y, δt))
 ) {
     printf "y(%2d) = %12f ± %e\n", $t, $y, abs($y - ($t**2 + 4)**2 / 16)
-    if $t.narrow ~~ Int;
+    if $t %% 1;
 }

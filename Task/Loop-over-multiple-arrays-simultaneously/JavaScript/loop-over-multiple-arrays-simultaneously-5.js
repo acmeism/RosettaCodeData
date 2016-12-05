@@ -1,24 +1,33 @@
-(function (lists) {
+(function () {
+    'use strict';
 
-    // [[a]] -> [[a]]
-    function zip(lists) {
-        var lng = lists.length,
-            lstHead = lng ? [].concat.apply([], lists.map(function (lst) {
-                return lst.length ? [lst[0]] : [];
-            })) : [];
-
-        return lstHead.length === lng ? [lstHead].concat(
-            zip(lists.map(function (x) {
-                return x.slice(1);
-            }))
-        ) : [];
+    // zipListsWith :: ([a] -> b) -> [[a]] -> [[b]]
+    function zipListsWith(f, xss) {
+        return (xss.length ? xss[0] : [])
+            .map(function (_, i) {
+                return f(xss.map(function (xs) {
+                    return xs[i];
+                }));
+            });
     }
 
-    // [a] -> s
+
+
+
+    // Sample function over a list
+
+    // concat :: [a] -> s
     function concat(lst) {
         return ''.concat.apply('', lst);
     }
 
-    return zip(lists).map(concat).join('\n')
 
-})([["a", "b", "c"], ["A", "B", "C"], [1, 2, 3]]);
+    //    TEST
+
+    return zipListsWith(
+        concat,
+        [["a", "b", "c"], ["A", "B", "C"], [1, 2, 3]]
+    )
+    .join('\n');
+
+})();

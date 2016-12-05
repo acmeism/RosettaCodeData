@@ -1,30 +1,13 @@
-public class IdentityMatrix {
+public class PrintIdentityMatrix {
 
-	public static int[][] matrix(int n){
-		int[][] array = new int[n][n];
-		
-		for(int row=0; row<n; row++){
-			for(int col=0; col<n; col++){
-				if(row == col){
-					array[row][col] = 1;
-				}
-				else{
-					array[row][col] = 0;
-				}
-			}
-		}
-		return array;
-	}
-	public static void printMatrix(int[][] array){
-		for(int row=0; row<array.length; row++){
-			for(int col=0; col<array[row].length; col++){
-				System.out.print(array[row][col] + "\t");
-			}
-			System.out.println();
-		}
-	}
-	public static void main (String []args){
-		printMatrix(matrix(5));
-	}
+    public static void main(String[] args) {
+        int n = 5;
+        int[][] array = new int[n][n];
+
+        IntStream.range(0, n).forEach(i -> array[i][i] = 1);
+
+        Arrays.stream(array)
+                .map((int[] a) -> Arrays.toString(a))
+                .forEach(System.out::println);
+    }
 }
-By Sani Yusuf @saniyusuf.

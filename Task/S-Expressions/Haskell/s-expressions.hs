@@ -1,8 +1,8 @@
-import Text.ParserCombinators.Parsec ((<|>), (<?>), many, many1, char, try, parse, sepBy, choice)
-import Text.ParserCombinators.Parsec.Char (noneOf)
-import Text.ParserCombinators.Parsec.Token (integer, float, whiteSpace, stringLiteral, makeTokenParser)
-import Text.ParserCombinators.Parsec.Language (haskellDef)
-
+import Data.Functor
+import Text.Parsec ((<|>), (<?>), many, many1, char, try, parse, sepBy, choice)
+import Text.Parsec.Char (noneOf)
+import Text.Parsec.Token (integer, float, whiteSpace, stringLiteral, makeTokenParser)
+import Text.Parsec.Language (haskell)
 
 data Val = Int Integer
          | Float Double
@@ -10,40 +10,19 @@ data Val = Int Integer
          | Symbol String
          | List [Val] deriving (Eq, Show)
 
-lexer = makeTokenParser haskellDef
-
-tInteger = (integer lexer) >>= (return . Int) <?> "integer"
-
-tFloat = (float lexer) >>= (return . Float) <?> "floating point number"
-
-tString = (stringLiteral lexer) >>= (return . String) <?> "string"
-
-tSymbol = (many1 $ noneOf "()\" \t\n\r") >>= (return . Symbol) <?> "symbol"
-
-tAtom = choice [try tFloat, try tInteger, tSymbol, tString] <?> "atomic expression"
-
-tExpr = do
-    whiteSpace lexer
-    expr <- tList <|> tAtom
-    whiteSpace lexer
-    return expr
-    <?> "expression"
-
-tList = do
-    char '('
-    list <- many tExpr
-    char ')'
-    return $ List list
-    <?> "list"
-
 tProg = many tExpr <?> "program"
+  where tExpr = between ws ws (tList <|> tAtom) <?> "expression"
+        ws = whiteSpace haskell
+        tAtom  =  try (Int <$> integer haskell) <?> "integer"
+              <|> try (Float <$> float haskell) <?> "floating point number"
+              <|> String <$> stringLiteral haskell <?> "string"
+              <|> Symbol <$> many1 (noneOf "()\"\t\n\r") <?> "symbol"
+              <?> "atomic expression"
+        tList = List <$> between (char '(') (char ')') (many tExpr) <?> "list"
 
-p ex = case parse tProg "" ex of
-              Right x -> putStrLn $  unwords $ map show x
-              Left err -> print err
+p = either print (putStrLn . unwords . map show) . parse tProg ""
 
 main = do
     let expr = "((data \"quoted data\" 123 4.5)\n  (data (!@# (4.5) \"(more\" \"data)\")))"
-    putStrLn $ "The input:\n" ++ expr ++ "\n"
-    putStr "Parsed as:\n"
+    putStrLn ("The input:\n" ++ expr ++ "\nParsed as:")
     p expr

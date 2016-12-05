@@ -5,6 +5,7 @@
 #include <deque>
 #include <map>
 #include <algorithm>                    // for lower_bound()
+#include <iterator>                     // for prev()
 
 using namespace std;
 
@@ -36,7 +37,7 @@ protected:
   typedef deque<INDEXES*> MATCHES;
 
   // return the LCS as a linked list of matched index pairs
-  uint64_t LCS::Pairs(MATCHES& matches, shared_ptr<Pair> *pairs) {
+  uint64_t Pairs(MATCHES& matches, shared_ptr<Pair> *pairs) {
     auto trace = pairs != nullptr;
     PAIRS traces;
     THRESHOLD threshold;
@@ -79,6 +80,7 @@ protected:
           if (limit == threshold.end()) {
             // insert case
             threshold.push_back(index2);
+            limit = prev(threshold.end());
             if (trace) {
               auto prefix = index3 > 0 ? traces[index3 - 1] : nullptr;
               auto last = make_shared<Pair>(index1, index2, prefix);

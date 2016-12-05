@@ -1,9 +1,1 @@
-fillit ok
-
-lalpha count type abcdefghijklmnopqrstuvwxyz ok
-
-loadit ok
-
-lalpha count type abcdefghijklmnopqrstuvwxyz ok
-
- ok
+: printit2  [char] z 1+  [char] a  do  I emit  loop ;

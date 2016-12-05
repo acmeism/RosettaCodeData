@@ -3,8 +3,9 @@ class KnapsackItem {
   has $.weight;
   has $.value;
   has $.name;
-  method new($volume,$weight,$value, $name) {
-    self.bless(*, :$volume, :$weight, :$value, :$name)
+
+  method new($volume,$weight,$value,$name) {
+    self.bless(:$volume, :$weight, :$value, :$name)
   }
 };
 

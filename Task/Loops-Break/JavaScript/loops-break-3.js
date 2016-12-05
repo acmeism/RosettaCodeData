@@ -1,34 +1,14 @@
-18
-10
-16
-10
-8
-0
-13
-3
-2
-14
-15
-17
-14
-7
-10
-8
-0
-2
-0
-2
-5
-16
-3
-16
-6
-7
-19
-0
-16
-9
-7
-11
-17
-10
+console.log(
+  (function streamTillInitialTen() {
+    var nFirst = Math.floor(Math.random() * 20);
+
+    if (nFirst === 10) return [10];
+
+    return [
+      nFirst,
+      Math.floor(Math.random() * 20)
+    ].concat(
+      streamTillInitialTen()
+    );
+  })().join('\n')
+);

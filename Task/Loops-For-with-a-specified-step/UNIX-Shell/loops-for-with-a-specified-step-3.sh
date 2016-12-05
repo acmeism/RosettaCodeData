@@ -1,3 +1,5 @@
-for (( x=2; $x<=8; x=$x+2 )); do
-  printf "%d, " $x
+x=2
+while [[$x -le 8]]; do
+	echo $x
+	((x=x+2))
 done

@@ -2,9 +2,7 @@
 
 def powers(m)
   return enum_for(__method__, m) unless block_given?
-
-  n = 0
-  loop { yield n ** m; n += 1 }
+  0.step{|n| yield n**m}
 end
 
 def squares_without_cubes

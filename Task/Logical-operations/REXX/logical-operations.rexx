@@ -1,31 +1,27 @@
-/*REXX program to show some binary  (AKA  bit  or logical)  operations. */
-x=1;   y=0
-    /*═════════════════════════════════════════════════echo   X,Y values*/
-call TT 'name', "value"
-call TT 'x'   ,    x
-call TT 'y'   ,    y
-    /*═════════════════════════════════════════════════negate X,Y values*/
-call TT 'name', "negated"
-call TT 'x'   ,   \x                 /*some REXXes support the  ¬  char.*/
-call TT 'y'   ,   \y
-    /*═════════════════════════════════════════════════AND    X,Y values*/
-call TT 'value','value',"AND";   do    x=0 to 1
-                                    do y=0 to 1;  call TT x,y, x & y;  end
-                                 end
-    /*═════════════════════════════════════════════════OR     X,Y values*/
-call TT 'value','value',"OR";    do    x=0 to 1
-                                    do y=0 to 1;  call TT x,y, x | y;  end
-                                 end
-    /*═════════════════════════════════════════════════XOR    X,Y values*/
-call TT 'value','value',"XOR";   do   x=0 for 2
-                                   do y=0 for 2;  call TT x,y, x && y; end
-                                 end
-exit                                   /*stick a fork in it, we're done.*/
-/*──────────────────────────────────TT subroutine───────────────────────*/
-TT: parse arg a.1,a.2,a.3,a.4;  hdr=length(a.1)\==1; if hdr then say;  w=7
-         do TT=0 to hdr;    _=
-               do k=1 for arg();     _=_ center(a.k,w);     end   /*k*/
-         say _
-         a.=copies('─',w)
-         end   /*TT*/
-return
+/*REXX program  demonstrates some  binary  (also known as  bit  or logical)  operations.*/
+         x=1;      y=0;      @v= 'value'         /*set initial values of X & Y; literal.*/
+                                                 /* [↓]  echo  the   X  and  Y   values.*/
+call TT 'name', "value"                          /*display the  header  (title) line.   */
+call TT 'x'   ,    x                             /*display "x"  and then the value of X.*/
+call TT 'y'   ,    y                             /*   "    "y"   "    "   "    "    " Y */
+                                                 /* [↓]  negate the X; then the Y value.*/
+call TT 'name', "negated"                        /*some REXXes support the  ¬  character*/
+call TT 'x'   ,   \x                             /*display "x"  and then the value of ¬X*/
+call TT 'y'   ,   \y                             /*   "    "y"   "    "   "    "    " ¬Y*/
+                                                 /*both DO loops use 0 and 1 for values.*/
+call TT @v, @v, 'AND';   do x=0 for 2;    do y=0 for 2;  call TT x, y, x  & y;   end /*y*/
+                         end   /*x*/
+
+call TT @v, @v, 'OR';    do x=0 for 2;    do y=0 for 2;  call TT x, y, x  | y;   end /*y*/
+                         end   /*x*/
+
+call TT @v, @v, 'XOR';   do x=0 for 2;    do y=0 for 2;  call TT x, y, x && y;   end /*y*/
+                         end   /*x*/
+exit                                             /*stick a fork in it,  we're all done. */
+/*──────────────────────────────────────────────────────────────────────────────────────*/
+TT: parse arg @.1,@.2,@.3,@.4;  hdr=length(@.1)\==1;       if hdr  then say;    w=7
+             do j=0  to hdr;   _=;    do k=1  for arg();   _=_ center(@.k,w);   end  /*k*/
+             say _
+             @.=copies('═', w)                   /*define the header separator line.    */
+             end   /*j*/                         /*W:  is used for the width of a column*/
+    return

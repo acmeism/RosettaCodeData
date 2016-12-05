@@ -5,10 +5,10 @@ isEdible=:3 :0
 
 coclass'FoodBox'
 create=:3 :0
-  assert isEdible_Connoisseur_ type=:y
   collection=: 0#y
 )
 add=:3 :0"0
-  'inedible' assert type e. copath y
+  'inedible' assert isEdible_Connoisseur_ y
   collection=: collection, y
+  EMPTY
 )

@@ -150,38 +150,18 @@ END; # TORANGE #
 OP TOSTRING = ( []INT values )STRING:
 BEGIN
 
-    # converts an integer to a string #
-    OP TOSTRING = ( INT value )STRING:
-    BEGIN
-        STRING result := "";
-        INT    n      := ABS value;
-
-        WHILE
-            REPR ( ( n MOD 10 ) + ABS "0" ) PLUSTO result;
-            n OVERAB 10;
-            n > 0
-        DO
-            SKIP
-        OD;
-
-    # RESULT #
-        IF value < 0 THEN "-" ELSE "" FI + result
-    END; # TOSTRING #
-
-
     STRING result    := "";
     STRING separator := "";
 
     FOR pos FROM LWB values TO UPB values
     DO
-        result +:= ( separator + TOSTRING values[ pos ] );
+        result +:= ( separator + whole( values[ pos ], 0 ) );
         separator := ","
     OD;
 
 # RESULT #
     result
 END; # TOSTRING #
-
 
 
 test:(

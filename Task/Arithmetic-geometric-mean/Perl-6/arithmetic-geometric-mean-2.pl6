@@ -1,5 +1,5 @@
 sub agm( $a, $g ) {
-    @$_ ~~ ($a, $g) ?? $a !! agm(|@$_)
+    $a ≅ $g ?? $a !! agm(|@$_)
         given ($a + $g)/2, sqrt $a * $g;
 }
 

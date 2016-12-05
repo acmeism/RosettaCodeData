@@ -1,7 +1,7 @@
 with Generic_Swap;
 ...
 type T is ...
-package T_Swap is new Generic_Swap(Swap_Type => T);
-A,B:T;
+procedure T_Swap is new Generic_Swap (Swap_Type => T);
+A, B : T;
 ...
-T_Swap(A,B);
+T_Swap (A, B);

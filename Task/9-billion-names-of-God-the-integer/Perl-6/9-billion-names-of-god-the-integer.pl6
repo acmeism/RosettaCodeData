@@ -1,4 +1,4 @@
-my @todo = [1];
+my @todo = $[1];
 my @sums = 0;
 sub nextrow($n) {
     for +@todo .. $n -> $l {
@@ -24,6 +24,6 @@ say .fmt('%2d'), ": ", nextrow($_)[] for 1..10;
 
 
 say "\nsums:";
-for 23, 123, 1234, 10000 {
+for 23, 123, 1234, 12345 {
     say $_, "\t", [+] nextrow($_)[];
 }

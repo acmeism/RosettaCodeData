@@ -7,12 +7,10 @@ sub transpose(@m)
 
 # creates a random matrix
 my @a;
-for (^10).pick X (^10).pick -> ($x, $y) { @a[$x][$y] = (^100).pick; }
-
-say "original: ";
-.perl.say for @a;
+for ^5 X ^5 -> ($x, $y) { @a[$x][$y] = ('a'..'z').pick; }
+say "original:";
+.gist.say for @a;
 
 my @b = transpose(@a);
-
-say "transposed: ";
-.perl.say for @b;
+say "transposed:";
+.gist.say for @b;

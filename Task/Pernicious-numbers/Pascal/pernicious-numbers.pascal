@@ -19,6 +19,20 @@ const
      1,0,0,0,0,0, 1,0,0,0,1,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0,
      1,0,0,0);
 
+function n_beyond_k(n,k: NativeInt):Uint64;
+var
+  i : NativeInt;
+Begin
+  result := 1;
+  IF 2*k>= n  then
+    k := n-k;
+  For i := 1 to k do
+  Begin
+    result := result *n DIV i;
+    dec(n);
+  end;
+end;
+
 function popcnt32(n:Uint32):NativeUint;
 //https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation
 const
@@ -35,31 +49,36 @@ begin
 end;
 
 var
-  t : TDAteTime;
-  i,
+  bit1cnt,
   k : LongWord;
-
+  PernCnt : Uint64;
 Begin
   writeln('the 25 first pernicious numbers');
-  I:=1;k:=0;
+  k:=1;
+  PernCnt:=0;
   repeat
-    IF PrimeTil64[popCnt32(i)] <> 0 then Begin
-      inc(k); write(i,' ');end;
-    inc(i);
-  until k >= 25;
+    IF PrimeTil64[popCnt32(k)] <> 0 then Begin
+      inc(PernCnt); write(k,' ');end;
+    inc(k);
+  until PernCnt >= 25;
   writeln;
 
   writeln('pernicious numbers in [888888877..888888888]');
-  For i :=  888888877 to 888888888 do
-    IF PrimeTil64[popCnt32(i)] <> 0  then
-      write(i,' ');
-  writeln;
+  For k :=  888888877 to 888888888 do
+    IF PrimeTil64[popCnt32(k)] <> 0  then
+      write(k,' ');
+  writeln(#13#10);
 
-  //speedtest of popcount
-  t:= time;
-  k := 0;
-  For i :=  High(i) downto 0 do
-    k := k+PrimeTil64[popCnt32(i)];
-  t := time-t;
-  writeln(k,' pernicious numbers in [0..2^32-1] takes ',t*86400:0:3,' seconds');
- end.
+  k := 8;
+  repeat
+    PernCnt := 0;
+    For bit1cnt := 0 to k do
+    Begin
+      //i == number of Bits set,n_beyond_k(k,i) == number of arrangements
+      IF PrimeTil64[bit1cnt] <> 0 then
+        inc(PernCnt,n_beyond_k(k,bit1cnt));
+    end;
+    writeln(PernCnt,' pernicious numbers in [0..2^',k,'-1]');
+    inc(k,k);
+  until k>64;
+end.

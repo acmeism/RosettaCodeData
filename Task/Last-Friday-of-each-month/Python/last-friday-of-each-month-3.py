@@ -1,12 +1,9 @@
 import calendar
-from itertools import chain
-f=chain.from_iterable
 c=calendar.Calendar()
 fridays={}
 year=raw_input("year")
 add=list.__add__
-
-for day in f(f(f(c.yeardatescalendar(int(year))))):
+for day in reduce(add,reduce(add,reduce(add,c.yeardatescalendar(int(year))))):
 
     if "Fri" in day.ctime() and year in day.ctime():
         month,day=str(day).rsplit("-",1)

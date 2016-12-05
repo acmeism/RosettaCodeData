@@ -1,3 +1,2 @@
-open my $fh, $filename;
-my $text; read $fh, $text, -s $filename;
-close $fh;
+use Path::Tiny;
+my $text = path($filename)->slurp_utf8;

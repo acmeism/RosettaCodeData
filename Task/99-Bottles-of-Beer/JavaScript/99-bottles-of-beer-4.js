@@ -1,25 +1,2 @@
-function Bottles(count) {
-  this.count = count || 99;
-}
-
-Bottles.prototype.take = function() {
-  var verse = [
-    this.count + " bottles of beer on the wall,",
-    this.count + " bottles of beer!",
-    "Take one down, pass it around",
-    (this.count - 1) + " bottles of beer on the wall!"
-  ].join("\n");
-
-  console.log(verse);
-
-  this.count--;
-};
-
-Bottles.prototype.sing = function() {
-  while (this.count) {
-    this.take();
-  }
-};
-
-var bar = new Bottles(99);
-bar.sing();
+// Line breaks are in HTML
+var beer; while ((beer = typeof beer === "undefined" ? 99 : beer) > 0) document.write( beer + " bottle" + (beer != 1 ? "s" : "") + " of beer on the wall<br>" + beer + " bottle" + (beer != 1 ? "s" : "") + " of beer<br>Take one down, pass it around<br>" + (--beer) + " bottle" + (beer != 1 ? "s" : "") + " of beer on the wall<br>" );

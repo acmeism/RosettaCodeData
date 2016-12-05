@@ -1,6 +1,7 @@
+;; Incorporated some improvements from the alternative implementation below
 (defn ro2ar [r]
-  (->> (reverse r)
-       (replace (zipmap "MDCLXVI" [1000 500 100 50 10 5 1]))
+  (->> (reverse (.toUpperCase r))
+       (map {\M 1000 \D 500 \C 100 \L 50 \X 10 \V 5 \I 1})
        (partition-by identity)
        (map (partial apply +))
        (reduce #(if (< %1 %2) (+ %1 %2) (- %1 %2)))))

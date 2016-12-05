@@ -1,0 +1,70 @@
+#include <pari/pari.h>
+
+typedef int SUDOKU [9][9];
+
+static inline int check_num(SUDOKU s, int row, int col, int num)
+{
+  int i, r = (row/3)*3, c = (col/3)*3;
+
+  for (i = 0; i < 9; i++)
+    if (s[row][i] == num || s[i][col] == num || s[i%3 + r][i/3 + c] == num)
+      return 0;
+
+  return 1;
+}
+
+static int sudoku_solve(SUDOKU s, int row, int col)
+{
+  int num;
+
+  if (row < 9 && col < 9) {
+    if (s[row][col]) {
+      if (col < 8)
+	return sudoku_solve(s, row, col+1);
+      if (row < 8)
+	return sudoku_solve(s, row+1, 0);
+      return 1;
+    }
+    else
+      for (num = 1; num < 10; num++)
+	if (check_num(s, row, col, num)) {
+	  s[row][col] = num;
+	  if (sudoku_solve(s, row, col))
+	    return 1;
+	  else
+	    s[row][col] = 0;
+	}
+    return 0;
+  }
+  return 1;
+}
+
+GEN plug_sudoku(GEN M)
+{
+  SUDOKU s;
+  GEN S;
+  int i, k;
+
+  if (typ(M) != t_MAT)
+    pari_err(e_MISC, "parameter not matrix");
+
+  S = matsize(M);
+
+  if (itos(gel(S, 1)) < 9 || itos(gel(S, 2)) < 9)
+    pari_err(e_MISC, "parameter not 9x9 matrix");
+
+  for (i = 0; i < 9; i++)
+    for (k = 0; k < 9; k++)
+      s[i][k] = itos(gcoeff(M, i+1, k+1));	/* get sudoku */
+
+  if (sudoku_solve(s, 0, 0)) {			/* solve sudoku */
+    S = cgetg(10, t_MAT);
+    for (k = 0; k < 9; k++) {			/* create 9x9 matrix */
+      gel(S, k+1) = cgetg(10, t_COL);
+      for (i = 0; i < 9; i++)
+	gcoeff(S, i+1, k+1) = stoi(s[i][k]);	/* fill in elements */
+    }
+    return S;
+  }
+  return gen_0;		/* no solution */
+}

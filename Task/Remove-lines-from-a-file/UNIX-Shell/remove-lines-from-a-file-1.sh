@@ -1,6 +1,6 @@
 #!/bin/sh
 error() {
-  echo "$*"
+  echo >&2 "$0: $*"
   exit 1
 }
 
@@ -8,8 +8,9 @@ error() {
 
 file=$1
 start=$2
-end=$3
+count=$3
+end=`expr $start + $count - 1`
 
-[ -f $file ] || error "$file does not exist"
+[ -f "$file" ] || error "$file does not exist"
 
-sed $start,${end}d $file >/tmp/$$ && mv /tmp/$$ $file
+sed "$start,${end}d" "$file" >/tmp/$$ && mv /tmp/$$ "$file"

@@ -1,6 +1,7 @@
 sub MAIN (*@files) {
-    (my %norm).push: do for @files -> $file {
-        $file X=> slurp($file).lc.words;
+    my %norm;
+    do for @files -> $file {
+        %norm.push: $file X=> slurp($file).lc.words;
     }
     (my %inv).push: %norm.invert.unique;
 

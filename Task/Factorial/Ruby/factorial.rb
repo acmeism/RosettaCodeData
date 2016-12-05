@@ -16,8 +16,7 @@ end
 
 # Iterative with Range#inject
 def factorial_inject(n)
-  return 1 if n.zero?
-  (1..n).inject { |prod, i| prod * i }
+  (1..n).inject(1){ |prod, i| prod * i }
 end
 
 # Iterative with Range#reduce, requires Ruby 1.8.7

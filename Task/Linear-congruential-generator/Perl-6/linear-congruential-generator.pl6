@@ -8,8 +8,8 @@ sub ms   {
     )
 }
 
-say 'BSD LCG first 10 values (fist one is the seed):';
+say 'BSD LCG first 10 values (first one is the seed):';
 .say for bsd(0)[^10];
 
-say "\nMS LCG first 10 values (fist one is the seed):";
+say "\nMS LCG first 10 values (first one is the seed):";
 .say for ms(0)[^10];

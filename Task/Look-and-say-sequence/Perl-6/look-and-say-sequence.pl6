@@ -1,8 +1,1 @@
-my @look-and-say = (
-    '1',
-    *.comb(/(.)$0*/).map({ .chars ~ .substr(0,1) }).join
-    ...
-    *
-);
-
-.say for @look-and-say[^10];
+.say for '1', *.subst(/(.)$0*/, { .chars ~ .[0] }, :g) ... *;

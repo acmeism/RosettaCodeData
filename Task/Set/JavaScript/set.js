@@ -8,7 +8,7 @@ set.add('three');
 set.has(0); //=> true
 set.has(3); //=> false
 set.has('two'); // true
-set.has(Math.sqrt(4)); //=> true
+set.has(Math.sqrt(4)); //=> false
 set.has('TWO'.toLowerCase()); //=> true
 
 set.size; //=> 4

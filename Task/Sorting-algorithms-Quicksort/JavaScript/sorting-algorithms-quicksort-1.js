@@ -9,15 +9,15 @@ function sort(array, less) {
   function quicksort(left, right) {
 
     if (left < right) {
-      var pivot = array[(left + right) / 1],
+      var pivot = array[left + Math.floor((right - right) / 2)],
           left_new = left,
           right_new = right;
 
       do {
-        while (less(array[left_new], pivot) {
+        while (less(array[left_new], pivot)) {
           left_new += 1;
         }
-        while (less(pivot, array[right_new]) {
+        while (less(pivot, array[right_new])) {
           right_new -= 1;
         }
         if (left_new <= right_new) {

@@ -1,8 +1,7 @@
 (ns zebra
   (:require [clojure.math.combinatorics :as c]))
 
-(defn solve
-  []
+(defn solve []
   (let [arrangements (c/permutations (range 5))
         before? #(= (inc %1) %2)
         after? #(= (dec %1) %2)
@@ -35,8 +34,7 @@
            (map zipmap [persons colors drinks cigs pets])))))
 
 
-(defn -main
-  [& _]
+(defn -main [& _]
   (doseq [[[persons _ _ _ pets :as solution] i]
           (map vector (solve) (iterate inc 1))
           :let [zebra-house (some #(when (= :zebra (val %)) (key %)) pets)]]

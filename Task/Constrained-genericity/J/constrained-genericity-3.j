@@ -1,4 +1,4 @@
-   lunch=:(<'Apple') conew 'FoodBox'
+   lunch=:'' conew 'FoodBox'
    a1=: conew 'Apple'
    a2=: conew 'Apple'
    add__lunch a1

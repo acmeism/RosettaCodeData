@@ -34,9 +34,7 @@ public class StateNamePuzzle {
                 String s = pair0 + pair[1];
                 String key = Arrays.toString(s.chars().sorted().toArray());
 
-                List<String[]> val;
-                if ((val = map.get(key)) == null)
-                    val = new ArrayList<>();
+                List<String[]> val = map.getOrDefault(key, new ArrayList<>());
                 val.add(pair);
                 map.put(key, val);
             }

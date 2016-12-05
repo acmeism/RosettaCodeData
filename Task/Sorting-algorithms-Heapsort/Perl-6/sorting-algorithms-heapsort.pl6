@@ -1,4 +1,4 @@
-sub heap_sort ( @list is rw ) {
+sub heap_sort ( @list ) {
     for ( 0 ..^ +@list div 2 ).reverse -> $start {
         _sift_down $start, @list.end, @list;
     }
@@ -9,7 +9,7 @@ sub heap_sort ( @list is rw ) {
     }
 }
 
-sub _sift_down ( $start, $end, @list is rw ) {
+sub _sift_down ( $start, $end, @list ) {
     my $root = $start;
     while ( my $child = $root * 2 + 1 ) <= $end {
         $child++ if $child + 1 <= $end and [<] @list[ $child, $child+1 ];

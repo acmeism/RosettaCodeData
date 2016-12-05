@@ -1,9 +1,10 @@
-printf "%s %s %s %s %s %s %s %s %s %s\n", ng(1,1), ng(2,1), ng(3,1), ng(4,1), ng(5,1), ng(6,1), ng(7,1), ng(8,1), ng(9,1), ng(10,1) ;
-printf "%s %s %s %s %s %s %s %s %s %s\n", ng(1,2), ng(2,2), ng(3,2), ng(4,2), ng(5,2), ng(6,2), ng(7,2), ng(8,2), ng(9,2), ng(10,2) ;
-printf "%s %s %s %s %s %s %s %s %s %s\n", ng(1,3), ng(2,3), ng(3,3), ng(4,3), ng(5,3), ng(6,3), ng(7,3), ng(8,3), ng(9,3), ng(10,3) ;
-printf "%s %s %s %s %s %s %s %s %s %s\n", ng(1,4), ng(2,4), ng(3,4), ng(4,4), ng(5,4), ng(6,4), ng(7,4), ng(8,4), ng(9,4), ng(10,4) ;
-printf "%s %s %s %s %s %s %s %s %s %s\n", ng(1,5), ng(2,5), ng(3,5), ng(4,5), ng(5,5), ng(6,5), ng(7,5), ng(8,5), ng(9,5), ng(10,5) ;
-printf "%s %s %s %s %s %s %s %s %s %s\n", ng(1,6), ng(2,6), ng(3,6), ng(4,6), ng(5,6), ng(6,6), ng(7,6), ng(8,6), ng(9,6), ng(10,6) ;
-printf "%s %s %s %s %s %s %s %s %s %s\n", ng(1,7), ng(2,7), ng(3,7), ng(4,7), ng(5,7), ng(6,7), ng(7,7), ng(8,7), ng(9,7), ng(10,7) ;
-printf "%s %s %s %s %s %s %s %s %s %s\n", ng(1,8), ng(2,8), ng(3,8), ng(4,8), ng(5,8), ng(6,8), ng(7,8), ng(8,8), ng(9,8), ng(10,8) ;
-printf "%s %s %s %s %s %s %s %s %s %s\n", ng(1,9), ng(2,9), ng(3,9), ng(4,9), ng(5,9), ng(6,9), ng(7,9), ng(8,9), ng(9,9), ng(10,9) ;
+use ntheory qw/vecprod/;
+
+sub mfac {
+  my($n,$d) = @_;
+  vecprod(map { $n - $_*$d } 0 .. int(($n-1)/$d));
+}
+
+for my $degree (1..5) {
+  say "$degree: ",join(" ",map{mfac($_,$degree)} 1..10);
+}

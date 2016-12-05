@@ -11,7 +11,7 @@ def bubble_sort(seq):
             if seq[i] > seq[i+1]:
                 seq[i], seq[i+1] = seq[i+1], seq[i]
                 changed = True
-    return None
+    return seq
 
 if __name__ == "__main__":
    """Sample usage and simple test suite"""

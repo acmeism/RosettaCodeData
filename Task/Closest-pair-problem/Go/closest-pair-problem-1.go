@@ -4,6 +4,7 @@ import (
     "fmt"
     "math"
     "math/rand"
+    "time"
 )
 
 type xy struct {
@@ -11,18 +12,17 @@ type xy struct {
 }
 
 const n = 1000
-const scale = 1.
+const scale = 100.
 
 func d(p1, p2 xy) float64 {
-    dx := p2.x - p1.x
-    dy := p2.y - p1.y
-    return math.Sqrt(dx*dx + dy*dy)
+    return math.Hypot(p2.x-p1.x, p2.y-p1.y)
 }
 
 func main() {
+    rand.Seed(time.Now().Unix())
     points := make([]xy, n)
     for i := range points {
-        points[i] = xy{rand.Float64(), rand.Float64() * scale}
+        points[i] = xy{rand.Float64() * scale, rand.Float64() * scale}
     }
     p1, p2 := closestPair(points)
     fmt.Println(p1, p2)

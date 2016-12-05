@@ -1,4 +1,4 @@
 sub median {
   my @a = sort @_;
-  return (@a[@a.end / 2] + @a[@a / 2]) / 2;
+  return (@a[(*-1) div 2] + @a[* div 2]) / 2;
 }

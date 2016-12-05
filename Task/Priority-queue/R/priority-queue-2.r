@@ -1,5 +1,5 @@
-[1] "Solve RC tasks"
-[1] "Tax return"
-[1] "Clear drains"
-[1] "Feed cat"
-[1] "Make tea"
+1 : Solve RC tasks
+2 : Tax return
+3 : Clear drains
+4 : Feed cat
+5 : Make tea

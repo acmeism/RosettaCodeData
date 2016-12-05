@@ -1,3 +1,4 @@
+use experimental :cached;
 proto fib (Int $n --> Int) is cached {*}
 multi fib (0)  { 0 }
 multi fib (1)  { 1 }

@@ -16,7 +16,7 @@ my Int $stem_unit = 10;
 my %h = @data.classify: * div $stem_unit;
 
 my $range = [minmax] %h.keys».Int;
-my $stem_format =  "%{$range.from.chars max $range.to.chars}d";
+my $stem_format =  "%{$range.min.chars max $range.max.chars}d";
 
 for $range.list -> $stem {
     my $leafs = %h{$stem} // [];

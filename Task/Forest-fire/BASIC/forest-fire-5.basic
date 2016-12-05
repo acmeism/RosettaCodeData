@@ -1,65 +1,167 @@
-Sub Run()
-  //Handy named constants
-  Const empty = 0
-  Const tree = 1
-  Const fire = 2
-  Const ablaze = &cFF0000    //Using the &c numeric operator to indicate a color in hex
-  Const alive = &c00FF00
-  Const dead = &c804040
+; Some systems reports high CPU-load while running this code.
+; This may likely be due to the graphic driver used in the
+; 2D-function Plot().
+; If experiencing this problem, please reduce the #Width & #Height
+; or activate the parameter #UnLoadCPU below with a parameter 1 or 2.
+;
+; This code should work with the demo version of PureBasic on both PC & Linux
 
-  //Our forest
-  Dim worldPic As New Picture(480, 480, 32)
-  Dim newWorld(120, 120) As Integer
-  Dim oldWorld(120, 120) As Integer
+; General parameters for the world
+#f    = 1e-6
+#p    = 1e-2
+#SeedATree  = 0.005
+#Width      = 400
+#Height     = 400
 
-  //Initialize forest
-  Dim rand As New Random
-  For x as Integer = 0 to 119
-    For y as Integer = 0 to 119
-      if rand.InRange(0, 2) = 0 Or x = 119 or y = 119 or x = 0 or y = 0 Then
-        newWorld(x, y) = empty
-        worldPic.Graphics.ForeColor = dead
-        worldPic.Graphics.FillRect(x*4, y*4, 4, 4)
-      Else
-        newWorld(x, y) = tree
-        worldPic.Graphics.ForeColor = alive
-        worldPic.Graphics.FillRect(x*4, y*4, 4, 4)
-      end if
+; Setting up colours
+#Fire       = $080CF7
+#BackGround = $BFD5D3
+#YoungTree  = $00E300
+#NormalTree = $00AC00
+#MatureTree = $009500
+#OldTree    = $007600
+#Black      = $000000
+
+; Depending on your hardware, use this to control the speed/CPU-load.
+; 0 = No load reduction
+; 1 = Only active about every second frame
+; 2 = '1' & release the CPU after each horizontal line.
+#UnLoadCPU  = 0
+
+Enumeration
+  #Empty  =0
+  #Ignited
+  #Burning
+  #Tree
+  #Old=#Tree+20
+EndEnumeration
+
+Global Dim Forest.i(#Width, #Height)
+Global Title$="Forest fire in PureBasic"
+Global Cnt
+
+Macro Rnd()
+  (Random(2147483647)/2147483647.0)
+EndMacro
+
+Procedure Limit(n, min, max)
+  If n<min
+    n=min
+  ElseIf n>max
+    n=max
+  EndIf
+  ProcedureReturn n
+EndProcedure
+
+Procedure SpreadFire(x,y)
+  Protected cnt=0, i, j
+  For i=Limit(x-1, 0, #Width) To Limit(x+1, 0, #Width)
+    For j=Limit(y-1, 0, #Height) To Limit(y+1, 0, #Height)
+      If Forest(i,j)>=#Tree
+        Forest(i,j)=#Ignited
+      EndIf
     Next
   Next
-  oldWorld = newWorld
+EndProcedure
 
-  //Burn, baby burn!
-  While Window1.stop = False
-    For x as Integer = 0 To 119
-      For y As Integer = 0 to 119
-        Dim willBurn As Integer = rand.InRange(0, Window1.burnProb.Value)
-        Dim willGrow As Integer = rand.InRange(0, Window1.growProb.Value)
-        if x = 119 or y = 119 or x = 0 or y = 0 Then
-          Continue
-        end if
-        Select Case oldWorld(x, y)
-        Case empty
-          If willGrow = (Window1.growProb.Value) Then
-            newWorld(x, y) = tree
-            worldPic.Graphics.ForeColor = alive
-            worldPic.Graphics.FillRect(x*4, y*4, 4, 4)
-          end if
-        Case tree
-          if oldWorld(x - 1, y) = fire Or oldWorld(x, y - 1) = fire Or oldWorld(x + 1, y) = fire Or oldWorld(x, y + 1) = fire Or oldWorld(x + 1, y + 1) = fire Or oldWorld(x - 1, y - 1) = fire Or oldWorld(x - 1, y + 1) = fire Or oldWorld(x + 1, y - 1) = fire Or willBurn = (Window1.burnProb.Value) Then
-            newWorld(x, y) = fire
-            worldPic.Graphics.ForeColor = ablaze
-            worldPic.Graphics.FillRect(x*4, y*4, 4, 4)
-          end if
-        Case fire
-          newWorld(x, y) = empty
-          worldPic.Graphics.ForeColor = dead
-          worldPic.Graphics.FillRect(x*4, y*4, 4, 4)
-        End Select
-      Next
+Procedure InitMap()
+  Protected x, y, type
+  For y=1 To #Height
+    For x=1 To #Width
+      If Rnd()<=#SeedATree
+        type=#Tree
+      Else
+        type=#Empty
+      EndIf
+      Forest(x,y)=type
     Next
-    Window1.Canvas1.Graphics.DrawPicture(worldPic, 0, 0)
-    oldWorld = newWorld
-    me.Sleep(Window1.speed.Value)
-  Wend
-End Sub
+  Next
+EndProcedure
+
+Procedure UpdateMap()
+  Protected x, y
+  For y=1 To #Height
+    For x=1 To #Width
+      Select Forest(x,y)
+        Case #Burning
+          Forest(x,y)=#Empty
+          SpreadFire(x,y)
+        Case #Ignited
+          Forest(x,y)=#Burning
+        Case #Empty
+          If Rnd()<=#p
+            Forest(x,y)=#Tree
+          EndIf
+        Default
+          If Rnd()<=#f
+            Forest(x,y)=#Burning
+          Else
+            Forest(x,y)+1
+          EndIf
+      EndSelect
+    Next
+  Next
+EndProcedure
+
+Procedure PresentMap()
+  Protected x, y, c
+  cnt+1
+  SetWindowTitle(0,Title$+", time frame="+Str(cnt))
+  StartDrawing(ImageOutput(1))
+  For y=0 To OutputHeight()-1
+    For x=0 To OutputWidth()-1
+      Select Forest(x,y)
+        Case #Empty
+          c=#BackGround
+        Case #Burning, #Ignited
+          c=#Fire
+        Default
+          If Forest(x,y)<#Tree+#Old
+            c=#YoungTree
+          ElseIf Forest(x,y)<#Tree+2*#Old
+            c=#NormalTree
+          ElseIf Forest(x,y)<#Tree+3*#Old
+            c=#MatureTree
+          ElseIf Forest(x,y)<#Tree+4*#Old
+            c=#OldTree
+          Else ; Tree died of old age
+            Forest(x,y)=#Empty
+            c=#Black
+          EndIf
+      EndSelect
+      Plot(x,y,c)
+    Next
+    CompilerIf #UnLoadCPU>1
+      Delay(1)
+    CompilerEndIf
+  Next
+  StopDrawing()
+  ImageGadget(1, 0, 0, #Width, #Height, ImageID(1))
+EndProcedure
+
+If OpenWindow(0, 10, 30, #Width, #Height, Title$, #PB_Window_MinimizeGadget)
+  SmartWindowRefresh(0, 1)
+  If CreateImage(1, #Width, #Height)
+    Define Event, freq
+    If ExamineDesktops() And DesktopFrequency(0)
+      freq=DesktopFrequency(0)
+    Else
+      freq=60
+    EndIf
+    AddWindowTimer(0,0,5000/freq)
+    InitMap()
+    Repeat
+      Event = WaitWindowEvent()
+      Select Event
+        Case #PB_Event_CloseWindow
+          End
+        Case #PB_Event_Timer
+          CompilerIf #UnLoadCPU>0
+            Delay(25)
+          CompilerEndIf
+          UpdateMap()
+          PresentMap()
+      EndSelect
+    ForEver
+  EndIf
+EndIf

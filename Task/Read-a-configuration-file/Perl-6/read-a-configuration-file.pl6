@@ -24,9 +24,9 @@ grammar ConfFile {
     token line:sym<comment> { ^^ [ ';' | '#' ] \N* }
     token line:sym<blank>   { ^^ \h* $$ }
 
-    token line:sym<fullname>       {:i fullname»       <rest> { $fullname = $<rest>[0].trim } }
-    token line:sym<favouritefruit> {:i favouritefruit» <rest> { $favouritefruit = $<rest>[0].trim } }
-    token line:sym<needspeeling>   {:i needspeeling»    <yes> { $needspeeling = defined $<yes>[0] } }
+    token line:sym<fullname>       {:i fullname»       <rest> { $fullname = $<rest>.trim } }
+    token line:sym<favouritefruit> {:i favouritefruit» <rest> { $favouritefruit = $<rest>.trim } }
+    token line:sym<needspeeling>   {:i needspeeling»    <yes> { $needspeeling = defined $<yes> } }
     token rest { \h* '='? (\N*) }
     token yes { :i \h* '='? \h*
     	[
@@ -38,15 +38,13 @@ grammar ConfFile {
 }
 
 grammar MyConfFile is ConfFile {
-    token line:sym<otherfamily>    {:i otherfamily»    <many> { @otherfamily = $<many>[0]».trim} }
-    token many { \h*'='? ([ <![,]> \N ]*) ** ',' }
+    token line:sym<otherfamily>    {:i otherfamily»    <rest> { @otherfamily = $<rest>.split(',')».trim } }
 }
 
 MyConfFile.parsefile('file.cfg');
 
-.perl.say for
-    :$fullname,
-    :$favouritefruit,
-    :$needspeeling,
-    :$seedsremoved,
-    :@otherfamily;
+say "fullname: $fullname";
+say "favouritefruit: $favouritefruit";
+say "needspeeling: $needspeeling";
+say "seedsremoved: $seedsremoved";
+print "otherfamily: "; say @otherfamily.perl;

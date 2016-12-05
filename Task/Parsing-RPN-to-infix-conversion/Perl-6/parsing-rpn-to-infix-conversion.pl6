@@ -16,7 +16,7 @@ sub rpm-to-infix($string) {
         when '^'       { @stack.push: 4 => ~(p($x,5), $_, p($y,4)) }
         when '*' | '/' { @stack.push: 3 => ~(p($x,3), $_, p($y,3)) }
         when '+' | '-' { @stack.push: 2 => ~(p($x,2), $_, p($y,2)) }
-        LEAVE { say @stack }
+        # LEAVE { say @stack } # phaser not yet implemented in this context
     }
     say "-----------------";
     @stack».value;

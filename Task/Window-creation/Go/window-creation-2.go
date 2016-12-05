@@ -1,22 +1,22 @@
 package main
 
 import (
-    "sdl"
-    "fmt"
+    "log"
+
+    "github.com/veandco/go-sdl2/sdl"
 )
 
 func main() {
-    if sdl.Init(sdl.INIT_VIDEO) != 0 {
-        fmt.Println(sdl.GetError())
-        return
+    window, err := sdl.CreateWindow("RC Window Creation",
+        sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
+        320, 200, 0)
+    if err != nil {
+        log.Fatal(err)
     }
-    defer sdl.Quit()
-
-    if sdl.SetVideoMode(200, 200, 32, 0) == nil {
-        fmt.Println(sdl.GetError())
-        return
+    for {
+        if _, ok := sdl.WaitEvent().(*sdl.QuitEvent); ok {
+            break
+        }
     }
-
-    for e := new(sdl.Event); e.Wait() && e.Type != sdl.QUIT; {
-    }
+    window.Destroy()
 }

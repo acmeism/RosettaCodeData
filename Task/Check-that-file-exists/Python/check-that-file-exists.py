@@ -1,6 +1,6 @@
 import os
 
-os.path.exists("input.txt")
-os.path.exists("/input.txt")
-os.path.exists("docs")
-os.path.exists("/docs")
+os.path.isfile("input.txt")
+os.path.isfile("/input.txt")
+os.path.isdir("docs")
+os.path.isdir("/docs")

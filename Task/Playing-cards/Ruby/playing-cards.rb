@@ -31,7 +31,7 @@ class Deck
   end
 
   def to_s
-    "[#{@deck.join(", ")}]"
+    @deck.inspect
   end
 
   def shuffle!

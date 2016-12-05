@@ -1,6 +1,6 @@
 sub swap_rows    ( @M,         $r1, $r2 ) { @M[ $r1, $r2 ] = @M[ $r2, $r1 ] };
-sub scale_row    ( @M, $scale, $r       ) { @M[$r]  =              @M[$r]  X* $scale   };
-sub shear_row    ( @M, $scale, $r1, $r2 ) { @M[$r1] = @M[$r1] Z+ ( @M[$r2] X* $scale ) };
+sub scale_row    ( @M, $scale, $r       ) { @M[$r]  =              @M[$r]  »*» $scale   };
+sub shear_row    ( @M, $scale, $r1, $r2 ) { @M[$r1] = @M[$r1].list »+» ( @M[$r2] »*» $scale ) };
 sub reduce_row   ( @M,         $r,  $c  ) { scale_row( @M, 1/@M[$r][$c], $r ) };
 sub clear_column ( @M,         $r,  $c  ) {
     for @M.keys.grep( * != $r ) -> $row_num {

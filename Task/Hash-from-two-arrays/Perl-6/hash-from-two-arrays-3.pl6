@@ -1,2 +1,1 @@
-my %hash;
-%hash{@keys} = @vals;
+%( @keys Z=> @values )

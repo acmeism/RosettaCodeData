@@ -1,26 +1,19 @@
 def read_matrix(data)
-  lines = data.each_line.to_a                   # ver 2.0 later  data.lines
+  lines = data.lines
   9.times.collect { |i| 9.times.collect { |j| lines[i][j].to_i } }
 end
 
 def permissible(matrix, i, j)
   ok = [nil, *1..9]
+  check = ->(x,y) { ok[matrix[x][y]] = nil  if matrix[x][y].nonzero? }
   # Same as another in the column isn't permissible...
-  9.times do |i2|
-    ok[matrix[i2][j]] = nil if matrix[i2][j].nonzero?
-  end
+  9.times { |x| check[x, j] }
   # Same as another in the row isn't permissible...
-  9.times do |j2|
-    ok[matrix[i][j2]] = nil if matrix[i][j2].nonzero?
-  end
+  9.times { |y| check[i, y] }
   # Same as another in the 3x3 block isn't permissible...
-  irange = (ig = (i / 3) * 3) .. ig + 2
-  jrange = (jg = (j / 3) * 3) .. jg + 2
-  irange.each do |i2|
-    jrange.each do |j2|
-      ok[matrix[i2][j2]] = nil if matrix[i2][j2].nonzero?
-    end
-  end
+  xary = [ *(x = (i / 3) * 3) .. x + 2 ]        #=> [0,1,2], [3,4,5] or [6,7,8]
+  yary = [ *(y = (j / 3) * 3) .. y + 2 ]
+  xary.product(yary).each { |x, y| check[x, y] }
   # Gathering only permitted one
   ok.compact
 end

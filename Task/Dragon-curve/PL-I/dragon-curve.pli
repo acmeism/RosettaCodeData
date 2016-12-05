@@ -1,0 +1,237 @@
+* PROCESS GONUMBER, MARGINS(1,72), NOINTERRUPT, MACRO;
+TEST:PROCEDURE OPTIONS(MAIN);
+ DECLARE
+  SYSIN FILE STREAM INPUT,
+  DRAGON FILE STREAM OUTPUT PRINT,
+  SYSPRINT FILE STREAM OUTPUT PRINT;
+ DECLARE (MIN,MAX,MOD,INDEX,LENGTH,SUBSTR,VERIFY,TRANSLATE) BUILTIN;
+ DECLARE (COMPLEX,SQRT,REAL,IMAG,ATAN,SIN,EXP,COS,ABS) BUILTIN;
+ %INCLUDE PLILIB(GOODIES);
+ %INCLUDE PLILIB(SCAN);
+ %INCLUDE PLILIB(GRAMMAR);
+ %INCLUDE PLILIB(CARDINAL);
+ %INCLUDE PLILIB(ORDINAL);
+ %INCLUDE PLILIB(ANSWAROD);
+ %INCLUDE PLILIB(RUNFILE);
+ %INCLUDE PLILIB(PSTUFF);
+
+ DECLARE (TWOPI,TORAD) REAL;
+ DECLARE RANGE(4) REAL;
+ DECLARE TRACERANGE BOOLEAN INITIAL(FALSE);
+ DECLARE FRESHRANGE BOOLEAN INITIAL(TRUE);
+
+ BOUND:PROCEDURE(Z);
+  DECLARE Z COMPLEX;
+  DECLARE (ZX,ZY) REAL;
+   ZX = REAL(Z); ZY = IMAG(Z);
+   IF FRESHRANGE THEN
+    DO;
+     RANGE(1),RANGE(2) = ZX;
+     RANGE(3),RANGE(4) = ZY;
+    END;
+    ELSE
+     DO;
+      RANGE(1) = MIN(RANGE(1),ZX);
+      RANGE(2) = MAX(RANGE(2),ZX);
+      RANGE(3) = MIN(RANGE(3),ZY);
+      RANGE(4) = MAX(RANGE(4),ZY);
+     END;
+   FRESHRANGE = FALSE;
+ END BOUND;
+
+ PLOTZ:PROCEDURE(Z,PEN);
+  DECLARE Z COMPLEX;
+  DECLARE PEN INTEGER;
+   IF TRACERANGE THEN CALL BOUND(Z);
+   CALL PLOT(REAL(Z),IMAG(Z),PEN);
+ END PLOTZ;
+
+ %PAGE;
+ DRAGONCURVE:PROCEDURE(ORDER,HOP); /*Folding paper in two...*/
+/*Some statistics on runs with x = 56.25", y = 32.6"
+&(the calcomp plotter).*/
+/*The actual size of the picture determines the number of steps
+&to each quarter-turn.*/
+/*   n      turns       x         y     secs     dx    dy
+&*/
+/*  20  1,048,575  -2389:681  -682:1364  180+  3070  2046
+&*/
+/*  19    524,287  -1365:681  -340:1364  119   2046  1704
+&*/
+/*  18    262,143   -341:681  -340:1194   71   1022  1554
+&*/
+/*  17    131,071   -171:681  -340:682    35    852  1022
+&*/
+  DECLARE ORDER BIGINT; /*So how many folds.*/
+  DECLARE HOP BOOLEAN;
+  DECLARE FOLD(0:31,0:32767) BOOLEAN; /*Oh for (0:1000000) or so..*/
+  DECLARE (TURN,N,IT,I,I1,I2,J1,J2,L,LL) BIGINT;
+  DECLARE (XMIN,XMAX,YMIN,YMAX,XMID,YMID) REAL;
+  DECLARE (IXMIN,IXMAX,IYMIN,IYMAX) BIGINT;
+  DECLARE (S,H,TORAD) REAL;
+  DECLARE (ZMID,Z,Z2,DZ,ZL) COMPLEX;
+  DECLARE (FULLTURN,ABOUTTURN,QUARTERTURN) INTEGER;
+  DECLARE (WAY,DIRECTION,ND,LD,LD1,LD2) INTEGER;
+  DECLARE LEAF(0:3,0:360) COMPLEX; /*Corner turning.*/
+  DECLARE SWAPXY BOOLEAN; /*Try to align rectangles.*/
+  DECLARE (T1,T2) CHARACTER(200) VARYING;
+   IF ¬PLOTCHOICE('') THEN RETURN; /*Ascertain the plot device.*/
+   N = 0;
+   FOR TURN = 1 TO ORDER;
+    IT = N + 1;
+    I1 = IT/32768; I2 = MOD(IT,32768);
+    FOLD(I1,I2) = TRUE;
+    FOR I = 1 TO N;
+     I1 = (IT + I)/32768; I2 = MOD(IT + I,32768);
+     J1 = (IT - I)/32768; J2 = MOD(IT - I,32768);
+     FOLD(I1,I2) = ¬FOLD(J1,J2);
+    END;
+    N = N*2 + 1;
+    IF HOP & TURN < ORDER THEN GO TO XX;
+    XMIN,XMAX,YMIN,YMAX = 0;
+    Z = 0; /*Start at the origin.*/
+    DZ = 1; /*Step out unilaterally.*/
+    FOR I = 1 TO N;
+     Z = Z + DZ; /*Take the step before the kink.*/
+     I1 = I/32768; I2 = MOD(I,32768);
+     IF FOLD(I1,I2) THEN DZ = DZ*(0 + 1I); ELSE DZ = DZ*(0 - 1I);
+     Z = Z + DZ; /*The step after the kink.*/
+     XMIN = MIN(XMIN,REAL(Z)); XMAX = MAX(XMAX,REAL(Z));
+     YMIN = MIN(YMIN,IMAG(Z)); YMAX = MAX(YMAX,IMAG(Z));
+    END;
+    SWAPXY = ((XMAX - XMIN) >= (YMAX - YMIN)) /*Contemplate */
+     ¬= (PLOTSTUFF.XSIZE >= PLOTSTUFF.YSIZE); /* rectangularities.*/
+    IF SWAPXY THEN
+     DO;
+      H = XMIN;
+      XMIN = YMIN;
+      YMIN = -XMAX;
+      XMAX = YMAX;
+      YMAX = -H;
+     END;
+    IXMAX = XMAX; IYMAX = YMAX; IXMIN = XMIN; IYMIN = YMIN;
+    XMID = (XMAX + XMIN)/2; YMID = (YMAX + YMIN)/2;
+    ZMID = COMPLEX(XMID,YMID);
+    XMAX = XMAX - XMID; YMAX = YMAX - YMID;
+    XMIN = XMIN - XMID; YMIN = YMIN - YMID;
+    T1 = 'Order ' || IFMT(TURN) || ' Dragoncurve, '
+     || SAYNUM(0,N,'turn') || '.';
+    IF SWAPXY THEN T2 = 'y range ' || IFMT(IYMIN) || ':' || IFMT(IYMAX)
+     || ', x range ' || IFMT(IXMIN) || ':' || IFMT(IXMAX);
+     ELSE T2 = 'x range ' || IFMT(IXMIN) || ':' || IFMT(IXMAX)
+     || ', y range ' || IFMT(IYMIN) || ':' || IFMT(IYMAX);
+    S = MIN(PLOTSTUFF.XSIZE/(XMAX - XMIN), /*Rectangularity */
+     (PLOTSTUFF.YSIZE - 4*H)/(YMAX - YMIN)); /* matching?*/
+    H = MIN(PLOTSTUFF.XSIZE,S*(XMAX - XMIN)); /*X-width for text.*/
+    H = MIN(PLOTCHAR,H/(MAX(LENGTH(T1),LENGTH(T2)) + 6));
+    IF ¬NEWRANGE(XMIN*S,XMAX*S,YMIN*S-2*H,YMAX*S+2*H) THEN STOP('Urp!');
+    CALL PLOTTEXT(-LENGTH(T1)*H/2,YMAX*S + 2*PLOTTICK,H,T1,0);
+    CALL PLOTTEXT(-LENGTH(T2)*H/2,YMIN*S - 2*H + 2*PLOTTICK,H,T2,0);
+    QUARTERTURN = MIN(MAX(3,12*SQRT(S)),90); /*Angle refinement.*/
+    ABOUTTURN = QUARTERTURN*2;
+    FULLTURN = QUARTERTURN*4; /*Ensures divisibility.*/
+    TORAD = TWOPI/FULLTURN; /*Imagine if FULLTURN was 360.*/
+    ZL = 1; /*Start with 0 degrees.*/
+    FOR L = 0 TO 3; /*The four directions.*/
+     FOR I = 0 TO FULLTURN; /*Fill out the petals in the corner.*/
+      LEAF(L,I) = ZL + EXP((0 + 1I)*I*TORAD); /*Poke!*/
+     END; /*Fill out the full circle for each for simplicity.*/
+     ZL = ZL*(0 + 1I); /*Rotate to the next axis.*/
+    END; /*Four circles, centred one unit along each axial direction.*/
+    Z = -ZMID; /*The start point. Was 0, before shift by ZMID.*/
+    CALL PLOTZ(S*Z,3); /*Position the pen.*/
+    DIRECTION = 0; /*The way ahead is along the x-axis.*/
+    DZ = 1; /*The step before the kink.*/
+    IF SWAPXY THEN DIRECTION = -QUARTERTURN; /*Or maybe y.*/
+    IF SWAPXY THEN DZ = (0 - 1I); /*An x-y swap.*/
+    FRESHRANGE = TRUE; /*A sniffing.*/
+    FOR I = 1 TO N; /*The deviationism begins.*/
+     I1 = I/32768; I2 = MOD(I,32768);
+     IF FOLD(I1,I2) THEN WAY = +1; ELSE WAY = -1;
+     ND = DIRECTION + QUARTERTURN*WAY;
+     IF ND >= FULLTURN THEN ND = ND - FULLTURN;
+     IF ND < 0 THEN ND = ND + FULLTURN;
+     LD = ND/QUARTERTURN; /*Select a leaf.*/
+     LD1 = MOD(ND + ABOUTTURN,FULLTURN);
+     LD2 = LD1 + WAY*QUARTERTURN; /*No mod, see the FOR loop below.*/
+     FOR L = LD1 TO LD2 BY WAY; /*Round the kink.*/
+      LL = L; /*A copy to wrap into range.*/
+      IF LL < 0 THEN LL = LL + FULLTURN;
+      IF LL >= FULLTURN THEN LL = LL - FULLTURN;
+      ZL = Z + LEAF(LD,LL); /*Work along the curve.*/
+      CALL PLOTZ(S*ZL,2); /*Move a bit.*/
+     END; /*On to the next step.*/
+     DIRECTION = ND; /*The new direction.*/
+     Z = Z + DZ; /*The first half of the step that has been rounded.*/
+     DZ = DZ*(0 + 1I)*WAY; /*A right-angle, one way or the other.*/
+     Z = Z + DZ; /*Avoid the roundoff of hordes of fractional moves.*/
+    END; /*On to the next fold.*/
+    CALL PLOT(0,0,998);
+    IF TRACERANGE THEN PUT SKIP(3) FILE(DRAGON) LIST('Dragoncurve: ');
+    IF TRACERANGE THEN PUT FILE(DRAGON) DATA(RANGE,ORDER,S,ZMID);
+XX:END;
+ END DRAGONCURVE;
+ %PAGE;
+ %PAGE;
+ %PAGE;
+ RANDOM:PROCEDURE(SEED) RETURNS(REAL);
+  DECLARE SEED INTEGER;
+   SEED = SEED*497 + 4032;
+   IF SEED <= 0 THEN SEED = SEED + 32767;
+   IF SEED > 32767 THEN SEED = MOD(SEED,32767);
+   RETURN(SEED/32767.0);
+ END RANDOM;
+
+ %PAGE;
+ TRACE:PROCEDURE(O,R,A,N,G);
+  DECLARE (I,N,G) INTEGER;
+  DECLARE (O,R,A(*),X0,X1,X2) COMPLEX;
+   X1 = O + R*A(1);
+   X0 = X1;
+   CALL PLOT(REAL(X1),IMAG(X1),3);
+   FOR I = 2 TO N;
+    X2 = O + R*A(I);
+    CALL PLOT(REAL(X2),IMAG(X2),2);
+    X1 = X2;
+   END;
+   CALL PLOT(REAL(X0),IMAG(X0),2);
+ END TRACE;
+
+ CENTREZ:PROCEDURE(A,N);
+  DECLARE (A(*),T) COMPLEX;
+  DECLARE (I,N) INTEGER;
+   T = 0;
+   FOR I = 1 TO N;
+    T = T + A(I);
+   END;
+   T = T/N;
+   FOR I = 1 TO N;
+    A(I) = A(I) - T;
+   END;
+ END CENTREZ;
+ %PAGE;
+ %PAGE;
+ DECLARE (BELCH,ORDER,CHASE,TWIRL) INTEGER;
+ DECLARE HOP BOOLEAN;
+
+  TWOPI = 8*ATAN(1);
+  TORAD = TWOPI/360;
+  BELCH = REPLYN('How many dragoncurves (max 20)');
+  IF BELCH < 12 THEN HOP = FALSE;
+   ELSE HOP = YEA('Go directly to order ' || IFMT(BELCH));
+/*ORDER = REPLYN('The depth of recursion (eg 4)');
+  CHASE = REPLYN('How many pursuits');
+  TWIRL = REPLYN('How many twirls');
+  TRACERANGE = YEA('Trace the ranges');*/
+  CALL DRAGONCURVE(BELCH,HOP);
+/*CALL TRIANGLEPLEX(ORDER);
+  CALL SQUAREBASH(ORDER,+1);
+  CALL SQUAREBASH(ORDER,-1);
+  CALL SNOWFLAKE(ORDER);
+  CALL SNOWFLAKE3(ORDER);
+  CALL PURSUE(CHASE);
+  CALL LISSAJOU(TWIRL);
+  CALL CARDIOD;
+  CALL HEART;*/
+  CALL PLOT(0,0,-3); CALL PLOT(0,0,999);
+END TEST;

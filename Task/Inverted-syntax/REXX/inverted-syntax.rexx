@@ -1,14 +1,10 @@
-      SIGNAL   {ON|OFF}   someCondition   {name}
-
-/*here is an example of a special case (for SYNTAX). */
+/*REXX program demonstrates a use of a special case of inverted syntax  (via SIGNAL ON).*/
 signal on syntax
 a=7
-zz=444/(7-a)
+zz=444 / (7-a)
 return zz
-
-syntax: say '***error***!'
-        say 'program is attempting to do division by zero.'
-        say 'REXX statement number is:' sigL
-        say 'the Rexx source statement is:'
-        say sourceLine(sigL)
-        exit 13
+/*──────────────────────────────────────────────────────────────────────────────────────*/
+syntax:  say  '***error***  program is attempting to do division by zero,'
+         say  'the REXX statement number is: '  sigL  " and the REXX source is:"
+         say  sourceLine(sigL)
+         exit 13

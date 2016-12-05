@@ -1,68 +1,143 @@
-      nomainwin
-
-      gridX = 20
-      gridY = gridX
-
-      mult      =500 /gridX
-      pointSize =360 /gridX
-
-      dim old( gridX +1, gridY +1), new( gridX +1, gridY +1)
-
-'Set blinker:
-      old( 16, 16) =1: old( 16, 17) =1 : old( 16, 18) =1
-
-'Set glider:
-      old(  5,  7) =1: old(  6,  7) =1: old(  7,  7) =1
-      old(  7,  6) =1: old(  6,  5) =1
-
-      WindowWidth  =570
-      WindowHeight =600
-
-      open "Conway's 'Game of Life'." for graphics_nsb_nf as #w
-
-      #w "trapclose [quit]"
-      #w "down ; size "; pointSize
-      #w "fill black"
-
-'Draw initial grid
-      for x = 1 to gridX
-        for y = 1 to gridY
-          '#w "color "; int( old( x, y) *256); " 0 255"
-          if old( x, y) <>0 then #w "color red" else #w "color darkgray"
-          #w "set "; x *mult +20; " "; y *mult +20
-        next y
-      next x
-'   ______________________________________________________________________________
-'Run
-      do
-        for x =1 to gridX
-          for y =1 to gridY
-            'find number of live Moore neighbours
-            neighbours =old( x -1, y -1) +old( x, y -1) +old( x +1, y -1)+_
-                        old( x -1, y)                   +old( x +1, y   )+_
-                        old( x -1, y +1) +old( x, y +1) +old( x +1, y +1)
-            was =old( x, y)
-            if was =0 then
-                if neighbours =3 then N =1 else N =0
-            else
-                if neighbours =3  or neighbours =2 then N =1 else N =0
-            end if
-            new( x, y) = N
-            '#w "color "; int( N /8 *256); " 0 255"
-            if N <>0 then #w "color red" else #w "color darkgray"
-            #w "set "; x *mult +20; " "; y *mult +20
-          next y
-        next x
-        scan
-'swap
-        for x =1 to gridX
-          for y =1 to gridY
-            old( x, y) =new( x, y)
-          next y
-        next x
-'Re-run until interrupted...
-      loop until FALSE
-'User shutdown received
-    [quit]
-    close #w
-    end
+'
+' Conway's Game of Life
+'
+' 30x30 world held in an array size 32x32
+' world is in indices 1->30, 0 and 31 are always false, for neighbourhoods
+'
+DIM world!(32,32)
+DIM ns%(31,31) ! used to hold the neighbour counts
+clock%=1
+'
+' run the world
+'
+@setup_world
+@open_window
+DO
+  @display_world
+  t$=INKEY$
+  EXIT IF t$="q" ! need to hold key down to exit
+  @update_world
+  DELAY 0.5 ! delay of 0.5s needed in compiled version
+LOOP
+@close_window
+'
+' Setup the world, with a blinker in one corner and a glider in the other
+'
+PROCEDURE setup_world
+  ARRAYFILL world!(),FALSE
+  ' blinker in lower-right
+  world!(25,25)=TRUE
+  world!(26,25)=TRUE
+  world!(27,25)=TRUE
+  ' glider in top-left
+  world!(2,2)=TRUE
+  world!(3,3)=TRUE
+  world!(3,4)=TRUE
+  world!(2,4)=TRUE
+  world!(1,4)=TRUE
+RETURN
+'
+' Count the number of neighbours of the point i,j
+' (Assume i/j +/- 1 will not fall out of world)
+'
+FUNCTION count_neighbours(i%,j%)
+  LOCAL count%,l%
+  count%=0
+  FOR l%=-1 TO 1
+    IF world!(i%+l%,j%-1)
+      count%=count%+1
+    ENDIF
+    IF world!(i%+l%,j%+1)
+      count%=count%+1
+    ENDIF
+  NEXT l%
+  IF world!(i%-1,j%)
+    count%=count%+1
+  ENDIF
+  IF world!(i%+1,j%)
+    count%=count%+1
+  ENDIF
+  RETURN count%
+ENDFUNC
+'
+' Update the world one step
+'
+PROCEDURE update_world
+  LOCAL i%,j%
+  ' compute neighbour counts and store
+  FOR i%=1 TO 30
+    FOR j%=1 TO 30
+      ns%(i%,j%)=@count_neighbours(i%,j%)
+    NEXT j%
+  NEXT i%
+  ' update the world cells
+  FOR i%=1 TO 30
+    FOR j%=1 TO 30
+      IF world!(i%,j%)
+        SELECT ns%(i%,j%)
+        CASE 0,1
+          world!(i%,j%)=FALSE ! LONELY
+        CASE 2,3
+          world!(i%,j%)=TRUE ! LIVES
+        CASE 4,5,6,7,8
+          world!(i%,j%)=FALSE ! OVERCROWDED
+        ENDSELECT
+      ELSE
+        IF ns%(i%,j%)=3
+          world!(i%,j%)=TRUE ! BIRTH
+        ELSE
+          world!(i%,j%)=FALSE ! BARREN
+        ENDIF
+      ENDIF
+    NEXT j%
+  NEXT i%
+  ' update the clock
+  clock%=clock%+1
+RETURN
+'
+' Display the world in window
+'
+PROCEDURE display_world
+  LOCAL offsetx%,offsety%,i%,j%,x%,y%,scale%
+  @clear_window
+  ' show clock
+  VSETCOLOR 2,0,0,0
+  DEFTEXT 2
+  PRINT AT(5,1);"Clock: ";clock%
+  ' offset from top-left of display
+  offsetx%=10
+  offsety%=10
+  ' colour to display active cell
+  VSETCOLOR 1,15,0,0
+  DEFFILL 1
+  ' scale of display
+  scale%=9
+  ' display each cell in world
+  FOR i%=1 TO 30
+    FOR j%=1 TO 30
+      IF world!(i%,j%)
+        ' display active cell
+        x%=offsetx%+scale%*i%
+        y%=offsety%+scale%*j%
+        PBOX x%,y%,x%+scale%,y%+scale%
+      ENDIF
+    NEXT j%
+  NEXT i%
+RETURN
+'
+' Manage window for display
+'
+PROCEDURE open_window
+  OPENW 1
+  CLEARW 1
+RETURN
+'
+PROCEDURE clear_window
+  VSETCOLOR 0,15,15,15
+  DEFFILL 0
+  PBOX 0,0,300,300
+RETURN
+'
+PROCEDURE close_window
+  CLOSEW 1
+RETURN

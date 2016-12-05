@@ -1,3 +1,3 @@
-for pipe("find -iname '*.txt'").lines -> $filename {
+for run(«find -iname *.txt», :out).out.lines -> $filename {
     ...
 }

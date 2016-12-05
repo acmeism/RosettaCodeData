@@ -1,10 +1,9 @@
 data BalancedTernary = Bt [Int]
 
 zeroTrim a = if null s then [0] else s where
-	s = f [] [] a
-	f x _ [] = x
-	f x y (0:zs) = f x (y++[0]) zs
-	f x y (z:zs) = f (x++y++[z]) [] zs
+	s = fst $ foldl f ([],[]) a
+	f (x,y) 0 = (x, y++[0])
+	f (x,y) z = (x++y++[z], [])
 
 btList (Bt a) = a
 

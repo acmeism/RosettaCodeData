@@ -10,7 +10,7 @@ hexer =  18  22  54  42,                             /*define a  4x4  matrix. */
                            call Cholesky hexer
 exit                                   /*stick a fork in it,  we're all done. */
 /*────────────────────────────────────────────────────────────────────────────*/
-Cholesky: procedure;  parse arg mat;   say;   say;   call tell 'input array',mat
+Cholesky: procedure;  parse arg mat;   say;   say;   call tell 'input matrix',mat
              do    r=1  for ord
                 do c=1  for r; $=0;  do i=1  for c-1; $=$+!.r.i*!.c.i; end /*i*/
                 if r=c  then !.r.r=sqrt(!.r.r-$)

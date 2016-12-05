@@ -1,45 +1,40 @@
-my @my_list = (2,3,6,23,13,5,7,3,4,5);
-heap_sort(\@my_list);
-print "@my_list\n";
-exit;
+#!/usr/bin/perl
 
-sub heap_sort
-{
-        my($list) = @_;
-        my $count = scalar @$list;
-        heapify($count,$list);
+my @a = (4, 65, 2, -31, 0, 99, 2, 83, 782, 1);
+print "@a\n";
+heap_sort(\@a);
+print "@a\n";
 
-        my $end = $count - 1;
-        while($end > 0)
-        {
-                @$list[0,$end] = @$list[$end,0];
-                sift_down(0,$end-1,$list);
-                $end--;
-        }
+sub heap_sort {
+    my ($a) = @_;
+    my $n = @$a;
+    for (my $i = ($n - 2) / 2; $i >= 0; $i--) {
+        down_heap($a, $n, $i);
+    }
+    for (my $i = 0; $i < $n; $i++) {
+        my $t = $a->[$n - $i - 1];
+        $a->[$n - $i - 1] = $a->[0];
+        $a->[0] = $t;
+        down_heap($a, $n - $i - 1, 0);
+    }
 }
-sub heapify
-{
-        my ($count,$list) = @_;
-        my $start = ($count - 2) / 2;
-        while($start >= 0)
-        {
-                sift_down($start,$count-1,$list);
-                $start--;
-        }
-}
-sub sift_down
-{
-        my($start,$end,$list) = @_;
 
-        my $root = $start;
-        while($root * 2 + 1 <= $end)
-        {
-                my $child = $root * 2 + 1;
-                $child++ if($child + 1 <= $end && $list->[$child] < $list->[$child+1]);
-                if($list->[$root] < $list->[$child])
-                {
-                        @$list[$root,$child] = @$list[$child,$root];
-                        $root = $child;
-                }else{ return }
-        }
+sub down_heap {
+    my ($a, $n, $i) = @_;
+    while (1) {
+        my $j = max($a, $n, $i, 2 * $i + 1, 2 * $i + 2);
+        last if $j == $i;
+        my $t = $a->[$i];
+        $a->[$i] = $a->[$j];
+        $a->[$j] = $t;
+        $i = $j;
+    }
+}
+
+sub max {
+    my ($a, $n, $i, $j, $k) = @_;
+    my $m = $i;
+    $m = $j if $j < $n && $a->[$j] > $a->[$m];
+    $m = $k if $k < $n && $a->[$k] > $a->[$m];
+    return $m;
 }

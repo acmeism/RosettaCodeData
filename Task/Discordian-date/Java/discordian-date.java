@@ -2,7 +2,6 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 
 public class DiscordianDate {
-
     final static String[] seasons = {"Chaos", "Discord", "Confusion",
         "Bureaucracy", "The Aftermath"};
 

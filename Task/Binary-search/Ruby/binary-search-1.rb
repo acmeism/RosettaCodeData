@@ -2,7 +2,7 @@ class Array
   def binary_search(val, low=0, high=(length - 1))
     return nil if high < low
     mid = (low + high) >> 1
-    case var <=> self[mid]
+    case val <=> self[mid]
       when -1
         binary_search(val, low, mid - 1)
       when 1

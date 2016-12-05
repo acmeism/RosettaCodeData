@@ -4,7 +4,7 @@ values='triangle quadrilateral pentagon hexagon heptagon octagon nonagon decagon
 keys  ='thuhree  vour          phive    sicks   zeaven   ate     nein    den     duzun'
                            /* [↑]  superfluous blanks added to humorous */
                            /*      keys just because it looks prettier. */
-call hash values,keys                 /*nothing, then let's leave Dodge*/ /*hash the keys to the values.   */
+call hash values,keys                  /*hash the keys to the values.   */
 parse arg query .                      /*get what was specified on C.L. */
 if query==''  then exit                /*Nothing?  Then leave Dodge City*/
 pad=left('',30)                        /*used for padding the display.  */

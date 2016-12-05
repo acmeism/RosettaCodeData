@@ -1,11 +1,11 @@
 class String
   def wrap(width)
-    txt = gsub(/\s+/, " ")
+    txt = gsub("\n", " ")
     para = []
     i = 0
-    while i < txt.length
+    while i < length
       j = i + width
-      j -= 1 while txt[j] != " "
+      j -= 1 while j != txt.length && j > i + 1 && !(txt[j] =~ /\s/)
       para << txt[i ... j]
       i = j + 1
     end

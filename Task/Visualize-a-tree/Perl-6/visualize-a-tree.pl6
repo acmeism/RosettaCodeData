@@ -20,4 +20,4 @@ sub visualize-tree($tree, &label, &children,
 # example tree built up of pairs
 my $tree = root=>[a=>[a1=>[a11=>[]]],b=>[b1=>[b11=>[]],b2=>[],b3=>[]]];
 
-.say for visualize-tree($tree, *.key, *.value.list);
+.map({.join("\n")}).join("\n").say for visualize-tree($tree, *.key, *.value.list);

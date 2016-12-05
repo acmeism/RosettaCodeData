@@ -3,4 +3,5 @@
 : stripchars ( a1 u1 a2 u2 -- ) bounds ?do 2dup i c@ .stripped loop 2drop ;
 
 : "aei" s" aei" ;
-"aei" s" She was a soul stripper. She took my heart!" stripchars
+
+\ usage: "aei" s" She was a soul stripper. She took my heart!" stripchars

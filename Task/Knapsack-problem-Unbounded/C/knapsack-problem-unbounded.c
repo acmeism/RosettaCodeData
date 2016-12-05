@@ -1,52 +1,58 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-struct {
-	double val, wgt, vol;
-	const char * name;
-} items[] = { // value in hundreds, volume in thousandths
-	{30, .3, 25,	"panacea"},
-	{18, .2, 15,	"ichor"},
-	{25, 2.,  2,	"gold"},
-	{0,0,0,0}
+typedef struct {
+    char *name;
+    double value;
+    double weight;
+    double volume;
+} item_t;
+
+item_t items[] = {
+    {"panacea", 3000.0, 0.3, 0.025},
+    {"ichor",   1800.0, 0.2, 0.015},
+    {"gold",    2500.0, 2.0, 0.002},
 };
 
-/* silly setup for silly task */
-int best_cnt[16] = {0}, cnt[16] = {0};
-double best_v = 0;
+int n = sizeof (items) / sizeof (item_t);
+int *count;
+int *best;
+double best_value;
 
-void grab_em(int idx, double cap_v, double cap_w, double v)
-{
-	double val;
-	int t = cap_w / items[idx].wgt;
-	cnt[idx] = cap_v / items[idx].vol;
-
-	if (cnt[idx] > t) cnt[idx] = t;
-
-	while (cnt[idx] >= 0) {
-		val = v + cnt[idx] * items[idx].val;
-		if (!items[idx + 1].name) {
-			if (val > best_v) {
-				best_v = val;
-				memcpy(best_cnt, cnt, sizeof(int) * (1 + idx));
-			}
-			return;
-		}
-		grab_em(idx + 1, cap_v - cnt[idx] * items[idx].vol,
-			cap_w - cnt[idx] * items[idx].wgt, val);
-		cnt[idx]--;
-	}
+void knapsack (int i, double value, double weight, double volume) {
+    int j, m1, m2, m;
+    if (i == n) {
+        if (value > best_value) {
+            best_value = value;
+            for (j = 0; j < n; j++) {
+                best[j] = count[j];
+            }
+        }
+        return;
+    }
+    m1 = weight / items[i].weight;
+    m2 = volume / items[i].volume;
+    m = m1 < m2 ? m1 : m2;
+    for (count[i] = m; count[i] >= 0; count[i]--) {
+        knapsack(
+            i + 1,
+            value + count[i] * items[i].value,
+            weight - count[i] * items[i].weight,
+            volume - count[i] * items[i].volume
+        );
+    }
 }
 
-int main(void)
-{
-	int i;
-
-	grab_em(0, 250, 25, 0);
-	printf("value: %g hundreds\n", best_v);
-	for (i = 0; items[i].name; i++)
-		printf("%d %s\n", best_cnt[i], items[i].name);
-
-	return 0;
+int main () {
+    count = malloc(n * sizeof (int));
+    best = malloc(n * sizeof (int));
+    best_value = 0;
+    knapsack(0, 0.0, 25.0, 0.25);
+    int i;
+    for (i = 0; i < n; i++) {
+        printf("%d %s\n", best[i], items[i].name);
+    }
+    printf("best value: %.0f\n", best_value);
+    free(count); free(best);
+    return 0;
 }

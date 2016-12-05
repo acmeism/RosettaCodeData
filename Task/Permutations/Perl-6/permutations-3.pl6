@@ -1,4 +1,4 @@
-sub permute(@items) {
+sub permute(+@items) {
    my @seq := 1..+@items;
    gather for (^[*] @seq) -> $n is copy {
       my @order;
@@ -7,7 +7,7 @@ sub permute(@items) {
          $n div= $_;
       }
       my @i-copy = @items;
-      take [ map { @i-copy.splice($_, 1) }, @order ];
+      take map { |@i-copy.splice($_, 1) }, @order;
    }
 }
 .say for permute( 'a'..'c' )

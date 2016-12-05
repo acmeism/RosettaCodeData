@@ -2,6 +2,12 @@
 #include <stdio.h>
 #include <time.h>
 
+#define day_of_week( x ) ((x) == 1 ? "Sweetmorn" :\
+                          (x) == 2 ? "Boomtime" :\
+                          (x) == 3 ? "Pungenday" :\
+                          (x) == 4 ? "Prickle-Prickle" :\
+                          "Setting Orange")
+
 #define season( x ) ((x) == 0 ? "Chaos" :\
                     (x) == 1 ? "Discord" :\
                     (x) == 2 ? "Confusion" :\
@@ -25,7 +31,8 @@ char * ddate( int y, int d ){
     }
   }
 
-  sprintf( result, "%s %d, YOLD %d", season( d/73 ), date( d ), dyear );
+  sprintf( result, "%s, %s %d, YOLD %d",
+           day_of_week(d%5), season(((d%73)==0?d-1:d)/73 ), date( d ), dyear );
 
   return result;
 }

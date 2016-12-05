@@ -3,11 +3,9 @@ package main
 import "fmt"
 
 func main() {
-    for value := 0;; {
-        value++
-        fmt.Println(value)
-        if value % 6 == 0 {
-            break
-        }
-    }
+	var value int
+	for ok := true; ok; ok = value%6 != 0 {
+		value++
+		fmt.Println(value)
+	}
 }

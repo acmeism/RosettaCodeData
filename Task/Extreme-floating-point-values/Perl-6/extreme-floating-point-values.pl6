@@ -1,8 +1,8 @@
 print qq:to 'END'
-positive infinity: {Inf}
-negative infinity: {-Inf}
-negative zero: {-0e0}
-not a number: {NaN}
+positive infinity: {1e309}
+negative infinity: {-1e309}
+negative zero: {0e0 * -1}
+not a number: {0 * 1e309}
 +Inf + 2.0 = {Inf + 2}
 +Inf - 10.1 = {Inf - 10.1}
 +Inf + -Inf = {Inf + -Inf}

@@ -1,11 +1,10 @@
 function dec2bin (n)
-	local bin, number, bit = "", tonumber(n) -- can pass n as string
-	while number > 0 do
-		bit = number % 2
-		number = math.floor(number/2)
-		bin = bit .. bin
-	end
-	return bin
+    local bin = ""
+    while n > 0 do
+        bin = n % 2 .. bin
+        n = math.floor(n / 2)
+    end
+    return bin
 end
 
 print(dec2bin(5))

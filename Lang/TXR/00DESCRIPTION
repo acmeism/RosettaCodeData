@@ -1,7 +1,12 @@
 {{language
 |site=http://www.nongnu.org/txr/}}
+{{language programming paradigm|functional}}
+{{language programming paradigm|procedural}}
+{{language programming paradigm|object-oriented}}
+{{language programming paradigm|imperative}}
+{{language programming paradigm|declarative}}
 
-TXR is a new language implemented in [[C]], running on POSIX platforms such as [[Linux]], [[Mac OS X]] and on Windows via [[Cygwin]] as well as more natively thanks to [[MinGW]].
+TXR is a new language implemented in [[C]], running on POSIX platforms such as [[Linux]], [[Mac OS X]] and [[Solaris]] as well as on [[Microsoft Windows]]. It is a dynamic, high level language originally intended for "data munging" tasks in Unix-like environments, particularly tasks requiring accurate, robust text scraping from loosely structured documents.
 
 The Rosetta Code TXR solutions can be viewed in color, and all on one page with a convenient navigation pane [http://www.nongnu.org/txr/rosetta-solutions.html here].
 
@@ -9,50 +14,6 @@ TXR started as a language for "reversing here-documents": evaluating a template 
 
 <code>eval $(txr <txr-program> <args> ...)</code>
 
-TXR remains close to these roots: its main language is the pattern-based text extraction notation well-suited for matching large regions of
-entire text documents.  That language has become powerful enough to neatly parse grammars, while the tool developed a Lisp dialect to round out the functionality and increase its power.
+TXR was internally based, from the beginning, on a data model based on Lisp and eventually exposed a Lisp dialect that came to be known as TXR Lisp. TXR Lisp at first complemented the pattern extraction language, extending its power, but eventually became distinct. Programs can be written in TXR Lisp with no traces of the TXR pattern language, or vice versa.
 
-=== What's with all that <code>@</code> stuff? ===
-
-About the <code>@</code> character: this serves as a multi-level escape in TXR. In the fundamental TXR syntax, which is literal text, this character is a signal which indicates that the object which follows is a variable or directive. Then inside a directive, the character indicates that the object which follows is a TXR Lisp expression to be evaluated as such, rather than according to the expression evaluation rules of the pattern language:
-
-<pre>This is some literal text to be matched.
-@# this is a comment in the pattern language.
-This text matches and binds @variable.
-@(bind y  ;; this is the start of a directive in the TXR pattern language
-   @(> x 42) ;; this is an expression in TXR Lisp
-)
-Back to text.</pre>
-
-In TXR Lisp, the <code>@</code> character has more "meta" piled on top of it: <code>@foo</code> denotes <code>(sys:var foo)</code>, and <code>@(foo ...)</code> denotes <code>(sys:expr foo>)</code>. In any context which needs to separate meta-variables and meta-expressions from variables and expressions, this may come in handy.  It's used by the <code>op</code> operator for currying, for instance <code>(op * @1 @1)</code> returns a function of one argument which returns the square of that argument. The implementation of the operator looks for syntax like <code>(sys:var 1)</code> and replaces it with the arguments of the generated lambda function.  The <code>@</code> character also appears in quasiliteral strings, where it interpolates the values of variables and expressions as text.
-
-TXR is somewhat unusual in that the relationship between a domain-specific language (DSL) and general-purpose host language is reversed. Typically, at least in Lisp systems, DSL's are embedded into the parent language. In TXR, the "outer shell" is the domain-specific language for extracting text, and Lisp is embedded in it as "computational appliance".  It doesn't take much to reach the Lisp though: a TXR source file can just consist of a single <code>@(do ...)</code> directive which contains nothing but TXR Lisp forms. Also, TXR Lisp evaluation is available from program invocation via the <code>-e</code> and <code>-p</code> options.
-
-The second unusual feature in TXR is that the "tokens" in the pattern matching language are essentially themselves Lisp symbols and expressions. These "tokens" are used to create a block-structured language. This is quite odd. For instance a construct might begin with a <code>@(collect :vars (foo))</code>. This is a Lisp expression with interior structure, but to the parser of the pattern language, it's also basically just a token, like a giant keyword. IT begins a collect clause, and is followed by some optional material which may just be literal text, and must be terminated by the <code>@(end)</code> directive: another token-expression entity.
-
-=== Dual Personality ===
-
-From the solutions below, it is obvious that some of them make heavy use of the pattern language and little or no TXR Lisp. Others are quite the other way around, based entirely or almost entirely on Lisp, whereas others follow strategies of mixing the approaches.
-
-=== Lisp Innovation ===
-
-Although TXR Lisp is heavily based on prior work and strongly influenced by Common Lisp (for instance, there is a real <code>nil</code> symbol which is a list terminator and means "false", and it's primarily Lisp-2 dialect), TXR Lisp nevertheless manages to innovate within the world of Lisp.
-
-==== Can't We All Just Get Along? ====
-
-One major innovation is the way in which TXR Lisp closes the ages-old gap between Lisp-1 and Lisp-2, and the associated religious sectarian division it has caused. TXR Lisp recognizes that there are advantages both in having separate function and variable namespaces, and in having a single namespace: and it provides support for both approaches. The idea is devilishly simple. A special operator called "dwim" (do what I mean) is provided such that <code>(dwim forms ...)</code> basically denotes <code>(forms ...)</code>, but with Lisp-1 style evaluation: any of the forms which are symbols are resolved according to a flattened namespace that combines variable and function bindings (with conflicts resolved in favor of variables).  TXR Lisp programmers do not use the <code>dwim</code> operator directly, but rather the square bracket notation <code>[a b c ...] -> (dwim a b c)</code>.  So for instance, <code>[mapcar list '(1 2 3) '(a b c)]</code> zips together two lists. Using round brackets, it would have to be <code>(mapcar (fun list) '(1 2 3) '(a b c))</code>.  Moreover, if <code>foo</code> is a variable that holds a function of one argument, it has to be called using <code>(call foo arg)</code>. But with the "dwim brackets", it is just <code>[foo arg]</code>.  The "dwim brackets" also support various funcall-extensions, like indexing into arrays and slicing and so on. If <code>h</code> is a hash then <code>[h "a" 42]</code> looks up the string <code>a</code> in the hash and returns the value, or else returns 42 if the key is not found. If <code>a</code> is an array, list or string, then <code>[a 2..3]</code> extracts a slice. On the other hand, "dwim brackets" do not support operators: <code>[let (a b c) ...]</code> is not valid; or rather, it expects a variable or function <code>let</code> to exist, ignoring the <code>let</code> operator. Operators are strictly in the Lisp-2 domain, which is fine because Lisp-2 is a cleaner model with regard to operators anyway!
-
-==== Polymorphizing the Classics ====
-
-In TXR Lisp, classic Lisp operations like <code>mapcar</code>, <code>cdr</code> or <code>append</code> work exactly like they are supposed to, when they operate on lists. Right down to improper lists like <code>(append 42) -> 42</code> and <code>(append '(1) 2) -> (1 . 2)</code>.
-However, most of the operations have been extended to also work with strings and vectors. So for instance, <code>(mapcar (op + 1) "abc")</code> nicely yields the string <code>"bcd"</code> where <code>1</code> has been added to every character code of the original string. <code>(car "abc")</code> yields <code>#\a</code>, a character, <code>(cdr "abc")</code> yields <code>"bc"</code>, and <code>(cdr "c")</code> yields <code>nil</code> (rather than the empty string!) (Almost) everything proceeds from there.
-
-==== Good Hackers Borrow; Great Ones Steal ====
-
-TXR steals ideas from libraries and languages related to Lisp. The <code>op</code> operator is inspired by Goo's <code>op</code>, and the cl-op library for Common Lisp which is also inspired by Goo's <code>op</code>.
-
-Array and list slices are straight out of Python, right down to the half-open ranges (not including the upper endpoint), and negative values indexing from the tail of the array. The concept is further improved upon by allowing the Lisp symbols <code>nil</code> and <code>t</code> to be used as range indexes. 
-
-Slices, even empty ones, are assignable places in TXR Lisp: we can easily replace a possibly empty section of a string, lisp or vector, with a sequence that is of different length, also possibly empty: for instance, if <code>x</code> contains <code>"abc"</code> then <code>(set [x 1..2] "foo")</code> changes <code>x</code> to contain <code>"afooc"</code>.
-
-The <code>group-by</code> function is a straight rip-off from Ruby.
+TXR Lisp is an original dialect that contains many innovative features, which orchestrate together to express neat, compact solutions to everyday data processing problems. Programmers familiar with Common Lisp will be comfortable with TXR Lisp, and there is much to like for those who use Scheme, Racket or Clojure.  TXR Lisp incorporates ideas from contemporary scripting languages also; a key motivation in many of its developments is the promotion of succinctness, which is something that often isn't associated with languages in the Lisp family.

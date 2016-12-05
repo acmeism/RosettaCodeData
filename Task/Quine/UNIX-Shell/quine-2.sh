@@ -1,14 +1,1 @@
-{
-	string=`cat`
-	printf "$string" "$string"
-	echo
-	echo END-FORMAT
-} <<'END-FORMAT'
-{
-	string=`cat`
-	printf "$string" "$string"
-	echo
-	echo END-FORMAT
-} <<'END-FORMAT'
-%s
-END-FORMAT
+history | tail -n 1 | cut -c 8-

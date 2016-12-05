@@ -1,17 +1,4 @@
-#!/usr/bin/perl
-{{task}}
-The Dutch national flag is composed of three coloured bands in the order red then white and lastly blue. The problem posed by [[wp:Edsger Dijkstra|Edsger Dijkstra]] is:
-:Given a number of red, blue and white balls in random order, arrange them in the order of the colours Dutch national flag.
-When the problem was first posed, Dijkstra then went on to successively refine a solution, minimising the number of swaps and the number of times the colour of a ball needed to determined and restricting the balls to end in an array, ...
-
-;This task is to:
-# Generate a randomized order of balls ''ensuring that they are not in the order of the Dutch national flag''.
-# Sort the balls in a way idiomatic to your language.
-# Check the sorted balls ''are'' in the order of the Dutch national flag.
-
-;Cf.
-* [[wp:Dutch national flag problem|Dutch national flag problem]]
-* [https://www.google.co.uk/search?rlz=1C1DSGK_enGB472GB472use warnings;
+use warnings;
 use strict;
 use 5.010; # //
 

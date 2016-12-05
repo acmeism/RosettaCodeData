@@ -82,4 +82,37 @@ BEGIN
    OD;
    h / 6 * (f(a) + f(b) + 4 * sum1 + 2 * sum2)
 END # simpson #;
+
+# test the above procedures #
+PROC test integrators = ( STRING     legend
+                        , F          function
+                        , LONG REAL  lower limit
+                        , LONG REAL  upper limit
+                        , INT        iterations
+                        ) VOID:
+BEGIN
+    print( ( legend
+           , fixed(  left rect( function, lower limit, upper limit, iterations ), -20, 6 )
+           , fixed( right rect( function, lower limit, upper limit, iterations ), -20, 6 )
+           , fixed(   mid rect( function, lower limit, upper limit, iterations ), -20, 6 )
+           , fixed(  trapezium( function, lower limit, upper limit, iterations ), -20, 6 )
+           , fixed(    simpson( function, lower limit, upper limit, iterations ), -20, 6 )
+           , newline
+           )
+         )
+END; # test integrators #
+print( ( "   "
+       , "           left rect"
+       , "          right rect"
+       , "            mid rect"
+       , "           trapezium"
+       , "             simpson"
+       , newline
+       )
+     );
+test integrators( "x^3", ( LONG REAL x )LONG REAL: x * x * x, 0,     1,       100 );
+test integrators( "1/x", ( LONG REAL x )LONG REAL: 1 / x,     1,   100,     1 000 );
+test integrators( "x  ", ( LONG REAL x )LONG REAL: x,         0, 5 000, 5 000 000 );
+test integrators( "x  ", ( LONG REAL x )LONG REAL: x,         0, 6 000, 6 000 000 );
+
 SKIP

@@ -1,3 +1,3 @@
-foreach x (`jot - 2 8 2`)
-	echo $x
-end
+for (( x=2; $x<=8; x=$x+2 )); do
+  printf "%d, " $x
+done

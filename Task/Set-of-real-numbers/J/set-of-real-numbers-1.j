@@ -12,7 +12,6 @@ interval=: 3 :0
   (lo&(<`<:@.cL) *. hi&(>`>:@.cH))ing
 )
 
-in=: 4 :'y has x'
 union=: 4 :'(x has +. y has)ing'
 intersect=: 4 :'(x has *. y has)ing'
 without=: 4 :'(x has *. [: -. y has)ing'

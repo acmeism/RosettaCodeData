@@ -6,8 +6,10 @@ version(Win32) {
   pragma(lib, "ws2_32.lib") ;
 }
 void main() {
+  long res;
   auto socket = new Socket(AddressFamily.INET, SocketType.STREAM) ;
   socket.connect(new InternetAddress("localhost",256)) ;
-  writefln(socket.send(cast(void[])"hello socket world"), " bytes sent.") ;
+  res = socket.send(cast(void[])"hello socket world") ;
+  writefln("Socket %d bytes sent.", res) ;
   socket.close() ;
 }

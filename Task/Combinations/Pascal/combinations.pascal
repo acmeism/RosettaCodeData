@@ -4,7 +4,7 @@ const
  m_max = 3;
  n_max = 5;
 var
- combination: array [1..m_max] of integer;
+ combination: array [0..m_max] of integer;
 
  procedure generate(m: integer);
   var

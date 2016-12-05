@@ -1,7 +1,0 @@
-(define (read-next-line-iter file)
-	   (let ((line (read-line file)))
-	     (unless (eof-object? line)
-	       (display line)
-	       (newline)
-	       (read-next-line-iter file))))
-(call-with-input-file "foobar.txt" read-next-line-iter)

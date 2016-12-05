@@ -1,3 +1,6 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
+
 import Control.Monad
 import Control.Monad.ST
 import Data.Array

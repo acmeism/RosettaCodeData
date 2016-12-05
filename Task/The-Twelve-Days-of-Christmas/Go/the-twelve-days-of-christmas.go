@@ -18,7 +18,7 @@ func main() {
 		"Eleven pipers piping", "Twelve drummers drumming"}
 
 	day := func(n int) {
-		fmt.Printf("On the %s day of Christams, my true love gave to me\n", numbers[n])
+		fmt.Printf("On the %s day of Christams, my true love sent to me\n", numbers[n])
 	}
 
 	day(0)

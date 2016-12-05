@@ -2,24 +2,30 @@ package main
 
 import (
     "fmt"
-    "time"
+    "testing"
 )
 
-func from(t0 time.Time) {
-    fmt.Println(time.Now().Sub(t0))
-}
-
-func empty() {
-    defer from(time.Now())
-}
+func empty() {}
 
 func count() {
-    defer from(time.Now())
     for i := 0; i < 1e6; i++ {
     }
 }
 
 func main() {
-    empty()
-    count()
+    e := testing.Benchmark(func(b *testing.B) {
+        for i := 0; i < b.N; i++ {
+            empty()
+        }
+    })
+    c := testing.Benchmark(func(b *testing.B) {
+        for i := 0; i < b.N; i++ {
+            count()
+        }
+    })
+    fmt.Println("Empty function:    ", e)
+    fmt.Println("Count to a million:", c)
+    fmt.Println()
+    fmt.Printf("Empty: %12.4f\n", float64(e.T.Nanoseconds())/float64(e.N))
+    fmt.Printf("Count: %12.4f\n", float64(c.T.Nanoseconds())/float64(c.N))
 }

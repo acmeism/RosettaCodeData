@@ -1,6 +1,7 @@
 import java.util.Random;
 
 public class BestShuffle {
+    private final static Random rand = new Random();
 
     public static void main(String[] args) {
         String[] words = {"abracadabra", "seesaw", "grrrrrr", "pop", "up", "a"};
@@ -27,7 +28,6 @@ public class BestShuffle {
     }
 
     public static void shuffle(char[] text) {
-        Random rand = new Random();
         for (int i = text.length - 1; i > 0; i--) {
             int r = rand.nextInt(i + 1);
             char tmp = text[i];

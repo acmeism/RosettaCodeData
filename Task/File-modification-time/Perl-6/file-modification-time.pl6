@@ -6,7 +6,7 @@ class utimbuf is repr('CStruct') {
 
     submethod BUILD(:$atime, :$mtime) {
         $!actime = $atime;
-        $!modtime = $mtime;
+        $!modtime = $mtime.to-posix[0].round;
     }
 }
 

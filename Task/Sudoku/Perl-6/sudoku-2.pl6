@@ -28,7 +28,7 @@ use v6;
 #
 
 # keep a list with all the cells, handy for traversal
-my @cells = do for 0..8 X 0..8 -> $x, $y { [ $x, $y ] };
+my @cells = do for (flat 0..8 X 0..8) -> $x, $y { [ $x, $y ] };
 
 #
 # Try to solve this puzzle and return the resolved puzzle if it is at
@@ -129,7 +129,7 @@ sub solution-complexity-factor($sudoku, Int $x, Int $y) {
     }
     # the number of possible values should take precedence
     my Int $f = 1000 * count-values($sudoku[$x][$y]);
-    for 0..2 X 0..2 -> $lx, $ly {
+    for (flat 0..2 X 0..2) -> $lx, $ly {
         $f += count-values($sudoku[$lx+$bx*3][$ly+$by*3])
     }
     for 0..^($by*3), (($by+1)*3)..8 -> $ly {
@@ -152,7 +152,7 @@ sub matches-in-competing-cells($sudoku, Int $x, Int $y, Int $val) {
         return $cell.grep({ $val == $_ }) ?? 1 !! 0;
     }
     my Int $c = 0;
-    for 0..2 X 0..2 -> $lx, $ly {
+    for (flat 0..2 X 0..2) -> $lx, $ly {
         $c += cell-matching($sudoku[$lx+$bx*3][$ly+$by*3])
     }
     for 0..^($by*3), (($by+1)*3)..8 -> $ly {
@@ -208,7 +208,7 @@ sub trace(Int $level, Str $message) {
 
 sub clone-sudoku($sudoku) {
     my $clone;
-    for 0..8 X 0..8 -> $x, $y {
+    for (flat 0..8 X 0..8) -> $x, $y {
         $clone[$x][$y] = $sudoku[$x][$y];
     }
     return $clone;

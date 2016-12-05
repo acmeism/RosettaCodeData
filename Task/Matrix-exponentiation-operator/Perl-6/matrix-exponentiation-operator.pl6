@@ -23,7 +23,7 @@ multi infix:<**> (SqMat $m, Int $n is copy where { $_ >= 0 }) {
 multi show (SqMat $m) {
     my $size = 1;
     for ^$m X ^$m -> ($i, $j) { $size max= $m[$i][$j].Str.chars; }
-    say join "\n", $m».fmt("%{$size}s");
+    .put for @$m».fmt("%{$size}s");
 }
 
 my @m = [1, 2, 0],

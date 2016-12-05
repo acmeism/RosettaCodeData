@@ -1,6 +1,4 @@
-is_open = {}
-
-for door = 1,100 do is_open[door] = false end
+local is_open = {}
 
 for pass = 1,100 do
     for door = pass,100,pass do
@@ -9,9 +7,5 @@ for pass = 1,100 do
 end
 
 for i,v in next,is_open do
-    if v then
-        print ('Door '..i..':','open')
-    else
-        print ('Door '..i..':', 'close')
-    end
+    print ('Door '..i..':',v and 'open' or 'close')
 end

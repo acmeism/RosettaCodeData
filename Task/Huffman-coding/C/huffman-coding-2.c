@@ -106,7 +106,8 @@ void decode(const char *s, node t)
 int main(void)
 {
 	int i;
-	const char *str = "this is an example for huffman encoding", buf[1024];
+	const char *str = "this is an example for huffman encoding";
+        char buf[1024];
 
 	init(str);
 	for (i = 0; i < 128; i++)

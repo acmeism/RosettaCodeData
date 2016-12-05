@@ -1,6 +1,6 @@
-abc = "abcdefghijklmnopqrstuvwxyz"    /*define all the lowercase letters*/
-abcU = translate(abc)                 /*   "    "   "  uppercase    "   */
+abc  = "abcdefghijklmnopqrstuvwxyz"              /*define all  lowercase  Latin letters.*/
+abcU = translate(abc)                            /*   "    "   uppercase    "      "    */
 
-x = 'alphaBETA'                       /*define string to a REXX variable*/
-y = translate(x)                      /*uppercase  X  and store it───► Y*/
-z = translate(x, abc, abcU)           /*tran uppercase──►lowercase chars*/
+x = 'alphaBETA'                                  /*define a string to a REXX variable.  */
+y = translate(x)                                 /*uppercase  X  and store it ───►  Y   */
+z = translate(x, abc, abcU)                      /*translate uppercase──►lowercase chars*/

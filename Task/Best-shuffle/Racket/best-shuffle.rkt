@@ -15,6 +15,6 @@
   (for/sum ([c1 (in-string s1)] [c2 (in-string s2)])
     (if (eq? c1 c2) 1 0)))
 
-(for ([s (in-list '("tree" "abracadabra" "seesaw" "elk" "grrrrrr" "up" "a"))])
+(for ([s (in-list '("abracadabra" "seesaw" "elk" "grrrrrr" "up" "a"))])
   (define sh (best-shuffle s))
   (printf " ~a, ~a, (~a)\n" s sh (count-same s sh)))

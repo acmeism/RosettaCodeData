@@ -9,7 +9,7 @@ VEL  =: 0        NB. ms_1
 
 PEND=: noun define
 pc pend;pn "Pendulum";
-minwh 320 200; cc isi isigraph type flush;
+minwh 320 200; cc isi isigraph flush;
 )
 
 pend_run=: verb define

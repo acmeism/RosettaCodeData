@@ -1,41 +1,41 @@
-/*REXX program  sorts  a stemmed array using the   quicksort  algorithm.*/
-call gen@                              /*generate the array elements.   */
-call show@   'before sort'             /*show   before   array elements.*/
-call quickSort   #                     /*invoke the  quicksort  routine.*/
-call show@   ' after sort'             /*show    after   array elements.*/
-exit                                   /*stick a fork in it, we're done.*/
-/*──────────────────────────────────QUICKSORT subroutine────────────────*/
-quickSort: procedure expose @.         /*access the caller's local var. */
-a.1=1;   b.1=arg(1);   $=1
-
-  do  while  $\==0;   L=a.$;   t=b.$;   $=$-1;        if t<2  then iterate
-  h=L+t-1
-  ?=L+t%2
-  if @.h<@.L then if @.?<@.h then do;  p=@.h;  @.h=@.L;  end
-                             else if @.?>@.L then p=@.L
-                                             else do;  p=@.?; @.?=@.L; end
-             else if @.?<@.l then p=@.L
-                             else if @.?>@.h then do;  p=@.h; @.h=@.L; end
-                                             else do;  p=@.?; @.?=@.L; end
-  j=L+1
-  k=h
-        do forever
-            do j=j         while j<=k & @.j<=p;  end /*a tinie-tiny loop*/
-            do k=k  by -1  while j <k & @.k>=p;  end /*another   "    " */
-        if j>=k  then leave                          /*segment finished?*/
-        _=@.j;   @.j=@.k;   @.k=_                    /*swap j&k elements*/
-        end   /*forever*/
-
-  k=j-1;   @.L=@.k;   @.k=p;              $=$+1
-  if j<=?  then do;   a.$=j;  b.$=h-j+1;  $=$+1;  a.$=L;  b.$=k-L;     end
-           eLse do;   a.$=L;  b.$=k-L;    $=$+1;  a.$=j;  b.$=h-j+1;   end
-  end   /*whiLe $¬==0*/
-
-return
-/*──────────────────────────────────GEN@ subroutine─────────────────────*/
-gen@:  @.=;   maxL=0                   /*assign default value for array.*/
-@.1  = " Rivers that form part of a (USA) state's border "                 /*this value is adjusted later to include a prefix & suffix.*/
-@.2  = '='                                                                 /*this value is expanded later.  */
+/*REXX program  sorts  a  stemmed array  using the   quicksort  algorithm.              */
+call gen@                                        /*generate the elements for the array. */
+call show@   'before sort'                       /*show  the  before   array elements.  */
+call qSort       #                               /*invoke the  quicksort  subroutine.   */
+call show@   ' after sort'                       /*show  the   after   array elements.  */
+exit                                             /*stick a fork in it,  we're all done. */
+/*──────────────────────────────────────────────────────────────────────────────────────*/
+qSort: procedure expose @.;  a.1=1;  b.1=arg(1)  /*access the caller's local variable.  */
+       $=1
+               do  while  $\==0;    L=a.$;   t=b.$;   $=$-1;      if t<2  then iterate
+               h=L+t-1;             ?=L+t%2
+               if @.h<@.L  then if @.?<@.h  then do;  p=@.h;  @.h=@.L;  end
+                                            else if @.?>@.L  then p=@.L
+                                                             else do;  p=@.?; @.?=@.L; end
+                           else if @.?<@.l  then p=@.L
+                                            else if @.?>@.h  then do;  p=@.h; @.h=@.L; end
+                                                             else do;  p=@.?; @.?=@.L; end
+               j=L+1;                             k=h
+                      do forever
+                          do j=j         while j<=k & @.j<=p;  end  /*a tinie-tiny loop.*/
+                          do k=k  by -1  while j <k & @.k>=p;  end  /*another   "    "  */
+                      if j>=k  then leave                           /*segment finished? */
+                      _=@.j;   @.j=@.k;   @.k=_                     /*swap J&K elements.*/
+                      end   /*forever*/
+               $=$+1
+               k=j-1;   @.L=@.k;   @.k=p
+               if j<=?  then do;   a.$=j;   b.$=h-j+1;   $=$+1;   a.$=L;   b.$=k-L;    end
+                        eLse do;   a.$=L;   b.$=k-L;     $=$+1;   a.$=j;   b.$=h-j+1;  end
+               end          /*whiLe $¬==0*/
+       return
+/*──────────────────────────────────────────────────────────────────────────────────────*/
+show@: w=length(#);        do j=1  for #;  say 'element'  right(j,w)  arg(1)":"  @.j;  end
+       say copies('▒', maxL + w + 22)            /*display a separator (between outputs)*/
+       return
+/*──────────────────────────────────GEN@ subroutine──────────────────────────────────────────────────────────────────────────────────────────────────────*/
+gen@:  @.=;   maxL=0                             /*assign default value for array.*/
+@.1  = " Rivers that form part of a (USA) state's border "                                   /*this value is adjusted later to include a prefix & suffix.*/
+@.2  = '='                                                                                   /*this value is expanded later.  */
 @.3  = "Perdido River                       Alabama, Florida"
 @.4  = "Chattahoochee River                 Alabama, Georgia"
 @.5  = "Tennessee River                     Alabama, Kentucky, Mississippi, Tennessee"
@@ -98,17 +98,10 @@ gen@:  @.=;   maxL=0                   /*assign default value for array.*/
 @.62 = "Blackwater River                    North Carolina, Virginia"
 @.63 = "Columbia River                      Oregon, Washington"
 
-        do #=1  while  @.#\==''        /*find how many entries, and also*/
-        maxL=max(maxL, length(@.#))    /*  find the maximum width entry.*/
-        end   /*#*/
-#=#-1                                  /*adjust the highest element #.  */
-@.1=centre(@.1, maxL, '-')             /*adjust the header information. */
-@.2=copies(@.2, maxL)                  /*adjust the header separator.   */
-return
-/*──────────────────────────────────SHOW@ subroutine────────────────────*/
-show@: widthH=length(#)                /*maximum width of any line.     */
-                        do j=1  for #  /*display each item in the array.*/
-                        say  'element'   right(j,widthH)   arg(1)':'   @.j
-                        end   /*j*/
-say copies('▒', maxL + widthH + 22)    /*display a  separator  line.    */
+           do #=1  while  @.#\==''               /*find how many entries in array,  and */
+           maxL=max(maxL, length(@.#))           /*   also find the maximum width entry.*/
+           end   /*#*/
+#=#-1                                            /*adjust the highest element number.   */
+@.1=center(@.1, maxL, '-')                       /*   "    "  header information.       */
+@.2=copies(@.2, maxL)                            /*   "    "     "   separator.         */
 return

@@ -1,2 +1,2 @@
-factors_naive 6
-[1,2,3,6]
+import Data.List (group)
+primePowerFactors = map (\x-> (head x, length x)) . group . factorize

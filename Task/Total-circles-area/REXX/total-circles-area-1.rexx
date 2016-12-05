@@ -1,7 +1,7 @@
-/*REXX pgm calculates the total area of (possibly overlapping) circles. */
-parse arg box .                        /*obtain possible #boxes from CL.*/
-if box==''  then box=500               /*allow specification of # boxes.*/
-numeric digits 15                      /*ensure enough digits for points*/
+/*REXX program calculates the total area of  (possibly overlapping)  circles.           */
+parse arg box dig .                              /*obtain optional argument from the CL.*/
+if box=='' | box==','  then box= 500             /*Not specified?  Then use the default.*/
+if dig=='' | dig==','  then dig=  12             /* "      "         "   "   "     "    */
                     data = ' 1.6417233788   1.6121789534  0.0848270516',
                            '-1.4944608174   1.2077959613  1.1039549836',
                            ' 0.6110294452  -0.6907087527  0.9089162485',
@@ -28,8 +28,8 @@ numeric digits 15                      /*ensure enough digits for points*/
                            '-0.6855727502   1.6465021616  1.0593087096',
                            ' 0.0152957411   0.0638919221  0.9771215985'
 circles=words(data)%3      /*    ══x══          ══y══       ══radius══  */
-parse var data minX minY . 1 maxX maxY .   /*assign some min & max vals.*/
-            do j=1  for circles; _=j*3-2   /*assign circles with datam. */
+parse var data minX minY . 1 maxX maxY .              /*assign minimum & maximum values.*/
+            do j=1  for circles; _=j*3-2              /*assign some circles with datum. */
             @x.j=word(data,_);  @y.j=word(data,_+1)
                                 @r.j=word(data,_+2);   @rr.j=@r.j**2
             minX=min(minX, @x.j-@r.j);  maxX=max(maxX, @x.j+@r.j)
@@ -37,13 +37,14 @@ parse var data minX minY . 1 maxX maxY .   /*assign some min & max vals.*/
             end   /*j*/
 dx=(maxX-minX) / box
 dy=(maxY-minY) / box
-#=0                                        /*count of sample points.    */
-      do   row=0  to box;   y=minY+row*dy  /*process the grid rows.     */
-        do col=0  to box;   x=minX+col*dx  /*process the grid cols.     */
-          do k=1  for circles              /*now process each circle.   */
-          if (x-@x.k)**2+(y-@y.k)**2 <= @rr.k  then  do; #=#+1; leave; end
+#=0                                                   /*count of sample points (so far).*/
+      do   row=0  to box;   y=minY+row*dy             /*process each of the grid rows.  */
+        do col=0  to box;   x=minX+col*dx             /*   "      "   "  "    "  column.*/
+          do k=1  for circles                         /*now process each new circle.    */
+          if (x-@x.k)**2+(y-@y.k)**2 <= @rr.k  then  do;  #=#+1;  leave;  end
           end   /*k*/
         end     /*col*/
       end       /*row*/
-                                       /*stick a fork in it, we're done.*/
-say 'The approximate area is: '   #*dx*dy    "  using"   box**2  "points."
+                                                      /*stick a fork in it, we're done. */
+say 'Using ' box  " boxes (which have "  box**2  ' points)  and '  dig  " decimal digits,"
+say 'the approximate area is: '  #*dx*dy

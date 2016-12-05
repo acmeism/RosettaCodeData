@@ -1,52 +1,28 @@
-class Vigenere(val key: String) {
+object Vigenere {
+
+  val key = "LEMON"
+  val chars = 'A' to 'Z'
 
   private def rotate(p: Int, s: IndexedSeq[Char]) = s.drop(p) ++ s.take(p)
+  val vSquare = (for (i <- Range(0, 25)) yield rotate(i, chars)).flatten
 
-  private val chars = 'A' to 'Z'
+  def encrypt(s: String) = enrOrDecode(0, s.toUpperCase, encode)
+  def decrypt(s: String) = enrOrDecode(0, s.toUpperCase, decode)
 
-  private val vSquare = (chars ++
-                rotate(1, chars) ++
-                rotate(2, chars) ++
-                rotate(3, chars) ++
-                rotate(4, chars) ++
-                rotate(5, chars) ++
-                rotate(6, chars) ++
-                rotate(7, chars) ++
-                rotate(8, chars) ++
-                rotate(9, chars) ++
-                rotate(10, chars) ++
-                rotate(11, chars) ++
-                rotate(12, chars) ++
-                rotate(13, chars) ++
-                rotate(14, chars) ++
-                rotate(15, chars) ++
-                rotate(16, chars) ++
-                rotate(17, chars) ++
-                rotate(18, chars) ++
-                rotate(19, chars) ++
-                rotate(20, chars) ++
-                rotate(21, chars) ++
-                rotate(22, chars) ++
-                rotate(23, chars) ++
-                rotate(24, chars) ++
-                rotate(25, chars))
-
-  private var encIndex = -1
-  private var decIndex = -1
-
-  def encode(c: Char) = {
-    encIndex += 1
-    if (encIndex == key.length) encIndex = 0
-    if (chars.contains(c)) vSquare((c - 'A') * 26 + key(encIndex) - 'A') else c
+  private def enrOrDecode(i: Int , in: String, op:(Char, Int) => Char): String = {
+    if (in.length == 0) in else {
+      val index = if (i == key.length) 0 else i
+      (if (chars.contains(in.head)) op(in.head, index) else in.head) + enrOrDecode(index + 1, in.tail, op)
+    }
   }
 
-  def decode(c: Char) = {
-    decIndex += 1
-    if (decIndex == key.length) decIndex = 0
-    if (chars.contains(c)) {
-      val baseIndex = (key(decIndex) - 'A') * 26
+  private def encode(c: Char, index: Int): Char = {
+    vSquare((c - 'A') * 26 + key(index) - 'A')
+  }
+
+  private def decode(c: Char, index: Int) = {
+      val baseIndex = (key(index) - 'A') * 26
       val nextIndex = vSquare.indexOf(c, baseIndex)
       chars(nextIndex - baseIndex)
-    } else c
   }
 }

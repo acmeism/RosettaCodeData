@@ -11,7 +11,7 @@ feature {NONE}
 			across
 				0 |..| 14 as c
 			loop
-				io.put_double (catalan_numbers (c.item))
+				io.put_double (nth_catalan_number (c.item))
 				io.new_line
 			end
 		end
@@ -28,7 +28,7 @@ feature {NONE}
 			else
 				t := 4 * n.to_double - 2
 				s := n.to_double + 1
-				Result := t / s * catalan_numbers (n - 1)
+				Result := t / s * nth_catalan_number (n - 1)
 			end
 		end
 

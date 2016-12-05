@@ -6,7 +6,7 @@ sub MAIN(\N = 8) {
         }
         False;
     }
-    sub search(@field is rw, $row) {
+    sub search(@field, $row) {
         return @field if $row == N;
         for ^N -> $i {
             @field[$row] = $i;

@@ -43,7 +43,7 @@ public class NauticalBell extends Thread {
             try {
                 Thread.sleep(wait);
             } catch (InterruptedException e) {
-                System.out.println(e);
+                return;
             }
         }
     }

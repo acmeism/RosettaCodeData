@@ -1,7 +1,4 @@
-constant FT = 2, &ft ... 0;
-constant FT2 = FT.grep: { not $_ +& ($_ - 1) }
-for 1..* -> $i {
-    given FT2[$i] {
-        say $i, "\t", .msb, "\t", $_;
-    }
+for fractran <17/91 78/85 19/51 23/38 29/33 77/29 95/23 77/19 1/17 11/13 13/11
+        15/14 15/2 55/1> {
+        say $++, "\t", .msb, "\t", $_ if .log %% log(2);
 }

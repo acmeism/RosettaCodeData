@@ -12,19 +12,20 @@ else
 }
 
 
-if($_POST["guess"]){
-    $guess  = htmlspecialchars($_POST['guess']);
-
-	echo $guess . "<br />";
-    if ($guess != $number)
-	{
-        echo "Your guess is not correct";
-    }
-	elseif($guess == $number)
-	{
-        echo "You got the correct number!";
-    }
-
+if(isset($_POST["guess"])){
+	if($_POST["guess"]){
+	    $guess  = htmlspecialchars($_POST['guess']);
+	
+		echo $guess . "<br />";
+	    if ($guess != $number)
+		{
+	        echo "Your guess is not correct";
+	    }
+		elseif($guess == $number)
+		{
+	        echo "You got the correct number!";
+	    }
+	}
 }
 ?>
 

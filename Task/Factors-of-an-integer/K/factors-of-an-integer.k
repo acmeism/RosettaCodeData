@@ -1,10 +1,6 @@
-   f:{d:&~x!'!1+_sqrt x;?d,_ x%|d}
-
-   f 1
-1
-
-   f 3
-1 3
+ f:{i:{y[&x=y*x div y]}[x;1+!_sqrt x];?i,x div|i}
+equivalent to:
+q)f:{i:{y where x=y*x div y}[x ; 1+ til floor sqrt x]; distinct i,x div reverse i}
 
    f 120
 1 2 3 4 5 6 8 10 12 15 20 24 30 40 60 120

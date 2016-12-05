@@ -1,0 +1,6 @@
+require("LuaXML")
+local dom = xml.new("root")
+local element = xml.new("element")
+table.insert(element, "Some text here")
+dom:append(element)
+dom:save("dom.xml")

@@ -10,8 +10,8 @@ def merge(left, right):
             result.append(right[right_idx])
             right_idx += 1
 
-    if left:
+    if left_idx < len(left):
         result.extend(left[left_idx:])
-    if right:
+    if right_idx < len(right):
         result.extend(right[right_idx:])
     return result

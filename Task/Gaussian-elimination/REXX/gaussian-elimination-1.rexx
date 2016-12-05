@@ -1,5 +1,14 @@
 /* REXX ---------------------------------------------------------------
 * 07.08.2014 Walter Pachl translated from PL/I)
+* improved to get integer results for, e.g. this input:
+  -6 -18  13   6  -6 -15  -2  -9    -231
+   2  20   9   2  16 -12 -18  -5     647
+  23  18 -14 -14  -1  16  25 -17    -907
+  -8  -1 -19   4   3 -14  23   8     248
+  25  20  -6  15   0 -10   9  17    1316
+ -13  -1   3   5  -2  17  14 -12   -1080
+  19  24 -21  -5 -19   0 -24 -17    1006
+  20  -3 -14 -16 -23 -25 -15  20    1496
 *--------------------------------------------------------------------*/
   Numeric Digits 20
   Parse Arg t
@@ -56,15 +65,17 @@
 Exit
 
 Gauss_elimination:
-  do j = 1 to n
-     do i = j+1 to n /* For each of the rows beneath the current (pivot) row. */
-        t = a.j.j / a.i.j
-        do k = j+1 to n /* Subtract a multiple of row i from row j. */
-           a.i.k = a.j.k - t*a.i.k
-        end
-        b.i = b.j - t*b.i /* ... and the right-hand side. */
-     end
-  end
+  Do j=1 to n-1
+    ma=a.j.j
+    Do ja=j+1 To n
+      mb=a.ja.j
+      Do i=1 To n
+        new=a.j.i*mb-a.ja.i*ma
+        a.ja.i=new
+        End
+      b.ja=b.j*mb-b.ja*ma
+      End
+    End
   Return
 
 Backward_substitution:

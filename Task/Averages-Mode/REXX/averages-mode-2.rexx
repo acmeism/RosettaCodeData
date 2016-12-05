@@ -1,17 +1,17 @@
 /* Rexx */
--- ~~ main ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*-- ~~ main ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 call run_samples
 return
 exit
 
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- returns a comma separated string of mode values from a comma separated input vector string
+/*-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/*-- returns a comma separated string of mode values from a comma separated input vector string */
 mode:
   procedure
   parse arg lvector
   drop vector.
   vector. = ''
-  call makeStem lvector -- this call creates the "vector." stem from the input string
+  call makeStem lvector /*-- this call creates the "vector." stem from the input string */
   seen.   = 0
   modes.  = ''
   modeMax = 0
@@ -46,8 +46,8 @@ mode:
 
   return lmodes
 
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- pretty-print
+/*-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/*-- pretty-print */
 show_mode:
   procedure
   parse arg lvector
@@ -55,8 +55,8 @@ show_mode:
   say 'Vector: ['space(lvector, 0)'], Mode(s): ['space(lmodes, 0)']'
   return modes
 
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
--- load the "vector." stem from the comma separated input vector string
+/*-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/*-- load the "vector." stem from the comma separated input vector string */
 makeStem:
   procedure expose vector.
   vector.0 = 0
@@ -69,7 +69,7 @@ makeStem:
     end v_
   return vector.0
 
--- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/*-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 run_samples:
   procedure
   call show_mode '10, 9, 8, 7, 6, 5, 4, 3, 2, 1'                     -- 10 9 8 7 6 5 4 3 2 1

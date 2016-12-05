@@ -21,3 +21,5 @@ CONSTANT: number-of-doors 100
 : main ( -- )
     number-of-doors 1 + <bit-array>
     [ toggle-all-multiples ] [ print-doors ] bi ;
+
+main

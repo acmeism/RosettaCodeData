@@ -1,25 +1,22 @@
-use Test;
+sub infix:<⊞>(uint32 $a, uint32 $b --> uint32) { ($a + $b) +& 0xffffffff }
+sub infix:«<<<»(uint32 $a, UInt $n --> uint32) { ($a +< $n) +& 0xffffffff +| ($a +> (32-$n)) }
 
-sub prefix:<¬>(\x)       {   (+^ x) % 2**32 }
-sub infix:<⊞>(\x, \y)    {  (x + y) % 2**32 }
-sub infix:«<<<»(\x, \n)  { (x +< n) % 2**32 +| (x +> (32-n)) }
+constant FGHI = { ($^a +& $^b) +| (+^$a +& $^c) },
+                { ($^a +& $^c) +| ($^b +& +^$c) },
+                { $^a +^ $^b +^ $^c             },
+                { $^b +^ ($^a +| +^$^c)         };
 
-constant FGHI = -> \X, \Y, \Z { (X +& Y) +| (¬X +& Z) },
-                -> \X, \Y, \Z { (X +& Z) +| (Y +& ¬Z) },
-                -> \X, \Y, \Z { X +^ Y +^ Z           },
-                -> \X, \Y, \Z { Y +^ (X +| ¬Z)        };
-
-constant S = flat (7, 12, 17, 22) xx 4,
-		  (5,  9, 14, 20) xx 4,
-		  (4, 11, 16, 23) xx 4,
-		  (6, 10, 15, 21) xx 4;
+constant _S = flat (7, 12, 17, 22) xx 4,
+                  (5,  9, 14, 20) xx 4,
+                  (4, 11, 16, 23) xx 4,
+                  (6, 10, 15, 21) xx 4;
 
 constant T = (floor(abs(sin($_ + 1)) * 2**32) for ^64);
 
 constant k = flat (   $_           for ^16),
-		  ((5*$_ + 1) % 16 for ^16),
-		  ((3*$_ + 5) % 16 for ^16),
-		  ((7*$_    ) % 16 for ^16);
+                  ((5*$_ + 1) % 16 for ^16),
+                  ((3*$_ + 5) % 16 for ^16),
+                  ((7*$_    ) % 16 for ^16);
 
 sub little-endian($w, $n, *@v) {
     my \step1 = ($w X* ^$n).eager;  # temporary bug workaround
@@ -34,24 +31,23 @@ sub md5-pad(Blob $msg)
     flat @padded.map({ :256[$^d,$^c,$^b,$^a] }), little-endian(32, 2, bits);
 }
 
-sub md5-block(@H is rw, @X)
+sub md5-block(@H, @X)
 {
-    my ($A, $B, $C, $D) = @H;
-    for ^64 -> \i {
-        my \f = FGHI[i div 16]($B, $C, $D);
-          ($A, $B,                                         $C, $D)
-        = ($D, $B ⊞ (($A ⊞ f ⊞ T[i] ⊞ @X[k[i]]) <<< S[i]), $B, $C);
-    }
+    my uint32 ($A, $B, $C, $D) = @H;
+    ($A, $B, $C, $D) = ($D, $B ⊞ (($A ⊞ FGHI[$_ div 16]($B, $C, $D) ⊞ T[$_] ⊞ @X[k[$_]]) <<< _S[$_]), $B, $C) for ^64;
     @H «⊞=» ($A, $B, $C, $D);
 }
 
 sub md5(Blob $msg --> Blob)
 {
-    my @M = md5-pad($msg);
-    my @H = 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476;
+    my uint32 @M = md5-pad($msg);
+    my uint32 @H = 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476;
     md5-block(@H, @M[$_ .. $_+15]) for 0, 16 ...^ +@M;
     Blob.new: little-endian(8, 4, @H);
 }
+
+use Test;
+plan 7;
 
 for 'd41d8cd98f00b204e9800998ecf8427e', '',
     '0cc175b9c0f1b6a831c399e269772661', 'a',

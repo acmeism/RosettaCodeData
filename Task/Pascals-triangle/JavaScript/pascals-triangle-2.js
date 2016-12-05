@@ -1,70 +1,92 @@
 (function (n) {
+    'use strict';
 
-  // A Pascal triangle of n rows
-  // n --> [[n]]
-  function pascalTriangle(n) {
+    // A Pascal triangle of n rows
 
-    // Sums of each consecutive pair of numbers
-    // [n] --> [n]
-    function pairSums(lst) {
-      return lst.reduce(function (acc, n, i, l) {
-        var iPrev = i ? i - 1 : 0;
-        return i ? acc.concat(l[iPrev] + l[i]) : acc
-      }, []);
+    // pascal :: Int -> [[Int]]
+    function pascal(n) {
+        return range(1, n - 1)
+            .reduce(function (a) {
+                var lstPreviousRow = a.slice(-1)[0];
+
+                return a
+                    .concat(
+                        [zipWith(
+                            function (a, b) {
+                                return a + b
+                            },
+                            [0].concat(lstPreviousRow),
+                            lstPreviousRow.concat(0)
+                        )]
+                    );
+            }, [[1]]);
     }
 
-    // Next line in a Pascal triangle series
-    // [n] --> [n]
-    function nextPascal(lst) {
-      return lst.length ? [1].concat(
-        pairSums(lst)
-      ).concat(1) : [1];
+
+
+    // GENERIC FUNCTIONS
+
+    // zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+    function zipWith(f, xs, ys) {
+        return xs.length === ys.length ? (
+            xs.map(function (x, i) {
+                return f(x, ys[i]);
+            })
+        ) : undefined;
     }
 
-    // Each row is a function of the preceding row
-    return n ? Array.apply(null, Array(n - 1)).reduce(
-      function (a, _, i) {
-        return a.concat([nextPascal(a[i])]);
-      }, [[1]]) : [];
-  }
+    // range :: Int -> Int -> [Int]
+    function range(m, n) {
+        return Array.apply(null, Array(n - m + 1))
+            .map(function (x, i) {
+                return m + i;
+            });
+    }
 
-  // TEST
-  var lstTriangle = pascalTriangle(n);
+    // TEST
+    var lstTriangle = pascal(n);
 
 
-  // FORMAT OUTPUT AS WIKI TABLE
+    // FORMAT OUTPUT AS WIKI TABLE
 
-  // [[a]] -> bool -> s -> s
-  function wikiTable(lstRows, blnHeaderRow, strStyle) {
-    return '{| class="wikitable" ' + (
-      strStyle ? 'style="' + strStyle + '"' : ''
-    ) + lstRows.map(function (lstRow, iRow) {
-      var strDelim = ((blnHeaderRow && !iRow) ? '!' : '|');
+    // [[a]] -> bool -> s -> s
+    function wikiTable(lstRows, blnHeaderRow, strStyle) {
+        return '{| class="wikitable" ' + (
+                strStyle ? 'style="' + strStyle + '"' : ''
+            ) + lstRows.map(function (lstRow, iRow) {
+                var strDelim = ((blnHeaderRow && !iRow) ? '!' : '|');
 
-      return '\n|-\n' + strDelim + ' ' + lstRow.map(function (v) {
-        return typeof v === 'undefined' ? ' ' : v;
-      }).join(' ' + strDelim + strDelim + ' ');
-    }).join('') + '\n|}';
-  }
+                return '\n|-\n' + strDelim + ' ' + lstRow.map(function (
+                        v) {
+                        return typeof v === 'undefined' ? ' ' : v;
+                    })
+                    .join(' ' + strDelim + strDelim + ' ');
+            })
+            .join('') + '\n|}';
+    }
 
-  var lstLastLine = lstTriangle.slice(-1)[0],
-    lngBase = (lstLastLine.length * 2) - 1,
-    nWidth = lstLastLine.reduce(function (a, x) {
-      var d = x.toString().length;
-      return d > a ? d : a;
-    }, 1) * lngBase;
+    var lstLastLine = lstTriangle.slice(-1)[0],
+        lngBase = (lstLastLine.length * 2) - 1,
+        nWidth = lstLastLine.reduce(function (a, x) {
+            var d = x.toString()
+                .length;
+            return d > a ? d : a;
+        }, 1) * lngBase;
 
-  return [
+    return [
     wikiTable(
-      lstTriangle.map(function (lst) {
-        return lst.join(';;').split(';');
-      }).map(function (line, i) {
-        var lstPad = Array((lngBase - line.length) / 2);
-        return lstPad.concat(line).concat(lstPad);
-      }),
-      false,
-      'text-align:center;width:' + nWidth + 'em;height:' + nWidth +
-      'em;table-layout:fixed;'
+            lstTriangle.map(function (lst) {
+                return lst.join(';;')
+                    .split(';');
+            })
+            .map(function (line, i) {
+                var lstPad = Array((lngBase - line.length) / 2);
+                return lstPad.concat(line)
+                    .concat(lstPad);
+            }),
+            false,
+            'text-align:center;width:' + nWidth + 'em;height:' + nWidth +
+            'em;table-layout:fixed;'
     ),
 
     JSON.stringify(lstTriangle)

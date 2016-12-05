@@ -2,9 +2,9 @@ include FMS-SI.f
 include FMS-SILib.f
 
 
-\ FMS doesn't have the ability to add instance variables
-\ or methods at run time.  But it is very simple to add any number of
-\ objects of any type to a single object at run time.  The added
+
+\ We can add any number of variables at runtime by adding
+\ objects of any type to an instance at run time.  The added
 \ objects are then accessible via an index number.
 
 :class foo

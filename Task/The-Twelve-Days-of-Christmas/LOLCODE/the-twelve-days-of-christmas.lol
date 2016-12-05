@@ -33,7 +33,7 @@ IM IN YR Outer UPPIN YR i WILE DIFFRINT i AN 12
   I HAS A Day ITZ SUM OF i AN 1
   VISIBLE "On the " !
   VISIBLE Dayz'Z SRS Day !
-  VISIBLE " day of Christmas, my true love gave to me"
+  VISIBLE " day of Christmas, my true love sent to me"
   IM IN YR Inner UPPIN YR j WILE DIFFRINT j AN  Day
     I HAS A Count ITZ DIFFERENCE OF Day AN j
     VISIBLE Prezents'Z SRS Count

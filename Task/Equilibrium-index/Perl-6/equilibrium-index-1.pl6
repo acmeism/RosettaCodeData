@@ -9,4 +9,4 @@ sub equilibrium_index(@list) {
 }
 
 my @list = -7, 1, 5, 2, -4, 3, 0;
-.say for equilibrium_index(@list);
+.say for equilibrium_index(@list).grep(/\d/);

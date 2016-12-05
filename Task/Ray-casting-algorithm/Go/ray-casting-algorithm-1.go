@@ -1,8 +1,8 @@
 package main
 
 import (
-    "math"
     "fmt"
+    "math"
 )
 
 type xy struct {
@@ -85,7 +85,12 @@ var tpg = []poly{
         {p13, p14}, {p14, p9}, {p9, p11}}},
 }
 
-var tpt = []xy{{5, 5}, {5, 8}, {-10, 5}, {0, 5}, {10, 5}, {8, 5}, {10, 10}}
+var tpt = []xy{
+    // test points common in other solutions on this page
+    {5, 5}, {5, 8}, {-10, 5}, {0, 5}, {10, 5}, {8, 5}, {10, 10},
+    // test points that show the problem with "strange"
+    {1, 2}, {2, 1},
+}
 
 func main() {
     for _, pg := range tpg {

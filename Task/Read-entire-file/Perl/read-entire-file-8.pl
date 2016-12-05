@@ -1,4 +1,3 @@
-use Sys::Mmap;
-Sys::Mmap->new(my $str, 0, 'foo.txt')
-  or die "Cannot Sys::Mmap->new: $!";
+use File::Map 'map_file';
+map_file(my $str, "foo.txt");
 print $str;

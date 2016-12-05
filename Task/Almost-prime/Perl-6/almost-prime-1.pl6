@@ -6,6 +6,6 @@ sub is-k-almost-prime($n is copy, $k) returns Bool {
 }
 
 for 1 .. 5 -> $k {
-    say .[^10]
+    say ~.[^10]
         given grep { is-k-almost-prime($_, $k) }, 2 .. *
 }

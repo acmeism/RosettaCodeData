@@ -8,5 +8,6 @@ echo
     "product:             ", $a * $b, "\n",
     "truncating quotient: ", (int)($a / $b), "\n",
     "flooring quotient:   ", floor($a / $b), "\n",
-    "remainder:           ", $a % $b, "\n";
+    "remainder:           ", $a % $b, "\n",
+    "power:               ", $a ** $b, "\n"; // PHP 5.6+ only
 ?>

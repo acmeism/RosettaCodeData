@@ -71,10 +71,8 @@ center :: Int -> String -> String
 center i a = T.unpack . (T.center i ' ') $ T.pack a
 
 printCal :: [[[T.Text]]] -> IO ()
-printCal []     = return ()
-printCal (c:cx) = do
-  mapM_ (putStrLn . T.unpack) rows
-  printCal cx
+printCal = mapM_ f where
+  f c = mapM_ (putStrLn . T.unpack) rows
     where rows = map (T.intercalate calMargin) $ transpose c
 
 printCalendar :: Integer -> Int -> IO ()

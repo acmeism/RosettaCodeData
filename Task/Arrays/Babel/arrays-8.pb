@@ -1,2 +1,1 @@
-    [ptr 1 2 3]
-    ar2ls (4) unshift bons
+[ptr 1 2 3] [ptr 4] cat

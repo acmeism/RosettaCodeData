@@ -1,9 +1,9 @@
 horner <- function(a, x) {
-  iv <- 0
-  for(i in length(a):1) {
-    iv <- iv * x + a[i]
+  y <- 0
+  for(c in rev(a)) {
+    y <- y * x + c
   }
-  iv
+  y
 }
 
 cat(horner(c(-19, 7, -4, 6), 3), "\n")

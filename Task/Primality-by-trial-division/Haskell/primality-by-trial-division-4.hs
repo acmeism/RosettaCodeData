@@ -1,2 +1,1 @@
-primes = sieve [2..] where
-   sieve (p:xs) = p : sieve [x | x <- xs, x `mod` p /= 0]
+isPrime n = n > 1 && []==[i | i <- [2..n-1], isPrime i && rem n i == 0]

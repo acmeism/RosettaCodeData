@@ -16,8 +16,8 @@ interval=: 3 :0
   (lo&(<`<:@.cL) *. hi&(>`>:@.cH))ing ; lo,hi
 )
 
-in=: 4 :'y has x'
 union=: 4 :'(x has +. y has)ing; x edges y'
 intersect=: 4 :'(x has *. y has)ing; x edges y'
 without=: 4 :'(x has *. [: -. y has)ing; x edges y'
+in=: 4 :'y has x'
 isEmpty=: 1 -.@e. contour in ]

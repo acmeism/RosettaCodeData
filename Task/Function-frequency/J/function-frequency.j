@@ -1,29 +1,35 @@
-   PRIMITIVES=: ;:'!   !.  !:  "   ".  ":  #   #.  #:  $   $.  $:  %   %.  %:  &   &.  &.: &:  *   *.  *:  +   +.  +:  ,   ,.  ,:  -   -.  -:  .   ..  .:  /   /.  /:  0:  1:  2:  3:  4:  5:  6:  7:  8:  9:  :   :.  ::  ;   ;.  ;:  <   <.  <:  =   =.  =:  >   >.  >:  ?   ?. ...'
+   IGNORE=: ;:'y(0)1',CR
 
    Filter=: (#~`)(`:6)
 
-   NB. monad top10 .  y is a character vector of much j source code
-   top10=: 10 {. \:~@:((#;{.)/.~@:(e.&PRIMITIVES Filter@:;:))
+   NB. extract tokens from a large body newline terminated of text
+   roughparse=: ;@(<@;: ::(''"_);._2)
 
-   top10 JSOURCE NB. JSOURCE are the j Zeckendorf verbs.
-┌─┬──┐
-│6│=.│
-├─┼──┤
-│5│=:│
-├─┼──┤
-│4│@:│
-├─┼──┤
-│3│~ │
-├─┼──┤
-│3│: │
-├─┼──┤
-│3│+ │
-├─┼──┤
-│3│$ │
-├─┼──┤
-│2│|.│
-├─┼──┤
-│2│i.│
-├─┼──┤
-│2│/ │
-└─┴──┘
+   NB. count frequencies and get the top x
+   top=: top=: {. \:~@:((#;{.)/.~)
+
+   NB. read all installed script (.ijs) files and concatenate them
+   JSOURCE=: ;fread each 1&e.@('.ijs'&E.)@>Filter {."1 dirtree jpath '~install'
+
+   10 top (roughparse JSOURCE)-.IGNORE
+┌─────┬──┐
+│49591│, │
+├─────┼──┤
+│40473│=:│
+├─────┼──┤
+│35593│; │
+├─────┼──┤
+│34096│=.│
+├─────┼──┤
+│24757│+ │
+├─────┼──┤
+│18726│" │
+├─────┼──┤
+│18564│< │
+├─────┼──┤
+│18446│/ │
+├─────┼──┤
+│16984│> │
+├─────┼──┤
+│14655│@ │
+└─────┴──┘

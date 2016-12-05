@@ -1,9 +1,44 @@
-Array.apply(null, { length: 100 })
-  .map(function(v, i) { return i + 1; })
-    .forEach(function(door) {
-      var sqrt = Math.sqrt(door);
+(function (n) {
+    'use strict';
 
-      if (sqrt === (sqrt | 0)) {
-        console.log("Door %d is open", door);
-      }
-    });
+    return range(1, 100)
+        .filter(function (x) {
+            return integerFactors(x)
+                .length % 2;
+        });
+
+    function integerFactors(n) {
+        var rRoot = Math.sqrt(n),
+            intRoot = Math.floor(rRoot),
+
+            lows = range(1, intRoot)
+            .filter(function (x) {
+                return (n % x) === 0;
+            });
+
+        // for perfect squares, we can drop the head of the 'highs' list
+        return lows.concat(lows.map(function (x) {
+                return n / x;
+            })
+            .reverse()
+            .slice((rRoot === intRoot) | 0));
+    }
+
+    // range(intFrom, intTo, optional intStep)
+    // Int -> Int -> Maybe Int -> [Int]
+    function range(m, n, delta) {
+        var d = delta || 1,
+            blnUp = n > m,
+            lng = Math.floor((blnUp ? n - m : m - n) / d) + 1,
+            a = Array(lng),
+            i = lng;
+
+        if (blnUp)
+            while (i--) a[i] = (d * i) + m;
+        else
+            while (i--) a[i] = m - (d * i);
+
+        return a;
+    }
+
+})(100);

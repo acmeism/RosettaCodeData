@@ -1,9 +1,9 @@
-import random
+from random import randrange
 
 while True:
-    a = random.randrange(20)
-    print a
+    a = randrange(20)
+    print(a)
     if a == 10:
         break
-    b = random.randrange(20)
-    print b
+    b = randrange(20)
+    print(b)

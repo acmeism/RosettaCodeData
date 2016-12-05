@@ -4,7 +4,7 @@
 
 (defun read-all (stream)
   (loop for char = (read-char-no-hang stream nil :eof)
-     until (or (null char) (eq char :eof)) collect char into msg
+     until (or (null char) (eql char :eof)) collect char into msg
      finally (return (values msg char))))
 
 (defun echo-server (port &optional (log-stream *standard-output*))

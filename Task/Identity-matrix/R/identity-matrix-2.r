@@ -1,4 +1,7 @@
-     [,1] [,2] [,3]
-[1,]    1    0    0
-[2,]    0    1    0
-[3,]    0    0    1
+Identity_matrix=function(size){
+  x=matrix(0,size,size)
+  for (i in 1:size) {
+    x[i,i]=1
+  }
+  return(x)
+}

@@ -1,22 +1,18 @@
-sub amb($var,*@a) {
-    "[{
-        @a.pick(*).map: {"||\{ $var = '$_' }"}
-     }]";
+sub infix:<lf> ($a,$b) {
+    next unless try $a.substr(*-1,1) eq $b.substr(0,1);
+    "$a $b";
 }
 
-sub joins ($word1, $word2) {
-    substr($word1,*-1,1) eq substr($word2,0,1)
-}
+multi dethunk(Callable $x) { try take $x() }
+multi dethunk(     Any $x) {     take $x   }
 
-'' ~~ m/
-    :my ($a,$b,$c,$d);
-    <{ amb '$a', <the that a> }>
-    <{ amb '$b', <frog elephant thing> }>
-    <?{ joins $a, $b }>
-    <{ amb '$c', <walked treaded grows> }>
-    <?{ joins $b, $c }>
-    <{ amb '$d', <slowly quickly> }>
-    <?{ joins $c, $d }>
-    { say "$a $b $c $d" }
-    <!>
-/;
+sub amb (*@c) { gather @c».&dethunk }
+
+say first *, do
+    amb(<the that a>, { die 'oops'}) Xlf
+    amb('frog',{'elephant'},'thing') Xlf
+    amb(<walked treaded grows>)      Xlf
+    amb { die 'poison dart' },
+        {'slowly'},
+        {'quickly'},
+        { die 'fire' };

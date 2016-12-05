@@ -1,2 +1,2 @@
-factors_co 6
-[1,2,3,6]
+~> factors_naive 25
+[1,5,25]

@@ -33,7 +33,7 @@ sub mk-inv(&fn, $d, $lim) {
   return %h;
 }
 
-sub MAIN($tblsz) {
+sub MAIN($tblsz = 12) {
   my %invsin = mk-inv(&sin, 0.05, $tblsz);
   my %invcos = mk-inv(&cos, 0.05, $tblsz);
   my %invtan = mk-inv(&tan, 0.05, $tblsz);

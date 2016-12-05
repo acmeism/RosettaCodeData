@@ -9,7 +9,7 @@ sub MAIN ($filename = 'default.ppm') {
 
     $out.say("P5\n$dim\n$depth");
 
-    for $in.slurp.ords -> $r, $g, $b {
+    for $in.lines.ords -> $r, $g, $b {
         my $gs = $r * 0.2126 + $g * 0.7152 + $b * 0.0722;
         $out.print: chr($gs min 255);
     }

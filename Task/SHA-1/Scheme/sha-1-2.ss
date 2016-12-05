@@ -1,4 +1,3 @@
-(import (lib sha1))
 (define (->string value)
    (runes->string
    (let ((L "0123456789abcdef"))

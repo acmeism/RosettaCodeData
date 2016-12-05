@@ -20,13 +20,13 @@ string discordianDate(in Date date) pure {
                     date.dayOfYear - 1 :
                     date.dayOfYear;
 
-    immutable dsDay = doy % 73; // Season day.
+    immutable dsDay = (doy % 73)==0? 73:(doy % 73); // Season day.
     if (dsDay == 5)
         return apostle[doy / 73] ~ ", in the YOLD " ~ dYear;
     if (dsDay == 50)
         return holiday[doy / 73] ~ ", in the YOLD " ~ dYear;
 
-    immutable dSeas = seasons[doy / 73];
+    immutable dSeas = seasons[(((doy%73)==0)?doy-1:doy) / 73];
     immutable dWday = weekday[(doy - 1) % 5];
 
     return format("%s, day %s of %s in the YOLD %s",
@@ -48,6 +48,33 @@ unittest {
            "Discoflux, in the YOLD 3177");
 }
 
-void main() {
-    (cast(Date)Clock.currTime).discordianDate.writeln;
+void main(string args[]) {
+    int yyyymmdd, day, mon, year, sign;
+    if (args.length == 1) {
+       (cast(Date)Clock.currTime).discordianDate.writeln;
+       return;
+    }
+    foreach (i, arg; args) {
+        if (i > 0) {
+            //writef("%d: %s: ", i, arg);
+            yyyymmdd = to!int(arg);
+            if (yyyymmdd < 0) {
+                sign = -1;
+                yyyymmdd = -yyyymmdd;
+            }
+            else {
+                sign = 1;
+            }
+            day = yyyymmdd % 100;
+            if (day == 0) {
+               day = 1;
+            }
+            mon = ((yyyymmdd - day) / 100) % 100;
+            if (mon == 0) {
+               mon = 1;
+            }
+            year = sign * ((yyyymmdd - day - 100*mon) / 10000);
+            writefln("%s", Date(year, mon, day).discordianDate);
+        }
+    }
 }

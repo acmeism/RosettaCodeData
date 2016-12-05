@@ -2,6 +2,16 @@ package main
 
 import "fmt"
 
+func computePerfect(n int64) bool {
+    var sum int64
+    for i := int64(1); i < n; i++ {
+        if n%i == 0 {
+            sum += i
+        }
+    }
+    return sum == n
+}
+
 // following function satisfies the task, returning true for all
 // perfect numbers representable in the argument type
 func isPerfect(n int64) bool {
@@ -23,14 +33,4 @@ func main() {
             fmt.Println("tested", n)
         }
     }
-}
-
-func computePerfect(n int64) bool {
-    var sum int64
-    for i := int64(1); i < n; i++ {
-        if n%i == 0 {
-            sum += i
-        }
-    }
-    return sum == n
 }

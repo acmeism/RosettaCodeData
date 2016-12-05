@@ -1,1 +1,1 @@
-fib = 0 : 1 : next fib where next (a: t@(b:_)) = (a+b) : next t
+fib x = if x < 1 then 0 else if x < 2 then 1 else fib(x - 1) + fib(x - 2)

@@ -63,13 +63,11 @@ sub solve(Int $hh, Int $ww, Int $recur) returns Int {
     return $cnt;
 }
 
-sub MAIN {
-    my ($y, $x);
-    loop ($y = 1; $y <= 10; $y++) {
-        loop ($x = 1; $x <= $y; $x++) {
-            if (!($x +& 1) || !($y +& 1)) {
-                printf("%d x %d: %d\n", $y, $x, solve($y, $x, 1));
-            }
+my ($y, $x);
+loop ($y = 1; $y <= 10; $y++) {
+    loop ($x = 1; $x <= $y; $x++) {
+        if (!($x +& 1) || !($y +& 1)) {
+            printf("%d x %d: %d\n", $y, $x, solve($y, $x, 1));
         }
     }
 }

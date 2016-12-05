@@ -1,4 +1,4 @@
-use Term::ANSIColor;
+use Terminal::ANSIColor;
 
 say colored('RED ON WHITE', 'bold red on_white');
 say colored('GREEN', 'bold green');

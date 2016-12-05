@@ -1,3 +1,5 @@
+use MONKEY-SEE-NO-EVAL;
+
 sub leftrect(&f, $a, $b, $n) {
     my $h = ($b - $a) / $n;
     $h * [+] do f($_) for $a, $a+$h ... $b-$h;
@@ -15,7 +17,8 @@ sub midrect(&f, $a, $b, $n) {
 
 sub trapez(&f, $a, $b, $n) {
     my $h = ($b - $a) / $n;
-    $h / 2 * [+] f($a), f($b), |do f($_) * 2 for $a+$h, $a+$h+$h ... $b-$h;
+    my $partial-sum += f($_) * 2 for $a+$h, $a+$h+$h ... $b-$h;
+    $h / 2 * [+] f($a), f($b), $partial-sum;
 }
 
 sub simpsons(&f, $a, $b, $n) {

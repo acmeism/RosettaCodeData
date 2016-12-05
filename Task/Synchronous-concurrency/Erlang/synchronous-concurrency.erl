@@ -9,8 +9,6 @@ start() ->
    process( io:get_line(IO, ""), IO, Pid ),
    file:close( IO ).
 
-
-
 process( eof, _IO, Pid ) ->
    Pid ! count,
    receive

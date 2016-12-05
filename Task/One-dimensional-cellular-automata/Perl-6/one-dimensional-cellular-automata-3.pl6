@@ -1,4 +1,4 @@
-my $size = 50;
-my Automata $a .= new: :rule(90), :cells( 0 xx $size div 2, 1, 0 xx $size div 2 );
+my @padding = 0 xx 25;
+my Automaton $a .= new: :rule(90), :cells(flat @padding, 1, @padding);
 
 say $a++ for ^20;

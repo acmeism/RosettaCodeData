@@ -12,9 +12,11 @@ int main()
     // create array
     two_d_array_type A(boost::extents[dim1][dim2]);
 
-    // write elements
+    // write element
     A[0][0] = 3.1415;
 
-    // read elements
+    // read element
     std::cout << A[0][0] << std::endl;
+
+    return 0;
 }

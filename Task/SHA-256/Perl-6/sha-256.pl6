@@ -16,7 +16,7 @@ multi sha256(Blob $data) {
     constant K = init(* **(1/3))[^64];
     my @b = flat $data.list, 0x80;
     push @b, 0 until (8 * @b - 448) %% 512;
-    push @b, reverse (8 * $data).polymod(256 xx 7);
+    push @b, slip reverse (8 * $data).polymod(256 xx 7);
     my @word = :256[@b.shift xx 4] xx @b/4;
 
     my @H = init(&sqrt)[^8];
@@ -40,5 +40,5 @@ multi sha256(Blob $data) {
         }
         @H [Z[m+]]= @h;
     }
-    return Blob.new: map { reverse .polymod(256 xx 3) }, @H;
+    return Blob.new: map { |reverse .polymod(256 xx 3) }, @H;
 }

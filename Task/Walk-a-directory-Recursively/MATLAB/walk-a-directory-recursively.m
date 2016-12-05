@@ -1,7 +1,7 @@
 function walk_a_directory_recursively(d, pattern)
 	f = dir(fullfile(d,pattern));
 	for k = 1:length(f)
-		printf('%s\n',fullfile(d,f(k).name));
+		fprintf('%s\n',fullfile(d,f(k).name));
 	end;
 
 	f = dir(d);

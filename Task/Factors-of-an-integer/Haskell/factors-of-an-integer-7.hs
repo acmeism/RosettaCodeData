@@ -1,4 +1,5 @@
-*Main> :set +s
-*Main> factors 120
-[1,2,3,4,5,6,8,10,12,15,20,24,30,40,60,120]
-(0.01 secs, 7578656 bytes)
+import Data.List
+factors_o n = ds ++ [r | mod n r == 0] ++ reverse (map (n `div`) ds)
+        where
+        r = floor (sqrt (fromIntegral n))
+        ds = [i | i <- [1..r-1], mod n i == 0]

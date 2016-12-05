@@ -16,7 +16,6 @@ bool polynomialfit(int obs, int degree,
   cov = gsl_matrix_alloc(degree, degree);
 
   for(i=0; i < obs; i++) {
-    gsl_matrix_set(X, i, 0, 1.0);
     for(j=0; j < degree; j++) {
       gsl_matrix_set(X, i, j, pow(dx[i], j));
     }

@@ -1,5 +1,5 @@
-sub foo($a,$b) {
-    $a + $b, $a * $b, $b xx $a
+sub addmul($a, $b) {
+    $a + $b, $a * $b
 }
 
-say foo 3, 7;
+my ($add, $mul) = addmul 3, 7;

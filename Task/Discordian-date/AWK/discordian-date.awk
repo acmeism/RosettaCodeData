@@ -83,11 +83,14 @@ function yearly_calendar(y,  d,m) {
       }
     }
 }
-function dos_date(  cmd,x) { # under Microsoft Windows XP
+function dos_date(  arr,cmd,d,x) { # under Microsoft Windows
+# XP - The current date is: MM/DD/YYYY
+# 8  - The current date is: DOW MM/DD/YYYY
     cmd = "DATE <NUL"
-    cmd | getline x # The current date is: MM/DD/YYYY
+    cmd | getline x
     close(cmd) # close pipe
-    return sprintf("%04d%02d%02d",substr(x,28,4),substr(x,22,2),substr(x,25,2))
+    d = arr[split(x,arr," ")]
+    return sprintf("%04d%02d%02d",substr(d,7,4),substr(d,1,2),substr(d,4,2))
 }
 function error(x) {
     printf("error: argument %d is invalid, %s, in %s\n",argno,ARGV[argno],x)

@@ -1,14 +1,14 @@
-/*REXX program simulates a # of trials of the classic Monty Hall problem*/
-parse arg t .; if t=='' then t=1000000 /*Not specified? Then use default*/
-wins.=0                                /*wins.0=stay;  wins.1=switching.*/
-                                       /*door values:    0=goat   1=car */
-  do  t                                /*perform this loop   T   times. */
-  door.=0                              /*set all doors to  zero.        */
-  car=random(1,3);   door.car=1        /*TV show hides a car randomly.  */
-  ?=random(1,3)  ;   _=door.?          /*contestant picks a random door.*/
-  wins._=wins._+1                      /*bump the type of win strategy. */
-  end   /*DO t*/
-
-say 'switching wins '     format(wins.0/t*100,,1)"%  of the time."
-say '  staying wins '     format(wins.1/t*100,,1)"%  of the time.";    say
-say 'performed'   t   "times."          /*stick a fork in it, we're done.*
+/*REXX program  simulates  a number of trials of the classic  Monty Hall  problem.      */
+parse arg # d .                                  /*obtain the optional args from the CL.*/
+if #=='' | #==","  then #=1000000                /*Not specified?  Then use 1 million.  */
+if d=='' | d==","  then d=      3                /* "      "         "   "  three doors.*/
+wins.=0                                          /*wins.0 ≡ stay,    wins.1 ≡ switching.*/
+           do  #;                   door.   =0   /*initialize all doors to a value of 0.*/
+           car=random(1, d);        door.car=1   /*the TV show hides a car randomly.    */
+             ?=random(1, d);        _=door.?     /*the contestant picks a random door.  */
+           wins._ = wins._ + 1                   /*bump the type of win strategy.       */
+           end   /*#*/                           /* [↑]  perform the loop   #   times.  */
+                                                 /* [↑]  door values:   0≡goat    1≡car */
+say 'switching wins '    format(wins.0 / # * 100, , 1)"%  of the time."
+say '  staying wins '    format(wins.1 / # * 100, , 1)"%  of the time." ;    say
+say 'performed '  #  " times with "  d ' doors.' /*stick a fork in it,  we're all done. */

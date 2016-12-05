@@ -1,0 +1,89 @@
+**FREE
+Ctl-opt MAIN(Main);
+Ctl-opt DFTACTGRP(*NO) ACTGRP(*NEW);
+
+dcl-pr QDCXLATE EXTPGM('QDCXLATE');
+  dataLen         packed(5 : 0) CONST;
+  data            char(32767) options(*VARSIZE);
+  conversionTable char(10) CONST;
+end-pr;
+
+dcl-pr Qc3CalculateHash EXTPROC('Qc3CalculateHash');
+  inputData             pointer value;
+  inputDataLen          int(10) const;
+  inputDataFormat       char(8) const;
+  algorithmDscr         char(16) const;
+  algorithmFormat       char(8) const;
+  cryptoServiceProvider char(1) const;
+  cryptoDeviceName      char(1) const options(*OMIT);
+  hash                  char(64) options(*VARSIZE : *OMIT);
+  errorCode             char(32767) options(*VARSIZE);
+end-pr;
+
+dcl-c HEX_CHARS CONST('0123456789ABCDEF');
+
+dcl-proc Main;
+  dcl-s inputData char(45);
+  dcl-s inputDataLen int(10) INZ(0);
+  dcl-s outputHash char(16);
+  dcl-s outputHashHex char(32);
+  dcl-ds algorithmDscr QUALIFIED;
+    hashAlgorithm int(10) INZ(0);
+  end-ds;
+  dcl-ds ERRC0100_NULL QUALIFIED;
+    bytesProvided int(10) INZ(0);  // Leave at zero
+    bytesAvailable int(10);
+  end-ds;
+
+  dow inputDataLen = 0;
+    DSPLY 'Input: ' '' inputData;
+    inputData = %trim(inputData);
+    inputDataLen = %len(%trim(inputData));
+    DSPLY ('Input=' + inputData);
+    DSPLY ('InputLen=' + %char(inputDataLen));
+    if inputDataLen = 0;
+      DSPLY 'Input must not be blank';
+    endif;
+  enddo;
+
+  // Convert from EBCDIC to ASCII
+  QDCXLATE(inputDataLen : inputData : 'QTCPASC');
+  algorithmDscr.hashAlgorithm = 1;   // MD5
+  // Calculate hash
+  Qc3CalculateHash(%addr(inputData) : inputDataLen : 'DATA0100' : algorithmDscr
+                   : 'ALGD0500' : '0' : *OMIT : outputHash : ERRC0100_NULL);
+  // Convert to hex
+  CVTHC(outputHashHex : outputHash : 32);
+  DSPLY ('MD5: ' + outputHashHex);
+  return;
+end-proc;
+
+// This procedure is actually a MI, but I couldn't get it to bind so I wrote my own version
+dcl-proc CVTHC;
+  dcl-pi *N;
+    target char(65534) options(*VARSIZE);
+    srcBits char(32767) options(*VARSIZE) CONST;
+    targetLen int(10) value;
+  end-pi;
+  dcl-s i int(10);
+  dcl-s lowNibble ind INZ(*OFF);
+  dcl-s inputOffset int(10) INZ(1);
+  dcl-ds dataStruct QUALIFIED;
+    numField int(5) INZ(0);
+    // IBM i is big-endian
+    charField char(1) OVERLAY(numField : 2);
+  end-ds;
+
+  for i = 1 to targetLen;
+    if lowNibble;
+      dataStruct.charField = %BitAnd(%subst(srcBits : inputOffset : 1) : X'0F');
+      inputOffset += 1;
+    else;
+      dataStruct.charField = %BitAnd(%subst(srcBits : inputOffset : 1) : X'F0');
+      dataStruct.numField /= 16;
+    endif;
+    %subst(target : i : 1) = %subst(HEX_CHARS : dataStruct.numField + 1 : 1);
+    lowNibble = NOT lowNibble;
+  endfor;
+  return;
+end-proc;

@@ -1,15 +1,11 @@
 (defn primes-to
-  "Computes lazy sequence of prime numbers up to a given number using sieve of Eratosthenes"
-  [max-prime]
-  (let [sieve (fn [s n]
-                (if (<= (* n n) max-prime)
-                  (recur (if (s n)
-                           (reduce #(assoc %1 %2 false) s (range (* n n) (inc max-prime) n))
-                           s)
-                         (inc n))
-                  s))]
-    (->> (-> (reduce conj (vector-of :boolean) (map #(= % %) (range (inc max-prime))))
-             (assoc 0 false)
-             (assoc 1 false)
-             (sieve 2))
-         (map-indexed #(vector %2 %1)) (filter first) (map second))))
+  "Returns a lazy sequence of prime numbers less than lim"
+  [lim]
+  (let [max-i (int (/ (- lim 1) 2))
+        refs (boolean-array max-i true)
+        root (/ (dec (int (Math/sqrt lim))) 2)]
+    (do (doseq [i (range 1 (inc root))
+                :when (aget refs i)]
+          (doseq [j (range (* (+ i i) (inc i)) max-i (+ i i 1))]
+            (aset refs j false)))
+        (cons 2 (map #(+ % % 1) (filter #(aget refs %) (range 1 max-i)))))))

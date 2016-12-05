@@ -1,23 +1,38 @@
-       PROGRAM-ID. Perform-Example.
+       identification division.
+       program-id. altering.
 
-       PROCEDURE DIVISION.
-       Main.
-           PERFORM Moo
-           PERFORM Display-Stuff
-           PERFORM Boo THRU Moo
+       procedure division.
+       main section.
 
-           GOBACK
-           .
+      *> And now for some altering.
+       contrived.
+       ALTER story TO PROCEED TO beginning
+       GO TO story
+       .
 
-       Display-Stuff SECTION.
-       Foo.
-           DISPLAY "Foo " WITH NO ADVANCING
-           .
+      *> Jump to a part of the story
+       story.
+       GO.
+       .
 
-       Boo.
-           DISPLAY "Boo " WITH NO ADVANCING
-           .
+      *> the first part
+       beginning.
+       ALTER story TO PROCEED to middle
+       DISPLAY "This is the start of a changing story"
+       GO TO story
+       .
 
-       Moo.
-           DISPLAY "Moo"
-           .
+      *> the middle bit
+       middle.
+       ALTER story TO PROCEED to ending
+       DISPLAY "The story progresses"
+       GO TO story
+       .
+
+      *> the climatic finish
+       ending.
+       DISPLAY "The story ends, happily ever after"
+       .
+
+      *> fall through to the exit
+       exit program.

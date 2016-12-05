@@ -1,25 +1,25 @@
 # Brute force, see the "Permutations" page for the next.perm function
 safe <- function(p) {
-	n <- length(p)
-	for(i in 1:(n-1)) {
-		for(j in (i+1):n) {
-			if(abs(p[j] - p[i]) == abs(j - i)) return(FALSE)
-		}
-	}
-	return(TRUE)
+  n <- length(p)
+  for (i in seq(1, n - 1)) {
+    for (j in seq(i + 1, n)) {
+      if (abs(p[j] - p[i]) == abs(j - i)) return(F)
+    }
+  }
+  return(T)
 }
 
 queens <- function(n) {
-	p <- 1:n
-	k <- 0
-	while(!is.null(p)) {
-		if(safe(p)) {
-			cat(p,"\n")
-			k <- k + 1
-		}
-		p <- next.perm(p)
-	}
-	return(k)
+  p <- 1:n
+  k <- 0
+  while (!is.null(p)) {
+    if(safe(p)) {
+      cat(p, "\n")
+      k <- k + 1
+    }
+    p <- next.perm(p)
+  }
+  return(k)
 }
 
 queens(8)

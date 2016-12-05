@@ -3,8 +3,9 @@ include FMS-SI.f
 \ A singleton is created by using normal Forth data
 \ allocation words such as value or variable as instance variables.
 \ Any number of instances of a singleton class may be
-\ instantiated but they will all operate on the same shared data.
-\ The data name space will remain private to objects of the class.
+\ instantiated but messages will all operate on the same shared data
+\ so it is the same as if only one object has been created.
+\ The data name space will remain private to the class.
 
 :class singleton
   0 value a

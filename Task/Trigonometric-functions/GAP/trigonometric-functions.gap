@@ -2,6 +2,9 @@
 
 Pi := Acos(-1.0);
 
+# Or use the built-in constant:
+Pi := FLOAT.PI;
+
 r := Pi / 5.0;
 d := 36;
 

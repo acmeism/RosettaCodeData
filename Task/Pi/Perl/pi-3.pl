@@ -1,4 +1,4 @@
-use bigint try=>"GMP"
+use bigint try=>"GMP";
 
 # Pi/4 = 4 arctan 1/5 - arctan 1/239
 # expanding it with Taylor series with what's probably the dumbest method

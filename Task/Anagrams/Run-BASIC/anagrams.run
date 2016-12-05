@@ -1,67 +1,64 @@
-a$ = httpGet$("http://www.puzzlers.org/pub/wordlists/unixdict.txt")  ' get the words from this web
-
-sqliteconnect #mem, ":memory:"                                       ' create in memory DB
-#mem execute("CREATE TABLE words(theWord,sortWord)")
-
-ii = 1
-while ii
-   jj       = instr(a$,chr$(10),ii + 1)
-   if jj > 0 then
-      theWord$ = mid$(a$,ii, jj - ii)                                 ' get each word
-
-      if instr(theWord$,"'") <> 0 then theWord$ = dblQuote$(theWord$) ' eclipse the single quote
-      sortWord$ = theWord$
-     ' ------------------------------------
-     ' Sort word using the ol bubble sort
-     ' ------------------------------------
-      j = 1
-      while j
-         j = 0
-         for i = 1 to len(sortWord$) - 1
-            if mid$(sortWord$,i,1) > mid$(sortWord$,i + 1,1) then
-               sortWord$ = left$(sortWord$,i - 1) + mid$(sortWord$,i + 1,1) +  mid$(sortWord$,i,1) + mid$(sortWord$,i + 2)
-               j = 1
-            end if
-         next i
-      wend
-     ' ----------------------------
-     ' place in memory sql table
-     ' ----------------------------
-      #mem execute("INSERT INTO words VALUES('";theWord$;"','";sortWord$;"')")
-   end if
-   ii = jj + 1
-wend
-
-' -----------------------------------------------------------
-' Select matched words in word order and print in html table
-' -----------------------------------------------------------
-html "<table border=1>"
-mem$ = "SELECT words.theWord,
-matchWords.theWord as mWord
-FROM words
-JOIN words as matchWords
-ON   matchWords.sortWord = words.sortWord
-AND  matchWOrds.theWord <> words.theWord
-ORDER BY words.theWord"
+sqliteconnect #mem, ":memory:"
+mem$ = "CREATE TABLE anti(gram,ordr);
+CREATE INDEX ord ON anti(ordr)"
 #mem execute(mem$)
-WHILE #mem hasanswer()
-   #row     = #mem #nextrow()
-   theWord$ = #row theWord$()
-   mWord$   = #row mWord$()
-   html "<tr><td>";theWord$;"</td><td>";mWord$;"</td></tr>"
-WEND
-html "</table>"
-end
+' read the file
+a$ = httpGet$("http://www.puzzlers.org/pub/wordlists/unixdict.txt")
 
-' -----------------------------------------
-' Convert single quotes to double quotes
-' -----------------------------------------
-FUNCTION dblQuote$(str$)
-i    = 1
-qq$  = ""
-while (word$(str$,i,"'")) <> ""
-   dblQuote$   = dblQuote$;qq$;word$(str$,i,"'")
-   qq$ = "''"
-   i   = i + 1
-WEND
-END FUNCTION
+' break the file words apart
+i = 1
+while i <> 0
+	j	= instr(a$,chr$(10),i+1)
+	if j = 0 then exit while
+	a1$	= mid$(a$,i,j-i)
+	q	= instr(a1$,"'")
+	if q > 0 then a1$ = left$(a1$,q) + mid$(a1$,q)
+	ln	= len(a1$)
+	s$	= a1$
+
+	' Split the characters of the word and sort them
+	s = 1
+	while	s = 1
+		s = 0
+		for k = 1 to ln -1
+			if mid$(s$,k,1) > mid$(s$,k+1,1) then
+				h$	= mid$(s$,k,1)
+				h1$	= mid$(s$,k+1,1)
+				s$ 	= left$(s$,k-1) + h1$ + h$ + mid$(s$,k+2)
+				s	= 1
+			end if
+		next k
+	wend
+
+	mem$	= "INSERT INTO anti VALUES('";a1$;"','";ord$;"')"
+	#mem execute(mem$)
+	i	= j +1
+wend
+' find all antigrams
+mem$	= "SELECT count(*) as cnt,anti.ordr FROM anti GROUP BY ordr ORDER BY cnt desc"
+#mem execute(mem$)
+numDups = #mem ROWCOUNT()	'Get the number of rows
+dim dups$(numDups)
+for i = 1 to numDups
+	#row	= #mem #nextrow()
+	cnt	= #row cnt()
+	if i = 1 then maxCnt = cnt
+	if cnt < maxCnt then exit for
+	dups$(i) = #row ordr$()
+next i
+
+for i = 1 to i -1
+	mem$	= "SELECT anti.gram FROM anti
+		   WHERE  anti.ordr = '";dups$(i);"'
+		   ORDER BY anti.gram"
+	#mem execute(mem$)
+	rows = #mem ROWCOUNT()	'Get the number of rows
+
+	for ii = 1 to rows
+		#row	= #mem #nextrow()
+		gram$	= #row gram$()
+		print gram$;chr$(9);
+	next ii
+	print
+next i
+end

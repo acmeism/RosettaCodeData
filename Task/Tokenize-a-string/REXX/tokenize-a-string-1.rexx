@@ -1,4 +1,4 @@
-/*REXX program seperates a string of comma-delimited words, and echoes. */
+/*REXX program separates a string of comma-delimited words, and echoes. */
 sss = 'Hello,How,Are,You,Today'        /*words seperated by commas (,). */
 say 'input string =' sss               /*display the original string.   */
 new=sss                                /*make a copy of the string.     */

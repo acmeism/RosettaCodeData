@@ -1,41 +1,60 @@
 package main
 import "fmt"
 
-// Send the sequence 2, 3, 4, ... to channel 'ch'.
-func Generate(ch chan<- int) {
-	for i := 2; ; i++ {
-		ch <- i // Send 'i' to channel 'ch'.
+type xint uint64
+type xgen func()(xint)
+
+func primes() func()(xint) {
+	pp, psq := make([]xint, 0), xint(25)
+
+	var sieve func(xint, xint)xgen
+	sieve = func(p, n xint) xgen {
+		m, next := xint(0), xgen(nil)
+		return func()(r xint) {
+			if next == nil {
+				r = n
+				if r <= psq {
+					n += p
+					return
+				}
+
+				next = sieve(pp[0] * 2, psq) // chain in
+				pp = pp[1:]
+				psq = pp[0] * pp[0]
+
+				m = next()
+			}
+			switch {
+			case n < m: r, n = n, n + p
+			case n > m: r, m = m, next()
+			default:    r, n, m = n, n + p, next()
+			}
+			return
+		}
+	}
+
+	f := sieve(6, 9)
+	n, p := f(), xint(0)
+
+	return func()(xint) {
+		switch {
+		case p < 2: p = 2
+		case p < 3: p = 3
+		default:
+			for p += 2; p == n; {
+				p += 2
+				if p > n {
+					n = f()
+				}
+			}
+			pp = append(pp, p)
+		}
+		return p
 	}
 }
 
-// Copy the values from channel 'in' to channel 'out',
-// removing those divisible by 'prime'.
-// 'in' assumed to send increasing numbers
-func Filter(in <-chan int, out chan<- int, prime int) {
-        m := prime + prime
-	for {
-		i := <-in // Receive value from 'in'.
-		for i > m {
-			m = m + prime
-			}
-		if i < m {
-			out <- i // Send 'i' to 'out'.
-			}
-	}
-}
-
-// The prime sieve: Daisy-chain Filter processes.
 func main() {
-	ch := make(chan int) // Create a new channel.
-	go Generate(ch)      // Launch Generate goroutine.
-	for i := 0; i < 100; i++ {
-		prime := <-ch
-		fmt.Printf("%4d", prime)
-		if (i+1)%20==0 {
-			fmt.Println("")
-			}
-		ch1 := make(chan int)
-		go Filter(ch, ch1, prime)
-		ch = ch1
+	for i, p := 0, primes(); i < 100000; i++ {
+		fmt.Println(p())
 	}
 }

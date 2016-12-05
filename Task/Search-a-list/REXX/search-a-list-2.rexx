@@ -1,6 +1,6 @@
-/*REXX program searches a collection of strings.                        */
-hay.0=1000                             /*safely indicate highest item #.*/
-hay.200 = 'binilnilium'
+/*REXX program searches a collection of strings   (an array of periodic table elements).*/
+hay.0   =      1000                              /*safely indicate highest item number. */
+hay.200 = 'Binilnilium'
 hay.98  = 'californium'
 hay.6   = 'carbon'
 hay.112 = 'copernicium'
@@ -17,28 +17,18 @@ hay.11  = 'sodium'
 hay.16  = 'sulfur'
 hay.81  = 'thallium'
 hay.92  = 'uranium'
+                                                 /* [↑]  sorted by the element name.    */
+needle  = 'gold'                                 /*we'll be looking for the gold.       */
+upper needle                                     /*in case some people capitalize.      */
+found=0                                          /*assume the needle isn't found  (yet).*/
 
-needle  = 'gold'                       /*we'll be looking for the gold. */
-upper needle                           /*in case some people capitalize.*/
-found=0                                /*assume needle isn't found, yet.*/
-
-          do j=1  for hay.0            /*start looking in haystack item1*/
-          _=hay.j;     upper _         /*make it uppercase to be safe.  */
-          if _=needle  then do         /*we've found needle in haystack.*/
-                            found=1    /*indicate that needle was found,*/
-                            leave      /*  and stop looking, of course. */
+          do j=1  for hay.0                      /*start looking in haystack,  item 1.  */
+          _=hay.j;     upper _                   /*make it uppercase just to be safe.   */
+          if _=needle  then do;  found=1         /*we've found the needle in haystack.  */
+                                 leave           /*  ··· and stop looking, of course.   */
                             end
           end   /*j*/
 
-if found  then return j                /*return haystack index number.  */
+if found  then return j                          /*return the haystack  index  number.  */
           else say  needle  "wasn't found in the haystack!"
-return 0                               /*indicates needle wasn't found. */
-
-/*─────────────────────────────────────────────── incidentally, to find */
-                                       /* the number of haystack items: */
-hayItems=0
-
-  do k=1  for hay.0                    /*find item  AFTER the last item.*/
-  if hay.k\==''  then hayItems=hayItems+1       /*bump the item counter.*/
-  end   /*k*/
-                                       /*stick a fork in it, we're done.*/
+return 0                                         /*indicates the needle  wasn't  found. */

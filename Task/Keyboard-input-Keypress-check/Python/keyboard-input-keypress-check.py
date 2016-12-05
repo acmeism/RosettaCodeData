@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
-# this solution will work only in Windows, as msvcrt is a Windows only package
-
-import thread
+import __future__
+import sys
+if sys.version_info.major < 3:
+    import thread as _thread
+else:
+    import _thread
 import time
 
 
@@ -10,7 +13,7 @@ try:
     from msvcrt import getch  # try to import Windows version
 except ImportError:
     def getch():   # define non-Windows version
-        import sys, tty, termios
+        import tty, termios
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
@@ -26,11 +29,11 @@ def keypress():
     global char
     char = getch()
 
-thread.start_new_thread(keypress, ())
+_thread.start_new_thread(keypress, ())
 
 while True:
     if char is not None:
-        print "Key pressed is " + char
+        print("Key pressed is " + char.decode('utf-8'))
         break
-    print "Program is running"
+    print("Program is running")
     time.sleep(5)

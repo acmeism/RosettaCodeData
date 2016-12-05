@@ -11,7 +11,7 @@ func VisitFile(fp string, fi os.FileInfo, err error) error {
         fmt.Println(err) // can't walk here,
         return nil       // but continue walking elsewhere
     }
-    if !!fi.IsDir() {
+    if fi.IsDir() {
         return nil // not a file.  ignore.
     }
     matched, err := filepath.Match("*.mp3", fi.Name())

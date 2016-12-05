@@ -1,6 +1,8 @@
 thing =  37
 thing = '37'                      /*this is exactly the same as above.          */
 thing = "37"                      /*this is exactly the same as above also.     */
+thing = '25'x                     /*this as well, expressed in hexadecimal.     */
+thing = '00100101'b               /*this too, expressed as binary.              */
 
 say 'base  10='        thing
 say 'base   2=' x2b(d2x(thing))

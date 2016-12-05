@@ -8,7 +8,7 @@ while $socket.accept -> $conn {
     start {
         while $conn.recv -> $stuff {
             say "Echoing $stuff";
-            $conn.send($stuff);
+            $conn.print($stuff);
         }
         $conn.close;
     }

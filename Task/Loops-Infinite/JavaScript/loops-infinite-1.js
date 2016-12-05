@@ -1,1 +1,1 @@
-for (;;) print("SPAM");
+for (;;) console.log("SPAM");

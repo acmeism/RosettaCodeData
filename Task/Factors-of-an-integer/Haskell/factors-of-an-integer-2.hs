@@ -1,1 +1,2 @@
-factors_naive n = [i | i <-[1..n], (mod n i) == 0]
+~> factors 42
+[1,7,3,21,2,14,6,42]

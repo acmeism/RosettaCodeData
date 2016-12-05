@@ -1,4 +1,1 @@
-logical(true, true)
-logical(true, false)
-logical(false, false)
-logical(false, true)
+[true, false].each { a -> [true, false].each { b-> logical(a, b) } }

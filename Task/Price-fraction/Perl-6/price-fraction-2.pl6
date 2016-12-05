@@ -22,5 +22,5 @@ my @price = map *.value, flat
 ;
 
 while prompt("value: ") -> $value {
-    say @price[ $value * 100 ] // note "Out of range";
+    say @price[$value * 100] // "Out of range";
 }

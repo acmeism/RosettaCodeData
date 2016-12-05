@@ -14,7 +14,7 @@ end
 def invmod(e, et)
   g, x = extended_gcd(e, et)
   if g != 1
-    raise 'Teh maths are broken!'
+    raise 'The maths are broken!'
   end
   x % et
 end

@@ -1,0 +1,81 @@
+* IBAN - International Bank Account Number validation
+      DEFINE('ibantable()')                           :(iban_table_end)
+ibantable
+      ibantable = TABLE(70)
+      ibancodes =
++        'AL28AD24AT20AZ28BE16BH22BA20BR29BG22CR21'
++        'HR21CY28CZ24DK18DO28EE20FO18FI18FR27GE22'
++        'DE22GI23GR27GL18GT28HU28IS26IE22IL23IT27'
++        'KZ20KW30LV21LB28LI21LT20LU20MK19MT31MR27'
++        'MU30MC27MD24ME22NL18NO15PK24PS29PL28PT25'
++        'RO24SM27SA24RS22SK24SI19ES24SE24CH21TN24'
++        'TR26AE23GB22VG24'
+      nordeacodes =
++        'DZ24AO25BJ28FB27BI16CM27CV25IR26CI28MG27'
++        'ML28MZ25SN28UA29'
+      allcodes = ibancodes nordeacodes
+iban1 allcodes LEN(2) . country LEN(2) . length =     :F(return)
+      ibantable<country> = length                     :(iban1)
+iban_table_end
+
+      DEFINE('tonumbers(tonumbers)letter,p')          :(tonumbers_end)
+tonumbers
+      tonumbers ANY(&UCASE) . letter                  :f(RETURN)
+      &UCASE @p letter
+      tonumbers letter = p + 10                       :(tonumbers)
+tonumbers_end
+
+* modulo for long integers
+*
+      DEFINE('mod(m,n)')                              :(mod_end)
+mod   m LEN(9) . r =                                  :f(modresult)
+      mod = REMDR(CONVERT(r,"INTEGER"), n)
+mod0  m LEN(7) . r =                                  :f(modresult)
+      mod = mod r
+      mod = REMDR(mod, n)                             :(mod0)
+modresult
+      mod = GT(SIZE(m), 0) REMDR(mod m, n)            :(RETURN)
+mod_end
+
+      DEFINE('invalid(l,t)')                          :(invalid_end)
+invalid
+      OUTPUT = "Invalid IBAN: " l ": " t              :(RETURN)
+invalid_end
+
+***** main *****
+      ibant  = ibantable()
+      FREEZE(ibant)
+
+      INPUT(.INPUT, 28,,'iban.dat')
+read  line   = INPUT                                  :f(END)
+      country = checkdigits = line2 =
+**    GB82 WEST 1234 5698 7654 32
+**    Uppercase line2 and remove spaces.
+      line2 = REPLACE(line, &LCASE, &UCASE)
+space line2 ANY(" ") =                                :s(space)
+
+**    GB82WEST12345698765432
+**    Capture country code and checkdigits.
+      line2 LEN(2) . country LEN(2) . checkdigits
+
+**    1. Is the country code known?
+      IDENT(ibant<country>)
++       invalid(line, "unlisted country: " country)   :s(read)
+
+**    2. Is the length correct for the country?
+      NE(SIZE(line2), ibant<country>)
++       invalid(line, "length: " SIZE(line2)
++       " not " ibant<country>)                       :s(read)
+
+**    3. Move first four chars to end of line.
+**    Convert line2 letters to numbers.
+**    3214282912345698765432161182
+      line2 = SUBSTR(line2,5) SUBSTR(line2,1,4)
+      line2 = tonumbers(line2)
+**    Mod_97 of line2 = 1?
+      modsum  = mod(line2, 97)
+      NE(modsum, 1)
++       invalid(line, "mod_97 " modsum " not = 1")    :s(read)
+
+      OUTPUT = "valid IBAN: " line                    :(read)
+END

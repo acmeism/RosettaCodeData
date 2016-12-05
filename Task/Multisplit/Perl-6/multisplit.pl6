@@ -1,4 +1,4 @@
-sub multisplit($str, @seps) { $str.split(/ ||@seps /, :all) }
+sub multisplit($str, @seps) { $str.split(/ ||@seps /, :v) }
 
 my @chunks = multisplit( 'a!===b=!=c==d', < == != = > );
 

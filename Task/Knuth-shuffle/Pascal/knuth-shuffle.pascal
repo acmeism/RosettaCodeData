@@ -1,33 +1,52 @@
 program Knuth;
 
 const
-  max = 10;
+  startIdx = -5;
+  max = 11;
 type
-  list = array [1..max] of integer;
+  tmyData = string[9];
+  tmylist = array [startIdx..startIdx+max-1] of tmyData;
 
-procedure shuffle(var a: list);
+procedure InitList(var a: tmylist);
 var
-  i,k,tmp: integer;
+  i: integer;
+Begin
+  for i := Low(a) to High(a) do
+    str(i:3,a[i])
+end;
+
+procedure shuffleList(var a: tmylist);
+var
+  i,k : integer;
+  tmp: tmyData;
 begin
-  randomize;
-  for i := max downto 2 do begin
-     k := random(i) + 1;
-     if (a[i] <> a[k]) then begin
-       tmp := a[i]; a[i] := a[k]; a[k] := tmp
-     end
+  for i := High(a)-low(a) downto 1 do begin
+    k := random(i+1) + low(a);
+    tmp := a[i+low(a)]; a[i+low(a)] := a[k]; a[k] := tmp
   end
+end;
+
+procedure DisplayList(const a: tmylist);
+var
+  i : integer;
+Begin
+  for i := Low(a) to High(a) do
+    write(a[i]);
+  writeln
 end;
 
 { Test and display }
 var
- a: list;
+ a: tmylist;
  i: integer;
-
 begin
-  for i := 1 to max do
-    a[i] := i;
-  shuffle(a);
-  for i := 1 to max do
-    write(a[i], ' ');
-  writeln
+  randomize;
+  InitList(a);
+  DisplayList(a);
+  writeln;
+  For i := 0 to 4 do
+  Begin
+    shuffleList(a);
+    DisplayList(a);
+  end;
 end.

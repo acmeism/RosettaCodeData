@@ -10,7 +10,7 @@ class Card {
 
 class Deck {
     has Card @.cards = pick *,
-            map { Card.new(:$^pip, :$^suit) }, (Pip.pick(*) X Suit.pick(*));
+            map { Card.new(:$^pip, :$^suit) }, flat (Pip.pick(*) X Suit.pick(*));
 
     method shuffle { @!cards .= pick: * }
 

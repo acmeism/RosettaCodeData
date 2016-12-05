@@ -1,6 +1,6 @@
-import Random (randomRIO)
+import System.Random (randomRIO)
 
 pick :: [a] -> IO a
-pick xs = randomRIO (0, length xs - 1) >>= return . (xs !!)
+pick xs = fmap (xs !!) $ randomRIO (0, length xs - 1)
 
 x <- pick [1 2 3]

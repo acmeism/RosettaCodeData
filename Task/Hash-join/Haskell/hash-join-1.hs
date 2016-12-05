@@ -20,7 +20,7 @@ hashJoin xs fx ys fy = runST $ do
       Just v -> modifySTRef' l ((map (x,)  v) ++)
   readSTRef l
 
-test = mapM_ print $ hashJoin
+main = mapM_ print $ hashJoin
     [(1, "Jonah"), (2, "Alan"), (3, "Glory"), (4, "Popeye")]
         snd
     [("Jonah", "Whales"), ("Jonah", "Spiders"),

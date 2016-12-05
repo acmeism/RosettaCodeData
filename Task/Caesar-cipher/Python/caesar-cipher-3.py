@@ -1,9 +1,11 @@
-from string import ascii_uppercase as abc
-
-def caesar(s, k, decode = False):
-    trans = dict(zip(abc, abc[(k,26-k)[decode]:] + abc[:(k,26-k)[decode]]))
-    return ''.join(trans[L] for L in s.upper() if L in abc)
-
-msg = "The quick brown fox jumped over the lazy dogs"
-print(caesar(msg, 11))
-print(caesar(caesar(msg, 11), 11, True))
+import string
+def caesar(s, k = 13, decode = False, *, memo={}):
+  if decode: k = 26 - k
+  k = k % 26
+  table = memo.get(k)
+  if table is None:
+    table = memo[k] = str.maketrans(
+                        string.ascii_uppercase + string.ascii_lowercase,
+                        string.ascii_uppercase[k:] + string.ascii_uppercase[:k] +
+                        string.ascii_lowercase[k:] + string.ascii_lowercase[:k])
+  return s.translate(table)

@@ -1,22 +1,27 @@
-(defn primes-Bird
-  "Computes the unbounded sequence of primes using a Sieve of Eratosthenes algorithm by Richard Bird."
-  []
-  (letfn [(mltpls [p] (let [p2 (* 2 p)]
-                        (letfn [(nxtmltpl [c]
-                                  (cons c (lazy-seq (nxtmltpl (+ c p2)))))]
-                          (nxtmltpl (* p p))))),
-          (allmtpls [ps] (cons (mltpls (first ps)) (lazy-seq (allmtpls (next ps))))),
-          (union [xs ys] (let [xv (first xs), yv (first ys)]
-                           (if (< xv yv) (cons xv (lazy-seq (union (next xs) ys)))
-                             (if (< yv xv) (cons yv (lazy-seq (union xs (next ys))))
-                               (cons xv (lazy-seq (union (next xs) (next ys)))))))),
-          (mrgmltpls [mltplss] (cons (first (first mltplss))
-                                     (lazy-seq (union (next (first mltplss))
-                                                      (mrgmltpls (next mltplss)))))),
-          (minusStrtAt [n cmpsts] (loop [n n, cmpsts cmpsts]
-                                    (if (< n (first cmpsts))
-                                      (cons n (lazy-seq (minusStrtAt (+ n 2) cmpsts)))
-                                      (recur (+ n 2) (next cmpsts)))))]
-    (do (def oddprms (cons 3 (lazy-seq (let [cmpsts (-> oddprms (allmtpls) (mrgmltpls))]
-                                         (minusStrtAt 5 cmpsts)))))
-        (cons 2 (lazy-seq oddprms)))))
+(set! *unchecked-math* true)
+
+(defn primes-to
+  "Computes lazy sequence of prime numbers up to a given number using sieve of Eratosthenes"
+  [n]
+  (let [root (-> n Math/sqrt long),
+        rootndx (long (/ (- root 3) 2)),
+        ndx (long (/ (- n 3) 2)),
+        cmpsts (long-array (inc (/ ndx 64))),
+        isprm #(zero? (bit-and (aget cmpsts (bit-shift-right % 6))
+                               (bit-shift-left 1 (bit-and % 63)))),
+        cullp (fn [i]
+                (let [p (long (+ i i 3))]
+	                (loop [i (bit-shift-right (- (* p p) 3) 1)]
+	                  (if (<= i ndx)
+	                    (do (let [w (bit-shift-right i 6)]
+	                    (aset cmpsts w (bit-or (aget cmpsts w)
+	                                           (bit-shift-left 1 (bit-and i 63)))))
+	                        (recur (+ i p))))))),
+        cull (fn [] (loop [i 0] (if (<= i rootndx)
+                                  (do (if (isprm i) (cullp i)) (recur (inc i))))))]
+    (letfn [(nxtprm [i] (if (<= i ndx)
+                          (cons (+ i i 3) (lazy-seq (nxtprm (loop [i (inc i)]
+                                                              (if (or (> i ndx) (isprm i)) i
+                                                                (recur (inc i)))))))))]
+      (if (< n 2) nil
+        (cons 3 (if (< n 3) nil (do (cull) (lazy-seq (nxtprm 0)))))))))

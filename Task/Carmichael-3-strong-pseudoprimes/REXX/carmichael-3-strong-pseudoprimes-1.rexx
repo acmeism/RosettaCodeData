@@ -1,37 +1,39 @@
-/*REXX program calculates  Carmichael  3-strong  pseudoprimes (up to N).*/
-numeric digits 30                      /*in case user wants bigger nums.*/
-parse arg N .;  if N=='' then N=61     /*allow user to specify the limit*/
-if 1=='f1'x  then times='af'x          /*if EBCDIC machine, use a bullet*/
-             else times='f9'x          /* " ASCII     "      "  "   "   */
-carms=0                                /*number of Carmichael #s so far.*/
-!.=0                                   /*a method of prime memoization. */
-    do p=3  to N  by 2;  if \isPrime(p) then iterate  /*Not prime? Skip.*/
-    pm=p-1; nps=-p*p; @.=0; min=1e9; max=0 /*some handy-dandy variables.*/
-             do h3=2  to  pm;  g=h3+p  /*find Carmichael #s for this P. */
-               do d=1  to g-1
-               if g*pm//d\==0                 then iterate
-               if ((nps//h3)+h3)//h3\==d//h3  then iterate
-               q=1+pm*g%d;    if \isPrime(q)  then iterate
-               r=1+p*q%h3;    if q*r//pm\==1  then iterate
-                              if \isPrime(r)  then iterate
-               carms=carms+1           /*bump the Carmichael # counter. */
-               min=min(min,q);  max=max(max,q);  @.q=r   /*build a list.*/
-               end   /*d*/
-             end     /*h3*/
-                                       /*display a list of some Carm #s.*/
-         do j=min to max by 2; if @.j==0 then iterate   /*one of the #s?*/
-         say '──────── a Carmichael number: '   p   times  j   times   @.j
-         end   /*j*/
-    say                                /*show bueatification blank line.*/
-    end        /*p*/
-say;     say carms ' Carmichael numbers found.'
-exit                                   /*stick a fork in it, we're done.*/
-/*──────────────────────────────────ISPRIME subroutine──────────────────*/
-isPrime: procedure expose !.;  parse arg x;  if !.x   then return 1
-if wordpos(x,'2 3 5 7 11 13')\==0   then  do;  !.x=1;  return 1;  end
-if x<17 then return 0;  if x//2==0 then return 0; if x//3==0 then return 0
-if right(x,1)==5 then return 0;                   if x//7==0 then return 0
-                 do i=11 by 6  until i*i>x;  if x// i    ==0 then return 0
-                                             if x//(i+2) ==0 then return 0
-                 end  /*i*/
-!.x=1;  return 1
+/*REXX program calculates  Carmichael  3─strong  pseudoprimes  (up to and including N). */
+numeric digits 18                                /*handle big dig #s (9 is the default).*/
+parse arg N .;    if N==''  then N=61            /*allow user to specify for the search.*/
+tell= N>0;           N=abs(N)                    /*N>0?  Then display Carmichael numbers*/
+#=0                                              /*number of Carmichael numbers so far. */
+@.=0;   @.2=1; @.3=1; @.5=1; @.7=1; @.11=1; @.13=1; @.17=1; @.19=1; @.23=1; @.29=1; @.31=1
+                                                 /*[↑]  prime number memoization array. */
+    do p=3  to N  by 2;  pm=p-1;   bot=0;  top=0 /*step through some (odd) prime numbers*/
+    if \isPrime(p)  then iterate;  nps=-p*p      /*is   P   a prime?   No, then skip it.*/
+    !.=0                                         /*the list of Carmichael #'s  (so far).*/
+             do h3=2  to  pm;  g=h3+p            /*find Carmichael #s  for this prime.  */
+             gPM=g*pm;  npsH3=((nps//h3)+h3)//h3 /*define a couple of shortcuts for pgm.*/
+                                                 /* [↓] perform some weeding of D values*/
+                 do d=1  for g-1;                   if gPM//d \== 0      then iterate
+                                                    if npsH3  \== d//h3  then iterate
+                                       q=1+gPM%d;   if \isPrime(q)       then iterate
+                                       r=1+p*q%h3;  if q*r//pm\==1       then iterate
+                                                    if \isPrime(r)       then iterate
+                 #=#+1;                !.q=r     /*bump Carmichael counter; add to array*/
+                 if bot==0  then bot=q;   bot=min(bot,q);    top=max(top,q)
+                 end   /*d*/
+             end       /*h3*/
+    $=                                           /*display a list of some Carmichael #s.*/
+             do j=bot  to top  by 2  while tell;   if !.j\==0  then $=$  p"∙"j'∙'!.j
+             end           /*j*/
+
+    if $\==''  then say 'Carmichael number: '      strip($)
+    end                /*p*/
+say
+say '──────── '     #     " Carmichael numbers found."
+exit                                             /*stick a fork in it,  we're all done. */
+/*──────────────────────────────────────────────────────────────────────────────────────*/
+isPrime: parse arg x;             if @.x      then return 1           /*X a known prime?*/
+         if x<37  then return 0;  if x//2==0  then return 0; if x// 3==0     then return 0
+         parse var x '' -1 _;     if _==5     then return 0; if x// 7==0     then return 0
+                                do k=11  by 6  until k*k>x;  if x// k   ==0  then return 0
+                                                             if x//(k+2)==0  then return 0
+                                end  /*i*/
+         @.x=1;   return 1

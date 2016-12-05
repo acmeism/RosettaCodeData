@@ -27,7 +27,7 @@ sub MAIN ($file, *%changes) {
     say $out: format-line .key, |(.value ~~ Bool ?? (Nil, .value) !! (.value, True))
         for %changes;
 
-    run 'mv', $tmpfile, $file; # work-around for NYI `move $tmpfile, $file;`
+    move $tmpfile, $file;
 }
 
 END { unlink $tmpfile if $tmpfile.IO.e }

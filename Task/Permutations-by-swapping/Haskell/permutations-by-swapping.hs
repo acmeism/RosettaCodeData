@@ -4,7 +4,7 @@ s_permutations = flip zip (cycle [1, -1]) . (foldl aux [[]])
           (f,item) <- zip (cycle [reverse,id]) items
           f (insertEv x item)
         insertEv x [] = [[x]]
-        insertEv x l@(y:ys) = (x:l) : map (y:) $ insertEv x ys
+        insertEv x l@(y:ys) = (x:l) : map (y:) (insertEv x ys)
 
 main :: IO ()
 main = do

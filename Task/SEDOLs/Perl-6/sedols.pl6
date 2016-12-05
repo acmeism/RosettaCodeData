@@ -2,7 +2,7 @@ sub sedol( Str $s ) {
     die 'No vowels allowed' if $s  ~~ /<[AEIOU]>/;
     die 'Invalid format'    if $s !~~ /^ <[0..9B..DF..HJ..NP..TV..Z]>**6 $ /;
 
-    my %base36 = ( 0..9, 'A'..'Z' ) Z ( ^36 );
+    my %base36 = (flat 0..9, 'A'..'Z') »=>« ^36;
     my @weights = 1, 3, 1, 7, 3, 9;
 
     my @vs = %base36{ $s.comb };

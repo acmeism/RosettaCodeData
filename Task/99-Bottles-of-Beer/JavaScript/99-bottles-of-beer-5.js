@@ -1,18 +1,25 @@
-function bottleSong(n) {
-  if (!isFinite(Number(n)) || n == 0) n = 100;
-  var a  = '%% bottles of beer',
-      b  = ' on the wall',
-      c  = 'Take one down, pass it around',
-      r  = '<br>'
-      p  = document.createElement('p'),
-      s  = [],
-      re = /%%/g;
-
-  while(n) {
-    s.push((a+b+r+a+r+c+r).replace(re, n) + (a+b).replace(re, --n));
-  }
-  p.innerHTML = s.join(r+r);
-  document.body.appendChild(p);
+function Bottles(count) {
+  this.count = count || 99;
 }
 
-window.onload = bottleSong;
+Bottles.prototype.take = function() {
+  var verse = [
+    this.count + " bottles of beer on the wall,",
+    this.count + " bottles of beer!",
+    "Take one down, pass it around",
+    (this.count - 1) + " bottles of beer on the wall!"
+  ].join("\n");
+
+  console.log(verse);
+
+  this.count--;
+};
+
+Bottles.prototype.sing = function() {
+  while (this.count) {
+    this.take();
+  }
+};
+
+var bar = new Bottles(99);
+bar.sing();

@@ -1,20 +1,15 @@
-/*REXX program displays integers until a   Ctrl─C  is pressed, then show*/
-/* the number of seconds that have elapsed since start of pgm execution.*/
+/*REXX program displays integers until a   Ctrl─C  is pressed, then shows the number of */
+/*────────────────────────────────── seconds that have elapsed since start of execution.*/
+call time 'Reset'                                /*reset the REXX elapsed timer.        */
+signal on halt                                   /*HALT: signaled via a  Ctrl─C  in DOS.*/
 
-call time 'E'                          /*reset the REXX elapsed timer.  */
-signal on halt                         /*HALT is signaled via a  Ctrl─C.*/
+   do j=1                                        /*start with  unity  and go ye forth.  */
+   say right(j,20)                               /*display the integer right-justified. */
+   t=time('E')                                   /*get the REXX elapsed time in seconds.*/
+                do forever;   u=time('Elapsed')  /* "   "    "     "      "   "    "    */
+                if u<t | u>t+.5  then iterate j  /* ◄═══ passed midnight or  ½  second. */
+                end   /*forever*/
+   end   /*j*/
 
-  do j=1                               /*start with 1 and go ye forth.  */
-  say right(j,20)                      /*display integer right-justified*/
-  t=time('E')                          /*get the elapsed time in seconds*/
-              do forever; u=time('E')  /*get the elapsed time in seconds./
-              if u<t |,                /* ◄═══ means we passed midnight.*/
-                 u>t+.5 then iterate j /* ◄═══ means we passed ½ second.*/
-              end   /*forever*/
-  end               /*j*/
-
-say 'Program control should never ever get here, said Captain Dunsel.'
-
-/*──────────────────────────────────HALT subroutine─────────────────────*/
-halt: say 'program HALTed, it ran for' format(time("E"),,2) 'seconds.'
-                                       /*stick a fork in it, we're done.*/
+halt: say  'program HALTed, it ran for'   format(time("ELapsed"),,2)     'seconds.'
+                                                 /*stick a fork in it,  we're all done. */

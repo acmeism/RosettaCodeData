@@ -1,7 +1,11 @@
-def quicksortInt(coll: List[Int]): List[Int] =
-  if (coll.isEmpty) {
-    coll
-  } else {
-    val (smaller, bigger) = coll.tail partition (_ < coll.head)
-    quicksortInt(smaller) ::: coll.head :: quicksortInt(bigger)
+  def sort(xs: List[Int]): List[Int] = {
+    xs match {
+      case Nil => Nil
+      case x :: xx => {
+        // Arbitrarily partition list in two
+        val (lo, hi) = xx.partition(_ < x)
+        // Sort each half
+        sort(lo) ++ (x :: sort(hi))
+      }
+    }
   }

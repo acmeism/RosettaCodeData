@@ -1,43 +1,30 @@
+(load "sha256.l")
+
 (setq *Alphabet
-   (chop "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"))
-
-# if returns NIL then adress is already invalid
-(de base58 (Str)
-   (let N 0
-      (for L (chop Str)
-         (setq N
-            (+
-               (* N 58)
-               (index L *Alphabet)
-               -1 ) ) )
-
-      N )
-)
-
-(de sha256 (Lst)
-   (native "libcrypto.so" "SHA256"
-      '(B . 32)
-      (cons
-         NIL
-         (32)
-         (native "libcrypto.so" "SHA256" '(B . 32)
-            (cons NIL (32) Lst) (length Lst) '(NIL (32))) )
-      32
-      '(NIL (32)) ) )
-
-(de bytes25 (N)
-   (flip
-      (make
-         (do 25
-            (link (% N 256))
-            (setq N (/ N 256)) ) ) ) )
-
+   (chop "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz") )
+(de unbase58 (Str)
+   (let (Str (chop Str)  Lst (need 25 0)  C)
+      (while (setq C (dec (index (pop 'Str) *Alphabet)))
+         (for (L Lst L)
+            (set
+               L (& (inc 'C (* 58 (car L))) 255)
+               'C (/ C 256) )
+            (pop 'L) ) )
+      (flip Lst) ) )
 (de valid (Str)
    (and
-      (base58 Str)
-      (bytes25 @)
+      (setq @@ (unbase58 Str))
       (=
-         (head 4 (sha256 (head 21 @)))
-         (tail 4 @) ) ) )
-
-(bye)
+         (head 4 (sha256 (sha256 (head 21 @@))))
+         (tail 4 @@) ) ) )
+(test
+   T
+   (valid "17NdbrSGoUotzeGCcMMCqnFkEvLymoou9j") )
+(test
+   T
+   (=
+      NIL
+      (valid "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62j")
+      (valid "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62!")
+      (valid "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62iz")
+      (valid "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62izz") ) )

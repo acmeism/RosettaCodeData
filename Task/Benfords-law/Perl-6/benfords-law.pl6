@@ -1,4 +1,4 @@
-sub benford(@a) { bag +« @a».comb: /<( <[ 1..9 ]> )> <[ , . \d ]>*/ }
+sub benford(@a) { bag +« @a».substr(0,1) }
 
 sub show(%distribution) {
     printf "%9s %9s  %s\n", <Actual Expected Deviation>;

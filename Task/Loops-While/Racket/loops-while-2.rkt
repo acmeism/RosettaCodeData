@@ -5,7 +5,7 @@
       body ...
       (loop))))
 
-(define n 0)
-(while (< n 10)
+(define n 1024)
+(while (positive? n)
   (displayln n)
-  (set! n (add1 n)))
+  (set! n (sub1 n)))

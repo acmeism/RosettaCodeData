@@ -1,34 +1,31 @@
-(function () {
-  return chain(
+(function (n) {
+    'use strict';
 
-    rng(1, 100),
+    return perfectSquaresUpTo(100);
 
-    function (x) {
-      var root = Math.sqrt(x);
-
-      return root === Math.floor(root) ? inject(x) : fail();
+    function perfectSquaresUpTo(n) {
+        return range(1, Math.floor(Math.sqrt(n)))
+            .map(function (x) {
+                return x * x;
+            });
     }
-  );
 
+    // GENERIC
 
-  /*************************************************************/
+    // range(intFrom, intTo, optional intStep)
+    // Int -> Int -> Maybe Int -> [Int]
+    function range(m, n, delta) {
+        var d = delta || 1,
+            blnUp = n > m,
+            lng = Math.floor((blnUp ? n - m : m - n) / d) + 1,
+            a = Array(lng),
+            i = lng;
 
-  // monadic Bind/chain for lists
-  function chain(xs, f) {
-    return [].concat.apply([], xs.map(f));
-  }
+        if (blnUp)
+            while (i--) a[i] = (d * i) + m;
+        else
+            while (i--) a[i] = m - (d * i);
+        return a;
+    }
 
-  // monadic Return/inject for lists
-  function inject(x) { return [x]; }
-
-  // monadic Fail for lists
-  function fail() { return []; }
-
-  // rng(1, 20) --> [1..20]
-  function rng(m, n) {
-    return Array.apply(null, Array(n - m + 1)).map(function (x, i) {
-      return m + i;
-    });
-  }
-
-})();
+})(100);

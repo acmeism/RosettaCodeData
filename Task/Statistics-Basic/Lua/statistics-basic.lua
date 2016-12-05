@@ -1,5 +1,4 @@
 math.randomseed(os.time())
-math.random()  -- First number after seeding not random - throw one away
 
 function randList (n)  -- Build table of size n
 	local numbers = {}

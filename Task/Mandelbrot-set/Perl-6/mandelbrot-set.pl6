@@ -1,13 +1,3 @@
-constant MAX_ITERATIONS = 50;
-my $width = my $height = +(@*ARGS[0] // 30);
-
-sub cut(Range $r, Int $n where $n > 1) {
-    $r.min, * + ($r.max - $r.min) / ($n - 1) ... $r.max
-}
-
-my @re = cut(-2 .. 1/2, $height);
-my $im = [ cut( 0 .. 5/4, $width div 2 + 1) X* 1i ];
-
 constant @color_map = map ~*.comb(/../).map({:16($_)}), <
 000000 0000fc 4000fc 7c00fc bc00fc fc00fc fc00bc fc007c fc0040 fc0000 fc4000
 fc7c00 fcbc00 fcfc00 bcfc00 7cfc00 40fc00 00fc00 00fc40 00fc7c 00fcbc 00fcfc
@@ -31,27 +21,29 @@ b4fcc4 b4fcd8 b4fce8 b4fcfc b4e8fc b4d8fc b4c4fc 000070 1c0070 380070 540070
 2c402c 2c4030 2c4034 2c403c 2c4040 2c3c40 2c3440 2c3040
 >;
 
-sub mandelbrot( Complex $c ) {
-    my $im2 = $c.im**2;
-    return 0 if ($c.re + 1)**2 + $im2 < 1/16;
-    my $q = ($c.re - 1/4)**2 + $im2;
-    return 0 if $q*($q + ($c.re - 1/4)) < $im2/4;
-    my $z = 0i;
-    for ^MAX_ITERATIONS -> $i {
-        return $i + 1 if $z.re**2 + $z.im**2 > 4;
-        $z = $z * $z + $c;
+constant MAX_ITERATIONS = 50;
+my $width = my $height = +(@*ARGS[0] // 31);
+
+sub cut(Range $r, UInt $n where $n > 1) {
+    $r.min, * + ($r.max - $r.min) / ($n - 1) ... $r.max
+}
+
+my @re = cut(-2 .. 1/2, $height);
+my @im = cut( 0 .. 5/4, $width div 2 + 1) X* 1i;
+
+sub mandelbrot(Complex $z is copy, Complex $c) {
+    for 1 .. MAX_ITERATIONS {
+	$z = $z*$z + $c;
+	return $_ if $z.abs > 2;
     }
     return 0;
 }
-
-my @promises = map -> $re {
-    start { [ mandelbrot($re + $_) for @$im ] }
-}, @re;
 
 say "P3";
 say "$width $height";
 say "255";
 
-for @promises».result {
-    say @color_map[(flat .reverse, .[1..*])[^$width]];
+for @re -> $re {
+    put @color_map[|.reverse, |.[1..*]][^$width] given
+    my @ = map &mandelbrot.assuming(0i, *), $re «+« @im;
 }

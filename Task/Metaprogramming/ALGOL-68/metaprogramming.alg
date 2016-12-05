@@ -78,7 +78,7 @@ OP   WITH      = ( INSPECTTOREPLACE inspected, STRING replace with )REF STRING:
                   FI
             DO
                 result +:= replace with;
-                rest    := rest[ UPB to replace : ]
+                rest    := rest[ 1 + UPB to replace : ]
             OD
 
         ELIF option OF inspected = replace first

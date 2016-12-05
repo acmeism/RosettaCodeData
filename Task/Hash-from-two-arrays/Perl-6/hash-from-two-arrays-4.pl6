@@ -1,1 +1,1 @@
-%( <a b c d e> Z=> ^5 )
+{ @keys »=>« @values }  # Will fail if the lists differ in length

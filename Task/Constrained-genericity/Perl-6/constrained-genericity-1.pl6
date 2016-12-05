@@ -2,8 +2,8 @@ subset Eatable of Any where { .^can('eat') };
 
 class Cake { method eat() {...} }
 
-role FoodBox[Eatable ::T] {
-    has T %.foodbox;
+role FoodBox[Eatable] {
+    has %.foodbox;
 }
 
 class Yummy does FoodBox[Cake] { }      # composes correctly

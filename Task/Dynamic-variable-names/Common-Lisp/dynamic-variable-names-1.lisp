@@ -1,6 +1,2 @@
-(defun rc-create-variable (name initial-value)
-  "Create a global variable whose name is NAME in the current package and which is bound to INITIAL-VALUE."
-  (let ((symbol (intern name)))
-    (proclaim `(special ,symbol))
-    (setf (symbol-value symbol) initial-value)
-    symbol))
+(setq var-name (read))  ; reads a name into var-name
+(set var-name 1)        ; assigns the value 1 to a variable named as entered by the user

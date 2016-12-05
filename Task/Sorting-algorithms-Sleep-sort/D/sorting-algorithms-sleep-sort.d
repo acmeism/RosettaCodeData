@@ -1,21 +1,16 @@
-import std.stdio, std.conv, std.datetime, std.array, core.thread;
+import core.thread, std.concurrency, std.datetime,
+    std.stdio, std.algorithm, std.conv;
 
-final class SleepSorter: Thread {
-    private immutable uint val;
+void main(string[] args)
+{
+    if (!args.length)
+        return;
 
-    this(in uint n) /*pure nothrow @safe*/ {
-        super(&run);
-        val = n;
-    }
+    foreach (number; args[1 .. $].map!(to!uint))
+        spawn((uint num) {
+            Thread.sleep(dur!"msecs"(10 * num));
+            writef("%d ", num);
+        }, number);
 
-    private void run() {
-        Thread.sleep(dur!"msecs"(1000 * val));
-        writef("%d ", val);
-    }
-}
-
-void main(in string[] args) {
-    if (!args.empty)
-        foreach (const arg; args[1 .. $])
-            new SleepSorter(arg.to!uint).start;
+    thread_joinAll();
 }

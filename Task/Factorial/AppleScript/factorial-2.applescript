@@ -1,5 +1,10 @@
+-- factorial :: Int -> Int
 on factorial(x)
-	if x < 0 then return 0
-	if x > 1 then return x * (my factorial(x - 1))
-	return 1
+    if x > 1 then
+        x * (factorial(x - 1))
+    else if x = 1 then
+        1
+    else
+        0
+    end if
 end factorial

@@ -1,34 +1,28 @@
-/*Arithmetic Geometric Mean of 1 and 1/sqrt(2)
+#include<bits/stdc++.h>
+using namespace std;
+#define _cin	ios_base::sync_with_stdio(0);	cin.tie(0);
+#define rep(a, b)	for(ll i =a;i<=b;++i)
 
-  Nigel_Galloway
-  February 7th., 2012.
-*/
-
-#include "gmp.h"
-
-void agm (const mpf_t in1, const mpf_t in2, mpf_t out1, mpf_t out2) {
-	mpf_add (out1, in1, in2);
-	mpf_div_ui (out1, out1, 2);
-	mpf_mul (out2, in1, in2);
-	mpf_sqrt (out2, out2);
+double agm(double a, double g)		//ARITHMETIC GEOMETRIC MEAN
+{	double epsilon = 1.0E-16,a1,g1;
+	if(a*g<0.0)
+	{	cout<<"Couldn't find arithmetic-geometric mean of these numbers\n";
+		exit(1);
+	}
+	while(fabs(a-g)>epsilon)
+	{	a1 = (a+g)/2.0;
+		g1 = sqrt(a*g);
+		a = a1;
+		g = g1;
+	}
+	return a;
 }
 
-int main (void) {
-	mpf_set_default_prec (65568);
-	mpf_t x0, y0, resA, resB;
-
-	mpf_init_set_ui (y0, 1);
-	mpf_init_set_d (x0, 0.5);
-	mpf_sqrt (x0, x0);
-	mpf_init (resA);
-	mpf_init (resB);
-
-	for(int i=0; i<7; i++){
-		agm(x0, y0, resA, resB);
-		agm(resA, resB, x0, y0);
-	}
-	gmp_printf ("%.20000Ff\n", x0);
-	gmp_printf ("%.20000Ff\n\n", y0);
-
-	return 0;
+int main()
+{	_cin;    //fast input-output
+	double x, y;
+	cout<<"Enter X and Y: ";	//Enter two numbers
+	cin>>x>>y;
+	cout<<"\nThe Arithmetic-Geometric Mean of "<<x<<" and "<<y<<" is "<<agm(x, y);
+return 0;
 }

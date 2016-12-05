@@ -1,56 +1,113 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <ctype.h>
+#include <getopt.h>
 
-void upper_case(char *src)
+#define NUMLETTERS 26
+#define BUFSIZE 4096
+
+char *get_input(void);
+
+int main(int argc, char *argv[])
 {
-        while (*src != '\0') {
-                if (islower(*src)) *src &= ~0x20;
-                src++;
+    char const usage[] = "Usage: vinigere [-d] key";
+    char sign = 1;
+    char const plainmsg[] = "Plain text:  ";
+    char const cryptmsg[] = "Cipher text: ";
+    bool encrypt = true;
+    int opt;
+
+    while ((opt = getopt(argc, argv, "d")) != -1) {
+        switch (opt) {
+        case 'd':
+            sign = -1;
+            encrypt = false;
+            break;
+        default:
+            fprintf(stderr, "Unrecogized command line argument:'-%i'\n", opt);
+            fprintf(stderr, "\n%s\n", usage);
+            return 1;
         }
-}
+    }
 
-char* encipher(const char *src, char *key, int is_encode)
-{
-        int i, klen, slen;
-        char *dest;
+    if (argc - optind != 1) {
+        fprintf(stderr, "%s requires one argument and one only\n", argv[0]);
+        fprintf(stderr, "\n%s\n", usage);
+        return 1;
+    }
 
-        dest = strdup(src);
-        upper_case(dest);
-        upper_case(key);
 
-        /* strip out non-letters */
-        for (i = 0, slen = 0; dest[slen] != '\0'; slen++)
-                if (isupper(dest[slen]))
-                        dest[i++] = dest[slen];
+    // Convert argument into array of shifts
+    char const *const restrict key = argv[optind];
+    size_t const keylen = strlen(key);
+    char shifts[keylen];
 
-        dest[slen = i] = '\0'; /* null pad it, make it safe to use */
-
-        klen = strlen(key);
-        for (i = 0; i < slen; i++) {
-                if (!isupper(dest[i])) continue;
-                dest[i] = 'A' + (is_encode
-                                ? dest[i] - 'A' + key[i % klen] - 'A'
-                                : dest[i] - key[i % klen] + 26) % 26;
+    char const *restrict plaintext = NULL;
+    for (size_t i = 0; i < keylen; i++) {
+        if (!(isalpha(key[i]))) {
+            fprintf(stderr, "Invalid key\n");
+            return 2;
         }
+        char const charcase = (isupper(key[i])) ? 'A' : 'a';
+        // If decrypting, shifts will be negative.
+        // This line would turn "bacon" into {1, 0, 2, 14, 13}
+        shifts[i] = (key[i] - charcase) * sign;
+    }
 
-        return dest;
+    do {
+        fflush(stdout);
+        // Print "Plain text: " if encrypting and "Cipher text:  " if
+        // decrypting
+        printf("%s", (encrypt) ? plainmsg : cryptmsg);
+        plaintext = get_input();
+        if (plaintext == NULL) {
+            fprintf(stderr, "Error getting input\n");
+            return 4;
+        }
+    } while (strcmp(plaintext, "") == 0); // Reprompt if entry is empty
+
+    size_t const plainlen = strlen(plaintext);
+
+    char* const restrict ciphertext = calloc(plainlen + 1, sizeof *ciphertext);
+    if (ciphertext == NULL) {
+        fprintf(stderr, "Memory error\n");
+        return 5;
+    }
+
+    for (size_t i = 0, j = 0; i < plainlen; i++) {
+        // Skip non-alphabetical characters
+        if (!(isalpha(plaintext[i]))) {
+            ciphertext[i] = plaintext[i];
+            continue;
+        }
+        // Check case
+        char const charcase = (isupper(plaintext[i])) ? 'A' : 'a';
+        // Wrapping conversion algorithm
+        ciphertext[i] = ((plaintext[i] + shifts[j] - charcase + NUMLETTERS) % NUMLETTERS) + charcase;
+        j = (j+1) % keylen;
+    }
+    ciphertext[plainlen] = '\0';
+    printf("%s%s\n", (encrypt) ? cryptmsg : plainmsg, ciphertext);
+
+    free(ciphertext);
+    // Silence warnings about const not being maintained in cast to void*
+    free((char*) plaintext);
+    return 0;
 }
+char *get_input(void) {
 
-int main()
-{
-        const char *str = "Beware the Jabberwock, my son! The jaws that bite, "
-                    "the claws that catch!";
-        const char *cod, *dec;
-        char key[] = "VIGENERECIPHER";
+    char *const restrict buf = malloc(BUFSIZE * sizeof (char));
+    if (buf == NULL) {
+        return NULL;
+    }
 
-        printf("Text: %s\n", str);
-        printf("key:  %s\n", key);
+    fgets(buf, BUFSIZE, stdin);
 
-        cod = encipher(str, key, 1); printf("Code: %s\n", cod);
-        dec = encipher(cod, key, 0); printf("Back: %s\n", dec);
+    // Get rid of newline
+    size_t const len = strlen(buf);
+    if (buf[len - 1] == '\n') buf[len - 1] = '\0';
 
-        /* free(dec); free(cod); */ /* nah */
-        return 0;
+    return buf;
 }

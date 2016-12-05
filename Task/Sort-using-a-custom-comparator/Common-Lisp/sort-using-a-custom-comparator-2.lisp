@@ -1,5 +1,5 @@
 CL-USER> (defvar *strings*
-                 '("Cat" "apple" "Adam" "zero" "Xmas" "quit" "Level" "add" "Actor" "base" "butter"))
+                 (list "Cat" "apple" "Adam" "zero" "Xmas" "quit" "Level" "add" "Actor" "base" "butter"))
 *STRINGS*
 CL-USER> (sort *strings* #'> :key #'length)
 ("butter" "apple" "Level" "Actor" "Adam" "zero" "Xmas" "quit" "base"

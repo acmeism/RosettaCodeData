@@ -1,46 +1,36 @@
-#include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#define MAX(A,B) (((A)>(B))? (A) : (B))
+#define MAX(a, b) (a > b ? a : b)
 
-char * lcs(const char *a,const char * b) {
-    int lena = strlen(a)+1;
-    int lenb = strlen(b)+1;
-
-    int bufrlen = 40;
-    char bufr[40], *result;
-
-    int i,j;
-    const char *x, *y;
-    int *la = calloc(lena*lenb, sizeof( int));
-    int  **lengths = malloc( lena*sizeof( int*));
-    for (i=0; i<lena; i++) lengths[i] = la + i*lenb;
-
-    for (i=0,x=a; *x; i++, x++) {
-        for (j=0,y=b; *y; j++,y++ ) {
-            if (*x == *y) {
-               lengths[i+1][j+1] = lengths[i][j] +1;
+int lcs (char *a, int n, char *b, int m, char **s) {
+    int i, j, k, t;
+    int *z = calloc((n + 1) * (m + 1), sizeof (int));
+    int **c = calloc((n + 1), sizeof (int *));
+    for (i = 0; i <= n; i++) {
+        c[i] = &z[i * (m + 1)];
+    }
+    for (i = 1; i <= n; i++) {
+        for (j = 1; j <= m; j++) {
+            if (a[i - 1] == b[j - 1]) {
+                c[i][j] = c[i - 1][j - 1] + 1;
             }
             else {
-               int ml = MAX(lengths[i+1][j], lengths[i][j+1]);
-               lengths[i+1][j+1] = ml;
+                c[i][j] = MAX(c[i - 1][j], c[i][j - 1]);
             }
         }
     }
-
-    result = bufr+bufrlen;
-    *--result = '\0';
-    i = lena-1; j = lenb-1;
-    while ( (i>0) && (j>0) ) {
-        if (lengths[i][j] == lengths[i-1][j])  i -= 1;
-        else if (lengths[i][j] == lengths[i][j-1]) j-= 1;
-        else {
-//			assert( a[i-1] == b[j-1]);
-            *--result = a[i-1];
-            i-=1; j-=1;
-        }
+    t = c[n][m];
+    *s = malloc(t);
+    for (i = n, j = m, k = t - 1; k >= 0;) {
+        if (a[i - 1] == b[j - 1])
+            (*s)[k] = a[i - 1], i--, j--, k--;
+        else if (c[i][j - 1] > c[i - 1][j])
+            j--;
+        else
+            i--;
     }
-    free(la); free(lengths);
-    return strdup(result);
+    free(c);
+    free(z);
+    return t;
 }

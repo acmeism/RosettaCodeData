@@ -1,7 +1,14 @@
-% SWI-Prolog:
+primes(X, PS) :- X > 1, range(2, X, R), sieve(R, PS).
 
-?- time( (sieve(100000,P), length(P,N), writeln(N), last(P, LP), writeln(LP) )).
-% 1,323,159 inferences, 0.862 CPU in 0.921 seconds (94% CPU, 1534724 Lips)
-P = [2, 3, 5, 7, 11, 13, 17, 19, 23|...],
-N = 9592,
-LP = 99991.
+range(X, X, [X]) :- !.
+range(X, Y, [X | R]) :- X < Y, X1 is X + 1, range(X1, Y, R).
+
+mult(A, B, C) :- C is A*B.
+
+sieve([X], [X]) :- !.
+sieve([H | T], [H | S]) :- maplist( mult(H), [H | T], MS),
+                           remove(MS, T, R), sieve(R, S).
+
+remove( _,       [],      []     ) :- !.
+remove( [H | X], [H | Y], R      ) :- !, remove(X, Y, R).
+remove( X,       [H | Y], [H | R]) :- remove(X, Y, R).

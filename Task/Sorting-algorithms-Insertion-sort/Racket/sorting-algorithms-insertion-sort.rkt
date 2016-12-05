@@ -1,9 +1,9 @@
 #lang racket
 
 (define (sort < l)
-  (define (insert x y)
-    (match* (x y)
-      [(x '()) (list x)]
-      [(x (cons y ys)) (cond [(< x y) (list* x y ys)]
-                             [else (cons y (insert x ys))])]))
+  (define (insert x ys)
+    (match ys
+      [(list) (list x)]
+      [(cons y rst) (cond [(< x y) (cons x ys)]
+                          [else (cons y (insert x rst))])]))
   (foldl insert '() l))

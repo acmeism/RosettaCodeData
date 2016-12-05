@@ -1,1 +1,1 @@
-[val 1 2 3] 7 1 paste
+[1 2 3] dup 1 7 set ;

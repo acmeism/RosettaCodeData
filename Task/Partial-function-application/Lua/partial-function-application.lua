@@ -14,10 +14,9 @@ function squared(n)
     return n ^ 2
 end
 
-function partial(f, ...)
-    local args = ...
+function partial(f, arg)
     return function(...)
-        return f(args, ...)
+        return f(arg, ...)
     end
 end
 

@@ -9,6 +9,7 @@
         ((>= number 50) (string-append "L" (encode/roman (- number 50))))
         ((>= number 40) (string-append "XL" (encode/roman (- number 40))))
         ((>= number 10) (string-append "X" (encode/roman (- number 10))))
+        ((>= number 9) (string-append "IX" (encode/roman (- number 9))))
         ((>= number 5) (string-append "V" (encode/roman (- number 5))))
         ((>= number 4) (string-append "IV" (encode/roman (- number 4))))
         ((>= number 1) (string-append "I" (encode/roman (- number 1))))

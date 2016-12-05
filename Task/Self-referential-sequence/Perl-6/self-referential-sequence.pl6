@@ -5,7 +5,7 @@ my %seen;
 for 1 .. 1000000 -> $m {
     next unless $m ~~ /0/;         # seed must have a zero
     my $j = join '', $m.comb.sort;
-    next if %seen.exists($j);      # already tested a permutation
+    next if %seen{$j}:exists;      # already tested a permutation
     %seen{$j} = '';
     my @seq := converging($m);
     my %elems;
@@ -23,7 +23,7 @@ for 1 .. 1000000 -> $m {
 };
 
 for @list -> $m {
-    say "Seed Value(s): ", ~permutations($m).uniq.grep( { .substr(0,1) != 0 } );
+    say "Seed Value(s): ", my $seeds = ~permutations($m).unique.grep( { .substr(0,1) != 0 } );
     my @seq := converging($m);
     my %elems;
     my $count;
@@ -41,7 +41,7 @@ sub permutations ($string, $sofar? = '' ) {
     for ^$string.chars -> $idx {
         my $this = $string.substr(0,$idx)~$string.substr($idx+1);
         my $char = substr($string, $idx,1);
-        @perms.push( permutations( $this, join '', $sofar, $char ) ) ;
+        @perms.push( |permutations( $this, join '', $sofar, $char ) );
     }
     return @perms;
 }

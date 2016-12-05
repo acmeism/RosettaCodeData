@@ -3,7 +3,7 @@
         (high (1- (length array))))
 
     (do () ((< high low) nil)
-      (let ((middle (floor (/ (+ low high) 2))))
+      (let ((middle (floor (+ low high) 2)))
 
         (cond ((> (aref array middle) value)
                (setf high (1- middle)))

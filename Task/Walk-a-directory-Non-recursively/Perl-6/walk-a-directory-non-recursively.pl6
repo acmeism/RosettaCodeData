@@ -1,1 +1,1 @@
-.say for dir(".", :test(/foo/))
+.say for dir ".", :test(/foo/);

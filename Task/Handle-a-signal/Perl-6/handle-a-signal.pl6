@@ -1,4 +1,4 @@
-signal(Signal::SIGINT).tap: {
+signal(SIGINT).tap: {
     note "Took { now - INIT now } seconds.";
     exit;
 }

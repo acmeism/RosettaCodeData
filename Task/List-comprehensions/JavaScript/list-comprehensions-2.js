@@ -1,31 +1,14 @@
-(function(n) {
+function range(begin, end) {
+    for (let i = begin; i < end; ++i)
+        yield i;
+}
 
-  // USING A LIST MONAD DIRECTLY, WITHOUT LIST COMPREHENSION NOTATION
+function triples(n) {
+    return [[x,y,z] for each (x in range(1,n+1))
+                     for each (y in range(x,n+1))
+                     for each (z in range(y,n+1))
+                     if (x*x + y*y == z*z) ]
+}
 
-  return mb( rng(1,     n), function(x) {
-  return mb( rng(1 + x, n), function(y) {
-  return mb( rng(1 + y, n), function(z) {
-
-  return ( x * x + y * y === z * z ) ? mReturn([x, y, z]) : [];
-
-  })})});
-
-  /******************************************************************/
-
-  // Monadic bind (chain) for lists
-  function mb(xs, f) {
-    return [].concat.apply([], xs.map(f));
-  }
-
-  // Monadic return (inject) for lists
-  function mReturn(a) {
-    return [a];
-  }
-
-  function rng(m, n) {
-    return Array.apply(null, Array(n - m + 1)).map(
-      function (x, i) { return m + i; }
-    );
-  }
-
-})(100);
+for each (var triple in triples(20))
+    print(triple);

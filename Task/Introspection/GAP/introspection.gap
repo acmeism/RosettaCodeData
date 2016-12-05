@@ -15,7 +15,7 @@ CheckEval("AbsInt", "bloop");
 
 # Sum of integer variables
 GlobalIntegers := function()
-	local s, x;
+	local s, x, name;
 	s := 0;
 	for name in SortedList(NamesGVars()) do
 		if IsBoundGlobal(name) then

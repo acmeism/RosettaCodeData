@@ -19,4 +19,5 @@ int main()
   std::cout << array[0][0] << std::endl;
 
   // the array is automatically freed at the end of main()
+  return 0;
 }

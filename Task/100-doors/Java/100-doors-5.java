@@ -2,11 +2,12 @@ public class Doors
 {
  public static void main(final String[] args)
  {
-  StringBuilder sb = new StringBuilder();
+  boolean[] doors = new boolean[100];
 
-  for (int i = 1; i <= 10; i++)
-   sb.append("Door #").append(i*i).append(" is open\n");
+  for (int pass = 0; pass < 10; pass++)
+   doors[(pass + 1) * (pass + 1) - 1] = true;
 
-  System.out.println(sb.toString());
+  for(int i = 0; i < 100; i++)
+   System.out.println("Door #" + (i + 1) + " is " + (doors[i] ? "open." : "closed."));
  }
 }

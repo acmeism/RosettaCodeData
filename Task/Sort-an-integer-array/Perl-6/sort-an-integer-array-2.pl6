@@ -1,1 +1,1 @@
-my @sorted = sort +*, @a;
+@a .= sort;

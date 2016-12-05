@@ -1,27 +1,28 @@
 defmodule Maze do
   def generate(w, h) do
-    :random.seed(:os.timestamp)
-    (for i <- 1..w, j <- 1..h, do: {i,j}) |>
-    Enum.each(fn{i,j} -> Process.put({:vis, i, j}, true) end)
-    walk(:random.uniform(w), :random.uniform(h))
-    print(w, h)
+    maze = (for i <- 1..w, j <- 1..h, into: Map.new, do: {{:vis, i, j}, true})
+           |> walk(:rand.uniform(w), :rand.uniform(h))
+    print(maze, w, h)
+    maze
   end
 
-  defp walk(x, y) do
-    Process.put({:vis, x, y}, false)
-    Enum.each(Enum.shuffle([[x-1,y], [x,y+1], [x+1,y], [x,y-1]]), fn [i,j] ->
-      if Process.get({:vis, i, j}) do
-        if i == x, do: Process.put({:hor, x, max(y, j)}, "+   "),
-                 else: Process.put({:ver, max(x, i), y}, "    ")
-        walk(i, j)
+  defp walk(map, x, y) do
+    Enum.shuffle( [[x-1,y], [x,y+1], [x+1,y], [x,y-1]] )
+    |> Enum.reduce(Map.put(map, {:vis, x, y}, false), fn [i,j],acc ->
+      if acc[{:vis, i, j}] do
+        {k, v} = if i == x, do: {{:hor, x, max(y, j)}, "+   "},
+                          else: {{:ver, max(x, i), y}, "    "}
+        walk(Map.put(acc, k, v), i, j)
+      else
+        acc
       end
     end)
   end
 
-  defp print(w, h) do
+  defp print(map, w, h) do
     Enum.each(1..h, fn j ->
-      IO.puts (Enum.map(1..w, fn i -> Process.get({:hor, i, j}, "+---") end) |> Enum.join) <> "+"
-      IO.puts (Enum.map(1..w, fn i -> Process.get({:ver, i, j}, "|   ") end) |> Enum.join) <> "|"
+      IO.puts Enum.map_join(1..w, fn i -> Map.get(map, {:hor, i, j}, "+---") end) <> "+"
+      IO.puts Enum.map_join(1..w, fn i -> Map.get(map, {:ver, i, j}, "|   ") end) <> "|"
     end)
     IO.puts String.duplicate("+---", w) <> "+"
   end

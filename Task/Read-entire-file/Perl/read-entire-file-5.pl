@@ -1,6 +1,7 @@
-use IO::All;
-$text = io($filename)->all;
-$text = io($filename)->utf8->all;
-@text = io($filename)->slurp;
-$text < io($filename);
-io($filename) > $text;
+my $text;
+{
+  local $/ = undef;
+  open my $fh, '<:encoding(UTF-8)', $filename or die "Could not open '$filename':  $!";
+  $text = <$fh>;
+  close $fh;
+}

@@ -1,9 +1,22 @@
-DATA : lat1 TYPE char20 VALUE '36.12' ,
-       lon1 TYPE char20 VALUE '-86.67' ,
-       lat2 TYPE char20 VALUE '33.94' ,
-       lon2 TYPE char20 VALUE '-118.4' ,
-       distance TYPE p DECIMALS 1 .
-CONSTANTS : pi TYPE char20 VALUE '3.141592654',
-            earth_radius TYPE char20 VALUE '6372.8' ."in km
-distance = earth_radius * acos( cos( ( 90 - lat1 ) * ( pi / 180 ) ) * cos( ( 90 - lat2 ) * ( pi / 180 ) ) +  sin( ( 90 - lat1 ) * ( pi / 180 ) ) * sin( ( 90 - lat2 ) * ( pi / 180 ) ) * cos( ( lon1 - lon2 ) * ( pi / 180 ) ) ) .
+  DATA: X1 TYPE F, Y1 TYPE F,
+        X2 TYPE F, Y2 TYPE F, YD TYPE F,
+        PI TYPE F,
+        PI_180 TYPE F,
+        MINUS_1 TYPE F VALUE '-1'.
+
+PI     = ACOS( MINUS_1 ).
+PI_180 = PI / 180.
+
+LATITUDE1 = 36,12 . LONGITUDE1 = -86,67 .
+LATITUDE2 = 33,94 . LONGITUDE2 = -118,4 .
+
+  X1 = LATITUDE1  * PI_180.
+  Y1 = LONGITUDE1 * PI_180.
+  X2 = LATITUDE2  * PI_180.
+  Y2 = LONGITUDE2 * PI_180.
+  YD = Y2 - Y1.
+
+  DISTANCE = 20000 / PI *
+    ACOS( SIN( X1 ) * SIN( X2 ) + COS( X1 ) * COS( X2 ) * COS( YD ) ).
+
 WRITE : 'Distance between given points = ' , distance , 'km .' .

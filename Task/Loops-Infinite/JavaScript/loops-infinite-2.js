@@ -1,1 +1,1 @@
-while (true) print("SPAM");
+while (true) console.log("SPAM");

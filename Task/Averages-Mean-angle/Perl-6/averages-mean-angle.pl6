@@ -1,5 +1,7 @@
-sub deg2rad { $^d * pi / 180 }
-sub rad2deg { $^r * 180 / pi }
+# Of course, you can still use pi and 180.
+sub deg2rad { $^d * tau / 360 }
+sub rad2deg { $^r * 360 / tau }
+
 sub phase ($c)  {
     my ($mag,$ang) = $c.polar;
     return NaN if $mag < 1e-16;

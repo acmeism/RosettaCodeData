@@ -1,14 +1,15 @@
 package main
 
-import "gtk"
+import (
+    "github.com/mattn/go-gtk/glib"
+    "github.com/mattn/go-gtk/gtk"
+)
 
 func main() {
     gtk.Init(nil)
-    window := gtk.Window(gtk.GTK_WINDOW_TOPLEVEL)
-    window.Connect("destroy", func(*gtk.CallbackContext) {
-        gtk.MainQuit()
-    },
-        "")
+    window := gtk.NewWindow(gtk.WINDOW_TOPLEVEL)
+    window.Connect("destroy",
+        func(*glib.CallbackContext) { gtk.MainQuit() }, "")
     window.Show()
     gtk.Main()
 }

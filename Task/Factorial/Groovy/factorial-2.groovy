@@ -1,1 +1,1 @@
-(0..6).each { println "${it}: ${rFact(it)}" }
+def iFact = { (it > 1) ? (2..it).inject(1 as BigInteger) { i, j -> i*j } : 1 }

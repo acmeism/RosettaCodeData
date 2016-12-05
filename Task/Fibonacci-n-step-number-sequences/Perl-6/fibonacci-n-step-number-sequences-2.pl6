@@ -1,5 +1,5 @@
 sub fib ($n, @xs is copy = [1]) {
-    gather {
+    flat gather {
         take @xs[*];
         loop {
             take my $x = [+] @xs;

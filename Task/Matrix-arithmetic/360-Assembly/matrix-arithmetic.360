@@ -1,0 +1,152 @@
+*        Matrix arithmetic         13/05/2016
+MATARI   START
+         STM    R14,R12,12(R13)    save caller's registers
+         LR     R12,R15            set R12 as base register
+         USING  MATARI,R12         notify assembler
+         LA     R11,SAVEAREA       get the address of my savearea
+         ST     R13,4(R11)         save caller's savearea pointer
+         ST     R11,8(R13)         save my savearea pointer
+         LR     R13,R11            set R13 to point to my savearea
+         LA     R1,TT              @tt
+         BAL    R14,DETER          call deter(tt)
+         LR     R2,R0              R2=deter(tt)
+         LR     R3,R1              R3=perm(tt)
+         XDECO  R2,PG1+12          edit determinant
+         XPRNT  PG1,80             print determinant
+         XDECO  R3,PG2+12          edit permanent
+         XPRNT  PG2,80             print permanent
+EXITALL  L      R13,SAVEAREA+4     restore caller's savearea address
+         LM     R14,R12,12(R13)    restore caller's registers
+         XR     R15,R15            set return code to 0
+         BR     R14                return to caller
+SAVEAREA DS     18F                main savearea
+TT       DC     F'3'               matrix size
+         DC     F'2',F'9',F'4',F'7',F'5',F'3',F'6',F'1',F'8' <==input
+PG1      DC     CL80'determinant='
+PG2      DC     CL80'permanent='
+XDEC     DS     CL12
+*        recursive function        (R0,R1)=deter(t)   (python style)
+DETER    CNOP   0,4                  returns determinant and permanent
+         STM    R14,R12,12(R13)    save all registers
+         LR     R9,R1              save R1
+         L      R2,0(R1)           n
+         BCTR   R2,0               n-1
+         LR     R11,R2             n-1
+         MR     R10,R2             (n-1)*(n-1)
+         SLA    R11,2              (n-1)*(n-1)*4
+         LA     R11,1(R11)         size of q array
+         A      R11,=A(STACKLEN)   R11 storage amount required
+         GETMAIN RU,LV=(R11)       allocate storage for stack
+         USING  STACK,R10          make storage addressable
+         LR     R10,R1             establish stack addressability
+         LA     R1,SAVEAREB        get the address of my savearea
+         ST     R13,4(R1)          save caller's savearea pointer
+         ST     R1,8(R13)          save my savearea pointer
+         LR     R13,R1             set R13 to point to my savearea
+         LR     R1,R9              restore R1
+         LR     R9,R1              @t
+         L      R4,0(R9)           t(0)
+         ST     R4,N               n=t(0)
+IF1      CH     R4,=H'1'           if n=1
+         BNE    SIF1               then
+         L      R2,4(R9)             t(1)
+         ST     R2,R                 r=t(1)
+         ST     R2,S                 s=t(1)
+         B      EIF1               else
+SIF1     L      R2,N                 n
+         BCTR   R2,0                 n-1
+         ST     R2,Q                 q(0)=n-1
+         ST     R2,NM1               nm1=n-1
+         LA     R0,1                 1
+         ST     R0,SGN               sgn=1
+         SR     R0,R0                0
+         ST     R0,R                 r=0
+         ST     R0,S                 s=0
+         LA     R6,1                 k=1
+LOOPK    C      R6,N                 do k=1 to n
+         BH     ELOOPK               leave k
+         SR     R0,R0                  0
+         ST     R0,JQ                  jq=0
+         ST     R0,KTI                 kti=0
+         LA     R7,1                   iq=1
+LOOPIQ   C      R7,NM1                 do iq=1 to n-1
+         BH     ELOOPIQ                leave iq
+         LR     R2,R7                    iq
+         LA     R2,1(R2)                 iq+1
+         ST     R2,IT                    it=iq+1
+         L      R2,KTI                   kti
+         A      R2,N                     kti+n
+         ST     R2,KTI                   kti=kti+n
+         ST     R2,KT                    kt=kti
+         LA     R8,1                     jt=1
+LOOPJT   C      R8,N                     do jt=1 to n
+         BH     ELOOPJT                  leave jt
+         L      R2,KT                      kt
+         LA     R2,1(R2)                   kt+1
+         ST     R2,KT                      kt=kt+1
+IF2      CR     R8,R6                      if jt<>k
+         BE     EIF2                       then
+         L      R2,JQ                        jq
+         LA     R2,1(R2)                     jq+1
+         ST     R2,JQ                        jq=jq+1
+         L      R1,KT                        kt
+         SLA    R1,2                         *4
+         L      R2,0(R1,R9)                  t(kt)
+         L      R1,JQ                        jq
+         SLA    R1,2                         *4
+         ST     R2,Q(R1)                     q(jq)=t(kt)
+EIF2     EQU    *                          end if
+         LA     R8,1(R8)                   jt=jt+1
+         B      LOOPJT                   next jt
+ELOOPJT  LA     R7,1(R7)                 iq=iq+1
+         B      LOOPIQ                 next iq
+ELOOPIQ  LR     R1,R6                  k
+         SLA    R1,2                   *4
+         L      R5,0(R1,R9)            t(k)
+         LR     R2,R5                  R2,R5=t(k)
+         LA     R1,Q                   @q
+         BAL    R14,DETER              call deter(q)
+         LR     R3,R0                  R3=deter(q)
+         ST     R1,P                   p=perm(q)
+         MR     R4,R3                  R5=t(k)*deter(q)
+         M      R4,SGN                 R5=sgn*t(k)*deter(q)
+         A      R5,R                   +r
+         ST     R5,R                   r=r+sgn*t(k)*deter(q)
+         LR     R5,R2                  t(k)
+         M      R4,P                   R5=t(k)*perm(q)
+         A      R5,S                   +s
+         ST     R5,S                   s=s+t(k)*perm(q)
+         L      R2,SGN                 sgn
+         LCR    R2,R2                  -sgn
+         ST     R2,SGN                 sgn=-sgn
+         LA     R6,1(R6)               k=k+1
+         B      LOOPK                next k
+ELOOPK   EQU    *                    end do
+EIF1     EQU    *                  end if
+EXIT     L      R13,SAVEAREB+4     restore caller's savearea address
+         L      R2,R               return value (determinant)
+         L      R3,S               return value (permanent)
+         XR     R15,R15            set return code to 0
+         FREEMAIN A=(R10),LV=(R11) free allocated storage
+         LR     R0,R2              first return value
+         LR     R1,R3              second return value
+         L      R14,12(R13)        restore caller's return address
+         LM     R2,R12,28(R13)     restore registers R2 to R12
+         BR     R14                return to caller
+IT       DS     F                  static area (out of stack)
+KT       DS     F                  "
+JQ       DS     F                  "
+KTI      DS     F                  "
+P        DS     F                  "
+         DROP   R12                base no longer needed
+STACK    DSECT                     dynamic area (stack)
+SAVEAREB DS     18F                function savearea
+N        DS     F                  n
+NM1      DS     F                  n-1
+R        DS     F                  determinant accu
+S        DS     F                  permanent accu
+SGN      DS     F                  sign
+STACKLEN EQU    *-STACK
+Q        DS     F                  sub matrix q((n-1)*(n-1)+1)
+         YREGS
+         END    MATARI

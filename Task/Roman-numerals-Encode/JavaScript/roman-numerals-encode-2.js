@@ -1,50 +1,49 @@
-function roman(strIntegers) {
-  'use strict';
-  // DICTIONARY OF GLYPH:VALUE MAPPINGS
-  var dctGlyphs = {
-    M: 1000,
-    CM: 900,
-    D: 500,
-    CD: 400,
-    C: 100,
-    XC: 90,
-    L: 50,
-    XL: 40,
-    X: 10,
-    IX: 9,
-    V: 5,
-    IV: 4,
-    I: 1
-  };
-
-  // LIST OF INTEGER STRINGS, WITH ANY SEPARATOR
-  var strNums = typeof strIntegers === 'string' ? strIntegers : strIntegers.toString(),
-    lstParts = strNums.split(/\d+/),
-    strSeparator = lstParts.length > 1 ? lstParts[1] : '',
-    lstDecimal = strSeparator ? strIntegers.split(strSeparator) : [strNums];
+(function () {
+    'use strict';
 
 
-  // REWRITE OF DECIMAL INTEGER AS ROMAN
-  function rewrite(strN) {
-    var n = Number(strN);
+    // If the Roman is a string, pass any delimiters through
 
-    /*  Starting with the highest-valued glyph:
-      take as many bites as we can with it
-      (decrementing residual value with each bite,
-      and appending a corresponding glyph copy to the string)
-      before moving down to the next most expensive glyph */
+    // (Int | String) -> String
+    function romanTranscription(a) {
+        if (typeof a === 'string') {
+            var ps = a.split(/\d+/),
+                dlm = ps.length > 1 ? ps[1] : undefined;
 
-  // return Object.keys(dctGlyphs).reduce(
-  // OR:
-  return 'M CM D CD C XC L XL X IX V IV I'.split(' ').reduce(
-      function (s, k) {
-        var v = dctGlyphs[k];
-        return n >= v ? (n -= v, s + k) : s;
-      }, ''
-    )
+            return (dlm ? a.split(dlm)
+                    .map(function (x) {
+                        return Number(x);
+                    }) : [a])
+                .map(roman)
+                .join(dlm);
+        } else return roman(a);
+    }
 
-  }
+    // roman :: Int -> String
+    function roman(n) {
+        return [[1000, "M"], [900, "CM"], [500, "D"], [400, "CD"], [100,
+        "C"], [90, "XC"], [50, "L"], [40, "XL"], [10, "X"], [9,
+        "IX"], [5, "V"], [4, "IV"], [1, "I"]]
+            .reduce(function (a, lstPair) {
+                var m = a.remainder,
+                    v = lstPair[0];
 
-  // ALL REWRITTEN, WITH SEPARATOR RESTORED
-  return lstDecimal.map(rewrite).join(strSeparator);
-}
+                return (v > m ? a : {
+                    remainder: m % v,
+                    roman: a.roman + Array(
+                            Math.floor(m / v) + 1
+                        )
+                        .join(lstPair[1])
+                });
+            }, {
+                remainder: n,
+                roman: ''
+            }).roman;
+    }
+
+    // TEST
+
+    return [2016, 1990, 2008, "14.09.2015", 2000, 1666].map(
+        romanTranscription);
+
+})();

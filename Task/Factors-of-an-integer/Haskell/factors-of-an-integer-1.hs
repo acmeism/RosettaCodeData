@@ -1,5 +1,8 @@
-import HFM.Primes(primePowerFactors)
-import Data.List
+import HFM.Primes (primePowerFactors)
+import Control.Monad (mapM)
+import Data.List (product)
 
-factors = map product.
-          mapM (uncurry((. enumFromTo 0) . map .(^) )) . primePowerFactors
+-- primePowerFactors :: Integer -> [(Integer,Int)]
+
+factors = map product .
+          mapM (\(p,m)-> [p^i | i<-[0..m]]) . primePowerFactors

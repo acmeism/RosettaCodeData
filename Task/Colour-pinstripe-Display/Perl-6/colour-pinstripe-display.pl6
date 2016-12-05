@@ -14,7 +14,7 @@ my @colors = map -> $r, $g, $b { [$r, $g, $b] },
 my $PPM = open "pinstripes.ppm", :w, :bin or die "Can't create pinstripes.ppm: $!";
 
 $PPM.print: qq:to/EOH/;
-    P6
+    P3
     # pinstripes.ppm
     $HOR $VERT
     255
@@ -23,8 +23,8 @@ $PPM.print: qq:to/EOH/;
 my $vzones = $VERT div 4;
 for 1..4 -> $w {
     my $hzones = ceiling $HOR / $w / +@colors;
-    my $line = Buf.new: ((@colors Xxx $w) xx $hzones).splice(0,$HOR).map: *.values;
-    $PPM.write: $line for ^$vzones;
+    my $line = [((@colors Xxx $w) xx $hzones).flatmap: *.values].splice(0,$HOR);
+    $PPM.put: $line for ^$vzones;
 }
 
 $PPM.close;

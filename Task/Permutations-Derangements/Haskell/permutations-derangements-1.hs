@@ -5,9 +5,8 @@ import Data.List
 derangements xs = filter (and . zipWith (/=) xs) $ permutations xs
 
 -- Compute the number of derangements of n elements
-subfactorial 0 = 0
+subfactorial 0 = 1
 subfactorial 1 = 0
-subfactorial 2 = 1
 subfactorial n = (n-1) * (subfactorial (n-1) + subfactorial (n-2))
 
 main = do

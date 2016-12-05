@@ -7,7 +7,7 @@ func IsPrime(n int) bool {
 }
 
 func isPrime_r(n, i int) bool {
-	if i*i < n {
+	if i*i <= n {
 		return n % i != 0 && isPrime_r(n, i+2)
 	}
 	return true

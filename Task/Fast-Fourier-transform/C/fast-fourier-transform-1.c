@@ -27,23 +27,24 @@ void fft(cplx buf[], int n)
 	_fft(buf, out, n, 1);
 }
 
+
+void show(const char * s, cplx buf[]) {
+	printf("%s", s);
+	for (int i = 0; i < 8; i++)
+		if (!cimag(buf[i]))
+			printf("%g ", creal(buf[i]));
+		else
+			printf("(%g, %g) ", creal(buf[i]), cimag(buf[i]));
+}
+
 int main()
 {
 	PI = atan2(1, 1) * 4;
 	cplx buf[] = {1, 1, 1, 1, 0, 0, 0, 0};
 
-	void show(const char * s) {
-		printf("%s", s);
-		for (int i = 0; i < 8; i++)
-			if (!cimag(buf[i]))
-				printf("%g ", creal(buf[i]));
-			else
-				printf("(%g, %g) ", creal(buf[i]), cimag(buf[i]));
-	}
-
-	show("Data: ");
+	show("Data: ", buf);
 	fft(buf, 8);
-	show("\nFFT : ");
+	show("\nFFT : ", buf);
 
 	return 0;
 }

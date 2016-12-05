@@ -8,4 +8,4 @@
 
 (defmethod matrix-transpose clojure.lang.PersistentVector
   [mtx]
-  (vec (apply map vector mtx)))
+  (apply mapv vector mtx))

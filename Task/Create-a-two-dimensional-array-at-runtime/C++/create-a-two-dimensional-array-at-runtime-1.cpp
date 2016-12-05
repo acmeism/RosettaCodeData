@@ -23,4 +23,6 @@ int main()
   // get rid of array
   delete[] array;
   delete[] array_data;
+
+  return 0;
 }

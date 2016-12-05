@@ -1,0 +1,180 @@
+*        calendar                  08/06/2016
+CALENDAR CSECT
+         USING  CALENDAR,R13       base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    prolog
+         ST     R13,4(R15)         "
+         ST     R15,8(R13)         "
+         LR     R13,R15            "
+         L      R4,YEAR            year
+         SRDA   R4,32              .
+         D      R4,=F'4'           year//4
+         LTR    R4,R4              if year//4=0
+         BNZ    LYNOT
+         L      R4,YEAR            year
+         SRDA   R4,32              .
+         D      R4,=F'100'         year//100
+         LTR    R4,R4              if year//100=0
+         BNZ    LY
+         L      R4,YEAR            year
+         SRDA   R4,32              .
+         D      R4,=F'400'         if year//400
+         LTR    R4,R4              if year//400=0
+         BNZ    LYNOT
+LY       MVC    ML+2,=H'29'        ml(2)=29  leapyear
+LYNOT    SR     R10,R10            ltd1=0
+         LA     R6,1               i=1
+LOOPI1   C      R6,=F'31'          do i=1 to 31
+         BH     ELOOPI1
+         XDECO  R6,XDEC            edit i
+         LA     R14,TD1            td1
+         AR     R14,R10            td1+ltd1
+         MVC    0(3,R14),XDEC+9    sub(td1,ltd1+1,3)=pic(i,3)
+         LA     R10,3(R10)         ltd1+3
+         LA     R6,1(R6)           i=i+1
+         B      LOOPI1
+ELOOPI1  LA     R6,1               i=1
+LOOPI2   C      R6,=F'12'          do i=1 to 12
+         BH     ELOOPI2
+         ST     R6,M               m=i
+         MVC    D,=F'1'            d=1
+         MVC    YY,YEAR            yy=year
+         L      R4,M               m
+         C      R4,=F'3'           if m<3
+         BNL    GE3
+         L      R2,M               m
+         LA     R2,12(R2)          m+12
+         ST     R2,M               m=m+12
+         L      R2,YY              yy
+         BCTR   R2,0               yy-1
+         ST     R2,YY              yy=yy-1
+GE3      L      R2,YY              yy
+         LR     R1,R2              yy
+         SRA    R1,2               yy/4
+         AR     R2,R1              yy+(yy/4)
+         L      R4,YY              yy
+         SRDA   R4,32              .
+         D      R4,=F'100'         yy/100
+         SR     R2,R5              yy+(yy/4)-(yy/100)
+         L      R4,YY              yy
+         SRDA   R4,32              .
+         D      R4,=F'400'         yy/400
+         AR     R2,R5              yy+(yy/4)-(yy/100)+(yy/400)
+         A      R2,D               r2=yy+(yy/4)-(yy/100)+(yy/400)+d
+         LA     R5,153             153
+         M      R4,M               153*m
+         LA     R5,8(R5)           153*m+8
+         D      R4,=F'5'           (153*m+8)/5
+         AR     R5,R2              ((153*m+8)/5+r2
+         LA     R4,0               .
+         D      R4,=F'7'           r4=mod(r5,7)  0=sun 1=mon ... 6=sat
+         LTR    R4,R4              if j=0
+         BNZ    JNE0
+         LA     R4,7               j=7
+JNE0     BCTR   R4,0               j-1
+         MH     R4,=H'3'           j*3
+         LR     R10,R4             j1=j*3
+         LR     R1,R6              i
+         SLA    R1,1               *2
+         LH     R11,ML-2(R1)       ml(i)
+         MH     R11,=H'3'          j2=ml(i)*3
+         MVC    TD2,BLANK          td2=' '
+         LA     R4,TD1             @td1
+         LR     R5,R11             j2
+         LA     R2,TD2             @td2
+         AR     R2,R10             @td2+j1
+         LR     R3,R5              j2
+         MVCL   R2,R4              sub(td2,j1+1,j2)=sub(td1,1,j2)
+         LR     R1,R6              i
+         MH     R1,=H'144'         *144
+         LA     R14,DA-144(R1)     @da(i)
+         MVC    0(144,R14),TD2     da(i)=td2
+         LA     R6,1(R6)           i=i+1
+         B      LOOPI2
+ELOOPI2  L      R1,YEAR            year
+         XDECO  R1,PG+23           edit year
+         XPRNT  PG,35              print year
+         MVC    WDLINE,BLANK       wdline=' '
+         LA     R10,1              lwdline=1
+         LA     R8,1               k=1
+LOOPK3   C      R8,=F'3'           do k=1 to 3
+         BH     ELOOPK3
+         LA     R4,WDLINE          @wdline
+         AR     R4,R10             +lwdline
+         MVC    0(20,R4),WDNA      sub(wdline,lwdline+1,20)=wdna
+         LA     R10,20(R10)        lwdline=lwdline+20
+         C      R8,=F'3'           if k<3
+         BNL    ITERK3
+         LA     R10,2(R10)         lwdline=lwdline+2
+ITERK3   LA     R8,1(R8)           k=k+1
+         B      LOOPK3
+ELOOPK3  LA     R6,1               i=1
+LOOPI4   C      R6,=F'12'          do i=1 to 12 by 3
+         BH     ELOOPI4
+         MVC    MOLINE,BLANK       moline=' '
+         LA     R10,6              lmoline=6
+         LR     R8,R6              k=i
+LOOPK4   LA     R2,2(R6)           i+2
+         CR     R8,R2              do k=i to i+2
+         BH     ELOOPK4
+         LR     R1,R8              k
+         MH     R1,=H'10'          *10
+         LA     R3,MO-10(R1)       mo(k)
+         LA     R4,MOLINE          @moline
+         AR     R4,R10             +lmoline
+         MVC    0(10,R4),0(R3)     sub(moline,lmoline+1,10)=mo(k)
+         LA     R10,22(R10)        lmoline=lmoline+22
+         LA     R8,1(R8)           k=k+1
+         B      LOOPK4
+ELOOPK4  XPRNT  MOLINE,L'MOLINE    print months
+         XPRNT  WDLINE,L'WDLINE    print days of week
+         LA     R7,1               j=1
+LOOPJ4   C      R7,=F'106'         do j=1 to 106 by 21
+         BH     ELOOPJ4
+         MVC    PG,BLANK           clear buffer
+         LA     R9,PG              pgi=0
+         LR     R8,R6              k=i
+LOOPK5   LA     R2,2(R6)           i+2
+         CR     R8,R2              do k=i to i+2
+         BH     ELOOPK5
+         LR     R1,R8              k
+         MH     R1,=H'144'         *144
+         LA     R4,DA-144(R1)      da(k)
+         BCTR   R4,0               -1
+         AR     R4,R7              +j
+         MVC    0(21,R9),0(R4)     substr(da(k),j,21)
+         LA     R9,22(R9)          pgi=pgi+22
+         LA     R8,1(R8)           k=k+1
+         B      LOOPK5
+ELOOPK5  XPRNT  PG,L'PG            print buffer
+         LA     R7,21(R7)          j=j+21
+         B      LOOPJ4
+ELOOPJ4  LA     R6,3(R6)           i=i+3
+         B      LOOPI4
+ELOOPI4  L      R13,4(0,R13)       epilog
+         LM     R14,R12,12(R13)    "
+         XR     R15,R15            "
+         BR     R14                exit
+         LTORG
+YEAR     DC     F'1969'            <==
+MO       DC     CL10' January  ',CL10' February ',CL10'  March   '
+         DC     CL10'  April   ',CL10'   May    ',CL10'   June   '
+         DC     CL10'   July   ',CL10'  August  ',CL10'September '
+         DC     CL10' October  ',CL10' November ',CL10' December '
+ML       DC     H'31',H'28',H'31',H'30',H'31',H'30'
+         DC     H'31',H'31',H'30',H'31',H'30',H'31'
+WDNA     DC     CL20'Mo Tu We Th Fr Sa Su'
+M        DS     F
+D        DS     F
+YY       DS     F
+TD1      DS     CL93
+TD2      DS     CL144
+MOLINE   DS     CL66
+WDLINE   DS     CL66
+PG       DC     CL66' '
+XDEC     DS     CL12
+BLANK    DC     CL144' '
+DA       DS     12CL144
+         YREG
+         END    CALENDAR

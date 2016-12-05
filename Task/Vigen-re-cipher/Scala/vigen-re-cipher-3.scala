@@ -1,6 +1,6 @@
-val text = "ATTACKATDAWN"
-val myVigenere = new Vigenere("LEMON")
-val encoded = text.map(c => myVigenere.encode(c))
-println("Plaintext => " + text)
-println("Ciphertext => " + encoded)
-println("Decrypted => " + encoded.map(c => myVigenere.decode(c)))
+val text = "Beware the Jabberwock, my son! The jaws that bite, the claws that catch!"
+val encoded = Vigenere.encrypt(text)
+val decoded = Vigenere.decrypt(text)
+println("Plain text => " + text)
+println("Cipher text => " + encoded)
+println("Decrypted => " + decoded)

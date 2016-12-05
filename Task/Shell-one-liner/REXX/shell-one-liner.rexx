@@ -1,5 +1,8 @@
- ┌────────────────────────────────────────────────┐
- │  from the MS Windows® command line  (cmd.exe)  │
- └────────────────────────────────────────────────┘
+        ╔══════════════════════════════════════════════╗
+        ║                                              ║
+        ║  from the MS Window command line  (cmd.exe)  ║
+        ║                                              ║
+        ╚══════════════════════════════════════════════╝
 
-echo do j=10 by 20 for 4;say right('hello',j);end | regina
+
+echo   do j=10  by 20  for 4;   say right('hello',j); end   |   regina

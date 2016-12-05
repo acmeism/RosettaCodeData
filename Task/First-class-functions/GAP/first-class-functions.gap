@@ -18,7 +18,7 @@ ApplyList := function(u, x)
   return v;
 end;
 
-# Inverse and Sqrt are in the built-in library. Note that GAP doesn't have real numbers nor floating point numbers. Therefore, Sqrt yields values in cyclotomic fields.
+# Inverse and Sqrt are in the built-in library. Note that Sqrt yields values in cyclotomic fields.
 # For example,
 #    gap> Sqrt(7);
 #    E(28)^3-E(28)^11-E(28)^15+E(28)^19-E(28)^23+E(28)^27

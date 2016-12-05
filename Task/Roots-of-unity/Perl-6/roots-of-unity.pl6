@@ -1,5 +1,4 @@
-sub roots-of-unity (Int \n where 1..*) {
-    map { exp 2i * pi/n * $_ }, ^n;
+constant n = 10;
+for ^n -> \k {
+    say cis(k*τ/n);
 }
-
-printf "%+.5f%+.5fi\n", .reals for roots-of-unity 10;

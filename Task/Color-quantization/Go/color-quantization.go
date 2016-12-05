@@ -17,16 +17,16 @@ func main() {
         log.Fatal(err)
     }
     img, err := png.Decode(f)
-    f.Close()
+    if ec := f.Close(); err != nil {
+        log.Fatal(err)
+    } else if ec != nil {
+        log.Fatal(ec)
+    }
+    fq, err := os.Create("frog16.png")
     if err != nil {
         log.Fatal(err)
     }
-    fq, err := os.Create("frog256.png")
-    if err != nil {
-        log.Fatal(err)
-    }
-    err = png.Encode(fq, quant(img, 256))
-    if err != nil {
+    if err = png.Encode(fq, quant(img, 16)); err != nil {
         log.Fatal(err)
     }
 }

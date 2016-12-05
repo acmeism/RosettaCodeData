@@ -1,33 +1,35 @@
 class Point {
    protected int x, y;
    public Point() { this(0); }
-   public Point(int x0) { this(x0, 0); }
-   public Point(int x0, int y0) { x = x0; y = y0; }
+   public Point(int x) { this(x, 0); }
+   public Point(int x, int y) { this.x = x; this.y = y; }
    public Point(Point p) { this(p.x, p.y); }
-   public int getX() { return x; }
-   public int getY() { return y; }
-   public int setX(int x0) { x = x0; }
-   public int setY(int y0) { y = y0; }
-   public void print() { System.out.println("Point"); }
+   public int getX() { return this.x; }
+   public int getY() { return this.y; }
+   public void setX(int x) { this.x = x; }
+   public void setY(int y) { this.y = y; }
+   public void print() { System.out.println("Point x: " + this.x + " y: " + this.y); }
 }
 
-public class Circle extends Point {
+class Circle extends Point {
    private int r;
    public Circle(Point p) { this(p, 0); }
-   public Circle(Point p, int r0) { super(p); r = r0; }
+   public Circle(Point p, int r) { super(p); this.r = r; }
    public Circle() { this(0); }
-   public Circle(int x0) { this(x0, 0); }
-   public Circle(int x0, int y0) { this(x0, y0, 0); }
-   public Circle(int x0, int y0, int r0) { super(x0, y0); r = r0; }
+   public Circle(int x) { this(x, 0); }
+   public Circle(int x, int y) { this(x, y, 0); }
+   public Circle(int x, int y, int r) { super(x, y); this.r = r; }
    public Circle(Circle c) { this(c.x, c.y, c.r); }
-   public int getR() { return r; }
-   public int setR(int r0) { r = r0; }
-   public void print() { System.out.println("Circle"); }
+   public int getR() { return this.r; }
+   public void setR(int r) { this.r = r; }
+   public void print() { System.out.println("Circle x: " + this.x + " y: " + this.y + " r: " + this.r); }
+}
 
-   public static void main(String args[]) {
-      Point p = new Point();
-      Point c = new Circle();
-      p.print();
-      c.print();
-   }
+public class test {
+  public static void main(String args[]) {
+    Point p = new Point();
+    Point c = new Circle();
+    p.print();
+    c.print();
+  }
 }

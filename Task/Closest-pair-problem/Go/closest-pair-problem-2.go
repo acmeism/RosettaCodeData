@@ -6,6 +6,7 @@ import (
     "fmt"
     "math"
     "math/rand"
+    "time"
 )
 
 // number of points to search for closest pair
@@ -13,7 +14,7 @@ const n = 1e6
 
 // size of bounding box for points.
 // x and y will be random with uniform distribution in the range [0,scale).
-const scale = 1.
+const scale = 100.
 
 // point struct
 type xy struct {
@@ -21,17 +22,15 @@ type xy struct {
     key  int64   // an annotation used in the algorithm
 }
 
-// Euclidian distance
 func d(p1, p2 xy) float64 {
-    dx := p2.x - p1.x
-    dy := p2.y - p1.y
-    return math.Sqrt(dx*dx + dy*dy)
+    return math.Hypot(p2.x-p1.x, p2.y-p1.y)
 }
 
 func main() {
+    rand.Seed(time.Now().Unix())
     points := make([]xy, n)
     for i := range points {
-        points[i] = xy{rand.Float64(), rand.Float64() * scale, 0}
+        points[i] = xy{rand.Float64() * scale, rand.Float64() * scale, 0}
     }
     p1, p2 := closestPair(points)
     fmt.Println(p1, p2)
@@ -64,14 +63,14 @@ func closestPair(s []xy) (p1, p2 xy) {
         mx := int64(scale*invB) + 1 // mx is number of cells along a side
         // construct map as a histogram:
         // key is index into mesh.  value is count of points in cell
-        hm := make(map[int64]int)
+        hm := map[int64]int{}
         for ip, p := range s1 {
             key := int64(p.x*invB)*mx + int64(p.y*invB)
             s1[ip].key = key
             hm[key]++
         }
         // construct s2 = s1 less the points without neighbors
-        var s2 []xy
+        s2 := make([]xy, 0, len(s1))
         nx := []int64{-mx - 1, -mx, -mx + 1, -1, 0, 1, mx - 1, mx, mx + 1}
         for i, p := range s1 {
             nn := 0
@@ -93,7 +92,7 @@ func closestPair(s []xy) (p1, p2 xy) {
     // step 4: compute answer from approximation
     invB := 1 / dxi
     mx := int64(scale*invB) + 1
-    hm := make(map[int64][]int)
+    hm := map[int64][]int{}
     for i, p := range s {
         key := int64(p.x*invB)*mx + int64(p.y*invB)
         s[i].key = key

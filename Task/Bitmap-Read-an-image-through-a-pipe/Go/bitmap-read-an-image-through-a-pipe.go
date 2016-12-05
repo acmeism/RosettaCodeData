@@ -6,33 +6,25 @@ package main
 // * Write a PPM file
 
 import (
-    "fmt"
+    "log"
     "os/exec"
     "raster"
 )
 
 func main() {
-    // (A file with this name is output by the Go solution to the task
-    // "Bitmap/PPM conversion through a pipe," but of course any handy
-    // jpeg should work.)
-    c := exec.Command("djpeg", "pipeout.jpg")
+    c := exec.Command("convert", "Unfilledcirc.png", "-depth", "1", "ppm:-")
     pipe, err := c.StdoutPipe()
     if err != nil {
-        fmt.Println(err)
-        return
+        log.Fatal(err)
     }
-    err = c.Start()
-    if err != nil {
-        fmt.Println(err)
-        return
+    if err = c.Start(); err != nil {
+        log.Fatal(err)
     }
     b, err := raster.ReadPpmFrom(pipe)
     if err != nil {
-        fmt.Println(err)
-        return
+        log.Fatal(err)
     }
-    err = b.WritePpmFile("pipein.ppm")
-    if err != nil {
-        fmt.Println(err)
+    if err = b.WritePpmFile("Unfilledcirc.ppm"); err != nil {
+        log.Fatal(err)
     }
 }

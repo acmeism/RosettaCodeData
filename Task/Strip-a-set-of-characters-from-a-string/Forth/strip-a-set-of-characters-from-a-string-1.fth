@@ -1,39 +1,15 @@
-\ rosetta Code strip chars from a string
-\ Forth is a low level language that is extended to solve your problem
-\ Using the Forth parser, primitive memory operations and the stack
-\ for data transfer between functions, we create high level functionality
-\ STRIPCHARS here has 1st Argument as the chars. If you don't like it
-\ reverse the arguments with SWAP. :)
+: append-char ( char str -- ) dup >r  count dup 1+ r> c! + c! ;  \ append char to a counted string
+: strippers   ( -- addr len)  s" aeiAEI" ;     \ a string literal returns addr and length
 
-create buffer1  256 allot                  \ temp buffer, returns its address to the stack
-
-\ extend the language a little
-: STRING,  ( addr len -- )                 \ compile a string at the next available memory (called 'HERE')
-           here  over 1+  allot  place ;
-
-: APPEND-CHAR  ( char string -- )          \ append char to a counted string
-           dup >r  count dup 1+ r> c! + c! ;
-
-: ,"       [CHAR] " PARSE  STRING, ;       \ Parse input stream until '"' and compile into memory
-
-: =""      ( cstring -- )  0 swap c! ;     \ empty a counted string by setting count to zero
-
-: writestr ( cstring -- )                  \ print a counted string from the stack with new line
-           count type cr ;
-
-
-\ use our language extensions
-create "aei" ," aei"
-create input ," She was a soul stripper. She took my heart!"
-
-: stripchars ( str1 str2 -- str3 )         \ chars are 1st argument, str2 is the input string
-        buffer1 =""                        \ clear the buffer
-        count bounds                       \ calc loop limits for str2
+: stripchars ( addr1 len1  addr2 len2 -- PAD len )
+        0 PAD c!                               \ clear the PAD buffer
+        bounds                                 \ calc loop limits for addr2
         DO
-           dup count I C@ scan 0=          \ scan for char in str1, test for zero
-           IF                              \ if NOT found
-              I c@ buffer1 append-char     \ append the str2 char to buffer1
-           THEN                            \ ... and then ... continue the loop
+           2dup I C@ ( -- addr1 len1 addr1 len1 char)
+           scan nip 0=                         \ scan for char in addr1, test for zero
+           IF                                  \ if stack = true (ie. NOT found)
+              I c@ PAD append-char             \ fetch addr2 char, append to PAD
+           THEN                                \ ...then ... continue the loop
         LOOP
-        drop                               \ we don't need str1 now
-        buffer1 ;                          \ addr of buffer1 put on stack as the output
+        2drop                                  \ we don't need STRIPPERS now
+        PAD count ;                            \ return PAD address and length

@@ -1,0 +1,242 @@
+' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' '
+' Remove File Lines V1.0                            '
+'                                                   '
+' Developed by A. David Garza Marín in VB-DOS for   '
+' RosettaCode. November 30, 2016.                   '
+' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' '
+
+'OPTION _EXPLICIT ' For QB45
+'OPTION EXPLICIT ' For VBDOS, PDS 7.1
+
+' SUBs and FUNCTIONs
+DECLARE FUNCTION DeleteLinesFromFile% (WhichFile AS STRING, Start AS LONG, HowMany AS LONG)
+DECLARE FUNCTION FileExists% (WhichFile AS STRING)
+DECLARE FUNCTION GetDummyFile$ (WhichFile AS STRING)
+DECLARE FUNCTION ErrorMessage$ (WhichError AS INTEGER)
+DECLARE FUNCTION CountLines& (WhichFile AS STRING)
+DECLARE FUNCTION YorN$ ()
+
+' Var
+DIM iOk AS INTEGER, iErr AS INTEGER, lStart AS LONG, lHowMany AS LONG, lSize AS LONG
+DIM sFile AS STRING
+
+' Const
+CONST ProgramName = "RemFLine (Remove File Lines) Enhanced V1.0"
+
+' ----------------------------- Main program cycle --------------------------------
+CLS
+PRINT ProgramName
+PRINT
+PRINT "This program will remove as many lines of a text file as you state, starting"
+PRINT "with the line number you also state. If the starting line number is beyond"
+PRINT "total lines in the text file stated, then the process will be aborted. If the"
+PRINT "quantity of lines stated to be deleted is beyond the total lines in the text"
+PRINT "file, the process also will be aborted. The program will give you a message"
+PRINT "if everything ran ok or if any error happened. Includes a function to count"
+PRINT "how many lines has the intended file."
+DO
+    PRINT
+    INPUT "Please, type the name of the file"; sFile
+    sFile = LTRIM$(RTRIM$(sFile))
+    IF sFile <> "" THEN
+      lSize = CountLines&(sFile)
+      IF lSize > 0 THEN
+        PRINT "Delete starting on which line (Default=1, Max="; lSize; ")";
+        INPUT lStart
+
+        IF lStart = 0 THEN lStart = 1
+        IF lStart < lSize THEN
+          PRINT "How many lines do you want to remove (Default=1, Max="; (lSize - lStart) + 1; ")";
+          INPUT lHowMany
+          IF lHowMany = 0 THEN lHowMany = 1
+          IF lHowMany + lStart <= lSize THEN
+            iOk = DeleteLinesFromFile%(sFile, lStart, lHowMany)
+          ELSE
+            iOk = 1
+          END IF
+        ELSE
+          iOk = 2
+        END IF
+      ELSEIF lSize = -1 THEN
+        iOk = 3
+      ELSE
+        iOk = 4  ' The file is not a text file
+      END IF
+    ELSE
+      iOk = 5  ' Null file name not allowed
+    END IF
+    PRINT
+    PRINT ErrorMessage$(iOk)
+    PRINT "Do you want to try again? (Y/N)"
+LOOP UNTIL YorN$ = "N"
+'----------------End of Main program Cycle ----------------
+
+END
+
+FileError:
+    iErr = ERR
+RESUME NEXT
+
+FUNCTION CountLines& (WhichFile AS STRING)
+    ' Var
+    DIM iFile AS INTEGER
+    DIM l AS LONG, li AS LONG, j AS LONG, lFileSize AS LONG, lLines AS LONG
+    DIM sLine AS STRING, strR AS STRING
+
+    ' This function will count how many lines has the file
+    IF FileExists%(WhichFile) THEN
+        strR = CHR$(13)
+        li = 1
+        iFile = FREEFILE
+        sLine = SPACE$(128)
+        lLines = 0
+        OPEN WhichFile FOR BINARY AS #iFile
+          lFileSize = LOF(iFile)
+          DO
+            IF (LOC(iFile) + LEN(sLine)) > lFileSize THEN
+              sLine = SPACE$(lFileSize - LOC(iFile))
+            END IF
+            IF LEN(sLine) > 0 THEN
+              GET #iFile, , sLine
+              GOSUB AnalizeLine
+            END IF
+          LOOP UNTIL LEN(sLine) < 128
+        CLOSE iFile
+    ELSE
+        lLines = -1
+    END IF
+
+    CountLines& = lLines
+
+EXIT FUNCTION
+
+AnalizeLine:
+   li = 1
+   DO
+     l = INSTR(li, sLine, strR)
+     IF l > 0 THEN
+       lLines = lLines + 1
+       li = l + 1
+     END IF
+   LOOP UNTIL l = 0
+RETURN
+END FUNCTION
+
+FUNCTION DeleteLinesFromFile% (WhichFile AS STRING, Start AS LONG, HowMany AS LONG)
+    ' Var
+    DIM lCount AS LONG, iFile AS INTEGER, iFile2 AS INTEGER, lhm AS LONG, iError AS INTEGER
+    DIM sLine AS STRING, sDummyFile AS STRING
+
+    IF FileExists%(WhichFile) THEN
+        sDummyFile = GetDummyFile$(WhichFile)
+
+        ' It is assumed a text file
+        iFile = FREEFILE
+        OPEN WhichFile FOR INPUT AS #iFile
+
+        iFile2 = FREEFILE
+        OPEN sDummyFile FOR OUTPUT AS #iFile2
+
+        lhm = 0
+        DO WHILE NOT EOF(iFile)
+            LINE INPUT #iFile, sLine
+            lCount = lCount + 1
+            IF lCount >= Start AND lhm < HowMany THEN
+                lhm = lhm + 1
+            ELSE
+                PRINT #iFile2, sLine
+            END IF
+        LOOP
+
+        CLOSE iFile2, iFile
+
+        ' Check if everything went ok or not
+        iError = 0
+        IF lCount < Start THEN
+            iError = 2 ' Full file is shorter than the start line stated,
+                       '  process will be aborted.
+        ELSEIF lhm < HowMany THEN
+            iError = 1 ' File was shorter than lines requested to be removed,
+                       '  process will be aborted.
+        END IF
+
+        IF iError > 0 THEN
+          KILL sDummyFile  ' Process aborted
+        ELSE
+          KILL WhichFile
+          NAME sDummyFile AS WhichFile
+        END IF
+    ELSE
+      iError = 3 ' The file doesn't exist. The process is aborted.
+    END IF
+
+    DeleteLinesFromFile% = iError
+
+END FUNCTION
+
+FUNCTION ErrorMessage$ (WhichError AS INTEGER)
+    ' Var
+    DIM sError AS STRING
+
+    SELECT CASE WhichError
+      CASE 0: sError = "Everything went Ok. Lines removed from file."
+      CASE 1: sError = "File is shorter than the number of lines stated to remove. Process aborted."
+      CASE 2: sError = "Whole file is shorter than the starting point stated. Process aborted."
+      CASE 3: sError = "File doesn't exist. Process aborted."
+      CASE 4: sError = "The file doesn't seem to be a text file. Process aborted."
+      CASE 5: sError = "You need to provide a valid file name, please."
+    END SELECT
+
+    ErrorMessage$ = sError
+END FUNCTION
+
+FUNCTION FileExists% (WhichFile AS STRING)
+    ' Var
+    DIM iFile AS INTEGER
+    DIM iItExists AS INTEGER
+    SHARED iErr AS INTEGER
+
+    ON ERROR GOTO FileError
+    iFile = FREEFILE
+    iErr = 0
+    OPEN WhichFile FOR BINARY AS #iFile
+    IF iErr = 0 THEN
+        iItExists = LOF(iFile) > 0
+        CLOSE #iFile
+
+        IF NOT iItExists THEN
+            KILL WhichFile
+        END IF
+    END IF
+    ON ERROR GOTO 0
+    FileExists% = iItExists
+
+END FUNCTION
+
+FUNCTION GetDummyFile$ (WhichFile AS STRING)
+    ' Var
+    DIM i AS INTEGER, j AS INTEGER
+
+    ' Gets the path specified in WhichFile
+    i = 1
+    DO
+        j = INSTR(i, WhichFile, "\")
+        IF j > 0 THEN i = j + 1
+    LOOP UNTIL j = 0
+
+    GetDummyFile$ = LEFT$(WhichFile, i - 1) + "$dummyf$.tmp"
+END FUNCTION
+
+FUNCTION YorN$ ()
+    ' Var
+    DIM sYorN AS STRING
+
+    DO
+      sYorN = UCASE$(INPUT$(1))
+      IF INSTR("YN", sYorN) = 0 THEN
+        BEEP
+      END IF
+    LOOP UNTIL sYorN = "Y" OR sYorN = "N"
+
+    YorN$ = sYorN
+END FUNCTION

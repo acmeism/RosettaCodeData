@@ -3,8 +3,8 @@ def compress(uncompressed):
 
     # Build the dictionary.
     dict_size = 256
-    dictionary = dict((chr(i), chr(i)) for i in xrange(dict_size))
-    # in Python 3: dictionary = {chr(i): chr(i) for i in range(dict_size)}
+    dictionary = dict((chr(i), i) for i in xrange(dict_size))
+    # in Python 3: dictionary = {chr(i): i for i in range(dict_size)}
 
     w = ""
     result = []

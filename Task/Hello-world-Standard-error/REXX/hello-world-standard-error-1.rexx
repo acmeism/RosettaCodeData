@@ -1,1 +1,1 @@
-say 'Goodbye, World!'
+call lineout 'STDERR', "Goodbye, World!"

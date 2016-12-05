@@ -22,4 +22,4 @@
    numbers))
 
 (defun print-max-factor (pair)
-  (format t "~a has the largest miniumum factor ~a~%" (car pair) (cdr pair)))
+  (format t "~a has the largest minimum factor ~a~%" (car pair) (cdr pair)))

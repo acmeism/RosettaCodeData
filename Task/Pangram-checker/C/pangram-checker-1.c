@@ -1,27 +1,32 @@
 #include <stdio.h>
 
-int isPangram(const char *string)
+int is_pangram(const char *s)
 {
+	const char *alpha = ""
+		"abcdefghjiklmnopqrstuvwxyz"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
 	char ch, wasused[26] = {0};
 	int total = 0;
 
-	while ((ch = *string++)) {
-		int index;
+	while ((ch = *s++) != '\0') {
+		const char *p;
+		int idx;
 
-		if('A'<=ch&&ch<='Z')
-			index = ch-'A';
-		else if('a'<=ch&&ch<='z')
-			index = ch-'a';
-		else
+		if ((p = strchr(alpha, ch)) == NULL)
 			continue;
 
-		total += !wasused[index];
-		wasused[index] = 1;
+		idx = (p - alpha) % 26;
+
+		total += !wasused[idx];
+		wasused[idx] = 1;
+		if (total == 26)
+			return 1;
 	}
-	return (total==26);
+	return 0;
 }
 
-int main()
+int main(void)
 {
 	int i;
 	const char *tests[] = {
@@ -31,6 +36,6 @@ int main()
 
 	for (i = 0; i < 2; i++)
 		printf("\"%s\" is %sa pangram\n",
-			tests[i], isPangram(tests[i])?"":"not ");
+			tests[i], is_pangram(tests[i])?"":"not ");
 	return 0;
 }

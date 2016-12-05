@@ -5,7 +5,7 @@ simulate=:3 :0
   scenario=. ((pick@-.,])pick,pick) bind x
   stayWin=. =/@}.
   switchWin=. pick@(x -. }:) = {:
-  r=.(stayWin,switchWin)@scenario"0 i.1000
+  r=.(stayWin,switchWin)@scenario"0 i.y
   labels=. ];.2 'limit stay switch '
   smoutput labels,.":"0 y,+/r
 )

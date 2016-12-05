@@ -1,11 +1,3 @@
-(define-library (lib sha1)
-  (export
-    sha1:digest)
-
-  (import (r5rs base)
-      (owl math) (owl list) (owl string) (owl list-extra))
-(begin
-
 ; band - binary AND operation
 ; bor - binary OR operation
 ; bxor - binary XOR operation
@@ -166,4 +158,3 @@
                      (->32 (+ C c))
                      (->32 (+ D d))
                      (->32 (+ E e)))))))))
-))

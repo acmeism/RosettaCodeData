@@ -14,7 +14,24 @@ end
 
 --tail-recursive
 function a(n,u,s) if n<2 then return u+s end return a(n-1,u+s,u) end
-function trfib(i) return a(i,1,0) end
+function trfib(i) return a(i-1,1,0) end
 
 --table-recursive
-fib_n = setmetatable({1, 1}, {__index = function(z,n) return z[n-1] + z[n-2] end})
+fib_n = setmetatable({1, 1}, {__index = function(z,n) return n<=0 and 0 or z[n-1] + z[n-2] end})
+
+--table-recursive done properly (values are actually saved into table; also the first element
+-- of Fibonacci sequence is 0, so the initial table should be {0, 1}).
+fib_n = setmetatable({0, 1}, {
+  __index = function(t,n)
+    if n <= 0 then return 0 end
+    t[n] = t[n-1] + t[n-2]
+    return t[n]
+  end
+})
+
+--loop version
+function lfibs(n)
+  local p0,p1=0,1
+  for _=1,n do p0,p1 = p1,p0+p1 end
+  return p0
+end

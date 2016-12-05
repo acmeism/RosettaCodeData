@@ -1,5 +1,5 @@
 sub balanced($_ is copy) {
-    () while s:g/'[]'//;
+    Nil while s:g/'[]'//;
     $_ eq '';
 }
 

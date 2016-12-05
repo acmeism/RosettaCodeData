@@ -13,13 +13,13 @@ sub ev (Str $s --> Num) {
     my sub minus ($b) { $b ?? -1 !! +1 }
 
     my sub sum ($x) {
-        [+] product($x<product>), map
+        [+] flat product($x<product>), map
             { minus($^y[0] eq '-') * product $^y<product> },
             |($x[0] or [])
     }
 
     my sub product ($x) {
-        [*] factor($x<factor>), map
+        [*] flat factor($x<factor>), map
             { factor($^y<factor>) ** minus($^y[0] eq '/') },
             |($x[0] or [])
     }

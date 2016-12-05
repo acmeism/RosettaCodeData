@@ -1,0 +1,1 @@
+fun main(a: Array<String>) {}

@@ -28,7 +28,7 @@ sub cuboid ( [$x, $y, $z] ) {
     my \x = $x * 4;
     my \y = $y * 4;
     my \z = $z * 2;
-    my Bool %t;
+    my %t;
     sub horz ($X, $Y) { %t{$Y     }{$X + $_} = True for 0 .. x }
     sub vert ($X, $Y) { %t{$Y + $_}{$X     } = True for 0 .. y }
     sub diag ($X, $Y) { %t{$Y - $_}{$X + $_} = True for 0 .. z }

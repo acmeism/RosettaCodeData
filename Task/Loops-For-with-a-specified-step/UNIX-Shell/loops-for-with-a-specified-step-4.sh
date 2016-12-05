@@ -1,4 +1,5 @@
-for x in {2..8..2}
-do
-  echo $x
+x=2
+while ((x<=8)); do
+	echo $x
+	((x+=2))
 done

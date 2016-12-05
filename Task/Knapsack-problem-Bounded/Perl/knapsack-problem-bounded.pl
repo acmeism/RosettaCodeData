@@ -64,7 +64,7 @@ sub pick {
 	}]}
 }
 
-my ($v, $w, $p) = pick(400, $#items);
+my ($v, $w, $p) = pick($max_weight, $#items);
 for (0 .. $#$p) {
 	if ($p->[$_] > 0) {
 		print "$p->[$_] of $items[$_]{name}\n";

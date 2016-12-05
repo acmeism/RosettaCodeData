@@ -1,15 +1,6 @@
 require 'matrix'
 
 class Vector
-  def cross_product(v)
-    unless size == 3 && v.size == 3
-      raise ArgumentError, "Vectors must have size 3"
-    end
-    Vector[self[1] * v[2] - self[2] * v[1],
-           self[2] * v[0] - self[0] * v[2],
-           self[0] * v[1] - self[1] * v[0]]
-  end
-
   def scalar_triple_product(b, c)
     self.inner_product(b.cross_product c)
   end

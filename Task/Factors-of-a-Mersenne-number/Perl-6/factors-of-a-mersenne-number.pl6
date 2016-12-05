@@ -26,7 +26,7 @@ sub mtest($bits, $p) {
     my @bits = $bits.base(2).comb;
     loop (my $sq = 1; @bits; $sq %= $p) {
 	$sq *= $sq;
-	$sq += $sq if @bits.shift;
+	$sq += $sq if 1 == @bits.shift;
     }
     $sq == 1;
 }

@@ -13,7 +13,7 @@ my @a = <3 4 5>;
 my @b = <4 3 5>;
 my @c = <-5 -12 -13>;
 
-say (:@a, :@b, :@c).perl;
+say (:@a, :@b, :@c);
 say "a ⋅ b = { @a ⋅ @b }";
 say "a ⨯ b = <{ @a ⨯ @b }>";
 say "a ⋅ (b ⨯ c) = { scalar-triple-product(@a, @b, @c) }";

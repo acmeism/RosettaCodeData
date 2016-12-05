@@ -1,1 +1,7 @@
-(open "output.txt", :w).print(slurp "input.txt")
+my $in = open "input.txt";
+my $out = open "output.txt", :w;
+for $in.lines -> $line {
+    $out.say: $line;
+}
+$in.close;
+$out.close;

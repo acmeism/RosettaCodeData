@@ -1,1 +1,1 @@
-$*IN.get.words.reduce(* + *).say
+say [+] get.words;

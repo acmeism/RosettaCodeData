@@ -1,1 +1,1 @@
-my $pi ::= 3 + rand;
+my $pi := 3 + rand;

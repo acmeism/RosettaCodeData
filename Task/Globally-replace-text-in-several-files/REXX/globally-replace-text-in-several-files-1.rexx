@@ -1,28 +1,27 @@
-/*REXX program to read the files specified and globally replace a string*/
-old = 'Goodbye London!'                /*old text to be replaced.       */
-new = 'Hello New York!'                /*new text used for replacement. */
-parse arg fileList;       files=words(fileList);           pad=left('',20)
-                                       hdr='────── file'   /*eyecatcher.*/
-   do f=1  for files;     aFile=translate(word(fileList,f),,','); say; say
-   say hdr' is being read: '  aFile  pad  "("f  'out of'  files  "files)."
-   call linein aFile,1,0               /*position the file for input.   */
-   changes=0                           /*# changes in the file (so far).*/
+/*REXX program  reads  the  files specified  and  globally replaces  a string.          */
+old= "Goodbye London!"                           /*the  old text     to be replaced.    */
+new= "Hello New York!"                           /* "   new   "   used for replacement. */
+parse  arg  fileList                             /*obtain required list of files from CL*/
+files=words(fileList)                            /*the number of files in the file list.*/
 
-      do j=1  while lines(aFile)\==0   /*read a file  (if it exists).   */
-      @.j = linein(aFile)              /*read a record from the file.   */
-      if pos(old,@.j)==0  then iterate /*Anything to change?   No, skip.*/
-      changes = changes+1              /*bump the change counter.       */
-      @.j = changestr(old,@.j,new)     /*change this record, old ──► new*/
-      end   /*j*/
+   do f=1  for files;    fn=translate(word(fileList,f),,',');     say;   say
+   say '──────── file is being read: '    fn    " ("f   'out of'   files   "files)."
+   call linein fn,1,0                            /*position the file for input.         */
+   changes=0                                     /*the number of changes in file so far.*/
+             do rec=0  while lines(fn)\==0       /*read a file   (if it exists).        */
+             @.rec=linein(fn)                    /*read a record (line)  from the file. */
+             if pos(old, @.rec)==0  then iterate /*Anything to change?   No, then skip. */
+             changes=changes + 1                 /*flag that file contents have changed.*/
+             @.rec=changestr(old, @.rec, new)    /*change the @.rec record, old ──► new.*/
+             end   /*rec*/
 
-   say hdr '     was read: '   aFile", with "   j-1   'records.'
-   if  changes == 0  then  do
-                           say hdr ' not  changed: ' aFile
-                           iterate  /*f*/
-                           end
-   call lineout aFile,,1               /*position the file for output.  */
-   say hdr 'being changed: ' aFile
-     do r=1 for j-1;  call lineout aFile,@.r;  end      /*re-write file.*/
-   say hdr 'was   changed: ' aFile  " with" changes 'lines changed.'
-   end   /*f*/
-                                       /*stick a fork in it, we're done.*/
+   say '──────── file has been read: '         fn", with "      rec      'records.'
+   if changes==0  then do;  say '──────── file  not  changed: '   fn;   iterate;   end
+   call lineout fn,,1                            /*position file for output at 1st line.*/
+   say '──────── file being changed: '   fn
+
+       do r=0  for rec;     call lineout fn, @.r /*re─write the contents of the file.   */
+       end   /*r*/
+
+   say '──────── file was   changed: '   fn    " with"   changes   'lines changed.'
+   end   /*f*/                                   /*stick a fork in it,  we're all done. */

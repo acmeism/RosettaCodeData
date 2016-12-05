@@ -1,0 +1,23 @@
+fn merge<T: Copy + PartialOrd>(x1: &[T], x2: &[T], y: &mut [T]) {
+	assert_eq!(x1.len() + x2.len(), y.len());
+	let mut i = 0;
+	let mut j = 0;
+	let mut k = 0;
+	while i < x1.len() && j < x2.len() {
+		if x1[i] < x2[j] {
+			y[k] = x1[i];
+			k += 1;
+			i += 1;
+		} else {
+			y[k] = x2[j];
+			k += 1;
+			j += 1;
+		}
+	}
+	if i < x1.len() {
+		y[k..].copy_from_slice(&x1[i..]);
+	}
+	if j < x2.len() {
+		y[k..].copy_from_slice(&x2[j..]);
+	}
+}

@@ -8,22 +8,19 @@
     }
 
     // Monadic bind (chain) for lists
-    function chain(xs, f) {
+    function mb(xs, f) {
         return [].concat.apply([], xs.map(f));
     }
 
-    var lstRange = range(m, n),
+    var rng = range(m, n),
 
-        lstTable = [['x'].concat(lstRange)].concat(
-            chain(lstRange, function (y) {
-                return [[y].concat(
-                    chain(lstRange, function (x) {
-                        return x < y ? [''] : [x * y]; // triangle only
-                    })
-                )]
-            })
-        );
+        lstTable = [['x'].concat(   rng )]
+                         .concat(mb(rng,   function (x) {
+        return       [[x].concat(mb(rng,   function (y) {
 
+            return y < x ? [''] : [x * y];               // triangle only
+
+    }))]}));
 
     /*                        FORMATTING OUTPUT                             */
 

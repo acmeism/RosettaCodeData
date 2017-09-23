@@ -21,7 +21,7 @@ sub mo-prime($a, $p, $e) {
     my $t = ($p - 1) * ($p ** ($e - 1)); #  = Phi($p**$e) where $p prime
     my @qs = 1;
     for factor($t) -> $f {
-        @qs = @qs.map(-> $q { (0..$f.value).map(-> $j { $q * $f.key ** $j }) });
+        @qs = flat @qs.map(-> $q { (0..$f.value).map(-> $j { $q * $f.key ** $j }) });
     }
     @qs.sort();
 
@@ -30,15 +30,13 @@ sub mo-prime($a, $p, $e) {
 
 sub mo($a, $m) {
     $a gcd $m == 1 || die "$a and $m are not relatively prime";
-    [lcm] 1, factor($m).map(-> $r { mo-prime($a, $r.key, $r.value) });
+    [lcm] flat 1, factor($m).map(-> $r { mo-prime($a, $r.key, $r.value) });
 }
 
 sub MAIN("test") {
     use Test;
 
     for (10, 21, 25, 150, 1231, 123141, 34131) -> $n {
-        # say factor($n).perl;
-        # say factor($n).map(-> $pair { $pair.key ** $pair.value }).perl;
         is ([*] factor($n).map(-> $pair { $pair.key ** $pair.value })), $n, "$n factors correctly";
     }
 

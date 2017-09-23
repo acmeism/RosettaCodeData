@@ -5,7 +5,7 @@ import std.algorithm: min, max;
 import std.parallelism: task;
 import core.thread: Thread;
 import core.sync.mutex: Mutex;
-import core.time: dur;
+import core.time: seconds;
 
 __gshared uint transfersCount;
 
@@ -73,24 +73,22 @@ final class Buckets(size_t nBuckets) if (nBuckets > 0) {
 }
 
 void randomize(size_t N)(Buckets!N data) {
-    immutable maxi = data.length - 1;
     auto rng = Xorshift(1);
 
     while (data.running) {
-        immutable i = uniform(0, maxi, rng);
-        immutable j = uniform(0, maxi, rng);
-        immutable amount = uniform(0, 20, rng);
+        immutable i = uniform(0, data.length, rng);
+        immutable j = uniform(0, data.length, rng);
+        immutable amount = uniform!"[]"(0, 20, rng);
         data.transfer(i, j, amount);
     }
 }
 
 void equalize(size_t N)(Buckets!N data) {
-    immutable maxi = data.length - 1;
     auto rng = Xorshift(1);
 
     while (data.running) {
-        immutable i = uniform(0, maxi, rng);
-        immutable j = uniform(0, maxi, rng);
+        immutable i = uniform(0, data.length, rng);
+        immutable j = uniform(0, data.length, rng);
         immutable a = data[i];
         immutable b = data[j];
         if (a > b)
@@ -104,7 +102,7 @@ void display(size_t N)(Buckets!N data) {
     foreach (immutable _; 0 .. 10) {
         writeln(transfersCount, " ", data);
         transfersCount = 0;
-        Thread.sleep(dur!"msecs"(1000));
+        Thread.sleep(1.seconds);
     }
     data.running = false;
 }

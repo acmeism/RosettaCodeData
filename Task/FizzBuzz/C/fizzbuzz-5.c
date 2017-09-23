@@ -1,11 +1,5 @@
-#include<stdio.h>
+#include <stdio.h>
 
-int main ()
-{
-	int i;
-	const char *s[] = { "%d\n", "Fizz\n", s[3] + 4, "FizzBuzz\n" };
-	for (i = 1; i <= 100; i++)
-		printf(s[!(i % 3) + 2 * !(i % 5)], i);
-
-	return 0;
+int main() {
+  for (int i=1; i<=105; i++) if (i%3 && i%5) printf("%3d ", i); else printf("%s%s%s", i%3?"":"Fizz", i%5?"":"Buzz", i%15?" ":"\n");
 }

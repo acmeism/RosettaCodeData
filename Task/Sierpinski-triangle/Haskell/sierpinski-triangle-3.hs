@@ -1,16 +1,9 @@
-import Data.List (intersperse)
+import Data.Bits ((.&.))
 
-sierpinski :: Int -> String
-sierpinski n = let
+sierpinski n = map row [m, m-1 .. 0] where
+	m = 2^n - 1
+	row y = replicate y ' ' ++ concatMap cell [0..m - y] where
+		cell x	| y .&. x == 0 = " *"
+			| otherwise = "  "
 
-    -- Top down, each row after the first is an XOR rewrite
-    rule90 n = (scanl next ['*'] [1..n-1]) where
-        next line _ = zipWith xor (" " ++ line) (line ++ " ")
-        xor l r | l == r = ' ' | otherwise = '*'
-
-    -- Bottom up, each line above the base is indented 1 more space
-    in fst (foldr spacing ("", "") (rule90 (2^n))) where
-        spacing x (s, w) =
-            (concat [w, intersperse ' ' x, "\n", s], w ++ " ")
-
-main = putStr $ sierpinski 4
+main = mapM_ putStrLn $ sierpinski 4

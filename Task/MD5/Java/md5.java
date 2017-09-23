@@ -1,28 +1,25 @@
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-/**
- * Test MD5 digest computation
- *
- * @author Roedy Green
- * @version 1.0
- * @since 2004-06-07
- */
-public final class MD5{
-	public static void main(String[] args) throws UnsupportedEncodingException,
-			NoSuchAlgorithmException{
-		byte[] theTextToDigestAsBytes=
-				"The quick brown fox jumped over the lazy dog's back"
-						.getBytes("8859_1");
-		MessageDigest md= MessageDigest.getInstance("MD5");
-		md.update(theTextToDigestAsBytes);
-		byte[] digest= md.digest();
+public class Digester {
 
-		// dump out the hash
-		for(byte b: digest){
-			System.out.printf("%02X", b & 0xff);
-		}
-		System.out.println();
-	}
+    public static void main(String[] args) {
+        System.out.println(hexDigest("Rosetta code", "MD5"));
+    }
+
+    static String hexDigest(String str, String digestName) {
+        try {
+            MessageDigest md = MessageDigest.getInstance(digestName);
+            byte[] digest = md.digest(str.getBytes(StandardCharsets.UTF_8));
+            char[] hex = new char[digest.length * 2];
+            for (int i = 0; i < digest.length; i++) {
+                hex[2 * i] = "0123456789abcdef".charAt((digest[i] & 0xf0) >> 4);
+                hex[2 * i + 1] = "0123456789abcdef".charAt(digest[i] & 0x0f);
+            }
+            return new String(hex);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 }

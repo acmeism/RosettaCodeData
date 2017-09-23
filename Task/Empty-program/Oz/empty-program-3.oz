@@ -1,4 +1,0 @@
-functor
-define
-   skip
-end

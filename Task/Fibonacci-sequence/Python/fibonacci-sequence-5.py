@@ -1,7 +1,11 @@
-def fibFastRec(n):
-    def fib(prvprv, prv, c):
-        if c < 1:
-            return prvprv
-        else:
-            return fib(prv, prvprv + prv, c - 1)
-    return fib(0, 1, n)
+def fibMemo():
+    pad = {0:0, 1:1}
+    def func(n):
+        if n not in pad:
+            pad[n] = func(n-1) + func(n-2)
+        return pad[n]
+    return func
+
+fm = fibMemo()
+for i in range(1,31):
+    print fm(i),

@@ -5,9 +5,9 @@ on quickSort(xs)
 
         -- lessOrEqual :: a -> Bool
         script lessOrEqual
-            on lambda(x)
+            on |λ|(x)
                 x ≤ h
-            end lambda
+            end |λ|
         end script
 
         set {less, more} to partition(lessOrEqual, t)
@@ -19,7 +19,7 @@ on quickSort(xs)
 end quickSort
 
 
--- TEST
+-- TEST -----------------------------------------------------------------------
 on run
 
     quickSort([11.8, 14.1, 21.3, 8.5, 16.7, 5.7])
@@ -29,8 +29,7 @@ on run
 end run
 
 
-
--- GENERIC FUNCTIONS
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
 -- partition :: predicate -> List -> (Matches, nonMatches)
 -- partition :: (a -> Bool) -> [a] -> ([a], [a])
@@ -39,7 +38,7 @@ on partition(f, xs)
         set lst to {{}, {}}
         repeat with x in xs
             set v to contents of x
-            set end of item ((lambda(v) as integer) + 1) of lst to v
+            set end of item ((|λ|(v) as integer) + 1) of lst to v
         end repeat
         return {item 2 of lst, item 1 of lst}
     end tell
@@ -61,7 +60,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

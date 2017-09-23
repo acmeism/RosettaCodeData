@@ -1,9 +1,26 @@
-import List
-import Char
+import Data.List (sortBy)
+import Data.Function (on)
+import Data.Char (toLower)
 
-mycmp s1 s2 = case compare (length s2) (length s1) of
-                 EQ -> compare (map toLower s1) (map toLower s2)
-                 x  -> x
+lengthThenAZ :: String -> String -> Ordering
+lengthThenAZ a b
+  | d == EQ = on compare (toLower <$>) a b
+  | otherwise = d
+  where
+    d = on compare length a b
 
-strings = ["Here", "are", "some", "sample", "strings", "to", "be", "sorted"]
-sorted = sortBy mycmp strings
+descLengthThenAZ :: String -> String -> Ordering
+descLengthThenAZ a b
+  | d == EQ = on compare (toLower <$>) a b
+  | otherwise = d
+  where
+    d = on (flip compare) length a b
+
+xs :: [String]
+xs = ["Here", "are", "some", "sample", "strings", "to", "be", "sorted"]
+
+main :: IO ()
+main =
+  mapM_
+    putStrLn
+    [unlines $ sortBy lengthThenAZ xs, unlines $ sortBy descLengthThenAZ xs]

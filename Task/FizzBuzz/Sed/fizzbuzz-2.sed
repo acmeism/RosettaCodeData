@@ -1,1 +1,1 @@
-seq 1 100 | sed -r '3~3 s/[0-9]*/Fizz/; 5~5 s/[0-9]*$/Buzz/'
+seq 100 | sed '/.*[05]$/s//Buzz/;n;s//Buzz/;n;s//Buzz/;s/^[0-9]*/Fizz/'

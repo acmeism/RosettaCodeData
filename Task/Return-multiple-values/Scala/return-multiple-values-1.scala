@@ -1,1 +1,1 @@
-def addsub(x: Int, y: Int) = (x + y, x - y)
+def addSubMult(x: Int, y: Int) = (x + y, x - y, x * y)

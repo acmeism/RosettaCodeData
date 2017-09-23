@@ -5,15 +5,13 @@ on run
         set end of fns to closure(i)
     end repeat
 
-    lambda() of item 3 of fns
-
+    |λ|() of item 3 of fns
 end run
-
 
 on closure(x)
     script
-        on lambda()
-            return x * x
-        end lambda
+        on |λ|()
+            x * x
+        end |λ|
     end script
 end closure

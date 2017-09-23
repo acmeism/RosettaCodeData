@@ -16,7 +16,7 @@ create w 256 allot     \ counted string
 
 : free-dict                           forth-wordlist set-current ;
 
-: in-dict? ( key len -- ? )		\ can assume len > 1
+: in-dict? ( key len -- ? )   \ can assume len > 1
   dict search-wordlist dup if nip then ;
 
 : lookup-dict ( key len -- symbol )
@@ -83,7 +83,7 @@ create entry 256 allot
     else
       abort" bad symbol!"
     then then
-    entry count type	\ output
+    entry count type  \ output
     entry 1+ c@ w+c
     w count add-symbol
     entry count w place

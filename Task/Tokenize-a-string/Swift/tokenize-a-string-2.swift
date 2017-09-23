@@ -1,5 +1,5 @@
 let text = "Hello,How,Are,You,Today"
-let tokens = split(text, { $0 == "," }) // for single-character separator
-println(tokens)
-let result = ".".join(tokens)
-println(result)
+let tokens = text.characters.split(",").map{String($0)} // for single-character separator
+print(tokens)
+let result = tokens.joinWithSeparator(".")
+print(result)

@@ -1,18 +1,18 @@
-(lst => {
+(() => {
     'use strict';
 
 
     // rootMeanSquare :: [Num] -> Real
-    let rootMeanSquare = lst =>
-        Math.sqrt(
-            lst.reduce(
+    const rootMeanSquare = xs =>
+       Math.sqrt(
+            xs.reduce(
                 (a, x) => (a + x * x),
                 0
-            ) / lst.length
+           ) / xs.length
         );
 
 
-    return rootMeanSquare(lst);
+    return rootMeanSquare([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
 
-
-})([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+     // -> 6.2048368229954285
+})();

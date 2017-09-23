@@ -1,11 +1,11 @@
 /*REXX program  obtains and displays  Catalan numbers  from  a  Pascal's triangle.      */
 parse arg N .                                    /*Obtain the optional argument from CL.*/
-if N=='' | N=="."  then N=15                     /*Not specified?  Then use the default.*/
+if N=='' | N==","  then N=15                     /*Not specified?  Then use the default.*/
 numeric digits max(9, N%2 + N%8)                 /*so we can handle huge Catalan numbers*/
 !.=.
-      do j=1  for N                              /* [↓]  display   N   Catalan numbers. */
-      say  comb(j+j,j) % (j+1)                   /*display the   Jth   Catalan number.  */
-      end   /*j*/
+                      do j=1  for N              /* [↓]  display   N   Catalan numbers. */
+                      say  comb(j+j, j) % (j+1)  /*display the   Jth   Catalan number.  */
+                      end   /*j*/
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 !:    procedure expose !.;  parse arg z;     if !.z\==. then return !.z;  _=1

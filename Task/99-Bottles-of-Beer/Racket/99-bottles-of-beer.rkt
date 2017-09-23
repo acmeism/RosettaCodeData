@@ -5,4 +5,4 @@
            Take one down, pass it around\n~a of beer on the wall\n\n"
           (plural bottles) (plural bottles) (plural (sub1 bottles)))
   (unless (= 1 bottles) (sing (sub1 bottles))))
-(sing 100)
+(sing 99)

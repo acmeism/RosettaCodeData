@@ -26,12 +26,12 @@ grammar CollectWords {
 
 class CollectWords::Actions {
     method TOP($/) {
-        make $<word>».ast».flat.Bag;
+        make $<word>».ast.flat.Bag;
     }
 
     method word($/) {
         if $<with_c> + $<no_c> {
-            make ($<with_c>».ast xx $<freq>, $<no_c>».ast xx $<freq>);
+            make flat $<with_c>».ast xx $<freq>, $<no_c>».ast xx $<freq>;
         } else {
             make ();
         }
@@ -48,10 +48,10 @@ class CollectWords::Actions {
 
 sub plausible($good, $bad, $msg) {
     if $good > 2*$bad {
-        say "$msg: PLAUSIBLE ($good ✔ vs. $bad ✘)";
+        say "$msg: PLAUSIBLE ($good  vs. $bad ✘)";
         return True;
     } else {
-        say "$msg: NOT PLAUSIBLE ($good ✔ vs. $bad ✘)";
+        say "$msg: NOT PLAUSIBLE ($good  vs. $bad ✘)";
         return False;
     }
 }

@@ -1,0 +1,176 @@
+{{language|Lamdatalk}}
+
+
+The {lambda way} project is a web application built on two engines:
+
+1)  {lambda tank}, a tiny wiki built as a thin overlay on top of any web browser,
+
+2)  {lambda talk}, a purely functional language unifying authoring, styling and scripting in a single and coherent s-expression based syntax.
+
+=={lambda talk} in a few words==
+
+1) Expressions are written in a prefix notation using curly braces.
+
+2) Away from curly braces words are just words.
+
+  2+3 is equal to {+ 2 3} 
+  -> 2+3 is equal to 5
+
+3) Functions are created with '''lambda''' and named with '''def'''.
+
+  {def foo 
+   {lambda {:a :b} 
+    :a+:b is equal to {+ :a :b}}} 
+  -> foo
+  {foo 2 3} 
+  -> 2+3 is equal to 5
+
+==more about {lambda talk}==
+
+{lambda talk} is freely inspired by the '''λ-calculus'''. At the lowest level a {lambda talk} expression is exclusively made of words, abstractions and applications:
+
+===structure & evaluation===
+
+  expression is [word|abstraction|application]*
+    where
+  1) word        is [^\s{}]*                      -> word
+  2) abstraction is {lambda {words} expression}   -> word
+  3) application is {expression expression}       -> words
+
+1) a word is any character except spaces and curly braces, and is not evaluated out of curly braces,
+
+2) an abstraction is a '''special form''' (called a function) selecting words (called arguments) in an expression (called the body), and is evaluated to a word referencing an anonymous function added to a single dictionary, initially empty,
+
+3) an application is a '''simple form''' calling an abstraction to replace selected words by some other words (called values), and is evaluated to words.
+
+The evaluation stops when all expressions have been replaced by words.
+
+In order to make code easier to write and read, we define a second special form:
+
+  {def word expression}
+
+allowing to create constants added to the dictionary and to give names to anonymous functions.
+
+What can be done with so little?
+
+===Examples===
+
+Out of curly braces words are not evaluated:
+
+  Hello World 
+  -> Hello World
+
+Sequences of words can be given a name:
+
+  {def HI Hello World} 
+  -> HI
+  HI, I just say {HI} 
+  -> HI, I just say Hello World
+
+Abstractions can be defined and immediately called:
+
+  {{lambda {o a} oh happy day!} oOOOo aaAAaa} 
+  -> oOOOoh haaAAaappy daaAAaay!
+
+The abstraction is first evaluated, the application gets the awaited values oOOOo and aaAAaa, calls the abstraction which makes the substitution and returns the result, oOOOoh haaAAaappy daaAAaay!. 
+
+Abstractions can be given a name and then called easily several times:
+
+  {def GOOD_DAY {lambda {o a} oh happy day!}} 
+  -> GOOD_DAY
+  {GOOD_DAY oOOOo aaAaa} 
+  -> oOOOoh haaAaappy daaAaay!
+  {GOOD_DAY ♠ ♥}
+  -> ♠h h♥ppy d♥y!
+
+Most of the time expressions are nested. The expression below returns the first word of Hello World:
+
+  {{lambda {z}
+   {z {lambda {x y} x}}}
+    {{lambda {x y z}
+     {z x y}} Hello World}} 
+  -> Hello
+
+Using names helps to recognize a data structure and its accessors:
+
+  {def CONS {lambda {:x :y :z} {:z :x :y}}}        -> CONS
+  {def CAR  {lambda {:z} {:z {lambda {:x :y} :x}}}} -> CAR
+  {def CDR  {lambda {:z} {:z {lambda {:x :y} :y}}}} -> CDR
+  {CAR {CONS Hello World}} -> Hello
+  {CDR {CONS Hello World}} -> World
+
+===about the implementation===
+
+{lambda talk} is not implemented following the standard process, code -> tokens -> tree -> eval. '''The code is a string from beginning to end'''. At each keyboard input, the code is processed by a single function, do_eval(), which returns words sent to the browser for the final evaluation and display: 
+
+  var do_eval = function( code ) {
+    code = pre_processing( code );
+    code = eval_lambdas( code );   // {lambda {args} body}
+    code = eval_defs( code );      // {def name body}
+    code = eval_forms( code );     // {a {b {c ...}}}
+    code = post_processing( code );
+    return code
+  };
+
+'''1) eval_forms()''': Using a single '''regular expression''' the eval_forms() function loops over the code string, skips the words out of curly braces, matches nested forms {first rest} from inside out, and replaces them by words. The repeated substitutions inside the code string overcomes limitations of regular language. It's a kind of Turing machine. 
+
+'''2) eval_lambdas()''': this function uses arguments as '''regular expressions''' to successively replace occurrences found in the function's body by the given values. Lambdas have the following properties:
+
+- lambdas are '''first class functions''', they can be called as functions' arguments and returned from functions,
+
+- lambdas are pure black boxes, they '''don't create closures''' and are context free, inner lambdas don't see outer functions' arguments, there are no lexical scoping, no free variables,
+
+- lambdas accept de facto '''partial function application''': called with a number of values lesser than its arity, a lambda memorizes the given values and returns a new lambda waiting for the rest.
+
+'''Note:''': This is what Ward Cunningham wrote about such an iconoclastic implementation: ''« I was surprised that the technique worked so well in so many cases. I knew that regex are highly optimized and the cpus themselves optimize sequential access to memory which the regex must have at its core. [..] Yes, this has at its heart the repeated application of a text transformation. The fact that it is repeated application of the same transformation makes it exceptional. [..] Repeated application of Regular Expressions can perform Touring Complete computations. This works because the needed "state" is in the partially evaluated text itself. »'' All is said!
+
+===and?===
+
+Upon these foundations, after '''Alonzo Church''', we could define the set of natural numbers [ZERO, ONE, TWO, ...] and their associate operators, [SUCC, ADD, MUL, POWER, PRED, ...] allowing to build '''iterative''' and '''recursive''' processes. For instance, computing factorials:
+
+  {CHURCH 
+   {{lambda {:n}
+    {{lambda {:g :n} {:g :g :n}} 
+     {lambda {:g :n}
+      {{{ISZERO :n} 
+       {CONS {lambda {:g :n} ONE}
+             {lambda {:g :n}
+              {MUL :n {:g :g {PRED :n}}}}
+      }} :g :n}} :n}} FIVE}}
+  -> 120 
+
+=={lambda talk} full==
+
+In fact, {lambda talk} takes benefit from the extraordinary power of modern web browsers and simply adds a coherent and unique language on existing tools.  
+
+In its complete state, {lambda talk} comes with a more complete set of special forms, [lambda, def, if, let, quote, macro, require, script, style], and a dictionary containing about 200 primitive functions built on the Javascript Math Object, HTML tags, CSS rules, SVG, the DOM and more, pairs, lists, arrays, light-show, spreadsheet, splines, turtle graphics, big numbers, ... and some other specific to the wiki context. Example:
+
+  {def ! {lambda {:a :b}
+   {if {< :b 2}
+    then :a
+    else {! {* :a :b} {- :b 1}}}}}
+  -> !
+  {! 1 6}
+  -> 720
+
+What for? Well, you could compute the famous Euler's number:
+
+  {def euler {lambda {:n} 
+    {+ {map {lambda {:n} {/ 1 {! 1 :n}}} {serie 0 :n}}}}}
+  -> euler
+  {euler 17} 
+  -> 2.7182818284590455
+
+Web design is not forgotten and examples can be seen in the workshop's website. Thanks to the language's unicity, authors, web-designers and coders can share their experiences to build rich web pages.
+
+The {lambda way} project adds on browsers a thin overlay, {lambda tank}, giving to {lambda talk} a small ''Interactive Development Environment'' without any external dependencies and thereby easy to download (50kb) and install on any web account provider running PHP. From any web browser, on any system, complex and dynamic web pages can be created, enriched, structured and tested in real time on the web.
+
+A full presentation of the {lambda way} project can be seen in:
+
+  - http://lambdaway.free.fr/
+  - http://lambdaway.free.fr/workshop/?view=about
+  - http://lambdaway.free.fr/workshop/?view=foundations
+  - http://lambdaway.free.fr/workshop/?view=oxford_slides
+  - and several other pages of the workshop.
+
+Your opinion is welcome. Alain Marty

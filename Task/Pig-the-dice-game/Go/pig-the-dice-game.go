@@ -27,7 +27,7 @@ func main() {
 			playerScores[player] += currentScore
 			fmt.Printf("    Player %v now has a score of %v.\n\n", player, playerScores[player])
 
-			if playerScores[player] >= 10 {
+			if playerScores[player] >= 100 {
 				fmt.Printf("    Player %v wins!!!\n", player)
 				return
 			}

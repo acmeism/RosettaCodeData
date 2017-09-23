@@ -3,9 +3,9 @@
 -- reverse1 :: [a] -> [a]
 on reverse1(xs)
     script rev
-        on lambda(a, x)
+        on |λ|(a, x)
             a & x
-        end lambda
+        end |λ|
     end script
 
     if class of xs is text then
@@ -14,7 +14,6 @@ on reverse1(xs)
         foldr(rev, {}, xs)
     end if
 end reverse1
-
 
 -- or the built-in reverse method for lists
 
@@ -28,22 +27,19 @@ on reverse2(xs)
 end reverse2
 
 
-
--- TESTING reverse1 and reverse2 with same string and list
+-- TESTING reverse1 and reverse2 with same string and list ---------------------------------------------------------------------------
 on run
     script test
-        on lambda(f)
+        on |λ|(f)
             map(f, ["Hello there !", {1, 2, 3, 4, 5}])
-        end lambda
+        end |λ|
     end script
 
     map(test, [reverse1, reverse2])
 end run
 
 
-
-
--- GENERIC LIBRARY FUNCTIONS
+-- GENERIC FUNCTIONS ---------------------------------------------------------------------------
 
 -- foldr :: (a -> b -> a) -> a -> [b] -> a
 on foldr(f, startValue, xs)
@@ -51,7 +47,7 @@ on foldr(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from lng to 1 by -1
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
@@ -63,7 +59,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -76,7 +72,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

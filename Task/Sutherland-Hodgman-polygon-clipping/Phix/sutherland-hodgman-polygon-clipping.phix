@@ -1,0 +1,109 @@
+--
+-- demo\rosetta\Sutherland_Hodgman_polygon_clipping.exw
+--
+enum X,Y
+
+function inside(sequence cp1, sequence cp2, sequence p)
+    return (cp2[X]-cp1[X])*(p[Y]-cp1[Y])>(cp2[Y]-cp1[Y])*(p[X]-cp1[X])
+end function
+
+function intersection(sequence cp1, sequence cp2, sequence s, sequence e)
+atom {dcx,dcy} = {cp1[X]-cp2[X],cp1[Y]-cp2[Y]},
+     {dpx,dpy} = {s[X]-e[X],s[Y]-e[Y]},
+     n1 = cp1[X]*cp2[Y]-cp1[Y]*cp2[X],
+     n2 = s[X]*e[Y]-s[Y]*e[X],
+     n3 = 1/(dcx*dpy-dcy*dpx)
+    return {(n1*dpx-n2*dcx)*n3,(n1*dpy-n2*dcy)*n3}
+end function
+
+function sutherland_hodgman(sequence subjectPolygon, sequence clipPolygon)
+sequence cp1, cp2, s, e, inputList, outputList = subjectPolygon
+    cp1 = clipPolygon[$]
+    for i=1 to length(clipPolygon) do
+        cp2 = clipPolygon[i]
+        inputList = outputList
+        outputList = {}
+        s = inputList[$]
+        for j=1 to length(inputList) do
+            e = inputList[j]
+            if inside(cp1,cp2,e) then
+                if not inside(cp1,cp2,s) then
+                    outputList = append(outputList,intersection(cp1,cp2,s,e))
+                end if
+                outputList = append(outputList,e)
+            elsif inside(cp1,cp2,s) then
+                outputList = append(outputList,intersection(cp1,cp2,s,e))
+            end if
+            s = e
+        end for
+        cp1 = cp2
+    end for
+    return outputList
+end function
+
+constant subjectPolygon = {{50, 150}, {200, 50}, {350, 150}, {350, 300},
+                           {250, 300}, {200, 250}, {150, 350}, {100, 250},
+                           {100, 200}},
+         clipPolygon = {{100, 100}, {300, 100}, {300, 300}, {100, 300}}
+
+sequence clippedPolygon = sutherland_hodgman(subjectPolygon,clipPolygon)
+
+include pGUI.e
+
+Ihandle dlg, canvas
+cdCanvas cddbuffer, cdcanvas
+
+procedure draw_poly(sequence poly)
+    cdCanvasBegin(cddbuffer,CD_FILL)
+    for i=1 to length(poly) do
+        atom {x,y} = poly[i]
+        cdCanvasVertex(cddbuffer,x,y)
+    end for
+    cdCanvasEnd(cddbuffer)
+end procedure
+
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+    cdCanvasActivate(cddbuffer)
+    cdCanvasClear(cddbuffer)
+    cdCanvasSetForeground(cddbuffer, CD_CYAN)
+    draw_poly(subjectPolygon)
+    cdCanvasSetForeground(cddbuffer, CD_MAGENTA)
+    draw_poly(clipPolygon)
+    cdCanvasSetForeground(cddbuffer, CD_ORANGE)
+    draw_poly(clippedPolygon)
+    cdCanvasFlush(cddbuffer)
+    return IUP_DEFAULT
+end function
+
+function map_cb(Ihandle ih)
+    cdcanvas = cdCreateCanvas(CD_IUP, ih)
+    cddbuffer = cdCreateCanvas(CD_DBUFFER, cdcanvas)
+    cdCanvasSetBackground(cddbuffer, CD_WHITE)
+    cdCanvasSetForeground(cddbuffer, CD_GRAY)
+    return IUP_DEFAULT
+end function
+
+function esc_close(Ihandle /*ih*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    return IUP_CONTINUE
+end function
+
+procedure main()
+    IupOpen()
+
+    canvas = IupCanvas(NULL)
+    IupSetAttribute(canvas, "RASTERSIZE", "400x400")
+    IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
+    IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+
+    dlg = IupDialog(canvas)
+    IupSetAttribute(dlg, "TITLE", "Sutherland-Hodgman polygon clipping")
+    IupSetAttribute(dlg, "RESIZE", "NO")
+    IupSetCallback(dlg, "K_ANY", Icallback("esc_close"))
+
+    IupShow(dlg)
+    IupMainLoop()
+    IupClose()
+end procedure
+
+main()

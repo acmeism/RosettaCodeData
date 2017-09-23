@@ -1,3 +1,4 @@
-    Haystack ;:^:_1@(] ,. [ ((<'is not in haystack')"_)`(#@[ I.@:= ])`(8!:0@])} i.) Needles
-Washington is not in haystack
-Bush 4
+   Needles e. Haystack
+0 1
+   1 2 3 4 5 6 7 8 9 e. 2 3 5 60
+0 1 1 0 1 0 0 0 0

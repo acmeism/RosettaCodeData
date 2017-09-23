@@ -1,4 +1,4 @@
 for i in 1..5:
-  for i in 1..i:
+  for j in 1..i:
     stdout.write("*")
   echo("")

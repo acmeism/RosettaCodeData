@@ -10,9 +10,9 @@ end positionalArgs
 -- namedArgs :: Record -> String
 on namedArgs(rec)
     script showKVpair
-        on lambda(k)
+        on |λ|(k)
             my putStrLn(k & " -> " & keyValue(rec, k))
-        end lambda
+        end |λ|
     end script
 
     -- follow each argument name and value with line feed
@@ -52,7 +52,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -89,7 +89,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

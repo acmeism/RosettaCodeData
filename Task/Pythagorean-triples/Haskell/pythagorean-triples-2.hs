@@ -1,15 +1,22 @@
-triangles :: Int -> [[Int]]
-triangles max_peri | max_peri < 12 = []
-           | otherwise = concat tiers where
-    tiers = takeWhile (not.null) $ iterate tier [[3,4,5]]
-    tier = concatMap (filter ((<=max_peri).sum).tmul)
-    tmul t = map (map (sum . zipWith (*) t))
-        [[[ 1,-2,2],[ 2,-1,2],[ 2,-2,3]],
-         [[ 1, 2,2],[ 2, 1,2],[ 2, 2,3]],
-         [[-1, 2,2],[-2, 1,2],[-2, 2,3]]]
+pythagoreanTriplesBelow :: Int -> [[Int]]
+pythagoreanTriplesBelow n =
+  let m = quot n 2
+  in concatMap
+       (\x ->
+           concatMap
+             (\y ->
+                 concatMap
+                   (\z ->
+                       if x + y + z <= n && x ^ 2 + y ^ 2 == z ^ 2
+                         then [[x, y, z]]
+                         else [])
+                   [y + 1 .. m])
+             [x + 1 .. m])
+       [1 .. m]
 
-triangle_count max_p = (length t, sum $ map ((max_p `div`).sum) t)
-    where t = triangles max_p
-
-main = mapM_ putStrLn $
-    map (\n -> show n ++ " " ++ show (triangle_count n)) $ map (10^) [1..]
+-- TEST -------------------------------------------------------------------------
+main :: IO ()
+main =
+  mapM_
+    (print . length)
+    ([id, filter (\[x, y, _] -> gcd x y == 1)] <*> [pythagoreanTriplesBelow 100])

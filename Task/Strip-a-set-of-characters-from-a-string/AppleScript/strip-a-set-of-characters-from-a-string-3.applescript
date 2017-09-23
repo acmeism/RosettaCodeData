@@ -9,7 +9,7 @@ on stripChars(strNeedles, strHaystack)
 end stripChars
 
 
--- TEST
+-- TEST ------------------------------------------------------------------------
 on run
 
     stripChars("aei", "She was a soul stripper. She took my heart!")
@@ -18,15 +18,14 @@ on run
 end run
 
 
-
--- GENERIC LIBRARY FUNCTIONS
+-- GENERIC FUNCTIONS -----------------------------------------------------------
 
 -- splitRegex :: RegexPattern -> String -> [String]
 on splitRegex(strRegex, str)
     set lstMatches to regexMatches(strRegex, str)
     if length of lstMatches > 0 then
         script preceding
-            on lambda(a, x)
+            on |λ|(a, x)
                 set iFrom to start of a
                 set iLocn to (location of x)
 
@@ -36,7 +35,7 @@ on splitRegex(strRegex, str)
                     set strPart to ""
                 end if
                 {parts:parts of a & strPart, start:iLocn + (length of x) - 1}
-            end lambda
+            end |λ|
         end script
 
         set recLast to foldl(preceding, {parts:[], start:0}, lstMatches)
@@ -74,7 +73,7 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
@@ -95,7 +94,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

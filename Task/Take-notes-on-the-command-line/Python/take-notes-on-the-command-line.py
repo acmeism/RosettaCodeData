@@ -1,15 +1,12 @@
 import sys, datetime, shutil
 
-#sys.argv[1:] = 'go for it'.split()
 if len(sys.argv) == 1:
     try:
-        f = open('notes.txt', 'r')
-        shutil.copyfileobj(f, sys.stdout)
-        f.close()
+        with open('notes.txt', 'r') as f:
+            shutil.copyfileobj(f, sys.stdout)
     except IOError:
         pass
 else:
-    f = open('notes.txt', 'a')
-    f.write(datetime.datetime.now().isoformat() + '\n')
-    f.write("\t%s\n" % ' '.join(sys.argv[1:]))
-    f.close()
+    with open('notes.txt', 'a') as f:
+        f.write(datetime.datetime.now().isoformat() + '\n')
+        f.write("\t%s\n" % ' '.join(sys.argv[1:]))

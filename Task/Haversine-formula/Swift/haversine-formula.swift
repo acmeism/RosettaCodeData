@@ -1,10 +1,10 @@
 import Foundation
 
 func haversine(lat1:Double, lon1:Double, lat2:Double, lon2:Double) -> Double {
-    let lat1rad = lat1 * M_PI/180
-    let lon1rad = lon1 * M_PI/180
-    let lat2rad = lat2 * M_PI/180
-    let lon2rad = lon2 * M_PI/180
+    let lat1rad = lat1 * Double.pi/180
+    let lon1rad = lon1 * Double.pi/180
+    let lat2rad = lat2 * Double.pi/180
+    let lon2rad = lon2 * Double.pi/180
 
     let dLat = lat2rad - lat1rad
     let dLon = lon2rad - lon1rad
@@ -15,4 +15,4 @@ func haversine(lat1:Double, lon1:Double, lat2:Double, lon2:Double) -> Double {
     return R * c
 }
 
-println(haversine(36.12, -86.67, 33.94, -118.40))
+print(haversine(lat1:36.12, lon1:-86.67, lat2:33.94, lon2:-118.40))

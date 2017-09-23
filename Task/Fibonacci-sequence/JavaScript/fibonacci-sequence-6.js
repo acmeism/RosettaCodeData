@@ -1,10 +1,17 @@
-function* fibonacciGenerator() {
-    var prev = 0;
-    var curr = 1;
-    while (true) {
-        yield curr;
-        curr = curr + prev;
-        prev = curr - prev;
+(function () {
+    'use strict';
+
+    function fib(n) {
+        return Array.apply(null, Array(n + 1))
+            .map(function (_, i, lst) {
+                return lst[i] = (
+                    i ? i < 2 ? 1 :
+                    lst[i - 2] + lst[i - 1] :
+                    0
+                );
+            })[n];
     }
-}
-var fib = fibonacciGenerator();
+
+    return fib(32);
+
+})();

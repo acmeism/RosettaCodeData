@@ -1,17 +1,7 @@
-function Y(dn) {
-    return (function(fn) {
-        return fn(fn);
-    }(function(fn) {
-        return dn(function() {
-            return fn(fn).apply(null, arguments);
-        });
-    }));
-}
-var fib = Y(function(fn) {
-    return function(n) {
-        if (n === 0 || n === 1) {
-            return n;
-        }
-        return fn(n - 1) + fn(n - 2);
+var fib = (function(cache){
+    return cache = cache || {}, function(n){
+        if (cache[n]) return cache[n];
+        else return cache[n] = n == 0 ? 0 : n < 0 ? -fib(-n)
+            : n <= 2 ? 1 : fib(n-2) + fib(n-1);
     };
-});
+})();

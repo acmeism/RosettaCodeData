@@ -1,2 +1,1 @@
- *Main> take 10 $ show $ fst $ fibN2 (10^6)
- "1953282128"
+f (n,(a,b)) = (2*n,(a*a+b*b,2*a*b+b*b))     -- iterate f (1,(0,1)) ; b is nth

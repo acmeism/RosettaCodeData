@@ -1,23 +1,25 @@
+-- LAST SUNDAYS OF YEAR ------------------------------------------------------
+
 --  lastSundaysOfYear :: Int -> [Date]
 on lastSundaysOfYear(y)
 
     -- lastWeekDaysOfYear :: Int -> Int -> [Date]
     script lastWeekDaysOfYear
-        on lambda(intYear, iWeekday)
+        on |λ|(intYear, iWeekday)
 
             -- lastWeekDay :: Int -> Int -> Date
             script lastWeekDay
-                on lambda(iLastDay, iMonth)
+                on |λ|(iLastDay, iMonth)
                     set iYear to intYear
 
                     calendarDate(iYear, iMonth, iLastDay - ¬
                         (((weekday of calendarDate(iYear, iMonth, iLastDay)) as integer) + ¬
                             (7 - (iWeekday))) mod 7)
-                end lambda
+                end |λ|
             end script
 
             map(lastWeekDay, lastDaysOfMonths(intYear))
-        end lambda
+        end |λ|
 
         -- isLeapYear :: Int -> Bool
         on isLeapYear(y)
@@ -30,11 +32,11 @@ on lastSundaysOfYear(y)
         end lastDaysOfMonths
     end script
 
-    lastWeekDaysOfYear's lambda(y, Sunday as integer)
+    lastWeekDaysOfYear's |λ|(y, Sunday as integer)
 end lastSundaysOfYear
 
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run argv
 
     intercalate(linefeed, ¬
@@ -45,7 +47,7 @@ on run argv
 
 end run
 
--- ARGUMENT HANDLING
+-- ARGUMENT HANDLING ---------------------------------------------------------
 
 -- Up to two optional command line arguments: [yearFrom], [yearTo]
 -- (Default range in absence of arguments: from two years ago, to two years ahead)
@@ -62,7 +64,7 @@ end singleYearOrRange
 -- fiveCurrentYears :: () -> [Int]
 on fiveCurrentYears(_)
     set intThisYear to year of (current date)
-    range(intThisYear - 2, intThisYear + 2)
+    enumFromTo(intThisYear - 2, intThisYear + 2)
 end fiveCurrentYears
 
 -- argIntegers :: maybe [String] -> [Int]
@@ -75,9 +77,12 @@ on argIntegers(argv)
 end argIntegers
 
 
--- GENERIC FUNCTIONS -------------------------------------------------------------------------
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
--- Dates and date strings
+-- apply (a -> b) -> a -> b
+on apply(f, a)
+    mReturn(f)'s |λ|(a)
+end apply
 
 -- calendarDate :: Int -> Int -> Int -> Date
 on calendarDate(intYear, intMonth, intDay)
@@ -88,38 +93,28 @@ on calendarDate(intYear, intMonth, intDay)
     end tell
 end calendarDate
 
--- isoDateString :: Date -> String
-on isoDateString(dte)
-    (((year of dte) as string) & ¬
-        "-" & text items -2 thru -1 of ¬
-        ("0" & ((month of dte) as integer) as string)) & ¬
-        "-" & text items -2 thru -1 of ¬
-        ("0" & day of dte)
-end isoDateString
+-- cond :: Bool -> (a -> b) -> (a -> b) -> (a -> b)
+on cond(bool, f, g)
+    if bool then
+        f
+    else
+        g
+    end if
+end cond
 
--- parseInt :: String -> Int
-on parseInt(s)
-    s as integer
-end parseInt
-
--- Testing and tabulation
-
--- transpose :: [[a]] -> [[a]]
-on transpose(xss)
-    script column
-        on lambda(_, iCol)
-            script row
-                on lambda(xs)
-                    item iCol of xs
-                end lambda
-            end script
-
-            map(row, xss)
-        end lambda
-    end script
-
-    map(column, item 1 of xss)
-end transpose
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- intercalate :: Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -130,26 +125,19 @@ on intercalate(strText, lstText)
     return strJoined
 end intercalate
 
+-- isoDateString :: Date -> String
+on isoDateString(dte)
+    (((year of dte) as string) & ¬
+        "-" & text items -2 thru -1 of ¬
+        ("0" & ((month of dte) as integer) as string)) & ¬
+        "-" & text items -2 thru -1 of ¬
+        ("0" & day of dte)
+end isoDateString
+
 -- isoRow :: [Date] -> String
 on isoRow(lstDate)
     intercalate(tab, map(my isoDateString, lstDate))
 end isoRow
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
-        set d to -1
-    else
-        set d to 1
-    end if
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range
-
--- Higher-order functions
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -157,7 +145,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -170,21 +158,29 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
 
--- cond :: Bool -> (a -> b) -> (a -> b) -> (a -> b)
-on cond(bool, f, g)
-    if bool then
-        f
-    else
-        g
-    end if
-end cond
+-- parseInt :: String -> Int
+on parseInt(s)
+    s as integer
+end parseInt
 
--- apply (a -> b) -> a -> b
-on apply(f, a)
-    mReturn(f)'s lambda(a)
-end apply
+-- transpose :: [[a]] -> [[a]]
+on transpose(xss)
+    script column
+        on |λ|(_, iCol)
+            script row
+                on |λ|(xs)
+                    item iCol of xs
+                end |λ|
+            end script
+
+            map(row, xss)
+        end |λ|
+    end script
+
+    map(column, item 1 of xss)
+end transpose

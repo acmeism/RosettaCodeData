@@ -17,7 +17,7 @@ T[][] grayDict(int N, T)() pure nothrow {
     T[][] dict = [gray!(N, T)(), [0]];
     // Append inversed gray encoding mapping.
     foreach (immutable i; 1 .. dict[0].length)
-        dict[1] ~= countUntil(dict[0], i);
+        dict[1] ~= cast(T)countUntil(dict[0], i);
     return dict;
 }
 

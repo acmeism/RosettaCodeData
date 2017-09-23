@@ -1,109 +1,173 @@
 import Foundation
 
-class Direction {
-    var vect:(Int, Int, Int)
-    var bit:Int {
-        let (bit, dx, dy) = vect
-        return bit
+extension Array {
+    mutating func swap(_ index1:Int, _ index2:Int) {
+        let temp = self[index1]
+        self[index1] = self[index2]
+        self[index2] = temp
     }
 
-    var dx:Int {
-        let (bit, dx, dy) = vect
-        return dx
-    }
-
-    var dy:Int {
-        let (bit, dx, dy) = vect
-        return dy
-    }
-
-    var opposite:Direction {
-        switch (vect) {
-        case (1, 0, -1):
-            return Direction(bit: 2, dx: 0, dy: 1)
-        case (2, 0, 1):
-            return Direction(bit: 1, dx: 0, dy: -1)
-        case (4, 1, 0):
-            return Direction(bit: 8, dx: -1, dy: 0)
-        case (8, -1, 0):
-            return Direction(bit: 4, dx: 1, dy: 0)
-        default:
-            return Direction(bit: 0, dx: 0, dy: 0)
+    mutating func shuffle() {
+        for _ in 0..<self.count {
+            let index1 = Int(arc4random()) % self.count
+            let index2 = Int(arc4random()) % self.count
+            self.swap(index1, index2)
         }
-    }
-
-    init(bit:Int, dx:Int, dy:Int) {
-        self.vect = (bit, dx, dy)
     }
 }
 
-let N = Direction(bit: 1, dx: 0, dy: -1)
-let S = Direction(bit: 2, dx: 0, dy: 1)
-let E = Direction(bit: 4, dx: 1, dy: 0)
-let W = Direction(bit: 8, dx: -1, dy: 0)
+enum Direction:Int {
+    case north = 1
+    case south = 2
+    case east = 4
+    case west = 8
+
+    static var allDirections:[Direction] {
+        return [Direction.north, Direction.south, Direction.east, Direction.west]
+    }
+
+    var opposite:Direction {
+        switch self {
+        case .north:
+            return .south
+        case .south:
+            return .north
+        case .east:
+            return .west
+        case .west:
+            return .east
+        }
+    }
+
+    var diff:(Int, Int) {
+        switch self {
+        case .north:
+            return (0, -1)
+        case .south:
+            return (0, 1)
+        case .east:
+            return (1, 0)
+        case .west:
+            return (-1, 0)
+        }
+    }
+
+    var char:String {
+        switch self {
+        case .north:
+            return "N"
+        case .south:
+            return "S"
+        case .east:
+            return "E"
+        case .west:
+            return "W"
+        }
+    }
+
+}
 
 class MazeGenerator {
-    let x:Int!
-    let y:Int!
-    var maze:[[Int]]!
+    let x:Int
+    let y:Int
+    var maze:[[Int]]
 
     init(_ x:Int, _ y:Int) {
         self.x  = x
         self.y = y
-        var col = [Int](count: y, repeatedValue: 0)
-        self.maze = [[Int]](count: x, repeatedValue: col)
+        let column = [Int](repeating: 0, count: y)
+        self.maze = [[Int]](repeating: column, count: x)
         generateMaze(0, 0)
     }
 
-    func display() {
-        for i in 0..<y {
-            // Draw top edge
-            for j in 0..<x {
-                print((maze[j][i] & 1) == 0 ? "+---" : "+   ")
+    private func generateMaze(_ cx:Int, _ cy:Int) {
+        var directions = Direction.allDirections
+        directions.shuffle()
+        for direction in directions {
+            let (dx, dy) = direction.diff
+            let nx = cx + dx
+            let ny = cy + dy
+            if inBounds(nx, ny) && maze[nx][ny] == 0 {
+                maze[cx][cy] |= direction.rawValue
+                maze[nx][ny] |= direction.opposite.rawValue
+                generateMaze(nx, ny)
             }
-            println("+")
+        }
+    }
+
+    private func inBounds(_ testX:Int, _ testY:Int) -> Bool {
+        return inBounds(value:testX, upper:self.x) && inBounds(value:testY, upper:self.y)
+    }
+
+    private func inBounds(value:Int, upper:Int) -> Bool {
+        return (value >= 0) && (value < upper)
+    }
+
+    func display() {
+        let cellWidth = 3
+        for j in 0..<y {
+            // Draw top edge
+            var topEdge = ""
+            for i in 0..<x {
+                topEdge += "+"
+                topEdge += String(repeating: (maze[i][j] & Direction.north.rawValue) == 0 ? "-" : " ", count: cellWidth)
+            }
+            topEdge += "+"
+            print(topEdge)
 
             // Draw left edge
-            for j in 0..<x {
-                print((maze[j][i] & 8) == 0 ? "|   " : "    ")
+            var leftEdge = ""
+            for i in 0..<x {
+                leftEdge += (maze[i][j] & Direction.west.rawValue) == 0 ? "|" : " "
+                leftEdge += String(repeating: " ", count: cellWidth)
             }
-            println("|")
+            leftEdge += "|"
+            print(leftEdge)
         }
 
         // Draw bottom edge
-        for j in 0..<x {
-            print("+---")
+        var bottomEdge = ""
+        for _ in 0..<x {
+            bottomEdge += "+"
+            bottomEdge += String(repeating: "-", count: cellWidth)
         }
-        println("+")
+        bottomEdge += "+"
+        print(bottomEdge)
     }
 
-    func generateMaze(cx:Int, _ cy:Int) {
-        var dirs = [N, S, E, W] as NSMutableArray
-        for i in 0..<dirs.count {
-            let x1 = Int(arc4random()) % dirs.count
-            let x2 = Int(arc4random()) % dirs.count
-            dirs.exchangeObjectAtIndex(x1, withObjectAtIndex: x2)
-        }
-
-        for dir in dirs {
-            var dir = dir as Direction
-            let nx = cx + dir.dx
-            let ny = cy + dir.dy
-            if (between(nx, self.x) && between(ny, self.y) && (maze[nx][ny] == 0)) {
-                    maze[cx][cy] |= dir.bit
-                    maze[nx][ny] |= dir.opposite.bit
-                    generateMaze(nx, ny)
+    func displayInts() {
+        for j in 0..<y {
+            var line = ""
+            for i in 0..<x {
+                line += String(maze[i][j]) + "\t"
             }
-
+            print(line)
         }
     }
 
-    func between(v:Int, _ upper:Int) -> Bool {
-        return (v >= 0) && (v < upper)
+    func displayDirections() {
+        for j in 0..<y {
+            var line = ""
+            for i in 0..<x {
+                line += getDirectionsAsString(maze[i][j]) + "\t"
+            }
+            print(line)
+        }
+    }
+
+    private func getDirectionsAsString(_ value:Int) -> String {
+        var line = ""
+        for direction in Direction.allDirections {
+            if (value & direction.rawValue) != 0 {
+                line += direction.char
+            }
+        }
+        return line
     }
 }
 
-let x = 10
+
+let x = 20
 let y = 10
 let maze = MazeGenerator(x, y)
 maze.display()

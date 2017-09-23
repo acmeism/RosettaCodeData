@@ -3,5 +3,5 @@ I:=1024;
 WHILE I>0 DO
 BEGIN
    OUTINT(I);
-   I:=I/2
+   I:=I DIV 2
 END

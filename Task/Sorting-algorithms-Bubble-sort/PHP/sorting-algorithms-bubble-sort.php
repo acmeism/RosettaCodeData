@@ -10,4 +10,5 @@ function bubbleSort(array &$array) {
       }
     }
   } while ($swapped);
+  return $array;
 }

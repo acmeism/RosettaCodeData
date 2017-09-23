@@ -6,4 +6,4 @@ function iter(a, b, c)
   end
 end
 
-for u, v, w in iter(a1, a2, a3) do print(u, v, w) end
+for u, v, w in iter(a1, a2, a3) do print(u..v..w) end

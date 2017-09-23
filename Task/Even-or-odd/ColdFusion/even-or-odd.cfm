@@ -1,5 +1,3 @@
-<Cfif i MOD 2 eq 0>
-  She's even
-<Cfelse>
-  He's odd
-</cfif>
+function f(numeric n) {
+   return n mod 2?"odd":"even"
+}

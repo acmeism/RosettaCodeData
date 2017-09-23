@@ -1,4 +1,4 @@
-sub maxnum(@x) {
+sub maxnum(*@x) {
     [~] @x.sort: -> $a, $b { $b ~ $a leg $a ~ $b }
 }
 

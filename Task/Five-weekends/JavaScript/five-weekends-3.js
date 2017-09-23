@@ -1,7 +1,6 @@
 (function () {
     'use strict';
 
-
     // longMonthsStartingFriday :: Int -> Int
     function longMonthsStartingFriday(y) {
         return [0, 2, 4, 6, 7, 9, 11]
@@ -10,7 +9,6 @@
                     .getDay() === 5;
             });
     }
-
 
     // range :: Int -> Int -> [Int]
     function range(m, n) {
@@ -53,5 +51,4 @@
         },
         null, 2
     );
-
 })();

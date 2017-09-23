@@ -1,0 +1,129 @@
+*        Closest Pair Problem      10/03/2017
+CLOSEST  CSECT
+         USING  CLOSEST,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R6,1               i=1
+         LA     R7,2               j=2
+         BAL    R14,DDCALC         dd=(px(i)-px(j))^2+(py(i)-py(j))^2
+         BAL    R14,DDSTORE        ddmin=dd; ii=i; jj=j
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,N)        do i=1 to n
+         LA     R7,1                 j=1
+       DO WHILE=(C,R7,LE,N)          do j=1 to n
+         BAL    R14,DDCALC         dd=(px(i)-px(j))^2+(py(i)-py(j))^2
+       IF CP,DD,GT,=P'0' THEN          if dd>0 then
+       IF CP,DD,LT,DDMIN THEN            if dd<ddmin then
+         BAL    R14,DDSTORE                ddmin=dd; ii=i; jj=j
+       ENDIF    ,                        endif
+       ENDIF    ,                      endif
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         ZAP    WPD,DDMIN          ddmin
+         DP     WPD,=PL8'2'        ddmin/2
+         ZAP    SQRT2,WPD(8)       sqrt2=ddmin/2
+         ZAP    SQRT1,DDMIN        sqrt1=ddmin
+       DO WHILE=(CP,SQRT1,NE,SQRT2)  do while sqrt1<>sqrt2
+         ZAP    SQRT1,SQRT2          sqrt1=sqrt2
+         ZAP    WPD,DDMIN            ddmin
+         DP     WPD,SQRT1            /sqrt1
+         ZAP    WP1,WPD(8)           ddmin/sqrt1
+         AP     WP1,SQRT1            +sqrt1
+         ZAP    WPD,WP1              ~
+         DP     WPD,=PL8'2'          /2
+         ZAP    SQRT2,WPD(8)         sqrt2=(sqrt1+(ddmin/sqrt1))/2
+       ENDDO    ,                  enddo while
+         MVC    PG,=CL80'the minimum distance '
+         ZAP    WP1,SQRT2          sqrt2
+         BAL    R14,EDITPK         edit
+         MVC    PG+21(L'WC),WC     output
+         XPRNT  PG,L'PG            print buffer
+         XPRNT  =CL22'is between the points:',22
+         MVC    PG,PGP             init buffer
+         L      R1,II              ii
+         SLA    R1,4               *16
+         LA     R4,PXY-16(R1)      @px(ii)
+         MVC    WP1,0(R4)          px(ii)
+         BAL    R14,EDITPK         edit
+         MVC    PG+3(L'WC),WC      output
+         MVC    WP1,8(R4)          py(ii)
+         BAL    R14,EDITPK         edit
+         MVC    PG+21(L'WC),WC     output
+         XPRNT  PG,L'PG            print buffer
+         MVC    PG,PGP             init buffer
+         L      R1,JJ              jj
+         SLA    R1,4               *16
+         LA     R4,PXY-16(R1)      @px(jj)
+         MVC    WP1,0(R4)          px(jj)
+         BAL    R14,EDITPK         edit
+         MVC    PG+3(L'WC),WC      output
+         MVC    WP1,8(R4)          py(jj)
+         BAL    R14,EDITPK         edit
+         MVC    PG+21(L'WC),WC     output
+         XPRNT  PG,L'PG            print buffer
+         L      R13,4(0,R13)       restore previous savearea pointer
+         LM     R14,R12,12(R13)    restore previous context
+         XR     R15,R15            rc=0
+         BR     R14                exit
+DDCALC   EQU    *             ---- dd=(px(i)-px(j))^2+(py(i)-py(j))^2
+         LR     R1,R6              i
+         SLA    R1,4               *16
+         LA     R4,PXY-16(R1)      @px(i)
+         LR     R1,R7              j
+         SLA    R1,4               *16
+         LA     R5,PXY-16(R1)      @px(j)
+         ZAP    WP1,0(8,R4)        px(i)
+         ZAP    WP2,0(8,R5)        px(j)
+         SP     WP1,WP2            px(i)-px(j)
+         ZAP    WPS,WP1            =
+         MP     WP1,WPS            (px(i)-px(j))*(px(i)-px(j))
+         ZAP    WP2,8(8,R4)        py(i)
+         ZAP    WP3,8(8,R5)        py(j)
+         SP     WP2,WP3            py(i)-py(j)
+         ZAP    WPS,WP2            =
+         MP     WP2,WPS            (py(i)-py(j))*(py(i)-py(j))
+         AP     WP1,WP2            (px(i)-px(j))^2+(py(i)-py(j))^2
+         ZAP    DD,WP1             dd=(px(i)-px(j))^2+(py(i)-py(j))^2
+         BR     R14           ---- return
+DDSTORE  EQU    *             ---- ddmin=dd; ii=i; jj=j
+         ZAP    DDMIN,DD           ddmin=dd
+         ST     R6,II              ii=i
+         ST     R7,JJ              jj=j
+         BR     R14           ---- return
+EDITPK   EQU    *             ----
+         MVC    WM,MASK            set mask
+         EDMK   WM,WP1             edit and mark
+         BCTR   R1,0               -1
+         MVC    0(1,R1),WM+17      set sign
+         MVC    WC,WM              len17<-len18
+         BR     R14           ---- return
+N        DC     A((PGP-PXY)/16)
+PXY      DC     PL8'0.654682',PL8'0.925557',PL8'0.409382',PL8'0.619391'
+         DC     PL8'0.891663',PL8'0.888594',PL8'0.716629',PL8'0.996200'
+         DC     PL8'0.477721',PL8'0.946355',PL8'0.925092',PL8'0.818220'
+         DC     PL8'0.624291',PL8'0.142924',PL8'0.211332',PL8'0.221507'
+         DC     PL8'0.293786',PL8'0.691701',PL8'0.839186',PL8'0.728260'
+PGP      DC     CL80'  [+xxxxxxxxx.xxxxxx,+xxxxxxxxx.xxxxxx]'
+MASK     DC     C' ',7X'20',X'21',X'20',C'.',6X'20',C'-'  CL18 15num
+II       DS     F
+JJ       DS     F
+DD       DS     PL8
+DDMIN    DS     PL8
+SQRT1    DS     PL8
+SQRT2    DS     PL8
+WP1      DS     PL8
+WP2      DS     PL8
+WP3      DS     PL8
+WPS      DS     PL8
+WPD      DS     PL16
+WM       DS     CL18
+WC       DS     CL17
+PG       DS     CL80
+         YREGS
+         END    CLOSEST

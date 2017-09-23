@@ -1,9 +1,11 @@
+-- DOT PRODUCT ---------------------------------------------------------------
+
 -- dotProduct :: [Number] -> [Number] -> Number
 on dotProduct(xs, ys)
     script product
-        on lambda(a, b)
+        on |λ|(a, b)
             a * b
-        end lambda
+        end |λ|
     end script
 
     if length of xs = length of ys then
@@ -13,19 +15,8 @@ on dotProduct(xs, ys)
     end if
 end dotProduct
 
--- sum :: [Number] -> Number
-on sum(xs)
-    script add
-        on lambda(a, b)
-            a + b
-        end lambda
-    end script
 
-    foldl(add, 0, xs)
-end sum
-
-
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
 
     dotProduct([1, 3, -5], [4, -2, -1])
@@ -34,18 +25,7 @@ on run
 end run
 
 
--- GENERIC FUNCTIONS
-
--- all :: (a -> Bool) -> [a] -> Bool
-on all(f, xs)
-    tell mReturn(f)
-        set lng to length of xs
-        repeat with i from 1 to lng
-            if not lambda(item i of xs) then return false
-        end repeat
-        true
-    end tell
-end all
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- foldl :: (a -> b -> a) -> a -> [b] -> a
 on foldl(f, startValue, xs)
@@ -53,29 +33,20 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
 end foldl
 
--- zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
-on zipWith(f, xs, ys)
-    set nx to length of xs
-    set ny to length of ys
-    if nx < 1 or ny < 1 then
-        {}
+-- min :: Ord a => a -> a -> a
+on min(x, y)
+    if y < x then
+        y
     else
-        set lng to cond(nx < ny, nx, ny)
-        set lst to {}
-        tell mReturn(f)
-            repeat with i from 1 to lng
-                set end of lst to lambda(item i of xs, item i of ys)
-            end repeat
-            return lst
-        end tell
+        x
     end if
-end zipWith
+end min
 
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
@@ -84,16 +55,30 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
 
--- cond :: Bool -> (a -> b) -> (a -> b) -> (a -> b)
-on cond(bool, f, g)
-    if bool then
-        f
-    else
-        g
-    end if
-end cond
+-- sum :: [Number] -> Number
+on sum(xs)
+    script add
+        on |λ|(a, b)
+            a + b
+        end |λ|
+    end script
+
+    foldl(add, 0, xs)
+end sum
+
+-- zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+on zipWith(f, xs, ys)
+    set lng to min(length of xs, length of ys)
+    set lst to {}
+    tell mReturn(f)
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, item i of ys)
+        end repeat
+        return lst
+    end tell
+end zipWith

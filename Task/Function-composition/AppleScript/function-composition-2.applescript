@@ -1,22 +1,4 @@
--- Compose (right to left) a list of ordinary 2nd class handlers (of arbitrary length)
-
--- compose :: [(a -> a)] -> (a -> a)
-on compose(fs)
-    script
-        on lambda(x)
-            script
-                on lambda(a, f)
-                    mReturn(f)'s lambda(a)
-                end lambda
-            end script
-
-            foldr(result, x, fs)
-        end lambda
-    end script
-end compose
-
-
--- TEST
+-- FUNCTIONS TO COMPOSE -------------------------------------------------------
 
 on root(x)
     x ^ 0.5
@@ -30,17 +12,30 @@ on half(x)
     x / 2
 end half
 
-
+-- TEST -----------------------------------------------------------------------
 on run
 
-    tell compose([half, succ, root]) to lambda(5)
+    compose([half, succ, root])'s |λ|(5)
 
     --> 1.61803398875
 end run
 
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
+-- compose :: [(a -> a)] -> (a -> a)
+on compose(fs)
+    script
+        on |λ|(x)
+            script
+                on |λ|(a, f)
+                    mReturn(f)'s |λ|(a)
+                end |λ|
+            end script
 
--- GENERIC FUNCTIONS
+            foldr(result, x, fs)
+        end |λ|
+    end script
+end compose
 
 -- foldr :: (a -> b -> a) -> a -> [b] -> a
 on foldr(f, startValue, xs)
@@ -48,7 +43,7 @@ on foldr(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from lng to 1 by -1
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
@@ -61,7 +56,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

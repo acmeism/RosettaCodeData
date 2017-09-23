@@ -1,4 +1,4 @@
--- CHECK NESTING OF SQUARE BRACKET SEQUENCES
+-- CHECK NESTING OF SQUARE BRACKET SEQUENCES ---------------------------------
 
 -- Zero-based index of the first problem (-1 if none found):
 
@@ -28,32 +28,30 @@ on imbalance(strBrackets)
     result's errorIndex(characters of strBrackets, 0, 0)
 end imbalance
 
-
-
--- TEST
+-- TEST ----------------------------------------------------------------------
 
 -- Random bracket sequences for testing
 -- brackets :: Int -> String
-on brackets(n)
+on randomBrackets(n)
     -- bracket :: () -> String
     script bracket
-        on lambda(_)
+        on |λ|(_)
             cond((random number) < 0.5, "[", "]")
-        end lambda
+        end |λ|
     end script
-    intercalate("", map(bracket, range(1, n)))
-end brackets
+    intercalate("", map(bracket, enumFromTo(1, n)))
+end randomBrackets
 
 on run
     set nPairs to 6
 
     -- report :: Int -> String
     script report
-        property strPad : concatReplicate(nPairs * 2 + 4, space)
+        property strPad : concat(replicate(nPairs * 2 + 4, space))
 
-        on lambda(n)
+        on |λ|(n)
             set w to n * 2
-            set s to brackets(w)
+            set s to randomBrackets(w)
             set i to imbalance(s)
             set blnOK to (i = -1)
 
@@ -62,19 +60,20 @@ on run
             set strLine to "'" & s & "'" & ¬
                 (items (w + 2) thru -1 of strPad) & strStatus
 
-            set strPointer to cond(blnOK, "", linefeed & concatReplicate(i + 1, space) & "^")
+            set strPointer to cond(blnOK, ¬
+                "", linefeed & concat(replicate(i + 1, space)) & "^")
 
             intercalate("", {strLine, strPointer})
-        end lambda
+        end |λ|
     end script
 
     linefeed & ¬
         intercalate(linefeed, ¬
-            map(report, range(0, nPairs))) & linefeed
+            map(report, enumFromTo(1, nPairs))) & linefeed
 end run
 
 
--- GENERIC LIBRARY FUNCTIONS
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -82,7 +81,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -94,7 +93,7 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
@@ -108,10 +107,21 @@ on intercalate(strText, lstText)
     return strJoined
 end intercalate
 
--- concatReplicate :: Int -> String -> String
-on concatReplicate(n, s)
-    concat(replicate(n, s))
-end concatReplicate
+-- concat :: [[a]] -> [a] | [String] -> String
+on concat(xs)
+    script append
+        on |λ|(a, b)
+            a & b
+        end |λ|
+    end script
+
+    if length of xs > 0 and class of (item 1 of xs) is string then
+        set empty to ""
+    else
+        set empty to {}
+    end if
+    foldl(append, empty, xs)
+end concat
 
 -- Egyptian multiplication - progressively doubling a list, appending
 -- stages of doubling to an accumulator where needed for binary
@@ -131,21 +141,6 @@ on replicate(n, a)
     return out & dbl
 end replicate
 
--- concat :: [[a]] -> [a] | [String] -> String
-on concat(xs)
-    script append
-        on lambda(a, b)
-            a & b
-        end lambda
-    end script
-
-    if length of xs > 0 and class of (item 1 of xs) is string then
-        foldl(append, "", xs)
-    else
-        foldl(append, {}, xs)
-    end if
-end concat
-
 -- Value of one of two expressions
 -- cond ::  Bool -> a -> b -> c
 on cond(bln, f, g)
@@ -155,15 +150,15 @@ on cond(bln, f, g)
         set e to g
     end if
     if class of e is handler then
-        mReturn(e)'s lambda()
+        mReturn(e)'s |λ|()
     else
         e
     end if
 end cond
 
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
         set d to -1
     else
         set d to 1
@@ -173,7 +168,7 @@ on range(m, n)
         set end of lst to i
     end repeat
     return lst
-end range
+end enumFromTo
 
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
@@ -182,7 +177,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

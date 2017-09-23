@@ -79,7 +79,7 @@ Closedown.
               END IF			!Rather than just one at a time.
             END IF			!Curse the double evaluation of WHILE(L < LEN(PROG) & ...)
           END FUNCTION RATTLE	!Computers excel at counting.
-        END SUBROUTINE BRAINFORT!They only need be direction as to what to count...
+        END SUBROUTINE BRAINFORT!Their only need be direction as to what to count...
       END MODULE BRAIN	!Simple in itself.
 
       PROGRAM POKE	!A tester.

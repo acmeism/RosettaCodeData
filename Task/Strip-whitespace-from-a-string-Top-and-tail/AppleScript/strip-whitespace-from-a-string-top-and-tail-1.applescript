@@ -1,11 +1,11 @@
 use framework "Foundation" -- "OS X" Yosemite onwards, for NSRegularExpression
 
+-- STRIP WHITESPACE ----------------------------------------------------------
 
 -- isSpace :: Char -> Bool
 on isSpace(c)
     ((length of c) = 1) and regexTest("\\s", c)
 end isSpace
-
 
 -- stripStart :: Text -> Text
 on stripStart(s)
@@ -23,14 +23,14 @@ on strip(s)
 end strip
 
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
     set strText to "  \t\t \n \r    Much Ado About Nothing \t \n \r  "
 
     script arrowed
-        on lambda(x)
+        on |λ|(x)
             "-->" & x & "<--"
-        end lambda
+        end |λ|
     end script
 
     map(arrowed, [stripStart(strText), stripEnd(strText), strip(strText)])
@@ -43,15 +43,19 @@ on run
 end run
 
 
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
--- GENERIC FUNCTIONS
+-- dropAround :: (Char -> Bool) -> [a] -> [a]
+on dropAround(p, xs)
+    dropWhile(p, dropWhileEnd(p, xs))
+end dropAround
 
 -- dropWhile :: (a -> Bool) -> [a] -> [a]
 on dropWhile(p, xs)
     tell mReturn(p)
         set lng to length of xs
         set i to 1
-        repeat while i ≤ lng and lambda(item i of xs)
+        repeat while i ≤ lng and |λ|(item i of xs)
             set i to i + 1
         end repeat
     end tell
@@ -66,7 +70,7 @@ end dropWhile
 on dropWhileEnd(p, xs)
     tell mReturn(p)
         set i to length of xs
-        repeat while i > 0 and lambda(item i of xs)
+        repeat while i > 0 and |λ|(item i of xs)
             set i to i - 1
         end repeat
     end tell
@@ -77,28 +81,13 @@ on dropWhileEnd(p, xs)
     end if
 end dropWhileEnd
 
--- dropAround :: (Char -> Bool) -> [a] -> [a]
-on dropAround(p, xs)
-    dropWhile(p, dropWhileEnd(p, xs))
-end dropAround
-
--- regexTest :: RegexPattern -> String -> Bool
-on regexTest(strRegex, str)
-    set ca to current application
-    set oString to ca's NSString's stringWithString:str
-    ((ca's NSRegularExpression's regularExpressionWithPattern:strRegex ¬
-        options:((ca's NSRegularExpressionAnchorsMatchLines as integer)) ¬
-        |error|:(missing value))'s firstMatchInString:oString options:0 ¬
-        range:{location:0, |length|:oString's |length|()}) is not missing value
-end regexTest
-
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
     tell mReturn(f)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -111,7 +100,17 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
+
+-- regexTest :: RegexPattern -> String -> Bool
+on regexTest(strRegex, str)
+    set ca to current application
+    set oString to ca's NSString's stringWithString:str
+    ((ca's NSRegularExpression's regularExpressionWithPattern:strRegex ¬
+        options:((ca's NSRegularExpressionAnchorsMatchLines as integer)) ¬
+        |error|:(missing value))'s firstMatchInString:oString options:0 ¬
+        range:{location:0, |length|:oString's |length|()}) is not missing value
+end regexTest

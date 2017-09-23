@@ -1,0 +1,3 @@
+[ 30 bernoulli-numbers ] time
+...
+Running time: 0.004331652 seconds

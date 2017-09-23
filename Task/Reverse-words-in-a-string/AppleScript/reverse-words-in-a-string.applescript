@@ -1,4 +1,4 @@
-on run {}
+on run
 
     unlines(map(reverseWords, |lines|("---------- Ice and Fire ------------
 
@@ -12,6 +12,9 @@ fire. favor who those with hold I
 Frost Robert -----------------------")))
 
 end run
+
+
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- reverseWords :: String -> String
 on reverseWords(str)
@@ -65,13 +68,24 @@ end intercalate
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
-    script mf
-        property lambda : f
-    end script
-    set lst to {}
-    set lng to length of xs
-    repeat with i from 1 to lng
-        set end of lst to mf's lambda(item i of xs, i, xs)
-    end repeat
-    return lst
+    tell mReturn(f)
+        set lng to length of xs
+        set lst to {}
+        repeat with i from 1 to lng
+            set end of lst to lambda(item i of xs, i, xs)
+        end repeat
+        return lst
+    end tell
 end map
+
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property lambda : f
+        end script
+    end if
+end mReturn

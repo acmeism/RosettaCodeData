@@ -1,20 +1,25 @@
 (() => {
     'use strict';
 
+    // SUM OF A SERIES -------------------------------------------------------
+
     // seriesSum :: Num a => (a -> a) -> [a] -> a
     const seriesSum = (f, xs) =>
-        xs.reduce((a, x) => a + f(x), 0);
+        foldl((a, x) => a + f(x), 0, xs);
 
 
-    // GENERIC ------------------------------------------
+    // GENERIC ---------------------------------------------------------------
 
-    // range :: Int -> Int -> [Int]
-    const range = (m, n) =>
+    // enumFromToInt :: Int -> Int -> [Int]
+    const enumFromTo = (m, n) =>
         Array.from({
             length: Math.floor(n - m) + 1
         }, (_, i) => m + i);
 
-    // TEST ----------------------------------------------
+    // foldl :: (b -> a -> b) -> b -> [a] -> b
+    const foldl = (f, a, xs) => xs.reduce(f, a);
 
-    return seriesSum(x => 1 / (x * x), range(1, 1000));
+    // TEST ------------------------------------------------------------------
+
+    return seriesSum(x => 1 / (x * x), enumFromTo(1, 1000));
 })();

@@ -1,30 +1,30 @@
-on run {}
+on run
 
-    set lstFn to {sin_, cos_, cube_}
-    set lstInvFn to {asin_, acos_, croot_}
+    set fs to {sin_, cos_, cube_}
+    set afs to {asin_, acos_, croot_}
 
     -- Form a list of three composed function objects,
     -- and map testWithHalf() across the list to produce the results of
     -- application of each composed function (base function composed with inverse) to 0.5
 
-    map(testWithHalf, zipWith(mCompose, lstFn, lstInvFn))
+    script testWithHalf
+        on |λ|(f)
+            mReturn(f)'s |λ|(0.5)
+        end |λ|
+    end script
 
+    map(testWithHalf, zipWith(mCompose, fs, afs))
 
     --> {0.5, 0.5, 0.5}
-
 end run
-
-on testWithHalf(mf)
-    mf's lambda(0.5)
-end testWithHalf
 
 -- Simple composition of two unadorned handlers into
 -- a method of a script object
 on mCompose(f, g)
     script
-        on lambda(x)
-            mReturn(f)'s lambda(mReturn(g)'s lambda(x))
-        end lambda
+        on |λ|(x)
+            mReturn(f)'s |λ|(mReturn(g)'s |λ|(x))
+        end |λ|
     end script
 end mCompose
 
@@ -34,7 +34,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -47,37 +47,31 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
 
 -- zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
 on zipWith(f, xs, ys)
-    set nx to length of xs
-    set ny to length of ys
-    if nx < 1 or ny < 1 then
-        {}
-    else
-        set lng to cond(nx < ny, nx, ny)
-        set lst to {}
-        tell mReturn(f)
-            repeat with i from 1 to lng
-                set end of lst to lambda(item i of xs, item i of ys)
-            end repeat
-            return lst
-        end tell
-    end if
+    set lng to min(length of xs, length of ys)
+    set lst to {}
+    tell mReturn(f)
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, item i of ys)
+        end repeat
+        return lst
+    end tell
 end zipWith
 
--- cond :: Bool -> (a -> b) -> (a -> b) -> (a -> b)
-on cond(bool, f, g)
-    if bool then
-        f
+-- min :: Ord a => a -> a -> a
+on min(x, y)
+    if y < x then
+        y
     else
-        g
+        x
     end if
-end cond
+end min
 
 on sin:r
     (do shell script "echo 's(" & r & ")' | bc -l") as real

@@ -1,5 +1,5 @@
 var val = 0
 repeat {
-  val++
+  val += 1
   print(val)
 } while val % 6 != 0

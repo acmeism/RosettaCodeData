@@ -1,3 +1,5 @@
+-- INTEGER DIGITS SUMMED -----------------------------------------------------
+
 -- digitsSummed :: (Int | String) -> Int
 on digitsSummed(n)
 
@@ -23,33 +25,30 @@ on digitsSummed(n)
             end if
         end digitValue
 
-        on lambda(accumulator, strDigit)
+        on |λ|(accumulator, strDigit)
             accumulator + digitValue(strDigit)
-        end lambda
+        end |λ|
     end script
 
     foldl(digitAdded, 0, splitOn("", n as string))
 end digitsSummed
 
 
--- TEST
-
--- showDigitSum :: Int -> String
-on showDigitSum(n)
-    (n as string) & " -> " & digitsSummed(n)
-end showDigitSum
-
-
+-- TEST ----------------------------------------------------------------------
 on run
+    -- showDigitSum :: Int -> String
+    script showDigitSum
+        on |λ|(n)
+            (n as string) & " -> " & digitsSummed(n)
+        end |λ|
+    end script
 
     intercalate(linefeed, ¬
-        map(showDigitSum, [1, 12345, "254", "fe", "f0e", "999ABCXYZ"]))
-
+        map(showDigitSum, [1, 1234, "254", "fe", "f0e", "999ABCXYZ"]))
 end run
 
 
-
--- GENERIC FUNCTIONS
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- foldl :: (a -> b -> a) -> a -> [b] -> a
 on foldl(f, startValue, xs)
@@ -57,11 +56,19 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
 end foldl
+
+-- intercalate :: Text -> [Text] -> Text
+on intercalate(strText, lstText)
+    set {dlm, my text item delimiters} to {my text item delimiters, strText}
+    set strJoined to lstText as text
+    set my text item delimiters to dlm
+    return strJoined
+end intercalate
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -69,7 +76,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -82,7 +89,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
@@ -94,11 +101,3 @@ on splitOn(strDelim, strMain)
     set my text item delimiters to dlm
     return xs
 end splitOn
-
--- intercalate :: Text -> [Text] -> Text
-on intercalate(strText, lstText)
-    set {dlm, my text item delimiters} to {my text item delimiters, strText}
-    set strJoined to lstText as text
-    set my text item delimiters to dlm
-    return strJoined
-end intercalate

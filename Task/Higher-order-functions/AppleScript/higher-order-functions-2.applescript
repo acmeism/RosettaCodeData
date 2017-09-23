@@ -39,7 +39,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -58,7 +58,7 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
@@ -68,14 +68,13 @@ end foldl
 -- Sublist of those elements for which the predicate
 -- function returns true
 -- filter :: (a -> Bool) -> [a] -> [a]
--- filter :: (a -> Bool) -> [a] -> [a]
 on filter(f, xs)
     tell mReturn(f)
         set lst to {}
         set lng to length of xs
         repeat with i from 1 to lng
             set v to item i of xs
-            if lambda(v, i, xs) then set end of lst to v
+            if |λ|(v, i, xs) then set end of lst to v
         end repeat
         return lst
     end tell
@@ -88,7 +87,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

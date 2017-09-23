@@ -1,10 +1,10 @@
 /*REXX program sorts a list (which may be numbers) by using the quick select algorithm. */
 parse arg list;  if list=''  then list=9 8 7 6 5 0 1 2 3 4    /*Not given?  Use default.*/
 say right('list: ', 22)           list
+#=words(list)
+              do i=1  for #;  @.i=word(list, i)  /*assign all the items ──► @. (array). */
+              end   /*i*/                        /* [↑]  #: number of items in the list.*/
 say
-      do #=1  for words(list);  @.#=word(list,#) /*assign all the items ──► @. (array). */
-      end   /*#*/                                /* [↑]  #: number of items in the list.*/
-#=#-1                                            /*adjust number of items in the list.  */
       do j=1  for #                              /*show  1 ──►  # items place and value.*/
       say right('item', 20)     right(j, length(#))",  value: "      qSel(1, #, j)
       end   /*j*/

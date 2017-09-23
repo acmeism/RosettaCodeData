@@ -1,5 +1,3 @@
 function fib(n) {
-  return function(n,a,b) {
-    return n>0 ? arguments.callee(n-1,b,a+b) : a;
-  }(n,0,1);
+  return n<2?n:fib(n-1)+fib(n-2);
 }

@@ -1,1 +1,2 @@
-def countSubstring( str:String, substr:String ) = substr.r.findAllMatchIn(str).length
+def countSubstring(str: String, sub: String): Int =
+  str.sliding(sub.length).count(_ == sub)

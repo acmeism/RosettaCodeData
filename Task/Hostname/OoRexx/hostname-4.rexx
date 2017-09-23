@@ -1,0 +1,1 @@
+address command "echo $HOSTNAME"

@@ -5,7 +5,7 @@
 #include <deque>
 #include <map>
 #include <algorithm>                    // for lower_bound()
-#include <iterator>                     // for prev()
+#include <iterator>                     // for next() and prev()
 
 using namespace std;
 
@@ -55,10 +55,10 @@ protected:
           // Each of the index1, index2 pairs considered here correspond to a match
           auto index2 = *it2;
 
-	  //
+          //
           // Note: The index2 values are monotonically decreasing, which allows the
-          // thresholds to be updated in place.  Montonicity allows a binary search,
-          // implemented here by std::lower_bound()
+          // thresholds to be updated in-place.  Monotonicity allows a binary search,
+          // implemented here by std::lower_bound().
           //
           limit = lower_bound(threshold.begin(), limit, index2);
           auto index3 = distance(threshold.begin(), limit);
@@ -72,14 +72,14 @@ protected:
           // Depending on match redundancy, the number of Pair constructions may be
           // divided by factors ranging from 2 up to 10 or more.
           //
-          auto skip = it2 + 1 != dq2.end() &&
-            (limit == threshold.begin() || *(limit - 1) < *(it2 + 1));
-
+          auto skip = next(it2) != dq2.end() &&
+            (limit == threshold.begin() || *prev(limit) < *next(it2));
           if (skip) continue;
 
           if (limit == threshold.end()) {
             // insert case
             threshold.push_back(index2);
+            // Refresh limit iterator:
             limit = prev(threshold.end());
             if (trace) {
               auto prefix = index3 > 0 ? traces[index3 - 1] : nullptr;
@@ -136,7 +136,7 @@ protected:
   string Select(shared_ptr<Pair> pairs, uint64_t length,
     bool right, const string& s1, const string& s2) {
     string buffer;
-    buffer.reserve(length);
+    buffer.reserve((uint32_t)length);
     for (auto next = pairs; next != nullptr; next = next->next) {
       auto c = right ? s2[next->index2] : s1[next->index1];
       buffer.push_back(c);

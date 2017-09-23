@@ -1,10 +1,12 @@
-def binarySearch[A <% Ordered[A]](xs: Seq[A], x: A): Option[Int] = {
-  var (low, high) = (0, xs.size - 1)
-  while (low <= high)
-    (low + high) / 2 match {
-      case mid if xs(mid) > x => high = mid - 1
-      case mid if xs(mid) < x => low = mid + 1
-      case mid => return Some(mid)
-    }
-  None
-}
+def binarySearch[T](xs: Seq[T], x: T)(implicit ordering: Ordering[T]): Option[Int] = {
+    var low: Int = 0
+    var high: Int = xs.size - 1
+
+    while (low <= high)
+      low + high >>> 1 match {
+        case guess if ordering.gt(xs(guess), x) => high = guess - 1 //too high
+        case guess if ordering.lt(xs(guess), x) => low = guess + 1 // too low
+        case guess => return Some(guess) //found it
+      }
+    None //not found
+  }

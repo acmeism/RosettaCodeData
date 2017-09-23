@@ -6,7 +6,7 @@ function factorial(n) {
   //we skip zero and one since both are 1 and are identity
   while (n > 1) {
     sum *= n;
-    n -= 1;
+    n--;
   }
   return sum;
 }

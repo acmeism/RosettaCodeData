@@ -1,19 +1,16 @@
-import com.google.common.base.Function;
+public class Accumulator {
+    private double sum;
+    public Accumulator(double sum0) {
+        sum = sum0;
+    }
+    public double call(double n) {
+        return sum += n;
+    }
 
-public class AccumulatorFactory {
-	private static Function<Double, Double> accumulator(final Double elem) {
-		return new Function<Double, Double>() {
-			Double sum = elem;
-			@Override public Double apply(Double val) {
-				return sum += val;
-			}
-		};
-	}
-
-	public static void main(String[] args) {
-		Function<Double, Double> x = accumulator(1d);
-		x.apply(5d);
-		System.out.println(accumulator(3d));		
-		System.out.println(x.apply(2.3));
-	}
+    public static void main(String[] args) {
+        Accumulator x = new Accumulator(1);
+        x.call(5);
+        System.out.println(new Accumulator(3));
+        System.out.println(x.call(2.3));
+    }
 }

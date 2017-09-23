@@ -1,6 +1,6 @@
 function multiples($param1, &$param2) {
 	if ($param1 == 'bob') {
-		$param2 = 'is your grandmonther';
+		$param2 = 'is your grandmother';
 		return true;
 	}
 	

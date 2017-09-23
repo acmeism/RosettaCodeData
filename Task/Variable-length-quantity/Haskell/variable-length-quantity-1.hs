@@ -1,10 +1,15 @@
-import Numeric
+import Numeric (readOct, showOct)
+import Data.List (intercalate)
 
+to :: Int -> String
 to = flip showOct ""
 
+from :: String -> Int
 from = fst . head . readOct
 
-main = do
-	fancy 2097152
-	fancy 2097151
-		where fancy i = putStrLn $ to i ++ " <-> " ++ show (from $ to i)
+main :: IO ()
+main =
+  mapM_
+    (putStrLn .
+     intercalate " <-> " . (pure (:) <*> to <*> (return . show . from . to)))
+    [2097152, 2097151]

@@ -7,7 +7,7 @@
 test() ->
     Str = "TOBEORNOTTOBEORTOBEORNOT",
     [84,79,66,69,79,82,78,79,84,256,258,260,265,259,261,263] =
-	encode(Str),
+  encode(Str),
     Str = decode(encode(Str)),
     ok.
 
@@ -24,11 +24,11 @@ encode([H|T], D, Free, Out) ->
 
 find_match([H|T], L, LastVal, D, Free, Out) ->
     case dict:find([H|L], D) of
-	{ok, Val} ->
-	    find_match(T, [H|L], Val, D, Free, Out);
-	error ->
-	    D1 = dict:store([H|L], Free, D),
-	    encode([H|T], D1, Free+1, [LastVal|Out])
+  {ok, Val} ->
+      find_match(T, [H|L], Val, D, Free, Out);
+  error ->
+      D1 = dict:store([H|L], Free, D),
+      encode([H|T], D1, Free+1, [LastVal|Out])
     end;
 find_match([], _, LastVal, _, _, Out) ->
     reverse([LastVal|Out]).

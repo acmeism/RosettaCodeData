@@ -49,7 +49,7 @@ class LZW
                 }
             }
             $result .= $entry;
-            $dictionary[$dictSize++] = $w + $entry[0];
+            $dictionary[$dictSize++] = $w . $entry[0];
             $w = $entry;
         }
         return $result;

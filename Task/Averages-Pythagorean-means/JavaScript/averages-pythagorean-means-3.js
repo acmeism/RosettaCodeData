@@ -2,31 +2,62 @@
 
     // arithmeticMean :: [Number] -> Number
     const arithmeticMean = xs =>
-        xs.reduce((sum, n) => sum + n, 0) / xs.length;
+        foldl((sum, n) => sum + n, 0, xs) / length(xs);
 
     // geometricMean :: [Number] -> Number
     const geometricMean = xs =>
-        Math.pow(xs.reduce((product, x) => product * x, 1), 1 / xs.length);
+        raise(foldl((product, x) => product * x, 1, xs), 1 / length(xs));
 
     // harmonicMean :: [Number] -> Number
     const harmonicMean = xs =>
-        xs.length / xs.reduce((invSum, n) => invSum + (1 / n), 0);
+        length(xs) / foldl((invSum, n) => invSum + (1 / n), 0, xs);
 
+    // GENERIC FUNCTIONS ------------------------------------------------------
 
-    // TEST
-    const values = [arithmeticMean, geometricMean, harmonicMean]
-        .map(f => f([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])),
+    // A list of functions applied to a list of arguments
+    // <*> :: [(a -> b)] -> [a] -> [b]
+    const ap = (fs, xs) => //
+        [].concat.apply([], fs.map(f => //
+            [].concat.apply([], xs.map(x => [f(x)]))));
 
-        mean = {
-            Arithmetic: values[0],
-            Geometric: values[1],
-            Harmonic: values[2]
-        };
+    // foldl :: (b -> a -> b) -> b -> [a] -> b
+    const foldl = (f, a, xs) => xs.reduce(f, a);
 
-    return JSON.stringify({
+    // length :: [a] -> Int
+    const length = xs => xs.length;
+
+    // mapFromList :: [(k, v)] -> Dictionary
+    const mapFromList = kvs =>
+        foldl((a, [k, v]) =>
+            (a[(typeof k === 'string' && k) || show(k)] = v, a), {}, kvs);
+
+    // raise :: Num -> Int -> Num
+    const raise = (n, e) => Math.pow(n, e);
+
+    // show :: a -> String
+    // show :: a -> Int -> String
+    const show = (...x) =>
+        JSON.stringify.apply(
+            null, x.length > 1 ? [x[0], null, x[1]] : x
+        );
+
+    // zip :: [a] -> [b] -> [(a,b)]
+    const zip = (xs, ys) =>
+        xs.slice(0, Math.min(xs.length, ys.length))
+        .map((x, i) => [x, ys[i]]);
+
+    // TEST -------------------------------------------------------------------
+    // mean :: Dictionary
+    const mean = mapFromList(zip(
+        ['Arithmetic', 'Geometric', 'Harmonic'],
+        ap([arithmeticMean, geometricMean, harmonicMean], [
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        ])
+    ));
+
+    return show({
         values: mean,
         test: `is A >= G >= H ? ${mean.Arithmetic >= mean.Geometric &&
             mean.Geometric >= mean.Harmonic ? "yes" : "no"}`
-    }, null, 2);
-
+    }, 2);
 })();

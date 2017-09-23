@@ -4,7 +4,7 @@ sub visualize-tree($tree, &label, &children,
                    :@end = ('└─', '  '),
 ) {
     sub visit($node, *@pre) {
-        gather {
+        | gather {
             take @pre[0] ~ label($node);
             my @children := children($node);
             my $end = @children.end;

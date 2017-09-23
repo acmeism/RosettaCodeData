@@ -14,7 +14,8 @@ Do r1=1 To 6
       poss=space(translate('12345678',' ',r1||kk||r2),0)
       Call rest
       End
-    End
+
+ End
   End
 say cnt.1 'solutions'
 Say time('E')
@@ -51,7 +52,7 @@ out:
   Do k=1 To 8
     ol=ol||pos.k
     End
-  cnt.1+=1
+  cnt.1=cnt.1+1
   If cnt.1<4 |,
      cnt.1>957 Then
     Say format(cnt.1,3) poss r1 kk r2  ol

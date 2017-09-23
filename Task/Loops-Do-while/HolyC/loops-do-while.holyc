@@ -1,0 +1,5 @@
+U8 i = 0;
+do {
+   i++;
+   Print("%d\n", i);
+} while (i % 6 != 0);

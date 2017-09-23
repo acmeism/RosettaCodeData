@@ -3,4 +3,4 @@ var anyArray = [Any]()
 anyArray.append("foo") // Adding to an Array
 anyArray.append(1) // ["foo", 1]
 anyArray.removeAtIndex(1) // Remove object
-anyArray[0] = "bar" // ["bar"]]
+anyArray[0] = "bar" // ["bar"]

@@ -3,34 +3,31 @@ with Ada.Text_IO, Ada.Characters.Latin_1;
 
 procedure Longest_String_Challenge is
    function "+"(S: String) return Unbounded_String renames To_Unbounded_String;
-   function "-"(U: Unbounded_String) return String renames To_String;
    Separator: constant Character := Ada.Characters.Latin_1.NUL;
 
-   procedure Funny_Stuff(B, L: in out Unbounded_String;
-                         N: Unbounded_String;
-                         S, T: String) is
-      C: Character;
+   procedure Funny_Stuff(B, L: in out Unbounded_String; N: Unbounded_String) is
+      -- B holds a list of all longest strings, separated by Separator
+      -- L holds longest string so far
+      -- N is the next string to be considered
+      Nat: Natural;
    begin
-      C:= T(T'First); -- (1) raises Constraint_Error if T is empty
+      Nat := Length(N) - Length(L);
+        -- (1) this raises exception if L longer then N
+      declare
+         Pos: Positive;
       begin
-	 C := S(S'First); -- (2) raises Constraint_Error if S is empty
-	   -- at this point, we know that neither S nor T are empty
-         Funny_Stuff(B,L,N,S(S'First+1 .. S'Last), T(T'First+1..T'Last));
+         Pos := Nat; -- (2) this raises exception if L at least as long as N
+                     -- at this point, we know N is longer then L
+         B   := N;
+         L   := N;
       exception
-         when Constraint_Error => -- come from (2), S is empty, T is not empty!
-	    B   := N;
-	    L   := N;
+         when Constraint_Error -- come from (2)
+            -- at this point, we know L and N are of the same length
+            => B := B & Separator & N; -- add N to the set of solutions
       end;
    exception
-      when Constraint_Error => -- come from (1), T is empty
-	 begin
-	    C := S(S'First); -- (3) raises Constraint_Error if S is empty
-	    -- at this point, we know that T is empty and S isn't
-	    null;
-	exception
-	    when Constraint_Error => -- come from (3); both S and T are empty
-	    B := B & Separator & N;
-	end;
+      when Constraint_Error => null; -- come from (1)
+        -- at this point, we know L is longer then N
    end Funny_Stuff;
 
    Buffer: Unbounded_String := +"";
@@ -40,11 +37,11 @@ procedure Longest_String_Challenge is
 begin
    while True loop
       Next := + Ada.Text_IO.Get_Line;
-        -- (4) raises exception when trying to read beyond end of file
-      Funny_Stuff(Buffer, Longest, Next, -Longest, -Next);
+        -- (3) raises exception when trying to read beyond the end of file
+      Funny_Stuff(Buffer, Longest, Next);
    end loop;
 exception
-   when others => -- come from (4)
+   when others => -- come from (3)
       for I in To_String(Buffer)'Range loop
          if To_String(Buffer)(I) = Separator then
             Ada.Text_IO.New_Line;

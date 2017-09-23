@@ -18,7 +18,7 @@ test: Procedure
   Return
 
 LevenshteinDistance: Procedure Expose ld.
--- sl and tl are the number of characters in string s and t respectively
+/* sl and tl are the number of characters in string s and t respectively */
   Parse Arg s,sl,t,tl
   If ld.sl.tl<>'' Then
     Return ld.sl.tl

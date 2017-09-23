@@ -14,11 +14,11 @@ say '   the number of abundant  numbers: '       right(!.a, length(high) )
 say '   the number of deficient numbers: '       right(!.d, length(high) )
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-sigma: procedure; parse arg x;  if x<2  then return 0;      odd=x//2      /*is  X  odd? */
+sigma: procedure; parse arg x; if x<2  then return 0;  odd=x // 2    /* // ◄──remainder.*/
        s=1                                       /* [↓]  only use  EVEN or ODD integers.*/
-               do j=2+odd  by 1+odd  while j*j<x /*divide by all integers up to  √x.    */
-               if x//j==0  then  s=s+j+ x%j      /*add the two divisors to (sigma) sum. */
-               end   /*j*/                       /* [↑]  %  is the REXX integer division*/
+             do j=2+odd  by 1+odd  while j*j<x   /*divide by all integers up to  √x.    */
+             if x//j==0  then  s=s+j+ x%j        /*add the two divisors to (sigma) sum. */
+             end   /*j*/                         /* [↑]  %  is the REXX integer division*/
                                                  /* [↓]  adjust for a square.       ___ */
        if j*j==x  then  s=s+j                    /*Was  X  a square?   If so, add  √ x  */
        return s                                  /*return (sigma) sum of the divisors.  */

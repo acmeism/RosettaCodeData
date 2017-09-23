@@ -1,4 +1,4 @@
-#!/bin/env racket
+#!/usr/bin/env racket
 #lang racket/base
 
 (define (run i o)

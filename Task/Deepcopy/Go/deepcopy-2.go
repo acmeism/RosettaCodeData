@@ -1,62 +1,60 @@
 package main
 
-import (
-    "encoding/gob"
-    "fmt"
-    "os"
-)
+import "fmt"
 
-// capability requested by task
-func deepcopy(dst, src interface{}) error {
-    r, w, err := os.Pipe()
-    if err != nil {
-        return err
+// a type that allows cyclic structures
+type node []*node
+
+// recursively print the contents of a node
+func (n *node) list() {
+    if n == nil {
+        fmt.Println(n)
+        return
     }
-    enc := gob.NewEncoder(w)
-    err = enc.Encode(src)
-    if err != nil {
-        return err
+    listed := map[*node]bool{nil: true}
+    var r func(*node)
+    r = func(n *node) {
+        listed[n] = true
+        fmt.Printf("%p -> %v\n", n, *n)
+        for _, m := range *n {
+            if !listed[m] {
+                r(m)
+            }
+        }
     }
-    dec := gob.NewDecoder(r)
-    return dec.Decode(dst)
+    r(n)
 }
 
-// define linked list type, an example of a recursive type
-type link struct {
-    Value string
-    Next  *link
-}
-
-// method satisfies stringer interface for fmt.Println
-func (l *link) String() string {
-    if l == nil {
-        return "nil"
+// construct a deep copy of a node
+func (n *node) ccopy() *node {
+    if n == nil {
+        return n
     }
-    s := "(" + l.Value
-    for l = l.Next; l != nil; l = l.Next {
-        s += " " + l.Value
+    cc := map[*node]*node{nil: nil}
+    var r func(*node) *node
+    r = func(n *node) *node {
+        c := make(node, len(*n))
+        cc[n] = &c
+        for i, m := range *n {
+            d, ok := cc[m]
+            if !ok {
+                d = r(m)
+            }
+            c[i] = d
+        }
+        return &c
     }
-    return s + ")"
+    return r(n)
 }
 
 func main() {
-    // create a linked list with two elements
-    l1 := &link{"a", &link{Value: "b"}}
-    // print original
-    fmt.Println(l1)
-    // declare a variable to hold deep copy
-    var l2 *link
-    // copy
-    if err := deepcopy(&l2, l1); err != nil {
-        fmt.Println(err)
-        return
-    }
-    // print copy
-    fmt.Println(l2)
-    // now change contents of original list
-    l1.Value, l1.Next.Value = "c", "d"
-    // show that it is changed
-    fmt.Println(l1)
-    // show that copy is unaffected
-    fmt.Println(l2)
+    a := node{nil}
+    c := &node{&node{&a}}
+    a[0] = c
+    c.list()
+    cc := c.ccopy()
+    fmt.Println("copy:")
+    cc.list()
+    fmt.Println("original:")
+    c.list()
 }

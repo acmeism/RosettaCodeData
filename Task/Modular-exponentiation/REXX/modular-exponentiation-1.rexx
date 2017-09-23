@@ -18,9 +18,9 @@ powerMod: procedure;  parse arg x,p,n                 /*fast modular exponentiat
           if p<0   then do;   say '***error*** power is negative:'  p;    exit 13;     end
           parse value max(x**2,p,n)'E0'  with  "E" e  /*obtain the biggest of the three.*/
           numeric digits max(20, e*2)                 /*big enough to handle  A².       */
-          _=1                                         /*use this for the first value.   */
+          $=1                                         /*use this for the first value.   */
                      do  while p\==0                  /*perform  while   P   isn't zero.*/
-                     if p//2  then _=_*x//n           /*is  P  odd?  (is ÷ remainder≡1).*/
-                     p=p%2;        x=x*x//n           /*halve  P;   calculate  x² mod n */
+                     if p//2  then $=$ * x  // n      /*is  P  odd?  (is ÷ remainder≡1).*/
+                     p=p%2;        x=x * x  // n      /*halve  P;   calculate  x² mod n */
                      end   /*while*/                  /* [↑]  keep mod'ing 'til equal 0.*/
-          return _
+          return $

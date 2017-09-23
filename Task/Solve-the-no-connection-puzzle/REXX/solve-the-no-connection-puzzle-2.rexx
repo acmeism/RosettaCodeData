@@ -9,19 +9,19 @@ oLimit=limit;                   limit=abs(limit)       /* ║         /│\  /�
 @.3 = 'C   A D G'                                      /* ║     C────D────E────F      ║ */
 @.4 = 'D   A B C E G'                                  /* ║      \   │\  /│   /       ║ */
 @.5 = 'E   A B D F H'                                  /* ║       \  │ \/ │  /        ║ */
-@.6 = 'F   B E G'                                      /* ║        \ │ /\ │ /         ║ */
+@.6 = 'F   B E H'                                      /* ║        \ │ /\ │ /         ║ */
 @.7 = 'G   C D E'                                      /* ║         \│/  \│/          ║ */
 @.8 = 'H   D E F'                                      /* ║          G    H           ║ */
 cnt=0                                                  /* ╚═══════════════════════════╝ */
-                  do nodes=1  while  @.nodes\=='';    _=word(@.nodes,1)
+                  do pegs=1  while  @.pegs\=='';    _=word(@.pegs, 1)
                   subs=0
-                             do #=1  for  words(@.nodes)-1  /*create list of node paths.*/
-                             __=word(@.nodes,#+1);   if __>_  then iterate
-                             subs=subs + 1;          !._.subs=__
+                             do #=1  for  words(@.pegs) -1  /*create list of node paths.*/
+                             __=word(@.pegs, #+1);      if __>_  then iterate
+                             subs=subs + 1;             !._.subs=__
                              end  /*#*/
                   !._.0=subs                    /*assign the number of the node paths.  */
-                  end   /*nodes*/
-pegs=nodes-1                                    /*the number of pegs to be seated.      */
+                  end   /*pegs*/
+pegs=pegs - 1                                   /*the number of pegs to be seated.      */
 _='    '                                        /*_   is used for indenting the output. */
         do        a=1  for pegs;     if ?('A')  then iterate
          do       b=1  for pegs;     if ?('B')  then iterate
@@ -42,7 +42,7 @@ _='    '                                        /*_   is used for indenting the 
          end         /*b*/
         end          /*a*/
 say                                              /*display a blank line to the terminal.*/
-s=left('s',cnt\==1)                              /*handle the case of plurals  (or not).*/
+s=left('s', cnt\==1)                             /*handle the case of plurals  (or not).*/
 say 'found '   cnt   " solution"s'.'             /*display the number of solutions found*/
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/

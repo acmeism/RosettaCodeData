@@ -1,2 +1,7 @@
-var fruits = { APPLE : 0, BANANA : 1, CHERRY : 2 };
-Object.freeze(fruits);
+// enum fruits { apple, banana, cherry }
+
+var f = "apple";
+
+if(f == "apple"){
+    f = "banana";
+}

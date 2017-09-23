@@ -1,331 +1,315 @@
-#import system.
-#import system'routines.
-#import extensions.
-#import extensions'text.
+import system'routines.
+import extensions.
+import extensions'text.
 
-#class Token
+class Token
 {
-    #field theValue.
-    #field theLevel.
+    object                theValue.
 
-    #constructor new &level:aLevel
+    object rprop level :: theLevel.
+
+    constructor new level:aLevel
     [
         theValue := StringWriter new.
         theLevel := aLevel + 9.
     ]
 
-    #method level = theLevel.
-
-    #method append : aChar
+    append : aChar
     [
         theValue << aChar.
     ]
 
-    #method number = theValue get toReal.
+    number = theValue get; toReal.
 }
 
-#class Node
+class Node
 {
-    #field theLeft.
-    #field theRight.
-    #field theLevel.
+    object prop  left  :: theLeft.
+    object prop  right :: theRight.
+    object rprop level :: theLevel.
 
-    #constructor new &level:aLevel
+    constructor new level:aLevel
     [
         theLevel := aLevel.
     ]
-
-    #method level = theLevel.
-
-    #method left = theLeft.
-
-    #method right = theRight.
-
-    #method set &left:anObject [ theLeft := anObject. ]
-
-    #method set &right:anObject [ theRight := anObject. ]
 }
 
-#class SummaryNode :: Node
+class SummaryNode :: Node
 {
-    #constructor new &level:aLevel
-        <= %new &level:(aLevel + 1).
+    constructor new level:aLevel
+        <= new level(aLevel + 1).
 
-    #method number = theLeft number + theRight number.
+    number = theLeft number + theRight number.
 }
 
-#class DifferenceNode :: Node
+class DifferenceNode :: Node
 {
-    #constructor new &level:aLevel
-        <= %new &level:(aLevel + 1).
+    constructor new level:aLevel
+        <= new level(aLevel + 1).
 
-    #method number = theLeft number - theRight number.
+    number = theLeft number - theRight number.
 }
 
-#class ProductNode :: Node
+class ProductNode :: Node
 {
-    #constructor new &level:aLevel
-        <= %new &level:(aLevel + 2).
+    constructor new level:aLevel
+        <= new level(aLevel + 2).
 
-    #method number = theLeft number * theRight number.
+    number = theLeft number * theRight number.
 }
 
-#class FractionNode :: Node
+class FractionNode :: Node
 {
-    #constructor new &level:aLevel
-        <= %new &level:(aLevel + 2).
+    constructor new level:aLevel
+        <= new level(aLevel + 2).
 
-    #method number = theLeft number / theRight number.
+    number = theLeft number / theRight number.
 }
 
-#class Expression
+class Expression
 {
-    #field theLevel.
-    #field theTop.
+    object rprop level :: theLevel.
+    object prop  top   :: theTop.
 
-    #constructor new &level:aLevel
+    constructor new level:aLevel
     [
-        theLevel := aLevel.
+        theLevel := aLevel
     ]
 
-    #method top = theTop.
+    right = theTop.
 
-    #method set &top:aNode [ theTop := aNode. ]
+    set right:aNode [ theTop := aNode ]
 
-    #method right = theTop.
-
-    #method set &right:aNode [ theTop := aNode. ]
-
-    #method level = theLevel.
-
-    #method number => theTop.
+    number => theTop.
 }
 
-#symbol operatorState = (:ch)
+operatorState = (:ch)
 [
     ch =>
-        #40 ? [      // (
-            self new &bracket goto &start.
-        ]
+        $40 [      // (
+            ^ closure newBracket; gotoStarting
+        ];
         ! [
-            self new &token append:ch goto &token.
+            ^ closure newToken; append:ch; gotoToken
         ].
 ].
 
-#symbol tokenState = (:ch)
+tokenState = (:ch)
 [
     ch =>
-        #41 ? [      // )
-            self close &bracket goto &token.
-        ]
-        #42 ? [      // *
-            self new &product goto &operator.
-        ]
-        #43 ? [      // +
-            self new &summary goto &operator.
-        ]
-        #45 ? [      // -
-            self new &difference goto &operator.
-        ]
-        #47 ?       // /
-        [
-            self new &fraction goto &operator.
-        ]
+        $41 [      // )
+            ^ closure closeBracket; gotoToken
+        ];
+        $42 [      // *
+            ^ closure newProduct; gotoOperator
+        ];
+        $43 [      // +
+            ^ closure newSummary; gotoOperator
+        ];
+        $45 [      // -
+            ^ closure newDifference; gotoOperator
+        ];
+        $47 [      // /
+            ^ closure newFraction; gotoOperator
+        ];
         ! [
-            self append:ch.
+            ^ closure append:ch
         ].
 ].
 
-#symbol startState = (:ch)
+startState = (:ch)
 [
     ch =>
-        #40 ? [      // (
-            self new &bracket goto &start.
-        ]
-        #45 ? [ // -
-            self new &token append &literal:"0" new &difference goto &operator.
-        ]
+        $40 [      // (
+            ^ closure newBracket; gotoStarting
+        ];
+        $45 [ // -
+            ^ closure newToken; append literal:"0"; newDifference; gotoOperator
+        ];
         ! [
-            self new &token append:ch goto &token.
+            ^ closure newToken; append:ch; gotoToken
         ].
 ].
 
-#class Scope
+class Scope
 {
-    #field theState.
-    #field theLevel.
-    #field theParser.
-    #field theToken.
-    #field theExpression.
+    object theState.
+    object theLevel.
+    object theParser.
+    object theToken.
+    object theExpression.
 
-    #constructor new &parser:aParser
+    constructor new parser:aParser
     [
         theState := startState.
         theLevel := 0.
-        theExpression := Expression new &level:0.
+        theExpression := Expression new level:0.
         theParser := aParser.
     ]
 
-    #method new &token
+    newToken
     [
-        theToken := theParser append &token &expression:theExpression &level:theLevel.
+        theToken := theParser appendToken expression:theExpression level:theLevel.
     ]
 
-    #method new &summary
-    [
-        theToken := nil.
-
-        theParser append &summary &expression:theExpression &level:theLevel.
-    ]
-
-    #method new &difference
+    newSummary
     [
         theToken := nil.
 
-        theParser append &difference &expression:theExpression &level:theLevel.
+        theParser appendSummary expression:theExpression level:theLevel.
     ]
 
-    #method new &product
+    newDifference
     [
         theToken := nil.
 
-        theParser append &product &expression:theExpression &level:theLevel.
+        theParser appendDifference expression:theExpression level:theLevel
     ]
 
-    #method new &fraction
+    newProduct
     [
         theToken := nil.
 
-        theParser append &fraction &expression:theExpression &level:theLevel.
+        theParser appendProduct expression:theExpression level:theLevel
     ]
 
-    #method new &bracket
+    newFraction
+    [
+        theToken := nil.
+
+        theParser appendFraction expression:theExpression level:theLevel
+    ]
+
+    newBracket
     [
         theToken := nil.
 
         theLevel := theLevel + 10.
 
-        theParser append &subexpression &expression:theExpression &level:theLevel.
+        theParser appendSubexpression expression:theExpression level:theLevel.
     ]
 
-    #method close &bracket
+    closeBracket
     [
-        (theLevel < 10)
-            ? [ #throw InvalidArgumentException new &message:"Invalid expression". ].
+        if (theLevel < 10)
+            [ InvalidArgumentException new:"Invalid expression"; raise ].
 
-        theLevel := theLevel - 10.
+        theLevel := theLevel - 10
     ]
 
-    #method append:ch
+    append:ch
     [
-        ((ch >= #48) and:(ch < #58))
-            ? [ theToken append:ch. ]
-            ! [ #throw InvalidArgumentException new &message:"Invalid expression". ].
+        if((ch >= $48) && (ch < $58))
+            [ theToken append:ch ];
+            [ InvalidArgumentException new:"Invalid expression"; raise ]
     ]
 
-    #method append &literal:aLiteral
+    append literal:aLiteral
     [
-        aLiteral run &each: ch [ self append:ch. ].
+        aLiteral forEach(:ch)[ self append:ch ]
     ]
 
-    #method goto &start
+    gotoStarting
     [
-        theState := startState.
+        theState := startState
     ]
 
-    #method goto &token
+    gotoToken
     [
-        theState := tokenState.
+        theState := tokenState
     ]
 
-    #method goto &operator
+    gotoOperator
     [
-        theState := operatorState.
+        theState := operatorState
     ]
 
-    #method number => theExpression.
+    number => theExpression.
 
-    #method => theState.
+    dispatch => theState.
 }
 
-#class Parser
+class Parser
 {
-    #method append &token &expression:anExpression &level:aLevel
+    appendToken expression:anExpression level:aLevel
     [
-        #var aToken := Token new &level:aLevel.
+        var aToken := Token new level:aLevel.
 
-        anExpression set &top:($self append &last:(anExpression top) &new:aToken).
+        anExpression set top:($self append last(anExpression top) new:aToken).
 
-        ^ aToken.
+        ^ aToken
     ]
 
-    #method append &summary &expression:anExpression &level:aLevel
+    appendSummary expression:anExpression level:aLevel
     [
-        anExpression set &top:($self append &last:(anExpression top) &new:(SummaryNode new &level:aLevel)).
+        anExpression set top($self append last(anExpression top) new(SummaryNode new level:aLevel)).
     ]
 
-    #method append &difference &expression:anExpression &level:aLevel
+    appendDifference expression:anExpression level:aLevel
     [
-        anExpression set &top:($self append &last:(anExpression top) &new:(DifferenceNode new &level:aLevel)).
+        anExpression set top($self append last(anExpression top) new(DifferenceNode new level:aLevel)).
     ]
 
-    #method append &product &expression:anExpression &level:aLevel
+    appendProduct expression:anExpression level:aLevel
     [
-        anExpression set &top:($self append &last:(anExpression top) &new:(ProductNode new &level:aLevel)).
+        anExpression set top($self append last(anExpression top) new(ProductNode new level:aLevel)).
     ]
 
-    #method append &fraction &expression:anExpression &level:aLevel
+    appendFraction expression:anExpression level:aLevel
     [
-        anExpression set &top:($self append &last:(anExpression top) &new:(FractionNode new &level:aLevel)).
+        anExpression set top($self append last(anExpression top) new(FractionNode new level:aLevel))
     ]
 
-    #method append &subexpression &expression:anExpression &level:aLevel
+    appendSubexpression expression:anExpression level:aLevel
     [
-        anExpression set &top:($self append &last:(anExpression top) &new:(Expression new &level:aLevel)).
+        anExpression set top($self append last(anExpression top) new(Expression new level:aLevel)).
     ]
 
-    #method append &last:aLastNode &new:aNewNode
+    append last:aLastNode new:aNewNode
     [
-        ($nil == aLastNode)
-            ? [ ^ aNewNode. ].
+        if($nil == aLastNode)
+            [ ^ aNewNode ].
 
-        (aNewNode level <= aLastNode level)
-            ? [ aNewNode set &left:aLastNode. ^ aNewNode. ].
+        if (aNewNode level <= aLastNode level)
+            [ aNewNode set left:aLastNode. ^ aNewNode ].
 
-        #var aParent := aLastNode.
-        #var aCurrent := aLastNode right.
-        #loop (($nil != aCurrent) and:[ aNewNode level > aCurrent level ]) ?
+        var aParent := aLastNode.
+        var aCurrent := aLastNode right.
+        while (($nil != aCurrent) && $(aNewNode level > aCurrent level))
             [ aParent := aCurrent. aCurrent := aCurrent right. ].
 
-        ($nil == aCurrent)
-            ? [ aParent set &right:aNewNode. ]
-            ! [ aNewNode set &left:aCurrent. aParent set &right:aNewNode. ].
+        if ($nil == aCurrent)
+            [ aParent set right:aNewNode. ];
+            [ aNewNode set left:aCurrent. aParent set right:aNewNode ].
 
-        ^ aLastNode.
+        ^ aLastNode
     ]
 
-    #method run : aText
+    run : aText
     [
-        #var aScope := Scope new &parser:$self.
+        var aScope := Scope new parser:$self.
 
-        aText run &each: ch [ aScope eval:ch. ].
+        aText forEach(:ch)[ aScope eval:ch ].
 
-        ^ aScope number.
+        ^ aScope number
     ]
 }
 
-#symbol program =
+program =
 [
-    #var aText := String new.
-    #var aParser := Parser new.
+    var aText := String new.
+    var aParser := Parser new.
 
-    [ console readLine save &to:aText length > 0] doWhile:
+    $(console readLine; saveTo:aText; length > 0) doWhile:
     [
-        console writeLine:"=" :(aParser run:aText)
-            | if &Error:e [
-                    console writeLine:"Invalid Expression".
-                ].
+        try(console printLine("=",aParser run:aText))
+        {
+            on(Exception e)
+            [
+                console writeLine:"Invalid Expression"
+            ]
+        }.
 
-        aText clear.
+        aText clear
     ].
 ].

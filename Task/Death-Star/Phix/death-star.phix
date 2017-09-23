@@ -1,0 +1,103 @@
+--
+-- demo\rosetta\DeathStar.exw
+--
+include pGUI.e
+
+Ihandle dlg, canvas
+cdCanvas cddbuffer, cdcanvas
+
+function dot(sequence x, sequence y)
+    return sum(sq_mul(x,y))
+end function
+
+function normalize(sequence v)
+    atom len = sqrt(dot(v, v))
+    if len=0 then return {0,0,0} end if
+    return sq_mul(v,1/len)
+end function
+
+enum X,Y,Z
+
+function hit(sequence s, atom x, y, atom r)
+    x -= s[X]
+    y -= s[Y]
+    atom zsq := r*r - (x*x + y*y)
+    if zsq >= 0 then
+        atom zsqrt := sqrt(zsq)
+        return {s[Z] - zsqrt, s[Z] + zsqrt, true}
+    end if
+    return {0, 0, false}
+end function
+
+procedure deathStar(integer width, height, atom k, atom amb, sequence direction)
+integer lum
+sequence vec
+integer r = floor((min(width,height)-40)/2)
+integer cx = floor(width/2)
+integer cy = floor(height/2)
+sequence pos = {0,0,0},
+         neg = {r*-3/4,r*-3/4,r*-1/4}
+
+    for y = pos[Y]-r to pos[Y]+r do
+        for x = pos[X]-r to pos[X]+r do
+            atom {zb1, zb2, hit1} := hit(pos, x, y, r)
+            if hit1 then
+                atom {zs1, zs2, hit2} := hit(neg, x, y, r/2)
+                if not hit2 or zs2<=zb2 then
+                    if hit2 and zs1<=zb1 then
+                        vec = {neg[X] - x, neg[Y] - y, neg[Z] - zs2}
+                    else
+                        vec = {x - pos[X], y - pos[Y], zb1 - pos[Z]}
+--                      vec = {x, y, zb1}
+                    end if
+                    atom s = dot(direction, normalize(vec))
+                    lum = and_bits(#FF,255*(iff(s<0?0:power(s,k))+amb)/(1+amb))
+                    lum += lum*#100+lum*#10000
+                    cdCanvasPixel(cddbuffer, cx+x, cy-y, lum)
+                end if
+            end if
+        end for
+    end for
+end procedure
+
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+integer {width, height} = IupGetIntInt(canvas, "DRAWSIZE")
+    cdCanvasActivate(cddbuffer)
+    cdCanvasClear(cddbuffer)
+    deathStar(width, height, 1.5, 0.2, normalize({20, -40, -10}))
+    cdCanvasFlush(cddbuffer)
+    return IUP_DEFAULT
+end function
+
+function map_cb(Ihandle ih)
+    cdcanvas = cdCreateCanvas(CD_IUP, ih)
+    cddbuffer = cdCreateCanvas(CD_DBUFFER, cdcanvas)
+    cdCanvasSetBackground(cddbuffer, CD_BLACK)
+    return IUP_DEFAULT
+end function
+
+function esc_close(Ihandle /*ih*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    return IUP_CONTINUE
+end function
+
+procedure main()
+    IupOpen()
+
+    canvas = IupCanvas(NULL)
+    IupSetAttribute(canvas, "RASTERSIZE", "340x340") -- initial size
+    IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
+
+    dlg = IupDialog(canvas)
+    IupSetAttribute(dlg, "TITLE", "Draw a sphere")
+    IupSetCallback(dlg, "K_ANY",     Icallback("esc_close"))
+    IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+
+    IupMap(dlg)
+    IupSetAttribute(canvas, "RASTERSIZE", NULL) -- release the minimum limitation
+    IupShowXY(dlg,IUP_CENTER,IUP_CENTER)
+    IupMainLoop()
+    IupClose()
+end procedure
+
+main()

@@ -1,16 +1,23 @@
->>> for s in ['0', '00', '123', '-123.', '-123e-4', '0123', '0x1a1', '-123+4.5j', '0b0101', '0.123', '-0xabc', '-0b101']:
-    print "%14s -> %-14s %s" % ('"'+s+'"', is_numeric(s), type(is_numeric(s)))
+def numeric(literal):
+    """Return value of numeric literal or None if can't parse a value"""
+    castings = [int, float, complex,
+        lambda s: int(s,2),  #binary
+        lambda s: int(s,8),  #octal
+        lambda s: int(s,16)] #hex
+    for cast in castings:
+        try:
+            return cast(literal)
+        except ValueError:
+            pass
+    return None
 
-           "0" -> 0              <type 'int'>
-          "00" -> 0              <type 'int'>
-         "123" -> 123            <type 'int'>
-       "-123." -> -123.0         <type 'float'>
-     "-123e-4" -> -0.0123        <type 'float'>
-        "0123" -> 83             <type 'int'>
-       "0x1a1" -> 417            <type 'int'>
-   "-123+4.5j" -> (-123+4.5j)    <type 'complex'>
-      "0b0101" -> 5              <type 'int'>
-       "0.123" -> 0.123          <type 'float'>
-      "-0xabc" -> -2748          <type 'int'>
-      "-0b101" -> -5             <type 'int'>
->>>
+
+tests = [
+    '0', '0.', '00', '123', '0123', '+123', '-123', '-123.', '-123e-4', '-.8E-04',
+    '0.123', '(5)', '-123+4.5j', '0b0101', ' +0B101 ', '0o123', '-0xABC', '0x1a1',
+    '12.5%', '1/2', '½', '3¼', 'π', 'Ⅻ', '1,000,000', '1 000', '- 001.20e+02',
+    'NaN', 'inf', '-Infinity']
+
+for s in tests:
+    print("%14s -> %-14s %-20s is_numeric: %-5s  str.isnumeric: %s" % (
+        '"'+s+'"', numeric(s), type(numeric(s)), is_numeric(s), s.isnumeric() ))

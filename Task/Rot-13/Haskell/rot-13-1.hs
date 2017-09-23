@@ -1,7 +1,14 @@
-import Data.Char
+import Data.Char (isAlpha, toLower, chr, ord)
 
 rot13 :: Char -> Char
 rot13 c
-  | toLower c >= 'a' && toLower c <= 'm' = chr (ord c + 13)
-  | toLower c >= 'n' && toLower c <= 'z' = chr (ord c - 13)
+  | isAlpha c = chr (if_ (toLower c <= 'm') (+) (-) (ord c) 13)
   | otherwise = c
+
+if_ :: Bool -> a -> a -> a
+if_ True x _ = x
+if_ False _ y = y
+
+-- Simple test
+main :: IO ()
+main = print $ rot13 <$> "Abjurer nowhere"

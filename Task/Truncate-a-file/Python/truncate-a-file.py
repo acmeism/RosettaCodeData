@@ -5,5 +5,4 @@ def truncate_file(name, length):
         return False
     with open(name, 'ab') as f:
         f.truncate(length)
-        f.close()
-        return True
+    return True

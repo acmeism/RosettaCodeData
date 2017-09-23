@@ -1,8 +1,4 @@
-   msg=: (<'is not in haystack')"_                  NB. not found message
-   idxmissing=: #@[ I.@:= ]                         NB. indices of items not found
-   fmtdata=: 8!:0@]                                 NB. format atoms as boxed strings
-   findLastIndex=: ;:inv@(] ,. [ msg`idxmissing`fmtdata} i:)
-
-   Haystack findLastIndex Needles                   NB. usage
-Washington is not in haystack
-Bush 7
+   1 2 3 4 5 6 7 8 9 I. 2 3 5 60 6.66
+1 2 4 9 6
+   (;:'eight five four nine one seven six three two') I. ;:'two three five sixty'
+8 7 1 7

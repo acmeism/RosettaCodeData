@@ -1,3 +1,16 @@
+' Soundex
+    tt=array( _
+      "Ashcraft","Ashcroft","Gauss","Ghosh","Hilbert","Heilbronn","Lee","Lloyd", _
+      "Moses","Pfister","Robert","Rupert","Rubin","Tymczak","Soundex","Example")
+    tv=array( _
+      "A261","A261","G200","G200","H416","H416","L000","L300", _
+      "M220","P236","R163","R163","R150","T522","S532","E251")
+    For i=lbound(tt) To ubound(tt)
+        ts=soundex(tt(i))
+        If ts<>tv(i) Then ok=" KO "& tv(i) Else ok=""
+        Wscript.echo right(" "& i ,2) & " " & left( tt(i) &space(12),12) & " " & ts & ok
+    Next 'i
+
 Function getCode(c)
     Select Case c
         Case "B", "F", "P", "V"
@@ -12,22 +25,19 @@ Function getCode(c)
             getCode = "5"
         Case "R"
             getCode = "6"
+        Case "W","H"
+            getCode = "-"
     End Select
-End Function
+End Function 'getCode
 
 Function soundex(s)
-    Dim code, previous
+    Dim code, previous, i
     code = UCase(Mid(s, 1, 1))
-    previous = 7
-    For i = 2 to (Len(s) + 1)
+    previous = getCode(UCase(Mid(s, 1, 1)))
+    For i = 2 To Len(s)
         current = getCode(UCase(Mid(s, i, 1)))
-        If Len(current) > 0 And current <> previous Then
-            code = code & current
-        End If
-        previous = current
-    Next
-    soundex = Mid(code, 1, 4)
-    If Len(code) < 4 Then
-        soundex = soundex & String(4 - Len(code), "0")
-    End If
-End Function
+        If current <> "" And current <> "-" And current <> previous Then code = code & current
+        If current <> "-" Then previous = current
+    Next 'i
+    soundex = Mid(code & "000", 1, 4)
+End Function 'soundex

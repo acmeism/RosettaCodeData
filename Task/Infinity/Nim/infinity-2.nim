@@ -1,2 +1,2 @@
-var f = inf
+var f = Inf
 echo f

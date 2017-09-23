@@ -8,15 +8,15 @@ multi sub pokem ([$i, *@rest], $w, $v = 0) {
     my @skip = pokem @rest, $w, $v;
     if $w >= $i.weight { # next one fits
       my @put = pokem @rest, $w - $i.weight, $v + $i.unit;
-      return (%cache{$key} = @put, $i.name).list if @put[0] > @skip[0];
+      return (%cache{$key} = |@put, $i.name).list if @put[0] > @skip[0];
     }
-    return (%cache{$key} = @skip).list;
+    return (%cache{$key} = |@skip).list;
   }
 }
 
 my $MAX_WEIGHT = 400;
-my @table = map     -> $name,  $weight,  $unit {
-    KnapsackItem.new: :$name, :$weight, :$unit;
+my @table = flat map -> $name,  $weight,  $unit {
+     KnapsackItem.new: :$name, :$weight, :$unit;
 },
     'map',                      9, 150,
     'compass',                 13,  35,

@@ -1,8 +1,11 @@
-(function() {
-  var i;
-
-  for (i = 1; i <= 100; i++) {
-    console.log([i % 3 === 0 ? 'Fizz' : void 0] + [i % 5 === 0 ? 'Buzz' : void 0] || i);
-  }
-
-}).call(this);
+(function rng(i) {
+    return i ? rng(i - 1).concat(i) : []
+})(100).map(
+    function (n) {
+        return n % 3 ? (
+            n % 5 ? n : "Buzz"
+        ) : (
+            n % 5 ? "Fizz" : "FizzBuzz"
+        )
+    }
+).join(' ')

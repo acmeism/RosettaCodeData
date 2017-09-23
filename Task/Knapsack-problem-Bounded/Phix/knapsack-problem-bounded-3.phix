@@ -1,0 +1,141 @@
+--
+-- demo\rosetta\knapsackB.exw
+-- ==========================
+--
+atom t0 = time()
+
+enum HI,PTS,ACTW,SOLN
+sequence range_cache = {}
+
+integer cache_entries = 0
+
+procedure add_range(integer at, atom weight, atom actual_weight, atom points, sequence soln)
+    if actual_weight>weight then ?9/0 end if
+    for i=length(range_cache)+1 to at do -- (while too small do)
+        if i=at then
+            range_cache = append(range_cache,{{weight,points,actual_weight,soln}})
+            cache_entries += 1
+            return
+        end if
+        range_cache = append(range_cache,{})
+    end for
+    for i=1 to length(range_cache[at]) do
+        sequence rcati = range_cache[at][i]
+        if weight=rcati[ACTW] then
+            if rcati[PTS..SOLN]!={points,actual_weight,soln} then ?9/0 end if
+            return
+        elsif weight<rcati[ACTW] then
+            -- (we cannot extend an existing range down, since it starts at
+            --  the actual weight, that must also be the minimum weight...)
+            if soln=rcati[SOLN] then ?9/0 end if
+            -- insert a new range
+            range_cache[at][i..i-1] = {{weight,points,actual_weight,soln}}
+            cache_entries += 1
+            return
+        elsif soln=rcati[SOLN] then
+            if rcati[PTS..SOLN]!={points,actual_weight,soln} then ?9/0 end if
+            if weight>rcati[HI] then        -- extend existing range up
+                rcati = {}
+                range_cache[at][i][HI] = weight
+            end if
+            return
+        elsif weight<=rcati[HI] then
+            ?9/0        -- duplicate solution?? (or discard as below)
+--          return                          -- (discard)
+        end if
+    end for
+    range_cache[at] = append(range_cache[at],{weight,points,actual_weight,soln})
+    cache_entries += 1
+end procedure
+
+function in_range(integer at, atom weight)
+    if at<=length(range_cache) then
+        for i=1 to length(range_cache[at]) do
+            sequence rcati = range_cache[at][i]
+            if weight<=rcati[HI] then
+                if weight>=rcati[ACTW] then
+                    return rcati[PTS..SOLN] -- {pts,act_weight,soln}
+                end if
+                exit
+            end if
+        end for
+    end if
+    return {}   -- (no suitable cache entry found)
+end function
+
+constant goodies = {
+-- item                     weight value pieces
+{"map",                     9,      150,    1},
+{"compass",                 13,     35,     1},
+{"sandwich",                50,     60,     2},
+{"glucose",                 15,     60,     2},
+{"tin",                     68,     45,     3},
+{"banana",                  27,     60,     3},
+{"apple",                   39,     40,     3},
+{"cheese",                  23,     30,     1},
+{"beer",                    52,     10,     3},
+{"suntan cream",            11,     70,     1},
+{"water",                   153,    200,    2},
+{"camera",                  32,     30,     1},
+{"T-shirt",                 24,     15,     2},
+{"trousers",                48,     10,     2},
+{"umbrella",                73,     40,     1},
+{"waterproof trousers",     42,     70,     1},
+{"waterproof overclothes",  43,     75,     1},
+{"note-case",               22,     80,     1},
+{"sunglasses",              7,      20,     1},
+{"towel",                   18,     12,     2},
+{"socks",                   4,      50,     1},
+{"book",                    30,     10,     2}}
+
+integer cache_hits = 0
+integer cache_misses = 0
+
+function knapsack(integer max_weight, integer at)
+    integer best_points = 0, points
+    sequence best_choices = {}, choices
+    atom act_weight = 0, sub_weight
+    if at>=1 then
+        sequence soln = in_range(at,max_weight)
+        if length(soln) then
+            cache_hits += 1
+            return soln
+        end if
+        cache_misses += 1
+        integer {?,witem,pitem,imax} = goodies[at]
+        best_choices = repeat(0,at)
+        for i=0 to imax do
+            integer wlim = max_weight-i*witem
+            if wlim<0 then exit end if
+            {points,sub_weight,choices} = knapsack(wlim, at-1)
+            points += i*pitem
+            if points>best_points then
+                best_points = points
+                best_choices = choices&i
+                act_weight = sub_weight+i*witem
+            end if
+        end for
+        add_range(at,max_weight,act_weight,best_points,best_choices)
+    end if
+    return {best_points, act_weight, best_choices}
+end function
+
+sequence res = knapsack(400, length(goodies))   -- {points,act_weight,choices}
+
+atom weight = 0, witem
+atom points = 0, pitem
+string idesc
+for i=1 to length(goodies) do
+    integer c = res[3][i]
+    if c then
+        {idesc,witem,pitem} = goodies[i]
+        printf(1,"%d %s\n",{c,idesc})
+        weight += c*witem
+        points += c*pitem
+    end if
+end for
+if points!=res[1] then ?9/0 end if  -- sanity check
+if weight!=res[2] then ?9/0 end if  -- sanity check
+printf(1,"Value %d, weight %g [%3.2fs]\n",{points,weight,time()-t0})
+
+printf(1,"cache_entries:%d, hits:%d, misses:%d\n",{cache_entries,cache_hits,cache_misses})

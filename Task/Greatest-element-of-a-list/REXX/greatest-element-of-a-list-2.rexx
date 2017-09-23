@@ -1,14 +1,11 @@
-/*REXX program finds the  greatest element  in an array (of numbers).   */
-y.=                                    /*set all array elements to null.*/
-y.1  =  2;      y.2  =  3;      y.3  =  5;      y.4  =  7;      y.5  = 11
-y.6  = 31;      y.7  = 71;      y.8  = 91;      y.9  = 32;      y.10 = 92
-y.11 = 13;      y.12 = 73;      y.13 = 14;      y.14 = 34;      y.15 = 74
-y.16 = 35;      y.17 = 95;      y.18 = 16;      y.19 = 76;      y.20 = 17
-
-big   = y.1                            /*choose a initial biggest number*/
-                do j=2  while y.j\=='' /*traipse through the whole array*/
-                big = max(big, y.j)    /*use a  BIF  to find the biggie.*/
-                end   /*j*/
-
-say 'the biggest value in an array of '    j-1     " elements is: "    big
-                                       /*stick a fork in it, we're done.*/
+/*REXX program finds the  greatest element  in a list (of the first 25 reversed primes).*/
+@.=;       @.1 = 2;    @.2 = 3;    @.3 = 5;    @.4 = 7;    @.5 =11;    @.6 =31;    @.7 =71
+           @.8 =91;    @.9 =32;    @.10=92;    @.11=13;    @.12=73;    @.13=14;    @.14=34
+           @.15=74;    @.16=35;    @.17=95;    @.18=16;    @.19=76;    @.20=17;    @.21=37
+           @.22=97;    @.23=38;    @.24=98;    @.25=79
+big=@.1                                          /*choose an initial biggest number.    */
+                do #=2  while @.#\==''           /*traipse through whole array of nums. */
+                big = max(big, @.#)              /*use a BIF to find the biggest number.*/
+                end   /*#*/
+                                                 /*stick a fork in it,  we're all done. */
+say 'the biggest value in an array of '      #-1       " elements is: "           big

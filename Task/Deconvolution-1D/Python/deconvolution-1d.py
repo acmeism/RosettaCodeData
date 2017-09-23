@@ -22,6 +22,7 @@ def ToReducedRowEchelonForm( M ):
                 lv = M[i][lead]
                 M[i] = [ iv - lv*rv for rv,iv in zip(M[r],M[i])]
         lead += 1
+    return M
 
 def pmtx(mtx):
     print ('\n'.join(''.join(' %4s' % col for col in row) for row in mtx))

@@ -10,7 +10,7 @@ call hdr 2 ;  do j=LO  to HI;  say '     Catalan'     right(j, w)": "      Cat2(
 call hdr 3 ;  do j=LO  to HI;  say '     Catalan'     right(j, w)": "      Cat3(j) ;   end
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-!:     arg z; if !.z\==. then return !.z; !=1;  do k=2 for z; !=!*k; end;  !.z=!; return !
+!:     arg z; if !.z\==. then return !.z; !=1;  do k=2  to z; !=!*k; end;  !.z=!; return !
 Cat1A: procedure expose !.;  parse arg n;     return comb(n+n, n)    %  (n+1)
 Cat1B: procedure expose !.;  parse arg n;     return !(n+n) % ((n+1) * !(n)**2)
 Cat3:  procedure expose c.;  arg n; if c.n==. then c.n=(4*n-2)*cat3(n-1)%(n+1); return c.n
@@ -18,6 +18,6 @@ comb:  procedure;            parse arg x,y;   return pFact(x-y+1, x) % pFact(2, 
 hdr:   !.=.; c.=.; c.0=1; say; say center('Catalan numbers, method' arg(1),79,'─'); return
 pFact: procedure;            !=1;      do k=arg(1)  to arg(2);  !=!*k;  end;    return !
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-Cat2:  procedure expose c.;  parse arg n;  $=0;          if c.n\==.  then return c.n
-                                       do k=0  to n-1;   $=$ + cat2(k) * cat2(n-k-1);  end
+Cat2:  procedure expose c.;  parse arg n;  $=0;         if c.n\==.  then return c.n
+                                       do k=0  for n;   $=$ + Cat2(k) * Cat2(n-k-1);   end
                              c.n=$;           return $    /*use a memoization technique.*/

@@ -1,0 +1,77 @@
+--
+-- demo\rosetta\Draw_a_sphere.exw
+--
+include pGUI.e
+
+Ihandle dlg, canvas
+cdCanvas cddbuffer, cdcanvas
+
+function dot(sequence x, sequence y)
+    return sum(sq_mul(x,y))
+end function
+
+function normalize(sequence v)
+    atom len = sqrt(dot(v, v))
+    if len=0 then return {0,0,0} end if
+    return sq_mul(v,1/len)
+end function
+
+procedure drawSphere(integer width, height, atom k, atom amb, sequence direction)
+integer r = floor((min(width,height)-20)/2)
+integer cx = floor(width/2)
+integer cy = floor(height/2)
+integer lum
+    for x=-r to r do
+        for y=-r to r do
+            integer z = r*r-x*x-y*y
+            if z>=0 then
+                atom s = dot(direction, normalize({x,y,sqrt(z)}))
+                lum = and_bits(#FF,255*(power(iff(s<0?0:s),k)+amb)/(1+amb))
+                lum += lum*#100+lum*#10000
+                cdCanvasPixel(cddbuffer, x+cx, y+cy, lum)
+            end if
+        end for
+    end for
+end procedure
+
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+integer {width, height} = IupGetIntInt(canvas, "DRAWSIZE")
+    cdCanvasActivate(cddbuffer)
+    cdCanvasClear(cddbuffer)
+    drawSphere(width,height,1.5,0.2,normalize({-30,-30,50}))
+    cdCanvasFlush(cddbuffer)
+    return IUP_DEFAULT
+end function
+
+function map_cb(Ihandle ih)
+    cdcanvas = cdCreateCanvas(CD_IUP, ih)
+    cddbuffer = cdCreateCanvas(CD_DBUFFER, cdcanvas)
+    cdCanvasSetBackground(cddbuffer, CD_BLACK)
+    return IUP_DEFAULT
+end function
+
+function esc_close(Ihandle /*ih*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    return IUP_CONTINUE
+end function
+
+procedure main()
+    IupOpen()
+
+    canvas = IupCanvas(NULL)
+    IupSetAttribute(canvas, "RASTERSIZE", "340x340") -- initial size
+    IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
+
+    dlg = IupDialog(canvas)
+    IupSetAttribute(dlg, "TITLE", "Draw a sphere")
+    IupSetCallback(dlg, "K_ANY",     Icallback("esc_close"))
+    IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+
+    IupMap(dlg)
+    IupSetAttribute(canvas, "RASTERSIZE", NULL) -- release the minimum limitation
+    IupShowXY(dlg,IUP_CENTER,IUP_CENTER)
+    IupMainLoop()
+    IupClose()
+end procedure
+
+main()

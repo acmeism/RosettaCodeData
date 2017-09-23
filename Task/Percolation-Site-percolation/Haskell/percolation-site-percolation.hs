@@ -1,69 +1,76 @@
 {-# LANGUAGE OverloadedStrings #-}
-import           Control.Monad
-import           Control.Monad.Random
-import           Data.Array.Unboxed
-import           Data.List
-import           Formatting
+import Control.Monad
+import Control.Monad.Random
+import Data.Array.Unboxed
+import Data.List
+import Formatting
 
 type Field = UArray (Int, Int) Char
 
 -- Start percolating some seepage through a field.
--- Recurse to continue percolation with spreading seepage.
+-- Recurse to continue percolation with new seepage.
 percolateR :: [(Int, Int)] -> Field -> (Field, [(Int,Int)])
 percolateR [] f = (f, [])
-percolateR seep f = percolateR
-                       (concat $ fmap neighbors validSeep)
-                       (f // map (\p -> (p,'.')) validSeep) where
-    neighbors p@(r,c) = [(r-1,c), (r+1,c), (r, c-1), (r, c+1)]
-    ((rLo,cLo),(rHi,cHi)) = bounds f
-    validSeep = filter (\p@(r,c) -> r >= rLo &&
-                                    r <= rHi &&
-                                    c >= cLo &&
-                                    c <= cHi &&
-                                    f!p == ' ') $ nub $ sort seep
+percolateR seep f =
+    let ((xLo,yLo),(xHi,yHi)) = bounds f
+        validSeep = filter (\p@(x,y) ->    x >= xLo
+                                        && x <= xHi
+                                        && y >= yLo
+                                        && y <= yHi
+                                        && f!p == ' ') $ nub $ sort seep
 
--- Percolate a field;  Return the percolated field.
+        neighbors (x,y) = [(x,y-1), (x,y+1), (x-1,y), (x+1,y)]
+
+    in  percolateR
+            (concatMap neighbors validSeep)
+            (f // map (\p -> (p,'.')) validSeep)
+
+-- Percolate a field.  Return the percolated field.
 percolate :: Field -> Field
 percolate start =
-    let ((_,_),(_,cHi)) = bounds start
-        (final, _) = percolateR [(0,c) | c <- [0..cHi]] start
+    let ((_,_),(xHi,_)) = bounds start
+        (final, _) = percolateR [(x,0) | x <- [0..xHi]] start
     in final
 
 -- Generate a random field.
-randomField :: Int -> Int -> Double -> Rand StdGen Field
-randomField rows cols threshold = do
-    rnd <- replicateM rows (replicateM cols $ getRandomR (0.0, 1.0))
-    return $ array ((0,0), (rows-1, cols-1))
-                    [((r,c), if rnd !! r !! c < threshold then ' '
-                             else '#')
-                     | r <- [0..rows-1], c <- [0..cols-1] ]
+initField :: Int -> Int -> Double -> Rand StdGen Field
+initField w h threshold = do
+    frnd <- fmap (\rv -> if rv<threshold then ' ' else  '#') <$> getRandoms
+    return $ listArray ((0,0), (w-1, h-1)) frnd
 
--- Assess whether or not percolation reached bottom of field.
-leaky :: Field -> Bool
-leaky f = '.' `elem` [f!(rHi,c) | c <- [cLo..cHi]] where
-               ((_,cLo),(rHi,cHi)) = bounds f
+-- Get a list of "leaks" from the bottom of a field.
+leaks :: Field -> [Bool]
+leaks f =
+    let ((xLo,_),(xHi,yHi)) = bounds f
+    in [f!(x,yHi)=='.'| x <- [xLo..xHi]]
 
 -- Run test once; Return bool indicating success or failure.
 oneTest :: Int -> Int -> Double -> Rand StdGen Bool
-oneTest rows cols threshold =
-    leaky <$> percolate <$> randomField rows cols threshold
+oneTest w h threshold =
+    or.leaks.percolate <$> initField w h threshold
 
--- Run test multple times; Return the number of tests that pass
+-- Run test multple times; Return the number of tests that pass.
 multiTest :: Int -> Int -> Int -> Double -> Rand StdGen Double
-multiTest repeats rows cols threshold = do
-    x <- replicateM repeats $ oneTest rows cols threshold
-    let leakyCount = length $ filter (==True) x
-    return $ fromIntegral leakyCount / fromIntegral repeats
+multiTest testCount w h threshold = do
+    results <- replicateM testCount $ oneTest w h threshold
+    let leakyCount = length $ filter id results
+    return $ fromIntegral leakyCount / fromIntegral testCount
 
+-- Display a field with walls and leaks.
 showField :: Field -> IO ()
-showField a =   mapM_ print [ [ a!(r,c) | c <- [cLo..cHi]] | r <- [rLo..rHi]]
-              where ((rLo,cLo),(rHi,cHi)) = bounds a
+showField a =  do
+    let ((xLo,yLo),(xHi,yHi)) = bounds a
+    mapM_ print [ [ a!(x,y) | x <- [xLo..xHi]] | y <- [yLo..yHi]]
 
 main :: IO ()
 main = do
   g <- getStdGen
-  let (startField, g2) = runRand (randomField 15 15 0.6) g
-  putStrLn "Unpercolated field with 0.6 threshold."
+  let w = 15
+      h = 15
+      threshold = 0.6
+      (startField, g2) = runRand (initField w h threshold) g
+
+  putStrLn ("Unpercolated field with " ++ show threshold ++ " threshold.")
   putStrLn ""
   showField startField
 
@@ -72,12 +79,17 @@ main = do
   putStrLn ""
   showField $ percolate startField
 
+  let testCount = 10000
+      densityCount = 10
+
   putStrLn ""
-  putStrLn "Results of running percolation test 10000 times with thresholds ranging from 0.0 to 1.0 ."
-  let d = 10
-  let ns = [0..10]
-  let tests = sequence [multiTest 10000 15 15 v
-                           | n <- ns,
-                             let v = fromIntegral n / fromIntegral d ]
-  let results = zip ns (evalRand tests g2)
-  mapM_ print [format ("p=" % int % "/" % int % " -> " % fixed 4) n d r | (n,r) <- results]
+  putStrLn (   "Results of running percolation test " ++ show testCount
+            ++ " times with thresholds ranging from 0/" ++ show densityCount
+            ++ " to " ++ show densityCount ++ "/" ++ show densityCount ++ " .")
+
+  let densities = [0..densityCount]
+      tests = sequence [multiTest testCount w h v
+                           | density <- densities,
+                             let v = fromIntegral density / fromIntegral densityCount ]
+      results = zip densities (evalRand tests g2)
+  mapM_ print [format ("p=" % int % "/" % int % " -> " % fixed 4) density densityCount x | (density,x) <- results]

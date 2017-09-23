@@ -1,19 +1,18 @@
 -- fib :: Int -> Int
 on fib(n)
 
-    -- (Int, Int) -> (Int, Int)
+    -- lastTwo : (Int, Int) -> (Int, Int)
     script lastTwo
-        on lambda([a, b])
+        on |λ|([a, b])
             [b, a + b]
-        end lambda
+        end |λ|
     end script
 
-    item 1 of foldl(lastTwo, {0, 1}, range(1, n))
+    item 1 of foldl(lastTwo, {0, 1}, enumFromTo(1, n))
 end fib
 
 
-
--- TEST
+-- TEST -----------------------------------------------------------------------
 on run
 
     fib(32)
@@ -21,9 +20,21 @@ on run
     --> 2178309
 end run
 
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
-
--- GENERIC FUNCTIONS
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if n < m then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- foldl :: (a -> b -> a) -> a -> [b] -> a
 on foldl(f, startValue, xs)
@@ -31,7 +42,7 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
@@ -44,21 +55,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
-        set d to -1
-    else
-        set d to 1
-    end if
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range

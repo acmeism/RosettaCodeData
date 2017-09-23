@@ -20,7 +20,7 @@ proc paint() {.cdecl.} =
 
   glFlush()
 
-proc reshape(width, height) {.cdecl.} =
+proc reshape(width, height: cint) {.cdecl.} =
   glViewport(0, 0, width, height)
   glMatrixMode(GL_PROJECTION)
   glLoadIdentity()

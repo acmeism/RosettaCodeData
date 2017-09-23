@@ -8,7 +8,7 @@ sub crc(
     :@bitorder = 0..7,    # default: eat bytes LSB-first
     :@crcorder = 0..$n-1, # default: MSB of checksum is coefficient of x⁰
 ) {
-    my @bit = flat ($buf.list X+& (1 X+< @bitorder).list)».so».Int, 0 xx $n;
+    my @bit = flat ($buf.list X+& (1 X+< @bitorder))».so».Int, 0 xx $n;
 
     @bit[0   .. $n-1] «+^=» @init;
     @bit[$_  ..$_+$n] «+^=» @poly if @bit[$_] for 0..@bit.end-$n;

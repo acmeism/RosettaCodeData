@@ -1,27 +1,35 @@
 ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' '
-' Remove File Lines V1.0                            '
+' Remove File Lines V1.1                            '
 '                                                   '
 ' Developed by A. David Garza Marín in VB-DOS for   '
 ' RosettaCode. November 30, 2016.                   '
+'                                                   '
+' Date      | Change                                '
+'-------------------------------------------------- '
+' 2016/11/30| Original version                      '
+' 2016/12/30| Added functionality to read parameters'
+'           | from Command Line                     '
 ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' '
 
 'OPTION _EXPLICIT ' For QB45
-'OPTION EXPLICIT ' For VBDOS, PDS 7.1
+OPTION EXPLICIT ' For VBDOS, PDS 7.1
 
 ' SUBs and FUNCTIONs
 DECLARE FUNCTION DeleteLinesFromFile% (WhichFile AS STRING, Start AS LONG, HowMany AS LONG)
 DECLARE FUNCTION FileExists% (WhichFile AS STRING)
 DECLARE FUNCTION GetDummyFile$ (WhichFile AS STRING)
+DECLARE FUNCTION getFileName$ (CommandString AS STRING)
+DECLARE FUNCTION getHowManyLines& (CommandLine AS STRING)
+DECLARE FUNCTION getStartPoint& (CommandLine AS STRING)
 DECLARE FUNCTION ErrorMessage$ (WhichError AS INTEGER)
 DECLARE FUNCTION CountLines& (WhichFile AS STRING)
-DECLARE FUNCTION YorN$ ()
 
 ' Var
 DIM iOk AS INTEGER, iErr AS INTEGER, lStart AS LONG, lHowMany AS LONG, lSize AS LONG
-DIM sFile AS STRING
+DIM sFile AS STRING, sCommand AS STRING
 
 ' Const
-CONST ProgramName = "RemFLine (Remove File Lines) Enhanced V1.0"
+CONST ProgramName = "RemFLine (Remove File Lines) Enhanced V1.1"
 
 ' ----------------------------- Main program cycle --------------------------------
 CLS
@@ -34,41 +42,59 @@ PRINT "quantity of lines stated to be deleted is beyond the total lines in the t
 PRINT "file, the process also will be aborted. The program will give you a message"
 PRINT "if everything ran ok or if any error happened. Includes a function to count"
 PRINT "how many lines has the intended file."
-DO
-    PRINT
-    INPUT "Please, type the name of the file"; sFile
-    sFile = LTRIM$(RTRIM$(sFile))
-    IF sFile <> "" THEN
-      lSize = CountLines&(sFile)
-      IF lSize > 0 THEN
-        PRINT "Delete starting on which line (Default=1, Max="; lSize; ")";
-        INPUT lStart
+' Verifies if parameters are specified
+sCommand = COMMAND$
+IF sCommand <> "" THEN
+  sFile = getFileName$(sCommand)
+  lSize = CountLines&(sFile)
+  lStart = getStartPoint&(sCommand)  ' Defaults to 1
+  lHowMany = getHowManyLines&(sCommand) ' Defaults to 1
+ELSE
+  PRINT
+  INPUT "Please, type the name of the file"; sFile
+  sFile = LTRIM$(RTRIM$(sFile))
+  IF sFile <> "" THEN
+    lSize = CountLines&(sFile)
+    IF lSize > 0 THEN
+      PRINT "Delete starting on which line (Default=1, Max="; lSize; ")";
+      INPUT lStart
 
-        IF lStart = 0 THEN lStart = 1
-        IF lStart < lSize THEN
-          PRINT "How many lines do you want to remove (Default=1, Max="; (lSize - lStart) + 1; ")";
-          INPUT lHowMany
-          IF lHowMany = 0 THEN lHowMany = 1
-          IF lHowMany + lStart <= lSize THEN
-            iOk = DeleteLinesFromFile%(sFile, lStart, lHowMany)
-          ELSE
-            iOk = 1
-          END IF
-        ELSE
-          iOk = 2
-        END IF
-      ELSEIF lSize = -1 THEN
-        iOk = 3
-      ELSE
-        iOk = 4  ' The file is not a text file
+      IF lStart = 0 THEN lStart = 1
+      IF lStart < lSize THEN
+        PRINT "How many lines do you want to remove (Default=1, Max="; (lSize - lStart) + 1; ")";
+        INPUT lHowMany
+        IF lHowMany = 0 THEN lHowMany = 1
       END IF
-    ELSE
-      iOk = 5  ' Null file name not allowed
     END IF
-    PRINT
-    PRINT ErrorMessage$(iOk)
-    PRINT "Do you want to try again? (Y/N)"
-LOOP UNTIL YorN$ = "N"
+  END IF
+END IF
+
+PRINT
+PRINT "Erasing "; lHowMany; "lines from "; sFile; " starting on line"; lStart; "."
+IF lSize > 0 THEN
+  IF lHowMany + lStart <= lSize THEN
+    iOk = DeleteLinesFromFile%(sFile, lStart, lHowMany)
+  ELSEIF lHowMany + lStart > lSize THEN
+    iOk = 1
+  ELSEIF lStart > lSize THEN
+    iOk = 2
+  END IF
+ELSEIF lSize = -1 THEN
+  iOk = 3
+END IF
+
+IF lSize = -1 THEN
+  iOk = 3
+ELSEIF lSize = 0 THEN
+  iOk = 4  ' The file is not a text file
+END IF
+
+IF sFile = "" THEN
+  iOk = 5  ' Null file name not allowed
+END IF
+
+PRINT
+PRINT ErrorMessage$(iOk)
 '----------------End of Main program Cycle ----------------
 
 END
@@ -227,16 +253,54 @@ FUNCTION GetDummyFile$ (WhichFile AS STRING)
     GetDummyFile$ = LEFT$(WhichFile, i - 1) + "$dummyf$.tmp"
 END FUNCTION
 
-FUNCTION YorN$ ()
-    ' Var
-    DIM sYorN AS STRING
+FUNCTION getFileName$ (CommandString AS STRING)
+  ' Var
+  DIM i AS INTEGER
+  DIM sFileName AS STRING
 
-    DO
-      sYorN = UCASE$(INPUT$(1))
-      IF INSTR("YN", sYorN) = 0 THEN
-        BEEP
-      END IF
-    LOOP UNTIL sYorN = "Y" OR sYorN = "N"
+  i = INSTR(CommandString, ",")
+  IF i > 0 THEN
+    sFileName = LEFT$(CommandString, i - 1)
+  ELSEIF LEN(CommandString) > 0 THEN
+    sFileName = CommandString
+  END IF
 
-    YorN$ = sYorN
+  getFileName$ = sFileName
+END FUNCTION
+
+FUNCTION getHowManyLines& (CommandLine AS STRING)
+  ' Var
+  DIM i AS INTEGER, j AS INTEGER
+  DIM l AS LONG
+
+  i = INSTR(CommandLine, ",")
+  IF i > 0 THEN
+    j = INSTR(i + 1, CommandLine, ",")
+    IF j = 0 THEN
+      l = 1
+    ELSE
+      l = CLNG(VAL(MID$(CommandLine, j + 1)))
+    END IF
+  END IF
+
+  getHowManyLines& = l
+
+END FUNCTION
+
+FUNCTION getStartPoint& (CommandLine AS STRING)
+  ' Var
+  DIM i AS INTEGER, j AS INTEGER
+  DIM l AS LONG
+
+  i = INSTR(CommandLine, ",")
+  IF i > 0 THEN
+    j = INSTR(i + 1, CommandLine, ",")
+    IF j = 0 THEN j = LEN(CommandLine)
+    l = CLNG(VAL(MID$(CommandLine, i + 1, j - i)))
+  ELSE
+    i = 1
+  END IF
+
+  getStartPoint& = l
+
 END FUNCTION

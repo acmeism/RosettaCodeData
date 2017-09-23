@@ -1,54 +1,52 @@
 use framework "Foundation"
 
--- toUpperCase :: Text -> Text
-on toUpperCase(str)
-    set ca to current application
-    ((ca's NSString's stringWithString:(str))'s ¬
-        uppercaseStringWithLocale:(ca's NSLocale's currentLocale())) as text
-end toUpperCase
-
--- toLowerCase :: Text -> Text
-on toLowerCase(str)
-    set ca to current application
-    ((ca's NSString's stringWithString:(str))'s ¬
-        lowercaseStringWithLocale:(ca's NSLocale's currentLocale())) as text
-end toLowerCase
-
--- toCapitalized :: Text -> Text
-on toCapitalized(str)
-    set ca to current application
-    ((ca's NSString's stringWithString:(str))'s ¬
-        capitalizedStringWithLocale:(ca's NSLocale's currentLocale())) as text
-end toCapitalized
-
-
--- TEST
+-- TEST -----------------------------------------------------------------------
 on run
 
-    -- testCase :: Handler -> String
-    script testCase
-        on lambda(f)
-            mReturn(f)'s lambda("alphaBETA αβγδΕΖΗΘ")
-        end lambda
-    end script
+    ap({toLower, toTitle, toUpper}, {"alphaBETA αβγδΕΖΗΘ"})
 
-    map(testCase, {toUpperCase, toLowerCase, toCapitalized})
+    --> {"alphabeta αβγδεζηθ", "Alphabeta Αβγδεζηθ", "ALPHABETA ΑΒΓΔΕΖΗΘ"}
 
 end run
 
 
--- GENERIC FUNCTIONS
--- map :: (a -> b) -> [a] -> [b]
-on map(f, xs)
-    tell mReturn(f)
-        set lng to length of xs
-        set lst to {}
-        repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
-        end repeat
-        return lst
-    end tell
-end map
+-- GENERIC FUNCTIONS ----------------------------------------------------------
+
+-- toLower :: String -> String
+on toLower(str)
+    set ca to current application
+    ((ca's NSString's stringWithString:(str))'s ¬
+        lowercaseStringWithLocale:(ca's NSLocale's currentLocale())) as text
+end toLower
+
+-- toTitle :: String -> String
+on toTitle(str)
+    set ca to current application
+    ((ca's NSString's stringWithString:(str))'s ¬
+        capitalizedStringWithLocale:(ca's NSLocale's currentLocale())) as text
+end toTitle
+
+-- toUpper :: String -> String
+on toUpper(str)
+    set ca to current application
+    ((ca's NSString's stringWithString:(str))'s ¬
+        uppercaseStringWithLocale:(ca's NSLocale's currentLocale())) as text
+end toUpper
+
+-- A list of functions applied to a list of arguments
+-- (<*> | ap) :: [(a -> b)] -> [a] -> [b]
+on ap(fs, xs)
+    set {nf, nx} to {length of fs, length of xs}
+    set lst to {}
+    repeat with i from 1 to nf
+        tell mReturn(item i of fs)
+            repeat with j from 1 to nx
+                set end of lst to |λ|(contents of (item j of xs))
+            end repeat
+        end tell
+    end repeat
+    return lst
+end ap
 
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
@@ -57,7 +55,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

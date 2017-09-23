@@ -1,0 +1,2 @@
+errprint(`Goodbye, World!
+')dnl

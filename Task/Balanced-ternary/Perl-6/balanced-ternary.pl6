@@ -34,7 +34,7 @@ sub carry (*@digits is copy) {
 multi prefix:<-> (BT $x) { $x.neg }
 
 multi infix:<+> (BT $x, BT $y) {
-    my ($b,$a) = sort +*.coeff, $x, $y;
+    my ($b,$a) = sort +*.coeff, ($x, $y);
     BT.new: coeff => carry ($a.coeff Z+ |$b.coeff, |(0 xx $a.coeff - $b.coeff));
 }
 

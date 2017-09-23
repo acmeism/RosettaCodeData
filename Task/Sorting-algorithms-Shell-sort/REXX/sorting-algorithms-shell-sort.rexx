@@ -31,18 +31,16 @@ gen:    @.=                                      /*assign a default value to ste
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 shellSort: procedure expose @.;   parse arg N    /*obtain the  N  from the argument list*/
            i=N%2                                 /*%   is integer division in REXX.     */
-                       do  while i\==0
-                                do j=i+1  to N;    k=j;       p=k-i   /*P: previous item*/
-                                _=@.j
-                                         do  while k>=i+1  &  @.p>_;     @.k=@.p
-                                         k=k-i;    p=k-i
-                                         end   /*while k≥i+1*/
-                                @.k=_
-                                end            /*j*/
-
-                       if i==2  then i=1
-                                else i=i*5 % 11
-                       end                     /*while i¬==0*/
+                     do  while i\==0
+                              do j=i+1  to N;    k=j;       p=k-i     /*P: previous item*/
+                              _=@.j
+                                    do  while k>=i+1 & @.p>_;    @.k=@.p;   k=k-i;   p=k-i
+                                    end   /*while k≥i+1*/
+                              @.k=_
+                              end         /*j*/
+                     if i==2  then i=1
+                              else i=i * 5 % 11
+                     end                  /*while i¬==0*/
            return
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 show:      do j=1  for #;  say 'element'  right(j,length(#)) arg(1)": "  @.j; end;  return

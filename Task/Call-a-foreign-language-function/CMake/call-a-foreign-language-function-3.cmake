@@ -21,7 +21,7 @@ initial_pass(void *info, void *mf, int argc, char *argv[])
 
 	/* Parse numerator and denominator. */
 	for(i = 2, j = 0; i < 4; i++, j++) {
-		count = sscanf(argv[i], "%d%1s", &n[j], c);
+		count = sscanf(argv[i], "%d%1s", &n[j], &c);
 		if (count != 1) {
 			snprintf(buf, sizeof buf,
 			    "Not an integer: %s", argv[i]);

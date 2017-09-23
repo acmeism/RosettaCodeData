@@ -1,64 +1,67 @@
--- BRIEF
-
+-- BRIEF -----------------------------------------------------------------------
 on run
+    set localisations to ¬
+        {"on the wall", ¬
+            "Take one down, pass it around", ¬
+            "Better go to the store to buy some more", "bottle"}
 
     intercalate("\n\n", ¬
-        map(recitation, range(99, 0)))
-
+        (map(curry(incantation)'s |λ|(localisations), enumFromTo(99, 0))))
 end run
 
 
--- DECLARATIVE
+-- DECLARATIVE -----------------------------------------------------------------
 
-script recitation
-    property coordinates : " on the wall"
-    property redistribution : "Take one down, pass it around"
-    property resort : "Better go to the store to buy some more"
-    property unit : "bottle"
+-- incantation :: [String] -> Int -> String
+on incantation(xs, n)
+    script asset
+        on |λ|(n)
+            unwords({(n as string), item -1 of xs & cond(n ≠ 1, "s", "")})
+        end |λ|
+    end script
 
-    -- Int -> String
-    on lambda(n)
-        if n > 0 then
-            set reserve to resourceDescriptor(n)
-            set residue to resourceDescriptor(n - 1)
+    script store
+        on |λ|(n)
+            unwords({asset's |λ|(n), item 1 of xs})
+        end |λ|
+    end script
 
-            intercalate(linefeed, ¬
-                {reserve & coordinates, reserve, ¬
-                    redistribution, residue & coordinates})
-        else
-            resort
-        end if
-    end lambda
-
-    -- resourceDescriptor :: Int -> String
-    on resourceDescriptor(n)
-        if n ≠ 1 then
-            (n as string) & space & unit & "s"
-        else
-            "1 " & unit
-        end if
-    end resourceDescriptor
-end script
+    set {distribute, solve} to items 2 thru 3 of xs
+    if n > 0 then
+        unlines({store's |λ|(n), asset's |λ|(n), distribute, store's |λ|(n - 1)})
+    else
+        solve
+    end if
+end incantation
 
 
+-- GENERICALLY DYSFUNCTIONAL ---------------------------------------------------
 
--- DYSFUNCTIONAL
+-- cond :: Bool -> a -> a -> a
+on cond(bln, f, g)
+    if bln then
+        f
+    else
+        g
+    end if
+end cond
 
--- map :: (a -> b) -> [a] -> [b]
-on map(f, xs)
-    tell mReturn(f)
-        set lng to length of xs
-        set lst to {}
-        repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
-        end repeat
-        return lst
-    end tell
-end map
+-- curry :: (Script|Handler) -> Script
+on curry(f)
+    script
+        on |λ|(a)
+            script
+                on |λ|(b)
+                    |λ|(a, b) of mReturn(f)
+                end |λ|
+            end script
+        end |λ|
+    end script
+end curry
 
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
         set d to -1
     else
         set d to 1
@@ -68,7 +71,7 @@ on range(m, n)
         set end of lst to i
     end repeat
     return lst
-end range
+end enumFromTo
 
 -- intercalate :: Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -78,6 +81,18 @@ on intercalate(strText, lstText)
     return strJoined
 end intercalate
 
+-- map :: (a -> b) -> [a] -> [b]
+on map(f, xs)
+    tell mReturn(f)
+        set lng to length of xs
+        set lst to {}
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, i, xs)
+        end repeat
+        return lst
+    end tell
+end map
+
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
 on mReturn(f)
@@ -85,7 +100,17 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
+
+-- unlines :: [String] -> String
+on unlines(xs)
+    intercalate(linefeed, xs)
+end unlines
+
+-- unwords :: [String] -> String
+on unwords(xs)
+    intercalate(space, xs)
+end unwords

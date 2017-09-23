@@ -3,7 +3,7 @@ require "prime"
 class Integer
 
   def popcount
-    to_s(2).count("1")
+    to_s(2).count("1")   #Ruby 2.4:  digits(2).count(1)
   end
 
   def pernicious?

@@ -1,0 +1,73 @@
+' FB 1.05.0 Win64
+
+#Include "crt/math.bi"  '' include math functions in C runtime library
+
+' Declare function pointer type
+' This implicitly assumes default StdCall calling convention on Windows
+Type Class2Func As Function(As Double) As Double
+
+' A couple of functions with the above prototype
+Function functionA(v As Double) As Double
+  Return v*v*v  '' cube of v
+End Function
+
+Function functionB(v As Double) As Double
+  Return Exp(Log(v)/3)  '' same as cube root of v which would normally be v ^ (1.0/3.0) in FB
+End Function
+
+' A function taking a function as an argument
+Function function1(f2 As Class2Func, val_ As Double) As Double
+  Return f2(val_)
+End Function
+
+' A function returning a function
+Function whichFunc(idx As Long) As Class2Func
+   Return IIf(idx < 4, @functionA, @functionB)
+End Function
+
+' Additional function needed to treat CDecl function pointer as StdCall
+' Get compiler warning otherwise
+Function cl2(f As Function CDecl(As Double) As Double) As Class2Func
+  Return CPtr(Class2Func, f)
+End Function
+
+' A list of functions
+' Using C Runtime library versions of trig functions as it doesn't appear
+' to be possible to apply address operator (@) to FB's built-in versions
+Dim funcListA(0 To 3) As Class2Func = {@functionA, cl2(@sin_),  cl2(@cos_), cl2(@tan_)}
+Dim funcListB(0 To 3) As Class2Func = {@functionB, cl2(@asin_), cl2(@acos_), cl2(@atan_)}
+
+' Composing Functions
+Function invokeComposed(f1 As Class2Func, f2 As Class2Func, val_ As double) As Double
+   Return f1(f2(val_))
+End Function
+
+Type Composition
+  As Class2Func f1, f2
+End Type
+
+Function compose(f1 As Class2Func, f2 As Class2Func) As Composition Ptr
+  Dim comp As Composition Ptr = Allocate(SizeOf(Composition))
+  comp->f1 = f1
+  comp->f2 = f2
+  Return comp
+End Function
+
+Function callComposed(comp As Composition Ptr, val_ As Double ) As Double
+  Return comp->f1(comp->f2(val_))
+End Function
+
+Dim ix As Integer
+Dim c As Composition Ptr
+
+Print "function1(functionA, 3.0) = "; CSng(function1(whichFunc(0), 3.0))
+Print
+For ix = 0 To 3
+  c = compose(funcListA(ix), funcListB(ix))
+  Print "Composition"; ix; "(0.9) = "; CSng(callComposed(c, 0.9))
+Next
+
+Deallocate(c)
+Print
+Print "Press any key to quit"
+Sleep

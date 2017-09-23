@@ -1,0 +1,94 @@
+--
+-- demo\rosetta\Forest_fire.exw
+--
+include pGUI.e
+
+Ihandle dlg, canvas, hTimer
+cdCanvas cddbuffer, cdcanvas
+
+constant TITLE = "Forest Fire"
+
+sequence f = {}     -- the forest
+
+atom P = 0.03       -- probability of new tree growing
+atom F = 0.00003    -- probability of new fire starting
+
+enum EMPTY,TREE,FIRE    -- (1,2,3)
+constant colours = {CD_BLACK,CD_GREEN,CD_YELLOW}
+
+function randomf()
+    return rand(1000000)/1000000    -- returns 0.000001..1.000000
+end function
+
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+integer {w, h} = IupGetIntInt(canvas, "DRAWSIZE")
+    cdCanvasActivate(cddbuffer)
+    if length(f)!=w+2
+    or length(f[1])!=h+2 then
+        f = sq_rand(repeat(repeat(2,h+2),w+2))  -- (EMPTY or TREE)
+    end if
+    sequence fn = f
+    for x = 2 to w+1 do
+        for y = 2 to h+1 do
+            integer fnxy
+            switch f[x,y] do
+                case EMPTY:
+                    fnxy = EMPTY+(randomf()<P)  -- (EMPTY or TREE)
+                case TREE:
+                    fnxy = TREE
+                    if f[x-1,y-1]=FIRE or f[x,y-1]=FIRE or f[x+1,y-1]=FIRE
+                    or f[x-1,y  ]=FIRE or (randomf()<F) or f[x+1,y  ]=FIRE
+                    or f[x-1,y+1]=FIRE or f[x,y+1]=FIRE or f[x+1,y+1]=FIRE then
+                        fnxy = FIRE
+                    end if
+                case FIRE:
+                    fnxy = EMPTY
+            end switch
+            fn[x,y] = fnxy
+            cdCanvasPixel(cddbuffer, x-2, y-2, colours[fnxy])
+        end for
+    end for
+    f = fn
+    cdCanvasFlush(cddbuffer)
+    return IUP_DEFAULT
+end function
+
+function map_cb(Ihandle ih)
+    cdcanvas = cdCreateCanvas(CD_IUP, ih)
+    cddbuffer = cdCreateCanvas(CD_DBUFFER, cdcanvas)
+    return IUP_DEFAULT
+end function
+
+function key_cb(Ihandle /*ih*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    return IUP_CONTINUE
+end function
+
+function timer_cb(Ihandle /*ih*/)
+    IupUpdate(canvas)
+    return IUP_IGNORE
+end function
+
+procedure main()
+    IupOpen()
+
+    canvas = IupCanvas(NULL)
+    IupSetAttribute(canvas, "RASTERSIZE", "200x200") -- initial size
+    IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
+
+    dlg = IupDialog(canvas)
+    IupSetAttribute(dlg, "TITLE", TITLE)
+    IupSetAttribute(dlg, "MAXSIZE", "800x400")  -- (too slow any bigger)
+    IupSetCallback(dlg, "K_ANY",     Icallback("key_cb"))
+    IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+
+    hTimer = IupTimer(Icallback("timer_cb"), 100)
+
+    IupMap(dlg)
+    IupSetAttribute(canvas, "RASTERSIZE", NULL) -- release min limitation
+    IupShow(dlg)
+    IupMainLoop()
+    IupClose()
+end procedure
+
+main()

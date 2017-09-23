@@ -1,4 +1,4 @@
-#!/bin/env racket
+#!/usr/bin/env racket
 #lang racket
 (define file "NOTES.TXT")
 (require racket/date)

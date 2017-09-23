@@ -11,7 +11,7 @@ struct PApply
     F f;
     Arg arg;
 
-    tempalte< class F_, class Arg_ >
+    template< class F_, class Arg_ >
     PApply( F_&& f, Arg_&& arg )
         : f(std::forward<F_>(f)), arg(std::forward<Arg_>(arg))
     {

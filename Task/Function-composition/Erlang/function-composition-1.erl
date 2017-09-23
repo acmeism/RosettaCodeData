@@ -1,5 +1,5 @@
 -module(fn).
--export([compose/1, multicompose/2]).
+-export([compose/2, multicompose/1]).
 
 compose(F,G) -> fun(X) -> F(G(X)) end.
 

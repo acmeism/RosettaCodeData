@@ -1,5 +1,6 @@
 void test(ref int i) {
-    writefln(&i);
+    import std.stdio;
+    writeln(&i);
 }
 
 void main() {

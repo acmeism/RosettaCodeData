@@ -1,0 +1,140 @@
+--
+-- demo\rosetta\Clock.exw
+--
+include pGUI.e
+
+constant USE_OPENGL = 01
+
+Ihandle dlg, canvas, hTimer
+cdCanvas cd_canvas
+
+procedure draw_hand(atom degrees, atom r, baseangle, baselen, cx, cy)
+    atom a = PI-(degrees+90)*PI/180
+    -- tip
+    atom x1 = cos(a)*(r)
+    atom y1 = sin(a)*(r)
+    -- base
+    atom x2 = cos(a+PI-baseangle)*baselen
+    atom y2 = sin(a+PI-baseangle)*baselen
+    atom x3 = cos(a+PI+baseangle)*baselen
+    atom y3 = sin(a+PI+baseangle)*baselen
+    cdCanvasLineWidth(cd_canvas,1)
+    cdCanvasLine(cd_canvas,cx+x1,cy+y1,cx+x2,cy+y2)
+    cdCanvasLine(cd_canvas,cx+x2,cy+y2,cx+x3,cy+y3)
+    cdCanvasLine(cd_canvas,cx+x3,cy+y3,cx+x1,cy+y1)
+    cdCanvasBegin(cd_canvas,CD_FILL)
+    cdCanvasVertex(cd_canvas,cx+x1,cy+y1)
+    cdCanvasVertex(cd_canvas,cx+x2,cy+y2)
+    cdCanvasVertex(cd_canvas,cx+x3,cy+y3)
+    cdCanvasEnd(cd_canvas)
+end procedure
+
+procedure draw_clock(atom cx, cy, d)
+atom w = 2+floor(d/25)
+    cdCanvasFont(cd_canvas, "Helvetica", CD_PLAIN, floor(d/15))
+    cdCanvasLineWidth(cd_canvas, w)
+    cdCanvasArc(cd_canvas, cx, cy, d, d, 0, 360)
+    d -= w+8
+    w = 1+floor(d/50)
+    for i=6 to 360 by 6 do
+        integer h = remainder(i,30)=0
+        cdCanvasLineWidth(cd_canvas, floor(w*(1+h)/3))
+        atom a = PI-(i+90)*PI/180
+        atom x1 = cos(a)*d/2, x2 = cos(a)*(d/2-w*(2+h)*.66)
+        atom y1 = sin(a)*d/2, y2 = sin(a)*(d/2-w*(2+h)*.66)
+        cdCanvasLine(cd_canvas, cx+x1, cy+y1, cx+x2, cy+y2)
+        if h then
+            x1 = cos(a)*(d/2-w*4.5)
+            y1 = sin(a)*(d/2-w*4.5)
+            cdCanvasText(cd_canvas,cx+x1,cy+y1,sprintf("%d",{i/30}))
+        end if
+    end for
+    atom {hour,mins,secs,msecs} = date(true)[DT_HOUR..DT_MSEC]
+    if IupGetInt(hTimer,"TIME")<1000 then
+        -- (if showing once a second, always land on exact
+        --  seconds, ie completely ignore msecs, otherwise
+        --  show smooth running (fractional) second hand.)
+        secs += msecs/1000
+    end if
+    mins += secs/60
+    hour += mins/60
+    atom r = d/2
+    draw_hand(hour*360/12,r-w*9,0.3,d/20,cx,cy)
+    draw_hand(mins*360/60,r-w*2,0.2,d/16,cx,cy)
+    cdCanvasSetForeground(cd_canvas, CD_RED)
+    draw_hand(secs*360/60,r-w*2,0.05,d/16,cx,cy)
+    cdCanvasSetForeground(cd_canvas, CD_BLACK)
+end procedure
+
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+integer {width, height} = IupGetIntInt(canvas, "DRAWSIZE")
+integer r = floor(min(width,height)*0.9)
+integer cx = floor(width/2)
+integer cy = floor(height/2)
+    cdCanvasActivate(cd_canvas)
+    cdCanvasClear(cd_canvas)
+    draw_clock(cx,cy,r)
+    cdCanvasFlush(cd_canvas)
+    return IUP_DEFAULT
+end function
+
+function timer_cb(Ihandle /*ih*/)
+    IupUpdate(canvas)
+    return IUP_IGNORE
+end function
+
+function map_cb(Ihandle ih)
+    if USE_OPENGL then
+        atom res = IupGetDouble(NULL, "SCREENDPI")/25.4
+        IupGLMakeCurrent(canvas)
+        cd_canvas = cdCreateCanvas(CD_GL, "10x10 %g", {res})
+    else
+        cd_canvas = cdCreateCanvas(CD_IUPDBUFFER, canvas)
+    end if
+    cdCanvasSetBackground(cd_canvas, CD_WHITE)
+    cdCanvasSetForeground(cd_canvas, CD_BLACK)
+    {} = cdCanvasTextAlignment(cd_canvas, CD_CENTER)
+    return IUP_DEFAULT
+end function
+
+function canvas_resize_cb(Ihandle /*canvas*/)
+    if USE_OPENGL then
+        integer {canvas_width, canvas_height} = IupGetIntInt(canvas, "DRAWSIZE")
+        atom res = IupGetDouble(NULL, "SCREENDPI")/25.4
+        cdCanvasSetAttribute(cd_canvas, "SIZE", "%dx%d %g", {canvas_width, canvas_height, res})
+    end if
+    return IUP_DEFAULT
+end function
+
+function esc_close(Ihandle /*ih*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    return IUP_CONTINUE
+end function
+
+procedure main()
+    IupOpen()
+
+    if USE_OPENGL then
+        canvas = IupGLCanvas()
+    else
+        canvas = IupCanvas()
+    end if
+    IupSetAttribute(canvas, "RASTERSIZE", "350x350") -- initial size
+    IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
+    IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+    IupSetCallback(canvas, "RESIZE_CB", Icallback("canvas_resize_cb"))
+
+    hTimer = IupTimer(Icallback("timer_cb"), 40)    -- smooth secs
+--  hTimer = IupTimer(Icallback("timer_cb"), 1000)  -- tick seconds
+
+    dlg = IupDialog(canvas)
+    IupSetAttribute(dlg, "TITLE", "Clock")
+    IupSetCallback(dlg, "K_ANY",     Icallback("esc_close"))
+
+    IupShowXY(dlg,IUP_CENTER,IUP_CENTER)
+    IupSetAttribute(canvas, "RASTERSIZE", NULL) -- release the minimum limitation
+    IupMainLoop()
+    IupClose()
+end procedure
+
+main()

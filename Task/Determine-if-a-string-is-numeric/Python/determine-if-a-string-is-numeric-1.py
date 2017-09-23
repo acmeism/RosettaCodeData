@@ -1,5 +1,8 @@
-s = '123'
-try:
-    i = float(s)
-except (ValueError, TypeError):
-    print 'not numeric'
+def is_numeric(s):
+    try:
+        float(s)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+is_numeric('123.0')

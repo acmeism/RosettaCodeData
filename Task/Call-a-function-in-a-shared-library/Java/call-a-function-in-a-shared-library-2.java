@@ -1,15 +1,34 @@
-import com.sun.jna.Library;
-import com.sun.jna.Native;
+/* TrySort.c */
 
-public class LoadLibJNA{
-   private interface YourSharedLibraryName extends Library{
-      //put shared library functions here with no definition
-      public void sharedLibraryfunction();
-   }
+#include <stdlib.h>
+#include "TrySort.h"
 
-   public static void main(String[] args){
-      YourSharedLibraryName lib = (YourSharedLibraryName)Native.loadLibrary("sharedLibrary",//as in "sharedLibrary.dll"
-                                                                          YourSharedLibraryName.class);
-      lib.sharedLibraryFunction();
-   }
+static void fail(JNIEnv *jenv, const char *error_name) {
+    jclass error_class = (*jenv)->FindClass(jenv, error_name);
+    (*jenv)->ThrowNew(jenv, error_class, NULL);
+}
+
+static int reverse_abs_cmp(const void *pa, const void *pb) {
+    jint a = *(jint *)pa;
+    jint b = *(jint *)pb;
+    a = a > 0 ? -a : a;
+    b = b > 0 ? -b : b;
+    return a < b ? -1 : a > b ? 1 : 0;
+}
+
+void Java_TrySort_sortInC(JNIEnv *jenv, jclass obj, jintArray ary) {
+    jint *elem, length;
+
+    if (ary == NULL) {
+	fail(jenv, "java/lang/NullPointerException");
+	return;
+    }
+    length = (*jenv)->GetArrayLength(jenv, ary);
+    elem = (*jenv)->GetPrimitiveArrayCritical(jenv, ary, NULL);
+    if (elem == NULL) {
+	fail(jenv, "java/lang/OutOfMemoryError");
+	return;
+    }
+    qsort(elem, length, sizeof(jint), reverse_abs_cmp);
+    (*jenv)->ReleasePrimitiveArrayCritical(jenv, ary, elem, 0);
 }

@@ -1,17 +1,10 @@
-(function () {
-    'use strict';
-
-    function fib(n) {
-        return Array.apply(null, Array(n + 1))
-            .map(function (_, i, lst) {
-                return lst[i] = (
-                    i ? i < 2 ? 1 :
-                    lst[i - 2] + lst[i - 1] :
-                    0
-                );
-            })[n];
-    }
-
-    return fib(32);
-
-})();
+function fib(n) {
+  var a = 0, b = 1, t;
+  while (n-- > 0) {
+    t = a;
+    a = b;
+    b += t;
+    console.log(a);
+  }
+  return a;
+}

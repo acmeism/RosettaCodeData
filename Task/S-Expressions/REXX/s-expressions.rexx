@@ -1,64 +1,55 @@
-/*REXX program  parses  an   S-expression   and  displays the results.                  */
+/*REXX program  parses  an   S-expression   and  displays the results to the terminal.  */
 input= '((data "quoted data" 123 4.5) (data (!@# (4.5) "(more" "data)")))'
-say 'input:';       say input                    /*display the input data string to term*/
-say copies('═', length(input))                   /*also,  display a header fence.       */
-groupO.=                                         /*default value for grouping symbols.  */
-groupO.1 = '{' ;    groupC.1 = "}"               /*grouping symbols  (Open & Close).    */
-groupO.2 = '[' ;    groupC.2 = "]"               /*    "       "        "  "   "        */
-groupO.3 = '(' ;    groupC.3 = ")"               /*    "       "        "  "   "        */
+say center('input', length(input), "═")          /*display the header title to terminal.*/
+say         input                                /*   "     "  input data    "    "     */
+say copies('═',     length(input) )              /*   "     "  header sep    "    "     */
+grpO.=;      grpO.1 = '{'   ;    grpC.1 = "}"    /*pair of grouping symbol: braces      */
+             grpO.2 = '['   ;    grpC.2 = "]"    /*  "   "    "       "     brackets    */
+             grpO.3 = '('   ;    grpC.3 = ")"    /*  "   "    "       "     parentheses */
+             grpO.4 = '«'   ;    grpC.4 = "»"    /*  "   "    "       "     guillemets  */
+q.=;            q.1 = "'"   ;       q.2 = '"'    /*1st and 2nd literal string delimiter.*/
 #        = 0                                     /*the number of tokens found (so far). */
 tabs     = 10                                    /*used for the indenting of the levels.*/
-q.1      = "'"                                   /*literal string delimiter,  first.    */
-q.2      = '"'                                   /*    "      "       "       second.   */
-numLits  = 2                                     /*the number of kinds of literals.     */
 seps     = ',;'                                  /*characters used for separation.      */
-atoms    = ' 'seps                               /*characters used to separate atoms.   */
+atoms    = ' 'seps                               /*     "       "  to  separate atoms.  */
 level    = 0                                     /*the current level being processed.   */
-quoted   = 0                                     /*quotation level  (when nested).      */
-groupu   =                                       /*used to go  ↑  an expression level.  */
-groupd   =                                       /*  "   "  "  ↓   "     "       "      */
-$.=                                              /*the stem array to hold the tokens.   */
-           do n=1  while groupO.n\==''           /*handle the number of grouping symbols*/
-           atoms =atoms  || groupO.n || groupC.n
-           groupu=groupu || groupO.n
-           groupd=groupd || groupC.n
-           end   /*n*/
+quoted   = 0                                     /*quotation level  (for nested quotes).*/
+grpU     =                                       /*used to go   up  an expression level.*/
+grpD     =                                       /*  "   "  "  down  "     "       "    */
+@.=;        do n=1  while grpO.n\==''
+            atoms = atoms || grpO.n || grpC.n    /*add Open and Closed groups to  ATOMS.*/
+            grpU  = grpU  || grpO.n              /*add Open            groups to  GRPU, */
+            grpD  = grpD  || grpC.n              /*add          Closed groups to  GRPD, */
+            end   /*n*/                          /* [↑]  handle a bunch of grouping syms*/
 literals=
-           do k=1  for numLits
-           literals=literals || q.k
-           end   /*k*/
-!=
-     /*▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ text parsing ▒▒▒▒▒▒▒▒*/
-  do j=1  to length(input);                _=substr(input,j,1)                       /*▒*/
-                                                                                     /*▒*/
-  if quoted  then do;  !=! || _                                                      /*▒*/
-                       if _==literalStart  then quoted=0                             /*▒*/
-                       iterate                                                       /*▒*/
-                  end                                                                /*▒*/
-                                                                                     /*▒*/
-  if pos(_,literals)\==0 then do;  literalStart=_                                    /*▒*/
-                                   !=! || _                                          /*▒*/
-                                   quoted=1                                          /*▒*/
-                                   iterate                                           /*▒*/
-                              end                                                    /*▒*/
-                                                                                     /*▒*/
-  if pos(_,atoms)==0  then do;  !=! || _ ;  iterate;  end                            /*▒*/
-                      else do;  call add!;  !=_;      end                            /*▒*/
-                                                                                     /*▒*/
-  if pos(_,literals)==0 then do;   if pos(_,groupu)\==0  then level=level+1          /*▒*/
-                                   call add!                                         /*▒*/
-                                   if pos(_,groupd)\==0  then level=level-1          /*▒*/
-                                   if level<0   then say 'oops, mismatched' _        /*▒*/
-                             end                                                     /*▒*/
-  end   /*j*/                                                                        /*▒*/
-                                                                                     /*▒*/
-call add!                                        /*handle any residual tokens.*/     /*▒*/
-if level\==0  then say  'oops, mismatched grouping symbol'                           /*▒*/
-if quoted     then say  'oops, no end of quoted literal'      literalStart           /*▒*/
-     /*▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒*/
+            do k=1  while q.k\=='';  literals=literals || q.k   /*add literal delimiters*/
+            end   /*k*/
+!=;                                      literalStart=
+      do j=1  to length(input);          $=substr(input, j, 1)                             /* ◄■■■■■text parsing*/
+                                                                                           /* ◄■■■■■text parsing*/
+      if quoted                then do;  !=! || $;    if $==literalStart  then quoted=0    /* ◄■■■■■text parsing*/
+                                         iterate                                           /* ◄■■■■■text parsing*/
+                                    end            /* [↑]  handle running  quoted str.*/   /* ◄■■■■■text parsing*/
+                                                                                           /* ◄■■■■■text parsing*/
+      if pos($, literals)\==0  then do;  literalStart=$;      !=! || $;        quoted=1    /* ◄■■■■■text parsing*/
+                                         iterate                                           /* ◄■■■■■text parsing*/
+                                    end            /* [↑]  handle start of quoted str.*/   /* ◄■■■■■text parsing*/
+                                                                                           /* ◄■■■■■text parsing*/
+      if pos($, atoms)==0      then do;  !=! || $ ;   iterate;   end  /*is    an atom?*/   /* ◄■■■■■text parsing*/
+                               else do;  call add!;   !=$;       end  /*isn't an atam?*/   /* ◄■■■■■text parsing*/
+                                                                                           /* ◄■■■■■text parsing*/
+      if pos($, literals)==0   then do;  if pos($, grpU)\==0  then level=level + 1         /* ◄■■■■■text parsing*/
+                                         call add!                                         /* ◄■■■■■text parsing*/
+                                         if pos($, grpD)\==0  then level=level - 1         /* ◄■■■■■text parsing*/
+                                         if level<0  then say  'error, mismatched'   $     /* ◄■■■■■text parsing*/
+                                    end                                                    /* ◄■■■■■text parsing*/
+      end   /*j*/                                                                          /* ◄■■■■■text parsing*/
+                                                                                           /* ◄■■■■■text parsing*/
+call add!                                        /*process any residual tokens.*/          /* ◄■■■■■text parsing*/
+if level\==0  then say  'error, mismatched grouping symbol'                                /* ◄■■■■■text parsing*/
+if quoted     then say  'error, no end of quoted literal'      literalStart                /* ◄■■■■■text parsing*/
 
-      do m=1  for #;  say $.m;  end  /*m*/       /*display the tokens to the terminal.  */
+      do m=1  for #;   say @.m;     end  /*m*/   /*display the tokens to the terminal.  */
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-add!: if !\=''  then do;  #=#+1;  $.#=left('', max(0, tabs*(level-1)))!;  end;          !=
-      return
+add!: if !=''  then return;   #=#+1;  @.#=left("", max(0, tabs*(level-1)))!;  !=;   return

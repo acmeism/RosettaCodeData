@@ -16,7 +16,7 @@ sub sha1-pad(Blob $msg)
     flat @padded.map({ :256[$^a,$^b,$^c,$^d] }), (bits +> 32)mod2³², (bits)mod2³²;
 }
 
-sub sha1-block(@H is rw, @M is copy)
+sub sha1-block(@H, @M is copy)
 {
     @M.push: S(1, [+^] @M[$_ «-« <3 8 14 16>] ) for 16 .. 79;
 

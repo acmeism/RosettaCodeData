@@ -12,7 +12,7 @@ program cdemo2
     abquot = a / b
     abpow  = a ** b
     areal = real(a)               ! Real part
-    aimag = imag(a)               ! Imaginary part
+    aimag = imag(a)               ! Imaginary part. Function imag(a) is possibly not recognised. Use aimag(a) if so.
     newc = cmplx(x,y)             ! Creating a complex on the fly from two reals intrinsically
                                   !   (initializer only works in declarations)
     newc = x + y*i                ! Creating a complex on the fly from two reals arithmetically

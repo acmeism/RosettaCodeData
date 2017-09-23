@@ -1,4 +1,3 @@
-func factorial(num: Int) -> Int {
-
-    return num < 1 ? 1 : num * factorial(num - 1)
+func factorial(_ n: Int) -> Int {
+	return n < 2 ? 1 : n * factorial(n - 1)
 }

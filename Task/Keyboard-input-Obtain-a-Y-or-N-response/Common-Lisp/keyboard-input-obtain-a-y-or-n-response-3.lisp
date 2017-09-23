@@ -1,0 +1,8 @@
+(defun y-or-no ()
+  (with-screen (scr :input-reading :unbuffered :input-blocking t)
+    (clear scr)
+    (princ "Do you want to continue? [Y/N]" scr)
+    (refresh scr)
+    (event-case (scr event)
+      ((#\Y #\y) (return-from event-case t))
+      ((#\N #\n) (return-from event-case nil)))))

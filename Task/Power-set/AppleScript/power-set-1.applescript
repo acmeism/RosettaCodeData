@@ -1,29 +1,30 @@
+-- POWER SET -----------------------------------------------------------------
+
 -- powerset :: [a] -> [[a]]
 on powerset(xs)
     script subSet
-        on lambda(acc, x)
-            script consX
-                on lambda(y)
+        on |λ|(acc, x)
+            script cons
+                on |λ|(y)
                     {x} & y
-                end lambda
+                end |λ|
             end script
 
-            acc & map(consX, acc)
-        end lambda
+            acc & map(cons, acc)
+        end |λ|
     end script
 
     foldr(subSet, {{}}, xs)
 end powerset
 
---------------------------------------------------------------------------------------
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
     script test
-        on lambda(x)
+        on |λ|(x)
             set {setName, setMembers} to x
             {setName, powerset(setMembers)}
-        end lambda
+        end |λ|
     end script
 
     map(test, [¬
@@ -34,11 +35,9 @@ on run
     --> {{"Set [1,2,3]", {{}, {3}, {2}, {2, 3}, {1}, {1, 3}, {1, 2}, {1, 2, 3}}},
     -->  {"Empty set", {{}}},
     -->  {"Set containing only empty set", {{}, {{}}}}}
-
 end run
 
-
--- GENERIC FUNCTIONS ---------------------------------------------------------------
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- foldr :: (a -> b -> a) -> a -> [b] -> a
 on foldr(f, startValue, xs)
@@ -46,7 +45,7 @@ on foldr(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from lng to 1 by -1
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
@@ -58,7 +57,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -71,7 +70,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

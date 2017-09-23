@@ -1,15 +1,15 @@
-/*REXX program calculates and demonstrates  arbitrary precision numbers.      */
-numeric digits 200000                  /*two hundred thousand decimal digits. */
+/*REXX program calculates and demonstrates  arbitrary precision numbers (using powers). */
+numeric digits 200000                            /*two hundred thousand decimal digits. */
 
-    n = 5 ** (4 ** (3 ** 2))           /*calculate multiple exponentiations.  */
+    n = 5 ** (4 ** (3 ** 2) )                    /*calculate multiple exponentiations.  */
 
-check = 62060698786608744707...92256259918212890625
-sampl = left(n, 20)   ||    ...    ||   right(n, 20)
+true=62060698786608744707...92256259918212890625 /*what answer is supposed to look like.*/
+rexx= left(n, 20)'...'right(n, 20)               /*the left and right 20 decimal digits.*/
 
-say  ' check:'   check
-say  'sample:'   sampl
-say  'digits:'   length(n)
+say  '  true:'    true                           /*show what the  "true"  answer is.    */
+say  '  REXX:'    rexx                           /*  "    "   "    REXX      "    "     */
+say  'digits:'    length(n)                      /*  "    "   "   length  of answer is. */
 say
-if check==sampl  then say 'passed!'
-                 else say 'failed!'
-                                       /*stick a fork in it,  we're all done. */
+if true == rexx   then say 'passed!'             /*either it passed,  ···               */
+                  else say 'failed!'             /*    or it didn't.                    */
+                                                 /*stick a fork in it,  we're all done. */

@@ -1,9 +1,11 @@
 import 'dart:io';
 
-void main(){
-  HttpServer.bind('localhost', 8080)
-            .then((HttpServer server) =>
-                server.listen((HttpRequest request) =>
-            	    request..response.write('Hello, world')
-            		   ..response.close()));
+main() async {
+  var server = await HttpServer.bind('127.0.0.1', 8080);
+
+  await for (HttpRequest request in server) {
+    request.response
+      ..write('Hello, world')
+      ..close();
+  }
 }

@@ -1,66 +1,64 @@
-((a, b) => {
+(() => {
     'use strict';
 
+    const symmetricDifference = (xs, ys) =>
+        union(difference(xs, ys), difference(ys, xs));
 
-    let // UNION AND DIFFERENCE
+
+    // GENERIC FUNCTIONS ------------------------------------------------------
+
+    // First instance of x (if any) removed from xs
+    // delete_ :: Eq a => a -> [a] -> [a]
+    const delete_ = (x, xs) => {
+        const i = xs.indexOf(x);
+        return i !== -1 ? (xs.slice(0, i)
+            .concat(xs.slice(i, -1))) : xs;
+    };
+
+    //  (\\)  :: (Eq a) => [a] -> [a] -> [a]
+    const difference = (xs, ys) =>
+        ys.reduce((a, x) => filter(z => z !== x, a), xs);
+
+    // filter :: (a -> Bool) -> [a] -> [a]
+    const filter = (f, xs) => xs.filter(f);
+
+    // flip :: (a -> b -> c) -> b -> a -> c
+    const flip = f => (a, b) => f.apply(null, [b, a]);
+
+    // foldl :: (b -> a -> b) -> b -> [a] -> b
+    const foldl = (f, a, xs) => xs.reduce(f, a);
+
+    // nub :: [a] -> [a]
+    const nub = xs => {
+        const mht = unconsMay(xs);
+        return mht.nothing ? xs : (
+            ([h, t]) => [h].concat(nub(t.filter(s => s !== h)))
+        )(mht.just);
+    };
+
+    // show :: a -> String
+    const show = x => JSON.stringify(x, null, 2);
+
+    // unconsMay :: [a] -> Maybe (a, [a])
+    const unconsMay = xs => xs.length > 0 ? {
+        just: [xs[0], xs.slice(1)],
+        nothing: false
+    } : {
+        nothing: true
+    };
 
     // union :: [a] -> [a] -> [a]
-        union = (xs, ys) => unionBy((a, b) => a === b, xs, ys),
+    const union = (xs, ys) => {
+        const sx = nub(xs);
+        return sx.concat(foldl(flip(delete_), nub(ys), sx));
+    };
 
-        // difference :: [a] -> [a] -> [a]
-        difference = (xs, ys) =>
-            ys.reduce((a, y) =>
-                a.indexOf(y) !== -1 ? (
-                    delete_(y, a)
-                ) : a.concat(y), xs),
+    // TEST -------------------------------------------------------------------
+    const
+        a = ["John", "Serena", "Bob", "Mary", "Serena"],
+        b = ["Jim", "Mary", "John", "Jim", "Bob"];
 
-
-
-        // GENERAL PRIMITIVES
-
-        // unionBy :: (a -> a -> Bool) -> [a] -> [a] -> [a]
-        unionBy = (f, xs, ys) => {
-            let sx = nubBy(f, xs),
-                sy = nubBy(f, ys);
-
-            return sx.concat(
-                sx
-                .reduce(
-                    (a, x) => deleteBy(f, x, a),
-                    sy
-                )
-            )
-        },
-
-        // deleteBy :: (a -> a -> Bool) -> a -> [a] -> [a]
-        deleteBy = (f, x, xs) =>
-            xs.reduce((a, y) => f(x, y) ? a : a.concat(y), []),
-
-        // delete_  :: a -> [a] -> [a]
-        delete_ = (x, xs) =>
-            deleteBy((a, b) => a === b, x, xs),
-
-        // nubBy :: (a -> a -> Bool) -> [a] -> [a]
-        nubBy = (f, xs) => {
-            let x = (xs.length ? xs[0] : undefined);
-
-            return x !== undefined ? [x].concat(
-                nubBy(f, xs.slice(1)
-                    .filter(y => !f(x, y))
-                )
-            ) : [];
-        };
-
-
-
-    // 'SYMMETRIC DIFFERENCE'
-
-    return union(
-        difference(a, b),
-        difference(b, a)
+    return show(
+        symmetricDifference(a, b)
     );
-
-})(
-    ["John", "Serena", "Bob", "Mary", "Serena"],
-    ["Jim", "Mary", "John", "Jim", "Bob"]
-);
+})();

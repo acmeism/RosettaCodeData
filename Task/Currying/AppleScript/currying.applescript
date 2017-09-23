@@ -1,18 +1,18 @@
 -- curry :: (Script|Handler) -> Script
 on curry(f)
     script
-        on lambda(a)
+        on |λ|(a)
             script
-                on lambda(b)
-                    lambda(a, b) of mReturn(f)
-                end lambda
+                on |λ|(b)
+                    |λ|(a, b) of mReturn(f)
+                end |λ|
             end script
-        end lambda
+        end |λ|
     end script
 end curry
 
 
--- TESTS
+-- TESTS ----------------------------------------------------------------------
 
 -- add :: Num -> Num -> Num
 on add(a, b)
@@ -31,61 +31,36 @@ curry(add)
 
 
 -- Test 2.
-curry(add)'s lambda(2)
+curry(add)'s |λ|(2)
 
 --> «script»
 
 
 -- Test 3.
-curry(add)'s lambda(2)'s lambda(3)
+curry(add)'s |λ|(2)'s |λ|(3)
 
 --> 5
 
 
 -- Test 4.
-map(curry(product)'s lambda(7), range(1, 10))
+map(curry(product)'s |λ|(7), enumFromTo(1, 10))
 
 --> {7, 14, 21, 28, 35, 42, 49, 56, 63, 70}
 
 
 -- Combined:
 {curry(add), ¬
-    curry(add)'s lambda(2), ¬
-    curry(add)'s lambda(2)'s lambda(3), ¬
-    map(curry(product)'s lambda(7), range(1, 10))}
+    curry(add)'s |λ|(2), ¬
+    curry(add)'s |λ|(2)'s |λ|(3), ¬
+    map(curry(product)'s |λ|(7), enumFromTo(1, 10))}
 
 --> {«script», «script», 5, {7, 14, 21, 28, 35, 42, 49, 56, 63, 70}}
 
 
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
--- GENERIC FUNCTIONS
-
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
-on mReturn(f)
-    if class of f is script then
-        f
-    else
-        script
-            property lambda : f
-        end script
-    end if
-end mReturn
-
--- map :: (a -> b) -> [a] -> [b]
-on map(f, xs)
-    tell mReturn(f)
-        set lng to length of xs
-        set lst to {}
-        repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
-        end repeat
-        return lst
-    end tell
-end map
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
     if n < m then
         set d to -1
     else
@@ -96,4 +71,28 @@ on range(m, n)
         set end of lst to i
     end repeat
     return lst
-end range
+end enumFromTo
+
+-- map :: (a -> b) -> [a] -> [b]
+on map(f, xs)
+    tell mReturn(f)
+        set lng to length of xs
+        set lst to {}
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, i, xs)
+        end repeat
+        return lst
+    end tell
+end map
+
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property |λ| : f
+        end script
+    end if
+end mReturn

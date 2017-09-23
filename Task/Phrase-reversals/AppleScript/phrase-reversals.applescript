@@ -1,39 +1,71 @@
--- _reverse :: [a] -> [a]
-on _reverse(xs)
-    if class of xs is text then
-        (reverse of characters of xs) as text
-    else
-        reverse of xs
-    end if
-end _reverse
+-- REVERSED PHRASES, COMPONENT WORDS, AND WORD ORDER ---------------------
+
+-- reverseString, reverseEachWord, reverseWordOrder :: String -> String
+on stringReverse(s)
+    |reverse|(s)
+end stringReverse
+
+on reverseEachWord(s)
+    wordLevel(curry(my map)'s |λ|(my |reverse|))'s |λ|(s)
+end reverseEachWord
+
+on reverseWordOrder(s)
+    wordLevel(my |reverse|)'s |λ|(s)
+end reverseWordOrder
 
 
--- TEST
+-- wordLevel :: ([String] -> [String]) -> String -> String
+on wordLevel(f)
+    script
+        on |λ|(x)
+            unwords(mReturn(f)'s |λ|(|words|(x)))
+        end |λ|
+    end script
+end wordLevel
 
-on run {}
-    set phrase to "rosetta code phrase reversal"
 
-    unlines({¬
-        _reverse(phrase), ¬
-        unwords(map(_reverse, _words(phrase))), ¬
-        unwords(_reverse(_words(phrase)))})
+-- TEST ----------------------------------------------------------------------
+on run
+    unlines(|<*>|({stringReverse, reverseEachWord, reverseWordOrder}, ¬
+        {"rosetta code phrase reversal"}))
+
+    -->
+
+    --     "lasrever esarhp edoc attesor
+    --      attesor edoc esarhp lasrever
+    --      reversal phrase code rosetta"
 end run
 
 
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
--- GENERIC FUNCTIONS
+-- A list of functions applied to a list of arguments
+-- (<*> | ap) :: [(a -> b)] -> [a] -> [b]
+on |<*>|(fs, xs)
+    set {nf, nx} to {length of fs, length of xs}
+    set acc to {}
+    repeat with i from 1 to nf
+        tell mReturn(item i of fs)
+            repeat with j from 1 to nx
+                set end of acc to |λ|(contents of (item j of xs))
+            end repeat
+        end tell
+    end repeat
+    return acc
+end |<*>|
 
--- map :: (a -> b) -> [a] -> [b]
-on map(f, xs)
-    tell mReturn(f)
-        set lng to length of xs
-        set lst to {}
-        repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
-        end repeat
-        return lst
-    end tell
-end map
+-- curry :: (Script|Handler) -> Script
+on curry(f)
+    script
+        on |λ|(a)
+            script
+                on |λ|(b)
+                    |λ|(a, b) of mReturn(f)
+                end |λ|
+            end script
+        end |λ|
+    end script
+end curry
 
 -- intercalate :: Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -43,10 +75,43 @@ on intercalate(strText, lstText)
     return strJoined
 end intercalate
 
--- _words :: String -> [String]
-on _words(str)
-    words of str
-end _words
+-- map :: (a -> b) -> [a] -> [b]
+on map(f, xs)
+    tell mReturn(f)
+        set lng to length of xs
+        set lst to {}
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, i, xs)
+        end repeat
+        return lst
+    end tell
+end map
+
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property |λ| : f
+        end script
+    end if
+end mReturn
+
+-- reverse :: [a] -> [a]
+on |reverse|(xs)
+    if class of xs is text then
+        (reverse of characters of xs) as text
+    else
+        reverse of xs
+    end if
+end |reverse|
+
+-- words :: String -> [String]
+on |words|(s)
+    words of s
+end |words|
 
 -- unlines :: [String] -> String
 on unlines(lstLines)
@@ -57,15 +122,3 @@ end unlines
 on unwords(lstWords)
     intercalate(space, lstWords)
 end unwords
-
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
-on mReturn(f)
-    if class of f is script then
-        f
-    else
-        script
-            property lambda : f
-        end script
-    end if
-end mReturn

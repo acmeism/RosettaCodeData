@@ -1,59 +1,61 @@
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.Timer;
 import java.util.TimerTask;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.WindowConstants;
 
-public class Rotate extends JFrame {
-  String text = "Hello World! ";
-  JLabel label = new JLabel(text);
-  boolean rotRight = true;
-  int startIdx = 0;
+public class Rotate {
 
-  public Rotate() {
-    label.addMouseListener(new MouseAdapter() {
-      @Override
-      public void mouseClicked(MouseEvent evt) {
-        rotRight = !rotRight;
-      }
-    });
-    add(label);
-    pack();
-    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    setVisible(true);
-  }
+    private static class State {
+        private final String text = "Hello World! ";
+        private int startIndex = 0;
+        private boolean rotateRight = true;
+    }
 
-  public static void main(String[] args) {
-    final Rotate rot = new Rotate();
-    TimerTask task = new TimerTask() {
-      public void run() {
-        if (rot.rotRight) {
-          rot.startIdx++;
-          if (rot.startIdx >= rot.text.length()) {
-            rot.startIdx -= rot.text.length();
-          }
-        } else {
-          rot.startIdx--;
-          if (rot.startIdx < 0) {
-            rot.startIdx += rot.text.length();
-          }
+    public static void main(String[] args) {
+        State state = new State();
+
+        JLabel label = new JLabel(state.text);
+        label.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                state.rotateRight = !state.rotateRight;
+            }
+        });
+
+        TimerTask task = new TimerTask() {
+            public void run() {
+                int delta = state.rotateRight ? 1 : -1;
+                state.startIndex = (state.startIndex + state.text.length() + delta) % state.text.length();
+                label.setText(rotate(state.text, state.startIndex));
+            }
+        };
+        Timer timer = new Timer(false);
+        timer.schedule(task, 0, 500);
+
+        JFrame rot = new JFrame();
+        rot.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        rot.add(label);
+        rot.pack();
+        rot.setLocationRelativeTo(null);
+        rot.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                timer.cancel();
+            }
+        });
+        rot.setVisible(true);
+    }
+
+    private static String rotate(String text, int startIdx) {
+        char[] rotated = new char[text.length()];
+        for (int i = 0; i < text.length(); i++) {
+            rotated[i] = text.charAt((i + startIdx) % text.length());
         }
-        rot.label.setText(getRotatedText(rot.text, rot.startIdx));
-      }
-    };
-    Timer timer = new Timer(false);
-    timer.schedule(task, 0, 500);
-  }
-
-  public static String getRotatedText(String text, int startIdx) {
-    String ret = "";
-    int i = startIdx;
-    do {
-      ret += text.charAt(i) + "";
-      i++;
-      i = i % text.length();
-    } while (i != startIdx);
-    return ret;
-  }
+        return String.valueOf(rotated);
+    }
 }

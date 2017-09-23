@@ -1,4 +1,4 @@
--- SUBSTRING PRIMITIVES
+-- SUBSTRINGS -----------------------------------------------------------------
 
 --  take :: Int -> Text -> Text
 on take(n, s)
@@ -28,8 +28,7 @@ on init(s)
 end init
 
 
--- TEST
-
+-- TEST -----------------------------------------------------------------------
 on run
     set str to "一二三四五六七八九十"
 
@@ -50,9 +49,9 @@ on run
     script tabulate
         property strPad : "                                        "
 
-        on lambda(l, r)
+        on |λ|(l, r)
             l & drop(length of l, strPad) & r
-        end lambda
+        end |λ|
     end script
 
     linefeed & intercalate(linefeed, ¬
@@ -60,25 +59,7 @@ on run
             legends, parts)) & linefeed
 end run
 
-
-
--- GENERIC LIBRARY FUNCTIONS – FOR FORMATTING RESULTS
-
--- zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
-on zipWith(f, xs, ys)
-    set lng to length of xs
-    if lng is not length of ys then
-        missing value
-    else
-        tell mReturn(f)
-            set lst to {}
-            repeat with i from 1 to lng
-                set end of lst to lambda(item i of xs, item i of ys)
-            end repeat
-            return lst
-        end tell
-    end if
-end zipWith
+-- GENERIC FUNCTIONS FOR TEST -------------------------------------------------
 
 -- intercalate :: Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -88,6 +69,15 @@ on intercalate(strText, lstText)
     return strJoined
 end intercalate
 
+-- min :: Ord a => a -> a -> a
+on min(x, y)
+    if y < x then
+        y
+    else
+        x
+    end if
+end min
+
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
 on mReturn(f)
@@ -95,7 +85,19 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
+
+-- zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+on zipWith(f, xs, ys)
+    set lng to min(length of xs, length of ys)
+    set lst to {}
+    tell mReturn(f)
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, item i of ys)
+        end repeat
+        return lst
+    end tell
+end zipWith

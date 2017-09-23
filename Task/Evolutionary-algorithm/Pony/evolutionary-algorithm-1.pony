@@ -45,7 +45,7 @@ actor Main
     var i: USize = 0
     while i < trial.size() do
       try
-        if trial(i) == _target(i) then
+        if trial(i)? == _target(i)? then
           ret_val = ret_val + 1
         end
       end
@@ -64,7 +64,7 @@ actor Main
       if rnd_real <= rate then
         let rnd_int: U64 = _rand.int(_possibilities.size().u64())
         try
-          ret_val.push(_possibilities(rnd_int.usize()))
+          ret_val.push(_possibilities(rnd_int.usize())?)
         end
       else
         ret_val.push(char)

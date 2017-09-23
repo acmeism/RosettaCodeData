@@ -1,0 +1,5 @@
+BEGIN
+    INTEGER I;
+    FOR I := 1 STEP 3 UNTIL 19 DO
+        WRITE( I );
+END

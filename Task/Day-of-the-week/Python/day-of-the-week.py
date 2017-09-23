@@ -1,6 +1,3 @@
-from datetime import date
+from calendar import weekday, SUNDAY
 
-for year in range(2008, 2122):
-    day = date(year, 12, 25)
-    if day.weekday() == 6:
-        print(day.strftime('%d %b %Y'))
+[year for year in range(2008, 2122) if weekday(year, 12, 25) == SUNDAY]

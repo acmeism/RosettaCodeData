@@ -1,9 +1,0 @@
-proc gcd_iterative(u1, v1: int64): int64 =
-  var t: int64 = 0
-  var u = u1
-  var v = v1
-  while v != 0:
-      t = u
-      u = v
-      v = t %% v
-  result = abs(u)

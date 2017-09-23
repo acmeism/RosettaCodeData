@@ -1,63 +1,79 @@
 (function (n) {
     'use strict';
 
-    // A Pascal triangle of n rows
+    // PASCAL TRIANGLE --------------------------------------------------------
 
     // pascal :: Int -> [[Int]]
     function pascal(n) {
-        return range(1, n - 1)
-            .reduce(function (a) {
-                var lstPreviousRow = a.slice(-1)[0];
-
-                return a
-                    .concat(
-                        [zipWith(
-                            function (a, b) {
-                                return a + b
-                            },
-                            [0].concat(lstPreviousRow),
-                            lstPreviousRow.concat(0)
-                        )]
-                    );
-            }, [[1]]);
-    }
+        return foldl(function (a) {
+            var xs = a.slice(-1)[0]; // Previous row
+            return append(a, [zipWith(
+                function (a, b) {
+                    return a + b;
+                },
+                append([0], xs),
+                append(xs, [0])
+            )]);
+        }, [
+            [1] // Initial seed row
+        ], enumFromTo(1, n - 1));
+    };
 
 
+    // GENERIC FUNCTIONS ------------------------------------------------------
 
-    // GENERIC FUNCTIONS
+    // (++) :: [a] -> [a] -> [a]
+    function append(xs, ys) {
+        return xs.concat(ys);
+    };
+
+    // enumFromTo :: Int -> Int -> [Int]
+    function enumFromTo(m, n) {
+        return Array.from({
+            length: Math.floor(n - m) + 1
+        }, function (_, i) {
+            return m + i;
+        });
+    };
+
+    // foldl :: (b -> a -> b) -> b -> [a] -> b
+    function foldl(f, a, xs) {
+        return xs.reduce(f, a);
+    };
+
+    // foldr (a -> b -> b) -> b -> [a] -> b
+    function foldr(f, a, xs) {
+        return xs.reduceRight(f, a);
+    };
+
+    // map :: (a -> b) -> [a] -> [b]
+    function map(f, xs) {
+        return xs.map(f);
+    };
+
+    // min :: Ord a => a -> a -> a
+    function min(a, b) {
+        return b < a ? b : a;
+    };
 
     // zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
     function zipWith(f, xs, ys) {
-        return xs.length === ys.length ? (
-            xs.map(function (x, i) {
-                return f(x, ys[i]);
-            })
-        ) : undefined;
-    }
+        return Array.from({
+            length: min(xs.length, ys.length)
+        }, function (_, i) {
+            return f(xs[i], ys[i]);
+        });
+    };
 
-    // range :: Int -> Int -> [Int]
-    function range(m, n) {
-        return Array.apply(null, Array(n - m + 1))
-            .map(function (x, i) {
-                return m + i;
-            });
-    }
-
-    // TEST
+    // TEST and FORMAT --------------------------------------------------------
     var lstTriangle = pascal(n);
-
-
-    // FORMAT OUTPUT AS WIKI TABLE
 
     // [[a]] -> bool -> s -> s
     function wikiTable(lstRows, blnHeaderRow, strStyle) {
-        return '{| class="wikitable" ' + (
-                strStyle ? 'style="' + strStyle + '"' : ''
-            ) + lstRows.map(function (lstRow, iRow) {
-                var strDelim = ((blnHeaderRow && !iRow) ? '!' : '|');
-
-                return '\n|-\n' + strDelim + ' ' + lstRow.map(function (
-                        v) {
+        return '{| class="wikitable" ' + (strStyle ? 'style="' + strStyle +
+                '"' : '') + lstRows.map(function (lstRow, iRow) {
+                var strDelim = blnHeaderRow && !iRow ? '!' : '|';
+                return '\n|-\n' + strDelim + ' ' + lstRow.map(function (v) {
                         return typeof v === 'undefined' ? ' ' : v;
                     })
                     .join(' ' + strDelim + strDelim + ' ');
@@ -66,29 +82,21 @@
     }
 
     var lstLastLine = lstTriangle.slice(-1)[0],
-        lngBase = (lstLastLine.length * 2) - 1,
+        lngBase = lstLastLine.length * 2 - 1,
         nWidth = lstLastLine.reduce(function (a, x) {
             var d = x.toString()
                 .length;
             return d > a ? d : a;
         }, 1) * lngBase;
 
-    return [
-    wikiTable(
-            lstTriangle.map(function (lst) {
-                return lst.join(';;')
-                    .split(';');
-            })
-            .map(function (line, i) {
-                var lstPad = Array((lngBase - line.length) / 2);
-                return lstPad.concat(line)
-                    .concat(lstPad);
-            }),
-            false,
-            'text-align:center;width:' + nWidth + 'em;height:' + nWidth +
-            'em;table-layout:fixed;'
-    ),
-
-    JSON.stringify(lstTriangle)
-  ].join('\n\n');
+    return [wikiTable(lstTriangle.map(function (lst) {
+            return lst.join(';;')
+                .split(';');
+        })
+        .map(function (line, i) {
+            var lstPad = Array((lngBase - line.length) / 2);
+            return lstPad.concat(line)
+                .concat(lstPad);
+        }), false, 'text-align:center;width:' + nWidth + 'em;height:' + nWidth +
+        'em;table-layout:fixed;'), JSON.stringify(lstTriangle)].join('\n\n');
 })(7);

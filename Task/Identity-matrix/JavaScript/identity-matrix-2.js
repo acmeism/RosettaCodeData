@@ -7,7 +7,11 @@
             length: n
         }, (_, j) => i !== j ? 0 : 1));
 
+    // show :: a -> String
+    const show = JSON.stringify;
 
     // TEST
-    return idMatrix(5);
+    return idMatrix(5)
+        .map(show)
+        .join('\n');
 })();

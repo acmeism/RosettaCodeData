@@ -1,5 +1,6 @@
 import java.util.LinkedList;
 import java.util.Queue;
+
 public class MovingAverage {
     private final Queue<Double> window = new LinkedList<Double>();
     private final int period;
@@ -19,13 +20,13 @@ public class MovingAverage {
     }
 
     public double getAvg() {
-        if (window.isEmpty()) return 0; // technically the average is undefined
+        if (window.isEmpty()) return 0.0; // technically the average is undefined
         return sum / window.size();
     }
 
     public static void main(String[] args) {
-        double[] testData = {1,2,3,4,5,5,4,3,2,1};
-        int[] windowSizes = {3,5};
+        double[] testData = {1, 2, 3, 4, 5, 5, 4, 3, 2, 1};
+        int[] windowSizes = {3, 5};
         for (int windSize : windowSizes) {
             MovingAverage ma = new MovingAverage(windSize);
             for (double x : testData) {

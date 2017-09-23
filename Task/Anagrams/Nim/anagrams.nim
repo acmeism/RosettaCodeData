@@ -11,8 +11,8 @@ proc main() =
         anagrams.mgetOrPut(key, newSeq[string]()).add(word)
         count = max(count, anagrams[key].len)
 
-    for k, v in anagrams:
+    for _, v in anagrams:
         if v.len == count:
-            v.join(", ").echo
+            v.join(" ").echo
 
 main()

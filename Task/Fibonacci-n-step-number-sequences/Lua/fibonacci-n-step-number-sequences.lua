@@ -1,37 +1,20 @@
-function n_Nacci (n, seqLength, lucas)
-    local seq, nextNum = {1}
-    if lucas then
-        seq = {2, 1}
-    else
-        for power = 1, n - 1 do
-            table.insert(seq, 2 ^ power)
-        end
-    end
-    while #seq < seqLength do
-        nextNum = 0
-        for i = #seq - (n-1), #seq do
-            nextNum = nextNum + seq[i]
-        end
-        table.insert(seq, nextNum)
+function nStepFibs (seq, limit)
+    local iMax, sum = #seq - 1
+    while #seq < limit do
+        sum = 0
+        for i = 0, iMax do sum = sum + seq[#seq - i] end
+        table.insert(seq, sum)
     end
     return seq
 end
 
-function display (t)
-    print(" n\t|\t\t\tValues")
-    print(string.rep("-", 75))
-    for k, v in pairs(t) do
-        io.write(" " .. k, "\t| ")
-        for _, val in pairs(v) do
-            io.write(val .. " ")
-        end
-        print("...")
-    end
+local fibSeqs = {
+    {name = "Fibonacci",  values = {1, 1}      },
+    {name = "Tribonacci", values = {1, 1, 2}   },
+    {name = "Tetranacci", values = {1, 1, 2, 4}},
+    {name = "Lucas",      values = {2, 1}      }
+}
+for _, sequence in pairs(fibSeqs) do
+    io.write(sequence.name .. ": ")
+    print(table.concat(nStepFibs(sequence.values, 10), " "))
 end
-
-local nacciTab = {}
-for n = 2, 10 do
-    nacciTab[n] = n_Nacci(n, 16) -- 16 of each fits in one cmd line
-end
-nacciTab.lucas = n_Nacci(2, 16, "lucas")
-display(nacciTab)

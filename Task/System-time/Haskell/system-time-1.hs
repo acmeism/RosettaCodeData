@@ -1,7 +1,11 @@
 import System.Time
-import System.Locale
+       (getClockTime, toCalendarTime, formatCalendarTime)
 
-main = do ct <- getClockTime
-          print ct                 -- print default format, or
-          cal <- toCalendarTime ct
-          putStrLn $ formatCalendarTime defaultTimeLocale "%a %b %e %H:%M:%S %Y" cal
+import System.Locale (defaultTimeLocale)
+
+main :: IO ()
+main = do
+  ct <- getClockTime
+  print ct -- print default format, or
+  cal <- toCalendarTime ct
+  putStrLn $ formatCalendarTime defaultTimeLocale "%a %b %e %H:%M:%S %Y" cal

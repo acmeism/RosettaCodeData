@@ -1,6 +1,3 @@
-  function str = stripchars(str, charlist)
-    charlist = unique(charlist);
-    for k=1:length(charlist)
-      str(str==charlist(k)) = [];
-    end;
-  end;
+function str = stripchars(str, charlist)
+  % MATLAB after 2016b: str = erase(str, charlist);
+  str(ismember(str, charlist)) = '';

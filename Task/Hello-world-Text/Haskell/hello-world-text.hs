@@ -1,1 +1,3 @@
-main = putStrLn "Hello world!"
+message :: String
+message = "Hello world!"
+main = putStrLn message

@@ -1,4 +1,2 @@
-  global VERBOSE;
-  VERBOSE = 1;    % display of sequence elements turned on
-  N = hailstone(27);   %display sequence
-  printf('\n\n%i\n',N);  %
+x = hailstone(27);
+fprintf('hailstone(27): %d %d %d %d ... %d %d %d %d\nnumber of elements: %d\n', x(1:4), x(end-3:end), numel(x))

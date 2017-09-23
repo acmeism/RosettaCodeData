@@ -9,19 +9,19 @@ on integerFactors(n)
 
         -- isFactor :: Int -> Bool
         script isFactor
-            on lambda(x)
+            on |λ|(x)
                 (n mod x) = 0
-            end lambda
+            end |λ|
         end script
 
         -- Factors up to square root of n,
-        set lows to filter(isFactor, range(1, intRoot))
+        set lows to filter(isFactor, enumFromTo(1, intRoot))
 
         -- integerQuotient :: Int -> Int
         script integerQuotient
-            on lambda(x)
+            on |λ|(x)
                 (n / x) as integer
-            end lambda
+            end |λ|
         end script
 
         -- and quotients of these factors beyond the square root.
@@ -30,8 +30,7 @@ on integerFactors(n)
     end if
 end integerFactors
 
-
--- TEST
+-- TEST ------------------------------------------------------------------------
 on run
 
     integerFactors(120)
@@ -40,8 +39,21 @@ on run
 end run
 
 
+-- GENERIC FUNCTIONS -----------------------------------------------------------
 
--- GENERIC LIBRARY FUNCTIONS
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if n < m then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- filter :: (a -> Bool) -> [a] -> [a]
 on filter(f, xs)
@@ -50,7 +62,7 @@ on filter(f, xs)
         set lng to length of xs
         repeat with i from 1 to lng
             set v to item i of xs
-            if lambda(v, i, xs) then set end of lst to v
+            if |λ|(v, i, xs) then set end of lst to v
         end repeat
         return lst
     end tell
@@ -62,25 +74,11 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
 end map
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
-        set d to -1
-    else
-        set d to 1
-    end if
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range
 
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
@@ -89,7 +87,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

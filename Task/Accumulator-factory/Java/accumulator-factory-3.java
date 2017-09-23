@@ -1,15 +1,24 @@
-import java.util.function.DoubleUnaryOperator;
+public class AccumulatorFactory {
 
-public interface AccumulatorFactory {
-  public static DoubleUnaryOperator accumulator(double element) {
-    double[] sum = new double[] { element };
-    return value -> sum[0] += value;
-  }
+    public interface Accumulator {
+        double add(double x);
+    }
 
-  public static void main(String... arguments) {
-    DoubleUnaryOperator x = accumulator(1d);
-    x.applyAsDouble(5d);
-    System.out.println(accumulator(3d));		
-    System.out.println(x.applyAsDouble(2.3));
-  }
+    private static Accumulator accumulator(final double initial) {
+        return new Accumulator() {
+            private double sum = initial;
+
+            @Override
+            public double add(double x) {
+                return sum += x;
+            }
+        };
+    }
+
+    public static void main(String[] args) {
+        Accumulator x = accumulator(1.0);
+        x.add(5.0);
+        System.out.println(accumulator(3.0));
+        System.out.println(x.add(2.3));
+    }
 }

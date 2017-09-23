@@ -1,5 +1,5 @@
 sub MAIN($size as Int) {
-    my $t = Turtle.new(dir => northeast);
+    my $t = Turtle.new(dir => 1);
     my $counter = 0;
     for 1 ..^ $size -> $run {
 	for ^$run {

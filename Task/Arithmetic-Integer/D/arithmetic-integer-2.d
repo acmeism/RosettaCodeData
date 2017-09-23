@@ -1,4 +1,4 @@
-import std.stdio, std.string, std.conv, std.typetuple;
+import std.stdio, std.string, std.conv, std.meta;
 
 void main() {
     int a = -16, b = 5;
@@ -8,6 +8,6 @@ void main() {
     } catch (StdioException e) {}
     writeln("a = ", a, ", b = ", b);
 
-    foreach (op; TypeTuple!("+", "-", "*", "/", "%", "^^"))
+    foreach (op; AliasSeq!("+", "-", "*", "/", "%", "^^"))
         mixin(`writeln("a ` ~ op ~ ` b = ", a` ~ op ~ `b);`);
 }

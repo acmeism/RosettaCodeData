@@ -1,41 +1,29 @@
 import java.math.BigInteger;
+import java.util.Locale;
 
-public class Benford {
-    private static interface NumberGenerator {
-        BigInteger[] getNumbers();
-    }
+public class BenfordsLaw {
 
-    private static class FibonacciGenerator implements NumberGenerator {
-        public BigInteger[] getNumbers() {
-            final BigInteger[] fib = new BigInteger[ 1000 ];
-            fib[ 0 ] = fib[ 1 ] = BigInteger.ONE;
-            for ( int i = 2; i < fib.length; i++ )
-                fib[ i ] = fib[ i - 2 ].add( fib[ i - 1 ] );
-            return fib;
+    private static BigInteger[] generateFibonacci(int n) {
+        BigInteger[] fib = new BigInteger[n];
+        fib[0] = BigInteger.ONE;
+        fib[1] = BigInteger.ONE;
+        for (int i = 2; i < fib.length; i++) {
+            fib[i] = fib[i - 2].add(fib[i - 1]);
         }
+        return fib;
     }
 
-    private final int[] firstDigits = new int[ 9 ];
-    private final int   count;
+    public static void main(String[] args) {
+        BigInteger[] numbers = generateFibonacci(1000);
 
-    private Benford( final NumberGenerator ng ) {
-        final BigInteger[] numbers = ng.getNumbers();
-        count = numbers.length;
-        for ( final BigInteger number : numbers )
-            firstDigits[ Integer.valueOf( number.toString().substring( 0, 1 ) ) - 1 ]++;
-    }
+        int[] firstDigits = new int[10];
+        for (BigInteger number : numbers) {
+            firstDigits[Integer.valueOf(number.toString().substring(0, 1))]++;
+        }
 
-    public String toString() {
-        final StringBuilder result = new StringBuilder();
-        for ( int i = 0; i < firstDigits.length; i++ )
-            result.append( i + 1 )
-                .append( '\t' ).append( firstDigits[ i ] / ( double )count )
-                .append( '\t' ).append( Math.log10( 1 + 1d / ( i + 1 ) ) )
-                .append( '\n' );
-        return result.toString();
-    }
-
-    public static void main( final String[] args ) {
-        System.out.println( new Benford( new FibonacciGenerator() ) );
+        for (int i = 1; i < firstDigits.length; i++) {
+            System.out.printf(Locale.ROOT, "%d %10.6f %10.6f%n",
+                    i, (double) firstDigits[i] / numbers.length, Math.log10(1.0 + 1.0 / i));
+        }
     }
 }

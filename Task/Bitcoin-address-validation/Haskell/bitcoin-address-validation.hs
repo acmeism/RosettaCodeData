@@ -22,7 +22,7 @@ validityCheck encodedAddress =
        Just ev ->
          let address = toBytes ev
              addressLength = length address
-         in if addressLength > 24
+         in if addressLength > 25
             then Left "Address length exceeds 25 bytes"
             else
               if addressLength < 4

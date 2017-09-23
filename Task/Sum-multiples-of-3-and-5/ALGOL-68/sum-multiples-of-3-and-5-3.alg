@@ -1,37 +1,55 @@
--- sum35 :: Int -> Int
-on sum35(n)
-    sumMults(n, 3) + sumMults(n, 5) - sumMults(n, 15)
-end sum35
+-- SUM MULTIPLES OF 3 AND 5 --------------------------------------------------
 
--- Area under straight line between first multiple and last:
+-- sums of all multiples of 3 or 5 below or equal to N
+-- for N = 10 to N = 10E8 (limit of AS integers)
 
--- sumMults :: Int -> Int -> Int
-on sumMults(n, f)
-    set n1 to (n - 1) div f
+-- sum35Result :: String -> Int -> Int -> String
+script sum35Result
 
-    f * n1 * (n1 + 1) div 2
-end sumMults
+    -- sum35 :: Int -> Int
+    on sum35(n)
+        sumMults(n, 3) + sumMults(n, 5) - sumMults(n, 15)
+    end sum35
+
+    -- Area under straight line between first multiple and last:
+
+    -- sumMults :: Int -> Int -> Int
+    on sumMults(n, f)
+        set n1 to (n - 1) div f
+
+        f * n1 * (n1 + 1) div 2
+    end sumMults
+
+    on |λ|(a, x, i)
+        a & "10<sup>" & i & "</sup> -> " & ¬
+            sum35(10 ^ x) & "<br>"
+    end |λ|
+end script
 
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
-    -- sums of all multiples of 3 or 5 below or equal to N
-    -- for N = 10 to N = 10E8 (limit of AS integers)
 
-    -- sum35Result :: String -> Int -> Int -> String
-    script sum35Result
-        on lambda(a, x, i)
-            a & "10<sup>" & i & "</sup> -> " & ¬
-                sum35(10 ^ x) & "<br>"
-        end lambda
-    end script
+    foldl(sum35Result, "", enumFromTo(1, 8))
 
-    foldl(sum35Result, "", range(1, 8))
 end run
 
 
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
--- GENERIC LIBRARY FUNCTIONS
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- foldl :: (a -> b -> a) -> a -> [b] -> a
 on foldl(f, startValue, xs)
@@ -39,7 +57,7 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
@@ -52,26 +70,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    set d to cond(n < m, -1, 1)
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range
-
--- cond :: Bool -> (a -> b) -> (a -> b) -> (a -> b)
-on cond(bool, f, g)
-    if bool then
-        f
-    else
-        g
-    end if
-end cond

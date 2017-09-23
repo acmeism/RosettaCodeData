@@ -1,24 +1,30 @@
+-- ID MATRIX -----------------------------------------------------------------
+
 -- idMatrix :: Int -> [(0|1)]
 on idMatrix(n)
-    set xs to range(1, n)
+    set xs to enumFromTo(1, n)
 
     script row
-        on lambda(x)
-            script zeroOrOne
-                on lambda(i)
-                    cond(i = x, 1, 0)
-                end lambda
+        on |λ|(x)
+            script
+                on |λ|(i)
+                    if i = x then
+                        1
+                    else
+                        0
+                    end if
+                end |λ|
             end script
 
-            map(zeroOrOne, xs)
-        end lambda
+            map(result, xs)
+        end |λ|
     end script
 
     map(row, xs)
 end idMatrix
 
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
 
     idMatrix(5)
@@ -26,8 +32,21 @@ on run
 end run
 
 
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
--- GENERIC FUNCTIONS ------------------------------------------
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if n < m then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -35,7 +54,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -48,30 +67,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
-
--- cond :: Bool -> a -> a -> a
-on cond(bool, f, g)
-    if bool then
-        f
-    else
-        g
-    end if
-end cond
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
-        set d to -1
-    else
-        set d to 1
-    end if
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range

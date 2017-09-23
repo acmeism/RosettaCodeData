@@ -1,0 +1,64 @@
+10 REM REM Used the following as official standard:
+20 REM REM  http://www.cnb.cz/cs/platebni_styk/iban/download/EBS204.pdf
+30 REM REM Pairs of ISO 3166 country code & expected IBAN length for this country
+40 LET c$="AL28 AD24 AT20 AZ28 BE16 BH22 BA20 BR29 BG22 CR21 HR21 CY28 CZ24 DK18 DO28 EE20 "
+50 LET c$=c$+"FO18 FI18 FR27 GE22 DE22 GI23 GR27 GL18 GT28 HU28 IS26 IE22 IL23 IT27 KZ20 KW30 "
+60 LET c$=c$+"LV21 LB28 LI21 LT20 LU20 MK19 MT31 MR27 MU30 MC27 MD24 ME22 NL18 NO15 PK24 PS29 "
+70 LET c$=c$+"PL28 PT25 RO24 SM27 SA24 RS22 SK24 SI19 ES24 SE24 CH21 TN24 TR26 AE23 GB22 VG24 "
+80 LET e$=""
+100 LET i$="GB82 WEST 1234 5698 7654 32": GO SUB 1000
+110 LET i$="gb82 west 1234 5698 7654 32": GO SUB 1000
+120 LET i$="GB82 TEST 1234 5698 7654 32": GO SUB 1000
+130 LET i$="GR16 0110 1250 0000 0001 2300 695": GO SUB 1000
+140 LET i$="IL62-0108-0000-0009-9999-999": GO SUB 1000
+900 STOP
+1000 REM IBAN check routine
+1010 LET explen=0: LET lenc=LEN c$
+1020 FOR i=1 TO lenc STEP 5
+1030 IF i$( TO 2)=c$(i TO i+1) THEN LET explen=VAL c$(i+2 TO i+3): GO TO 2000
+1040 NEXT i
+2000 LET match=explen>0
+2010 REM Continue if country code found
+2020 IF NOT match THEN LET e$="country code: "+i$( TO 2): GO TO 3000
+2030 REM Remove espace = convert to digital IBAN
+2040 LET d$=""
+2050 FOR i=1 TO LEN i$
+2060 IF i$(i)>" " THEN LET d$=d$+i$(i)
+2070 NEXT i
+2080 LET match=explen=LEN d$
+2090 REM Continue if length is correct
+2100 IF NOT match THEN LET e$="code length, expected length: "+STR$ explen: GO TO 3000
+2110 REM Create temporary string with country code appended
+2120 LET t$=d$(5 TO )+d$(1 TO 2)
+2130 REM Make big number, replacing letters by numbers using next conversion table: A=10 ... Z=35
+2140 LET b$=""
+2150 FOR i=1 TO LEN t$
+2160 LET c= CODE t$(i)
+2170 IF (c>64 AND c<91) THEN LET b$=b$+STR$ (c-55): GO TO 2200
+2190 IF (c>47 AND c<58) THEN LET b$=b$+t$(i)
+2200 NEXT i
+2210 REM MOD 97 on bignum$+"00" and subtract result from 98 to obtain control number
+2220 LET k$=b$+"00": GO SUB 4000
+2230 LET kk=98-mod97
+2240 REM Compare with control number in IBAN
+2250 LET match=VAL i$(3 TO 4)=kk
+2260 REM Continue if control number matches
+2270 IF NOT match THEN LET e$="check digits, should be: "+STR$ kk: GO TO 3000
+2280 REM Append kk to bignum$ and determine if MOD 97 results in 1
+2285 LET k$="0"+STR$ kk
+2290 LET k$=b$+k$(LEN k$-1 TO ): GO SUB 4000
+2300 LET match=mod97=1
+2310 REM Continue if mod 97
+2320 IF NOT match THEN LET e$="result from modulo 97"
+3000 IF match THEN PRINT "  ": GO TO 3100
+3010 PRINT "in";: LET e$=" ***error!*** invalid "+e$
+3100 PRINT "valid IBAN: ";i$;e$: LET e$=""
+3110 RETURN
+4000 REM Modulo 97
+4010 LET mod97=0
+4020 FOR i=1 TO LEN k$
+4030 LET d$=STR$ (mod97)+k$(i)
+4040 LET mod97=FN m(VAL (d$),97)
+4050 NEXT i
+4060 RETURN
+5000 DEF FN m(a,b)=a-INT (a/b)*b: REM modulo

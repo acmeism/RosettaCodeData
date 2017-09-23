@@ -1,4 +1,4 @@
-sub maxsubseq (*@a) {
+sub max-subseq (*@a) {
     my ($start, $end, $sum, $maxsum) = -1, -1, 0, 0;
     for @a.kv -> $i, $x {
         $sum += $x;

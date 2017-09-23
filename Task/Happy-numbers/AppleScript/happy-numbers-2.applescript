@@ -1,3 +1,5 @@
+-- HAPPY NUMBERS --------------------------------------------------------------
+
 -- isHappy :: Int -> Bool
 on isHappy(n)
 
@@ -9,64 +11,62 @@ on isHappy(n)
 
             -- digitSquared :: Int -> Int -> Int
             script digitSquared
-                on lambda(a, x)
+                on |λ|(a, x)
                     (a + (x as integer) ^ 2) as integer
-                end lambda
+                end |λ|
             end script
 
-            on lambda(n)
+            on |λ|(n)
                 foldl(digitSquared, 0, splitOn("", n as string))
-            end lambda
+            end |λ|
         end script
 
         -- [Int] -> Int -> Bool
-        on lambda(s, n)
+        on |λ|(s, n)
             if n = 1 then
                 true
             else
                 if s contains n then
                     false
                 else
-                    lambda(s & n, lambda(n) of sumOfSquaredDigits)
+                    |λ|(s & n, |λ|(n) of sumOfSquaredDigits)
                 end if
             end if
-        end lambda
+        end |λ|
     end script
 
-    endsInOne's lambda({}, n)
+    endsInOne's |λ|({}, n)
 end isHappy
 
-
--- TEST
+-- TEST -----------------------------------------------------------------------
 on run
 
     -- seriesLength :: {n:Int, xs:[Int]} -> Bool
     script seriesLength
         property target : 8
 
-        on lambda(rec)
+        on |λ|(rec)
             length of xs of rec = target of seriesLength
-        end lambda
+        end |λ|
     end script
 
     -- succTest :: {n:Int, xs:[Int]} -> {n:Int, xs:[Int]}
     script succTest
-        on lambda(rec)
-            set xs to xs of rec
-            set n to n of rec
+        on |λ|(rec)
+            tell rec to set {xs, n} to {its xs, its n}
 
             script testResult
-                on lambda(x)
+                on |λ|(x)
                     if isHappy(x) then
                         xs & x
                     else
                         xs
                     end if
-                end lambda
+                end |λ|
             end script
 
-            {n:n + 1, xs:testResult's lambda(n)}
-        end lambda
+            {n:n + 1, xs:testResult's |λ|(n)}
+        end |λ|
     end script
 
     xs of |until|(seriesLength, succTest, {n:1, xs:{}})
@@ -75,8 +75,7 @@ on run
 end run
 
 
-
--- GENERIC FUNCTIONS
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
 -- foldl :: (a -> b -> a) -> a -> [b] -> a
 on foldl(f, startValue, xs)
@@ -84,31 +83,23 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
 end foldl
 
--- until :: (a -> Bool) -> (a -> a) -> a -> a
-on |until|(p, f, x)
-    set mp to mReturn(p)
-    set mf to mReturn(f)
-
-    script
-        property p : mp's lambda
-        property f : mf's lambda
-
-        on lambda(v)
-            repeat until p(v)
-                set v to f(v)
-            end repeat
-            return v
-        end lambda
-    end script
-
-    result's lambda(x)
-end |until|
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property |λ| : f
+        end script
+    end if
+end mReturn
 
 -- splitOn :: Text -> Text -> [Text]
 on splitOn(strDelim, strMain)
@@ -118,14 +109,15 @@ on splitOn(strDelim, strMain)
     return xs
 end splitOn
 
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
-on mReturn(f)
-    if class of f is script then
-        f
-    else
-        script
-            property lambda : f
-        end script
-    end if
-end mReturn
+-- until :: (a -> Bool) -> (a -> a) -> a -> a
+on |until|(p, f, x)
+    set mp to mReturn(p)
+    set v to x
+
+    tell mReturn(f)
+        repeat until mp's |λ|(v)
+            set v to |λ|(v)
+        end repeat
+    end tell
+    return v
+end |until|

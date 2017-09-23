@@ -1,5 +1,5 @@
 int val = 0;
 do{
    val++;
-   cout << val << endl;
+   std::cout << val << std::endl;
 }while(val % 6 != 0);

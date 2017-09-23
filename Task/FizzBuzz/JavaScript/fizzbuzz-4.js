@@ -1,11 +1,1 @@
-(function rng(i) {
-    return i ? rng(i - 1).concat(i) : []
-})(100).map(
-    function (n) {
-        return n % 3 ? (
-            n % 5 ? n : "Buzz"
-        ) : (
-            n % 5 ? "Fizz" : "FizzBuzz"
-        )
-    }
-).join(' ')
+for(i=1;i<101;i++)console.log((i%3?'':'Fizz')+(i%5?'':'Buzz')||i)

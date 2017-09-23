@@ -15,11 +15,11 @@ multi ins( $x, @s [$col, $a, $y, $b] ) {
 multi ins( $x, Any:U ) { [R, Any, $x, Any] }
 
 multi insert( $x, $s ) {
-    [B, ins($x,$s)[1..3]];
+    [B, |ins($x,$s)[1..3]];
 }
 
 sub MAIN {
     my $t = Any;
     $t = insert($_, $t) for (1..10).pick(*);
-    say $t.perl;
+    say $t.gist;
 }

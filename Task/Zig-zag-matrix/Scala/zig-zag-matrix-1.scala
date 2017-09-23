@@ -1,10 +1,19 @@
-def zigzag(n:int) = {
-  var l = List[Tuple2[int,int]]()
-  (0 until n*n) foreach {i=>l = l + (i%n,i/n)}
-  l = l.sort{case ((x,y),(u,v)) => if (x+y == u+v)
-                                     if ((x+y) % 2 == 0) x<u else y<v
-                                   else (x+y) < (u+v) }
-  var a = new Array[Array[int]](n,n)
-  l.zipWithIndex foreach {case ((x,y),i) => a(y)(x) = i}
-  a
-}
+  def zigzag(n: Int): Array[Array[Int]] = {
+    val l = for (i <- 0 until n*n) yield (i%n, i/n)
+    val lSorted = l.sortWith {
+      case ((x,y), (u,v)) =>
+        if (x+y == u+v)
+          if ((x+y) % 2 == 0) x<u else y<v
+        else x+y < u+v
+    }
+    val res = Array.ofDim[Int](n, n)
+    lSorted.zipWithIndex foreach {
+      case ((x,y), i) => res(y)(x) = i
+    }
+    res
+  }
+
+  zigzag(5).foreach{
+    ar => ar.foreach(x => print("%3d".format(x)))
+    println
+  }

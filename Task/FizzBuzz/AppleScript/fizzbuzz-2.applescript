@@ -1,23 +1,4 @@
-on run
-
-    intercalate(linefeed, ¬
-        map(fizzBuzz, range(1, 100)))
-
-end run
-
-
--- fizzBuzz :: Int -> String
-on fizzBuzz(x)
-    caseOf(x, [[my fizzAndBuzz, "FizzBuzz"], ¬
-        [my fizz, "Fizz"], ¬
-        [my buzz, "Buzz"]], ¬
-        x as string)
-end fizzBuzz
-
--- fizzAndBuzz :: Int -> Bool
-on fizzAndBuzz(n)
-    n mod 15 = 0
-end fizzAndBuzz
+-- FIZZBUZZ ------------------------------------------------------------------
 
 -- fizz :: Int -> Bool
 on fizz(n)
@@ -29,17 +10,52 @@ on buzz(n)
     n mod 5 = 0
 end buzz
 
+-- fizzAndBuzz :: Int -> Bool
+on fizzAndBuzz(n)
+    n mod 15 = 0
+end fizzAndBuzz
 
--- GENERIC LIBRARY FUNCTIONS
+-- fizzBuzz :: Int -> String
+on fizzBuzz(x)
+    caseOf(x, [[my fizzAndBuzz, "FizzBuzz"], ¬
+        [my fizz, "Fizz"], ¬
+        [my buzz, "Buzz"]], x as string)
+end fizzBuzz
+
+
+-- TEST ----------------------------------------------------------------------
+on run
+
+    intercalate(linefeed, ¬
+        map(fizzBuzz, enumFromTo(1, 100)))
+
+end run
+
+
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- caseOf :: a -> [(predicate, b)] -> Maybe b -> Maybe b
 on caseOf(e, lstPV, default)
     repeat with lstCase in lstPV
         set {p, v} to contents of lstCase
-        if mReturn(p)'s lambda(e) then return v
+        if mReturn(p)'s |λ|(e) then return v
     end repeat
     return default
 end caseOf
+
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- intercalate :: Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -55,7 +71,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -68,21 +84,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
-        set d to -1
-    else
-        set d to 1
-    end if
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range

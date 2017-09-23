@@ -1,3 +1,3 @@
-define(`quine',``$1(`$1')'')
-quine(`define(`quine',``$1(`$1')'')
+define(`quine',``$1(`$1')'')dnl
+quine(`define(`quine',``$1(`$1')'')dnl
 quine')

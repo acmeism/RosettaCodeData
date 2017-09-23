@@ -7,7 +7,7 @@ Doors flipUnoptimized(Doors doors) pure nothrow {
     doors[] = DoorState.closed;
 
     foreach (immutable i; 0 .. doors.length)
-        for (int j = i; j < doors.length; j += i + 1)
+        for (ulong j = i; j < doors.length; j += i + 1)
             if (doors[j] == DoorState.open)
                 doors[j] = DoorState.closed;
             else

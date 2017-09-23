@@ -1,0 +1,77 @@
+*        Comma quibbling           13/03/2017
+COMMAQUI CSECT
+         USING  COMMAQUI,R13       base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,=A(N))    do i=1 to hbound(t)
+         LR     R1,R6                i
+         SLA    R1,5                 *32
+         LA     R2,T-32              @t(0)
+         AR     R1,R2                @t(i)
+         MVC    S1,0(R1)             s1=t(i)
+         MVC    S2,=CL32'{'          s2='{'
+         LA     R8,S2+1              s2ins=1
+         MVC    I2,=F'0'             i2=0
+         LA     R7,1                 j=1
+       DO WHILE=(C,R7,LE,=A(L'T))    do j=1 to length(t)
+         LA     R1,S1                  @s1
+         BCTR   R1,0                   @s1-1
+         AR     R1,R7                  @s1-1+j
+         MVC    CJ,0(R1)               cj=mid(s1,j,1)
+         CLI    CJ,C' '                if cj=' '
+         BE     EXITJ                  then goto exitj
+       IF CLI,CJ,EQ,C',' THEN          if cj="," then
+         MVC    0(2,R8),=C', '           s2=s2||", "
+         LA     R8,2(R8)                 s2ins=s2ins+2
+         LR     R0,R8                    s2ins
+         LA     R1,S2+1                  @s2+1
+         SR     R0,R1                    len(s2)-1
+         ST     R0,I2                    i2=len(s2)-1
+       ELSE     ,                      else
+         MVC    0(1,R8),CJ               s2=s2||cj
+         LA     R8,1(R8)                 s2ins=s2ins+1
+       ENDIF    ,                      endif
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+EXITJ    MVI    0(R8),C'}'           s2=s2||"}"
+         LA     R8,1(R8)             s2ins=s2ins+1
+         L      R0,I2                i2
+       IF LTR,R0,NZ,R0 THEN          if i2<>0 then
+         MVC    S2B,S2                 s2b=mid(s2,1,i2-1)
+         LA     R1,S2B-1               @s2b-1
+         A      R1,I2                  +i2
+         MVC    0(5,R1),=C' and '      s2b||" and "
+         LA     R1,5(R1)               +5
+         LA     R2,S2+1                @s2+1
+         A      R2,I2                  +i2
+         LR     R3,R8                  s2ins
+         LA     R0,S2+1                @s2+1
+         SR     R3,R0                  s2ins-(@s2+1)
+         S      R3,I2                  -i2
+         BCTR   R3,0                   -1
+         EX     R3,XMVC                s2b||=mid(s2,i2+2)
+         MVC    S2,S2B     s2=mid(s2,1,i2-1)||" and "||mid(s2,i2+2)
+       ENDIF    ,                    endif
+         XPRNT  S2,L'S2              print s2
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         L      R13,4(0,R13)       restore previous savearea pointer
+         LM     R14,R12,12(R13)    restore previous context
+         XR     R15,R15            rc=0
+         BR     R14                exit
+XMVC     MVC    0(0,R1),0(R2)      mvc @r1,@r2
+N        EQU    (TEND-T)/L'T       items of t
+T        DC     CL32' ',CL32'ABC',CL32'ABC,DEF',CL32'ABC,DEF,G,H'
+TEND     DS     0C
+I2       DS     F
+S1       DS     CL(L'T)
+S2       DS     CL(L'T)
+S2B      DS     CL(L'T)
+CJ       DS     CL1
+         YREGS
+         END    COMMAQUI

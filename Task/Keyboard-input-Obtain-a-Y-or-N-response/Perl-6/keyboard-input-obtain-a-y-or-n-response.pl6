@@ -5,7 +5,7 @@ sub prompt-char($prompt) {
     LEAVE shell "stty sane";
 
     print $prompt;
-    $TTY.getc;
+    $TTY.read(1).decode('latin1');
 }
 
 say so prompt-char("Y or N? ") ~~ /:i y/;

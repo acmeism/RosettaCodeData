@@ -1,10 +1,10 @@
 import complex
 
-proc mandelbrot(a): Complex =
+proc mandelbrot(a: Complex): Complex =
   for i in 0 .. <50:
     result = result * result + a
 
-iterator stepIt(start, step, iterations) =
+iterator stepIt(start, step: float, iterations: int): auto =
   for i in 0 .. iterations:
     yield start + float(i) * step
 

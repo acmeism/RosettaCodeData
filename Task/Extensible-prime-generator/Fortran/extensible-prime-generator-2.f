@@ -303,8 +303,24 @@ Can invoke GETSREC, which can invoke PSURGE, which ... invokes NEXTPRIME. Oh dea
 
         LOGICAL FUNCTION ISPRIME(N)	!Could fool around explicity testing 2 and 3 and say 5,
          INTEGER N			!But that means also checking that N > 2, N > 3, and N > 5.
-          ISPRIME = N .EQ. NEXTPRIME(N - 1)	!This is so much easier.
-        END FUNCTION ISPRIME		!No divisions up to SQRT(N) or the like either.
+c        ISPRIME = N .EQ. NEXTPRIME(N - 1)	!This is so much easier, but involves scanning to reach the next prime.
+         INTEGER R,IST,I,C,B		!Assistants for indexing the bit array.
+          IF (N.LE.1) THEN	!First, preclude sillyness.
+            ISPRIME = .FALSE.		!Not a prime.
+          ELSE IF (N.EQ.2) THEN	!This is the only even number
+            ISPRIME = .TRUE.		!That is a prime.
+          ELSE IF (MOD(N,2).EQ.0) THEN	!Other even numbers
+            ISPRIME = .FALSE.		!Are not prime numbers.
+          ELSE			!Righto, now N is an odd number and there is a bit array for them.
+            R = (N - SORG)/(2*SBITS)	!SORG is odd, so (N - SORG) is even.
+            CALL GETSREC(R + 1)		!The first record is numbered one, not zero.
+            IST = SORG + R*(2*SBITS)	!The number for its first bit: even numbers are omitted.
+            I = (N - IST)/2		!Offset into the record. N - IST is even.
+            C = I/8			!Which character in SCHAR(0:SCHARS - 1)?
+            B = MOD(I,8)		!Which bit in SCHAR(C), indexing from zero?
+            ISPRIME = IAND(ICHAR(SCHAR(C)),ICHAR(BITON(B))).GT.0	!The bit is on for a prime.
+          END IF			!All that fuss to find a single bit.
+        END FUNCTION ISPRIME		!But, no divisions up to SQRT(N) or the like.
       END MODULE PRIMEBAG	!Functions updating a disc file as a side effect...
 
       PROGRAM POKE

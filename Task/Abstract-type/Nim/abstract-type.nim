@@ -1,9 +1,12 @@
 type
-  Comparable = generic x, y
+  Comparable = concept x, y
     (x < y) is bool
 
-  Container[T] = generic c
-    c.len is ordinal
-    items(c) is iterator
-    for value in c:
-      type(value) is T
+  Stack[T] = concept s, var v
+    s.pop() is T
+    v.push(T)
+
+    s.len is Ordinal
+
+    for value in s:
+      value is T

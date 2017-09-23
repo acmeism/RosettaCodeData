@@ -1,69 +1,76 @@
--- MULTIPLICATION TABLE FOR INTEGERS M TO N
+tableText(multTable(1, 12))
 
--- table :: Int -> Int -> [[String]]
-on table(m, n)
+-- multTable :: Int -> [[String]]
+on multTable(m, n)
 
-    set axis to range(m, n)
+    set axis to enumFromTo(m, n)
 
     script column
-        on lambda(x)
+        on |λ|(x)
             script row
-                on lambda(y)
+                on |λ|(y)
                     if y < x then
-                        {""}
+                        ""
                     else
-                        {(x * y) as text}
+                        (x * y) as string
                     end if
-                end lambda
+                end |λ|
             end script
 
             {x & map(row, axis)}
-        end lambda
+        end |λ|
     end script
 
     {{"x"} & axis} & concatMap(column, axis)
-end table
+end multTable
 
+-- TABLE DISPLAY --------------------------------------------------------------
 
-on run
-
-    tableText(table(1, 12))
-
-end run
-
-
--- TABLE DISPLAY
-
--- tableText :: [[String]] -> String
+-- tableText :: [[Int]] -> String
 on tableText(lstTable)
     script tableLine
-        on lambda(lstLine)
+        on |λ|(lstLine)
             script tableCell
-                on lambda(cell)
-                    (characters -4 thru -1 of ("    " & cell)) as string
-                end lambda
+                on |λ|(int)
+                    (characters -4 thru -1 of ("    " & int)) as string
+                end |λ|
             end script
 
             intercalate(" ", map(tableCell, lstLine))
-        end lambda
+        end |λ|
     end script
 
     intercalate(linefeed, map(tableLine, lstTable))
 end tableText
 
 
--- GENERIC LIBRARY FUNCTIONS
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
 -- concatMap :: (a -> [b]) -> [a] -> [b]
 on concatMap(f, xs)
-    script append
-        on lambda(a, b)
-            a & b
-        end lambda
-    end script
-
-    foldl(append, {}, map(f, xs))
+    set lst to {}
+    set lng to length of xs
+    tell mReturn(f)
+        repeat with i from 1 to lng
+            set lst to (lst & |λ|(item i of xs, i, xs))
+        end repeat
+    end tell
+    return lst
 end concatMap
+
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- foldl :: (a -> b -> a) -> a -> [b] -> a
 on foldl(f, startValue, xs)
@@ -71,11 +78,28 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
 end foldl
+
+-- intercalate :: Text -> [Text] -> Text
+on intercalate(strText, lstText)
+    set {dlm, my text item delimiters} to {my text item delimiters, strText}
+    set strJoined to lstText as text
+    set my text item delimiters to dlm
+    return strJoined
+end intercalate
+
+-- justifyRight :: Int -> Char -> Text -> Text
+on justifyRight(n, cFiller, strText)
+    if n > length of strText then
+        text -n thru -1 of ((replicate(n, cFiller) as text) & strText)
+    else
+        strText
+    end if
+end justifyRight
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -83,7 +107,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -96,29 +120,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
-        set d to -1
-    else
-        set d to 1
-    end if
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range
-
--- intercalate :: Text -> [Text] -> Text
-on intercalate(strText, lstText)
-    set {dlm, my text item delimiters} to {my text item delimiters, strText}
-    set strJoined to lstText as text
-    set my text item delimiters to dlm
-    return strJoined
-end intercalate

@@ -14,9 +14,9 @@ var (
 )
 
 func main() {
-    a := Vandermonde(x, 2)
-    b := mat64.NewDense(11, 1, y)
-    c := mat64.NewDense(3, 1, nil)
+    a := Vandermonde(x, degree)
+    b := mat64.NewDense(len(y), 1, y)
+    c := mat64.NewDense(degree+1, 1, nil)
 
     qr := new(mat64.QR)
     qr.Factorize(a)

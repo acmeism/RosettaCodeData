@@ -1,8 +1,5 @@
-dim items(2)
-items(0)="Apple"
-items(1)="Orange"
-items(2)="Banana"
+items = Array("Apple", "Orange", "Banana")
 
-For Each x in items
-  WScript.Echo x
+For Each x In items
+    WScript.Echo x
 Next

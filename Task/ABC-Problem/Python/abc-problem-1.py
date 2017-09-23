@@ -1,3 +1,8 @@
+'''
+Note that this code is broken, e.g., it won't work when
+blocks = [("A", "B"), ("A","C")] and the word is "AB", where the answer
+should be True, but the code returns False.
+'''
 blocks = [("B", "O"),
           ("X", "K"),
           ("D", "Q"),

@@ -1,41 +1,49 @@
 import Data.List (sort)
+import Control.Arrow ((&&&))
 
-primes = 2:filter isPrime [3,5..] where
-    isPrime n = f n primes where
-        f n (p:ps)
-            | p*p > n = True
-            | n`mod`p == 0 = False
-            | otherwise = f n ps
+-- VAMPIRE NUMBERS ------------------------------------------------------------
+vampires :: [Int]
+vampires = filter ((0 <) . length . fangs) [1 ..]
 
-primeFactors n = f n primes where
-    f n (p:ps)
-        | p*p > n = if n == 1 then [] else [(n,1)]
-        | n`mod`p == 0 = (p,e):f res ps
-        | otherwise = f n ps
-        where (e,res) = ppower (n`div`p) p 1
-    ppower n p e
-        | n`mod`p /= 0 = (e,n)
-        | otherwise = ppower (n`div`p) p (e+1)
-
-factors n = comb (primeFactors n) where
-    comb [] = [1]
-    comb ((p,e):others) = [a*b | b<-map (p^) [0 .. e], a<-comb others]
-
-ndigit 0 = 0
-ndigit n = 1 + ndigit (n`div`10)
-
+fangs :: Int -> [(Int, Int)]
 fangs n
-    | odd w = []
-    | otherwise = map (\x->(x,n`div`x)) $ filter isfang (factors n) where
-        isfang x = x > xmin && x < y && y < ymax &&      -- same length
-            ((x`div`10)/=0 || (y`div`10)/=0) &&          -- not zero-ended
-            sort (show n) == sort ((show x) ++ (show y)) -- same digits
-            where y = n`div`x
-        w = ndigit n
-        xmin = 10^(w`div`2-1)
-        ymax = 10^(w`div`2)
+  | odd w = []
+  | otherwise = ((,) <*> quot n) <$> filter isfang (integerFactors n)
+  where
+    ndigit :: Int -> Int
+    ndigit 0 = 0
+    ndigit n = 1 + ndigit (quot n 10)
+    w = ndigit n
+    xmin = 10 ^ (quot w 2 - 1)
+    xmax = xmin * 10
+    isfang x =
+      x > xmin &&
+      x < y &&
+      y < xmax && -- same length
+      (quot x 10 /= 0 || quot y 10 /= 0) && -- not zero-ended
+      sort (show n) == sort (show x ++ show y)
+      where
+        y = quot n x
 
-vampires = filter ((0<).length.fangs) [1..]
+-- FACTORS --------------------------------------------------------------------
+integerFactors :: Int -> [Int]
+integerFactors n
+  | n < 1 = []
+  | otherwise =
+    lows ++
+    (quot n <$>
+     (if intSquared == n -- A perfect square,
+        then tail -- and cofactor of square root would be redundant.
+        else id)
+       (reverse lows))
+  where
+    (intSquared, lows) =
+      (^ 2) &&& (filter ((0 ==) . rem n) . enumFromTo 1) $
+      floor (sqrt $ fromIntegral n)
 
-main = mapM (\n->print (n,fangs n)) $
-        ((take 25 vampires) ++ [16758243290880, 24959017348650, 14593825548650])
+-- TEST -----------------------------------------------------------------------
+main :: IO [()]
+main =
+  mapM
+    (print . ((,) <*>) fangs)
+    (take 25 vampires ++ [16758243290880, 24959017348650, 14593825548650])

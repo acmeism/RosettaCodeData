@@ -1,12 +1,3 @@
-on run
-
-    set lstRange to {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-
-    {{sum:reduce(summed, 0, lstRange)}, ¬
-        {product:reduce(product, 1, lstRange)}}
-
-end run
-
 on summed(a, b)
     a + b
 end summed
@@ -15,24 +6,55 @@ on product(a, b)
     a * b
 end product
 
+-- TEST -----------------------------------------------------------------------
+on run
 
+    set xs to enumFromTo(1, 10)
 
--- GENERIC LIBRARY FUNCTION
+    {xs, ¬
+        {sum:foldl(summed, 0, xs)}, ¬
+        {product:foldl(product, 1, xs)}}
 
--- list, function, initial accumulator value
--- the arguments available to the function f(a, x, i, l) are
--- v: current accumulator value
--- x: current item in list
--- i: [ 1-based index in list ] optional
--- l: [ a reference to the list itself ] optional
-on reduce(f, initialValue, xs)
-    script mf
-        property lambda : f
-    end script
+    --> {{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, {sum:55}, {product:3628800}}
 
-    set v to initialValue
-    repeat with i from 1 to length of xs
-        set v to mf's lambda(v, item i of xs, i, xs)
+end run
+
+-- GENERIC FUNCTIONS ----------------------------------------------------------
+
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if n < m then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
     end repeat
-    return v
-end reduce
+    return lst
+end enumFromTo
+
+-- foldl :: (a -> b -> a) -> a -> [b] -> a
+on foldl(f, startValue, xs)
+    tell mReturn(f)
+        set v to startValue
+        set lng to length of xs
+        repeat with i from 1 to lng
+            set v to |λ|(v, item i of xs, i, xs)
+        end repeat
+        return v
+    end tell
+end foldl
+
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property |λ| : f
+        end script
+    end if
+end mReturn

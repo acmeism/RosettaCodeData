@@ -1,1 +1,1 @@
-{"ALPHABETA ΑΒΓΔΕΖΗΘ", "alphabeta αβγδεζηθ", "Alphabeta Αβγδεζηθ"}
+{"alphabeta αβγδεζηθ", "Alphabeta Αβγδεζηθ", "ALPHABETA ΑΒΓΔΕΖΗΘ"}

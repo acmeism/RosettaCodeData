@@ -1,3 +1,5 @@
+import std.stdio;
+
 class LinkedList(T)
 {
  Node!(T) head, tail;
@@ -65,13 +67,13 @@ class Node(T)
  /** Insert an element after this one. */
  void insertAfter (T value)
  {
-  new Node!(T)(this, next, value, parent);
+  new Node!(T)(next, this, value, parent);
  }
 
  /** Insert an element before this one. */
  void insertBefore (T value)
  {
-  new Node!(T)(previous, this, value, parent);
+  new Node!(T)(this, previous, value, parent);
  }
 
  /** Remove the current node from the list. */
@@ -90,8 +92,8 @@ class Node(T)
 
 void main ()
 {
- char[][] sample = ["was", "it", "a", "cat", "I", "saw"];
- auto list = LinkedList!(char[]).fromArray (sample);
+ string[] sample = ["was", "it", "a", "cat", "I", "saw"];
+ auto list = LinkedList!string.fromArray (sample);
  for (auto elem = list.head; elem; elem = elem.next)
  {
   writef ("%s ", elem.value);

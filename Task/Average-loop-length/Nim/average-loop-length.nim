@@ -1,20 +1,20 @@
-import math, strfmt
+import random, math, strfmt
 randomize()
 
 const
   maxN = 20
   times = 1_000_000
 
-proc factorial(n): float =
+proc factorial(n: int): float =
   result = 1
   for i in 1 .. n:
     result *= i.float
 
-proc expected(n): float =
+proc expected(n: int): float =
   for i in 1 .. n:
     result += factorial(n) / pow(n.float, i.float) / factorial(n - i)
 
-proc test(n, times): int =
+proc test(n, times: int): int =
   for i in 1 .. times:
     var
       x = 1

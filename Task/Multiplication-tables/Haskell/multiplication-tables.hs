@@ -1,8 +1,26 @@
-import Control.Monad
-import Text.Printf
+import Data.Monoid ((<>))
+import Data.List (intercalate, transpose)
 
-main = do
-    putStrLn $ "   x" ++ concatMap fmt [1..12]
-    zipWithM_ f [1..12] $ iterate ("    " ++) ""
-  where f n s = putStrLn $ fmt n ++ s ++ concatMap (fmt . (*n)) [n..12]
-        fmt n = printf "%4d" (n :: Int)
+multTable :: Int -> [[String]]
+multTable n =
+  let xs = [1 .. n]
+  in xs >>=
+     \x ->
+        [ show x <> ":" :
+          (xs >>=
+           \y ->
+              [ if y < x
+                  then mempty
+                  else show (x * y)
+              ])
+        ]
+
+table :: String -> [[String]] -> [String]
+table delim rows =
+  let justifyRight c n s = drop (length s) (replicate n c <> s)
+  in intercalate delim <$>
+     transpose
+       ((fmap =<< justifyRight ' ' . maximum . fmap length) <$> transpose rows)
+
+main :: IO ()
+main = (putStrLn . unlines . table "  " . multTable) 12

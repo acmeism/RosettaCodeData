@@ -1,2 +1,1 @@
-println(countSubstring("ababababab", "abab"))
-println(countSubstring("the three truths", "th"))
+def countSubstring( str:String, substr:String ) = substr.r.findAllMatchIn(str).length

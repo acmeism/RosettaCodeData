@@ -7,7 +7,7 @@ enum cProb =    0.01; // Tree creation probability.
 enum Cell : char { empty=' ', tree='T', fire='#' }
 alias World = Cell[][];
 
-bool hasBurningNeighbours(in World world, in int r, in int c)
+bool hasBurningNeighbours(in World world, in ulong r, in ulong c)
 pure nothrow @safe @nogc {
     foreach (immutable rowShift; -1 .. 2)
         foreach (immutable colShift; -1 .. 2)
@@ -19,8 +19,8 @@ pure nothrow @safe @nogc {
 }
 
 void nextState(in World world, World nextWorld) /*nothrow*/ @safe /*@nogc*/ {
-    foreach (immutable r, const row; world)
-        foreach (immutable c, immutable elem; row)
+    foreach (r, row; world)
+        foreach (c, elem; row)
             final switch (elem) with (Cell) {
                 case empty:
                     nextWorld[r][c]= (uniform01 < cProb) ? tree : empty;

@@ -1,52 +1,144 @@
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-with Ada.Text_IO, Ada.Characters.Latin_1;
+with Ada.Text_IO;
 
-procedure Longest_String_Challenge is
-   function "+"(S: String) return Unbounded_String renames To_Unbounded_String;
-   Separator: constant Character := Ada.Characters.Latin_1.NUL;
+procedure Longest_Strings is
+   use Ada.Text_IO;
 
-   procedure Funny_Stuff(B, L: in out Unbounded_String; N: Unbounded_String) is
-      -- B holds a list of all longest strings, separated by Separator
-      -- L holds longest string so far
-      -- N is the next string to be considered
-      Nat: Natural;
-   begin
-      Nat := Length(N) - Length(L);
-        -- (1) this raises exception if L longer then N
-      declare
-         Pos: Positive;
+   -- first, in order to strictly use integer, I use integer in
+   -- place of an enumeration type: -1 => not-equal
+   --                                0 => shorter - ignore, no print current string
+   --                                1 => equal - print current and up-stream
+   --                                2 => longer - no print upstream, only current and equal subsequent
+   --                           others => null; -- must never happen.
+   --
+   -- Anything else that is tested or used that is not a string or integer
+   -- is not used explicitly by me, but is a standard part of the language
+   -- as provided in the standard libraries (like boolean "End_Of_File").
+
+   function Measure_And_Print_N (O : String := ""; -- original/old string
+                                 N : String := ""  -- next/new string
+                                ) return Integer is
+      T1 : String := O;
+      T2 : String := N;
+      L  : Integer := 1; -- Length defaults to the same;
+      function Test_Length (O : in out String; -- original/old string
+                            N : in out String) -- new/test-subject string
+                            return Integer is
+         function Test_Equal (O : in out String; N : in out String)
+                              return Integer is
+         begin
+            O := N;
+            return 1;
+         exception
+            when Constraint_Error =>
+               return -1;
+         end;
       begin
-         Pos := Nat; -- (2) this raises exception if L at least as long as N
-                     -- at this point, we know N is longer then L
-         B   := N;
-         L   := N;
+         case Test_Equal (O, N) is
+         when -1 =>
+            O (N'Range) := N;
+            return 0;
+         when 1 =>
+            return 1;
+         when others =>
+            return -1;
+         end case;
       exception
-         when Constraint_Error -- come from (2)
-            -- at this point, we know L and N are of the same length
-            => B := B & Separator & N; -- add N to the set of solutions
+         when Constraint_Error =>
+            return 2;
       end;
-   exception
-      when Constraint_Error => null; -- come from (1)
-        -- at this point, we know L is longer then N
-   end Funny_Stuff;
+   begin
+         case Test_Length (T1, T2) is
+         when 0 =>
 
-   Buffer: Unbounded_String := +"";
-   Longest: Unbounded_String := +"";
-   Next: Unbounded_String;
+            -- N < O, so return "shorter"  do not print N
 
+            if End_Of_File
+            then
+               return 0;
+            else
+               case Measure_And_Print_N (O, Get_Line) is
+                  when 0 =>
+                     return 0;
+                  when 1 =>
+                     return 0;
+                  when 2 =>
+                     return 2; -- carry up any subsequent canceling of print.
+                  when others =>
+                     raise Numeric_Error;
+               end case;
+            end if;
+         when 1 =>
+
+            -- O = N, so return "equal"  print N if all subsequent values are
+            -- less than or equal to N
+
+            if End_Of_File
+            then
+               Put_Line (N);
+               return 1;
+            else
+               case Measure_And_Print_N (O, Get_Line) is
+                  when 0 =>
+                     Put_Line (N);
+                     return 1;
+                  when 1 =>
+                     Put_Line (N);
+                     return 1;
+                  when 2 =>  -- carry up the subsequent canceling of print.
+                     null;
+                     return 2;
+                  when others =>
+                     raise Numeric_Error;
+               end case;
+            end if;
+         when 2 =>
+
+            -- N > O, so return "longer" to cancel printing all previous values
+            -- and print N if it is also equal to or greater than descendant
+            -- values.
+
+            if End_Of_File
+            then
+               Put_Line (N);
+               return 2;
+            else
+               case Measure_And_Print_N (N, Get_Line) is
+                  when 0 =>
+                     Put_Line (N);
+                     return 2;
+                  when 1 =>
+                     Put_Line (N);
+                     return 2;
+                  when 2 =>  -- printing N cancelled by subsequent input.
+                     null;
+                     return 2;
+                  when others =>
+                     raise Numeric_Error;
+               end case;
+            end if;
+         when others =>
+
+            -- This should never happen - raise exception
+
+            raise Numeric_Error;
+         end case;
+   end;
 begin
-   while True loop
-      Next := + Ada.Text_IO.Get_Line;
-        -- (3) raises exception when trying to read beyond the end of file
-      Funny_Stuff(Buffer, Longest, Next);
-   end loop;
-exception
-   when others => -- come from (3)
-      for I in To_String(Buffer)'Range loop
-         if To_String(Buffer)(I) = Separator then
-            Ada.Text_IO.New_Line;
-         else
-            Ada.Text_IO.Put(To_String(Buffer)(I));
-         end if;
-      end loop;
-end Longest_String_Challenge;
+   if End_Of_File
+   then
+      null;
+   else
+      case Measure_And_Print_N ("", Get_Line) is
+         when 0 =>
+            Put_Line (Current_Error,
+                      "Error, Somehow the input line is calculated as less than zero!");
+         when 1 =>
+            Put_Line (Current_Error,
+                      "All input lines appear to be blank.");
+         when 2 =>
+            null;
+         when others =>
+            raise Numeric_Error;
+      end case;
+   end if;
+end;

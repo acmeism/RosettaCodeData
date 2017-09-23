@@ -1,1 +1,4 @@
-val (sum, difference) = addsub(33, 12)
+def addSubMult(x: Int, y:Int) : (Int, Int, Int) = {
+  ...
+  (x + y, x - y, x * y)
+}

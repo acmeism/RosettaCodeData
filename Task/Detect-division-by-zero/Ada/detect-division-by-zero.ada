@@ -23,7 +23,7 @@ begin
    New_Line;
    Put("Floating point divide by zero: ");
    Fresult := Fnum / Fdenom;
-   if Fresult > Float'Last then
+   if Fresult > Float'Last or Fresult < Float'First then
       Put("Division by zero detected (infinite value).");
    else
       Put(Item => Fresult, Aft => 9, Exp => 0);

@@ -1,38 +1,24 @@
-[<RequireQualifiedAccess>]
-module MinHeap =
+type CIS<'T> = struct val v:'T val cont:unit->CIS<'T> //'Co Inductive Stream for laziness
+                      new (v,cont) = { v = v; cont = cont } end
+type Prime = uint32
 
-  type HeapEntry<'V> = struct val k:uint32 val v:'V new(k,v) = {k=k;v=v} end
-  [<CompilationRepresentation(CompilationRepresentationFlags.UseNullAsTrueValue)>]
-  [<NoEquality; NoComparison>]
-  type PQ<'V> =
-         | Mt
-         | Br of HeapEntry<'V> * PQ<'V> * PQ<'V>
-
-  let empty = Mt
-
-  let peekMin = function | Br(kv, _, _) -> Some(kv.k, kv.v)
-                         | _            -> None
-
-  let rec push wk wv =
-    function | Mt -> Br(HeapEntry(wk, wv), Mt, Mt)
-             | Br(vkv, ll, rr) ->
-                 if wk <= vkv.k then
-                   Br(HeapEntry(wk, wv), push vkv.k vkv.v rr, ll)
-                 else Br(vkv, push wk wv rr, ll)
-
-  let private siftdown wk wv pql pqr =
-    let rec sift pl pr =
-      match pl with
-        | Mt -> Br(HeapEntry(wk, wv), Mt, Mt)
-        | Br(vkvl, pll, plr) ->
-            match pr with
-              | Mt -> if wk <= vkvl.k then Br(HeapEntry(wk, wv), pl, Mt)
-                      else Br(vkvl, Br(HeapEntry(wk, wv), Mt, Mt), Mt)
-              | Br(vkvr, prl, prr) ->
-                  if wk <= vkvl.k && wk <= vkvr.k then Br(HeapEntry(wk, wv), pl, pr)
-                  elif vkvl.k <= vkvr.k then Br(vkvl, sift pll plr, pr)
-                  else Br(vkvr, pl, sift prl prr)
-    sift pql pqr
-
-  let replaceMin wk wv = function | Mt -> Mt
-                                  | Br(_, ll, rr) -> siftdown wk wv ll rr
+let primesTreeFold() =
+  let rec (^^) (xs: CIS<Prime>) (ys: CIS<Prime>) = // merge streams; no duplicates
+    let x = xs.v in let y = ys.v
+    if x < y then CIS(x, fun() -> xs.cont() ^^ ys)
+    elif y < x then CIS(y, fun() -> xs ^^ ys.cont())
+    else CIS(x, fun() -> xs.cont() ^^ ys.cont())
+  let pmltpls p = let adv = p + p
+                  let rec nxt c = CIS(c, fun() -> nxt (c + adv)) in nxt (p * p)
+  let rec allmltps (ps: CIS<Prime>) = CIS(pmltpls ps.v, fun() -> allmltps (ps.cont()))
+  let rec pairs (css: CIS<CIS<Prime>>) =
+    let ncss = css.cont()
+    CIS(css.v ^^ ncss.v, fun() -> pairs (ncss.cont()))
+  let rec cmpsts (css: CIS<CIS<Prime>>) =
+    CIS(css.v.v, fun() -> (css.v.cont()) ^^ (cmpsts << pairs << css.cont)())
+  let rec minusat n (cs: CIS<Prime>) =
+    if n < cs.v then CIS(n, fun() -> minusat (n + 2u) cs)
+    else minusat (n + 2u) (cs.cont())
+  let rec oddprms() = CIS(3u, fun() -> (minusat 5u << cmpsts << allmltps) (oddprms()))
+  Seq.unfold (fun (ps: CIS<Prime>) -> Some(ps.v, ps.cont()))
+             (CIS(2u, fun() -> (minusat 3u << cmpsts << allmltps) (oddprms())))

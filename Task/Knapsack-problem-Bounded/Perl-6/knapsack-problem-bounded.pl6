@@ -8,15 +8,15 @@ multi sub pokem ([$i, *@rest], $w, $v = 0) {
     my @skip = pokem @rest, $w, $v;
     if $w >= $i.weight { # next one fits
       my @put = pokem @rest, $w - $i.weight, $v + $i.unit;
-      return (%cache{$key} = @put, $i.name).list if @put[0] > @skip[0];
+      return (%cache{$key} = |@put, $i.name).list if @put[0] > @skip[0];
     }
-    return (%cache{$key} = @skip).list;
+    return (%cache{$key} = |@skip).list;
   }
 }
 
 my $MAX_WEIGHT = 400;
-my @table = map     -> $name,  $weight,  $unit,     $count {
-    KnapsackItem.new( :$name, :$weight, :$unit ) xx $count;
+my @table = flat map -> $name,  $weight,  $unit,     $count {
+     KnapsackItem.new( :$name, :$weight, :$unit ) xx $count;
 },
         'map',                         9,      150,    1,
         'compass',                     13,     35,     1,
@@ -39,7 +39,7 @@ my @table = map     -> $name,  $weight,  $unit,     $count {
         'sunglasses',                  7,      20,     1,
         'towel',                       18,     12,     2,
         'socks',                       4,      50,     1,
-        'book',                        30,     10,     2,
+        'book',                        30,     10,     2
         ;
 
 my ($value, @result) = pokem @table, $MAX_WEIGHT;
@@ -49,6 +49,6 @@ my ($value, @result) = pokem @table, $MAX_WEIGHT;
 say "Value = $value";
 say "Tourist put in the bag:";
 say "  # ITEM";
-for %hash.kv -> $item, $number {
-  say "  $number $item";
+for %hash.sort -> $item {
+  say "  {$item.value} {$item.key}";
 }

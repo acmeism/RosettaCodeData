@@ -1,10 +1,9 @@
 constant @sq = ^10 X** 2;
 my $cnt = 0;
-my %cache;
 
-sub Euler92($n) is cached {
+sub Euler92($n) {
     $n == any(1,89) ?? $n !!
-    Euler92( [+] @sq[$n.comb] )
+    (state %){$n} //= Euler92( [+] @sq[$n.comb] )
 }
 
 for 1 .. 1_000_000 -> $n {

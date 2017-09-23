@@ -1,24 +1,32 @@
-module Life1D where
+import Data.List (unfoldr)
+import System.Random (newStdGen, randomRs)
+import Control.Monad (liftM2, ap)
 
-import Data.List
-import System.Random
-import Control.Monad
-import Control.Arrow
-
-bnd :: [Char] -> Char
+bnd :: String -> Char
 bnd bs =
-   case bs of
-        "_##" -> '#'
-        "#_#" -> '#'
-        "##_" -> '#'
-        _     -> '_'
+  case bs of
+    "_##" -> '#'
+    "#_#" -> '#'
+    "##_" -> '#'
+    _ -> '_'
 
-donxt xs = unfoldr(\xs -> case xs of [_,_] -> Nothing ;
-                                      _ -> Just (bnd $ take 3 xs, drop 1 xs))  $ '_':xs++"_"
+donxt :: String -> String
+donxt xs =
+  unfoldr
+    (\xs ->
+        case xs of
+          [_, _] -> Nothing
+          _ -> Just (bnd $ take 3 xs, drop 1 xs)) $
+  '_' : xs ++ "_"
 
-lahmahgaan xs = init.until (liftM2 (==) last (last. init)) (ap (++)(return. donxt. last)) $ [xs, donxt xs]
+lahmahgaan :: String -> [String]
+lahmahgaan xs =
+  init .
+  until (liftM2 (==) last (last . init)) (ap (++) (return . donxt . last)) $
+  [xs, donxt xs]
 
+main :: IO ()
 main = do
-   g <- newStdGen
-   let oersoep = map ("_#"!!). take 36 $ randomRs(0,1) g
-   mapM_ print . lahmahgaan $ oersoep
+  g <- newStdGen
+  let oersoep = map ("_#" !!) . take 36 $ randomRs (0, 1) g
+  mapM_ print . lahmahgaan $ oersoep

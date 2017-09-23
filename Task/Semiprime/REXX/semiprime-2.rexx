@@ -2,12 +2,16 @@
 parse arg bot top .                              /*obtain optional arguments from the CL*/
 if bot=='' | bot==","  then bot=random()         /*None given?   User wants us to guess.*/
 if top=='' | top==","  then top=bot              /*maybe define a range of numbers.     */
-w=max(length(bot), length(top))                  /*obtain the maximum width of numbers. */
+tell=  top=>0 |  top==bot                        /*should results be shown to the term? */
+w=max(length(bot), length(top)) + 5              /*obtain the maximum width of numbers. */
 numeric digits max(9, w)                         /*ensure there're enough decimal digits*/
-             do n=bot  to top                    /*show results for a range of numbers. */
-             if isSemiPrime(n)  then say right(n, w)      "    is semiprime."
-                                else say right(n, w)      " isn't semiprime."
+#=0                                              /*initialize number of semiprimes found*/
+             do n=bot  to abs(top)               /*show results for a range of numbers. */
+             ?=isSemiPrime(n);      #=#+?        /*Is N a semiprime?; Maybe bump counter*/
+             if tell  then say right(n,w)  right(word("isn't" 'is', ?+1), 6)  'semiprime.'
              end   /*n*/
+say
+if bot\==top  then say 'found '   #   " semiprimes."
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 isPrime: procedure;  parse arg x;               if x<2  then return 0  /*number too low?*/

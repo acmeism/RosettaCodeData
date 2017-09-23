@@ -97,8 +97,7 @@ int main()
   {
     std::cout << parent << ": " << fitness << "\n";
     double const mutation_rate = 0.02 + (0.9*fitness)/initial_fitness;
-    typedef std::vector<std::string> childvec;
-    childvec childs;
+    std::vector<std::string> childs;
     childs.reserve(C+1);
 
     childs.push_back(parent);

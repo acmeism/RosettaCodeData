@@ -1,18 +1,26 @@
 import Data.Time.Calendar
-import Data.Time.Calendar.WeekDate
+       (Day, addDays, showGregorian, fromGregorian, gregorianMonthLength)
+import Data.Time.Calendar.WeekDate (toWeekDate)
+import Data.List (transpose, intercalate)
 
-findFriday date = head $ filter isFriday $ map toDate [-6 .. 0]
-  where
-    toDate ago = addDays ago date
-    isFriday theDate = let (_ , _ , day) = toWeekDate theDate
-                       in day == 5
+-- [1 .. 7] for [Mon .. Sun]
+findWeekDay :: Int -> Day -> Day
+findWeekDay dayOfWeek date =
+  head
+    (filter
+       (\x ->
+           let (_, _, day) = toWeekDate x
+           in day == dayOfWeek)
+       ((`addDays` date) <$> [-6 .. 0]))
 
-fridayDates year = map (showGregorian . findFriday) lastDaysInMonth
-  where
-    lastDaysInMonth = map findLastDay [1 .. 12]
-    findLastDay month = fromGregorian year month (gregorianMonthLength year month)
+weekDayDates :: Int -> Integer -> [String]
+weekDayDates dayOfWeek year =
+  ((showGregorian . findWeekDay dayOfWeek) .
+   (fromGregorian year <*> gregorianMonthLength year)) <$>
+  [1 .. 12]
 
-main = do
-  putStrLn "Please enter a year!"
-  year <- getLine
-  mapM_ putStrLn $ fridayDates (read year)
+main :: IO ()
+main =
+  mapM_
+    putStrLn
+    (intercalate "  " <$> transpose (weekDayDates 5 <$> [2012 .. 2017]))

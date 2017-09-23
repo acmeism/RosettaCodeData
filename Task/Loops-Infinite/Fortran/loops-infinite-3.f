@@ -1,2 +1,0 @@
-10 WRITE(*,*) "SPAM"
-   GOTO 10

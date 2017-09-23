@@ -10,29 +10,21 @@
           I = 1		!First element of the prog.
 
           DO WHILE(I.LE.LEN(PROG))	!Off the end yet?
-            C = PROG(I:I)		!Load the opcode fingered by I.
-            I = I + 1			!Advance one. The classic.
-            SELECT CASE(C)		!Now decode the instruction.
-             CASE(">")			!Move the data finger one place right.
-              D = D + 1
-             CASE("<")			!Move the data finger one place left.
-              D = D - 1
-             CASE("+")			!Add one to the fingered datum.
-              STORE(D) = CHAR(ICHAR(STORE(D)) + 1)
-             CASE("-")			!Subtract one.
-              STORE(D) = CHAR(ICHAR(STORE(D)) - 1)
-             CASE(".")			!Write a character.
-              WRITE (MSG,1) STORE(D)
-             CASE(",")			!Read a character.
-              READ (KBD,1) STORE(D)
-             CASE("[")			!Conditionally, surge forward.
-              IF (ICHAR(STORE(D)).EQ.0) CALL SEEK(+1)
-             CASE("]")			!Conditionally, retreat.
-              IF (ICHAR(STORE(D)).NE.0) CALL SEEK(-1)
-             CASE DEFAULT		!For all others,
-		  			!Do nothing.
-            END SELECT			!That was simple.
-          END DO		!See what comes next.
+            C = PROG(I:I)			!Load the opcode fingered by I.
+            I = I + 1				!Advance one. The classic.
+            SELECT CASE(C)			!Now decode the instruction.
+             CASE(">"); D = D + 1				!Move the data finger one place right.
+             CASE("<"); D = D - 1				!Move the data finger one place left.
+             CASE("+"); STORE(D) = CHAR(ICHAR(STORE(D)) + 1)	!Add one to the fingered datum.
+             CASE("-"); STORE(D) = CHAR(ICHAR(STORE(D)) - 1)	!Subtract one.
+             CASE("."); WRITE (MSG,1) STORE(D)			!Write a character.
+             CASE(","); READ (KBD,1) STORE(D)			!Read a character.
+             CASE("["); IF (ICHAR(STORE(D)).EQ.0) CALL SEEK(+1)	!Conditionally, surge forward.
+             CASE("]"); IF (ICHAR(STORE(D)).NE.0) CALL SEEK(-1)	!Conditionally, retreat.
+             CASE DEFAULT				!For all others,
+		  						!Do nothing.
+            END SELECT				!That was simple.
+          END DO			!See what comes next.
 
     1     FORMAT (A1,$)	!One character, no advance to the next line.
          CONTAINS	!Now for an assistant.

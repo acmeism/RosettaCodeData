@@ -1,16 +1,5 @@
-#include <stdio.h>
-
-main() {
-  int i = 1;
-  while(i <= 100) {
-    if(i % 15 == 0)
-      puts("FizzBuzz");
-    else if(i % 3 == 0)
-      puts("Fizz");
-    else if(i % 5 == 0)
-      puts("Buzz");
-    else
-      printf("%d\n", i);
-    i++;
-  }
-}
+  int i = 0 ;  char B[88] ;
+  while ( i++ < 100 )
+    !sprintf( B, "%s%s%s%s",
+       i%3 ? "":"Fiz", i%5 ? "":"Buz", i%7 ? "":"Goz", i%11 ? "":"Kaz" )
+    ? sprintf( B, "%d", i ):0, printf( ", %s", B );

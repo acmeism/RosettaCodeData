@@ -1,9 +1,13 @@
-import Data.Bits ((.&.))
+import Data.List (intercalate)
 
-sierpinski n = map row [m, m-1 .. 0] where
-	m = 2^n - 1
-	row y = replicate y ' ' ++ concatMap cell [0..m - y] where
-		cell x	| y .&. x == 0 = " *"
-			| otherwise = "  "
+sierpinski :: Int -> [String]
+sierpinski 0 = ["▲"]
+sierpinski n =
+  concat $
+  (<$> sierpinski (n - 1)) <$>                  -- Previous triangle,
+  [ flip intercalate ([replicate (2 ^ (n - 1))] <*> " -") -- centred,
+  , (++) <*> ('+' :)               -- above singly spaced duplicates.
+  ]
 
+main :: IO ()
 main = mapM_ putStrLn $ sierpinski 4

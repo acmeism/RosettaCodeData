@@ -1,5 +1,5 @@
 sub is-number( $term --> Bool ) {
-    ?($term ~~ /\d/) and +$term ~~ Numeric;
+    ?($term ~~ /\d/) and $term ~~ Numeric;
 }
 
 printf "%10s %s\n", "<$_>", is-number( $_ ) for flat

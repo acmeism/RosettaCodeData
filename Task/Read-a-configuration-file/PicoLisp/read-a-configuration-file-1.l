@@ -1,5 +1,0 @@
-(de rdConf (File)
-   (pipe (in File (while (echo "#" ";") (till "^J")))
-      (while (read)
-         (skip)
-         (set @ (or (line T) T)) ) ) )

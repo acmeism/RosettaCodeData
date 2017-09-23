@@ -1,68 +1,76 @@
-include ..\arwen\arwen.ew
-include ..\arwen\axtra.ew
+--
+-- demo\rosetta\animate_pendulum2.exw
+-- ==================================
+--
+include pGUI.e
 
-constant main = create(Window, "Animated Pendulum", 0, 0, 20, 20, 625, 690, 0),
-         mainDC = getPrivateDC(main),
-         backDC = c_func(xCreateCompatibleDC, {NULL}),  -- the background
-         viewDC = c_func(xCreateCompatibleDC, {NULL}),  -- with animation
-         grey = #909090
+Ihandle dlg, canvas, timer
+cdCanvas cddbuffer, cdcanvas
 
-constant MainTimer = createTimer()
-
-integer dw = 0, dh = 0      -- client area width and height
-atom bmBack, bmView
-integer bmX = 0, bmY = 0    -- actual size of the bitmaps
-
-constant dt = 1E-3
 constant g = 50
 
-integer sX = 0, sY = 0      -- suspension point of pendulum
-integer len
 atom alpha = PI/2,
-     omega = 0,
-     epsilon
+     omega = 0
 
-function mainHandler(integer id, integer msg, atom wParam, object lParam)
-integer eX, eY              -- moving end of pendulum
-    if msg=WM_SIZE then
-        {{},{},dw,dh} = getClientRect(main)
-        if dw>bmX or dh>bmY then
-            -- we need bigger bitmaps
-            bmBack = c_func(xCreateCompatibleBitmap, {mainDC, dw, dh})
-            {} = deleteObject(selectObject(backDC,bmBack))
-            -- clear the background
-            setPenColor(grey)
-            drawRectangleh(backDC, True, 0, 0, dw, dh)
-            bmView = c_func(xCreateCompatibleBitmap, {mainDC, dw, dh})
-            {} = deleteObject(selectObject(viewDC,bmView))
-            {bmX,bmY} = {dw,dh}
-        end if
-        -- new suspension point and length
-        sX = floor(dw/2)
-        sY = floor(dh/8)
-        len = sX-20
-    elsif msg=WM_PAINT then
-        -- start with a fresh copy of the background
-        void = c_func(xBitBlt,{viewDC,0,0,dw,dh,backDC,0,0,SRCCOPY})
-        eX = floor(len*sin(alpha)+sX)
-        eY = floor(len*cos(alpha)+sY)
-        drawLinesh(viewDC,{Red,{sX,sY,eX,eY},Yellow})
-        drawEllipseh(viewDC,eX-5,eY-5,eX+5,eY+5)
-        void = c_func(xBitBlt,{mainDC,0,0,dw,dh,viewDC,0,0,SRCCOPY})
-    elsif msg=WM_TIMER then
-        epsilon = -len*sin(alpha)*g
-        omega += dt*epsilon
-        alpha += dt*omega
-        repaintWindow(main)
-    elsif msg=WM_SHOWWINDOW then
-        startTimer(MainTimer,main,33)
-    elsif msg=WM_CHAR
-      and wParam=VK_ESCAPE then
-        closeWindow(main)
-        if id or object(lParam) then end if -- suppress warnings
-    end if
-    return 0
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+    integer {w, h} = IupGetIntInt(canvas, "DRAWSIZE")
+    cdCanvasActivate(cddbuffer)
+    cdCanvasClear(cddbuffer)
+    -- new suspension point and length
+    integer sX = floor(w/2)
+    integer sY = floor(h/8)
+    integer len = sX-30
+    atom dt = 1/w
+    -- move:
+    atom epsilon = -len*sin(alpha)*g
+    omega += dt*epsilon
+    alpha += dt*omega
+    -- repaint:
+    integer eX = floor(len*sin(alpha)+sX)
+    integer eY = floor(len*cos(alpha)+sY)
+    cdCanvasSetForeground(cddbuffer, CD_DARK_GREY)
+    cdCanvasLine(cddbuffer, sX, h-sY, eX, h-eY)
+    cdCanvasSetForeground(cddbuffer, CD_BLACK)
+    cdCanvasSector(cddbuffer, eX, h-eY, 35, 35, 0, 360)
+    cdCanvasFlush(cddbuffer)
+    return IUP_DEFAULT
 end function
-setHandler({main},routine_id("mainHandler"))
 
-WinMain(main, SW_NORMAL)
+function timer_cb(Ihandle /*ih*/)
+    IupUpdate(canvas)
+    return IUP_IGNORE
+end function
+
+function map_cb(Ihandle ih)
+    cdcanvas = cdCreateCanvas(CD_IUP, ih)
+    cddbuffer = cdCreateCanvas(CD_DBUFFER, cdcanvas)
+    cdCanvasSetBackground(cddbuffer, CD_GREY)
+    return IUP_DEFAULT
+end function
+
+function esc_close(Ihandle /*ih*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    return IUP_CONTINUE
+end function
+
+procedure main()
+    IupOpen()
+
+    canvas = IupCanvas(NULL)
+    IupSetAttribute(canvas, "RASTERSIZE", "640x380")
+    IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
+    IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+
+    timer = IupTimer(Icallback("timer_cb"), 20)
+
+    dlg = IupDialog(canvas)
+    IupSetAttribute(dlg, "TITLE", "Animated Pendulum")
+    IupSetCallback(dlg, "K_ANY", Icallback("esc_close"))
+
+    IupShow(dlg)
+    IupSetAttribute(canvas, "RASTERSIZE", NULL)
+    IupMainLoop()
+    IupClose()
+end procedure
+
+main()

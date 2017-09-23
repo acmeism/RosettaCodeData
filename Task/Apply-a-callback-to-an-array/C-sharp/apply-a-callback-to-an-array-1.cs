@@ -1,34 +1,11 @@
-using System;
+int[] intArray = { 1, 2, 3, 4, 5 };
+// Simplest method:  LINQ, functional
+int[] squares1 = intArray.Select(x => x * x).ToArray();
 
-static class Program
-{
-  // Purpose: Apply a callback (or anonymous method) to an Array
-  // Output: Prints the squares of an int array to the console.
-  // Compiler: Visual Studio 2005
-  // Framework: .net 2
+// Slightly fancier: LINQ, query expression
+int[] squares2 = (from x in intArray
+                  select x * x).ToArray();
 
-  [STAThread]
-  public static void Main()
-  {
-    int[] intArray = { 1, 2, 3, 4, 5 };
-
-    // Using a callback,
-    Console.WriteLine("Printing squares using a callback:");
-    Array.ForEach<int>(intArray, PrintSquare);
-
-    // or using an anonymous method:
-    Console.WriteLine("Printing squares using an anonymous method:");
-    Array.ForEach<int>
-    (
-      intArray,
-      delegate(int value)
-      {
-        Console.WriteLine(value * value);
-      });
-  }
-
-  public static void PrintSquare(int value)
-  {
-    Console.WriteLine(value * value);
-  }
-}
+// Or, if you only want to call a function on each element, just use foreach
+foreach (var i in intArray)
+    Console.WriteLine(i * i);

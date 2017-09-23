@@ -1,25 +1,60 @@
 (() => {
-    'use strict';
 
     // isHappy :: Int -> Bool
-    function isHappy(n) {
-        let f = n => n.toString()
-            .split('')
-            .reduce((a, x) => a + Math.pow(parseInt(x, 10), 2), 0),
-            p = (s, n) => n === 1 ? true : (
-                s.has(n) ? false : p(s.add(n), f(n))
+    const isHappy = n => {
+        const f = n =>
+            foldl(
+                (a, x) => a + raise(read(x), 2), // ^2
+                0,
+                splitOn('', show(n))
+            ),
+            p = (s, n) => n === 1 ? (
+                true
+            ) : member(n, s) ? (
+                false
+            ) : p(
+                insert(n, s), f(n)
             );
         return p(new Set(), n);
-    }
+    };
 
-    // TEST
+    // GENERIC FUNCTIONS ------------------------------------------------------
 
-    // range :: Int -> Int -> [Int]
-    let range = (m, n) => Array.from({
-        length: Math.floor(n - m) + 1
-    }, (_, i) => m + i);
+    // enumFromTo :: Int -> Int -> [Int]
+    const enumFromTo = (m, n) =>
+        Array.from({
+            length: Math.floor(n - m) + 1
+        }, (_, i) => m + i);
 
-    return range(1, 50)
-        .filter(isHappy)
-        .slice(0, 8);
+    // filter :: (a -> Bool) -> [a] -> [a]
+    const filter = (f, xs) => xs.filter(f);
+
+    // foldl :: (b -> a -> b) -> b -> [a] -> b
+    const foldl = (f, a, xs) => xs.reduce(f, a);
+
+    // insert :: Ord a => a -> Set a -> Set a
+    const insert = (e, s) => s.add(e);
+
+    // member :: Ord a => a -> Set a -> Bool
+    const member = (e, s) => s.has(e);
+
+    // read :: Read a => String -> a
+    const read = JSON.parse;
+
+    // show :: a -> String
+    const show = x => JSON.stringify(x);
+
+    // splitOn :: String -> String -> [String]
+    const splitOn = (cs, xs) => xs.split(cs);
+
+    // raise :: Num -> Int -> Num
+    const raise = (n, e) => Math.pow(n, e);
+
+    // take :: Int -> [a] -> [a]
+    const take = (n, xs) => xs.slice(0, n);
+
+    // TEST -------------------------------------------------------------------
+    return show(
+        take(8, filter(isHappy, enumFromTo(1, 50)))
+    );
 })()

@@ -1,0 +1,132 @@
+\
+\ anagrams.8th
+\ Rosetta Code - Anagrams problem
+\ Using the word list at:
+\   http://www.puzzlers.org/pub/wordlists/unixdict.txt,
+\ find the sets of words that share the same characters
+\ that contain the most words in them.
+\
+
+ns: anagrams
+
+m:new var, anamap
+a:new var, anaptr
+0 var, analen
+
+\ sort a string
+: s:sort \ s -- s                             \
+  null s:/                                    \ a
+  ' s:cmpi a:sort                             \ a
+  "" a:join                                   \ s
+  ;
+
+: process-words \ word --                     \ word
+  s:lc                                        \ word
+  dup                                         \ word word
+  >r                                          \ word | word
+  \ 1. we create a sorted version of the curret word (sword)
+  s:sort                                      \ sword | word
+  \ We check if sword can be found in map anamap
+  anamap @                                    \ sword anamap | word
+  over                                        \ sword anamap sword | word
+  m:exists?                                   \ sword anamap boolean | word
+  if                                          \ sword anamap | word
+  \ If sword already exists in anamap:
+  \    - get mapvalue, which is an array
+  \    - add the original word to that array
+  \    - store the array in the map with key sword
+    over                                      \ sword anamap sword | word
+    m:@                                       \ sword anamap array | word
+    r>                                        \ sword anamap array word
+    a:push                                    \ sword anamap array
+    rot                                       \ anamap array sword
+    swap                                      \ anamap sword array
+    m:!                                       \ anamap
+  else                                        \ sword anamap | word
+  \ If sword does not yet exist in anamap:
+  \    - create empty array
+  \    - put the original word into that array
+  \    - store the array in the map with key sword
+    swap                                      \ anamap sword | word
+    a:new                                     \ anamap sword array | word
+    r>                                        \ anamap sword array word
+    a:push                                    \ anamap sword array
+    m:!                                       \ anamap
+  then
+  drop                                        \
+  ;
+
+\ Read and check all words in array analist
+: read-and-check-words \ --                   \
+  "analist.txt"                               \ fname
+  f:open-ro                                   \ f
+  ' process-words f:eachline                  \ f
+  f:close                                     \
+  ;
+
+: len< \ key array arraylen --                \ key array arraylen
+  2drop                                       \ key
+  drop                                        \
+  ;
+
+: len= \ key array arraylen --                \ key array arraylen
+  2drop                                       \ key
+  anaptr @                                    \ key anaptr
+  swap                                        \ anaptr key
+  a:push                                      \ anaptr
+  drop                                        \
+  ;
+
+: len> \ key array arraylen --                \ key array arraylen
+  analen                                      \ key array arraylen analen
+  !                                           \ key array
+  drop                                        \ key
+  anaptr @                                    \ key anaptr
+  a:clear                                     \ key anaptr
+  swap                                        \ anaptr key
+  a:push                                      \ anaptr
+  drop                                        \
+  ;
+
+: fetch-longest-list \ key array --           \ key array
+  a:len                                       \ key array arraylen
+  analen @                                    \ key array arraylen analen
+  2dup                                        \ key array arraylen analen arraylen analen
+  n:cmp                                       \ key array arraylen analen value
+  1 n:+                                       \ key array arraylen analen value
+  nip                                         \ key array arraylen value
+  [ ' len< , ' len= , ' len> ]                \ key array arraylen value swarr
+  swap                                        \ key array arraylen swarr value
+  caseof                                      \
+  ;
+
+: list-words-1 \ ix value --                  \ ix value
+  nip                                         \ value
+  "\t" . .                                    \
+  ;
+
+: list-words \ ix value --                    \ ix value
+  nip                                         \ value
+  anamap @                                    \ value anamap
+  swap                                        \ anamap value
+  m:@                                         \ anamap array
+  nip                                         \ array
+  ' list-words-1 a:each                       \ array
+  cr                                          \ array
+  drop                                        \
+  ;
+
+: app:main
+
+  \ Create a map, where the values are arrays, containing all words
+  \ which are the same when sorted (sword); sword is used as key
+  read-and-check-words
+
+  \ Create an array that holds the keys for anamap, for which the value,
+  \ which is the array of anagrams, has the biggest length found.
+  anamap @ ' fetch-longest-list m:each
+
+  \ Dump the resulting words to the console
+  anaptr @ ' list-words a:each drop
+  bye
+  ;

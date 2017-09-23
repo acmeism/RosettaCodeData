@@ -1,35 +1,71 @@
 (() => {
-    'use strict';
 
     // isHappy :: Int -> Bool
-    let isHappy = n => {
-        let f = n => n.toString()
-            .split('')
-            .reduce((a, x) => a + Math.pow(parseInt(x, 10), 2), 0),
-            p = (s, n) => n === 1 ? true : (
-                s.has(n) ? false : p(s.add(n), f(n))
+    const isHappy = n => {
+        const f = n =>
+            foldl(
+                (a, x) => a + raise(read(x), 2), // ^2
+                0,
+                splitOn('', show(n))
+            ),
+            p = (s, n) => n === 1 ? (
+                true
+            ) : member(n, s) ? (
+                false
+            ) : p(
+                insert(n, s), f(n)
             );
         return p(new Set(), n);
-    },
+    };
+
+    // GENERIC FUNCTIONS ------------------------------------------------------
+
+    // filter :: (a -> Bool) -> [a] -> [a]
+    const filter = (f, xs) => xs.filter(f);
+
+    // foldl :: (b -> a -> b) -> b -> [a] -> b
+    const foldl = (f, a, xs) => xs.reduce(f, a);
+
+    // insert :: Ord a => a -> Set a -> Set a
+    const insert = (e, s) => s.add(e);
+
+    // member :: Ord a => a -> Set a -> Bool
+    const member = (e, s) => s.has(e);
+
+    // read :: Read a => String -> a
+    const read = JSON.parse;
+
+    // show :: a -> String
+    const show = x => JSON.stringify(x);
+
+    // splitOn :: String -> String -> [String]
+    const splitOn = (cs, xs) => xs.split(cs);
+
+    // raise :: Num -> Int -> Num
+    const raise = (n, e) => Math.pow(n, e);
 
     // until :: (a -> Bool) -> (a -> a) -> a -> a
-    until = (p, f, x) => {
+    const until = (p, f, x) => {
         let v = x;
         while (!p(v)) v = f(v);
         return v;
     };
 
-    return until(
-        m => m.xs.length === 8,
-        m => {
-            let n = m.n;
-            return {
-                n: n + 1,
-                xs: isHappy(n) ? m.xs.concat(n) : m.xs
-            };
-        }, {
-            n: 1,
-            xs: []
-        }
-    ).xs;
+    // TEST -------------------------------------------------------------------
+    return show(
+        until(
+            m => m.xs.length === 8,
+            m => {
+                const n = m.n;
+                return {
+                    n: n + 1,
+                    xs: isHappy(n) ? m.xs.concat(n) : m.xs
+                };
+            }, {
+                n: 1,
+                xs: []
+            }
+        )
+        .xs
+    );
 })();

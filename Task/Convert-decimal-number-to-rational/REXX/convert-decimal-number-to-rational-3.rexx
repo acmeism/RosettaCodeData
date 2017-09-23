@@ -50,8 +50,7 @@ test:
   Else
     tag='should be' soll
   say zin '=' fract tag
-  -- Say left(zz/nn,60)
-  Return
+   Return
 
 GCD: procedure
 /**********************************************************************

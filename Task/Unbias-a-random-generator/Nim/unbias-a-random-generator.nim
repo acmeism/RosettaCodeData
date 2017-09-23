@@ -3,20 +3,18 @@ randomize()
 
 template newSeqWith(len: int, init: expr): expr =
   var result {.gensym.} = newSeq[type(init)](len)
-  for i in 0 .. <len:
+  for i in 0..<len:
     result[i] = init
-  result
 
 proc randN(n): (proc: range[0..1]) =
-  result = proc(): range[0..1] =
-    if random(n) == 0: 1 else: 0
+  proc: range[0..1] = ord(random(n) == 0)
 
 proc unbiased(biased): range[0..1] =
-  var (this, that) = (biased(), biased())
-  while this == that:
-    this = biased()
+  result = biased()
+  var that = biased()
+  while result == that:
+    result = biased()
     that = biased()
-  return this
 
 for n in 3..6:
   var biased = randN(n)

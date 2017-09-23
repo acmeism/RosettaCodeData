@@ -12,21 +12,22 @@ drawSphere: procedure;  parse arg r, k, ambient              /*get the arguments
                     else shading= "·:!°oe@░▒▓"               /* ASCII      "       "    */
        lightSource= '30  30  -50'                            /*position of light source.*/
        parse value  norm(lightSource)   with   s1 s2 s3      /*normalize light source.  */
-       sLen=length(shading)-1;          rr=r*r               /*handy─dandy variables.   */
+       shadeLen=length(shading) - 1;    rr=r**2;      r2=r+r /*handy─dandy variables.   */
 
-         do   i=floor(-r)    to ceil(r)  ;     x=  i+.5;       xx=x**2;        $=
-           do j=floor(-2*r)  to ceil(r+r);     y=j/2+.5;       yy=y**2
+         do   i=floor( -r)  to ceil( r);   x=i       + .5;        xx=x**2;            $=
+           do j=floor(-r2)  to ceil(r2);   y=j * .5  + .5;        yy=y**2
            if xx+yy<=rr  then do                             /*is point within sphere ? */
-                              parse value  norm(x y sqrt(rr-xx-yy))   with   v1  v2  v3
-                              dot=s1*v1  + s2*v2  + s3*v3    /*the dot product of the Vs*/
+                              parse value  norm(x  y  sqrt(rr-xx-yy) )   with   v1  v2  v3
+                              dot=s1*v1  +  s2*v2  +  s3*v3  /*the dot product of the Vs*/
+                              if dot>0  then dot=0           /*if positive, make it zero*/     /*◄■■■■ same as:  dot=max(0, dot) */
                               if dot>0  then dot=0           /*if positive, make it zero*/
-                              b=abs(dot)**k + ambient        /*calculate the brightness.*/
-                              if b<=0   then brite=sLen
-                                        else brite=trunc( max( (1-b) * sLen, 0) )
-                              $=($)substr(shading,brite+1,1) /*construct a display line.*/
-                              end
+                              b=-dot**k  +  ambient          /*calculate the brightness.*/
+                              if b<=0   then brite=shadeLen
+                                        else brite=max( (1-b) * shadeLen,  0)  % 1
+                              $=($)substr(shading, brite + 1, 1)
+                              end                            /* [↑]  build display line.*/
                          else $=$' '                         /*append a blank to line.  */
-           end   /*j*/
+           end   /*j*/                                       /*[↓] strip trailing blanks*/
          say strip($, 'T')                                   /*show a line of the sphere*/
          end     /*i*/                                       /* [↑]  display the sphere.*/
        return

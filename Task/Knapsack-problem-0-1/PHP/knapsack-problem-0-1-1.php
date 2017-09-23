@@ -8,11 +8,9 @@
 # PHP Translation from Python, Memoization,
 # and index return functionality added by Brian Berneker
 #
-#It works uncorrectly! For examle if $aw=4. Max value is true, but no "Array Indices" and its parameters are displayed
-#
 #########################################################
 
-function knapSolveFast2($w, $v, $i, $aW, &$m, &$pickedItems) {
+function knapSolveFast2($w, $v, $i, $aW, &$m) {
 
 	global $numcalls;
 	$numcalls ++;
@@ -40,18 +38,18 @@ function knapSolveFast2($w, $v, $i, $aW, &$m, &$pickedItems) {
 	
 		// Not at end of decision branch..
 		// Get the result of the next branch (without this one)
-		list ($without_i,$without_PI) = knapSolveFast2($w, $v, $i-1, $aW,$m,$pickedItems);
+		list ($without_i, $without_PI) = knapSolveFast2($w, $v, $i-1, $aW, $m);
 
 		if ($w[$i] > $aW) { // Does it return too many?
 			
 			$m[$i][$aW] = $without_i; // Memo without including this one
-			$m['picked'][$i][$aW] = array(); // and a blank array entry...
-			return array($without_i,array()); // and return it
+			$m['picked'][$i][$aW] = $without_PI; // and a blank array entry...
+			return array($without_i, $without_PI); // and return it
 
 		} else {
 		
 			// Get the result of the next branch (WITH this one picked, so available weight is reduced)
-			list ($with_i,$with_PI) = knapSolveFast2($w, $v, ($i-1), ($aW - $w[$i]),$m,$pickedItems);
+			list ($with_i,$with_PI) = knapSolveFast2($w, $v, ($i-1), ($aW - $w[$i]), $m);
 			$with_i += $v[$i];  // ..and add the value of this one..
 			
 			// Get the greater of WITH or WITHOUT
@@ -81,7 +79,7 @@ $v4 = array(150,35,200,160,60,45,60,40,30,10,70,30,15,10,40,70,75,80,20,12,50,10
 $numcalls = 0; $m = array(); $pickedItems = array();
 
 ## Solve
-list ($m4,$pickedItems) = knapSolveFast2($w4, $v4, sizeof($v4) -1, 400,$m,$pickedItems);
+list ($m4,$pickedItems) = knapSolveFast2($w4, $v4, sizeof($v4) -1, 400, $m);
 
 # Display Result
 echo "<b>Items:</b><br>".join(", ",$items4)."<br>";

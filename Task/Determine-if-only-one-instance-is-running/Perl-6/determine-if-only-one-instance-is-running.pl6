@@ -15,12 +15,12 @@ my $pidfile = open "$lockpid", :w or die "Can't create $lockpid: $!";
 $pidfile.say($pid);
 $pidfile.close;
 
-if try link($lockpid, $lockfile) {
+if try link($lockfile, $lockpid) {
     $havelock = True;
 }
 else {
     shell "kill -CONT `cat $lockfile` || rm $lockfile";
-    if try link($lockpid, $lockfile) {
+    if try link($lockfile, $lockpid) {
         $havelock = True;
     }
     else {

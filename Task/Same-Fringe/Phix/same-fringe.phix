@@ -1,0 +1,79 @@
+--
+-- demo\rosetta\Same_Fringe.exw
+-- ============================
+--
+--  Requires 0.7.5 or later (implementation revealed that task_yield did not
+--                           have side effects of e_all properly set.)
+--
+constant tests = {{0,1,{0,2,0}},
+                  {{0,1,0},2,0},
+                  {{0,1,0},2,{0,3,0}},
+                 }
+
+sequence tasks
+integer res = 0
+sequence sdata = repeat(0,2)
+
+integer active_tasks
+integer show_details = 1
+
+procedure scan(sequence tree, integer level, integer tidx)
+object {left,data,right} = tree
+    if res=0 then
+        if left!=0 then scan(left,level+1,tidx) end if
+        sdata[tidx] = data
+        if show_details then
+            printf(1,"task[%d] sets sdata[%d] to ",tidx)
+            ?data
+        end if
+        if res=0 then
+            task_suspend(task_self())
+            task_yield()
+        end if
+        if right!=0 then scan(right,level+1,tidx) end if
+    end if
+    if level=1 then
+        if show_details then
+            printf(1,"task[%d] ends\n",tidx)
+        end if
+        active_tasks -= 1
+        tasks[tidx] = 0
+        sdata[tidx] = -1 -- (or use a separate flag)
+    end if
+end procedure
+
+?"started"
+procedure test(integer t1, integer t2)
+    tasks = {task_create(routine_id("scan"),{tests[t1],1,1}),
+             task_create(routine_id("scan"),{tests[t2],1,2})}
+    active_tasks = 2
+    res = 0
+    while active_tasks>0 do
+        if tasks[1] then
+            task_schedule(tasks[1],1)
+            task_yield()
+        end if
+        if tasks[2] then
+            task_schedule(tasks[2],1)
+            task_yield()
+        end if
+        if res=0 then
+            res = compare(sdata[1],sdata[2])
+            if show_details then
+                ?{res,sdata[1],sdata[2],active_tasks}
+            end if
+        end if
+    end while
+    printf(1,"test(%d,%d):%d\n",{t1,t2,res})
+end procedure
+
+test(1,1)
+show_details = 0
+test(1,2)
+test(1,3)
+test(2,1)
+test(2,2)
+test(2,3)
+test(3,1)
+test(3,2)
+test(3,3)

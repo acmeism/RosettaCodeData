@@ -1,12 +1,32 @@
-import Data.List
+import Data.List (transpose)
 
-xs <+> ys = zipWith (+) xs ys
-xs <*> ys = sum $ zipWith (*) xs ys
+(<+>)
+  :: Num a
+  => [a] -> [a] -> [a]
+(<+>) = zipWith (+)
 
-newtype Mat a = Mat [[a]] deriving (Eq, Show)
+(<*>)
+  :: Num a
+  => [a] -> [a] -> a
+(<*>) = (sum .) . zipWith (*)
 
-instance Num a => Num (Mat a) where
+newtype Mat a =
+  Mat [[a]]
+  deriving (Eq, Show)
+
+instance Num a =>
+         Num (Mat a) where
   negate (Mat x) = Mat $ map (map negate) x
-  Mat x + Mat y   = Mat $ zipWith (<+>) x y
-  Mat x * Mat y   = Mat [[xs <*> ys | ys <- transpose y] | xs <- x]
+  Mat x + Mat y = Mat $ zipWith (<+>) x y
+  Mat x * Mat y =
+    Mat
+      [ [ xs Main.<*> ys -- Main prefix to distinguish fron applicative operator
+        | ys <- transpose y ]
+      | xs <- x ]
+  abs = undefined
   fromInteger _ = undefined -- don't know dimension of the desired matrix
+  signum = undefined
+
+-- TEST ----------------------------------------------------------------------
+main :: IO ()
+main = print $ Mat [[1, 2], [0, 1]] ^ 4

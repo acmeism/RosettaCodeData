@@ -1,0 +1,144 @@
+--
+-- demo\rosetta\Conways_Game_of_Life.exw
+--
+include pGUI.e
+
+Ihandle dlg, canvas, hTimer
+cdCanvas cddbuffer, cdcanvas
+
+sequence c = {},    -- cells
+         cn,        -- new cells
+         cl         -- last cells
+
+procedure draw(integer what)
+integer lx = length(c)
+integer ly = length(c[1])
+integer x = floor(lx/2)
+integer y = floor(ly/2)
+    switch what do
+        case ' ' : -- Clear
+            c = sq_mul(c,0)
+        case '+' : -- Blinker
+            {c[x-1,y],c[x,y],c[x+1,y]} @= 1
+        case 'G' : -- Glider
+            {                      c[x+1,y+4],
+             c[x+2,y+2],           c[x+2,y+4],
+                        c[x+3,y+3],c[x+3,y+4]} @= 1
+        case 'T' : -- Thunderbird
+            {c[x-1,y+1],c[x,y+1],c[x+1,y+1],
+             c[x,y+3],c[x,y+4],c[x,y+5]} @= 1
+        case 'X' : -- Cross
+            for x=2 to lx-1 do
+                y = floor(ly*x/lx)
+                if y>1 then
+                    {c[x,y],c[x,ly-y]} @= 1
+                end if
+            end for
+    end switch
+end procedure
+
+atom t0 = time()
+
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+integer {width, height} = IupGetIntInt(canvas, "DRAWSIZE")
+integer colour, cnxy, live, alive = 0
+    if length(c)!=height
+    or length(c[1])!=width then
+        c = repeat(repeat(0,height),width)
+        cn = c
+        cl = c
+        draw('X')
+    end if
+    cdCanvasActivate(cddbuffer)
+    for y=2 to height-1 do
+        for x=2 to width-1 do
+            integer  xm1 = x-1,              xp1 = x+1,
+                     ym1 = y-1,              yp1 = y+1
+            cnxy = c[xm1,ym1] + c[x,ym1] + c[xp1,ym1] +
+                   c[xm1,y]              + c[xp1,y] +
+                   c[xm1,yp1] + c[x,yp1] + c[xp1,yp1]
+            if c[x,y]=1 then
+                live = (cnxy>=2 and cnxy<=3)
+            else
+                live = (cnxy=3)
+            end if
+            cn[x,y] = live
+            alive += live
+            if live then
+                if c[x,y] then
+                    colour = iff(cl[x,y]?CD_PURPLE  -- adult
+                                        :CD_GREEN)  -- newborn
+                else
+                    colour = iff(cl[x,y]?CD_RED     -- old
+                                        :CD_YELLOW) -- shortlived
+                end if
+            else
+                colour = CD_BLACK
+            end if
+            cdCanvasPixel(cddbuffer, x, y, colour)
+        end for
+    end for
+    cdCanvasFlush(cddbuffer)
+    if not alive then
+        IupStoreAttribute(hTimer, "RUN", "NO")
+        IupStoreAttribute(dlg, "TITLE", "died")
+--  elsif cl=cn then -- (made blinker stable)
+    elsif c=cn then
+        IupStoreAttribute(hTimer, "RUN", "NO")
+        IupStoreAttribute(dlg, "TITLE", "stable")
+    else
+        cl = c
+        c = cn
+        IupSetStrAttribute(dlg, "TITLE", "%3.2f", {time()-t0})
+    end if
+    return IUP_DEFAULT
+end function
+
+function map_cb(Ihandle ih)
+    cdcanvas = cdCreateCanvas(CD_IUP, ih)
+    cddbuffer = cdCreateCanvas(CD_DBUFFER, cdcanvas)
+    cdCanvasSetBackground(cddbuffer, CD_WHITE)
+    cdCanvasSetForeground(cddbuffer, CD_RED)
+    return IUP_DEFAULT
+end function
+
+function key_cb(Ihandle /*ih*/, atom c)
+    if    find(c," ")   then draw(' ')  -- Clear
+    elsif find(c,"+bB") then draw('+')  -- Blinker
+    elsif find(c,"gG")  then draw('G')  -- Glider
+    elsif find(c,"tT")  then draw('T')  -- Thunderbird
+    elsif find(c,"xX")  then draw('X')  -- Cross
+    end if
+    IupStoreAttribute(hTimer, "RUN", "YES")
+    IupStoreAttribute(dlg, "TITLE", "Life")
+    if c=K_ESC then return IUP_CLOSE end if
+    return IUP_CONTINUE
+end function
+
+function timer_cb(Ihandle /*ih*/)
+    IupUpdate(canvas)
+    return IUP_IGNORE
+end function
+
+procedure main()
+    IupOpen()
+
+    canvas = IupCanvas(NULL)
+    IupSetAttribute(canvas, "RASTERSIZE", "200x200") -- initial size
+    IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
+
+    dlg = IupDialog(canvas)
+    IupSetAttribute(dlg, "TITLE", "Conway's Game of Life")
+    IupSetCallback(dlg, "K_ANY",     Icallback("key_cb"))
+    IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+
+    hTimer = IupTimer(Icallback("timer_cb"), 30)
+
+    IupMap(dlg)
+    IupSetAttribute(canvas, "RASTERSIZE", NULL) -- release the minimum limitation
+    IupShowXY(dlg,IUP_CENTER,IUP_CENTER)
+    IupMainLoop()
+    IupClose()
+end procedure
+
+main()

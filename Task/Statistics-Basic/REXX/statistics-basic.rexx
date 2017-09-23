@@ -11,12 +11,11 @@ if datatype(seed,'W')    then call random ,,seed /*allow a  seed  for the  RANDO
                 #._=#._+1                        /*    ···  and bump its count.         */
                 end   /*j*/
 
-        do k=0  for 10                           /*show a histogram of the bins.        */
+        do k=0  for 10;  kp=k+1                  /*show a histogram of the bins.        */
         lr='0.'k      ;  if k==0  then lr="0  "  /*adjust for the  low range.           */
-        hr='0.'||(k+1);  if k==9  then hr="1  "  /*   "    "   "  high range.           */
-        range=lr"──►"hr' '                       /*construct the range.                 */
+        hr='0.'kp     ;  if k==9  then hr="1  "  /*   "    "   "  high range.           */
         barPC=right(strip(left(format(100*#.k/size, , 2), 5)) ,5)    /*compute the  %.  */
-        say range barPC copies('─', format(barPC*1, , 0))            /*display histogram*/
+        say lr"──►"hr' '  barPC copies('─', format(barPC*1, , 0))    /*display histogram*/
         end   /*k*/
 say
 say 'sample size = ' size;          say

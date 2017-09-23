@@ -1,0 +1,142 @@
+//Length of board side
+Board_size = 8;
+
+function flag_out = no_attack(side, board, pos)
+    //Evaluates (pos(1),pos(2)) in board if it's not on any queen attacking range
+    //side (scalar): board's side length
+    //board (sidexside matrix): matrix of 0s and 1s representing queens on a board
+    //pos (1x2 matrix): postition on board to be evaluated
+    //flag_out (bool): %T if position is available, and %F otherwise
+
+    //Counting queens on rows and columns
+    row_col = sum(board(pos(1),:)) + sum(board(:,pos(2)));
+
+    //Counting queens on first diagonal
+    diag_1 = sum(...
+                 diag(board, 0 +...
+                     (pos(2)>pos(1))*(pos(2)-pos(1)) +...
+                     (pos(1)>pos(2))*(pos(2)-pos(1))...
+                     )...
+                 );
+
+    //Counting queens on second diagonal
+    a = pos(1) + pos(2);
+    if a<=side+1 then
+        rows = [1:a-1]
+        cols = a - rows;
+    else
+        d = 2*(side+1)-a-1;
+        rows = [side:-1:side-d+1]
+        cols  = a - rows;
+    end
+
+    diag_2 = 0;
+    for i = 1:length(rows)
+        diag_2 = diag_2 + board(rows(i),cols(i));
+    end
+
+    //Check if there's any queen
+    flag_out = ( ~(row_col | diag_1 | diag_2) );
+endfunction
+
+//Solution counter
+Sol_count = 0;
+
+//"Soltion found" flag
+Sol_found = %F;
+
+//Empty board
+Board = zeros(Board_size,Board_size);
+
+//Matrix for backtracking
+Queens= zeros(Board_size,2);
+
+//Queens counter
+N_queens = Board_size;
+
+//Row and column counters
+i = 1; j = 1;
+
+//Start counting time
+tic();
+
+//Begin search
+while i <= Board_size
+    while j <= Board_size
+        //Availability flag: check position (i,j)
+        flag = %F;
+        if (0 < i & 0 < j) & (i <= Board_size & j <= Board_size) then
+            flag = no_attack(Board_size,Board,[i j]);
+        end
+
+        //Reset solution flag
+        Sol_found = %F;
+
+        if flag then
+            //Put a queen on the board if position is available
+            Board(i,j) = 1;
+
+            //Update number of remaining queens
+            N_queens = N_queens - 1;
+
+            //Keep track of queens positions
+            Queens(Board_size - N_queens,:) = [i j];
+
+            //Jump to next row end of line is reached
+            if i+1<=Board_size
+                i = i + 1;
+            end
+            //Start over from the begining of new line
+            j = 0;
+
+            //Count and flag a solution if all queens have
+            //been placed on the board
+            if N_queens == 0 then
+                Sol_count = Sol_count + 1;
+                Sol_found = %T;
+                break
+            end
+        end
+
+        //Increment column number
+        j = j + 1;
+    end
+
+    //Increment row number and start from first column
+    if ~Sol_found then
+        i = i + 1;
+        j = 1;
+
+        //Limiting placement of the first queen to the first row
+        //Stop searching solutions if columns of first row
+        //have been tested
+        if i == 2 & j == 1 & sum(Board) == 0  then
+            break
+        end
+    end
+
+    //Backtracking: if (i,j) reaches the and of the board
+    //and there are queens left to be placed on it
+    if ~Sol_found & i == Board_size + 1 & j == 1 then
+        ind = Board_size - N_queens;
+        if ind > 0 then
+            //Recover last queen's position
+            i = Queens(ind,1);
+            j = Queens(ind,2);
+
+            //Remove it from the board and from the counter
+            Board(i,j) = 0;
+            Queens(ind,:) = [0 0];
+            N_queens = N_queens + 1;
+
+            //Move to next column
+            j = j + 1;
+        end
+    end
+end
+
+//Printing result on console
+disp("There are "+string(Sol_count)+" solutions for a "+...
+     string(Board_size)+"x"+string(Board_size)+" board.");
+//Time elapsed
+disp("Time: "+string(toc())+"s.");

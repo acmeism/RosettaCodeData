@@ -1,16 +1,16 @@
 -- stripChars :: String -> String -> String
 on stripChars(strNeedles, strHaystack)
     script notNeedles
-        on lambda(x)
+        on |λ|(x)
             notElem(x, strNeedles)
-        end lambda
+        end |λ|
     end script
 
     intercalate("", filter(notNeedles, strHaystack))
 end stripChars
 
 
--- TEST
+-- TEST ---------------------------------------------------------------------------
 on run
 
     stripChars("aei", "She was a soul stripper. She took my heart!")
@@ -19,8 +19,7 @@ on run
 end run
 
 
-
--- GENERIC LIBRARY FUNCTIONS
+-- GENERIC FUNCTIONS ---------------------------------------------------------------------------
 
 -- filter :: (a -> Bool) -> [a] -> [a]
 on filter(f, xs)
@@ -29,7 +28,7 @@ on filter(f, xs)
         set lng to length of xs
         repeat with i from 1 to lng
             set v to item i of xs
-            if lambda(v, i, xs) then set end of lst to v
+            if |λ|(v, i, xs) then set end of lst to v
         end repeat
         return lst
     end tell
@@ -55,7 +54,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

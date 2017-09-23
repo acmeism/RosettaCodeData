@@ -1,40 +1,42 @@
 import asyncnet, asyncdispatch
 
-type TClient = tuple[socket: AsyncSocket, name: string]
-var clients: seq[Client] = @[]
+type
+  Client = tuple
+    socket: AsyncSocket
+    name: string
+    connected: bool
+
+var clients {.threadvar.}: seq[Client]
 
 proc sendOthers(client: Client, line: string) {.async.} =
   for c in clients:
-    if c != client:
+    if c != client and c.connected:
       await c.socket.send(line & "\c\L")
 
 proc processClient(socket: AsyncSocket) {.async.} =
   await socket.send("Please enter your name: ")
-  let client: Client = (socket, await socket.recvLine())
+  var client: Client = (socket, await socket.recvLine(), true)
 
-  clients.add client
-  discard client.sendOthers "+++ " & client.name & " arrived +++"
+  clients.add(client)
+  asyncCheck client.sendOthers("+++ " & client.name & " arrived +++")
 
   while true:
     let line = await client.socket.recvLine()
     if line == "":
-      discard client.sendOthers "--- " & client.name & " leaves ---"
-      break
-    discard client.sendOthers client.name & "> " & line
-
-  for i,c in clients:
-    if c == client:
-      clients.del i
-      break
+      asyncCheck client.sendOthers("--- " & client.name & " leaves ---")
+      client.connected = false
+      return
+    asyncCheck client.sendOthers(client.name & "> " & line)
 
 proc serve() {.async.} =
+  clients = @[]
   var server = newAsyncSocket()
   server.bindAddr(Port(4004))
   server.listen()
 
   while true:
     let socket = await server.accept()
-    discard processClient socket
+    asyncCheck processClient(socket)
 
-discard serve()
+asyncCheck serve()
 runForever()

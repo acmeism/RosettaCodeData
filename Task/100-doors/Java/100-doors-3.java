@@ -1,11 +1,12 @@
-public class Doors
-{
-	public static void main(String[] args)
-	{
-		boolean[] doors=new boolean[100];
-		for(int i=0;i<10;i++)
-			doors[i*(i+2)]=true;
-		for(int i=0;i<100;i++)
-			System.out.println("Door #"+(i+1)+" is"+(doors[i]?"open.":" closed."));
-	}
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+class HundredDoors {
+    public static void main(String args[]) {
+        String openDoors = IntStream.rangeClosed(1, 100)
+                .filter(i -> Math.pow((int) Math.sqrt(i), 2) == i)
+                .mapToObj(Integer::toString)
+                .collect(Collectors.joining(", "));
+        System.out.printf("Open doors: %s%n", openDoors);
+    }
 }

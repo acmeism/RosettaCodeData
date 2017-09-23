@@ -3,7 +3,7 @@ on zigzagMatrix(n)
 
     -- diagonals :: n -> [[n]]
     script diagonals
-        on lambda(n)
+        on |λ|(n)
             script mf
                 on diags(xs, iCol, iRow)
                     if (iCol < length of xs) then
@@ -21,34 +21,24 @@ on zigzagMatrix(n)
                 end diags
             end script
 
-            diags(range(0, n * n - 1), 1, 1) of mf
-        end lambda
+            diags(enumFromTo(0, n * n - 1), 1, 1) of mf
+        end |λ|
     end script
 
     -- oddReversed :: [a] -> Int -> [a]
     script oddReversed
-        on lambda(lst, i)
+        on |λ|(lst, i)
             if i mod 2 = 0 then
                 lst
             else
                 reverse of lst
             end if
-        end lambda
+        end |λ|
     end script
 
-    rowsFromDiagonals(n, map(oddReversed, lambda(n) of diagonals))
+    rowsFromDiagonals(n, map(oddReversed, |λ|(n) of diagonals))
 
 end zigzagMatrix
-
-
--- TEST
-on run
-
-    zigzagMatrix(5)
-
-end run
-
-
 
 -- Rows of given length from list of diagonals
 -- rowsFromDiagonals :: Int -> [[a]] -> [[a]]
@@ -57,9 +47,9 @@ on rowsFromDiagonals(n, lst)
 
         -- lengthOverOne :: [a] -> Bool
         script lengthOverOne
-            on lambda(lst)
+            on |λ|(lst)
                 length of lst > 1
-            end lambda
+            end |λ|
         end script
 
         set {edge, residue} to splitAt(n, lst)
@@ -69,14 +59,34 @@ on rowsFromDiagonals(n, lst)
                 map(my tail, ¬
                     filter(lengthOverOne, edge)) & residue)
     else
-        []
+        {}
     end if
 end rowsFromDiagonals
 
 
----------------------------------------------------------------------------
+-- TEST -----------------------------------------------------------------------
+on run
 
--- GENERIC FUNCTIONS
+    zigzagMatrix(5)
+
+end run
+
+
+-- GENERIC FUNCTIONS ----------------------------------------------------------
+
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if n < m then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- filter :: (a -> Bool) -> [a] -> [a]
 on filter(f, xs)
@@ -85,11 +95,20 @@ on filter(f, xs)
         set lng to length of xs
         repeat with i from 1 to lng
             set v to item i of xs
-            if lambda(v, i, xs) then set end of lst to v
+            if |λ|(v, i, xs) then set end of lst to v
         end repeat
         return lst
     end tell
 end filter
+
+-- head :: [a] -> a
+on head(xs)
+    if length of xs > 0 then
+        item 1 of xs
+    else
+        missing value
+    end if
+end head
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -97,11 +116,23 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
 end map
+
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property |λ| : f
+        end script
+    end if
+end mReturn
 
 -- splitAt:: n -> list -> {n items from start of list, rest of list}
 -- splitAt :: Int -> [a] -> ([a], [a])
@@ -117,15 +148,6 @@ on splitAt(n, xs)
     end if
 end splitAt
 
--- head :: [a] -> a
-on head(xs)
-    if length of xs > 0 then
-        item 1 of xs
-    else
-        missing value
-    end if
-end head
-
 -- tail :: [a] -> [a]
 on tail(xs)
     if length of xs > 1 then
@@ -134,26 +156,3 @@ on tail(xs)
         {}
     end if
 end tail
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    set d to 1
-    if n < m then set d to -1
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range
-
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
-on mReturn(f)
-    if class of f is script then
-        f
-    else
-        script
-            property lambda : f
-        end script
-    end if
-end mReturn

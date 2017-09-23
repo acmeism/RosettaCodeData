@@ -1,1 +1,1 @@
- PRINT 'Goodby, World!'
+ PRINT 'Goodbye, World!'

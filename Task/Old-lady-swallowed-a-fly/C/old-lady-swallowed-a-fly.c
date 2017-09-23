@@ -1,29 +1,36 @@
 #include <stdio.h>
-
-const char *dict[] = {
-"_ha _c _e _p,/Quite absurd_f_p;_`cat,/Fancy that_fcat;_j`dog,/What a hog"
-"_fdog;_l`pig,/Her mouth_qso big_fpig;_d_r,/She just opened her throat_f_"
-"r;_icow,/_mhow she_ga cow;_k_o,/It_qrather wonky_f_o;_a_o_bcow,_khorse.."
-"./She's dead, of course!/","_a_p_b_e ","/S_t "," to catch the ","fly,/Bu"
-"t _mwhy s_t fly,/Perhaps she'll die!//_ha","_apig_bdog,_l`","spider,/Tha"
-"t wr_nj_ntickled inside her;_aspider_b_c",", to_s a ","_sed ","There_qan"
-" old lady who_g","_a_r_bpig,_d","_acat_b_p,_","_acow_b_r,_i","_adog_bcat"
-",_j","I don't know ","iggled and ","donkey","bird"," was ","goat"," swal"
-"low","he_gthe"
+static char const *animals[] = {
+    "fly",
+    "spider",
+    "bird",
+    "cat",
+    "dog",
+    "goat",
+    "cow",
+    "horse"
+};
+static char const *verses[]  = {
+    "I don't know why she swallowed that fly.\nPerhaps she'll die\n",
+    "That wiggled and jiggled and tickled inside her",
+    "How absurd, to swallow a bird",
+    "Imagine that. She swallowed a cat",
+    "What a hog to swallow a dog",
+    "She just opened her throat and swallowed that goat",
+    "I don't know how she swallowed that cow",
+    "She's dead of course"
 };
 
-int print(const char *c, int s)
-{
-	do {
-		if (s) s = print(dict[*c - 95], 0);
-		else if (*c == '_') s = 1;
-		else putchar(*c == '/' ? '\n' : *c);
-	} while (*++c);
-	return s;
-}
+#define LEN(ARR) (sizeof ARR / sizeof *ARR)
 
-int main()
+int main(void)
 {
-	print(dict[0], 0);
-	return 0;
+    for (size_t i = 0; i < LEN(animals); i++) {
+        printf("There was an old lady who swallowed a %s\n%s\n", animals[i], verses[i]);
+        for (size_t j = i; j > 0 && i < LEN(animals) - 1; j--) {
+            printf("She swallowed the %s to catch the %s\n", animals[j], animals[j-1]);
+            if (j == 1) {
+                printf("%s\n", verses[0]);
+            }
+        }
+    }
 }

@@ -1,4 +1,6 @@
-use framework "Foundation"   -- Yosemite onwards – for splitting by regex
+use framework "Foundation" -- Yosemite onwards – for splitting by regex
+
+-- SPARKLINE -----------------------------------------------------------------
 
 -- sparkLine :: [Num] -> String
 on sparkLine(xs)
@@ -8,20 +10,20 @@ on sparkLine(xs)
 
     -- scale :: Num -> Num
     script scale
-        on lambda(x)
+        on |λ|(x)
             ((x - min) * 7) / dataRange
-        end lambda
+        end |λ|
     end script
 
     -- bucket :: Num -> String
     script bucket
-        on lambda(n)
+        on |λ|(n)
             if n ≥ 0 and n < 8 then
                 item (n + 1 as integer) of "▁▂▃▄▅▆▇█"
             else
                 missing value
             end if
-        end lambda
+        end |λ|
     end script
 
     intercalate("", map(bucket, map(scale, xs)))
@@ -41,20 +43,20 @@ on numericOrdering(a, b)
 end numericOrdering
 
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
 
     -- splitNumbers :: String -> [Real]
     script splitNumbers
         script asReal
-            on lambda(x)
+            on |λ|(x)
                 x as real
-            end lambda
+            end |λ|
         end script
 
-        on lambda(s)
+        on |λ|(s)
             map(asReal, splitRegex("[\\s,]+", s))
-        end lambda
+        end |λ|
     end script
 
     map(sparkLine, map(splitNumbers, ["1 2 3 4 5 6 7 8 7 6 5 4 3 2 1", ¬
@@ -66,9 +68,7 @@ on run
 end run
 
 
-
-
--- GENERIC LIBRARY FUNCTIONS
+-- GENERIC LIBRARY FUNCTIONS -------------------------------------------------
 
 -- foldl :: (a -> b -> a) -> a -> [b] -> a
 on foldl(f, startValue, xs)
@@ -76,11 +76,19 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
 end foldl
+
+-- intercalate :: Text -> [Text] -> Text
+on intercalate(strText, lstText)
+    set {dlm, my text item delimiters} to {my text item delimiters, strText}
+    set strJoined to lstText as text
+    set my text item delimiters to dlm
+    return strJoined
+end intercalate
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -88,7 +96,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -98,13 +106,13 @@ end map
 on maximumBy(f, xs)
     script max
         property cmp : f
-        on lambda(a, b)
+        on |λ|(a, b)
             if a is missing value or cmp(a, b) < 0 then
                 b
             else
                 a
             end if
-        end lambda
+        end |λ|
     end script
 
     foldl(max, missing value, xs)
@@ -114,48 +122,29 @@ end maximumBy
 on minimumBy(f, xs)
     script min
         property cmp : f
-        on lambda(a, b)
+        on |λ|(a, b)
             if a is missing value or cmp(a, b) > 0 then
                 b
             else
                 a
             end if
-        end lambda
+        end |λ|
     end script
 
     foldl(min, missing value, xs)
 end minimumBy
 
--- splitRegex :: RegexPattern -> String -> [String]
-on splitRegex(strRegex, str)
-    set lstMatches to regexMatches(strRegex, str)
-    if length of lstMatches > 0 then
-        script preceding
-            on lambda(a, x)
-                set iFrom to start of a
-                set iLocn to (location of x)
-
-                if iLocn > iFrom then
-                    set strPart to text (iFrom + 1) thru iLocn of str
-                else
-                    set strPart to ""
-                end if
-                {parts:parts of a & strPart, start:iLocn + (length of x) - 1}
-            end lambda
-        end script
-
-        set recLast to foldl(preceding, {parts:[], start:0}, lstMatches)
-
-        set iFinal to start of recLast
-        if iFinal < length of str then
-            parts of recLast & text (iFinal + 1) thru -1 of str
-        else
-            parts of recLast & ""
-        end if
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
     else
-        {str}
+        script
+            property |λ| : f
+        end script
     end if
-end splitRegex
+end mReturn
 
 -- regexMatches :: RegexPattern -> String -> [{location:Int, length:Int}]
 on regexMatches(strRegex, str)
@@ -173,22 +162,33 @@ on regexMatches(strRegex, str)
     lstMatches
 end regexMatches
 
--- intercalate :: Text -> [Text] -> Text
-on intercalate(strText, lstText)
-    set {dlm, my text item delimiters} to {my text item delimiters, strText}
-    set strJoined to lstText as text
-    set my text item delimiters to dlm
-    return strJoined
-end intercalate
+-- splitRegex :: RegexPattern -> String -> [String]
+on splitRegex(strRegex, str)
+    set lstMatches to regexMatches(strRegex, str)
+    if length of lstMatches > 0 then
+        script preceding
+            on |λ|(a, x)
+                set iFrom to start of a
+                set iLocn to (location of x)
 
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
-on mReturn(f)
-    if class of f is script then
-        f
-    else
-        script
-            property lambda : f
+                if iLocn > iFrom then
+                    set strPart to text (iFrom + 1) thru iLocn of str
+                else
+                    set strPart to ""
+                end if
+                {parts:parts of a & strPart, start:iLocn + (length of x) - 1}
+            end |λ|
         end script
+
+        set recLast to foldl(preceding, {parts:[], start:0}, lstMatches)
+
+        set iFinal to start of recLast
+        if iFinal < length of str then
+            parts of recLast & text (iFinal + 1) thru -1 of str
+        else
+            parts of recLast & ""
+        end if
+    else
+        {str}
     end if
-end mReturn
+end splitRegex

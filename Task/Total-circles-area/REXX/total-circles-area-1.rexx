@@ -2,6 +2,7 @@
 parse arg box dig .                              /*obtain optional argument from the CL.*/
 if box=='' | box==','  then box= 500             /*Not specified?  Then use the default.*/
 if dig=='' | dig==','  then dig=  12             /* "      "         "   "   "     "    */
+numeric digits dig                               /*have enough decimal digits for points*/
                     data = ' 1.6417233788   1.6121789534  0.0848270516',
                            '-1.4944608174   1.2077959613  1.1039549836',
                            ' 0.6110294452  -0.6907087527  0.9089162485',

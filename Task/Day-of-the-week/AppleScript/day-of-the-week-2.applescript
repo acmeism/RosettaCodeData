@@ -1,8 +1,4 @@
-on run
-
-    filter(xmasIsSunday, range(2008, 2121))
-
-end run
+filter(xmasIsSunday, enumFromTo(2008, 2121))
 
 
 -- xmasIsSunday :: Int -> Bool
@@ -14,33 +10,43 @@ on xmasIsSunday(y)
 end xmasIsSunday
 
 
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
--- GENERIC FUNCTIONS
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- filter :: (a -> Bool) -> [a] -> [a]
 on filter(f, xs)
-    script mf
-        property lambda : f
-    end script
-
-    set lst to {}
-    set lng to length of xs
-    repeat with i from 1 to lng
-        set v to item i of xs
-        if mf's lambda(v, i, xs) then
-            set end of lst to v
-        end if
-    end repeat
-    return lst
+    tell mReturn(f)
+        set lst to {}
+        set lng to length of xs
+        repeat with i from 1 to lng
+            set v to item i of xs
+            if |λ|(v, i, xs) then set end of lst to v
+        end repeat
+        return lst
+    end tell
 end filter
 
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    set lng to (n - m) + 1
-    set base to m - 1
-    set lst to {}
-    repeat with i from 1 to lng
-        set end of lst to i + base
-    end repeat
-    return lst
-end range
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property |λ| : f
+        end script
+    end if
+end mReturn

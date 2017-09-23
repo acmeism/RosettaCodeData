@@ -1,27 +1,28 @@
-import Data.List as L
-import Data.Maybe
+import Data.List
+       (isPrefixOf, stripPrefix, genericLength, intercalate)
 
-trysplit :: Eq a => [a] -> [[a]] -> Maybe ([a], [a])
+trysplit :: String -> [String] -> Maybe (String, String)
 trysplit s delims =
-  case filter (`L.isPrefixOf` s) delims of
-    []    -> Nothing
-    (d:_) -> Just (d, fromJust $ L.stripPrefix d s)
+  case filter (`isPrefixOf` s) delims of
+    [] -> Nothing
+    (d:_) -> Just (d, (\(Just x) -> x) $ stripPrefix d s)
 
-multisplit :: (Eq a, Num n) => [a] -> [[a]] -> [([a], [a], n)]
+multisplit :: String -> [String] -> [(String, String, Int)]
 multisplit list delims =
-  let ms []       acc pos = [(acc, [], pos)]
+  let ms [] acc pos = [(acc, [], pos)]
       ms l@(s:sx) acc pos =
         case trysplit l delims of
-          Nothing       -> ms sx (s:acc) (pos + 1)
-          Just (d, sxx) -> (acc, d, pos) : ms sxx [] (pos + L.genericLength d)
+          Nothing -> ms sx (s : acc) (pos + 1)
+          Just (d, sxx) -> (acc, d, pos) : ms sxx [] (pos + genericLength d)
   in ms list [] 0
 
 main :: IO ()
 main = do
-  let test   = "a!===b=!=c"
-      delims = ["==", "!=", "="]
-      parsed = multisplit test delims
-  putStrLn "split string:"
-  putStrLn $ L.intercalate "," $ map (\(a, _, _) -> a) parsed
-  putStrLn "with [(string, delimiter, offset)]:"
-  print parsed
+  let parsed = multisplit "a!===b=!=c" ["==", "!=", "="]
+  mapM_
+    putStrLn
+    [ "split string:"
+    , intercalate "," $ map (\(a, _, _) -> a) parsed
+    , "with [(string, delimiter, offset)]:"
+    , show parsed
+    ]

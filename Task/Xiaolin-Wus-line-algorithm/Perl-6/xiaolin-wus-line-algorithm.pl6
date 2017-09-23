@@ -47,7 +47,7 @@ sub draw-line(@a is copy, @b is copy) {
     for (x-pxl1 + 1 .. x-pxl2 - 1)
 	Z
 	(intery, intery + gradient ... *)
-    -> \x,\y {
+    -> (\x,\y) {
 	my \c = fpart(y);
 	$plot(x, floor(y)    , 1 - c) unless c == 1;
 	$plot(x, floor(y) + 1, c    ) unless c == 0;

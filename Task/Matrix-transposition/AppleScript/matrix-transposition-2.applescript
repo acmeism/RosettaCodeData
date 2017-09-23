@@ -1,31 +1,31 @@
+-- TRANSPOSE -----------------------------------------------------------------
+
 -- transpose :: [[a]] -> [[a]]
 on transpose(xss)
     script column
-        on lambda(_, iCol)
+        on |λ|(_, iCol)
             script row
-                on lambda(xs)
+                on |λ|(xs)
                     item iCol of xs
-                end lambda
+                end |λ|
             end script
 
             map(row, xss)
-        end lambda
+        end |λ|
     end script
 
     map(column, item 1 of xss)
 end transpose
 
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
-
     transpose([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]])
 
     --> {{1, 4, 7, 10}, {2, 5, 8, 11}, {3, 6, 9, 12}}
 end run
 
-
--- GENERIC LIBRARY FUNCTIONS
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -33,7 +33,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -46,7 +46,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

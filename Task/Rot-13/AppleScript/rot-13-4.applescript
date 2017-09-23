@@ -1,7 +1,9 @@
+-- ROT 13 --------------------------------------------------------------------
+
 -- rot13 :: String -> String
 on rot13(str)
     script rt13
-        on lambda(x)
+        on |λ|(x)
             if (x ≥ "a" and x ≤ "m") or (x ≥ "A" and x ≤ "M") then
                 character id ((id of x) + 13)
             else if (x ≥ "n" and x ≤ "z") or (x ≥ "N" and x ≤ "Z") then
@@ -9,24 +11,22 @@ on rot13(str)
             else
                 x
             end if
-        end lambda
+        end |λ|
     end script
 
     intercalate("", map(rt13, characters of str))
 end rot13
 
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
-
     rot13("nowhere ABJURER")
 
     -->  "abjurer NOWHERE"
-
 end run
 
 
--- GENERIC FUNCTIONS
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -34,7 +34,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -55,7 +55,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

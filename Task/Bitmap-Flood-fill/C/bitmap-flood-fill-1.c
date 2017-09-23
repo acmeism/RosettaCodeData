@@ -1,106 +1,107 @@
-// http://commons.wikimedia.org/wiki/File:Julia_immediate_basin_1_3.png
-
-unsigned int f(unsigned int _iX, unsigned int _iY)
 /*
-   gives position of point (iX,iY) in 1D array  ; uses also global variables
-   it does not check if index is good  so memory error is possible
-*/
-{return (_iX + (iYmax-_iY-1)*iXmax );}
+ * RosettaCode: Bitmap/Flood fill, language C, dialects C89, C99, C11.
+ *
+ * This is an implementation of the recursive algorithm. For the sake of
+ * simplicity, instead of reading files as JPEG, PNG, etc., the program
+ * read and write Portable Bit Map (PBM) files in plain text format.
+ * Portable Bit Map files can also be read and written with GNU GIMP.
+ *
+ * The program is just an example, so the image size is limited to 2048x2048,
+ * the image can only be black and white, there is no run-time validation.
+ *
+ * Data is read from a standard input stream, the results are written to the
+ * standard output file.
+ *
+ * In order for this program to work properly it is necessary to allocate
+ * enough memory for the program stack. For example, in Microsoft Visual Studio,
+ * the option /stack:134217728 declares a 128MB stack instead of the default
+ * size of 1MB.
+ */
+#define _CRT_SECURE_NO_WARNINGS /* Unlock printf etc. in MSVC */
+#include <stdio.h>
+#include <stdlib.h>
 
+#define MAXSIZE 2048
+#define BYTE unsigned char
 
-int FillContour(int iXseed, int iYseed,  unsigned char color, unsigned char _data[])
+static int width, height;
+static BYTE bitmap[MAXSIZE][MAXSIZE];
+static BYTE oldColor;
+static BYTE newColor;
+
+void floodFill(int i, int j)
 {
-  /*
-     fills contour with black border ( color = iJulia)  using seed point inside contour
-     and horizontal lines
-     it starts from seed point, saves max right( iXmaxLocal) and max left ( iXminLocal) interior points of horizontal line,
-     in new line ( iY+1 or iY-1) it computes new interior point  : iXmidLocal=iXminLocal + (iXmaxLocal-iXminLocal)/2;
-     result is stored in _data array : 1D array of 1-bit colors ( shades of gray)
-     it does not check if index of _data array is good  so memory error is possible
-  */
+    if ( 0 <= i && i < height
+    &&   0 <= j && j < width
+    &&   bitmap[i][j] == oldColor )
+    {
+        bitmap[i][j] = newColor;
+        floodFill(i-1,j);
+        floodFill(i+1,j);
+        floodFill(i,j-1);
+        floodFill(i,j+1);
+    }
+}
 
+/* *****************************************************************************
+ * Input/output routines.
+ */
 
-  int iX, /* seed integer coordinate */
-    iY=iYseed,
-    /* most interior point of line iY */
-    iXmidLocal=iXseed,
-    /* min and max of interior points of horizontal line iY */
-    iXminLocal,
-    iXmaxLocal;
-  int i ; /* index of _data array */;
+void skipLine(FILE* file)
+{
+    while(!ferror(file) && !feof(file) && fgetc(file) != '\n')
+        ;
+}
 
+void skipCommentLines(FILE* file)
+{
+    int c;
+    int comment = '#';
 
-  /* ---------  move up --------------- */
-  do{
-    iX=iXmidLocal;
-    i =f(iX,iY); /* index of _data array */;
+    while ((c = fgetc(file)) == comment)
+        skipLine(file);
+    ungetc(c,file);
+}
 
-    /* move to right */
-    while (_data[i]==iInterior)
-      { _data[i]=color;
-        iX+=1;
-        i=f(iX,iY);
-      }
-    iXmaxLocal=iX-1;
+readPortableBitMap(FILE* file)
+{
+    int i,j;
 
-    /* move to left */
-    iX=iXmidLocal-1;
-    i=f(iX,iY);
-    while (_data[i]==iInterior)
-      { _data[i]=color;
-        iX-=1;
-        i=f(iX,iY);
-      }
-    iXminLocal=iX+1;
+    skipLine(file);
+    skipCommentLines(file);  fscanf(file,"%d",&width);
+    skipCommentLines(file);  fscanf(file,"%d",&height);
+    skipCommentLines(file);
 
+    if ( width <= MAXSIZE && height <= MAXSIZE )
+        for ( i = 0; i < height; i++ )
+            for ( j = 0; j < width; j++ )
+                fscanf(file,"%1d",&(bitmap[i][j]));
+    else exit(EXIT_FAILURE);
+}
 
-    iY+=1; /* move up */
-    iXmidLocal=iXminLocal + (iXmaxLocal-iXminLocal)/2; /* new iX inside contour */
-    i=f(iXmidLocal,iY); /* index of _data array */;
-    if ( _data[i]==iJulia)  break; /*  it should not cross the border */
+void writePortableBitMap(FILE* file)
+{
+    int i,j;
+    fprintf(file,"P1\n");
+    fprintf(file,"%d %d\n", width, height);
+    for ( i = 0; i < height; i++ )
+    {
+        for ( j = 0; j < width; j++ )
+            fprintf(file,"%1d", bitmap[i][j]);
+        fprintf(file,"\n");
+    }
+}
 
-  } while  (iY<iYmax);
+/* *****************************************************************************
+ * The main entry point.
+ */
 
-
-  /* ------  move down ----------------- */
-  iXmidLocal=iXseed;
-  iY=iYseed-1;
-
-
-  do{
-    iX=iXmidLocal;
-    i =f(iX,iY); /* index of _data array */;
-
-    /* move to right */
-    while (_data[i]==iInterior) /*  */
-      { _data[i]=color;
-        iX+=1;
-        i=f(iX,iY);
-      }
-    iXmaxLocal=iX-1;
-
-    /* move to left */
-    iX=iXmidLocal-1;
-    i=f(iX,iY);
-    while (_data[i]==iInterior) /*  */
-      { _data[i]=color;
-        iX-=1; /* move to right */
-        i=f(iX,iY);
-      }
-    iXminLocal=iX+1;
-
-    iY-=1; /* move down */
-    iXmidLocal=iXminLocal + (iXmaxLocal-iXminLocal)/2; /* new iX inside contour */
-    i=f(iXmidLocal,iY); /* index of _data array */;
-    if ( _data[i]==iJulia)  break; /*  it should not cross the border */
-  } while  (0<iY);
-
-  /* mark seed point by big pixel */
-  const int iSide =iXmax/500; /* half of width or height of big pixel */
-  for(iY=iYseed-iSide;iY<=iYseed+iSide;++iY){
-    for(iX=iXseed-iSide;iX<=iXseed+iSide;++iX){
-      i= f(iX,iY); /* index of _data array */
-      _data[i]=10;}}
-
-  return 0;
+int main(void)
+{
+    oldColor = 1;
+    newColor = oldColor ? 0 : 1;
+    readPortableBitMap(stdin);
+    floodFill(height/2,width/2);
+    writePortableBitMap(stdout);
+    return EXIT_SUCCESS;
 }

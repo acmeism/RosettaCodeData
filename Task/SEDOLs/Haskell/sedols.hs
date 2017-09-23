@@ -1,22 +1,31 @@
-import Data.Char
+import Data.Char (isDigit, isAsciiUpper, ord)
 
-char2value c | c `elem` "AEIOU"     = error "No vowels."
-             | c >= '0' && c <= '9' = ord c - ord '0'
-             | c >= 'A' && c <= 'Z' = ord c - ord 'A' + 10
+checkSum :: String -> String
+checkSum =
+  show .
+  (`rem` 10) .
+  (-) 10 . (`rem` 10) . sum . zipWith (*) [1, 3, 1, 7, 3, 9] . (charValue <$>)
 
-sedolweight = [1,3,1,7,3,9]
+charValue :: Char -> Int
+charValue c
+  | c `elem` "AEIOU" = error "No vowels."
+  | isDigit c = ord c - ord '0'
+  | isAsciiUpper c = ord c - ord 'A' + 10
 
-checksum sedol = show ((10 - (tmp `mod` 10)) `mod` 10)
-  where tmp = sum $ zipWith (*) sedolweight $ map char2value sedol
-
-main = mapM_ (\sedol -> putStrLn $ sedol ++ checksum sedol)
-        [ "710889",
-          "B0YBKJ",
-          "406566",
-          "B0YBLH",
-          "228276",
-          "B0YBKL",
-          "557910",
-          "B0YBKR",
-          "585284",
-          "B0YBKT" ]
+-- TEST ----------------------------------------------------------------------
+main :: IO ()
+main =
+  mapM_
+    (putStrLn . ((++) <*> checkSum))
+    [ "710889"
+    , "B0YBKJ"
+    , "406566"
+    , "B0YBLH"
+    , "228276"
+    , "B0YBKL"
+    , "557910"
+    , "B0YBKR"
+    , "585284"
+    , "B0YBKT"
+    , "B00030"
+    ]

@@ -1,0 +1,108 @@
+--
+-- demo\rosetta\GaltonBox.exw
+--
+constant TITLE = "Galton Box"
+
+include pGUI.e
+
+Ihandle dlg, canvas, timershow
+cdCanvas cddbuffer, cdcanvas
+
+integer brem = 80
+sequence balls = {{0,1,0}}
+sequence bins = repeat(0,8)
+
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+    integer {w, h} = IupGetIntInt(canvas, "DRAWSIZE"), x, y
+    atom xx, yy
+    cdCanvasActivate(cddbuffer)
+    cdCanvasClear(cddbuffer)
+    -- draw the pins, then balls, then bins
+    cdCanvasSetForeground(cddbuffer, CD_DARK_GREEN)
+    integer pinsize = min(floor(h/40),floor(w/50))
+    for y=4 to 16 by 2 do
+        for x=-(y-4) to (y-4) by 4 do
+            xx = w/2 + x*w/32
+            yy = h -y*h/32
+            cdCanvasSector(cddbuffer, xx, yy, pinsize, pinsize, 0, 360)
+        end for
+    end for
+    cdCanvasSetForeground(cddbuffer, CD_INDIGO)
+    for i=1 to length(balls) do
+        {x, y} = balls[i]
+        xx = w/2 + x*w/32
+        yy = h -y*h/32
+        cdCanvasSector(cddbuffer, xx, yy, pinsize*4, pinsize*4, 0, 360)
+    end for
+    cdCanvasLineWidth(cddbuffer,w/9)
+    for i=1 to length(bins) do
+        xx = w/2+(i*4-18)*w/32
+        yy = bins[i]*h/64+10
+        cdCanvasLine(cddbuffer,xx,10,xx,yy)
+    end for
+    cdCanvasFlush(cddbuffer)
+    return IUP_DEFAULT
+end function
+
+function timer_cb(Ihandle ih)
+integer x, y=9, dx
+    if length(balls) then
+        {x,y,dx} = balls[1]
+        if y>20 then
+            bins[(x+18)/4] += 1
+            balls = balls[2..$]
+        end if
+    end if
+    for i=1 to length(balls) do
+        {x,y,dx} = balls[i]
+        if y>15 then
+            dx = 0
+        elsif and_bits(y,1)=0 then
+            dx = {-1,+1}[rand(2)]
+        end if
+        balls[i] = {x+dx,y+1,dx}
+    end for
+    if y>4 and brem!=0 then
+        brem -= 1
+        balls = append(balls,{0,1,0})
+    end if
+    if brem=0 and length(balls)=0 then
+        IupSetAttribute(timershow,"RUN","NO")
+    end if
+    IupUpdate(canvas)
+    return IUP_IGNORE
+end function
+
+function map_cb(Ihandle ih)
+    cdcanvas = cdCreateCanvas(CD_IUP, ih)
+    cddbuffer = cdCreateCanvas(CD_DBUFFER, cdcanvas)
+    cdCanvasSetBackground(cddbuffer, CD_GREY)
+    return IUP_DEFAULT
+end function
+
+function esc_close(Ihandle /*ih*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    return IUP_CONTINUE
+end function
+
+procedure main()
+    IupOpen()
+
+    canvas = IupCanvas(NULL)
+    IupSetAttribute(canvas, "RASTERSIZE", "640x380")
+    IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
+    IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+
+    timershow = IupTimer(Icallback("timer_cb"), 80)
+
+    dlg = IupDialog(canvas)
+    IupSetAttribute(dlg, "TITLE", TITLE)
+    IupSetCallback(dlg, "K_ANY", Icallback("esc_close"))
+
+    IupShow(dlg)
+    IupSetAttribute(canvas, "RASTERSIZE", NULL)
+    IupMainLoop()
+    IupClose()
+end procedure
+
+main()

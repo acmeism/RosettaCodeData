@@ -1,10 +1,5 @@
-from math import *
+def fib(n,x=[0,1]):
+   for i in range(abs(n)-1): x=[x[1],sum(x)]
+   return x[1]*pow(-1,abs(n)-1) if n<0 else x[1] if n else 0
 
-def analytic_fibonacci(n):
-  sqrt_5 = sqrt(5);
-  p = (1 + sqrt_5) / 2;
-  q = 1/p;
-  return int( (p**n + q**n) / sqrt_5 + 0.5 )
-
-for i in range(1,31):
-  print analytic_fibonacci(i),
+for i in range(-30,31): print fib(i),

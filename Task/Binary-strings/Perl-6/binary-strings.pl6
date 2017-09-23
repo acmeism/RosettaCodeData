@@ -1,5 +1,4 @@
 # Perl 6 is perfectly fine with NUL *characters* in strings:
-
 my Str $s = 'nema' ~ 0.chr ~ 'problema!';
 say $s;
 
@@ -10,9 +9,9 @@ my Str $str = "My God, it's full of chars!";
 my Buf $buf = Buf.new(255, 0, 1, 2, 3);
 say $buf;
 
-# Strs can be encoded into Bufs …
-my Buf $this = 'foo'.encode('ascii');
-# … and Bufs can be decoded into Strs …
+# Strs can be encoded into Blobs …
+my Blob $this = 'round-trip'.encode('ascii');
+# … and Blobs can be decoded into Strs …
 my Str $that = $this.decode('ascii');
 
 # So it's all there. Nevertheless, let's solve this task explicitly
@@ -23,7 +22,7 @@ class ByteStr {
     # … that keeps an array of bytes, and we delegate some
     # straight-forward stuff directly to this attribute:
     # (Note: "has byte @.bytes" would be nicer, but that is
-    # not yet implemented in rakudo or niecza.)
+    # not yet implemented in Rakudo.)
     has Int @.bytes handles(< Bool elems gist push >);
 
     # A handful of methods …
@@ -43,11 +42,11 @@ class ByteStr {
 
 # A couple of operators for our new type:
 multi infix:<cmp>(ByteStr $x, ByteStr $y) { $x.bytes cmp $y.bytes }
-multi infix:<~>  (ByteStr $x, ByteStr $y) { ByteStr.new(:bytes($x.bytes, $y.bytes)) }
+multi infix:<~>  (ByteStr $x, ByteStr $y) { ByteStr.new(:bytes(|$x.bytes, |$y.bytes)) }
 
 # create some byte strings (destruction not needed due to garbage collection)
 my ByteStr $b0 = ByteStr.new;
-my ByteStr $b1 = ByteStr.new(:bytes( 'foo'.ords, 0, 10, 'bar'.ords ));
+my ByteStr $b1 = ByteStr.new(:bytes( |'foo'.ords, 0, 10, |'bar'.ords ));
 
 # assignment ($b1 and $b2 contain the same ByteStr object afterwards):
 my ByteStr $b2 = $b1;
@@ -69,14 +68,15 @@ say 'b1 is ', $b1 ?? 'not empty' !! 'empty';
 
 # appending a byte:
 $b1.push: 123;
+say 'appended = ', $b1;
 
 # extracting a substring:
 my $sub = $b1.substr(2, 4);
-say 'sub = ', $sub;
+say 'substr = ', $sub;
 
 # replacing a byte:
 $b2.replace(102 => 103);
-say $b2;
+say 'replaced = ', $b2;
 
 # joining:
 my ByteStr $b3 = $b1 ~ $sub;

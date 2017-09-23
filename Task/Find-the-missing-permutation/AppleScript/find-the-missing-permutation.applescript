@@ -1,85 +1,39 @@
-use framework "Foundation"
+use framework "Foundation" -- ( sort )
 
--- UNDER-REPRESENTED CHARACTER IN EACH OF N COLUMNS
-
--- missingChar :: Record -> Character
-script missingChar
-    -- mean :: [Num] -> Num
-    on mean(xs)
-        script sum
-            on lambda(a, b)
-                a + b
-            end lambda
-        end script
-
-        foldl(sum, 0, xs) / (length of xs)
-    end mean
-
-    -- Record -> Character
-    on lambda(rec)
-        set nMean to mean(allValues(rec))
-
-        script belowMean
-            on lambda(a, x, i)
-                set k to toLowerCase(x)
-                if a is missing value then
-                    set v to keyValue(rec, k)
-                    if v < nMean then
-                        toUpperCase(x)
-                    else
-                        missing value
-                    end if
-                else
-                    a
-                end if
-            end lambda
-        end script
-
-        foldl(belowMean, missing value, allKeys(rec))
-    end lambda
-end script
-
--- Count of each character type in each character column
-
--- colCounts :: [Character] -> Record
-script colCounts
-    on lambda(xs)
-        script tally
-            on lambda(a, x)
-                set k to toLowerCase(x)
-                set v to keyValue(a, k)
-                if v is missing value then
-                    set n to 1
-                else
-                    set n to v + 1
-                end if
-                updatedRecord(a, k, n)
-            end lambda
-        end script
-
-        foldl(tally, {name:""}, xs)
-    end lambda
-end script
-
--- TEST
+-- RAREST LETTER IN EACH COLUMN -----------------------------------------------
 on run
-
-    map(missingChar, ¬
-        map(colCounts, ¬
-            transpose(map(curry(splitOn)'s lambda(""), ¬
-                splitOn(space, ¬
-                    "ABCD CABD ACDB DACB BCDA ACBD " & ¬
-                    "ADCB CDAB DABC BCAD CADB CDBA " & ¬
-                    "CBAD ABDC ADBC BDCA DCBA BACD " & ¬
-                    "BADC BDAC CBDA DBCA DCAB"))))) as text
+    intercalate("", ¬
+        map(compose({¬
+            sort, ¬
+            group, ¬
+            curry(minimumBy)'s lambda(comparing(_length)), ¬
+            head}), ¬
+            transpose(map(stringChars, (splitOn(space, ¬
+                "ABCD CABD ACDB DACB BCDA ACBD " & ¬
+                "ADCB CDAB DABC BCAD CADB CDBA " & ¬
+                "CBAD ABDC ADBC BDCA DCBA BACD " & ¬
+                "BADC BDAC CBDA DBCA DCAB"))))))
 
     --> "DBAC"
 end run
 
 
----------------------------------------------------------------------------
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
--- GENERIC FUNCTIONS
+-- compose :: [(a -> a)] -> (a -> a)
+on compose(fs)
+    script
+        on lambda(x)
+            script
+                on lambda(a, f)
+                    mReturn(f)'s lambda(a)
+                end lambda
+            end script
+
+            foldl(result, x, fs)
+        end lambda
+    end script
+end compose
 
 -- transpose :: [[a]] -> [[a]]
 on transpose(xss)
@@ -98,6 +52,61 @@ on transpose(xss)
     map(column, item 1 of xss)
 end transpose
 
+-- sort :: [a] -> [a]
+on sort(lst)
+    ((current application's NSArray's arrayWithArray:lst)'s ¬
+        sortedArrayUsingSelector:"compare:") as list
+end sort
+
+-- group :: Eq a => [a] -> [[a]]
+on group(xs)
+    script eq
+        on lambda(a, b)
+            a = b
+        end lambda
+    end script
+
+    groupBy(eq, xs)
+end group
+
+-- minimumBy :: (a -> a -> Ordering) -> [a] -> a
+on minimumBy(f, xs)
+    set mf to mReturn(f)
+    script min
+        on lambda(a, b)
+            if a is missing value then
+                b
+            else if mf's lambda(a, b) < 0 then
+                a
+            else
+                b
+            end if
+        end lambda
+    end script
+
+    foldl(min, missing value, xs)
+end minimumBy
+
+-- comparing :: (a -> b) -> (a -> a -> Ordering)
+on comparing(f)
+    set mf to mReturn(f)
+    script
+        on lambda(a, b)
+            set x to mf's lambda(a)
+            set y to mf's lambda(b)
+            if x < y then
+                -1
+            else
+                if x > y then
+                    1
+                else
+                    0
+                end if
+            end if
+        end lambda
+    end script
+end comparing
+
 -- curry :: (Script|Handler) -> Script
 on curry(f)
     script
@@ -110,6 +119,82 @@ on curry(f)
         end lambda
     end script
 end curry
+
+-- groupBy :: (a -> a -> Bool) -> [a] -> [[a]]
+on groupBy(f, xs)
+    set mf to mReturn(f)
+
+    script enGroup
+        on lambda(a, x)
+            if length of (active of a) > 0 then
+                set h to item 1 of active of a
+            else
+                set h to missing value
+            end if
+
+            if h is not missing value and mf's lambda(h, x) then
+                {active:(active of a) & x, sofar:sofar of a}
+            else
+                {active:{x}, sofar:(sofar of a) & {active of a}}
+            end if
+        end lambda
+    end script
+
+    if length of xs > 0 then
+        set dct to foldl(enGroup, {active:{item 1 of xs}, sofar:{}}, tail(xs))
+        if length of (active of dct) > 0 then
+            sofar of dct & {active of dct}
+        else
+            sofar of dct
+        end if
+    else
+        {}
+    end if
+end groupBy
+
+-- head :: [a] -> a
+on head(xs)
+    if length of xs > 0 then
+        item 1 of xs
+    else
+        missing value
+    end if
+end head
+
+-- tail :: [a] -> [a]
+on tail(xs)
+    if length of xs > 1 then
+        items 2 thru -1 of xs
+    else
+        {}
+    end if
+end tail
+
+-- splitOn :: Text -> Text -> [Text]
+on splitOn(strDelim, strMain)
+    set {dlm, my text item delimiters} to {my text item delimiters, strDelim}
+    set xs to text items of strMain
+    set my text item delimiters to dlm
+    return xs
+end splitOn
+
+-- stringChars :: String -> [Char]
+on stringChars(s)
+    characters of s
+end stringChars
+
+-- length :: [a] -> Int
+on _length(xs)
+    length of xs
+end _length
+
+-- intercalate :: Text -> [Text] -> Text
+on intercalate(strText, lstText)
+    set {dlm, my text item delimiters} to {my text item delimiters, strText}
+    set strJoined to lstText as text
+    set my text item delimiters to dlm
+    return strJoined
+end intercalate
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -135,19 +220,6 @@ on foldl(f, startValue, xs)
     end tell
 end foldl
 
--- splitOn :: Text -> Text -> [Text]
-on splitOn(strDelim, strMain)
-    set {dlm, my text item delimiters} to {my text item delimiters, strDelim}
-    set xs to text items of strMain
-    set my text item delimiters to dlm
-    return xs
-end splitOn
-
--- ord :: Character -> Int
-on ord(x)
-    id of x
-end ord
-
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
 on mReturn(f)
@@ -159,52 +231,3 @@ on mReturn(f)
         end script
     end if
 end mReturn
-
-
--- NSString
-
--- toLowerCase :: String -> String
-on toLowerCase(str)
-    set ca to current application
-    ((ca's NSString's stringWithString:(str))'s ¬
-        lowercaseStringWithLocale:(ca's NSLocale's currentLocale())) as text
-end toLowerCase
-
--- toUpperCase :: String -> String
-on toUpperCase(str)
-    set ca to current application
-    ((ca's NSString's stringWithString:(str))'s ¬
-        uppercaseStringWithLocale:(ca's NSLocale's currentLocale())) as text
-end toUpperCase
-
-
--- NSDictionary
-
--- allKeys :: Record -> [String]
-on allKeys(rec)
-    (current application's NSDictionary's dictionaryWithDictionary:rec)'s allKeys() as list
-end allKeys
-
--- allValues :: Record -> [a]
-on allValues(rec)
-    (current application's NSDictionary's dictionaryWithDictionary:rec)'s allValues() as list
-end allValues
-
--- keyValue :: Record -> String -> Maybe String
-on keyValue(rec, strKey)
-    set ca to current application
-    set v to (ca's NSDictionary's dictionaryWithDictionary:rec)'s objectForKey:strKey
-    if v is not missing value then
-        item 1 of ((ca's NSArray's arrayWithObject:v) as list)
-    else
-        missing value
-    end if
-end keyValue
-
--- updatedRecord :: Record -> String -> a -> Record
-on updatedRecord(rec, strKey, varValue)
-    set ca to current application
-    set nsDct to (ca's NSMutableDictionary's dictionaryWithDictionary:rec)
-    nsDct's setValue:varValue forKey:strKey
-    item 1 of ((ca's NSArray's arrayWithObject:nsDct) as list)
-end updatedRecord

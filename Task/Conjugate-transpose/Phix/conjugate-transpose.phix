@@ -1,0 +1,120 @@
+enum REAL, IMAG
+
+type complex(sequence s)
+    return length(s)=2 and atom(s[REAL]) and atom(s[IMAG])
+end type
+
+function c_add(complex a, complex b)
+    return sq_add(a,b)
+end function
+
+function c_mul(complex a, complex b)
+    return {a[REAL] * b[REAL] - a[IMAG] * b[IMAG],
+            a[REAL] * b[IMAG] + a[IMAG] * b[REAL]}
+end function
+
+function c_conj(complex a)
+    return {a[REAL],-a[IMAG]}
+end function
+
+function c_print(complex a)
+    if a[IMAG]=0 then return sprintf("%g",a[REAL]) end if
+    return sprintf("%g%+gi",a)
+end function
+
+procedure m_print(sequence a)
+    integer l = length(a)
+    for i=1 to l do
+        for j=1 to l do
+            a[i][j] = c_print(a[i][j])
+        end for
+        a[i] = "["&join(a[i],",")&"]"
+    end for
+    puts(1,join(a,"\n")&"\n")
+end procedure
+
+
+function conjugate_transpose(sequence a)
+    sequence res = a
+    integer l = length(a)
+    for i=1 to l do
+        for j=1 to l do
+          res[i][j] = c_conj(a[j][i])
+        end for
+    end for
+    return res
+end function
+
+function m_unitary(sequence act)
+-- note: a was normal and act = a*ct already
+    integer l = length(act)
+    for i=1 to l do
+        for j=1 to l do
+            atom {re,im} = act[i,j]
+            -- round to nearest billionth
+            -- (powers of 2 help the FPU out)
+            re = round(re,1024*1024*1024)
+            im = round(im,1024*1024*1024)
+            if im!=0
+            or (i=j and re!=1)
+            or (i!=j and re!=0) then
+                return 0
+            end if
+        end for
+    end for
+    return 1
+end function
+
+function m_mul(sequence a, sequence b)
+    sequence res = sq_mul(a,0)
+    integer l = length(a)
+    for i=1 to l do
+        for j=1 to l do
+            for k=1 to l do
+                res[i][j] = c_add(res[i][j],c_mul(a[i][k],b[k][j]))
+            end for
+        end for
+    end for
+    return res
+end function
+
+procedure test(sequence a)
+sequence ct = conjugate_transpose(a)
+    printf(1,"Original matrix:\n")
+    m_print(a)
+    printf(1,"Conjugate transpose:\n")
+    m_print(ct)
+    -- note: rounding similar to that in m_unitary may be rqd (in a similar
+    --       loop in a new m_equal function) on these two equality tests,
+    --       but as it is, all tests pass with the builtin = operator.
+    printf(1,"Hermitian?: %s\n",{iff(a=ct?"TRUE":"FALSE")}) -- (this one)
+    sequence act = m_mul(a,ct), cta = m_mul(ct,a)
+    bool normal = act=cta                                   -- (&this one)
+    printf(1,"Normal?: %s\n",{iff(normal?"TRUE":"FALSE")})
+    printf(1,"Unitary?: %s\n\n",{iff(normal and m_unitary(act)?"TRUE":"FALSE")})
+end procedure
+
+constant x = sqrt(2)/2
+
+constant tests = {{{{3, 0},{2,1}},
+                   {{2,-1},{1,0}}},
+
+                  {{{ 1, 0},{ 1, 1},{ 0, 2}},
+                   {{ 1,-1},{ 5, 0},{-3, 0}},
+                   {{ 0,-2},{-3, 0},{ 0, 0}}},
+
+                  {{{0.5,+0.5},{0.5,-0.5}},
+                   {{0.5,-0.5},{0.5,+0.5}}},
+
+                  {{{ 1, 0},{ 1, 0},{ 0, 0}},
+                   {{ 0, 0},{ 1, 0},{ 1, 0}},
+                   {{ 1, 0},{ 0, 0},{ 1, 0}}},
+
+                  {{{x, 0},{x, 0},{0, 0}},
+                   {{0,-x},{0, x},{0, 0}},
+                   {{0, 0},{0, 0},{0, 1}}},
+
+                  {{{2,7},{9,-5}},
+                   {{3,4},{8,-6}}}}
+
+for i=1 to length(tests) do test(tests[i]) end for

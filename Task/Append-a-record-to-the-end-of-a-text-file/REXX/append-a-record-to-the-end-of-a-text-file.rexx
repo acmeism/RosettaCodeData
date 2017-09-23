@@ -1,5 +1,4 @@
 /*REXX program  writes (appends) two records,  closes the file,  appends another record.*/
-signal on syntax;      signal on noValue         /*handle (if any)  REXX program errors.*/
 tFID= 'PASSWD.TXT'                               /*define the name of the  output  file.*/
 call lineout tFID                                /*close the output file,  just in case,*/
                                                  /*   it could be open from calling pgm.*/
@@ -18,10 +17,7 @@ call writeRec tFID,,                             /*append the  3rd record  to th
 call lineout fid                                 /*"be safe" programming: close the file*/
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-err: say; say '***error***';  say;   do j=1  for arg();  say arg(j);  say;  end;   exit 13
 s:   if arg(1)==1  then return arg(3);       return word(arg(2) 's', 1)     /*pluralizer*/
-/*──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────*/
-noValue:  syntax: call err 'REXX program' condition("C"), condition("D"), 'REXX source statement (line' sigl"):", sourceline(sigl)
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 writeRec: parse arg fid,_                        /*get the fileID, and also the 1st arg.*/
           sep=':'                                /*field delimiter used in file, it ··· */
@@ -35,5 +31,6 @@ writeRec: parse arg fid,_                        /*get the fileID, and also the 
                        if r==0  then return      /*Zero?   Then record was written.     */
                        call sleep tries          /*Error?  So try again after a delay.  */
                        end   /*tries*/           /*Note:  not all REXXes have  SLEEP.   */
-          call err    r    'record's(r)    "not written to file"    fid;       exit 13
+
+          say '***error***';  say r  'record's(r)   "not written to file"   fid;   exit 13
           /*some error causes: no write access, disk is full, file lockout, no authority*/

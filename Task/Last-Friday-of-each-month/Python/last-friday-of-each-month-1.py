@@ -1,6 +1,6 @@
 import calendar
 
-def lastFridays(year):
+def last_fridays(year):
     for month in range(1, 13):
         last_friday = max(week[calendar.FRIDAY]
             for week in calendar.monthcalendar(year, month))

@@ -18,8 +18,7 @@ TM:  !=1;   bot=1;   top=1;   @er= '***error***' /*start at  the tape location  
              if rMove== 'left'  then !=!-1       /*Are we moving left?   Then subtract 1*/
              if rMove=='right'  then !=!+1       /* "   "    "   right?    "    add    1*/
              bot=min(bot, !);   top=max(top, !)  /*find the  tape  bottom and top.      */
-             state=rNext                         /*use this for the next  state.        */
-             iterate cycle                       /*go process another TM instruction.   */
+             state=rNext;       iterate cycle    /*use this for the next  state;  and   */
              end   /*k*/
           say @er 'unknown state:' state;  leave /*oops, we have an unknown state error.*/
           end   /*cycle*/
@@ -27,8 +26,8 @@ TM:  !=1;   bot=1;   top=1;   @er= '***error***' /*start at  the tape location  
           do t=bot  to top;        _=@.t
           if _==blank  then _=' '                /*do we need to translate a true blank?*/
           $=$ || pad || _                        /*construct char by char, maybe pad it.*/
-          end   /*t*/                            /* [↑]  construct the  tape's contents.*/
-     L=length($)
+          end   /*t*/                            /* [↑]  construct  the  tape's contents*/
+     L=length($)                                 /*obtain length of  "     "       "    */
      if L==0     then $= "[tape is blank.]"      /*make an  empty tape  visible to user.*/
      if L>1000   then $=left($, 1000) ...        /*truncate tape to 1k bytes, append ···*/
      say "tape's contents:"  $                   /*show the tape's contents (or 1st 1k).*/

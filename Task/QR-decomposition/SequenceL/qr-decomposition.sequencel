@@ -1,0 +1,89 @@
+import <Utilities/Math.sl>;
+import <Utilities/Sequence.sl>;
+import <Utilities/Conversion.sl>;
+
+main :=
+    let
+        qrTest := [[12.0, -51.0,   4.0],
+                   [ 6.0, 167.0, -68.0],
+                   [-4.0,  24.0, -41.0]];
+
+        qrResult := qr(qrTest);
+
+        x := 1.0*(0 ... 10);
+        y := 1.0*[1, 6, 17, 34, 57, 86, 121, 162, 209, 262, 321];
+
+        regResult := polyfit(x, y, 2);
+    in
+        "q:\n" ++ delimit(delimit(floatToString(qrResult[1], 6), ','), '\n') ++ "\n\n" ++
+        "r:\n" ++ delimit(delimit(floatToString(qrResult[2], 1), ','), '\n') ++ "\n\n" ++
+        "polyfit:\n" ++ "[" ++ delimit(floatToString(regResult, 1), ',') ++ "]";
+
+//---Polynomial Regression---
+
+polyfit(x(1), y(1), n) :=
+    let
+        a[j] := x ^ j foreach j within 0 ... n;
+    in
+        lsqr(transpose(a), transpose([y]));
+
+lsqr(a(2), b(2)) :=
+    let
+        qrDecomp := qr(a);
+        prod := mm(transpose(qrDecomp[1]), b);
+    in
+        solveUT(qrDecomp[2], prod);
+
+solveUT(r(2), b(2)) :=
+    let
+        n := size(r[1]);
+    in
+        solveUTHelper(r, b, n, duplicate(0.0, n));
+
+solveUTHelper(r(2), b(2), k, x(1)) :=
+    let
+        n := size(r[1]);
+        newX :=  setElementAt(x, k, (b[k][1] - sum(r[k][(k+1) ... n] * x[(k+1) ... n])) / r[k][k]);
+    in
+        x when k <= 0
+    else
+        solveUTHelper(r, b, k - 1, newX);
+
+//---QR Decomposition---
+
+qr(A(2)) := qrHelper(A, id(size(A)), 1);
+
+qrHelper(A(2), Q(2), i) :=
+    let
+        m := size(A);
+        n := size(A[1]);
+
+        householder := makeHouseholder(A[i ... m, i]);
+
+        H[j,k] :=
+                householder[j - i + 1][k - i + 1] when j >= i and k >= i
+            else
+                1.0 when j = k else 0.0
+            foreach j within 1 ... m,
+                    k within 1 ... m;
+    in
+        [Q,A] when i > (n - 1 when m = n else n)
+    else
+        qrHelper(mm(H, A), mm(Q, H), i + 1);
+
+
+makeHouseholder(a(1)) :=
+    let
+        v := [1.0] ++ tail(a / (a[1] + sqrt(sum(a ^ 2)) * sign(a[1])));
+
+        H := id(size(a)) - (2.0 / mm([v], transpose([v])))[1,1] * mm(transpose([v]), [v]);
+    in
+        H;
+
+//---Utilities---
+
+id(n)[i,j] := 1.0 when i = j else 0.0
+              foreach i within 1 ... n,
+                      j within 1 ... n;
+
+mm(A(2), B(2))[i,j] := sum( A[i] * transpose(B)[j] );

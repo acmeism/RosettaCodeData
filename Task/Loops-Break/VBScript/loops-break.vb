@@ -1,16 +1,17 @@
-	do
-		a = int( rnd * 20)
-		wscript.stdout.write a
-		if a = 10 then exit do
-		b = int( rnd * 20 )
-		wscript.echo vbnullstring,b
-	loop
+Dim a, b, i
 
-	dim i
-	for i = 1 to 100000
-		a = int( rnd * 20)
-		wscript.stdout.write a
-		if a = 10 then exit for
-		b = int( rnd * 20 )
-		wscript.echo vbnullstring,b
-	next
+Do
+    a = Int(Rnd * 20)
+    WScript.StdOut.Write a
+    If a = 10 Then Exit Do
+    b = Int(Rnd * 20)
+    WScript.Echo vbNullString, b
+Loop
+
+For i = 1 To 100000
+    a = Int(Rnd * 20)
+    WScript.StdOut.Write a
+    If a = 10 Then Exit For
+    b = Int(Rnd * 20)
+    WScript.Echo vbNullString, b
+Next

@@ -1,4 +1,7 @@
-import Data.List (sort, permutations)
+import Data.List (permutations)
 
-main = print (map maxcat [[1,34,3,98,9,76,45,4], [54,546,548,60]] :: [Integer])
-    where maxcat = read . last . sort . map (concat . map show) . permutations
+main =
+  print
+    (maxcat <$> [[1, 34, 3, 98, 9, 76, 45, 4], [54, 546, 548, 60]] :: [Integer])
+  where
+    maxcat = read . maximum . (concatMap show <$>) . permutations

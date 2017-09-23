@@ -1,43 +1,76 @@
 -- comb :: Int -> [a] -> [[a]]
 on comb(n, lst)
-    set h to head(lst)
-
-    script headPrepended
-        on lambda(t)
-            h & t
-        end lambda
-    end script
-
     if n < 1 then
-        [[]]
-    else if length of lst = 0 then
-        []
+        {{}}
     else
-        set xs to tail(lst)
+        if not isNull(lst) then
+            set {h, xs} to uncons(lst)
 
-        map(headPrepended, ¬
-            comb(n - 1, xs)) & comb(n, xs)
+            map(curry(my cons)'s |λ|(h), comb(n - 1, xs)) & comb(n, xs)
+        else
+            {}
+        end if
     end if
 end comb
 
-
--- TEST
-
--- spaced :: [a] -> String
-on spaced(lst)
-    intercalate(space, lst)
-end spaced
-
+-- TEST -----------------------------------------------------------------------
 on run
 
     intercalate(linefeed, ¬
-        map(spaced, comb(3, range(0, 4))))
+        map(unwords, comb(3, enumFromTo(0, 4))))
 
 end run
 
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
+-- cons :: a -> [a] -> [a]
+on cons(x, xs)
+    {x} & xs
+end cons
 
--- GENERIC FUNCTIONS
+-- curry :: (Script|Handler) -> Script
+on curry(f)
+    script
+        on |λ|(a)
+            script
+                on |λ|(b)
+                    |λ|(a, b) of mReturn(f)
+                end |λ|
+            end script
+        end |λ|
+    end script
+end curry
+
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if n < m then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
+
+-- intercalate :: Text -> [Text] -> Text
+on intercalate(strText, lstText)
+    set {dlm, my text item delimiters} to {my text item delimiters, strText}
+    set strJoined to lstText as text
+    set my text item delimiters to dlm
+    return strJoined
+end intercalate
+
+-- isNull :: [a] -> Bool
+on isNull(xs)
+    if class of xs is string then
+        xs = ""
+    else
+        xs = {}
+    end if
+end isNull
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -45,7 +78,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -58,47 +91,27 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
 
--- intercalate :: Text -> [Text] -> Text
-on intercalate(strText, lstText)
-    set {dlm, my text item delimiters} to {my text item delimiters, strText}
-    set strJoined to lstText as text
-    set my text item delimiters to dlm
-    return strJoined
-end intercalate
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
-        set d to -1
-    else
-        set d to 1
-    end if
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range
-
--- head :: [a] -> a
-on head(xs)
-    if length of xs > 0 then
-        item 1 of xs
+-- uncons :: [a] -> Maybe (a, [a])
+on uncons(xs)
+    set lng to length of xs
+    if lng > 0 then
+        if class of xs is string then
+            set cs to text items of xs
+            {item 1 of cs, rest of cs}
+        else
+            {item 1 of xs, rest of xs}
+        end if
     else
         missing value
     end if
-end head
+end uncons
 
--- tail :: [a] -> [a]
-on tail(xs)
-    if length of xs > 1 then
-        items 2 thru -1 of xs
-    else
-        {}
-    end if
-end tail
+-- unwords :: [String] -> String
+on unwords(xs)
+    intercalate(space, xs)
+end unwords

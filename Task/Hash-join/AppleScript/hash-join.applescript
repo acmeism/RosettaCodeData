@@ -1,11 +1,13 @@
 use framework "Foundation" -- Yosemite onwards, for record-handling functions
 
+-- HASH JOIN -----------------------------------------------------------------
+
 -- hashJoin :: [Record] -> [Record] -> String -> [Record]
 on hashJoin(tblA, tblB, strJoin)
     set {jA, jB} to splitOn("=", strJoin)
 
     script instanceOfjB
-        on lambda(a, x)
+        on |λ|(a, x)
             set strID to keyValue(x, jB)
 
             set maybeInstances to keyValue(a, strID)
@@ -14,32 +16,32 @@ on hashJoin(tblA, tblB, strJoin)
             else
                 updatedRecord(a, strID, [x])
             end if
-        end lambda
+        end |λ|
     end script
 
     set M to foldl(instanceOfjB, {name:"multiMap"}, tblB)
 
     script joins
-        on lambda(a, x)
+        on |λ|(a, x)
             set matches to keyValue(M, keyValue(x, jA))
             if matches is not missing value then
                 script concat
-                    on lambda(row)
+                    on |λ|(row)
                         x & row
-                    end lambda
+                    end |λ|
                 end script
 
                 a & map(concat, matches)
             else
                 a
             end if
-        end lambda
+        end |λ|
     end script
 
     foldl(joins, {}, tblA)
 end hashJoin
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
     set lstA to [¬
         {age:27, |name|:"Jonah"}, ¬
@@ -60,12 +62,13 @@ on run
 end run
 
 
--- RECORD PRIMITIVES
+-- RECORD FUNCTIONS ----------------------------------------------------------
 
 -- keyValue :: String -> Record -> Maybe a
 on keyValue(rec, strKey)
     set ca to current application
-    set v to (ca's NSDictionary's dictionaryWithDictionary:rec)'s objectForKey:strKey
+    set v to (ca's NSDictionary's dictionaryWithDictionary:rec)'s ¬
+        objectForKey:strKey
     if v is not missing value then
         item 1 of ((ca's NSArray's arrayWithObject:v) as list)
     else
@@ -82,7 +85,7 @@ on updatedRecord(rec, strKey, varValue)
 end updatedRecord
 
 
--- GENERIC PRIMITIVES
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- foldl :: (a -> b -> a) -> a -> [b] -> a
 on foldl(f, startValue, xs)
@@ -90,7 +93,7 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
@@ -102,19 +105,11 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
 end map
-
--- splitOn :: Text -> Text -> [Text]
-on splitOn(strDelim, strMain)
-    set {dlm, my text item delimiters} to {my text item delimiters, strDelim}
-    set lstParts to text items of strMain
-    set my text item delimiters to dlm
-    return lstParts
-end splitOn
 
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
@@ -123,7 +118,15 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
+
+-- splitOn :: Text -> Text -> [Text]
+on splitOn(strDelim, strMain)
+    set {dlm, my text item delimiters} to {my text item delimiters, strDelim}
+    set lstParts to text items of strMain
+    set my text item delimiters to dlm
+    return lstParts
+end splitOn

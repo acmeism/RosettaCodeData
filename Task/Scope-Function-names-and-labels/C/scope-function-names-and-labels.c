@@ -14,7 +14,7 @@ int main(void)
 	int x;
 
 	printf("This will demonstrate function and label scopes.\n");
-	printf("All output is happening throung printf(), a function declared in the header stdio.h, which is external to this program.\n");
+	printf("All output is happening through printf(), a function declared in the header stdio.h, which is external to this program.\n");
 	printf("Enter a number: ");
 	if (scanf("%d", &x) != 1)
 		return 0;

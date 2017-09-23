@@ -1,9 +1,10 @@
-count :: Eq a => [a] -> [a] -> Int
-count []  = error "empty substring"
-count sub = go
+import Data.Text hiding (length)
+
+countAll :: String -> String -> Int
+countAll needle haystack = length (breakOnAll n h)
   where
-    go = scan sub . dropWhile (/= head sub)
-    scan _ [] = 0
-    scan [] xs = 1 + go xs
-    scan (x:xs) (y:ys) | x == y    = scan xs ys
-                       | otherwise = go ys
+    [n, h] = pack <$> [needle, haystack]
+
+main :: IO ()
+main =
+  print $ countAll "ab" <$> ["ababababab", "abelian absurdity", "babel kebab"]

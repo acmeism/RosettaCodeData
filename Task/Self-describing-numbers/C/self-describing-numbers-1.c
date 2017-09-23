@@ -1,45 +1,26 @@
 #include <stdio.h>
 
-int self_desc(const char *s)
+inline int self_desc(unsigned long long xx)
 {
-	unsigned char cnt[10] = {0};
-	int i;
-	for (i = 0; s[i] != '\0'; i++) cnt[s[i] - '0']++;
-	for (i = 0; s[i] != '\0'; i++) if (cnt[i] + '0' != s[i]) return 0;
-	return 1;
-}
+	register unsigned int d, x;
+	unsigned char cnt[10] = {0}, dig[10] = {0};
 
-void gen(int n)
-{
-	char d[11];
-	int one, i;
-	/* one = 0 may be confusing.  'one' is the number of digit 1s */
-	for (one = 0; one <= 2 && one < n - 2; one++) {
-		for (i = 0; i <= n; d[i++] = 0);
+	for (d = 0; xx > ~0U; xx /= 10)
+		cnt[ dig[d++] = xx % 10 ]++;
 
-		if ((d[0] = n - 2 - one) != 2) {
-			d[2] = d[d[0] - 0] = 1;
-			d[1] = 2;
-		} else {
-			d[1] = one ? 1 : 0;
-			d[2] = 2;
-		}
+	for (x = xx; x; x /= 10)
+		cnt[ dig[d++] = x % 10 ]++;
 
-		for (i = 0; i < n; d[i++] += '0');
-		if (self_desc(d)) printf("%s\n", d);
-	}
+	while(d-- && dig[x++] == cnt[d]);
+
+	return d == -1;
 }
 
 int main()
 {
 	int i;
-	const char *nums[] = { "1210", "1337", "2020", "21200", "3211000", "42101000", 0};
+	for (i = 1; i < 100000000; i++) /* don't handle 0 */
+		if (self_desc(i)) printf("%d\n", i);
 
-	for (i = 0; nums[i]; i++)
-		printf("%s is %sself describing\n", nums[i],
-			self_desc(nums[i]) ? "" : "not ");
-
-	printf("\nAll autobiograph numbers:\n");
-	for (i = 0; i < 11; i++) gen(i);
 	return 0;
 }

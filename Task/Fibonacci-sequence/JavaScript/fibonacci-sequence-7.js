@@ -1,35 +1,17 @@
-(() => {
-    'use strict';
-
-    // Nth member of fibonacci series
-
-    // fib :: Int -> Int
-    function fib(n) {
-        return mapAccumL(([a, b]) => [
-            [b, a + b], b
-        ], [0, 1], range(1, n))[0][0];
+function Y(dn) {
+    return (function(fn) {
+        return fn(fn);
+    }(function(fn) {
+        return dn(function() {
+            return fn(fn).apply(null, arguments);
+        });
+    }));
+}
+var fib = Y(function(fn) {
+    return function(n) {
+        if (n === 0 || n === 1) {
+            return n;
+        }
+        return fn(n - 1) + fn(n - 2);
     };
-
-    // GENERIC FUNCTIONS
-
-    // mapAccumL :: (acc -> x -> (acc, y)) -> acc -> [x] -> (acc, [y])
-    let mapAccumL = (f, acc, xs) => {
-        return xs.reduce((a, x) => {
-            let pair = f(a[0], x);
-
-            return [pair[0], a[1].concat(pair[1])];
-        }, [acc, []]);
-    }
-
-    // range :: Int -> Int -> Maybe Int -> [Int]
-    let range = (m, n) =>
-        Array.from({
-            length: Math.floor(n - m) + 1
-        }, (_, i) => m + i);
-
-
-    // TEST
-    return fib(32);
-
-    // --> 2178309
-})();
+});

@@ -1,1 +1,1 @@
-compose: {x@y@z}
+compose:{'[x;y]}

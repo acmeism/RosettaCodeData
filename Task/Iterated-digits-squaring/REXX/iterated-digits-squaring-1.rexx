@@ -20,7 +20,6 @@ a.=.                                             /*intermediate counts of some n
      #.s=#.s+1                                   /*bump the counter for the 1's or 89's.*/
      end   /*j*/
 
-  do k=1  by 88  for 2;      q='"'
-  say 'count of' right(q||k||q,5) " chains for all natural numbers up to "  n  ' is:'  #.k
-  end   /*k*/
-                                                 /*stick a fork in it,  we're all done. */
+  do k=1  by 88  for 2;   @=right('"'k'"', 5)    /*display two results; define a literal*/
+  say 'count of'   @    " chains for all natural numbers up to "     n     ' is:'      #.k
+  end   /*k*/                                    /*stick a fork in it,  we're all done. */

@@ -1,18 +1,31 @@
- (n => {
+(n => {
+    'use strict';
 
-     let flatMap = (xs, f) => [].concat.apply([], xs.map(f)),
+    // GENERIC FUNCTIONS ------------------------------------------------------
 
-         range = (m, n) => Array.from({
-             length: (n - m) + 1
-         }, (_, i) => m + i);
+    // concatMap :: (a -> [b]) -> [a] -> [b]
+    const concatMap = (f, xs) => [].concat.apply([], xs.map(f));
+
+    // enumFromTo :: Int -> Int -> [Int]
+    const enumFromTo = (m, n) =>
+        Array.from({
+            length: Math.floor(n - m) + 1
+        }, (_, i) => m + i);
 
 
-     return flatMap(range(1,     n), (x) =>
-            flatMap(range(1 + x, n), (y) =>
-            flatMap(range(1 + y, n), (z) =>
-                 x * x + y * y === z * z ? [
-                     [x, y, z]
-                 ] : []
-             )));
+    // EXAMPLE ----------------------------------------------------------------
 
- })(20);
+    // [(x, y, z) | x <- [1..n], y <- [x..n], z <- [y..n], x ^ 2 + y ^ 2 == z ^ 2]
+
+    return concatMap(x =>
+           concatMap(y =>
+           concatMap(z =>
+
+                x * x + y * y === z * z ? [
+                    [x, y, z]
+                ] : [],
+
+           enumFromTo(y, n)),
+           enumFromTo(x, n)),
+           enumFromTo(1, n));
+})(20);

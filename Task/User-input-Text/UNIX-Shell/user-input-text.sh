@@ -1,4 +1,6 @@
 #!/bin/sh
 
-read STRING
-read INTEGER
+read string
+read integer
+read -p 'Enter a number: ' number
+echo "The number is $number"

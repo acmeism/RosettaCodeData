@@ -1,31 +1,29 @@
-class MyClass {
-}
+class MyClass { }
 
-func printPointer<T>(ptr: UnsafePointer<T>) {
-  println(ptr)
+func printAddress<T>(of pointer: UnsafePointer<T>) {
+    print(pointer)
 }
 
 func test() {
-  var x = 42
-  var y = 3.14
-  var z = "foo"
-  var obj = MyClass()
+    var x = 42
+    var y = 3.14
+    var z = "foo"
+    var obj = MyClass()
 
-  // Use a pointer to a variable on the stack and print its address
-  withUnsafePointer(&x) { ptr in println(ptr) }
-  withUnsafePointer(&y) { ptr in println(ptr) }
-  withUnsafePointer(&z) { ptr in println(ptr) }
-  withUnsafePointer(&obj) { ptr in println(ptr) }
+    // Use a pointer to a variable on the stack and print its address.
+    withUnsafePointer(to: &x)   { print($0) }
+    withUnsafePointer(to: &y)   { print($0) }
+    withUnsafePointer(to: &z)   { print($0) }
+    withUnsafePointer(to: &obj) { print($0) }
 
-  // Alternately:
-  printPointer(&x)
-  printPointer(&y)
-  printPointer(&z)
-  printPointer(&obj)
+    // Alternately:
+    printAddress(of: &x)
+    printAddress(of: &y)
+    printAddress(of: &z)
+    printAddress(of: &obj)
 
-  // Printing the address of an object that an object reference points to
-  // In Swift 3, unsafeAddress is removed
-  println(Unmanaged.passUnretained(obj).toOpaque())
+    // Printing the address of an object that an object reference points to.
+    print(Unmanaged.passUnretained(obj).toOpaque())
 }
 
 test()

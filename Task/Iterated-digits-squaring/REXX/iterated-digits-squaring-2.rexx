@@ -8,16 +8,16 @@ $.=.;  $.0=0;  $.00=0;  $.000=0;  $.0000=0; @.=. /*short-cuts for sub-group summ
      #.s=#.s+1                                   /*bump the counter for  1's  or  89's. */
      end   /*j*/
 
-  do k=1  by 88  for 2;      q='"'
-  say 'count of' right(q||k||q,5) " chains for all natural numbers up to "  n  ' is:'  #.k
+  do k=1  by 88  for 2;   @=right('"'k'"', 5)    /*display two results; define a literal*/
+  say 'count of'   @    " chains for all natural numbers up to "     n     ' is:'      #.k
   end   /*k*/
-                                                 /*stick a fork in it,  we're all done. */
+exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 sumDs: parse arg z;  chunk=3                     /*obtain the number (for adding digits)*/
 p=0                                              /*set partial sum of the decimal digits*/
    do m=1  by chunk  to length(z)                /*process the number, in chunks of four*/
    y=substr(z, m, chunk)                         /*extract a 4─byte chunk of the number.*/
-   if @.y==.  then do;    oy=y;   a=0            /*Not done before?  Then sum the number*/
+   if @.y==.  then do;   oy=y;  a=0              /*Not done before?  Then sum the number*/
                      do  until y==''             /*process each of the dec. digits in Y.*/
                      parse var y _ +1 y; a=a+!._ /*obtain a decimal digit; add it to  A.*/
                      end  /*until y ···*/        /* [↑]   A ≡ is the sum of squared digs*/
@@ -29,11 +29,11 @@ p=0                                              /*set partial sum of the decima
 
 if $.p\==.  then return $.p                      /*Computed before?  Then use the value.*/
 y=p                                              /*use a new copy of  P.                */
-        do  until s==1 | s==89;  s=0             /*add the squared decimal digits of  P.*/
+        do  until s==1 | s==89;       s=0        /*add the squared decimal digits of  P.*/
            do  until y==''                       /*process each  decimal digits in    X.*/
-           parse var y _ +1 y; s=s+!._           /*get a dec. digit; sum the fast square*/
-           end   /*until x ···*/                 /* [↑]  S ≡ is sum of the squared digs.*/
+           parse var y _ +1 y;        s=s+!._    /*get a dec. digit; sum the fast square*/
+           end   /*until y=='' ···*/             /* [↑]  S ≡ is sum of the squared digs.*/
         y=s                                      /*substitute the sum for a  "new"  X.  */
-        end      /*until*/                       /* [↑]  keep looping 'til  S=1  or  89.*/
+        end      /*until s==1  ···*/             /* [↑]  keep looping 'til  S=1  or  89.*/
 $.p=s                                            /*use this for memoization for the sum.*/
 return s

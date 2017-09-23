@@ -13,6 +13,8 @@ bool solveMaze(char[][] maze, in V2 s, in V2 end) pure nothrow @safe @nogc {
     foreach (immutable d; [V2(0, -cy), V2(+cx, 0), V2(0, +cy), V2(-cx, 0)])
         if (maze[s.y + (d.y / 2)][s.x + (d.x / 2)] == ' ' &&
             maze[s.y + d.y][s.x + d.x] == ' ') {
+//Would this help?
+//          maze[s.y + (d.y / 2)][s.x + (d.x / 2)] = pathSymbol;
             maze[s.y + d.y][s.x + d.x] = pathSymbol;
             if (solveMaze(maze, V2(s.x + d.x, s.y + d.y), end))
                 return true;

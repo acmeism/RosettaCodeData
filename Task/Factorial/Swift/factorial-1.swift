@@ -1,4 +1,3 @@
-func factorial(num: Int) -> Int {
-
-    return num < 1 ? 1 : reduce(1...num, 1, *)
+func factorial(_ n: Int) -> Int {
+	return n < 2 ? 1 : (2...n).reduce(1, *)
 }

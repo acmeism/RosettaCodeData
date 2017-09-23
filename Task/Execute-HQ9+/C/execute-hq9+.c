@@ -1,7 +1,8 @@
 void runCode(const char *code)
 {
     int c_len = strlen(code);
-    int i, accumulator=0, bottles;
+    int i, bottles;
+    unsigned accumulator=0;
     for(i=0;i<c_len;i++)
     {
         switch(code[i])

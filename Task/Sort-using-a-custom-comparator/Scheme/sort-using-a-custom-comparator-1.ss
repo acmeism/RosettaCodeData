@@ -1,5 +1,5 @@
 (use srfi-13);;Syntax for module inclusion depends on implementation,
-;;as does the presence of a sort function.
+;;a sort function may be predefined, or available through srfi 95
 (define (mypred? a b)
   (let ((len-a (string-length a))
 	(len-b (string-length b)))

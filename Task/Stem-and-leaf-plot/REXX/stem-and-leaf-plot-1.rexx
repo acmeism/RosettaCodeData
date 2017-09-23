@@ -1,5 +1,5 @@
 /*REXX program displays a stem and leaf plot of any non-negative numbers [can include 0]*/
-parse arg @                                      /* [↑]  Not specified? Then use default*/
+parse arg @                                      /* [↓]  Not specified? Then use default*/
 if @=''  then @=12 127 28 42 39 113 42 18 44 118 44 37 113 124 37 48 127 36 29 31 125 139,
    131 115 105 132 104 123 35 113 122 42 117 119 58 109 23 105 63 27 44 105 99 41 128 121,
    116 125  32  61 37 127 29 113 121 58 114 126 53 114 96 25 109 7 31 141 46 13 27 43 117,

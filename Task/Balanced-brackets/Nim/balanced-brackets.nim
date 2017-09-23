@@ -1,16 +1,10 @@
-import random
+from random import random, randomize, shuffle
+from strutils import repeat
+
 randomize()
 
-proc shuffle(s: var string) =
-  for i in countdown(s.high, 0):
-    swap(s[i], s[random(s.len)])
-
 proc gen(n: int): string =
-  result = newString(2 * n)
-  for i in 0 .. <n:
-    result[i] = '['
-  for i in n .. <(2*n):
-    result[i] = ']'
+  result = "[]".repeat(n)
   shuffle(result)
 
 proc balanced(txt: string): bool =

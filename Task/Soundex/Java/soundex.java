@@ -28,7 +28,10 @@ private static String getCode(char c){
 public static String soundex(String s){
   String code, previous, soundex;
   code = s.toUpperCase().charAt(0) + "";
-  previous = "7";
+
+  // EDITED : previous = "7";
+  previous = getCode(s.toUpperCase().charAt(0));
+
   for(int i = 1;i < s.length();i++){
     String current = getCode(s.toUpperCase().charAt(i));
     if(current.length() > 0 && !current.equals(previous)){

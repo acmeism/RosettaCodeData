@@ -1,14 +1,15 @@
--- CARPET MODEL
+-- CARPET MODEL --------------------------------------------------------------
 
 -- sierpinskiCarpet :: Int -> [[Bool]]
 on sierpinskiCarpet(n)
 
     -- rowStates :: Int -> [Bool]
     script rowStates
-        on lambda(x, _, xs)
+        on |λ|(x, _, xs)
 
             -- cellState :: Int -> Bool
             script cellState
+
                 -- inCarpet :: Int -> Int -> Bool
                 on inCarpet(x, y)
                     if (x = 0 or y = 0) then
@@ -20,63 +21,74 @@ on sierpinskiCarpet(n)
                     end if
                 end inCarpet
 
-                on lambda(y)
+                on |λ|(y)
                     inCarpet(x, y)
-                end lambda
+                end |λ|
             end script
 
             map(cellState, xs)
-        end lambda
+        end |λ|
     end script
 
-    map(rowStates, range(0, (3 ^ n) - 1))
+    map(rowStates, enumFromTo(0, (3 ^ n) - 1))
 end sierpinskiCarpet
 
 
--- TEST
-
+-- TEST ----------------------------------------------------------------------
 on run
     -- Carpets of orders 1, 2, 3
 
     set strCarpets to ¬
         intercalate(linefeed & linefeed, ¬
-            map(showCarpet, range(1, 3)))
+            map(showCarpet, enumFromTo(1, 3)))
 
     set the clipboard to strCarpets
 
     return strCarpets
 end run
 
-
--- CARPET DISPLAY
+-- CARPET DISPLAY ------------------------------------------------------------
 
 -- showCarpet :: Int -> String
 on showCarpet(n)
+
     -- showRow :: [Bool] -> String
     script showRow
         -- showBool :: Bool -> String
         script showBool
-            on lambda(bool)
+            on |λ|(bool)
                 if bool then
                     character id 9608
                 else
                     " "
                 end if
-            end lambda
+            end |λ|
         end script
 
-        on lambda(xs)
+        on |λ|(xs)
             intercalate("", map(my showBool, xs))
-        end lambda
+        end |λ|
     end script
 
     intercalate(linefeed, map(showRow, sierpinskiCarpet(n)))
 end showCarpet
 
 
----------------------------------------------------------------------------
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
--- GENERIC LIBRARY FUNCTIONS
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -84,7 +96,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -98,20 +110,6 @@ on intercalate(strText, lstText)
     return strJoined
 end intercalate
 
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
-        set d to -1
-    else
-        set d to 1
-    end if
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range
-
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
 on mReturn(f)
@@ -119,7 +117,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

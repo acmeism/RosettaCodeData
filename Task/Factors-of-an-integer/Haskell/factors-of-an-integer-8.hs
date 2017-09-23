@@ -1,9 +1,5 @@
-*Main> :set +s
-~> factors_o 120
-[1,2,3,4,5,6,8,10,12,15,20,24,30,40,60,120]
-(0.01 secs, 7578656 bytes)
-
-~> factors_o 12041111117
-[1,7,41,287,541,3787,22181,77551,155267,542857,3179591,22257137,41955091,2936856
-37,1720158731,12041111117]
-(0.31 secs, 51583744 bytes)
+import Data.List
+factors_o n = ds ++ [r | (d,0) <- [divMod n r], r <- r:[d | d>r]] ++ reverse (map (n `div`) ds)
+        where
+        r = floor (sqrt (fromIntegral n))
+        ds = [i | i <- [1..r-1], mod n i == 0]

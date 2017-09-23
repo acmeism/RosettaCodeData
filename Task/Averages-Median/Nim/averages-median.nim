@@ -1,6 +1,6 @@
 import algorithm, strutils
 
-proc median(xs): float =
+proc median(xs: seq[float]): float =
   var ys = xs
   sort(ys, system.cmp[float])
   0.5 * (ys[ys.high div 2] + ys[ys.len div 2])

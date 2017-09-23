@@ -1,2 +1,1 @@
-let printSquares = mapM_ (print.square)
-printSquares values
+[1 .. 10] >>= pure . (^ 2)

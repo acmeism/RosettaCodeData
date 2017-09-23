@@ -1,13 +1,11 @@
-import Control.Monad
 import Data.Time
-import System.Locale
+       (FormatTime, formatTime, defaultTimeLocale, utcToLocalTime,
+        getCurrentTimeZone, getCurrentTime)
 
-format1 :: FormatTime t => t -> String
-format1 = formatTime defaultTimeLocale "%Y-%m-%e"
+formats :: FormatTime t => [t -> String]
+formats = (formatTime defaultTimeLocale) <$>  ["%F", "%A, %B %d, %Y"]
 
-format2 :: FormatTime t => t -> String
-format2 = formatTime defaultTimeLocale "%A, %B %d, %Y"
-
+main :: IO ()
 main = do
-    t <- liftM2 utcToLocalTime getCurrentTimeZone getCurrentTime
-    mapM_ putStrLn [format1 t, format2 t]
+  t <- pure utcToLocalTime <*> getCurrentTimeZone <*> getCurrentTime
+  putStrLn $ unlines (formats <*> pure t)

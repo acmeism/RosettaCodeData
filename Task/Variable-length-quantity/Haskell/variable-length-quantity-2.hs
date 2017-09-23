@@ -1,11 +1,19 @@
+import Data.List (intercalate)
+
+base :: Int
 base = 8
 
+to :: Int -> [Int]
 to 0 = []
 to i = to (div i base) ++ [mod i base]
 
-from = foldl1 (\x y -> x*base + y)
+from :: [Int] -> Int
+from = foldl1 ((+) . (base *))
 
-main = do
-	fancy 2097152
-	fancy 2097151
-		where fancy i = putStrLn $ concatMap show (to i) ++ " <-> " ++ show (from $ to i)
+main :: IO ()
+main =
+  mapM_
+    (putStrLn .
+     intercalate " <-> " .
+     (((:) . concatMap show . to) <*> (return . show . from . to)))
+    [2097152, 2097151]

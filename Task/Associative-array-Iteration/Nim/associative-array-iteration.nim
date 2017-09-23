@@ -1,6 +1,6 @@
 import tables
 
-var t: TTable[int,string] = initTable[int,string]()
+var t: Table[int,string] = initTable[int,string]()
 
 t[1] = "one"
 t[2] = "two"

@@ -1,5 +1,5 @@
 var val = 0
-do {
-   val++
-   println(val)
+repeat {
+  val++
+  print(val)
 } while val % 6 != 0

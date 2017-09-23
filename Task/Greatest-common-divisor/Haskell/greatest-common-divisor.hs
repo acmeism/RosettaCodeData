@@ -1,5 +1,5 @@
 gcd :: (Integral a) => a -> a -> a
-gcd 0 0 =  error "Prelude.gcd: gcd 0 0 is undefined"
-gcd x y =  gcd' (abs x) (abs y) where
-  gcd' a 0  =  a
-  gcd' a b  =  gcd' b (a `rem` b)
+gcd x y = gcd_ (abs x) (abs y)
+  where
+    gcd_ a 0 = a
+    gcd_ a b = gcd_ b (a `rem` b)

@@ -74,21 +74,14 @@ end mapAccumL
 -- until :: (a -> Bool) -> (a -> a) -> a -> a
 on |until|(p, f, x)
     set mp to mReturn(p)
-    set mf to mReturn(f)
+    set v to x
 
-    script
-        property p : mp's lambda
-        property f : mf's lambda
-
-        on lambda(v)
-            repeat until p(v)
-                set v to f(v)
-            end repeat
-            return v
-        end lambda
-    end script
-
-    result's lambda(x)
+    tell mReturn(f)
+        repeat until mp's lambda(v)
+            set v to lambda(v)
+        end repeat
+    end tell
+    return v
 end |until|
 
 -- map :: (a -> b) -> [a] -> [b]

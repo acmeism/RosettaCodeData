@@ -1,4 +1,4 @@
-map(factorCountMod2, range(1, 100))
+map(factorCountMod2, enumFromTo(1, 100))
 
 on factorCountMod2(n)
     {n, (length of integerFactors(n)) mod 2 = 1}

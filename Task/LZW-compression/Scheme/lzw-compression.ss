@@ -69,8 +69,8 @@
               (set! dictionary
                     (append dictionary
                             (list (string-append
-				   (list-ref dictionary k)
-				   (string (string-ref (list-ref dictionary kn) 0)))))))))
+           (list-ref dictionary k)
+           (string (string-ref (list-ref dictionary kn) 0)))))))))
 
     ;; Build the resulting string
     (set! result (string-append result (list-ref dictionary k)))

@@ -1,10 +1,10 @@
 procedure main()
 
-   foo_m1()      # equivalent of class method, not normally used
    bar := foo()  # create instance
-   bar.m2()      # call method m2 with self=bar
-end
+   bar.m2()      # call method m2 with self=bar, an implicit first parameter
 
+   foo_m1( , "param1", "param2")  # equivalent of static class method, first (self) parameter is null
+end
 
 class foo(cp1,cp2)
    method m1(m1p1,m1p2)

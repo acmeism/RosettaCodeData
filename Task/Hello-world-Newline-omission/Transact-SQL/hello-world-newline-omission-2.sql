@@ -1,1 +1,1 @@
- select 'Goodby, World!'
+ select 'Goodbye, World!'

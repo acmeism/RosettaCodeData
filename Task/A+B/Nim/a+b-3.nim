@@ -6,7 +6,7 @@ proc aplusb(a,b: float): float =
 proc getnumber(): float =
   try:
     parseFloat(readLine(stdin))
-  except EInvalidValue:
+  except ValueError:
     echo("Please enter a number: ")
     getnumber()
 

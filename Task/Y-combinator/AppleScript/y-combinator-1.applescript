@@ -1,64 +1,62 @@
--- Y COMBINATOR
+-- Y COMBINATOR ---------------------------------------------------------------
 
 on |Y|(f)
     script
-        on lambda(y)
+        on |λ|(y)
             script
-                on lambda(arg)
-                    y's lambda(y)'s lambda(arg)
-                end lambda
+                on |λ|(x)
+                    y's |λ|(y)'s |λ|(x)
+                end |λ|
             end script
 
-            f's lambda(result)
-
-        end lambda
+            f's |λ|(result)
+        end |λ|
     end script
 
-    result's lambda(result)
+    result's |λ|(result)
 end |Y|
 
 
--- TEST
+-- TEST -----------------------------------------------------------------------
 on run
 
     -- Factorial
     script fact
-        on lambda(f)
+        on |λ|(f)
             script
-                on lambda(n)
+                on |λ|(n)
                     if n = 0 then return 1
-                    n * (f's lambda(n - 1))
-                end lambda
+                    n * (f's |λ|(n - 1))
+                end |λ|
             end script
-        end lambda
+        end |λ|
     end script
 
 
     -- Fibonacci
     script fib
-        on lambda(f)
+        on |λ|(f)
             script
-                on lambda(n)
+                on |λ|(n)
                     if n = 0 then return 0
                     if n = 1 then return 1
-                    (f's lambda(n - 2)) + (f's lambda(n - 1))
-                end lambda
+                    (f's |λ|(n - 2)) + (f's |λ|(n - 1))
+                end |λ|
             end script
-        end lambda
+        end |λ|
     end script
 
-    {facts:map(|Y|(fact), range(0, 11)), fibs:map(|Y|(fib), range(0, 20))}
+    {facts:map(|Y|(fact), enumFromTo(0, 11)), fibs:map(|Y|(fib), enumFromTo(0, 20))}
 
     --> {facts:{1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800, 39916800},
-    --> fibs:{0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765}}
+
+    --> fibs:{0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987,
+    --           1597, 2584, 4181, 6765}}
 
 end run
 
 
----------------------------------------------------------------------------
-
-
--- GENERIC FUNCTIONS (FOR TEST)
+-- GENERIC FUNCTIONS FOR TEST -------------------------------------------------
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -66,14 +64,14 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
 end map
 
--- range :: Int -> Int -> [Int]
-on range(m, n)
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
     if n < m then
         set d to -1
     else
@@ -84,7 +82,7 @@ on range(m, n)
         set end of lst to i
     end repeat
     return lst
-end range
+end enumFromTo
 
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
@@ -93,7 +91,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

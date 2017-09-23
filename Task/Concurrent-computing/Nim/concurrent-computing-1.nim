@@ -1,8 +1,8 @@
 const str = ["Enjoy", "Rosetta", "Code"]
 
-var thr: array[3, TThread[int32]]
+var thr: array[3, Thread[int32]]
 
-proc f(i) {.thread.} =
+proc f(i:int32) {.thread.} =
   echo str[i]
 
 for i in 0..thr.high:

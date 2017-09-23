@@ -1,86 +1,30 @@
-#![feature(iter_arith)]
-use std::cmp::max;
-use std::vec::Vec;
+use std::cmp;
 
-
-// This struct is used to store our items that we want in our knap-sack.
-#[derive(Clone, Debug)]
-struct Item<'a> {
-    name: &'a str,
+struct Item {
+    name: &'static str,
     weight: usize,
     value: usize
 }
 
-
-// This is a bottom-up dynamic programming solution to the 0-1 knap-sack problem.
-//      maximize value
-//      subject to weights <= max_weight
-fn knapsack01_dyn<'a>(items: &[Item<'a>], max_weight: usize) -> Vec<Item<'a>> {
-    // Imagine we wrote a recursive function(item, max_weight) that returns a
-    // usize corresponding to the maximum cumulative value by considering a
-    // subset of items such that the combined weight <= max_weight.
-    //
-    // fn best_value(item: usize, max_weight: usize) -> usize {
-    //     if item == 0 {
-    //         return 0;
-    //     }
-    //     if items[item - 1].weight > max_weight {
-    //         return best_value(item - 1, max_weight);
-    //     }
-    //     return max(best_value(item - 1, max_weight),
-    //                best_value(item - 1, max_weight - items[item - 1].weight)
-    //                + items[item - 1].value);
-    //     }
-    // }
-    //
-    // best_value(n_items, max_weight) is equal to the maximum value that
-    // we can add to the bag.
-    //
-    // The problem with using this function is that it performs redundant
-    // calculations.
-    //
-    // The dynamic programming solution is to precompute all of the values
-    // we need and put them into a 2D array.
-    //
-    // In a similar vein, the top-down solution would be to memoize the
-    // function then compute the results on demand.
-
-    let mut best_value = vec![vec![0usize; max_weight + 1]; items.len() + 1];
-
-    // Loop over the items.
+fn knapsack01_dyn(items: &[Item], max_weight: usize) -> Vec<&Item> {
+    let mut best_value = vec![vec![0; max_weight + 1]; items.len() + 1];
     for (i, it) in items.iter().enumerate() {
-        // Loop over the weights.
         for w in 1 .. max_weight + 1 {
             best_value[i + 1][w] =
-                // do we have room in our knapsack?
                 if it.weight > w {
-                    // if we don't, then we'll say that the value doesn't change
-                    // when considering this item
-                    best_value[i][w].clone()
+                    best_value[i][w]
                 } else {
-                    // If we do, then we have to see if the value we gain by adding
-                    // the item, given the weight, is better than not adding the item.
-                    max(best_value[i][w].clone(), best_value[i][w - it.weight] + it.value)
+                    cmp::max(best_value[i][w], best_value[i][w - it.weight] + it.value)
                 }
         }
     }
 
-    // A possibly over-allocated dynamically sized vector to push results to.
     let mut result = Vec::with_capacity(items.len());
+    let mut left_weight = max_weight;
 
-    // Variable representing the weight left in the bag
-    let mut left_weight = max_weight.clone();
-
-    // We built up the solution space through a forward pass over the data,
-    // now we have to traverse backwards to get the solution.
     for (i, it) in items.iter().enumerate().rev() {
-        // We can check if an item should be added to the knap-sack by
-        // comparing best_value with and without this item. If best_value
-        // added this item then so should we.
         if best_value[i + 1][left_weight] != best_value[i][left_weight] {
-            result.push(it.clone());
-            // We remove the weight of the object from the remaining weight
-            // we can add to the bag.
+            result.push(it);
             left_weight -= it.weight;
         }
     }
@@ -92,9 +36,7 @@ fn knapsack01_dyn<'a>(items: &[Item<'a>], max_weight: usize) -> Vec<Item<'a>> {
 fn main () {
     const MAX_WEIGHT: usize = 400;
 
-    // Static immutable allocation of our items.
-    static ITEMS: &'static [Item<'static>] = &[
-        // Too much repetition of field names here!
+    const ITEMS: &[Item] = &[
         Item { name: "map",                    weight: 9,   value: 150 },
         Item { name: "compass",                weight: 13,  value: 35 },
         Item { name: "water",                  weight: 153, value: 200 },
@@ -123,12 +65,9 @@ fn main () {
 
     // We reverse the order because we solved the problem backward.
     for it in items.iter().rev() {
-        println!("{:?}", it);
+        println!("{}", it.name);
     }
 
-    let tot_weight: usize = items.iter().map(|w| w.weight).sum();
-    println!("Total weight: {}", tot_weight);
-
-    let tot_value: usize = items.iter().map(|w| w.value).sum();
-    println!("Total value: {}", tot_value);
+    println!("Total weight: {}", items.iter().map(|w| w.weight).sum::<usize>());
+    println!("Total value: {}", items.iter().map(|w| w.value).sum::<usize>());
 }

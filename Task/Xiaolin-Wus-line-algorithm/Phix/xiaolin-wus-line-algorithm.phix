@@ -1,0 +1,120 @@
+--
+-- demo\rosetta\XiaolinWuLine.exw
+-- ==============================
+--
+constant TITLE = "Xiaolin Wu's line algorithm"
+
+bool bresline = false   -- space toggles, for comparison
+
+include pGUI.e
+
+Ihandle dlg, canvas
+cdCanvas cddbuffer, cdcanvas
+
+constant BACK = CD_PARCHMENT,
+         LINE = CD_BLUE,
+         rB = red(BACK), gB = green(BACK), bB = blue(BACK),
+         rL = red(LINE), gL = green(LINE), bL = blue(LINE)
+
+procedure plot(atom x, atom y, atom c, bool steep=false)
+--  plot the pixel at (x, y) with brightness c (where 0 <= c <= 1)
+    if steep then {x,y} = {y,x} end if
+    atom C = 1-c
+    c = rgb(rL*c+rB*C,gL*c+gB*C,bL*c+bB*C)
+    cdCanvasPixel(cddbuffer, x, y, c)
+end procedure
+
+procedure plot2(atom x, atom y, atom f, atom xgap, bool steep)
+    plot(x,y,(1-f)*xgap,steep)
+    plot(x,y+1,f*xgap,steep)
+end procedure
+
+function fpart(atom x)
+    return x - floor(x)     -- fractional part of x
+end function
+
+procedure draw_line(atom x0,y0,x1,y1)
+    if bresline then
+        cdCanvasLine(cddbuffer, x0, y0, x1, y1)
+        return
+    end if
+    bool steep := abs(y1 - y0) > abs(x1 - x0)
+    if steep then
+        {x0, y0, x1, y1} = {y0, x0, y1, x1}
+    end if
+    if x0>x1 then
+        {x0, x1, y0, y1} = {x1, x0, y1, y0}
+    end if
+
+    atom dx := x1 - x0,
+         dy := y1 - y0,
+         gradient := iff(dx=0? 1 : dy / dx)
+
+    -- handle first endpoint
+    atom xend := round(x0),
+         yend := y0 + gradient * (xend - x0),
+         xgap := 1-fpart(x0 + 0.5),
+         xpxl1 := xend, -- this will be used in the main loop
+         ypxl1 := floor(yend)
+    plot2(xpxl1, ypxl1, fpart(yend), xgap, steep)
+    atom intery := yend + gradient -- first y-intersection for the main loop
+
+    -- handle second endpoint
+    xend := round(x1)
+    yend := y1 + gradient * (xend - x1)
+    xgap := fpart(x1 + 0.5)
+    atom xpxl2 := xend, -- this will be used in the main loop
+         ypxl2 := floor(yend)
+    plot2(xpxl2, ypxl2, fpart(yend), xgap, steep)
+
+    -- main loop
+    for x = xpxl1+1 to xpxl2-1 do
+        plot2(x, floor(intery), fpart(intery), 1, steep)
+        intery += gradient
+    end for
+end procedure
+
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+    integer {w, h} = sq_sub(IupGetIntInt(canvas, "DRAWSIZE"),10)
+    cdCanvasActivate(cddbuffer)
+    cdCanvasClear(cddbuffer)
+    draw_line(0,0,200,200)
+    draw_line(w,0,200,200)
+    draw_line(0,h,200,200)
+    draw_line(w,h,200,200)
+    cdCanvasFlush(cddbuffer)
+    return IUP_DEFAULT
+end function
+
+function map_cb(Ihandle ih)
+    cdcanvas = cdCreateCanvas(CD_IUP, ih)
+    cddbuffer = cdCreateCanvas(CD_DBUFFER, cdcanvas)
+    cdCanvasSetBackground(cddbuffer, BACK)
+    cdCanvasSetForeground(cddbuffer, LINE)
+    return IUP_DEFAULT
+end function
+
+function esc_close(Ihandle /*ih*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    if c=' ' then
+        bresline = not bresline
+        IupRedraw(canvas)
+    end if
+    return IUP_CONTINUE
+end function
+
+procedure main()
+    IupOpen()
+    canvas = IupCanvas(NULL)
+    IupSetAttribute(canvas, "RASTERSIZE", "640x480")
+    IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
+    IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+    dlg = IupDialog(canvas)
+    IupSetAttribute(dlg, "TITLE", TITLE)
+    IupSetCallback(dlg, "K_ANY", Icallback("esc_close"))
+    IupShow(dlg)
+    IupSetAttribute(canvas, "RASTERSIZE", NULL)
+    IupMainLoop()
+    IupClose()
+end procedure
+main()

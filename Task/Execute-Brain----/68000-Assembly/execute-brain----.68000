@@ -1,0 +1,331 @@
+;
+; Brainfuck interpreter by Thorham
+;
+; 68000+ AmigaOs2+
+;
+; Cell size is a byte
+;
+    incdir  "asminc:"
+
+    include "dos/dosextens.i"
+    include "lvo/lvos.i"
+
+execBase equ 4
+
+start
+
+; parse command line parameter
+
+    move.l  a0,fileName
+
+    move.b  (a0)+,d0
+    beq     exit ; no parameter
+
+    cmp.b   #'"',d0 ; filter out double quotes
+    bne     .loop
+
+    addq.l  #1,fileName
+
+.loop
+    move.b  (a0)+,d0
+
+    cmp.b   #'"',d0 ; filter out double quotes
+    beq     .done
+
+    cmp.b   #32,d0
+    bge     .loop
+
+.done
+    clr.b   -(a0) ; end of string
+
+; open dos library
+
+    move.l  execBase,a6
+
+    lea     dosName,a1
+    moveq   #36,d0
+    jsr     _LVOOpenLibrary(a6)
+    move.l  d0,dosBase
+    beq     exit
+
+; get stdin and stdout handles
+
+    move.l  dosBase,a6
+
+    jsr     _LVOInput(a6)
+    move.l  d0,stdIn
+    beq     exit
+
+    jsr     _LVOOutput(a6)
+    move.l  d0,stdOut
+    beq     exit
+
+    move.l  stdIn,d1
+    jsr     _LVOFlush(a6)
+
+; open file
+
+    move.l  fileName,d1
+    move.l  #MODE_OLDFILE,d2
+    jsr     _LVOOpen(a6)
+    move.l  d0,fileHandle
+    beq     exit
+
+; examine file
+
+    lea     fileInfoBlock,a4
+
+    move.l  fileHandle,d1
+    move.l  a4,d2
+    jsr     _LVOExamineFH(a6)
+    tst.w   d0
+    beq     exit
+
+; exit if the file is a folder
+
+    tst.l   fib_DirEntryType(a4)
+    bge     exit
+
+; allocate file memory
+
+    move.l  execBase,a6
+
+    move.l  fib_Size(a4),d0
+    beq     exit ; exit if file is empty
+    clr.l   d1
+    jsr     _LVOAllocVec(a6)
+    move.l  d0,program
+    beq     exit
+
+; read file
+
+    move.l  dosBase,a6
+
+    move.l  fileHandle,d1
+    move.l  program,d2
+    move.l  fib_Size(a4),d3
+    jsr     _LVORead(a6)
+    tst     d0
+    ble     exit ; exit if read didn't succeed
+
+; close file
+
+    move.l  fileHandle,d1
+    jsr     _LVOClose(a6)
+    clr.l   fileHandle
+
+; clear tape (bss section is allocated by os but not cleared)
+
+    lea     tape,a0
+    lea     tapeEnd,a1
+
+.loopClear
+    clr.b   (a0)+
+    cmp.l   a0,a1
+    bne     .loopClear
+
+; interpreter
+
+    move.l  program,a2
+    lea     tape,a3
+
+    clr.l   d2
+
+    move.l  a2,d6 ; start of program
+    move.l  a2,d7 ; end of program
+    add.l   fib_Size(a4),d7
+
+loop
+    move.b  (a2)+,d2
+
+    cmp.b   #">",d2
+    beq     .incPtr
+
+    cmp.b   #"<",d2
+    beq     .decPtr
+
+    cmp.b   #"+",d2
+    beq     .incMem
+
+    cmp.b   #"-",d2
+    beq     .decMem
+
+    cmp.b   #".",d2
+    beq     .outMem
+
+    cmp.b   #",",d2
+    beq     .inMem
+
+    cmp.b   #"[",d2
+    beq     .jmpForward
+
+    cmp.b   #"]",d2
+    beq     .jmpBack
+
+; next command
+
+.next
+    cmp.l   d7,a2 ; test end of program
+    blt     loop
+
+; end of program reached
+
+    bra     exit
+
+; command implementations
+
+.incPtr
+    addq.l  #1,a3
+    cmp.l   #tapeEnd,a3 ; test end of tape
+    bge     exit
+    bra     .next
+
+.decPtr
+    subq.l  #1,a3
+    cmp.l   #tape,a3 ; test start of tape
+    blt     exit
+    bra     .next
+
+.incMem
+    addq.b  #1,(a3)
+    bra     .next
+
+.decMem
+    subq.b  #1,(a3)
+    bra     .next
+
+.outMem
+    move.l  stdOut,d1
+    move.b  (a3),d2
+    jsr     _LVOFPutC(a6)
+    bra     .next
+
+.inMem
+    move.l  stdIn,d1
+    jsr     _LVOFGetC(a6)
+
+    cmp.b   #27,d0 ; convert escape to 0
+    bne     .notEscape
+    moveq   #0,d0
+.notEscape
+    move.b  d0,(a3)
+
+    bra     .next
+
+.jmpForward
+    tst.b   (a3)
+    bne     .next
+
+    move.l  a2,a4
+    clr.l   d3
+
+.loopf
+    cmp.l   d7,a4 ; test end of program
+    bge     exit
+
+    move.b  (a4)+,d2
+
+    cmp.b   #"[",d2
+    bne     .lf
+
+    addq.l  #1,d3
+    bra     .loopf
+.lf
+    cmp.b   #"]",d2
+    bne     .loopf
+
+    subq.l  #1,d3
+    bge     .loopf
+
+    move.l  a4,a2
+    bra     .next
+
+.jmpBack
+    tst.b   (a3)
+    beq     .next
+
+    move.l  a2,a4
+    clr.l   d3
+
+.loopb
+    move.b  -(a4),d2
+
+    cmp.l   d6,a4 ; test start of program
+    blt     exit
+
+    cmp.b   #"]",d2
+    bne     .lb
+
+    addq.l  #1,d3
+    bra     .loopb
+.lb
+    cmp.b   #"[",d2
+    bne     .loopb
+
+    subq.l  #1,d3
+    bgt     .loopb
+
+    move.l  a4,a2
+    bra     .next
+
+; cleanup and exit
+
+exit
+    move.l  dosBase,a6
+
+    move.l  fileHandle,d1
+    beq     .noFile
+    jsr     _LVOClose(a6)
+.noFile
+
+    move.l  execBase,a6
+
+    move.l  program,a1
+    tst.l   a1
+    beq     .noMem
+    jsr     _LVOFreeVec(a6)
+.noMem
+
+    move.l  dosBase,a1
+    tst.l   a1
+    beq     .noLib
+    jsr     _LVOCloseLibrary(a6)
+.noLib
+
+    rts
+
+; data
+
+    section data,data_p
+
+dosBase
+    dc.l    0
+
+fileName
+    dc.l    0
+
+fileHandle
+    dc.l    0
+
+fileInfoBlock
+    dcb.b   fib_SIZEOF
+
+stdIn
+    dc.l    0
+
+stdOut
+    dc.l    0
+
+program
+    dc.l    0
+
+dosName
+    dc.b    "dos.library",0
+
+; tape memory
+
+    section mem,bss_p
+
+tape
+    ds.b    1024*64
+tapeEnd

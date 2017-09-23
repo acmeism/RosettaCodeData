@@ -1,20 +1,4 @@
-#include<stdio.h>
-
-int main (void)
-{
-    int i;
-    for (i = 1; i <= 100; i++)
-    {
-        if (!(i % 15))
-            printf ("FizzBuzz");
-        else if (!(i % 3))
-            printf ("Fizz");
-        else if (!(i % 5))
-            printf ("Buzz");
-        else
-            printf ("%d", i);
-
-        printf("\n");
-    }
-    return 0;
-}
+  int i = 0 ;  char B[88] ;
+  while ( i++ < 100 )
+    !sprintf( B, "%s%s", i%3 ? "":"Fizz", i%5 ? "":"Buzz" )
+    ? sprintf( B, "%d", i ):0, printf( ", %s", B );

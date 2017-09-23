@@ -1,50 +1,49 @@
-public class Brackets {
-    public static boolean checkBrackets(String str){
-        int mismatchedBrackets = 0;
-        for(char ch:str.toCharArray()){
-            if(ch == '['){
-                mismatchedBrackets++;
-            }else if(ch == ']'){
-                mismatchedBrackets--;
-            }else{
-                return false; //non-bracket chars
+public class BalancedBrackets {
+
+    public static boolean hasBalancedBrackets(String str) {
+        int brackets = 0;
+        for (char ch : str.toCharArray()) {
+            if (ch == '[') {
+                brackets++;
+            } else if (ch == ']') {
+                brackets--;
+            } else {
+                return false;   // non-bracket chars
             }
-            if(mismatchedBrackets < 0){ //close bracket before open bracket
+            if (brackets < 0) {   // closing bracket before opening bracket
                 return false;
             }
         }
-        return mismatchedBrackets == 0;
+        return brackets == 0;
     }
 
-    public static String generate(int n){
-        if(n % 2 == 1){ //if n is odd we can't match brackets
-            return null;
-        }
-        String ans = "";
+    public static String generateBalancedBrackets(int n) {
+        assert n % 2 == 0;   // if n is odd we can't match brackets
+        char[] ans = new char[n];
         int openBracketsLeft = n / 2;
         int unclosed = 0;
-        while(ans.length() < n){
-            if(Math.random() >= .5 && openBracketsLeft > 0 || unclosed == 0){
-                ans += '[';
+        for (int i = 0; i < n; i++) {
+            if (Math.random() >= 0.5 && openBracketsLeft > 0 || unclosed == 0) {
+                ans[i] = '[';
                 openBracketsLeft--;
                 unclosed++;
-            }else{
-                ans += ']';
+            } else {
+                ans[i] = ']';
                 unclosed--;
             }
         }
-        return ans;
+        return String.valueOf(ans);
     }
 
-    public static void main(String[] args){
-        String[] tests = {"", "[]", "][", "[][]", "][][", "[[][]]", "[]][[]"};
-        for(int i = 0; i <= 16; i+=2){
-            String bracks = generate(i);
-            System.out.println(bracks + ": " + checkBrackets(bracks));
+    public static void main(String[] args) {
+        for (int i = 0; i <= 16; i += 2) {
+            String brackets = generateBalancedBrackets(i);
+            System.out.println(brackets + ": " + hasBalancedBrackets(brackets));
         }
 
-        for(String test: tests){
-            System.out.println(test + ": " + checkBrackets(test));
+        String[] tests = {"", "[]", "][", "[][]", "][][", "[[][]]", "[]][[]"};
+        for (String test : tests) {
+            System.out.println(test + ": " + hasBalancedBrackets(test));
         }
     }
 }

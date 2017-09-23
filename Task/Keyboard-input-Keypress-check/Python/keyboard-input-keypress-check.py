@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, unicode_literals, print_function
 
-import __future__
+import tty, termios
 import sys
 if sys.version_info.major < 3:
     import thread as _thread
@@ -13,7 +15,6 @@ try:
     from msvcrt import getch  # try to import Windows version
 except ImportError:
     def getch():   # define non-Windows version
-        import tty, termios
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
@@ -23,17 +24,28 @@ except ImportError:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         return ch
 
-char = None
-
 def keypress():
     global char
     char = getch()
 
-_thread.start_new_thread(keypress, ())
+def main():
+    global char
+    char = None
+    _thread.start_new_thread(keypress, ())
 
-while True:
-    if char is not None:
-        print("Key pressed is " + char.decode('utf-8'))
-        break
-    print("Program is running")
-    time.sleep(5)
+    while True:
+        if char is not None:
+            try:
+                print("Key pressed is " + char.decode('utf-8'))
+            except UnicodeDecodeError:
+                print("character can not be decoded, sorry!")
+                char = None
+            _thread.start_new_thread(keypress, ())
+            if char == 'q' or char == '\x1b':  # x1b is ESC
+                exit()
+            char = None
+        print("Program is running")
+        time.sleep(1)
+
+if __name__ == "__main__":
+    main()

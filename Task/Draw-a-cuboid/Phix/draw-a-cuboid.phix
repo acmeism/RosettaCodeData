@@ -1,17 +1,10 @@
-include ..\arwen\arwen.ew
-include ..\arwen\axtra.ew
+--
+-- demo\rosetta\draw_cuboid.exw
+--
+include pGUI.e
 
-constant main = create(Window, "Draw Cuboid", 0, 0, 20, 20, 625, 690, 0),
-         mainDC = getPrivateDC(main),
-         backDC = c_func(xCreateCompatibleDC, {NULL}),  -- the background
-         viewDC = c_func(xCreateCompatibleDC, {NULL}),  -- with animation
-         grey = #909090
-
-constant MainTimer = createTimer()
-
-integer dw = 0, dh = 0      -- client area width and height
-atom bmBack, bmView
-integer bmX = 0, bmY = 0    -- actual size of the bitmaps
+Ihandle dlg, canvas, hTimer
+cdCanvas cd_canvas
 
 -- arrays: 3D coordinates of vertices
 sequence x = {-2.0, +2.0, +2.0, -2.0,  -2.0, +2.0, +2.0, -2.0},
@@ -19,58 +12,130 @@ sequence x = {-2.0, +2.0, +2.0, -2.0,  -2.0, +2.0, +2.0, -2.0},
          z = {-1.0, -1.0, -1.0, -1.0,  +1.0, +1.0, +1.0, +1.0},
          Segment = {1,2, 2,3, 3,4, 4,1, 5,6, 6,7, 7,8, 8,5, 1,5, 2,6, 3,7, 4,8}
 
-constant  Size=50.0, Sz=0.008, Sx=-0.013 -- drawing size and tumbling speeds
+atom Size = 50.0,       -- drawing size
+     Sz = 0.008,        -- tumbling speeds
+     Sx =-0.013,        -- ""
+     Sy =-0.013,        -- ""
+     S = 2
 
-function mainHandler(integer id, integer msg, atom wParam, object lParam)
-atom farthest
-integer v1, v2, farv, c
-    if msg=WM_SIZE then
-        {{},{},dw,dh} = getClientRect(main)
-        if dw>bmX or dh>bmY then
-            -- we need bigger bitmaps
-            bmBack = c_func(xCreateCompatibleBitmap, {mainDC, dw, dh})
-            {} = deleteObject(selectObject(backDC,bmBack))
-            -- clear the background
-            setPenColor(grey)
-            setPenBkColor(grey)
-            drawRectangleh(backDC, True, 0, 0, dw, dh)
-            bmView = c_func(xCreateCompatibleBitmap, {mainDC, dw, dh})
-            {} = deleteObject(selectObject(viewDC,bmView))
-            {bmX,bmY} = {dw,dh}
+procedure draw_cube(integer wx, wh)
+    atom farthest = 0.0             -- find the farthest vertex
+    integer farv, v1, v2, c, style
+    for i=1 to 8 do
+        if z[i]>farthest then farthest = z[i]  farv = i end if
+    end for
+    for v=1 to 2*12 by 2 do         -- for all the vertices...
+        v1 = Segment[v]             -- get vertex number
+        v2 = Segment[v+1]
+        c = CD_RED
+        style = CD_CONTINUOUS
+        if v1=farv or v2=farv then
+            c = CD_BLUE
+            style = CD_DASHED
         end if
-    elsif msg=WM_PAINT then
-        -- start with a fresh copy of the background
-        void = c_func(xBitBlt,{viewDC,0,0,dw,dh,backDC,0,0,SRCCOPY})
-        farthest = 0.0                  -- find the farthest vertex
-        for i=1 to 8 do
-            if z[i]>farthest then farthest = z[i]  farv = i end if
-        end for
-        for v=1 to 2*12 by 2 do         -- for all the vertices...
-            v1 = Segment[v]             -- get vertex number
-            v2 = Segment[v+1]
-            c = Red; setPenStyle(Solid)
-            if v1=farv or v2=farv then c=Blue; setPenStyle(Dash) end if
-            drawLinesh(viewDC,{c,{x[v1]*Size+dw/2, y[v1]*Size+dh/2,
-                                  x[v2]*Size+dw/2, y[v2]*Size+dh/2}})
-        end for
-        void = c_func(xBitBlt,{mainDC,0,0,dw,dh,viewDC,0,0,SRCCOPY})
-    elsif msg=WM_TIMER then
-        for i=1 to 8 do
-            x[i] = x[i]+y[i]*Sz     -- rotate vertices in X-Y plane
-            y[i] = y[i]-x[i]*Sz
-            y[i] = y[i]+z[i]*Sx     -- rotate vertices in Y-Z plane
-            z[i] = z[i]-y[i]*Sx
-        end for
-        repaintWindow(main)
-    elsif msg=WM_SHOWWINDOW then
-        startTimer(MainTimer,main,33)
-    elsif msg=WM_CHAR
-      and wParam=VK_ESCAPE then
-        closeWindow(main)
-        if id or object(lParam) then end if -- suppress warnings
-    end if
-    return 0
-end function
-setHandler({main},routine_id("mainHandler"))
+        cdCanvasSetForeground(cd_canvas, c)
+        cdCanvasLineStyle(cd_canvas, style)
+        atom x1 = x[v1]*Size+wx,
+             y1 = y[v1]*Size+wh,
+             x2 = x[v2]*Size+wx,
+             y2 = y[v2]*Size+wh
+        cdCanvasLine(cd_canvas,x1,y1,x2,y2)
+    end for
+end procedure
 
-WinMain(main, SW_NORMAL)
+function canvas_action_cb(Ihandle canvas)
+    cdCanvasActivate(cd_canvas)
+    cdCanvasClear(cd_canvas)
+    integer {wx, wh} = sq_floor_div(IupGetIntInt(canvas, "DRAWSIZE"),2)
+    draw_cube(wx,wh)
+    cdCanvasFlush(cd_canvas)
+    return IUP_DEFAULT
+end function
+
+function canvas_map_cb(Ihandle canvas)
+    atom res = IupGetDouble(NULL, "SCREENDPI")/25.4
+    IupGLMakeCurrent(canvas)
+    cd_canvas = cdCreateCanvas(CD_GL, "10x10 %g", {res})
+    cdCanvasSetBackground(cd_canvas, CD_BLACK)
+    return IUP_DEFAULT
+end function
+
+function canvas_unmap_cb(Ihandle canvas)
+    cdKillCanvas(cd_canvas)
+    return IUP_DEFAULT
+end function
+
+function canvas_resize_cb(Ihandle /*canvas*/)
+    integer {canvas_width, canvas_height} = IupGetIntInt(canvas, "DRAWSIZE")
+    atom res = IupGetDouble(NULL, "SCREENDPI")/25.4
+    cdCanvasSetAttribute(cd_canvas, "SIZE", "%dx%d %g", {canvas_width, canvas_height, res})
+    return IUP_DEFAULT
+end function
+
+function k_any(Ihandle /*ih*/, atom c)
+    if c=K_ESC then
+        return IUP_CLOSE
+    elsif c=K_UP then
+        for i=1 to 8 do
+            y[i] = y[i]+z[i]*Sx*S   -- rotate vertices in Y-Z plane
+            z[i] = z[i]-y[i]*Sx*S
+        end for
+    elsif c=K_DOWN then
+        for i=1 to 8 do
+            y[i] = y[i]-z[i]*Sx*S   -- rotate vertices in Y-Z plane
+            z[i] = z[i]+y[i]*Sx*S
+        end for
+    elsif c=K_LEFT then
+        for i=1 to 8 do
+            x[i] = x[i]+z[i]*Sy*S   -- rotate vertices in X-Z plane
+            z[i] = z[i]-x[i]*Sy*S
+        end for
+    elsif c=K_RIGHT then
+        for i=1 to 8 do
+            x[i] = x[i]-z[i]*Sy*S   -- rotate vertices in X-Z plane
+            z[i] = z[i]+x[i]*Sy*S
+        end for
+    elsif c='+' then
+        Size += 5
+    elsif c='-' then
+        Size = max(10,Size-5)
+    elsif c=' ' then
+        IupSetInt(hTimer,"RUN",not IupGetInt(hTimer,"RUN"))
+    end if
+    IupRedraw(canvas)
+    return IUP_CONTINUE
+end function
+
+function timer_cb(Ihandle /*ih*/)
+    for i=1 to 8 do
+        x[i] = x[i]+y[i]*Sz*S   -- rotate vertices in X-Y plane
+        y[i] = y[i]-x[i]*Sz*S
+        y[i] = y[i]+z[i]*Sx*S   -- rotate vertices in Y-Z plane
+        z[i] = z[i]-y[i]*Sx*S
+        x[i] = x[i]+z[i]*Sy*S   -- rotate vertices in X-Z plane
+        z[i] = z[i]-x[i]*Sy*S
+    end for
+    IupUpdate(canvas)
+    return IUP_IGNORE
+end function
+
+procedure main()
+    IupOpen()
+    IupImageLibOpen()
+    canvas = IupGLCanvas()
+    IupSetAttribute(canvas, "RASTERSIZE", "640x480")
+    IupSetCallback(canvas, "ACTION", Icallback("canvas_action_cb"))
+    IupSetCallback(canvas, "MAP_CB", Icallback("canvas_map_cb"))
+    IupSetCallback(canvas, "UNMAP_CB", Icallback("canvas_unmap_cb"))
+    IupSetCallback(canvas, "RESIZE_CB", Icallback("canvas_resize_cb"))
+    dlg = IupDialog(IupVbox({canvas}))
+    IupSetAttribute(dlg, "TITLE", "Draw Cuboid")
+    IupSetCallback(dlg, "K_ANY",  Icallback("k_any"))
+    IupShow(dlg)
+    IupSetAttribute(canvas, "RASTERSIZE", NULL)
+    hTimer = IupTimer(Icallback("timer_cb"), 40)
+
+    IupMainLoop()
+    IupClose()
+end procedure
+main()

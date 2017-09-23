@@ -1,0 +1,103 @@
+#
+# 4bitadder.icn, emulate a 4 bit adder. Using only and, or, not
+#
+record carry(c)
+
+#
+# excercise the adder, either "test" or 2 numbers
+#
+procedure main(argv)
+    c := carry(0)
+
+    # cli test
+    if map(\argv[1]) == "test" then {
+        # Unicon allows explicit radix literals
+        every i := (2r0000  | 2r1001 | 2r1111) do {
+            write(i, "+0,3,9,15")
+            every j := (0 | 3 | 9 | 15) do {
+                ans := fourbitadder(t1 := fourbits(i), t2 := fourbits(j), c)
+                write(t1, " + ", t2, " = ", c.c, ":", ans)
+            }
+        }
+        return
+    }
+    # command line, two values, if given, first try four bit binaries
+    cli := fourbitadder(t1 := (*\argv[1] = 4 & fourbits("2r" || argv[1])),
+                        t2 := (*\argv[2] = 4 & fourbits("2r" || argv[2])), c)
+    write(t1, " + ", t2, " = ", c.c, ":", \cli) & return
+
+    # if no result for that, try decimal values
+    cli := fourbitadder(t1 := fourbits(\argv[1]),
+                        t2 := fourbits(\argv[2]), c)
+    write(t1, " + ", t2, " = ", c.c, ":", \cli) & return
+
+    # or display the help
+    write("Usage: 4bitadder [\"test\"] | [bbbb bbbb] | [n n], range 0-15")
+end
+
+#
+# integer to fourbits as string
+#
+procedure fourbits(i)
+    local s, t
+    if not numeric(i) then fail
+    if not (0 <= integer(i) < 16) then {
+        write("out of range: ", i)
+        fail
+    }
+    s := ""
+    every t := (8 | 4 | 2 | 1) do {
+        s ||:= if iand(i, t) ~= 0 then "1" else "0"
+    }
+    return s
+end
+
+#
+# low level xor emulation with or, and, not
+#
+procedure xor(a, b)
+    return ior(iand(a, icom(b)), iand(b, icom(a)))
+end
+
+#
+# half adder, and into carry, xor for result bit
+#
+procedure halfadder(a, b, carry)
+    carry.c := iand(a,b)
+    return xor(a,b)
+end
+
+#
+# full adder, two half adders, or for carry
+#
+procedure fulladder(a, b, c0, c1)
+    local c2, c3, r
+    c2 := carry(0)
+    c3 := carry(0)
+
+    # connect two half adders with carry
+    r := halfadder(halfadder(c0.c, a, c2), b, c3)
+    c1.c := ior(c2.c, c3.c)
+    return r
+end
+
+#
+# fourbit adder, as bit string
+#
+procedure fourbitadder(a, b, cr)
+    local cs, c0, c1, c2, s
+    cs := carry(0)
+    c0 := carry(0)
+    c1 := carry(0)
+    c2 := carry(0)
+
+    # create a string for subscripting. strings are immutable, new strings created
+    s := "0000"
+    # bit 0 is string position 4
+    s[4+:1] := fulladder(a[4+:1], b[4+:1], cs, c0)
+    s[3+:1] := fulladder(a[3+:1], b[3+:1], c0, c1)
+    s[2+:1] := fulladder(a[2+:1], b[2+:1], c1, c2)
+    s[1+:1] := fulladder(a[1+:1], b[1+:1], c2, cr)
+    # cr.c is the overflow carry
+    return s
+end

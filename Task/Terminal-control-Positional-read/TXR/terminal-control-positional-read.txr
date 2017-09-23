@@ -1,0 +1,72 @@
+;;; Type definitions and constants
+
+(typedef BOOL (enum BOOL FALSE TRUE))
+(typedef HANDLE cptr)
+(typedef WCHAR wchar)
+(typedef DWORD uint32)
+(typedef WORD uint16)
+(typedef SHORT short)
+
+(typedef COORD
+         (struct COORD
+           (X SHORT)
+           (Y SHORT)))
+
+(typedef SMALL_RECT
+         (struct SMALL_RECT
+           (Left SHORT)
+           (Top SHORT)
+           (Right SHORT)
+           (Bottom SHORT)))
+
+(typedef CONSOLE_SCREEN_BUFFER_INFO
+         (struct CONSOLE_SCREEN_BUFFER_INFO
+           (dwSize COORD)
+           (dwCursorPosition COORD)
+           (wAttributes WORD)
+           (srWindow SMALL_RECT)
+           (dwMaximumWindowSize COORD)))
+
+;;; Various constants
+
+(defvarl STD_INPUT_HANDLE (- #x100000000 10))
+(defvarl STD_OUTPUT_HANDLE (- #x100000000 11))
+(defvarl STD_ERROR_HANDLE (- #x100000000 12))
+
+(defvarl NULL cptr-null)
+(defvarl INVALID_HANDLE_VALUE (cptr-int -1))
+
+;;; Foreign Function Bindings
+
+(with-dyn-lib "kernel32.dll"
+  (deffi GetStdHandle "GetStdHandle" HANDLE (DWORD))
+  (deffi GetConsoleScreenBufferInfo "GetConsoleScreenBufferInfo"
+         BOOL (HANDLE (ptr-out CONSOLE_SCREEN_BUFFER_INFO)))
+  (deffi ReadConsoleOutputCharacter "ReadConsoleOutputCharacterW"
+         BOOL (HANDLE (ptr-out (array 1 WCHAR))
+                       DWORD COORD (ptr-out (array 1 DWORD)))))
+
+;;; Now the character at <2, 5> -- column 3, row 6.
+
+(let ((console-handle (GetStdHandle STD_OUTPUT_HANDLE)))
+  (when (equal console-handle INVALID_HANDLE_VALUE)
+    (error "couldn't get console handle"))
+
+  (let* ((cinfo (new CONSOLE_SCREEN_BUFFER_INFO))
+         (getinfo-ok (GetConsoleScreenBufferInfo console-handle cinfo))
+         (coord (if getinfo-ok
+                  ^#S(COORD X ,(+ 2 cinfo.srWindow.Left)
+                            Y ,(+ 5 cinfo.srWindow.Top))
+                  #S(COORD X 0 Y 0)))
+         (chars (vector 1))
+         (nread (vector 1))
+         (read-ok (ReadConsoleOutputCharacter console-handle chars
+                                              1 coord nread)))
+    (when (eq getinfo-ok 'FALSE)
+      (error "GetConsoleScreenBufferInfo failed"))
+    (prinl cinfo)
+    (when (eq read-ok 'FALSE)
+      (error "ReadConsoleOutputCharacter failed"))
+    (unless (plusp [nread 0])
+      (error "ReadConsoleOutputCharacter read zero characters"))
+    (format t "character is ~s\n" [chars 0])))

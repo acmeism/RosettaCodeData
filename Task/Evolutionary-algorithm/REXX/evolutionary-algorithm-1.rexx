@@ -26,7 +26,7 @@ fitness: parse arg x; $=0;   do k=1 for Ltar; $=$+(substr(x,k,1)==substr(target,
          return $
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 mutate:  parse arg x,rate;  $=                   /*set  X  to 1st argument, RATE to 2nd.*/
-                   do j=1  for Ltar;       r=random(1,100000)    /*REXX's max for RANSOM*/
+                   do j=1  for Ltar;       r=random(1,100000)    /*REXX's max for RANDOM*/
                    if .00001*r<=rate  then $=$ || substr(abc,r//Labc+1, 1)
                                       else $=$ || substr(x  ,j        , 1)
                    end   /*j*/

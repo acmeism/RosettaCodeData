@@ -9,7 +9,11 @@ public class ShuntingYard {
     }
 
     static String infixToPostfix(String infix) {
+        /* To find out the precedence, we take the index of the
+           token in the ops string and divide by 2 (rounding down).
+           This will give us: 0, 0, 1, 1, 2 */
         final String ops = "-+/*^";
+
         StringBuilder sb = new StringBuilder();
         Stack<Integer> s = new Stack<>();
 

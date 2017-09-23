@@ -1,1 +1,0 @@
-FileTools:-Size( "input.txt" )

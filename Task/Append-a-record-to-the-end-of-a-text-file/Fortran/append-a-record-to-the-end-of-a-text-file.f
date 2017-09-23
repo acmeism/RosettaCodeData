@@ -45,7 +45,7 @@ Choose the existing file, and append a further record to it.
      1 DETAILS("X Yz","Room 1003","(234)555-8193",
      2  "(234)555-033","xyz@rosettacode.org"),
      3 "/home/xyz","/bin/bash")
-      WRITE (F,*) NOTE					!Append it's content to the file.
+      WRITE (F,*) NOTE					!Append its content to the file.
       CLOSE (F)
 
 Chase through the file, revealing what had been written..

@@ -1,0 +1,82 @@
+; x86_64 linux nasm
+
+struc Stack
+  maxSize: resb 8
+  currentSize: resb 8
+  contents:
+endStruc
+
+section .data
+
+soError: db "Stack Overflow Exception", 10
+seError: db "Stack Empty Error", 10
+
+
+section .text
+
+createStack:
+; IN: max number of elements (rdi)
+; OUT: pointer to new stack (rax)
+  push rdi
+  xor rdx, rdx
+  mov rbx, 8
+  mul rbx
+  mov rcx, rax
+  mov rax, 12
+  mov rdi, 0
+  syscall
+  push rax
+  mov rdi, rax
+  add rdi, rcx
+  mov rax, 12
+  syscall
+  pop rax
+  pop rbx
+  mov qword [rax + maxSize], rbx
+  mov qword [rax + currentSize], 0
+  ret
+
+
+push:
+; IN: stack to operate on (stack argument), element to push (rdi)
+; OUT: void
+  mov rax, qword [rsp + 8]
+  mov rbx, qword [rax + currentSize]
+  cmp rbx, qword [rax + maxSize]
+  je stackOverflow
+  lea rsi, [rax + contents + 8*rbx]
+  mov qword [rsi], rdi
+  add qword [rax + currentSize], 1
+  ret
+
+
+pop:
+; pop
+; IN: stack to operate on (stack argument)
+; OUT: element from stack top
+  mov rax, qword [rsp + 8]
+  mov rbx, qword [rax + currentSize]
+  cmp rbx, 0
+  je stackEmpty
+  sub rbx, 1
+  lea rsi, [rax + contents + 8*rbx]
+  mov qword [rax + currentSize], rbx
+  mov rax, qword [rsi]
+  ret
+
+
+; stack operation exceptions
+stackOverflow:
+  mov rsi, soError
+  mov rdx, 25
+  jmp errExit
+stackEmpty:
+  mov rsi, seError
+  mov rdx, 18
+errExit:
+  mov rax, 1
+  mov rdi, 1
+  syscall
+  mov rax, 60
+  mov rdi, 1
+  syscall

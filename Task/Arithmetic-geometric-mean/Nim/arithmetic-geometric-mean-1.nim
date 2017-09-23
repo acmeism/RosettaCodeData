@@ -11,4 +11,4 @@ proc agm(a, g: float,delta: float = 1.0e-15): float =
     aOld = aNew
   result = aOld
 
-echo ($agm(1.0,1.0/sqrt(2)))
+echo $agm(1.0,1.0/sqrt(2.0))

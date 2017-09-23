@@ -1,4 +1,3 @@
-//Author Gavryushin Ivan @dcc0
 <?php
 $b="0123";
 $a=strrev($b);

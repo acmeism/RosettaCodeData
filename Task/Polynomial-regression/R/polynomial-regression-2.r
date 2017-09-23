@@ -1,2 +1,1 @@
-(Intercept)           x      I(x^2)
-          1           2           3
+coef(lm(y ~ poly(x, 2, raw=T)))

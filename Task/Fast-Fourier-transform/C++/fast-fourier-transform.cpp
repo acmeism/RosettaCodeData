@@ -33,12 +33,14 @@ void fft(CArray& x)
 
 // Cooley-Tukey FFT (in-place, breadth-first, decimation-in-frequency)
 // Better optimized but less intuitive
+// !!! Warning : in some cases this code make result different from not optimased version above (need to fix bug)
+// The bug is now fixed @2017/05/30
 void fft(CArray &x)
 {
 	// DFT
 	unsigned int N = x.size(), k = N, n;
 	double thetaT = 3.14159265358979323846264338328L / N;
-	Complex phiT = Complex(cos(thetaT), sin(thetaT)), T;
+	Complex phiT = Complex(cos(thetaT), -sin(thetaT)), T;
 	while (k > 1)
 	{
 		n = k;

@@ -1,12 +1,19 @@
-function nreps(s, n) {
-  var o = '';
-  if (n < 1) return o;
-  while (n > 1) {
-    if (n & 1) o += s;
-    n >>= 1;
-    s += s;
-  }
-  return o + s;
-}
+(() => {
+    'use strict';
 
-nreps('ha', 50000);
+    // replicate :: Int -> String -> String
+    const replicate = (n, s) => {
+        let v = [s],
+            o = [];
+        if (n < 1) return o;
+        while (n > 1) {
+            if (n & 1) o = o + v;
+            n >>= 1;
+            v = v + v;
+        }
+        return o.concat(v);
+    };
+
+
+    return replicate(5000, "ha")
+})();

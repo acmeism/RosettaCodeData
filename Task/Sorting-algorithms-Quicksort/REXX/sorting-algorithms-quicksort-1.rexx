@@ -5,35 +5,35 @@ call qSort       #                               /*invoke the  quicksort  subrou
 call show@   ' after sort'                       /*show  the   after   array elements.  */
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-qSort: procedure expose @.;  a.1=1;  b.1=arg(1)  /*access the caller's local variable.  */
+qSort: procedure expose @.; a.1=1; parse arg b.1 /*access the caller's local variable.  */
        $=1
-               do  while  $\==0;    L=a.$;   t=b.$;   $=$-1;      if t<2  then iterate
-               h=L+t-1;             ?=L+t%2
-               if @.h<@.L  then if @.?<@.h  then do;  p=@.h;  @.h=@.L;  end
+               do  while  $\==0;    L=a.$;     t=b.$;     $=$-1;      if t<2  then iterate
+               H=L+t-1;             ?=L+t%2
+               if @.H<@.L  then if @.?<@.H  then do;  p=@.H;  @.H=@.L;  end
                                             else if @.?>@.L  then p=@.L
                                                              else do;  p=@.?; @.?=@.L; end
-                           else if @.?<@.l  then p=@.L
-                                            else if @.?>@.h  then do;  p=@.h; @.h=@.L; end
+                           else if @.?<@.L  then p=@.L
+                                            else if @.?>@.H  then do;  p=@.H; @.H=@.L; end
                                                              else do;  p=@.?; @.?=@.L; end
                j=L+1;                             k=h
                       do forever
-                          do j=j         while j<=k & @.j<=p;  end  /*a tinie-tiny loop.*/
+                          do j=j         while j<=k & @.j<=p;  end  /*a tinie─tiny loop.*/
                           do k=k  by -1  while j <k & @.k>=p;  end  /*another   "    "  */
                       if j>=k  then leave                           /*segment finished? */
                       _=@.j;   @.j=@.k;   @.k=_                     /*swap J&K elements.*/
                       end   /*forever*/
                $=$+1
                k=j-1;   @.L=@.k;   @.k=p
-               if j<=?  then do;   a.$=j;   b.$=h-j+1;   $=$+1;   a.$=L;   b.$=k-L;    end
-                        eLse do;   a.$=L;   b.$=k-L;     $=$+1;   a.$=j;   b.$=h-j+1;  end
-               end          /*whiLe $¬==0*/
+               if j<=?  then do;   a.$=j;   b.$=H-j+1;   $=$+1;   a.$=L;   b.$=k-L;    end
+                        else do;   a.$=L;   b.$=k-L;     $=$+1;   a.$=j;   b.$=H-j+1;  end
+               end          /*while $¬==0*/
        return
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 show@: w=length(#);        do j=1  for #;  say 'element'  right(j,w)  arg(1)":"  @.j;  end
        say copies('▒', maxL + w + 22)            /*display a separator (between outputs)*/
        return
-/*──────────────────────────────────GEN@ subroutine──────────────────────────────────────────────────────────────────────────────────────────────────────*/
-gen@:  @.=;   maxL=0                             /*assign default value for array.*/
+/*───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────*/
+gen@:  @.=;   maxL=0                             /*assign a default value for the array.*/
 @.1  = " Rivers that form part of a (USA) state's border "                                   /*this value is adjusted later to include a prefix & suffix.*/
 @.2  = '='                                                                                   /*this value is expanded later.  */
 @.3  = "Perdido River                       Alabama, Florida"
@@ -97,10 +97,9 @@ gen@:  @.=;   maxL=0                             /*assign default value for arra
 @.61 = "Catawba River                       North Carolina, South Carolina"
 @.62 = "Blackwater River                    North Carolina, Virginia"
 @.63 = "Columbia River                      Oregon, Washington"
-
-           do #=1  while  @.#\==''               /*find how many entries in array,  and */
-           maxL=max(maxL, length(@.#))           /*   also find the maximum width entry.*/
-           end   /*#*/
+                do #=1  until  @.#==''           /*find how many entries in array,  and */
+                maxL=max(maxL, length(@.#))      /*   also find the maximum width entry.*/
+                end   /*#*/
 #=#-1                                            /*adjust the highest element number.   */
 @.1=center(@.1, maxL, '-')                       /*   "    "  header information.       */
 @.2=copies(@.2, maxL)                            /*   "    "     "   separator.         */

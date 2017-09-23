@@ -1,50 +1,68 @@
 (() => {
     'use strict';
 
+    // PASCAL'S TRIANGLE ------------------------------------------------------
+
     // pascal :: Int -> [[Int]]
-    let pascal = n =>
-            range(1, n - 1)
-            .reduce(a => {
-                let lstPreviousRow = a.slice(-1)[0];
-
-                return a
-                    .concat([zipWith((a, b) => a + b,
-                        [0].concat(lstPreviousRow),
-                        lstPreviousRow.concat(0)
-                    )]);
-            }, [
-                [1]
+    const pascal = n =>
+        foldl(a => {
+            const xs = a.slice(-1)[0]; // Previous row
+            return append(a, [
+                zipWith(
+                    (a, b) => a + b,
+                    append([0], xs),
+                    append(xs, [0])
+                )
             ]);
+        }, [
+            [1] // Initial seed row
+        ], enumFromTo(1, n - 1));
 
-    // GENERIC FUNCTIONS
 
-    // Int -> Int -> Maybe Int -> [Int]
-    let range = (m, n, step) => {
-                let d = (step || 1) * (n >= m ? 1 : -1);
-                return Array.from({
-                    length: Math.floor((n - m) / d) + 1
-                }, (_, i) => m + (i * d));
-            },
+    // GENERIC FUNCTIONS ------------------------------------------------------
 
-        // zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
-        zipWith = (f, xs, ys) =>
-            xs.length === ys.length ? (
-                xs.map((x, i) => f(x, ys[i]))
-            ) : undefined;
+    // (++) :: [a] -> [a] -> [a]
+    const append = (xs, ys) => xs.concat(ys);
 
-    // TEST
-    return pascal(7)
-        .reduceRight((a, x) => {
-            let strIndent = a.indent;
+    // enumFromTo :: Int -> Int -> [Int]
+    const enumFromTo = (m, n) =>
+        Array.from({
+            length: Math.floor(n - m) + 1
+        }, (_, i) => m + i);
 
+    // flip :: (a -> b -> c) -> b -> a -> c
+    const flip = f => (a, b) => f(b, a);
+
+    // foldl :: (b -> a -> b) -> b -> [a] -> b
+    const foldl = (f, a, xs) => xs.reduce(f, a);
+
+    // foldr (a -> b -> b) -> b -> [a] -> b
+    const foldr = (f, a, xs) => xs.reduceRight(flip(f), a);
+
+    // map :: (a -> b) -> [a] -> [b]
+    const map = (f, xs) => xs.map(f);
+
+    // min :: Ord a => a -> a -> a
+    const min = (a, b) => b < a ? b : a;
+
+    // zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+    const zipWith = (f, xs, ys) =>
+        Array.from({
+            length: min(xs.length, ys.length)
+        }, (_, i) => f(xs[i], ys[i]));
+
+    // TEST -------------------------------------------------------------------
+    return foldr((x, a) => {
+            const strIndent = a.indent;
             return {
-                rows: strIndent + x
-                    .map(n => ('    ' + n).slice(-4))
+                rows: strIndent + map(n => ('    ' + n)
+                        .slice(-4), x)
                     .join('') + '\n' + a.rows,
                 indent: strIndent + '  '
             };
         }, {
             rows: '',
             indent: ''
-        }).rows;
+        }, pascal(7))
+        .rows;
 })();

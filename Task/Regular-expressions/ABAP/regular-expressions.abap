@@ -8,4 +8,4 @@ ENDIF.
 REPLACE ALL OCCURRENCES OF REGEX '[t|T]est' IN text WITH 'Regex'.
 
 cl_demo_output=>write( text ).
-cl_demo_output=>display(
+cl_demo_output=>display( ).

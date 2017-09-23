@@ -1,6 +1,8 @@
 use framework "Foundation"
 use scripting additions
 
+-- BOXING THE COMPASS --------------------------------------------------------
+
 property plstLangs : [{|name|:"English"} & ¬
     {expansions:{N:"north", S:"south", E:"east", W:"west", b:" by "}} & ¬
     {|N|:"N", |NNNE|:"NbE", |NNE|:"N-NE", |NNENE|:"NEbN", |NE|:"NE", |NENEE|:"NEbE"} & ¬
@@ -34,14 +36,15 @@ on compassKeys(intDepth)
     -- Necessity drives recursive subdivision of broader directions, shrinking
     -- boxes down to a workable level of precision:
     script subdivision
-        on lambda(lstCompass, N)
+        on |λ|(lstCompass, N)
             if N ≤ 1 then
                 lstCompass
             else
                 script subKeys
-                    on lambda(a, x, i, xs)
+                    on |λ|(a, x, i, xs)
                         -- Borders between N and S engender E and W.
-                        -- further subdivisions (boxes) concatenate their two parent keys.
+                        -- further subdivisions (boxes)
+                        -- concatenate their two parent keys.
                         if i > 1 then
                             cond(N = intDepth, ¬
                                 a & {cond(x = "N", "W", "E")} & x, ¬
@@ -49,21 +52,22 @@ on compassKeys(intDepth)
                         else
                             a & x
                         end if
-                    end lambda
+                    end |λ|
                 end script
 
-                lambda(foldl(subKeys, {}, lstCompass), N - 1)
+                |λ|(foldl(subKeys, {}, lstCompass), N - 1)
             end if
-        end lambda
+        end |λ|
     end script
 
-    tell subdivision to items 1 thru -2 of lambda(urCompass, intDepth)
+    tell subdivision to items 1 thru -2 of |λ|(urCompass, intDepth)
 end compassKeys
 
 -- pointIndex :: Int -> Num -> String
 on pointIndex(power, degrees)
     set nBoxes to 2 ^ power
-    set i to round (degrees + (360 / (nBoxes * 2))) mod 360 * nBoxes / 360 rounding up
+    set i to round (degrees + (360 / (nBoxes * 2))) ¬
+        mod 360 * nBoxes / 360 rounding up
     cond(i > 0, i, 1)
 end pointIndex
 
@@ -72,7 +76,7 @@ on pointNames(precision, iBox)
     set k to item iBox of compassKeys(precision)
 
     script translation
-        on lambda(recLang)
+        on |λ|(recLang)
             set maybeTrans to keyValue(recLang, k)
             set strBrief to cond(maybeTrans is missing value, k, maybeTrans)
 
@@ -80,10 +84,10 @@ on pointNames(precision, iBox)
 
             if recExpand is not missing value then
                 script expand
-                    on lambda(c)
+                    on |λ|(c)
                         set t to keyValue(recExpand, c)
                         cond(t is not missing value, t, c)
-                    end lambda
+                    end |λ|
                 end script
                 set strName to (intercalate(cond(precision > 5, " ", ""), ¬
                     map(expand, characters of strBrief)))
@@ -91,7 +95,7 @@ on pointNames(precision, iBox)
             else
                 strBrief
             end if
-        end lambda
+        end |λ|
     end script
 
     map(translation, plstLangs)
@@ -99,15 +103,7 @@ end pointNames
 
 -- maxLen :: [String] -> Int
 on maxLen(xs)
-    -- compareByLength = (String, String) -> (-1 | 0 | 1)
-    script compareByLength
-        on lambda(a, b)
-            set {intA, intB} to {length of a, length of b}
-            cond(intA < intB, -1, cond(intA > intB, 1, 0))
-        end lambda
-    end script
-
-    length of maximumBy(compareByLength, xs)
+    length of maximumBy(comparing(my |length|), xs)
 end maxLen
 
 -- alignRight :: Int -> String -> String
@@ -136,43 +132,43 @@ on compassTable(precision, xs)
         set join to curry(my intercalate)
 
         -- INDEX COLUMN
-        set lstIndex to map(lambda(precision) of curry(pointIndex), xs)
+        set lstIndex to map(|λ|(precision) of curry(pointIndex), xs)
         set lstStrIndex to map(show, lstIndex)
         set nIndexWidth to maxLen(lstStrIndex)
-        set colIndex to map(lambda(nIndexWidth + intPad) of rightAligned, lstStrIndex)
+        set colIndex to map(|λ|(nIndexWidth + intPad) of rightAligned, lstStrIndex)
 
         -- ANGLES COLUMN
         script degreeFormat
-            on lambda(x)
+            on |λ|(x)
                 set {c, m} to splitOn(".", x as string)
                 c & "." & (text 1 thru 2 of (m & "0")) & "°"
-            end lambda
+            end |λ|
         end script
         set lstAngles to map(degreeFormat, xs)
         set nAngleWidth to maxLen(lstAngles) + intPad
-        set colAngles to map(lambda(nAngleWidth) of rightAligned, lstAngles)
+        set colAngles to map(|λ|(nAngleWidth) of rightAligned, lstAngles)
 
         -- NAMES COLUMNS
         script precisionNames
-            on lambda(iBox)
+            on |λ|(iBox)
                 pointNames(precision, iBox)
-            end lambda
+            end |λ|
         end script
 
         set lstTrans to transpose(map(precisionNames, lstIndex))
         set lstTransWidths to map(maxLen, lstTrans)
 
         script spacedNames
-            on lambda(lstLang, i)
-                map(lambda((item i of lstTransWidths) + 2) of leftAligned, lstLang)
-            end lambda
+            on |λ|(lstLang, i)
+                map(|λ|((item i of lstTransWidths) + 2) of leftAligned, lstLang)
+            end |λ|
         end script
 
         set colsTrans to map(spacedNames, lstTrans)
 
         -- TABLE
         intercalate(linefeed, ¬
-            map(lambda("") of join, ¬
+            map(|λ|("") of join, ¬
                 transpose({colIndex} & {colAngles} & ¬
                     {replicate(length of lstIndex, "  ")} & colsTrans)))
     end if
@@ -180,9 +176,8 @@ end compassTable
 
 
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
-
     set xs to [0.0, 16.87, 16.88, 33.75, 50.62, 50.63, 67.5, 84.37, ¬
         84.38, 101.25, 118.12, 118.13, 135.0, 151.87, 151.88, 168.75, ¬
         185.62, 185.63, 202.5, 219.37, 219.38, 236.25, 253.12, 253.13, ¬
@@ -196,23 +191,52 @@ on run
     --    to substitute for missing names for very finely divided boxes.
 
     compassTable(5, xs) -- // 2^5  -> 32 boxes
-
 end run
 
 
--- GENERIC FUNCTIONS
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
--- map :: (a -> b) -> [a] -> [b]
-on map(f, xs)
-    tell mReturn(f)
-        set lng to length of xs
-        set lst to {}
-        repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
-        end repeat
-        return lst
-    end tell
-end map
+-- comparing :: (a -> b) -> (a -> a -> Ordering)
+on comparing(f)
+    set mf to mReturn(f)
+    script
+        on |λ|(a, b)
+            set x to mf's |λ|(a)
+            set y to mf's |λ|(b)
+            if x < y then
+                -1
+            else
+                if x > y then
+                    1
+                else
+                    0
+                end if
+            end if
+        end |λ|
+    end script
+end comparing
+
+-- cond :: Bool -> a -> a -> a
+on cond(bool, f, g)
+    if bool then
+        f
+    else
+        g
+    end if
+end cond
+
+-- curry :: (Script|Handler) -> Script
+on curry(f)
+    script
+        on |λ|(a)
+            script
+                on |λ|(b)
+                    |λ|(a, b) of mReturn(f)
+                end |λ|
+            end script
+        end |λ|
+    end script
+end curry
 
 -- foldl :: (a -> b -> a) -> a -> [b] -> a
 on foldl(f, startValue, xs)
@@ -220,65 +244,11 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
 end foldl
-
--- curry :: (Script|Handler) -> Script
-on curry(f)
-    script
-        on lambda(a)
-            script
-                on lambda(b)
-                    lambda(a, b) of mReturn(f)
-                end lambda
-            end script
-        end lambda
-    end script
-end curry
-
--- transpose :: [[a]] -> [[a]]
-on transpose(xss)
-    script column
-        on lambda(_, iCol)
-            script row
-                on lambda(xs)
-                    item iCol of xs
-                end lambda
-            end script
-
-            map(row, xss)
-        end lambda
-    end script
-
-    map(column, item 1 of xss)
-end transpose
-
--- maximumBy :: (a -> a -> Ordering) -> [a] -> a
-on maximumBy(f, xs)
-    set cmp to mReturn(f)
-    script max
-        on lambda(a, b)
-            if a is missing value or cmp's lambda(a, b) < 0 then
-                b
-            else
-                a
-            end if
-        end lambda
-    end script
-
-    foldl(max, missing value, xs)
-end maximumBy
-
--- splitOn :: Text -> Text -> [Text]
-on splitOn(strDelim, strMain)
-    set {dlm, my text item delimiters} to {my text item delimiters, strDelim}
-    set xs to text items of strMain
-    set my text item delimiters to dlm
-    return xs
-end splitOn
 
 -- intercalate :: Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -287,39 +257,6 @@ on intercalate(strText, lstText)
     set my text item delimiters to dlm
     return strJoined
 end intercalate
-
--- keyValue :: Record -> String -> Maybe String
-on keyValue(rec, strKey)
-    set ca to current application
-    set v to (ca's NSDictionary's dictionaryWithDictionary:rec)'s objectForKey:strKey
-    if v is not missing value then
-        item 1 of ((ca's NSArray's arrayWithObject:v) as list)
-    else
-        missing value
-    end if
-end keyValue
-
--- toLower :: String -> String
-on toLower(str)
-    set ca to current application
-    ((ca's NSString's stringWithString:(str))'s ¬
-        lowercaseStringWithLocale:(ca's NSLocale's currentLocale())) as text
-end toLower
-
--- toUpper :: String -> String
-on toUpper(str)
-    set ca to current application
-    ((ca's NSString's stringWithString:(str))'s ¬
-        uppercaseStringWithLocale:(ca's NSLocale's currentLocale())) as text
-end toUpper
-
--- toTitle :: String -> String
-on toTitle(str)
-    set ca to current application
-    ((ca's NSString's stringWithString:(str))'s ¬
-        capitalizedStringWithLocale:(ca's NSLocale's currentLocale())) as text
-end toTitle
-
 
 -- justifyLeft :: Int -> Char -> Text -> Text
 on justifyLeft(N, cFiller, strText)
@@ -339,6 +276,62 @@ on justifyRight(N, cFiller, strText)
     end if
 end justifyRight
 
+-- keyValue :: Record -> String -> Maybe String
+on keyValue(rec, strKey)
+    set ca to current application
+    set v to (ca's NSDictionary's dictionaryWithDictionary:rec)'s objectForKey:strKey
+    if v is not missing value then
+        item 1 of ((ca's NSArray's arrayWithObject:v) as list)
+    else
+        missing value
+    end if
+end keyValue
+
+-- length :: [a] -> Int
+on |length|(xs)
+    length of xs
+end |length|
+
+-- map :: (a -> b) -> [a] -> [b]
+on map(f, xs)
+    tell mReturn(f)
+        set lng to length of xs
+        set lst to {}
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, i, xs)
+        end repeat
+        return lst
+    end tell
+end map
+
+-- maximumBy :: (a -> a -> Ordering) -> [a] -> a
+on maximumBy(f, xs)
+    set cmp to mReturn(f)
+    script max
+        on |λ|(a, b)
+            if a is missing value or cmp's |λ|(a, b) < 0 then
+                b
+            else
+                a
+            end if
+        end |λ|
+    end script
+
+    foldl(max, missing value, xs)
+end maximumBy
+
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property |λ| : f
+        end script
+    end if
+end mReturn
+
 -- replicate :: Int -> a -> [a]
 on replicate(N, a)
     set out to {}
@@ -353,23 +346,48 @@ on replicate(N, a)
     return out & dbl
 end replicate
 
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
-on mReturn(f)
-    if class of f is script then
-        f
-    else
-        script
-            property lambda : f
-        end script
-    end if
-end mReturn
+-- splitOn :: Text -> Text -> [Text]
+on splitOn(strDelim, strMain)
+    set {dlm, my text item delimiters} to {my text item delimiters, strDelim}
+    set xs to text items of strMain
+    set my text item delimiters to dlm
+    return xs
+end splitOn
 
--- cond :: Bool -> a -> a -> a
-on cond(bool, f, g)
-    if bool then
-        f
-    else
-        g
-    end if
-end cond
+-- transpose :: [[a]] -> [[a]]
+on transpose(xss)
+    script column
+        on |λ|(_, iCol)
+            script row
+                on |λ|(xs)
+                    item iCol of xs
+                end |λ|
+            end script
+
+            map(row, xss)
+        end |λ|
+    end script
+
+    map(column, item 1 of xss)
+end transpose
+
+-- toLower :: String -> String
+on toLower(str)
+    set ca to current application
+    ((ca's NSString's stringWithString:(str))'s ¬
+        lowercaseStringWithLocale:(ca's NSLocale's currentLocale())) as text
+end toLower
+
+-- toTitle :: String -> String
+on toTitle(str)
+    set ca to current application
+    ((ca's NSString's stringWithString:(str))'s ¬
+        capitalizedStringWithLocale:(ca's NSLocale's currentLocale())) as text
+end toTitle
+
+-- toUpper :: String -> String
+on toUpper(str)
+    set ca to current application
+    ((ca's NSString's stringWithString:(str))'s ¬
+        uppercaseStringWithLocale:(ca's NSLocale's currentLocale())) as text
+end toUpper

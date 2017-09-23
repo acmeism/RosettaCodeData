@@ -1,20 +1,19 @@
 -- oddMagicSquare :: Int -> [[Int]]
 on oddMagicSquare(n)
     cond((n mod 2) > 0, ¬
-        rotate(transpose(rotate(table(n)))), ¬
+        cycleRows(transpose(cycleRows(table(n)))), ¬
         missing value)
 end oddMagicSquare
 
-
--- TEST
+-- TEST -----------------------------------------------------------------------
 on run
     -- Orders 3, 5, 11
 
     -- wikiTableMagic :: Int -> String
     script wikiTableMagic
-        on lambda(n)
+        on |λ|(n)
             formattedTable(oddMagicSquare(n))
-        end lambda
+        end |λ|
     end script
 
     intercalate(linefeed & linefeed, map(wikiTableMagic, {3, 5, 11}))
@@ -22,25 +21,25 @@ end run
 
 -- table :: Int -> [[Int]]
 on table(n)
-    set lstTop to range(1, n)
+    set lstTop to enumFromTo(1, n)
 
     script cols
-        on lambda(row)
+        on |λ|(row)
             script rows
-                on lambda(x)
+                on |λ|(x)
                     (row * n) + x
-                end lambda
+                end |λ|
             end script
 
             map(rows, lstTop)
-        end lambda
+        end |λ|
     end script
 
-    map(cols, range(0, n - 1))
+    map(cols, enumFromTo(0, n - 1))
 end table
 
--- rotation :: [[a]] -> [[a]]
-on rotate(lst)
+-- cycleRows :: [[a]] -> [[a]]
+on cycleRows(lst)
     script rotationRow
         -- rotatedList :: [a] -> Int -> [a]
         on rotatedList(lst, n)
@@ -51,16 +50,16 @@ on rotate(lst)
             items -m thru -1 of lst & items 1 thru (lng - m) of lst
         end rotatedList
 
-        on lambda(row, i)
+        on |λ|(row, i)
             rotatedList(row, (((length of row) + 1) div 2) - (i))
-        end lambda
+        end |λ|
     end script
 
     map(rotationRow, lst)
-end rotate
+end cycleRows
 
 
--- GENERIC FUNCTIONS
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
 -- intercalate :: Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -76,7 +75,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -89,14 +88,14 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
 
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
         set d to -1
     else
         set d to 1
@@ -106,7 +105,7 @@ on range(m, n)
         set end of lst to i
     end repeat
     return lst
-end range
+end enumFromTo
 
 -- splitOn :: Text -> Text -> [Text]
 on splitOn(strDelim, strMain)
@@ -119,21 +118,21 @@ end splitOn
 -- transpose :: [[a]] -> [[a]]
 on transpose(xss)
     script column
-        on lambda(_, iCol)
+        on |λ|(_, iCol)
             script row
-                on lambda(xs)
+                on |λ|(xs)
                     item iCol of xs
-                end lambda
+                end |λ|
             end script
 
             map(row, xss)
-        end lambda
+        end |λ|
     end script
 
     map(column, item 1 of xss)
 end transpose
 
--- WIKI DISPLAY
+-- WIKI DISPLAY ---------------------------------------------------------------
 
 -- formattedTable :: [[Int]] -> String
 on formattedTable(lstTable)
@@ -145,20 +144,20 @@ on formattedTable(lstTable)
 end formattedTable
 
 -- wikiTable :: [Text] -> Bool -> Text -> Text
-on wikiTable(lstRows, blnHdr, strStyle)
-    script fWikiRows
-        on lambda(lstRow, iRow)
+on wikiTable(xs, blnHdr, strStyle)
+    script wikiRows
+        on |λ|(lstRow, iRow)
             set strDelim to cond(blnHdr and (iRow = 0), "!", "|")
             set strDbl to strDelim & strDelim
             linefeed & "|-" & linefeed & strDelim & space & ¬
                 intercalate(space & strDbl & space, lstRow)
-        end lambda
+        end |λ|
     end script
 
     linefeed & "{| class=\"wikitable\" " & ¬
         cond(strStyle ≠ "", "style=\"" & strStyle & "\"", "") & ¬
         intercalate("", ¬
-            map(fWikiRows, lstRows)) & linefeed & "|}" & linefeed
+            map(wikiRows, xs)) & linefeed & "|}" & linefeed
 end wikiTable
 
 -- cond :: Bool -> a -> a -> a

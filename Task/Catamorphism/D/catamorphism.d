@@ -1,9 +1,9 @@
 void main() {
-    import std.stdio, std.algorithm, std.range, std.numeric,
-           std.conv, std.typecons, std.typetuple;
+    import std.stdio, std.algorithm, std.range, std.meta, std.numeric,
+           std.conv, std.typecons;
 
     auto list = iota(1, 11);
-    alias ops = TypeTuple!(q{a + b}, q{a * b}, min, max, gcd);
+    alias ops = AliasSeq!(q{a + b}, q{a * b}, min, max, gcd);
 
     foreach (op; ops)
         writeln(op.stringof, ": ", list.reduce!op);

@@ -1,27 +1,27 @@
-import static java.util.stream.LongStream.rangeClosed;
+import java.util.stream.LongStream;
 
 public class NumberClassifications {
 
     public static void main(String[] args) {
-        int countDeficient = 0;
-        int countPerfect = 0;
-        int countAbundant = 0;
+        int deficient = 0;
+        int perfect = 0;
+        int abundant = 0;
 
-        for (long i = 1; i <= 20_000L; i++) {
+        for (long i = 1; i <= 20_000; i++) {
             long sum = properDivsSum(i);
             if (sum < i)
-                countDeficient++;
+                deficient++;
             else if (sum == i)
-                countPerfect++;
+                perfect++;
             else
-                countAbundant++;
+                abundant++;
         }
-        System.out.println("Deficient: " + countDeficient);
-        System.out.println("Perfect: " + countPerfect);
-        System.out.println("Abundant: " + countAbundant);
+        System.out.println("Deficient: " + deficient);
+        System.out.println("Perfect: " + perfect);
+        System.out.println("Abundant: " + abundant);
     }
 
-    public static Long properDivsSum(long n) {
-        return rangeClosed(1, (n + 1) / 2).filter(i -> n % i == 0 && n != i).sum();
+    public static long properDivsSum(long n) {
+        return LongStream.rangeClosed(1, (n + 1) / 2).filter(i -> n != i && n % i == 0).sum();
     }
 }

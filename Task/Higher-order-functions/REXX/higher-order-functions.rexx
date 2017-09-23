@@ -1,18 +1,12 @@
-/*REXX program demonstrates passing a  function  (as a name)  to another function.      */
-                            n=3735928559
-funcName = 'fib'     ;      q= 10;            call someFunk  funcName, q;        call tell
-funcName = 'fact'    ;      q=  6;            call someFunk  funcName, q;        call tell
-funcName = 'square'  ;      q= 13;            call someFunk  funcName, q;        call tell
-funcName = 'cube'    ;      q=  3;            call someFunk  funcName, q;        call tell
-                            q=721;            call someFunk  'reverse',q;        call tell
-say copies('═', 30)                              /*display a nice separator fence       */
-say 'done as'   d2x(n).                          /*prove that variable N is still intact*/
+/*REXX program demonstrates the  passing of a  name of a function  to another function. */
+call function  'fact'   ,   6;           say right(    'fact{'$"} = ", 30)    result
+call function  'square' ,  13;           say right(  'square{'$"} = ", 30)    result
+call function  'cube'   ,   3;           say right(    'cube{'$"} = ", 30)    result
+call function  'reverse', 721;           say right( 'reverse{'$"} = ", 30)    result
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-cube:     return n**3
-fact:     !=1;                                 do j=2 to n;   !=!*j;         end; return !
-fib:      if n<2 then return n; _=0; a=0; b=1; do j=2 to n; _=a+b; a=b; b=_; end; return _
-reverse:  return 'REVERSE'(n)
-someFunk: procedure;  arg ?,n;  signal value (?);  say result  'result';          return
-square:   return n**2
-tell:     say right(funcName'('q") = ",20)  result;                               return
+cube:     return $**3
+fact:     procedure expose $;  !=1;      do j=2  to $;    !=!*j;     end;         return !
+function: arg ?.;   parse arg ,$;        signal value (?.)
+reverse:  return 'REVERSE'($)
+square:   return $**2

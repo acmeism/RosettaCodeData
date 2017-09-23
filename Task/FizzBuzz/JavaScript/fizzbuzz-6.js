@@ -1,25 +1,36 @@
-var divs = [15, 3, 5];
-var says = ['FizzBuzz', 'Fizz', 'Buzz'];
+(() => {
 
-function fizzBuzz(first, last) {
-    for (var n = first; n <= last; n++) {
-        print(getFizzBuzz(n));
-    }
-}
+    // FIZZBUZZ --------------------------------------------------------------
 
-function getFizzBuzz(n) {
-    var sayWhat = n;
-    for (var d = 0; d < divs.length; d++) {
-        if (isMultOf(n, divs[d])) {
-            sayWhat = says[d];
-            break;
-        }
-    }
-    return sayWhat;
-}
+    // fizzBuzz :: Int -> String
+    const fizzBuzz = n =>
+        caseOf(n, [
+            [x => x % 15 === 0, "FizzBuzz"],
+            [x => x % 3 === 0, "Fizz"],
+            [x => x % 5 === 0, "Buzz"]
+        ], n.toString());
 
-function isMultOf(n, d) {
-    return n % d == 0;
-}
+    // GENERIC FUNCTIONS -----------------------------------------------------
 
-fizzBuzz(1, 100);
+    // caseOf :: a -> [(a -> Bool, b)] -> b -> b
+    const caseOf = (e, pvs, otherwise) =>
+        pvs.reduce((a, [p, v]) =>
+            a !== otherwise ? a : (p(e) ? v : a), otherwise);
+
+    // enumFromTo :: Int -> Int -> [Int]
+    const enumFromTo = (m, n) =>
+        Array.from({
+            length: Math.floor(n - m) + 1
+        }, (_, i) => m + i);
+
+    // map :: (a -> b) -> [a] -> [b]
+    const map = (f, xs) => xs.map(f);
+
+    // unlines :: [String] -> String
+    const unlines = xs => xs.join('\n');
+
+    // TEST ------------------------------------------------------------------
+    return unlines(
+        map(fizzBuzz, enumFromTo(1, 100))
+    );
+})();

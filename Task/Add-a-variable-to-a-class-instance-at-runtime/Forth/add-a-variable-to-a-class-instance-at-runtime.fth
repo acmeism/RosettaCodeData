@@ -9,6 +9,7 @@ include FMS-SILib.f
 
 :class foo
   object-list inst-objects \ a dynamically growable object container
+  :m init: inst-objects init: ;m
   :m add: ( obj -- ) inst-objects add: ;m
   :m at: ( idx -- obj ) inst-objects at: ;m
 ;class

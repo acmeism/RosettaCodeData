@@ -1,61 +1,39 @@
 include FMS-SI.f
 include FMS-SILib.f
-
-: (where) ( class-xt where-dfa -- flag )
-     swap >body { where-dfa class-dfa }
-     begin
-       class-dfa ['] object >body <>
-     while
-       class-dfa where-dfa = if true exit then
-       class-dfa sfa @  to class-dfa
-     repeat false ;
-
-: where ( class-xt "classname" -- flag )
-  ' >body state @
-  if postpone literal postpone (where)
-  else (where)
-  then ; immediate
-
 :class Eatable
-   :m eat cr ." successful eat" ;m
+   :m eat ." successful eat " ;m
 ;class
 
-\ FoodBox is defined without using eat in any way.
+\ FoodBox is defined without inspecting for the eat message
 :class FoodBox
   object-list eatable-types
-  :m fill: { n class-xt -- }
-     class-xt where Eatable
-     if   n 0 do class-xt eatable-types xtadd: loop
-     else ." not an eatable type "
+  :m init: eatable-types init: ;m
+  :m add: ( obj -- )
+     dup is-kindOf Eatable
+     if   eatable-types add:
+     else drop ." not an eatable type "
      then ;m
-  :m get ( -- obj ) eatable-types ;m
+  :m test
+     begin eatable-types each:
+     while eat
+     repeat ;m
 ;class
 
-: test ( obj -- )  \ send the eat message to each object in the object-list
-  begin dup each:
-  while eat
-  repeat drop ;
+FoodBox aFoodBox
+Eatable aEatable
+aEatable aFoodBox add:  \ add the e1 object to the object-list
+aFoodBox test  \ => successful eat
 
-FoodBox fb
-3 ' Eatable fb fill:  \ fill the object-list with 3 objects of class Eatable
-fb get test
-successful eat
-successful eat
-successful eat
+:class brick
+ :m eat cr ." successful eat " ;m
+;class
 
-FoodBox fb1
-5 ' object fb1 fill: \ => not an eatable type
+brick abrick  \ create an object that is not eatable
+abrick aFoodBox add: \ => not an eatable type
 
 :class apple <super Eatable
 ;class
 
-:class green-apple <super apple
-;class
-
-5 ' green-apple fb1 fill:
-fb1 get test
-successful eat
-successful eat
-successful eat
-successful eat
-successful eat
+apple anapple
+anapple aFoodBox add:
+aFoodBox test  \ => successful eat successful eat

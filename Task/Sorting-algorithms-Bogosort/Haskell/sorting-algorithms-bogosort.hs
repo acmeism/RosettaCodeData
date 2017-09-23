@@ -2,9 +2,10 @@ import System.Random
 import Data.Array.IO
 import Control.Monad
 
-isSorted :: (Ord a) => [a] -> Bool
-isSorted (e1:e2:r) = e1 <= e2 && isSorted (e2:r)
-isSorted _         = True
+isSortedBy :: (a -> a -> Bool) -> [a] -> Bool
+isSortedBy _ [] = True
+isSortedBy f xs = all (uncurry f) . (zip <*> tail) $ xs
+
 
 -- from http://www.haskell.org/haskellwiki/Random_shuffle
 shuffle :: [a] -> IO [a]
@@ -21,6 +22,9 @@ shuffle xs = do
     newArray :: Int -> [a] -> IO (IOArray Int a)
     newArray n xs =  newListArray (1,n) xs
 
-bogosort :: (Ord a) => [a] -> IO [a]
-bogosort li | isSorted li = return li
-            | otherwise   = shuffle li >>= bogosort
+bogosortBy :: (a -> a -> Bool) -> [a] -> IO [a]
+bogosortBy f xs | isSortedBy f xs = return xs
+                | otherwise       = shuffle xs >>= bogosortBy f
+
+bogosort :: Ord a => [a] -> IO [a]
+bogosort = bogosortBy (<)

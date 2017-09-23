@@ -13,7 +13,7 @@
         (and (char=? (car s) (car r))
              (loop (cdr s) (cdr r))))))
 
-<lang scheme>> (palindrome? "ingirumimusnocteetconsumimurigni")
+> (palindrome? "ingirumimusnocteetconsumimurigni")
 #t
 > (palindrome? "This is not a palindrome")
 #f

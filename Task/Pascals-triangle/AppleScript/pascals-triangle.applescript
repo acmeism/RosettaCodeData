@@ -1,57 +1,73 @@
+-- PASCAL ---------------------------------------------------------------------
+
 -- pascal :: Int -> [[Int]]
 on pascal(intRows)
 
     script addRow
         on nextRow(row)
             script add
-                on lambda(a, b)
+                on |λ|(a, b)
                     a + b
-                end lambda
+                end |λ|
             end script
 
             zipWith(add, [0] & row, row & [0])
         end nextRow
 
-        on lambda(xs)
+        on |λ|(xs)
             xs & {nextRow(item -1 of xs)}
-        end lambda
+        end |λ|
     end script
 
-    foldr(addRow, {{1}}, range(1, intRows - 1))
+    foldr(addRow, {{1}}, enumFromTo(1, intRows - 1))
 end pascal
 
-
--- TEST
-
+-- TEST -----------------------------------------------------------------------
 on run
     set lstTriangle to pascal(7)
 
     script spaced
-        on lambda(xs)
+        on |λ|(xs)
             script rightAlign
-                on lambda(x)
+                on |λ|(x)
                     text -4 thru -1 of ("    " & x)
-                end lambda
+                end |λ|
             end script
 
             intercalate("", map(rightAlign, xs))
-        end lambda
+        end |λ|
     end script
 
     script indented
-        on lambda(a, x)
+        on |λ|(a, x)
             set strIndent to leftSpace of a
 
-            {rows:strIndent & x & linefeed & rows of a, leftSpace:leftSpace of a & "  "}
-        end lambda
+            {rows:¬
+                strIndent & x & linefeed & rows of a, leftSpace:¬
+                leftSpace of a & "  "} ¬
+
+        end |λ|
     end script
 
-    rows of foldr(indented, {rows:"", leftSpace:""}, map(spaced, lstTriangle))
+    rows of foldr(indented, ¬
+        {rows:"", leftSpace:""}, map(spaced, lstTriangle))
 end run
 
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
-
--- GENERIC LIBRARY FUNCTIONS
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if n < m then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- foldr :: (a -> b -> a) -> a -> [b] -> a
 on foldr(f, startValue, xs)
@@ -59,50 +75,11 @@ on foldr(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from lng to 1 by -1
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
 end foldr
-
--- map :: (a -> b) -> [a] -> [b]
-on map(f, xs)
-    tell mReturn(f)
-        set lng to length of xs
-        set lst to {}
-        repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
-        end repeat
-        return lst
-    end tell
-end map
-
--- zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
-on zipWith(f, xs, ys)
-    set nx to length of xs
-    set ny to length of ys
-    if nx < 1 or ny < 1 then
-        {}
-    else
-        set lng to cond(nx < ny, nx, ny)
-        set lst to {}
-        tell mReturn(f)
-            repeat with i from 1 to lng
-                set end of lst to lambda(item i of xs, item i of ys)
-            end repeat
-            return lst
-        end tell
-    end if
-end zipWith
-
--- cond :: Bool -> (a -> b) -> (a -> b) -> (a -> b)
-on cond(bool, f, g)
-    if bool then
-        f
-    else
-        g
-    end if
-end cond
 
 -- intercalate :: Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -112,16 +89,26 @@ on intercalate(strText, lstText)
     return strJoined
 end intercalate
 
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    set lng to (n - m) + 1
-    set base to m - 1
-    set lst to {}
-    repeat with i from 1 to lng
-        set end of lst to i + base
-    end repeat
-    return lst
-end range
+-- map :: (a -> b) -> [a] -> [b]
+on map(f, xs)
+    tell mReturn(f)
+        set lng to length of xs
+        set lst to {}
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, i, xs)
+        end repeat
+        return lst
+    end tell
+end map
+
+-- min :: Ord a => a -> a -> a
+on min(x, y)
+    if y < x then
+        y
+    else
+        x
+    end if
+end min
 
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
@@ -130,7 +117,19 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
+
+-- zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+on zipWith(f, xs, ys)
+    set lng to min(length of xs, length of ys)
+    set lst to {}
+    tell mReturn(f)
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, item i of ys)
+        end repeat
+        return lst
+    end tell
+end zipWith

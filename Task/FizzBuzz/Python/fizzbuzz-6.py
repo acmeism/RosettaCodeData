@@ -1,6 +1,13 @@
-messages = [None, "Fizz", "Buzz", "FizzBuzz"]
-acc = 810092048
-for i in xrange(1, 101):
-    c = acc & 3
-    print messages[c] if c else i
-    acc = acc >> 2 | c << 28
+from itertools import cycle, izip, count, islice
+
+fizzes = cycle([""] * 2 + ["Fizz"])
+buzzes = cycle([""] * 4 + ["Buzz"])
+both = (f + b for f, b in izip(fizzes, buzzes))
+
+# if the string is "", yield the number
+# otherwise yield the string
+fizzbuzz = (word or n for word, n in izip(both, count(1)))
+
+# print the first 100
+for i in islice(fizzbuzz, 100):
+    print i

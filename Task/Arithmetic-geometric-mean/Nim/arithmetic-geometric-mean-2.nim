@@ -14,7 +14,7 @@ proc agm(x,y: float): tuple[resA,resG: float] =
 
   (a[23], g[23])
 
-var t = agm(1, 1/sqrt(2))
+var t = agm(1, 1/sqrt(2.0))
 
 echo("Result A: " & formatFloat(t.resA, ffDecimal, 24))
 echo("Result G: " & formatFloat(t.resG, ffDecimal, 24))

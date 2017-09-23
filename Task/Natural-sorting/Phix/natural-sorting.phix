@@ -1,0 +1,148 @@
+--
+-- demo/rosetta/Natural_sorting.exw
+--
+function utf32ch(sequence s)
+    for i=1 to length(s) do
+        s[i] = utf8_to_utf32(s[i])[1]
+    end for
+    return s
+end function
+
+constant common = {"the","it","to","a","of","is"},
+         {al,ac_replacements} = columnize({
+            {"Æ","AE"},{"æ","ae"},{"Þ","TH"},{"þ","th"},
+            {"Ð","TH"},{"ð","th"},{"ß","ss"},{"�","fi"},
+            {"�","fl"},{"",'s'},{"’",'z'},
+            {"À",'A'},{"Á",'A'},{"Â",'A'},{"Ã",'A'},
+            {"Ä",'A'},{"Å",'A'},{"à",'a'},{"á",'a'},
+            {"â",'a'},{"ã",'a'},{"ä",'a'},{"å",'a'},
+            {"Ç",'C'},{"ç",'c'},{"È",'E'},{"É",'E'},
+            {"Ê",'E'},{"Ë",'E'},{"è",'e'},{"é",'e'},
+            {"ê",'e'},{"ë",'e'},{"Ì",'I'},{"Í",'I'},
+            {"Î",'I'},{"Ï",'I'},{"ì",'i'},{"í",'i'},
+            {"î",'i'},{"ï",'i'},{"Ò",'O'},{"Ó",'O'},
+            {"Ô",'O'},{"Õ",'O'},{"Ö",'O'},{"Ø",'O'},
+            {"ò",'o'},{"ó",'o'},{"ô",'o'},{"õ",'o'},
+            {"ö",'o'},{"ø",'o'},{"Ñ",'N'},{"ñ",'n'},
+            {"Ù",'U'},{"Ú",'U'},{"Û",'U'},{"Ü",'U'},
+            {"ù",'u'},{"ú",'u'},{"û",'u'},{"ü",'u'},
+            {"Ý",'Y'},{"ÿ",'y'},{"ý",'y'}}),
+        accents_and_ligatures = utf32ch(al)
+
+function normalise(string s)
+    sequence utf32 = utf8_to_utf32(s)
+    sequence res = {}
+    integer i = 1, ch, prev
+    for i=1 to length(utf32) do
+        ch = utf32[i]
+        if find(ch," \t\r\n\x0b\x0c") then
+            if length(res)>0 and prev!=' ' then
+                res &= -1
+            end if
+            prev = ' '
+        elsif find(ch,"0123456789") then
+            if length(res)=0 or prev!='0' then
+                res &= ch-'0'
+            else
+                res[$] = res[$]*10+ch-'0'
+            end if
+            prev = '0'
+        else
+            object rep = find(ch,accents_and_ligatures)
+            if rep then
+                rep = lower(ac_replacements[rep])
+            else
+                rep = lower(ch)
+            end if
+            if length(res) and sequence(res[$]) then
+                res[$] &= rep
+            else
+                res = append(res,""&rep)
+            end if
+            prev = ch
+        end if
+    end for
+    for i=1 to length(common) do
+        while 1 do
+            integer k = find(common[i],res)
+            if k=0 then exit end if
+            res[k..k] = {}
+            if length(res) and res[1]=-1 then
+                res = res[2..$]
+            end if
+        end while
+    end for
+    if length(res) and prev=' ' then
+        res = res[1..$-1]
+    end if
+    return res
+end function
+
+sequence tests = {
+                  {"  leading spaces: 4",
+                   "    leading spaces: 3",
+                   "leading spaces: 2",
+                   " leading spaces: 1"},
+                  {"adjacent spaces: 3",
+                   "adjacent  spaces: 4",
+                   "adjacent   spaces: 1",
+                   "adjacent    spaces: 2"},
+                  {"white    space: 3-2",
+                   "white\r  space: 3-3",
+                   "white\x0cspace: 3-1",
+                   "white\x0bspace: 3+0",
+                   "white\n  space: 3+1",
+                   "white\t  space: 3+2"},
+                  {"caSE independent: 3-1",
+                   "cASE independent: 3-2",
+                   "casE independent: 3+0",
+                   "case independent: 3+1"},
+                  {"foo1000bar99baz9.txt",
+                   "foo100bar99baz0.txt",
+                   "foo100bar10baz0.txt",
+                   "foo1000bar99baz10.txt"},
+                  {"foo1bar",
+                   "foo100bar",
+                   "foo bar",
+                   "foo1000bar"},
+                  {"The Wind in the Willows",
+                   "The 40th step more",
+                   "The 39 steps",
+                   "Wanda"},
+                  {"ignore ý accents: 2-2",
+                   "ignore Ý accents: 2-1",
+                   "ignore y accents: 2+0",
+                   "ignore Y accents: 2+1"},
+                  {"Ball","Card","above","aether",
+                   "apple","autumn","außen","bald",
+                   "car","e-mail","evoke","nina",
+                   "niño","Æon","Évian","æon"},
+                 }
+
+sequence s, n, t, tags
+
+function natural(integer i, integer j)
+    return compare(t[i],t[j])
+end function
+
+for i=1 to length(tests) do
+    s = tests[i]
+    n = sort(s)
+    t = repeat(0,length(s))
+    for j=1 to length(s) do
+        t[j] = normalise(s[j])
+    end for
+    tags = custom_sort(routine_id("natural"),tagset(length(s)))
+    if i=3 then -- clean up the whitespace mess
+        for j=1 to length(s) do
+            s[j] = substitute_all(s[j],{"\r","\x0c","\x0b","\n","\t"},{"\\r","\\x0c","\\x0b","\\n","\\t"})
+            n[j] = substitute_all(n[j],{"\r","\x0c","\x0b","\n","\t"},{"\\r","\\x0c","\\x0b","\\n","\\t"})
+        end for
+    end if
+    printf(1,"%-30s %-30s %-30s\n",{"original","normal","natural"})
+    printf(1,"%-30s %-30s %-30s\n",{"========","======","======="})
+    for k=1 to length(tags) do
+        printf(1,"%-30s|%-30s|%-30s\n",{s[k],n[k],s[tags[k]]})
+    end for
+    puts(1,"\n")
+end for

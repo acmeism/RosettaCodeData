@@ -1,0 +1,46 @@
+const PORT=8080;
+const SERVLET_THREADS=4;
+
+    // A class to process requests from clients (eg browsers)
+    // in a thread. Requests are received via a pipe, which feeds
+    // all Servlet threads.
+class Servlet{
+   fcn init(jobPipe){ self.launch(jobPipe); }
+   fcn liftoff(jobPipe){
+      while(1){    // read request, write response, repeat
+         socket:=jobPipe.read();
+         if(socket.wait(60) != 1)	// what is Chrome doing?
+            { socket.close(); continue; }
+         if (request:=socket.read())
+	    try{ processRequest(request,socket); } catch{}
+      }
+   }
+   fcn splashdown(h,e){ println("Servlet died before its time"); }
+}
+
+fcn processRequest(request,socket){
+   response:=responseHeader();
+   response+="Goodbye, World!";
+   socket.write(response); socket.close();    // no Keep-Alive
+}
+
+fcn responseHeader(status=200,reason="OK"){
+  String(
+   "HTTP/1.0 ",status," ",reason,"\r\n",
+   Time.Date.httpDate(),"\r\n"
+   "Server: ZTWS (zkl)\r\n"
+   "Connection: close\r\n"
+   "Content-Type: text/html; charset=UTF-8\r\n"
+   "\r\n")
+}
+
+      //////////////////// Start the server ///////////////////////
+var jobPipe=Thread.Pipe();    // a queue of requests
+do(SERVLET_THREADS){ Servlet(jobPipe) }  // start threads
+
+    // Create the HTTP server listen socket
+    // Sits here forever passing client HTTP connects to Servlets
+serverSocket:=Network.TCPServerSocket.open(PORT);
+println("HTTP server started at http://",
+    serverSocket.hostname, ":", serverSocket.port);
+serverSocket.listen(jobPipe);

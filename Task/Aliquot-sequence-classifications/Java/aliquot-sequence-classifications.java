@@ -1,11 +1,12 @@
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.LongStream;
-import static java.util.stream.LongStream.rangeClosed;
 
 public class AliquotSequenceClassifications {
 
-    public static Long properDivsSum(long n) {
-        return rangeClosed(1, (n + 1) / 2).filter(i -> n % i == 0 && n != i).sum();
+    private static Long properDivsSum(long n) {
+        return LongStream.rangeClosed(1, (n + 1) / 2).filter(i -> n % i == 0 && n != i).sum();
     }
 
     static boolean aliquot(long n, int maxLen, long maxTerm) {
@@ -52,8 +53,9 @@ public class AliquotSequenceClassifications {
     }
 
     public static void main(String[] args) {
-        long[] arr = {11L, 12, 28, 496, 220, 1184,  12496, 1264460,
-                           790, 909, 562, 1064, 1488};
+        long[] arr = {
+                11, 12, 28, 496, 220, 1184, 12496, 1264460,
+                790, 909, 562, 1064, 1488};
 
         LongStream.rangeClosed(1, 10).forEach(n -> aliquot(n, 16, 1L << 47));
         System.out.println();

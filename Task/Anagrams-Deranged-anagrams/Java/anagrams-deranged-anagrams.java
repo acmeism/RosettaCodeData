@@ -1,62 +1,47 @@
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class DerangedAnagrams {
 
-    public static void main(final String[] args) throws IOException {
-        if (!findAnagrams(readLines("unixdict.txt")))
-            System.out.println("no result");
+    public static void main(String[] args) throws IOException {
+        List<String> words = Files.readAllLines(new File("unixdict.txt").toPath());
+        printLongestDerangedAnagram(words);
     }
 
-    private static boolean isDeranged(final String w, final List<String> lst) {
-        for (String w2 : lst) {
-            int k = w.length() - 1;
-            while (k >= 0 && w.charAt(k) != w2.charAt(k)) {
-                k--;
-            }
-            if (k == -1) {
-                System.out.println(w + ", " + w2);
-                return true;
-            }
-        }
-        return false;
-    }
+    private static void printLongestDerangedAnagram(List<String> words) {
+        words.sort(Comparator.comparingInt(String::length).reversed().thenComparing(String::toString));
 
-    private static boolean findAnagrams(final List<String> words) {
-        Collections.sort(words, new Comparator<String>() {
-            public int compare(String a, String b) {
-                return b.length() - a.length();
-            }
-        });
         Map<String, ArrayList<String>> map = new HashMap<>();
-        for (String w : words) {
-            char[] srt = w.toCharArray();
-            Arrays.sort(srt);
-            String key = String.valueOf(srt);
-            ArrayList<String> lst;
-            if (map.containsKey(key)) {
-                lst = map.get(key);
-                if (isDeranged(w, lst)) {
-                    return true;
+        for (String word : words) {
+            char[] chars = word.toCharArray();
+            Arrays.sort(chars);
+            String key = String.valueOf(chars);
+
+            List<String> anagrams = map.computeIfAbsent(key, k -> new ArrayList<>());
+            for (String anagram : anagrams) {
+                if (isDeranged(word, anagram)) {
+                    System.out.printf("%s %s%n", anagram, word);
+                    return;
                 }
-                lst.add(w);
-            } else {
-                lst = new ArrayList<>();
-                lst.add(w);
-                map.put(key, lst);
             }
+            anagrams.add(word);
         }
-        return false;
+        System.out.println("no result");
     }
 
-    private static List<String> readLines(final String fn) throws IOException {
-        List<String> lines;
-        try (BufferedReader br = new BufferedReader(new FileReader(fn))) {
-            lines = new ArrayList<>();
-            String line = null;
-            while ((line = br.readLine()) != null)
-                lines.add(line);
+    private static boolean isDeranged(String word1, String word2) {
+        for (int i = 0; i < word1.length(); i++) {
+            if (word1.charAt(i) == word2.charAt(i)) {
+                return false;
+            }
         }
-        return lines;
+        return true;
     }
 }

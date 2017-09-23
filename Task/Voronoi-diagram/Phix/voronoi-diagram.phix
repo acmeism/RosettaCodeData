@@ -1,0 +1,195 @@
+--
+-- demo\rosetta\VoronoiDiagram.exw
+--
+include pGUI.e
+
+Ihandle dlg, canvas, timer
+cdCanvas cddbuffer, cdcanvas
+
+-- Stop any current drawing process before starting a new one:
+-- Without this it /is/ going to crash, if it tries to finish
+-- drawing all 100 sites, when there are now only 50, for eg.
+integer timer_active = 0
+
+integer nsites = 200
+integer last_width = -1, last_height
+sequence siteX, siteY, siteC
+
+enum EUCLID, MANHATTAN, MINKOWSKI
+
+constant dmodes = {"Euclid", "Manhattan", "Minkowski"}
+
+integer dmode = EUCLID,
+        drawn = 0       -- (last dmode actually shown)
+
+function distance(integer x1,y1, x2,y2)
+atom d
+    x1 -= x2
+    y1 -= y2
+    switch dmode do
+        case EUCLID:    d = x1*x1+y1*y1                       -- (no need for sqrt)
+        case MANHATTAN: d = abs(x1)+abs(y1)
+        case MINKOWSKI: d = power(abs(x1),3)+power(abs(y1),3) -- ("" power(d,1/3))
+    end switch
+    return d
+end function
+
+sequence nearestIndex, dist
+
+function checkRow(integer site, integer x, integer height)
+bool res = false
+atom dxSquared
+    integer x1 = siteX[site]-x
+    switch dmode do
+        case EUCLID:    dxSquared = x1*x1
+        case MANHATTAN: dxSquared = abs(x1)
+        case MINKOWSKI: dxSquared = power(abs(x1),3)
+    end switch
+    for y=1 to height do
+--      atom dSquared = distance(siteX[site],siteY[site],x,y)   -- (sub-optimal..)
+        atom dSquared
+        integer y1 = siteY[site]-y
+        switch dmode do
+            case EUCLID:    dSquared = dxSquared + y1*y1
+            case MANHATTAN: dSquared = dxSquared + abs(y1)
+            case MINKOWSKI: dSquared = dxSquared + power(abs(y1),3)
+        end switch
+        if dSquared<=dist[x,y] then
+            dist[x,y] = dSquared
+            nearestIndex[x,y] = site
+            res = true
+        end if
+    end for
+    return res
+end function
+
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+integer {width, height} = IupGetIntInt(canvas, "DRAWSIZE")
+    if width!=last_width
+    or height!=last_height
+    or nsites!=length(siteX) then
+        if nsites<1 then nsites = 1 end if
+        siteX = sq_rand(repeat(width,nsites))
+        siteY = sq_rand(repeat(height,nsites))
+        siteC = sq_rand(repeat(#FFFFFF,nsites))
+        last_width = width
+        last_height = height
+        drawn = 0
+    end if
+    if drawn!=dmode             -- (prevent double-draw, and)
+    and not timer_active then   -- (drawing when rug moved..)
+        drawn = dmode
+        cdCanvasActivate(cddbuffer)
+        atom t0 = time(), t1
+        t1 = time()+0.25
+        nearestIndex = repeat(repeat(1,height),width)
+        dist = repeat(repeat(0,height),width)
+        -- fill distance table with distances from the first site
+        integer x1 = siteX[1], y1 = siteY[1]
+        for x=1 to width do
+            for y=1 to height do
+                dist[x,y] = distance(x1,y1,x,y)
+            end for
+            if timer_active then exit end if
+        end for
+        --for other towns
+        for i=2 to nsites do
+            -- look left
+            for x=siteX[i] to 1 by -1 do
+                if not checkRow(i, x, height) then exit end if
+            end for
+            -- look right
+            for x=siteX[i]+1 to width do
+                if not checkRow(i, x, height) then exit end if
+            end for
+            if timer_active then exit end if
+            if time()>t1 then
+                IupSetStrAttribute(dlg, "TITLE", "Voronoi diagram (generating - %3.2f%%)",{100*i/nsites})
+                IupFlush()
+                t1 = time()+0.25
+            end if
+        end for
+        t1 = time()
+        for y=1 to height do
+            integer nearest = nearestIndex[1,y]
+            integer s = 1
+            for x=2 to width do
+                if nearestIndex[x,y]<>nearest then
+                    cdCanvasSetForeground(cddbuffer, siteC[nearest])
+                    cdCanvasLine(cddbuffer, s-1, y-1, x-2, y-1)
+                    nearest = nearestIndex[x,y]
+                    s = x
+                end if
+            end for
+            if timer_active then exit end if
+            cdCanvasSetForeground(cddbuffer, siteC[nearest])
+            cdCanvasLine(cddbuffer, s-1, y-1, width-1, y-1)
+        end for
+        if not timer_active then
+            cdCanvasSetForeground(cddbuffer, CD_BLACK)
+            for i=1 to nsites do
+                cdCanvasSector(cddbuffer, siteX[i], siteY[i], 2, 2, 0, 360)
+            end for
+            cdCanvasFlush(cddbuffer)
+            IupSetStrAttribute(dlg, "TITLE", "Voronoi diagram - %s, %dx%d, %d sites, %3.2fs",{dmodes[dmode],width,height,nsites,time()-t0})
+        end if
+    end if
+    return IUP_DEFAULT
+end function
+
+function map_cb(Ihandle ih)
+    cdcanvas = cdCreateCanvas(CD_IUP, ih)
+    cddbuffer = cdCreateCanvas(CD_DBUFFER, cdcanvas)
+    cdCanvasSetBackground(cddbuffer, CD_WHITE)
+    cdCanvasSetForeground(cddbuffer, CD_BLACK)
+    return IUP_DEFAULT
+end function
+
+function esc_close(Ihandle /*ih*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    integer wasdmode = dmode
+    switch c do
+        case '+': nsites *= 2
+        case '-': nsites = max(floor(nsites/2),1)
+        case 'E','e': dmode = EUCLID
+        case 'M','m': dmode = MANHATTAN
+        case 'W','w': dmode = MINKOWSKI
+    end switch
+    if dmode!=wasdmode
+    or nsites!=length(siteX) then
+        -- give any current drawing process 0.1s to abandon:
+        timer_active = 1
+        IupStoreAttribute(timer, "RUN", "YES")
+--      IupUpdate(canvas)
+    end if
+    return IUP_CONTINUE
+end function
+
+function timer_cb(Ihandle /*ih*/)
+    timer_active = 0
+    IupStoreAttribute(timer, "RUN", "NO")
+    IupUpdate(canvas)
+    return IUP_IGNORE
+end function
+
+procedure main()
+    IupOpen()
+
+    canvas = IupCanvas(NULL)
+    IupSetAttribute(canvas, "RASTERSIZE", "600x400") -- initial size
+    IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
+
+    timer = IupTimer(Icallback("timer_cb"), 100, 0) -- (inactive)
+
+    dlg = IupDialog(canvas)
+    IupSetAttribute(dlg, "TITLE", "Voronoi diagram")
+    IupSetCallback(dlg, "K_ANY",     Icallback("esc_close"))
+    IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+
+    IupMap(dlg)
+    IupSetAttribute(canvas, "RASTERSIZE", NULL) -- release the minimum limitation
+    IupShowXY(dlg,IUP_CENTER,IUP_CENTER)
+    IupMainLoop()
+    IupClose()
+end procedure
+main()

@@ -1,49 +1,71 @@
-use std::sync::Arc;
+//! A simple implementation of the Y Combinator
+// λf.(λx.xx)(λx.f(xx))
+// <=> λf.(λx.f(xx))(λx.f(xx))
 
-//Arc<Box<Closure>>
-macro_rules! abc {
-    ($x:expr) => (Arc::new(Box::new($x)));
+// CREDITS: A better version of the previous code that was posted here, with detailed explanation.
+// See <y> and also <y_apply>.
+
+// A function type that takes its own type as an input is an infinite recursive type.
+// We introduce a trait that will allow us to have an input with the same type as self, and break the recursion.
+// The input is going to be a trait object that implements the desired function in the interface.
+// NOTE: We will be coercing a reference to a closure into this trait object.
+trait Apply<T, R> {
+    fn apply( &self, &Apply<T, R >, T ) -> R;
 }
 
-#[derive(Clone)]
-enum Mu<T> {
-    Roll(Arc<Box<Fn(Mu<T>)->T>>),
-}
+impl<T, R, F> Apply<T, R> for F where F: Fn( &Apply<T, R>, T ) -> R {
+    fn apply( &self, f: &Apply<T, R>, t: T ) -> R {
+        self( f, t )
 
-fn unroll<T>(Mu::Roll(f): Mu<T>) -> Arc<Box<Fn(Mu<T>)->T>> {f.clone()}
-
-pub type Func<A> = Arc<Box<Fn(A)->A>>;
-pub type RecFunc<A> = Arc<Box<Fn(Func<A>) -> Func<A>>>;
-
-pub fn y<A: 'static>(f: RecFunc<A>) -> Func<A> {
-    let g: Arc<Box<Fn(Mu<Func<A>>)->Func<A>>> = abc!(move |x : Mu<Func<A>>| -> Func<A> {
-        let f = f.clone();
-        abc!(move |a:A| -> A {
-            let f = f.clone();
-            f(unroll(x.clone())(x.clone()))(a)
-        })
-    });
-    g(Mu::Roll(g.clone()))
-}
-
-#[macro_export]
-macro_rules! y {
-    (|$name:ident| $fun:tt) => {
-        y(abc!(|$name| abc!($fun)))
+        // If we were to pass in self as f, we get -
+        // NOTE: Each letter is an individual symbol.
+        // λf.λt.sft
+        // => λs.λt.sst [s/f]
+        // => λs.ss
     }
 }
 
-fn fac(n: u32) -> u32 {
-    let fn_: Func<u32> = y!(|f| (move |x| if x == 0 { 1 } else { f(x-1) * x }));
-    fn_(n)
+// Here you take a reference to the function you want to recurse, AND the input, and return the result.
+// But, you are NOT <returning> a recursive version of the given function...
+// You CAN, of course, wrap this in a closure.
+fn y_apply<T, R, F>( f: &F, t: T ) -> R where F: Fn( &Fn( T ) -> R, T ) -> R {
+    ( &|x: &Apply<T, R>, y| x.apply( x, y ) )
+    .apply( &|x: &Apply<T, R>, y| f( &|z| x.apply( x, z ), y ), t )
+
+    // NOTE: Each letter is an individual symbol.
+    // (λx.(λy.xxy))(λx.(λy.f(λz.xxz)y))t
+    // => (λx.xx)(λx.f(xx))t
+    // => (Yf)t
 }
 
-fn fib(n: u32) -> u32 {
-    let fn_: Func<u32> = y!(|f| (move |x| if x < 2 { x } else { f(x-1) + f(x-2) }));
-    fn_(n)
+// The static lifetime bounds on the type parameters 'T' and 'R' guarantee that those types will not -
+// - contain any references that will have a lifetime less than 'static.
+// If the types are allowed to have references that have a lifetime shorter than 'static, those references -
+// - may become invalid while you still you have the returned value.
+// You need to have the lifetimes be 'static, because, unlike before, you RETURN a recursive version of the function...
+fn y<T: 'static, R: 'static>( f: Box<Fn( &Fn( T ) -> R, T ) -> R> ) -> Box<Fn( T ) -> R> {
+    Box::new( move |t: T| ( &|x: &Apply<T, R>, y| x.apply( x, y ) )
+                          .apply( &|x: &Apply<T, R>, y| f( &|z| x.apply( x, z ), y ), t ) )
+
+      // NOTE: Each letter is an individual symbol.
+      // (λt(λx.(λy.xxy))(λx.(λy.f(λz.xxz)y)))t
+      // => (λx.xx)(λx.f(xx))
+      // => Yf
+}
+
+fn fac( n: usize ) -> usize {
+    let almost_fac = Box::new( |f: &Fn( usize ) -> usize, x| if x == 0 { 1 } else { x * f( x - 1 ) } );
+    let fac = y( almost_fac );
+    fac( n )
+}
+
+fn fib( n: usize ) -> usize {
+    let almost_fib = Box::new( |f: &Fn( usize ) -> usize, x| if x < 2 { x } else { f( x - 2 ) + f( x - 1 ) } );
+    let fib = y( almost_fib );
+    fib( n )
 }
 
 fn main() {
-    println!("{}", fac(10));
-    println!("{}", fib(10))
+    println!( "{}", fac( 10 ) );
+    println!( "{}", fib( 10 ) );
 }

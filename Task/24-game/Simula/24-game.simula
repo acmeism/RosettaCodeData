@@ -1,0 +1,296 @@
+BEGIN
+
+    CLASS EXPR;
+    BEGIN
+
+
+        REAL PROCEDURE POP;
+        BEGIN
+            IF STACKPOS > 0 THEN
+            BEGIN STACKPOS := STACKPOS - 1; POP := STACK(STACKPOS); END;
+        END POP;
+
+
+        PROCEDURE PUSH(NEWTOP); REAL NEWTOP;
+        BEGIN
+            STACK(STACKPOS) := NEWTOP;
+            STACKPOS := STACKPOS + 1;
+        END PUSH;
+
+
+        REAL PROCEDURE CALC(OPERATOR, ERR); CHARACTER OPERATOR; LABEL ERR;
+        BEGIN
+            REAL X, Y; X := POP; Y := POP;
+            IF      OPERATOR = '+' THEN PUSH(Y + X)
+            ELSE IF OPERATOR = '-' THEN PUSH(Y - X)
+            ELSE IF OPERATOR = '*' THEN PUSH(Y * X)
+            ELSE IF OPERATOR = '/' THEN BEGIN
+                                            IF X = 0 THEN
+                                            BEGIN
+                                                EVALUATEDERR :- "DIV BY ZERO";
+                                                GOTO ERR;
+                                            END;
+                                            PUSH(Y / X);
+                                        END
+            ELSE
+            BEGIN
+                EVALUATEDERR :- "UNKNOWN OPERATOR";
+                GOTO ERR;
+            END
+        END CALC;
+
+
+        PROCEDURE READCHAR(CH); NAME CH; CHARACTER CH;
+        BEGIN
+            IF T.MORE THEN CH := T.GETCHAR ELSE CH := EOT;
+        END READCHAR;
+
+
+        PROCEDURE SKIPWHITESPACE(CH); NAME CH; CHARACTER CH;
+        BEGIN
+            WHILE (CH = SPACE) OR (CH = TAB) OR (CH = CR) OR (CH = LF) DO
+                READCHAR(CH);
+        END SKIPWHITESPACE;
+
+
+        PROCEDURE BUSYBOX(OP, ERR); INTEGER OP; LABEL ERR;
+        BEGIN
+            CHARACTER OPERATOR;
+            REAL NUMBR;
+            BOOLEAN NEGATIVE;
+
+            SKIPWHITESPACE(CH);
+
+            IF OP = EXPRESSION THEN
+            BEGIN
+
+                NEGATIVE := FALSE;
+                WHILE (CH = '+') OR (CH = '-') DO
+                BEGIN
+                    IF CH = '-' THEN NEGATIVE :=  NOT NEGATIVE;
+                    READCHAR(CH);
+                END;
+
+                BUSYBOX(TERM, ERR);
+
+                IF NEGATIVE THEN
+                BEGIN
+                    NUMBR := POP; PUSH(0 - NUMBR);
+                END;
+
+                WHILE (CH = '+') OR (CH = '-') DO
+                BEGIN
+                    OPERATOR := CH; READCHAR(CH);
+                    BUSYBOX(TERM, ERR); CALC(OPERATOR, ERR);
+                END;
+
+            END
+            ELSE IF OP = TERM THEN
+            BEGIN
+
+                BUSYBOX(FACTOR, ERR);
+                WHILE (CH = '*') OR (CH = '/') DO
+                BEGIN
+                    OPERATOR := CH; READCHAR(CH);
+                    BUSYBOX(FACTOR, ERR); CALC(OPERATOR, ERR)
+                END
+
+            END
+            ELSE IF OP = FACTOR THEN
+            BEGIN
+
+                IF (CH = '+') OR (CH = '-') THEN
+                  BUSYBOX(EXPRESSION, ERR)
+                ELSE IF (CH >= '0') AND (CH <= '9') THEN
+                  BUSYBOX(NUMBER, ERR)
+                ELSE IF CH = '(' THEN
+                BEGIN
+                    READCHAR(CH);
+                    BUSYBOX(EXPRESSION, ERR);
+                    IF CH = ')' THEN READCHAR(CH) ELSE GOTO ERR;
+                END
+                ELSE GOTO ERR;
+
+            END
+            ELSE IF OP = NUMBER THEN
+            BEGIN
+
+                NUMBR := 0;
+                WHILE (CH >= '0') AND (CH <= '9') DO
+                BEGIN
+                    NUMBR := 10 * NUMBR + RANK(CH) - RANK('0'); READCHAR(CH);
+                END;
+                IF CH = '.' THEN
+                BEGIN
+                    REAL FAKTOR;
+                    READCHAR(CH);
+                    FAKTOR := 10;
+                    WHILE (CH >= '0') AND (CH <= '9') DO
+                    BEGIN
+                        NUMBR := NUMBR + (RANK(CH) - RANK('0')) / FAKTOR;
+                        FAKTOR := 10 * FAKTOR;
+                        READCHAR(CH);
+                    END;
+                END;
+                PUSH(NUMBR);
+
+            END;
+
+            SKIPWHITESPACE(CH);
+
+        END BUSYBOX;
+
+
+        BOOLEAN PROCEDURE EVAL(INP); TEXT INP;
+        BEGIN
+            EVALUATEDERR :- NOTEXT;
+            STACKPOS := 0;
+            T :- COPY(INP.STRIP);
+            READCHAR(CH);
+            BUSYBOX(EXPRESSION, ERRORLABEL);
+          ! OUTTEXT("T = '");
+          ! OUTTEXT(T);
+          ! OUTTEXT("'");
+          ! OUTTEXT(", T.POS = ");
+          ! OUTINT(T.POS, 0);
+          ! OUTTEXT(", STACKPOS = ");
+          ! OUTINT(STACKPOS, 0);
+          ! OUTTEXT(", T.MORE = ");
+          ! OUTCHAR(IF T.MORE THEN 'T' ELSE 'F');
+          ! OUTTEXT(", CH = ");
+          ! OUTCHAR(CH);
+          ! OUTIMAGE;
+            IF NOT T.MORE AND STACKPOS = 1 AND CH = EOT THEN
+            BEGIN
+                EVALUATED := POP;
+                EVAL := TRUE;
+                GOTO NOERRORLABEL;
+            END;
+    ERRORLABEL:
+            EVAL := FALSE;
+            IF EVALUATEDERR = NOTEXT THEN
+                EVALUATEDERR :- "INVALID EXPRESSION: " & INP;
+    NOERRORLABEL:
+        END EVAL;
+
+
+        REAL PROCEDURE RESULT;
+            RESULT := EVALUATED;
+
+        TEXT PROCEDURE ERR;
+            ERR :- EVALUATEDERR;
+
+        TEXT T;
+
+        INTEGER EXPRESSION;
+        INTEGER TERM;
+        INTEGER FACTOR;
+        INTEGER NUMBER;
+
+        CHARACTER TAB;
+        CHARACTER LF;
+        CHARACTER CR;
+        CHARACTER SPACE;
+        CHARACTER EOT;
+
+        CHARACTER CH;
+        REAL ARRAY STACK(0:31);
+        INTEGER STACKPOS;
+
+        REAL EVALUATED;
+        TEXT EVALUATEDERR;
+
+        EXPRESSION := 1;
+        TERM := 2;
+        FACTOR := 3;
+        NUMBER := 4;
+
+        TAB := CHAR(9);
+        LF := CHAR(10);
+        CR := CHAR(13);
+        SPACE := CHAR(32);
+        EOT := CHAR(0);
+
+    END EXPR;
+
+    INTEGER ARRAY DIGITS(1:4);
+    INTEGER SEED, I;
+    REF(EXPR) E;
+
+    E :- NEW EXPR;
+    OUTTEXT("ENTER RANDOM SEED: ");
+    OUTIMAGE;
+    SEED := ININT;
+    FOR I := 1 STEP 1 UNTIL 4 DO DIGITS(I) := RANDINT(0, 9, SEED);
+
+L:  BEGIN
+        INTEGER ARRAY DIGITSUSED(0:9);
+        INTEGER ARRAY DIGITSTAKEN(0:9);
+        CHARACTER C, LASTC;
+        TEXT INP;
+
+        LASTC := CHAR(0);
+        OUTTEXT("MAKE 24 USING THESE DIGITS: ");
+        FOR I := 1 STEP 1 UNTIL 4 DO
+        BEGIN
+            OUTINT(DIGITS(I), 2);
+            DIGITSUSED( DIGITS(I) ) := DIGITSUSED( DIGITS(I) ) + 1;
+        END;
+        OUTIMAGE;
+        INIMAGE;
+        INP :- COPY(SYSIN.IMAGE.STRIP);
+        OUTIMAGE;
+        WHILE INP.MORE DO
+        BEGIN
+            C := INP.GETCHAR;
+            IF (C >= '0') AND (C <= '9') THEN
+            BEGIN
+                INTEGER D;
+                IF (LASTC >= '0') AND (LASTC <= '9') THEN
+                BEGIN
+                    OUTTEXT("NUMBER HAS TOO MANY DIGITS: ");
+                    OUTCHAR(LASTC);
+                    OUTCHAR(C);
+                    OUTIMAGE;
+                    GOTO L;
+                END;
+                D := RANK(C) - RANK('0');
+                DIGITSTAKEN(D) := DIGITSTAKEN(D) + 1;
+            END
+            ELSE IF NOT ((C = '+') OR (C = '-') OR (C = '/') OR (C = '*') OR
+                         (C = ' ') OR (C = '(') OR (C = ')')) THEN
+            BEGIN
+                OUTTEXT("ILLEGAL INPUT CHARACTER: ");
+                OUTCHAR(C);
+                OUTIMAGE;
+                GOTO L;
+            END;
+            LASTC := C;
+        END;
+        FOR I := 0 STEP 1 UNTIL 9 DO
+        BEGIN
+            IF DIGITSUSED(I) <> DIGITSTAKEN(I) THEN
+            BEGIN
+                OUTTEXT("NOT THE SAME DIGITS.");
+                OUTIMAGE;
+                GOTO L;
+            END;
+        END;
+        IF E.EVAL(INP) THEN
+        BEGIN
+            OUTTEXT("RESULT IS ");
+            OUTFIX(E.RESULT, 4, 10);
+            OUTIMAGE;
+            OUTTEXT(IF ABS(E.RESULT - 24) < 0.001
+                    THEN "YOU WIN"
+                    ELSE "YOU LOOSE");
+            OUTIMAGE;
+        END
+        ELSE
+        BEGIN
+            OUTTEXT(E.ERR);
+            OUTIMAGE;
+        END;
+    END;
+
+END.

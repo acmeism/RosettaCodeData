@@ -1,2 +1,2 @@
 powerSet :: [a] -> [[a]]
-powerset = foldr (\x acc -> acc ++ map (x:) acc) [[]]
+powerSet = foldr (\x acc -> acc ++ map (x:) acc) [[]]

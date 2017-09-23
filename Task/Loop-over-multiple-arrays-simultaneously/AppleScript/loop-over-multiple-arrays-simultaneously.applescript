@@ -1,60 +1,62 @@
+-- ZIP LISTS WITH FUNCTION ---------------------------------------------------
+
 -- zipListsWith :: ([a] -> b) -> [[a]] -> [[b]]
 on zipListsWith(f, xss)
-    set lngLists to length of xss
+    set n to length of xss
 
-    -- appliedToNths :: a -> Int -> [b]
-    script appliedToNths
-        on lambda(_, i)
-            -- nthItem :: [a] -> a
-            script nthItem
-                on lambda(xs)
+    script
+        on |λ|(_, i)
+            script
+                on |λ|(xs)
                     item i of xs
-                end lambda
+                end |λ|
             end script
 
-            if i ≤ lngLists then
-                apply(f, (map(nthItem, xss)))
+            if i ≤ n then
+                apply(f, (map(result, xss)))
             else
                 {}
             end if
-        end lambda
+        end |λ|
     end script
 
-    if lngLists > 0 then
-        map(appliedToNths, item 1 of xss)
+    if n > 0 then
+        map(result, item 1 of xss)
     else
         []
     end if
 end zipListsWith
 
 
-
--- TEST
-
--- Function to apply:
-
--- concatList [String] -> String
-on concatList(lst)
-    intercalate("", lst)
-end concatList
-
+-- TEST  ( zip lists with concat ) -------------------------------------------
 on run
-    -- Application:
 
     intercalate(linefeed, ¬
-        zipListsWith(concatList, ¬
+        zipListsWith(concat, ¬
             [["a", "b", "c"], ["A", "B", "C"], [1, 2, 3]]))
 
 end run
 
 
-
--- GENERIC FUNCTIONS
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- apply (a -> b) -> a -> b
 on apply(f, a)
-    mReturn(f)'s lambda(a)
+    mReturn(f)'s |λ|(a)
 end apply
+
+-- concat :: [[a]] -> [a] | [String] -> String
+on concat(xs)
+    if length of xs > 0 and class of (item 1 of xs) is string then
+        set acc to ""
+    else
+        set acc to {}
+    end if
+    repeat with i from 1 to length of xs
+        set acc to acc & item i of xs
+    end repeat
+    acc
+end concat
 
 -- intercalate :: Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -70,7 +72,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -83,7 +85,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

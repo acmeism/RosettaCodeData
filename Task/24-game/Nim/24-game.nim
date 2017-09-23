@@ -1,8 +1,11 @@
-import math, strutils, algorithm, sequtils
+from random import randomize, random
+from strutils import Whitespace
+from algorithm import sort
+from sequtils import deduplicate
 randomize()
 
-template newSeqWith(len: int, init: expr): expr =
-  var result {.gensym.} = newSeq[type(init)](len)
+template newSeqWith(len: int, init: untyped): untyped =
+  var result = newSeq[type(init)](len)
   for i in 0 .. <len:
     result[i] = init
   result
@@ -14,7 +17,7 @@ var
 
 echo "Make 24 with the digits: ", problem
 
-template op(c): stmt =
+template op(c) =
   let a = stack.pop
   stack.add c(stack.pop, a)
 

@@ -1,45 +1,47 @@
+-- FINAL DOOR STATES ---------------------------------------------------------
+
 -- finalDoors :: Int -> [(Int, Bool)]
 on finalDoors(n)
 
     -- toggledCorridor :: [(Int, Bool)] -> (Int, Bool) -> Int -> [(Int, Bool)]
     script toggledCorridor
-        on lambda(a, _, k)
+        on |λ|(a, _, k)
 
             -- perhapsToggled :: Bool -> Int -> Bool
             script perhapsToggled
-                on lambda(x, i)
+                on |λ|(x, i)
                     if i mod k = 0 then
                         {i, not item 2 of x}
                     else
                         {i, item 2 of x}
                     end if
-                end lambda
+                end |λ|
             end script
 
             map(perhapsToggled, a)
-        end lambda
+        end |λ|
     end script
 
-    set lstRange to range(1, n)
+    set xs to enumFromTo(1, n)
 
     foldl(toggledCorridor, ¬
-        zip(lstRange, replicate(n, {false})), lstRange)
+        zip(xs, replicate(n, {false})), xs)
 end finalDoors
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
     -- isOpenAtEnd :: (Int, Bool) -> Bool
     script isOpenAtEnd
-        on lambda(door)
+        on |λ|(door)
             (item 2 of door)
-        end lambda
+        end |λ|
     end script
 
     -- doorNumber :: (Int, Bool) -> Int
     script doorNumber
-        on lambda(door)
+        on |λ|(door)
             (item 1 of door)
-        end lambda
+        end |λ|
     end script
 
     map(doorNumber, filter(isOpenAtEnd, finalDoors(100)))
@@ -48,8 +50,21 @@ on run
 end run
 
 
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
--- GENERIC FUNCTIONS
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if n < m then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- filter :: (a -> Bool) -> [a] -> [a]
 on filter(f, xs)
@@ -58,7 +73,7 @@ on filter(f, xs)
         set lng to length of xs
         repeat with i from 1 to lng
             set v to item i of xs
-            if lambda(v, i, xs) then set end of lst to v
+            if |λ|(v, i, xs) then set end of lst to v
         end repeat
         return lst
     end tell
@@ -70,7 +85,7 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
@@ -82,40 +97,38 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
 end map
 
--- zip :: [a] -> [b] -> [(a, b)]
-on zip(xs, ys)
-    script pair
-        on lambda(x, i)
-            [x, item i of ys]
-        end lambda
-    end script
-
-    if length of xs = length of ys then
-        map(pair, xs)
+-- min :: Ord a => a -> a -> a
+on min(x, y)
+    if y < x then
+        y
     else
-        missing value
+        x
     end if
-end zip
+end min
 
--- Egyptian multiplication - progressively doubling a list, appending
--- stages of doubling to an accumulator where needed for binary
--- assembly of a target length
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property |λ| : f
+        end script
+    end if
+end mReturn
 
 -- replicate :: Int -> a -> [a]
 on replicate(n, a)
-    if class of a is list then
-        set out to {}
-    else
-        set out to ""
-    end if
+    set out to {}
     if n < 1 then return out
-    set dbl to a
+    set dbl to {a}
 
     repeat while (n > 1)
         if (n mod 2) > 0 then set out to out & dbl
@@ -125,25 +138,12 @@ on replicate(n, a)
     return out & dbl
 end replicate
 
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    set d to 1
-    if n < m then set d to -1
+-- zip :: [a] -> [b] -> [(a, b)]
+on zip(xs, ys)
+    set lng to min(length of xs, length of ys)
     set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
+    repeat with i from 1 to lng
+        set end of lst to {item i of xs, item i of ys}
     end repeat
     return lst
-end range
-
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
-on mReturn(f)
-    if class of f is script then
-        f
-    else
-        script
-            property lambda : f
-        end script
-    end if
-end mReturn
+end zip

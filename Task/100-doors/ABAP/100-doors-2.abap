@@ -1,14 +1,9 @@
-form open_doors_opt.
-  data: lv_square type i value 1,
-        lv_inc    type i value 3.
-  data: lt_doors  type standard table of c initial size 100.
-  field-symbols: <wa_door> type c.
-  do 100 times.
-    append initial line to lt_doors assigning <wa_door>.
-    if sy-index = lv_square.
-      <wa_door> = 'X'.
-      add: lv_inc to lv_square, 2 to lv_inc.
-      write : / 'Door', (4) sy-index right-justified, 'is open' no-gap.
-    endif.
-  enddo.
-endform.
+cl_demo_output=>display( REDUCE stringtab( INIT list TYPE stringtab
+                                              aux TYPE i
+                                          FOR door = 1 WHILE door <= 100
+                                          FOR pass = 1 WHILE pass <= 100
+                                         NEXT aux   = COND #( WHEN pass = 1 THEN 1
+                                                              WHEN door MOD pass = 0 THEN aux + 1 ELSE aux  )
+                                              list  = COND #( WHEN pass = 100
+                                                                THEN COND #( WHEN aux MOD 2 <> 0 THEN VALUE #( BASE list ( CONV #( door ) ) )
+                                                                              ELSE list ) ELSE list ) ) ).

@@ -1,0 +1,56 @@
+constant W = machine_word(),
+         {RTN,PREVEBP} = iff(W=4?{8,20}:{16,40})
+
+procedure show_stack()
+sequence symtab, symtabN
+integer rtn
+atom prev_ebp
+
+    #ilASM{
+        [32]
+            lea edi,[symtab]
+            call :%opGetST      -- [edi]=symtab (ie our local:=the real symtab)
+            mov edi,[ebp+20]    -- prev_ebp
+            mov eax,[edi+8]     -- calling routine no
+            mov [rtn],eax
+            mov eax,edi
+            lea edi,[prev_ebp]
+            call :%pStoreMint
+        [64]
+            lea rdi,[symtab]
+            call :%opGetST      -- [rdi]=symtab (ie our local:=the real symtab)
+            mov rdi,[rbp+40]    -- prev_ebp
+            mov rax,[rdi+16]    -- calling routine no
+            mov [rtn],rax
+            mov rax,rdi
+            lea rdi,[prev_ebp]
+            call :%pStoreMint
+        []
+          }
+    while rtn!=21 do -- (T_maintls, main top level routine, always present)
+        symtabN = symtab[rtn]
+        ?symtabN[1]
+        prev_ebp = peekNS(prev_ebp+PREVEBP,W,0)
+        rtn = peekNS(prev_ebp+RTN,W,0)
+    end while
+end procedure
+
+procedure three(bool die)
+    if die then
+        ?9/0
+    else
+        show_stack()
+    end if
+end procedure
+
+procedure two(bool die)
+    three(die)
+end procedure
+
+procedure one(bool die)
+    two(die)
+end procedure
+
+one(0)
+?routine_id("dummy")    -- see note below
+one(1)

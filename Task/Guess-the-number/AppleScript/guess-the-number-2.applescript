@@ -1,9 +1,11 @@
+-- GUESS THE NUMBER ----------------------------------------------------------
+
 on run
     -- isMatch :: Int -> Bool
     script isMatch
-        on lambda(x)
+        on |λ|(x)
             tell x to its guess = its secret
-        end lambda
+        end |λ|
     end script
 
     -- challenge :: () -> {secret: Int, guess: Int}
@@ -21,14 +23,14 @@ on run
             end if
         end response
 
-        on lambda(rec)
+        on |λ|(rec)
             {secret:(random number from 1 to 10), guess:response() ¬
                 of challenge, attempts:(attempts of rec) + 1}
-        end lambda
+        end |λ|
     end script
 
 
-    -- MAIN LOOP
+    -- MAIN LOOP -------------------------------------------------------------
     set rec to |until|(isMatch, challenge, {secret:-1, guess:0, attempts:0})
 
     display dialog (((guess of rec) as string) & ":    Well guessed ! " & ¬
@@ -36,29 +38,7 @@ on run
 end run
 
 
-
--- GENERIC LBRARY FUNCTIONS
-
--- until :: (a -> Bool) -> (a -> a) -> a -> a
-on |until|(p, f, x)
-    set mp to mReturn(p)
-    set mf to mReturn(f)
-
-    script
-        property p : mp's lambda
-        property f : mf's lambda
-
-        on lambda(v)
-            repeat until p(v)
-                set v to f(v)
-            end repeat
-            return v
-        end lambda
-    end script
-
-    result's lambda(x)
-end |until|
-
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- isInteger :: a -> Bool
 on isInteger(e)
@@ -77,7 +57,20 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
+
+-- until :: (a -> Bool) -> (a -> a) -> a -> a
+on |until|(p, f, x)
+    set mp to mReturn(p)
+    set v to x
+
+    tell mReturn(f)
+        repeat until mp's |λ|(v)
+            set v to |λ|(v)
+        end repeat
+    end tell
+    return v
+end |until|

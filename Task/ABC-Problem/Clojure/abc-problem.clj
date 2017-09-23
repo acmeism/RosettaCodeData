@@ -10,7 +10,7 @@
 (defn abc
   "return lazy sequence of solutions (i.e. block lists)"
   [blocks [c & cs]]
-  (if-some c
+  (if (some? c)
     (for [b blocks :when (some #(= c %) b)
           bs (abc (omit blocks b) cs)]
       (cons b bs))

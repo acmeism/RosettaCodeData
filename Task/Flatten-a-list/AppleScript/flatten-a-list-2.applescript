@@ -1,59 +1,34 @@
--- quickSort :: (Ord a) => [a] -> [a]
-on quickSort(xs)
-    set headTail to uncons(xs)
-    if headTail is not missing value then
-        set {h, t} to headTail
-
-        -- lessOrEqual :: a -> Bool
-        script lessOrEqual
-            on lambda(x)
-                x ≤ h
-            end lambda
-        end script
-
-        set {less, more} to partition(lessOrEqual, t)
-
-        quickSort(less) & h & quickSort(more)
+-- flatten :: Tree a -> [a]
+on flatten(t)
+    if class of t is list then
+        concatMap(flatten, t)
     else
-        xs
+        t
     end if
-end quickSort
+end flatten
 
-
--- TEST
+-- TEST -----------------------------------------------------------------------
 on run
 
-    quickSort([11.8, 14.1, 21.3, 8.5, 16.7, 5.7])
+    flatten([[1], 2, [[3, 4], 5], [[[]]], [[[6]]], 7, 8, []])
 
-    --> {5.7, 8.5, 11.8, 14.1, 16.7, 21.3}
-
+    --> {1, 2, 3, 4, 5, 6, 7, 8}
 end run
 
 
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
--- GENERIC FUNCTIONS
-
--- partition :: predicate -> List -> (Matches, nonMatches)
--- partition :: (a -> Bool) -> [a] -> ([a], [a])
-on partition(f, xs)
+-- concatMap :: (a -> [b]) -> [a] -> [b]
+on concatMap(f, xs)
+    set lst to {}
+    set lng to length of xs
     tell mReturn(f)
-        set lst to {{}, {}}
-        repeat with x in xs
-            set v to contents of x
-            set end of item ((lambda(v) as integer) + 1) of lst to v
+        repeat with i from 1 to lng
+            set lst to (lst & |λ|(item i of xs, i, xs))
         end repeat
-        return {item 2 of lst, item 1 of lst}
     end tell
-end partition
-
--- uncons :: [a] -> Maybe (a, [a])
-on uncons(xs)
-    if length of xs > 0 then
-        {item 1 of xs, rest of xs}
-    else
-        missing value
-    end if
-end uncons
+    return lst
+end concatMap
 
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
@@ -62,7 +37,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

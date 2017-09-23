@@ -1,17 +1,26 @@
 import Data.Time.Calendar
-import Data.Time.Calendar.WeekDate
+       (Day, addDays, showGregorian, fromGregorian, gregorianMonthLength)
+import Data.Time.Calendar.WeekDate (toWeekDate)
+import Data.List (transpose, intercalate)
 
--- 1 for Monday to 7 for Sunday
-findWeekDay dayOfWeek date = head $ filter isWeekDay $ map toDate [-6 .. 0]
-  where
-    toDate ago = addDays ago date
-    isWeekDay theDate = let (_ , _ , day) = toWeekDate theDate
-                       in day == dayOfWeek
+-- [1 .. 7] for [Mon .. Sun]
+findWeekDay :: Int -> Day -> Day
+findWeekDay dayOfWeek date =
+  head
+    (filter
+       (\x ->
+           let (_, _, day) = toWeekDate x
+           in (day == dayOfWeek))
+       ((`addDays` date) <$> [-6 .. 0]))
 
-weekDayDates dayOfWeek year = map (showGregorian . findWeekDay dayOfWeek) lastDaysInMonth
-  where
-    lastDaysInMonth = map findLastDay [1 .. 12]
-    findLastDay month = fromGregorian year month (gregorianMonthLength year month)
+weekDayDates :: Int -> Integer -> [String]
+weekDayDates dayOfWeek year =
+  ((showGregorian . findWeekDay dayOfWeek) .
+   (fromGregorian year <*> gregorianMonthLength year)) <$>
+  [1 .. 12]
 
-sundayDates = weekDayDates 7
-main = readLn >>= mapM_ putStrLn.sundayDates
+main :: IO ()
+main =
+  mapM_
+    putStrLn
+    (intercalate "  " <$> transpose (weekDayDates 7 <$> [2013 .. 2017]))

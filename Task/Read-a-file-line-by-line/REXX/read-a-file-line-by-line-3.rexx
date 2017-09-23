@@ -1,15 +1,14 @@
-/*REXX program reads and displays (with count) a file, 1 line at a time.*/
-parse arg fileID .;  if fileID==''  then exit   /*No fileID?  Then stop.*/
-say 'displaying file: '  fileID        /*show what file is being shown. */
-call linein fileID,1,0                 /*see comment in the section hdr.*/
-say                                    /* [↓]  show the file's contents.*/
-     do #=1  while lines(fileID)\==0   /*loop whilst there are records. */
-     x=linein(fileID);  xLen=length(x) /*read a record; get its length. */
-     say                               /*show a blank for peruseability.*/
-     say 'record#=' # "  length=" xLen /*show the record number & length*/
-     say x                             /*show the content of the record.*/
-     end    /*#*/
+/*REXX program   reads  and  displays  (with a count)  a file,  one line at a time.     */
+parse arg fID .;      if fID==''  then exit      /*Was no fileID specified?  Then quit. */
+say center(' displaying file: ' fID" ", 79, '═') /*show the name of the file being read.*/
+call linein fID, 1, 0                            /*see the comment in the section header*/
+say                                              /* [↓]  show a file's contents (lines).*/
+     do #=1  while lines(fID)\==0; y=linein(fID) /*loop whilst there are lines in file. */
+     say                                         /*show a blank line for peruseability. */
+     say 'record#='   #   "  length="  length(y) /*show the record number and the length*/
+     say y                                       /*show the content of the line (record)*/
+     end   /*#*/
 say
-say 'file '  fileID  " has "  #-1  ' records.'   /*record count summary.*/
-call lineout fileID                    /*close input file (most REXXes).*/
-                                       /*stick a fork in it, we're done.*/
+say 'file '   fID   " has "   #-1   ' records.'  /*display the record count summary.    */
+call lineout  fID                                /*close the input file  (most REXXes). */
+                                                 /*stick a fork in it,  we're all done. */

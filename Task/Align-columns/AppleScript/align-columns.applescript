@@ -1,3 +1,5 @@
+-- COLUMN ALIGNMENTS ---------------------------------------------------------
+
 property pstrLines : ¬
     "Given$a$text$file$of$many$lines,$where$fields$within$a$line$\n" & ¬
     "are$delineated$by$a$single$'dollar'$character,$write$a$program\n" & ¬
@@ -10,29 +12,15 @@ property eLeft : -1
 property eCenter : 0
 property eRight : 1
 
-on run
-    set lstCols to lineColumns("$", pstrLines)
-
-    script testAlignment
-        on lambda(eAlign)
-            columnsAligned(eAlign, lstCols)
-        end lambda
-    end script
-
-    intercalate(return & return, ¬
-        map(testAlignment, {eLeft, eRight, eCenter}))
-end run
-
-
 -- columnsAligned :: EnumValue -> [[String]] -> String
 on columnsAligned(eAlign, lstCols)
     -- padwords :: Int -> [String] -> [[String]]
     script padwords
-        on lambda(n, lstWords)
+        on |λ|(n, lstWords)
 
             -- pad :: String -> String
             script pad
-                on lambda(str)
+                on |λ|(str)
                     set lngPad to n - (length of str)
                     if eAlign = my eCenter then
                         set lngHalf to lngPad div 2
@@ -45,11 +33,11 @@ on columnsAligned(eAlign, lstCols)
                             {replicate(lngPad, space), str, ""}
                         end if
                     end if
-                end lambda
+                end |λ|
             end script
 
             map(pad, lstWords)
-        end lambda
+        end |λ|
     end script
 
     unlines(map(my unwords, ¬
@@ -61,9 +49,9 @@ end columnsAligned
 on lineColumns(strColDelim, strText)
     -- _words :: Text -> [Text]
     script _words
-        on lambda(str)
+        on |λ|(str)
             splitOn(strColDelim, str)
-        end lambda
+        end |λ|
     end script
 
     set lstRows to map(_words, splitOn(linefeed, pstrLines))
@@ -71,9 +59,9 @@ on lineColumns(strColDelim, strText)
 
     -- fullRow :: [[a]] -> [[a]]
     script fullRow
-        on lambda(lst)
+        on |λ|(lst)
             lst & replicate(nCols - (length of lst), {""})
-        end lambda
+        end |λ|
     end script
 
     transpose(map(fullRow, lstRows))
@@ -81,19 +69,56 @@ end lineColumns
 
 -- widest [a] -> Int
 on widest(xs)
-    script maxLen
-        on lambda(a, x)
-            set lng to length of x
-            cond(lng > a, lng, a)
-        end lambda
-    end script
-
-    foldl(maxLen, 0, xs)
+    |length|(maximumBy(comparing(my |length|), xs))
 end widest
 
+-- TEST ----------------------------------------------------------------------
+on run
+    set lstCols to lineColumns("$", pstrLines)
 
+    script testAlignment
+        on |λ|(eAlign)
+            columnsAligned(eAlign, lstCols)
+        end |λ|
+    end script
 
--- GENERIC LIBRARY FUNCTIONS
+    intercalate(return & return, ¬
+        map(testAlignment, {eLeft, eRight, eCenter}))
+end run
+
+-- GENERIC FUNCTIONS ---------------------------------------------------------
+
+-- comparing :: (a -> b) -> (a -> a -> Ordering)
+on comparing(f)
+    set mf to mReturn(f)
+    script
+        on |λ|(a, b)
+            set x to mf's |λ|(a)
+            set y to mf's |λ|(b)
+            if x < y then
+                -1
+            else
+                if x > y then
+                    1
+                else
+                    0
+                end if
+            end if
+        end |λ|
+    end script
+end comparing
+
+-- foldl :: (a -> b -> a) -> a -> [b] -> a
+on foldl(f, startValue, xs)
+    tell mReturn(f)
+        set v to startValue
+        set lng to length of xs
+        repeat with i from 1 to lng
+            set v to |λ|(v, item i of xs, i, xs)
+        end repeat
+        return v
+    end tell
+end foldl
 
 -- Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -103,52 +128,22 @@ on intercalate(strText, lstText)
     return strJoined
 end intercalate
 
--- Text -> Text -> [Text]
-on splitOn(strDelim, strMain)
-    set {dlm, my text item delimiters} to {my text item delimiters, strDelim}
-    set lstParts to text items of strMain
-    set my text item delimiters to dlm
-    return lstParts
-end splitOn
+-- length :: [a] -> Int
+on |length|(xs)
+    length of xs
+end |length|
 
--- [Text] -> Text
-on unlines(lstLines)
-    intercalate(linefeed, lstLines)
-end unlines
-
--- [Text] -> Text
-on unwords(lstWords)
-    intercalate(" ", lstWords)
-end unwords
-
--- transpose :: [[a]] -> [[a]]
-on transpose(xss)
-    script column
-        on lambda(_, iCol)
-            script row
-                on lambda(xs)
-                    item iCol of xs
-                end lambda
-            end script
-
-            map(row, xss)
-        end lambda
-    end script
-
-    map(column, item 1 of xss)
-end transpose
-
--- foldl :: (a -> b -> a) -> a -> [b] -> a
-on foldl(f, startValue, xs)
-    tell mReturn(f)
-        set v to startValue
-        set lng to length of xs
-        repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
-        end repeat
-        return v
-    end tell
-end foldl
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property |λ| : f
+        end script
+    end if
+end mReturn
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -156,34 +151,36 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
 end map
 
--- zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
-on zipWith(f, xs, ys)
-    set lng to length of xs
-    if lng is not length of ys then return missing value
+-- maximumBy :: (a -> a -> Ordering) -> [a] -> a
+on maximumBy(f, xs)
+    set cmp to mReturn(f)
+    script max
+        on |λ|(a, b)
+            if a is missing value or cmp's |λ|(a, b) < 0 then
+                b
+            else
+                a
+            end if
+        end |λ|
+    end script
 
-    tell mReturn(f)
-        set lst to {}
-        repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, item i of ys)
-        end repeat
-        return lst
-    end tell
-end zipWith
+    foldl(max, missing value, xs)
+end maximumBy
 
--- cond :: Bool -> a -> a -> a
-on cond(bool, f, g)
-    if bool then
-        f
+-- min :: Ord a => a -> a -> a
+on min(x, y)
+    if y < x then
+        y
     else
-        g
+        x
     end if
-end cond
+end min
 
 -- Egyptian multiplication - progressively doubling a list, appending
 -- stages of doubling to an accumulator where needed for binary
@@ -191,7 +188,11 @@ end cond
 
 -- replicate :: Int -> a -> [a]
 on replicate(n, a)
-    set out to cond(class of a is string, "", {})
+    if class of a is string then
+        set out to ""
+    else
+        set out to {}
+    end if
     if n < 1 then return out
     set dbl to a
 
@@ -203,14 +204,49 @@ on replicate(n, a)
     return out & dbl
 end replicate
 
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
-on mReturn(f)
-    if class of f is script then
-        f
-    else
-        script
-            property lambda : f
-        end script
-    end if
-end mReturn
+-- Text -> Text -> [Text]
+on splitOn(strDelim, strMain)
+    set {dlm, my text item delimiters} to {my text item delimiters, strDelim}
+    set lstParts to text items of strMain
+    set my text item delimiters to dlm
+    return lstParts
+end splitOn
+
+-- transpose :: [[a]] -> [[a]]
+on transpose(xss)
+    script column
+        on |λ|(_, iCol)
+            script row
+                on |λ|(xs)
+                    item iCol of xs
+                end |λ|
+            end script
+
+            map(row, xss)
+        end |λ|
+    end script
+
+    map(column, item 1 of xss)
+end transpose
+
+-- [Text] -> Text
+on unlines(lstLines)
+    intercalate(linefeed, lstLines)
+end unlines
+
+-- [Text] -> Text
+on unwords(lstWords)
+    intercalate(" ", lstWords)
+end unwords
+
+-- zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+on zipWith(f, xs, ys)
+    set lng to min(length of xs, length of ys)
+    set lst to {}
+    tell mReturn(f)
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, item i of ys)
+        end repeat
+        return lst
+    end tell
+end zipWith

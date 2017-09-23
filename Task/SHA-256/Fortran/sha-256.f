@@ -87,7 +87,7 @@ program sha256
         allocate(character(m) :: name)
         call get_command_argument(i, name)
         call sha256hash(name, hash, dwStatus, filesize)
-        if (dwStatus*0 == 0) then
+        if (dwStatus == 0) then
             do j = 1, SHA256LEN
                 write(*, "(Z2.2)", advance="NO") hash(j)
             end do

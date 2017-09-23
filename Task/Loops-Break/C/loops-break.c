@@ -1,17 +1,18 @@
-#include <stdlib.h>
-#include <time.h>
-#include <stdio.h>
+/*Corrected by Abhishek Ghosh, Mahalaya (19th September) 2017*/
 
-#define LOWER 0
-#define UPPER 19
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
 
 int main() {
-    srand(time(NULL));
+	time_t t;
+	int a;
+    srand((unsigned)time(&t));
 
     for (;;) {
-        unsigned a = LOWER + rand() / (RAND_MAX / (UPPER - LOWER + 1) + 1);
+        a = rand()%20;
         printf("%d\n", a);
-        if (a == 10) break;
+        if (a == 0) break;
     }
     return 0;
 }

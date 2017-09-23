@@ -1,7 +1,7 @@
-/*REXX program calculates GAMMA using the Taylor series coefficients, ≈80 decimal digits*/
-                             /*The GAMMA function symbol is the Greek capital letter: Γ */
+/*REXX program calculates GAMMA using the Taylor series coefficients; ≈80 decimal digits*/
+                            /*The GAMMA function symbol is the Greek capital letter:  Γ */
 numeric digits 90                                /*be able to handle extended precision.*/
-parse arg LO HI .                                /*allow specification of gamma argument*/
+parse arg LO HI .                                /*allow specification of gamma arg/args*/
                                                  /* [↓]  either show a range or a ···   */
         do j=word(LO 1, 1)  to word(HI LO 9, 1)  /*              ··· single gamma value.*/
         say 'gamma('j") ="  gamma(j)             /*compute gamma of J and display value.*/
@@ -9,8 +9,8 @@ parse arg LO HI .                                /*allow specification of gamma 
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 gamma:  procedure;   parse arg x;    xm=x-1;    sum=0
-                               /*coefficients thanks to:  Arne Fransén & Staffan Wrigge.*/
- #.1 =  1                      /* [↓]    #.2   is the   Euler-Mascheroni  constant.     */
+                                /*coefficients thanks to: Arne Fransén & Staffan Wrigge.*/
+ #.1 =  1                       /* [↓]    #.2   is the   Euler-Mascheroni  constant.    */
  #.2 =  0.57721566490153286060651209008240243104215933593992359880576723488486772677766467
  #.3 = -0.65587807152025388107701951514539048127976638047858434729236244568387083835372210
  #.4 = -0.04200263503409523552900393487542981871139450040110609352206581297618009687597599
@@ -62,7 +62,7 @@ gamma:  procedure;   parse arg x;    xm=x-1;    sum=0
 #.50 = -0.00000000000000000000000000000000000000001056233178503581218600561071538285049997
 #.51 =  0.00000000000000000000000000000000000000000026784429826430494783549630718908519485
 #.52 =  0.00000000000000000000000000000000000000000002424715494851782689673032938370921241
-#=52;                do k=#  by -1  for #
-                     sum=sum*xm  +  #.k
-                     end   /*k*/
+#=52;                           do k=#  by -1  for #
+                                sum=sum*xm  +  #.k
+                                end   /*k*/
 return 1/sum

@@ -1,16 +1,23 @@
-import Data.List
-import System.Random
-import Control.Monad
-import Control.Arrow
-import Data.Ord
+import Data.List (minimumBy, tails, unfoldr, foldl1') --'
 
-vecLeng [[a,b],[p,q]] = sqrt $ (a-p)^2+(b-q)^2
+import System.Random (newStdGen, randomRs)
 
-findClosestPair =  foldl1' ((minimumBy (comparing vecLeng). ). (. return). (:)) .
-                   concatMap (\(x:xs) -> map ((x:).return) xs) . init . tails
+import Control.Arrow ((&&&))
+
+import Data.Ord (comparing)
+
+vecLeng [[a, b], [p, q]] = sqrt $ (a - p) ^ 2 + (b - q) ^ 2
+
+findClosestPair =
+  foldl1'' ((minimumBy (comparing vecLeng) .) . (. return) . (:)) .
+  concatMap (\(x:xs) -> map ((x :) . return) xs) . init . tails
 
 testCP = do
-    g <- newStdGen
-    let pts :: [[Double]]
-        pts = take 1000. unfoldr (Just. splitAt 2) $ randomRs(-1,1) g
-    print . (id &&& vecLeng ) . findClosestPair $ pts
+  g <- newStdGen
+  let pts :: [[Double]]
+      pts = take 1000 . unfoldr (Just . splitAt 2) $ randomRs (-1, 1) g
+  print . (id &&& vecLeng) . findClosestPair $ pts
+
+main = testCP
+
+foldl1'' = foldl1'

@@ -1,11 +1,14 @@
-/* REXX */
-Parse Version v; Say v
-n=1000000
-Say 'N='n
-Call time 'R'; Do i=1 To n; xx=f1(5); End; Say 'f1' xx time('E')
-Call time 'R'; Do i=1 To n; xx=f2(5); End; Say 'f2' xx time('E')
-Call time 'R'; Do i=1 To n; xx=f3(5); End; Say 'f3' xx time('E')
-Exit
-f1: procedure;   parse arg x;   return  x**3  -  3 * x**2   +   2 * x
-f2: procedure;   parse arg x;   x2=x*x; return x*x2 - 3*x2 + x+x
-f3: Return((arg(1)-3)*arg(1)+2)*arg(1)
+/*REXX program finds the roots of a specific function:  x^3 - 3*x^2 + 2*x  via bisection*/
+parse arg bot top inc .                          /*obtain optional arguments from the CL*/
+if bot=='' | bot==","  then bot= -5              /*Not specified?  Then use the default.*/
+if top=='' | top==","  then top= +5              /* "       "        "   "   "     "    */
+if inc=='' | inc==","  then inc=   .0001         /* "       "        "   "   "     "    */
+x=bot-inc                                        /*compute 1st value to start compares. */
+z=x*(x*(x-3)+2)                                  /*formula used   ──► x^3 - 3x^2  + 2x  */
+!=sign(z)                                        /*obtain the sign of the initial value.*/
+            do x=bot  to top  by  inc            /*traipse through the specified range. */
+            z=x*(x*(x-3)+2);       $=sign(z)     /*compute new value;  obtain the sign. */
+            if z=0  then                               say  'found an exact root at'   x/1
+                    else if !\==$  then if !\==0  then say  'passed a root at'         x/1
+            !=$                                  /*use the new sign for the next compare*/
+            end   /*x*/                          /*dividing by unity normalizes X  [↑]  */

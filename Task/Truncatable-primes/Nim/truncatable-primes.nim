@@ -1,6 +1,6 @@
 import sets, strutils, algorithm
 
-proc primes(n): seq[int64] =
+proc primes(n: int64): seq[int64] =
   result = @[]
   var multiples = initSet[int64]()
   for i in 2..n:
@@ -9,7 +9,7 @@ proc primes(n): seq[int64] =
       for j in countup(i*i, n, i.int):
         multiples.incl j
 
-proc truncatablePrime(n): tuple[left: int64, right: int64] =
+proc truncatablePrime(n: int64): tuple[left: int64, right: int64] =
   var
     primelist: seq[string] = @[]
   for x in primes(n):
@@ -18,14 +18,14 @@ proc truncatablePrime(n): tuple[left: int64, right: int64] =
   var primeset = toSet primelist
   for n in primelist:
     var alltruncs = initSet[string]()
-    for i in 0..n.len:
-      alltruncs.incl n[1..n.high]
+    for i in 0..n.len-1:
+      alltruncs.incl n[i..n.high]
     if alltruncs <= primeset:
       result.left = parseInt(n)
       break
   for n in primelist:
     var alltruncs = initSet[string]()
-    for i in 0..n.len:
+    for i in 0..n.len-1:
       alltruncs.incl n[0..i]
     if alltruncs <= primeset:
       result.right = parseInt(n)

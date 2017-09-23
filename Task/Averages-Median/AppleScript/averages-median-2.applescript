@@ -1,15 +1,17 @@
+-- MEDIAN ---------------------------------------------------------------------
+
 -- median :: [Num] -> Num
 on median(xs)
     -- nth :: [Num] -> Int -> Maybe Num
     script nth
-        on lambda(xxs, n)
+        on |λ|(xxs, n)
             if length of xxs > 0 then
                 set {x, xs} to uncons(xxs)
 
                 script belowX
-                    on lambda(y)
+                    on |λ|(y)
                         y < x
-                    end lambda
+                    end |λ|
                 end script
 
                 set {ys, zs} to partition(belowX, xs)
@@ -18,24 +20,24 @@ on median(xs)
                     x
                 else
                     if k > n then
-                        lambda(ys, n)
+                        |λ|(ys, n)
                     else
-                        lambda(zs, n - k - 1)
+                        |λ|(zs, n - k - 1)
                     end if
                 end if
             else
                 missing value
             end if
-        end lambda
+        end |λ|
     end script
 
     set n to length of xs
     if n > 0 then
         tell nth
             if n mod 2 = 0 then
-                (lambda(xs, n div 2) + lambda(xs, (n div 2) - 1)) / 2
+                (|λ|(xs, n div 2) + |λ|(xs, (n div 2) - 1)) / 2
             else
-                lambda(xs, n div 2)
+                |λ|(xs, n div 2)
             end if
         end tell
     else
@@ -43,8 +45,7 @@ on median(xs)
     end if
 end median
 
-
--- TEST
+-- TEST -----------------------------------------------------------------------
 on run
 
     map(median, [¬
@@ -56,9 +57,31 @@ on run
     --> {missing value, 4, 3.5, 2.1}
 end run
 
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
+-- map :: (a -> b) -> [a] -> [b]
+on map(f, xs)
+    tell mReturn(f)
+        set lng to length of xs
+        set lst to {}
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, i, xs)
+        end repeat
+        return lst
+    end tell
+end map
 
--- GENERIC FUNCTIONS
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property |λ| : f
+        end script
+    end if
+end mReturn
 
 -- partition :: predicate -> List -> (Matches, nonMatches)
 -- partition :: (a -> Bool) -> [a] -> ([a], [a])
@@ -67,7 +90,7 @@ on partition(f, xs)
         set lst to {{}, {}}
         repeat with x in xs
             set v to contents of x
-            set end of item ((lambda(v) as integer) + 1) of lst to v
+            set end of item ((|λ|(v) as integer) + 1) of lst to v
         end repeat
     end tell
     {item 2 of lst, item 1 of lst}
@@ -81,27 +104,3 @@ on uncons(xs)
         missing value
     end if
 end uncons
-
--- map :: (a -> b) -> [a] -> [b]
-on map(f, xs)
-    tell mReturn(f)
-        set lng to length of xs
-        set lst to {}
-        repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
-        end repeat
-        return lst
-    end tell
-end map
-
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
-on mReturn(f)
-    if class of f is script then
-        f
-    else
-        script
-            property lambda : f
-        end script
-    end if
-end mReturn

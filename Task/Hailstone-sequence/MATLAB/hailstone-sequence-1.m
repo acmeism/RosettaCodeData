@@ -1,19 +1,11 @@
-   function x = hailstone(n)
-      % iterative definition
-      global VERBOSE;
-      x = 1;
-      while (1)
-        if VERBOSE,
-          printf('%i ',n);   % print element
-        end;
-
-        if n==1,
-          return;
-        elseif mod(n,2),
-          n = 3*n+1;
-        else
-          n = n/2;
-        end;
-        x = x + 1;
-      end;
-   end;
+function x = hailstone(n)
+  x = n;
+  while n > 1
+       % faster than mod(n, 2)
+    if n ~= floor(n / 2) * 2
+      n = n * 3 + 1;
+    else
+      n = n / 2;
+    end
+    x(end + 1) = n; %#ok
+  end

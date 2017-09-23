@@ -5,15 +5,12 @@
     // so this multiplication function takes and returns
     // long integer strings rather than any kind of native integer
 
-
     // longMult :: (String | Integer) -> (String | Integer) -> String
     function longMult(num1, num2) {
         return largeIntegerString(
             digitProducts(digits(num1), digits(num2))
         );
     }
-
-
 
     // digitProducts :: [Int] -> [Int] -> [Int]
     function digitProducts(xs, ys) {
@@ -37,7 +34,6 @@
             })
     }
 
-
     // largeIntegerString :: [Int] -> String
     function largeIntegerString(lstColumnValues) {
         var dctProduct = lstColumnValues
@@ -60,7 +56,6 @@
         ) : '') + dctProduct.digits;
     }
 
-
     // multTables :: [Int] -> [Int] -> [[Int]]
     function multTable(xs, ys) {
         return ys.map(function (y) {
@@ -79,10 +74,8 @@
             });
     }
 
-
     // TEST showing that larged bounded integer inputs give only rounded results
     // whereas integer string inputs allow for full precision on this scale (2^128)
-
 
     return {
         fromIntegerStrings: longMult(
@@ -94,5 +87,4 @@
             18446744073709551616
         )
     };
-
 })();

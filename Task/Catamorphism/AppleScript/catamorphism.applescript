@@ -1,21 +1,22 @@
+-- CATAMORPHISMS --------------------------------------------------
+
 -- the arguments available to the called function f(a, x, i, l) are
 -- a: current accumulator value
 -- x: current item in list
 -- i: [ 1-based index in list ] optional
 -- l: [ a reference to the list itself ] optional
 
--- reduce :: (a -> b -> a) -> a -> [b] -> a
-on reduce(f, startValue, xs)
+-- foldl :: (a -> b -> a) -> a -> [b] -> a
+on foldl(f, startValue, xs)
     tell mReturn(f)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
-end reduce
-
+end foldl
 
 -- the arguments available to the called function f(a, x, i, l) are
 -- a: current accumulator value
@@ -23,45 +24,71 @@ end reduce
 -- i: [ 1-based index in list ] optional
 -- l: [ a reference to the list itself ] optional
 
--- reduceRight :: (a -> b -> a) -> a -> [b] -> a
-on reduceRight(f, startValue, xs)
+-- foldr :: (a -> b -> a) -> a -> [b] -> a
+on foldr(f, startValue, xs)
     tell mReturn(f)
         set v to startValue
         set lng to length of xs
         repeat with i from lng to 1 by -1
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
-end reduceRight
+end foldr
 
 
--- TEST
+-- OTHER FUNCTIONS DEFINED IN TERMS OF FOLDL AND FOLDR ------------
+
+-- concat :: [[a]] -> [a] | [String] -> String
+on concat(xs)
+    script append
+        on |λ|(a, b)
+            a & b
+        end |λ|
+    end script
+
+    if length of xs > 0 and class of (item 1 of xs) is string then
+        set unit to ""
+    else
+        set unit to {}
+    end if
+    foldl(append, unit, xs)
+end concat
+
+-- product :: Num a => [a] -> a
+on product(xs)
+    script
+        on |λ|(a, b)
+            a * b
+        end |λ|
+    end script
+
+    foldr(result, 1, xs)
+end product
+
+-- sum :: Num a => [a] -> a
+on sum(xs)
+    script
+        on |λ|(a, b)
+            a + b
+        end |λ|
+    end script
+
+    foldl(result, 0, xs)
+end sum
+
+
+-- TEST -----------------------------------------------------------
 on run
-    set lst to {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+    set xs to {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
-    {reduce(sum_, 0, lst), ¬
-        reduce(product_, 1, lst), ¬
-        reduceRight(append_, "", lst)}
+    {sum(xs), product(xs), concat(xs)}
 
     --> {55, 3628800, "10987654321"}
 end run
 
-on sum_(a, b)
-    a + b
-end sum_
 
-on product_(a, b)
-    a * b
-end product_
-
-on append_(a, b)
-    a & b
-end append_
-
-
-
--- GENERIC
+-- GENERIC FUNCTION -----------------------------------------------
 
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
@@ -70,7 +97,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

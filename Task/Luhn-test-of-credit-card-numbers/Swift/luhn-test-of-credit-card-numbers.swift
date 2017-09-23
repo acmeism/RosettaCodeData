@@ -1,10 +1,10 @@
 func lunhCheck(number : String) -> Bool
 {
-	let reversedInts = number.characters.reverse().map { Int(String($0)) }
-	return reversedInts.enumerate().reduce(0, combine: {(sum, val) in
-		let odd = val.index % 2 == 1
-		return sum + (odd ? (val.element! == 9 ? 9 : (val.element! * 2) % 9) : val.element!)
-	}) % 10 == 0
+	let reversedInts = number.characters.reversed().map { Int(String($0)) }
+        return reversedInts.enumerated().reduce(0, {(sum, val) in
+            let odd = val.offset % 2 == 1
+            return sum + (odd ? (val.element! == 9 ? 9 : (val.element! * 2) % 9) : val.element!)
+        }) % 10 == 0
 }
 
 

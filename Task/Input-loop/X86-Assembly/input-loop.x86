@@ -1,0 +1,149 @@
+#define SYS_WRITE   $1
+#define SYS_OPEN    $2
+#define SYS_CLOSE   $3
+#define SYS_FSTAT   $5
+#define SYS_MMAP    $9
+#define SYS_MUNMAP  $11
+#define SYS_EXIT    $60
+
+// From experiments:
+#define FSIZEOFF    48
+#define STATSIZE    144
+
+// From Linux source:
+#define RDONLY      $00
+#define PROT_READ   $0x1
+#define MAP_PRIVATE $0x02
+#define STDIN       $0
+#define STDOUT      $1
+
+.global _start
+.text
+
+/* Details: */
+/*
+    Remember:  %rax(%rdi, %rsi, %rdx, %r10, %r8, %r9)
+    - Open a file (get its fd)
+        - int fd = open("filename", RDONLY)
+    - Get its filesize:
+        - fstat(fd, statstruct). 0 if ok. fsize at statstruct+48
+    - Then memory map it.
+        - void* vmemptr = mmap(vmemptr, fsize, PROT_READ, MAP_PRIVATE, fd, 0)
+    - Scan for newlines, print line.
+        - Keep going until done. Details at 11.
+    - Unmap memory
+        - munmap(vmemptr, filesize). 0 if ok.
+    - Exit
+ */
+
+.macro ERRCHECK code
+    cmpq    $\code, %rax
+    je      fs_error
+.endm
+
+/* Local stack notes:
+    0: int fd
+    4: void* vmemptr
+    12: void* head
+    20: void* lookahead
+    28: void* end
+*/
+_start:
+    // Open:
+    movq    RDONLY, %rsi
+    // Filename ptr is on stack currently as argv[1]:
+    cmpq    $1, (%rsp)          // if argc is 1, default to stdin
+    jnz     open_file
+    subq    $36, %rsp           // local stack
+    movl    STDIN, (%rsp)
+    jmp     fstat
+
+    open_file:
+    movq    16(%rsp), %rdi      // argc(8), argv0(8) => rsp+16. filename
+    movq    SYS_OPEN, %rax
+    syscall
+    ERRCHECK    -1
+    subq    $36, %rsp           // local stack
+    movl    %eax, (%rsp)        // int fd = open(argv[1], RDONLY)
+
+    // fstat to get filesize
+    fstat:
+    movq    $statstruct, %rsi
+    movl    (%rsp), %edi        // fd
+    movq    SYS_FSTAT, %rax
+    syscall                     // fstat(fd, statstruct)
+    ERRCHECK    -1
+
+    // mmap - don't forget to munmap.
+    mmap:
+    movq    $0, %r9             // offset
+    movq    (%rsp), %r8         // fd
+    movq    MAP_PRIVATE, %r10
+    movq    PROT_READ, %rdx
+    movq    filesize, %rsi
+    movq    (%rsp), %rdi        // vmemptr
+    movq    SYS_MMAP, %rax
+    syscall
+    ERRCHECK    -1
+    movq    %rax, 4(%rsp)       // void* vmemptr = mmap(vmemptr, fsize, PROT_READ, MAP_PRIVATE, fd, 0)
+
+    /* Print lines */
+    movq    %rax, 12(%rsp)  // head = vmemptr
+    addq    filesize, %rax
+    decq    %rax
+    movq    %rax, 28(%rsp)  // end = vmemptr+filesize-1
+    scan_outer:
+        movq    12(%rsp), %rax
+        cmpq    28(%rsp), %rax
+        jge     cleanup         // if head >= end, done
+        movq    %rax, %rbx      // Using rbx as lookahead
+        scan_inner:
+            cmpq    28(%rsp), %rbx
+            jge     writeline       // if lookahead >= end, write the line.
+            cmpb    $'\n, (%rbx)
+            jz      writeline       // if '\n'==*lookahead, write the line
+            incq    %rbx
+            jmp     scan_inner
+        writeline:
+            // write:
+            incq    %rbx
+            movq    %rbx, %rdx
+            subq    12(%rsp), %rdx  // rdx <- lookahead-head
+            movq    12(%rsp), %rsi
+            movq    STDOUT, %rdi
+            movq    SYS_WRITE, %rax
+            syscall                 // write(stdout, head, lookahead-head)
+            safety:
+            movq    %rbx, 12(%rsp)  // head = lookahead.
+            jmp     scan_outer
+
+    cleanup:
+    // munmap
+    movq    filesize, %rsi
+    movq    4(%rsp), %rdi
+    movq    SYS_MUNMAP, %rax
+    syscall                     // munmap(vmemptr, filesize)
+    cmpq    $-1, %rax
+    je      fs_error
+    // close
+    movl    (%rsp), %edi
+    movq    SYS_CLOSE, %rax
+    syscall                     // close(fd)
+    ERRCHECK    -1
+
+exit:
+    movq    SYS_EXIT, %rax
+    xorq    %rdi, %rdi              // The exit code.
+    syscall
+
+fs_error:
+    movq    SYS_EXIT, %rax
+    movq    $-1, %rdi
+    syscall                         // exit(-1)
+
+.data
+statstruct:     // This struct is 144 bytes. Only want size (+48)
+    .zero FSIZEOFF
+    filesize:  // 8 bytes.
+    .quad   0
+    .zero   STATSIZE-FSIZEOFF+8

@@ -1,6 +1,0 @@
-'(("neal" "lena" "lean" "lane" "elan")
-  ("trace" "crate" "cater" "carte" "caret")
-  ("regal" "large" "lager" "glare" "alger")
-  ("elba" "bela" "bale" "able" "abel")
-  ("lange" "glean" "galen" "angle" "angel")
-  ("vile" "veil" "live" "levi" "evil"))

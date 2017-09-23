@@ -4,14 +4,14 @@ red  = '000000000000000011111111'b               /*   "    "   red    "       " 
 green= '000000001111111100000000'b               /*   "    "  green   "       "     "   */
 white= '111111111111111111111111'b               /*   "    "  white   "       "     "   */
                                                  /*image is defined to the test image.  */
-hx=125;  hy=125                                  /*define limits  (x,Y)  for the image. */
-area=white;     call fill 125,  25, red          /*fill the white area in red.          */
-area=black;     call fill 125, 125, green        /*fill the center orb in green.        */
+hx=125;    hy=125                                /*define limits  (X,Y)  for the image. */
+area=white;      call fill 125,  25, red         /*fill the white area in red.          */
+area=black;      call fill 125, 125, green       /*fill the center orb in green.        */
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 fill: procedure expose image. hx hy area;  parse arg x,y,fill_color   /*obtain the args.*/
       if x<1 | x>hx | y<1 | y>hy   then return   /*X or Y  are outside of the image area*/
-      pixel=@(x, y)                              /*obtain the color of the  X,Y  pixel. */
+      pixel=image.x.y                            /*obtain the color of the  X,Y  pixel. */
       if pixel\==area  then return               /*the pixel has already been filled    */
                                                  /*with the  fill_color,  or we are not */
                                                  /*within the area to be filled.        */

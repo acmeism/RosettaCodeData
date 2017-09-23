@@ -83,7 +83,7 @@ while @rawcircles {
 
 sub set_cbits(Point $p) {
     my $cbits = 0;
-    for @circles Z (1,2,4...*) -> $c, $b {
+    for @circles Z (1,2,4...*) -> ($c, $b) {
 	$cbits += $b if $c.contains($p);
     }
     $cbits;

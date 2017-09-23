@@ -1,28 +1,11 @@
-with Ada.Text_IO;
-
-procedure Binary_Output is
-
-   package IIO is new Ada.Text_IO.Integer_IO(Integer);
-
-   function To_Binary(N: Natural) return String is
-      S: String(1 .. 1000); -- more than plenty!
-      Left:  Positive := S'First;
-      Right: Positive := S'Last;
-   begin
-      IIO.Put(To => S, Item => N, Base => 2); -- This is the conversion!
-      -- Now S is a String with many spaces and some "2#...#" somewhere.
-      -- We only need the "..." part without spaces or base markers.
-      while S(Left) /= '#' loop
-         Left := Left + 1;
-      end loop;
-      while S(Right) /= '#' loop
-         Right := Right - 1;
-      end loop;
-      return S(Left+1 .. Right-1);
-   end To_Binary;
-
+with ada.text_io;use ada.text_io;
+procedure binary is
+-- the digits in base 2
+  bit : array (0..1) of string (1..1) := ("0","1");
+-- the conversion function itself
+  function bin_image (n : Natural) return string is (if n<2 then bit (n) else bin_image (n/2)&bit(n mod 2));
+-- the values we want to test
+  test_values : array (1..3) of Natural := (5,50,9000);
 begin
-   Ada.Text_IO.Put_Line(To_Binary(5));    -- 101
-   Ada.Text_IO.Put_Line(To_Binary(50));   -- 110010
-   Ada.Text_IO.Put_Line(To_Binary(9000)); -- 10001100101000
-end Binary_Output;
+  for test of test_values loop put_line ("Output for"&test'img&" is "&bin_image (test)); end loop;
+end binary;

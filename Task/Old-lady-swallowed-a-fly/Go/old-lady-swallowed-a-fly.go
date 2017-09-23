@@ -26,9 +26,8 @@ func main() {
             break
         }
 
-        for i > 0 {
+        for ; i > 0; i-- {
             fmt.Printf("She swallowed the %s to catch the %s,\n", animals[i][name], animals[i-1][name])
-            i--
         }
 
         fmt.Println(animals[0][lyric] + "\n")

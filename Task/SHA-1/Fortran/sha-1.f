@@ -85,7 +85,7 @@ program sha1
         allocate(character(m) :: name)
         call get_command_argument(i, name)
         call sha1hash(name, hash, dwStatus, filesize)
-        if (dwStatus*0 == 0) then
+        if (dwStatus == 0) then
             do j = 1, SHA1LEN
                 write(*, "(Z2.2)", advance="NO") hash(j)
             end do

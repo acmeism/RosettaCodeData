@@ -1,0 +1,7 @@
+U8 i, max = 10;
+for (i = 1; i <= max; i++) {
+  Print("%d", i);
+  if (i == max) break;
+  Print(", ");
+}
+Print("\n");

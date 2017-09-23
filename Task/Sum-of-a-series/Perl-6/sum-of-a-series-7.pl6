@@ -1,2 +1,2 @@
-sub ζ($s) is cached { [\+] 1..* X** -$s }
-say ζ(2)[1000];
+constant ζish = [\+] map -> \𝑖 { 1 / 𝑖**2 }, 1..*;
+say ζish[1000];

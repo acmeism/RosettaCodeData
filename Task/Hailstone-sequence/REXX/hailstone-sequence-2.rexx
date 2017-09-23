@@ -1,7 +1,7 @@
 /*REXX program tests a  number  and also a  range for  hailstone  (Collatz)  sequences. */
 !.=0;     !.0=1;  !.2=1;  !.4=1;  !.6=1;  !.8=1  /*assign even numerals to be  "true".  */
 numeric digits 20;  @.=0                         /*handle big numbers; initialize array.*/
-parse arg x y z .;  !.h=y                        /*get optional arguments from the C,L. */
+parse arg x y z .;  !.h=y                        /*get optional arguments from the C.L. */
 if x=='' | x==","   then x=    27                /*No  1st  argument?  Then use default.*/
 if y=='' | y==","   then y=100000 - 1            /* "  2nd      "        "   "     "    */
 if z=='' | z==","   then z=    12                /*head/tail number?     "   "     "    */
@@ -24,7 +24,7 @@ hailstone: procedure expose @. !. hm;  parse arg n 1 s 1 o,@.1  /*N,S,O: are the
                        do  while @.n==0          /*loop while the residual is unknown.  */
                        parse var  n  ''  -1  L   /*extract the last decimal digit of  N.*/
                        if !.L  then n=n%2        /*N is even?   Then calculate  fast ÷  */
-                               else n=n*3 + 1    /*?  ? odd ?   Then calculate  3*n + 1 */
+                               else n=n*3 + 1    /*"  " odd ?     "      "      3*n + 1 */
                        s=s  n                    /* [↑]  %: is the REXX integer division*/
                        end   /*while*/           /* [↑]  append  N  to the sequence list*/
            s=s  @.n                              /*append the number to a sequence list.*/

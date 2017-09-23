@@ -1,28 +1,13 @@
-def is_numeric(lit):
-    'Return value of numeric literal string or ValueError exception'
-
-    # Handle '0'
-    if lit == '0': return 0
-    # Hex/Binary
-    litneg = lit[1:] if lit[0] == '-' else lit
-    if litneg[0] == '0':
-        if litneg[1] in 'xX':
-            return int(lit,16)
-        elif litneg[1] in 'bB':
-            return int(lit,2)
-        else:
-            try:
-                return int(lit,8)
-            except ValueError:
-                pass
-
-    # Int/Float/Complex
-    try:
-        return int(lit)
-    except ValueError:
-        pass
-    try:
-        return float(lit)
-    except ValueError:
-        pass
-    return complex(lit)
+def is_numeric(literal):
+    """Return whether a literal can be parsed as a numeric value"""
+    castings = [int, float, complex,
+        lambda s: int(s,2),  #binary
+        lambda s: int(s,8),  #octal
+        lambda s: int(s,16)] #hex
+    for cast in castings:
+        try:
+            cast(literal)
+            return True
+        except ValueError:
+            pass
+    return False

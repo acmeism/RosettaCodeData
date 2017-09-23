@@ -1,20 +1,36 @@
--- Open the file named on the command line
-local file = assert(io.open(arg[1]))
--- Keep a table counting the instances of each letter
-local instances = {}
-local function tally(char)
-  -- normalize case
-  char = string.upper(char)
-  -- add to the count of the found character
-  occurrences[char] = occurrences[char] + 1
+-- Return entire contents of named file
+function readFile (filename)
+  local file = assert(io.open(filename, "r"))
+  local contents = file:read("*all")
+  file:close()
+  return contents
 end
--- For each line in the file
-for line in file:lines() do
-  line:gsub(
-    '%a', -- For each letter (%a) on the line,
-    tally) --increase the count for that letter
+
+-- Return a closure to keep track of letter counts
+function tally ()
+  local t = {}
+
+  -- Add x to tally if supplied, return tally list otherwise
+  local function count (x)
+    if x then
+      if t[x] then
+        t[x] = t[x] + 1
+      else
+        t[x] = 1
+      end
+    else
+      return t
+    end
+  end
+
+  return count
 end
--- Print letter counts
-for letter, count in pairs(instances) do
-  print(letter, count)
+
+-- Main procedure
+local letterCount = tally()
+for letter in readFile(arg[1]):gmatch("%a") do
+  letterCount(letter)
+end
+for k, v in pairs(letterCount()) do
+  print(k, v)
 end

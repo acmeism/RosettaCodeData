@@ -1,49 +1,33 @@
 import java.io.*;
 
 public class Rot13 {
-    public static void main(String[] args) {
-        BufferedReader in;
+
+    public static void main(String[] args) throws IOException {
         if (args.length >= 1) {
             for (String file : args) {
-                try {
-                    in = new BufferedReader(new FileReader(file));
-                    String line;
-                    while ((line = in.readLine()) != null) {
-                        System.out.println(convert(line));
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
+                try (InputStream in = new BufferedInputStream(new FileInputStream(file))) {
+                    rot13(in, System.out);
                 }
             }
         } else {
-            try {
-                in = new BufferedReader(new InputStreamReader(System.in));
-                String line;
-                while ((line = in.readLine()) != null) {
-                    System.out.println(convert(line));
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            rot13(System.in, System.out);
         }
     }
 
-    public static String convert(String msg) {
-        StringBuilder retVal = new StringBuilder();
-        for (char a : msg.toCharArray()) {
-            if (a >= 'A' && a <= 'Z') {
-                a += 13;
-                if (a > 'Z') {
-                    a -= 26;
-                }
-            } else if (a >= 'a' && a <= 'z') {
-                a += 13;
-                if (a > 'z') {
-                    a -= 26;
-                }
-            }
-            retVal.append(a);
+    private static void rot13(InputStream in, OutputStream out) throws IOException {
+        int ch;
+        while ((ch = in.read()) != -1) {
+            out.write(rot13((char) ch));
         }
-        return retVal.toString();
+    }
+
+    private static char rot13(char ch) {
+        if (ch >= 'A' && ch <= 'Z') {
+            return (char) (((ch - 'A') + 13) % 26 + 'A');
+        }
+        if (ch >= 'a' && ch <= 'z') {
+            return (char) (((ch - 'a') + 13) % 26 + 'a');
+        }
+        return ch;
     }
 }

@@ -1,62 +1,60 @@
--- showCharRange :: String -> String -> [String]
-on showCharRange(strFrom, strTo)
-    -- showChar :: Int -> String
-    script showChar
-        on lambda(intID)
-            character id intID
-        end lambda
-    end script
-
-    map(showChar, range(id of strFrom, id of strTo))
-end showCharRange
-
-
--- TEST
 on run
 
-    {showCharRange("a", "z"), ¬
-        showCharRange("🐐", "🐟")}
+    {enumFromTo("a", "z"), ¬
+        enumFromTo("🐐", "🐟")}
 
 end run
 
+-- GENERIC FUNCTIONS ----------------------------------------------------------
 
----------------------------------------------------------------------------
--- GENERIC FUNCTIONS
+-- chr :: Int -> Char
+on chr(n)
+    character id n
+end chr
 
--- map :: (a -> b) -> [a] -> [b]
-on map(f, xs)
-    tell mReturn(f)
-        set lng to length of xs
-        set lst to {}
-        repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
-        end repeat
-        return lst
-    end tell
-end map
+-- ord :: Char -> Int
+on ord(c)
+    id of c
+end ord
 
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
-on mReturn(f)
-    if class of f is script then
-        f
-    else
-        script
-            property lambda : f
-        end script
-    end if
-end mReturn
+-- enumFromTo :: Enum a => a -> a -> [a]
+on enumFromTo(m, n)
+    set {intM, intN} to {fromEnum(m), fromEnum(n)}
 
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
+    if intM > intN then
         set d to -1
     else
         set d to 1
     end if
     set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
+    if class of m is text then
+        repeat with i from intM to intN by d
+            set end of lst to chr(i)
+        end repeat
+    else
+        repeat with i from intM to intN by d
+            set end of lst to i
+        end repeat
+    end if
     return lst
-end range
+end enumFromTo
+
+-- fromEnum :: Enum a => a -> Int
+on fromEnum(x)
+    set c to class of x
+    if c is boolean then
+        if x then
+            1
+        else
+            0
+        end if
+    else if c is text then
+        if x ≠ "" then
+            id of x
+        else
+            missing value
+        end if
+    else
+        x as integer
+    end if
+end fromEnum

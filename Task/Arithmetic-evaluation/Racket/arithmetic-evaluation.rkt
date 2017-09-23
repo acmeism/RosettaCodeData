@@ -12,7 +12,7 @@
          [(~or "+" "-" "*" "/") (string->symbol lexeme)]
          ["(" 'OPEN]
          [")" 'CLOSE]
-         [(~: (~+ numeric) (~? #\. (~* numeric)))
+         [(~: (~+ numeric) (~? (~: #\. (~* numeric))))
           (token-NUM (string->number lexeme))]))
 
 (define parse

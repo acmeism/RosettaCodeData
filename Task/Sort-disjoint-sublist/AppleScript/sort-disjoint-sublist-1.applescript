@@ -1,5 +1,7 @@
 use framework "Foundation" -- for basic NSArray sort
 
+-- DISJOINT SORT -------------------------------------------------------------
+
 --  disjointSort :: [a] -> [Int] -> [a]
 on disjointSort(xs, indices)
 
@@ -8,9 +10,9 @@ on disjointSort(xs, indices)
 
     -- valueByIndex :: Int -> a
     script valueByIndex
-        on lambda(i)
+        on |λ|(i)
             item i of xs
-        end lambda
+        end |λ|
     end script
 
     set subsetSorted to ¬
@@ -18,14 +20,14 @@ on disjointSort(xs, indices)
 
     -- staticOrSorted :: a -> Int -> a
     script staticOrSorted
-        on lambda(x, i)
+        on |λ|(x, i)
             set iIndex to elemIndex(i, indicesSorted)
             if iIndex is missing value then
                 x
             else
                 item iIndex of subsetSorted
             end if
-        end lambda
+        end |λ|
     end script
 
     -- Sorted subset re-stitched into unsorted remainder of list
@@ -33,9 +35,7 @@ on disjointSort(xs, indices)
 
 end disjointSort
 
-
---TEST
-
+-- TEST ----------------------------------------------------------------------
 on run
     -- The indexing of AppleScript lists is 1-based
     -- so we use {7,2,8} in place of {6,1,7}
@@ -43,15 +43,7 @@ on run
     disjointSort({7, 6, 5, 4, 3, 2, 1, 0}, {7, 2, 8})
 end run
 
-
-
--- GENERIC FUNCTIONS
-
--- sort :: [a] -> [a]
-on sort(lst)
-    ((current application's NSArray's arrayWithArray:lst)'s ¬
-        sortedArrayUsingSelector:"compare:") as list
-end sort
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- elemIndex :: a -> [a] -> Maybe Int
 on elemIndex(x, xs)
@@ -68,7 +60,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -81,7 +73,13 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
+
+-- sort :: [a] -> [a]
+on sort(lst)
+    ((current application's NSArray's arrayWithArray:lst)'s ¬
+        sortedArrayUsingSelector:"compare:") as list
+end sort

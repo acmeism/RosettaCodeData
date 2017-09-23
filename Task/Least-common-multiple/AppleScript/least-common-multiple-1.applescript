@@ -1,3 +1,5 @@
+-- LEAST COMMON MULTIPLE -----------------------------------------------------
+
 -- lcm :: Integral a => a -> a -> a
 on lcm(x, y)
     if x = 0 or y = 0 then
@@ -8,7 +10,7 @@ on lcm(x, y)
 end lcm
 
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
 
     lcm(12, 18)
@@ -16,8 +18,7 @@ on run
     --> 36
 end run
 
-
--- GENERAL FUNCTIONS
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- abs :: Num a => a -> a
 on abs(x)
@@ -30,15 +31,15 @@ end abs
 
 -- gcd :: Integral a => a -> a -> a
 on gcd(x, y)
-    script _gcd
-        on lambda(a, b)
+    script
+        on |λ|(a, b)
             if b = 0 then
                 a
             else
-                lambda(b, a mod b)
+                |λ|(b, a mod b)
             end if
-        end lambda
+        end |λ|
     end script
 
-    _gcd's lambda(abs(x), abs(y))
+    result's |λ|(abs(x), abs(y))
 end gcd

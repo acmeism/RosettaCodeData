@@ -1,8 +1,16 @@
-import Data.Time
-import Data.Time.Calendar.WeekDate
+import Data.Time (fromGregorian)
 
-isXmasSunday year = wday == 7
-    where (_,_,wday) = toWeekDate $ fromGregorian year 12 25
+import Data.Time.Calendar.WeekDate (toWeekDate)
 
-main = mapM_ putStrLn ["25 December " ++ show year ++ " is Sunday"
-                       | year <- [2008..2121], isXmasSunday year]
+isXmasSunday :: Integer -> Bool
+isXmasSunday year =
+  let (_, _, wday) = toWeekDate $ fromGregorian year 12 25
+  in wday == 7
+
+main :: IO ()
+main =
+  mapM_
+    putStrLn
+    [ "25 December " ++ show year ++ " is Sunday"
+    | year <- [2008 .. 2121]
+    , isXmasSunday year ]

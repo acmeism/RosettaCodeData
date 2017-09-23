@@ -1,14 +1,14 @@
 import math, sequtils, future
 
-proc amean(num): float =
+proc amean(num: seq[float]): float =
   sum(num) / float(len(num))
 
-proc gmean(num): float =
+proc gmean(num: seq[float]): float =
   result = 1
   for n in num: result *= n
   result = pow(result, 1.0 / float(num.len))
 
-proc hmean(num): float =
+proc hmean(num: seq[float]): float =
   for n in num: result += 1.0 / n
   result = float(num.len) / result
 

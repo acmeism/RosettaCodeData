@@ -22,5 +22,5 @@ function ch960startPos() {
   return rank;
 }
 
-// test
+// testing (10 times)
 for (var x = 1; x <= 10; x++) console.log(ch960startPos().join(" | "));

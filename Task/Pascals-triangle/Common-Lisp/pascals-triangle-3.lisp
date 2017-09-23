@@ -1,0 +1,11 @@
+(defun next-pascal (l)
+  `(1 ,@(loop for i from 0 to (- (length l) 2)
+	      collect (+ (nth i l) (nth (1+ i) l)))
+    1))
+
+(defun pascal-print (r)
+    (let* ((pasc (loop with p = (list (list 1))
+		       repeat r do (nconc p (list (apply #'next-pascal (last p))))
+		       finally (return p)))
+	   (len (length (format nil "~A" (car (last pasc))))))
+      (format t (format nil "~~{~~~D:@<~~{~~A ~~}~~>~~%~~}" len) pasc)))

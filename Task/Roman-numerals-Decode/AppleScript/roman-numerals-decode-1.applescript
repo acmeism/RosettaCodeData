@@ -1,9 +1,3 @@
-on run
-    map(romanValue, {"MCMXC", "MDCLXVI", "MMVIII"})
-
-    --> {1990, 1666, 2008}
-end run
-
 -- romanValue :: String -> Int
 on romanValue(s)
     script roman
@@ -18,7 +12,7 @@ on romanValue(s)
                 -- If this glyph:value pair matches the head of the list
                 -- return the value and the tail of the list
                 -- transcribe :: (String, Number) -> Maybe (Number, [String])
-                on lambda(lstPair)
+                on |λ|(lstPair)
                     set lstR to characters of (item 1 of lstPair)
                     if isPrefixOf(lstR, xs) then
                         -- Value of this matching glyph, with any remaining glyphs
@@ -26,7 +20,7 @@ on romanValue(s)
                     else
                         {}
                     end if
-                end lambda
+                end |λ|
             end script
 
             if length of xs > 0 then
@@ -41,8 +35,40 @@ on romanValue(s)
     toArabic(characters of s) of roman
 end romanValue
 
+-- TEST -----------------------------------------------------------------------
+on run
+    map(romanValue, {"MCMXC", "MDCLXVI", "MMVIII"})
 
--- GENERIC LIBRARY FUNCTIONS
+    --> {1990, 1666, 2008}
+end run
+
+
+-- GENERIC FUNCTIONS ----------------------------------------------------------
+
+-- concatMap :: (a -> [b]) -> [a] -> [b]
+on concatMap(f, xs)
+    set lst to {}
+    set lng to length of xs
+    tell mReturn(f)
+        repeat with i from 1 to lng
+            set lst to (lst & |λ|(item i of xs, i, xs))
+        end repeat
+    end tell
+    return lst
+end concatMap
+
+--  drop :: Int -> a -> a
+on drop(n, a)
+    if n < length of a then
+        if class of a is text then
+            text (n + 1) thru -1 of a
+        else
+            items (n + 1) thru -1 of a
+        end if
+    else
+        {}
+    end if
+end drop
 
 -- isPrefixOf :: [a] -> [a] -> Bool
 on isPrefixOf(xs, ys)
@@ -59,53 +85,29 @@ on isPrefixOf(xs, ys)
     end if
 end isPrefixOf
 
---  drop :: Int -> a -> a
-on drop(n, a)
-    if n < length of a then
-        if class of a is text then
-            text (n + 1) thru -1 of a
-        else
-            items (n + 1) thru -1 of a
-        end if
-    else
-        {}
-    end if
-end drop
-
--- concatMap :: (a -> [b]) -> [a] -> [b]
-on concatMap(f, xs)
-    script append
-        on lambda(a, b)
-            a & b
-        end lambda
-    end script
-
-    foldl(append, {}, map(f, xs))
-end concatMap
-
--- foldl :: (a -> b -> a) -> a -> [b] -> a
-on foldl(f, startValue, xs)
-    tell mReturn(f)
-        set v to startValue
-        set lng to length of xs
-        repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
-        end repeat
-        return v
-    end tell
-end foldl
-
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
     tell mReturn(f)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
 end map
+
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property |λ| : f
+        end script
+    end if
+end mReturn
 
 -- uncons :: [a] -> Maybe (a, [a])
 on uncons(xs)
@@ -115,15 +117,3 @@ on uncons(xs)
         missing value
     end if
 end uncons
-
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
-on mReturn(f)
-    if class of f is script then
-        f
-    else
-        script
-            property lambda : f
-        end script
-    end if
-end mReturn

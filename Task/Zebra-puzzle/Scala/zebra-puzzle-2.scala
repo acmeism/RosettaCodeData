@@ -67,7 +67,7 @@ object Einstein extends App {
 
   // There *should* be just one solution...
   solutions.foreach { solution =>
-    // so we can pretty-print, find out the maximum strength length of all cells
+    // so we can pretty-print, find out the maximum string length of all cells
     val maxLen = solution.flatten.map(_.length).max
 
     def pretty(str: String): String = str + (" " * (maxLen - str.length + 1))

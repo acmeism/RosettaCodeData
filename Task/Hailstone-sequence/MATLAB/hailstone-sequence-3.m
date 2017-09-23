@@ -1,8 +1,9 @@
-  global VERBOSE;
-  VERBOSE = 0;    % display of sequence elements turned off
-  N = 100000;
-  M = zeros(N,1);
-  for k=1:N,
-     M(k) = hailstone(k);   %display sequence
-  end;
-  [maxLength, n] = max(M)
+N = 1e5;
+maxLen = 0;
+for k = 1:N
+  kLen = numel(hailstone(k));
+  if kLen > maxLen
+    maxLen = kLen;
+    n = k;
+  end
+end

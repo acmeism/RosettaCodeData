@@ -20,8 +20,13 @@
           IF (VSP.LE.0) THEN	!Just in case
             WRITE (VOUT,1) "Empty",VSP	!My stack may be empty.
            ELSE			!But normally, it is not.
-            WRITE (VOUT,1) WOT,VSP,STACKV(VSP),PM,STACKE(VSP)	!Topmost.
-    1       FORMAT (A8,": Vstack(",I2,") =",F8.1,A1,F6.2)	!Suits the example.
+            IF (STACKV(VSP).EQ.0) THEN	!But it might have a zero value!
+              WRITE (VOUT,1) WOT,VSP,STACKV(VSP),PM,STACKE(VSP)		!Alas. No percentage, then.
+    1         FORMAT (A8,": Vstack(",I2,") =",F8.1,A1,F6.2,F9.1,"%")	!Suits the example.
+             ELSE		!Avoiding a divide-by-zero is polite.
+              WRITE (VOUT,1) WOT,VSP,STACKV(VSP),PM,STACKE(VSP),	!Possibly, a surprise, still.
+     1         STACKE(VSP)/STACKV(VSP)*100	!The relative error may well be interesting.
+            END IF		!The pearls have been cast.
           END IF		!So much for protection.
         END SUBROUTINE VSHOW	!Could reveal all the stack...
 

@@ -1,1 +1,1 @@
-c = list_to_array(c);
+list_join(a, b);

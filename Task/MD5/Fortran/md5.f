@@ -83,7 +83,7 @@ program md5
         allocate(character(m) :: name)
         call get_command_argument(i, name)
         call md5hash(name, hash, dwStatus, filesize)
-        if (dwStatus*0 == 0) then
+        if (dwStatus == 0) then
             do j = 1, MD5LEN
                 write(*, "(Z2.2)", advance="NO") hash(j)
             end do

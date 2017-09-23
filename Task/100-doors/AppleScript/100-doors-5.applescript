@@ -2,16 +2,16 @@
 on perfectSquaresUpTo(n)
     script squared
         -- (Int -> Int)
-        on lambda(x)
+        on |λ|(x)
             x * x
-        end lambda
+        end |λ|
     end script
 
     set realRoot to n ^ (1 / 2)
     set intRoot to realRoot as integer
     set blnNotPerfectSquare to not (intRoot = realRoot)
 
-    map(squared, range(1, intRoot - (blnNotPerfectSquare as integer)))
+    map(squared, enumFromTo(1, intRoot - (blnNotPerfectSquare as integer)))
 end perfectSquaresUpTo
 
 on run

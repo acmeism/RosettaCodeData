@@ -27,11 +27,11 @@
             [(> Px (max Ax Bx)) #f]
             [(< Px (min Ax Bx)) #t]
             [else
-             (let ([red (if (neq? Ax Px)
+             (let ([red (if (neq? Ax Bx)
                             (/ (- By Ay) (- Bx Ax))
                             +inf.0)]
                    [blue (if (neq? Ax Px)
-                             (/ (- Py Ax) (- Px Ax))
+                             (/ (- Py Ay) (- Px Ax))
                              +inf.0)])
                (if (>= blue red) #t #f))])))
 

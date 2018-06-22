@@ -1,4 +1,4 @@
-/*REXX program  creates and displays  an  ASCII art  version of the   Yin─Yang   symbol.*/
+/*REXX program creates & displays an ASCII art version of the Yin─Yang (taijitu) symbol.*/
 parse arg s1 s2 .                                /*obtain optional arguments from the CL*/
 if s1=='' | s1==","  then s1=17                  /*Not defined?   Then use the default. */
 if s2=='' | s2==","  then s2=s1 % 2              /* "      "        "   "   "     "     */

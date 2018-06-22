@@ -32,7 +32,7 @@
     (define/override (on-paint)
       (with-gl-context (λ() (draw-opengl) (swap-gl-buffers))))
     (define/override (on-size width height)
-      (with-gl-context (λ() (resize width height))))
+      (with-gl-context (λ() (resize width height) (on-paint))))
     (super-instantiate () (style '(gl)))))
 
 (define win (new frame% [label "Racket Rosetta Code OpenGL example"]

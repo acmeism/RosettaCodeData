@@ -1,14 +1,13 @@
 use framework "Foundation" -- Yosemite onwards, for the toLowerCase() function
 
--- Kelvin to other scale
+-- KELVIN TO OTHER SCALE -----------------------------------------------------
 
 -- kelvinAs :: ScaleName -> Num -> Num
 on kelvinAs(strOtherScale, n)
     heatBabel(n, "Kelvin", strOtherScale)
 end kelvinAs
 
-
--- More general conversion
+-- MORE GENERAL CONVERSION ---------------------------------------------------
 
 -- heatBabel :: n -> ScaleName -> ScaleName -> Num
 on heatBabel(n, strFromScale, strToScale)
@@ -17,7 +16,7 @@ on heatBabel(n, strFromScale, strToScale)
     set fahr to 459.67
 
     script reading
-        on lambda(x, strFrom)
+        on |λ|(x, strFrom)
             if strFrom = "k" then
                 x as real
             else if strFrom = "c" then
@@ -27,11 +26,11 @@ on heatBabel(n, strFromScale, strToScale)
             else
                 x / ratio
             end if
-        end lambda
+        end |λ|
     end script
 
     script writing
-        on lambda(x, strTo)
+        on |λ|(x, strTo)
             if strTo = "k" then
                 x
             else if strTo = "c" then
@@ -41,22 +40,21 @@ on heatBabel(n, strFromScale, strToScale)
             else
                 x * ratio
             end if
-        end lambda
+        end |λ|
     end script
 
-    writing's lambda(reading's lambda(n, ¬
-        toLowerCase(text 1 of strFromScale)), ¬
-        toLowerCase(text 1 of strToScale))
+    writing's |λ|(reading's |λ|(n, ¬
+        toLower(text 1 of strFromScale)), ¬
+        toLower(text 1 of strToScale))
 end heatBabel
 
 
--- TEST
-
+-- TEST ----------------------------------------------------------------------
 on kelvinTranslations(n)
     script translations
-        on lambda(x)
+        on |λ|(x)
             {x, kelvinAs(x, n)}
-        end lambda
+        end |λ|
     end script
 
     map(translations, {"K", "C", "F", "R"})
@@ -64,24 +62,16 @@ end kelvinTranslations
 
 on run
     script tabbed
-        on lambda(x)
+        on |λ|(x)
             intercalate(tab, x)
-        end lambda
+        end |λ|
     end script
 
     intercalate(linefeed, map(tabbed, kelvinTranslations(21)))
 end run
 
 
-
--- GENERIC LIBRARY FUNCTIONS
-
--- toLowerCase :: String -> String
-on toLowerCase(str)
-    set ca to current application
-    ((ca's NSString's stringWithString:(str))'s ¬
-        lowercaseStringWithLocale:(ca's NSLocale's currentLocale())) as text
-end toLowerCase
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- intercalate :: Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -97,7 +87,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -110,7 +100,14 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
+
+-- toLower :: String -> String
+on toLower(str)
+    set ca to current application
+    ((ca's NSString's stringWithString:(str))'s ¬
+        lowercaseStringWithLocale:(ca's NSLocale's currentLocale())) as text
+end toLower

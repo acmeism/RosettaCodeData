@@ -1,24 +1,33 @@
-Set FSO=CreateObject("Scripting.FileSystemObject")
+Set FSO = CreateObject("Scripting.FileSystemObject")
+
 Function FileExists(strFile)
-if FSO.fileExists(strFile) then
-FileExists=true
-else
-FileExists=false
-end if
-end function
+    If FSO.FileExists(strFile) Then
+        FileExists = True
+    Else
+        FileExists = False
+    End If
+End Function
 
-Function folderExists(strFolder)
-if FSO.folderExists(strFolder) then
-folderExists=true
-else
-folderexists=false
-end if
-end function
+Function FolderExists(strFolder)
+    If FSO.FolderExists(strFolder) Then
+        FolderExists = True
+    Else
+        Folderexists = False
+    End If
+End Function
 
-'''''usage (apostrophes indicate comments-this section will not be run)'''''
-'if fileExists("C:\test.txt") then
-'msgbox"It Exists!"
-'else
-'msgbox"awww"
-'end if
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'''''Usage (apostrophes indicate comments-this section will not be run)'''''
+'If FileExists("C:\test.txt") Then
+'   MsgBox "It Exists!"
+'Else
+'   Msgbox "awww"
+'End If
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+'Shorter version
+
+If CreateObject("Scripting.FileSystemObject").FileExists("d:\test.txt") Then
+    Wscript.Echo "File Exists"
+Else
+    Wscript.Echo "File Does Not Exist")
+End If

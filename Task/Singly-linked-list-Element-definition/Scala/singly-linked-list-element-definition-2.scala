@@ -1,11 +1,3 @@
-class Node {
-  var data: Int
-  var next = this
-
-  def this(n: Int, link: Node) {
-    this()
-    if (next != null){
-      data = n
-      next = link
-    }
-  }
+def main(args: Array[String]): Unit = {
+  val words = List("Rosetta", "Code", "Scala", "Example")
+}

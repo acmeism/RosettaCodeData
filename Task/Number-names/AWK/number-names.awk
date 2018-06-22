@@ -20,6 +20,7 @@ function numtowords(n,  minus,str) {
       str = intowords(n)
     }
     gsub(/  /," ",str)
+    gsub(/ $/,"",str)
     return(minus str)
 }
 function intowords(n) {

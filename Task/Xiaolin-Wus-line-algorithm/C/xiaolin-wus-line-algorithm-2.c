@@ -59,7 +59,7 @@ void draw_line_antialias(
     plot_(xpxl2, ypxl2 + 1, fpart_(yend) * xgap);
 
     int x;
-    for(x=xpxl1+1; x <= (xpxl2-1); x++) {
+    for(x=xpxl1+1; x < xpxl2; x++) {
       plot_(x, ipart_(intery), rfpart_(intery));
       plot_(x, ipart_(intery) + 1, fpart_(intery));
       intery += gradient;
@@ -76,7 +76,7 @@ void draw_line_antialias(
     int ypxl1 = yend;
     int xpxl1 = ipart_(xend);
     plot_(xpxl1, ypxl1, rfpart_(xend)*ygap);
-    plot_(xpxl1, ypxl1+1, fpart_(xend)*ygap);
+    plot_(xpxl1 + 1, ypxl1, fpart_(xend)*ygap);
     double interx = xend + gradient;
 
     yend = round_(y2);
@@ -85,10 +85,10 @@ void draw_line_antialias(
     int ypxl2 = yend;
     int xpxl2 = ipart_(xend);
     plot_(xpxl2, ypxl2, rfpart_(xend) * ygap);
-    plot_(xpxl2, ypxl2 + 1, fpart_(xend) * ygap);
+    plot_(xpxl2 + 1, ypxl2, fpart_(xend) * ygap);
 
     int y;
-    for(y=ypxl1+1; y <= (ypxl2-1); y++) {
+    for(y=ypxl1+1; y < ypxl2; y++) {
       plot_(ipart_(interx), y, rfpart_(interx));
       plot_(ipart_(interx) + 1, y, fpart_(interx));
       interx += gradient;

@@ -1,50 +1,78 @@
 use NativeCall;
+use SDL2::Raw;
+use nqp;
 
-class SDL_Window is repr('CStruct') {}
-class SDL_Renderer is repr('CStruct') {}
-
-my ($w, $h) = 320, 240;
+my int ($w, $h) = 320, 240;
 my SDL_Window $window;
 my SDL_Renderer $renderer;
 
-constant $sdl-lib = 'libSDL2';
-constant SDL_INIT_VIDEO = 0x00000020;
-constant SDL_WINDOWPOS_UNDEFINED_MASK = 0x1FFF0000;
-constant SDL_WINDOW_SHOWN = 0x00000004;
+constant $sdl-lib = 'SDL2';
 
-sub SDL_Init(int32 $flag) returns int32 is native($sdl-lib) {*}
-sub SDL_Quit() is native($sdl-lib) {*}
+sub SDL_RenderDrawPoints( SDL_Renderer $, CArray[int32] $points, int32 $count ) returns int32 is native($sdl-lib) {*}
 
-sub SDL_CreateWindow(Str $title, int $x, int $y, int $w, int $h, int32 $flag) returns SDL_Window is native($sdl-lib) {*}
-sub SDL_CreateRenderer(SDL_Window $, int $, int $) returns SDL_Renderer is native($sdl-lib) {*}
-sub SDL_SetRenderDrawColor(SDL_Renderer $, int $r, int $g, int $b, int $a) returns Int is native($sdl-lib) {*}
-sub SDL_RenderClear(SDL_Renderer $) returns Int is native($sdl-lib) {*}
-sub SDL_RenderDrawPoint( SDL_Renderer $, int $x, int $y ) returns Int is native($sdl-lib) {*}
-sub SDL_RenderPresent(SDL_Renderer $) is native($sdl-lib) {*}
+SDL_Init(VIDEO);
+$window = SDL_CreateWindow(
+    "some white noise",
+    SDL_WINDOWPOS_CENTERED_MASK, SDL_WINDOWPOS_CENTERED_MASK,
+    $w, $h,
+    SHOWN
+);
+$renderer = SDL_CreateRenderer( $window, -1, ACCELERATED +| TARGETTEXTURE );
+
+SDL_ClearError();
+
+my $noise_texture = SDL_CreateTexture($renderer, %PIXELFORMAT<RGB332>, STREAMING, $w, $h);
+
+my $pixdatabuf = CArray[int64].new(0, 1234, 1234, 1234);
 
 sub render {
-    SDL_SetRenderDrawColor($renderer, 0, 0, 0, 0);
-    SDL_RenderClear($renderer);
-    SDL_SetRenderDrawColor($renderer, 255, 255, 255, 0);
-    loop (my int $i; $i < $w; $i = $i + 1) {
-        loop (my int $j; $j < $h; $j = $j + 1) {
-            SDL_RenderDrawPoint( $renderer, $i, $j ) if Bool.pick
+    my int $pitch;
+    my int $cursor;
+
+    # work-around to pass the pointer-pointer.
+    my $pixdata = nativecast(Pointer[int64], $pixdatabuf);
+    SDL_LockTexture($noise_texture, SDL_Rect, $pixdata, $pitch);
+
+    $pixdata = nativecast(CArray[int8], Pointer.new($pixdatabuf[0]));
+
+    loop (my int $row; $row < $h; $row = $row + 1) {
+        loop (my int $col; $col < $w; $col = $col + 1) {
+            $pixdata[$cursor + $col] = Bool.roll ?? 0xff !! 0x0;
         }
+        $cursor = $cursor + $pitch;
     }
+
+    SDL_UnlockTexture($noise_texture);
+
+    SDL_RenderCopy($renderer, $noise_texture, SDL_Rect, SDL_Rect);
     SDL_RenderPresent($renderer);
 }
 
-SDL_Init(SDL_INIT_VIDEO);
-$window = SDL_CreateWindow(
-    "some white noise",
-    SDL_WINDOWPOS_UNDEFINED_MASK, SDL_WINDOWPOS_UNDEFINED_MASK,
-    $w, $h,
-    SDL_WINDOW_SHOWN
-);
-$renderer = SDL_CreateRenderer( $window, -1, 1 );
-loop {
-    my $then = now;
+my $event = SDL_Event.new;
+
+my @times;
+
+main: loop {
+    my $start = nqp::time_n();
+
+    while SDL_PollEvent($event) {
+        my $casted_event = SDL_CastEvent($event);
+
+        given $casted_event {
+            when *.type == QUIT {
+                last main;
+            }
+        }
+    }
+
     render();
-    note "{1 / (now - $then)} fps";
+
+    @times.push: nqp::time_n() - $start;
 }
-END { SDL_Quit() }
+
+@times .= sort;
+
+my @timings = (@times[* div 50], @times[* div 4], @times[* div 2], @times[* * 3 div 4], @times[* - * div 100]);
+
+say "frames per second:";
+say (1 X/ @timings).fmt("%3.4f");

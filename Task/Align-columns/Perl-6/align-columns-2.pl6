@@ -1,15 +1,7 @@
-my @lines = slurp("example.txt").lines;
-my @widths;
-
-for @lines { for .split('$').kv { @widths[$^key] max= $^word.chars; } }
-for @lines { say |.split('$').kv.map: { (align @widths[$^key], $^word) ~ " "; } }
-
-sub align($column_width, $word, $aligment = @*ARGS[0]) {
-        my $lr = $column_width - $word.chars;
-        my $c  = $lr / 2;
-        given ($aligment) {
-                when "center" { " " x $c.ceiling ~ $word ~ " " x $c.floor }
-                when "right"  { " " x $lr        ~ $word                  }
-                default       {                    $word ~ " " x $lr      }
-        }
+sub MAIN ($alignment where 'left'|'right', $file) {
+    my @lines := $file.IO.lines.map(*.split('$').cache).cache;
+    my @widths = roundrobin(|@lines).map(*».chars.max);
+    my $align  = {left=>'-', right=>''}{$alignment};
+    my $format = @widths.map( '%' ~ ++$ ~ '$' ~ $align ~ * ~ 's' ).join(' ') ~ "\n";
+    printf $format, |$_ for @lines;
 }

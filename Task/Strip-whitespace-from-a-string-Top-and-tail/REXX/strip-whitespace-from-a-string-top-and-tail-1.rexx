@@ -3,7 +3,7 @@ yyy="   this is a string that has leading/embedded/trailing blanks,  fur shure. 
 say 'YYY──►'yyy"◄──"                             /*display the original string + fence. */
                       /*white space also includes tabs (VT, HT), among other characters.*/
 
-                      /*all examples in each group are equivalent, only the opton's 1st */
+                      /*all examples in each group are equivalent, only the option's 1st*/
                       /*character is examined.                                          */
 noL=strip(yyy,'L')                               /*elide any  leading white space.      */
 noL=strip(yyy,"l")                               /*  (the same as the above statement.) */

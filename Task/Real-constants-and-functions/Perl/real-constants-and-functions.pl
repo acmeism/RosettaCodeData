@@ -9,3 +9,9 @@ abs($x); # absolute value
 floor($x); # floor
 ceil($x); # ceiling
 $x ** $y; # power
+
+use Math::Trig;
+pi; # alternate way to get pi
+
+use Math::Complex;
+pi; # alternate way to get pi

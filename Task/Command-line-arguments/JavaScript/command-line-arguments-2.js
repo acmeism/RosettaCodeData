@@ -1,4 +1,3 @@
-import System;
-var argv:String[] = Environment.GetCommandLineArgs();
-for (var i in argv)
-  print(argv[i]);
+var objArgs = WScript.Arguments;
+for (var i = 0; i < objArgs.length; i++)
+   WScript.Echo(objArgs.Item(i));

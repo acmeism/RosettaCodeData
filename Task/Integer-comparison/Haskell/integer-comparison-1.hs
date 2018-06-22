@@ -1,11 +1,10 @@
+myCompare :: Integer -> Integer -> String
 myCompare a b
   | a < b  = "A is less than B"
   | a > b  = "A is greater than B"
   | a == b = "A equals B"
 
 main = do
-  a' <- getLine
-  b' <- getLine
-  let { a :: Integer; a = read a' }
-  let { b :: Integer; b = read b' }
+  a <- readLn
+  b <- readLn
   putStrLn $ myCompare a b

@@ -1,18 +1,12 @@
 BEGIN {
 
          # Windows
-          out = system2var("for %I in (input.txt) do @echo %~zI")
-          printf("input.txt\t%s\n", out)
-          out = system2var("for %I in (\input.txt) do @echo %~zI")
-          printf("\input.txt\t%s\n", out)
+          printf("input.txt\t%s\n", system2var("for %I in (input.txt) do @echo %~zI"))
+          printf("\input.txt\t%s\n", system2var("for %I in (\input.txt) do @echo %~zI"))
 
          # Non-Windows
-          out = getline2var("ls -l input.txt")
-          split(out, size, " ")
-          printf("input.txt\t%s\n", size[5])
-          out = getline2var("ls -l /input.txt")
-          split(out, size, " ")
-          printf("/input.txt\t%s\n", size[5])
+          printf("input.txt\t%s\n", getline2var("stat --printf=\"%s\" input.txt"))
+          printf("/input.txt\t%s\n", getline2var("stat --printf=\"%s\" /input.txt"))
 }
 
 # Windows system() method

@@ -14,7 +14,7 @@ lcm: procedure; parse arg $,_; $=$ _;           do i=3  to arg();  $=$ arg(i);  
      parse var $ x $                                  /*obtain the first value in args. */
      x=abs(x)                                         /*use the absolute value of  X.   */
                do  while $\==''                       /*process the remainder of args.  */
-               parse var $ ! $;   !=abs(!)            /*pick off the next arg (ABS val).*/
+               parse var $ ! $;    if !<0  then !=-!  /*pick off the next arg (ABS val).*/
                if !==0  then return 0                 /*if zero, then LCM is also zero. */
                d=x*!                                  /*calculate part of the LCM here. */
                       do  until !==0;    parse  value   x//!  !     with     !  x

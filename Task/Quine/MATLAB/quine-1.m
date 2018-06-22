@@ -1,7 +1,1 @@
-  function quine()
-    fid = fopen([mfilename,'.m']);
-    while ~feof(fid)
-      printf('%s\n',fgetl(fid));
-    end;
-    fclose(fid); 	
-  end;
+x='{>\(y>(((-y-(((<(^<ejtq)\{-y.2^*<';z=['x=''',x,''';'];disp([z,x-1]);

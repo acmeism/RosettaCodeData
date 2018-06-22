@@ -16,4 +16,8 @@ sub long_multiply ( Str $x, Str $y ) {
     return groups_to_num @group_sums;
 }
 
-long_multiply( '18446744073709551616', '18446744073709551616' ).say;
+my $str = '18446744073709551616';
+long_multiply( $str, $str ).say;
+
+# cross-check with native implementation
+say +$str * +$str;

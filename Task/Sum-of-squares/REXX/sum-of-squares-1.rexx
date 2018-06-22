@@ -1,3 +1,4 @@
+/*REXX program  sums  the squares of the numbers  in a (numeric)  vector of 15 numbers. */
 numeric digits 100                               /*allow 100─digit numbers; default is 9*/
 v= -100 9 8 7 6 0 3 4 5 2 1 .5 10 11 12          /*define a vector with fifteen numbers.*/
 #=words(v)                                       /*obtain number of words in the V list.*/

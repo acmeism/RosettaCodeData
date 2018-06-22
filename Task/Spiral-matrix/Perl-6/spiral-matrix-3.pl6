@@ -1,11 +1,19 @@
-sub MAIN($size as Int) {
-my $t = Turtle.new(dir => ($size %% 2 ?? 4 !! 0));
-my $counter = $size * $size;
-while $counter {
-    $t.lay-egg(--$counter);
-    $t.turn-left;
-    $t.turn-right if $t.look;
-    $t.forward;
+sub spiral_matrix ( $n ) {
+    my @sm;
+    my $len = $n;
+    my $pos = 0;
+
+    for ^($n/2).ceiling -> $i {
+        my $j = $i +  1;
+        my $e = $n - $j;
+
+        @sm[$i     ][$i + $_] = $pos++ for         ^(  $len); # Top
+        @sm[$j + $_][$e     ] = $pos++ for         ^(--$len); # Right
+        @sm[$e     ][$i + $_] = $pos++ for reverse ^(  $len); # Bottom
+        @sm[$j + $_][$i     ] = $pos++ for reverse ^(--$len); # Left
+    }
+
+    return @sm;
 }
-$t.showmap;
-}
+
+say .fmt('%3d') for spiral_matrix(5);

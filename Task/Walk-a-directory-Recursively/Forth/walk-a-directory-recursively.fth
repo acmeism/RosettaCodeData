@@ -1,30 +1,47 @@
+require unix/filestat.fs
+require unix/libc.fs
+
+: $append ( from len to -- )   2DUP >R >R  COUNT + SWAP MOVE  R> R@ C@ + R> C! ;
+
 defer ls-filter
 
-: dots? ( name len -- ? )
-  dup 1 = if drop c@ [char] . =
-  else 2 = if dup c@ [char] . = swap 1+ c@ [char] . = and
-  else drop false then then ;
+: dots? ( name len -- ? )   drop c@ [char] . = ;
 
-: ls-r ( dir len -- )
-  open-dir if drop exit then  ( dirid)
+file-stat buffer: statbuf
+
+: isdir ( addr u -- flag )
+    statbuf lstat ?ior  statbuf st_mode w@ S_IFMT and S_IFDIR = ;
+
+: (ls-r) ( dir len -- )
+  pad c@ >r  pad $append  s" /" pad $append
+  pad count open-dir if  drop  r> pad c!  exit  then  ( dirid)
   begin
-    dup pad 256 rot read-dir throw
+    dup pad count + 256 rot read-dir throw
   while
-    pad over dots? 0= if   \ ignore current and parent dirs
-      pad over recurse
-      pad over ls-filter if
-        cr pad swap type
+    pad count + over dots? 0= if   \ ignore all hidden names
+      dup pad count rot + 2dup ls-filter if
+        cr 2dup type
+      then
+      isdir if
+        pad count + swap recurse
       else drop then
     else drop then
   repeat
-  drop close-dir throw ;
+  drop  r> pad c!
+  close-dir throw
+;
 
-: c-file? ( str len -- ? )
+: ls-r ( dir len -- )  0 pad c!  (ls-r) ;
+
+: c-files ( str len -- ? )
   dup 3 < if 2drop false exit then
   + 1- dup c@ 32 or
    dup [char] c <> swap [char] h <> and if drop false exit then
   1- dup c@ [char] . <> if drop false exit then
   drop true ;
-' c-file? is ls-filter
+' c-files is ls-filter
 
-s" ." ls-r
+: all-files ( str len -- ? )   2drop true ;
+' all-files is ls-filter
+
+s" ." ls-r cr

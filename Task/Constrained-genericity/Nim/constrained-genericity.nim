@@ -1,5 +1,5 @@
 type
-  Eatable = generic e
+  Eatable = concept e
     eat(e)
 
   FoodBox[e: Eatable] = seq[e]

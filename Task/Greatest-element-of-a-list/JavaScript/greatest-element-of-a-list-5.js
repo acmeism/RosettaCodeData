@@ -3,11 +3,19 @@
 
     // MAXIMUM BY ... --------------------------------------------------------
 
-    // maximumBy :: (a -> a -> Ordering) -> [a] -> a
-    const maximumBy = (f, xs) =>
-        xs.reduce((a, x) => a === undefined ? x : (
-            f(x, a) > 0 ? x : a
-        ), undefined);
+    // Ordering: (LT|EQ|GT):
+    //  GT: 1 (or other positive n)
+    //  EQ: 0
+    //  LT: -1 (or other negative n)
+    // maximumByMay :: (a -> a -> Ordering) -> [a] -> Maybe a
+    const maximumByMay = (f, xs) =>
+        xs.length > 0 ? (
+            just(xs.slice(1)
+                .reduce((a, x) => f(x, a) > 0 ? x : a, xs[0]))
+        ) : nothing('Empty list');
+
+
+    // GENERIC FUNCTIONS -----------------------------------------------------
 
     // comparing :: (a -> b) -> (a -> a -> Ordering)
     const comparing = f =>
@@ -18,6 +26,32 @@
             return a < b ? -1 : a > b ? 1 : 0
         };
 
+    // catMaybes :: [Maybe a] -> [a]
+    const catMaybes = mbs =>
+        concatMap(m => m.nothing ? [] : [m.just], mbs);
+
+    // concatMap :: (a -> [b]) -> [a] -> [b]
+    const concatMap = (f, xs) =>
+        xs.length > 0 ? [].concat.apply([], xs.map(f)) : [];
+
+    // just :: a -> Just a
+    const just = x => ({
+        nothing: false,
+        just: x
+    });
+
+    // nothing :: () -> Nothing
+    const nothing = (optionalMsg) => ({
+        nothing: true,
+        msg: optionalMsg
+    });
+
+    // show :: Int -> a -> Indented String
+    // show :: a -> String
+    const show = (...x) =>
+        JSON.stringify.apply(
+            null, x.length > 1 ? [x[1], null, x[0]] : x
+        );
 
     // TEST ------------------------------------------------------------------
     const words = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta"];
@@ -36,6 +70,9 @@
     }, {
         k: 'Shanghai',
         n: 24.3
+    }, {
+        k: 'Tokyo',
+        n: 13.2
     }];
 
     // length :: [a] -> Int
@@ -44,12 +81,14 @@
     // population :: {k: String, n: Float}
     const population = dct => dct.n;
 
-    // show :: a -> String
-    const show = x => JSON.stringify(x, null, 2);
-
     // OUTPUT ----------------------------------------------------------------
-    return show({
-        byWordLength: maximumBy(comparing(length), words),
-        byCityPopulation: maximumBy(comparing(population), cities)
-    });
+    const maxima = ([
+        maximumByMay(comparing(length), words),
+        maximumByMay(comparing(length), []),
+        maximumByMay(comparing(population), cities)
+    ]);
+
+    return show(2,
+        catMaybes(maxima)
+    );
 })();

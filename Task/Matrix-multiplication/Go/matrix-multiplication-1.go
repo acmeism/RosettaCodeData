@@ -3,21 +3,21 @@ package main
 import (
     "fmt"
 
-    "github.com/gonum/matrix/mat64"
+    "gonum.org/v1/gonum/mat"
 )
 
 func main() {
-    a := mat64.NewDense(2, 4, []float64{
+    a := mat.NewDense(2, 4, []float64{
         1, 2, 3, 4,
         5, 6, 7, 8,
     })
-    b := mat64.NewDense(4, 3, []float64{
+    b := mat.NewDense(4, 3, []float64{
         1, 2, 3,
         4, 5, 6,
         7, 8, 9,
         10, 11, 12,
     })
-    var m mat64.Dense
+    var m mat.Dense
     m.Mul(a, b)
-    fmt.Println(mat64.Formatted(&m))
+    fmt.Println(mat.Formatted(&m))
 }

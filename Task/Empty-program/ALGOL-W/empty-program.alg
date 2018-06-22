@@ -1,1 +1,2 @@
-begin end.
+.
+comment using the <empty statement>;

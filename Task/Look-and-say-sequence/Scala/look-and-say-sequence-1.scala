@@ -1,11 +1,27 @@
-def lookAndSay(seed: BigInt) = {
-  val s = seed.toString
-  ( 1 until s.size).foldLeft((1, s(0), new StringBuilder)) {
-    case ((len, c, sb), index) if c != s(index) => sb.append(len); sb.append(c); (1, s(index), sb)
-    case ((len, c, sb), _) => (len + 1, c, sb)
-  } match {
-    case (len, c, sb) => sb.append(len); sb.append(c); BigInt(sb.toString)
-  }
-}
+import scala.annotation.tailrec
 
-def lookAndSayIterator(seed: BigInt) = Iterator.iterate(seed)(lookAndSay)
+object LookAndSay extends App {
+
+  loop(10, "1")
+
+  @tailrec
+  private def loop(n: Int, num: String): Unit = {
+    println(num)
+    if (n <= 0) () else loop(n - 1, lookandsay(num))
+  }
+
+  private def lookandsay(number: String): String = {
+    val result = new StringBuilder
+
+    @tailrec
+    def loop(numberString: String, repeat: Char, times: Int): String =
+      if (numberString.isEmpty) result.toString()
+      else if (numberString.head != repeat) {
+        result.append(times).append(repeat)
+        loop(numberString.tail, numberString.head, 1)
+      } else loop(numberString.tail, numberString.head, times + 1)
+
+    loop(number.tail + " ", number.head, 1)
+  }
+
+}

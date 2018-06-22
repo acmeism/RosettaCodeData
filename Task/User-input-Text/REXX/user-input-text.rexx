@@ -1,10 +1,10 @@
-/*REXX pgm prompts and gets a string and also the # 75000 from terminal.*/
-say 'Please enter a string:';     parse  pull userString
-say 'You entered this string:' userString /* show it on the console     */
-                                       /* [↑]  string can be any length.*/
-  do  until userNumber=75000           /*repeat this loop until correct.*/
-  say                                  /*display blank line to terminal.*/
-  say 'Please enter the number 75000'  /*display a nice prompt message. */
-  parse pull userNumber                /*obtain the user text from term.*/
-  end   /*until ··· */                 /*check if the response is legit.*/
-                                       /*stick a fork in it, we're done.*/
+/*REXX program prompts & reads/obtains a string, and also the number 75000 from terminal*/
+say 'Please enter a string:'                     /*issue a prompt message to the term.  */
+parse pull userString                            /*the (char) string can be any length. */
+                                                 /* [↑]  the string could be null/empty.*/
+  do  until userNumber=75000                     /*repeat this loop until satisfied.    */
+  say                                            /*display a blank line to the terminal.*/
+  say 'Please enter the number 75000'            /*display a nice prompt message to term*/
+  parse pull userNumber                          /*obtain the user text from terminal.  */
+  end   /*until*/                                /*check if the response is legitimate. */
+                                                 /*stick a fork in it,  we're all done. */

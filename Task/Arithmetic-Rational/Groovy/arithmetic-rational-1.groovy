@@ -1,4 +1,4 @@
-class Rational implements Comparable {
+class Rational extends Number implements Comparable {
     final BigInteger num, denom
 
     static final Rational ONE = new Rational(1)
@@ -6,8 +6,9 @@ class Rational implements Comparable {
 
     Rational(BigDecimal decimal) {
         this(
-        decimal.scale() < 0 ? decimal.unscaledValue()*10**(-decimal.scale()) : decimal.unscaledValue(),
-        decimal.scale() < 0 ? 1                                              : 10**(decimal.scale()))
+        decimal.scale() < 0 ? decimal.unscaledValue() * 10 ** -decimal.scale() : decimal.unscaledValue(),
+        decimal.scale() < 0 ? 1                                                : 10 ** decimal.scale()
+        )
     }
 
     Rational(BigInteger n, BigInteger d = 1) {
@@ -16,14 +17,14 @@ class Rational implements Comparable {
     }
 
     private List reduce(BigInteger n, BigInteger d) {
-        BigInteger sign = ((n < 0) != (d < 0)) ? -1 : 1
+        BigInteger sign = ((n < 0) ^ (d < 0)) ? -1 : 1
         (n, d) = [n.abs(), d.abs()]
         BigInteger commonFactor = gcd(n, d)
 
         [n.intdiv(commonFactor) * sign, d.intdiv(commonFactor)]
     }
 
-    public Rational toLeastTerms() { reduce(num, denom) as Rational }
+    Rational toLeastTerms() { reduce(num, denom) as Rational }
 
     private BigInteger gcd(BigInteger n, BigInteger m) {
         n == 0 ? m : { while(m%n != 0) { (n, m) = [m%n, n] }; n }()
@@ -83,15 +84,15 @@ class Rational implements Comparable {
 
     Object asType(Class type) {
         switch (type) {
-            case this.getClass():              return this
-            case [Boolean.class,Boolean.TYPE]: return asBoolean()
-            case BigDecimal.class:             return toBigDecimal()
-            case BigInteger.class:             return toBigInteger()
-            case [Double.class,Double.TYPE]:   return toDouble()
-            case [Float.class,Float.TYPE]:     return toFloat()
-            case [Integer.class,Integer.TYPE]: return toInteger()
-            case [Long.class,Long.TYPE]:       return toLong()
-            case String.class:                 return toString()
+            case this.class:              return this
+            case [Boolean, Boolean.TYPE]: return asBoolean()
+            case BigDecimal:              return toBigDecimal()
+            case BigInteger:              return toBigInteger()
+            case [Double, Double.TYPE]:   return toDouble()
+            case [Float, Float.TYPE]:     return toFloat()
+            case [Integer, Integer.TYPE]: return toInteger()
+            case [Long, Long.TYPE]:       return toLong()
+            case String:                  return toString()
             default: throw new ClassCastException("Cannot convert from type Rational to type " + type)
         }
     }
@@ -99,10 +100,10 @@ class Rational implements Comparable {
     boolean equals(o) { compareTo(o) == 0 }
 
     int compareTo(o) {
-        o instanceof Rational \
-            ? compareTo(o as Rational) \
-            : o instanceof Number \
-                ? compareTo(o as Number)\
+        o instanceof Rational
+            ? compareTo(o as Rational)
+            : o instanceof Number
+                ? compareTo(o as Number)
                 : (Double.NaN as int)
     }
     int compareTo(Rational r) { num*r.denom <=> denom*r.num }

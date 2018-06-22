@@ -2,11 +2,12 @@
     'use strict';
 
     // haversine :: (Num, Num) -> (Num, Num) -> Num
-    let haversine = ([lat1, lon1], [lat2, lon2]) => {
+    const haversine = ([lat1, lon1], [lat2, lon2]) => {
         // Math lib function names
-        let [pi, asin, sin, cos, sqrt, pow, round] =
-            ['PI', 'asin', 'sin', 'cos', 'sqrt', 'pow', 'round']
-            .map(k => Math[k]),
+        const [pi, asin, sin, cos, sqrt, pow, round] = [
+            'PI', 'asin', 'sin', 'cos', 'sqrt', 'pow', 'round'
+        ]
+        .map(k => Math[k]),
 
             // degrees as radians
             [rlat1, rlat2, rlon1, rlon2] = [lat1, lat2, lon1, lon2]

@@ -4,7 +4,7 @@
 -define(Match, "<BR>(.+ UTC)").
 
 main() ->
-	inets:start(),
-	{ok, {_Status, _Header, HTML}} = httpc:request(?Url),
-	{match, [Time]} = re:run(HTML, ?Match, [{capture, all_but_first, binary}]),
-	io:format("~s~n",[Time]).
+  inets:start(),
+  {ok, {_Status, _Header, HTML}} = httpc:request(?Url),
+  {match, [Time]} = re:run(HTML, ?Match, [{capture, all_but_first, binary}]),
+  io:format("~s~n",[Time]).

@@ -1,56 +1,61 @@
-(lst => {
+(() => {
 
     // knuthShuffle :: [a] -> [a]
-    function knuthShuffle(lst) {
-        let lng = lst.length;
+    const knuthShuffle = xs =>
+        enumFromTo(0, xs.length - 1)
+        .reduceRight((a, i) => {
+            const iRand = randomRInt(0, i);
+            return i !== iRand ? (
+                swapped(i, iRand, a)
+            ) : a;
+        }, xs);
 
-        return lng ? range(0, lng - 1)
-            .reduceRight((a, i) => {
-                let iRand = i > 0 ? randomInteger(0, i) : 0;
+    const test = () => knuthShuffle(
+        (`alpha beta gamma delta epsilon zeta
+          eta theta iota kappa lambda mu`)
+        .split(/\s+/)
+    );
 
-                return i !== iRand ? swapped(a, i, iRand) : a;
-            }, lst) : [];
+    // Non mutating version of swapped
+
+    // swapped :: Int -> Int -> [a] -> [a]
+    const swapped = (iFrom, iTo, xs) =>
+        xs.map(
+            (x, i) => iFrom !== i ? (
+                iTo !== i ? (
+                    x
+                ) : xs[iFrom]
+            ) : xs[iTo]
+        );
+
+    // GENERIC FUNCTIONS ----------------------------------
+
+    // enumFromTo :: Int -> Int -> [Int]
+    const enumFromTo = (m, n) =>
+        n >= m ? (
+            iterateUntil(x => x >= n, x => 1 + x, m)
+        ) : [];
+
+    // iterateUntil :: (a -> Bool) -> (a -> a) -> a -> [a]
+    const iterateUntil = (p, f, x) => {
+        let vs = [x],
+            h = x;
+        while (!p(h))(h = f(h), vs.push(h));
+        return vs;
     };
 
-
-    // A non-mutating variant of swapped():
-
-    // swapped :: [a] -> Int -> Int -> [a]
-    let swapped = (lst, iFrom, iTo) => {
-            let [iLow, iHigh] = iTo > iFrom ? (
-                    [iFrom, iTo]
-            ) : [iTo, iFrom];
-
-            return iLow !== iHigh ? (
-                    [].concat(
-                        (iLow > 0 ? lst.slice(0, iLow) : []), // pre
-                        lst[iHigh],                           // DOWN
-                        lst.slice(iLow + 1, iHigh),           // mid
-                        lst[iLow],                            // UP
-                        lst.slice(iHigh + 1)                  // post
-                    )
-                ) : lst.slice(0) // (unchanged copy)
-        },
-
-        // randomInteger :: Int -> Int -> Int
-        randomInteger = (low, high) =>
+    // randomRInt :: Int -> Int -> Int
+    const randomRInt = (low, high) =>
         low + Math.floor(
             (Math.random() * ((high - low) + 1))
-        ),
+        );
 
-        // range :: Int -> Int -> Maybe Int -> [Int]
-        range = (m, n, step) => {
-            let d = (step || 1) * (n >= m ? 1 : -1);
+    // zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+    const zipWith = (f, xs, ys) =>
+        Array.from({
+            length: Math.min(xs.length, ys.length)
+        }, (_, i) => f(xs[i], ys[i], i));
 
-            return Array.from({
-                length: Math.floor((n - m) / d) + 1
-            }, (_, i) => m + (i * d));
-        };
-
-
-    return knuthShuffle(lst);
-
-})(
-    'alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu'
-    .split(' ')
-);
+    // MAIN ---
+    return test();
+})();

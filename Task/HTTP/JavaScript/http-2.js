@@ -1,3 +1,5 @@
-$.get('http://rosettacode.org', function(data) {
-  console.log(data);
-};
+fetch('http://rosettacode.org').then(function(response) {
+  return response.text();
+}).then(function(myText) {
+  console.log(myText);
+});

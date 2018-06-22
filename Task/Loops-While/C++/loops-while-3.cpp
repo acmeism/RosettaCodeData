@@ -1,2 +1,3 @@
-for (init; cond; update)
+for(init; cond; update){
   statement;
+}

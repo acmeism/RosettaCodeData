@@ -1,26 +1,21 @@
-sub infix:<M> (@x, @y) {
-    gather {
-	while @x and @y {
-	    take do given @x[0] cmp @y[0] {
-		when Increase { @x.shift }
-		when Decrease { @y.shift }
-		when Same     { @x.shift, @y.shift }
-	    }
-	}
-	take @x, @y;
-    }
+sub infix:<M> (@x-in, @y-in) {
+    my @x = | @x-in;
+    my @y = | @y-in;
+    flat @x, @y,
+        reverse gather while @x and @y {
+            take do given @x[*-1] cmp @y[*-1] {
+                when More { pop @x }
+                when Less { pop @y }
+                when Same { pop(@x), pop(@y) }
+            }
+        }
 }
 
-sub strand (@x is rw) {
-    my $prev = -Inf;
+sub strand (@x) {
     my $i = 0;
+    my $prev = -Inf;
     gather while $i < @x {
-	if @x[$i] before $prev {
-	    $i++;
-        }
-        else {
-            take $prev = splice(@x, $i, 1)[0];
-	}
+        @x[$i] before $prev ?? $i++ !! take $prev = splice(@x, $i, 1)[0];
     }
 }
 
@@ -31,11 +26,11 @@ sub strand_sort (@x is copy) {
 }
 
 my @a = (^100).roll(10);
-say "Before @a[]";
+say "Before {@a}";
 @a = strand_sort(@a);
-say "After  @a[]";
+say "After  {@a}";
 
 @a = <The quick brown fox jumps over the lazy dog>;
-say "Before @a[]";
+say "Before {@a}";
 @a = strand_sort(@a);
-say "After  @a[]";
+say "After  {@a}";

@@ -1,6 +1,10 @@
-(defun 100-doors ()
-  (let ((doors (make-array 100)))
-    (dotimes (i 10)
-      (setf (svref doors (* i i)) t))
-    (dotimes (i 100)
-      (format t "door ~a: ~:[closed~;open~]~%" (1+ i) (svref doors i)))))
+(defun doors (n)
+  (loop for a from 1 to n collect
+        (if (zerop (mod (sqrt a) 1)) t nil)))
+
+> (doors 100)
+(T NIL NIL T NIL NIL NIL NIL T NIL NIL NIL NIL NIL NIL T NIL NIL NIL NIL NIL
+ NIL NIL NIL T NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL T NIL NIL NIL NIL NIL
+ NIL NIL NIL NIL NIL NIL NIL T NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL
+ NIL NIL T NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL T
+ NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL NIL T)

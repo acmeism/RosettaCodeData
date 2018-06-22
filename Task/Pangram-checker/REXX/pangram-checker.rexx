@@ -1,13 +1,17 @@
 /*REXX program  verifies  if an  entered/supplied  string  (sentence)  is a pangram.    */
 @abc= 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'               /*a list of all (Latin) capital letters*/
 
-    do forever;    say                           /*keep promoting 'til null (or blanks).*/
-    say '──────── Please enter a pangramic sentence   (or a blank to quit):';        say
+    do forever                                   /*keep promoting 'til null (or blanks).*/
+    say
+    say '──────── Please enter a pangramic sentence   (or a blank to quit):'
+    say
     pull y                                       /*this also uppercases the  Y variable.*/
     if y=''  then leave                          /*if nothing entered,  then we're done.*/
-    ?=verify(@abc, y)                            /*Are all the (Latin) letters present? */
-    if ?==0  then say  '──────── Sentence is a pangram.'
-             else say  "──────── Sentence isn't a pangram, missing:"    substr(@abc, ?, 1)
+
+    absent= space( translate( @abc, , y), 0)     /*obtain a list of any absent letters. */
+
+    if absent==''  then say  '──────── Sentence is a pangram.'
+                   else say  "──────── Sentence isn't a pangram, missing: "    absent
     say
     end   /*forever*/
 

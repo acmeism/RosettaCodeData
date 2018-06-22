@@ -1,4 +1,4 @@
-use ntheory "vecextract";
-my @S=("a","b","c");
-my @PS = map { "[".join(" ",vecextract(\@S,$_))."]" } 0..2**scalar(@S)-1;
-say join("  ",@PS);
+use ntheory "forcomb";
+my @S = qw/a b c/;
+forcomb { print "[@S[@_]]  " } scalar(@S);
+print "\n";

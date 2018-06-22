@@ -1,17 +1,27 @@
-load "stdlib.ring"
-aList = file2list("C:\Ring\unixdict.txt")
-for m = 1 to 10
-    nr = random(len(aList)-1) + 1
-    bool = semordnilap(aList[nr])
-    see aList[nr] + nl
-    if bool = 0 see "is palindrome" + nl + nl
-    else see "is semordnilap" + nl + nl ok
-next
+# Project : Semordnilap
+# Date    : 2018/04/18
+# Author : Gal Zsolt (~ CalmoSoft ~)
+# Email   : <calmosoft@gmail.com>
 
-func semordnilap aString
-     bString = ""
-     for i=len(aString) to 1 step -1
-         bString = bString + aString[i]
-     next
-     see aString
-     if aString = bString return 0 else return 1 ok
+load "stdlib.ring"
+nr = 0
+num = 0
+aList = file2list("C:\Ring\CalmoSoft\unixdict.txt")
+for n = 1 to len(aList)
+     bool = semordnilap(aList[n])
+     if (bool > 0 and nr > n)
+        num = num + 1
+        if num % 31 = 0
+           see aList[n] + " " + aList[nr] + nl
+        ok
+     ok
+next
+see "Total number of unique pairs = " + num + nl
+
+func semordnilap(aString)
+       bString = ""
+       for i=len(aString) to 1 step -1
+            bString = bString + aString[i]
+       next
+       nr = find(aList,bString)
+       return nr

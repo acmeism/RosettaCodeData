@@ -17,9 +17,9 @@
 			in_angle.value = 0;
 			var cx = 150, cy = 50;
 			var radius = 100; // cm
-			var g = 981; // cm/s^2
+			var g = 9.81; // m/s^2
 			var angle = 0; // radians
-			var vel = 0; // cm/s
+			var vel = 0; // m/s
 			var dx = 0.02; // s
 			var acc, vel, penx, peny;
 			var timerFunction = null;
@@ -33,9 +33,9 @@
 				if(!timerFunction) timerFunction = setInterval(swing, dx * 1000);
 			}
 			function swing(){
-				acc = g * Math.cos(angle) * dx;
-				vel += acc * dx;
-				angle += vel * dx;
+				acc = g * Math.cos(angle);
+				vel += acc * dx;//Convert m/s/s to m/s
+				angle += vel/(radius/100) * dx; //convert m/s into rad/s and then into rad
 				setPenPos();
 			}
 			function setPenPos(){

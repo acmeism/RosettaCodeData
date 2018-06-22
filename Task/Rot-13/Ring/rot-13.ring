@@ -10,5 +10,5 @@ for a = 1 to len(s)
        if char > "z" char = char(ascii(char) - 26) else  char = letter ok
     ok
     ans = ans + char
-nex
+next
 see ans + nl

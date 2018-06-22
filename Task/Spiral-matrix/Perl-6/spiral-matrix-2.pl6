@@ -1,16 +1,11 @@
-sub MAIN($size as Int) {
-my $t = Turtle.new(dir => 2);
-my $counter = 0;
-$t.forward(-1);
-for 0..^ $size -> $ {
+sub MAIN(Int $size = 5) {
+my $t = Turtle.new(dir => ($size %% 2 ?? 4 !! 0));
+my $counter = $size * $size;
+while $counter {
+    $t.lay-egg(--$counter);
+    $t.turn-left;
+    $t.turn-right if $t.look;
     $t.forward;
-    $t.lay-egg($counter++);
-}
-for $size-1 ... 1 -> $run {
-    $t.turn-right;
-    $t.forward, $t.lay-egg($counter++) for 0..^$run;
-    $t.turn-right;
-    $t.forward, $t.lay-egg($counter++) for 0..^$run;
 }
 $t.showmap;
 }

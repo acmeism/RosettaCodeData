@@ -1,20 +1,21 @@
 import Data.List (maximumBy)
 import Data.Ord (comparing)
 
+collatz :: Int -> Int
+collatz n
+  | even n = n `div` 2
+  | otherwise = 3 * n + 1
+
 hailstone :: Int -> [Int]
 hailstone = takeWhile (/= 1) . iterate collatz
-  where
-    collatz n =
-      if even n
-        then n `div` 2
-        else 3 * n + 1
 
 longestChain :: Int
 longestChain =
-  fst
-    (maximumBy (comparing snd) (((,) <*> length . hailstone) <$> [1 .. 100000]))
+  fst $
+  maximumBy (comparing snd) $ (,) <*> (length . hailstone) <$> [1 .. 100000]
 
 --TEST -------------------------------------------------------------------------
+main :: IO ()
 main =
   mapM_
     putStrLn

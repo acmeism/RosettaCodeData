@@ -1,3 +1,11 @@
-x = """x = {0}{1}{0}
-print x.format(chr(34)*3,x)"""
-print x.format(chr(34)*3,x)
+$ cat reproducing.py
+  File "reproducing.py", line 1
+    File "reproducing.py", line 1
+    ^
+IndentationError: unexpected indent
+
+$ python reproducing.py
+  File "reproducing.py", line 1
+    File "reproducing.py", line 1
+    ^
+IndentationError: unexpected indent

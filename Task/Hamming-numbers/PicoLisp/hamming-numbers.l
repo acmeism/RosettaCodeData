@@ -9,5 +9,5 @@
       H ) )
 
 (println (make (for N 20 (link (hamming N)))))
-(println (hamming 1691))
-(println (hamming 1000000))
+(println (hamming 1691))   # very fast
+(println (hamming 1000000))   # runtime about 13 minutes on i5-3570S

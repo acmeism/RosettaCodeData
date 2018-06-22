@@ -18,7 +18,7 @@
 
    CALL Drawgen(cells(1:gridsize, 1:gridsize), generation)
    DO generation = 1, 8
-      CALL Nextgen(cells)
+      CALL NextgenV2(cells)
       CALL Drawgen(cells(1:gridsize, 1:gridsize), generation)
    END DO
 
@@ -48,8 +48,8 @@
      INTEGER :: neighbours, i, j
 
      buffer = cells   ! Store current status
-     DO i = 1, SIZE(cells, 1)-2
-        DO j = 1, SIZE(cells, 2)-2
+     DO j = 1, SIZE(cells, 2)-2
+        DO i = 1, SIZE(cells, 1)-2
           if(buffer(i, j)) then
             neighbours = sum(count(buffer(i-1:i+1, j-1:j+1), 1)) - 1
           else
@@ -71,4 +71,30 @@
      END DO
   END SUBROUTINE Nextgen
 
+!###########################################################################
+!   In this version instead of cycling through all points an integer array
+! is used the sum the live neighbors of all points. The sum is done with
+! the entire array cycling through the eight positions of the neighbors.
+!   Executing a grid size of 10000 in 500 generations this version gave a
+! speedup of almost 4 times.
+!###########################################################################
+  PURE SUBROUTINE NextgenV2(cells)
+     LOGICAL, INTENT(IN OUT) :: cells(:,:)
+     INTEGER(KIND=1) :: buffer(1:SIZE(cells, 1)-2,1:SIZE(cells, 2)-2)
+     INTEGER :: gridsize, i, j
+
+     gridsize=SIZE(cells, 1)
+     buffer=0
+
+     DO j=-1, 1
+        DO i=-1,1
+           IF(i==0 .AND. j==0) CYCLE
+           WHERE(cells(i+2:gridsize-i-1,j+2:gridsize-j-1)) buffer=buffer+1
+        END DO
+     END DO
+
+     WHERE(buffer<2 .or. buffer>3) cells(2:gridsize-1,2:gridsize-1) = .FALSE.
+     WHERE(buffer==3) cells(2:gridsize-1,2:gridsize-1) = .TRUE.
+  END SUBROUTINE NextgenV2
+!###########################################################################
  END PROGRAM LIFE_2D

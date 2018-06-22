@@ -1,1 +1,1 @@
-import sys; sys.stdout.write(open(sys.argv[0]).read())
+x = 'x = {!r};print(x.format(x))';print(x.format(x))

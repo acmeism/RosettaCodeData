@@ -1,5 +1,5 @@
 (function f() {
 
-    console.log('(' + f.toString() + ')();');
+    return '(' + f.toString() + ')();';
 
 })();

@@ -1,46 +1,60 @@
-public class Int2Words {
-    static String[] small = {"one", "two", "three", "four", "five", "six",
-        "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen",
-        "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"};
-    static String[] tens = {"twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty",
-        "ninety"};
-    static String[] big = {"thousand", "million", "billion", "trillion"};
+public enum IntToWords {
+    ;
+
+    private static final String[] small = {
+            "", "one", "two", "three", "four",
+            "five", "six", "seven", "eight", "nine",
+            "ten", "eleven", "twelve", "thirteen", "fourteen",
+            "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"};
+    private static final String[] tens = {
+            "", "", "twenty", "thirty", "forty",
+            "fifty", "sixty", "seventy", "eighty", "ninety"};
+    private static final String[] big = {
+            "", "thousand", "million", "billion", "trillion",
+            "quadrillion", "quintillion"};
 
     public static void main(String[] args) {
-        System.out.println(int2Text(900000001));
-        System.out.println(int2Text(1234567890));
-        System.out.println(int2Text(-987654321));
         System.out.println(int2Text(0));
+        System.out.println(int2Text(10));
+        System.out.println(int2Text(30));
+        System.out.println(int2Text(47));
+        System.out.println(int2Text(100));
+        System.out.println(int2Text(999));
+        System.out.println(int2Text(1000));
+        System.out.println(int2Text(9999));
+        System.out.println(int2Text(123_456));
+        System.out.println(int2Text(900_000_001));
+        System.out.println(int2Text(1_234_567_890));
+        System.out.println(int2Text(-987_654_321));
+        System.out.println(int2Text(Long.MAX_VALUE));
+        System.out.println(int2Text(Long.MIN_VALUE));
     }
 
     public static String int2Text(long number) {
-        long num = 0;
-        String outP = "";
-        int unit = 0;
-        long tmpLng1 = 0;
+        StringBuilder sb = new StringBuilder();
 
         if (number == 0) {
             return "zero";
         }
 
-        num = Math.abs(number);
+        long num = -Math.abs(number);
 
-        for (;;) {
-            tmpLng1 = num % 100;
-            if (tmpLng1 >= 1 && tmpLng1 <= 19) {
-                outP = small[(int) tmpLng1 - 1] + " " + outP;
-            } else if (tmpLng1 >= 20 && tmpLng1 <= 99) {
-                if (tmpLng1 % 10 == 0) {
-                    outP = tens[(int) (tmpLng1 / 10) - 2] + " " + outP;
+        int unit = 1;
+        while (true) {
+            int rem100 = (int) -(num % 100);
+            if (rem100 >= 20) {
+                if (rem100 % 10 == 0) {
+                    sb.insert(0, tens[rem100 / 10] + " ");
                 } else {
-                    outP = tens[(int) (tmpLng1 / 10) - 2] + "-"
-                            + small[(int) (tmpLng1 % 10) - 1] + " " + outP;
+                    sb.insert(0, tens[rem100 / 10] + "-" + small[rem100 % 10] + " ");
                 }
+            } else if (rem100 != 0) {
+                sb.insert(0, small[rem100] + " ");
             }
 
-            tmpLng1 = (num % 1000) / 100;
-            if (tmpLng1 != 0) {
-                outP = small[(int) tmpLng1 - 1] + " hundred " + outP;
+            int hundreds = (int) -(num % 1000) / 100;
+            if (hundreds != 0) {
+                sb.insert(0, small[hundreds] + " hundred ");
             }
 
             num /= 1000;
@@ -48,17 +62,17 @@ public class Int2Words {
                 break;
             }
 
-            tmpLng1 = num % 1000;
-            if (tmpLng1 != 0) {
-                outP = big[unit] + " " + outP;
+            int rem1000 = (int) -(num % 1000);
+            if (rem1000 != 0) {
+                sb.insert(0, big[unit] + " ");
             }
             unit++;
         }
 
         if (number < 0) {
-            outP = "negative " + outP;
+            sb.insert(0, "negative ");
         }
 
-        return outP.trim();
+        return sb.toString().trim();
     }
 }

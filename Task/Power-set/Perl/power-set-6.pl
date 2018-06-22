@@ -1,11 +1,6 @@
-use List::Util qw(reduce);
-
-sub powerset {
-    @{( reduce { [@$a, map { Set->new($_->elements, $b) } @$a ] }
-               [Set->new()], shift->elements )};
+package Set {
+    sub new       { bless { map {$_ => undef} @_[1..$#_] }, shift; }
+    sub elements  { sort keys %{shift()} }
+    sub as_string { 'Set(' . join(' ', sort keys %{shift()}) . ')' }
+    # ...more set methods could be defined here...
 }
-
-my $set = Set->new(1, 2, 3);
-my @subsets = powerset($set);
-
-print $_->as_string, "\n" for @subsets;

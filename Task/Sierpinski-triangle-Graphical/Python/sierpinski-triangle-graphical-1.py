@@ -1,20 +1,9 @@
-#!/usr/bin/env python
-##########################################################################################
-# import necessary modules
-# ------------------------
-from numpy import *
-import turtle
-
-##########################################################################################
-#	Functions defining the drawing actions
-#       (used by the function DrawSierpinskiTriangle).
-#	----------------------------------------------
-def Left(turn, point, fwd, angle, turt):
-	turt.left(angle)
-	return [turn, point, fwd, angle, turt]
-def Right(turn, point, fwd, angle, turt):
-	turt.right(angle)
-	return [turn, point, fwd, angle, turt]
-def Forward(turn, point, fwd, angle, turt):
-	turt.forward(fwd)
-	return [turn, point, fwd, angle, turt]
+# likely the simplest possible version?
+import turtle as t
+def sier(n,length):
+    if (n==0):
+        return
+    for i in range(3):
+        sier(n-1, length/2)
+        t.fd(length)
+        t.rt(120)

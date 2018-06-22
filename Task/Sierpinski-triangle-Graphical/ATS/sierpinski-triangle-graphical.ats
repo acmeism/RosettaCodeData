@@ -1,0 +1,103 @@
+// patscc -O2 -flto -D_GNU_SOURCE -DATS_MEMALLOC_LIBC sierpinski.dats -o sierpinski -latslib -lSDL2
+#include "share/atspre_staload.hats"
+
+typedef point = (int, int)
+
+extern fun midpoint(A: point, B: point): point = "mac#"
+
+extern fun sierpinski_draw(n: int, A: point, B: point, C: point): void = "mac#"
+
+extern fun triangle_remove(A: point, B: point, C: point): void = "mac#"
+
+extern fun sdl_drawline(x1: int, y1: int, x2: int, y2: int): void = "ext#sdl_drawline"
+
+extern fun line(A: point, B: point): void
+
+extern fun ats_tredraw(): void = "mac#ats_tredraw"
+
+implement midpoint(A, B) = (xmid, ymid) where {
+  val xmid = (A.0 + B.0) / 2
+  val ymid = (A.1 + B.1) / 2
+}
+
+implement triangle_remove(A, B, C) = (
+  line(A, B);
+  line(B, C);
+  line(C, A);
+)
+
+implement sierpinski_draw(n, A, B, C) =
+  if n > 0 then
+    let
+      val AB = midpoint(A, B)
+      val BC = midpoint(B, C)
+      val CA = midpoint(C, A)
+    in
+      triangle_remove(AB, BC, CA);
+      sierpinski_draw(n-1, A, AB, CA);
+      sierpinski_draw(n-1, B, BC, AB);
+      sierpinski_draw(n-1, C, CA, BC);
+    end
+
+implement line(A, B) = sdl_drawline(A.0, A.1, B.0, B.1)
+
+extern fun SDL_Init(): void = "ext#sdl_init"
+extern fun SDL_Quit(): void = "ext#sdl_quit"
+extern fun SDL_Loop(): void = "ext#sdl_loop"
+
+implement ats_tredraw() = sierpinski_draw(7, (320, 0), (0, 480), (640, 480))
+
+implement main0() = (
+  SDL_Init();
+  SDL_Loop();
+  SDL_Quit();
+)
+
+%{
+#include <SDL2/SDL.h>
+#include <unistd.h>
+extern void ats_tredraw();
+SDL_Window *sdlwin;
+SDL_Renderer *sdlren;
+void sdl_init() {
+  if (SDL_Init(SDL_INIT_VIDEO)) {
+    exit(1);
+  }
+  if ((sdlwin = SDL_CreateWindow("sierpinski triangles", 100, 100, 640, 480, SDL_WINDOW_SHOWN)) == NULL) {
+    SDL_Quit();
+    exit(2);
+  }
+  if ((sdlren = SDL_CreateRenderer(sdlwin, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC)) == NULL) {
+    SDL_DestroyWindow(sdlwin);
+    SDL_Quit();
+    exit(3);
+  }
+}
+void sdl_clear() {
+  SDL_SetRenderDrawColor(sdlren, 0, 0, 0, SDL_ALPHA_OPAQUE);
+  SDL_RenderClear(sdlren);
+  SDL_SetRenderDrawColor(sdlren, 255, 255, 255, SDL_ALPHA_OPAQUE);
+}
+void sdl_loop() {
+  SDL_Event event;
+  while (1) {
+    sdl_clear();
+    ats_tredraw();
+    SDL_RenderPresent(sdlren);
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_QUIT) {
+        return;
+      }
+    }
+  }
+}
+void sdl_quit() {
+    SDL_DestroyRenderer(sdlren);
+    SDL_DestroyWindow(sdlwin);
+    SDL_Quit();
+}
+
+void sdl_drawline(int x1, int y1, int x2, int y2) {
+  SDL_RenderDrawLine(sdlren, x1, y1, x2, y2);
+}
+%}

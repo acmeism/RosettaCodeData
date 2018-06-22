@@ -1,3 +1,3 @@
-a = 'YSA9ICcnCmIgPSBhLmRlY29kZSgnYmFzZTY0JykKcHJpbnQgYls6NV0rYStiWzU6XQ=='
-b = a.decode('base64')
-print b[:5]+a+b[5:]
+x = """x = {0}{1}{0}
+print x.format(chr(34)*3,x)"""
+print x.format(chr(34)*3,x)

@@ -3,11 +3,11 @@ parse arg N .                                    /*obtain optional argument from
 if N=='' | N==","  then N=8                      /*Not specified:  Then use the default.*/
 if N<1  then signal nOK                          /*display a message, the board is bad. */
 rank=1;   file=1;       #=0                      /*starting rank&file;  #≡number queens.*/
-@.=0;     pad=left('', 9* (N<18))                /*define empty board;  set indentation.*/
+@.=0;     pad=left('', 9* (N<18) )               /*define empty board;  set indentation.*/
                                                  /* [↓]  rank&file ≡ chessboard row&cols*/
   do  while #<N;      @.file.rank=1              /*keep placing queens until we're done.*/
-  if ok(file, rank)  then do; #=#+1; rank=rank+1 /*Queen not being attacked? Then eureka*/
-                              file=1             /*use another attempt at another file. */
+  if ok(file, rank)  then do; #=#+1;      file=1 /*Queen not being attacked? Then eureka*/
+                              rank=rank+1        /*use another attempt at another rank. */
                               iterate            /*go and try another queen placement.  */
                           end                    /* [↑]  found a good queen placement.  */
   @.file.rank=0                                  /*It isn't safe.  So remove this queen.*/
@@ -21,8 +21,8 @@ rank=1;   file=1;       #=0                      /*starting rank&file;  #≡numb
 
 say 'A solution for '    N    " queens:";   g=substr( copies("╬═══",  N)  ,2);         say
 say pad  translate('╔'g"╗", '╦', "╬")            /*display the top rank  (of the board).*/
-line   = '╠'g"╣";     dither='░'                 /*define a line (bar) for cell boundry.*/
-bar    = '║'    ;     queen='Q'                  /*kinds:  horizontal, vertical, salad. */
+line   = '╠'g"╣";     dither= '▒'                /*define a line (bar) for cell boundry.*/
+bar    = '║'    ;     queen = "Q"                /*kinds:  horizontal, vertical, salad. */
 Bqueen = dither || queen || dither               /*glyph befitting a black─square queen.*/
 Wqueen =        ' 'queen" "                      /*  "       "     " white─square   "   */
 

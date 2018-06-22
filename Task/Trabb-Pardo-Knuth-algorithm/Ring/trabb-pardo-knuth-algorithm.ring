@@ -1,12 +1,31 @@
-decimals(7)
-s = [4,3,4,2,1,1,2,3,4,5]
+# Project : Trabb Pardo–Knuth algorithm
+# Date    : 2017/10/06
+# Author : Gal Zsolt (~ CalmoSoft ~)
+# Email   : <calmosoft@gmail.com>
 
-for i = 10 to 1 step -1
-    see "f(" + s[i] + ")=";
-    x = f(s[i])
-    if x > 400 see "--- too large ---" + nl
-    else see x + nl ok
+decimals(3)
+x = list(11)
+for n=1 to 11
+    x[n] = n
 next
 
-func f n
-     return sqrt(fabs(n))+5*pow(n,3)
+s = [-5, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6]
+for i = 1 to 11
+    see string(i) + " => " + s[i] + nl
+next
+see copy("-", 20) + nl
+i = i - 1
+
+while i > 0
+      see "f(" + string(s[i]) + ") = "
+      x = f(s[i])
+      if x > 400
+         see "-=< overflow >=-" + nl
+      else
+         see x + nl
+      ok
+      i = i - 1
+end
+
+func f(n)
+     return sqrt(fabs(n)) + 5 * pow(n, 3)

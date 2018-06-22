@@ -1,21 +1,20 @@
 #!/usr/bin/env python
 import string
+
+TRANSLATION_TABLE = str.maketrans(
+    string.ascii_uppercase + string.ascii_lowercase,
+    string.ascii_uppercase[13:] + string.ascii_uppercase[:13] +
+    string.ascii_lowercase[13:] + string.ascii_lowercase[:13]
+)
+
+
 def rot13(s):
-   """Implement the rot-13 encoding function: "rotate" each letter by the
-      letter that's 13 steps from it (wrapping from z to a)
-   """
-   return s.translate(
-       string.maketrans(
-           string.ascii_uppercase + string.ascii_lowercase,
-           string.ascii_uppercase[13:] + string.ascii_uppercase[:13] +
-           string.ascii_lowercase[13:] + string.ascii_lowercase[:13]
-           )
-       )
+    """Return the rot-13 encoding of s."""
+    return s.translate(TRANSLATION_TABLE)
+
+
 if __name__ == "__main__":
-   """Peform line-by-line rot-13 encoding on any files listed on our
-      command line or act as a standard UNIX filter (if no arguments
-      specified).
-   """
-   import fileinput
-   for line in fileinput.input():
-      print rot13(line),  # (Note the trailing comma; avoid double-spacing our output)!
+    """rot-13 encode the input files, or stdin if no files are provided."""
+    import fileinput
+    for line in fileinput.input():
+        print(rot13(line), end="")

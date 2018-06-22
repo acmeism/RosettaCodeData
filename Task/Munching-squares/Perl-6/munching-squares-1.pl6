@@ -1,4 +1,4 @@
-my $ppm = open("munching.ppm", :w) or
+my $ppm = open("munching0.ppm", :w) or
   die "Can't create munching.ppm: $!";
 
 $ppm.print(q :to 'EOT');

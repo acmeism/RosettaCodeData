@@ -5,12 +5,12 @@ if radx=='' | radx==","  then radx=10            /* "      "         "   "   "  
 mx=N * (N+1) % 2  -  N                           /*calculate maximum value of any value.*/
 say 'displaying a '  N   " row Floyd's triangle in base"  radx':'  /*display the header.*/
 say
-#=1; do     r=1  for N;      i=0;         _=     /*construct Floyd's triangle row by row*/
-         do #=#  for r;      i=i+1               /*start to construct a row of triangle.*/
+#=1;  do     r=1  for N;   i=0;            _=    /*construct Floyd's triangle row by row*/
+         do #=#  for r;    i=i+1                 /*start to construct a row of triangle.*/
          _=_ right(base(#, radx),  length( base(mx+i, radx) ) )    /*build triangle row.*/
          end   /*#*/
-     say substr(_, 2)                            /*remove 1st leading blank in the line,*/
-     end       /*r*/                             /* [↑]   introduced by first abutment. */
+      say substr(_, 2)                           /*remove 1st leading blank in the line,*/
+      end      /*r*/                             /* [↑]   introduced by first abutment. */
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 base: procedure; parse arg x 1 ox,toB,inB              /*obtain number, toBase, inBase. */

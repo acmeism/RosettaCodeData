@@ -1,1 +1,5 @@
-(map #(let [s (str (if (zero? (mod % 3)) "Fizz") (if (zero? (mod % 5)) "Buzz"))] (if (empty? s) % s)) (range 1 101))
+(map (fn [x] (cond (zero? (mod x 15)) "FizzBuzz"
+                   (zero? (mod x 5)) "Buzz"
+                   (zero? (mod x 3)) "Fizz"
+		     :else x))
+     (range 1 101))

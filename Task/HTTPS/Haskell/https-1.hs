@@ -5,4 +5,4 @@ import qualified Data.ByteString.Lazy as L
 import Network (withSocketsDo)
 
 main = withSocketsDo
-     $ simpleHttp "https://sourceforge.net/" >>= L.putStr
+    $ simpleHttp "https://sourceforge.net/" >>= L.putStr

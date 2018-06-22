@@ -9,7 +9,7 @@ function sort(array, less) {
   function quicksort(left, right) {
 
     if (left < right) {
-      var pivot = array[left + Math.floor((right - right) / 2)],
+      var pivot = array[left + Math.floor((right - left) / 2)],
           left_new = left,
           right_new = right;
 

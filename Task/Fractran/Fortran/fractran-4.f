@@ -30,7 +30,7 @@
           N = IT	!A copy I can damage.
           NF = 0	!No factors found.
           P = 0		!Because no primes have been tried.
-       PP:DO WHILE (IT.GT.1)	!Step through the possibilities.
+       PP:DO WHILE (N.GT.1)	!Step through the possibilities.
        	    P = P + 1		!Another prime impends.
             F = PRIME(P)	!Grab a possible factor.
             POW = 0		!It has no power yet.
@@ -48,11 +48,10 @@
                 STOP "Not enough storage!"	!Quite.
               END IF			!But normally,
               NF = NF + 1		!Admit another factor.
-              FACTOR.PNUM(NF) = P	!Identify the prime.
+              FACTOR.PNUM(NF) = P	!Identify the prime. NOT the prime itself.
               FACTOR.PPOW(NF) = POW	!Place its power.
             END IF		!So much for that factor.
-            IF (N.LE.1) EXIT PP	!Perhaps nothing remains?
-          END DO PP	!Try another prime.
+          END DO PP	!Try another prime, if N > 1 still.
           FACTOR.PNUM(0) = NF	!Place the count.
         END FUNCTION FACTOR	!Thus, a list of primes and their powers.
 

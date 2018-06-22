@@ -17,10 +17,10 @@ int main( int argc , char *argv[ ] ) {
    double infocontent = 0 ;
    for ( std::pair<char , int> p : frequencies ) {
       double freq = static_cast<double>( p.second ) / numlen ;
-      infocontent += freq * log2( freq ) ;
+      infocontent -= freq * log2( freq ) ;
    }
-   infocontent *= -1 ;
+
    std::cout << "The information content of " << teststring
-      << " is " << infocontent << " !\n" ;
+      << " is " << infocontent << std::endl ;
    return 0 ;
 }

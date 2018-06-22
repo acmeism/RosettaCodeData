@@ -25,7 +25,7 @@ sub find-factor ( Int $n, $constant = 1 ) {
 INIT my $start = now;
 
 # Infinite list of semiprimes
-constant @semiprimes = 4, 6, 9, -> $p { ($p + 1 ... &is-semiprime).tail } ... *;
+constant @semiprimes = lazy gather for 4 .. * { .take if .&is-semiprime };
 
 # Show the semiprimes < 100
 say 'Semiprimes less than 100:';
@@ -33,6 +33,6 @@ say @semiprimes[^ @semiprimes.first: * > 100, :k ], "\n";
 
 # Check individual integers, or in this case, a range
 my $s = 2⁹⁷ - 1;
-say "Is $_ semiprime?: ", is-semiprime( $_ ) for $s .. $s + 30;
+say "Is $_ semiprime?: ", .&is-semiprime for $s .. $s + 30;
 
 say 'elapsed seconds: ', now - $start;

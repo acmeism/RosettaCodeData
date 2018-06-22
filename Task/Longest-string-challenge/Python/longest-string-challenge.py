@@ -1,14 +1,16 @@
 import fileinput
 
-# originally, return len(a) - len(b) if positive, 0 otherwise.
-# Observing that longer is used for its Boolean result,
-# and that '' is False, while any other string is True,
-# longer need only to return a after removing len(b) characters,
-# which is done without resorting to len().
+# This returns True if the second string has a value on the
+# same index as the last index of the first string. It runs
+# faster than trimming the strings because it runs len once
+# and is a single index lookup versus slicing both strings
+# one character at a time.
 def longer(a, b):
-    while a and b:
-        a, b = a[1:], b[1:]
-    return a
+    try:
+        b[len(a)-1]
+        return False
+    except:
+        return True
 
 longest, lines = '', ''
 for x in fileinput.input():

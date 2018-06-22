@@ -21,7 +21,7 @@ int main(void)
 	double *y, x, y2;
 	double x0 = 0, x1 = 10, dx = .1;
 	int i, n = 1 + (x1 - x0)/dx;
-	y = malloc(sizeof(double) * n);
+	y = (double *)malloc(sizeof(double) * n);
 
 	for (y[0] = 1, i = 1; i < n; i++)
 		y[i] = rk4(rate, dx, x0 + dx * (i - 1), y[i-1]);

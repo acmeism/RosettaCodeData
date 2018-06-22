@@ -1,9 +1,6 @@
 (defn powerset [coll]
   (reduce (fn [a x]
-            (->> a
-                 (map #(set (concat #{x} %)))
-                 (concat a)
-                 set))
+            (into a (map #(conj % x)) a))
           #{#{}} coll))
 
 (powerset #{1 2 3})

@@ -1,17 +1,11 @@
-#include <map>       // for std::map
-#include <algorithm> // for std::transform
-#include <string>    // for std::string
-#include <utility>   // for std::make_pair
+#include <range/v3/view/zip.hpp>
+#include <unordered_map>
+#include <string>
 
 int main()
 {
-  std::string keys[] = { "one", "two", "three" };
+  std::string keys[] = { "1", "2", "3" };
   std::string vals[] = { "foo", "bar", "baz" };
 
-  std::map<std::string, std::string> hash;
-
-  std::transform(keys, keys+3,
-                 vals,
-                 std::inserter(hash, hash.end()),
-                 std::make_pair<std::string, std::string>);
+  std::unordered_map<std::string, std::string> hash(ranges::view::zip(keys, vals));
 }

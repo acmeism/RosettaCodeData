@@ -1,4 +1,3 @@
 proc factorial(x): int =
-  result = 1
-  for i in 1..x+1:
-    result *= i
+  if x > 0: x * factorial(x - 1)
+  else: 1

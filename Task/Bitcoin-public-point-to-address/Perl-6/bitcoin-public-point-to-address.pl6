@@ -1,4 +1,5 @@
-use SSL::Digest;
+use Digest::SHA;
+use Digest::RIPEMD;
 
 constant BASE58 = <
       1 2 3 4 5 6 7 8 9

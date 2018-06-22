@@ -1,3 +1,2 @@
-let flatten = list => list.reduce(
-    (a, b) => a.concat(Array.isArray(b) ? flatten(b) : b), []
-);
+// flatten :: Tree a -> [a]
+const flatten = t => Array.isArray(t) ? [].concat(...t.map(flatten)) : t;

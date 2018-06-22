@@ -1,10 +1,11 @@
-aList = "[[1], 2, [[3, 4], 5], [[[]]], [[[6]]], 7, 8, []]"
-bList = ""
-cList = ""
-for n=1 to len(aList)
-    if ascii(aList[n]) >= 48 and  ascii(aList[n]) <= 57
-    bList = bList + ", " + aList[n] ok
+aString = "[[1], 2, [[3, 4], 5], [[[]]], [[[6]]], 7, 8, []]"
+bString = ""
+cString = ""
+for n=1 to len(aString)
+    if ascii(aString[n]) >= 48 and  ascii(aString[n]) <= 57
+       bString = bString + ", " + aString[n]
+    ok
 next
-cList = substr(bList,3,Len(bList)-2)
-dList = "[" + cList + "]"
-see dList + nl
+cString = substr(bString,3,Len(bString)-2)
+cString = '"' + cString + '"'
+see cString + nl

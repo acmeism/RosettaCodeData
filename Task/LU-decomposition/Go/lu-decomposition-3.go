@@ -3,17 +3,17 @@ package main
 import (
     "fmt"
 
-    "github.com/gonum/matrix/mat64"
+    "gonum.org/v1/gonum/mat"
 )
 
 func main() {
-    showLU(mat64.NewDense(3, 3, []float64{
+    showLU(mat.NewDense(3, 3, []float64{
         1, 3, 5,
         2, 4, 7,
         1, 1, 0,
     }))
     fmt.Println()
-    showLU(mat64.NewDense(4, 4, []float64{
+    showLU(mat.NewDense(4, 4, []float64{
         11, 9, 24, 2,
         1, 5, 2, 6,
         3, 17, 18, 1,
@@ -21,14 +21,13 @@ func main() {
     }))
 }
 
-func showLU(a *mat64.Dense) {
-    fmt.Printf("a: %v\n\n", mat64.Formatted(a, mat64.Prefix("   ")))
-    var lu mat64.LU
+func showLU(a *mat.Dense) {
+    fmt.Printf("a: %v\n\n", mat.Formatted(a, mat.Prefix("   ")))
+    var lu mat.LU
     lu.Factorize(a)
-    var l, u mat64.TriDense
-    l.LFrom(&lu)
-    u.UFrom(&lu)
-    fmt.Printf("l: %.5f\n\n", mat64.Formatted(&l, mat64.Prefix("   ")))
-    fmt.Printf("u: %.5f\n\n", mat64.Formatted(&u, mat64.Prefix("   ")))
+    l := lu.LTo(nil)
+    u := lu.UTo(nil)
+    fmt.Printf("l: %.5f\n\n", mat.Formatted(l, mat.Prefix("   ")))
+    fmt.Printf("u: %.5f\n\n", mat.Formatted(u, mat.Prefix("   ")))
     fmt.Println("p:", lu.Pivot(nil))
 }

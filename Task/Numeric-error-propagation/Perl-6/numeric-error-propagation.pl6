@@ -19,7 +19,7 @@ multi approx($x) { Approx.new: :$x, :c[0 xx +@INDEP] }
 # Each ± gets its own source slot.
 multi infix:<±>($a, $b) {
     .push: 0 for @INDEP; # lengthen older component lists
-    my $c = [ 0 xx @INDEP, $b ];
+    my $c = [ flat 0 xx @INDEP, $b ];
     @INDEP.push: $c;	 # add new component list
 
     approx $a, $c;

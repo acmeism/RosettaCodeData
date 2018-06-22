@@ -29,18 +29,8 @@
        LOGICAL ODD                       ! even or odd bit position
 
 *      IF (N < 2) RETURN      ! validate
-       J = 0                  ! find bit size of an integer
-       J = NOT(J)
-       ILIM = 0
-       DO I = 1, 32767                 ! much bigger than exists
-         J = ISHFT(J, -1)
-         IF (.NOT. BTEST(J, 0)) THEN
-           ILIM = I
-           GO TO 10
-         END IF
-       END DO
-  10   CONTINUE
-
+*
+        ILIM = Bit_size(i)    !Get the fixed number of bits
 *=======================================================================
 * Alternate between putting data into IW and into IX
 *=======================================================================

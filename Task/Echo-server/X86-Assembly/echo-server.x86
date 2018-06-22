@@ -1,0 +1,178 @@
+; x86_64 Linux NASM
+
+global _start
+
+%define af_inet 2
+%define sock_stream 1
+%define default_proto 0
+%define sol_sock 1
+%define reuse_addr 2
+%define reuse_port 15
+%define server_port 9001
+%define addr_any 0
+%define family_offset 0
+%define port_offset 2
+%define addr_offset 4
+%define unused_offset 8
+%define addr_len 16
+%define buffer_len 64
+%define max_connections 3
+
+
+section .text
+
+; rdi - 16 bit value to be byte swapped
+; return - byte swapped value
+htn_swap16:
+
+  xor rax, rax
+  mov rdx, 0x000000ff
+
+  mov rsi, rdi
+  and rsi, rdx
+  shl rsi, 8
+  or rax, rsi
+  shl rdx, 8
+
+  mov rsi, rdi
+  and rsi, rdx
+  shr rsi, 8
+  or rax, rsi
+  ret
+
+; return - server socket
+create_server_socket:
+
+  mov rax, 41
+  mov rdi, af_inet
+  mov rsi, sock_stream
+  mov rdx, default_proto
+  syscall
+  push rax
+
+  mov rax, 54
+  mov rdi, qword [rsp]
+  mov rsi, sol_sock
+  mov rdx, reuse_addr
+  mov qword [rsp - 16], 1
+  lea r10, [rsp - 16]
+  mov r8, 4
+  syscall
+
+  mov rax, 54
+  mov rdi, qword [rsp]
+  mov rsi, sol_sock
+  mov rdx, reuse_port
+  mov qword [rsp - 16], 1
+  lea r10, [rsp - 16]
+  mov r8, 4
+  syscall
+
+
+  pop rax
+  ret
+
+; rdi - socket
+; rsi - port
+; rdx - connections
+; return - void
+bind_and_listen:
+
+  push rdi
+  push rdx
+
+  mov rdi, rsi
+  call htn_swap16
+
+  lea rsi, [rsp - 16]
+  mov word [rsi + family_offset], af_inet
+  mov word [rsi + port_offset], ax
+  mov dword [rsi + addr_offset], addr_any
+  mov qword [rsi + unused_offset], 0
+
+  mov rax, 49
+  mov rdi, qword [rsp + 8]
+  mov rdx, addr_len
+  syscall
+
+  mov rax, 50
+  pop rsi
+  pop rdi
+  syscall
+  ret
+
+; rdi - server socket
+; return - client socket
+accept:
+
+  mov rax, 43
+  lea rsi, [rsp - 16]
+  lea rdx, [rsp - 24]
+  syscall
+  ret
+
+; rdi - client socket
+; return - void
+echo:
+
+  push rdi
+  mov rax, 0
+  lea rsi, [rsp - 104]
+  mov rdx, buffer_len
+  syscall
+
+  pop rdi
+  mov rdx, rax
+  lea rsi, [rsp - 112]
+  mov rax, 1
+  syscall
+  ret
+
+
+_start:
+
+  call create_server_socket
+  mov r14, rax
+
+  mov rdi, rax
+  mov rsi, server_port
+  mov rdx, max_connections
+  call bind_and_listen
+
+accept_connection:
+
+  mov rdi, r14
+  call accept
+
+  mov r15, rax
+  mov rax, 57
+  syscall
+
+  test rax, rax
+  jz handle_connection
+
+  ; close client socket
+  mov rax, 3
+  mov rdi, r15
+  syscall
+  jmp accept_connection
+
+handle_connection:
+
+  mov rdi, r15
+  call echo
+
+  close_client:
+    mov rax, 3
+    mov rdi, r15
+    syscall
+
+  close_server:
+    mov rax, 3
+    mov rdi, r14
+    syscall
+
+  exit:
+    mov rax, 60
+    xor rdi, rdi
+    syscall

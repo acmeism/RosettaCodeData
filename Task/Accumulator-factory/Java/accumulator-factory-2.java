@@ -1,16 +1,27 @@
-public class Accumulator {
-    private double sum;
-    public Accumulator(double sum0) {
-        sum = sum0;
+import java.util.function.UnaryOperator;
+
+public class AccumulatorFactory {
+
+    public static UnaryOperator<Number> accumulator(Number sum0) {
+	// Allows sum[0] = ... inside lambda.
+	Number[] sum = { sum0 };
+
+	// Acts like n -> sum[0] += n, but chooses long or double.
+	// Converts weird types (like BigInteger) to double.
+	return n -> (longable(sum[0]) && longable(n)) ?
+	    (sum[0] = sum[0].longValue() + n.longValue()) :
+	    (sum[0] = sum[0].doubleValue() + n.doubleValue());
     }
-    public double call(double n) {
-        return sum += n;
+
+    private static boolean longable(Number n) {
+	return n instanceof Byte || n instanceof Short ||
+	    n instanceof Integer || n instanceof Long;
     }
 
     public static void main(String[] args) {
-        Accumulator x = new Accumulator(1);
-        x.call(5);
-        System.out.println(new Accumulator(3));
-        System.out.println(x.call(2.3));
+	UnaryOperator<Number> x = accumulator(1);
+	x.apply(5);
+	accumulator(3);
+	System.out.println(x.apply(2.3));
     }
 }

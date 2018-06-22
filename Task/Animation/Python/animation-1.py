@@ -1,55 +1,44 @@
-import pygame, sys
-from pygame.locals import *
-pygame.init()
+#!/usr/bin/env python3
+import sys
 
-YSIZE = 40
-XSIZE = 150
+from PyQt5.QtCore import QBasicTimer, Qt
+from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QApplication, QLabel
 
-TEXT = "Hello World! "
-FONTSIZE = 32
 
-LEFT = False
-RIGHT = True
+class Marquee(QLabel):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.right_to_left_direction = True
+        self.initUI()
+        self.timer = QBasicTimer()
+        self.timer.start(80, self)
 
-DIR = RIGHT
+    def initUI(self):
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setText("Hello World! ")
+        self.setFont(QFont(None, 50, QFont.Bold))
+        # make more irritating for the authenticity with <marquee> element
+        self.setStyleSheet("QLabel {color: cyan; }")
 
-TIMETICK = 180
-TICK = USEREVENT + 2
+    def timerEvent(self, event):
+        i = 1 if self.right_to_left_direction else -1
+        self.setText(self.text()[i:] + self.text()[:i])  # rotate
 
-TEXTBOX = pygame.Rect(10,10,XSIZE,YSIZE)
+    def mouseReleaseEvent(self, event):  # change direction on mouse release
+        self.right_to_left_direction = not self.right_to_left_direction
 
-pygame.time.set_timer(TICK, TIMETICK)
+    def keyPressEvent(self, event):  # exit on Esc
+        if event.key() == Qt.Key_Escape:
+            self.close()
 
-window = pygame.display.set_mode((XSIZE, YSIZE))
-pygame.display.set_caption("Animation")
 
-font = pygame.font.SysFont(None, FONTSIZE)
-screen = pygame.display.get_surface()
-
-def rotate():
-    index = DIR and -1 or 1
-    global TEXT
-    TEXT = TEXT[index:]+TEXT[:index]
-
-def click(position):
-    if TEXTBOX.collidepoint(position):
-        global DIR
-        DIR = not DIR
-
-def draw():
-    surface = font.render(TEXT, True, (255,255,255), (0,0,0))
-    global TEXTBOX
-    TEXTBOX = screen.blit(surface, TEXTBOX)
-
-def input(event):
-    if event.type == QUIT:
-        sys.exit(0)
-    elif event.type == MOUSEBUTTONDOWN:
-        click(event.pos)
-    elif event.type == TICK:
-        draw()
-        rotate()
-
-while True:
-    input(pygame.event.wait())
-    pygame.display.flip()
+app = QApplication(sys.argv)
+w = Marquee()
+# center widget on the screen
+w.adjustSize()  # update w.rect() now
+w.move(QApplication.instance().desktop().screen().rect().center()
+       - w.rect().center())
+w.show()
+sys.exit(app.exec())

@@ -1,6 +1,6 @@
 /*REXX program uses a  subtractive generator, and creates a sequence of random numbers. */
-s.0=292929;        s.1=1;                                 billion=10**9   /* ◄────────┐ */
-numeric digits 20;                                        billion=1e9     /*same as─►─┘ */
+s.0=292929;        s.1=1;                                 billion=1e9     /* ◄────────┐ */
+numeric digits 20;                                        billion=10**9   /*same as─►─┘ */
 cI=55;             do i=2  to cI-1
                    s.i=mod(s(i-2) - s(i-1), billion)
                    end   /*i*/

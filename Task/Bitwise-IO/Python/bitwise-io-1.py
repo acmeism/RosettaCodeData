@@ -4,10 +4,16 @@ class BitWriter(object):
         self.bcount = 0
         self.out = f
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.flush()
+
     def __del__(self):
         try:
             self.flush()
-        except ValueError:   # I/O operation on closed file
+        except ValueError:   # I/O operation on closed file.
             pass
 
     def _writebit(self, bit):
@@ -35,6 +41,12 @@ class BitReader(object):
         self.bcount = 0
         self.read = 0
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
     def _readbit(self):
         if not self.bcount:
             a = self.input.read(1)
@@ -56,22 +68,22 @@ class BitReader(object):
 if __name__ == '__main__':
     import os
     import sys
-    # determine module name from this file's name and import it
+    # Determine this module's name from it's file name and import it.
     module_name = os.path.splitext(os.path.basename(__file__))[0]
     bitio = __import__(module_name)
 
     with open('bitio_test.dat', 'wb') as outfile:
-        writer = bitio.BitWriter(outfile)
-        chars = '12345abcde'
-        for ch in chars:
-            writer.writebits(ord(ch), 7)
+        with bitio.BitWriter(outfile) as writer:
+            chars = '12345abcde'
+            for ch in chars:
+                writer.writebits(ord(ch), 7)
 
     with open('bitio_test.dat', 'rb') as infile:
-        reader = bitio.BitReader(infile)
-        chars = []
-        while True:
-            x = reader.readbits(7)
-            if reader.read == 0:
-                break
-            chars.append(chr(x))
-        print(''.join(chars))
+        with bitio.BitReader(infile) as reader:
+            chars = []
+            while True:
+                x = reader.readbits(7)
+                if not reader.read:  # End-of-file?
+                    break
+                chars.append(chr(x))
+            print(''.join(chars))

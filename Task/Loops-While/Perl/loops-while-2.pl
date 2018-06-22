@@ -1,5 +1,3 @@
-my $n = 1024;
-until ($n <= 0) {
+for(my $n = 1024; $n > 0; $n >>= 1){
     print "$n\n";
-    $n = int $n / 2;
 }

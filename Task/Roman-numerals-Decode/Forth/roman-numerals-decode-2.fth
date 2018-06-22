@@ -1,44 +1,48 @@
- Alternative Forth methodology
+\ decode roman numerals using Forth methodology
 \ create words to describe and solve the problem
+\ ANS/ISO Forth
+
 HEX
-: toUpper ( char -- char ) 05F and ;
+: TOUPPER ( char -- char ) 05F AND ;
 
 DECIMAL
 \ status holders
-variable oldndx
-variable curndx
-variable negcnt
+VARIABLE OLDNDX
+VARIABLE CURNDX
+VARIABLE NEGFLAG
 
-\ word to compile a quote delimtited string into memory
-: ,"   ( -- )  [char] " word C@ 1+ allot ;
+: NUMERALS ( -- addr len)  S"  IVXLCDM" ;  ( 1st char is a blank)
+CREATE VALUES ( -- addr) 0 , 1 , 5 , 10 , 50 , 100 , 500 , 1000 ,
 
-\ look-up tables place into memory
-create numerals  ," IVXLCDM"
-create values    0 , 1 , 5 , 10 , 50 , 100 , 500 , 1000 ,
+: []  ( n addr -- addr[n]) SWAP CELLS +  ;  \ array address calc.
 
 \ define words to describe/solve the problem
-: init     ( -- )           curndx off  oldndx off  negcnt off ;
-: toindex  ( char -- indx)  toUpper numerals count rot SCAN dup 0= abort" invalid numeral" ;
-: tovalue  ( ndx -- n )     cells  values + @ ;
-: remember ( ndx -- ndx )   curndx @ oldndx !  dup curndx !  ;
-: memory@   ( -- n1 n2 )    curndx @ oldndx @ ;
-: numval   ( char -- n )    toindex remember tovalue ;
-: ?illegal ( ndx --  )      memory@ =  negcnt @ and abort" illegal format" ;
+: INIT     ( -- )        CURNDX OFF  OLDNDX OFF  NEGFLAG OFF ;
 
-\ logic
-: negate?  ( n -- +/- n )
-           memory@ <
-           if   negcnt on
-                negate
-           else
-                ?illegal
-                negcnt off
-           then ;
+: >INDEX  ( char -- ndx) TOUPPER >R  NUMERALS TUCK R> SCAN NIP -
+                         DUP 7 > ABORT" Invalid Roman numeral" ;
+
+: REMEMBER ( ndx -- ndx ) CURNDX @ OLDNDX !  DUP CURNDX !  ;
+
+: ]VALUE@  ( ndx -- n )   REMEMBER VALUES [] @ ;
+
+: >VALUE ( char -- n )   >INDEX ]VALUE@ ;
+
+: ?ILLEGAL ( ndx --  )   CURNDX @ OLDNDX @ =  NEGFLAG @ AND ABORT" Illegal format" ;
+
+\ LOGIC
+: ?NEGATE ( n -- +n | -n)
+           CURNDX @ OLDNDX @ <
+           IF   NEGFLAG ON
+                NEGATE
+           ELSE
+                ?ILLEGAL
+                NEGFLAG OFF
+           THEN ;
 
 \ solution
-: decode   ( c-addr -- n )
-           init
+: >ARABIC  ( addr len -- n )
+           INIT
            0              \ accumulator on the stack
-           swap
-           count 1- bounds swap
-           do   i c@ numval negate? +   -1 +loop ;.
+          -ROT 1- BOUNDS SWAP
+           DO   I C@ >VALUE ?NEGATE +    -1 +LOOP ;

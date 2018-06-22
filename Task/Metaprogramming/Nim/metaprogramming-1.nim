@@ -1,4 +1,4 @@
-proc `^`*[T: SomeInteger](base: T, exp: T): T =
+proc `^`*[T: SomeInteger](base, exp: T): T =
   var (base, exp) = (base, exp)
   result = 1
 

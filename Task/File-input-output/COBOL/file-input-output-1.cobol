@@ -1,48 +1,40 @@
-       IDENTIFICATION DIVISION.
-       PROGRAM-ID. file-io.
-
-       ENVIRONMENT DIVISION.
-       INPUT-OUTPUT SECTION.
-       FILE-CONTROL.
-           SELECT in-file ASSIGN "input.txt"
-               ORGANIZATION LINE SEQUENTIAL.
-
-           SELECT OPTIONAL out-file ASSIGN "output.txt"
-               ORGANIZATION LINE SEQUENTIAL.
-
-       DATA DIVISION.
-       FILE SECTION.
-       FD  in-file.
-       01  in-line                 PIC X(256).
-
-       FD  out-file.
-       01  out-line                PIC X(256).
-
-       PROCEDURE DIVISION.
-       DECLARATIVES.
-       in-file-error SECTION.
-           USE AFTER ERROR ON in-file.
-           DISPLAY "An error occurred while using input.txt."
-           GOBACK
+       identification division.
+       program-id. copyfile.
+       environment division.
+       input-output section.
+       file-control.
+           select input-file assign to "input.txt"
+               organization sequential
            .
-       out-file-error SECTION.
-           USE AFTER ERROR ON out-file.
-           DISPLAY "An error occurred while using output.txt."
-           GOBACK
+           select output-file assign to "output.txt"
+               organization sequential
            .
-       END DECLARATIVES.
-
-       mainline.
-           OPEN INPUT in-file
-           OPEN OUTPUT out-file
-
-           PERFORM FOREVER
-               READ in-file
-                   AT END
-                       EXIT PERFORM
-               END-READ
-               WRITE out-line FROM in-line
-           END-PERFORM
-
-           CLOSE in-file, out-file
+       data division.
+       file section.
+       fd input-file.
+       1 input-record pic x(80).
+       fd output-file.
+       1 output-record pic x(80).
+       working-storage section.
+       1 end-of-file-flag pic 9 value 0.
+         88 eof value 1.
+       1 text-line pic x(80).
+       procedure division.
+       begin.
+           open input input-file
+               output output-file
+           perform read-input
+           perform until eof
+               write output-record from text-line
+               perform read-input
+           end-perform
+           close input-file output-file
+           stop run
            .
+       read-input.
+           read input-file into text-line
+           at end
+               set eof to true
+           end-read
+           .
+       end program copyfile.

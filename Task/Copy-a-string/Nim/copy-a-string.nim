@@ -1,3 +1,3 @@
 var
   c = "This is a string"
-  d = c # Copy of content into new string
+  d = c # Copy c into a new string

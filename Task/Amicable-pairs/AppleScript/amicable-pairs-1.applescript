@@ -1,38 +1,39 @@
+-- AMICABLE PAIRS ------------------------------------------------------------
+
 -- amicablePairsUpTo :: Int -> Int
 on amicablePairsUpTo(max)
 
     -- amicable :: [Int] -> Int -> Int -> [Int] -> [Int]
     script amicable
-        on lambda(lstAccumulator, m, n, lstSums)
+        on |λ|(a, m, n, lstSums)
             if (m > n) and (m ≤ max) and ((item m of lstSums) = n) then
-                lstAccumulator & [[n, m]]
+                a & [[n, m]]
             else
-                lstAccumulator
+                a
             end if
-        end lambda
+        end |λ|
     end script
 
     -- divisorsSummed :: Int -> Int
     script divisorsSummed
         -- sum :: Int -> Int -> Int
         script sum
-            on lambda(a, b)
+            on |λ|(a, b)
                 a + b
-            end lambda
+            end |λ|
         end script
 
-        on lambda(n)
+        on |λ|(n)
             foldl(sum, 0, properDivisors(n))
-        end lambda
+        end |λ|
     end script
 
-    foldl(amicable, [], ¬
-        map(divisorsSummed, range(1, max)))
+    foldl(amicable, {}, ¬
+        map(divisorsSummed, enumFromTo(1, max)))
 end amicablePairsUpTo
 
 
--- TEST
-
+-- TEST ----------------------------------------------------------------------
 on run
 
     amicablePairsUpTo(20000)
@@ -40,23 +41,23 @@ on run
 end run
 
 
--- PROPER DIVISORS
+-- PROPER DIVISORS -----------------------------------------------------------
 
 -- properDivisors :: Int -> [Int]
 on properDivisors(n)
 
     -- isFactor :: Int -> Bool
     script isFactor
-        on lambda(x)
+        on |λ|(x)
             n mod x = 0
-        end lambda
+        end |λ|
     end script
 
     -- integerQuotient :: Int -> Int
     script integerQuotient
-        on lambda(x)
+        on |λ|(x)
             (n / x) as integer
-        end lambda
+        end |λ|
     end script
 
     if n = 1 then
@@ -67,7 +68,7 @@ on properDivisors(n)
         set blnPerfectSquare to intRoot = realRoot
 
         -- Factors up to square root of n,
-        set lows to filter(isFactor, range(1, intRoot))
+        set lows to filter(isFactor, enumFromTo(1, intRoot))
 
         -- and quotients of these factors beyond the square root,
         -- excluding n itself (last item)
@@ -76,10 +77,21 @@ on properDivisors(n)
     end if
 end properDivisors
 
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
----------------------------------------------------------------------------
-
--- GENERIC LIBRARY FUNCTIONS
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- filter :: (a -> Bool) -> [a] -> [a]
 on filter(f, xs)
@@ -88,7 +100,7 @@ on filter(f, xs)
         set lng to length of xs
         repeat with i from 1 to lng
             set v to item i of xs
-            if lambda(v, i, xs) then set end of lst to v
+            if |λ|(v, i, xs) then set end of lst to v
         end repeat
         return lst
     end tell
@@ -100,7 +112,7 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
@@ -112,25 +124,11 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
 end map
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
-        set d to -1
-    else
-        set d to 1
-    end if
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range
 
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
@@ -139,7 +137,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn

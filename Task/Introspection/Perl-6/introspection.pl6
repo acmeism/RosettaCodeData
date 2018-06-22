@@ -1,4 +1,4 @@
-use v6.0;   # require Perl 6.0
+use v6;   # require Perl 6
 
 my $bloop = -123;
 

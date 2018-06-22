@@ -42,7 +42,14 @@ comb: procedure expose !.;  parse arg x,y;        if x==y  then return 1
 gcd:  procedure;            parse arg x,y;    x=abs(x)
         do  until  y==0;    parse value  x//y y  with  y x;  end;      return x
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-lcm:  procedure;            parse arg x,y;        x=abs(x);            return x*y/gcd(x,y)
+lcm:  procedure; parse arg x,y;      if x<0  then x=-x
+                 if y<0   then y= -y
+                 if y==0  then return 0               /*if zero, then LCM is also zero. */
+                 d=x*y                                /*calculate part of the LCM here. */
+                       do  until y==0;   parse  value    x//y  y      with      y  x
+                       end   /*until*/                /* [↑]  this is a short & fast GCD*/
+                 x=d%x                                /*divide the pre─calculated value.*/
+      return x                                        /*return with the LCM of the args.*/
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 perm: procedure expose !.;  parse arg x,y;        if !.p.x.y\==0  then return !.p.x.y
       z=1;   do j=x-y+1  to x;   z=z*j;   end;    !.p.x.y=z;           return z

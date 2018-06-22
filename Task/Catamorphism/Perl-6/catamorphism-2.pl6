@@ -1,3 +1,4 @@
+my @list = 1..10;
 say reduce &infix:<+>, @list;
 say reduce &infix:<*>, @list;
 say reduce &infix:<~>, @list;

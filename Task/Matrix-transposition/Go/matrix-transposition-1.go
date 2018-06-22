@@ -3,15 +3,15 @@ package main
 import (
     "fmt"
 
-    "github.com/gonum/matrix/mat64"
+    "gonum.org/v1/gonum/mat"
 )
 
 func main() {
-    m := mat64.NewDense(2, 3, []float64{
+    m := mat.NewDense(2, 3, []float64{
         1, 2, 3,
         4, 5, 6,
     })
-    fmt.Println(mat64.Formatted(m))
+    fmt.Println(mat.Formatted(m))
     fmt.Println()
-    fmt.Println(mat64.Formatted(m.T()))
+    fmt.Println(mat.Formatted(m.T()))
 }

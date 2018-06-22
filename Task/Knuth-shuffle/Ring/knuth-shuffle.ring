@@ -1,16 +1,31 @@
-a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-shuffle(a)
-for n = 1 to len(a)
-    see "" + a[n] + " "
-next
+# Project : Knuth shuffle
+# Date    : 2017/11/08
+# Author : Gal Zsolt [~ CalmoSoft ~]
+# Email   : <calmosoft@gmail.com>
 
-func shuffle t
-     n = len(t)
-     while n > 1
-           k = random(n-1)+1
-           temp = t[n]
-           t[n] = t[k]
-           t[k] = temp
-           n = n - 1
-     end
-     return t
+items = list(52)
+for n = 1 to len(items)
+      items[n] = n
+next
+knuth(items)
+showarray(items)
+
+func knuth(items)
+       for i = len(items) to 1 step -1
+            j = random(i-1) + 1
+            if i != j
+               temp = items[i]
+               items[i] = items[j]
+               items[j] = temp
+            ok
+       next
+
+func showarray(vect)
+       see "["
+       svect = ""
+       for n = 1 to len(vect)
+           svect = svect + vect[n] + " "
+       next
+       svect = left(svect, len(svect) - 1)
+       see svect
+       see "]" + nl

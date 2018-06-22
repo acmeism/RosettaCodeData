@@ -10,12 +10,9 @@ type symbolTable string
 func (symbols symbolTable) encode(s string) []byte {
 	seq := make([]byte, len(s))
 	pad := []byte(symbols)
-	c1 := []byte{0}
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		c1[0] = c
-		x := byte(bytes.Index(pad, c1))
-		seq[i] = x
+	for i, c := range []byte(s) {
+		x := bytes.IndexByte(pad, c)
+		seq[i] = byte(x)
 		copy(pad[1:], pad[:x])
 		pad[0] = c
 	}

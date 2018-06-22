@@ -7,7 +7,7 @@ int main(void) {
    Display *d;
    Window w;
    XEvent e;
-   char *msg = "Hello, World!";
+   const char *msg = "Hello, World!";
    int s;
 
    d = XOpenDisplay(NULL);

@@ -1,5 +1,5 @@
 function quicksort($arr){
-	$loe = $gt = array();
+	$lte = $gt = array();
 	if(count($arr) < 2){
 		return $arr;
 	}
@@ -7,12 +7,12 @@ function quicksort($arr){
 	$pivot = array_shift($arr);
 	foreach($arr as $val){
 		if($val <= $pivot){
-			$loe[] = $val;
-		}elseif ($val > $pivot){
+			$lte[] = $val;
+		} else {
 			$gt[] = $val;
 		}
 	}
-	return array_merge(quicksort($loe),array($pivot_key=>$pivot),quicksort($gt));
+	return array_merge(quicksort($lte),array($pivot_key=>$pivot),quicksort($gt));
 }
 
 $arr = array(1, 3, 5, 7, 9, 8, 6, 4, 2);

@@ -1,5 +1,3 @@
-use List::Util qw(reduce);
-
 sub powerset {
-    @{( reduce { [@$a, map([@$_, $b], @$a)] } [[]], @_ )}
+    @_ ? map { $_, [$_[0], @$_] } powerset(@_[1..$#_]) : [];
 }

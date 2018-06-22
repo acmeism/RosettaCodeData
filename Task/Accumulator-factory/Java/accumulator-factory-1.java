@@ -1,16 +1,29 @@
-public class Accumulator {
-    private double sum;
-    public Accumulator(double sum0) {
-        sum = sum0;
+public class Accumulator
+    //implements java.util.function.UnaryOperator<Number> // Java 8
+{
+    private Number sum;
+
+    public Accumulator(Number sum0) {
+	sum = sum0;
     }
-    public double call(double n) {
-        return sum += n;
+
+    public Number apply(Number n) {
+	// Acts like sum += n, but chooses long or double.
+	// Converts weird types (like BigInteger) to double.
+	return (longable(sum) && longable(n)) ?
+	    (sum = sum.longValue() + n.longValue()) :
+	    (sum = sum.doubleValue() + n.doubleValue());
+    }
+
+    private static boolean longable(Number n) {
+	return n instanceof Byte || n instanceof Short ||
+	    n instanceof Integer || n instanceof Long;
     }
 
     public static void main(String[] args) {
-        Accumulator x = new Accumulator(1);
-        x.call(5);
-        System.out.println(new Accumulator(3));
-        System.out.println(x.call(2.3));
+	Accumulator x = new Accumulator(1);
+	x.apply(5);
+	new Accumulator(3);
+	System.out.println(x.apply(2.3));
     }
 }

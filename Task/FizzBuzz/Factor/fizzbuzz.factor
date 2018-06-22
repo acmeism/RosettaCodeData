@@ -1,4 +1,4 @@
-USING: math kernel io math.ranges ;
+USING: math kernel io math.functions math.parser math.ranges ;
 IN: fizzbuzz
 : fizz ( n -- str ) 3 divisor? "Fizz" "" ? ;
 : buzz ( n -- str ) 5 divisor? "Buzz" "" ? ;

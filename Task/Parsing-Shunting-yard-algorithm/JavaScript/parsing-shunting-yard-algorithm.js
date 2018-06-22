@@ -65,7 +65,5 @@ for (var i = 0; i < infix.length; i++) {
     s.pop(); // pop (, but not onto the output queue
   }
 }
-while (s.length()>0){
-  postfix += s.pop() + " ";
-}
+postfix += s.dataStore.reverse().join(" ");
 print(postfix);

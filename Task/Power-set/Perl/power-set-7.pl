@@ -1,3 +1,11 @@
+use List::Util qw(reduce);
+
 sub powerset {
-    @_ ? map { $_, [$_[0], @$_] } powerset(@_[1..$#_]) : [];
+    @{( reduce { [@$a, map { Set->new($_->elements, $b) } @$a ] }
+               [Set->new()], shift->elements )};
 }
+
+my $set = Set->new(1, 2, 3);
+my @subsets = powerset($set);
+
+print $_->as_string, "\n" for @subsets;

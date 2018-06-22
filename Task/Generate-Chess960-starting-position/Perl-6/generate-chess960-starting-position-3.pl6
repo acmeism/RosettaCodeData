@@ -1,6 +1,4 @@
-constant chess960 = eager
-    .subst(:nth(2), /'♜'/, '♚')
-        if / '♝' [..]* '♝' /
-            for < ♛ ♜ ♜ ♜ ♝ ♝ ♞ ♞ >.permutations».join.uniq;
+constant chess960 =
+   < ♛ ♜ ♜ ♜ ♝ ♝ ♞ ♞ >.permutations».join.unique.grep( / '♝' [..]* '♝' / )».subst(:nth(2), /'♜'/, '♚');
 
 .say for chess960;

@@ -1,9 +1,9 @@
 package main
 
 import (
-    "bytes"
     "encoding/xml"
     "fmt"
+    "strings"
     "text/template"
 )
 
@@ -17,7 +17,7 @@ var tmpl = `<CharacterRemarks>
 `
 
 func xmlEscapeString(s string) string {
-    var b bytes.Buffer
+    var b strings.Builder
     xml.Escape(&b, []byte(s))
     return b.String()
 }
@@ -28,7 +28,7 @@ func main() {
 
     // Define function required by task description.
     xRemarks := func(crms []crm) (string, error) {
-        var b bytes.Buffer
+        var b strings.Builder
         err := xt.Execute(&b, crms)
         return b.String(), err
     }

@@ -1,5 +1,10 @@
-import Control.Monad (when)
+import Data.IORef
+import Control.Monad.Loops
 
-whileM :: (Monad m) => m Bool -> m a -> m ()
-whileM cond body = do c <- cond
-                      when c (body >> whileM cond body)
+main :: IO ()
+main = do r <- newIORef 1024
+          whileM_ (do n <- readIORef r
+                     return (n > 0))
+                  (do n <- readIORef r
+                     print n
+                     modifyIORef r (`div` 2))

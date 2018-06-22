@@ -1,9 +1,1 @@
-import Data.List (foldl') --'
-
-fib :: Integer -> Integer
-fib n =
-  fst $
-  foldl' --'
-    (\(a, b) _ -> (b, a + b))
-    (0, 1)
-    [1 .. n]
+fib = 0 : 1 : zipWith (+) fib (tail fib)

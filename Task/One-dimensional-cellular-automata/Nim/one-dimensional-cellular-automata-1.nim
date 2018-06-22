@@ -1,68 +1,48 @@
-import math
-randomize()
+import random
+
 
 type
-  TBoolArray = array[0..30, bool] # an array that is indexed with 0..10
-  TSymbols = tuple[on: char , off: char]
+  BoolArray  = array[30, bool]
+  Symbols    = array[bool, char]
+
+
+proc neighbours(map: BoolArray, i: int): int =
+  if i > 0:             inc(result, int(map[i - 1]))
+  if i + 1 < len(map):  inc(result, int(map[i + 1]))
+
+proc print(map: BoolArray, symbols: Symbols) =
+  for i in map: write(stdout, symbols[i])
+  write(stdout, "\l")
+
+proc randomMap: BoolArray =
+  randomize()
+  for i in mitems(result): i = rand([true, false])
+
 
 const
-    num_turns = 20
-    symbols:TSymbols = ('#','_')
+  num_turns = 20
+  symbols   = ['_', '#']
 
-proc `==` (x:TBoolArray,y:TBoolArray): bool =
-    if len(x) != len(y):
-        return False
-    for i in 0..(len(x)-1):
-        if x[i] != y[i]:
-            return False
-    return True
+  T = true
+  F = false
 
-proc count_neighbours(map:TBoolArray , tile:int):int =
-    result = 0
-    if tile != len(map)-1 and map[tile+1]:
-        result += 1
-    if tile != 0 and map[tile-1]:
-        result += 1
+var map =
+  [F, T, T, T, F, T, T, F, T, F, T, F, T, F, T,
+    F, F, T, F, F, F, F, F, F, F, F, F, F, F, F]
 
-proc print_map(map:TBoolArray, symbols:TSymbols) =
-    for i in map:
-        if i:
-            write(stdout,symbols[0])
-        else:
-            write(stdout,symbols[1])
-    write(stdout,"\n")
+# map = randomMap()  # uncomment for random start
 
-proc random_map(): TBoolArray =
-    var map = [False,False,False,False,False,False,False,False,False,False,False,
-                False,False,False,False,False,False,False,False,False,False,False,
-                False,False,False,False,False,False,False,False,False]
-    for i in 0..(len(map)-1):
-        map[i] = bool(random(2))
-    return map
+print(map, symbols)
 
-proc fixed_map(): TBoolArray =
-    var map = [False,True,True,True,False,True,True,False,True,False,True,
-                False,True,False,True,False,False,True,False,False,False,False,
-                False,False,False,False,False,False,False,False,False]
-    return map
+for _ in 0 ..< num_turns:
+  var map2 = map
 
-#make the map
-var map:TBoolArray
-#map = random_map()    # uncomment for random start
-map = fixed_map()
-print_map(map,symbols)
-for i in 0..num_turns:
-    var new_map = map
-    for j in 0..(len(map)-1):
-        if map[j]:
-            if count_neighbours(map, j) == 2 or
-                count_neighbours(map, j) == 0:
-                new_map[j] = False
-        else:
-            if count_neighbours(map, j) == 2:
-                new_map[j] = True
-    if new_map == map:
-        print_map(map,symbols)
-        break
-    map = new_map
-    print_map(map,symbols)
+  for i, v in pairs(map):
+    map2[i] =
+      if v: neighbours(map, i) == 1
+      else: neighbours(map, i) == 2
+
+  print(map2, symbols)
+
+  if map2 == map: break
+  map = map2

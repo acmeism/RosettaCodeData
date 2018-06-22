@@ -1,0 +1,12 @@
+I64 *a, *b;
+a = Str2I64(GetStr("Enter your first number: "));
+b = Str2I64(GetStr("Enter your second number: "));
+
+if (a < b)
+  Print("%d is less than %d\n", a, b);
+
+if (a == b)
+  Print("%d is equal to %d\n", a, b);
+
+if (a > b)
+  Print("%d is greater than %d\n", a, b);

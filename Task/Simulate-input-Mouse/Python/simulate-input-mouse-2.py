@@ -1,19 +1,23 @@
-import pyautogui
+import autopy
+import math
+import time
+import random
 
-pyautogui.moveTo(100, 200)      # moves mouse to X of 100, Y of 200.
-pyautogui.moveTo(None, 500)     # moves mouse to X of 100, Y of 500.
-pyautogui.moveTo(600, None)     # moves mouse to X of 600, Y of 500.
-pyautogui.moveTo(100, 200, 2)   # moves mouse to X of 100, Y of 200 over 2 seconds
+TWO_PI = math.pi * 2.0
 
-pyautogui.moveRel(0, 50)        # move the mouse down 50 pixels.
-pyautogui.moveRel(-30, 0)       # move the mouse left 30 pixels.
 
-pyautogui.click()                          # Left button click on current position
-pyautogui.click(clicks=2)
-pyautogui.click(clicks=2, interval=0.25)   # with a quarter second pause in between clicks
+def sine_mouse_wave():
+    """
+    Moves the mouse in a sine wave from the left edge of the screen to
+    the right.
+    """
+    width, height = autopy.screen.get_size()
+    height /= 2
+    height -= 10  # Stay in the screen bounds.
 
-pyautogui.click(10, 5)                     # Mouse left button click, x=10, y=5
-pyautogui.click(200, 250, button='right')  # Mouse right button click, x=200, y=250
+    for x in xrange(width):
+        y = int(height * math.sin((TWO_PI * x) / width) + height)
+        autopy.mouse.move(x, y)
+        time.sleep(random.uniform(0.001, 0.003))
 
-pyautogui.scroll(10)   # scroll up 10 "clicks"
-pyautogui.scroll(10, x=100, y=100)  # move mouse cursor to 100, 200, then scroll up 10 "clicks"
+sine_mouse_wave()

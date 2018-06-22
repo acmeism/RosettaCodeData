@@ -1,4 +1,4 @@
--- ORDINAL STRINGS
+-- ORDINAL STRINGS -----------------------------------------------------------
 
 -- ordinalString :: Int -> String
 on ordinalString(n)
@@ -16,50 +16,26 @@ on ordinalSuffix(n)
     end if
 end ordinalSuffix
 
-
-
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
 
     -- showOrdinals :: [Int] -> [String]
     script showOrdinals
-        on lambda(lstInt)
+        on |λ|(lstInt)
             map(ordinalString, lstInt)
-        end lambda
+        end |λ|
     end script
 
     map(showOrdinals, ¬
-        map(tupleRange, ¬
+        map(uncurry(enumFromTo), ¬
             [[0, 25], [250, 265], [1000, 1025]]))
-
 end run
 
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
-
--- GENERIC FUNCTIONS
-
--- map :: (a -> b) -> [a] -> [b]
-on map(f, xs)
-    tell mReturn(f)
-        set lng to length of xs
-        set lst to {}
-        repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
-        end repeat
-        return lst
-    end tell
-end map
-
--- tupleRange :: (Int, Int) -> [Int]
-on tupleRange(lstPair)
-    set {m, n} to lstPair
-
-    range(m, n)
-end tupleRange
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
         set d to -1
     else
         set d to 1
@@ -69,7 +45,19 @@ on range(m, n)
         set end of lst to i
     end repeat
     return lst
-end range
+end enumFromTo
+
+-- map :: (a -> b) -> [a] -> [b]
+on map(f, xs)
+    tell mReturn(f)
+        set lng to length of xs
+        set lst to {}
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, i, xs)
+        end repeat
+        return lst
+    end tell
+end map
 
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
@@ -78,7 +66,17 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
+
+-- uncurry :: Handler (a -> b -> c) -> Script |λ| ((a, b) -> c)
+on uncurry(f)
+    script
+        on |λ|(xy)
+            set {x, y} to xy
+            mReturn(f)'s |λ|(x, y)
+        end |λ|
+    end script
+end uncurry

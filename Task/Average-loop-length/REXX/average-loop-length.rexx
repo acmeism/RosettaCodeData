@@ -2,7 +2,7 @@
 parse arg runs tests seed .                      /*obtain optional arguments from the CL*/
 if  runs =='' |  runs ==","  then runs =      40 /*Not specified?  Then use the default.*/
 if tests =='' | tests ==","  then tests= 1000000 /* "      "         "   "   "     "    */
-if datatype(seed,'W')   then call random ,, seed /*Is integer?   For RAND repeatability.*/
+if datatype(seed, 'W')  then call random ,, seed /*Is integer?   For RAND repeatability.*/
 !.=0;          !.0=1                             /*used for  factorial (!)  memoization.*/
 numeric digits 100000                            /*be able to calculate 25k! if need be.*/
 numeric digits max(9, length( !(runs) )   )      /*set the NUMERIC DIGITS for  !(runs). */

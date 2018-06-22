@@ -1,9 +1,8 @@
 /* REXX ---------------------------------------------------------------
 * Solve the Zebra Puzzle
 *--------------------------------------------------------------------*/
-  oid='zebra.txt'; 'erase' oid
   Call mk_perm    /* compute all permutations                        */
-  Call encode     /* encode the elements of the specifucations       */
+  Call encode     /* encode the elements of the specifications       */
   /* ex2 .. eg16     the formalized specifications                   */
   solutions=0
   Call time 'R'
@@ -42,7 +41,7 @@
                                               ||left(animal.ai,11)
                         Call out ol.i
                         End
-                      solutions+=1
+                      solutions=solutions+1
                       End
                     End /* animal_i */
                   End
@@ -50,7 +49,7 @@
               End
             End /* drink_i */
           End
-        End /* colr_i */
+        End /* color_i */
       End
     End /* nation_i */
   Say 'Number of solutions =' solutions
@@ -167,4 +166,4 @@ encode:
 
 out:
   Say arg(1)
-  Return lineout(oid,arg(1))
+  Return

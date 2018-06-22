@@ -1,19 +1,22 @@
+import static org.junit.Assert.assertEquals;
+
 import java.awt.Color;
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class BasicBitmapStorageTest extends TestCase
-{
- public static final int WIDTH = 640, HEIGHT = 480;
+public class BasicBitmapStorageTest {
 
- BasicBitmapStorage bbs = new BasicBitmapStorage(WIDTH, HEIGHT);
+    @Test
+    public void testHappy() {
+        int width = 640;
+        int height = 480;
 
- public void testHappy()
- {
-  bbs.fill(Color.cyan);
-  bbs.setPixel(WIDTH / 2, HEIGHT / 2, Color.BLACK);
-  Color c1 = bbs.getPixel(WIDTH / 2, HEIGHT / 2);
-  Color c2 = bbs.getPixel(20, 20);
-  assertEquals(Color.BLACK, c1);
-  assertEquals(Color.CYAN, c2);
- }
+        BasicBitmapStorage bbs = new BasicBitmapStorage(width, height);
+        bbs.fill(Color.CYAN);
+        bbs.setPixel(width / 2, height / 2, Color.BLACK);
+        Color c1 = bbs.getPixel(width / 2, height / 2);
+        Color c2 = bbs.getPixel(20, 20);
+
+        assertEquals(Color.BLACK, c1);
+        assertEquals(Color.CYAN, c2);
+    }
 }

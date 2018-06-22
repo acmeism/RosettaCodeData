@@ -3,17 +3,13 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         canvas {
             background-color: black;
         }
     </style>
-
 </head>
-
 <body>
-
     <canvas></canvas>
     <script>
         var canvas = document.querySelector("canvas");
@@ -25,8 +21,8 @@
         canvas.addEventListener("mousemove", function (event) {
             prevMouseX = mouseX;
             prevMouseY = mouseY;
-            mouseX = event.clientX;
-            mouseY = event.clientY;
+            mouseX = event.x;
+            mouseY = event.y;
 
             var incrX = (mouseX - prevMouseX) * 0.01;
             var incrY = (mouseY - prevMouseY) * 0.01;
@@ -100,5 +96,4 @@
     </script>
 
 </body>
-
 </html>

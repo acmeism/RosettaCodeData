@@ -1,1 +1,1 @@
-import sys,inspect;sys.stdout.write(inspect.getsource(inspect.currentframe()))
+import sys; sys.stdout.write(open(sys.argv[0]).read())

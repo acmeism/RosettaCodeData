@@ -2,13 +2,11 @@
 #include <iostream>
 #include <tuple>
 
-using namespace std;
-
 int gcd(int a, int b) {
     a = abs(a);
     b = abs(b);
     while (b != 0) {
-        tie(a, b) = make_tuple(b, a % b);
+        std::tie(a, b) = std::make_tuple(b, a % b);
     }
     return a;
 }
@@ -19,8 +17,8 @@ int lcm(int a, int b) {
 }
 
 int main() {
-    cout << "The least common multiple of 12 and 18 is " << lcm(12, 18)
-         << " ,\n"
-         << "and the greatest common divisor " << gcd(12, 18) << " !" << endl;
+    std::cout << "The least common multiple of 12 and 18 is " << lcm(12, 18) << ",\n"
+        << "and their greatest common divisor is " << gcd(12, 18) << "!"
+        << std::endl;
     return 0;
 }

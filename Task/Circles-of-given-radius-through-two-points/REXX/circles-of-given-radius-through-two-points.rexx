@@ -12,19 +12,18 @@ say '  ════════  ════════  ═══════
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 2circ: procedure; parse arg px py qx qy r .;  x=(qx-px)/2;   y=(qy-py)/2
-                                             bx=px+x;       by=py+y;    pb=sqrt(x**2+y**2)
+                                             bx=px + x;     by=py + y;  pb=sqrt(x**2+y**2)
        if r = 0  then return  'radius of zero yields no circles.'
        if pb==0  then return  'coincident points give infinite circles.'
        if pb >r  then return  'points are too far apart for the specified radius.'
-       cb=sqrt(r**2-pb**2);                  x1=y*cb/pb;    y1=x*cb/pb
+       cb=sqrt(r**2 - pb**2);      x1=y * cb / pb;                  y1=x * cb / pb
                       return  f(bx-x1)   f(by+y1)   f(bx+x1)   f(by-y1)
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-f:     f=right(format(arg(1), , 4), 9);   _=f    /*format the # with four decimal digits*/
-       if pos(.,f)\==0  then f=strip(f,'T',0)    /*strip trailing  0s  if decimal point.*/
-       return left(strip(f,'T',.), length(_))    /*maybe strip  trailing  decimal point.*/
+f:     f=right( format( arg(1), , 4), 9);       _=f         /*format # with 4 dec digits*/
+       if pos(.,f)>0 & pos('E',f)=0  then f=strip(f,'T',0)  /*strip trailing 0s if .& ¬E*/
+       return left(strip(f,'T',.), length(_))               /*strip trailing dec point. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 sqrt:  procedure; arg x; if x=0  then return 0;  d=digits(); numeric digits;  h=d+6;  m.=9
        numeric form;  parse value format(x,2,1,,0) 'E0'  with  g "E" _ .;  g=g *.5'e'_ % 2
-                  do j=0  while h>9;      m.j=h;               h=h%2+1;        end  /*j*/
-                  do k=j+5  to 0  by -1;  numeric digits m.k;  g=(g+x/g)*.5;   end  /*k*/
-       return g
+         do j=0  while h>9;      m.j=h;               h=h%2+1;        end  /*j*/
+         do k=j+5  to 0  by -1;  numeric digits m.k;  g=(g+x/g)*.5;   end  /*k*/; return g

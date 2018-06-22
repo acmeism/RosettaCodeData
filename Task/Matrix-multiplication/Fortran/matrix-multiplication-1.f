@@ -1,5 +1,5 @@
-real, dimension(n,m) :: a = reshape( (/ (i, i=1, n*m) /), (/ n, m /) )
-real, dimension(m,k) :: b = reshape( (/ (i, i=1, m*k) /), (/ m, k /) )
+real, dimension(n,m) :: a = reshape( [ (i, i=1, n*m) ], [ n, m ] )
+real, dimension(m,k) :: b = reshape( [ (i, i=1, m*k) ], [ m, k ] )
 real, dimension(size(a,1), size(b,2)) :: c    ! C is an array whose first dimension (row) size
                                               ! is the same as A's first dimension size, and
                                               ! whose second dimension (column) size is the same

@@ -1,4 +1,4 @@
-constant chess960 = eager gather for 0..3 -> $q {
+constant chess960 = gather for 0..3 -> $q {
     (my @q = <♜ ♚ ♜>).splice($q, 0, '♛');
     for 0 .. @q -> $n1 {
         (my @n1 = @q).splice($n1, 0, '♞');

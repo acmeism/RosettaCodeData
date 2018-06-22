@@ -17,8 +17,8 @@ Sub remove_lines(filepath,start,number)
 			Do Until discard_count = number
 				InFile.SkipLine
 				discard_count = discard_count + 1
-				line_count = line_count + 1
 			Loop
+		line_count = line_count + 1
 		End If
 	Loop
 	InFile.Close

@@ -2,36 +2,36 @@
 red   = '00000000 00000000 11111111'b            /*define a    red    value.            */
 blue  = '11111111 00000000 00000000'b            /*   "   "    blue     "               */
 blue  = 'ff 00 00'x                              /*another way to define a  blue  value.*/
-image.=                                          /*"allocate" an  "array"  to  nulls.   */
-call RGBfill red                                 /*set the entire image to red.         */
-call RGBset  10, 40, blue                        /*set  a  pixel        to blue.        */
-
-x=10;      y=40;     pix=RGBget(x, y)            /*get the color of a pixel.            */
-hexv = c2x(pix)                                  /*get hex    value of pix's color.     */
-binv = x2b(hexv)                                 /* "  binary   "    "  "      "        */
-
-say  'pixel'   x","y   '='   binv                /*show the binary value of  20,50      */
-bin3v = left(binv, 8)   substr(binv, 9, 8)   right(binv, 8)
-say  'pixel'   x","y   '='   bin3v               /*show again, but with spaces.         */
+@.    =                                          /*define entire  @.  array  to  nulls. */
+             x=10;       y=40                    /*set pixel's coördinates.             */
+call RGBfill      red                            /*set the entire   image   to red.     */
+call RGBset x, y, blue                           /*set a pixel (at  10,40)  to blue.    */
+color = RGBget(x, y)                             /*get the color of a pixel.            */
+hexV  = c2x(color)                               /*get hex    value of pixel's color.   */
+binV  = x2b(hexV)                                /* "  binary   "    "    "      "      */
+bin3V = left(binV, 8)    substr(binV, 9, 8)    right(binV, 8)
+hex3V = left(hexV, 2)    substr(hexV, 3, 2)    right(hexV, 2)
+xy= '(' || x","y')'                              /*create a handy─dandy literal for SAY.*/
+say  xy    ' pixel in binary: '     binV         /*show the binary value of  20,50      */
+say  xy    ' pixel in binary: '     bin3V        /*show again, but with spaces.         */
 say                                              /*show a blank between binary and hex. */
-say  'pixel'   x","y   '='   hexv                /*show again, but in hexadecimal.      */
-hex3v = left(hexv, 2)   substr(hexv, 3, 2)   right(hexv, 2)
-say  'pixel'   x","y   '='   hex3v               /*show again, but with spaces.         */
+say  xy    ' pixel in hex:    '     hexV         /*show again, but in hexadecimal.      */
+say  xy    ' pixel in hex:    '     hex3V        /*show again, but with spaces.         */
+call PPMwrite 'image', 500, 500                  /*create a PPM (output) file of image. */      /* ◄■■■■■■■■ not part of this task.*/
+say                                              /*show a blank.                        */
+say 'The file  image.PPM   was created.'         /*inform user that a file was created. */
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-RGBfill: procedure expose image.;      image.=arg(1);   return
+RGBfill:  @.=arg(1);                          return          /*fill image with a color.*/
+RGBget:   parse arg px,py;                    return @.px.py  /*get a pixel's color.    */
+RGBset:   parse arg px,py,p$;  @.px.py=p$;    return          /*set "    "      "       */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-RGBget: procedure expose image.;       parse arg Xpixel,Ypixel
-return  image.Xpixel.Ypixel                      /*obtain and return the pixel's color. */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-RGBraster: procedure expose image.;    parse arg Xsize,Ysize,color;   RGB=
-             do    x=1  to Xsize;  _=            /*build raster one line  at a time.    */
-                do y=1  to Ysize                 /*  "   a line  "  pixel  " "   "      */
-                _=_ || image.x.y                 /*append single pixel to the line.     */
-                end   /*y*/                      /* [↑]  all done building a line.      */
-             RGB=RGB || _                        /*append a single line to raster.      */
-             end      /*x*/                      /* [↑]  all done building raster.      */
-r          return RGB                            /*return  RGB  raster to the invoker.  */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-RGBset: procedure expose image.;       parse arg Xpixel,Ypixel,color
-        image.Xpixel.Ypixel=color;     return    /*define pixel, return to the invoker. */
+PPMwrite: parse arg oFN, width, height           /*obtain output filename, width, height*/
+          oFID= oFN'.PPM';   $='9'x;   #=255     /*fileID;  separator;  max color value.*/
+          call charout oFID, ,  1                /*set the position of the file's output*/
+          call charout oFID,'P6'width || $ || height || $ || # || $    /*write hdr info.*/
+            do   j=1  for width
+              do k=1  for height;     call charout oFID, @.j.k
+              end   /*k*/                        /*  ↑          write the PPM file, ··· */
+            end     /*j*/                        /*  └───────── ··· one pixel at a time.*/
+          call charout oFID;      return         /*close the output file just to be safe*/

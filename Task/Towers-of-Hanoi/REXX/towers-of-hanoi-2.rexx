@@ -4,7 +4,7 @@ if N=='' | N==","  then N=3                      /*Not specified?  Then use the 
 sw=80;     wp=sw%3-1;     blanks=left('', wp)    /*define some default REXX variables.  */
 c.1= sw % 3 % 2                                  /* [↑]  SW: assume default Screen Width*/
 c.2= sw % 2 - 1
-c.3= sw - 1 - c.1 - 1
+c.3= sw - 1 - c.1
 #=0;       z=2**N-1;      moveK=z                /*#moves; min# of moves; where to move.*/
 @abc='abcdefghijklmnopqrstuvwxyN'                /*dithering chars when many disks used.*/
 ebcdic= ('f0'x==0)                               /*determine if EBCDIC or ASCII machine.*/

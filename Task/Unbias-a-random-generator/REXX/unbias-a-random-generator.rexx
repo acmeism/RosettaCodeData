@@ -4,7 +4,7 @@ if #==''  |  #==","     then #=1000              /*#:  the number of SAMPLES to 
 if R==''  |  R==","     then R=6                 /*R:  the high number for the  range.  */
 if datatype(seed, 'W')  then call random ,,seed  /*Specified?  Then use for RANDOM seed.*/
 dash='─';    @b="biased";         @ub='un'@b     /*literals for the SAY column headers. */
-say left('',5)   ctr('N',5)   ctr(@b)   ctr(@b"%")  ctr(@ub)  ctr(@ub'%')   ctr("samples")
+say left('',5)   ctr("N",5)   ctr(@b)   ctr(@b'%')  ctr(@ub)  ctr(@ub"%")   ctr('samples')
 dash=
        do N=3  to R;      b=0;                u=0
          do j=1  for #;   b=b + randN(N);     u=u + unbiased()

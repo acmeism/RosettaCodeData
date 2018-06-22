@@ -1,10 +1,10 @@
->> catalanNumbers(14)
+>> catalanNumber(14)
 
 ans =
 
      2674440
 
->> catalanNumbers((0:17))'
+>> catalanNumbers(18)'
 
 ans =
 

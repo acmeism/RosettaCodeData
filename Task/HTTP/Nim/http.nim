@@ -1,3 +1,4 @@
 import httpclient
 
-echo getContent "http://rosettacode.org"
+var client = newHttpClient()
+echo client.getContent "http://rosettacode.org"

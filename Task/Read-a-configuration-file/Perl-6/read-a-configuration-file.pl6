@@ -17,7 +17,7 @@ grammar ConfFile {
 	[ \n || { die "Parse failed at line $*linenum" } ]
     }
 
-    proto token line() {{*}}
+    proto token line() {*}
 
     token line:misc  { {} (\S+) { die "Unrecognized word: $0" } }
 

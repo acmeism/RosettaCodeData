@@ -15,7 +15,7 @@ my $pidfile = open "$lockpid", :w or die "Can't create $lockpid: $!";
 $pidfile.say($pid);
 $pidfile.close;
 
-if try link($lockfile, $lockpid) {
+if try link($lockpid, $lockfile) {
     $havelock = True;
 }
 else {

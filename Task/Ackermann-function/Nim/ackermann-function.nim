@@ -22,4 +22,4 @@ echo "First non-negative Integer please: "
 let first = getNumber()
 echo "Second non-negative Integer please: "
 let second = getNumber()
-echo "Reslut: ", $ackermann(first, second)
+echo "Result: ", $ackermann(first, second)

@@ -11,23 +11,15 @@
             });
     }
 
-
-
-
-    // Sample function over a list
-
     // concat :: [a] -> s
     function concat(lst) {
         return ''.concat.apply('', lst);
     }
 
-
-    //    TEST
-
+    // TEST
     return zipListsWith(
         concat,
         [["a", "b", "c"], ["A", "B", "C"], [1, 2, 3]]
     )
     .join('\n');
-
 })();

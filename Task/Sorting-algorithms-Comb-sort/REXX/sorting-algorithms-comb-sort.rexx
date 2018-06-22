@@ -7,13 +7,14 @@ call show       ' after sort'                    /*display the   after  array el
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 combSort: procedure expose @.;   parse arg N     /*N:  is the number of  @  elements.   */
-          s=N-1                                  /*S:  is the spread between  COMBs.    */
-                 do  until  s<=1 & done;  done=1 /*assume sort is done  (so far).       */
-                 s=trunc(s*0.8)                  /*Note:   ÷   is slow,    *  is better.*/
-                     do j=1  until js>=N;    js=j+s
-                     if @.j>@.js  then do;   _=@.j;   @.j=@.js;   @.js=_;   done=0;    end
-                     end   /*j*/
-                 end       /*until*/
+          g=N - 1                                /*G:  is the gap between the sort COMBs*/
+                  do  until g<=1 & done;  done=1 /*assume sort is done  (so far).       */
+                  g=g * 0.8  % 1                 /*equivalent to:   g=trunc( g / 1.25)  */
+                  if g==0  then g=1              /*handle case of the gap is too small. */
+                      do j=1  until $ >= N;    $=j + g       /*$:  temp index variable. */
+                      if @.j > @.$  then do;   _=@.j;    @.j=@.$;   @.$=_;   done=0;   end
+                      end   /*j*/
+                  end       /*until*/            /* [↑]  swap two elements in the array.*/
           return
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 gen:      @.   =                            ;       @.12 = "dodecagon         12"
@@ -31,4 +32,4 @@ gen:      @.   =                            ;       @.12 = "dodecagon         12
                    do #=1  while  @.#\=='';  end;   #=#-1  /*find how many elements in @*/
           return                                 /* [↑]  adjust # because of the DO loop*/
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-show:     do j=1  for #;  say '        element'  right(j,w)  arg(1)":"  @.j;  end;  return
+show:     do k=1  for #; say right('element',15) right(k,w)  arg(1)":"  @.k;  end;  return

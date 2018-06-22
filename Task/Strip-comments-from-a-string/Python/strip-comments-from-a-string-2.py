@@ -1,8 +1,5 @@
-def remove_comments(line, sep):
-    for s in sep:
-        line = line.split(s)[0]
-    return line.strip()
+import re
 
-# test
-print remove_comments('apples ; pears # and bananas', ';#')
-print remove_comments('apples ; pears # and bananas', '!')
+m = re.match(r'^([^#]*)#(.*)$', line)
+if m:  # The line contains a hash / comment
+    line = m.group(1)

@@ -1,31 +1,38 @@
-buffer = &70               ; or anywhere in zero page that's good
+buffer = $fa               ; or anywhere in zero page that's good
+maxpage = $95              ; if non-terminated that's bad
 
-org &1900
+org $1900
 .rot13
-         stx buffer
-         sty buffer+1
-         ldy #0
-.loop    lda (buffer),y
-         bne decode        ; quit on ASCII 0
-         rts
-.decode  cmp #&7b          ; high range
-         bcs next
-         cmp #&41          ; low range
-         bcc next
-         cmp #&4f
-         bcc add13
-         cmp #&5b
-         bcc sub13
-         cmp #&61
-         bcc next
-         cmp #&6f
-         bcc add13
-         bcs sub13         ; saves a byte over a jump
-.next    iny
-         jmp loop
-.add13   adc #13           ; we only get here via bcc; so clc not needed
-         jmp storeit
-.sub13   sec
-         sbc #13
-.storeit sta (buffer),y
-         jmp next
+          stx buffer
+          sty buffer+1
+          ldy #0
+          beq readit
+.loop     cmp #$7b          ; high range
+          bcs next          ; >= {
+          cmp #$41          ; low range
+          bcc next          ; < A
+          cmp #$4e
+          bcc add13         ; < N
+          cmp #$5b
+          bcc sub13set      ; < [
+          cmp #$61
+          bcc next          ; < a
+          cmp #$6e
+          bcs sub13         ; >= n
+.add13    adc #13           ; we only get here via bcc; so clc not needed
+          bne storeit
+.sub13set sec               ; because we got here via bcc; so sec is needed
+.sub13    sbc #13           ; we can get here via bcs; so sec not needed
+.storeit  sta (buffer),y
+.next     iny
+          bne readit
+          ldx buffer+1
+          cpx maxpage
+          beq done
+          inx
+          stx buffer+1
+.readit   lda (buffer),y    ; quit on ascii 0
+          bne loop
+.done     rts
+.end
+save "rot-13", rot13, end

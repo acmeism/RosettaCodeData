@@ -1,21 +1,15 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import string
-def rot13(s):
-   """Implement the rot-13 encoding function: "rotate" each letter by the
-      letter that's 13 steps from it (wrapping from z to a)
-   """
-   return s.translate(
-       str.maketrans(
-           string.ascii_uppercase + string.ascii_lowercase,
-           string.ascii_uppercase[13:] + string.ascii_uppercase[:13] +
-           string.ascii_lowercase[13:] + string.ascii_lowercase[:13]
-           )
-       )
-if __name__ == "__main__":
+lets = string.ascii_lowercase
+key = {x:y for (x,y) in zip(lets[13:]+lets[:14], lets)}
+key.update({x.upper():key[x].upper() for x in key.keys()})
+encode = lambda x: ''.join((key.get(c,c) for c in x))
+if __name__ == '__main__':
    """Peform line-by-line rot-13 encoding on any files listed on our
       command line or act as a standard UNIX filter (if no arguments
       specified).
    """
    import fileinput
    for line in fileinput.input():
-      print(rot13(line), end="")
+      print(encode(line), end="")

@@ -11,7 +11,7 @@ function mult(strNum1,strNum2){
 
             if ( aResult[idxIter] > 9 ) {    // Carrying
                 aResult[idxIter + 1] = Math.floor( aResult[idxIter] / 10 ) + ( idxIter + 1 >= aResult.length ? 0 : aResult[idxIter + 1] );
-                aResult[idxIter] -= Math.floor( aResult[idxIter] / 10 ) * 10;
+                aResult[idxIter] %= 10;
             }
         }
     }

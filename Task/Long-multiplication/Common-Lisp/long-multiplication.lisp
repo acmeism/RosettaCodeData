@@ -20,7 +20,7 @@
               significant digit first.  The digits returned by
               long-add do have the most significant bit first."
              (if (every 'endp digitses)
-               (nconc (digits carry) sum)
+               (nconc (number->digits carry) sum)
                (let ((column-sum (reduce '+ (mapcar #'first-digit digitses)
                                          :initial-value carry)))
                  (multiple-value-bind (carry column-digit)
@@ -30,8 +30,8 @@
     ;; get the digits of a and b (least significant bit first), and
     ;; compute the zero padded rows. Then, add these rows (using
     ;; long-add) and convert the digits back to a number.
-    (do ((a (nreverse (digits a)))
-         (b (nreverse (digits b)))
+    (do ((a (nreverse (number->digits a)))
+         (b (nreverse (number->digits b)))
          (prefix '() (list* 0 prefix))
          (rows '()))
         ((endp b) (digits->number (long-add rows)))

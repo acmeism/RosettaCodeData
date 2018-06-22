@@ -1,17 +1,13 @@
 import Foundation
 
 extension Array {
-    mutating func swap(_ index1:Int, _ index2:Int) {
-        let temp = self[index1]
-        self[index1] = self[index2]
-        self[index2] = temp
-    }
-
     mutating func shuffle() {
-        for _ in 0..<self.count {
-            let index1 = Int(arc4random()) % self.count
-            let index2 = Int(arc4random()) % self.count
-            self.swap(index1, index2)
+        guard count > 1 else { return }
+
+        for i in 0..<self.count - 1 {
+            let j = Int(arc4random_uniform(UInt32(count - i))) + i
+            guard i != j else { continue }
+            swap(&self[i], &self[j])
         }
     }
 }

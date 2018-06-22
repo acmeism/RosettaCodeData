@@ -57,7 +57,7 @@ sub solveboard($board) {
 
         my $old = @grid[$y][$x];
 
-        return False if $old and $old != $v;
+        return False if +$old and $old != $v;
         return False if @known[$v] and @known[$v] !eqv $coord;
 
         @grid[$y][$x] = $v;               # conjecture grid value

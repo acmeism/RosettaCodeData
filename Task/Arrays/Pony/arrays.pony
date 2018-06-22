@@ -1,3 +1,7 @@
+use "assert"      // due to the use of Fact
+
+- - -
+
 var numbers = Array[I32](16) // creating array of 32-bit ints with initial allocation for 16 elements
 numbers.push(10) // add value 10 to the end of array, extending the underlying memory if needed
 try

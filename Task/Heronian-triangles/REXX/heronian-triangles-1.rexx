@@ -1,8 +1,8 @@
 /*REXX program generates & displays primitive Heronian triangles by side length and area*/
 parse arg  N  first  area  .                     /*obtain optional arguments from the CL*/
-if     N==''  |     N==','  then     N=200       /*Not specified?  Then use the default.*/
-if first==''  | first==','  then first= 10       /* "      "         "   "   "     "    */
-if  area==''  |  area==','  then  area=210       /* "      "         "   "   "     "    */
+if     N==''  |     N==","  then     N=200       /*Not specified?  Then use the default.*/
+if first==''  | first==","  then first= 10       /* "      "         "   "   "     "    */
+if  area==''  |  area==","  then  area=210       /* "      "         "   "   "     "    */
 numeric digits 99; numeric digits max(9, 1+length(N**5))  /*ensure 'nuff decimal digits.*/
 call Heron;       HT= 'Heronian triangles'       /*invoke the  Heron  subroutine.       */
 say  #          ' primitive'  HT  "found with sides up to "   N  ' (inclusive).'

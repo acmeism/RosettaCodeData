@@ -1,9 +1,10 @@
-# syntax: GAWK -f HAMMING_NUMBERS.AWK
+# syntax: gawk -M -f hamming_numbers.awk
 BEGIN {
     for (i=1; i<=20; i++) {
       printf("%d ",hamming(i))
     }
     printf("\n1691: %d\n",hamming(1691))
+    printf("\n1000000: %d\n",hamming(1000000))
     exit(0)
 }
 function hamming(limit,  h,i,j,k,n,x2,x3,x5) {

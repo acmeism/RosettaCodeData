@@ -21,10 +21,14 @@ contains
     integer, dimension(tmin:tmax) :: cnt
     integer :: i, z
 
-    forall(i=tmin:tmax)
-       cnt(i) = count(array == i)
-    end forall
-
+    cnt = 0         ! Initialize to zero to prevent false counts
+    FORALL (I=1:Z)  ! Not sure that this gives any benefit over a DO loop.
+        cnt(array(i)) = cnt(array(i))+1
+    END FORALL
+!
+!   ok - cnt contains the frequency of every value
+!   let's unwind them into the original array
+!
     z = 1
     do i = tmin, tmax
        do while ( cnt(i) > 0 )

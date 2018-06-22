@@ -12,10 +12,10 @@ say "50 states:";
 .say for anastates @states;
 
 say "\n54 states:";
-.say for anastates @states, < New_Kory Wen_Kory York_New Kory_New New_Kory >;
+.say for sort anastates @states, < New_Kory Wen_Kory York_New Kory_New New_Kory >;
 
 sub anastates (*@states) {
-    my @s = @states.uniq».subst('_', ' ');
+    my @s = @states.unique».subst('_', ' ');
 
     my @pairs = gather for ^@s -> $i {
 	for $i ^..^ @s -> $j {
@@ -29,7 +29,7 @@ sub anastates (*@states) {
 	for ^@c -> $i {
 	    for $i ^..^ @c -> $j {
 		my $set = set @c[$i].list, @c[$j].list;
-		take $set.keys.join(', ') if $set == 4;
+		take @c[$i].list.join(', ') ~ ' = ' ~ @c[$j].list.join(', ') if $set == 4;
 	    }
 	}
     }

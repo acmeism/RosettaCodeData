@@ -1,0 +1,2 @@
+U8 *string = "Hello, world!";
+Print("%d\n", StrLen(string));

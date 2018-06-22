@@ -1,3 +1,4 @@
 import httpclient
 
-echo getContent "https://sourceforge.net"
+var client = newHttpClient()
+echo client.getContent("https://sourceforge.net")

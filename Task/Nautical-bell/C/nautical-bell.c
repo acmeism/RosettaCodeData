@@ -1,11 +1,14 @@
+/*Abhishek Ghosh, Original : 20th September 2017, Corrected : 25th September 2017*/
+
 #include<unistd.h>
 #include<stdio.h>
 #include<time.h>
 
-#define DELAY 3000
+#define SHORTLAG 1000
+#define LONGLAG  2000
 
 int main(){
-	int i,times;
+	int i,times,hour,min,sec,min1,min2;
 	
 	time_t t;
 	struct tm* currentTime;
@@ -14,22 +17,39 @@ int main(){
 		time(&t);
 		currentTime = localtime(&t);
 		
-		times = (currentTime->tm_hour%12==0)?12:currentTime->tm_hour%12;
+		hour = currentTime->tm_hour;
+		min = currentTime->tm_min;
+		sec = currentTime->tm_sec;
 		
-		if(currentTime->tm_min==0 && currentTime->tm_sec==0){
-			printf("\nIt is now %d:00 %s. Sounding the bell %d times.",times,(currentTime->tm_hour>11)?"PM":"AM",times);
+		hour = 12;
+		min = 0;
+		sec = 0;
 		
-			for(i=0;i<times;i++){
+		if((min==0 || min==30) && sec==0)
+			times = ((hour*60 + min)%240)%8;
+		if(times==0){
+			times = 8;
+		}	
+
+		if(min==0){
+			min1 = 0;
+			min2 = 0;
+		}
+		
+		else{
+			min1 = 3;
+			min2 = 0;
+		}
+		
+		if((min==0 || min==30) && sec==0){
+			printf("\nIt is now %d:%d%d %s. Sounding the bell %d times.",hour,min1,min2,(hour>11)?"PM":"AM",times);
+		
+			for(i=1;i<=times;i++){
 				printf("\a");
-				sleep(DELAY);
+				
+				(i%2==0)?sleep(LONGLAG):sleep(SHORTLAG);
 			}
 		}
-		
-		else if(currentTime->tm_min==30 && currentTime->tm_sec==0){
-			printf("\nIt is now %d:30 %s. Sounding the bell once.",times,(currentTime->tm_hour>11)?"PM":"AM");
-			printf("\a");
-		}
 	}
-	
 	return 0;
 }

@@ -38,3 +38,22 @@ class Turtle {
     }
     }
 }
+
+# Now we can build the spiral in the normal way from outside-in like this:
+
+sub MAIN(Int $size = 5) {
+my $t = Turtle.new(dir => 2);
+my $counter = 0;
+$t.forward(-1);
+for 0..^ $size -> $ {
+    $t.forward;
+    $t.lay-egg($counter++);
+}
+for $size-1 ... 1 -> $run {
+    $t.turn-right;
+    $t.forward, $t.lay-egg($counter++) for 0..^$run;
+    $t.turn-right;
+    $t.forward, $t.lay-egg($counter++) for 0..^$run;
+}
+$t.showmap;
+}

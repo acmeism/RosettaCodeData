@@ -3,7 +3,7 @@ numeric digits 60                                /*in case sundial is in polar r
 parse arg lat lng .                              /*obtain optional arguments from the CL*/
                               /*     ┌───────────◄ None specified?  Then use the default*/
                               /*     │             of Jules Verne's Lincoln Island,     */
-                              /*     ↓             aka      Ernest Legouve Reed.        */
+                              /*     ↓             aka      Ernest Legouve Reef.        */
 if lat=='' | lat==","  then lat=   -4.95         /*Not specified?  Then use the default.*/
 if lng=='' | lng==","  then lng= -150.5          /* "      "         "   "   "     "    */
 mer=format(lng/15, , 0) * 15                     /*calculate legal meridian longitude.  */
@@ -18,7 +18,7 @@ L=max(length(lat), length(lng), length(mer) )    /*find maximum length of three 
          indent=left('', 30)                     /*make prettier: indented presentation.*/
      say indent  center('    ', w1)   center("sun hour", w2)     center('dial hour' , w3)
      say indent  center('hour', w1)   center("angle"   , w2)     center('line angle', w3)
-call sep                                         /*to help a one-eyed pirate's eyeball. */
+call sep                                         /*to help a one─eyed pirate's eyeball. */
         do h=-6  to 6                            /*Okey dokey then, now let's show stuff*/
              select
              when abs(h)==12  then hc='midnight' /*Holy smokes! Above the arctic circle.*/
@@ -28,9 +28,10 @@ call sep                                         /*to help a one-eyed pirate's e
              end   /*select*/
         hra=15 * h  -  lng + mer                 /*calculate sun hour angle (in degrees)*/
         hla=r2d( Atan(sineLat * tan( d2r(hra)))) /*this is the heavy lifting calculation*/
+        if abs(hra)>90  then hla=hla + 180*sign(hra*lat)   /*adjust for negative angle. */
         say indent center(hc, w1)  right(format(hra, ,1), w2)   right(format(hla, ,1), w3)
         end        /*h*/
-call sep                                         /*to help a one-eyed pirate's eyeball. */
+call sep                                         /*to help a one─eyed pirate's eyeball. */
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 pi:   pi= 3.1415926535897932384626433832795028841971693993751058209749445923078; return pi
@@ -48,7 +49,7 @@ Acos: procedure; arg x;  if x<-1 | x>1  then call AcosErr;      return .5 * pi()
 Atan: procedure; parse arg x; if abs(x)=1 then return pi()/4*x; return Asin(x/sqrt(1+x*x))
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 Asin: procedure; parse arg x;   if x<-1 | x>1  then call AsinErr;    s=x*x
-      if abs(x)>=sqrt(2)*.4  then return sign(x) * Acos(sqrt(1-s));  z=x;     o=x;     p=z
+      if abs(x)>=sqrt(2)*.5  then return sign(x) * Acos(sqrt(1-s));  z=x;     o=x;     p=z
         do j=2 by 2; o=o*s*(j-1)/j; z=z+o/(j+1); if z=p  then leave; p=z; end;    return z
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 sin:  procedure; parse arg x;   x=r2r(x);    numeric fuzz min(5, digits() - 3)

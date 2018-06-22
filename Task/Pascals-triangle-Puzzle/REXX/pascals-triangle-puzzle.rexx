@@ -1,33 +1,33 @@
-/*REXX program solves a  "Pyramid of Numbers"  puzzle given four values.*/
-          /*┌──────────────────────────────────────────────┐
-          ┌─┘                                              └─┐
-          │                              answer              │
-          │             mid             /                    │
-          │               \            /                     │
-          │                \        151                      │
-          │                 \   ααα     ααα                  │
-          │                  40    ααα    ααα                │
-          │              ααα    ααα    ααα    ααα            │
-          │           x      11     y      4       z         │
-          │                 /               \                │
-          │                /                 \               │
-          │               /                   \              │
-          │              B                     D             │
-          └─┐                                              ┌─┘
-            └──────────────────────────────────────────────┘*/
-parse arg x b y d z mid answer .       /*get some values, others, just X*/
-   pad=left('',15)                     /*for inserting spaces in output.*/
-   top=answer - 4*b - 4*d              /*calculate the top # - constants*/
-middle=mid - 2*b                       /*calculate the mod # - constants*/
+/*REXX program solves a   (Pascal's)   "Pyramid of Numbers"   puzzle given four values. */
+                         /*┌───────────────────────────────────────────────────────────┐
+                           │                                        answer             │
+                           │                        mid            /                   │
+                           │                           \          /                    │
+                           │                            \       151                    │
+                           │                             \   ααα  ααα                  │
+                           │                              40   ααα   ααα               │
+                           │                            ααα  ααα  ααα  ααα             │
+                           │                          x    11    y    4    z           │
+                           │                              /            \               │
+                           │                             /              \              │
+                           │                            /                \             │
+                           │Find:  x  y  z             b                  d            │
+                           └───────────────────────────────────────────────────────────┘*/
+parse arg  b  d  mid  answer .                   /*obtain optional variables from the CL*/
+if     b=='' |      b==","  then      b=  11     /*Not specified?  Then use the default.*/
+if     d=='' |      d==","  then      d=   4     /* "      "         "   "   "     "    */
+if    mid='' |    mid==","  then    mid=  40     /* "      "         "   "   "     "    */
+if answer='' | answer==","  then answer= 151     /* "      "         "   "   "     "    */
+   pad= left('', 15)                             /*used for inserting spaces in output. */
+   big= answer - 4*b - 4*d                       /*calculate big   number less constants*/
+middle= mid - 2*b                                /*    "    middle    "     "      "    */
 
-  do x  =-top  to top
-    do y=-top  to top
-    if x+y\==middle   then iterate     /*40 = x+2B+Y  -or-  40-2*11 =x+y*/
-    y6=y*6                             /*calculate a short cut.         */
-           do z=-top  to top
-           if z\==y-x     then iterate /*z has to equal y-x  (y=x+z)    */
-           if x+y6+z==top then say pad 'x = ' x pad "y = " y pad 'z = ' z
-           end   /*z*/
-    end          /*y*/
-  end            /*x*/
-                                       /*stick a fork in it, we're done.*/
+  do x  =-big  to big
+    do y=-big  to big
+    if x+y\==middle   then iterate               /*40 = x+2B+Y   ──or──   40-2*11 = x+y */
+        do z=-big  to big
+        if z  \==  y - x   then iterate          /*z has to equal y-x  (y=x+z)    */
+        if x+y*6+z == big  then say pad  'x = '    x  pad    "y = "    y  pad   'z = '   z
+        end   /*z*/
+    end       /*y*/
+  end         /*x*/                              /*stick a fork in it,  we're all done. */

@@ -39,7 +39,7 @@ class Board(aBoard : List[Char] = BaseBoard) {
 }
 
 
-object TicTacToe extends Application {
+object TicTacToe extends App {
 
    def play(board : Board, turn : Char) {
 

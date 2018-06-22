@@ -41,7 +41,7 @@ class ByteStr {
 }
 
 # A couple of operators for our new type:
-multi infix:<cmp>(ByteStr $x, ByteStr $y) { $x.bytes cmp $y.bytes }
+multi infix:<cmp>(ByteStr $x, ByteStr $y) { $x.bytes.join cmp $y.bytes.join }
 multi infix:<~>  (ByteStr $x, ByteStr $y) { ByteStr.new(:bytes(|$x.bytes, |$y.bytes)) }
 
 # create some byte strings (destruction not needed due to garbage collection)

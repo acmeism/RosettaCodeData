@@ -9,12 +9,11 @@
 parse arg limit .;  if limit\==''  then #=limit  /*allow user to specify a scan limit.  */
 @.=;   ig=0;  !.=0                               /*nullify array and the longest path.  */
 call build@                                      /*build a stemmed array from the @ list*/
-                do v=#  by -1  for #             /*scrub the @ list for unusuable words.*/
+                do v=#  by -1  for #             /*scrub the @ list for unusable words. */
                 parse var @.v  F  2  ''  -1  L   /*obtain first and last letter of word.*/
                 if !.1.F>1 | !.9.L>1  then iterate                /*is this a dead word?*/
-                say 'ignorning dead word:'   @.v;      ig=ig+1;         @=delword(@, v, 1)
-  /*delete from  @ list.*/
-                end   /*v*/                      /*delete dead wprd from  @ ──┘         */
+                say 'ignoring dead word:'    @.v;      ig=ig+1;         @=delword(@, v, 1)
+                end   /*v*/                      /*delete dead word from  @ ──┘         */
 $$$=                                             /*nullify the possible longest path.   */
 if ig\==0  then do;   call build@;   say;   say 'ignoring'   ig   "dead word"s(ig).;   say
                 end
@@ -37,7 +36,7 @@ build@:     do i=1  for #;     @.i=word(@, i)    /*build a stemmed array from th
 s:    if arg(1)==1  then return arg(3);    return word( arg(2) 's', 1)   /*a pluralizer.*/
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 scan: procedure expose @. # !. $$$ MP MPL;    parse arg $$$,!;                  p=! - 1
-      parse var  @.p  ''  -1  LC                 /*obtain the last character of prev. @ */
+      parse var  @.p  ''  -1  LC                 /*obtain last character of previous @. */
       if !.1.LC==0  then return                  /*is this a  dead─end  word?           */
                                                  /* [↓]  PARSE obtains first char of @.i*/
          do i=!  to #;  parse var  @.i  p  2     /*scan for the longest word path.      */

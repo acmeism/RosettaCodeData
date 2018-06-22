@@ -1,98 +1,129 @@
-global nCells, cMap, best
-record Pos(r,c)
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE BangPatterns #-}
+{-# OPTIONS_GHC -ddump-simpl -ddump-to-file -ddump-stg -O2 -fforce-recomp #-}
+module Main (main) where
 
-procedure main(A)
-    puzzle := showPuzzle("Input",readPuzzle())
-    QMouse(puzzle,findStart(puzzle),&null,0)
-    showPuzzle("Output", solvePuzzle(puzzle)) | write("No solution!")
-end
+import           Control.Monad.ST (runST)
+import           Data.List (intercalate, transpose)
+import qualified Data.Ix as Ix
+import qualified Data.Vector as V
+import           Data.Vector.Unboxed (Vector)
+import qualified Data.Vector.Unboxed         as U
+import qualified Data.Vector.Unboxed.Mutable as MU
+import           Data.Foldable (for_)
 
-procedure readPuzzle()
-    # Start with a reduced puzzle space
-    p := [[-1],[-1]]
-    nCells := maxCols := 0
-    every line := !&input do {
-        put(p,[: -1 | -1 | gencells(line) | -1 | -1 :])
-        maxCols <:= *p[-1]
-        }
-    every put(p, [-1]|[-1])
-    # Now normalize all rows to the same length
-    every i := 1 to *p do p[i] := [: !p[i] | (|-1\(maxCols - *p[i])) :]
-    return p
-end
+type Position = ( Int, Int )
 
-procedure gencells(s)
-    static WS, NWS
-    initial {
-        NWS := ~(WS := " \t")
-        cMap := table()     # Map to/from internal model
-        cMap["#"] := -1;  cMap["_"] :=  0
-        cMap[-1]  := " "; cMap[0]   := "_"
-        }
+type Bounds = (Position, Position)
 
-    s ? while not pos(0) do {
-            w := (tab(many(WS))|"", tab(many(NWS))) | break
-            w := numeric(\cMap[w]|w)
-            if -1 ~= w then nCells +:= 1
-            suspend w
-            }
-end
+type KnightBoard = (Bounds, Vector Int)
 
-procedure showPuzzle(label, p)
-    write(label," with ",nCells," cells:")
-    every r := !p do {
-        every c := !r do writes(right((\cMap[c]|c),*nCells+1))
-        write()
-        }
-    return p
-end
+toSlot :: Char -> Int
+toSlot '0' = 0
+toSlot '1' = 1
+toSlot _ = -1
 
-procedure findStart(p)
-    if \p[r := !*p][c := !*p[r]] = 1 then return Pos(r,c)
-end
+toString :: Int -> String
+toString (-1) = replicate 3 ' '
+toString n = replicate (3 - length nn) ' ' ++ nn
+ where
+   nn = show n
 
-procedure solvePuzzle(puzzle)
-    if path := \best then {
-        repeat {
-            loc := path.getLoc()
-            puzzle[loc.r][loc.c] := path.getVal()
-            path := \path.getParent() | break
-            }
-        return puzzle
-        }
-end
+chunksOf :: Int -> [a] -> [[a]]
+chunksOf _ [] = []
+chunksOf n xs = uncurry ((. chunksOf n) . (:)) (splitAt n xs)
 
-class QMouse(puzzle, loc, parent, val)
+showBoard :: KnightBoard -> String
+showBoard (bounds, board) =
+ intercalate "\n" . map concat . transpose . chunksOf (height + 1) . map toString $
+   U.toList board
+ where
+   (_, (_, height)) = bounds
 
-    method getVal(); return val; end
-    method getLoc(); return loc; end
-    method getParent(); return parent; end
-    method atEnd(); return nCells = val; end
+toBoard :: [String] -> KnightBoard
+toBoard strs = (((0,0),(width-1,height-1)), board)
+ where
+   height = length strs
+   width = minimum (length <$> strs)
+   board =
+     U.fromListN (width*height) . map toSlot . concat . transpose $
+     take width <$> strs
 
-    method visit(r,c)
-        if /best & validPos(r,c) then return Pos(r,c)
-    end
+-- Solve the knight's tour with a simple Depth First Search.
+solveKnightTour :: KnightBoard -> Maybe KnightBoard
+solveKnightTour (bounds@(_,(_,yb)), board) = runST $ do
+ array <- U.thaw board
+ let maxDepth = U.length $ U.filter (/= (-1)) board
+     Just iniIdx = U.findIndex (==1) board
+     initPosition = mkPos iniIdx
+     !hops = V.generate  (U.length board) $ \i ->
+       if board `U.unsafeIndex` i == -1
+       then U.empty
+       else mkHops (mkPos i)
 
-    method validPos(r,c)
-        v := val+1
-        xv := (0 <= puzzle[r][c]) | fail
-        if xv = (v|0) then {  # make sure this path hasn't already gone there
-            ancestor := self
-            while xl := (ancestor := \ancestor.getParent()).getLoc() do
-                if (xl.r = r) & (xl.c = c) then fail
-            return
-            }
-    end
+     solve !depth !position = MU.unsafeRead array position >>= \case
+       0 -> do
+         MU.unsafeWrite array position depth
+         case depth == maxDepth of
+           True -> return True
+           False -> do
+             results <- U.mapM (solve (depth + 1)) (hops `V.unsafeIndex` position)
+             if U.or results
+               then return True
+               else do
+                 MU.unsafeWrite array position 0
+                 return False
+       _ -> pure False
 
-initially
-    val := val+1
-    if atEnd() then return best := self
-    QMouse(puzzle, visit(loc.r-2,loc.c-1), self, val)
-    QMouse(puzzle, visit(loc.r-2,loc.c+1), self, val)
-    QMouse(puzzle, visit(loc.r-1,loc.c+2), self, val)
-    QMouse(puzzle, visit(loc.r+1,loc.c+2), self, val)
-    QMouse(puzzle, visit(loc.r+2,loc.c+1), self, val)
-    QMouse(puzzle, visit(loc.r+2,loc.c-1), self, val)
-    QMouse(puzzle, visit(loc.r+1,loc.c-2), self, val)
-    QMouse(puzzle, visit(loc.r-1,loc.c-2), self, val)
-end
+ MU.unsafeWrite array (Ix.index bounds initPosition) 0
+ result <- solve 1 (Ix.index bounds initPosition)
+ farray <- U.unsafeFreeze array
+ return $ if result then Just (bounds, farray) else Nothing
+ where
+   offsets = U.fromListN 8 [ (1, 2), (2, 1), (2, -1), (-1, 2), (-2, 1), (1, -2), (-1, -2), (-2, -1) ]
+   mkHops pos = U.filter (\i -> board `U.unsafeIndex` i == 0)
+              $ U.map (Ix.index bounds)
+              $ U.filter (Ix.inRange bounds)
+              $ U.map (add pos) offsets
+   add (x, y) (x', y') = (x + x', y + y')
+   mkPos idx = idx `quotRem` (yb+1)
+
+
+tourExA :: [String]
+tourExA =
+ [ " 000    "
+ , " 0 00   "
+ , " 0000000"
+ , "000  0 0"
+ , "0 0  000"
+ , "1000000 "
+ , "  00 0  "
+ , "   000  "
+ ]
+
+tourExB :: [String]
+tourExB =
+ [ "-----1-0-----"
+ , "-----0-0-----"
+ , "----00000----"
+ , "-----000-----"
+ , "--0--0-0--0--"
+ , "00000---00000"
+ , "--00-----00--"
+ , "00000---00000"
+ , "--0--0-0--0--"
+ , "-----000-----"
+ , "----00000----"
+ , "-----0-0-----"
+ , "-----0-0-----"
+ ]
+
+main :: IO ()
+main =
+ for_
+   [tourExA, tourExB]
+   (\board -> do
+       case solveKnightTour $ toBoard board of
+         Nothing -> putStrLn "No solution.\n"
+         Just solution -> putStrLn $ showBoard solution ++ "\n")

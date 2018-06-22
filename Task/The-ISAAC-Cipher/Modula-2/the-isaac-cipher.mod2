@@ -1,0 +1,250 @@
+MODULE RosettaIsaac;
+
+FROM Strings IMPORT
+  Length, Assign, Append;
+FROM STextIO IMPORT
+  WriteString, WriteLn;
+FROM Conversions IMPORT
+  CardBaseToStr;
+
+CONST
+  MaxStrLength = 256;
+
+TYPE
+  TMode = (iEncrypt, iDecrypt);
+  TString = ARRAY [0 .. MaxStrLength - 1] OF CHAR;
+  TCardIndexedFrom0To7 = ARRAY [0 .. 7] OF CARDINAL;
+
+VAR
+(* TASK globals *)
+  Msg: TString = 'a Top Secret secret';
+  Key: TString = 'this is my secret key';
+  XCTxt: TString = ''; (* XOR ciphertext *)
+  MCTxt: TString = ''; (* MOD ciphertext *)
+  XPTxt: TString = ''; (* XOR decryption (plaintext) *)
+  MPTxt: TString = ''; (* MOD decryption (plaintext) *)
+  Mode: TMode = iEncrypt;
+  HexTxt: TString;
+
+(* ISAAC globals *)
+(* external results *)
+  RandRsl: ARRAY [0 .. 256] OF CARDINAL;
+  RandCnt: CARDINAL;
+
+(* internal state *)
+  MM: ARRAY [0 .. 256] OF CARDINAL;
+  AA: CARDINAL = 0;
+  BB: CARDINAL = 0;
+  CC: CARDINAL = 0;
+
+PROCEDURE Isaac;
+VAR
+  I, X, Y: CARDINAL;
+BEGIN
+   CC := CC + 1;    (* CC just gets incremented once per 256 results *)
+   BB := BB + CC;   (* then combined with BB *)
+   FOR I := 0 TO 255 DO
+     X := MM[I];
+     CASE (I MOD 4) OF
+        0: AA := AA BXOR (AA SHL 13); |
+        1: AA := AA BXOR (AA SHR 6); |
+        2: AA := AA BXOR (AA SHL 2); |
+        3: AA := AA BXOR (AA SHR 16);
+     ELSE
+     END;
+     AA := MM[(I + 128) MOD 256] + AA;
+     Y  := MM[(X SHR 2) MOD 256] + AA + BB;
+     MM[I] := Y;
+     BB := MM[(Y SHR 10) MOD 256] + X;
+     RandRsl[I] := BB;
+   END; (* FOR *)
+   RandCnt := 0;  (* Prepare to use the first set of results. *)
+END Isaac;
+
+PROCEDURE Mix(VAR A: TCardIndexedFrom0To7);
+BEGIN
+  A[0] := A[0] BXOR A[1] SHL 11; A[3] := A[3] + A[0]; A[1] := A[1] + A[2];
+  A[1] := A[1] BXOR A[2] SHR  2; A[4] := A[4] + A[1]; A[2] := A[2] + A[3];
+  A[2] := A[2] BXOR A[3] SHL  8; A[5] := A[5] + A[2]; A[3] := A[3] + A[4];
+  A[3] := A[3] BXOR A[4] SHR 16; A[6] := A[6] + A[3]; A[4] := A[4] + A[5];
+  A[4] := A[4] BXOR A[5] SHL 10; A[7] := A[7] + A[4]; A[5] := A[5] + A[6];
+  A[5] := A[5] BXOR A[6] SHR  4; A[0] := A[0] + A[5]; A[6] := A[6] + A[7];
+  A[6] := A[6] BXOR A[7] SHL  8; A[1] := A[1] + A[6]; A[7] := A[7] + A[0];
+  A[7] := A[7] BXOR A[0] SHR  9; A[2] := A[2] + A[7]; A[0] := A[0] + A[1];
+END Mix;
+
+PROCEDURE RandInit(Flag: BOOLEAN);
+VAR
+  I, J: CARDINAL;
+  A: TCardIndexedFrom0To7;
+BEGIN
+  AA := 0; BB := 0; CC := 0;
+  A[0] := 2654435769; (* $9e3779b9: the golden ratio *)
+  FOR J := 1 TO 7 DO
+    A[J] := A[0];
+  END;
+
+  FOR I := 0 TO 3 DO (* Scramble it *)
+    Mix(A);
+  END;
+  FOR I := 0 TO 255 BY 8 DO (* Fill in MM[] with messy stuff. *)
+    IF Flag THEN (* Use all the information in the seed. *)
+      FOR J := 0 TO 7 DO
+        A[J] := A[J] + RandRsl[I + J];
+      END;
+    END;
+    Mix(A);
+    FOR J := 0 TO 7 DO
+      MM[I + J] := A[J];
+    END;
+  END; (* FOR I*)
+
+  IF Flag THEN
+    (* Do a second pass to make all of the Seed affect all of MM *)
+    FOR I := 0 TO 255 BY 8 DO
+      FOR J := 0 TO 7 DO
+        A[J] := A[J] + MM[I + J];
+      END;
+      Mix(A);
+      FOR J := 0 TO 7 DO
+        MM[I + J] := A[J];
+      END;
+    END; (* FOR I *)
+  END;
+  Isaac(); (* Fill in the first set of results *)
+  RandCnt := 0; (* Prepare to use the first set of results *)
+END RandInit;
+
+(* Seed ISAAC with a given string.
+  The string can be any size. The first 256 values will be used. *)
+PROCEDURE SeedIsaac(Seed: ARRAY OF CHAR; Flag: BOOLEAN);
+VAR
+  I, M: CARDINAL;
+BEGIN
+  FOR I := 0 TO 255 DO
+    MM[I] := 0;
+  END;
+  M := Length(Seed);
+  FOR I := 0 TO 255 DO
+  (* In case seed has less than 256 elements *)
+    IF I > M THEN
+      RandRsl[I] := 0
+    ELSE
+      (* Modula-2 strings are 0-based (at least, in this case). *)
+      RandRsl[I] := ORD(Seed[I]);
+    END;
+  END;
+  (* Initialize ISAAC with seed. *)
+  RandInit(Flag);
+END SeedIsaac;
+
+(* Get a random 32-bit value 0..MAXINT *)
+PROCEDURE GetRandom32Bit(): CARDINAL;
+VAR
+  Result: CARDINAL;
+BEGIN
+  Result := RandRsl[RandCnt];
+  INC(RandCnt);
+  IF RandCnt > 255 THEN
+    Isaac();
+    RandCnt := 0;
+  END;
+  RETURN Result;
+END GetRandom32Bit;
+
+(* Get a random character in printable ASCII range. *)
+PROCEDURE GetRandomChar(): SHORTCARD;
+BEGIN
+  RETURN GetRandom32Bit() MOD 95 + 32;
+END GetRandomChar;
+
+(* Convert an ASCII string to a hexadecimal string. *)
+PROCEDURE ASCII2Hex(Source: ARRAY OF CHAR; VAR OUT Destination: ARRAY OF CHAR);
+VAR
+  I: CARDINAL;
+  NumbHex: ARRAY [0 .. 1] OF CHAR;
+BEGIN
+  Assign('', Destination);
+  FOR I := 0 TO Length(Source) - 1 DO
+    CardBaseToStr(ORD(Source[I]), 16, NumbHex);
+    IF Length(NumbHex) <= 1 THEN
+      Append('0', Destination);
+    END;
+    Append(NumbHex, Destination);
+  END;
+END ASCII2Hex;
+
+(* XOR encrypt on random stream. *)
+PROCEDURE Vernam(Msg: ARRAY OF CHAR; VAR OUT Destination: ARRAY OF CHAR);
+VAR
+  I: CARDINAL;
+  OrdMsgI: SHORTCARD;
+BEGIN
+  Assign('', Destination);
+  FOR I := 0 TO Length(Msg) - 1 DO
+    OrdMsgI := ORD(Msg[I]);
+    Append(CHR(GetRandomChar() BXOR OrdMsgI), Destination);
+  END;
+END Vernam;
+
+(* Get position of the letter in chosen alphabet *)
+PROCEDURE LetterNum(Letter, Start: CHAR): SHORTCARD;
+BEGIN
+  RETURN ORD(Letter) - ORD(Start);
+END LetterNum;
+
+(* Caesar-shift a character <Shift> places: Generalized Vigenere *)
+PROCEDURE Caesar(M: TMode; Ch: CHAR; Shift, Modulo: INTEGER; Start: CHAR): CHAR;
+VAR
+  N, IntOrdStart: INTEGER;
+BEGIN
+  IF M = iDecrypt THEN
+    Shift := -Shift;
+  END;
+  N := LetterNum(Ch, Start);
+  N := N + Shift;
+  N := N MOD Modulo;
+  IF N < 0 THEN
+    N := N + Modulo;
+  END;
+  IntOrdStart := ORD(Start);
+  RETURN CHR(IntOrdStart + N);
+END Caesar;
+
+(* Vigenere mod 95 encryption & decryption. *)
+PROCEDURE Vigenere(Msg: ARRAY OF CHAR; M: TMode; VAR OUT Destination: ARRAY OF CHAR);
+VAR
+  I: CARDINAL;
+BEGIN
+  Assign('', Destination);
+  FOR I := 0 TO Length(Msg) - 1 DO
+    Append(Caesar(M, Msg[I], GetRandomChar(), 95, ' '), Destination);
+  END;
+END Vigenere;
+
+BEGIN
+  (* (1) Seed ISAAC with the key *)
+  SeedIsaac(Key, TRUE);
+  (* (2) Encryption *)
+  Mode := iEncrypt;
+  (* (a) XOR (Vernam) *)
+  Vernam(Msg, XCTxt);
+  (* (b) MOD (Vigenere) *)
+  Vigenere(Msg, Mode, MCTxt);
+  (* (3) Decryption *)
+  Mode := iDecrypt;
+  SeedIsaac(Key, TRUE);
+  (* (a) XOR (Vernam) *)
+  Vernam(XCTxt, XPTxt);
+  (* (b) MOD (Vigenere) *)
+  Vigenere(MCTxt, Mode, MPTxt);
+  (* program output *)
+  WriteString('Message: '); WriteString(Msg); WriteLn;
+  WriteString('Key    : '); WriteString(Key); WriteLn;
+  ASCII2Hex(XCTxt, HexTxt);
+  WriteString('XOR    : '); WriteString(HexTxt); WriteLn;
+  ASCII2Hex(MCTxt, HexTxt);
+  WriteString('MOD    : '); WriteString(HexTxt); WriteLn;
+  WriteString('XOR dcr: '); WriteString(XPTxt); WriteLn;
+  WriteString('MOD dcr: '); WriteString(MPTxt); WriteLn;
+END RosettaIsaac.

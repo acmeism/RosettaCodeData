@@ -1,18 +1,12 @@
-import tables
+import HeapQueue
 
-var
-  pq = initTable[int, string]()
+var pq = newHeapQueue[(int, string)]()
 
-proc main() =
-  pq.add(3, "Clear drains")
-  pq.add(4, "Feed cat")
-  pq.add(5, "Make tea")
-  pq.add(1, "Solve RC tasks")
-  pq.add(2, "Tax return")
+pq.push((3, "Clear drains"))
+pq.push((4, "Feed cat"))
+pq.push((5, "Make tea"))
+pq.push((1, "Solve RC tasks"))
+pq.push((2, "Tax return"))
 
-  for i in countUp(1,5):
-    if pq.hasKey(i):
-      echo i, ": ", pq[i]
-      pq.del(i)
-
-main()
+while pq.len() > 0:
+    echo pq.pop()

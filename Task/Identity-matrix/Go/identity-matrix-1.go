@@ -3,11 +3,11 @@ package main
 import (
     "fmt"
 
-    "github.com/gonum/matrix/mat64"
+    "gonum.org/v1/gonum/mat"
 )
 
-func eye(n int) *mat64.Dense {
-    m := mat64.NewDense(n, n, nil)
+func eye(n int) *mat.Dense {
+    m := mat.NewDense(n, n, nil)
     for i := 0; i < n; i++ {
         m.Set(i, i, 1)
     }
@@ -15,5 +15,5 @@ func eye(n int) *mat64.Dense {
 }
 
 func main() {
-    fmt.Println(mat64.Formatted(eye(3)))
+    fmt.Println(mat.Formatted(eye(3)))
 }

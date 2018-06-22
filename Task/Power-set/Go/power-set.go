@@ -1,9 +1,9 @@
 package main
 
 import (
-    "bytes"
     "fmt"
     "strconv"
+    "strings"
 )
 
 // types needed to implement general purpose sets are element and set
@@ -85,7 +85,7 @@ func (s set) String() string {
     if len(s) == 0 {
         return "∅"
     }
-    var buf bytes.Buffer
+    var buf strings.Builder
     buf.WriteRune('{')
     for i, e := range s {
         if i > 0 {
@@ -104,7 +104,7 @@ func (s set) powerSet() set {
         var u set
         for _, er := range r {
             er := er.(set)
-           u = append(u, append(er[:len(er):len(er)], es))
+            u = append(u, append(er[:len(er):len(er)], es))
         }
         r = append(r, u...)
     }

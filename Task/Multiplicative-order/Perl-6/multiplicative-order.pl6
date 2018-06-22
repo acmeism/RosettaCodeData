@@ -1,4 +1,4 @@
-my @primes := 2, grep *.is-prime, (3,5,7...*);
+my @primes := 2, |grep *.is-prime, (3,5,7...*);
 
 sub factor($a is copy) {
     gather {
@@ -23,9 +23,8 @@ sub mo-prime($a, $p, $e) {
     for factor($t) -> $f {
         @qs = flat @qs.map(-> $q { (0..$f.value).map(-> $j { $q * $f.key ** $j }) });
     }
-    @qs.sort();
 
-    @qs.first(-> $q { expmod( $a, $q, $m ) == 1});
+    @qs.sort.first(-> $q { expmod( $a, $q, $m ) == 1});
 }
 
 sub mo($a, $m) {

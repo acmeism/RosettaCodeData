@@ -1,5 +1,5 @@
 def mean(nums)
-  nums.inject(0.0, :+) / nums.size
+  nums.sum(0.0) / nums.size
 end
 
 nums = [3, 1, 4, 1, 5, 9]

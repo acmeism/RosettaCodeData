@@ -1,5 +1,1 @@
-static union
-{
-  int i;
-  int j;
-};
+int& i = *(int*)0xA100;

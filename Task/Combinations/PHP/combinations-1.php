@@ -1,6 +1,5 @@
  <?php
-//Author: I. Gavryushin aka dcc0
-//set amount of elements as in $n var
+
 $a=array(1,2,3,4,5);
 $k=3;
 $n=5;

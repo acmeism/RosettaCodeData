@@ -1,0 +1,6 @@
+>> trim/head " remove leading white space "
+== "remove leading white space "
+>> trim/tail " remove trailing white space "
+== " remove trailing white space"
+>> trim " remove both white spaces "
+== "remove both white spaces"

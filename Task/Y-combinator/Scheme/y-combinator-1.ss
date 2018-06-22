@@ -4,6 +4,7 @@
      (lambda (g)
        (h (lambda args (apply (g g) args)))))))
 
+;; head-recursive factorial
 (define fac
   (Y
     (lambda (f)
@@ -11,6 +12,16 @@
         (if (< x 2)
             1
             (* x (f (- x 1))))))))
+
+;; tail-recursive factorial
+(define (fac2 n)
+  (letrec ((tail-fac
+             (Y (lambda (f)
+                  (lambda (n acc)
+                    (if (zero? n)
+                        acc
+                        (f (- n 1) (* n acc))))))))
+    (tail-fac n 1)))
 
 (define fib
   (Y

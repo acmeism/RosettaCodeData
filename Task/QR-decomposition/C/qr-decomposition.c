@@ -10,7 +10,7 @@ typedef struct {
 mat matrix_new(int m, int n)
 {
 	mat x = malloc(sizeof(mat_t));
-	x->v = malloc(sizeof(double) * m);
+	x->v = malloc(sizeof(double*) * m);
 	x->v[0] = calloc(sizeof(double), m * n);
 	for (int i = 0; i < m; i++)
 		x->v[i] = x->v[0] + n * i;

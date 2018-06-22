@@ -53,7 +53,7 @@ public class InteractFX extends Application {
         Button increment = new Button("Increment");
         increment.setOnAction(event-> inputValue.set(inputValue.get() + 1));
 
-        // incr-button is disabled when input is >= 0
+        // incr-button is disabled when input is >= 10
         increment.disableProperty().bind(inputValue.greaterThanOrEqualTo(10));
 
 

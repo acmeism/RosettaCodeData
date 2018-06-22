@@ -74,8 +74,10 @@ contains
     if (n < 1000) then
        if ((10 .le. tens) .and. (tens .lt. 20)) then
           ordinate = a // "'" // ateen(ones_index:ones_index+1)
+          !            ^^^^^^  remove these characters to remove the important '
        else
           ordinate = a // "'" // a09(ones_index:ones_index+1)
+          !            ^^^^^^  remove these characters to remove the important '
        end if
     else
        if ((10 .le. tens) .and. (tens .lt. 20)) then

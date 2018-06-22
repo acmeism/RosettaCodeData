@@ -1,8 +1,8 @@
 #include <stdio.h>
-#include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/time.h>
 
 void set_mode(int want_key)
 {

@@ -4,4 +4,4 @@
       (and (< 1 x)
            (odd? x)
            (not-any? (partial divides? x)
-                     (range 3 (math/sqrt x) 2)))))
+                     (range 3 (inc (Math/sqrt x)) 2)))))

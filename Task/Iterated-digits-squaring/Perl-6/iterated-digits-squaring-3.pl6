@@ -1,3 +1,4 @@
+use nqp;
 my $cache := nqp::list_i();
 nqp::bindpos_i($cache, 650, 0);
 nqp::bindpos_i($cache, 1, 1);

@@ -1,30 +1,25 @@
-| u0 u1 foo bar baz|
+Exception subclass: #U0.
+Exception subclass: #U1.
 
-u0 := Signal new.
-u1 := Signal new.
+Object subclass: Foo [
 
-foo := [
-         2 timesRepeat:[
-             [ bar value ]
-                 on: u0
-                 do:[ 'u0 cought' printCR ]
-         ]
-       ].
+    bazCount := 0.
 
-bar := [
-         baz value
-       ].
+    foo
+        [2 timesRepeat:
+            [ "==>" [self bar] "<=="
+                on: U0
+                do:
+                    [:sig |
+                    'Call to bar was aborted by exception U0' printNl.
+                    sig return]]]
 
-baz := [
-        |alreadyCalled|
+    bar
+        [self baz]
 
-        [
-            alreadyCalled isNil ifTrue:[
-                alreadyCalled := true. u0 raise
-            ] ifFalse:[
-                u1 raise
-            ]
-        ]
-       ] value.
-
-foo value
+    baz
+        [bazCount := bazCount + 1.
+        bazCount = 1 ifTrue: [U0 new signal].
+        bazCount = 2 ifTrue: [U1 new signal].
+        "Thirds time's a charm..."]
+]

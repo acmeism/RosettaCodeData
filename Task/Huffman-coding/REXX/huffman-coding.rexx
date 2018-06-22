@@ -1,6 +1,7 @@
 /* REXX ---------------------------------------------------------------
 * 27.12.2013 Walter Pachl
 * 29.12.2013 -"- changed for test of s=xrange('00'x,'ff'x)
+* 14.03.2018 -"- use format instead of right to diagnose size poblems
 * Stem m contains eventually the following node data
 * m.i.0id Node id
 * m.i.0c  character
@@ -130,8 +131,8 @@ Do si=1 To 999 While sc<>''
       End
     End
   End
-Say 'Input ' s
-Say 'result' sr
+Say 'Input ="'s'"'
+Say 'result="'sr'"'
 
 Exit
 
@@ -139,10 +140,10 @@ show:
 /*---------------------------------------------------------------------
 * show all lines representing node data
 *--------------------------------------------------------------------*/
-Say ' i  pp id  c  f  l r d'
+Say '  i   pp  id   c   f   l r d'
 Do i=1 To m.0
-  Say right(i,2) right(m.i.0o,3) right(m.i.0id,2),
-          right(m.i.0f,2) right(m.i.0l,2) right(m.i.0r,2) m.i.0d m.i.0t
+  Say format(i,3) format(m.i.0o,4) format(m.i.0id,3),
+          format(m.i.0f,3) format(m.i.0l,3) format(m.i.0r,3) m.i.0d m.i.0t
   End
 Call dbg copies('-',21)
 Return

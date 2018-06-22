@@ -14,5 +14,5 @@
                 (t
                  (setf (first comb-tail) curr)
                  (mc (1+ curr) (1- left) (1- needed) (rest comb-tail))
-                 (mc (1+ curr) (1- left) needed comb)))))
+                 (mc (1+ curr) (1- left) needed comb-tail)))))
       (mc 0 n m combination))))

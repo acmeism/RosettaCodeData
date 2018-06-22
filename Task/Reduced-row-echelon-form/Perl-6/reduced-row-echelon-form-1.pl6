@@ -1,25 +1,21 @@
 sub rref (@m) {
-    @m or return;
+    return unless @m;
     my ($lead, $rows, $cols) = 0, +@m, +@m[0];
 
     for ^$rows -> $r {
-        return @m if $lead >= $cols;
+        $lead < $cols or return @m;
         my $i = $r;
-
-        until @m[$i][$lead] {
+        until @m[$i;$lead] {
             ++$i == $rows or next;
             $i = $r;
             ++$lead == $cols and return @m;
         }
-
-        @m[$i, $r] = @m[$r, $i];
-
-        my $lv = @m[$r][$lead];
+        @m[$i, $r] = @m[$r, $i] if $r != $i;
+        my $lv = @m[$r;$lead];
         @m[$r] »/=» $lv;
-
         for ^$rows -> $n {
             next if $n == $r;
-            @m[$n] »-=» @m[$r] »*» @m[$n][$lead];
+            @m[$n] »-=» @m[$r] »*» (@m[$n;$lead] // 0);
         }
         ++$lead;
     }

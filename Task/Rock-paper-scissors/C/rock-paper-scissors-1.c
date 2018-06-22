@@ -1,22 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
+#define LEN 3
 
-int rand_i(int n)
+/* pick a random index from 0 to n-1, according to probablities listed
+   in p[] which is assumed to have a sum of 1. The values in the probablity
+   list matters up to the point where the sum goes over 1 */
+int rand_idx(double *p, int n)
 {
-	int rand_max = RAND_MAX - (RAND_MAX % n);
-	int ret;
-	while ((ret = rand()) >= rand_max);
-	return ret/(rand_max / n);
-}
-
-int weighed_rand(int *tbl, int len)
-{
-	int i, sum, r;
-	for (i = 0, sum = 0; i < len; sum += tbl[i++]);
-	if (!sum) return rand_i(len);
-
-	r = rand_i(sum) + 1;
-	for (i = 0; i < len && (r -= tbl[i]) > 0; i++);
+	double s = rand() / (RAND_MAX + 1.0);
+	int i;
+	for (i = 0; i < n - 1 && (s -= p[i]) >= 0; i++);
 	return i;
 }
 
@@ -27,9 +20,10 @@ int main()
 	const char *names[] = { "Rock", "Paper", "Scissors" };
 	char str[2];
 	const char *winner[] = { "We tied.", "Meself winned.", "You win." };
+	double  p[LEN] = { 1./3, 1./3, 1./3 };
 
 	while (1) {
-		my_action = (weighed_rand(user_rec, 3) + 1) % 3;
+		my_action = rand_idx(p,LEN);
 
 		printf("\nYour choice [1-3]:\n"
 			"  1. Rock\n  2. Paper\n  3. Scissors\n> ");
@@ -37,7 +31,10 @@ int main()
 		/* scanf is a terrible way to do input.  should use stty and keystrokes */
 		if (!scanf("%d", &user_action)) {
 			scanf("%1s", str);
-			if (*str == 'q') return 0;
+			if (*str == 'q') {
+				printf("Your choices [rock : %d , paper :  %d , scissors %d] ",user_rec[0],user_rec[1], user_rec[2]);
+				return 0;
+			}
 			continue;
 		}
 		user_action --;

@@ -1,6 +1,14 @@
-package Set {
-    sub new       { bless { map {$_ => undef} @_[1..$#_] }, shift; }
-    sub elements  { sort keys %{shift()} }
-    sub as_string { 'Set(' . join(' ', sort keys %{shift()}) . ')' }
-    # ...more set methods could be defined here...
+use Set::Object qw(set);
+
+sub powerset {
+    my $p = Set::Object->new( set() );
+    foreach my $i (shift->elements) {
+        $p->insert( map { set($_->elements, $i) } $p->elements );
+    }
+    return $p;
 }
+
+my $set = set(1, 2, 3);
+my $powerset = powerset($set);
+
+print $powerset->as_string, "\n";

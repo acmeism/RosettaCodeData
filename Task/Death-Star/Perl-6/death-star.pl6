@@ -30,7 +30,7 @@ my $neg = sphere.new(
 );
 
 sub MAIN ($outfile = 'deathstar-perl6.pgm') {
-    spurt $outfile, ("P5\n$x $y\n$depth"); # .pgm header
+    spurt $outfile, ("P5\n$x $y\n$depth\n"); # .pgm header
     my $out = open( $outfile, :a, :bin ) or die "$!\n";
     say 'Calculating row:';
     $out.write( Blob.new( draw_ds(3, .15) ) );

@@ -7,12 +7,12 @@ class HistoryVar {
     }
 }
 
-my $foo := HistoryVar.new;
+my \foo = HistoryVar.new;
 
-$foo = 1;
-$foo = 2;
-$foo += 3;
-$foo = 42;
+foo = 1;
+foo = 2;
+foo += 3;
+foo = 42;
 
-.say for $foo.history;
-say "Current value: $foo";
+.say for foo.history;
+say "Current value: {foo}";

@@ -1,3 +1,4 @@
+import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -9,7 +10,7 @@ public class BitcoinAddressValidator {
     public static boolean validateBitcoinAddress(String addr) {
         if (addr.length() < 26 || addr.length() > 35)
             return false;
-        byte[] decoded = decodeBase58(addr, 25);
+        byte[] decoded = decodeBase58To25Bytes(addr);
         if (decoded == null)
             return false;
 
@@ -19,22 +20,19 @@ public class BitcoinAddressValidator {
         return Arrays.equals(Arrays.copyOfRange(hash2, 0, 4), Arrays.copyOfRange(decoded, 21, 25));
     }
 
-    private static byte[] decodeBase58(String input, int len) {
-        byte[] output = new byte[len];
+    private static byte[] decodeBase58To25Bytes(String input) {
+        BigInteger num = BigInteger.ZERO;
         for (char t : input.toCharArray()) {
             int p = ALPHABET.indexOf(t);
             if (p == -1)
                 return null;
-            for (int j = len - 1; j >= 0; j--) {
-                p += 58 * (output[j] & 0xFF);
-                output[j] = (byte) (p % 256);
-                p /= 256;
-            }
-            if (p != 0)
-                return null;
+            num = num.multiply(BigInteger.valueOf(58)).add(BigInteger.valueOf(p));
         }
 
-        return output;
+        byte[] result = new byte[25];
+        byte[] numBytes = num.toByteArray();
+        System.arraycopy(numBytes, 0, result, result.length - numBytes.length, numBytes.length);
+        return result;
     }
 
     private static byte[] sha256(byte[] data) {

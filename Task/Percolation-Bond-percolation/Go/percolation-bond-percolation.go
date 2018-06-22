@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -67,7 +67,7 @@ var (
 )
 
 func (g *grid) String() string {
-	var buf bytes.Buffer
+	var buf strings.Builder
 	// Don't really need to call Grow but it helps avoid multiple
 	// reallocations if the size is large.
 	buf.Grow((len(g.cell) + 1) * len(g.cell[0]) * 7)

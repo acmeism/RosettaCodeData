@@ -1,3 +1,1 @@
-message :: String
-message = "Hello world!"
-main = putStrLn message
+main = putStrLn "Hello world!"

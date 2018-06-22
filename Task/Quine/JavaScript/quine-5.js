@@ -1,5 +1,1 @@
-(function f() {
-
-    return '(' + f.toString() + ')();';
-
-})();
+var a=function () {var b="var a="+a.toString()+"\;a()";alert(b)};a()

@@ -1,3 +1,3 @@
 function n = catalanNumbers(n)
-    n = arrayfun(@(n)prod(n+1:2*n)/prod(1:n+1), n);
+    n = [1 cumprod((2:4:4*n-6) ./ (2:n))];
 end

@@ -1,44 +1,81 @@
 class Wireworld {
     has @.line;
+    method height () { @!line.elems }
+    has int $.width;
 
-    multi method new(@line) { self.new: :@line }
-    multi method new($str ) { self.new: $str.lines }
+    multi method new(@line) { samewith :@line, :width(max @line».chars) }
+    multi method new($str ) { samewith $str.lines }
 
     method gist { join "\n", @.line }
-    method postcircumfix:<[ ]>($i) { @.line[$i].comb }
 
-    method neighbors($i where ^@.line, $j where ^$.line.pick.chars)
+    method !neighbors($i where ^$.height, $j where ^$.width)
     {
-        my @i = grep any(^@.line), $i «+« (-1, 0, 1);
-        my @j = grep any(^@.line.pick.chars), $j «+« (-1, 0, 1);
-        gather for @i X @j -> \i, \j {
+        my @i = grep ^$.height, $i «+« (-1, 0, 1);
+        my @j = grep ^$.width,  $j «+« (-1, 0, 1);
+        gather for @i X @j -> (\i, \j) {
             next if [ i, j ] ~~ [ $i, $j ];
-            take self[i][j];
+            take @!line[i].comb[j];
         }
     }
     method succ {
-        my $succ = self.new: '' xx @.line;
-        for ^@.line X ^@.line.pick.chars -> $i, $j {
-            $succ.line[$i] ~=
-            do given self[$i][$j] {
+        my @succ;
+        for ^$.height X ^$.width -> ($i, $j) {
+            @succ[$i] ~=
+            do given @!line[$i].comb[$j] {
                 when 'H' { 't' }
                 when 't' { '.' }
                 when '.' {
-                    grep('H', self.neighbors($i, $j)) == 1|2 ?? 'H' !! '.'
+                    grep('H', self!neighbors($i, $j)) == 1|2 ?? 'H' !! '.'
                 }
                 default { ' ' }
             }
         }
-        return $succ;
+        return self.new: @succ;
     }
 }
 
-my $str =
-"tH.........
-.   .
-   ...
-.   .
-Ht.. ......";
+my %*SUB-MAIN-OPTS;
+%*SUB-MAIN-OPTS<named-anywhere> = True;
 
-my Wireworld $world .= new: $str;
-say $world++ for ^3;
+multi sub MAIN (
+    IO()      $filename,
+    Numeric:D :$interval = 1/4,
+    Bool      :$stop-on-repeat,
+) {
+    run-loop :$interval, :$stop-on-repeat, Wireworld.new: $filename.slurp;
+}
+
+#| run a built-in example
+multi sub MAIN (
+    Numeric:D :$interval = 1/4,
+    Bool      :$stop-on-repeat,
+) {
+    run-loop :$interval, :$stop-on-repeat, Wireworld.new: Q:to/END/
+    tH.........
+    .   .
+       ...
+    .   .
+    Ht.. ......
+    END
+}
+
+sub run-loop (
+    Wireworld:D     $initial,
+    Real:D(Numeric) :$interval = 1/4,
+    Bool            :$stop-on-repeat
+){
+    my %seen is SetHash;
+
+    for $initial ...^ * eqv * { # generate a sequence (uses .succ)
+        print "\e[2J";
+        say '#' x $initial.width;
+        .say;
+        say '#' x $initial.width;
+
+        if $stop-on-repeat {
+            last if %seen{ .gist }++;
+        }
+
+        sleep $interval;
+    }
+}

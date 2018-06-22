@@ -1,42 +1,38 @@
 import scala.annotation.tailrec
 
-case class Item(name: String, value: Int, weight: Double, volume: Double)
+object UnboundedKnapsack extends App {
+  private val (maxWeight, maxVolume) = (BigDecimal(25.0), BigDecimal(0.25))
+  private val items = Seq(Item("panacea", 3000, 0.3, 0.025), Item("ichor", 1800, 0.2, 0.015), Item("gold", 2500, 2.0, 0.002))
 
-val items = List(
-  Item("panacea", 3000, 0.3, 0.025),
-  Item("ichor", 1800, 0.2, 0.015),
-  Item("gold", 2500, 2.0, 0.002))
+  @tailrec
+  private def packer(notPacked: Seq[Knapsack], packed: Seq[Knapsack]): Seq[Knapsack] = {
+    def fill(knapsack: Knapsack): Seq[Knapsack] = items.map(i => Knapsack(i +: knapsack.bagged))
 
-val (maxWeight, maxVolume) = (25, 0.25)
+    def stuffer(Seq: Seq[Knapsack]): Seq[Knapsack] = // Cause brute force
+      Seq.map(k => Knapsack(k.bagged.sortBy(_.name))).distinct
 
-def show(is: List[Item]) =
-  (items.map(_.name) zip items.map(i => is.count(_ == i))).map {
-    case (i, c) => s"$i: $c"
-  }.mkString(", ")
-
-case class Knapsack(items: List[Item]) {
-  def value = items.foldLeft(0)(_ + _.value)
-  def weight = items.foldLeft(0.0)(_ + _.weight)
-  def volume = items.foldLeft(0.0)(_ + _.volume)
-  def isFull = !((weight <= maxWeight) && (volume <= maxVolume))
-  override def toString =
-    s"[${show(items)} | value: $value, weight: $weight, volume: $volume]"
-}
-
-def fill(knapsack: Knapsack): List[Knapsack] =
-  items.map(i => Knapsack(i :: knapsack.items))
-
-//cause brute force
-def distinct(list: List[Knapsack]) =
-  list.map(k => Knapsack(k.items.sortBy(_.name))).distinct
-
-@tailrec
-def f(notPacked: List[Knapsack], packed: List[Knapsack]): List[Knapsack] =
-  notPacked match {
-    case Nil => packed.sortBy(_.value).takeRight(4)
-    case _ =>
-      val notFull = distinct(notPacked.flatMap(fill)).filterNot(_.isFull)
-      f(notFull, notPacked ::: packed)
+    if (notPacked.isEmpty) packed.sortBy(-_.totValue).take(4)
+    else packer(stuffer(notPacked.flatMap(fill)).filter(_.isNotFull), notPacked ++ packed)
   }
 
-f(items.map(i => Knapsack(List(i))), Nil).foreach(println)
+  private case class Item(name: String, value: Int, weight: BigDecimal, volume: BigDecimal)
+
+  private case class Knapsack(bagged: Seq[Item]) {
+    def isNotFull: Boolean = totWeight <= maxWeight && totVolume <= maxVolume
+
+    override def toString = s"[${show(bagged)} | value: $totValue, weight: $totWeight, volume: $totVolume]"
+
+    def totValue: Int = bagged.map(_.value).sum
+
+    private def totVolume = bagged.map(_.volume).sum
+
+    private def totWeight = bagged.map(_.weight).sum
+
+    private def show(is: Seq[Item]) =
+      (items.map(_.name) zip items.map(i => is.count(_ == i)))
+        .map { case (i, c) => f"$i:$c%3d" }
+        .mkString(", ")
+  }
+
+  packer(items.map(i => Knapsack(Seq(i))), Nil).foreach(println)
+}

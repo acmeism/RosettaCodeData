@@ -25,6 +25,12 @@ react {
             LAST {
                 broadcast "--- %s left ---", $name;
                 %connections{$name}:delete;
+                $conn.close ;
+            }
+            QUIT {
+                 default {
+                     say "oh no, $_";
+                }
             }
         }
     }

@@ -6,6 +6,7 @@
 
 : (let F (tmp "foo")
    (ctl F                                 # Get exclusive lock
-      (let N (in F (read))                # Atomic increment
-         (out F (println (inc N))) ) ) )
+      (in F
+         (let N (read)                    # Atomic increment
+            (out F (println (inc N))) ) ) ) )
 -> 124

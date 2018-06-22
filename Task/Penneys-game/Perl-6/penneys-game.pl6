@@ -32,7 +32,7 @@ repeat until prompt("Wanna play again? ").lc ~~ /^n/ {
     my @mine;
 
     if $flip == $mefirst {
-        print "{Yay.pick}! I get to choose first, and I choose: "; sleep 2; say @mine = Coin.roll(3);
+        print "{Yay.pick}! I get to choose first, and I choose: "; sleep 2; say @mine = |Coin.roll(3);
         @yours = your-choice("Now you gotta choose: ");
         while @yours eqv @mine {
             say "{Bozo.pick}! We'd both win at the same time if you pick that!";
@@ -43,7 +43,7 @@ repeat until prompt("Wanna play again? ").lc ~~ /^n/ {
     else {
         @yours = your-choice("{Boo.pick}! First you choose: ");
         say "OK, you'll win if we see: ", @yours;
-        print "In that case, I'll just randomly choose: "; sleep 2; say @mine = Coin(+!@yours[1]), @yours[0,1];
+        print "In that case, I'll just randomly choose: "; sleep 2; say @mine = Coin(+!@yours[1]), |@yours[0,1];
     }
 
     sub check($a,$b,$c) {
@@ -65,7 +65,7 @@ repeat until prompt("Wanna play again? ").lc ~~ /^n/ {
         "Can I borrow that coin again?").pick;
     sleep 1;
     print "Here we go!\n\t";
-    for Coin.roll(3), &check ...^ :!defined {
+    for |Coin.roll(3), &check ...^ :!defined {
         flipping;
         print "$_ ";
     }

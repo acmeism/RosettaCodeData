@@ -1,17 +1,17 @@
+-- MULTIPLE DISTINCT OBJECTS -------------------------------------------------
+
 -- nObjects Constructor -> Int -> [Object]
 on nObjects(f, n)
-    map(f, range(1, n))
+    map(f, enumFromTo(1, n))
 end nObjects
 
-
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
-
     -- someConstructor :: a -> Int -> b
     script someConstructor
-        on lambda(_, i)
+        on |λ|(_, i)
             {index:i}
-        end lambda
+        end |λ|
     end script
 
     nObjects(someConstructor, 6)
@@ -19,9 +19,21 @@ on run
     --> {{index:1}, {index:2}, {index:3}, {index:4}, {index:5}, {index:6}}
 end run
 
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
-
--- GENERIC FUNCTIONS -----------------------------------------------------------
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
@@ -29,7 +41,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -42,21 +54,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
-        set d to -1
-    else
-        set d to 1
-    end if
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range

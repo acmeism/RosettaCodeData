@@ -1,0 +1,20 @@
+U8 n, *g;
+U8 min = 1, max = 100;
+
+n = min + RandU16 % max;
+
+Print("Guess the number between %d and %d: ", min, max);
+
+while(1) {
+  g = GetStr;
+
+  if (Str2I64(g) == n) {
+    Print("You guessed correctly!\n");
+    break;
+  }
+
+  if (Str2I64(g) < n)
+    Print("Your guess was too low.\nTry again: ");
+  if (Str2I64(g) > n)
+    Print("Your guess was too high.\nTry again: ");
+}

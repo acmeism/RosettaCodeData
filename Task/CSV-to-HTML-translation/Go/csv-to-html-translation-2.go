@@ -6,6 +6,7 @@ import (
     "flag"
     "fmt"
     "html/template"
+    "strings"
 )
 
 var csvStr = `Character,Speech
@@ -34,7 +35,7 @@ func csvToHtml(csvStr string, headings bool) (string, error) {
     if headings {
         tStr = tHeadings
     }
-    var b bytes.Buffer
+    var b strings.Builder
     err = template.Must(template.New("").Parse(tStr)).Execute(&b, data)
     return b.String(), err
 }

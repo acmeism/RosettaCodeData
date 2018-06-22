@@ -4,6 +4,11 @@ for %pairs.kv -> $k, $v {
     say "(k,v) = ($k, $v)";
 }
 
+# Stable order
+for %pairs.sort(*.value)>>.kv -> ($k, $v) {
+    say "(k,v) = ($k, $v)";
+}
+
 { say "$^a => $^b" } for %pairs.kv;
 
 say "key = $_" for %pairs.keys;

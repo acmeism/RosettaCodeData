@@ -7,14 +7,12 @@ sub kigits($n) {
     }
 }
 
-constant narcissistic = 0, (1..*).map: -> $d {
+for (1..*) -> $d {
     my @t = 0..9 X** $d;
     my @table = @t X+ @t X+ @t;
-    sub is-narcissistic(\n) { n == [+] @table[kigits(n)] }
-    gather take $_ if is-narcissistic($_) for 10**($d-1) ..^ 10**$d;
-}
-
-for narcissistic {
-    say ++state $n, "\t", $_;
-    last if $n == 25;
-}
+    sub is-narcissistic(\n) { n == [+] @table[kigits(n)] };
+    state $l = 2;
+    FIRST say "1\t0";
+    say $l++, "\t", $_ if .&is-narcissistic for 10**($d-1) ..^ 10**$d;
+    last if $l > 25
+};

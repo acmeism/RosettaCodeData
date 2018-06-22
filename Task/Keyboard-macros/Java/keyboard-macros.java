@@ -13,6 +13,7 @@ class KeyboardMacroDemo {
                                  +"<b>Ctrl-H</b> to hide it</html>";
 
         frame.add( new JLabel(directions));
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         frame.addKeyListener( new KeyAdapter(){
             public void keyReleased( KeyEvent e ) {

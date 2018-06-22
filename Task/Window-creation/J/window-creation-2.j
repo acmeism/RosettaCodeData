@@ -1,7 +1,6 @@
 MINWDW=: noun define
 pc minwdw;
 pas 162 85;pcenter;
-rem form end;
 )
 
 minwdw_run=: monad define

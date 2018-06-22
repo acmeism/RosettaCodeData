@@ -11,7 +11,7 @@
                                              boolean?)]))
 
   (struct point (x y) #:transparent)
-  (struct seg (Ax Ay Bx By))
+  (struct seg (Ax Ay Bx By) #:transparent)
   (define ε 0.000001)
   (define (neq? x y) (not (eq? x y)))
 
@@ -23,17 +23,23 @@
                               (eq? Pyo By))
                           ε 0))])
 
-      (cond [(or (< Py Ay) (> Py By)) #f]
+      (define Ax2 (if (< Ay By) Ax Bx))
+      (define Ay2 (if (< Ay By) Ay By))
+      (define Bx2 (if (< Ay By) Bx Ax))
+      (define By2 (if (< Ay By) By Ay))
+
+      (cond [(or (> Py (max Ay By)) (< Py (min Ay By))) #f]
             [(> Px (max Ax Bx)) #f]
-            [(< Px (min Ax Bx)) #t]
-            [else
-             (let ([red (if (neq? Ax Px)
-                            (/ (- By Ay) (- Bx Ax))
-                            +inf.0)]
-                   [blue (if (neq? Ax Px)
-                             (/ (- Py Ax) (- Px Ax))
-                             +inf.0)])
-               (if (>= blue red) #t #f))])))
+            [else (cond
+                [(< Px (min Ax Bx)) #t]
+                [else
+                 (let ([red (if (neq? Ax2 Bx2)
+                               (/ (- By2 Ay2) (- Bx2 Ax2))
+                               +inf.0)]
+                      [blue (if (neq? Ax2 Px)
+                                (/ (- Py Ay2) (- Px Ax2))
+                                 +inf.0)])
+                   (if (>= blue red) #t #f))])])))
 
   (define (point-in-polygon? point polygon)
     (odd?

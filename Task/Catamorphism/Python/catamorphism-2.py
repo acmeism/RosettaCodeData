@@ -1,3 +1,5 @@
+# Python 3.X
+
 from functools import reduce
 from operator import add, mul
 

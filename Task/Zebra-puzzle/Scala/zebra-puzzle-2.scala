@@ -78,8 +78,7 @@ object Einstein extends App {
     // print each row including a column header
     ((1 to 5).map(n => s"House $n") +: solution).map(_.map(pretty)).map(x => (pretty(labels.next) +: x).mkString(" ")).foreach(println)
 
-    println()
-    println(s"The ${solution(1)(solution(3).indexOf("Fish"))} owns the Fish")
+    println(s"\nThe ${solution(1)(solution(3).indexOf("Fish"))} owns the Fish")
   }
 
-}
+}// loc 38

@@ -25,7 +25,7 @@ exit                                             /*stick a fork in it,  we're al
 s:    if arg(1)==1  then return arg(3);    return word( arg(2) 's', 1)   /*a pluralizer.*/
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 scan: procedure expose @. MP # MPL $$$;   parse arg $$$,!;                      p=! - 1
-      parse var  @.p  ''  -1  LC                 /*obtain the last character of prev. @ */
+      parse var  @.p  ''  -1  LC                 /*obtain last character of previous @. */
                                                  /* [↓]  PARSE obtains first char of @.i*/
         do i=!  to #;  parse var  @.i  p  2      /* [↓]  scan for the longest word path.*/
         if p==LC  then do                        /*is the  first─char  ≡  last─char ?   */

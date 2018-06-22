@@ -1,0 +1,8 @@
+>>foreach item data [append item/6 "^/" repeat c 5 [append item/:c ","]]
+>> print data
+C1, C2, C3, C4, C5, SUM
+1, 5, 9, 13, 17, 45
+2, 6, 10, 14, 18, 50
+3, 7, 11, 15, 19, 55
+4, 8, 12, 16, 20, 60
+>>write fileout.csv form data

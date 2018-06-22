@@ -1,6 +1,6 @@
 sub balanced($s) {
     .none < 0 and .[*-1] == 0
-        given [\+] '\\' «leg« $s.comb;
+        given ([\+] '\\' «leg« $s.comb).cache;
 }
 
 my $n = prompt "Number of bracket pairs: ";

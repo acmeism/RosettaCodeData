@@ -59,14 +59,9 @@ for ^particlenum -> $progress {
         }
     }
     set($x,$y);
-    display if $progress %% 50;
     if $spawnradius < mid && abs(($x|$y) - mid) > $spawnradius - 5 {
         $spawnradius = $spawnradius + 1;
     }
 }
 
-say "";
 display;
-say "";
-say "time elapsed: ", (now - BEGIN { now }).Num.fmt("%.2f"), " seconds";
-say "";

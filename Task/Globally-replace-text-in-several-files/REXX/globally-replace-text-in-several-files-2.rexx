@@ -1,7 +1,7 @@
 /* REXX ***************************************************************
 * Copy all files *.txt to *.rpl
 * replacing all occurrences of old by new
-* Execute in the directory containing the files to ne processed
+* Execute in the directory containing the files to be processed
 * 16.01.2013 Walter Pachl
 *                         ...if file names contain blanks
 **********************************************************************/

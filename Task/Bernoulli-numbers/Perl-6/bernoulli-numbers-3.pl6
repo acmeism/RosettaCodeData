@@ -14,3 +14,10 @@ constant bernoulli =
     map { .key => .value[*-1] },
     (0 => [FatRat.new(1,1)], &next-bernoulli ... *)
 ;
+
+constant @bpairs = bernoulli[^52];
+
+my $width = [max] @bpairs.map: *.value.numerator.chars;
+my $form = "B(%d)\t= \%{$width}d/%d\n";
+
+printf $form, .key, .value.nude for @bpairs;

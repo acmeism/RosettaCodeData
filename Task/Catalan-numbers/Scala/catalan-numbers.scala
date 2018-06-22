@@ -3,7 +3,7 @@ object Catalan {
   def catalan(n: BigInt) = factorial(2 * n) / (factorial(n + 1) * factorial(n))
 
   def main(args: Array[String]) {
-    for (n <- 1 to 15) {
+    for (n <- 0 to 15) {
       println("catalan(" + n + ") = " + catalan(n))
     }
   }

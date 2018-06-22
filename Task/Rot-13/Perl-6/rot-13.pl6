@@ -1,1 +1,1 @@
-.=trans: 'a..mn..z' => 'n..za..m', :ii
+print slurp.trans: ['A'..'Z','a'..'z'] => ['N'..'Z','A'..'M','n'..'z','a'..'m']

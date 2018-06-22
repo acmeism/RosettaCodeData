@@ -8,3 +8,8 @@ num findGreatestElement(List<num> list){
   }
   return greatestElement;
 }
+/* and this is a shorter version */
+import 'dart:math';
+num findGreatestElement(List<num> list){
+  return list.reduce(max);
+}

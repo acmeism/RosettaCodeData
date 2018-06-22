@@ -1,14 +1,12 @@
-import std.stdio, std.algorithm, std.math, std.random, std.typecons;
+import std.stdio, std.algorithm, std.math, std.random;
 
-enum maxDim = 3;
-
-struct KdNode {
-    double[maxDim] x;
+struct KdNode(size_t dim) {
+    double[dim] x;
     KdNode* left, right;
 }
 
 // See QuickSelect method.
-KdNode* findMedian(size_t idx)(KdNode[] nodes) pure nothrow @nogc {
+KdNode!dim* findMedian(size_t idx, size_t dim)(KdNode!dim[] nodes) pure nothrow @nogc {
     auto start = nodes.ptr;
     auto end = &nodes[$ - 1] + 1;
 
@@ -17,7 +15,7 @@ KdNode* findMedian(size_t idx)(KdNode[] nodes) pure nothrow @nogc {
     if (end == start + 1)
         return start;
 
-    KdNode* md = start + (end - start) / 2;
+    auto md = start + (end - start) / 2;
 
     while (true) {
         immutable double pivot = md.x[idx];
@@ -44,32 +42,32 @@ KdNode* findMedian(size_t idx)(KdNode[] nodes) pure nothrow @nogc {
     }
 }
 
-KdNode* makeTree(size_t dim, size_t i)(KdNode[] nodes)
+KdNode!dim* makeTree(size_t dim, size_t i = 0)(KdNode!dim[] nodes)
 pure nothrow @nogc {
     if (!nodes.length)
         return null;
 
-    auto n = findMedian!i(nodes);
+    auto n = nodes.findMedian!i;
     if (n != null) {
         enum i2 = (i + 1) % dim;
         immutable size_t nPos = n - nodes.ptr;
-        n.left  = makeTree!(dim, i2)(nodes[0 .. nPos]);
+        n.left = makeTree!(dim, i2)(nodes[0 .. nPos]);
         n.right = makeTree!(dim, i2)(nodes[nPos + 1 .. $]);
     }
 
     return n;
 }
 
-void nearest(size_t dim)(in KdNode* root,
-                         in ref KdNode nd,
+void nearest(size_t dim)(in KdNode!dim* root,
+                         in ref KdNode!dim nd,
                          in size_t i,
-                         ref const(KdNode)* best,
+                         ref const(KdNode!dim)* best,
                          ref double bestDist,
                          ref size_t nVisited) pure nothrow @safe @nogc {
-    static double dist(in ref KdNode a, in ref KdNode b)
+    static double dist(in ref KdNode!dim a, in ref KdNode!dim b)
     pure nothrow @nogc {
-        typeof(KdNode.x[0]) result = 0;
-        foreach (immutable i; staticIota!(0, dim))
+        double result = 0;
+        static foreach (i; 0 .. dim)
             result += (a.x[i] - b.x[i]) ^^ 2;
         return result;
     }
@@ -101,50 +99,50 @@ void nearest(size_t dim)(in KdNode* root,
                 nd, i2, best, bestDist, nVisited);
 }
 
-void randPt(size_t dim=3)(ref KdNode v, ref Xorshift rng)
+void randPt(size_t dim)(ref KdNode!dim v, ref Xorshift rng)
 pure nothrow @safe @nogc {
-    foreach (immutable i; staticIota!(0, dim))
+    static foreach (i; 0 .. dim)
         v.x[i] = rng.uniform01;
 }
 
-void smallTest() {
-    KdNode[] wp = [{[2, 3]}, {[5, 4]}, {[9, 6]},
+/// smallTest
+unittest {
+    KdNode!2[] wp = [{[2, 3]}, {[5, 4]}, {[9, 6]},
                    {[4, 7]}, {[8, 1]}, {[7, 2]}];
-    KdNode thisPt = {[9, 2]};
+    KdNode!2 thisPt = {[9, 2]};
 
-    KdNode* root = makeTree!(2, 0)(wp);
+    auto root = makeTree(wp);
 
-    const(KdNode)* found = null;
+    const(KdNode!2)* found = null;
     double bestDist = 0;
     size_t nVisited = 0;
-    nearest!2(root, thisPt, 0, found, bestDist, nVisited);
+    root.nearest(thisPt, 0, found, bestDist, nVisited);
 
     writefln("WP tree:\n  Searching for %s\n" ~
              "  Found %s, dist = %g\n  Seen %d nodes.\n",
-             thisPt.x[0..2], found.x[0..2], sqrt(bestDist), nVisited);
+             thisPt.x, found.x, sqrt(bestDist), nVisited);
 }
 
-void bigTest() {
+/// bigTest
+unittest {
     enum N = 1_000_000;
     enum testRuns = 100_000;
 
-    auto bigTree = new KdNode[N];
+    auto bigTree = new KdNode!3[N];
     auto rng = 1.Xorshift;
     foreach (ref node; bigTree)
         randPt(node, rng);
 
-    KdNode* root = makeTree!(3, 0)(bigTree);
-    KdNode thisPt;
+    auto root = makeTree(bigTree);
+    KdNode!3 thisPt;
     randPt(thisPt, rng);
 
-    const(KdNode)* found = null;
+    const(KdNode!3)* found = null;
     double bestDist = 0;
     size_t nVisited = 0;
-    nearest!3(root, thisPt, 0, found, bestDist, nVisited);
+    root.nearest(thisPt, 0, found, bestDist, nVisited);
 
-    writefln("Big tree (%d nodes):\n  Searching for %s\n"~
-             "  Found %s, dist = %g\n  Seen %d nodes.",
-             N, thisPt.x, found.x, sqrt(bestDist), nVisited);
+    writefln("Big tree (%d nodes):\n  Searching for %s\n" ~ "  Found %s, dist = %g\n  Seen %d nodes.", N, thisPt.x, found.x, sqrt(bestDist), nVisited);
 
     size_t sum = 0;
     foreach (immutable _; 0 .. testRuns) {
@@ -154,12 +152,7 @@ void bigTest() {
         nearest!3(root, thisPt, 0, found, bestDist, nVisited);
         sum += nVisited;
     }
-    writefln("\nBig tree:\n  Visited %d nodes for %d random "~
+    writefln("\nBig tree:\n  Visited %d nodes for %d random " ~
              "searches (%.2f per lookup).",
              sum, testRuns, sum / double(testRuns));
-}
-
-void main() {
-    smallTest;
-    bigTest;
 }

@@ -12,8 +12,7 @@ int main(int argc, char *argv[])
 
         for(m = 0; m < 12; m++) {
                 w = (w + days[m]) % 7;
-                printf("%d-%02d-%d\n", y, m + 1,
-                        days[m] + (w < 5 ? -2 : 5) - w);
+                printf("%d-%02d-%d\n", y, m + 1,days[m] - w);
         }
 
         return 0;

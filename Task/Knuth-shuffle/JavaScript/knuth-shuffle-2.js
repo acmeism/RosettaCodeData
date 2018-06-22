@@ -1,38 +1,46 @@
-(lst => {
+(() => {
 
     // knuthShuffle :: [a] -> [a]
-    let knuthShuffle = lst =>
-        range(0, lst.length - 1)
+    const knuthShuffle = xs =>
+        enumFromTo(0, xs.length - 1)
         .reduceRight((a, i) => {
-            let iRand = i ? randomInteger(0, i) : 0,
+            const
+                iRand =  randomRInt(0, i),
                 tmp = a[iRand];
-
-            return iRand !== i ?  (
+            return iRand !== i ? (
                 a[iRand] = a[i],
                 a[i] = tmp,
                 a
             ) : a;
-        }, lst),
+        }, xs);
 
-        // randomInteger :: Int -> Int -> Int
-        randomInteger = (low, high) =>
+    const test = () => knuthShuffle(
+        (`alpha beta gamma delta epsilon zeta
+              eta theta iota kappa lambda mu`)
+        .split(/\s+/)
+    );
+
+    // GENERIC FUNCTIONS ----------------------------------
+
+    // enumFromTo :: Int -> Int -> [Int]
+    const enumFromTo = (m, n) =>
+        n >= m ? (
+            iterateUntil(x => x >= n, x => 1 + x, m)
+        ) : [];
+
+    // iterateUntil :: (a -> Bool) -> (a -> a) -> a -> [a]
+    const iterateUntil = (p, f, x) => {
+        let vs = [x],
+            h = x;
+        while (!p(h))(h = f(h), vs.push(h));
+        return vs;
+    };
+
+    // randomRInt :: Int -> Int -> Int
+    const randomRInt = (low, high) =>
         low + Math.floor(
             (Math.random() * ((high - low) + 1))
-        ),
+        );
 
-        // range :: Int -> Int -> Maybe Int -> [Int]
-        range = (m, n, step) => {
-            let d = (step || 1) * (n >= m ? 1 : -1);
-
-            return Array.from({
-                length: Math.floor((n - m) / d) + 1
-            }, (_, i) => m + (i * d));
-        };
-
-
-    return knuthShuffle(lst);
-
-})(
-    'alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu'
-    .split(' ')
-  );
+    return test();
+})();

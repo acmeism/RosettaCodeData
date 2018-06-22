@@ -1,0 +1,46 @@
+using Luxor
+using Colors
+using BoundaryValueDiffEq
+
+# constants for differential equations and movie
+const g = 9.81
+const L = 1.0                         # pendulum length in meters
+const bobd = 0.10                     # pendulum bob diameter in meters
+const framerate = 50.0                # intended frame rate/sec
+const t0 = 0.0                        # start time (s)
+const tf = 2.3                        # end simulation time (s)
+const dtframe = 1.0/framerate         # time increment per frame
+const tspan = linspace(t0, tf, Int(floor(tf*framerate)))  # array of time points in animation
+
+const bgcolor = "black"               # gif background
+const leaderhue = (0.80, 0.70, 0.20)  # gif swing arm hue light gold
+const hslcolors = [HSL(col) for col in (distinguishable_colors(
+                   Int(floor(tf*framerate)+3),[RGB(1,1,1)])[2:end])]
+const giffilename = "pendulum.gif"    # output file
+
+# differential equations
+simplependulum(t,u,du) = (θ=u[1]; dθ=u[2]; du[1]=dθ; du[2]=-(g/L)*sin(θ))
+bc2(residual, ua, ub) = (residual[1] = ua[1] + pi/2; residual[2] = ub[1] + pi/2)
+bvp2 = TwoPointBVProblem(simplependulum, bc2, [pi/2,pi/2], (tspan[1],tspan[end]))
+sol2 = solve(bvp2, MIRK4(), dt=dtframe) # use the MIRK4 solver for TwoPointBVProblem
+
+# movie making background
+backdrop(scene, framenumber) = background(bgcolor)
+
+function frame(scene, framenumber)
+    u1, u2 = sol2.u[framenumber]
+    y, x = L*cos(u1), L*sin(u1)
+    sethue(leaderhue)
+    poly([Point(-4.0, 0.0), Point(4.0, 0.0),
+          Point(160.0x,160.0y)], :fill)
+    sethue(Colors.HSV(framenumber*4.0, 1, 1))
+    circle(Point(160.0x,160.0y), 160bobd, :fill)
+    text(string("frame $framenumber of $(scene.framerange.stop)"),
+        Point(0.0, -190.0),
+        halign=:center)
+end
+
+muv = Movie(400, 400, "Pendulum Demo", 1:length(tspan))
+animate(muv, [Scene(muv, backdrop),
+              Scene(muv, frame, easingfunction=easeinoutcubic)],
+              creategif=true, pathname=giffilename)

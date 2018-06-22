@@ -14,7 +14,7 @@ class CreationFactory
     var f = USize(0)
     for i in Range(0, s.size()) do
       try
-        if s(i) == _desired(i) then
+        if s(i)? == _desired(i)? then
           f = f +1
         end
       end
@@ -57,7 +57,7 @@ class Mutator
 
   fun ref _random_letter(): U8 =>
     let ln = _rand.int(_possibilities.size().u64()).usize()
-    try _possibilities(ln) else ' ' end
+    try _possibilities(ln)? else ' ' end
 
 class Generation
   let _size: USize

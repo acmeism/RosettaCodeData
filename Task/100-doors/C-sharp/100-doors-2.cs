@@ -7,9 +7,10 @@ namespace ConsoleApplication1
         {
             //The o variable stores the number of the next OPEN door.
             int o = 1;
-
-            //The n variable is used to help calculate the next value of the o variable.
-            int n = 0;
+            int f = 1;
+            int l = 5;
+            Random r = new Random();
+            o = r.Next(f, l);
 
             //The d variable determines the door to be output next.
             for (int d = 1; d <= 100; d++)
@@ -18,8 +19,9 @@ namespace ConsoleApplication1
                 if (d == o)
                 {
                     Console.WriteLine("Open");
-                    n++;
-                    o += 2 * n + 1;
+                    f = f + 5;
+                    l = l + 5;
+                    o = r.Next(f, l);
                 }
                 else
                     Console.WriteLine("Closed");

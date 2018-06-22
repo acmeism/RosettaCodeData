@@ -1,1 +1,2 @@
-x = 'x = {!r};print(x.format(x))';print(x.format(x))
+x = 'x = %r\nprint(x %% x)'
+print(x % x)

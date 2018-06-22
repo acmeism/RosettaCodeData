@@ -1,0 +1,22 @@
+'BEGIN' 'COMMENT' Loops/Nested - ALGOL60 - 19/06/2018;
+  'INTEGER' SEED;
+  'INTEGER' 'PROCEDURE' RANDOM(N);
+  'VALUE' N; 'INTEGER' N;
+  'BEGIN'
+    SEED:=(SEED*19157+12347) '/' 21647;
+    RANDOM:=SEED-(SEED '/' N)*N+1
+  'END' RANDOM;
+  'INTEGER' 'ARRAY' A(/1:10,1:10/);
+  'INTEGER' I,J;
+  SEED:=31569;
+  'FOR' I:=1 'STEP' 1 'UNTIL' 10 'DO'
+    'FOR' J:=1 'STEP' 1 'UNTIL' 10 'DO'
+      A(/I,J/):=RANDOM(20);
+  SYSACT(1,6,120);SYSACT(1,8,60);SYSACT(1,12,1);'COMMENT' open print;
+  'FOR' I:=1 'STEP' 1 'UNTIL' 10 'DO'
+    'FOR' J:=1 'STEP' 1 'UNTIL' 10 'DO' 'BEGIN'
+      OUTINTEGER(1,A(/I,J/));
+      'IF' A(/I,J/)=20 'THEN' 'GOTO' LAB;
+	'END';
+LAB:
+'END'

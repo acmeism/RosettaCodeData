@@ -1,2 +1,4 @@
-for (var i = 0; i < arguments.length; i++)
-    print(arguments[i]);
+import System;
+var argv:String[] = Environment.GetCommandLineArgs();
+for (var i in argv)
+  print(argv[i]);

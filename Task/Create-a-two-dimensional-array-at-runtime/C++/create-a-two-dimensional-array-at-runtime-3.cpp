@@ -1,5 +1,5 @@
 #include <iostream>
-#include "boost/multi_array.hpp"
+#include <boost/multi_array.hpp>
 
 typedef boost::multi_array<double, 2> two_d_array_type;
 

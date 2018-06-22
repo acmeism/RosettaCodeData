@@ -1,9 +1,8 @@
 (->> (slurp "http://www.puzzlers.org/pub/wordlists/unixdict.txt")
-     (apply str)
      clojure.string/split-lines
      (group-by sort)
      vals
-     (sort-by count #(compare %2 %1))  ;; sort in reverse
+     (sort-by count >)  ;; sort in reverse
      (partition-by count)
      first)
 

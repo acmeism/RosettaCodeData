@@ -1,20 +1,28 @@
-(function (n) {
+(() => {
     'use strict';
 
     // factorial :: Int -> Int
-    let factorial = (n) => range(1, n).reduce(product, 1);
+    const factorial = n =>
+        enumFromTo(1, n)
+        .reduce(product, 1);
 
+
+    const test = () =>
+        factorial(18);
+    // --> 6402373705728000
+
+
+    // GENERIC FUNCTIONS ----------------------------------
 
     // product :: Num -> Num -> Num
-    let product = (a, b) => a * b,
+    const product = (a, b) => a * b;
 
-        // range :: Int -> Int -> [Int]
-        range = (m, n) =>
-            Array.from({
-                length: (n - m) + 1
-            }, (_, i) => m + i)
+    // range :: Int -> Int -> [Int]
+    const enumFromTo = (m, n) =>
+        Array.from({
+            length: (n - m) + 1
+        }, (_, i) => m + i);
 
-
-    return factorial(n);
-
-})(18);
+    // MAIN ------
+    return test();
+})();

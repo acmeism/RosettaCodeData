@@ -1,17 +1,11 @@
-object Main extends App {
-
-  def lookAndSay(previous: List[BigInt]): Stream[List[BigInt]] = {
-
-    def next(num: List[BigInt]): List[BigInt] = num match {
-      case Nil => Nil
-      case head :: Nil => 1 :: head :: Nil
-      case head :: tail =>
-        val size = (num takeWhile (_ == head)).size
-        List(BigInt(size), head) ::: next(num.drop(size))
-    }
-    val x = next(previous)
-    x #:: lookAndSay(x)
+def lookAndSay(seed: BigInt) = {
+  val s = seed.toString
+  ( 1 until s.size).foldLeft((1, s(0), new StringBuilder)) {
+    case ((len, c, sb), index) if c != s(index) => sb.append(len); sb.append(c); (1, s(index), sb)
+    case ((len, c, sb), _) => (len + 1, c, sb)
+  } match {
+    case (len, c, sb) => sb.append(len); sb.append(c); BigInt(sb.toString)
   }
-
-  (lookAndSay(1 :: Nil) take 10).foreach(s => println(s.mkString("")))
 }
+
+def lookAndSayIterator(seed: BigInt) = Iterator.iterate(seed)(lookAndSay)

@@ -4,7 +4,8 @@ sub radsort (@ints) {
 
     for reverse ^$maxlen -> $r {
         my @buckets = @list.classify( *.substr($r,1) ).sort: *.key;
-        if !$r and @buckets[0].key eq '-' { @buckets[0].value .= reverse }
+        @buckets[0].value = @buckets[0].value.reverse.List
+            if !$r and @buckets[0].key eq '-';
         @list = flat map *.value.values, @buckets;
     }
     @list».Int;

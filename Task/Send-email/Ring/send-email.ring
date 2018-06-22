@@ -1,3 +1,4 @@
+load "stdlib.ring"
 See "Send email..." + nl
 sendemail("smtp://smtp.gmail.com",
           "calmosoft@gmail.com",

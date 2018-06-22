@@ -1,4 +1,4 @@
-sub disjointSort( @values is rw , @indices is rw --> List ) {
+sub disjointSort( @values, @indices --> List ) {
    my @sortedValues = @values[ @indices ].sort ;
    for @indices.sort -> $insert {
       @values[ $insert ] = @sortedValues.shift ;

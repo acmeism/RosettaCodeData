@@ -1,15 +1,16 @@
-PURE SUBROUTINE Insertion_Sort(a)
-  REAL, INTENT(in out), DIMENSION(:) :: a
-  REAL :: temp
-  INTEGER :: i, j
+subroutine sort(n, a)
+    implicit none
+    integer :: n, i, j
+    real :: a(n), x
 
-  DO i = 2, SIZE(a)
-     j = i - 1
-     temp = a(i)
-     DO WHILE (j>=1 .AND. a(j)>temp)
-        a(j+1) = a(j)
-        j = j - 1
-     END DO
-     a(j+1) = temp
-  END DO
-END SUBROUTINE Insertion_Sort
+    do i = 2, n
+        x = a(i)
+        j = i - 1
+        do while (j >= 1)
+            if (a(j) <= x) exit
+            a(j + 1) = a(j)
+            j = j - 1
+        end do
+        a(j + 1) = x
+    end do
+end subroutine

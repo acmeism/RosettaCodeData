@@ -36,7 +36,7 @@ int ulam_get_map(int x, int y, int n)
 
     int mx = abs(x), my = abs(y);
     int l = 2 * max(mx, my);
-    int d = y > x ? l * 3 + x + y : l - x - y;
+    int d = y >= x ? l * 3 + x + y : l - x - y;
 
     return pow(l - 1, 2) + d;
 }

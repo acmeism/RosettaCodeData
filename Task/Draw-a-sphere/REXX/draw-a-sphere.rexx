@@ -20,7 +20,6 @@ drawSphere: procedure;  parse arg r, k, ambient              /*get the arguments
                               parse value  norm(x  y  sqrt(rr-xx-yy) )   with   v1  v2  v3
                               dot=s1*v1  +  s2*v2  +  s3*v3  /*the dot product of the Vs*/
                               if dot>0  then dot=0           /*if positive, make it zero*/     /*◄■■■■ same as:  dot=max(0, dot) */
-                              if dot>0  then dot=0           /*if positive, make it zero*/
                               b=-dot**k  +  ambient          /*calculate the brightness.*/
                               if b<=0   then brite=shadeLen
                                         else brite=max( (1-b) * shadeLen,  0)  % 1

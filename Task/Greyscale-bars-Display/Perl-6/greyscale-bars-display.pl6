@@ -2,11 +2,11 @@ my $wininfo = qx[xwininfo -root];
 my ($width,$height) = ($wininfo ~~ /'Width: ' (\d+) .*? 'Height: ' (\d+)/).list;
 ($width,$height) = 1280,768 unless $width;
 
-my $PGM = open "greybars.pgm", :w or die "Can't create greybars.pgm: $!";
+my $PGM = open "Greyscale-bars-perl6.pgm", :w or die "Can't create Greyscale-bars-perl6.pgm: $!";
 
 $PGM.print: qq:to/EOH/;
     P2
-    # greybars.pgm
+    # Greyscale-bars-perl6.pgm
     $width $height
     65535
     EOH
@@ -30,8 +30,6 @@ $line = ~(@nums Zxx divvy($width,64));
 $PGM.say: $line for ^$h4;
 
 $PGM.close;
-
-shell "eog -f greybars.pgm";
 
 sub divvy($all, $div) {
     my @marks = ((1/$div,2/$div ... 1) X* $all)».round;

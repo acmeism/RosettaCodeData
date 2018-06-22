@@ -1,5 +1,7 @@
 use Test;
 
+sub palin( Str $string) { so $string.lc.comb(/\w/) eq  $string.flip.lc.comb(/\w/) }
+
 my %tests =
     'A man, a plan, a canal: Panama.'           => True,
     'My dog has fleas'                          => False,

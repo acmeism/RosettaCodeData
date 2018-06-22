@@ -1,9 +1,11 @@
-my @ffr;
-my @ffs;
+my %r = 1 => 1;
+my %s = 1 => 2;
 
-@ffr.plan: 0, 1, gather take @ffr[$_] + @ffs[$_] for 1..*;
-@ffs.plan: 0, 2, 4..6, gather take @ffr[$_] ^..^ @ffr[$_+1] for 3..*;
+sub ffr ($n) { %r{$n} //= ffr($n - 1) + ffs($n - 1) }
+sub ffs ($n) { %s{$n} //= (grep none(map &ffr, 1..$n), max(%s.values)+1..*)[0] }
 
-say @ffr[1..10];
+my @ffr = map &ffr, 1..*;
+my @ffs = map &ffs, 1..*;
 
-say "Rawks!" if (1...1000) eqv sort @ffr[1..40], @ffs[1..960];
+say @ffr[^10];
+say "Rawks!" if 1...1000 eqv sort |@ffr[^40], |@ffs[^960];

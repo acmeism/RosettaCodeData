@@ -20,14 +20,13 @@ proc huffmanEncode {str args} {
     }
 
     set encoding [walkTree [$pq get]]
-    set map [dict create {*}[lreverse $encoding]]
 
     if {$opts(-dump)} {
-        foreach key [lsort -command compare [dict keys $map]] {
-            set char [dict get $map $key]
-            puts "$char\t[dict get $charcount $char]\t$key"
+        foreach {char huffCode} [lsort -index 1 -stride 2 -command compare $encoding] {
+            puts "$char\t[dict get $charcount $char]\t$huffCode"
         }
     }
+    $pq destroy
 
     return $encoding
 }

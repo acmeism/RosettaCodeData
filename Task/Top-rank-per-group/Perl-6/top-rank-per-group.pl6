@@ -16,7 +16,7 @@ my @data = do for q:to/---/.lines -> $line {
 
   $%( < Id      Salary  Dept    Name >
       Z=>
-      $line.split(/ \t+ /)
+      $line.split(/ \s\s+ /)
     )
 }
 

@@ -1,90 +1,112 @@
-import java.awt.*;
-import javax.swing.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 
-public class Bresenham extends JFrame {
+public class Bresenham {
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                JFrame f = new Bresenham();
-                f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                f.setVisible(true);
-                f.add(new BresenhamPanel(), BorderLayout.CENTER);
-                f.setTitle("Bresenham");
-                f.setResizable(false);
-                f.pack();
-                f.setLocationRelativeTo(null);
-            }
-        });
+        SwingUtilities.invokeLater(Bresenham::run);
+    }
+
+    private static void run() {
+        JFrame f = new JFrame();
+        f.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        f.setTitle("Bresenham");
+
+        f.getContentPane().add(new BresenhamPanel());
+        f.pack();
+
+        f.setLocationRelativeTo(null);
+        f.setVisible(true);
     }
 }
 
 class BresenhamPanel extends JPanel {
-    final int centerX, centerY;
 
-    public BresenhamPanel() {
-        int w = 600;
-        int h = 500;
-        centerX = w / 2;
-        centerY = h / 2;
-        setPreferredSize(new Dimension(w, h));
-        setBackground(Color.white);
+    private final int pixelSize = 10;
+
+    BresenhamPanel() {
+        setPreferredSize(new Dimension(600, 500));
+        setBackground(Color.WHITE);
     }
 
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        drawLine(g, 0, 0, 8, 19); // NNE
-        drawLine(g, 0, 0, 19, 8); // ENE
-        drawLine(g, 0, 0, 19, -8); // ESE
-        drawLine(g, 0, 0, 8, -19); // SSE
-        drawLine(g, 0, 0, -8, -19); // SSW
-        drawLine(g, 0, 0, -19, -8); // WSW
-        drawLine(g, 0, 0, -19, 8); // WNW
-        drawLine(g, 0, 0, -8, 19); // NNW
+        int w = (getWidth() - 1) / pixelSize;
+        int h = (getHeight() - 1) / pixelSize;
+        int maxX = (w - 1) / 2;
+        int maxY = (h - 1) / 2;
+        int x1 = -maxX, x2 = maxX * -2 / 3, x3 = maxX * 2 / 3, x4 = maxX;
+        int y1 = -maxY, y2 = maxY * -2 / 3, y3 = maxY * 2 / 3, y4 = maxY;
+
+        drawLine(g, 0, 0, x3, y1); // NNE
+        drawLine(g, 0, 0, x4, y2); // ENE
+        drawLine(g, 0, 0, x4, y3); // ESE
+        drawLine(g, 0, 0, x3, y4); // SSE
+        drawLine(g, 0, 0, x2, y4); // SSW
+        drawLine(g, 0, 0, x1, y3); // WSW
+        drawLine(g, 0, 0, x1, y2); // WNW
+        drawLine(g, 0, 0, x2, y1); // NNW
     }
 
     private void plot(Graphics g, int x, int y) {
+        int w = (getWidth() - 1) / pixelSize;
+        int h = (getHeight() - 1) / pixelSize;
+        int maxX = (w - 1) / 2;
+        int maxY = (h - 1) / 2;
+
+        int borderX = getWidth() - ((2 * maxX + 1) * pixelSize + 1);
+        int borderY = getHeight() - ((2 * maxY + 1) * pixelSize + 1);
+        int left = (x + maxX) * pixelSize + borderX / 2;
+        int top = (y + maxY) * pixelSize + borderY / 2;
+
         g.setColor(Color.black);
-        g.drawOval(centerX + (x * 10), centerY + (-y * 10), 10, 10);
+        g.drawOval(left, top, pixelSize, pixelSize);
     }
 
     private void drawLine(Graphics g, int x1, int y1, int x2, int y2) {
-        // delta of exact value and rounded value of the dependant variable
+        // delta of exact value and rounded value of the dependent variable
         int d = 0;
 
-        int dy = Math.abs(y2 - y1);
         int dx = Math.abs(x2 - x1);
+        int dy = Math.abs(y2 - y1);
 
-        int dy2 = (dy << 1); // slope scaling factors to avoid floating
-        int dx2 = (dx << 1); // point
+        int dx2 = 2 * dx; // slope scaling factors to
+        int dy2 = 2 * dy; // avoid floating point
 
         int ix = x1 < x2 ? 1 : -1; // increment direction
         int iy = y1 < y2 ? 1 : -1;
 
-        if (dy <= dx) {
-            for (;;) {
-                plot(g, x1, y1);
-                if (x1 == x2)
+        int x = x1;
+        int y = y1;
+
+        if (dx >= dy) {
+            while (true) {
+                plot(g, x, y);
+                if (x == x2)
                     break;
-                x1 += ix;
+                x += ix;
                 d += dy2;
                 if (d > dx) {
-                    y1 += iy;
+                    y += iy;
                     d -= dx2;
                 }
             }
         } else {
-            for (;;) {
-                plot(g, x1, y1);
-                if (y1 == y2)
+            while (true) {
+                plot(g, x, y);
+                if (y == y2)
                     break;
-                y1 += iy;
+                y += iy;
                 d += dx2;
                 if (d > dy) {
-                    x1 += ix;
+                    x += ix;
                     d -= dy2;
                 }
             }

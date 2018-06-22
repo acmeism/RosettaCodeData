@@ -3,13 +3,13 @@ package main
 import (
     "fmt"
 
-    "github.com/gonum/matrix/mat64"
+    "gonum.org/v1/gonum/mat"
 )
 
 func cholesky(order int, elements []float64) fmt.Formatter {
-    t := mat64.NewTriDense(order, false, nil)
-    t.Cholesky(mat64.NewSymDense(order, elements), false)
-    return mat64.Formatted(t)
+    var c mat.Cholesky
+    c.Factorize(mat.NewSymDense(order, elements))
+    return mat.Formatted(c.LTo(nil))
 }
 
 func main() {

@@ -7,25 +7,26 @@ on toBase(intBase, n)
     end if
 end toBase
 
-
 -- inBaseDigits :: String -> Int -> [String]
 on inBaseDigits(strDigits, n)
     set intBase to length of strDigits
 
     script nextDigit
-        on lambda(residue)
+        on |λ|(residue)
             set {divided, remainder} to quotRem(residue, intBase)
+            if divided > 0 then
+                {just:(item (remainder + 1) of strDigits), new:divided, nothing:false}
+            else
+                {nothing:true}
+            end if
 
-            {valid:divided > 0, value:(item (remainder + 1) of strDigits), new:divided}
-        end lambda
+        end |λ|
     end script
 
     reverse of unfoldr(nextDigit, n) as string
 end inBaseDigits
 
-
-
--- OTHER FUNCTIONS DERIVABLE FROM inBaseDigits
+-- OTHER FUNCTIONS DERIVABLE FROM inBaseDigits -------------------------------
 
 -- inUpperHex :: Int -> String
 on inUpperHex(n)
@@ -37,31 +38,32 @@ on inDevanagariDecimal(n)
     inBaseDigits("०१२३४५६७८९", n)
 end inDevanagariDecimal
 
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
     script
-        on lambda(x)
+        on |λ|(x)
             {{binary:toBase(2, x), octal:toBase(8, x), hex:toBase(16, x)}, ¬
                 {upperHex:inUpperHex(x), dgDecimal:inDevanagariDecimal(x)}}
-        end lambda
+        end |λ|
     end script
 
     map(result, [255, 240])
 end run
 
 
--- GENERIC FUNCTIONS
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
 -- unfoldr :: (b -> Maybe (a, b)) -> b -> [a]
 on unfoldr(f, v)
-    set mf to mReturn(f)
     set lst to {}
-    set recM to mf's lambda(v)
-    repeat while (valid of recM) is true
-        set end of lst to value of recM
-        set recM to mf's lambda(new of recM)
-    end repeat
-    lst & value of recM
+    set recM to {nothing:false, new:v}
+    tell mReturn(f)
+        repeat while (not (nothing of recM))
+            set recM to |λ|(new of recM)
+            if not nothing of recM then set end of lst to just of recM
+        end repeat
+    end tell
+    lst
 end unfoldr
 
 --  quotRem :: Integral a => a -> a -> (a, a)
@@ -75,7 +77,7 @@ on map(f, xs)
         set lng to length of xs
         set lst to {}
         repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
+            set end of lst to |λ|(item i of xs, i, xs)
         end repeat
         return lst
     end tell
@@ -88,20 +90,7 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
-
--- until :: (a -> Bool) -> (a -> a) -> a -> a
-on |until|(p, f, x)
-    set mp to mReturn(p)
-    set v to x
-
-    tell mReturn(f)
-        repeat until mp's lambda(v)
-            set v to lambda(v)
-        end repeat
-    end tell
-    return v
-end |until|

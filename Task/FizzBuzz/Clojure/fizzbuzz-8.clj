@@ -1,1 +1,4 @@
-(map #(nth (conj (cycle [% % "Fizz" % "Buzz" "Fizz" % % "Fizz" "Buzz" % "Fizz" % % "FizzBuzz"]) %) %) (range 1 101))
+(take 100 (map #(let [s (str %2 %3) ] (if (seq s) s (inc %)) )
+            (range)
+            (cycle [ "" "" "Fizz" ])
+            (cycle [ "" "" "" "" "Buzz" ])))

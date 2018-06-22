@@ -1,24 +1,15 @@
-sub is-derangement(List $l) {
-    return not grep { $l[$_] == $_ }, 0..($l.elems - 1);
+sub derangements(@l) {
+    @l.permutations.grep(-> @p { none(@p Zeqv @l) })
 }
 
-# task 1
-sub derangements(Range $x) {
-    $x.permutations.grep( *.&is-derangement )
+sub prefix:<!>(Int $n) {
+    (1, 0, 1, -> $a, $b { ($++ + 2) × ($b + $a) } ... *)[$n]
 }
 
-# task 2
-.say for (0..4).&derangements;
+say 'derangements([1, 2, 3, 4])';
+say derangements([1, 2, 3, 4]), "\n";
 
-# task 3
-sub prefix:<!>(Int $x) {
-    return +derangements(^$x);
-}
-
-# task 4
-for ^9 -> $n {
-    say "number: " ~ $n;
-    say "count: " ~ !$n;
-    say "derangements: ";
-    .say for (0..$n-1).&derangements;
+say 'n == !n == derangements(^n).elems';
+for 0 .. 9 -> $n {
+    say "!$n == { !$n } == { derangements(^$n).elems }"
 }

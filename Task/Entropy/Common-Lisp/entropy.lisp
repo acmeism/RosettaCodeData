@@ -1,8 +1,0 @@
-(defun entropy (string)
-  (let ((table (make-hash-table :test 'equal))
-        (entropy 0))
-    (mapc (lambda (c) (setf (gethash c table) (+ (gethash c table 0) 1)))
-          (coerce string 'list))
-    (maphash (lambda (k v) (decf entropy (* (/ v (length input-string)) (log (/ v (length input-string)) 2))))
-             table)
-    entropy))

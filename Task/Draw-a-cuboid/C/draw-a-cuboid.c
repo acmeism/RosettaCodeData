@@ -1,3 +1,4 @@
+/*Code verified and output corrected by Abhishek Ghosh, 23rd September 2017*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>

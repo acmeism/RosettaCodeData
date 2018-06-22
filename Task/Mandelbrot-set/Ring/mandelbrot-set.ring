@@ -3,7 +3,7 @@ load "guilib.ring"
 new qapp
         {
         win1 = new qwidget() {
-               setwindowtitle("drawing using qpainter")
+               setwindowtitle("Mandelbrot set")
                setgeometry(100,100,500,500)
                label1 = new qlabel(win1) {
                         setgeometry(10,10,400,400)

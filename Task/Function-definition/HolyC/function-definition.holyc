@@ -1,0 +1,7 @@
+F64 Multiply(F64 a, F64 b) {
+  return a * b;
+}
+
+F64 x;
+x = Multiply(42, 13.37);
+Print("%5.2f\n", x);

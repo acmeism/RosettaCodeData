@@ -1,3 +1,4 @@
+USE: locals
 :: accumulator ( n! -- quot ) [ n + dup n! ] ;
 
 1 accumulator

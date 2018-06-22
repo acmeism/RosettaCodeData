@@ -19,7 +19,7 @@ my %vs = (
 
 my %choices = %vs<options>.map({; $_.substr(0,2).lc => $_ });
 my $keys    = %choices.keys.join('|');
-my $prompt  = %vs<options>.map({$_.subst(/(\w\w)/,->$/{"[$0]"})}).join(' ')~"? ";
+my $prompt  = %vs<options>.map({$_.subst(/(\w\w)/, -> $/ {"[$0]"})}).join(' ')~"? ";
 my %weight  = %choices.keys »=>» 1;
 
 my @stats = 0,0,0;

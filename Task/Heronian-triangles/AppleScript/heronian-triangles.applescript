@@ -1,13 +1,13 @@
 use framework "Foundation"
 
-property ca : current application
+-- HERONIAN TRIANGLES --------------------------------------------------------
 
 -- heroniansOfSideUpTo :: Int -> [(Int, Int, Int)]
 on heroniansOfSideUpTo(n)
     script sideA
-        on lambda(a)
+        on |λ|(a)
             script sideB
-                on lambda(b)
+                on |λ|(b)
                     script sideC
                         -- primitiveHeronian :: Int -> Int -> Int -> Bool
                         on primitiveHeronian(x, y, z)
@@ -16,55 +16,51 @@ on heroniansOfSideUpTo(n)
                                 isIntegerValue(hArea(x, y, z))
                         end primitiveHeronian
 
-                        on lambda(c)
+                        on |λ|(c)
                             if primitiveHeronian(a, b, c) then
-                                [[a, b, c]]
+                                {{a, b, c}}
                             else
-                                []
+                                {}
                             end if
-                        end lambda
+                        end |λ|
                     end script
 
-                    concatMap(sideC, range(b, n))
-                end lambda
+                    concatMap(sideC, enumFromTo(b, n))
+                end |λ|
             end script
 
-            concatMap(sideB, range(a, n))
-        end lambda
+            concatMap(sideB, enumFromTo(a, n))
+        end |λ|
     end script
 
-    concatMap(sideA, range(1, n))
+    concatMap(sideA, enumFromTo(1, n))
 end heroniansOfSideUpTo
 
 
-
--- TEST
-
+-- TEST ----------------------------------------------------------------------
 on run
     set n to 200
 
-    set lstHeron to sortByKeys(map(triangleDimensions, ¬
-        heroniansOfSideUpTo(n)), ¬
-        {"area", "perimeter", "maxSide"})
+    set lstHeron to ¬
+        sortByComparing({{"area", true}, {"perimeter", true}, {"maxSide", true}}, ¬
+            map(triangleDimensions, heroniansOfSideUpTo(n)))
 
     set lstCols to {"sides", "perimeter", "area"}
-    set lstColWidths to [20, 15, 0]
+    set lstColWidths to {20, 15, 0}
     set area to 210
 
     script areaFilter
         -- Record -> [Record]
-        on lambda(recTriangle)
+        on |λ|(recTriangle)
             if area of recTriangle = area then
-                [recTriangle]
+                {recTriangle}
             else
-                []
+                {}
             end if
-        end lambda
+        end |λ|
     end script
 
-    intercalate("
-
-", {("Number of triangles found (with sides <= 200): " & ¬
+    intercalate("\n \n", {("Number of triangles found (with sides <= 200): " & ¬
         length of lstHeron as string), ¬
         ¬
             tabulation("First 10, ordered by area, perimeter, longest side", ¬
@@ -73,8 +69,6 @@ on run
             tabulation("Area = 210", ¬
                 concatMap(areaFilter, lstHeron), lstCols, lstColWidths)})
 end run
-
-
 
 -- triangleDimensions :: (Int, Int, Int) ->
 --       {sides: (Int, Int, Int),  area: Int, perimeter: Int, maxSize: Int}
@@ -105,23 +99,23 @@ on gcd(m, n)
 end gcd
 
 
--- TABLE FORMATTING
+-- TABULATION ----------------------------------------------------------------
 
 -- tabulation :: [Record] -> [String] -> String -> [Integer] -> String
 on tabulation(strLegend, lstRecords, lstKeys, lstWidths)
     script heading
-        on lambda(strTitle, iCol)
-            set str to toCapitalized(strTitle)
-            str & nreps(space, (item iCol of lstWidths) - (length of str))
-        end lambda
+        on |λ|(strTitle, iCol)
+            set str to toTitle(strTitle)
+            str & replicate((item iCol of lstWidths) - (length of str), space)
+        end |λ|
     end script
 
     script lineString
-        on lambda(rec)
+        on |λ|(rec)
             script fieldString
                 -- fieldString :: String -> Int -> String
-                on lambda(strKey, i)
-                    set v to keyValue(rec, strKey)
+                on |λ|(strKey, i)
+                    set v to keyValue(strKey, rec)
 
                     if class of v is list then
                         set strData to ("(" & intercalate(", ", v) & ")")
@@ -129,12 +123,12 @@ on tabulation(strLegend, lstRecords, lstKeys, lstWidths)
                         set strData to v as string
                     end if
 
-                    strData & nreps(space, (item i of (lstWidths)) - (length of strData))
-                end lambda
+                    strData & replicate(space, (item i of (lstWidths)) - (length of strData))
+                end |λ|
             end script
 
             tab & intercalate(tab, map(fieldString, lstKeys))
-        end lambda
+        end |λ|
     end script
 
     strLegend & ":" & linefeed & linefeed & ¬
@@ -143,44 +137,39 @@ on tabulation(strLegend, lstRecords, lstKeys, lstWidths)
         intercalate(linefeed, map(lineString, lstRecords))
 end tabulation
 
--- isIntegerValue :: Num -> Bool
-on isIntegerValue(n)
-    {real, integer} contains class of n and (n = (n as integer))
-end isIntegerValue
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
-
--- sortByKeys :: [Record] -> [String] -> [Record]
-on sortByKeys(lstRecords, lstKeys)
-    script keyDescriptor
-        on lambda(strKey)
-            ca's NSSortDescriptor's ¬
-                sortDescriptorWithKey:(strKey) ascending:true
-        end lambda
-    end script
-
-    ((ca's NSArray's arrayWithArray:lstRecords)'s ¬
-        sortedArrayUsingDescriptors:(map(keyDescriptor, lstKeys))) as list
-end sortByKeys
-
-
--- keyValue :: Record -> String -> a
-on keyValue(rec, strKey)
-    item 1 of ((ca's NSArray's ¬
-        arrayWithObject:((ca's NSDictionary's dictionaryWithDictionary:rec)'s ¬
-            objectForKey:strKey)) as list)
-end keyValue
-
--- GENERIC FUNCTIONS
+-- concat :: [[a]] -> [a] | [String] -> String
+on concat(xs)
+    if length of xs > 0 and class of (item 1 of xs) is string then
+        set acc to ""
+    else
+        set acc to {}
+    end if
+    repeat with i from 1 to length of xs
+        set acc to acc & item i of xs
+    end repeat
+    acc
+end concat
 
 -- concatMap :: (a -> [b]) -> [a] -> [b]
 on concatMap(f, xs)
-    script append
-        on lambda(a, b)
-            a & b
-        end lambda
-    end script
-    foldl(append, {}, map(f, xs))
+    concat(map(f, xs))
 end concatMap
+
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
+        set d to -1
+    else
+        set d to 1
+    end if
+    set lst to {}
+    repeat with i from m to n by d
+        set end of lst to i
+    end repeat
+    return lst
+end enumFromTo
 
 -- foldl :: (a -> b -> a) -> a -> [b] -> a
 on foldl(f, startValue, xs)
@@ -188,35 +177,11 @@ on foldl(f, startValue, xs)
         set v to startValue
         set lng to length of xs
         repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
+            set v to |λ|(v, item i of xs, i, xs)
         end repeat
         return v
     end tell
 end foldl
-
--- map :: (a -> b) -> [a] -> [b]
-on map(f, xs)
-    tell mReturn(f)
-        set lng to length of xs
-        set lst to {}
-        repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
-        end repeat
-        return lst
-    end tell
-end map
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    set d to 1
-    if n < m then set d to -1
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
-end range
-
 
 -- intercalate :: Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -226,24 +191,33 @@ on intercalate(strText, lstText)
     return strJoined
 end intercalate
 
--- Text -> Text
-on toCapitalized(str)
-    ((ca's NSString's stringWithString:(str))'s ¬
-        capitalizedStringWithLocale:(ca's NSLocale's currentLocale())) as text
-end toCapitalized
+-- isIntegerValue :: Num -> Bool
+on isIntegerValue(n)
+    {real, integer} contains class of n and (n = (n as integer))
+end isIntegerValue
 
--- String -> Int -> String
-on nreps(s, n)
-    set o to ""
-    if n < 1 then return o
+-- keyValue :: String -> Record -> Maybe String
+on keyValue(strKey, rec)
+    set ca to current application
+    set v to (ca's NSDictionary's dictionaryWithDictionary:rec)'s objectForKey:strKey
+    if v is not missing value then
+        item 1 of ((ca's NSArray's arrayWithObject:v) as list)
+    else
+        missing value
+    end if
+end keyValue
 
-    repeat while (n > 1)
-        if (n mod 2) > 0 then set o to o & s
-        set n to (n div 2)
-        set s to (s & s)
-    end repeat
-    return o & s
-end nreps
+-- map :: (a -> b) -> [a] -> [b]
+on map(f, xs)
+    tell mReturn(f)
+        set lng to length of xs
+        set lst to {}
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, i, xs)
+        end repeat
+        return lst
+    end tell
+end map
 
 -- Lift 2nd class handler function into 1st class script wrapper
 -- mReturn :: Handler -> Script
@@ -252,7 +226,52 @@ on mReturn(f)
         f
     else
         script
-            property lambda : f
+            property |λ| : f
         end script
     end if
 end mReturn
+
+-- replicate :: Int -> String -> String
+on replicate(n, s)
+    set out to ""
+    if n < 1 then return out
+    set dbl to s
+
+    repeat while (n > 1)
+        if (n mod 2) > 0 then set out to out & dbl
+        set n to (n div 2)
+        set dbl to (dbl & dbl)
+    end repeat
+    return out & dbl
+end replicate
+
+-- List of {strKey, blnAscending} pairs -> list of records -> sorted list of records
+
+-- sortByComparing :: [(String, Bool)] -> [Records] -> [Records]
+on sortByComparing(keyDirections, xs)
+    set ca to current application
+
+    script recDict
+        on |λ|(x)
+            ca's NSDictionary's dictionaryWithDictionary:x
+        end |λ|
+    end script
+    set dcts to map(recDict, xs)
+
+    script asDescriptor
+        on |λ|(kd)
+            set {k, d} to kd
+            ca's NSSortDescriptor's sortDescriptorWithKey:k ascending:d selector:dcts
+        end |λ|
+    end script
+
+    ((ca's NSArray's arrayWithArray:dcts)'s ¬
+        sortedArrayUsingDescriptors:map(asDescriptor, keyDirections)) as list
+end sortByComparing
+
+-- toTitle :: String -> String
+on toTitle(str)
+    set ca to current application
+    ((ca's NSString's stringWithString:(str))'s ¬
+        capitalizedStringWithLocale:(ca's NSLocale's currentLocale())) as text
+end toTitle

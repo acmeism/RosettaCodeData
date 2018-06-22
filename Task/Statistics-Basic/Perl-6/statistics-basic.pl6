@@ -6,5 +6,5 @@ for 100, 1_000, 10_000 -> $N {
     $mean**2 R- $N R/ [+] @data »**» 2;
     printf "%.1f %s\n", .key, '=' x (500 * .value.elems / $N)
         for sort @data.classify: (10 * *).Int / 10;
-    &say;
+    say '';
 }

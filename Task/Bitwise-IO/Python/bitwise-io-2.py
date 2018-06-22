@@ -6,3 +6,4 @@ c = sys.stdin.read(1)
 while len(c) > 0:
     o.writebits(ord(c), 7)
     c = sys.stdin.read(1)
+o.flush()

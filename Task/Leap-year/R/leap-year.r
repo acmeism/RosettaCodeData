@@ -3,5 +3,5 @@ isLeapYear <- function(year) {
 }
 
 for (y in c(1900, 1994, 1996, 1997, 2000)) {
-    print(paste(y, " is ", ifelse(isLeapYear(y), "", "not "), "a leap year.", sep=""))
+  cat(y, ifelse(isLeapYear(y), "is", "isn't"), "a leap year.\n")
 }

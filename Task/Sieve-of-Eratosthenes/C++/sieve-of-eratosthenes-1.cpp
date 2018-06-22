@@ -1,20 +1,47 @@
-// yield all prime numbers less than limit.
-template<class UnaryFunction>
-void primesupto(int limit, UnaryFunction yield)
+#include <iostream>
+#include <algorithm>
+#include <vector>
+
+template <typename ForwardIterator>
+size_t prime_sieve(ForwardIterator start, ForwardIterator end)
 {
-  std::vector<bool> is_prime(limit, true);
-
-  const int sqrt_limit = static_cast<int>(std::sqrt(limit));
-  for (int n = 2; n <= sqrt_limit; ++n)
-    if (is_prime[n]) {
-	yield(n);
-
-	for (unsigned k = n*n, ulim = static_cast<unsigned>(limit); k < ulim; k += n)
-      //NOTE: "unsigned" is used to avoid an overflow in `k+=n` for `limit` near INT_MAX
-	  is_prime[k] = false;
+    if (start == end) return 0;
+    // clear the container with 0
+    std::fill(start, end, 0);
+    // mark composites with 1
+    for (ForwardIterator prime_it = start + 1; prime_it != end; ++prime_it)
+    {
+        if (*prime_it == 1) continue;
+        // determine the prime number represented by this iterator location
+        size_t stride = (prime_it - start) + 1;
+        // mark all multiples of this prime number up to max
+        ForwardIterator mark_it = prime_it;
+        while ((end - mark_it) > stride)
+        {
+            std::advance(mark_it, stride);
+            *mark_it = 1;
+        }
     }
+    // copy marked primes into container
+    ForwardIterator out_it = start;
+    for (ForwardIterator it = start + 1; it != end; ++it)
+    {
+        if (*it == 0)
+        {
+            *out_it = (it - start) + 1;
+            ++out_it;
+        }
+    }
+    return out_it - start;
+}
 
-  for (int n = sqrt_limit + 1; n < limit; ++n)
-    if (is_prime[n])
-	yield(n);
+int main(int argc, const char* argv[])
+{
+    std::vector<int> primes(100);
+    size_t count = prime_sieve(primes.begin(), primes.end());
+    // display the primes
+    for (size_t i = 0; i < count; ++i)
+        std::cout << primes[i] << " ";
+    std::cout << std::endl;
+    return 1;
 }

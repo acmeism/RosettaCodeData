@@ -1,17 +1,23 @@
-while true
-see "Hey There,
-========================
-I'm thinking of a number between 0 and 10, Can you guess it??
-Guess :> "
-give x
-n = random(10)
-if x = n see "
-**********************************************
-     ** Thats right You Are Genius :D **
-**********************************************
-"
-exit
-else
-see "Oops its not true, Try again please :)" + copy(nl,3)
-ok
+### Bert Mariani
+### 2018-03-01
+### Guess_My_Number
+
+myNumber = random(10)
+answer   = 0
+
+See "Guess my number between 1 and 10"+ nl
+
+while answer != myNumber
+  See "Your guess: "
+  Give answer
+
+  if answer = myNumber
+    See "Well done! You guessed it! "+ myNumber +nl
+  else
+    See "Try again"+ nl
+  ok
+
+  if answer = 0
+    See "Give up. My number is: "+ myNumber +nl
+  ok
 end

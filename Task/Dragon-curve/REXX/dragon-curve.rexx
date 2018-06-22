@@ -27,5 +27,5 @@ p=translate(left(p,1), 0123, 'NESW');   $=       /*get the orientation for drago
              do r=minX  to maxX;    a=           /*nullify the line that will be drawn. */
                 do c=minY  to maxY; a=a || @.r.c /*create a line (row) of curve points. */
                 end   /*c*/                      /* [↑] append a single column of a row.*/
-             if a\=''  then say strip(a, 'T')    /*display a line (row) of curve points.*/
+             if a\=''  then say strip(a, "T")    /*display a line (row) of curve points.*/
              end      /*r*/                      /*stick a fork in it,  we're all done. */

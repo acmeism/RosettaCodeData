@@ -12,7 +12,7 @@ exit                                             /*stick a fork in it,  we're al
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 Kaprekar: procedure; parse arg N; #=0; aN=abs(N) /*set counter to zero; use  │N│  value.*/
           numeric digits max(9, 2*length(N) )    /*use enough decimal digits for square.*/
-          if aN>1  then call tell 1              /*unity is defined to be a Kaprekar #. */
+          if aN>0  then call tell 1              /*unity is defined to be a Kaprekar #. */
                                                  /* [↑]  handle case of  N  being unity.*/
           if aN>1  then do j=2  for aN-2;  s=j*j /*calculate the  square  of  J   (S).  */
                         if j//9==s//9  then do k=1  for length(s)%2  /*≡ casted out 9's?*/

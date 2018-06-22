@@ -1,22 +1,23 @@
+-- ZECKENDORF NUMBERS --------------------------------------------------------
+
 -- zeckendorf :: Int -> String
 on zeckendorf(n)
     script f
-        on lambda(n, x)
+        on |λ|(n, x)
             if n < x then
                 [n, 0]
             else
                 [n - x, 1]
             end if
-        end lambda
+        end |λ|
     end script
 
     if n = 0 then
         {0} as string
     else
-        item 2 of mapAccumL(f, n, _reverse(tail(fibUntil(n)))) as string
+        item 2 of mapAccumL(f, n, |reverse|(just of tailMay(fibUntil(n)))) as string
     end if
 end zeckendorf
-
 
 -- fibUntil :: Int -> [Int]
 on fibUntil(n)
@@ -25,104 +26,36 @@ on fibUntil(n)
 
     script atLimit
         property ceiling : limit
-        on lambda(x)
+        on |λ|(x)
             (item 2 of x) > (atLimit's ceiling)
-        end lambda
+        end |λ|
     end script
 
     script nextPair
         property series : xs
-        on lambda([a, b])
+        on |λ|([a, b])
             set nextPair's series to nextPair's series & b
             [b, a + b]
-        end lambda
+        end |λ|
     end script
 
     |until|(atLimit, nextPair, {0, 1})
     return nextPair's series
 end fibUntil
 
-
--- TEST
+-- TEST ----------------------------------------------------------------------
 on run
 
     intercalate(linefeed, ¬
-        map(zeckendorf, range(0, 20)))
+        map(zeckendorf, enumFromTo(0, 20)))
 
 end run
 
+-- GENERIC FUNCTIONS ---------------------------------------------------------
 
--- GENERIC LIBRARY FUNCTIONS
-
--- 'The mapAccumL function behaves like a combination of map and foldl;
--- it applies a function to each element of a list, passing an
--- accumulating parameter from left to right, and returning a final
--- value of this accumulator together with the new list.' (see Hoogle)
-
--- mapAccumL :: (acc -> x -> (acc, y)) -> acc -> [x] -> (acc, [y])
-on mapAccumL(f, acc, xs)
-    script
-        on lambda(a, x)
-            tell mReturn(f) to set pair to lambda(item 1 of a, x)
-            [item 1 of pair, (item 2 of a) & item 2 of pair]
-        end lambda
-    end script
-
-    foldl(result, [acc, []], xs)
-end mapAccumL
-
--- until :: (a -> Bool) -> (a -> a) -> a -> a
-on |until|(p, f, x)
-    set mp to mReturn(p)
-    set v to x
-
-    tell mReturn(f)
-        repeat until mp's lambda(v)
-            set v to lambda(v)
-        end repeat
-    end tell
-    return v
-end |until|
-
--- map :: (a -> b) -> [a] -> [b]
-on map(f, xs)
-    tell mReturn(f)
-        set lng to length of xs
-        set lst to {}
-        repeat with i from 1 to lng
-            set end of lst to lambda(item i of xs, i, xs)
-        end repeat
-        return lst
-    end tell
-end map
-
--- foldl :: (a -> b -> a) -> a -> [b] -> a
-on foldl(f, startValue, xs)
-    tell mReturn(f)
-        set v to startValue
-        set lng to length of xs
-        repeat with i from 1 to lng
-            set v to lambda(v, item i of xs, i, xs)
-        end repeat
-        return v
-    end tell
-end foldl
-
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
-on mReturn(f)
-    if class of f is script then
-        f
-    else
-        script
-            property lambda : f
-        end script
-    end if
-end mReturn
-
--- range :: Int -> Int -> [Int]
-on range(m, n)
-    if n < m then
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m > n then
         set d to -1
     else
         set d to 1
@@ -132,7 +65,60 @@ on range(m, n)
         set end of lst to i
     end repeat
     return lst
-end range
+end enumFromTo
+
+-- foldl :: (a -> b -> a) -> a -> [b] -> a
+on foldl(f, startValue, xs)
+    tell mReturn(f)
+        set v to startValue
+        set lng to length of xs
+        repeat with i from 1 to lng
+            set v to |λ|(v, item i of xs, i, xs)
+        end repeat
+        return v
+    end tell
+end foldl
+
+-- 'The mapAccumL function behaves like a combination of map and foldl;
+-- it applies a function to each element of a list, passing an
+-- accumulating parameter from left to right, and returning a final
+-- value of this accumulator together with the new list.' (see Hoogle)
+
+-- mapAccumL :: (acc -> x -> (acc, y)) -> acc -> [x] -> (acc, [y])
+on mapAccumL(f, acc, xs)
+    script
+        on |λ|(a, x)
+            tell mReturn(f) to set pair to |λ|(item 1 of a, x)
+            [item 1 of pair, (item 2 of a) & item 2 of pair]
+        end |λ|
+    end script
+
+    foldl(result, [acc, []], xs)
+end mapAccumL
+
+-- map :: (a -> b) -> [a] -> [b]
+on map(f, xs)
+    tell mReturn(f)
+        set lng to length of xs
+        set lst to {}
+        repeat with i from 1 to lng
+            set end of lst to |λ|(item i of xs, i, xs)
+        end repeat
+        return lst
+    end tell
+end map
+
+-- Lift 2nd class handler function into 1st class script wrapper
+-- mReturn :: Handler -> Script
+on mReturn(f)
+    if class of f is script then
+        f
+    else
+        script
+            property |λ| : f
+        end script
+    end if
+end mReturn
 
 -- intercalate :: Text -> [Text] -> Text
 on intercalate(strText, lstText)
@@ -142,20 +128,33 @@ on intercalate(strText, lstText)
     return strJoined
 end intercalate
 
--- _reverse :: [a] -> [a]
-on _reverse(xs)
+-- reverse :: [a] -> [a]
+on |reverse|(xs)
     if class of xs is text then
         (reverse of characters of xs) as text
     else
         reverse of xs
     end if
-end _reverse
+end |reverse|
 
--- tail :: [a] -> [a]
-on tail(xs)
+-- tailMay :: [a] -> Maybe [a]
+on tailMay(xs)
     if length of xs > 1 then
-        items 2 thru -1 of xs
+        {nothing:false, just:items 2 thru -1 of xs}
     else
-        {}
+        {nothing:true}
     end if
-end tail
+end tailMay
+
+-- until :: (a -> Bool) -> (a -> a) -> a -> a
+on |until|(p, f, x)
+    set mp to mReturn(p)
+    set v to x
+
+    tell mReturn(f)
+        repeat until mp's |λ|(v)
+            set v to |λ|(v)
+        end repeat
+    end tell
+    return v
+end |until|

@@ -1,8 +1,9 @@
 use GTK::Simple;
+use GTK::Simple::App;
 
 my GTK::Simple::App $app .= new( title => 'Controls Enable / Disable' );
 
-$app.set_content(
+$app.set-content(
     my $box = GTK::Simple::HBox.new(
         my $inc   = GTK::Simple::Button.new( label => ' + ' ),
         my $value = GTK::Simple::Entry.new,
@@ -10,7 +11,7 @@ $app.set_content(
     )
 );
 
-$app.border_width = 10;
+$app.border-width = 10;
 $box.spacing = 10;
 
 $value.changed.tap: {
@@ -19,9 +20,9 @@ $value.changed.tap: {
     $dec.sensitive = $value.text > 0;
 }
 
-$value.text = 0;
+$value.text = '0';
 
-$inc.clicked.tap: { $value.text += 1 }
-$dec.clicked.tap: { $value.text -= 1 }
+$inc.clicked.tap: { my $val = $value.text; $val += 1; $value.text = $val.Str }
+$dec.clicked.tap: { my $val = $value.text; $val -= 1; $value.text = $val.Str }
 
 $app.run;

@@ -1,1 +1,1 @@
-print(__file__[:-3])
+import sys,inspect;sys.stdout.write(inspect.getsource(inspect.currentframe()))

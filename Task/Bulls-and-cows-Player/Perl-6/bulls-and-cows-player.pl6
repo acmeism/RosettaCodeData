@@ -1,7 +1,7 @@
 # we use the [] reduction meta operator along with the Cartesian Product
 # operator X to create the Cartesian Product of four times [1..9] and then get
 # all the elements where the number of unique digits is four.
-my @candidates = ([X] [1..9] xx 4).tree.grep: *.uniq == 4;
+my @candidates = ([X] [1..9] xx 4).grep: *.unique == 4;
 
 repeat {
 	my $guess = @candidates.pick;

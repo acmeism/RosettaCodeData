@@ -1,1 +1,1 @@
-"ha" x 5
+print "ha" x 5

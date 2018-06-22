@@ -9,7 +9,7 @@ public class RayCasting {
         if (P[1] == A[1] || P[1] == B[1])
             P[1] += 0.0001;
 
-        if (P[1] > B[1] || P[1] < A[1] || P[0] > max(A[0], B[0]))
+        if (P[1] > B[1] || P[1] < A[1] || P[0] >= max(A[0], B[0]))
             return false;
 
         if (P[0] < min(A[0], B[0]))

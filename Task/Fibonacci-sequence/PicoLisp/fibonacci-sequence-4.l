@@ -1,7 +1,4 @@
-(de fibo (N)
-   (let (I 1 J 0)
+(de fib (N)
+   (let (A 0  B 1)
       (do N
-         (let (Tmp J)
-            (inc 'J I)
-            (setq I Tmp) ) )
-      J) )
+         (prog1 B (setq B (+ A B) A @)) ) ) )

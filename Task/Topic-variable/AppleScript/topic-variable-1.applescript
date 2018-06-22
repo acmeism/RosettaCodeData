@@ -23,13 +23,11 @@ end squareRoot
 -- A list of functions applied to a list of arguments
 -- (<*> | ap) :: [(a -> b)] -> [a] -> [b]
 on ap(fs, xs)
-    set intFs to length of fs
-    set intXs to length of xs
     set lst to {}
-    repeat with i from 1 to intFs
-        tell mReturn(item i of fs)
-            repeat with j from 1 to intXs
-                set end of lst to |λ|(contents of (item j of xs))
+    repeat with f in fs
+        tell mReturn(contents of f)
+            repeat with x in xs
+                set end of lst to |λ|(contents of x)
             end repeat
         end tell
     end repeat

@@ -1,23 +1,24 @@
-import math
+from math import sqrt
 
-iterator iprimes_upto(limit: int): int =
-  let sqrtlmt = int(sqrt float64(limit))
-  var is_cmpsts = newSeq[bool](limit + 1)
-  is_cmpsts[0] = true; is_cmpsts[1] = true
-  for n in 2 .. sqrtlmt: # cull to square root of limit
-    if not is_cmpsts[n]: # if prime -> cull its composites
-      for i in countup((n *% n), limit+1, n): # start at ``n`` squared
-        is_cmpsts[i] = true
+iterator primesUpto(limit: int): int =
+  let sqrtLimit = int(sqrt(float64(limit)))
+  var composites = newSeq[bool](limit + 1)
+  composites[0] = true
+  composites[1] = true
+  for n in 2 .. sqrtLimit: # cull to square root of limit
+    if not composites[n]: # if prime -> cull its composites
+      for i in countup(n *% n, limit + 1, n): # start at ``n`` squared
+        composites[i] = true
   for n in 2 .. limit: # separate iteration over results
-    if not is_cmpsts[n]:
+    if not composites[n]:
       yield n
 
 echo("Primes are:")
-for x in iprimes_upto(100):
+for x in primesUpto(100):
    write(stdout, x, " ")
 echo ""
 
 var count = 0
-for p in iprimes_upto(1000000):
+for p in primesUpto(1000000):
   count += 1
-writeLine stdout, "There are ", count, " primes up to 1000000."
+echo "There are ", count, " primes up to 1000000."

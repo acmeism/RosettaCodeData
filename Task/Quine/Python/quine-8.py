@@ -1,11 +1,4 @@
-$ cat reproducing.py
-  File "reproducing.py", line 1
-    File "reproducing.py", line 1
-    ^
-IndentationError: unexpected indent
-
-$ python reproducing.py
-  File "reproducing.py", line 1
-    File "reproducing.py", line 1
-    ^
-IndentationError: unexpected indent
+$ cat print\(__file__\)
+print(__file__)
+$ python print\(__file__\)
+print(__file__)

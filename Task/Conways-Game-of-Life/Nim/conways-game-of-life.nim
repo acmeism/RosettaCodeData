@@ -1,4 +1,4 @@
-import os, strutils, math
+import os, strutils, random
 
 randomize()
 var w, h: int
@@ -9,8 +9,8 @@ if w <= 0: w = 30
 if h <= 0: h = 30
 
 # Initialize
-var univ, utmp = newSeq[seq[bool]] h
-for y in 0 .. <h:
+var univ, utmp = newSeq[seq[bool]](h)
+for y in 0..<h:
   univ[y].newSeq w
   utmp[y].newSeq w
   for x in 0 .. <w:
@@ -20,18 +20,18 @@ for y in 0 .. <h:
 while true:
   # Show
   stdout.write "\e[H"
-  for y in 0 .. <h:
-    for x in 0 .. <w:
+  for y in 0..<h:
+    for x in 0..<w:
       stdout.write if univ[y][x]: "\e[07m  \e[m" else: "  "
     stdout.write "\e[E"
   stdout.flushFile
 
   # Evolve
-  for y in 0 .. <h:
-    for x in 0 .. <w:
+  for y in 0..<h:
+    for x in 0..<w:
       var n = 0
-      for y1 in y-1 .. y+1:
-        for x1 in x-1 .. x+1:
+      for y1 in y-1..y+1:
+        for x1 in x-1..x+1:
           if univ[(y1+h) mod h][(x1 + w) mod w]:
             inc n
 

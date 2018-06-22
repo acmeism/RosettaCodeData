@@ -1,21 +1,8 @@
-use strict;
-use warnings;
-sub powerset(&@) {
-    my $callback = shift;
-    my $bitmask = '';
-    my $bytes = @_/8;
-    {
-       my @indices = grep vec($bitmask, $_, 1), 0..$#_;
-       $callback->( @_[@indices] );
-       ++vec($bitmask, $_, 8) and last for 0 .. $bytes;
-       redo if @indices != @_;
-    }
+my @set = (1, 2, 3);
+my @powerset = powerset(@set);
+
+sub set_to_string {
+    "{" . join(", ", map { ref $_ ? set_to_string(@$_) : $_ } @_) . "}"
 }
 
-print "powerset of empty set:\n";
-powerset { print "[@_]\n" };
-print "powerset of set {1,2,3,4}:\n";
-powerset { print "[@_]\n" } 1..4;
-my $i = 0;
-powerset { ++$i } 1..9;
-print "The powerset of a nine element set contains $i elements.\n";
+print set_to_string(@powerset), "\n";

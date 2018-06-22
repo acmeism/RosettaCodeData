@@ -1,0 +1,9 @@
+U64 Factorial(U64 n) {
+  U64 i, result = 1;
+  for (i = 1; i <= n; ++i)
+    result *= i;
+  return result;
+}
+
+Print("1:  %d\n", Factorial(1));
+Print("10: %d\n", Factorial(10));

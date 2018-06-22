@@ -30,7 +30,7 @@ string[][] topoSort(TDependencies d) pure /*nothrow @safe*/ {
         TDependencies dd;
         foreach (immutable item, const dep; d)
             if (!ordered.canFind(item))
-                dd[item] = dep.filter!(s => !ordered.canFind(s)).array;
+                dd[item] = dep.dup.filter!(s => !ordered.canFind(s)).array;
         d = dd;
     }
 

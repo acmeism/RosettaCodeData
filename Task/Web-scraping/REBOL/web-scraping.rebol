@@ -1,8 +1,8 @@
 REBOL [
-	Title: "Web Scraping"
-	Author: oofoe
-	Date: 2009-12-07
-	URL: http://rosettacode.org/wiki/Web_Scraping
+  Title: "Web Scraping"
+  Author: oofoe
+  Date: 2009-12-07
+  URL: http://rosettacode.org/wiki/Web_Scraping
 ]
 
 ; Notice that REBOL understands unquoted URL's:

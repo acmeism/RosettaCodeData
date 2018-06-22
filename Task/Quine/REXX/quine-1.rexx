@@ -1,1 +1,1 @@
-/*REXX program outputs itself.*/ do j=1 for sourceline(); say sourceline(j); end
+/*REXX program outputs its own 1─line source.*/    say sourceline(1)

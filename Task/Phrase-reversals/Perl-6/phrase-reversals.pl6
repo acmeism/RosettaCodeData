@@ -1,6 +1,6 @@
 my $s = 'rosetta code phrase reversal';
 
-say 'Input               : ', $s;
-say 'String reversed     : ', $s.flip;
-say 'Each word reversed  : ', $s.words».flip;
-say 'Word-order reversed : ', $s.words.reverse;
+put 'Input               : ', $s;
+put 'String reversed     : ', $s.flip;
+put 'Each word reversed  : ', $s.words».flip;
+put 'Word-order reversed : ', $s.words.reverse;

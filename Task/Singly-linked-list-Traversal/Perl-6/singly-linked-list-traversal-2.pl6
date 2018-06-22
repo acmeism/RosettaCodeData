@@ -1,4 +1,4 @@
-use MONKEY_TYPING;
+use MONKEY-TYPING;
 augment class Pair {
     method traverse () {
         gather loop (my $l = self; $l; $l.=value) {

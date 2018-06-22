@@ -1,45 +1,50 @@
-import Data.List (unfoldr, elemIndex)
-import Data.Binary (Word8)
-import Crypto.Hash.SHA256 (hash)
-import Data.ByteString (unpack, pack)
+import           Control.Monad      (when)
+import           Data.List          (elemIndex)
+import           Data.Monoid        ((<>))
+import qualified Data.ByteString    as BS
+import           Data.ByteString    (ByteString)
+
+import           Crypto.Hash.SHA256 (hash)  -- from package cryptohash
 
 -- Convert from base58 encoded value to Integer
 decode58 :: String -> Maybe Integer
-decode58 = foldl (\v d -> (+) <$> ((58*) <$> v) <*> (fromIntegral <$> elemIndex d c58 )) $ Just 0
-  where c58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+decode58 = fmap combine . traverse parseDigit
+  where
+    combine = foldl (\acc digit -> 58 * acc + digit) 0  -- should be foldl', but this trips up the highlighting
+    parseDigit char = toInteger <$> elemIndex char c58
+    c58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
--- Convert from base58 encoded value to list of bytes
-toBytes :: Integer -> [Word8]
-toBytes x = reverse $ unfoldr (\b -> if b == 0 then Nothing else Just (fromIntegral $ b `mod` 256, b `div` 256)) x
+-- Convert from base58 encoded value to bytes
+toBytes :: Integer -> ByteString
+toBytes = BS.reverse . BS.pack . map (fromIntegral . (`mod` 256)) . takeWhile (> 0) . iterate (`div` 256)
+
+-- Check if the hash of the first 21 (padded) bytes matches the last 4 bytes
+checksumValid :: ByteString -> Bool
+checksumValid address =
+  let (value, checksum) = BS.splitAt 21 $ leftPad address
+  in and $ BS.zipWith (==) checksum $ hash $ hash $ value
+  where
+    leftPad bs = BS.replicate (25 - BS.length bs) 0 <> bs
+
+-- utility
+withError :: e -> Maybe a -> Either e a
+withError e = maybe (Left e) Right
 
 -- Check validity of base58 encoded bitcoin address.
--- Result is either an error string (Left) or a validity bool (Right).
-validityCheck :: String -> Either String Bool
-validityCheck encodedAddress =
-  let d58 = decode58 encodedAddress
-  in case d58 of
-       Nothing -> Left "Invalid base 58 encoding"
-       Just ev ->
-         let address = toBytes ev
-             addressLength = length address
-         in if addressLength > 25
-            then Left "Address length exceeds 25 bytes"
-            else
-              if addressLength < 4
-              then Left "Address length less than 4 bytes"
-              else
-                let (bs,cs) = splitAt 21 $ replicate (25 - addressLength) 0 ++ address
-                in Right $ all (uncurry (==)) (zip cs $ unpack $ hash $ hash $ pack bs)
+-- Result is either an error string (Left) or unit (Right ()).
+validityCheck :: String -> Either String ()
+validityCheck encoded = do
+  num <- withError "Invalid base 58 encoding" $ decode58 encoded
+  let address = toBytes num
+  when (BS.length address > 25) $ Left "Address length exceeds 25 bytes"
+  when (BS.length address <  4) $ Left "Address length less than 4 bytes"
+  when (not $ checksumValid address) $ Left "Invalid checksum"
 
 -- Run one validity check and display results.
 validate :: String -> IO ()
-validate encodedAddress =
-  let vc = validityCheck encodedAddress
-  in case vc of
-       Left err ->
-         putStrLn $ show encodedAddress ++ " -> " ++ show err
-       Right validity ->
-         putStrLn $ show encodedAddress ++ " -> " ++ if validity then "Valid" else "Invalid"
+validate encodedAddress = do
+  let result = either show (const "Valid") $ validityCheck encodedAddress
+  putStrLn $ show encodedAddress ++ " -> " ++ result
 
 -- Run some validity check tests.
 main :: IO ()

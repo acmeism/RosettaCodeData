@@ -1,7 +1,6 @@
 {
   init;
-  while (cond)
-  {
+  while(cond){
     statement;
     update;
   }

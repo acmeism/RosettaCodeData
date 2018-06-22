@@ -1,11 +1,4 @@
-#lang racket
-
-(require math/matrix)
-
-(define (fibmat n) (matrix-ref
-                    (matrix-expt (matrix ([1 1]
-                                          [1 0]))
-                                 n)
-                    1 0))
-
-(fibmat 1000)
+(define (fib n (a 0) (b 1))
+  (if (< n 2)
+      1
+      (+ a (fib (- n 1) b (+ a b)))))

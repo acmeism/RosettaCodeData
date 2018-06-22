@@ -15,7 +15,7 @@ int main(void)
 		exit(EXIT_FAILURE);
 
 	while ((read = getline(&line, &len, stream)) != -1) {
-		printf("Retrieved line of length %zu :\n", read);
+		printf("Retrieved line of length %u :\n", read);
 		printf("%s", line);
 	}
 

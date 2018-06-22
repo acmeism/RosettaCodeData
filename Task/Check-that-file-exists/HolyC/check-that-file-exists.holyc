@@ -1,0 +1,20 @@
+U0 FileExists(U8 *f) {
+  if (FileFind(f) && !IsDir(f)) {
+    Print("'%s' file exists.\n", f);
+  } else {
+    Print("'%s' file does not exist.\n", f);
+  }
+}
+
+U0 DirExists(U8 *d) {
+  if (IsDir(d)) {
+    Print("'%s' directory exists.\n", d);
+  } else {
+    Print("'%s' directory does not exist.\n", d);
+  }
+}
+
+FileExists("input.txt");
+FileExists("::/input.txt");
+DirExists("docs");
+DirExists("::/docs");

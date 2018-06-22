@@ -1,9 +1,12 @@
-;config-file.lisp
-(defstruct config-file :fullname :favoritefruit :needspeeling :seedsremoved :otherfamily)
-(with-open-file (in "config-file.txt")
-  (defvar contents (read in))
-  (format t "~a~%" contents)
-  ;reading the config-file into a structure gives us
-  ;some helper functions to access individualy each element
-  (format t "Fullname: ~a~%" (config-file-fullname contents))
-  (format t "Contents is a config-file? ~a~%" (config-file-p contents)))
+READ-CONFIG> (with-open-file (s "test.cfg") (parse-config s))
+#<HASH-TABLE :TEST EQUAL :COUNT 4 {100BD25B43}>
+READ-CONFIG> (maphash (lambda (k v) (print (list k v))) *)
+
+("FULLNAME" "Foo Barber")
+("FAVOURITEFRUIT" "banana")
+("NEEDSPEELING" T)
+("OTHERFAMILY" ("Rhu Barber" "Harry Barber"))
+NIL
+READ-CONFIG> (gethash "SEEDSREMOVED" **)
+NIL
+NIL

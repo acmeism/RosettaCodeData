@@ -1,5 +1,5 @@
   blue= "00 00 ff"x                              /*define the blue color  (hexadecimal).*/
-  blue= '00 00 ff'x                              /*define the blue color  (hexadecimal).*/
+  blue= '00 00 FF'x                              /*define the blue color  (hexadecimal).*/
   blue= '0000ff'x                                /*define the blue color  (hexadecimal).*/
 
   blue= '00000000 00000000 11111111'b            /*define the blue color  (binary).     */

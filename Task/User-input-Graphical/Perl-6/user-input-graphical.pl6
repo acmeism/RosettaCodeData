@@ -1,10 +1,11 @@
 use GTK::Simple;
+use GTK::Simple::App;
 
 my GTK::Simple::App $app .= new( title => 'User Interaction' );
 
-$app.border_width = 20;
+$app.border-width = 20;
 
-$app.set_content(
+$app.set-content(
     GTK::Simple::VBox.new(
         my $        = GTK::Simple::Label.new( text => 'Enter a string.' ),
         my $str     = GTK::Simple::Entry.new,

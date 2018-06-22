@@ -24,7 +24,7 @@ variable temp-addr
 : reverse-copy ( addr1 addr2 u -- addr1 addr2 )
     0 do over I' 1- I - + over I + 1 cmove loop 2drop ;
 
-: palindrome? ( addr1 u1 -- )
+: palindrome? ( -- )
     get-phrase strip-input position-phrase reverse-copy compare 0= if
     ." << Valid >> Palindrome."
     else ." << Not >> a Palindrome."

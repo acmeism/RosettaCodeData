@@ -1,9 +1,11 @@
-function luhn(str){
-	return str.split('').reduceRight(function(prev, curr, idx){
-		prev = parseInt(prev, 10);
-		if ((idx + 1) % 2 !== 0) {
-			curr = (curr * 2).toString().split('').reduce(function(p, c){ return parseInt(p, 10) + parseInt(c, 10)});
-		}
-		return prev + parseInt(curr, 10);
-	}) % 10 === 0;
-}
+var luhn10 = function(a,b,c,d,e) {
+  for(d = +a[b = a.length-1], e=0; b--;)
+    c = +a[b], d += ++e % 2 ? 2 * c % 10 + (c > 4) : c;
+  return !(d%10)
+};
+
+// returns true
+luhn10('4111111111111111')
+
+// returns false
+luhn10('4111111111111112')

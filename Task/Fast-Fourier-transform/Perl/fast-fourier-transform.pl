@@ -7,7 +7,7 @@ sub fft {
     my @evn = fft(@_[grep { not $_ % 2 } 0 .. $#_ ]);
     my @odd = fft(@_[grep { $_ % 2 } 1 .. $#_ ]);
     my $twd = 2*i* pi / @_;
-    $odd[$_] *= exp( $_ * $twd ) for 0 .. $#odd;
+    $odd[$_] *= exp( $_ * -$twd ) for 0 .. $#odd;
     return
     (map { $evn[$_] + $odd[$_] } 0 .. $#evn ),
     (map { $evn[$_] - $odd[$_] } 0 .. $#evn );

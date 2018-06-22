@@ -1,5 +1,5 @@
-inf = 1.0 / 0.0    #=> Infinity
-nan = 0.0 / 0.0    #=> NaN
+inf = 1.0 / 0.0    # or Float::INFINITY
+nan = 0.0 / 0.0               # or Float::NAN
 
 expression = [
   "1.0 / 0.0", "-1.0 / 0.0", "0.0 / 0.0", "- 0.0",

@@ -1,4 +1,3 @@
-use v6;
 use XML;
 
 my $xml = from-xml '<Students>
@@ -11,4 +10,4 @@ my $xml = from-xml '<Students>
   <Student DateOfBirth="1993-09-10" Gender="F" Name="&#x00C9;mily" />
 </Students>';
 
-say .<Name> for $xml.nodes.grep(*.name eq 'Student')
+say .<Name> for $xml.nodes.grep(/Student/)

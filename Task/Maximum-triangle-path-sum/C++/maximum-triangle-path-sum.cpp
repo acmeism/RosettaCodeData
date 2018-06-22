@@ -1,3 +1,4 @@
+/* Algorithm complexity: n*log(n) */
 #include <iostream>
 
 int main( int argc, char* argv[] )
@@ -30,7 +31,7 @@ int main( int argc, char* argv[] )
 
     // walk backward by rows, replacing each element with max attainable therefrom
     for (int n = tn - 1; n > 0; --n)   // n is size of row, note we do not process last row
-        for (int k = (n * (n-1)) / 2; k < (n * (n+2)) / 2; ++k)
+        for (int k = (n * (n-1)) / 2; k < (n * (n+1)) / 2; ++k) // from the start to the end of row
             triangle[k] += std::max(triangle[k + n], triangle[k + n + 1]);
 
     std::cout << "Maximum total: " << triangle[0] << "\n\n";

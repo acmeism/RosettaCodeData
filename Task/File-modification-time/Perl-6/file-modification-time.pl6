@@ -10,7 +10,7 @@ class utimbuf is repr('CStruct') {
     }
 }
 
-sub sysutime(Str, utimbuf --> int) is native is symbol('utime') {*}
+sub sysutime(Str, utimbuf --> int32) is native is symbol('utime') {*}
 
 sub MAIN (Str $file) {
     my $mtime = $file.IO.modified // die "Can't stat $file: $!";

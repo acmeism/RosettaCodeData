@@ -50,7 +50,7 @@ std::pair<double, points_t> find_closest_optimized(const std::vector<point_t>& x
 	auto xR = std::vector<point_t>();
 	std::copy(std::begin(xP), std::begin(xP) + (N / 2), std::back_inserter(xL));
 	std::copy(std::begin(xP) + (N / 2), std::end(xP), std::back_inserter(xR));
-	auto xM = xP.at(N / 2).first;
+	auto xM = xP.at((N-1) / 2).first;
 	auto yL = std::vector<point_t>();
 	auto yR = std::vector<point_t>();
 	std::copy_if(std::begin(yP), std::end(yP), std::back_inserter(yL), [&xM](const point_t& p) {

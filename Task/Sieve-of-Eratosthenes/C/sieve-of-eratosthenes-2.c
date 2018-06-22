@@ -5,7 +5,7 @@ void sieve(int *, int);
 int main(int argc, char *argv)
 {
     int *array, n=10;
-    array =(int *)malloc(sizeof(int));
+    array =(int *)malloc((n + 1) * sizeof(int));
     sieve(array,n);
     return 0;
 }

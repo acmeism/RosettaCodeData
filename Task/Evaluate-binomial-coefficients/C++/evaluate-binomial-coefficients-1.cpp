@@ -13,11 +13,9 @@ double Factorial(double nValue)
        return nValue;
    }
 
-double EvaluateBinomialCoefficient(double nValue, double nValue2)
+double binomialCoefficient(double n, double k)
    {
-       double result;
-       if(nValue2 == 1)return nValue;
-       result = (Factorial(nValue))/(Factorial(nValue2)*Factorial((nValue - nValue2)));
-       nValue2 = result;
-       return nValue2;
+       if (abs(n - k) < 1e-7 || k  < 1e-7) return 1.0;
+       if( abs(k-1.0) < 1e-7 || abs(k - (n-1)) < 1e-7)return n;
+       return Factorial(n) /(Factorial(k)*Factorial((n - k)));
    }

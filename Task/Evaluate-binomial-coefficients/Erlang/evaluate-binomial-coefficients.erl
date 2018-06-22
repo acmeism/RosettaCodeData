@@ -1,3 +1,4 @@
+choose(N, 0) -> 1;
 choose(N, K) when is_integer(N), is_integer(K), (N >= 0), (K >= 0), (N >= K) ->
   choose(N, K, 1, 1).
 

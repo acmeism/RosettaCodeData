@@ -19,16 +19,16 @@ constant k = flat (   $_           for ^16),
                   ((7*$_    ) % 16 for ^16);
 
 sub little-endian($w, $n, *@v) {
-    my \step1 = ($w X* ^$n).eager;  # temporary bug workaround
-    my \step2 = (@v X+> step1);
-    step2 X% (2 ** $w);
+    my \step1 = $w X* ^$n;
+    my \step2 = @v X+> step1;
+    step2 X% 2**$w;
 }
 
 sub md5-pad(Blob $msg)
 {
-    my \bits = 8 * $msg.elems;
-    my @padded = flat $msg.list, 0x80, 0x00 xx (-(bits div 8 + 1 + 8) % 64);
-    flat @padded.map({ :256[$^d,$^c,$^b,$^a] }), little-endian(32, 2, bits);
+    my $bits = 8 * $msg.elems;
+    my @padded = flat $msg.list, 0x80, 0x00 xx -($bits div 8 + 1 + 8) % 64;
+    flat @padded.map({ :256[$^d,$^c,$^b,$^a] }), little-endian(32, 2, $bits);
 }
 
 sub md5-block(@H, @X)

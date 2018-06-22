@@ -1,5 +1,3 @@
-use v6;
-
 # reciprocal difference:
 multi sub ρ(&f, @x where * < 1) { 0 } # Identity
 multi sub ρ(&f, @x where * == 1) { &f(@x[0]) }
@@ -15,11 +13,11 @@ multi sub thiele($x, %f, $ord where { $ord == +%f }) { 1 } # Identity
 multi sub thiele($x, %f, $ord) {
   my &f = {%f{$^a}};                # f(x) as a table lookup
 
-  # Caveat: depends on the fact that Rakudo maintains key order within hashes
-  my $a = ρ(&f, %f.keys[^($ord +1)]);
-  my $b = ρ(&f, %f.keys[^($ord -1)]);
+  # must sort hash keys to maintain order between invocations
+  my $a = ρ(&f, %f.keys.sort[^($ord +1)]);
+  my $b = ρ(&f, %f.keys.sort[^($ord -1)]);
 
-  my $num = $x - %f.keys[$ord];
+  my $num = $x - %f.keys.sort[$ord];
   my $cont = thiele($x, %f, $ord +1);
 
   # Thiele always takes this form:

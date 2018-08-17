@@ -1,8 +1,6 @@
-error_reporting(E_ALL & ~ ( E_NOTICE | E_WARNING ));
-
 while (true) {
     echo "\nEnter a value in kelvin (q to quit): ";
-    if (($kelvin = trim(fgets(STDIN))) !== false) {
+    if ($kelvin = trim(fgets(STDIN))) {
         if ($kelvin == 'q') {
             echo 'quitting';
             break;

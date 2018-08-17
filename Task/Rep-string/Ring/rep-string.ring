@@ -1,8 +1,4 @@
 # Project : Rep-string
-# Date    : 2017/10/14
-# Author  : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
-
 
 test = ["1001110011",
         "1110111011",

@@ -1,7 +1,3 @@
-/// @Author: Alexandre Felipe (o.alexandre.felipe@gmail.com)
-/// @Date: 2018-Jan-25
-///
-
 package math_pkg;
   // Inspired by the post
   // https://community.cadence.com/cadence_blogs_8/b/fv/posts/create-a-sine-wave-generator-using-systemverilog

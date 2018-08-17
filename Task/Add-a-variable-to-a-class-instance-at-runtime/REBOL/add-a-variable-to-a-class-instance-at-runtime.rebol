@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Add Variables to Class at Runtime"
-	Author: oofoe
-	Date: 2009-12-04
 	URL: http://rosettacode.org/wiki/Adding_variables_to_a_class_instance_at_runtime
 ]
 

@@ -1,7 +1,5 @@
 REBOL [
     Title: "Documentation"
-    Date: 2009-12-14
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Documentation
 	Purpose: {To demonstrate documentation of REBOL pograms.}
 ]

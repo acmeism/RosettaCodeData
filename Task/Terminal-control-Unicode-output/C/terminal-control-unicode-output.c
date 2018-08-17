@@ -1,6 +1,3 @@
-/*30th August, 2012
-Abhishek Ghosh*/
-
 #include<stdlib.h>
 #include<stdio.h>
 

@@ -1,7 +1,4 @@
-/*28th August, 2012
-Abhishek Ghosh
-
-Uses C99 specified complex.h, complex datatype has to be defined and operation provided if used on non-C99 compilers */
+/* Uses C99 specified complex.h, complex datatype has to be defined and operation provided if used on non-C99 compilers */
 
 #include<stdlib.h>
 #include<stdio.h>

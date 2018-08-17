@@ -1,4 +1,4 @@
-proc maxsum(s): int =
+proc maxsum(s: openArray[int]): int =
   var maxendinghere = 0
   for x in s:
     maxendinghere = max(maxendinghere + x, 0)

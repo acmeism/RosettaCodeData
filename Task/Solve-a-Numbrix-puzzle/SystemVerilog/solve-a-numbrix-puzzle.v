@@ -1,8 +1,3 @@
-/// @Author: Alexandre Felipe (o.alexandre.felipe@gmail.com)
-/// @Date:  2017-May-10
-///
-
-
 //////////////////////////////////////////////////////////////////////////////
 ///  NumbrixSolver                                                         ///
 ///     Solve the puzzle, by using system verilog randomization engine     ///

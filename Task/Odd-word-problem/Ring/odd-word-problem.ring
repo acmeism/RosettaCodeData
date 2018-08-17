@@ -1,7 +1,4 @@
 # Project : Odd word problem
-# Date    : 2017/10/15
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 test = "what,is,the;meaning,of:life."
 n1 = 1

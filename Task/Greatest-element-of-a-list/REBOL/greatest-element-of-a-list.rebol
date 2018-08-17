@@ -1,7 +1,5 @@
 REBOL [
     Title: "Maximum Value"
-    Date: 2009-12-15
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Maximum_Value
 ]
 

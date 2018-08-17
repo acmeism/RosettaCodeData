@@ -1,0 +1,55 @@
+integer res  -- 1=failure, 0=success
+atom rint = 0   -- random 32-bit int
+
+#ilASM{
+        mov eax,1
+        cpuid
+        bt ecx,30
+        mov edi,1 -- exit code: failure
+        jnc :exit
+
+        -- rdrand sets CF=0 if no random number
+        -- was available. Intel documentation
+        -- recommends 10 retries in a tight loop
+        mov ecx,11
+    ::loop1
+        sub ecx, 1
+        jz :exit -- exit code is set already
+        rdrand eax
+        -- (the above generates exception #C000001D if not supported)
+--      rdtsc
+        jnc :loop1
+
+        lea edi,[rint]
+        call :%pStoreMint
+        xor edi,edi
+
+    ::exit
+        mov [res],edi
+        xor ebx,ebx     -- important!
+      }
+
+?{res,rint}
+
+if res=0 then   -- (success)
+
+    --
+    -- To convert a signed 32-bit int to an unsigned one:
+    --
+    --  method 1
+--  atom urint1 = rint
+--  if urint1<0 then urint1+=#100000000 end if
+    atom urint1 = rint+iff(rint<0?#100000000:0)
+
+    --  method 2
+    atom pMem = allocate(4)
+    poke4(pMem,rint)
+    atom urint2 = peek4u(pMem)
+    free(pMem)
+
+    --  method 3
+    atom urint3 = bytes_to_int(int_to_bytes(rint,4),signed:=false)
+
+    ?{urint1,urint2,urint3}
+
+end if

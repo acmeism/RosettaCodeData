@@ -1,7 +1,4 @@
 # Project : Word wrap
-# Date    : 2018/01/02
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 

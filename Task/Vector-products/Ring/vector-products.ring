@@ -1,7 +1,4 @@
 # Project : Vector products
-# Date    : 2017/09/21
-# Author  : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 d = list(3)
 e = list(3)

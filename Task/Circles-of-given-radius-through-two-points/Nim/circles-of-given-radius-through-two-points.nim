@@ -5,16 +5,16 @@ type
   Circle = tuple[x, y, r: float]
 
 proc circles(p1, p2: Point, r: float): tuple[c1, c2: Circle] =
-  if r == 0: raise newException(EInvalidValue,
+  if r == 0: raise newException(ValueError,
     "radius of zero")
-  if p1 == p2: raise newException(EInvalidValue,
+  if p1 == p2: raise newException(ValueError,
     "coincident points gives infinite number of Circles")
 
   # delta x, delta y between points
   let (dx, dy) = (p2.x - p1.x, p2.y - p1.y)
   # dist between points
   let q = sqrt(dx*dx + dy*dy)
-  if q > 2.0*r: raise newException(EInvalidValue,
+  if q > 2.0*r: raise newException(ValueError,
     "separation of points > diameter")
 
   # halfway point
@@ -43,6 +43,6 @@ for p1, p2, r in tries.items:
     let (c1, c2) = circles(p1, p2, r)
     echo "  ", c1
     echo "  ", c2
-  except EInvalidValue:
+  except ValueError:
     echo "  ERROR: ", getCurrentExceptionMsg()
   echo ""

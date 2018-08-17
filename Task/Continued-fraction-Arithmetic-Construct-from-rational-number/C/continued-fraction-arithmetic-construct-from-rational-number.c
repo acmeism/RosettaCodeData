@@ -1,5 +1,3 @@
-/*Abhishek Ghosh, 8th November 2013, Rotterdam*/
-
 #include<stdio.h>
 
 typedef struct{

@@ -1,0 +1,144 @@
+--
+-- demo\arwendemo\hotkey.exw
+-- =========================
+--
+--  Author: Pete Lomax, credit to Aku Saya for HotKey
+--                            and Thomas Parslow for sendkeys
+--
+--  http://phix.x10.mx
+--
+--/**/with gui
+include arwen.ew
+
+constant
+    MOD_ALT = #1,
+    MOD_CONTROL = #2,
+    MOD_SHIFT = #4,
+    MOD_WIN = #8
+
+integer Modifier, vKeyCode
+
+constant Main = create(Window, "Hotkey", 0, 0, 36, 99, 294, 201, 0)
+constant MainHwnd = getHwnd(Main)
+constant mFile = create(Menu,"File",0,Main,190,63,0,0,0)
+constant mExit = create(MenuItem,"Exit",0,mFile,194,53,0,0,0)
+constant mHelp = create(Menu,"Help",0,Main,182,57,0,0,0)
+constant mAbout = create(MenuItem,"About",0,mHelp,184,45,0,0,0)
+constant AltKey = create(CheckBox, "Alt", 0, Main, 8, 5, 62, 20, 0)
+constant ShiftKey = create(CheckBox, "Shift", 0, Main, 8, 28, 56, 20, 0)
+constant CtrlKey = create(CheckBox, "Ctrl", 0, Main, 8, 52, 70, 20, 0)
+constant WinKey = create(CheckBox, "Windows", 0, Main, 8, 76, 72, 20, 0)
+constant KeyList = create(ComboDropDown, "KeyList", 0, Main, 89, 11, 100, 652, 0)
+constant KeyInfoText = create(Label, "", 0, Main, 90, 72, 186, 20, SS_LEFTNOWORDWRAP)
+constant SetButton = create(Button, "setHotKey", 0, Main, 8, 99, 176, 40, BS_DEFPUSHBUTTON)
+constant KillButton = create(Button, "killHotKey", 0, Main, 195, 99, 80, 40, 0)
+
+sequence KeyCodes
+
+procedure initialise()
+string text
+    for f=1 to 11 do    -- F1 to F11 (F12 is reserved)
+        text = sprintf("F%d",f)
+        void = insertItem(KeyList,text,0)
+    end for
+    KeyCodes = {VK_F1, VK_F2, VK_F3, VK_F4, VK_F5, VK_F6, VK_F7, VK_F8, VK_F9, VK_F10, VK_F11}
+    for ch='A' to 'Z' do
+        text = sprintf("%s",ch)
+        void = insertItem(KeyList,text,0)
+        KeyCodes &= ch -- (as char, not string)
+    end for
+    for i=1 to 9 do
+        text = sprintf("%d",i)
+        void = insertItem(KeyList,text,0)
+        KeyCodes &= i -- (as char, not string)
+    end for
+end procedure
+initialise()
+
+constant INPUT_KEYBOARD=1
+
+procedure pokeKey(atom pKey, integer key)
+-- see http://msdn.microsoft.com/en-us/library/windows/desktop/ms646270(v=vs.85).aspx
+-- and http://msdn.microsoft.com/en-us/library/windows/desktop/ms646271(v=vs.85).aspx
+integer ScanCode
+    ScanCode = c_func(xVkKeyScan,{key})
+    poke4(pKey+KEYBDINPUT_type,INPUT_KEYBOARD)
+    poke2(pKey+KEYBDINPUT_wVk,key)
+    poke4(pKey+KEYBDINPUT_dwFlags,0)
+    poke4(pKey+KEYBDINPUT_wScan,ScanCode)
+    poke4(pKey+KEYBDINPUT_time,0)
+    poke4(pKey+KEYBDINPUT_dwExtraInfo,0)
+end procedure
+
+function MainHandler(integer id, integer msg, atom wParam, object lParam)
+string text
+atom pKeys, pKey
+integer nRes
+
+    if msg=WM_SETFOCUS then
+        if id=SetButton then
+            if not getIndex(KeyList) then
+                setFocus(KeyList)
+                void = messageBox("HotKey","Select a key from the drop-down",MB_OK)
+            else
+                Modifier = isChecked(AltKey) * MOD_ALT +
+                           isChecked(ShiftKey) * MOD_SHIFT +
+                           isChecked(CtrlKey) * MOD_CONTROL +
+                           isChecked(WinKey) * MOD_WIN
+                vKeyCode = KeyCodes[getIndex(KeyList)]
+                text = sprintf("setHotKey(Main, #%02x, #%02x) [%s]",{Modifier,vKeyCode,getText(KeyList)})
+                setText(KeyInfoText, text)
+            end if
+        elsif id=KillButton then
+            text = sprintf("killHotKey(Main) [%s]",{getText(KeyList)})
+            setText(KeyInfoText, text)
+        end if
+    elsif msg=WM_COMMAND then
+        if id=mExit then
+            closeWindow(Main)
+        elsif id=mAbout then
+            text = "Simple hotkey/sendinput wrapper.\n\n"&
+
+                   "Author Pete Lomax.\n"&
+                   "Written in phix (http://phix.x10.mx) but could easily be ported\n"&
+                   "to any language (that can invoke RegisterHotKey and SendInput).\n\n"&
+
+                   "First, use the checkboxes and dropdown to select a hotkey (eg F7).\n"&
+                   "Currently always sends {delete,down}, but that could easily be changed.\n"&
+                   "Used on build02 to perform the GUID stripping.\n\n"&
+
+                   "Note that Windows Server 2008 requires this to be run in admin mode, \n"&
+                   "as otherwise something called UIPI will block it and not say why.\n"
+            void = messageBox("HotKey",text,MB_OK)
+        elsif id=SetButton then
+            -- see http://msdn.microsoft.com/en-us/library/windows/desktop/ms646309(v=vs.85).aspx
+            if c_func(xRegisterHotKey,{MainHwnd, 0, Modifier, vKeyCode})=0 then
+                void = messageBox("HotKey","Register Hotkey failed",MB_OK)
+            end if
+        elsif id=KillButton then
+            if c_func(xUnregisterHotKey,{MainHwnd, 0})=0 then
+                void = messageBox("HotKey","UnRegister Hotkey failed",MB_OK)
+            end if
+        end if
+    elsif msg=WM_HOTKEY then
+        setText(Main,sprintf("%g",time()))
+        pKeys = allocate(sizeofstruct(KEYBDINPUT)*2)
+        pKey = pKeys
+        pokeKey(pKey,VK_DELETE)
+        pKey += sizeofstruct(KEYBDINPUT)
+        pokeKey(pKey,VK_DOWN)
+
+        -- see http://msdn.microsoft.com/en-us/library/windows/desktop/ms646310(v=vs.85).aspx
+        nRes = c_func(xSendInput,{2,pKeys,sizeofstruct(KEYBDINPUT)})
+        if nRes!=2 then
+            nRes = c_func(xGetLastError,{})
+            text = sprintf("SendInput failed[%d]",nRes)
+            void = messageBox("HotKey",text,MB_OK)
+        end if
+    end if
+    if wParam or object(lParam) then end if -- suppress warnings
+    return 0
+end function
+setHandler({Main,SetButton,KillButton,mExit,mAbout},routine_id("MainHandler"))
+
+WinMain(Main,SW_NORMAL)

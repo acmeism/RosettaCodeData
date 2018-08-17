@@ -1,7 +1,4 @@
 # Project : Anonymous recursion
-# Date    : 2018/01/03
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 t=0
 for x = -2 to 12

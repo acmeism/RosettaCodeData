@@ -6,8 +6,7 @@ begin
    Open (File => File,
          Mode => In_File,
          Name => "line_by_line.adb");
-   loop
-      exit when End_Of_File (File);
+   While not  End_Of_File (File) Loop
       Put_Line (Get_Line (File));
    end loop;
 

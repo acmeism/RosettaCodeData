@@ -1,7 +1,4 @@
 # Project : Cholesky decomposition
-# Date    : 2017/11/12
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 decimals(5)

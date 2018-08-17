@@ -15,10 +15,10 @@ print "Key: " . (my $key = $ARGV[ 2 ]) . "\n";
 
 if( $cipher_decipher =~ /ENC/ ){
   print "Plain-text: " . (my $plain = $ARGV[ 1 ]) . "\n";
-  print "Encrypted: " . Vigenere( 1, $plain ) . "\n";
+  print "Encrypted: " . Vigenere( 1, $key, $plain ) . "\n";
 }elsif( $cipher_decipher =~ /DEC/ ){
   print "Cipher-text: " . (my $cipher = $ARGV[ 1 ]) . "\n";
-  print "Decrypted: " . Vigenere( -1, $cipher ) . "\n";
+  print "Decrypted: " . Vigenere( -1, $key, $cipher ) . "\n";
 }
 
 sub printHelp{
@@ -29,7 +29,7 @@ sub printHelp{
 }
 
 sub Vigenere{
-  my ($direction, $text) = @_;
+  my ($direction, $key, $text) = @_;
   for( my $count = 0; $count < length $text; $count ++ ){
     $key_offset = $direction * ord substr( $key, $count % length $key, 1);
     $char_offset = ord substr( $text, $count, 1 );

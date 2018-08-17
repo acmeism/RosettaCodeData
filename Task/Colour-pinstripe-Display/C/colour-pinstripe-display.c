@@ -1,5 +1,3 @@
-/*Abhishek Ghosh, 6th November 2013, Rotterdam*/
-
 #include<graphics.h>
 #include<conio.h>
 

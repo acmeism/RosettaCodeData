@@ -1,7 +1,4 @@
 # Project : Permutations/Rank of a permutation
-# Date    : 2017/10/21
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 list = [0, 1, 2, 3]
 for perm = 0 to 23

@@ -1,4 +1,3 @@
-USE: infix
-[infix
-    5*(1+1) ! 10
-infix]
+MACRO: pre ( quot -- quot ) reverse ;
+
+[ + 2 2 ] pre ! 4

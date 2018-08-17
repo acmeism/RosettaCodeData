@@ -1,7 +1,4 @@
 # Project : Set
-# Date    : 2018/03/26
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 arr = ["apple", "banana", "cherry", "date", "elderberry", "fig", "grape"]
 for n = 1 to 25

@@ -1,5 +1,3 @@
-/*Corrected by Abhishek Ghosh, Mahalaya (19th September) 2017*/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>

@@ -1,7 +1,4 @@
 # Project : Knapsack problem/0-1
-# Date    : 2018/01/27
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 knap = [["map",9,150],
             ["compass",13,35],

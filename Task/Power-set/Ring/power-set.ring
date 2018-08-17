@@ -1,7 +1,4 @@
 # Project : Power set
-# Date    : 2018/01/13
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 list = ["1", "2", "3", "4"]
 see powerset(list)

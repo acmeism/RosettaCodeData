@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Yuletide Holiday"
-	Author: oofoe
-	Date: 2009-12-07
 	URL: http://rosettacode.org/wiki/Yuletide_Holiday
 ]
 

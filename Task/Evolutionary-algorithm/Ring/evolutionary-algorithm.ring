@@ -1,7 +1,4 @@
 # Project : Evolutionary algorithm
-# Date    : 2018/03/28
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 target = "METHINKS IT IS LIKE A WEASEL"
 parent = "IU RFSGJABGOLYWF XSMFXNIABKT"

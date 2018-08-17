@@ -1,4 +1,4 @@
-program prime;
+program emirp;
 {$IFDEF FPC}
   {$MODE DELPHI}
   {$OPTIMIZATION ON,REGVAR,PEEPHOLE,CSE,ASMCSE}
@@ -319,7 +319,7 @@ var
   sievePr,
   PrimPos,
   srPrPos  : NativeUint;
-  l:   Uint64;
+
 Begin
   Init;
   MaxPos := CalcPos(MaxUpperLimit);
@@ -570,12 +570,11 @@ Begin
   end;
 end;
 
-procedure GetEmirps(loLmt,HiLmt: Uint64);
+function GetEmirps(loLmt,HiLmt: Uint64):NativeInt;
 var
   p1 :tRecPrime;
-  cnt: NativeUint;
 Begin
-  cnt := 0;
+  result := 0;
   IF HiLmt < loLmt then
     exit;
   IF loLmt > MaxUpperLimit then
@@ -590,18 +589,16 @@ Begin
 
   repeat
     if isEmirp(p1.rpPrime) then
-      inc(cnt);
+      inc(result);
     iF not(NextPrime(p1)) then
       BREAK;
   until p1.rpPrime > HiLmt;
-
-  write(cnt:10);
 end;
 
 var
   T1,T0: TDateTime;
   Anzahl :Uint64;
-  i,j : Uint64;
+  i,j,dgtCnt,totalCnt : Uint64;
   n : LongInt;
 Begin
   T0 := now;
@@ -637,15 +634,22 @@ Begin
 
   writeln;
   writeln('Count Emirps');
+  writeln('             Emirp           Total');
+  writeln('Decimals     Count           Count');
+  totalCnt := 0;
   j := 10;
+  i := 2;
+  dgtCnt := 2;  // 13 is not present so 13<->31 isnt found
   repeat
-   writeln(j:10);
-    GetEmirps(  j,  j+j-1);//10..00->19..99
-    GetEmirps(3*j,3*j+j-1);//30..00->39..99
-    GetEmirps(7*j,7*j+j-1);//70..00->79..99
-    GetEmirps(9*j,9*j+j-1);//90..00->99..99
-    writeln;
+    write(i:8);
+    inc(dgtCnt,GetEmirps(  j,  j+j-1));//10..00->19..99
+    inc(dgtCnt,GetEmirps(3*j,3*j+j-1));//30..00->39..99
+    inc(dgtCnt,GetEmirps(7*j,7*j+j-1));//70..00->79..99
+    inc(dgtCnt,GetEmirps(9*j,9*j+j-1));//90..00->99..99
+    inc(TotalCnt,dgtCnt);
+    writeln(dgtCnt:12,TotalCnt:14);
     j:=j*10;
+    inc(i);
+    dgtCnt := 0;
   until j >= MaxUpperLimit;
-
 end.

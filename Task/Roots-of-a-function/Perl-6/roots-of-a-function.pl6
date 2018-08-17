@@ -1,4 +1,4 @@
-sub f($x) { $x*$x*$x - 3*$x*$x + 2*$x }
+sub f(\x) { x³ - 3*x² + 2*x }
 
 my $start = -1;
 my $stop = 3;

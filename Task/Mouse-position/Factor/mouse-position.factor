@@ -1,5 +1,5 @@
 : replace-text ( button text -- )
-    [ drop children>> pop drop ] [ >label add-gadget drop ] 2bi;
+    [ drop children>> pop drop ] [ >label add-gadget drop ] 2bi ;
 : present-locations ( loc1 loc2 -- string )
     [
       first2 [ number>string ] bi@ "," glue

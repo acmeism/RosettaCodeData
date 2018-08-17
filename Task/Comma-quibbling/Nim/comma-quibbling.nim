@@ -1,4 +1,4 @@
-proc commaQuibble(s): string =
+proc commaQuibble(s: openArray[string]): string =
   result = ""
   for i, c in s:
     if i > 0: result.add (if i < s.high: ", " else: " and ")

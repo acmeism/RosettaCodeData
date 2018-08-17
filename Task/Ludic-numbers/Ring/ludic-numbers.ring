@@ -1,7 +1,4 @@
 # Project : Ludic numbers
-# Date    : 2017/11/07
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 ludic = list(300)
 resludic = []

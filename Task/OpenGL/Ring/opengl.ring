@@ -1,7 +1,4 @@
 # Project: OpenGL
-# Date   : 2018/06/09
-# Author: Gal Zsolt [~ CalmoSoft ~]
-# Email  : <calmosoft@gmail.com>
 
 load "freeglut.ring"
 load "opengl21lib.ring"

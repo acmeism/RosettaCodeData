@@ -1,7 +1,5 @@
 REBOL [
     Title: "Sleep Main Thread"
-    Date: 2009-12-15
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Sleep_the_Main_Thread
 ]
 

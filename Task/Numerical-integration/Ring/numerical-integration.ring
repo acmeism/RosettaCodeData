@@ -1,7 +1,4 @@
 # Project : Numerical integration
-# Date    : 2018/04/087
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 decimals(8)
 data = [["pow(x,3)",0,1,100], ["1/x",1, 100,1000], ["x",0,5000,5000000], ["x",0,6000,6000000]]

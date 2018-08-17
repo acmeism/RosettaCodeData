@@ -1,6 +1,3 @@
-/// @Author: Alexandre Felipe (o.alexandre.felipe@gmail.com)
-/// @Date: 2017-May-10
-
 ///////////////////////////////////////////////////////////////////////////////
 /// seven_sided_dice_tb : (testbench)                                       ///
 ///      Check the distribution of the output of a seven sided dice circuit ///

@@ -1,7 +1,4 @@
 # Project : Aliquot sequence classnifications
-# Date    : 2017/11/16
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 see "Rosetta Code - aliquot sequence classnifications" + nl
 while true

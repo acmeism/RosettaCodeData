@@ -1,7 +1,4 @@
 # Project : Jensen's Device
-# Date    : 2018/01/31
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 decimals(14)
 i = 100

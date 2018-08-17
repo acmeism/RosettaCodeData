@@ -1,7 +1,4 @@
 # Project : Truncatable primes
-# Date    : 2017/10/15
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 for n = 1000000 to 1 step -1
     flag = 1

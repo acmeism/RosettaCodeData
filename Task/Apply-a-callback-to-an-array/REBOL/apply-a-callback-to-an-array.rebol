@@ -1,7 +1,5 @@
 REBOL [
     Title: "Array Callback"
-    Date: 2010-01-04
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Apply_a_callback_to_an_Array
 ]
 

@@ -1,7 +1,5 @@
 REBOL [
 	Title: "FizzBuzz"
-	Author: oofoe
-	Date: 2009-12-10
 	URL: http://rosettacode.org/wiki/FizzBuzz
 ]
 

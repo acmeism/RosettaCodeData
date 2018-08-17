@@ -1,5 +1,3 @@
-/*Abhishek Ghosh, 7th October 2017*/
-
 #include<stdio.h>
 
 int main()

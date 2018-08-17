@@ -1,7 +1,4 @@
 ;; Project : Primality by trial division
-;; Date    : 2018/03/06
-;; Author : Gal Zsolt [~ CalmoSoft ~]
-;; Email   : <calmosoft@gmail.com>
 
 (defun prime(n)
          (setq flag 0)

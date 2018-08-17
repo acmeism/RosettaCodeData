@@ -1,7 +1,4 @@
 # Project : Anagrams
-# Date    : 2017/11/28
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 fn1 = "unixdict.txt"

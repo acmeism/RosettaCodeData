@@ -1,7 +1,4 @@
 # Project : Combinations
-# Date    : 2017/10/29
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 n = 5
 k = 3

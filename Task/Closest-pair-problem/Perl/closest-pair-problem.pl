@@ -104,4 +104,4 @@ my ($a, $b, $d) = closest_pair_simple(\@points);
 print "$d\n";
 
 my ($a1, $b1, $d1) = closest_pair(\@points);
-#print "$d1\n";
+print "$d1\n";

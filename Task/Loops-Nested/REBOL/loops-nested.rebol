@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Loop/Nested"
-	Author: oofoe
-	Date: 2010-01-05
 	URL: http://rosettacode.org/wiki/Loop/Nested
 ]
 

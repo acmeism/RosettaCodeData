@@ -1,7 +1,4 @@
 # Project : Draw a cuboid
-# Date    : 2018/01/18
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 load "guilib.ring"
 

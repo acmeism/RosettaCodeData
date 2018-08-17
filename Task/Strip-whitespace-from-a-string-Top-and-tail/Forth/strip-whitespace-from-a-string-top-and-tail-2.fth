@@ -1,1 +1,1 @@
- : trim  ( addr len -- addr' len') -leading -trailing ;
+ : strip ( addr len -- addr' len') -leading -trailing ;

@@ -1,7 +1,5 @@
 REBOL [
     Title: "Rot-13"
-    Date: 2009-12-14
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Rot-13
 ]
 

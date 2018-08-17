@@ -1,7 +1,4 @@
 # Project : Variadic function
-# Date    : 2017/11/13
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 sum([1,2])
 sum([1,2,3])

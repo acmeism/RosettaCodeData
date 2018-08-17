@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Percent Image Difference"
-	Author: oofoe
-	Date: 2009-12-31
 	URL: http://rosettacode.org/wiki/Percentage_of_difference_between_2_images
 ]
 

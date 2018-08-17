@@ -1,7 +1,4 @@
-/*30th August,2012
-Abhishek Ghosh
-
-Please note that curs_set is terminal dependent.*/
+/* Please note that curs_set is terminal dependent. */
 
 #include<curses.h>
 #include<stdio.h>

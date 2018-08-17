@@ -1,7 +1,4 @@
 # Project : Short-circuit evaluation
-# Date    : 2018/01/23
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 for k = 1 to 2
       word = ["AND","OR"]

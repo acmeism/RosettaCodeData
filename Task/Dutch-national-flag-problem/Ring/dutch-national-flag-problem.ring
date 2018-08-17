@@ -1,7 +1,4 @@
 # Project : Dutch national flag problem
-# Date    : 2017/11/23
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 flag = ["Red","White","Blue"]
 balls = list(10)

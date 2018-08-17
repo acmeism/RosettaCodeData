@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Increment Numerical String"
-	Author: oofoe
-	Date: 2009-12-23
 	URL: http://rosettacode.org/wiki/Increment_numerical_string
 ]
 

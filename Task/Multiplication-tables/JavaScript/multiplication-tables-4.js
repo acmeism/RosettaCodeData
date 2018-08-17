@@ -1,5 +1,13 @@
 (() => {
 
+    // main :: () -> IO String
+    const main = () =>
+        wikiTable(
+            multTable(1, 12),
+            true,
+            'text-align:center;width:33em;height:33em;table-layout:fixed;'
+        );
+
     // multTable :: Int -> Int -> [[String]]
     const multTable = (m, n) => {
         const xs = enumFromToInt(m, n);
@@ -15,14 +23,6 @@
                 xs
             )
         ];
-    };
-
-    // main :: () -> IO String
-    const main = () => {
-        return wikiTable(
-            multTable(1, 12), true,
-            'text-align:center;width:33em;height:33em;table-layout:fixed;'
-        );
     };
 
     // GENERIC FUNCTIONS -----------------------------------------------------
@@ -72,7 +72,7 @@
             length: n
         }, () => x);
 
-    // FORMATTING -------------------------------------------------------------
+    // FORMATTING ------------------------------------------------------------
 
     // wikiTable :: [[a]] -> Bool -> String -> String
     const wikiTable = (rows, blnHeader, style) =>

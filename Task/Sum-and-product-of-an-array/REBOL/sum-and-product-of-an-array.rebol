@@ -1,7 +1,5 @@
 REBOL [
     Title: "Sum and Product"
-    Date: 2010-01-04
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Sum_and_product_of_array
 ]
 

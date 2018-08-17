@@ -1,7 +1,4 @@
 # Project : Top rank per group
-# Date    : 2017/12/10
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 salary = "Tyler Bennett,E10297,32000,D101

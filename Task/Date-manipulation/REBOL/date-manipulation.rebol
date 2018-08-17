@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Date Manipulation"
-	Author: oofoe
-	Date: 2009-12-06
 	URL: http://rosettacode.org/wiki/Date_Manipulation
 ]
 

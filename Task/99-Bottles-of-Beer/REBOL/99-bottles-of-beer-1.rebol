@@ -1,7 +1,5 @@
 rebol [
     Title: "99 Bottles of Beer"
-    Author: oofoe
-    Date: 2009-12-11
     URL: http://rosettacode.org/wiki/99_Bottles_of_Beer
 ]
 

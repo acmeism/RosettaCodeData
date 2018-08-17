@@ -14,7 +14,7 @@ if x.len == 0: echo "empty" # check if empty
 x.add('!') # append a byte
 
 echo x[5..8] # substring
-echo x[8 .. -1] # substring
+echo x[8 .. ^1] # substring
 
 z = x & y # join strings
 

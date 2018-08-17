@@ -1,7 +1,4 @@
 # Project : Voronoi diagram
-# Date    : 2018/03/30
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 load "guilib.ring"
 load "stdlib.ring"

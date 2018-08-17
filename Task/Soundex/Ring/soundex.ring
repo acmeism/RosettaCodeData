@@ -1,7 +1,4 @@
 # Project: Soundex
-# Date   : 2018/06/11
-# Author: Gal Zsolt [~ CalmoSoft ~]
-# Email  : <calmosoft@gmail.com>
 
 name = ["Ashcraf", "Ashcroft", "Gauss", "Ghosh", "Hilbert", "Heilbronn", "Lee", "Lloyd",
               "Moses", "Pfister", "Robert", "Rupert", "Rubin","Tymczak", "Soundex", "Example"]

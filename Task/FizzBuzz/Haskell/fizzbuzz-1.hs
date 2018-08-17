@@ -1,7 +1,11 @@
-main = mapM_ (putStrLn . fizzbuzz) [1..100]
-
+fizzbuzz :: Int -> String
 fizzbuzz x
-    | x `mod` 15 == 0 = "FizzBuzz"
-    | x `mod`  3 == 0 = "Fizz"
-    | x `mod`  5 == 0 = "Buzz"
-    | otherwise = show x
+  | f 15 = "FizzBuzz"
+  | f 3 = "Fizz"
+  | f 5 = "Buzz"
+  | otherwise = show x
+  where
+    f = (0 ==) . rem x
+
+main :: IO ()
+main = mapM_ (putStrLn . fizzbuzz) [1 .. 100]

@@ -9,7 +9,7 @@ proc floyd(rowcount = 5): seq[seq[int]] =
       row.add i
     result.add row
 
-proc pfloyd(rows) =
+proc pfloyd(rows: seq[seq[int]]) =
   var colspace = newSeq[int]()
   for n in rows[rows.high]: colspace.add(($n).len)
   for row in rows:

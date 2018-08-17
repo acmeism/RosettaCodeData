@@ -1,7 +1,4 @@
 # Project : Heronian triangles
-# Date    : 2017/11/04
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 see "Heronian triangles with sides up to 200" + nl
 see "Sides               Perimeter       Area" + nl

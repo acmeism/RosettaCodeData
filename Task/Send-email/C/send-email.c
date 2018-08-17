@@ -1,5 +1,3 @@
-/*Abhishek Ghosh, 13th June 2018*/
-
 #include <curl/curl.h>
 #include <string.h>
 #include <stdio.h>

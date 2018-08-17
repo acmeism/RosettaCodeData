@@ -1,7 +1,4 @@
 # Project : Averages/Mean angle
-# Date    : 2018/01/08
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 decimals(6)

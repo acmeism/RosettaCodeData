@@ -22,11 +22,9 @@ int main()
 {
     std::string laf = "1";
 
-    std::cout << laf << std::endl;
+    std::cout << laf << '\n';
     for (int i = 0; i < 10; ++i) {
         laf = lookandsay(laf);
-        std::cout << laf << std::endl;
+        std::cout << laf << '\n';
     }
-
-    return 0;
 }

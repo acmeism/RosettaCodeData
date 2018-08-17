@@ -5,5 +5,5 @@ sub accumulator {
 
 my $x = accumulator(1);
 $x->(5);
-print accumulator(3), "\n";
+accumulator(3);
 print $x->(2.3), "\n";

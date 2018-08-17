@@ -6,7 +6,7 @@ block:
     addition = foldl(numbers, a + b)
     substraction = foldl(numbers, a - b)
     multiplication = foldl(numbers, a * b)
-    words = @["nim", "rod", "is", "cool"]
+    words = @["nim", "is", "cool"]
     concatenation = foldl(words, a & b)
 
 block:
@@ -15,5 +15,5 @@ block:
     addition = foldr(numbers, a + b)
     substraction = foldr(numbers, a - b)
     multiplication = foldr(numbers, a * b)
-    words = @["nim", "rod", "is", "cool"]
+    words = @["nim", "is", "cool"]
     concatenation = foldr(words, a & b)

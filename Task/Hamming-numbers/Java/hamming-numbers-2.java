@@ -1,7 +1,6 @@
 import java.math.BigInteger;
 import java.util.*;
 
-// ilkka.kokkarinen@gmail.com
 
 public class HammingTriple implements Comparable<HammingTriple> {
 

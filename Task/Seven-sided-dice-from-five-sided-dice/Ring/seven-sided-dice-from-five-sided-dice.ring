@@ -1,7 +1,4 @@
 # Project : Seven-sided dice from five-sided dice
-# Date    : 2018/02/02
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 for n = 1 to 20
          d = dice7()

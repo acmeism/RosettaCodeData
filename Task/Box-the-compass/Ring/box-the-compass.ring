@@ -1,7 +1,4 @@
 # Project : Box the compass
-# Date    : 2017/12/31
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 names = ["North", "North by east", "North-northeast",
                "Northeast by north", "Northeast", "Northeast by east", "East-northeast",

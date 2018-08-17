@@ -1,7 +1,4 @@
 # Project : Greyscale bars/Display
-# Date    : 2018/01/09
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "guilib.ring"
 

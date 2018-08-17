@@ -5,46 +5,61 @@
 include pGUI.e
 
 Ihandle dlg, canvas, timer
-cdCanvas cddbuffer, cdcanvas
+cdCanvas cdcanvas
 
 constant g = 50
 
-atom alpha = PI/2,
-     omega = 0
+atom angle = PI/2,
+     velocity = 0
+integer w, h, len = 0
 
 function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
-    integer {w, h} = IupGetIntInt(canvas, "DRAWSIZE")
-    cdCanvasActivate(cddbuffer)
-    cdCanvasClear(cddbuffer)
-    -- new suspension point and length
+    {w, h} = IupGetIntInt(canvas, "DRAWSIZE")
+    cdCanvasActivate(cdcanvas)
+    cdCanvasClear(cdcanvas)
+    -- new suspension point:
     integer sX = floor(w/2)
-    integer sY = floor(h/8)
-    integer len = sX-30
-    atom dt = 1/w
-    -- move:
-    atom epsilon = -len*sin(alpha)*g
-    omega += dt*epsilon
-    alpha += dt*omega
+    integer sY = floor(h/16)
     -- repaint:
-    integer eX = floor(len*sin(alpha)+sX)
-    integer eY = floor(len*cos(alpha)+sY)
-    cdCanvasSetForeground(cddbuffer, CD_DARK_GREY)
-    cdCanvasLine(cddbuffer, sX, h-sY, eX, h-eY)
-    cdCanvasSetForeground(cddbuffer, CD_BLACK)
-    cdCanvasSector(cddbuffer, eX, h-eY, 35, 35, 0, 360)
-    cdCanvasFlush(cddbuffer)
+    integer eX = floor(len*sin(angle)+sX)
+    integer eY = floor(len*cos(angle)+sY)
+    cdCanvasSetForeground(cdcanvas, CD_CYAN)
+    cdCanvasLine(cdcanvas, sX, h-sY, eX, h-eY)
+    cdCanvasSetForeground(cdcanvas, CD_DARK_GREEN)
+    cdCanvasSector(cdcanvas, sX, h-sY, 5, 5, 0, 360)
+    cdCanvasSetForeground(cdcanvas, CD_BLUE)
+    cdCanvasSector(cdcanvas, eX, h-eY, 35, 35, 0, 360)
+    cdCanvasFlush(cdcanvas)
     return IUP_DEFAULT
 end function
 
 function timer_cb(Ihandle /*ih*/)
+    integer newlen = floor(w/2)-30
+    if newlen!=len then
+        len = newlen
+        atom tmp = 2*g*len*(cos(angle))
+        velocity = iff(tmp<0?0:sqrt(tmp)*sign(velocity))
+    end if
+    atom dt = 0.2/w
+    atom delta = -len*sin(angle)*g
+    velocity += dt*delta
+    angle += dt*velocity
     IupUpdate(canvas)
     return IUP_IGNORE
 end function
 
 function map_cb(Ihandle ih)
-    cdcanvas = cdCreateCanvas(CD_IUP, ih)
-    cddbuffer = cdCreateCanvas(CD_DBUFFER, cdcanvas)
-    cdCanvasSetBackground(cddbuffer, CD_GREY)
+    atom res = IupGetDouble(NULL, "SCREENDPI")/25.4
+    IupGLMakeCurrent(canvas)
+    cdcanvas = cdCreateCanvas(CD_GL, "10x10 %g", {res})
+    cdCanvasSetBackground(cdcanvas, CD_PARCHMENT)
+    return IUP_DEFAULT
+end function
+
+function canvas_resize_cb(Ihandle /*canvas*/)
+    integer {canvas_width, canvas_height} = IupGetIntInt(canvas, "DRAWSIZE")
+    atom res = IupGetDouble(NULL, "SCREENDPI")/25.4
+    cdCanvasSetAttribute(cdcanvas, "SIZE", "%dx%d %g", {canvas_width, canvas_height, res})
     return IUP_DEFAULT
 end function
 
@@ -56,10 +71,11 @@ end function
 procedure main()
     IupOpen()
 
-    canvas = IupCanvas(NULL)
+    canvas = IupGLCanvas()
     IupSetAttribute(canvas, "RASTERSIZE", "640x380")
     IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
     IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+    IupSetCallback(canvas, "RESIZE_CB", Icallback("canvas_resize_cb"))
 
     timer = IupTimer(Icallback("timer_cb"), 20)
 

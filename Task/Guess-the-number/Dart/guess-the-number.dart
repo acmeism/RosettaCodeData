@@ -1,12 +1,9 @@
 import 'dart:math';
-void main()
-{
-  int y=5;
-  int max=11,min=1;
-  var x= new Random();
-  x=x.nextInt(max-min);
-  if (y==x)
-    print("WON");
-  else
-    print('Try Again');
+import 'dart:io';
+
+main() {
+  final n = (1 + new Random().nextInt(10)).toString();
+  print("Guess which number I've chosen in the range 1 to 10");
+  do { stdout.write(" Your guess : "); } while (n != stdin.readLineSync());
+  print("\nWell guessed!");
 }

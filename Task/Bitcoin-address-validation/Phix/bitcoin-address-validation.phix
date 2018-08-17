@@ -1,0 +1,84 @@
+--
+-- demo\rosetta\bitcoin_address_validation.exw
+--
+string coin_err
+
+constant b58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+string charmap = ""
+
+function unbase58(string s)
+string out = repeat('\0',25)
+    if length(charmap)=0 then
+        charmap = repeat('\0',256)
+        for i=1 to length(b58) do
+            charmap[b58[i]] = i
+        end for
+    end if
+-- not at all sure about this:
+--  if length(s)!=34 then
+--      coin_err = "bad length"
+--      return 0
+--  end if
+    if s[1]!='1' and s[1]!='3' then
+        coin_err = "first character is not 1 or 3"
+        return 0
+    end if
+    for i=1 to length(s) do
+        integer c = charmap[s[i]]
+        if c=0 then
+            coin_err = "bad char"
+            return 0
+        end if
+        c -= 1
+        for j=25 to 1 by -1 do
+            c += 58 * out[j];
+            out[j] = and_bits(c,#FF)
+            c = floor(c/#100)
+        end for
+        if c!=0 then
+            coin_err = "address too long"
+            return 0
+        end if
+    end for
+    if out[1]!='\0' then
+        coin_err = "not version 0"
+        return 0
+    end if
+    return out
+end function
+
+include builtins\sha256.e
+
+procedure valid(string s)
+object dec
+    coin_err = "OK"
+    dec = unbase58(s)
+    if string(dec) then
+        if dec[22..$]!=sha256(sha256(dec[1..21]))[1..4] then
+            coin_err = "bad digest"
+        end if
+    end if
+end procedure
+
+constant tests = {
+                "1Q1pE5vPGEEMqRcVRMbtBK842Y6Pzo6nK9",   -- OK
+                "1Q1pE5vPGEEMqRcVRMbtBK842Y6Pzo6nJ9",   -- bad digest
+                "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i",   -- OK
+                "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62X",   -- bad digest (checksum changed, original data.)
+                "1ANNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i",   -- bad digest (data changed, original checksum.)
+                "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62iz",  -- not version 0
+                "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62izz", -- address too long
+                "1A Na15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i",   -- bad char
+                "1111111111111111111114oLvT2",  -- OK?
+                "17NdbrSGoUotzeGCcMMCqnFkEvLymoou9j",   -- OK (*NB*: apparently differs to Python solution,
+                                                        --     but does agree with Racket and Rust entries)
+                "1badbadbadbadbadbadbadbadbadbadbad",   -- not version 0
+                "BZbvjr", -- first character is not 1 or 3 (checksum is fine, address too short)
+                "16UwLL9Risc3QfPqBUvKofHmBQ7wMtjvM",    -- OK (from public_point_to_address)
+                 $}
+
+        for i=1 to length(tests) do
+            valid(tests[i]);
+            printf(1,"%s: %s\n", {tests[i], coin_err})
+        end for
+{} = wait_key()

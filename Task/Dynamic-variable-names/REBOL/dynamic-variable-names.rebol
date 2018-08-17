@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Dynamic Variable Name"
-	Author: oofoe
-	Date: 2009-12-28
 	URL: http://rosettacode.org/wiki/Dynamic_variable_names
 ]
 

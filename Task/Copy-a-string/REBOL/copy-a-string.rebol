@@ -1,7 +1,5 @@
 REBOL [
     Title: "String Copy"
-    Date: 2009-12-16
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Copy_a_string
 ]
 

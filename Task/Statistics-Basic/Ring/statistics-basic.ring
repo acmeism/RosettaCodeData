@@ -1,7 +1,4 @@
 # Project : Statistics/Basic
-# Date    : 2017/11/14
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 decimals(9)
 sample(100)

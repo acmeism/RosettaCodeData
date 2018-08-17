@@ -1,5 +1,5 @@
-print $hash->{key1};
+print $hashref->{key1};
 
-$hash->{key1} = 'val1';
+$hashref->{key1} = 'val1';
 
-@hash->{'key1', 'three'} = ('val1', -238.83);
+@{$hashref}{('key1', 'three')} = ('val1', -238.83);

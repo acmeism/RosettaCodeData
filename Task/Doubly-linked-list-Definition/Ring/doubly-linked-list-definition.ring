@@ -1,7 +1,4 @@
 # Project : Doubly-linked list/Definition
-# Date    : 2018/01/08
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 test = [1, 5, 7, 0, 3, 2]
 insert(test, 0, 9)

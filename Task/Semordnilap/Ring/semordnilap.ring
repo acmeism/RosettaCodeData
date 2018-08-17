@@ -1,7 +1,4 @@
 # Project : Semordnilap
-# Date    : 2018/04/18
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 nr = 0

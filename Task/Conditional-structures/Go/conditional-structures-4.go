@@ -1,4 +1,4 @@
-if x := fetchSomething(); if x > 0 {
+if x := fetchSomething(); x > 0 {
     DoPos(x)
 } else {
     DoNeg(x)

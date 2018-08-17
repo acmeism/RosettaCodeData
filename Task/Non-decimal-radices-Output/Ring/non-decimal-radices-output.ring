@@ -1,7 +1,4 @@
 # Project : Non Decimal radices/Output
-# Date    : 2017/09/15
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 see string(0) + nl
 see string(123456789) + nl

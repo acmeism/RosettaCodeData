@@ -1,7 +1,4 @@
 # Project : Levenshtein distance
-# Date    : 2017/12/15
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 see "" + "distance(kitten, sitting) = " + levenshteindistance("kitten", "sitting") + nl

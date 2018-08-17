@@ -1,6 +1,4 @@
-/*29th August, 2012
-Abhishek Ghosh
-
+/*
 The function anynacci determines the n-arity of the sequence from the number of seed elements. 0 ended arrays are used since C does not have a way of determining the length of dynamic and function-passed integer arrays.*/
 
 #include<stdlib.h>

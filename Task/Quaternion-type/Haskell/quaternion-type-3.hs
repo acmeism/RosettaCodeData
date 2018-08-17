@@ -1,43 +1,16 @@
-class Quaternion(a, b, c, d)
+procedure main ()
+  q := Quaternion (1,2,3,4)
+  q1 := Quaternion (2,3,4,5)
+  q2 := Quaternion (3,4,5,6)
+  r := 7
 
-  method norm ()
-    return sqrt (a*a + b*b + c*c + d*d)
-  end
-
-  method negative ()
-    return Quaternion(-a, -b, -c, -d)
-  end
-
-  method conjugate ()
-    return Quaternion(a, -b, -c, -d)
-  end
-
-  method add (n)
-    if type(n) == "Quaternion__state"
-      then return Quaternion(a+n.a, b+n.b, c+n.c, d+n.d)
-      else return Quaternion(a+n, b, c, d)
-  end
-
-  method multiply (n)
-    if type(n) == "Quaternion__state"
-      then return Quaternion(a*n.a - b*n.b - c*n.c - d*n.d,
-                             a*n.b + b*n.a + c*n.d - d*n.c,
-                             a*n.c - b*n.d + c*n.a + d*n.b,
-                             a*n.d + b*n.c - c*n.b + d*n.a)
-      else return Quaternion(a*n, b*n, c*n, d*n)
-  end
-
-  method sign (n)
-    return if n >= 0 then "+" else "-"
-  end
-
-  method string ()
-    return ("" || a || sign(b) || abs(b) || "i" || sign(c) || abs(c) || "j" || sign(d) || abs(d) || "k");
-  end
-
-  initially(a, b, c, d)
-    self.a := if /a then 0 else a
-    self.b := if /b then 0 else b
-    self.c := if /c then 0 else c
-    self.d := if /d then 0 else d
+  write ("The norm      of " || q.string() || " is " || q.norm ())
+  write ("The negative  of " || q.string() || " is " || q.negative().string ())
+  write ("The conjugate of " || q.string() || " is " || q.conjugate().string ())
+  write ("Sum of " || q.string() || " and " || r || " is " || q.add(r).string ())
+  write ("Sum of " || q.string() || " and " || q1.string() || " is " || q.add(q1).string ())
+  write ("Product of " || q.string() || " and " || r || " is " || q.multiply(r).string ())
+  write ("Product of " || q.string() || " and " || q1.string() || " is " || q.multiply(q1).string ())
+  write ("q1*q2 = " || q1.multiply(q2).string ())
+  write ("q2*q1 = " || q2.multiply(q1).string ())
 end

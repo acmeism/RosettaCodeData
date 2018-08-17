@@ -1,7 +1,4 @@
 # Project : Reduced row echelon form
-# Date    : 2017/12/27
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 matrix = [[1, 2, -1, -4],
               [2, 3, -1, -11],

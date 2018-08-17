@@ -1,4 +1,4 @@
-def tail = { list, n ->  def m = list.size(); list[([m - n, 0].max())..<m] }
+def tail = { list, n ->  def m = list.size(); list.subList([m - n, 0].max(),m) }
 
 final STACK = [A:[],B:[],C:[]].asImmutable()
 

@@ -1,7 +1,5 @@
 rebol [
     Title: "Classes"
-    Author: oofoe
-    Date: 2009-12-11
     URL: http://rosettacode.org/wiki/Classes
 ]
 

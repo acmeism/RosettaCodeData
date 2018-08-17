@@ -1,45 +1,66 @@
-shared void run() {
-	
-	class Automata1D<Cell>({Cell*} data, Cell alive, Cell dead)
-		given Cell satisfies Object {
-		
-		assert(data.every((Cell element) => element == alive || element == dead));
-		
-		value imaginaryFirstCell = data.first else dead;
-		value imaginaryLastCell = data.last else dead;
+shared abstract class Cell(character) of alive | dead {
+	shared Character character;
+	string => character.string;
+	shared formal Cell opposite;
+}
 
-		value cells = Array {*data.rest.exceptLast};
+shared object alive extends Cell('#') {
+	opposite => dead;
+}
+shared object dead extends Cell('_') {
+	opposite => alive;
+}
+
+shared Map<Character, Cell> cellsByCharacter = map { for (cell in `Cell`.caseValues) cell.character->cell };
+
+shared class Automata1D({Cell*} initialCells) {
+	
+	
+	value permanentFirstCell = initialCells.first else dead;
+	value permanentLastCell = initialCells.last else dead;
+	
+	value cells = Array { *initialCells.rest.exceptLast };
+	
+	shared Boolean evolve() {
 		
-		function isAlive(Cell c) => c == alive;
-		function flipped(Cell c) => c == alive then dead else alive;
+		value newCells = Array {
+			for (index->cell in cells.indexed)
+			let (left = cells[index - 1] else permanentFirstCell,
+				right = cells[index + 1] else permanentLastCell,
+				neighbours = [left, right],
+				bothAlive = neighbours.every(alive.equals),
+				bothDead = neighbours.every(dead.equals))
+			if (bothAlive)
+			then cell.opposite
+			else if (cell == alive && bothDead)
+			then dead
+			else cell
+		};
 		
-		shared Boolean evolve() {
-			value buffer = Array {
-				*cells.indexed.map((Integer->Cell element) {
-					value index->cell = element;
-					value left = cells[index - 1] else imaginaryFirstCell;
-					value right = cells[index + 1] else imaginaryLastCell;
-					if(isAlive(left) && isAlive(right)) {
-						return flipped(cell);
-					}
-					if(isAlive(cell) && !isAlive(left) && !isAlive(right)) {
-						return dead;
-					}
-					return cell;
-				}
-			)};
-			value changed = buffer != cells;
-			buffer.copyTo(cells);
-			return changed;
+		if (newCells == cells) {
+			return false;
 		}
 		
-		string => imaginaryFirstCell.string + "".join(cells) + imaginaryLastCell.string;
+		newCells.copyTo(cells);
+		return true;
 	}
+	
+	string => permanentFirstCell.string + "".join(cells) + permanentLastCell.string;
+}
 
-	value automata = Automata1D("_###_##_#_#_#_#__#__", '#', '_');
+shared Automata1D? automata1d(String string) =>
+		let (cells = string.map((Character element) => cellsByCharacter[element]))
+		if (cells.every((Cell? element) => element exists))
+		then Automata1D(cells.coalesced)
+		else null;
+
+shared void run() {
+
+	assert (exists automata = automata1d("__###__##_#_##_###__######_###_#####_#__##_____#_#_#######__"));
+	
 	variable value generation = 0;
 	print("generation ``generation`` ``automata``");
-	while(automata.evolve() && generation < 10) {
-		print("generation ``++generation`` ``automata``");
+	while (automata.evolve() && generation<10) {
+		print("generation `` ++generation `` ``automata``");
 	}
 }

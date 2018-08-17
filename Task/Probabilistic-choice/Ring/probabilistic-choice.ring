@@ -1,7 +1,4 @@
 # Project : Probabilistic choice
-# Date    : 2017/10/01
-# Author  : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 cnt = list(8)
 item = ["aleph","beth","gimel","daleth","he","waw","zayin","heth"]

@@ -1,4 +1,3 @@
-/*Abhishek Ghosh, 24th October 2017*/
 #include<stdarg.h>
 #include<stdio.h>
 

@@ -1,7 +1,4 @@
 # Project : Number reversal game
-# Date    : 2017/12/02
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 rever = 1:9
 leftrever = []

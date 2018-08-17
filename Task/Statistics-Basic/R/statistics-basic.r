@@ -1,5 +1,3 @@
-#Abhishek Ghosh, 10th January 2018
-
 #Generate the sets
 a = runif(10,min=0,max=1)
 b = runif(100,min=0,max=1)

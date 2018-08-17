@@ -18,12 +18,12 @@ proc getPrime(idx: int): int =
 
   return primes[idx]
 
-for x in 1 .. < int32.high.int:
+for x in 1 ..< int32.high.int:
   stdout.write x, " = "
   var n = x
   var first = 1
 
-  for i in 0 .. < int32.high:
+  for i in 0 ..< int32.high:
     let p = getPrime(i)
     while n mod p == 0:
       n = n div p

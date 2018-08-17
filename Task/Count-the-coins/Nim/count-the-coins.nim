@@ -1,4 +1,4 @@
-proc changes(amount, coins): int =
+proc changes(amount: int, coins: openArray[int]): int =
   var ways = @[1]
   ways.setLen(amount+1)
   for coin in coins:

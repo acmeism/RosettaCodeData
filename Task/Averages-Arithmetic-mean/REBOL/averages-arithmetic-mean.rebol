@@ -1,7 +1,5 @@
 rebol [
     Title: "Arithmetic Mean (Average)"
-    Author: oofoe
-    Date: 2009-12-11
     URL: http://rosettacode.org/wiki/Average/Arithmetic_mean
 ]
 

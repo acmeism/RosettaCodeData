@@ -50,10 +50,9 @@ DECIMAL
               morse-emit               \ send the morse code
            loop ;
 
-NAMESPACE MORSE                        \ prevent name conflicts with letters and numbers
+VOCABULARY MORSE                       \ prevent name conflicts with letters and numbers
 
 MORSE DEFINITIONS                      \ the following definitions go into MORSE namespace
-
 : .   ( -- ) sound  dit_dur  silence off_dur ;
 : -   ( -- ) sound  dah_dur  silence off_dur ;
 

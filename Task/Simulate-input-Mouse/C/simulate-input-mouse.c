@@ -1,5 +1,3 @@
-/*Abhishek Ghosh, 10th October 2017*/
-
 #define WINVER 0x500
 #include<windows.h>
 

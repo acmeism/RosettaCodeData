@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Stack"
-	Author: oofoe
-	Date: 2010-10-04
 	URL: http://rosettacode.org/wiki/Stack
 ]
 

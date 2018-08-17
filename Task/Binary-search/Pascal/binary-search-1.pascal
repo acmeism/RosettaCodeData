@@ -2,8 +2,8 @@ function binary_search(element: real; list: array of real): integer;
 var
     l, m, h: integer;
 begin
-    l := 0;
-    h := High(list) - 1;
+    l := Low(list);
+    h := High(list);
     binary_search := -1;
     while l <= h do
     begin

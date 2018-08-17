@@ -1,7 +1,4 @@
 # Project : Digital root/Multiplicative digital root
-# Date    : 2017/11/21
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 root = newlist(10, 5)

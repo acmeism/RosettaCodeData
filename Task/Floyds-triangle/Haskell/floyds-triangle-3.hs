@@ -4,11 +4,13 @@ floyd :: Int -> [[Int]]
 floyd n =
   snd $
   mapAccumL
-    (\start row -> (start + succ row, [start .. start + row]))
+    (\a x ->
+        let m = a + x
+        in (succ m, [a .. m]))
     1
     [0 .. pred n]
 
--- TEST -----------------------------------------------------------------------
+-- TEST -------------------------------------
 showFloyd :: [[Int]] -> String
 showFloyd xs =
   let padRight n = length >>= (<$> mappend (replicate n ' ')) . drop

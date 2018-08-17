@@ -35,8 +35,25 @@ class LeftTruncatablePrime
 
   public static void main(String[] args)
   {
-    int maxRadix = Integer.parseInt(args[0]);
-    int millerRabinCertainty = Integer.parseInt(args[1]);
+    if (args.length != 2) {
+      System.err.println("There must be exactly two command line arguments.");
+      return;
+    }
+    int maxRadix;
+    try {
+      maxRadix = Integer.parseInt(args[0]);
+      if (maxRadix < 3) throw new NumberFormatException();
+    } catch (NumberFormatException e) {
+      System.err.println("Radix must be an integer greater than 2.");
+      return;
+    }
+    int millerRabinCertainty;
+    try {
+      millerRabinCertainty = Integer.parseInt(args[1]);
+    } catch (NumberFormatException e) {
+      System.err.println("Miiller-Rabin Certainty must be an integer.");
+      return;
+    }
     for (int radix = 3; radix <= maxRadix; radix++)
     {
       BigInteger largest = getLargestLeftTruncatablePrime(radix, millerRabinCertainty);

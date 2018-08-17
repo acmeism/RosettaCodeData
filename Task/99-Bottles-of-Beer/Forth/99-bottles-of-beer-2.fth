@@ -1,36 +1,35 @@
-: bottles ( n -- ) \ select the right grammar based on 'n'
-        dup
-        case
-         1 of    ." One more bottle " drop endof
-         0 of    ." No more bottles " drop endof
-                 . ." bottles "    \ default case
-        endcase ;
+DECIMAL
+: BOTTLES ( n -- )
+        DUP
+        CASE
+         1 OF    ." One more bottle " DROP ENDOF
+         0 OF    ." NO MORE bottles " DROP ENDOF
+                 . ." bottles "    \ DEFAULT CASE
+        ENDCASE ;
 
-\ create punctuation with delay for artistic effect
-: ,   [char] , emit  100 ms ;
-: .   [char] . emit  300 ms ;
+: ,   [CHAR] , EMIT  SPACE 100 MS CR ;
+: .   [CHAR] . EMIT  300 MS  CR CR CR ;
 
-\ create the words to write the program
-: of       ." of "   ;
-: beer     ." beer " ;
-: on       ." on "   ;
-: the      ." the "  ;
-: wall     ." wall" ;
-: take     ." take " ;
-: one      ." one "  ;
-: down     ." down" ;
-: pass     ."  pass " ;
-: it       ." it "   ;
-: around   ." around" ;
+: OF       ." of "   ;     : BEER     ." beer " ;
+: ON       ." on "   ;     : THE      ." the "  ;
+: WALL     ." wall" ;      : TAKE     ." take " ;
+: ONE      ." one "  ;     : DOWN     ." down, " ;
+: PASS     ." pass " ;     : IT       ." it "   ;
+: AROUND   ." around" ;
 
-\ who said Forth is write only?
-: beers ( n -- )   \  USAGE:  99 beers
-      1 swap
-      cr
-      do
-           I bottles of beer on the wall , cr
-           I bottles of beer ,             cr
-             take one down , pass it around , cr
-        I 1- bottles of beer on the wall .  cr
-        cr
-      -1 +loop ;
+: POPONE    1 SWAP CR ;
+: DRINK     POSTPONE DO ; IMMEDIATE
+: ANOTHER   S" -1 +LOOP" EVALUATE ; IMMEDIATE
+: HOWMANY   S" I " EVALUATE ; IMMEDIATE
+: ONELESS   S" I 1- " EVALUATE ; IMMEDIATE
+: HANGOVER    ." :-("  CR QUIT ;
+
+: BEERS ( n -- )   \ Usage:  99 BEERS
+      POPONE
+      DRINK
+         HOWMANY BOTTLES OF BEER ON THE WALL ,
+         HOWMANY BOTTLES OF BEER ,
+         TAKE ONE DOWN PASS IT AROUND ,
+         ONELESS BOTTLES OF BEER ON THE WALL .
+      ANOTHER
+      HANGOVER ;

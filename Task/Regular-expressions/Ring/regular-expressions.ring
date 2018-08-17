@@ -1,7 +1,4 @@
 # Project : Regular expressions
-# Date    : 2018/01/23
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 text = "I am a text"
 if right(text,4) = "text"

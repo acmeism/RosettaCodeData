@@ -1,5 +1,4 @@
 /* REXX ************************************************************
-* 11.12.2012 Walter Pachl
 * There is no equivalent to PL/I's SIZE condition in REXX.
 * The result of an arithmetic expression is rounded
 * according to the current setting of Numeric Digits.

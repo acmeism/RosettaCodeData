@@ -1,7 +1,3 @@
-/*
-  Author: Kevin Bacon [haxifix (@gmail.com)]
-  Date: 2018-05-16
-*/
 #include <iostream>
 #include <vector>
 #include <numeric>

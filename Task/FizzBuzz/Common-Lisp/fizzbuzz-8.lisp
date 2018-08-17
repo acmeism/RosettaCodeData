@@ -1,7 +1,4 @@
 ;; Project : FizzBuzz
-;; Date    : 2018/03/07
-;; Author : Gal Zsolt [~ CalmoSoft ~]
-;; Email   : <calmosoft@gmail.com>
 
 (defun fizzbuzz (&optional n)
           (let ((n (or n 1)))

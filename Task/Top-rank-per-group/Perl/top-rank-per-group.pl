@@ -30,10 +30,9 @@ Kim Arlich,E10001,57000,D190
 Timothy Grove,E16398,29900,D190
 EOF
 
-@ARGV or die "Please provide a value for N.\n";
-my $N = shift;
+my $N = shift || 3;
 
-foreach my $d (sort uniq map {$_->{dept}} @data) {
+foreach my $d (uniq sort map {$_->{dept}} @data) {
     print "$d\n";
     my @es =
         sort {$b->{salary} <=> $a->{salary}}

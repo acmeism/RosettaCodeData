@@ -1,18 +1,19 @@
 package main
 
 import (
-    "fmt"
-    "math/big"
+	"fmt"
+	"math/big"
 )
 
 func main() {
-    answer := big.NewInt(42)
-    answer.Exp(big.NewInt(5), answer.Exp(big.NewInt(4),
-        answer.Exp(big.NewInt(3), big.NewInt(2), nil), nil), nil)
-    answer_string := answer.String()
-    length := len(answer_string)
-    fmt.Printf("has %d digits: %s ... %s\n",
-        length,
-        answer_string[0:20],
-        answer_string[length-20:])
+	x := big.NewInt(2)
+	x = x.Exp(big.NewInt(3), x, nil)
+	x = x.Exp(big.NewInt(4), x, nil)
+	x = x.Exp(big.NewInt(5), x, nil)
+	str := x.String()
+	fmt.Printf("5^(4^(3^2)) has %d digits: %s ... %s\n",
+		len(str),
+		str[:20],
+		str[len(str)-20:],
+	)
 }

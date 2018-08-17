@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Integer"
-	Author: oofoe
-	Date: 2010-09-29
 	URL: http://rosettacode.org/wiki/Arithmetic/Integer
 ]
 

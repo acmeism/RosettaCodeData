@@ -1,7 +1,4 @@
 # Project : Multisplit
-# Date    : 2017/12/26
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 str = "a!===b=!=c"
 sep = "=== != =! b =!="

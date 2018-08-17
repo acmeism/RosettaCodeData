@@ -1,5 +1,3 @@
-/*Abhishek Ghosh, 3rd October 2017*/
-
 #include<windows.h>
 #include<stdio.h>
 

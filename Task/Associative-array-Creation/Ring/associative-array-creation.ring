@@ -1,7 +1,4 @@
 # Project  Associative array/Creation
-# Date     2018/03/24
-# Author  Gal Zsolt [~ CalmoSoft ~]
-# Email    <calmosoft@gmail.com>
 
 myarray = [["one",1],
                  ["two",2],

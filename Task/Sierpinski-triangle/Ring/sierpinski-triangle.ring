@@ -1,7 +1,4 @@
 # Project : Sierpinski triangle
-# Date    : 2017/09/20
-# Author  : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 norder=4
 xy = list(40)

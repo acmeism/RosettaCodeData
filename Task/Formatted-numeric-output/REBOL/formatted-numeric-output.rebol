@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Formatted Numeric Output"
-	Author: oofoe
-	Date: 2009-12-22
 	URL: http://rosettacode.org/wiki/Formatted_Numeric_Output
 ]
 

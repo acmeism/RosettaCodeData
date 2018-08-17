@@ -1,7 +1,4 @@
 # Project : Forward difference
-# Date    : 2018/01/19
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 s = [90, 47, 58, 29, 22, 32, 55, 5, 55, 73]
 for p = 1 to 9

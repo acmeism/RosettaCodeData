@@ -1,4 +1,4 @@
-Strings in Forth are simply named memory locations
+\ Strings in Forth are simply named memory locations
 
 create astring  256 allot   \ create a "string"
 

@@ -1,7 +1,4 @@
 # Project : Greatest subsequential sum
-# Date    : 2017/09/26
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 aList1 = [0, 1, 2, -3, 3, -1, 0, -4, 0, -1, -4, 2]
 see "[0, 1, 2, -3, 3, -1, 0, -4, 0, -1, -4, 2]  -> " + sum(aList1) + nl

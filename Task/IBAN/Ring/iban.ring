@@ -1,7 +1,4 @@
 # Project : IBAN
-# Date    : 2018/01/03
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 codes = list(5)
 codes[1] = "GB82 WEST 1234 5698 7654 32"

@@ -1,11 +1,27 @@
-import Data.List (transpose)
+import Data.List (intercalate, transpose)
+import Control.Monad (join)
 
-spiral :: Int -> Int -> Int -> [[Int]]
-spiral rows cols start =
-  if rows > 0
-    then [start .. start + cols - 1] :
-         (reverse <$> transpose (spiral cols (rows - 1) (start + cols)))
-    else [[]]
+spiral :: Int -> [[Int]]
+spiral n = go n n 0
+  where
+    go rows cols start =
+      if 0 < rows
+        then [start .. start + pred cols] :
+             fmap reverse (transpose $ go cols (pred rows) (start + cols))
+        else [[]]
 
 main :: IO ()
-main = mapM_ print $ spiral 5 5 0
+main = putStrLn $ wikiTable (spiral 5)
+
+
+-- TABLE FORMATTING ----------------------------------------
+
+wikiTable :: Show a => [[a]] -> String
+wikiTable =
+  join .
+  ("{| class=\"wikitable\" style=\"text-align:center;" :) .
+  ("width:12em;height:12em;table-layout:fixed;\"\n|-\n" :) .
+  return .
+  (++ "\n|}") .
+  intercalate "\n|-\n" .
+  fmap (('|' :) . (' ' :) . intercalate " || " . fmap show)

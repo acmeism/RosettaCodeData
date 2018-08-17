@@ -1,7 +1,4 @@
 # Project : 24 game
-# Date    : 2018/02/21
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 digits = list(4)

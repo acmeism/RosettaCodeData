@@ -1,7 +1,4 @@
 # Project : Atomic updates
-# Date    : 2018/01/01
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 bucket = list(10)
 f2 = 0

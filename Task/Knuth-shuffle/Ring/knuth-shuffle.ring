@@ -1,7 +1,4 @@
 # Project : Knuth shuffle
-# Date    : 2017/11/08
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 items = list(52)
 for n = 1 to len(items)

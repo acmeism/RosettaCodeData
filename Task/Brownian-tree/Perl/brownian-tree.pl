@@ -101,13 +101,11 @@ my $count;
 PARTICLE: while (1) {
         my $a = rand(2 * PI);
         my $p = [ $r_start * cos($a), $r_start * sin($a) ];
-        while ($_ = move($p)) {
-                given ($_) {
-                        when (1) { next }
-                        when (2) { $count++; last; }
-                        when (3) { last PARTICLE }
-                        default  { last }
-                }
+        while (my $m = move($p)) {
+                if    ($m == 1) { next }
+                elsif ($m == 2) { $count++; last; }
+                elsif ($m == 3) { last PARTICLE }
+                else            { last }
         }
         print STDERR "$count $max_dist/@{[int($r_start)]}/@{[STOP_RADIUS]}\r" unless $count% 7;
 }

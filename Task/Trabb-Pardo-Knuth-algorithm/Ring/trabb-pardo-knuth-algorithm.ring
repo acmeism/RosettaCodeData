@@ -1,7 +1,4 @@
 # Project : Trabb Pardo–Knuth algorithm
-# Date    : 2017/10/06
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 decimals(3)
 x = list(11)

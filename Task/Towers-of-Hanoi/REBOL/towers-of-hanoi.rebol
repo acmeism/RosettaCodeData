@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Towers of Hanoi"
-	Author: oofoe
-	Date: 2009-12-08
 	URL: http://rosettacode.org/wiki/Towers_of_Hanoi
 ]
 

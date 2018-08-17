@@ -1,3 +1,5 @@
+import java.util.Stack;
+
 public class PostfixToInfix {
 
     public static void main(String[] args) {

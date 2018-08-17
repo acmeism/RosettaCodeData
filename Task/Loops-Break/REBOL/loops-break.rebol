@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Loop/Break"
-	Author: oofoe
-	Date: 2009-12-19
 	URL: http://rosettacode.org/wiki/Loop/Break
 ]
 

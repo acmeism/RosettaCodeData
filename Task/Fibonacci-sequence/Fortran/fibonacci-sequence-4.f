@@ -1,20 +1,12 @@
-    function fibI(n)
+module fibonacci
+contains
+    recursive function fibR(n) result(fib)
         integer, intent(in) :: n
-        integer, parameter :: fib0 = 0, fib1 = 1
-        integer            :: fibI, back1, back2, i
+        integer             :: fib
 
         select case (n)
-            case (:0);      fibI = fib0
-            case (1);       fibI = fib1
-
-            case default
-                fibI = fib1
-                back1 = fib0
-                do i = 2, n
-                    back2 = back1
-                    back1 = fibI
-                    fibI   = back1 + back2
-                end do
-         end select
-    end function fibI
-end module fibonacci
+            case (:0);      fib = 0
+            case (1);       fib = 1
+            case default;   fib = fibR(n-1) + fibR(n-2)
+        end select
+    end function fibR

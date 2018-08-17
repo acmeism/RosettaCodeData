@@ -1,8 +1,8 @@
 import sequtils
 
-iterator castOut(base = 10, start = 1, ending = 999_999) =
+iterator castOut(base = 10, start = 1, ending = 999_999): int =
   var ran: seq[int] = @[]
-  for y in 0 .. <base-1:
+  for y in 0 ..< base-1:
     if y mod (base - 1) == (y*y) mod (base - 1):
       ran.add(y)
 

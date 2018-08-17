@@ -1,6 +1,4 @@
 # Project : Find common directory path
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 i = null

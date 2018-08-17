@@ -1,7 +1,4 @@
 # Project : Factors of a Mersenne number
-# Date    : 2018/04/02
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 see "A factor of M929 is " + mersennefactor(929) + nl
 see "A factor of M937 is " + mersennefactor(937) + nl

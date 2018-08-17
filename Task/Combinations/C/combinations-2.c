@@ -11,9 +11,10 @@ void comb(int m, int n, unsigned char *c)
 
 		/* this check is not strictly necessary, but if m is not close to n,
 		   it makes the whole thing quite a bit faster */
+		i = 0;
 		if (c[i]++ < m) continue;
 
-		for (i = 0; c[i] >= m - i;) if (++i >= n) return;
+		for (; c[i] >= m - i;) if (++i >= n) return;
 		for (c[i]++; i; i--) c[i-1] = c[i] + 1;
 	}
 }

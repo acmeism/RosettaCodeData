@@ -1,2 +1,1 @@
-my $_ = 3;
-print for $_**2, "\n", sqrt;
+print sqrt . " " for (4, 16, 64)

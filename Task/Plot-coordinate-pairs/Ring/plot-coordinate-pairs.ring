@@ -1,7 +1,4 @@
 # Project : Plot coordinate pairs
-# Date    : 2018/01/11
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "guilib.ring"
 

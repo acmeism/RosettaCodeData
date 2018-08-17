@@ -9,8 +9,8 @@ if width=='' | width==","  then width=linesize() /* "      "         "   "   "  
 $=word(@,1)                                      /*initialize  $  with the first word.  */
             do k=2  for words(@)-1;  x=word(@,k) /*parse until text (@) exhausted.      */
             _=$ x                                /*append it to the  $  list and test.  */
-            if length(_)>width  then do;  say $  /*this word a bridge too far?    > w.  */
-                                          _=x    /*assign this word to the next line.   */
+            if length(_)>=width  then do;  say $ /*this word a bridge too far?    > w.  */
+                                           _=x   /*assign this word to the next line.   */
                                      end
             $=_                                  /*new words (on a line)  are OK so far.*/
             end   /*m*/

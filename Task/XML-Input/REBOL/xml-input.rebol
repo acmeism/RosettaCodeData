@@ -1,7 +1,5 @@
 REBOL [
 	Title: "XML Reading"
-	Author: oofoe
-	Date: 2009-12-08
 	URL: http://rosettacode.org/wiki/XML_Reading
 ]
 

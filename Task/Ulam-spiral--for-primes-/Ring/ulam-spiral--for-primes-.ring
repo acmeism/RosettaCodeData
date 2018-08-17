@@ -1,7 +1,4 @@
 # Project : Ulam spiral (for primes)
-# Date    : 2018/06/11
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 load "guilib.ring"
 load "stdlib.ring"

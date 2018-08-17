@@ -4,4 +4,5 @@ Private Function Ethiopian_Multiplication(First As Long, Second As Long) As Long
         First = lngHalve(First)
         Second = lngDouble(Second)
     Loop While First >= 1
+    Ethiopian_Multiplication = Mult_Eth
 End Function

@@ -1,7 +1,4 @@
 # Project : Undefined values
-# Date    : 2018/03/27
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 test()
 func test

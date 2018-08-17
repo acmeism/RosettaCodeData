@@ -1,7 +1,4 @@
 # Project : Extend your language
-# Date    : 2017/11/15
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 see "a = 1, b = 1 => "
 test(1, 1)

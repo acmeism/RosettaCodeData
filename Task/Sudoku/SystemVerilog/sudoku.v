@@ -1,7 +1,3 @@
-/// @Author: Alexandre Felipe (o.alexandre.felipe@gmail.com)
-/// @Date: 2017-May-10
-///
-
 //////////////////////////////////////////////////////////////////////////////
 /// SudokuSolver                                                           ///
 ///    A class that fills up a sudoku board, the initial board is given    ///

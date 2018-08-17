@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Simple Windowed Application"
-	Author: oofoe
-	Date: 2009-12-07
 	URL: http://rosettacode.org/wiki/Simple_Windowed_Application
 ]
 

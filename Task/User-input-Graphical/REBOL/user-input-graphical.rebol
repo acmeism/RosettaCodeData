@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Graphical User Input"
-	Author: oofoe
-	Date: 2009-12-07
 	URL: http://rosettacode.org/wiki/User_Input_-_graphical
 ]
 

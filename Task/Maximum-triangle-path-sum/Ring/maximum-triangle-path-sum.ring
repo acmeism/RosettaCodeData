@@ -1,7 +1,4 @@
 # Project : Maximum triangle path sum
-# Date    : 2018/02/06
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 ln = list(19)

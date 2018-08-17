@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Functional Composition"
-	Author: oofoe
-	Date: 2009-12-06
 	URL: http://rosettacode.org/wiki/Functional_Composition
 ]
 

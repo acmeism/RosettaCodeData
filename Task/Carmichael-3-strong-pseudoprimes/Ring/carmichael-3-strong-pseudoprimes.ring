@@ -1,7 +1,4 @@
 # Project : Carmichael 3 strong pseudoprimes
-# Date    : 2017/11/29
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 see "The following are Carmichael munbers for p1 <= 61:" + nl
 see "p1     p2      p3     product" + nl

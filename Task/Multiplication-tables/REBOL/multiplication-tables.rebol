@@ -1,7 +1,5 @@
 REBOL [
 	Title: "12x12 Multiplication Table"
-	Author: oofoe
-	Date: 2009-12-26
 	URL: http://rosettacode.org/wiki/Print_a_Multiplication_Table
 ]
 

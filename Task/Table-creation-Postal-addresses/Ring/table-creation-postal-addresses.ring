@@ -1,7 +1,4 @@
 # Project : Table creation/Postal addresses
-# Date    : 2018/04/19
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 oSQLite = sqlite_init()

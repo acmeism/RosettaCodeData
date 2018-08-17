@@ -1,4 +1,5 @@
 import java.util.Scanner;
+
 public class Sundial {
     public static void main(String[] args) {
         double lat, slat, lng, ref;
@@ -19,7 +20,7 @@ public class Sundial {
         System.out.printf("Hour, sun hour angle, dial hour line angle from 6am to 6pm\n");
 
         for (int h = -6; h <= 6; h++) {
-            double hla, hra;
+            double hla, hra, hraRad;
             hra = 15.0 * h;
             hra = hra - lng + ref;
             hraRad = Math.toRadians(hra);

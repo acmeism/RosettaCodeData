@@ -1,6 +1,6 @@
 public class CirclesTotalArea {
 
-    /* Solution by ilkka.kokkarinen@gmail.com
+    /*
      * Rectangles are given as 4-element arrays [tx, ty, w, h].
      * Circles are given as 3-element arrays [cx, cy, r].
      */

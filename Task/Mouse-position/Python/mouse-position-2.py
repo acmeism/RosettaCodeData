@@ -1,5 +1,5 @@
 #simple way of ,get cursor xy data
-#niwantha33@gmail.com
+
 from Tkinter import *
 win=Tk()
 win.geometry("200x300")

@@ -1,7 +1,4 @@
 # Project : Fibonacci word
-# Date    : 2018/01/23
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 fw1 = "1"
 fw2 = "0"

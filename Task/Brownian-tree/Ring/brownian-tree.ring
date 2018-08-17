@@ -1,8 +1,4 @@
 # Project : Brownian tree
-# Date    : 2018/02/16
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
-
 
 load "stdlib.ring"
 load "guilib.ring"

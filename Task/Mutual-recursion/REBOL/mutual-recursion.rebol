@@ -1,7 +1,5 @@
 REBOL [
     Title: "Mutual Recursion"
-    Date: 2009-12-14
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Mutual_Recursion
 	References: [http://en.wikipedia.org/wiki/Hofstadter_sequence#Hofstadter_Female_and_Male_sequences]
 ]

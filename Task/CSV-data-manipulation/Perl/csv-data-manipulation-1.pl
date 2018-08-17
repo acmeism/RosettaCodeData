@@ -25,7 +25,7 @@ $_->[ $column_number{C4} ] += $_->[ $column_number{C1} ] for @rows;
 push @header, 'Sum';
 $column_number{Sum} = $#header;
 
-push $_, sum(@$_) for @rows;
+push @$_, sum(@$_) for @rows;
 push @rows, [
                 map  {
                     my $col = $_;

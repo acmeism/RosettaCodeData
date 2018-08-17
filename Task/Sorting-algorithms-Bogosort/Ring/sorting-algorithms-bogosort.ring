@@ -1,7 +1,4 @@
 # Project : Sorting algorithms/Bogosort
-# Date    : 2018/02/17
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 test = [4, 65, 2, 31, 0, 99, 2, 83, 782, 1]
 shuffles = 0

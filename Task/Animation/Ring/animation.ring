@@ -1,7 +1,4 @@
 # Project : Animation
-# Date    : 2018/01/18
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 Load "guilib.ring"
 load "stdlib.ring"

@@ -1,7 +1,4 @@
 # Project : Gray code
-# Date    : 2018/01/12
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 pos = 5
 see "0 : 00000 => 00000 => 00000" + nl

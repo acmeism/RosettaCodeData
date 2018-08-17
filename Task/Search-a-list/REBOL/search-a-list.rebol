@@ -1,7 +1,5 @@
 REBOL [
 	Title: "List Indexing"
-	Author: oofoe
-	Date: 2009-12-06
 	URL: http://rosettacode.org/wiki/Index_in_a_list
 ]
 

@@ -1,7 +1,4 @@
 # Project : Horizontal sundial calculations
-# Date    : 2017/10/24
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 pi = 22/7

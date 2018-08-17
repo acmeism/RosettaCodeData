@@ -1,7 +1,4 @@
 # Project : Non-continuous subsequences
-# Date    : 2018/02/03
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 list = [1,2,3,4]

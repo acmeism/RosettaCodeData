@@ -1,7 +1,4 @@
 # Project : Longest string challenge
-# Date    : 2017/10/11
-# Author  : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 

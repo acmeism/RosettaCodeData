@@ -1,7 +1,4 @@
-doors = [false] * 100
-100.times do |i|
-  (i ... doors.length).step(i + 1) do |j|
-    doors[j] = !doors[j]
-  end
+n = 100
+(1..n).each do |i|
+  puts "Door #{i} is #{i**0.5 == (i**0.5).round ? "open" : "closed"}"
 end
-puts doors.map.with_index(1){|d,i| "Door #{i} is #{d ? 'open' : 'closed'}."}

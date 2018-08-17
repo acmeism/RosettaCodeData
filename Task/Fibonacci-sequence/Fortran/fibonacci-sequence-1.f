@@ -1,24 +1,22 @@
-      FUNCTION IFIB(N)
-      IF (N.EQ.0) THEN
-        ITEMP0=0
-      ELSE IF (N.EQ.1) THEN
-        ITEMP0=1
-      ELSE IF (N.GT.1) THEN
-        ITEMP1=0
-        ITEMP0=1
-        DO 1 I=2,N
-          ITEMP2=ITEMP1
-          ITEMP1=ITEMP0
-          ITEMP0=ITEMP1+ITEMP2
-    1   CONTINUE
-      ELSE
-        ITEMP1=1
-        ITEMP0=0
-        DO 2 I=-1,N,-1
-          ITEMP2=ITEMP1
-          ITEMP1=ITEMP0
-          ITEMP0=ITEMP2-ITEMP1
-    2   CONTINUE
-      END IF
-      IFIB=ITEMP0
+C     FIBONACCI SEQUENCE - FORTRAN IV
+      NN=46
+      DO 1 I=0,NN
+    1 WRITE(*,300) I,IFIBO(I)
+  300 FORMAT(1X,I2,1X,I10)
+      END
+C
+      FUNCTION IFIBO(N)
+      IF(N) 9,1,2
+    1 IFN=0
+      GOTO 9
+    2 IF(N-1) 9,3,4
+    3 IFN=1
+      GOTO 9
+    4 IFNM1=0
+      IFN=1
+      DO 5 I=2,N
+      IFNM2=IFNM1
+      IFNM1=IFN
+    5 IFN=IFNM1+IFNM2
+    9 IFIBO=IFN
       END

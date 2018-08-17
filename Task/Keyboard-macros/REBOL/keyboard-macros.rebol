@@ -1,7 +1,5 @@
 REBOL [
     Title: "Keyboard Macros"
-    Date: 2009-12-14
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Keyboard_macros
 ]
 

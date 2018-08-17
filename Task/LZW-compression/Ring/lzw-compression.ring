@@ -1,7 +1,4 @@
 # Project : LZW compression
-# Date    : 2018/04/07
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 plaintext = "TOBEORNOTTOBEORTOBEORNOT"
 result = []

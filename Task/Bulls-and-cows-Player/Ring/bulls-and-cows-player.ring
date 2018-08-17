@@ -1,7 +1,4 @@
 # Project : Bulls and cows/Player
-# Date    : 2017/11/21
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 secret = ""
 while len(secret) != 4

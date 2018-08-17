@@ -1,7 +1,5 @@
 REBOL [
     Title: "Detect Divide by Zero"
-    Date: 2009-12-16
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Divide_by_Zero_Detection
 ]
 

@@ -5,7 +5,8 @@ procedure modular_inverse is
   function inv_mod (a : Integer; n : Positive) return Integer with post=> (a * inv_mod'Result) mod n = 1 is
     -- To calculate the inverse we do as if we would calculate the GCD with the Euclid extended algorithm
     -- (but we just keep the coefficient on a)
-    function inverse (a, b, u, v : Integer) return Integer is (if b=0 then u else inverse (b, a mod b, v, u-(v*a)/b));
+    function inverse (a, b, u, v : Integer) return Integer is
+     (if b=0 then u else inverse (b, a mod b, v, u-(v*a)/b));
   begin
     return inverse (a, n, 1, 0);
   end inv_mod;

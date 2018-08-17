@@ -1,5 +1,3 @@
-/*Abhishek Ghosh, Original : 20th September 2017, Corrected : 25th September 2017*/
-
 #include<unistd.h>
 #include<stdio.h>
 #include<time.h>

@@ -1,7 +1,4 @@
 # Project : Continued fraction
-# Date    : 2018/03/17
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 see "SQR(2) = " + contfrac(1, 1, "2", "1") + nl
 see "        e = " + contfrac(2, 1, "n", "n") + nl

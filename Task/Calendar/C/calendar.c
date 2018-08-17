@@ -11,7 +11,7 @@ struct months {
 	int days, start_wday, at;
 } months[12] = {
 	{ "January",	31, 0, 0 },
-	{ "Februray",	28, 0, 0 },
+	{ "February",	28, 0, 0 },
 	{ "March",	31, 0, 0 },
 	{ "April",	30, 0, 0 },
 	{ "May",	31, 0, 0 },

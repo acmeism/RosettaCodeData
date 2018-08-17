@@ -15,11 +15,14 @@ for $*IN.lines -> $line {
             %licenses<times>.push($date_time);
         }
     }
-    else {
+    elsif $license eq 'IN' {
         if %licenses<count> == %licenses<max> {
             %licenses<times>[*-1] ~= " through " ~ $date_time;
         }
         %licenses<count>--;
+    }
+    else {
+        # Not a licence OUT or IN event, do nothing
     }
 };
 

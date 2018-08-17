@@ -9,8 +9,8 @@
 
 : STRLEN  ( addr -- length)  c@ ;        \ alias the "character fetch" operator
 
-: COUNT   ( addr --  addr+1 length)      \ returns the address+1 and the length byte on the stack
-          dup  strlen swap 1+ swap ;
+: COUNT   ( addr --  addr+1 length)      \ Standard word. Shown for explanation
+          dup  strlen swap 1+ swap ;     \ returns the address+1 and the length byte on the stack
 
 : ENDSTR  ( str -- addr)                 \ calculate the address at the end of a string
           COUNT + ;
@@ -25,10 +25,10 @@
            >r  COUNT  R> APPEND ;
 
 : PLACE  ( addr1 len addr2 -- )           \ addr1 and length, placed at addr2 as counted string
-           2dup 2>r  1+  swap  move  2r> c! ;
+           2dup 2>r  char+  swap  move  2r> c! ;
 
 : STRING, ( addr len -- )                 \ compile a string at the next available memory (called 'HERE')
-            here  over 1+  allot  place ;
+            here  over char+  allot  place ;
 
 : APPEND-CHAR  ( char string -- )         \ append char to string
            dup >r  count dup 1+ r> c! + c! ;
@@ -72,12 +72,12 @@
   string: strpad                           \ general purpose storage buffer
 
 : substr  ( string1 start length -- strpad) \ Extract a substring of string and return an output string
-         strpad =""                        \ clear strpad
-         >r                                \ push the length
-         +                                 \ calc the new start addr
-         r> strpad append                  \ pop the length and append to strpad
-         strpad ;                          \ return the address of strpad.
-
+          >r >r                             \ push start,length
+          count                             \ compute addr,len
+          r> 1- /string                     \ pop start, subtract 1, cut string
+          drop r>                           \ drop existing length, pop new length
+          strpad place                      \ place new stack string in strpad
+          strpad ;                          \ return address of strpad
 
 \ COMPARE takes the 4 inputs from the stack (addr1 len1  addr2 len2 )
 \ and returns a flag for equal (0) , less-than (1)  or greater-than (-1) on the stack

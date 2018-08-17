@@ -1,7 +1,4 @@
 ;; Project : Palindrome detection
-;; Date    : 2018/03/06
-;; Author : Gal Zsolt [~ CalmoSoft ~]
-;; Email   : <calmosoft@gmail.com>
 
 (defun palindrome(x)
           (if (string= x (reverse x))

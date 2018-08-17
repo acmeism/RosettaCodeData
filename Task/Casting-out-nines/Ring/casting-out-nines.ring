@@ -1,7 +1,4 @@
 # Project : Casting out nines
-# Date    : 2018/03/24
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 co9(1, 10, 99, [1,9,45,55,99])
 co9(1, 10, 1000, [1,9,45,55,99,297,703,999])

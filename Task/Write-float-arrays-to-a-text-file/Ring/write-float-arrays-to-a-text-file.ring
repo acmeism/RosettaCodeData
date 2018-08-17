@@ -1,7 +1,4 @@
 # Project : Write float arrays to a text file
-# Date    : 2018/02/15
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 decimals(13)
 x = [1, 2, 3, 100000000000]

@@ -6,23 +6,27 @@ include pGUI.e
 
 constant colours = {CD_BLACK, CD_RED, CD_GREEN, CD_MAGENTA, CD_CYAN, CD_YELLOW, CD_WHITE}
 
-Ihandle dlg, canvas
-cdCanvas cddbuffer, cdcanvas
-
-function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
-    cdCanvasActivate(cddbuffer)
-    integer {width, height} = IupGetIntInt(canvas, "DRAWSIZE")
+procedure draw_to(cdCanvas cdcanvas)
+    cdCanvasActivate(cdcanvas)
+    integer {width, height} = cdCanvasGetSize(cdcanvas)
     for y=1 to 4 do
         integer x = 0, c = 1, h = floor(height/(5-y))
         while x<width do
-            cdCanvasSetForeground(cddbuffer, colours[c])
-            cdCanvasBox(cddbuffer, x, x+y, height-h, height)
+            cdCanvasSetForeground(cdcanvas, colours[c])
+            cdCanvasBox(cdcanvas, x, x+y, height-h, height)
             x += y
             c = iff(c=length(colours)?1:c+1)
         end while
         height -= h
     end for
-    cdCanvasFlush(cddbuffer)
+    cdCanvasFlush(cdcanvas)
+end procedure
+
+Ihandle dlg, canvas
+cdCanvas cddbuffer, cdcanvas
+
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+    draw_to(cddbuffer)
     return IUP_DEFAULT
 end function
 
@@ -43,8 +47,26 @@ function esc_close(Ihandle /*ih*/, atom c)
     return IUP_CONTINUE
 end function
 
+function print_cb(Ihandle /*ih*/)
+    cdCanvan print_canvas = cdCreateCanvas(CD_PRINTER, "pinstripe -d")
+    if print_canvas!=NULL then
+        draw_to(print_canvas)
+        cdKillCanvas(print_canvas)
+    end if
+    return IUP_DEFAULT
+end function
+
+function exit_cb(Ihandle /*ih*/)
+    return IUP_CLOSE
+end function
+
 procedure main()
     IupOpen()
+
+    Ihandle file_menu = IupMenu({IupMenuItem("&Print",Icallback("print_cb")),
+                                 IupMenuItem("E&xit", Icallback("exit_cb"))})
+
+    Ihandle main_menu = IupMenu({IupSubmenu("File", file_menu)})
 
     canvas = IupCanvas(NULL)
     IupSetAttribute(canvas, "RASTERSIZE", "600x400") -- initial size
@@ -54,6 +76,7 @@ procedure main()
 
     dlg = IupDialog(canvas)
     IupSetAttribute(dlg, "TITLE", "Colour pinstripe")
+    IupSetAttributeHandle(dlg,"MENU",main_menu)
     IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
     IupSetCallback(dlg, "K_ANY",     Icallback("esc_close"))
 

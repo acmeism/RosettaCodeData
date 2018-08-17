@@ -1,8 +1,7 @@
 object LongestIncreasingSubsequence extends App {
   val tests = Map(
     "3,2,6,4,5,1" -> Seq("2,4,5", "3,4,5"),
-    "0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15" ->
-      Seq("0,2,6,9,11,15", "0,2,6,9,13,15", "0,4,6,9,13,15", "0,4,6,9,11,15")
+    "0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15" -> Seq("0,2,6,9,11,15", "0,2,6,9,13,15", "0,4,6,9,13,15", "0,4,6,9,11,15")
   )
 
   def lis(l: Array[Int]): Seq[Array[Int]] =
@@ -28,9 +27,7 @@ object LongestIncreasingSubsequence extends App {
       val allLongests: Seq[Array[Int]] = lis(asInts(given))
       println(
         s"$given has ${allLongests.length} longest increasing subsequences, e.g. ${
-          allLongests.last
-            .mkString(",")
-        }")
+          allLongests.last.mkString(",")}")
       allLongests.forall(lis => expect.contains(lis.mkString(",")))
   })
 }

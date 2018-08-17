@@ -1,7 +1,4 @@
 ;; Project : Even or odd
-;; Date    : 2018/03/05
-;; Author : Gal Zsolt [~ CalmoSoft ~]
-;; Email   : <calmosoft@gmail.com>
 
 (defun evenodd (nr)
           (cond ((evenp nr) "even")

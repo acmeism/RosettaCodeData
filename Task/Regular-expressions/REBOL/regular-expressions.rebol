@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Regular Expression Matching"
-	Author: oofoe
-	Date: 2009-12-06
 	URL: http://rosettacode.org/wiki/Regular_expression_matching
 ]
 

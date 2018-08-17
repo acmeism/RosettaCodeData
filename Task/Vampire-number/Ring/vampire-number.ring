@@ -1,7 +1,4 @@
 # Project : Vampire number
-# Date    : 2018/02/01
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 for p = 10 to 127000
      vampire(p)

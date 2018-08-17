@@ -1,7 +1,5 @@
 REBOL [
 	Title: "First Class Functions"
-	Author: oofoe
-	Date: 2009-12-05
 	URL: http://rosettacode.org/wiki/First-class_functions
 ]
 

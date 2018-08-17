@@ -1,7 +1,4 @@
 # Project : Self-describing numbers
-# Date    : 2017/11/18
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 for num = 1 to 45000000
      res = 0

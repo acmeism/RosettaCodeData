@@ -1,7 +1,4 @@
 # Project : Hash from two arrays
-# Date    : 2018/03/18
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 list1="one two three"
 list2="1 2 3"

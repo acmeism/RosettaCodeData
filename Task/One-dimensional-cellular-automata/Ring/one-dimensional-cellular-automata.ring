@@ -1,7 +1,4 @@
 # Project : One-dimensional cellular automata
-# Date    : 2017/10/21
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 rule = ["0", "0", "0", "1", "0", "1", "1", "0"]
 now = "01110110101010100100"

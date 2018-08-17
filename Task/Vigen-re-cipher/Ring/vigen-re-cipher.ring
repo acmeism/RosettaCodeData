@@ -1,7 +1,4 @@
 # Project : Vigenère cipher
-# Date    : 2018/01/02
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 key = "LEMON"
 plaintext = "ATTACK AT DAWN"

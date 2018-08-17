@@ -1,7 +1,4 @@
 # Project : Sorting algorithms/Strand sort
-# Date    : 2018/03/04
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 test = [-2,0,-2,5,5,3,-1,-3,5,5,0,2,-4,4,2]
 results = []

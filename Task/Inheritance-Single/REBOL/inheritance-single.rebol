@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Inheritance"
-	Author: oofoe
-	Date: 2009-12-08
 	URL: http://rosettacode.org/wiki/Inheritance
 ]
 

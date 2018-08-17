@@ -1,7 +1,5 @@
 REBOL [
     Title: "Loop Plus Half"
-    Date: 2009-12-16
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Loop/n_plus_one_half
 ]
 

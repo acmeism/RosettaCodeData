@@ -1,7 +1,4 @@
 # Project : Caesar cipher
-# Date    : 2017/11/11
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 cipher = "pack my box with five dozen liquor jugs"
 abc = "abcdefghijklmnopqrstuvwxyz"

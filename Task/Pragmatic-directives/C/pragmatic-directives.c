@@ -1,5 +1,3 @@
-/*Abhishek Ghosh, 7th October 2017*/
-
 /*Almost every C program has the below line,
 the #include preprocessor directive is used to
 instruct the compiler which files to load before compiling the program.

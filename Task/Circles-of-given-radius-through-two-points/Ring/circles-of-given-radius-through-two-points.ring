@@ -1,7 +1,4 @@
 # Project : Circles of given radius through two points
-# Date    : 2018/01/05
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 decimals(4)
 x1 = 0.1234

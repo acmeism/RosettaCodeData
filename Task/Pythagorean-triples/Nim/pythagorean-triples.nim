@@ -6,7 +6,7 @@ var
   total, prim = 0
   maxPeri = 10
 
-proc newTri(ins) =
+proc newTri(ins: array[0..2, int]) =
   var p = ins[0] + ins[1] + ins[2]
   if p > maxPeri: return
   inc(prim)

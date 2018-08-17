@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Function Argument"
-	Author: oofoe
-	Date: 2009-12-19
 	URL: http://rosettacode.org/wiki/Function_as_an_Argument
 ]
 

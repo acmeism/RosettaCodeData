@@ -1,7 +1,4 @@
 # Project : Rock-paper-scissors
-# Date    : 2018/03/25
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 see "
 welcome to the game of rock-paper-scissors.

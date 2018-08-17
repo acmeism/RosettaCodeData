@@ -1,7 +1,4 @@
 # Project : Best shuffle
-# Date    : 2018/02/15
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 test = ["abracadabra", "seesaw", "elk", "grrrrrr", "up", "a"]
 

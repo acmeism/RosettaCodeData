@@ -1,4 +1,3 @@
-/*Corrected by Abhishek Ghosh, 6th November 2017*/
 #include <iostream>
 #include <stack>
 #include <string>

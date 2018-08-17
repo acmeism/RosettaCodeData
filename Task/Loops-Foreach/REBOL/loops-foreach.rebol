@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Loop/Foreach"
-	Author: oofoe
-	Date: 2009-12-19
 	URL: http://rosettacode.org/wiki/Loop/Foreach
 ]
 

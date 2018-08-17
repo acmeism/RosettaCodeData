@@ -1,7 +1,4 @@
 # Project : Nautical bell
-# Date    : 2017/12/26
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 m = 0
 for n = 0 to 23

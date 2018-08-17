@@ -1,7 +1,4 @@
 # Project : Calendar
-# Date    : 2018/06/05
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "guilib.ring"
 load "stdlib.ring"

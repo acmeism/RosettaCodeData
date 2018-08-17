@@ -1,5 +1,3 @@
-/*Abhishek Ghosh, 10th October 2017*/
-
 #include<stdlib.h>
 #include<locale.h>
 #include<wchar.h>

@@ -1,7 +1,4 @@
 # Project : Simulate input/Mouse
-# Date    : 2018/02/02
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 load "guilib.ring"
 load "stdlib.ring"

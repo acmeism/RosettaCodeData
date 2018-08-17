@@ -1,0 +1,87 @@
+--
+-- demo\rosetta\sha1.exw
+-- =====================
+--
+--  NB no longer considered secure. Non-optimised.
+--
+constant m4 = allocate(4)   -- scratch area, for uint32
+
+function uint32(atom v)
+    poke4(m4,v)
+    return peek4u(m4)
+end function
+
+function sq_uint32(sequence s)
+    for i=1 to length(s) do
+        s[i] = uint32(s[i])
+    end for
+    return s
+end function
+
+function dword(string msg, integer i)
+-- get dword as big-endian
+    return msg[i]*#1000000+msg[i+1]*#10000+msg[i+2]*#100+msg[i+3]
+end function
+
+function xor_all(sequence s)
+atom result = 0
+    for i=1 to length(s) do
+        result = xor_bits(result, s[i])
+    end for
+    result = uint32(result)
+    return result
+end function
+
+function rol(atom word, integer bits)
+-- left rotate the bits of a 32-bit number by the specified number of bits
+    return uint32(word*power(2,bits))+floor(word/power(2,32-bits))
+end function
+
+function sha1(string msg)
+atom a,b,c,d,e,temp,k
+sequence w = repeat(0,80)
+atom h0 = 0x67452301,
+     h1 = 0xefcdab89,
+     h2 = 0x98badcfe,
+     h3 = 0x10325476,
+     h4 = 0xc3d2e1f0
+
+    integer bits = length(msg)*8
+    msg &= #80
+    while mod(length(msg),64)!=56 do msg &= '\0' end while
+    msg &= reverse(int_to_bytes(bits,8))
+
+    for chunk=1 to length(msg) by 64 do
+        for i=1 to 16 do
+            w[i] = dword(msg,chunk+(i-1)*4)
+        end for
+        for i=17 to 80 do
+            w[i] = rol(xor_all({w[i-3],w[i-8],w[i-14],w[i-16]}),1)
+        end for
+        {a,b,c,d,e} = {h0,h1,h2,h3,h4}
+        for i=1 to 80 do
+            if i<=20 then
+                temp = or_bits(and_bits(b,c),and_bits(not_bits(b),d))
+                k = #5A827999
+            elsif i<=40 then
+                temp = xor_bits(xor_bits(b,c),d)
+                k = #6ED9EBA1
+            elsif i<=60 then
+                temp = or_bits(or_bits(and_bits(b,c),and_bits(b,d)),and_bits(c,d))
+                k = #8F1BBCDC
+            else -- i<=80
+                temp = xor_bits(xor_bits(b,c),d)
+                k = #CA62C1D6
+            end if
+            {a,b,c,d,e} = {uint32(rol(a,5)+temp+e+k+w[i]),a,rol(b,30),c,d}
+        end for
+        {h0,h1,h2,h3,h4} = sq_uint32(sq_add({h0,h1,h2,h3,h4},{a,b,c,d,e}))
+    end for
+    sequence res = {h0, h1, h2, h3, h4}
+    for i=1 to length(res) do
+        res[i] = sprintf("%08X",res[i])
+    end for
+    return join(res)
+end function
+
+?sha1("Rosetta Code")

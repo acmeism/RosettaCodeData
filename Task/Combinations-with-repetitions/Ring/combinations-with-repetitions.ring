@@ -1,7 +1,4 @@
 # Project : Combinations with repetitions
-# Date    : 2017/10/29
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 n = 2
 k = 3

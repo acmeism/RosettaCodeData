@@ -1,7 +1,4 @@
 # Project : Terminal control/Coloured text
-# Date    : 2018/04/19
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 load "consolecolors.ring"
 

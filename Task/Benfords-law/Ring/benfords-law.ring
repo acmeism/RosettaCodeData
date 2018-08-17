@@ -1,7 +1,4 @@
 # Project : Benford's law
-# Date    : 2017/11/29
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 decimals(3)
 n= 1000

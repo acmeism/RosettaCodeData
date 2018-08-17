@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Generic Swap"
-	Author: oofoe
-	Date: 2009-12-06
 	URL: http://rosettacode.org/wiki/Generic_swap
 	Reference: [http://reboltutorial.com/blog/rebol-words/]
 ]

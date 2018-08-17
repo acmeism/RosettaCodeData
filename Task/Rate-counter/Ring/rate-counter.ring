@@ -1,7 +1,4 @@
 # Project : Rate counter
-# Date    : 2017/09/11
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 see "method 1: calculate reciprocal of elapsed time:" + nl
 for trial = 1 to 3

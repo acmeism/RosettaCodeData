@@ -1,7 +1,4 @@
 # Project : Higher-order functions
-# Date    : 2018/04/03
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 docalcs(1,10,"squares",:square)
 docalcs(1,10,"cubes",:cube)

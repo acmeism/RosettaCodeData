@@ -1,7 +1,4 @@
 # Project : Averages/Mode
-# Date    : 2018/04/11
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 a = [1, 3, 6, 6, 6, 6, 7, 7, 12, 12, 17]
 b = [1, 2, 4, 4, 1]

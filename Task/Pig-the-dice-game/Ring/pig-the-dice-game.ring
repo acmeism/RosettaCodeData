@@ -1,7 +1,4 @@
 # Project : Pig the dice game
-# Date    : 2017/10/31
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 numPlayers = 2
 maxScore = 100

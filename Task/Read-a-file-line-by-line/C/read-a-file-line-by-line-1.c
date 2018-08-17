@@ -1,25 +1,30 @@
-// From manpage for "getline"
-
+/*
+ * Read (and write) the standard input file
+ * linie-by-line. This version is for ASCII
+ * encoded text files.
+ */
 #include <stdio.h>
-#include <stdlib.h>
+
+/*
+ * BUFSIZE is a max size of line plus 1.
+ *
+ * It would be nice to dynamically allocate  bigger buffer for longer lines etc.
+ * - but this example is as simple as possible. Dynamic buffer allocation from
+ * the heap may not be a good idea as it seems, because it can cause memory
+ * segmentation in embeded systems.
+ */
+#define BUFSIZE 1024
 
 int main(void)
 {
-	FILE *stream;
-	char *line = NULL;
-	size_t len = 0;
-	ssize_t read;
+    static char buffer[BUFSIZE];
 
-	stream = fopen("file.txt", "r");
-	if (stream == NULL)
-		exit(EXIT_FAILURE);
+    /*
+     * Never use gets() instead fgets(), because gets()
+     * is a really unsafe function.
+     */
+    while (fgets(buffer, BUFSIZE, stdin))
+        puts(buffer);
 
-	while ((read = getline(&line, &len, stream)) != -1) {
-		printf("Retrieved line of length %u :\n", read);
-		printf("%s", line);
-	}
-
-	free(line);
-	fclose(stream);
-	exit(EXIT_SUCCESS);
+    return 0;
 }

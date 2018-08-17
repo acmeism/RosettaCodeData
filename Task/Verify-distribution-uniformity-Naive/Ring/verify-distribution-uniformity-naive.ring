@@ -1,7 +1,4 @@
 # Project : Verify distribution uniformity/Naive
-# Date    : 2017/09/21
-# Author  : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 maxrnd = 7
 for r = 2 to 5

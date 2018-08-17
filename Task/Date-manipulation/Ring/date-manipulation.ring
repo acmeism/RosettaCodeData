@@ -1,7 +1,4 @@
 # Project : Date manipulation
-# Date    : 2018/02/14
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 dateorigin = "March 7 2009 7:30pm EST"

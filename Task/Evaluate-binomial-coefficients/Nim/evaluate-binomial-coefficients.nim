@@ -1,4 +1,4 @@
-proc binomialCoeff(n, k): int =
+proc binomialCoeff(n, k: int): int =
   result = 1
   for i in 1..k:
     result = result * (n-i+1) div i

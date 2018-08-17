@@ -1,7 +1,4 @@
 # Project : Map range
-# Date    : 2017/09/20
-# Author  : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 decimals(1)
 al = 0

@@ -1,5 +1,5 @@
 import Data.Functor
-import Text.Parsec ((<|>), (<?>), many, many1, char, try, parse, sepBy, choice)
+import Text.Parsec ((<|>), (<?>), many, many1, char, try, parse, sepBy, choice, between)
 import Text.Parsec.Char (noneOf)
 import Text.Parsec.Token (integer, float, whiteSpace, stringLiteral, makeTokenParser)
 import Text.Parsec.Language (haskell)
@@ -13,10 +13,10 @@ data Val = Int Integer
 tProg = many tExpr <?> "program"
   where tExpr = between ws ws (tList <|> tAtom) <?> "expression"
         ws = whiteSpace haskell
-        tAtom  =  try (Int <$> integer haskell) <?> "integer"
-              <|> try (Float <$> float haskell) <?> "floating point number"
-              <|> String <$> stringLiteral haskell <?> "string"
-              <|> Symbol <$> many1 (noneOf "()\"\t\n\r") <?> "symbol"
+        tAtom  =  (try (Float <$> float haskell) <?> "floating point number")
+              <|> (try (Int <$> integer haskell) <?> "integer")
+              <|> (String <$> stringLiteral haskell <?> "string")
+              <|> (Symbol <$> many1 (noneOf "()\"\t\n\r ") <?> "symbol")
               <?> "atomic expression"
         tList = List <$> between (char '(') (char ')') (many tExpr) <?> "list"
 

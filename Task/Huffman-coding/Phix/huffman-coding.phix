@@ -1,0 +1,98 @@
+function store_nodes(object key, object data, integer nodes)
+    setd({data,key},0,nodes)
+    return 1
+end function
+constant r_store_nodes = routine_id("store_nodes")
+
+function build_freqtable(string data)
+integer freq = new_dict(),
+        nodes = new_dict()
+    for i=1 to length(data) do
+        integer di = data[i]
+        setd(di,getd(di,freq)+1,freq)
+    end for
+    traverse_dict(r_store_nodes, nodes, freq)
+    destroy_dict(freq)
+    return nodes
+end function
+
+function build_hufftree(integer nodes)
+sequence lkey, rkey, node
+integer lfreq, rfreq
+    while true do
+        lkey = getd_partial_key({0,0},nodes)
+        lfreq = lkey[1]
+        deld(lkey,nodes)
+        rkey = getd_partial_key({0,0},nodes)
+        rfreq = rkey[1]
+        deld(rkey,nodes)
+
+        node = {lfreq+rfreq,{lkey,rkey}}
+
+        if dict_size(nodes)=0 then exit end if
+
+        setd(node,0,nodes)
+    end while
+    destroy_dict(nodes)
+    return node
+end function
+
+procedure build_huffcodes(object node, string bits, integer d)
+    {integer freq, object data} = node
+    if sequence(data) then
+        build_huffcodes(data[1],bits&'0',d)
+        build_huffcodes(data[2],bits&'1',d)
+    else
+        setd(data,{freq,bits},d)
+    end if
+end procedure
+
+function print_huffcode(integer key, sequence data, integer /*user_data*/)
+    printf(1,"'%c' [%d] %s\n",key&data)
+    return 1
+end function
+constant r_print_huffcode = routine_id("print_huffcode")
+
+procedure print_huffcodes(integer d)
+    traverse_dict(r_print_huffcode, 0, d)
+end procedure
+
+function invert_huffcode(integer key, sequence data, integer rd)
+    setd(data[2],key,rd)
+    return 1
+end function
+constant r_invert_huffcode = routine_id("invert_huffcode")
+
+procedure main(string data)
+    if length(data)<2 then ?9/0 end if
+    integer nodes = build_freqtable(data)
+    sequence huff = build_hufftree(nodes)
+    integer d = new_dict()
+    build_huffcodes(huff, "", d)
+    print_huffcodes(d)
+
+    string encoded = ""
+    for i=1 to length(data) do
+        encoded &= getd(data[i],d)[2]
+    end for
+    ?encoded
+
+    integer rd = new_dict()
+    traverse_dict(r_invert_huffcode, rd, d)
+    string decoded = ""
+    integer done = 0
+    while done<length(encoded) do
+        string key = ""
+        integer node = 0
+        while node=0 do
+            done += 1
+            key &= encoded[done]
+            node = getd_index(key, rd)
+        end while
+        decoded &= getd_by_index(node,rd)
+    end while
+    ?decoded
+
+end procedure
+
+main("this is an example for huffman encoding")

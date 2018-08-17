@@ -1,7 +1,5 @@
 REBOL [
     Title: "Factorial"
-    Author: oofoe
-    Date: 2009-12-10
     URL: http://rosettacode.org/wiki/Factorial_function
 ]
 

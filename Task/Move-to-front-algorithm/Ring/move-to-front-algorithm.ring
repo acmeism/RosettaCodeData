@@ -1,7 +1,4 @@
 # Project : Move-to-front algorithm
-# Date    : 2018/01/13
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 test("broood")
 test("bananaaa")

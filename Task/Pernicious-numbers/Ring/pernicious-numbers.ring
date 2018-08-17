@@ -1,7 +1,4 @@
 # Project : Pernicious numbers
-# Date    : 2017/10/01
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 see "The first 25 pernicious numbers:" + nl
 nr = 0

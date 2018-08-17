@@ -1,7 +1,4 @@
 # Project : Execute HQ9
-# Date    : 2017/09/12
-# Author  : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 bottle("hq9+HqQ+Qq")
 

@@ -100,12 +100,10 @@ sub if2($$@) {
         or grep {defined and ref $_ ne 'CODE'} @_;
 
     my $index;
-    given ([$cond1, $cond2]) {
-        when ([False, False])   {$index = IdxOrElse}
-        when ([False, True ])   {$index = IdxElse2 }
-        when ([True,  False])   {$index = IdxElse1 }
-        when ([True,  True ])   {$index = IdxThen  }
-    }
+    if (!$cond1 && !$cond2) {$index = IdxOrElse}
+    if (!$cond1 &&  $cond2) {$index = IdxElse2 }
+    if ( $cond1 && !$cond2) {$index = IdxElse1 }
+    if ( $cond1 &&  $cond2) {$index = IdxThen  }
 
     my $closure = $_[$index];
     &$closure   if defined $closure;

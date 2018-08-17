@@ -1,7 +1,4 @@
 # Project : Hofstadter Figure-Figure sequences
-# Date    : 2018/01/17
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 hofr = list(20)
 hofr[1] = 1

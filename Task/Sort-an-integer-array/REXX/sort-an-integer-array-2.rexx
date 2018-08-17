@@ -16,13 +16,13 @@ $=                                                         /*list: define as nul
 say '  sorted =' space($)                                  /*display the sorted list.   */
 exit                                              /*stick a fork in it,  we're all done.*/
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-eSort: procedure expose @.;   parse arg N;   h=N           /*get item count for array.  */
-                 do  while  h>1;       h=h%2               /*partition the array.       */
-                   do i=1  for N-h;   j=i;   k=h+i
-                       do  while  @.k<@.j                  /*keep swapping while less.  */
-                       parse value  @.j @.k  with  @.k @.j /*swap two array elements.   */
-                       if h>=j  then leave;  j=j-h;  k=k-h
-                       end   /*while @.k<@.j*/
-                   end       /*i*/
-                 end         /*while h>1*/
+eSort: procedure expose @.;   parse arg N;     h=N                   /*an eXchange sort.*/
+              do  while h>1;                   h= h%2                /*define a segment.*/
+                 do i=1  for N-h;              j=i;     k= h+i       /*sort top segment.*/
+                    do  while  @.k<@.j                               /*see if need swap.*/
+                        parse value  @.j @.k   with   @.k @.j        /*swap two elements*/
+                        if h>=j  then leave;   j= j-h;   k= k-h      /*this part sorted?*/
+                        end   /*while @.k<@.j*/
+                    end       /*i*/
+              end             /*while h>1*/
        return

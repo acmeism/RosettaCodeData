@@ -1,7 +1,4 @@
 # Project : Zeckendorf number representation
-# Date    : 2017/12/13
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 see "0 0" + nl
 for n = 1 to 20

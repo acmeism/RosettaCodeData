@@ -1,7 +1,4 @@
 # Project : Sorting algorithms/Permutation sort
-# Date    : 2018/02/20
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 a = [4, 65, 2, 31, 0, 99, 2, 83, 782]
 result = []

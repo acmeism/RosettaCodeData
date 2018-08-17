@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Trigonometric Functions"
-	Author: oofoe
-	Date: 2009-12-07
 	URL: http://rosettacode.org/wiki/Trigonometric_Functions
 ]
 

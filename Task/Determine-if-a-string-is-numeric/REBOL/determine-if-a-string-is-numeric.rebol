@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Is Numeric?"
-	Author: oofoe
-	Date: 2009-12-04
 	URL: http://rosettacode.org/wiki/IsNumeric
 ]
 

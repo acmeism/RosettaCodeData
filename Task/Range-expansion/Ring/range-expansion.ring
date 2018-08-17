@@ -1,7 +1,4 @@
 # Project : Range expansion
-# Date    : 2017/11/08
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 int = "-6,-3--1,3-5,7-11,14,15,17-20"
 int = str2list(substr(int, ",", nl))

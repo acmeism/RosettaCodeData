@@ -1,7 +1,4 @@
 # Project : Fibonacci n-step number sequences
-# Date    : 2017/10/07
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 f = list(12)
 

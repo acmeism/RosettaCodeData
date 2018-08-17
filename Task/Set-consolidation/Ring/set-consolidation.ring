@@ -1,7 +1,4 @@
 # Project : Set consolidation
-# Date    : 2018/03/29
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 load "stdlib.ring"
 test = ["AB","AB,CD","AB,CD,DB","HIK,AB,CD,DB,FGH"]

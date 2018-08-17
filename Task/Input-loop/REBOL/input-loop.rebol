@@ -1,7 +1,5 @@
 REBOL [
 	Title: "Basic Input Loop"
-	Author: oofoe
-	Date: 2009-12-06
 	URL: http://rosettacode.org/wiki/Basic_input_loop
 ]
 

@@ -1,4 +1,4 @@
-import strutils, unsigned, bigints
+import strutils, bigints
 
 var
   tmp1, tmp2, tmp3, acc, k, dd = initBigInt(0)

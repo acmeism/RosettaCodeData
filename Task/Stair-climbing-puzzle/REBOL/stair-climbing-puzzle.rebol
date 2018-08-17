@@ -1,7 +1,5 @@
 REBOL [
     Title: "Stair Climber"
-    Date: 2009-12-14
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Stair_Climbing
 ]
 

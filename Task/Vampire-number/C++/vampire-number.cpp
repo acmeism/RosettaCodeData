@@ -13,12 +13,12 @@ bool isVampireNumber( long number, std::vector<std::pair<long, long> > & solutio
    std::sort ( numberstring.begin( ) , numberstring.end( ) ) ;
    int fanglength = numberstring.length( ) / 2 ;
    long start = static_cast<long>( std::pow( 10 , fanglength - 1 ) ) ;
-   long end = start * 10 ;
-   for ( long i = start ; i < ( end - start ) / 2 ; i++ ) {
+   long end = sqrt(number) ;
+   for ( long i = start ; i <= end ; i++ ) {
       if ( number % i == 0 ) {
 	 long quotient = number / i ;
 	 if ( ( i % 10 == 0 ) && ( quotient % 10 == 0 ) )
-	    return false ;
+	    continue ;
 	 numberstream.str( "" ) ; //clear the number stream
 	 numberstream << i << quotient ;
 	 std::string divisorstring ( numberstream.str( ) ) ;
@@ -45,11 +45,11 @@ int main( ) {
       long end = start * 10 ;
       for ( long num = start ; num < end ; num++ ) {
 	 if ( isVampireNumber( num , solutions ) ) {
+            vampireNumbersFound++ ;
 	    std::cout << vampireNumbersFound << " :" << num << " is a vampire number! These are the fangs:\n" ;
 	    std::for_each( solutions.begin( ) , solutions.end( ) , printOut ) ;
 	    std::cout << "\n_______________" << std::endl ;
-	    solutions.clear( ) ;
-	    vampireNumbersFound++ ;
+	    solutions.clear( ) ;	
 	    if ( vampireNumbersFound == 25 )
 	       break ;
 	 }
@@ -58,7 +58,7 @@ int main( ) {
    }
    std::vector<long> testnumbers ;
    testnumbers.push_back( 16758243290880 ) ;
-   testnumbers.push_back( 2495901734865 ) ;
+   testnumbers.push_back( 24959017348650 ) ;
    testnumbers.push_back( 14593825548650 ) ;
    for ( std::vector<long>::const_iterator svl = testnumbers.begin( ) ;
 	 svl != testnumbers.end( ) ; svl++ ) {

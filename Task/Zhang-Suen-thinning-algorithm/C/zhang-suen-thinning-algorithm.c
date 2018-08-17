@@ -1,5 +1,3 @@
-/*Abhishek Ghosh, 24th September 2017*/
-
 #include<stdlib.h>
 #include<stdio.h>
 

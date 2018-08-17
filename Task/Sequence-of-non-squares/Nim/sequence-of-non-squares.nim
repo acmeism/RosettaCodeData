@@ -1,11 +1,11 @@
 import math
 
-proc nosqr(n): seq[int] =
-  result = @[]
+proc nosqr(n: int): seq[int] =
+  result = newSeq[int] n
   for i in 1..n:
-    result.add(i + round(sqrt(float(i))))
+    result[i - 1] = i + i.float.sqrt.round.int
 
-proc issqr(n): bool =
+proc issqr(n: int): bool =
   let sqr = sqrt(float(n))
   let err = abs(sqr - float(round(sqr)))
   err < 1e-7

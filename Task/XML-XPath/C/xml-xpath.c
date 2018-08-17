@@ -1,5 +1,3 @@
-/*Abhishek Ghosh, 10th March 2018*/
-
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 

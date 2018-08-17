@@ -1,7 +1,4 @@
 # Project : Non-decimal radices/Convert
-# Date    : 2017/10/20
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 see "0 (decimal) -> " + hex(0) + " (base 16)" + nl
 see "26 (decimal) -> " + hex(26) + " (base 16)" + nl

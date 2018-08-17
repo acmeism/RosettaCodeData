@@ -1,6 +1,3 @@
-/* Abhishek Ghosh
-   27th August, 2012 */
-
 #include<math.h>
 #include<stdio.h>
 

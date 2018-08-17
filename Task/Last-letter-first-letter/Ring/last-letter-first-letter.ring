@@ -1,7 +1,4 @@
 # Project : Last letter-first letter
-# Date    : 2017/12/30
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 ready = []
 names = ["audino", "bagon", "baltoy", "banette",

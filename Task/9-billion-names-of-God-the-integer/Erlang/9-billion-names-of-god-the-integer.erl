@@ -1,29 +1,21 @@
--module(god_the_integer).
--export([example/0, names/1, print_pyramid/1]).
+-module(triangle).
+-export([start/1]).
+start(N)->
+  print(1,1,N).
+print(N,N,N)->
+1;
+print(A,B,N) when A>=B->
+   io:format("~p ",[formula(A,B)]),
+   print(A,B+1,N);
+print(A,B,N) when B>A->
+   io:format("~n"),
+   print(A+1,1,N).
 
-example() ->
-	Names = names( 10 ),
-	print_pyramid( Names ).
-
-names( N ) ->
-	[names_row(X) || X <- lists:seq(1, N)].
-
-print_pyramid( Names ) ->
-	Width = erlang:length( lists:last(Names) ),
-	[print_pyramid_row(Width, X) || X <- Names].
-
-
-
-names_row( M ) ->
-	[p(M, X) || X <- lists:seq(1, M)].
-
-p( N, K ) when K > N -> 0;
-p( N, N ) -> 1;
-p( _N, 0 ) -> 0;
-p( N, K ) ->
-	p( N - 1, K - 1 ) + p( N - K, K ).
-
-print_pyramid_row( Width, Row ) ->
-	   io:fwrite( "~*s", [Width - erlang:length(Row), " "] ),
-	   [io:fwrite("~p ", [X]) || X <- Row],
-	   io:nl().
+formula(_,0)->
+  0;
+formula(B,B)->
+  1;
+formula(A,B) when B>A->
+  0;
+formula(A1,B1)->
+  formula(A1-1,B1-1)+formula(A1-B1,B1).

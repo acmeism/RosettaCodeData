@@ -1,7 +1,4 @@
 # Project : I before E except after C
-# Date    : 2017/11/26
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 fn1 = "unixdict.txt"
 

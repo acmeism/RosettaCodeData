@@ -1,7 +1,4 @@
 # Project : Comma Quibbling
-# Date    : 2017/11/12
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
 
 text = list(4)
 text[1] = "{}"

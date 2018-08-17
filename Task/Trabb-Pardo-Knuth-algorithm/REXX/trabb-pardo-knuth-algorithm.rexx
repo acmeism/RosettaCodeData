@@ -4,7 +4,7 @@ parse arg N .;   if N=='' | N==","  then N=11    /*Not specified?  Then use the 
 maxValue= 400                                    /*the maximum value   f(x)   can have. */
      wid=  20                                    /*  ··· but only show this many digits.*/
     frac=   5                                    /*  ··· show this # of fractional digs.*/
-say '                           _____               '      /* ◄───── display a vinculum.*/
+say '                           _____'           /* ◄─── this  SAY  displays a vinculum.*/
 say 'function:        ƒ(x)  ≡  √ │x│   +   (5 * x^3)'
 prompt= 'enter '      N      " numbers for the Trabb─Pardo─Knuth algorithm:     (or Quit)"
 

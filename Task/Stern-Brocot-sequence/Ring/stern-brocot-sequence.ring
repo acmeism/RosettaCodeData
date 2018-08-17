@@ -1,7 +1,4 @@
 # Project : Stern-Brocot sequence
-# Date    : 2018/02/01
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 limit = 1200
 item = list(limit+1)

@@ -1,7 +1,4 @@
 # Project : Stem-and-leaf plot
-# Date    : 2018/03/16
-# Author : Gal Zsolt [~ CalmoSoft ~]
-# Email   : <calmosoft@gmail.com>
 
 data = list(120)
 data = [12, 127,  28,  42,  39, 113,  42,  18,  44, 118,  44,  37, 113, 124,

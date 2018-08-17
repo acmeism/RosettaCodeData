@@ -1,8 +1,4 @@
 # Project : Forest fire
-# Date    : 2018/01/13
-# Author : Gal Zsolt (~ CalmoSoft ~)
-# Email   : <calmosoft@gmail.com>
-
 
 load "guilib.ring"
 load "stdlib.ring"

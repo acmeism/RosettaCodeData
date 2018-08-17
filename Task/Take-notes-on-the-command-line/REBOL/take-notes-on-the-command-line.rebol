@@ -1,7 +1,5 @@
 REBOL [
    Title: "Notes"
-   Author: oofoe
-   Date: 2010-10-04
    URL: http://rosettacode.org/wiki/Take_notes_on_the_command_line
 ]
 

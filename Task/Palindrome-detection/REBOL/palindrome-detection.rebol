@@ -1,7 +1,5 @@
 REBOL [
     Title: "Palindrome Recognizer"
-    Date: 2010-01-03
-    Author: oofoe
     URL: http://rosettacode.org/wiki/Palindrome
 ]
 

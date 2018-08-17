@@ -1,0 +1,5 @@
+local request = require('http.request')
+local headers, stream = request.new_from_uri("https://sourceforge.net/"):go()
+local body = stream:get_body_as_string()
+local status = headers:get(':status')
+io.write(string.format('Status: %d\nBody: %s\n', status, body)

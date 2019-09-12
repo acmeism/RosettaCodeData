@@ -23,7 +23,7 @@ my @input = 0x21, 0x04, 0x3B, 0x04, 0x30, 0x04, 0x32, 0x04;
 my @key   = 0xF9, 0x04, 0xC1, 0xE2;
 
 my ($L,$R) = @input.reverse.map: { :256[$^a,$^b,$^c,$^d] }
-my ($K   ) = @key\ .reverse.map: { :256[$^a,$^b,$^c,$^d] }
+my ($K   ) = @key  .reverse.map: { :256[$^a,$^b,$^c,$^d] }
 
 ($L,$R) = feistel-step(&ГОСТ-round, $L, $R, $K);
 

@@ -4,8 +4,8 @@ sub common_prefix {
     my ($sep, @paths) = @_;
     my %prefixes;
 
-    foreach (@paths) {
-        do { ++$prefixes{$_} } while s/$sep [^$sep]* $//g
+    for (@paths) {
+        do { ++$prefixes{$_} } while s/$sep [^$sep]* $//x
     }
 
     return first { $prefixes{$_} == @paths } reverse sort keys %prefixes;

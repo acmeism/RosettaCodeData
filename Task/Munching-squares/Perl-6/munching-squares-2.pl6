@@ -5,7 +5,7 @@ my @colors = map -> $r, $g, $b { Buf.new: $r, $g, $b },
 		     flat (0,2...254),(254,252...0));
 
 
-my $PPM = open "munching1.ppm", :w or die "Can't create munching.ppm: $!";
+my $PPM = open "munching1.ppm", :w orelse .die;
 
 $PPM.print: qq:to/EOH/;
     P6

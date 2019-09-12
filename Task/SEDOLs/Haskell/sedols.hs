@@ -4,7 +4,7 @@ checkSum :: String -> String
 checkSum =
   show .
   (`rem` 10) .
-  (-) 10 . (`rem` 10) . sum . zipWith (*) [1, 3, 1, 7, 3, 9] . (charValue <$>)
+  (-) 10 . (`rem` 10) . sum . zipWith (*) [1, 3, 1, 7, 3, 9] . fmap charValue
 
 charValue :: Char -> Int
 charValue c

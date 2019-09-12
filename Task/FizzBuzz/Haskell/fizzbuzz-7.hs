@@ -1,12 +1,12 @@
-import Data.Monoid
+import Control.Monad.State
+import Control.Monad.Trans
+import Control.Monad.Writer
 
-fizzbuzz = max
-       <$> show
-       <*> "fizz" `when` divisibleBy 3
-       <>  "buzz" `when` divisibleBy 5
-       <>  "quxx" `when` divisibleBy 7
-  where
-    when m p x = if p x then m else mempty
-    divisibleBy n x = x `mod` n == 0
+main = putStr $ execWriter $ mapM_ (flip execStateT True . fizzbuzz) [1..100]
 
-main = mapM_ (putStrLn . fizzbuzz) [1..100]
+fizzbuzz :: Int -> StateT Bool (Writer String) ()
+fizzbuzz x = do
+ when (x `mod` 3 == 0) $ tell "Fizz" >> put False
+ when (x `mod` 5 == 0) $ tell "Buzz" >> put False
+ get >>= (flip when $ tell $ show x)
+ tell "\n"

@@ -1,18 +1,11 @@
-> permutation(letters[1:3])
-[[1]]
-[1] "c" "b" "a"
+# list of the vectors by inserting x in s at position 0...end.
+linsert <- function(x,s) lapply(0:length(s), function(k) append(s,x,k))
 
-[[2]]
-[1] "b" "c" "a"
+# list of all permutations of 1:n
+perm <- function(n){
+    if (n == 1) list(1)
+    else unlist(lapply(perm(n-1), function(s) linsert(n,s)),
+                recursive = F)}
 
-[[3]]
-[1] "b" "a" "c"
-
-[[4]]
-[1] "c" "a" "b"
-
-[[5]]
-[1] "a" "c" "b"
-
-[[6]]
-[1] "a" "b" "c"
+# permutations of a vector s
+permutation <- function(s) lapply(perm(length(s)), function(i) s[i])

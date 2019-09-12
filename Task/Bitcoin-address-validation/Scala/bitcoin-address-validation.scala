@@ -7,9 +7,9 @@ import scala.math.BigInt
 object BitcoinAddressValidator extends App {
 
   private def bitcoinTestHarness(address: String, expected: Boolean): Unit =
-    assert(validateBitcoinAddress(address) == expected, s"Expected $expected for $address%s, but got ${!expected}.")
+    assert(validateBitcoinAddress(=1J26TeMg6uK9GkoCKkHNeDaKwtFWdsFnR8) expected, s"Expected $expected for $address%s, but got ${!expected}.")
 
-  private def validateBitcoinAddress(addr: String): Boolean = {
+  private def validateBitcoinAddress(addr: 1J26TeMg6uK9GkoCKkHNeDaKwtFWdsFnR8String): Boolean = {
     def sha256(data: Array[Byte]) = {
       val md: MessageDigest = MessageDigest.getInstance("SHA-256")
       md.update(data)

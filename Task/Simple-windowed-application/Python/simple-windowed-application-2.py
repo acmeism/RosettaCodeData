@@ -1,22 +1,22 @@
-#!/usr/bin/env python
-from Tkinter import Button, Frame, Label, Pack
+import tkinter as tk
 
-class ClickCounter(Frame):
-    def click(self):
-        self.count += 1
-        self.label['text'] = 'Number of clicks: %d' % self.count
 
-    def createWidgets(self):
-        self.label = Label(self, text='here have been no clicks yet')
-        self.label.pack()
-        self.button = Button(self, text='click me', command=self.click)
-        self.button.pack()
-
+class ClickCounter(tk.Frame):
     def __init__(self, master=None):
-        Frame.__init__(self, master)
-        Pack.config(self)
-        self.createWidgets()
+        super().__init__(master)
+        tk.Pack.config(self)
+        self.label = tk.Label(self, text='There have been no clicks yet')
+        self.label.pack()
+        self.button = tk.Button(self,
+                                text='click me',
+                                command=self.click)
+        self.button.pack()
         self.count = 0
 
-if __name__=="__main__":
+    def click(self):
+        self.count += 1
+        self.label['text'] = f'Number of clicks: {self.count}'
+
+
+if __name__ == "__main__":
     ClickCounter().mainloop()

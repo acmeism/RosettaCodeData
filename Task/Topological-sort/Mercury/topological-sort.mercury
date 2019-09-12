@@ -1,0 +1,76 @@
+:- module topological_sort.
+
+:- interface.
+
+:- import_module io.
+:- pred main(io::di,io::uo) is det.
+
+
+:- implementation.
+:- import_module string, solutions, list, set, require.
+
+:- pred min_element(set(T),pred(T,T),T).
+:- mode min_element(in,pred(in,in) is semidet,out) is nondet.
+min_element(_,_,_):-fail.
+min_element(S,P,X):-
+    member(X,S),
+    filter((pred(Y::in) is semidet :- P(Y,X)),S,LowerThanX),
+    is_empty(LowerThanX).
+
+
+
+:- pred topological_sort(set(T),pred(T,T),list(T),list(T)).
+:- mode topological_sort(in,(pred((ground >> ground), (ground >> ground)) is semidet),in,out) is nondet.
+:- pred topological_sort(set(T),pred(T,T),list(T)).
+:- mode topological_sort(in,(pred((ground >> ground), (ground >> ground)) is semidet),out) is nondet.
+
+topological_sort(S,P,Ac,L) :-
+    (
+	is_empty(S) -> L is Ac
+    ;   solutions(
+	    pred(X::out) is nondet:-
+		min_element(S,P,X)
+	 ,  Solutions
+	),
+	(
+	    is_empty(Solutions) -> error("No solution detected.\n")
+	; delete_list(Solutions,S,Sprime),
+	  append(Solutions,Ac,AcPrime),
+	  topological_sort(Sprime,P,AcPrime,L)
+	)
+    ).
+
+topological_sort(S,P,L) :- topological_sort(S,P,[],L).
+
+
+:- pred distribute(list(T)::in,{T,list(T)}::out) is det.
+distribute([],_):-error("Error in distribute").
+distribute([H|T],Z) :- Z = {H,T}.
+
+:- pred db_compare({string,list(string)}::in,{string,list(string)}::in) is semidet.
+db_compare({X1,L1},{X2,_}) :- not(X1=X2),list.member(X2,L1).
+
+
+main(!IO) :-
+    Input  = [
+"des_system_lib   std synopsys std_cell_lib des_system_lib dw02 dw01 ramlib ieee",
+"dw01             ieee dw01 dware gtech",
+"dw02             ieee dw02 dware",
+"dw03             std synopsys dware dw03 dw02 dw01 ieee gtech",
+"dw04             dw04 ieee dw01 dware gtech",
+"dw05             dw05 ieee dware",
+"dw06             dw06 ieee dware",
+"dw07             ieee dware",
+"dware            ieee dware",
+"gtech            ieee gtech",
+"ramlib           std ieee",
+"std_cell_lib     ieee std_cell_lib",
+"synopsys"],
+    Words=list.map(string.words,Input),
+    list.map(distribute,Words,Db),
+    solutions(pred(X::out) is nondet :- topological_sort(set.from_list(Db),db_compare,X),SortedWordLists),
+    list.map(
+	     pred({X,Y}::in,Z::out) is det:- X=Z,
+	     list.det_head(SortedWordLists),
+	     CompileOrder),
+    print(CompileOrder,!IO).

@@ -1,7 +1,6 @@
 sub stats ( @test, @all ) {
-    (([+] @test) / +@test ) - ([+] flat @all, (@test X* -1)) / (@all - @test)
+    ([+] @test / +@test) - ([+] flat @all, (@test X* -1)) / @all - @test
 }
-
 
 my int @treated = <85 88 75 66 25 29 83 39 97>;
 my int @control = <68 41 10 49 16 65 32 92 28 98>;
@@ -9,9 +8,9 @@ my int @all = flat @treated, @control;
 
 my $base = stats( @treated, @all );
 
-my @trials = 0, 0, 0;
+my atomicint @trials[3] = 0, 0, 0;
 
-@trials[ 1 + ( stats( $_, @all ) <=> $base ) ]++ for @all.combinations(+@treated);
+@all.combinations(+@treated).race.map: { @trials[ 1 + ( stats( $_, @all ) <=> $base ) ]⚛++ }
 
 say 'Counts: <, =, > ', @trials;
 say 'Less than    : %', 100 * @trials[0] / [+] @trials;

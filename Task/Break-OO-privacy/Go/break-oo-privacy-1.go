@@ -51,17 +51,23 @@ func examineAndModify(any interface{}) {
 	// However, we can bypass this restriction with the unsafe
 	// package once we know what type it is (so we can use the
 	// correct pointer type, here *int):
-	vp := v.Field(1).Addr()   // Take the fields's address
-	uip := vp.Pointer()       // … get an int value of the address
-	up := unsafe.Pointer(uip) // … convert it "unsafely"
-	p := (*int)(up)           // … and end up with what we want/need
+	vp := v.Field(1).Addr()            // Take the fields's address
+	up := unsafe.Pointer(vp.Pointer()) // … get an int value of the address and convert it "unsafely"
+	p := (*int)(up)                    // … and end up with what we want/need
 	fmt.Printf("  vp has type %-14T = %v\n", vp, vp)
-	fmt.Printf(" uip has type %-14T = %#0x\n", uip, uip)
 	fmt.Printf("  up has type %-14T = %#0x\n", up, up)
 	fmt.Printf("   p has type %-14T = %v pointing at %v\n", p, p, *p)
 	*p = 43 // effectively obj.unexported = 43
 	// or an incr all on one ulgy line:
 	*(*int)(unsafe.Pointer(v.Field(1).Addr().Pointer()))++
+
+	// Note that as-per the package "unsafe" documentation,
+	// the return value from vp.Pointer *must* be converted to
+	// unsafe.Pointer in the same expression; the result is fragile.
+	//
+	// I.e. it is invalid to do:
+	//	thisIsFragile := vp.Pointer()
+	//	up := unsafe.Pointer(thisIsFragile)
 }
 
 // This time we'll use an external package to demonstrate that it's not

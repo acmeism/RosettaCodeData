@@ -1,28 +1,26 @@
 @echo off
-setlocal enabledelayedexpansion
 
-::The Main Thing...
-set choices="fee fie","huff and puff","mirror mirror","tick tock"
-set "quest=Which is from the three pigs?"
-call :select
+call:menu "fee fie" "huff and puff" "mirror mirror" "tick tock"
 pause>nul
-exit /b 0
-::/The Main Thing.
+exit /b
 
-::The Function...
-:select
-set number=0
-for %%A in (%choices%) do set tmpvar=%%A&set /a number+=1&set opt!number!=!tmpvar:"=!
-:tryagain
-cls&echo.
-for /l %%A in (1,1,%number%) do echo. Option %%A - !opt%%A!
-echo.
-set /p input=%quest%
-for /l %%A in (1,1,%number%) do (
-	if !input! equ %%A echo.&echo.You chose option %%A - !opt%%A!&goto :EOF
+:menu
+cls
+setlocal enabledelayedexpansion
+set count=0
+set reset=endlocal ^& goto menu
+:menuloop
+for %%i in (%*) do (
+	set /a count+=1
+	set string[!count!]=%%~i
+	echo string[!count!] = %%~i
 )
 echo.
-echo.Invalid Input. Please try again...
-pause>nul
-goto tryagain
-::/The Function.
+set /p choice=^>
+if "%choice%"=="" %reset%
+set "isNum="
+for /f "delims=0123456789" %%i in ("%choice%") do set isNum=%%i
+if defined isNum %reset%
+if %choice% gtr %count% %reset%
+echo.!string[%choice%]!
+goto:eof

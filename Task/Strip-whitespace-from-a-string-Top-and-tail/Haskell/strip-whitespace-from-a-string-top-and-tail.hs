@@ -1,11 +1,11 @@
-import Data.Char
+import Data.Char (isSpace)
+import Data.List (dropWhileEnd)
 
 trimLeft :: String -> String
 trimLeft = dropWhile isSpace
 
 trimRight :: String -> String
-trimRight str | all isSpace str = ""
-trimRight (c : cs) = c : trimRight cs
+trimRight = dropWhileEnd isSpace
 
 trim :: String -> String
 trim = trimLeft . trimRight

@@ -1,10 +1,20 @@
-#include <Core/Core.h>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
 
-using namespace Upp;
-
-CONSOLE_APP_MAIN
+int main()
 {
-	FileIn in(CommandLine()[0]);
-	while(in && !in.IsEof())
-		Cout().PutLine(in.GetLine());
+  std::ifstream infile("thefile.txt");
+  std::string line;
+  while (std::getline(infile, line) )
+     {
+        std::istringstream iss(line);
+        int a, b;
+        if (!(iss >> a >> b)) { break; } // if no error a and b get values from file
+
+        std::cout << "a:\t" << a <<"\n";
+        std::cout << "b:\t" << b <<"\n";
+     }
+      std::cout << "finished" << std::endl;
 }

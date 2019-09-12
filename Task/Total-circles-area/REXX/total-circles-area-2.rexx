@@ -2,8 +2,9 @@
 parse arg box dig .                              /*obtain optional argument from the CL.*/
 if box=='' | box==','  then box= -500            /*Not specified?  Then use the default.*/
 if dig=='' | dig==','  then dig=   12            /* "      "         "   "   "     "    */
-verbose= box<0;        box=abs(box); boxen=box+1 /*set a flag if we're in verbose mode. */
+verbose= box<0;    box= abs(box);  boxen= box+1  /*set a flag if we're in verbose mode. */
 numeric digits dig                               /*have enough decimal digits for points*/
+
 /* ══════x══════ ══════y══════ ═══radius═══     ══════x══════ ══════y══════ ═══radius═══*/
 $=' 1.6417233788  1.6121789534 0.0848270516     -1.4944608174  1.2077959613 1.1039549836',
   ' 0.6110294452 -0.6907087527 0.9089162485      0.3844862411  0.2923344616 0.2375743054',
@@ -18,34 +19,35 @@ $=' 1.6417233788  1.6121789534 0.0848270516     -1.4944608174  1.2077959613 1.10
   ' 0.8055826339 -0.0482092025 0.3327165165     -0.6311979224  0.7184578971 0.2491045282',
   ' 1.4685857879 -0.8347049536 1.3670667538     -0.6855727502  1.6465021616 1.0593087096',
   ' 0.0152957411  0.0638919221 0.9771215985 '         /*define circles with X, Y, and R.*/
-circles=words($) % 3                                  /*figure out how many circles.    */
+
+circles= words($) % 3                                 /*figure out how many circles.    */
 if verbose  then say 'There are'  circles  "circles." /*display the number of circles.  */
 parse var  $   minX minY . 1 maxX maxY .              /*assign minimum & maximum values.*/
 
-           do j=1  for circles;  _=j*3-2              /*assign some circles with datum. */
-           @x.j=word($, _);      @y.j=word($, _ + 1)
-                                 @r.j=word($, _ + 2)/1;       @rr.j=@r.j**2
-           minX=min(minX, @x.j - @r.j);        maxX=max(maxX, @x.j + @r.j)
-           minY=min(minY, @y.j - @r.j);        maxY=max(maxY, @y.j + @r.j)
+           do j=1  for circles;   _= j * 3  -  2      /*assign some circles with datum. */
+           @x.j= word($, _);      @y.j=word($, _ + 1)
+                                  @r.j=word($, _ + 2) / 1;         @rr.j= @r.j **2
+           minX= min(minX, @x.j - @r.j);           maxX= max(maxX, @x.j + @r.j)
+           minY= min(minY, @y.j - @r.j);           maxY= max(maxY, @y.j + @r.j)
            end   /*j*/
 
-  do   m=1   for circles                              /*sort the circles by their radii.*/
-    do n=m+1 to  circles                              /* [↓]  sort by  descending radii.*/
+  do   m=1    for circles                             /*sort the circles by their radii.*/
+    do n=m+1  to  circles                             /* [↓]  sort by  descending radii.*/
     if @r.n>@r.m then parse  value  @x.n @y.n @r.n   @x.m @y.m @r.m  with,
                                     @x.m @y.m @r.m   @x.n @y.n @r.n
     end   /*n*/                                       /* [↑]   Is it higher?  Then swap.*/
   end     /*m*/
 
-dx=(maxX-minX) / box;        dy=(maxY-minY) / box     /*compute the  DX  and  DY  values*/
-w=length(circles)                                     /*# in ►─ fully contained circles.*/
-#in=0
+dx= (maxX-minX) / box;        dy= (maxY-minY) / box   /*compute the  DX  and  DY  values*/
+w= length(circles)                                    /*# in ►─ fully contained circles.*/
+#in= 0
        do     j=1  for circles                        /*traipse through the  J  circles.*/
            do k=1  for circles;  if k==j | @r.j==0  then iterate  /*ignore self and/or 0*/
            if k==j | @r.j==0          then iterate    /*ignore self  and/or zero radius.*/
            if  @y.j+@r.j > @y.k+@r.k  |  @x.j-@r.j < @x.k-@r.k |,       /*is J inside K?*/
                @y.j-@r.j < @y.k-@r.k  |  @x.j+@r.j > @x.k+@r.k   then iterate
            if verbose  then say 'Circle ' right(j,w) ' is contained in circle ' right(k,w)
-           @r.j=0;          #in=#in+1                 /*elide this circle; and bump # in*/
+           @r.j= 0;             #in= #in + 1          /*elide this circle; and bump # in*/
            end   /*k*/
        end       /*j*/                                /* [↑]  elided overlapping circle.*/
 
@@ -59,7 +61,7 @@ nC=0                                                  /*number of  "new"  circle
            do   row=0  for boxen;   y=minY + row*dy   /*process each of the grid row.   */
              do col=0  for boxen;   x=minX + col*dx   /*   "      "   "  "    "  column.*/
                do k=1  for nC                         /*now process each new circle.    */
-               if (x - @x.k)**2 + (y - @y.k)**2  <=  @rr.k  then  do;  #=#+1;  leave;  end
+               if (x - @x.k)**2 + (y - @y.k)**2 <= @rr.k  then  do;  #= #+1;  leave;   end
                end   /*k*/
              end     /*col*/
            end       /*row*/

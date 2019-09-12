@@ -8,5 +8,5 @@ my @samples = @points.roll(100); # or .pick(100) to get distinct points
 # format and print
 my %matrix;
 for @range X @range -> ($x, $y) { %matrix{$y}{$x} = ' ' }
-%matrix{$_[1]}{$_[0]} = '*' for @samples;
+%matrix{.[1]}{.[0]} = '*' for @samples;
 %matrix{$_}{@range}.join(' ').say for @range;

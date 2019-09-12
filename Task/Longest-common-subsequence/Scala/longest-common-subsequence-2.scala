@@ -1,16 +1,7 @@
-  case class Memoized[A1, A2, B](f: (A1, A2) => B) extends ((A1, A2) => B) {
-    val cache = scala.collection.mutable.Map.empty[(A1, A2), B]
-    def apply(x: A1, y: A2) = cache.getOrElseUpdate((x, y), f(x, y))
-  }
-
-  lazy val lcsM: Memoized[List[Char], List[Char], List[Char]] = Memoized {
-    case (_, Nil) => Nil
-    case (Nil, _) => Nil
-    case (x :: xs, y :: ys) if x == y => x :: lcsM(xs, ys)
-    case (x :: xs, y :: ys)           => {
-      (lcsM(x :: xs, ys), lcsM(xs, y :: ys)) match {
-        case (xs, ys) if xs.length > ys.length => xs
-        case (xs, ys)                          => ys
-      }
-    }
+  def lcsRec[T]: (IndexedSeq[T], IndexedSeq[T]) => IndexedSeq[T] = {
+    case (a +: as, b +: bs) if a == b => a +: lcsRec(as, bs)
+    case (as, bs) if as.isEmpty || bs.isEmpty => IndexedSeq[T]()
+    case (a +: as, b +: bs) =>
+      val (s1, s2) = (lcsRec(a +: as, bs), lcsRec(as, b +: bs))
+      if(s1.length > s2.length) s1 else s2
   }

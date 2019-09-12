@@ -3,7 +3,7 @@
 int bsearch (int *a, int n, int x) {
     int i = 0, j = n - 1;
     while (i <= j) {
-        int k = (i + j) / 2;
+        int k = i + ((j - i) / 2);
         if (a[k] == x) {
             return k;
         }
@@ -21,7 +21,7 @@ int bsearch_r (int *a, int x, int i, int j) {
     if (j < i) {
         return -1;
     }
-    int k = (i + j) / 2;
+    int k = i + ((j - i) / 2);
     if (a[k] == x) {
         return k;
     }

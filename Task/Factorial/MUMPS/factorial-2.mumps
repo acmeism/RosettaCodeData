@@ -9,5 +9,5 @@ Write $$factorial(1) ; 1
 Write $$factorial(2) ; 2
 Write $$factorial(3) ; 6
 Write $$factorial(10) ; 3628800
-Write $$factorial(-6) ; Negative numberr
+Write $$factorial(-6) ; Negative number
 Write $$factorial(3.7) ; Not an integer

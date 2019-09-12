@@ -1,28 +1,33 @@
-(function (strSample) {
+(() => {
 
     // isPalindrome :: String -> Bool
-    let isPalindrome = s =>
-        s.split('')
-        .reverse()
-        .join('') === s;
+    const isPalindrome = s => {
+        const cs = filter(c => ' ' !== c, s.toLocaleLowerCase());
+        return cs.join('') === reverse(cs).join('');
+    };
 
 
+    // TEST -----------------------------------------------
+    const main = () =>
+        isPalindrome(
+            'In girum imus nocte et consumimur igni'
+        )
 
-    // TESTING
+    // GENERIC FUNCTIONS ----------------------------------
 
-    // lowerCaseNoSpace :: String -> String
-    let lowerCaseNoSpace = s =>
-        concatMap(c => c !== ' ' ? [c.toLowerCase()] : [],
-            s.split(''))
-        .join(''),
+    // filter :: (a -> Bool) -> [a] -> [a]
+    const filter = (f, xs) => (
+        'string' !== typeof xs ? (
+            xs
+        ) : xs.split('')
+    ).filter(f);
 
-        // concatMap :: (a -> [b]) -> [a] -> [b]
-        concatMap = (f, xs) => [].concat.apply([], xs.map(f));
+    // reverse :: [a] -> [a]
+    const reverse = xs =>
+        'string' !== typeof xs ? (
+            xs.slice(0).reverse()
+        ) : xs.split('').reverse().join('');
 
-
-    return isPalindrome(
-        lowerCaseNoSpace(strSample)
-    );
-
-
-})("In girum imus nocte et consumimur igni");
+    // MAIN ---
+    return main();
+})();

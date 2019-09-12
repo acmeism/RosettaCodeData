@@ -1,9 +1,12 @@
 constant number-of-decimals = 100;
 
 multi sqrt(Int $n) {
-    .[*-1] given
-    1, { ($_ + $n div $_) div 2 } ... * == *
+    my $guess = 10**($n.chars div 2);
+    my $iterator = { ( $^x   +   $n div ($^x) ) div 2 };
+    my $endpoint = { $^x == $^y|$^z };
+    return min (+$guess, $iterator … $endpoint)[*-1, *-2];
 }
+
 multi sqrt(FatRat $r --> FatRat) {
     return FatRat.new:
     sqrt($r.nude[0] * 10**(number-of-decimals*2) div $r.nude[1]),

@@ -1,137 +1,116 @@
-import extensions.
-import cellular.
-import system'routines.
-import system'threading.
-import system'text.
+import extensions;
+import system'threading;
+import cellular;
 
-const int maxX = 48.
-const int maxY = 28.
+const int maxX = 48;
+const int maxY = 28;
 
-type listener_func = ListenerFunc.
-
-limited closure class ListenerFunc
-{
-    closure space:space []
-}
+const int DELAY = 50;
 
 sealed class Model
 {
-    space   theSpace.
-    ruleset theRuleSet.
-    bool    started.
+    Space   theSpace;
+    RuleSet theRuleSet;
+    bool    started;
 
-    listener_func event onUpdate :: theListener.
+    event Func<Space, object> OnUpdate;
 
-    constructor newRandomset ruleset:transformSet
-    [
-        theSpace := IntMatrixSpace new int:maxY int:maxX ruleset:randomSet.
+    constructor newRandomset(RuleSet transformSet)
+    {
+        theSpace := new IntMatrixSpace(maxY, maxX, randomSet);
 
-        theRuleSet := transformSet.
+        theRuleSet := transformSet;
 
-        started := false.
-    ]
+        started := false
+    }
 
-    constructor newLoaded ruleset:initSet ruleset:transformSet
-    [
-        theSpace := IntMatrixSpace new int:maxY int:maxX ruleset:initSet.
+    constructor newLoaded(RuleSet initSet, RuleSet transformSet)
+    {
+        theSpace := new IntMatrixSpace(maxY, maxX, initSet);
 
-        theRuleSet := transformSet.
+        theRuleSet := transformSet;
 
-        started := false.
-    ]
+        started := false
+    }
 
-    $onUpdate
-    [
-        if ($nil != theListener)
-            [ theListener(theSpace) ].
-    ]
+    private onUpdate()
+    {
+        OnUpdate.?(theSpace)
+    }
 
-    init
-    [
-        $self $onUpdate.
-    ]
-
-    run
-    [
+    run()
+    {
         if (started)
-            [ theSpace update ruleset:theRuleSet. ];
-            [ started := true. ].
+        {
+            theSpace.update(theRuleSet)
+        }
+        else
+        {
+            started := true
+        };
 
-        $self $onUpdate.
-    ]
+        self.onUpdate()
+    }
 }
 
-const int DELAY = 50.
-
-symbol testSet = ((0,1,0),
-                  (0,1,0),
-                  (0,1,0)).
-
-class gameOfLifeRuleSet = BaseRuleSet::
+singleton gameOfLifeRuleSet : RuleSet
 {
-    proceed space:s int:x int:y vint:retVal
-    [
-        int cell := s getAt int:x int:y.
-        int number := s getLiveCell int:x int:y int:1. // NOTE : number of living cells around the self includes the cell itself
+    proceed(Space s, int x, int y, ref int retVal)
+    {
+        int cell := s.at(x, y);
+        int number := s.LiveCell(x, y, 1); // NOTE : number of living cells around the self includes the cell itself
 
-        if ((cell == 0) && (number == 3))
-        [
-            retVal int := 1
-        ];
-        if ((cell == 1) && ((number == 4) || (number == 3)))
-        [
-            retVal int := 1
-        ];
-        [
-            retVal int := 0
-        ]
-    ]
-}.
-
-extension space presenterOp
-{
-    print
-    [
-        console setCursorPosition int:0 int:0.
-
-        int columns := self columns.
-        int rows := self rows.
-
-        int i := 0.
-        int j := 0.
-        while (i < rows)
-        [
-            j := 0.
-
-            while (j < columns)
-            [
-                int cell := self getAt int:i int:j.
-
-                console write((cell == 0)iif(" ","o")).
-
-                j := j + 1.
-            ].
-
-            i := i + 1.
-            console writeLine.
-        ].
-    ]
+        if (cell == 0 && number == 3)
+        {
+            retVal := 1
+        }
+        else if (cell == 1 && (number == 4 || number == 3))
+        {
+            retVal := 1
+        }
+        else
+        {
+            retVal := 0
+        }
+    }
 }
 
-program =
-[
-    console clear.
+public extension presenterOp : Space
+{
+    print()
+    {
+        console.setCursorPosition(0, 0);
 
-    var model := Model newRandomset ruleset:gameOfLifeRuleSet.
+        int columns := self.Columns;
+        int rows := self.Rows;
 
-    model onUpdate listener_func(:sp)<space>[ sp print ].
+        for(int i := 0, i < rows, i += 1)
+        {
+            for(int j := 0, j < columns, j += 1)
+            {
+                int cell := self.at(i, j);
 
-    until (console isKeyAvailable)
-    [
-        model run.
+                console.write((cell == 0).iif(" ","o"));
+            };
 
-        thread sleep:DELAY.
-    ].
+            console.writeLine()
+        }
+    }
+}
 
-    console readChar.
-].
+public program()
+{
+    auto model := Model.newRandomset(gameOfLifeRuleSet);
+    console.clear();
+
+    model.OnUpdate := (Space sp){ sp.print() };
+
+    until (console.KeyAvailable)
+    {
+        model.run();
+
+        threadControl.sleep:DELAY
+    };
+
+    console.readChar()
+}

@@ -1,101 +1,104 @@
+import system'routines.
 import extensions.
 import cellular.
-import system'routines.
-import system'threading.
-import system'text.
 
-const int maxX = 48.
-const int maxY = 28.
+const literal sample =
+" tH......
+.        ......
+ ...Ht...      .
+              ....
+              .  .....
+              ....
+ ......tH      .
+.        ......
+ ...Ht...".
 
-type listener_func = ListenerFunc.
+const literal conductorLabel = ".".
+const literal headLabel = "H".
+const literal tailLabel = "t".
+const literal emptyLabel = " ".
 
-limited class ListenerFunc
+const int empty = 0.
+const int conductor = 1.
+const int electronHead = 2.
+const int electronTail = 3.
+
+wireWorldRuleSet = RuleSet::
 {
-    action eval space:space []
-}
+    proceed(Space s, int x, int y, ref<int> retVal)
+    [
+        int cell := s getAt(x, y).
+
+        cell =>
+            conductor
+            [
+                int number := s getLiveCell(x, y, electronHead).
+                if ((number == 1)||(number == 2))
+                [
+                    retVal value := electronHead
+                ];
+                [
+                    retVal value := conductor
+                ]
+            ];
+            electronHead
+            [
+                retVal value := electronTail
+            ];
+            electronTail
+            [
+                retVal value := conductor
+            ];
+            ![
+                retVal value := cell
+            ].
+    ]
+}.
 
 sealed class Model
 {
-    space   theSpace.
-    ruleset theRuleSet.
-    bool    started.
+    T<Space>   theSpace.
 
-    listener_func event onUpdate :: theListener.
-
-    constructor newRandomset ruleset:transformSet
+    constructor load(LiteralValue stateString,int maxX, int maxY)
     [
-        theSpace := IntMatrixSpace new int:maxY int:maxX ruleset:randomSet.
+        var strings := stateString split(newLine); selectBy(:s)(s toArray); toArray.
 
-        theRuleSet := transformSet.
+        theSpace := IntMatrixSpace new(maxX, maxY, RuleSet::
+        {
+            proceed(Space s, int x, int y, ref<int> retVal)
+            [
+                if (x < strings length)
+                [
+                    var l := strings[x].
+                    if (y < l length)
+                    [
+                        (l[y]) =>
+                            conductorLabel [ retVal value := conductor ];
+                            headLabel      [ retVal value := electronHead ];
+                            tailLabel      [ retVal value := electronTail ];
+                            emptyLabel     [ retVal value := empty ].
+                    ];
+                    [
+                        retVal value := empty
+                    ]
+                ];
+                [
+                    retVal value := empty
+                ]
 
-        started := false.
-    ]
-
-    constructor newLoaded ruleset:initSet ruleset:transformSet
-    [
-        theSpace := IntMatrixSpace new int:maxY int:maxX ruleset:initSet.
-
-        theRuleSet := transformSet.
-
-        started := false.
-    ]
-
-    $onUpdate
-    [
-        if ($nil != theListener)
-            [ theListener eval space:theSpace ].
-    ]
-
-    init
-    [
-        $self $onUpdate.
+            ]
+        }).
     ]
 
     run
     [
-        if (started)
-            [ theSpace update ruleset:theRuleSet. ];
-            [ started := true. ].
-
-        $self $onUpdate.
+        theSpace update(wireWorldRuleSet).
     ]
-}
 
-const int DELAY = 50.
-
-symbol testSet = ((0,1,0),
-                  (0,1,0),
-                  (0,1,0)).
-
-class gameOfLifeRuleSet = BaseRuleSet::
-{
-    proceed space:s int:x int:y vint:retVal
-    [
-        int cell := s getAt int:x int:y.
-        int number := s getLiveCell int:x int:y int:1. // NOTE : number of living cells around the self includes the cell itself
-
-        if ((cell == 0) && (number == 3))
-        [
-            retVal int := 1
-        ];
-        if ((cell == 1) && ((number == 4) || (number == 3)))
-        [
-            retVal int := 1
-        ];
-        [
-            retVal int := 0
-        ]
-    ]
-}.
-
-extension space presenterOp
-{
     print
     [
-        console setCursorPosition int:0 int:0.
-
-        int columns := self columns.
-        int rows := self rows.
+        int columns := theSpace columns.
+        int rows := theSpace rows.
 
         int i := 0.
         int j := 0.
@@ -105,9 +108,15 @@ extension space presenterOp
 
             while (j < columns)
             [
-                int cell := self getAt int:i int:j.
+                var label := emptyLabel.
+                int cell := theSpace getAt(i, j).
 
-                console write((cell == 0)iif(" ","o")).
+                cell =>
+                    conductor    [ label := conductorLabel ];
+                    electronHead [ label := headLabel ];
+                    electronTail [ label := tailLabel ].
+
+                console write(label).
 
                 j := j + 1.
             ].
@@ -118,20 +127,12 @@ extension space presenterOp
     ]
 }
 
-program =
+public program
 [
-    console clear.
-
-    var model := Model newRandomset ruleset:gameOfLifeRuleSet.
-
-    model onUpdate listener_func(&space:sp)[ sp print ].
-
-    until (console isKeyAvailable)
+    T<Model> model := Model load(sample,10,30).
+    0 to:10 do(:i)
     [
-        model run.
-
-        thread sleep:DELAY.
-    ].
-
-    console readChar.
-].
+        console printLineFormatted("Iteration {0}",i).
+        model print; run.
+    ]
+]

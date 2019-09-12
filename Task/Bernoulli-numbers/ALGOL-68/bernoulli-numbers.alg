@@ -1,6 +1,6 @@
 BEGIN
-    # Show the non-zero Bernoulli numbers B0 to B60                  #
-    # as rational numbers                                            #
+    # Show Bernoulli numbers B0 to B60 as rational numbers           #
+
     # Uses code from the Arithmetic/Rational task modified to use    #
     # LONG LONG INT to allow for the large number of digits requried #
 
@@ -8,13 +8,17 @@ BEGIN
 
     # Code from the Arithmetic/Rational task                         #
     # ============================================================== #
+
     MODE FRAC = STRUCT( LONG LONG INT num #erator#,  den #ominator#);
+
     PROC gcd = (LONG LONG INT a, b) LONG LONG INT: # greatest common divisor #
        (a = 0 | b |: b = 0 | a |: ABS a > ABS b  | gcd(b, a MOD b) | gcd(a, b MOD a));
-     PROC lcm = (LONG LONG INT a, b)LONG LONG INT: # least common multiple #
+
+    PROC lcm = (LONG LONG INT a, b)LONG LONG INT: # least common multiple #
        a OVER gcd(a, b) * b;
-     PRIO // = 9; # higher then the ** operator #
-     OP // = (LONG LONG INT num, den)FRAC: ( # initialise and normalise #
+
+    PRIO // = 9; # higher then the ** operator #
+    OP // = (LONG LONG INT num, den)FRAC: ( # initialise and normalise #
        LONG LONG INT common = gcd(num, den);
        IF den < 0 THEN
          ( -num OVER common, -den OVER common)
@@ -22,11 +26,13 @@ BEGIN
          ( num OVER common, den OVER common)
        FI
      );
+
     OP + = (FRAC a, b)FRAC: (
        LONG LONG INT common = lcm(den OF a, den OF b);
        FRAC result := ( common OVER den OF a * num OF a + common OVER den OF b * num OF b, common );
        num OF result//den OF result
     );
+
     OP - = (FRAC a, b)FRAC: a + -b,
        * = (FRAC a, b)FRAC: (
            LONG LONG INT num = num OF a * num OF b,
@@ -34,7 +40,9 @@ BEGIN
            LONG LONG INT common = gcd(num, den);
            (num OVER common) // (den OVER common)
          );
+
     OP - = (FRAC frac)FRAC: (-num OF frac, den OF frac);
+
     # ============================================================== #
     # end code from the Arithmetic/Rational task                     #
 

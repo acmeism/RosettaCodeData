@@ -1,13 +1,19 @@
-create table people (age decimal(3), name varchar(16));
-insert into people (age, name) values (27, 'Jonah');
-insert into people (age, name) values (18, 'Alan');
-insert into people (age, name) values (28, 'Glory');
-insert into people (age, name) values (18, 'Popeye');
-insert into people (age, name) values (28, 'Alan');
+-- setting up the test data
 
-create table nemesises (name varchar(16), nemesis varchar(16));
-insert into nemesises (name, nemesis) values ('Jonah', 'Whales');
-insert into nemesises (name, nemesis) values ('Jonah', 'Spiders');
-insert into nemesises (name, nemesis) values ('Alan', 'Ghosts');
-insert into nemesises (name, nemesis) values ('Alan', 'Zombies');
-insert into nemesises (name, nemesis) values ('Glory', 'Buffy');
+create table people (age number(3), name varchar2(30));
+insert into people (age, name)
+  select 27, 'Jonah'  from dual union all
+  select 18, 'Alan'   from dual union all
+  select 28, 'Glory'  from dual union all
+  select 18, 'Popeye' from dual union all
+  select 28, 'Alan'   from dual
+;
+
+create table nemesises (name varchar2(30), nemesis varchar2(30));
+insert into nemesises (name, nemesis)
+  select 'Jonah', 'Whales'  from dual union all
+  select 'Jonah', 'Spiders' from dual union all
+  select 'Alan' , 'Ghosts'  from dual union all
+  select 'Alan' , 'Zombies' from dual union all
+  select 'Glory', 'Buffy'   from dual
+;

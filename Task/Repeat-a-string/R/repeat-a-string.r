@@ -1,1 +1,1 @@
-paste(rep("ha",5), collapse='')
+strrep("ha", 5)

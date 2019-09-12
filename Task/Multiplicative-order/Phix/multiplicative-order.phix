@@ -1,0 +1,113 @@
+include mpfr.e
+
+procedure multi_order(mpz res, a, sequence p_and_k)
+    mpz pk = mpz_init(),
+        t = mpz_init(),
+        x = mpz_init(),
+        q = mpz_init()
+    mpz_set_si(res,1)
+    if length(p_and_k)=1 then
+        string {ps} = p_and_k
+        mpz_set_str(pk,ps)
+        mpz_sub_ui(t,pk,1)
+    else
+        atom {p, k} = p_and_k
+        mpz_ui_pow_ui(pk,p,k)
+        mpz_ui_pow_ui(t,p,k-1)
+        mpz_mul_si(t,t,p-1)
+    end if
+    sequence pf = mpz_prime_factors(t)
+    for i=1 to length(pf) do
+        if length(pf[i])=1 then
+            string {fs} = pf[i]
+            mpz_set_str(q,fs)
+            mpz_set(x,q)
+        else
+            {integer qi, integer ei} = pf[i]
+            mpz_set_si(q,qi)
+            mpz_pow_ui(x,q,ei)
+        end if
+        mpz_fdiv_q(x, t, x)
+        mpz_powm(x,a,x,pk)
+        integer guard = 0
+        while mpz_cmp_si(x,1)!=0 do
+            mpz_mul(res,res,q)
+            mpz_powm(x,x,q,pk)
+            guard += 1
+            if guard>100 then ?9/0 end if -- (increase if rqd)
+        end while
+    end for
+    x = mpz_free(x)
+end procedure
+
+function multiplicative_order(mpz a, m)
+    mpz res = mpz_init(1),
+        ri = mpz_init()
+    mpz_gcd(ri,a,m)
+    if mpz_cmp_si(ri,1)!=0 then return "(a,m) not coprime" end if
+    sequence pf = mpz_prime_factors(m,10000) -- (increase if rqd)
+    for i=1 to length(pf) do
+        multi_order(ri,a,pf[i])
+        mpz_lcm(res,res,ri)
+    end for
+    return mpz_get_str(res)
+end function
+
+function shorta(mpz n)
+    string res = mpz_get_str(n)
+    integer lr = length(res)
+    if lr>80 then
+        res[6..-6] = "..."
+        res &= sprintf(" (%d digits)",lr)
+    end if
+    return res
+end function
+
+procedure mo_test(mpz a, n)
+    string res = multiplicative_order(a, n)
+    printf(1,"ord(%s) mod %s = %s\n",{shorta(a),shorta(n),res})
+end procedure
+
+function i(atom i) return mpz_init(i) end function -- (ugh)
+function p10(integer e,i)   -- init to 10^e+i
+    mpz res = mpz_init()
+    mpz_ui_pow_ui(res,10,e)
+    mpz_add_si(res,res,i)
+    return res
+end function
+
+atom t = time()
+mo_test(i(3), i(10))
+mo_test(i(37), i(1000))
+mo_test(i(37), i(10000))
+mo_test(i(37), i(3343))
+mo_test(i(37), i(3344))
+mo_test(i(2), i(1000))
+mo_test(p10(100,+1), i(7919))
+mo_test(p10(1000,+1), i(15485863))
+mo_test(p10(10000,-1), i(22801763489))
+mo_test(i(1511678068), i(7379191741))
+mo_test(i(3047753288), i(2257683301))
+?"==="
+mpz b = p10(20,-1)
+mo_test(i(2), b)
+mo_test(i(17),b)
+mo_test(i(54),i(100001))
+string s9090 = multiplicative_order(mpz_init(54),mpz_init(100001))
+if s9090!="9090" then ?9/0 end if
+mpz m54 = mpz_init(54),
+    m100001 = mpz_init(100001)
+mpz_powm_ui(b,m54,9090,m100001)
+printf(1,"%s\n",mpz_get_str(b))
+bool error = false
+for r=1 to 9090-1 do
+    mpz_powm_ui(b,m54,r,m100001)
+    if mpz_cmp_si(b,1)=0 then
+        printf(1,"mpz_powm_ui(54,%d,100001) gives 1!\n",r)
+        error = true
+        exit
+    end if
+end for
+if not error then
+    printf(1,"Everything checks. (%s)\n",{elapsed(time()-t)})
+end if

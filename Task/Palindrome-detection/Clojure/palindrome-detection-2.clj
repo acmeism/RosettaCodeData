@@ -1,7 +1,5 @@
-(defn palindrome? [s]
-  (loop [i 0
-         j (dec (. s length))]
-    (cond (>= i j) true
-          (= (get s i) (get s j))
-            (recur (inc i) (dec j))
-          :else false)))
+(defn palindrome? [^String s]
+  (loop [front 0 back (dec (.length s))]
+    (or (>= front back)
+        (and (= (.charAt s front) (.charAt s back))
+             (recur (inc front) (dec back)))))

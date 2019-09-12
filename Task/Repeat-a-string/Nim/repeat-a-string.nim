@@ -1,2 +1,2 @@
 import strutils
-repeatStr(5, "ha")
+repeat("ha", 5)

@@ -39,10 +39,10 @@ cuboid(D1,D2,D3) :-
 
 :- pce_begin_class(hpara, path, "drawing of a horizontal parallelogram").
 
-initialise(P, Pos, Width, Hight, Color) :->
+initialise(P, Pos, Width, Height, Color) :->
 	send(P, send_super, initialise),
 	send(P, append, Pos),
-	H is ceiling(sqrt(Hight * 48)),
+	H is ceiling(sqrt(Height * 48)),
 	get(Pos, x, X),
 	get(Pos, y, Y),
 	X1 is X + H,
@@ -59,7 +59,7 @@ initialise(P, Pos, Width, Hight, Color) :->
 
 :- pce_begin_class(vpara, path, "drawing of a vertical parallelogram").
 
-initialise(P, Pos, Hight, Depth, Color) :->
+initialise(P, Pos, Height, Depth, Color) :->
 	send(P, send_super, initialise),
 	send(P, append, Pos),
 	H is ceiling(sqrt(Depth * 48)),
@@ -68,7 +68,7 @@ initialise(P, Pos, Hight, Depth, Color) :->
 	X1 is X + H,
 	Y1 is Y - H,
 	send(P, append, point(X1, Y1)),
-	Y2 is Y1 + Hight,
+	Y2 is Y1 + Height,
 	send(P, append, point(X1, Y2)),
 	Y3 is Y2 + H,
 	send(P, append, point(X, Y3)),

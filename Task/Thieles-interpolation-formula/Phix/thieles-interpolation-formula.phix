@@ -1,0 +1,49 @@
+constant N = 32,
+         N2 = (N * (N - 1) / 2),
+         STEP = 0.05
+
+constant inf = 1e300*1e300,
+         nan = -(inf/inf)
+
+sequence {xval, t_sin, t_cos, t_tan} @= repeat(0,N)
+
+for i=1 to N do
+    xval[i] = (i-1) * STEP
+    t_sin[i] = sin(xval[i])
+    t_cos[i] = cos(xval[i])
+    t_tan[i] = t_sin[i] / t_cos[i]
+end for
+
+enum R_SIN, R_COS, R_TAN, R_TRIG=$
+
+sequence rhot = repeat(repeat(nan,N2),R_TRIG)
+
+function rho(sequence x, y, integer rdx, int i, int n)
+    if n<0 then return 0 end if
+    if n=0 then return y[i+1] end if
+
+    integer idx = (N - 1 - n) * (N - n) / 2 + i + 1;
+    if rhot[rdx][idx]=nan then -- value not computed yet
+        rhot[rdx][idx] = (x[i+1] - x[i+1 + n])
+                        / (rho(x, y, rdx, i, n-1) - rho(x, y, rdx, i+1, n-1))
+                        + rho(x, y, rdx, i+1, n-2)
+    end if
+    return rhot[rdx][idx]
+end function
+
+function thiele(sequence x, y, integer rdx, atom xin, integer n)
+    if n>N-1 then return 1 end if
+    return rho(x, y, rdx, 0, n) - rho(x, y, rdx, 0, n-2)
+            + (xin-x[n+1]) / thiele(x, y, rdx, xin, n+1)
+end function
+
+constant fmt = iff(machine_bits()=32?"%32s : %.14f\n"
+                                    :"%32s : %.17f\n")
+printf(1,fmt,{"PI",PI})
+printf(1,fmt,{"6*arcsin(0.5)",6*arcsin(0.5)})
+printf(1,fmt,{"3*arccos(0.5)",3*arccos(0.5)})
+printf(1,fmt,{"4*arctan(1)",4*arctan(1)})
+
+printf(1,fmt,{"6*thiele(t_sin,xval,R_SIN,0.5,0)",6*thiele(t_sin,xval,R_SIN,0.5,0)})
+printf(1,fmt,{"3*thiele(t_cos,xval,R_COS,0.5,0)",3*thiele(t_cos,xval,R_COS,0.5,0)})
+printf(1,fmt,{"4*thiele(t_tan,xval,R_TAN,1,0)",4*thiele(t_tan,xval,R_TAN,1,0)})

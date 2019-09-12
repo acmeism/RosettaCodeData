@@ -1,11 +1,10 @@
 #include <stdio.h>
-
-int main(void)
+int main()
 {
-    for (int i = 1; i <= 100; ++i) {
-        if (i % 3 == 0) printf("fizz");
-        if (i % 5 == 0) printf("buzz");
-        if (i * i * i * i % 15 == 1) printf("%d", i);
-        puts("");
+    for (int i=0;++i<101;puts(""))
+    {
+        char f[] = "FizzBuzz%d";
+        f[8-i%5&12]=0;
+        printf (f+(-i%3&4+f[8]/8), i);
     }
 }

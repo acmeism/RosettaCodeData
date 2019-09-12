@@ -1,4 +1,4 @@
-module md5_m
+module md5_mod
     use kernel32
     use advapi32
     implicit none
@@ -40,7 +40,7 @@ contains
         end if
 
         do
-            status = ReadFile(hFile, loc(buffer), BUFLEN, loc(nRead), NULL)
+            status = ReadFile(hFile, loc(buffer), BUFLEN, nRead, NULL)
             if (status == FALSE .or. nRead == 0) exit
             filesize = filesize + nRead
             if (CryptHashData(hHash, buffer, nRead, 0) == FALSE) then
@@ -69,7 +69,7 @@ contains
 end module
 
 program md5
-    use md5_m
+    use md5_mod
     implicit none
     integer :: n, m, i, j
     character(:), allocatable :: name

@@ -1,30 +1,22 @@
 (function () {
 
-  function memoized(fn) {
+  function memoizedHailstone() {
     var dctMemo = {};
 
-    return function (x) {
-      var varValue = dctMemo[x];
+    return function hailstone(n) {
+      var value = dctMemo[n];
 
-      if ('u' === (typeof varValue)[0])
-        dctMemo[x] = varValue = fn(x);
-      return varValue;
-    };
-  }
-  // Hailstone Sequence
-  // n -> [n]
-  function hailstone(n) {
-    return n === 1 ? [1] : (
-      [n].concat(
-        hailstone(n % 2 ? n * 3 + 1 : n / 2)
-      )
-    )
+      if (typeof value === "undefined") {
+        dctMemo[n] = value = (n === 1) ?
+          [1] : ([n].concat(hailstone(n % 2 ? n * 3 + 1 : n / 2)));
+      }
+      return value;
+    }
   }
 
-   // Derived a memoized version of the function,
-  //  which can reuse previously calculated paths
-
-  var fnCollatz = memoized(hailstone);
+  // Derived a memoized version of the function,
+  // which can reuse previously calculated paths
+  var fnCollatz = memoizedHailstone();
 
   // Iterative version of range
   // [m..n]

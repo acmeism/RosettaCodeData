@@ -7,7 +7,7 @@ object I_before_E_except_after_C extends App {
   val testCEI2 = "(^|[^c])ei".r // e before i when not preceded by c
   var countsCEI = (0,0)
 
-  scala.io.Source.fromURL("http://www.puzzlers.org/pub/wordlists/unixdict.txt").getLines.map(_.toLowerCase).foreach{word =>
+  scala.io.Source.fromURL("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt").getLines.map(_.toLowerCase).foreach{word =>
     if (testIE1.findFirstIn(word).isDefined) countsIE = (countsIE._1 + 1, countsIE._2)
     if (testIE2.findFirstIn(word).isDefined) countsIE = (countsIE._1, countsIE._2 + 1)
     if (testCEI1.findFirstIn(word).isDefined) countsCEI = (countsCEI._1 + 1, countsCEI._2)

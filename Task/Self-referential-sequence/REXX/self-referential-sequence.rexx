@@ -1,4 +1,4 @@
-/*REXX program generates a  self─referential sequence  and displays the maximums.       */
+/*REXX pgm generates a self─referential sequence and displays sequences with max length.*/
 parse arg LO HI .                                /*obtain optional arguments from the CL*/
 if LO=='' | LO==","  then LO=      1             /*Not specified?  Then use the default.*/
 if HI=='' | HI==","  then HI=1000000 - 1         /* "      "         "   "   "     "    */

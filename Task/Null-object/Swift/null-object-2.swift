@@ -1,5 +1,5 @@
-if let v = opt {
-    println("There is some value: \(v)")
+if maybeInt == nil {
+  print("variable is nil")
 } else {
-    println("There is no value")
+  print("variable has some value")
 }

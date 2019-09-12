@@ -1,1 +1,1 @@
-#1=(write '#1# :circle t)
+((lambda (x) `(,x ',x)) '(lambda (x) `(,x ',x)))

@@ -3,7 +3,7 @@
    ar2ro(1666) returns (M D C L X V I)"
   (cond
    ((>= AN 1000) (cons 'M (ar2ro (- AN 1000))))
-   ((>= AN 900) (cons 'C (cons 'M (ar2ro (-AN 900)))))
+   ((>= AN 900) (cons 'C (cons 'M (ar2ro (- AN 900)))))
    ((>= AN 500) (cons 'D (ar2ro (- AN 500))))
    ((>= AN 400) (cons 'C (cons 'D (ar2ro (- AN 400)))))
    ((>= AN 100) (cons 'C (ar2ro (- AN 100))))

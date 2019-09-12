@@ -12,7 +12,8 @@ IN: fizzbuzz
 
 : fizz ( str n -- str n ) dup 3 < [ 1 + ] [ drop "Fizz" append 1 ] if ;
 : buzz ( str n -- str n ) dup 5 < [ 1 + ] [ drop "Buzz" append 1 ] if ;
-: FizzBuzz ( m -- v ) { fizz buzz } zz ;
-: FizzBuzz-100 ( -- ) 100 FizzBuzz . ;
+: quxx ( str n -- str n ) dup 7 < [ 1 + ] [ drop "Quxx" append 1 ] if ;
+: FizzBuzzQuxx ( m -- v ) { fizz buzz quxx } zz ;
+: FizzBuzzQuxx-100 ( -- ) 100 FizzBuzzQuxx . ;
 
-MAIN: FizzBuzz-100
+MAIN: FizzBuzzQuxx-100

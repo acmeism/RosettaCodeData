@@ -7,9 +7,10 @@
 
 (defn bead-sort [xs]
   (->> xs
-       (map #(repeat 1 %))
+       (map #(repeat % 1))
        transpose
        transpose
        (map #(reduce + %))))
 
+;; This algorithm does not work if collection has zero
 (-> [5 2 4 1 3 3 9] bead-sort println)

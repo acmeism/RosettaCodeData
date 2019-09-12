@@ -24,7 +24,7 @@ object Einstein extends App {
     if (brand == "Prince") == (nationality == "German") // #14
   } yield new House(nationality, color, beverage, animal, brand)
   val members = for { // Neighborhood clues
-    h1 <- housesLeftOver().filter(p => (p.nationality == "Norwegia" /* #10 */) && (p.color != "Green") /* #5a */) // 28
+    h1 <- housesLeftOver().filter(p => (p.nationality == "Norwegian" /* #10 */) && (p.color != "Green") /* #5a */) // 28
     h3 <- housesLeftOver(h1).filter(p => p.beverage == "Milk") // #9 // 24
     h2 <- housesLeftOver(h1, h3).filter(_.color == "Blue") // #15
     if matchMiddleBrandAnimal(h1, h2, h3, "Blend", "Cats") // #11

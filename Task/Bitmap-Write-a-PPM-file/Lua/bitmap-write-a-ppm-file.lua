@@ -54,7 +54,7 @@ function Bitmap:writeP6(filename)
     end
 end
 
-function Bitmap:fill(x, y, width, heigth, color)
+function Bitmap:fill(x, y, width, height, color)
     width = (width == nil) and self.width or width
     height = (height == nil) and self.height or height
     width = width + x

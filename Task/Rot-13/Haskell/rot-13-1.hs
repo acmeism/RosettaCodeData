@@ -1,13 +1,10 @@
-import Data.Char (isAlpha, toLower, chr, ord)
+import Data.Char (chr, isAlpha, ord, toLower)
+import Data.Bool (bool)
 
 rot13 :: Char -> Char
 rot13 c
-  | isAlpha c = chr (if_ (toLower c <= 'm') (+) (-) (ord c) 13)
+  | isAlpha c = chr $ bool (-) (+) ('m' >= toLower c) (ord c) 13
   | otherwise = c
-
-if_ :: Bool -> a -> a -> a
-if_ True x _ = x
-if_ False _ y = y
 
 -- Simple test
 main :: IO ()

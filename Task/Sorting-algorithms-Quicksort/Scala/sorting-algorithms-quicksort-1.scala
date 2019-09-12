@@ -1,11 +1,6 @@
-  def sort(xs: List[Int]): List[Int] = {
-    xs match {
-      case Nil => Nil
-      case x :: xx => {
-        // Arbitrarily partition list in two
-        val (lo, hi) = xx.partition(_ < x)
-        // Sort each half
-        sort(lo) ++ (x :: sort(hi))
-      }
-    }
+  def sort(xs: List[Int]): List[Int] = xs match {
+    case Nil => Nil
+    case head :: tail =>
+      val (less, notLess) = tail.partition(_ < head) // Arbitrarily partition list in two
+      sort(less) ++ (head :: sort(notLess))          // Sort each half
   }

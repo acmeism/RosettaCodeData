@@ -14,12 +14,12 @@ package History_Variables is
 
    -- non-destructively search for old values
    function Peek(V: Variable; Generation: Natural := 1) return Item_Type;
-   -- V.Peek(0) returns current value; V.Peek(1) the previous value, ect.
+   -- V.Peek(0) returns current value; V.Peek(1) the previous value, etc.
    -- when calling V.Peek(i), i must be in 0 .. V.Defined-1, else Constraint_Error is raised
 
    -- destructively restore previous value
    procedure Undo(V: in out Variable);
-   -- old V.Peek(0) is forgotten, old V.Peek(i) is new V.Peek(i-1), ect.
+   -- old V.Peek(0) is forgotten, old V.Peek(i) is new V.Peek(i-1), etc.
    -- accordingly, V.Defined decrements by 1
    -- special case: if V.Defined=0 then V.Undo does not change V
 

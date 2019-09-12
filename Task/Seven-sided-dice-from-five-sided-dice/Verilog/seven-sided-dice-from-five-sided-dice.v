@@ -56,7 +56,7 @@ endmodule
 ///////////////////////////////////////////////////////////////////////////////
 /// seven_sided_dice :                                                      ///
 ///      Synthsizeable module that using a 5 sided dice as a black box      ///
-///      is able to reproduce teh outcomes if a 7-sided dice                ///
+///      is able to reproduce the outcomes if a 7-sided dice                ///
 ///////////////////////////////////////////////////////////////////////////////
 module seven_sided_dice(
   input wire       clk,

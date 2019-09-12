@@ -33,9 +33,8 @@ sub try_column {
         }
 }
 
-$board_size = 12;  # takes a minute or so, 14,200 solutions
+$board_size = 12;
 try_column(0);
 
-local $" = "\n";
-print @solutions;
-print "total ", scalar(@solutions), " solutions\n";
+#print for @solutions; # un-comment to see all solutions
+print "total " . @solutions . " solutions\n";

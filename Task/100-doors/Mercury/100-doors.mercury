@@ -1,33 +1,39 @@
 :- module doors.
 :- interface.
-:- import_module array, io, int.
-
-:- type door ---> open ; closed.
-:- type doors == array(door).
-
-:- func toggle(door) = door.
-:- pred walk(int::in, doors::in, doors::out) is semidet.
-:- pred walks(int::in, int::in, doors::in, doors::out) is det.
-
+:- import_module io.
 :- pred main(io::di, io::uo) is det.
-
 :- implementation.
+:- import_module bitmap, bool, list, string, int.
 
-toggle(open) = closed.
-toggle(closed) = open.
+:- func doors = bitmap.
+doors = bitmap.init(100, no).
 
-walk(N, !D) :- walk(N, N, !D).
+:- pred walk(int, bitmap, bitmap).
+:- mode walk(in, bitmap_di, bitmap_uo) is det.
+walk(Pass, !Doors) :-
+    walk(Pass, Pass, !Doors).
 
-:- pred walk(int::in, int::in, doors::in, doors::out) is semidet.
-walk(At, By, !D) :-
-        semidet_lookup(!.D, At - 1, Door),
-        slow_set(At - 1, toggle(Door), !D),
-        ( walk(At + By, By, !D) -> true ; true ).
+:- pred walk(int, int, bitmap, bitmap).
+:- mode walk(in, in, bitmap_di, bitmap_uo) is det.
+walk(At, By, !Doors) :-
+    ( if bitmap.in_range(!.Doors, At - 1) then
+        bitmap.unsafe_flip(At - 1, !Doors),
+        walk(At + By, By, !Doors)
+    else
+        true
+    ).
 
-walks(N, End, !D) :-
-        ( N =< End, walk(N, !D) -> walks(N + 1, End, !D) ; true ).
+:- pred report(bitmap, int, io, io).
+:- mode report(bitmap_di, in, di, uo) is det.
+report(Doors, N, !IO) :-
+    ( if is_set(Doors, N - 1) then
+        State = "open"
+    else
+        State = "closed"
+    ),
+    io.format("door #%d is %s\n",
+        [i(N), s(State)], !IO).
 
 main(!IO) :-
-        io.write(Doors1, !IO), io.nl(!IO),
-        array.init(100, closed, Doors0),
-        walks(1, 100, Doors0, Doors1).
+    list.foldl(walk, 1 .. 100, doors, Doors),
+    list.foldl(report(Doors), 1 .. 100, !IO).

@@ -32,13 +32,12 @@ sub mk-inv(&fn, $d, $lim) {
 }
 
 sub MAIN($tblsz = 12) {
-  my %invsin = mk-inv(&sin, 0.05, $tblsz);
-  my %invcos = mk-inv(&cos, 0.05, $tblsz);
-  my %invtan = mk-inv(&tan, 0.05, $tblsz);
 
-  my $sin_pi = 6 * thiele(0.5, %invsin, 0);
-  my $cos_pi = 3 * thiele(0.5, %invcos, 0);
-  my $tan_pi = 4 * thiele(1.0, %invtan, 0);
+  my ($sin_pi, $cos_pi, $tan_pi);
+  my $p1 = Promise.start( { my %invsin = mk-inv(&sin, 0.05, $tblsz); $sin_pi = 6 * thiele(0.5, %invsin, 0) } );
+  my $p2 = Promise.start( { my %invcos = mk-inv(&cos, 0.05, $tblsz); $cos_pi = 3 * thiele(0.5, %invcos, 0) } );
+  my $p3 = Promise.start( { my %invtan = mk-inv(&tan, 0.05, $tblsz); $tan_pi = 4 * thiele(1.0, %invtan, 0) } );
+  await $p1, $p2, $p3;
 
   say "pi = {pi}";
   say "estimations using a table of $tblsz elements:";

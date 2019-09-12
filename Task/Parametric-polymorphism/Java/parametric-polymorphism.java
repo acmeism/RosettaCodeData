@@ -5,9 +5,9 @@ public class Tree<T>{
 
 	public void replaceAll(T value){
 		this.value = value;
-		if(left != null)
+		if (left != null)
 			left.replaceAll(value);
-		if(right != null)
+		if (right != null)
 			right.replaceAll(value);
 	}
 }

@@ -1,7 +1,3 @@
-def isNumeric(str: String): Boolean = {
-  !throwsNumberFormatException(str.toLong) || !throwsNumberFormatException(str.toDouble)
-}
-
-def throwsNumberFormatException(f: => Any): Boolean = {
-  try { f; false } catch { case e: NumberFormatException => true }
+def isNumeric2(str: String): Boolean = {
+  str.matches(s"""[+-]?((\d+(e\d+)?[lL]?)|(((\d+(\.\d*)?)|(\.\d+))(e\d+)?[fF]?))""")
 }

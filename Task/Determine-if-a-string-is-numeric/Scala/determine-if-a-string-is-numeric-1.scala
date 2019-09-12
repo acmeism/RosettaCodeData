@@ -1,1 +1,3 @@
-def isNumeric(input: String): Boolean = input.forall(_.isDigit)
+import scala.util.control.Exception.allCatch
+
+def isNumber(s: String): Boolean = (allCatch opt s.toDouble).isDefined

@@ -1,7 +1,6 @@
-#!bin/usr/perl
 use strict;
 use warnings;
-use 5.020;
+use feature 'say';
 
 #This is a script to calculate an equation for a given set of coordinates.
 #Input will be taken in sets of x and y. It can handle a grand total of 26 pairs.
@@ -9,9 +8,11 @@ use 5.020;
 use Math::MatrixReal;
 
 =pod
+
 Step 1: Get each x coordinate all at once (delimited by " ") and each for y at once
 on the next prompt in the same format (delimited by " ").
 =cut
+
 sub getPairs() {
     my $buffer = <STDIN>;
     chomp($buffer);
@@ -24,12 +25,13 @@ my @y = getPairs();
 #This whole thing depends on the number of x's being the same as the number of y's
 my $pairs = scalar(@x);
 
-
 =pod
+
 Step 2: Devise the base equation of our polynomial using the following idea
 There is some polynomial of degree n (n == number of pairs - 1) such that
 f(x)=ax^n + bx^(n-1) + ... yx + z
 =cut
+
 #Create an array of coefficients and their degrees with the format ("coefficent degree")
 my @alphabet;
 my @degrees;
@@ -40,9 +42,11 @@ for(my $alpha = "a", my $degree = $pairs - 1; $degree >= 0; $degree--, $alpha++)
 
 
 =pod
+
 Step 3: Using the array of coeffs and their degrees, set up individual equations solving for
 each coordinate pair. Why put it in this format? It interfaces witht he Math::MatrixReal package better this way.
 =cut
+
 my @coeffs;
 for(my $count = 0; $count < $pairs; $count++) {
     my $buffer = "[ ";
@@ -56,23 +60,26 @@ foreach (@coeffs) {
     $row .= ("$_\n");
 }
 
-
 =pod
+
 Step 4: We now have rows of x's raised to powers. With this in mind, we create a coefficient matrix.
 =cut
+
 my $matrix = Math::MatrixReal->new_from_string($row);
 my $buffMatrix = $matrix->new_from_string($row);
 
-
 =pod
+
 Step 5: Now that we've gotten the matrix to do what we want it to do, we need to calculate the various determinants of the matrices
 =cut
+
 my $coeffDet = $matrix->det();
 
-
 =pod
+
 Step 6: Now that we have the determinant of the coefficient matrix, we need to find the determinants of the coefficient matrix with each column (1 at a time) replaced with the y values.
 =cut
+
 #NOTE: Unlike in Perl, matrix indices start at 1, not 0.
 for(my $rows = my $column = 1; $column <= $pairs; $column++) {
     #Reassign the values in the current column to the y values
@@ -92,8 +99,10 @@ for(my $rows = my $column = 1; $column <= $pairs; $column++) {
 
 
 =pod
+
 Step 7: Now that we've found the values of a, b, ... y, z of the original polynomial, it's time to form our polynomial!
 =cut
+
 my $polynomial;
 for(my $i = 0; $i < $pairs-1; $i++) {
     if($alphabet[$i] == 0) {

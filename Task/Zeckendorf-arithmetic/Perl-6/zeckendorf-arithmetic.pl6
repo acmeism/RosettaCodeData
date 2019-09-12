@@ -17,7 +17,6 @@ sub infix:<eqz>($a, $b) { $a eq $b };
 # not equal
 sub infix:<nez>($a, $b) { $a ne $b };
 
-
 ######## Operators for Zeckendorf arithmetic ########
 
 # post increment
@@ -37,10 +36,10 @@ sub postfix:<--z>($a is rw) {
 }
 
 # addition
-sub infix:<+z>($a is copy, $b is copy) { $a++z while $b--z nez $z0; $a };
+sub infix:<+z>($a is copy, $b is copy) { $a++z; $a++z while $b--z nez $z0; $a };
 
 # subtraction
-sub infix:<-z>($a is copy, $b is copy) { $a--z while $b--z nez $z0; $a };
+sub infix:<-z>($a is copy, $b is copy) { $a--z; $a--z while $b--z nez $z0; $a };
 
 # multiplication
 sub infix:<*z>($a, $b) {
@@ -65,12 +64,12 @@ sub infix:</z>($a is copy, $b is copy) {
     repeat {
         my $d = $b +z ($z1 ~ $z0);
         $c++z;
+        $a++z;
         $a--z while $d--z nez $z0
     } until $a ltz $b;
     $c ~= " remainder $a" if $a nez $z0;
     $c
 };
-
 
 ###################### Testing ######################
 

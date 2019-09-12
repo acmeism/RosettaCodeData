@@ -1,9 +1,9 @@
 sub propdivsum (\x) {
-    my @l = x > 1, gather for 2 .. x.sqrt.floor -> \d {
-        my \y = x div d;
-        if y * d == x { take d; take y unless y == d }
+    my @l = x > 1;
+    (2 .. x.sqrt.floor).map: -> \d {
+        unless x % d { my \y = x div d; y == d ?? @l.push: d !! @l.append: d,y }
     }
-    [+] gather @l.deepmap(*.take);
+    sum @l;
 }
 
 multi quality (0,1)  { 'perfect ' }
@@ -24,8 +24,7 @@ sub aliquotidian ($x) {
         }
         %seen{$this} = $to;
     }
-    "$x non-terminating";
-
+    "$x non-terminating\t[{@seq}]";
 }
 
 aliquotidian($_).say for flat

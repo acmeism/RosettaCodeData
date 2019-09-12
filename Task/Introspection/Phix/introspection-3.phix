@@ -1,0 +1,113 @@
+include builtins/VM/pStack.e -- :%opGetST
+-- copies from pglobals.e:
+constant S_Name  = 1,   -- const/var/rtn name
+         S_NTyp  = 2,   -- Const/GVar/TVar/Nspc/Type/Func/Proc
+         S_FPno  = 3,   -- File and Path number
+         S_Slink = 6,   -- scope/secondary chain (see below)
+         S_vtype = 7,   -- variable type or namespace fileno
+         S_GVar2 = 2,   -- global or static variable
+         T_int   = 1,
+         T_EBP   = 22,  -- compiled/listing=0, interpreted={ebp4,esp4,sym4} (set at last possible moment)
+         T_ds4   = 23   -- compiled = start of data section, same but /4 when interpreted ([T_EBP]!=0)
+
+function var_id(object s)
+-- hacked copy of routine_id(), for local file-level integers only
+integer res,            -- symidx for string s, else sum(local gvar integers)
+        rtn,            -- routine number of callee, from callstack
+        cFno,           -- calling fileno.
+        tidx,
+        ds4
+object symtab,
+       si,              -- copy of symtab[i], speedwise
+       si_name          -- copy of symtab[i][S_name], speedwise/thread-sfaety
+
+    -- get copy of symtab. NB read only! may contain nuts! (unassigned vars)
+    enter_cs()
+    #ilASM{
+        [32]
+            lea edi,[symtab]
+            call :%opGetST      -- [edi]=symtab (ie our local:=the real symtab)
+            mov edi,[ebp+20]    -- prev_ebp
+            mov edi,[edi+8]     -- calling routine no
+            mov [rtn],edi
+        [64]
+            lea rdi,[symtab]
+            call :%opGetST      -- [rdi]=symtab (ie our local:=the real symtab)
+            mov rdi,[rbp+40]    -- prev_ebp
+            mov rdi,[rdi+16]    -- calling routine no
+            mov [rtn],rdi
+        []
+          }
+    if symtab[T_EBP]=0 then             -- compiled
+        ds4 = floor(symtab[T_ds4]/4)
+    else                                -- interpreted
+        ds4 = symtab[T_ds4]
+    end if
+    cFno = symtab[rtn][S_FPno]      -- fileno of callee (whether routine or toplevel)
+    res = iff(s=0?0:-1)
+    for i=1 to length(symtab) do
+        si = symtab[i]
+        if sequence(si)
+        and si[S_NTyp]=S_GVar2
+        and si[S_FPno]=cFno
+        and si[S_vtype]=T_int then
+            si_name = si[S_Name]
+            if s=0 then
+                -- cut-down version of pDiagN.e/getGvarValue():
+                integer gidx = si[S_Slink], novalue, o
+                #ilASM{
+                        mov [novalue],0
+                    [32]
+                        mov esi,[ds4]
+                        mov edx,[gidx]
+                        shl esi,2
+                        mov esi,[esi+edx*4+16] -- ([ds+(gidx+4)*4] == gvar[gidx])
+                        cmp esi,h4
+                        jl @f
+                            mov [novalue],1
+                            xor esi,esi
+                      @@:
+                        mov [o],esi
+                    [64]
+                        mov rsi,[ds4]
+                        mov rdx,[gidx]
+                        shl rsi,2
+                        mov rsi,[rsi+rdx*8+24] -- ([ds+(gidx+3)*8] == gvar[gidx])
+                        mov r15,h4
+                        cmp rsi,r15
+                        jl @f
+                            mov [novalue],1
+                            xor rsi,rsi
+                      @@:
+                        mov [o],rsi
+                    []
+                      }
+                if novalue then
+                    ?{si_name,"no_value"}
+                else
+                    res += o
+                end if
+            elsif s=si_name then
+                res = i
+                exit
+            end if
+        end if
+    end for
+    si_name = 0
+    si = 0
+    symtab = 0
+    leave_cs()
+    return res
+end function
+
+{} = routine_id("blurgzmp") -- force symtab name population..
+                            -- (alt: see rbldrqd in pDiagN.e)
+integer bloop = 5,
+--      barf,               -- triggers {"barf","no_value"}
+        burp = 35
+bloop = 6
+burp += 1
+?var_id("bloop")        -- >0 === exists
+?var_id("blooop")       -- -1 === does not exist
+?var_id(0)              -- bloop+burp = 42
+?bloop+burp             --     "", doh

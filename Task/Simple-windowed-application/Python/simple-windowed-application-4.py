@@ -1,28 +1,35 @@
 import wx
 
-class MyApp(wx.App):
-  def click(self, event):
-    self.count += 1
-    self.label.SetLabel("Count: %d" % self.count)
 
-  def OnInit(self):
-    frame = wx.Frame(None, wx.ID_ANY, "Hello from wxPython")
-    self.count = 0
-    self.button = wx.Button(frame, wx.ID_ANY, "Click me!")
-    self.label = wx.StaticText(frame, wx.ID_ANY, "Count: 0")
-    self.Bind(wx.EVT_BUTTON, self.click, self.button)
+class ClickCounter(wx.Frame):
+    def __init__(self):
+        super().__init__(parent=None)
+        self.count = 0
+        self.button = wx.Button(parent=self,
+                                label="Click me!")
+        self.label = wx.StaticText(parent=self,
+                                   label="There have been no clicks yet")
+        self.Bind(event=wx.EVT_BUTTON,
+                  handler=self.click,
+                  source=self.button)
 
-    self.sizer = wx.BoxSizer(wx.VERTICAL)
-    self.sizer.Add(self.button, True, wx.EXPAND)
-    self.sizer.Add(self.label, True, wx.EXPAND)
-    frame.SetSizer(self.sizer)
-    frame.SetAutoLayout(True)
-    self.sizer.Fit(frame)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(window=self.button,
+                       proportion=1,
+                       flag=wx.EXPAND)
+        self.sizer.Add(window=self.label,
+                       proportion=1,
+                       flag=wx.EXPAND)
+        self.SetSizer(self.sizer)
+        self.sizer.Fit(self)
 
-    frame.Show(True)
+    def click(self, _):
+        self.count += 1
+        self.label.SetLabel(f"Count: {self.count}")
 
-    self.SetTopWindow(frame)
-    return True
 
-app = MyApp(0)
-app.MainLoop()
+if __name__ == '__main__':
+    app = wx.App()
+    frame = ClickCounter()
+    frame.Show()
+    app.MainLoop()

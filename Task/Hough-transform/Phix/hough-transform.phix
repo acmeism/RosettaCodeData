@@ -1,0 +1,53 @@
+-- demo\rosetta\Hough_transform.exw
+include pGUI.e
+
+function hypot(atom a,b) return sqrt(a*a+b*b) end function
+
+function hough_transform(imImage im, integer width=460, height=360)
+    height = 2*floor(height / 2)
+    integer xsize = im_width(im),
+            ysize = im_width(im)
+    sequence ht = repeat(repeat(repeat(255,3),width),height)
+    sequence canvas = repeat(repeat(255,width),height)
+    atom rmax = hypot(xsize, ysize),
+         dr = 2*(rmax / height),
+         dth = (PI / width)
+    for y=0 to ysize-1 do
+        for x=0 to xsize-1 do
+            integer {r,g,b} = im_pixel(im, x, y)
+            if r!=255 then
+                for k=1 to width do
+                    atom th = dth*(k-1),
+                         r2 = (x*cos(th) + y*sin(th))
+                    integer iry = (height/2 + floor(r2/dr + 0.5))+1,
+                            cik = canvas[iry][k] - 1
+                    canvas[iry][k] = cik
+                    ht[iry][k] = repeat(cik,3)
+                end for
+            end if
+        end for
+    end for
+    ht = flatten(ht) -- (needed by IupImageRGB)
+    Ihandle new_img = IupImageRGB(width, height, ht)
+    return new_img
+end function
+
+IupOpen()
+
+atom pError = allocate(machine_word())
+imImage im1 = imFileImageLoadBitmap("Pentagon.png",0,pError)
+if im1=NULL then ?"error opening Pentagon.png" abort(0) end if
+Ihandln image1 = IupImageFromImImage(im1),
+        image2 = hough_transform(im1),
+        label1 = IupLabel(),
+        label2 = IupLabel()
+IupSetAttributeHandle(label1, "IMAGE", image1)
+IupSetAttributeHandle(label2, "IMAGE", image2)
+
+Ihandle dlg = IupDialog(IupHbox({label1, label2}))
+IupSetAttribute(dlg, "TITLE", "Hough transform")
+IupCloseOnEscape(dlg)
+IupShow(dlg)
+
+IupMainLoop()
+IupClose()

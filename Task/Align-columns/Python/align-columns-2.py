@@ -1,21 +1,18 @@
-txt = """Given$a$txt$file$of$many$lines,$where$fields$within$a$line$
+'''
+cat <<'EOF' > align_columns.dat
+Given$a$text$file$of$many$lines,$where$fields$within$a$line$
 are$delineated$by$a$single$'dollar'$character,$write$a$program
 that$aligns$each$column$of$fields$by$ensuring$that$words$in$each$
 column$are$separated$by$at$least$one$space.
 Further,$allow$for$each$word$in$a$column$to$be$either$left$
-justified,$right$justified,$or$center$justified$within$its$column."""
+justified,$right$justified,$or$center$justified$within$its$column.
+EOF
+'''
 
-parts = [line.rstrip("$").split("$") for line in txt.splitlines()]
-
-max_widths = {}
-for line in parts:
-    for i, word in enumerate(line):
-        max_widths[i] = max(max_widths.get(i, 0), len(word))
-
-for i, justify in enumerate([str.ljust, str.center, str.rjust]):
-    print ["Left", "Center", "Right"][i], " column-aligned output:\n"
-    for line in parts:
-        for j, word in enumerate(line):
-            print justify(word, max_widths[j]),
-        print
-    print "- " * 52
+for align in '<^>':
+  rows = [ line.strip().split('$') for line in open('align_columns.dat') ]
+  fmts = [ '{:%s%d}' % (align, max( len(row[i]) if i < len(row) else 0 for row in rows ))
+           for i in range(max(map(len, rows))) ]
+  for row in rows:
+    print(' '.join(fmts).format(*(row + [''] * len(fmts))))
+  print('')

@@ -19,7 +19,7 @@
      free(array);
    clean_up_file:
      fclose(fp);
-   clean_up_str"
+   clean_up_str:
      free(str );
    exit:
    return;

@@ -3,7 +3,12 @@ from itertools import islice
 def hamming2():
     '''\
     This version is based on a snippet from:
-        http://dobbscodetalk.com/index.php?option=com_content&task=view&id=913&Itemid=85
+        https://web.archive.org/web/20081219014725/http://dobbscodetalk.com:80
+                         /index.php?option=com_content&task=view&id=913&Itemid=85
+        http://www.drdobbs.com/architecture-and-design/hamming-problem/228700538
+        Hamming problem
+        Written by Will Ness
+        December 07, 2008
 
         When expressed in some imaginary pseudo-C with automatic
         unlimited storage allocation and BIGNUM arithmetics, it can be

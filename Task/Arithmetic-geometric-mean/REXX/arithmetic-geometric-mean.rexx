@@ -10,16 +10,22 @@ say  '2nd # ='      b                            /*   "     "    B     "        
 say  '  AGM ='  agm(a, b)                        /*   "     "   AGM    "                */
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-agm:  procedure: parse arg x,y;   if x=y  then return x      /*is this an equality case?*/
-                                  if y=0  then return 0      /*is   Y  equal to zero ?  */
-                                  if x=0  then return y / 2  /* "   X    "    "   "     */
-      d=digits();  numeric digits d+5            /*add 5 more digs to ensure convergence*/
-      tiny='1e-' || (digits() - 1)               /*construct a pretty tiny REXX number. */
-      ox=x + 1
-                        do #=1  while ox\=x & abs(ox)>tiny;  ox=x;          oy=y
-                                                              x=(ox+oy)/2;   y=sqrt(ox*oy)
-                        end   /*#*/
-      numeric digits d;       return x / 1       /*restore digs, normalize X to new digs*/
+agm:  procedure: parse arg x,y;    if x=y  then return x     /*is this an equality case?*/
+                                   if y=0  then return 0     /*is   Y   equal to zero ? */
+                                   if x=0  then return y/2   /* "   X     "    "   "    */
+      d= digits()                                /*obtain the  current  decimal digits. */
+      numeric digits d + 5                       /*add 5 more digs to ensure convergence*/
+      tiny= '1e-'  ||  (digits() - 1)            /*construct a pretty tiny REXX number. */
+      ox= x + 1                                  /*ensure that   the old X  ¬=  new X.  */
+                do  while ox\=x  &  abs(ox)>tiny /*compute until the old X   ≡  new X.  */
+                ox= x                            /*save    the  old  value of  X.       */
+                oy= y                            /*  "      "    "     "    "  Y.       */
+                x=     (ox + oy)  *  .5          /*compute  "   new    "    "  X.       */
+                y= sqrt(ox * oy)                 /*   "     "    "     "    "  Y.       */
+                end   /*while*/
+
+      numeric digits d                           /*restore the original decimal digits. */
+      return x / 1                               /*normalize  X  to new    "       "    */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 sqrt: procedure; parse arg x; if x=0  then return 0; d=digits(); m.=9; numeric form; h=d+6
       numeric digits; parse value format(x,2,1,,0) 'E0'  with  g 'E' _ .;  g=g *.5'e'_ % 2

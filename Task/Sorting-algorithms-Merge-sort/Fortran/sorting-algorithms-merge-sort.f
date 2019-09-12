@@ -1,69 +1,68 @@
-subroutine Merge(A,NA,B,NB,C,NC)
+      program TestMergeSort
+        implicit none
+        integer, parameter :: N = 8
+        integer :: A(N) = (/ 1, 5, 2, 7, 3, 9, 4, 6 /)
+        integer :: work((size(A) + 1) / 2)
+        write(*,'(A,/,10I3)')'Unsorted array :',A
+        call MergeSort(A, work)
+        write(*,'(A,/,10I3)')'Sorted array :',A
+      contains
 
-   integer, intent(in) :: NA,NB,NC         ! Normal usage: NA+NB = NC
-   integer, intent(in out) :: A(NA)        ! B overlays C(NA+1:NC)
-   integer, intent(in)     :: B(NB)
-   integer, intent(in out) :: C(NC)
+      subroutine merge(A, B, C)
+        implicit none
+! The targe attribute is necessary, because A .or. B might overlap with C.
+        integer, target, intent(in) :: A(:), B(:)
+        integer, target, intent(inout) :: C(:)
+        integer :: i, j, k
 
-   integer :: I,J,K
+        if (size(A) + size(B) > size(C)) stop(1)
 
-   I = 1; J = 1; K = 1;
-   do while(I <= NA .and. J <= NB)
-      if (A(I) <= B(J)) then
-         C(K) = A(I)
-         I = I+1
-      else
-         C(K) = B(J)
-         J = J+1
-      endif
-      K = K + 1
-   enddo
-   do while (I <= NA)
-      C(K) = A(I)
-      I = I + 1
-      K = K + 1
-   enddo
-   return
+        i = 1; j = 1
+        do k = 1, size(C)
+          if (i <= size(A) .and. j <= size(B)) then
+            if (A(i) <= B(j)) then
+              C(k) = A(i)
+              i = i + 1
+            else
+              C(k) = B(j)
+              j = j + 1
+            end if
+          else if (i <= size(A)) then
+            C(k) = A(i)
+            i = i + 1
+          else if (j <= size(B)) then
+            C(k) = B(j)
+            j = j + 1
+          end if
+        end do
+      end subroutine merge
 
-end subroutine merge
+      subroutine swap(x, y)
+        implicit none
+        integer, intent(inout) :: x, y
+        integer :: tmp
+        tmp = x; x = y; y = tmp
+      end subroutine
 
-recursive subroutine MergeSort(A,N,T)
-
-   integer, intent(in) :: N
-   integer, dimension(N), intent(in out) :: A
-   integer, dimension((N+1)/2), intent (out) :: T
-
-   integer :: NA,NB,V
-
-   if (N < 2) return
-   if (N == 2) then
-      if (A(1) > A(2)) then
-         V = A(1)
-         A(1) = A(2)
-         A(2) = V
-      endif
-      return
-   endif
-   NA=(N+1)/2
-   NB=N-NA
-
-   call MergeSort(A,NA,T)
-   call MergeSort(A(NA+1),NB,T)
-
-   if (A(NA) > A(NA+1)) then
-      T(1:NA)=A(1:NA)
-      call Merge(T,NA,A(NA+1),NB,A,N)
-   endif
-   return
-
-end subroutine MergeSort
-
-program TestMergeSort
-
-   integer, parameter :: N = 8
-   integer, dimension(N) :: A = (/ 1, 5, 2, 7, 3, 9, 4, 6 /)
-   integer, dimension ((N+1)/2) :: T
-   call MergeSort(A,N,T)
-   write(*,'(A,/,10I3)')'Sorted array :',A
-
-end program TestMergeSort
+      recursive subroutine MergeSort(A, work)
+        implicit none
+        integer, intent(inout) :: A(:)
+        integer, intent(inout) :: work(:)
+        integer :: half
+        half = (size(A) + 1) / 2
+        if (size(A) < 2) then
+          continue
+        else if (size(A) == 2) then
+          if (A(1) > A(2)) then
+            call swap(A(1), A(2))
+          end if
+        else
+          call MergeSort(A( : half), work)
+          call MergeSort(A(half + 1 :), work)
+          if (A(half) > A(half + 1)) then
+            work(1 : half) = A(1 : half)
+            call merge(work(1 : half), A(half + 1:), A)
+          endif
+        end if
+      end subroutine MergeSort
+      end program TestMergeSort

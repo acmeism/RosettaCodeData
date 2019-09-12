@@ -23,17 +23,17 @@ sub play (Strategy $strategy, Int :$doors = 3) returns Prize {
     return $strategy === Stay ?? $initial_pick !! @doors[0];
 }
 
-constant TRIALS = 1000;
+constant TRIALS = 10_000;
 
 for 3, 10 -> $doors {
-    my %wins;
+    my atomicint @wins[2];
     say "With $doors doors: ";
     for Stay, 'Staying', Switch, 'Switching' -> $s, $name {
-        for ^TRIALS {
-            ++%wins{$s} if play($s, doors => $doors) == Car;
+        (^TRIALS).race.map: {
+            @wins[$s]⚛++ if play($s, doors => $doors) == Car;
         }
         say "  $name wins ",
-            round(100*%wins{$s} / TRIALS),
+            round(100*@wins[$s] / TRIALS),
             '% of the time.'
     }
 }

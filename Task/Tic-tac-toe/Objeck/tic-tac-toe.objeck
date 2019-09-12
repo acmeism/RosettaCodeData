@@ -1,0 +1,372 @@
+class TicTacToe {
+  @board : Char[,];
+  @cpu_opening : Bool;
+
+  enum Status {
+    INVALID_MOVE,
+    PLAYING,
+    QUIT,
+    TIE,
+    CPU_WIN,
+    PLAYER_WIN
+  }
+
+  consts Weights {
+    MIN := -1000,
+    MAX := 1000
+  }
+
+  function : Main(args : String[]) ~ Nil {
+    cpu_score := 0;
+    player_score := 0;
+
+    for(i :=0; i < 5; i += 1;) {
+      game := TicTacToe->New();
+      result := game->Play();
+
+      if(result = Status->PLAYER_WIN) {
+        player_score += 1;
+        "\n=> Player Wins!"->PrintLine();
+      }
+      else if(result = Status->CPU_WIN) {
+        cpu_score += 1;
+        "\n=> CPU Wins!"->PrintLine();
+      }
+      else if(result = Status->TIE) {
+        "\n=> Tie."->PrintLine();
+      }
+      else {
+        break;
+      };
+    };
+
+    "\nHuman={$player_score}, CPU={$cpu_score}"->PrintLine();
+  }
+
+  New() {
+    @board := Char->New[3, 3];
+    for(index := 0; index < 9; index += 1;) {
+      j := index / 3;
+      i := index % 3;
+      @board[i, j] := '1' + index;
+    };
+
+    @cpu_opening := true;
+  }
+
+  method : Play() ~ Status {
+    players_turn := Int->Random(1) = 1 ? true : false;
+
+    if(players_turn) {
+      @cpu_opening := false;
+      "\n*** NEW (Player) ***\n"->PrintLine();
+      Draw();
+    }
+    else {
+      "\n*** NEW (CPU) ***\n"->PrintLine();
+    };
+
+    playing := true;
+    do {
+      status : Status;
+
+      if(players_turn) {
+        status := PlayerMove();
+        players_turn := false;
+      }
+      else {
+        status := CpuMove();
+        players_turn := true;
+      };
+
+      if(players_turn) {
+        Draw();
+      };
+
+      select(status) {
+        label Status->INVALID_MOVE: {
+          "\n=> Invalid Move"->PrintLine();
+        }
+
+        label Status->PLAYER_WIN: {
+          return Status->PLAYER_WIN;
+        }
+
+        label Status->CPU_WIN: {
+          return Status->CPU_WIN;
+        }
+
+        label Status->TIE: {
+          return Status->TIE;
+        }
+
+        label Status->QUIT: {
+          playing := false;
+        }
+      };
+    }
+    while(playing);
+
+    return Status->QUIT;
+  }
+
+  method : PlayerMove() ~ Status {
+    move := System.IO.Console->ReadString();
+    if(move->Size() = 0) {
+      return Status->INVALID_MOVE;
+    };
+
+    option := move->Get(0);
+    if(option = 'q') {
+      return Status->QUIT;
+    };
+
+    if(LegalMove(option, 'X')) {
+      if(IsWinner(@board, 'X')) {
+        return Status->PLAYER_WIN;
+      }
+      else if(IsTied()) {
+        return Status->TIE;
+      }
+      else {
+        return Status->PLAYING;
+      };
+    }
+    else {
+      return Status->INVALID_MOVE;
+    };
+  }
+
+  method : CpuMove() ~ Status {
+    if(@cpu_opening) {
+      select(Int->Random(2)) {
+        label 0: {
+          @board[0, 0] := 'O';
+        }
+
+        label 1: {
+          @board[1, 1] := 'O';
+        }
+
+        label 2: {
+          @board[2, 2] := 'O';
+        }
+      };
+      @cpu_opening := false;
+    }
+    else {
+      BestCpuMove(CopyBoard());
+    };
+
+    if(IsWinner(@board, 'O')) {
+      return Status->CPU_WIN;
+    }
+    else if(IsTied()) {
+      return Status->TIE;
+    }
+    else {
+      return Status->PLAYING;
+    };
+  }
+
+  method : Minimax(board : Char[,], depth : Int, is_max : Bool, alpha : Int, beta : Int) ~ Int {
+      score := EvaluateMove(board);
+      if(score = 10 | score = -10) {
+          return score;
+      };
+
+      if(IsTied()) {
+        return 0;
+      };
+
+    if(is_max) {
+          best := Weights->MIN;
+          for(i := 0; i < 3; i += 1;) {
+        for(j := 0; j < 3; j += 1;) {
+          if(board[i,j] <> 'X' & board[i,j] <>'O') {
+            test := board[i,j];
+            board[i,j] := 'O';
+            best := Int->Max(best, Minimax(board, depth + 1, false, alpha, beta));
+            alpha := Int->Max(alpha, best);
+            board[i,j] := test;
+
+            if(beta <= alpha) {
+              return best;
+            };
+          };
+        };
+      };
+
+      return best;
+    }
+    else {
+      best := Weights->MAX;
+          for(i := 0; i < 3; i += 1;) {
+        for(j := 0; j < 3; j += 1;) {
+          if(board[i,j] <> 'X' & board[i,j] <>'O') {
+            test := board[i,j];
+            board[i,j] := 'X';
+            best := Int->Min(best, Minimax(board, depth + 1, true, alpha, beta));
+            beta := Int->Min(beta, best);
+            board[i,j] := test;
+
+            if(beta <= alpha) {
+              return best;
+            };
+          };
+        };
+      };
+
+      return best;
+    };
+    }
+
+    method : BestCpuMove(board : Char[,]) ~ Nil {
+      best := Weights->MIN; # empty
+      best_i := -1;
+      best_j := -1;
+
+      for(i := 0; i < 3; i += 1;) {
+      for(j := 0; j < 3; j += 1;) {
+        if(board[i,j] <> 'X' & board[i,j] <> 'O') {
+          test := board[i,j];
+          board[i,j] := 'O';
+          move := Int->Max(best, Minimax(board, 0, false, Weights->MIN, Weights->MAX));
+          board[i,j] := test;
+
+          if(move > best) {
+            best_i := i;
+              best_j := j;
+            best := move;
+          };
+                };
+      };
+    };
+
+    @board[best_i, best_j] := 'O';
+    }
+
+    method : EvaluateMove(board : Char[,]) ~ Int {
+      if(IsWinner(board, 'O')) {
+        return 10;
+      }
+      else if(IsWinner(board, 'X')) {
+        return -10;
+      }
+      else {
+        return 0;
+      };
+    }
+
+    method : CopyBoard() ~ Char[,] {
+      board := Char->New[3, 3];
+
+      for(i := 0; i < 3; i += 1;) {
+      for(j := 0; j < 3; j += 1;) {
+        board[i,j] := @board[i,j];
+      };
+    };
+
+    return board;
+    }
+
+  method : LegalMove(move : Char, player: Char) ~ Bool {
+    if(move >= '1' & move <= '9') {
+      index := (move - '1')->As(Int);
+      j := index / 3; i := index % 3;
+
+      if(@board[i, j] = 'X' | @board[i, j] = 'O') {
+        return false;
+      };
+
+      @board[i, j] := player;
+      return true;
+    }
+    else {
+      return false;
+    };
+  }
+
+  method : IsWinner(board : Char[,], player : Char) ~ Bool {
+    # --- diagonal ---
+    check := 0;
+    for(i := 0; i < 3; i += 1;) {
+      if(board[i, i] = player) {
+        check += 1;
+      };
+    };
+
+    if(check = 3) {
+      return true;
+    };
+
+    check := 0;
+    j := 2;
+    for(i := 0; i < 3; i += 1;) {
+      if(board[i, j] = player) {
+        check += 1;
+      };
+      j -= 1;
+    };
+
+    if(check = 3) {
+      return true;
+    };
+
+    # --- vertical ---
+    for(i := 0; i < 3; i += 1;) {
+      check := 0;
+      for(j := 0; j < 3; j += 1;) {
+        if(board[i, j] = player) {
+          check += 1;
+        };
+      };
+
+      if(check = 3) {
+        return true;
+      };
+    };
+
+    # --- horizontal ---
+    for(j := 0; j < 3; j += 1;) {
+      check := 0;
+      for(i := 0; i < 3; i += 1;) {
+        if(board[i, j] = player) {
+          check += 1;
+        };
+      };
+
+      if(check = 3) {
+        return true;
+      };
+    };
+
+    return false;
+  }
+
+  method : IsTied() ~ Bool {
+    for(i := 0; i < 3; i += 1;) {
+      for(j := 0; j < 3; j += 1;) {
+        if(@board[i, j] <> 'X' & @board[i, j] <> 'O') {
+          return false;
+        };
+      };
+    };
+
+    return true;
+  }
+
+  method : Draw() ~ Nil {
+    a1 := @board[0, 0]; a2 := @board[1, 0]; a3 := @board[2, 0];
+    b1 := @board[0, 1]; b2 := @board[1, 1]; b3 := @board[2, 1];
+    c1 := @board[0, 2]; c2 := @board[1, 2]; c3 := @board[2, 2];
+
+    "==========="->PrintLine();
+    " {$a1} | {$a2} | {$a3} "->PrintLine();
+    "---|---|---"->PrintLine();
+    " {$b1} | {$b2} | {$b3} "->PrintLine();
+    "---|---|---"->PrintLine();
+    " {$c1} | {$c2} | {$c3} "->PrintLine();
+    "===========\n"->PrintLine();
+  }
+}

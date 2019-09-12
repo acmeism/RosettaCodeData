@@ -19,7 +19,7 @@ my @solutions;
 my %max_items;
 
 for $panacea, $ichor, $gold -> $item {
-    %max_items{$item.name} = floor [min]
+    %max_items{$item.name} = floor min
                             $maximum.volume / $item.volume,
 			    $maximum.weight / $item.weight;
 }

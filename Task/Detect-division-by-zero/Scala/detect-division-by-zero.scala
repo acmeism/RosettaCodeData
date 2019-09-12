@@ -14,4 +14,10 @@ object DivideByZero extends Application {
 
   println("divided by zero = " + check(1, 0))
 
+  def check1(x: Int, y: Int): Boolean = {
+    import scala.util.Try
+    Try(y/x).isFailure
+  }
+  println("divided by zero = " + check1(1, 0))
+
 }

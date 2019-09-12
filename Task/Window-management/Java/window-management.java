@@ -16,16 +16,10 @@ import javax.swing.border.EmptyBorder;
 public class WindowController extends JFrame {
    // Create UI on correct thread
    public static void main( final String[] args ) {
-      EventQueue.invokeLater (
-         new Runnable() {
-            public void run() {
-               new WindowController();
-            }
-         }
-      );
+      EventQueue.invokeLater( () -> new WindowController() );
    }
 
-   private JComboBox list;
+   private JComboBox<ControlledWindow> list;
 
    // Button class to call the right method
    private class ControlButton extends JButton {
@@ -58,7 +52,7 @@ public class WindowController extends JFrame {
       setLayout( new BorderLayout( 3, 3 ) );
       getRootPane().setBorder( new EmptyBorder( 3, 3, 3, 3 ) );
       add( new JLabel( "Add windows and control them." ), BorderLayout.NORTH );
-      main.add( list = new JComboBox() );
+      main.add( list = new JComboBox<>() );
       add( main, BorderLayout.CENTER );
       controls.setLayout( new GridLayout( 0, 1, 3, 3 ) );
       controls.add( new ControlButton( "Add"      ) );
@@ -103,42 +97,95 @@ public class WindowController extends JFrame {
    }
 
    public void doHide() {
-      ( ( JFrame ) list.getSelectedItem() ).setVisible( false );
+      final JFrame window = getWindow();
+      if ( null == window ) {
+         return;
+      }
+      window.setVisible( false );
    }
 
    public void doShow() {
-      ( ( JFrame ) list.getSelectedItem() ).setVisible( true );
+      final JFrame window = getWindow();
+      if ( null == window ) {
+         return;
+      }
+      window.setVisible( true );
    }
 
    public void doClose() {
-      ( ( JFrame ) list.getSelectedItem() ).dispose();
+      final JFrame window = getWindow();
+      if ( null == window ) {
+         return;
+      }
+      window.dispose();
    }
 
    public void doMinimise() {
-      ( ( JFrame ) list.getSelectedItem() ).setState( Frame.ICONIFIED );
+      final JFrame window = getWindow();
+      if ( null == window ) {
+         return;
+      }
+      window.setState( Frame.ICONIFIED );
    }
 
    public void doMaximise() {
-      ( ( JFrame ) list.getSelectedItem() ).setExtendedState( Frame.MAXIMIZED_BOTH );
+      final JFrame window = getWindow();
+      if ( null == window ) {
+         return;
+      }
+      window.setExtendedState( Frame.MAXIMIZED_BOTH );
    }
 
    public void doMove() {
-      ( ( JFrame ) list.getSelectedItem() ).setLocation
-      (
-         Integer.parseInt( JOptionPane.showInputDialog( "Horizontal position?" ) ),
-         Integer.parseInt( JOptionPane.showInputDialog( "Vertical position?" ) )
-      );
+      final JFrame window = getWindow();
+      if ( null == window ) {
+         return;
+      }
+      final int hPos = getInt( "Horizontal position?" );
+      if ( -1 == hPos ) {
+         return;
+      }
+      final int vPos = getInt( "Vertical position?" );
+      if ( -1 == vPos ) {
+         return;
+      }
+      window.setLocation ( hPos, vPos );
    }
 
    public void doResize() {
-      final JFrame window = ( JFrame ) list.getSelectedItem();
+      final JFrame window = getWindow();
+      if ( null == window ) {
+         return;
+      }
+      final int width = getInt( "Width?" );
+      if ( -1 == width ) {
+         return;
+      }
+      final int height = getInt( "Height?" );
+      if ( -1 == height ) {
+         return;
+      }
+      window.setBounds ( window.getX(), window.getY(), width, height );
+   }
 
-      window.setBounds
-      (
-         window.getX(),
-         window.getY(),
-         Integer.parseInt( JOptionPane.showInputDialog( "Width?" ) ),
-         Integer.parseInt( JOptionPane.showInputDialog( "Height?" ) )
-      );
+   private JFrame getWindow() {
+      final JFrame window = ( JFrame ) list.getSelectedItem();
+      if ( null == window ) {
+         JOptionPane.showMessageDialog( this, "Add a window first" );
+      }
+      return window;
+   }
+
+   private int getInt(final String prompt) {
+      final String s = JOptionPane.showInputDialog( prompt );
+      if ( null == s ) {
+         return -1;
+      }
+      try {
+         return Integer.parseInt( s );
+      } catch ( final NumberFormatException x ) {
+         JOptionPane.showMessageDialog( this, "Not a number" );
+         return -1;
+      }
    }
 }

@@ -1,3 +1,5 @@
+#lang racket
+
 (for ([n (in-range 1 101)])
   (displayln
    (match (gcd n 15)

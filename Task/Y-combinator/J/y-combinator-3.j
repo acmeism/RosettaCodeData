@@ -1,12 +1,7 @@
-   fac f. Y NB. Showing the stateless recursive factorial function...
-'1:`(] * [ ([ 128!:2 ,&<) ] - 1:)@.(0 < ])&>/'&([ 128!:2 ,&<)
+   arb=. ':'<@;(1;~":0)<@;<@((":0)&;)                     NB. AR of an explicit adverb from its body
 
-   fac f.   NB. Showing the stateless factorial step...
-1:`(] * [ ([ 128!:2 ,&<) ] - 1:)@.(0 < ])
+   ara=. 1 :'arb u'                                       NB. The verb arb as an adverb
+   srt=. 1 :'arb ''u u`:6('' , (5!:5<''u'') , '')`:6 y''' NB. AR of the self-replication and transformation adverb
+   gab=. 1 :'u u`:6'                                      NB. The AR of the adverb and the adverb itself as a train
 
-
-   Fib f. Y NB. Showing the stateless recursive Fibonacci function...
-'(([ ([ 128!:2 ,&<) ] - 2:) + [ ([ 128!:2 ,&<) ] - 1:)^:(1 < ])&>/'&([ 128!:2 ,&<)
-
-   Fib f.   NB. Showing the stateless Fibonacci step...
-(([ ([ 128!:2 ,&<) ] - 2:) + [ ([ 128!:2 ,&<) ] - 1:)^:(1 < ])
+   Y=. ara srt gab                                        NB. Train of adverbs

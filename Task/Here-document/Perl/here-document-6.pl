@@ -1,5 +1,7 @@
-print(<<EOF
-Mary had
-  a little
-EOF
-   . "lamb\n");
+sub flibbertigibbet {
+    print <<~END;
+        Mary had
+          a little
+        lamb
+        END
+}

@@ -1,0 +1,12 @@
+(= divisor (fn (num)
+   (= dlist '())
+   (when (is 1 num) (= dlist '(1 0)))
+   (when (is 2 num) (= dlist '(2 1)))
+   (unless (or (is 1 num) (is 2 num))
+   (up i 1 (+ 1 (/ num 2))
+     (if (is 0 (mod num i))
+         (push i dlist)))
+   (= dlist (cons num dlist)))
+   dlist))
+
+(map [rev _] (map [divisor _] '(45 53 60 64)))

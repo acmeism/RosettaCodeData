@@ -1,13 +1,8 @@
-def pi
+pi_digits = Enumerator.new do |y|
   q, r, t, k, n, l = 1, 0, 1, 1, 3, 3
-  dot = nil
   loop do
     if 4*q+r-t < n*t
-      yield n
-      if dot.nil?
-        yield '.'
-        dot = '.'
-      end
+      y << n
       nr = 10*(r-n*t)
       n = ((10*(3*q+r)) / t) - 10*n
       q *= 10
@@ -25,4 +20,5 @@ def pi
   end
 end
 
-pi {|digit| print digit; $stdout.flush}
+print pi_digits.next, "."
+loop { print pi_digits.next }

@@ -1,0 +1,142 @@
+include builtins\cffi.e
+
+constant AF_UNSPEC = 0,
+--       AF_INET = 2,
+--       AF_INET6 = 23,
+--       SOCK_STREAM = 1,
+         SOCK_DGRAM = 2,
+--       IPPROTO_TCP = 6,
+         NI_MAXHOST = 1025,
+         NI_NUMERICHOST = iff(platform()=LINUX?1:2)
+
+constant tWAD = """
+typedef struct WSAData {
+  WORD           wVersion;
+  WORD           wHighVersion;
+  char           szDescription[257];
+  char           szSystemStatus[129];
+  unsigned short iMaxSockets;
+  unsigned short iMaxUdpDg;
+  char           *lpVendorInfo;
+} WSADATA, *LPWSADATA;
+""",
+tWAS = """
+int WSAStartup(
+  _In_   WORD wVersionRequested,
+  _Out_  LPWSADATA lpWSAData
+);
+""",
+tWAC = """
+int WSACleanup(void);
+""",
+tAI_W="""
+typedef struct addrinfo {
+  int             ai_flags;
+  int             ai_family;
+  int             ai_socktype;
+  int             ai_protocol;
+  size_t          ai_addrlen;
+  char            *ai_canonname;
+  struct sockaddr  *ai_addr;
+  struct addrinfo  *ai_next;
+} ADDRINFOA, *PADDRINFOA;
+""",
+tAI_L="""
+typedef struct addrinfo {
+    int              ai_flags;
+    int              ai_family;
+    int              ai_socktype;
+    int              ai_protocol;
+    int              ai_addrlen;
+    struct sockaddr *ai_addr;
+    char            *ai_canonname;
+    struct addrinfo *ai_next;
+};
+""",
+tGAI = """
+int getaddrinfo(
+  _In_opt_  PCSTR pNodeName,
+  _In_opt_  PCSTR pServiceName,
+  _In_opt_  const ADDRINFOA *pHints,
+  _Out_     PADDRINFOA *ppResult
+);
+""",
+--int getaddrinfo(const char *node, const char *service,
+--                     const struct addrinfo *hints,
+--                     struct addrinfo **res);
+tGNI = """
+int getnameinfo(
+  _In_   sockaddr *sa,
+  _In_   int salen,
+  _Out_  char *host,
+  _In_   DWORD hostlen,
+  _Out_  char *serv,
+  _In_   DWORD servlen,
+  _In_   int flags
+);
+""",
+--int getnameinfo(const struct sockaddr *addr, socklen_t addrlen,
+--                     char *host, socklen_t hostlen,
+--                     char *serv, socklen_t servlen, int flags);
+tFAI = """
+void freeaddrinfo(
+  _In_  struct addrinfo *ai
+);
+"""
+--void freeaddrinfo(struct addrinfo *res);
+
+integer xgetaddrinfo = NULL, xgetnameinfo, xfreeaddrinfo, idAI,
+        xwsastartup, xwsacleanup, error
+
+function get_name_info(string fqdn)
+    if xgetaddrinfo=NULL then
+        atom lib
+        if platform()=WINDOWS then
+            integer idWAD = define_struct(tWAD)
+            atom pWAD = allocate_struct(idWAD,cleanup:=true)
+            lib = open_dll("Ws2_32.dll")
+            xwsastartup = define_cffi_func(lib,tWAS)
+            xwsacleanup = define_cffi_func(lib,tWAC)
+            error = c_func(xwsastartup,{#00020002,pWAD})
+            if error then ?9/0 end if
+            idAI = define_struct(tAI_W)
+        elsif platform()=LINUX then
+            lib = open_dll("libc.so.6")
+            idAI = define_struct(tAI_L)
+        end if
+        xgetaddrinfo = define_cffi_func(lib,tGAI)
+        xgetnameinfo = define_cffi_func(lib,tGNI)
+        xfreeaddrinfo = define_cffi_proc(lib,tFAI)
+    end if
+    atom hints = allocate_struct(idAI,cleanup:=true),
+         res = allocate(machine_word(),cleanup:=true),
+         host = allocate(NI_MAXHOST,cleanup:=true)
+    set_struct_field(idAI,hints,"ai_family",AF_UNSPEC)
+--  set_struct_field(idAI,hints,"ai_socktype",SOCK_STREAM)
+    set_struct_field(idAI,hints,"ai_socktype",SOCK_DGRAM)
+    error = c_func(xgetaddrinfo,{fqdn,NULL,hints,res})
+    if error then ?9/0 end if
+    res = peekNS(res,machine_word(),false)
+    atom ptr = res
+    sequence results = {}
+    while ptr!=NULL do
+        atom addr = get_struct_field(idAI,ptr,"ai_addr")
+        integer len = get_struct_field(idAI,ptr,"ai_addrlen")
+        error = c_func(xgetnameinfo,{addr, len, host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST})
+        if error then ?9/0 end if
+        results = append(results,peek_string(host))
+        ptr = get_struct_field(idAI,ptr,"ai_next")
+    end while
+    c_proc(xfreeaddrinfo,{res})
+    return results
+end function
+
+procedure WSACleanup()
+    if platform()=WINDOWS then
+        error = c_func(xwsacleanup,{})
+        if error then crash("WSACleanup failed: %d\n",{error}) end if
+    end if
+end procedure
+
+?get_name_info("www.kame.net")
+WSACleanup()

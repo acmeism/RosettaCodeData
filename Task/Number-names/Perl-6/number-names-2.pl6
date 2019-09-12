@@ -1,4 +1,4 @@
-use Lingua::EN::Numbers::Cardinal;
+use Lingua::EN::Numbers; # Version 2.4.0 or higher
 
 put join "\n", .&cardinal, .&cardinal(:improper) with -7/4;
 

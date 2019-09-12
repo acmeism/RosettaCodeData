@@ -20,8 +20,15 @@ Timothy Grove,E16398,29900,D190'''
 
 rows = db.split('\n')
 DBRecord = namedtuple('DBRecord', rows[0].replace(' ', '_'))
-records = [ DBRecord(*row.split(',')) for row in rows[1:] ]
-records.sort(key = lambda record: (record.Department, -float(record.Salary)))
-print '\n\n'.join('\n  '.join([dpt] + [str(g) for g in grp][:N])
-                  for dpt, grp in groupby(records,
-                                          lambda record: record.Department))
+
+records = [DBRecord(*row.split(',')) for row in rows[1:]]
+
+records.sort(key=lambda record: (record.Department, -float(record.Salary)))
+
+print('\n\n'.join(
+    '\n  '.join([dpt] + [str(g) for g in grp][:N])
+    for dpt, grp in groupby(
+        records,
+        lambda record: record.Department
+    )
+))

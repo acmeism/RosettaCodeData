@@ -3,26 +3,26 @@ import java.time.LocalTime
 import scala.math._
 
 object Clock extends App {
-  private val (width, heigth) = (80, 35)
+  private val (width, height) = (80, 35)
 
   def getGrid(localTime: LocalTime): Array[Array[Char]] = {
     val (minute, second) = (localTime.getMinute, localTime.getSecond())
-    val grid = Array.fill[Char](heigth, width)(' ')
+    val grid = Array.fill[Char](height, width)(' ')
 
     def toGridCoord(x: Double, y: Double): (Int, Int) =
-      (floor((y + 1.0) / 2.0 * heigth).toInt, floor((x + 1.0) / 2.0 * width).toInt)
+      (floor((y + 1.0) / 2.0 * height).toInt, floor((x + 1.0) / 2.0 * width).toInt)
 
     def makeText(grid: Array[Array[Char]], r: Double, theta: Double, str: String) {
       val (row, col) = toGridCoord(r * cos(theta), r * sin(theta))
       (0 until str.length).foreach(i =>
-        if (row >= 0 && row < heigth && col + i >= 0 && col + i < width) grid(row)(col + i) = str(i))
+        if (row >= 0 && row < height && col + i >= 0 && col + i < width) grid(row)(col + i) = str(i))
     }
 
     def makeCircle(grid: Array[Array[Char]], r: Double, c: Char) {
       var theta = 0.0
       while (theta < 2 * Pi) {
         val (row, col) = toGridCoord(r * cos(theta), r * sin(theta))
-        if (row >= 0 && row < heigth && col >= 0 && col < width) grid(row)(col) = c
+        if (row >= 0 && row < height && col >= 0 && col < width) grid(row)(col) = c
         theta = theta + 0.01
       }
     }
@@ -31,7 +31,7 @@ object Clock extends App {
       var r = 0.0
       while (r < maxR) {
         val (row, col) = toGridCoord(r * cos(theta), r * sin(theta))
-        if (row >= 0 && row < heigth && col >= 0 && col < width) grid(row)(col) = c
+        if (row >= 0 && row < height && col >= 0 && col < width) grid(row)(col) = c
         r = r + 0.01
       }
     }

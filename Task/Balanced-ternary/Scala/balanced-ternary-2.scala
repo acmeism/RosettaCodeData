@@ -1,15 +1,14 @@
-object TernarySpecification extends Properties("Ternary") {
+object Main {
 
-  property("sum") = forAll { (a: Int, b: Int) =>
-    val at: Ternary = a
-    val bt: Ternary = b
-    (at+bt).intValue == (at.intValue + bt.intValue)
-  }
-
-  property("multiply") = forAll { (a: Int, b: Int) =>
-    val at: Ternary = a
-    val bt: Ternary = b
-    (at*bt).intValue == (at.intValue * bt.intValue)
+  def main(args: Array[String]): Unit = {
+    val a: Ternary = "+-0++0+"
+    val b: Ternary = -436
+    val c: Ternary = "+-++-"
+    println(a.toString + " " + a.intValue)
+    println(b.toString + " " + b.intValue)
+    println(c.toString + " " + c.intValue)
+    val res = a * (b - c)
+    println(res.toString + " " + res.intValue)
   }
 
 }

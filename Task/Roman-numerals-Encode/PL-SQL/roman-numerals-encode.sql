@@ -5,13 +5,13 @@
  * Please see also the SQL solution for the same task.
  */
 
-DECLARE
-FUNCTION rencode(an IN NUMBER) RETURN VARCHAR2 IS
-   rs VARCHAR2(20);
+CREATE OR REPLACE
+FUNCTION rencode(an IN NUMBER)
+  RETURN VARCHAR2
+IS
 BEGIN
-SELECT to_char(to_char(to_date(an,'YYYY'), 'RRRR'), 'RN') INTO rs FROM dual;
-RETURN rs;
-END;
+  RETURN to_char(an, 'RN');
+END rencode;
 
 BEGIN
 

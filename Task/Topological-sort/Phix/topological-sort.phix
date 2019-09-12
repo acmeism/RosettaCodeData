@@ -1,0 +1,90 @@
+sequence names
+enum RANK, NAME, DEP    -- content of names
+-- rank is 1 for items to compile first, then 2, etc,
+--      or 0 if cyclic dependencies prevent compilation.
+-- name is handy, and makes the result order alphabetic!
+-- dep is a list of dependencies (indexes to other names)
+
+function add_dependency(string name)
+    integer k = find(name,vslice(names,NAME))
+    if k=0 then
+        names = append(names,{0,name,{}})
+        k = length(names)
+    end if
+    return k
+end function
+
+procedure topsort(string input)
+    names = {}
+    sequence lines = split(input,'\n')
+    for i=1 to length(lines) do
+        sequence line = split(lines[i],no_empty:=true),
+                 dependencies = {}
+        integer k = add_dependency(line[1])
+        for j=2 to length(line) do
+            integer l = add_dependency(line[j])
+            if l!=k then -- ignore self-references
+                dependencies &= l
+            end if
+        end for
+        names[k][DEP] = dependencies
+    end for
+
+    -- Now populate names[RANK] iteratively:
+    bool more = true
+    integer rank = 0
+    while more do
+        more = false
+        rank += 1
+        for i=1 to length(names) do
+            if names[i][RANK]=0 then
+                bool ok = true
+                for j=1 to length(names[i][DEP]) do
+                    integer ji = names[i][DEP][j],
+                            nr = names[ji][RANK]
+                    if nr=0 or nr=rank then
+                        -- not yet compiled, or same pass
+                        ok = false
+                        exit
+                    end if
+                end for
+                if ok then
+                    names[i][RANK] = rank
+                    more = true
+                end if
+            end if
+        end for
+    end while
+
+    names = sort(names) -- (ie by [RANK=1] then [NAME=2])
+    integer prank = names[1][RANK]
+    if prank=0 then puts(1,"** CYCLIC **:") end if
+    for i=1 to length(names) do
+        rank = names[i][RANK]
+        if i>1 then
+            puts(1,iff(rank=prank?" ":"\n"))
+        end if
+        puts(1,names[i][NAME])
+        prank = rank
+    end for
+    puts(1,"\n")
+end procedure
+
+constant input = """
+des_system_lib  std synopsys std_cell_lib des_system_lib dw02 dw01 ramlib ieee
+dw01            ieee dw01 dware gtech
+dw02            ieee dw02 dware
+dw03            std synopsys dware dw03 dw02 dw01 ieee gtech
+dw04            dw04 ieee dw01 dware gtech
+dw05            dw05 ieee dware
+dw06            dw06 ieee dware
+dw07            ieee dware
+dware           ieee dware
+gtech           ieee gtech
+ramlib          std ieee
+std_cell_lib    ieee std_cell_lib
+synopsys"""
+
+topsort(input)
+puts(1,"\nbad input:\n")
+topsort(input&"\ndw01 dw04")

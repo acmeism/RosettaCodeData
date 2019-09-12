@@ -6,7 +6,7 @@ getWordList :: IO String
 getWordList  =  do
     response  <-  simpleHTTP.getRequest$ url
     getResponseBody response
-        where url = "http://www.puzzlers.org/pub/wordlists/unixdict.txt"
+        where url = "http://wiki.puzzlers.org/pub/wordlists/unixdict.txt"
 
 main = do
     words <- getWordList

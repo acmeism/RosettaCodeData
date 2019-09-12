@@ -15,9 +15,9 @@ r=1;       c=(n+1) % 2                           /*define the initial  row  and 
                                                  /* [↓]  display square with aligned #'s*/
           do   r=1  for N;  _=                   /*display  one matrix row  at a time.  */
             do c=1  for N;  _=_ right(@.r.c, w)  /*construct a row of the magic square. */
-            end  /*c*/
+            end   /*c*/
           say substr(_, 2)                       /*display a row of the magic square.   */
-          end   /*c*/
+          end     /*r*/
 say                                              /* [↓]  If an odd square, show magic #.*/
 if N//2  then say  'The magic number  (or magic constant is): '         N * (NN+1) % 2
                                                  /*stick a fork in it,  we're all done. */

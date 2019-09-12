@@ -1,21 +1,18 @@
-#include <stdio.h>
+#include <cstdio>
 #include <vector>
 #include <string>
 
 using namespace std;
-vector<string> options{ "iced", "jam", "plain" };
 
-void print_vector(vector<int> v, int n, vector<string> s){
-        for (int i = 0; i < n; ++i)
+void print_vector(const vector<int> &v, size_t n, const vector<string> &s){
+        for (size_t i = 0; i < n; ++i)
                 printf("%s\t", s[v[i]].c_str());
         printf("\n");
 }
 
-int combination_with_repetiton(int sabores, int bolas, const vector<string>& v_sabores){
+void combination_with_repetiton(int sabores, int bolas, const vector<string>& v_sabores){
         sabores--;
-        vector<int> v;
-        for (int i = 0; i <= bolas; ++i)
-                v.push_back(0);
+        vector<int> v(bolas+1, 0);
         while (true){
                 for (int i = 0; i < bolas; ++i){                //vai um
                         if (v[i] > sabores){
@@ -32,11 +29,10 @@ int combination_with_repetiton(int sabores, int bolas, const vector<string>& v_s
                 print_vector(v, bolas, v_sabores);
                 v[0] += 1;
         }
-
-        return 1;
 }
 
 int main(){
+        vector<string> options{ "iced", "jam", "plain" };
         combination_with_repetiton(3, 2, options);
         return 0;
 }

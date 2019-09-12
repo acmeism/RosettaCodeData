@@ -11,26 +11,29 @@
                                 say ' LCM:'     fold(@list,  "LCM" )
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-fold: procedure;  parse arg z;  arg ,f;         z=space(z);         BIFs='MIN MAX LCM GCD'
-      za=translate(z, f, ' ');                  zf=f"("translate(z, ',' , " ")')'
-      if f=='+' | f=="*"        then interpret  "return"  za
-      if f=='||'                then return  space(z, 0)
-      if f=='AVG'               then interpret  "return"  fold(z, '+')    "/"    words(z)
+fold: procedure;  parse arg z;  arg ,f;         z = space(z);      BIFs= 'MIN MAX LCM GCD'
+      za= translate(z, f, ' ');                 zf= f"("translate(z, ',' , " ")')'
+      if f== '+' | f=="*"       then interpret  "return"  za
+      if f== '||'               then return  space(z, 0)
+      if f== 'AVG'              then interpret  "return"  fold(z, '+')    "/"    words(z)
       if wordpos(f, BIFs)\==0   then interpret  "return"  zf
       if f=='LIST' | f=="SHOW"  then return z
       return 'illegal function:'     arg(2)
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-GCD:  procedure;  $=;                           do j=1  for arg();  $=$ arg(j);  end /*j*/
-      parse var $ x z .;   if x=0  then x=z            /* [↑] build a list of arguments.*/
-      x=abs(x)
-                       do k=2  to words($);     y=abs(word($, k));   if y=0  then iterate
-                         do until _=0;    _=x//y;   x=y;   y=_;   end  /*until*/
-                       end   /*k*/
+GCD:  procedure;  $=;                          do j=1  for arg();    $= $ arg(j)
+                                               end   /*j*/
+      parse var $ x z .;    if x=0  then x= z                  /* [↑] build an arg list.*/
+      x= abs(x)
+                         do k=2  to words($);  y= abs( word($, k));   if y=0  then iterate
+                           do until _=0;       _= x // y;      x= y;     y= _
+                           end   /*until*/
+                         end   /*k*/
       return x
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-LCM:  procedure;  $=;                           do j=1  for arg();  $=$ arg(j);  end /*j*/
-      x=abs(word($, 1))                                /* [↑] build a list of arguments.*/
-                        do k=2  to words($);    !=abs(word($, k));  if !=0  then return 0
-                        x=x*! / GCD(x, !)              /*have  GCD do the heavy lifting.*/
-                        end   /*k*/
+LCM:  procedure;  $=;    do j=1  for arg();     $= $ arg(j)
+                         end   /*j*/
+      x= abs(word($, 1))                                       /* [↑] build an arg list.*/
+                         do k=2  to words($);   != abs(word($, k));  if !=0  then return 0
+                         x= x*!  /  GCD(x, !)                  /*GCD does the heavy work*/
+                         end   /*k*/
       return x

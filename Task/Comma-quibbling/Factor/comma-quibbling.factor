@@ -1,20 +1,14 @@
-USING: arrays combinators io kernel qw sequences ;
-IN: rosetta-code.comma-quibble
+USING: inverse qw sequences ;
 
-: wrap ( str -- {str} ) "{" prepend "}" append ;
-: quibble-pair ( seq -- str ) " and " join wrap ;
-: quibble-list ( seq -- str )
-    [ but-last ] [ last ] bi [ ", " join ] dip 2array
-    quibble-pair ;
-: comma-quibble ( seq -- ) dup length
-{
-  { 0 [ drop "{}" ] }
-  { 1 [ first wrap ] }
-  { 2 [ quibble-pair ] }
-  [ drop quibble-list ]
-} case print ;
+: (quibble) ( seq -- seq' )
+    {
+        { [ { } ] [ "" ] }
+        { [ 1array ] [ ] }
+        { [ 2array ] [ " and " glue ] }
+        [ unclip swap (quibble) ", " glue ]
+    } switch ;
 
-{ } comma-quibble
-qw{ ABC } comma-quibble
-qw{ ABC DEF } comma-quibble
-qw{ ABC DEF G H } comma-quibble
+: quibble ( seq -- str ) (quibble) "{%s}" sprintf ;
+
+{ } qw{ ABC } qw{ ABC DEF } qw{ ABC DEF G H }
+[ quibble print ] 4 napply

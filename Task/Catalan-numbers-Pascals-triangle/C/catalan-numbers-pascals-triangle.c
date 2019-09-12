@@ -24,7 +24,7 @@ int main()
     //the first is not calculated for the formula
     printf("1 ");
 
-    //iterating fro 2 to 15
+    //iterating from 2 to 15
     for (n=2; n<=N; ++n) {
         //initializaing for products
         num = den = 1;

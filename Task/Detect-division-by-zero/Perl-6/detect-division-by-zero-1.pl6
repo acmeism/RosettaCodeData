@@ -1,14 +1,12 @@
-sub div($a, $b){
+sub div($a, $b) {
     my $r;
     try {
         $r = $a / $b;
         CATCH {
-           say "tried to divide by zero !" if $! ~~ "Divide by zero";
+            default { note "Unexpected exception, $_" }
         }
     }
-    return $r // fail;
+    return $r // Nil;
 }
-
-say div(10,2); # 5
-say div(1,0); # Inf, 1/0 constants are substituted for Infinity
-say div(1, sin(0)); # undef, and prints "tried to divide by zero"
+say div(10,2);
+say div(1, sin(0));

@@ -3,7 +3,7 @@ require 'prime'
 
 class Integer
   def semi_prime?
-    prime_division.map( &:last ).sum == 2
+    prime_division.sum(&:last) == 2
   end
 end
 

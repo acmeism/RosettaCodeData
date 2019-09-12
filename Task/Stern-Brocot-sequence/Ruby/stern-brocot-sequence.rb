@@ -13,7 +13,7 @@ puts "First 15: #{sb.first(15)}"
   puts "#{n} first appears at #{sb.find_index(n)+1}."
 end
 
-if sb.take(1000).each_cons(2).map { |a,b| a.gcd(b) }.all? { |n| n==1 }
+if sb.take(1000).each_cons(2).all? { |a,b| a.gcd(b) == 1 }
   puts "All GCD's are 1"
 else
   puts "Whoops, not all GCD's are 1!"

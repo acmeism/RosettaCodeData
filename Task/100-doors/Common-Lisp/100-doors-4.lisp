@@ -1,6 +1,6 @@
 (defun doors (n)
   (loop for a from 1 to n collect
-        (if (zerop (mod (sqrt a) 1)) t nil)))
+        (zerop (mod (sqrt a) 1))))
 
 > (doors 100)
 (T NIL NIL T NIL NIL NIL NIL T NIL NIL NIL NIL NIL NIL T NIL NIL NIL NIL NIL

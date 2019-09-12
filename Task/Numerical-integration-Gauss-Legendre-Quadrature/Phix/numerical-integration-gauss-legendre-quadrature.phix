@@ -1,0 +1,78 @@
+integer order = 0
+
+sequence legendreRoots = {},
+         legendreWeights = {}
+
+function legendre(integer term, atom z)
+    if term=0 then
+        return 1
+    elsif term=1 then
+        return z
+    else
+        return ((2*term-1)*z*legendre(term-1,z)-(term-1)*legendre(term-2,z))/term
+    end if
+end function
+
+function legendreDerivative(integer term, atom z)
+    if term=0
+    or term=1 then
+        return term
+    end if
+    return (term*(z*legendre(term,z)-legendre(term-1,z)))/(z*z-1)
+end function
+
+procedure getLegendreRoots()
+    legendreRoots = {}
+    for index=1 to order do
+        atom y = cos(PI*(index-0.25)/(order+0.5))
+        while 1 do
+            atom y1 = y
+            y -= legendre(order,y)/legendreDerivative(order,y)
+            if abs(y-y1)<2e-16 then exit end if
+        end while
+        legendreRoots &= y
+    end for
+end procedure
+
+procedure getLegendreWeights()
+    legendreWeights = {}
+    for index=1 to order do
+        atom lri = legendreRoots[index],
+             diff = legendreDerivative(order,lri),
+             weight = 2 / ((1-power(lri,2))*power(diff,2))
+        legendreWeights &= weight
+    end for
+end procedure
+
+function gaussLegendreQuadrature(integer f, lowerLimit, upperLimit, n)
+    order = n
+
+    getLegendreRoots()
+    getLegendreWeights()
+
+    atom c1 = (upperLimit - lowerLimit) / 2
+    atom c2 = (upperLimit + lowerLimit) / 2
+    atom s = 0
+
+    for i = 1 to order do
+        s += legendreWeights[i] * call_func(f,{c1 * legendreRoots[i] + c2})
+    end for
+
+    return c1 * s
+end function
+
+include pmaths.e    -- exp()
+constant r_exp = routine_id("exp")
+
+string fmt = iff(machine_bits()=32?"%.13f":"%.14f")
+string res
+for i=5 to 11 by 6 do
+    res = sprintf(fmt,{gaussLegendreQuadrature(r_exp, -3, 3, i)})
+    if i=5 then
+        puts(1,"roots:") ?legendreRoots
+        puts(1,"weights:") ?legendreWeights
+    end if
+    printf(1,"Gauss-Legendre %2d-point quadrature for exp over [-3..3] = %s\n",{order,res})
+end for
+res = sprintf(fmt,{exp(3)-exp(-3)})
+printf(1,"                                     compared to actual = %s\n",{res})

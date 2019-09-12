@@ -1,15 +1,12 @@
 import Control.Arrow ((&&&))
+import Data.Bool (bool)
 
 integerFactors :: Int -> [Int]
-integerFactors n
-  | n < 1 = []
-  | otherwise =
-    lows ++
-    (quot n <$>
-     (if intSquared == n -- A perfect square,
-        then tail        -- and cofactor of square root would be redundant.
-        else id)
-       (reverse lows))
+integerFactors n =
+  bool -- For perfect squares, `tail` excludes cofactor of square root
+    (lows ++ (quot n <$> bool id tail (n == intSquared) (reverse lows)))
+    []
+    (n < 1)
   where
     (intSquared, lows) =
       (^ 2) &&& (filter ((0 ==) . rem n) . enumFromTo 1) $

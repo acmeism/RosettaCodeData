@@ -1,20 +1,20 @@
 from itertools import groupby
 from collections import namedtuple
-from pprint import pprint as pp
 
-def anyvalidcomb(items,  val=0, wt=0):
+def anyvalidcomb(items, maxwt, val=0, wt=0):
     ' All combinations below the maxwt '
     if not items:
         yield [], val, wt
     else:
         this, *items = items            # car, cdr
-        for n in range(this.number+1):
-            v = val + n*this.value
-            w = wt  + n*this.weight
+        for n in range(this.number + 1):
+            w = wt  + n * this.weight
             if w > maxwt:
                 break
-            for c in anyvalidcomb(items, v, w):
-                yield [this]*n + c[COMB], c[VAL], c[WT]
+            v = val + n * this.value
+            this_comb = [this] * n
+            for comb, value, weight in anyvalidcomb(items, maxwt, v, w):
+                yield this_comb + comb, value, weight
 
 maxwt = 400
 COMB, VAL, WT = range(3)
@@ -45,8 +45,7 @@ items = [ Item(*x) for x in
             ("book", 30, 10, 2),
            ) ]
 
-bagged = max( anyvalidcomb(items), key=lambda c: (c[VAL], -c[WT])) # max val or min wt if values equal
-print("Bagged the following %i items\n  " % len(bagged[COMB]) +
-      '\n  '.join('%i off: %s' % (len(list(grp)), item.name)
-                  for item,grp in groupby(sorted(bagged[COMB]))))
+bagged = max( anyvalidcomb(items, maxwt), key=lambda c: (c[VAL], -c[WT])) # max val or min wt if values equal
+print("Bagged the following %i items" % len(bagged[COMB]))
+print('\n\t'.join('%i off: %s' % (len(list(grp)), item.name) for item, grp in groupby(sorted(bagged[COMB]))))
 print("for a total value of %i and a total weight of %i" % bagged[1:])

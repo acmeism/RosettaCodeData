@@ -1,4 +1,4 @@
-♀/*REXX program can re-define most keys (including  F  keys)  on a PC keyboard.*/
+/*REXX program can re-define most keys (including  F  keys)  on a PC keyboard.*/
 trace off
 parse arg !
 if !all(arg())  then exit

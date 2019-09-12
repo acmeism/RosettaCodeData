@@ -1,0 +1,95 @@
+include mpfr.e
+mpfr_set_default_prec(-87) -- 87 decimal places.
+
+sequence c = mpfr_inits(40)
+
+function gamma(atom z)
+    mpfr accm = c[1]
+    if mpfr_cmp_si(accm,0)=0 then
+        -- c[1] := sqrt(2*PI)
+        mpfr_const_pi(accm)
+        mpfr_mul_si(accm,accm,2)
+        mpfr_sqrt(accm,accm)
+        -- k1_factrl = (k - 1)!*(-1)^k with 0!==1
+        mpfr k1_factrl = mpfr_init(1),
+             tmk = mpfr_init(),
+             p = mpfr_init()
+        for k=2 to length(c) do
+            -- c[k] = exp(13-k)*power(13-k,k-1.5)/k1_factrl
+            mpfr_set_si(tmk,length(c)+1-k)
+            mpfr_exp(c[k],tmk)
+            mpfr_set_d(p,k-1.5)
+            mpfr_pow(p,tmk,p)
+            mpfr_div(p,p,k1_factrl)
+            mpfr_mul(c[k],c[k],p)
+            -- k1_factrl *= -(k-1)
+            mpfr_mul_si(k1_factrl,k1_factrl,-(k-1))
+        end for
+    end if
+    accm = mpfr_init_set(accm)
+    for k=2 to length(c) do
+        -- accm += c[k]/(z+k-1)
+        mpfr ck = mpfr_init_set(c[k]),
+             zk = mpfr_init(z+k-1)
+        mpfr_div(ck,ck,zk)
+        mpfr_add(accm,accm,ck)
+    end for
+    atom zc = z+length(c)
+    -- accm *= exp(-zc)*power(zc,z+0.5) -- Gamma(z+1)
+    mpfr ez = mpfr_init(-zc),
+         p = mpfr_init(zc),
+         zh = mpfr_init(z+0.5)
+    mpfr_exp(ez,ez)
+    mpfr_pow(p,p,zh)
+    mpfr_mul(accm,accm,ez)
+    mpfr_mul(accm,accm,p)
+    -- return accm/z
+    mpfr_set_d(ez,z)
+    mpfr_div(accm,accm,ez)
+    return accm
+end function
+
+function gamma2(atom z)
+    mpfr r = mpfr_init(z)
+    mpfr_gamma(r,r)
+    return r
+end function
+
+constant FMT = "%43.40Rf"
+
+procedure sq(mpfr x, integer n, d=1)
+    mpfr p = mpfr_init_set(x)
+    mpfr_mul_si(p,p,n)
+    mpfr_div_si(p,p,d)
+    mpfr_mul(p,p,p)
+    string xs = mpfr_sprintf(FMT,x),
+           ps = mpfr_sprintf(FMT,p)
+    printf(1,"%s,%s\n",{xs,ps})
+end procedure
+
+procedure si(mpfr x)
+    string xs = mpfr_sprintf(FMT,x)
+    printf(1,"%s\n",trim_tail(xs,".0"))
+end procedure
+
+sq(gamma(-3/2),3,4)
+sq(gamma(-1/2),-1,2)
+sq(gamma(1/2),1)
+si(gamma(1))
+sq(gamma(3/2),2)
+si(gamma(2))
+sq(gamma(5/2),4,3)
+si(gamma(3))
+sq(gamma(7/2),8,15)
+si(gamma(4))
+puts(1,"mpfr_gamma():\n")
+sq(gamma2(-3/2),3,4)
+sq(gamma2(-1/2),-1,2)
+sq(gamma2(1/2),1)
+si(gamma2(1))
+sq(gamma2(3/2),2)
+si(gamma2(2))
+sq(gamma2(5/2),4,3)
+si(gamma2(3))
+sq(gamma2(7/2),8,15)
+si(gamma2(4))

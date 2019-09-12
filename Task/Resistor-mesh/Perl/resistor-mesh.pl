@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 
 my ($w, $h) = (9, 9);
 my @v = map([ (0) x ($w + 1) ], 0 .. $h); # voltage
@@ -35,17 +36,16 @@ sub calc_diff {
 
 sub iter {
 	my $diff = 1;
-	while ($diff > 1e-24) { # 1e-24 is overkill (12 digits of precision)
+	while ($diff > 1e-15) {
 		set_boundary();
 		$diff = calc_diff();
-		print "error^2: $diff\r";
+		#print "error^2: $diff\n"; # un-comment to see slow convergence
 		for my $i (0 .. $h) {
 			for my $j (0 .. $w) {
 				$v[$i][$j] -= $d[$i][$j];
 			}
 		}
 	}
-	print "\n";
 
 	my @current = (0) x 3;
 	for my $i (0 .. $h) {
@@ -57,4 +57,4 @@ sub iter {
 	return ($current[1] - $current[-1]) / 2;
 }
 
-print "R = @{[2 / iter()]}\n";
+printf "R = %.6f\n", 2 / iter();

@@ -1,74 +1,152 @@
-use framework "Foundation" -- Yosemite onwards – for splitting by regex
+use AppleScript version "2.4"
+use framework "Foundation"
+use scripting additions
 
--- SPARKLINE -----------------------------------------------------------------
-
--- sparkLine :: [Num] -> String
-on sparkLine(xs)
-    set min to minimumBy(my numericOrdering, xs)
-    set max to maximumBy(my numericOrdering, xs)
-    set dataRange to max - min
-
-    -- scale :: Num -> Num
-    script scale
-        on |λ|(x)
-            ((x - min) * 7) / dataRange
-        end |λ|
-    end script
-
-    -- bucket :: Num -> String
-    script bucket
-        on |λ|(n)
-            if n ≥ 0 and n < 8 then
-                item (n + 1 as integer) of "▁▂▃▄▅▆▇█"
-            else
-                missing value
-            end if
-        end |λ|
-    end script
-
-    intercalate("", map(bucket, map(scale, xs)))
-end sparkLine
-
--- numericOrdering :: Num -> Num -> (-1 | 0 | 1)
-on numericOrdering(a, b)
-    if a < b then
-        -1
-    else
-        if a > b then
-            1
-        else
-            0
-        end if
-    end if
-end numericOrdering
-
-
--- TEST ----------------------------------------------------------------------
 on run
-
-    -- splitNumbers :: String -> [Real]
-    script splitNumbers
-        script asReal
-            on |λ|(x)
-                x as real
-            end |λ|
-        end script
-
-        on |λ|(s)
-            map(asReal, splitRegex("[\\s,]+", s))
-        end |λ|
-    end script
-
-    map(sparkLine, map(splitNumbers, ["1 2 3 4 5 6 7 8 7 6 5 4 3 2 1", ¬
-        "1.5, 0.5 3.5, 2.5 5.5, 4.5 7.5, 6.5", ¬
-        "3 2 1 0 -1 -2 -3 -4 -3 -2 -1 0 1 2 3", ¬
-        "-1000 100 1000 500 200 -400 -700 621 -189 3"]))
-
-    -- {"▁▂▃▄▅▆▇█▇▆▅▄▃▂▁","▂▁▄▃▆▅█▇","█▇▆▅▄▃▂▁▂▃▄▅▆▇█","▁▅█▆▅▃▂▇▄▅"}
+    unlines(map(¬
+        compose(compose(unlines, sparkLine), readFloats), ¬
+        {"0, 1, 19, 20", "0, 999, 4000, 4999, 7000, 7999", ¬
+            "0, 1000, 4000, 5000, 7000, 8000", ¬
+            "1 2 3 4 5 6 7 8 7 6 5 4 3 2 1", ¬
+            "1.5, 0.5 3.5, 2.5 5.5, 4.5 7.5, 6.5"}))
 end run
 
 
--- GENERIC LIBRARY FUNCTIONS -------------------------------------------------
+-- sparkLine :: [Float] -> [String]
+on sparkLine(xs)
+    set ys to sort(xs)
+    set mn to item 1 of ys
+    set mx to item -1 of ys
+    set n to length of xs
+    set mid to (n div 2)
+    set w to (mx - mn) / 8
+
+    script bound
+        on |λ|(x)
+            mn + (w * x)
+        end |λ|
+    end script
+    set lbounds to map(bound, enumFromTo(1, 7))
+
+    script spark
+        on |λ|(x)
+            script flipGT
+                on |λ|(b)
+                    b > x
+                end |λ|
+            end script
+            script indexedBlock
+                on |λ|(i)
+                    item i of "▁▂▃▄▅▆▇"
+                end |λ|
+            end script
+            maybe("█", indexedBlock, findIndex(flipGT, lbounds))
+        end |λ|
+    end script
+
+    script str
+        on |λ|(x)
+            x as string
+        end |λ|
+    end script
+
+    {concat(map(spark, xs)), ¬
+        unwords(map(str, xs)), ¬
+        "Min " & mn as string, ¬
+        "Mean " & roundTo(mean(xs), 2) as string, ¬
+        "Median " & bool(item mid of xs, ((item mid of xs) + ¬
+        (item (mid + 1) of xs)) / 2, even(n)), ¬
+        "Max " & mx as string, ""}
+end sparkLine
+
+
+-- GENERIC -------------------------------------------------
+
+-- Just :: a -> Maybe a
+on Just(x)
+    {type:"Maybe", Nothing:false, Just:x}
+end Just
+
+-- Nothing :: Maybe a
+on Nothing()
+    {type:"Maybe", Nothing:true}
+end Nothing
+
+-- bool :: a -> a -> Bool -> a
+on bool(f, t, p)
+    if p then
+        t
+    else
+        f
+    end if
+end bool
+
+-- compose (<<<) :: (b -> c) -> (a -> b) -> a -> c
+on compose(f, g)
+    script
+        property mf : mReturn(f)
+        property mg : mReturn(g)
+        on |λ|(x)
+            mf's |λ|(mg's |λ|(x))
+        end |λ|
+    end script
+end compose
+
+-- concat :: [[a]] -> [a]
+-- concat :: [String] -> String
+on concat(xs)
+    set lng to length of xs
+    if 0 < lng and string is class of (item 1 of xs) then
+        set acc to ""
+    else
+        set acc to {}
+    end if
+    repeat with i from 1 to lng
+        set acc to acc & item i of xs
+    end repeat
+    acc
+end concat
+
+-- enumFromTo :: Int -> Int -> [Int]
+on enumFromTo(m, n)
+    if m ≤ n then
+        set lst to {}
+        repeat with i from m to n
+            set end of lst to i
+        end repeat
+        return lst
+    else
+        return {}
+    end if
+end enumFromTo
+
+-- even :: Int -> Bool
+on even(x)
+    0 = x mod 2
+end even
+
+-- Takes a predicate function and a list and
+-- returns Just( the 1-based index of the first
+-- element ) in the list satisfying the predicate
+-- or Nothing if there is no such element.
+-- findIndex(isSpace, "hello world")
+--> {type:"Maybe", Nothing:false, Just:6}
+
+-- findIndex(even, [3, 5, 7, 8, 9])
+--> {type:"Maybe", Nothing:false, Just:4}
+
+-- findIndex(isUpper, "all lower case")
+--> {type:"Maybe", Nothing:true}
+-- findIndex :: (a -> Bool) -> [a] -> Maybe Int
+on findIndex(p, xs)
+    tell mReturn(p)
+        set lng to length of xs
+        repeat with i from 1 to lng
+            if |λ|(item i of xs) then return Just(i)
+        end repeat
+        return Nothing()
+    end tell
+end findIndex
 
 -- foldl :: (a -> b -> a) -> a -> [b] -> a
 on foldl(f, startValue, xs)
@@ -82,14 +160,6 @@ on foldl(f, startValue, xs)
     end tell
 end foldl
 
--- intercalate :: Text -> [Text] -> Text
-on intercalate(strText, lstText)
-    set {dlm, my text item delimiters} to {my text item delimiters, strText}
-    set strJoined to lstText as text
-    set my text item delimiters to dlm
-    return strJoined
-end intercalate
-
 -- map :: (a -> b) -> [a] -> [b]
 on map(f, xs)
     tell mReturn(f)
@@ -102,42 +172,33 @@ on map(f, xs)
     end tell
 end map
 
--- maximumBy :: (a -> a -> Ordering) -> [a] -> a
-on maximumBy(f, xs)
-    script max
-        property cmp : f
-        on |λ|(a, b)
-            if a is missing value or cmp(a, b) < 0 then
-                b
-            else
-                a
-            end if
+-- mean :: [Num] -> Num
+on mean(xs)
+    script
+        on |λ|(a, x)
+            a + x
         end |λ|
     end script
+    foldl(result, 0, xs) / (length of xs)
+end mean
 
-    foldl(max, missing value, xs)
-end maximumBy
+-- | The 'maybe' function takes a default value, a function, and a 'Maybe'
+-- value.  If the 'Maybe' value is 'Nothing', the function returns the
+-- default value.  Otherwise, it applies the function to the value inside
+-- the 'Just' and returns the result.
+-- maybe :: b -> (a -> b) -> Maybe a -> b
+on maybe(v, f, mb)
+    if Nothing of mb then
+        v
+    else
+        tell mReturn(f) to |λ|(Just of mb)
+    end if
+end maybe
 
--- minimumBy :: (a -> a -> Ordering) -> [a] -> a
-on minimumBy(f, xs)
-    script min
-        property cmp : f
-        on |λ|(a, b)
-            if a is missing value or cmp(a, b) > 0 then
-                b
-            else
-                a
-            end if
-        end |λ|
-    end script
-
-    foldl(min, missing value, xs)
-end minimumBy
-
--- Lift 2nd class handler function into 1st class script wrapper
--- mReturn :: Handler -> Script
+-- Lift 2nd class handler function into 1s class script wrapper
+-- mReturn :: First-class m => (a -> b) -> m (a -> b)
 on mReturn(f)
-    if class of f is script then
+    if script is class of f then
         f
     else
         script
@@ -146,23 +207,66 @@ on mReturn(f)
     end if
 end mReturn
 
--- regexMatches :: RegexPattern -> String -> [{location:Int, length:Int}]
-on regexMatches(strRegex, str)
-    set ca to current application
-    set oRgx to ca's NSRegularExpression's regularExpressionWithPattern:strRegex ¬
-        options:((ca's NSRegularExpressionAnchorsMatchLines as integer)) |error|:(missing value)
-    set oString to ca's NSString's stringWithString:str
-    set oMatches to oRgx's matchesInString:oString options:0 range:{location:0, |length|:oString's |length|()}
+-- readFloats :: String -> [Float]
+on readFloats(s)
+    script asReal
+        on |λ|(n)
+            n as real
+        end |λ|
+    end script
+    map(asReal, splitRegex("[\\s,]+", s))
+end readFloats
 
-    set lstMatches to {}
-    set lng to count of oMatches
-    repeat with i from 1 to lng
-        set end of lstMatches to range() of item i of oMatches
-    end repeat
-    lstMatches
+-- regexMatches :: String -> String -> [[String]]
+on regexMatches(strRegex, strHay)
+    set ca to current application
+    -- NSNotFound handling and and High Sierra workaround due to @sl1974
+    set NSNotFound to a reference to 9.22337203685477E+18 + 5807
+    set oRgx to ca's NSRegularExpression's regularExpressionWithPattern:strRegex ¬
+        options:((ca's NSRegularExpressionAnchorsMatchLines as integer)) ¬
+        |error|:(missing value)
+    set oString to ca's NSString's stringWithString:strHay
+
+    script matchString
+        on |λ|(m)
+            script rangeMatched
+                on |λ|(i)
+                    tell (m's rangeAtIndex:i)
+                        set intFrom to its location
+                        if NSNotFound ≠ intFrom then
+                            text (intFrom + 1) thru (intFrom + (its |length|)) of strHay
+                        else
+                            missing value
+                        end if
+                    end tell
+                end |λ|
+            end script
+        end |λ|
+    end script
+
+    script asRange
+        on |λ|(x)
+            range() of x
+        end |λ|
+    end script
+    map(asRange, (oRgx's matchesInString:oString ¬
+        options:0 range:{location:0, |length|:oString's |length|()}) as list)
 end regexMatches
 
--- splitRegex :: RegexPattern -> String -> [String]
+
+-- roundTo :: Float -> Int -> Float
+on roundTo(x, n)
+    set d to 10 ^ n
+    (round (x * d)) / d
+end roundTo
+
+-- sort :: Ord a => [a] -> [a]
+on sort(xs)
+    ((current application's NSArray's arrayWithArray:xs)'s ¬
+        sortedArrayUsingSelector:"compare:") as list
+end sort
+
+-- splitRegex :: Regex -> String -> [String]
 on splitRegex(strRegex, str)
     set lstMatches to regexMatches(strRegex, str)
     if length of lstMatches > 0 then
@@ -192,3 +296,21 @@ on splitRegex(strRegex, str)
         {str}
     end if
 end splitRegex
+
+-- unlines :: [String] -> String
+on unlines(xs)
+    set {dlm, my text item delimiters} to ¬
+        {my text item delimiters, linefeed}
+    set str to xs as text
+    set my text item delimiters to dlm
+    str
+end unlines
+
+-- unwords :: [String] -> String
+on unwords(xs)
+    set {dlm, my text item delimiters} to ¬
+        {my text item delimiters, space}
+    set s to xs as text
+    set my text item delimiters to dlm
+    return s
+end unwords

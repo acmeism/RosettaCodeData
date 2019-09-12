@@ -38,7 +38,7 @@ Do i=1 To length(uncompressed)
   Else Do
     res=res||dict.w', '
     dict.wc=dict_size
-    dict_size+=1
+    dict_size=dict_size+1
     w=c
     End
   End
@@ -61,7 +61,7 @@ w=d.w
 Do i=1 To words(compressed)
   k=word(compressed,i)
   Select
-    When d.k<>'' | d.k=='20'x then /* allow for blank */
+    When d.k<>'' | d.k==' ' then /* allow for blank */
       entry=d.k
     When k=dict_size Then
       entry=w||substr(w,1,1)
@@ -70,7 +70,7 @@ Do i=1 To words(compressed)
     End
   res=res||entry
   d.dict_size=w||substr(entry,1,1)
-  dict_size+=1
+  dict_size=dict_size+1
   w=entry
   End
 Return res

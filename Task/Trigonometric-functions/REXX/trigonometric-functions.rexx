@@ -44,20 +44,20 @@ tanErr:  call tellErr 'tan(' || x") causes division by zero, X=" || x
 AsinErr: call tellErr 'Asin(x),  X  must be in the range of  -1 ──► +1,  X=' || x
 AcosErr: call tellErr 'Acos(x),  X  must be in the range of  -1 ──► +1,  X=' || x
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-Atan: procedure; parse arg x;  if abs(x)=1  then return pi() * .25 * sign(x)
-                                                 return Asin(x / sqrt(1 + x*x) )
+Atan: procedure; parse arg x;    if abs(x)=1  then return pi() * .25 * sign(x)
+                                                   return Asin(x / sqrt(1 + x*x) )
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-cos:  procedure; parse arg x;       x= r2r(x);   a=abs(x);                    hpi= pi * .5
-          numeric fuzz min(6, digits() - 3);     if a=pi()      then return -1
-          if a=hpi | a=hpi*3  then return 0;     if a=pi() / 3  then return .5
-          if a=pi() * 2 / 3   then return -.5;                       return .sinCos(1, -1)
+cos:  procedure; parse arg x;       x= r2r(x);     a= abs(x);                 hpi= pi * .5
+          numeric fuzz min(6, digits() - 3);       if a=pi      then return -1
+          if a=hpi | a=hpi*3  then return 0;       if a=pi / 3  then return .5
+          if a=pi * 2 / 3     then return -.5;                  return .sinCos(1, -1)
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-sin:    procedure; parse arg x;   x=r2r(x);       numeric fuzz min(5, max(1, digits() -3))
-        if x=pi*.5  then return 1;                if x==pi * 1.5  then return -1
-        if abs(x)=pi | x=0   then return 0;                           return .sinCos(x, 1)
+sin:    procedure; parse arg x;   x=r2r(x);        numeric fuzz min(5, max(1, digits()-3))
+        if x=pi*.5  then return 1;                 if x==pi * 1.5  then return -1
+        if abs(x)=pi | x=0   then return 0;                            return .sinCos(x,1)
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 .sinCos:  parse arg z 1 _,i;        q= x*x
-          do k=2  by 2  until p=z;  p= z;       _= - _ * q / (k * (k+i) );   z= z+_;   end
+          do k=2  by 2  until p=z;  p= z;     _= - _ * q / (k * (k+i) );   z= z + _;   end
           return z
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 sqrt: procedure; parse arg x;   if x=0  then return 0;  d=digits();  i=;    m.=9;   h= d+6

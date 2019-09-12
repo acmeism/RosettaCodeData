@@ -1,63 +1,55 @@
-with Ada.Text_IO;
+WITH Ada.Text_IO, Ada.Characters.Handling;
+USE Ada.Text_IO, Ada.Characters.Handling;
 
-procedure Vignere_Cipher is
+PROCEDURE Main IS
+   SUBTYPE Alpha IS Character RANGE 'A' .. 'Z';
+   TYPE Ring IS MOD (Alpha'Pos (Alpha'Last)-Alpha'Pos (Alpha'First) + 1);
+   TYPE Seq IS ARRAY (Integer RANGE <>) OF Ring;
 
-   subtype Letter is Character range 'A' .. 'Z';
-   subtype Lowercase is Character range 'a' .. 'z';
+   FUNCTION "+" (S, Key : Seq) RETURN Seq IS
+      R : Seq (S'Range);
+   BEGIN
+      FOR I IN R'Range LOOP
+         R (I) := S (I) + Key (Key'First + (I - R'First) MOD Key'Length);
+      END LOOP;
+      RETURN R;
+   END "+";
 
-   function "+"(X, Y: Letter) return Letter is
-   begin
-      return Character'Val( ( (Character'Pos(X)-Character'Pos('A'))
-                                + (Character'Pos(Y)-Character'Pos('A')) ) mod 26
-                          + Character'Pos('A'));
-   end;
+   FUNCTION "-" (S : Seq) RETURN Seq IS
+      R : Seq (S'Range);
+   BEGIN
+      FOR I IN R'Range LOOP
+         R (I) := - S (I);
+      END LOOP;
+      RETURN R;
+   END "-";
 
-   function Normalize(S: String) return String is
-      -- removes all characters except for uppercase and lowercase letters
-      -- replaces lowercase by uppercase letters
-      Offset: Integer := Character'Pos('A') - Character'Pos('a');
-   begin
-      if S="" then
-         return "";
-      elsif S(S'First) in Letter then
-         return S(S'First) & Normalize(S(S'First+1 .. S'Last));
-      elsif  S(S'First) in Lowercase then
-         return (Character'Val(Character'Pos(S(S'First)) + Offset)
-                   & Normalize(S(S'First+1 .. S'Last)));
-      else
-         return Normalize(S(S'First+1 .. S'Last));
-      end if;
-   end Normalize;
+   FUNCTION To_Seq (S : String) RETURN Seq IS
+      R  : Seq (S'Range);
+      I  : Integer := R'First;
+   BEGIN
+      FOR C OF To_Upper (S) LOOP
+         IF C IN Alpha THEN
+            R (I) := Ring'Mod (Alpha'Pos (C) - Alpha'Pos (Alpha'First));
+            I := I + 1;
+         END IF;
+      END LOOP;
+      RETURN R (R'First .. I - 1);
+   END To_Seq;
 
-   function Encrypt(Key: String; Text: String) return String is
-      Ciphertext: String(Text'Range);
-   begin
-      for I in Text'Range loop
-         Ciphertext(I) := Text(I)
-           + Key(Key'First + ((I-Text'First) mod Key'Length));
-      end loop;
-      return Ciphertext;
-   end Encrypt;
+   FUNCTION To_String (S : Seq ) RETURN String IS
+      R : String (S'Range);
+   BEGIN
+      FOR I IN R'Range LOOP
+         R (I) := Alpha'Val ( Integer (S (I)) + Alpha'Pos (Alpha'First));
+      END LOOP;
+      RETURN R;
+   END To_String;
 
-   function Invert(Key: String) return String is
-      Result: String(Key'Range);
-   begin
-      for I in Key'Range loop
-         Result(I)
-           := Character'Val( 26 - (Character'Pos(Key(I))-Character'Pos('A'))
-                               + Character'Pos('A') );
-      end loop;
-      return Result;
-   end Invert;
-
-   use Ada.Text_IO;
-   Input: String := Get_Line;
-   Key:   String := Normalize(Get_Line);
-   Ciph:  String := Encrypt(Key => Key, Text => Normalize(Input));
-
-begin
-   Put_Line("Input      =" & Input);
-   Put_Line("Key        =" & Key);
-   Put_Line("Ciphertext =" & Ciph);
-   Put_Line("Decryption =" & Encrypt(Key => Invert(Key), Text => Ciph));
-end Vignere_Cipher;
+   Input : Seq := To_Seq (Get_Line);
+   Key : Seq := To_Seq (Get_Line);
+   Crypt : Seq := Input + Key;
+BEGIN
+   Put_Line ("Encrypted: " & To_String (Crypt));
+   Put_Line ("Decrypted: " & To_String (Crypt + (-Key)));
+END Main;

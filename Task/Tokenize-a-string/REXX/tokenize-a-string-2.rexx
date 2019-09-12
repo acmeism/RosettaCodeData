@@ -4,7 +4,9 @@ say 'input string='sss
 say ''
 say 'Words in the string:'
 ss =translate(sss,' ',',')
+dot='.'
 Do i=1 To words(ss)
-  say word(ss,i)'.'
+  If i=words(ss) Then dot=''
+  say word(ss,i)dot
   End
 say 'End-of-list.'

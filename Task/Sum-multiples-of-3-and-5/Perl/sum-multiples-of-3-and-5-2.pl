@@ -1,3 +1,4 @@
+use feature 'say';
 sub tri
 {
     my $n = shift;
@@ -7,7 +8,7 @@ sub tri
 sub sum
 {
     my $n = (shift) - 1;
-    return (3 * tri($n / 3) + 5 * tri($n / 5) - 15 * tri($n / 15));
+    (3 * tri( int($n/3) ) + 5 * tri( int($n/5) ) - 15 * tri( int($n/15) ) );
 }
 
 say sum(1e3);

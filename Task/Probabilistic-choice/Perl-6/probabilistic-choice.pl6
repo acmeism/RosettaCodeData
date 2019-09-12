@@ -5,8 +5,8 @@ constant @event = <aleph beth gimel daleth he waw zayin heth>;
 constant @P = flat (1 X/ 5 .. 11), 1759/27720;
 constant @cP = [\+] @P;
 
-my @results;
-@results[ @cP.first: { $_ > once rand }, :k ]++ xx TRIALS;
+my atomicint @results[+@event];
+(^TRIALS).race.map: { @results[ @cP.first: { $_ > once rand }, :k ]⚛++; }
 
 say  'Event    Occurred Expected  Difference';
 for ^@results {

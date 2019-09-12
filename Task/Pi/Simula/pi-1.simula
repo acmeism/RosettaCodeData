@@ -1,0 +1,309 @@
+CLASS BIGNUM;
+BEGIN
+
+    BOOLEAN PROCEDURE TISZERO(T); TEXT T;
+        TISZERO := T = "0";
+
+    TEXT PROCEDURE TSHL(T); TEXT T;
+        TSHL :- IF TISZERO(T) THEN T ELSE T & "0";
+
+    TEXT PROCEDURE TSHR(T); TEXT T;
+        TSHR :- IF T.LENGTH = 1 THEN "0" ELSE T.SUB(1, T.LENGTH - 1);
+
+    INTEGER PROCEDURE TSIGN(T); TEXT T;
+        TSIGN := IF TISZERO(T) THEN 0
+            ELSE IF T.SUB(1, 1) = "-" THEN -1
+            ELSE 1;
+
+    TEXT PROCEDURE TABS(T); TEXT T;
+        TABS :- IF TSIGN(T) < 0 THEN T.SUB(2, T.LENGTH - 1) ELSE T;
+
+    TEXT PROCEDURE TNEGATE(T); TEXT T;
+        TNEGATE :- IF TSIGN(T) <= 0 THEN TABS(T) ELSE ("-" & T);
+
+    TEXT PROCEDURE TREVERSE(T); TEXT T;
+    BEGIN
+        INTEGER I, J;
+        I := 1; J := T.LENGTH;
+        WHILE I < J DO
+        BEGIN CHARACTER C1, C2;
+            T.SETPOS(I); C1 := T.GETCHAR;
+            T.SETPOS(J); C2 := T.GETCHAR;
+            T.SETPOS(I); T.PUTCHAR(C2);
+            T.SETPOS(J); T.PUTCHAR(C1);
+            I := I + 1;
+            J := J - 1;
+        END;
+        TREVERSE :- T;
+    END TREVERSE;
+
+    INTEGER PROCEDURE TCMPUNSIGNED(A, B); TEXT A, B;
+    BEGIN
+        INTEGER ALEN, BLEN, RESULT;
+        ALEN := A.LENGTH; BLEN := B.LENGTH;
+        IF ALEN < BLEN THEN
+            RESULT := -1
+        ELSE IF ALEN > BLEN THEN
+            RESULT := 1
+        ELSE BEGIN
+            INTEGER CMP, I; BOOLEAN DONE;
+            A.SETPOS(1);
+            B.SETPOS(1);
+            I := 1;
+            WHILE I <= ALEN AND NOT DONE DO
+            BEGIN
+                I := I + 1;
+                CMP := RANK(A.GETCHAR) - RANK(B.GETCHAR);
+                IF NOT (CMP = 0) THEN
+                    DONE := TRUE;
+            END;
+            RESULT := CMP;
+        END;
+        TCMPUNSIGNED := RESULT;
+    END TCMPUNSIGNED;
+
+    INTEGER PROCEDURE TCMP(A, B); TEXT A, B;
+    BEGIN
+        BOOLEAN ANEG, BNEG;
+        ANEG := TSIGN(A) < 0; BNEG := TSIGN(B) < 0;
+        IF ANEG AND BNEG THEN
+           TCMP := -TCMPUNSIGNED(TABS(A), TABS(B))
+        ELSE IF NOT ANEG AND BNEG THEN
+           TCMP := 1
+        ELSE IF ANEG AND NOT BNEG THEN
+           TCMP := -1
+        ELSE
+           TCMP := TCMPUNSIGNED(A, B);
+    END TCMP;
+
+    TEXT PROCEDURE TADDUNSIGNED(A, B); TEXT A, B;
+    BEGIN
+        INTEGER CARRY, I, J;
+        TEXT BF;
+        I := A.LENGTH;
+        J := B.LENGTH;
+        BF :- BLANKS(MAX(I, J) + 1);
+        WHILE I >= 1 OR J >= 1 DO BEGIN
+            INTEGER X, Y, Z;
+            IF I >= 1 THEN BEGIN
+                A.SETPOS(I); I := I - 1; X := RANK(A.GETCHAR) - RANK('0');
+            END;
+            IF J >= 1 THEN BEGIN
+                B.SETPOS(J); J := J - 1; Y := RANK(B.GETCHAR) - RANK('0');
+            END;
+            Z := X + Y + CARRY;
+            IF Z < 10 THEN
+            BEGIN BF.PUTCHAR(CHAR(Z + RANK('0'))); CARRY := 0;
+            END ELSE
+            BEGIN BF.PUTCHAR(CHAR(MOD(Z, 10) + RANK('0'))); CARRY := 1;
+            END;
+        END;
+        IF CARRY > 0 THEN
+            BF.PUTCHAR(CHAR(CARRY + RANK('0')));
+        BF :- TREVERSE(BF.STRIP);
+        TADDUNSIGNED :- BF;
+    END TADDUNSIGNED;
+
+    TEXT PROCEDURE TADD(A, B); TEXT A, B;
+    BEGIN
+        BOOLEAN ANEG, BNEG;
+        ANEG := TSIGN(A) < 0; BNEG := TSIGN(B) < 0;
+        IF NOT ANEG AND BNEG THEN          ! (+7)+(-5) =  (7-5) =   2 ;
+            TADD :- TSUBUNSIGNED(A, TABS(B))
+        ELSE IF ANEG AND NOT BNEG THEN     ! (-7)+(+5) =  (5-7) =  -2 ;
+            TADD :- TSUBUNSIGNED(B, TABS(A))
+        ELSE IF ANEG AND BNEG THEN         ! (-7)+(-5) = -(7+5) = -12 ;
+            TADD :- TNEGATE(TADDUNSIGNED(TABS(A), TABS(B)))
+        ELSE                               ! (+7)+(+5) =  (7+5) =  12 ;
+            TADD :- TADDUNSIGNED(A, B);
+    END TADD;
+
+    TEXT PROCEDURE TSUBUNSIGNED(A, B); TEXT A, B;
+    BEGIN
+        INTEGER I, J, CARRY;
+        I := A.LENGTH; J := B.LENGTH;
+        IF I < J OR I = J AND A < B THEN
+            TSUBUNSIGNED :- TNEGATE(TSUBUNSIGNED(B, A)) ELSE
+        BEGIN
+            TEXT BF;
+            BF :- BLANKS(MAX(I, J) + 1);
+            WHILE I >= 1 OR J >= 1 DO
+            BEGIN
+                INTEGER X, Y, Z;
+                IF I >= 1 THEN
+                BEGIN A.SETPOS(I); I := I - 1;
+                    X := RANK(A.GETCHAR) - RANK('0');
+                END;
+                IF J >= 1 THEN
+                BEGIN B.SETPOS(J); J := J - 1;
+                    Y := RANK(B.GETCHAR) - RANK('0');
+                END;
+                Z := X - Y - CARRY;
+                IF Z >= 0 THEN
+                BEGIN
+                    BF.PUTCHAR(CHAR(RANK('0') + Z));
+                    CARRY := 0;
+                END ELSE
+                BEGIN
+                    BF.PUTCHAR(CHAR(RANK('0') + MOD(10 + Z, 10)));
+                    CARRY := 1; ! (Z / 10);
+                END;
+            END;
+            BF :- BF.STRIP;
+            BF :- TREVERSE(BF);
+            BF.SETPOS(1);
+            WHILE BF.LENGTH > 1 AND THEN BF.GETCHAR = '0' DO
+            BEGIN
+                BF :- BF.SUB(2, BF.LENGTH - 1);
+                BF.SETPOS(1);
+            END;
+            TSUBUNSIGNED :- BF;
+        END;
+    END TSUBUNSIGNED;
+
+    TEXT PROCEDURE TSUB(A, B); TEXT A, B;
+    BEGIN
+        BOOLEAN ANEG, BNEG;
+        ANEG := TSIGN(A) < 0; BNEG := TSIGN(B) < 0;
+        IF ANEG AND BNEG THEN              ! (-7)-(-5) = -(7-5) =  -2 ;
+            TSUB :- TNEGATE(TSUBUNSIGNED(TABS(A), TABS(B)))
+        ELSE IF NOT ANEG AND BNEG THEN     ! (+7)-(-5) =  (7+5) =  12 ;
+            TSUB :- TADDUNSIGNED(A, TABS(B))
+        ELSE IF ANEG AND NOT BNEG THEN     ! (-7)-(+5) = -(7+5) = -12 ;
+            TSUB :- TNEGATE(TADDUNSIGNED(TABS(A), B))
+        ELSE                               ! (+7)-(+5) =  (7-5) =   2 ;
+            TSUB :- TSUBUNSIGNED(A, B);
+    END TSUB;
+
+    TEXT PROCEDURE TMULUNSIGNED(A, B); TEXT A, B;
+    BEGIN
+        INTEGER ALEN, BLEN;
+        ALEN := A.LENGTH; BLEN := B.LENGTH;
+        IF ALEN < BLEN THEN
+            TMULUNSIGNED :- TMULUNSIGNED(B, A)
+        ELSE BEGIN
+            TEXT PRODUCT; INTEGER J;
+            PRODUCT :- "0";
+            FOR J := 1 STEP 1 UNTIL BLEN DO BEGIN
+                TEXT PART; INTEGER I, Y, CARRY;
+                B.SETPOS(J); Y := RANK(B.GETCHAR) - RANK('0');
+                PART :- BLANKS(ALEN + BLEN + 1); PART.SETPOS(1);
+                FOR I := ALEN STEP -1 UNTIL 1 DO BEGIN
+                    INTEGER X, Z;
+                    A.SETPOS(I); X := RANK(A.GETCHAR) - RANK('0');
+                    Z := X * Y + CARRY;
+                    IF Z < 10 THEN BEGIN
+                        PART.PUTCHAR(CHAR(RANK('0') + Z));
+                        CARRY := 0;
+                    END ELSE BEGIN
+                        PART.PUTCHAR(CHAR(RANK('0') + MOD(Z, 10)));
+                        CARRY := Z // 10;
+                    END;
+                END;
+                IF CARRY > 0 THEN
+                    PART.PUTCHAR(CHAR(RANK('0') + CARRY));
+                PART :- PART.SUB(1, PART.POS - 1);
+                PART :- TREVERSE(PART);
+                PART.SETPOS(1);
+                WHILE PART.LENGTH > 1 AND THEN PART.GETCHAR = '0' DO
+                BEGIN
+                    PART :- PART.SUB(2, PART.LENGTH - 1);
+                    PART.SETPOS(1);
+                END;
+                PRODUCT :- TADDUNSIGNED(TSHL(PRODUCT), PART);
+            END;
+            TMULUNSIGNED :- PRODUCT;
+        END;
+    END TMULUNSIGNED;
+
+    TEXT PROCEDURE TMUL(A, B); TEXT A, B;
+    BEGIN
+        BOOLEAN ANEG, BNEG;
+        ANEG := TSIGN(A) < 0; BNEG := TSIGN(B) < 0;
+        IF ANEG AND BNEG THEN              ! (-7)*(-5) =  (7*5) =>  35 ;
+           TMUL :- TMULUNSIGNED(TABS(A), TABS(B))
+        ELSE IF NOT ANEG AND BNEG THEN     ! (+7)*(-5) = -(7*5) => -35 ;
+           TMUL :- TNEGATE(TMULUNSIGNED(A, TABS(B)))
+        ELSE IF ANEG AND NOT BNEG THEN     ! (-7)*(+5) = -(7*5) => -35 ;
+           TMUL :- TNEGATE(TMULUNSIGNED(TABS(A), B))
+        ELSE                               ! (+7)*(+5) =  (7*5) =>  35 ;
+           TMUL :- TMULUNSIGNED(A, B);
+    END TMUL;
+
+    CLASS DIVMOD(DIV,MOD); TEXT DIV,MOD;;
+
+    REF(DIVMOD) PROCEDURE TDIVMODUNSIGNED(A, B); TEXT A, B;
+    BEGIN
+        INTEGER CC;
+        REF(DIVMOD) RESULT;
+        IF TISZERO(B) THEN
+            ERROR("DIVISION BY ZERO");
+        CC := TCMPUNSIGNED(A, B);
+        IF CC < 0 THEN
+            RESULT :- NEW DIVMOD("0", A)
+        ELSE IF CC = 0 THEN
+            RESULT :- NEW DIVMOD("1", "0")
+        ELSE BEGIN
+            INTEGER ALEN, BLEN, AIDX;
+            TEXT Q, R;
+            ALEN := A.LENGTH; BLEN := B.LENGTH;
+            Q :- BLANKS(ALEN); Q.SETPOS(1);
+            R :- BLANKS(ALEN); R.SETPOS(1);
+            R := A.SUB(1, BLEN - 1); R.SETPOS(BLEN);
+            FOR AIDX := BLEN STEP 1 UNTIL ALEN DO
+            BEGIN
+                INTEGER COUNT; BOOLEAN DONE;
+                IF TISZERO(R.STRIP) THEN
+                    R.SETPOS(1);
+                A.SETPOS(AIDX); R.PUTCHAR(A.GETCHAR);
+                WHILE NOT DONE DO
+                BEGIN
+                    TEXT DIFF;
+                    DIFF :- TSUBUNSIGNED(R.STRIP, B);
+                    IF TSIGN(DIFF) < 0 THEN
+                        DONE := TRUE
+                    ELSE BEGIN
+                        R := DIFF; R.SETPOS(DIFF.LENGTH + 1);
+                        COUNT := COUNT + 1;
+                    END;
+                END;
+                IF (NOT (COUNT = 0)) OR (NOT (Q.POS = 1)) THEN
+                    Q.PUTCHAR(CHAR(COUNT + RANK('0')));
+            END;
+            RESULT :- NEW DIVMOD(Q.STRIP, R.STRIP);
+        END;
+        TDIVMODUNSIGNED :- RESULT;
+    END TDIVMODUNSIGNED;
+
+    REF(DIVMOD) PROCEDURE TDIVMOD(A, B); TEXT A, B;
+    BEGIN
+        BOOLEAN ANEG, BNEG; REF(DIVMOD) RESULT;
+        ANEG := TSIGN(A) < 0; BNEG := TSIGN(B) < 0;
+        IF ANEG AND BNEG THEN
+            BEGIN
+                RESULT :- TDIVMOD(TABS(A), TABS(B));
+                RESULT.MOD :- TNEGATE(RESULT.MOD);
+            END
+        ELSE IF NOT ANEG AND BNEG THEN
+            BEGIN
+                RESULT :- TDIVMOD(A, TABS(B));
+                RESULT.DIV :- TNEGATE(RESULT.DIV);
+            END
+        ELSE IF ANEG AND NOT BNEG THEN
+            BEGIN
+                RESULT :- TDIVMOD(TABS(A), B);
+                RESULT.DIV :- TNEGATE(RESULT.DIV);
+                RESULT.MOD :- TNEGATE(RESULT.MOD);
+            END
+        ELSE
+            RESULT :- TDIVMODUNSIGNED(A, B);
+        TDIVMOD :- RESULT;
+    END TDIVMOD;
+
+    TEXT PROCEDURE TDIV(A, B); TEXT A, B;
+        TDIV :- TDIVMOD(A, B).DIV;
+
+    TEXT PROCEDURE TMOD(A, B); TEXT A, B;
+        TMOD :- TDIVMOD(A, B).MOD;
+
+END BIGNUM;

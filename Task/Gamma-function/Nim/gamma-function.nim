@@ -10,7 +10,7 @@ const a = [
  0.00000000000000122678, -0.00000000000000011813,  0.00000000000000000119,
  0.00000000000000000141, -0.00000000000000000023,  0.00000000000000000002 ]
 
-proc gamma(x): float =
+proc gamma(x: float): float =
   let y = x.float - 1.0
   result = a[a.high]
   for n in countdown(high(a) - 1, low(a)):

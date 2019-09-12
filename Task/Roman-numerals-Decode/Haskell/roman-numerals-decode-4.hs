@@ -1,31 +1,29 @@
-import qualified Data.Map.Strict as M
+import Data.List (mapAccumL, isPrefixOf)
+import Control.Arrow ((***))
 
-fromRoman :: String -> Int
-fromRoman xs = partialSum + lastDigit
-  where
-    (partialSum, lastDigit) = foldl accumulate (0, 0) (evalRomanDigit <$> xs)
-    accumulate (partial, lastDigit) newDigit
-      | newDigit <= lastDigit = (partial + lastDigit, newDigit)
-      | otherwise = (partial - lastDigit, newDigit)
-
-mapRoman :: M.Map Char Int
-mapRoman =
-  M.fromList
-    [ ('I', 1)
-    , ('V', 5)
-    , ('X', 10)
-    , ('L', 50)
-    , ('C', 100)
-    , ('D', 500)
-    , ('M', 1000)
-    ]
-
-evalRomanDigit :: Char -> Int
-evalRomanDigit c =
-  let mInt = M.lookup c mapRoman
-  in case mInt of
-       Just x -> x
-       _ -> error $ c : " is not a roman digit"
+romanValue :: String -> Int
+romanValue =
+  let tr s (k, v) =
+        until (not . isPrefixOf k . fst) (drop (length k) *** (v +)) (s, 0)
+  in sum .
+     snd .
+     flip
+       (mapAccumL tr)
+       [ ("M", 1000)
+       , ("CM", 900)
+       , ("D", 500)
+       , ("CD", 400)
+       , ("C", 100)
+       , ("XC", 90)
+       , ("L", 50)
+       , ("XL", 40)
+       , ("X", 10)
+       , ("IX", 9)
+       , ("V", 5)
+       , ("IV", 4)
+       , ("I", 1)
+       ]
 
 main :: IO ()
-main = print $ fromRoman <$> ["MDCLXVI", "MCMXC", "MMVIII", "MMXVI", "MMXVII"]
+main =
+  mapM_ (print . romanValue) ["MDCLXVI", "MCMXC", "MMVIII", "MMXVI", "MMXVII"]

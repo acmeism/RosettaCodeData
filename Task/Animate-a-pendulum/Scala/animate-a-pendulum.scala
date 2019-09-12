@@ -1,34 +1,22 @@
 import java.awt.Color
-import scala.actors.Actor
-import scala.swing.{ Graphics2D, MainFrame, Panel, SimpleSwingApplication }
+import java.util.concurrent.{Executors, TimeUnit}
+
+import scala.swing.{Graphics2D, MainFrame, Panel, SimpleSwingApplication}
 import scala.swing.Swing.pair2Dimension
 
 object Pendulum extends SimpleSwingApplication {
   val length = 100
 
   lazy val ui = new Panel {
-    import scala.math.{ cos, Pi, sin }
+    import scala.math.{cos, Pi, sin}
+
     background = Color.white
     preferredSize = (2 * length + 50, length / 2 * 3)
     peer.setDoubleBuffered(true)
 
     var angle: Double = Pi / 2
 
-    def pendular = new Actor {
-      var angleVelocity = 0.0
-      val dt = 0.1
-
-      def act() {
-        while (true) {
-          angleVelocity += (-9.81 / length * sin(angle)) * dt
-          angle += angleVelocity * dt
-          repaint()
-          Thread.sleep(15)
-        }
-      }
-    }
-
-    override def paintComponent(g: Graphics2D) = {
+    override def paintComponent(g: Graphics2D): Unit = {
       super.paintComponent(g)
 
       val (anchorX, anchorY) = (size.width / 2, size.height / 4)
@@ -43,12 +31,25 @@ object Pendulum extends SimpleSwingApplication {
       g.setColor(Color.yellow)
       g.fillOval(ballX - 7, ballY - 7, 14, 14)
     }
+
+    val animate: Runnable = new Runnable {
+      var angleVelocity = 0.0
+      var dt = 0.1
+
+      override def run(): Unit = {
+        angleVelocity += -9.81 / length * Math.sin(angle) * dt
+        angle += angleVelocity * dt
+        repaint()
+      }
+    }
   }
 
-  def top = new MainFrame {
+  override def top = new MainFrame {
     title = "Rosetta Code >>> Task: Animate a pendulum | Language: Scala"
     contents = ui
-    centerOnScreen
-    ui.pendular.start
+    centerOnScreen()
+    Executors.
+      newSingleThreadScheduledExecutor().
+      scheduleAtFixedRate(ui.animate, 0, 15, TimeUnit.MILLISECONDS)
   }
 }

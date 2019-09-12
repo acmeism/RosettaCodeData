@@ -16,3 +16,20 @@ sub mmult
      }
   return [@p];
  }
+
+sub display { join("\n" => map join(" " => map(sprintf("%4d", $_), @$_)), @{+shift})."\n" }
+
+@a =
+(
+   [1, 2],
+   [3, 4]
+);
+
+@b =
+(
+   [-3, -8, 3],
+   [-2,  1, 4]
+);
+
+$c = mmult(\@a,\@b);
+display($c)

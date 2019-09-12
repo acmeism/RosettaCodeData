@@ -1,11 +1,12 @@
-strip :: String -> String
-strip =
-  filter
-    (\x -- Though use of Data.Char functions like isAlpha, isDigit etc
-        -- seems more probable.
-       ->
-        let o = fromEnum x
-        in o > 31 && o < 126)
+import Control.Applicative (liftA2)
+
+strip, strip2 :: String -> String
+strip = filter (liftA2 (&&) (> 31) (< 126) . fromEnum)
+
+-- or
+strip2 = filter (((&&) <$> (> 31) <*> (< 126)) . fromEnum)
 
 main :: IO ()
-main = print $ strip "alphabetic 字母 with some less parochial parts"
+main =
+  (putStrLn . unlines) $
+  [strip, strip2] <*> ["alphabetic 字母 with some less parochial parts"]

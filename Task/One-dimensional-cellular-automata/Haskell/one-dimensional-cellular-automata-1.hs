@@ -1,6 +1,6 @@
-import Data.List (unfoldr)
 import System.Random (newStdGen, randomRs)
-import Control.Monad (liftM2, ap)
+import Control.Applicative (liftA2)
+import Data.List (unfoldr)
 
 bnd :: String -> Char
 bnd bs =
@@ -22,7 +22,7 @@ donxt xs =
 lahmahgaan :: String -> [String]
 lahmahgaan xs =
   init .
-  until (liftM2 (==) last (last . init)) (ap (++) (return . donxt . last)) $
+  until (liftA2 (==) last (last . init)) ((++) <*> (return . donxt . last)) $
   [xs, donxt xs]
 
 main :: IO ()

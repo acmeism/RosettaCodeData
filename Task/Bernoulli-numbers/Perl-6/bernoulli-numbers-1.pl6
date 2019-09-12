@@ -11,7 +11,7 @@ sub bernoulli($n) {
 
 constant @bpairs = grep *.value.so, ($_ => bernoulli($_) for 0..60);
 
-my $width = [max] @bpairs.map: *.value.numerator.chars;
+my $width = max @bpairs.map: *.value.numerator.chars;
 my $form = "B(%2d) = \%{$width}d/%d\n";
 
 printf $form, .key, .value.nude for @bpairs;

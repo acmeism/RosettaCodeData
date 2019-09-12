@@ -59,7 +59,7 @@ function resultantSet = symmetricDifference(set1,set2)
         end
     end %equality
 
-    %Define the relative compliment for cell arrays
+    %Define the relative complement for cell arrays
     function set1 = relativeComplement(set1,set2)
 
         for k = (1:numel(set2))

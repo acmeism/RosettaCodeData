@@ -36,7 +36,30 @@ run
 !HelloSocket methodsFor: 'handling'!
 
 handleSocket: s
-    | msg |
+    | msg |/**
+ Sockets in Neko
+ Tectonics:
+   nekoc sockets.neko
+   sudo nc -vulp 256 & sudo neko sockets
+*/
+
+var socket_init = $loader.loadprim("std@socket_init", 0);
+var socket_new = $loader.loadprim("std@socket_new", 1);
+var host_resolve = $loader.loadprim("std@host_resolve", 1);
+var socket_connect = $loader.loadprim("std@socket_connect", 3);
+var socket_write = $loader.loadprim("std@socket_write", 2);
+var socket_close = $loader.loadprim("std@socket_close", 1);
+
+/* Initialize Neko socket API */
+socket_init();
+
+/* true; UDP, false; TCP */
+var socket = socket_new(true);
+
+var c = socket_connect(socket, host_resolve("localhost"), 1256);
+socket_write(socket, "hello socket world");
+
+socket_close(socket);
     msg := 'hello socket world'.
     msg displayOn: s.
     (String with: (Character value: 10)) displayOn: s.

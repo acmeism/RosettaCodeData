@@ -3,7 +3,7 @@ import Control.Arrow ((&&&))
 
 -- VAMPIRE NUMBERS ------------------------------------------------------------
 vampires :: [Int]
-vampires = filter ((0 <) . length . fangs) [1 ..]
+vampires = filter (not . null . fangs) [1 ..]
 
 fangs :: Int -> [(Int, Int)]
 fangs n

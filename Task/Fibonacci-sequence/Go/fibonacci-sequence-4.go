@@ -10,6 +10,6 @@ func main() {
 	c := make(chan int)
 	go fib(c)
 	for i := 0; i < 10; i++ {
-		fmt.println(<-c)
+		fmt.Println(<-c)
 	}
 }

@@ -1,2 +1,2 @@
 while (true)
-  std::cout << "SPAM" << std::endl;
+  std::cout << "SPAM\n";

@@ -9,4 +9,4 @@
 
 german
 No More Solutions
-% 250,927 inferences, 0.027 CPU in 0.027 seconds (100% CPU, 9240311 Lips)
+% 263,486 inferences, 0.047 CPU in 0.063 seconds (74% CPU, 5630007 Lips)

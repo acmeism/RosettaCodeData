@@ -1,8 +1,8 @@
-  use Gtk '-init';
+  use Gtk3 '-init';
 
-  $window = Gtk::Window->new;
+  $window = Gtk3::Window->new;
   $window->signal_connect(
-    destroy => sub { Gtk->main_quit; }
+    destroy => sub { Gtk3->main_quit; }
   );
   $window->show_all;
-  Gtk->main;
+  Gtk3->main;

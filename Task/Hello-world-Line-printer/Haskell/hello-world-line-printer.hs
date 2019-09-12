@@ -1,5 +1,4 @@
-import System.Cmd
+import System.Process (ProcessHandle, runCommand)
 
-cmd = "echo \"Hello World!\" | lpr"
-
-main = system cmd
+main :: IO ProcessHandle
+main = runCommand "echo \"Hello World!\" | lpr"

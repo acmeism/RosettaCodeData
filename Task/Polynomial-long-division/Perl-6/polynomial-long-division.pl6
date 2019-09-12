@@ -6,7 +6,7 @@ sub poly_long_div ( @n is copy, @d ) {
         @n.shift;
     }
 
-    return $(@q), $(@n);
+    return @q, @n;
 }
 
 sub xP ( $power ) { $power>1 ?? "x^$power" !! $power==1 ?? 'x' !! '' }

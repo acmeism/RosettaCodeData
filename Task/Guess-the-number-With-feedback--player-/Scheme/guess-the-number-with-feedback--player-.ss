@@ -1,5 +1,4 @@
-(define minimum 1)
-(define maximum 100)
+(define minimum 1)   (define maximum 100)
 
 (display "Enter a number from ")(display minimum)
 (display " to ")(display maximum)(display ": ")

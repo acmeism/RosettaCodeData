@@ -1,5 +1,8 @@
+from itertools import (accumulate, chain)
+from operator import mul
+
+# factorial :: Integer
 def factorial(n):
-    z=1
-    if n>1:
-        z=n*factorial(n-1)
-    return z
+    return list(
+        accumulate(chain([1], range(1, 1 + n)), mul)
+    )[-1]

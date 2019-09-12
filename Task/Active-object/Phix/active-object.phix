@@ -1,0 +1,63 @@
+sequence x = {}
+enum TERMINATE, INTERVAL, KFUN, VALUE, T0, K0, ID, ISIZE=$
+integer xlock = init_cs()
+
+function zero(atom /*t*/) return 0 end function
+function sine(atom t) return sin(2*PI*0.5*t) end function
+
+procedure update(integer dx)
+    enter_cs(xlock)
+    atom t1 = time(),
+         k1 = call_func(x[dx][KFUN],{t1})
+    x[dx][VALUE] += (k1 + x[dx][K0]) * (t1 - x[dx][T0]) / 2
+    x[dx][T0] = t1
+    x[dx][K0] = k1
+    leave_cs(xlock)
+end procedure
+
+procedure tick(integer dx)
+    while not x[dx][TERMINATE] do
+        sleep(x[dx][INTERVAL])
+        update(dx)
+    end while
+end procedure
+
+function new_integrator(integer rid, atom interval)
+    x = append(x,repeat(0,ISIZE))
+    integer dx = length(x)
+    x[dx][TERMINATE] = false
+    x[dx][INTERVAL] = interval
+    x[dx][KFUN] = rid
+    x[dx][T0] = time()
+    update(dx)
+    x[dx][ID] = create_thread(routine_id("tick"),{dx})
+    return dx
+end function
+
+procedure set_input(integer dx, rid)
+    enter_cs(xlock)
+    x[dx][KFUN] = rid
+    x[dx][K0] = 0
+    leave_cs(xlock)
+end procedure
+
+function get_output(integer dx)
+    enter_cs(xlock)
+    atom v = x[dx][VALUE]
+    leave_cs(xlock)
+    return v
+end function
+
+procedure stop_integrator(integer dx)
+    x[dx][TERMINATE] = true
+    wait_thread(x[dx][ID])
+end procedure
+
+puts(1,"")
+integer dx = new_integrator(routine_id("sine"),0.01)
+sleep(2)
+printf(1,"%f\n",get_output(dx))
+set_input(dx,routine_id("zero"))
+sleep(0.5)
+printf(1,"%f\n",get_output(dx))
+stop_integrator(dx)

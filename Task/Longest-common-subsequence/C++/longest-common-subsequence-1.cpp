@@ -37,7 +37,7 @@ protected:
   typedef deque<INDEXES*> MATCHES;
 
   // return the LCS as a linked list of matched index pairs
-  uint64_t Pairs(MATCHES& matches, shared_ptr<Pair> *pairs) {
+  uint32_t Pairs(MATCHES& matches, shared_ptr<Pair> *pairs) {
     auto trace = pairs != nullptr;
     PAIRS traces;
     THRESHOLD threshold;
@@ -51,14 +51,14 @@ protected:
       if (!it1->empty()) {
         auto dq2 = *it1;
         auto limit = threshold.end();
-        for (auto it2 = dq2.begin(); it2 != dq2.end(); it2++) {
+        for (auto it2 = dq2.rbegin(); it2 != dq2.rend(); it2++) {
           // Each of the index1, index2 pairs considered here correspond to a match
           auto index2 = *it2;
 
           //
-          // Note: The index2 values are monotonically decreasing, which allows the
-          // thresholds to be updated in-place.  Monotonicity allows a binary search,
-          // implemented here by std::lower_bound().
+          // Note: The reverse iterator it2 visits index2 values in descending order,
+          // allowing thresholds to be updated in-place.  std::lower_bound() is used
+          // to perform a binary search.
           //
           limit = lower_bound(threshold.begin(), limit, index2);
           auto index3 = distance(threshold.begin(), limit);
@@ -72,7 +72,7 @@ protected:
           // Depending on match redundancy, the number of Pair constructions may be
           // divided by factors ranging from 2 up to 10 or more.
           //
-          auto skip = next(it2) != dq2.end() &&
+          auto skip = next(it2) != dq2.rend() &&
             (limit == threshold.begin() || *prev(limit) < *next(it2));
           if (skip) continue;
 
@@ -125,7 +125,7 @@ protected:
     const string& s1, const string& s2) {
     uint32_t index = 0;
     for (const auto& it : s2)
-      indexes[it].push_front(index++);
+      indexes[it].push_back(index++);
 
     for (const auto& it : s1) {
       auto& dq2 = indexes[it];
@@ -133,10 +133,10 @@ protected:
     }
   }
 
-  string Select(shared_ptr<Pair> pairs, uint64_t length,
+  string Select(shared_ptr<Pair> pairs, uint32_t length,
     bool right, const string& s1, const string& s2) {
     string buffer;
-    buffer.reserve((uint32_t)length);
+    buffer.reserve(length);
     for (auto next = pairs; next != nullptr; next = next->next) {
       auto c = right ? s2[next->index2] : s1[next->index1];
       buffer.push_back(c);

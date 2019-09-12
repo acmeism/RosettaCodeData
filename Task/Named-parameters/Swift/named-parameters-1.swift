@@ -1,4 +1,4 @@
-func isGreater(x x:Int, thanY y:Int) -> Bool {
-    return x > y
+func greet(person: String, hometown: String) -> String {
+    return "Hello \(person)!  Glad you could visit from \(hometown)."
 }
-assert(isGreater(x: 5, thanY: 10) == false)
+print(greet(person: "Bill", hometown: "Cupertino"))

@@ -1,8 +1,6 @@
 str := "Rosetta code"
 MsgBox, % "File:`n" (file) "`n`nSHA-256:`n" FileSHA256(file)
 
-
-
 ; SHA256 ============================================================================
 SHA256(string, encoding = "utf-8")
 {

@@ -1,9 +1,9 @@
-import random
-from twisted.internet    import reactor, task, defer
-from twisted.python.util import println
+from __future__ import print_function
+from multiprocessing import Pool
 
-delay = lambda: 1e-4*random.random()
-d = defer.DeferredList([task.deferLater(reactor, delay(), println, line)
-                        for line in 'Enjoy Rosetta Code'.split()])
-d.addBoth(lambda _: reactor.stop())
-reactor.run()
+def main():
+    p = Pool()
+    p.map(print, 'Enjoy Rosetta Code'.split())
+
+if __name__=="__main__":
+    main()

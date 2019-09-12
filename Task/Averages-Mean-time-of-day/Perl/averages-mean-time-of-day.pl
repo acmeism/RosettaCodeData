@@ -1,32 +1,32 @@
-use Const::Fast;
-const my $SECONDS_IN_HOUR   => 60 * 60;
-const my $SECONDS_IN_MINUTE => 60;
+use POSIX 'fmod';
+use Math::Complex;
+use List::Util qw(sum);
+use utf8;
 
-sub hms_2_seconds {
-    my ( $hms ) = @_;
-    my ( $h, $m, $s ) = split /:/, $hms;
-    $h += 24 if $h < 12;
-    return $s + $m * $SECONDS_IN_MINUTE + $h * $SECONDS_IN_HOUR;
-}
-sub seconds_2_hms {
-    my ( $seconds ) = @_;
+use constant τ => 2 * 3.1415926535;
 
-    my ( $h, $m );
-
-    $h = int( $seconds / $SECONDS_IN_HOUR );
-    $seconds = $seconds % $SECONDS_IN_HOUR;
-
-    $m = int( $seconds / $SECONDS_IN_MINUTE );
-    $seconds = $seconds % $SECONDS_IN_MINUTE;
-
-    return sprintf "%02s:%02s:%02s", $h, $m, $seconds;
+# time-of-day to radians
+sub tod2rad {
+    ($h,$m,$s) = split /:/, @_[0];
+    (3600*$h + 60*$m + $s) * τ / 86400;
 }
 
-my @hms = split /,\s+/, scalar <STDIN>;
-
-my ($sum, $count);
-for my $time ( @hms) {
-    $sum += hms_2_seconds $time;
-    $count++;
+# radians to time-of-day
+sub rad2tod {
+    my $x = $_[0] * 86400 / τ;
+    sprintf '%02d:%02d:%02d', fm($x/3600,24), fm($x/60,60), fm($x,60);
 }
-say seconds_2_hms int( $sum / $count );
+
+# float modulus, normalized to positive values
+sub fm  {
+    my($n,$b) = @_;
+    $x = fmod($n,$b);
+    $x += $b if $x < 0;
+}
+
+sub phase     { arg($_[0]) }  # aka theta
+sub cis       { cos($_[0]) + i*sin($_[0]) }
+sub mean_time { rad2tod phase sum map { cis tod2rad $_ } @_ }
+
+@times = ("23:00:17", "23:40:20", "00:12:45", "00:17:19");
+print mean_time(@times) . " is the mean time of " . join(' ', @times) . "\n";

@@ -7,13 +7,10 @@ for 3 .. * -> $base {
         my $place = $base ** $digits;
         for 1 ..^ $base -> $digit {
             my $left = $digit * $place;
-            for @stems -> $stem {
-	        my $new = $left + $stem;
-	        @new.push($new) if $new.is-prime;
-            }
+            @new.append: (@stems »+» $left).race(:8degree, :8batch).grep: *.is-prime
         }
-        last unless @new;
+        last unless +@new;
         @stems = @new;
     }
-    say "\nLargest ltp in base $base = { @stems.tail } or :$base\<{@stems.tail.base($base)}>\n";
+    say "\nLargest ltp in base $base = {@stems.max} or :$base\<@stems.max.base($base)}>\n";
 }

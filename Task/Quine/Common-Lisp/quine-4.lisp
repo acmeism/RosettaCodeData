@@ -1,1 +1,1 @@
-#1=(progn (setq *print-circle* t) (write '#1#))
+#1=(write '#1# :circle t)

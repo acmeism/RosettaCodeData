@@ -1,6 +1,6 @@
-import Data.List
-import Control.Arrow
-import Data.Ord
+import Data.List (group, insertBy, sort, sortBy)
+import Control.Arrow ((&&&), second)
+import Data.Ord (comparing)
 
 data HTree a
   = Leaf a
@@ -10,7 +10,7 @@ data HTree a
 
 test :: String -> IO ()
 test =
-  mapM_ (\(a, b) -> putStrLn ('\'' : a : "\' : " ++ b)) .
+  mapM_ (\(a, b) -> putStrLn ('\'' : a : ("' : " ++ b))) .
   serialize . huffmanTree . freq
 
 serialize :: HTree a -> [(a, String)]
@@ -23,7 +23,7 @@ huffmanTree
   => [(w, a)] -> HTree a
 huffmanTree =
   snd .
-  head . until (null . tail) hstep . sortBy (comparing fst) . (second Leaf <$>)
+  head . until (null . tail) hstep . sortBy (comparing fst) . fmap (second Leaf)
 
 hstep
   :: (Ord a, Num a)
@@ -34,4 +34,7 @@ hstep ((w1, t1):(w2, t2):wts) =
 freq
   :: Ord a
   => [a] -> [(Int, a)]
-freq = ((length &&& head) <$>) . group . sort
+freq = fmap (length &&& head) . group . sort
+
+main :: IO ()
+main = test "this is an example for huffman encoding"

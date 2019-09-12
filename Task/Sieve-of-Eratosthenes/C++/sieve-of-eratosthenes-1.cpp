@@ -2,20 +2,21 @@
 #include <algorithm>
 #include <vector>
 
-template <typename ForwardIterator>
-size_t prime_sieve(ForwardIterator start, ForwardIterator end)
+// requires Iterator satisfies RandomAccessIterator
+template <typename Iterator>
+size_t prime_sieve(Iterator start, Iterator end)
 {
     if (start == end) return 0;
     // clear the container with 0
     std::fill(start, end, 0);
     // mark composites with 1
-    for (ForwardIterator prime_it = start + 1; prime_it != end; ++prime_it)
+    for (Iterator prime_it = start + 1; prime_it != end; ++prime_it)
     {
         if (*prime_it == 1) continue;
         // determine the prime number represented by this iterator location
         size_t stride = (prime_it - start) + 1;
         // mark all multiples of this prime number up to max
-        ForwardIterator mark_it = prime_it;
+        Iterator mark_it = prime_it;
         while ((end - mark_it) > stride)
         {
             std::advance(mark_it, stride);
@@ -23,8 +24,8 @@ size_t prime_sieve(ForwardIterator start, ForwardIterator end)
         }
     }
     // copy marked primes into container
-    ForwardIterator out_it = start;
-    for (ForwardIterator it = start + 1; it != end; ++it)
+    Iterator out_it = start;
+    for (Iterator it = start + 1; it != end; ++it)
     {
         if (*it == 0)
         {

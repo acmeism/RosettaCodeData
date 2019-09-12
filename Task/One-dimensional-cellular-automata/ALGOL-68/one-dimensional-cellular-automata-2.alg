@@ -1,5 +1,4 @@
 INT stop generation = 9;
-<lang algol68>INT stop generation = 9;
 INT upb universe = 20;
 FORMAT alive or dead = $b("#","_")$;
 

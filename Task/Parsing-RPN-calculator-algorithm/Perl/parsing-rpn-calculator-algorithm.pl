@@ -1,17 +1,27 @@
-# RPN calculator
-#
-# Nigel Galloway April 2nd., 2012
-#
-$WSb = '(?:^|\s+)';
-$WSa = '(?:\s+|$)';
-$num = '([+-/]?(?:\.\d+|\d+(?:\.\d*)?))';
-$op = '([-+*/^])';
-sub myE {
-  my $a = '('.$1.')'.$3.'('.$2.')';
-  $a =~ s/\^/**/;
-  return eval($a);
+use strict;
+use warnings;
+use feature 'say';
+
+my $number   = '[+-]?(?:\.\d+|\d+(?:\.\d*)?)';
+my $operator = '[-+*/^]';
+
+my @tests = ('3 4 2 * 1 5 - 2 3 ^ ^ / +');
+
+for (@tests) {
+    while (
+        s/ \s* ((?<left>$number))     # 1st operand
+           \s+ ((?<right>$number))    # 2nd operand
+           \s+ ((?<op>$operator))     # operator
+           (?:\s+|$)                  # more to parse, or done?
+         /
+           ' '.evaluate().' '         # substitute results of evaluation
+         /ex
+    ) {}
+    say;
 }
-while (<>)  {
-  while (s/$WSb$num\s+$num\s+$op$WSa/' '.myE().' '/e)  {}
-  print ($_, "\n");
+
+sub evaluate {
+  (my $a = "($+{left})$+{op}($+{right})") =~ s/\^/**/;
+  say $a;
+  eval $a;
 }

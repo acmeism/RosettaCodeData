@@ -17,7 +17,7 @@ constant bernoulli =
 
 constant @bpairs = bernoulli[^52];
 
-my $width = [max] @bpairs.map: *.value.numerator.chars;
+my $width = max @bpairs.map: *.value.numerator.chars;
 my $form = "B(%d)\t= \%{$width}d/%d\n";
 
 printf $form, .key, .value.nude for @bpairs;

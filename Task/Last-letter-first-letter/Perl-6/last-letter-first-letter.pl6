@@ -16,7 +16,7 @@ for @names.kv -> $i, $name {
     push @succs[$ix], $i;
 }
 
-my $OUT = open "llfl.new", :w or die "Can't create llfl.new: $!";
+my $OUT = open "llfl.new", :w orelse .die;
 $OUT.print: chr($_ + 32),"\n" for 0 ..^ @names;
 close $OUT;
 my $new = +@names;
@@ -25,8 +25,8 @@ my $len = 1;
 while $new {
     say "Length { $len++ }: $new candidates";
     shell 'mv llfl.new llfl.known';
-    my $IN = open "llfl.known" or die "Can't reopen llfl.known: $!";
-    my $OUT = open "llfl.new", :w or die "Can't create llfl.new: $!";
+    my $IN = open "llfl.known" orelse .die;
+    my $OUT = open "llfl.new", :w orelse .die;
     $new = 0;
 
     loop {
@@ -42,7 +42,7 @@ while $new {
     $OUT.close;
 }
 
-my $IN = open "llfl.known" or die "Can't reopen llfl.known: $!";
+my $IN = open "llfl.known" orelse .die;
 my $eg = $IN.lines.pick;
 say "Length of longest: ", $eg.chars;
 say join ' ', $eg.ords.reverse.map: { @names[$_ - 32] }

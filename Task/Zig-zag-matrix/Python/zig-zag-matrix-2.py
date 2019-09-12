@@ -1,18 +1,33 @@
-def zigzag(n):
-    def move(i, j):
-        if j < (n - 1):
-            return max(0, i-1), j+1
-        else:
-            return i+1, j
-    a = [[0] * n for _ in xrange(n)]
+# pylint: disable=invalid-name
+# pylint: disable=unused-argument
+"ZigZag iterator."
+import sys
+
+if sys.version_info[0] >= 3:
+    xrange = range
+
+def move(x, y, columns, rows):
+    "Tells us what to do next with x and y."
+    if y < (rows - 1):
+        return max(0, x-1), y+1
+    return x+1, y
+
+def zigzag(rows, columns):
+    "ZigZag iterator, yields indices."
     x, y = 0, 0
-    for v in xrange(n * n):
-        a[y][x] = v
+    size = rows * columns
+    for _ in xrange(size):
+        yield y, x
         if (x + y) & 1:
-            x, y = move(x, y)
+            x, y = move(x, y, columns, rows)
         else:
-            y, x = move(y, x)
-    return a
+            y, x = move(y, x, rows, columns)
+
+# test code
+i, rows, cols = 0, 5, 5
+mat = [[0 for x in range(cols)] for y in range(rows)]
+for (y, x) in zigzag(rows, cols):
+    mat[y][x], i = i, i + 1
 
 from pprint import pprint
-pprint(zigzag(5))
+pprint(mat)

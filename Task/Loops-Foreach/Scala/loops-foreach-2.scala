@@ -1,2 +1,1 @@
-for (element <- 1 to 4)
-  println(element)
+(element <- 1 to 4).foreach(println)

@@ -1,5 +1,1 @@
-// Note use of big integer support in this version
-
-implicit def IntToFac(i : Int) = new {
-  def ! = (2 to i).foldLeft(BigInt(1))(_*_)
-}
+def factorial(n: Int) = (2 to n).product

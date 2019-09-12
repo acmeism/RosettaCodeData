@@ -1,2 +1,5 @@
 (defun factorial (n)
-    (reduce #'* (loop for i from 1 to n collect i)))
+  "Calculates N!"
+  (loop for result = 1 then (* result i)
+     for i from 2 to n
+     finally (return result)))

@@ -8,34 +8,33 @@ parse arg peeps  '(' rows  cols  empty  life!  clearScreen  repeats  generations
       life! = pickChar(life!            '☼')     /*the gylph kinda looks like an amoeba.*/
        reps =        p(repeats            2)     /*stop pgm  if there are  two  repeats.*/
 generations =        p(generations      100)     /*the number of  generations  allowed. */
-sw=max(linesize()-1,cols)                        /*usable screen width for the display. */
-#reps=0;         $.=emp                          /*the universe is new,  ··· and barren.*/
+sw= max(linesize() - 1,  cols)                   /*usable screen width for the display. */
+#reps= 0;        $.= emp                         /*the universe is new,  ··· and barren.*/
 gens=abs(generations)                            /*used for a  programming  convenience.*/
-x=space(peeps);  upper x                         /*elide superfluous spaces; uppercase. */
-if x==''         then x="BLINKER"                /*if nothing specified,  use  BLINKER. */
+x= space(peeps); upper x                         /*elide superfluous spaces; uppercase. */
+if x==''         then x= "BLINKER"               /*if nothing specified,  use  BLINKER. */
 if x=='BLINKER'  then x= "2,1 2,2 2,3"
 if x=='OCTAGON'  then x= "1,5 1,6 2,4 2,7 3,3 3,8 4,2 4,9 5,2 5,9 6,3 6,8 7,4 7,7 8,5 8,6"
 call assign.                                     /*assign the initial state of all cells*/
 call showCells                                   /*show the  initial state of the cells.*/
-                                                 /* [↓]  cell colony grows, lives, dies.*/
      do life=1  for gens;      call assign@      /*construct  next  generation of cells.*/
      if generations>0 | life==gens  then call showCells    /*should cells be displayed? */
-     end   /*life*/
-fin: exit                                        /*stick a fork in it,  we're all done. */
+     end   /*life*/                              /* [↑]  cell colony grows, lives, dies.*/
+exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 showCells: if clearScr  then 'CLS'               /*  ◄───  change 'command' for your OS.*/
            call showRows                         /*show the rows in the proper order.   */
            say right(copies('▒', sw)  life, sw)  /*show a fence between the generations.*/
-           if _==''  then call fin               /*if there's no life, then stop the run*/
-           if !._    then #reps=#reps+1          /*we detected a repeated cell pattern. */
-           !._=1                                 /*existence  state and compare  later. */
+           if _==''  then exit                   /*if there's no life, then stop the run*/
+           if !._    then #reps= #reps + 1       /*we detected a repeated cell pattern. */
+           !._= 1                                /*existence  state and compare  later. */
            if reps\==0 & #reps<=reps then return /*so far, so good,   regarding repeats.*/
            say
            say center('"Life" repeated itself' reps "times, simulation has ended.",sw,'▒')
-           call fin                              /*stick a fork in it,  we're all done. */
+           exit                                  /*stick a fork in it,  we're all done. */
 /*───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────*/
 $:         parse arg _row,_col;                    return $._row._col==life!
-assign$:   do r=1  for rows;   do c=1  for cols;   $.r.c=@.r.c;                                     end;    end;       return
+assign$:   do r=1  for rows;   do c=1  for cols;   $.r.c= @.r.c;                                    end;    end;       return
 assign.:   do while x\==''; parse var x r "," c x; $.r.c=life!; rows=max(rows,r); cols=max(cols,c); end; life=0; !.=0; return
 assign?:   ?=$.r.c; n=neighbors(); if ?==emp then do;if n==3 then ?=life!; end; else if n<2 | n>3 then ?=emp; @.r.c=?; return
 assign@:   @.=emp;      do r=1  for rows;  do c=1  for cols;  call assign?;  end;  end;            call assign$;       return

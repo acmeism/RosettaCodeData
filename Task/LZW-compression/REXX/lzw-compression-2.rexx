@@ -1,29 +1,25 @@
 /*REXX program compresses text using the  LZW  (Lempel─Ziv─Welch), and reconstitutes it.*/
-parse arg x                                      /*get an optional argument from the CL.*/
-if x=''  then x= '"There is nothing permanent except change." ─── Heraclitus [540-475 BC]'
-       say 'original text='        x
-cypher=LZWc(x)                                   /*compress text using the LZW algorithm*/
-       say 'reconstituted='   LZWd(cypher)
-       say ' LZW integers='        cypher
+parse arg x;     if x==''  then                  /*get an optional argument from the CL.*/
+          x= '"There is nothing permanent except change."   ───  Heraclitus  [540-475 BC]'
+       say 'original text='        x             /* [↑]  Not specified? Then use default*/
+cypher= LZWc(x)                                  /*compress text using the LZW algorithm*/
+       say 'reconstituted='   LZWd(cypher)       /*display the reconstituted string.    */
+       say ' LZW integers='        cypher        /*   "     "  LZW  integers used.      */
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-LZWc: procedure; parse arg y,,w $ @.;  #=256             /*the  LZW  compress algorithm.*/
-                           do j=0  for #;   _=d2c(j);      @._=j;        end  /*j*/
-
-                           do k=1  for length(y);            _=w || substr(y, k, 1)
-                           if @._==''  then do;  $=$ @.w;  @._=#;  #=#+1;  w=substr(y,k,1)
-                                            end
-                                       else w=_
-                           end   /*k*/
-      return strip($ @.w)                                /*remove any superfluous blanks*/
+LZWc: procedure; parse arg y,,w $ @.;            #= 256        /*LZW compress algorithm.*/
+                                     do j=0  for #;    _= d2c(j);    @._= j;    end  /*j*/
+       do k=1  for length(y)+1;            z= w || substr(y, k, 1)
+       if @.z==''  then do;  $= $ @.w;   @.z= #;    #= # + 1;    w= substr(y, k, 1);   end
+                   else w= z
+       end   /*k*/;                           return substr($, 2)   /*del leading blank.*/
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-LZWd: procedure; parse arg w y,,@.;    #=256             /*the LZW decompress algorithm.*/
-                           do j=0  for #;          @.j=d2c(j);    end  /*j*/
-      $=@.w;   w=$
-                           do k=1  for words(y);            _=word(y, k)
-                           if @._\=='' | @.k==" "  then ?=@._
-                                                   else  if _==#  then ?=w || left(w, 1)
-                           $=$ || ?
-                           @.#=w || left(?, 1);    #=#+1;         w=?
-                           end   /*k*/
-      return $
+LZWd: procedure; parse arg x y,,@.;              #= 256      /*LZW decompress algorithm.*/
+                                     do j=0  for #;      @.j= d2c(j);      end  /*j*/
+      $= @.x;  w= $                                          /*#:  is the dictionay size*/
+                      do k=1  for words(y);             z= word(y, k)
+                      if @.z\=='' | @.k==" "  then ?= @.z
+                                              else if z==#  then ?= w || left(w, 1)
+                      $= $ || ?
+                      @.#= w || left(?, 1);   #= # + 1;          w= ?
+                      end   /*k*/;            return $

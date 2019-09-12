@@ -1,5 +1,24 @@
-use List::MoreUtils 'all';
+use strict;
+use warnings;
+use feature 'say';
 
-sub pangram {all {$_[0] =~ /$_/i} 'a' .. 'z';}
+sub pangram1 {
+    my($str,@set) = @_;
+    use List::MoreUtils 'all';
+    all { $str =~ /$_/i } @set;
+}
 
-print "Yes.\n" if pangram 'Cozy lummox gives smart squid who asks for job pen.';
+sub pangram2 {
+    my($str,@set) = @_;
+    '' eq (join '',@set) =~ s/[$str]//gir;
+}
+
+my @alpha = 'a' .. 'z';
+
+for (
+    'Cozy Lummox Gives Smart Squid Who Asks For Job Pen.',
+    'Crabby Lummox Gives Smart Squid Who Asks For Job Pen.'
+) {
+    say pangram1($_,@alpha) ? 'Yes' : 'No';
+    say pangram2($_,@alpha) ? 'Yes' : 'No';
+}

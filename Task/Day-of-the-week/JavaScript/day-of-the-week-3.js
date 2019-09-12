@@ -1,19 +1,30 @@
 (() => {
     'use strict';
 
-    // xmasIsSunday :: Integer -> Bool
-    const xmasIsSunday = year => (new Date(year, 11, 25))
-            .getDay() === 0;
+    // main :: IO ()
+    const main = () => {
+        const
+            xs = enumFromTo(2008, 2121)
+            .filter(xmasIsSunday);
+        return (
+            console.log(xs),
+            xs
+        );
+    };
 
-    // range :: Int -> Int -> [Int]
-    const range = (m, n) =>
+
+    // xmasIsSunday :: Int -> Bool
+    const xmasIsSunday = year =>
+        (new Date(year, 11, 25))
+        .getDay() === 0;
+
+
+    // enumFromTo :: Int -> Int -> [Int]
+    const enumFromTo = (m, n) =>
         Array.from({
-            length: Math.floor(n - m) + 1
+            length: 1 + n - m
         }, (_, i) => m + i);
 
 
-
-    return range(2008, 2121)
-        .filter(xmasIsSunday);
-
+    return main();
 })();

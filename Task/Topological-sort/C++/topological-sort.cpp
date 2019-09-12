@@ -49,7 +49,8 @@ public:
 		for(auto const& lookup : map)
 		{
 			auto const&
-				goal = lookup.first,
+				goal = lookup.first;
+   auto const&
 				relations = lookup.second;
 			if(relations.dependencies == 0)
 				sorted.push_back(goal);
@@ -61,7 +62,8 @@ public:
 		for(auto const& lookup : map)
 		{
 			auto const&
-				goal = lookup.first,
+				goal = lookup.first;
+   auto const&
 				relations = lookup.second;
 			if(relations.dependencies != 0)
 				unsortable.push_back(goal);

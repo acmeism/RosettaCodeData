@@ -1,103 +1,121 @@
-import extensions.
-import extensions'routines.
-import system'collections.
+import extensions;
+import extensions'routines;
+import system'collections;
+
+singleton DummyNode
+{
+    get generic()
+        = EmptyEnumerable;
+}
 
 class Node
 {
-    type<IntNumber> rprop value :: _value.
-    type<Node>      rprop left  :: _left.
-    type<Node>      rprop right :: _right.
+    rprop int  Value;
+    rprop Node Left;
+    rprop Node Right;
 
-    constructor new(IntNumber value)
-    [
-        _value := value.
-    ]
-
-    constructor new(IntNumber value, Node left)
-    [
-        _value := value.
-        _left := left.
-    ]
-
-    constructor new(IntNumber value, Node left, Node right)
-    [
-        _value := value.
-        _left :=left.
-        _right :=right.
-    ]
-
-    Preorder = BaseEnumerable::
+    constructor new(int value)
     {
-        enumerator = CompoundEnumerator new(SingleEnumerable new(_value), _left Preorder \ back:$nil, _right Preorder \ back:$nil).
-    }.
+        Value := value
+    }
 
-    Inorder = BaseEnumerable::
+    constructor new(int value, Node left)
     {
-        enumerator
-        [
-            if ($nil != _left)
-            [
-                ^ CompoundEnumerator new(_left Inorder, SingleEnumerable new(_value), _right Inorder \ back:$nil).
-            ];
-            [
-                ^ SingleEnumerable new(_value)
-            ]
-        ]
-    }.
+        Value := value;
+        Left := left;
+    }
 
-    Postorder = BaseEnumerable::
+    constructor new(int value, Node left, Node right)
     {
-        enumerator
-        [
-            if ($nil == _left)
-            [
-                ^ SingleEnumerable new(_value)
-            ];
-            if ($nil == _right)
-            [
-                ^ CompoundEnumerator new(_left Postorder, SingleEnumerable new(_value)).
-            ];
-            [
-                ^ CompoundEnumerator new(_left Postorder, _right Postorder, SingleEnumerable new(_value)).
-            ]
-        ]
-    }.
+        Value := value;
+        Left := left;
+        Right := right
+    }
 
-    LevelOrder = BaseEnumerable::
+    Preorder = new Enumerable:
     {
-        queue<Node> queue := (queue<Node>(4)) push:$self.
+        Enumerator enumerator() = CompoundEnumerator.new(
+                                        SingleEnumerable.new(Value),
+                                        (Left ?? DummyNode).Preorder,
+                                        (Right ?? DummyNode).Preorder);
+    };
 
-        enumerator = Enumerator::
+    Inorder = new Enumerable:
+    {
+        Enumerator enumerator()
         {
-            next = queue isNotEmpty.
+            if (nil != Left)
+            {
+                ^ CompoundEnumerator.new(Left.Inorder, SingleEnumerable.new(Value), (Right ?? DummyNode).Inorder)
+            }
+            else
+            {
+                ^ SingleEnumerable.new(Value).enumerator()
+            }
+        }
+    };
 
-            get
-            [
-                type<Node> item := queue pop.
-                type<Node> left := item left.
-                type<Node> right := item right.
+    Postorder = new Enumerable:
+    {
+        Enumerator enumerator()
+        {
+            if (nil == Left)
+            {
+                ^ SingleEnumerable.new(Value).enumerator()
+            }
+            else if (nil == Right)
+            {
+                ^ CompoundEnumerator.new(Left.Postorder, SingleEnumerable.new(Value))
+            }
+            else
+            {
+                ^ CompoundEnumerator.new(Left.Postorder, Right.Postorder, SingleEnumerable.new(Value))
+            }
+        }
+    };
 
-                if ($nil != left)
-                [
-                    queue push(left).
-                ].
-                if ($nil != right)
-                [
-                    queue push(right).
-                ].
+    LevelOrder = new Enumerable:
+    {
+        Queue<Node> queue := class Queue<Node>.allocate(4).push:self;
 
-                ^ item value.
-            ]
-        }.
-    }.
+        Enumerator enumerator() = new Enumerator:
+        {
+            bool next() = queue.isNotEmpty();
+
+            get()
+            {
+                Node item := queue.pop();
+                Node left := item.Left;
+                Node right := item.Right;
+
+                if (nil != left)
+                {
+                    queue.push(left)
+                };
+                if (nil != right)
+                {
+                    queue.push(right)
+                };
+
+                ^ item.Value
+            }
+
+            reset()
+            {
+                NotSupportedException.raise()
+            }
+
+            enumerable() = queue;
+        };
+    };
 }
 
-program =
-[
-   var tree := Node new(1, Node new(2, Node new(4, Node new(7)), Node new(5)), Node new(3, Node new(6, Node new(8), Node new(9)))).
+public program()
+{
+   var tree := Node.new(1, Node.new(2, Node.new(4, Node.new(7)), Node.new(5)), Node.new(3, Node.new(6, Node.new(8), Node.new(9))));
 
-   console printLine("Preorder  :", tree Preorder).
-   console printLine("Inorder   :", tree Inorder).
-   console printLine("Postorder :", tree Postorder).
-   console printLine("LevelOrder:", tree LevelOrder).
-].
+   console.printLine("Preorder  :", tree.Preorder);
+   console.printLine("Inorder   :", tree.Inorder);
+   console.printLine("Postorder :", tree.Postorder);
+   console.printLine("LevelOrder:", tree.LevelOrder)
+}

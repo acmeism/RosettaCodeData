@@ -1,4 +1,5 @@
 with Ada.Text_IO;
+with Ada.Float_Text_IO;
 with Ada.Strings.Unbounded;
 
 procedure Knapsack_Continuous is
@@ -23,7 +24,7 @@ procedure Knapsack_Continuous is
       Sum : Float := 0.0;
    begin
       for I in Items'Range loop
-         Sum := Sum + Items (I).Weight * Items (I).Taken;
+         Sum := Sum + Items (I).Taken;
       end loop;
       return Sum;
    end Total_Weight;
@@ -32,7 +33,7 @@ procedure Knapsack_Continuous is
       Sum : Float := 0.0;
    begin
       for I in Items'Range loop
-         Sum := Sum + Float (Items (I).Value) * Items (I).Taken;
+         Sum := Sum + Float (Items (I).Value) / Items(I).Weight * Items (I).Taken;
       end loop;
       return Sum;
    end Total_Value;
@@ -71,8 +72,7 @@ procedure Knapsack_Continuous is
          end loop;
       end;
    end Solve_Knapsack_Continuous;
-
-   All_Items : Item_Array :=
+    All_Items : Item_Array :=
      ((US.To_Unbounded_String ("beef"), 3.8, 36, 0.0),
       (US.To_Unbounded_String ("pork"), 5.4, 43, 0.0),
       (US.To_Unbounded_String ("ham"), 3.6, 90, 0.0),
@@ -85,18 +85,18 @@ procedure Knapsack_Continuous is
 
 begin
    Solve_Knapsack_Continuous (All_Items, 15.0);
-   Ada.Text_IO.Put_Line
-     ("Total Weight: " & Float'Image (Total_Weight (All_Items)));
-   Ada.Text_IO.Put_Line
-     ("Total Value:  " & Float'Image (Total_Value (All_Items)));
+   Ada.Text_IO.Put ("Total Weight: ");
+   Ada.Float_Text_IO.Put (Total_Weight (All_Items), 0, 2, 0);
+   Ada.Text_IO.New_Line;
+   Ada.Text_IO.Put ("Total Value:  ");
+   Ada.Float_Text_IO.Put (Total_Value (All_Items), 0, 2, 0);
+   Ada.Text_IO.New_Line;
    Ada.Text_IO.Put_Line ("Items:");
    for I in All_Items'Range loop
       if All_Items (I).Taken > 0.0 then
-         Ada.Text_IO.Put_Line
-           ("   " &
-            Float'Image (All_Items (I).Taken) &
-            " of " &
-            US.To_String (All_Items (I).Name));
+         Ada.Text_IO.Put ("   ");
+         Ada.Float_Text_IO.Put (All_Items (I).Taken, 0, 2, 0);
+         Ada.Text_IO.Put_Line (" of " & US.To_String (All_Items (I).Name));
       end if;
    end loop;
 end Knapsack_Continuous;

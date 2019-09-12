@@ -1,18 +1,19 @@
->>> def lcm(p,q):
-	p, q = abs(p), abs(q)
-	m = p * q
-	if not m: return 0
-	while True:
-		p %= q
-		if not p: return m // q
-		q %= p
-		if not q: return m // p
+>>> def lcm(*values):
+	values = set([abs(int(v)) for v in values])
+	if values and 0 not in values:
+		n = n0 = max(values)
+		values.remove(n)
+		while any( n % m for m in values ):
+			n += n0
+		return n
+	return 0
 
-		
 >>> lcm(-6, 14)
 42
->>> lcm(12, 18)
-36
 >>> lcm(2, 0)
 0
+>>> lcm(12, 18)
+36
+>>> lcm(12, 18, 22)
+396
 >>>

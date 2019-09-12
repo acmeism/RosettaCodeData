@@ -1,17 +1,16 @@
+import Control.Applicative (liftA2)
 import Data.List (genericLength)
 
--- ARITHMETIC, GEOMETRIC AND HARMONIC MEANS -----------------------
+-- ARITHMETIC, GEOMETRIC AND HARMONIC MEANS ---------------
+
 arithmetic, geometric, harmonic :: [Double] -> Double
-arithmetic = liftM2 (/) sum genericLength
+arithmetic = liftA2 (/) sum genericLength
 
-geometric = liftM2 (**) product ((1 /) . genericLength)
+geometric = liftA2 (**) product ((1 /) . genericLength)
 
-harmonic = liftM2 (/) genericLength (foldr ((+) . (1 /)) 0)
+harmonic = liftA2 (/) genericLength (foldr ((+) . (1 /)) 0)
 
--- GENERIC --------------------------------------------------------
-liftM2 f g h = pure f <*> g <*> h
-
--- TEST -----------------------------------------------------------
+-- TEST ---------------------------------------------------
 xs :: [Double]
 xs = [arithmetic, geometric, harmonic] <*> [[1 .. 10]]
 

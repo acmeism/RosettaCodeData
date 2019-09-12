@@ -9,8 +9,13 @@
 // We introduce a trait that will allow us to have an input with the same type as self, and break the recursion.
 // The input is going to be a trait object that implements the desired function in the interface.
 // NOTE: We will be coercing a reference to a closure into this trait object.
+
 trait Apply<T, R> {
-    fn apply( &self, &Apply<T, R >, T ) -> R;
+  fn apply(
+    &self,
+    &Apply<T, R>,
+    T
+  ) -> R;
 }
 
 // In Rust, closures fall into three kinds: FnOnce, FnMut and Fn.
@@ -21,67 +26,103 @@ trait Apply<T, R> {
 // that is not Clone.
 // All Fn are also FnMut, and all closures of Fn are also Clone. However, programmers can create
 // Fn objects that are not Clone
-// The following address all closures that is Clone, and those are Fn.
-impl<T, R, F> Apply<T, R> for F where F: FnOnce( &Apply<T, R>, T ) -> R + Clone {
-    fn apply( &self, f: &Apply<T, R>, t: T ) -> R {
-        (self.clone())( f, t )
 
-        // If we were to pass in self as f, we get -
-        // NOTE: Each letter is an individual symbol.
-        // λf.λt.sft
-        // => λs.λt.sst [s/f]
-        // => λs.ss
-    }
-}
-//This will work for all Fn objects, not just closures
-//And it is a little bit more efficient for Fn closures as it do not clone itself.
-//However under 1.26 it is not possible to define both. We will
-//need to wait for specialization.
-//impl<T, R, F> Apply<T, R> for F where F: Fn( &Apply<T, R>, T ) -> R {
-//    fn apply( &self, f: &Apply<T, R>, t: T ) -> R {
-//        self( f, t )
-//}
-//Before 1.26 we have some limitations and so we need some workarounds. But now impl Trait is stable and we can
-// write the following:
-fn y<T,R>(f:impl FnOnce(&Fn(T) -> R, T) -> R + Clone) -> impl FnOnce(T) -> R {
-   |t| (|x: &Apply<T,R>,y| x.apply(x,y))
-       (&move |x:&Apply<T,R>,y| f(&|z| x.apply(x,z), y), t)
+// This will work for all Fn objects, not just closures
+// And it is a little bit more efficient for Fn closures as it do not clone itself.
+impl<T, R, F> Apply<T, R> for F where F:
+  Fn(&Apply<T, R>, T) -> R
+{
+  fn apply(
+    &self,
+    f: &Apply<T, R>,
+    t: T
+  ) -> R {
+    self(f, t)
 
     // NOTE: Each letter is an individual symbol.
     // (λx.(λy.xxy))(λx.(λy.f(λz.xxz)y))t
     // => (λx.xx)(λx.f(xx))t
     // => (Yf)t
+  }
 }
 
-//Previous version removed as they are just hacks when impl Trait is not available.
+// This works for all closures that is Clone, and those are Fn.
+// impl<T, R, F> Apply<T, R> for F where F: FnOnce( &Apply<T, R>, T ) -> R + Clone {
+//     fn apply( &self, f: &Apply<T, R>, t: T ) -> R {
+//         (self.clone())( f, t )
 
-fn fac( n: usize ) -> usize {
-    let almost_fac = |f: &Fn( usize ) -> usize, x| if x == 0 { 1 } else { x * f( x - 1 ) };
-    let fac = y( almost_fac );
-    fac( n )
+//         // If we were to pass in self as f, we get -
+//         // NOTE: Each letter is an individual symbol.
+//         // λf.λt.sft
+//         // => λs.λt.sst [s/f]
+//         // => λs.ss
+//     }
+// }
+
+// Before 1.26 we have some limitations and so we need some workarounds. But now impl Trait is stable and we can
+// write the following:
+
+fn y<T,R>(f:impl Fn(&Fn(T) -> R, T) -> R) -> impl Fn(T) -> R {
+  move |t| (
+    |x: &Apply<T,R>, y| x.apply(x, y)
+  ) (
+    &|x: &Apply<T,R>, y| f(
+      &|z| x.apply(x,z),
+      y
+    ),
+    t
+  )
+}
+
+// fn y<T,R>(f:impl FnOnce(&Fn(T) -> R, T) -> R + Clone) -> impl FnOnce(T) -> R {
+//    |t| (|x: &Apply<T,R>,y| x.apply(x,y))
+//        (&move |x:&Apply<T,R>,y| f(&|z| x.apply(x,z), y), t)
+
+//     // NOTE: Each letter is an individual symbol.
+//     // (λx.(λy.xxy))(λx.(λy.f(λz.xxz)y))t
+//     // => (λx.xx)(λx.f(xx))t
+//     // => (Yf)t
+// }
+
+// Previous version removed as they are just hacks when impl Trait is not available.
+
+fn fac(n: usize) -> usize {
+  let almost_fac = |f: &Fn(usize) -> usize, x|
+    if x == 0 {
+      1
+    } else {
+      x * f(x - 1)
+    }
+  ;
+  let fac = y( almost_fac );
+  fac(n)
 }
 
 fn fib( n: usize ) -> usize {
-    let almost_fib = |f: &Fn( usize ) -> usize, x| if x < 2 { 1 } else { f( x - 2 ) + f( x - 1 ) };
-    let fib = y( almost_fib );
-    fib( n )
+  let almost_fib = |f: &Fn(usize) -> usize, x|
+    if x < 2 {
+      1
+    } else {
+      f(x - 2) + f(x - 1)
+    };
+  let fib = y(almost_fib);
+  fib(n)
 }
 
 fn optimal_fib( n: usize ) -> usize {
-    let almost_fib = |f: &Fn( (usize,usize,usize) ) -> usize, (i0,i1,x)|
-    {
-        match x {
-            0 => i0,
-            1 => i1,
-            x => f((i1,i0+i1, x-1))
-        }
-    };
-    let fib = |x|y( almost_fib )((1,1,x));
-    fib( n )
+  let almost_fib = |f: &Fn((usize,usize,usize)) -> usize, (i0,i1,x)|
+    match x {
+      0 => i0,
+      1 => i1,
+      x => f((i1,i0+i1, x-1))
+    }
+  ;
+  let fib = |x| y(almost_fib)((1,1,x));
+  fib(n)
 }
 
 fn main() {
-    println!( "{}", fac( 10 ) );
-    println!( "{}", fib( 10 ) );
-    println!( "{}", optimal_fib( 10 ) );
+  println!("{}", fac(10));
+  println!("{}", fib(10));
+  println!("{}", optimal_fib(10));
 }

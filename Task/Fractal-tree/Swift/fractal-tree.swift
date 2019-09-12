@@ -1,5 +1,3 @@
-import UIKit
-
 extension CGFloat {
   func degrees_to_radians() -> CGFloat {
     return CGFloat(M_PI) * self / 180.0
@@ -10,7 +8,6 @@ extension Double {
   func degrees_to_radians() -> Double {
     return Double(M_PI) * self / 180.0
   }
-
 }
 
 
@@ -48,8 +45,6 @@ class Tree: UIView {
     color.set()
     drawTree(self.frame.width / 2 , y1: self.frame.height * 0.8, angle: -90 , depth: 9 )
   }
-
-
 }
 
 

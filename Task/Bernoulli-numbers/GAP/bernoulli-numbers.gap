@@ -1,7 +1,8 @@
-for a in Filtered(List([1 .. 60], n -> [n, Bernoulli(n)]), x -> x[2] <> 0) do
+for a in Filtered(List([0 .. 60], n -> [n, Bernoulli(n)]), x -> x[2] <> 0) do
     Print(a, "\n");
 od;
 
+[ 0, 1 ]
 [ 1, -1/2 ]
 [ 2, 1/6 ]
 [ 4, -1/30 ]

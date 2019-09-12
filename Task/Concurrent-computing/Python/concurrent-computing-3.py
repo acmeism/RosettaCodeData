@@ -4,5 +4,6 @@ import random
 def echo(text):
     print(text)
 
-for text in ["Enjoy", "Rosetta", "Code"]:
-    threading.Timer(random.random(), echo, (text,)).start()
+threading.Timer(random.random(), echo, ("Enjoy",)).start()
+threading.Timer(random.random(), echo, ("Rosetta",)).start()
+threading.Timer(random.random(), echo, ("Code",)).start()

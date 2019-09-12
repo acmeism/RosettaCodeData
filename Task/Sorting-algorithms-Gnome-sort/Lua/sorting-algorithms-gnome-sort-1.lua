@@ -1,7 +1,7 @@
 function gnomeSort(a)
     local i, j = 2, 3
 
-    while i < #a do
+    while i <= #a do
         if a[i-1] <= a[i] then
             i = j
             j = j + 1

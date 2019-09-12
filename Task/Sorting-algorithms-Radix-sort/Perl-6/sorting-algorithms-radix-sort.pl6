@@ -1,5 +1,5 @@
 sub radsort (@ints) {
-    my $maxlen = [max] @ints».chars;
+    my $maxlen = max @ints».chars;
     my @list = @ints».fmt("\%0{$maxlen}d");
 
     for reverse ^$maxlen -> $r {

@@ -1,4 +1,7 @@
-declare
+functor
+import
+  System
+define
   fun {IsHappy N}
      {IsHappy2 N nil}
   end
@@ -37,4 +40,5 @@ declare
 
   HappyNumbers = {LFilter {Nat 1} IsHappy}
 in
-  {Show {List.take HappyNumbers 8}}
+  {System.show {List.take HappyNumbers 8}}
+end

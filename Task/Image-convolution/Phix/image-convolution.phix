@@ -1,0 +1,107 @@
+-- demo\rosetta\Image_convolution.exw
+include pGUI.e
+
+constant filters = {-- Emboss
+                    {{-2.0, -1.0, 0.0},
+                     {-1.0,  1.0, 1.0},
+                     { 0.0,  1.0, 2.0}},
+                    -- Sharpen
+                    {{-1.0, -1.0, -1.0},
+                     {-1.0,  9.0, -1.0},
+                     {-1.0, -1.0, -1.0}},
+                    -- Sobel_emboss
+                    {{-1.0, -2.0, -1.0},
+                     { 0.0,  0.0,  0.0},
+                     { 1.0,  2.0,  1.0}},
+                    -- Box_blur
+                    {{ 1.0, 1.0, 1.0},
+                     { 1.0, 1.0, 1.0},
+                     { 1.0, 1.0, 1.0}},
+                    -- Gaussian_blur
+                    {{1,  4,  7,  4, 1},
+                     {4, 16, 26, 16, 4},
+                     {7, 26, 41, 26, 7},
+                     {4, 16, 26, 16, 4},
+                     {1,  4,  7,  4, 1}}}
+
+function convolute(imImage img, integer fdx)
+integer width = im_width(img),
+        height = im_height(img)
+sequence original = repeat(repeat(0,width),height),
+         new_image,
+         filter = filters[fdx]
+integer fh = length(filter), hh=(fh-1)/2,
+        fw = length(filter[1]), hw=(fw-1)/2,
+        divisor = max(sum(filter),1)
+
+    for y=height-1 to 0 by -1 do
+        for x=0 to width-1 do
+            original[height-y,x+1] = im_pixel(img, x, y)
+        end for
+    end for
+    new_image = original
+
+    for y=hh+1 to height-hh-1 do
+        for x=hw+1 to width-hw-1 do
+            sequence newrgb = {0,0,0}
+            for i=-hh to +hh do
+                for j=-hw to +hw do
+                    newrgb = sq_add(newrgb,sq_mul(filter[i+hh+1,j+hw+1],original[y+i,x+j]))
+                end for
+            end for
+            new_image[y,x] = sq_max(sq_min(sq_floor_div(newrgb,divisor),255),0)
+        end for
+    end for
+
+    new_image = flatten(new_image) -- (as needed by IupImageRGB)
+    Ihandle new_img = IupImageRGB(width, height, new_image)
+    return new_img
+end function
+
+IupOpen()
+
+constant w = machine_word(),
+         TITLE = "Image convolution"
+atom pError = allocate(w)
+imImage im1 = imFileImageLoadBitmap("Quantum_frog.512.png",0,pError)
+
+if im1=NULL then
+    ?{"error opening image",peekNS(pError,w,1)}
+    {} = wait_key()
+    abort(0)
+end if
+
+Ihandle dlg,
+        filter = IupList("DROPDOWN=YES, VALUE=1")
+
+Ihandln image1 = IupImageFromImImage(im1),
+        image2 = convolute(im1,1),
+        label1 = IupLabel(),
+        label2 = IupLabel()
+IupSetAttributeHandle(label1, "IMAGE", image1)
+IupSetAttributeHandle(label2, "IMAGE", image2)
+
+function valuechanged_cb(Ihandle /*filter*/)
+    IupSetAttribute(dlg,"TITLE","Working...")
+    IupSetAttributeHandle(label2, "IMAGE", NULL)
+    IupDestroy(image2)
+    image2 = convolute(im1,IupGetInt(filter,"VALUE"))
+    IupSetAttributeHandle(label2, "IMAGE", image2)
+    IupSetAttribute(dlg,"TITLE",TITLE)
+    IupRefresh(dlg)
+    return IUP_DEFAULT
+end function
+IupSetCallback(filter,"VALUECHANGED_CB",Icallback("valuechanged_cb"))
+
+IupSetAttributes(filter,"1=Emboss, 2=Sharpen, 3=\"Sobel emboss\", 4=\"Box_blur\", 5=Gaussian_blur")
+IupSetAttributes(filter,"VISIBLEITEMS=6") -- (still dunno why this trick works)
+dlg = IupDialog(IupVbox({filter,
+                         IupFill(),
+                         IupHbox({IupFill(),label1, label2,IupFill()}),
+                         IupFill()}))
+IupSetAttribute(dlg, "TITLE", TITLE)
+IupCloseOnEscape(dlg)
+IupShow(dlg)
+
+IupMainLoop()
+IupClose()

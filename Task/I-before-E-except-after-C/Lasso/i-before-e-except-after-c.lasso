@@ -3,7 +3,7 @@ local(cie,cei,ie,ei) = (:0,0,0,0)
 local(match_ie) = regExp(`[^c]ie`)
 local(match_ei) = regExp(`[^c]ei`)
 
-with word in include_url(`http://www.puzzlers.org/pub/wordlists/unixdict.txt`)->asString->split("\n")
+with word in include_url(`http://wiki.puzzlers.org/pub/wordlists/unixdict.txt`)->asString->split("\n")
 where #word >> `ie` or #word >> `ei`
 do {
     #word >> `cie`

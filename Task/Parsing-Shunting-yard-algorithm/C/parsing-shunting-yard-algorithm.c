@@ -99,7 +99,7 @@ int parse(const char *s) {
 	pat_t *p;
 	str_tok_t *t, tok;
 
-	prec_booster = l_queue = 0;
+	prec_booster = l_queue = l_stack = 0;
 	display(s);
 	while (*s) {
 		p = match(s, pat_arg, &tok, &s);
@@ -152,6 +152,9 @@ re_op:		p = match(s, pat_ops, &tok, &s);
 		display(s);
 	}
 
+	if (p->prec > 0)
+		fail("unexpected eol", s);
+
 	return 1;
 }
 
@@ -165,6 +168,7 @@ int main()
 		"(((((((1+2+3**(4 + 5))))))",		/* bad parens */
 		"a^(b + c/d * .1e5)!",			/* unknown op */
 		"(1**2)**3",				/* OK */
+		"2 + 2 *",				/* unexpected eol */
 		0
 	};
 

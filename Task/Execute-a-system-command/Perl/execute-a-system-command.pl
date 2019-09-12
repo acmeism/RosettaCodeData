@@ -1,13 +1,9 @@
-my @results = qx(ls);
-# runs command and returns its STDOUT as a string
-my @results = `ls`;
-# ditto, alternative syntax
+my @results = qx(ls);  # run command and return STDOUT as a string
 
-system "ls";
-# runs command and returns its exit status; its STDOUT gets output to our STDOUT
+my @results = `ls`;    # same, alternative syntax
 
-print `ls`;
-#The same, but with back quotes
+system "ls";           # run command and return exit status; STDOUT of command goes program STDOUT
 
-exec "ls";
-# replace current process with another
+print `ls`;            # same, but with back quotes
+
+exec "ls";             # replace current process with another

@@ -1,4 +1,4 @@
-WordList := URL_ToVar("http://www.puzzlers.org/pub/wordlists/unixdict.txt")
+WordList := URL_ToVar("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt")
 WordList := RegExReplace(WordList, "i)cie", "", cieN)
 WordList := RegExReplace(WordList, "i)cei", "", ceiN)
 RegExReplace(WordList, "i)ie", "", ieN)

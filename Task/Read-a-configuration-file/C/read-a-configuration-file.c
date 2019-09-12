@@ -104,7 +104,7 @@ static int populate_configs (struct configs * confs) {
 		.implicit_is_not_empty = TRUE,
 		.do_not_collapse_values = FALSE,
 		.preserve_empty_quotes = FALSE,
-		.no_disabled_after_space = FALSE,
+		.disabled_after_space = TRUE,
 		.disabled_can_be_implicit = FALSE
 	};
 

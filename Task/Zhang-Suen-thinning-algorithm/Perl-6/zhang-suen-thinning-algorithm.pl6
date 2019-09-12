@@ -1,6 +1,17 @@
-constant DEBUG = 1;
+my $source = qq:to/EOD/;
+................................
+.#########.......########.......
+.###...####.....####..####......
+.###....###.....###....###......
+.###...####.....###.............
+.#########......###.............
+.###.####.......###....###......
+.###..####..###.####..####.###..
+.###...####.###..########..###..
+................................
+EOD
 
-my @lines = ([.ords X+& 1] for lines);  # The low bits Just Work.
+my @lines = ([.ords X+& 1] for $source.split("\n")); # The low bits Just Work.
 my \v = +@lines;
 my \h = +@lines[0];
 my @black = flat @lines.map: *.values;   # Flatten to 1-dimensional.
@@ -30,11 +41,11 @@ repeat while my @goners1 or my @goners2 {
 
     @goners1 = seewhite (0,2,4), (2,4,6);
     @black[@goners1] = 0 xx *;
-    say "Ping: {[+] @black} remaining after removing ", @goners1 if DEBUG;
+    say "Ping: {[+] @black} remaining after removing ", @goners1;
 
     @goners2 = seewhite (0,2,6), (0,4,6);
     @black[@goners2] = 0 xx *;
-    say "Pong: {[+] @black} remaining after removing ", @goners2 if DEBUG;
+    say "Pong: {[+] @black} remaining after removing ", @goners2;
 }
 
 say @black.splice(0,h).join.trans('01' => '.#') while @black;

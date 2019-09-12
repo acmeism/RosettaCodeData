@@ -1,0 +1,114 @@
+integer show = 2,       -- max number to show
+                        -- (nb mirrors are not shown)
+        chance = 1000   -- 1=always, 2=50%, 3=33%, etc
+
+sequence grid
+
+integer gh, -- = length(grid),
+        gw  -- = length(grid[1])
+
+integer ty1, ty2, tx1, tx2  -- target {y,x}s
+
+procedure mirror(integer y, x, ch)
+-- plant/reset ch and the symmetric copy
+    grid[y,x] = ch
+    grid[gh-y+1,gw-x+1] = ch
+end procedure
+
+enum             RIGHT,  UP,   DOWN,  LEFT
+constant dyx = {{0,+1},{-1,0},{+1,0},{0,-1}},
+         chx = "-||-"
+
+function search(integer y, x, d, level)
+    integer count = 0
+    if level=0 or grid[y,x]!='x' then
+        mirror(y,x,'x')
+        integer {dy,dx} = dyx[d],
+                {ny,nx} = {y+dy,x+dx},
+                {yy,xx} = {y+dy*2,x+dx*3}
+        if grid[ny,nx]=' ' then
+            integer c = chx[d]
+            mirror(ny,nx,c)
+            if c='-' then
+                mirror(ny,nx+dx,c)
+            end if
+            integer meet = (yy=ty1 or yy=ty2) and (xx=tx1 or xx=tx2)
+            if meet then
+                count = 1
+                if show and rand(chance)=chance then
+                    show -= 1
+                    sequence g = grid -- (make copy/avoid reset)
+                    -- fill in(/overwrite) the last cut, if any
+                    if    ty1!=ty2 then g[ty1+1,tx1] = '|'
+                    elsif tx1!=tx2 then g[ty1][tx1+1..tx1+2] = "--"
+                    end if
+                    puts(1,join(g,'\n')&"\n\n")
+                end if
+            else
+                if grid[yy,xx]='+' then -- (minor gain)
+                    for d=RIGHT to LEFT do -- (kinda true!)
+                        count += search(yy,xx,d,level+1)
+                    end for
+                end if
+            end if
+            mirror(ny,nx,' ')
+            if c='-' then
+                mirror(ny,nx+dx,' ')
+            end if
+        end if
+        if level!=0 then
+            -- ((level=0)==leave outer edges 'x' for next iteration)
+            mirror(y,x,'+')
+        end if
+    end if
+    return count
+end function
+
+function odd(integer n)  return remainder(n,2)=1 end function
+function even(integer n) return remainder(n,2)=0 end function
+
+procedure make_grid(integer w,h)
+-- The outer edges are 'x'; the inner '+' become 'x' when visited.
+-- Likewise edges are cuts but the inner ones get filled in later.
+sequence tb = join(repeat("x",w+1),"--"),
+         hz = join('x'&repeat("+",w-1)&'x',"  ")&"\n",
+         vt = "|"&repeat(' ',w*3-1)&"|\n"
+    grid = split(tb&"\n"&join(repeat(vt,h),hz)&tb,'\n')
+    -- set size (for mirroring) and target info:
+    gh = length(grid)       gw = length(grid[1])
+    ty1 = h+even(h)         ty2 = ty1+odd(h)*2
+    tx1 = floor(w/2)*3+1    tx2 = tx1+odd(w)*3
+end procedure
+
+function side(integer w, h)
+    make_grid(w,h)
+    -- search top to mid-point
+    integer count = 0, last = 0
+    for r=3 to h+1 by 2 do
+        last = search(r,1,RIGHT,0) -- left to right
+        count += 2*last
+    end for
+    if even(h) then
+        count -= last -- (un-double the centre line)
+    end if
+    return count
+end function
+
+--atom t0 = time()
+-- nb sub-optimal: obviously "grid" was designed for easy display, rather than speed.
+for y=1 to 9 do         -- 24s
+--for y=1 to 10 do      -- (gave up on >10x8)
+    for x=1 to y do
+--  for x=1 to min(y,8) do  -- 4 mins 16s (with y to 10)
+        if even(x*y) then
+            integer count = side(x,y)
+            if x=y then
+                count *= 2
+            else
+                count += side(y,x)
+            end if
+            printf(1,"%d x %d: %d\n", {y, x, count})
+        end if
+    end for
+end for
+--?elapsed(time()-t0)

@@ -4,7 +4,7 @@ data Tree a
 
 flatten :: Tree a -> [a]
 flatten (Leaf x) = [x]
-flatten (Node xs) = concatMap flatten xs
+flatten (Node xs) = xs >>= flatten
 
 main :: IO ()
 main =
@@ -19,4 +19,5 @@ main =
     , Leaf 8
     , Node []
     ]
--- output: [1,2,3,4,5,6,7,8]
+
+-- [1,2,3,4,5,6,7,8]

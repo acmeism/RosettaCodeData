@@ -1,3 +1,5 @@
+use strict;
+
 sub lis {
     my @l = map [], 1 .. @_;
     push @{$l[0]}, +$_[0];
@@ -9,7 +11,7 @@ sub lis {
         }
         push @{$l[$i]}, $_[$i];
     }
-    my ($max, $l) = 0, [];
+    my ($max, $l) = (0, []);
     for (@l) {
         ($max, $l) = (scalar(@$_), $_) if @$_ > $max;
     }

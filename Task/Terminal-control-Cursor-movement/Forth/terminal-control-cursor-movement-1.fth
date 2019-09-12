@@ -4,7 +4,7 @@ DECIMAL
 ( support routines)
  27 CONSTANT ESC
 : <##>    ( n -- ) ( sends n, radix 10, no spaces)
-          BASE @ >R   0 <# #S #> TYPE   R> BASE ! ;
+          BASE @ >R DECIMAL  0 <# #S #> TYPE   R> BASE ! ;
 
 : ESC[   ( -- )   ESC EMIT ." [" ;
 

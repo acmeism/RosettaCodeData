@@ -20,16 +20,16 @@ void counting_sort_mm(int *array, int n, int min, int max)
   free(count);
 }
 
-void counting_sort(int *array, int n)
+void min_max(int *array, int n, int *min, int *max)
 {
-  int i, min, max;
+  int i;
 
-  min = max = array[0];
+  *min = *max = array[0];
   for(i=1; i < n; i++) {
-    if ( array[i] < min ) {
-      min = array[i];
-    } else if ( array[i] > max ) {
-      max = array[i];
+    if ( array[i] < *min ) {
+      *min = array[i];
+    } else if ( array[i] > *max ) {
+      *max = array[i];
     }
   }
 }

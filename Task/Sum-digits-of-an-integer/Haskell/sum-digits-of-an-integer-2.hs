@@ -2,21 +2,19 @@ import Data.Char (digitToInt, intToDigit, isHexDigit)
 import Data.List (transpose, intersperse)
 import Numeric (showIntAtBase, readInt)
 
--- Function of digit string
 digitSum :: String -> Int
-digitSum = sum . (digitToInt <$>)
+digitSum = foldr ((+) . digitToInt) 0
 
--- Function of base and integer value
 intDigitSum :: Int -> Int -> Int
 intDigitSum base n = digitSum (showIntAtBase base intToDigit n [])
 
--- TEST
+-- TESTS ---------------------------------------------------
 main :: IO ()
 main =
   mapM_ putStrLn $
   unwords <$>
   transpose
-    (((<$>) =<< flip justifyRight ' ' . succ . maximum . (length <$>)) <$>
+    ((fmap =<< flip justifyRight ' ' . succ . maximum . fmap length) <$>
      transpose
        ([ "Base"
         , "Digits"
@@ -26,10 +24,10 @@ main =
         ] :
         ((\(s, b) ->
              let v = readBase b s
-             in [ show b                 -- base
-                , show s                 -- digits
-                , show v                 -- value
-                , show (digitSum s)      -- sum from digit string
+             in [ show b -- base
+                , show s -- digits
+                , show v -- value
+                , show (digitSum s) -- sum from digit string
                 , show (intDigitSum b v) -- sum from base and value
                 ]) <$>
          [("1", 10), ("1234", 10), ("fe", 16), ("f0e", 16)])))

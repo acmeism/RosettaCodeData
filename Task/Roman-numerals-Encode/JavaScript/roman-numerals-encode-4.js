@@ -5,7 +5,7 @@
     const roman = n =>
         concat(snd(mapAccumL((balance, [k, v]) => {
             const [q, r] = quotRem(balance, v);
-            return [r, q > 0 ? concat(replicate(q, k)) : ''];
+            return [r, q > 0 ? k.repeat(q) : ''];
         }, n, [
             ['M', 1000],
             ['CM', 900],
@@ -48,12 +48,6 @@
 
     // quotRem :: Integral a => a -> a -> (a, a)
     const quotRem = (m, n) => [Math.floor(m / n), m % n];
-
-    // replicate :: Int -> a -> [a]
-    const replicate = (n, x) =>
-        Array.from({
-            length: n
-        }, () => x);
 
     // show :: a -> String
     const show = (...x) =>

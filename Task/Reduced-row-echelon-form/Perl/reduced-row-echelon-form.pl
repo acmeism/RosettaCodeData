@@ -23,3 +23,15 @@ sub rref
           $_ -= $lv * $mr[++$n] foreach @{ $m[$i] };}
 
       ++$lead;}}
+
+sub display { join("\n" => map join(" " => map(sprintf("%4d", $_), @$_)), @{+shift})."\n" }
+
+@m =
+(
+   [  1,  2,  -1,  -4 ],
+   [  2,  3,  -1, -11 ],
+   [ -2,  0,  -3,  22 ]
+);
+
+rref(\@m);
+print display(\@m);

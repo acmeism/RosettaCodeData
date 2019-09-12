@@ -5,7 +5,7 @@ Name: declare   -- a local declaration block has an optional name
    Z : Integer renames Y: -- Rename Y (creates a view)
    function F (X: Integer) return Integer is
      -- Inside, all declarations outside are visible when not hidden: X, Y, Z are global with respect to F.
-     X: Integer := Z;  -- hides the outer X which however can be refered to by Name.X
+     X: Integer := Z;  -- hides the outer X which however can be referred to by Name.X
    begin
      ...
    end F;  -- locally declared variables stop to exist here

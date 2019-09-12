@@ -1,0 +1,100 @@
+enum type fps_type FPS_UNDEF = 0,
+                   FPS_CONST,
+                   FPS_ADD,
+                   FPS_SUB,
+                   FPS_MUL,
+                   FPS_DIV,
+                   FPS_DERIV,
+                   FPS_INT
+end type
+
+enum FPS_TYPE, FPS_S1, FPS_S2, FPS_A0
+sequence fpss = {}
+
+type fps(object id)
+    return integer(id) and id>=1 and id<=length(fpss)
+end type
+
+type fpsn(object id)
+    return id=NULL or fps(id)
+end type
+
+function fps_new(fps_type ft=FPS_UNDEF, fpsn s1=0, s2=0, atom a0=0)
+    fpss = append(fpss,{ft,s1,s2,a0})
+    fps fpsid = length(fpss)
+    return fpsid
+end function
+
+-- as per C, for (eg) self or mutually recursive definitions.
+procedure fps_redefine(fps fpsid, fps_type ft, fpsn s1id, s2id, object a0="")
+    fpss[fpsid][FPS_TYPE] = ft
+    fpss[fpsid][FPS_S1] = s1id
+    fpss[fpsid][FPS_S2] = s2id
+    if atom(a0) then
+        fpss[fpsid][FPS_A0] = a0
+    end if
+end procedure
+
+function fps_const(atom a0)
+    fps x = fps_new(FPS_CONST,a0:=a0)
+    -- (aside: in the above, the ":=a0" refers to the local namespace
+    --         as usual, whereas "a0:=" refers to the param namespace
+    --         /inside/ the () of fps_new(), so there is no conflict.)
+    return x
+end function
+
+constant INF = 1e300*1e300,
+         NAN = -(INF/INF)
+
+/* Taking the n-th term of series.  This is where actual work is done. */
+function term(fps x, int n)
+    atom ret = 0
+
+    {fps_type ft, fpsn s1id, fpsn s2id, atom a0} = fpss[x]
+    --  FPS_TYPE,    FPS_S1,    FPS_S2,  FPS_A0 <-- nb above must match
+    switch ft do
+        case FPS_CONST: ret := iff(n>0 ? 0 : a0)
+        case FPS_ADD:   ret := term(s1id, n) + term(s2id, n)
+        case FPS_SUB:   ret := term(s1id, n) - term(s2id, n)
+        case FPS_MUL:
+                for i=0 to n do
+                        ret += term(s1id, i) * term(s2id, n-i)
+                end for
+        case FPS_DIV:
+                if not term(s2id, 0) then return NAN end if
+                ret = term(s1id, n)
+                for i=1 to n do
+                        ret -= term(s2id, i) * term(x, n-i) / term(s2id, 0)
+                end for
+        case FPS_DERIV: ret := n * term(s1id, n+1)
+        case FPS_INT:   ret := iff(n=0 ? a0 : term(s1id, n-1)/n)
+        default:        ret := 9/0 -- (fatal error)
+    end switch
+    return ret
+end function
+
+procedure term9(string txt, fps x)
+    printf(1,"%s:",{txt})
+    for i=0 to 9 do printf(1," %g", term(x, i)) end for
+    printf(1,"\n")
+end procedure
+
+procedure main()
+    fps one = fps_const(1)
+    fps fcos = fps_new()                    /* cosine */
+    fps fsin = fps_new(FPS_INT,fcos)        /* sine */
+    fps ftan = fps_new(FPS_DIV,fsin,fcos)   /* tangent */
+
+    /* redefine cos to complete the mutual recursion */
+    fps_redefine(fcos, FPS_SUB, one, fps_new(FPS_INT,fsin))
+
+    fps fexp = fps_const(1);        /* exponential */
+    /* make exp recurse on self */
+    fps_redefine(fexp, FPS_INT, fexp, 0);
+
+    term9("Sin",fsin)
+    term9("Cos",fcos)
+    term9("Tan",ftan)
+    term9("Exp",fexp)
+end procedure
+main()

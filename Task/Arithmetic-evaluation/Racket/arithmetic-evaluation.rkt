@@ -1,6 +1,7 @@
 #lang racket
 
-(require parser-tools/yacc parser-tools/lex
+(require parser-tools/yacc
+         parser-tools/lex
          (prefix-in ~ parser-tools/lex-sre))
 
 (define-tokens value-tokens (NUM))
@@ -30,6 +31,6 @@
 
 (define (calc str)
   (define i (open-input-string str))
-  (displayln (parse (λ() (lex i)))))
+  (displayln (parse (λ () (lex i)))))
 
 (calc "(1 + 2 * 3) - (1+2)*-3")

@@ -1,23 +1,11 @@
-import System.Environment
-import System.IO
-import System.Directory
-import Control.Monad
+import Data.Char (chr, isAlpha, ord, toLower)
+import Data.Bool (bool)
 
-hInteract :: (String -> String) -> Handle -> Handle -> IO ()
-hInteract f hIn hOut =
-  hGetContents hIn >>= hPutStr hOut . f
+rot13 :: Char -> Char
+rot13 =
+  let rot = flip ((bool (-) (+) . ('m' >=) . toLower) <*> ord)
+  in (bool <*> chr . rot 13) <*> isAlpha
 
-processByTemp :: (Handle -> Handle -> IO ()) -> String -> IO ()
-processByTemp f name = do
-  hIn <- openFile name ReadMode
-  let tmp = name ++ "$"
-  hOut <- openFile tmp WriteMode
-  f hIn hOut
-  hClose hIn
-  hClose hOut
-  removeFile name
-  renameFile tmp name
-
-process :: (Handle -> Handle -> IO ()) -> [String] -> IO ()
-process f [] = f stdin stdout
-process f ns = mapM_ (processByTemp f) ns
+-- Simple test
+main :: IO ()
+main = print $ rot13 <$> "Abjurer nowhere"

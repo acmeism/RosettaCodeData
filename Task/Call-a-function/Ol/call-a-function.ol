@@ -3,7 +3,6 @@
 ;;; Calling a function that requires no arguments
 (define (no-args-function)
    (print "ok."))
-)
 
 (no-args-function)
 ; ==> ok.
@@ -13,7 +12,6 @@
 (define (two-args-function a b)
    (print "a: " a)
    (print "b: " b))
-)
 
 (two-args-function 8 13)
 ; ==> a: 8
@@ -29,7 +27,7 @@
       (print "b: " (car args)))
    (if (less? 1 (length args))
       (print "c: " (cadr args)))
-   ; etc.
+   ; etc...
 )
 
 (optional-args-function 3)
@@ -53,10 +51,10 @@
 
 
 ;;; Calling a function with named arguments
-; /no named arguments "from the box" provided, but it can be simulated using builtin maps (named "ff")
+; /no named arguments "from the box" is provided, but it can be easily simulated using builtin associative arrays (named "ff")
 (define (named-args-function args)
-   (print "a: " (get args 'a 8))
-   (print "b: " (get args 'b 13))
+   (print "a: " (get args 'a 8)) ; 8 is default value if no variable value given
+   (print "b: " (get args 'b 13)); same as above
 )
 
 (named-args-function #empty)
@@ -65,10 +63,14 @@
 (named-args-function (list->ff '((a . 3))))
 ; ==> a: 3
 ; ==> b: 13
-(named-args-function (list->ff '((b . 7))))
+; or nicer (and shorter) form available from ol version 2.1
+(named-args-function '{(a . 3)})
+; ==> a: 3
+; ==> b: 13
+(named-args-function '{(b . 7)})
 ; ==> a: 8
 ; ==> b: 7
-(named-args-function (list->ff '((a . 3) (b . 7))))
+(named-args-function '{(a . 3) (b . 7)})
 ; ==> a: 3
 ; ==> b: 7
 
@@ -83,6 +85,12 @@
 (first-class-arg-function - 2 3)
 ; ==> -1
 
+;;; Using a function in statement context
+(let ((function (lambda (x) (* x x))))
+   (print (function 4))
+; ==> 16
+;(print (function 4))
+; ==> What is 'function'?
 
 ;;; Obtaining the return value of a function
 (define (return-value-function)
@@ -93,7 +101,15 @@
    (print result))
 ; ==> ok.
 ; ==> 123
-; actually
+
+;;; Obtaining the return value of a function while breaking the function execution (for example infinite loop)
+(print
+   (call/cc (lambda (return)
+      (let loop ((n 0))
+         (if (eq? n 100)
+            (return (* n n)))
+         (loop (+ n 1))))))) ; this is infinite loop
+; ==> 10000
 
 
 ;;; Is partial application possible and how
@@ -103,17 +119,20 @@
 )
 
 (define plus (make-partial-function +))
+(define minus (make-partial-function -))
+
 (plus 2 3)
 ; ==> 5
-(define minus (make-partial-function -))
 (minus 2 3)
 ; ==> -1
 
-
-; TBD:
-;;; Using a function in statement context
-;;; Using a function in first-class context within an expression
-;;; Obtaining the return value of a function
 ;;; Distinguishing built-in functions and user-defined functions
+; ol has no builtin functions but only eight builtin forms: quote, values, lambda, setq, letq, ifeq, either, values-apply.
+; all other functions is "user-defined", and some of them defined in base library, for example (scheme core) defines if, or, and, zero?, length, append...
+
 ;;; Distinguishing subroutines and functions
+; Both subroutines and functions is a functions in Ol.
+; Btw, the "subroutine" has a different meaning in Ol - the special function that executes simultaneously in own context. The intersubroutine messaging mechanism is provided, sure.
+
 ;;; Stating whether arguments are passed by value or by reference
+; The values in Ol always passed as values and objects always passed as references. If you want to pass an object copy - make a copy by yourself.

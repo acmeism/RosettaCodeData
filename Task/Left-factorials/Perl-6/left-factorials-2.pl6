@@ -1,5 +1,6 @@
-constant fact = 1, |[\*] 1..*;
-constant leftfact = 0, |[\+] fact;
+constant leftfact = 0, |[\+] 1, (|[\*] 1..*);
 
-printf "!%d  = %s\n", $_, leftfact[$_] for 0 ... 10, 20 ... 110;
-printf "!%d has %d digits.\n", $_, leftfact[$_].chars for 1000, 2000 ... 10000;
+$ = leftfact[10000]; # Pre-initialize
+
+.say for ( 0 … 10, 20 … 110 ).hyper(:4batch).map: { sprintf "!%d  = %s", $_, leftfact[$_] };
+.say for (1000, 2000 … 10000).hyper(:4batch).map: { sprintf "!%d has %d digits.", $_, chars leftfact[$_] };

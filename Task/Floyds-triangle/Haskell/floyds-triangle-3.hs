@@ -1,12 +1,12 @@
 import Data.List (mapAccumL)
+import Control.Arrow ((&&&))
 
 floyd :: Int -> [[Int]]
 floyd n =
   snd $
   mapAccumL
     (\a x ->
-        let m = a + x
-        in (succ m, [a .. m]))
+        ((succ &&& enumFromTo a) (a + x)))
     1
     [0 .. pred n]
 

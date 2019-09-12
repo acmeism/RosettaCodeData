@@ -16,4 +16,4 @@ begin
   -- The further line will raise an exception since the GCD will not be 1
   Put_Line (inv_mod (42,77)'img);
   exception when others => Put_Line ("The inverse doesn't exist.");
-end bitmap;
+end modular_inverse;

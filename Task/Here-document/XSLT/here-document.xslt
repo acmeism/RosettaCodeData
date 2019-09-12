@@ -14,7 +14,7 @@ your text, a workaround is to drop out of the CDATA section, output part of the
 terminator, then start a new CDATA section and output the rest. Let's do this
 now:
 
-	]]>]]<![CDATA[>
+    ]]>]]<![CDATA[>
 
 Newlines and spacing are retained as well, as long as they're evaluated in a
 context that bothers preserving them. Whether or not the spaces before and after

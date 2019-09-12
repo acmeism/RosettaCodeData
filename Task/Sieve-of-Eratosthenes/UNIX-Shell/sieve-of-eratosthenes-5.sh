@@ -1,28 +1,33 @@
-# Sieve of Eratosthenes: Echoes all prime numbers through $limit.
-@ limit = 80
+# Fill $1 characters with $2.
+fill () {
+	# This pipeline would begin
+	#   head -c $1 /dev/zero | ...
+	# but some systems have no head -c. Use dd.
+	dd if=/dev/zero bs=$1 count=1 2>/dev/null | tr '\0' $2
+}
 
-if ( ( $limit * $limit ) / $limit != $limit ) then
-	echo limit is too large, would cause integer overflow.
-	exit 1
-endif
+filter () {
+	# Use sed to put an 'x' after each multiple of $1, remove
+	# first 'x', and mark non-primes with '0'.
+	sed -e s/$2/\&x/g -e s/x// -e s/.x/0/g | {
+		if expr $1 '*' $1 '<' $3 > /dev/null; then
+			filter `expr $1 + 1` .$2 $3
+		else
+			cat
+		fi
+	}
+}
 
-# Use $prime[2], $prime[3], ..., $prime[$limit] as array of booleans.
-# Initialize values to 1 => yes it is prime.
-set prime=( `repeat $limit echo 1` )
+# Generate a sequence of 1s and 0s indicating primality.
+oz () {
+	fill $1 1 | sed s/1/0/ | filter 2 .. $1
+}
 
-# Find and echo prime numbers.
-@ i = 2
-while ( $i <= $limit )
-	if ( $prime[$i] ) then
-		echo $i
+# Echo prime numbers from 2 to $1.
+prime () {
+	# Escape backslash inside backquotes. sed sees one backslash.
+	echo `oz $1 | sed 's/./&\\
+/g' | grep -n 1 | sed s/:1//`
+}
 
-		# For each multiple of i, set 0 => no it is not prime.
-		# Optimization: start at i squared.
-		@ m = $i * $i
-		while ( $m <= $limit )
-			set prime[$m] = 0
-			@ m += $i
-		end
-	endif
-	@ i += 1
-end
+prime 1000

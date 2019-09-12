@@ -1,2 +1,2 @@
-~> factors_naive 25
+~> factorsNaive 25
 [1,5,25]

@@ -1,4 +1,4 @@
-levenshtein :: String -> String -> Int
+levenshtein :: Eq a => [a] -> [a] -> Int
 levenshtein s1 s2 = last $ foldl transform [0 .. length s1] s2
   where
     transform ns@(n:ns1) c = scanl calc (n + 1) $ zip3 s1 ns ns1

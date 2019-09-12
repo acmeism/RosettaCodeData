@@ -1,1 +1,1 @@
-select * from people p join nemesises n on p.name = n.name
+select /*+ use_hash */ * from people join nemesises using(name);

@@ -3,7 +3,7 @@
 
 typedef struct stream_t stream_t, *stream;
 struct stream_t {
-	/* get funciton is supposed to return a byte value (0-255),
+	/* get function is supposed to return a byte value (0-255),
 		or -1 to signify end of input */
 	int (*get)(stream);
 	/* put function does output, one byte at a time */

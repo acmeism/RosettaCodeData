@@ -4,7 +4,7 @@ oFID_ = 'ODDWORD.'                               /*  "       "       "    "   " 
 
      do case=1  for 2;   #=0                     /*#:  is the number of characters read.*/
      iFID=iFID_ || case                          /*read   ODDWORD.IN1  or  ODDWORD.IN2  */
-     oFID=oFID_ || case                          /*write  ODDWORD.1    o r ODDWORD.2    */
+     oFID=oFID_ || case                          /*write  ODDWORD.1    or  ODDWORD.2    */
      say;   say;    say '════════ reading file: '        iFID        "════════"                /* ◄■■■■■■■■■ optional. */
 
          do  until x==.                               /* [↓]  perform for  "odd"  words.*/

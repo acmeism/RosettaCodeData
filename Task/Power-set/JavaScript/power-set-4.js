@@ -3,7 +3,7 @@
 
     // powerset :: [a] -> [[a]]
     const powerset = xs =>
-        xs.reduceRight((a, x) => a.concat(a.map(y => [x].concat(y))), [
+        xs.reduceRight((a, x) => [...a, ...a.map(y => [x, ...y])], [
             []
         ]);
 

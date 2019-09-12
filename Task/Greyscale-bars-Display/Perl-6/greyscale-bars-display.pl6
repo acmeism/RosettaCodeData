@@ -1,8 +1,6 @@
-my $wininfo = qx[xwininfo -root];
-my ($width,$height) = ($wininfo ~~ /'Width: ' (\d+) .*? 'Height: ' (\d+)/).list;
-($width,$height) = 1280,768 unless $width;
+my ($width,$height) = 1280,768;
 
-my $PGM = open "Greyscale-bars-perl6.pgm", :w or die "Can't create Greyscale-bars-perl6.pgm: $!";
+my $PGM = open "Greyscale-bars-perl6.pgm", :w orelse die "Can't create Greyscale-bars-perl6.pgm: $_";
 
 $PGM.print: qq:to/EOH/;
     P2

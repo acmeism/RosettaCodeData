@@ -1,5 +1,5 @@
 procedure Make_List is
-   Link_Access : A, B, C;
+   A, B, C : Link_Access;
 begin
    A := new Link;
    B := new Link;

@@ -1,21 +1,14 @@
+import Data.Numbers.Primes (isPrime)
 import Data.List (unfoldr)
 import Data.Tuple (swap)
+import Data.Bool (bool)
 
 isPernicious :: Int -> Bool
 isPernicious = isPrime . popCount
 
 popCount :: Int -> Int
 popCount =
-  sum . unfoldr ((flip if_ Nothing . (0 ==)) <*> (Just . swap . flip quotRem 2))
-
-isPrime :: Int -> Bool
-isPrime =
-  (==) <$> (\n -> [1 .. n] >>= flip ((if_ . (0 ==) . mod n) <*> return) []) <*>
-  ((1 :) . return)
-
-if_ :: Bool -> a -> a -> a
-if_ True x _ = x
-if_ False _ y = y
+  sum . unfoldr ((flip bool Nothing . Just . swap . flip quotRem 2) <*> (0 ==))
 
 main :: IO ()
 main =

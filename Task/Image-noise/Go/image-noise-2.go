@@ -1,7 +1,7 @@
 package main
 
 /* Note, the x-go-binding/ui/x11 lib is under development and has as a temp solution
-   set the x window to a static hight and with, you have to manualy set these
+   set the x window to a static height and with, you have to manualy set these
    to 240 x 320 in code.google.com/p/x-go-binding/ui/x11/conn.go */
 
 import "code.google.com/p/x-go-binding/ui"

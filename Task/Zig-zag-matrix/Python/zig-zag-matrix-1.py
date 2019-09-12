@@ -1,13 +1,22 @@
 def zigzag(n):
-    indexorder = sorted(((x,y) for x in range(n) for y in range(n)),
-                    key = lambda (x,y): (x+y, -y if (x+y) % 2 else y) )
-    return {index: n for n,index in enumerate(indexorder)}
+    '''zigzag rows'''
+    def compare(xy):
+        x, y = xy
+        return (x + y, -y if (x + y) % 2 else y)
+    xs = range(n)
+    return {index: n for n, index in enumerate(sorted(
+        ((x, y) for x in xs for y in xs),
+        key=compare
+    ))}
+
 
 def printzz(myarray):
-    n = int(len(myarray)** 0.5 +0.5)
-    for x in range(n):
-        for y in range(n):
-                print "%2i" % myarray[(x,y)],
-        print
+    '''show zigzag rows as lines'''
+    n = int(len(myarray) ** 0.5 + 0.5)
+    xs = range(n)
+    print('\n'.join(
+        [''.join("%3i" % myarray[(x, y)] for x in xs) for y in xs]
+    ))
+
 
 printzz(zigzag(6))

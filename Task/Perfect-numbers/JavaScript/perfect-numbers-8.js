@@ -1,24 +1,25 @@
-((nFrom, nTo) => {
+(() => {
+    const main = () =>
+        enumFromTo(1, 10000).filter(perfect);
 
     // perfect :: Int -> Bool
-    let perfect = n => {
-            let lows = range(1, Math.floor(Math.sqrt(n)))
-                .filter(x => (n % x) === 0);
+    const perfect = n => {
+        const
+            lows = enumFromTo(1, Math.floor(Math.sqrt(n)))
+            .filter(x => (n % x) === 0);
 
-            return n > 1 && lows.concat(lows.map(x => n / x))
-                .reduce((a, x) => (a + x), 0) / 2 === n;
-        },
+        return n > 1 && lows.concat(lows.map(x => n / x))
+            .reduce((a, x) => (a + x), 0) / 2 === n;
+    };
 
-        // range :: Int -> Int -> Maybe Int -> [Int]
-        range = (m, n, step) => {
-            let d = (step || 1) * (n >= m ? 1 : -1);
+    // GENERIC --------------------------------------------
 
-            return Array.from({
-                length: Math.floor((n - m) / d) + 1
-            }, (_, i) => m + (i * d));
-        };
+    // enumFromTo :: Int -> Int -> [Int]
+    const enumFromTo = (m, n) =>
+        Array.from({
+            length: n - m + 1
+        }, (_, i) => i + m)
 
-    return range(nFrom, nTo)
-        .filter(perfect);
-
-})(1, 10000);
+    // MAIN ---
+    return main();
+})();

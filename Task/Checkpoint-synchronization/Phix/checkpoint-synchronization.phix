@@ -1,0 +1,50 @@
+-- demo\rosetta\checkpoint_synchronisation.exw
+constant NPARTS = 3
+integer workers = 0
+sequence waiters = {}
+bool terminate = false
+
+procedure checkpoint(integer task_id)
+    if length(waiters)+1=NPARTS or terminate then
+        printf(1,"checkpoint\n")
+        for i=1 to length(waiters) do
+            task_schedule(waiters[i],1)
+        end for
+        waiters = {}
+    else
+        waiters &= task_id
+        task_suspend(task_id)
+        task_yield()
+    end if
+end procedure
+
+procedure worker(string name)
+    printf(1,"worker %s running\n",{name})
+    while not terminate do
+        printf(1,"worker %s begins part\n",{name})
+        task_delay(rnd())
+        printf(1,"worker %s completes part\n",{name})
+        checkpoint(task_self())
+        if rnd()>0.95 then exit end if
+        task_delay(rnd())
+    end while
+    printf(1,"worker %s leaves\n",{name})
+    workers -= 1
+end procedure
+
+string name = "A"
+
+while get_key()!=#1B do -- (key escape to shut down)
+    if workers<NPARTS then
+        integer task_id = task_create(routine_id("worker"),{name})
+        task_schedule(task_id,1)
+        name[1] += 1
+        workers += 1
+    end if
+    task_yield()
+end while
+printf(1,"escape keyed\n")
+terminate = true
+while workers>0 do
+    task_yield()
+end while

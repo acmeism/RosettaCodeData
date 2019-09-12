@@ -1,7 +1,7 @@
    F1=@sin;	% F1 refers to function sin()
    F2=@cos;	% F2 refers to function cos()
 
-   % varios ways to call the refered function 	
+   % varios ways to call the referred function 	
    F1(pi/4)
    F2(pi/4)
    feval(@sin,pi/4)

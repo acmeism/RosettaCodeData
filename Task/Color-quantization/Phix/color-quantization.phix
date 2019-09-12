@@ -1,0 +1,97 @@
+-- demo\rosetta\Color_quantization.exw
+include pGUI.e
+
+function makeCluster(sequence pixels)
+    sequence rs = vslice(pixels,1),
+             gs = vslice(pixels,2),
+             bs = vslice(pixels,3)
+    integer n = length(pixels),
+            rd = max(rs)-min(rs),
+            gd = max(gs)-min(gs),
+            bd = max(bs)-min(bs)
+    atom score = n*rd*gd*bd
+--  atom score = n*(rd+gd+bd)  -- (this is how/where to experiment)
+    sequence centroid = sq_round({sum(rs)/n,sum(gs)/n,sum(bs)/n}),
+             ranges = {rd,gd,bd}
+    return {score,centroid,ranges,pixels}
+end function
+
+function colorQuant(imImage img, integer n)
+integer width = im_width(img),
+        height = im_width(img)
+    -- Extract the original pixels from the image
+    sequence original = {}
+    integer dx = 1
+    for y=height-1 to 0 by -1 do
+        for x=0 to width-1 do
+            original = append(original,im_pixel(img, x, y)&dx)
+            dx += 1
+        end for
+    end for
+    -- Divide pixels into clusters
+    sequence cs = {makeCluster(original)}, unsplittable={}, centroid, volume, pixels
+    while length(cs)<n do
+        cs = sort(cs)
+--      cs = reverse(sort(cs)) -- (to deliberately show a much worse result)
+        {?,centroid,volume,pixels} = cs[$]
+        integer {vr,vg,vb} = volume
+        integer pdx = iff(vr>vg and vr>vb?1:iff(vg>vb?2:3)),
+                c = centroid[pdx] -- (ie r=1, g=2, b=3)
+        sequence p1 = {}, p2 = {}
+        for i=1 to length(pixels) do
+            sequence p = pixels[i]
+            if p[pdx]<c then p1 = append(p1,p) else p2 = append(p2,p) end if
+        end for
+        if length(p1) and length(p2) then
+            cs[$] = makeCluster(p1)
+            cs = append(cs,makeCluster(p2))
+        else
+            ?"unsplittable"
+            unsplittable = append(unsplittable,cs[$])
+            cs = cs[1..$-1]
+            n -= 1
+        end if
+    end while
+    cs &= unsplittable
+    -- substitute all pixels with the centroid (aka cluster average)
+    for i=1 to length(cs) do
+        {?,centroid,?,pixels} = cs[i]
+        for p=1 to length(pixels) do
+            dx = pixels[p][4]
+            original[dx] = centroid
+        end for
+    end for
+    original = flatten(original) -- (needed for IupImageRGB)
+    Ihandle new_img = IupImageRGB(width, height, original)
+    return new_img
+end function
+
+IupOpen()
+
+atom pError = allocate(machine_word())
+imImage im1 = imFileImageLoadBitmap("Quantum_frog.png",0,pError)
+if im1=NULL then ?"error opening Quantum_frog.png" abort(0) end if
+-- stolen from simple_paint (else im_pixel crashed):
+-- we are going to support only RGB images with no alpha
+imImageRemoveAlpha(im1)
+if im_color_space(im1)!=IM_RGB then
+    imImage new_image = imImageCreateBased(im1, -1, -1, IM_RGB, -1)
+    imConvertColorSpace(im1, new_image)
+    imImageDestroy(im1)
+    im1 = new_image
+end if
+
+Ihandln image1 = IupImageFromImImage(im1),
+        image2 = colorQuant(im1,16),
+        label1 = IupLabel(),
+        label2 = IupLabel()
+IupSetAttributeHandle(label1, "IMAGE", image1)
+IupSetAttributeHandle(label2, "IMAGE", image2)
+
+Ihandle dlg = IupDialog(IupHbox({label1, label2}))
+IupSetAttribute(dlg, "TITLE", "Color quantization")
+IupCloseOnEscape(dlg)
+IupShow(dlg)
+
+IupMainLoop()
+IupClose()

@@ -1,8 +1,8 @@
-import Graphics.Element exposing (show)
+import Html exposing (text)
 import List exposing (map)
 
 main =
-  map getWordForNum [1..100] |> show
+  [1..100] |> map getWordForNum |> text
 
 getWordForNum num =
   if num % 15 == 0 then
@@ -12,4 +12,4 @@ getWordForNum num =
   else if num % 5 == 0 then
     "Buzz"
   else
-    toString num
+    String.fromInt num

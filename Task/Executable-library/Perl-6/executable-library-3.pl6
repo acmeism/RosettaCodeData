@@ -1,3 +1,4 @@
 use Hailstone;
-my %score; %score{hailstone($_).elems}++ for 1 .. 100_000;
+my %score;
+(1 .. 100_000).race.map: { %score{hailstone($_).elems}++ };
 say "Most common length is {.key}, occurring {.value} times." given max :by(*.value), %score;

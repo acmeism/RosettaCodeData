@@ -1,11 +1,10 @@
 Number extend [
   my_factorial [
-    (self < 2) ifTrue: [ ^1 ]
-               ifFalse: [ |c|
-                 c := OrderedCollection new.
-                 2 to: self do: [ :i | c add: i ].
-		 ^ (c fold: [ :a :b | a * b ] )
-               ]
+    (self < 2)
+        ifTrue: [ ^1 ]
+        ifFalse: [
+	    ^ (2 to: self) fold: [ :a :b | a * b ]
+        ]
   ]
 ].
 

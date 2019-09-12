@@ -1,30 +1,53 @@
-function is_prime(integer n)
-    if n<2 then return 0 end if
-    if n=2 then return 1 end if
-    if remainder(n,2)=0 then return 0 end if
-    for i=3 to floor(sqrt(n)) by 2 do
-        if remainder(n,i)=0 then
-            return 0
-        end if
-    end for
-    return 1
-end function
+bool full = true -- (see extended output below)
+constant limit = iff(full?20:23)
 
-include bigatom.e
+include mpfr.e
 
 function mersenne(integer p)
     if p = 2 then return true end if
     if not is_prime(p) then return false end if
-    bigatom s := ba_new(4),
-            m := ba_sub(ba_power(2,p),1)
+    mpz s := mpz_init(4),
+        m := mpz_init(),
+        r = mpz_init()
+    mpz_ui_pow_ui(m, 2, p)
+    mpz_sub_si(m,m,1)
     for i=3 to p do
-         s := ba_remainder(ba_sub(ba_multiply(s,s),2),m)
+        mpz_mul(s,s,s)
+        mpz_sub_si(s,s,2)
+--      mpz_mod(s,s,m)
+        if mpz_sign(s) < 0 then
+            mpz_add(s, s ,m)
+        else
+            mpz_tdiv_r_2exp(r, s, p)
+            mpz_tdiv_q_2exp(s, s, p)
+            mpz_add(s, s, r)
+        end if
+        if (mpz_cmp(s, m) >= 0) then mpz_sub(s, s, m) end if
     end for
-    return ba_compare(s,ba_new(0))=0
+    bool res = mpz_cmp_si(s,0)=0
+    {s,m,r} = mpz_free({s,m,r})
+    return res
 end function
 
-for i=2 to 128 do
-   if mersenne(i) then
-      printf(1," M%d",{i})
-   end if
-end for
+atom t0 = time(), t1 = t0
+integer i=2, j = 1, count = 0
+constant mersennes = {1279, 2203, 2281, 3217, 4253, 4423, 9689, 9941, 11213, 19937, 21701,
+                      23209, 44497, 86243, 110503, 132049, 216091, 756839, 859433, 1257787,
+                      1398269, 2976221, 3021377, 6972593, 13466917, 20996011, 24036583,
+                      25964951, 30402457, 32582657, 37156667, 42643801, 43112609}
+
+while count<limit do
+    if mersenne(i) then
+        count += 1
+        string e = iff(time()-t1<0.1?"",", "&elapsed(time()-t1))
+        printf(1,"M%d (%d%s)\n",{i,count,e})
+        t1 = time()
+    end if
+    if full or i<1000 then
+        i += 1
+    else
+        i = mersennes[j]
+        j += 1
+    end if
+end while
+printf(1,"completed in %s\n",{elapsed(time()-t0)})

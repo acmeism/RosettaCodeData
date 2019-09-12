@@ -8,7 +8,7 @@ class Metronome{
 	public void start(){
 		while(true){
 			try {
-				Thread.sleep((long)(1000*(60/bpm)));
+				Thread.sleep((long)(1000*(60.0/bpm)));
 			}catch(InterruptedException e) {
 				e.printStackTrace();
 			}

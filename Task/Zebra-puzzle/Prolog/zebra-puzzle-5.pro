@@ -42,7 +42,7 @@ zebra :-
 
     % print the answers
     sort([Englishman-englishman, Spaniard-spaniard, Japanese-japanese,         Ukrainian-ukrainian,     Norwegian-norwegian],   NationNames),
-    sort([Red-red,               Green-green,       White-white,               Yellow-yellow,           Blue-bule],             ColorNames),
+    sort([Red-red,               Green-green,       White-white,               Yellow-yellow,           Blue-blue],             ColorNames),
     sort([Oldgold-oldgold,       Kools-kools,       Chesterfield-chesterfield, Luckystrike-luckystrike, Parliament-parliament], SmokeNames),
     sort([Dog-dog,               Snails-snails,     Fox-fox,                   Horse-horse,             Zebra-zebra],           PetNames),
     sort([Tea-tea,               Coffee-coffee,     Milk-milk,                 Orangejuice-orangejuice, Water-water],           DrinkNames),

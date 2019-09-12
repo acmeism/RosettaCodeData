@@ -4,7 +4,7 @@ public class BinarySearchIterative {
         int hi = nums.length - 1;
         int lo = 0;
         while (hi >= lo) {
-            int guess = lo + ((hi - lo) / 2);
+            int guess = (lo + hi) >>> 1;  // from OpenJDK
             if (nums[guess] > check) {
                 hi = guess - 1;
             } else if (nums[guess] < check) {

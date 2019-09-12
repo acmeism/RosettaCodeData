@@ -4,5 +4,5 @@
 
 main() ->
 	List =[1,2,3,4,5],
-	Index = random:uniform(length(List)),
+	Index = rand:uniform(length(List)),
 	lists:nth(Index,List).

@@ -1,7 +1,9 @@
-from __future__ import print_function
 import random
-import gevent
+from twisted.internet    import reactor, task, defer
+from twisted.python.util import println
 
 delay = lambda: 1e-4*random.random()
-gevent.joinall([gevent.spawn_later(delay(), print, line)
-               for line in 'Enjoy Rosetta Code'.split()])
+d = defer.DeferredList([task.deferLater(reactor, delay(), println, line)
+                        for line in 'Enjoy Rosetta Code'.split()])
+d.addBoth(lambda _: reactor.stop())
+reactor.run()

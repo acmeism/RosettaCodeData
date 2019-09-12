@@ -1,10 +1,8 @@
-module sha256_m
+module sha256_mod
     use kernel32
     use advapi32
     implicit none
     integer, parameter :: SHA256LEN = 32
-    integer(DWORD), parameter :: CALG_SHA_256 = 32780
-    character(*), parameter :: MS_ENH_RSA_AES_PROV = "Microsoft Enhanced RSA and AES Cryptographic Provider"C
 contains
     subroutine sha256hash(name, hash, dwStatus, filesize)
         implicit none
@@ -44,7 +42,7 @@ contains
         end if
 
         do
-            status = ReadFile(hFile, loc(buffer), BUFLEN, loc(nRead), NULL)
+            status = ReadFile(hFile, loc(buffer), BUFLEN, nRead, NULL)
             if (status == FALSE .or. nRead == 0) exit
             filesize = filesize + nRead
             if (CryptHashData(hHash, buffer, nRead, 0) == FALSE) then
@@ -73,7 +71,7 @@ contains
 end module
 
 program sha256
-    use sha256_m
+    use sha256_mod
     implicit none
     integer :: n, m, i, j
     character(:), allocatable :: name

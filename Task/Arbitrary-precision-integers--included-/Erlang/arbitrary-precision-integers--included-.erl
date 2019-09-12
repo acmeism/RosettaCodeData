@@ -13,7 +13,7 @@ pow(B,P,Acc) ->
 
 test() ->
     I = pow(5,pow(4,pow(3,2))),
-    [S] = io_lib:format("~b",[I]),
+    S = integer_to_list(I),
     L = length(S),
     Prefix = lists:sublist(S,20),
     Suffix = lists:sublist(S,L-19,20),

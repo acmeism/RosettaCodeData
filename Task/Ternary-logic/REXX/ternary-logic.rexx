@@ -141,7 +141,7 @@ truthTable: procedure; parse arg $ ';' comm 1 $o;        $o=strip($o)
       return
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 scan: procedure; parse arg x,at;    L=length(x);    t=L;     lp=0;     apost=0;    quote=0
-      if at<0  then do;  t=1;  x=translate(x, '()', ")(");   end
+      if at<0  then do;   t=1;   x= translate(x, '()', ")(");    end
 
                       do j=abs(at)  to t  by sign(at);  _=substr(x,j,1);  __=substr(x,j,2)
                       if quote           then do; if _\=='"'  then iterate
@@ -152,44 +152,44 @@ scan: procedure; parse arg x,at;    L=length(x);    t=L;     lp=0;     apost=0; 
                                               if __=="''"     then do; j=j+1; iterate; end
                                               apost=0;  iterate
                                               end
-                      if _=='"'          then do; quote=1;                    iterate; end
-                      if _=="'"          then do; apost=1;                    iterate; end
+                      if _=='"'          then do;  quote=1;                   iterate; end
+                      if _=="'"          then do;  apost=1;                   iterate; end
                       if _==' '          then iterate
-                      if _=='('          then do; lp=lp+1;                    iterate; end
-                      if lp\==0          then do; if _==')'   then lp=lp-1;   iterate; end
+                      if _=='('          then do;  lp=lp+1;                   iterate; end
+                      if lp\==0          then do;  if _==')'  then lp=lp-1;   iterate; end
                       if datatype(_,'U') then return j - (at<0)
                       if at<0            then return j + 1
                       end   /*j*/
       return min(j,L)
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-changeFunc: procedure;  parse arg z,fC,newF;   funcPos=0
-           do forever
-           funcPos=pos(fC, z, funcPos + 1);    if funcPos==0  then return z
-           origPos=funcPos
-           z=changestr(fC, z, ",'"newF"',")
-           funcPos=funcPos + length(newF) + 4
-           where=scan(z, funcPos)     ;        z=insert(    '}',  z,  where)
-           where=scan(z, 1 - origPos) ;        z=insert('trit{',  z,  where)
-           end   /*forever*/
+changeFunc: procedure;  parse arg z,fC,newF;       funcPos= 0
+            do forever
+            funcPos= pos(fC, z, funcPos + 1);      if funcPos==0  then return z
+            origPos= funcPos
+                  z= changestr(fC, z, ",'"newF"',")
+            funcPos= funcPos + length(newF) + 4
+              where= scan(z, funcPos)     ;        z= insert(    '}',  z,  where)
+              where= scan(z, 1 - origPos) ;        z= insert('trit{',  z,  where)
+            end   /*forever*/
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-trit: procedure; arg a,$,b;    v=\(a==2 | b==2);      o= a==1 | b==1;       z= a==0 | b==0
-           select
-           when $=='FALSE'   then           return 0
-           when $=='AND'     then if v then return a & b;      else return 2
-           when $=='NAIMPB'  then if v then return \(\a & \b); else return 2
-           when $=='BOOLB'   then           return b
-           when $=='NBIMPA'  then if v then return \(\b & \a); else return 2
-           when $=='BOOLA'   then           return a
-           when $=='XOR'     then if v then return a && b    ; else return 2
-           when $=='OR'      then if v then return a | b     ; else  if o  then return 1
-                                                                           else return 2
-           when $=='NOR'     then if v then return \(a | b)  ; else return 2
-           when $=='XNOR'    then if v then return \(a && b) ; else return 2
-           when $=='NOTB'    then if v then return \b        ; else return 2
-           when $=='NOTA'    then if v then return \a        ; else return 2
-           when $=='AIMPB'   then if v then return \(a & \b) ; else return 2
-           when $=='NAND'    then if v then return \(a &  b) ; else  if z  then return 1
-                                                                           else return 2
-           when $=='TRUE'    then           return   1
-           otherwise                        return -13        /*error, unknown function.*/
-           end   /*select*/
+trit: procedure; arg a,$,b;   v= \(a==2 | b==2);    o= (a==1 | b==1);     z= (a==0 | b==0)
+            select
+            when $=='FALSE'   then            return 0
+            when $=='AND'     then if v  then return a & b;      else return 2
+            when $=='NAIMPB'  then if v  then return \(\a & \b); else return 2
+            when $=='BOOLB'   then            return b
+            when $=='NBIMPA'  then if v  then return \(\b & \a); else return 2
+            when $=='BOOLA'   then            return a
+            when $=='XOR'     then if v  then return a && b    ; else return 2
+            when $=='OR'      then if v  then return a | b     ; else  if o  then return 1
+                                                                             else return 2
+            when $=='NOR'     then if v  then return \(a | b)  ; else return 2
+            when $=='XNOR'    then if v  then return \(a && b) ; else return 2
+            when $=='NOTB'    then if v  then return \b        ; else return 2
+            when $=='NOTA'    then if v  then return \a        ; else return 2
+            when $=='AIMPB'   then if v  then return \(a & \b) ; else return 2
+            when $=='NAND'    then if v  then return \(a &  b) ; else  if z  then return 1
+                                                                             else return 2
+            when $=='TRUE'    then           return   1
+            otherwise                        return -13       /*error, unknown function.*/
+            end   /*select*/

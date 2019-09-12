@@ -11,7 +11,7 @@ END {
     try unlink $lockpid;
 }
 
-my $pidfile = open "$lockpid", :w or die "Can't create $lockpid: $!";
+my $pidfile = open "$lockpid", :w orelse .die;
 $pidfile.say($pid);
 $pidfile.close;
 

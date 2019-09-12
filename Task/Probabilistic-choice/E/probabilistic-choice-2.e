@@ -31,7 +31,7 @@ def makeIntervalTree(assocs :List[Tuple[any, float64]]) {
         return split(assocs[midpoint][1], makeIntervalTree(assocs.run(0, midpoint)),
                                           makeIntervalTree(assocs.run(midpoint)))
     } else {
-        def <nowiki>[[value, _]] := assocs</nowiki>
+        def [[value, _]] := assocs
         return leaf(value)
     }
 }

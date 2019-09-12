@@ -4,7 +4,7 @@ sub stream(&next, &safe, &prod, &cons, $z is copy, @x) {
     gather loop {
         $z = safe($z, my $y = next($z)) ??
              prod($z, take $y)          !!
-             cons($z, @x[(state $)++])
+             cons($z, @x[$++])
     }
 }
 

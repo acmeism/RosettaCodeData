@@ -89,10 +89,10 @@ sub set_cbits(Point $p) {
     $cbits;
 }
 
-my $xmin = [min] @circles.map: { .center.x - .radius }
-my $xmax = [max] @circles.map: { .center.x + .radius }
-my $ymin = [min] @circles.map: { .center.y - .radius }
-my $ymax = [max] @circles.map: { .center.y + .radius }
+my $xmin = min @circles.map: { .center.x - .radius }
+my $xmax = max @circles.map: { .center.x + .radius }
+my $ymin = min @circles.map: { .center.y - .radius }
+my $ymax = max @circles.map: { .center.y + .radius }
 
 my $min-radius = @circles[*-1].radius;
 

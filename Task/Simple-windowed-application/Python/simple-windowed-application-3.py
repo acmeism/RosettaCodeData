@@ -1,20 +1,36 @@
-import sys
-from qt import *
+from functools import partial
+from itertools import count
 
-def update_label():
-    global i
-    i += 1
-    lbl.setText("Number of clicks: %i" % i)
+from PyQt5.QtWidgets import (QApplication,
+                             QLabel,
+                             QPushButton,
+                             QWidget)
+from PyQt5.QtCore import QRect
 
-i = 0
-app = QApplication(sys.argv)
-win = QWidget()
-win.resize(200, 100)
-lbl = QLabel("There have been no clicks yet", win)
-lbl.setGeometry(0, 15, 200, 25)
-btn = QPushButton("click me", win)
-btn.setGeometry(50, 50, 100, 25)
-btn.connect(btn, SIGNAL("clicked()"), update_label)
-win.show()
-app.connect(app, SIGNAL("lastWindowClosed()"), app, SLOT("quit()"))
-app.exec_loop()
+LABEL_GEOMETRY = QRect(0, 15, 200, 25)
+BUTTON_GEOMETRY = QRect(50, 50, 100, 25)
+
+
+def on_click(_, label, counter=count(1)):
+    label.setText(f"Number of clicks: {next(counter)}")
+
+
+def main():
+    application = QApplication([])
+    window = QWidget()
+    label = QLabel(text="There have been no clicks yet",
+                   parent=window)
+    label.setGeometry(LABEL_GEOMETRY)
+    button = QPushButton(text="click me",
+                         parent=window)
+    button.setGeometry(BUTTON_GEOMETRY)
+    update_counter = partial(on_click,
+                             label=label)
+    button.clicked.connect(update_counter)
+    window.show()
+    application.lastWindowClosed.connect(window.close)
+    application.exec_()
+
+
+if __name__ == '__main__':
+    main()

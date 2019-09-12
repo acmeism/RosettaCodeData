@@ -1,239 +1,254 @@
-import extensions.
+import extensions;
 
-const dig = ("00","01","10").
-const dig1 = ("","1","10").
+const dig = new string[]{"00","01","10"};
+const dig1 = new string[]{"","1","10"};
 
-sealed struct ZeckendorfNumber :: BaseNumber
+sealed struct ZeckendorfNumber
 {
-    int dVal.
-    int dLen.
+    int dVal;
+    int dLen;
 
-    clone
-        = ZeckendorfNumber $new(dVal,dLen).
+    clone()
+        = ZeckendorfNumber.newInternal(dVal,dLen);
 
-    stacksafe explicit n(LiteralValue s)
-    [
-        int i := s length - 1.
-        int q := 1.
+    cast n(string s)
+    {
+        int i := s.Length - 1;
+        int q := 1;
 
-        dLen := i / 2.
-        dVal := 0.
+        dLen := i / 2;
+        dVal := 0;
 
         while (i >= 0)
-        [
-            dVal += ((intConvertor convert(s[i]) - 48) * q).
-            q *= 2.
+        {
+            dVal += ((intConvertor.convert(s[i]) - 48) * q);
+            q *= 2;
 
-            i -= 1.
-        ].
-    ]
+            i -= 1
+        }
+    }
 
-    stacksafe $readContent vint:val vint:len
-    [
-        val int := dVal.
-        len int := dLen.
-    ]
+    internal readContent(ref int val, ref int len)
+    {
+        val := dVal;
+        len := dLen;
+    }
 
-    sealed $a(IntNumber n)
-    [
-        int i := n.
+    private a(int n)
+    {
+        int i := n;
 
         while (true)
-        [
+        {
             if (dLen < i)
-            [
-                dLen := i.
-            ].
+            {
+                dLen := i
+            };
 
-            ((dVal >> (i * 2)) && 3) =>
-                0 [ ^ $self ];
-                1 [ ^ $self ];
-                2 [
-                    ifnot ((dVal >> ((i + 1) * 2)) allMask:1)
-                    [
-                        ^ $self.
-                    ].
+            int v2 := dVal $shr (i * 2);
+            int v := (dVal $shr (i * 2)) && 3;
 
-                    dVal += (1 << (i*2 + 1)).
-                    ^ $self.
-                ];
-                3 [
-                    dVal := dVal && ((3 << i*2) inverted).
+            ((dVal $shr (i * 2)) && 3) =>
+                0 { ^ self }
+                1 { ^ self }
+                2 {
+                    ifnot ((dVal $shr ((i + 1) * 2)).allMask:1)
+                    {
+                        ^ self
+                    };
 
-                    $self $b((i+1)*2).
-                ].
+                    dVal += (1 $shl (i*2 + 1));
 
-            i += 1.
-        ].
-    ]
+                    ^ self
+                }
+                3 {
+                    int tmp := 3 $shl (i * 2);
+                    tmp := tmp.xor(-1);
+                    dVal := dVal && tmp;
 
-    inc
-    [
-        dVal += 1.
-        $self $a(0).
-    ]
+                    self.b((i+1)*2)
+                };
 
-    $b(IntNumber pos)
-    [
-        if (pos == 0) [ ^ $self inc ].
+            i += 1
+        }
+    }
 
-        ifnot((dVal >> pos) allMask:1)
-        [
-            dVal += (1 << pos).
-            $self $a(pos / 2).
-            if (pos > 1) [ $self $a((pos / 2) - 1) ]
-        ];
-        [
-            dVal := dVal && (1 << pos) inverted.
-            $self $b(pos + 1).
-            $self $b(pos - (pos > 1) iif(2,1)).
-        ].
-    ]
+    inc()
+    {
+        dVal += 1;
+        self.a(0)
+    }
 
-    $c(IntNumber pos)
-    [
-        if ((dVal >> pos) allMask:1)
-        [
-            dVal := dVal && (1 << pos) inverted.
+    private b(int pos)
+    {
+        if (pos == 0) { ^ self.inc() };
 
-            ^ $self
-        ].
+        ifnot((dVal $shr pos).allMask:1)
+        {
+            dVal += (1 $shl pos);
+            self.a(pos / 2);
+            if (pos > 1) { self.a((pos / 2) - 1) }
+        }
+        else
+        {
+            dVal := dVal && (1 $shl pos).Inverted;
+            self.b(pos + 1);
+            int arg := pos - ((pos > 1) ? 2 : 1);
+            self.b(/*pos - ((pos > 1) ? 2 : 1)*/arg)
+        }
+    }
 
-        $self $c(pos + 1).
+    private c(int pos)
+    {
+        if ((dVal $shr pos).allMask:1)
+        {
+            int tmp := 1 $shl pos;
+            tmp := tmp.xor(-1);
+
+            dVal := dVal && tmp;
+
+            ^ self
+        };
+
+        self.c(pos + 1);
 
         if (pos > 0)
-        [
-            $self $b(pos - 1).
-        ];
-        [
-            $self inc.
-        ]
-    ]
+        {
+            self.b(pos - 1)
+        }
+        else
+        {
+            self.inc()
+        }
+    }
 
-    constructor $sum(ZeckendorfNumber n, ZeckendorfNumber m)
-    [
-        int mVal := 0.
-        int mLen := 0.
+    internal constructor sum(ZeckendorfNumber n, ZeckendorfNumber m)
+    {
+        int mVal := 0;
+        int mLen := 0;
 
-        n $readContent vint:dVal vint:dLen.
-        m $readContent vint:mVal vint:mLen.
+        n.readContent(ref dVal, ref dLen);
+        m.readContent(ref mVal, ref mLen);
 
-        0 till((mLen + 1) * 2) do(:GN)
-        [
-            if (mVal shiftRight:GN; allMask:1)
-            [
-                $self $b(GN).
-            ].
-        ].
-    ]
+        for(int GN := 0, GN < (mLen + 1) * 2, GN += 1)
+        {
+            if ((mVal $shr GN).allMask:1)
+            {
+                self.b(GN)
+            }
+        }
+    }
 
-    constructor $difference(ZeckendorfNumber n, ZeckendorfNumber m)
-    [
-        int mVal := 0.
-        int mLen := 0.
+    internal constructor difference(ZeckendorfNumber n, ZeckendorfNumber m)
+    {
+        int mVal := 0;
+        int mLen := 0;
 
-        n $readContent vint:dVal vint:dLen.
-        m $readContent vint:mVal vint:mLen.
+        n.readContent(ref dVal, ref dLen);
+        m.readContent(ref mVal, ref mLen);
 
-        0 till((mLen + 1) * 2) do(:GN)
-        [
-            if (mVal shiftRight:GN; allMask:1)
-            [
-                $self $c(GN).
-            ].
-        ].
+        for(int GN := 0, GN < (mLen + 1) * 2, GN += 1)
+        {
+            if ((mVal $shr GN).allMask:1)
+            {
+                self.c(GN)
+            }
+        };
 
-        while ((((dVal >> (dLen*2)) && 3) == 0) || (dLen == 0))
-        [
-            dLen -= 1.
-        ].
-    ]
+        while (((dVal $shr (dLen*2)) && 3) == 0 || dLen == 0)
+        {
+            dLen -= 1
+        }
+    }
 
-    constructor $product(ZeckendorfNumber n, ZeckendorfNumber m)
-    [
-        n $readContent vint:dVal vint:dLen.
+    internal constructor product(ZeckendorfNumber n, ZeckendorfNumber m)
+    {
+        n.readContent(ref dVal, ref dLen);
 
-        var Na := m.
-        var Nb := m.
-        var Nr := 0n.
-        var Nt := 0n.
+        ZeckendorfNumber Na := m;
+        ZeckendorfNumber Nb := m;
+        ZeckendorfNumber Nr := 0n;
+        ZeckendorfNumber Nt := 0n;
 
-        0 to((dLen + 1) * 2) do(:i)
-        [
-            if (((dVal shiftRight:i) && 1) > 0)
-            [
+        for(int i := 0, i < (dLen + 1) * 2, i += 1)
+        {
+            if (((dVal $shr i) && 1) > 0)
+            {
                 Nr += Nb
-            ].
-            Nt := Nb.
-            Nb += Na.
-            Na := Nt.
-        ].
+            };
+            Nt := Nb;
+            Nb += Na;
+            Na := Nt
+        };
 
-        Nr $readContent vint:dVal vint:dLen.
-    ]
+        Nr.readContent(ref dVal, ref dLen);
+    }
 
-    constructor $new(IntNumber v, IntNumber l)
-    [
-        dVal := v.
-        dLen := l.
-    ]
+    internal constructor newInternal(int v, int l)
+    {
+        dVal := v;
+        dLen := l
+    }
 
-    literal
-    [
+    get string Printable()
+    {
         if (dVal == 0)
-            [ ^ "0". ].
+            { ^ "0" };
 
-        literal s := dig1[(dVal >> (dLen * 2)) && 3].
-        int i := dLen - 1.
+        //int n := dVal $shr (dLen * 2);
+        //int r := (dVal $shr (dLen * 2)) && 3;
+
+        string s := dig1[(dVal $shr (dLen * 2)) && 3];
+        int i := dLen - 1;
         while (i >= 0)
-        [
-            s := s + dig[(dVal >> (i * 2)) && 3].
+        {
+            s := s + dig[(dVal $shr (i * 2)) && 3];
 
             i-=1
-        ].
+        };
 
-        ^ s.
-    ]
+        ^ s
+    }
 
     add(ZeckendorfNumber n)
-        = ZeckendorfNumber $sum($self, n).
+        = ZeckendorfNumber.sum(self, n);
 
     subtract(ZeckendorfNumber n)
-        = ZeckendorfNumber $difference($self, n).
+        = ZeckendorfNumber.difference(self, n);
 
     multiply(ZeckendorfNumber n)
-        = ZeckendorfNumber $product($self, n).
+        = ZeckendorfNumber.product(self, n);
 }
 
-program =
-[
-    console printLine("Addition:").
-    var n := 10n.
+public program()
+{
+    console.printLine("Addition:");
+    var n := 10n;
 
-    n += 10n.
-    console printLine(n).
-    n += 10n.
-    console printLine(n).
-    n += 1001n.
-    console printLine(n).
-    n += 1000n.
-    console printLine(n).
-    n += 10101n.
-    console printLine(n).
+    n += 10n;
+    console.printLine(n);
+    n += 10n;
+    console.printLine(n);
+    n += 1001n;
+    console.printLine(n);
+    n += 1000n;
+    console.printLine(n);
+    n += 10101n;
+    console.printLine(n);
 
-    console printLine("Subtraction:").
-    n := 1000n.
-    n -= 101n.
-    console printLine(n).
-    n := 10101010n.
-    n -= 1010101n.
-    console printLine(n).
+    console.printLine("Subtraction:");
+    n := 1000n;
+    n -= 101n;
+    console.printLine(n);
+    n := 10101010n;
+    n -= 1010101n;
+    console.printLine(n);
 
-    console printLine("Multiplication:").
-    n := 1001n.
-    n *= 101n.
-    console printLine(n).
-    n := 101010n.
-    n += 101n.
-    console printLine(n).
-].
+    console.printLine("Multiplication:");
+    n := 1001n;
+    n *= 101n;
+    console.printLine(n);
+    n := 101010n;
+    n += 101n;
+    console.printLine(n)
+}

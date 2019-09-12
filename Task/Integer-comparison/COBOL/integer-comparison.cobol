@@ -20,7 +20,7 @@
                DISPLAY A " is equal to " B
            ELSE IF A > B
                DISPLAY A " is larger than " B
-           END-IF
+           END-IF.
 
            GOBACK
            .

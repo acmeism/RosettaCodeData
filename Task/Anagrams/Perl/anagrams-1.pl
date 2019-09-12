@@ -1,15 +1,12 @@
-use LWP::Simple;
-use List::Util qw(max);
+use List::Util 'max';
 
-my @words = split(' ', get('http://www.puzzlers.org/pub/wordlists/unixdict.txt'));
+my @words = split "\n", do { local( @ARGV, $/ ) = ( 'unixdict.txt' ); <> };
 my %anagram;
-foreach my $word (@words) {
-    push @{ $anagram{join('', sort(split(//, $word)))} }, $word;
+for my $word (@words) {
+    push @{ $anagram{join '', sort split '', $word} }, $word;
 }
 
 my $count = max(map {scalar @$_} values %anagram);
-foreach my $ana (values %anagram) {
-    if (@$ana >= $count) {
-        print "@$ana\n";
-    }
+for my $ana (values %anagram) {
+    print "@$ana\n" if @$ana == $count;
 }

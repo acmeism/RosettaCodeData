@@ -1,8 +1,9 @@
-import Data.Monoid ((<>))
-import Data.Array (Array, listArray, (!))
 import Data.List (unfoldr, transpose, intercalate)
+import Data.Array (Array, listArray, (!))
+import Data.Monoid ((<>))
 
--- ARBITRARY RADICES ----------------------------------------------------------
+
+-- ARBITRARY RADICES ---------------------------------------
 bases :: [Int]
 bases = abs <$> [2, 7, 8, 10, 12, 16, 32]
 
@@ -22,19 +23,18 @@ baseDigits base
       let (q, r) = quotRem n base
       in Just (digits ! r, q)
 
--- TEST AND TABULATION---------------------------------------------------------
+-- TEST AND TABULATION-------------------------------------
 table :: String -> [[String]] -> [String]
 table delim rows =
   intercalate delim <$>
   transpose
-    ((\col ->
-         let width = maximum (length <$> col)
-             justifyRight n c s = drop (length s) (replicate n c <> s)
-         in justifyRight width ' ' <$> col) <$>
-     transpose rows)
+    ((fmap =<< flip justifyRight ' ' . maximum . fmap length) <$> transpose rows)
+
+justifyRight :: Int -> Char -> String -> String
+justifyRight n c s = drop (length s) (replicate n c <> s)
 
 main :: IO ()
 main =
   mapM_
     putStrLn
-    (table " " (([(show <$>), (const "----" <$>)] <*> [bases]) <> tableRows))
+    (table " " (([fmap show, fmap $ const "----"] <*> [bases]) <> tableRows))

@@ -112,6 +112,7 @@ procedure echo_server_multi is
       GNAT.Sockets.Create_Socket (Socket => Receiver);
       GNAT.Sockets.Set_Socket_Option
         (Socket => Receiver,
+         Level  => GNAT.Sockets.Socket_Level,
          Option => (Name    => GNAT.Sockets.Reuse_Address, Enabled => True));
       GNAT.Sockets.Bind_Socket
         (Socket  => Receiver,

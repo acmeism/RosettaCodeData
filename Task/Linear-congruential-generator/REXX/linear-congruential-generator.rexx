@@ -1,12 +1,12 @@
-/*REXX program is a congruential generator which simulates the old BSD  and  MS random  */
+/*REXX program uses a congruential generator that simulates the old BSD  and  MS random */
 /*──────────── number generators.    BSD= 0 ──► (2**31)-1           MS= 0 ──► (2**16)-1 */
-numeric digits 20                                /*used enough digits for the multiply.*/
+numeric digits 20                                /*use enough dec. digs for the multiply*/
 
   do seed=0  to 1                                /*perform for seed=0  and also  seed=1.*/
-  bsd=seed;      ms=seed                         /*assign  SEED  to  two REXX variables.*/
-  say center('seed='seed, 79, '─')               /*display the seed in a title/separator*/
+  bsd= seed;    ms= seed                         /*assign  SEED  to  two REXX variables.*/
+  say center('seed='seed, 79, "─")               /*display the seed in a title/separator*/
                                                  /* [↓]  show 20 rand #'s for each seed.*/
-      do j=1  for 20                             /*obtain the right─most 3 digits of  J.*/
+      do j=1  for 20                             /*generate and display 20 rand numbers.*/
       bsd = (1103515245 * bsd  +    12345)    //    2**31
       ms  = (    214013 *  ms  +  2531011)    //    2**31
       say '  state'   right(j,3)   " BSD"   right(bsd,     11)   left('', 13),

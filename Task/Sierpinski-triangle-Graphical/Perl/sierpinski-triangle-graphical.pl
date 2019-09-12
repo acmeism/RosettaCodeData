@@ -1,29 +1,48 @@
-use List::Util qw'min max sum';
+my $levels = 6;
+my $side   = 512;
+my $height = get_height($side);
 
-sub write_eps {
-	my @x = @_[0, 2, 4];
-	my @y = @_[1, 3, 5];
-	my $sx = sum(@x) / 3;
-	my $sy = sum(@y) / 3;
-	@x = map { $_ - $sx } @x;
-	@y = map { $_ - $sy } @y;
+sub get_height { my($side) = @_; $side * sqrt(3) / 2 }
 
-	print <<"HEAD";
-%!PS-Adobe-3.0
-%%BoundingBox: @{[min(@x) - 10]} @{[min(@y) - 10]} @{[max(@x) + 10]} @{[max(@y) + 10]}
-/v1 { $x[0] $y[0] } def /v2 { $x[1] $y[1] } def /v3 { $x[2] $y[2] } def
-/t { translate } def
-/r { .5 .5 scale 2 copy t 2 index sierp pop neg exch neg exch t 2 2 scale } def
-
-/sierp { dup 1 sub dup 0 ne
-	{ v1 r v2 r v3 r }
-	{ v1 moveto v2 lineto v3 lineto} ifelse
-	pop
-} def
-
-9 sierp fill pop showpage
-%%EOF
-HEAD
+sub triangle {
+    my($x1, $y1, $x2, $y2, $x3, $y3, $fill, $animate) = @_;
+    my $svg;
+    $svg .= qq{<polygon points="$x1,$y1 $x2,$y2 $x3,$y3"};
+    $svg .= qq{ style="fill: $fill; stroke-width: 0;"} if $fill;
+    $svg .= $animate
+        ? qq{>\n  <animate attributeType="CSS" attributeName="opacity"\n  values="1;0;1" keyTimes="0;.5;1" dur="20s" repeatCount="indefinite" />\n</polygon>\n}
+        : ' />';
+    return $svg;
 }
 
-write_eps 0, 0, 300, 215, -25, 200;
+sub fractal {
+    my( $x1, $y1, $x2, $y2, $x3, $y3, $r ) = @_;
+    my $svg;
+    $svg .= triangle( $x1, $y1, $x2, $y2, $x3, $y3 );
+    return $svg unless --$r;
+    my $side = abs($x3 - $x2) / 2;
+    my $height = get_height($side);
+    $svg .= fractal( $x1, $y1-$height*2, $x1-$side/2, $y1-3*$height, $x1+$side/2, $y1-3*$height, $r);
+    $svg .= fractal( $x2, $y1, $x2-$side/2, $y1-$height, $x2+$side/2, $y1-$height, $r);
+    $svg .= fractal( $x3, $y1, $x3-$side/2, $y1-$height, $x3+$side/2, $y1-$height, $r);
+}
+
+open my $fh, '>', 'run/sierpinski_triangle.svg';
+print $fh <<'EOD',
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" version="1.1" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="basegradient" cx="50%" cy="65%" r="50%" fx="50%" fy="65%">
+    <stop offset="10%" stop-color="#ff0" />
+    <stop offset="60%" stop-color="#f00" />
+    <stop offset="99%" stop-color="#00f" />
+  </radialGradient>
+</defs>
+EOD
+
+triangle( $side/2, 0, 0, $height, $side, $height, 'url(#basegradient)' ),
+triangle( $side/2, 0, 0, $height, $side, $height, '#000', 'animate' ),
+'<g style="fill: #fff; stroke-width: 0;">',
+fractal( $side/2, $height, $side*3/4, $height/2, $side/4, $height/2, $levels ),
+'</g></svg>';

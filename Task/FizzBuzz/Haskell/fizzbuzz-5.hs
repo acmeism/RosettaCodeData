@@ -1,12 +1,15 @@
-import Control.Monad.State
-import Control.Monad.Trans
-import Control.Monad.Writer
+import Data.List (zipWith3)
+import Data.Bool (bool)
 
-main = putStr $ execWriter $ mapM_ (flip execStateT True . fizzbuzz) [1..100]
+fizzBuzz :: [String]
+fizzBuzz =
+  zipWith3
+    (\f b n ->
+        let fb = f ++ b
+        in bool fb n (null fb))
+    (cycle $ replicate 2 [] ++ ["fizz"])
+    (cycle $ replicate 4 [] ++ ["buzz"])
+    (show <$> [1 ..])
 
-fizzbuzz :: Int -> StateT Bool (Writer String) ()
-fizzbuzz x = do
- when (x `mod` 3 == 0) $ tell "Fizz" >> put False
- when (x `mod` 5 == 0) $ tell "Buzz" >> put False
- get >>= (flip when $ tell $ show x)
- tell "\n"
+main :: IO ()
+main = mapM_ putStrLn $ take 100 fizzBuzz

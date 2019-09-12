@@ -1,8 +1,8 @@
 /*REXX program shows and displays examples of multiple  RETURN  values  from a function.*/
 numeric digits 70                                /*the default is:    NUMERIC DIGITS 9  */
 parse arg a b .                                  /*obtain two numbers from command line.*/
-if a=='' | a==","  then a=82                     /*Not specified?  Then use the default.*/
-if b=='' | b==","  then b=20                     /* "      "         "   "   "     "    */
+if a=='' | a==","  then a= 82                    /*Not specified?  Then use the default.*/
+if b=='' | b==","  then b= 20                    /* "      "         "   "   "     "    */
 say '     a ='  a                                /*display the first number to the term.*/
 say '     b ='  b                                /*   "     "  second   "    "  "    "  */
 say copies('═', 50)                              /*display a separator line  "  "    "  */

@@ -1,1 +1,1 @@
-(format t #1='"(format t #1='~s #1#)" #1#)
+#1=(progn (setq *print-circle* t) (write '#1#))

@@ -1,1 +1,1 @@
-for i in range(100):print(i%3//2*'Fizz'+i%5//4*'Buzz'or i+1)
+for i in range(1,101): print("Fizz"*(i%3==0) + "Buzz"*(i%5==0) or i)

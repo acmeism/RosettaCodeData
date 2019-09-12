@@ -15,4 +15,4 @@ predicates = [
 
 for sol in permutations(Names.seq):
     if all(p(sol) for p in predicates):
-        print " ".join(Names.strings[s] for s in sol)
+        print(" ".join(x for x, y in sorted(zip(Names.strings, sol), key=lambda x: x[1])))

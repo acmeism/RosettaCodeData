@@ -1,108 +1,93 @@
 const
   pasTriMax = 61;
+
 type
-  tpasTri =array[0..pasTriMax] of UInt64;
+  TPasTri = array[0 .. pasTriMax] of UInt64;
 
 var
-  pasTri : tpasTri;
+  pasTri: TPasTri;
 
-procedure pastriangle(n:longInt);
-//calculate the n'th line 0.. middle
+procedure PascalTriangle(n: LongWord);
+// Calculate the n'th line 0.. middle
 var
-  j,k: longWord;
+  j, k: LongWord;
 begin
   pasTri[0] := 1;
   j := 1;
-  while (j<=n) do
+  while j <= n do
   begin
-    inc(j);
-    k := j SHR 1;
-    pasTri[k] :=pasTri[k-1];
-    For k := k downto 1 do
-      inc(pasTri[k],pasTri[k-1]);
+    Inc(j);
+    k := j div 2;
+    pasTri[k] := pasTri[k - 1];
+    for k := k downto 1 do
+      Inc(pasTri[k], pasTri[k - 1]);
   end;
 end;
 
-function CheckPrime(n:longWord):boolean;
+function IsPrime(n: LongWord): Boolean;
 var
-  i : integer;
-  res: boolean;
-Begin
-
-  IF n > pasTriMax then
+  i: Integer;
+begin
+  if n > pasTriMax then
   begin
-    writeln(n,' is out of range ');
-    EXIT;
+    WriteLn(n, ' is out of range');
+    Halt;
   end;
 
-  pastriangle(n);
-  res := true;
-  i := n shr 1;
-  while res AND (i >1) do
-  Begin
-    res := res AND(pasTri[i] mod n = 0);
-    dec(i);
+  PascalTriangle(n);
+  Result := true;
+  i := n div 2;
+  while Result and (i > 1) do
+  begin
+    Result := Result and (pasTri[i] mod n = 0);
+    Dec(i);
   end;
-  CheckPrime := res;
 end;
 
-procedure ExpandPoly(n:longWord);
+procedure ExpandPoly(n: LongWord);
 const
-  Vz :array[boolean] of char = ('+','-');
+  Vz: array[Boolean] of Char = ('+', '-');
 var
-  j,k: longWord;
+  j: LongWord;
   bVz: Boolean;
-Begin
-  IF n < 2 then
-  Begin
-    IF n = 0 then
-      writeln('(x-1)^0 = 1')
-    else
-      writeln('(x-1)^1 = x-1');
-    EXIT;
-  end;
-
-  IF n > pasTriMax then
+begin
+  if n > pasTriMax then
   begin
-    writeln(n,' is out of range ');
-    EXIT;
+    WriteLn(n,' is out of range');
+    Halt;
   end;
 
-  pastriangle(n);
-  write('(x-1)^',n,' = ');
-  k := 0;
-  j := n;
-  bVz := false;
-  repeat
-    IF j=n then
-      write('x^',j)
-    else
-      write(Vz[bVz],pasTri[k],'*x^',j);
-    bVz := Not(bVz);
-    inc(k);
-    dec(j);
-  until k>= j;
-  k := j;
-  while k > 0 do
-  Begin
-    IF j <> 1 then
-      write(Vz[bVz],pasTri[k],'*x^',j)
-    else
-      write(Vz[bVz],pasTri[k],'*x');
-    bVz := Not(bVz);
-    dec(k);
-    dec(j);
+  case n of
+    0: WriteLn('(x-1)^0 = 1');
+    1: WriteLn('(x-1)^1 = x-1');
+  else
+    PascalTriangle(n);
+    Write('(x-1)^', n, ' = ');
+    Write('x^', n);
+    bVz := true;
+    for j := n - 1 downto n div 2 + 1 do
+    begin
+      Write(vz[bVz], pasTri[n - j], '*x^', j);
+      bVz := not bVz;
+    end;
+    for j := n div 2 downto 2 do
+    begin
+      Write(vz[bVz], pasTri[j], '*x^', j);
+      bVz := not bVz;
+    end;
+    Write(vz[bVz], pasTri[1], '*x');
+    bVz := not bVz;
+    WriteLn(vz[bVz], pasTri[0]);
   end;
-  write(Vz[bVz],pasTri[0]);
-  writeln;
 end;
 
 var
   n: LongWord;
-Begin
-  For n := 0 to 9 do
+begin
+  for n := 0 to 9 do
     ExpandPoly(n);
-  For n := 2 to pasTriMax do
-    IF CheckPrime(n) then
-      write(n:3);
+  for n := 2 to pasTriMax do
+    if IsPrime(n) then
+      Write(n:3);
+  WriteLn;
 end.

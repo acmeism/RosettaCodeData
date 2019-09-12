@@ -1,9 +1,21 @@
-#lang racket
-(require db)
+#lang racket/base
+(require sql db)
 
-(define con (postgresql-connect #:user user #:database db #:password password))
-(define pst (prepare pgc "UPDATE players
-                            SET name = ?, score = ?, active = ?
-                            WHERE jerseyNum = ?"))
-(define bst (bind-prepared-statement pst '("Smith, Steve" 42 #t 99)))
-(query-value con bst)
+(define pgc
+  ; Don't actually inline sensitive data ;)
+  (postgresql-connect #:user     "resu"
+                      #:database "esabatad"
+                      #:server   "example.com"
+                      #:port     5432
+                      #:password "s3>r37P455"))
+
+(define update-player
+  (parameterize ((current-sql-dialect 'postgresql))
+                (update players
+                        #:set [name ?] [score ?] [active ?]
+                        #:where [jerseyNum ?])))
+
+(apply query
+       pgc
+       update-player
+       '("Smith, Steve" 42 #t 99))

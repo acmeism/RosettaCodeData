@@ -1,5 +1,7 @@
 using System;
+
 delegate int Func2(int a, int b);
+
 class Program
 {
     static int Call(Func2 f, int a, int b)

@@ -1,7 +1,7 @@
 import Data.Char (digitToInt)
 
 luhn :: String -> Bool
-luhn x = rem (s1 + s2) 10 == 0
+luhn x = 0 == rem (s1 + s2) 10
   where
     stringInts = fmap digitToInt
     (odds, evens) = oddsEvens (stringInts $ reverse x)
@@ -9,14 +9,11 @@ luhn x = rem (s1 + s2) 10 == 0
     s2 = sum $ sum . stringInts . show . (2 *) <$> evens
 
 oddsEvens :: [a] -> ([a], [a])
-oddsEvens xs =
-  foldr
-    (\(x, i) (os, es) ->
-        (if rem i 2 /= 0
-           then (x : os, es)
-           else (os, x : es)))
-    ([], [])
-    (zip xs [1 ..])
+oddsEvens xs = foldr go ([], []) (zip xs [1 ..])
+  where
+    go (x, i) (os, es)
+      | 0 /= rem i 2 = (x : os, es)
+      | otherwise = (os, x : es)
 
 main :: IO ()
 main =

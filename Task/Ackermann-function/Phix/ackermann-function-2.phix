@@ -1,0 +1,82 @@
+-- demo\rosetta\Ackermann.exw
+include mpfr.e
+
+procedure ack(integer m, mpz n)
+    if m=0 then
+        mpz_add_ui(n, n, 1)                     -- return n+1
+    elsif m=1 then
+        mpz_add_ui(n, n, 2)                     -- return n+2
+    elsif m=2 then
+        mpz_mul_si(n, n, 2)
+        mpz_add_ui(n, n, 3)                     -- return 2*n+3
+    elsif m=3 then
+        if not mpz_fits_integer(n) then
+            -- As per Go: 2^MAXINT would most certainly run out of memory.
+            -- (think about it: a million digits is fine but pretty daft;
+            --  however a billion digits requires > addressable memory.)
+            integer bn = mpz_sizeinbase(n, 2)
+            throw(sprintf("A(m,n) had n of %d bits; too large",bn))
+        end if
+        integer ni = mpz_get_integer(n)
+        mpz_set_si(n, 8)
+        mpz_mul_2exp(n, n, ni) -- (n:=8*2^ni)
+        mpz_sub_ui(n, n, 3)                     -- return power(2,n+3)-3
+    elsif mpz_cmp_si(n,0)=0 then
+        mpz_set_si(n, 1)
+        ack(m-1,n)                              -- return ack(m-1,1)
+    else
+        mpz_sub_ui(n, n, 1)
+        ack(m,n)
+        ack(m-1,n)                              -- return ack(m-1,ack(m,n-1))
+    end if
+end procedure
+
+constant limit = 23,
+         fmtlens = {1,2,2,2,3,3,3,4,4,4,4,5,5,5,6,6,6,7,7,7,7,8,8,8},
+         extras = {{3,100},{3,1e6},{4,2},{4,3}}
+
+procedure ackermann_tests()
+    atom t0 = time()
+    atom n = mpz_init()
+    printf(1,"   0")
+    for j=1 to limit do
+        string fmt = sprintf(" %%%dd",fmtlens[j+1])
+        printf(1,fmt,j)
+    end for
+    printf(1,"\n")
+    for i=0 to 5 do
+        printf(1,"%d:",i)
+        for j=0 to iff(i>=4?5-i:limit) do
+            mpz_set_si(n, j)
+            ack(i,n)
+            string fmt = sprintf(" %%%ds",fmtlens[j+1])
+            printf(1,fmt,{mpz_get_str(n)})
+        end for
+        printf(1,"\n")
+    end for
+    printf(1,"\n")
+    for i=1 to length(extras) do
+        integer {em, en} = extras[i]
+        mpz_set_si(n, en)
+        string res
+        try
+            ack(em,n)
+            res = mpz_get_str(n)
+            integer lr = length(res)
+            if lr>50 then
+                res[21..-21] = "..."
+                res &= sprintf(" (%d digits)",lr)
+            end if
+        catch e
+            -- ack(4,3), ack(5,1) and ack(6,0) all fail,
+            --                   just as they should do
+            res = "***ERROR***: "&e[E_USER]
+        end try
+        printf(1,"ack(%d,%d) %s\n",{em,en,res})
+    end for
+    n = mpz_free(n)
+    printf(1,"\n")
+    printf(1,"ackermann_tests completed (%s)\n\n",{elapsed(time()-t0)})
+end procedure
+
+ackermann_tests()

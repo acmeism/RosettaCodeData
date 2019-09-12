@@ -28,7 +28,7 @@ End Function
 
 'testing:
 Public Sub Main()
-  Debug.Print "5: " & Bin(5)
-  Debug.Print "50: " & Bin(50)
-  Debug.Print "9000: " & Bin(9000)
+  Debug.Print Bin(5)
+  Debug.Print Bin(50)
+  Debug.Print Bin(9000)
 End Sub

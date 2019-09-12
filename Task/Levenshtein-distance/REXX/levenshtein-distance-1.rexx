@@ -1,22 +1,20 @@
-/*REXX program calculates the  Levenshtein distance  between two text strings.*/
+/*REXX pgm calculates/displays the Levenshtein distance between 2 text strings*/
 call Levenshtein  'kitten'                      , "sitting"
 call Levenshtein  'rosettacode'                 , "raisethysword"
 call Levenshtein  'Sunday'                      , "Saturday"
-call Levenshtein  'Vladimir_Levenshtein[1965]'  , "Vladimir_Levenshtein[1965]"
-call Levenshtein  'this_algorithm_is_similar_to', "Damerau-Levenshtein_distance"
+call Levenshtein  'Vladimir Levenshtein[1965]'  , "Vladimir Levenshtein[1965]"
+call Levenshtein  'this algorithm is similar to', "Damerau─Levenshtein distance"
 exit                                   /*stick a fork in it,  we're all done. */
 /*────────────────────────────────────────────────────────────────────────────*/
-Levenshtein: procedure; parse arg s,t;     sL=length(s);      tL=length(t)
-say '          1st string  = '    s
-say '          2nd string  = '      t
-@.=0;                                         do i=1  for tL; @.0.i=i; end /*i*/
-                                              do i=1  for sL; @.i.0=i; end /*i*/
-  do     j=1  for tL; j_=j-1; q=substr(t,j,1)
-      do k=1  for sL; k_=k-1
-      if q==substr(s,k,1)  then @.k.j=@.k_.j_
-                           else @.k.j=1   +   min(@.k_.j,  @.k.j_,  @.k_.j_)
-      end   /*k*/
-  end       /*j*/
-
-say 'Levenshtein distance  = '  @.sL.tL;                 say
-return
+Levenshtein: procedure; parse arg o,t;  oL= length(o);   tL= length(t);    @.= 0
+say '     original string  = '    o                        /*display string 1.*/
+say '       target string  = '      t                      /*   "       "   2.*/
+                 do #=1  for tL;  @.0.#= #;  end  /*#*/    /*the   drop  array*/
+                 do #=1  for oL;  @.#.0= #;  end  /*#*/    /* "   insert   "  */
+    do    j=1  for tL;    j_= j-1;   q= substr(t, j, 1)    /*obtain character.*/
+       do k=1  for oL;    k_= k-1
+       if q==substr(o, k, 1)  then @.k.j= @.k_.j_          /*use previous char*/
+                              else @.k.j= 1   +   min(@.k_.j,  @.k.j_,  @.k_.j_)
+        end   /*k*/
+    end       /*j*/                               /* [↑]  use the best choice.*/
+say 'Levenshtein distance  = '     @.oL.tL;          say;               return

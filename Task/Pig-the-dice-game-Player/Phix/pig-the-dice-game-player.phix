@@ -1,0 +1,77 @@
+constant maxScore = 100
+
+function one_game(sequence strategies)
+integer numPlayers = length(strategies)
+sequence scores = repeat(0,numPlayers)
+integer points = 0, -- points accumulated in current turn, 0=swap turn
+        rolls  = 0, -- number of rolls
+        player = rand(numPlayers)   -- start with a random player
+    while true do
+        integer roll = rand(6)
+        if roll=1 then
+            points = 0 -- swap turn
+        else
+            points += roll
+            if scores[player]+points>=maxScore then exit end if
+            rolls += 1
+            if not call_func(strategies[player],{scores,player,points,rolls}) then
+                scores[player] += points
+                points = 0 -- swap turn
+            end if
+        end if
+        if points=0 then
+            player = mod(player,numPlayers) + 1
+            rolls = 0
+        end if
+    end while
+    return player
+end function
+
+-- each strategy returns true to roll, false to hold.
+
+function strategy1(sequence /*scores*/, integer /*player*/, points, /*rolls*/)
+    return points<20    -- roll until 20 or more
+end function
+constant r_s1 = routine_id("strategy1")
+
+function strategy2(sequence /*scores*/, integer /*player*/, /*points*/, rolls)
+    return rolls<4      -- roll 4 times
+end function
+constant r_s2 = routine_id("strategy2")
+
+function strategy3(sequence scores, integer player, points, /*rolls*/)
+    -- roll until 20 or score>80
+    return points<20 or scores[player]+points>80
+end function
+constant r_s3 = routine_id("strategy3")
+
+function strategy4(sequence scores, integer player, points, /*rolls*/)
+    -- roll until 20 or any player has >71
+    for i=1 to length(scores) do
+        if scores[i]>71 then return true end if
+    end for
+    return points<20
+end function
+constant r_s4 = routine_id("strategy4")
+
+constant strategies = {r_s1,r_s2,r_s3,r_s4}
+
+-- play each strategy 1000 times against all combinations of other strategies
+for s=1 to length(strategies) do
+    sequence opponents = strategies
+    opponents[s..s] = {}
+    integer mask = power(2,length(opponents))-1
+    integer wins = 0
+    for m=1 to mask do -- (all possible bit settings, bar 0, eg/ie 1..7)
+        sequence game = {strategies[s]}
+        for g=1 to length(opponents) do
+            if and_bits(m,power(2,g-1)) then
+                game &= opponents[g]
+            end if
+        end for
+        for n=1 to 1000 do
+            wins += one_game(game)=1
+        end for
+    end for
+    printf(1,"strategy %d: %d wins\n",{s,wins})
+end for

@@ -1,8 +1,8 @@
 'Purpose: Converts TXT files into VBS code with a function that returns a text string with the contents of the TXT file
-'		  The TXT file can even be another VBS file.
+'         The TXT file can even be another VBS file.
 
 'History:
-'	1.0	8may2009	Initial release
+'   1.0 8may2009    Initial release
 '
 '
 Const ForReading = 1
@@ -19,7 +19,7 @@ objDialog.InitialDir = WshShell.CurrentDirectory
 intResult = objDialog.ShowOpen
 
 If intResult = 0 Then
-	WshShell.Popup "No file selected.", 2, " ", 64
+    WshShell.Popup "No file selected.", 2, " ", 64
     Wscript.Quit
 Else
     strFileNameIN = objDialog.FileName
@@ -30,18 +30,18 @@ strFileNameOUT= strFileNameIN & "_CONVERTED.Vbs"
 'Check if strFileNameOUT exists already
 Set objFSO = CreateObject("Scripting.FileSystemObject")
 If objFSO.FileExists(strFileNameOUT) then  'does the file EXIST?
-'	WScript.Echo "found"
-	OVRWT=MSGBOX(strFileNameOUT & " exists already"&vbCRLF&"Overwrite?",vbYesNoCancel,"Overwrite?")
-	if OVRWT = 6 then
-		'proceed
-		objFSO.DeleteFile(strFileNameOUT)
-	else
-		WshShell.Popup "Exiting as requested.", 1, " ", 64
-		Wscript.Quit
-	End If
+'   WScript.Echo "found"
+    OVRWT=MSGBOX(strFileNameOUT & " exists already"&vbCRLF&"Overwrite?",vbYesNoCancel,"Overwrite?")
+    if OVRWT = 6 then
+        'proceed
+        objFSO.DeleteFile(strFileNameOUT)
+    else
+        WshShell.Popup "Exiting as requested.", 1, " ", 64
+        Wscript.Quit
+    End If
 Else
-'	WScript.Echo "not found" 'strFileNameOUT does NOT exists already
-	
+'   WScript.Echo "not found" 'strFileNameOUT does NOT exists already
+
 END if
 
 strBaseName=objFSO.GetBaseName(strFileNameIN)
@@ -61,7 +61,7 @@ strText = Replace(strText, strOldText, strNewText)
 
 'Add objTXTFile.writeline ("
 strOldText = VBCRLF
-strNewText = """)  &vbCrLf"&VBCRLF&"	strText=strText& ("""
+strNewText = """)  &vbCrLf"&VBCRLF&"    strText=strText& ("""
 strText = Replace(strText, strOldText, strNewText)
 'Converting done
 
@@ -73,10 +73,10 @@ objFile.WriteLine "'this Function will return a string containing the contents o
 objFile.WriteLine "msgbox "&strBaseName &"()"
 objFile.WriteLine vbCrLf
 objFile.WriteLine "Function "&strBaseName&"()"
-objFile.WriteLine "	'returns a string containing the contents of the file called "&strFileName
-objFile.WriteLine "	Dim strText"
-objFile.WriteLine "	strText= ("""&strText&""") &vbCrLf"
-objFile.WriteLine "	"&strBaseName&"=strText"
+objFile.WriteLine " 'returns a string containing the contents of the file called "&strFileName
+objFile.WriteLine " Dim strText"
+objFile.WriteLine " strText= ("""&strText&""") &vbCrLf"
+objFile.WriteLine " "&strBaseName&"=strText"
 objFile.WriteLine "End Function"
 objFile.Close
 

@@ -1,1 +1,1 @@
-: foo  19 jump: 1+ 21 ;
+: foo #19 &n:inc jump #21 ;

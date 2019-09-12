@@ -1,5 +1,5 @@
 [bottles
-  [newline <nowiki>''</nowiki> puts].
+  [newline '' puts].
   [beer
     [0 =] ['No more bottles of beer' put] if
     [1 =] ['One bottle of beer' put] if

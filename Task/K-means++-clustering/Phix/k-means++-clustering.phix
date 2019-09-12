@@ -1,0 +1,182 @@
+-- demo\rosetta\K_means_clustering.exw
+--  Press F5 to restart
+include pGUI.e
+
+Ihandle dlg, canvas, timer
+cdCanvas cddbuffer, cdcanvas
+
+constant TITLE = "K-means++ clustering"
+
+constant useGoInitialData = false       -- (not very well centered)
+
+constant N = 30000,                     -- number of points
+         K = 16                         -- number of clusters
+
+sequence {Px, Py, Pc} @= repeat(0,N),   -- coordinates of points and their cluster
+         {Cx, Cy} @= repeat(0,K)        -- coordinates of centroid of cluster
+
+constant colours = {CD_RED, CD_DARK_RED, CD_BLUE, CD_DARK_BLUE, CD_CYAN, CD_DARK_CYAN,
+                    CD_GREEN, CD_DARK_GREEN, CD_MAGENTA, CD_DARK_MAGENTA, CD_YELLOW,
+                    CD_DARK_YELLOW, CD_DARK_ORANGE, CD_INDIGO, CD_PURPLE, CD_DARK_GREY}
+if length(colours)<K then ?9/0 end if
+
+function Centroid()
+-- Find new centroids of points grouped with current centroids
+bool change = false
+    for c=1 to K do                         -- for each centroid...
+        integer x=0, y=0, count:= 0;        -- find new centroid
+        for i=1 to N do                     -- for all points
+            if Pc[i] = c then               -- grouped with current centroid...
+                x += Px[i]
+                y += Py[i]
+                count += 1
+            end if
+        end for
+        if count!=0 then
+            x = floor(x/count)
+            y = floor(y/count)
+            if Cx[c]!=x
+            or Cy[c]!=y then
+                Cx[c] = x
+                Cy[c] = y
+                change:= true
+            end if
+        end if
+    end for
+    return change
+end function
+
+function sq(atom x) return x*x end function
+
+procedure Voronoi()             -- Group points with their nearest centroid
+    integer d2,                 -- distance squared,
+            min_d2              -- minimum distance squared
+    for i=1 to N do             -- for each point...
+        min_d2 := #3FFFFFFF     -- find closest centroid
+        for c=1 to K do
+            d2 := sq(Px[i]-Cx[c]) + sq(Py[i]-Cy[c])
+            if d2<min_d2 then
+                min_d2 := d2
+                Pc[i] := c      -- update closest centroid
+            end if
+        end for
+    end for
+end procedure
+
+function rand_xy()              -- Return random X,Y biased for polar coordinates
+    atom d := rand(240)-1,              -- distance: 0..239
+         a := rnd()*2*PI                -- angle:    0..2pi
+    integer x:= floor(d*cos(a))+320,    -- rectangular coords centered on screen
+            y:= floor(d*sin(a))+240     --     (that is, assuming 640x480)
+    return {x,y}
+end function
+
+--This little bit is copied from/based on Go:
+constant k = K,
+         nPoints = N,
+         xBox = 300,
+         yBox = 200,
+         stdv = 30
+
+function genECData()
+    sequence orig = repeat({0,0}, k),
+             data = repeat({0,0,0}, nPoints)
+    integer n = 0, nk = k
+    for i=1 to k do
+        integer x := rand(xBox)+320,
+                y := rand(yBox)+240
+        orig[i] = {x, y}
+        for j=1 to floor((nPoints-n)/nk) do
+            n += 1
+            atom d := rand(stdv)-1,             -- distance: 0..239
+                 a := rnd()*2*PI                -- angle:    0..2pi
+            integer nx:= floor(d*cos(a))+x, -- rectangular coords centered on screen
+                    ny:= floor(d*sin(a))+y  --     (that is, assuming 640x480)
+            data[n] = {nx,ny,i}
+        end for
+        nk -= 1
+    end for
+    if n!=nPoints then ?9/0 end if
+    return {orig, data}
+end function
+--</Go ends>
+
+integer iteration = 0
+
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+    integer {w, h} = IupGetIntInt(canvas, "DRAWSIZE")
+    cdCanvasActivate(cddbuffer)
+    if iteration=0 then
+        if useGoInitialData then
+            sequence {origins,data} = genECData()
+            {Px, Py, Pc} = columnize(data)
+            {Cx, Cy} = columnize(origins)
+        else
+            for i=1 to N do {Px[i],Py[i]} = rand_xy() end for   -- random set of points
+            for i=1 to K do {Cx[i],Cy[i]} = rand_xy() end for   -- random set of cluster centroids
+        end if
+    end if
+    sequence {r,g,b} @ = repeat(0,w*h)
+    Voronoi()
+    bool change := Centroid()
+    for i=1 to N do
+        integer idx = Px[i]+(Py[i]-1)*w
+        {r[idx],g[idx],b[idx]} = cdDecodeColor(colours[Pc[i]])
+    end for
+    for i=1 to K do
+        integer idx = Cx[i]+(Cy[i]-1)*w
+        {r[idx],g[idx],b[idx]} = cdDecodeColor(CD_WHITE)
+    end for
+    cdCanvasPutImageRectRGB(cddbuffer, w, h, {r,g,b})
+    cdCanvasFlush(cddbuffer)
+    if change then
+        iteration += 1
+        IupSetStrAttribute(dlg, "TITLE", "%s (iteration %d)",{TITLE,iteration})
+    else
+        IupSetInt(timer,"RUN",0)                -- (stop timer)
+        IupSetStrAttribute(dlg, "TITLE", TITLE)
+    end if
+    return IUP_DEFAULT
+end function
+
+function timer_cb(Ihandle /*ih*/)
+    IupUpdate(canvas)
+    return IUP_IGNORE
+end function
+
+function map_cb(Ihandle ih)
+    cdcanvas = cdCreateCanvas(CD_IUP, ih)
+    cddbuffer = cdCreateCanvas(CD_DBUFFER, cdcanvas)
+    return IUP_DEFAULT
+end function
+
+function esc_close(Ihandle /*ih*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    if c=K_F5 then
+        iteration = 0
+        IupSetInt(timer,"RUN",1)                -- (restart timer)
+    end if
+    return IUP_CONTINUE
+end function
+
+procedure main()
+    IupOpen()
+
+    canvas = IupCanvas(NULL)
+    IupSetAttribute(canvas, "RASTERSIZE", "640x480")
+    IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
+    IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+
+    timer = IupTimer(Icallback("timer_cb"), 100)
+
+    dlg = IupDialog(canvas,"DIALOGFRAME=YES")
+    IupSetAttribute(dlg, "TITLE", TITLE)
+    IupSetCallback(dlg, "K_ANY",     Icallback("esc_close"))
+
+    IupShow(dlg)
+    IupSetAttribute(canvas, "RASTERSIZE", NULL)
+    IupMainLoop()
+    IupClose()
+end procedure
+
+main()

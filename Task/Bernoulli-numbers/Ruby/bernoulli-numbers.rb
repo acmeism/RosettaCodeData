@@ -1,10 +1,9 @@
 bernoulli = Enumerator.new do |y|
-  ar, m = [], 0
-  loop do
+  ar = []
+  0.step do |m|
     ar << Rational(1, m+1)
     m.downto(1){|j| ar[j-1] = j*(ar[j-1] - ar[j]) }
     y << ar.first  # yield
-    m += 1
   end
 end
 

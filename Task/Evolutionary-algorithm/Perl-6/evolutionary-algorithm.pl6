@@ -4,7 +4,7 @@ constant @alphabet = flat 'A'..'Z',' ';
 constant C = 100;
 
 sub mutate { [~] (rand < mutate_chance ?? @alphabet.pick !! $_ for $^string.comb) }
-sub fitness { [+] $^string.comb Zeq state @ = target.comb }
+sub fitness { [+] $^string.comb Zeq target.comb }
 
 loop (
     my $parent = @alphabet.roll(target.chars).join;

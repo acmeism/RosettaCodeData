@@ -1,1 +1,1 @@
-puts gets.split.map(&:to_i).inject(:+)
+puts gets.split.sum(&:to_i)

@@ -14,4 +14,4 @@ main = do
   s <- readFile "unixdict.txt"
   let l = semordnilaps (lines s)
   print $ length l
-  mapM_ (print . ((,) <*> reverse)) $ take 5 l
+  mapM_ (print . ((,) <*> reverse)) $ take 5 (filter ((4 <) . length) l)

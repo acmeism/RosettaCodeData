@@ -1,19 +1,22 @@
-import Data.List (transpose, unfoldr, intercalate)
+import Data.List (transpose, maximumBy)
 import Data.List.Split (chunksOf)
+import Data.Ord (comparing)
 
 magicSquare :: Int -> [[Int]]
-magicSquare n =
-  case mod n 2 of
-    1 ->
-      (transpose .
-       cycledRows .
-       transpose . cycledRows . (chunksOf <*> (enumFromTo 1 . (^ 2))))
-        n
-    _ -> []
+magicSquare n
+  | 1 == mod n 2 = applyN 2 (transpose . cycled) $ plainSquare n
+  | otherwise = []
 
--- Table of integers -> Table with rows rotated by descending deltas
-cycledRows :: [[Int]] -> [[Int]]
-cycledRows rows =
+-- TEST ---------------------------------------------------
+main :: IO ()
+main = mapM_ putStrLn $ (showSquare . magicSquare) <$> [3, 5, 7]
+
+-- GENERIC ------------------------------------------------
+applyN :: Int -> (a -> a) -> a -> a
+applyN n f = foldr (.) id (replicate n f)
+
+cycled :: [[Int]] -> [[Int]]
+cycled rows =
   let n = length rows
       d = quot n 2
   in zipWith
@@ -21,7 +24,17 @@ cycledRows rows =
        [d,subtract 1 d .. -d]
        rows
 
-main :: IO ()
-main =
-  putStr $
-  intercalate "\n\n" ((unlines . fmap show . magicSquare) <$> [3, 5, 7])
+plainSquare :: Int -> [[Int]]
+plainSquare = chunksOf <*> enumFromTo 1 . (^ 2)
+
+-- FORMATTING ---------------------------------------------
+justifyRight :: Int -> a -> [a] -> [a]
+justifyRight n c = (drop . length) <*> (replicate n c ++)
+
+showSquare
+  :: Show a
+  => [[a]] -> String
+showSquare rows =
+  let srows = fmap show <$> rows
+      w = 1 + maximum (length <$> concat srows)
+  in unlines $ concatMap (justifyRight w ' ') <$> srows

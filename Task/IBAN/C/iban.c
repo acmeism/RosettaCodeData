@@ -72,7 +72,7 @@ int valid_iban(char *iban)
     strncpy(rot + sz - 4, iban, 4);
 
     /* Allocate space for the transformed IBAN. */
-    trans = alloca(sz + l);
+    trans = alloca(sz + l + 1);
     trans[sz + l] = 0;
 
     /* Convert A to 10, B to 11, etc. */

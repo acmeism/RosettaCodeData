@@ -1,2 +1,7 @@
-def is_palindrome_r2(s):
-  return not s or s[0] == s[-1] and is_palindrome_r2(s[1:-1])
+def is_palindrome_r(s):
+  if len(s) <= 1:
+    return True
+  elif s[0] != s[-1]:
+    return False
+  else:
+    return is_palindrome_r(s[1:-1])

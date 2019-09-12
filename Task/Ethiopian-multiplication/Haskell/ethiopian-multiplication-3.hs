@@ -3,27 +3,20 @@ import Control.Monad (join)
 import Data.List (unfoldr)
 import Data.Tuple (swap)
 
--- ETHIOPIAN MULTIPLICATION ---------------------------------------------------
+-- ETHIOPIAN MULTIPLICATION -------------------------------
 ethMult
   :: (Monoid m)
   => Int -> m -> m
 ethMult n m =
-  foldr
-    (\(d, x) a ->
-        case d of
-          0 -> a
-          _ -> a <> x)
-    mempty $
-  zip
-    (unfoldr
-       (\h ->
-           case h of
-             0 -> Nothing
-             _ -> Just . swap $ quotRem h 2)
-       n)
-    (iterate (join (<>)) m)
+  let half n
+        | 0 /= n = Just . swap $ quotRem n 2
+        | otherwise = Nothing
+      addedWhereOdd (d, x) a
+        | 0 /= d = a <> x
+        | otherwise = a
+  in foldr addedWhereOdd mempty $ zip (unfoldr half n) (iterate (join (<>)) m)
 
--- TEST -----------------------------------------------------------------------
+-- TEST ---------------------------------------------------
 main :: IO ()
 main = do
   mapM_ print $

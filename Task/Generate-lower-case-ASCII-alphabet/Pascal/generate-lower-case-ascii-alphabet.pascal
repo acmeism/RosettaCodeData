@@ -1,11 +1,10 @@
-program atoz;
-type
-  tlowAlphabet = 'a'..'z';
+program lowerCaseAscii(input, output, stdErr);
 var
-  ch : tlowAlphabet;
-
+	alphabet: set of char;
 begin
-  for ch := low(ch) to High(ch) do
-    write(ch);
-  writeln;
+	// as per ISO 7185, 'a'..'z' do not necessarily have to be contiguous
+	alphabet := [
+			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+			'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
+		];
 end.

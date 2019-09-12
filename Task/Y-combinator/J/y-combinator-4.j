@@ -1,4 +1,1 @@
-   sr=. [ apply f.,&<                 NB. Self referring
-   lv=. (((^:_1)b.)(`(<'0';_1)))(`:6) NB. Linear representation of a verb argument
-   Y=. (&>)/lv(&sr) f.                NB. Y combinator
-   Y=. 'Y'f.                          NB. Fixing it
+XY=. (1 :'('':''<@;(1;~":0)<@;<@((":0)&;))u')(1 :'('':''<@;(1;~":0)<@;<@((":0)&;))((''u u`:6('',(5!:5<''u''),'')`:6 y''),(10{a.),'':'',(10{a.),''x(u u`:6('',(5!:5<''u''),'')`:6)y'')')(1 :'u u`:6')

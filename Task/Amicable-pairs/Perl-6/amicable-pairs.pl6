@@ -1,12 +1,12 @@
 sub propdivsum (\x) {
-    my @l = x > 1, gather for 2 .. x.sqrt.floor -> \d {
-        my \y = x div d;
-        if y * d == x { take d; take y unless y == d }
+    my @l = 1 if x > 1;
+    (2 .. x.sqrt.floor).map: -> \d {
+        unless x % d { @l.push: d; my \y = x div d; @l.push: y if y != d }
     }
-    [+] gather @l.deepmap(*.take);
+    sum @l
 }
 
-for 1..20000 -> $i {
+(1..20000).race.map: -> $i {
     my $j = propdivsum($i);
     say "$i $j" if $j > $i and $i == propdivsum($j);
 }

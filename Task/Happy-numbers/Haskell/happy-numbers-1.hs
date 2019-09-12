@@ -8,6 +8,7 @@ isHappy = p empty
     p s n
       | n `member` s = False
       | otherwise = p (insert n s) (f n)
-    f = sum . (((^ 2) . toInteger . digitToInt) <$>) . show
+    f = sum . fmap ((^ 2) . toInteger . digitToInt) . show
 
+main :: IO ()
 main = mapM_ print $ take 8 $ filter isHappy [1 ..]

@@ -1,19 +1,22 @@
->>> def lcm(*values):
-	values = set([abs(int(v)) for v in values])
-	if values and 0 not in values:
-		n = n0 = max(values)
-		values.remove(n)
-		while any( n % m for m in values ):
-			n += n0
-		return n
-	return 0
+from prime_decomposition import decompose
+try:
+    reduce
+except NameError:
+    from functools import reduce
 
->>> lcm(-6, 14)
-42
->>> lcm(2, 0)
-0
->>> lcm(12, 18)
-36
->>> lcm(12, 18, 22)
-396
->>>
+def lcm(a, b):
+    mul = int.__mul__
+    if a and b:
+        da = list(decompose(abs(a)))
+        db = list(decompose(abs(b)))
+        merge= da
+        for d in da:
+            if d in db: db.remove(d)
+        merge += db
+        return reduce(mul, merge, 1)
+    return 0
+
+if __name__ == '__main__':
+    print( lcm(12, 18) )    # 36
+    print( lcm(-6, 14) )    # 42
+    assert lcm(0, 2) == lcm(2, 0) == 0

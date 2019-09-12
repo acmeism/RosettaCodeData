@@ -10,7 +10,7 @@ sub next_perm ( @a is copy ) {
     my $r = @a.end;
     my $s = $j + 1;
     @a[ $r--, $s++ ] .= reverse while $r > $s;
-    return $(@a);
+    return @a;
 }
 
 .say for [<a b c>], &next_perm ...^ !*;

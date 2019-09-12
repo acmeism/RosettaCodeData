@@ -1,3 +1,6 @@
+#include <stdio.h>
+
+<lang perl>
 use strict;
 use warnings;
 use integer;

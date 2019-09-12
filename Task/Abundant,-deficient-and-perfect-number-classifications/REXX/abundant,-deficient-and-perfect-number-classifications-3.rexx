@@ -1,3 +1,4 @@
+/* REXX */
 Call time 'R'
 cnt.=0
 Do x=1 To 20000

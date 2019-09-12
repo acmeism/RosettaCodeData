@@ -137,5 +137,10 @@ my @g[4;4;6] = (
 );
 
 say "# {+@f.shape}D array:";
+my @h = deconvolve-N( @g, @f );
 say "h =";
-pretty_print( deconvolve-N( @g, @f ) );
+pretty_print( @h );
+my @h-shaped[2;3;4] = @(deconvolve-N( @g, @f ));
+my @ff = deconvolve-N( @g, @h-shaped );
+say "\nff =";
+pretty_print( @ff );

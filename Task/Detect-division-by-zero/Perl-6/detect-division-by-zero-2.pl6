@@ -1,7 +1,5 @@
-multi div($a, $b){ return $a / $b }
-multi div($a, $b where { $b == 0 }){
-    say 'lolicheatsyou';
-    return 1;
-}
+multi div($a, $b) { return $a / $b }
+multi div($a, $b where { $b == 0 }) { note 'Attempt to divide by zero.'; return Nil }
 
-say div(1, sin(0)); # prints "lolicheatsyou" newline "1"
+say div(10, 2);
+say div(1, sin(0));

@@ -1,29 +1,22 @@
 use NativeCall;
 use SDL2::Raw;
-use nqp;
 
 my int ($w, $h) = 320, 240;
-my SDL_Window $window;
-my SDL_Renderer $renderer;
-
-constant $sdl-lib = 'SDL2';
-
-sub SDL_RenderDrawPoints( SDL_Renderer $, CArray[int32] $points, int32 $count ) returns int32 is native($sdl-lib) {*}
 
 SDL_Init(VIDEO);
-$window = SDL_CreateWindow(
-    "some white noise",
+
+my SDL_Window $window = SDL_CreateWindow(
+    "White Noise - Perl 6",
     SDL_WINDOWPOS_CENTERED_MASK, SDL_WINDOWPOS_CENTERED_MASK,
     $w, $h,
-    SHOWN
+    RESIZABLE
 );
-$renderer = SDL_CreateRenderer( $window, -1, ACCELERATED +| TARGETTEXTURE );
 
-SDL_ClearError();
+my SDL_Renderer $renderer = SDL_CreateRenderer( $window, -1, ACCELERATED +| TARGETTEXTURE );
 
 my $noise_texture = SDL_CreateTexture($renderer, %PIXELFORMAT<RGB332>, STREAMING, $w, $h);
 
-my $pixdatabuf = CArray[int64].new(0, 1234, 1234, 1234);
+my $pixdatabuf = CArray[int64].new(0, $w, $h, $w);
 
 sub render {
     my int $pitch;
@@ -50,10 +43,7 @@ sub render {
 
 my $event = SDL_Event.new;
 
-my @times;
-
 main: loop {
-    my $start = nqp::time_n();
 
     while SDL_PollEvent($event) {
         my $casted_event = SDL_CastEvent($event);
@@ -66,13 +56,21 @@ main: loop {
     }
 
     render();
-
-    @times.push: nqp::time_n() - $start;
+    print fps;
 }
 
-@times .= sort;
+say '';
 
-my @timings = (@times[* div 50], @times[* div 4], @times[* div 2], @times[* * 3 div 4], @times[* - * div 100]);
-
-say "frames per second:";
-say (1 X/ @timings).fmt("%3.4f");
+sub fps {
+    state $fps-frames = 0;
+    state $fps-now    = now;
+    state $fps        = '';
+    $fps-frames++;
+    if now - $fps-now >= 1 {
+        $fps = [~] "\b" x 40, ' ' x 20, "\b" x 20 ,
+            sprintf "FPS: %5.2f  ", ($fps-frames / (now - $fps-now)).round(.01);
+        $fps-frames = 0;
+        $fps-now = now;
+    }
+    $fps
+}

@@ -1,11 +1,22 @@
-rnl = [ { '4' : 'MMMM', '3' : 'MMM', '2' : 'MM', '1' : 'M', '0' : '' }, { '9' : 'CM', '8' : 'DCCC', '7' : 'DCC',
-          '6' : 'DC', '5' : 'D', '4' : 'CD', '3' : 'CCC', '2' : 'CC', '1' : 'C', '0' : '' }, { '9' : 'XC',
-          '8' : 'LXXX', '7' : 'LXX', '6' : 'LX', '5' : 'L', '4' : 'XL', '3' : 'XXX', '2' : 'XX', '1' : 'X',
-          '0' : '' }, { '9' : 'IX', '8' : 'VIII', '7' : 'VII', '6' : 'VI', '5' : 'V', '4' : 'IV', '3' : 'III',
-          '2' : 'II', '1' : 'I', '0' : '' }]
-# Option 1
-def number2romannumeral(n):
-    return ''.join([rnl[x][y] for x, y in zip(range(4), str(n).zfill(4)) if n < 5000 and n > -1])
-# Option 2
-def number2romannumeral(n):
-    return reduce(lambda x, y: x + y, map(lambda x, y: rnl[x][y], range(4), str(n).zfill(4))) if -1 < n < 5000 else None
+def arabic_to_roman(dclxvi):
+#===========================
+  '''Convert an integer from the decimal notation to the Roman notation'''
+  org = dclxvi; # 666 #
+  out = "";
+  for scale, arabic_scale  in enumerate(arabic):
+    if org == 0: break
+    multiples = org // arabic_scale;
+    org -= arabic_scale * multiples;
+    out += roman[scale] * multiples;
+    if (org >= -adjust_arabic[scale] + arabic_scale):
+      org -= -adjust_arabic[scale] + arabic_scale;
+      out +=  adjust_roman[scale] +  roman[scale]
+  return out
+
+if __name__ == "__main__":
+  test = (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,25,30,40,50,60,69,70,
+     80,90,99,100,200,300,400,500,600,666,700,800,900,1000,1009,1444,1666,1945,1997,1999,
+     2000,2008,2500,3000,4000,4999,5000,6666,10000,50000,100000,500000,1000000);
+
+  for val in test:
+    print("%8d %s" %(val, arabic_to_roman(val)))

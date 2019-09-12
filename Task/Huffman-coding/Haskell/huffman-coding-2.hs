@@ -1,4 +1,3 @@
-*Main> test "this is an example for huffman encoding"
 'p' : 00000
 'r' : 00001
 'g' : 00010

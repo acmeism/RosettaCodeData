@@ -1,10 +1,10 @@
 import Data.Char (toLower)
 
-isPalindrome :: String -> Bool
+isPalindrome :: Eq a => [a] -> Bool
 isPalindrome = (==) <*> reverse
 
 -- Alternatively, comparing just the first half with the reversed latter half
-isPal :: String -> Bool
+isPal :: Eq a => [a] -> Bool
 isPal s =
   let (q, r) = quotRem (length s) 2
   in take q s == reverse (drop (q + r) s)

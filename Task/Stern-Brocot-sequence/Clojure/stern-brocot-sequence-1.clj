@@ -1,18 +1,34 @@
-;; compute the Nth (1-based) Stern-Brocot number directly
-(defn nth-stern-brocot [n]
-  (if (< n 2)
-    n
-    (let [h (quot n 2) h1 (inc h) hth (nth-stern-brocot h)]
-      (if (zero? (mod n 2)) hth (+ hth (nth-stern-brocot h1))))))
+;; each step adds two items
+(defn sb-step [v]
+  (let [i (quot (count v) 2)]
+    (conj v (+ (v (dec i)) (v i)) (v i))))
 
-;; return a lazy version of the entire Stern-Brocot sequence
-(defn stern-brocot
-  ([] (stern-brocot 1))
-  ([n] (cons (nth-stern-brocot n) (lazy-seq (stern-brocot (inc n))))))
+;; A lazy, infinite sequence -- `take` what you want.
+(def all-sbs (sequence (map peek) (iterate sb-step [1 1])))
 
-(printf "Stern-Brocot numbers 1-15: %s%n"
-        (clojure.string/join ", " (take 15 (stern-brocot))))
+;; zero-based
+(defn first-appearance [n]
+  (first (keep-indexed (fn [i x] (when (= x n) i)) all-sbs)))
 
-(dorun (for [n (concat (range 1 11) [100])]
-  (printf "The first appearance of %3d is at index %4d.%n"
-    n (inc (first (keep-indexed #(when (= %2 n) %1) (stern-brocot)))))))
+;; inlined abs; rem is slightly faster than mod, and the same result for positive values
+(defn gcd [a b]
+  (loop [a (if (neg? a) (- a) a)
+         b (if (neg? b) (- b) b)]
+    (if (zero? b)
+      a
+      (recur b (rem a b)))))
+
+(defn check-pairwise-gcd [cnt]
+  (let [sbs (take (inc cnt) all-sbs)]
+    (every? #(= 1 %) (map gcd sbs (rest sbs)))))
+
+;; one-based index required by problem statement
+(defn report-sb []
+  (println "First 15 Stern-Brocot members:" (take 15 all-sbs))
+  (println "First appearance of N at 1-based index:")
+  (doseq [n [1 2 3 4 5 6 7 8 9 10 100]]
+    (println " first" n "at" (inc (first-appearance n))))
+  (println "Check pairwise GCDs = 1 ..." (check-pairwise-gcd 1000))
+  true)
+
+(report-sb)

@@ -1,10 +1,12 @@
-fizzBuzz :: (Integral a) => a -> String
-fizzBuzz i
-  | fizz && buzz = "FizzBuzz"
-  | fizz         = "Fizz"
-  | buzz         = "Buzz"
-  | otherwise    = show i
-  where fizz = i `mod` 3 == 0
-        buzz = i `mod` 5 == 0
+import Data.Bool (bool)
 
-main = mapM_ (putStrLn . fizzBuzz) [1..100]
+fizzBuzz :: [String]
+fizzBuzz =
+  let fb n k = cycle (replicate (pred n) [] ++ [k])
+  in zipWith
+       (flip . bool <*> null)
+       (zipWith (++) (fb 3 "fizz") (fb 5 "buzz"))
+       (show <$> [1 ..])
+
+main :: IO ()
+main = mapM_ putStrLn $ take 100 fizzBuzz

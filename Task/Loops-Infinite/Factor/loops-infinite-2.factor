@@ -1,1 +1,1 @@
-: spam ( -- ) [ "SPAM" print t ] loop ;
+[ "SPAM" print t ] loop

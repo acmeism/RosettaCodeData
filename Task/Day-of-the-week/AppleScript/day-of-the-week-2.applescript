@@ -1,29 +1,31 @@
-filter(xmasIsSunday, enumFromTo(2008, 2121))
+on run
+    -- xmasOnSunday :: Int -> Bool
+    script xmasOnSunday
+        on |λ|(y)
+            tell (current date)
+                set {its year, its month, its day, its time} to {y, 12, 25, 0}
+                return its weekday is Sunday
+            end tell
+        end |λ|
+    end script
 
-
--- xmasIsSunday :: Int -> Bool
-on xmasIsSunday(y)
-    tell (current date)
-        set {its year, its month, its day, its time} to {y, 12, 25, 0}
-        return its weekday is Sunday
-    end tell
-end xmasIsSunday
+    filter(xmasOnSunday, enumFromTo(2008, 2121))
+end run
 
 
 -- GENERIC FUNCTIONS ----------------------------------------------------------
 
 -- enumFromTo :: Int -> Int -> [Int]
 on enumFromTo(m, n)
-    if m > n then
-        set d to -1
+    if m ≤ n then
+        set lst to {}
+        repeat with i from m to n
+            set end of lst to i
+        end repeat
+        return lst
     else
-        set d to 1
+        return {}
     end if
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
 end enumFromTo
 
 -- filter :: (a -> Bool) -> [a] -> [a]

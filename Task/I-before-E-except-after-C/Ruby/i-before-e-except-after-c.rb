@@ -2,7 +2,7 @@ require 'open-uri'
 
 plausibility_ratio = 2
 counter = Hash.new(0)
-path = 'http://www.puzzlers.org/pub/wordlists/unixdict.txt'
+path = 'http://wiki.puzzlers.org/pub/wordlists/unixdict.txt'
 rules = [['I before E when not preceded by C:', 'ie', 'ei'],
          ['E before I when preceded by C:', 'cei', 'cie']]
 

@@ -1,7 +1,6 @@
 sub hero($a, $b, $c) {
     my $s = ($a + $b + $c) / 2;
-    my $a2 = $s * ($s - $a) * ($s - $b) * ($s - $c);
-    $a2.sqrt;
+    ($s * ($s - $a) * ($s - $b) * ($s - $c)).sqrt;
 }
 
 sub heronian-area($a, $b, $c) {
@@ -21,17 +20,19 @@ sub show(@measures) {
 }
 
 sub MAIN ($maxside = 200, $first = 10, $witharea = 210) {
-    my @h = sort gather
-        for 1 .. $maxside -> $c {
-            for 1 .. $c -> $b {
-                for $c - $b + 1 .. $b -> $a {
-                    if primitive-heronian-area($a,$b,$c) -> $area {
-                        take [$area, $a+$b+$c, $c, $b, $a];
-                    }
+    my @hh[1000];
+    my atomicint $i;
+    (1 .. $maxside).race(:12batch).map: -> $c {
+        for 1 .. $c -> $b {
+            for $c - $b + 1 .. $b -> $a {
+                if primitive-heronian-area($a,$b,$c) -> $area {
+                    @hh[$i⚛++] = [$area, $a+$b+$c, $c, $b, $a];
                 }
             }
         }
+    }
 
+    my @h = (@hh.grep: so *).sort;
     say "Primitive Heronian triangles with sides up to $maxside: ", +@h;
 
     say "\nFirst $first:";

@@ -1,2 +1,2 @@
-sub clear { print state $ = qx[clear] }
+sub clear { print qx[clear] }
 clear;

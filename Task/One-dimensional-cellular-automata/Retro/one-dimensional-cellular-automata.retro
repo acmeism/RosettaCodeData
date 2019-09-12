@@ -1,33 +1,156 @@
-{{
-  : $, ( $- ) withLength [ @+ , ] times @ , ;
-  create this   ".###.##.#.#.#.#..#.." $,
-  create next   this getLength allot
-  create group  "..." $,
-  variable neighbours
+# 1D Cellular Automota
 
-  : reset                  0 !neighbours ;
-  : hasNeighbour?          @ '# = [ neighbours ++ ] ifTrue ;
-  : countNeighboursOnEdge  '# = [ 1 ] [ 0 ] if !neighbours ;
-  : flip                   dup this + @ '# = [ '. ] [ '# ] if ;
-  : extract                dup this + 1- group 3 copy ;
+Assume an array of cells with an initial distribution of live and
+dead cells, and imaginary cells off the end of the array having
+fixed values.
 
-  : count
-    ( left   ) [  0 = ] [ @this        countNeighboursOnEdge ] when
-    ( right  ) [ 19 = ] [  this 19 + @ countNeighboursOnEdge ] when
-    ( middle ) reset extract group dup 2 + 2hasNeighbour? ;
+Cells in the next generation of the array are calculated based on
+the value of the cell and its left and right nearest neighbors in
+the current generation.
 
-  : process
-    reset count @neighbours
-    [ 0 = ] [ drop dup next + '. swap !       ] when
-    [ 1 = ] [ drop dup this + @ over next + ! ] when
-    [ 2 = ] [ drop flip over next + !         ] when
-    drop ;
+If, in the following table, a live cell is represented by 1 and a
+dead cell by 0 then to generate the value of the cell at a particular
+index in the array of cellular values you use the following table:
 
-  : generation
-    0 this getLength
-    [ process 1+ ] times drop
-    next this withLength copy ;
----reveal---
-  : generations
-    cr 0 swap [ [ this swap "%d %s\n" puts ] sip generation 1+ ] times drop ;
-}}
+000 -> 0  #
+001 -> 0  #
+010 -> 0  # Dies without enough neighbours
+011 -> 1  # Needs one neighbour to survive
+100 -> 0  #
+101 -> 1  # Two neighbours giving birth
+110 -> 1  # Needs one neighbour to survive
+111 -> 0  # Starved to death.
+
+I had originally written an implementation of this in RETRO 11.
+For RETRO 12 I took advantage of new language features and some
+further considerations into the rules for this task.
+
+The first word, `string,` inlines a string to `here`. I'll use
+this to setup the initial input.
+
+~~~
+:string, (s-) [ , ] s:for-each #0 , ;
+~~~
+
+The next two lines setup an initial generation and a buffer for
+the evolved generation. In this case, `This` is the current
+generation and `Next` reflects the next step in the evolution.
+
+~~~
+'This d:create
+  '.###.##.#.#.#.#..#.. string,
+
+'Next d:create
+  '.................... string,
+~~~
+
+I use `display` to show the current generation.
+
+~~~
+:display (-)
+  &This s:put nl ;
+~~~
+
+As might be expected, `update` copies the `Next` generation to
+the `This` generation, setting things up for the next cycle.
+
+~~~
+:update (-)
+  &Next &This dup s:length copy ;
+~~~
+
+The word `group` extracts a group of three cells. This data will
+be passed to `evolve` for processing.
+
+~~~
+:group (a-nnn)
+  [ fetch ]
+  [ n:inc fetch ]
+  [ n:inc n:inc fetch ] tri ;
+~~~
+
+I use `evolve` to decide how a cell should change, based on its
+initial state with relation to its neighbors.
+
+In the prior implementation this part was much more complex as I
+tallied things up and had separate conditions for each combination.
+This time I take advantage of the fact that only cells with two
+neighbors will be alive in the next generation. So the process is:
+
+- take the data from `group`
+- compare to `$#` (for living cells)
+- add the flags
+- if the result is `#-2`, the cell should live
+- otherwise it'll be dead
+
+~~~
+:evolve (nnn-c)
+  [ $# eq? ] tri@ + +
+  #-2 eq? [ $# ] [ $. ] choose ;
+~~~
+
+For readability I separated out the next few things. `at` takes an
+index and returns the address in `This` starting with the index.
+
+~~~
+:at (n-na)
+  &This over + ;
+~~~
+
+The `record` word adds the evolved value to a buffer. In this case
+my `generation` code will set the buffer to `Next`.
+
+~~~
+:record (c-)
+  buffer:add n:inc ;
+~~~
+
+And now to tie it all together. Meet `generation`, the longest bit
+of code in this sample. It has several bits:
+
+- setup a new buffer pointing to `Next`
+
+  - this also preserves the old buffer
+
+- setup a loop for each cell in `This`
+
+  - initial loop index at -1, to ensure proper dummy state for first cell
+  - get length of `This` generation
+
+- perform a loop for each item in the generation, updating `Next` as it goes
+
+- copy `Next` to `This` using `update`.
+
+~~~
+:generation (-)
+  [ &Next buffer:set
+    #-1 &This s:length
+    [ at group evolve record ] times drop
+    update
+  ] buffer:preserve ;
+~~~
+
+The last bit is a helper. It takes a number of generations and displays
+the state, then runs a `generation`.
+
+~~~
+:generations (n-)
+  [ display generation ] times ;
+~~~
+
+And a text. The output should be:
+
+    .###.##.#.#.#.#..#..
+    .#.#####.#.#.#......
+    ..##...##.#.#.......
+    ..##...###.#........
+    ..##...#.##.........
+    ..##....###.........
+    ..##....#.#.........
+    ..##.....#..........
+    ..##................
+    ..##................
+
+~~~
+#10 generations
+~~~

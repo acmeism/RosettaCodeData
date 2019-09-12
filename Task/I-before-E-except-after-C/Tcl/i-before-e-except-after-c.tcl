@@ -22,7 +22,7 @@ proc plausible {description x y} {
     return $result
 }
 
-set t [http::geturl http://www.puzzlers.org/pub/wordlists/unixdict.txt]
+set t [http::geturl http://wiki.puzzlers.org/pub/wordlists/unixdict.txt]
 set words [split [http::data $t] "\n"]
 http::cleanup $t
 foreach {name pattern} {ie (?:^|[^c])ie ei (?:^|[^c])ei cie cie cei cei} {

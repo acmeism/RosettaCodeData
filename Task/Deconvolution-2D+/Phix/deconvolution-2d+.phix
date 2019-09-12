@@ -1,0 +1,224 @@
+-- demo\rosetta\Deconvolution.exw
+
+function m_size(sequence m)
+--
+-- returns the size of a matrix as a list of lengths
+--
+    sequence res = {}
+    object me = m
+    while sequence(me) do
+        res &= length(me)
+        me = me[1]
+    end while
+    return res
+end function
+
+function product(sequence s)
+--
+-- multiply all elements of s together
+--
+    integer res = s[1]
+    for i=2 to length(s) do
+        res *= s[i]
+    end for
+    return res
+end function
+
+function make_coordset(sequence size)
+--
+-- returns all points in the matrix, in zero-based indexes,
+-- eg {{0,0,0}..{3,3,5}} for a 4x4x6 matrix [96 in total]
+--
+    sequence res = {}
+    integer count = product(size)
+    for i=0 to count-1 do
+        sequence coords = {}
+        integer j = i
+        for s=length(size) to 1 by -1 do
+            integer dimension = size[s]
+            coords &= mod(j,dimension)
+            j = floor(j/dimension)
+        end for
+        coords = reverse(coords)
+        res = append(res,coords)
+    end for
+    return res
+end function
+
+function row(sequence g, f, gs, gc, fs, hs)
+--
+--# Assembles a row, which is one of the simultaneous equations that needs
+--# to be solved by reducing the whole set to reduced row echelon form. Note
+--# that each row describes the equation for a single cell of the 'g' function.
+--#
+--# Arguments:
+--# g   The "result" matrix of the convolution being undone.
+--# h   The known "input" matrix of the convolution being undone.
+--# gs  The size descriptor of 'g', passed as argument for efficiency.
+--# gc  The coordinate in 'g' that we are generating the equation for.
+--# fs  The size descriptor of 'f', passed as argument for efficiency.
+--# hs  The size descriptor of 'h' (the unknown "input" matrix), passed
+--#     as argument for efficiency.
+--
+    sequence row = {},
+             coords = make_coordset(hs)
+    for i=1 to length(coords) do
+        sequence hc = coords[i]
+        object fn = f
+        for k=1 to length(gc) do
+            integer d = gc[k]-hc[k]
+            if d<0 or d>=fs[k] then
+                fn = 0
+                exit
+            end if
+            fn = fn[d+1]
+        end for
+        row = append(row,fn)
+    end for
+    object gn = g
+    for i=1 to length(gc) do
+        gn = gn[gc[i]+1]
+    end for
+    row = append(row,gn)
+    return row
+end function
+
+function toRREF(sequence m)
+--
+-- [renamed] copy of Reduced_row_echelon_form.htm#Phix
+-- plus one small tweak, as noted below, exit->return,
+-- not that said seems to make any actual difference.
+--
+integer lead = 1,
+        rows = length(m),
+        cols = length(m[1])
+    for r=1 to rows do
+        if lead>=cols then exit end if
+        integer i = r
+        while m[i][lead]=0 do
+            i += 1
+            if i=rows then
+                i = r
+                lead += 1
+--              if lead=cols then exit end if
+                if lead=cols then return m end if
+            end if
+        end while
+        -- nb m[i] is assigned before m[r], which matters when i=r:
+        {m[r],m[i]} = {sq_div(m[i],m[i][lead]),m[r]}
+        for j=1 to rows do
+            if j!=r then
+                m[j] = sq_sub(m[j],sq_mul(m[j][lead],m[r]))
+            end if
+        end for
+        lead += 1
+    end for
+    return m
+end function
+
+function lset(sequence h, sequence idx, object v)
+-- helper routine: store v somewhere deep inside h
+    integer i1 = idx[1]+1
+    if length(idx)=1 then
+        h[i1] = v
+    else
+        h[i1] = lset(h[i1],idx[2..$],v)
+    end if
+    return h
+end function
+
+function deconvolve(sequence g, f)
+--
+--# Deconvolve a pair of matrixes. Solves for 'h' such that 'g = f convolve h'.
+--#
+--# Arguments:
+--# g     The matrix of data to be deconvolved.
+--# f     The matrix describing the convolution to be removed.
+--
+    -- Compute the sizes of the various matrixes involved.
+    sequence gsize = m_size(g),
+             fsize = m_size(f),
+             hsize = sq_add(sq_sub(gsize,fsize),1)
+
+    -- Prepare the set of simultaneous equations to solve
+    sequence toSolve = {},
+             coords = make_coordset(gsize)
+    for i=1 to length(coords) do
+        toSolve = append(toSolve,row(g,f,gsize,coords[i],fsize,hsize))
+    end for
+
+    -- Solve the equations
+    sequence solved = toRREF(toSolve)
+
+    -- Create a result matrix of the right size
+    object h = 0
+    for i=length(hsize) to 1 by -1 do
+        h = repeat(h,hsize[i])
+    end for
+
+    -- Fill the results from the equations into the result matrix
+    coords = make_coordset(hsize)
+    for i=1 to length(coords) do
+        h = lset(h,coords[i],solved[i][$])
+    end for
+    return h
+end function
+
+constant f1 = { 6, -9, -7, -5},
+         g1 = {-48, 84, -16, 95, 125, -70, 7, 29, 54, 10},
+         h1 = {-8, 2, -9, -2, 9, -8, -2}
+
+if deconvolve(g1, f1)!=h1 then ?9/0 end if
+if deconvolve(g1, h1)!=f1 then ?9/0 end if
+
+constant f2 = {{-5, 2,-2,-6,-7},
+               { 9, 7,-6, 5,-7},
+               { 1,-1, 9, 2,-7},
+               { 5, 9,-9, 2,-5},
+               {-8, 5,-2, 8, 5}},
+         g2 = {{ 40, -21, 53,  42, 105,   1,  87,  60,  39, -28},
+               {-92, -64, 19,-167, -71, -47, 128,-109,  40, -21},
+               { 58,  85,-93,  37, 101, -14,   5,  37, -76, -56},
+               {-90,-135, 60,-125,  68,  53, 223,   4, -36, -48},
+               { 78,  16,  7,-199, 156,-162,  29,  28,-103, -10},
+               {-62, -89, 69, -61,  66, 193, -61,  71,  -8, -30},
+               { 48,  -6, 21,  -9,-150, -22, -56,  32,  85,  25}},
+         h2 = {{-8, 1,-7,-2,-9, 4},
+               { 4, 5,-5, 2, 7,-1},
+               {-6,-3,-3,-6, 9, 5}}
+
+if deconvolve(g2, f2)!=h2 then ?9/0 end if
+if deconvolve(g2, h2)!=f2 then ?9/0 end if
+
+constant f3 = {{{-9,  5, -8}, { 3,  5,  1}},
+               {{-1, -7,  2}, {-5, -6,  6}},
+               {{ 8,  5,  8}, {-2, -6, -4}}},
+         g3 = {{{ 54,  42,  53, -42,  85, -72},
+                { 45,-170,  94, -36,  48,  73},
+                {-39,  65,-112, -16, -78, -72},
+                {  6, -11,  -6,  62,  49,   8}},
+               {{-57,  49, -23,  52,-135,  66},
+                {-23, 127, -58,  -5,-118,  64},
+                { 87, -16, 121,  23, -41, -12},
+                {-19,  29,  35,-148, -11,  45}},
+               {{-55,-147,-146, -31,  55,  60},
+                {-88, -45, -28,  46, -26,-144},
+                {-12,-107, -34, 150, 249,  66},
+                { 11, -15, -34,  27, -78, -50}},
+               {{ 56,  67, 108,   4,   2, -48},
+                { 58,  67,  89,  32,  32,  -8},
+                {-42, -31,-103, -30, -23,  -8},
+                {  6,   4, -26, -10,  26,  12}}},
+         h3 = {{{ -6, -8, -5,  9},
+                { -7,  9, -6, -8},
+                {  2, -7,  9,  8}},
+               {{  7,  4,  4, -6},
+                {  9,  9,  4, -4},
+                { -3,  7, -2, -3}}}
+
+if deconvolve(g3, f3)!=h3 then ?9/0 end if
+if deconvolve(g3, h3)!=f3 then ?9/0 end if
+
+ppOpt({pp_Nest,2,pp_IntFmt,"%3d"})
+pp(deconvolve(g3, f3))
+pp(deconvolve(g3, h3))

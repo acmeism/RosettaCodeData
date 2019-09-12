@@ -18,6 +18,6 @@ sub triples($limit) {
     "$limit => ({$complex.re, $complex.im})";
 }
 
-for 10,100,1000 ... * -> $limit {
+for 10, 100, 1000, 10000 -> $limit {
     say triples $limit;
 }

@@ -1,0 +1,258 @@
+'From first principles (No external library)
+Function _divide(n1 As String,n2 As String,decimal_places As Integer=10,dpflag As String="s") As String
+    Dim As String number=n1,divisor=n2
+    dpflag=Lcase(dpflag)
+    'For MOD
+    Dim As Integer modstop
+    If dpflag="mod" Then
+        If Len(n1)<Len(n2) Then Return n1
+        If Len(n1)=Len(n2) Then
+            If n1<n2 Then Return n1
+        End If
+        modstop=Len(n1)-Len(n2)+1
+    End If
+    If dpflag<>"mod" Then
+        If dpflag<>"s"  Then dpflag="raw"
+    End If
+    Dim runcount As Integer
+    '_______  LOOK UP TABLES ______________
+    Dim Qmod(0 To 19) As Ubyte
+    Dim bool(0 To 19) As Ubyte
+    For z As Integer=0 To 19
+        Qmod(z)=(z Mod 10+48)
+        bool(z)=(-(10>z))
+    Next z
+    Dim answer As String   'THE ANSWER STRING
+
+    '_______ SET THE DECIMAL WHERE IT SHOULD BE AT _______
+    Dim As String part1,part2
+    #macro set(decimal)
+    #macro insert(s,char,position)
+    If position > 0 And position <=Len(s) Then
+        part1=Mid(s,1,position-1)
+        part2=Mid(s,position)
+        s=part1+char+part2
+    End If
+    #endmacro
+    insert(answer,".",decpos)
+    answer=thepoint+zeros+answer
+    If dpflag="raw" Then
+        answer=Mid(answer,1,decimal_places)
+    End If
+    #endmacro
+    '______________________________________________
+    '__________ SPLIT A STRING ABOUT A CHARACTRR __________
+    Dim As String var1,var2
+    Dim pst As Integer
+    #macro split(stri,char,var1,var2)
+    pst=Instr(stri,char)
+    var1="":var2=""
+    If pst<>0 Then
+        var1=Rtrim(Mid(stri,1,pst),".")
+        var2=Ltrim(Mid(stri,pst),".")
+    Else
+        var1=stri
+    End If
+    #endmacro
+
+    #macro Removepoint(s)
+    split(s,".",var1,var2)
+    #endmacro
+    '__________ GET THE SIGN AND CLEAR THE -ve __________________
+    Dim sign As String
+    If Left(number,1)="-" Xor Left (divisor,1)="-" Then sign="-"
+    If Left(number,1)="-" Then  number=Ltrim(number,"-")
+    If Left (divisor,1)="-" Then divisor=Ltrim(divisor,"-")
+
+    'DETERMINE THE DECIMAL POSITION BEFORE THE DIVISION
+    Dim As Integer lennint,lenddec,lend,lenn,difflen
+    split(number,".",var1,var2)
+    lennint=Len(var1)
+    split(divisor,".",var1,var2)
+    lenddec=Len(var2)
+
+    If Instr(number,".") Then
+        Removepoint(number)
+        number=var1+var2
+    End If
+    If Instr(divisor,".") Then
+        Removepoint(divisor)
+        divisor=var1+var2
+    End If
+    Dim As Integer numzeros
+    numzeros=Len(number)
+    number=Ltrim(number,"0"):divisor=Ltrim (divisor,"0")
+    numzeros=numzeros-Len(number)
+    lend=Len(divisor):lenn=Len(number)
+    If lend>lenn Then difflen=lend-lenn
+    Dim decpos As Integer=lenddec+lennint-lend+2-numzeros 'THE POSITION INDICATOR
+    Dim _sgn As Byte=-Sgn(decpos)
+    If _sgn=0 Then _sgn=1
+    Dim As String thepoint=String(_sgn,".") 'DECIMAL AT START (IF)
+    Dim As String zeros=String(-decpos+1,"0")'ZEROS AT START (IF) e.g. .0009
+    If dpflag<>"mod" Then
+        If Len(zeros) =0 Then dpflag="s"
+    End If
+    Dim As Integer runlength
+    If Len(zeros) Then
+        runlength=decimal_places
+        answer=String(Len(zeros)+runlength+10,"0")
+        If dpflag="raw" Then
+            runlength=1
+            answer=String(Len(zeros)+runlength+10,"0")
+            If decimal_places>Len(zeros) Then
+                runlength=runlength+(decimal_places-Len(zeros))
+                answer=String(Len(zeros)+runlength+10,"0")
+            End If
+        End If
+
+    Else
+        decimal_places=decimal_places+decpos
+        runlength=decimal_places
+        answer=String(Len(zeros)+runlength+10,"0")
+    End If
+    '___________DECIMAL POSITION DETERMINED  _____________
+
+    'SET UP THE VARIABLES AND START UP CONDITIONS
+    number=number+String(difflen+decimal_places,"0")
+    Dim count As Integer
+    Dim temp As String
+    Dim copytemp As String
+    Dim topstring As String
+    Dim copytopstring As String
+    Dim As Integer lenf,lens
+    Dim As Ubyte takeaway,subtractcarry
+    Dim As Integer n3,diff
+    If Ltrim(divisor,"0")="" Then Return "Error :division by zero"
+    lens=Len(divisor)
+    topstring=Left(number,lend)
+    copytopstring=topstring
+    Do
+        count=0
+        Do
+            count=count+1
+            copytemp=temp
+
+            Do
+                '___________________ QUICK SUBTRACTION loop _________________
+
+                lenf=Len(topstring)
+                If  lens<lenf=0 Then 'not
+                    If Lens>lenf Then
+                        temp= "done"
+                        Exit Do
+                    End If
+                    If divisor>topstring Then
+                        temp= "done"
+                        Exit Do
+                    End If
+                End If
+
+                diff=lenf-lens
+                temp=topstring
+                subtractcarry=0
+
+                For n3=lenf-1 To diff Step -1
+                    takeaway= topstring[n3]-divisor[n3-diff]+10-subtractcarry
+                    temp[n3]=Qmod(takeaway)
+                    subtractcarry=bool(takeaway)
+                Next n3
+                If subtractcarry=0 Then Exit Do
+                If n3=-1 Then Exit Do
+                For n3=n3 To 0 Step -1
+                    takeaway= topstring[n3]-38-subtractcarry
+                    temp[n3]=Qmod(takeaway)
+                    subtractcarry=bool(takeaway)
+                    If subtractcarry=0 Then Exit Do
+                Next n3
+                Exit Do
+
+            Loop 'single run
+            temp=Ltrim(temp,"0")
+            If temp="" Then temp= "0"
+            topstring=temp
+        Loop Until temp="done"
+        ' INDIVIDUAL CHARACTERS CARVED OFF ________________
+        runcount=runcount+1
+        If count=1 Then
+            topstring=copytopstring+Mid(number,lend+runcount,1)
+        Else
+            topstring=copytemp+Mid(number,lend+runcount,1)
+        End If
+        copytopstring=topstring
+        topstring=Ltrim(topstring,"0")
+        If dpflag="mod" Then
+            If runcount=modstop Then
+                If topstring="" Then Return "0"
+                Return Mid(topstring,1,Len(topstring)-1)
+            End If
+        End If
+        answer[runcount-1]=count+47
+        If topstring="" And runcount>Len(n1)+1 Then
+            Exit Do
+        End If
+    Loop Until runcount=runlength+1
+
+    ' END OF RUN TO REQUIRED DECIMAL PLACES
+    set(decimal) 'PUT IN THE DECIMAL POINT
+    'THERE IS ALWAYS A DECIMAL POINT SOMEWHERE IN THE ANSWER
+    'NOW GET RID OF IT IF IT IS REDUNDANT
+    answer=Rtrim(answer,"0")
+    answer=Rtrim(answer,".")
+    answer=Ltrim(answer,"0")
+    If answer="" Then Return "0"
+    Return sign+answer
+End Function
+
+Dim Shared As Integer _Mod(0 To 99),_Div(0 To 99)
+For z As Integer=0 To 99:_Mod(z)=(z Mod 10+48):_Div(z)=z\10:Next
+
+    Function Qmult(a As String,b As String) As String
+        Var flag=0,la = Len(a),lb = Len(b)
+        If Len(b)>Len(a) Then flag=1:Swap a,b:Swap la,lb
+        Dim As Ubyte n,carry,ai
+        Var c =String(la+lb,"0")
+        For i As Integer =la-1 To 0 Step -1
+            carry=0:ai=a[i]-48
+            For j As Integer =lb-1 To 0 Step -1
+                n = ai * (b[j]-48) + (c[i+j+1]-48) + carry
+                carry =_Div(n):c[i+j+1]=_Mod(n)
+            Next j
+            c[i]+=carry
+        Next i
+        If flag Then Swap a,b
+        Return Ltrim(c,"0")
+    End Function
+    '=======================================================================
+    #define mod_(a,b) _divide((a),(b),,"mod")
+    #define div_(a,b) iif(len((a))<len((b)),"0",_divide((a),(b),-2))
+
+    Function Modular_Exponentiation(base_num As String, exponent As String, modulus As String) As String
+        Dim b1 As String = base_num
+        Dim e1 As String = exponent
+        Dim As String result="1"
+        b1 = mod_(b1,modulus)
+        Do While e1 <> "0"
+            Var L=Len(e1)-1
+            If e1[L] And 1 Then
+                result=mod_(Qmult(result,b1),modulus)
+            End If
+            b1=mod_(qmult(b1,b1),modulus)
+            e1=div_(e1,"2")
+        Loop
+        Return result
+    End Function
+
+
+
+
+    var base_num="2988348162058574136915891421498819466320163312926952423791023078876139"
+    var exponent="2351399303373464486466122544523690094744975233415544072992656881240319"
+    var modulus="10000000000000000000000000000000000000000"
+    dim as double t=timer
+    var ans=Modular_Exponentiation(base_num,exponent,modulus)
+    print "Result:"
+    Print ans
+    print "time taken  ";(timer-t)*1000;" milliseconds"
+    Print "Done"
+    Sleep

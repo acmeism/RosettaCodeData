@@ -1,21 +1,44 @@
-include builtins\bigatom.e
+-- demo\rosetta\fibonacci.exw
+include mpfr.e
 
-sequence fcacheba = {BA_ONE,BA_ONE}
+mpz res = NULL, prev, next
+integer lastn
+atom t0 = time()
 
-function fibonamemba(integer n) -- memoized, works for -ve numbers, yields bigatom
+function fibonampz(integer n) -- resumable, works for -ve numbers, yields mpz
 integer absn = abs(n)
-    if n=0 then return BA_ZERO end if
-    while length(fcacheba)<absn do
-        fcacheba = append(fcacheba,ba_add(fcacheba[$],fcacheba[$-1]))
-    end while
-    if n<0 and remainder(n,2)=0 then return ba_sub(0,fcacheba[absn]) end if
-    return fcacheba[absn]
+    if res=NULL or absn!=abs(lastn)+1 then
+        if res=NULL then
+            prev = mpz_init(0)
+            res = mpz_init(1)
+            next = mpz_init()
+        else
+            if n==lastn then return res end if
+        end if
+        mpz_fib2_ui(res,prev,absn)
+    else
+        if lastn<0 and remainder(lastn,2)=0 then
+            mpz_mul_si(res,res,-1)
+        end if
+        mpz_add(next,res,prev)
+        {prev,res,next} = {res,next,prev}
+    end if
+    if n<0 and remainder(n,2)=0 then
+        mpz_mul_si(res,res,-1)
+    end if
+    lastn = n
+    return res
 end function
 
 for i=0 to 28 do
     if i then puts(1,", ") end if
-    ba_printf(1,"%B", fibonamemba(i))
+    printf(1,"%s", {mpz_get_str(fibonampz(i))})
 end for
 puts(1,"\n")
-ba_printf(1,"%B", fibonamemba(705))
-puts(1,"\n")
+printf(1,"%s\n", {mpz_get_str(fibonampz(705))})
+
+string s = mpz_get_str(fibonampz(4784969))
+integer l = length(s)
+s[40..-40] = "..."
+?{l,s}
+?elapsed(time()-t0)

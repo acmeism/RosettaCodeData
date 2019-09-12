@@ -1,12 +1,8 @@
-def binary_search(l, value):
-    low = 0
-    high = len(l)-1
-    while low + 1 < high:
-        mid = (low+high)//2
-        if l[mid] > value:
-            high = mid
-        elif l[mid] < value:
-            low = mid
-        else:
-            return mid
-    return high if abs(l[high] - value) < abs(l[low] - value) else low
+index = bisect.bisect_left(list, item) # leftmost insertion point
+index = bisect.bisect_right(list, item) # rightmost insertion point
+index = bisect.bisect(list, item) # same as bisect_right
+
+# same as above but actually insert the item into the list at the given place:
+bisect.insort_left(list, item)
+bisect.insort_right(list, item)
+bisect.insort(list, item)

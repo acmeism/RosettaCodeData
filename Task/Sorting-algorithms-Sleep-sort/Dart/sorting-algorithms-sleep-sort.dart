@@ -1,18 +1,6 @@
-import 'dart:async';
+void main() async {
+  Future<void> sleepsort(Iterable<int> input) => Future.wait(input
+      .map((i) => Future.delayed(Duration(milliseconds: i), () => print(i))));
 
-Future<List<int>> sleepsort(List<int> input) {
-  List<Future<int>> tasks = [];
-  List<int> result = [];
-  for (int i in input) {
-    tasks.add(new Future.delayed(new Duration(seconds: i), () {
-      result.add(i);
-    }));
-  }
-  return Future.wait(tasks).then((_) {
-    return result;
-  });
+  await sleepsort([3, 10, 2, 120, 122, 121, 54]);
 }
-
-sleepsort.sleepsort([3, 1, 2]).then((List<int> sorted) {
-  print(sorted);
-});

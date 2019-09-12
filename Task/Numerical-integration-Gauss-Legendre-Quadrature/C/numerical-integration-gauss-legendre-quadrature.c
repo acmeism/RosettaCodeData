@@ -42,9 +42,9 @@ void lege_roots()
 		do {
 			x1 = x;
 			x -= lege_eval(N, x) / lege_diff(N, x);
-		} while (x != x1);
-		/*  x != x1 is normally a no-no, but this task happens to be
-		 *  well behaved. */
+		} while ( fdim( x, x1) > 2e-16 );
+		/*  fdim( ) was introduced in C99, if it isn't available
+		 *  on your system, try fabs( ) */
 		lroots[i - 1] = x;
 
 		x1 = lege_diff(N, x);

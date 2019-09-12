@@ -1,6 +1,7 @@
 my ($max, @current);
 sub non_continuous {
-        my ($idx, $has_gap, $found) = @_;
+        my ($idx, $has_gap) = @_;
+        my $found;
 
         for ($idx .. $max) {
                 push @current, $_;
@@ -13,5 +14,5 @@ sub non_continuous {
         $found;
 }
 
-$max = 20;      # 1048365 sequences, 10 seconds-ish
+$max = 20;
 print "found ", non_continuous(1), " sequences\n";

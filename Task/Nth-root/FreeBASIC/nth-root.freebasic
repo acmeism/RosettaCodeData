@@ -1,0 +1,41 @@
+' version 14-01-2019
+' compile with: fbc -s console
+
+Function nth_root(n As Integer, number As Double) As Double
+
+    Dim As Double a1 = number / n, a2 , a3
+
+    Do
+        a3 = Abs(a2 - a1)
+        a2 = ((n -1) * a1 + number / a1 ^ (n -1)) / n
+        Swap a1, a2
+    Loop Until Abs(a2 - a1) = a3
+
+    Return a1
+
+End Function
+
+' ------=< MAIN >=------
+
+Dim As UInteger n
+Dim As Double tmp
+
+Print
+Print "   n    5643 ^ 1 / n     nth_root ^ n"
+Print " ------------------------------------"
+For n = 3 To 11 Step 2
+    tmp = nth_root(n, 5643)
+    Print Using " ###    ###.########    ####.########"; n; tmp; tmp ^ n
+Next
+
+Print
+For n = 25 To 125 Step 25
+    tmp = nth_root(n, 5643)
+    Print Using " ###    ###.########    ####.########"; n; tmp; tmp ^ n
+Next
+
+' empty keyboard buffer
+While Inkey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

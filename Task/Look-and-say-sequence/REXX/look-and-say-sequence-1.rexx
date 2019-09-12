@@ -1,21 +1,22 @@
-/*REXX pgm displays the sequence (or lengths) for the look & say series.*/
-parse arg N ! .;  if N=='' then N=20   /*No nums given? Then use default*/
-if !==''  then !=1                     /*Null?   Then assume 1st number.*/
+/*REXX program displays the sequence (and/or lengths) for the    look and say    series.*/
+parse arg N ! .                                  /*obtain optional arguments from the CL*/
+if N=='' | N==","  then N=20                     /*Not specified?  Then use the deault. */
+if !=='' | !==","  then !=1                      /* "      "         "   "   "     "    */
 
-      do j=1  for abs(N)               /*repeat a # times to show  NUMS.*/
-      if j\==1  then !=$lookAndSay(!)  /*invoke sub to calculate next #.*/
-      if N<0    then say  'length['j"]:"  length(!)   /*show its length.*/
-                else say  !            /*show the number to the screen. */
-      end   /*j*/
-exit                                   /*stick a fork in it, we're done.*/
-/*──────────────────────────────────$LOOKANDSAY subroutine──────────────*/
-$lookAndSay: procedure; parse arg x,,$ /*define the argument passed {X}.*/
-fin = '0'x                             /*use unique char to end scanning*/
-x=x || fin                             /*append FIN character to string.*/
-             do k=1  by 0              /*now, process the given sequence*/
-             y=substr(x,k,1)           /*pick off one char to examine.  */
-             if y==fin  then return $  /*if we're at the end, then done.*/
-             _=verify(x,y,,k) - k      /*see how many chars we have of Y*/
-             $=$ || _ || y             /*build the "say" thingy list.   */
-             k=k  + _                  /*now, point to the next char.   */
+     do j=1  for abs(N)                          /*repeat a number of times to show NUMS*/
+     if j\==1  then != $lookAndSay(!)            /*invoke function to calculate next #. */
+     if N<0    then say 'length['j"]:" length(!) /*Also,  display the sequence's length.*/
+               else say '['j"]:"      !          /*display the number to the terminal.  */
+     end   /*j*/
+exit                                             /*stick a fork in it,  we're all done. */
+/*──────────────────────────────────────────────────────────────────────────────────────*/
+$lookAndSay: procedure; parse arg x,,$           /*obtain the (passed) argument  {X}.   */
+fin = '0'x                                       /*use unique character to end scanning.*/
+x=x || fin                                       /*append the  FIN  character to string.*/
+             do k=1  by 0                        /*now,  process the given sequence.    */
+                y=  substr(x, k, 1)              /*pick off one character to examine.   */
+             if y== fin  then return $           /*if we're at the end, then we're done.*/
+             _= verify(x, y, , k)  - k           /*see how many characters we have of Y.*/
+             $= $ || _ || y                      /*build the  "look and say"  sequence. */
+             k= k  + _                           /*now, point to the next character.    */
              end   /*k*/

@@ -1,6 +1,6 @@
 use Image::PNG::Portable;
 
-my @bars = '▁▂▃▄▅▆▇█▇▆▅▄▃▂▁'.comb;
+my @bars = '▁▂▃▅▆▇▇▆▅▃▂▁'.comb;
 
 my %type = ( # Voronoi diagram type distance calculation
     'Taxicab'   => sub ($px, $py, $x, $y) { ($px - $x).abs  + ($py - $y).abs  },
@@ -27,7 +27,7 @@ for %type.keys -> $type {
 
 sub voronoi (@domains, :$w, :$h, :$type) {
     my $png = Image::PNG::Portable.new: :width($w), :height($h);
-    for ^$w -> $x {
+    (^$w).race.map: -> $x {
         print "\b" x 2+@bars, @bars.=rotate(1).join , '  ';
         for ^$h -> $y {
             my ($, $i) = min @domains.map: { %type{$type}(%($_)<x>, %($_)<y>, $x, $y), $++ };
@@ -38,9 +38,7 @@ sub voronoi (@domains, :$w, :$h, :$type) {
 }
 
 sub dot (%h, $png, $radius = 3) {
-    for %h<x> - $radius .. %h<x> + $radius -> $x {
-        for %h<y> - $radius .. %h<y> + $radius -> $y {
+    for (%h<x> X+ -$radius .. $radius) X (%h<y> X+ -$radius .. $radius) -> ($x, $y) {
             $png.set($x, $y, 0, 0, 0) if ( %h<x> - $x + (%h<y> - $y) * i ).abs <= $radius;
-        }
     }
 }

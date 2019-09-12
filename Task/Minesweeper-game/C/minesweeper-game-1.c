@@ -39,6 +39,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #ifndef NDEBUG
 # define DEBUG_CODE(A) A
@@ -120,7 +121,7 @@ void*allocarray(int rank,size_t*shape,size_t itemSize) {
 
 /* matprint prints an array in APL\360 style */
 /* with a NULL element printing function matprint assumes an array of double */
-void*matprint(void*a,int rank,size_t*shape,size_t size,void(*print_elt)()) {
+void matprint(void*a,int rank,size_t*shape,size_t size,void(*print_elt)()) {
   union {
     unsigned **ppu;
     unsigned *pu;

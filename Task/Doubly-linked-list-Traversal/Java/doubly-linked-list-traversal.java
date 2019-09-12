@@ -1,13 +1,20 @@
+package com.rosettacode;
+
 import java.util.LinkedList;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-public static void main(){
-    LinkedList<String> LL = new LinkedList<String>();
-    traverse(LL.iterator());
-    traverse(LL.descendingIterator());
-}
+public class DoubleLinkedListTraversing {
 
-private static void traverse(Iterator<String> iter){
-    while(iter.hasNext()){
-        iter.next();
-    }
+  public static void main(String[] args) {
+
+    final LinkedList<String> doubleLinkedList =
+        IntStream.range(1, 10)
+            .mapToObj(String::valueOf)
+            .collect(Collectors.toCollection(LinkedList::new));
+
+    doubleLinkedList.iterator().forEachRemaining(System.out::print);
+    System.out.println();
+    doubleLinkedList.descendingIterator().forEachRemaining(System.out::print);
+  }
 }

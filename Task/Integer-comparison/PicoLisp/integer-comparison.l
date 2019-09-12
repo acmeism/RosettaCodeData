@@ -1,7 +1,7 @@
 (prin "Please enter two values: ")
 
 (in NIL  # Read from standard input
-   (let (A (read) B (read))
+   (let (A (read)  B (read))
       (prinl
          "The first one is "
          (cond

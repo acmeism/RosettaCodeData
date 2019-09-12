@@ -1,24 +1,19 @@
-program LetterFrequency;
+program letterFrequency(input, output, stdErr);
 var
-  textFile: text;
-  character: char;
-  counter: array[0..255] of integer;
-  i: integer;
+	chart: array[char] of integer;
+	c: char;
 begin
-  for i := low(counter) to high(counter) do
-    counter[i] := 0;
-  assign(textFile, 'a_text_file.txt');
-  reset(textFile);
-  while not eof(textFile) do
-  begin
-    while not eoln(textFile) do
-    begin
-      read(textFile, character);
-      inc(counter[ord(character)]);
-    end;
-    readln(textFile);
-  end;
-  for i := low(counter) to high(counter) do
-    if counter[i] > 0 then
-      writeln(char(i), ': ', counter[i]);
+	for c := low(chart) to high(chart) do
+	begin
+		chart[c] := 0;
+	end;
+	
+	// parameter-less EOF() checks for EOF(input)
+	while not EOF() do
+	begin
+		read(c);
+		inc(chart[c]);
+	end;
+	
+	// now, chart[someLetter] gives you the letter’s frequency
 end.

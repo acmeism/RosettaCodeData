@@ -16,7 +16,7 @@ public interface YCombinator {
     Function<Integer,Integer> fac = Y(f -> n ->
       (n <= 1)
         ? 1
-        : (n * f.apply(n - 1));
+        : (n * f.apply(n - 1))
     );
 
     System.out.println("fib(10) = " + fib.apply(10));

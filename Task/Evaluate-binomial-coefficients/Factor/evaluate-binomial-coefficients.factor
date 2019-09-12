@@ -2,7 +2,7 @@
     dup 0 = [ drop 1 ] [ dup 1 - fact * ] if ;
 
 : choose ( n k -- n-choose-k )
-    2dup - fact swap fact * swap fact swap / ;
+    2dup - [ fact ] tri@ * / ;
 
 ! outputs 10
 5 3 choose .

@@ -1,4 +1,4 @@
-for 2..2**19 -> $candidate {
+(2..2**19).hyper.map: -> $candidate {
     my $sum = 1 / $candidate;
     for 2 .. ceiling(sqrt($candidate)) -> $factor {
         if $candidate %% $factor {

@@ -15,7 +15,7 @@ int levenshtein(const char *s, int ls, const char *t, int lt)
         /* if last letters are the same, the difference is whatever is
          * required to edit the rest of the strings
          */
-        if (s[ls] == t[ls])
+        if (s[ls - 1] == t[lt - 1])
                 return levenshtein(s, ls - 1, t, lt - 1);
 
         /* else try:

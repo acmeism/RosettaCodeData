@@ -1,9 +1,9 @@
 Program LinearCongruentialGenerator(output);
-
+{$mode iso}
 var
   x1, x2: int64;
 
-function bsdrand: longint;
+function bsdrand: cardinal;
   const
     a = 1103515245;
     c = 12345;
@@ -13,7 +13,7 @@ function bsdrand: longint;
     bsdrand := x1;
   end;
 
-function msrand: longint;
+function msrand: cardinal;
   const
     a = 214013;
     c = 2531011;
@@ -24,7 +24,7 @@ function msrand: longint;
   end;
 
 var
-  i: longint;
+  i: cardinal;
 begin
   writeln('      BSD            MS');
   x1 := 0;

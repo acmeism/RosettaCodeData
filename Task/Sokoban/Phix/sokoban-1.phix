@@ -1,0 +1,171 @@
+-- demo\rosetta\Sokoban.exw
+integer w, h    -- (set from parsing the input grid)
+sequence moves  --    "", as +/-w and +/-1 (udlr)
+string live     --    "", Y if box can go there
+
+function reachable(sequence pushes, string level)
+    integer p = find_any("@+",level)
+    string ok = repeat('N',length(level))
+    ok[p] = 'Y'
+    while true do
+        p = find('Y',ok)
+        if p=0 then exit end if
+        ok[p] = 'y'
+        for i=1 to length(moves) do
+            integer pn = p+moves[i]
+            if ok[pn]='N'
+            and find(level[pn]," .") then
+                ok[pn] = 'Y'
+            end if
+        end for
+    end while
+    for i=length(pushes)-1 to 1 by -2 do
+        if ok[pushes[i]-pushes[i+1]]!='y' then
+            pushes[i..i+1] = {}
+        end if
+    end for
+    return pushes
+end function
+
+function pushable(string level)
+    sequence res = {}
+    for i=1 to length(level) do
+        if find(level[i],"$*") then
+            if  find(level[i-w]," .@+")
+            and find(level[i+w]," .@+") then
+                if live[i-w]='Y' then res &= {i,-w} end if
+                if live[i+w]='Y' then res &= {i,+w} end if
+            end if
+            if  find(level[i-1]," .@+")
+            and find(level[i+1]," .@+") then
+                if live[i-1]='Y' then res &= {i,-1} end if
+                if live[i+1]='Y' then res &= {i,+1} end if
+            end if
+        end if
+    end for
+    return reachable(res,level)
+end function
+
+function solve(string level)
+    atom t2 = time()+2
+    integer seen = new_dict()
+    sequence solution = "No solution.", partial = {}
+    sequence todo = {{level,partial,pushable(level)}}, pushes
+    while length(todo) do
+        sequence t1 = todo[1]
+        todo = todo[2..$]
+        {level,partial,pushes} = t1
+        integer p = find_any("@+",level)
+        while length(pushes) do
+            integer {s,m} = pushes[1..2]
+            pushes = pushes[3..$]
+            level[p] = " ."[find(level[p],"@+")]
+            level[s] = "@+"[find(level[s],"$*")]
+            level[s+m] = "$*"[find(level[s+m]," .")]
+            if getd_index(level,seen)=0 then
+                sequence np = partial&{s,m}
+                if not find('$',level) then
+                    solution = np
+                    todo = {}
+                    pushes = {}
+                    exit
+                end if
+                setd(level,true,seen)
+                if time()>t2 then
+                    printf(1,"working... (seen %d)\r",dict_size(seen))
+                    t2 = time()+2
+                end if
+                todo = append(todo,{level,np,pushable(level)})
+            end if
+            level = t1[1] -- (reset)
+        end while
+    end while
+    destroy_dict(seen)
+    return solution
+end function
+
+procedure plays(string level, sequence solution)
+-- This plays push-only solutions (see play() for lurd)
+    string res = level
+    integer p = find_any("@+",level)
+    for i=1 to length(solution) by 2 do
+        integer {s,m} = solution[i..i+1] m+=s
+        level[p] = " ."[find(level[p],"@+")]
+        level[s] = "@+"[find(level[s],"$*")]
+        level[m] = "$*"[find(level[m]," .")]
+        res &= level
+        p = s
+    end for
+    -- (replacing +0 with 1/2/3 may help in some cases)
+    puts(1,join_by(split(res,'\n'),h,floor(80/(w+2))+0))
+end procedure
+
+procedure mark_live(integer p, string level)
+-- (idea cribbed from the C version)
+    if live[p]='N' then
+        live[p] = 'Y'
+        integer l = length(level)
+        if p-w*2>=1 and level[p-w]!='#' and level[p-w*2]!='#' then mark_live(p-w,level) end if
+        if p+w*2<=l and level[p+w]!='#' and level[p+w*2]!='#' then mark_live(p+w,level) end if
+        if p-2  >=1 and level[p-1]!='#' and level[p-2]  !='#' then mark_live(p-1,level) end if
+        if p+2  <=l and level[p+1]!='#' and level[p+2]  !='#' then mark_live(p+1,level) end if
+    end if
+end procedure
+
+function make_square(string level)
+--
+-- Sets {h, w, moves, live}, and returns an evened-out/rectangular level
+--
+    if level[$]!='\n' then level &= '\n' end if -- (for the display)
+    sequence lines = split(level,'\n')
+    h = length(lines)-1             -- set height (ignore trailing \n)
+    sequence ln = repeat(0,h)
+    for i=1 to h do
+        ln[i] = {length(lines[i]),i}
+        for j=1 to length(lines[i]) do
+            -- validate each line, why not
+            if not find(lines[i,j]," #.$@*") then
+                crash("invalid input")
+            end if
+        end for
+    end for
+    ln = sort(ln)
+    w = ln[$][1]+1                  -- set width (==longest, inc \n)
+    moves = {-w,+w,-1,+1}           -- and make these (udlr) legal ...
+    for i=1 to h do
+        integer {l,n} = ln[i], pad = w-1-l
+        if pad=0 then exit end if
+        lines[n] &= repeat(' ',pad) -- ... by evening up the "grid"
+    end for
+    level = join(lines,'\n')
+    live = join(repeat(repeat('N',w-1),h),'\n')
+    for p=1 to length(level) do
+        if find(level[p],".+*") then
+            mark_live(p,level)
+        end if
+    end for
+    return level
+end function
+
+constant input = """
+#######
+#     #
+#     #
+#. #  #
+#. $$ #
+#.$$  #
+#.#  @#
+#######
+"""
+
+atom t0 = time()
+string level = make_square(input)
+sequence pushset = solve(level)
+integer pop = length(pushset)/2
+if string(pushset) then
+    puts(1,level)
+    printf(1,"%s\n",{pushset}) -- ("No Solution.")
+else
+    printf(1,"solution of %d pushes (%s)\n",{pop,elapsed(time()-t0)})
+    plays(level,pushset)
+end if

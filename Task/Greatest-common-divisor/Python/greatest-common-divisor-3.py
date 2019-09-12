@@ -1,2 +1,4 @@
-def gcd(u, v):
-    return gcd(v, u % v) if v else abs(u)
+def gcd_iter(u, v):
+    while v:
+        u, v = v, u % v
+    return abs(u)

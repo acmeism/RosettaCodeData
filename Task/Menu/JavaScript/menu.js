@@ -1,20 +1,36 @@
-function select(question, choices) {
-    var prompt = "";
-    for (var i in choices)
-        prompt += i + ". " + choices[i] + "\n";
-    prompt += question;
+const readline = require('readline');
 
-    var input;
-    while (1) {
-        WScript.Echo(prompt);
-        input = parseInt( WScript.StdIn.readLine() );
-        if (0 <= input && input < choices.length)
-            break;
-        WScript.Echo("\nTry again.");
-    }
-    return input;
+async function menuSelect(question, choices) {
+  if (choices.length === 0) return '';
+
+  const prompt = choices.reduce((promptPart, choice, i) => {
+    return promptPart += `${i + 1}. ${choice}\n`;
+  }, '');
+
+  let inputChoice = -1;
+  while (inputChoice < 1 || inputChoice > choices.length) {
+    inputChoice = await getSelection(`\n${prompt}${question}: `);
+  }
+
+  return choices[inputChoice - 1];
 }
 
-var choices = ['fee fie', 'huff and puff', 'mirror mirror', 'tick tock'];
-var choice = select("Which is from the three pigs?", choices);
-WScript.Echo("you selected: " + choice + " -> " + choices[choice]);
+function getSelection(prompt) {
+  return new Promise((resolve) => {
+    const lr = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    lr.question(prompt, (response) => {
+      lr.close();
+      resolve(parseInt(response) || -1);
+    });
+  });
+}
+
+const choices = ['fee fie', 'huff and puff', 'mirror mirror', 'tick tock'];
+const question = 'Which is from the three pigs?';
+menuSelect(question, choices).then((answer) => {
+  console.log(`\nYou chose ${answer}`);
+});

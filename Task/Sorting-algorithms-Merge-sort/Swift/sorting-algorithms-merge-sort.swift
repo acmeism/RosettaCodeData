@@ -1,45 +1,52 @@
-func mergeSort<T:Comparable>(inout list:[T]) {
-    if list.count <= 1 {
-        return
+// Merge Sort in Swift 4.2
+// Source: https://github.com/raywenderlich/swift-algorithm-club/tree/master/Merge%20Sort
+// NOTE: by use of generics you can make it sort arrays of any type that conforms to
+//       Comparable protocol, however this is not always optimal
+
+import Foundation
+
+func mergeSort(_ array: [Int]) -> [Int] {
+  guard array.count > 1 else { return array }
+
+  let middleIndex = array.count / 2
+
+  let leftPart = mergeSort(Array(array[0..<middleIndex]))
+  let rightPart = mergeSort(Array(array[middleIndex..<array.count]))
+
+  func merge(left: [Int], right: [Int]) -> [Int] {
+    var leftIndex = 0
+    var rightIndex = 0
+
+    var merged = [Int]()
+    merged.reserveCapacity(left.count + right.count)
+
+    while leftIndex < left.count && rightIndex < right.count {
+      if left[leftIndex] < right[rightIndex] {
+        merged.append(left[leftIndex])
+        leftIndex += 1
+      } else if left[leftIndex] > right[rightIndex] {
+        merged.append(right[rightIndex])
+        rightIndex += 1
+      } else {
+        merged.append(left[leftIndex])
+        leftIndex += 1
+        merged.append(right[rightIndex])
+        rightIndex += 1
+      }
     }
 
-    func merge(var left:[T], var right:[T]) -> [T] {
-        var result = [T]()
-
-        while left.count != 0 && right.count != 0 {
-            if left[0] <= right[0] {
-                result.append(left.removeAtIndex(0))
-            } else {
-                result.append(right.removeAtIndex(0))
-            }
-        }
-
-        while left.count != 0 {
-            result.append(left.removeAtIndex(0))
-        }
-
-        while right.count != 0 {
-            result.append(right.removeAtIndex(0))
-        }
-
-        return result
+    while leftIndex < left.count {
+      merged.append(left[leftIndex])
+      leftIndex += 1
     }
 
-    var left = [T]()
-    var right = [T]()
-
-    let mid = list.count / 2
-
-    for i in 0..<mid {
-        left.append(list[i])
+    while rightIndex < right.count {
+      merged.append(right[rightIndex])
+      rightIndex += 1
     }
 
-    for i in mid..<list.count {
-        right.append(list[i])
-    }
+    return merged
+  }
 
-    mergeSort(&left)
-    mergeSort(&right)
-
-    list = merge(left, right)
+  return merge(left: leftPart, right: rightPart)
 }

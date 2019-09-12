@@ -1,10 +1,9 @@
 -----------------------------------------------------------------------
--- Generic Quicksort procedure
+-- Generic Quick_Sort procedure
 -----------------------------------------------------------------------
 generic
-    type Element_Type is private;
-   type Index_Type is (<>);
-   type Element_Array is array(Index_Type range <>) of Element_Type;
-   with function "<" (Left, Right : Element_Type) return Boolean is <>;
-   with function ">" (Left, Right : Element_Type) return Boolean is <>;
-procedure Sort(Item : in out Element_Array);
+   type Element is private;
+   type Index is (<>);
+   type Element_Array is array(Index range <>) of Element;
+   with function "<" (Left, Right : Element) return Boolean is <>;
+procedure Quick_Sort(A : in out Element_Array);

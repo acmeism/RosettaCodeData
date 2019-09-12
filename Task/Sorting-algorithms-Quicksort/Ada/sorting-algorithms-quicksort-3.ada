@@ -1,13 +1,12 @@
-with Sort;
 with Ada.Text_Io;
 with Ada.Float_Text_IO; use Ada.Float_Text_IO;
 
 procedure Sort_Test is
    type Days is (Mon, Tue, Wed, Thu, Fri, Sat, Sun);
-   type Sales is array(Days range <>) of Float;
-   procedure Sort_Days is new Sort(Float, Days, Sales);
+   type Sales is array (Days range <>) of Float;
+   procedure Sort_Days is new Quick_Sort(Float, Days, Sales);
 
-   procedure Print(Item : Sales) is
+   procedure Print (Item : Sales) is
    begin
       for I in Item'range loop
          Put(Item => Item(I), Fore => 5, Aft => 2, Exp => 0);

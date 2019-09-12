@@ -9,11 +9,11 @@ function main = |args| {
         println("Hello, world!")
       }
       when ch == 'q' or ch == 'Q' {
-  			println(source)
-  		}
-  		when ch == '9' {
+        println(source)
+      }
+      when ch == '9' {
         ninety9Bottles()
-  		}
+      }
       when ch == '+' {
         accumulator = accumulator + 1
       }

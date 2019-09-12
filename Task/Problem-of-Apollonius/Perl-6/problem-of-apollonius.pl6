@@ -2,12 +2,10 @@ class Circle {
    has $.x;
    has $.y;
    has $.r;
-   method gist { "circle($!x, $!y, $!r)" }
+   method gist { sprintf "%s =%7.3f " xx 3, (:$!x,:$!y,:$!r)».kv }
 }
 
 sub circle($x,$y,$r) { Circle.new: :$x, :$y, :$r }
-
-sub postfix:<²>($x) { $x * $x }
 
 sub solve-Apollonius([\c1, \c2, \c3], [\s1, \s2, \s3]) {
     my \𝑣11 = 2 * c2.x - 2 * c1.x;
@@ -46,8 +44,7 @@ sub solve-Apollonius([\c1, \c2, \c3], [\s1, \s2, \s3]) {
     circle(xs, ys, rs);
 }
 
-sub MAIN {
-    my @c = circle(0, 0, 1), circle(4, 0, 1), circle(2, 4, 2);
-    say solve-Apollonius @c, <1 1 1>;
-    say solve-Apollonius @c, <-1 -1 -1>;
+my @c = circle(0, 0, 1), circle(4, 0, 1), circle(2, 4, 2);
+for ([X] [-1,1] xx 3) -> @i {
+    say (solve-Apollonius @c, @i).gist;
 }

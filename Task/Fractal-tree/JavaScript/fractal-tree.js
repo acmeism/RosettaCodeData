@@ -6,7 +6,7 @@
 var elem = document.getElementById('canvas');
 var context = elem.getContext('2d');
 
-context.fillStyle = '#000';
+context.fillStyle = '#C0C0C0';
 context.lineWidth = 1;
 
 var deg_to_rad = Math.PI / 180.0;

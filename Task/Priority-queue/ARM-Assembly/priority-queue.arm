@@ -1,0 +1,424 @@
+/* ARM assembly Raspberry PI  */
+/*  program priorqueue.s   */
+
+/* Constantes    */
+.equ STDOUT, 1     @ Linux output console
+.equ EXIT,   1     @ Linux syscall
+.equ WRITE,  4     @ Linux syscall
+
+.equ  NBMAXIELEMENTS,    100
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* example structure  item  */
+    .struct  0
+item_priority:                     @ priority
+    .struct  item_priority + 4
+item_address:                      @ string address
+    .struct  item_address + 4
+item_fin:
+/* example structure heap  */
+    .struct  0
+heap_size:                         @ heap size
+    .struct  heap_size + 4
+heap_items:                        @ structure of items
+    .struct  heap_items + (item_fin * NBMAXIELEMENTS)
+heap_fin:
+
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessEmpty:       .asciz "Empty queue. \n"
+szMessNotEmpty:    .asciz "Not empty queue. \n"
+szMessError:       .asciz "Error detected !!!!. \n"
+szMessResult:      .ascii "Priority : "                    @ message result
+sMessPriority:        .fill 11, 1, ' '
+                   .asciz " : "
+
+szString1:         .asciz "Clear drains"
+szString2:         .asciz "Feed cat"
+szString3:         .asciz "Make tea"
+szString4:         .asciz "Solve RC tasks"
+szString5:         .asciz "Tax return"
+szCarriageReturn:  .asciz "\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+Queue1:                .skip heap_fin      @ queue memory place
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                       @ entry of program
+    ldr r0,iAdrQueue1                       @ queue structure address
+    bl isEmpty
+    cmp r0,#0
+    beq 1f
+    ldr r0,iAdrszMessEmpty
+    bl affichageMess                        @ display message empty
+    b 2f
+1:
+    ldr r0,iAdrszMessNotEmpty
+    bl affichageMess                        @ display message not empty
+2:
+    @ init item 1
+    ldr r0,iAdrQueue1                       @ queue structure address
+    mov r1,#3                               @ priority
+    ldr r2,iAdrszString1
+    bl pushQueue                            @ add item in queue
+    cmp r0,#-1                              @ error ?
+    beq 99f
+
+    ldr r0,iAdrQueue1                       @ queue structure address
+    bl isEmpty
+    cmp r0,#0                               @ not empty
+    beq 3f
+    ldr r0,iAdrszMessEmpty
+    bl affichageMess                        @ display message empty
+    b 4f
+3:
+    ldr r0,iAdrszMessNotEmpty
+    bl affichageMess                        @ display message not empty
+
+4:
+    @ init item 2
+    ldr r0,iAdrQueue1                       @ queue structure address
+    mov r1,#4                               @ priority
+    ldr r2,iAdrszString2
+    bl pushQueue                            @ add item in queue
+    cmp r0,#-1                              @ error ?
+    beq 99f
+    @ init item 3
+    ldr r0,iAdrQueue1                       @ queue structure address
+    mov r1,#5                               @ priority
+    ldr r2,iAdrszString3
+    bl pushQueue                            @ add item in queue
+    cmp r0,#-1                              @ error ?
+    beq 99f
+    @ init item 4
+    ldr r0,iAdrQueue1                       @ queue structure address
+    mov r1,#1                               @ priority
+    ldr r2,iAdrszString4
+    bl pushQueue                            @ add item in queue
+    cmp r0,#-1                              @ error ?
+    beq 99f
+    @ init item 5
+    ldr r0,iAdrQueue1                       @ queue structure address
+    mov r1,#2                               @ priority
+    ldr r2,iAdrszString5
+    bl pushQueue                            @ add item in queue
+    cmp r0,#-1                              @ error ?
+    beq 99f
+5:
+    ldr r0,iAdrQueue1                       @ queue structure address
+    bl popQueue                             @ return item
+    cmp r0,#-1                              @ end ?
+    beq 100f
+    mov r2,r1                               @ save string address
+    ldr r1,iAdrsMessPriority                @ conversion priority
+    bl conversion10                         @ decimal conversion
+    ldr r0,iAdrszMessResult
+    bl affichageMess                        @ display message
+    mov r0,r2                               @ string address
+    bl affichageMess                        @ display message
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    b 5b                                    @ loop
+99:
+    @ error
+    ldr r0,iAdrszMessError
+    bl affichageMess
+100:                                        @ standard end of the program
+    mov r0, #0                              @ return code
+    mov r7, #EXIT                           @ request to exit program
+    svc #0                                  @ perform the system call
+
+iAdrQueue1:               .int Queue1
+iAdrszString1:            .int szString1
+iAdrszString2:            .int szString2
+iAdrszString3:            .int szString3
+iAdrszString4:            .int szString4
+iAdrszString5:            .int szString5
+iAdrszMessError:          .int szMessError
+iAdrszMessEmpty:          .int szMessEmpty
+iAdrszMessNotEmpty:       .int szMessNotEmpty
+iAdrszMessResult:         .int szMessResult
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrsMessPriority:        .int sMessPriority
+
+/******************************************************************/
+/*     test if queue empty                                        */
+/******************************************************************/
+/* r0 contains the address of queue structure */
+isEmpty:
+    push {r1,lr}                            @ save  registres
+    ldr r1,[r0,#heap_size]                  @ heap size
+    cmp r1,#0
+    moveq r0,#1                             @ empty queue
+    movne r0,#0                             @ not empty
+    pop {r1,lr}                             @ restaur registers
+    bx lr                                   @ return
+/******************************************************************/
+/*     add item  in queue                                         */
+/******************************************************************/
+/* r0 contains the address of queue structure */
+/* r1 contains the priority of item           */
+/* r2 contains the string address             */
+pushQueue:
+    push {r1-r9,lr}                         @ save  registres
+    ldr r3,[r0,#heap_size]                  @ heap size
+    cmp r3,#0                               @ heap empty ?
+    bne 1f
+    add r4,r0,#heap_items                   @ address of item structure
+    str r1,[r4,#item_priority]              @ store in first item
+    str r2,[r4,#item_address]
+    mov r3,#1                               @ heap size
+    str r3,[r0,#heap_size]                  @ new heap size
+    b 100f
+1:
+    mov r4,r3                               @ maxi index
+    lsr r5,r4,#1                            @ current index = maxi / 2
+    mov r8,r1                               @ save priority
+    mov r9,r2                               @ save string address
+2:                                          @ insertion loop
+    cmp r4,#0                               @ end loop ?
+    ble 3f
+    mov r6,#item_fin                        @ item size
+    mul r6,r5,r6                            @ item shift
+    add r6,r0
+    add r6,#heap_items                      @ compute address item
+    ldr r7,[r6,#item_priority]              @ load priority
+    cmp r7,r8                               @ compare priority
+    ble 3f                                  @ <=  end loop
+    mov r1,r4                               @ last index
+    mov r2,r5                               @ current index
+    bl exchange
+    mov r4,r5                               @ last index = current index
+    lsr r5,#1                               @ current index / 2
+    b 2b
+3:                                          @ store item at last index find
+    mov r6,#item_fin                        @ item size
+    mul r6,r4,r6                            @ item shift
+    add r6,r0
+    add r6,#heap_items                      @ item address
+    str r8,[r6,#item_priority]
+    str r9,[r6,#item_address]
+    add r3,#1                               @ increment heap size
+    cmp r3,#NBMAXIELEMENTS                  @ maxi ?
+    movge r0,#-1                            @ yes -> error
+    bge 100f
+    str r3,[r0,#heap_size]                  @ store new size
+100:
+    pop {r1-r9,lr}                          @ restaur registers
+    bx lr                                   @ return
+/******************************************************************/
+/*     swap two elements of table                                  */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains the first index */
+/* r2 contains the second index */
+exchange:
+    push {r3-r6,lr}                         @ save registers
+    add r5,r0,#heap_items                   @ address items begin
+    mov r3,#item_fin                        @ item size
+    mul r4,r1,r3                            @ compute item 1 shift
+    add r4,r5                               @ compute item 1 address
+    mul r6,r2,r3                            @ compute item 2 shift
+    add r6,r5                               @ compute item 2 address
+    ldr r5,[r4,#item_priority]              @ exchange
+    ldr r3,[r6,#item_priority]
+    str r3,[r4,#item_priority]
+    str r5,[r6,#item_priority]
+    ldr r5,[r4,#item_address]
+    ldr r3,[r6,#item_address]
+    str r5,[r6,#item_address]
+    str r3,[r4,#item_address]
+
+100:
+    pop {r3-r6,lr}
+    bx lr                                              @ return
+/******************************************************************/
+/*     move one element of table                                  */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains the origin index */
+/* r2 contains the destination index */
+moveItem:
+    push {r3-r6,lr}                         @ save registers
+    add r5,r0,#heap_items                   @ address items begin
+    mov r3,#item_fin                        @ item size
+    mul r4,r1,r3                            @ compute item 1 shift
+    add r4,r5                               @ compute item 1 address
+    mul r6,r2,r3                            @ compute item 2 shift
+    add r6,r5                               @ compute item 2 address
+    ldr r5,[r4,#item_priority]              @ exchange
+    str r5,[r6,#item_priority]
+    ldr r5,[r4,#item_address]
+    str r5,[r6,#item_address]
+
+100:
+    pop {r3-r6,lr}
+    bx lr                                   @ return
+
+
+/******************************************************************/
+/*     pop queue                                                  */
+/******************************************************************/
+/* r0 contains the address of queue structure */
+/* r0 return priority        */
+/* r1 return string address   */
+popQueue:
+    push {r2-r10,lr}                        @ save  registres
+    mov r1,r0                               @ save address queue
+    bl isEmpty                              @ control if empty queue
+    cmp r0,#1                               @ yes -> error
+    moveq r0,#-1
+    beq 100f
+    @ save données à retourner
+    mov r0,r1                               @ restaur address queue
+    add r4,r0,#heap_items                   @ address of item structure
+    ldr r8,[r4,#item_priority]              @ save priority first item
+    ldr r9,[r4,#item_address]               @ save address string first item
+    ldr r3,[r0,#heap_size]                  @ heap size
+    sub r7,r3,#1                            @ last item
+    mov r1,r7
+    mov r2,#0                               @ first item
+    bl moveItem                             @ move last item in first item
+
+    cmp r7,#1                               @ one only item ?
+    beq 10f                                 @ yes -> end
+    mov r4,#0                               @ first  index
+1:
+    cmp r4,r7                               @ = last index
+    bge 10f                                 @ yes -> end
+    mov r5,r7                               @ last index
+    cmp r4,#0                               @ init current index
+    moveq r6,#1                             @ = 1
+    lslne r6,r4,#1                          @ else = first index * 2
+    cmp r6,r7                               @ current index > last index
+    bgt 2f                                  @ yes
+                                            @ no compar priority current item last item
+    mov r1,#item_fin
+    mul r1,r6,r1
+    add r1,r0
+    add r1,#heap_items                      @ address of current item structure
+    ldr r1,[r1,#item_priority]
+    mov r10,#item_fin
+    mul r10,r5,r10
+    add r10,r0
+    add r10,#heap_items                     @ address of last item structure
+    ldr r10,[r10,#item_priority]
+    cmp r1,r10
+    movlt r5,r6
+2:
+    add r10,r6,#1                           @ increment current index
+    cmp r10,r7                              @ end ?
+    bgt 3f                                  @ yes
+    mov r1,#item_fin                        @ no compare priority
+    mul r1,r10,r1
+    add r1,r0
+    add r1,#heap_items                     @ address of item structure
+    ldr r1,[r1,#item_priority]
+    mov r2,#item_fin
+    mul r2,r5,r2
+    add r2,r0
+    add r2,#heap_items                     @ address of item structure
+    ldr r2,[r2,#item_priority]
+    cmp r1,r2
+    movlt r5,r10
+3:
+    mov r1,r5                              @ move item
+    mov r2,r4
+    bl moveItem
+    mov r4,r5
+    b 1b                                   @ and loop
+10:
+    sub r3,#1
+    str r3,[r0,#heap_size]                 @ new heap size
+    mov r0,r8                              @ return priority
+    mov r1,r9                              @ return string address
+100:
+    pop {r2-r10,lr}                        @ restaur registers
+    bx lr                                  @ return
+/******************************************************************/
+/*     display text with size calculation                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+affichageMess:
+    push {r0,r1,r2,r7,lr}                   @ save  registres
+    mov r2,#0                               @ counter length
+1:                                          @ loop length calculation
+    ldrb r1,[r0,r2]                         @ read octet start position + index
+    cmp r1,#0                               @ if 0 its over
+    addne r2,r2,#1                          @ else add 1 in the length
+    bne 1b                                  @ and loop
+                                            @ so here r2 contains the length of the message
+    mov r1,r0                               @ address message in r1
+    mov r0,#STDOUT                          @ code to write to the standard output Linux
+    mov r7, #WRITE                          @ code call system "write"
+    svc #0                                  @ call systeme
+    pop {r0,r1,r2,r7,lr}                    @ restaur registers */
+    bx lr                                   @ return
+/******************************************************************/
+/*     Converting a register to a decimal                                 */
+/******************************************************************/
+/* r0 contains value and r1 address area   */
+.equ LGZONECAL,   10
+conversion10:
+    push {r1-r4,lr}                         @ save registers
+    mov r3,r1
+    mov r2,#LGZONECAL
+1:                                          @ start loop
+    bl divisionpar10                        @ r0 <- dividende. quotient ->r0 reste -> r1
+    add r1,#48                              @ digit
+    strb r1,[r3,r2]                         @ store digit on area
+    cmp r0,#0                               @ stop if quotient = 0
+    subne r2,#1                               @ previous position
+    bne 1b                                  @ else loop
+                                            @ end replaces digit in front of area
+    mov r4,#0
+2:
+    ldrb r1,[r3,r2]
+    strb r1,[r3,r4]                         @ store in area begin
+    add r4,#1
+    add r2,#1                               @ previous position
+    cmp r2,#LGZONECAL                       @ end
+    ble 2b                                  @ loop
+    mov r1,#' '
+3:
+    strb r1,[r3,r4]
+    add r4,#1
+    cmp r4,#LGZONECAL                       @ end
+    ble 3b
+100:
+    pop {r1-r4,lr}                          @ restaur registres
+    bx lr                                   @return
+/***************************************************/
+/*   division par 10   signé                       */
+/* Thanks to http://thinkingeek.com/arm-assembler-raspberry-pi/*
+/* and   http://www.hackersdelight.org/            */
+/***************************************************/
+/* r0 dividende   */
+/* r0 quotient */	
+/* r1 remainder  */
+divisionpar10:	
+  /* r0 contains the argument to be divided by 10 */
+    push {r2-r4}                           @ save registers  */
+    mov r4,r0
+    mov r3,#0x6667                         @ r3 <- magic_number  lower
+    movt r3,#0x6666                        @ r3 <- magic_number  upper
+    smull r1, r2, r3, r0                   @ r1 <- Lower32Bits(r1*r0). r2 <- Upper32Bits(r1*r0)
+    mov r2, r2, ASR #2                     @ r2 <- r2 >> 2
+    mov r1, r0, LSR #31                    @ r1 <- r0 >> 31
+    add r0, r2, r1                         @ r0 <- r2 + r1
+    add r2,r0,r0, lsl #2                   @ r2 <- r0 * 5
+    sub r1,r4,r2, lsl #1                   @ r1 <- r4 - (r2 * 2)  = r4 - (r0 * 10)
+    pop {r2-r4}
+    bx lr                                  @ return

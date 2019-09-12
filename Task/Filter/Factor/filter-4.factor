@@ -1,5 +1,5 @@
 USE: locals
-10 iota >vector [| v |
+10 <iota> >vector [| v |
     v [ even? ] filter drop
     v pprint " after filter" print
     v [ even? ] filter! drop

@@ -1,0 +1,5 @@
+s[n..n+m]
+s[n..high(nativeUInt)]
+s[1..length(s)-1]
+s[pos(c, s)..pos(c, s)+m]
+s[pos(p, s)..pos(p, s)+m]

@@ -25,41 +25,35 @@ TABLE
 
 my (@name, @weight, @value);
 for (split "\n", $raw) {
-        for ([ split /\t+/ ]) {
-                push @name,  $_->[0];
-                push @weight, $_->[1];
-                push @value,  $_->[2];
-        }
+    for ([ split /\t+/ ]) {
+        push @name,   $_->[0];
+        push @weight, $_->[1];
+        push @value,  $_->[2];
+    }
 }
 
 my $max_weight = 400;
-my @p = (map([[0, []], map undef, 0 .. $max_weight], 0 .. $#name),
-        [ map([0, []], 0 .. $max_weight + 1)]);
+my @p = map [map undef, 0 .. 1+$max_weight], 0 .. $#name;
 
 sub optimal {
-        my ($i, $w) = @_;
+    my ($i, $w) = @_;
+    return [0, []] if $i < 0;
+    return $p[$i][$w] if $p[$i][$w];
 
-        if (!defined $p[$i][$w]) {
-                if ($weight[$i] > $w) {
-                        $p[$i][$w] = optimal($i - 1, $w)
-                } else {
-                        my $x = optimal($i - 1, $w);
-                        my $y = optimal($i - 1, $w - $weight[$i]);
+    if ($weight[$i] > $w) {
+        $p[$i][$w] = optimal($i - 1, $w)
+    } else {
+        my $x = optimal($i - 1, $w);
+        my $y = optimal($i - 1, $w - $weight[$i]);
 
-                        if ($x->[0] > $y->[0] + $value[$i]) {
-                                $p[$i][$w] = $x
-                        } else {
-                                $p[$i][$w] = [  $y->[0] + $value[$i],
-                                                [ @{$y->[1]}, $name[$i] ]]
-                        }
-                }
+        if ($x->[0] > $y->[0] + $value[$i]) {
+            $p[$i][$w] = $x
+        } else {
+            $p[$i][$w] = [  $y->[0] + $value[$i], [ @{$y->[1]}, $name[$i] ]]
         }
-        return $p[$i][$w]
+    }
+    return $p[$i][$w]
 }
 
-my $sol = optimal($#name, $max_weight);
-print "$sol->[0]: @{$sol->[1]}\n";
-
-# prints:
-# 1030: map compass water sandwich glucose banana suntancream waterproof trousers
-#         waterproof overclothes note-case sunglasses socks
+my $solution = optimal($#name, $max_weight);
+print "$solution->[0]: @{$solution->[1]}\n";

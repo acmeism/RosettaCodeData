@@ -25,8 +25,8 @@ var totalGames = 10000,
 		 * or if I initially guessed a losing door but then switched,
 		 * I've won.
 		 *
-		 * The only time I lose is when I initially guess the winning door
-		 * and then switch.
+		 * I lose when I initially guess the winning door and then switch,
+                 * or initially guess a losing door and don't switch.
 		 */
 
 		totalTimesWon++;

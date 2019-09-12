@@ -41,23 +41,23 @@ void findCircles(point p1,point p2,double radius)
 
 int main()
 {
-int i;
+    int i;
 
-point cases[] = 	
-{	{0.1234, 0.9876},    {0.8765, 0.2345},
+    point cases[] = 	
+    {	{0.1234, 0.9876},    {0.8765, 0.2345},
 	{0.0000, 2.0000},    {0.0000, 0.0000},
 	{0.1234, 0.9876},    {0.1234, 0.9876},
 	{0.1234, 0.9876},    {0.8765, 0.2345},
 	{0.1234, 0.9876},    {0.1234, 0.9876}
-};
+    };
 
-double radii[] = {2.0,1.0,2.0,0.5,0.0};
+    double radii[] = {2.0,1.0,2.0,0.5,0.0};
 
-for(i=0;i<5;i++)
-{	
+    for(i=0;i<5;i++)
+    {	
 	printf("\nCase %d)",i+1);
 	findCircles(cases[2*i],cases[2*i+1],radii[i]);
-}
+    }
 
-return 0;
+    return 0;
 }

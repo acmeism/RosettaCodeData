@@ -9,7 +9,7 @@ function testConvImage
            1 2 1 ];         % Gaussian smoothing (without normalizing)
     fprintf('Original image:\n')
     disp(Im)
-    fprintf('Original kernal:\n')
+    fprintf('Original kernel:\n')
     disp(Ker)
     fprintf('Padding with zeroes:\n')
     disp(convImage(Im, Ker, 'zeros'))
@@ -17,7 +17,7 @@ function testConvImage
     disp(convImage(Im, Ker, 'value', 5))
     fprintf('Duplicating border pixels to pad image:\n')
     disp(convImage(Im, Ker, 'extend'))
-    fprintf('Renormalizing kernal and using only values within image:\n')
+    fprintf('Renormalizing kernel and using only values within image:\n')
     disp(convImage(Im, Ker, 'partial'))
     fprintf('Only processing inner (non-border) pixels:\n')
     disp(convImage(Im, Ker, 'none'))
@@ -39,7 +39,7 @@ function testConvImage
 %     title('Duplicating border pixels to pad image')
 %     figure
 %     imshow(imresize(convImage(Im, Ker, 'partial'), 10))
-%     title('Renormalizing kernal and using only values within image')
+%     title('Renormalizing kernel and using only values within image')
 %     figure
 %     imshow(imresize(convImage(Im, Ker, 'none'), 10))
 %     title('Only processing inner (non-border) pixels')
@@ -47,7 +47,7 @@ end
 
 function ImOut = convImage(Im, Ker, varargin)
 % ImOut = convImage(Im, Ker)
-%   Filters an image using sliding-window kernal convolution.
+%   Filters an image using sliding-window kernel convolution.
 %   Convolution is done layer-by-layer. Use rgb2gray if single-layer needed.
 %   Zero-padding convolution will be used if no border handling is specified.
 %   Im - Array containing image data (output from imread)
@@ -60,7 +60,7 @@ function ImOut = convImage(Im, Ker, varargin)
 %
 % ImOut = convImage(Im, Ker, 'value', padVal)
 %   Image will be padded with padVal when calculating convolution
-%   (possibly useful for emphasizing certain data with unusual kernal)
+%   (possibly useful for emphasizing certain data with unusual kernel)
 %
 % ImOut = convImage(Im, Ker, 'extend')
 %   Image will be padded with the value of the closest image pixel

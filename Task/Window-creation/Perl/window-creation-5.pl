@@ -1,8 +1,5 @@
-use strict;
-use warnings;
-use QtGui4;
+  use Wx;
 
-my $app = Qt::Application(\@ARGV);
-my $window = Qt::MainWindow;
-$window->show;
-exit $app->exec;
+  $window = Wx::Frame->new(undef, -1, 'title');
+  $window->Show;
+  Wx::SimpleApp->new->MainLoop;

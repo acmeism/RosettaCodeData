@@ -1,0 +1,1 @@
+stringOfChar('*', 5)

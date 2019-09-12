@@ -1,10 +1,10 @@
 import Html exposing (text)
 import List exposing (map)
-import String exposing (join)
+import String exposing (join, fromInt)
 
 main : Html.Html
 main =
-  map fizzbuzz [1..100] |> join " " |> text
+  [1..100] |> map fizzbuzz |> join " " |> text
 
 fizzbuzz : Int -> String
 fizzbuzz num =
@@ -13,6 +13,6 @@ fizzbuzz num =
     buzz = if num % 5 == 0 then "Buzz" else ""
   in
     if fizz == buzz then
-      toString num
+      fromInt num
     else
       fizz ++ buzz

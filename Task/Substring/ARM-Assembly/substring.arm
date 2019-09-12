@@ -1,0 +1,308 @@
+/* ARM assembly Raspberry PI  */
+/*  program substring.s   */
+
+/* Constantes    */
+.equ STDOUT, 1                           @ Linux output console
+.equ EXIT,   1                           @ Linux syscall
+.equ WRITE,  4                           @ Linux syscall
+
+.equ BUFFERSIZE,          100
+
+/* Initialized data */
+.data
+szMessString:            .asciz "Result : "
+szString1:               .asciz "abcdefghijklmnopqrstuvwxyz"
+szStringStart:           .asciz "abcdefg"
+szCarriageReturn:        .asciz "\n"
+
+/* UnInitialized data */
+.bss
+szSubString:             .skip 500             @ buffer result
+
+
+/*  code section */
+.text
+.global main
+main:
+
+    ldr r0,iAdrszString1                        @ address input string
+    ldr r1,iAdrszSubString                      @ address output string
+    mov r2,#22                                  @ location
+    mov r3,#4                                   @ length
+    bl subStringNbChar                          @ starting from n characters in and of m length
+    ldr r0,iAdrszMessString                     @ display message
+    bl affichageMess
+    ldr r0,iAdrszSubString                      @ display substring result
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn                 @ display line return
+    bl affichageMess
+    @
+    ldr r0,iAdrszString1
+    ldr r1,iAdrszSubString
+    mov r2,#15                                  @ location
+    bl subStringEnd                             @starting from n characters in, up to the end of the string
+    ldr r0,iAdrszMessString                     @ display message
+    bl affichageMess
+    ldr r0,iAdrszSubString
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn                 @ display line return
+    bl affichageMess
+    @
+    ldr r0,iAdrszString1
+    ldr r1,iAdrszSubString
+    bl subStringMinus                           @ whole string minus last character
+    ldr r0,iAdrszMessString                     @ display message
+    bl affichageMess
+    ldr r0,iAdrszSubString
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn                 @ display line return
+    bl affichageMess
+    @
+    ldr r0,iAdrszString1
+    ldr r1,iAdrszSubString
+    mov r2,#'c'                                 @ start character
+    mov r3,#5                                   @ length
+    bl subStringStChar                          @starting from a known character within the string and of m length
+    cmp r0,#-1                                  @ error ?
+    beq 2f
+    ldr r0,iAdrszMessString                     @ display message
+    bl affichageMess
+    ldr r0,iAdrszSubString
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn                 @ display line return
+    bl affichageMess
+    @
+2:
+    ldr r0,iAdrszString1
+    ldr r1,iAdrszSubString
+    ldr r2,iAdrszStringStart                    @ sub string to start
+    mov r3,#10                                  @ length
+    bl subStringStString                        @ starting from a known substring within the string and of m length
+    cmp r0,#-1                                  @ error ?
+    beq 3f
+    ldr r0,iAdrszMessString                     @ display message
+    bl affichageMess
+    ldr r0,iAdrszSubString
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn                 @ display line return
+    bl affichageMess
+3:
+100:                                            @ standard end of the program
+    mov r0, #0                                  @ return code
+    mov r7, #EXIT                               @ request to exit program
+    svc 0                                       @ perform system call
+iAdrszMessString:         .int szMessString
+iAdrszString1:            .int szString1
+iAdrszSubString:            .int szSubString
+iAdrszStringStart:            .int szStringStart
+iAdrszCarriageReturn:     .int szCarriageReturn
+/******************************************************************/
+/*     sub strings  index start  number of characters             */
+/******************************************************************/
+/* r0 contains the address of the input string */
+/* r1 contains the address of the output string */
+/* r2 contains the start index                  */
+/* r3 contains numbers of characters to extract */
+/* r0 returns number of characters or -1 if error */
+subStringNbChar:
+    push {r1-r5,lr}                             @ save  registers
+    mov r4,#0                                   @ counter byte output string
+1:
+    ldrb r5,[r0,r2]                             @ load byte string input
+    cmp r5,#0                                   @ zero final ?
+    beq 2f
+    strb r5,[r1,r4]                             @ store byte output string
+    add r2,#1                                   @ increment counter
+    add r4,#1
+    cmp r4,r3                                   @ end ?
+    blt 1b                                      @ no -> loop
+2:
+    mov r5,#0
+    strb r5,[r1,r4]                             @ load byte string 2
+    mov r0,r4
+100:
+    pop {r1-r5,lr}                              @ restaur registers
+    bx lr                                       @ return
+/******************************************************************/
+/*     sub strings  index start at end of string             */
+/******************************************************************/
+/* r0 contains the address of the input string */
+/* r1 contains the address of the output string */
+/* r2 contains the start index                  */
+/* r0 returns number of characters or -1 if error */
+subStringEnd:
+    push {r1-r5,lr}                             @ save registers
+    mov r4,#0                                   @ counter byte output string
+1:
+    ldrb r5,[r0,r2]                             @ load byte string 1
+    cmp r5,#0                                   @ zero final ?
+    beq 2f
+    strb r5,[r1,r4]
+    add r2,#1
+    add r4,#1
+    b 1b                                        @ loop
+2:
+    mov r5,#0
+    strb r5,[r1,r4]                             @ load byte string 2
+    mov r0,r4
+100:
+    pop {r1-r5,lr}                              @ restaur registers
+    bx lr
+/******************************************************************/
+/*      whole string minus last character                        */
+/******************************************************************/
+/* r0 contains the address of the input string */
+/* r1 contains the address of the output string */
+/* r0 returns number of characters or -1 if error */
+subStringMinus:
+    push {r1-r5,lr}                             @ save  registers
+    mov r2,#0                                   @ counter byte input string
+    mov r4,#0                                   @ counter byte output string
+1:
+    ldrb r5,[r0,r2]                             @ load byte string
+    cmp r5,#0                                   @ zero final ?
+    beq 2f
+    strb r5,[r1,r4]
+    add r2,#1
+    add r4,#1
+    b 1b                                        @  loop
+2:
+    sub r4,#1
+    mov r5,#0
+    strb r5,[r1,r4]                             @ load byte string 2
+    mov r0,r4
+100:
+    pop {r1-r5,lr}                              @ restaur registers
+    bx lr
+/******************************************************************/
+/*   starting from a known character within the string and of m length  */
+/******************************************************************/
+/* r0 contains the address of the input string */
+/* r1 contains the address of the output string */
+/* r2 contains the character    */
+/* r3 contains the length
+/* r0 returns number of characters or -1 if error */
+subStringStChar:
+    push {r1-r5,lr}                             @ save  registers
+    mov r6,#0                                   @ counter byte input string
+    mov r4,#0                                   @ counter byte output string
+
+1:
+    ldrb r5,[r0,r6]                             @ load byte string
+    cmp r5,#0                                   @ zero final ?
+    streqb r5,[r1,r4]
+    moveq r0,#-1
+    beq 100f
+    cmp r5,r2
+    beq 2f
+    add r6,#1
+    b 1b                                        @  loop
+2:
+    strb r5,[r1,r4]
+    add r6,#1
+    add r4,#1
+    cmp r4,r3
+    bge 3f
+    ldrb r5,[r0,r6]                             @ load byte string
+    cmp r5,#0
+    bne 2b
+3:
+    mov r5,#0
+    strb r5,[r1,r4]                             @ load byte string 2
+    mov r0,r4
+100:
+    pop {r1-r5,lr}                              @ restaur registers
+    bx lr
+
+/******************************************************************/
+/*   starting from a known substring within the string and of m length  */
+/******************************************************************/
+/* r0 contains the address of the input string */
+/* r1 contains the address of the output string */
+/* r2 contains the address of string to start    */
+/* r3 contains the length
+/* r0 returns number of characters or -1 if error */
+subStringStString:
+    push {r1-r8,lr}                             @ save  registers
+    mov r7,r0                                   @ save address
+    mov r8,r1                                   @ counter byte string
+    mov r1,r2
+    bl searchSubString
+    cmp r0,#-1
+    beq 100f
+    mov r6,r0                                   @ counter byte input string
+    mov r4,#0
+1:
+    ldrb r5,[r7,r6]                             @ load byte string
+    strb r5,[r8,r4]
+    cmp r5,#0                                   @ zero final ?
+    moveq r0,r4
+    beq 100f
+    add r4,#1
+    cmp r4,r3
+    addlt r6,#1
+    blt 1b                                      @  loop
+    mov r5,#0
+    strb r5,[r8,r4]
+    mov r0,r4
+100:
+    pop {r1-r8,lr}                              @ restaur registers
+    bx lr
+
+/******************************************************************/
+/*   search a substring in the string                            */
+/******************************************************************/
+/* r0 contains the address of the input string */
+/* r1 contains the address of substring */
+/* r0 returns index of substring in string or -1 if not found */
+searchSubString:
+    push {r1-r6,lr}                       @ save registers
+    mov r2,#0                             @ counter byte input string
+    mov r3,#0                             @ counter byte string
+    mov r6,#-1                            @ index found
+    ldrb r4,[r1,r3]
+1:
+    ldrb r5,[r0,r2]                       @ load byte string
+    cmp r5,#0                             @ zero final ?
+    moveq r0,#-1                          @ yes returns error
+    beq 100f
+    cmp r5,r4                             @ compare character
+    beq 2f
+    mov r6,#-1                            @ no equals - > raz index
+    mov r3,#0                             @ and raz counter byte
+    add r2,#1                             @ and increment counter byte
+    b 1b                                  @ and loop
+2:                                        @ characters equals
+    cmp r6,#-1                            @ first characters equals ?
+    moveq r6,r2                           @ yes -> index begin in r6
+    add r3,#1                             @ increment counter substring
+    ldrb r4,[r1,r3]                       @ and load next byte
+    cmp r4,#0                             @ zero final ?
+    beq 3f                                @ yes -> end search
+    add r2,#1                             @ else increment counter string
+    b 1b                                  @ and loop
+3:
+    mov r0,r6
+100:
+    pop {r1-r6,lr}                        @ restaur registers
+    bx lr
+
+/******************************************************************/
+/*     display text with size calculation                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+affichageMess:
+    push {r0,r1,r2,r7,lr}                       @ save  registers
+    mov r2,#0                                   @ counter length */
+1:                                              @ loop length calculation
+    ldrb r1,[r0,r2]                             @ read octet start position + index
+    cmp r1,#0                                   @ if 0 its over
+    addne r2,r2,#1                              @ else add 1 in the length
+    bne 1b                                      @ and loop
+                                                @ so here r2 contains the length of the message
+    mov r1,r0                                   @ address message in r1
+    mov r0,#STDOUT                              @ code to write to the standard output Linux
+    mov r7, #WRITE                              @ code call system "write"
+    svc #0                                      @ call system
+    pop {r0,r1,r2,r7,lr}                        @ restaur registers
+    bx lr                                       @ return

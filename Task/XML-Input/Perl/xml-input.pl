@@ -1,3 +1,4 @@
+use utf8;
 use XML::Simple;
 
 my $ref = XMLin('<Students>

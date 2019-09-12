@@ -1,4 +1,2 @@
-(defun fact (n)
-  (if (< n 2)
-      1
-    (* n (fact(- n 1)))))
+(defun factorial (n)
+  (if (zerop n) 1 (* n (factorial (1- n)))))

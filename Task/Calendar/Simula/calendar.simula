@@ -1,0 +1,144 @@
+BEGIN
+    INTEGER WIDTH, YEAR;
+    INTEGER COLS, LEAD, GAP;
+    TEXT ARRAY WDAYS(0:6);
+    CLASS MONTH(MNAME); TEXT MNAME;
+    BEGIN INTEGER DAYS, START_WDAY, AT_POS;
+    END MONTH;
+    REF(MONTH) ARRAY MONTHS(0:11);
+    WIDTH := 80; YEAR := 1969;
+
+    BEGIN
+        TEXT T;
+        INTEGER I, M;
+        FOR T :- "Su", "Mo", "Tu", "We", "Th", "Fr", "Sa" DO BEGIN
+            WDAYS(I) :- T; I := I+1;
+        END;
+        I := 0;
+        FOR T :- "January", "February", "March",
+                 "April", "May", "June",
+                 "July", "August", "September",
+                 "October", "November", "December" DO BEGIN
+            MONTHS(I) :- NEW MONTH(T); I := I+1;
+        END;
+        I := 0;
+        FOR M := 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 DO BEGIN
+            MONTHS(I).DAYS := M; I := I+1;
+        END;
+    END;
+
+    BEGIN
+
+        PROCEDURE SPACE(N); INTEGER N;
+        BEGIN
+            WHILE N > 0 DO BEGIN
+                OUTCHAR(' '); N := N-1;
+            END;
+        END SPACE;
+
+        PROCEDURE INIT_MONTHS;
+        BEGIN
+            INTEGER I;
+
+            IF MOD(YEAR,4) = 0 AND MOD(YEAR,100) <> 0 OR MOD(YEAR,400) = 0 THEN
+                MONTHS(1).DAYS := 29;
+
+            YEAR := YEAR-1;
+            MONTHS(0).START_WDAY
+                := MOD(YEAR * 365 + YEAR//4 - YEAR//100 + YEAR//400 + 1, 7);
+
+            FOR I := 1 STEP 1 UNTIL 12-1 DO
+                MONTHS(I).START_WDAY :=
+                    MOD(MONTHS(I-1).START_WDAY + MONTHS(I-1).DAYS, 7);
+
+            COLS := (WIDTH + 2) // 22;
+            WHILE MOD(12,COLS) <> 0 DO
+                COLS := COLS-1;
+            GAP := IF COLS - 1 <> 0 THEN (WIDTH - 20 * COLS) // (COLS - 1) ELSE 0;
+            IF GAP > 4 THEN
+                GAP := 4;
+            LEAD := (WIDTH - (20 + GAP) * COLS + GAP + 1) // 2;
+            YEAR := YEAR+1;
+        END INIT_MONTHS;
+
+        PROCEDURE PRINT_ROW(ROW); INTEGER ROW;
+        BEGIN
+            INTEGER C, I, FROM, UP_TO;
+            INTEGER PROCEDURE PREINCREMENT(I); NAME I; INTEGER I;
+            BEGIN I := I+1; PREINCREMENT := I;
+            END PREINCREMENT;
+            INTEGER PROCEDURE POSTINCREMENT(I); NAME I; INTEGER I;
+            BEGIN POSTINCREMENT := I; I := I+1;
+            END POSTINCREMENT;
+            FROM := ROW * COLS;
+            UP_TO := FROM + COLS;
+            SPACE(LEAD);
+            FOR C := FROM STEP 1 UNTIL UP_TO-1 DO BEGIN
+                I := MONTHS(C).MNAME.LENGTH;
+                SPACE((20 - I)//2);
+                OUTTEXT(MONTHS(C).MNAME);
+                SPACE(20 - I - (20 - I)//2 + (IF C = UP_TO - 1 THEN 0 ELSE GAP));
+            END;
+            OUTIMAGE;
+
+            SPACE(LEAD);
+            FOR C := FROM STEP 1 UNTIL UP_TO-1 DO BEGIN
+                FOR I := 0 STEP 1 UNTIL 7-1 DO BEGIN
+                    OUTTEXT(WDAYS(I)); OUTTEXT(IF I = 6 THEN "" ELSE " ");
+                END;
+                IF C < UP_TO - 1 THEN
+                    SPACE(GAP)
+                ELSE
+                    OUTIMAGE;
+            END;
+
+            WHILE TRUE DO BEGIN
+                FOR C := FROM STEP 1 UNTIL UP_TO-1 DO
+                    IF MONTHS(C).AT_POS < MONTHS(C).DAYS THEN
+                        GO TO IBREAK;
+            IBREAK:
+                IF C = UP_TO THEN
+                    GO TO OBREAK;
+
+                SPACE(LEAD);
+                FOR C := FROM STEP 1 UNTIL UP_TO-1 DO BEGIN
+                    FOR I := 0 STEP 1 UNTIL MONTHS(C).START_WDAY-1 DO
+                        SPACE(3);
+                    WHILE POSTINCREMENT(I) < 7 AND MONTHS(C).AT_POS < MONTHS(C).DAYS DO BEGIN
+                        OUTINT(PREINCREMENT(MONTHS(C).AT_POS),2);
+                        IF I < 7 OR C < UP_TO - 1 THEN
+                            SPACE(1);
+                    END;
+                    WHILE POSTINCREMENT(I) <= 7 AND C < UP_TO-1 DO
+                        SPACE(3);
+                    IF C < UP_TO - 1 THEN
+                        SPACE(GAP - 1);
+                    MONTHS(C).START_WDAY := 0;
+                END;
+                OUTIMAGE;
+            END;
+        OBREAK:
+            OUTIMAGE;
+        END PRINT_ROW;
+
+        PROCEDURE PRINT_YEAR;
+        BEGIN
+            INTEGER ROW;
+            TEXT BUF;
+            INTEGER STRLEN;
+            BUF :- BLANKS(32); BUF.PUTINT(YEAR); BUF.SETPOS(1);
+            WHILE BUF.MORE AND THEN BUF.GETCHAR = ' ' DO
+                STRLEN := STRLEN+1;
+            BUF :- BUF.SUB(STRLEN+1, 32-STRLEN);
+            SPACE((WIDTH - BUF.LENGTH) // 2);
+            OUTTEXT(BUF); OUTIMAGE; OUTIMAGE;
+            WHILE ROW * COLS < 12 DO BEGIN
+                PRINT_ROW(ROW);
+                ROW := ROW+1;
+            END;
+        END PRINT_YEAR;
+
+        INIT_MONTHS;
+        PRINT_YEAR;
+    END;
+END;

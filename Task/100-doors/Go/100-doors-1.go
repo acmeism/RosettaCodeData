@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func main() {
-    doors := make([]bool, 100)
+    doors := [100]bool{}
 
     // the 100 passes called for in the task description
     for pass := 1; pass <= 100; pass++ {

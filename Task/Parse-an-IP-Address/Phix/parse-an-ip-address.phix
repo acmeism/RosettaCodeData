@@ -1,0 +1,147 @@
+function parse_ip(string txt)
+    sequence r
+    integer dot = find('.',txt),
+            colon = find(':',txt),
+            openbr = find('[',txt),
+            closebr = find(']',txt)
+    if colon=5 and txt[1..4] = "http" then
+        txt = trim(txt[6..$],"/")
+        return parse_ip(txt)
+    end if
+    bool ipv6 = openbr or dot=0 or (colon and colon<dot)
+    if ipv6 then
+        sequence res = repeat(0,8)
+        if openbr then
+            if openbr!=1 or closebr<openbr then return 0 end if
+            r = scanf(txt[closebr+1..$],":%d")
+            if length(r)!=1 then return 0 end if
+            atom port = r[1][1]
+            if port<0 or port>65535 then return 0 end if
+            res &= port
+            txt = txt[2..closebr-1]
+        end if
+        if dot then
+            colon = rfind(':',txt)
+            if colon>dot then return 0 end if
+            object r4 = parse_ip(txt[colon+1..$])
+            if not sequence(r4) or length(r4)!=4 then return 0 end if
+            res[7] = r4[1]*#100+r4[2]
+            res[8] = r4[3]*#100+r4[4]
+            txt = txt[1..colon-1+(txt[colon-1]=':')]
+            dot = 2
+        end if
+        sequence r8 = {}
+        integer ip = 0
+        while length(txt) do
+            colon = find(':',txt)
+            if colon=1 then
+                if ip then return 0 end if
+                ip = length(r8)+1
+                txt = txt[2+(length(r8)=0)..$]
+            else
+                r = scanf(txt[1..colon-1],"%x")
+                if length(r)!=1 then return 0 end if
+                atom r11 = r[1][1]
+                if r11<0 or r11>#FFFF then return 0 end if
+                r8 &= r11
+                if colon=0 then exit end if
+                txt = txt[colon+1..$]
+            end if
+        end while
+        if ip then
+            if length(r8)>=(8-dot) then return 0 end if
+            r8[ip..ip-1] = repeat(0,(8-dot)-length(r8))
+        else
+            if length(r8)!=8-dot then return 0 end if
+        end if
+        res[1..8-dot] = r8
+        return res
+    end if
+    -- ipv4:
+    if dot=0 or (colon and colon<dot) then return 0 end if
+    r = scanf(txt[1..colon-1],"%d.%d.%d.%d")
+    if length(r)!=1 then return 0 end if
+    r = r[1]
+    for i=1 to length(r) do
+        if r[i]<0 or r[i]>255 then return 0 end if
+    end for
+    if colon then
+        sequence r2 = scanf(txt[colon+1..$],"%d")
+        if length(r2)!=1 then return 0 end if
+        atom port = r2[1][1]
+        if port<0 or port>65535 then return 0 end if
+        r &= port
+    end if
+    return r
+end function
+
+constant tests = {{"127.0.0.1",{127,0,0,1}},
+                  {"127.0.0.1:80",{127,0,0,1,80}},
+                  {"::1",{0,0,0,0,0,0,0,1}},
+                  {"[::1]:80",{0,0,0,0,0,0,0,1,80}},
+                  {"2605:2700:0:3::4713:93e3",{#2605,#2700,0,3,0,0,#4713,#93e3}},
+                  {"[2605:2700:0:3::4713:93e3]:80",{#2605,#2700,0,3,0,0,#4713,#93e3,80}},
+                  {"::ffff:192.168.173.22",{0,0,0,0,0,#ffff,#c0a8,#ad16}},
+                  {"[::ffff:192.168.173.22]:80",{0,0,0,0,0,#ffff,#c0a8,#ad16,80}},
+                  {"1::",{1,0,0,0,0,0,0,0}},
+                  {"[1::]:80",{1,0,0,0,0,0,0,0,80}},
+                  {"::",{0,0,0,0,0,0,0,0}},
+                  {"[::]:80",{0,0,0,0,0,0,0,0,80}},
+                  {"192.168.0.1",{192,168,0,1}},
+                  {"2001:db8:85a3:0:0:8a2e:370:7334",{#2001,#db8,#85a3,0,0,#8a2e,#370,#7334}},
+                  {"2001:db8:85a3::8a2e:370:7334",{#2001,#db8,#85a3,0,0,#8a2e,#370,#7334}},
+                  {"[2001:db8:85a3:8d3:1319:8a2e:370:7334]:443",{#2001,#db8,#85a3,#8d3,#1319,#8a2e,#370,#7334,443}},
+                  {"256.0.0.0",0},
+                  {"g::1",0},
+                  {"::ffff:127.0.0.0.1",0},
+                  {"a::b::1",0},
+                  {"0000",0},
+                  {"0000:0000",0},
+                  {"0000:0000:0000:0000:0000:0000:0000:0000",{0,0,0,0,0,0,0,0}},
+                  {"0000:0000:0000::0000:0000",{0,0,0,0,0,0,0,0}},
+                  {"0000::0000::0000:0000",0},
+                  {"ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",{#ffff,#ffff,#ffff,#ffff,#ffff,#ffff,#ffff,#ffff}},
+                  {"ffff:ffff:ffff:fffg:ffff:ffff:ffff:ffff",0},
+                  {"fff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",{#fff,#ffff,#ffff,#ffff,#ffff,#ffff,#ffff,#ffff}},
+                  {"fff:ffff:0:ffff:ffff:ffff:ffff:ffff",{#fff,#ffff,0,#ffff,#ffff,#ffff,#ffff,#ffff}},
+                  {"2001:0db8:0:0:0:0:1428:57ab",{#2001,#0db8,0,0,0,0,#1428,#57ab}},
+                  {"2001:0db8::1428:57ab",{#2001,#0db8,0,0,0,0,#1428,#57ab}},
+                  {"2001:0db8:0:0:8d3:0:0:0",{#2001,#0db8,0,0,#8d3,0,0,0}},
+                  {"2001:0db8:0:0:8d3::",{#2001,#0db8,0,0,#8d3,0,0,0}},
+                  {"2001:0db8::8d3:0:0:0",{#2001,#0db8,0,0,#8d3,0,0,0}},
+                  {"http://127.0.0.1/",{127,0,0,1}},
+                  {"http:",0},
+                  {"http:/2001:db8:3:4::127.0.2.0",{#2001,#db8,3,4,0,0,#7F00,#200}},
+                  {"::192.168.0.1",{0,0,0,0,0,0,#C0A8,1}},
+                  {"::ffff:0:255.255.255.255",{0,0,0,0,#ffff,0,#ffff,#ffff}},
+                  {"",0},
+                  {"ffffffffffffffffffffffffffffffff::",0},
+                  {"[1::]:9999999999999999999999999999",0},
+                  {"I think that's enough tests for now",0}}
+
+for i=1 to length(tests) do
+    {string ip, object expected} = tests[i]
+    object actual = parse_ip(ip)
+    if actual!=expected then
+        ?{ip,actual,expected}
+        ?9/0
+    end if
+    string addr
+    if actual=0 then
+        addr = "**not a valid ip address**"
+    else
+        if remainder(length(actual),2) then
+            actual[$] = sprintf(", port %d",actual[$])
+        else
+            actual = append(actual,"")
+        end if
+        if length(actual)=5 then
+            addr = sprintf("ivp4 address: %02x%02x%02x%02x%s",actual)
+        elsif length(actual)=9 then
+            addr = sprintf("ivp6 address: %04x%04x%04x%04x%04x%04x%04x%04x%s",actual)
+        else
+            ?9/0
+        end if
+    end if
+    printf(1,"%45s %s\n",{ip,addr})
+end for

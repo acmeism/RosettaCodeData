@@ -1,0 +1,103 @@
+enum FN, V, BITS -- fields of a bitwiseioreader/writer
+
+function new_bitwiseio(string filename, mode)
+    integer fn = open(filename,mode)
+    return {fn,0,0}     -- ie {FN,V=0,BITS=0}
+end function
+
+function new_bitwiseiowriter(string filename)
+    return new_bitwiseio(filename,"wb")
+end function
+
+function new_bitwiseioreader(string filename)
+    return new_bitwiseio(filename,"rb")
+end function
+
+function write_bits(sequence writer, integer v, bits)
+    integer {fn,wv,wb} = writer,
+            p2 = power(2,bits), ch
+    if v!=and_bits(v,p2*2-1) then ?9/0 end if
+    wv = wv*p2+v
+    wb += bits
+    while wb>=8 do
+        wb -= 8
+        p2 = power(2,wb)
+        ch = floor(wv/p2)
+        puts(fn,ch)
+        wv -= ch*p2
+    end while
+    if wv>=#100 then ?9/0 end if
+    if wb>=8 then ?9/0 end if
+    writer[V]= wv
+    writer[BITS]= wb
+    return writer
+end function
+
+function close_bitwiseiowriter(sequence writer)
+    integer {fn,wv,wb} = writer
+    if wb then
+        if wb>=8 then ?9/0 end if -- sanity check
+        writer = write_bits(writer,0,8-wb)
+    end if
+    if writer[V]!=0 then ?9/0 end if
+    if writer[BITS]!=0 then ?9/0 end if
+    close(fn)
+    writer[FN]=-1
+    return writer
+end function
+
+function read_bits(sequence reader, integer bits)
+    integer {fn,rv,rb} = reader, ch, p2
+    while bits>rb do
+        ch = getc(fn)
+        if ch=-1 then return {-1,reader} end if
+        rv = rv*#100+ch
+        rb += 8
+    end while
+    rb -= bits
+    p2 = power(2,rb)
+    ch = floor(rv/p2)
+    rv -= ch*p2
+    reader[V]= rv
+    reader[BITS]= rb
+    return {ch,reader}
+end function
+
+function as_hexb(string s, fmt="%02x ")
+-- helper funtion, returns hex string, or binary if fmt="%08b "
+    string res = ""
+    for i=1 to length(s) do
+        res &= sprintf(fmt,s[i])
+    end for
+    return trim(res)
+end function
+
+constant test = "This is a test."
+--constant test = "This is a test"
+--constant test = "abcdefghijk"
+--constant test = "STRING"
+--constant test = "This is an ascii string that will be crunched, written, read and expanded."
+printf(1,"\"%s\" as bytes: %s (length %d)\n",{test,as_hexb(test),length(test)})
+printf(1,"    original bits: %s\n",{as_hexb(test,"%08b ")})
+
+sequence writer = new_bitwiseiowriter("test.bin")
+for i=1 to length(test) do
+    writer = write_bits(writer,test[i],7)
+end for
+writer = close_bitwiseiowriter(writer)
+
+integer fn = open("test.bin","rb")
+string bytes = get_text(fn,GT_WHOLE_FILE)
+printf(1,"Written bitstream: %s\n",{as_hexb(bytes,"%08b ")})
+printf(1,"Written bytes: %s (length %d)\n",{as_hexb(bytes),length(bytes)})
+close(fn)
+
+sequence reader = new_bitwiseioreader("test.bin")
+bytes = ""
+integer ch
+while true do
+    {ch,reader} = read_bits(reader,7)
+    if ch=-1 then exit end if
+    bytes &= ch
+end while
+printf(1,"\"%s\" as bytes: %s (length %d)\n",{bytes,as_hexb(bytes),length(bytes)})

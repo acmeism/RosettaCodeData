@@ -1,8 +1,8 @@
-# Assume rest of definition is already present
-oo::define List method insertAfter element {
-    $element attach $next
-    set next $element
+proc insertIntoList {existingList predecessor newElement} {
+  upvar $existingList exList
+  set exList [linsert $exList [expr [lsearch -exact $exList $predecessor] + 1] $newElement]
 }
 
-set A [List new "A" [List new "B"]]
-$A insertAfter [List new "C"]
+set list {A B}
+insertIntoList list A C
+puts $list

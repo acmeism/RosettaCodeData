@@ -1,28 +1,21 @@
 import Data.List (mapAccumL)
 
-roman :: Int -> String
-roman n =
-  concat
-    (snd
-       (mapAccumL
-          (\a (m, s) ->
-              let (q, r) = quotRem a m
-              in (r, [1 .. q] >> s))
-          n
-          [ (1000, "M")
-          , (900, "CM")
-          , (500, "D")
-          , (400, "CD")
-          , (100, "C")
-          , (90, "XC")
-          , (50, "L")
-          , (40, "XL")
-          , (10, "X")
-          , (9, "IX")
-          , (5, "V")
-          , (4, "IV")
-          , (1, "I")
-          ]))
+roman :: [(Int, String)] -> Int -> String
+roman vks n =
+  concat . snd $
+  mapAccumL
+    (\a (m, s) ->
+        let (q, r) = quotRem a m
+        in (r, [1 .. q] >> s))
+    n
+    vks
+
+romanFromInt :: Int -> String
+romanFromInt =
+  roman $
+  zip
+    [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
+    ["M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"]
 
 main :: IO ()
-main = mapM_ (putStrLn . roman) [1666, 1990, 2008, 2016, 2017]
+main = (putStrLn . unlines) (romanFromInt <$> [1666, 1990, 2008, 2016, 2018])

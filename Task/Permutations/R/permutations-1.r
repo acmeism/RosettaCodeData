@@ -1,48 +1,35 @@
-next.perm <- function(p) {
-  n <- length(p)
-  i <- n - 1
-  r = T
-  for (i in seq(n - 1, 1)) {
-    if (p[i] < p[i + 1]) {
-      r = F
-      break
+next.perm <- function(a) {
+  n <- length(a)
+  i <- n
+  while (i > 1 && a[i - 1] >= a[i]) i <- i - 1
+  if (i == 1) {
+    NULL
+  } else {
+    j <- i
+    k <- n
+    while (j < k) {
+      s <- a[j]
+      a[j] <- a[k]
+      a[k] <- s
+      j <- j + 1
+      k <- k - 1
     }
-  }
-
-  j <- i + 1
-  k <- n
-  while (j < k) {
-    x <- p[j]
-    p[j] <- p[k]
-    p[k] <- x
-    j <- j + 1
-    k <- k - 1
-  }
-
-  if(r) return(NULL)
-
-  j <- n
-  while (p[j] > p[i]) j <- j - 1
-  j <- j + 1
-
-  x <- p[i]
-  p[i] <- p[j]
-  p[j] <- x
-  return(p)
-}
-
-print.perms <- function(n) {
-  p <- 1:n
-  while (!is.null(p)) {
-    cat(p, "\n")
-    p <- next.perm(p)
+    s <- a[i - 1]
+    j <- i
+    while (a[j] <= s) j <- j + 1
+    a[i - 1] <- a[j]
+    a[j] <- s
+    a
   }
 }
 
-print.perms(3)
-# 1 2 3
-# 1 3 2
-# 2 1 3
-# 2 3 1
-# 3 1 2
-# 3 2 1
+perm <- function(n) {
+  e <- NULL
+  a <- 1:n
+  repeat {
+    e <- cbind(e, a)
+    a <- next.perm(a)
+    if (is.null(a)) break
+  }
+  unname(e)
+}

@@ -1,0 +1,142 @@
+-- demo\rosetta\ISAAC_Cipher.exw
+
+sequence randrsl = repeat(0,256)
+integer randcnt
+
+sequence mm
+atom aa,bb,cc
+
+function r32(object a)
+    if sequence(a) then
+        for i=1 to length(a) do
+            a[i] = r32(a[i])
+        end for
+        return a
+    end if
+    if a<0 then a+=#100000000 end if
+    return remainder(a,#100000000)
+end function
+
+function shl(atom word, integer bits)
+    return r32(word*power(2,bits))
+end function
+
+function shr(atom v, integer bits)
+    return floor(v/power(2,bits))
+end function
+
+procedure Isaac()
+    cc += 1;    -- cc just gets incremented once per 256 results
+    bb += cc;   -- then combined with bb
+    for i=1 to 256 do
+        atom x = mm[i]
+        switch mod(i-1,4) do
+            case 0: aa := xor_bits(aa,shl(aa,13))
+            case 1: aa := xor_bits(aa,shr(aa, 6))
+            case 2: aa := xor_bits(aa,shl(aa, 2))
+            case 3: aa := xor_bits(aa,shr(aa,16))
+        end switch
+        aa = r32(mm[xor_bits(i-1,#80)+1]+aa)
+        atom y := mm[and_bits(shr(x,2),#FF)+1]+aa+bb
+        mm[i] := y;
+        bb := r32(mm[and_bits(shr(y,10),#FF)+1] + x)
+        randrsl[i]:= bb;
+    end for
+    randcnt = 1
+end procedure
+
+function mix(sequence a8)
+    atom {a,b,c,d,e,f,g,h} = a8
+    a = xor_bits(a,shl(b,11));  {d,b} = r32({d+a,b+c});
+    b = xor_bits(b,shr(c, 2));  {e,c} = r32({e+b,c+d});
+    c = xor_bits(c,shl(d, 8));  {f,d} = r32({f+c,d+e});
+    d = xor_bits(d,shr(e,16));  {g,e} = r32({g+d,e+f});
+    e = xor_bits(e,shl(f,10));  {h,f} = r32({h+e,f+g});
+    f = xor_bits(f,shr(g, 4));  {a,g} = r32({a+f,g+h});
+    g = xor_bits(g,shl(h, 8));  {b,h} = r32({b+g,h+a});
+    h = xor_bits(h,shr(a, 9));  {c,a} = r32({c+h,a+b});
+    a8 = {a,b,c,d,e,f,g,h}
+    return a8
+end function
+
+procedure iRandInit()
+    {aa,bb,cc} = {0,0,0}
+    sequence a8 = repeat(#9e3779b9,8)   -- the golden ratio
+    for i=1 to 4 do        -- scramble it
+        a8 = mix(a8)
+    end for
+    for i=1 to 255 by 8 do
+        a8 = mix(sq_add(a8,randrsl[i..i+7]))
+        mm[i..i+7] = a8
+    end for
+    for i=1 to 255 by 8 do
+        a8 = mix(r32(sq_add(a8,mm[i..i+7])))
+        mm[i..i+7] = a8
+    end for
+    Isaac()         -- fill in the first set of results
+end procedure
+
+procedure iSeed(string seed)
+    mm = repeat(0,256)
+    randrsl = repeat(0,256)
+    randrsl[1..min(length(seed),256)] = seed
+    iRandInit()
+end procedure
+
+function randch()
+    atom res = mod(randrsl[randcnt],95)+32
+    randcnt += 1
+    if randcnt>256 then
+        Isaac()
+    end if
+    return res
+end function
+
+function Vernam(string msg)
+    string res = ""
+    for i=1 to length(msg) do
+        res &= xor_bits(msg[i],randch())
+    end for
+    return res
+end function
+
+function Caesar(integer ch, shift)
+    return ' '+mod(ch-' '+shift,95)
+end function
+
+enum ENCRYPT = +1,
+     DECRYPT = -1
+
+function Vigenere(string msg, integer mode)
+    string res = ""
+    for i=1 to length(msg) do
+        res &= Caesar(msg[i],randch()*mode)
+    end for
+    return res
+end function
+
+constant string msg = "a Top Secret secret",
+                key = "this is my secret key"
+
+iSeed(key)
+string xctx := Vernam(msg),
+       mctx := Vigenere(msg,ENCRYPT)
+
+iSeed(key)
+string xptx := Vernam(xctx),
+       mptx := Vigenere(mctx,DECRYPT)
+
+function ascii2hex(string s)
+    string res = ""
+    for i=1 to length(s) do
+        res &= sprintf("%02x",s[i])
+    end for
+    return res
+end function
+
+printf(1,"Message: %s\n",{msg})
+printf(1,"Key    : %s\n",{key})
+printf(1,"XOR    : %s\n",{ascii2hex(xctx)})
+printf(1,"MOD    : %s\n",{ascii2hex(mctx)})
+printf(1,"XOR dcr: %s\n",{xptx})
+printf(1,"MOD dcr: %s\n",{mptx})

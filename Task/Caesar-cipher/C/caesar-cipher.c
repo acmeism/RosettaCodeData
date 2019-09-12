@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #define caesar(x) rot(13, x)
 #define decaesar(x) rot(13, x)
@@ -16,8 +17,11 @@ void rot(int c, char *str)
 	{
 		if (!isalpha(str[i]))
 			continue;
-		
-		str[i] = alpha[isupper(str[i])][((int)(tolower(str[i])-'a')+c)%26];
+
+		if (isupper(str[i]))
+                        str[i] = alpha[1][((int)(tolower(str[i]) - 'a') + c) % 26];
+                else
+                        str[i] = alpha[0][((int)(tolower(str[i]) - 'a') + c) % 26];
 	}
 }
 

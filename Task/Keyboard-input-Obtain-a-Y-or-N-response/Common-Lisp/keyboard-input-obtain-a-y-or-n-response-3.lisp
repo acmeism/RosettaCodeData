@@ -1,5 +1,5 @@
 (defun y-or-no ()
-  (with-screen (scr :input-reading :unbuffered :input-blocking t)
+  (with-screen (scr :input-buffering nil :input-blocking t)
     (clear scr)
     (princ "Do you want to continue? [Y/N]" scr)
     (refresh scr)

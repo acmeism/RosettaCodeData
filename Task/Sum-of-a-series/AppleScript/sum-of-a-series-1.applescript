@@ -1,20 +1,21 @@
--- SUM OF SERIES -------------------------------------------------------------
+-- SUM OF SERIES ------------------------------------------
 
 -- seriesSum :: Num a => (a -> a) -> [a] -> a
 on seriesSum(f, xs)
-    set mf to mReturn(f)
-    script
+    script go
+        property mf : |λ| of mReturn(f)
         on |λ|(a, x)
-            a + (mf's |λ|(x))
+            a + mf(x)
         end |λ|
     end script
 
-    foldl(result, 0, xs)
+    foldl(go, 0, xs)
 end seriesSum
 
 
--- TEST ----------------------------------------------------------------------
+-- TEST ---------------------------------------------------
 
+-- inverseSquare :: Num -> Num
 on inverseSquare(x)
     1 / (x ^ 2)
 end inverseSquare
@@ -26,20 +27,19 @@ on run
 end run
 
 
--- GENERIC FUNCTIONS ---------------------------------------------------------
+-- GENERIC FUNCTIONS --------------------------------------
 
 -- enumFromTo :: Int -> Int -> [Int]
 on enumFromTo(m, n)
-    if m > n then
-        set d to -1
+    if m ≤ n then
+        set lst to {}
+        repeat with i from m to n
+            set end of lst to i
+        end repeat
+        lst
     else
-        set d to 1
+        {}
     end if
-    set lst to {}
-    repeat with i from m to n by d
-        set end of lst to i
-    end repeat
-    return lst
 end enumFromTo
 
 -- foldl :: (a -> b -> a) -> a -> [b] -> a

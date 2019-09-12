@@ -1,2 +1,2 @@
 (defn palindrome? [s]
-  (= s (apply str (reverse s))))
+  (= s (clojure.string/reverse s)))

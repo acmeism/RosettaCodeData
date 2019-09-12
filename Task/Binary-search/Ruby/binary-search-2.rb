@@ -3,7 +3,7 @@ class Array
     low, high = 0, length - 1
     while low <= high
       mid = (low + high) >> 1
-      case var <=> self[mid]
+      case val <=> self[mid]
         when 1
           low = mid + 1
         when -1

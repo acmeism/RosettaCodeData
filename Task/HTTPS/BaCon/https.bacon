@@ -1,69 +1,15 @@
-' SSL library
-PRAGMA INCLUDE <openssl/ssl.h> <openssl/err.h>
-PRAGMA LDFLAGS -lcrypto -lssl
+OPTION TLS TRUE
+website$ = "www.google.com"
 
-' Using RAM disk as a string
-OPTION MEMSTREAM TRUE
+OPEN website$ & ":443" FOR NETWORK AS mynet
 
-' BaCon must not choke on SSL functions
-OPTION PARSE FALSE
+SEND "GET / HTTP/1.1\r\nHost: " & website$ & "\r\n\r\n" TO mynet
+WHILE WAIT(mynet, 1000)
+    RECEIVE dat$ FROM mynet
+    total$ = total$ & dat$
+    IF REGEX(dat$, "\r\n\r\n$") THEN BREAK           : ' Quit receiving data when end indicator was reached
+WEND
 
-' Request to send to remote webserver (CONST is a macro def)
-CONST req$ = "GET / HTTP/1.1\r\nHost: " & TOKEN$(website$, 1, ":") & "\r\n\r\n"
-
-' Some SSL related variables
-DECLARE ctx TYPE SSL_CTX*
-DECLARE meth TYPE const SSL_METHOD*
-DECLARE ssl TYPE SSL*
-DECLARE sbio TYPE BIO*
-
-' Which website we need to fetch
-IF AMOUNT(ARGUMENT$) = 1 THEN
-    website$ = "www.google.com:443"
-ELSE
-    website$ = TOKEN$(ARGUMENT$, 2)
-END IF
-
-' Initialize SSL
-SSL_library_init()
-SSL_load_error_strings()
-
-' Create SSL context object
-meth = SSLv23_method()
-ctx = SSL_CTX_new(meth)
-ssl = SSL_new(ctx)
-
-' Cpnnect to website creating a socket
-OPEN website$ FOR NETWORK AS mynet
-
-' Perform the SSL handshake using the socket
-sbio = BIO_new_socket(mynet, BIO_NOCLOSE)
-SSL_set_bio(ssl, sbio, sbio)
-IF SSL_connect(ssl) <= 0 THEN
-    EPRINT "SSL connect error"
-    END 1
-END IF
-
-' Setup buffer for the data coming back
-mem = MEMORY(1024)
-OPEN mem FOR MEMORY AS buf$
-
-' Send the GET request to the remote server
-SSL_write(ssl, req$, LEN(req$))
-REPEAT
-    ' Fetch the response into the buffer
-    SSL_read(ssl, buf$, 1024)
-    total$ = total$ & buf$
-    memset((void*)mem, 0, 1024)
-UNTIL ISFALSE(WAIT(mynet, 500))
-
-' Bring down SSL
-SSL_shutdown(ssl)
-
-' Close handles and free memory
-CLOSE MEMORY buf$
 CLOSE NETWORK mynet
-FREE mem
 
-' Show result
-PRINT total$
+PRINT REPLACE$(total$, "\r\n[0-9a-fA-F]+\r\n", "\r\n", TRUE) : ' Remove chunk indicators from HTML data

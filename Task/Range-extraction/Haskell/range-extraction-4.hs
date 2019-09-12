@@ -1,26 +1,24 @@
 import Data.List (intercalate, groupBy, isPrefixOf)
 import Data.List.Split (chop)
+import Data.Bool (bool)
 
 rangeFormat :: [Int] -> String
 rangeFormat xs =
   intercalate "," $
-  (\x -> head (if_ (length x > 1) (tail x) x)) <$>
+  (head . ((bool <*> tail) <*> (> 1) . length)) <$>
   groupBy isPrefixOf (rangeString <$> chop succSpan (zip xs (tail xs)))
-  where
-    rangeString [] = ""
-    rangeString xxs@(x:xs)
-      | null xs = show (snd x)
-      | otherwise = intercalate "-" (show <$> [fst x, snd (last xs)])
-    succSpan [] = ([], [])
-    succSpan (xxs@(x:xs))
-      | null ys = ([x], xs)
-      | otherwise = (ys, zs)
-      where
-        (ys, zs) = span (uncurry ((==) . succ)) xxs
 
-if_ :: Bool -> a -> a -> a
-if_ True x _ = x
-if_ False _ y = y
+rangeString [] = ""
+rangeString xxs@(x:xs)
+  | null xs = show (snd x)
+  | otherwise = intercalate "-" (show <$> [fst x, snd (last xs)])
+
+succSpan [] = ([], [])
+succSpan (xxs@(x:xs))
+  | null ys = ([x], xs)
+  | otherwise = (ys, zs)
+  where
+    (ys, zs) = span (uncurry ((==) . succ)) xxs
 
 main :: IO ()
 main =

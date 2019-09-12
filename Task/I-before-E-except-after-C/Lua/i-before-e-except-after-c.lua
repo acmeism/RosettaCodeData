@@ -22,7 +22,7 @@ function plaus (case, opposite, words)
 end
 
 -- Main procedure
-local page = http.request("http://www.puzzlers.org/pub/wordlists/unixdict.txt")
+local page = http.request("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt")
 io.write("I before E when not preceded by C: ")
 local sub1 = plaus("[^c]ie", "cie", page)
 io.write("E before I when preceded by C: ")

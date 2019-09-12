@@ -1,29 +1,40 @@
-import Data.List (mapAccumL, isPrefixOf)
-import Control.Arrow ((***))
+module Main where
 
-romanValue :: String -> Int
-romanValue =
-  let tr s (k, v) =
-        until (not . isPrefixOf k . fst) (drop (length k) *** (v +)) (s, 0)
-  in sum .
-     snd .
-     flip
-       (mapAccumL tr)
-       [ ("M", 1000)
-       , ("CM", 900)
-       , ("D", 500)
-       , ("CD", 400)
-       , ("C", 100)
-       , ("XC", 90)
-       , ("L", 50)
-       , ("XL", 40)
-       , ("X", 10)
-       , ("IX", 9)
-       , ("V", 5)
-       , ("IV", 4)
-       , ("I", 1)
-       ]
+------------------------
+--  DECODER FUNCTION  --
+------------------------
 
-main :: IO ()
-main =
-  mapM_ (print . romanValue) ["MDCLXVI", "MCMXC", "MMVIII", "MMXVI", "MMXVII"]
+decodeDigit :: Char -> Int
+decodeDigit 'I' = 1
+decodeDigit 'V' = 5
+decodeDigit 'X' = 10
+decodeDigit 'L' = 50
+decodeDigit 'C' = 100
+decodeDigit 'D' = 500
+decodeDigit 'M' = 1000
+decodeDigit _ = error "invalid digit"
+
+--  We process a Roman numeral from right to left, digit by digit, adding the value.
+--  If a digit is lower than the previous then its value is negative.
+--  The first digit is always positive.
+
+decode roman = fst (foldl addValue (0, 0) (reverse roman))
+  where
+    addValue (lastSum, lastValue) digit = (updatedSum, value)
+      where
+        value = decodeDigit digit;
+        updatedSum = (if value < lastValue then (-) else (+)) lastSum value
+
+------------------
+--  TEST SUITE  --
+------------------
+
+main = do
+  test "MCMXC" 1990
+  test "MMVIII" 2008
+  test "MDCLXVI" 1666
+
+test roman expected = putStrLn (roman ++ " = " ++ (show (arabic)) ++ remark)
+  where
+    arabic = decode roman
+    remark = " (" ++ (if arabic == expected then "PASS" else ("FAIL, expected " ++ (show expected))) ++ ")"

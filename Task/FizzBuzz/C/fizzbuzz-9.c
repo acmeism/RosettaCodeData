@@ -1,3 +1,11 @@
 #include <stdio.h>
-#define F(x,y) printf("%s",i%x?"":#y"zz")
-int main(int i){for(--i;i++^100;puts(""))F(3,Fi)|F(5,Bu)||printf("%i",i);return 0;}
+
+int main(void)
+{
+    for (int i = 1; i <= 100; ++i) {
+        if (i % 3 == 0) printf("fizz");
+        if (i % 5 == 0) printf("buzz");
+        if (i * i * i * i % 15 == 1) printf("%d", i);
+        puts("");
+    }
+}

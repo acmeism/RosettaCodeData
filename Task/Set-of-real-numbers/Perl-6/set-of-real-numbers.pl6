@@ -32,7 +32,7 @@ class IvSet {
 	    return iv -Inf..Inf;
 	}
 	my $pre;
-	push @old, $(Inf^..Inf) unless @old[*-1].max === Inf;
+	push @old, Inf^..Inf unless @old[*-1].max === Inf;
 	if @old[0].min === -Inf {
 	    $pre = @old.shift;
 	}
@@ -43,7 +43,7 @@ class IvSet {
 	    my $old = @old.shift;
 	    my $excludes-min = !$pre.excludes-max;
 	    my $excludes-max = !$old.excludes-min;
-	    push @new, $(Range.new($pre.max,$old.min,:$excludes-min,:$excludes-max));
+	    push @new, Range.new($pre.max,$old.min,:$excludes-min,:$excludes-max);
 	    $pre = $old;
 	}
 	IvSet.new(@new);
@@ -87,7 +87,7 @@ multi infix:<∩> (IvSet $ars, IvSet $brs) {
 		my $max = $a.range.max min $b.range.max;
 		my $excludes-min = not $min ~~ $a & $b;
 		my $excludes-max = not $max ~~ $a & $b;
-		push @overlap, $(Range.new($min,$max,:$excludes-min, :$excludes-max));
+		push @overlap, Range.new($min,$max,:$excludes-min, :$excludes-max);
 	    }
 	}
     }
@@ -135,8 +135,7 @@ my $A = iv(0..10) ∩
    iv |(0..10).map({ $_ - 1/6 .. $_ + 1/6 }).cache;
 
 my $B = iv 0..sqrt(1/6),
-	   |(1..99).map({ $(sqrt($_-1/6) .. sqrt($_ + 1/6)) }),
-	   sqrt(100-1/6)..10;
+      |(1..99).map({ sqrt($_-1/6) .. sqrt($_ + 1/6) }), sqrt(100-1/6)..10;
 
 say 'A − A is empty: ', not $A − $A;
 

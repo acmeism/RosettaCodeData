@@ -1,97 +1,76 @@
 (() => {
     'use strict';
 
-    // GENERIC FUNCTIONS FOR COMPARISONS
+    // main :: IO ()
+    const main = () => {
+        const
+            lengthThenAZ = mappendOrd(
+                comparing(length),
+                comparing(toLower)
+            ),
+            descLengthThenAZ = mappendOrd(
+                flip(comparing(length)),
+                comparing(toLower)
+            );
 
-    // Ordering :: ( LT | EQ | GT ) | ( -1 | 0 | 1 )
-    // compare :: a -> a -> Ordering
-    const compare = (a, b) => a < b ? -1 : (a > b ? 1 : 0);
+        console.log(
+            apList(apList([sortBy])([
+                lengthThenAZ,
+                descLengthThenAZ
+            ]))([
+                [
+                    "Here", "are", "some", "sample",
+                    "strings", "to", "be", "sorted"
+                ]
+            ]).map(unlines).join('\n\n')
+        );
+    };
 
-    // mappendOrdering :: Ordering -> Ordering -> Ordering
-    const mappendOrdering = (a, b) => a !== 0 ? a : b;
+    // GENERIC FUNCTIONS ----------------------------------
 
-    // on :: (b -> b -> c) -> (a -> b) -> a -> a -> c
-    const on = (f, g) => (a, b) => f(g(a), g(b));
+    // apList (<*>) :: [a -> b] -> [a] -> [b]
+    const apList = fs => xs =>
+        // The application of each of a list of functions,
+        // to each of a list of values.
+        fs.flatMap(
+            f => xs.flatMap(x => [f(x)])
+        );
+
+    // comparing :: (a -> b) -> (a -> a -> Ordering)
+    const comparing = f =>
+        (x, y) => {
+            const
+                a = f(x),
+                b = f(y);
+            return a < b ? -1 : (a > b ? 1 : 0);
+        };
 
     // flip :: (a -> b -> c) -> b -> a -> c
-    const flip = f => (a, b) => f.apply(null, [b, a]);
-
-    // arrayCopy :: [a] -> [a]
-    const arrayCopy = (xs) => xs.slice(0);
-
-    // show :: a -> String
-    const show = x => JSON.stringify(x, null, 2);
-
-
-    // TEST
-    const xs = ['Shanghai', 'Karachi', 'Beijing', 'Sao Paulo', 'Dhaka', 'Delhi', 'Lagos'];
-
-    const rs = [{
-        name: 'Shanghai',
-        pop: 24.2
-    }, {
-        name: 'Karachi',
-        pop: 23.5
-    }, {
-        name: 'Beijing',
-        pop: 21.5
-    }, {
-        name: 'Sao Paulo',
-        pop: 24.2
-    }, {
-        name: 'Dhaka',
-        pop: 17.0
-    }, {
-        name: 'Delhi',
-        pop: 16.8
-    }, {
-        name: 'Lagos',
-        pop: 16.1
-    }]
-
-    // population :: Dictionary -> Num
-    const population = x => x.pop;
+    const flip = f =>
+        1 < f.length ? (
+            (a, b) => f(b, a)
+        ) : (x => y => f(y)(x));
 
     // length :: [a] -> Int
-    const length = xs => xs.length;
+    const length = xs =>
+        (Array.isArray(xs) || 'string' === typeof xs) ? (
+            xs.length
+        ) : Infinity;
+
+    // mappendOrd (<>) :: Ordering -> Ordering -> Ordering
+    const mappendOrd = (a, b) => a !== 0 ? a : b;
+
+    // sortBy :: (a -> a -> Ordering) -> [a] -> [a]
+    const sortBy = f => xs =>
+        xs.slice()
+        .sort(f);
 
     // toLower :: String -> String
-    const toLower = s => s.toLowerCase();
+    const toLower = s => s.toLocaleLowerCase();
 
-    // lengthThenAZ :: String -> String -> ( -1 | 0 | 1)
-    const lengthThenAZ = (a, b) =>
-        mappendOrdering(
-            on(compare, length)(a, b),
-            on(compare, toLower)(a, b)
-        );
+    // unlines :: [String] -> String
+    const unlines = xs => xs.join('\n');
 
-    // descLengthThenAZ :: String -> String -> ( -1 | 0 | 1)
-    const descLengthThenAZ = (a, b) =>
-        mappendOrdering(
-            on(flip(compare), length)(a, b),
-            on(compare, toLower)(a, b)
-        );
-
-    return show({
-        default: arrayCopy(xs)
-            .sort(compare),
-
-        descendingDefault: arrayCopy(xs)
-            .sort(flip(compare)),
-
-        byLengthThenAZ: arrayCopy(xs)
-            .sort(lengthThenAZ),
-
-        byDescendingLengthThenZA: arrayCopy(xs)
-            .sort(flip(lengthThenAZ)),
-
-        byDescendingLengthThenAZ: arrayCopy(xs)
-            .sort(descLengthThenAZ),
-
-        byPopulation: arrayCopy(rs)
-            .sort(on(compare, population)),
-
-        byDescendingPopulation: arrayCopy(rs)
-            .sort(on(flip(compare), population))
-    });
+    // MAIN ---
+    return main();
 })();

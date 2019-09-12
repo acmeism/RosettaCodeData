@@ -1,28 +1,22 @@
 import Data.List (inits, intercalate, transpose)
+import Control.Applicative (liftA2)
+import Data.Bool (bool)
 
--- REP-CYCLES -----------------------------------------------------------------
+-- REP-CYCLES ---------------------------------------------
 repCycles :: String -> [String]
 repCycles cs =
   let n = length cs
   in filter ((cs ==) . take n . cycle) (tail $ inits (take (quot n 2) cs))
 
-cycleReport :: String -> [String]
-cycleReport xs =
-  let reps = repCycles xs
-  in [ xs
-     , if not (null reps)
-         then last reps
-         else "(n/a)"
-     ]
-
--- TEST -----------------------------------------------------------------------
+-- TEST ---------------------------------------------------
 main :: IO ()
-main = do
-  putStrLn "Longest cycles:\n"
+main =
   putStrLn $
-    unlines $
-    table "  -> " $
-    cycleReport <$>
+  fTable
+    "Longest cycles:\n"
+    id
+    ((flip bool "n/a" . last) <*> null)
+    repCycles
     [ "1001110011"
     , "1110111011"
     , "0010010010"
@@ -36,13 +30,10 @@ main = do
     , "1"
     ]
 
--- GENERIC --------------------------------------------------------------------
-table :: String -> [[String]] -> [String]
-table delim rows =
-  intercalate delim <$>
-  transpose
-    ((\col ->
-         let width = (length $ maximum col)
-             justifyLeft n c s = take n (s ++ replicate n c)
-         in justifyLeft width ' ' <$> col) <$>
-     transpose rows)
+-- GENERIC ------------------------------------------------
+fTable :: String -> (a -> String) -> (b -> String) -> (a -> b) -> [a] -> String
+fTable s xShow fxShow f xs =
+  let w = maximum (length . xShow <$> xs)
+      rjust n c = liftA2 drop length (replicate n c ++)
+  in unlines $
+     s : fmap (((++) . rjust w ' ' . xShow) <*> ((" -> " ++) . fxShow . f)) xs

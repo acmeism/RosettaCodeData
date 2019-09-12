@@ -1,3 +1,3 @@
 do
-  std::cout << "SPAM" << std::endl;
+  std::cout << "SPAM\n";
 while (true);

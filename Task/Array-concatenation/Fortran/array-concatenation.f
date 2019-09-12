@@ -1,5 +1,5 @@
 program Concat_Arrays
-implicit none
+  implicit none
 
   ! Note: in Fortran 90 you must use the old array delimiters (/ , /)
   integer, dimension(3) :: a = [1, 2, 3] ! (/1, 2, 3/)
@@ -9,13 +9,9 @@ implicit none
   allocate(c(size(a)+size(b)))
   c(1 : size(a)) = a
   c(size(a)+1 : size(a)+size(b)) = b
-  write(*,*) c
+  print*, c
 
   ! alternative
   d = [a, b] ! (/a, b/)
-  write(*,*) d
-
-  deallocate(c)
-  deallocate(d)
-
+  print*, d
 end program Concat_Arrays

@@ -7,7 +7,7 @@ my @scores =
     Barry   => 41,
     Stephen => 39;
 
-sub tiers (@s) { @s.classify(*.value).pairs.sort.reverse.map: { [.value».key] } }
+sub tiers (@s) { @s.classify(*.value).pairs.sort.reverse.map: { .value».key } }
 
 sub standard (@s) {
     my $rank = 1;
@@ -38,8 +38,8 @@ sub fractional (@s) {
     }
 }
 
-say   "Standard:";   .say for   standard @scores;
-say "\nModified:";   .say for   modified @scores;
-say "\nDense:";      .say for      dense @scores;
-say "\nOrdinal:";    .say for    ordinal @scores;
-say "\nFractional:"; .say for fractional @scores;
+say   "Standard:";   .perl.say for   standard @scores;
+say "\nModified:";   .perl.say for   modified @scores;
+say "\nDense:";      .perl.say for      dense @scores;
+say "\nOrdinal:";    .perl.say for    ordinal @scores;
+say "\nFractional:"; .perl.say for fractional @scores;

@@ -1,3 +1,4 @@
-var s: string = nil
+let s: pointer = nil
 
-var ns: string not nil = nil # Compile time error
+{.experimental: "notnil".}
+let ns: pointer not nil = nil # Compile time error

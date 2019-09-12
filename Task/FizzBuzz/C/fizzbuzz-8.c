@@ -1,16 +1,3 @@
 #include <stdio.h>
-
-main() {
-  int i = 1;
-  while(i <= 100) {
-    if(i % 15 == 0)
-      puts("FizzBuzz");
-    else if(i % 3 == 0)
-      puts("Fizz");
-    else if(i % 5 == 0)
-      puts("Buzz");
-    else
-      printf("%d\n", i);
-    i++;
-  }
-}
+#define F(x,y) printf("%s",i%x?"":#y"zz")
+int main(int i){for(--i;i++^100;puts(""))F(3,Fi)|F(5,Bu)||printf("%i",i);return 0;}

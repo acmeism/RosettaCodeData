@@ -1,0 +1,103 @@
+*        RPN calculator         RC 25/01/2019
+REVPOL   CSECT
+         USING  REVPOL,R13         base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         XPRNT  TEXT,L'TEXT        print expression !?
+         L      R4,0               js=0  offset in stack
+         LA     R5,0               ns=0  number of stack items
+         LA     R6,0               jt=0  offset in text
+         LA     R7,TEXT            r7=@text
+         MVC    CC,0(R7)           cc first char of token
+       DO WHILE=(CLI,CC,NE,X'00')  do while cc<>'0'x
+         MVC    CTOK,=CL5' '         ctok=''
+         MVC    CTOK(1),CC           ctok=cc
+         CLI    CC,C' '              if cc=' '
+         BE     ITERATE              then goto iterate
+       IF CLI,CC,GE,C'0',AND,CLI,CC,LE,C'9' THEN
+         MVC    DEED,=C'Load'        deed='Load'
+         XDECI  R2,0(R7)             r2=cint(text); r1=@text
+         ST     R2,STACK(R4)         stack(js)=cc
+         SR     R1,R7                lt  length of token
+         BCTR   R1,0                 lt-1
+         EX     R1,MVCV              MVC CTOK("R1"),0(R7)
+         AR     R6,R1                jt+=lt-1
+         AR     R7,R1                @text+=lt-1
+         LA     R4,4(R4)             js+=4
+         LA     R5,1(R5)             ns++
+       ELSE     ,                    else
+         MVC    DEED,=C'Exec'        deed='Exec'
+         LA     R9,STACK-8(R4)       @stack(j-1)
+       IF CLI,CC,EQ,C'+' THEN        if cc='+' then
+         L      R1,STACK-8(R4)         stack(j-1)
+         A      R1,STACK-4(R4)         stack(j-1)+stack(j)
+         ST     R1,0(R9)               stack(j-1)=stack(j-1)+stack(j)
+       ENDIF    ,                    endif
+       IF CLI,CC,EQ,C'-' THEN        if cc='-' then
+         L      R1,STACK-8(R4)         stack(j-1)
+         S      R1,STACK-4(R4)         stack(j-1)-stack(j)
+         ST     R1,0(R9)               stack(j-1)=stack(j-1)-stack(j)
+       ENDIF    ,                    endif
+       IF CLI,CC,EQ,C'*' THEN        if cc='*' then
+         L      R3,STACK-8(R4)         stack(j-1)
+         M      R2,STACK-4(R4)         stack(j-1)*stack(j)
+         ST     R3,0(R9)               stack(j-1)=stack(j-1)*stack(j)
+       ENDIF    ,                    endif
+       IF CLI,CC,EQ,C'/' THEN        if cc='/' then
+         L      R2,STACK-8(R4)         stack(j-1)
+         SRDA   R2,32                  for sign propagation
+         D      R2,STACK-4(R4)         stack(j-1)/stack(j)
+         ST     R3,0(R9)               stack(j-1)=stack(j-1)/stack(j)
+       ENDIF    ,                    endif
+       IF CLI,CC,EQ,C'^' THEN        if cc='^' then
+         LA     R3,1                   r3=1
+         L      R0,STACK-4(R4)         r0=stack(j) [loop count]
+EXPONENT M      R2,STACK-8(R4)         r3=r3*stack(j-1)
+         BCT    R0,EXPONENT            if r0--<>0 then goto exponent
+         ST     R3,0(R9)               stack(j-1)=stack(j-1)^stack(j)
+       ENDIF    ,                    endif
+         S      R4,=F'4'             js-=4
+         BCTR   R5,0                 ns--
+       ENDIF    ,                  endif
+         MVC    PG,=CL80' '          clean buffer
+         MVC    PG(4),DEED           output deed
+         MVC    PG+5(5),CTOK         output cc
+         MVC    PG+11(6),=C'Stack:'  output
+         LA     R2,1                 i=1
+         LA     R3,STACK             @stack
+         LA     R9,PG+18             @buffer
+       DO WHILE=(CR,R2,LE,R5)        do i=1 to ns
+         L      R1,0(R3)               stack(i)
+         XDECO  R1,XDEC                edit stack(i)
+         MVC    0(5,R9),XDEC+7         output stack(i)
+         LA     R2,1(R2)               i=i+1
+         LA     R3,4(R3)               @stack+=4
+         LA     R9,6(R9)               @buffer+=6
+       ENDDO    ,                    enddo
+         XPRNT  PG,L'PG              print
+ITERATE  LA     R6,1(R6)             jt++
+         LA     R7,1(R7)             @text++
+         MVC    CC,0(R7)             cc next char
+       ENDDO    ,                  enddo
+         L      R1,STACK           stack(1)
+         XDECO  R1,XDEC            edit stack(1)
+         MVC    XDEC(4),=C'Val='   output
+         XPRNT  XDEC,L'XDEC        print stack(1)
+         L      R13,4(0,R13)       restore previous savearea pointer
+         LM     R14,R12,12(R13)    restore previous context
+         XR     R15,R15            rc=0
+         BR     R14                exit
+MVCV     MVC    CTOK(0),0(R7)      patern mvc
+TEXT     DC     C'3 4 2 * 1 5 - 2 3 ^ ^ / +',X'00'
+STACK    DS     16F                stack(16)
+DEED     DS     CL4
+CC       DS     C
+CTOK     DS     CL5
+PG       DS     CL80
+XDEC     DS     CL12
+         YREGS
+         END    REVPOL

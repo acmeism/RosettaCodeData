@@ -20,7 +20,7 @@ public class TreeTraversal {
 		PREORDER, INORDER, POSTORDER, LEVEL
 	}
 
-	static void traverse(Node<?> node, ORDER order) {
+        static <T> void traverse(Node<T> node, ORDER order) {
 		if (node == null) {
 			return;
 		}
@@ -41,10 +41,10 @@ public class TreeTraversal {
 			node.visit();
 			break;
 		case LEVEL:
-			Queue<Node<?>> queue = new LinkedList<>();
+			Queue<Node<T>> queue = new LinkedList<>();
 			queue.add(node);
 			while(!queue.isEmpty()){
-				Node<?> next = queue.remove();
+				Node<T> next = queue.remove();
 				next.visit();
 				if(next.left!=null)
 					queue.add(next.left);

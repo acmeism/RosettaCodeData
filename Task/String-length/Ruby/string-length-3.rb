@@ -1,4 +1,1 @@
-# -*- coding: iso-8859-1 -*-
-s = "møøse"
-puts "Byte length: %d" % s.bytesize
-puts "Character length: %d" % s.length
+"J̲o̲s̲é̲".grapheme_clusters.length

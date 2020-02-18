@@ -1,5 +1,5 @@
       *> TECTONICS
-      *>   wget http://www.puzzlers.org/pub/wordlists/unixdict.txt
+      *>   wget http://wiki.puzzlers.org/pub/wordlists/unixdict.txt
       *>   or visit https://sourceforge.net/projects/souptonuts/files
       *>   or snag ftp://ftp.openwall.com/pub/wordlists/all.gz
       *>      for a 5 million all language word file (a few phrases)

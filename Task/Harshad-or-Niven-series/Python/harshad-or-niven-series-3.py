@@ -1,31 +1,24 @@
 '''Harshad or Niven series'''
 
-from itertools import dropwhile, islice
+from itertools import chain, count, dropwhile, islice
 
 
-# harshads :: () -> Gen [Int]
+# harshads :: () -> [Int]
 def harshads():
-    '''Harshad series.'''
-    x = 1
-    while True:
-        if 0 == (x % digitSum(x)):
-            yield x
-        x = 1 + x
+    '''Harshad series'''
+    def go(x):
+        return [x] if 0 == (x % digitSum(x)) else []
+    return chain.from_iterable(
+        map(go, count(1))
+    )
 
 
 # digitSum :: Int -> Int
 def digitSum(n):
-    '''The Sum of the decimal digits of n.'''
-    def plusDigit(ra):
-        r = ra[0]
-        return (r // 10, ra[1] + (r % 10))
-
-    def remZero(ra):
-        return 0 == ra[0]
-
-    return until(remZero)(plusDigit)(
-        (n, 0)
-    )[1]
+    '''Sum of the decimal digits of n.'''
+    def go(x):
+        return Nothing() if 0 == x else Just(divmod(x, 10))
+    return sum(unfoldl(go)(n))
 
 
 # TEST ----------------------------------------------------
@@ -53,6 +46,22 @@ def main():
 
 # GENERIC -------------------------------------------------
 
+# Just :: a -> Maybe a
+def Just(x):
+    '''Constructor for an inhabited Maybe (option type) value.
+       Wrapper containing the result of a computation.
+    '''
+    return {'type': 'Maybe', 'Nothing': False, 'Just': x}
+
+
+# Nothing :: Maybe a
+def Nothing():
+    '''Constructor for an empty Maybe (option type) value.
+       Empty wrapper returned where a computation is not possible.
+    '''
+    return {'type': 'Maybe', 'Nothing': True}
+
+
 # take :: Int -> [a] -> [a]
 # take :: Int -> String -> String
 def take(n):
@@ -66,17 +75,30 @@ def take(n):
     )
 
 
-# until :: (a -> Bool) -> (a -> a) -> a -> a
-def until(p):
-    '''The result of repeatedly applying f until p holds.
-       The initial seed value is x.
+# unfoldl(lambda x: Just(((x - 1), x)) if 0 != x else Nothing())(10)
+# -> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+# unfoldl :: (b -> Maybe (b, a)) -> b -> [a]
+def unfoldl(f):
+    '''Dual to reduce or foldl.
+       Where these reduce a list to a summary value, unfoldl
+       builds a list from a seed value.
+       Where f returns Just(a, b), a is appended to the list,
+       and the residual b is used as the argument for the next
+       application of f.
+       When f returns Nothing, the completed list is returned.
     '''
-    def go(f, x):
-        v = x
-        while not p(v):
-            v = f(v)
-        return v
-    return lambda f: lambda x: go(f, x)
+    def go(v):
+        x, r = v, v
+        xs = []
+        while True:
+            mb = f(x)
+            if mb.get('Nothing'):
+                return xs
+            else:
+                x, r = mb.get('Just')
+                xs.insert(0, r)
+        return xs
+    return lambda x: go(x)
 
 
 # DISPLAY -------------------------------------------------

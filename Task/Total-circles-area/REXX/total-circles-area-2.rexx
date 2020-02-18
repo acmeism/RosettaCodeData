@@ -4,7 +4,6 @@ if box=='' | box==','  then box= -500            /*Not specified?  Then use the 
 if dig=='' | dig==','  then dig=   12            /* "      "         "   "   "     "    */
 verbose= box<0;    box= abs(box);  boxen= box+1  /*set a flag if we're in verbose mode. */
 numeric digits dig                               /*have enough decimal digits for points*/
-
 /* ══════x══════ ══════y══════ ═══radius═══     ══════x══════ ══════y══════ ═══radius═══*/
 $=' 1.6417233788  1.6121789534 0.0848270516     -1.4944608174  1.2077959613 1.1039549836',
   ' 0.6110294452 -0.6907087527 0.9089162485      0.3844862411  0.2923344616 0.2375743054',
@@ -24,7 +23,7 @@ circles= words($) % 3                                 /*figure out how many circ
 if verbose  then say 'There are'  circles  "circles." /*display the number of circles.  */
 parse var  $   minX minY . 1 maxX maxY .              /*assign minimum & maximum values.*/
 
-           do j=1  for circles;   _= j * 3  -  2      /*assign some circles with datum. */
+           do j=1  for circles;   _= j * 3   -   2    /*assign some circles with datum. */
            @x.j= word($, _);      @y.j=word($, _ + 1)
                                   @r.j=word($, _ + 2) / 1;         @rr.j= @r.j **2
            minX= min(minX, @x.j - @r.j);           maxX= max(maxX, @x.j + @r.j)
@@ -39,32 +38,33 @@ parse var  $   minX minY . 1 maxX maxY .              /*assign minimum & maximum
   end     /*m*/
 
 dx= (maxX-minX) / box;        dy= (maxY-minY) / box   /*compute the  DX  and  DY  values*/
-w= length(circles)                                    /*# in ►─ fully contained circles.*/
-#in= 0
-       do     j=1  for circles                        /*traipse through the  J  circles.*/
-           do k=1  for circles;  if k==j | @r.j==0  then iterate  /*ignore self and/or 0*/
-           if k==j | @r.j==0          then iterate    /*ignore self  and/or zero radius.*/
-           if  @y.j+@r.j > @y.k+@r.k  |  @x.j-@r.j < @x.k-@r.k |,       /*is J inside K?*/
+                       do z=0  for boxen;       rowDY.z= z * dy;         colDX.z= z * dx
+                       end   /*z*/
+w= length(circles)                                    /*W:   used for aligning output.  */
+#in= 0                                                /*#in ◄───fully contained circles.*/
+       do     j=1  for circles                        /*traipse through all the circles.*/
+           do k=1  for circles;   if k==j | @r.j==0   then iterate     /*skip oneself.  */
+           if  @y.j+@r.j > @y.k+@r.k  |  @x.j-@r.j < @x.k-@r.k |,      /*is J inside K? */
                @y.j-@r.j < @y.k-@r.k  |  @x.j+@r.j > @x.k+@r.k   then iterate
            if verbose  then say 'Circle ' right(j,w) ' is contained in circle ' right(k,w)
-           @r.j= 0;             #in= #in + 1          /*elide this circle; and bump # in*/
+           @r.j= 0;             #in= #in + 1          /*elide this circle; and bump #in.*/
            end   /*k*/
        end       /*j*/                                /* [↑]  elided overlapping circle.*/
 
 if #in==0   then #in= 'no'                            /*use gooder English.  (humor).   */
 if verbose  then do; say; say #in " circles are fully contained within other circles.";end
-nC=0                                                  /*number of  "new"  circles.      */
-           do n=1  for circles;   if @r.n==0  then iterate               /*skip if zero.*/
-           nC=nC+1;  @x.nC=@x.n;  @y.nC=@y.n;  @r.nC=@r.n;  @rr.nC=@r.n**2
-           end   /*n*/                                /* [↑]  elide overlapping circles.*/
-#=0                                                   /*count of sample points (so far).*/
-           do   row=0  for boxen;   y=minY + row*dy   /*process each of the grid row.   */
-             do col=0  for boxen;   x=minX + col*dx   /*   "      "   "  "    "  column.*/
-               do k=1  for nC                         /*now process each new circle.    */
-               if (x - @x.k)**2 + (y - @y.k)**2 <= @rr.k  then  do;  #= #+1;  leave;   end
-               end   /*k*/
-             end     /*col*/
-           end       /*row*/
+nC= 0                                                 /*number of  "new"  circles.      */
+       do n=1  for circles;  if @r.n==0  then iterate /*skip circles with zero radii.   */
+       nC= nC + 1;     @x.nC= @x.n;      @y.nC= @y.n;      @r.nC= @r.n;    @rr.nC= @r.n**2
+       end   /*n*/                                    /* [↑]  elide overlapping circles.*/
+#= 0                                                  /*count of sample points (so far).*/
+       do   row=0  for boxen;    y= minY + rowDY.row  /*process each of the grid row.   */
+         do col=0  for boxen;    x= minX + colDX.col  /*   "      "   "  "    "  column.*/
+           do k=1  for nC                             /*now process each new circle.    */
+           if (x - @x.k)**2 + (y - @y.k)**2 <= @rr.k  then  do;   #= # + 1;   leave;   end
+           end   /*k*/
+         end     /*col*/
+       end       /*row*/
 say                                                   /*stick a fork in it, we're done. */
 say 'Using ' box  " boxes (which have "  box**2  ' points)  and '  dig  " decimal digits,"
-say 'the approximate area is: '  #*dx*dy
+say 'the approximate area is: '    # * dx * dy

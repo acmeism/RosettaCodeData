@@ -2,7 +2,7 @@
 
 anagrams:-
         % we read the URL of the words
-	http_open('http://www.puzzlers.org/pub/wordlists/unixdict.txt',	In, []),
+	http_open('http://wiki.puzzlers.org/pub/wordlists/unixdict.txt',	In, []),
 	read_file(In, [], Out),
 	close(In),
 

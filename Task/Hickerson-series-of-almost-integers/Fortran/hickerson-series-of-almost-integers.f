@@ -1,23 +1,23 @@
-Program Hickerson
-! 3 February 2014
-! not all Fortran compilers provide REAL*16 and INTEGER*8
-implicit none
-real(kind=kind(1q0)) :: s
-integer(kind=kind(1_8)) :: i,n,f,is
+program hickerson
+    implicit none
+    integer, parameter :: q = selected_real_kind(30)
+    integer, parameter :: l = selected_int_kind(15)
+    real(q) :: s, l2
+    integer :: i, n, k
 
-do n = 1, 17
-      s = 0.5q0 / log(2q0)
-      do i = 1,n
-         s = (s * i) / log(2q0)
-      end do
+    l2 = log(2.0_q)
+    do n = 1, 17
+        s = 0.5_q / l2
+        do i = 1, n
+            s = (s * i) / l2
+        end do
 
-      is = s
-      f = (s-is)*10                 !first digit after decimal point
-      if (f == 0 .or. f == 9) then
-         write(*,10)n,s,''
-      else
-         write(*,10)n,s,' NOT'
-      endif
-end do
-10 format('h(',i2,') = ',F23.3,' is',A,' an almost-integer')
-end program Hickerson
+        k = floor((s - floor(s, l)) * 10)
+        if (k == 0 .or. k == 9) then
+            print 1, n, s, ""
+        else
+            print 1, n, s, " NOT"
+        endif
+    end do
+  1 format('h(',I2,') = ',F23.3,' is',A,' an almost-integer')
+end program

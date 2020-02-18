@@ -3,7 +3,7 @@ def compress(uncompressed):
 
     # Build the dictionary.
     dict_size = 256
-    dictionary = dict((chr(i), i) for i in xrange(dict_size))
+    dictionary = dict((chr(i), i) for i in range(dict_size))
     # in Python 3: dictionary = {chr(i): i for i in range(dict_size)}
 
     w = ""
@@ -27,11 +27,11 @@ def compress(uncompressed):
 
 def decompress(compressed):
     """Decompress a list of output ks to a string."""
-    from cStringIO import StringIO
+    from io import StringIO
 
     # Build the dictionary.
     dict_size = 256
-    dictionary = dict((i, chr(i)) for i in xrange(dict_size))
+    dictionary = dict((i, chr(i)) for i in range(dict_size))
     # in Python 3: dictionary = {i: chr(i) for i in range(dict_size)}
 
     # use StringIO, otherwise this becomes O(N^2)

@@ -1,19 +1,16 @@
 import Data.List (transpose, intercalate)
 import Data.List.Split (splitOn)
+import Data.Bool (bool)
 
 cdp :: [String] -> String
-cdp xs
-  | null xs = []
-  | otherwise =
-    (intercalate "/" .
-     fmap head . takeWhile same . transpose . fmap (splitOn "/"))
-      xs
-
-same
-  :: Eq a
-  => [a] -> Bool
-same [] = True
-same (x:xs) = all (x ==) xs
+cdp =
+  flip
+    (bool .
+     intercalate "/" .
+     fmap head .
+     takeWhile ((all . (==) . head) <*> tail) . transpose . fmap (splitOn "/"))
+    ([]) <*>
+  null
 
 main :: IO ()
 main =

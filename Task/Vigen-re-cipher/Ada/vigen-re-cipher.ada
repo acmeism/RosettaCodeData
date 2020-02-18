@@ -3,7 +3,7 @@ USE Ada.Text_IO, Ada.Characters.Handling;
 
 PROCEDURE Main IS
    SUBTYPE Alpha IS Character RANGE 'A' .. 'Z';
-   TYPE Ring IS MOD (Alpha'Pos (Alpha'Last)-Alpha'Pos (Alpha'First) + 1);
+   TYPE Ring IS MOD (Alpha'Range_length);
    TYPE Seq IS ARRAY (Integer RANGE <>) OF Ring;
 
    FUNCTION "+" (S, Key : Seq) RETURN Seq IS

@@ -8,10 +8,10 @@ role FPS {
 
     method pretty($n) {
         sub super($i) { $i.trans('0123456789' => '⁰¹²³⁴⁵⁶⁷⁸⁹') }
-        my $str = $.coeffs[0].perl;
-        for 1..$n Z $.coeffs[1..$n] -> $i, $_ {
-            when * > 0 { $str ~= " + {(+$_).perl}∙x{super($i)}" }
-            when * < 0 { $str ~= " - {(-$_).perl}∙x{super($i)}" }
+        my $str = $.coeffs[0];
+        for flat 1..$n Z $.coeffs[1..$n] -> $p, $c {
+            when $c > 0 { $str ~= " + { $c .nude.join: '/'}∙x{super($p)}" }
+            when $c < 0 { $str ~= " - {-$c .nude.join: '/'}∙x{super($p)}" }
         }
         $str;
     }
@@ -38,8 +38,8 @@ class InvFPS does FPS {
     has FPS $.x;
     method coeffs {
         # see http://en.wikipedia.org/wiki/Formal_power_series#Inverting_series
-        gather {
-            my @a := $.x.coeffs;
+        flat gather {
+            my @a = $.x.coeffs;
             @a[0] != 0 or fail "Cannot invert power series with zero constant term.";
             take my @b = (1 / @a[0]);
             take @b[$_] = -@b[0] * [+] (@a[1..$_] Z* @b[$_-1...0]) for 1..*;
@@ -54,7 +54,7 @@ class DerFPS does FPS {
 
 class IntFPS does FPS {
     has FPS $.x;
-    method coeffs { 0, (0..*).map: { $.x.coeffs[$_] / ($_+1) } }
+    method coeffs { 0, |(0..*).map: { $.x.coeffs[$_] / ($_+1) } }
 }
 
 class DeferredFPS does FPS {
@@ -69,7 +69,7 @@ multi infix:<*>(FPS $x, FPS $y) { ProFPS.new(:$x, :$y) }
 multi infix:</>(FPS $x, FPS $y) { $x * InvFPS.new(:x($y)) }
 
 # an example of a mixed-type operator:
-multi infix:<->(Numeric $x, FPS $y) { ExplicitFPS.new(:coeffs($x, 0 xx *)) - $y }
+multi infix:<->(Numeric $x, FPS $y) { ExplicitFPS.new(:coeffs(lazy flat $x, 0 xx *)) - $y }
 
 # define sine and cosine in terms of each other
 my $sin       = DeferredFPS.new;
@@ -79,6 +79,6 @@ $sin.realized = $cos.integrate;
 # define tangent in terms of sine and cosine
 my $tan       = $sin / $cos;
 
-say 'sin(x) ≈ ', $sin.pretty(10);
-say 'cos(x) ≈ ', $cos.pretty(10);
-say 'tan(x) ≈ ', $tan.pretty(10);
+say 'sin(x) ≈ ' ~ $sin.pretty(10);
+say 'cos(x) ≈ ' ~ $cos.pretty(10);
+say 'tan(x) ≈ ' ~ $tan.pretty(10);

@@ -1,7 +1,6 @@
 stableMatching :: Eq a => State a -> [Couple a]
-stableMatching = getPairs . iterateUntil (null._freeGuys) step
+stableMatching = getPairs . until (null._freeGuys) step
   where
-    iterateUntil p f = head . dropWhile (not . p) . iterate f
     getPairs s = map (_2 %~ head) $ s^.guys
 
 step :: Eq a => State a -> State a

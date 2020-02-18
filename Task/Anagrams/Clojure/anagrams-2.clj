@@ -1,4 +1,4 @@
-(->> (slurp "http://www.puzzlers.org/pub/wordlists/unixdict.txt")
+(->> (slurp "http://wiki.puzzlers.org/pub/wordlists/unixdict.txt")
      clojure.string/split-lines
      (group-by sort)
      vals

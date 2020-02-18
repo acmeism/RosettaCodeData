@@ -1,5 +1,4 @@
 import Data.List (inits, intercalate, transpose)
-import Control.Applicative (liftA2)
 import Data.Bool (bool)
 
 -- REP-CYCLES ---------------------------------------------
@@ -33,7 +32,7 @@ main =
 -- GENERIC ------------------------------------------------
 fTable :: String -> (a -> String) -> (b -> String) -> (a -> b) -> [a] -> String
 fTable s xShow fxShow f xs =
-  let w = maximum (length . xShow <$> xs)
-      rjust n c = liftA2 drop length (replicate n c ++)
+  let rjust n c = drop . length <*> (replicate n c ++)
+      w = maximum (length . xShow <$> xs)
   in unlines $
      s : fmap (((++) . rjust w ' ' . xShow) <*> ((" -> " ++) . fxShow . f)) xs

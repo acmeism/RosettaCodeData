@@ -1,2 +1,8 @@
-USING: math.parser math.primes.factors math.ranges ;
-IN: scratchpad "1: 1" print 2 20 [a,b] [ dup pprint ": " write factors [ number>string ] map " x " join print ] each
+USING: io kernel math.primes.factors math.ranges prettyprint
+sequences ;
+
+: .factors ( n -- )
+    dup pprint ": " write factors
+    [ " × " write ] [ pprint ] interleave nl ;
+
+"1: 1" print 2 20 [a,b] [ .factors ] each

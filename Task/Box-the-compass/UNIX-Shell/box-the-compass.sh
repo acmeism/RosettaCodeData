@@ -11,18 +11,16 @@ test_angles=(  0.00  16.87  16.88  33.75  50.62  50.63  67.50
              236.25 253.12 253.13 270.00 286.87 286.88 303.75
              320.62 320.63 337.50 354.37 354.38 )
 
-
-# capitalize a string
-function capitalize {
-  echo "$1" | sed 's/^./\U&/'
+capitalize() {
+  printf '%s%s\n' "$(tr a-z A-Z <<<"${1:0:1}")" "${1:1}"
 }
 
 # convert compass point abbreviation to full text of label
 function expand_point {
-  local label="$1"
+  local label=$1
   set -- N north E east S south W west b " by "
   while (( $# )); do
-    label="${label//$1/$2}"
+    label=${label//$1/$2}
     shift 2
   done
   capitalize "$label"
@@ -35,6 +33,7 @@ function amod {
 
 # convert a compass angle from degrees into a box index (1..32)
 function compass_point {
+  # use bc or dc depending on what's on the system
   #amod $(dc <<<"$1 5.625 + 11.25 / 1 + p") 32
   amod $(bc <<<"($1 + 5.625) / 11.25 + 1") 32
 }

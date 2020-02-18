@@ -6,8 +6,8 @@ call bSort  N                                    /*invoke the bubble sort  with 
 call show        ' after sort:'                  /*show the   after    array elements.  */
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-bSort: procedure expose @.;  parse arg n;  m=n-1 /*N: is the number of @ array elements.*/
-       do m=m  by -1  until ok;     ok=1         /*keep sorting the  @ array until done.*/
+bSort: procedure expose @.;  parse arg n         /*N: is the number of @ array elements.*/
+       do m=n-1  by -1  until ok;     ok=1       /*keep sorting the  @ array until done.*/
            do j=1  for m;   k=j+1;  if @.j>@.k  then parse value @.j @.k 0 with @.k @.j ok
            end   /*j*/                           /* [↑]  swap 2 elements, flag as ¬done.*/
        end       /*m*/;      return

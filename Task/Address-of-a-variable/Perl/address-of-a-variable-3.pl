@@ -1,6 +1,4 @@
 my $a = 12;
-our $b; # you can overlay only global variables (this line is only for strictness)
-*b = \$a;
-print $b; # prints 12
-$b++;
-print $a; # prints 13
+my $b = \$a; # get reference
+$$b = $$b + 30; # access referenced value
+print $a; # prints 42

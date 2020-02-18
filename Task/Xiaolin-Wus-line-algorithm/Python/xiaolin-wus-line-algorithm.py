@@ -28,7 +28,8 @@ def putpixel(img, xy, color, alpha=1):
 
 def draw_line(img, p1, p2, color):
     """Draws an anti-aliased line in img from p1 to p2 with the given color."""
-    x1, y1, x2, y2 = p1 + p2
+    x1, y1 = p1
+    x2, y2 = p2
     dx, dy = x2-x1, y2-y1
     steep = abs(dx) < abs(dy)
     p = lambda px, py: ((px,py), (py,px))[steep]
@@ -46,8 +47,8 @@ def draw_line(img, p1, p2, color):
         yend = y + grad * (xend - x)
         xgap = _rfpart(x + 0.5)
         px, py = int(xend), int(yend)
-        putpixel(img, (px, py), color, _rfpart(yend) * xgap)
-        putpixel(img, (px, py+1), color, _fpart(yend) * xgap)
+        putpixel(img, p(px, py), color, _rfpart(yend) * xgap)
+        putpixel(img, p(px, py+1), color, _fpart(yend) * xgap)
         return px
 
     xstart = draw_endpoint(p(*p1)) + 1

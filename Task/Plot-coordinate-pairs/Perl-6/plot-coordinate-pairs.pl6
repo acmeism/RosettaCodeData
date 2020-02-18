@@ -12,4 +12,4 @@ say SVG.serialize: SVG::Plot.new(
     min-y-axis  => 0,
     values      => [@y,],
     title  => 'Coordinate Pairs',
-).plot(:xy-lines);
+).plot(:lines);

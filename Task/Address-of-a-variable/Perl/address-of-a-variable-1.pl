@@ -1,2 +1,2 @@
 use Scalar::Util qw(refaddr);
-print refaddr(\my $v), "\n";  # 135691508
+print refaddr(\my $v), "\n";  # 140502490125712

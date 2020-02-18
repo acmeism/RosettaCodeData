@@ -1,9 +1,6 @@
-sub writefloat($filename, @x, @y, :$x-precision = 3, :$y-precision = 5) {
-    constant TAB = "\t" xx *;
-    constant NL = "\n" xx *;
-
-    open($filename, :w).print(
-        flat @x>>.base(10, $x-precision) Z TAB Z @y>>.base(10, $y-precision) Z NL);
+sub writefloat($filename, @x, @y, :$x-precision = 3, :$y-precision = 3) {
+    open($filename, :w).print:
+        join '', flat (@x».fmt("%.{$x-precision}g") X "\t") Z (@y».fmt("%.{$y-precision}g") X "\n");
 }
 my @x = 1, 2, 3, 1e11;
-writefloat('sqrt.dat', @x, @x>>.sqrt, :y-precision(20));
+writefloat('sqrt.dat', @x, @x».sqrt, :y-precision(5));

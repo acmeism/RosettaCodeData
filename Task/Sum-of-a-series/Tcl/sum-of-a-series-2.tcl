@@ -1,8 +1,12 @@
 package require Tcl 8.5
-package require struct::list
 
-proc sum_of {lambda nums} {
-    struct::list fold [struct::list map $nums [list apply $lambda]] 0 ::tcl::mathop::+
+proc partial_sum {func - start - stop} {
+    for {set x $start; set sum 0} {$x <= $stop} {incr x} {
+        set sum [expr {$sum + [apply $func $x]}]
+    }
+    return $sum
 }
 
-sum_of $S [range 1 1001] ;# ==> 1.6439345666815615
+set S {x {expr {1.0 / $x**2}}}
+
+partial_sum $S from 1 to 1000 ;# => 1.6439345666815615

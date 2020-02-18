@@ -21,7 +21,7 @@ local function compress(uncompressed) -- string
 end
 
 local function decompress(compressed) -- table
-  local dictionary, dictSize, entry, result, w, k = {}, 255, "", "", ""
+  local dictionary, dictSize, entry, result, w, k = {}, 0, "", {}, ""
   for i = 0, 255 do
     dictionary[i] = string.char(i)
   end
@@ -34,12 +34,12 @@ local function decompress(compressed) -- table
     else
       return nil, i
     end
-    result = result .. entry
+    table.insert(result, entry)
     dictionary[dictSize] = w .. string.sub(entry, 1, 1)
     dictSize = dictSize + 1
     w = entry
   end
-  return result
+  return table.concat(result)
 end
 
 local example = "TOBEORNOTTOBEORTOBEORNOT"

@@ -1,18 +1,15 @@
 import Data.Map as M (fromList, keys, lookup)
+import Control.Applicative ((<|>))
 import Data.Maybe (mapMaybe)
 import Data.List (sort)
 
 disjointSort :: [Int] -> [Int] -> [Int]
 disjointSort ixs xs =
-  let dctAll = fromList $ zip xs [0 ..]
-      ks = sort ixs
+  let ks = sort ixs
+      dctAll = fromList $ zip xs [0 ..]
       dctIx = fromList $ zip ks $ sort (mapMaybe (`M.lookup` dctAll) ks)
   in mapMaybe
-       (\k ->
-           let mb = M.lookup k dctIx
-           in case mb of
-                Nothing -> M.lookup k dctAll
-                _ -> mb)
+       ((<|>) <$> (`M.lookup` dctIx) <*> (`M.lookup` dctAll))
        (keys dctAll)
 
 main :: IO ()

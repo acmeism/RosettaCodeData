@@ -1,0 +1,50 @@
+-- demo\rosetta\SOAP.exw
+include builtins\libcurl.e
+include builtins\xml.e      -- xml_encode()
+
+function write_callback(atom pData, integer size, integer nmemb, atom /*pUserdata*/)
+integer bytes_written = size*nmemb
+    puts(1,peek({pData,bytes_written}))
+    return bytes_written
+end function
+constant write_cb = call_back({'+',routine_id("write_callback")})
+
+function compose_soap_frobnicate(string foo, bar, baz)
+  return sprintf("""
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+ xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+ <soap:Body>
+  <frobnicate xmlns="http://example.com/frobnicate">
+   <foo>%s</foo>
+   <bar>%s</bar>
+   <baz>%s</baz>
+  </frobnicate>
+ </soap:Body>
+</soap:Envelope>""",{xml_encode(foo),xml_encode(bar),xml_encode(baz)})
+end function
+
+curl_global_init()
+atom curl = curl_easy_init()
+curl_easy_setopt(curl, CURLOPT_URL, "https://ameriwether.com/cgi-bin/info.pl")
+string soap = compose_soap_frobnicate("'Ein'", ">Zwei<", "\"Drei\"")
+curl_easy_setopt(curl, CURLOPT_POSTFIELDS, soap)
+curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC)
+curl_easy_setopt(curl, CURLOPT_USERNAME, "user")
+curl_easy_setopt(curl, CURLOPT_PASSWORD, "password")
+curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb)
+atom headers = NULL
+headers = curl_slist_append(headers, "Content-Type: text/xml; charset=utf-8")
+headers = curl_slist_append(headers, "SOAPAction: \"https://ameriwether.com/cgi-bin/info.pl/frobnicate\"")
+headers = curl_slist_append(headers, "Accept: text/plain") -- Example output easier to read as plain text.
+curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers)
+-- Make the example URL work even if your CA bundle is missing.
+curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false)
+CURLcode res = curl_easy_perform(curl)
+if res!=CURLE_OK then
+    printf(2, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res))
+end if
+curl_slist_free_all(headers)
+curl_easy_cleanup(curl)
+curl_global_cleanup()

@@ -18,7 +18,7 @@ public class TemperatureConversion {
     }
 
     public static double kelvinToCelsius(double k) {
-        return k + 273.15;
+        return k - 273.15;
     }
 
     public static double kelvinToFahrenheit(double k) {

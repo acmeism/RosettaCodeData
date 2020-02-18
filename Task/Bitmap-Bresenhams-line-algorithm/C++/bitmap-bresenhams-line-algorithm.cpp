@@ -1,4 +1,4 @@
-void Line( const float x1, const float y1, const float x2, const float y2, const Color& color )
+void Line( float x1, float y1, float x2, float y2, const Color& color )
 {
         // Bresenham's line algorithm
   const bool steep = (fabs(y2 - y1) > fabs(x2 - x1));
@@ -23,7 +23,7 @@ void Line( const float x1, const float y1, const float x2, const float y2, const
 
   const int maxX = (int)x2;
 
-  for(int x=(int)x1; x<maxX; x++)
+  for(int x=(int)x1; x<=maxX; x++)
   {
     if(steep)
     {

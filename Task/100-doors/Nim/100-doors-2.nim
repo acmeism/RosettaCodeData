@@ -1,9 +1,15 @@
-var isOpen: array[1..100, bool]
+from strutils import `%`
 
-for pass in countup(1, 100):
-  for door in countup(pass,100,pass):
-    isOpen[door] = not isOpen[door]
+const numDoors = 100
+var doors {.compileTime.}: array[1..numDoors, bool]
 
-for i in countup(1, 100):
-  if isOpen[i]:
-    echo("Door ",i," is open.")
+proc calcDoors(): string =
+  for pass in 1..numDoors:
+    for door in countup(pass, numDoors, pass):
+      doors[door] = not doors[door]
+  for door in 1..numDoors:
+    result.add("Door $1 is $2.\n" % [$door, if doors[door]: "open" else: "closed"])
+
+const outputString: string = calcDoors()
+
+echo outputString

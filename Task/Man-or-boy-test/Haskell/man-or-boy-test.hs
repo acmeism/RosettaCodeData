@@ -1,4 +1,3 @@
-import Control.Applicative (liftA2)
 import Data.IORef (modifyIORef, newIORef, readIORef)
 
 a
@@ -10,7 +9,7 @@ a k x1 x2 x3 x4 x5 = do
         k <- pred ! r
         a k b x1 x2 x3 x4
   if k <= 0
-    then liftA2 (+) x4 x5
+    then (+) <$> x4 <*> x5
     else b
   where
     f !r = modifyIORef r f >> readIORef r

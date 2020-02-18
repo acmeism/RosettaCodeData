@@ -1,0 +1,95 @@
+module CayleyDickson
+
+data CD : Nat -> Type -> Type where
+    CDBase : a -> CD 0 a
+    CDProd : CD n a -> CD n a -> CD (S n) a
+
+pairTy : Nat -> Type -> Type
+pairTy Z a = a
+pairTy (S n) a = let b = pairTy n a in (b, b)
+
+fromPair : (n : Nat) -> pairTy n a -> CD n a
+fromPair Z x = CDBase x
+fromPair (S m) (x, y) = CDProd (fromPair m x) $ fromPair m y
+
+toPair : CD n a -> pairTy n a
+toPair (CDBase x) = x
+toPair (CDProd x v) = (toPair x, toPair v)
+
+first : CD n a -> a
+first (CDBase x) = x
+first (CDProd x v) = first x
+
+fromBase : Num a => (n : Nat) -> a -> CD n a
+fromBase Z x = CDBase x
+fromBase (S m) x = CDProd (fromBase m x) $ fromBase m 0
+
+multSclr : Num a => CD n a -> a -> CD n a
+multSclr (CDBase x) y = CDBase $ x * y
+multSclr (CDProd x v) y = CDProd (multSclr x y) $ multSclr v y
+
+divSclr : Fractional a => CD n a -> a -> CD n a
+divSclr (CDBase x) y = CDBase $ x / y
+divSclr (CDProd x v) y = CDProd (divSclr x y) $ divSclr v y
+
+plusCD : Num a => CD n a -> CD n a -> CD n a
+plusCD (CDBase x) (CDBase y) = CDBase $ x + y
+plusCD (CDProd x v) (CDProd y w) = CDProd (plusCD x y) $ plusCD v w
+
+negCD : Neg a => CD n a -> CD n a
+negCD (CDBase x) = CDBase $ negate x
+negCD (CDProd x v) = CDProd (negCD x) $ negCD v
+
+minusCD : Neg a => CD n a -> CD n a -> CD n a
+minusCD (CDBase x) (CDBase y) = CDBase $ x - y
+minusCD (CDProd x v) (CDProd y w) = CDProd (minusCD x y) $ minusCD v w
+
+conjCD : Neg a => CD n a -> CD n a
+conjCD (CDBase x) = CDBase x
+conjCD (CDProd x v) = CDProd (conjCD x) $ negCD v
+
+multCD : Neg a => CD n a -> CD n a -> CD n a
+multCD (CDBase x) (CDBase y) = CDBase $ x * y
+multCD (CDProd x v) (CDProd y w) = CDProd (minusCD (multCD x y) (multCD (conjCD w) v)) $ plusCD (multCD w x) $ multCD v $ conjCD y
+
+absSqrCD : Neg a => CD n a -> CD n a
+absSqrCD x = multCD x $ conjCD x
+
+sqrLnCD : Neg a => CD n a -> a
+sqrLnCD = first . absSqrCD
+
+recipCD : Neg a => Fractional a => CD n a -> CD n a
+recipCD x = conjCD $ divSclr x $ sqrLnCD x
+
+divCD : Neg a => Fractional a => CD n a -> CD n a -> CD n a
+divCD x y = multCD x $ recipCD y
+
+absCD : CD n Double -> Double
+absCD x = sqrt $ sqrLnCD x
+
+showComps : Show a => CD n a -> String
+showComps (CDBase x) = show x
+showComps (CDProd x v) = showComps x ++ ", " ++ showComps v
+
+Eq a => Eq (CD n a) where
+    (CDBase x) == (CDBase y) = x == y
+    (CDProd x v) == (CDProd y w) = x == y && v == w
+
+Show a => Show (CD n a) where
+    show x = "(" ++ showComps x ++ ")"
+
+Neg a => Num (CD n a) where
+    (+) = plusCD
+    (*) = multCD
+    fromInteger m {n} = fromBase n $ fromInteger m
+
+Neg a => Neg (CD n a) where
+    negate = negCD
+    (-) = minusCD
+
+(Neg a, Fractional a) => Fractional (CD n a) where
+    (/) = divCD
+    recip = recipCD
+
+Abs (CD n Double) where
+    abs {n} = fromBase n . absCD

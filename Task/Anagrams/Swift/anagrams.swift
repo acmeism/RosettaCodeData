@@ -1,6 +1,6 @@
 import Foundation
 
-let wordsURL = NSURL(string: "http://www.puzzlers.org/pub/wordlists/unixdict.txt")!
+let wordsURL = NSURL(string: "http://wiki.puzzlers.org/pub/wordlists/unixdict.txt")!
 
 let wordsstring = try NSString(contentsOfURL:wordsURL , encoding: NSUTF8StringEncoding)
 let allwords = wordsstring.componentsSeparatedByString("\n")

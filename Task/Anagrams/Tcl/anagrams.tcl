@@ -1,7 +1,7 @@
 package require Tcl 8.5
 package require http
 
-set url http://www.puzzlers.org/pub/wordlists/unixdict.txt
+set url http://wiki.puzzlers.org/pub/wordlists/unixdict.txt
 set response [http::geturl $url]
 set data [http::data $response]
 http::cleanup $response

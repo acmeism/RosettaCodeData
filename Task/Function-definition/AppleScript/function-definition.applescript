@@ -1,3 +1,3 @@
-on multiply(a, b)
+to multiply(a as number, b as number)
     return a * b
 end

@@ -1,3 +1,2 @@
-int main(){
-   while(1) write("SPAM\n");
-}
+while(1)
+    write("SPAM\n");

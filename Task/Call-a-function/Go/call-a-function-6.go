@@ -1,9 +1,15 @@
-	fn := func(r rune) rune {
-		if unicode.IsSpace(r) {
-			return -1
-		}
-		return r
-	}
-	strings.Map(fn, "Spaces removed")
-	strings.Map(unicode.ToLower, "Test")
-	strings.Map(func(r rune) rune { return r + 1 }, "shift")
+package main
+
+import "fmt"
+
+func bar(a, b, c int) {
+	fmt.Printf("%d, %d, %d", a, b, c)
+}
+
+func main() {
+	args := make(map[string]int)
+	args["a"] = 3
+	args["b"] = 2
+	args["c"] = 1
+	bar(args["a"], args["b"], args["c"]) // prt 3, 2, 1
+}

@@ -1,1 +1,1 @@
-say "Door $_ is ", <closed open>[.sqrt == .sqrt.floor] for 1..100;
+ say "Door $_ is open" for 1..10 X** 2;

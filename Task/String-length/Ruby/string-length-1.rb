@@ -1,4 +1,1 @@
-# -*- coding: utf-8 -*-
-
-puts "あいうえお".bytesize
-# => 15
+"J̲o̲s̲é̲".bytesize

@@ -1,0 +1,1 @@
+(defonce bar 42)

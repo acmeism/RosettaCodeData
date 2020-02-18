@@ -5,6 +5,8 @@
 * 09.05.2013 Walter Pachl accept arguments n w s and fix output
 *                         thanks for the review/test
 * I see no need for specifying a start count (actually a start number)
+* This task states:      n    prisoners are standing on a circle,
+*    sequentially numbered from  0  to  n-1.    The 1st prisoner is  0.
 * This program should work on EVERY REXX.
 * Pls report if this is not the case and let us know what's a problem.
 **********************************************************************/

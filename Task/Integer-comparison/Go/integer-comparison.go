@@ -7,9 +7,11 @@ import (
 
 func main() {
 	var n1, n2 int
+	fmt.Print("enter number: ")
 	if _, err := fmt.Scan(&n1); err != nil {
 		log.Fatal(err)
 	}
+	fmt.Print("enter number: ")
 	if _, err := fmt.Scan(&n2); err != nil {
 		log.Fatal(err)
 	}

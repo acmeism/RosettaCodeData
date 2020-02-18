@@ -1,25 +1,25 @@
 /*REXX program displays (or writes to a file)   Pascal's triangle  (centered/formatted).*/
 numeric digits 3000                              /*be able to handle gihugeic triangles.*/
 parse arg nn .                                   /*obtain the optional argument from CL.*/
-if nn=='' | nn==","  then nn=10                  /*Not specified?  Then use the default.*/
-N=abs(nn)                                        /*N  is the number of rows in triangle.*/
-w=length( !(N-1) / !(N%2) / !(N-1-N%2) )         /*W:  the width of the biggest integer.*/
-@.=1;    $.=@.;   unity=right(1, w)              /*defaults rows & lines; aligned unity.*/
+if nn=='' | nn==","  then nn= 10                 /*Not specified?  Then use the default.*/
+N= abs(nn)                                       /*N  is the number of rows in triangle.*/
+w= length( !(N-1) / !(N%2) / !(N-1-N%2) )        /*W:  the width of the biggest integer.*/
+@.= 1;      $.= @.;          unity= right(1, w)  /*defaults rows & lines; aligned unity.*/
                                                  /* [↓]  build rows of Pascals' triangle*/
-  do   r=1  for N;           rm=r-1              /*Note:  the first column is always  1.*/
-    do c=2  to rm;           cm=c-1              /*build the rest of the columns in row.*/
+  do   r=1  for N;           rm= r-1             /*Note:  the first column is always  1.*/
+    do c=2  to rm;           cm= c-1             /*build the rest of the columns in row.*/
     @.r.c= @.rm.cm + @.rm.c                      /*assign value to a specific row & col.*/
     $.r  = $.r     right(@.r.c, w)               /*and construct a line for output (row)*/
     end   /*c*/                                  /* [↑]    C  is the column being built.*/
-  if r\==1  then $.r=$.r  unity                  /*for  rows≥2,  append a trailing  "1".*/
+  if r\==1  then $.r= $.r  unity                 /*for  rows≥2,  append a trailing  "1".*/
   end     /*r*/                                  /* [↑]    R  is the  row   being built.*/
                                                  /* [↑]  WIDTH: for nicely looking line.*/
-width=length($.N)                                /*width of the last (output) line (row)*/
+width= length($.N)                               /*width of the last (output) line (row)*/
                                                  /*if NN<0, output is written to a file.*/
-      do r=1  for N;     $$=center($.r, width)   /*center this particular Pascals' row. */
-      if nn>0  then say                       $$ /*SAY    if   NN    is positive,  else */
-               else call lineout 'PASCALS.'n, $$ /*write this Pascal's row ───►  a file.*/
-      end   /*r*/
+     do r=1  for N;     $$= center($.r, width)   /*center this particular Pascals' row. */
+     if nn>0  then say                       $$  /*SAY    if   NN    is positive,  else */
+              else call lineout 'PASCALS.'n, $$  /*write this Pascal's row ───►  a file.*/
+     end   /*r*/
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 !: procedure; !=1;  do j=2  to arg(1); !=!*j; end /*j*/;  return !   /*compute factorial*/

@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-    r, err := http.Get("http://www.puzzlers.org/pub/wordlists/unixdict.txt")
+    r, err := http.Get("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt")
     if err != nil {
         fmt.Println(err)
         return

@@ -10,7 +10,7 @@ with Gtk.Main;
 
 procedure Graphic_Input is
    Window  : Gtk_Window;
-   Grid    : Gtk_Table;
+   Grid    : Gtk_Tnetable;
    Label   : Gtk_Label;
    Message : Gtk_Label;
    Edit    : Gtk_GEntry;

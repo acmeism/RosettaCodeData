@@ -1,0 +1,42 @@
+(define stack #null)
+(print "stack is: " stack)
+(print "is stack empty: " (eq? stack #null))
+
+(print "* pushing 1")
+(define stack (cons 1 stack))
+(print "stack is: " stack)
+(print "is stack empty: " (eq? stack #null))
+
+(print "* pushing 2")
+(define stack (cons 2 stack))
+(print "stack is: " stack)
+(print "is stack empty: " (eq? stack #null))
+
+(print "* pushing 3")
+(define stack (cons 3 stack))
+(print "stack is: " stack)
+(print "is stack empty: " (eq? stack #null))
+
+(print "* poping")
+(define-values (value stack) (uncons stack #f))
+(print "value: " value)
+(print "stack: " stack)
+(print "is stack empty: " (eq? stack #null))
+
+(print "* poping")
+(define-values (value stack) (uncons stack #f))
+(print "value: " value)
+(print "stack: " stack)
+(print "is stack empty: " (eq? stack #null))
+
+(print "* poping")
+(define-values (value stack) (uncons stack #f))
+(print "value: " value)
+(print "stack: " stack)
+(print "is stack empty: " (eq? stack #null))
+
+(print "* poping")
+(define-values (value stack) (uncons stack #f))
+(print "value: " value)
+(print "stack: " stack)
+(print "is stack empty: " (eq? stack #null))

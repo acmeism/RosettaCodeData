@@ -1,3 +1,1 @@
-for n in range(1, 100):
-    fb = ''.join([ denom[1] if n % denom[0] == 0 else '' for denom in [(3,'fizz'),(5,'buzz')] ])
-    print fb if fb else n
+for i in range(100):print(i%3//2*'Fizz'+i%5//4*'Buzz'or i+1)

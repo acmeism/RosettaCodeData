@@ -1,0 +1,80 @@
+-- demo\rosetta\Record_sound.exw
+constant wavfile = "capture.wav",
+         bitspersample = 16,
+         channels = 2,
+         samplespersec = 44100,
+         alignment = bitspersample * channels / 8,
+         bytespersec = alignment * samplespersec,
+         params = sprintf(" bitspersample %d channels %d alignment %d samplespersec %d bytespersec %d",
+                           {bitspersample,   channels,   alignment,   samplespersec,   bytespersec}),
+         error_size = 2048
+atom winmm = NULL, xmciSendString, pError
+
+procedure mciSendString(string msg)
+    if winmm=NULL then
+         winmm = open_dll("winmm.dll")
+         xmciSendString = define_c_func(winmm,"mciSendStringA",
+            {C_PTR,     --  LPCTSTR lpszCommand
+             C_PTR,     --  LPTSTR lpszReturnString
+             C_INT,     --  UINT cchReturn
+             C_PTR},    --  HANDLE hwndCallback
+            C_INT)      -- MCIERROR
+         pError = allocate(error_size)
+    end if
+    atom res = c_func(xmciSendString,{msg,pError,error_size,NULL})
+    if res!=0 then crash("error %0x: %s",{res,peek_string(pError)}) end if
+end procedure
+
+include get.e   -- get_bytes()
+
+function record(integer bytes)
+    integer fn = open("/dev/dsp","rb")
+    if fn=-1 then return "" end if
+    string res = get_bytes(fn,bytes)
+    close(fn)
+    return res
+end function
+
+procedure play(string buf)
+    if length(buf) then
+        integer fn = open("/dev/dsp","wb")
+        if fn!=-1 then
+            puts(fn,buf)
+            close(fn)
+        end if
+    end if
+end procedure
+
+if platform()=WINDOWS then
+    mciSendString("close all")
+    mciSendString("open new type waveaudio alias capture")
+    mciSendString("set capture" & params)
+
+    puts(1,"Press SPACE to start recording...")
+    while wait_key()!=' ' do end while
+
+    mciSendString("record capture")
+    puts(1,"Recording, press SPACE to stop...")
+    while wait_key()!=' ' do end while
+
+    mciSendString("stop capture")
+    mciSendString("save capture " & wavfile)
+    mciSendString("delete capture")
+    mciSendString("close capture")
+
+    puts(1,"Captured audio is stored in "&wavfile)
+elsif platform()=LINUX then
+    -- warning: untested
+    play(record(65536))
+--  -- alternative, from Go (ditto)
+--  string name = "test.wav",
+--         rate = "2000", -- (2000..192000 Hz)
+--         durn = "5" -- (5 to 30 seconds)
+--  printf(1,"OK, start speaking now...\n")
+--  -- Default arguments: -c 1, -t wav. Note only signed 16 bit format supported.
+--  string cmd = sprintf("arecord -r %s -f S16_LE -d %s %s", {rate,durn,name})
+--  {} = system_exec(cmd)
+--  printf(1,"'%s' created on disk and will now be played back...\n", {name})
+--  {} = system_exec("aplay "&name)
+--  printf(1,"Play-back completed.\n")
+end if

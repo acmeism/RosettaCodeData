@@ -1,5 +1,4 @@
+from numpy import prod
+
 def factorial(n):
-    z=1
-    if n>1:
-        z=n*factorial(n-1)
-    return z
+    return prod(range(1, n + 1), dtype=int)

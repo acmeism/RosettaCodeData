@@ -1,27 +1,29 @@
 module FormalPowerSeries
 
+using Printf
+import Base.iterate, Base.eltype, Base.one, Base.show, Base.IteratorSize
+import Base.IteratorEltype, Base.length, Base.size, Base.convert
+
 _div(a, b) = a / b
 _div(a::Union{Integer,Rational}, b::Union{Integer,Rational}) = a // b
 
 abstract type AbstractFPS{T<:Number} end
 
-Base.iteratorsize(::AbstractFPS) = Base.IsInfinite()
-Base.done(::AbstractFPS, ::Any) = false
-Base.iteratoreltype(::AbstractFPS) = Base.HasEltype()
+Base.IteratorSize(::AbstractFPS) = Base.IsInfinite()
+Base.IteratorEltype(::AbstractFPS) = Base.HasEltype()
 Base.eltype(::AbstractFPS{T}) where T = T
 Base.one(::AbstractFPS{T}) where T = ConstantFPS(one(T))
 
 function Base.show(io::IO, fps::AbstractFPS{T}) where T
     itr = Iterators.take(fps, 8)
-    s = start(itr)
-    a, s = next(itr, s)
+    a, s = iterate(itr)
     print(io, a)
-    a, s = next(itr, s)
+    a, s = iterate(itr, s)
     @printf(io, " %s %s⋅x",
         ifelse(sign(a) ≥ 0, '+', '-'), abs(a))
     local i = 2
-    while !done(itr, s)
-        a, s = next(itr, s)
+    while (it = iterate(itr, s)) != nothing
+        a, s = it
         @printf(io, " %s %s⋅x^%i",
             ifelse(sign(a) ≥ 0, '+', '-'), abs(a), i)
         i += 1
@@ -34,9 +36,12 @@ struct MinusFPS{T,A<:AbstractFPS{T}} <: AbstractFPS{T}
 end
 Base.:-(a::AbstractFPS{T}) where T = MinusFPS{T,typeof(a)}(a)
 
-Base.start(fps::MinusFPS) = start(fps.a)
-function Base.next(fps::MinusFPS, st)
-    v, s = next(fps.a, st)
+function Base.iterate(fps::MinusFPS)
+	v, s = iterate(fps.a)
+	return -v, s
+end
+function Base.iterate(fps::MinusFPS, st)
+    v, s = iterate(fps.a, st)
     return -v, s
 end
 
@@ -48,11 +53,15 @@ Base.:+(a::AbstractFPS{A}, b::AbstractFPS{B}) where {A,B} =
     SumFPS{promote_type(A, B),typeof(a),typeof(b)}(a, b)
 Base.:-(a::AbstractFPS, b::AbstractFPS) = a + (-b)
 
-Base.start(fps::SumFPS) = (start(fps.a), start(fps.b))
-function Base.next(fps::SumFPS{T,A,B}, st) where {T,A,B}
+function Base.iterate(fps::SumFPS{T,A,B}) where {T,A,B}
+    a1, s1 = iterate(fps.a)
+    a2, s2 = iterate(fps.b)
+    return T(a1 + a2), (s1, s2)
+end
+function Base.iterate(fps::SumFPS{T,A,B}, st) where {T,A,B}
     stateA, stateB = st
-    valueA, stateA = next(fps.a, stateA)
-    valueB, stateB = next(fps.b, stateB)
+    valueA, stateA = iterate(fps.a, stateA)
+    valueB, stateB = iterate(fps.b, stateB)
     return T(valueA + valueB), (stateA, stateB)
 end
 
@@ -63,13 +72,17 @@ end
 Base.:*(a::AbstractFPS{A}, b::AbstractFPS{B}) where {A,B} =
     ProductFPS{promote_type(A, B),typeof(a),typeof(b)}(a, b)
 
-Base.start(fps::ProductFPS{T}) where T = (start(fps.a), start(fps.b), T[], T[])
-function Base.next(fps::ProductFPS{T,A,B}, st) where {T,A,B}
+function Base.iterate(fps::ProductFPS{T}) where T
+    a1, s1 = iterate(fps.a)
+    a2, s2 = iterate(fps.b)
+    T(sum(a1 .* a2)), (s1, s2, T[a1], T[a2])
+end
+function Base.iterate(fps::ProductFPS{T,A,B}, st) where {T,A,B}
     stateA, stateB, listA, listB = st
-    valueA, stateA = next(fps.a, stateA)
-    valueB, stateB = next(fps.b, stateB)
+    valueA, stateA = iterate(fps.a, stateA)
+    valueB, stateB = iterate(fps.b, stateB)
     push!(listA, valueA)
-    unshift!(listB, valueB)
+    pushfirst!(listB, valueB)
     return T(sum(listA .* listB)), (stateA, stateB, listA, listB)
 end
 
@@ -78,16 +91,14 @@ struct DifferentiatedFPS{T,A<:AbstractFPS} <: AbstractFPS{T}
 end
 differentiate(fps::AbstractFPS{T}) where T = DifferentiatedFPS{T,typeof(fps)}(fps)
 
-function Base.start(fps::DifferentiatedFPS{T,A}) where {T,A}
-    s = start(fps.a)
-    _, s = next(fps.a, s)
-    n = zero(T)
-    return n, s
+function Base.iterate(fps::DifferentiatedFPS{T,A}) where {T,A}
+    _, s = iterate(fps.a)
+    return Base.iterate(fps, (zero(T), s))
 end
-function Base.next(fps::DifferentiatedFPS{T,A}, st) where {T,A}
+function Base.iterate(fps::DifferentiatedFPS{T,A}, st) where {T,A}
     n, s = st
     n += one(n)
-    v, s = next(fps.a, s)
+    v, s = iterate(fps.a, s)
     return n * v, (n, s)
 end
 
@@ -99,11 +110,16 @@ integrate(fps::AbstractFPS{T}, k::T=zero(T)) where T = IntegratedFPS{T,typeof(fp
 integrate(fps::AbstractFPS{T}, k::T=zero(T)) where T <: Integer =
     IntegratedFPS{Rational{T},typeof(fps)}(fps, k)
 
-Base.start(fps::IntegratedFPS{T,A}) where {T,A} = zero(T), start(fps.a)
-function Base.next(fps::IntegratedFPS{T,A}, st) where {T,A}
+function Base.iterate(fps::IntegratedFPS{T,A}, st=(0, 0)) where {T,A}
+	if st == (0, 0)
+		return fps.k, (one(T), 0)
+	end
     n, s = st
-    iszero(n) && return fps.k, (one(n), s)
-    v, s = next(fps.a, s)
+    if n == one(T)
+		v, s = iterate(fps.a)
+	else
+		v, s = iterate(fps.a, s)
+	end
     r::T = _div(v, n)
     n += one(n)
     return r, (n, s)
@@ -114,10 +130,10 @@ end
 struct FiniteFPS{T} <: AbstractFPS{T}
     v::NTuple{N,T} where N
 end
-Base.start(fps::FiniteFPS) = 1
-Base.next(fps::FiniteFPS{T}, st) where T =
-    st > endof(fps.v) ? (zero(T), st) : (fps.v[st], st + 1)
+Base.iterate(fps::FiniteFPS{T}, st=1) where T =
+    st > lastindex(fps.v) ? (zero(T), st) : (fps.v[st], st + 1)
 Base.convert(::Type{FiniteFPS}, x::Real) = FiniteFPS{typeof(x)}((x,))
+FiniteFPS(r) = convert(FiniteFPS, r)
 for op in (:+, :-, :*)
     @eval Base.$op(x::Number, a::AbstractFPS) = $op(FiniteFPS(x), a)
     @eval Base.$op(a::AbstractFPS, x::Number) = $op(a, FiniteFPS(x))
@@ -126,13 +142,11 @@ end
 struct ConstantFPS{T} <: AbstractFPS{T}
     k::T
 end
-Base.start(::ConstantFPS) = nothing
-Base.next(c::ConstantFPS, ::Any) = c.k, nothing
+Base.iterate(c::ConstantFPS, ::Any=nothing) = c.k, nothing
 
 struct SineFPS{T} <: AbstractFPS{T} end
 SineFPS() = SineFPS{Rational{Int}}()
-Base.start(::SineFPS) = 0, 1, 1
-function Base.next(::SineFPS{T}, st) where T
+function Base.iterate(::SineFPS{T}, st=(0, 1, 1)) where T
     n, fac, s = st
     local r::T
     if iseven(n)
@@ -148,8 +162,7 @@ end
 
 struct CosineFPS{T} <: AbstractFPS{T} end
 CosineFPS() = CosineFPS{Rational{Int}}()
-Base.start(::CosineFPS) = 0, 1, 1
-function Base.next(::CosineFPS{T}, st) where T
+function Base.iterate(::CosineFPS{T}, st=(0, 1, 1)) where T
     n, fac, s = st
     local r::T
     if iseven(n)

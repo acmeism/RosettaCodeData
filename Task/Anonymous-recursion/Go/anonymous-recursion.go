@@ -36,9 +36,7 @@ type fx func(fx) fn
 
 func yc(f ff) fn {
     return func(x fx) fn {
-        return f(func(a1, a2, a3 int) int {
-            return x(x)(a1, a2, a3)
-        })
+        return x(x)
     }(func(x fx) fn {
         return f(func(a1, a2, a3 int) int {
             return x(x)(a1, a2, a3)

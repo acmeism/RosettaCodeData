@@ -39,6 +39,8 @@ class KdTree(object):
             d = exset[m]
             while m + 1 < len(exset) and exset[m + 1][split] == d[split]:
                 m += 1
+            d = exset[m]
+
 
             s2 = (split + 1) % len(d)  # cycle coordinates
             return KdNode(d, split, nk2(s2, exset[:m]),

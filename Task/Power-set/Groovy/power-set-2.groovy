@@ -1,3 +1,3 @@
-def vocalists = [ "C", "S", "N", "Y" ] as LinkedHashSet
-println "${vocalists}"
+def vocalists = [ 'C', 'S', 'N', 'Y' ] as Set
+println vocalists
 println powerSet(vocalists)

@@ -18,7 +18,7 @@ declare -A wordlist
 while read -r word; do
     uniq_letters=( $(for ((i=0; i<${#word}; i++)); do echo "${word:i:1}"; done | sort) )
     wordlist["${uniq_letters[*]}"]+="$word "
-done < <( http_get_body www.puzzlers.org  /pub/wordlists/unixdict.txt )
+done < <( http_get_body wiki.puzzlers.org  /pub/wordlists/unixdict.txt )
 
 maxlen=0
 maxwords=()

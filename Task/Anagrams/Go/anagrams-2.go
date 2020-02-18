@@ -1,4 +1,4 @@
-def words = new URL('http://www.puzzlers.org/pub/wordlists/unixdict.txt').text.readLines()
+def words = new URL('http://wiki.puzzlers.org/pub/wordlists/unixdict.txt').text.readLines()
 def groups = words.groupBy{ it.toList().sort() }
 def bigGroupSize = groups.collect{ it.value.size() }.max()
 def isBigAnagram = { it.value.size() == bigGroupSize }

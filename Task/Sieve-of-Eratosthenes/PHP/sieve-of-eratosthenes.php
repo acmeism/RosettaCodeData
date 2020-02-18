@@ -18,3 +18,9 @@ function iprimes_upto($limit)
 
     return $primes;
 }
+
+echo wordwrap(
+    'Primes less or equal than 1000 are : ' . PHP_EOL .
+    implode(' ', array_keys(iprimes_upto(1000), true, true)),
+    100
+);

@@ -6,6 +6,8 @@ same line breaks and spacing as
      you set in this block.
 ]])
 
+print([=[by using equals signs, ]] may be embedded.]=])
+
 local msg = [[this is a message that spans
 multiple lines and will have the next lines
 preserved as they were entered, so be careful

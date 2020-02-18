@@ -6,7 +6,6 @@
         X = A(I)
         J = I
    10   J = J - 1
-Can't   IF (J.EQ.0 .OR. A(J).LE.X) GO TO 20 in case both sides are ALWAYS evaluated.
         IF (J.EQ.0) GO TO 20
         IF (A(J).LE.X) GO TO 20
         A(J + 1) = A(J)

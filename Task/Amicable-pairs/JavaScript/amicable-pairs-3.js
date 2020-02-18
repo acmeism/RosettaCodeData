@@ -1,46 +1,61 @@
-(max => {
+(() => {
+    'use strict';
 
     // amicablePairsUpTo :: Int -> [(Int, Int)]
-    let amicablePairsUpTo = max =>
-        range(1, max)
-        .map(x => properDivisors(x)
-            .reduce((a, b) => a + b, 0))
-        .reduce((a, m, i, lst) => {
-            let n = i + 1;
+    const amicablePairsUpTo = n => {
+        const sigma = compose(sum, properDivisors);
+        return enumFromTo(1)(n).flatMap(x => {
+            const y = sigma(x);
+            return x < y && x === sigma(y) ? ([
+                [x, y]
+            ]) : [];
+        });
+    };
 
-            return (m > n) && lst[m - 1] === n ?
-                a.concat([[n, m]]) : a;
-        }, []),
-
-
-        // properDivisors :: Int -> [Int]
-        properDivisors = n => {
-            if (n < 2) return [];
-            else {
-                let rRoot = Math.sqrt(n),
-                    intRoot = Math.floor(rRoot),
-                    blnPerfectSquare = rRoot === intRoot,
-
-                    lows = range(1, intRoot)
-                    .filter(x => (n % x) === 0);
-
-                return lows.concat(lows.slice(1)
-                    .map(x => n / x)
-                    .reverse()
-                    .slice(blnPerfectSquare | 0));
-            }
-        },
-
-        // Int -> Int -> Maybe Int -> [Int]
-        range = (m, n, step) => {
-            let d = (step || 1) * (n >= m ? 1 : -1);
-
-            return Array.from({
-                length: Math.floor((n - m) / d) + 1
-            }, (_, i) => m + (i * d));
-        }
+    // properDivisors :: Int -> [Int]
+    const properDivisors = n => {
+        const
+            rRoot = Math.sqrt(n),
+            intRoot = Math.floor(rRoot),
+            lows = enumFromTo(1)(intRoot)
+            .filter(x => 0 === (n % x));
+        return lows.concat(lows.map(x => n / x)
+            .reverse()
+            .slice((rRoot === intRoot) | 0, -1));
+    };
 
 
-    return amicablePairsUpTo(max);
+    // TEST -----------------------------------------------
 
-})(20000);
+    // main :: IO ()
+    const main = () =>
+        console.log(unlines(
+            amicablePairsUpTo(20000).map(JSON.stringify)
+        ));
+
+
+    // GENERIC FUNCTIONS ----------------------------------
+
+    // compose (<<<) :: (b -> c) -> (a -> b) -> a -> c
+    const compose = (...fs) =>
+        x => fs.reduceRight((a, f) => f(a), x);
+
+
+    // enumFromTo :: Int -> Int -> [Int]
+    const enumFromTo = m => n =>
+        Array.from({
+            length: 1 + n - m
+        }, (_, i) => m + i);
+
+
+    // sum :: [Num] -> Num
+    const sum = xs => xs.reduce((a, x) => a + x, 0);
+
+
+    // unlines :: [String] -> String
+    const unlines = xs => xs.join('\n');
+
+
+    // MAIN ---
+    return main();
+})();

@@ -6,12 +6,12 @@ call bSort         #                             /*invoke the bubble sort  with 
 call show   ' after sort'                        /*show the  after   array elements.    */
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-bSort: procedure expose @.;  parse arg n;  m=n-1 /*N: is the number of @ array elements.*/
-           do m=m  for m  by -1  until ok;  ok=1 /*keep sorting the  @ array until done.*/
-             do j=1  for m;  k=j+1;  if @.j<=@.k  then iterate     /*elements in order? */
-             _=@.j;  @.j=@.k;  @.k=_;       ok=0 /*swap two elements;  flag as not done.*/
-             end   /*j*/
-           end     /*m*/;        return
+bSort: procedure expose @.;  parse arg n         /*N: is the number of @ array elements.*/
+         do m=n-1  by -1  until ok;         ok=1 /*keep sorting the  @ array until done.*/
+           do j=1  for m;  k=j+1;  if @.j<=@.k  then iterate       /*elements in order? */
+           _=@.j;  @.j=@.k;  @.k=_;         ok=0 /*swap two elements;  flag as not done.*/
+           end   /*j*/
+         end     /*m*/;        return
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 gen: @.=;         @.1 = '---letters of the Hebrew alphabet---' ;   @.13= "kaph    [kaf]"
                   @.2 = '====================================' ;   @.14= "lamed"

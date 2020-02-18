@@ -1,13 +1,17 @@
-public class Binom {
-    public static double binomCoeff(double n, double k) {
-        double result = 1;
-        for (int i = 1; i < k + 1; i++) {
-            result *= (n - i + 1) / i;
-        }
-        return result;
+public class Binomial
+{
+    private static long binom(int n, int k)
+    {
+        if (k==0)
+            return 1;
+        else if (k>n-k)
+            return binom(n, n-k);
+        else
+            return binom(n-1, k-1)*n/k;
     }
 
-    public static void main(String[] args) {
-        System.out.println(binomCoeff(5, 3));
+    public static void main(String[] args)
+    {
+        System.out.println(binom(5, 3));
     }
 }

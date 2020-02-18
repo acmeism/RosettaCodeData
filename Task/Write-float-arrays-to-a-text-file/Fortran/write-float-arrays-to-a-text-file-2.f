@@ -1,26 +1,12 @@
-program writefloats
-  implicit none
+      program writefloats
+      integer i
+      double precision x(4), y(4)
+      data x /1d0, 2d0, 4d0, 1d11/
 
-  real, dimension(10) :: a, sqrta
-  integer :: i
-  integer, parameter :: unit = 40
+      do 10 i = 1, 4
+      y = sqrt(x)
+   10 continue
 
-  a = (/ (i, i=1,10) /)
-  sqrta = sqrt(a)
-
-  open(unit, file="xydata.txt", status="new", action="write")
-  call writexy(unit, a, sqrta)
-  close(unit)
-
-contains
-
-  subroutine writexy(u, x, y)
-    real, dimension(:), intent(in) :: x, y
-    integer, intent(in) :: u
-
-    integer :: i
-
-    write(u, "(2F10.4)") (x(i), y(i), i=lbound(x,1), ubound(x,1))
-  end subroutine writexy
-
-end program writefloats
+      open(unit=15, file='two_cols.txt', status='new')
+      write(15, '(f20.3,f21.4)') (x(i), y(i), i = 1, 4)
+      end

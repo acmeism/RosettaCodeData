@@ -1,0 +1,45 @@
+-- demo\rosetta\SimpleHttpServer.exw
+include builtins\sockets.e      -- added for 0.8.1 (not yet documented)
+
+constant MAX_QUEUE      = 100,
+         ESCAPE         = #1B,
+         BUFFER_SIZE    = 2048,
+         buffer         = allocate(BUFFER_SIZE),
+         sock_addr      = new_sock_addr(AF_INET, 8080, NULL),
+         peerAddr       = new_sock_addr(),
+
+response = substitute("""
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+
+<!DOCTYPE html>
+<html>
+ <head>
+  <title>Bye-bye baby bye-bye</title>
+  <style>
+   body { background-color: #111 }
+   h1 { font-size:4cm; text-align: center; color: black;
+        text-shadow: 0 0 2mm red}
+  </style>
+ </head>
+ <body>
+  <h1>Goodbye, world!</h1>
+ </body>
+</html>
+
+""","\n","\r\n")
+
+atom sock = socket(AF_INET,SOCK_STREAM,NULL)
+bind(sock,sock_addr)
+listen(sock,MAX_QUEUE)
+while get_key()!=ESCAPE do
+    atom peer = accept(sock,peerAddr),
+         ip = get_sin_addr(sock_addr)
+    integer len = recv(peer,buffer,BUFFER_SIZE,0)
+    string request = peek({buffer,len})
+    printf(1,"Client IP: %s\n%s\n",{ip_to_string(ip),request})
+    if length(request)>3 and request[1..4]="GET " then
+        poke(buffer,response)
+        send(peer,buffer,length(response),0)
+    end if
+end while

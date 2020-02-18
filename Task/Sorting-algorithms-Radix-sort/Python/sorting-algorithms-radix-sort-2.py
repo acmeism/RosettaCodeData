@@ -58,6 +58,9 @@ def radix(some_list, idex=None, size=None):
 
     result = []
     for b in bins:
+        #If the bin is empty it skips the recursive call
+        if b == []:
+            continue
         # Make the recursive call
         # Sort each of the sub-lists in our bins
         result.append(radix(b, idex-1, size))

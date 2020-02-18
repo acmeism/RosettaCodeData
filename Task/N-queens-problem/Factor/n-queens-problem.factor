@@ -5,7 +5,7 @@ IN: queens
 
 :: safe?  ( board q -- ? )
     [let  q board nth :> x
-      q iota [
+      q <iota> [
          x swap
          [ board nth ] keep
          q swap -
@@ -15,10 +15,10 @@ IN: queens
     ] ;
 
 : solution? ( board -- ? )
-    dup length iota [ dupd safe? ] all? nip ;
+    dup length <iota> [ dupd safe? ] all? nip ;
 
 : queens ( n -- l )
-    iota all-permutations [ solution? ] filter ;
+    <iota> all-permutations [ solution? ] filter ;
 
 : .queens ( n -- )
     queens

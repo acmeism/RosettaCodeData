@@ -1,20 +1,22 @@
-val distrubution = {
-  def randomNormal = 1.0 + 0.5 * scala.util.Random.nextGaussian
+object RandomNumbers extends App {
 
-  def normalDistribution(a: Double): Stream[Double] = a #:: normalDistribution(randomNormal)
+  val distribution: LazyList[Double] = {
+    def randomNormal: Double = 1.0 + 0.5 * scala.util.Random.nextGaussian
 
-  normalDistribution(randomNormal)
-}
+    def normalDistribution(a: Double): LazyList[Double] = a #:: normalDistribution(randomNormal)
 
-/*
- * Let's test it
- */
+    normalDistribution(randomNormal)
+  }
+
+  /*
+   * Let's test it
+   */
   def calcAvgAndStddev[T](ts: Iterable[T])(implicit num: Fractional[T]): (T, Double) = {
     val mean: T =
       num.div(ts.sum, num.fromInt(ts.size)) // Leaving with type of function T
 
     // Root of mean diffs
-    val stdDev = sqrt(ts.map { x =>
+    val stdDev = Math.sqrt(ts.map { x =>
       val diff = num.toDouble(num.minus(x, mean))
       diff * diff
     }.sum / ts.size)
@@ -22,4 +24,5 @@ val distrubution = {
     (mean, stdDev)
   }
 
-println(calcAvgAndStddev(distrubution.take(1000))) // e.g. (1.0061433267806525,0.5291834867560893)
+  println(calcAvgAndStddev(distribution.take(1000))) // e.g. (1.0061433267806525,0.5291834867560893)
+}

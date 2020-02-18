@@ -1,0 +1,215 @@
+  [Caesar cipher for Rosetta Code.
+  EDSAC program, Initial Orders 2.]
+
+  [Table for converting alphabetic position 0..25 to EDSAC code.
+   The EDSAC code is in the high 5 bits.]
+            T   54 K [access table via C parameter]
+            P   56 F
+            T   56 K
+   AFBFCFDFEFFFGFHFIFJFKFLFMFNFOFPFQFRFSFTFUFVFWFXFYFZF
+
+  [Table for converting 5-bit EDSAC code to alphabetic position 0..25.
+   Computed at run time (so the programmer doesn't need to know the EDSAC codes).
+   32 entries; entry is -1 if the EDSAC code does not represent a letter.]
+            T   53 K [access table via B parameter]
+            P   82 F
+
+  [Subroutine to read string from input and
+     store with char codes in high 5 bits.
+   String is terminated by blank row of tape, which is stored.
+   Input: 0F holds address of string in address field (bits 1..11).
+   22 locations; workspace: 4D]
+            T  114 K
+   GKA3FT19@AFA20@T10@I5FA4DR16FT4DA4FUFE14@A21@G18@T5FA10@A2FE4@T5FEFUFK2048F
+
+  [Subroutine to print string with character codes in high 5 bits.
+   String is terminated by blank row of tape, which is not printed.
+   Input: 0F holds address of string in address field (bits 1..11).
+   18 locations; orkspace: 4F]
+            T  136 K
+   GKA3FT16@AFA2@T5@AFU4FE10@A17@G15@O4FT4FA5@A2FG4@TFEFK2048F
+
+  [Define start of user message]
+            T   47 K  [access message via M parameter]
+            P  350 F  [address of message]
+
+            T  154 K
+            G      K
+  [Constants]
+      [0]   P      M  [address of user message]
+      [1]   A      B
+      [2]   A      C
+      [3]   T      B
+      [4]   P   25 F
+      [5]   P   26 F
+      [6]   P   31 F
+      [7]   K 2048 F  [(1) letter shift (2) used in test for
+                        blank row of tape at end of message]
+      [8]   @      F  [carriage return]
+      [9]   &      F  [line feed]
+     [10]   K 4096 F  [null char]
+
+  [Constant messages. Each includes new line at the end.]
+     [11]   TF EF SF TF IF NF GF @F &F K4096F
+     [21]   P   11 @
+     [22]   EF NF TF EF RF !F MF EF SF SF AF GF EF @F &F K4096F
+     [38]   P   22 @
+     [39]   MF UF SF TF !F SF TF AF RF TF !F WF IF TF HF !F BF !F TF OF !F ZF @F &F K4096F
+     [64]   P   39 @
+
+ [Subroutine to convert EDSAC code to alphabetic position.
+  Input:  4F holds EDSAC code in high 5 bits
+  Output: 4F holds alphabetic position (0..25, or -1 if not a letter).
+  Workspace: 5F]
+     [65]   A    3 F  [make jump for return]
+            T   75 @  [plant in code]
+            A    4 F  [load EDSAC code]
+            R  512 F  [shift code into address field]
+            T    5 F  [temp store]
+            C    5 F  [acc := address bits only]
+            A    1 @  [make order to load alphabetic position]
+            T   73 @  [plant in code]
+     [73]   A      B  [load alphabetic position]
+            T    4 F  [store in 4F]
+     [75]   E      F  [return]
+
+ [Subroutine to encipher or decipher a message by Caesar shift.
+  Input:  Message is accessed by the M parameter, and
+          terminated by a blank row of tape.
+  Output: 0F = error flag: 0 if OK, < 0 if error (bad message prefix)
+  Workspace 4F.]
+     [76]   A    3 F  [make jump for return]
+            T  119 @  [plant in code]
+            A   80 @  [load order to access first char]
+            T   95 @  [plant in code]
+     [80]   A      M  [load first char of message]
+            T    4 F  [pass to subroutine]
+     [82]   A   82 @  [get alphabetic position]
+            G   65 @
+            A    4 F  [load alphabetic position]
+            U      F  [to 0F for use as shift]
+            S    2 F  [check it's not 0 or -1]
+            G  118 @  [error exit if it is]
+            T    1 F  [clear acc]
+            S      F  [load negative of shift]
+            G  108 @  [jump to store first char
+                       and convert rest of message]
+           [Here after skipping non-letter]
+     [91]   T    4 F  [clear acc]
+           [Here after converting letter]
+     [92]   A   95 @  [load order to read character]
+            A    2 F  [inc address to next character]
+            T   95 @  [store back]
+     [95]   A      M  [load char from message (in top 5 bits)]
+            E  100 @  [if >= 0 then not blank row]
+            A    7 @  [if < 0, test for blank row]
+            G  117 @  [jump out if so]
+            S    7 @  [restore after test]
+    [100]   T    4 F  [character to 4F for subroutine]
+    [101]   A  101 @  [for return from subroutine]
+            G   65 @  [sets 4F := alphabetic position]
+            A    4 F  [to acc]
+            G   91 @  [if < 0 then not a letter; don't change it]
+            A      F  [apply Caesar shift]
+           [Subtract 26 if required, so result is in range 0..25]
+            S    5 @  [subtract 26]
+            E  109 @  [skip next if result >= 0]
+    [108]   A    5 @  [add 26]
+    [109]   A    2 @  [make order to read EDSAC letter at that position]
+            T  114 @  [plant in code]
+            A   95 @  [load A order from above]
+            A   14 C  [add 'O F' to make T order]
+            T  115 @  [plant in code]
+    [114]   A      C  [load enciphered letter]
+    [115]   T      M  [overwrite original letter]
+            E   92 @  [loop back]
+    [117]   T      F  [flag = 0 for OK]
+    [118]   T      F  [flag to 0F: 0 if OK, < 0 if error]
+    [119]   E      F  [return with acc = 0]
+
+ [Subroutine to print encipered or deciphered message, plus new line]
+    [120]   A    3 F  [make jump order for return]
+            T  128 @  [plant in code]
+            A      @  [load address of message]
+            T      F  [to 0F for print subroutine]
+    [124]   A  124 @
+            G  136 F  [print message, clears acc]
+            O    8 @  [print new line]
+            O    9 @
+    [128]   E      F  [return with acc = 0]
+
+ [Main routine]
+    [129]   O    7 @  [set letter shift]
+            H    6 @  [mult reg has this value throughout;
+                       selects bits 1..5 of 17-bit value]
+           [Build inverse table from direct table
+            First initialize all 32 locations to -1]
+            A    6 @  [work backwards]
+    [132]   A    3 @  [make T order for inverse table]
+            T  135 @  [plant in code]
+            S    2 F  [make -1 in address field]
+    [135]   T      B  [store in inverse table]
+            A  135 @  [get T order]
+            S    2 F  [dec address]
+            S    3 @  [compare with start of table]
+            E  132 @  [loop till done]
+           [Now fill in entries by reversing direct table]
+            T      F  [clear acc]
+            A    4 @  [work backwards]
+    [142]   U    5 F  [index in 5F]
+            A    2 @  [make A order for direct table]
+            T  145 @  [plant in code]
+    [145]   A      C  [load entry from direct table, code in top 5 bits]
+            R  512 F  [shift 11 right, 5-bit code to address field]
+            T    4 F  [temp store]
+            C    4 F  [pick out 5-bit code]
+            A    3 @  [make T order for inverse table]
+            T  152 @  [plant in code]
+            A    5 F  [load index]
+    [152]   T      B  [store in inverse table]
+            A    5 F  [load index again]
+            S    2 F  [update index]
+            E  142 @  [loop back]
+           [Here when inverse table is complete]
+    [156]   T      F  [clear acc]
+    [157]   A   21 @  [load address of "testing" message]
+            T      F  [to 0F for print subroutine]
+    [159]   A  159 @
+            G  136 F  [print "testing message"]
+            E  168 @  [jump to read from end of this file]
+           [Loop back here to get message from user]
+    [162]   A   38 @  [load address of prompt]
+            T      F  [to 0F for print subroutine]
+    [164]   A  164 @
+            G  136 F  [print prompt]
+            O   10 @  [print null to flush teleprinter buffer]
+            Z      F  [stop]
+           [First time here, read message from end of this file.
+            Later times, read message from file chosen by the user.]
+    [168]   A      @  [load address of message]
+            T      F  [to 0F for input]
+    [170]   A  170 @
+            G  114 F  [read message]
+    [172]   A  172 @
+            G  120 @  [print message]
+    [174]   A  174 @
+            G   76 @  [call Caesar shift subroutine]
+            A      F  [load error flag]
+            E  184 @  [jump if OK]
+            T      F  [error, clear acc]
+            A   64 @  [load address of error message]
+            T      F
+    [181]   A  181 @
+            G  136 F  [print error message]
+            E  162 @  [back to try again]
+           [Here if message was enciphered without error]
+    [184]   A  184 @
+            G  120 @  [print enciphered message]
+    [186]   A  186 @
+            G   76 @  [call Caesar shift subroutine]
+    [188]   A  188 @
+            G  120 @  [print deciphered message]
+            E  162 @  [back for another message]
+            E  129 Z  [define entry point]
+            P      F  [acc = 0 on entry]
+DGAZA!FREQUENS!LIBYCUM!DUXIT!KARTHAGO!TRIUMPHUM.

@@ -1,1 +1,1 @@
-solve( crossprod(X), crossprod(X, Y))
+solve(crossprod(X), crossprod(X, Y))

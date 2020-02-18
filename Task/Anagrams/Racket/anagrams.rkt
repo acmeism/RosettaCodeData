@@ -18,4 +18,4 @@
   (define max-keys (filter (λ (k) (= (length (hash-ref h k)) max-ws)) (hash-keys h)))
   (map (λ (k) (hash-ref h k)) max-keys))
 
-(get-maxes (hash-words (get-lines "http://www.puzzlers.org/pub/wordlists/unixdict.txt")))
+(get-maxes (hash-words (get-lines "http://wiki.puzzlers.org/pub/wordlists/unixdict.txt")))

@@ -1,57 +1,20 @@
-foldlZipWith::(a -> b -> c) -> (d -> c -> d) -> d -> [a] -> [b]  -> d
-foldlZipWith _ _ u [] _          = u
-foldlZipWith _ _ u _ []          = u
-foldlZipWith f g u (x:xs) (y:ys) = foldlZipWith f g (g u (f x y)) xs ys
+isMatrix xs = null xs || all ((== (length.head $ xs)).length) xs
 
-foldl1ZipWith::(a -> b -> c) -> (c -> c -> c) -> [a] -> [b] -> c
-foldl1ZipWith _ _ [] _          = error "First list is empty"
-foldl1ZipWith _ _ _ []          = error "Second list is empty"
-foldl1ZipWith f g (x:xs) (y:ys) = foldlZipWith f g (f x y) xs ys
-
-multAdd::(a -> b -> c) -> (c -> c -> c) -> [[a]] -> [[b]] -> [[c]]
-multAdd f g xs ys = map (\us -> foldl1ZipWith (\u vs -> map (f u) vs) (zipWith g) us ys) xs
+isSquareMatrix xs = null xs || all ((== (length xs)).length) xs
 
 mult:: Num a => [[a]] -> [[a]] -> [[a]]
-mult xs ys = multAdd (*) (+) xs ys
+mult uss vss = map ((\xs -> if null xs then [] else foldl1 (zipWith (+)) xs). zipWith (\vs u -> map (u*) vs) vss) uss
 
-bubble::([a] -> c) -> (c -> c -> Bool) -> [[a]] -> [[b]] -> ([[a]],[[b]])
-bubble _ _ [] ts         = ([],ts)
-bubble _ _ rs []         = (rs,[])
-bubble f g (r:rs) (t:ts) = bub r t (f r) rs ts [] []
-  where
-  bub l k _ [] _ xs ys          = (l:xs,k:ys)
-  bub l k _ _ [] xs ys          = (l:xs,k:ys)
-  bub l k m (u:us) (v:vs) xs ys = ans
-    where
-    mu = f u
-    ans | g m mu    = bub l k m us vs (u:xs) (v:ys)
-        | otherwise = bub u v mu us vs (l:xs) (k:ys)
+gauss::[[Double]] -> [[Double]] -> [[Double]]
+gauss xs bs = map (map fromRational) $ solveGauss (toR xs) (toR bs)
+    where toR = map $ map toRational
 
-pivot::Num a => [a] -> [a] -> [[a]] -> [[a]] -> ([[a]],[[a]])
-pivot xs ks ys ls = go ys ls [] []
-  where
-  x              = head xs
-  fun r          = zipWith (\u v ->  u*r - v*x)
-  val rs ts      = let f = fun (head rs) in (tail $ f xs rs,f ks ts)
-  go [] _ us vs  = (us,vs)
-  go _ [] us vs  = (us,vs)
-  go rs ts us vs = go (tail rs) (tail ts) (es:us) (fs:vs)
-    where (es,fs) = val (head rs) (head ts)
-
-triangle::(Num a,Ord a) => [[a]] -> [[a]] -> ([[a]],[[a]])
-triangle as bs = go (as,bs) [] []
-  where
-  go ([],_) us vs  = (us,vs)
-  go (_,[]) us vs  = (us,vs)
-  go (rs,ts) us vs = ans
-    where
-    (xs:ys,ks:ls) = bubble (abs.head) (>=) rs ts
-    ans = go (pivot xs ks ys ls) (xs:us) (ks:vs)
+solveGauss:: (Fractional a, Ord a) => [[a]] -> [[a]] -> [[a]]
+solveGauss xs bs | null xs || null bs || length xs /= length bs || (not $ isSquareMatrix xs) || (not $ isMatrix bs) = []
+                 | otherwise = uncurry solveTriangle $ triangle xs bs
 
 solveTriangle::(Fractional a,Eq a) => [[a]] -> [[a]] -> [[a]]
-solveTriangle [] _ = []
-solveTriangle _ [] = []
-solveTriangle as _ | not.null.dropWhile ((/= 0).head) $ as = []
+solveTriangle us _ | not.null.dropWhile ((/= 0).head) $ us = []
 solveTriangle ([c]:as) (b:bs) = go as bs [map (/c) b]
   where
   val us vs ws = let u = head us in map (/u) $ zipWith (-) vs (head $ mult [tail us] ws)
@@ -59,45 +22,19 @@ solveTriangle ([c]:as) (b:bs) = go as bs [map (/c) b]
   go _ [] zs          = zs
   go (x:xs) (y:ys) zs = go xs ys $ (val x y zs):zs
 
-solveGauss:: (Fractional a, Ord a) => [[a]] -> [[a]] -> [[a]]
-solveGauss as bs = uncurry solveTriangle $ triangle as bs
+triangle::(Num a, Ord a) => [[a]] -> [[a]] -> ([[a]],[[a]])
+triangle xs bs = triang ([],[]) (xs,bs)
+    where
+    triang ts (_,[]) = ts
+    triang ts ([],_) = ts
+    triang (os,ps) zs = triang (us:os,cs:ps).unzip $ [(fun tus vs, fun cs es) | (v:vs,es) <- zip uss css,let fun = zipWith (\x y -> v*x - u*y)]
+        where ((us@(u:tus)):uss,cs:css) = bubble zs
 
-matI::(Num a) => Int -> [[a]]
-matI n = [ [fromIntegral.fromEnum $ i == j | j <- [1..n]] | i <- [1..n]]
-
-task::[[Rational]] -> [[Rational]] -> IO()
-task a b = do
-  let x         = solveGauss a b
-  let u         = map (map fromRational) x
-  let y         = mult a x
-  let identity  = matI (length x)
-  let a1        = solveGauss a identity
-  let h         = mult a a1
-  let z         = mult a1 b
-  putStrLn "a ="
-  mapM_ print a
-  putStrLn "b ="
-  mapM_ print b
-  putStrLn "solve: a * x = b => x = solveGauss a b ="
-  mapM_ print x
-  putStrLn "u = fromRationaltoDouble x ="
-  mapM_ print u
-  putStrLn "verification: y = a * x = mult a x ="
-  mapM_ print y
-  putStrLn $ "test: y == b = "
-  print $ y == b
-  putStrLn "identity matrix: identity ="
-  mapM_ print identity
-  putStrLn "find: a1 = inv(a) => solve: a * a1 = identity => a1 = solveGauss a identity ="
-  mapM_ print a1
-  putStrLn "verification: h = a * a1 = mult a a1 ="
-  mapM_ print h
-  putStrLn $ "test: h == identity = "
-  print $ h == identity
-  putStrLn "z = a1 * b = mult a1 b ="
-  mapM_ print z
-  putStrLn "test: z == x ="
-  print $ z == x
+bubble::(Num a, Ord a) => ([[a]],[[a]]) -> ([[a]],[[a]])
+bubble (xs,bs) = (go xs, go bs)
+    where
+    idmax = snd.minimum.flip zip [0..].map (negate.abs.head) $ xs
+    go ys = let (us,vs) = splitAt idmax ys in vs ++ us
 
 main = do
   let a  = [[1.00, 0.00, 0.00,  0.00,  0.00,   0.00],
@@ -107,4 +44,4 @@ main = do
             [1.00, 2.51, 6.32, 15.88, 39.90, 100.28],
             [1.00, 3.14, 9.87, 31.01, 97.41, 306.02]]
   let b = [[-0.01], [0.61], [0.91], [0.99], [0.60], [0.02]]
-  task a b
+  mapM_ print $ gauss a b

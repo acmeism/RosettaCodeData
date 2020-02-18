@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 static class Program
 {
-    // TL; DR:
+    // In short:
     public static void Foo()
     {
         string s;
@@ -16,21 +16,21 @@ static class Program
         // Check for empty string only (false if s is null):
         if (s != null && s.Length == 0) { }
 
-        // Check for null or empty (most idiomatic .NET way):
+        // Check for null or empty (more idiomatic in .NET):
         if (string.IsNullOrEmpty(s)) { }
     }
 
     public static void Main()
     {
         // Equality is somewhat convoluted in .NET.
-        // The means above are the author's recommendation for each case.
+        // The methods above are the author's recommendation for each case.
 
         // s is initialized to null. It is a variable of the System.String type that is a null reference and is not
         // the empty string.
         string s = null;
 
-        // Alias Console.WriteLine with a shorter name to make the demonstration code less verbose.
-        void P(bool x) => Console.WriteLine(x);
+        // Alias Console.WriteLine(bool) with a shorter name to make the demonstration code less verbose.
+        Action<bool> P = Console.WriteLine;
 
         // Assign the empty string literal to s.
         s = "";

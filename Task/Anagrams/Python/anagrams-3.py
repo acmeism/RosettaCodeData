@@ -1,5 +1,5 @@
 >>> import urllib, itertools
->>> words = urllib.urlopen('http://www.puzzlers.org/pub/wordlists/unixdict.txt').read().split()
+>>> words = urllib.urlopen('http://wiki.puzzlers.org/pub/wordlists/unixdict.txt').read().split()
 >>> len(words)
 25104
 >>> anagrams = [list(g) for k,g in itertools.groupby(sorted(words, key=sorted), key=sorted)]

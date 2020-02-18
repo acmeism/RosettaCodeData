@@ -15,8 +15,8 @@ int getBlackNeighbours(int row,int col){
 	
 	for(i=-1;i<=1;i++){
 		for(j=-1;j<=1;j++){
-			if(i!=0 && j!=0)
-				sum+= (imageMatrix[row+i][col+i]==imagePixel);
+			if(i!=0 || j!=0)
+				sum+= (imageMatrix[row+i][col+j]==imagePixel);
 		}
 	}
 	

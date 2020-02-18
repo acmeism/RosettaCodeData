@@ -25,7 +25,7 @@ public interface Anagram {
       () -> new BufferedReader(
         new InputStreamReader(
           new URL(
-            "http://www.puzzlers.org/pub/wordlists/unixdict.txt"
+            "http://wiki.puzzlers.org/pub/wordlists/unixdict.txt"
           ).openStream()
         )
       ),

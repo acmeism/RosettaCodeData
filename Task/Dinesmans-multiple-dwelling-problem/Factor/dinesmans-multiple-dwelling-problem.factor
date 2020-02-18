@@ -22,7 +22,7 @@ IN: rosetta.dinesman
     5 [1,b] all-permutations [ meets-constraints? ] filter ;
 
 : >names ( seq -- seq )
-    [ 1 - qw{ baker cooper fletcher miller smith } nth ] map ;
+     [ qw{ baker cooper fletcher miller smith } nth swap 2array ] map-index ;
 
 : dinesman ( -- )
     solutions [ >names . ] each ;

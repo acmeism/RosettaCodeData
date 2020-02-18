@@ -8,8 +8,8 @@ rosetta_sort :-
 
 
 my_comp(Comp, W1, W2) :-
-	length(W1,L1),
-	length(W2, L2),
+	string_length(W1,L1),
+	string_length(W2, L2),
 	(   L1 < L2 -> Comp = '>'
 	;   L1 > L2 -> Comp = '<'
 	;   compare(Comp, W1, W2)).

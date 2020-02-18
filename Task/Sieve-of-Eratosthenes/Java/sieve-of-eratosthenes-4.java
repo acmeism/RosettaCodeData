@@ -1,54 +1,28 @@
-import java.util.Iterator;
-import java.util.PriorityQueue;
-import java.math.BigInteger;
+import java.util.Set;
+import java.util.TreeSet;
 
-// generates all prime numbers
-public class InfiniteSieve implements Iterator<BigInteger> {
+public class Sieve{
+    public static Set<Integer> findPrimeNumbers(int limit) {
+    int last = 2;
+    TreeSet<Integer> nums = new TreeSet<>();
 
-    private static class NonPrimeSequence implements Comparable<NonPrimeSequence> {
-	BigInteger currentMultiple;
-	BigInteger prime;
+    if(limit < last) return nums;
 
-	public NonPrimeSequence(BigInteger p) {
-	    prime = p;
-	    currentMultiple = p.multiply(p); // start at square of prime
-	}
-	@Override public int compareTo(NonPrimeSequence other) {
-	    // sorted by value of current multiple
-	    return currentMultiple.compareTo(other.currentMultiple);
-	}
+    for(int i = last; i <= limit; i++){
+      nums.add(i);
     }
 
-    private BigInteger i = BigInteger.valueOf(2);
-    // priority queue of the sequences of non-primes
-    // the priority queue allows us to get the "next" non-prime quickly
-    final PriorityQueue<NonPrimeSequence> nonprimes = new PriorityQueue<NonPrimeSequence>();
+    return filterList(nums, last, limit);
+  }
 
-    @Override public boolean hasNext() { return true; }
-    @Override public BigInteger next() {
-	// skip non-prime numbers
-	for ( ; !nonprimes.isEmpty() && i.equals(nonprimes.peek().currentMultiple); i = i.add(BigInteger.ONE)) {
-            // for each sequence that generates this number,
-            // have it go to the next number (simply add the prime)
-            // and re-position it in the priority queue
-	    while (nonprimes.peek().currentMultiple.equals(i)) {
-		NonPrimeSequence x = nonprimes.poll();
-		x.currentMultiple = x.currentMultiple.add(x.prime);
-		nonprimes.offer(x);
-	    }
-	}
-	// prime
-        // insert a NonPrimeSequence object into the priority queue
-	nonprimes.offer(new NonPrimeSequence(i));
-	BigInteger result = i;
-	i = i.add(BigInteger.ONE);
-	return result;
+  private static TreeSet<Integer> filterList(TreeSet<Integer> list, int last, int limit) {
+    int squared = last*last;
+    if(squared < limit) {
+      for(int i=squared; i <= limit; i += last) {
+        list.remove(i);
+      }
+      return filterList(list, list.higher(last), limit);
     }
-
-    public static void main(String[] args) {
-	Iterator<BigInteger> sieve = new InfiniteSieve();
-	for (int i = 0; i < 25; i++) {
-	    System.out.println(sieve.next());
-	}
-    }
+    return list;
+  }
 }

@@ -1,0 +1,65 @@
+integer xlock = init_cs()
+
+class integrator
+--
+-- Integrates input function f over time
+-- v + (t1 - t0) * (f(t1) + f(t0)) / 2
+--
+    integer f   -- function f(atom t); (see note)
+    atom interval, t0, k0 = 0, v = 0
+    bool running
+    public integer id
+
+    procedure set_func(integer rid)
+        this.f = rid
+    end procedure
+
+    procedure update()
+        enter_cs(xlock)
+        integer f = this.f  -- (nb: no "this")
+        atom t1 = time(),
+             k1 = f(t1)
+-- (oops, '+=' not yet properly supported on class fields...)
+--      v += (t1 - t0) * (k1 + k0) / 2
+        v = v + (t1 - t0) * (k1 + k0) / 2
+        t0 = t1
+        k0 = k1
+        leave_cs(xlock)
+    end procedure
+
+    procedure tick()
+        running = true
+        while running do
+            sleep(interval)
+            update()
+        end while
+    end procedure
+
+    procedure stop()
+        running = false
+        wait_thread(id)
+    end procedure
+
+    function get_output()
+        return v
+    end function
+
+end class
+
+function new_integrator(integer rid, atom interval)
+    integrator i = new({rid,interval,time()})
+    i.update()
+    i.id = create_thread(i.tick,{i})
+    return i
+end function
+
+function zero(atom /*t*/) return 0 end function
+function sine(atom t) return sin(2*PI*0.5*t) end function
+
+integrator i = new_integrator(sine,0.01);
+sleep(2)
+?i.get_output()
+i.set_func(zero)
+sleep(0.5)
+i.stop()
+?i.get_output()

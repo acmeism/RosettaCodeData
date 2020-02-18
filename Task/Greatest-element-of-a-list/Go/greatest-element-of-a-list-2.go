@@ -1,38 +1,25 @@
 package main
 
-import (
-    "fmt"
-    "math/rand"
-    "time"
-)
-
-// function, per task description
-func largest(a []int) (lg int, ok bool) {
-    if len(a) == 0 {
-        return
-    }
-    lg = a[0]
-    for _, e := range a[1:] {
-        if e > lg {
-            lg = e
-        }
-    }
-    return lg, true
-}
+import "fmt"
 
 func main() {
-    // random size slice
-    rand.Seed(time.Now().UnixNano())
-    a := make([]int, rand.Intn(11))
-    for i := range a {
-        a[i] = rand.Intn(101) - 100 // fill with random numbers
-    }
+	x := []int{
+		48, 96, 86, 68,
+		57, 82, 63, 70,
+		37, 34, 83, 27,
+		19, 97, 9, 17,
+	}
 
-    fmt.Println(a)
-    lg, ok := largest(a)
-    if ok {
-        fmt.Println(lg)
-    } else {
-        fmt.Println("empty list.  no maximum.")
-    }
+	smallest, biggest := x[0], x[0]
+	for _, v := range x {
+		if v > biggest {
+			biggest = v
+		}
+		if v < smallest {
+			smallest = v
+		}
+	}
+
+	fmt.Println("The biggest number is ", biggest) // prt 97
+	fmt.Println("The smallest number is ", smallest) // prt 9
 }

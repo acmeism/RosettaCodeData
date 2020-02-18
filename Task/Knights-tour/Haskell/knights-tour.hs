@@ -1,46 +1,48 @@
-import Data.Char (ord, chr)
-import Data.Ord (comparing)
+{-# LANGUAGE TupleSections #-}
+
 import Data.List (minimumBy, (\\), intercalate, sort)
+import Data.Ord (comparing)
+import Data.Char (ord, chr)
+import Data.Bool (bool)
 
 type Square = (Int, Int)
 
-board :: [Square]
-board =
-  [ (x, y)
-  | x <- [1 .. 8]
-  , y <- [1 .. 8] ]
-
-knightMoves :: Square -> [Square]
-knightMoves (x, y) = filter (`elem` board) jumps
-  where
-    jumps =
-      [ (x + i, y + j)
-      | i <- jv
-      , j <- jv
-      , abs i /= abs j ]
-    jv = [1, -1, 2, -2]
-
 knightTour :: [Square] -> [Square]
 knightTour moves
-  | null candMoves = reverse moves
+  | null possibilities = reverse moves
   | otherwise = knightTour $ newSquare : moves
   where
-    newSquare = minimumBy (comparing (length . findMoves)) candMoves
-    candMoves = findMoves $ head moves
-    findMoves = (\\ moves) . knightMoves
+    newSquare = minimumBy (comparing (length . findMoves)) possibilities
+    possibilities = findMoves $ head moves
+    findMoves = (\\ moves) . knightOptions
 
-toSq :: String -> (Int, Int)
-toSq [x, y] = (ord x - 96, ord y - 48)
+knightOptions :: Square -> [Square]
+knightOptions (x, y) =
+  knightMoves >>=
+  (\(i, j) ->
+      let a = x + i
+          b = y + j
+      in bool [] [(a, b)] (onBoard a && onBoard b))
 
-toAlg :: (Int, Int) -> String
-toAlg (x, y) = [chr (x + 96), chr (y + 48)]
+knightMoves :: [(Int, Int)]
+knightMoves =
+  let deltas = [id, negate] <*> [1, 2]
+  in deltas >>=
+     (\i -> deltas >>= (bool [] . return . (i, )) <*> ((abs i /=) . abs))
 
--- TEST -----------------------------------------------------------------------
-sq :: (Int, Int)
-sq = toSq "e5" -- Input: starting position on the board, e.g. (5, 5) as "e5"
+onBoard :: Int -> Bool
+onBoard = (&&) . (0 <) <*> (9 >)
+
+-- TEST ---------------------------------------------------
+startPoint = "e5"
+
+algebraic :: (Int, Int) -> String
+algebraic (x, y) = [chr (x + 96), chr (y + 48)]
 
 main :: IO ()
-main = printTour $ toAlg <$> knightTour [sq]
+main =
+  printTour $
+  algebraic <$> knightTour [(\[x, y] -> (ord x - 96, ord y - 48)) startPoint]
   where
     printTour [] = return ()
     printTour tour = do

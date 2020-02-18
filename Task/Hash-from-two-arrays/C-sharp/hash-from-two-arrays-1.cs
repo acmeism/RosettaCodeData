@@ -1,14 +1,17 @@
-System.Collections.HashTable h = new System.Collections.HashTable();
+static class Program
+{
+    static void Main()
+    {
+        System.Collections.Hashtable h = new System.Collections.Hashtable();
 
-string[] arg_keys = {"foo","bar","val"};
-string[] arg_values = {"little", "miss", "muffet"};
+        string[] keys = { "foo", "bar", "val" };
+        string[] values = { "little", "miss", "muffet" };
 
-//Some basic error checking
-int arg_length = 0;
-if ( arg_keys.Length == arg_values.Length ) {
-  arg_length = arg_keys.Length;
-}
+        System.Diagnostics.Trace.Assert(keys.Length == values.Length, "Arrays are not same length.");
 
-for( int i = 0; i < arg_length; i++ ){
-  h.add( arg_keys[i], arg_values[i] );
+        for (int i = 0; i < keys.Length; i++)
+        {
+            h.Add(keys[i], values[i]);
+        }
+    }
 }

@@ -21,7 +21,7 @@ int main()
 	ip.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
 		
 	SendInput(1,&ip,sizeof(ip));
-	sleep(1);
+	Sleep(1);
 	if(x>3)	
 		x-=1;
 	if(y<maxY-3)

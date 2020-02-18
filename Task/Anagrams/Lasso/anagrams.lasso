@@ -1,6 +1,6 @@
 local(
 	anagrams	= map,
-	words		= include_url('http://www.puzzlers.org/pub/wordlists/unixdict.txt')->split('\n'),
+	words		= include_url('http://wiki.puzzlers.org/pub/wordlists/unixdict.txt')->split('\n'),
 	key,
 	max		= 0,
 	findings	= array

@@ -1,5 +1,5 @@
 println("Downloading...")
-when (def wordText := <http://www.puzzlers.org/pub/wordlists/unixdict.txt> <- getText()) -> {
+when (def wordText := <http://wiki.puzzlers.org/pub/wordlists/unixdict.txt> <- getText()) -> {
     def words := wordText.split("\n")
 
     def storage := [].asMap().diverge()

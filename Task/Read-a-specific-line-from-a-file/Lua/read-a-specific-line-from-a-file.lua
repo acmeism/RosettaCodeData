@@ -1,8 +1,10 @@
-iter = io.lines 'test.txt'
-for i=0, 5 do
-    if not iter() then
-        error 'Not 7 lines in file'
-    end
+function fileLine (lineNum, fileName)
+  local count = 0
+  for line in io.lines(fileName) do
+    count = count + 1
+    if count == lineNum then return line end
+  end
+  error(fileName .. " has fewer than " .. lineNum .. " lines.")
 end
 
-line = iter()
+print(fileLine(7, "test.txt"))

@@ -2,7 +2,7 @@ require 'open-uri'
 
 anagram = Hash.new {|hash, key| hash[key] = []} # map sorted chars to anagrams
 
-open('http://www.puzzlers.org/pub/wordlists/unixdict.txt') do |f|
+open('http://wiki.puzzlers.org/pub/wordlists/unixdict.txt') do |f|
   words = f.read.split
   for word in words
     anagram[word.split('').sort] << word

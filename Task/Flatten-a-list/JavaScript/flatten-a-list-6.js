@@ -1,5 +1,8 @@
-// flatten :: Nested List a -> [a]
+// flatten :: NestedList a -> [a]
 const flatten = t => {
-    const go = x => Array.isArray(x) ? x.flatMap(go) : x
+    const go = x =>
+        Array.isArray(x) ? (
+            x.flatMap(go)
+        ) : x;
     return go(t);
 };

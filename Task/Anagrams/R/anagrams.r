@@ -1,4 +1,4 @@
-words <- readLines("http://www.puzzlers.org/pub/wordlists/unixdict.txt")
+words <- readLines("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt")
 word_group <- sapply(
     strsplit(words, split=""), # this will split all words to single letters...
     function(x) paste(sort(x), collapse="") # ...which we sort and paste again

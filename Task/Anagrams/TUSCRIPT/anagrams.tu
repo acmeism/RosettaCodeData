@@ -1,5 +1,5 @@
 $$ MODE TUSCRIPT,{}
-requestdata = REQUEST ("http://www.puzzlers.org/pub/wordlists/unixdict.txt")
+requestdata = REQUEST ("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt")
 
 DICT anagramm CREATE 99999
 

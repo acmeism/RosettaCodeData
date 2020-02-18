@@ -10,14 +10,14 @@ call bSort  N                                    /*invoke the bubble sort  with 
 call show        ' after sort:'                  /*show the   after    array elements.  */
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-bSort: procedure expose @.;  parse arg #;  m=#-1 /*N: is the number of @ array elements.*/
+bSort: procedure expose @.;  parse arg #         /*N: is the number of @ array elements.*/
        call disp                                 /*show a snapshot of the unsorted array*/
-       do m=m  by -1  until ok;     ok=1         /*keep sorting the  @ array until done.*/
+       do m=#-1  by -1  until ok;    ok=1        /*keep sorting the  @ array until done.*/
            do j=1  for m;   k=j+1
            if @.j>@.k  then do;     parse value    @.j  @.k  0      with      @.k  @.j  ok
                             end
            end   /*j*/                           /* [↑]  swap 2 elements, flag as ¬done.*/
-       call disp                                 /*show snapshot of partically sorted @.*/
+       call disp                                 /*show snapshot of partially sorted @. */
        end       /*m*/;      return
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 gen:   do j=1  for N;  @.j= j;  end

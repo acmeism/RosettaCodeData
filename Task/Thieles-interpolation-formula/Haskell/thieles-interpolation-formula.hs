@@ -3,8 +3,8 @@ thiele xs ys = f rho1 (tail xs)
   where
     f _ [] _ = 1
     f r@(r0:r1:r2:rs) (x:xs) v = r2 - r0 + (v - x) / f (tail r) xs v
-    rho1 = ((!! 1) . (++ [0])) <$> rho
-    rho = [0,0 ..] : [0,0 ..] : ys : rnext (tail rho) xs (tail xs)
+    rho1 = (!! 1) . (++ [0]) <$> rho
+    rho = repeat 0 : repeat 0 : ys : rnext (tail rho) xs (tail xs)
       where
         rnext _ _ [] = []
         rnext r@(r0:r1:rs) x xn =

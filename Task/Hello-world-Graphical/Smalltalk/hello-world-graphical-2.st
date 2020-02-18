@@ -1,1 +1,1 @@
-Dialog information: 'Goodbye, world.'
+'Hello World' asMorph openInWindow

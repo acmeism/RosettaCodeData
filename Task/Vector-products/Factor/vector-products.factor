@@ -1,5 +1,4 @@
 USING: arrays io locals math prettyprint sequences ;
-IN: rosetta-code.vector-products
 
 : dot-product ( a b -- dp ) [ * ] 2map sum ;
 

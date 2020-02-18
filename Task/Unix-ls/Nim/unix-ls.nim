@@ -1,4 +1,6 @@
-import os
+from algorithm import sorted
+from os import walkPattern
+from sequtils import toSeq
 
-for kind, path in walkDir(getCurrentDir(), true):
+for path in toSeq(walkPattern("*")).sorted:
   echo path

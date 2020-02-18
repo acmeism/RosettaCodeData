@@ -4,7 +4,7 @@ ar = CSV.table("test.csv").to_a #table method assumes headers and converts numbe
 
 # manipulate:
 ar.first << "SUM"
-ar[1..-1].each{|row| row << row.inject(:+)}
+ar[1..-1].each{|row| row << row.sum}
 
 # write:
 CSV.open("out.csv", 'w') do |csv|

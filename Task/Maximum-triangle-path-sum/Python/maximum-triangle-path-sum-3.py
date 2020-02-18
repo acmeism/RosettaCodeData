@@ -1,14 +1,17 @@
+'''Maximum triangle path sum'''
+
 from functools import (reduce)
-from itertools import (starmap)
 
 
 # maxPathSum :: [[Int]] -> Int
 def maxPathSum(rows):
+    '''The maximum total among all possible
+       paths from the top to the bottom row.
+    '''
     return reduce(
-        lambda xs, ys: list(starmap(
-            lambda a, b, c: a + max(b, c),
-            zip(ys, xs, xs[1:])
-        )),
+        lambda xs, ys: [
+            a + max(b, c) for (a, b, c) in zip(ys, xs, xs[1:])
+        ],
         reversed(rows[:-1]), rows[-1]
     )[0]
 

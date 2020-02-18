@@ -1,11 +1,9 @@
-import Control.Applicative (liftA2)
-
 nthRoot :: Double -> Double -> Double
 nthRoot n x =
   fst $
   until
     (uncurry (==))
-    (((,) <*> ((/ n) . liftA2 (+) ((n - 1) *) ((x /) . (** (n - 1))))) . snd)
+    (((,) <*> ((/ n) . ((+) <$> ((n - 1) *) <*> (x /) . (** (n - 1))))) . snd)
     (x, x / n)
 
 -- TESTS --------------------------------------------------
@@ -23,6 +21,6 @@ main =
 fTable :: String -> (a -> String) -> (b -> String) -> (a -> b) -> [a] -> String
 fTable s xShow fxShow f xs =
   let w = maximum (length . xShow <$> xs)
-      rjust n c = liftA2 drop length (replicate n c ++)
+      rjust n c = drop . length <*> (replicate n c ++)
   in unlines $
      s : fmap (((++) . rjust w ' ' . xShow) <*> ((" -> " ++) . fxShow . f)) xs

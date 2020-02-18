@@ -1,6 +1,6 @@
-import System.Random (randomRIO)
+import Control.Monad (replicateM, unless)
 import Data.List (tails, transpose)
-import Control.Monad (liftM2, replicateM, unless)
+import System.Random (randomRIO)
 
 data Cell
   = Empty
@@ -22,7 +22,7 @@ randomChance = randomRIO (0, 1.0) :: IO Double
 rim :: a -> [[a]] -> [[a]]
 rim b = fmap (fb b) . (fb =<< rb)
   where
-    fb = liftM2 (.) (:) (flip (++) . return)
+    fb = (.) <$> (:) <*> (flip (++) . return)
     rb = fst . unzip . zip (repeat b) . head
 
 take3x3 :: [[a]] -> [[[a]]]

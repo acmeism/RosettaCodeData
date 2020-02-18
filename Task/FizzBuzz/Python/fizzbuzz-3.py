@@ -1,1 +1,9 @@
-for i in range(1,101): print("Fizz"*(i%3==0) + "Buzz"*(i%5==0) or i)
+for n in range(1,101):
+    response = ''
+
+    if not n%3:
+        response += 'Fizz'
+    if not n%5:
+        response += 'Buzz'
+
+    print(response or n)

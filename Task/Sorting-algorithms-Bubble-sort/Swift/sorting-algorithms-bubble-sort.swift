@@ -1,4 +1,4 @@
-func bubbleSort<T:Comparable>(inout list:[T]) {
+func bubbleSort<T:Comparable>(list:inout[T]) {
     var done = false
     while !done {
         done = true
@@ -10,3 +10,8 @@ func bubbleSort<T:Comparable>(inout list:[T]) {
         }
     }
 }
+
+var list1 = [3, 1, 7, 5, 2, 5, 3, 8, 4]
+print(list1)
+bubbleSort(list: &list1)
+print(list1)

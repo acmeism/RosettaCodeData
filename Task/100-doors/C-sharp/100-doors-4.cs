@@ -5,14 +5,11 @@ namespace ConsoleApplication1
     {
         static void Main()
         {
-            bool[] doors = new bool[100];
+            double n;
 
-            //The number of passes can be 1-based, but the number of doors must be 0-based.
-            for (int p = 1; p <= 100; p++)
-                for (int d = p - 1; d < 100; d += p)
-                    doors[d] = !doors[d];
-            for (int d = 0; d < 100; d++)
-                Console.WriteLine("Door #{0}: {1}", d + 1, doors[d] ? "Open" : "Closed");
+            //If the current door number is the perfect square of an integer, say it is open, else say it is closed.
+            for (int d = 1; d <= 100; d++)
+                Console.WriteLine("Door #{0}: {1}", d, (n = Math.Sqrt(d)) == (int)n ? "Open" : "Closed");
             Console.ReadKey(true);
         }
     }

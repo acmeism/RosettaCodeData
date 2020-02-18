@@ -9,7 +9,7 @@
   (if (list? x)
     (vector->list (knuth-shuffle (list->vector x)))
     (begin (for ([i (in-range (sub1 (vector-length x)) 0 -1)])
-             (define r (random i))
+             (define r (random (+ i 1)))
              (swap! x i r))
            x)))
 

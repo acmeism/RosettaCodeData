@@ -1,76 +1,70 @@
-'''Flatten a list'''
+'''Flatten a nested list'''
 
-from functools import (reduce)
 from itertools import (chain)
 
 
-def flatten(xs):
-    '''A flat list of atomic values derived
-       from a nested list.
-    '''
-    return reduce(
-        lambda a, x: a + list(until(every(notList))(
-            concatMap(pureList)
-        )([x])),
-        xs, []
-    )
+# flatten :: NestedList a -> [a]
+def flatten(x):
+    '''A list of atomic values resulting from fully flattening
+       an arbitrarily nested list.'''
+    return concatMap(flatten)(x) if isinstance(x, list) else [x]
 
 
-# TEST ----------------------------------------------------
 def main():
-    '''From nested list to flattened list'''
-
-    print(main.__doc__ + ':\n\n')
-    xs = [[1], 2, [[3, 4], 5], [[[]]], [[[6]]], 7, 8, []]
+    '''Test: flatten an arbitrarily nested list.'''
     print(
-        repr(xs) + ' -> ' + repr(flatten(xs))
+        fTable(__doc__ + ':')(showList)(showList)(
+            flatten
+        )([
+            [[[]]],
+            [[1, 2, 3]],
+            [[1], [[2]], [[[3, 4]]]],
+            [[1], 2, [[3, 4], 5], [[[]]], [[[6]]], 7, 8, []]
+        ])
     )
 
 
 # GENERIC -------------------------------------------------
+
+# compose (<<<) :: (b -> c) -> (a -> b) -> a -> c
+def compose(g):
+    '''Right to left function composition.'''
+    return lambda f: lambda x: g(f(x))
+
 
 # concatMap :: (a -> [b]) -> [a] -> [b]
 def concatMap(f):
     '''A concatenated list over which a function has been mapped.
        The list monad can be derived by using a function f which
        wraps its output in a list,
-       (using an empty list to represent computational failure).
-    '''
+       (using an empty list to represent computational failure).'''
     return lambda xs: list(
         chain.from_iterable(map(f, xs))
     )
 
 
-# every :: (a -> Bool) -> [a] -> Bool
-def every(p):
-    '''True if p(x) holds for every x in xs'''
-    def go(p, xs):
-        return all(map(p, xs))
-    return lambda xs: go(p, xs)
+# fTable :: String -> (a -> String) ->
+#                     (b -> String) ->
+#        (a -> b) -> [a] -> String
+def fTable(s):
+    '''Heading -> x display function ->
+                 fx display function ->
+          f -> value list -> tabular string.'''
+    def go(xShow, fxShow, f, xs):
+        w = max(map(compose(len)(xShow), xs))
+        return s + '\n' + '\n'.join([
+            xShow(x).rjust(w, ' ') + (' -> ') + fxShow(f(x))
+            for x in xs
+        ])
+    return lambda xShow: lambda fxShow: lambda f: lambda xs: go(
+        xShow, fxShow, f, xs
+    )
 
 
-# notList :: a -> Bool
-def notList(x):
-    '''True if the value x is not a list.'''
-    return not isinstance(x, list)
-
-
-# pureList :: a -> [b]
-def pureList(x):
-    '''x if x is a list, othewise [x]'''
-    return x if isinstance(x, list) else [x]
-
-
-# until :: (a -> Bool) -> (a -> a) -> a -> a
-def until(p):
-    '''The result of repeatedly applying f until p holds.
-       The initial seed value is x.'''
-    def go(f, x):
-        v = x
-        while not p(v):
-            v = f(v)
-        return v
-    return lambda f: lambda x: go(f, x)
+# showList :: [a] -> String
+def showList(xs):
+    '''Stringification of a list.'''
+    return '[' + ','.join(str(x) for x in xs) + ']'
 
 
 if __name__ == '__main__':

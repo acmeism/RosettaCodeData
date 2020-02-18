@@ -1,6 +1,6 @@
 >>> import urllib
 >>> from collections import defaultdict
->>> words = urllib.urlopen('http://www.puzzlers.org/pub/wordlists/unixdict.txt').read().split()
+>>> words = urllib.urlopen('http://wiki.puzzlers.org/pub/wordlists/unixdict.txt').read().split()
 >>> len(words)
 25104
 >>> anagram = defaultdict(list) # map sorted chars to anagrams

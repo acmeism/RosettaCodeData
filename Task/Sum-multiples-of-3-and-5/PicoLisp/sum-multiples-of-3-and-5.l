@@ -8,5 +8,3 @@
          (-
             (+ (sumMul N 3) (sumMul N 5))
             (sumMul N 15) ) ) ) )
-
-(bye)

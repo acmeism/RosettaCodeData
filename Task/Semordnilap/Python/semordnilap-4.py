@@ -5,33 +5,22 @@ import requests
 URL = 'http://wiki.puzzlers.org/pub/wordlists/unixdict.txt'
 
 
-def find_semordnilaps():
-  """
-  This generator could just take the `word_generator`
-  as an argument and read words from it. That would
-  have been both simpler and more efficient, but it
-  is implemented this way for the sake of illustration.
-  """
-  seen = set()
-  word = None
+def find_semordnilaps(word_generator):
 
-  while True:
-    word = yield word
+  # Keys in this dict are the words seen so far, reversed.
+  # Values are booleans determining whether we have seen (and yielded)
+  # the key, so that we don't yield the same word twice.
+  seen = {}
 
+  for word in word_generator:
     if word not in seen:
-      seen.add(word[::-1])
-      word = None
-
-
-def semordnilap_words(word_generator):
-
-  semordnilaps_finder = find_semordnilaps()
-  semordnilaps_finder.send(None)
-
-  words = map(semordnilaps_finder.send, word_generator)
-
-  # need to get rid of `None` values for words which are not semordnilaps
-  yield from filter(None, words)
+      reversed_word = word[::-1]
+      seen[reversed_word] = False  # not yielded yet
+    else:
+      yielded_already = seen[word]
+      if not yielded_already:
+        yield word
+        seen[word] = True  # the word has been yielded
 
 
 def url_lines(url):
@@ -41,20 +30,18 @@ def url_lines(url):
 
 def main(url=URL, num_of_examples=5):
 
-  semordnilaps_generator = semordnilap_words(url_lines(url))
+  semordnilaps_generator = find_semordnilaps(url_lines(url))
 
   semordnilaps = list(semordnilaps_generator)
 
-  example_words = random.choices(semordnilaps, k=num_of_examples)
+  example_words = random.choices(semordnilaps, k=int(num_of_examples))
   example_pairs = ((word, word[::-1]) for word in example_words)
 
-  print(('found %(num)s semordnilap usernames:\n'
-         '%(examples)s\n'
-         '...'
-        ) % dict(
-          num = len(semordnilaps),
-          examples = '\n'.join(str(pair) for pair in example_pairs),
-        ))
+  print(
+    f'found {len(semordnilaps)} semordnilap usernames:',
+    * ['%s %s' % p for p in example_pairs]+['...'],
+    sep='\n'
+  )
 
   return semordnilaps
 

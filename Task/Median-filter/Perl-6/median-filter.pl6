@@ -1,29 +1,6 @@
-# Reference: https://github.com/azawawi/perl6-magickwand
+use PDL:from<Perl5>;
+use PDL::Image2D:from<Perl5>;
 
-# WIP by module author
-
-#!/usr/bin/env perl6
-
-use v6;
-
-use MagickWand;
-
-# A new magic wand
-my $original = MagickWand.new;
-
-# Read an image
-$original.read("image/example.jpg");
-
-# apply median filter
-say "Median Filter...";
-my $o = $original.clone;
-$o.median-filter;
-$o.label("Median Filter");
-# And then write a new image
-$o.write("output.png");
-
-# And cleanup on exit
-LEAVE {
-  $original.cleanup   if $original.defined;
-  $o.cleanup if $o.defined;
-}
+my $image = rpic 'plasma.png';
+my $smoothed = med2d($image, ones(3,3), {Boundary => 'Truncate'});
+wpic $smoothed, 'plasma_median.png';

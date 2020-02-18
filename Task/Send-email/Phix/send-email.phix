@@ -1,0 +1,62 @@
+include builtins\libcurl.e
+
+constant USER = "you@gmail.com",
+         PWD = "secret",
+         URL = "smtps://smtp.gmail.com:465",
+         FROM = "sender@gmail.com",
+         TO = "addressee@email.com",
+         CC = "info@example.org",
+         FMT = "Date: Mon, 13 Jun 2018 11:30:00 +0100\r\n"&
+               "To: %s\r\n"&
+               "From: %s (Example User)\r\n"&
+               "Cc: %s (Another example User)\r\n"&
+               "Subject: Sanding mail via Phix\r\n"&
+               "\r\n"&
+               "This mail is being sent by a Phix program.\r\n"&
+               "\r\n"&
+               "It connects to the GMail SMTP server, by far the most popular mail program of all.\r\n"&
+               "Which is, however, probably not written in Phix.\r\n"
+
+function read_callback(atom pbuffer, integer size, nmemb, atom pUserData)
+-- copy a maximum of size*nmemb bytes into pbuffer
+    if size==0 or nmemb==0 or size*nmemb<1 then return 0 end if
+    {integer sent, integer len, atom pPayload} = peekns({pUserData,3})
+    integer bytes_written = min(size*nmemb,len-sent)
+    mem_copy(pbuffer,pPayload+sent,bytes_written)
+    sent += bytes_written
+    pokeN(pUserData,sent,machine_word())
+--  printf(2, "*** We read %d bytes from file\n", bytes_written)
+    return bytes_written
+end function
+constant read_cb = call_back({'+',routine_id("read_callback")})
+
+constant string payload_text = sprintf(FMT,{TO,FROM,CC})
+
+curl_global_init()
+CURLcode res = CURLE_OK
+atom slist_recipients = NULL
+atom curl = curl_easy_init()
+curl_easy_setopt(curl, CURLOPT_USERNAME, USER)
+curl_easy_setopt(curl, CURLOPT_PASSWORD, PWD)
+curl_easy_setopt(curl, CURLOPT_URL, URL)
+curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL)
+curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0)
+curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0)
+curl_easy_setopt(curl, CURLOPT_MAIL_FROM, FROM)
+slist_recipients = curl_slist_append(slist_recipients, TO)
+slist_recipients = curl_slist_append(slist_recipients, CC)
+curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, slist_recipients)
+curl_easy_setopt(curl, CURLOPT_READFUNCTION, read_cb);
+atom pUserData = allocate(machine_word()*3),
+     pPayload = allocate_string(payload_text)
+pokeN(pUserData,{0,length(payload_text),pPayload},machine_word())
+curl_easy_setopt(curl, CURLOPT_READDATA, pUserData)
+curl_easy_setopt(curl, CURLOPT_UPLOAD, true)
+--curl_easy_setopt(curl, CURLOPT_VERBOSE, true)
+res = curl_easy_perform(curl)
+if res!=CURLE_OK then
+    printf(2, "curl_easy_perform() failed: %d (%s)\n",{res,curl_easy_strerror(res)})
+end if
+curl_slist_free_all(slist_recipients)
+curl_easy_cleanup(curl)
+curl_global_cleanup()

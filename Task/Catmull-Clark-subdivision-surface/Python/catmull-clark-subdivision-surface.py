@@ -311,9 +311,9 @@ def get_points_faces(input_points, input_faces):
 def get_new_points(input_points, points_faces, avg_face_points, avg_mid_edges):
     """
 
-    m1 = (n - 3) / n
-    m2 = 1 / n
-    m3 = 2 / n
+    m1 = (n - 3.0) / n
+    m2 = 1.0 / n
+    m3 = 2.0 / n
     new_coords = (m1 * old_coords)
                + (m2 * avg_face_points)
                + (m3 * avg_mid_edges)
@@ -324,9 +324,9 @@ def get_new_points(input_points, points_faces, avg_face_points, avg_mid_edges):
 
     for pointnum in range(len(input_points)):
         n = points_faces[pointnum]
-        m1 = (n - 3) / n
-        m2 = 1 / n
-        m3 = 2 / n
+        m1 = (n - 3.0) / n
+        m2 = 1.0 / n
+        m3 = 2.0 / n
         old_coords = input_points[pointnum]
         p1 = mul_point(old_coords, m1)
         afp = avg_face_points[pointnum]

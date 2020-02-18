@@ -1,1 +1,1 @@
-11 iota <reversed> [ . ] each
+11 <iota> <reversed> [ . ] each

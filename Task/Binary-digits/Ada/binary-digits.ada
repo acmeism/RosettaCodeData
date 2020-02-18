@@ -1,4 +1,4 @@
-wwith ada.text_io;use ada.text_io;
+with ada.text_io; use ada.text_io;
 procedure binary is
   bit : array (0..1) of character := ('0','1');
 

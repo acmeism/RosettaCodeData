@@ -6,15 +6,15 @@ divs(1) -> [];
 divs(N) -> lists:sort(divisors(1,N)).
 
 divisors(1,N) ->
-     [1] ++ divisors(2,N,math:sqrt(N)).
+      divisors(2,N,math:sqrt(N),[1]).
 
-divisors(K,_N,Q) when K > Q -> [];
-divisors(K,N,_Q) when N rem K =/= 0 ->
-    [] ++ divisors(K+1,N,math:sqrt(N));
-divisors(K,N,_Q) when K * K  == N ->
-    [K] ++ divisors(K+1,N,math:sqrt(N));
-divisors(K,N,_Q) ->
-    [K, N div K] ++ divisors(K+1,N,math:sqrt(N)).
+divisors(K,_N,Q,L) when K > Q -> L;
+divisors(K,N,_Q,L) when N rem K =/= 0 ->
+    divisors(K+1,N,_Q,L);
+divisors(K,N,_Q,L) when K * K  =:= N ->
+    divisors(K+1,N,_Q,[K|L]);
+divisors(K,N,_Q,L) ->
+    divisors(K+1,N,_Q,[N div K, K|L]).
 
 sumdivs(N) -> lists:sum(divs(N)).
 

@@ -1,78 +1,141 @@
 Program HappyNumbers (output);
-// NativeUInt: LongWord 32-Bit-OS/ Uint64 64-Bit-OS
 {$IFDEF FPC}
   {$MODE DELPHI}
-  {$OPTIMIZATION ON,Regvar,PEEPHOLE,CSE,ASMCSE}
-  {$CODEALIGN proc=32}
+  {$OPTIMIZATION ON,All}
 {$ELSE}
-  //for Delphi
   {$APPLICATION CONSOLE}
 {$ENDIF}
+//{$DEFINE Use1E9}
+uses
+  sysutils,//Timing
+  strutils;//Numb2USA
+
 const
-  HighCache = 19*(9*9);//sum sqrdigt of Uint64
-  cDigit  = 1000;
+  base = 10;
+  HighCache = 20*(sqr(base-1));//sum of sqr digit of Uint64
+{$IFDEF Use1E9}
+  cDigit1  = sqr(base)*sqr(base);//must be power of base
+  cDigit2  = Base*sqr(cDigit1);// 1e9
+  cMaxPot  = 18;
+{$ELSE}
+  cDigit1  = base*sqr(base);//must be power of base
+  cDigit2  = sqr(cDigit1);// 1e6
+  cMaxPot  = 14;
+{$ENDIF}
+
 type
-  tCache     = array[0..HighCache] of Word;
-  tSqrdCache = array[0..cDigit] of Word;
-  tSqrdSumCache = array[0..HighCache] of Word;
+  tSumSqrDgts    = array[0..cDigit2] of word;
+  tCache         = array[0..2*HighCache] of word;
+  tSqrdSumCache  = array[0..2*HighCache] of Uint32;
+
 var
+  SumSqrDgts :tSumSqrDgts;
   Cache : tCache;
-  SqrdCache :tSqrdCache;
-  SqrdSumCache :tSqrdSumCache;
 
-function find(n: NativeUint;const cache: tCache): boolean;
-var
-  i: NativeUint;
-begin
-  find := false;
-  for i := low(cache) to high(cache) do
-    if cache[i] = n then
-      find := true;
-  writeln(i:10,n:10);
-end;
+  SqrdSumCache1,
+  SqrdSumCache2 :tSqrdSumCache;
 
-procedure InitSqrdCache;
+  T1,T0 : TDateTime;
+  MAX2,Max1 : NativeInt;
+
+procedure InitSumSqrDgts;
+//calc all sum of squared digits 0..cDigits2
+//using already calculated values
 var
-  i,n,sum,r: NativeUint;
+  i,j,n,sq,Base1: NativeInt;
 begin
-  For i := 0 to  cDigit do
-  Begin
-    sum := 0;
-    n := i;
-    while n > 0 do
-    begin
-      r := n;
-      n := n div 10;
-      r := r-10*n;
-      sum := sum + r*r;
+  For i := 0 to Base-1 do
+    SumSqrDgts[i] := i*i;
+  Base1 := Base;
+  n := Base;
+  repeat
+    For i := 1 to base-1 do
+    Begin
+      sq := SumSqrDgts[i];
+      For j := 0 to base1-1 do
+      Begin
+        SumSqrDgts[n] := sq+SumSqrDgts[j];
+        inc(n);
+      end;
     end;
-    SqrdCache[i] := sum;
-  end;
+    Base1 := Base1*base;
+  until Base1 >= cDigit2;
+  SumSqrDgts[n] := 1;
 end;
 
-function SumSqrdDgt(n: NativeUint): NativeUint;
+function SumSqrdDgt(n: Uint64):NativeUint;inline;
 var
-  sum,r: NativeUint;
+  r: Uint64;
 begin
-  sum := 0;
-  while n > cDigit do
-  begin
+  result := 0;
+  while n>cDigit2 do
+  Begin
     r := n;
-    n := n div cDigit;
-    r := r-cDigit*n;
-    sum := sum + SqrdCache[r];
+    n := n div cDigit2;
+    r := r-n*cDigit2;
+    inc(result,SumSqrDgts[r]);
   end;
-  SumSqrdDgt := sum + SqrdCache[n];
+  inc(result,SumSqrDgts[n]);
 end;
 
+procedure CalcSqrdSumCache1;
+var
+  Count : tSqrdSumCache;
+  i,sq,result : NativeInt;
+begin
+  For i :=High(Count) downto 0 do
+    Count[i] := 0;
+  //count the manifold
+  For i := cDigit1-1 downto 0 do
+    inc(count[SumSqrDgts[i]]);
+  For i := High(Count) downto 0 do
+    if count[i] <> 0 then
+    Begin
+      Max1 := i;
+      BREAK;
+    end;
+  For sq := 0 to (20-3)*81 do
+  Begin
+    result := 0;
+    For i := Max1 downto 0 do
+      inc(result,Count[i]*Cache[sq+i]);
+    SqrdSumCache1[sq] := result;
+  end;
+end;
+
+procedure CalcSqrdSumCache2;
+var
+  Count : tSqrdSumCache;
+  i,sq,result : NativeInt;
+begin
+  For i :=High(Count) downto 0 do
+    Count[i] := 0;
+  For i := cDigit2-1 downto 0 do
+    inc(count[SumSqrDgts[i]]);
+  For i := High(Count) downto 0 do
+    if count[i] <> 0 then
+    Begin
+      Max2 := i;
+      BREAK;
+    end;
+  For sq := 0 to (20-6)*81 do
+  Begin
+    result := 0;
+    For i := Max2 downto 0 do
+      inc(result,Count[i]*Cache[sq+i]);
+    SqrdSumCache2[sq] := result;
+  end;
+end;
 
 procedure Inithappy;
 var
   n,s,p : NativeUint;
 Begin
-  fillchar(SqrdSumCache,SizeOf(SqrdSumCache),#0);
-  InitSqrdCache;
+  fillchar(SqrdSumCache1,SizeOf(SqrdSumCache1),#0);
+  fillchar(SqrdSumCache2,SizeOf(SqrdSumCache2),#0);
+  InitSumSqrDgts;
   fillChar(Cache,SizeOf(Cache),#0);
+
   Cache[1] := 1;
   For n := 1 to High(Cache) do
   Begin
@@ -100,57 +163,67 @@ Begin
       end;
     end;
   end;
-end;
-
-function nextCdigits(sqSum: NativeUint):NativeUint;
-var
-  i,cnt : LongInt;
-Begin
-  cnt:= SqrdSumCache[sqSum];
-  If cnt = 0 then
-  Begin
-    For i := 0 to Cdigit-1 do
-      cnt := cnt + Ord(Cache[sqSum+SqrdCache[i]]=1);
-    //saving calculation->speed up x100
-    SqrdSumCache[sqSum] := cnt;
-  end;
-  nextCdigits := cnt;
+  //mark all unhappy numbers with 0
+  For n := 1 to High(Cache) do
+    If Cache[n] <> 1 then
+      Cache[n] := 0;
+   CalcSqrdSumCache1;
+   CalcSqrdSumCache2;
 end;
 
 function is_happy(n: NativeUint): boolean;inline;
 begin
-  is_happy := Cache[SumSqrdDgt(n)]=1
+  is_happy := Boolean(Cache[SumSqrdDgt(n)])
 end;
 
-function nthHappy(Limit: NativeUint):NativeUint;
+function nthHappy(Limit: Uint64):Uint64;
 var
-  n,
-  count : NativeUint;
+  d,e,sE: NativeUint;
 begin
-  n:= 0;
-  count := 0;
-  // big steps
-  IF limit>cDigit then
-    repeat
-      inc(count,nextCdigits(SumSqrdDgt(n)));
-      inc(n,cDigit);
-    until count >= Limit-cDigit;
-  // small steps
-  repeat
-    if is_happy(n) then
-      inc(count);
-    inc(n);
-  until count >= Limit;
-  nthHappy:= n-1;
+  result := 0;
+  d := 0;
+  e := 0;
+  sE := SumSqrDgts[e];
+  //big steps
+  while Limit >= cDigit2 do
+  begin
+    dec(Limit,SqrdSumCache2[SumSqrDgts[d]+sE]);
+    inc(result,cDigit2);
+    inc(d);
+    IF d >=cDigit2 then
+    Begin
+      inc(e);
+      sE := SumSqrdDgt(e);//SumSqrDgts[e];
+      d :=0;
+    end;
+  end;
+  //small steps
+  while Limit >= cDigit1 do
+  Begin
+    dec(Limit,SqrdSumCache1[SumSqrdDgt(result)]);
+    inc(result,cDigit1);
+  end;
+  //ONE BY ONE
+  while Limit > 0 do
+  begin
+    dec(Limit,Cache[SumSqrdDgt(result)]);
+    inc(result);
+  end;
+  result -= 1;
 end;
 
 var
-  n, count,Limit: NativeUint;
+  n, count :Uint64;
+  Limit: NativeUint;
 begin
+  write('cDigit1 = ',Numb2USA(IntToStr(cDigit1)));
+  writeln('  cDigit2 = ',Numb2USA(IntToStr(cDigit2)));
+  T0 := now;
   Inithappy;
+  writeln('Init takes ',FormatDateTime(' HH:NN:SS.ZZZ',now-T0));
   n := 1;
   count := 0;
-  while count < 8 do
+  while count < 10  do
   begin
     if is_happy(n) then
     begin
@@ -161,11 +234,16 @@ begin
   end;
   writeln;
 
+  T0 := now;
+  T1 := T0;
   n := 1;
-  Limit := 10;// 1En
+  Limit := 10;
   repeat
-    writeln('10e',n,' nth happy number ',nthHappy(limit):13);
+    writeln('1E',n:2,' n.th happy number ',Numb2USA(IntToStr(nthHappy(Limit))):26,
+      FormatDateTime(' HH:NN:SS.ZZZ',now-T1));
+    T1 := now;
     inc(n);
     Limit := limit*10;
-  until n> 8;
+  until n> cMaxPot;
+  writeln('Total time counting ',FormatDateTime('HH:NN:SS.ZZZ',now-T0));
 end.

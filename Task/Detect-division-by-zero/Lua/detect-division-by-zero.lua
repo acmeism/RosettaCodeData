@@ -1,5 +1,4 @@
-function div(a,b)
-  quot = a/b
-  if quot == 1/0 then error() end
-  return quot
+local function div(a,b)
+  if b == 0 then error() end
+  return a/b
 end

@@ -14,5 +14,5 @@ def usec(function, arguments):
         timer.print_exc(file=sys.stderr)
         raise
 
- def nothing(): pass
- def identity(x): return x
+def nothing(): pass
+def identity(x): return x

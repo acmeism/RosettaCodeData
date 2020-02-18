@@ -4,7 +4,7 @@ import java.util.*;
 
 public class WordsOfEqChars {
     public static void main(String[] args) throws IOException {
-        URL url = new URL("http://www.puzzlers.org/pub/wordlists/unixdict.txt");
+        URL url = new URL("http://wiki.puzzlers.org/pub/wordlists/unixdict.txt");
         InputStreamReader isr = new InputStreamReader(url.openStream());
         BufferedReader reader = new BufferedReader(isr);
 

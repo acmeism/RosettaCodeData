@@ -85,25 +85,20 @@ local function kmeans(data, nclusters, init)
     -- take one center c1, chosen uniformly at random from 'data'
     local i = math.random(1, #data)
     centers[K] = {x = data[i].x, y = data[i].y}
+    local D = {}
 
     -- repeat until we have taken 'nclusters' centers
     while K < nclusters do
       -- take a new center ck, choosing a point 'i' of 'data' with probability
       -- D(i)^2 / sum_{i=1}^n D(i)^2
 
-      local D = {}
       local sum_D = 0.0
       for i = 1,#data do
-        local min_d = nil
-
-        for c = 1,K do
-          local d = diss(data[i], centers[c])
-
-          if min_d == nil or d < min_d then
+        local min_d = D[i]
+        local d = diss(data[i], centers[K])
+        if min_d == nil or d < min_d then
             min_d = d
-          end
         end
-
         D[i] = min_d
         sum_D = sum_D + min_d
       end

@@ -1,12 +1,6 @@
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
 class HundredDoors {
-    public static void main(String args[]) {
-        String openDoors = IntStream.rangeClosed(1, 100)
-                .filter(i -> Math.pow((int) Math.sqrt(i), 2) == i)
-                .mapToObj(Integer::toString)
-                .collect(Collectors.joining(", "));
-        System.out.printf("Open doors: %s%n", openDoors);
+    public static void main(String[] args) {
+        for (int i = 1; i <= 10; i++)
+            System.out.printf("Door %d is open.%n", i * i);
     }
 }

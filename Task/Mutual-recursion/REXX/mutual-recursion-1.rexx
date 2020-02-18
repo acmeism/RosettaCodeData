@@ -1,8 +1,8 @@
 /*REXX program shows  mutual recursion  (via the Hofstadter Male and Female sequences). */
-parse arg lim .;       if lim=''  then lim=40;    w=length(lim);      pad=left('', 20)
+parse arg lim .;      if lim=''  then lim= 40;     w= length(lim);      pad= left('', 20)
 
-     do j=0  to lim;   jj=right(j, w);    ff=right(F(j), w);          mm=right(M(j), w)
-     say   pad     'F('jj") ="            ff   pad   'M('jj") ="      mm
+     do j=0  for lim+1;   jj= right(j, w);   ff= right(F(j), w);        mm= right(M(j), w)
+     say    pad       'F('jj") ="            ff   pad   'M('jj") ="     mm
      end   /*j*/
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/

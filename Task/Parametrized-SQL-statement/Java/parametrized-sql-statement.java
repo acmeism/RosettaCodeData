@@ -8,21 +8,28 @@ public class DBDemo{
    private String username;
    private String password;
 
-   Connection conn = DriverManager.getConnection(protocol + dbName, username, password);
    PreparedStatement query;
 
    public int setUpAndExecPS(){
-      query = conn.prepareStatement(
+      try {
+         Connection conn = DriverManager.getConnection(protocol + dbName, username, password);
+
+         query = conn.prepareStatement(
             "UPDATE players SET name = ?, score = ?, active = ? WHERE jerseyNum = ?");
 
-      query.setString(1, "Smith, Steve");//automatically sanitizes and adds quotes
-      query.setInt(2, 42);
-      query.setBoolean(3, true);
-      query.setInt(4, 99);
-      //there are similar methods for other SQL types in PerparedStatement
+         query.setString(1, "Smith, Steve");//automatically sanitizes and adds quotes
+         query.setInt(2, 42);
+         query.setBoolean(3, true);
+         query.setInt(4, 99);
+         //there are similar methods for other SQL types in PerparedStatement
+         return query.executeUpdate();//returns the number of rows changed
+         //PreparedStatement.executeQuery() will return a java.sql.ResultSet,
+         //execute() will simply return a boolean saying whether it succeeded or not
 
-      return query.executeUpdate();//returns the number of rows changed
-      //PreparedStatement.executeQuery() will return a java.sql.ResultSet,
-      //execute() will simply return a boolean saying whether it succeeded or not
+      } catch (Exception e) {
+         e.printStackTrace();
+      }
+
+      return 0;
    }
 }

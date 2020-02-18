@@ -1,1 +1,1 @@
-100 iota [ semiprime? ] filter [ pprint bl ] each nl
+100 <iota> [ semiprime? ] filter [ pprint bl ] each nl

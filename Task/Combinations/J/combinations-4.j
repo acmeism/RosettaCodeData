@@ -1,3 +1,10 @@
-combr=: dyad define M.
-  if. (x>:y)+.0=x do. i.(x<:y),x else. (0,.x combr&.<: y),1+x combr y-1 end.
+comb2=: dyad define
+  d =. 1 + y - x
+  k =. >: |. i. d
+  z =. < \. |. i. d
+  for. i.x-1 do.
+     z=. , each /\. k ,. each z
+     k =. 1 + k
+  end.
+  ;{.z
 )

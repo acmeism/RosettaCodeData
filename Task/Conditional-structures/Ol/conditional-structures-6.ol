@@ -1,8 +1,8 @@
-(tuple-case (tuple 'selector 1 2 3)
-   ((case1 x y)
-      (print "tuple-case: case1 " x ", " y))
-   ((selector x y z)
-      (print "tuple-case: selector " x ", " y ", " z))
+(cond
+   ((= (* 2 2) 4)
+      (print "cond: equal"))
+   ((= (* 2 2) 6)
+      (print "cond: not equal"))
    (else
-      (print "tuple-case: i don't know")))
-; ==> tuple-case: selector 1, 2, 3
+      (print "cond: i don't know")))
+; ==> cond: equal

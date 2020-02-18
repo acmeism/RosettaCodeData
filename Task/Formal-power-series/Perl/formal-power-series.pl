@@ -108,7 +108,7 @@ print "cos(x) ~= $cos\n";
 print "tan(x) ~= $tan\n";
 print "exp(x) ~= $exp\n";
 
-print "sin^2 + cos^s = ", $sin*$sin + $cos*$cos, "\n";
+print "sin^2 + cos^2 = ", $sin*$sin + $cos*$cos, "\n";
 
 1;
 __END__

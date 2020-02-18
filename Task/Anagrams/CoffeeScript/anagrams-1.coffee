@@ -17,7 +17,7 @@ show_large_anagram_sets = (word_lst) ->
 
 get_word_list = (process) ->
   options =
-    host: "www.puzzlers.org"
+    host: "wiki.puzzlers.org"
     path: "/pub/wordlists/unixdict.txt"
 
   req = http.request options, (res) ->

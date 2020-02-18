@@ -1,70 +1,66 @@
-foldlZipWith::(a -> b -> c) -> (d -> c -> d) -> d -> [a] -> [b]  -> d
-foldlZipWith _ _ u [] _          = u
-foldlZipWith _ _ u _ []          = u
-foldlZipWith f g u (x:xs) (y:ys) = foldlZipWith f g (g u (f x y)) xs ys
-
-foldl1ZipWith::(a -> b -> c) -> (c -> c -> c) -> [a] -> [b] -> c
-foldl1ZipWith _ _ [] _          = error "First list is empty"
-foldl1ZipWith _ _ _ []          = error "Second list is empty"
-foldl1ZipWith f g (x:xs) (y:ys) = foldlZipWith f g (f x y) xs ys
-
-multAdd::(a -> b -> c) -> (c -> c -> c) -> [[a]] -> [[b]] -> [[c]]
-multAdd f g xs ys = map (\us -> foldl1ZipWith (\u vs -> map (f u) vs) (zipWith g) us ys) xs
-
 mult:: Num a => [[a]] -> [[a]] -> [[a]]
-mult xs ys = multAdd (*) (+) xs ys
+mult uss vss = map ((\xs -> if null xs then [] else foldl1 (zipWith (+)) xs). zipWith (\vs u -> map (u*) vs) vss) uss
 
-triangle::(Fractional a, Ord a) => [[a]] -> [[a]] -> (a,[(([a],[a]),Int)])
-triangle as bs = pivot 1 [] $ zipWith3 (\x y i -> ((x,y),i)) as bs [(0::Int)..]
+bubble::([a] -> c) -> (c -> c -> Bool) -> [[a]] -> [[b]] -> ([[a]],[[b]])
+bubble _ _ [] ts         = ([],ts)
+bubble _ _ rs []         = (rs,[])
+bubble f g (r:rs) (t:ts) = bub r t (f r) rs ts [] []
   where
-  good rs ts = (abs.head.fst.fst $ ts) <= (abs.head.fst.fst $ rs)
-  go (us,vs) ((os,ps),i) = if o == 0 then ((rs,f vs ps),i) else ((f us rs,f vs ps),i)
+  bub l k _ [] _ xs ys          = (l:xs,k:ys)
+  bub l k _ _ [] xs ys          = (l:xs,k:ys)
+  bub l k m (u:us) (v:vs) xs ys = ans
     where
-    (o,rs) = (head os,tail os)
-    f = zipWith (\x y -> y - x*o)
-  change i (ys:zs) = map (\xs -> if (==i).snd $ xs then ys else xs) zs
-  pivot d ls [] = (d,ls)
-  pivot d ls zs@((_,j):ys) = if u == 0 then (0,ls) else pivot e (ps:ls) ws
-    where
-    e  = if i == j then u*d else -u*d
-    ws = map (go (map (/u) us,map (/u) vs)) $ if i == j then ys else change i zs
-    ps@((u:us,vs),i) = foldl1 (\rs ts ->  if good rs ts then rs else ts) zs
+    mu = f u
+    ans | g m mu    = bub l k m us vs (u:xs) (v:ys)
+        | otherwise = bub u v mu us vs (l:xs) (k:ys)
 
--- ((det,sol),permutation) = gauss as bs
--- det = determinant as
--- sol is solution of: as * sol = bs
--- perm is a permutation with: (matPerm perm) * as * sol = (matPerm perm) * bs
-gauss::(Fractional a,Ord a) => [[a]] -> [[a]] -> ((a,[[a]]),[Int])
-gauss as bs = if 0 == det then ((0,[]),[]) else solveTriangle ms
+pivot::Num a => [a] -> [a] -> [[a]] -> [[a]] -> ([[a]],[[a]])
+pivot xs ks ys ls = go ys ls [] []
   where
-  (det,ms) = triangle as bs
-  solveTriangle ((([c],b),i):sys) = go sys [map (/c) b] [i]
+  x              = head xs
+  fun r          = zipWith (\u v ->  u*r - v*x)
+  val rs ts      = let f = fun (head rs) in (tail $ f xs rs,f ks ts)
+  go [] _ us vs  = (us,vs)
+  go _ [] us vs  = (us,vs)
+  go rs ts us vs = go (tail rs) (tail ts) (es:us) (fs:vs)
+    where (es,fs) = val (head rs) (head ts)
+
+triangle::(Num a,Ord a) => [[a]] -> [[a]] -> ([[a]],[[a]])
+triangle as bs = go (as,bs) [] []
+  where
+  go ([],_) us vs  = (us,vs)
+  go (_,[]) us vs  = (us,vs)
+  go (rs,ts) us vs = ans
     where
-    val us vs ws = let u = head us in map (/u) $ zipWith (-) vs (head $ mult [tail us] ws)
-    go [] zs is        = ((det,zs),is)
-    go (((x,y),i):sys) zs is = go sys ((val x y zs):zs) (i:is)
+    (xs:ys,ks:ls) = bubble (abs.head) (>=) rs ts
+    ans = go (pivot xs ks ys ls) (xs:us) (ks:vs)
 
-solveGauss::(Fractional a,Ord a) => [[a]] -> [[a]] -> [[a]]
-solveGauss as = snd.fst.gauss as
+solveTriangle::(Fractional a,Eq a) => [[a]] -> [[a]] -> [[a]]
+solveTriangle [] _ = []
+solveTriangle _ [] = []
+solveTriangle as _ | not.null.dropWhile ((/= 0).head) $ as = []
+solveTriangle ([c]:as) (b:bs) = go as bs [map (/c) b]
+  where
+  val us vs ws = let u = head us in map (/u) $ zipWith (-) vs (head $ mult [tail us] ws)
+  go [] _ zs          = zs
+  go _ [] zs          = zs
+  go (x:xs) (y:ys) zs = go xs ys $ (val x y zs):zs
 
-matI::Num a => Int -> [[a]]
-matI n = [ [fromIntegral.fromEnum $ i == j | i <- [1..n]] | j <- [1..n]]
+solveGauss:: (Fractional a, Ord a) => [[a]] -> [[a]] -> [[a]]
+solveGauss as bs = uncurry solveTriangle $ triangle as bs
 
-matPerm::Num a => [Int] -> [[a]]
-matPerm ns = [ [fromIntegral.fromEnum $ i == j | (j,_) <- zip [0..] ns] | i <- ns]
+matI::(Num a) => Int -> [[a]]
+matI n = [ [fromIntegral.fromEnum $ i == j | j <- [1..n]] | i <- [1..n]]
 
 task::[[Rational]] -> [[Rational]] -> IO()
 task a b = do
-  let ((d,x),perm)   = gauss a b
-  let ps             = matPerm perm
-  let u              = map (map fromRational) x
-  let y              = mult a x
-  let identity       = matI (length x)
-  let a1             = solveGauss a identity
-  let h              = mult a a1
-  let z              = mult a1 b
-  putStrLn "d = determinant a ="
-  print d
+  let x         = solveGauss a b
+  let u         = map (map fromRational) x
+  let y         = mult a x
+  let identity  = matI (length x)
+  let a1        = solveGauss a identity
+  let h         = mult a a1
+  let z         = mult a1 b
   putStrLn "a ="
   mapM_ print a
   putStrLn "b ="
@@ -77,8 +73,6 @@ task a b = do
   mapM_ print y
   putStrLn $ "test: y == b = "
   print $ y == b
-  putStrLn "ps is the permutation associated to matrix a and ps ="
-  mapM_ print ps
   putStrLn "identity matrix: identity ="
   mapM_ print identity
   putStrLn "find: a1 = inv(a) => solve: a * a1 = identity => a1 = solveGauss a identity ="
@@ -99,5 +93,5 @@ main = do
             [1.00, 1.88, 3.55,  6.70, 12.62,  23.80],
             [1.00, 2.51, 6.32, 15.88, 39.90, 100.28],
             [1.00, 3.14, 9.87, 31.01, 97.41, 306.02]]
-  let b = [[-0.01], [0.61], [0.91],  [0.99],  [0.60], [0.02]]
+  let b = [[-0.01], [0.61], [0.91], [0.99], [0.60], [0.02]]
   task a b

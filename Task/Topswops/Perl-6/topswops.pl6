@@ -7,6 +7,6 @@ sub swops(@a is copy) {
     $count
 }
 
-sub topswops($n) { max (1..$n).permutations.race(:8degree).map: *.&swops }
+sub topswops($n) { max (1..$n).permutations.race.map: *.&swops }
 
 say "$_ {topswops $_}" for 1 .. 10;

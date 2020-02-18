@@ -1,1 +1,1 @@
-: foo #19 &n:inc jump #21 ;
+:foo #19 &n:inc \ju...... #21 ;

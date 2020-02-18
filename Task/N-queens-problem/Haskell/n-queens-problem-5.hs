@@ -40,21 +40,21 @@ emptySt = ([],[])
 
 -- | Breadth-first search
 bfs :: Int -> [(State, Thread)] -> (State, Thread)
-bfs n []                     = error "Couldn't find a feasible solution"
+bfs n []                     = error "Could not find a feasible solution"
 bfs n sts | (not.empty) goal = head goal
-          | otherwise        = bfs n sts'
+          | otherwise        = bfs n sts2
   where
-    goal = filter (isGoal n) sts'
-    sts' = filter (feasible n) $ (moves n) <*> sts
+    goal = filter (isGoal n) sts2
+    sts2 = filter (feasible n) $ (moves n) <*> sts
 
 -- | Depth-first search
 dfs :: Int -> (State, Thread) -> [(State, Thread)]
 dfs n st | isGoal n st     = [st]
          | infeasible n st = [emptySt]
          | otherwise       = do x   <- [1..n]
-                                st' <- dfs n $ move x st
-                                guard $ st' /= emptySt
-                                return st'
+                                st2 <- dfs n $ move x st
+                                guard $ st2 /= emptySt
+                                return st2
 
 main = do
   [narg] <- getArgs

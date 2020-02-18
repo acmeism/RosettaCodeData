@@ -1,22 +1,9 @@
-USING: formatting kernel math math.functions sequences
-tools.time ;
-IN: rosetta-code.sum35
+USING: kernel math prettyprint ;
 
-: {x+y-z} ( {x,y,z} -- x+y-z ) first3 [ + ] dip - ;
+: sum-multiples ( m n upto -- sum )
+    >integer 1 - [ 2dup * ] dip
+    [ 2dup swap [ mod - + ] [ /i * 2/ ] 2bi ] curry tri@
+    [ + ] [ - ] bi* ;
 
-: range-length ( limit multiple -- len ) [ 1 - ] dip /i ;
-
-: triangular ( limit multiple -- sum )
-    [ range-length ] [ nip over 1 + ] 2bi * * 2 / ;
-
-: sum35 ( limit -- sum )
-    { 3 5 15 } [ triangular ] with map {x+y-z} ;
-
-: msg ( limit sum -- )
-    "The sum of multiples of 3 or 5 below %d is %d.\n" printf ;
-
-: output ( limit -- ) dup sum35 msg ;
-
-: main ( -- ) [ 1000 10 20 ^ [ output ] bi@ ] time ;
-
-MAIN: main
+3 5 1000 sum-multiples .
+3 5 1e20 sum-multiples .

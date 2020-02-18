@@ -1,7 +1,7 @@
 import extensions;
 
-const dig = new string[]{"00","01","10"};
-const dig1 = new string[]{"","1","10"};
+const dig = new string[]::("00","01","10");
+const dig1 = new string[]::("","1","10");
 
 sealed struct ZeckendorfNumber
 {

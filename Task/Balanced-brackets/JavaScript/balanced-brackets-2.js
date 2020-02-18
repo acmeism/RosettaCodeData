@@ -1,60 +1,56 @@
-(() => {
-    'use strict';
+console.log("Supplied examples");
+var tests = ["", "[]", "][", "[][]", "][][", "[[][]]", "[]][[]"];
+for (var test of tests)
+{
+  console.log("The string '" + test + "' is " +
+      (isStringBalanced(test) ? "" : "not ") + "OK.");
+}
+console.log();
+console.log("Random generated examples");
+for (var example = 1; example <= 10; example++)
+{
+  var test = generate(Math.floor(Math.random() * 10) + 1);
+  console.log("The string '" + test + "' is " +
+      (isStringBalanced(test) ? "" : "not ") + "OK.");
+}
 
-    // Int -> String
-    let randomBrackets = n => range(1, n)
-        .map(() => Math.random() < 0.5 ? '[' : ']')
-        .join('');
+function isStringBalanced(str)
+{
+  var paired = 0;
+  for (var i = 0; i < str.length && paired >= 0; i++)
+  {
+    var c = str[i];
+    if (c == '[')
+      paired++;
+    else if (c == ']')
+      paired--;
+  }
+  return (paired == 0);
+}
 
-    // imbalance :: String -> Integer
-    let imbalance = strBrackets => {
-
-        // iDepth: initial nesting depth (0 = closed)
-        // iIndex: starting character position
-
-        // errorIndex :: [Char] -> Int -> Int -> Int
-        let errorIndex = (xs, iDepth, iIndex) => {
-            if (xs.length > 0) {
-                let tail = xs.slice(1),
-                    iNext = iDepth + (xs[0] === '[' ? 1 : -1);
-
-                if (iNext < 0) return iIndex; // unmatched closing bracket
-                else return tail.length ? errorIndex(
-                        tail, iNext, iIndex + 1
-                    ) : iNext === 0 ? -1 : iIndex; // balanced ? problem index ?
-
-            } else return iDepth === 0 ? -1 : iIndex;
-        };
-
-        return errorIndex(strBrackets.split(''), 0, 0);
-    };
-
-
-    // GENERIC FUNCTION
-
-    // range :: Int -> Int -> [Int]
-    let range = (m, n) =>
-        Array.from({
-            length: Math.floor(n - m) + 1
-        }, (_, i) => m + i);
-
-    // TESTING AND FORMATTING OUTPUT
-
-    let lngPairs = 6,
-        strPad = Array(lngPairs * 2 + 4)
-        .join(' ');
-
-    return range(0, lngPairs)
-        .map(n => {
-            let w = n * 2,
-                s = randomBrackets(w),
-                i = imbalance(s),
-                blnOK = i === -1;
-
-            return "'" + s + "'" + strPad.slice(w + 2) +
-                (blnOK ? 'OK' : 'problem') +
-                (blnOK ? '' : '\n' + Array(i + 2)
-                    .join(' ') + '^');
-        })
-        .join('\n');
-})();
+function generate(n)
+{
+  var opensCount = 0, closesCount = 0;
+  // Choose at random until n of one type generated
+  var generated = "";
+  while (opensCount < n && closesCount < n)
+  {
+    switch (Math.floor(Math.random() * 2) + 1)
+    {
+      case 1:
+        opensCount++;
+        generated += "[";
+        break;
+      case 2:
+        closesCount++;
+        generated += "]";
+        break;
+      default:
+        break;
+    }
+  }
+  // Now pad with the remaining other brackets
+  generated +=
+      opensCount == n ? "]".repeat(n - closesCount) : "[".repeat(n - opensCount);
+  return generated;
+}

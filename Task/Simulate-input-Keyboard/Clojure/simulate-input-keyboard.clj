@@ -1,5 +1,5 @@
 (import java.awt.Robot)
-(import java.awt.KeyEvent)
+(import java.awt.event.KeyEvent)
 (defn keytype [str]
   (let [robot (new Robot)]
        (doseq [ch str]

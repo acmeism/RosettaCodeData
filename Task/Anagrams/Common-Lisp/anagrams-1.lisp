@@ -1,4 +1,4 @@
-(defun anagrams (&optional (url "http://www.puzzlers.org/pub/wordlists/unixdict.txt"))
+(defun anagrams (&optional (url "http://wiki.puzzlers.org/pub/wordlists/unixdict.txt"))
   (let ((words (drakma:http-request url :want-stream t))
         (wordsets (make-hash-table :test 'equalp)))
     ;; populate the wordsets and close stream

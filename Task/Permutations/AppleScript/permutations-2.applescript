@@ -1,7 +1,7 @@
 to DoPermutations(aList, n)
-    --> Heaps's algorithm (Permutation by interchanging pairs) AppleScript by Jean.O.matiC
+    --> Heaps's algorithm (Permutation by interchanging pairs)
     if n = 1 then
-        tell (a reference to Permlist) to copy aList to its end
+        tell (a reference to PermList) to copy aList to its end
         -- or: copy aList as text (for concatenated results)
     else
         repeat with i from 1 to n
@@ -11,23 +11,22 @@ to DoPermutations(aList, n)
             else
                 tell aList to set [item 1, item n] to [item n, item 1] -- swaps items 1 and n of aList
             end if
-            set i to i + 1
         end repeat
     end if
-    return (a reference to Permlist) as list
+    return (a reference to PermList) as list
 end DoPermutations
 
 --> Example 1 (list of words)
-set [SourceList, Permlist] to [{"Good", "Johnny", "Be"}, {}]
+set [SourceList, PermList] to [{"Good", "Johnny", "Be"}, {}]
 DoPermutations(SourceList, SourceList's length)
---> result (value of Permlist)
+--> result (value of PermList)
 {{"Good", "Johnny", "Be"}, {"Johnny", "Good", "Be"}, {"Be", "Good", "Johnny"}, ¬
     {"Good", "Be", "Johnny"}, {"Johnny", "Be", "Good"}, {"Be", "Johnny", "Good"}}
 
 --> Example 2 (characters with concatenated results)
-set [SourceList, Permlist] to [{"X", "Y", "Z"}, {}]
+set [SourceList, PermList] to [{"X", "Y", "Z"}, {}]
 DoPermutations(SourceList, SourceList's length)
---> result (value of Permlist)
+--> result (value of PermList)
 {"XYZ", "YXZ", "ZXY", "XZY", "YZX", "ZYX"}
 
 --> Example 3 (Integers)

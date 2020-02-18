@@ -1,64 +1,127 @@
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
-#define IS_CTRL  (1 << 0)
-#define IS_EXT	 (1 << 1)
-#define IS_ALPHA (1 << 2)
-#define IS_DIGIT (1 << 3) /* not used, just give you an idea */
+#define MAXBUF 256  /* limit */
+#define STR_SZ 100  /* string size */
 
-unsigned int char_tbl[256] = {0};
 
-/* could use ctypes, but then they pretty much do the same thing */
-void init_table()
+/* function prototypes */
+int ascii (const unsigned char c);
+
+int ascii_ext (const unsigned char c);
+
+unsigned char* strip(unsigned char* str, const size_t n, int ext );
+
+
+/* check character
+   return 1 for true
+          0 for false
+*/
+int ascii (const unsigned char c)
 {
-	int i;
+  unsigned char min = 32;
+  unsigned char max = 126;
 
-	for (i = 0; i < 32; i++) char_tbl[i] |= IS_CTRL;
-	char_tbl[127] |= IS_CTRL;
+  if ( c>=min && c<=max ) return 1;
 
-	for (i = 'A'; i <= 'Z'; i++) {
-		char_tbl[i] |= IS_ALPHA;
-		char_tbl[i + 0x20] |= IS_ALPHA; /* lower case */
-	}
-
-	for (i = 128; i < 256; i++) char_tbl[i] |= IS_EXT;
+  return 0;
 }
 
-/* depends on what "stripped" means; we do it in place.
- * "what" is a combination of the IS_* macros, meaning strip if
- * a char IS_ any of them
- */
-void strip(char * str, int what)
+
+/* check i extended character
+   return 1 for true
+          0 for false
+*/
+int ascii_ext (const unsigned char c)
 {
-	unsigned char *ptr, *s = (void*)str;
-	ptr = s;
-	while (*s != '\0') {
-		if ((char_tbl[(int)*s] & what) == 0)
-			*(ptr++) = *s;
-		s++;
-	}
-	*ptr = '\0';
+  unsigned char min_ext = 128;
+  unsigned char max_ext = 255;
+
+  if ( c>=min_ext && c<=max_ext )
+       return 1;
+
+  return 0;
 }
 
-int main()
+
+/* fill buffer omly with valid characters
+   then rewrite string from buffer
+   limit to n < MAX chars
+*/
+
+unsigned char* strip( unsigned char* str, const size_t n, int ext)
 {
-	char a[256];
-	int i;
 
-	init_table();
+  unsigned char buffer[MAXBUF] = {'\0'};
 
-	/* populate string with one of each char */
-	for (i = 1; i < 255; i++) a[i - 1] = i; a[255] = '\0';
-	strip(a, IS_CTRL);
-	printf("%s\n", a);
+  size_t i = 0;  // source index
+  size_t j = 0;  // dest   index
 
-	for (i = 1; i < 255; i++) a[i - 1] = i; a[255] = '\0';
-	strip(a, IS_CTRL | IS_EXT);
-	printf("%s\n", a);
+  size_t max = (n<MAXBUF)? n : MAXBUF -1;  // limit size
 
-	for (i = 1; i < 255; i++) a[i - 1] = i; a[255] = '\0';
-	strip(a, IS_CTRL | IS_EXT | IS_ALPHA);
-	printf("%s\n", a);
+  while (i < max )
+    {
+      if ( (ext && ascii_ext(str[i]) ) ||  (ascii(str[i]) ) )    // check
+	{
+	  buffer[j++] = str[i]; // assign
+	}
+      i++;
+    }
 
-	return 0;
+  memset(str, '\0', max); // wipe string
+
+  i = 0;               // reset count
+
+  while( i < j)
+    {
+      str[i] = buffer[i]; // copy back
+      i++;
+    }
+
+  str[j] = '\0';  // terminate properly
+
+  return str;
+}
+
+/* try it out */
+int main( int argc, char** argv)
+{
+  enum {ASCII=0, EXT=1}; /* enumeration makes easier reading */
+
+  unsigned int seed = 134529;  // RNG seed value
+
+  /* variables and storage */
+  unsigned char badstring[STR_SZ] = {'\0'};
+  unsigned char bs_2[STR_SZ]      = {'\0'};
+
+  unsigned char* goodstring = NULL;
+  unsigned char* goodstring_ext = NULL;
+
+  size_t i = 0;
+
+  srand(seed); /* seed RNG */
+
+  fprintf(stdout, "Original:\t" );
+
+  /* generate a random string */
+  for (i = 0; i < STR_SZ; i++)
+    {
+      badstring[i] = (unsigned char) ( rand () & (unsigned char)0xFF );
+      fprintf(stdout, "%c", badstring[i] );
+    }
+  fprintf(stdout, "\n");
+
+
+   memcpy(bs_2, badstring, STR_SZ * sizeof(unsigned char) ); /* copy string */
+
+   goodstring_ext = strip( badstring, STR_SZ, EXT); /* remove non-extended and non-ascii */
+
+   fprintf(stdout, "\nEXT:\t%s\n" , goodstring_ext );
+
+   goodstring = strip( bs_2, STR_SZ, ASCII); /* remove all non-ascii */
+
+   fprintf(stdout, "\nASCII:\t%s\n" , goodstring );
+
+return 0;
 }

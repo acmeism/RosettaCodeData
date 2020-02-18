@@ -10,19 +10,20 @@ def queenPuzzle(nRows, nCols):
        in which no two Queens share a row,
        column, or diagonal.
     '''
-    def go(nRows, nCols):
+    def go(nRows):
+        lessRows = nRows - 1
         return reduce(
             lambda a, xys: a + reduce(
                 lambda b, iCol: b + [xys + [iCol]] if (
-                    safe(nRows - 1, iCol, xys)
+                    safe(lessRows, iCol, xys)
                 ) else b,
                 enumFromTo(1)(nCols),
                 []
             ),
-            go(nRows - 1, nCols),
+            go(lessRows),
             []
         ) if nRows > 0 else [[]]
-    return go(nRows, nCols)
+    return go(nRows)
 
 
 # safe :: Int -> Int -> [Int] -> Bool

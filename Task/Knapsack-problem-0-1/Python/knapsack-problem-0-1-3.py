@@ -1,5 +1,5 @@
 def total_value(items, max_weight):
-    return  sum([x[2] for x in items]) if sum([x[1] for x in items]) < max_weight else 0
+    return  sum([x[2] for x in items]) if sum([x[1] for x in items]) <= max_weight else 0
 
 cache = {}
 def solve(items, max_weight):

@@ -14,7 +14,7 @@ gen:  fibs= '-55 -21 -1 -8 -8 -21 -55 0 0'       /*some non─positive Fibonacci
 
       /* ┌◄─┬──◄─ some paired bread primes which are of the form:  (P-3)÷2  and  2∙P+3  */
       /* │  │     where P is a prime. Bread primes are related to sandwich & meat primes*/
-      /* ↓  ↓ ──── ──── ───── ────── ────── ────── ────── ─────── ─────── ─────── ──────*/
+      /* ↓  ↓ ──── ════ ───── ══════ ────── ══════ ────── ═══════ ─────── ═══════ ──────*/
       bp=2 17 5 29 7 37 13 61 43 181 47 197 67 277 97 397 113 461 137 557 167 677 173 701,
                                                       797 1117 307 1237 1597 463 1861 467
       $=bp fibs;         #=words($)              /*combine the two lists; get # of items*/
@@ -22,10 +22,10 @@ gen:  fibs= '-55 -21 -1 -8 -8 -21 -55 0 0'       /*some non─positive Fibonacci
       return                                     /* [↑]  populate the  @.  array with #s*/
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 pancakeSort: procedure expose @.;   parse arg N
-                       do N=N  by -1  for N-1
-                       !=@.1;  ?=1;                do j=2  to N;   if @.j<=!  then iterate
-                                                   !=@.j;          ?=j
+                    do N=N  by -1  for N-1
+                    != @.1;   ?= 1;                do j=2  to N;   if @.j<=!  then iterate
+                                                   != @.j;         ?= j
                                                    end   /*j*/
-                       call flip ?;   call flip N
-                       end   /*N*/
+                    call flip ?;   call flip N
+                    end   /*N*/
              return

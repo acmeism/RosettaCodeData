@@ -1,20 +1,20 @@
 import complex
 
-proc mandelbrot(a: Complex): Complex =
-  for i in 0 .. <50:
-    result = result * result + a
+proc inMandelbrotSet(c: Complex, maxEscapeIterations = 50): bool =
+  result = true; var z: Complex
+  for i in 0..maxEscapeIterations:
+    z = z * z + c
+    if abs2(z) > 4: return false
 
-iterator stepIt(start, step: float, iterations: int): auto =
-  for i in 0 .. iterations:
-    yield start + float(i) * step
+iterator steps(start, step: float, numPixels: int): float =
+  for i in 0..numPixels:
+    yield start + i.float * step
 
-var rows = ""
-for y in stepIt(1.0, -0.05, 41):
-  for x in stepIt(-2.0, 0.0315, 80):
-    if abs(mandelbrot((x,y))) < 2:
-      rows.add('*')
-    else:
-      rows.add(' ')
-  rows.add("\n")
+proc mandelbrotImage(yStart, yStep, xStart, xStep: float, height, width: int): string =
+  for y in steps(yStart, yStep, height):
+    for x in steps(xStart, xStep, width):
+      result.add(if complex(x, y).inMandelbrotSet: '*'
+                 else: ' ')
+    result.add('\n')
 
-echo rows
+echo mandelbrotImage(1.0, -0.05, -2.0, 0.0315, 40, 80)

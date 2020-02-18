@@ -9,7 +9,6 @@ if n=='' | n==","  then n= 10                    /* "      "         "   "   "  
 
       do k=n%2  by -1  to 1;   @.j= k;   j= j+1  /*  "   2nd   "   "   "   decreasing " */
       end   /*k*/
-
                       say '  number  '     " SMA with period" p' '   " SMA with period" q
                       say ' ──────── '     "───────────────────"     '───────────────────'
                                            pad='     '

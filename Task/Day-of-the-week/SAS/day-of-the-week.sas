@@ -1,7 +1,7 @@
 data _null_;
 do y=2008 to 2121;
-a=mdy(12,25,y);
-if weekday(a)=1 then put y;
+    a=mdy(12,25,y);
+    if weekday(a)=1 then put y;
 end;
 run;
 

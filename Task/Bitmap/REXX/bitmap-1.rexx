@@ -1,10 +1,11 @@
 /*REXX program demonstrates how to process/display a simple  RGB  raster graphics image.*/
-red   = '00000000 00000000 11111111'b            /*define a    red    value.            */
-blue  = '11111111 00000000 00000000'b            /*   "   "    blue     "               */
-blue  = 'ff 00 00'x                              /*another way to define a  blue  value.*/
+red   = 'ff 00 00'x                              /*a method to define a   red   value.  */
+blue  = '00 00 ff'x                              /*"    "    "    "   "   blue    "     */
 @.    =                                          /*define entire  @.  array  to  nulls. */
-             x=10;       y=40                    /*set pixel's coördinates.             */
+outFN = 'image'                                  /*the filename of the output image PPM */
+sWidth = 500;     sHeight= 500                   /*the screen width and height in pixels*/
 call RGBfill      red                            /*set the entire   image   to red.     */
+            x= 10;       y= 40                   /*set pixel's coördinates.             */
 call RGBset x, y, blue                           /*set a pixel (at  10,40)  to blue.    */
 color = RGBget(x, y)                             /*get the color of a pixel.            */
 hexV  = c2x(color)                               /*get hex    value of pixel's color.   */
@@ -17,9 +18,9 @@ say  xy    ' pixel in binary: '     bin3V        /*show again, but with spaces. 
 say                                              /*show a blank between binary and hex. */
 say  xy    ' pixel in hex:    '     hexV         /*show again, but in hexadecimal.      */
 say  xy    ' pixel in hex:    '     hex3V        /*show again, but with spaces.         */
-call PPMwrite 'image', 500, 500                  /*create a PPM (output) file of image. */      /* ◄■■■■■■■■ not part of this task.*/
+call PPMwrite outFN, sWidth, sHeight             /*create a PPM (output) file of image. */      /* ◄■■■■■■■■ not part of this task.*/
 say                                              /*show a blank.                        */
-say 'The file  image.PPM   was created.'         /*inform user that a file was created. */
+say 'The file ' outFN".PPM  was created."        /*inform user that a file was created. */
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
 RGBfill:  @.=arg(1);                          return          /*fill image with a color.*/

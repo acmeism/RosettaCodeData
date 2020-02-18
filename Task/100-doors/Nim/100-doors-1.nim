@@ -1,16 +1,11 @@
-from strutils import format
+from strutils import `%`
 
-proc check_doors() =
-  const n = 100
-  var is_open : array[1..n, bool] # auto-initialized to false
-  # pass over the doors n times
-  for pass in 1..n:
-    var i = pass
-    while i <= n:
-      is_open[i] = not is_open[i]
-      i += pass
-  # print the result
-  for door in 1..n:
-    echo format("door $1 is $2.", door, (if is_open[door]: "open" else: "closed"))
+const numDoors = 100
+var doors: array[1..numDoors, bool]
 
-check_doors()
+for pass in 1..numDoors:
+  for door in countup(pass, numDoors, pass):
+    doors[door] = not doors[door]
+
+for door in 1..numDoors:
+  echo "Door $1 is $2." % [$door, if doors[door]: "open" else: "closed"]

@@ -1,4 +1,4 @@
-(defun sum-3-5 (ls)
+(defun sum-3-5 (n)
   (apply '+ (seq-filter
 	     '(lambda (x) (or (= 0 (% x 3) ) (= 0 (% x 5) )))
-	     ls) ))
+	     (number-sequence 1 (- n 1))) ))

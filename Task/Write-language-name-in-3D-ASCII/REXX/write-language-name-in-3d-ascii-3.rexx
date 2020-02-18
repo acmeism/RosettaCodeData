@@ -13,5 +13,5 @@
   $.1 = changestr( "/ ",   $.1,   '/\'    )
   $.2 = changestr( "\ ",   $.2,   '\/'    )
        do k=1  for 2;  say strip(left('',#-j)$.k,"T")   /*the LEFT BIF does indentation.*/
-       end  /*k*/                                /* [↓]  display a line  and its shadow.*/
+       end  /*k*/                                /* [↑]  display a line  and its shadow.*/
   end       /*j*/                                /*stick a fork in it,  we're all done. */

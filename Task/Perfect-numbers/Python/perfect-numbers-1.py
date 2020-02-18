@@ -1,6 +1,6 @@
-def perf(n):
+def perf1(n):
     sum = 0
-    for i in xrange(1, n):
+    for i in range(1, n):
         if n % i == 0:
             sum += i
     return sum == n

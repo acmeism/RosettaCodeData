@@ -1,62 +1,62 @@
-(order => {
-    // sierpinski :: Int -> [Bool]
-    let sierpinski = intOrder => {
+(() => {
+    'use strict';
 
-        // asciiPascalMod2 :: Int -> [[Int]]
-        let asciiPascalMod2 = nRows =>
-            range(1, nRows - 1)
-            .reduce(sofar => {
-                let lstPrev = sofar.slice(-1)[0];
+    // LINES OF SIERPINSKI TRIANGLE AT LEVEL N -------------------------------
 
-                // The composition of (asciiBinary . mod 2 . add)
-                // is reduced here to a rule from two parent characters
-                // to a single child character.
+    // sierpinski :: Int -> [String]
+    const sierpTriangle = n =>
+        // Previous triangle centered with left and right padding,
+        (n > 0) ? concat(ap([
+            map(xs => intercalate(xs, ap(
+                [s => concat(replicate(Math.pow(2, (n - 1)), s))], [' ', '-']
+            ))),
 
-                // Rule 90 also reduces to the same XOR
-                // relationship between left and right neighbours.
+            // above a pair of duplicates, placed one character apart.
+            map(xs => intercalate('+', [xs, xs]))
+        ], [sierpTriangle(n - 1)])) : ['▲'];
 
-                return sofar
-                    .concat([zipWith(
-                        (left, right) => left === right ? ' ' : '*',
-                        [' '].concat(lstPrev),
-                        lstPrev.concat(' ')
-                    )]);
-            }, [
-                ['*'] // Tip of triangle
-            ]);
 
-        // Reduce/folding from the last item (base of list)
-        // which has zero left indent.
+    // GENERIC FUNCTIONS -----------------------------------------------------
 
-        // Each preceding row has one more indent space than the row beneath it
-        return asciiPascalMod2(Math.pow(2, intOrder))
-            .reduceRight((a, x) => {
-                return {
-                    triangle: a.indent + x.join(' ') + '\n' + a.triangle,
-                    indent: a.indent + ' '
-                }
-            }, {
-                triangle: '',
-                indent: ''
-            }).triangle
+    // replicate :: Int -> a -> [a]
+    const replicate = (n, a) => {
+        let v = [a],
+            o = [];
+        if (n < 1) return o;
+        while (n > 1) {
+            if (n & 1) o = o.concat(v);
+            n >>= 1;
+            v = v.concat(v);
+        }
+        return o.concat(v);
     };
 
-    // zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
-    let zipWith = (f, xs, ys) =>
-            xs.length === ys.length ? (
-                xs.map((x, i) => f(x, ys[i]))
-            ) : undefined,
+    // curry :: ((a, b) -> c) -> a -> b -> c
+    const curry = f => a => b => f(a, b);
 
-        // range(intFrom, intTo, optional intStep)
-        // Int -> Int -> Maybe Int -> [Int]
-        range = (m, n, step) => {
-            let d = (step || 1) * (n >= m ? 1 : -1);
+    // map :: (a -> b) -> [a] -> [b]
+    const map = curry((f, xs) => xs.map(f));
 
-            return Array.from({
-                length: Math.floor((n - m) / d) + 1
-            }, (_, i) => m + (i * d));
-        };
+    // Apply a list of functions to a list of arguments
+    // <*> :: [(a -> b)] -> [a] -> [b]
+    const ap = (fs, xs) => //
+        [].concat.apply([], fs.map(f => //
+            [].concat.apply([], xs.map(x => [f(x)]))));
 
-    return sierpinski(order);
+    // unlines :: [String] -> String
+    const unlines = xs => xs.join('\n');
 
-})(4);
+    // intercalate :: String -> [a] -> String
+    const intercalate = (s, xs) => xs.join(s);
+
+    // concat :: [[a]] -> [a] || [String] -> String
+    const concat = xs => {
+        if (xs.length > 0) {
+            const unit = typeof xs[0] === 'string' ? '' : [];
+            return unit.concat.apply(unit, xs);
+        } else return [];
+    };
+
+    // TEST ------------------------------------------------------------------
+    return unlines(sierpTriangle(4));
+})();

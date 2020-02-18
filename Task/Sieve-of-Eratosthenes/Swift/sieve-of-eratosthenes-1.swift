@@ -1,37 +1,25 @@
-import Foundation
+import Foundation // for sqrt() and Date()
 
-func primes(_ n: Int)
-    -> UnfoldSequence<Int, (Int?, Bool)> {
-  var sieve = Array<Bool>(repeating: true, count: n + 1)
-  let lim = Int(sqrt(Double(n)))
+let max = 1_000_000
+let maxroot = Int(sqrt(Float80(max)))
+let startingPoint = Date()
 
-  for i in 2...lim {
-    if sieve[i] {
-      for notPrime in stride(from: i*i, through: n, by: i) {
-        sieve[notPrime] = false
-      }
+var isprime = [Bool](repeating: true, count: max+1 )
+for i in 2...maxroot {
+    if isprime[i] {
+        for k in stride(from: max/i, through: i, by: -1) {
+            if isprime[k] {
+                isprime[i*k] = false }
+        }
     }
-  }
-
-  return sequence(first: 2, next: { (p:Int) -> Int? in
-    var np = p + 1
-    while np <= n && !sieve[np] { np += 1}
-    return np > n ? nil : np
-  })
 }
 
-let range = 100000000
+var count = 0
+for i in 2...max {
+    if isprime[i] {
+        count += 1
+    }
+}
+print("\(count) primes found under \(max)")
 
-print("The primes up to 100 are:")
-primes(100).forEach { print($0, "", terminator: "") }
-print()
-
-print("Found \(primes(1000000).reduce(0) { (a, _) in a + 1 }) primes to 1000000.")
-
-let start = NSDate()
-var answr = primes(range).reduce(0) { (a, _) in a + 1 }
-let elpsd = -start.timeIntervalSinceNow
-
-print("Found \(answr) primes to \(range).")
-
-print(String(format: "This test took %.3f milliseconds.", elpsd * 1000))
+print("\(startingPoint.timeIntervalSinceNow * -1) seconds")

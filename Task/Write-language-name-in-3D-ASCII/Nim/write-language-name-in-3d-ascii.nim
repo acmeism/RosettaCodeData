@@ -6,8 +6,8 @@ const nim = """
  # #  #     #     # ## #
  #  # #     #     #    #
  #   ##     #     #    #
- #    #   #####   #    #"""
-
-let lines = nim.replace("#", "<<<").replace(" ", "X").replace("X", "   ").replace("\n", " Y").replace("< ", "<>").split('Y')
+ #    #   #####   #    #
+"""
+let lines = nim.replace("#", "<<<").replace(" ", "   ").replace("< ", "<>").replace("<\n", "<>\n").splitLines
 for i, line in lines:
-  echo spaces((lines.len - i) * 3), line
+  echo spaces(lines.len - i), line

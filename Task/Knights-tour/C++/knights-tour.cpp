@@ -92,8 +92,8 @@ public:
                 if(data[y + dy][x + dx] != 0)
                     continue;
 
-                ++n;
                 get<2>(order[n]) = i + 1;
+                ++n;
                 data[y+dy][x+dx] = n + 1;
                 order[n] = make_tuple(x+dx, y+dy, 0, sortMoves(x+dx, y+dy));
                 ok = true;

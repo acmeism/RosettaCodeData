@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 mapfile -t name <<EOF
-###             #
-#  #            #
-#  #            #
-###    ##   ### ###
-#  #     # #    #  #
-#  #  ####  ##  #  #
-#  # #  ##    # #  #
-###   ## # ###  #  #
+Aimhacks
 EOF
 
 main() {

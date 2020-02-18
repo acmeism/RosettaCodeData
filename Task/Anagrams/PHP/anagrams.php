@@ -1,5 +1,5 @@
 <?php
-$words = explode("\n", file_get_contents('http://www.puzzlers.org/pub/wordlists/unixdict.txt'));
+$words = explode("\n", file_get_contents('http://wiki.puzzlers.org/pub/wordlists/unixdict.txt'));
 foreach ($words as $word) {
     $chars = str_split($word);
     sort($chars);

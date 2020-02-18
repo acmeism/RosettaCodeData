@@ -13,6 +13,9 @@ _=_ 'californium einsteinium fermium mendelevium nobelium lawrencium rutherfordi
 _=_ 'seaborgium bohrium hassium meitnerium darmstadtium roentgenium copernicium nihonium'
 _=_ 'flerovium moscovium livermorium tennessine oganesson ununenniym unbinvlium umbiunium'
 
+                                                 /*─────  You can't trust atoms,   ─────*/
+                                                 /*─────  they make everything up. ─────*/
+
 #= words(_)                                      /*obtain the number of words in list.  */
-item= subword(_, random(1, #), 1)                /*obtain random word (element) in list.*/
+item= word(_, random(1, #) )                     /*pick a random word (element) in list.*/
 say 'random element: '    item                   /*stick a fork in it,  we're all done. */

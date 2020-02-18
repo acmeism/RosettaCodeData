@@ -36,6 +36,12 @@ func inHexagon(pts []rl.Vector2, pt rl.Vector2) bool {
     return false
 }
 
+func DrawLineStrip(points []rl.Vector2, pointsCount int32, color rl.Color) {
+    for i := int32(0);  i < pointsCount - 1; i++  {
+         rl.DrawLineV(points[i], points[i+1], color)
+    }
+}
+
 func main() {
     screenWidth := int32(600)
     screenHeight := int32(600)
@@ -75,7 +81,7 @@ func main() {
             ctr := pts[i][0]
             ctr.X -= r
             index := -1
-            if key := rl.GetKeyPressed(); key != -1 {
+            if key := rl.GetKeyPressed(); key > 0 {
                 if key >= 97 && key <= 122 {
                     key -= 32
                 }
@@ -107,7 +113,7 @@ func main() {
                 rl.DrawPoly(ctr, 6, r-1, 30, rl.Magenta)
             }
             rl.DrawText(string(c.letter), int32(c.x)-5, int32(c.y)-10, 32, rl.Black)
-            rl.DrawPolyExLines(pts[i], 7, rl.Black)
+            DrawLineStrip(pts[i], 7, rl.Black)
             rl.DrawText(sChosen, 100, 525, 24, rl.Black)
             rl.DrawText(lChosen, 100, 565, 24, rl.Black)
         }

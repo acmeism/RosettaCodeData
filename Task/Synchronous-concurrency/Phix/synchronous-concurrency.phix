@@ -1,0 +1,55 @@
+(notonline)-->
+ <span style="color: #000080;font-style:italic;">-- demo\rosetta\Synchronous_concurrency.exw</span>
+ <span style="color: #008080;">without</span> <span style="color: #008080;">js</span> <span style="color: #000080;font-style:italic;">-- threads, file i/o, command_line()</span>
+ <span style="color: #004080;">string</span> <span style="color: #000000;">filename</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">substitute</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">command_line</span><span style="color: #0000FF;">()[</span><span style="color: #000000;">2</span><span style="color: #0000FF;">],</span><span style="color: #008000;">".exe"</span><span style="color: #0000FF;">,</span><span style="color: #008000;">".exw"</span><span style="color: #0000FF;">)</span>
+
+ <span style="color: #004080;">atom</span> <span style="color: #000000;">frThread</span><span style="color: #0000FF;">,</span>  <span style="color: #000080;font-style:italic;">-- file reader thread</span>
+      <span style="color: #000000;">lcThread</span>   <span style="color: #000080;font-style:italic;">-- line counter thread</span>
+
+ <span style="color: #004080;">sequence</span> <span style="color: #000000;">queue</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{}</span>
+ <span style="color: #004080;">integer</span> <span style="color: #000000;">qlock</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">init_cs</span><span style="color: #0000FF;">(),</span>
+     <span style="color: #000000;">linecount</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">1</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">readfile</span><span style="color: #0000FF;">()</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">fn</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">open</span><span style="color: #0000FF;">(</span><span style="color: #000000;">filename</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"r"</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">while</span> <span style="color: #000000;">1</span> <span style="color: #008080;">do</span>
+         <span style="color: #004080;">object</span> <span style="color: #000000;">line</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">gets</span><span style="color: #0000FF;">(</span><span style="color: #000000;">fn</span><span style="color: #0000FF;">)</span>
+         <span style="color: #7060A8;">enter_cs</span><span style="color: #0000FF;">(</span><span style="color: #000000;">qlock</span><span style="color: #0000FF;">)</span>
+         <span style="color: #000000;">queue</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">append</span><span style="color: #0000FF;">(</span><span style="color: #000000;">queue</span><span style="color: #0000FF;">,</span><span style="color: #000000;">line</span><span style="color: #0000FF;">)</span>
+         <span style="color: #000000;">line</span> <span style="color: #0000FF;">=</span> <span style="color: #004080;">atom</span><span style="color: #0000FF;">(</span><span style="color: #000000;">line</span><span style="color: #0000FF;">)</span>   <span style="color: #000080;font-style:italic;">-- kill refcount!</span>
+         <span style="color: #7060A8;">leave_cs</span><span style="color: #0000FF;">(</span><span style="color: #000000;">qlock</span><span style="color: #0000FF;">)</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">line</span> <span style="color: #008080;">then</span> <span style="color: #008080;">exit</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+     <span style="color: #7060A8;">close</span><span style="color: #0000FF;">(</span><span style="color: #000000;">fn</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">wait_thread</span><span style="color: #0000FF;">(</span><span style="color: #000000;">lcThread</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">printf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"Lines read: %d\n"</span><span style="color: #0000FF;">,</span><span style="color: #000000;">linecount</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">exit_thread</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">countlines</span><span style="color: #0000FF;">()</span>
+     <span style="color: #000000;">linecount</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+     <span style="color: #008080;">while</span> <span style="color: #000000;">1</span> <span style="color: #008080;">do</span>
+         <span style="color: #7060A8;">enter_cs</span><span style="color: #0000FF;">(</span><span style="color: #000000;">qlock</span><span style="color: #0000FF;">)</span>
+         <span style="color: #008080;">if</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">queue</span><span style="color: #0000FF;">)=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span>
+             <span style="color: #7060A8;">leave_cs</span><span style="color: #0000FF;">(</span><span style="color: #000000;">qlock</span><span style="color: #0000FF;">)</span>
+ <span style="color: #000080;font-style:italic;">--          sleep(0.1)</span>
+         <span style="color: #008080;">else</span>
+             <span style="color: #004080;">object</span> <span style="color: #000000;">line</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">queue</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">]</span>
+             <span style="color: #000000;">queue</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">queue</span><span style="color: #0000FF;">[</span><span style="color: #000000;">2</span><span style="color: #0000FF;">..$]</span>
+             <span style="color: #7060A8;">leave_cs</span><span style="color: #0000FF;">(</span><span style="color: #000000;">qlock</span><span style="color: #0000FF;">)</span>
+             <span style="color: #008080;">if</span> <span style="color: #004080;">atom</span><span style="color: #0000FF;">(</span><span style="color: #000000;">line</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span> <span style="color: #008080;">exit</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #000080;font-style:italic;">--          ?line</span>
+             <span style="color: #000000;">linecount</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+     <span style="color: #7060A8;">exit_thread</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #000000;">lcThread</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">create_thread</span><span style="color: #0000FF;">(</span><span style="color: #000000;">countlines</span><span style="color: #0000FF;">,{})</span>
+ <span style="color: #000000;">frThread</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">create_thread</span><span style="color: #0000FF;">(</span><span style="color: #000000;">readfile</span><span style="color: #0000FF;">,{})</span>
+
+ <span style="color: #7060A8;">wait_thread</span><span style="color: #0000FF;">(</span><span style="color: #000000;">frThread</span><span style="color: #0000FF;">)</span>
+ <span style="color: #7060A8;">puts</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"done"</span><span style="color: #0000FF;">)</span>
+
+ <span style="color: #0000FF;">{}</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">wait_key</span><span style="color: #0000FF;">()</span>
+<!--

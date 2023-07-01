@@ -1,0 +1,425 @@
+/* ARM assembly Raspberry PI  */
+/*  program anaderan.s   */
+
+ /* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+.equ MAXI,         50000
+.equ BUFFERSIZE,   300000
+.equ READ, 3                            @ system call
+.equ OPEN, 5                            @ system call
+.equ CLOSE, 6                           @ system call
+.equ O_RDWR,  0x0002                    @ open for reading and writing
+
+/*********************************/
+/* Structures                    */
+/*********************************/
+/* this structure has size multiple de 4 */
+    .struct  0
+Word_Ptr_buffer:                           @ pointer word buffer
+    .struct  Word_Ptr_buffer + 4
+Word_Ptr_sorted:                           @ pointer word sorted letters
+    .struct  Word_Ptr_sorted + 4
+Word_length:                               @ word length
+    .struct  Word_length + 4
+Word_top:                                  @ top
+    .struct  Word_top + 4
+Word_end:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szFileName:           .asciz "./unixdict.txt"
+//szFileName:           .asciz "./listwordT.txt"
+szMessErreur:         .asciz "FILE ERROR."
+szMessStart:          .asciz "Program 32 bits start.\n"
+szCarriageReturn:     .asciz "\n"
+szMessSpace:          .asciz " "
+
+ptBuffer1:            .int sBuffer1
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+tbStWords:                  .skip Word_end * MAXI
+iNBword:                    .skip 4
+sBuffer:                    .skip BUFFERSIZE
+sBuffer1:                   .skip BUFFERSIZE
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                      @ entry of program
+    ldr r0,iAdrszMessStart
+    bl affichageMess
+    mov r4,#0              @ loop indice
+    ldr r0,iAdrszFileName  @ file name
+    mov r1,#O_RDWR         @ flags
+    mov r2,#0              @ mode
+    mov r7,#OPEN           @
+    svc 0
+    cmp r0,#0              @ error open
+    ble 99f
+    mov r8,r0              @ FD save Fd
+    ldr r1,iAdrsBuffer     @ buffer address
+    ldr r2,iSizeBuf        @ buffersize
+    mov r7, #READ
+    svc 0
+    cmp r0,#0              @ error read ?
+    blt 99f
+    mov r5,r0              @ save size read bytes
+    ldr r4,iAdrsBuffer     @ buffer address
+    ldr r0,iAdrsBuffer     @ start word address
+    mov r2,#0
+    mov r1,#0              @ word length
+1:
+    cmp r2,r5
+    bge 2f
+    ldrb r3,[r4,r2]
+    cmp r3,#0xD            @ end word ?
+    addne r1,r1,#1         @ increment word length
+    addne r2,r2,#1         @ increment indice
+    bne 1b                 @ and loop
+    mov r3,#0
+    strb r3,[r4,r2]        @ store final zero
+    bl anaWord             @ sort word letters
+    add r2,r2,#2           @ jump OD and 0A
+    add r0,r4,r2           @ new address begin word
+    mov r1,#0              @ init length
+    b 1b                   @ and loop
+
+2:
+    mov r3,#0              @ last word
+    strb r3,[r4,r2]
+    bl anaWord
+
+    mov r0,r8              @ file Fd
+    mov r7, #CLOSE
+    svc 0
+    cmp r0,#0              @ error close ?
+    blt 99f
+
+    ldr r0,iAdrtbStWords   @ array structure words address
+    mov r1,#0              @ first indice
+    ldr r2,iAdriNBword
+    ldr r2,[r2]            @ last indice
+    bl triRapide           @ quick sort
+    ldr r4,iAdrtbStWords   @ array structure words address
+
+    mov r0,r4
+    mov r9,r2                     @ size word array
+    mov r8,#0                     @ indice first occurence
+    ldr r3,[r4,#Word_Ptr_sorted]  @ load first value
+    mov r2,#1                     @ loop indice
+    mov r10,#Word_end             @ words structure size
+    mov r12,#0                    @ max word length
+3:                                @ begin loop
+    mla r7,r2,r10,r4              @ compute array index
+    ldr r5,[r7,#Word_Ptr_sorted]  @ load next value
+    mov r0,r3
+    mov r1,r5
+    bl comparStrings
+    cmp r0,#0                     @ sorted strings equal ?
+    bne 4f
+    mla r11,r8,r10,r4
+    ldr r0,[r11,#Word_Ptr_buffer] @ address word 1
+    ldr r1,[r7,#Word_Ptr_buffer]  @ address word 2
+    bl controlLetters
+    cmp r0,#0                     @ not ok ?
+    beq 5f
+    mov r0,#1                     @ letters ok
+    str r0,[r7,#Word_top]         @ store top in first occurence
+    str r0,[r11,#Word_top]        @ store top in current occurence
+    ldr r0,[r7,#Word_length]      @ word length
+    cmp r0,r12                    @ compare maxi
+    movgt r12,r0                  @ yes  length word -> value max
+    b 5f
+4:                                @ no
+    mov r0,r8
+    add r8,r8,#1                  @ init index  new first occurence
+    mla r11,r8,r10,r4             @ compute array index
+    ldr r3,[r11,#Word_Ptr_sorted] @ init value new first occurence
+    mov r2,r0                     @ reprise au debut de la sequence
+5:
+    add r2,r2,#1                  @ increment indice
+    cmp r2,r9                     @ end word array ?
+    blt 3b                        @ no -> loop
+
+    mov r2,#0                     @ raz indice
+    ldr r4,iAdrtbStWords          @ array structure words address
+6:                                @ begin display loop
+    mla r11,r2,r10,r4             @ compute array index
+    ldr r6,[r11,#Word_top]        @ load top
+    cmp r6,#0                     @ top ok ?
+    beq 7f
+    ldr r6,[r11,#Word_length]     @ load length
+    cmp r6,r12                    @ compare maxi
+    bne 7f
+    ldr r0,[r11,#Word_Ptr_buffer] @ load address first word
+    bl affichageMess              @ display first word
+    add r2,r2,#1                  @ increment indice
+
+    mla r11,r2,r10,r4             @ compute array index
+    ldr r6,[r11,#Word_top]        @ load top
+    cmp r6,#0                     @ top ok ?
+    beq 7f
+    ldr r0,iAdrszMessSpace
+    bl affichageMess
+    ldr r0,[r11,#Word_Ptr_buffer] @ load address other word
+    bl affichageMess              @ display second word
+
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+7:
+    add r2,r2,#1                  @ increment indice
+    cmp r2,r9                     @ maxi ?
+    blt 6b                        @ no -> loop
+
+    b 100f
+99:                               @ display error
+    ldr r1,iAdrszMessErreur
+    bl displayError
+
+100:                              @ standard end of the program
+    mov r0, #0                    @ return code
+    mov r7, #EXIT                 @ request to exit program
+    svc #0                        @ perform the system call
+iAdrszCarriageReturn:        .int szCarriageReturn
+iAdrszFileName:              .int szFileName
+iAdrszMessErreur:            .int szMessErreur
+iAdrsBuffer:                 .int sBuffer
+iSizeBuf:                    .int BUFFERSIZE
+iAdrszMessSpace:             .int szMessSpace
+iAdrtbStWords:               .int tbStWords
+iAdrszMessStart:             .int szMessStart
+/******************************************************************/
+/*     analizing word                                   */
+/******************************************************************/
+/*  r0  word address */
+/*  r1 word length   */
+anaWord:
+    push {r1-r6,lr}
+    mov r5,r0
+    mov r6,r1
+    //ldr r1,iAdrptTabBuffer
+    ldr r1,iAdrtbStWords
+    ldr r2,iAdriNBword
+    ldr r3,[r2]
+    mov r4,#Word_end
+    mla r1,r3,r4,r1
+    str r0,[r1,#Word_Ptr_buffer]
+    mov r0,#0
+    str r0,[r1,#Word_top]
+    str r6,[r1,#Word_length]
+    ldr r4,iAdrptBuffer1
+    ldr r0,[r4]
+    add r6,r6,r0
+    add r6,r6,#1
+    str r6,[r4]
+    str r0,[r1,#Word_Ptr_sorted]
+
+    add r3,r3,#1
+    str r3,[r2]
+    mov r1,r0
+    mov r0,r5
+    bl triLetters         @ sort word letters
+    mov r2,#0
+100:
+    pop {r1-r6,pc}
+iAdriNBword:            .int iNBword
+iAdrptBuffer1:          .int ptBuffer1
+/******************************************************************/
+/*     sort word letters                                  */
+/******************************************************************/
+/* r0  address begin word */
+/* r1  address recept array */
+triLetters:
+    push {r1-r7,lr}
+    mov r2,#0
+1:
+    ldrb r3,[r0,r2]         @ load letter
+    cmp r3,#0               @ end word ?
+    beq 6f
+    cmp r2,#0               @ first letter ?
+    bne 2f
+    strb r3,[r1,r2]         @ yes store in first position
+    add r2,r2,#1            @ increment indice
+    b 1b                    @ and loop
+2:
+    mov r4,#0
+3:                          @ begin loop to search insertion position
+    ldrb r5,[r1,r4]         @ load letter
+    cmp r3,r5               @ compare
+    blt 4f                  @ to low -> insertion
+    add r4,r4,#1            @ increment indice
+    cmp r4,r2               @ compare to letters number in place
+    blt 3b                  @ search loop
+    strb r3,[r1,r2]         @ else store in last position
+    add r2,r2,#1
+    b 1b                    @ and loop
+4:                          @ move first letters in one position
+    sub r6,r2,#1            @ start indice
+5:
+    ldrb r5,[r1,r6]         @ load letter
+    add r7,r6,#1            @ store indice - 1
+    strb r5,[r1,r7]         @ store letter
+    sub r6,r6,#1            @ decrement indice
+    cmp r6,r4               @ end ?
+    bge 5b                  @ no loop
+    strb r3,[r1,r4]         @ else store letter in free position
+    add r2,r2,#1
+    b 1b                    @ and loop
+6:
+    mov r3,#0               @ final zéro
+    strb r3,[r1,r2]
+100:
+    pop {r1-r7,pc}
+/******************************************************************/
+/*     control letters                                  */
+/******************************************************************/
+/* r0  address  word 1*/
+/* r1  address  word 2 */
+controlLetters:
+    push {r1-r4,lr}
+    mov r2,#0
+1:
+    ldrb r3,[r0,r2]      @ load a letter
+    cmp r3,#0            @ end word ?
+    moveq r0,#1          @  yes it is OK
+    beq 100f
+    ldrb r4,[r1,r2]      @ load a letter word 2 same position
+    cmp r3,r4            @ equal ?
+    moveq r0,#0          @ yes -> not good
+    beq 100f
+    add r2,r2,#1
+    b 1b
+100:
+    pop {r1-r4,pc}
+/***************************************************/
+/*   Appel récursif Tri Rapide quicksort           */
+/***************************************************/
+/* r0 contains the address of table */
+/* r1 contains index of first item  */
+/* r2 contains the number of elements  > 0  */
+triRapide:
+    push {r2-r5,lr}         @ save registers
+    sub r2,#1               @ last item index
+    cmp r1,r2               @ first > last ?
+    bge 100f                @ yes -> end
+    mov r4,r0               @ save r0
+    mov r5,r2               @ save r2
+    bl partition1           @ cutting into 2 parts
+    mov r2,r0               @ index partition
+    mov r0,r4               @ table address
+    bl triRapide            @ sort lower part
+    mov r0,r4               @ table address
+    add r1,r2,#1            @ index begin = index partition + 1
+    add r2,r5,#1            @ number of elements
+    bl triRapide            @ sort higter part
+
+ 100:                       @ end function
+    pop {r2-r5,lr}          @ restaur  registers
+    bx lr                   @ return
+
+/******************************************************************/
+/*      Partition table elements                                */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains index of first item  */
+/* r2 contains index of last item   */
+partition1:
+    push {r1-r9,lr}        @ save registers
+    mov r8,r0               @ save address table 2
+    mov r7,r2
+    mov r9,#Word_end
+    mla r3,r7,r9,r8
+    ldr r6,[r3,#Word_Ptr_sorted]  @ load string address last index
+    mov r4,r1               @ init with first index
+    mov r5,r1               @ init with first index
+1:                          @ begin loop
+    mla r3,r5,r9,r8
+    ldr r0,[r3,#Word_Ptr_sorted]   @ load current string address
+    mov r1,r6                      @ first string address
+    bl comparStrings
+    cmp r0,#0
+    bge 2f
+    mov r0,r8                @ current string < first string
+    mov r1,r4                @ swap array
+    mov r2,r5
+    bl swapWord
+    add r4,r4,#1             @ and increment index 1
+2:
+    add r5,r5,#1             @ increment index 2
+    cmp r5,r7                @ end ?
+    blt 1b                   @ no -> loop
+
+    mov r0,r8                @ and swap array
+    mov r1,r4
+    mov r2,r7
+    bl swapWord
+
+    mov r0,r4                @ return index partition
+100:
+    pop {r1-r9,lr}
+    bx lr
+/******************************************************************/
+/*      Swap table elements                                */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains index 1  */
+/* r2 contains index  2   */
+swapWord:
+    push {r1-r6,lr}        @ save registers
+    mov r3,#Word_end
+    mla r4,r1,r3,r0        @ compute array index
+    mla r5,r2,r3,r0
+    mov r6,#0
+1:
+    ldr r2,[r4,r6]         @ load 4 bytes
+    ldr r3,[r5,r6]
+    str r2,[r5,r6]         @ store 4 bytes
+    str r3,[r4,r6]
+    add r6,r6,#4           @ increment 4 bytes
+    cmp r6,#Word_end       @ structure size is multiple to 4
+    blt 1b
+100:
+    pop {r1-r6,pc}
+/************************************/
+/* Strings case sensitive comparisons  */
+/************************************/
+/* r0 et r1 contains the address of strings */
+/* return 0 in r0 if equals */
+/* return -1 if string r0 < string r1 */
+/* return 1  if string r0 > string r1 */
+comparStrings:
+    push {r1-r4}      @ save des registres
+    mov r2,#0         @ counter
+1:
+    ldrb r3,[r0,r2]   @ byte string 1
+    ldrb r4,[r1,r2]   @ byte string 2
+    cmp r3,r4
+    movlt r0,#-1      @ small
+    movgt r0,#1       @ greather
+    bne 100f          @ not equals
+    cmp r3,#0         @ 0 end string
+    moveq r0,#0       @ equals
+    beq 100f          @ end string
+    add r2,r2,#1      @ else add 1 in counter
+    b 1b              @ and loop
+100:
+    pop {r1-r4}
+    bx lr
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

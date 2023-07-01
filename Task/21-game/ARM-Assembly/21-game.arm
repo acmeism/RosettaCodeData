@@ -1,0 +1,218 @@
+/* ARM assembly Raspberry PI  */
+/*  program game21.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+.equ STDIN,  0       @ Linux input console
+.equ READ,   3       @ Linux syscall
+.equ HITTOTAL,   21
+.equ BUFFERSIZE, 10
+
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessRules:         .ascii "21 Game\n"
+                    .ascii "21 is a two player game, the game is played by choosing a number \n"
+                    .ascii "(1, 2, or 3) to be added to the running total. The game is won by\n"
+                    .ascii "the player whose chosen number causes the running total to reach \n"
+                    .asciz "exactly 21. The running total starts at zero.\n\n\n"
+
+szMessHumanChoice:  .asciz "Enter your choice (1,2, 3 or type (q)uit to exit): "
+szMessErrChoise:    .asciz "invalid choice.\n "
+szMessHumanBegin:   .asciz "The first move is human move.\n"
+szMessPiBegin:      .asciz "The first move is Raspberry pi. \n"
+szMessHumanWon:     .asciz "You won. \n"
+szMessHumanLost:    .asciz "You lost. \n"
+szMessTotal:        .asciz "The running total is @ \n"
+szMessPiChoice:     .asciz "Raspberry choice if  @ \n"
+szMessNewGame:      .asciz "New game (y/n) ? \n"
+szCarriageReturn:   .asciz "\n"
+.align 4
+iGraine:  .int 123456
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+sBuffer:          .skip BUFFERSIZE
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 @ entry of program
+
+    ldr r0,iAdrszMessRules
+    bl affichageMess
+1:
+    mov r10,#0                         @ total = 0
+    mov r0,#100
+    bl genereraleas
+    cmp r0,#50
+    blt 2f
+    ldr r0,iAdrszMessHumanBegin        @ human begin
+    bl affichageMess
+    b 4f
+2:                                     @ Rasp begin
+    ldr r0,iAdrszMessPiBegin
+    bl affichageMess
+    mov r0,#1
+3:                                    @ rasp turn
+    add r10,r10,r0
+    ldr r1,iAdrsZoneConv
+    bl conversion10                   @ call decimal conversion
+    ldr r0,iAdrszMessPiChoice
+    ldr r1,iAdrsZoneConv              @ insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+    cmp r10,#HITTOTAL
+    bne 4f
+    ldr r0,iAdrszMessHumanLost
+    bl affichageMess
+    b 10f
+4:                                    @ display current total
+    mov r0,r10
+    ldr r1,iAdrsZoneConv
+    bl conversion10                   @ call decimal conversion
+    ldr r0,iAdrszMessTotal
+    ldr r1,iAdrsZoneConv              @ insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+
+5:                                    @ human turn
+    ldr r0,iAdrszMessHumanChoice
+    bl affichageMess
+    bl saisie
+    cmp r0,#'q'                       @ quit ?
+    beq 100f
+    cmp r0,#'Q'
+    beq 100f
+    cmp r0,#'1'
+    addeq r10,r10,#1
+    beq 6f
+    cmp r0,#'2'
+    addeq r10,r10,#2
+    beq 6f
+    cmp r0,#'3'
+    addeq r10,r10,#3
+    beq 6f
+    ldr r0,iAdrszMessErrChoise
+    bl affichageMess
+    b 5b
+6:
+    cmp r10,#HITTOTAL                @ total = maxi ?
+    beq 9f                           @ yes -> human won
+    cmp r10,#5                       @ else compute rasp number
+    rsble r0,r10,#5
+    ble 7f
+    cmp r10,#9
+    rsble r0,r10,#9
+    ble 7f
+    cmp r10,#13
+    rsble r0,r10,#13
+    ble 7f
+    cmp r10,#17
+    rsble r0,r10,#17
+    ble 7f
+    cmp r10,#21
+    rsble r0,r10,#21
+    ble 7f
+7:                                  @ control number rasp
+    cmp r0,#0
+    ble 8f
+    cmp r0,#3
+    ble 3b
+8:                                  @ if not ok, generate random number
+    mov r0,#2
+    bl genereraleas
+    add r0,r0,#1
+    b 3b                            @ and loop
+
+9:                                  @ display human won
+    ldr r0,iAdrszMessHumanWon
+    bl affichageMess
+10:                                 @ display new game ?
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    ldr r0,iAdrszMessNewGame
+    bl affichageMess
+    bl saisie
+    cmp r0,#'y'
+    beq 1b
+    cmp r0,#'Y'
+    beq 1b
+
+100:                                  @ standard end of the program
+    mov r0, #0                        @ return code
+    mov r7, #EXIT                     @ request to exit program
+    svc #0                            @ perform the system call
+
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszMessRules:          .int szMessRules
+iAdrszMessHumanBegin:     .int szMessHumanBegin
+iAdrszMessPiBegin:        .int szMessPiBegin
+iAdrszMessPiChoice:       .int szMessPiChoice
+iAdrszMessTotal:          .int szMessTotal
+iAdrszMessHumanChoice:    .int szMessHumanChoice
+iAdrszMessHumanLost:      .int szMessHumanLost
+iAdrszMessHumanWon:       .int szMessHumanWon
+iAdrszMessNewGame:        .int szMessNewGame
+iAdrszMessErrChoise:      .int szMessErrChoise
+iAdrsZoneConv:            .int sZoneConv
+/******************************************************************/
+/*            string saisie                                       */
+/******************************************************************/
+/* r0 return the first character of human entry */
+saisie:
+    push {r1-r7,lr}        @ save registers
+    mov r0,#STDIN          @ Linux input console
+    ldr r1,iAdrsBuffer     @ buffer address
+    mov r2,#BUFFERSIZE     @ buffer size
+    mov r7,#READ           @ request to read datas
+    svc 0                  @ call system
+    ldr r1,iAdrsBuffer     @ buffer address
+    ldrb r0,[r1]           @ load first character
+100:
+    pop {r1-r7,lr}
+    bx lr                   @ return
+iAdrsBuffer:         .int sBuffer
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* r0 contains limit  */
+genereraleas:
+    push {r1-r4,lr}                   @ save registers
+    ldr r4,iAdriGraine
+    ldr r2,[r4]
+    ldr r3,iNbDep1
+    mul r2,r3,r2
+    ldr r3,iNbDep1
+    add r2,r2,r3
+    str r2,[r4]                       @ maj de la graine pour l appel suivant
+    cmp r0,#0
+    beq 100f
+    mov r1,r0                         @ divisor
+    mov r0,r2                         @ dividende
+    bl division
+    mov r0,r3                         @ résult = remainder
+
+100:                                  @ end function
+    pop {r1-r4,lr}                    @ restaur registers
+    bx lr                             @ return
+/*****************************************************/
+iAdriGraine: .int iGraine
+iNbDep1:     .int 0x343FD
+iNbDep2:     .int 0x269EC3
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

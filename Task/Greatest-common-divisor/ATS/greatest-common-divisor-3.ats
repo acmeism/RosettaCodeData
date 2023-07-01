@@ -1,0 +1,231 @@
+(********************************************************************)
+(*
+
+  GCD of two integers, by Euclid’s algorithm; verified with proofs.
+
+  Compile with ‘patscc -o gcd gcd.dats’.
+
+*)
+
+#define ATS_DYNLOADFLAG 0       (* No initialization is needed. *)
+
+#include "share/atspre_define.hats"
+#include "share/atspre_staload.hats"
+
+(********************************************************************)
+(*                                                                  *)
+(* Definition of the gcd by axioms in the static language.          *)
+(*                                                                  *)
+(* (‘Props’ are better supported in ATS, but I enjoy using the      *)
+(* the static language in proofs.)                                  *)
+(*                                                                  *)
+
+(* Write the gcd as an undefined static function. It will be defined
+   implicitly by axioms. (Such a function also can be used with an
+   external SMT solver such as CVC4, but using an external solver is
+   not the topic of this program.) *)
+stacst gcd (u : int, v : int) : int
+
+(*
+   I think the reader will accept the following axioms as valid,
+   if gcd(0, 0) is to be defined as equal to zero.
+
+   (An exercise for the reader is to prove ‘gcd_of_remainder’
+   from gcd (u, v) == gcd (u, v - u). This requires definitions
+   of multiplication and Euclidean division, which are encoded
+   in terms of props in ‘prelude/SATS/arith_prf.sats’.)
+*)
+
+extern praxi
+gcd_of_zero :
+  {u, v : int | u == 0; 0 <= v} (* For all integers u = 0,
+                                   v non-negative. *)
+  () -<prf> [gcd (u, v) == v] void
+
+extern praxi
+gcd_of_remainder :
+  {u, v : int | 0 < u; 0 <= v}  (* For all integers u positive,
+                                   v non-negative. *)
+  () -<prf> [gcd (u, v) == gcd (u, v mod u)] void
+
+extern praxi
+gcd_is_commutative :
+  {u, v : int}                  (* For all integers u, v. *)
+  () -<prf> [gcd (u, v) == gcd (v, u)] void
+
+extern praxi
+gcd_of_the_absolute_values :
+  {u, v : int}                  (* For all integers u, v. *)
+  () -<prf> [gcd (u, v) == gcd (abs u, abs v)] void
+
+extern praxi
+gcd_is_a_function :
+  {u1, v1 : int}
+  {u2, v2 : int | u1 == u2; v1 == v2}
+  () -<prf> [gcd (u1, v1) == gcd (u2, v2)] void
+
+(********************************************************************)
+(*                                                                  *)
+(* Function declarations.                                           *)
+(*                                                                  *)
+
+(* g1uint_gcd_euclid will be the generic template function for
+   unsigned integers. *)
+extern fun {tk : tkind}
+g1uint_gcd_euclid :
+  {u, v : int}
+  (g1uint (tk, u),
+   g1uint (tk, v)) -<>
+    g1uint (tk, gcd (u, v))
+
+(* g1int_gcd_euclid will be the generic template function for
+   signed integers, giving an unsigned result. *)
+extern fun {tk_signed, tk_unsigned : tkind}
+g1int_gcd_euclid :
+  {u, v : int}
+  (g1int (tk_signed, u),
+   g1int (tk_signed, v)) -<>
+    g1uint (tk_unsigned, gcd (u, v))
+
+(* Let us call these functions ‘gcd_euclid’ or just ‘gcd’. *)
+overload gcd_euclid with g1uint_gcd_euclid
+overload gcd_euclid with g1int_gcd_euclid
+overload gcd with gcd_euclid
+
+(********************************************************************)
+(*                                                                  *)
+(* Function implementations.                                        *)
+(*                                                                  *)
+
+(* The implementation of the remainder function in the ATS2 prelude
+   is inconvenient for us; it does not say that the result equals
+   ‘u mod v’. Let us reimplement it more to our liking. *)
+fn {tk : tkind}
+g1uint_rem {u, v : int | v != 0}
+           (u    : g1uint (tk, u),
+            v    : g1uint (tk, v)) :<>
+    [w : int | 0 <= w; w < v; w == u mod v]
+    g1uint (tk, w) =
+  let
+    prval _ = lemma_g1uint_param u
+    prval _ = lemma_g1uint_param v
+  in
+    $UNSAFE.cast (g1uint_mod (u, v))
+  end
+
+implement {tk}
+g1uint_gcd_euclid {u, v} (u, v) =
+  let
+    (* The static variable v, which is defined within the curly
+       braces, must, with each iteration, approach zero without
+       passing it. Otherwise the loop is not proven to terminate,
+       and the typechecker will reject it. *)
+    fun
+    loop {u, v : int | 0 <= u; 0 <= v} .<v>.
+         (u    : g1uint (tk, u),
+          v    : g1uint (tk, v)) :<>
+        g1uint (tk, gcd (u, v)) =
+      if v = g1i2u 0 then
+        let
+          (* prop_verify tests whether what we believe we have
+             proven has actually been proven. Using it a lot lengthens
+             the code but is excellent documentation. *)
+          prval _ = prop_verify {0 <= u} ()
+          prval _ = prop_verify {v == 0} ()
+
+          prval _ = gcd_of_zero {v, u} ()
+          prval _ = prop_verify {gcd (v, u) == u} ()
+
+          prval _ = gcd_is_commutative {u, v} ()
+          prval _ = prop_verify {gcd (u, v) == gcd (v, u)} ()
+
+          (* Therefore, by transitivity of equality: *)
+          prval _ = prop_verify {gcd (u, v) == u} ()
+        in
+          u
+        end
+      else
+        let
+          prval _ = prop_verify {0 <= u} ()
+          prval _ = prop_verify {0 < v} ()
+
+          prval _ = gcd_of_remainder {v, u} ()
+          prval _ = prop_verify {gcd (v, u) == gcd (v, u mod v)} ()
+
+          prval _ = gcd_is_commutative {u, v} ()
+          prval _ = prop_verify {gcd (u, v) == gcd (v, u)} ()
+
+          (* Therefore, by transitivity of equality: *)
+          prval _ = prop_verify {gcd (u, v) == gcd (v, u mod v)} ()
+
+          val [w : int] w = g1uint_rem (u, v)
+          prval _ = prop_verify {0 <= w} ()
+          prval _ = prop_verify {w < v} ()
+          prval _ = prop_verify {w == u mod v} ()
+
+          (* It has been proven that the function will terminate: *)
+          prval _ = prop_verify {0 <= w && w < v} ()
+
+          prval _ = gcd_is_a_function {v, u mod v} {v, w} ()
+          prval _ = prop_verify {gcd (v, u mod v) == gcd (v, w)} ()
+
+          (* Therefore, by transitivity of equality: *)
+          prval _ = prop_verify {gcd (u, v) == gcd (v, w)} ()
+        in
+          loop (v, w)
+        end
+
+    (* u is unsigned, thus proving 0 <= u. *)
+    prval _ = lemma_g1uint_param (u)
+
+    (* v is unsigned, thus proving 0 <= v. *)
+    prval _ = lemma_g1uint_param (v)
+  in
+    loop (u, v)
+  end
+
+implement {tk_signed, tk_unsigned}
+g1int_gcd_euclid {u, v} (u, v) =
+  let
+    (* Prove that gcd(abs u, abs v) equals gcd(u, v). *)
+    prval _ = gcd_of_the_absolute_values {u, v} ()
+  in
+    (* Compute gcd(abs u, abs v). The ‘g1i2u’ notations cast the
+       values from signed integers to unsigned integers. *)
+    g1uint_gcd_euclid (g1i2u (abs u), g1i2u (abs v))
+  end
+
+(********************************************************************)
+(*                                                                  *)
+(* A demonstration program.                                         *)
+(*                                                                  *)
+(* Unfortunately, the ATS prelude may not include implementations   *)
+(* of all the functions we need for long and long long integers.    *)
+(* Thus the demonstration will be entirely on regular int and uint. *)
+(*                                                                  *)
+(* (Including implementations here would distract from the purpose. *)
+(*                                                                  *)
+
+implement
+main0 () =
+  begin
+    (* Unsigned integers. *)
+    assertloc (gcd (0U, 10U) = 10U);
+    assertloc (gcd (9U, 6U) = 3U);
+    assertloc (gcd (40902U, 24140U) = 34U);
+
+    (* Signed integers. *)
+    assertloc (gcd (0, 10) = gcd (0U, 10U));
+    assertloc (gcd (~10, 0) = gcd (0U, 10U));
+    assertloc (gcd (~6, ~9) = 3U);
+    assertloc (gcd (40902, 24140) = 34U);
+    assertloc (gcd (40902, ~24140) = 34U);
+    assertloc (gcd (~40902, 24140) = 34U);
+    assertloc (gcd (~40902, ~24140) = 34U);
+    assertloc (gcd (24140, 40902) = 34U);
+    assertloc (gcd (~24140, 40902) = 34U);
+    assertloc (gcd (24140, ~40902) = 34U);
+    assertloc (gcd (~24140, ~40902) = 34U)
+  end
+
+(********************************************************************)

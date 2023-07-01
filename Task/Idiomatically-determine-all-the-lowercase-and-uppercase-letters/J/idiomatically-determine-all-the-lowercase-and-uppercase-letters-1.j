@@ -1,0 +1,2 @@
+   (#~ tolower ~: toupper) a.
+ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz

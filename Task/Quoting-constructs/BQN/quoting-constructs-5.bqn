@@ -1,0 +1,2 @@
+"Hello World"
+"Quoted "" String"

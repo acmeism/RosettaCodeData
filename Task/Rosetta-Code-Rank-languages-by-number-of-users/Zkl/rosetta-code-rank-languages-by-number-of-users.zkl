@@ -1,0 +1,34 @@
+const MIN_USERS=60;
+var [const] CURL=Import("zklCurl"), YAJL=Import("zklYAJL")[0];
+
+fcn rsGet{
+   continueValue,r,curl := "",List, CURL();
+   do{	// eg 5 times
+      page:=("http://rosettacode.org/mw/api.php?action=query"
+        "&generator=categorymembers&prop=categoryinfo"
+	"&gcmtitle=Category%%3ALanguage%%20users"
+	"&rawcontinue=&format=json&gcmlimit=350"
+	"%s").fmt(continueValue);
+      page=curl.get(page);
+      page=page[0].del(0,page[1]);  // get rid of HTML header
+      json:=YAJL().write(page).close();
+      json["query"]["pages"].pump(r.append,'wrap(x){ x=x[1];
+         //("2708",Dictionary(title:Category:C User,...,categoryinfo:D(pages:373,size:373,...)))
+	 // or title:SmartBASIC
+	 if((pgs:=x.find("categoryinfo")) and (pgs=pgs.find("pages")) and
+	    pgs>=MIN_USERS)
+	   return(pgs,x["title"].replace("Category:","").replace(" User",""));
+	   return(Void.Skip);
+      });
+      if(continueValue=json.find("query-continue",""))
+        continueValue=String("&gcmcontinue=",
+	   continueValue["categorymembers"]["gcmcontinue"]);
+   }while(continueValue);
+   r
+}
+
+allLangs:=rsGet();
+allLangs=allLangs.sort(fcn(a,b){ a[0]>b[0] });
+println("========== ",Time.Date.prettyDay()," ==========");
+foreach n,pgnm in ([1..].zip(allLangs))
+   { println("#%3d with %4s users: %s".fmt(n,pgnm.xplode())) }

@@ -1,0 +1,6 @@
+nw = require("nw")
+win = nw:app():window(320, 240)
+win:show()
+win:maximize()
+cw, ch = win:client_size()
+print(cw .. " x " .. ch)

@@ -1,0 +1,603 @@
+(*------------------------------------------------------------------*)
+(* Natural sorting.                                                 *)
+(*------------------------------------------------------------------*)
+
+(* I deal only with ASCII here and solve only the first four
+   problems. For Unicode, I would most likely use GNU libunistring (or
+   Gnulib) and UTF-32. Handling Unicode properly is complicated.
+
+   There are other matters that make "natural sorting" a tricky
+   thing. For instance, which "accented letters" are actually
+   "accented"--rather than distinct letters in their own
+   right--depends on the language and the purpose. In Esperanto, for
+   example, 'ĉ' is a distinct letter that goes just after the letter
+   'c'. *)
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+(*------------------------------------------------------------------*)
+(* Types and interfaces.                                            *)
+
+typedef char_skipper =
+  {n : int}
+  {i : nat | i <= n}
+  (string n,
+   size_t n,
+   size_t i) -<cloref>
+    [j : int | i <= j; j <= n]
+    size_t j
+
+typedef char_skipper_backwards =
+  {n : int}
+  {i : nat | i <= n}
+  (string n,
+   size_t n,
+   size_t i) -<cloref>
+    [j : int | 0 <= j; j <= i]
+    size_t j
+
+typedef char_translator =
+  {n : int}
+  string n -<cloref,!wrt> string n
+
+extern fn
+make_char_skipper :
+  (char -<cloref> bool) -<> char_skipper
+
+extern fn
+make_char_skipper_backwards :
+  (char -<cloref> bool) -<> char_skipper_backwards
+
+extern fn
+make_char_translator :
+  (char -<cloref> bool,
+   char -<cloref> [c : int | 1 <= c; c <= 127] char c) -<>
+    char_translator
+
+extern fn
+remove_leading_spaces :
+  {n : int}
+  string n -< !wrt >
+    [m : nat | m <= n]
+    string m
+
+extern fn
+remove_trailing_spaces :
+  {n : int}
+  string n -< !wrt >
+    [m : nat | m <= n]
+    string m
+
+extern fn
+combine_adjacent_spaces :
+  {n : int}
+  string n -< !wrt >
+    [m : nat | m <= n]
+    string m
+
+extern fn
+compare_strings_containing_numbers :
+  {m, n : int}
+  (string m, string n) -<> int
+
+extern fn
+evaluate_natural :
+  {m    : int}
+  {i, n : nat | i + n <= m}
+  (string m, size_t i, size_t n) -<> ullint
+
+extern fn
+compare_strings_naturally :
+  {m, n : int}
+  (string m, string n) -< !wrt > int
+
+extern fn
+list_sort_strings_naturally :
+  {n : int}
+  list (String, n) -< !wrt > list (String, n)
+
+(*------------------------------------------------------------------*)
+(* Global closures.                                                 *)
+
+val skip_spaces =
+  make_char_skipper (lam c => c = ' ')
+
+val skip_spaces_backwards =
+  make_char_skipper_backwards (lam c => c = ' ')
+
+val skip_digits =
+  make_char_skipper (lam c => isdigit c)
+
+val translate_whitespace_to_spaces =
+  make_char_translator (lam c => isspace c, lam c => ' ')
+
+(* A little unit test. *)
+val- "1 2 3 " = translate_whitespace_to_spaces "1\t2\v3\n"
+
+val string_tolower =
+  make_char_translator
+    (lam c => isupper c,
+     lam c =>
+       let
+         typedef ascii_lowercase =
+           [c : int | 'a' <= c; c <= 'z'] char c
+         val c = tolower c
+       in
+         $UN.cast{ascii_lowercase} c
+       end)
+
+(* A little unit test. *)
+val- "abcdef" = string_tolower "ABCdef"
+
+(*------------------------------------------------------------------*)
+(* Implementations.                                                 *)
+
+implement
+make_char_skipper match =
+  let
+    fun
+    skipper {n : int}
+            {i : nat | i <= n}
+            .<n - i>.
+            (s : string n,
+             n : size_t n,
+             i : size_t i)
+        :<cloref> [j : int | i <= j; j <= n]
+                  size_t j =
+      if i = n then
+        i
+      else if ~match s[i] then
+        i
+      else
+        skipper (s, n, succ i)
+  in
+    skipper
+  end
+
+implement
+make_char_skipper_backwards match =
+  let
+    fun
+    skipper {n : int}
+            {i : nat | i <= n}
+            .<i>.
+            (s : string n,
+             n : size_t n,
+             i : size_t i)
+        :<cloref> [j : int | 0 <= j; j <= i]
+                  size_t j =
+      if i = i2sz 0 then
+        i
+      else if ~match s[pred i] then
+        i
+      else
+        skipper (s, n, pred i)
+  in
+    skipper
+  end
+
+implement
+make_char_translator (match, replace) =
+  let
+    fn
+    translator {n : int}
+               (s : string n)
+        :<cloref,!wrt> string n =
+      let
+        prval () = lemma_string_param s
+        val n = strlen s
+
+        fun
+        loop {i : nat | i <= n}
+             .<n - i>.
+             (t : strnptr n,    (* strnptr so it is mutable. *)
+              i : size_t i)
+            :<!wrt> strnptr n =
+          if i = n then
+            t
+          else
+            let
+              val c = t[i]
+            in
+              if match c then
+                t[i] := replace c;
+              loop (t, succ i)
+            end
+      in
+        strnptr2string (loop (string1_copy s, i2sz 0))
+      end
+  in
+    translator
+  end
+
+implement
+remove_leading_spaces s =
+  let
+    prval () = lemma_string_param s
+    val n = strlen s
+    val j = skip_spaces (s, n, i2sz 0)
+  in
+    strnptr2string (string_make_substring (s, j, n - j))
+  end
+
+(* A little unit test. *)
+val- "1   " = remove_leading_spaces "   1   "
+
+implement
+remove_trailing_spaces s =
+  let
+    prval () = lemma_string_param s
+    val n = strlen s
+    val j = skip_spaces_backwards (s, n, n)
+  in
+    strnptr2string (string_make_substring (s, i2sz 0, j))
+  end
+
+(* A little unit test. *)
+val- "   1" = remove_trailing_spaces "   1   "
+
+fn
+_combine_adjacent_spaces
+          {n : int}
+          (s : string n)
+    :<!refwrt> [m : nat | m <= n]
+               string m =
+  let
+    prval () = lemma_string_param s
+    val n = strlen s
+  in
+    if n = i2sz 0 then
+      s
+    else
+      let
+        val buf = arrayref_make_elt<char> (succ n, '\0')
+        val () = buf[0] := s[0]
+
+        fun
+        loop {i : pos | i <= n}
+             {j : pos | j <= i}
+             .<n - i>.
+             (i : size_t i,
+              j : size_t j)
+            :<!refwrt> [k : pos | k <= n]
+                       size_t k =
+          if i = n then
+            j
+          else
+            begin
+              if (s[i] = ' ') * (s[pred i] = ' ') then
+                loop (succ i, j)
+              else
+                begin
+                  buf[j] := s[i];
+                  loop (succ i, succ j)
+                end
+            end
+
+        val [k : int] k = loop (i2sz 1, i2sz 1)
+        val s1 = $UN.cast{string k} (ptrcast buf)
+      in
+        strnptr2string (string_make_substring (s1, i2sz 0, k))
+      end
+  end
+
+implement
+combine_adjacent_spaces s =
+  $effmask_ref _combine_adjacent_spaces s
+
+(* A little unit test. *)
+val- " 1 2 3 4 " = combine_adjacent_spaces " 1   2  3 4  "
+
+implement
+compare_strings_containing_numbers {m, n} (sm, sn) =
+  let
+    prval () = lemma_string_param sm
+    prval () = lemma_string_param sn
+    val m = strlen sm
+    and n = strlen sn
+
+    fun
+    compare_them
+              {i, j : nat | i <= m; j <= n}
+              .<m - i, n - j>.
+              (i : size_t i,
+               j : size_t j)
+        :<> int =
+      if i = m then
+        (if j = n then 0 else ~1)
+      else if j = n then
+        1
+      else if (isdigit sm[i]) * (isdigit sn[j]) then
+        let
+          val i1 = skip_digits (sm, m, succ i)
+          and j1 = skip_digits (sn, n, succ j)
+          val vm = evaluate_natural (sm, i, i1 - i)
+          and vn = evaluate_natural (sn, j, j1 - j)
+        in
+          if vm = vn then
+            compare_them (i1, j1)
+          else if vm < vn then
+            ~1
+          else
+            1
+        end
+      else
+        let
+          val cmp = compare (sm[i], sn[j])
+        in
+          if cmp = 0 then
+            compare_them (succ i, succ j)
+          else
+            cmp
+        end
+  in
+    compare_them (i2sz 0, i2sz 0)
+  end
+
+implement
+evaluate_natural {m} {i, n} (s, i, n) =
+  let
+    fun
+    loop {k : int | i <= k; k <= i + n}
+         .<(i + n) - k>.
+         (k     : size_t k,
+          accum : ullint)
+        :<> ullint =
+      if k = i + n then
+        accum
+      else
+        let
+          val digit = (char2int0 s[k] - char2int0 '0')
+          val accum = (10ULL * accum) + g0i2u digit
+        in
+          loop (succ k, accum)
+        end
+  in
+    loop (i, 0ULL)
+  end
+
+(* A little unit test. *)
+val- 1234ULL = evaluate_natural ("xy1234z", i2sz 2, i2sz 4)
+
+implement
+compare_strings_naturally (sm, sn) =
+  let
+    prval () = lemma_string_param sm
+    prval () = lemma_string_param sn
+
+    fn
+    adjust_string (s : String0)
+        :<!wrt> String0 =
+      let
+        val s = translate_whitespace_to_spaces s
+        val s = string_tolower s
+        val s = remove_leading_spaces s
+        val s = remove_trailing_spaces s
+        val s = combine_adjacent_spaces s
+      in
+        s
+      end
+  in
+    compare_strings_containing_numbers (adjust_string sm,
+                                        adjust_string sn)
+  end
+
+implement
+list_sort_strings_naturally lst =
+  let
+    implement
+    list_mergesort$cmp<String> (x, y) =
+      $effmask_wrt compare_strings_naturally (x, y)
+  in
+    list_vt2t (list_mergesort<String> lst)
+  end
+
+(*------------------------------------------------------------------*)
+(* Now see if we pass the required tests.                           *)
+
+implement
+gequal_val_val<String> (x, y) =
+  g0ofg1 x = g0ofg1 y
+
+fn
+nicefy_string (s : string)
+    : string =
+  let
+    val s = g1ofg0 s
+    prval () = lemma_string_param s
+    val n = strlen s
+    prval [n : int] EQINT () = eqint_make_guint n
+
+    var t : string = ""
+    var i : [i : nat | i <= n] size_t i
+  in
+    for (i := i2sz 0; i <> n; i := succ i)
+      let
+        val c = char2int0 s[i]
+      in
+        if c < 32 then
+          let
+            val numstr = strptr2string (g0int2string c)
+            val u =
+              strptr2string (string0_append4 (t, "[", numstr, "]"))
+          in
+            t := u
+          end
+        else
+          let
+            val chrstr = strnptr2string (string_sing s[i])
+            val u = strptr2string (string0_append (t, chrstr))
+          in
+            t := u
+          end
+      end;
+    t
+  end
+
+fn
+make_list_printable {n : int}
+                    (lst : list (String, n))
+    : list (string, n) =
+  let
+    prval () = lemma_list_param lst
+
+    fun
+    loop {i : nat | i <= n}
+         .<n - i>.
+         (lst   : list (String, n - i),
+          accum : list (string, i))
+        : list (string, n) =
+      case+ lst of
+      | NIL => list_vt2t (list_reverse accum)
+      | head :: tail =>
+        let
+          val s = strptr2string (string0_append3 ("|", head, "|"))
+        in
+          loop (tail, nicefy_string s :: accum)
+        end
+  in
+    loop (lst, NIL)
+  end
+
+fn
+test_ignoring_leading_spaces () : void =
+  let
+    val givenlst = $list ("ignore leading spaces: 2-2",
+                          " ignore leading spaces: 2-1",
+                          "  ignore leading spaces: 2+0",
+                          "   ignore leading spaces: 2+1")
+    val expected = $list ("  ignore leading spaces: 2+0",
+                          "   ignore leading spaces: 2+1",
+                          " ignore leading spaces: 2-1",
+                          "ignore leading spaces: 2-2")
+
+    val sortedlst = list_sort_strings_naturally givenlst
+  in
+    assertloc (sortedlst = expected);
+    println! ("Ignoring leading spaces:");
+    println! ("  given:  ", make_list_printable givenlst);
+    println! ("  result: ", make_list_printable sortedlst)
+  end
+
+fn
+test_ignoring_trailing_spaces () : void =
+  (* I added this test, myself. *)
+  let
+    val givenlst = $list ("ignore trailing spaces: 2b2",
+                          "ignore trailing spaces: 2b1 ",
+                          "ignore trailing spaces: 2b+0  ",
+                          "ignore trailing spaces: 2b+1   ")
+    val expected = $list ("ignore trailing spaces: 2b+0  ",
+                          "ignore trailing spaces: 2b+1   ",
+                          "ignore trailing spaces: 2b1 ",
+                          "ignore trailing spaces: 2b2")
+
+    val sortedlst = list_sort_strings_naturally givenlst
+  in
+    assertloc (sortedlst = expected);
+    println! ("Ignoring trailing spaces:");
+    println! ("  given:  ", make_list_printable givenlst);
+    println! ("  result: ", make_list_printable sortedlst)
+  end
+
+fn
+test_combining_adjacent_spaces () : void =
+  let
+    val givenlst = $list ("ignore m.a.s spaces: 2-2",
+                          "ignore m.a.s  spaces: 2-1",
+                          "ignore m.a.s   spaces: 2+0",
+                          "ignore m.a.s    spaces: 2+1")
+    val expected = $list ("ignore m.a.s   spaces: 2+0",
+                          "ignore m.a.s    spaces: 2+1",
+                          "ignore m.a.s  spaces: 2-1",
+                          "ignore m.a.s spaces: 2-2")
+
+    val sortedlst = list_sort_strings_naturally givenlst
+  in
+    assertloc (sortedlst = expected);
+    println! ("Combining adjacent spaces:");
+    println! ("  given:  ", make_list_printable givenlst);
+    println! ("  result: ", make_list_printable sortedlst)
+  end
+
+fn
+test_whitespace_equivalence () : void =
+  let
+    val givenlst = $list ("Equiv. spaces: 3-3",
+                          "Equiv.\rspaces: 3-2",
+                          "Equiv.\x0cspaces: 3-1",
+                          "Equiv.\x0bspaces: 3+0",
+                          "Equiv.\nspaces: 3+1",
+                          "Equiv.\tspaces: 3+2")
+    val expected = $list ("Equiv.\x0bspaces: 3+0",
+                          "Equiv.\nspaces: 3+1",
+                          "Equiv.\tspaces: 3+2",
+                          "Equiv.\x0cspaces: 3-1",
+                          "Equiv.\rspaces: 3-2",
+                          "Equiv. spaces: 3-3")
+
+    val sortedlst = list_sort_strings_naturally givenlst
+  in
+    assertloc (sortedlst = expected);
+    println! ("All whitespace characters equivalent:");
+    println! ("  given:  ", make_list_printable givenlst);
+    println! ("  result: ", make_list_printable sortedlst)
+  end
+
+fn
+test_case_independence () : void =
+  let
+    val givenlst = $list ("cASE INDEPENENT: 3-2",
+                          "caSE INDEPENENT: 3-1",
+                          "casE INDEPENENT: 3+0",
+                          "case INDEPENENT: 3+1")
+    val expected = $list ("casE INDEPENENT: 3+0",
+                          "case INDEPENENT: 3+1",
+                          "caSE INDEPENENT: 3-1",
+                          "cASE INDEPENENT: 3-2")
+
+    val sortedlst = list_sort_strings_naturally givenlst
+  in
+    assertloc (sortedlst = expected);
+    println! ("Case independence:");
+    println! ("  given:  ", make_list_printable givenlst);
+    println! ("  result: ", make_list_printable sortedlst)
+  end
+
+fn
+test_numeric_fields () : void =
+  let
+    val givenlst = $list ("foo100bar99baz0.txt",
+                          "foo100bar10baz0.txt",
+                          "foo1000bar99baz10.txt",
+                          "foo1000bar99baz9.txt")
+    val expected = $list ("foo100bar10baz0.txt",
+                          "foo100bar99baz0.txt",
+                          "foo1000bar99baz9.txt",
+                          "foo1000bar99baz10.txt")
+
+    val sortedlst = list_sort_strings_naturally givenlst
+  in
+    assertloc (sortedlst = expected);
+    println! ("Numeric fields:");
+    println! ("  given:  ", make_list_printable givenlst);
+    println! ("  result: ", make_list_printable sortedlst)
+  end
+
+implement
+main0 () =
+  begin
+    test_ignoring_leading_spaces ();
+    test_ignoring_trailing_spaces ();
+    test_combining_adjacent_spaces ();
+    test_whitespace_equivalence ();
+    test_case_independence ();
+    test_numeric_fields ();
+    println! ("success")
+  end
+
+(*------------------------------------------------------------------*)

@@ -1,0 +1,1 @@
+foo |@ary, |%hsh;

@@ -1,0 +1,75 @@
+using Printf, Distributions
+
+newgrid(p::Float64, M::Int=15, N::Int=15) = rand(Bernoulli(p), M, N)
+
+function walkmaze!(grid::Matrix{Int}, r::Int, c::Int, indx::Int)
+    NOT_VISITED = 1 # const
+    N, M = size(grid)
+    dirs = [[1, 0], [-1, 0], [0, 1], [1, 0]]
+    # fill cell
+    grid[r, c] = indx
+
+    # is the bottom line?
+    rst = r == N
+
+    # for each direction, if has not reached the bottom yet and can continue go to that direction
+    for d in dirs
+        rr, cc = (r, c) .+ d
+        if !rst && checkbounds(Bool, grid, rr, cc) && grid[rr, cc] == NOT_VISITED
+            rst = walkmaze!(grid, rr, cc, indx)
+        end
+    end
+    return rst
+end
+
+function checkpath!(grid::Matrix{Int})
+    NOT_VISITED = 1 # const
+    N, M = size(grid)
+    walkind = 1
+    for m in 1:M
+        if grid[1, m] == NOT_VISITED
+            walkind += 1
+            if walkmaze!(grid, 1, m, walkind)
+                return true
+            end
+        end
+    end
+    return false
+end
+
+function printgrid(G::Matrix{Int})
+    LETTERS = vcat(' ', '#', 'A':'Z')
+    for r in 1:size(G, 1)
+        println(r % 10, ") ", join(LETTERS[G[r, :] .+ 1], ' '))
+    end
+    if any(G[end, :] .> 1)
+        println("!) ", join((ifelse(c > 1, LETTERS[c+1], ' ') for c in G[end, :]), ' '))
+    end
+end
+
+const nrep = 1000 # const
+sampleprinted = false
+
+p = collect(0.0:0.1:1.0)
+f = similar(p)
+for i in linearindices(f)
+    c = 0
+    for _ in 1:nrep
+        G = newgrid(p[i])
+        perc = checkpath!(G)
+        if perc
+            c += 1
+            if !sampleprinted
+                @printf("Sample percolation, %i×%i grid, p = %.2f\n\n", size(G, 1), size(G, 2), p[i])
+                printgrid(G)
+                sampleprinted = true
+            end
+        end
+    end
+    f[i] = c / nrep
+end
+
+println("\nFrequencies for $nrep tries that percolate through\n")
+for (pi, fi) in zip(p, f)
+    @printf("p = %.1f ⇛ f = %.3f\n", pi, fi)
+end

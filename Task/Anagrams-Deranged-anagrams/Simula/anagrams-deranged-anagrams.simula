@@ -1,0 +1,132 @@
+! cim --memory-pool-size=512 deranged-anagrams.sim;
+BEGIN
+
+   CLASS TEXTVECTOR;
+   BEGIN
+
+      CLASS TEXTARRAY(N); INTEGER N;
+      BEGIN TEXT ARRAY DATA(1:N);
+      END TEXTARRAY;
+
+      PROCEDURE EXPAND(N); INTEGER N;
+      BEGIN
+         INTEGER I;
+         REF(TEXTARRAY) TEMP;
+         TEMP :- NEW TEXTARRAY(N);
+         FOR I := 1 STEP 1 UNTIL SIZE DO
+            TEMP.DATA(I) :- ITEMS.DATA(I);
+         ITEMS :- TEMP;
+      END EXPAND;
+
+      PROCEDURE APPEND(T); TEXT T;
+      BEGIN
+         IF SIZE + 1 > CAPACITY THEN
+         BEGIN
+            CAPACITY := 2 * CAPACITY;
+            EXPAND(CAPACITY);
+         END;
+         SIZE := SIZE + 1;
+         ITEMS.DATA(SIZE) :- T;
+      END APPEND;
+
+      TEXT PROCEDURE ELEMENT(I); INTEGER I;
+      BEGIN
+         IF I < 1 OR I > SIZE THEN ERROR("ELEMENT: INDEX OUT OF BOUNDS");
+         ELEMENT :- ITEMS.DATA(I);
+      END ELEMENT;
+
+      INTEGER PROCEDURE FIND_INDEX(STR,INDEX); TEXT STR; INTEGER INDEX;
+      BEGIN
+         INTEGER I, FOUND;
+         FOUND := -1;
+         FOR I := INDEX STEP 1 UNTIL SIZE DO
+            IF STR = ELEMENT(I) THEN
+            BEGIN
+               FOUND := I;
+               GOTO L;
+            END;
+      L: FIND_INDEX := FOUND;
+      END FIND_INDEX;
+
+      INTEGER CAPACITY;
+      INTEGER SIZE;
+      REF(TEXTARRAY) ITEMS;
+
+      CAPACITY := 20;
+      SIZE := 0;
+      EXPAND(CAPACITY);
+   END TEXTVECTOR;
+
+   BOOLEAN PROCEDURE DERANGE(S1,S2); TEXT S1,S2;
+   BEGIN
+      INTEGER I;
+      BOOLEAN RESULT;
+      RESULT := TRUE;
+      I := 1;
+      WHILE RESULT AND I <= S1.LENGTH DO
+      BEGIN
+         CHARACTER C1, C2;
+         S1.SETPOS(I); C1 := S1.GETCHAR;
+         S2.SETPOS(I); C2 := S2.GETCHAR;
+         IF C1 = C2 THEN
+            RESULT := FALSE
+         ELSE
+            I := I+1;
+      END;
+      DERANGE := RESULT;
+   END DERANGE;
+
+   PROCEDURE STRSORT(STR); NAME STR; TEXT STR;
+   BEGIN
+      INTEGER N, I;
+      FOR N := STR.LENGTH STEP -1 UNTIL 2 DO
+         FOR I := 1 STEP 1 UNTIL N-1 DO
+         BEGIN
+            CHARACTER CI1,CI2;
+            STR.SETPOS(I); CI1 := STR.GETCHAR; CI2 := STR.GETCHAR;
+            IF CI1 > CI2 THEN
+            BEGIN
+               STR.SETPOS(I); STR.PUTCHAR(CI2); STR.PUTCHAR(CI1);
+            END;
+         END;
+   END STRSORT;
+
+   REF(INFILE) FILE;
+   INTEGER LEN, FOUNDLEN;
+   REF(TEXTVECTOR) VECT, SVECT;
+   INTEGER INDEX, P1, P2;
+   TEXT STR;
+
+   VECT :- NEW TEXTVECTOR;
+   SVECT :- NEW TEXTVECTOR;
+   FOUNDLEN := 1;
+   FILE :- NEW INFILE("unixdict.txt");
+   FILE.OPEN(BLANKS(132));
+   WHILE NOT FILE.LASTITEM DO
+   BEGIN
+      STR :- FILE.INTEXT(132).STRIP;
+      LEN := STR.LENGTH;
+      IF LEN > FOUNDLEN THEN
+      BEGIN
+         VECT.APPEND(COPY(STR));
+         STRSORT(STR);
+         INDEX := 0;
+         COMMENT Loop through anagrams by index in vector of sorted strings;
+         INDEX := SVECT.FIND_INDEX(STR, INDEX + 1);
+         WHILE INDEX > 0 DO
+         BEGIN
+            IF DERANGE(VECT.ELEMENT(VECT.SIZE), VECT.ELEMENT(INDEX)) THEN
+            BEGIN
+               P1 := VECT.SIZE;
+               P2 := INDEX;
+               FOUNDLEN := LEN;
+            END IF;
+            INDEX := SVECT.FIND_INDEX(STR, INDEX + 1);
+         END WHILE;
+         SVECT.APPEND(STR);
+      END IF;
+   END WHILE;
+   FILE.CLOSE;
+   OUTTEXT(VECT.ELEMENT(P1) & " " & VECT.ELEMENT(P2));
+   OUTIMAGE;
+END

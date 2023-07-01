@@ -1,0 +1,2 @@
+      FACTORIAL 6
+720

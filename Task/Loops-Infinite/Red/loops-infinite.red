@@ -1,0 +1,3 @@
+forever [
+print "SPAM"
+]

@@ -1,0 +1,125 @@
+putch:	equ	2
+puts:	equ	9
+	org	100h
+	lxi	h,80h	; Get length of command line input
+	mov	a,m
+	cpi	2
+	rc		; If no input, stop
+	add	l
+	mov	l,a	; Go to end of numbers
+	mov	c,l	; C = end of numbers
+	inx	h
+	mvi	m,0FFh	; Terminate digit sequence with FFh
+	dcx	h
+sub0:	mov	a,m
+	cpi	32	; When space reached, we're at the beginning
+	jz	to20
+	sui	'0'	; Subtract '0' from each digit and make sure
+	rc		; they are all valid
+	cpi	10	
+	rnc	
+	mov	m,a
+	dcx 	h
+	jmp	sub0
+to20:	mov	a,c	; Calculate amount of numbers
+	sui	81h
+	mov	c,a
+to20l:	mov	e,c	; E = digit counter
+	mvi	l,82h	; Start at beginning
+div2:	mov	a,m	; Grab digit
+	jnc	$+5	; If carry, add ten
+	adi	10
+	rar		; Divide by two
+	mov	m,a	; Write back
+	inx	h
+	dcr	e
+	jnz	div2	; Keep going
+	dcx	h	; For the last number we want
+	ral		; to keep the carry
+	mov	m,a	; This digit is now base-20
+	dcr	c	; One fewer digit left to do
+	jnz	to20l
+	mvi	l,81h	; Find start and end of numbers
+start:	inx	h
+	mov	a,m
+	ana	a
+	jz	start
+	mov	b,l	; B = start
+	inr	a	; If number is zero, output nothing
+	rz
+nend:	inx	h
+	mov	a,m
+	inr	a
+	jnz	nend
+	mov	a,l	; A = end
+	sub	b
+	mov	c,a	; C = amount
+	call	edge
+	mvi	d,3	; D=line
+line:	push	b	; Save start and amount
+	mov	l,b	; HL = first digit
+	mvi	h,0
+num:	call	dline	; Print line for digit
+	inx	h	; Next digit
+	dcr	c
+	jnz	num
+	push	d	; Save line number
+	lxi	d,dn	; Print end of line
+	call	print
+	pop 	d	; Restore variables
+	pop 	b
+	dcr	d
+	jp	line	; Print next line
+edge:	push	b	; Print edge (top or bottom)
+edge_l:	push	b	; Keep counter
+	lxi	d,edges	
+	call 	print
+	pop	b
+	dcr 	c
+	jnz	edge_l
+	lxi	d,edgen	
+	call	print
+	pop	b
+	ret	
+dline:	push	h	; Print line for digit (D'th from bottom)
+	push	d
+	push	b
+	mov	a,m
+	ora	d	; Line and number both 0?
+	jnz	$+9
+	lxi	d,dz	; Then print line with @
+	jmp	dnum
+	mov	a,d	; 5 * line
+	add	a
+	add	a
+	add	d
+	mov	e,a
+	mov	a,m	; A -= 5 * line
+	sub	e
+	lxi	d,d0	; If <0, empty
+	jm	dnum
+	cpi	5
+	jc	$+9
+	lxi	d,d5	; If >=5, ----
+	jmp	dnum
+	add	a	; Otherwise, d[n]
+	mov	l,a
+	add	a
+	add	l
+	mov	l,a
+	mvi	h,0
+	dad	d
+	xchg
+dnum:	call	print
+	pop	b
+	pop	d
+	pop	h
+	ret		
+print:	mvi	c,puts
+	jmp	5
+edges:	db	'+----$'
+edgen:	db	'+',13,10,'$'
+dz:	db	'| @  $'
+d0:	db	'|    $| .  $| .. $|... $|....$'
+d5:	db	'|----$'
+dn:	db	'|',13,10,'$'

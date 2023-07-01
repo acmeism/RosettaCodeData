@@ -1,0 +1,64 @@
+Procedure handleError(value, msg.s)
+  If value = 0
+    MessageRequester("Error", msg)
+    End
+  EndIf
+EndProcedure
+
+handleError(InitNetwork(), "Unable to initialize network functions.")
+If OpenConsole()
+  Define url$, x1$, y1$, title$, unescapedTitle$, encodedURL$
+  Define x2, i, j, totalExamples, totalTasks
+  url$ = "http://www.rosettacode.org/mw/api.php?action=query" +
+         "&list=categorymembers&cmtitle=Category:Programming_Tasks" +
+         "&cmlimit=500&format=xml"
+
+  Repeat
+    handleError(ReceiveHTTPFile(url$, "tasks.xml"), "Unable to access tasks URL.")
+
+    handleError(ReadFile(0, "tasks.xml"), "Unable to read 'task.xml' file.")
+    x1$ =  ReadString(0)
+    CloseFile(0)
+
+    Repeat
+      x2 = FindString(x1$, "title=", x2 + 1)
+      If x2
+        title$ = Mid(x1$, x2 + 7, 99)
+        title$ = Left(title$, FindString(title$, ">", 1) - 4)
+        unescapedTitle$ = UnescapeString(ReplaceString(title$, "&#039;", "&apos;"), #PB_String_EscapeXML)
+        encodedURL$ = URLEncoder("http://www.rosettacode.org/mw/index.php?title=" + unescapedTitle$ + "&action=raw")
+        If ReceiveHTTPFile(encodedURL$, "task.xml")
+          ReadFile(0, "task.xml")
+          While Not Eof(0)
+            y1$ =  ReadString(0)
+            If FindString(y1$, "=={{header|", 1, #PB_String_NoCase)
+              totalExamples + 1
+            EndIf
+          Wend
+          CloseFile(0)
+
+          PrintN(unescapedTitle$ +": " + Str(totalExamples) + " examples")
+
+          totalTasks + totalExamples
+          totalExamples = 0
+        EndIf
+      EndIf
+    Until x2 = 0
+
+    ;check for additional pages of tasks
+    x2 = FindString(x1$, "cmcontinue=")
+    If x2
+      i = FindString(x1$, #DQUOTE$, x2 + 1)
+      j = FindString(x1$, #DQUOTE$, i + 1)
+      url$ = URLEncoder("http://www.rosettacode.org/mw/api.php?action=query" +
+                        "&list=categorymembers&cmtitle=Category:Programming_Tasks" +
+                        "&cmlimit=500&format=xml&cmcontinue=" + Mid(x1$, i + 1, j - i))
+    Else
+      Break ;all done
+    EndIf
+  ForEver
+
+  PrintN("Total: " + Str(totalTasks) + " examples")
+  Input()
+  CloseConsole()
+EndIf

@@ -1,0 +1,190 @@
+(* Stacks implemented as linked lists. *)
+
+(* A nonlinear stack type of size n, which is good for when you are
+   using a garbage collector or can let the memory leak. *)
+typedef stack_t (t : t@ype+, n : int) = list (t, n)
+typedef stack_t (t : t@ype+) = [n : int] stack_t (t, n)
+
+(* A linear stack type of size n, which requires (and will enforce)
+   explicit freeing. (Note that a "peek" function for a linear stack
+   is a complicated topic. But the task avoids this issue.) *)
+viewtypedef stack_vt (vt : vt@ype+, n : int) = list_vt (vt, n)
+viewtypedef stack_vt (vt : vt@ype+) = [n : int] stack_vt (vt, n)
+
+(* Proof that a given nonlinear stack does not have a nonnegative
+   size. *)
+prfn
+lemma_stack_t_param {n : int} {t : t@ype}
+                    (stack : stack_t (t, n)) :<prf>
+    [0 <= n] void =
+  lemma_list_param stack
+
+(* Proof that a given linear stack does not have a nonnegative
+   size. *)
+prfn
+lemma_stack_vt_param {n : int} {vt : vt@ype}
+                     (stack : !stack_vt (vt, n)) :<prf>
+    [0 <= n] void =
+  lemma_list_vt_param stack
+
+(* Create an empty nonlinear stack. *)
+fn {}
+stack_t_nil {t : t@ype} () :<> stack_t (t, 0) =
+  list_nil ()
+
+(* Create an empty linear stack. *)
+fn {}
+stack_vt_nil {vt : vt@ype} () :<> stack_vt (vt, 0) =
+  list_vt_nil ()
+
+(* Is a nonlinear stack empty? *)
+fn {}
+stack_t_is_empty {n : int} {t : t@ype}
+                 (stack : stack_t (t, n)) :<>
+    [empty : bool | empty == (n == 0)]
+    bool empty =
+  case+ stack of
+  | list_nil _ => true
+  | list_cons _ => false
+
+(* Is a linear stack empty? *)
+fn {}
+stack_vt_is_empty {n : int} {vt : vt@ype}
+                  (* ! = pass by value; stack is preserved. *)
+                  (stack : !stack_vt (vt, n)) :<>
+    [empty : bool | empty == (n == 0)]
+    bool empty =
+  case+ stack of
+  | list_vt_nil _ => true
+  | list_vt_cons _ => false
+
+(* Push to a nonlinear stack that is stored in a variable. *)
+fn {t : t@ype}
+stack_t_push {n : int}
+             (stack : &stack_t (t, n) >> stack_t (t, m),
+              x     : t) :<!wrt>
+    (* It is proved that the stack is raised one higher. *)
+    #[m : int | 1 <= m; m == n + 1]
+    void =
+  let
+    prval _ = lemma_stack_t_param stack
+    prval _ = prop_verify {0 <= n} ()
+  in
+    stack := list_cons (x, stack)
+  end
+
+(* Push to a linear stack that is stored in a variable. Beware: if x
+   is linear, it is consumed. *)
+fn {vt : vt@ype}
+stack_vt_push {n : int}
+              (stack : &stack_vt (vt, n) >> stack_vt (vt, m),
+               x     : vt) :<!wrt>
+    (* It is proved that the stack is raised one higher. *)
+    #[m : int | 1 <= m; m == n + 1]
+    void =
+  let
+    prval _ = lemma_stack_vt_param stack
+    prval _ = prop_verify {0 <= n} ()
+  in
+    stack := list_vt_cons (x, stack)
+  end
+
+(* Pop from a nonlinear stack that is stored in a variable. It is
+   impossible (unless you cheat the typechecker) to pop from an empty
+   stack. *)
+fn {t : t@ype}
+stack_t_pop {n : int | 1 <= n}
+            (stack : &stack_t (t, n) >> stack_t (t, m)) :<!wrt>
+    (* It is proved that the stack is lowered by one. *)
+    #[m : int | m == n - 1]
+    t =
+  case+ stack of
+  | list_cons (x, tail) =>
+    begin
+      stack := tail;
+      x
+    end
+
+(* Pop from a linear stack that is stored in a variable. It is
+   impossible (unless you cheat the typechecker) to pop from an empty
+   stack. *)
+fn {vt : vt@ype}
+stack_vt_pop {n : int | 1 <= n}
+             (stack : &stack_vt (vt, n) >> stack_vt (vt, m)) :<!wrt>
+    (* It is proved that the stack is lowered by one. *)
+    #[m : int | m == n - 1]
+    vt =
+  case+ stack of
+  | ~ list_vt_cons (x, tail) => (* ~ = the top node is consumed. *)
+    begin
+      stack := tail;
+      x
+    end
+
+(* A linear stack has to be consumed. *)
+extern fun {vt : vt@ype}
+stack_vt_free$element_free (x : vt) :<> void
+fn {vt : vt@ype}
+stack_vt_free {n : int}
+              (stack : stack_vt (vt, n)) :<> void =
+  let
+    fun
+    loop {m : int | 0 <= m}
+         .<m>. (* <-- proof of loop termination *)
+         (stk : stack_vt (vt, m)) :<> void =
+      case+ stk of
+      | ~ list_vt_nil () => begin end
+      | ~ list_vt_cons (x, tail) =>
+        begin
+          stack_vt_free$element_free x;
+          loop tail
+        end
+
+    prval _ = lemma_stack_vt_param stack
+  in
+    loop stack
+  end
+
+implement
+main0 () =
+  let
+    var nonlinear_stack : stack_t (int) = stack_t_nil ()
+    var linear_stack : stack_vt (int) = stack_vt_nil ()
+    implement stack_vt_free$element_free<int> x = begin end
+
+    overload is_empty with stack_t_is_empty
+    overload is_empty with stack_vt_is_empty
+
+    overload push with stack_t_push
+    overload push with stack_vt_push
+
+    overload pop with stack_t_pop
+    overload pop with stack_vt_pop
+  in
+    println! ("nonlinear_stack is empty? ", is_empty nonlinear_stack);
+    println! ("linear_stack is empty? ", is_empty linear_stack);
+
+    println! ("pushing 3, 2, 1...");
+    push (nonlinear_stack, 3);
+    push (nonlinear_stack, 2);
+    push (nonlinear_stack, 1);
+    push (linear_stack, 3);
+    push (linear_stack, 2);
+    push (linear_stack, 1);
+
+    println! ("nonlinear_stack is empty? ", is_empty nonlinear_stack);
+    println! ("linear_stack is empty? ", is_empty linear_stack);
+
+    println! ("popping nonlinear_stack: ", (pop nonlinear_stack) : int);
+    println! ("popping nonlinear_stack: ", (pop nonlinear_stack) : int);
+    println! ("popping nonlinear_stack: ", (pop nonlinear_stack) : int);
+
+    println! ("popping linear_stack: ", (pop linear_stack) : int);
+    println! ("popping linear_stack: ", (pop linear_stack) : int);
+    println! ("popping linear_stack: ", (pop linear_stack) : int);
+
+    println! ("nonlinear_stack is empty? ", is_empty nonlinear_stack);
+    println! ("linear_stack is empty? ", is_empty linear_stack);
+
+    stack_vt_free<int> linear_stack
+  end

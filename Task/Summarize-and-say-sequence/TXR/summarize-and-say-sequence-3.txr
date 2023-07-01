@@ -1,0 +1,46 @@
+;; Macro very similar to Racket's for/fold
+(defmacro for-accum (accum-var-inits each-vars . body)
+  (let ((accum-vars [mapcar first accum-var-inits])
+        (block-sym (gensym))
+        (next-args [mapcar (ret (progn @rest (gensym))) accum-var-inits])
+        (nvars (length accum-var-inits)))
+    ^(let ,accum-var-inits
+       (flet ((iter (,*next-args)
+                ,*[mapcar (ret ^(set ,@1 ,@2)) accum-vars next-args]))
+         (each ,each-vars
+           ,*body)
+         (list ,*accum-vars)))))
+
+(defun next (s)
+  (let ((v (vector 10 0)))
+    (each ((c s))
+      (inc [v (- #\9 c)]))
+    (cat-str
+      (collect-each ((x v)
+                     (i (range 9 0 -1)))
+        (when (> x 0)
+          `@x@i`)))))
+
+(defun seq-of (s)
+  (for* ((ns ()))
+        ((not (member s ns)) (reverse ns))
+        ((push s ns) (set s (next s)))))
+
+(defun sort-string (s)
+  [sort (copy s) >])
+
+(tree-bind (len nums seq)
+  (for-accum ((*len nil) (*nums nil) (*seq nil))
+             ((n (range 1000000 0 -1))) ;; start at the high end
+    (let* ((s (tostring n))
+           (sorted (sort-string s)))
+      (if (equal s sorted)
+        (let* ((seq (seq-of s))
+               (len (length seq)))
+          (cond ((or (not *len) (> len *len)) (iter len (list s) seq))
+                ((= len *len) (iter len (cons s *nums) seq))))
+        (iter *len
+              (if (and *nums (member sorted *nums)) (cons s *nums) *nums)
+              *seq))))
+  (put-line `Numbers: @{nums ", "}\nLength: @len`)
+  (each ((n seq)) (put-line `  @n`)))

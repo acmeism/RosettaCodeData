@@ -1,0 +1,4 @@
+MCSKIP MT,<>
+MCINS %.
+MCDEF F WITHS (,,)
+AS <%WA1.%WA3.%WA2.%WA2.>

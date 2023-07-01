@@ -1,0 +1,83 @@
+;; This is the exception that will be thrown if an amb expression is
+;; unsatisfiable.
+AmbError ::= Exception clone tap {
+
+  self message := "Amb expression failed".
+
+  AmbError := self.
+
+}.
+
+;; The Amb object itself is primarily for internal use. It stores the
+;; "next" backtracking point if an amb expression outright fails or
+;; exhausts its possibilities at some point.
+Amb ::= Object clone tap {
+
+  ;; The default "next" point is to throw an exception. This will be
+  ;; overridden in many cases, if there is an actual next handler to
+  ;; jump to.
+  self nextHandler := { AmbError clone throw. }.
+
+  Amb := self.
+
+}.
+
+callAmb := {
+  ;; We need an object which will be accessible from inside the
+  ;; continuations that will store the next backtracking point which
+  ;; will be called.
+  backtracker := Amb clone.
+  ;; We define the dynamically-scoped method $amb which will try each
+  ;; possibility that it is given. If all of those possibilities fail,
+  ;; it will call the next handler.
+  $amb := {
+    takes '[cases].
+    ;; This is the return point. We're going to try each element of
+    ;; the cases variable (probably an array, but it could feasibly be
+    ;; any collection type). For each element, we'll jump to this
+    ;; point (which will wind up being the end of the $amb method). If
+    ;; it ends up failing, the backtrack point will get called and
+    ;; we'll try the next one.
+    callCC {
+      escapable.
+      ;; Get the current backtrack point from the toplevel object and
+      ;; store it within this continuation. The backtrack object's
+      ;; current backtrack point will change as we make new attempts,
+      ;; but this prevHandler variable is stored locally in this scope
+      ;; and will not change, so we can always use it later.
+      prevHandler := #'(backtracker nextHandler).
+      ;; We iterate over the collection to try each element.
+      cases visit {
+        takes '[curr].
+        callCC {
+          ;; This inner continuation will be our new backtrack point.
+          ;; We store the continuation object itself in the backtrack
+          ;; object so that future $amb calls know to return to this
+          ;; point if something goes wrong.
+          nextExit := #'$1.
+          backtracker nextHandler := { nextExit call (Nil). }.
+          ;; Now we actually try the value by jumping to the end of
+          ;; the $amb method and returning control to the caller.
+          return (curr).
+        }.
+      }.
+      ;; If we exhaust each possibility, then that means every value
+      ;; in the cases variable has been tried and has failed. So we
+      ;; set the backtrack point back to what it was before we tried
+      ;; all of these values, and then we jump back to that previous
+      ;; backtrack point.
+      backtracker nextHandler := #'(prevHandler).
+      prevHandler.
+      ;; prevHandler will always either perform a continuation jump
+      ;; (if there is a new backtrack point to try) or throw an
+      ;; exception (if we've exhausted all possibilities), so this
+      ;; continuation block will never exit normally.
+    }.
+  }.
+  ;; An instant failure at a point in an amb expression is equivalent
+  ;; to an $amb call on an empty collection.
+  $fail := { $amb (Nil). }.
+  ;; Now that the dynamic variables are in place, let's call the
+  ;; block.
+  #'($1) call.
+}.

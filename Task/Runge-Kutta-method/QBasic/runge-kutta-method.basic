@@ -1,0 +1,16 @@
+y! = 1
+FOR i = 0 TO 100
+    t = i / 10
+
+    IF t = INT(t) THEN
+       actual! = ((t ^ 2 + 4) ^ 2) / 16
+        PRINT USING "y(##) = ###.######  Error = "; t; y;
+       PRINT actual - y
+       END IF
+
+    k1! = t * SQR(y)
+    k2! = (t + .05) * SQR(y + .05 * k1)
+    k3! = (t + .05) * SQR(y + .05 * k2)
+    k4! = (t + .1) * SQR(y + .1 * k3)
+    y = y + .1 * (k1 + 2 * (k2 + k3) + k4) / 6
+NEXT i

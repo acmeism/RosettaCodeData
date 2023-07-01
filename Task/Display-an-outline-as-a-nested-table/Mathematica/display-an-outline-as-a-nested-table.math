@@ -1,0 +1,120 @@
+s = "Display an outline as a nested table.
+    Parse the outline to a tree,
+        measuring the indent of each line,
+        translating the indentation to a nested structure,
+        and padding the tree to even depth.
+    count the leaves descending from each node,
+        defining the width of a leaf as 1,
+        and the width of a parent node as a sum.
+            (The sum of the widths of its children)
+    and write out a table with 'colspan' values
+        either as a wiki table,
+        or as HTML.";
+s = StringSplit[s, "\n"];
+indentation = LengthWhile[Characters[#], EqualTo[" "]] & /@ s;
+s = MapThread[StringDrop, {s, indentation}];
+indentation =
+  indentation /.
+   Thread[Union[indentation] -> Range[Length[Union[indentation]]]];
+ii = Transpose[{Range[Length[indentation]], indentation}];
+(*ii//Grid*)
+
+sel = Table[
+   {i, Last@Select[ii, #[[2]] < i[[2]] \[And] #[[1]] < i[[1]] &]}
+   ,
+   {i, Rest@ii}
+   ];
+g = Graph[Rule @@@ sel[[All, All, 1]], VertexLabels -> "Name"];
+
+vl = VertexList[g];
+head = FirstPosition[vl, 1][[1]];
+dm = GraphDistanceMatrix[g];
+depth = ReverseSortBy[Transpose[{vl, dm[[All, head]]}], Last];
+colspandb = <||>;
+data = Table[
+   vert = d[[1]];
+   vd = VertexInDegree[g, vert];
+   vics = VertexInComponent[g, vert, {1}];
+   vocs = Rest@VertexOutComponent[g, vert];
+   cspan = 0;
+   Do[
+    If[KeyExistsQ[colspandb, vic],
+     cspan += colspandb[vic]
+     ]
+    ,
+    {vic, vics}
+    ];
+   If[cspan == 0, cspan = 1];
+   AssociateTo[colspandb, d[[1]] -> cspan];
+   {Sequence @@ d, vd, vics, vocs, cspan}
+   ,
+   {d, depth}
+   ];
+
+emptybefore = Table[
+   {d[[1]],
+    Length@
+     Select[
+       data, #[[1]] < d[[1]] \[And]
+         Length[#[[4]]] == 0 \[And] #[[2]] < d[[2]] &][[All, {1, 2,
+        3}]]}
+   ,
+   {d, data}
+   ];
+emptybefore = Association[Rule @@@ emptybefore];
+
+depthcopy = depth;
+depthcopy[[All, 2]] += 1;
+graphelements =
+  SortBy[Sort /@ GatherBy[depthcopy, Last], First /* Last][[All, All,
+    1]];
+
+str = {"<table style='text-align: center;'>"};
+colorsdb = <|1 -> "#ffffe6", 2 -> "#ffebd2", 6 -> "#f0fff0",
+   10 -> "#e6ffff"|>;
+Do[
+ AppendTo[str, "<tr>"];
+ totalspan = 0;
+ Do[
+  If[KeyExistsQ[colorsdb, g],
+   color = colorsdb[g]
+   ,
+   (*Print["sel",SelectFirst[data,First/*EqualTo[g]][[5]]];*)
+
+   color =
+    colorsdb[
+     Max[
+      Intersection[SelectFirst[data, First /* EqualTo[g]][[5]],
+       Keys[colorsdb]]]]
+   ];
+  span = SelectFirst[data, First /* EqualTo[g]][[6]];
+  totalspan += span;
+
+  empty = emptybefore[g];
+  str = str~Join~
+    ConstantArray["<td style=\"background-color: #F9F9F9;\"></td>",
+     empty];
+  If[span == 1,
+   AppendTo[str,
+     "<td style=\"background-color: " <> color <> ";\">" <> s[[g]] <>
+      "</td>"];
+   ,
+   AppendTo[str,
+     "<tdcolspan=\"" <> ToString[span] <>
+      "\" style=\"background-color: " <> color <> ";\">" <> s[[g]] <>
+      "</td>"];
+   ];
+  ,
+  {g, ge}
+  ];
+ extra =
+  SelectFirst[data, First /* EqualTo[1]][[6]] - totalspan - empty;
+ str = str~Join~
+   ConstantArray["<td style=\"background-color: #F9F9F9;\"></td>",
+    extra];
+ AppendTo[str, "</tr>"];
+ ,
+ {ge, graphelements}
+ ]
+AppendTo[str, "</table>"];
+StringRiffle[str, "\n"]

@@ -1,0 +1,14 @@
+I64 *a, *b;
+a = Str2I64(GetStr("Enter your first number: "));
+b = Str2I64(GetStr("Enter your second number: "));
+
+if (b == 0)
+  Print("Error: The second number must not be zero.\n");
+else {
+  Print("a + b = %d\n", a + b);
+  Print("a - b = %d\n", a - b);
+  Print("a * b = %d\n", a * b);
+  Print("a / b = %d\n", a / b); /* rounds down */
+  Print("a % b = %d\n", a % b); /* same sign as first operand */
+  Print("a ` b = %d\n", a ` b);
+}

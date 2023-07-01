@@ -1,0 +1,1 @@
+print load replace input " " " + "

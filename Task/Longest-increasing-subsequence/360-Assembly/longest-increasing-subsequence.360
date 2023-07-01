@@ -1,0 +1,121 @@
+*        Longest increasing subsequence    04/03/2017
+LNGINSQ  CSECT
+         USING  LNGINSQ,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R6,1             i=1
+       DO WHILE=(CH,R6,LE,=H'2') do i=1 to 2
+       IF CH,R6,EQ,=H'1' THEN      if i=1 then
+         MVC    N,=AL2((A2-A1)/2)    n=hbound(a1)
+         MVC    AA(64),A1            a=a1
+       ELSE     ,                  else
+         MVC    N,=AL2((AA-A2)/2)    n=hbound(a2)
+         MVC    AA(64),A2            a=a2
+       ENDIF    ,                  endif
+         MVC    PG,=CL80': '       init buffer
+         LA     R2,AA-2            @a
+         LH     R3,N               n
+         BAL    R14,PRINT          print a
+         MVC    LL,=H'0'           l=0
+         SR     R7,R7              j=0
+       DO WHILE=(CH,R7,LE,N)       do j=0 to n
+         MVC    LO,=H'1'             lo=1
+         MVC    HI,LL                hi=l
+         LH     R4,LO                lo
+       DO WHILE=(CH,R4,LE,HI)        do while lo<=hi
+         LH     R1,LO                  lo
+         AH     R1,HI                  lo+hi
+         SRA    R1,1                   /2
+         STH    R1,MIDDLE              middle=(lo+hi)/2
+         SLA    R1,1                   *2
+         LH     R1,MM(R1)              m(middle+1)
+         SLA    R1,1                   *2
+         LH     R3,AA(R1)              r3=a(m(middle+1)+1)
+         LR     R1,R7                  j
+         SLA    R1,1                   *2
+         LH     R4,AA(R1)              r4=a(j+1)
+         LH     R2,MIDDLE              middle
+       IF CR,R3,LT,R4 THEN             if a(m(middle+1)+1)<a(j+1) then
+         LA     R2,1(R2)                 middle+1
+         STH    R2,LO                    lo=middle+1
+       ELSE     ,                      else
+         BCTR   R2,0                     middle-1
+         STH    R2,HI                    hi=middle-1
+       ENDIF    ,                      endif
+         LH     R4,LO                  lo
+       ENDDO    ,                    end /*while*/
+         LH     R10,LO               newl=lo
+         LR     R1,R10               newl
+         SLA    R1,1                 *2
+         LH     R3,MM-2(R1)          m(newl)
+         LR     R1,R7                j
+         SLA    R1,1                 *2
+         STH    R3,PP(R1)            p(j+1)=m(newl)
+         LR     R1,R10               newl
+         SLA    R1,1                 *2
+         STH    R7,MM(R1)            m(newl+1)=j
+       IF CH,R10,GT,LL               if newl>l then
+         STH    R10,LL                 l=newl
+       ENDIF    ,                    endif
+         LA     R7,1(R7)             j++
+       ENDDO    ,                  enddo j
+         LH     R1,LL              l
+         SLA    R1,1               *2
+         LH     R10,MM(R1)         k=m(l+1)
+         LH     R7,LL              j=l
+       DO WHILE=(CH,R7,GE,=H'1')   do j=l to 1 by -1
+         LR     R1,R10               k
+         SLA    R1,1                 *2
+         LH     R2,AA(R1)            a(k+1)
+         LR     R1,R7                j
+         SLA    R1,1                 *2
+         STH    R2,SS-2(R1)          s(j)=a(k+1)
+         LR     R1,R10               k
+         SLA    R1,1                 *2
+         LH     R10,PP(R1)           k=p(k+1)
+         BCTR   R7,0                 j--
+       ENDDO    ,                  enddo j
+         MVC    PG,=CL80'> '       init buffer
+         LA     R2,SS-2            @s
+         LH     R3,LL              l
+         BAL    R14,PRINT          print a
+         LA     R6,1(R6)           i++
+       ENDDO    ,                enddo i
+         L      R13,4(0,R13)       restore previous savearea pointer
+         LM     R14,R12,12(R13)    restore previous context
+         XR     R15,R15            rc=0
+         BR     R14                exit
+PRINT    LA     R10,PG        ---- print subroutine
+         LA     R10,2(R10)         pgi=2
+         LA     R7,1               j=1
+       DO WHILE=(CR,R7,LE,R3)      do j=1 to nx
+         LR     R1,R7                j
+         SLA    R1,1                 *2
+         LH     R1,0(R2,R1)          x(j)
+         XDECO  R1,XDEC              edit x(j)
+         MVC    0(3,R10),XDEC+9      output x(j)
+         LA     R10,3(R10)           pgi+=3
+         LA     R7,1(R7)             j++
+       ENDDO    ,                  enddo j
+         XPRNT  PG,L'PG            print buffer
+         BR     R14           ---- return
+A1       DC     H'3',H'2',H'6',H'4',H'5',H'1'
+A2       DC     H'0',H'8',H'4',H'12',H'2',H'10',H'6',H'14'
+         DC     H'1',H'9',H'5',H'13',H'3',H'11',H'7',H'15'
+AA       DS     32H                a(32)
+PP       DS     32H                p(32)
+MM       DS     32H                m(32)
+SS       DS     32H                s(32)
+N        DS     H                  n
+LL       DS     H                  l
+LO       DS     H                  lo
+HI       DS     H                  hi
+MIDDLE   DS     H                  middle
+PG       DS     CL80               buffer
+XDEC     DS     CL12               temp for xdeco
+         YREGS
+         END    LNGINSQ

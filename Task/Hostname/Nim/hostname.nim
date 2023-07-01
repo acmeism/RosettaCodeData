@@ -1,0 +1,2 @@
+import nativesockets
+echo getHostName()

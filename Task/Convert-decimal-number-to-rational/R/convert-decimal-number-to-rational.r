@@ -1,0 +1,9 @@
+ratio<-function(decimal){
+  denominator=1
+  while(nchar(decimal*denominator)!=nchar(round(decimal*denominator))){
+    denominator=denominator+1
+  }
+  str=paste(decimal*denominator,"/",sep="")
+  str=paste(str,denominator,sep="")
+  return(str)
+}

@@ -1,0 +1,148 @@
+/* ARM assembly AARCH64 Raspberry PI 3B or android 64 bits */
+/*  program additivePrime64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ MAXI,      500
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResult:       .asciz "Prime  : @ \n"
+szMessCounter:      .asciz "Number found : @ \n"
+szCarriageReturn:   .asciz "\n"
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:                  .skip 24
+TablePrime:                 .skip 8 * MAXI
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                               // entry of program
+
+    bl createArrayPrime
+    mov x5,x0                       // prime number
+
+    ldr x4,qAdrTablePrime           // address prime table
+    mov x10,#0                      // init counter
+    mov x6,#0                       // indice
+1:
+    ldr x2,[x4,x6,lsl #3]           // load prime
+    mov x9,x2                       // save prime
+    mov x7,#0                       // init digit sum
+    mov x1,#10                      // divisor
+2:                                  // begin loop
+    mov x0,x2                       // dividende
+    udiv x2,x0,x1
+    msub x3,x2,x1,x0                // compute remainder
+    add x7,x7,x3                    // add digit to digit sum
+    cmp x2,#0                       // quotient null ?
+    bne 2b                          // no -> comppute other digit
+
+    mov x8,#1                       // indice
+4:                                  // prime search loop
+    cmp x8,x5                       // maxi ?
+    bge 5f                          // yes
+    ldr x0,[x4,x8,lsl #3]           // load prime
+    cmp x0,x7                       // prime >= digit sum ?
+    add x0,x8,1
+    csel x8,x0,x8,lt                // no -> increment indice
+    blt 4b                          // and loop
+    bne 5f                          // >
+    mov x0,x9                       // equal
+    bl displayPrime
+    add x10,x10,#1                  // increment counter
+5:
+    add x6,x6,#1                    // increment first indice
+    cmp x6,x5                       // maxi ?
+    blt 1b                          // and loop
+
+    mov x0,x10                      // number counter
+    ldr x1,qAdrsZoneConv
+    bl conversion10                 // call décimal conversion
+    ldr x0,qAdrszMessCounter
+    ldr x1,qAdrsZoneConv            // insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess                // display message
+
+100:                                // standard end of the program
+    mov x0, #0                      // return code
+    mov x8, #EXIT                   // request to exit program
+    svc #0                          // perform the system call
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszMessResult:         .quad szMessResult
+qAdrszMessCounter:        .quad szMessCounter
+qAdrTablePrime:           .quad TablePrime
+/******************************************************************/
+/*      créate prime array                                       */
+/******************************************************************/
+createArrayPrime:
+    stp x1,lr,[sp,-16]!       // save  registres
+    ldr x4,qAdrTablePrime    // address prime table
+    mov x0,#1
+    str x0,[x4]              // store 1 in array
+    mov x0,#2
+    str x0,[x4,#8]           // store 2 in array
+    mov x0,#3
+    str x0,[x4,#16]          // store 3 in array
+    mov x5,#3                // prine counter
+    mov x7,#5                // first number to test
+1:
+    mov x6,#1                // indice
+2:
+    mov x0,x7                // dividende
+    ldr x1,[x4,x6,lsl #3]    // load divisor
+    udiv x2,x0,x1
+    msub x3,x2,x1,x0         // compute remainder
+    cmp x3,#0                // null remainder ?
+    beq 4f                   // yes -> end loop
+    cmp x2,x1                // quotient < divisor
+    bge 3f
+    str x7,[x4,x5,lsl #3]    // dividende is prime store in array
+    add x5,x5,#1             // increment counter
+    b 4f                     // and end loop
+3:
+    add x6,x6,#1             // else increment indice
+    cmp x6,x5                // maxi ?
+    blt 2b                   // no -> loop
+4:
+    add x7,x7,#2             // other odd number
+    cmp x7,#MAXI             // maxi ?
+    blt 1b                   // no -> loop
+    mov x0,x5                // return counter
+100:
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+/******************************************************************/
+/*      Display prime table elements                                */
+/******************************************************************/
+/* x0 contains the prime */
+displayPrime:
+    stp x1,lr,[sp,-16]!       // save  registres
+    ldr x1,qAdrsZoneConv
+    bl conversion10           // call décimal conversion
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv      // insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess          // display message
+100:
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+
+qAdrsZoneConv:                   .quad sZoneConv
+
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

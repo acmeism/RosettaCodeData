@@ -1,0 +1,206 @@
+program WebScrape;
+
+{$APPTYPE CONSOLE}
+
+{.$DEFINE DEBUG}
+
+uses
+  Classes,
+  Winsock;
+
+
+{ Function to connect to host, send HTTP request and retrieve response }
+function DoHTTPGET(const hostName: PAnsiChar; const resource: PAnsiChar; HTTPResponse: TStrings): Boolean;
+const
+  Port: integer = 80;
+  CRLF = #13#10; // carriage return/line feed
+var
+  WSAData: TWSAData;
+  Sock: TSocket;
+  SockAddrIn: TSockAddrIn;
+  IPAddress: PHostEnt;
+  bytesIn: integer;
+  inBuffer: array [0..1023] of char;
+  Req: string;
+begin
+  Result := False;
+  HTTPResponse.Clear;
+
+  { Initialise use of the Windows Sockets DLL.
+    Older Windows versions support Winsock 1.1 whilst newer Windows
+    include Winsock 2 but support 1.1.  Therefore, we'll specify
+    version 1.1 ($101) as being the highest version of Windows Sockets
+    that we can use to provide greatest flexibility.
+    WSAData receives details of the Windows Sockets implementation }
+  Winsock.WSAStartUp($101, WSAData);
+  try
+
+    { Create a socket for TCP/IP usage passing in
+      Address family spec: AF_INET (TCP, UDP, etc.)
+      Type specification: SOCK_STREAM
+      Protocol: IPPROTO_TCP (TCP) }
+    Sock := WinSock.Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    try
+
+      // Check we have a valid socket
+      if (Sock <> INVALID_SOCKET) then
+        begin
+          // Populate socket address structure
+          with SockAddrIn do
+            begin
+              // Address family specification
+              sin_family := AF_INET;
+              // Port
+              sin_port := htons(Port);
+              // Address
+              sin_addr.s_addr := inet_addr(hostName);
+            end;
+
+          if (SockAddrIn.sin_addr.s_addr = INADDR_NONE) then
+            begin
+              { As we're using a domain name instead of an
+                IP Address, we need to resolve the domain name }
+              IPAddress := Winsock.gethostbyname(hostName);
+
+              // Quit if we didn't get an IP Address
+              if (IPAddress = nil) then
+                Exit;
+
+              // Update the structure with the IP Address
+              SockAddrIn.sin_addr.s_addr := PLongint(IPAddress^.h_addr_list^)^;
+            end;
+
+          // Try to connect to host
+          if (Winsock.connect(Sock, SockAddrIn, SizeOf(SockAddrIn)) <> SOCKET_ERROR) then
+            begin
+              // OK - Connected
+
+              // Compose our request
+              // Each line of the request must be terminated with a carriage return/line feed
+
+              {  The First line specifies method (e.g. GET, POST), path to required resource,
+                 and the HTTP version being used.  These three fields are space separated. }
+               Req := 'GET '+resource+' HTTP/1.1' + CRLF +
+
+                     // Host: is the only Required header in HTTP 1.1
+                     'Host: '+hostName + CRLF +
+
+                     { Persistent connections are the default in HTTP 1.1 but, as we don't want
+                       or need one for this exercise, we must include the "Connection: close"
+                       header in our request }
+                     'Connection: close' + CRLF +
+
+                     CRLF; // Request must end with an empty line!
+
+              // Try to send the request to the host
+              if (Winsock.send(Sock,Req[1],Length(Req),0) <> SOCKET_ERROR) then
+                begin
+                  // Initialise incoming data buffer (i.e. fill array with nulls)
+                  FillChar(inBuffer,SizeOf(inBuffer),#0);
+                  // Loop until nothing left to read
+                  repeat
+                    // Read incoming data from socket
+                    bytesIn := Winsock.recv(Sock, inBuffer, SizeOf(inBuffer), 0);
+                    // Assign buffer to Stringlist
+                    HTTPResponse.Text := HTTPResponse.Text + Copy(string(inBuffer),1,bytesIn);
+                  until
+                    (bytesIn <= 0) or (bytesIn = SOCKET_ERROR);
+
+                  { Our list of response strings should
+                    contain at least 1 line }
+                  Result := HTTPResponse.Count > 0;
+                end;
+
+             end;
+
+        end;
+
+    finally
+      // Close our socket
+      Winsock.closesocket(Sock);
+    end;
+
+  finally
+    { This causes our application to deregister itself from this
+      Windows Sockets implementation and allows the implementation
+      to free any resources allocated on our behalf. }
+    Winsock.WSACleanup;
+  end;
+
+end;
+
+{ Simple function to locate and return the UTC time from the
+  request sent to http://tycho.usno.navy.mil/cgi-bin/timer.pl
+  The HTTPResponse parameter contains both the HTTP Headers and
+  the HTML served up by the requested resource. }
+function ParseResponse(HTTPResponse: TStrings): string;
+var
+  i: Integer;
+begin
+  Result := '';
+
+  { Check first line for server response code
+    We want something like this: HTTP/1.1 200 OK }
+  if Pos('200',HTTPResponse[0]) > 0 then
+    begin
+      for i := 0 to Pred(HTTPResponse.Count) do
+        begin
+          { The line we're looking for is something like this:
+            <BR>May. 04. 21:55:19 UTC Universal Time }
+
+          // Check each line
+          if Pos('UTC',HTTPResponse[i]) > 0 then
+            begin
+              Result := Copy(HTTPResponse[i],5,Pos('UTC',HTTPResponse[i])-1);
+              Break;
+            end;
+
+        end;
+    end
+    else
+    Result := 'HTTP Error: '+HTTPResponse[0];
+end;
+
+
+const
+  host: PAnsiChar = 'tycho.usno.navy.mil';
+  res : PAnsiChar = '/cgi-bin/timer.pl';
+
+
+var
+  Response: TStrings;
+
+begin
+  { A TStringList is a TStrings descendant class
+    that is used to store and manipulate a list
+    of strings.
+
+    Instantiate a stringlist class to
+    hold the results of our HTTP GET }
+  Response := TStringList.Create;
+  try
+    // Try an HTTP GET request
+    if DoHTTPGET(host,res,Response) then
+      begin
+        {$IFDEF DEBUG}
+        { Write the entire response to
+          the console window }
+        Writeln(Response.text);
+        {$ELSE}
+        { Parse the response and write the
+          result to the console window }
+        Writeln(ParseResponse(Response));
+        {$ENDIF DEBUG}
+      end
+      else
+      Writeln('Error retrieving data');
+
+  finally
+    Response.Free;
+  end;
+
+  // Keep console window open
+  Readln;
+
+
+end.

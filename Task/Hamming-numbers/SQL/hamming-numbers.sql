@@ -1,0 +1,37 @@
+CREATE TEMPORARY TABLE factors(n INT);
+INSERT INTO factors VALUES(2);
+INSERT INTO factors VALUES(3);
+INSERT INTO factors VALUES(5);
+
+CREATE TEMPORARY TABLE hamming AS
+    WITH RECURSIVE ham AS (
+          SELECT 1 as h
+          UNION
+          SELECT h*n x FROM ham JOIN factors ORDER BY x
+          LIMIT 1700
+        )
+    SELECT h FROM ham;
+
+sqlite> SELECT h FROM hamming ORDER BY h LIMIT 20;
+1
+2
+3
+4
+5
+6
+8
+9
+10
+12
+15
+16
+18
+20
+24
+25
+27
+30
+32
+36
+sqlite> SELECT h FROM hamming ORDER BY h LIMIT 1 OFFSET 1690;
+2125764000

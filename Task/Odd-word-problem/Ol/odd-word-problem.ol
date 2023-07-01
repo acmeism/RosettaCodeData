@@ -1,0 +1,31 @@
+(define (odd_word_problem words)
+   (letrec ((odd (lambda (s out)
+               (let loop ((s s) (l '()))
+                  (cond
+                     ((null? s)
+                        out)
+                     ((pair? s)
+                        (if (<= #\a (car s) #\z)
+                           (loop (cdr s) (cons (car s) l))
+                           (even (cdr s) (cons (cons (reverse l) (car s)) out))))
+                     (else
+                        (loop (s) l))))))
+            (even (lambda (s out)
+               (let loop ((s s) (l '()))
+                  (cond
+                     ((null? s)
+                        out)
+                     ((pair? s)
+                        (if (<= #\a (car s) #\z)
+                           (loop (cdr s) (cons (car s) l))
+                           (odd (cdr s) (cons (cons l (car s)) out))))
+                     (else
+                        (loop (s) l)))))))
+      (for-each (lambda (p)
+                  (display (runes->string (car p)))
+                  (display (string (cdr p))))
+         (reverse
+            (odd (str-iter words) '()))))
+      (print))
+(odd_word_problem "what,is,the;meaning,of:life.")
+(odd_word_problem "we,are;not,in,kansas;any,more.")

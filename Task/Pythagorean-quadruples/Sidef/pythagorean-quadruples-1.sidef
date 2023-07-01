@@ -1,0 +1,95 @@
+# Finds all solutions (a,b) such that: a^2 + b^2 = n^2
+func sum_of_two_squares(n) is cached {
+
+    n == 0 && return [[0, 0]]
+
+    var prod1 = 1
+    var prod2 = 1
+
+    var prime_powers = []
+
+    for p,e in (n.factor_exp) {
+        if (p % 4 == 3) {                  # p = 3 (mod 4)
+            e.is_even || return []         # power must be even
+            prod2 *= p**(e >> 1)
+        }
+        elsif (p == 2) {                   # p = 2
+            if (e.is_even) {               # power is even
+                prod2 *= p**(e >> 1)
+            }
+            else {                         # power is odd
+                prod1 *= p
+                prod2 *= p**((e - 1) >> 1)
+                prime_powers.append([p, 1])
+            }
+        }
+        else {                             # p = 1 (mod 4)
+            prod1 *= p**e
+            prime_powers.append([p, e])
+        }
+    }
+
+    prod1 == 1 && return [[prod2, 0]]
+    prod1 == 2 && return [[prod2, prod2]]
+
+    # All the solutions to the congruence: x^2 = -1 (mod prod1)
+    var square_roots = gather {
+        gather {
+            for p,e in (prime_powers) {
+                var pp = p**e
+                var r = sqrtmod(-1, pp)
+                take([[r, pp], [pp - r, pp]])
+            }
+        }.cartesian { |*a|
+            take(Math.chinese(a...))
+        }
+    }
+
+    var solutions = []
+
+    for r in (square_roots) {
+
+        var s = r
+        var q = prod1
+
+        while (s*s > prod1) {
+            (s, q) = (q % s, s)
+        }
+
+        solutions.append([prod2 * s, prod2 * (q % s)])
+    }
+
+    for p,e in (prime_powers) {
+        for (var i = e%2; i < e; i += 2) {
+
+            var sq = p**((e - i) >> 1)
+            var pp = p**(e - i)
+
+            solutions += (
+                __FUNC__(prod1 / pp).map { |pair|
+                    pair.map {|r| sq * prod2 * r }
+                }
+            )
+        }
+    }
+
+    solutions.map     {|pair| pair.sort } \
+             .uniq_by {|pair| pair[0]   } \
+             .sort_by {|pair| pair[0]   }
+}
+
+# Finds all solutions (a,b,c) such that: a^2 + b^2 + c^2 = n^2
+func sum_of_three_squares(n) {
+    gather {
+        for k in (1 .. n//3) {
+            var t = sum_of_two_squares(n**2 - k**2) || next
+            take(t.map { [k, _...] }...)
+        }
+    }
+}
+
+say gather {
+    for n in (1..2200) {
+        sum_of_three_squares(n) || take(n)
+    }
+}

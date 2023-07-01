@@ -1,0 +1,10 @@
+fun Array<*>.println() = println(joinToString(prefix = "[", postfix = "]"))
+
+fun main(args: Array<String>) {
+    val data = arrayOf(Complex(1.0, 0.0), Complex(1.0, 0.0), Complex(1.0, 0.0), Complex(1.0, 0.0),
+            Complex(0.0, 0.0), Complex(0.0, 2.0), Complex(0.0, 0.0), Complex(0.0, 0.0))
+
+    val a = FFT.fft(data)
+    a.println()
+    FFT.rfft(a).println()
+}

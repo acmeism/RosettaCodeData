@@ -1,0 +1,76 @@
+Module Fix_Console_Window {
+	// This Module:
+	// a) move console window
+	// b) disable console close window. Without it, a close console terminates the M2000 environment
+	declare GetConsoleWindow Lib "Kernel32.GetConsoleWindow"
+	declare SetWindowPos Lib "User32.SetWindowPos" {Long hwnd, Long hWnd, Long x, Long y , Long nWidth, Long nHeight, Long uFlags}
+	declare GetSystemMenu  Lib "User32.GetSystemMenu" {Long hWnd, Long bRevert}
+	const SC_CLOSE = 0xF060
+	const MF_BYCOMMAND = 0
+	declare DeleteMenu Lib "User32.DeleteMenu"  {Long hMenu, Long  uPosition, Long  uFlags}
+	call Void DeleteMenu(GetSystemMenu(GetConsoleWindow(), 0), SC_CLOSE, MF_BYCOMMAND)
+	// if we dont move the M2000 console window (which is full screen),
+	// we can get the position and dimension of the current monitor
+	// current monitor return the read only variable Window
+	back {
+		gradient 0  ' set black preserving cursors
+		x=motion.x div twipsx  ' make x,y,w, h PIXELS
+		y=motion.y div twipsy
+		w=scale.x div twipsx
+		h=scale.y div twipsy
+	}
+	// set console window 50px smaller form all sides from full screen
+	call void  SetWindowPos(GetConsoleWindow(), -1, x+50, y+50, w-100, h-100, 0x0040)
+}
+declare SetCosnoleDispMode lib "Kernel32.SetConsoleDisplayMode" { Long cons, Long b, Long &opt}
+declare GetMode lib "Kernel32.GetConsoleMode" {Long cons, long &a}
+declare SetMode lib "kernel32.SetConsoleMode" {Long cons, long a}
+declare GetConsole lib "Kernel32.AllocConsole"
+declare FreeConsole lib "Kernel32.FreeConsole"
+declare ConsoleCaption lib "Kernel32.SetConsoleTitleW" {a$}
+declare GetHandle lib "Kernel32.GetStdHandle" {Long a}
+declare CloseHandle lib "Kernel32.CloseHandle" {Long a}
+// we use the W version (always M2000 need the W version for strings)
+declare global WriteCons Lib "Kernel32.WriteConsoleW" {Long cons, a$,  Long n, Long  &p, Long u}
+const CONSOLE_FULLSCREEN_MODE=1&, CONSOLE_WINDOWED_MODE=0&
+const ENABLE_VIRTUAL_TERMINAL_PROCESSING=0x0004
+// These are special sequences
+const StopBlinking$=chr$(27)+"[?25l"
+Def EscXY$(x,y)=chr$(27)+"["+str$(y,0)+";"+str$(x,0)+"H"
+
+// Using Windows Console
+// void make the call to drop return value, without this the call use non zero values as error number
+// using R=GetConsole() we can get the return value.
+call void GetConsole()
+call void ConsoleCaption("M2000 Windows Console")
+// -11 for output
+Long  m=-11, RetLong
+m=GetHandle(m)
+Call Fix_Console_Window
+// you can skip SetCosnoleDispModet,
+// it seems this mode CONSOLE_WINDOWED_MODE is by default.
+// call void SetCosnoleDispMode(m, CONSOLE_WINDOWED_MODE, &RetLong)  ' 1 for fullscreen
+wait 10 ' give 10ms time to OS
+// Now we set the Virtual Terminal Processing (so we can send ESC codes)
+Call Void GetMode(m, &RetLong)
+Call Void SetMode(M,binary.or(Retlong, ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+// Stop Blinking and set cursor (we can't see) to  3rd column and 6th row
+// window's console origin is at 1,1
+PrintConsole(StopBlinking$+EscXY$(3, 6))
+// Print RetLong
+wait 1000
+PrintConsole("Hello")
+// Print RetLong
+wait 12000
+call void CloseHandle(m)
+call void FreeConsole()
+// Using M2000 console (not the window one)
+cls 0, 0
+// M2000 layer origin is 0,0
+// Cursor 3-1, 6-1 ' statement to set cursor
+Print @(3-1, 6-1), "Hello"
+
+Sub PrintConsole(a$)
+      RetLong=0&
+      call Void WriteCons(m, a$, Len(a$), &RetLong, 0)
+End Sub

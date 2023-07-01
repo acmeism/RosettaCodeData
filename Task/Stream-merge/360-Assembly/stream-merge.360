@@ -1,0 +1,117 @@
+*        Stream Merge              07/02/2017
+STRMERGE CSECT
+         USING  STRMERGE,R13       base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    prolog
+         ST     R13,4(R15)         " <-
+         ST     R15,8(R13)         " ->
+         LR     R13,R15            " addressability
+         OPEN   (OUTDCB,OUTPUT)    open the output file
+         LA     R6,1               n=1
+         LA     R9,FILE            file(n)
+LOOPN    C      R6,=A(NN)          do n=1 to nn
+         BH     ELOOPN
+         L      R2,0(R9)           @DCB
+         OPEN   ((R2),INPUT)       open input file # n
+         LR     R1,R6              n
+         BAL    R14,READ           call read(n)
+         LA     R6,1(R6)           n=n+1
+         LA     R9,4(R9)           file(n++)
+         B      LOOPN              end do n
+ELOOPN   BCTR   R6,0               n=n-1
+LOOP     SR     R8,R8              lowest=0
+         LA     R7,1               k=1
+LOOPK    CR     R7,R6              do k=1 to n
+         BH     ELOOPK
+         LA     R2,RECDEF-1(R7)    @recdef(k)
+         CLI    0(R2),X'00'        if not recdef(k)
+         BNE    ERECDEF
+         LR     R1,R7              k
+         BAL    R14,READ           call read(k)
+ERECDEF  LR     R1,R7              k
+         LA     R2,EOF-1(R1)       @eof(k)
+         CLI    0(R2),X'00'        if not eof(k)
+         BNE    EEOF
+         LTR    R8,R8              if lowest<>0
+         BZ     LOWEST0
+         LR     R1,R7              k
+         SLA    R1,6
+         LA     R2,REC-64(R1)      @rec(k)
+         CLC    0(64,R2),PG        if rec(k)<y
+         BNL    RECLTY
+         B      LOWEST0            optimization
+RECLTY   B      EEOF
+LOWEST0  LR     R1,R7              k
+         SLA    R1,6
+         LA     R2,REC-64(R1)      @rec(k)
+         MVC    PG,0(R2)           y=rec(k)
+         LR     R8,R7              lowest=k
+EEOF     LA     R7,1(R7)           k=k+1
+         B      LOOPK              end do k
+ELOOPK   LTR    R8,R8              if lowest=0
+         BZ     EXIT               goto exit
+         BAL    R14,WRITE          call write
+         LR     R1,R8              lowest
+         BAL    R14,READ           call read(lowest)
+         B      LOOP
+EXIT     LA     R7,1               k=1
+         LA     R9,FILE            file(n)
+LOOPKC   CR     R7,R6              do k=1 to n
+         BH     ELOOPKC
+         L      R2,0(R9)           @DCB
+         CLOSE  ((R2))             close input file # k
+         LA     R7,1(R7)           k=k+1
+         LA     R9,4(R9)           file(n++)
+         B      LOOPKC             end do k
+ELOOPKC  CLOSE  (OUTDCB)           close output
+         L      R13,4(0,R13)       epilog
+         LM     R14,R12,12(R13)    " restore
+         XR     R15,R15            " rc=0
+         BR     R14                exit
+*------- ----   ----------------------------------------
+READ     LR     R4,R1              z
+         LA     R2,RECDEF-1(R1)    @recdef(z)
+         MVI    0(R2),X'00'        recdef(z)=false
+         LA     R2,EOF-1(R1)       @eof(z)
+         CLI    0(R2),X'00'        if not eof(z)
+         BNE    EOFZ
+         LR     R1,R4              z
+         SLA    R1,6
+         LA     R3,REC-64(R1)      @rec(z)
+         LR     R5,R4              z
+         SLA    R5,2
+         LA     R9,FILE-4(R5)      @file(z)
+         L      R5,0(R9)           @DCB
+         GET    (R5),(R3)          read record
+         LA     R2,RECDEF-1(R4)    @recdef(z)
+         MVI    0(R2),X'01'        recdef(z)=true
+EOFZ     BR     R14                return
+INEOF    LA     R2,EOF-1(R4)       @eof(z)
+         MVI    0(R2),X'01'        eof(z)=true
+         B      EOFZ
+*------- ----   ----------------------------------------
+WRITE    LR     R1,R8              lowest
+         SLA    R1,6
+         LA     R2,REC-64(R1)      @rec(lowest)
+         PUT    OUTDCB,(R2)        write record
+         BR     R14                return
+*        ----   ----------------------------------------
+IN1DCB   DCB   DSORG=PS,MACRF=PM,DDNAME=IN1DD,LRECL=64,                *
+               RECFM=FT,EODAD=INEOF
+IN2DCB   DCB   DSORG=PS,MACRF=PM,DDNAME=IN2DD,LRECL=64,                *
+               RECFM=FT,EODAD=INEOF
+IN3DCB   DCB   DSORG=PS,MACRF=PM,DDNAME=IN3DD,LRECL=64,                *
+               RECFM=FT,EODAD=INEOF
+IN4DCB   DCB   DSORG=PS,MACRF=PM,DDNAME=IN4DD,LRECL=64,                *
+               RECFM=FT,EODAD=INEOF
+OUTDCB   DCB   DSORG=PS,MACRF=PM,DDNAME=OUTDD,LRECL=64,                *
+               RECFM=FT
+FILE     DC     A(IN1DCB,IN2DCB,IN3DCB,IN4DCB)
+NN       EQU    (*-FILE)/4
+EOF      DC     (NN)X'00'
+RECDEF   DC     (NN)X'00'
+REC      DS     (NN)CL64
+PG       DS     CL64
+         YREGS
+         END    STRMERGE

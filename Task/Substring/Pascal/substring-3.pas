@@ -1,0 +1,1 @@
+myBindableStringVariable[firstCharacterIndex .. lastCharacterIndex]

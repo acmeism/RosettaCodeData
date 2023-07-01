@@ -1,0 +1,253 @@
+' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' '
+' Read a Configuration File V1.0                    '
+'                                                   '
+' Developed by A. David Garza Marín in VB-DOS for   '
+' RosettaCode. December 2, 2016.                    '
+' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' '
+
+OPTION EXPLICIT  ' For VB-DOS, PDS 7.1
+' OPTION _EXPLICIT  ' For QB64
+
+' SUBs and FUNCTIONs
+DECLARE FUNCTION ErrorMessage$ (WhichError AS INTEGER)
+DECLARE FUNCTION YorN$ ()
+DECLARE FUNCTION FileExists% (WhichFile AS STRING)
+DECLARE FUNCTION ReadConfFile% (NameOfConfFile AS STRING)
+DECLARE FUNCTION getVariable$ (WhichVariable AS STRING)
+DECLARE FUNCTION getArrayVariable$ (WhichVariable AS STRING, WhichIndex AS INTEGER)
+
+' Register for values located
+TYPE regVarValue
+  VarName AS STRING * 20
+  VarType AS INTEGER ' 1=String, 2=Integer, 3=Real
+  VarValue AS STRING * 30
+END TYPE
+
+' Var
+DIM rVarValue() AS regVarValue, iErr AS INTEGER, i AS INTEGER, iHMV AS INTEGER
+DIM otherfamily(1 TO 2) AS STRING
+DIM fullname AS STRING, favouritefruit AS STRING, needspeeling AS INTEGER, seedsremoved AS INTEGER
+CONST ConfFileName = "config.fil"
+
+' ------------------- Main Program ------------------------
+CLS
+PRINT "This program reads a configuration file and shows the result."
+PRINT
+PRINT "Default file name: "; ConfFileName
+PRINT
+iErr = ReadConfFile(ConfFileName)
+IF iErr = 0 THEN
+  iHMV = UBOUND(rVarValue)
+  PRINT "Variables found in file:"
+  FOR i = 1 TO iHMV
+    PRINT RTRIM$(rVarValue(i).VarName); " = "; RTRIM$(rVarValue(i).VarValue); " (";
+    SELECT CASE rVarValue(i).VarType
+      CASE 0: PRINT "Undefined";
+      CASE 1: PRINT "String";
+      CASE 2: PRINT "Integer";
+      CASE 3: PRINT "Real";
+    END SELECT
+    PRINT ")"
+  NEXT i
+  PRINT
+
+  ' Sets required variables
+  fullname = getVariable$("FullName")
+  favouritefruit = getVariable$("FavouriteFruit")
+  needspeeling = VAL(getVariable$("NeedSpeeling"))
+  seedsremoved = VAL(getVariable$("SeedsRemoved"))
+  FOR i = 1 TO 2
+    otherfamily(i) = getArrayVariable$("OtherFamily", i)
+  NEXT i
+  PRINT "Variables requested to set values:"
+  PRINT "fullname = "; fullname
+  PRINT "favouritefruit = "; favouritefruit
+  PRINT "needspeeling = ";
+  IF needspeeling = 0 THEN PRINT "false" ELSE PRINT "true"
+  PRINT "seedsremoved = ";
+  IF seedsremoved = 0 THEN PRINT "false" ELSE PRINT "true"
+  FOR i = 1 TO 2
+    PRINT "otherfamily("; i; ") = "; otherfamily(i)
+  NEXT i
+ELSE
+  PRINT ErrorMessage$(iErr)
+END IF
+' --------- End of Main Program -----------------------
+
+END
+
+FileError:
+  iErr = ERR
+RESUME NEXT
+
+FUNCTION ErrorMessage$ (WhichError AS INTEGER)
+    ' Var
+    DIM sError AS STRING
+
+    SELECT CASE WhichError
+      CASE 0: sError = "Everything went ok."
+      CASE 1: sError = "Configuration file doesn't exist."
+      CASE 2: sError = "There are no variables in the given file."
+    END SELECT
+
+    ErrorMessage$ = sError
+END FUNCTION
+
+FUNCTION FileExists% (WhichFile AS STRING)
+    ' Var
+    DIM iFile AS INTEGER
+    DIM iItExists AS INTEGER
+    SHARED iErr AS INTEGER
+
+    ON ERROR GOTO FileError
+    iFile = FREEFILE
+    iErr = 0
+    OPEN WhichFile FOR BINARY AS #iFile
+    IF iErr = 0 THEN
+        iItExists = LOF(iFile) > 0
+        CLOSE #iFile
+
+        IF NOT iItExists THEN
+            KILL WhichFile
+        END IF
+    END IF
+    ON ERROR GOTO 0
+    FileExists% = iItExists
+
+END FUNCTION
+
+FUNCTION getArrayVariable$ (WhichVariable AS STRING, WhichIndex AS INTEGER)
+  ' Var
+  DIM i AS INTEGER, iHMV AS INTEGER, iCount AS INTEGER
+  DIM sVar AS STRING, sVal AS STRING, sWV AS STRING
+  SHARED rVarValue() AS regVarValue
+
+  ' Looks for a variable name and returns its value
+  iHMV = UBOUND(rVarValue)
+  sWV = UCASE$(LTRIM$(RTRIM$(WhichVariable)))
+  sVal = ""
+  DO
+    i = i + 1
+    sVar = UCASE$(RTRIM$(rVarValue(i).VarName))
+    IF sVar = sWV THEN
+      iCount = iCount + 1
+      IF iCount = WhichIndex THEN
+        sVal = LTRIM$(RTRIM$(rVarValue(i).VarValue))
+      END IF
+    END IF
+  LOOP UNTIL i >= iHMV OR sVal <> ""
+
+  ' Found it or not, it will return the result.
+  ' If the result is "" then it didn't found the requested variable.
+  getArrayVariable$ = sVal
+
+END FUNCTION
+
+FUNCTION getVariable$ (WhichVariable AS STRING)
+  ' Var
+  DIM i AS INTEGER, iHMV AS INTEGER
+  DIM sVal AS STRING
+
+  ' For a single variable, looks in the first (and only)
+  '   element of the array that contains the name requested.
+  sVal = getArrayVariable$(WhichVariable, 1)
+
+  getVariable$ = sVal
+END FUNCTION
+
+FUNCTION ReadConfFile% (NameOfConfFile AS STRING)
+  ' Var
+  DIM iFile AS INTEGER, iType AS INTEGER, iVar AS INTEGER, iHMV AS INTEGER
+  DIM iVal AS INTEGER, iCurVar AS INTEGER, i AS INTEGER, iErr AS INTEGER
+  DIM dValue AS DOUBLE
+  DIM sLine AS STRING, sVar AS STRING, sValue  AS STRING
+  SHARED rVarValue() AS regVarValue
+
+  ' This procedure reads a configuration file with variables
+  '  and values separated by the equal sign (=) or a space.
+  '  It needs the FileExists% function.
+  '  Lines begining with # or blank will be ignored.
+  IF FileExists%(NameOfConfFile) THEN
+    iFile = FREEFILE
+    REDIM rVarValue(1 TO 10) AS regVarValue
+    OPEN NameOfConfFile FOR INPUT AS #iFile
+      WHILE NOT EOF(iFile)
+        LINE INPUT #iFile, sLine
+        sLine = RTRIM$(LTRIM$(sLine))
+        IF LEN(sLine) > 0 THEN ' Does it have any content?
+          IF LEFT$(sLine, 1) <> "#" THEN  ' Is not a comment?
+            IF LEFT$(sLine,1) = ";" THEN  ' It is a commented variable
+              sLine = LTRIM$(MID$(sLine, 2))
+            END IF
+            iVar = INSTR(sLine, "=")  ' Is there an equal sign?
+            IF iVar = 0 THEN iVar = INSTR(sLine, " ") ' if not then is there a space?
+
+            GOSUB AddASpaceForAVariable
+            iCurVar = iHMV
+            IF iVar > 0 THEN  ' Is a variable and a value
+              rVarValue(iHMV).VarName = LEFT$(sLine, iVar - 1)
+            ELSE              ' Is just a variable name
+              rVarValue(iHMV).VarName = sLine
+              rVarValue(iHMV).VarValue = ""
+            END IF
+
+            IF iVar > 0 THEN  ' Get the value(s)
+              sLine = LTRIM$(MID$(sLine, iVar + 1))
+              DO  ' Look for commas
+                iVal = INSTR(sLine, ",")
+                IF iVal > 0 THEN  ' There is a comma
+                  rVarValue(iHMV).VarValue = RTRIM$(LEFT$(sLine, iVal - 1))
+                  GOSUB AddASpaceForAVariable
+                  rVarValue(iHMV).VarName = rVarValue(iHMV - 1).VarName  ' Repeats the variable name
+                  sLine = LTRIM$(MID$(sLine, iVal + 1))
+                END IF
+              LOOP UNTIL iVal = 0
+              rVarValue(iHMV).VarValue = sLine
+
+              ' Determine the variable type of each variable found in this step
+              FOR i = iCurVar TO iHMV
+                GOSUB DetermineVariableType
+              NEXT i
+            END IF
+          END IF
+        END IF
+      WEND
+    CLOSE iFile
+    IF iHMV > 0 THEN
+      REDIM PRESERVE rVarValue(1 TO iHMV) AS regVarValue
+      iErr = 0 ' Everything ran ok.
+    ELSE
+      REDIM rVarValue(1 TO 1) AS regVarValue
+      iErr = 2 ' No variables found in configuration file
+    END IF
+  ELSE
+    iErr = 1 ' File doesn't exist
+  END IF
+
+  ReadConfFile = iErr
+
+EXIT FUNCTION
+
+AddASpaceForAVariable:
+  iHMV = iHMV + 1
+
+  IF UBOUND(rVarValue) < iHMV THEN  ' Are there space for a new one?
+    REDIM PRESERVE rVarValue(1 TO iHMV + 9) AS regVarValue
+  END IF
+RETURN
+
+DetermineVariableType:
+  sValue = RTRIM$(rVarValue(i).VarValue)
+  IF ASC(LEFT$(sValue, 1)) < 48 OR ASC(LEFT$(sValue, 1)) > 57 THEN
+    rVarValue(i).VarType = 1  ' String
+  ELSE
+    dValue = VAL(sValue)
+    IF CLNG(dValue) = dValue THEN
+      rVarValue(i).VarType = 2 ' Integer
+    ELSE
+      rVarValue(i).VarType = 3 ' Real
+    END IF
+  END IF
+RETURN
+
+END FUNCTION

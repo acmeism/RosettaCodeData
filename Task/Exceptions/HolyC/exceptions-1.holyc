@@ -1,0 +1,8 @@
+try {
+  U8 *err = 'Error';
+  throw(err); // throw exception
+} catch {
+  if (err == 'Error')
+    Print("Raised 'Error'");
+  PutExcept; // print the exception and stack trace
+}

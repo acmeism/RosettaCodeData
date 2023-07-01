@@ -1,0 +1,118 @@
+% Represents one playing card.
+card = cluster is make, parse, unparse, equal, all_cards
+    rep = struct[pip: int, suit: char]
+    own suits: string := "CHSD";
+    own pips: sequence[string] := sequence[string]$
+        ["A","2","3","4","5","6","7","8","9","10","J","Q","K"]
+
+    find_pip = proc (pip: string) returns (int) signals (bad_format)
+        for i: int in int$from_to(1, sequence[string]$size(pips)) do
+            if pips[i] = pip then return(i) end
+        end
+        signal bad_format
+    end find_pip
+
+    make = proc (pip: int, suit: char) returns (cvt) signals (bad_format)
+        if string$indexc(suit, suits) = 0
+           cor ~(pip >= 1 cand pip <= 13)
+            then signal bad_format
+        end
+        return(rep${pip: pip, suit: suit})
+    end make
+
+    parse = proc (s: string) returns (cvt) signals (bad_format)
+        size: int := string$size(s)
+        if size<2 cor size>3 then signal bad_format end
+        pip: string := string$substr(s, 1, size-1)
+        suit: char := string$rest(s, size-1)[1]
+        return(down(make(find_pip(pip), suit))) resignal bad_format
+    end parse
+
+    unparse = proc (c: cvt) returns (string)
+        return( pips[c.pip] || string$c2s(c.suit) )
+    end unparse
+
+    equal = proc (a, b: cvt) returns (bool)
+        return( a.pip = b.pip cand a.suit = b.suit )
+    end equal
+
+    % Yield all cards in the canonical order
+    all_cards = iter () yields (cvt)
+        for suit: char in string$chars(suits) do
+            for pip: int in int$from_to(1,sequence[string]$size(pips)) do
+                yield(down(make(pip, suit)))
+             end
+        end
+    end all_cards
+end card
+
+% Represents a deck
+deck = cluster is new, shuffle, cards, deal, unparse
+    rep = array[card]
+
+    new = proc () returns (cvt)
+        d: rep := rep$new()
+        for c: card in card$all_cards() do rep$addh(d, c) end
+        return(d)
+    end new
+
+    shuffle = proc (d: cvt)
+        lo: int := rep$low(d)
+        hi: int := rep$high(d)
+        for i: int in int$from_to_by(hi, lo+1, -1) do
+            j: int := lo + random$next(i-lo)
+            c: card := d[i]
+            d[i] := d[j]
+            d[j] := c
+        end
+    end shuffle
+
+    cards = iter (d: cvt) yields (card)
+        for c: card in rep$elements(d) do yield(c) end
+    end cards
+
+    deal = proc (d: cvt) returns (card) signals (empty)
+        if rep$empty(d) then signal empty end
+        return(rep$reml(d))
+    end deal
+
+    unparse = proc (d: cvt) returns (string)
+        ss: stream := stream$create_output()
+        n: int := 0
+        for c: card in cards(up(d)) do
+            if n~=0 cand n//13=0 then stream$putc(ss, '\n')
+            elseif n~=0 then stream$putc(ss, ' ')
+            end
+            stream$puts(ss, card$unparse(c))
+            n := n+1
+        end
+        return(stream$get_contents(ss))
+    end unparse
+end deck
+
+start_up = proc ()
+    po: stream := stream$primary_output()
+    % seed the RNG
+    d_: date := now()
+    random$seed(d_.second + 60*(d_.minute + 60*d_.hour))
+
+    % make a new deck
+    d: deck := deck$new()
+    stream$putl(po, "New deck: ")
+    stream$putl(po, deck$unparse(d))
+
+    % shuffle the deck
+    deck$shuffle(d)
+    stream$putl(po, "\nShuffled deck: ")
+    stream$putl(po, deck$unparse(d))
+
+    % deal some cards
+    stream$puts(po, "\nDealing 10 cards:")
+    for i: int in int$from_to(1, 10) do
+        stream$puts(po, " " || card$unparse(deck$deal(d)))
+    end
+
+    % show remaining deck
+    stream$putl(po, "\n\nRemaining cards in deck:")
+    stream$putl(po, deck$unparse(d))
+end start_up

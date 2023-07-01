@@ -1,0 +1,85 @@
+puts:	equ	9	; CP/M calls
+putch:	equ	2
+	org	100h
+	;;;	Print first 200 numbers
+	lxi	d,first
+	mvi	c,puts
+	call	5
+	mvi	b,200	; 200 numbers
+f200:	push	b
+	call	next	; Get next number
+	call	pnum	; Print the number
+	pop	b	; Restore counter
+	dcr	b	; Are we there yet?
+	jnz	f200	; If not, next number
+	;;;	Find 10,000,000th number
+	lxi	d,tenmil
+	mvi	c,puts
+	call	5
+f1e7:	call	next	; Keep generating numbers until ten million reached
+	jnz	f1e7	; Then print the number
+	;;;	Print the current number
+pnum:	lxi	d,num
+pscan:	dcx	d	; Scan for zero
+	ldax	d
+	ana	a
+	jnz	pscan
+	mvi	c,puts	; Once found, print string
+	jmp	5
+	;;;	Increment number until rises and falls are equal
+next:	lxi	h,num
+incdgt:	mov	a,m	; Get digit
+	ana	a	; If 0, then initialize
+	jz	grow
+	inr	a	; Otherwise, increment
+	mov	m,a	; Store back
+	cpi	'9'+1	; Rollover?
+	jnz	idone	; If not, we're done
+	mvi	m,'0'	; If so, set digit to 0
+	dcx	h	; And increment previous digit
+	jmp	incdgt
+grow:	mvi	m,'1'
+idone:	lxi	h,num	; Find rises and falls
+	mvi	b,0	; B = rises - falls
+	mov	c,m	; C = right digit in comparison
+pair:	dcx	h
+	mov	a,m	; A = left digit in comparison
+	ana	a	; When zero, done
+	jz	check
+	cmp	c	; Compare left digit to right digit
+	jc	fall	; A<C = fall
+	jnz	rise	; A>C = rise
+nxdgt:	mov	c,a	; C is now left digit
+	jmp	pair	; Check next pair
+fall:	dcr	b	; Fall: decrement B
+	jmp	nxdgt
+rise:	inr	b	; Rise: increment B
+	jmp	nxdgt
+check:	mov	a,b	; If B=0 then rises and falls are equal
+	ana	a
+	jnz	next	; Otherwise, increment number and try again
+	lxi	h,ctr	; But if so, decrement the counter to 10 million
+	mov	a,m	; First byte
+	sui	1
+	mov	m,a
+	inx	h	; Second byte
+	mov	a,m
+	sbb	b	; B=0 here
+	mov	m,a
+	inx	h	; Third byte
+	mov	a,m
+	sbb	b
+	mov	m,a
+	dcx	h	; OR them together to see if the number is zero
+	ora	m
+	dcx	h
+	ora	m
+	ret
+	;;;	Strings
+first:	db	'The first 200 numbers are:',13,10,'$'
+tenmil:	db	13,10,10,'The 10,000,000th number is: $'
+	;;;	Current number (stored as ASCII)
+	db	0,0,0,0,0,0,0,0
+num:	db	'0 $'
+	;;;	24-bit counter to keep track of ten million
+ctr:	db	80h,96h,98h	; 1e7 = 989680h

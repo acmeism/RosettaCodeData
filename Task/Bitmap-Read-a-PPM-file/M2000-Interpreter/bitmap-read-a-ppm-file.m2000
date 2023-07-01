@@ -1,0 +1,169 @@
+Module Checkit {
+      Function Bitmap  {
+            If match("NN") then {
+                 Read x as long, y as long
+            } else.if Match("N") Then  {
+                \\ is a file?
+                  Read f
+                  if not Eof(f) then {
+                        Line Input #f,  p3$
+                              If p3$="P3" Then {
+                                    Line Input #f, Comment$
+                                    if left$(Comment$,1)="#" then {
+                                          Line Input #f, Dimension$
+                                    } else  Dimension$=Comment$
+                                    long x=Val(piece$(Dimension$," ")(0))
+                                    long y=Val(piece$(Dimension$," ")(1))
+                                    do {
+                                          Line Input #f, P255$
+                                    } until left$(P255$, 1)<>"#"
+                                    If not P255$="255" then Error "Not proper ppm format"
+                              }
+                  }
+            } else Error "No proper arguments"
+
+
+            if x<1 or y<1 then  Error "Wrong dimensions"
+            structure rgb {
+                  red as byte
+                  green as byte
+                  blue as byte
+            }
+            m=len(rgb)*x mod 4
+            if m>0 then m=4-m  ' add some bytes to raster line
+            m+=len(rgb) *x
+            Structure rasterline {
+                  {
+                        pad as byte*m
+                  }
+                  \\ union pad+hline
+                  hline as rgb*x
+            }
+
+            Structure Raster {
+                  magic as integer*4
+                  w as integer*4
+                  h as integer*4
+                  lines as rasterline*y
+            }
+            Buffer Clear Image1 as Raster
+            \\ 24 chars as header to be used from bitmap render build in functions
+            Return Image1, 0!magic:="cDIB", 0!w:=Hex$(x,2), 0!h:=Hex$(y, 2)
+            \\ fill white (all 255)
+            \\ Str$(string) convert to ascii, so we get all characters from words  width to byte width
+            if not valid(f) then  Return Image1, 0!lines:=Str$(String$(chrcode$(255), Len(rasterline)*y))
+            Buffer Clear Pad as Byte*4
+            SetPixel=Lambda Image1, Pad,aLines=Len(Raster)-Len(Rasterline), blines=-Len(Rasterline) (x, y, c) ->{
+                  where=alines+3*x+blines*y
+                  if c>0 then c=color(c)
+                  c-!
+                  Return Pad, 0:=c as long
+                  Return Image1, 0!where:=Eval(Pad, 2) as byte, 0!where+1:=Eval(Pad, 1) as byte, 0!where+2:=Eval(Pad, 0) as byte
+
+            }
+            GetPixel=Lambda Image1,aLines=Len(Raster)-Len(Rasterline), blines=-Len(Rasterline) (x,y) ->{
+                  where=alines+3*x+blines*y
+                  =color(Eval(image1, where+2 as byte), Eval(image1, where+1 as byte), Eval(image1, where as byte))
+            }
+            StrDib$=Lambda$ Image1, Raster -> {
+                  =Eval$(Image1, 0, Len(Raster))
+            }
+            CopyImage=Lambda Image1 (image$) -> {
+                  if left$(image$,12)=Eval$(Image1, 0, 24 ) Then  {
+                         Return Image1, 0:=Image$
+                  } Else Error "Can't Copy Image"
+            }
+            Export2File=Lambda Image1, x, y (f) -> {
+                  \\ use this between open and close
+                  Print #f, "P3"
+                  Print #f,"# Created using M2000 Interpreter"
+                  Print #f, x;" ";y
+                  Print #f, 255
+                  x2=x-1
+                  where=24
+                  For y1= 0 to y-1 {
+                        a$=""
+                        For x1=0 to x2 {
+                              Print #f, a$;Eval(Image1, where+2 as byte);" ";
+                              Print #f,  Eval(Image1, where+1 as byte);" ";
+                              Print #f,  Eval(Image1, where as byte);
+                              where+=3
+                              a$=" "
+                        }
+                        Print #f
+                        m=where mod 4
+                        if m<>0 then where+=4-m
+                  }
+            }
+            if valid(F) then {
+                  'load  RGB values form file
+                  x0=x-1
+                  where=24
+                        For y1=y-1 to 0 {
+                              do {
+                                          Line Input #f, aline$
+                              } until left$(aline$,1)<>"#"
+                              flush   ' empty stack
+                              Stack aline$  ' place all values to stack as FIFO
+                              For x1=0 to x0 {
+                                    \\ now read from stack using Number
+                                    Return Image1, 0!where+2:=Number as byte, 0!where+1:=Number as byte, 0!where:=Number as byte
+                                    where+=3
+                              }
+                              m=where mod 4
+                              if m<>0 then where+=4-m
+                        }
+            }
+            Group Bitmap {
+                  SetPixel=SetPixel
+                  GetPixel=GetPixel
+                  Image$=StrDib$
+                  Copy=CopyImage
+                  ToFile=Export2File
+            }
+            =Bitmap
+      }
+      A=Bitmap(10, 10)
+      Call A.SetPixel(5,5, color(128,0,255))
+      Open "A.PPM" for Output as #F
+            Call A.ToFile(F)
+      Close #f
+      Open "A.PPM" for Input as #F
+      Try {
+            C=Bitmap(f)
+            Copy 400*twipsx,200*twipsy use C.Image$()
+      }
+      Close #f
+      ' is the same as this one
+        Open "A.PPM" for Input as #F
+            Line Input #f,  p3$
+            If p3$="P3" Then {
+                  Line Input #f, Comment$
+                  if left$(Comment$,1)="#" then {
+                        Line Input #f, Dimension$
+                  } else  Dimension$=Comment$
+                  Long x=Val(piece$(Dimension$," ")(0))
+                  Long y=Val(piece$(Dimension$," ")(1))
+                  do {
+                        Line Input #f, P255$
+                  } until left$(P255$, 1)<>"#"
+                  If not P255$="255" then Error "Not proper ppm format"
+                  B=Bitmap(x, y)
+                  x0=x-1
+                  For y1=y-1 to 0 {
+                        do {
+                                    Line Input #f, aline$
+                        } until left$(aline$,1)<>"#"
+                        flush   ' empty stack
+                        Stack aline$  ' place all values to stack as FIFO
+                        For x1=0 to x0 {
+                              \\ now read from stack
+                              Read red, green, blue
+                              Call B.setpixel(x1, y1, Color(red, green, blue))
+                        }
+                  }
+            }
+      Close #f
+      If valid("B") then  Copy 200*twipsx,200*twipsy use B.Image$()
+}
+Checkit

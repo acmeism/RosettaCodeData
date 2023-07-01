@@ -1,0 +1,5 @@
+(define (fib-iter n)
+  (do ((num 2 (+ num 1))
+       (fib-prev 1 fib)
+       (fib 1 (+ fib fib-prev)))
+      ((>= num n) fib)))

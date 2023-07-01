@@ -1,0 +1,158 @@
+/*
+  BFC.COM
+  BrainF**k's Pseudo-compiler!
+  Mr_Dalien. NOV 26, 2021
+*/
+#include <hopper.h>
+
+#proto checkMove(_S_,_OPE_,_CODE_,_BF_)
+#proto check(_S_,_OPE_,_CODE_,_BF_)
+#proto tabulation(_S_)
+
+main:
+
+  total arg,minus(1) zero?
+  do {
+      {"\LR","Bad filename!\OFF\n"}print
+      {0}return
+  }
+  filename = [&2]    // get filename parameter 2 (parameter 1 is "bfc.com")
+
+  sf="",{filename}exist?,not,
+  do{
+      {"File: \LR",filename,"\OFF"," don't exist!\n"}print
+      {0}return
+  }
+  {filename}load string(sf)   // load file as string
+  --sf                        // "load string" load adding a newline at the EOS. "--sf" delete it!
+
+  // determine tape size:
+  rightMove=0,{">",sf}count at, mov(rightMove)
+  leftMove=0,{"<",sf}count at, mov(leftMove)
+  totalCells = 0
+  prec(0)   // precision 0 decimals: all number are integers!
+  {0}{rightMove}minus(leftMove), cpy(totalCells),lt?
+  do{
+      {"In file \LR",filename,"\OFF",": program bad formed!\n"}print
+      {0}return
+  }
+
+  // start process!
+  nLen=0, {sf}len,mov(nLen)
+
+  i=1,       // index
+  res={},    // new file "C"
+  space=5    // tab space
+  // header:
+  {"#include <stdio.h>","int main(){","     int ptr=0, i=0, cell["},{totalCells},xtostr,cat,{"];"}cat,push all(res)
+  {"     for( i=0; i<",totalCells},xtostr,cat,{"; ++i) cell[i]=0;"}cat,push(res)
+
+  iwhile={},swOk=0,true(swOk)
+  cntMove=0
+  v=""
+  __PRINCIPAL__:
+     [i:i]get(sf),mov(v),
+     switch(v)
+        case(">")::do{
+           _checkMove(">","+","ptr",sf),
+           _tabulation(space),{"if(ptr>="}cat,{totalCells},xtostr,cat
+                              {") perror(\"Program pointer overflow\");"}cat,push(res),
+           exit
+        }
+        case("<")::do{
+           _checkMove("<","-","ptr",sf),
+           _tabulation(space),{"if(ptr<0) perror(\"Program pointer underflow\");"}cat,push(res),
+           exit
+        }
+        case("+")::do{
+           _check("+","+","cell[ptr]",sf), exit
+        }
+        case("-")::do{
+           _check("-","-","cell[ptr]",sf), exit
+        }
+        case("[")::do{
+           {"]"}push(iwhile)
+           _tabulation(space),{"while(cell[ptr])"}cat,push(res),
+           _tabulation(space),{"{"}cat,push(res)
+           space += 5
+           exit
+        }
+        case("]")::do{
+           try
+               pop(iwhile),kill
+               space -= 5, _tabulation(space),{"}"}cat,push(res)
+           catch(e)
+              {"SIMBOL: ",v,", POS: ",i,": \LR","Symbol out of context \OFF"}println
+              false(swOk)
+           finish
+           exit
+        }
+        case(".")::do{
+            _tabulation(space),{"putchar(cell[ptr]);"}cat,push(res)
+            exit
+        }
+        case(",")::do{
+            _tabulation(space),{"cell[ptr] = getc(stdin);"}cat,push(res)
+            exit
+        }
+       // otherwise?
+        {"WARNING! SIMBOL(ASCII): ",v}asc,{", POS: ",i,": \LY","Invalid code, is ommited!\OFF\n"}print
+
+     end switch
+     {cntMove}neg?    // exist more "<" than ">" ??
+     do {
+        {"SIMBOL: ",v,", POS: ",i,": \LR","Underflow detected!\OFF\n"}print
+        false(swOk)
+     }
+     ++i,{nLen,i}le?,{swOk},and,jt(__PRINCIPAL__)
+
+  {swOk} do{
+     _tabulation(space),{"return 0;"}cat,push(res)
+     space -=5
+     {"}"}push(res)
+
+     name="",   {"",".bf",filename},transform,mov(name),  // bye bye ".bf"!
+     cname="",  {name,".c"}cat,mov(cname),                // hello <filename>.c!
+     {"\n"}tok sep                     // save array with newlines
+     {res,cname},save                  // save the array into the <filename>.c"
+     {" "}tok sep                      // "join" need this!
+     executable="",  {"gcc ",cname," -o ",name} join(executable)  // line to compile new filename
+     {executable}execv                 // do compile c program generated!
+
+     /* OPTIONAL: remove <filename>.c */
+     // {"rm ",cname}cat,execv
+  }
+  {"\LG","Compilation terminated "}
+  if({swOk}not)
+     {"\LR","with errors!\OFF\n"}
+  else
+     {"successfully!\OFF\n"}
+  end if
+  print
+exit(0)
+
+.locals
+checkMove(simb,operator,code,bfprg)
+   c=1,
+   {cntMove},iif({operator}eqto("+"),1,-1),add,mov(cntMove)
+   __SUB_MOVE__:
+      ++i,[i:i]get(sf),{simb}eq?
+      do{ ++c,
+          {cntMove},iif({operator}eqto("+"),1,-1),add,mov(cntMove)
+          jmp(__SUB_MOVE__)
+      }
+   _tabulation(space),{code}cat,{operator}cat,{"= "}cat,{c}xtostr,cat,{";"}cat
+   push(res)
+   --i
+back
+check(simb,operator,code,bfprg)
+   c=1,
+   __SUB__:
+      ++i,[i:i]get(sf),{simb}eq? do{ ++c, jmp(__SUB__) }
+   _tabulation(space),{code}cat,{operator}cat,{"= "}cat,{c}xtostr,cat,{";"}cat
+   push(res)
+   --i
+back
+tabulation(space)
+   {" "}replyby(space)
+back

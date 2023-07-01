@@ -1,0 +1,24 @@
+   >pokenames {~{.R
+machamp
+petilil
+landorus
+scrafty
+yamask
+kricketune
+emboar
+registeel
+loudred
+darmanitan
+nosepass
+simisear
+relicanth
+heatmor
+rufflet
+trapinch
+haxorus
+seaking
+girafarig
+gabite
+exeggcute
+emolga
+audino

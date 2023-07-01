@@ -1,0 +1,153 @@
+rawio:	equ	6
+	org	100h
+	;;;	Initialize RNG from keypresses
+	lxi	d,keys
+	call	puts
+	mvi	b,4	; 4*4 = 16 bytes
+rndini:	mvi	c,4
+	lxi	h,rnddat
+rndin2:	push	b
+	push 	h
+rndkey:	call	keyin	; Get key
+	ana	a
+	jz	rndkey
+	pop	h
+	pop 	b
+	xra	m	; XOR into random data
+	mov	m,a
+	inx	h
+	dcr	c
+	jnz	rndin2
+	dcr	b
+	jnz 	rndini
+	lxi	d,done
+	call	puts
+	;;;	Create and shuffle array of numbers
+	mvi	a,'1'	; Start at 1
+	mvi	b,9	; 9 items
+	lxi	h,list
+mklst:	mov	m,a	; Store item
+	inr	a	; Increment item
+	inx	h	; Increment pointer
+	dcr	b	; One fewer list
+	jnz	mklst
+	mov	m,b	; Zero-terminate the list
+	lxi	d,list+8
+shuf:	call	rande	; Shuffle the list. E = high, L = low
+	mov	l,a
+	ldax	d	; Load current number
+	mov	b,m	; Load number to swap with
+	mov	m,a	; Store first number
+	mov	a,b	; Store second number
+	stax	d
+	dcr	e	; Move pointer back
+	jnz	shuf	; Keep going until list is shuffled
+	lxi	h,0	; Keep score on stack
+	push	h
+	;;;	Game loop
+game:	lxi	d,list	; Print current state
+	call	puts
+	lxi	d,list
+	ldax	d
+check:	mov	b,a	; Check if list is sorted (done)
+	inx	d
+	ldax	d
+	ana	a	; Reached end of list?
+	jz	win	; Then the list is in order
+	cmp	b	; Larger than previous?
+	jnc	check	; Then keep going
+	lxi	d,prompt
+	call	puts	; Ask for a number
+	call	getnum
+	mov	b,a 	; B = high number
+	dcr	b
+	mvi	c,0	; C = low number
+	mvi	h,listhi
+swap:	mov	l,c	; Load high number in D
+	mov	d,m
+	mov	l,b	; Load high number in E
+	mov	e,m
+	mov	m,d	; Store low number in high place
+	mov	l,c
+	mov	m,e	; Store high number in low place
+	dcr	b	; Decrement high index
+	inr	c	; Increment low index
+	mov	a,c	; Low < high?
+	cmp	b
+	jc	swap	; Then keep swapping
+	lxi	d,nl	; Print newline
+	call	puts
+	pop	h	; Increment score
+	inx 	h
+	push 	h
+	jmp	game
+win:	lxi	d,winmsg
+	call	puts	; Print win message
+	lxi	h,score
+	xthl		; Retrieve score and push score output buffer
+	lxi	b,-10	; Divisor
+digit:	lxi	d,-1	; Quotient
+dgdiv:	inx	d	; Find digit
+	dad	b
+	jc	dgdiv
+	mvi	a,'0'+10
+	add	l	; Store digit
+	pop	h	; Get pointer
+	dcx 	h	; Decrement pointer
+	mov	m,a	; Write digit to memory
+	push	h	; Store pointer
+	xchg		; Continue with quotient
+	mov	a,h	; Done yet?
+	ora	l
+	jnz	digit	; If not keep going
+	pop	d	; Retrieve pointer
+	;;;	Print 0-terminated string
+puts:	ldax	d	; Get character
+	ana	a	; Is it zero?
+	rz		; Then stop
+	inx	d	; Otherwise, increment buffer pointer
+	push	d	; Save buffer pointer
+	mov	e,a	; Print character
+	call	io
+	pop	d	; Restore buffer pointer
+	jmp 	puts	; Next character 	
+	;;;	Read 1-9 key
+gnerr:	mvi	e,7
+	call	io
+getnum:	call	keyin
+	ana	a
+	jz	getnum	; If no key, wait for one
+	cpi	'1'
+	jc	gnerr	; Not valid - beep and try again
+	cpi	'9'+1
+	jnc	gnerr
+	push	psw	; Valid - echo
+	mov	e,a
+	call	io
+	pop	psw
+	sui	'0'
+	ret
+keyin:	mvi	e,0FFh	; Read key
+io:	mvi	c,rawio	; CP/M raw I/O call
+	jmp	5
+	;;; 	Random number up to E
+rande:	call	rand
+	ani	15
+	cmp	e
+	jnc	rande
+	ret
+	;;;	RNG
+rand:	push	h! lxi h,rnddat! inr m! mov a,m! inx h! xra m! inx h! xra m
+	mov	m,a! inx h! add m! mov m,a! rar! dcx h! xra m! dcx h! add m
+	mov	m,a! pop h
+	ret
+prompt:	db	9,' - Reverse how many? ',0
+keys:	db	'Please press some keys to seed the RNG...',0
+done:	db	'done.'
+nl:	db	13,10,0
+winmsg:	db	13,10,'You win! Score = ',0
+	db	'*****'
+score:	db	13,10,0
+listhi:	equ	$/256+1
+list:	equ	listhi*256
+rnddat:	equ	list+16

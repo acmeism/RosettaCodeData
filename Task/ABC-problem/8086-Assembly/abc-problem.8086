@@ -1,0 +1,63 @@
+	cpu	8086
+	bits	16
+	org	100h
+section	.text
+	jmp	demo
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;; Subroutine "blocks": see if the $-terminated string in DS:BX
+	;;; can be written with the blocks.
+	;;; Returns: carry flag set if word is accepted.
+	;;; Uses registers: AL, BX, CX, SI, DI
+	;;; Assumes CS=DS=ES
+blocks:	mov	si,.list	; Set all blocks available
+	mov	di,.avail
+	mov	cx,20
+	rep	movsw
+.char:	mov 	al,[bx]		; Get current character
+	inc	bx
+	cmp	al,'$'		; Are we at the end?
+	je	.ok		; Then the string is accepted
+	mov	cx,40		; If not, check if block is available
+	mov	di,.avail
+	repne	scasb
+	test	cx,cx		; This clears the carry flag
+	jz	.out		; If zero, block is not available
+	dec	di		; Zero out the block we found
+	mov	[di],ch		; CH is guaranteed 0 here
+	xor	di,1		; Point at other character on block
+	mov	[di],ch		; Zero out that one too.
+	jmp	.char
+.ok:	stc
+.out:	ret
+.list:	db	'BOXKDQCPNAGTRETGQDFSJWHUVIANOBERFSLYPCZM'
+.avail:	db	'                                        '
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;; Test code: run the subroutine on the given words
+demo:	mov	bp,words
+wrd:	mov	dx,[bp]		; Get word
+	test	dx,dx		; End of words?
+	jz	stop
+	mov	ah,9		; Print word
+	int	21h
+	mov	bx,dx		; Run subroutine
+	call	blocks
+	mov	dx,yes		; Print yes or no depending on carry
+	jc	print
+	mov	dx,no
+print:	mov	ah,9
+	int	21h
+	inc	bp
+	inc	bp
+	jmp	wrd
+stop:	ret
+section	.data
+yes:	db	': Yes',13,10,'$'
+no:	db	': No',13,10,'$'
+words:	dw	.a,.bark,.book,.treat,.cmn,.squad,.confs,0
+.a:	db	'A$'
+.bark:	db	'BARK$'
+.book:	db	'BOOK$'
+.treat:	db	'TREAT$'
+.cmn:	db	'COMMON$'
+.squad:	db	'SQUAD$'
+.confs:	db	'CONFUSE$'

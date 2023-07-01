@@ -1,0 +1,5 @@
+(de move (N A B C)  # Use: (move 3 'left 'center 'right)
+   (unless (=0 N)
+      (move (dec N) A C B)
+      (println 'Move 'disk 'from A 'to B)
+      (move (dec N) C B A) ) )

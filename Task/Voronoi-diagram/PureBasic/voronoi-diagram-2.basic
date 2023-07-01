@@ -1,0 +1,68 @@
+Structure VCoo
+  x.i:  y.i
+  Colour.i: FillColour.i
+EndStructure
+
+Macro RandInt(MAXLIMIT)
+  Int(MAXLIMIT*(Random(#MAXLONG)/#MAXLONG))
+EndMacro
+
+Procedure GenRandomPoints(Array a.VCoo(1), xMax, yMax, cnt)
+  Protected i, j, k, l
+  cnt-1
+  Dim a(cnt)
+  For i=0 To cnt
+    a(i)\x = RandInt(xMax): a(i)\y = RandInt(yMax)
+    j = RandInt(255): k = RandInt(255): l = RandInt(255)
+    a(i)\Colour = RGBA(j, k, l, 255)
+    a(i)\FillColour = RGBA(255-j, 255-k, 255-l, 255)
+  Next i
+  ProcedureReturn #True
+EndProcedure
+
+Procedure MakeVoronoiDiagram(Array a.VCoo(1),xMax, yMax)
+  Protected i, x, y, img, dist, dt, dx, dy
+  img = CreateImage(#PB_Any, xMax+1, yMax+1, 32)
+  If StartDrawing(ImageOutput(img))
+    For y=0 To yMax
+      For x=0 To xMax
+        dist = #MAXLONG
+        For i=0 To ArraySize(a())
+          dx = x-a(i)\x
+          dy = y-a(i)\y
+          dt = Sign(dx)*dx + Sign(dy)*dy
+          If dt > dist ; no update
+            Continue
+          ElseIf dt < dist  ; an new 'owner' is found
+            dist = dt
+            Plot(x,y,a(i)\FillColour)
+          Else ; dt = dist
+            Plot(x,y,RGBA(0,0,0,0)) ; no clear 'owner', make the pixel transparent
+          EndIf
+        Next
+      Next
+    Next
+    For i=0 To ArraySize(a())
+      Circle(a(i)\x, a(i)\y, 1, a(i)\Colour)
+    Next
+    StopDrawing()
+  EndIf
+  ProcedureReturn img
+EndProcedure
+
+; Main code
+Define img, x, y, file$
+Dim V.VCoo(0)
+x = 640: y = 480
+If Not GenRandomPoints(V(), x, y, 150): End: EndIf
+img = MakeVoronoiDiagram(V(), x, y)
+If img And OpenWindow(0, 0, 0, x, y, "Voronoi Diagram in PureBasic", #PB_Window_SystemMenu)
+  ImageGadget(0, 0, 0, x, y, ImageID(img))
+  Repeat: Until WaitWindowEvent() = #PB_Event_CloseWindow
+EndIf
+
+UsePNGImageEncoder()
+file$ = SaveFileRequester("Save Image?", "Voronoi_Diagram_in_PureBasic.png", "PNG|*.png", 0)
+If file$ <> ""
+  SaveImage(img, file$, #PB_ImagePlugin_PNG)
+EndIf

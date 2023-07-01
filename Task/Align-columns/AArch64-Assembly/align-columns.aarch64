@@ -1,0 +1,328 @@
+/* ARM assembly AARCH64 Raspberry PI 3B or android 64 bits */
+/*  program alignColumn64.s     */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ BUFFERSIZE, 16 * 10
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessLeft:        .asciz "LEFT :\n"
+szMessRight:       .asciz "\nRIGHT :\n"
+szMessCenter:      .asciz "\nCENTER :\n"
+szCarriageReturn:  .asciz "\n"
+
+szLine1:    .asciz "Given$a$text$file$of$many$lines,$where$fields$within$a$line$"
+szLine2:    .asciz "are$delineated$by$a$single$'dollar'$character,$write$a$program"
+szLine3:    .asciz "that$aligns$each$column$of$fields$by$ensuring$that$words$in$each$"
+szLine4:    .asciz "column$are$separated$by$at$least$one$space."
+szLine5:    .asciz "Further,$allow$for$each$word$in$a$column$to$be$either$left$"
+szLine6:    .asciz "justified,$right$justified,$or$center$justified$within$its$column."
+
+.align 8
+qtbPtLine:    .quad szLine1,szLine2,szLine3,szLine4,szLine5,szLine6
+              .equ NBLINES, (. - qtbPtLine) / 8
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                               // entry of program
+    ldr x0,qAdrqtbPtLine
+    bl computeMaxiLengthWords
+    mov x19,x0                      // column counter
+    ldr x0,qAdrszMessLeft
+    bl affichageMess
+    ldr x0,qAdrqtbPtLine
+    mov x1,x19                      // column size
+    bl alignLeft
+    ldr x0,qAdrszMessRight
+    bl affichageMess
+    ldr x0,qAdrqtbPtLine
+    mov x1,x19                      // column size
+    bl alignRight
+    ldr x0,qAdrszMessCenter
+    bl affichageMess
+    ldr x0,qAdrqtbPtLine
+    mov x1,x19                      // column size
+    bl alignCenter
+100:                                // standard end of the program
+    mov x0, #0                      // return code
+    mov x8, #EXIT                   // request to exit program
+    svc #0                          // perform the system call
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszMessLeft:           .quad szMessLeft
+qAdrszMessRight:          .quad szMessRight
+qAdrszMessCenter:         .quad szMessCenter
+qAdrqtbPtLine:            .quad qtbPtLine
+/******************************************************************/
+/*      compute maxi words                                 */
+/******************************************************************/
+/* x0 contains adresse pointer array */
+computeMaxiLengthWords:
+    stp fp,lr,[sp,-16]!      // save  registres
+    mov x2,#0                // indice pointer array
+    mov x3,#0                // maxi length words
+1:
+    ldr x1,[x0,x2,lsl #3]    // load pointer
+    mov x4,#0                // length words counter
+    mov x5,#0                // indice line character
+2:
+    ldrb w6,[x1,x5]          // load a line character
+    cmp x6,#0                // line end ?
+    beq 4f
+    cmp x6,#'$'              // separator ?
+    bne 3f
+    cmp x4,x3
+    csel x3,x4,x3,gt         // if greather replace maxi
+    mov x4,#-1               // raz length counter
+3:
+    add x4,x4,#1
+    add x5,x5,#1             // increment character indice
+    b 2b                     // and loop
+4:                           // end line
+    cmp x4,x3                // compare word counter and maxi
+    csel x3,x4,x3,gt         // if greather replace maxi
+    add x2,x2,#1             // increment indice line pointer
+    cmp x2,#NBLINES          // maxi ?
+    blt 1b                   // no -> loop
+
+    mov x0,x3                // return maxi length counter
+100:
+    ldp fp,lr,[sp],16        // restaur des  2 registres
+    ret
+
+/******************************************************************/
+/*      align left                                                */
+/******************************************************************/
+/* x0 contains the address of pointer array*/
+/* x1 contains column size */
+alignLeft:
+    stp fp,lr,[sp,-16]!       // save  registres
+    sub sp,sp,#BUFFERSIZE    // reserve place for output buffer
+    mov fp,sp
+    mov x5,x0                // array address
+    mov x2,#0                // indice array
+1:
+    ldr x3,[x5,x2,lsl #3]    // load line pointer
+    mov x4,#0                // line character indice
+    mov x7,#0                // output buffer character indice
+    mov x6,#0                // word lenght
+2:
+    ldrb w0,[x3,x4]          // load a character line
+    strb w0,[fp,x7]          // store in buffer
+    cmp w0,#0                // line end ?
+    beq 6f
+    cmp w0,#'$'              // separator ?
+    bne 5f
+    mov x0,#' '
+    strb w0,[fp,x7]          // replace $ by space
+3:
+    cmp x6,x1                // length word >= length column
+    bge 4f
+    add x7,x7,#1
+    mov x0,#' '
+    strb w0,[fp,x7]          // add space to buffer
+    add x6,x6,#1
+    b 3b                     // and loop
+4:
+    mov x6,#-1               // raz word length
+5:
+    add x4,x4,#1             // increment line indice
+    add x7,x7,#1             // increment buffer indice
+    add x6,x6,#1             // increment word length
+    b 2b
+
+6:
+    mov x0,#'\n'
+    strb w0,[fp,x7]          // return line
+    add x7,x7,#1
+    mov x0,#0
+    strb w0,[fp,x7]          // final zéro
+    mov x0,fp
+    bl affichageMess         // display output buffer
+    add x2,x2,#1
+    cmp x2,#NBLINES
+    blt 1b
+
+100:
+    add sp,sp,#BUFFERSIZE
+    ldp fp,lr,[sp],16        // restaur des  2 registres
+    ret
+/******************************************************************/
+/*      align right                                                */
+/******************************************************************/
+/* x0 contains the address of pointer array*/
+/* x1 contains column size */
+alignRight:
+    stp fp,lr,[sp,-16]!       // save  registres
+    sub sp,sp,#BUFFERSIZE    // reserve place for output buffer
+    mov fp,sp
+    mov x5,x0                // array address
+    mov x2,#0                // indice array
+1:
+    ldr x3,[x5,x2,lsl #3]    // load line pointer
+    mov x4,#0                // line character indice
+    mov x7,#0                // output buffer character indice
+    mov x6,#0                // word lenght
+    mov x8,x3                // word begin address
+2:                           // compute word length
+    ldrb w0,[x3,x4]          // load a character line
+    cmp w0,#0                // line end ?
+    beq 3f
+    cmp w0,#'$'              // separator ?
+    beq 3f
+    add x4,x4,#1             // increment line indice
+    add x6,x6,#1             // increment word length
+    b 2b
+
+3:
+    cmp x6,#0
+    beq 4f
+    sub x6,x1,x6             // compute left spaces to add
+4:                           // loop add spaces to buffer
+    cmp x6,#0
+    blt 5f
+    mov x0,#' '
+    strb w0,[fp,x7]          // add space to buffer
+    add x7,x7,#1
+    sub x6,x6,#1
+    b 4b                     // and loop
+5:
+    mov x9,#0
+6:                           // copy loop word to buffer
+    ldrb w0,[x8,x9]
+    cmp x0,#'$'
+    beq 7f
+    cmp x0,#0                // line end
+    beq 8f
+    strb w0,[fp,x7]
+    add x7,x7,#1
+    add x9,x9,#1
+    b 6b
+7:
+    add x8,x8,x9
+    add x8,x8,#1             // new word begin
+    mov x6,#0                // raz word length
+    add x4,x4,#1             // increment line indice
+    b 2b
+
+8:
+    mov x0,#'\n'
+    strb w0,[fp,x7]          // return line
+    add x7,x7,#1
+    mov x0,#0
+    strb w0,[fp,x7]          // final zéro
+    mov x0,fp
+    bl affichageMess         // display output buffer
+    add x2,x2,#1
+    cmp x2,#NBLINES
+    blt 1b
+
+100:
+    add sp,sp,#BUFFERSIZE
+    ldp fp,lr,[sp],16        // restaur des  2 registres
+    ret
+/******************************************************************/
+/*      align center                                                */
+/******************************************************************/
+/* x0 contains the address of pointer array*/
+/* x1 contains column size */
+alignCenter:
+    stp fp,lr,[sp,-16]!      // save  registres
+    sub sp,sp,#BUFFERSIZE    // reserve place for output buffer
+    mov fp,sp
+    mov x5,x0                // array address
+    mov x2,#0                // indice array
+1:
+    ldr x3,[x5,x2,lsl #3]    // load line pointer
+    mov x4,#0                // line character indice
+    mov x7,#0                // output buffer character indice
+    mov x6,#0                // word length
+    mov x8,x3                // word begin address
+2:                           // compute word length
+    ldrb w0,[x3,x4]          // load a character line
+    cmp w0,#0                // line end ?
+    beq 3f
+    cmp w0,#'$'              // separator ?
+    beq 3f
+    add x4,x4,#1             // increment line indice
+    add x6,x6,#1             // increment word length
+    b 2b
+3:
+    cmp x6,#0
+    beq 5f
+    sub x6,x1,x6             // total spaces number to add
+    mov x12,x6
+    lsr x6,x6,#1             // divise by 2 = left spaces number
+4:
+    cmp x6,#0
+    blt 5f
+    mov x0,#' '
+    strb w0,[fp,x7]          // add space to buffer
+    add x7,x7,#1             // increment output indice
+    sub x6,x6,#1             // decrement number space
+    b 4b                     // and loop
+5:
+    mov x9,#0
+6:                           // copy loop word to buffer
+    ldrb w0,[x8,x9]
+    cmp x0,#'$'              // séparator ?
+    beq 7f
+    cmp x0,#0                // line end ?
+    beq 10f
+    strb w0,[fp,x7]
+    add x7,x7,#1
+    add x9,x9,#1
+    b 6b
+7:
+    lsr x6,x12,#1            // divise total spaces by 2
+    sub x6,x12,x6            // and compute number spaces to right side
+8:                           // loop to add right spaces
+    cmp x6,#0
+    ble 9f
+    mov x0,#' '
+    strb w0,[fp,x7]          // add space to buffer
+    add x7,x7,#1
+    sub x6,x6,#1
+    b 8b                     // and loop
+
+9:
+    add x8,x8,x9
+    add x8,x8,#1             // new address word begin
+    mov x6,#0                // raz word length
+    add x4,x4,#1             // increment line indice
+    b 2b                     // and loop new word
+
+10:
+    mov x0,#'\n'
+    strb w0,[fp,x7]          // return line
+    add x7,x7,#1
+    mov x0,#0
+    strb w0,[fp,x7]          // final zéro
+    mov x0,fp
+    bl affichageMess         // display output buffer
+    add x2,x2,#1             // increment line indice
+    cmp x2,#NBLINES          // maxi ?
+    blt 1b                   // loop
+
+100:
+    add sp,sp,#BUFFERSIZE
+    ldp fp,lr,[sp],16        // restaur des  2 registres
+    ret
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

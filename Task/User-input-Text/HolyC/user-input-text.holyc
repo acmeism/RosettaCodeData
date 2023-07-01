@@ -1,0 +1,10 @@
+U8 *s;
+s = GetStr("Enter a string: ");
+
+U32 *n;
+do {
+  n = GetStr("Enter 75000: ");
+} while(Str2I64(n) != 75000);
+
+Print("Your string: %s\n", s);
+Print("75000: %d\n", Str2I64(n));

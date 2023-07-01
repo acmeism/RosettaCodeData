@@ -1,0 +1,441 @@
+/* ARM assembly AARCH64 Raspberry PI 3B or android 64 bits */
+/* program tonshan64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessStartPgm:          .asciz "Program 64 bits start \n"
+szMessEndPgm:            .asciz "Program normal end.\n"
+szMessError:             .asciz "\033[31mError  !!!\n"
+szMessErrGen:            .asciz "Error end program.\n"
+szMessOverflow:          .asciz "Overflow function modulo.\n"
+szMessNoSolution:        .asciz "No solution.\n"
+szCarriageReturn:        .asciz "\n"
+
+/* datas message display */
+szMessEntry:             .asciz "Number : @ modulo : @ ==> "
+szMessResult:            .asciz "Racine 1 : @ Racine 2 : @  \n"
+
+
+qNumberN:            .quad 44402
+qNumberP:            .quad 100049
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+.align 4
+sZoneConv:               .skip 24
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                               // program start
+    ldr x0,qAdrszMessStartPgm       // display start message
+    bl affichageMess
+
+    mov x0,10
+    mov x1,13
+    bl displayEntry
+    bl computeTonSha
+    bl displayResult
+
+    mov x0,56
+    mov x1,101
+    bl displayEntry
+    bl computeTonSha
+    bl displayResult
+
+    mov x0,1030
+    mov x1,10009
+    bl displayEntry
+    bl computeTonSha
+    bl displayResult
+
+    mov x0,1032
+    mov x1,10009
+    bl displayEntry
+    bl computeTonSha
+    bcs 1f
+    bl displayResult
+1:
+    ldr x4,qAdrqNumberN
+    ldr x0,[x4]
+    ldr x4,qAdrqNumberP
+    ldr x1,[x4]
+    bl displayEntry
+    bl computeTonSha
+    bl displayResult
+
+    ldr x0,qAdrszMessEndPgm         // display end message
+    bl affichageMess
+    b 100f
+99:                                 // display error message
+    ldr x0,qAdrszMessError
+    bl affichageMess
+100:                                // standard end of the program
+    mov x0, #0                      // return code
+    mov x8, #EXIT                   // request to exit program
+    svc 0                           // perform system call
+qAdrszMessStartPgm:        .quad szMessStartPgm
+qAdrszMessEndPgm:          .quad szMessEndPgm
+qAdrszMessError:           .quad szMessError
+qAdrszMessNoSolution:      .quad szMessNoSolution
+qAdrszCarriageReturn:      .quad szCarriageReturn
+qAdrqNumberN:              .quad qNumberN
+qAdrqNumberP:              .quad qNumberP
+
+qAdrszMessResult:          .quad szMessResult
+qAdrsZoneConv:             .quad sZoneConv
+
+/******************************************************************/
+/*     algorithm Tonelli–Shanks                                   */
+/******************************************************************/
+/* x0 contains number */
+/* x1 contains modulus */
+/* x0 return root 1 */
+/* x1 return root 2 */
+computeTonSha:
+    stp x10,lr,[sp,-16]!    // save  registres
+    stp x2,x3,[sp,-16]!     // save  registres
+    stp x4,x5,[sp,-16]!     // save  registres
+    stp x6,x7,[sp,-16]!     // save  registres
+    stp x8,x9,[sp,-16]!     // save  registres
+    stp x11,x12,[sp,-16]!   // save  registres
+    mov x9,x0               // save number
+    mov x10,x1              // save modulo p
+    mov x2,x10
+    sub x1,x2,1
+    lsr x1,x1,1
+    bl moduloPuR64
+    bcs 100f                // error ?
+    cmp x0,#1
+    bne 20f
+    sub x5,x10,1
+    mov x6,#1               // s
+1:
+    lsr x5,x5,#1            // div by 2
+    tst x5,1                // even ?
+    cinc x6,x6,eq           // yes count
+    beq 1b                  // and loop
+                            // x5 = q
+    cmp x6,#1               // s = 1 ?
+    bne 3f
+    add x1,x10,1            // compute root 1
+    lsr x1,x1,#2            // p + 1 / 4
+    mov x0,x9               // n
+    mov x2,x10              // p
+    bl moduloPuR64
+    bcs 100f                // error ?
+    neg x1,x0               // compute root 2 = - root 1
+    b 100f                  // and end
+3:
+    mov x7,#3               // z
+4:
+    mov x0,x7
+    mov x2,x10              //  p
+    sub x1,x2,1
+    lsr x1,x1,1             // power = p - 1 / 2
+    bl moduloPuR64
+    bcs 100f                // error ?
+    cmp x0,#1
+    cinc x7,x7,eq           // si égal à 1
+    cinc x7,x7,eq
+    beq 4b
+    cmp x0,0
+    cinc x7,x7,eq           // si egal à 0
+    cinc x7,x7,eq
+    beq 4b
+    mov x0,x7               // z
+    mov x1,x5               // q
+    mov x2,x10              // p
+    bl moduloPuR64
+    bcs 100f                // error ?
+    mov x12,x0              // c = z pow q mod p
+
+    add x1,x5,1             // = q +1
+    lsr x1,x1,1             // div 2
+    mov x0,x9               // n
+    mov x2,x10              // p
+    bl moduloPuR64
+    mov x4,x0               // r =  n puis (q+1)/2 mod p
+
+    mov x0,x9               // n
+    mov x1,x5               // = q
+    mov x2,x10              // p
+    bl moduloPuR64
+    bcs 100f                // error ?
+    mov x5,x0               // reuse r5 = t = n pow q mod p
+
+8:                          // begin loop
+    cmp x5,1
+    beq 10f
+    mov x0,x5               // t
+    mov x1,x6               // m
+    mov x2,x10              // p
+    bl searchI              // search i for t puis 2 puis i = 1 mod p
+    cmp x0,-1               // not find -> no solution
+    beq 20f
+    mov x9,x0               // i
+    sub x8,x6,x0            // compute b
+    sub x8,x8,1             // m - i - 1
+    mov x1,1
+    lsl x1,x1,x8
+    mov x0,x12
+    mov x2,x10              // p
+    bl moduloPuR64
+    bcs 100f                // error ?
+    mov x7,x0               // b = c puis 2 puis 2 puis m-i-1  à verifier
+
+    mul x0,x7,x4            // r = r * b mod p
+    umulh x1,x7,x4
+    mov x2,x10
+    bl divisionReg128U
+    mov x4,x3               // r mod p
+    mul x0,x7,x7
+    umulh x1,x7,x7
+    mov x2,x10
+    bl divisionReg128U
+    mov x12,x3              // c mod p
+
+    mul x0,x5,x12
+    umulh x1,x5,x12
+    mov x2,x10
+    bl divisionReg128U
+    mov x5,x3               // t mod p
+
+    mov x6,x9               // m = i
+    b 8b
+9:
+
+10:
+    mov x0,x4               // x0 return root 1
+    sub x1,x10,x0           //  x1 return root 2
+    cmn x0,0                // carry à zero roots ok
+   b 100f
+20:
+    ldr x0,qAdrszMessNoSolution
+    bl affichageMess
+
+    mov x0,0
+    mov x1,0
+    cmp x0,0               // carry to 1 No solution
+100:
+    ldp x11,x12,[sp],16
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x10,lr,[sp],16      // restaur des  2 registres
+    ret                     // retour adresse lr x30
+
+/******************************************************************/
+/*     search i                                               */
+/******************************************************************/
+// x0 contains t
+// x1 contains maxi
+// x2 contains modulo
+searchI:
+    stp x1,lr,[sp,-16]!    // save  registres
+    stp x2,x3,[sp,-16]!    // save  registres
+    stp x4,x5,[sp,-16]!    // save  registres
+    stp x6,x7,[sp,-16]!    // save  registres
+    mov x4,x0              // t
+    mov x6,x1              // m
+    mov x3,1               // i
+1:
+    mov x5,1
+    lsl x5,x5,x3           // compute 2 power i
+
+    mov x0,x4
+    mov x1,x5
+    bl moduloPuR64         // compute t pow 2 pow i mod p
+    cmp x0,1               // = 1 ?
+    beq 3f                 // yes it is ok
+    add x3,x3,1            // next i
+    cmp x3,x6
+    blt 1b                 // loop
+    mov x0,-1              // not find
+    b 100f
+3:
+    mov x0,x3              // return i
+100:
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret                       // retour adresse lr x30
+/******************************************************************/
+/*     display numbers                                             */
+/******************************************************************/
+/* x0 contains number */
+/* x1 contains modulo */
+displayEntry:
+    stp x0,lr,[sp,-16]!        // save  registres
+    stp x1,x2,[sp,-16]!        // save  registres
+    mov x2,x1                  // root 2
+    ldr x1,qAdrsZoneConv       // convert root 1 in r0
+    bl conversion10S           // convert ascii string
+    ldr x0,qAdrszMessEntry
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc      // and put in message
+    mov x3,x0
+    mov x0,x2                  // racine 2
+    ldr x1,qAdrsZoneConv
+    bl conversion10S           // convert ascii string
+    mov x0,x3
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc      // and put in message
+    bl affichageMess
+100:
+    ldp x1,x2,[sp],16
+    ldp x0,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+qAdrszMessEntry:   .quad szMessEntry
+/******************************************************************/
+/*     display roots                                               */
+/******************************************************************/
+/* x0 contains root 1 */
+/* x1 contains root 2 */
+displayResult:
+    stp x1,lr,[sp,-16]!        // save  registres
+    stp x2,x3,[sp,-16]!        // save  registres
+    mov x2,x1                  // root 2
+    ldr x1,qAdrsZoneConv       // convert root 1 in r0
+    bl conversion10S           // convert ascii string
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc      // and put in message
+    mov x3,x0
+    mov x0,x2                  // racine 2
+    ldr x1,qAdrsZoneConv
+    bl conversion10S           // convert ascii string
+    mov x0,x3
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc      // and put in message
+    bl affichageMess
+100:
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+/**************************************************************/
+/********************************************************/
+/*   Calcul modulo de b puissance e modulo m  */
+/*    Exemple 4 puissance 13 modulo 497 = 445         */
+/********************************************************/
+/* x0  nombre  */
+/* x1 exposant */
+/* x2 modulo   */
+moduloPuR64:
+    stp x1,lr,[sp,-16]!        // save  registres
+    stp x3,x4,[sp,-16]!        // save  registres
+    stp x5,x6,[sp,-16]!        // save  registres
+    stp x7,x8,[sp,-16]!        // save  registres
+    stp x9,x10,[sp,-16]!        // save  registres
+    cbz x0,100f
+    cbz x1,100f
+    mov x8,x0
+    mov x7,x1
+    mov x6,1                   // resultat
+    udiv x4,x8,x2
+    msub x9,x4,x2,x8           // contient le reste
+1:
+    tst x7,1
+    beq 2f
+    mul x4,x9,x6
+    umulh x5,x9,x6
+    mov x6,x4
+    mov x0,x6
+    mov x1,x5
+    bl divisionReg128U
+    cbnz x1,99f                // overflow
+    mov x6,x3
+2:
+    mul x8,x9,x9
+    umulh x5,x9,x9
+    mov x0,x8
+    mov x1,x5
+    bl divisionReg128U
+    cbnz x1,99f                // overflow
+    mov x9,x3
+    lsr x7,x7,1
+    cbnz x7,1b
+    cmn x0,0                   // carry à zero pas d'erreur
+    mov x0,x6                  // result
+    b 100f
+99:
+    ldr x0,qAdrszMessOverflow
+    bl  affichageMess
+    cmp x0,0                   // carry à un car erreur
+    mov x0,-1                  // code erreur
+
+100:
+    ldp x9,x10,[sp],16          // restaur des  2 registres
+    ldp x7,x8,[sp],16          // restaur des  2 registres
+    ldp x5,x6,[sp],16          // restaur des  2 registres
+    ldp x3,x4,[sp],16          // restaur des  2 registres
+    ldp x1,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+qAdrszMessOverflow:         .quad  szMessOverflow
+/***************************************************/
+/*   division d un nombre de 128 bits par un nombre de 64 bits */
+/***************************************************/
+/* x0 contient partie basse dividende */
+/* x1 contient partie haute dividente */
+/* x2 contient le diviseur */
+/* x0 retourne partie basse quotient */
+/* x1 retourne partie haute quotient */
+/* x3 retourne le reste */
+divisionReg128U:
+    stp x6,lr,[sp,-16]!        // save  registres
+    stp x4,x5,[sp,-16]!        // save  registres
+    mov x5,#0                  // raz du reste R
+    mov x3,#128                // compteur de boucle
+    mov x4,#0                  // dernier bit
+1:
+    lsl x5,x5,#1               // on decale le reste de 1
+    tst x1,1<<63               // test du bit le plus à gauche
+    lsl x1,x1,#1               // on decale la partie haute du quotient de 1
+    beq 2f
+    orr  x5,x5,#1              // et on le pousse dans le reste R
+2:
+    tst x0,1<<63
+    lsl x0,x0,#1               // puis on decale la partie basse
+    beq 3f
+    orr x1,x1,#1               // et on pousse le bit de gauche dans la partie haute
+3:
+    orr x0,x0,x4               // position du dernier bit du quotient
+    mov x4,#0                  // raz du bit
+    cmp x5,x2
+    blt 4f
+    sub x5,x5,x2                // on enleve le diviseur du reste
+    mov x4,#1                   // dernier bit à 1
+4:
+                               // et boucle
+    subs x3,x3,#1
+    bgt 1b
+    lsl x1,x1,#1               // on decale le quotient de 1
+    tst x0,1<<63
+    lsl x0,x0,#1              // puis on decale la partie basse
+    beq 5f
+    orr x1,x1,#1
+5:
+    orr x0,x0,x4                  // position du dernier bit du quotient
+    mov x3,x5
+100:
+    ldp x4,x5,[sp],16          // restaur des  2 registres
+    ldp x6,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

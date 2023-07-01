@@ -1,0 +1,193 @@
+	;
+	; Check if input string is a palindrome using Z80 assembly language
+	;
+	; Runs under CP/M 3.1 on YAZE-AG-2.51.2 Z80 emulator
+	; Assembled with zsm4 on same emulator/OS, uses macro capabilities of said assembler
+	; Created with vim under Windows
+	;
+	; 2023-04-17 Xorph
+	;
+
+	;
+	; Useful definitions
+	;
+
+	bdos	equ 05h		; Call to CP/M BDOS function
+	strdel	equ 6eh		; Set string delimiter
+	readstr	equ 0ah		; Read string from console
+	wrtstr	equ 09h		; Write string to console
+
+	nul	equ 00h		; ASCII control characters
+	esc	equ 1bh
+	cr	equ 0dh
+	lf	equ 0ah
+
+	buflen	equ 30h		; Length of input buffer
+
+	;
+	; Macros for BDOS calls
+	;
+
+setdel 	macro	char		; Set string delimiter to char
+	ld	c,strdel
+	ld	e,char
+	call	bdos
+	endm
+
+print 	macro	msg		; Output string to console
+	ld	c,wrtstr
+	ld	de,msg
+	call	bdos
+	endm
+
+newline	macro			; Print newline
+	ld	c,wrtstr
+	ld	de,crlf
+	call	bdos
+	endm
+
+readln 	macro	buf		; Read a line from input
+	ld	c,readstr
+	ld	de,buf
+	call	bdos
+	endm
+
+	;
+	; Other macros
+	;
+
+toupper	macro
+	local	notlow
+	cp	'a'
+	jr	c,notlow
+	cp	'z'+1
+	jr	nc,notlow
+	add	a,'A'-'a'
+notlow:
+	endm
+
+	;
+	; =====================
+	; Start of main program
+	; =====================
+	;
+
+	cseg
+
+	setdel	nul		; Set string delimiter to 00h
+
+	ld	b,buflen	; Clear input buffer
+	ld	hl,bufcont
+clrloop:
+	ld	(hl),0
+	inc	hl
+	djnz	clrloop
+
+	readln	inputbuf	; Read a line from input
+	newline			; Newline is discarded during input, so write one...
+
+	ld	b,buflen	; Convert all to uppercase
+	ld	hl,bufcont
+uprloop:
+	ld	a,(hl)
+	toupper
+	ld	(hl),a
+	inc	hl
+	djnz	uprloop
+
+	ld	a,(inputbuf+1)	; Eliminate all spaces
+	ld	b,a	
+	ld	c,0		; Counter for non-spaces
+	ld	ix,bufcont	; String (buffer) address in ix
+	ld	iy,compress	; Compressed string (without blanks) goes to iy
+spcloop:
+	ld	a,(ix)
+	cp	' '
+	jr	z,isblank
+	inc	c		; If not blank, move to (iy) and increment counter
+	ld	(iy),a
+	inc	iy
+isblank:
+	inc	ix
+	djnz	spcloop
+
+	ld	a,c		; Move back to original buffer
+	ld	(inputbuf+1),a	; New length of text without spaces for further processing
+	ld	b,0		; bc now set correctly to new length
+	ld	de,bufcont	; Set up and use block move
+	ld	hl,compress
+	ldir
+	ex	de,hl		; Add nul terminator - target is in de, but memory load only via hl
+	ld	(hl),nul
+
+	print	bufcont		; Print actual text before start of check
+	newline
+
+	ld	a,(inputbuf+1)	; Get number of characters entered into bc, if 0 quit
+	ld	b,0		; bc can be used for adding the text length to iy
+	cp	b		; b is 0 for setting bc correctly and so can also be used for comparison
+	jr	z,isnopali
+	ld	c,a		; bc is now loaded correctly
+
+	ld	ix,bufcont	; ix points to start of string
+	ld	iy,bufcont	; iy points to end of string: Let it point to start...
+	add	iy,bc		; ...and add the string's length - 1
+	dec	iy
+
+	ld	b,c		; Use b as counter for comparison (djnz)
+	srl	b		; Only need to check half the chars - if odd, the middle char need not be checked
+
+chkloop:
+	ld	a,(ix)		; Actual comparison: Get (ix) into a and compare with (iy)
+	cp	(iy)		; Upon mismatch, quit immediately
+	jr	nz,isnopali
+	inc	ix
+	dec	iy
+	djnz	chkloop
+
+	; All comparisons ok, print success - fall through to ispali
+
+ispali:
+	ld	de,messagey
+	jr	writeres
+
+isnopali:
+	ld	de,messagen
+	; Fall through to writeres
+
+writeres:
+	ld	c,wrtstr	; Echo the text on screen
+	call	bdos
+	newline
+
+	ret			; Return to CP/M
+
+	;
+	; ===================
+	; End of main program
+	; ===================
+	;
+
+	;
+	; ================
+	; Data definitions
+	; ================
+	;
+
+	dseg
+
+inputbuf:			; Input buffer
+	defb	buflen		; Maximum possible length
+	defb	00h		; Returned length of actual input
+bufcont:
+	defs	buflen		; Actual input area
+compress:
+	defs	buflen		; For eliminating spaces
+
+messagey:
+	defz	'Yes'		; Is a Palindrome
+
+messagen:
+	defz	'No'		; Is not a Palindrome
+
+crlf:	defb	cr,lf,nul	; Generic newline

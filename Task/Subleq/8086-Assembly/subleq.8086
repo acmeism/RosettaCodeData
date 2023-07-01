@@ -1,0 +1,290 @@
+	;;;	-------------------------------------------------------------
+	;;;	SUBLEQ interpreter that runs under MS-DOS.
+	;;;	The word size is 16 bits, and the SUBLEQ program gets a 64KB
+	;;;	(that is, 32K Subleq words) address space.
+	;;;	The SUBLEQ program is read from a text file given on the
+	;;;	command line, I/O is done via the console.
+	;;;	Console I/O is normally raw, but with the /T parameter,
+	;;;	line ending translation is done (CRLF <> LF).
+	;;;	-------------------------------------------------------------
+	bits	16
+	cpu	8086
+	;;;	MS-DOS system calls
+getch:	equ	1h	; Get character
+putch:	equ	2h	; Print character
+puts:	equ	9h	; Print string
+fopen:	equ	3Dh	; Open file
+fclose:	equ	3Eh	; Close file
+fread:	equ	3Fh	; Read from file
+alloc:	equ	48h	; Allocate memory block
+resize:	equ	4Ah	; Change size of memory block
+exit:	equ	4Ch	; Exit to DOS
+	;;;	Constants
+RBUFSZ:	equ	1024	; 1K read buffer
+CR:	equ	13	; CR and LF
+LF:	equ	10
+	;;;	RAM locations
+cmdlen:	equ	80h	; Length of command line
+cmdlin:	equ	81h	; Contents of command line
+	org	100h
+section	.text
+	clc			; Make sure string instructions go forward
+	;;;	-- Memory initialization ------------------------------------
+	;;;	This is a .COM file. This means MS-DOS gives us all available
+	;;;	memory starting at CS:0, and CS=DS=ES=SS. This means in order
+	;;;	to allocate a separate 64k segment for the SUBLEQ memory
+	;;;	space, we will first need to free all memory we're not using.
+	;;;	-------------------------------------------------------------
+memini:	mov	sp,memtop	; Point SP into memory we will be keeping
+	mov	dx,emem		; Set up a pointer to the memory error msg
+	mov	ah,resize	; Reallocate current block
+	mov	bx,sp		; Size is in paragraphs (16 bytes), and the
+	mov	cl,4		; assembler will not let me shift a label at
+	shr	bx,cl		; compile time, so we'll do it at runtime.
+	inc	bx		; BX=(memtop>>4)+1; memtop in last paragraph.	
+	int	21h
+	jnc	.alloc		; Carry not set = allocate memory
+	jmp	die		; Otherwise, error (jump > 128 bytes)
+	;;;	Allocate a 64K block for the SUBLEQ program's address space
+.alloc:	mov	ah,alloc	; Allocate 64K (4096 paragraphs) for the
+	mov	bx,4096		; SUBLEQ program. Because that is the size of
+	int	21h		; an 8086 segment, we get free wraparound,
+	jnc	.zero		; and we don't have to worry about bounds
+	jmp	die		; checking.
+	;;;	Zero out the memory we're given
+.zero:	push	ax		; Keep SUBLEQ segment on stack.
+	mov	es,ax		; Let ES point into our SUBLEQ segment.
+	mov	cx,32768	; 32K words = 64K bytes to set to zero.
+	xor	ax,ax		; We don't have to care about where DI is,
+	rep	stosw		; since we're doing all of ES anyway.
+	;;;	-- Parse the command line and open the file -----------------
+	;;;	A filename should be given on the command line, which should
+	;;;	be a text file containing (possibly negative) integers
+	;;;	written in base 10. For "efficiency", we read the file 1K
+	;;;	at a time into a buffer, rather than character by character.
+	;;;	We also handle the '/T' parameter here.
+	;;;	-------------------------------------------------------------
+rfile:	mov	dx,usage	; Print 'usage' message if no argument
+	mov	di,cmdlin	; 0-terminate command line for use with fopen
+	xor	bh,bh		; We'll use BX to index into the command line
+	mov	bl,[cmdlen]	; Length of command line
+	test	bl,bl		; If it's zero, no argument was given
+	jnz	.term		; If not zero, go ahead
+	jmp 	die		; Otherwise, error (again, jump > 128 bytes)
+.term:	mov	[di+bx],bh	; Otherwise, 0-terminate
+	mov	ax,ds		; Let ES point into our data segment
+	mov	es,ax		; (in order to use SCASB).
+.skp:	mov	al,' '		; Skip any preceding spaces
+	mov	cx,128		; Max. command line length
+	repe	scasb
+	dec	di		; As usual, SCASB goes one byte too far
+	mov	al,[di]		; If we're at zero now, we don't have an
+	test	al,al		; argument either, so same error.
+	jnz	.parm		; (Again, jump > 128 bytes)
+	jmp	die
+.parm	cmp	al,'/'		; Input parameter?
+	jne	.open		; If not, this is the filename, open it
+	inc	di		; If so, is it 'T' or 't'?
+	mov	al,[di]
+	inc	di		; Skip past it
+	mov	dl,[di]		; And is the next one a space again?
+	cmp	dl,' '
+	je	.testp		; If so, it's potentially valid
+.perr:	mov	dx,eparm	; If not, print error message
+	jmp	die
+.testp:	or	al,32		; Make lowercase
+	cmp	al,'t'		; 'T'?
+	jne	.perr		; If not, print error message
+	inc	byte [trans]	; If so, turn translation on
+	jmp	.skp		; And then get the filename
+.open:	mov	ax,fopen<<8	; Open file for reading (AL=0=O_RDONLY)
+	mov	dx,di		; 0-terminated path on the command line
+	int	21h
+	jnc	.read		; Carry not set = file opened
+	mov	dx,efile	; Otherwise, file error (we don't much care
+	jmp	die		; which one, that's too much work.)
+.read:	pop	es 		; Let ES be the SUBLEQ segment (which we
+	xor	di,di		; pushed earlier), and DI point to 1st word.
+	mov	bp,ax		; Keep the file handle in BP.
+	xor	cx,cx		; We have read no bytes yet.
+	;;;	-- Read and parse the file ----------------------------------
+	;;;	We need to read 16-bit signed integers from the file,
+	;;;	in decimal. The integers are separated by whitespace, which
+	;;;	for simplicity's sake we'll say is ASCII space and _all_
+	;;;	control characters. BP, CX and SI are used as state to
+	;;;	emulate character-based I/O, and so must be preserved;
+	;;;	furthermore, DI is used as a pointer into the SUBLEQ memory.
+	;;;	-------------------------------------------------------------
+skipws:	call	fgetc		; Get next character
+	jc	fdone		; If we get EOF, we're done.
+	cmp	al,' '		; Is it whitespace? (0 upto ' ' inclusive)
+	jbe	skipws		; Then keep skipping
+rdnum:	xor	dl,dl		; DL is set if number is negative
+	xor	bx,bx		; BX will keep the number
+	cmp	al,'-'		; Is first character a '-'?
+	jne	.dgt		; If not, it's positive
+	inc	dx		; Otherwise, set DL,
+	call	fgetc		; and get next character.
+	jc	fdone
+.dgt:	mov	dh,al		; Store character in DH
+	sub	dh,'0'		; Subtract '0'
+	cmp	dh,9		; Digit is [0..9]?
+	jbe	.dgtok		; Then it is OK
+	jmp	fmterr		; Otherwise, format error (jump > 128)
+.dgtok:	mov	ax,bx		; BX *= 10 (without using MUL or SHL BX,CL;
+	shl	bx,1		; since we can't spare the registers).
+	shl	bx,1
+	add	bx,ax
+	shl 	bx,1
+	mov	al,dh		; Load digit into AL
+	cbw			; Sign extend (in practice just sets AH=0)
+	add	bx,ax		; Add it into BX
+	call	fgetc		; Get next character
+	jc	dgteof		; EOF while reading num is special
+	cmp	al,' '		; If it isn't whitespace,
+	ja	.dgt		; then it's the next digit.
+	test	dl,dl		; Otherwise, number is done. Was it negative?
+	jz 	.wrnum		; If not, write it to SUBLEQ memory
+	neg	bx		; Otherwise, negate it
+.wrnum:	mov	ax,bx		; ...and _then_ write it.
+	stosw
+	jmp	skipws		; Skip any other wspace and get next number
+dgteof:	test	dl,dl		; If we reached EOF while reading a number,
+	jz	.wrnum		; we need to do the same conditional negation
+	neg	bx		; and write out the number that was still in
+.wrnum:	mov	ax,bx		; BX.
+	stosw
+fdone:	mov	ah,fclose	; When we're done, close the file.
+	mov	bx,bp		; (Not strictly necessary since we've only
+	int	21h		; read, so we don't care about errors.)
+	;;;	-- Run the SUBLEQ code --------------------------------------
+	;;;	SI = instruction pointer. An instruction A B C is loaded into
+	;;;	BX DI AX respectively. Note that SUBLEQ addresses words,
+	;;;	whereas the 8086 addresses bytes, so the addresses all need
+	;;;	to be shifted left once before being used.
+	;;;	-------------------------------------------------------------
+subleq:	xor	si,si		; Start with IP=0
+	mov	cl,[trans]	; CL = \r\n translation on or off
+	mov	ax,es		; Set DS=ES=SUBLEQ segment
+	mov	ds,ax
+	;;;	Load instruction
+.step:	lodsw			; Load A
+	mov	bx,ax		; BP = A
+	lodsw			; Load B
+	mov	di,ax		; DI = B
+	lodsw			; Load C (AX=C)
+	;;;	Check for special cases
+	inc	bx		; BX=-1 = read byte	
+	jz	.in		; If ++BP==0, then read character
+	dec	bx		; Restore BX
+	inc	di		; If ++DI==0, then write character
+	jz	.out		
+	dec	di		; Restore DI
+	;;;	Do the SUBLEQ instruction
+	shl	di,1		; Addresses must be doubled since SUBLEQ
+	shl	bx,1		; addresses words and we're addressing bytes
+	mov	dx,[di]		; Retrieve [B]
+	sub	dx,[bx]		; DX = [B] - [A]
+	mov	[di],dx		; [B] = DX
+	jg	.step		; If [B]>[A], (i.e. [B]-[A]>=0), do next step
+	shl	ax,1		; Otherwise, AX*2 (C) becomes the new IP
+	mov	si,ax
+	jnc	.step		; If high bit was 0, next step
+	mov	ax,exit<<8	; But otherwise, it was negative, so we stop
+	int	21h
+	;;;	Read a character from standard input
+.in:	mov	ah,getch	; Input: read character into AL
+	int	21h		
+	cmp	al,CR		; Is it CR?
+	je	.crin		; If not, just store the character
+.sto:	xor	ah,ah		; Character goes in low byte of word
+	shl	di,1		; Word address to byte address
+	mov	[di],ax		; Store character in memory at B
+	jmp	.step		; And do next step
+	;;;	Pressing enter only returns CR; not CR LF on two reads,
+	;;;	therefore on CR we give LF instead when translation is on.
+.crin:	test	cl,cl		; Do we even want translation?
+	jz	.sto		; If not, just store the CR and leave it
+	mov	al,LF		; But if so, use LF instead
+	jmp	.sto
+	;;;	Write a character to standard output
+.out: 	shl	bx,1		; Load character from [A]
+	mov	dl,[bx]		; We only need the low byte
+	mov 	ah,putch	; Set AH to print the character
+	cmp	dl,LF		; Is it LF?
+	je	.lfo		; Then handle it separately
+.wr:	int	21h
+	jmp	.step		; Do next step
+	;;;	LF needs to be translated into CR LF, so we need to print the
+	;;;	CR first and then the LF, if translation is on.
+.lfo:	test	cl,cl		; Do we even want translation?
+	jz	.wr		; If not, just print the LF
+	mov	dl,CR		; If so, print a CL first
+	int	21h
+	mov	dl,LF		; And then a LF
+	jmp	.wr
+	;;;	-- Subroutine: get byte from file buffer. --------------------
+	;;;	If the buffer is empty, fill with more bytes from file.
+	;;;	On EOF, return with carry set.
+	;;;	Input:  BP = file handle, CX = bytes left in buffer,
+	;;;	        SI = current pointer into buffer.
+	;;;	Output: AL = byte, CX and SI moved, other registers preserved
+	;;;	-------------------------------------------------------------
+fgetc:	test	cx,cx		; Bytes left?
+	jz	.read		; If not, read from file
+.buf:	lodsb			; Otherwise, get byte from buffer
+	dec	cx		; One fewer byte left
+	ret			; And we're done. (TEST clears carry, LODSB
+				; and DEC don't touch it, so it's clear.)
+.read:	push	ax		; Keep AX, BX, DX
+	push	bx
+	push	dx
+	mov	ah,fread	; Read from file,
+	mov	bx,bp		; BP = file handle,
+	mov	cx,RBUFSZ	; Fill up entire buffer if possible,
+	mov	dx,fbuf		; Starting at the start of buffer,
+	mov	si,dx		; Also start returning bytes from there.
+	int	21h
+	jc	.err		; Carry set = read error
+	mov	cx,ax		; CX = amount of bytes read
+	pop	dx		; Restore AX, BX, DX
+	pop	bx
+	pop 	ax
+	test	cx,cx		; If CX not zero, we now have data in buffer
+	jnz	.buf		; So get first byte from buffer
+	stc			; But if not, EOF, so set carry and return
+	ret
+.err:	mov	dx,efile	; On error, print the file error message
+	jmp	die		; and stop
+	;;;	Parse error (invalid digit) ---------------------------------
+	;;;	Invalid character is in AL. BP, CX, SI still set to read from
+	;;;	file.
+fmterr:	mov	dx,ds		; Set ES=DS
+	mov	es,dx
+	mov	dl,5		; Max. 5 characters
+	mov	di,eparse.dat	; DI = empty space in error message
+.wrch:	stosb			; Store character in error message
+	call	fgetc		; Get next character
+	jc	.done		; No more chars = stop
+	dec	dl		; If room left,
+	jnz	.wrch		; write next character
+.done:	mov	dx,eparse	; Use error message with offender written in
+				; And fall through to stop the program
+	;;;	Print the error message in [DS:DX] and terminate with
+	;;;	errorlevel 2.
+die:	mov	ah,puts
+	int	21h
+	mov	ax,exit<<8 | 2
+	int	21h
+section	.data
+usage:	db	'SUBLEQ [/T] <file> - Run the SUBLEQ program in <file>.$'
+efile:	db	'Error reading file.$'
+eparm:	db	'Invalid parameter.$'
+emem:	db	'Memory allocation failure.$'
+eparse:	db	'Invalid integer at: '
+.dat:	db	'     $'	; Spaces to be filled in by error routine
+trans:	db	0	; Will be set if CRLF translation is on
+section	.bss	
+fbuf:	resb	RBUFSZ	; File buffer
+stack:	resw	128	; 128 words for main stack (should be enough)
+memtop:	equ	$

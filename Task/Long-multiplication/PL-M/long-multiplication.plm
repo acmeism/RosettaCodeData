@@ -1,0 +1,96 @@
+100H: /* LONG MULTIPLICATION OF LARGE INTEGERS                               */
+   /* LARGE INTEGERS ARE REPRESENTED BY ARRAYS OF BYTES WHOSE VALUES ARE     */
+   /* A SINGLE DECIMAL DIGIT OF THE NUMBER                                   */
+   /* THE LEAST SIGNIFICANT DIGIT OF THE LARGE INTEGER IS IN ELEMENT 1       */
+   /* ELEMENT 0 CONTAINS THE NUMBER OF DIGITS THE NUMBER HAS                 */
+   BDOS: PROCEDURE( FN, ARG ); /* CP/M BDOS SYSTEM CALL                      */
+      DECLARE FN BYTE, ARG ADDRESS;
+      GOTO 5;
+   END BDOS;
+   PRINT$CHAR:   PROCEDURE( C ); DECLARE C BYTE;    CALL BDOS( 2, C ); END;
+   PRINT$STRING: PROCEDURE( S ); DECLARE S ADDRESS; CALL BDOS( 9, S ); END;
+   DECLARE PRINT$NL LITERALLY 'PRINT$STRING( .( 0DH, 0AH, ''$'' ) )';
+
+   DECLARE LONG$INTEGER  LITERALLY '(201)BYTE';
+   DECLARE DIGIT$BASE    LITERALLY '10';
+
+   /* PRINTS A LONG INTEGER                                                  */
+   PRINT$LONG$INTEGER: PROCEDURE( N$PTR );
+      DECLARE N$PTR ADDRESS;
+      DECLARE N BASED N$PTR LONG$INTEGER;
+      DECLARE ( D, F ) BYTE;
+      F = N( 0 );
+      DO D = 1 TO N( 0 );
+         CALL PRINT$CHAR( N( F ) + '0' );
+         F = F - 1;
+      END;
+   END PRINT$LONG$INTEGER;
+   /* IMPLEMENTS LONG MULTIPLICATION, C IS SET TO A * B                      */
+   /*     C CAN BE THE SAME LONG$INTEGER AS A OR B                           */
+   LONG$MULTIPLY: PROCEDURE( A$PTR, B$PTR, C$PTR );
+      DECLARE ( A$PTR, B$PTR, C$PTR ) ADDRESS;
+      DECLARE ( A BASED A$PTR, B BASED B$PTR, C BASED C$PTR ) LONG$INTEGER;
+      DECLARE MRESULT LONG$INTEGER;
+      DECLARE RPOS    BYTE;
+
+      /* MULTIPLIES THE LONG INTEGER IN B BY THE INTEGER A, THE RESULT       */
+      /*     IS ADDED TO C, STARTING FROM DIGIT START                        */
+      /*     OVERFLOW IS IGNORED                                             */
+      MULTIPLY$ELEMENT: PROCEDURE( A, B$PTR, C$PTR, START );
+         DECLARE ( B$PTR, C$PTR )                 ADDRESS;
+         DECLARE ( A, START )                     BYTE;
+         DECLARE ( B BASED B$PTR, C BASED C$PTR ) LONG$INTEGER;
+         DECLARE ( CDIGIT, D$CARRY, BPOS, CPOS )  BYTE;
+         D$CARRY = 0;
+         CPOS    = START;
+         DO BPOS = 1 TO B( 0 );
+            CDIGIT = C( CPOS ) + ( A * B( BPOS ) ) + D$CARRY;
+            IF CDIGIT < DIGIT$BASE THEN D$CARRY = 0;
+            ELSE DO;
+               /* HAVE DIGITS TO CARRY                                       */
+               D$CARRY = CDIGIT  /  DIGIT$BASE;
+               CDIGIT  = CDIGIT MOD DIGIT$BASE;
+            END;
+            C( CPOS ) = CDIGIT;
+            CPOS = CPOS + 1;
+         END;
+         C( CPOS ) = D$CARRY;
+         /* REMOVE LEADING ZEROS BUT IF THE NUMBER IS 0, KEEP THE FINAL 0    */
+         DO WHILE( CPOS > 1 AND C( CPOS ) = 0 );
+            CPOS = CPOS - 1;
+         END;
+         C( 0 ) = CPOS;
+      END MULTIPLY$ELEMENT ;
+
+      /* THE RESULT WILL BE COMPUTED IN MRESULT, ALLOWING A OR B TO BE C     */
+      DO RPOS = 1 TO LAST( MRESULT ); MRESULT( RPOS ) = 0; END;
+      /* MULTIPLY BY EACH DIGIT AND ADD TO THE RESULT                        */
+      DO RPOS = 1 TO A( 0 );
+         IF A( RPOS ) <> 0 THEN DO;
+            CALL MULTIPLY$ELEMENT( A( RPOS ), B$PTR, .MRESULT, RPOS );
+         END;
+      END;
+      /* RETURN THE RESULT IN C                                              */
+      DO RPOS = 0 TO MRESULT( 0 ); C( RPOS ) = MRESULT( RPOS ); END;
+   END;
+
+   /* CALCULATE AND OUTPUT 2^128                                             */
+   DECLARE ( TWO$TO$64, TWO$TO$128 ) LONG$INTEGER;
+   DECLARE ( PWR, TPOS ) BYTE;
+   /* CONSTRUCT 2^64 IN TWO$TO$64                                            */
+   DO TPOS = 0 TO LAST( TWO$TO$64 ); TWO$TO$64( TPOS ) = 0; END;
+   TWO$TO$64( 0 ) = 1;
+   TWO$TO$64( 1 ) = 2;
+   PWR          = 1;
+   DO WHILE PWR < 64;
+      CALL LONG$MULTIPLY( .TWO$TO$64, .TWO$TO$64, .TWO$TO$64 );
+      PWR  = PWR + PWR;
+   END;
+   /* CONSTRUCT 2^128                                                        */
+   TWO$TO$128( 0 ) = 1;
+   TWO$TO$128( 1 ) = 0;
+   CALL LONG$MULTIPLY( .TWO$TO$64, .TWO$TO$64, .TWO$TO$128 );
+   CALL PRINT$STRING( .( '2', 05EH, '128: $' ) ); /* 05EH = "^" IN ASCII     */
+   CALL PRINT$LONG$INTEGER( .TWO$TO$128 );
+   CALL PRINT$NL;
+EOF

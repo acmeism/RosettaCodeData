@@ -1,0 +1,10 @@
+f = FREEFILE
+filename$ = "file.txt"
+
+OPEN filename$ FOR BINARY AS #f
+WHILE NOT EOF(f)
+    char$ = STR$(LOF(f))
+    GET #f, , char$
+    PRINT char$;
+WEND
+CLOSE #f

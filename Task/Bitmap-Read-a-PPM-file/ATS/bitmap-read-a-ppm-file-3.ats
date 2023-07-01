@@ -1,0 +1,79 @@
+(* The program should be able to read a PPM in raw or plain format,
+   with any valid Maxval. The output will be a grayscale raw PPM with
+   Maxval=255.
+
+   Compile with "myatscc bitmap_read_ppm_task_program.dats", which
+   should give you a program named "bitmap_read_ppm_task_program". *)
+
+(*
+
+##myatsccdef=\
+patscc -std=gnu2x -g -O2 -DATS_MEMALLOC_LIBC \
+  -o $fname($1) $1 \
+  bitmap{,_{{read,write}_ppm,grayscale}}_task.{s,d}ats
+
+*)
+
+#include "share/atspre_staload.hats"
+
+staload "bitmap_task.sats"
+staload "bitmap_read_ppm_task.sats"
+staload "bitmap_write_ppm_task.sats"
+staload "bitmap_grayscale_task.sats"
+
+staload _ = "bitmap_task.dats"
+staload _ = "bitmap_read_ppm_task.dats"
+staload _ = "bitmap_write_ppm_task.dats"
+staload _ = "bitmap_grayscale_task.dats"
+
+implement
+main0 (argc, argv) =
+  let
+    val args = listize_argc_argv (argc, argv)
+    val nargs = length args
+
+    val inpf =
+      if nargs < 2 then
+        stdin_ref
+      else if args[1] = "-" then
+        stdin_ref
+      else
+        fileref_open_exn (args[1], file_mode_r)
+    val pix_opt = pixmap_read_ppm<rgb24> inpf
+    val () = fileref_close inpf
+  in
+    case+ pix_opt of
+    | ~ None_vt () =>
+      begin
+        free args;
+        println! ("For some reason, I failed to read the image.");
+        exit 1
+      end
+    | ~ Some_vt @(pfgc1 | pix1) =>
+      let
+        val @(pfgc2 | pix2) = pixmap_convert<rgb24,gray8> pix1
+        val () = free (pfgc1 | pix1)
+        val @(pfgc3 | pix3) = pixmap_convert<gray8,rgb24> pix2
+        val () = free (pfgc2 | pix2)
+
+        val outf =
+          if nargs < 3 then
+            stdout_ref
+          else if args[2] = "-" then
+            stdout_ref
+          else
+            fileref_open_exn (args[2], file_mode_w)
+        val success = pixmap_write_ppm<rgb24> (outf, pix3)
+        val () = fileref_close outf
+
+        val () = free (pfgc3 | pix3)
+      in
+        free args;
+        if ~success then
+          begin
+            println! ("For some reason, ",
+                      "I failed to write a new image.");
+            exit 2
+          end
+      end
+  end

@@ -1,0 +1,7 @@
+number = 524
+DO
+    NUMBER = number + 2
+LOOP UNTIL ((number ^ 2) MOD 1000000) = 269696
+PRINT "The smallest number whose square ends in 269696 is: "; number
+PRINT "It's square is "; number ^ 2
+END

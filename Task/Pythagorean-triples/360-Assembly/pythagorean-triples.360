@@ -1,0 +1,127 @@
+*        Pythagorean triples -     12/06/2018
+PYTHTRI  CSECT
+         USING  PYTHTRI,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         SAVE   (14,12)            save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         MVC    PMAX,=F'1'         pmax=1
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,=F'6')    do i=1 to 6
+         L      R5,PMAX              pmax
+         MH     R5,=H'10'            *10
+         ST     R5,PMAX              pmax=pmax*10
+         MVC    PRIM,=F'0'           prim=0
+         MVC    COUNT,=F'0'          count=0
+         L      R1,PMAX              pmax
+         BAL    R14,ISQRT            isqrt(pmax)
+         SRA    R0,1                 /2
+         ST     R0,NMAX              nmax=isqrt(pmax)/2
+         LA     R7,1                 n=1
+       DO WHILE=(C,R7,LE,NMAX)       do n=1 to nmax
+         LA     R9,1(R7)               m=n+1
+         LR     R5,R9                  m
+         AR     R5,R7                  +n
+         MR     R4,R9                  *m
+         SLA    R5,1                   *2
+         LR     R8,R5                  p=2*m*(m+n)
+       DO WHILE=(C,R8,LE,PMAX)         do while p<=pmax
+         LR     R1,R9                    m
+         LR     R2,R7                    n
+         BAL    R14,GCD                  gcd(m,n)
+       IF C,R0,EQ,=F'1' THEN             if gcd(m,n)=1 then
+         L      R2,PRIM                    prim
+         LA     R2,1(R2)                   +1
+         ST     R2,PRIM                    prim=prim+1
+         L      R4,PMAX                    pmax
+         SRDA   R4,32                      ~
+         DR     R4,R8                      /p
+         A      R5,COUNT                   +count
+         ST     R5,COUNT                   count=count+pmax/p
+       ENDIF    ,                        endif
+         LA     R9,2(R9)                 m=m+2
+         LR     R5,R9                    m
+         AR     R5,R7                    +n
+         MR     R4,R9                    *m
+         SLA    R5,1                     *2
+         LR     R8,R5                    p=2*m*(m+n)
+       ENDDO    ,                      enddo n
+         LA     R7,1(R7)               n++
+       ENDDO    ,                    enddo n
+         L      R1,PMAX              pmax
+         XDECO  R1,XDEC              edit pmax
+         MVC    PG+15(9),XDEC+3      output pmax
+         L      R1,COUNT             count
+         XDECO  R1,XDEC              edit count
+         MVC    PG+33(9),XDEC+3      output count
+         L      R1,PRIM              prim
+         XDECO  R1,XDEC              edit prim
+         MVC    PG+55(9),XDEC+3      output prim
+         XPRNT  PG,L'PG              print
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         L      R13,4(0,R13)       restore previous savearea pointer
+         RETURN (14,12),RC=0       restore registers from calling sav
+NMAX     DS     F                  nmax
+PMAX     DS     F                  pmax
+COUNT    DS     F                  count
+PRIM     DS     F                  prim
+PG     DC CL80'Max Perimeter: ........., Total: ........., Primitive:'
+XDEC     DS     CL12
+GCD      EQU    *  --------------- function gcd(a,b)
+         STM    R2,R7,GCDSA        save context
+         LR     R3,R1              c=a
+         LR     R4,R2              d=b
+GCDLOOP  LR     R6,R3              c
+         SRDA   R6,32              ~
+         DR     R6,R4              /d
+         LTR    R6,R6              if c mod d=0
+         BZ     GCDELOOP           then leave loop
+         LR     R5,R6              e=c mod d
+         LR     R3,R4              c=d
+         LR     R4,R5              d=e
+         B      GCDLOOP            loop
+GCDELOOP LR     R0,R4              return(d)
+         LM     R2,R7,GCDSA        restore context
+         BR     R14                return
+GCDSA    DS     6A                 context store
+ISQRT    EQU    *  --------------- function isqrt(n)
+         STM    R3,R10,ISQRTSA     save context
+         LR     R6,R1              n=r1
+         LR     R10,R6             sqrtn=n
+         SRA    R10,1              sqrtn=n/2
+       IF LTR,R10,Z,R10 THEN       if sqrtn=0 then
+         LA     R10,1                sqrtn=1
+       ELSE     ,                  else
+         LA     R9,0                 snm2=0
+         LA     R8,0                 snm1=0
+         LA     R7,0                 sn=0
+         LA     R3,0                 okexit=0
+       DO UNTIL=(C,R3,EQ,=A(1))      do until okexit=1
+         AR     R10,R7                 sqrtn=sqrtn+sn
+         LR     R9,R8                  snm2=snm1
+         LR     R8,R7                  snm1=sn
+         LR     R4,R6                  n
+         SRDA   R4,32                  ~
+         DR     R4,R10                 /sqrtn
+         SR     R5,R10                 -sqrtn
+         SRA    R5,1                   /2
+         LR     R7,R5                  sn=(n/sqrtn-sqrtn)/2
+       IF C,R7,EQ,=F'0',OR,CR,R7,EQ,R9 THEN  if sn=0 or sn=snm2 then
+         LA     R3,1                     okexit=1
+       ENDIF    ,                      endif
+       ENDDO    ,                    enddo until
+       ENDIF    ,                  endif
+         LR     R5,R10             sqrtn
+         MR     R4,R10             *sqrtn
+       IF CR,R5,GT,R6 THEN         if sqrtn*sqrtn>n then
+         BCTR   R10,0                sqrtn=sqrtn-1
+       ENDIF    ,                  endif
+         LR     R0,R10             return(sqrtn)
+         LM     R3,R10,ISQRTSA     restore context
+         BR     R14                return
+ISQRTSA  DS     8A                 context store
+         YREGS
+         END    PYTHTRI

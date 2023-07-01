@@ -1,0 +1,11 @@
+$$ MODE TUSCRIPT
+
+datei="rosetta.txt"
+ERROR/STOP OPEN (datei,READ,-std-)
+
+ACCESS q: READ/RECORDS/UTF8 $datei s,line
+ LOOP
+ READ/NEXT/EXIT q
+ PRINT line
+ ENDLOOP
+ENDACCESS q

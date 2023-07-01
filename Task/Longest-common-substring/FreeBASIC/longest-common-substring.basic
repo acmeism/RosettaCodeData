@@ -1,0 +1,12 @@
+Function LCS(a As String, b As String) As String
+    If Len(a) = 0 Or Len(b) = 0 Then Return ""
+    While Len(b)
+        For j As Integer = Len(b) To 1 Step -1
+            If Instr(a, Left(b, j)) Then Return Left(b, j)
+        Next j
+        b = Mid(b, 2)
+    Wend
+End Function
+
+Print LCS("thisisatest", "testing123testing")
+Sleep

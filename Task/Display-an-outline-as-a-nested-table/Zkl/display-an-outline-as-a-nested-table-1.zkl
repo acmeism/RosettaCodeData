@@ -1,0 +1,64 @@
+fcn parseOutline(outline){  //--> "tree" annotated with spans
+   var [const] indent=" "*100;		// no tabs
+
+   parse:=fcn(ow,tree,parent,col,prevD,unit){
+      rows,span,spans,cell := 0, 0,List(), Void;
+      foreach line in (ow){
+	 if(not line) continue;
+	 d,text,d := line.prefix(indent), line[d,*], d/unit;  // d==0 is boo-boo
+         if(d==prevD){		// assume a leaf
+	    rows=rows.max(d);	// zero based
+	    col+=1; span+=1;
+	    cell=List(d,col,1,text);  // cell: (depth, col offset, span, text)
+	    tree.append(cell);
+	 }
+	 else if(d>prevD){	// down a level
+	    ow.push(line);
+	    r,s := self.fcn(ow,tree,cell,col-1,d,unit);
+	    rows = rows.max(r);
+	    spans.append(s);
+	 }
+	 else{   // d<prevD: done with this branch, back out to level above
+	    ow.push(line);
+	    break;
+	 }
+      }
+      span=( spans and (spans.sum(0) + span - 1) or span ).max(1);
+      parent[2]=span;
+      return(rows,span);
+   };
+
+   ow,title,trees := outline.walker(11), ow.next(), List();
+   line,unit := ow.peek(), line.prefix(indent);	// no leading space == bad
+   rows,cols := 0,0;
+   foreach line in (ow){	// the major (same color) columns
+      tree:=List(0, cell:=List(1, 1,1, line.strip()) );
+      trees.append(tree);
+      r,c := parse(ow,tree,cell,0,2,unit);
+      tree[0]=c;	// span for this "branch"
+      rows,cols = rows.max(r), cols + c;
+   }
+   return(rows+1,cols,title,trees);
+}
+
+fcn makeMarkup(rows,cols,title,trees){
+   var [const] colors=L("#ffebd2","#f0fff0","#e6ffff","#ffeeff");
+   out,cell := Data(Void), 0'~| style="background: %s " colspan=%d | %s~.fmt;
+   out.writeln(0'~{| class="wikitable" style="text-align: center;"~,"\n|-\n",
+     cell("#ffffe6;",cols,title));
+   foreach row in ([1..rows-1]){
+      clrs:=Walker.cycle(colors);
+      out.writeln("|-");
+      foreach t in (trees){	// create this row
+	 span,clr := t[0], clrs.next();
+	 col,cols := 1, t[1,*].filter('wrap([(d,_,text)]){ d==row });
+	 foreach _,cpos,cspan,text in (cols){
+	    if(col<cpos){ out.writeln(cell(clr,cpos-col,"")); col=cpos }
+	    out.writeln(cell(clr,cspan,text)); col+=cspan;
+	 }  // col is span+1 after loop if all cells had text
+	 if(col<=span) out.writeln(cell(clr,span-col+1,""));
+      }
+   }
+   out.writeln("|}");
+   out.text
+}

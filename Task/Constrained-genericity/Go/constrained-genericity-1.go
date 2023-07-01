@@ -1,0 +1,3 @@
+type eatable interface {
+    eat()
+}

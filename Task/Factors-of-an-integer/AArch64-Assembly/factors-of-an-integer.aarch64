@@ -1,0 +1,172 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program factorst64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ CHARPOS,       '@'
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessDeb:         .ascii "Factors of : @ are : \n"
+szMessFactor:      .asciz "@ \n"
+szCarriageReturn:  .asciz "\n"
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+sZoneConversion:        .skip 100
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                             // entry of program
+
+    mov x0,#100
+    bl factors
+    mov x0,#97
+    bl factors
+    ldr x0,qNumber
+    bl factors
+
+100:                             // standard end of the program
+    mov x0, #0                   // return code
+    mov x8, #EXIT                // request to exit program
+    svc 0                        // perform the system call
+
+qNumber:               .quad 32767
+qAdrszCarriageReturn:  .quad szCarriageReturn
+/******************************************************************/
+/*     calcul factors of number                                  */
+/******************************************************************/
+/* x0 contains the number to factorize */
+factors:
+    stp x1,lr,[sp,-16]!         // save  registers
+    stp x2,x3,[sp,-16]!         // save  registers
+
+    mov x5,x0                   // limit calcul
+    ldr x1,qAdrsZoneConversion  // conversion register in decimal string
+    bl conversion10S
+    ldr x0,qAdrszMessDeb        // display message
+    ldr x1,qAdrsZoneConversion
+    bl strInsertAtChar
+    bl affichageMess
+    mov x6,#1                   // counter loop
+1:   // loop
+    udiv x0,x5,x6               // division
+    msub x3,x0,x6,x5            // compute remainder
+    cbnz x3,2f                  // remainder not = zero -> loop
+                                // display result if yes
+    mov x0,x6
+    ldr x1,qAdrsZoneConversion
+    bl conversion10S
+    ldr x0,qAdrszMessFactor     // display message
+    ldr x1,qAdrsZoneConversion
+    bl strInsertAtChar
+    bl affichageMess
+2:
+    add x6,x6,#1                // add 1 to loop counter
+    cmp x6,x5                   // <=  number ?
+    ble 1b                      // yes loop
+100:
+    ldp x2,x3,[sp],16           // restaur  2 registers
+    ldp x1,lr,[sp],16           // restaur  2 registers
+    ret
+
+qAdrszMessDeb:        .quad szMessDeb
+qAdrszMessFactor:     .quad szMessFactor
+qAdrsZoneConversion:  .quad sZoneConversion
+/******************************************************************/
+/*   insert string at character insertion  */
+/******************************************************************/
+/* x0 contains the address of string 1 */
+/* x1 contains the address of insertion string   */
+/* x0 return the address of new string  on the heap */
+/* or -1 if error   */
+strInsertAtChar:
+    stp x2,lr,[sp,-16]!                      // save  registers
+    stp x3,x4,[sp,-16]!                      // save  registers
+    stp x5,x6,[sp,-16]!                      // save  registers
+    stp x7,x8,[sp,-16]!                      // save  registers
+    mov x3,#0                                // length counter
+1:                                           // compute length of string 1
+    ldrb w4,[x0,x3]
+    cmp w4,#0
+    cinc  x3,x3,ne                           // increment to one if not equal
+    bne 1b                                   // loop if not equal
+    mov x5,#0                                // length counter insertion string
+2:                                           // compute length to insertion string
+    ldrb w4,[x1,x5]
+    cmp x4,#0
+    cinc  x5,x5,ne                           // increment to one if not equal
+    bne 2b                                   // and loop
+    cmp x5,#0
+    beq 99f                                  // string empty -> error
+    add x3,x3,x5                             // add 2 length
+    add x3,x3,#1                             // +1 for final zero
+    mov x6,x0                                // save address string 1
+    mov x0,#0                                // allocation place heap
+    mov x8,BRK                               // call system 'brk'
+    svc #0
+    mov x5,x0                                // save address heap for output string
+    add x0,x0,x3                             // reservation place x3 length
+    mov x8,BRK                               // call system 'brk'
+    svc #0
+    cmp x0,#-1                               // allocation error
+    beq 99f
+
+    mov x2,0
+    mov x4,0
+3:                                           // loop copy string begin
+    ldrb w3,[x6,x2]
+    cmp w3,0
+    beq 99f
+    cmp w3,CHARPOS                           // insertion character ?
+    beq 5f                                   // yes
+    strb w3,[x5,x4]                          // no store character in output string
+    add x2,x2,1
+    add x4,x4,1
+    b 3b                                     // and loop
+5:                                           // x4 contains position insertion
+    add x8,x4,1                              // init index character output string
+                                             // at position insertion + one
+    mov x3,#0                                // index load characters insertion string
+6:
+    ldrb w0,[x1,x3]                          // load characters insertion string
+    cmp w0,#0                                // end string ?
+    beq 7f                                   // yes
+    strb w0,[x5,x4]                          // store in output string
+    add x3,x3,#1                             // increment index
+    add x4,x4,#1                             // increment output index
+    b 6b                                     // and loop
+7:                                           // loop copy end string
+    ldrb w0,[x6,x8]                          // load other character string 1
+    strb w0,[x5,x4]                          // store in output string
+    cmp x0,#0                                // end string 1 ?
+    beq 8f                                   // yes -> end
+    add x4,x4,#1                             // increment output index
+    add x8,x8,#1                             // increment index
+    b 7b                                     // and loop
+8:
+    mov x0,x5                                // return output string address
+    b 100f
+99:                                          // error
+    mov x0,#-1
+100:
+    ldp x7,x8,[sp],16                        // restaur  2 registers
+    ldp x5,x6,[sp],16                        // restaur  2 registers
+    ldp x3,x4,[sp],16                        // restaur  2 registers
+    ldp x2,lr,[sp],16                        // restaur  2 registers
+    ret
+
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

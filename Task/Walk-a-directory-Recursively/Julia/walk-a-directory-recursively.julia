@@ -1,0 +1,8 @@
+rootpath = "/home/user/music"
+pattern  = r".mp3$"
+
+for (root, dirs, files) in walkdir(rootpath)
+    for file in files
+        if occursin(pattern, file) println(file) end
+    end
+end

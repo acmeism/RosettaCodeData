@@ -1,0 +1,12 @@
+'Example: Find color of a screen pixel in QBasic (adapted from QBasic Help file).
+'  POINT(x%, y%)  returns color of pixel at coordinates x,y.
+SCREEN 7   'Choose color graphics screen (1,2,4,7,8,9,11,12,13).
+LINE (0, 0)-(100, 100), 2  'Draw diagonal line in color attribute 2.
+LOCATE 14, 1               'Locate below diagonal line to show output.
+FOR y% = 1 TO 10
+  FOR x% = 1 TO 10
+    PRINT POINT(x%, y%);   'POINT(x%, y%) displays pixel color.
+  NEXT x%
+  PRINT
+NEXT y%
+END

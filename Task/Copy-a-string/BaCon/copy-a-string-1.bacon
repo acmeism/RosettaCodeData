@@ -1,0 +1,4 @@
+a$ = "I am here"
+b$ = a$
+a$ = "Hello world..."
+PRINT a$, b$

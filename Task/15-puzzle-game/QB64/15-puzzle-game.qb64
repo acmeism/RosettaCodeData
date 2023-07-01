@@ -1,0 +1,83 @@
+_TITLE "GUI Sliding Blocks Game "
+RANDOMIZE TIMER
+
+' get from user the desired board size = s
+DO
+    LOCATE CSRLIN, 3: INPUT "(0 quits) Enter your number of blocks per side 3 - 9 you want > ", s
+    IF s = 0 THEN END
+LOOP UNTIL s > 2 AND s < 10
+
+' screen setup: based on the square blocks q pixels a sides
+q = 540 / s 'square size, shoot for 540 x 540 pixel board display
+SCREEN _NEWIMAGE(q * s + 1, q * s + 1, 32): _SCREENMOVE 360, 60
+
+'initialize board = solution
+DIM board(s, s)
+FOR r = 1 TO s
+    FOR c = 1 TO s
+        board(c, r) = c + (r - 1) * s
+    NEXT
+NEXT
+board(s, s) = 0: c0 = s: r0 = s
+
+'scramble board for puzzle
+FOR i = 0 TO s ^ 5 ' mix blocks
+    SELECT CASE INT(RND * 4) + 1
+        CASE 1: IF c0 < s THEN board(c0, r0) = board(c0 + 1, r0): board(c0 + 1, r0) = 0: c0 = c0 + 1
+        CASE 2: IF c0 > 1 THEN board(c0, r0) = board(c0 - 1, r0): board(c0 - 1, r0) = 0: c0 = c0 - 1
+        CASE 3: IF r0 < s THEN board(c0, r0) = board(c0, r0 + 1): board(c0, r0 + 1) = 0: r0 = r0 + 1
+        CASE 4: IF r0 > 1 THEN board(c0, r0) = board(c0, r0 - 1): board(c0, r0 - 1) = 0: r0 = r0 - 1
+    END SELECT
+NEXT
+
+t = TIMER: update = -1 'OK user here you go!
+DO
+    IF update THEN 'display status and determine if solved
+        solved = -1: update = 0
+        FOR r = 1 TO s
+            FOR c = 1 TO s
+                IF board(c, r) THEN
+                    IF board(c, r) <> (r - 1) * s + c THEN solved = 0
+                    COLOR _RGB32(255, 255, 255), _RGB32(0, 0, 255)
+                    LINE ((c - 1) * q + 1, (r - 1) * q + 2)-(c * q - 2, r * q - 2), _RGB32(0, 0, 255), BF
+                    _PRINTSTRING ((c - 1) * q + .4 * q, (r - 1) * q + .4 * q), RIGHT$(" " + STR$(board(c, r)), 2)
+                ELSE
+                    IF board(s, s) <> 0 THEN solved = 0
+                    COLOR _RGB32(0, 0, 0), _RGB32(0, 0, 0)
+                    LINE ((c - 1) * q, (r - 1) * q)-(c * q, r * q), , BF
+                END IF
+            NEXT
+        NEXT
+        IF solved THEN 'flash the Solved Report until user closes window else report status
+            _DISPLAY
+            flash$ = "Solved!" + STR$(mc) + " Moves in " + STR$(INT(TIMER - t)) + " secs."
+            WHILE 1: _TITLE flash$: _DELAY .2: _TITLE "  ": _DELAY .2: WEND
+        ELSE
+            _TITLE STR$(mc) + " Moves in " + STR$(INT(TIMER - t)) + " secs." + STR$(test)
+        END IF
+        _DISPLAY
+    END IF
+
+    'get next mouse click, check if on block next to empty space make move or beep
+    m = _MOUSEINPUT: mb = _MOUSEBUTTON(1): mx = _MOUSEX: my = _MOUSEY
+    IF mb AND solved = 0 THEN 'get last place mouse button was down
+        mb = _MOUSEBUTTON(1): mx = _MOUSEX: my = _MOUSEY
+        WHILE mb 'left button down, wait for mouse button release
+            m = _MOUSEINPUT: mb = _MOUSEBUTTON(1): mx = _MOUSEX: my = _MOUSEY
+        WEND
+
+        'convert mouse position to board array (x, y) are we near empty space?
+        bx = INT(mx / q) + 1: by = INT(my / q) + 1: update = -1
+        IF bx = c0 + 1 AND by = r0 THEN
+            board(c0, r0) = board(c0 + 1, r0): board(c0 + 1, r0) = 0: c0 = c0 + 1: mc = mc + 1
+        ELSEIF bx = c0 - 1 AND by = r0 THEN
+            board(c0, r0) = board(c0 - 1, r0): board(c0 - 1, r0) = 0: c0 = c0 - 1: mc = mc + 1
+        ELSEIF bx = c0 AND by = r0 + 1 THEN
+            board(c0, r0) = board(c0, r0 + 1): board(c0, r0 + 1) = 0: r0 = r0 + 1: mc = mc + 1
+        ELSEIF bx = c0 AND by = r0 - 1 THEN
+            board(c0, r0) = board(c0, r0 - 1): board(c0, r0 - 1) = 0: r0 = r0 - 1: mc = mc + 1
+        ELSE
+            BEEP
+        END IF
+    END IF
+LOOP

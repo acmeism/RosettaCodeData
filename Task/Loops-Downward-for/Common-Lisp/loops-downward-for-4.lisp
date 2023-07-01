@@ -1,0 +1,5 @@
+(defun down-to-0 (count)
+  (print count)
+  (if (not (zerop count))
+      (down-to-0 (1- count))))
+(down-to-0 10)

@@ -1,0 +1,34 @@
+(*The strategy is to first capture all special sub-expressions and reformat them so they are semantically clear. The built in function Distribute could then do the work of creating the alternatives, but the order wouldn't match that given in the instructions (although as a set the alternatives would be correct). I'll take a more complicated route so as to follow the instructions exactly.*)
+
+(*A few named constants for readability.*)
+EscapeToken="\\";(*In Mathematica, backslash is an escape character when inputing a string, so we need to escape it.*)
+LeftBraceToken="{";
+RightBraceToken="}";
+
+(*This basically sequesters escaped substrings so that they don't get matched during later processing.*)
+CaptureEscapes[exp:{___String}]:=SequenceReplace[exp,{EscapeToken,x_}:>EscapeToken<>x];
+
+(*Any remaining braces are un-escaped. I'm "unstringifying" them to more easily pick them out during later processing.*)
+CaptureBraces[exp:{___String}]:=ReplaceAll[exp,{LeftBraceToken->LeftBrace,RightBraceToken->RightBrace}];
+
+(*Building up trees for the braced expressions. Extra braces are just raw data, so transform them back to strings.*)
+CaptureBraceTrees[exp:{(_String|LeftBrace|RightBrace)...}]:=ReplaceAll[FixedPoint[SequenceReplace[{LeftBrace,seq:(_String|_BraceTree)...,RightBrace}:>BraceTree[seq]],exp],{LeftBrace->LeftBraceToken,RightBrace->RightBraceToken}];
+
+(*At thie point, we should have an expression with well-braced substructures representing potential alternatives. We must expand brace trees to alternatives in the correct order.*)
+ExpandBraceTrees[exp:Expr[head___String,bt_BraceTree,tail___]]:=ReplaceAll[Thread[Expr[head,ToAlternatives[bt],tail]],alt_Alt:>Sequence@@alt];
+ExpandBraceTrees[exp:Expr[___String]]:={exp};
+ExpandBraceTrees[exps:{__Expr}]:=Catenate[ExpandBraceTrees/@exps];
+
+(*If there are no commas, then it's a literal sub-expression. Otherwise, it's a set of alternatives.*)
+ToAlternatives[bt_BraceTree]:={LeftBraceToken<>StringJoin@@bt<>RightBraceToken}/;FreeQ[bt,","];
+ToAlternatives[BraceTree[","]]=ToAlternatives[BraceTree["",",",""]];
+ToAlternatives[bt:BraceTree[",",__]]:=ToAlternatives[Prepend[bt,""]];
+ToAlternatives[bt:BraceTree[__,","]]:=ToAlternatives[Append[bt,""]];
+ToAlternatives[bt_BraceTree]:=Alt@@@SequenceSplit[List@@bt,{","}];
+
+NormalizeExpression=Apply[Expr]@*CaptureBraceTrees@*CaptureBraces@*CaptureEscapes@*Characters;
+
+BraceExpand[str_String]:=ReplaceAll[FixedPoint[ExpandBraceTrees,NormalizeExpression[str]],Expr->StringJoin];
+
+(*Data was stored in a local file.*)
+BraceTestData=ReadList[FileNameJoin[{NotebookDirectory[],"BraceTestData.txt"}],String];BraceTestData//TableForm

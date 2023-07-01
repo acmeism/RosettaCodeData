@@ -1,0 +1,6 @@
+(defun qs (list)
+  (if (cdr list)
+      (flet ((pivot (test)
+               (remove (car list) list :test-not test)))
+        (nconc (qs (pivot #'>)) (pivot #'=) (qs (pivot #'<))))
+      list))

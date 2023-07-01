@@ -1,0 +1,36 @@
+DECLARE FUNCTION sufijo$ (n%)
+DECLARE SUB imprimeOrdinal (loLim%, hiLim%)
+
+imprimeOrdinal 0, 25
+imprimeOrdinal 250, 265
+imprimeOrdinal 1000, 1025
+END
+
+DEFINT A-Z
+SUB imprimeOrdinal (loLim, hiLim)
+  loLim = INT(loLim)
+  hiLim = INT(hiLim)
+  FOR i = loLim TO hiLim
+    PRINT STR$(i) + sufijo$(i) + " ";
+  NEXT i
+  PRINT
+END SUB
+
+FUNCTION sufijo$ (n)
+  n = INT(n)
+  NMod10 = n MOD 10
+  NMod100 = n MOD 100
+  IF (NMod10 = 1) AND (NMod100 <> 11) THEN
+    sufijo$ = "st"
+  ELSE
+    IF (NMod10 = 2) AND (NMod100 <> 12) THEN
+      sufijo$ = "nd"
+    ELSE
+      IF (NMod10 = 3) AND (NMod100 <> 13) THEN
+        sufijo$ = "rd"
+      ELSE
+        sufijo$ = "th"
+      END IF
+    END IF
+  END IF
+END FUNCTION

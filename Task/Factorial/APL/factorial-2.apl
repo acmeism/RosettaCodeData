@@ -1,0 +1,1 @@
+      FACTORIAL←{×/⍳⍵}  ⍝ OR:   FACTORIAL←×/⍳

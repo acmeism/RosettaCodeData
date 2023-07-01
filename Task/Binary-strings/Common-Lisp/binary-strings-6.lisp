@@ -1,0 +1,1 @@
+(concatenate 'string "string" "b")

@@ -1,0 +1,110 @@
+	org	100h
+	lxi	h,ecks	; Zero out 2000 bytes
+	lxi	b,0
+	lxi	d,2000
+zero:	mov	m,b
+	inx	h
+	dcx	d
+	mov	a,d
+	ora	e
+	jnz 	zero
+	lxi	b,-1	; BC = Outer loop variable
+outer:	inx	b
+	mvi	a,3	; Are we there yet? 1000 = 03E8h
+	cmp	b	; Compare high byte
+	jnz	go
+	mvi	a,0E8h	; Compare low byte
+	cmp	c
+	jz	done
+go:	mov	d,b	; DE = Inner loop variable
+	mov	e,c
+inner:	dcx	d
+	mov	a,d	; <= 0?
+	ral
+	jc	outer
+	push	b	; Keep both pointers
+	push	d
+	mov	h,b	; Load BC = eck[BC]
+	mov	l,c
+	call	eck
+	mov	c,m
+	inx	h
+	mov	b,m
+	xchg		; Load HL = -eck[DE]
+	call	eck
+	xchg
+	ldax 	d
+	cma
+	mov	l,a
+	inx	d
+	ldax 	d
+	cma
+	mov	h,a
+	inx	h 	; Two's complement
+	dad	b	; -eck[DE] + eck[BC]
+	mov	a,h	; Unfortunately this does not set flags
+	ora	l	; Check zero
+	pop	d	; Meanwhile, restore the pointers
+	pop	b
+	jnz	inner	; If no match, continue with inner loop
+	mov	h,b	; If we _did_, then get &eck[BC + 1]
+	mov	l,c
+	inx	h
+	call 	eck
+	mov	a,c	; Store BC - DE at that address
+	sub	e
+	mov	m,a
+	inx	h
+	mov	a,b
+	sbb	d
+	mov	m,a
+	jmp 	outer	; And continue the outer loop
+done:	lxi	h,0	; Print first 10 terms
+	call	p10
+	lxi	h,990	; Print last 10 terms
+p10:	mvi 	b,10	; Print 10 terms starting at term HL
+	call	eck
+ploop:	mov	e,m	; Load term into DE
+	inx	h
+	mov	d,m
+	inx	h
+	push 	b	; Keep counter
+	push 	h	; Keep pointer
+	xchg		; Term in HL
+	call	printn	; Print term
+	pop 	h	; Restore pointer and counter
+	pop 	b
+	dcr	b
+	jnz	ploop
+	lxi	d,nl	; Print a newline afterwards
+	jmp	prints
+eck:	push	b	; Set HL = &eck[HL]
+	lxi	b,ecks	; Base address
+	dad	h	; Multiply by two
+	dad	b	; Add base
+	pop	b
+	ret
+printn:	lxi	d,buf	; Print the number in HL
+	push	d	; Buffer pointer on stack
+	lxi	b,-10	; Divisor
+pdigit:	lxi	d,-1	; Quotient
+pdiv:	inx 	d
+	dad	b
+	jc 	pdiv
+	mvi	a,'0'+10
+	add	l	; Make ASCII digit
+	pop	h
+	dcx	h	; Store digit
+	mov	m,a
+	push 	h
+	xchg
+	mov	a,h	; Quotient nonzero?
+	ora	l
+	jnz	pdigit	; Then there are more digits
+	pop	d 	; Otherwise, print string using CP/M
+prints:	mvi	c,9
+	jmp	5
+nl:	db	13,10,'$'
+	db	'.....'
+buf:	db	' $'
+ecks:	equ	$

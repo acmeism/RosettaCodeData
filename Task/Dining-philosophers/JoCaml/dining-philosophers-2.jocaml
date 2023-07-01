@@ -1,0 +1,47 @@
+let print s t m = Printf.printf "t=%d: philosopher %s is %s\n" t s m; flush(stdout);;
+let random_wait n = Unix.sleep (Random.int n);;
+
+(* auxiliary function to keep track of time ticks, using integer seconds *)
+def  ts () & counter(n) = counter(n) & reply n to ts
+or   update_counter() & counter(n) = counter(n+1) & reply to update_counter
+and  counter_sentinel() = Unix.sleep 1; update_counter(); counter_sentinel()
+;;
+spawn counter(0) & counter_sentinel();;
+
+def stats(n, waited, maxwaited) & report_wait_time(m) =
+ let (n', waited', maxwaited') = (n+1, waited+m, max maxwaited m) in
+ Printf.printf "waiting average %f, max waited %d\n"
+   (float_of_int waited' /. float_of_int n')
+   maxwaited';
+ flush(stdout);
+ stats(n',waited',maxwaited') & reply () to report_wait_time
+;;
+
+spawn stats(0,0,0);;
+
+let eat s t = print s t "eating"; random_wait 10;;
+let think s = print s (ts()) "thinking"; random_wait 20;;
+
+(* "p" will be a philosopher channel, to be defined later
+ the messages ah, bh, ... do not need to be injected now. *)
+
+let will_eat s t = let t' = ts() in report_wait_time(t'-t); eat s t';;
+
+def ah(t,p) & fab() & fea() = will_eat "Aristotle" t; p() & fab() & fea()
+or  bh(t,p) & fab() & fbc() = will_eat "Kant" t; p() & fab() & fbc()
+or  ch(t,p) & fbc() & fcd() = will_eat "Spinoza" t; p() & fbc() & fcd()
+or  dh(t,p) & fcd() & fde() = will_eat "Marx" t; p() & fcd() & fde()
+or  eh(t,p) & fde() & fea() = will_eat "Russell" t; p() & fde() & fea()
+;;
+
+spawn fab() & fbc() & fcd() & fde() & fea();;
+
+(* define the thinking -> hungry transitions using local philosophers, and inject the philosophers *)
+List.map
+ (fun (h,s) -> def p() = think s; let t = ts() in print s t "hungry"; h(t,p) in spawn p())
+ [(ah,"Aristotle"); (bh,"Kant"); (ch,"Spinoza"); (dh,"Marx"); (eh,"Russell")]
+;;
+(* this replaces repetitive code such as that shown in the previous solution *)
+
+(* now we need to wait and do nothing; nobody will be able to inject godot() *)
+def wait_forever() & godot() = reply () to wait_forever in wait_forever();;

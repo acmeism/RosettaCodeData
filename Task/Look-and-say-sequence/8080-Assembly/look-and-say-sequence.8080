@@ -1,0 +1,83 @@
+bdos:		equ	5	; CP/M calls
+puts:		equ	9
+
+nmemb:		equ	15	; Change this to print more or fewer members
+
+		org	100h
+
+		
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Generate and output members of the sequence
+		mvi	b,nmemb	; Counter
+		
+outloop:	push	b	; Preserve counter across calls
+		
+		mvi	c,puts	; Output current member
+		lxi	d,memb
+		call	bdos	; And newline	
+		mvi	c,puts
+		lxi	d,newline
+		call	bdos
+		
+		lxi	h,memb	; Generate next member
+		call	looksay
+		
+		pop	b	; Restore counter
+		dcr	b	; Done yet?
+		jnz	outloop
+		rst	0
+		
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Given a $-terminated string under HL, representing
+		;; a member of the look and say sequence, generate
+		;; the next one in place (ish). The memory after the
+		;; string is assumed to be free.
+looksay:	push	h	; Save start of string on stack
+		mov	d,h	; And in DE
+		mov	e,l
+		mvi	a,'$'	; Find end of string
+findend:	cmp	m
+		inx	h
+		jnz	findend
+		xchg		; HL=string, DE=destination
+		push	d	; Save start of new string on stack
+		
+lookchar:	mvi	b,0	; Zero counter
+lookloop:	mov	a,m	; Get current character
+		inr	b	; Compare next character
+		inx	h
+		cmp	m	; While it is the same, keep going
+		jz	lookloop
+		
+		mov	c,a	; Keep character
+		mvi	a,'0'	; There are B amount of these characters
+		add	b	
+		stax	d	; Store the amount
+		inx	d	; And in the next location
+		mov	a,c 	; Store the character
+		stax	d
+		inx	d
+		
+		mvi	a,'$'	; Are we done?
+		cmp	m
+		jnz	lookchar	; If not, do next character
+		stax	d	; If yes, terminate new string
+		
+		;; Free up memory by copying the new string to where the old
+		;; string began.
+		pop	d	; Start of new string
+		pop	h	; Start of old string
+copyloop:	ldax	d	; Get char from new string
+		mov	m,a	; Store char where old string was
+		cpi	'$'	; are we done yet?
+		inx	d
+		inx	h
+		jnz	copyloop
+		ret
+		
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+newline:	db	13,10,'$'
+		;; This is where the string will be stored.
+memb:		db	'1$'	; First item
+		; Due to how CP/M loads programs, the memory after here
+		; is free until we hit the stack.

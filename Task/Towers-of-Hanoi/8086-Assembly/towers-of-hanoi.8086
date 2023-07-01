@@ -1,0 +1,31 @@
+	cpu	8086
+	bits	16
+	org	100h
+section	.text
+	mov	bx,0402h	; Set up first arguments to move()
+	mov	cx,0103h	; Registers chosen s.t. CX contains output
+	;;;	Move BH disks from CH via BL to CL
+move:	dec	bh		; One fewer disk in next iteration
+	jz	.out		; If this was last disk, just print move
+	push	bx		; Save the registers for a recursive call
+	push	cx
+	xchg	bl,cl		; Swap the 'to' and 'via' registers
+	call	move		; move(BH, CH, CL, BL)
+	pop	cx		; Restore the registers from the stack
+	pop	bx
+	call	.out		; Print the move
+	xchg	ch,bl		; Swap the 'from' and 'via' registers
+	jmp	move		; move(BH, BL, CH, CL)
+	;;;	Print the move
+.out:	mov	ax,'00'		; Add ASCII 0 to both 'from' and 'to'
+	add	ax,cx		; in one 16-bit operation
+	mov	[out1],ah	; Store 'from' field in output
+	mov	[out2],al	; Store 'to' field in output
+	mov	dx,outstr	; MS-DOS system call to print string
+	mov	ah,9
+	int	21h
+	ret
+section	.data
+outstr:	db	'Move disk from pole '
+out1:	db	'* to pole '
+out2:	db	'*',13,10,'$'

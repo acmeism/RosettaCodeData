@@ -1,0 +1,169 @@
+(* The following demonstrates a few ways to customize the
+   comparator. *)
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+%{^
+#include <strings.h>
+%}
+
+extern fn
+strcasecmp : (string, string) -<> int = "mac#strcasecmp"
+
+fn
+sort_strings_1 (lst : List string,
+                cmp : (string, string) -<> int)
+    :<!wrt> List string =
+  list_vt2t (list_mergesort_fun<string> (lst, cmp))
+
+fn
+sort_strings_2 (lst : List string,
+                cmp : (string, string) -<cloref> int)
+    :<!wrt> List string =
+  list_vt2t (list_mergesort_cloref<string> (lst, cmp))
+
+fn
+sort_using_a_template_function (lst : List string)
+    :<!wrt> List string =
+  (* There is no actual callback here. The comparison code is expanded
+     directly into the sort code. *)
+  let
+    implement
+    list_mergesort$cmp<string> (x, y) =
+      let
+        val m = length x
+        and n = length y
+      in
+        if m < n then
+          1
+        else if n < m then
+          ~1
+        else
+          strcasecmp (x, y)
+      end
+  in
+    (* The list mergesort template functions in the ATS prelude return
+       _linear_ lists.  Thus the call to list_vt2t to cast that result
+       to an ordinary list. *)
+    list_vt2t (list_mergesort<string> lst)
+  end
+
+fn
+sort_using_an_ordinary_function (lst : List string)
+    :<!wrt> List string =
+  (* Rather than expand the comparison code, incorporate a function
+     call into the sort implementation. *)
+  let
+    fn
+    cmp (x : string,
+         y : string)
+        :<> int =
+      let
+        val m = length x
+        and n = length y
+      in
+        if m < n then
+          1
+        else if n < m then
+          ~1
+        else
+          strcasecmp (x, y)
+      end
+  in
+    list_vt2t (list_mergesort_fun<string> (lst, cmp))
+  end
+
+fn
+sort_the_way_it_works_for_qsort_in_C (lst : List string)
+    :<!wrt> List string =
+  (* Here we have a true callback to an ordinary function. *)
+  let
+    fn
+    cmp (x : string,
+         y : string)
+        :<> int =
+      let
+        val m = length x
+        and n = length y
+      in
+        if m < n then
+          1
+        else if n < m then
+          ~1
+        else
+          strcasecmp (x, y)
+      end
+  in
+    sort_strings_1 (lst, cmp)
+  end
+
+fn
+sort_using_a_closure (lst : List string)
+    :<!wrt> List string =
+  (* Incorporate a closure into the sort implementation. (Standard C
+     does not have closures.) *)
+  let
+    fn
+    cmp (x : string,
+         y : string)
+        :<cloref> int =
+      let
+        val m = length x
+        and n = length y
+      in
+        if m < n then
+          1
+        else if n < m then
+          ~1
+        else
+          strcasecmp (x, y)
+      end
+  in
+    list_vt2t (list_mergesort_cloref<string> (lst, cmp))
+  end
+
+fn
+sort_by_calling_back_to_a_closure (lst : List string)
+    :<!wrt> List string =
+  let
+    fn
+    cmp (x : string,
+         y : string)
+        :<cloref> int =
+      let
+        val m = length x
+        and n = length y
+      in
+        if m < n then
+          1
+        else if n < m then
+          ~1
+        else
+          strcasecmp (x, y)
+      end
+  in
+    sort_strings_2 (lst, cmp)
+  end
+
+implement
+main0 () =
+  let
+    val unsorted =
+      $list{string}
+        ("Here", "are", "some", "sample", "strings",
+         "to", "be", "sorted")
+
+    val sorted1 = sort_using_a_template_function unsorted
+    val sorted2 = sort_using_an_ordinary_function unsorted
+    val sorted3 = sort_the_way_it_works_for_qsort_in_C unsorted
+    val sorted4 = sort_using_a_closure unsorted
+    val sorted5 = sort_by_calling_back_to_a_closure unsorted
+  in
+    println! unsorted;
+    println! sorted1;
+    println! sorted2;
+    println! sorted3;
+    println! sorted4;
+    println! sorted5
+  end

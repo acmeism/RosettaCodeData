@@ -1,0 +1,90 @@
+LIMIT:	equ	20000		; Maximum value
+	cpu	8086
+	org	100h
+section	.text
+	mov	ax,final	; Set DS and ES to point just beyond the
+	mov	cl,4		; program. We're just going to assume MS-DOS
+	shr	ax,cl		; gave us enough memory. (Generally the case,
+	inc	ax		; a .COM gets a 64K segment and we need ~40K.)
+	mov	cx,cs
+	add	ax,cx
+	mov	ds,ax
+	mov	es,ax
+calc:	mov	ax,1		; Calculate proper divisors for 2..20000
+	mov	di,4		; Initially, set each entry to 1.
+	mov	cx,LIMIT-1	; 2 to 20000 inclusive = 19999 entries
+	rep	stosw
+	mov	ax,2		; AX = outer loop counter
+	mov	cl,2
+	mov	dx,LIMIT*2	; Keep inner loop limit ready in DX
+	mov	bp,LIMIT/2	; And outer loop limit in BP
+.outer:	mov	bx,ax		; BX = inner loop counter (multiplied by two)
+	shl	bx,cl		; Each entry is 2 bytes wide
+.inner:	add	[bx],ax		; divsum[BX/2] += AX
+	add	bx,ax		; Advance to next entry
+	add	bx,ax		; Twice, because each entry is 2 bytes wide
+	cmp 	bx,dx		; Are we there yet?
+	jbe	.inner 		; If not, keep going
+	inc	ax
+	cmp	ax,bp		; Is the outer loop done yet?
+	jbe	.outer		; If not, keep going
+show:	mov	dx,LIMIT	; Keep limit ready in DX
+	mov	ax,2		; AX = outer loop counter
+	mov	si,4		; SI = address for outer loop
+.outer:	mov	cx,ax		; CX = inner loop counter
+	inc	cx
+	mov	di,cx		; DI = address for inner loop
+	shl	di,1
+	mov	bx,[si]		; Preload divsum[AX]
+.inner: cmp	cx,bx		; CX == divsum[AX]?
+	jne	.next		; If not, the pair is not amicable
+	cmp	ax,[di]		; AX == divsum[CX]?
+	jne	.next		; If not, the pair is not amicable
+	push	ax		; Keep the registers
+	push 	bx
+	push	cx
+	push 	dx
+	push	cx		; And CX twice because we need to print it
+	call	prax		; Print the first number
+	pop	ax
+	call	prax		; And the second number
+	mov	dx,nl		; And a newline
+	call	pstr
+	pop	dx		; Restore the registers
+	pop 	cx
+	pop 	bx
+	pop	ax
+.next:	inc	di		; Increment inner loop variable and address
+	inc	di		; Address twice because each entry has 2 bytes
+	inc	cx
+	cmp	cx,dx		; Are we done yet?
+	jbe	.inner		; If not, keep going
+	inc	si		; Increment outer loop variable and address
+	inc	si		; Address twice because each entry has 2 bytes
+	inc	ax
+	cmp	ax,dx		; Are we done yet?
+	jbe	.outer		; If not, keep going.
+	ret
+	;;;	Print the number in AX. Destroys AX, BX, CX, DX.
+prax:	mov	cx,10		; Divisor
+	mov	bx,nbuf		; Buffer pointer
+.digit:	xor 	dx,dx
+	div	cx		; Divide by 10 and extract digit
+	add	dl,'0'		; Add ASCII 0 to digit
+	dec	bx
+	mov	[cs:bx],dl 	; Store in string
+	test	ax,ax		; Any more?
+	jnz	.digit		; If so, keep going
+	mov	dx,bx		; If not, print the result
+	;;;	Print string from CS.
+pstr:	push	ds		; Save DS
+	mov	ax,cs		; Set DS to CS
+	mov	ds,ax
+	mov	ah,9		; Print string using MS-DOS
+	int	21h
+	pop	ds		; Restore DS
+	ret
+	db	'*****'
+nbuf:	db	' $'
+nl:	db	13,10,'$'
+final:	equ	$

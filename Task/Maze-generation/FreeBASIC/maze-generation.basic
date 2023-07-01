@@ -1,0 +1,130 @@
+' version 04-12-2016
+' compile with: fbc -s console
+' when generating a big maze it's possible to run out of stack space
+' increase stack with the -t xxxx (xxxx is the amount you want in Kbytes)
+
+ReDim Shared As String d() ' directions
+ReDim Shared As ULong c()  ' cell's
+
+Sub cell(x As ULong, y As ULong, s As ULong)
+
+    Dim As ULong x1, y1, di_n
+    c(x,y) = 1 ' mark as visited
+
+    Do
+        Dim As String di = d(x, y)
+        Dim As Long l = Len(di) -1
+        If l < 0 Then Exit Sub ' no directions left then exit
+        di_n = di[l] ' get direction
+        If l = 0 Then
+            d(x,y) = ""
+        Else
+            d(x,y) = Left(di,l)
+        End If
+
+        Select Case di_n ' 0,0 is upper left corner
+            Case Asc("N")
+                x1 = x    : y1 = y -1
+            Case Asc("E")
+                x1 = x +1 : y1 = y
+            Case Asc("S")
+                x1 = x    : y1 = y +1
+            Case Asc("W")
+                x1 = x -1 : y1 = y
+        End Select
+
+        If c(x1,y1) <> 0 Then Continue Do
+
+        Select Case di_n ' 0,0 is upper left corner
+            Case Asc("N")
+                Line (x * s +1 , y * s) - ((x +1) * s -1, y * s),0
+            Case Asc("E")
+                Line (x1 * s, y * s +1) - (x1 * s, (y +1) * s -1),0
+            Case Asc("S")
+                Line (x * s +1, y1 * s) - ((x +1) * s -1, y1 * s),0
+            Case Asc("W")
+                Line (x * s , y * s +1) - (x * s, (y +1) * s -1),0
+        End Select
+
+        cell(x1, y1, s)
+    Loop
+
+End Sub
+
+Sub gen_maze(w As ULong, h As ULong, s As ULong)
+
+    ReDim d(w, h)
+    ReDim c(w, h)
+    Dim As ULong x, y, r, i
+    Dim As String di
+
+    d(0, 0) = "SE"       ' cornes
+    d(0, h -1) ="NE"
+    d(w -1, 0) ="SW"
+    d(w -1, h -1) ="NW"
+
+    For x = 1 To w -2  ' sides
+        d(x,0) = "EWS"
+        d(x,h -1) = "NEW"
+    Next
+
+    For y = 1 To h -2
+        d(0, y) = "NSE"
+        d(w -1, y) ="NSW"
+    Next
+
+    For x = 0 To w -1     ' shuffle directions
+        For y = 0 To h -1
+            di = d(x,y)
+            If di = "" Then di = "NEWS"
+            i = Len(di)
+            Do
+                r = Fix(Rnd * i)
+                i = i - 1
+                Swap di[r], di[i]
+            Loop Until i = 0
+            d(x,y) = di
+        Next
+    Next
+
+    ScreenRes w * s +1, h * s +1, 8
+    ' draw the grid
+    For x = 0 To w
+        Line (x * s, 0) - (x * s, h * s), 2 ' green color
+    Next
+
+    For y = 0 To h
+        Line(0, y * s) - (w* s, y * s),2
+    Next
+    ' choice the start cell
+    x = Fix(Rnd * w)
+    y = Fix(Rnd * h)
+
+    cell(x, y, s)
+
+End Sub
+
+' ------=< MAIN >=------
+
+Randomize Timer
+
+Dim As ULong t
+
+Do
+    ' gen_maxe(width, height, cell size)
+    gen_maze(30, 30, 20)
+    WindowTitle " S to save, N for next maze, other key to stop"
+    Do
+    Var key = Inkey
+    key = UCase(key)
+    If key = "S" Then
+        t = t +1
+        BSave("maze" + Str(t) + ".bmp"), 0
+        key = ""
+    End If
+    If key = "N" Then Continue Do, Do
+    If key <> "" Then Exit Do, Do
+    Loop
+Loop
+
+End

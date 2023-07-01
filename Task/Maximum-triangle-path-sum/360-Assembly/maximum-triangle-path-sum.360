@@ -1,0 +1,133 @@
+*        Maximum triangle path sum - 28/04/2023
+MAXTRIA  CSECT
+         USING  MAXTRIA,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         SAVE   (14,12)            save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R9,1               k=1
+         LA     R6,1               i=1
+       DO WHILE=(CH,R6,LE,=AL2(N)) do i=1 to hbound(t)
+         LR     R1,R6                i
+         BCTR   R1,0                 -1
+         MH     R1,=AL2(X)           *x
+         LA     R14,T(R1)            @t(i)
+         MVC    C,0(R14)             c=t(i)
+         LA     R7,1                 j=1
+       DO WHILE=(CR,R7,LE,R9)        do j=1 to k
+         MVC    CC,C                   cc=substr(c,1,2)
+         MVC    XDEC,=CL12' '          clear
+         MVC    XDEC(L'CC),CC          cc
+         XDECI  R2,XDEC                r2=int(cc)
+         LR     R1,R9                  k
+         BCTR   R1,0                   -1
+         MH     R1,=AL2(N)             *n
+         LR     R0,R7                  j
+         BCTR   R0,0                   -1
+         AR     R1,R0                  (k-1)*n+(j-1)
+         SLA    R1,1                   *2 (H)
+         STH    R2,MM(R1)              m(k,j)=xdeci(substr(c,1,2),2)
+         LA     R10,X                  l=length(c)
+       DO WHILE=(CH,R10,GE,=AL2(1))    do l=length(c) to 1 by -1
+         LA     R14,C-1                  @c-1
+         AR     R14,R10                  +l
+         MVC    CL,0(R14)                cl=substr(c,l,1)
+       IF   CLI,CL,NE,C' ' THEN            if substr(c,l,1)^=' ' then
+         B      LEAVEL                     leave l
+       ENDIF    ,                        endif
+         BCTR   R10,0                    l--
+       ENDDO    ,                      enddo l
+LEAVEL   EQU    *
+       IF    CH,R10,GT,=AL2(4) THEN    if l>4 then
+         LR     R5,R10                   l
+         SH     R5,=H'3'                 l-3   (mvcl source length)
+         LA     R3,L'C64                 x     (mvcl target length)
+         LA     R4,C+3                   @c+3  (mvcl source)
+         LA     R2,C64                   @c64  (mvcl target)
+         ICM    R3,B'1000',=C' '         padding char
+         MVCL   R2,R4                    mvcl @c64[64] <- @c+3[l-3]
+         MVC    C,C64                    c=substr(c,4,l-3)
+       ENDIF    ,                      endif
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+         LA     R9,1(R9)             k=k+1
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         LR     R6,R9              k
+         SH     R6,=H'2'           k-2
+       DO WHILE=(CH,R6,GE,=AL2(1)) do i=k-2 to 1 by -1
+         LA     R7,1                 j=1
+       DO WHILE=(CR,R7,LE,R6)        do j=1 to i
+         LR     R1,R6                  i
+         MH     R1,=AL2(N)             *n
+         LR     R0,R7                  j
+         BCTR   R0,0                   j-1
+         AR     R1,R0                  i*n+(j-1)
+         SLA    R1,1                   *2 (H)
+         LH     R2,MM(R1)              m(i+1,j)
+         STH    R2,S1                  s1=m(i+1,j)
+         LR     R1,R6                  i
+         MH     R1,=AL2(N)             *n
+         AR     R1,R7                  i*n+j
+         SLA    R1,1                   *2 (H)
+         LH     R2,MM(R1)              m(i+1,j+1)
+         STH    R2,S2                  s2=m(i+1,j+1)
+         LH     R4,S1                  s1
+       IF    CH,R4,GT,S2 THEN          if s1>s2 then
+         LH     R8,S1                    sm=s1
+       ELSE     ,                      else
+         LH     R8,S2                    sm=s2
+       ENDIF    ,                      endif
+         LR     R1,R6                  i
+         BCTR   R1,0                   i-1
+         MH     R1,=AL2(N)             *n
+         LR     R0,R7                  j
+         BCTR   R0,0                   j-1
+         AR     R1,R0                  (i-1)*n+(j-1)
+         SLA    R1,1                   *2 (H)
+         LH     R2,MM(R1)              m(i,j)
+         LR     R10,R1                 index m(i,j)
+         AR     R2,R8                  m(i,j)+sm
+         STH    R2,MM(R10)             m(i,j)=m(i,j)+sm
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+         BCTR   R6,0                 i--
+       ENDDO    ,                  enddo i
+         LH     R1,MM              m(1,1)
+         XDECO  R1,PG              edit m(1,1)
+         XPRNT  PG,L'PG            output m(1,1)
+         L      R13,4(0,R13)       restore previous savearea pointer
+         RETURN (14,12),RC=0       restore registers from calling save
+N        EQU    18                 n
+X        EQU    64                 x
+MM       DS     (N*N)H             m(n,n)
+S1       DS     H                  s1
+S2       DS     H                  s2
+C        DS     CL(X)              c
+CC       DS     CL2                cc
+CL       DS     CL1                cl
+C64      DS     CL(X)              c64
+PG       DC     CL80' '            buffer
+XDEC     DS     CL12               temp for xdeci xdeco
+T     DC CL(X)'55'                 t(18) char(64)
+      DC CL(X)'94 48'
+      DC CL(X)'95 30 96'
+      DC CL(X)'77 71 26 67'
+      DC CL(X)'97 13 76 38 45'
+      DC CL(X)'07 36 79 16 37 68'
+      DC CL(X)'48 07 09 18 70 26 06'
+      DC CL(X)'18 72 79 46 59 79 29 90'
+      DC CL(X)'20 76 87 11 32 07 07 49 18'
+      DC CL(X)'27 83 58 35 71 11 25 57 29 85'
+      DC CL(X)'14 64 36 96 27 11 58 56 92 18 55'
+      DC CL(X)'02 90 03 60 48 49 41 46 33 36 47 23'
+      DC CL(X)'92 50 48 02 36 59 42 79 72 20 82 77 42'
+      DC CL(X)'56 78 38 80 39 75 02 71 66 66 01 03 55 72'
+      DC CL(X)'44 25 67 84 71 67 11 61 40 57 58 89 40 56 36'
+      DC CL(X)'85 32 25 85 57 48 84 35 47 62 17 01 01 99 89 52'
+      DC CL(X)'06 71 28 75 94 48 37 10 23 51 06 48 53 18 74 98 15'
+      DC CL(X)'27 02 92 23 08 71 76 84 15 52 92 63 81 10 44 10 69 93'
+         REGEQU
+         END    MAXTRIA

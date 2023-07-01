@@ -1,0 +1,15 @@
+DECLARE SUB rep (func AS STRING, c AS INTEGER)
+DECLARE SUB proc ()
+
+CALL rep("proc", 5)
+PRINT "Loop Ended"
+
+SUB proc
+	PRINT " Inside loop"
+END SUB
+
+SUB rep (func AS STRING, c AS INTEGER)
+	FOR i = 1 TO c
+		proc
+	NEXT
+END SUB

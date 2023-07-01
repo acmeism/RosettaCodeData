@@ -1,0 +1,62 @@
+// Helper function for mask: does the actual computation.
+function method mask_(v:int,m:int):int
+  decreases v-m
+  requires 0 <= v && 0 < m
+  ensures v < mask_(v,m)
+{
+  if v < m then m else mask_(v,m*10)
+}
+
+// Return the smallest power of 10 greater than v.
+function method mask(v:int):int
+  requires 0 <= v
+  ensures v < mask(v)
+{
+  mask_(v,10)
+}
+
+// Return true if the last digits of v == suffix.
+predicate method EndWith(v:int,suffix:int)
+  requires 0 <= suffix
+{
+  v % mask(suffix) == suffix
+}
+
+method SmallestSqEndingWith(suffix:int) returns (s:int)
+  requires 0 < suffix
+  ensures EndWith(s*s, suffix)
+  // ensures forall i :: 0 <= i < s ==> !EndWith(i*i,suffix)
+  decreases *                   // This method may not terminate.
+{
+  s := 0;
+  // squares is the sequence of s*s. A ghost variable is only used by the
+  // verification process at compile time.
+  ghost var squares := [];
+  while !EndWith(s*s, suffix)
+    invariant s == |squares|
+    invariant forall i :: 0 <= i < s ==> squares[i] == i*i && !EndWith(squares[i], suffix)
+    decreases *
+  {
+    squares := squares + [s*s];
+    s := s + 1;
+  }
+  // Leaving the method:
+  // s*s ends with the suffix.
+  assert EndWith(s*s, suffix);
+  // The sequence squares contains i*i for i in [0..s]; none of the elements of
+  // squares ends with the suffix.
+  assert s == |squares|;
+  assert forall i :: 0 <= i < s ==> i*i == squares[i] && !EndWith(squares[i], suffix);
+  // That last assertion should imply the commented-out post-condition of the
+  // method, but I'm not sure how to express that.
+  //
+  // Conclusion: s is guaranteed to be the smallest number whose square ends
+  // with the suffix.
+}
+
+method Main() decreases *
+{
+  var suffix := 269696;
+  var smallest := SmallestSqEndingWith(suffix);
+  print smallest, "\n";
+}

@@ -1,0 +1,5 @@
+(for (i 1 10)
+  (print i)
+  (if (= 0 (% i 5))
+      (println)
+    (print ", ")))

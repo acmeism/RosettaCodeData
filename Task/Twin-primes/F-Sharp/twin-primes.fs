@@ -1,0 +1,7 @@
+printfn "twin primes below 100000: %d" (primes64()|>Seq.takeWhile(fun n->n<=100000L)|>Seq.pairwise|>Seq.filter(fun(n,g)->g=n+2L)|>Seq.length)
+printfn "twin primes below 1000000: %d" (primes64()|>Seq.takeWhile(fun n->n<=1000000L)|>Seq.pairwise|>Seq.filter(fun(n,g)->g=n+2L)|>Seq.length)
+printfn "twin primes below 10000000: %d" (primes64()|>Seq.takeWhile(fun n->n<=10000000L)|>Seq.pairwise|>Seq.filter(fun(n,g)->g=n+2L)|>Seq.length)
+printfn "twin primes below 100000000: %d" (primes64()|>Seq.takeWhile(fun n->n<=100000000L)|>Seq.pairwise|>Seq.filter(fun(n,g)->g=n+2L)|>Seq.length)
+printfn "twin primes below 1000000000: %d" (primes64()|>Seq.takeWhile(fun n->n<=1000000000L)|>Seq.pairwise|>Seq.filter(fun(n,g)->g=n+2L)|>Seq.length)
+printfn "twin primes below 10000000000: %d" (primes64()|>Seq.takeWhile(fun n->n<=10000000000L)|>Seq.pairwise|>Seq.filter(fun(n,g)->g=n+2L)|>Seq.length)
+printfn "twin primes below 100000000000: %d" (primes64()|>Seq.takeWhile(fun n->n<=100000000000L)|>Seq.pairwise|>Seq.filter(fun(n,g)->g=n+2L)|>Seq.length)

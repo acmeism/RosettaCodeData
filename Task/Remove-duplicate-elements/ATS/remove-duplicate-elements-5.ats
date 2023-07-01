@@ -1,0 +1,86 @@
+(* Remove duplicate elements.
+
+   Elements already seen are put into a hash table. *)
+
+#include "share/atspre_staload.hats"
+
+(* Use hash tables from the libats/ML library. *)
+staload "libats/ML/SATS/hashtblref.sats"
+staload _ = "libats/ML/DATS/hashtblref.dats"
+staload _ = "libats/DATS/hashfun.dats"
+staload _ = "libats/DATS/hashtbl_chain.dats"
+staload _ = "libats/DATS/linmap_list.dats"
+
+(* How the remove_dups template function will be called. *)
+extern fn {key, a  : t@ype}
+remove_dups
+          {n    : int}
+          (key  : a -<cloref> key,
+           src  : arrayref (a, n),
+           n    : size_t n,
+           dst  : arrayref (a, n),
+           m    : &size_t? >> size_t m)
+    : #[m : nat | m <= n]
+      void
+
+implement {key, a}
+remove_dups {n} (key, src, n, dst, m) =
+  if n = i2sz 0 then
+    m := i2sz 0
+  else
+    let
+      prval () = lemma_arrayref_param src (* Prove 0 <= n. *)
+
+      fun
+      loop {i : nat | i <= n}
+           {j : nat | j <= i}
+           .<n - i>.
+           (ht : hashtbl (key, a),
+            i  : size_t i,
+            j  : size_t j)
+          : [m : nat | m <= n]
+            size_t m =
+        if i = n then
+          j
+        else
+          let
+            val x = src[i]
+            val k = key x
+          in
+            case+ hashtbl_search<key, a> (ht, k) of
+            | ~ None_vt () =>
+              begin     (* An element not yet encountered. Copy it. *)
+                hashtbl_insert_any<key, a> (ht, k, x);
+                dst[j] := x;
+                loop (ht, succ i, succ j)
+              end
+            | ~ Some_vt _ =>
+              begin     (* An element already encountered. Skip it. *)
+                loop (ht, succ i, j)
+              end
+          end;
+    in
+      m := loop (hashtbl_make_nil<key, a> (i2sz 1024),
+                 i2sz 0, i2sz 0)
+    end
+
+implement                       (* A demonstration. *)
+main0 () =
+  let
+    val src =
+      arrayref_make_list<string>
+        (10, $list ("a", "c", "b", "e", "a",
+                    "a", "d", "d", "b", "c"))
+    val dst = arrayref_make_elt<string> (i2sz 10, "?")
+    var m : size_t
+  in
+    remove_dups<string, string> (lam s => s, src, i2sz 10, dst, m);
+    let
+      prval [m : int] EQINT () = eqint_make_guint m
+      var i : natLte m
+    in
+      for (i := 0; i2sz i <> m; i := succ i)
+        print! (" ", dst[i]);
+      println! ()
+    end
+  end

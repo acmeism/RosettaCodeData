@@ -1,0 +1,126 @@
+(*------------------------------------------------------------------*)
+(* A version that uses the ats2-xprelude package
+   https://sourceforge.net/p/chemoelectric/ats2-xprelude
+
+   With ats2-xprelude installed, you can run the program with
+   something like:
+
+     patscc -DATS_MEMALLOC_GCBDW `pkg-config --variable=PATSCCFLAGS ats2-xprelude` \
+      `pkg-config --cflags ats2-xprelude` -O2 -std=gnu2x \
+      continued-fraction-from-rational-2.dats \
+      `pkg-config --libs ats2-xprelude` -lgc -lm && ./a.out
+
+   *)
+
+#include "share/atspre_staload.hats"
+#include "xprelude/HATS/xprelude.hats"
+
+staload "xprelude/SATS/exrat.sats"
+staload _ = "xprelude/DATS/exrat.dats"
+
+staload "xprelude/SATS/mpfr.sats"
+staload _ = "xprelude/DATS/mpfr.dats"
+
+(*------------------------------------------------------------------*)
+
+fn
+step (ratnum : ref exrat,
+      done   : ref bool)
+    : exrat =
+  let
+    (* Effectively we are doing the same thing as if we used integer
+       floor division and the denominator were kept positive. *)
+    val q = floor !ratnum
+    val diff = !ratnum - q
+  in
+    if iseqz diff then
+      begin
+        !done := true;
+        q
+      end
+    else
+      begin
+        !ratnum := reciprocal diff;
+        q
+      end
+  end
+
+fn
+r2cf (ratnum : exrat)
+    : () -<cloref1> Option exrat =
+  let
+    val ratnum = ref<exrat> ratnum
+    and done = ref<bool> false
+  in
+    lam () =>
+      if !done then
+        None ()
+      else
+        Some (step (ratnum, done))
+  end
+
+(*------------------------------------------------------------------*)
+
+fn
+print_digits (f : () -<cloref1> Option exrat)
+    : void =
+  let
+    fun
+    loop (sep : string)
+        : void =
+      case+ f () of
+      | None () => println! ("]")
+      | Some d =>
+        begin
+          print! (sep, d);
+          if sep = "[" then
+            loop "; "
+          else
+            loop ", "
+        end
+  in
+    loop "["
+  end
+
+fn {tk : tkind}
+print_continued_fraction
+          (ratnum : exrat)
+    : void =
+  begin
+    print! (ratnum, " => ");
+    print_digits (r2cf ratnum)
+  end
+
+(*------------------------------------------------------------------*)
+
+(* The number of bits in the significand of an IEEE binary256
+   floating point number. *)
+#define OCTUPLE_PREC 237
+
+implement
+main0 () =
+  begin
+    print_continued_fraction (exrat_make (1, 2));
+    print_continued_fraction (exrat_make (3, 1));
+    print_continued_fraction (exrat_make (23, 8));
+    print_continued_fraction (exrat_make (13, 11));
+    print_continued_fraction (exrat_make (22, 7));
+    print_continued_fraction (exrat_make (~151, 77));
+    let
+      val sqrt2 : mpfr = mpfr_SQRT2 OCTUPLE_PREC
+      val sqrt2 : exrat = g0f2f sqrt2
+    in
+      println! ("Octuple precision sqrt2:");
+      print_continued_fraction sqrt2
+    end;
+    let
+      val val_22_7 : mpfr =
+        mpfr_make ("22", OCTUPLE_PREC) / mpfr_make ("7", OCTUPLE_PREC)
+      val val_22_7 : exrat = g0f2f val_22_7
+    in
+      println! ("Octuple precision 22/7:");
+      print_continued_fraction val_22_7
+    end;
+  end
+
+(*------------------------------------------------------------------*)

@@ -1,0 +1,2 @@
+class MyInvalidArgument(ValueError):
+   pass

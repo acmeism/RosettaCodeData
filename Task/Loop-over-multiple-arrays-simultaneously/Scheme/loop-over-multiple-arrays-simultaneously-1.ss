@@ -1,0 +1,10 @@
+(let ((a '("a" "b" "c"))
+      (b '("A" "B" "C"))
+      (c '(1 2 3)))
+  (for-each
+    (lambda (i1 i2 i3)
+      (display i1)
+      (display i2)
+      (display i3)
+      (newline))
+    a b c))

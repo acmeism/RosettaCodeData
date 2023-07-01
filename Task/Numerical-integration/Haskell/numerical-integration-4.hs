@@ -1,0 +1,5 @@
+intLeftRect  = integrateClosed  1 [1,0]
+intRightRect = integrateClosed  1 [0,1]
+intMidRect   = integrateOpen    1 [1]
+intTrapezium = integrateClosed  2 [1,1]
+intSimpson   = integrateClosed  3 [1,4,1]

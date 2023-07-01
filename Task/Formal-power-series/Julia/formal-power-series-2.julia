@@ -1,0 +1,18 @@
+using .FormalPowerSeries
+
+@show cosine = FormalPowerSeries.CosineFPS()
+@show sine = FormalPowerSeries.SineFPS()
+
+intcosine = FormalPowerSeries.integrate(cosine)
+intsine = FormalPowerSeries.integrate(sine)
+uminintsine = 1 - FormalPowerSeries.integrate(sine)
+
+# Check coefficients up to the 20th term
+coefsine = collect(Iterators.take(sine, 20))
+coefintcosine = collect(Iterators.take(intcosine, 20))
+
+coefcosine = collect(Iterators.take(cosine, 20))
+coefuminintsine = collect(Iterators.take(uminintsine, 20))
+
+@assert coefsine == coefintcosine "The integral of cos should be sin"
+@assert coefcosine == coefuminintsine "1 minus the integral of sin should be cos"

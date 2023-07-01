@@ -1,0 +1,56 @@
+// Solve a linear system AX=B where A is symmetric and positive definite, so it can be Cholesky decomposed.
+fcn linsys(A,B){
+   n,m:=A.len(),B[1].len();  // A.rows,B.cols
+   y:=n.pump(List.createLong(n).write,0.0); // writable vector of n zeros
+   X:=make_array(n,m,0.0);
+   L:=cholesky(A); // A=LL'
+
+   foreach col in (m){
+      foreach k in (n){ // Forward substitution: y = L\B
+         y[k]=( B[k][col] - k.reduce('wrap(s,j){ s + L[k][j]*y[j] },0.0) )
+	      /L[k][k];
+      }
+      foreach k in ([n-1..0,-1]){   // Back substitution. x=L'\y
+         X[k][col]=
+	  ( y[k] - (k+1).reduce(n-k-1,'wrap(s,j){ s + L[j][k]*X[j][col] },0.0) )
+	  /L[k][k];
+      }
+   }
+   X
+}
+fcn cholesky(mat){   // Cholesky decomposition task
+   rows:=mat.len();
+   r:=(0).pump(rows,List().write, (0).pump(rows,List,0.0).copy); // matrix of zeros
+   foreach i,j in (rows,i+1){
+      s:=(0).reduce(j,'wrap(s,k){ s + r[i][k]*r[j][k] },0.0);
+      r[i][j]=( if(i==j)(mat[i][i] - s).sqrt()
+	        else    1.0/r[j][j]*(mat[i][j] - s) );
+   }
+   r
+}
+
+// Solve a linear least squares problem. Ax=b, with A being mxn, with m>n.
+// Solves the linear system A'Ax=A'b.
+fcn lsqr(A,b){
+   at:=transpose(A);
+   linsys(matMult(at,A), matMult(at,b));
+}
+// Least square fit of a polynomial of order n the x-y-curve.
+fcn polyfit(x,y,n){
+   n+=1;
+   m:=x[0].len();  // columns
+   A:=make_array(m,n,0.0);
+   foreach i,j in (m,n){ A[i][j]=x[0][i].pow(j); }
+   lsqr(A, transpose(y));
+}
+fcn make_array(n,m,v){ (m).pump(List.createLong(m).write,v)*n }
+fcn matMult(a,b){
+   n,m,p:=a[0].len(),a.len(),b[0].len();
+   ans:=make_array(m,p,0.0);
+   foreach i,j,k in (m,p,n){ ans[i][j]+=a[i][k]*b[k][j]; }
+   ans
+}
+fcn transpose(M){
+   if(M.len()==1) M[0].pump(List,List.create); // 1 row --> n columns
+   else M[0].zip(M.xplode(1));
+}

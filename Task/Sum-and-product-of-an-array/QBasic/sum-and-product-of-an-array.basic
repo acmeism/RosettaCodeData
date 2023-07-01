@@ -1,0 +1,15 @@
+DIM array(1 TO 5)
+DATA 1, 2, 3, 4, 5
+FOR index = LBOUND(array) TO UBOUND(array)
+    READ array(index)
+NEXT index
+
+LET sum = 0
+LET prod = 1
+FOR index = LBOUND(array) TO UBOUND(array)
+    LET sum = sum + array(index)
+    LET prod = prod * array(index)
+NEXT index
+PRINT "The sum is "; sum
+PRINT "and the product is "; prod
+END

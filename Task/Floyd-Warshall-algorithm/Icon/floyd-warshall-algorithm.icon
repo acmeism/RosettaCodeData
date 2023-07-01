@@ -1,0 +1,117 @@
+#
+# Floyd-Warshall algorithm.
+#
+# See https://en.wikipedia.org/w/index.php?title=Floyd%E2%80%93Warshall_algorithm&oldid=1082310013
+#
+
+record fw_results (n, distance, next_vertex)
+
+link array
+link numbers
+link printf
+
+procedure main ()
+  local example_graph
+  local fw
+  local u, v
+
+  example_graph := [[1, -2.0, 3],
+                    [3, +2.0, 4],
+                    [4, -1.0, 2],
+                    [2, +4.0, 1],
+                    [2, +3.0, 3]]
+
+  fw := floyd_warshall (example_graph)
+
+  printf ("  pair    distance   path\n")
+  printf ("-------------------------------------\n")
+  every u := 1 to fw.n do {
+    every v := 1 to fw.n do {
+      if u ~= v then {
+        printf (" %d -> %d    %4s     %s\n", u, v,
+                string (ref_array (fw.distance, u, v)),
+                path_to_string (find_path (fw.next_vertex, u, v)))
+      }
+    }
+  }
+end
+
+procedure floyd_warshall (edges)
+  local n, distance, next_vertex
+  local e
+  local i, j, k
+  local dist_ij, dist_ik, dist_kj, dist_ikj
+
+  n := max_vertex (edges)
+  distance := create_array ([1, 1], [n, n], &null)
+  next_vertex := create_array ([1, 1], [n, n], &null)
+
+  # Initialization.
+  every e := !edges do {
+    ref_array (distance, e[1], e[3]) := e[2]
+    ref_array (next_vertex, e[1], e[3]) := e[3]
+  }
+  every i := 1 to n do {
+    ref_array (distance, i, i) := 0.0 # Distance to self = 0.
+    ref_array (next_vertex, i, i) := i
+  }
+
+  # Perform the algorithm. Here &null will play the role of
+  # "infinity": "\" means a value is finite, "/" that it is infinite.
+  every k := 1 to n do {
+    every i := 1 to n do {
+      every j := 1 to n do {
+        dist_ij := ref_array (distance, i, j)
+        dist_ik := ref_array (distance, i, k)
+        dist_kj := ref_array (distance, k, j)
+        if \dist_ik & \dist_kj then {
+          dist_ikj := dist_ik + dist_kj
+          if /dist_ij | dist_ikj < dist_ij then {
+            ref_array (distance, i, j) := dist_ikj
+            ref_array (next_vertex, i, j) :=
+                ref_array (next_vertex, i, k)
+          }
+        }
+      }
+    }
+  }
+
+  return fw_results (n, distance, next_vertex)
+end
+
+procedure find_path (next_vertex, u, v)
+  local path
+
+  if / (ref_array (next_vertex, u, v)) then {
+    path := []
+  } else {
+    path := [u]
+    while u ~= v do {
+      u := ref_array (next_vertex, u, v)
+      put (path, u)
+    }
+  }
+  return path
+end
+
+procedure path_to_string (path)
+  local s
+
+  if *path = 0 then {
+    s := ""
+  } else {
+    s := string (path[1])
+    every s ||:= (" -> " || !path[2 : 0])
+  }
+  return s
+end
+
+procedure max_vertex (edges)
+  local e
+  local m
+
+  *edges = 0 & stop ("no edges")
+  m := 1
+  every e := !edges do m := max (m, e[1], e[3])
+  return m
+end

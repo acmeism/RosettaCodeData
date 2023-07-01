@@ -1,0 +1,111 @@
+puts:	equ	9		; CP/M syscall to print string
+fopen:	equ	15		; CP/M syscall to open a file
+fread:	equ	20		; CP/M syscall to read from file
+FCB1:	equ	5Ch		; First FCB (input file)
+DTA:	equ	80h		; Disk transfer address
+	org	100h
+	;;;	Make wheel (2nd argument) lowercase and store it
+	lxi	d,DTA+1		; Start of command line arguments
+scan:	inr	e		; Scan until we find a space
+	rz			; Stop if not found in 128 bytes
+	ldax	d
+	cpi	' '		; Found it?
+	jnz	scan		; If not, try again
+	inx	d		; If so, wheel starts 1 byte onwards
+	lxi	h,wheel		; Space for wheel
+	lxi	b,920h		; B=9 (chars), C=20 (case bit)
+whlcpy:	ldax	d		; Get wheel character
+	ora	c		; Make lowercase
+	mov	m,a		; Store
+	inx	d		; Increment both pointers
+	inx	h
+	dcr	b		; Decrement counter
+	jnz	whlcpy		; While not zero, copy next character
+	;;;	Open file in FCB1
+	mvi	e,FCB1		; D is already 0
+	mvi	c,fopen
+	call	5		; Returns A=FF on error
+	inr	a		; If incrementing A gives zero,
+	jz	err		; then print error and stop
+	lxi	h,word		; Copy into word
+	;;;	Read a 128-byte block from the file
+block:	push	h		; Keep word pointer
+	lxi	d,FCB1		; Read from file
+	mvi	c,fread
+	call	5
+	pop	h		; Restore word pointer
+	dcr	a		; A=1 = EOF
+	rz			; If so, stop.
+	inr	a		; Otherwise, A<>0 = error
+	jnz	err
+	lxi	d,DTA		; Start reading at DTA
+char:	ldax	d		; Get character
+	mov	m,a		; Store in word
+	cpi	26		; EOF reached?
+	rz			; Then stop
+	cpi	10		; End of line reached?
+	jz	ckword		; Then we have a full word
+	inx	h		; Increment word pointer
+nxchar:	inr	e		; Increment DTA pointer (low byte)
+	jz	block		; If rollover, get next block
+	jmp	char		; Otherwise, handle next character in block
+	;;;	Check if current word is valid
+ckword:	push	d		; Keep block pointer
+	lxi	d,wheel		; Copy the wheel
+	lxi	h,wcpy
+	mvi	c,9		; 9 characters
+cpyw:	ldax	d		; Get character
+	mov	m,a		; Store in copy
+	inx	h		; Increment pointers
+	inx	d
+	dcr	c		; Decrement counters
+	jnz	cpyw		; Done yet?
+	lxi	d,word		; Read from current word
+wrdch:	ldax	d		; Get character
+	cpi	32		; Check if <32
+	jc	wdone		; If so, the word is done
+	lxi	h,wcpy		; Check against the wheel letters
+	mvi	b,9
+wlch:	cmp	m		; Did we find it?
+	jz	findch
+	inx	h		; If not, try next character in wheel
+	dcr	b		; As long as there are characters
+	jnz	wlch		; If no match, this word is invalid
+wnext:	pop	d		; Restore block pointer
+	lxi	h,word		; Start reading new word
+	jmp	nxchar		; Continue with character following word
+findch:	mvi	m,0		; Found a match - set char to 0
+	inx	d		; And look at next character in word
+	jmp	wrdch
+wdone:	lda	wcpy+4		; Word is done - check if middle char used
+	ana	a		; If not, the word is invalid
+	jnz	wnext
+	lxi	h,wcpy		; See how many characters used
+	lxi	b,9		; C=9 (counter), B=0 (used)
+whtest:	mov	a,m		; Get wheel character
+	ana	a		; Is it zero?
+	jnz	$+4		; If not, skip next instr
+	inr	b		; If so, count it
+	inx	h		; Next wheel character
+	dcr	c		; Decrement counter
+	jnz	whtest
+	mvi	a,2		; At least 3 characters must be used
+	cmp	b
+	jnc	wnext		; If not, the word is invalid
+	xchg			; If so, the word _is_ valid, pointer in HL
+	mvi	m,13		; add CR
+	inx	h
+	mvi	m,10		; and LF
+	inx	h
+	mvi	m,'$'		; and the CP/M string terminator
+	lxi	d,word		; Then print the word
+	mvi	c,puts
+	call	5
+	jmp	wnext
+err:	lxi	d,errs		; Print file error
+	mvi	c,puts
+	jz	5
+errs:	db	'File error$'	; Error message
+wheel:	ds	9		; Room for wheel
+wcpy:	ds	9		; Copy of wheel (to mark characters used)
+word:	equ	$		; Room for current word

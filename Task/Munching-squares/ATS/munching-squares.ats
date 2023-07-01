@@ -1,0 +1,102 @@
+#include "share/atspre_staload.hats"
+
+(* uint2uchar0 seems to have a definition in the prelude, but no
+   implementation. Such incompletenesses are common, but usually
+   easily overcome. Here I simply redefine uint2uchar0 locally,
+   letting C do the casting. *)
+extern castfn uint2uchar0 : uint -<> uchar
+
+(* write_pam writes a Portable Arbitrary Map to standard output. It
+   XORs the positions of colors in a palette of size equal to a power
+   of two, containing RGB colors in the usual hex format. The palette
+   is otherwise arbitrary. *)
+fn
+write_pam {expnt     : nat}
+          {numcolors : nat}
+          (* The palette size must be proven to be a power of two. *)
+          (pf        : EXP2 (expnt, numcolors) |
+           palette   : &array (uint, numcolors),
+           numcolors : uint numcolors) : void =
+  let
+    fun
+    loop {x, y : nat | x <= numcolors; y <= numcolors}
+         .<numcolors - y, numcolors - x>.
+         (palette : &array (uint, numcolors),
+          x       : uint x,
+          y       : uint y) : void =
+      if y = numcolors then
+        ()
+      else if x = numcolors then
+        loop (palette, 0u, succ y)
+      else
+        let
+          val i = g1ofg0 (x lxor y)
+
+          (* Prove that the index is non-negative. *)
+          prval () = lemma_g1uint_param i
+
+          (* Test that the index is not out of bounds high. This could
+             be proven without a runtime check, but doing that is left
+             as an exercise for an advanced reader. For one thing, you
+             will need a more complicated version of lxor. Then you
+             will need to prove, or provide as an axiom, that the XOR
+             of two numbers of the same number of significant bits is
+             itself restricted to that number of bits. *)
+          val () = assertloc (i < numcolors)
+
+          val color = palette[i]
+          val r = uint2uchar0 (color >> 16)
+          and g = uint2uchar0 ((color >> 8) land 0xFFu)
+          and b = uint2uchar0 (color land 0xFFu)
+        in
+          print! (r, g, b);
+          loop (palette, succ x, y)
+        end
+  in
+    println! ("P7");
+    println! ("WIDTH ", numcolors);
+    println! ("HEIGHT ", numcolors);
+    println! ("DEPTH 3");
+    println! ("MAXVAL 255");
+    println! ("TUPLTYPE RGB");
+    println! ("ENDHDR");
+    loop (palette, 0u, 0u)
+  end
+
+prfn                           (* Produces a proof that 2**7 = 128. *)
+exp2_of_7_is_128 () :<prf> EXP2 (7, 128) =
+  EXP2ind (EXP2ind (EXP2ind (EXP2ind
+    (EXP2ind (EXP2ind (EXP2ind (EXP2bas ())))))))
+
+implement
+main0 () =
+  let
+    (* 128 RGB colors borrowed from
+       https://github.com/yeun/open-color *)
+    var palette : array (uint, 128) =
+      @[uint][128]
+        (0xe9ecefu, 0xdee2e6u, 0xced4dau, 0xadb5bdu, 0x868e96u, 0x495057u,
+         0x343a40u, 0x212529u, 0xfff5f5u, 0xffe3e3u, 0xffc9c9u, 0xffa8a8u,
+         0xff8787u, 0xff6b6bu, 0xfa5252u, 0xf03e3eu, 0xe03131u, 0xc92a2au,
+         0xfff0f6u, 0xffdeebu, 0xfcc2d7u, 0xfaa2c1u, 0xf783acu, 0xf06595u,
+         0xe64980u, 0xd6336cu, 0xc2255cu, 0xa61e4du, 0xf8f0fcu, 0xf3d9fau,
+         0xeebefau, 0xe599f7u, 0xda77f2u, 0xcc5de8u, 0xbe4bdbu, 0xae3ec9u,
+         0x9c36b5u, 0x862e9cu, 0xf3f0ffu, 0xe5dbffu, 0xd0bfffu, 0xb197fcu,
+         0x9775fau, 0x845ef7u, 0x7950f2u, 0x7048e8u, 0x6741d9u, 0x5f3dc4u,
+         0xedf2ffu, 0xdbe4ffu, 0xbac8ffu, 0x91a7ffu, 0x748ffcu, 0x5c7cfau,
+         0x4c6ef5u, 0x4263ebu, 0x3b5bdbu, 0x364fc7u, 0xe7f5ffu, 0xd0ebffu,
+         0xa5d8ffu, 0x74c0fcu, 0x4dabf7u, 0x339af0u, 0x228be6u, 0x1c7ed6u,
+         0x1971c2u, 0x1864abu, 0xe3fafcu, 0xc5f6fau, 0x99e9f2u, 0x66d9e8u,
+         0x3bc9dbu, 0x22b8cfu, 0x15aabfu, 0x1098adu, 0x0c8599u, 0x0b7285u,
+         0xe6fcf5u, 0xc3fae8u, 0x96f2d7u, 0x63e6beu, 0x38d9a9u, 0x20c997u,
+         0x12b886u, 0x0ca678u, 0x099268u, 0x087f5bu, 0xebfbeeu, 0xd3f9d8u,
+         0xb2f2bbu, 0x8ce99au, 0x69db7cu, 0x51cf66u, 0x40c057u, 0x37b24du,
+         0x2f9e44u, 0x2b8a3eu, 0xf4fce3u, 0xe9fac8u, 0xd8f5a2u, 0xc0eb75u,
+         0xa9e34bu, 0x94d82du, 0x82c91eu, 0x74b816u, 0x66a80fu, 0x5c940du,
+         0xfff9dbu, 0xfff3bfu, 0xffec99u, 0xffe066u, 0xffd43bu, 0xfcc419u,
+         0xfab005u, 0xf59f00u, 0xf08c00u, 0xe67700u, 0xfff4e6u, 0xffe8ccu,
+         0xffd8a8u, 0xffc078u, 0xffa94du, 0xff922bu, 0xfd7e14u, 0xf76707u,
+         0xe8590cu, 0xd9480fu)
+  in
+    write_pam (exp2_of_7_is_128 () | palette, 128u)
+  end

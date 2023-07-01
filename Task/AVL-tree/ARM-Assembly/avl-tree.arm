@@ -1,0 +1,764 @@
+/* ARM assembly Raspberry PI  */
+/*  program avltree2.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.equ STDOUT, 1           @ Linux output console
+.equ EXIT,   1           @ Linux syscall
+.equ WRITE,  4           @ Linux syscall
+.equ BRK,    0x2d        @ Linux syscall
+.equ CHARPOS,     '@'
+
+.equ NBVAL,    12
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure tree     */
+    .struct  0
+tree_root:                             @ root pointer (or node right)
+    .struct  tree_root + 4
+tree_size:                             @ number of element of tree
+    .struct  tree_size + 4
+tree_suite:
+    .struct  tree_suite + 12           @ for alignement to node
+tree_fin:
+/* structure node tree */
+    .struct  0
+node_right:                            @ right pointer
+    .struct  node_right + 4
+node_left:                             @ left pointer
+    .struct  node_left + 4
+node_value:                            @ element value
+    .struct  node_value + 4
+node_height:                          @ element value
+    .struct  node_height + 4
+node_parent:                          @ element value
+    .struct  node_parent + 4
+node_fin:
+/* structure queue*/
+    .struct  0
+queue_begin:                           @ next pointer
+    .struct  queue_begin + 4
+queue_end:                             @ element value
+    .struct  queue_end + 4
+queue_fin:
+/* structure node queue    */
+    .struct  0
+queue_node_next:                       @ next pointer
+    .struct  queue_node_next + 4
+queue_node_value:                      @ element value
+    .struct  queue_node_value + 4
+queue_node_fin:
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessPreOrder:       .asciz "PreOrder :\n"
+szCarriageReturn:     .asciz "\n"
+/* datas error display */
+szMessErreur:         .asciz "Error detected.\n"
+szMessKeyDbl:         .asciz "Key exists in tree.\n"
+szMessInsInv:         .asciz "Insertion in inverse order.\n"
+/* datas message display */
+szMessResult:         .asciz "Ele: @ G: @ D: @ val @ h @ pere @\n"
+sValue:               .space 12,' '
+                      .asciz "\n"
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+sZoneConv:            .skip 24
+stTree:               .skip tree_fin    @ place to structure tree
+stTree1:              .skip tree_fin    @ place to structure tree
+stQueue:              .skip queue_fin   @ place to structure queue
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:
+    mov r8,#1                           @ node tree value
+1:                                      @ loop insertion in order
+    ldr r0,iAdrstTree                   @ structure tree address
+    mov r1,r8
+    bl insertElement                    @ add element value r1
+    cmp r0,#-1
+    beq 99f
+    //ldr r3,iAdrstTree                 @ tree root address (begin structure)
+    //ldr r0,[r3,#tree_root]
+    //ldr r1,iAdrdisplayElement           @ function to execute
+    //bl preOrder
+    add r8,#1                           @ increment value
+    cmp r8,#NBVAL                       @ end ?
+    ble 1b                              @ no -> loop
+
+    ldr r0,iAdrstTree                   @ structure tree address
+    mov r1,#11                          @ verif key dobble
+    bl insertElement                    @ add element value r1
+    cmp r0,#-1
+    bne 2f
+    ldr r0,iAdrszMessErreur
+    bl affichageMess
+2:
+    ldr r0,iAdrszMessPreOrder           @ load verification
+    bl affichageMess
+    ldr r3,iAdrstTree                   @ tree root address (begin structure)
+    ldr r0,[r3,#tree_root]
+    ldr r1,iAdrdisplayElement           @ function to execute
+    bl preOrder
+
+
+    ldr r0,iAdrszMessInsInv
+    bl affichageMess
+    mov r8,#NBVAL                       @ node tree value
+3:                                      @ loop insertion inverse order
+    ldr r0,iAdrstTree1                  @ structure tree address
+    mov r1,r8
+    bl insertElement                    @ add element value r1
+    cmp r0,#-1
+    beq 99f
+    sub r8,#1                           @ increment value
+    cmp r8,#0                           @ end ?
+    bgt 3b                              @ no -> loop
+
+    ldr r0,iAdrszMessPreOrder           @ load verification
+    bl affichageMess
+    ldr r3,iAdrstTree1                  @ tree root address (begin structure)
+    ldr r0,[r3,#tree_root]
+    ldr r1,iAdrdisplayElement           @ function to execute
+    bl preOrder
+
+                                        @ search value
+    ldr r0,iAdrstTree1                  @ tree root address (begin structure)
+    mov r1,#11                          @ value to search
+    bl searchTree
+    cmp r0,#-1
+    beq 100f
+    mov r2,r0
+    ldr r0,iAdrszMessKeyDbl             @ key exists
+    bl affichageMess
+                                        @ suppresssion previous value
+    mov r0,r2
+    ldr r1,iAdrstTree1
+    bl supprimer
+
+    ldr r0,iAdrszMessPreOrder           @ verification
+    bl affichageMess
+    ldr r3,iAdrstTree1                  @ tree root address (begin structure)
+    ldr r0,[r3,#tree_root]
+    ldr r1,iAdrdisplayElement           @ function to execute
+    bl preOrder
+
+    b 100f
+99:                                     @ display error
+    ldr r0,iAdrszMessErreur
+    bl affichageMess
+100:                                    @ standard end of the program
+    mov r7, #EXIT                       @ request to exit program
+    svc 0                               @ perform system call
+iAdrszMessPreOrder:        .int szMessPreOrder
+iAdrszMessErreur:          .int szMessErreur
+iAdrszCarriageReturn:      .int szCarriageReturn
+iAdrstTree:                .int stTree
+iAdrstTree1:               .int stTree1
+iAdrstQueue:               .int stQueue
+iAdrdisplayElement:        .int displayElement
+iAdrszMessInsInv:          .int szMessInsInv
+/******************************************************************/
+/*     insert element in the tree                                 */
+/******************************************************************/
+/* r0 contains the address of the tree structure */
+/* r1 contains the value of element              */
+/* r0 returns address of element or - 1 if error */
+insertElement:                        @ INFO: insertElement
+    push {r1-r8,lr}                   @ save  registers
+    mov r7,r0                         @ save head
+    mov r0,#node_fin                  @ reservation place one element
+    bl allocHeap
+    cmp r0,#-1                        @ allocation error
+    beq 100f
+    mov r5,r0
+    str r1,[r5,#node_value]           @ store value in address heap
+    mov r3,#0
+    str r3,[r5,#node_left]            @ init left pointer with zero
+    str r3,[r5,#node_right]           @ init right pointer with zero
+    str r3,[r5,#node_height]          @ init balance with zero
+    ldr r2,[r7,#tree_size]            @ load tree size
+    cmp r2,#0                         @ 0 element ?
+    bne 1f
+    str r5,[r7,#tree_root]            @ yes -> store in root
+    b 4f
+1:                                    @ else search free address in tree
+    ldr r3,[r7,#tree_root]            @ start with address root
+2:                                    @ begin loop to insertion
+    ldr r4,[r3,#node_value]           @ load key
+    cmp r1,r4
+    beq 6f                            @ key equal
+    blt 3f                            @ key <
+                                      @ key >  insertion right
+    ldr r8,[r3,#node_right]           @ node empty ?
+    cmp r8,#0
+    movne r3,r8                       @ no -> next node
+    bne 2b                            @ and loop
+    str r5,[r3,#node_right]           @ store node address in right pointer
+    b 4f
+3:                                    @ left
+    ldr r8,[r3,#node_left]            @ left pointer empty ?
+    cmp r8,#0
+    movne r3,r8                       @
+    bne 2b                            @ no -> loop
+    str r5,[r3,#node_left]            @ store node address in left pointer
+4:
+    str r3,[r5,#node_parent]          @ store parent
+    mov r4,#1
+    str r4,[r5,#node_height]          @ store height = 1
+    mov r0,r5                         @ begin node to requilbrate
+    mov r1,r7                         @ head address
+    bl equilibrer
+
+5:
+    add r2,#1                        @ increment tree size
+    str r2,[r7,#tree_size]
+    mov r0,#0
+    b 100f
+6:                                   @ key equal ?
+    ldr r0,iAdrszMessKeyDbl
+    bl affichageMess
+    mov r0,#-1
+    b 100f
+100:
+    pop {r1-r8,lr}                    @ restaur registers
+    bx lr                             @ return
+iAdrszMessKeyDbl:           .int szMessKeyDbl
+/******************************************************************/
+/*     equilibrer after insertion                                    */
+/******************************************************************/
+/* r0 contains the address of the node       */
+/* r1 contains the address of head */
+equilibrer:                       @ INFO: equilibrer
+    push {r1-r8,lr}               @ save  registers
+    mov r3,#0                     @ balance factor
+1:                                @ begin loop
+    ldr r5,[r0,#node_parent]      @ load father
+    cmp r5,#0                     @ end ?
+    beq 5f
+    cmp r3,#2                     @ right tree too long
+    beq 5f
+    cmp r3,#-2                    @ left tree too long
+    beq 5f
+    mov r6,r0                     @ s = current
+    ldr r0,[r6,#node_parent]      @ current = father
+    ldr r7,[r0,#node_left]
+    cmp r7,#0
+    ldrne r8,[r7,#node_height]     @ height left tree
+    moveq r8,#0
+    ldr r7,[r0,#node_right]
+    cmp r7,#0
+    ldrne r9,[r7,#node_height]     @ height right tree
+    moveq r9,#0
+    cmp r8,r9
+    addgt r8,#1
+    strgt r8,[r0,#node_height]
+    addle r9,#1
+    strle r9,[r0,#node_height]
+    //
+    ldr r7,[r0,#node_right]
+    cmp r7,#0
+    ldrne r8,[r7,#node_height]
+    moveq r8,#0
+    ldr r7,[r0,#node_left]
+    cmp r7,#0
+    ldrne r9,[r7,#node_height]
+    moveq r9,#0
+    sub r3,r8,r9                    @ compute balance factor
+    b 1b
+5:
+    cmp r3,#2
+    beq 6f
+    cmp r3,#-2
+    beq 6f
+    b 100f
+6:
+    mov r3,r1
+    mov r4,r0
+    mov r1,r6
+    bl equiUnSommet
+                                      @ change head address ?
+    ldr r2,[r3,#tree_root]
+    cmp r2,r4
+    streq r6,[r3,#tree_root]
+100:
+    pop {r1-r8,lr}                    @ restaur registers
+    bx lr                             @ return
+/******************************************************************/
+/*     equilibre 1 sommet                                     */
+/******************************************************************/
+/* r0 contains the address of the node       */
+/* r1 contains the address of the node    */
+equiUnSommet:                             @ INFO: equiUnSommet
+    push {r1-r9,lr}                       @ save  registers
+    mov r5,r0                             @ save p
+    mov r6,r1    // s
+    ldr r2,[r5,#node_left]
+    cmp r2,r6
+    bne 5f
+    ldr r7,[r5,#node_right]
+    cmp r7,#0
+    moveq r8,#0
+    ldrne r8,[r7,#node_height]
+    ldr r7,[r5,#node_left]
+    cmp r7,#0
+    moveq r9,#0
+    ldrne r9,[r7,#node_height]
+    sub r3,r8,r9
+    cmp r3,#-2
+    bne 100f
+    ldr r7,[r6,#node_right]
+    cmp r7,#0
+    moveq r8,#0
+    ldrne r8,[r7,#node_height]
+    ldr r7,[r6,#node_left]
+    cmp r7,#0
+    moveq r9,#0
+    ldrne r9,[r7,#node_height]
+    sub r3,r8,r9
+    cmp r3,#1
+    bge 2f
+    mov r0,r5
+    bl rotRight
+    b 100f
+2:
+    mov r0,r6
+    bl rotLeft
+    mov r0,r5
+    bl rotRight
+    b 100f
+
+5:
+    ldr r7,[r5,#node_right]
+    cmp r7,#0
+    moveq r8,#0
+    ldrne r8,[r7,#node_height]
+    ldr r7,[r5,#node_left]
+    cmp r7,#0
+    moveq r9,#0
+    ldrne r9,[r7,#node_height]
+    sub r3,r8,r9
+    cmp r3,#2
+    bne 100f
+    ldr r7,[r6,#node_right]
+    cmp r7,#0
+    moveq r8,#0
+    ldrne r8,[r7,#node_height]
+    ldr r7,[r6,#node_left]
+    cmp r7,#0
+    moveq r9,#0
+    ldrne r9,[r7,#node_height]
+    sub r3,r8,r9
+    cmp r3,#-1
+    ble 2f
+    mov r0,r5
+    bl rotLeft
+    b 100f
+2:
+    mov r0,r6
+    bl rotRight
+    mov r0,r5
+    bl rotLeft
+    b 100f
+
+100:
+    pop {r1-r9,lr}                    @ restaur registers
+    bx lr                             @ return
+/******************************************************************/
+/*     right rotation                                     */
+/******************************************************************/
+/* r0 contains the address of the node       */
+rotRight:                           @ INFO: rotRight
+    push {r1-r5,lr}                 @ save  registers
+    //   r2                  r2
+    //      r0                   r1
+    //   r1                         r0
+    //      r3                    r3
+    ldr r1,[r0,#node_left]          @ load left children
+    ldr r2,[r0,#node_parent]        @ load father
+    cmp r2,#0                       @ no father ???
+    beq 2f
+    ldr r3,[r2,#node_left]          @ load left node father
+    cmp r3,r0                       @ equal current node ?
+    streq r1,[r2,#node_left]        @ yes store left children
+    strne r1,[r2,#node_right]       @ no store right
+2:
+    str r2,[r1,#node_parent]        @ change parent
+    str r1,[r0,#node_parent]
+    ldr r3,[r1,#node_right]
+    str r3,[r0,#node_left]
+    cmp r3,#0
+    strne r0,[r3,#node_parent]      @ change parent node left
+    str r0,[r1,#node_right]
+
+    ldr r3,[r0,#node_left]          @ compute newbalance factor
+    cmp r3,#0
+    moveq r4,#0
+    ldrne r4,[r3,#node_height]
+    ldr r3,[r0,#node_right]
+    cmp r3,#0
+    moveq r5,#0
+    ldrne r5,[r3,#node_height]
+    cmp r4,r5
+    addgt r4,#1
+    strgt r4,[r0,#node_height]
+    addle r5,#1
+    strle r5,[r0,#node_height]
+//
+    ldr r3,[r1,#node_left]         @ compute new balance factor
+    cmp r3,#0
+    moveq r4,#0
+    ldrne r4,[r3,#node_height]
+    ldr r3,[r1,#node_right]
+    cmp r3,#0
+    moveq r5,#0
+    ldrne r5,[r3,#node_height]
+    cmp r4,r5
+    addgt r4,#1
+    strgt r4,[r1,#node_height]
+    addle r5,#1
+    strle r5,[r1,#node_height]
+100:
+    pop {r1-r5,lr}                   @ restaur registers
+    bx lr
+/******************************************************************/
+/*     left rotation                                     */
+/******************************************************************/
+/* r0 contains the address of the node  sommet     */
+rotLeft:                             @ INFO: rotLeft
+    push {r1-r5,lr}                  @ save  registers
+    //   r2                  r2
+    //      r0                   r1
+    //          r1            r0
+    //        r3                 r3
+    ldr r1,[r0,#node_right]          @ load right children
+    ldr r2,[r0,#node_parent]         @ load father (racine)
+    cmp r2,#0                        @ no father ???
+    beq 2f
+    ldr r3,[r2,#node_left]           @ load left node father
+    cmp r3,r0                        @ equal current node ?
+    streq r1,[r2,#node_left]         @ yes store left children
+    strne r1,[r2,#node_right]        @ no store to right
+2:
+    str r2,[r1,#node_parent]         @ change parent of right children
+    str r1,[r0,#node_parent]         @ change parent of sommet
+    ldr r3,[r1,#node_left]           @ left children
+    str r3,[r0,#node_right]          @ left children pivot exists ?
+    cmp r3,#0
+    strne r0,[r3,#node_parent]       @ yes store in
+    str r0,[r1,#node_left]
+//
+    ldr r3,[r0,#node_left]           @ compute new height for old summit
+    cmp r3,#0
+    moveq r4,#0
+    ldrne r4,[r3,#node_height]       @ left height
+    ldr r3,[r0,#node_right]
+    cmp r3,#0
+    moveq r5,#0
+    ldrne r5,[r3,#node_height]       @ right height
+    cmp r4,r5
+    addgt r4,#1
+    strgt r4,[r0,#node_height]       @ if right > left
+    addle r5,#1
+    strle r5,[r0,#node_height]       @ if left > right
+//
+    ldr r3,[r1,#node_left]           @ compute new height for new
+    cmp r3,#0
+    moveq r4,#0
+    ldrne r4,[r3,#node_height]
+    ldr r3,[r1,#node_right]
+    cmp r3,#0
+    moveq r5,#0
+    ldrne r5,[r3,#node_height]
+    cmp r4,r5
+    addgt r4,#1
+    strgt r4,[r1,#node_height]
+    addle r5,#1
+    strle r5,[r1,#node_height]
+100:
+    pop {r1-r5,lr}                        @ restaur registers
+    bx lr
+/******************************************************************/
+/*     search value in tree                                       */
+/******************************************************************/
+/* r0 contains the address of structure of tree */
+/* r1 contains the value to search  */
+searchTree:                           @ INFO: searchTree
+    push {r1-r4,lr}                   @ save  registers
+    ldr r2,[r0,#tree_root]
+
+1:                                    @ begin loop
+    ldr r4,[r2,#node_value]           @ load key
+    cmp r1,r4
+    beq 3f                            @ key equal
+    blt 2f                            @ key <
+                                      @ key >  insertion right
+    ldr r3,[r2,#node_right]           @ node empty ?
+    cmp r3,#0
+    movne r2,r3                       @ no -> next node
+    bne 1b                            @ and loop
+    mov r0,#-1                        @ not find
+    b 100f
+2:                                    @ left
+    ldr r3,[r2,#node_left]            @ left pointer empty ?
+    cmp r3,#0
+    movne r2,r3                       @
+    bne 1b                            @ no -> loop
+    mov r0,#-1                        @ not find
+    b 100f
+3:
+    mov r0,r2                         @ return node address
+100:
+    pop {r1-r4,lr}                    @ restaur registers
+    bx lr
+/******************************************************************/
+/*     suppression node                                           */
+/******************************************************************/
+/* r0 contains the address of the node */
+/* r1 contains structure tree address  */
+supprimer:                       @ INFO: supprimer
+    push {r1-r8,lr}              @ save  registers
+    ldr r1,[r0,#node_left]
+    cmp r1,#0
+    bne 5f
+    ldr r1,[r0,#node_right]
+    cmp r1,#0
+    bne 5f
+                                 @ is a leaf
+    mov r4,#0
+    ldr r3,[r0,#node_parent]     @ father
+    cmp r3,#0
+    streq r4,[r1,#tree_root]
+    beq 100f
+    ldr r1,[r3,#node_left]
+    cmp r1,r0
+    bne 2f
+    str r4,[r3,#node_left]       @ suppression left children
+    ldr r5,[r3,#node_right]
+    cmp r5,#0
+    moveq r6,#0
+    ldrne r6,[r5,#node_height]
+    add r6,#1
+    str r6,[r3,#node_height]
+    b 3f
+2:                                @ suppression right children
+    str r4,[r3,#node_right]
+    ldr r5,[r3,#node_left]
+    cmp r5,#0
+    moveq r6,#0
+    ldrne r6,[r5,#node_height]
+    add r6,#1
+    str r6,[r3,#node_height]
+3:                                @ new balance
+    mov r0,r3
+    bl equilibrerSupp
+    b 100f
+5:                                @ is not à leaf
+    ldr r7,[r0,#node_right]
+    cmp r7,#0
+    beq 7f
+    mov r8,r0
+    mov r0,r7
+6:
+    ldr r6,[r0,#node_left]
+    cmp r6,#0
+    movne r0,r6
+    bne 6b
+    b 9f
+7:
+    ldr r7,[r0,#node_left]         @ search the litle element
+    cmp r7,#0
+    beq 9f
+    mov r8,r0
+    mov r0,r7
+8:
+    ldr r6,[r0,#node_right]        @ search the great element
+    cmp r6,#0
+    movne r0,r6
+    bne 8b
+9:
+    ldr r5,[r0,#node_value]         @ copy value
+    str r5,[r8,#node_value]
+    bl supprimer                    @ suppression node r0
+100:
+    pop {r1-r8,lr}                  @ restaur registers
+    bx lr
+
+/******************************************************************/
+/*     equilibrer after suppression                                   */
+/******************************************************************/
+/* r0 contains the address of the node       */
+/* r1 contains the address of head */
+equilibrerSupp:                   @ INFO: equilibrerSupp
+    push {r1-r8,lr}               @ save  registers
+    mov r3,#1                     @ balance factor
+    ldr r2,[r1,#tree_root]
+1:
+    ldr r5,[r0,#node_parent]      @ load father
+    cmp r5,#0                     @ no father
+    beq 100f
+    cmp r3,#0                     @ balance equilibred
+    beq 100f
+    mov r6,r0                     @ save entry node
+    ldr r0,[r6,#node_parent]      @ current = father
+    ldr r7,[r0,#node_left]
+    cmp r7,#0
+    ldrne r8,[r7,#node_height]    @ height left tree
+    moveq r8,#0
+    ldr r7,[r0,#node_right]
+    cmp r7,#0
+    ldrne r9,[r7,#node_height]    @ height right tree
+    moveq r9,#0
+    cmp r8,r9
+    addgt r8,#1
+    strgt r8,[r0,#node_height]
+    addle r9,#1
+    strle r9,[r0,#node_height]
+    //
+    ldr r7,[r0,#node_right]
+    cmp r7,#0
+    ldrne r8,[r7,#node_height]
+    moveq r8,#0
+    ldr r7,[r0,#node_left]
+    cmp r7,#0
+    ldrne r9,[r7,#node_height]
+    moveq r9,#0
+    sub r3,r8,r9                   @ compute balance factor
+    mov r2,r1
+    mov r4,r0                      @ save current
+    mov r1,r6
+    bl equiUnSommet
+                                   @ change head address ?
+    cmp r2,r4
+    streq r6,[r3,#tree_root]
+    mov r0,r4                      @ restaur current
+    b 1b
+
+100:
+    pop {r1-r8,lr}                  @ restaur registers
+    bx lr                           @ return
+/******************************************************************/
+/*     preOrder                                  */
+/******************************************************************/
+/* r0 contains the address of the node */
+/* r1 function address                 */
+preOrder:                                 @ INFO: preOrder
+    push {r1-r2,lr}                       @ save  registers
+    cmp r0,#0
+    beq 100f
+    mov r2,r0
+    blx r1                                @ call function
+
+    ldr r0,[r2,#node_left]
+    bl preOrder
+    ldr r0,[r2,#node_right]
+    bl preOrder
+100:
+    pop {r1-r2,lr}                        @ restaur registers
+    bx lr
+
+/******************************************************************/
+/*     display node                                               */
+/******************************************************************/
+/* r0 contains node  address          */
+displayElement:                        @ INFO: displayElement
+    push {r1,r2,r3,lr}                 @ save  registers
+    mov r2,r0
+    ldr r1,iAdrsZoneConv
+    bl conversion16
+    mov r4,#0
+    strb r4,[r1,r0]
+    ldr r0,iAdrszMessResult
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    mov r3,r0
+    ldr r0,[r2,#node_left]
+    ldr r1,iAdrsZoneConv
+    bl conversion16
+    mov r4,#0
+    strb r4,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    mov r3,r0
+    ldr r0,[r2,#node_right]
+    ldr r1,iAdrsZoneConv
+    bl conversion16
+    mov r4,#0
+    strb r4,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    mov r3,r0
+    ldr r0,[r2,#node_value]
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r4,#0
+    strb r4,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    mov r3,r0
+    ldr r0,[r2,#node_height]
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r4,#0
+    strb r4,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    mov r3,r0
+    ldr r0,[r2,#node_parent]
+    ldr r1,iAdrsZoneConv
+    bl conversion16
+    mov r4,#0
+    strb r4,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    bl affichageMess
+100:
+    pop {r1,r2,r3,lr}                        @ restaur registers
+    bx lr                              @ return
+iAdrszMessResult:          .int szMessResult
+iAdrsZoneConv:             .int sZoneConv
+iAdrsValue:                .int sValue
+
+/******************************************************************/
+/*     memory allocation on the heap                                  */
+/******************************************************************/
+/* r0 contains the size to allocate */
+/* r0 returns address of memory heap or - 1 if error */
+/* CAUTION : The size of the allowance must be a multiple of 4  */
+allocHeap:
+    push {r5-r7,lr}                   @ save  registers
+    @ allocation
+    mov r6,r0                         @ save size
+    mov r0,#0                         @ read address start heap
+    mov r7,#0x2D                      @ call system 'brk'
+    svc #0
+    mov r5,r0                         @ save address heap for return
+    add r0,r6                         @ reservation place for size
+    mov r7,#0x2D                      @ call system 'brk'
+    svc #0
+    cmp r0,#-1                        @ allocation error
+    movne r0,r5                       @ return address memory heap
+    pop {r5-r7,lr}                    @ restaur registers
+    bx lr                             @ return
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

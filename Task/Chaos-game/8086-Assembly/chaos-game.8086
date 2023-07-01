@@ -1,0 +1,122 @@
+	cpu	8086
+	bits	16
+vmode:	equ	0Fh		; Get current video mode
+time:	equ	2Ch		; Get current system time
+CGALO:	equ	4		; Low-res (4-color) CGA mode
+MDA:	equ	7		; MDA text mode
+section	.text
+	org	100h
+	mov	ah,vmode	; Get current video mode
+	int	10h
+	cmp	al,MDA		; If MDA mode, no CGA supported, so stop
+	jne	gr_ok
+	ret
+gr_ok:	push	ax		; Store old video mode on stack
+	mov	ax,CGALO	; Switch to low-resolution CGA mode
+	int	10h
+	mov	ah,time		; Get system time
+	int	21h
+	mov	di,cx		; Store as RNG seed
+	mov	bp,dx
+genX:	call	random		; Generate random X coordinate
+	cmp	al,200
+	jae	genX
+	mov	dh,al		; DH = X
+genY:	call	random		; Generate random Y coordinate
+	cmp	al,173
+	jae	genY
+	mov	dl,al		; DL = Y
+mloop:	mov	ah,1		; Is a key pressed?
+	int	16h
+	jz	point		; If not, calculate another point
+	pop	ax		; But if so, restore the old video mode
+	cbw
+	int	10h
+	ret			; And quit
+point:	call	random		; Generate random direction
+	and	al,3
+	cmp	al,3
+	je	point
+	mov	ah,al		; Keep direction (for color later)
+	dec	al		; Select direction
+	jz	d2
+	dec	al
+	jz	d3
+	shr	dh,1		; X /= 2
+	shr	dl,1		; Y /= 2
+	jmp	plot
+d2:	mov	cl,ah		; Keep color in CL
+	mov	si,100		; X = 100+(100-X)/2
+	xor	ax,ax		; (doing intermediate math in 16 bits)
+	mov	al,dh
+	neg	ax
+	add	ax,si
+	shr	ax,1
+	add	ax,si
+	mov	dh,al
+	mov	si,173		; Y = 173-(173-Y)/2
+	xor	ax,ax		; (doing intermediate math in 16 bits)
+	mov	al,dl
+	neg	ax
+	add	ax,si
+	shr	ax,1
+	neg	ax
+	add	ax,si
+	mov	dl,al
+	mov	ah,cl		; Restore color
+	jmp	plot
+d3:	mov	cl,ah		; Keep color
+	mov	si,200		; X = 200-(200-X)/2
+	xor	ax,ax		; (doing intermediate math in 16 bits)
+	mov	al,dh
+	neg	ax
+	add	ax,si
+	shr	ax,1
+	neg	ax
+	add	ax,si
+	mov	dh,al
+	mov	ah,cl		; Restore color
+	shr	dl,1		; Y /= 2
+plot:	mov	cl,dl		; There's a plot function in the BIOS, but it's
+	clc			; behind an INT and needs all the registers,
+	rcr	cl,1		; so we'll do it by hand.
+	sbb	bh,bh		; The even rows are at B800:NNNN, odd at BA00,
+	xor	bl,bl		; CL (Y coord) is divided by two, and if odd
+	and	bh,2		; we add 2(00) to B8(00) to get the right
+	add	bh,0B8h		; segment.
+	mov	ds,bx		; We can safely stick it in DS since we're not
+	xor	bx,bx		; using any RAM otherwise. 80 bytes per line,
+	mov	bl,cl		; so BX=Y * 80,
+	xor	ch,ch		
+	shl	bx,1		
+	shl	bx,1
+	add	bx,cx
+	mov	cl,4
+	shl	bx,cl
+	mov	cl,dh		; and 4 pixels per byte, so BX += Y/4
+	shr	cl,1
+	shr	cl,1
+	add	bx,cx
+	inc	ah		; Add 1 to direction to get 1 of 3 colors
+	mov	ch,dh		; See which pixel within the byte we're
+	and	ch,3		; looking at
+	mov	cl,3		; Leftmost pixel is in highest bits
+	sub	cl,ch
+	shl	cl,1		; Pixels are 2 bits wide
+	shl	ah,cl 		; Shift AH into place
+	or	[bx],ah		; Set the pixel in video memory
+	jmp	mloop		; Next pixel
+random:	xchg	bx,bp		; Load RNG state into byte-addressable
+	xchg	cx,di 		; registers.
+	inc	bl		; X++
+	xor	bh,ch		; A ^= C
+	xor	bh,bl		; A ^= X
+	add	cl,bh		; B += A
+	mov	al,cl		; C' = B
+	shr	al,1		; C' >>= 1
+	add	al,ch		; C' += C
+	xor	al,bh		; C' ^= A
+	mov	ch,al		; C = C'
+	xchg	bx,bp		; Restore the registers
+	xchg	cx,di
+	ret

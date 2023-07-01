@@ -1,0 +1,1 @@
+: spam ( -- ) "SPAM" print spam ;

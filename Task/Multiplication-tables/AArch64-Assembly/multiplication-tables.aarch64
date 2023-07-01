@@ -1,0 +1,149 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program multtable64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ MAXI,   12
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessValeur:        .fill 11, 1, ' '            // size => 11
+szCarriageReturn:   .asciz "\n"
+sBlanc1:            .asciz " "
+sBlanc2:            .asciz "  "
+sBlanc3:            .asciz "   "
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                           // entry of program
+    ldr x6,qAdrsBlanc1
+    ldr x7,qAdrsBlanc2
+    ldr x8,qAdrsBlanc3
+                                // display first line
+    mov x4,#0
+1:                              // begin loop
+    mov x0,x4
+    ldr x1,qAdrsMessValeur      // display value
+    bl conversion10             // call function
+    strb wzr,[x1,x0]            // final zéro on display value
+    ldr x0,qAdrsMessValeur
+    bl affichageMess            // display message
+    cmp x4,#10                  // one or two digit in résult
+    csel x0,x7,x8,ge            // display 2 or 3 spaces
+    bl affichageMess            // display message
+    add x4,x4,1                 // increment counter
+    cmp x4,MAXI
+    ble 1b                      // loop
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess            // display carriage return
+
+    mov x5,#1                   // line counter
+2:                              // begin loop lines
+    mov x0,x5                   // display column 1 with N° line
+    ldr x1,qAdrsMessValeur      // display value
+    bl conversion10             // call function
+    strb wzr,[x1,x0]            // final zéro
+    ldr x0,qAdrsMessValeur
+    bl affichageMess            // display message
+    cmp x5,#10                  // one or two digit in N° line
+    csel x0,x7,x8,ge            // display 2 or 3 spaces
+    bl affichageMess
+    mov x4,#1                  // counter column
+3:                             // begin loop columns
+    mul x0,x4,x5               // multiplication
+    mov x3,x0                  // save résult
+    ldr x1,qAdrsMessValeur     // display value
+    bl conversion10            // call function
+    strb wzr,[x1,x0]
+    ldr x0,qAdrsMessValeur
+    bl affichageMess           // display message
+    cmp x3,100                 // 3 digits in résult ?
+    csel x0,x6,x0,ge           // display 1 spaces
+    bge 4f
+    cmp x3,10                  // 2 digits in result
+    csel x0,x7,x8,ge           // display 2 or 3 spaces
+
+4:
+    bl affichageMess           // display message
+    add x4,x4,1                // increment counter column
+    cmp x4,x5                  // < counter lines
+    ble 3b                     // loop
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess           // display carriage return
+    add x5,x5,1                // increment line counter
+    cmp x5,MAXI                // MAXI ?
+    ble 2b                     // loop
+
+100:                           // standard end of the program
+    mov x0,0                   // return code
+    mov x8,EXIT                // request to exit program
+    svc 0                      // perform the system call
+
+qAdrsMessValeur:         .quad sMessValeur
+qAdrszCarriageReturn:    .quad szCarriageReturn
+qAdrsBlanc1:             .quad sBlanc1
+qAdrsBlanc2:             .quad sBlanc2
+qAdrsBlanc3:             .quad sBlanc3
+
+/******************************************************************/
+/*     Converting a register to a decimal unsigned                */
+/******************************************************************/
+/* x0 contains value and x1 address area   */
+/* x0 return size of result (no zero final in area) */
+/* area size => 11 bytes          */
+.equ LGZONECAL,   10
+conversion10:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    stp x4,x5,[sp,-16]!            // save  registers
+    mov x3,x1
+    mov x2,#LGZONECAL
+    mov x4,10
+1:                                 // start loop
+    mov x5,x0
+    udiv x0,x5,x4
+    msub x1,x0,x4,x5               //  x5 <- dividende. quotient ->x0 reste -> x1
+    add x1,x1,48                      // digit
+    strb w1,[x3,x2]                // store digit on area
+    cbz x0,2f                      // stop if quotient = 0
+    sub x2,x2,1                    // else previous position
+    b 1b                           // and loop
+                                   // and move digit from left of area
+2:
+    mov x4,0
+3:
+    ldrb w1,[x3,x2]
+    strb w1,[x3,x4]
+    add x2,x2,1
+    add x4,x4,1
+    cmp x2,LGZONECAL
+    ble 3b
+                                  // and move spaces in end on area
+    mov x0,x4                     // result length
+    mov x1,' '                    // space
+4:
+    strb w1,[x3,x4]               // store space in area
+    add x4,x4,1                   // next position
+    cmp x4,LGZONECAL
+    ble 4b                        // loop if x4 <= area size
+
+100:
+    ldp x4,x5,[sp],16                     // restaur  2 registers
+    ldp x2,x3,[sp],16                     // restaur  2 registers
+    ldp x1,lr,[sp],16                     // restaur  2 registers
+    ret                                   // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

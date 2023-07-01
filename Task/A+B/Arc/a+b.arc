@@ -1,0 +1,2 @@
+(prn (+ (read)
+        (read)))

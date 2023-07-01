@@ -1,0 +1,67 @@
+#Did not count the tasks where languages tasks are properly closed
+add_lan := proc(language, n, existence, languages, pos)
+	if (assigned(existence[language])) then
+		existence[language] += n:
+		return pos;
+	else
+		existence[language] := n:
+		languages(pos) := language:
+		return pos+1;
+	end if;
+end proc:
+count_tags := proc(tasks, pos)
+	local task, url, txt, header_tags, close_tags, close_len, header_len, occurence, i, pos_copy;
+	pos_copy := pos:
+	for task in tasks do
+		url := cat("http://www.rosettacode.org/mw/index.php?title=", StringTools:-Encode(StringTools:-SubstituteAll(task["title"], " ", "_"), 'percent'), "&action=raw"):
+		txt := URL:-Get(url):
+		header_tags := [StringTools:-SearchAll("=={{header|", txt)]:	
+		close_tags := [StringTools:-SearchAll("}}==",txt)]:
+		close_len := numelems(close_tags):
+		header_len := numelems(header_tags):
+		if header_len = 0 then
+			break;
+		end if;
+		if (not header_len = close_len) then
+			printf("%s is not counted since some language tags are not properly closed.\n", task["title"]);
+			break;
+		end if;
+		occurence := numelems([StringTools:-SearchAll("<lang>", txt[1..header_tags[1]])]):
+		if occurence > 0 then
+			pos_copy := add_lan("no languages", occurence, existence, languages, pos_copy):
+		end if:
+		if close_len > 1 then
+			for i from 2 to close_len do
+				occurence := numelems([StringTools:-SearchAll("<lang>", txt[header_tags[i-1]..header_tags[i]])]):
+				if occurence > 0 then 			
+					pos_copy := add_lan(txt[header_tags[i-1]+11..close_tags[i-1]-1], occurence, existence, languages, pos_copy):
+				end if:
+			end do:
+			occurence := numelems([StringTools:-SearchAll("<lang>", txt[header_tags[-1]..])]):
+			if occurence > 0 then	
+				pos_copy := add_lan(txt[header_tags[-1]+11..close_tags[-1]-1], occurence, existence, languages, pos_copy):
+			end if:
+		end if:
+	end do:
+	return pos_copy:
+end proc:
+
+existence := table():
+languages := Array():
+pos := 1:
+#go through every task
+x := JSON:-ParseFile("http://rosettacode.org/mw/api.php?action=query&list=categorymembers&cmtitle=Category:Programming_Tasks&cmlimit=10&format=json"):
+pos := count_tags(x["query"]["categorymembers"], pos):
+while(assigned(x["continue"]["cmcontinue"])) do
+	continue := x["continue"]["cmcontinue"]:
+	more_tasks:= cat("http://rosettacode.org/mw/api.php?action=query&list=categorymembers&cmtitle=Category:Programming_Tasks&cmlimit=10&format=json", "&continue=", x["continue"]["continue"], "&cmcontinue=", x["continue"]["cmcontinue"]):
+	x := JSON:-ParseFile(more_tasks):
+	pos := count_tags(x["query"]["categorymembers"], pos):
+end do:
+#Prints out the table
+total := 0:		
+for lan in languages do
+	total += existence[lan]:
+	printf("There are %d bare lang tags in %s\n", existence[lan], lan);
+end do:
+printf("Total number %d", total);

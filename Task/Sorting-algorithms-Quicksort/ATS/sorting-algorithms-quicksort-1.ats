@@ -1,0 +1,153 @@
+(*------------------------------------------------------------------*)
+(* Quicksort in ATS2, for non-linear lists.                         *)
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+(*------------------------------------------------------------------*)
+
+(* A simple quicksort working on "garbage-collected" linked lists,
+   with first element as pivot. This is meant as a demonstration, not
+   as a superior sort algorithm.
+
+   It is based on the "not-in-place" task pseudocode. *)
+
+datatype comparison_result =
+| first_is_less_than_second of ()
+| first_is_equal_to_second of ()
+| first_is_greater_than_second of ()
+
+extern fun {a : t@ype}
+list_quicksort$comparison (x : a, y : a) :<> comparison_result
+
+extern fun {a : t@ype}
+list_quicksort {n   : int}
+               (lst : list (a, n)) :<> list (a, n)
+
+(* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - *)
+
+implement {a}
+list_quicksort {n} (lst) =
+  let
+    fun
+    partition {n     : nat}
+              .<n>.             (* Proof of termination. *)
+              (lst   : list (a, n),
+               pivot : a)
+        :<> [n1, n2, n3 : int | n1 + n2 + n3 == n]
+            @(list (a, n1), list (a, n2), list (a, n3)) =
+      (* This implementation is *not* tail recursive. I may get a
+         scolding for using ATS to risk stack overflow! However, I
+         need more practice writing non-tail routines. :) Also, a lot
+         of programmers in other languages would do it this
+         way--especially if the lists are evaluated lazily. *)
+      case+ lst of
+      | NIL => @(NIL, NIL, NIL)
+      | head :: tail =>
+        let
+          val @(lt, eq, gt) = partition (tail, pivot)
+          prval () = lemma_list_param lt
+          prval () = lemma_list_param eq
+          prval () = lemma_list_param gt
+        in
+          case+ list_quicksort$comparison<a> (head, pivot) of
+          | first_is_less_than_second ()    => @(head :: lt, eq, gt)
+          | first_is_equal_to_second ()     => @(lt, head :: eq, gt)
+          | first_is_greater_than_second () => @(lt, eq, head :: gt)
+        end
+
+    fun
+    quicksort {n   : nat}
+              .<n>.             (* Proof of termination. *)
+              (lst : list (a, n))
+        :<> list (a, n) =
+      case+ lst of
+      | NIL => lst
+      | _ :: NIL => lst
+      | head :: tail =>
+        let
+          (* We are careful here to run "partition" on "tail" rather
+             than "lst", so the termination metric will be provably
+             decreasing. (Really the compiler *forces* us to take such
+             care, or else to change :<> to :<!ntm>) *)
+          val pivot = head
+          prval () = lemma_list_param tail
+          val @(lt, eq, gt) = partition {n - 1} (tail, pivot)
+          prval () = lemma_list_param lt
+          prval () = lemma_list_param eq
+          prval () = lemma_list_param gt
+          val eq = pivot :: eq
+          and lt = quicksort lt
+          and gt = quicksort gt
+        in
+          lt + (eq + gt)
+        end
+
+    prval () = lemma_list_param lst
+  in
+    quicksort {n} lst
+  end
+
+(*------------------------------------------------------------------*)
+
+val example_strings =
+  $list ("choose", "any", "element", "of", "the", "array",
+         "to", "be", "the", "pivot",
+         "divide", "all", "other", "elements", "except",
+         "the", "pivot", "into", "two", "partitions",
+         "all", "elements", "less", "than", "the", "pivot",
+         "must", "be", "in", "the", "first", "partition",
+         "all", "elements", "greater", "than", "the", "pivot",
+         "must", "be", "in", "the", "second", "partition",
+         "use", "recursion", "to", "sort", "both", "partitions",
+         "join", "the", "first", "sorted", "partition", "the",
+         "pivot", "and", "the", "second", "sorted", "partition")
+
+implement
+list_quicksort$comparison<string> (x, y) =
+  let
+    val i = strcmp (x, y)
+  in
+    if i < 0 then
+      first_is_less_than_second
+    else if i = 0 then
+      first_is_equal_to_second
+    else
+      first_is_greater_than_second
+  end
+
+implement
+main0 () =
+  let
+    val sorted_strings = list_quicksort<string> example_strings
+
+    fun
+    print_strings {n       : nat} .<n>.
+                  (strings : list (string, n),
+                   i       : int) : void =
+      case+ strings of
+      | NIL => if i <> 1 then println! () else ()
+      | head :: tail =>
+        begin
+          print! head;
+          if i = 8 then
+            begin
+              println! ();
+              print_strings (tail, 1)
+            end
+          else
+            begin
+              print! " ";
+              print_strings (tail, succ i)
+            end
+        end
+  in
+    println! (length example_strings);
+    println! (length sorted_strings);
+    print_strings (sorted_strings, 1)
+  end
+
+(*------------------------------------------------------------------*)

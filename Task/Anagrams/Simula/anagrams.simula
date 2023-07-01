@@ -1,0 +1,269 @@
+COMMENT COMPILE WITH
+$ cim -m64 anagrams-hashmap.sim
+;
+BEGIN
+
+    COMMENT ----- CLASSES FOR GENERAL USE ;
+
+    ! ABSTRACT HASH KEY TYPE ;
+    CLASS HASHKEY;
+    VIRTUAL:
+        PROCEDURE HASH IS
+            INTEGER PROCEDURE HASH;;
+        PROCEDURE EQUALTO IS
+            BOOLEAN PROCEDURE EQUALTO(K); REF(HASHKEY) K;;
+    BEGIN
+    END HASHKEY;
+
+    ! ABSTRACT HASH VALUE TYPE ;
+    CLASS HASHVAL;
+    BEGIN
+        ! THERE IS NOTHING REQUIRED FOR THE VALUE TYPE ;
+    END HASHVAL;
+
+    CLASS HASHMAP;
+    BEGIN
+        CLASS INNERHASHMAP(N); INTEGER N;
+        BEGIN
+
+            INTEGER PROCEDURE INDEX(K); REF(HASHKEY) K;
+            BEGIN
+                INTEGER I;
+                IF K == NONE THEN
+                    ERROR("HASHMAP.INDEX: NONE IS NOT A VALID KEY");
+                I := MOD(K.HASH,N);
+            LOOP:
+                IF KEYTABLE(I) == NONE OR ELSE KEYTABLE(I).EQUALTO(K) THEN
+                    INDEX := I
+                ELSE BEGIN
+                    I := IF I+1 = N THEN 0 ELSE I+1;
+                    GO TO LOOP;
+                END;
+            END INDEX;
+
+            ! PUT SOMETHING IN ;
+            PROCEDURE PUT(K,V); REF(HASHKEY) K; REF(HASHVAL) V;
+            BEGIN
+                INTEGER I;
+                IF V == NONE THEN
+                    ERROR("HASHMAP.PUT: NONE IS NOT A VALID VALUE");
+                I := INDEX(K);
+                IF KEYTABLE(I) == NONE THEN BEGIN
+                    IF SIZE = N THEN
+                        ERROR("HASHMAP.PUT: TABLE FILLED COMPLETELY");
+                    KEYTABLE(I) :- K;
+                    VALTABLE(I) :- V;
+                    SIZE := SIZE+1;
+                END ELSE
+                    VALTABLE(I) :- V;
+            END PUT;
+
+            ! GET SOMETHING OUT ;
+            REF(HASHVAL) PROCEDURE GET(K); REF(HASHKEY) K;
+            BEGIN
+                INTEGER I;
+                IF K == NONE THEN
+                    ERROR("HASHMAP.GET: NONE IS NOT A VALID KEY");
+                I := INDEX(K);
+                IF KEYTABLE(I) == NONE THEN
+                    GET :- NONE ! ERROR("HASHMAP.GET: KEY NOT FOUND");
+                ELSE
+                    GET :- VALTABLE(I);
+            END GET;
+
+            PROCEDURE CLEAR;
+            BEGIN
+                INTEGER I;
+                FOR I := 0 STEP 1 UNTIL N-1 DO BEGIN
+                    KEYTABLE(I) :- NONE;
+                    VALTABLE(I) :- NONE;
+                END;
+                SIZE := 0;
+            END CLEAR;
+
+            ! DATA MEMBERS OF CLASS HASHMAP ;
+            REF(HASHKEY) ARRAY KEYTABLE(0:N-1);
+            REF(HASHVAL) ARRAY VALTABLE(0:N-1);
+            INTEGER SIZE;
+
+        END INNERHASHMAP;
+
+        PROCEDURE PUT(K,V); REF(HASHKEY) K; REF(HASHVAL) V;
+        BEGIN
+            IF IMAP.SIZE >= 0.75 * IMAP.N THEN
+            BEGIN
+                COMMENT RESIZE HASHMAP ;
+                REF(INNERHASHMAP) NEWIMAP;
+                REF(ITERATOR) IT;
+                NEWIMAP :- NEW INNERHASHMAP(2 * IMAP.N);
+                IT :- NEW ITERATOR(THIS HASHMAP);
+                WHILE IT.MORE DO
+                BEGIN
+                    REF(HASHKEY) KEY;
+                    KEY :- IT.NEXT;
+                    NEWIMAP.PUT(KEY, IMAP.GET(KEY));
+                END;
+                IMAP.CLEAR;
+                IMAP :- NEWIMAP;
+            END;
+            IMAP.PUT(K, V);
+        END;
+
+        REF(HASHVAL) PROCEDURE GET(K); REF(HASHKEY) K;
+            GET :- IMAP.GET(K);
+
+        PROCEDURE CLEAR;
+            IMAP.CLEAR;
+
+        INTEGER PROCEDURE SIZE;
+            SIZE := IMAP.SIZE;
+
+        REF(INNERHASHMAP) IMAP;
+
+        IMAP :- NEW INNERHASHMAP(16);
+    END HASHMAP;
+
+    CLASS ITERATOR(H); REF(HASHMAP) H;
+    BEGIN
+        INTEGER POS,KEYCOUNT;
+
+        BOOLEAN PROCEDURE MORE;
+            MORE := KEYCOUNT < H.SIZE;
+
+        REF(HASHKEY) PROCEDURE NEXT;
+        BEGIN
+            INSPECT H.IMAP DO
+            BEGIN
+                WHILE KEYTABLE(POS) == NONE DO
+                    POS := POS+1;
+                NEXT :- KEYTABLE(POS);
+                KEYCOUNT := KEYCOUNT+1;
+                POS := POS+1;
+            END;
+        END NEXT;
+
+    END ITERATOR;
+
+    COMMENT ----- PROBLEM SPECIFIC CLASSES ;
+
+    HASHKEY CLASS TEXTHASHKEY(T); VALUE T; TEXT T;
+    BEGIN
+        INTEGER PROCEDURE HASH;
+        BEGIN
+            INTEGER I;
+            T.SETPOS(1);
+            WHILE T.MORE DO
+                I := 31*I+RANK(T.GETCHAR);
+            HASH := I;
+        END HASH;
+        BOOLEAN PROCEDURE EQUALTO(K); REF(HASHKEY) K;
+            EQUALTO := T = K QUA TEXTHASHKEY.T;
+    END TEXTHASHKEY;
+
+    HASHVAL CLASS TEXTVECTOR;
+    BEGIN
+
+        CLASS ARRAYHOLDER(N); INTEGER N;
+        BEGIN
+            TEXT ARRAY DATA(1:N);
+        END ARRAYHOLDER;
+
+        REF(ARRAYHOLDER) HOLDER;
+        INTEGER SIZE;
+
+        PROCEDURE DOUBLESIZE;
+        BEGIN
+            REF(ARRAYHOLDER) NEWHOLDER;
+            INTEGER I;
+            NEWHOLDER :- NEW ARRAYHOLDER(2 * HOLDER.N);
+            FOR I := 1 STEP 1 UNTIL HOLDER.N DO
+                NEWHOLDER.DATA(I) :- HOLDER.DATA(I);
+            HOLDER :- NEWHOLDER;
+        END;
+
+        PROCEDURE ADD(WORD); TEXT WORD;
+        BEGIN
+            SIZE := SIZE + 1;
+            IF SIZE > HOLDER.N THEN
+                DOUBLESIZE;
+            HOLDER.DATA(SIZE) :- WORD;
+        END;
+
+        HOLDER :- NEW ARRAYHOLDER(16);
+    END TEXTVECTOR;
+
+    TEXT PROCEDURE MAKEKEY(WORD); TEXT WORD;
+    BEGIN
+        TEXT KEY;
+        INTEGER I;
+        KEY :- BLANKS(WORD.LENGTH);
+        KEY.SETPOS(1);
+        FOR I := RANK('a') STEP 1 UNTIL RANK('z'),
+                 RANK('0') STEP 1 UNTIL RANK('9') DO
+        BEGIN
+            WORD.SETPOS(1);
+            WHILE WORD.MORE DO
+              IF WORD.GETCHAR = CHAR(I) THEN
+                  KEY.PUTCHAR(CHAR(I));
+        END;
+        MAKEKEY :- KEY;
+    END MAKEKEY;
+
+    REF(INFILE) INF;
+    REF(HASHMAP) MAP;
+    REF(HASHKEY) KEY;
+    REF(TEXTVECTOR) TVEC;
+    REF(ITERATOR) IT;
+    TEXT WORD;
+    INTEGER I, J, LONGEST;
+
+    MAP :- NEW HASHMAP;
+
+    INF :- NEW INFILE("unixdict.txt");
+    INF.OPEN(BLANKS(132));
+    WHILE NOT INF.LASTITEM DO
+    BEGIN
+        WORD :- COPY(INF.IMAGE).STRIP; INF.INIMAGE;
+        KEY :- NEW TEXTHASHKEY(MAKEKEY(WORD));
+        TVEC :- MAP.GET(KEY);
+        IF TVEC == NONE THEN
+        BEGIN
+            TVEC :- NEW TEXTVECTOR;
+            MAP.PUT(KEY, TVEC);
+        END;
+        TVEC.ADD(WORD);
+    END;
+    INF.CLOSE;
+
+    COMMENT FIND LONGEST ENTRIES ;
+
+    IT :- NEW ITERATOR(MAP);
+    WHILE IT.MORE DO
+    BEGIN
+        TVEC :- MAP.GET(IT.NEXT);
+        IF TVEC.SIZE > LONGEST THEN
+            LONGEST := TVEC.SIZE;
+    END;
+
+    COMMENT OUTPUT LONGEST ENTRIES ;
+
+    IT :- NEW ITERATOR(MAP);
+    WHILE IT.MORE DO
+    BEGIN
+        KEY :- IT.NEXT;
+        TVEC :- MAP.GET(KEY);
+        IF TVEC.SIZE = LONGEST THEN
+        BEGIN
+            OUTTEXT(KEY QUA TEXTHASHKEY.T);
+            OUTTEXT(":");
+            FOR J := 1 STEP 1 UNTIL TVEC.SIZE DO
+                INSPECT TVEC.HOLDER DO
+                BEGIN
+                    OUTCHAR(' ');
+                    OUTTEXT(DATA(J));
+                END;
+            OUTIMAGE;
+        END;
+    END;
+
+END

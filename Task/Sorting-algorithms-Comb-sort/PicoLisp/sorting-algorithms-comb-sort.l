@@ -1,0 +1,12 @@
+(de combSort (Lst)
+   (let (Gap (length Lst)  Swaps NIL)
+      (while (or (> Gap 1) Swaps)
+         (setq Gap (max 1 (/ (* Gap 4) 5)))
+         (off Swaps)
+         (use Lst
+            (for (G (cdr (nth Lst Gap))  G  (cdr G))
+               (when (> (car Lst) (car G))
+                  (xchg Lst G)
+                  (on Swaps) )
+               (pop 'Lst) ) ) ) )
+   Lst )

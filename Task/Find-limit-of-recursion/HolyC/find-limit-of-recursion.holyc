@@ -1,0 +1,6 @@
+U0 Recurse(U64 i) {
+  Print("%d\n", i);
+  Recurse(i + 1);
+}
+
+Recurse(0);

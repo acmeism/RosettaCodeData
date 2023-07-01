@@ -1,0 +1,12 @@
+(let ((count 20)
+      (cw (make-calkin-wilf-gen)))
+  (printf "~%First ~a terms of the Calkin-Wilf sequence:~%" count)
+  (do ((num 1 (1+ num)))
+      ((> num count))
+    (printf "~2d : ~a~%" num (cw))))
+
+(printf "~%Positions in Calkin-Wilf sequence of given numbers:~%")
+(let ((num 9/4))
+  (printf "~a @ ~a~%" num (calkin-wilf-position num)))
+(let ((num 83116/51639))
+  (printf "~a @ ~a~%" num (calkin-wilf-position num)))

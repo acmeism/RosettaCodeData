@@ -1,0 +1,180 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <fstream>
+#include <cerrno>
+
+#include "Cimg.h"
+
+#include "SL_Generated.h"
+
+using namespace std;
+using namespace cimg_library;
+
+char titleBuffer[200];
+
+std::string get_file_contents(const char*);
+
+int main(int argc, char ** argv)
+{
+	int cores = 0;
+	int maxSize = 700;
+
+	int drawSkip = 1;
+	int drawWait = 0;
+
+	string inputFile = "test";
+
+	if(argc > 1)
+	{
+		inputFile = argv[1];
+	}
+	if(argc > 2)
+	{
+		cores = atoi(argv[2]);
+	}
+
+	if(argc > 3)
+	{
+		maxSize = atoi(argv[3]);
+	}
+
+	if(argc > 4)
+	{
+		drawSkip = atoi(argv[4]);
+
+		if(drawSkip < 0)
+		{
+			drawWait = abs(drawSkip);
+			drawSkip = 1;
+		}
+	}
+
+	sl_init(cores);
+
+	SLTimer drawTimer;
+
+	sprintf(titleBuffer, "Conway's Game of Life in SequenceL: %d Cores", cores);
+
+	int width = 0;
+	int height = 0;
+
+	//Read input file--------------
+	Sequence<Sequence<int>> initialGrid;
+
+	if(inputFile != "test")
+	{
+		stringstream ss(get_file_contents(inputFile.c_str()));
+		string stringItem;
+		vector<int> elems;
+		char delim = ',';
+
+		getline(ss, stringItem, delim);
+		width = atoi(stringItem.c_str());
+		getline(ss, stringItem, delim);
+		height = atoi(stringItem.c_str());
+
+		while(getline(ss, stringItem, delim))
+		{
+			elems.push_back(atoi(stringItem.c_str()));
+		}
+
+		//Sequence Pointer Constructor----
+		int gridDims[] = {height, width, 0};
+		Sequence<Sequence<int>> tempGrid( (void*)&elems[0], gridDims);
+		initialGrid.hard_copy(tempGrid, 0);
+		//-----------------------------
+	}
+	else
+	{
+		width = maxSize;
+		height = maxSize;
+		sl_stressTestInput(maxSize, cores, initialGrid);
+	}
+	//--------
+
+	Sequence<Sequence<int>>  result;
+
+	const unsigned char black[] = {0};
+
+	CImg<unsigned char> visu(width * 4, height * 4, 1, 1, 0);
+	CImgDisplay draw_disp(visu, titleBuffer);
+	cout << "Conway's Game of Life in SequenceL" << endl << "Cores: " << cores << endl;
+
+	int generations = 0;
+	double compTime = 0;
+	double drawTime = 0;
+	SLTimer t;
+
+	while(!draw_disp.is_closed())
+	{
+		t.start();
+		sl_life(initialGrid, cores, result);
+		generations++;
+		initialGrid.hard_copy(result, 0);
+		t.stop();
+		compTime += t.getTime();
+
+		drawTimer.start();
+
+		if(drawSkip > 0 && generations % drawSkip == 0)
+		{
+
+			visu.fill(255);
+
+			for(int i = 1; i <= result.size(); i++)
+			{
+				for(int j = 1; j <= result[i].size(); j++)
+				{
+					if(result[i][j] == 1) visu.draw_circle((j-1) * 4, (i - 1) * 4, 2, black, 1);
+				}
+			}
+
+			visu.display(draw_disp);
+
+			int drawWidth = maxSize;
+			int drawHeight = maxSize;
+
+			if(width < height)
+			{
+				drawWidth = ((double)drawHeight * ((double)width / (double)height));
+			}
+			else
+			{
+				drawHeight = ((double)drawWidth * ((double)height / (double)width));
+			}
+
+			draw_disp.resize(drawWidth, drawHeight, false);
+
+			draw_disp.wait(drawWait);
+			drawTimer.stop();
+			drawTime += drawTimer.getTime();
+		}
+	}
+
+	cout << "Total Generations: " << generations << endl;
+
+	cout << "Average Compute Time: " << compTime / generations << " seconds" << endl;
+
+	cout << "Average Draw Time: " << drawTime / generations << " seconds" << endl;
+
+	sl_done();
+
+	return 0;
+}
+
+std::string get_file_contents(const char *filename)
+{
+  std::ifstream in(filename, std::ios::in | std::ios::binary);
+  if (in)
+  {
+    std::string contents;
+    in.seekg(0, std::ios::end);
+    contents.resize(in.tellg());
+    in.seekg(0, std::ios::beg);
+    in.read(&contents[0], contents.size());
+    in.close();
+    return(contents);
+  }
+  throw(errno);
+}

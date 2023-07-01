@@ -1,0 +1,64 @@
+*        Self-describing numbers   26/04/2020
+SELFDESC CSECT
+         USING  SELFDESC,R13       base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         SAVE   (14,12)            save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R8,1               k=1
+       DO WHILE=(C,R8,LE,=A(NN))   do k=1 to nn
+         CVD    R8,DBLK              binary to packed decimal (PL8)
+         MVC    CK,MAK               load mask
+         EDMK   CK,DBLK+2            packed dec (PL5) to char (CL10)
+         S      R1,=A(CK)            number of blanks
+         LR     R3,R1                "
+         LA     R9,L'CK              length(ck)
+         SR     R9,R1                length of the number
+         LA     R6,1                 i=1
+       DO WHILE=(CR,R6,LE,R9)        do i=1 to l
+         LA     R10,0                  n=0
+         LA     R7,1                   j=1
+       DO WHILE=(CR,R7,LE,R9)          do j=1 to l
+         LA     R1,CK-1                  @ck
+         AR     R1,R3                    +space(k)
+         AR     R1,R7                    +j
+         MVC    CJ,0(R1)                 substr(k,j,1)
+         IC     R1,CJ                    ~
+         SLL    R1,28                    shift left  28
+         SRL    R1,28                    shift right 28
+         LR     R2,R6                    i
+         BCTR   R2,0                     i-1
+       IF    CR,R1,EQ,R2 THEN            if substr(k,j,1)=i-1 then
+         LA     R10,1(R10)                 n++
+       ENDIF    ,                        endif
+         LA     R7,1(R7)                 j++
+       ENDDO    ,                      enddo j
+         LA     R1,CK-1                @ck
+         AR     R1,R3                  +space(k)
+         AR     R1,R6                  +i
+         MVC    CI,0(R1)               substr(k,i,1)
+         IC     R1,CI                  ~
+         SLL    R1,28                  shift left  28
+         SRL    R1,28                  shift right 28
+       IF    CR,R1,NE,R10 THEN         if substr(k,i,1)<>n then
+         B      ITERK                    iterate k
+       ENDIF    ,                      endif
+         LA     R6,1(R6)               i++
+       ENDDO    ,                    enddo i
+         XPRNT  CK,L'CK              print ck
+ITERK    LA     R8,1(R8)             k++
+       ENDDO    ,                  enddo k
+         L      R13,4(0,R13)       restore previous savearea pointer
+         RETURN (14,12),RC=0       restore registers from calling save
+NN       EQU    5000000            nn
+DBLK     DS     PL8                double word 15num
+MAK      DC     X'402020202020202020202020'  mask CL12 11num
+CK       DS     CL12               ck 12num
+CI       DS     C                  ci
+CJ       DS     C                  cj
+PG       DS     CL80               buffer
+XDEC     DS     CL12               temp fo xdeco
+         REGEQU
+         END    SELFDESC

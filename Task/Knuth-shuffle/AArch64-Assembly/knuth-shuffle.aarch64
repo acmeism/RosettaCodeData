@@ -1,0 +1,141 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program knuthshuffle64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessResult:      .asciz "Value  : @ \n"
+szCarriageReturn: .asciz "\n"
+
+.align 4
+TableNumber:         .quad   1,2,3,4,5,6,7,8,9,10
+                     .equ NBELEMENTS, (. - TableNumber) / 8
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConversion:         .skip 30
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                        // entry of program
+    ldr x0,qAdrTableNumber                   // address number table
+    mov x1,NBELEMENTS                       // number of élements
+    bl knuthShuffle
+    ldr x2,qAdrTableNumber
+    mov x3,0
+1:                                           // loop display table
+    ldr x0,[x2,x3,lsl 3]
+    ldr x1,qAdrsZoneConversion               // display value
+    bl conversion10S                          // call function
+    ldr x0,qAdrsMessResult
+    ldr x1,qAdrsZoneConversion
+    bl strInsertAtCharInc
+    bl affichageMess                         // display message
+    add x3,x3,1
+    cmp x3,NBELEMENTS - 1
+    ble 1b
+
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    /*    2e shuffle             */
+    ldr x0,qAdrTableNumber                   // address number table
+    mov x1,NBELEMENTS                        // number of élements
+    bl knuthShuffle
+    ldr x2,qAdrTableNumber
+    mov x3,0
+2:                                           // loop display table
+    ldr x0,[x2,x3,lsl 3]
+    ldr x1,qAdrsZoneConversion               // display value
+    bl conversion10S                         // call function
+    ldr x0,qAdrsMessResult
+    ldr x1,qAdrsZoneConversion
+    bl strInsertAtCharInc
+    bl affichageMess                         // display message
+    add x3,x3,1
+    cmp x3,NBELEMENTS - 1
+    ble 2b
+
+100:                                         // standard end of the program
+    mov x0,0                                 // return code
+    mov x8,EXIT                              // request to exit program
+    svc 0                                    // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsMessResult:          .quad sMessResult
+qAdrTableNumber:          .quad TableNumber
+qAdrsZoneConversion:      .quad sZoneConversion
+/******************************************************************/
+/*     Knuth Shuffle                                  */
+/******************************************************************/
+/* x0 contains the address of table */
+/* x1 contains the number of elements */
+knuthShuffle:
+    stp x1,lr,[sp,-16]!         // save  registers
+    stp x2,x3,[sp,-16]!         // save  registers
+    stp x4,x5,[sp,-16]!         // save  registers
+    stp x6,x7,[sp,-16]!         // save  registers
+    mov x5,x0                   // save table address
+    mov x6,x1                   // save number of elements
+    mov x2,0                    // start index
+1:
+    mov x0,0
+    mov x1,x2                   // generate aleas
+    bl extRandom
+    ldr x3,[x5,x2,lsl 3]        // swap number on the table
+    ldr x4,[x5,x0,lsl 3]
+    str x4,[x5,x2,lsl 3]
+    str x3,[x5,x0,lsl 3]
+    add x2,x2,1                 // next number
+    cmp x2,x6                   // end ?
+    blt 1b                      // no -> loop
+
+100:
+    ldp x6,x7,[sp],16           // restaur  2 registers
+    ldp x4,x5,[sp],16           // restaur  2 registers
+    ldp x2,x3,[sp],16           // restaur  2 registers
+    ldp x1,lr,[sp],16           // restaur  2 registers
+    ret
+/******************************************************************/
+/*     random number                                          */
+/******************************************************************/
+/*  x0 contains inferior value */
+/*  x1 contains maxi value */
+/*  x0 return random number */
+extRandom:
+    stp x1,lr,[sp,-16]!        // save  registers
+    stp x2,x8,[sp,-16]!        // save  registers
+    stp x19,x20,[sp,-16]!      // save  registers
+    sub sp,sp,16               // reserve 16 octets on stack
+    mov x19,x0
+    add x20,x1,1
+    mov x0,sp                  // store result on stack
+    mov x1,8                   // length 8 bytes
+    mov x2,0
+    mov x8,278                 //  call system Linux 64 bits Urandom
+    svc 0
+    mov x0,sp                  // load résult on stack
+    ldr x0,[x0]
+    sub x2,x20,x19             // calculation of the range of values
+    udiv x1,x0,x2              // calculation range modulo
+    msub x0,x1,x2,x0
+    add  x0,x0,x19             // and add inferior value
+100:
+    add sp,sp,16               // alignement stack
+    ldp x19,x20,[sp],16        // restaur  2 registers
+    ldp x2,x8,[sp],16          // restaur  2 registers
+    ldp x1,lr,[sp],16          // restaur  2 registers
+    ret                        // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

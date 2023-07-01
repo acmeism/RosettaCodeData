@@ -1,0 +1,2 @@
+INT othervar;
+pointer := othervar;

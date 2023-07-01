@@ -1,0 +1,206 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program createarray264.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ BUFFERSIZE,   64
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessRead1:         .asciz "Input size level 1 : "
+szMessRead2:         .asciz "Input size level 2 : "
+szMessIndice1:       .asciz "Indice 1 ="
+szMessIndice2:       .asciz "  Indice 2 ="
+szMessResult:        .asciz "  Item = "
+szMessStart:         .asciz "Program 64 bits start.\n"
+szCarriageReturn:    .asciz "\n"
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:             .skip BUFFERSIZE   // conversion buffer
+sZoneConv1:            .skip BUFFERSIZE   // conversion buffer
+sZoneConv2:            .skip BUFFERSIZE   // conversion buffer
+sBuffer:               .skip BUFFERSIZE
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+    ldr x0,qAdrszMessRead1
+    bl affichageMess
+    mov x0,#STDIN                // Linux input console
+    ldr x1,qAdrsBuffer           // buffer address
+    mov x2,#BUFFERSIZE           // buffer size
+    mov x8,READ
+    svc 0                        // call system
+    ldr x0,qAdrsBuffer           // buffer address
+    bl conversionAtoD
+    mov x9,x0
+    ldr x0,qAdrszMessRead2
+    bl affichageMess
+    mov x0,#STDIN                // Linux input console
+    ldr x1,qAdrsBuffer           // buffer address
+    mov x2,#BUFFERSIZE           // buffer size
+    mov x8,READ
+    svc 0                        // call system
+    ldr x0,qAdrsBuffer           // buffer address
+    bl conversionAtoD
+    mov x10,x0
+                                 // create array
+    lsl x12,x10,#3               // compute size level 2
+    mul x8,x12,x9                // compute size array
+    tst x8,0xF                   // multiple of 16 ?
+    add x11,x8,8                 // if no add 8 octets
+    csel x8,x8,x11,eq            // the stack must always be aligned on 16 bytes
+                                 // in 64 assembly arm
+    sub sp,sp,x8                 // reserve place on stack
+    mov fp,sp                    // save array address
+    mov x0,#0                    // init all items array
+ 1:                              // begin loop1
+    mov x1,#0
+ 2:                              // begin loop2
+    mul x2,x0,x12
+    add x2,x2,x1, lsl #3
+    str x2,[fp,x2]               // store shift in array item
+    add x1,x1,#1
+    cmp x1,x10
+    blt 2b
+    add x0,x0,#1
+    cmp x0,x9
+    blt 1b
+    mov x0,fp
+    mov x1,#1                   // second indice level 1
+    mov x2,#0                   // first  indice level 2
+    mov x3,x12                  // level 2 size
+    bl displayItem
+    mov x0,fp
+    sub x1,x9,#1                // last level 1
+    sub x2,x10,#1               // last level 2
+    mov x3,x12                  // level 2 size
+    bl displayItem
+
+    add sp,sp,x8                // release space on stack
+
+100:                             // standard end of the program
+    mov x0, #0                   // return code
+    mov x8,EXIT
+    svc #0                       // perform the system call
+
+qAdrszCarriageReturn:        .quad szCarriageReturn
+qAdrsZoneConv:               .quad sZoneConv
+qAdrsZoneConv1:              .quad sZoneConv1
+qAdrsZoneConv2:              .quad sZoneConv2
+qAdrszMessRead1:             .quad szMessRead1
+qAdrszMessRead2:             .quad szMessRead2
+qAdrsBuffer:                 .quad sBuffer
+qAdrszMessResult:            .quad szMessResult
+qAdrszMessStart:             .quad szMessStart
+qAdrszMessIndice1:           .quad szMessIndice1
+qAdrszMessIndice2:           .quad szMessIndice2
+/***************************************************/
+/*   display array item                    */
+/***************************************************/
+/* x0  array address */
+/* x1  indice 1 */
+/* x2 indice 2 */
+/* x3 level 2 size */
+displayItem:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    stp x6,fp,[sp,-16]!          // save  registers
+    mov x5,x0
+    mov x6,x1
+    mov x0,x6
+    ldr x1,qAdrsZoneConv
+    bl conversion10              // conversion indice 1
+    mov x0,x2
+    ldr x1,qAdrsZoneConv1
+    bl conversion10              // conversion indice 2
+    mul x4,x6,x3                 // multiply indice level 1 by level 2 size
+    add x4,x4,x2, lsl #3         // add indice level 2 * 8 (8 bytes)
+    ldr x0,[x5,x4]               // load array item
+    ldr x1,qAdrsZoneConv2
+    bl conversion10
+    mov x0,#7                    // string number to display
+    ldr x1,qAdrszMessIndice1
+    ldr x2,qAdrsZoneConv         // insert conversion in message
+    ldr x3,qAdrszMessIndice2
+    ldr x4,qAdrsZoneConv1        // insert conversion in message
+    ldr x5,qAdrszMessResult
+    ldr x6,qAdrsZoneConv2        // insert conversion in message
+    ldr x7,qAdrszCarriageReturn
+    bl displayStrings            // display message
+100:
+    ldp x6,fp,[sp],16            // restaur  registers
+    ldp x4,x5,[sp],16            // restaur  registers
+    ldp x2,x3,[sp],16            // restaur  registers
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+/***************************************************/
+/*   display multi strings                         */
+/*   new version 24/05/2023                        */
+/***************************************************/
+/* x0  contains number strings address */
+/* x1 address string1 */
+/* x2 address string2 */
+/* x3 address string3 */
+/* x4 address string4 */
+/* x5 address string5 */
+/* x6 address string5 */
+/* x7 address string6 */
+displayStrings:            // INFO:  displayStrings
+    stp x8,lr,[sp,-16]!    // save  registers
+    stp x2,fp,[sp,-16]!    // save  registers
+    add fp,sp,#32          // save paraméters address (4 registers saved * 8 bytes)
+    mov x8,x0              // save strings number
+    cmp x8,#0              // 0 string -> end
+    ble 100f
+    mov x0,x1              // string 1
+    bl affichageMess
+    cmp x8,#1              // number > 1
+    ble 100f
+    mov x0,x2
+    bl affichageMess
+    cmp x8,#2
+    ble 100f
+    mov x0,x3
+    bl affichageMess
+    cmp x8,#3
+    ble 100f
+    mov x0,x4
+    bl affichageMess
+    cmp x8,#4
+    ble 100f
+    mov x0,x5
+    bl affichageMess
+    cmp x8,#5
+    ble 100f
+    mov x0,x6
+    bl affichageMess
+    cmp x8,#6
+    ble 100f
+    mov x0,x7
+    bl affichageMess
+
+100:
+    ldp x2,fp,[sp],16        // restaur  registers
+    ldp x8,lr,[sp],16        // restaur  registers
+    ret
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

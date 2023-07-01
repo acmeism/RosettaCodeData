@@ -1,0 +1,1 @@
+ FOR  WRITE "SPAM",!

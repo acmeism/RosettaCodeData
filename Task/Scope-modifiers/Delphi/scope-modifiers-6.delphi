@@ -1,0 +1,2 @@
+strict private
+strict protected

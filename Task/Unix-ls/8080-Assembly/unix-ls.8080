@@ -1,0 +1,133 @@
+dma:		equ	80h
+puts:		equ	9h		; Write string to console
+sfirst:		equ	11h		; Find first matching file
+snext:		equ	12h		; Get next matching file
+		org	100h
+		;;;	First, retrieve all filenames in current directory
+		;;;	CP/M has function 11h (sfirst) and function 13h (snext)
+		;;;	to return the first, and then following, files that
+		;;;	match a wildcard.
+		lxi	d,0		; Amount of files
+		push	d 		; Push on stack
+		lxi	h,fnames	; Start of area to save names
+		push	h 		; Push on stack
+		lxi	d,fcb		; FCB that will match any file
+		mvi	c,sfirst	; Get the first file
+getnames:	call	5		; Call CP/M BDOS
+		inr	a		
+		jz	namesdone	; FF = we have all files
+		dcr	a		; Dir entry is at DMA+32*A	
+		rrc			; Rotate 3 right, same as
+		rrc			; rotate 5 left, *32
+		rrc
+		adi	dma+1		; Add DMA offset + 1 (filename offset)
+		mov	e,a		; Low byte of address
+		mvi	d,0		; High byte is 0
+		mvi	b,8		; Filename is 8 bytes
+		pop	h		; Get pointer to name area
+		call	memcpy		; Copy the name
+		mvi	m,' '		; Separate name and extension
+		inx	h
+		mvi	b,3		; Extension is 3 bytes
+		call 	memcpy		; Copy the extension
+		mvi	m,13		; While we're at it, terminate
+		inx	h		; the filename with \r\n
+		mvi 	m,10
+		inx	h
+		pop	d		; Get amount of files
+		inx	d		; Increment it (we've added a file)
+		push 	d 		; Put it back onto the stack
+		push	h		; Put the name pointer on the stack too
+		mvi	c,snext		; Go get the next file
+		jmp	getnames
+namesdone:	pop	h		; Terminate the file list with $
+		mvi	m,'$'		; so it can be printed with function 9
+		;;;	CP/M does not keep its directory in sorted order,
+		;;;	so we need to sort the list of files ourselves.
+		;;;	What follows is a simple insertion sort.
+		lxi	d,1		; DE (i) = 1
+sortouter:	pop	h		; Get amount of files
+		push	h
+		call 	cmpdehl		; i < length(files)?
+		jnc	sortdone	; If not, we're done
+		push	d		; push i; DE (j) = i
+sortinner:	push	d		; push j	
+		mov	a,d		; j > 0?
+		ora	e
+		jz	sortinnerdone	; If not, inner loop is done
+		dcx	d		; DE = j-1
+		call	lookup		; HL = files[j-1]
+		push	h		; push files[j-1]
+		inx	d		; DE = j
+		call 	lookup		; HL = files[j]
+		pop	d		; pop DE = files[j-1]
+		push	d		; keep them across comparison
+		push	h
+		call 	cmpentries	; A[j] >= A[j-1]?
+		pop	h
+		pop	d
+		jc	sortinnerdone	; Then inner loop is done.
+		mvi	b,12		; Otherwise we should swap them
+swaploop:	ldax	d		; Get byte from files[j-1]
+		mov	c,m		; Get byte from files[j]
+		mov	m,a		; files[j][x]=files[j-1][x]
+		mov	a,c		; files[j-1][x]=files[j]-[x]
+		stax	d
+		inx	h		; Increment pointers
+		inx	d
+		dcr	b		; all 12 bytes done yet?
+		jnz	swaploop	; if not, swap next byte
+		pop	d		; DE = j
+		dcx	d		; j = j-1
+		jmp	sortinner
+sortinnerdone:	pop	d		; pop j
+		pop	d		; pop i
+		inx	d		; i = i + 1
+		jmp	sortouter
+sortdone:	pop	h		; Remove file count from stack 	
+		;;;	We're done sorting the list, print it.
+		lxi	d,fnames	; Print the now sorted list of files
+		mvi	c,puts
+		jmp	5
+		;;;	Subroutine: compare entries under DE and HL
+cmpentries:	mvi	b,12		; Each entry has 12 relevant bytes.
+cmploop:	ldax	d		; Get byte from entry DE
+		cmp	m 		; Compare with byte from entry HL
+		rnz			; If they differ, we know the ordering
+		inx	h		; Increment both pointers
+		inx	d
+		dcr	b 		; Decrement byte counter
+		jnz	cmploop		; Compare next byte
+		ret
+		;;;	Subroutine: look up filename entry (HL=DE*14+fnames)
+lookup:		push	d		; Save entry number
+		mov	h,d
+		mov	l,e
+		dad	h		; HL = HL' * 2
+		dad	d		; HL = HL' * 3
+		dad	h		; HL = HL' * 6
+		dad	d		; HL = HL' * 7
+		dad	h		; HL = HL' * 14
+		lxi	d,fnames	; Offset
+		dad	d 		; Add the offset
+		pop	d 		; Restore entry number
+		ret
+		;;;	Subroutine: compare DE and HL
+cmpdehl:	mov	a,d
+		cmp	h
+		rnz
+		mov	a,e
+		cmp	l
+		ret
+		;;;	Subroutine: copy B bytes from DE to HL
+memcpy:		ldax	d		; Get byte from source
+		mov	m,a		; Store byte at destination
+		inx	h		; Increment both pointers
+		inx	d
+		dcr	b		; Done yet?
+		jnz	memcpy		; If not, copy next byte
+		ret
+		;;;	File control block used to specify wildcard
+fcb:		db	0,'???????????'	; Accept any file
+		ds	fcb+36-$	; Pad the FCB out to 36 bytes
+fnames:

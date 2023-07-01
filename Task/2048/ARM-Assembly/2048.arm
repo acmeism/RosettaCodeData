@@ -1,0 +1,891 @@
+/* ARM assembly Raspberry PI  */
+/*  program 2048.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+.equ STDIN,      0    @ Linux input console
+.equ READ,       3    @ Linux syscall
+.equ SIZE,       4
+.equ TOTAL,      2048
+.equ BUFFERSIZE, 80
+
+.equ IOCTL,     0x36  @ Linux syscall
+.equ SIGACTION, 0x43  @ Linux syscall
+.equ SYSPOLL,   0xA8  @ Linux syscall
+
+.equ TCGETS,    0x5401
+.equ TCSETS,    0x5402
+.equ ICANON,    2
+.equ ECHO,     10
+.equ POLLIN,    1
+
+.equ SIGINT,   2      @ Issued if the user sends an interrupt signal (Ctrl + C)
+.equ SIGQUIT,  3      @ Issued if the user sends a quit signal (Ctrl + D)
+.equ SIGTERM, 15      @ Software termination signal (sent by kill by default)
+.equ SIGTTOU, 22
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure termios see doc linux*/
+    .struct  0
+term_c_iflag:                    @ input modes
+    .struct  term_c_iflag + 4
+term_c_oflag:                    @ output modes
+    .struct  term_c_oflag + 4
+term_c_cflag:                    @ control modes
+    .struct  term_c_cflag + 4
+term_c_lflag:                    @ local modes
+    .struct  term_c_lflag + 4
+term_c_cc:                       @ special characters
+    .struct  term_c_cc + 20      @ see length if necessary
+term_fin:
+
+/* structure sigaction see doc linux */
+    .struct  0
+sa_handler:
+    .struct  sa_handler + 4
+sa_mask:
+    .struct  sa_mask + 4
+sa_flags:
+    .struct  sa_flags + 4
+sa_sigaction:
+    .struct  sa_sigaction + 4
+sa_fin:
+
+/* structure poll see doc linux */
+    .struct  0
+poll_fd:                            @   File Descriptor
+    .struct  poll_fd + 4
+poll_events:                        @  events mask
+    .struct  poll_events + 4
+poll_revents:                       @ events returned
+    .struct  poll_revents + 4
+poll_fin:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessOK:           .asciz "Bravo !! You win. \n"
+szMessNotOK:        .asciz "You lost !! \n"
+szMessNewGame:      .asciz "New game (y/n) ? \n"
+szMessErreur:       .asciz "Error detected.\n"
+szCarriageReturn:   .asciz "\n"
+//szMessMovePos:             .asciz "\033[00;00H"
+szMess0:            .asciz "      "
+szMess2:            .asciz "   2  "
+szMess4:            .asciz "   4  "
+szMess8:            .asciz "   8  "
+szMess16:           .asciz "  16  "
+szMess32:           .asciz "  32  "
+szMess64:           .asciz "  64  "
+szMess128:          .asciz " 128  "
+szMess256:          .asciz " 256  "
+szMess512:          .asciz " 512  "
+szMess1024:         .asciz " 1024 "
+szMess2048:         .asciz " 2048 "
+szClear1:           .byte 0x1B
+                    .byte 'c'           @ other console clear
+                    .byte 0
+
+szLineH:            .asciz "-----------------------------\n"
+szLineV:            .asciz "|"
+szLineVT:           .asciz "|      |      |      |      |\n"
+.align 4
+iGraine:            .int 123456
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+sZoneConv:      .skip 24
+sBuffer:        .skip BUFFERSIZE
+iTbCase:        .skip 4 * SIZE * SIZE
+iEnd:           .skip 4                        @ 0 loop  1 = end loop
+iTouche:        .skip 4                        @ value key pressed
+stOldtio:       .skip term_fin                 @ old terminal state
+stCurtio:       .skip term_fin                 @ current terminal state
+stSigAction:    .skip sa_fin                   @ area signal structure
+stSigAction1:   .skip sa_fin
+stPoll1:        .skip poll_fin                 @ area poll structure
+stPoll2:        .skip poll_fin
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 @ entry of program
+
+1:                                    @ begin game loop
+    ldr r0,iAdrszClear1
+    bl affichageMess
+    bl razTable
+2:
+    bl addDigit
+    cmp r0,#-1
+    beq 5f                            @ end game
+    bl displayGame
+3:
+    bl readKey
+    cmp r0,#-1
+    beq 100f                          @ error or control-c
+    bl keyMove
+    cmp r0,#0
+    beq 3b                            @ no change -> loop
+    cmp r0,#2                         @ last addition = 2048 ?
+    beq 4f
+    cmp r0,#-1                        @ quit ?
+    bne 2b                            @ loop
+
+    b 10f
+4:                                    @ last addition = 2048
+    ldr r0,iAdrszMessOK
+    bl affichageMess
+    b 10f
+5:                                    @ display message no solution
+    ldr r0,iAdrszMessNotOK
+    bl affichageMess
+
+10:                                   @ display new game ?
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    ldr r0,iAdrszMessNewGame
+    bl affichageMess
+    bl readKey
+    ldr r0,iAdriTouche
+    ldrb r0,[r0]
+    cmp r0,#'y'
+    beq 1b
+    cmp r0,#'Y'
+    beq 1b
+
+100:                                  @ standard end of the program
+    mov r0, #0                        @ return code
+    mov r7, #EXIT                     @ request to exit program
+    svc #0                            @ perform the system call
+
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszMessNotOK:          .int szMessNotOK
+iAdrszMessOK:             .int szMessOK
+iAdrszMessNewGame:        .int szMessNewGame
+iAdrsZoneConv:            .int sZoneConv
+iAdrszClear1:             .int szClear1
+/******************************************************************/
+/*     raz table cases                                                   */
+/******************************************************************/
+razTable:
+    push {r0-r2,lr}                  @ save  registers
+    ldr r1,iAdriTbCase
+    mov r0,#0
+    mov r2,#0
+1:
+    str r0,[r1,r2,lsl #2]
+    add r2,r2,#1
+    cmp r2,#SIZE * SIZE
+    blt 1b
+100:
+    pop {r0-r2,lr}                   @ restaur registers
+    bx lr                            @return
+/******************************************************************/
+/*     key move                                                   */
+/******************************************************************/
+/* r0 contains key value               */
+keyMove:
+    push {r1,lr}                  @ save  registers
+    cmp r0,#0x42                  @ down arrow
+    bne 1f
+    bl moveDown
+    b 100f
+1:
+    cmp r0,#0x41                  @ high arrow
+    bne 2f
+    bl moveUp
+    b 100f
+2:
+    cmp r0,#0x43                  @ right arrow
+    bne 3f
+    bl moveRight
+    b 100f
+3:
+    cmp r0,#0x44                  @ left arrow
+    bne 4f
+    bl moveLeft
+    b 100f
+4:
+    ldr r0,iAdriTouche
+    ldrb r0,[r0]
+    cmp r0,#'q'                   @ quit game
+    bne 5f
+    mov r0,#-1
+    b 100f
+5:
+    cmp r0,#'Q'                   @ quit game
+    bne 100f
+    mov r0,#-1
+    b 100f
+
+100:
+    pop {r1,lr}                   @ restaur registers
+    bx lr                         @return
+/******************************************************************/
+/*           move left                                   */
+/******************************************************************/
+/* r0 return -1 if ok     */
+moveLeft:
+    push {r1-r10,lr}            @ save registers
+    ldr r1,iAdriTbCase
+    mov r0,#0                   @ top move Ok
+    mov r2,#0                   @ line indice
+1:
+    mov r6,#0                   @ counter empty case
+    mov r7,#0                   @ first digit
+    mov r10,#0                  @ last digit to add
+    mov r3,#0                   @ column indice
+2:
+    lsl r5,r2,#2                @ change this if size <> 4
+    add r5,r5,r3                @ compute table indice
+    ldr r4,[r1,r5,lsl #2]
+    cmp r4,#0
+    addeq r6,r6,#1              @ positions vides
+    beq 5f
+    cmp r6,#0
+    beq 3f                      @ no empty left case
+    mov r8,#0
+    str r8,[r1,r5,lsl #2]       @ raz digit
+    sub r5,r5,r6
+    str r4,[r1,r5,lsl #2]       @ and store to left empty position
+    mov r0,#1                   @ move Ok
+    //sub r6,r6,#1
+3:
+    cmp r7,#0                   @ first digit
+    beq 4f
+    cmp r10,r4                  @ prec digit have to add
+    beq 4f
+    sub r8,r5,#1                @ prec digit
+    ldr r9,[r1,r8,lsl #2]
+    cmp r4,r9                   @ equal ?
+    bne 4f
+    mov r10,r4                  @ save digit
+    add r4,r4,r9                @ yes -> add
+    str r4,[r1,r8,lsl #2]
+    cmp r4,#TOTAL
+    moveq r0,#2
+    beq 100f
+    mov r4,#0
+    str r4,[r1,r5,lsl #2]
+    add r6,r6,#1                @ empty case + 1
+    mov r0,#1                   @ move Ok
+4:
+    add r7,r7,#1                @ no first digit
+
+5:                              @ and loop
+    add r3,r3,#1
+    cmp r3,#SIZE
+    blt 2b
+    add r2,r2,#1
+    cmp r2,#SIZE
+    blt 1b
+100:
+    pop {r1-r12,lr}
+    bx lr                       @ return
+/******************************************************************/
+/*           move right                                   */
+/******************************************************************/
+/* r0 return -1 if ok     */
+moveRight:
+    push {r1-r5,lr}                @ save registers
+    ldr r1,iAdriTbCase
+    mov r0,#0
+    mov r2,#0
+1:
+    mov r6,#0
+    mov r7,#0
+    mov r10,#0
+    mov r3,#SIZE-1
+2:
+    lsl r5,r2,#2                  @ change this if size <> 4
+    add r5,r5,r3
+    ldr r4,[r1,r5,lsl #2]
+    cmp r4,#0
+    addeq r6,r6,#1                @ positions vides
+    beq 5f
+
+    cmp r6,#0
+    beq 3f                      @ no empty right case
+    mov r0,#0
+    str r0,[r1,r5,lsl #2]       @ raz digit
+    add r5,r5,r6
+    str r4,[r1,r5,lsl #2]       @ and store to right empty position
+    mov r0,#1
+3:
+    cmp r7,#0                   @ first digit
+    beq 4f
+    add r8,r5,#1                @ next digit
+    ldr r9,[r1,r8,lsl #2]
+    cmp r4,r9                   @ equal ?
+    bne 4f
+    cmp r10,r4
+    beq 4f
+    mov r10,r4
+    add r4,r4,r9                @ yes -> add
+    str r4,[r1,r8,lsl #2]
+    cmp r4,#TOTAL
+    moveq r0,#2
+    beq 100f
+    mov r4,#0
+    str r4,[r1,r5,lsl #2]
+    add r6,r6,#1                @ empty case + 1
+    mov r0,#1
+4:
+    add r7,r7,#1                @ no first digit
+
+5:                              @ and loop
+    sub r3,r3,#1
+    cmp r3,#0
+    bge 2b
+    add r2,r2,#1
+    cmp r2,#SIZE
+    blt 1b
+
+100:
+    pop {r1-r5,lr}
+    bx lr                          @ return
+/******************************************************************/
+/*           move down                                   */
+/******************************************************************/
+/* r0 return -1 if ok     */
+moveDown:
+    push {r1-r5,lr}                @ save registers
+    ldr r1,iAdriTbCase
+    mov r0,#0
+    mov r3,#0
+1:
+    mov r6,#0
+    mov r7,#0
+    mov r10,#0
+    mov r2,#SIZE-1
+2:
+    lsl r5,r2,#2                  @ change this if size <> 4
+    add r5,r5,r3
+    ldr r4,[r1,r5,lsl #2]
+    cmp r4,#0
+    addeq r6,r6,#1                @ positions vides
+    beq 5f
+    cmp r6,#0
+    beq 3f                      @ no empty right case
+    mov r0,#0
+    str r0,[r1,r5,lsl #2]       @ raz digit
+    lsl r0,r6,#2
+    add r5,r5,r0
+    str r4,[r1,r5,lsl #2]       @ and store to right empty position
+    mov r0,#1
+3:
+    cmp r7,#0                   @ first digit
+    beq 4f
+    add r8,r5,#SIZE                @ down digit
+    ldr r9,[r1,r8,lsl #2]
+    cmp r4,r9                   @ equal ?
+    bne 4f
+    cmp r10,r4
+    beq 4f
+    mov r10,r4
+    add r4,r4,r9                @ yes -> add
+    str r4,[r1,r8,lsl #2]
+    cmp r4,#TOTAL
+    moveq r0,#2
+    beq 100f
+    mov r4,#0
+    str r4,[r1,r5,lsl #2]
+    add r6,r6,#1                @ empty case + 1
+    mov r0,#1
+4:
+    add r7,r7,#1                   @ no first digit
+
+5:                           @ and loop
+    sub r2,r2,#1
+    cmp r2,#0
+    bge 2b
+    add r3,r3,#1
+    cmp r3,#SIZE
+    blt 1b
+
+100:
+    pop {r1-r5,lr}
+    bx lr                          @ return
+/******************************************************************/
+/*           move up                                   */
+/******************************************************************/
+/* r0 return -1 if ok     */
+moveUp:
+    push {r1-r5,lr}                @ save registers
+    ldr r1,iAdriTbCase
+    mov r0,#0
+    mov r3,#0
+1:
+    mov r6,#0
+    mov r7,#0
+    mov r10,#0
+    mov r2,#0
+2:
+    lsl r5,r2,#2                  @ change this if size <> 4
+    add r5,r5,r3
+    ldr r4,[r1,r5,lsl #2]
+    cmp r4,#0
+    addeq r6,r6,#1                @ positions vides
+    beq 5f
+    cmp r6,#0
+    beq 3f                      @ no empty right case
+    mov r0,#0
+    str r0,[r1,r5,lsl #2]       @ raz digit
+    lsl r0,r6,#2
+    sub r5,r5,r0
+    str r4,[r1,r5,lsl #2]       @ and store to right empty position
+    mov r0,#1
+3:
+    cmp r7,#0                   @ first digit
+    beq 4f
+    sub r8,r5,#SIZE             @ up digit
+    ldr r9,[r1,r8,lsl #2]
+    cmp r4,r9                   @ equal ?
+    bne 4f
+    cmp r10,r4
+    beq 4f
+    mov r10,r4
+    add r4,r4,r9                @ yes -> add
+    str r4,[r1,r8,lsl #2]
+    cmp r4,#TOTAL
+    moveq r0,#2
+    beq 100f
+    mov r4,#0
+    str r4,[r1,r5,lsl #2]
+    add r6,r6,#1                @ empty case + 1
+    mov r0,#1
+4:
+    add r7,r7,#1                @ no first digit
+
+5:                              @ and loop
+    add r2,r2,#1
+    cmp r2,#SIZE
+    blt 2b
+    add r3,r3,#1
+    cmp r3,#SIZE
+    blt 1b
+
+100:
+    pop {r1-r5,lr}
+    bx lr                          @ return
+/******************************************************************/
+/*           add new digit on game                                   */
+/******************************************************************/
+/* r0 return -1 if ok     */
+addDigit:
+    push {r1-r5,lr}                @ save registers
+    sub sp,#4 * SIZE*SIZE
+    mov fp,sp
+
+    mov r0,#100
+    bl genereraleas
+    cmp r0,#10
+    movlt r5,#4
+    movge r5,#2
+    ldr r1,iAdriTbCase
+    mov r3,#0
+    mov r4,#0
+1:
+    ldr r2,[r1,r3,lsl #2]
+    cmp r2,#0
+    bne 2f
+    str r3,[fp,r4,lsl #2]
+    add r4,r4,#1
+2:
+    add r3,r3,#1
+    cmp r3,#SIZE*SIZE
+    blt 1b
+    cmp r4,#0              @ no empty case
+    moveq r0,#-1
+    beq 100f
+    cmp r4,#1
+    bne 3f
+    ldr r2,[fp]            @ one case
+    str r5,[r1,r2,lsl #2]
+    mov r0,#0
+    b 100f
+3:                         @ multiple case
+    sub r0,r4,#1
+    bl genereraleas
+    ldr r2,[fp,r0,lsl #2]
+    str r5,[r1,r2,lsl #2]
+    mov r0,#0
+
+100:
+    add sp,#4*  (SIZE*SIZE)    @ stack alignement
+    pop {r1-r5,lr}
+    bx lr                      @ return
+iAdriTbCase:         .int iTbCase
+/******************************************************************/
+/*            display game                                      */
+/******************************************************************/
+displayGame:
+    push {r1-r3,lr}            @ save registers
+    ldr r0,iAdrszClear1
+    bl affichageMess
+    ldr r0,iAdrszLineH
+    bl affichageMess
+    ldr r0,iAdrszLineVT
+    bl affichageMess
+    ldr r0,iAdrszLineV
+    bl affichageMess
+    ldr r1,iAdriTbCase
+    mov r2,#0
+1:
+    ldr r0,[r1,r2,lsl #2]
+    bl digitString
+    bl affichageMess
+    ldr r0,iAdrszLineV
+    bl affichageMess
+    add r2,r2,#1
+    cmp r2,#SIZE
+    blt 1b
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    ldr r0,iAdrszLineVT
+    bl affichageMess
+    ldr r0,iAdrszLineH
+    bl affichageMess
+    ldr r0,iAdrszLineVT
+    bl affichageMess
+    ldr r0,iAdrszLineV
+    bl affichageMess
+2:
+    ldr r0,[r1,r2,lsl #2]
+    bl digitString
+    bl affichageMess
+    ldr r0,iAdrszLineV
+    bl affichageMess
+    add r2,r2,#1
+    cmp r2,#SIZE*2
+    blt 2b
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    ldr r0,iAdrszLineVT
+    bl affichageMess
+    ldr r0,iAdrszLineH
+    bl affichageMess
+    ldr r0,iAdrszLineVT
+    bl affichageMess
+    ldr r0,iAdrszLineV
+    bl affichageMess
+3:
+    ldr r0,[r1,r2,lsl #2]
+    bl digitString
+    bl affichageMess
+    ldr r0,iAdrszLineV
+    bl affichageMess
+    add r2,r2,#1
+    cmp r2,#SIZE*3
+    blt 3b
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    ldr r0,iAdrszLineVT
+    bl affichageMess
+    ldr r0,iAdrszLineH
+    bl affichageMess
+    ldr r0,iAdrszLineVT
+    bl affichageMess
+    ldr r0,iAdrszLineV
+    bl affichageMess
+4:
+    ldr r0,[r1,r2,lsl #2]
+    bl digitString
+    bl affichageMess
+    ldr r0,iAdrszLineV
+    bl affichageMess
+    add r2,r2,#1
+    cmp r2,#SIZE*4
+    blt 4b
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    ldr r0,iAdrszLineVT
+    bl affichageMess
+    ldr r0,iAdrszLineH
+    bl affichageMess
+
+100:
+    pop {r1-r3,lr}
+    bx lr                       @ return
+iAdrszLineH:         .int szLineH
+iAdrszLineV:         .int szLineV
+iAdrszLineVT:        .int szLineVT
+//iAdrszMessMovePos:   .int szMessMovePos
+/******************************************************************/
+/*            digits string                                       */
+/******************************************************************/
+/* r0 contains number */
+/* r0 return address string */
+digitString:
+    push {r1,lr}        @ save registers
+    cmp r0,#0
+    bne 1f
+    ldr r0,iAdrszMess0
+    b 100f
+1:
+    cmp r0,#2
+    bne 2f
+    ldr r0,iAdrszMess2
+    b 100f
+2:
+    cmp r0,#4
+    bne 3f
+    ldr r0,iAdrszMess4
+    b 100f
+3:
+    cmp r0,#8
+    bne 4f
+    ldr r0,iAdrszMess8
+    b 100f
+4:
+    cmp r0,#16
+    bne 5f
+    ldr r0,iAdrszMess16
+    b 100f
+5:
+    cmp r0,#32
+    bne 6f
+    ldr r0,iAdrszMess32
+    b 100f
+6:
+    cmp r0,#64
+    bne 7f
+    ldr r0,iAdrszMess64
+    b 100f
+7:
+    cmp r0,#128
+    bne 8f
+    ldr r0,iAdrszMess128
+    b 100f
+8:
+    cmp r0,#256
+    bne 9f
+    ldr r0,iAdrszMess256
+    b 100f
+9:
+    cmp r0,#512
+    bne 10f
+    ldr r0,iAdrszMess512
+    b 100f
+10:
+    cmp r0,#1024
+    bne 11f
+    ldr r0,iAdrszMess1024
+    b 100f
+11:
+    cmp r0,#2048
+    bne 12f
+    ldr r0,iAdrszMess2048
+    b 100f
+12:
+    ldr r1,iAdrszMessErreur                       @ error message
+    bl   displayError
+100:
+    pop {r1,lr}
+    bx lr                   @ return
+iAdrszMess0:          .int szMess0
+iAdrszMess2:          .int szMess2
+iAdrszMess4:          .int szMess4
+iAdrszMess8:          .int szMess8
+iAdrszMess16:         .int szMess16
+iAdrszMess32:         .int szMess32
+iAdrszMess64:         .int szMess64
+iAdrszMess128:        .int szMess128
+iAdrszMess256:        .int szMess256
+iAdrszMess512:        .int szMess512
+iAdrszMess1024:       .int szMess1024
+iAdrszMess2048:        .int szMess2048
+
+//iAdrsBuffer:         .int sBuffer
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* r0 contains limit  */
+genereraleas:
+    push {r1-r4,lr}         @ save registers
+    ldr r4,iAdriGraine
+    ldr r2,[r4]
+    ldr r3,iNbDep1
+    mul r2,r3,r2
+    ldr r3,iNbDep2
+    add r2,r2,r3
+    str r2,[r4]             @ maj de la graine pour l appel suivant
+    cmp r0,#0
+    beq 100f
+    add r1,r0,#1            @ divisor
+    mov r0,r2               @ dividende
+    bl division
+    mov r0,r3               @ résult = remainder
+
+100:                        @ end function
+    pop {r1-r4,lr}          @ restaur registers
+    bx lr                   @ return
+/*****************************************************/
+iAdriGraine: .int iGraine
+iNbDep1:     .int 0x343FD
+iNbDep2:     .int 0x269EC3
+/***************************************************/
+/* read touch                                      */
+/***************************************************/
+readKey:
+    push {r1-r7,lr}
+    mov r5,#0
+    ldr r1,iAdriTouche                            @ buffer address
+    str r5,[r1]                                  @ raz 4 bytes iTouche
+    /* read terminal state */
+    mov r0,#STDIN                                @ input console
+    mov r1,#TCGETS
+    ldr r2,iAdrstOldtio
+    mov r7, #IOCTL                               @ call system Linux
+    svc #0
+    cmp r0,#0                                    @ error ?
+    beq 1f
+    ldr r1,iAdrszMessErreur                      @ error message
+    bl   displayError
+    mov r0,#-1
+    b 100f
+1:
+    adr r0,sighandler                            @ adresse routine traitement signal
+    ldr r1,iAdrstSigAction                       @ adresse structure sigaction
+    str r0,[r1,#sa_handler]                      @ maj handler
+    mov r0,#SIGINT                               @ signal type
+    ldr r1,iAdrstSigAction
+    mov r2,#0                                    @ NULL
+    mov r7, #SIGACTION                           @ call system
+    svc #0
+    cmp r0,#0                                    @ error ?
+    bne 97f
+    mov r0,#SIGQUIT
+    ldr r1,iAdrstSigAction
+    mov r2,#0                                    @ NULL
+    mov r7, #SIGACTION                           @ call system
+    svc #0
+    cmp r0,#0                                    @ error ?
+    bne 97f
+    mov r0,#SIGTERM
+    ldr r1,iAdrstSigAction
+    mov r2,#0                                    @ NULL
+    mov r7, #SIGACTION                           @ appel systeme
+    svc #0
+    cmp r0,#0
+    bne 97f
+    @
+    adr r0,iSIG_IGN                              @ address signal ignore function
+    ldr r1,iAdrstSigAction1
+    str r0,[r1,#sa_handler]
+    mov r0,#SIGTTOU                              @invalidate other process signal
+    ldr r1,iAdrstSigAction1
+    mov r2,#0                                    @ NULL
+    mov r7,#SIGACTION                            @ call system
+    svc #0
+    cmp r0,#0
+    bne 97f
+    @
+    /* read terminal current state  */
+    mov r0,#STDIN
+    mov r1,#TCGETS
+    ldr r2,iAdrstCurtio                          @ address current termio
+    mov r7,#IOCTL                                @ call systeme
+    svc #0
+    cmp r0,#0                                    @ error ?
+    bne 97f
+    mov r2,#ICANON | ECHO                        @ no key pressed echo on display
+    mvn r2,r2                                    @ and one key
+    ldr r1,iAdrstCurtio
+    ldr r3,[r1,#term_c_lflag]
+    and r3,r2                                    @ add flags
+    str r3,[r1,#term_c_lflag]                    @ and store
+    mov r0,#STDIN                                @ maj terminal current state
+    mov r1,#TCSETS
+    ldr r2,iAdrstCurtio
+    mov r7, #IOCTL                               @ call system
+    svc #0
+    cmp r0,#0
+    bne 97f
+    @
+2:                                               @ loop waiting key
+    ldr r0,iAdriEnd                              @ if signal ctrl-c  -> end
+    ldr r0,[r0]
+    cmp r0,#0
+    movne r5,#-1
+    bne 98f
+    ldr r0,iAdrstPoll1                            @ address structure poll
+    mov r1,#STDIN
+    str r1,[r0,#poll_fd]                          @ maj FD
+    mov r1,#POLLIN                                @ action code
+    str r1,[r0,#poll_events]
+    mov r1,#1                                     @ items number structure poll
+    mov r2,#0                                     @ timeout = 0
+    mov r7,#SYSPOLL                               @ call system POLL
+    svc #0
+    cmp r0,#0                                     @ key pressed ?
+    ble 2b                                        @ no key pressed -> loop
+                                                  @ read key
+    mov r0,#STDIN                                 @ File Descriptor
+    ldr r1,iAdriTouche                            @ buffer address
+    mov r2,#BUFFERSIZE                            @ buffer size
+    mov r7,#READ                                  @ read key
+    svc #0
+    cmp r0,#0                                     @ error ?
+    bgt 98f
+
+97:                                               @ error detected
+    ldr r1,iAdrszMessErreur                       @ error message
+    bl   displayError
+    mov r5,#-1
+98:                                               @ end then restaur begin state terminal
+    mov r0,#STDIN
+    mov r1,#TCSETS
+    ldr r2,iAdrstOldtio
+    mov r7,#IOCTL                                 @ call system
+    svc #0
+    cmp r0,#0
+    beq 99f                                       @ restaur ok
+    ldr r1,iAdrszMessErreur                       @ error message
+    bl   displayError
+    mov r0,#-1
+    b 100f
+99:
+    cmp r5,#0                                     @ no error or control-c ?
+    ldreq r2,iAdriTouche                          @ key address
+    ldreqb r0,[r2,#2]                             @ return key byte
+    movne r0,r5                                   @ or error
+100:
+    pop {r1-r7, lr}
+    bx lr
+iSIG_IGN:                 .int 1
+iAdriEnd:                 .int iEnd
+iAdrstPoll1:              .int stPoll1
+iAdriTouche:              .int iTouche
+iAdrstOldtio:             .int stOldtio
+iAdrstCurtio:             .int stCurtio
+iAdrstSigAction:          .int stSigAction
+iAdrstSigAction1:         .int stSigAction1
+iAdrszMessErreur :        .int szMessErreur
+/******************************************************************/
+/*     traitement du signal                                       */
+/******************************************************************/
+sighandler:
+    push {r0,r1}
+    ldr r0,iAdriEnd
+    mov r1,#1                 @ maj zone end
+    str r1,[r0]
+    pop {r0,r1}
+    bx lr
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

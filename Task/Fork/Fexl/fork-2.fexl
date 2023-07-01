@@ -1,0 +1,87 @@
+# (spawn child_fn next)
+# Fork the child function as a process and return its pid, stdin, stdout, and
+# stderr.
+\spawn =
+    (
+    ### Use error-checking versions of system routines
+    \pipe =
+        (\next
+        pipe \status\read\write
+        long_lt status 0 (die "pipe failed");
+        next read write
+        )
+
+    \dup2 =
+        (\oldfd\newfd\next
+        dup2 oldfd newfd \status
+        long_lt status 0 (die "dup2 failed");
+        next
+        )
+
+    \fdopen =
+        (\fd\mode\next
+        fdopen fd mode next;
+        die "fdopen failed"
+        )
+
+    \fork =
+        (\next
+        fork \pid
+        long_lt pid 0 (die "fork failed");
+        next pid
+        )
+
+    # Now here's the spawn function itself.
+    \child_fn\next
+
+    # First flush the parent's stdout and stderr to avoid any pending output
+    # accidentally getting pushed into the child's input.  I've noticed this
+    # can happen when your script output is sent to a file or pipe instead of
+    # a console.
+    get_stdout \fh fflush fh \_
+    get_stderr \fh fflush fh \_
+
+    # Now create a series of pipes, each with a read and write side.
+    pipe \r_in\w_in
+    pipe \r_out\w_out
+    pipe \r_err\w_err
+
+    fork \pid
+    long_eq pid 0
+        (
+        # Child process.
+
+        # Duplicate one side of each pipe into stdin, stdout, and stderr
+        # as appropriate.
+        dup2 r_in 0;
+        dup2 w_out 1;
+        dup2 w_err 2;
+
+        # Close unused file handles.  They're all unused because we duped the
+        # ones we need.  Also, we must close w_in or the child hangs waiting
+        # for stdin to close.
+        close r_in; close w_in;
+        close r_out; close w_out;
+        close r_err; close w_err;
+
+        # Now run the child function, which can use stdin, stdout, and stderr
+        # normally.
+        child_fn
+        )
+        (
+        # Parent process.  Open the opposite side of each pipe into three new
+        # file handles.
+        fdopen w_in "w" \child_in
+        fdopen r_out "r" \child_out
+        fdopen r_err "r" \child_err
+
+        # Close unused file handles.  We don't close the ones we fdopened
+        # because they are still in play (i.e. fdopen does not dup).
+        close r_in;
+        close w_out;
+        close w_err;
+
+        # Return the child's pid, stdin, stdout, and stderr.
+        next pid child_in child_out child_err
+        )
+    )

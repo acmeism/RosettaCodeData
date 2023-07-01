@@ -1,0 +1,498 @@
+# -*- ObjectIcon -*-
+#
+# The Rosetta Code lexical analyzer in Object Icon. Based upon the ATS
+# implementation.
+#
+# Usage: lex [INPUTFILE [OUTPUTFILE]]
+#   If INPUTFILE or OUTPUTFILE is "-" or missing, then standard input
+#   or standard output is used, respectively. *)
+#
+
+import io
+
+$define EOF -1
+
+$define TOKEN_ELSE          0
+$define TOKEN_IF            1
+$define TOKEN_PRINT         2
+$define TOKEN_PUTC          3
+$define TOKEN_WHILE         4
+$define TOKEN_MULTIPLY      5
+$define TOKEN_DIVIDE        6
+$define TOKEN_MOD           7
+$define TOKEN_ADD           8
+$define TOKEN_SUBTRACT      9
+$define TOKEN_NEGATE       10
+$define TOKEN_LESS         11
+$define TOKEN_LESSEQUAL    12
+$define TOKEN_GREATER      13
+$define TOKEN_GREATEREQUAL 14
+$define TOKEN_EQUAL        15
+$define TOKEN_NOTEQUAL     16
+$define TOKEN_NOT          17
+$define TOKEN_ASSIGN       18
+$define TOKEN_AND          19
+$define TOKEN_OR           20
+$define TOKEN_LEFTPAREN    21
+$define TOKEN_RIGHTPAREN   22
+$define TOKEN_LEFTBRACE    23
+$define TOKEN_RIGHTBRACE   24
+$define TOKEN_SEMICOLON    25
+$define TOKEN_COMMA        26
+$define TOKEN_IDENTIFIER   27
+$define TOKEN_INTEGER      28
+$define TOKEN_STRING       29
+$define TOKEN_END_OF_INPUT 30
+
+global whitespace
+global ident_start
+global ident_continuation
+
+procedure main(args)
+  local inpf, outf
+  local pushback_buffer, inp, pushback
+
+  initial {
+    whitespace := ' \t\v\f\r\n'
+    ident_start := '_' ++ &letters
+    ident_continuation := ident_start ++ &digits
+  }
+
+  inpf := FileStream.stdin
+  outf := FileStream.stdout
+  if 1 <= *args & args[1] ~== "-" then {
+    inpf := FileStream(args[1], FileOpt.RDONLY) | stop(&why)
+  }
+  if 2 <= *args & args[2] ~== "-" then {
+    outf := FileStream(args[2], ior(FileOpt.WRONLY,
+                                    FileOpt.TRUNC,
+                                    FileOpt.CREAT)) | stop(&why)
+  }
+
+  pushback_buffer := []
+  inp := create inputter(inpf, pushback_buffer)
+  pushback := create repeat push(pushback_buffer, \@&source)
+  @pushback                     #  The first invocation does nothing.
+
+  scan_text(outf, inp, pushback)
+end
+
+procedure scan_text(outf, inp, pushback)
+  local ch
+
+  while /ch | ch[1] ~=== EOF do {
+    skip_spaces_and_comments(inp, pushback)
+    ch := @inp
+    if ch[1] === EOF then {
+      print_token(outf, [TOKEN_END_OF_INPUT, "", ch[2], ch[3]])
+    } else {
+      ch @pushback
+      print_token(outf, get_next_token(inp, pushback))
+    }
+  }
+end
+
+procedure get_next_token(inp, pushback)
+  local ch, ch1
+  local ln, cn
+
+  skip_spaces_and_comments(inp, pushback)
+  ch := @inp
+  ln := ch[2]                   # line number
+  cn := ch[3]                   # column number
+  case ch[1] of {
+    "," : return [TOKEN_COMMA, ",", ln, cn]
+    ";" : return [TOKEN_SEMICOLON, ";", ln, cn]
+    "(" : return [TOKEN_LEFTPAREN, "(", ln, cn]
+    ")" : return [TOKEN_RIGHTPAREN, ")", ln, cn]
+    "{" : return [TOKEN_LEFTBRACE, "{", ln, cn]
+    "}" : return [TOKEN_RIGHTBRACE, "}", ln, cn]
+    "*" : return [TOKEN_MULTIPLY, "*", ln, cn]
+    "/" : return [TOKEN_DIVIDE, "/", ln, cn]
+    "%" : return [TOKEN_MOD, "%", ln, cn]
+    "+" : return [TOKEN_ADD, "+", ln, cn]
+    "-" : return [TOKEN_SUBTRACT, "-", ln, cn]
+    "<" : {
+      ch1 := @inp
+      if ch1[1] === "=" then {
+        return [TOKEN_LESSEQUAL, "<=", ln, cn]
+      } else {
+        ch1 @pushback
+        return [TOKEN_LESS, "<", ln, cn]
+      }
+    }
+    ">" : {
+      ch1 := @inp
+      if ch1[1] === "=" then {
+        return [TOKEN_GREATEREQUAL, ">=", ln, cn]
+      } else {
+        ch1 @pushback
+        return [TOKEN_GREATER, ">", ln, cn]
+      }
+    }
+    "=" : {
+      ch1 := @inp
+      if ch1[1] === "=" then {
+        return [TOKEN_EQUAL, "==", ln, cn]
+      } else {
+        ch1 @pushback
+        return [TOKEN_ASSIGN, "=", ln, cn]
+      }
+    }
+    "!" : {
+      ch1 := @inp
+      if ch1[1] === "=" then {
+        return [TOKEN_NOTEQUAL, "!=", ln, cn]
+      } else {
+        ch1 @pushback
+        return [TOKEN_NOT, "!", ln, cn]
+      }
+    }
+    "&" : {
+      ch1 := @inp
+      if ch1[1] === "&" then {
+        return [TOKEN_AND, "&&", ln, cn]
+      } else {
+        unexpected_character(ln, cn, ch)
+      }
+    }
+    "|" : {
+      ch1 := @inp
+      if ch1[1] === "|" then {
+        return [TOKEN_OR, "||", ln, cn]
+      } else {
+        unexpected_character(ln, cn, ch)
+      }
+    }
+    "\"" : {
+      ch @pushback
+      return scan_string_literal(inp)
+    }
+    "'" : {
+      ch @pushback
+      return scan_character_literal(inp, pushback)
+    }
+    default : {
+      if any(&digits, ch[1]) then {
+        ch @pushback
+        return scan_integer_literal(inp, pushback)
+      } else if any(ident_start, ch[1]) then {
+        ch @pushback
+        return scan_identifier_or_reserved_word (inp, pushback)
+      } else {
+        unexpected_character(ln, cn, ch)
+      }
+    }
+  }
+end
+
+procedure scan_identifier_or_reserved_word(inp, pushback)
+  local ch
+  local s
+  local line_no, column_no
+
+  s := ""
+  ch := @inp
+  line_no := ch[2]
+  column_no := ch[3]
+  while EOF ~=== ch[1] & any(ident_continuation, ch[1]) do {
+    s ||:= ch[1]
+    ch := @inp
+  }
+  ch @pushback
+  return reserved_word_lookup (s, line_no, column_no)
+end
+
+procedure scan_integer_literal(inp, pushback)
+  local ch
+  local s
+  local line_no, column_no
+
+  s := ""
+  ch := @inp
+  line_no := ch[2]
+  column_no := ch[3]
+  while EOF ~=== ch[1] & any(ident_continuation, ch[1]) do {
+    s ||:= ch[1]
+    ch := @inp
+  }
+  ch @pushback
+  not upto(~&digits, s) | invalid_integer_literal(line_no, column_no, s)
+  return [TOKEN_INTEGER, s, line_no, column_no]
+end
+
+procedure scan_character_literal(inp, pushback)
+  local ch, ch1
+  local close_quote
+  local toktup
+  local line_no, column_no
+
+  ch := @inp                    # The opening quote.
+  close_quote := ch[1]          # Same as the opening quote.
+  ch @pushback
+
+  line_no := ch[2]
+  column_no := ch[3]
+
+  toktup := scan_character_literal_without_checking_end(inp)
+  ch1 := @inp
+  if ch1[1] ~=== close_quote then {
+    repeat {
+      case ch1[1] of {
+        EOF : unterminated_character_literal(line_no, column_no)
+        close_quote : multicharacter_literal(line_no, column_no)
+        default : ch1 := @inp
+      }
+    }
+  }
+  return toktup
+end
+
+procedure scan_character_literal_without_checking_end(inp)
+  local ch, ch1, ch2
+
+  ch := @inp                    # The opening quote.
+  ch1 := @inp
+  EOF ~=== ch1[1] | unterminated_character_literal(ch[2], ch[3])
+  if ch1[1] == "\\" then {
+    ch2 := @inp
+    EOF ~=== ch2[1] | unterminated_character_literal(ch[2], ch[3])
+    case ch2[1] of {
+      "n" : return [TOKEN_INTEGER, string(ord("\n")), ch[2], ch[3]]
+      "\\" : return [TOKEN_INTEGER, string(ord("\\")), ch[2], ch[3]]
+      default : unsupported_escape(ch1[2], ch1[3], ch2)
+    }
+  } else {
+    return [TOKEN_INTEGER, string(ord(ch1[1])), ch[2], ch[3]]
+  }
+end
+
+procedure scan_string_literal(inp)
+  local ch, ch1, ch2
+  local line_no, column_no
+  local close_quote
+  local s
+  local retval
+
+  ch := @inp                    # The opening quote
+  close_quote := ch[1]          # Same as the opening quote.
+  line_no := ch[2]
+  column_no := ch[3]
+
+  s := ch[1]
+  until \retval do {
+    ch1 := @inp
+    ch1[1] ~=== EOF |
+        unterminated_string_literal (line_no, column_no,
+                                     "end of input")
+    ch1[1] ~== "\n" |
+        unterminated_string_literal (line_no, column_no,
+                                     "end of line")
+    if ch1[1] == close_quote then {
+      retval := [TOKEN_STRING, s || close_quote, line_no, column_no]
+    } else if ch1[1] ~== "\\" then {
+      s ||:= ch1[1]
+    } else {
+      ch2 := @inp
+      EOF ~=== ch2[1] | unsupported_escape(line_no, column_no, ch2)
+      case ch2[1] of {
+        "n" : s ||:= "\\n"
+        "\\" : s ||:= "\\\\"
+        default : unsupported_escape(line_no, column_no, ch2)
+      }
+    }
+  }
+  return retval
+end
+
+procedure skip_spaces_and_comments(inp, pushback)
+  local ch, ch1
+
+  repeat {
+    ch := @inp
+    (EOF === ch[1]) & { ch @pushback; return }
+    if not any(whitespace, ch[1]) then {
+      (ch[1] == "/") | { ch @pushback; return }
+      (ch1 := @inp) | { ch @pushback; return }
+      (ch1[1] == "*") | { ch1 @pushback; ch @pushback; return }
+      scan_comment(inp, ch[2], ch[3])
+    }
+  }
+end
+
+procedure scan_comment(inp, line_no, column_no)
+  local ch, ch1
+
+  until (\ch)[1] == "*" & (\ch1)[1] == "/" do {
+    ch := @inp
+    (EOF === ch[1]) & unterminated_comment(line_no, column_no)
+    if ch[1] == "*" then {
+      ch1 := @inp
+      (EOF === ch[1]) & unterminated_comment(line_no, column_no)
+    }
+  }
+  return
+end
+
+procedure reserved_word_lookup(s, line_no, column_no)
+
+  # Lookup is by an extremely simple perfect hash.
+
+  static reserved_words
+  static reserved_word_tokens
+  local hashval, token, toktup
+
+  initial {
+    reserved_words := ["if", "print", "else",
+                       "", "putc", "",
+                       "", "while", ""]
+    reserved_word_tokens :=
+        [TOKEN_IF, TOKEN_PRINT, TOKEN_ELSE,
+         TOKEN_IDENTIFIER, TOKEN_PUTC, TOKEN_IDENTIFIER,
+         TOKEN_IDENTIFIER, TOKEN_WHILE, TOKEN_IDENTIFIER]
+  }
+
+  if *s < 2 then {
+    toktup := [TOKEN_IDENTIFIER, s, line_no, column_no]
+  } else {
+    hashval := ((ord(s[1]) + ord(s[2])) % (*reserved_words)) + 1
+    token := reserved_word_tokens[hashval]
+    if token = TOKEN_IDENTIFIER | s ~== reserved_words[hashval] then {
+      toktup := [TOKEN_IDENTIFIER, s, line_no, column_no]
+    } else {
+      toktup := [token, s, line_no, column_no]
+    }
+  }
+  return toktup
+end
+
+procedure print_token(outf, toktup)
+  static token_names
+  local s_line, s_column
+
+  initial {
+    token_names := ["Keyword_else",
+                    "Keyword_if",
+                    "Keyword_print",
+                    "Keyword_putc",
+                    "Keyword_while",
+                    "Op_multiply",
+                    "Op_divide",
+                    "Op_mod",
+                    "Op_add",
+                    "Op_subtract",
+                    "Op_negate",
+                    "Op_less",
+                    "Op_lessequal",
+                    "Op_greater",
+                    "Op_greaterequal",
+                    "Op_equal",
+                    "Op_notequal",
+                    "Op_not",
+                    "Op_assign",
+                    "Op_and",
+                    "Op_or",
+                    "LeftParen",
+                    "RightParen",
+                    "LeftBrace",
+                    "RightBrace",
+                    "Semicolon",
+                    "Comma",
+                    "Identifier",
+                    "Integer",
+                    "String",
+                    "End_of_input"]
+  }
+
+  /outf := FileStream.stdout
+  s_line := string(toktup[3])
+  s_column := string(toktup[4])
+  writes(outf, right (s_line, max(5, *s_line)))
+  writes(outf, " ")
+  writes(outf, right (s_column, max(5, *s_column)))
+  writes(outf, "  ")
+  writes(outf, token_names[toktup[1] + 1])
+  case toktup[1] of {
+    TOKEN_IDENTIFIER : writes(outf, "     ", toktup[2])
+    TOKEN_INTEGER : writes(outf, "        ", toktup[2])
+    TOKEN_STRING : writes(outf, "         ", toktup[2])
+  }
+  write(outf)
+  return
+end
+
+procedure inputter(inpf, pushback_buffer)
+  local buffer
+  local line_no, column_no
+  local c
+
+  buffer := ""
+  line_no := 1
+  column_no := 1
+
+  repeat {
+      buffer? {
+        until *pushback_buffer = 0 & pos(0) do {
+          if *pushback_buffer ~= 0 then {
+            suspend pop(pushback_buffer)
+          } else {
+            c := move(1)
+            suspend [c, line_no, column_no]
+            if c == "\n" then {
+              line_no +:= 1
+              column_no := 1
+            } else {
+              column_no +:= 1
+            }
+          }
+        }
+      }
+      (buffer := reads(inpf, 2048)) |
+          suspend [EOF, line_no, column_no]
+    }
+end
+
+procedure unterminated_comment(line_no, column_no)
+  error("unterminated comment starting at ",
+        line_no, ":", column_no)
+end
+
+procedure unexpected_character(line_no, column_no, ch)
+  error("unexpected character '", ch[1], "' starting at ",
+        line_no, ":", column_no)
+end
+
+procedure unterminated_string_literal (line_no, column_no, cause)
+  error("unterminated string literal (", cause, ") starting at ",
+        line_no, ":", column_no)
+end
+
+procedure unsupported_escape (line_no, column_no, ch)
+  if ch[1] === EOF then {
+    error("unexpected \\ at end of input",
+          " starting at ", line_no, ":", column_no)
+  } else {
+    error("unsupported escape \\", ch[1],
+          " starting at ", line_no, ":", column_no)
+  }
+end
+
+procedure invalid_integer_literal(line_no, column_no, s)
+  error("invalid integer literal ", s,
+        " starting at ", line_no, ":", column_no)
+end
+
+procedure unterminated_character_literal(line_no, column_no)
+  error("unterminated character literal starting at ",
+        line_no, ":", column_no)
+end
+
+procedure multicharacter_literal(line_no, column_no)
+  error("unsupported multicharacter literal starting at ",
+        line_no, ":", column_no)
+end
+
+procedure error(args[])
+  write!([FileStream.stderr] ||| args)
+  exit(1)
+end

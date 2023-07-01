@@ -1,0 +1,102 @@
+#DEFINE CTAB CHR(9)
+#DEFINE CRLF CHR(13) + CHR(10)
+LOCAL lcTxt As String, i As Integer
+CLOSE DATABASES ALL
+SET SAFETY OFF
+CLEAR
+CREATE CURSOR scores (score I, name V(8), rownum I AUTOINC)
+INDEX ON score TAG score COLLATE "Machine"
+SET ORDER TO 0
+INSERT INTO scores (score, name) VALUES (44, "Solomon")
+INSERT INTO scores (score, name) VALUES (42, "Jason")
+INSERT INTO scores (score, name) VALUES (42, "Errol")
+INSERT INTO scores (score, name) VALUES (41, "Garry")
+INSERT INTO scores (score, name) VALUES (41, "Bernard")
+INSERT INTO scores (score, name) VALUES (41, "Barry")
+INSERT INTO scores (score, name) VALUES (39, "Stephen")
+
+CREATE CURSOR ranks (sc_rank I, mod_rank I, dense I, ordinal I, fractional B(1), score I, name V(8))
+INDEX ON score TAG score COLLATE "Machine"
+SET ORDER TO 0
+APPEND FROM DBF("scores") FIELDS score, name
+Std_Comp()
+Modified()
+Dense()
+Ordinal()
+Fractional()
+COPY TO ranks.txt TYPE DELIMITED WITH TAB
+lcTxt = ""
+FOR i = 1 TO FCOUNT()
+    lcTxt = lcTxt + FIELD(i) + CTAB
+ENDFOR
+lcTxt = LEFT(lcTxt, LEN(lcTxt) - 1) + CRLF + FILETOSTR("ranks.txt")
+STRTOFILE(lcTxt, "ranks.txt")
+MODIFY FILE ranks.txt
+SET SAFETY ON
+
+FUNCTION ScoreGroup(aa)
+LOCAL n As Integer
+SELECT score, COUNT(*) As num FROM scores ;
+GROUP BY score ORDER BY score DESC INTO ARRAY aa
+n = _TALLY
+RETURN n
+ENDFUNC
+
+PROCEDURE Std_Comp
+LOCAL n, i, nn
+LOCAL ARRAY a[1]
+SELECT ranks
+BLANK FIELDS sc_rank ALL
+nn = ScoreGroup(@a)
+n = 1
+FOR i = 1 TO nn
+    REPLACE sc_rank WITH n FOR score = a[i,1]
+    n = n + a[i,2]
+ENDFOR	
+ENDPROC
+
+PROCEDURE Modified
+LOCAL n, i, nn
+LOCAL ARRAY a[1]
+SELECT ranks
+BLANK FIELDS mod_rank ALL
+nn = ScoreGroup(@a)
+n = 0
+FOR i = 1 TO nn
+    n = n + a[i,2]
+    REPLACE mod_rank WITH n FOR score = a[i,1]
+ENDFOR	
+ENDPROC
+
+PROCEDURE Dense
+LOCAL n, i, nn
+LOCAL ARRAY a[1]
+SELECT ranks
+BLANK FIELDS dense ALL
+nn = ScoreGroup(@a)
+SELECT ranks
+n = 0
+FOR i = 1 TO nn
+    n = n + a[i,2]
+    REPLACE dense WITH i FOR score = a[i,1]
+ENDFOR	
+ENDPROC
+
+PROCEDURE Ordinal
+SELECT ranks
+BLANK FIELDS ordinal ALL
+REPLACE ordinal WITH RECNO() ALL
+ENDPROC
+
+PROCEDURE Fractional
+LOCAL i As Integer, nn As Integer
+LOCAL ARRAY a[1]
+SELECT ranks
+BLANK FIELDS fractional ALL
+SELECT CAST(AVG(rownum) As B(1)), score FROM scores ;
+GROUP BY score ORDER BY score DESC INTO ARRAY a
+nn = _TALLY
+FOR i = 1 TO nn
+    REPLACE fractional WITH a[i,1] FOR score = a[i,2]
+ENDFOR	
+ENDPROC

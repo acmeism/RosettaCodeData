@@ -1,0 +1,6 @@
+puts [sumDigits 1]
+puts [sumDigits 12345]
+puts [sumDigits 123045]
+puts [sumDigits fe 16]
+puts [sumDigits f0e 16]
+puts [sumDigits 000999ABCXYZ 36]

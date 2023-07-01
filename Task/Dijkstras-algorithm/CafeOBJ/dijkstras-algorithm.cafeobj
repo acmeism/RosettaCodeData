@@ -1,0 +1,192 @@
+"
+This code works with CafeOBJ 1.5.1 and CafeOBJ 1.5.5.
+Save this file as  DijkstraRosetta.cafe.
+To run the file type
+CafeOBJ> in DijkstraRosetta.cafe
+at the CafeOBJ command prompt.
+
+CafeOBJ is primarily a first order specification language which can also be used as a functional programming language.
+Being first order, we make no use higher order functions such as map.
+There is a minimal library of basic types such as natural numbers, integers, floating point number, and character string.
+There are no libraries for arrays, lists, trees, graphs.
+Hence the user written list module.
+
+
+Input
+ A directed positively weighted graph. The graph is represented as a list of 4tuples containing directed edges of the form (start, end, edgeDist,pathDist)
+The tuple (start, start,0,0)  means there is zero distance from start to start.
+
+Ouput
+1)  a list of 4-tuples with each tuple represents a node N, its source node, length of the connecting edge to N, and the shortest distance from the some starting node to N  .
+2)  a list of nodes on the shortest path from a chosen start to some chosen end node.
+
+Note needs a bit more work to exactly match the specified Rosetta Dijkstra task.
+"
+
+-- some system settings
+-- Most important is memoization (memo) which stores the value of a function instead of recomputing it each time the function is called.
+full reset
+set step off
+set print mode :fancy
+set stats off
+set verbose off
+set quiet on
+set memo on
+
+-- A module defining a simple parameterized list.
+mod! LIST(T :: TRIV) principal-sort List {
+[Elt < List ]
+op nil : -> List
+op (_:_) : List List -> List {memo assoc id: nil}
+op reverse_ : List -> List
+op head_ : List -> Elt
+var e : Elt
+var l : List
+eq reverse nil = nil .
+eq reverse (e : l) = (reverse l) :  e .
+eq head e : l = e .
+}
+
+
+-- Main module
+mod! DIJKSTRA {
+-- We use two different list notations, one for edges the other for paths.
+
+-- EdgeList : A four tuple used to store graph and paths and shortest distance
+--             start, end, edgeDist,pathDist
+  pr(LIST(4TUPLE(CHARACTER,CHARACTER,INT,INT)) *{sort List -> EdgeList, op (_:_) -> (_:e_), op nil -> nilE})
+
+-- PathList : A list of characters used to store final shortest path.
+  pr(LIST(CHARACTER) *{sort List -> PathList, op (_:_) -> (_:p_), op nil -> nilP})
+
+
+
+  op  dijkstra___ : Character EdgeList EdgeList -> EdgeList
+  op exploreNeighbours___  : Character EdgeList  EdgeList -> 4Tuple   {memo}
+  ops inf finishedI : -> Int
+  op finishedC : -> Character
+  op currDist__ :  Character EdgeList -> Int
+  op relax__ : EdgeList EdgeList -> EdgeList
+  op connectedTo__ : Character EdgeList -> Bool
+  op nextNode2Explore_ : EdgeList -> 4Tuple
+  op connectedList___ :  EdgeList Character EdgeList  -> EdgeList
+  op unvisitedList__ :  EdgeList  EdgeList  -> EdgeList
+  op SP___ :  Character Character  EdgeList -> PathList
+
+
+  vars  eD pD eD1 pD1 eD2 pD2 source   : Int
+  vars graph permanent  xs  : EdgeList
+  vars t t1 t2  : 4Tuple
+  vars s f z startVertex currentVertex : Character
+
+
+  eq inf = 500 .
+  eq finishedI = -1 .
+  eq finishedC = 'X' .
+
+-- Main dijkstra function
+eq dijkstra startVertex graph permanent =
+ if
+(exploreNeighbours startVertex permanent graph)  == << finishedC ;  finishedC ; finishedI ; finishedI >>
+then  permanent
+else
+(dijkstra  startVertex graph ( ((exploreNeighbours startVertex permanent graph) :e  permanent))) fi .
+
+
+eq exploreNeighbours startVertex permanent graph =
+(nextNode2Explore (relax (unvisitedList (connectedList graph startVertex permanent)  permanent)  permanent )) .
+
+
+
+-- nextNode2Explore takes a list of records and returns a record with the minimum 4th element else finished
+eq nextNode2Explore nilE = << finishedC ; finishedC ; finishedI ; finishedI >> .
+eq nextNode2Explore (t1 :e nilE) =  t1 .
+eq nextNode2Explore (t2 :e (t1 :e xs)) =  if (4* t1) < (4* t2) then t1
+                                          else
+                                          nextNode2Explore (t2 :e xs) fi .
+
+-- relaxes all edges leaving y
+eq relax nilE permanent = nilE .
+  eq relax (<< s ; f ; eD ; pD >>  :e xs) permanent =
+if
+(currDist s permanent)  < pD
+then
+<< f ; s ; eD ; ((currDist s permanent) + eD)  >> :e (relax xs permanent)
+else
+<< f ; s ; eD ; pD  >> :e (relax xs permanent) fi .
+
+
+-- Get the current best distance for a particular vertex s.
+eq currDist s nilE  =  inf .
+eq currDist s (t :e permanent) =  if ((1* t) == s) then  (4* t ) else
+ (currDist s permanent) fi .
+
+
+eq connectedTo z nilE = false .
+eq connectedTo z ((<< s ; f ; eD ; pD >>) :e  xs) =  if (s == z) then true else (connectedTo z xs) fi .
+
+eq connectedList nilE s permanent = nilE .
+eq connectedList (t :e graph) s permanent = if (connectedTo s permanent) then
+                                           (t :e (connectedList graph s permanent))
+                                           else (connectedList graph s permanent) fi  .
+
+
+eq unvisitedList nilE permanent = nilE .
+eq unvisitedList (t :e  graph) permanent  = if  not(connectedTo (2* t) permanent)
+                                         then (t :e (unvisitedList graph permanent))
+                                        else (unvisitedList graph permanent) fi  .
+
+
+
+-- To get the shortest path from a start node to some end node we used the above dijkstra function.
+-- From a given start to a given end we need to trace the path from the finish to the start and then reverse the output.
+var eList : EdgeList
+vars currentTuple :   4Tuple
+vars  start end :   Character
+eq SP start end nilE  = nilP .
+eq SP start end (currentTuple :e eList) =  if (end == (1* currentTuple))  then
+                                         (end :p (SP start (2* currentTuple) eList))
+                                          else  (SP start end  eList) fi .
+
+
+-- The graph to be traversed
+op  DirectedRosetta  : -> EdgeList
+eq DirectedRosetta  =  ( <<  'a' ;  'b' ; 7  ; inf >>  :e
+			 <<  'a' ;  'c'  ; 9  ; inf >>  :e
+			 <<  'a' ; 'f' ; 14 ; inf >> :e
+			 <<  'b' ; 'c' ; 10 ; inf >> :e
+			 <<  'b' ;  'd' ; 15 ; inf >> :e
+			 <<  'c' ; 'd' ; 11 ; inf >> :e
+			 <<  'c' ; 'f'  ; 2  ; inf >> :e
+			 <<  'd'  ; 'e' ; 6  ; inf  >> :e
+			 <<  'e'  ; 'f'  ; 9  ; inf >>) .
+
+
+  -- A set of possible starting points
+  ops  oneStart twoStart threeStart fourStart fiveStart sixStart : -> 4Tuple
+  eq oneStart =  <<  'a' ;  'a' ; 0 ; 0 >> .
+  eq twoStart = << 'b' ; 'b' ; 0 ; 0 >> .
+  eq threeStart = <<  'c' ;  'c' ; 0 ; 0 >> .
+  eq fourStart = << 'd' ; 'd' ; 0 ; 0 >> .
+  eq fiveStart = <<  'e' ;  'e' ; 0 ; 0 >> .
+  eq sixStart  = << 'f' ; 'f' ; 0 ; 0 >> .
+
+} -- End module
+
+-- We must open the module in the CafeOBJ interpreter
+open DIJKSTRA .
+--> All shortest distances starting from a(1)
+red dijkstra 'a' DirectedRosetta oneStart .
+-- Gives, where :e is the edge list separator
+-- << 'e' ; 'd' ; 6 ; 26 >> :e << 'd' ; 'c' ; 11 ; 20 >> :e << 'f' ; 'c' ; 2 ; 11 >> :e << 'c' ; 'a' ; 9 ; 9 >> :e << 'b' ; 'a' ; 7 ; 7 >>) :e << 'a' ; 'a' ; 0 ; 0 >> :EdgeList
+
+--> Shortest path from a(1) to e(5)
+red reverse (SP 'a' 'e' (dijkstra 'a' DirectedRosetta oneStart)) .
+-- Gives, where :p is the path list separator
+-- 'a' :p 'c' :p 'd' :p 'e' :PathList
+
+--> Shortest path from a(1) to f(6)
+red reverse (SP 'a' 'f' (dijkstra 'a' DirectedRosetta oneStart)) .
+-- Gives, where :p is the path list separator
+-- 'a' :p 'c' :p 'f':PathList
+eof

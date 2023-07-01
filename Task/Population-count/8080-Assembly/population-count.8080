@@ -1,0 +1,98 @@
+	org	100h
+	mvi	e,30	; 3^0 to 3^29 inclusive
+powers:	push	d	; Keep counter
+	;;;	Calculate Hamming weight of pow3
+	lxi	b,6	; C = 6 bytes, B = counter
+	lxi	h,pow3
+ham48:	mov	a,m	; Get byte
+	ana	a	; Clear carry
+hambt:	ral		; Rotate into carry
+	jnc	$+4	; Increment counter if carry set
+	inr	b
+	ana	a	; Done yet?
+	jnz	hambt	; If not, keep going
+	dcr	c	; More bytes?
+	inx	h
+	jnz	ham48	; If not, keep going
+	mov	a,b	; Print result
+	call	outa
+	;;;	Multiply pow3 by 3
+	mvi	b,6	; Make copy
+	lxi	h,pow3
+	lxi	d,pow3c
+copy:	mov	a,m
+	stax	d
+	inx	h
+	inx	d
+	dcr	b
+	jnz	copy
+	;;;	Multiply by 3 (add copy to it twice)
+	lxi	h,pow3c	
+	lxi	d,pow3
+	call	add48
+	call	add48
+	pop	d	; Restore counter
+	dcr	e	; Count down from 30
+	jnz	powers
+	call	outnl
+	;;;	Print first 30 evil numbers
+	;;;	An evil number has even parity
+	lxi	b,-226	; B=current number (start -1), C=counter
+evil:	inr	b	; Increment number
+	jpo	evil	; If odious, try next number
+	push	b	; Otherwise, output it,
+	mov	a,b
+	call	outa
+	pop	b
+	dcr	c	; Decrement counter
+	jnz	evil	; If not zero, get more numbers
+	call	outnl
+	;;;	Print first 30 odious numbers
+	;;;	An odious number has odd parity
+	lxi	b,-226
+odious:	inr	b
+	jpe	odious	; If number is evil, try next number
+	push	b
+	mov 	a,b
+	call	outa
+	pop	b
+	dcr	c
+	jnz	odious
+	;;;	Print newline
+outnl:	lxi	d,nl
+	mvi	c,9
+	jmp	5
+	;;;	Print 2-digit number in A
+outa:	lxi	d,0A2Fh	; D=10, E=high digit
+mkdgt:	inr	e
+	sub	d
+	jnc	mkdgt
+	adi	'0'+10	; Low digit
+	push	psw	; Save low digit
+	mvi	c,2	; Print high digit
+	call	5
+	pop	psw	; Restore low digit
+	mov	e,a	; Print low digit
+	mvi	c,2
+	call	5
+	mvi	e,' '	; Print space
+	mvi	c,2
+	jmp	5
+	;;;	Add 48-byte number at [HL] to [DE]
+add48:	push	h	; Keep pointers
+	push	d
+	mvi	b,6	; 6 bytes
+	ana	a	; Clear carry
+a48l:	ldax	d	; Get byte at [DE]
+	adc	m	; Add byte at [HL]
+	stax	d	; Store result at [DE]
+	inx	h	; Increment pointers
+	inx	d
+	dcr	b	; Any more bytes left?
+	jnz	a48l	; If so, do next byte
+	pop	d	; Restore pointers
+	pop	h
+	ret
+nl:	db	13,10,'$'
+pow3:	db	1,0,0,0,0,0	; pow3, starts at 1
+pow3c:	equ	$		; room for copy

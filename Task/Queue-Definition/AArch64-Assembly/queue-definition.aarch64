@@ -1,0 +1,235 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program defqueue64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ  NBMAXIELEMENTS,    100
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* example structure  for value of item  */
+    .struct  0
+value_ident:                     // ident
+    .struct  value_ident + 8
+value_value1:                    // value 1
+    .struct  value_value1 + 8
+value_value2:                    // value 2
+    .struct  value_value2 + 8
+value_fin:
+/* example structure  for queue  */
+    .struct  0
+queue_ptdeb:                     // begin pointer of item
+    .struct  queue_ptdeb + 8
+queue_ptfin:                     // end pointer of item
+    .struct  queue_ptfin + 8
+queue_stvalue:                   // structure of value item
+    .struct  queue_stvalue + (value_fin * NBMAXIELEMENTS)
+queue_fin:
+
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessEmpty:       .asciz "Empty queue. \n"
+szMessNotEmpty:    .asciz "Not empty queue. \n"
+szMessError:       .asciz "Error detected !!!!. \n"
+szMessResult:      .asciz "Ident : @ value 1 : @ value 2 : @ \n"  // message result
+
+szCarriageReturn:  .asciz "\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+Queue1:                .skip queue_fin      // queue memory place
+stItem:                .skip value_fin      // value item memory place
+sZoneConv:             .skip 100
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                       // entry of program
+    ldr x0,qAdrQueue1                       // queue structure address
+    bl isEmpty
+    cmp x0,#0
+    beq 1f
+    ldr x0,qAdrszMessEmpty
+    bl affichageMess                        // display message empty
+    b 2f
+1:
+    ldr x0,qAdrszMessNotEmpty
+    bl affichageMess                        // display message not empty
+2:
+    // init item 1
+    ldr x0,qAdrstItem
+    mov x1,#1
+    str x1,[x0,#value_ident]
+    mov x1,#11
+    str x1,[x0,#value_value1]
+    mov x1,#12
+    str x1,[x0,#value_value2]
+
+    ldr x0,qAdrQueue1                       // queue structure address
+    ldr x1,qAdrstItem
+    bl pushQueue                            // add item in queue
+    cmp x0,#-1                              // error ?
+    beq 99f
+    // init item 2
+    ldr x0,qAdrstItem
+    mov x1,#2
+    str x1,[x0,#value_ident]
+    mov x1,#21
+    str x1,[x0,#value_value1]
+    mov x1,#22
+    str x1,[x0,#value_value2]
+
+    ldr x0,qAdrQueue1                       // queue structure address
+    ldr x1,qAdrstItem
+    bl pushQueue                            // add item in queue
+    cmp x0,#-1
+    beq 99f
+    ldr x0,qAdrQueue1                       // queue structure address
+    bl isEmpty
+    cmp x0,#0                               // not empty
+    beq 3f
+    ldr x0,qAdrszMessEmpty
+    bl affichageMess                        // display message empty
+    b 4f
+3:
+    ldr x0,qAdrszMessNotEmpty
+    bl affichageMess                        // display message not empty
+
+4:
+    ldr x0,qAdrQueue1                       // queue structure address
+    bl popQueue                             // return address item
+    cmp x0,#-1                              // error ?
+    beq 99f
+    mov x2,x0                               // save item pointer
+    ldr x0,[x2,#value_ident]
+    ldr x1,qAdrsZoneConv                    // conversion ident
+    bl conversion10S                        // decimal conversion
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc                   // insert result at first @ character
+    mov x5,x0
+    ldr x0,[x2,#value_value1]
+    ldr x1,qAdrsZoneConv                    // conversion value 1
+    bl conversion10S                        // decimal conversion
+    mov x0,x5
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc                   // insert result at Second @ character
+    mov x5,x0
+    ldr x0,[x2,#value_value2]
+    ldr x1,qAdrsZoneConv                    // conversion value 2
+    bl conversion10S                        // decimal conversion
+    mov x0,x5
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc                   // insert result at third @ character
+    bl affichageMess                        // display message final
+    b 4b                                    // loop
+
+99:                                         // error
+    ldr x0,qAdrszMessError
+    bl affichageMess
+100:                                        // standard end of the program
+    mov x0,0                                // return code
+    mov x8,EXIT                             // request to exit program
+    svc 0                                   // perform the system call
+
+qAdrQueue1:               .quad Queue1
+qAdrstItem:               .quad stItem
+qAdrszMessError:          .quad szMessError
+qAdrszMessEmpty:          .quad szMessEmpty
+qAdrszMessNotEmpty:       .quad szMessNotEmpty
+qAdrszMessResult:         .quad szMessResult
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsZoneConv:            .quad sZoneConv
+
+/******************************************************************/
+/*     test if queue empty                                        */
+/******************************************************************/
+/* x0 contains the address of queue structure */
+/* x0 returns 0 if not empty, 1 if empty    */
+isEmpty:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    ldr x1,[x0,#queue_ptdeb]       // begin pointer
+    ldr x2,[x0,#queue_ptfin]       // begin pointer
+    cmp x1,x2
+    bne 1f
+    mov x0,#1                      // empty queue
+    b 2f
+1:
+    mov x0,#0                      // not empty
+2:
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+
+/******************************************************************/
+/*     add item  in queue                                         */
+/******************************************************************/
+/* x0 contains the address of queue structure */
+/* x1 contains the address of item            */
+pushQueue:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    add x2,x0,#queue_stvalue       // address of values structure
+    ldr x3,[x0,#queue_ptfin]       // end pointer
+    add x2,x2,x3                      // free address of queue
+    ldr x4,[x1,#value_ident]       // load ident item
+    str x4,[x2,#value_ident]       // and store in queue
+    ldr x4,[x1,#value_value1]      // idem
+    str x4,[x2,#value_value1]
+    ldr x4,[x1,#value_value2]
+    str x4,[x2,#value_value2]
+    add x3,x3,#value_fin
+    cmp x3,#value_fin * NBMAXIELEMENTS
+    beq 99f
+    str x3,[x0,#queue_ptfin]       // store new end pointer
+    b 100f
+99:
+    mov x0,#-1                     // error
+100:
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+
+/******************************************************************/
+/*     pop queue                                                  */
+/******************************************************************/
+/* x0 contains the address of queue structure */
+popQueue:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    mov x1,x0                      // control if empty queue
+    bl isEmpty
+    cmp x0,#1                      // yes -> error
+    beq 99f
+    mov x0,x1
+    ldr x1,[x0,#queue_ptdeb]       // begin pointer
+    add x2,x0,#queue_stvalue       // address of begin values item
+    add x2,x2,x1                   // address of item
+    add x1,x1,#value_fin
+    str x1,[x0,#queue_ptdeb]       // store nex begin pointer
+    mov x0,x2                      // return pointer item
+    b 100f
+99:
+    mov x0,#-1                     // error
+100:
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

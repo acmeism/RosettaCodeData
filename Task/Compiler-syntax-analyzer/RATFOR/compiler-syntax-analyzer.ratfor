@@ -1,0 +1,1551 @@
+######################################################################
+#
+# The Rosetta Code parser in Ratfor 77.
+#
+#
+# Ratfor 77 is a preprocessor for FORTRAN 77; therefore we do not have
+# recursive calls available. For printing the flattened tree, I use an
+# ordinary non-recursive implementation of the tree traversal. The
+# mutually recursive parser itself is more difficult to handle; for
+# that, I implement a tiny, FORTH-like token processor that supports
+# recursive calls.
+#
+# How to deal with input is another problem. I use formatted input,
+# treating each line as a (regrettably fixed length) array of type
+# CHARACTER. It is a very simple method, and leaves the input in a
+# form convenient for the necessary processing (given that the input
+# is not formatted in columns).
+#
+#
+# On a POSIX platform, the program can be compiled with f2c and run
+# somewhat as follows:
+#
+#    ratfor77 parse-in-ratfor.r > parse-in-ratfor.f
+#    f2c -C -Nc40 parse-in-ratfor.f
+#    cc parse-in-ratfor.c -lf2c
+#    ./a.out < compiler-tests/primes.lex
+#
+# With gfortran, a little differently:
+#
+#    ratfor77 parse-in-ratfor.r > parse-in-ratfor.f
+#    gfortran -fcheck=all -std=legacy parse-in-ratfor.f
+#    ./a.out < compiler-tests/primes.lex
+#
+#
+# I/O is strictly from default input and to default output, which, on
+# POSIX systems, usually correspond respectively to standard input and
+# standard output.
+#
+#---------------------------------------------------------------------
+
+# Parameters that you can adjust.
+
+define(LINESZ, 256)             # Size of an input line.
+define(STRNSZ, 4096)            # Size of the string pool.
+define(NODSSZ, 4096)            # Size of the nodes pool.
+define(DSTKSZ, 4096)            # Size of the data stack.
+define(PSTKSZ, 4096)            # Size of the precedence stack.
+define(XSTKSZ, 4096)            # Size of the execution stack.
+
+#---------------------------------------------------------------------
+
+define(TOKSZ, 5) # Size of a lexical token, in integers.
+define(ILN, 1)   # Index for line number.
+define(ICN, 2)   # Index for column number.
+define(ITK, 3)   # Index for token number.
+define(ITV, 4)   # Index for the string pool index of the token value.
+define(ITN, 5)   # Index for the length of the token value.
+
+define(NODESZ, 3)
+define(NTAG,   1)               # Index for the tag.
+                                # For an internal node --
+define(NLEFT,  2)               #   Index for the left node.
+define(NRIGHT, 3)               #   Index for the right node.
+                                # For a leaf node --
+define(NITV,   2)               #   Index for the string pool index.
+define(NITN,   3)               #   Length of the value.
+
+define(NIL, -1)                 # Nil node.
+
+define(TKELSE,  0)
+define(TKIF,    1)
+define(TKPRNT,  2)
+define(TKPUTC,  3)
+define(TKWHIL,  4)
+define(TKMUL,   5)
+define(TKDIV,   6)
+define(TKMOD,   7)
+define(TKADD,   8)
+define(TKSUB,   9)
+define(TKNEG,  10)
+define(TKLT,   11)
+define(TKLE,   12)
+define(TKGT,   13)
+define(TKGE,   14)
+define(TKEQ,   15)
+define(TKNE,   16)
+define(TKNOT,  17)
+define(TKASGN, 18)
+define(TKAND,  19)
+define(TKOR,   20)
+define(TKLPAR, 21)
+define(TKRPAR, 22)
+define(TKLBRC, 23)
+define(TKRBRC, 24)
+define(TKSEMI, 25)
+define(TKCMMA, 26)
+define(TKID,   27)
+define(TKINT,  28)
+define(TKSTR,  29)
+define(TKEOI,  30)
+
+define(NDID,    0)
+define(NDSTR,   1)
+define(NDINT,   2)
+define(NDSEQ,   3)
+define(NDIF,    4)
+define(NDPRTC,  5)
+define(NDPRTS,  6)
+define(NDPRTI,  7)
+define(NDWHIL,  8)
+define(NDASGN,  9)
+define(NDNEG,  10)
+define(NDNOT,  11)
+define(NDMUL,  12)
+define(NDDIV,  13)
+define(NDMOD,  14)
+define(NDADD,  15)
+define(NDSUB,  16)
+define(NDLT,   17)
+define(NDLE,   18)
+define(NDGT,   19)
+define(NDGE,   20)
+define(NDEQ,   21)
+define(NDNE,   22)
+define(NDAND,  23)
+define(NDOR,   24)
+
+subroutine string (src, isrc, nsrc, strngs, istrng, i, n)
+
+  # Store a string in the string pool.
+
+  implicit none
+
+  character src(*)         # Source string.
+  integer isrc, nsrc       # Index and length of the source substring.
+  character strngs(STRNSZ) # The string pool.
+  integer istrng           # The string pool's next slot.
+  integer i, n             # Index and length within the string pool.
+
+  integer j
+
+  if (STRNSZ < istrng + nsrc)
+    {
+      write (*, '(''string pool exhausted'')')
+      stop
+    }
+  for (j = 0; j < nsrc; j = j + 1)
+    strngs(istrng + j) = src(isrc + j)
+  i = istrng
+  n = nsrc
+  istrng = istrng + nsrc
+end
+
+subroutine astnod (node, nodes, inodes, i)
+
+  # Store a node in the nodes pool.
+
+  implicit none
+
+  integer node(NODESZ)
+  integer nodes(NODESZ, NODSSZ)
+  integer inodes
+  integer i
+
+  integer j
+
+  if (NODSSZ < inodes + 1)
+    {
+      write (*, '(''node pool exhausted'')')
+      stop
+    }
+  i = inodes
+  inodes = inodes + 1
+  for (j = 1; j <= NODESZ; j = j + 1)
+    nodes(j, i) = node(j)
+end
+
+function issp (c)
+
+  # Is a character a space character?
+
+  implicit none
+
+  character c
+  logical issp
+
+  integer ic
+
+  ic = ichar (c)
+  issp = (ic == 32 || (9 <= ic && ic <= 13))
+end
+
+function skipsp (str, i, imax)
+
+  # Skip past spaces in a string.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer imax
+  integer skipsp
+
+  logical issp
+
+  logical done
+
+  skipsp = i
+  done = .false.
+  while (!done)
+    {
+      if (imax <= skipsp)
+        done = .true.
+      else if (!issp (str(skipsp)))
+        done = .true.
+      else
+        skipsp = skipsp + 1
+    }
+end
+
+function skipns (str, i, imax)
+
+  # Skip past non-spaces in a string.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer imax
+  integer skipns
+
+  logical issp
+
+  logical done
+
+  skipns = i
+  done = .false.
+  while (!done)
+    {
+      if (imax <= skipns)
+        done = .true.
+      else if (issp (str(skipns)))
+        done = .true.
+      else
+        skipns = skipns + 1
+    }
+end
+
+function trimrt (str, n)
+
+  # Find the length of a string, if one ignores trailing spaces.
+
+  implicit none
+
+  character str(*)
+  integer n
+  integer trimrt
+
+  logical issp
+
+  logical done
+
+  trimrt = n
+  done = .false.
+  while (!done)
+    {
+      if (trimrt == 0)
+        done = .true.
+      else if (!issp (str(trimrt)))
+        done = .true.
+      else
+        trimrt = trimrt - 1
+    }
+end
+
+function mktok (str, i, n)
+
+  # Convert a substring to a token integer.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer n
+  integer mktok
+
+  character*16 tokstr(0:30)
+  character*16 test
+  integer j
+  logical done
+
+  data tokstr / 'Keyword_else    ', _
+                'Keyword_if      ', _
+                'Keyword_print   ', _
+                'Keyword_putc    ', _
+                'Keyword_while   ', _
+                'Op_multiply     ', _
+                'Op_divide       ', _
+                'Op_mod          ', _
+                'Op_add          ', _
+                'Op_subtract     ', _
+                'Op_negate       ', _
+                'Op_less         ', _
+                'Op_lessequal    ', _
+                'Op_greater      ', _
+                'Op_greaterequal ', _
+                'Op_equal        ', _
+                'Op_notequal     ', _
+                'Op_not          ', _
+                'Op_assign       ', _
+                'Op_and          ', _
+                'Op_or           ', _
+                'LeftParen       ', _
+                'RightParen      ', _
+                'LeftBrace       ', _
+                'RightBrace      ', _
+                'Semicolon       ', _
+                'Comma           ', _
+                'Identifier      ', _
+                'Integer         ', _
+                'String          ', _
+                'End_of_input    ' /
+
+  test = '                '
+  for (j = 0; j < n; j = j + 1)
+    test(j + 1 : j + 1) = str(i + j)
+
+  j = 0
+  done = .false.
+  while (!done)
+    {
+      if (TKEOI < j)
+        {
+          write (*, '(''unrecognized token'')')
+          stop
+        }
+      else if (test == tokstr(j))
+        done = .true.
+      else
+        j = j + 1
+    }
+
+  mktok = j
+end
+
+function mkint (str, i, n)
+
+  # Convert a unsigned integer substring to an integer.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer n
+  integer mkint
+
+  integer j
+
+  mkint = 0
+  for (j = 0; j < n; j = j + 1)
+    mkint = (10 * mkint) + (ichar (str(i + j)) - 48)
+end
+
+subroutine rdtok (strngs, istrng, blank, linno, colno, tokno, _
+                  itkval, ntkval)
+
+  # Read a token from the input.
+
+  implicit none
+
+  character strngs(STRNSZ)      # The string pool.
+  integer istrng                # The string pool's next slot.
+  logical blank                 # Is the line blank?
+  integer linno                 # The line number.
+  integer colno                 # The column number.
+  integer tokno                 # The token number.
+  integer itkval, ntkval        # Token value as a string.
+
+  integer skipsp, skipns, trimrt
+  integer mkint, mktok
+
+  character line(LINESZ)
+  character*20 fmt
+  integer n, i, j
+
+  # Read a line of text as an array of characters.
+  write (fmt, '(''('', I10, ''A1)'')') LINESZ
+  read (*, fmt) line
+
+  n = trimrt (line, LINESZ)
+  blank = (n == 0)
+
+  if (!blank)
+    {
+      i = skipsp (line, 1, n + 1)
+      j = skipns (line, i, n + 1)
+      linno = mkint (line, i, j - i)
+
+      i = skipsp (line, j, n + 1)
+      j = skipns (line, i, n + 1)
+      colno = mkint (line, i, j - i)
+
+      i = skipsp (line, j, n + 1)
+      j = skipns (line, i, n + 1)
+      tokno = mktok (line, i, j - i)
+
+      i = skipsp (line, j, n + 1)
+      j = n + 1
+      call string (line, i, j - i, strngs, istrng, itkval, ntkval)
+    }
+end
+
+subroutine gettok (strngs, istrng, tok)
+
+  # Get the next token.
+
+  implicit none
+
+  character strngs(STRNSZ)      # The string pool.
+  integer istrng                # The string pool's next slot.
+  integer tok(TOKSZ)
+
+  integer linno, colno, tokno, itkval, ntkval
+  logical blank
+
+  blank = .true.
+  while (blank)
+    call rdtok (strngs, istrng, blank, linno, colno, tokno, _
+                itkval, ntkval)
+  tok(ILN) = linno
+  tok(ICN) = colno
+  tok(ITK) = tokno
+  tok(ITV) = itkval
+  tok(ITN) = ntkval
+end
+
+function accept (strngs, istrng, curtok, tokno)
+
+  implicit none
+
+  character strngs(STRNSZ)      # The string pool.
+  integer istrng                # The string pool's next slot.
+  integer curtok(TOKSZ)
+  integer tokno
+  logical accept
+
+  accept = (curtok(ITK) == tokno)
+  if (accept)
+    call gettok (strngs, istrng, curtok)
+end
+
+subroutine expect (strngs, istrng, curtok, tokno)
+
+  implicit none
+
+  character strngs(STRNSZ)      # The string pool.
+  integer istrng                # The string pool's next slot.
+  integer curtok(TOKSZ)
+  integer tokno
+
+  logical accept
+
+  if (!accept (strngs, istrng, curtok, tokno))
+    {
+      # This is not the same message as printed by the reference C
+      # implementation. You can change that, if you wish.
+      write (*, 100) curtok(ILN), curtok(ICN)
+100   format ('unexpected token at line ', I5, ', column ', I5)
+      stop
+    }
+end
+
+function prec (tokno)
+
+  # Precedence.
+
+  implicit none
+
+  integer tokno
+  integer prec
+
+  if (tokno == TKMUL || tokno == TKDIV || tokno == TKMOD)
+    prec = 13
+  else if (tokno == TKADD || tokno == TKSUB)
+    prec = 12
+  else if (tokno == TKNEG || tokno == TKNOT)
+    prec = 14
+  else if (tokno == TKLT || tokno == TKLE || _
+           tokno == TKGT || tokno == TKGE)
+    prec = 10
+  else if (tokno == TKEQ || tokno == TKNE)
+    prec = 9
+  else if (tokno == TKAND)
+    prec = 5
+  else if (tokno == TKOR)
+    prec = 4
+  else
+    prec = -1
+end
+
+function isbin (tokno)
+
+  # Is an operation binary?
+
+  implicit none
+
+  integer tokno
+  logical isbin
+
+  isbin = (tokno == TKADD || _
+           tokno == TKSUB || _
+           tokno == TKMUL || _
+           tokno == TKDIV || _
+           tokno == TKMOD || _
+           tokno == TKLT  || _
+           tokno == TKLE  || _
+           tokno == TKGT  || _
+           tokno == TKGE  || _
+           tokno == TKEQ  || _
+           tokno == TKNE  || _
+           tokno == TKAND || _
+           tokno == TKOR)
+end
+
+function rtassc (tokno)
+
+  # Is an operation right associative?
+
+  implicit none
+
+  integer tokno
+  logical rtassc
+
+  # None of the current operators is right associative.
+  rtassc = .false.
+end
+
+function opernt (tokno)
+
+  # Return the node tag for a binary operator.
+
+  implicit none
+
+  integer tokno
+  integer opernt
+
+  if (tokno == TKMUL)
+    opernt = NDMUL
+  else if (tokno == TKDIV)
+    opernt = NDDIV
+  else if (tokno == TKMOD)
+    opernt = NDMOD
+  else if (tokno == TKADD)
+    opernt = NDADD
+  else if (tokno == TKSUB)
+    opernt = NDSUB
+  else if (tokno == TKNEG)
+    opernt = NDNEG
+  else if (tokno == TKNOT)
+    opernt = NDNOT
+  else if (tokno == TKLT)
+    opernt = NDLT
+  else if (tokno == TKLE)
+    opernt = NDLE
+  else if (tokno == TKGT)
+    opernt = NDGT
+  else if (tokno == TKGE)
+    opernt = NDGE
+  else if (tokno == TKEQ)
+    opernt = NDEQ
+  else if (tokno == TKNE)
+    opernt = NDNE
+  else if (tokno == TKAND)
+    opernt = NDAND
+  else if (tokno == TKOR)
+    opernt = NDOR
+  else
+    {
+      write (*, '(''unrecognized binary operator'')')
+      stop
+    }
+end
+
+#---------------------------------------------------------------------
+
+subroutine prtast (strngs, nodes, i, dstack)
+
+  # Print a tree in flattened format.
+
+  implicit none
+
+  character strngs(*)
+  integer nodes(NODESZ, NODSSZ)
+  integer i
+  integer dstack(DSTKSZ)
+
+  integer j
+  integer k
+  integer n
+  integer q, r
+  integer tag
+
+  character*80 fmt
+
+  dstack(1) = i
+  j = 2
+  while (j != 1)
+    {
+      j = j - 1
+      k = dstack(j)
+      if (k < 1)
+        write (*, '('';'')')
+      else
+        {
+          tag = nodes(NTAG, k)
+          if (tag == NDID)
+            {
+              n = nodes(NITN, k)
+              write (fmt, '(''("Identifier ", '', I5, ''A)'')') n
+              q = nodes(NITV, k)
+              write (*, fmt) (strngs(r), r = q, q + n - 1)
+            }
+          else if (tag == NDINT)
+            {
+              n = nodes(NITN, k)
+              write (fmt, '(''("Integer ", '', I5, ''A)'')') n
+              q = nodes(NITV, k)
+              write (*, fmt) (strngs(r), r = q, q + n - 1)
+            }
+          else if (tag == NDSTR)
+            {
+              n = nodes(NITN, k)
+              write (fmt, '(''("String ", '', I5, ''A)'')') n
+              q = nodes(NITV, k)
+              write (*, fmt) (strngs(r), r = q, q + n - 1)
+            }
+          else
+            {
+              if (tag == NDSEQ)
+                write (*, '(''Sequence'')')
+              else if (tag == NDIF)
+                write (*, '(''If'')')
+              else if (tag == NDPRTC)
+                write (*, '(''Prtc'')')
+              else if (tag == NDPRTS)
+                write (*, '(''Prts'')')
+              else if (tag == NDPRTI)
+                write (*, '(''Prti'')')
+              else if (tag == NDWHIL)
+                write (*, '(''While'')')
+              else if (tag == NDASGN)
+                write (*, '(''Assign'')')
+              else if (tag == NDNEG)
+                write (*, '(''Negate'')')
+              else if (tag == NDNOT)
+                write (*, '(''Not'')')
+              else if (tag == NDMUL)
+                write (*, '(''Multiply'')')
+              else if (tag == NDDIV)
+                write (*, '(''Divide'')')
+              else if (tag == NDMOD)
+                write (*, '(''Mod'')')
+              else if (tag == NDADD)
+                write (*, '(''Add'')')
+              else if (tag == NDSUB)
+                write (*, '(''Subtract'')')
+              else if (tag == NDLT)
+                write (*, '(''Less'')')
+              else if (tag == NDLE)
+                write (*, '(''LessEqual'')')
+              else if (tag == NDGT)
+                write (*, '(''Greater'')')
+              else if (tag == NDGE)
+                write (*, '(''GreaterEqual'')')
+              else if (tag == NDEQ)
+                write (*, '(''Equal'')')
+              else if (tag == NDNE)
+                write (*, '(''NotEqual'')')
+              else if (tag == NDAND)
+                write (*, '(''And'')')
+              else if (tag == NDOR)
+                write (*, '(''Or'')')
+              else
+                {
+                  write (*, '(''unrecognized node type'')')
+                  stop
+                }
+              if (DSTKSZ - 2 < n)
+                {
+                  write (*, '(''node stack overflow'')')
+                  stop
+                }
+              dstack(j) = nodes(NRIGHT, k)
+              dstack(j + 1) = nodes(NLEFT, k)
+              j = j + 2
+            }
+        }
+    }
+end
+
+#---------------------------------------------------------------------
+
+# A tiny recursive language. Each instruction is two integers,
+# although the second integer may be XPAD. XLOCs are named by
+# integers.
+
+define(XPAD,     0)             # "Padding"
+
+define(XLOC,    10)             # "Jump or call location"
+define(XJUMP,   20)             # "Jump to a place"
+define(XJUMPT,  30)             # "Jump to a place, if true"
+define(XJUMPF,  40)             # "Jump to a place, if false"
+define(XCALL,   50)             # "Call a subprogram"
+define(XRET,    60)             # "Return from a subprogram"
+
+define(XPUSH,  110)             # "Push an immediate value"
+define(XSWAP,  120)             # "Swap top two stack entries"
+
+define(XLT,    200)             # "Less than?"
+define(XADDI,  210)             # "Add immediate."
+
+define(XPPUSH, 610)             # "Push top to precedence stack"
+define(XPCOPY, 620)             # "Copy top of prec stack to top"
+define(XPDROP, 630)             # "Drop top of precedence stack"
+
+define(XGETTK, 710)             # "Get the next token"
+define(XTOKEQ, 720)             # "Token equals the argument?"
+define(XEXPCT, 730)             # "Expect token"
+define(XACCPT, 740)             # "Accept token"
+
+define(XTOK,   810)             # "Push the token number"
+define(XBINOP, 820)             # "Is top a binary operator?"
+define(XRASSC, 830)             # "Is top a right associative op?"
+define(XPREC,  840)             # "Precedence of token no. on top"
+define(XOPER,  850)             # "Operator for token no. on top"
+
+define(XINTND, 970)             # "Make internal node"
+define(XOPND,  975)             # "Make internal node for operator"
+define(XLEFND, 980)             # "Make leaf node"
+define(XNILND, 985)             # "Make nil node"
+
+define(XERROR, 1010)            # "Error"
+define(XRWARN, 1020)            # "Unused right associative branch"
+
+define(XPING,  2010)    # Print a ping message (for debugging)
+define(XPRTND, 2020)    # Print node at stack top (for debugging)
+define(XPRTTP, 2030)    # Print stack top as integer (for debugging)
+define(XPRTTK, 2040)    # Print the current token (for debugging)
+define(XPRTP,  2050)    # Print the current precedence (for debugging)
+define(XPRTST, 2060)    # Print the whole data stack (for debugging)
+
+# Call and jump locations in our program:
+define(CSTMT,  1000)            # stmt
+define(STMT01, 1010)
+define(STMT02, 1020)
+define(STMT03, 1030)
+define(STMT04, 1040)
+define(STMT05, 1050)
+define(STMT06, 1060)
+define(STMT07, 1070)
+define(STMT08, 1080)
+define(STMT09, 1090)
+define(STMT10, 1100)
+define(STMT11, 1110)
+define(STMT12, 1120)
+define(STMT13, 1130)
+define(STMT14, 1140)
+define(STMT15, 1150)
+define(CPEXPR, 2000)            # paren_expr
+define(CEXPR,  3000)            # expr
+define(EXPR01, 3010)
+define(EXPR02, 3020)
+define(EXPR03, 3030)
+define(EXPR04, 3040)
+define(EXPR05, 3050)
+define(EXPR06, 3060)
+define(EXPR10, 3100)
+define(EXPR11, 3110)
+define(EXPR12, 3120)
+define(EXPR13, 3130)
+define(PARS01, 4010)            # parse
+
+# Error numbers.
+define(EXSTMT, 100)             # "expecting start of statement"
+define(EXPRIM, 200)             # "expecting a primary"
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+subroutine ld(code, i, instr1, instr2)
+
+  implicit none
+
+  integer code(*)
+  integer i
+  integer instr1, instr2
+
+  code(i) = instr1
+  code(i + 1) = instr2
+  i = i + 2
+end
+
+subroutine ldcode (code)
+
+  # Load the code that is in the recursive language. The array
+  # allocated to hold the code must be large enough, but we do not
+  # check.
+
+  implicit none
+
+  integer code(*)
+  integer i
+
+  i = 1
+
+  #--------------------------------------------------
+
+  # The main loop.
+  call ld (code, i, XNILND, XPAD) # Nil node for start of sequence.
+  call ld (code, i, XGETTK, XPAD)
+  call ld (code, i, XLOC, PARS01) # Top of loop
+  call ld (code, i, XCALL, CSTMT)
+  call ld (code, i, XINTND, NDSEQ)
+  call ld (code, i, XTOKEQ, TKEOI) # End_of_input
+  call ld (code, i, XJUMPF, PARS01) # Loop unless end of input.
+  call ld (code, i, XRET, XPAD)
+
+  #--------------------------------------------------
+
+  call ld (code, i, XLOC, CEXPR)  # Start of "expr"
+  call ld (code, i, XPPUSH, XPAD) # Push the precedence argument.
+
+  call ld (code, i, XTOKEQ, TKLPAR) # LeftParen
+  call ld (code, i, XJUMPF, EXPR01)
+
+  # "( ... )"
+  call ld (code, i, XCALL, CPEXPR)
+  call ld (code, i, XJUMP, EXPR10)
+
+  call ld (code, i, XLOC, EXPR01)
+
+  call ld (code, i, XACCPT, TKSUB) # Op_subtract
+  call ld (code, i, XJUMPF, EXPR02)
+
+  # Unary minus
+  call ld (code, i, XPUSH, TKNEG)
+  call ld (code, i, XPREC, XPAD)
+  call ld (code, i, XCALL, CEXPR)  # expr <--
+  call ld (code, i, XNILND, XPAD)  # expr nil <--
+  call ld (code, i, XINTND, NDNEG)
+  call ld (code, i, XJUMP, EXPR10)
+
+  call ld (code, i, XLOC, EXPR02)
+
+  call ld (code, i, XACCPT, TKADD) # Op_add
+  call ld (code, i, XJUMPF, EXPR03)
+
+  # Unary plus
+  call ld (code, i, XPUSH, TKNEG)
+  call ld (code, i, XPREC, XPAD)
+  call ld (code, i, XCALL, CEXPR)  # expr <--
+  call ld (code, i, XJUMP, EXPR10)
+
+  call ld (code, i, XLOC, EXPR03)
+
+  call ld (code, i, XACCPT, TKNOT) # Op_not
+  call ld (code, i, XJUMPF, EXPR04)
+
+  # "!"
+  call ld (code, i, XPUSH, TKNOT)
+  call ld (code, i, XPREC, XPAD)
+  call ld (code, i, XCALL, CEXPR)  # expr <--
+  call ld (code, i, XNILND, XPAD)  # expr nil <--
+  call ld (code, i, XINTND, NDNOT)
+  call ld (code, i, XJUMP, EXPR10)
+
+  call ld (code, i, XLOC, EXPR04)
+
+  call ld (code, i, XTOKEQ, TKID) # Identifier
+  call ld (code, i, XJUMPF, EXPR05)
+
+  # Identifier
+  call ld (code, i, XLEFND, NDID)
+  call ld (code, i, XGETTK, XPAD)
+  call ld (code, i, XJUMP, EXPR10)
+
+  call ld (code, i, XLOC, EXPR05)
+
+  call ld (code, i, XTOKEQ, TKINT) # Integer
+  call ld (code, i, XJUMPF, EXPR06)
+
+  # Integer.
+  call ld (code, i, XLEFND, NDINT)
+  call ld (code, i, XGETTK, XPAD)
+  call ld (code, i, XJUMP, EXPR10)
+
+  call ld (code, i, XLOC, EXPR06)
+
+  call ld (code, i, XERROR, EXPRIM)
+
+  call ld (code, i, XLOC, EXPR10) # Top of precedence climbing loop
+
+  call ld (code, i, XTOK, XPAD)
+  call ld (code, i, XBINOP, XPAD)
+  call ld (code, i, XJUMPF, EXPR11) # Exit loop, if not a binary op.
+
+  call ld (code, i, XTOK, XPAD)
+  call ld (code, i, XPREC, XPAD)    # curtok_prec <--
+  call ld (code, i, XPCOPY, XPAD)   # curtok_prec p <--
+  call ld (code, i, XLT, XPAD)      # (curtok_prec < p)? <--
+  call ld (code, i, XJUMPT, EXPR11) # Exit loop if true.
+
+  call ld (code, i, XTOK, XPAD)
+  call ld (code, i, XOPER, XPAD) # x op <--
+  call ld (code, i, XSWAP, XPAD) # op x <--
+
+  call ld (code, i, XTOK, XPAD)
+  call ld (code, i, XRASSC, XPAD)
+  call ld (code, i, XJUMPT, EXPR12)
+
+  # Left associative.
+  call ld (code, i, XTOK, XPAD)
+  call ld (code, i, XPREC, XPAD)
+  call ld (code, i, XADDI, 1)   # op x q:=(q + 1) <--
+  call ld (code, i, XJUMP, EXPR13)
+
+  call ld (code, i, XLOC, EXPR12)
+
+  # Right associative. (Currently an unused branch.)
+  call ld (code, i, XRWARN, XPAD) # Warn about unused branch.
+  call ld (code, i, XTOK, XPAD)
+  call ld (code, i, XPREC, XPAD) # op x q <--
+
+  call ld (code, i, XLOC, EXPR13)
+
+  call ld (code, i, XGETTK, XPAD)
+  call ld (code, i, XCALL, CEXPR) # op x expr(q) <--
+  call ld (code, i, XOPND, XPAD)  # new_x <--
+
+  call ld (code, i, XJUMP, EXPR10) # Continue looping.
+
+  call ld (code, i, XLOC, EXPR11) # Loop exit.
+
+  call ld (code, i, XPDROP, XPAD) # Drop the precedence argument.
+  call ld (code, i, XRET, XPAD)   # End of "expr"
+
+  #--------------------------------------------------
+
+  call ld (code, i, XLOC, CPEXPR) # Start of "paren_expr"
+  call ld (code, i, XEXPCT, TKLPAR)
+  call ld (code, i, XPUSH, 0)
+  call ld (code, i, XCALL, CEXPR)
+  call ld (code, i, XEXPCT, TKRPAR)
+  call ld (code, i, XRET, XPAD)
+
+  #--------------------------------------------------
+
+  call ld (code, i, XLOC, CSTMT)  # Start of "stmt"
+
+  call ld (code, i, XACCPT, TKIF) # Keyword_if
+  call ld (code, i, XJUMPF, STMT01)
+
+  # "if (...) then ... else ..."
+  call ld (code, i, XCALL, CPEXPR)  # Get the paren expr ("if (...)").
+  call ld (code, i, XCALL, CSTMT)   # Get the "then" clause.
+  call ld (code, i, XACCPT, TKELSE) # Keyword_else
+  call ld (code, i, XJUMPF, STMT02)
+  call ld (code, i, XCALL, CSTMT) # Get the "else" clause.
+  call ld (code, i, XJUMP, STMT03)
+  call ld (code, i, XLOC, STMT02)
+  call ld (code, i, XNILND, XPAD) # The "else" statement is nil.
+  call ld (code, i, XLOC, STMT03)
+  call ld (code, i, XINTND, NDIF) # ("If" pred ("If" then else))
+  call ld (code, i, XINTND, NDIF)
+  call ld (code, i, XRET, XPAD)
+
+  call ld (code, i, XLOC, STMT01)
+
+  call ld (code, i, XACCPT, TKPUTC) # Keyword_putc
+  call ld (code, i, XJUMPF, STMT04)
+
+  # "putc (...);"
+  call ld (code, i, XCALL, CPEXPR) # Get the paren expr.
+  call ld (code, i, XNILND, XPAD)
+  call ld (code, i, XINTND, NDPRTC) # ("Prtc" expr nil)
+  call ld (code, i, XEXPCT, TKSEMI) # Expect ";"
+  call ld (code, i, XRET, XPAD)
+
+  call ld (code, i, XLOC, STMT04)
+
+  call ld (code, i, XACCPT, TKPRNT) # Keyword_print
+  call ld (code, i, XJUMPF, STMT05)
+
+  # "print(... , ... , ...);"
+  call ld (code, i, XEXPCT, TKLPAR) # Expect "("
+  call ld (code, i, XNILND, XPAD)   # nil for start of sequence
+  call ld (code, i, XLOC, STMT08)   # Top of loop
+  call ld (code, i, XTOKEQ, TKSTR)
+  call ld (code, i, XJUMPT, STMT06)
+  call ld (code, i, XPUSH, 0)
+  call ld (code, i, XCALL, CEXPR)
+  call ld (code, i, XNILND, XPAD)
+  call ld (code, i, XINTND, NDPRTI) # ("Prti" expr nil)
+  call ld (code, i, XJUMP, STMT07)
+  call ld (code, i, XLOC, STMT06)
+  call ld (code, i, XLEFND, NDSTR)
+  call ld (code, i, XNILND, XPAD)
+  call ld (code, i, XINTND, NDPRTS) # ("Prts" ("String" ...) nil)
+  call ld (code, i, XGETTK, XPAD)
+  call ld (code, i, XLOC, STMT07)
+  call ld (code, i, XINTND, NDSEQ)  # ("Sequence" ... ...)
+  call ld (code, i, XACCPT, TKCMMA) # Comma
+  call ld (code, i, XJUMPT, STMT08) # Loop if comma.
+  call ld (code, i, XEXPCT, TKRPAR) # Expect ")"
+  call ld (code, i, XEXPCT, TKSEMI) # Expect ";"
+  call ld (code, i, XRET, XPAD)
+
+  call ld (code, i, XLOC, STMT05)
+
+  call ld (code, i, XACCPT, TKSEMI) # Semicolon
+  call ld (code, i, XJUMPF, STMT09)
+
+  # Accept a lone ";".
+  call ld (code, i, XRET, XPAD)
+
+  call ld (code, i, XLOC, STMT09)
+
+  call ld (code, i, XTOKEQ, TKID) # Identifier
+  call ld (code, i, XJUMPF, STMT10)
+
+  # "identifier = expr;"
+  call ld (code, i, XLEFND, NDID) # ("Identifier" ...)
+  call ld (code, i, XGETTK, XPAD)
+  call ld (code, i, XEXPCT, TKASGN)
+  call ld (code, i, XPUSH, 0)
+  call ld (code, i, XCALL, CEXPR)
+  call ld (code, i, XINTND, NDASGN) # ("Assign" ("Identifier" ...) expr)
+  call ld (code, i, XEXPCT, TKSEMI)
+  call ld (code, i, XRET, XPAD)
+
+  call ld (code, i, XLOC, STMT10)
+
+  call ld (code, i, XACCPT, TKWHIL) # While
+  call ld (code, i, XJUMPF, STMT11)
+
+  # "while (...) ..."
+  call ld (code, i, XCALL, CPEXPR)
+  call ld (code, i, XCALL, CSTMT)
+  call ld (code, i, XINTND, NDWHIL) # ("While" pred stmt)
+  call ld (code, i, XRET, XPAD)
+
+  call ld (code, i, XLOC, STMT11)
+
+  call ld (code, i, XACCPT, TKLBRC) # LeftBrace
+  call ld (code, i, XJUMPF, STMT12)
+
+  # "{ ... }"
+  call ld (code, i, XNILND, XPAD)   # nil for start of sequence
+  call ld (code, i, XLOC, STMT13)   # Top of loop
+  call ld (code, i, XTOKEQ, TKEOI)
+  call ld (code, i, XJUMPT, STMT14)
+  call ld (code, i, XTOKEQ, TKRBRC)
+  call ld (code, i, XJUMPT, STMT14)
+  call ld (code, i, XCALL, CSTMT)
+  call ld (code, i, XINTND, NDSEQ)  # ("Sequence" ... ...)
+  call ld (code, i, XJUMP, STMT13)  # Loop again.
+  call ld (code, i, XLOC, STMT14)   # Loop exit
+  call ld (code, i, XEXPCT, TKRBRC) # Expect ";".
+  call ld (code, i, XRET, XPAD)
+
+  call ld (code, i, XLOC, STMT12)
+
+  call ld (code, i, XTOKEQ, TKEOI) # End_of_input
+  call ld (code, i, XJUMPF, STMT15)
+
+  call ld (code, i, XRET, XPAD)
+
+  call ld (code, i, XLOC, STMT15)
+
+  call ld (code, i, XERROR, EXSTMT) # "expecting start of stmt"
+
+  #--------------------------------------------------
+
+end
+
+subroutine dtpush (dstack, idstck, x)
+
+  # Push to the data stack.
+
+  implicit none
+
+  integer dstack(DSTKSZ)
+  integer idstck
+  integer x
+
+  if (DSTKSZ < idstck)
+    {
+      write (*, '(''node stack exhausted'')')
+      stop
+    }
+  dstack(idstck) = x
+  idstck = idstck + 1
+end
+
+function dtpop (dstack, idstck)
+
+  # Pop from the data stack.
+
+  implicit none
+
+  integer dstack(DSTKSZ)
+  integer idstck
+  integer dtpop
+
+  if (DSTKSZ < idstck)
+    {
+      write (*, '(''node stack exhausted'')')
+      stop
+    }
+  idstck = idstck - 1
+  dtpop = dstack(idstck)
+end
+
+subroutine ppush (pstack, ipstck, x)
+
+  # Push to the precedence stack.
+
+  implicit none
+
+  integer pstack(PSTKSZ)
+  integer ipstck
+  integer x
+
+  if (PSTKSZ < ipstck)
+    {
+      write (*, '(''precedence stack exhausted'')')
+      stop
+    }
+  pstack(ipstck) = x
+  ipstck = ipstck + 1
+end
+
+function ppop (pstack, ipstck)
+
+  # Pop from the precedence stack.
+
+  implicit none
+
+  integer pstack(PSTKSZ)
+  integer ipstck
+  integer ppop
+
+  if (PSTKSZ < ipstck)
+    {
+      write (*, '(''precedence stack exhausted'')')
+      stop
+    }
+  ipstck = ipstck - 1
+  ppop = pstack(ipstck)
+end
+
+function ipfind (code, loc)
+
+  # Find a location.
+
+  implicit none
+
+  integer code(*)
+  integer loc
+  integer ipfind
+
+  integer i
+
+  i = 1
+  while (code(i) != XLOC || code(i + 1) != loc)
+    i = i + 2
+  ipfind = i
+end
+
+subroutine ippush (xstack, ixstck, ip)
+
+  # Push the instruction pointer.
+
+  implicit none
+
+  integer xstack(XSTKSZ)
+  integer ixstck
+  integer ip
+
+  if (XSTKSZ < ixstck)
+    {
+      write (*, '(''recursive call stack exhausted'')')
+      stop
+    }
+  xstack(ixstck) = ip
+  ixstck = ixstck + 1
+end
+
+function ippop (xstack, ixstck)
+
+  # Pop an instruction pointer value.
+
+  implicit none
+
+  integer xstack(XSTKSZ)
+  integer ixstck
+  integer ippop
+
+  if (ixstck == 1)
+    {
+      write (*, '(''recursive call stack underflow'')')
+      stop
+    }
+  ixstck = ixstck - 1
+  ippop = xstack(ixstck)
+end
+
+function logl2i (u)
+
+  # Convert LOGICAL to INTEGER.
+
+  implicit none
+
+  logical u
+  integer logl2i
+
+  if (u)
+    logl2i = 1
+  else
+    logl2i = 0
+end
+
+subroutine recurs (strngs, istrng,
+                   nodes, inodes, _
+                   dstack, idstck, _
+                   pstack, ipstck, _
+                   xstack, ixstck, _
+                   code, ip)
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  integer nodes(NODESZ, NODSSZ) # Node pool
+  integer inodes                # Node pool's next slot.
+  integer dstack(DSTKSZ)        # Data stack.
+  integer idstck                # Data stack pointer.
+  integer pstack(PSTKSZ)        # Precedence stack.
+  integer ipstck                # Precedence stack pointer.
+  integer xstack(XSTKSZ)        # Execution stack.
+  integer ixstck                # Execution stack pointer.
+  integer code(*)               # Code in the recursive language.
+  integer ip                    # Instruction pointer.
+
+  integer prec
+  integer opernt
+  integer logl2i
+  integer dtpop
+  integer ppop
+  integer ippop
+  integer ipfind
+  logical accept
+  logical isbin
+  logical rtassc
+
+  integer curtok(TOKSZ)
+  integer node(NODESZ)
+  integer curprc                # Current precedence value.
+  integer i, j
+  logical done
+
+  curprc = 0
+  done = .false.
+  while (.not. done)
+    {
+      if (code(ip) == XLOC)
+        {
+          ip = ip + 2
+        }
+      else if (code(ip) == XJUMP)
+        {
+          ip = ipfind (code, code(ip + 1))
+        }
+      else if (code(ip) == XJUMPT)
+        {
+          i = dtpop (dstack, idstck)
+          if (i != 0)
+            ip = ipfind (code, code(ip + 1))
+          else
+            ip = ip + 2
+        }
+      else if (code(ip) == XJUMPF)
+        {
+          i = dtpop (dstack, idstck)
+          if (i == 0)
+            ip = ipfind (code, code(ip + 1))
+          else
+            ip = ip + 2
+        }
+      else if (code(ip) == XCALL)
+        {
+          call ippush (xstack, ixstck, ip + 2)
+          ip = ipfind (code, code(ip + 1))
+        }
+      else if (code(ip) == XRET)
+        {
+          if (ixstck == 1)
+            done = .true.
+          else
+            ip = ippop (xstack, ixstck)
+        }
+      else if (code(ip) == XINTND)
+        {
+          node(NRIGHT) = dtpop (dstack, idstck)
+          node(NLEFT) = dtpop (dstack, idstck)
+          node(NTAG) = code(ip + 1)
+          call astnod (node, nodes, inodes, i)
+          call dtpush (dstack, idstck, i)
+          ip = ip + 2
+        }
+      else if (code(ip) == XOPND)
+        {
+          node(NRIGHT) = dtpop (dstack, idstck)
+          node(NLEFT) = dtpop (dstack, idstck)
+          node(NTAG) = dtpop (dstack, idstck)
+          call astnod (node, nodes, inodes, i)
+          call dtpush (dstack, idstck, i)
+          ip = ip + 2
+        }
+      else if (code(ip) == XLEFND)
+        {
+          node(NITV) = curtok(ITV)
+          node(NITN) = curtok(ITN)
+          node(NTAG) = code(ip + 1)
+          call astnod (node, nodes, inodes, i)
+          call dtpush (dstack, idstck, i)
+          ip = ip + 2
+        }
+      else if (code(ip) == XNILND)
+        {
+          call dtpush (dstack, idstck, NIL)
+          ip = ip + 2
+        }
+      else if (code(ip) == XGETTK)
+        {
+          call gettok (strngs, istrng, curtok)
+          ip = ip + 2
+        }
+      else if (code(ip) == XTOKEQ)
+        {
+          i = logl2i (curtok(ITK) == code(ip + 1))
+          call dtpush (dstack, idstck, i)
+          ip = ip + 2
+        }
+      else if (code(ip) == XEXPCT)
+        {
+          call expect (strngs, istrng, curtok, code(ip + 1))
+          ip = ip + 2
+        }
+      else if (code(ip) == XACCPT)
+        {
+          i = logl2i (accept (strngs, istrng, curtok, code(ip + 1)))
+          call dtpush (dstack, idstck, i)
+          ip = ip + 2
+        }
+      else if (code(ip) == XSWAP)
+        {
+          i = dtpop (dstack, idstck)
+          j = dtpop (dstack, idstck)
+          call dtpush (dstack, idstck, i)
+          call dtpush (dstack, idstck, j)
+          ip = ip + 2
+        }
+      else if (code(ip) == XLT)
+        {
+          j = dtpop (dstack, idstck)
+          i = dtpop (dstack, idstck)
+          call dtpush (dstack, idstck, logl2i (i < j))
+          ip = ip + 2
+        }
+      else if (code(ip) == XADDI)
+        {
+          i = dtpop (dstack, idstck)
+          call dtpush (dstack, idstck, i + code(ip + 1))
+          ip = ip + 2
+        }
+      else if (code(ip) == XPPUSH)
+        {
+          i = dtpop (dstack, idstck)
+          call ppush (pstack, ipstck, i)
+          ip = ip + 2
+        }
+      else if (code(ip) == XPCOPY)
+        {
+          i = ppop (pstack, ipstck)
+          call ppush (pstack, ipstck, i)
+          call dtpush (dstack, idstck, i)
+          ip = ip + 2
+        }
+      else if (code(ip) == XPDROP)
+        {
+          i = ppop (pstack, ipstck)
+          ip = ip + 2
+        }
+      else if (code(ip) == XBINOP)
+        {
+          i = dtpop (dstack, idstck)
+          i = logl2i (isbin (i))
+          call dtpush (dstack, idstck, i)
+          ip = ip + 2
+        }
+      else if (code(ip) == XRASSC)
+        {
+          i = dtpop (dstack, idstck)
+          i = logl2i (rtassc (i))
+          call dtpush (dstack, idstck, i)
+          ip = ip + 2
+        }
+      else if (code(ip) == XPREC)
+        {
+          i = dtpop (dstack, idstck)
+          call dtpush (dstack, idstck, prec (i))
+          ip = ip + 2
+        }
+      else if (code(ip) == XOPER)
+        {
+          i = dtpop (dstack, idstck)
+          call dtpush (dstack, idstck, opernt (i))
+          ip = ip + 2
+        }
+      else if (code(ip) == XTOK)
+        {
+          call dtpush (dstack, idstck, curtok(ITK))
+          ip = ip + 2
+        }
+      else if (code(ip) == XPUSH)
+        {
+          call dtpush (dstack, idstck, code(ip + 1))
+          ip = ip + 2
+        }
+      else if (code(ip) == XERROR)
+        {
+          if (code(ip + 1) == EXSTMT)
+            {
+              write (*, 1000) curtok(ILN), curtok(ICN)
+1000          format ('expected start of statement at line ', _
+                      I5, ', column ', I5)
+            }
+          else if (code(ip + 1) == EXPRIM)
+            {
+              write (*, 1010) curtok(ILN), curtok(ICN)
+1010          format ('expected a primary at line ', _
+                      I5, ', column ', I5)
+            }
+          else
+            {
+              write (*, 2000) curtok(ILN), curtok(ICN)
+2000          format ('syntax error at line ', _
+                      I5, ', column ', I5)
+            }
+          stop
+        }
+      else if (code(ip) == XRWARN)
+        {
+          write (*, 3000)
+3000      format ('executing supposedly unused ', _
+                  '"right associative" operator branch')
+          ip = ip + 2
+        }
+      else if (code(ip) == XPING)
+        {
+          write (*, '(''ping'')')
+          ip = ip + 2
+        }
+      else if (code(ip) == XPRTND)
+        {
+          i = dtpop (dstack, idstck)
+          call dtpush (dstack, idstck, i)
+          call prtast (strngs, nodes, i, dstack)
+          ip = ip + 2
+        }
+      else if (code(ip) == XPRTTP)
+        {
+          i = dtpop (dstack, idstck)
+          call dtpush (dstack, idstck, i)
+          write (*, '(''top = '', I20)') i
+          ip = ip + 2
+        }
+      else if (code(ip) == XPRTTK)
+        {
+          write (*, '(''curtok ='', 5(1X, I5))') curtok
+          ip = ip + 2
+        }
+      else if (code(ip) == XPRTP)
+        {
+          write (*, '(''curprc = '', I2)') curprc
+          ip = ip + 2
+        }
+      else if (code(ip) == XPRTST)
+        {
+          write (*, '(''dstack ='', 100000(1X, I5))') _
+                (dstack(i), i = 1, idstck - 1)
+          ip = ip + 2
+        }
+      else
+        {
+          write (*, '(''illegal instruction'')')
+          stop
+        }
+    }
+end
+
+#---------------------------------------------------------------------
+
+program parse
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  integer nodes(NODESZ, NODSSZ) # Node pool
+  integer inodes                # Node pool's next slot.
+  integer dstack(DSTKSZ)        # Node stack.
+  integer idstck                # Node stack pointer.
+  integer pstack(PSTKSZ)        # Precedence stack.
+  integer ipstck                # Precedence stack pointer.
+  integer xstack(XSTKSZ)        # Execution stack.
+  integer ixstck                # Execution stack pointer.
+  integer code(1000)            # Recursive code.
+  integer ip                    # Instruction pointer.
+
+  integer i
+
+  integer dtpop
+
+  istrng = 1
+  inodes = 1
+  idstck = 1
+  ipstck = 1
+  ixstck = 1
+
+  call ldcode (code)
+  ip = 1
+
+  call recurs (strngs, istrng, nodes, inodes, _
+               dstack, idstck, pstack, ipstck, _
+               xstack, ixstck, code, ip)
+  i = dtpop (dstack, idstck)
+  call prtast (strngs, nodes, i, dstack)
+end
+
+######################################################################

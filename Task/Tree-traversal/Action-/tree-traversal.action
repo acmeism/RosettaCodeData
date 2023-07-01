@@ -1,0 +1,251 @@
+CARD EndProg ;required for ALLOCATE.ACT
+
+INCLUDE "D2:ALLOCATE.ACT" ;from the Action! Tool Kit. You must type 'SET EndProg=*' from the monitor after compiling, but before running this program!
+
+DEFINE PTR="CARD"
+
+DEFINE TREE_NODE_SIZE="5"
+TYPE TreeNode=[BYTE tData PTR left,right]
+
+DEFINE QUEUE_NODE_SIZE="4"
+TYPE QueueNode=[PTR qData,qNext]
+
+DEFINE STACK_NODE_SIZE="4"
+TYPE StackNode=[PTR sData,sNext]
+
+Type Tree=[PTR root] ;TreeNode POINTER
+TYPE Stack=[PTR top] ;StackNode POINTER
+TYPE Queue=[PTR front,rear] ;QueueNode POINTER
+
+PROC QueueInit(Queue POINTER q)
+  q.front=0 q.rear=0
+RETURN
+
+BYTE FUNC QueueIsEmpty(Queue POINTER q)
+  IF q.front=0 THEN RETURN (1) FI
+RETURN (0)
+
+PROC QueuePush(Queue POINTER q TreeNode POINTER d)
+  QueueNode POINTER node,tmp
+
+  node=Alloc(QUEUE_NODE_SIZE)
+  node.qData=d
+  node.qNext=0
+  IF QueueIsEmpty(q) THEN
+    q.front=node
+  ELSE
+    tmp=q.rear
+    tmp.qNext=node
+  FI
+  q.rear=node
+RETURN
+
+PTR FUNC QueuePop(Queue POINTER q)
+  QueueNode POINTER node
+  TreeNode POINTER d
+
+  IF QueueIsEmpty(q) THEN
+    PrintE("Error: queue is empty!")
+    Break()
+  FI
+
+  node=q.front
+  d=node.qData
+  q.front=node.qNext
+  Free(node,QUEUE_NODE_SIZE)
+RETURN (d)
+
+PROC StackInit(Stack POINTER s)
+  s.top=0
+RETURN
+
+BYTE FUNC StackIsEmpty(Stack POINTER s)
+  IF s.top=0 THEN
+    RETURN (1)
+  FI
+RETURN (0)
+
+PROC StackPush(Stack POINTER s TreeNode POINTER d)
+  StackNode POINTER node
+
+  node=Alloc(STACK_NODE_SIZE)
+  node.sData=d
+  node.sNext=s.top
+  s.top=node
+RETURN
+
+PTR FUNC StackPop(Stack POINTER s)
+  StackNode POINTER node
+  TreeNode POINTER d
+
+  IF StackIsEmpty(s) THEN
+    PrintE("Error stack is empty!")
+    Break()
+  FI
+
+  node=s.top
+  d=node.sData
+  s.top=node.sNext
+  Free(node,STACK_NODE_SIZE)
+RETURN (d)
+
+PTR FUNC CreateTreeNode(BYTE d TreeNode POINTER l,r)
+  TreeNode POINTER node
+
+  node=Alloc(TREE_NODE_SIZE)
+  node.tData=d
+  node.left=l
+  node.right=r
+RETURN (node)
+
+PROC BuildTree(Tree POINTER t)
+  TreeNode POINTER t2,t3,t4,t5,t6,t7,t8,t9
+
+  t7=CreateTreeNode(7,0,0)
+  t4=CreateTreeNode(4,t7,0)
+  t5=CreateTreeNode(5,0,0)
+  t2=CreateTreeNode(2,t4,t5)
+  t8=CreateTreeNode(8,0,0)
+  t9=CreateTreeNode(9,0,0)
+  t6=CreateTreeNode(6,t8,t9)
+  t3=CreateTreeNode(3,t6,0)
+  t.root=CreateTreeNode(1,t2,t3)
+RETURN
+
+PROC DestroyTree(Tree POINTER t)
+  TreeNode POINTER n
+  Queue q
+
+  IF t.root=0 THEN RETURN FI
+
+  QueueInit(q)
+  QueuePush(q,t.root)
+  WHILE QueueIsEmpty(q)=0
+  DO
+    n=QueuePop(q)
+    IF n.left#0 THEN
+      QueuePush(q,n.left)
+    FI
+    IF n.right#0 THEN
+      QueuePush(q,n.right)
+    FI
+    Free(n,TREE_NODE_SIZE)
+  OD
+  t.root=0
+RETURN
+
+PROC VisitNode(TreeNode POINTER n)
+  PrintB(n.tData) Put(32)
+RETURN
+
+PROC PreOrder(Tree POINTER t)
+  TreeNode POINTER n
+  Stack s
+
+  StackInit(s)
+  StackPush(s,t.root)
+  WHILE StackIsEmpty(s)=0
+  DO
+    n=StackPop(s)
+    VisitNode(n)
+    IF n.right#0 THEN
+      StackPush(s,n.right)
+    FI
+    IF n.left#0 THEN
+      StackPush(s,n.left)
+    FI
+  OD
+RETURN
+
+PROC InOrder(Tree POINTER t)
+  TreeNode POINTER n
+  Stack s
+
+  StackInit(s)
+  n=t.root
+  DO
+    DO
+      IF n.right#0 THEN
+        StackPush(s,n.right)
+      FI
+      StackPush(s,n)
+      IF n.left#0 THEN
+        n=n.left
+      ELSE
+        EXIT
+      FI
+    OD
+
+    n=StackPop(s)
+    WHILE StackIsEmpty(s)=0 AND n.right=0
+    DO
+      VisitNode(n)
+      n=StackPop(s)
+    OD
+
+    VisitNode(n)
+    IF StackIsEmpty(s) THEN EXIT FI
+    n=StackPop(s)
+  OD
+RETURN
+
+PROC PostOrder(Tree POINTER t)
+  TreeNode POINTER n
+  Stack s,tmp
+
+  StackInit(s)
+  StackInit(tmp)
+  StackPush(s,t.root)
+  WHILE StackIsEmpty(s)=0
+  DO
+    n=StackPop(s)
+    StackPush(tmp,n)
+    IF n.left#0 THEN
+      StackPush(s,n.left)
+    FI
+    IF n.right#0 THEN
+      StackPush(s,n.right)
+    FI
+  OD
+
+  WHILE StackIsEmpty(tmp)=0
+  DO
+    n=StackPop(tmp)
+    VisitNode(n)
+  OD
+RETURN
+
+PROC LevelOrder(Tree POINTER t)
+  TreeNode POINTER n
+  Queue q
+
+  QueueInit(q)
+  QueuePush(q,t.root)
+  WHILE QueueIsEmpty(q)=0
+  DO
+    n=QueuePop(q)
+    IF n.left#0 THEN
+      QueuePush(q,n.left)
+    FI
+    IF n.right#0 THEN
+      QueuePush(q,n.right)
+    FI
+    VisitNode(n)
+  OD
+RETURN
+
+PROC Main()
+  Tree t
+
+  Put(125) PutE() ;clear screen
+
+  AllocInit(0)
+  BuildTree(t)
+
+  Print("pre-order:   ") PreOrder(t)   PutE()
+  Print("in-order:    ") InOrder(t)    PutE()
+  Print("post-order:  ") PostOrder(t)  PutE()
+  Print("level-order: ") LevelOrder(t) PutE()
+
+  DestroyTree(t)
+RETURN

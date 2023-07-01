@@ -1,0 +1,453 @@
+/* ARM assembly Raspberry PI  */
+/* program numberClassif.s   */
+
+ /* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+.equ NBDIVISORS,             1000
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessStartPgm:          .asciz "Program start \n"
+szMessEndPgm:            .asciz "Program normal end.\n"
+szMessErrorArea:         .asciz "\033[31mError : area divisors too small.\n"
+szMessError:             .asciz "\033[31mError  !!!\n"
+szMessErrGen:            .asciz "Error end program.\n"
+szMessNbPrem:            .asciz "This number is prime !!!.\n"
+szMessResultFact:        .asciz "@ "
+
+szCarriageReturn:        .asciz "\n"
+
+/* datas message display */
+szMessResult:            .asciz "Number déficients : @ perfects : @ abundants : @ \n"
+
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+.align 4
+sZoneConv:               .skip 24
+tbZoneDecom:             .skip 4 * NBDIVISORS       // facteur 4 octets
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                               @ program start
+    ldr r0,iAdrszMessStartPgm       @ display start message
+    bl affichageMess
+
+    mov r4,#1
+    mov r3,#0
+    mov r6,#0
+    mov r7,#0
+    mov r8,#0
+    ldr r9,iNBMAX
+1:
+    mov r0,r4                       @  number
+    //=================================
+    ldr r1,iAdrtbZoneDecom
+    bl decompFact                @ create area of divisors
+    cmp r0,#0                    @ error ?
+    blt 2f
+    lsl r5,r4,#1                 @ number * 2
+    cmp r5,r1                    @ compare number and sum
+    addeq r7,r7,#1               @ perfect
+    addgt r6,r6,#1               @ deficient
+    addlt r8,r8,#1               @ abundant
+
+2:
+    add r4,r4,#1
+    cmp r4,r9
+    ble 1b
+
+    //================================
+
+    mov r0,r6                        @ deficient
+    ldr r1,iAdrsZoneConv
+    bl conversion10                  @ convert ascii string
+    ldr r0,iAdrszMessResult
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc               @ and put in message
+    mov r5,r0
+    mov r0,r7                        @ perfect
+    ldr r1,iAdrsZoneConv
+    bl conversion10                  @ convert ascii string
+    mov r0,r5
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc               @ and put in message
+    mov r5,r0
+    mov r0,r8                        @ abundant
+    ldr r1,iAdrsZoneConv
+    bl conversion10                  @ convert ascii string
+    mov r0,r5
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc               @ and put in message
+    bl affichageMess
+
+
+    ldr r0,iAdrszMessEndPgm         @ display end message
+    bl affichageMess
+    b 100f
+99:                                 @ display error message
+    ldr r0,iAdrszMessError
+    bl affichageMess
+100:                                @ standard end of the program
+    mov r0, #0                      @ return code
+    mov r7, #EXIT                   @ request to exit program
+    svc 0                           @ perform system call
+iAdrszMessStartPgm:        .int szMessStartPgm
+iAdrszMessEndPgm:          .int szMessEndPgm
+iAdrszMessError:           .int szMessError
+iAdrszCarriageReturn:      .int szCarriageReturn
+iAdrtbZoneDecom:           .int tbZoneDecom
+
+iAdrszMessResult:          .int szMessResult
+iAdrsZoneConv:             .int sZoneConv
+
+iNBMAX:                    .int 20000
+
+
+/******************************************************************/
+/*     factor decomposition                                               */
+/******************************************************************/
+/* r0 contains number */
+/* r1 contains address of divisors area */
+/* r0 return divisors items in table */
+/* r1 return the sum of divisors  */
+decompFact:
+    push {r3-r12,lr}              @ save  registers
+    cmp r0,#1
+    moveq r1,#1
+    beq 100f
+    mov r5,r1
+    mov r8,r0                    @ save number
+    bl isPrime                   @ prime ?
+    cmp r0,#1
+    beq 98f                      @ yes is prime
+    mov r1,#1
+    str r1,[r5]                  @ first factor
+    mov r12,#1                   @ divisors sum
+    mov r10,#1                   @ indice divisors table
+    mov r9,#2                    @ first divisor
+    mov r6,#0                    @ previous divisor
+    mov r7,#0                    @ number of same divisors
+
+    /*  division loop  */
+2:
+    mov r0,r8                    @ dividende
+    mov r1,r9                    @ divisor
+    bl division                  @ r2 quotient r3 remainder
+    cmp r3,#0
+    beq 3f                       @ if remainder  zero  ->  divisor
+
+        /* not divisor -> increment next divisor */
+    cmp r9,#2                    @ if divisor = 2 -> add 1
+    addeq r9,#1
+    addne r9,#2                  @ else add 2
+    b 2b
+
+       /* divisor   compute the new factors of number */
+3:
+    mov r8,r2                    @ else quotient -> new dividende
+    cmp r9,r6                    @ same divisor ?
+    beq 4f                       @ yes
+
+    mov r0,r5                    @ table address
+    mov r1,r10                   @ number factors in table
+    mov r2,r9                    @ divisor
+    mov r3,r12                   @ somme
+    mov r4,#0
+    bl computeFactors
+    mov r10,r1
+    mov r12,r0
+    mov r6,r9                    @ new divisor
+    b 7f
+
+4:                               @ same divisor
+    sub r7,r10,#1
+5:                              @ search in table the first use of divisor
+    ldr r3,[r5,r7,lsl #2 ]
+    cmp r3,r9
+    subne r7,#1
+    bne 5b
+                                 @ and compute new factors after factors
+    sub r4,r10,r7                @ start indice
+    mov r0,r5
+    mov r1,r10
+    mov r2,r9                    @ divisor
+    mov r3,r12
+    bl computeFactors
+    mov r12,r0
+    mov r10,r1
+
+
+    /* divisor -> test if new dividende is prime */
+7:
+    cmp r8,#1                    @ dividende = 1 ? -> end
+    beq 10f
+    mov r0,r8                    @ new dividende is prime ?
+    mov r1,#0
+    bl isPrime                   @ the new dividende is prime ?
+    cmp r0,#1
+    bne 10f                      @ the new dividende is not prime
+
+    cmp r8,r6                    @ else dividende is same divisor ?
+    beq 8f                       @ yes
+
+    mov r0,r5
+    mov r1,r10
+    mov r2,r8
+    mov r3,r12
+    mov r4,#0
+    bl computeFactors
+    mov r12,r0
+    mov r10,r1
+    mov r7,#0
+    b 11f
+8:
+    sub r7,r10,#1
+9:
+    ldr r3,[r5,r7,lsl #2 ]
+    cmp r3,r8
+    subne r7,#1
+    bne 9b
+
+    mov r0,r5
+    mov r1,r10
+    sub r4,r10,r7
+    mov r2,r8
+    mov r3,r12
+    bl computeFactors
+    mov r12,r0
+    mov r10,r1
+
+    b 11f
+
+10:
+    cmp r9,r8                    @ current divisor  > new dividende ?
+    ble 2b                       @ no -> loop
+
+    /* end decomposition */
+11:
+    mov r0,r10                  @ return number of table items
+    mov r1,r12                  @ return sum
+    mov r3,#0
+    str r3,[r5,r10,lsl #2]      @ store zéro in last table item
+    b 100f
+
+
+98:                             @ prime number
+    //ldr r0,iAdrszMessNbPrem
+    //bl   affichageMess
+    add r1,r8,#1
+    mov r0,#0                   @ return code
+    b 100f
+99:
+    ldr r0,iAdrszMessError
+    bl   affichageMess
+    mov r0,#-1                  @ error code
+    b 100f
+100:
+    pop {r3-r12,lr}             @ restaur registers
+    bx lr
+iAdrszMessNbPrem:           .int szMessNbPrem
+
+/*   r0 table factors address */
+/*   r1 number factors in table */
+/*   r2 new divisor */
+/*   r3 sum  */
+/*   r4 start indice */
+/*   r0 return sum */
+/*   r1 return number factors in table */
+computeFactors:
+    push {r2-r6,lr}              @ save registers
+    mov r6,r1                    @ number factors in table
+1:
+    ldr r5,[r0,r4,lsl #2 ]       @ load one factor
+    mul r5,r2,r5                 @ multiply
+    str r5,[r0,r1,lsl #2]        @ and store in the table
+
+    add r3,r5
+    add r1,r1,#1                 @ and increment counter
+    add r4,r4,#1
+    cmp r4,r6
+    blt 1b
+    mov r0,r3
+100:                             @ fin standard de la fonction
+    pop {r2-r6,lr}               @ restaur des registres
+    bx lr                        @ retour de la fonction en utilisant lr
+/***************************************************/
+/*   check if a number is prime              */
+/***************************************************/
+/* r0 contains the number            */
+/* r0 return 1 if prime  0 else */
+@2147483647
+@4294967297
+@131071
+isPrime:
+    push {r1-r6,lr}    @ save registers
+    cmp r0,#0
+    beq 90f
+    cmp r0,#17
+    bhi 1f
+    cmp r0,#3
+    bls 80f            @ for 1,2,3 return prime
+    cmp r0,#5
+    beq 80f            @ for 5 return prime
+    cmp r0,#7
+    beq 80f            @ for 7 return prime
+    cmp r0,#11
+    beq 80f            @ for 11 return prime
+    cmp r0,#13
+    beq 80f            @ for 13 return prime
+    cmp r0,#17
+    beq 80f            @ for 17 return prime
+1:
+    tst r0,#1          @ even ?
+    beq 90f            @ yes -> not prime
+    mov r2,r0          @ save number
+    sub r1,r0,#1       @ exposant n - 1
+    mov r0,#3          @ base
+    bl moduloPuR32     @ compute base power n - 1 modulo n
+    cmp r0,#1
+    bne 90f            @ if <> 1  -> not prime
+
+    mov r0,#5
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#7
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#11
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#13
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#17
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+80:
+    mov r0,#1        @ is prime
+    b 100f
+90:
+    mov r0,#0        @ no prime
+100:                 @ fin standard de la fonction
+    pop {r1-r6,lr}   @ restaur des registres
+    bx lr            @ retour de la fonction en utilisant lr
+/********************************************************/
+/*   Calcul modulo de b puissance e modulo m  */
+/*    Exemple 4 puissance 13 modulo 497 = 445         */
+/*                                             */
+/********************************************************/
+/* r0  nombre  */
+/* r1 exposant */
+/* r2 modulo   */
+/* r0 return result  */
+moduloPuR32:
+    push {r1-r7,lr}    @ save registers
+    cmp r0,#0          @ verif <> zero
+    beq 100f
+    cmp r2,#0          @ verif <> zero
+    beq 100f           @ TODO: v鲩fier les cas d erreur
+1:
+    mov r4,r2          @ save modulo
+    mov r5,r1          @ save exposant
+    mov r6,r0          @ save base
+    mov r3,#1          @ start result
+
+    mov r1,#0          @ division de r0,r1 par r2
+    bl division32R
+    mov r6,r2          @ base <- remainder
+2:
+    tst r5,#1          @  exposant even or odd
+    beq 3f
+    umull r0,r1,r6,r3
+    mov r2,r4
+    bl division32R
+    mov r3,r2          @ result <- remainder
+3:
+    umull r0,r1,r6,r6
+    mov r2,r4
+    bl division32R
+    mov r6,r2          @ base <- remainder
+
+    lsr r5,#1          @ left shift 1 bit
+    cmp r5,#0          @ end ?
+    bne 2b
+    mov r0,r3
+100:                   @ fin standard de la fonction
+    pop {r1-r7,lr}     @ restaur des registres
+    bx lr              @ retour de la fonction en utilisant lr
+
+/***************************************************/
+/*   division number 64 bits in 2 registers by number 32 bits */
+/***************************************************/
+/* r0 contains lower part dividende   */
+/* r1 contains upper part dividende   */
+/* r2 contains divisor   */
+/* r0 return lower part quotient    */
+/* r1 return upper part quotient    */
+/* r2 return remainder               */
+division32R:
+    push {r3-r9,lr}    @ save registers
+    mov r6,#0          @ init upper upper part remainder  !!
+    mov r7,r1          @ init upper part remainder with upper part dividende
+    mov r8,r0          @ init lower part remainder with lower part dividende
+    mov r9,#0          @ upper part quotient
+    mov r4,#0          @ lower part quotient
+    mov r5,#32         @ bits number
+1:                     @ begin loop
+    lsl r6,#1          @ shift upper upper part remainder
+    lsls r7,#1         @ shift upper  part remainder
+    orrcs r6,#1
+    lsls r8,#1         @ shift lower  part remainder
+    orrcs r7,#1
+    lsls r4,#1         @ shift lower part quotient
+    lsl r9,#1          @ shift upper part quotient
+    orrcs r9,#1
+                       @ divisor sustract  upper  part remainder
+    subs r7,r2
+    sbcs  r6,#0        @ and substract carry
+    bmi 2f             @ n駡tive ?
+
+                       @ positive or equal
+    orr r4,#1          @ 1 -> right bit quotient
+    b 3f
+2:                     @ negative
+    orr r4,#0          @ 0 -> right bit quotient
+    adds r7,r2         @ and restaur remainder
+    adc  r6,#0
+3:
+    subs r5,#1         @ decrement bit size
+    bgt 1b             @ end ?
+    mov r0,r4          @ lower part quotient
+    mov r1,r9          @ upper part quotient
+    mov r2,r7          @ remainder
+100:                   @ function end
+    pop {r3-r9,lr}     @ restaur registers
+    bx lr
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

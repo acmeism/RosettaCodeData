@@ -1,0 +1,109 @@
+[Van der Corput sequence for Rosetta Code.
+ EDSAC solution, Initial Orders 2.]
+
+[Library subroutine M3 - prints header at load time and is then overwritten.
+ Here, the last character sets the teleprinter to figures.]
+            PFGKIFAFRDLFUFOFE@A6FG@E8FEZPF
+            *VAN!DER!CORPUT!SEQUENCE@&#17A*BIT!!!#35A*BIT@&#
+            ..PZ [blank tape then re-sync]
+
+[Define load addresses]
+            T55K P100F  [V parameter: van der Corput subroutines]
+            T51K P64F   [G parameter: print subroutine]
+            T47K P400F  [M parameter: main routine]
+
+[Subroutines to return n'th element of van der Corput sequence.
+ 17-bit version: Call by GV, pass n in 0F (not preserved), result in 4F.
+ 35-bit version: Call by G1V, pass n in 0D (not preserved), result in 4D.]
+            E25K TV GK
+            G2@  [jump to 17-bit version]
+            G25@ [jump to 35-bit version]
+[17-bit version.
+ On EDSAC, it's a matter of reversing the bits after the binary point
+ To save time, we use a table to reverse the 16 bits in groups of 4.]
+      [2]   A3F T24@    [plant return link as usual]
+            H5 6@       [set mult reg to 0...01111 binary]
+            A55@ T4F    [set marker bit 0...01 in result]
+      [7]   A4F L4F T4F [shift result 4 left]
+            CF          [acc := next 4 bits of n]
+            LD          [shift into address field]
+            A58@ T14@   [plant A order to load from table]
+     [14]   AF          [{planted) load bits from table]
+            A4F         [add to result]
+            G22@        [jump out if marker bit has reached sign bit]
+            T4F         [update result]
+            AF R4F TF   [shift n 4 right]
+            E7@         [always loop back]
+     [22]   S57@        [done, remove marker bit]
+            T4F         [store final result]
+     [24]   ZF          [(planted) jump to return to caller]
+
+[35-bit version. Very similar to the 17-bit version, except that
+ after reversing 8 groups of 4, there are 2 bits left over,
+ which require separate treatment.]
+     [25]   A3F T54@    [plant return link as usual]
+            H56@        [set mult reg to 0...01111 binary]
+            YF L2F      [set marker bit 0...0100 in result]
+     [30]   L4F T4D     [shift result 4 left]
+            CF LD A58@ T36@ AF A4F T4F [update from table as in 17-bit version]
+            ADR4FTD     [shift n 4 right]
+            A4D         [load result]
+            E30@        [if marker bit hasn't reached sign bit, loop back]
+[Last 2 bits]
+     [44]   L1FT4D      [shift result 2 right]
+            CF LD A58@ T50@ [plant A order as in 17-bit version]
+     [50]   AF          [Planted) load bits from table]
+            R1F A4F T4F [shift table entry 2 right and add to result]
+     [54]   ZF          [(planted) jump to return to caller]
+[Constants]
+     [55]   PD          [17-bit 1]
+     [56]   P7D         [17-bit 15]
+     [57]   K4096F      [17-bit 10...0 binary]
+     [58]   A59@        [order to load from table{0}]
+[Table to reverse group of 4 bits, e.g. table{0010b} = 0100b]
+     [59]   PFP4FP2FP6FP1FP5FP3FP7FPDP4DP2DP6DP1DP5DP3DP7D
+
+[Library subroutine P1 to print number in range 0 <= x < 1.
+ Caller must print leading '0.' if required. 21 storage locations.]
+            E25K TG
+            GKA18@U17@S20@T5@H19@PFT5@VDUFOFFFSFL4FTDA5@A2FG6@EFU3FJFM1F
+
+[Main routine]
+            E25K TM GK
+      [0]   PF PF       [n, 35 bits, must be at even address]
+      [2]   PF          [negative count of terms]
+      [3]   P10F        [<=== EDIT number of terms, in address field]
+      [4]   PD          [17-bit integer 1]
+      [5]   MF          [dot (in figures mode)]
+      [6]   @F          [carriage return]
+      [7]   &F          [line feed]
+      [8]   !F          [space character]
+      [9]   K4096F      [null character]
+
+[Enter with acc = 0]
+     [10]   T#@         [n := 0]
+            S3@ T2@     [initialize negative count]
+     [13]   A@ TF       [pass 17-bit n in 0F]
+     [15]   A15@ GV     [call 17-bit van der Corput routine]
+            TD          [clear 0D, including sandwich bit]
+            A4F T1F     [extend 17-bit result to 35 bits in 0D]
+            O4@ O5@     [print '0.']
+     [22]   A22@ GG P5F [print result to 5 decimals]
+            O8@ O8@     [print 2 spaces]
+            A#@ TD      [pass 35-bit n in 0D]
+     [29]   A29@ G1V    [call 35-bit van der Corput routine]
+            A4D TD      [pass result in 0D]
+            O4@ O5@     [print '0.']
+     [35]   A35@ GG P10F [print result to 10 decimals]
+            O6@ O7@     [print CR LF]
+            A2@ A2F     [inc negative count]
+            E48@        [jump out if count = 0]
+            T2@         [update count]
+            A@ A4@ T@   [inc n]
+            E13@        [loop back]
+     [48]   O9@         [print null to flush teleprinter buffer]
+            ZF          [stop]
+
+            E10Z        [define entry point]
+            PF          [acc = 0 on entry]
+[end]

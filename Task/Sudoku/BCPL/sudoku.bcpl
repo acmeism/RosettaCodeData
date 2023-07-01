@@ -1,0 +1,396 @@
+// This can be run using Cintcode BCPL freely available from www.cl.cam.ac.uk/users/mr10.
+// Implemented by Martin Richards.
+
+// If you have cintcode BCPL installed on a Linux system you can compile and run this program
+// execute the following sequence of commands.
+
+// cd $BCPLROOT
+// cintsys
+// c bc sudoku
+// sudoku
+
+// This is a really naive program to solve SuDoku problems. Even so it is usually quite fast.
+
+// SuDoku consists of a 9x9 grid of cells. Each cell should contain
+// a digit in the range 1..9. Every row, column and major 3x3
+// square should contain all the digits 1..9. Some cells have
+// given values. The problem is to find digits to place in
+// the unspecified cells satisfying the constraints.
+
+// A typical problem is:
+
+//  - - -   6 3 8   - - -
+//  7 - 6   - - -   3 - 5
+//  - 1 -   - - -   - 4 -
+
+//  - - 8   7 1 2   4 - -
+//  - 9 -   - - -   - 5 -
+//  - - 2   5 6 9   1 - -
+
+//  - 3 -   - - -   - 1 -
+//  1 - 5   - - -   6 - 8
+//  - - -   1 8 4   - - -
+
+SECTION "sudoku"
+
+GET "libhdr"
+
+GLOBAL { count:ug
+
+// The 9x9 board
+
+a1; a2; a3; a4; a5; a6; a7; a8; a9
+b1; b2; b3; b4; b5; b6; b7; b8; b9
+c1; c2; c3; c4; c5; c6; c7; c8; c9
+d1; d2; d3; d4; d5; d6; d7; d8; d9
+e1; e2; e3; e4; e5; e6; e7; e8; e9
+f1; f2; f3; f4; f5; f6; f7; f8; f9
+g1; g2; g3; g4; g5; g6; g7; g8; g9
+h1; h2; h3; h4; h5; h6; h7; h8; h9
+i1; i2; i3; i4; i5; i6; i7; i8; i9
+}
+
+MANIFEST {
+N1=1<<0; N2=1<<1; N3=1<<2;
+N4=1<<3; N5=1<<4; N6=1<<5;
+N7=1<<6; N8=1<<7; N9=1<<8
+}
+
+LET start() = VALOF
+{ count := 0
+  initboard()
+  prboard()
+  ta1()
+  writef("*n*nTotal number of solutions: %n*n", count)
+  RESULTIS 0
+}
+
+AND initboard() BE {
+a1, a2, a3, a4, a5, a6, a7, a8, a9 :=  0, 0, 0, N6,N3,N8,  0, 0, 0
+b1, b2, b3, b4, b5, b6, b7, b8, b9 := N7, 0,N6,  0, 0, 0, N3, 0,N5
+c1, c2, c3, c4, c5, c6, c7, c8, c9 :=  0,N1, 0,  0, 0, 0,  0,N4, 0
+d1, d2, d3, d4, d5, d6, d7, d8, d9 :=  0, 0,N8, N7,N1,N2, N4, 0, 0
+e1, e2, e3, e4, e5, e6, e7, e8, e9 :=  0,N9, 0,  0, 0, 0,  0,N5, 0
+f1, f2, f3, f4, f5, f6, f7, f8, f9 :=  0, 0,N2, N5,N6,N9, N1, 0, 0
+g1, g2, g3, g4, g5, g6, g7, g8, g9 :=  0,N3, 0,  0, 0, 0,  0,N1, 0
+h1, h2, h3, h4, h5, h6, h7, h8, h9 := N1, 0,N5,  0, 0, 0, N6, 0,N8
+i1, i2, i3, i4, i5, i6, i7, i8, i9 :=  0, 0, 0, N1,N8,N4,  0, 0, 0
+
+// Un-comment the following to test that the backtracking works
+// giving 184 solutions.
+//h1, h2, h3, h4, h5, h6, h7, h8, h9 := N1, 0,N5,  0, 0, 0, N6, 0, 0
+//i1, i2, i3, i4, i5, i6, i7, i8, i9 :=  0, 0, 0,  0, 0, 0,  0, 0, 0
+}
+
+AND c(n) = VALOF SWITCHON n INTO
+{ DEFAULT:    RESULTIS '?'
+  CASE  0:    RESULTIS '-'
+  CASE N1:    RESULTIS '1'
+  CASE N2:    RESULTIS '2'
+  CASE N3:    RESULTIS '3'
+  CASE N4:    RESULTIS '4'
+  CASE N5:    RESULTIS '5'
+  CASE N6:    RESULTIS '6'
+  CASE N7:    RESULTIS '7'
+  CASE N8:    RESULTIS '8'
+  CASE N9:    RESULTIS '9'
+}
+
+AND prboard() BE
+{ LET form = "%c %c %c   %c %c %c   %c %c %c*n"
+  writef("*ncount = %n*n", count)
+  newline()
+  writef(form, c(a1),c(a2),c(a3),c(a4),c(a5),c(a6),c(a7),c(a8),c(a9))
+  writef(form, c(b1),c(b2),c(b3),c(b4),c(b5),c(b6),c(b7),c(b8),c(b9))
+  writef(form, c(c1),c(c2),c(c3),c(c4),c(c5),c(c6),c(c7),c(c8),c(c9))
+  newline()
+  writef(form, c(d1),c(d2),c(d3),c(d4),c(d5),c(d6),c(d7),c(d8),c(d9))
+  writef(form, c(e1),c(e2),c(e3),c(e4),c(e5),c(e6),c(e7),c(e8),c(e9))
+  writef(form, c(f1),c(f2),c(f3),c(f4),c(f5),c(f6),c(f7),c(f8),c(f9))
+  newline()
+  writef(form, c(g1),c(g2),c(g3),c(g4),c(g5),c(g6),c(g7),c(g8),c(g9))
+  writef(form, c(h1),c(h2),c(h3),c(h4),c(h5),c(h6),c(h7),c(h8),c(h9))
+  writef(form, c(i1),c(i2),c(i3),c(i4),c(i5),c(i6),c(i7),c(i8),c(i9))
+
+  newline()
+
+//abort(1000)
+}
+
+AND try(p, f, row, col, sq) BE
+{ LET x = !p
+  TEST x
+  THEN f()
+  ELSE { LET bits = row|col|sq
+//prboard()
+//              writef("x=%n %b9*n", x, bits)
+//abort(1000)
+         IF (N1&bits)=0 DO { !p:=N1; f() }
+         IF (N2&bits)=0 DO { !p:=N2; f() }
+         IF (N3&bits)=0 DO { !p:=N3; f() }
+         IF (N4&bits)=0 DO { !p:=N4; f() }
+         IF (N5&bits)=0 DO { !p:=N5; f() }
+         IF (N6&bits)=0 DO { !p:=N6; f() }
+         IF (N7&bits)=0 DO { !p:=N7; f() }
+         IF (N8&bits)=0 DO { !p:=N8; f() }
+         IF (N9&bits)=0 DO { !p:=N9; f() }
+         !p := 0
+       }
+}
+
+AND ta1() BE try(@a1, ta2, a1+a2+a3+a4+a5+a6+a7+a8+a9,
+                           a1+b1+c1+d1+e1+f1+g1+h1+i1,
+                           a1+a2+a3+b1+b2+b3+c1+c2+c3)
+AND ta2() BE try(@a2, ta3, a1+a2+a3+a4+a5+a6+a7+a8+a9,
+                           a2+b2+c2+d2+e2+f2+g2+h2+i2,
+                           a1+a2+a3+b1+b2+b3+c1+c2+c3)
+AND ta3() BE try(@a3, ta4, a1+a2+a3+a4+a5+a6+a7+a8+a9,
+                           a3+b3+c3+d3+e3+f3+g3+h3+i3,
+                           a1+a2+a3+b1+b2+b3+c1+c2+c3)
+AND ta4() BE try(@a4, ta5, a1+a2+a3+a4+a5+a6+a7+a8+a9,
+                           a4+b4+c4+d4+e4+f4+g4+h4+i4,
+                           a4+a5+a6+b4+b5+b6+c4+c5+c6)
+AND ta5() BE try(@a5, ta6, a1+a2+a3+a4+a5+a6+a7+a8+a9,
+                           a5+b5+c5+d5+e5+f5+g5+h5+i5,
+                           a4+a5+a6+b4+b5+b6+c4+c5+c6)
+AND ta6() BE try(@a6, ta7, a1+a2+a3+a4+a5+a6+a7+a8+a9,
+                           a6+b6+c6+d6+e6+f6+g6+h6+i6,
+                           a4+a5+a6+b4+b5+b6+c4+c5+c6)
+AND ta7() BE try(@a7, ta8, a1+a2+a3+a4+a5+a6+a7+a8+a9,
+                           a7+b7+c7+d7+e7+f7+g7+h7+i7,
+                           a7+a8+a9+b7+b8+b9+c7+c8+c9)
+AND ta8() BE try(@a8, ta9, a1+a2+a3+a4+a5+a6+a7+a8+a9,
+                           a8+b8+c8+d8+e8+f8+g8+h8+i8,
+                           a7+a8+a9+b7+b8+b9+c7+c8+c9)
+AND ta9() BE try(@a9, tb1, a1+a2+a3+a4+a5+a6+a7+a8+a9,
+                           a9+b9+c9+d9+e9+f9+g9+h9+i9,
+                           a7+a8+a9+b7+b8+b9+c7+c8+c9)
+
+AND tb1() BE try(@b1, tb2, b1+b2+b3+b4+b5+b6+b7+b8+b9,
+                           a1+b1+c1+d1+e1+f1+g1+h1+i1,
+                           a1+a2+a3+b1+b2+b3+c1+c2+c3)
+AND tb2() BE try(@b2, tb3, b1+b2+b3+b4+b5+b6+b7+b8+b9,
+                           a2+b2+c2+d2+e2+f2+g2+h2+i2,
+                           a1+a2+a3+b1+b2+b3+c1+c2+c3)
+AND tb3() BE try(@b3, tb4, b1+b2+b3+b4+b5+b6+b7+b8+b9,
+                           a3+b3+c3+d3+e3+f3+g3+h3+i3,
+                           a1+a2+a3+b1+b2+b3+c1+c2+c3)
+AND tb4() BE try(@b4, tb5, b1+b2+b3+b4+b5+b6+b7+b8+b9,
+                           a4+b4+c4+d4+e4+f4+g4+h4+i4,
+                           a4+a5+a6+b4+b5+b6+c4+c5+c6)
+AND tb5() BE try(@b5, tb6, b1+b2+b3+b4+b5+b6+b7+b8+b9,
+                           a5+b5+c5+d5+e5+f5+g5+h5+i5,
+                           a4+a5+a6+b4+b5+b6+c4+c5+c6)
+AND tb6() BE try(@b6, tb7, b1+b2+b3+b4+b5+b6+b7+b8+b9,
+                           a6+b6+c6+d6+e6+f6+g6+h6+i6,
+                           a4+a5+a6+b4+b5+b6+c4+c5+c6)
+AND tb7() BE try(@b7, tb8, b1+b2+b3+b4+b5+b6+b7+b8+b9,
+                           a7+b7+c7+d7+e7+f7+g7+h7+i7,
+                           a7+a8+a9+b7+b8+b9+c7+c8+c9)
+AND tb8() BE try(@b8, tb9, b1+b2+b3+b4+b5+b6+b7+b8+b9,
+                           a8+b8+c8+d8+e8+f8+g8+h8+i8,
+                           a7+a8+a9+b7+b8+b9+c7+c8+c9)
+AND tb9() BE try(@b9, tc1, b1+b2+b3+b4+b5+b6+b7+b8+b9,
+                           a9+b9+c9+d9+e9+f9+g9+h9+i9,
+                           a7+a8+a9+b7+b8+b9+c7+c8+c9)
+
+AND tc1() BE try(@c1, tc2, c1+c2+c3+c4+c5+c6+c7+c8+c9,
+                           a1+b1+c1+d1+e1+f1+g1+h1+i1,
+                           a1+a2+a3+b1+b2+b3+c1+c2+c3)
+AND tc2() BE try(@c2, tc3, c1+c2+c3+c4+c5+c6+c7+c8+c9,
+                           a2+b2+c2+d2+e2+f2+g2+h2+i2,
+                           a1+a2+a3+b1+b2+b3+c1+c2+c3)
+AND tc3() BE try(@c3, tc4, c1+c2+c3+c4+c5+c6+c7+c8+c9,
+                           a3+b3+c3+d3+e3+f3+g3+h3+i3,
+                           a1+a2+a3+b1+b2+b3+c1+c2+c3)
+AND tc4() BE try(@c4, tc5, c1+c2+c3+c4+c5+c6+c7+c8+c9,
+                           a4+b4+c4+d4+e4+f4+g4+h4+i4,
+                           a4+a5+a6+b4+b5+b6+c4+c5+c6)
+AND tc5() BE try(@c5, tc6, c1+c2+c3+c4+c5+c6+c7+c8+c9,
+                           a5+b5+c5+d5+e5+f5+g5+h5+i5,
+                           a4+a5+a6+b4+b5+b6+c4+c5+c6)
+AND tc6() BE try(@c6, tc7, c1+c2+c3+c4+c5+c6+c7+c8+c9,
+                           a6+b6+c6+d6+e6+f6+g6+h6+i6,
+                           a4+a5+a6+b4+b5+b6+c4+c5+c6)
+AND tc7() BE try(@c7, tc8, c1+c2+c3+c4+c5+c6+c7+c8+c9,
+                           a7+b7+c7+d7+e7+f7+g7+h7+i7,
+                           a7+a8+a9+b7+b8+b9+c7+c8+c9)
+AND tc8() BE try(@c8, tc9, c1+c2+c3+c4+c5+c6+c7+c8+c9,
+                           a8+b8+c8+d8+e8+f8+g8+h8+i8,
+                           a7+a8+a9+b7+b8+b9+c7+c8+c9)
+AND tc9() BE try(@c9, td1, c1+c2+c3+c4+c5+c6+c7+c8+c9,
+                           a9+b9+c9+d9+e9+f9+g9+h9+i9,
+                           a7+a8+a9+b7+b8+b9+c7+c8+c9)
+
+AND td1() BE try(@d1, td2, d1+d2+d3+d4+d5+d6+d7+d8+d9,
+                           a1+b1+c1+d1+e1+f1+g1+h1+i1,
+                           d1+d2+d3+e1+e2+e3+f1+f2+f3)
+AND td2() BE try(@d2, td3, d1+d2+d3+d4+d5+d6+d7+d8+d9,
+                           a2+b2+c2+d2+e2+f2+g2+h2+i2,
+                           d1+d2+d3+e1+e2+e3+f1+f2+f3)
+AND td3() BE try(@d3, td4, d1+d2+d3+d4+d5+d6+d7+d8+d9,
+                           a3+b3+c3+d3+e3+f3+g3+h3+i3,
+                           d1+d2+d3+e1+e2+e3+f1+f2+f3)
+AND td4() BE try(@d4, td5, d1+d2+d3+d4+d5+d6+d7+d8+d9,
+                           a4+b4+c4+d4+e4+f4+g4+h4+i4,
+                           d4+d5+d6+e4+e5+e6+f4+f5+f6)
+AND td5() BE try(@d5, td6, d1+d2+d3+d4+d5+d6+d7+d8+d9,
+                           a5+b5+c5+d5+e5+f5+g5+h5+i5,
+                           d4+d5+d6+e4+e5+e6+f4+f5+f6)
+AND td6() BE try(@d6, td7, d1+d2+d3+d4+d5+d6+d7+d8+d9,
+                           a6+b6+c6+d6+e6+f6+g6+h6+i6,
+                           d4+d5+d6+e4+e5+e6+f4+f5+f6)
+AND td7() BE try(@d7, td8, d1+d2+d3+d4+d5+d6+d7+d8+d9,
+                           a7+b7+c7+d7+e7+f7+g7+h7+i7,
+                           d7+d8+d9+e7+e8+e9+f7+f8+f9)
+AND td8() BE try(@d8, td9, d1+d2+d3+d4+d5+d6+d7+d8+d9,
+                           a8+b8+c8+d8+e8+f8+g8+h8+i8,
+                           d7+d8+d9+e7+e8+e9+f7+f8+f9)
+AND td9() BE try(@d9, te1, d1+d2+d3+d4+d5+d6+d7+d8+d9,
+                           a9+b9+c9+d9+e9+f9+g9+h9+i9,
+                           d7+d8+d9+e7+e8+e9+f7+f8+f9)
+
+AND te1() BE try(@e1, te2, e1+e2+e3+e4+e5+e6+e7+e8+e9,
+                           a1+b1+c1+d1+e1+f1+g1+h1+i1,
+                           d1+d2+d3+e1+e2+e3+f1+f2+f3)
+AND te2() BE try(@e2, te3, e1+e2+e3+e4+e5+e6+e7+e8+e9,
+                           a2+b2+c2+d2+e2+f2+g2+h2+i2,
+                           d1+d2+d3+e1+e2+e3+f1+f2+f3)
+AND te3() BE try(@e3, te4, e1+e2+e3+e4+e5+e6+e7+e8+e9,
+                           a3+b3+c3+d3+e3+f3+g3+h3+i3,
+                           d1+d2+d3+e1+e2+e3+f1+f2+f3)
+AND te4() BE try(@e4, te5, e1+e2+e3+e4+e5+e6+e7+e8+e9,
+                           a4+b4+c4+d4+e4+f4+g4+h4+i4,
+                           d4+d5+d6+e4+e5+e6+f4+f5+f6)
+AND te5() BE try(@e5, te6, e1+e2+e3+e4+e5+e6+e7+e8+e9,
+                           a5+b5+c5+d5+e5+f5+g5+h5+i5,
+                           d4+d5+d6+e4+e5+e6+f4+f5+f6)
+AND te6() BE try(@e6, te7, e1+e2+e3+e4+e5+e6+e7+e8+e9,
+                           a6+b6+c6+d6+e6+f6+g6+h6+i6,
+                           d4+d5+d6+e4+e5+e6+f4+f5+f6)
+AND te7() BE try(@e7, te8, e1+e2+e3+e4+e5+e6+e7+e8+e9,
+                           a7+b7+c7+d7+e7+f7+g7+h7+i7,
+                           d7+d8+d9+e7+e8+e9+f7+f8+f9)
+AND te8() BE try(@e8, te9, e1+e2+e3+e4+e5+e6+e7+e8+e9,
+                           a8+b8+c8+d8+e8+f8+g8+h8+i8,
+                           d7+d8+d9+e7+e8+e9+f7+f8+f9)
+AND te9() BE try(@e9, tf1, e1+e2+e3+e4+e5+e6+e7+e8+e9,
+                           a9+b9+c9+d9+e9+f9+g9+h9+i9,
+                           d7+d8+d9+e7+e8+e9+f7+f8+f9)
+
+AND tf1() BE try(@f1, tf2, f1+f2+f3+f4+f5+f6+f7+f8+f9,
+                           a1+b1+c1+d1+e1+f1+g1+h1+i1,
+                           d1+d2+d3+e1+e2+e3+f1+f2+f3)
+AND tf2() BE try(@f2, tf3, f1+f2+f3+f4+f5+f6+f7+f8+f9,
+                           a2+b2+c2+d2+e2+f2+g2+h2+i2,
+                           d1+d2+d3+e1+e2+e3+f1+f2+f3)
+AND tf3() BE try(@f3, tf4, f1+f2+f3+f4+f5+f6+f7+f8+f9,
+                           a3+b3+c3+d3+e3+f3+g3+h3+i3,
+                           d1+d2+d3+e1+e2+e3+f1+f2+f3)
+AND tf4() BE try(@f4, tf5, f1+f2+f3+f4+f5+f6+f7+f8+f9,
+                           a4+b4+c4+d4+e4+f4+g4+h4+i4,
+                           d4+d5+d6+e4+e5+e6+f4+f5+f6)
+AND tf5() BE try(@f5, tf6, f1+f2+f3+f4+f5+f6+f7+f8+f9,
+                           a5+b5+c5+d5+e5+f5+g5+h5+i5,
+                           d4+d5+d6+e4+e5+e6+f4+f5+f6)
+AND tf6() BE try(@f6, tf7, f1+f2+f3+f4+f5+f6+f7+f8+f9,
+                           a6+b6+c6+d6+e6+f6+g6+h6+i6,
+                           d4+d5+d6+e4+e5+e6+f4+f5+f6)
+AND tf7() BE try(@f7, tf8, f1+f2+f3+f4+f5+f6+f7+f8+f9,
+                           a7+b7+c7+d7+e7+f7+g7+h7+i7,
+                           d7+d8+d9+e7+e8+e9+f7+f8+f9)
+AND tf8() BE try(@f8, tf9, f1+f2+f3+f4+f5+f6+f7+f8+f9,
+                           a8+b8+c8+d8+e8+f8+g8+h8+i8,
+                           d7+d8+d9+e7+e8+e9+f7+f8+f9)
+AND tf9() BE try(@f9, tg1, f1+f2+f3+f4+f5+f6+f7+f8+f9,
+                           a9+b9+c9+d9+e9+f9+g9+h9+i9,
+                           d7+d8+d9+e7+e8+e9+f7+f8+f9)
+
+AND tg1() BE try(@g1, tg2, g1+g2+g3+g4+g5+g6+g7+g8+g9,
+                           a1+b1+c1+d1+e1+f1+g1+h1+i1,
+                           g1+g2+g3+h1+h2+h3+i1+i2+i3)
+AND tg2() BE try(@g2, tg3, g1+g2+g3+g4+g5+g6+g7+g8+g9,
+                           a2+b2+c2+d2+e2+f2+g2+h2+i2,
+                           g1+g2+g3+h1+h2+h3+i1+i2+i3)
+AND tg3() BE try(@g3, tg4, g1+g2+g3+g4+g5+g6+g7+g8+g9,
+                           a3+b3+c3+d3+e3+f3+g3+h3+i3,
+                           g1+g2+g3+h1+h2+h3+i1+i2+i3)
+AND tg4() BE try(@g4, tg5, g1+g2+g3+g4+g5+g6+g7+g8+g9,
+                           a4+b4+c4+d4+e4+f4+g4+h4+i4,
+                           g4+g5+g6+h4+h5+h6+i4+i5+i6)
+AND tg5() BE try(@g5, tg6, g1+g2+g3+g4+g5+g6+g7+g8+g9,
+                           a5+b5+c5+d5+e5+f5+g5+h5+i5,
+                           g4+g5+g6+h4+h5+h6+i4+i5+i6)
+AND tg6() BE try(@g6, tg7, g1+g2+g3+g4+g5+g6+g7+g8+g9,
+                           a6+b6+c6+d6+e6+f6+g6+h6+i6,
+                           g4+g5+g6+h4+h5+h6+i4+i5+i6)
+AND tg7() BE try(@g7, tg8, g1+g2+g3+g4+g5+g6+g7+g8+g9,
+                           a7+b7+c7+d7+e7+f7+g7+h7+i7,
+                           g7+g8+g9+h7+h8+h9+i7+i8+i9)
+AND tg8() BE try(@g8, tg9, g1+g2+g3+g4+g5+g6+g7+g8+g9,
+                           a8+b8+c8+d8+e8+f8+g8+h8+i8,
+                           g7+g8+g9+h7+h8+h9+i7+i8+i9)
+AND tg9() BE try(@g9, th1, g1+g2+g3+g4+g5+g6+g7+g8+g9,
+                           a9+b9+c9+d9+e9+f9+g9+h9+i9,
+                           g7+g8+g9+h7+h8+h9+i7+i8+i9)
+
+AND th1() BE try(@h1, th2, h1+h2+h3+h4+h5+h6+h7+h8+h9,
+                           a1+b1+c1+d1+e1+f1+g1+h1+i1,
+                           g1+g2+g3+h1+h2+h3+i1+i2+i3)
+AND th2() BE try(@h2, th3, h1+h2+h3+h4+h5+h6+h7+h8+h9,
+                           a2+b2+c2+d2+e2+f2+g2+h2+i2,
+                           g1+g2+g3+h1+h2+h3+i1+i2+i3)
+AND th3() BE try(@h3, th4, h1+h2+h3+h4+h5+h6+h7+h8+h9,
+                           a3+b3+c3+d3+e3+f3+g3+h3+i3,
+                           g1+g2+g3+h1+h2+h3+i1+i2+i3)
+AND th4() BE try(@h4, th5, h1+h2+h3+h4+h5+h6+h7+h8+h9,
+                           a4+b4+c4+d4+e4+f4+g4+h4+i4,
+                           g4+g5+g6+h4+h5+h6+i4+i5+i6)
+AND th5() BE try(@h5, th6, h1+h2+h3+h4+h5+h6+h7+h8+h9,
+                           a5+b5+c5+d5+e5+f5+g5+h5+i5,
+                           g4+g5+g6+h4+h5+h6+i4+i5+i6)
+AND th6() BE try(@h6, th7, h1+h2+h3+h4+h5+h6+h7+h8+h9,
+                           a6+b6+c6+d6+e6+f6+g6+h6+i6,
+                           g4+g5+g6+h4+h5+h6+i4+i5+i6)
+AND th7() BE try(@h7, th8, h1+h2+h3+h4+h5+h6+h7+h8+h9,
+                           a7+b7+c7+d7+e7+f7+g7+h7+i7,
+                           g7+g8+g9+h7+h8+h9+i7+i8+i9)
+AND th8() BE try(@h8, th9, h1+h2+h3+h4+h5+h6+h7+h8+h9,
+                           a8+b8+c8+d8+e8+f8+g8+h8+i8,
+                           g7+g8+g9+h7+h8+h9+i7+i8+i9)
+AND th9() BE try(@h9, ti1, h1+h2+h3+h4+h5+h6+h7+h8+h9,
+                           a9+b9+c9+d9+e9+f9+g9+h9+i9,
+                           g7+g8+g9+h7+h8+h9+i7+i8+i9)
+
+AND ti1() BE try(@i1, ti2, i1+i2+i3+i4+i5+i6+i7+i8+i9,
+                           a1+b1+c1+d1+e1+f1+g1+h1+i1,
+                           g1+g2+g3+h1+h2+h3+i1+i2+i3)
+AND ti2() BE try(@i2, ti3, i1+i2+i3+i4+i5+i6+i7+i8+i9,
+                           a2+b2+c2+d2+e2+f2+g2+h2+i2,
+                           g1+g2+g3+h1+h2+h3+i1+i2+i3)
+AND ti3() BE try(@i3, ti4, i1+i2+i3+i4+i5+i6+i7+i8+i9,
+                           a3+b3+c3+d3+e3+f3+g3+h3+i3,
+                           g1+g2+g3+h1+h2+h3+i1+i2+i3)
+AND ti4() BE try(@i4, ti5, i1+i2+i3+i4+i5+i6+i7+i8+i9,
+                           a4+b4+c4+d4+e4+f4+g4+h4+i4,
+                           g4+g5+g6+h4+h5+h6+i4+i5+i6)
+AND ti5() BE try(@i5, ti6, i1+i2+i3+i4+i5+i6+i7+i8+i9,
+                           a5+b5+c5+d5+e5+f5+g5+h5+i5,
+                           g4+g5+g6+h4+h5+h6+i4+i5+i6)
+AND ti6() BE try(@i6, ti7, i1+i2+i3+i4+i5+i6+i7+i8+i9,
+                           a6+b6+c6+d6+e6+f6+g6+h6+i6,
+                           g4+g5+g6+h4+h5+h6+i4+i5+i6)
+AND ti7() BE try(@i7, ti8, i1+i2+i3+i4+i5+i6+i7+i8+i9,
+                           a7+b7+c7+d7+e7+f7+g7+h7+i7,
+                           g7+g8+g9+h7+h8+h9+i7+i8+i9)
+AND ti8() BE try(@i8, ti9, i1+i2+i3+i4+i5+i6+i7+i8+i9,
+                           a8+b8+c8+d8+e8+f8+g8+h8+i8,
+                           g7+g8+g9+h7+h8+h9+i7+i8+i9)
+AND ti9() BE try(@i9, suc, i1+i2+i3+i4+i5+i6+i7+i8+i9,
+                           a9+b9+c9+d9+e9+f9+g9+h9+i9,
+                           g7+g8+g9+h7+h8+h9+i7+i8+i9)
+
+AND suc() BE
+{ count := count + 1
+  prboard()
+}

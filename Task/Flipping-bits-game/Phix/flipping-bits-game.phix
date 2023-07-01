@@ -1,0 +1,155 @@
+integer w, h
+
+string board, target
+
+procedure new_board()
+    board = ""
+    h = prompt_number("Enter number of rows(1..9):",{1,9})
+    w = prompt_number("Enter number of columns(1..26):",{1,26})
+    string line = ""
+    for j=1 to w do line &= 'A'+j-1 end for
+    board = "  "&line&"\n"
+    for i=1 to h do
+        line = '0'+i&" "
+        for j=1 to w do line &= '0'+rand(2)-1 end for
+        board &= line&"\n"
+    end for
+end procedure
+
+procedure show_bt()
+sequence sb = split(board,'\n'),
+         st = split(target,'\n')
+    printf(1,"board:%s     target:%s\n",{sb[1],st[1]})
+    for i=2 to length(sb)-1 do
+        printf(1,"      %s            %s\n",{sb[i],st[i]})
+    end for
+end procedure
+
+procedure flip(integer ch, bool bShow=true)
+integer k
+    if ch>='A' and ch<='A'+w-1 then
+        -- flip_column
+        ch = ch-'A'+1
+        for i=1 to h do
+            k = 2+ch+i*(w+3)
+            board[k] = '0'+'1'-board[k]
+        end for
+        k = 2+ch
+    elsif ch>='1' and ch<='0'+h then
+        -- flip_row
+        ch -= '0'
+        for i=1 to w do
+            k = 2+i+(ch)*(w+3)
+            board[k] = '0'+'1'-board[k]
+        end for
+        k = 1+(ch)*(w+3)
+    else
+        ?9/0    -- sanity check
+    end if
+    if bShow then
+        integer wasch = board[k]
+        board[k] = '*'
+        show_bt()
+        board[k] = wasch
+    end if
+end procedure
+
+procedure scramble_board()
+integer lim = 10000
+    while 1 do
+        for i=1 to lim do
+            if rand(2)=1 then
+                flip('A'-1+rand(w),false)
+            else
+                flip('0'+rand(h),false)
+            end if
+        end for
+        if board!=target then exit end if
+        lim -= 1 -- sidestep the degenerate 1x1 case
+    end while
+end procedure
+
+function solve_board()
+-- not guaranteed optimal (the commented-out length check clogs it on larger boards)
+string original = board, moves
+sequence next = {{0,board,""}},
+         legal_moves = tagset('A'+w-1,'A')&tagset('0'+h,'1')
+atom t2 = time()+2 -- in case board is illegal/unsolveable
+    while time()<t2 do
+        for lm=1 to length(legal_moves) do
+            integer c = legal_moves[lm]
+            {?,board,moves} = next[1]
+            flip(c,false)
+            moves &= c
+            if board = target then
+                board = original
+                return moves
+            end if
+            next = append(next,{sum(sq_eq(board,target)),board,moves})
+            for i=length(next) to 3 by -1 do
+                if next[i][1]<=next[i-1][1] then exit end if
+--              if length(next[i][3])>length(next[i-1][3]) then exit end if
+                {next[i-1],next[i]} = {next[i],next[i-1]}
+            end for
+        end for
+        next = next[2..$]
+    end while
+    board = original
+    return 0
+end function
+
+constant ESC = #1B
+
+procedure main()
+    integer moves = 0, solves = 0, ch
+    bool took_hint = false
+    new_board()
+    target = board
+    scramble_board()
+    show_bt()
+    object soln = solve_board()
+    while 1 do
+        string solve = iff(string(soln)?sprintf(" solveable in %d,",length(soln)):"")
+        printf(1,"moves taken %d,%s enter your move (A..%c or 1..%c) or ?:",{moves,solve,'A'+w-1,'0'+h})
+        while 1 do
+            ch = upper(wait_key())
+            if ch<=#FF then exit end if -- (ignore control keys)
+        end while
+        printf(1,"%c\n",ch)
+        if (ch>='A' and ch<='A'+w-1)
+        or (ch>='1' and ch<='0'+h) then
+            flip(ch)
+            if board=target then
+                printf(1,"\nWell %s!\n\n",{iff(took_hint?"cheated","done")})
+                exit
+            end if
+            moves += 1
+            soln = iff(string(soln) and ch=soln[1]?soln[2..$]:solve_board())
+        elsif string(soln) and
+             (ch='H' -- (nb consumed above if w>=8)
+           or ch='.') then
+            took_hint = true
+            printf(1,"hint: %c\n",soln[1])
+        elsif ch='Q' -- (nb consumed above if w>=17)
+           or ch=ESC then
+            exit
+        elsif string(soln) and
+             (ch='S' -- (nb consumed above if w>=19)
+           or ch='!') then
+            for i=1 to length(soln) do
+                printf(1,"auto-solving, move %d:\n",i)
+                flip(soln[i])
+                sleep(2)
+            end for
+            exit
+        else
+            puts(1,"press ")
+            if string(soln) then
+                puts(1,"'!' (or 's' if width<19) to solve the board automatically,\n")
+                puts(1,"      '.' (or 'h' if width<8) to show hint,\n")
+            end if
+            puts(1,"      escape (or 'q' if width<17) to quit\n")
+        end if
+    end while
+end procedure
+main()

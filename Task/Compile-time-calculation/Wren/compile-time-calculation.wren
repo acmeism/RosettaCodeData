@@ -1,0 +1,3 @@
+var factorial10 = 10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2
+
+System.print(factorial10)

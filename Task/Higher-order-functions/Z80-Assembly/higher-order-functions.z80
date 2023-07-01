@@ -1,0 +1,31 @@
+org &0040   ;Game Boy's vblank IRQ goes here.
+;This is not part of the standard Z80 vector table - interrupts work differently on the Game Boy.
+jp &ff80
+
+;more code goes here
+
+;during setup, we'll CALL SetupDMA before enabling the vblank IRQ.
+
+
+SetupDMA:
+	ld bc,DMACopyEnd-DMACopy               ;how many bytes to copy
+	ld hl,DMACopy                          ;pointer to source
+	ld de,&ff80                            ;pointer to destination
+	z_ldir                                 ;macro for LDIR which the game boy doesn't have.
+        ret
+
+DMACopy:					;must be run from &ff80
+	push af
+	ld a,>GBSpriteCache			;high byte of wherever we're storing our object attribute memory
+	gb_out <dma				;start the transfer - DMA auto-copies 256 bytes from xx00-xxFF where xx = >GBSpriteCache
+	ld a,&28				;delay - this ensures the DMA is done before we exit. Adjust to your liking.
+
+;game boy doesn't have in/out commands, rather all its I/O ports are at &FFxx so there are special commands just for accessing them faster
+;gb_out is a macro that inlines the bytecode, since not all assemblers auto-convert LD (&FFxx),a.
+
+DMACopyWait:
+	dec a
+	jr nz,DMACopyWait
+	pop af
+        reti
+DMACopyEnd:

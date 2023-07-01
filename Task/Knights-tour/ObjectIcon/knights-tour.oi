@@ -1,0 +1,363 @@
+#
+# Find Knight’s Tours.
+#
+# Using Warnsdorff’s heuristic, find multiple solutions.
+#
+# Based on my ATS/Postiats program.
+#
+# The main difference from the ATS is this program uses a
+# co-expression pair to make a generator of solutions, whereas the ATS
+# simply prints solutions where they are found.
+#
+#  Usage: ./knights_tour [START_POSITION [MAX_TOURS [closed]]]
+#  Examples:
+#      ./knights_tour     (prints one tour starting from a1)
+#      ./knights_tour c5
+#      ./knights_tour c5 2000
+#      ./knights_tour c5 2000 closed
+#
+
+$define DEFAULT_NUMBER_OF_RANKS 8
+$define DEFAULT_NUMBER_OF_FILES 8
+
+import io
+
+procedure main(args)
+  local f_out
+  local tours
+  local tour_board
+  local n_tour
+  local starting_position
+  local i, j
+  local max_tours
+  local closed_only
+
+  starting_position := \algebraic_notation_to_i_j(args[1]) | [1, 1]
+  i := starting_position[1]
+  j := starting_position[2]
+
+  max_tours := integer(args[2]) | 1
+  closed_only := if \args[3] === "closed" then &yes else &no
+
+  f_out := FileStream.stdout
+
+  tours := KnightsTours()
+  n_tour := 0
+  if n_tour < max_tours then
+    every tour_board := tours.generate(i, j, closed_only) do
+    {
+      n_tour +:= 1
+      write("Tour number ", n_tour)
+      f_out.write(tour_board.make_moves_display())
+      f_out.write(tour_board.make_board_display())
+      f_out.write()
+      if max_tours <= n_tour then
+        break
+    }
+end
+
+procedure algebraic_notation_to_i_j(s)
+  return [integer(s[2]), ord(s[1]) - ord('a') + 1]
+end
+
+class Move()
+  public const i
+  public const j
+
+  public new(rank, file)
+    i := rank
+    j := file
+    return
+  end
+
+  public make_display(n_ranks)
+    return char(ord('a') + j - 1) || i
+  end
+end
+
+class Chessboard()
+
+  public const n_ranks
+  public const n_files
+  public const n_squares
+  private board
+
+  public new(num_ranks, num_files)
+    /num_ranks := DEFAULT_NUMBER_OF_RANKS
+    /num_files := DEFAULT_NUMBER_OF_FILES
+
+    n_files := num_files
+    n_ranks := num_ranks
+    n_squares := n_ranks * n_files
+    board := list(n_squares)
+    return
+  end
+
+  public copy()
+    local new_board
+    local i
+
+    new_board := Chessboard(n_files, n_ranks)
+    every i := 1 to n_squares do
+      new_board.board[i] := board[i]
+    return new_board
+  end
+
+  public square(i, j)
+    # The board is stored in column-major order.
+    return board[i + (n_ranks * (j - 1))]
+  end
+
+  public try(i, j, value)
+    # Backtracking assignment. Though we use it for ordinary
+    # assignment.
+    #
+    # The board is stored in column-major order.
+    suspend board[i + (n_ranks * (j - 1))] <- value
+  end
+
+  public make_board_display()
+    local s
+    local i, j
+
+    s := ""
+    every i := n_ranks to 1 by -1 do
+    {
+      s ||:= "    "
+      every j := 1 to n_files do
+        s ||:= "+----"
+      s ||:= "+\n"
+      s ||:= right(i, 2) || " "
+      every j := 1 to n_files do
+        s ||:= " | " || (\right(square(i, j), 2))
+      s ||:= " |\n"
+    }
+    s ||:= "    "
+    every j := 1 to n_files do
+      s ||:= "+----"
+    s ||:= "+\n"
+    s ||:= "   "
+    every j := 1 to n_files do
+      s ||:= "    " || char(ord('a') + j - 1)
+    return s
+  end
+
+  public make_moves_display()
+    local positions
+    local i, j
+    local s
+    local first_position, last_position
+
+    positions := list(n_squares)
+    every i := 1 to n_ranks do
+      every j := 1 to n_files do
+        positions[square(i, j)] := Move(i, j)
+
+    s := ""
+    every j := 1 to n_squares - 1 do
+    {
+      s ||:= positions[j].make_display()
+      s ||:= (if j % n_files = 0 then " ->\n" else " -> ")
+    }
+    s ||:= positions[n_squares].make_display()
+
+    first_position := find_nth_position(1)
+    last_position := find_nth_position(n_squares)
+    if knight_positions_are_attacking(first_position.i,
+                                      first_position.j,
+                                      last_position.i,
+                                      last_position.j) then
+      s ||:= " -> cycle"
+
+    return s
+  end
+
+  public find_nth_position(n)
+    local i, j
+    local position
+
+    position := &null
+    i := 1
+    while /position & i <= n_ranks do
+    {
+      j := 1
+      while /position & j <= n_files do
+      {
+        if square(i, j) = n then
+          position := Move(i, j)
+        j +:= 1
+      }
+      i +:= 1
+    }
+    return position
+  end
+
+end
+
+class KnightsTours()
+
+  public const n_ranks
+  public const n_files
+  public const n_squares
+  private board
+
+  public new(num_ranks, num_files, i, j, closed_only)
+    board := Chessboard(num_ranks, num_files)
+    n_ranks := board.n_ranks
+    n_files := board.n_files
+    n_squares := board.n_squares
+    return
+  end
+
+  public generate(i, j, closed_only)
+    # i,j = starting position.
+
+    local consumer
+    local explorer
+    local tour_board
+
+    # Simple coroutines. The consumer receives complete tours (each in
+    # the form of a Chessboard) from the explorer.
+    consumer := &current
+    explorer := create explore(consumer, i, j, 1,
+                               closed_only, i, j)
+
+    while tour_board := @explorer do
+      suspend tour_board
+  end
+
+  private explore(consumer, i, j, n_position,
+                  closed_only, i_start, j_start)
+    # i,j = starting position.
+    board.try(i, j, n_position)
+    explore_inner(consumer, i, j, n_position,
+                  closed_only, i_start, j_start)
+    board.try(i, j, &null)
+  end
+
+  private explore_inner(consumer, i, j, n_position,
+                        closed_only, i_start, j_start)
+    local moves, mv
+
+    if n_squares - n_position = 1 then
+    {
+      # Is the last move possible? If so, make it and output the
+      # board. (Only zero or one of the moves can be non-null.)
+      moves := possible_moves(i, j)
+      every try_last_move(consumer, moves[1 to 8],
+                          closed_only, i_start, j_start)
+    }
+    else
+    {
+      moves := next_moves(i, j, n_position)
+      every mv := !moves do
+        if \mv then
+          explore(consumer, mv.i, mv.j, n_position + 1,
+                  closed_only, i_start, j_start)
+    }
+  end
+
+  private try_last_move(consumer, move, closed_only, i_start, j_start)
+    if \move then
+      if (/closed_only |
+          knight_positions_are_attacking(move.i, move.j,
+                                         i_start, j_start)) then
+      {
+        board.try(move.i, move.j, n_squares)
+        (board.copy())@consumer
+        board.try(move.i, move.j, &null)
+      }
+  end
+
+  private next_moves(i, j, n_position)
+    local moves
+    local w_list, w
+    local k
+
+    moves := possible_moves(i, j)
+    w_list := list(8)
+    every k := 1 to 8 do
+      w_list[k] := count_following_moves(moves[k], n_position)
+    w := pick_w(w_list)
+    if w = 0 then
+      # A dead end.
+      moves := list(8, &null)
+    else
+      # w is least positive number of following moves. Nullify any
+      # move that has either zero following moves (it is a dead end)
+      # or more than w following moves (it violates Warnsdorff’s
+      # heuristic).
+      every k := 1 to 8 do
+        if w_list[k] ~= w then
+          moves[k] := &null
+    return moves
+  end
+
+  private count_following_moves(move, n_position)
+    local w
+    local following_moves
+
+    w := 0
+    if \move then
+    {
+      board.try(move.i, move.j, n_position + 1)
+      following_moves := possible_moves(move.i, move.j)
+      every ( \following_moves[1 to 8] & w +:= 1 )
+      board.try(move.i, move.j, &null)
+    }
+    return w
+  end
+
+  private pick_w(w_list)
+    local w
+
+    w := 0
+    every w := next_pick (w, w_list[1 to 8])
+    return w
+  end
+
+  private next_pick(u, v)
+    local w
+
+    if v = 0 then
+      w := u
+    else if u = 0 then
+      w := v
+    else
+      w := min (u, v)
+    return w
+  end
+
+  private possible_moves(i, j)
+    local move1, move2, move3, move4
+    local move5, move6, move7, move8
+
+    move1 := try_move(i + 1, j + 2)
+    move2 := try_move(i + 2, j + 1)
+    move3 := try_move(i + 1, j - 2)
+    move4 := try_move(i + 2, j - 1)
+    move5 := try_move(i - 1, j + 2)
+    move6 := try_move(i - 2, j + 1)
+    move7 := try_move(i - 1, j - 2)
+    move8 := try_move(i - 2, j - 1)
+    return [move1, move2, move3, move4,
+            move5, move6, move7, move8]
+  end
+
+  private try_move(i1, j1)
+    return (1 <= i1 <= n_ranks &
+            1 <= j1 <= n_files &
+            /board.square(i1, j1) &
+            Move(i1, j1)) | &null
+  end
+
+end
+
+procedure knight_positions_are_attacking(i1, j1, i2, j2)
+  local i_diff, j_diff
+
+  i_diff := abs(i1 - i2)
+  j_diff := abs(j1 - j2)
+  return (((i_diff = 2 & j_diff = 1) |
+           (i_diff = 1 & j_diff = 2)) & &yes) | fail
+end

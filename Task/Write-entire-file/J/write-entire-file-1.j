@@ -1,0 +1,1 @@
+   characters fwrite filename

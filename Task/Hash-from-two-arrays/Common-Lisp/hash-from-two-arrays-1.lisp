@@ -1,0 +1,6 @@
+(defun rosetta-code-hash-from-two-arrays (vector-1 vector-2 &key (test 'eql))
+  (assert (= (length vector-1) (length vector-2)))
+  (let ((table (make-hash-table :test test :size (length vector-1))))
+    (map nil (lambda (k v) (setf (gethash k table) v))
+             vector-1 vector-2)
+    table))

@@ -1,0 +1,58 @@
+Structure PPMColor
+  r.c
+  g.c
+  b.c
+EndStructure
+
+Procedure LoadImagePPM(Image, file$)
+  ; Author Roger Rösch (Nickname Macros)
+  IDFile = ReadFile(#PB_Any, file$)
+  If IDFile
+    If CreateImage(Image, 1, 1)
+      Format$ = ReadString(IDFile)
+      ReadString(IDFile) ; skip comment
+      Dimensions$ = ReadString(IDFile)
+      w           = Val(StringField(Dimensions$, 1, " "))
+      h           = Val(StringField(Dimensions$, 2, " "))
+      ResizeImage(Image, w, h)
+      StartDrawing(ImageOutput(Image))
+      max = Val(ReadString(IDFile))           ; Maximal Value for a color
+      Select Format$
+        Case "P3" ; File in ASCII format
+          ; Exract everey number remaining in th file into an array using an RegEx
+          Stringlen = Lof(IDFile) - Loc(IDFile)
+          content$  = Space(Stringlen)
+          Dim color.s(0)
+          ReadData(IDFile, @content$, Stringlen)
+          CreateRegularExpression(1, "\d+")
+          ExtractRegularExpression(1, content$, color())
+          ; Plot color information on our empty Image
+          For y = 0 To h - 1
+            For x = 0 To w - 1
+              pos = (y*w + x)*3
+              r=Val(color(pos))*255 / max
+              g=Val(color(pos+1))*255 / max
+              b=Val(color(pos+2))*255 / max
+              Plot(x, y, RGB(r,g,b))
+            Next
+          Next
+        Case "P6" ;File In binary format
+          ; Read whole bytes into a buffer because its faster than reading single ones
+          Bufferlen = Lof(IDFile) - Loc(IDFile)
+          *Buffer   = AllocateMemory(Bufferlen)
+          ReadData(IDFile, *Buffer, Bufferlen)
+          ; Plot color information on our empty Image
+          For y = 0 To h - 1
+            For x = 0 To w - 1
+              *color.PPMColor = pos + *Buffer
+              Plot(x, y, RGB(*color\r*255 / max, *color\g*255 / max, *color\b*255 / max))
+              pos + 3
+            Next
+          Next
+      EndSelect
+      StopDrawing()
+      ; Return 1 if successfully loaded to behave as other PureBasic functions
+      ProcedureReturn 1
+    EndIf
+  EndIf
+EndProcedure

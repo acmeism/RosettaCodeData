@@ -1,0 +1,20 @@
+(defun longest-common-substring (a b)
+ "Return the longest substring common to a and b"
+ ;; Found at https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Longest_common_substring#Common_Lisp
+  (let ((L (make-array (list (length a) (length b)) :initial-element 0))
+        (z 0)
+        (result '()) )
+    (dotimes (i (length a))
+      (dotimes (j (length b))
+        (when (char= (char a i) (char b j))
+          (setf (aref L i j)
+                (if (or (zerop i) (zerop j))
+                    1
+                    (1+ (aref L (1- i) (1- j))) ))
+          (when (> (aref L i j) z)
+            (setf z (aref L i j)
+                  result '() ))
+          (when (= (aref L i j) z)
+            (pushnew (subseq a (1+ (- i z)) (1+ i))
+                     result :test #'equal )))))
+    result ))

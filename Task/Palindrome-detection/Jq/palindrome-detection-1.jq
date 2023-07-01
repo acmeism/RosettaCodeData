@@ -1,0 +1,1 @@
+def palindrome: explode | reverse == .;

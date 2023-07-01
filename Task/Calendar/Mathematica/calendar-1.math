@@ -1,0 +1,49 @@
+DataGrid[
+  rowHeights:{__Integer},
+  colWidths:{__Integer},
+  spacings:{_Integer,_Integer},
+  borderWidths:{{_Integer,_Integer},{_Integer,_Integer}},
+  options_Association,
+  data:{__List?MatrixQ}]:=
+  With[
+    (*Need to make sure we have sensible defaults for the decoration options.*)
+    {alignment=Lookup[options,"alignment",{0,0}],
+     background=Lookup[options,"background"," "],
+     dividers=Lookup[options,"dividers",{" "," "," "}],
+     border=Lookup[options,"border"," "],
+     dims={Length[rowHeights],Length[colWidths]}},
+    (*Pad the data so that it will fit into the specified rectangle (list of lists).*)
+    With[{augmentedData=PadRight[data,Times@@dims,{{{background}}}]},
+      (*Create a matrix of dimensions based on desired rectangle. Once we have a matrix of cells we can "thread" these two matrices and use that data to coerce each cell into its final dimensions.*)
+      With[{cellDims=ArrayReshape[Outer[List,rowHeights,colWidths],{Times@@dims,2}]},
+        (*MatrixAlign, defined below, rescales and aligns each cell's data.*)
+        With[{undecoratedGrid=Partition[MapThread[MatrixAlign[alignment,#1,background][#2]&, {cellDims,augmentedData}],dims[[2]]]},
+          (*Add the spacing to each row.*)
+          With[{dividedRows=MapThread[Transpose[Riffle[#2,{ConstantArray[dividers[[2]],{#1,spacings[[2]]}]},{2,-2,2}]]&, {rowHeights,undecoratedGrid}]},
+            (*Add the spacing between rows.*)
+            With[{dividedColumn=Riffle[dividedRows,{Transpose[Riffle[ConstantArray[dividers[[1]],{spacings[[1]],#}]&/@colWidths,{ConstantArray[dividers[[3]],spacings]},{2,-2,2}]]},{2,-2,2}]},
+              (*Assemble all cell rows into actual character rows. We now have one large matrix.*)
+              With[{dividedGrid=Catenate[Map[Flatten,dividedColumn,{2}]]},
+                (*Add borders.*)
+                ArrayPad[dividedGrid,borderWidths,border]]]]]]]];
+
+DataGrid[dims:{_Integer,_Integer},spacings_,borderWidths_,options_,data:{__List?MatrixQ}]:=
+(*Calculate the max height for each row and max width for each column, and then just call the previous DataGrid function above.*)
+  With[
+    {rowHeights=Flatten@BlockMap[Max[Part[#,All,All,1]]&,ArrayReshape[Dimensions/@data,Append[dims,2],1],{1,dims[[2]]}],
+     colWidths=Flatten@BlockMap[Max[Part[#,All,All,2]]&,ArrayReshape[Dimensions/@data,Append[dims,2],1],{dims[[1]],1}]},
+    DataGrid[rowHeights,colWidths,spacings,borderWidths,options,data]];
+
+(*This could probably be simplified, but I like having all of the aligment options explicit and separate for testability.*)
+MatrixAlign[{-1,-1},dims_,pad_]:=PadRight[#,dims,pad]&;
+MatrixAlign[{-1,0},dims_,pad_]:=PadRight[CenterArray[#,{Dimensions[#][[1]],dims[[2]]},pad],dims,pad]&;
+MatrixAlign[{-1,1},dims_,pad_]:=PadRight[PadLeft[#,{Dimensions[#][[1]],dims[[2]]},pad],dims,pad]&;
+MatrixAlign[{0,-1},dims_,pad_]:=CenterArray[PadRight[#,{Dimensions[#][[1]],dims[[2]]},pad],dims,pad]&;
+MatrixAlign[{0,0},dims_,pad_]:=CenterArray[#,dims,pad]&;
+MatrixAlign[{0,1},dims_,pad_]:=CenterArray[PadLeft[#,{Dimensions[#][[1]],dims[[2]]},pad],dims,pad]&;
+MatrixAlign[{1,-1},dims_,pad_]:=PadLeft[PadRight[#,{Dimensions[#][[1]],dims[[2]]},pad],dims,pad]&;
+MatrixAlign[{1,0},dims_,pad_]:=PadLeft[CenterArray[#,{Dimensions[#][[1]],dims[[2]]},pad],dims,pad]&;
+MatrixAlign[{1,1},dims_,pad_]:=PadLeft[#,dims,pad]&;
+
+(*While the grid functions make no assumptions about the format of the data, we will be using them with string/character data, and we will eventually want to output a calendar as a single large string. AsString gives us a standard method for transforming a matrix of characters into a string with rows delimited by newlines.*)
+AsString[matrix_List?MatrixQ]:=StringRiffle[matrix,"\n",""];

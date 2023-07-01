@@ -1,0 +1,20 @@
+┌─
+╵ "Lloyd"       "L300"
+  "Woolcock"    "W422"
+  "Donnell"     "D540"
+  "Baragwanath" "B625"
+  "Williams"    "W452"
+  "Ashcroft"    "A226"
+  "Euler"       "E460"
+  "Ellery"      "E460"
+  "Gauss"       "G200"
+  "Ghosh"       "G200"
+  "Hilbert"     "H416"
+  "Heilbronn"   "H416"
+  "Knuth"       "K530"
+  "Kant"        "K530"
+  "Ladd"        "L300"
+  "Lukasiewicz" "L222"
+  "Lissajous"   "L222"
+                       ┘
+1

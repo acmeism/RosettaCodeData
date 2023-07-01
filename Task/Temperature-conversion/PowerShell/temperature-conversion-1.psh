@@ -1,0 +1,21 @@
+function temp($k){
+    try{
+        $c = $k - 273.15
+        $r = $k / 5 * 9
+        $f = $r - 459.67
+    } catch {
+        Write-host "Input error."
+        return
+    }
+
+    Write-host ""
+    Write-host "    TEMP (Kelvin)    : " $k
+    Write-host "    TEMP (Celsius)   : " $c
+    Write-host "    TEMP (Fahrenheit): " $f
+    Write-host "    TEMP (Rankine)   : " $r
+    Write-host ""
+
+}
+
+$input=Read-host "Enter a temperature in Kelvin"
+temp $input

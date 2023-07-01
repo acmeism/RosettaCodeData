@@ -1,0 +1,1 @@
+say value('COMPUTERNAME',,'environment')

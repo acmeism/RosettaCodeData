@@ -1,0 +1,23 @@
+babel> dup {lsnum !} ... --> display the shuffled list of pairs and triples
+( 7 2 )
+( 6 4 )
+( 8 9 )
+( 0 5 )
+( 5 14 0 )
+( 3 1 )
+( 9 6 10 )
+( 1 12 4 )
+( 11 13 7 )
+( 8 2 3 )
+babel> gpsort ! --> sort the list
+babel> dup {lsnum !} ... --> display the result
+( 0 5 )
+( 3 1 )
+( 6 4 )
+( 7 2 )
+( 8 9 )
+( 1 12 4 )
+( 5 14 0 )
+( 8 2 3 )
+( 9 6 10 )
+( 11 13 7 )

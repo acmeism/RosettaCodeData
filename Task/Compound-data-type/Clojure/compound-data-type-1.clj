@@ -1,0 +1,1 @@
+(defrecord Point [x y])

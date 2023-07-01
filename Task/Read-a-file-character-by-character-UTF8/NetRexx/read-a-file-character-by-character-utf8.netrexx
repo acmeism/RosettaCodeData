@@ -1,0 +1,113 @@
+/* NetRexx */
+options replace format comments java crossref symbols nobinary
+numeric digits 20
+
+runSample(arg)
+return
+
+-- ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+method readCharacters(fName) public static binary returns String
+  slurped = String('')
+  slrp = StringBuilder()
+  fr = Reader null
+  fFile = File(fName)
+  EOF = int -1 -- End Of File indicator
+  do
+    fr = BufferedReader(FileReader(fFile))
+    ic = int
+    cc = char
+    -- read the contents of the file one character at a time
+    loop label rdr forever
+      -- Reader.read reads a single character as an integer value in the range 0 - 65535 [0x00 - 0xffff]
+      -- or -1 on end of stream i.e. End Of File
+      ic = fr.read()
+      if ic == EOF then leave rdr
+      cc = Rexx(ic).d2c
+      slrp.append(cc)
+      end rdr
+    -- load the results of the read into a variable
+    slurped = slrp.toString()
+  catch fex = FileNotFoundException
+    fex.printStackTrace()
+  catch iex = IOException
+    iex.printStackTrace()
+  finally
+    if fr \= null then do
+      fr.close()
+      catch iex = IOException
+        iex.printStackTrace()
+      end
+  end
+  return slurped
+
+-- ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+method encodingDetails(str = String) public static
+  stlen = str.length()
+  cplen = Character.codePointCount(str, 0, stlen)
+  say 'Unicode: length="'stlen'" code_point_count="'cplen'" string="'str'"'
+  loop ix = 0 to stlen - 1
+    cp = Rexx(Character.codePointAt(str, ix))
+    cc = Rexx(Character.charCount(cp))
+    say '  'formatCodePoint(ix, cc, cp)
+    if cc > 1 then do
+      surrogates = [Rexx(Character.highSurrogate(cp)).c2d(), Rexx(Character.lowSurrogate(cp)).c2d()]
+      loop sx = 0 to cc - 1
+        ix = ix + sx
+        cp = surrogates[sx]
+        say '  'formatCodePoint(ix, 1, cp)
+        end sx
+      end
+    end ix
+  say
+  return
+
+-- ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+-- @see http://docs.oracle.com/javase/6/docs/technotes/guides/intl/encoding.doc.html
+-- @since Java 1.7
+method formatCodePoint(ix, cc, cp) private static
+  scp = Rexx(Character.toChars(cp))
+  icp = cp.d2x(8).x2d(9) -- signed to unsigned conversion
+  ocp = Rexx(Integer.toOctalString(icp))
+  x_utf16 = ''
+  x_utf8  = ''
+  do
+    b_utf16 = String(scp).getBytes('UTF-16BE')
+    b_utf8  = String(scp).getBytes('UTF-8')
+    loop bv = 0 to b_utf16.length - 1 by 2
+      x_utf16 = x_utf16 Rexx(b_utf16[bv]).d2x(2) || Rexx(b_utf16[bv + 1]).d2x(2)
+      end bv
+    loop bv = 0 to b_utf8.length - 1
+      x_utf8 = x_utf8 Rexx(b_utf8[bv]).d2x(2)
+      end bv
+    x_utf16 = x_utf16.space(1, ',')
+    x_utf8  = x_utf8.space(1, ',')
+  catch ex = UnsupportedEncodingException
+    ex.printStackTrace()
+  end
+  cpName = Character.getName(cp)
+  fmt =                        -
+    'CodePoint:'               -
+    'index="'ix.right(3, 0)'"' -
+    'character_count="'cc'"'   -
+    'id="U+'cp.d2x(5)'"'       -
+    'hex="0x'cp.d2x(6)'"'      -
+    'dec="'icp.right(7, 0)'"'  -
+    'oct="'ocp.right(7, 0)'"'  -
+    'char="'scp'"'             -
+    'utf-16="'x_utf16'"'       -
+    'utf-8="'x_utf8'"'         -
+    'name="'cpName'"'
+  return fmt
+
+-- ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+method runSample(arg) public static
+  parse arg fileNames
+  if fileNames = '' then fileNames = 'data/utf8-001.txt'
+  loop while fileNames \= ''
+    parse fileNames fileName fileNames
+    slurped = readCharacters(fileName)
+    say "Input:" slurped
+    encodingDetails(slurped)
+    end
+  say
+  return

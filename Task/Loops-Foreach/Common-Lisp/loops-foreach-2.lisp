@@ -1,0 +1,1 @@
+(map nil #'print list)

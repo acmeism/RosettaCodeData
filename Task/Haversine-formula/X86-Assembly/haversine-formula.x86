@@ -1,0 +1,85 @@
+0000                                 .model  tiny
+0000                                 .code
+                                     .486
+                                     org     100h            ;.com files start here
+0100  9B DB E3               start:  finit                   ;initialize floating-point unit (FPU)
+                             ;Great circle distance =
+                             ; 2.0*Radius * ASin( sqrt( Haversine(Lat2-Lat1) +
+                             ;                          Haversine(Lon2-Lon1)*Cos(Lat1)*Cos(Lat2) ) )
+0103  D9 06 0191r                    fld     Lat2            ;push real onto FPU stack
+0107  D8 26 018Dr                    fsub    Lat1            ;subtract real from top of stack (st(0) = st)
+010B  E8 0070                        call    Haversine       ;(1.0-cos(st)) / 2.0
+010E  D9 06 0199r                    fld     Lon2            ;repeat for longitudes
+0112  D8 26 0195r                    fsub    Lon1
+0116  E8 0065                        call    Haversine       ;st(1)=Lats; st=Lons
+0119  D9 06 018Dr                    fld     Lat1
+011D  D9 FF                          fcos                    ;replace st with its cosine
+011F  D9 06 0191r                    fld     Lat2
+0123  D9 FF                          fcos            ;st=cos(Lat2); st(1)=cos(Lat1); st(2)=Lats; st(3)=Lons
+0125  DE C9                          fmul            ;st=cos(Lat2)*cos(Lat1); st(1)=Lats; st(2)=Lons
+0127  DE C9                          fmul            ;st=cos(Lat2)*cos(Lat1)*Lats; st(1)=Lons
+0129  DE C1                          fadd            ;st=cos(Lat2)*cos(Lat1)*Lats + Lons
+012B  D9 FA                          fsqrt                   ;replace st with its square root
+                             ;asin(x) = atan(x/sqrt(1-x^2))
+012D  D9 C0                          fld     st              ;duplicate tos
+012F  D8 C8                          fmul    st, st          ;x^2
+0131  D9 E8                          fld1                    ;get 1.0
+0133  DE E1                          fsubr                   ;1 - x^2
+0135  D9 FA                          fsqrt                   ;sqrt(1-x^2)
+0137  D9 F3                          fpatan                  ;take atan(st(1)/st)
+0139  D8 0E 019Dr                    fmul    Radius2         ;*2.0*Radius
+
+                             ;Display value in FPU's top of stack (st)
+      =0004                  before  equ     4               ;places before
+      =0002                  after   equ     2               ; and after decimal point
+      =0001                  scaler  =       1               ;"=" allows scaler to be redefined, unlike equ
+                                     rept    after           ;repeat block "after" times
+                             scaler  =       scaler*10
+                                     endm                    ;scaler now = 10^after
+
+013D  66| 6A 64                      push    dword ptr scaler;use stack for convenient memory location
+0140  67| DA 0C 24                   fimul   dword ptr [esp] ;st:= st*scaler
+0144  67| DB 1C 24                   fistp   dword ptr [esp] ;round st to nearest integer
+0148  66| 58                         pop     eax             ; and put it into eax
+
+014A  66| BB 0000000A                mov     ebx, 10         ;set up for idiv instruction
+0150  B9 0006                        mov     cx, before+after;set up loop counter
+0153  66| 99                 ro10:   cdq                     ;convert double to quad; i.e: edx:= 0
+0155  66| F7 FB                      idiv    ebx             ;eax:= edx:eax/ebx; remainder in edx
+0158  52                             push    dx              ;save least significant digit on stack
+0159  E2 F8                          loop    ro10            ;cx--; loop back if not zero
+
+015B  B1 06                          mov     cl, before+after;(ch=0)
+015D  B3 00                          mov     bl, 0           ;used to suppress leading zeros
+015F  58                     ro20:   pop     ax              ;get digit
+0160  0A D8                          or      bl, al          ;turn off suppression if not a zero
+0162  80 F9 03                       cmp     cl, after+1     ;is digit immediately to left of decimal point?
+0165  75 01                          jne     ro30            ;skip if not
+0167  43                              inc    bx              ;turn off leading zero suppression
+0168  04 30                  ro30:   add     al, '0'         ;if leading zero then ' ' else add 0
+016A  84 DB                          test    bl, bl
+016C  75 02                          jne     ro40
+016E  B0 20                           mov    al, ' '
+0170  CD 29                  ro40:   int     29h             ;display character in al register
+0172  80 F9 03                       cmp     cl, after+1     ;is digit immediately to left of decimal point?
+0175  75 04                          jne     ro50            ;skip if not
+0177  B0 2E                           mov    al, '.'         ;display decimal point
+0179  CD 29                           int    29h
+017B  E2 E2                  ro50:   loop    ro20            ;loop until all digits displayed
+017D  C3                             ret                     ;return to OS
+
+017E                         Haversine:                      ;return (1.0-Cos(Ang)) / 2.0 in st
+017E  D9 FF                          fcos
+0180  D9 E8                          fld1
+0182  DE E1                          fsubr
+0184  D8 36 0189r                    fdiv    N2
+0188  C3                             ret
+
+0189  40000000               N2      dd       2.0
+018D  3F21628D               Lat1    dd       0.63041        ;36.12*pi/180
+0191  3F17A4E8               Lat2    dd       0.59236        ;33.94*pi/180
+0195  BFC19F80               Lon1    dd      -1.51268        ;-86.67*pi/180
+0199  C004410B               Lon2    dd      -2.06647        ;-118.40*pi/180
+019D  46472666               Radius2 dd      12745.6         ;6372.8 average radius of Earth (km) times 2
+                             ;(TASM isn't smart enough to do floating point constant calculations)
+                                     end     start

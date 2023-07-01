@@ -1,0 +1,1 @@
+import std.file; import std.stdio; import std.string; void main() { auto source = readText("narcissist.d").chomp; auto input = readln().chomp(); if (source == input) writeln("accept"); else writeln("reject"); }

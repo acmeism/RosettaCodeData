@@ -1,0 +1,3 @@
+classdef (Abstract) AbsClass
+   ...
+end

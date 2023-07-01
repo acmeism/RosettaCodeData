@@ -1,0 +1,188 @@
+# -*- ObjectIcon -*-
+
+import graphics
+import ipl.graphics
+import io
+import util(Math)
+
+procedure main ()
+  local w
+  local width, height
+  local xcenter, ycenter, pixels_per_unit, max_iter
+  local zoom_ratio
+
+  write ("q or Q       : quit")
+  write ("left press   : recenter")
+  write ("+            : zoom in")
+  write ("-            : zoom in")
+  write ("2 .. 9       : set zoom ratio")
+  write ("o or O       : restore original")
+  write ("p or P       : dump to a PNG")
+
+  width := 400
+  height := 400
+
+  pixels_per_unit := 150
+  max_iter := 200
+  zoom_ratio := 2
+  xcenter := -0.75
+  ycenter := 0.0
+
+  w := Window().
+    set_size(width, height).
+    set_resize(&yes).
+    set_bg("white").
+    set_canvas("normal") | stop(&why)
+
+  event_loop (w, xcenter, ycenter, pixels_per_unit, max_iter,
+              zoom_ratio)
+end
+
+procedure event_loop (w, xcenter, ycenter, pixels_per_unit,
+                      max_iter, zoom_ratio)
+  local event
+  local xy
+  local png_number, png_name
+  local redraw
+  local width, height
+  local xleft, ytop
+  local i, j
+  local cx, cy, step
+  local iter, color
+
+  png_number := 1
+
+  redraw := &yes
+  repeat
+  {
+    if \redraw then
+    {
+      w.erase_area()
+
+      step := 1.0 / pixels_per_unit
+
+      width := w.get_width()
+      height := w.get_height()
+
+      xleft := xcenter - (width / (2.0 * pixels_per_unit))
+      ytop := ycenter + (height / (2.0 * pixels_per_unit))
+
+      cx := xleft
+      cy := ytop
+
+      j := 0
+      i := 0
+
+      redraw := &no
+    }
+
+    if j ~= height then
+    {
+      iter := count_mandelbrot_iterations (cx, cy, max_iter)
+      color := map_iterations_to_color (max_iter, iter)
+      w.set_fg (color)
+      w.draw_point (i, j)
+      i +:= 1;  cx +:= step
+      if i = width then
+      {
+        i := 0;   cx := xleft
+        j +:= 1;  cy -:= step
+      }
+    }
+
+    if *w.pending() ~= 0 then
+    {
+      event := w.event()
+      case event[1] of
+      {
+        QuitEvents():
+          exit()
+
+        Mouse.LEFT_PRESS:
+        {
+          xy := window_coords_to_point (w, event[2], event[3],
+                                        xcenter, ycenter,
+                                        pixels_per_unit)
+          xcenter := xy[1]
+          ycenter := xy[2]
+          redraw := &yes
+        }
+
+        "+":
+        {
+          pixels_per_unit := zoom_ratio * pixels_per_unit
+          redraw := &yes
+        }
+
+        "-":
+        {
+          pixels_per_unit :=
+            max (1, (1.0 / zoom_ratio) * pixels_per_unit)
+          redraw := &yes
+        }
+
+        !"23456789":
+          zoom_ratio := integer(event[1])
+
+        !"oO":
+        {
+          pixels_per_unit := 150
+          max_iter := 200
+          zoom_ratio := 2
+          xcenter := -0.75
+          ycenter := 0.0
+          redraw := &yes
+        }
+
+        !"pP":
+        {
+          png_name := "mandelbrot-image-" || png_number || ".png"
+          png_number +:= 1
+          w.get_pixels().to_file(png_name)
+          write ("Wrote ", png_name)
+        }
+
+        Window.RESIZE:
+          redraw := &yes
+      }
+
+      WDelay(w, 100)
+    }
+  }
+end
+
+procedure count_mandelbrot_iterations (cx, cy, max_iter)
+  local x, y, xsquared, ysquared, iter, tmp
+
+  x := 0
+  y := 0
+  iter := 0
+  until (iter = max_iter |
+         4 < (xsquared := x * x) + (ysquared := y * y)) do
+  {
+    tmp := xsquared - ysquared + cx
+    y := (2 * x * y) + cy
+    x := tmp
+    iter +:= 1
+  }
+  return iter
+end
+
+procedure map_iterations_to_color (max_iter, iter)
+  return "black " ||
+    integer((Math.log (iter) * 100.0) / Math.log (max_iter)) ||
+    "%"
+end
+
+procedure window_coords_to_point (w, xcoord, ycoord,
+                                  xcenter, ycenter,
+                                  pixels_per_unit)
+  local x, y
+
+  x := xcenter +
+    (((2.0 * xcoord) - w.get_width()) / (2.0 * pixels_per_unit))
+  y := ycenter +
+    ((w.get_height() - (2.0 * ycoord)) / (2.0 * pixels_per_unit))
+
+  return [x, y]
+end

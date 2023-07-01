@@ -1,0 +1,54 @@
+	cpu	8086
+	bits	16
+	org	100h
+section	.text
+	jmp	demo
+isbn13:	;;;	---------------------------------------------------------------
+	;;;	Check if the string at DS:SI is a valid ISBN-13 code.
+	;;;	Carry set if true, clear if false.
+	xor	dx,dx		; DX = running total
+	xor	ah,ah		; Set AH=0 so that AX=AL
+	call	.digit		; Get first digit and add to DX
+	call	.digit		; Get second digit and add to DX
+	add	dx,ax		; Add to DX twice more
+	add	dx,ax
+	call	.digit		; Get third digit and add to DX
+	lodsb			; Fourth character should be a '-'
+	cmp	al,'-'
+	jne	.fail 		; If not equal, fail
+	mov	cx,5 		; Then loop 5 times for the next 10 digits
+.loop:	call	.digit		; Get even digit and add to DX
+	add	dx,ax		; Add to running total twice more
+	add	dx,ax
+	call	.digit		; Get odd digit and add to DX
+	loop	.loop		; Do this 5 times
+	mov	ax,dx		; Divide running total by 10
+	mov	dl,10
+	div	dl
+	test	ah,ah		; Is the remainder zero?
+	jnz	.out		; If not, stop (TEST clears carry)
+	stc			; Otherwise, set carry and return
+	ret
+.digit:	lodsb			; Get first character
+	sub	al,'0'		; Subtract ASCII 0 to get digit value
+	cmp	al,9		
+	ja	.dfail
+	add	dx,ax		; Add to ASCII
+	ret
+.dfail:	pop	dx		; Remove return pointer for .digit from stack
+.fail:	clc			; Failure - clear carry
+.out:	ret
+	;;;	---------------------------------------------------------------
+	;;;	Demo: see if the MS-DOS command line contains a valid ISBN13
+	;;;	code.
+demo:	mov	si,82h		; Start of command line argument skipping space
+	call	isbn13		; Is it valid?
+	mov	ah,9		; MS-DOS print string
+	mov	dx,good		; If carry is set, it is good
+	jc	.print
+	mov	dx,bad		; Otherwise, it is bad
+.print:	int	21h
+	ret
+section	.data
+good:	db	'good$'
+bad: 	db	'bad$'

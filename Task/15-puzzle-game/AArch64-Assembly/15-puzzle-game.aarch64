@@ -1,0 +1,620 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program puzzle15_64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ NBBOX,  16
+.equ GRAINE,  123456      // change for other game
+.equ NBSHUFFLE, 4
+.equ KEYSIZE,  8
+
+.equ IOCTL,     0x1D  // Linux syscall
+.equ SIGACTION, 0x86   // Linux syscall
+.equ SYSPOLL,   0x16  // Linux syscall
+.equ CREATPOLL, 0x14  // Linux syscall
+.equ CTLPOLL,   0x15  // Linux syscall
+
+.equ TCGETS,    0x5401
+.equ TCSETS,    0x5402
+.equ ICANON,    2
+.equ ECHO,     10
+.equ POLLIN,    1
+.equ EPOLL_CTL_ADD,    1
+
+.equ SIGINT,   2    // Issued if the user sends an interrupt signal (Ctrl + C)
+.equ SIGQUIT,  3    // Issued if the user sends a quit signal (Ctrl + D)
+.equ SIGTERM, 15    // Software termination signal (sent by kill by default)
+.equ SIGTTOU, 22    //
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure termios see doc linux*/
+    .struct  0
+term_c_iflag:                    // input modes
+    .struct  term_c_iflag + 4
+term_c_oflag:                    // output modes
+    .struct  term_c_oflag + 4
+term_c_cflag:                    // control modes
+    .struct  term_c_cflag + 4
+term_c_lflag:                    // local modes
+    .struct  term_c_lflag + 4
+term_c_cc:                       // special characters
+    .struct  term_c_cc + 20      // see length if necessary
+term_fin:
+
+/* structure sigaction see doc linux */
+    .struct  0
+sa_handler:
+    .struct  sa_handler + 8
+sa_mask:
+    .struct  sa_mask + 8
+sa_flags:
+    .struct  sa_flags + 8
+sa_sigaction:
+    .struct  sa_sigaction + 8
+sa_fin:
+
+/* structure poll see doc linux */
+    .struct  0
+poll_event:
+    .struct  poll_event + 8
+poll_fd:                            //   File Descriptor
+    .struct  poll_fd + 8
+poll_fin:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessResult:           .ascii " "
+sMessValeur:           .fill 11, 1, ' '             // size => 11
+szCarriageReturn:      .asciz "\n"
+szMessGameWin:         .asciz "You win in @ move number !!!!\n"
+szMessMoveError:       .asciz "Huh... Impossible move !!!!\n"
+szMessErreur:          .asciz "Error detected.\n"
+szMessErrInitTerm:     .asciz "Error terminal init.\n"
+szMessErrInitPoll:     .asciz "Error poll init.\n"
+szMessErreurKey:       .asciz "Error read key.\n"
+szMessSpaces:          .asciz "    "
+qGraine:               .quad GRAINE
+szMessErr:             .asciz    "Error code hexa : @ décimal : @ \n"
+
+szClear:     .byte 0x1B
+             .byte 'c'                         // console clear
+             .byte 0
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+sZoneConv:      .skip 24
+qCodeError:     .skip 8
+ibox:           .skip 4 * NBBOX                // game boxes
+qEnd:           .skip 8                        // 0 loop  1 = end loop
+qTouche:        .skip KEYSIZE                  // value key pressed
+stOldtio:       .skip term_fin                 // old terminal state
+stCurtio:       .skip term_fin                 // current terminal state
+stSigAction:    .skip sa_fin                   // area signal structure
+stSigAction1:   .skip sa_fin
+stSigAction2:   .skip sa_fin
+stSigAction3:   .skip sa_fin
+stPoll1:        .skip poll_fin                 // area poll structure
+stPoll2:        .skip poll_fin
+stevents:       .skip 16
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                // entry of program
+    mov x0,#0
+    bl initTerm                      // terminal init
+    cmp x0,0                         // error ?
+    blt 100f
+    bl initPoll                      // epoll instance init
+    cmp x0,0
+    blt 99f
+    mov x22,x0                       // save epfd
+    ldr x2,qAdribox
+    mov x9,#0                        // init counter
+    mov x0,0
+1:                                   // loop init boxs
+    add x1,x0,#1                     // box value
+    str w1,[x2,x0, lsl #2]           // store value
+    add x0,x0,#1                     // increment counter
+    cmp x0,#NBBOX - 2                // end ?
+    ble 1b
+    mov x10,#15                      // empty box location
+    ldr x0,qAdribox
+    bl shuffleGame
+2:                                   // loop moves
+    ldr x0,qAdribox
+    bl displayGame
+3:
+    mov x0,x22                       // epfd
+    bl waitKey
+    cmp x0,0
+    beq 3b                           // no ket pressed -> loop
+    blt 99f                          // error ?
+    bl readKey                       // read key
+    cmp x0,#-1
+    beq 99f                          // error
+    cmp x0,3                         // <ctrl_C>
+    beq 5f
+    cmp x0,113                       // saisie q (quit) ?
+    beq 5f
+    cmp x0,81                        // saisie Q  (Quit)?
+    beq 5f
+    mov x1,x0                        // key
+    ldr x0,qAdribox
+    bl keyMove                       // analyze key move
+    ldr x0,qAdribox
+    bl gameOK                        // end game ?
+    cmp x0,#1
+    bne 2b                           // no -> loop
+                                     // win
+    mov x0,x9                        // move counter
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrszMessGameWin
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc            // insert result at @ character
+    bl affichageMess
+5:
+    bl restauTerm                    // terminal restaur
+    mov x0, #0                       // return code
+    b 100f
+99:
+    bl restauTerm                    // terminal restaur
+    mov x0,1                         // return code error
+    b 100f
+100:                                 // standard end of the program
+    mov x8, #EXIT                    // request to exit program
+    svc #0                           // perform the system call
+
+qAdrsMessValeur:          .quad sMessValeur
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsMessResult:          .quad sMessResult
+qAdribox:                 .quad ibox
+qAdrszMessGameWin:        .quad szMessGameWin
+qAdrstevents:             .quad stevents
+qAdrszMessErreur:         .quad szMessErreur
+qAdrstOldtio:             .quad stOldtio
+qAdrstCurtio:             .quad stCurtio
+qAdrstSigAction:          .quad stSigAction
+qAdrstSigAction1:         .quad stSigAction1
+qAdrSIG_IGN:              .quad 1
+qAdrqEnd:                 .quad qEnd
+qAdrqTouche:              .quad qTouche
+qAdrszMessErrInitTerm:    .quad szMessErrInitTerm
+qAdrszMessErrInitPoll:    .quad szMessErrInitPoll
+qAdrszMessErreurKey:      .quad szMessErreurKey
+/******************************************************************/
+/*     key move                                                   */
+/******************************************************************/
+/* x0 contains boxs address           */
+/* x1 contains key value               */
+/* x9 move counter                     */
+/* x10 contains location empty box    */
+keyMove:
+    stp x1,lr,[sp,-16]!              // save  registers
+    mov x7,x0
+    lsr x1,x1,16
+    cmp x1,#0x42                     // down arrow
+    bne 1f
+    cmp x10,#4                       // if x10 < 4   error
+    blt 80f
+    sub x2,x10,#4                    // compute location
+    b 90f
+1:
+    cmp x1,#0x41                     // high arrow
+    bne 2f
+    cmp x10,#11                      // if x10 > 11   error
+    bgt 80f
+    add x2,x10,#4                    // compute location
+    b 90f
+2:
+    cmp x1,#0x43                     // right arrow
+    bne 3f
+    tst x10,#0b11                    // if x10 = 0,4,8,12   error
+    beq 80f
+    sub x2,x10,#1                    // compute location
+    b 90f
+3:
+    cmp x1,#0x44                     // left arrow
+    bne 100f
+    and x3,x10,#0b11                 // error if x10 = 3 7 11 and 15
+    cmp x3,#3
+    beq 80f
+    add x2,x10,#1                    // compute location
+    b 90f
+
+80:                                  // move error
+    ldr x0,qAdrqCodeError
+    mov x1,#1
+    str x1,[x0]
+    b 100f
+90:                                  // white box and move box inversion
+    ldr w3,[x7,x2,lsl #2]
+    str w3,[x7,x10,lsl #2]
+    mov x10,x2
+    mov x3,#0
+    str w3,[x7,x10,lsl #2]
+    add x9,x9,#1                        // increment move counter
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrqCodeError:             .quad qCodeError
+/******************************************************************/
+/*     shuffle game                                       */
+/******************************************************************/
+/* x0 contains boxs address           */
+shuffleGame:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    stp x4,x5,[sp,-16]!            // save  registers
+    mov x1,x0
+    mov x0,NBSHUFFLE
+    bl genereraleas
+    lsl x4,x0,#1
+1:
+    mov x0,#14
+    bl genereraleas
+    add x3,x0,#1
+    mov x0,#14
+    bl genereraleas
+    add x5,x0,#1
+    ldr w2,[x1,x3,lsl #2]
+    ldr w0,[x1,x5,lsl #2]
+    str w2,[x1,x5,lsl #2]
+    str w0,[x1,x3,lsl #2]
+    subs x4,x4,#1
+    bgt 1b
+
+100:
+    ldp x4,x5,[sp],16              // restaur  2 registers
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*     game Ok ?                                      */
+/******************************************************************/
+/* x0 contains boxs address           */
+gameOK:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    mov x2,#0
+    ldr w3,[x0,x2,lsl #2]
+    add x2,x2,#1
+1:
+    ldr w1,[x0,x2,lsl #2]
+    cmp w1,w3
+    bge 2f
+    mov x0,#0                      // game not Ok
+    b 100f
+2:
+    mov x3,x1
+    add x2,x2,#1
+    cmp x2,#NBBOX -2
+    ble 1b
+    mov x0,#1                      // game Ok
+
+100:
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*     display game                                       */
+/******************************************************************/
+/* x0 contains boxs address           */
+displayGame:
+    stp x1,lr,[sp,-16]!            // save  registers
+                                   // clear screen !
+    mov x4,x0
+    ldr x0,qAdrszClear
+    bl affichageMess
+    mov x2,#0
+    ldr x1,qAdrsMessValeur
+1:
+    ldr w0,[x4,x2,lsl #2]
+    cmp w0,#0
+    bne 2f
+    ldr w0,iSpaces                    // store spaces
+    str w0,[x1]
+    b 3f
+2:
+    bl conversion10                     // call conversion decimal
+    cmp x0,1
+    beq 21f
+    mov x0,0x20
+    strh w0,[x1,#2]
+    b 3f
+21:
+    mov w0,0x2020
+    str w0,[x1,#1]
+3:
+    ldr x0,qAdrsMessResult
+    bl affichageMess                    // display message
+    add x0,x2,#1
+    tst x0,#0b11
+    bne 4f
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess                    // display message
+4:
+    add x2,x2,#1
+    cmp x2,#NBBOX - 1
+    ble 1b
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess                    // display line return
+    ldr x0,qAdrqCodeError               // error detected ?
+    ldr x1,[x0]
+    cmp x1,#0
+    beq 100f
+    mov x1,#0                           // raz error code
+    str x1,[x0]
+    ldr x0,qAdrszMessMoveError          // display error message
+    bl affichageMess
+100:
+    ldp x1,lr,[sp],16                   // restaur  2 registers
+    ret                                 // return to address lr x30
+iSpaces:              .int 0x00202020   // spaces
+qAdrszClear:          .quad szClear
+qAdrszMessMoveError:  .quad szMessMoveError
+
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* x0 contains limit  */
+genereraleas:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    ldr x1,qAdrqGraine
+    ldr x2,[x1]
+    ldr x3,qNbDep1
+    mul x2,x3,x2
+    ldr x3,qNbDep2
+    add x2,x2,x3
+    str x2,[x1]                    // maj de la graine pour l appel suivant
+    cmp x0,#0
+    beq 100f
+    udiv x3,x2,x0
+    msub x0,x3,x0,x2               // résult = remainder
+
+100:                               // end function
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/*****************************************************/
+qAdrqGraine: .quad qGraine
+qNbDep1:     .quad 0x0019660d
+qNbDep2:     .quad 0x3c6ef35f
+
+/******************************************************************/
+/*     traitement du signal                                       */
+/******************************************************************/
+sighandler:
+    stp x0,lr,[sp,-16]!            // save  registers
+    str x1,[sp,-16]!
+    ldr x0,qAdrqEnd
+    mov x1,#1                      // maj zone end
+    str x1,[x0]
+    ldr x1,[sp],16
+    ldp x0,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/***************************************************/
+/*   display error message                         */
+/***************************************************/
+/* x0 contains error code  x1 : message address */
+displayError:
+    stp x2,lr,[sp,-16]!            // save  registers
+    mov x2,x0                      // save error code
+    mov x0,x1
+    bl affichageMess
+    mov x0,x2                      // error code
+    ldr x1,qAdrsZoneConv
+    bl conversion16                // conversion hexa
+    ldr x0,qAdrszMessErr           // display error message
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc               // insert result at @ character
+    mov x3,x0
+    mov x0,x2                      // error code
+    ldr x1,qAdrsZoneConv               // result address
+    bl conversion10S                // conversion decimale
+    mov x0,x3
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc               // insert result at @ character
+    bl affichageMess
+100:
+    ldp x2,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrszMessErr:                 .quad szMessErr
+qAdrsZoneConv:                 .quad sZoneConv
+/*********************************/
+/* init terminal state            */
+/*********************************/
+initTerm:
+    stp x1,lr,[sp,-16]!            // save  registers
+    /* read terminal state */
+    mov x0,STDIN                   // input console
+    mov x1,TCGETS
+    ldr x2,qAdrstOldtio
+    mov x8,IOCTL                   // call system Linux
+    svc 0
+    cbnz x0,98f                    // error ?
+
+    adr x0,sighandler              // adresse routine traitement signal
+    ldr x1,qAdrstSigAction         // adresse structure sigaction
+    str x0,[x1,sa_handler]         // maj handler
+    mov x0,SIGINT                  // signal type
+    ldr x1,qAdrstSigAction
+    mov x2,0
+    mov x3,8
+    mov x8,SIGACTION               // call system
+    svc 0
+
+    cmp x0,0                       // error ?
+    bne 98f
+    mov x0,SIGQUIT
+    ldr x1,qAdrstSigAction
+    mov x2,0                       // NULL
+    mov x8,SIGACTION               // call system
+    svc 0
+    cmp x0,0                       // error ?
+    bne 98f
+    mov x0,SIGTERM
+    ldr x1,qAdrstSigAction
+    mov x2,0                       // NULL
+    mov x8,SIGACTION               // appel systeme
+    svc 0
+    cmp x0,0
+    bne 98f
+    //
+    adr x0,qAdrSIG_IGN             // address signal igonre function
+    ldr x1,qAdrstSigAction1
+    str x0,[x1,sa_handler]
+    mov x0,SIGTTOU                 //invalidate other process signal
+    ldr x1,qAdrstSigAction1
+    mov x2,0                       // NULL
+    mov x8,SIGACTION               // call system
+    svc 0
+    cmp x0,0
+    bne 98f
+    //
+    /* read terminal current state  */
+    mov x0,STDIN
+    mov x1,TCGETS
+    ldr x2,qAdrstCurtio            // address current termio
+    mov x8,IOCTL                   // call systeme
+    svc 0
+    cmp x0,0                       // error ?
+    bne 98f
+    mov x2,ICANON | ECHO           // no key pressed echo on display
+    mvn x2,x2                      // and one key
+    ldr x1,qAdrstCurtio
+    ldr x3,[x1,#term_c_lflag]
+    and x3,x2,x2                   // add flags
+    str x3,[x1,#term_c_lflag]      // and store
+    mov x0,STDIN                   // maj terminal current state
+    mov x1,TCSETS
+    ldr x2,qAdrstCurtio
+    mov x8,IOCTL                   // call system
+    svc 0
+    cbz x0,100f
+98:                                // error display
+    ldr x1,qAdrszMessErrInitTerm
+    bl   displayError
+    mov x0,-1
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrstSigAction2:    .quad stSigAction2
+qAdrstSigAction3:    .quad stSigAction3
+/*********************************/
+/* init instance epool            */
+/*********************************/
+initPoll:
+    stp x1,lr,[sp,-16]!            // save  registers
+    ldr x0,qAdrstevents
+    mov x1,STDIN                   // maj structure events
+    str x1,[x0,#poll_fd]           // maj FD
+    mov x1,POLLIN                  // action code
+    str x1,[x0,#poll_event]
+    mov x0,0
+    mov x8,CREATPOLL               // create epoll instance
+    svc 0
+    cmp x0,0                       // error ?
+    ble 98f
+    mov x10,x0                     // return FD epoll instance
+    mov x1,EPOLL_CTL_ADD
+    mov x2,STDIN                   // Fd to we want add
+    ldr x3,qAdrstevents            // structure events address
+    mov x8,CTLPOLL                 // call system control epoll
+    svc 0
+    cmp x0,0                       // error ?
+    blt 98f                       // no
+    mov x0,x10                     // return FD epoll instance
+    b 100f
+98:                                // error display
+    ldr x1,qAdrszMessErrInitPoll   // error message
+    bl   displayError
+    mov x0,-1
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/*********************************/
+/* wait key                      */
+/*********************************/
+/* x0 contains FD poll    */
+waitKey:
+    stp x1,lr,[sp,-16]!            // save  registers
+    ldr x11,qAdrqTouche            // key address
+    str xzr,[x11]                  // raz key
+1:
+    ldr x1,qAdrqEnd                // if signal ctrl-c  -> end
+    ldr x1,[x1]
+    cbnz x1,100f
+
+    ldr x1,qAdrstevents
+    mov x2,12                      // size events
+    mov x3,1                       // timeout = 1  TODO: ??
+    mov x4,0
+    mov x8,SYSPOLL                 // call system wait POLL
+    svc 0
+    cmp x0,0                       // key pressed ?
+    bge 100f
+98:                                // error display
+    ldr x1,qAdrszMessErreurKey        // error message
+    bl   displayError
+    mov x0,-1
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/*********************************/
+/* read key                      */
+/*********************************/
+/* x0 returns key value */
+readKey:
+    stp x1,lr,[sp,-16]!            // save  registers
+    mov x0,STDIN                   // File Descriptor
+    ldr x1,qAdrqTouche             // buffer address
+    mov x2,KEYSIZE                 // key size
+    mov x8,READ                    // read key
+    svc #0
+    cmp x0,0                       // error ?
+    ble 98f
+    ldr x2,qAdrqTouche             // key address
+    ldr x0,[x2]
+    b 100f
+98:                                // error display
+    ldr x1,qAdrszMessErreur        // error message
+    bl   displayError
+    mov x0,-1
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/*********************************/
+/* restaur terminal state        */
+/*********************************/
+restauTerm:
+    stp x1,lr,[sp,-16]!            // save  registers
+    mov x0,STDIN                   // end then restaur begin state terminal
+    mov x1,TCSETS
+    ldr x2,qAdrstOldtio
+    mov x8,IOCTL                   // call system
+    svc 0
+    cbz x0,100f
+    ldr x1,qAdrszMessErreur        // error message
+    bl   displayError
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

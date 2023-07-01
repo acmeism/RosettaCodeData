@@ -1,0 +1,167 @@
+DEFINE MINCOLORS="2"
+DEFINE MAXCOLORS="20"
+DEFINE MINLENGTH="4"
+DEFINE MAXLENGTH="10"
+DEFINE MINGUESS="7"
+DEFINE MAXGUESS="20"
+TYPE Score=[BYTE spot,corr,err]
+TYPE Settings=[BYTE colors,length,guesses,repeat]
+
+PROC GetSettings(Settings POINTER s)
+  CHAR ARRAY tmp(10)
+
+  DO
+    PrintF("Enter number of colors (%B-%B):",MINCOLORS,MAXCOLORS)
+    s.colors=InputB()
+  UNTIL s.colors>=MINCOLORS AND s.colors<=MAXCOLORS
+  OD
+  DO
+    PrintF("Enter length of code (%B-%B):",MINLENGTH,MAXLENGTH)
+    s.length=InputB()
+  UNTIL s.length>=MINLENGTH AND s.length<=MAXLENGTH
+  OD
+  DO
+    PrintF("Enter max number of guesses (%B-%B):",MINGUESS,MAXGUESS)
+    s.guesses=InputB()
+  UNTIL s.guesses>=MINGUESS AND s.guesses<=MAXGUESS
+  OD
+  IF s.colors<s.length THEN
+    s.repeat=1
+  ELSE
+    DO
+      Print("Allow repeated colors (Y/N):")
+      InputS(tmp)
+      IF tmp(0)=1 THEN
+        IF tmp(1)='y OR tmp(1)='Y THEN
+          s.repeat=1 EXIT
+        ELSEIF tmp(1)='n OR tmp(1)='N THEN
+          s.repeat=0 EXIT
+        FI
+      FI
+    OD
+  FI
+RETURN
+
+PROC Generate(CHAR ARRAY code Settings POINTER s)
+  CHAR ARRAY col(MAXCOLORS)
+  BYTE i,j,d,tmp,count
+
+  FOR i=0 TO MAXCOLORS-1
+  DO
+    col(i)=i+'A
+  OD
+  code(0)=s.length
+  count=s.colors
+  FOR i=1 TO s.length
+  DO
+    d=Rand(count)
+    code(i)=col(d)
+    IF s.repeat=0 THEN
+      count==-1
+      col(d)=col(count)
+    FI
+  OD
+RETURN
+
+BYTE FUNC GetCount(CHAR ARRAY s CHAR c)
+  BYTE i,count
+
+  count=0
+  FOR i=1 TO s(0)
+  DO
+    IF s(i)=c THEN
+      count==+1
+    FI
+  OD
+RETURN (count)
+
+PROC CheckScore(CHAR ARRAY code,guess
+  Settings POINTER s Score POINTER res)
+  BYTE i,j,codeCount,guessCount
+
+  res.spot=0
+  res.corr=0
+  IF guess(0)#s.length THEN
+    res.err=1
+    RETURN
+  FI
+  res.err=0
+
+  FOR i=0 TO s.colors-1
+  DO
+    codeCount=GetCount(code,i+'A)
+    guessCount=GetCount(guess,i+'A)
+    IF codeCount<guessCount THEN
+      res.corr==+codeCount
+    ELSE
+      res.corr==+guessCount
+    FI
+  OD
+  FOR i=1 TO s.length
+  DO
+    IF guess(i)=code(i) THEN
+      res.spot==+1
+      res.corr==-1
+    FI
+  OD
+RETURN
+
+PROC ToUpper(CHAR ARRAY s)
+  BYTE i,c
+
+  IF s(0)=0 THEN RETURN FI
+  FOR i=1 TO s(0)
+  DO
+    c=s(i)
+    IF c>='a AND c<='z THEN
+      s(i)=c-'a+'A
+    FI
+  OD
+RETURN
+
+PROC PrintScore(Score POINTER res Settings POINTER s)
+  INT i
+
+  FOR i=1 TO res.spot
+  DO Put('X) OD
+  FOR i=1 TO res.corr
+  DO Put('O) OD
+  FOR i=1 TO s.length-res.spot-res.corr
+  DO Put('-) OD
+RETURN
+
+PROC Main()
+  CHAR ARRAY code(MAXLENGTH+1),guess(255)
+  Score res
+  Settings s
+  BYTE tries
+
+  PrintE("Mastermind") PutE()
+  GetSettings(s) PutE()
+  Generate(code,s)
+  tries=s.guesses
+  PrintF("Enter your guess (%B tries):%E",tries)
+  DO
+    InputS(guess) ToUpper(guess)
+    CheckScore(code,guess,s,res)
+    Put(28) ;cursor up
+    PrintF("%S -> ",guess)
+    IF res.err THEN
+      Print("Wrong input")
+    ELSE
+      PrintScore(res,s)
+      IF res.spot=s.length THEN
+        PutE() PutE()
+        PrintE("You won!")
+        EXIT
+      FI
+      tries==-1
+      IF tries=0 THEN
+        PutE() PutE()
+        PrintE("You lost!")
+        EXIT
+      FI
+    FI
+    PrintF(", try again (%B tries):%E",tries)
+  OD
+RETURN

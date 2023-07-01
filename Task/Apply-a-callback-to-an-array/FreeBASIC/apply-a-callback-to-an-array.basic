@@ -1,0 +1,19 @@
+' FB 1.05.0 Win64
+
+Sub PrintEx(n As Integer)
+  Print n, n * n, n * n * n
+End Sub
+
+Sub Proc(a() As Integer, callback As Sub(n As Integer))
+  For i As Integer = LBound(a) To UBound(a)
+    callback(i)
+  Next
+End Sub
+
+Dim a(1 To 10) As Integer = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
+Print " n", "n^2", "n^3"
+Print " -", "---", "---"
+Proc(a(), @PrintEx)
+Print
+Print "Press any key to quit the program"
+Sleep

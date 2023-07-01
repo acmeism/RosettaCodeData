@@ -1,0 +1,72 @@
+MODULE CSV2HTML;
+IMPORT
+  Object,
+  IO,
+  IO:FileChannel,
+  IO:TextRider,
+  SB := ADT:StringBuffer,
+  NPCT:Tools,
+  NPCT:CGI:Utils,
+  Ex := Exception,
+  Out;
+VAR
+  fileChannel: FileChannel.Channel;
+  rd: TextRider.Reader;
+  line: ARRAY 1024 OF CHAR;
+  table: SB.StringBuffer;
+  parts: ARRAY 2 OF STRING;
+
+  PROCEDURE DoTableHeader(sb: SB.StringBuffer;parts: ARRAY OF STRING);
+  BEGIN
+    sb.Append("<tr><th>"+Utils.EscapeHTML(parts[0])+"</th><th>"+Utils.EscapeHTML(parts[1])+"</th></tr>");
+    sb.AppendLn
+  END DoTableHeader;
+
+  PROCEDURE DoTableRow(sb: SB.StringBuffer;parts: ARRAY OF STRING);
+  BEGIN
+    sb.Append("<tr><td>"+Utils.EscapeHTML(parts[0])+"</td><td>"+Utils.EscapeHTML(parts[1])+"</td></tr>");
+    sb.AppendLn
+  END DoTableRow;
+
+  PROCEDURE DoTable(sb: SB.StringBuffer): STRING;
+  VAR
+    aux: SB.StringBuffer;
+  BEGIN
+     aux := SB.New("<table>");aux.AppendLn;
+     RETURN aux.ToString() + sb.ToString() + "</table>";
+  END DoTable;
+
+BEGIN
+  TRY
+    fileChannel := FileChannel.OpenUnbuffered("script.csv",{FileChannel.read});
+  CATCH Ex.Exception(ex):
+    Out.Object(ex.GetMessage());Out.Ln;
+    HALT(1)
+  END;
+  rd := TextRider.ConnectReader(fileChannel);
+  (* Extract headers *)
+  TRY
+    rd.ReadLine(line);
+    table := NEW(SB.StringBuffer,2048);
+    Tools.Split(Object.NewLatin1(line),",",parts);
+    DoTableHeader(table,parts);
+  CATCH IO.Error(ex):
+    Out.Object(ex.Name() + ": " + ex.GetMessage());Out.Ln;
+    HALT(2)
+  END;
+
+  (* Extract data *)
+  LOOP
+    TRY
+      rd.ReadLine(line);
+      IF (line[0] # 0X)THEN (* skip empty lines *)
+        Tools.Split(Object.NewLatin1(line),",",parts);
+        DoTableRow(table,parts)
+      END
+    CATCH IO.Error(ex):
+      EXIT
+    END
+  END;
+  Out.Object(DoTable(table));Out.Ln;
+  fileChannel.Close()
+END CSV2HTML.

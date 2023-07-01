@@ -1,0 +1,27 @@
+FUNCTION L (X)
+    L = LOG(X) / LOG(2)
+END FUNCTION
+
+S$ = "1223334444"
+U$ = ""
+FOR I = 1 TO LEN(S$)
+    K = 0
+    FOR J = 1 TO LEN(U$)
+        IF MID$(U$, J, 1) = MID$(S$, I, 1) THEN K = 1
+    NEXT J
+    IF K = 0 THEN U$ = U$ + MID$(S$, I, 1)
+NEXT I
+DIM R(LEN(U$) - 1)
+FOR I = 1 TO LEN(U$)
+    C = 0
+    FOR J = 1 TO LEN(S$)
+        IF MID$(U$, I, 1) = MID$(S$, J, 1) THEN C = C + 1
+    NEXT J
+    R(I - 1) = (C / LEN(S$)) * L(C / LEN(S$))
+NEXT I
+E = 0
+FOR I = 0 TO LEN(U$) - 1
+    E = E - R(I)
+NEXT I
+PRINT E
+END

@@ -1,0 +1,187 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program problemABC64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ TRUE, 1
+.equ FALSE, 0
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessTitre1:        .asciz "Can_make_word: @ \n"
+szMessTrue:          .asciz "True.\n"
+szMessFalse:         .asciz "False.\n"
+szCarriageReturn:    .asciz "\n"
+
+szTablBloc:          .asciz "BO"
+                     .asciz "XK"
+                     .asciz "DQ"
+                     .asciz "CP"
+                     .asciz "NA"
+                     .asciz "GT"
+                     .asciz "RE"
+                     .asciz "TG"
+                     .asciz "QD"
+                     .asciz "FS"
+                     .asciz "JW"
+                     .asciz "HU"
+                     .asciz "VI"
+                     .asciz "AN"
+                     .asciz "OB"
+                     .asciz "ER"
+                     .asciz "FS"
+                     .asciz "LY"
+                     .asciz "PC"
+                     .asciz "ZM"
+                     .equ NBBLOC, (. -  szTablBloc) / 3
+
+szWord1:             .asciz "A"
+szWord2:             .asciz "BARK"
+szWord3:             .asciz "BOOK"
+szWord4:             .asciz "TREAT"
+szWord5:             .asciz "COMMON"
+szWord6:             .asciz "SQUAD"
+szWord7:             .asciz "CONFUSE"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+qtabTopBloc:         .skip 8 * NBBLOC
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                // entry of program
+    ldr x0,qAdrszWord1
+    bl traitBlock                    // control word
+
+    ldr x0,qAdrszWord2
+    bl traitBlock                    // control word
+
+    ldr x0,qAdrszWord3
+    bl traitBlock                    // control word
+
+    ldr x0,qAdrszWord4
+    bl traitBlock                    // control word
+
+    ldr x0,qAdrszWord5
+    bl traitBlock                    // control word
+
+    ldr x0,qAdrszWord6
+    bl traitBlock                    // control word
+
+    ldr x0,qAdrszWord7
+    bl traitBlock                    // control word
+
+100:                                  // standard end of the program
+    mov x0, #0                        // return code
+    mov x8, #EXIT                     // request to exit program
+    svc #0                            // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszWord1:              .quad szWord1
+qAdrszWord2:              .quad szWord2
+qAdrszWord3:              .quad szWord3
+qAdrszWord4:              .quad szWord4
+qAdrszWord5:              .quad szWord5
+qAdrszWord6:              .quad szWord6
+qAdrszWord7:              .quad szWord7
+/******************************************************************/
+/*          traitement                                           */
+/******************************************************************/
+/* x0 contains word */
+traitBlock:
+    stp x1,lr,[sp,-16]!       // save  registres
+    mov x1,x0
+    ldr x0,qAdrszMessTitre1   // insertion word in message
+    bl strInsertAtCharInc
+    bl affichageMess          // display title message
+    mov x0,x1
+    bl controlBlock           // control
+    cmp x0,#TRUE              // ok ?
+    bne 1f
+    ldr x0,qAdrszMessTrue     // yes
+    bl affichageMess
+    b 100f
+1:                            // no
+    ldr x0,qAdrszMessFalse
+    bl affichageMess
+100:
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+qAdrszMessTitre1:         .quad szMessTitre1
+qAdrszMessFalse:          .quad szMessFalse
+qAdrszMessTrue:           .quad szMessTrue
+/******************************************************************/
+/*        control if letters are in block                       */
+/******************************************************************/
+/* x0 contains word */
+controlBlock:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,x9,[sp,-16]!          // save  registres
+    mov x5,x0              // save word address
+    ldr x4,qAdrqtabTopBloc
+    ldr x6,qAdrszTablBloc
+    mov x2,#0
+    mov x3,#0
+1:                          // init table top block used
+    str x3,[x4,x2,lsl #3]
+    add x2,x2,#1
+    cmp x2,#NBBLOC
+    blt 1b
+    mov x2,#0
+2:                          // loop to load letters
+    ldrb w3,[x5,x2]
+    cbz w3,10f              // end
+    mov x0,0xDF
+    and x3,x3,x0         // transform in capital letter
+    mov x8,#0
+3:                          // begin loop control block
+    ldr x7,[x4,x8,lsl #3]   // block already used ?
+    cbnz x7,5f              // yes
+    add x9,x8,x8,lsl #1     // no -> index * 3
+    ldrb w7,[x6,x9]         // first block letter
+    cmp w3,w7               // equal ?
+    beq 4f
+    add x9,x9,#1
+    ldrb w7,[x6,x9]         // second block letter
+    cmp w3,w7               // equal ?
+    beq 4f
+    b 5f
+4:
+    mov x7,#1               // top block
+    str x7,[x4,x8,lsl #3]   // block used
+    add x2,x2,#1
+    b 2b                    // next letter
+5:
+    add x8,x8,#1
+    cmp x8,#NBBLOC
+    blt 3b
+    mov x0,#FALSE           // no letter find on block -> false
+    b 100f
+10:                         // all letters are ok
+    mov x0,#TRUE
+100:
+    ldp x8,x9,[sp],16       // restaur des  2 registres
+    ldp x6,x7,[sp],16       // restaur des  2 registres
+    ldp x4,x5,[sp],16       // restaur des  2 registres
+    ldp x2,x3,[sp],16       // restaur des  2 registres
+    ldp x1,lr,[sp],16       // restaur des  2 registres
+    ret
+qAdrqtabTopBloc:   .quad qtabTopBloc
+qAdrszTablBloc:    .quad szTablBloc
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

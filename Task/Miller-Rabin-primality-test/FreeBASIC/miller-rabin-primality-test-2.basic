@@ -1,0 +1,115 @@
+' version 05-04-2017
+' compile with: fbc -s console
+
+' TRUE/FALSE are built-in constants since FreeBASIC 1.04
+' But we have to define them for older versions.
+#Ifndef TRUE
+    #Define FALSE 0
+    #Define TRUE Not FALSE
+#EndIf
+
+#Include Once "gmp.bi"
+
+#Macro big_int(a)
+    Dim As Mpz_ptr a = Allocate( Len( __mpz_struct))
+    Mpz_init(a)
+#EndMacro
+
+Dim Shared As __gmp_randstate_struct rnd_
+
+Function miller_rabin(big_n As Mpz_ptr, num_of_tests As ULong) As Byte
+
+    If mpz_cmp_ui(big_n, 1) < 1 Then
+        Print "Numbers smaller then 1 not allowed"
+        Sleep  5000
+    End If
+
+    If mpz_cmp_ui(big_n, 2) = 0 OrElse mpz_cmp_ui(big_n, 3) = 0 Then
+        Return TRUE   ' 2 = prime , 3 = prime
+    End If
+
+    If mpz_tstbit(big_n, 0) = 0 Then Return FALSE  ' even number, no prime
+
+    Dim As ULong r, s
+    Dim As Byte return_value = TRUE
+
+    big_int(n_1) : big_int(n_2) : big_int(a) : big_int(d) : big_int(x)
+
+    mpz_sub_ui(n_1, big_n, 1) : mpz_sub_ui(n_2, big_n, 2) : mpz_set(d, n_1)
+
+    While mpz_tstbit(d, 0) = 0
+        mpz_fdiv_q_2exp(d, d, 1)
+        s += 1
+    Wend
+
+    While num_of_tests > 0
+        num_of_tests -= 1
+        mpz_urandomm(a, @rnd_, n_2)
+        mpz_add_ui(a, a, 2)
+        mpz_powm(x, a, d, big_n)
+        If mpz_cmp_ui(x, 1) = 0 Or mpz_cmp(x, n_1) = 0 Then Continue While
+
+        For r = 1 To s -1
+            mpz_powm_ui(x, x, 2, big_n)
+            If mpz_cmp_ui(x, 1) = 0 Then
+                return_value = FALSE
+                Exit While
+            End If
+            If mpz_cmp(x, n_1) = 0 Then Continue While
+        Next
+
+        If mpz_cmp(x, n_1) <> 0 Then
+            Return_value = FALSE
+            Exit while
+        End If
+    Wend
+
+    mpz_clear(n_1) : mpz_clear(a) : mpz_clear(d)
+    mpz_clear(n_2) : mpz_clear(x)
+
+    Return return_value
+
+End Function
+
+' ------=< MAIN >=------
+
+Dim As Long x
+Dim As String tmp
+Dim As ZString Ptr gmp_str : gmp_str = Allocate(1000000)
+big_int(big_n)
+
+Randomize Timer
+gmp_randinit_mt(@rnd_)
+For x = 0 To 200  'create seed for random generator
+    tmp += Str(Int(Rnd * 10))
+Next
+Mpz_set_str(big_n, tmp, 10)
+gmp_randseed(@rnd_, big_n) ' seed the random number generator
+
+For x = 2 To 100
+    mpz_set_ui(big_n, x)
+    If miller_rabin(big_n, 5) = TRUE Then
+        Print Using "####"; x;
+    End If
+Next
+
+Print : Print
+For x = 2 To 3300
+    mpz_set_ui(big_n, 1)
+    mpz_mul_2exp(big_n, big_n, x)
+    mpz_sub_ui(big_n, big_n, 1)
+    If miller_rabin(big_n, 5) = TRUE Then
+        gmp_str = Mpz_get_str(0, 10, big_n)
+        Print "2^";Str(x);"-1 = prime"
+    End If
+Next
+
+gmp_randclear(@rnd_)
+mpz_clear(big_n)
+DeAllocate(gmp_str)
+
+' empty keyboard buffer
+Print : While Inkey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

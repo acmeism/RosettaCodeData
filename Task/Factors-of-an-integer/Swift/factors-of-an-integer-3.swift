@@ -1,0 +1,6 @@
+println(factors(4))
+println(factors(1))
+println(factors(25))
+println(factors(63))
+println(factors(19))
+println(factors(768))

@@ -1,0 +1,72 @@
+\ Bitmap width in pixels, height in pixels
+\ Return a group object with some lambda as members: SetPixel, GetPixel, Image$
+\ copyimage
+\ using Copy x, y Use Image$ we can display image$ to x, y  as twips
+\ we can use  x*twipsx, y*twipsy  for x,y as  pixels
+Function Bitmap (x as long, y as long) {
+      if x<1 or y<1 then  Error "Wrong dimensions"
+      structure rgb {
+            red as byte
+            green as byte
+            blue as byte
+      }
+      m=len(rgb)*x mod 4
+      if m>0 then m=4-m  ' add some bytes to raster line
+      m+=len(rgb) *x
+      Structure rasterline {
+            {
+                  pad as byte*m
+            }
+            \\ union pad+hline
+            hline as rgb*x
+      }
+
+      Structure Raster {
+            magic as integer*4
+            w as integer*4
+            h as integer*4
+            lines as rasterline*y
+      }
+      Buffer Clear Image1 as Raster
+      \\ 24 chars as header to be used from bitmap render build in functions
+      Return Image1, 0!magic:="cDIB", 0!w:=Hex$(x,2), 0!h:=Hex$(y, 2)
+      \\ fill white (all 255)
+      \\ Str$(string) convert to ascii, so we get all characters from words  width to byte width
+      Return Image1, 0!lines:=Str$(String$(chrcode$(255), Len(rasterline)*y))
+      Buffer Clear Pad as Byte*4
+      SetPixel=Lambda Image1, Pad,aLines=Len(Raster)-Len(Rasterline), blines=-Len(Rasterline) (x, y, c) ->{
+            where=alines+3*x+blines*y
+            if c>0 then c=color(c)
+            c-!
+            Return Pad, 0:=c as long
+            Return Image1, 0!where:=Eval(Pad, 2) as byte, 0!where+1:=Eval(Pad, 1) as byte, 0!where+2:=Eval(Pad, 0) as byte
+
+      }
+      GetPixel=Lambda Image1,aLines=Len(Raster)-Len(Rasterline), blines=-Len(Rasterline) (x,y) ->{
+            where=alines+3*x+blines*y
+            =color(Eval(image1, where+2 as byte), Eval(image1, where+1 as byte), Eval(image1, where as byte))
+      }
+      StrDib$=Lambda$ Image1, Raster -> {
+            =Eval$(Image1, 0, Len(Raster))
+      }
+      CopyImage=Lambda Image1 (image$) -> {
+            if left$(image$,12)=Eval$(Image1, 0, 24 ) Then  {
+                   Return Image1, 0:=Image$
+            } Else Error "Can't Copy Image"
+      }
+      Group Bitmap {
+            SetPixel=SetPixel
+            GetPixel=GetPixel
+            Image$=StrDib$
+            Copy=CopyImage
+      }
+      =Bitmap
+}
+A=Bitmap(100,100)
+Call A.SetPixel(50,50, color(128,0,255))
+Print A.GetPixel(50,50)=color(128,0,255)
+\\ display image to screen at 100, 50 pixel
+copy 100*twipsx,50*twipsy use A.Image$()
+A1=Bitmap(100,100)
+Call A1.copy(A.Image$())
+copy 500*twipsx,50*twipsy use A1.Image$()

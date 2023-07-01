@@ -1,0 +1,11 @@
+w = 254
+
+SCREEN 13
+VIEW (0, 0)-(w / 2, w / 2), , 0
+
+FOR x = 0 TO w
+    FOR y = 0 TO w
+        COLOR ((x XOR y) AND 255)
+        PSET (x, y)
+    NEXT y
+NEXT x

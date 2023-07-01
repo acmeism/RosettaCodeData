@@ -1,0 +1,335 @@
+(* In this program, one of the two curves is "flattened" (converted to
+   a piecewise linear approximation). Then the problem is reduced to
+   finding intersections of the other curve with line segments.
+
+   I have never seen this method published in the literature, but
+   somewhere saw it hinted at.
+
+   Mainly to increase awareness of the representation, I flatten the
+   one curve using the symmetric power polynomial basis. See
+
+     J. Sánchez-Reyes, ‘The symmetric analogue of the polynomial power
+         basis’, ACM Transactions on Graphics, vol 16 no 3, July 1997,
+         page 319.
+
+     J. Sánchez-Reyes, ‘Applications of the polynomial s-power basis
+         in geometry processing’, ACM Transactions on Graphics, vol 19
+         no 1, January 2000, page 35.  *)
+
+#include "share/atspre_staload.hats"
+
+%{^
+#include <math.h>
+%}
+
+(* One simple way to make a foreign function call. I want to use only
+   the ATS prelude, but the prelude does not include support for the C
+   math library. (The bundled libats/libc does, and separately
+   available ats2-xprelude does.) *)
+extern fn sqrt : double -<> double = "mac#sqrt"
+
+macdef huge_val = $extval (double, "HUGE_VAL")
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+fun eval_bernstein_degree2
+      (@(q0 : double,
+         q1 : double,
+         q2 : double),
+       t    : double)
+    : double =
+  let
+    (* The de Casteljau algorithm. (The Schumaker-Volk algorithm also
+       is good BTW and is faster. In this program it should make no
+       noticeable difference, however.) *)
+    val s = 1.0 - t
+    val q01 = (s * q0) + (t * q1)
+    val q12 = (s * q1) + (t * q2)
+    val q012 = (s * q01) + (t * q12)
+  in
+    q012
+  end
+
+(* @(...) means an unboxed tuple. Also often can be written without
+   the @, but then might be mistaken for argument parentheses. *)
+fun
+bernstein2spower_degree2
+          (@(c0 : double, c1 : double, c2 : double))
+    : @(double, double, double) =
+  (* Convert from Bernstein coefficients (control points) to symmetric
+     power coefficients. *)
+  @(c0, c1 + c1 - c0 - c2, c2)
+
+fun
+spower_portion_degree2
+          (@(c0 : double, c1 : double, c2 : double),
+           @(t0 : double, t1 : double))
+    : @(double, double, double) =
+  (* Compose spower(c0, c1, c2) with spower(t0, t1). This will map the
+     portion [t0,t1] onto [0,1]. (I got these expressions with
+     Maxima, a while back.) *)
+  let
+    val t0_t0 = t0 * t0
+    and t0_t1 = t0 * t1
+    and t1_t1 = t1 * t1
+    and c2p1m0 = c2 + c1 - c0
+
+    val d0 = c0 + (c2p1m0 * t0) - (c1 * t0_t0)
+    and d1 = (c1 * t1_t1) - ((c1 + c1) * t0_t1) + (c1 * t0_t0)
+    and d2 = c0 + (c2p1m0 * t1) - (c1 * t1_t1)
+  in
+    @(d0, d1, d2)
+  end
+
+fun
+solve_linear_quadratic
+          (@(px0 : double, px1 : double),
+           @(py0 : double, py1 : double),
+           @(qx0 : double, qx1 : double, qx2 : double),
+           @(qy0 : double, qy1 : double, qy2 : double))
+    (* Returns the two real roots, or any numbers outside [0,1], if
+       there are no real roots. *)
+    : @(double, double) =
+  let
+    (* The coefficients of the quadratic equation can be found by the
+       following Maxima commands, which implicitize the line segment
+       and plug in the parametric equations of the parabola:
+
+         /* The line. */
+         xp(t) := px0*(1-t) + px1*t$
+         yp(t) := py0*(1-t) + py1*t$
+
+         /* The quadratic (Bernstein basis). */
+         xq(t) := qx0*(1-t)**2 + 2*qx1*t*(1-t) + qx2*t**2$
+         yq(t) := qy0*(1-t)**2 + 2*qy1*t*(1-t) + qy2*t**2$
+
+         /* Implicitize and plug in. */
+         impl(t) := resultant(xq(t)-xp(tau), yq(t)-yp(tau), tau)$
+         impl(t);
+         expand(impl(t));
+
+       Consequently you get a quadratic equation in t, which can be
+       solved by the quadratic formula.
+
+       Sometimes people solve this problem by projecting the line
+       segment onto the x- or y-axis, and similarly projecting the
+       parabola. However, the following is simpler to write, if you
+       have Maxima to derive it for you. Whether it is better to use
+       the expanded expression (as here) or not to, I do not know. *)
+
+    val px0py1 = px0 * py1
+    and px1py0 = px1 * py0
+
+    and px0qy0 = px0 * qy0
+    and px0qy1 = px0 * qy1
+    and px0qy2 = px0 * qy2
+    and px1qy0 = px1 * qy0
+    and px1qy1 = px1 * qy1
+    and px1qy2 = px1 * qy2
+
+    and py0qx0 = py0 * qx0
+    and py0qx1 = py0 * qx1
+    and py0qx2 = py0 * qx2
+    and py1qx0 = py1 * qx0
+    and py1qx1 = py1 * qx1
+    and py1qx2 = py1 * qx2
+
+    val A = ~px1qy2 + px0qy2 - px1qy0 + py1qx0
+              + px0qy0 + py1qx2 - py0qx2 - py0qx0
+              + 2.0 * (px1qy1 - px0qy1 - py1qx1 + py0qx1)
+    and B = 2.0 * (~px1qy1 + px0qy1 + px1qy0 - px0qy0
+                    + py1qx1 - py0qx1 - py1qx0 + py0qx0)
+    and C = ~px1qy0 + px0qy0 + py1qx0 - py0qx0 - px0py1 + px1py0
+
+    val discriminant = (B * B) - (4.0 * A * C)
+  in
+    if discriminant < g0i2f 0 then
+      @(huge_val, huge_val)       (* No real solutions. *)
+    else
+      let
+        val sqrt_discr = sqrt (discriminant)
+        val t1 = (~B - sqrt_discr) / (A + A)
+        and t2 = (~B + sqrt_discr) / (A + A)
+
+        fn
+        check_t (t : double) : double =
+          (* The parameter must lie in [0,1], and the intersection
+             point must lie between (px0,py0) and (px1,py1). We will
+             check only the x coordinate. *)
+          if t < 0.0 || 1.0 < t then
+            huge_val
+          else
+            let
+              val x = eval_bernstein_degree2 (@(qx0, qx1, qx2), t)
+            in
+              if x < px0 || px1 < x then
+                huge_val
+              else
+                t
+            end
+      in
+        @(check_t t1, check_t t2)
+      end
+  end
+
+fun
+flat_enough (@(px0 : double,
+               px1 : double,
+               px2 : double),
+             @(py0 : double,
+               py1 : double,
+               py2 : double),
+             tol   : double)
+    : bool =
+  (* The quadratic must be given in s-power coefficients. Its px1 and
+     py1 terms are to be removed. Compare an error estimate to the
+     segment length. *)
+  let
+    (*
+
+      The symmetric power polynomials of degree 2 are
+
+        1-t
+        t(1-t)
+        t
+
+      Conversion from quadratic to linear is effected by removal of
+      the center term, with absolute error bounded by the value of the
+      center coefficient, divided by 4 (because t(1-t) reaches a
+      maximum of 1/4, at t=1/2).
+
+    *)
+
+    val error_squared = 0.125 * ((px1 * px1) + (py1 * py1))
+    and length_squared = (px2 - px0)**2 + (py2 - py0)**2
+  in
+    error_squared / tol <= length_squared * tol
+  end
+
+(* One might be curious why "t@ype" instead of "type". The answer is:
+   the notation "type" is restricted to types that take up the same
+   space as a C void-pointer, which includes ATS pointers, "boxed"
+   types, etc. A "t@ype" can take up any amount of space, and so
+   includes any type there is (except for linear types, which is a
+   whole other subject). For instance, "int", "double", unboxed
+   records, unboxed tuples, and so on. *)
+fun {a, b : t@ype}              (* A polymorphic template function. *)
+list_any (pred : (a, b) -<cloref1> bool,
+          obj  : a,
+          lst  : List0 b)
+    : bool =
+  (* Does pred(obj, item) return true for any list item?  Here the
+     <cloref1> notation means that pred is a CLOSURE of the ordinary
+     garbage-collected kind, such as functions tend implicitly to be
+     in Lisps, MLs, Haskell, etc. *)
+  case+ lst of
+  | NIL => false
+  | hd :: tl =>
+    if pred (obj, hd) then
+      true
+    else
+      list_any (pred, obj, tl)
+
+fun
+find_intersection_parameters
+          (px      : @(double, double, double),
+           py      : @(double, double, double),
+           qx      : @(double, double, double),
+           qy      : @(double, double, double),
+           tol     : double,
+           spacing : double)
+    : List0 double =
+  let
+    val px = bernstein2spower_degree2 px
+    and py = bernstein2spower_degree2 py
+
+    fun
+    within_spacing (t_candidate : double,
+                    t_in_list   : double)
+        :<cloref1> bool =
+      abs (t_candidate - t_in_list) < spacing
+
+    fun
+    loop {n : nat}
+         (params   : list (double, n),
+          n        : int n,
+          workload : List0 (@(double, double)))
+        : List0 double =
+      case+ workload of
+      | NIL => params
+      | hd :: tl =>
+        let
+          val portionx = spower_portion_degree2 (px, hd)
+          and portiony = spower_portion_degree2 (py, hd)
+        in
+          if flat_enough (portionx, portiony, tol) then
+            let
+              val @(portionx0, _, portionx2) = portionx
+              and @(portiony0, _, portiony2) = portiony
+              val @(root0, root1) =
+                solve_linear_quadratic (@(portionx0, portionx2),
+                                        @(portiony0, portiony2),
+                                        qx, qy)
+            in
+              if 0.0 <= root0 && root0 <= 1.0 &&
+                  ~list_any (within_spacing, root0, params) then
+                begin
+                  if 0.0 <= root1 && root1 <= 1.0 &&
+                      ~list_any (within_spacing, root1, params) then
+                    loop (root0 :: root1 :: params, n + 2, tl)
+                  else
+                    loop (root0 :: params, n + 1, tl)
+                end
+              else if 0.0 <= root1 && root1 <= 1.0 &&
+                        ~list_any (within_spacing, root1, params) then
+                loop (root1 :: params, n + 1, tl)
+              else
+                loop (params, n, tl)
+            end
+          else
+            let
+              val @(t0, t1) = hd
+              val tmiddle = (0.5 * t0) + (0.5 * t1)
+              val job1 = @(t0, tmiddle)
+              and job2 = @(tmiddle, t1)
+            in
+              loop (params, n, job1 :: job2 :: tl)
+            end
+        end
+  in
+    loop (NIL, 0, @(0.0, 1.0) :: NIL)
+  end
+
+implement
+main0 () =
+  let
+    val px = @(~1.0, 0.0, 1.0)
+    val py = @(0.0, 10.0, 0.0)
+    val qx = @(2.0, ~8.0, 2.0)
+    val qy = @(1.0, 2.0, 3.0)
+    val tol = 0.001             (* "Flatness ratio" *)
+    val spacing = 0.0001        (* Min. spacing between parameters. *)
+    val t_list = find_intersection_parameters (px, py, qx, qy,
+                                               tol, spacing)
+
+    (* For no particular reason, sort the intersections so they go
+       from top to bottom. *)
+    val t_list = list_vt2t (list_vt_reverse (list_mergesort t_list))
+    val () = println! ("From top to bottom:")
+
+    fun
+    loop {n : nat} .<n>.
+         (t_list : list (double, n))
+        : void =
+      case+ t_list of
+      | NIL => ()
+      | t :: tl =>
+        begin
+          println! ("(", eval_bernstein_degree2 (qx, t), ", ",
+                    eval_bernstein_degree2 (qy, t), ")");
+          loop tl
+        end
+  in
+    loop t_list
+  end

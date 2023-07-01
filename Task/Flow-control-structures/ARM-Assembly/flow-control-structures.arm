@@ -1,0 +1,12 @@
+SWI n     ;software system call
+B label   ;Branch. Just "B" is a branch always, but any condition code can be added for a conditional branch.
+          ;In fact, almost any instruction can be made conditional to avoid branching.
+
+BL label  ;Branch and Link. This is the equivalent of the CALL command on the x86 or Z80.
+          ;The program counter is copied to the link register, then the operand of this command becomes the new program counter.
+
+BX Rn     ;Branch and Exchange. The operand is a register. The program counter is swapped with the register specified.
+          ;BX LR is commonly used to return from a subroutine.
+
+addeq R0,R0,#1     ;almost any instruction can be made conditional. If the flag state doesn't match the condition code, the instruction
+                   ;has no effect on registers or memory.

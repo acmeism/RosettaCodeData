@@ -1,0 +1,7 @@
+(loop for candidate from 2 below (expt 2 19)
+      for sum = (+ (/ candidate)
+                   (loop for factor from 2 to (isqrt candidate)
+                         when (zerop (mod candidate factor))
+                           sum (+ (/ factor) (/ (floor candidate factor)))))
+      when (= sum 1)
+        collect candidate)

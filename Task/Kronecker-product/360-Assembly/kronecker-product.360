@@ -1,0 +1,142 @@
+*        Kronecker product         06/04/2017
+KRONECK  CSECT
+         USING  KRONECK,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R1,1               first example
+         BAL    R14,PRODUCT        call product(a1,b1)
+         BAL    R14,PRINT          call print(r)
+         XPRNT  =C'---',3          separator
+         LA     R1,2               second example
+         BAL    R14,PRODUCT        call product(a2,b2)
+         BAL    R14,PRINT          call print(r)
+         L      R13,4(0,R13)       restore previous savearea pointer
+         LM     R14,R12,12(R13)    restore previous context
+         XR     R15,R15            rc=0
+         BR     R14                exit
+*------- ----   ----------------------------------------
+PRODUCT  EQU    *                  product(o)
+         STC    R1,OO              store o
+       IF CLI,OO,EQ,X'01' THEN     if o=1 then
+         MVC    MM(8),DIM1           (m,n)=hbound(a1) (p,q)=hbound(b1)
+         LA     R1,A1                @a1
+         LA     R2,B1                @b1
+       ELSE     ,                  else
+         MVC    MM(8),DIM2           (m,n)=hbound(a2) (p,q)=hbound(b2)
+         LA     R1,A2                @a2
+         LA     R2,B2                @b2
+       ENDIF    ,                  endif
+         ST     R1,ADDRA           addra=@a1
+         ST     R2,ADDRB           addrb=@b1
+         LH     R1,MM              m
+         MH     R1,PP              p
+         STH    R1,RI              ri=m*p
+         LH     R2,NN              n
+         MH     R2,QQ              *q
+         STH    R2,RJ              rj=n*q
+         LA     R6,1               i=1
+       DO WHILE=(CH,R6,LE,MM)      do i=1 to m
+         LA     R7,1                 j=1
+       DO WHILE=(CH,R7,LE,NN)        do j=1 to n
+         LA     R8,1                   k=1
+       DO WHILE=(CH,R8,LE,PP)          do k=1 to p
+         LA     R9,1                     l=1
+       DO WHILE=(CH,R9,LE,QQ)            do l=1 to q
+         LR     R1,R6                      i
+         BCTR   R1,0
+         MH     R1,NN                      *hbound(a,2)
+         AR     R1,R7                      j
+         BCTR   R1,0
+         SLA    R1,2
+         L      R4,ADDRA                   @a
+         L      R2,0(R4,R1)                r2=a(i,j)
+         LR     R1,R8                      k
+         BCTR   R1,0
+         MH     R1,QQ                      *hbound(b1,2)
+         AR     R1,R9                      l
+         BCTR   R1,0
+         SLA    R1,2
+         L      R4,ADDRB                   @b
+         L      R3,0(R4,R1)                r3=b(k,l)
+         LR     R5,R2                      r2
+         MR     R4,R3                      *r3
+         LR     R0,R5                      r0=a(i,j)*b(k,l)
+         LR     R1,R6                      i
+         BCTR   R1,0                       i-1
+         MH     R1,PP                      *p
+         AR     R1,R8                      r1=p*(i-1)+k
+         LR     R2,R7                      j
+         BCTR   R2,0                       j-1
+         MH     R2,QQ                      *q
+         AR     R2,R9                      r2=q*(j-1)+l
+         BCTR   R1,0
+         MH     R1,=AL2(NR)                *nr
+         AR     R1,R2                      r1=r1+r2
+         SLA    R1,2
+         ST     R0,R-4(R1)                 r(p*(i-1)+k,q*(j-1)+l)=r0
+         LA     R9,1(R9)                   l++
+       ENDDO    ,                        enddo l
+         LA     R8,1(R8)                 k++
+       ENDDO    ,                      enddo k
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         BR     R14                return
+*------- ----   ----------------------------------------
+PRINT    EQU    *                  print
+         LA     R6,1               i
+       DO WHILE=(CH,R6,LE,RI)      do i=1 to ri
+         MVC    PG,=CL80' '          init buffer
+         LA     R10,PG               pgi=0
+         LA     R7,1                 j
+       DO WHILE=(CH,R7,LE,RJ)        do j=1 to rj
+         LR     R1,R6                  i
+         BCTR   R1,0
+         MH     R1,=AL2(NR)            *nr
+         AR     R1,R7                  +j
+         SLA    R1,2
+         L      R2,R-4(R1)             r(i,j)
+         XDECO  R2,XDEC                edit
+         MVC    0(ND,R10),XDEC+12-ND   output
+         LA     R10,ND(R10)            pgi=pgi+nd
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+         XPRNT  PG,L'PG              print buffer
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo j
+         BR     R14                return
+*        ----   ----------------------------------------
+NR       EQU    32                 dim result max
+ND       EQU    3                  digits to print
+A1       DC     F'1',F'2'              a1(2,2)
+         DC     F'3',F'4'
+B1       DC     F'0',F'5'              b1(2,2)
+         DC     F'6',F'7'
+DIM1     DC     H'2',H'2',H'2',H'2'    dim a1 , dim b1
+A2       DC     F'0',F'1',F'0'         a2(3,3)
+         DC     F'1',F'1',F'1'
+         DC     F'0',F'1',F'0'
+B2       DC     F'1',F'1',F'1',F'1'    b2(3,4)
+         DC     F'1',F'0',F'0',F'1'
+         DC     F'1',F'1',F'1',F'1'
+DIM2     DC     H'3',H'3',H'3',H'4'    dim a2 , dim b2
+ADDRA    DS     A                  @a
+ADDRB    DS     A                  @b
+RI       DS     H                  ri
+RJ       DS     H                  rj
+MM       DS     H                  m
+NN       DS     H                  n
+PP       DS     H                  p
+QQ       DS     H                  q
+OO       DS     X                  o
+PG       DS     CL80               buffer
+XDEC     DS     CL12
+         LTORG
+R        DS     (NR*NR)F           r(nr,nr)
+         YREGS
+         END    KRONECK

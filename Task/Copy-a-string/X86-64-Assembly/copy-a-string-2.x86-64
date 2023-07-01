@@ -1,0 +1,114 @@
+%macro sysdef 2
+  %define sys_%1    %2
+%endmacro
+sysdef write,       1
+
+%macro prolog 1
+  push rbp
+  mov rbp, rsp
+  sub rsp, %1
+%endmacro
+
+%macro epilog 1
+  add rsp, %1
+  pop rbp
+%endmacro
+
+%macro xlea 2
+  lea %1, [rel %2]
+%endmacro
+
+%macro inv 1-7 0,0,0,0,0,0
+  mov r9,%7
+  mov r8,%6
+  mov r10,%5
+  mov rdx,%4
+  mov rsi,%3
+  mov rdi,%2
+  mov rax,sys_%1
+  syscall
+%endmacro
+
+section .rodata
+sz1     db "Goodbye, World!",0xa,0
+
+section .bss
+sz2     resq 1
+
+section .text
+  strlcpy:
+    prolog 0x38
+    %define dest  rbp-0x18
+    %define src   rbp-0x10
+    %define n     rbp-0x8
+
+    mov qword [rbp-0x28], rdi
+    mov qword [rbp-0x30], rsi
+    mov qword [rbp-0x38], rdx
+    mov rax, qword [rbp-0x28]
+    mov qword [dest], rax
+    mov rax, qword [rbp-0x30]
+    mov qword [src], rax
+    mov rax, qword [rbp-0x38]
+    mov qword [n], rax
+    cmp qword [n], 0
+    je _stlc_done
+    _stlc_doloop:
+      dec qword [n]
+      cmp qword [n], 0
+      je _stlc_done
+      mov rbx, qword [src]
+      lea rax, [rbx+1]
+      mov qword [src], rax
+      mov rax, qword [dest]
+      lea rcx, [rax+1]
+      mov qword [dest], rcx
+      movzx ebx, byte [rbx]
+      mov byte [rax], bl
+      movzx eax, byte [rax]
+      test al, al
+      je _stlc_done
+      jmp _stlc_doloop
+    _stlc_done:
+    epilog 0x38
+    ret
+
+  strlen:
+    prolog 0x10
+    %define s rbp-0x8
+
+    mov qword [rbp-0x10], rdi
+    mov rax, qword [rbp-0x10]
+    mov qword [s], rax
+    mov rsi, qword [s]
+    xor rcx, rcx
+    _stl_count:
+      cmp byte [rsi+rcx], 0
+      je _stl_exit
+      inc rcx
+      jne _stl_count
+    _stl_exit:
+      mov rax, rcx
+    epilog 0x10
+    ret
+
+    global main
+    main:
+      prolog 0x20
+      %define tmp rbp-0x20
+      xlea rbx, sz1
+      mov qword [tmp], rbx
+      mov rdi, qword [tmp]
+      call strlen
+      mov rcx, rax
+      push rcx
+      mov rdx, rcx
+      xlea rsi, sz1
+      xlea rdi, sz2
+      call strlcpy
+      xlea rbx, sz2
+      pop rcx
+      inv write, 1, rbx, rcx
+      inv exit, 0
+      epilog 0x20
+      ret

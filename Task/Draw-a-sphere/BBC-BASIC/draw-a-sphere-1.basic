@@ -1,0 +1,117 @@
+      MODE 8
+      INSTALL @lib$+"D3DLIB"
+      D3DTS_VIEW = 2
+      D3DTS_PROJECTION = 3
+      D3DRS_SPECULARENABLE = 29
+
+      SYS "LoadLibrary", @lib$+"D3DX8BBC.DLL" TO d3dx%
+      IF d3dx%=0 ERROR 100, "Couldn't load D3DX8BBC.DLL"
+      SYS "GetProcAddress", d3dx%, "D3DXCreateSphere" TO `D3DXCreateSphere`
+      SYS "GetProcAddress", d3dx%, "D3DXMatrixLookAtLH" TO `D3DXMatrixLookAtLH`
+      SYS "GetProcAddress", d3dx%, "D3DXMatrixPerspectiveFovLH" TO `D3DXMatrixPerspectiveFovLH`
+
+      DIM eyepos%(2), lookat%(2), up%(2), mat%(3,3)
+
+      DIM D3Dlight8{Type%, Diffuse{r%,g%,b%,a%}, Specular{r%,g%,b%,a%}, \
+      \ Ambient{r%,g%,b%,a%}, Position{x%,y%,z%}, Direction{x%,y%,z%}, \
+      \ Range%, Falloff%, Attenuation0%, Attenuation1%, Attenuation2%, \
+      \ Theta%, Phi%}
+
+      DIM D3Dmaterial8{Diffuse{r%,g%,b%,a%}, Ambient{r%,g%,b%,a%}, \
+      \ Specular{r%,g%,b%,a%}, Emissive{r%,g%,b%,a%}, Power%}
+
+      DIM D3Dbasemesh8{QueryInterface%, Addref%, Release%, \
+      \ DrawSubset%, GetNumFaces%, GetNumVertices%, GetFVF%, \
+      \ GetDeclaration%, GetOptions%, GetDevice%, \
+      \ CloneMeshFVF%, CloneMesh%, GetVertexBuffer%, GetIndexBuffer%, \
+      \ LockVertexBuffer%, UnlockVertexBuffer%, LockIndexBuffer%, \
+      \ UnlockIndexBuffer%, GetAttributeTable%}
+
+      DIM D3Ddevice8{QueryInterface%, AddRef%, Release%, TestCooperativeLevel%, \
+      \ GetAvailableTextureMem%, ResourceManagerDiscardBytes%, GetDirect3D%, \
+      \ GetDeviceCaps%, GetDisplayMode%, GetCreationParameters%, SetCursorProperties%, \
+      \ SetCursorPosition%, ShowCursor%, CreateAdditionalSwapChain%, Reset%, \
+      \ Present%, GetBackBuffer%, GetRasterStatus%, SetGammaRamp%, GetGammaRamp%, \
+      \ CreateTexture%, CreateVolumeTexture%, CreateCubeTexture%, CreateVertexBuffer%, \
+      \ CreateIndexBuffer%, CreateRenderTarget%, CreateDepthStencilSurface%, \
+      \ CreateImageSurface%, CopyRects%, UpdateTexture%, GetFrontBuffer%, \
+      \ SetRenderTarget%, GetRenderTarget%, GetDepthStencilSurface%, BeginScene%, \
+      \ EndScene%, Clear%, SetTransform%, GetTransform%, MultiplyTransform%, \
+      \ SetViewport%, GetViewport%, SetMaterial%, GetMaterial%, SetLight%, GetLight%, \
+      \ LightEnable%, GetLightEnable%, SetClipPlane%, GetClipPlane%, SetRenderState%, \
+      \ GetRenderState%, BeginStateBlock%, EndStateBlock%, ApplyStateBlock%, \
+      \ CaptureStateBlock%, DeleteStateBlock%, CreateStateBlock%, SetClipStatus%, \
+      \ GetClipStatus%, GetTexture%, SetTexture%, GetTextureStageState%, \
+      \ SetTextureStageState%, ValidateDevice%, GetInfo%, SetPaletteEntries%, \
+      \ GetPaletteEntries%, SetCurrentTexturePalette%, GetCurrentTexturePalette%, \
+      \ DrawPrimitive%, DrawIndexedPrimitive%, DrawPrimitiveUP%, \
+      \ DrawIndexedPrimitiveUP%, ProcessVertices%, CreateVertexShader%, \
+      \ SetVertexShader%, GetVertexShader%, DeleteVertexShader%, \
+      \ SetVertexShaderConstant%, GetVertexShaderConstant%, GetVertexShaderDeclaration%, \
+      \ GetVertexShaderFunction%, SetStreamSource%, GetStreamSource%, SetIndices%, \
+      \ GetIndices%, CreatePixelShader%, SetPixelShader%, GetPixelShader%, \
+      \ DeletePixelShader%, SetPixelShaderConstant%, GetPixelShaderConstant%, \
+      \ GetPixelShaderFunction%, DrawRectPatch%, DrawTriPatch%, DeletePatch%}
+
+      pDevice%=FN_initd3d(@hwnd%, 1, 1)
+      IF pDevice%=0 ERROR 100, "Couldn't create Direct3D8 device"
+      !(^D3Ddevice8{}+4) = !pDevice%
+
+      SYS `D3DXCreateSphere`, pDevice%, FN_f4(1), 50, 50, ^meshSphere%, 0
+      IF meshSphere% = 0 ERROR 100, "D3DXCreateSphere failed"
+      !(^D3Dbasemesh8{}+4) = !meshSphere%
+
+      REM. Point-source light:
+      D3Dlight8.Type%=1 : REM. point source
+      D3Dlight8.Diffuse.r%  = FN_f4(1)
+      D3Dlight8.Diffuse.g%  = FN_f4(1)
+      D3Dlight8.Diffuse.b%  = FN_f4(1)
+      D3Dlight8.Specular.r% = FN_f4(1)
+      D3Dlight8.Specular.g% = FN_f4(1)
+      D3Dlight8.Specular.b% = FN_f4(1)
+      D3Dlight8.Position.x% = FN_f4(2)
+      D3Dlight8.Position.y% = FN_f4(1)
+      D3Dlight8.Position.z% = FN_f4(4)
+      D3Dlight8.Range%      = FN_f4(10)
+      D3Dlight8.Attenuation0% = FN_f4(1)
+
+      REM. Material:
+      D3Dmaterial8.Diffuse.r%  = FN_f4(0.2)
+      D3Dmaterial8.Diffuse.g%  = FN_f4(0.6)
+      D3Dmaterial8.Diffuse.b%  = FN_f4(1.0)
+      D3Dmaterial8.Specular.r% = FN_f4(0.4)
+      D3Dmaterial8.Specular.g% = FN_f4(0.4)
+      D3Dmaterial8.Specular.b% = FN_f4(0.4)
+      D3Dmaterial8.Power%      = FN_f4(100)
+
+      fovy = RAD(30)
+      aspect = 5/4
+      znear = 1
+      zfar = 1000
+      bkgnd% = &7F7F7F
+      eyepos%() = 0, 0, FN_f4(6)
+      lookat%() = 0, 0, 0
+      up%() = 0, FN_f4(1), 0
+
+      SYS D3Ddevice8.Clear%, pDevice%, 0, 0, 3, bkgnd%, FN_f4(1), 0
+      SYS D3Ddevice8.BeginScene%, pDevice%
+      SYS D3Ddevice8.SetLight%, pDevice%, 0, D3Dlight8{}
+      SYS D3Ddevice8.LightEnable%, pDevice%, 0, 1
+      SYS D3Ddevice8.SetMaterial%, pDevice%, D3Dmaterial8{}
+      SYS D3Ddevice8.SetRenderState%, pDevice%, D3DRS_SPECULARENABLE, 1
+
+      SYS `D3DXMatrixLookAtLH`, ^mat%(0,0), ^eyepos%(0), ^lookat%(0), ^up%(0)
+      SYS D3Ddevice8.SetTransform%, pDevice%, D3DTS_VIEW, ^mat%(0,0)
+
+      SYS `D3DXMatrixPerspectiveFovLH`, ^mat%(0,0), FN_f4(fovy), \
+      \                                 FN_f4(aspect), FN_f4(znear), FN_f4(zfar)
+      SYS D3Ddevice8.SetTransform%, pDevice%, D3DTS_PROJECTION, ^mat%(0,0)
+
+      SYS D3Dbasemesh8.DrawSubset%, meshSphere%, 0
+      SYS D3Ddevice8.EndScene%, pDevice%
+      SYS D3Ddevice8.Present%, pDevice%, 0, 0, 0, 0
+
+      SYS D3Ddevice8.Release%, pDevice%
+      SYS D3Dbasemesh8.Release%, meshSphere%
+      SYS "FreeLibrary", d3dx%
+      END

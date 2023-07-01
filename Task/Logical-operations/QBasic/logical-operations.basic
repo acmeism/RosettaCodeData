@@ -1,0 +1,5 @@
+b1 = -1
+b2 = 0
+PRINT b1 AND b2
+PRINT b1 OR b2
+PRINT NOT b1

@@ -1,0 +1,1 @@
+getSlot("arbitraryMethod") code

@@ -1,0 +1,104 @@
+; linux x86_64
+
+struc block
+free: resb 1 ; whether or not this block is free
+size: resb 2 ; size of the chunk of memory
+next: resb 8 ; the next chunk after this one
+mem:
+endstruc
+
+section .data
+hStart: dq 0 ; the beginning of our heap space
+break: dq 0 ; the current end of our heap space
+
+
+section .text
+
+Allocate:
+
+  push rdi ; save the size argument
+
+  cmp qword [break], 0 ; if breakpoint is zero this
+  je firstAlloc        ; is the first call to allocate
+
+  mov rdi, qword [hStart] ; else address of heap start
+
+  findBlock: ; look for a suitable block of memory
+
+    cmp byte [rdi + free], 2
+    je newBlock ; end of heap reached, create new block
+
+    cmp byte [rdi + free], 0
+    je skipBlock ; this block taken
+
+    ; this block is free, make
+    ; sure it's big enough
+    mov bx, word [rdi + size]
+    mov rcx, qword [rsp] ; compare against our size arg
+    cmp cx, bx
+    jg skipBlock ; keep looking if not big enough
+
+    mov byte [rdi + free], 0 ; else mark as taken
+    add rdi, mem
+    add rsp, 8 ; discard size arg, we didn't need it
+    mov rax, rdi ; return pointer to this block
+    ret
+
+    skipBlock:
+      mov rsi, qword [rdi + next] ; load next
+      mov rdi, rsi                ' block address
+      jmp findBlock
+
+    newBlock:
+      mov rax, rdi
+      add rdi, 1024
+      cmp rdi, qword [break]
+      jl initAndAllocate
+      push rax
+      mov rdi, qword [break] ; if we are getting low on
+      add rdi, 4096          ; heap space, we ask OS for
+      mov rax, 12            ; more memory with brk syscall
+      syscall
+      cmp rax, qword [break] ; if breakpoint has not increased,
+      je allocFail           ; then memory could not be allocated
+      mov qword [break], rax
+      pop rax
+      jmp initAndAllocate
+
+
+  firstAlloc:    ; extra work has to be done on first
+    mov rax, 12  ; call to this subroutine
+    mov rdi, 0
+    syscall
+    mov qword [hStart], rax ; init heap start
+    add rax, 4096
+    mov rdi, rax
+    mov rax, 12   ; get heap memory with sys brk
+    syscall
+    cmp rax, qword [hStart]
+    je allocFail
+    mov qword [break], rax
+    mov rax, qword [hStart]
+
+  initAndAllocate:
+    mov byte [rax + free], 0  ; mark block free
+    pop rdi ; pop size arg off stack
+    mov word [rax + size], di ; mark it's size
+    lea rsi, [rax + mem + rdi]
+    mov byte [rsi + free], 2 ; mark heap end block
+    mov qword [rax + next], rsi ; mark next block
+    add rax, mem ; return pointer to block's memory space
+    ret
+
+allocFail: ; exit(1) when allocation fails
+  mov rax, 60
+  mov rdi, 1
+  syscall
+  ret
+
+; free this block so it can be
+; reused in a subsequent call to allocate
+Release:
+  sub rdi, mem
+  mov byte [rdi + free], 1
+  ret

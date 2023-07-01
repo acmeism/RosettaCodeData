@@ -1,0 +1,150 @@
+TYPE Unicode=[BYTE bc1,bc2,bc3]
+BYTE ARRAY hex=['0 '1 '2 '3 '4 '5 '6 '7 '8 '9 'A 'B 'C 'D 'E 'F]
+
+BYTE FUNC DecodeHex(CHAR c)
+  BYTE i
+
+  FOR i=0 TO 15
+  DO
+    IF c=hex(i) THEN
+      RETURN (i)
+    FI
+  OD
+  Break()
+RETURN (255)
+
+BYTE FUNC DecodeHex2(CHAR c1,c2)
+  BYTE h1,h2,res
+
+  h1=DecodeHex(c1)
+  h2=DecodeHex(c2)
+  res=(h1 LSH 4)%h2
+RETURN (res)
+
+PROC ValUnicode(CHAR ARRAY s Unicode POINTER u)
+  BYTE i,len
+
+  len=s(0)
+  IF len<6 AND len>8 THEN Break() FI
+  IF s(1)#'U OR s(2)#'+ THEN Break() FI
+
+  IF len=6 THEN
+    u.bc1=0
+  ELSEIF len=7 THEN
+    u.bc1=DecodeHex(s(3))
+    IF u.bc1>$10 THEN Break() FI
+  ELSE
+    u.bc1=DecodeHex2(s(3),s(4))
+  FI
+  u.bc2=DecodeHex2(s(len-3),s(len-2))
+  u.bc3=DecodeHex2(s(len-1),s(len))
+RETURN
+
+PROC PrintHex2(BYTE x)
+  Put(hex(x RSH 4))
+  Put(hex(x&$0F))
+RETURN
+
+PROC StrUnicode(Unicode POINTER u)
+  Print("U+")
+  IF u.bc1>$F THEN
+    PrintHex2(u.bc1)
+  ELSEIF u.bc1>0 THEN
+    Put(hex(u.bc1))
+  FI
+  PrintHex2(u.bc2)
+  PrintHex2(u.bc3)
+RETURN
+
+PROC PrintArray(BYTE ARRAY a BYTE len)
+  BYTE i
+
+  Put('[)
+  FOR i=0 TO len-1
+  DO
+    IF i>0 THEN Put(32 )FI
+    PrintHex2(a(i))
+  OD
+  Put('])
+RETURN
+
+PROC Encode(Unicode POINTER u BYTE ARRAY buf BYTE POINTER len)
+  IF u.bc1>0 THEN
+    len^=4
+    buf(0)=$F0 % (u.bc1 RSH 2)
+    buf(1)=$80 % ((u.bc1 & $03) LSH 4) % (u.bc2 RSH 4)
+    buf(2)=$80 % ((u.bc2 & $0F) LSH 2) % (u.bc3 RSH 6)
+    buf(3)=$80 % (u.bc3 & $3F)
+  ELSEIF u.bc2>=$08 THEN
+    len^=3
+    buf(0)=$E0 % (u.bc2 RSH 4)
+    buf(1)=$80 % ((u.bc2 & $0F) LSH 2) % (u.bc3 RSH 6)
+    buf(2)=$80 % (u.bc3 & $3F)
+  ELSEIF u.bc2>0 OR u.bc3>=$80 THEN
+    len^=2
+    buf(0)=$C0 % (u.bc2 LSH 2) % (u.bc3 RSH 6)
+    buf(1)=$80 % (u.bc3 & $3F)
+  ELSE
+    len^=1
+    buf(0)=u.bc3
+  FI
+RETURN
+
+PROC Decode(BYTE ARRAY buf BYTE len Unicode POINTER u)
+  IF len=1 THEN
+    u.bc1=0
+    u.bc2=0
+    u.bc3=buf(0)
+  ELSEIF len=2 THEN
+    u.bc1=0
+    u.bc2=(buf(0) & $1F) RSH 2
+    u.bc3=(buf(0) LSH 6) % (buf(1) & $3F)
+  ELSEIF len=3 THEN
+    u.bc1=0
+    u.bc2=(buf(0) LSH 4) % ((buf(1) & $3F) RSH 2)
+    u.bc3=(buf(1) LSH 6) % (buf(2) & $3F)
+  ELSEIF len=4 THEN
+    u.bc1=((buf(0) & $07) LSH 2) % ((buf(1) & $3F) RSH 4)
+    u.bc2=(buf(1) LSH 4) % ((buf(2) & $3F) RSH 2)
+    u.bc3=((buf(2) & $03) LSH 6) % (buf(3) & $3F)
+  ELSE
+    Break()
+  FI
+RETURN
+
+PROC Main()
+  DEFINE PTR="CARD"
+  DEFINE COUNT="11"
+  PTR ARRAY case(COUNT)
+  Unicode uni,res
+  BYTE ARRAY buf(4)
+  BYTE i,len
+
+  case(0)="U+0041"
+  case(1)="U+00F6"
+  case(2)="U+0416"
+  case(3)="U+20AC"
+  case(4)="U+1D11E"
+  case(5)="U+0024"
+  case(6)="U+00A2"
+  case(7)="U+0939"
+  case(8)="U+20AC"
+  case(9)="U+D55C"
+  case(10)="U+10348"
+
+  FOR i=0 TO COUNT-1
+  DO
+    IF i=0 THEN
+      PrintE("From RosettaCode:")
+    ELSEIF i=5 THEN
+      PutE() PrintE("From Wikipedia:")
+    FI
+    ValUnicode(case(i),uni)
+    Encode(uni,buf,@len)
+    Decode(buf,len,res)
+
+    StrUnicode(uni) Print(" -> ")
+    PrintArray(buf,len) Print(" -> ")
+    StrUnicode(res) PutE()
+  OD
+RETURN

@@ -1,0 +1,290 @@
+(* NOTE: Others are treating more negative numbers as the higher
+   priority, but I think it is pretty clear that making tea and
+   feeding the cat are higher in priority than solving RC tasks.
+
+   So I treat more positive numbers as higher priority.
+
+   But see a note below on how easy it is to reverse that. *)
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+(* For the sake of the task, use a heap implementation that comes with
+   the ATS distribution. *)
+staload H = "libats/ATS1/SATS/funheap_binomial.sats"
+
+(* #include instead of anonymous staload, to work around an
+   inconvenience in the distributed code: funheap_is_empty and
+   funheap_isnot_empty are functions rather than template
+   functions. One could instead compile funheap_binomial.dats
+   separately. Or one could copy and modify the distributed code to
+   one's own taste. (The heap code is GPL-3+) *)
+#include "libats/ATS1/DATS/funheap_binomial.dats"
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+abstype pqueue (a : t@ype+) = ptr
+
+extern fn {}
+pqueue_make_empty :
+  {a : t@ype}
+  () -<> pqueue a
+
+extern fn {}
+pqueue_is_empty :
+  {a : t@ype}
+  pqueue (INV(a)) -<> [b : bool] bool
+
+extern fn {}
+pqueue_isnot_empty :
+  {a : t@ype}
+  pqueue (INV(a)) -<> [b : bool] bool
+
+extern fn {a : t@ype}
+pqueue_size :
+  pqueue (INV(a)) -<> [n : nat] size_t n
+
+extern fn {a : t@ype}
+pqueue_insert :
+  (&pqueue (INV(a)) >> _, int, a) -< !wrt > void
+
+extern fn {a : t@ype}
+pqueue_delete :
+  (&pqueue (INV(a)) >> _) -< !wrt > Option a
+
+extern fn {a : t@ype}
+pqueue_peek :
+  (pqueue (INV(a))) -< !wrt > Option a
+
+extern fn {a : t@ype}
+pqueue_merge :
+  (pqueue (INV(a)), pqueue a) -< !wrt > pqueue a
+
+local
+
+  typedef heap_elt (a : t@ype+) =
+    '{
+      (* The "priority" field must come first. We take advantage of
+         the layout of a '{..} being that of a C struct. *)
+      priority = int,
+      value = a
+    }
+
+  fn {a : t@ype}
+  heap_elt_get_priority (elt : heap_elt a)
+      :<> int =
+    let
+      typedef prio_t = '{ priority = int }
+      val prio = $UN.cast{prio_t} elt
+    in
+      prio.priority
+    end
+
+  extern castfn
+  pqueue2heap :
+    {a : t@ype}
+    pqueue a -<> $H.heap (heap_elt a)
+
+  extern castfn
+  heap2pqueue :
+    {a : t@ype}
+    $H.heap (heap_elt a) -<> pqueue a
+
+  macdef p2h = pqueue2heap
+  macdef h2p = heap2pqueue
+
+  macdef comparison_cloref =
+    lam (x, y) =<cloref>
+      let
+        val px = heap_elt_get_priority x
+        and py = heap_elt_get_priority y
+      in
+        (* NOTE: Reverse the order of the arguments, if you want more
+                 negative numbers to represent higher priorities. *)
+        compare (py, px)
+      end
+
+  fn {a : t@ype}
+  funheap_getmin_opt (heap : $H.heap (INV(a)),
+                      cmp  : $H.cmp a)
+      :<!wrt> Option_vt a =
+    let
+      var result : a?
+      val success = $H.funheap_getmin<a> (heap, cmp, result)
+    in
+      if success then
+        let
+          prval () = opt_unsome{a} result
+        in
+          Some_vt{a} result
+        end
+      else
+        let
+          prval () = opt_unnone{a} result
+        in
+          None_vt{a} ()
+        end
+    end
+
+in
+
+  implement {}
+  pqueue_make_empty {a} () =
+    h2p{a} ($H.funheap_make_nil {heap_elt a} ())
+
+  implement {}
+  pqueue_is_empty {a} pq =
+    $H.funheap_is_empty {heap_elt a} (p2h{a} pq)
+
+  implement {}
+  pqueue_isnot_empty {a} pq =
+    $H.funheap_isnot_empty {heap_elt a} (p2h{a} pq)
+
+  implement {a}
+  pqueue_size pq =
+    $H.funheap_size<heap_elt a> (p2h{a} pq)
+
+  implement {a}
+  pqueue_insert (pq, priority, x) =
+    let
+      val elt =
+        '{
+          priority = priority,
+          value = x
+        } : heap_elt a
+      and compare = comparison_cloref
+      var heap = p2h{a} pq
+      val () = $H.funheap_insert (heap, elt, compare)
+    in
+      pq := h2p{a} heap
+    end
+
+  implement {a}
+  pqueue_delete pq =
+    let
+      typedef t = heap_elt a
+      val compare = comparison_cloref
+      var heap = p2h{a} pq
+      val elt_opt = $H.funheap_delmin_opt<heap_elt a> (heap, compare)
+    in
+      pq := h2p{a} heap;
+      case+ elt_opt of
+      | ~ Some_vt elt => Some (elt.value)
+      | ~ None_vt () => None ()
+    end
+
+  implement {a}
+  pqueue_peek pq =
+    let
+      typedef t = heap_elt a
+      val compare = comparison_cloref
+      and heap = p2h{a} pq
+      val elt_opt = funheap_getmin_opt<heap_elt a> (heap, compare)
+    in
+      case+ elt_opt of
+      | ~ Some_vt elt => Some (elt.value)
+      | ~ None_vt () => None ()
+    end
+
+  implement {a}
+  pqueue_merge (pq1, pq2) =
+    let
+      val heap1 = p2h{a} pq1
+      and heap2 = p2h{a} pq2
+      and compare = comparison_cloref
+    in
+      h2p{a} ($H.funheap_merge<heap_elt a> (heap1, heap2, compare))
+    end
+
+  overload iseqz with pqueue_is_empty
+  overload isneqz with pqueue_isnot_empty
+  overload size with pqueue_size
+  overload insert with pqueue_insert
+  overload delete with pqueue_delete
+  overload peek with pqueue_peek
+  overload merge with pqueue_merge
+
+end
+
+implement
+main0 () =
+  let
+    var pq = pqueue_make_empty{string} ()
+    val () = print! (" ", iseqz pq)
+    val () = print! (" ", isneqz pq)
+    val () = print! (" ", "size:", size pq)
+    val () = insert (pq, 3, "3")
+    val () = insert (pq, 4, "4")
+    val () = insert (pq, 2, "2")
+    val () = insert (pq, 5, "5")
+    val () = insert (pq, 1, "1")
+    val () = print! (" ", iseqz pq)
+    val () = print! (" ", isneqz pq)
+    val () = print! (" ", "size:", size pq)
+
+    var pq2 = pqueue_make_empty{string} ()
+    val () = insert (pq, 6, "6")
+    val () = insert (pq, 4, "4a")
+
+    val () = pq := merge (pq, pq2)
+    val () = print! (" ", iseqz pq)
+    val () = print! (" ", isneqz pq)
+    val () = print! (" ", "size:", size pq)
+
+    val- Some x = peek pq
+    val () = print! (" ", x)
+    val- Some x = peek pq
+    val () = print! (" ", x)
+    val- Some x = peek pq
+    val () = print! (" ", x)
+    val- Some x = peek pq
+    val () = print! (" ", x)
+    val- Some x = delete pq
+    val () = print! (" ", x)
+    val- Some x = delete pq
+    val () = print! (" ", x)
+    val- Some x = peek pq
+    val () = print! (" ", x)
+    val- Some x = peek pq
+    val () = print! (" ", x)
+    val- Some x = delete pq
+    val () = print! (" ", x)
+    val- Some x = peek pq
+    val () = print! (" ", x)
+    val- Some x = peek pq
+    val () = print! (" ", x)
+    val- Some x = peek pq
+    val () = print! (" ", x)
+    val- Some x = peek pq
+    val () = print! (" ", x)
+    val- Some x = delete pq
+    val () = print! (" ", x)
+    val- Some x = delete pq
+    val () = print! (" ", x)
+    val- Some x = delete pq
+    val () = print! (" ", x)
+    val- Some x = delete pq
+    val () = print! (" ", x)
+    val- None () = delete pq
+
+    val () = println! ()
+
+    var pq2 = pqueue_make_empty{string} ()
+    val () = insert (pq2, 3, "Clear drains")
+    val () = insert (pq2, 4, "Feed cat")
+    val () = insert (pq2, 5, "Make tea")
+    val () = insert (pq2, 1, "Solve RC tasks")
+    val () = insert (pq2, 2, "Tax return")
+    val- Some x = delete pq2
+    val () = println! ("|", x, "|")
+    val- Some x = delete pq2
+    val () = println! ("|", x, "|")
+    val- Some x = delete pq2
+    val () = println! ("|", x, "|")
+    val- Some x = delete pq2
+    val () = println! ("|", x, "|")
+    val- Some x = delete pq2
+    val () = println! ("|", x, "|")
+  in
+  end

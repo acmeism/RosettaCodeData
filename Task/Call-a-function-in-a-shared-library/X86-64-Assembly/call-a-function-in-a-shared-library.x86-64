@@ -1,0 +1,117 @@
+option casemap:none
+
+windows64       equ 1
+linux64         equ 3
+
+ifndef __LIB_CLASS__
+__LIB_CLASS__   equ 1
+
+  if @Platform eq windows64
+    option dllimport:<kernel32>
+      HeapAlloc       proto :qword, :dword, :qword
+      HeapFree        proto :qword, :dword, :qword
+      ExitProcess     proto :dword
+      GetProcessHeap  proto
+      LoadLibraryA    proto :qword
+      FreeLibrary     proto :qword
+      GetProcAddress  proto :qword, :qword
+    option dllimport:none
+      exit            equ ExitProcess
+      dlsym           equ GetProcAddress
+      dlclose         equ FreeLibrary
+  elseif @Platform eq linux64
+    malloc            proto :qword
+    free              proto :qword
+    exit              proto :dword
+    dlclose           proto :qword
+    dlopen            proto :qword, :dword
+    dlsym             proto :qword, :qword
+  endif
+
+  printf              proto :qword, :vararg
+
+  CLASS libldr
+    CMETHOD getproc
+  ENDMETHODS
+    libname   db 100 dup (0)
+    plib      dq ?
+  ENDCLASS
+
+  METHOD libldr, Init, <VOIDARG>, <>, library:qword, namelen:qword
+    mov rbx, thisPtr
+    assume rbx:ptr libldr
+    .if library != 0
+      mov rcx, namelen
+      mov rsi, library
+      lea rdi, [rbx].libname
+      rep movsb
+      if @Platform eq windows64
+        invoke LoadLibraryA, addr [rbx].libname
+        .if rax == 0
+          invoke printf, CSTR("--> Failed to load library",10)
+        .else
+          mov [rbx].plib, rax
+        .endif
+      elseif @Platform eq linux64
+        invoke dlopen, addr [rbx].libname, 1
+        .if rax == 0
+          lea rax, [rbx].libname
+          invoke printf, CSTR("--> Failed to load library %s",10), rax
+        .else
+          mov [rbx].plib, rax
+        .endif
+      endif
+    .else
+      invoke printf, CSTR("--> Library name to load required..",10)
+    .endif
+    mov rax, rbx
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+  METHOD libldr, getproc, <VOIDARG>, <>, func:qword
+    local tmp:qword
+    mov tmp, func
+    ;; Just return RAX..
+    invoke dlsym, [thisPtr].libldr.plib, tmp
+    ret
+  ENDMETHOD
+
+  METHOD libldr, Destroy, <VOIDARG>, <>
+    mov rbx, thisPtr
+    assume rbx:ptr libldr
+    .if [rbx].plib != 0
+      invoke dlclose, [rbx].plib
+    .endif
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+endif
+
+.data
+LibName     db "./somelib.l",0
+
+.code
+main proc
+  local ldr:ptr libldr
+
+  invoke printf, CSTR("--> Loading %s .. ",10), addr LibName
+  mov ldr, _NEW(libldr, addr LibName, sizeof(LibName))
+  ldr->getproc(CSTR("disappointment"))
+  .if rax == 0
+    lea rax, idisappointment
+  .endif
+  call rax
+  _DELETE(ldr)
+  invoke exit, 0
+  ret
+main endp
+
+idisappointment:
+  push rbp
+  mov rbp, rsp
+  invoke printf, CSTR("--> Well this is a internal disappointment..",10)
+  pop rbp
+  mov rax, 0
+  ret
+end

@@ -1,0 +1,7 @@
+ON ERROR GOTO ManejoErrores
+ERROR 99
+END
+
+ManejoErrores:
+  PRINT "Googbye World!"
+  RESUME

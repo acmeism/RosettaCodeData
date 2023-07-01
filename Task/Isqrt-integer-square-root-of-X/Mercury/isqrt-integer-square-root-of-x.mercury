@@ -1,0 +1,119 @@
+:- module isqrt_in_mercury.
+
+:- interface.
+:- import_module io.
+:- pred main(io, io).
+:- mode main(di, uo) is det.
+
+:- implementation.
+:- import_module char.
+:- import_module exception.
+:- import_module int.
+:- import_module integer.       % Integers of arbitrary size.
+:- import_module list.
+:- import_module string.
+
+:- func four = integer.
+four = integer(4).
+
+:- func seven = integer.
+seven = integer(7).
+
+%% Find a power of 4 greater than X.
+:- func pow4gtx(integer) = integer.
+pow4gtx(X) = Q :- pow4gtx_(X, one, Q).
+
+%% The tail recursion for pow4gtx.
+:- pred pow4gtx_(integer, integer, integer).
+:- mode pow4gtx_(in, in, out) is det.
+pow4gtx_(X, A, Q) :- if (X < A) then (Q = A)
+                     else (A1 = A * four,
+                           pow4gtx_(X, A1, Q)).
+
+%% Integer square root function.
+:- func isqrt(integer) = integer.
+isqrt(X) = Root :- isqrt(X, Root, _).
+
+%% Integer square root and remainder.
+:- pred isqrt(integer, integer, integer).
+:- mode isqrt(in, out, out) is det.
+isqrt(X, Root, Remainder) :-
+  Q = pow4gtx(X),
+  isqrt_(X, Q, zero, X, Root, Remainder).
+
+%% The tail recursion for isqrt.
+:- pred isqrt_(integer, integer, integer, integer, integer, integer).
+:- mode isqrt_(in, in, in, in, out, out) is det.
+isqrt_(X, Q, R0, Z0, R, Z) :-
+  if (X < zero) then throw("isqrt of a negative integer")
+  else if (Q = one) then (R = R0, Z = Z0)
+  else (Q1 = Q // four,
+        T = Z0 - R0 - Q1,
+        (if (T >= zero)
+         then (R1 = (R0 // two) + Q1,
+               isqrt_(X, Q1, R1, T, R, Z))
+         else (R1 is R0 // two,
+               isqrt_(X, Q1, R1, Z0, R, Z)))).
+
+%% Insert a character, every three digits, into (what presumably is)
+%% an integer numeral. (The name "commas" is not very good.)
+:- func commas(string, char) = string.
+commas(S, Comma) = T :-
+  RCL = to_rev_char_list(S),
+  commas_(RCL, Comma, 0, [], CL),
+  T = from_char_list(CL).
+
+%% The tail recursion for commas.
+:- pred commas_(list(char), char, int, list(char), list(char)).
+:- mode commas_(in, in, in, in, out) is det.
+commas_([], _, _, L, CL) :- L = CL.
+commas_([C | Tail], Comma, I, L, CL) :-
+  if (I = 3) then commas_([C | Tail], Comma, 0, [Comma | L], CL)
+  else (I1 = I + 1,
+        commas_(Tail, Comma, I1, [C | L], CL)).
+
+:- pred roots_m_to_n(integer, integer, io, io).
+:- mode roots_m_to_n(in, in, di, uo) is det.
+roots_m_to_n(M, N, !IO) :-
+  if (N < M) then true
+  else (write_string(to_string(isqrt(M)), !IO),
+        (if (M \= N) then write_string(" ", !IO)
+         else true),
+        M1 = M + one,
+        roots_m_to_n(M1, N, !IO)).
+
+:- pred roots_of_odd_powers_of_7(integer, integer, io, io).
+:- mode roots_of_odd_powers_of_7(in, in, di, uo) is det.
+roots_of_odd_powers_of_7(M, N, !IO) :-
+  if (N < M) then true
+  else (Pow7 = pow(seven, M),
+        Isqrt = isqrt(Pow7),
+        format("%2s %84s %43s",
+               [s(commas(to_string(M), (','))),
+                s(commas(to_string(Pow7), (','))),
+                s(commas(to_string(Isqrt), (',')))],
+               !IO),
+        nl(!IO),
+        M1 = M + two,
+        roots_of_odd_powers_of_7(M1, N, !IO)).
+
+main(!IO) :-
+  write_string("isqrt(i) for 0 <= i <= 65:", !IO),
+  nl(!IO), nl(!IO),
+  roots_m_to_n(zero, integer(65), !IO),
+  nl(!IO), nl(!IO), nl(!IO),
+  write_string("isqrt(7**i) for 1 <= i <= 73, i odd:", !IO),
+  nl(!IO), nl(!IO),
+  format("%2s %84s %43s", [s("i"), s("7**i"), s("isqrt(7**i)")], !IO),
+  nl(!IO),
+  write_string(duplicate_char(('-'), 131), !IO),
+  nl(!IO),
+  roots_of_odd_powers_of_7(one, integer(73), !IO).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Instructions for GNU Emacs--
+%%% local variables:
+%%% mode: mercury
+%%% prolog-indent-width: 2
+%%% end:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

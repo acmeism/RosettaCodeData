@@ -1,0 +1,243 @@
+#Import some functions
+clojure('count', 1) -> size
+clojure('nth', 2) -> charAt
+clojure('inc', 1) -> inc
+clojure('dec', 1) -> dec
+clojure('char', 1) -> char
+clojure('int', 1) -> int
+clojure('read-line', 0) -> readLine
+
+#The characters we will need
+charAt("\n", 0) -> newLine
+charAt("@", 0) -> exitCommand
+charAt("+", 0) -> incrCommand
+charAt("-", 0) -> decrCommand
+charAt("<", 0) -> shlCommand
+charAt(">", 0) -> shrCommand
+charAt(".", 0) -> printCommand
+charAt(",", 0) -> inputCommand
+charAt("[", 0) -> repeatCommand
+charAt("]", 0) -> endCommand
+
+#Read a character from a line of input.
+fun readChar -> return
+(
+	readLine() -> line
+	size(line) -> length
+	
+	#Return the ith character and a continuation
+	fun nextFromLine -> i, return
+	(
+		'='(i, length) -> eol
+		if (eol) ->
+		(
+			return(newLine, readChar)	#end of line
+		)
+		|
+			charAt(line, i) -> value
+			inc(i) -> i
+			fun next (-> return) nextFromLine(i, return) | next
+			return(value, next)
+	)
+	| nextFromLine
+	
+	nextFromLine(0, return)	#first character (position 0)
+)
+| readChar
+
+#Define a buffer as a value and a left and right stack
+fun empty (-> return, throw) throw("Error: out of bounds") | empty
+fun fill (-> return, throw) return(0, fill) | fill
+
+fun makeBuffer -> value, left, right, return
+(
+	fun buffer (-> return) return(value, left, right) | buffer
+	return(buffer)
+)
+| makeBuffer
+
+fun push -> value, stack, return
+(
+	fun newStack (-> return, throw) return(value, stack) | newStack
+	return(newStack)
+)
+| push
+
+#Brainf*** operations
+fun noop -> buffer, input, return
+(
+	return(buffer, input)
+)
+| noop
+
+fun selectOp -> command, return
+(
+	'='(command, incrCommand) -> eq
+	if (eq) ->
+	(
+		fun increment -> buffer, input, return
+		(
+			buffer() -> value, left, right
+			inc(value) -> value
+			makeBuffer(value, left, right) -> buffer
+			return(buffer, input)
+		)
+		| increment
+		return(increment)
+	)
+	|
+	'='(command, decrCommand) -> eq
+	if (eq) ->
+	(
+		fun decrement -> buffer, input, return
+		(
+			buffer() -> value, left, right
+			dec(value) -> value
+			makeBuffer(value, left, right) -> buffer
+			return(buffer, input)
+		)
+		| decrement
+		return(decrement)
+	)
+	|
+	'='(command, shlCommand) -> eq
+	if (eq) ->
+	(
+		fun shiftLeft -> buffer, input, return
+		(
+			buffer() -> value, left, right
+			push(value, right) -> right
+			left() -> value, left
+			(
+				makeBuffer(value, left, right) -> buffer
+				return(buffer, input)
+			)
+			| message
+				println(message) ->
+				exit()
+		)
+		| shiftLeft
+		return(shiftLeft)
+	)
+	|
+	'='(command, shrCommand) -> eq
+	if (eq) ->
+	(
+		fun shiftRight -> buffer, input, return
+		(
+			buffer() -> value, left, right
+			push(value, left) -> left
+			right() -> value, right
+			(
+				makeBuffer(value, left, right) -> buffer
+				return(buffer, input)
+			)
+			| message
+				println(message) ->
+				exit()
+		)
+		| shiftRight
+		return(shiftRight)
+	)
+	|
+	'='(command, printCommand) -> eq
+	if (eq) ->
+	(
+		fun putChar -> buffer, input, return
+		(
+			buffer() -> value, left, right
+			char(value) -> value
+			'print'(value) -> dummy
+			'flush'() -> dummy
+			return(buffer, input)
+		)
+		| putChar
+		return(putChar)
+	)
+	|
+	'='(command, inputCommand) -> eq
+	if (eq) ->
+	(
+		fun getChar -> buffer, input, return
+		(
+			input() -> letter, input
+			int(letter) -> letter
+			buffer() -> value, left, right
+			makeBuffer(letter, left, right) -> buffer
+			return(buffer, input)
+		)
+		| getChar
+		return(getChar)
+	)
+	|
+	return(noop)
+)
+| selectOp
+
+#Repeat until zero operation
+fun whileLoop -> buffer, input, continue, break
+(
+	buffer() -> value, left, right
+	'='(value, 0) -> zero
+	if (zero) ->
+	(
+		break(buffer, input)
+	)
+	|
+		continue(buffer, input) -> buffer, input
+		whileLoop(buffer, input, continue, break)
+)
+| whileLoop
+
+#Convert the Brainf*** program into dodo0 instructions
+fun compile -> input, endmark, return
+(
+	input() -> command, input
+
+	'='(command, endmark) -> eq
+	if (eq) ->
+	(
+		return(noop, input)	#the end, stop compiling
+	)
+	|
+		#Put in sequence the current operation and the rest of the program
+		fun chainOp -> op, input, return
+		(
+			compile(input, endmark) -> program, input
+			fun exec -> buffer, input, return
+			(
+				op(buffer, input) -> buffer, input
+				program(buffer, input, return)
+			)
+			| exec
+			return(exec, input)
+		)
+		| chainOp
+		
+		'='(command, repeatCommand) -> eq
+		if (eq) ->
+		(
+			compile(input, endCommand) -> body, input	#compile until "]"
+
+			#Repeat the loop body until zero
+			fun repeat -> buffer, input, return
+			(
+				whileLoop(buffer, input, body, return)
+			)
+			| repeat
+			chainOp(repeat, input, return)
+		)
+		|
+			selectOp(command) -> op
+			chainOp(op, input, return)
+)
+| compile
+
+#Main program
+compile(readChar, exitCommand) -> program, input
+makeBuffer(0, empty, fill) -> buffer
+input() -> nl, input	#consume newline from input
+
+#Execute the program instructions
+program(buffer, input) -> buffer, input
+exit()

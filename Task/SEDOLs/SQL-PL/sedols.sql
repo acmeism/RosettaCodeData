@@ -1,0 +1,64 @@
+--#SET TERMINATOR @
+
+SET SERVEROUTPUT ON@
+
+CREATE OR REPLACE FUNCTION CHECK_SEDOL (
+  IN TEXT VARCHAR(6)
+   ) RETURNS VARCHAR(7)
+ BEGIN
+  DECLARE TYPE SEDOL AS CHAR(1) ARRAY [6];
+--declare text varchar(6) default 'B12345';
+  DECLARE WEIGHT SEDOL;
+  DECLARE I SMALLINT;
+  DECLARE SENTENCE VARCHAR(256);
+  DECLARE CHAR_AT CHAR(1);
+  DECLARE OUTPUT CHAR(1);
+  DECLARE SUM SMALLINT;
+  DECLARE CHECK SMALLINT;
+  DECLARE INVALID_CHAR CONDITION FOR SQLSTATE '22004' ;
+  DECLARE STMT STATEMENT;
+
+  -- Converts all to upper.
+  SET TEXT = UPPER (TEXT);
+  -- CALL DBMS_OUTPUT.PUT_LINE(TEXT);
+  -- Checks the characters.
+  SET I = 1;
+  WHILE (I <= 6) DO
+   SET CHAR_AT = SUBSTR(TEXT, I, 1);
+   -- CALL DBMS_OUTPUT.PUT_LINE('Char ' || CHAR_AT);
+   SET SENTENCE = 'SET ? = (SELECT SEDOL FROM (SELECT ''' || CHAR_AT
+     || ''' SEDOL FROM SYSIBM.SYSDUMMY1) WHERE SEDOL IN (''B'',''C'',''D'',''F'',''G'',''H'',''J'','
+     || '''K'',''L'',''M'',''N'',''P'',''Q'',''R'',''S'',''T'',''V'',''W'',''X'',''Y'',''Z'',''0'','
+     || '''1'',''2'',''3'',''4'',''5'',''6'',''7'',''8'',''9''))';
+   PREPARE STMT FROM SENTENCE;
+   EXECUTE STMT INTO OUTPUT;
+   IF (OUTPUT IS NULL) THEN
+    SIGNAL INVALID_CHAR;
+   END IF;
+   SET I = I + 1;
+  END WHILE;
+
+  -- Assigns weight
+  SET WEIGHT[1] = '1';
+  SET WEIGHT[2] = '3';
+  SET WEIGHT[3] = '1';
+  SET WEIGHT[4] = '7';
+  SET WEIGHT[5] = '3';
+  SET WEIGHT[6] = '9';
+
+  -- Process the SEDOL.
+  SET SUM = 0;
+  SET I = 1;
+  WHILE (I <= 6) DO
+   SET CHAR_AT = SUBSTR(TEXT, I, 1);
+   IF (ASCII(CHAR_AT) > 65) THEN
+    SET SUM = SUM + WEIGHT[I] * (ASCII(CHAR_AT) - 64 + 9);
+   ELSE
+    SET SUM = SUM + WEIGHT[I] * CHAR_AT;
+   END IF;
+   SET I = I + 1;
+  END WHILE;
+  SET CHECK = MOD((10 - MOD(SUM, 10)), 10);
+  CALL DBMS_OUTPUT.PUT_LINE(CHECK);
+  RETURN TEXT || CHECK;
+ END @

@@ -1,0 +1,1 @@
+l.foreach(println(_))

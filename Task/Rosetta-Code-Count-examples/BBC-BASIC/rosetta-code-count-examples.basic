@@ -1,0 +1,84 @@
+      VDU 23,22,640;512;8,16,16,128+8 : REM Enable UTF-8 support
+
+      SYS "LoadLibrary", "URLMON.DLL" TO urlmon%
+      SYS "GetProcAddress", urlmon%, "URLDownloadToFileA" TO UDTF
+      special$ = "+()'"
+
+      url$ = "http://www.rosettacode.org/w/api.php?action=query" + \
+      \      "&list=categorymembers&cmtitle=Category:Programming_Tasks" + \
+      \      "&cmlimit=500&format=xml"
+      file$ = @tmp$ + "tasks.xml"
+      SYS UDTF, 0, url$, file$, 0, 0 TO fail%
+      IF fail% ERROR 100, "File download failed (tasks)"
+
+      Total% = 0
+      file% = OPENIN(file$)
+      WHILE NOT EOF#file%
+        a$ = GET$#file%
+        i% = 0
+        REPEAT
+          i% = INSTR(a$, "title=", i%+1)
+          IF i% THEN
+            j% = INSTR(a$, ">", i%)
+            title$ = MID$(a$, i%+7, j%-i%-10)
+            REM Replace HTML codes:
+            REPEAT
+              k% = INSTR(title$, "&")
+              IF k% THEN
+                l% = INSTR(title$, ";", k%)
+                title$ = LEFT$(title$,k%-1) + \
+                \        FNhtml(MID$(title$,k%,l%-k%+1)) + MID$(title$,l%+1)
+              ENDIF
+            UNTIL k% = 0
+            t$ = title$
+            REM Substitute characters not allowed in a URL:
+            FOR s% = 1 TO LEN(special$)
+              REPEAT
+                s$ = MID$(special$, s%, 1)
+                k% = INSTR(t$, s$)
+                IF k% t$ = LEFT$(t$,k%-1) + "%" + STR$~ASCs$ + MID$(t$,k%+1)
+              UNTIL k% = 0
+            NEXT
+            url$ = "http://www.rosettacode.org/w/index.php?title=" + t$ + \
+            \      "&action=raw"
+            file$ = @tmp$ + "title.htm"
+            SYS UDTF, 0, url$, file$, 0, 0 TO fail%
+            IF fail% ERROR 100, "File download failed " + t$
+            examples% = 0
+            task% = OPENIN(file$)
+            WHILE NOT EOF#task%
+              IF INSTR(GET$#task%, "=={{header|") examples% += 1
+            ENDWHILE
+            CLOSE #task%
+            Total% += examples%
+            PRINT title$ ": " ; examples% " examples."
+          ENDIF
+        UNTIL i% = 0
+        i% = INSTR(a$, "cmcontinue=")
+        IF i% THEN
+          CLOSE #file%
+          j% = INSTR(a$, """", i%+1)
+          k% = INSTR(a$, """", j%+1)
+          url$ = "http://www.rosettacode.org/w/api.php?action=query" + \
+          \      "&list=categorymembers&cmtitle=Category:Programming_Tasks" + \
+          \      "&cmlimit=500&format=xml&cmcontinue=" + MID$(a$,j%+1,k%-j%)
+          REPEAT
+            i% = INSTR(url$, "|")
+            IF i% url$ = LEFT$(url$,i%-1) + "%7C" + MID$(url$,i%+1)
+          UNTIL i% = 0
+          file$ = @tmp$ + "tasks.xml"
+          SYS UDTF, 0, url$, file$, 0, 0 TO fail%
+          IF fail% ERROR 100, "File download failed (continue)"
+          file% = OPENIN(file$)
+        ENDIF
+      ENDWHILE
+      CLOSE #file%
+      PRINT ' "Total: " ; Total% " examples."
+      END
+
+      DEF FNhtml(h$)
+      IF LEFT$(h$,2) = "&#" THEN = CHR$(VALMID$(h$,3))
+      CASE h$ OF
+        WHEN "&quot;": = """"
+      ENDCASE
+      = h$

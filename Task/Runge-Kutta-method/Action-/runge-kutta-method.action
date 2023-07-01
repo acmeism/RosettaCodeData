@@ -1,0 +1,121 @@
+INCLUDE "D2:PRINTF.ACT" ;from the Action! Tool Kit
+INCLUDE "H6:REALMATH.ACT"
+
+DEFINE PTR="CARD"
+
+REAL one,two,four,six
+
+PROC Init()
+  IntToReal(1,one)
+  IntToReal(2,two)
+  IntToReal(4,four)
+  IntToReal(6,six)
+RETURN
+
+PROC Fun=*(REAL POINTER x,y,res)
+  DEFINE JSR="$20"
+  DEFINE RTS="$60"
+  [JSR $00 $00 ;JSR to address set by SetFun
+   RTS]
+
+PROC SetFun(PTR p)
+  PTR addr
+
+  addr=Fun+1 ;location of address of JSR
+  PokeC(addr,p)
+RETURN
+
+PROC Rate(REAL POINTER x,y,res)
+  REAL tmp
+
+  Sqrt(y,tmp)         ;tmp=sqrt(y)
+  RealMult(x,tmp,res) ;res=x*sqrt(y)
+RETURN
+
+PROC RK4(PTR f REAL POINTER dx,x,y,res)
+  REAL k1,k2,k3,k4,dx2,k12,k22,tmp1,tmp2,tmp3
+
+  SetFun(f)
+  Fun(x,y,tmp1)        ;tmp1=f(x,y)
+  RealMult(dx,tmp1,k1) ;k1=dx*f(x,y)
+
+  RealDiv(dx,two,dx2)  ;dx2=dx/2
+  RealDiv(k1,two,k12)  ;k12=k1/2
+  RealAdd(x,dx2,tmp1)  ;tmp1=x+dx/2
+  RealAdd(y,k12,tmp2)  ;tmp2=y+k1/2
+  Fun(tmp1,tmp2,tmp3)  ;tmp3=f(x+dx/2,y+k1/2)
+  RealMult(dx,tmp3,k2) ;k2=dx*f(x+dx/2,y+k1/2)
+
+  RealDiv(k2,two,k22)  ;k22=k2/2
+  RealAdd(y,k22,tmp2)  ;tmp2=y+k2/2
+  Fun(tmp1,tmp2,tmp3)  ;tmp3=f(x+dx/2,y+k2/2)
+  RealMult(dx,tmp3,k3) ;k3=dx*f(x+dx/2,y+k2/2)
+
+  RealAdd(x,dx,tmp1)   ;tmp1=x+dx
+  RealAdd(y,k3,tmp2)   ;tmp2=y+k3
+  Fun(tmp1,tmp2,tmp3)  ;tmp3=f(x+dx,y+k3)
+  RealMult(dx,tmp3,k4) ;k4=dx*f(x+dx,y+k3)
+
+  RealAdd(k2,k3,tmp1)     ;tmp1=k2+k3
+  RealMult(two,tmp1,tmp2) ;tmp2=2*k2+2*k3
+  RealAdd(k1,tmp2,tmp1)   ;tmp3=k1+2*k2+2*k3
+  RealAdd(tmp1,k4,tmp2)   ;tmp2=k1+2*k2+2*k3+k4
+  RealDiv(tmp2,six,tmp1)  ;tmp1=(k1+2*k2+2*k3+k4)/6
+  RealAdd(y,tmp1,res)     ;res=y+(k1+2*k2+2*k3+k4)/6
+RETURN
+
+PROC Calc(REAL POINTER x,res)
+  REAL tmp1,tmp2
+
+  RealMult(x,x,tmp1)      ;tmp1=x*x
+  RealDiv(tmp1,four,tmp2) ;tmp2=x*x/4
+  RealAdd(tmp2,one,tmp1)  ;tmp1=x*x/4+1
+  Power(tmp1,two,res)     ;res=(x*x/4+1)^2
+RETURN
+
+PROC RelError(REAL POINTER a,b,res)
+  REAL tmp
+
+  RealDiv(a,b,tmp)     ;tmp=a/b
+  RealSub(tmp,one,res) ;res=a/b-1
+RETURN
+
+PROC Main()
+  REAL x0,x1,x,dx,y,y2,err,tmp1,tmp2
+  CHAR ARRAY s(20)
+  INT i,n
+
+  Put(125) PutE() ;clear the screen
+  MathInit()
+  Init()
+  PrintF("%-2S %-11S %-8S%E","x","y","rel err")
+
+  IntToReal(0,x0)
+  IntToReal(10,x1)
+  ValR("0.1",dx)
+
+  RealSub(x1,x0,tmp1)    ;tmp1=x1-x0
+  RealDiv(tmp1,dx,tmp2)  ;tmp2=(x1-x0)/dx
+  n=RealToInt(tmp2)      ;n=(x1-x0)/dx
+  i=0
+  IntToReal(1,y)
+  DO
+    IntToReal(i,tmp1)      ;tmp1=i
+    RealMult(dx,tmp1,tmp2) ;tmp2=i*dx
+    RealAdd(x0,tmp2,x)     ;x=x0+i*dx
+
+    IF i MOD 10=0 THEN
+      Calc(x,y2)
+      RelError(y,y2,err)
+      StrR(x,s) PrintF("%-2S ",s)
+      StrR(y,s) PrintF("%-11S ",s)
+      StrR(err,s) PrintF("%-8S%E",s)
+    FI
+
+    i==+1
+    IF i>n THEN EXIT FI
+
+    RK4(rate,dx,x,y,tmp1)  ;tmp1=rk4(rate,dx,x0+dx*(i-1),y)
+    RealAssign(tmp1,y)     ;y=rk4(rate,dx,x0+dx*(i-1),y)
+  OD
+RETURN

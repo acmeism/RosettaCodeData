@@ -1,0 +1,156 @@
+;
+;       Validate IBAN for DBL version 4 by Dario B.
+;
+;       Compile with "dbl -r" to reinitialize all data each time
+;       the module (main or subroutine) is entered.
+;
+        RECORD
+
+J,       D5
+ISVALID, D1
+IBAN,    A35,'GB82 WEST 1234 5698 7654 32'
+,        A35,'GB82 TEST 1234 5698 7654 32'
+,        A35,'GR16 0110 1250 0000 0001 2300 695'
+,        A35,'GB29 NWBK 6016 1331 9268 19'
+,        A35,'SA03 8000 0000 6080 1016 7519'
+,        A35,'CH93 0076 2011 6238 5295 7'
+,        A35,'IL62 0108 0000 0009 9999 999'
+,        A35,'US12 3456 7890 0987 6543 210'
+,        A35,'GR16 0110 1250 0000 0001 2300 695X'
+
+
+PROC
+;-------------------------------------------------------------------------------
+
+        XCALL FLAGS (0007000000,1)              ;Suppress STOP message
+
+        OPEN (1,O,'TT:')                        ;Open video
+
+        FOR J=1 UNTIL 9
+        DO BEGIN
+                XCALL CHECK_IBAN (IBAN(J),ISVALID)
+                IF (ISVALID.EQ.1)
+                THEN DISPLAY (1,IBAN(J),' is valid',10)
+                ELSE DISPLAY (1,IBAN(J),' is not valid',10)
+           END
+
+
+        CLOSE 1
+END
+
+;===============================================================================
+;               CHECK AND VALIDATE IBAN SUBROUTINE
+;===============================================================================
+
+                SUBROUTINE CHECK_IBAN
+
+IBAN,           A       ;IBAN code
+ISVALID,        D       ;0=is not valid 1=is valid
+
+
+
+        RECORD
+
+K,      D5
+J,      D5
+D2,     D2
+D3,     D3
+D9,     D9
+A9,     A9
+
+IBANC,  A35
+IINT,   A80
+PARTS,  D2
+MOD,    D5
+
+.DEFINE NC,75   ;numbers of ISO / LEN in table
+ISOCK,  [NC]A4,'AD24','AE23','AL28','AT20','AZ28','BA20','BE16','BG22','BH22','BR29',
+              &'BY28','CH21','CR22','CY28','CZ24','DE22','DK18','DO28','EE20','ES24',
+              &'FI18','FO18','FR27','GB22','GE22','GI23','GL18','GR27','GT28','HR21',
+              &'HU28','IE22','IL23','IQ23','IS26','IT27','JO30','KW30','KZ20','LB28',
+              &'LC32','LI21','LT20','LU20','LV21','MC27','MD24','ME22','MK19','MR27',
+              &'MT31','MU30','NL18','NO15','PK24','PL28','PS29','PT25','QA29','RO24',
+              &'RS22','SA24','SC31','SE24','SI19','SK24','SM27','ST25','SV28','TL23',
+              &'TN24','TR26','UA29','VG24','XK20'
+
+
+PROC
+;-------------------------------------------------------------------------------
+
+        CLEAR IBANC,IINT        ;Not required when compiled with dbl -r
+
+        ;Remove blanks
+        K=
+        FOR J=1 UNTIL %TRIM(IBAN) DO IF (IBAN(J:1).NE.' ')
+           BEGIN
+                INCR K
+                IBANC(K:1)=IBAN(J:1)
+           END
+
+        ;Check ISO code and len
+        UPCASE IBANC
+        FOR J=1 UNTIL NC DO IF (IBANC(1:2).EQ.ISOCK[J](1:2)) EXITLOOP
+        IF (J.GT.NC)
+           BEGIN
+                ;ISO not found in table, returns ISVALID=0
+                ISVALID=
+                XRETURN
+           END
+
+        D2=ISOCK[J](3:2)
+        IF (%TRIM(IBANC).NE.D2)
+           BEGIN
+                ;wrong len  returns ISVALID=0
+                ISVALID=
+                XRETURN
+           END
+
+        ; Now, do this
+        ; IBAN:                 GB82WEST12345698765432
+        ; Rearrange:            WEST12345698765432GB82
+        ; Convert to integer:   3214282912345698765432161182
+        ; Compute remainder:    3214282912345698765432161182    mod 97 = 1
+
+        ;Move the first four characters to the end
+        IBANC(%TRIM(IBANC)+1:4)=IBANC(1:4)
+        IBANC=IBANC(5,$LEN(IBANC))
+
+
+        ;Convert A to 10, B to 11 ... Z
+        K=1
+        FOR J=1 UNTIL %TRIM(IBANC)
+        DO BEGIN
+                IF (IBANC(J:1).GE.'A'.AND.IBANC(J:1).LE.'Z')
+                THEN BEGIN
+                        XCALL DECML (IBANC(J:1),D3)
+                        IINT(K:2)=D3-55,'XX'
+                        K=K+2
+                     END
+                ELSE BEGIN
+                        IINT(K:1)=IBANC(J:1)
+                        INCR K
+                     END
+           END
+
+        ;Calculate the mod 97 of large number.
+        ;Implements a stepwise check for mod 97 in chunks of 9 at the first time,
+        ;then in chunks of seven prepended by the last mod 97 operation converted
+        ;to a string
+        PARTS=1+(%TRIM(IINT)-9)/7
+        IF ((PARTS-1)*7.LT.%TRIM(IINT)-9) INCR PARTS
+
+        FOR J=1 UNTIL PARTS
+        DO BEGIN
+                IF (J.EQ.1) THEN A9=IINT(1:9)
+                ELSE BEGIN
+                        A9(1:2)=MOD,'XX'
+                        A9(3:7)=IINT(10+(J-2)*7:7)
+                     END
+                D9=A9
+                MOD=D9-(D9/97)*97
+           END
+
+        IF (MOD.EQ.1) ISVALID=1
+        ELSE ISVALID=
+        XRETURN
+END

@@ -1,0 +1,2 @@
+100 REM Standard BASIC comments begin with "REM" (remark) and extend to the end of the line
+110 PRINT "this is code": REM comment after statement

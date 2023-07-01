@@ -1,0 +1,147 @@
+(* Shell sort with both the gap sequence and the order predicate
+   selected by templates. *)
+
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+(* Interface                                                        *)
+
+extern fn {a : vt@ype}          (* The "less than" template. *)
+shell_sort$lt : (&a, &a) -<> bool
+
+extern fn {}                  (* Maps array size to a gap sequence. *)
+shell_sort$gaps : {n : int} size_t n -<> List1 ([i : pos] size_t i)
+
+extern fn {a : vt@ype}
+shell_sort {n   : int}
+           (arr : &array (a, n) >> _,
+            n   : size_t n)
+    :<!wrt> void
+
+(*------------------------------------------------------------------*)
+(* Implementation                                                   *)
+
+extern praxi
+array_v_takeout2       (* Get views for two distinct array elements.*)
+          {a     : vt@ype}
+          {p     : addr}
+          {n     : int}
+          {i, j  : nat | i < n; j < n; i != j}
+          (pfarr : array_v (a, p, n))
+    :<prf> @(a @ p + (i * sizeof a),
+             a @ p + (j * sizeof a),
+             (a @ p + (i * sizeof a),
+              a @ p + (j * sizeof a)) -<prf,lin> array_v (a, p, n))
+
+implement {a}
+shell_sort {n} (arr, n) =
+  let
+    fun
+    gapped_sort {gap   : pos | gap < n}
+                {i     : int | gap <= i; i <= n}
+                {p_arr : addr}
+                .<n - i>.
+                (pf_arr : !array_v (a, p_arr, n) >> _ |
+                 p_arr  : ptr p_arr,
+                 gap    : size_t gap,
+                 i      : size_t i)
+        :<!wrt> void =
+      if i <> n then
+        let
+          fun
+          move_elems {j : nat | j <= i}
+                     .<j>.
+                     (pf_arr : !array_v (a, p_arr, n) >> _ |
+                      j      : size_t j)
+              :<!wrt> void =
+            (* For simplicity in the safe use of an array, use
+               interchanges of array elements, instead of a temporary
+               variable and moves. *)
+            if gap <= j then
+              let
+                stadef k = j - gap
+                prval () = prop_verify {0 <= k} ()
+                prval () = prop_verify {k < j} ()
+                val k : size_t k = j - gap
+
+                val pk = ptr_add<a> (p_arr, k)
+                and pj = ptr_add<a> (p_arr, j)
+
+                prval @(pfk, pfj, fpf) =
+                  array_v_takeout2 {a} {p_arr} {n} {k, j} pf_arr
+                val is_less = shell_sort$lt<a> (!pj, !pk)
+                prval () = pf_arr := fpf (pfk, pfj)
+              in
+                if is_less then
+                  begin
+                    array_interchange (!p_arr, k, j);
+                    move_elems (pf_arr | k)
+                  end
+              end
+      in
+        move_elems (pf_arr | i);
+        gapped_sort (pf_arr | p_arr, gap, succ i)
+      end
+
+    fun
+    go_through_gaps
+              {num_gaps : nat}
+              .<num_gaps>.
+              (arr  : &array (a, n) >> _,
+               gaps : list ([i : pos] size_t i, num_gaps))
+        :<!wrt> void =
+      case+ gaps of
+      | list_nil () => ()
+      | list_cons (gap, more_gaps) =>
+        if n <= gap then
+          go_through_gaps (arr, more_gaps)
+        else
+          begin
+            gapped_sort (view@ arr | addr@ arr, gap, gap);
+            go_through_gaps (arr, more_gaps)
+          end
+  in
+    go_through_gaps (arr, shell_sort$gaps<> n)
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+shell_sort$lt<int> (x, y) =
+  x < y
+
+implement
+main0 () =
+  let
+    (* Gaps by Marcin Ciura. https://oeis.org/A102549 *)
+    val ciura_gaps =
+      $list{[i : pos] size_t i}
+        (i2sz 1750,
+         i2sz 701, i2sz 301,
+         i2sz 132, i2sz 57,
+         i2sz 23, i2sz 10,
+         i2sz 4, i2sz 1)
+
+    implement
+    shell_sort$gaps<> n =
+      (* Use Ciura's gaps, regardless of array size. *)
+      ciura_gaps
+
+    #define SIZE 30
+    var i : [i : nat] int i
+    var arr : array (int, SIZE)
+  in
+    array_initize_elt<int> (arr, i2sz SIZE, 0);
+    for (i := 0; i < SIZE; i := succ i)
+      arr[i] := $extfcall (int, "rand") % 10;
+
+    for (i := 0; i < SIZE; i := succ i)
+      print! (" ", arr[i]);
+    println! ();
+
+    shell_sort<int> (arr, i2sz SIZE);
+
+    for (i := 0; i < SIZE; i := succ i)
+      print! (" ", arr[i]);
+    println! ()
+  end

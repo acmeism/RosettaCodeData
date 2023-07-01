@@ -1,0 +1,6 @@
+abracadabra: (caardrabaab 0)
+seesaw: (ewsase 0)
+elk: (kel 0)
+grrrrrr: (rrrgrrr 5)
+up: (pu 0)
+a: (a 1)

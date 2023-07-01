@@ -1,0 +1,163 @@
+/* ARM assembly Raspberry PI  */
+/*  program radixSort1.s  */
+
+ /* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessSortOk:       .asciz "Table sorted.\n"
+szMessSortNok:      .asciz "Table not sorted !!!!!.\n"
+sMessResult:        .asciz "Value  : @ \n"
+szCarriageReturn:   .asciz "\n"
+
+.align 4
+TableNumber:      .int   1,110,30,6,201,5004,29,10,1008,4,7,-25000
+#TableNumber:       .int   10,9,8,7,6,5,4,3,2,1
+                   .equ NBELEMENTS, (. - TableNumber) / 4
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:            .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                               @ entry of program
+
+    ldr r0,iAdrTableNumber          @ address number table
+    mov r1,#0                       @ first element
+    mov r2,#NBELEMENTS              @ number of élements
+    bl radixSort
+    ldr r0,iAdrTableNumber          @ address number table
+    bl displayTable
+
+    ldr r0,iAdrTableNumber          @ address number table
+    mov r1,#NBELEMENTS              @ number of élements
+    bl isSorted                     @ control sort
+    cmp r0,#1                       @ sorted ?
+    beq 1f
+    ldr r0,iAdrszMessSortNok        @ no !! error sort
+    bl affichageMess
+    b 100f
+1:                                  @ yes
+    ldr r0,iAdrszMessSortOk
+    bl affichageMess
+100:                                @ standard end of the program
+    mov r0, #0                      @ return code
+    mov r7, #EXIT                   @ request to exit program
+    svc #0                          @ perform the system call
+
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrsMessResult:          .int sMessResult
+iAdrTableNumber:          .int TableNumber
+iAdrszMessSortOk:         .int szMessSortOk
+iAdrszMessSortNok:        .int szMessSortNok
+/******************************************************************/
+/*     control sorted table                                   */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains the number of elements  > 0  */
+/* r0 return 0  if not sorted   1  if sorted */
+isSorted:
+    push {r2-r4,lr}          @ save registers
+    mov r2,#0
+    ldr r4,[r0,r2,lsl #2]
+1:
+    add r2,#1
+    cmp r2,r1
+    movge r0,#1
+    bge 100f
+    ldr r3,[r0,r2, lsl #2]
+    cmp r3,r4
+    movlt r0,#0
+    blt 100f
+    mov r4,r3
+    b 1b
+100:
+    pop {r2-r4,lr}
+    bx lr                    @ return
+/******************************************************************/
+/*         radix sort                                             */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains the first element    */
+/* r2 contains the number of element */
+radixSort:
+    push {r3-r10,lr}                      @ save registers
+    mov r7,#0b1111                        @ mask one digit hexa
+    mov r10,#0                            @ digit counter
+1:
+    add r3,r1,#1                          @ start index i
+2:                                        @ start loop
+    ldr r4,[r0,r3,lsl #2]                 @ load value A[i]
+    and r8,r4,r7                          @ and mask
+    sub r5,r3,#1                          @ index j
+3:
+    ldr r6,[r0,r5,lsl #2]                 @ load value A[j]
+    and r9,r6,r7                          @ and mask
+    cmp r9,r8                             @ compare one digit hexa
+    ble 4f
+    add r5,#1                             @ increment index j
+    str r6,[r0,r5,lsl #2]                 @ store value A[j+1]
+    sub r5,#2                             @ j = j - 1
+    cmp r5,r1
+    bge 3b                                @ loop if j >= first item
+4:
+    add r5,#1                             @ increment index j
+    str r4,[r0,r5,lsl #2]                 @ store value A[i] in A[j+1]
+    add r3,#1                             @ increment index i
+    cmp r3,r2                             @ end ?
+    blt 2b                                @ no -> loop
+
+    //bl displayTable
+    lsl r7,#4                             @ shift mask 4 bits left
+    add r10,r10,#1                        @ increment counter
+    cmp r10,#8                            @ 8 digits ?
+    blt 1b                                @ no loop
+100:
+    pop {r3-r10,lr}
+    bx lr                                 @ return
+
+
+/******************************************************************/
+/*      Display table elements                                */
+/******************************************************************/
+/* r0 contains the address of table */
+displayTable:
+    push {r0-r3,lr}                                    @ save registers
+    mov r2,r0                                          @ table address
+    mov r3,#0
+1:                                                     @ loop display table
+    ldr r0,[r2,r3,lsl #2]
+    ldr r1,iAdrsZoneConv                               @
+    bl conversion10S                                   @ décimal conversion
+    ldr r0,iAdrsMessResult
+    ldr r1,iAdrsZoneConv                               @ insert conversion
+    bl strInsertAtCharInc
+    bl affichageMess                                   @ display message
+    add r3,#1
+    cmp r3,#NBELEMENTS - 1
+    ble 1b
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    mov r0,r2
+100:
+    pop {r0-r3,lr}
+    bx lr
+iAdrsZoneConv:           .int sZoneConv
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

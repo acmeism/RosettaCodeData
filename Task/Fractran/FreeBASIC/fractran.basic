@@ -1,0 +1,90 @@
+' version 06-07-2015
+' compile with: fbc -s console
+' uses gmp
+
+#Include Once "gmp.bi"
+
+' in case the two #define's are missing from 'gmp.bi' define them now
+#Ifndef mpq_numref
+    #Define mpq_numref(Q) (@(Q)->_mp_num)
+    #Define mpq_denref(Q) (@(Q)->_mp_den)
+#EndIf
+
+Dim As String prog(0 To ...) = {"17/91", "78/85", "19/51", "23/38", "29/33",_
+"77/29", "95/23", "77/19", "1/17", "11/13", "13/11", "15/14", "15/2", "55/1"}
+
+Dim As UInteger i, j, c, max = UBound(prog)
+Dim As Integer scanbit
+
+Dim As ZString Ptr gmp_str : gmp_str = Allocate(10000)
+Dim As Mpq_ptr  in_, out_
+in_ = Allocate(Len(__mpq_struct)) : Mpq_init(in_)
+out_ = Allocate(Len(__mpq_struct)) : Mpq_init(out_)
+Dim As mpz_ptr num, den
+num = Allocate(Len(__mpz_struct)) : Mpz_init(num)
+den = Allocate(Len(__mpz_struct)) : Mpz_init(den)
+
+Dim As mpq_ptr instruction(max)
+For i = 0 To max
+    instruction(i) = Allocate(Len(__mpq_struct))
+    mpq_init(instruction(i))
+    mpq_set_str(instruction(i), prog(i), 10 )
+Next
+
+mpq_set_str(in_ ,"2",10)
+i = 0 : j = 0
+Print "2";
+Do
+    mpq_mul(out_, instruction(i), in_)
+    i = i + 1
+    den = mpq_denref(out_)
+    If mpz_cmp_ui(den, 1) = 0 Then
+        Mpq_get_str(gmp_str, 10, out_)
+        Print ", ";*gmp_str;
+        mpq_swap(in_, out_)
+        i = 0
+        j = j + 1
+    End If
+Loop Until j > 14
+
+' this one only display if the integer is 2^p, p being prime
+mpq_set_str(in_ ,"2",10)
+i = 0 : j = 0 : c = 0
+Print : Print : Print
+Print "count          iterations    prime  2^prime"
+
+Do
+    mpq_mul(out_, instruction(i), in_)
+    i = i + 1
+    j = j + 1
+    den = mpq_denref(out_)
+    If mpz_cmp_ui(den, 1) = 0 Then
+        num = mpq_numref(out_)
+        scanbit =  mpz_scan1(num, 0)
+        ' if scanbit = 0 then number is odd
+        If scanbit > 0 Then
+            ' return from mpz_scan1(num, scanbit+1) is -1 for power of 2
+            If mpz_scan1(num, scanbit +1) = -1 Then
+                If c <= 20 Then Mpq_get_str(gmp_str, 10, out_) Else *gmp_str = ""
+                c = c + 1
+                Print Using "##### ################### ########  "; c; j; scanbit;
+                Print *gmp_str
+                If InKey <> "" Then Exit Do
+            End If
+        End If
+        mpq_swap(in_, out_)
+        i = 0
+    End If
+Loop
+
+' Loop Until scanbit > 300
+' Loop Until InKey <> ""
+' Loop Until scanbit > 300 Or InKey <> ""
+' stopping conditions will slow down the hole loop
+' loop will check for key if it's printing a result
+
+' empty keyboard buffer
+While InKey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

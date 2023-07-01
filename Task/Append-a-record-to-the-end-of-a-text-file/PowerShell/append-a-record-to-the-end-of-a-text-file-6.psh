@@ -1,0 +1,11 @@
+$records+= New-Record -Account   'xyz' `
+                      -Password  'x' `
+                      -UID       1003 `
+                      -GID       1000 `
+                      -FullName  'X Yz' `
+                      -Office    'Room 1003' `
+                      -Extension '(234)555-8913' `
+                      -HomePhone '(234)555-0033' `
+                      -Email     'xyz@rosettacode.org' `
+                      -Directory '/home/xyz' `
+                      -Shell     '/bin/bash'

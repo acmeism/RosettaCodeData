@@ -1,0 +1,22 @@
+PRINT "First line."
+GOSUB sub1
+PRINT "Fifth line."
+GOTO Ending
+
+sub1:
+PRINT "Second line."
+GOSUB sub2
+PRINT "Fourth line."
+RETURN
+
+Ending:
+PRINT "We're just about done..."
+GOTO Finished
+
+sub2:
+PRINT "Third line."
+RETURN
+
+Finished:
+PRINT "... with goto and gosub, thankfully."
+END

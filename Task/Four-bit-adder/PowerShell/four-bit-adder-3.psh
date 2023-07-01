@@ -1,0 +1,1 @@
+[RosettaCodeTasks.FourBitAdder.ConstructiveBlocks]::Test()

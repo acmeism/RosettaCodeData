@@ -1,0 +1,195 @@
+org &1000
+PrintChar equ &BB5A
+
+;reg usage:
+;DE = VM'S Program Counter
+;IXL = VM's Accumulator
+main:
+	ld ixl,0
+	ld de,Computer_Zero_RAM_2_plus_2
+	call Computer_Zero_VM
+	ld a,ixl
+	call ShowHex	;output to Amstrad CPC's screen
+	call NewLine
+	
+	ld ixl,0
+	ld de,Computer_Zero_RAM_7x8
+	call Computer_Zero_VM
+	ld a,ixl
+	jp ShowHex	;output and return to basic.
+	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;these two functions are related to displaying the output
+;	and have nothing to do with the virtual machine itself.
+ShowHex:	
+		push af
+			and %11110000
+			rrca
+			rrca
+			rrca
+			rrca
+			call PrintHexChar
+		pop af
+		and %00001111
+		;call PrintHexChar
+		;execution flows into it naturally.
+PrintHexChar:
+		;converts hex to ascii
+		or a	;Clear Carry Flag
+		daa
+		add a,&F0
+		adc a,&40
+		jp PrintChar
+		
+NewLine:
+	push af
+		ld a,13
+		call PrintChar
+		ld a,10
+		call PrintChar
+	pop af
+	ret
+	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+Computer_Zero_VM:
+	ld a,(de)			;opcode fetch
+	call UnpackOpcode	;stores opcode in B, operand in C
+	push de
+		ld de,Opcode_Table
+		ld a,b
+		rlca		;index times 2 for word data
+		
+		ld e,a
+		ld a,(de)
+		ld L,a
+		inc de
+		ld a,(de)
+		ld h,a		;LD HL,(DE)
+		
+	pop de
+	jp (hl)
+;register state after this jump:
+;DE = program counter
+;HL = address of instruction implementation
+;C = operand of the instruction we're about to execute
+;IXL = accumulator
+
+
+
+	overhead:
+	ld a,e
+	inc a
+	and %00011111		
+	;ensures we stay within the 32 byte address space.
+	ld e,a
+	jp Computer_Zero_VM
+
+
+	UnpackOpcode:
+	push af
+		and %11100000
+		rlca
+		rlca
+		rlca
+		ld b,a		;opcode in B
+	pop af
+	and %00011111
+	ld c,a			;operand in C
+	dummy:
+	ret
+
+
+
+align 256	;ensures the following table is page-aligned
+;this lets us index it much faster.
+Opcode_Table:	
+	dw vmNOP
+	dw vmLDA
+	dw vmSTA
+	dw vmADD
+	dw vmSUB
+	dw vmBRZ
+	dw vmJMP
+	dw vmSTP
+
+vmNOP:
+	jp overhead	;do nothing
+vmLDA:
+	push de
+	ld e,c		;offset DE by the operand
+	ld a,(de)	;load from that address
+	ld ixl,a	;and store it in the accumulator
+	pop de
+	jp overhead
+vmSTA:
+	push de
+	ld e,c		;offset DE by the operand
+	ld a,ixl	;get the accumulator
+	ld (de),a	;store it into (DE)	
+	pop de
+	jp overhead
+vmADD:
+	push de		
+	ld e,c		;offset DE by the operand
+	ld a,(de)	;load from that address
+	add ixl		;and add that value to the accumulator
+	ld ixl,a	;then set the new accumulator
+	pop de
+	jp overhead
+vmSUB:
+	push de
+	ld e,c		;offset DE by the operand
+	ld a,(de)
+	ld b,a
+	ld a,ixl
+	sub b
+	ld ixl,a
+	pop de
+	noBRZ:
+	jp overhead
+vmBRZ:
+	ld a,ixl
+	or a
+	jr nz, noBRZ
+vmJMP:
+	ld e,c
+	jp Computer_Zero_VM
+vmSTP:
+	ret		;return to main
+	
+align 256
+Computer_Zero_RAM_2_plus_2:
+	db %00100011,%01100100
+	db %11100000,%00000010
+	db %00000010,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+align 256
+Computer_Zero_RAM_7x8:
+	db %00101100,%01101010
+	db %01001100,%00101011
+	db %10001101,%01001011
+	db %10101000,%11000000
+	db %00101100,%11100000
+	db %00001000,%00000111
+	db %00000000,%00000001
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000
+	db %00000000,%00000000

@@ -1,0 +1,1 @@
+print scalar localtime, "\n";

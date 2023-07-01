@@ -1,0 +1,1 @@
+fconfigure $channel -buffersize $byteCount

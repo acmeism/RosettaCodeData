@@ -1,0 +1,109 @@
+F gen_row(w, s)
+   ‘Create all patterns of a row or col that match given runs.’
+   F gen_seg([[Int]] o, Int sp) -> [[Int]]
+      I o.empty
+         R [[2] * sp]
+      [[Int]] r
+      L(x) 1 .< sp - o.len + 2
+         L(tail) @gen_seg(o[1..], sp - x)
+            r [+]= [2] * x [+] o[0] [+] tail
+      R r
+
+   R gen_seg(s.map(i -> [1] * i), w + 1 - sum(s)).map(x -> x[1..])
+
+F deduce(hr, vr)
+   ‘Fix inevitable value of cells, and propagate.’
+   F allowable(row)
+      R row.reduce((a, b) -> zip(a, b).map((x, y) -> x [|] y))
+
+   F fits(a, b)
+      R all(zip(a, b).map((x, y) -> x [&] y))
+
+   V (w, h) = (vr.len, hr.len)
+   V rows = hr.map(x -> gen_row(@w, x))
+   V cols = vr.map(x -> gen_row(@h, x))
+   V can_do = rows.map(allowable)
+
+   V mod_rows = Set[Int]()
+   V mod_cols = Set(0 .< w)
+
+   F fix_col(n)
+      ‘See if any value in a given column is fixed;
+        if so, mark its corresponding row for future fixup.’
+      V c = @can_do.map(x -> x[@n])
+      @cols[n] = @cols[n].filter(x -> @@fits(x, @c))
+      L(x) @allowable(@cols[n])
+         V i = L.index
+         I x != @can_do[i][n]
+            @mod_rows.add(i)
+            @can_do[i][n] [&]= x
+
+   F fix_row(n)
+      ‘Ditto, for rows.’
+      V c = @can_do[n]
+      @rows[n] = @rows[n].filter(x -> @@fits(x, @c))
+      L(x) @allowable(@rows[n])
+         V i = L.index
+         I x != @can_do[n][i]
+            @mod_cols.add(i)
+            @can_do[n][i] [&]= x
+
+   F show_gram(m)
+      L(x) m
+         print(x.map(i -> ‘x#.?’[i]).join(‘ ’))
+      print()
+
+   L !mod_cols.empty
+      L(i) mod_cols
+         fix_col(i)
+      mod_cols.clear()
+      L(i) mod_rows
+         fix_row(i)
+      mod_rows.clear()
+
+   I all(multiloop((0 .< w), (0 .< h), (j, i) -> @can_do[i][j] C (1, 2)))
+      print(‘Solution would be unique’)
+   E
+      print(‘Solution may not be unique, doing exhaustive search:’)
+
+   V out = [[Int]()] * h
+
+   F try_all(Int n) -> Int
+      I n >= @h
+         L(j) 0 .< @w
+            I @out.map(x -> x[@j]) !C @cols[j]
+               R 0
+         @show_gram(@out)
+         R 1
+      V sol = 0
+      L(x) @rows[n]
+         @out[n] = x
+         sol += @try_all(n + 1)
+      R sol
+
+   V n = try_all(0)
+   I n == 0
+      print(‘No solution.’)
+   E I n == 1
+      print(‘Unique solution.’)
+   E
+      print(n‘ solutions.’)
+   print()
+
+F solve(p, show_runs = 1B)
+   [[[Int]]] s
+   L(l) p.split("\n")
+      s [+]= l.split(‘ ’).map(w -> w.map(c -> c.code - ‘A’.code + 1))
+   I show_runs
+      print(‘Horizontal runs: ’s[0])
+      print(‘Vertical runs: ’s[1])
+   deduce(s[0], s[1])
+
+L(p) File(‘nonogram_problems.txt’).read().split("\n\n")
+   solve(p)
+
+print(‘Extra example not solvable by deduction alone:’)
+solve("B B A A\nB B A A")
+
+print(‘Extra example where there is no solution:’)
+solve("B A A\nA A A")

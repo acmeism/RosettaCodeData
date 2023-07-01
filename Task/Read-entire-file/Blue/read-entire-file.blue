@@ -1,0 +1,47 @@
+global _start
+
+: syscall ( num:eax -- result:eax ) syscall ;
+
+: exit ( status:edi -- noret ) 60 syscall ;
+: bye ( -- noret ) 0 exit ;
+: die ( err:eax -- noret ) neg exit ;
+
+: unwrap ( result:eax -- value:eax ) dup 0 cmp ' die xl ;
+: ordie ( result -- ) unwrap drop ;
+
+: open ( pathname:edi flags:esi -- fd:eax ) 2 syscall unwrap ;
+: close ( fd:edi -- ) 3 syscall ordie ;
+
+48 resb stat_buf
+8 resb file-size
+88 resb padding
+
+: fstat ( fd:edi buf:esi -- ) 5 syscall ordie ;
+
+1 const prot_read
+2 const map_private
+
+: mmap ( fd:r8d len:esi addr:edi off:r9d prot:edx flags:r10d -- buf:eax ) 9 syscall unwrap ;
+: munmap ( addr:edi len:esi -- ) 11 syscall ordie ;
+
+1 resd fd
+0 const read-only
+
+: open-file ( pathname:edi -- ) read-only open fd ! ;
+: read-file-size ( -- ) fd @ stat_buf fstat ;
+: map-file ( fd len -- buf ) 0 0 prot_read map_private mmap ;
+: map-file ( -- buf ) fd @ file-size @ map-file ;
+: unmap-file ( buf -- ) file-size @ munmap ;
+: close-file ( -- ) fd @ close ;
+
+: open-this-file ( -- ) s" read_entire_file.blue" drop open-file ;
+
+: _start ( -- noret )
+	open-this-file
+	read-file-size
+	map-file
+	\ do something ...
+	unmap-file
+	close-file
+	bye
+;

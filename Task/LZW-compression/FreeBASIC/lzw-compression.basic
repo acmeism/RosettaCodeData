@@ -1,0 +1,110 @@
+' version 22-02-2019
+' compile with: fbc -s console
+
+Type dict
+    prefix As Integer
+    B      As String
+End Type
+
+Sub init(dictionary() As dict, ByRef last As ULong)
+
+    For i As ULong  = 0 To 255
+        dictionary(i).prefix = -1
+        dictionary(i).B = Chr(i)
+    Next
+    last = 255
+
+End Sub
+
+Function encode_LZW(dictionary() As dict, last_entry As ULong, input_str As String) As String
+
+    If Len(input_str) < 2 Then
+        Print "input string is to short"
+        Return ""
+    End If
+
+    Dim As String word, output_str, char
+    Dim As ULong i = 1, index, j, len_input = Len(input_str)
+
+    Do
+        If i > len_input Then
+            output_str = output_str + " " + Str(index)
+            Return output_str ' no more chars to process. we are done
+        End If
+        char = Mid(Input_str, i, 1)
+        i += 1
+        For j = 0 To last_entry
+            If dictionary(j).B = word + char Then
+                word += char
+                index = j
+                Continue Do
+            End If
+        Next
+        output_str = output_str + " " + Str(index)
+        last_entry = last_entry +1
+        dictionary(last_entry).B = word + char
+        dictionary(last_entry).prefix = index
+        word = char : index = Asc(char)
+    Loop
+
+End Function
+
+Function decode_LZW(dictionary() As dict, last_entry As ULong, input_str As String) As String
+
+    Dim As String temp, word, output_str
+    Dim As ULong i, i1 = 1, j, index
+    input_str = Trim(input_str)
+    Dim As ULong len_input = Len(input_str)
+    input_str = input_str + " "
+
+    i = InStr(i1, input_str, " ")
+    index = Val(Mid(Input_str, i1, i - i1))
+    word = dictionary(index).B
+    output_str = word
+    i1 = i +1
+    Do
+        i = InStr(i1, input_str, " ")
+        If i >= len_input Then
+            index = Val(Mid(input_str, i1))
+            output_str = output_str + dictionary(index).B
+            Return output_str
+        End If
+        index = Val(Mid(Input_str, i1, i - i1))
+        i1 = i +1
+        If index <= last_entry Then
+            temp = dictionary(index).B
+        Else
+            temp = word + Left(word, 1)
+        End If
+        output_str = output_str + temp
+        last_entry = last_entry +1
+        dictionary(last_entry).B = word + Left(temp, 1)
+        word = temp
+    Loop
+
+End Function
+
+' ------=< MAIN >=------
+
+Dim As ULong last_entry, max_bit = 9
+Dim As ULong dict_max = 1 Shl max_bit -1
+Dim As String output_str, input_str = "TOBEORNOTTOBEORTOBEORNOT"
+Dim As dict dictionary()
+
+Print "  input str: ";input_str
+
+ReDim dictionary(dict_max +1)
+init(dictionary(), last_entry)
+output_str = encode_LZW(dictionary(), last_entry, input_str)
+Print "encoded str: ";output_str
+
+ReDim dictionary(dict_max +1)
+init(dictionary(), last_entry)
+output_str = decode_LZW(dictionary(), last_entry, output_str)
+Print "decoded str: "; output_str
+
+' empty keyboard buffer
+While InKey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

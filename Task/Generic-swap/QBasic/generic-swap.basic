@@ -1,0 +1,10 @@
+SUB nswap (a, b)
+    temp = a: a = b: b = temp
+END SUB
+
+a = 1
+b = 2
+
+PRINT a, b
+CALL nswap(a, b)
+PRINT a, b

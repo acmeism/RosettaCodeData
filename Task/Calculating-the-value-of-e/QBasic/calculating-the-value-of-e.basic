@@ -1,0 +1,12 @@
+n = 1: n1 = 1
+
+e! = 1 / 1
+
+DO WHILE e <> e1
+   e1 = e
+   e = e + 1 / n
+   n1 = n1 + 1
+   n = n * n1
+LOOP
+
+PRINT "The value of e ="; e

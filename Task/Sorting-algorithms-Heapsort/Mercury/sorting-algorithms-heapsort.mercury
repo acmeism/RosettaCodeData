@@ -1,0 +1,106 @@
+%%%-------------------------------------------------------------------
+
+:- module heapsort_task.
+
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+
+:- implementation.
+:- import_module array.
+:- import_module int.
+:- import_module list.
+:- import_module random.
+:- import_module random.sfc16.
+
+%%%-------------------------------------------------------------------
+%%%
+%%% heapsort/3 --
+%%%
+%%% A generic heapsort predicate. It takes a "Less_than" predicate to
+%%% determine the order of the sort.
+%%%
+%%% That I call the predicate "Less_than" does not, by any means,
+%%% preclude a descending order. This "Less_than" refers to the
+%%% ordinals of the sequence. In other words, it means "comes before".
+%%%
+%%% The implementation closely follows the task pseudocode--although,
+%%% of course, loops have been turned into tail recursions and arrays
+%%% are treated as state variables.
+%%%
+
+:- pred heapsort(pred(T, T)::pred(in, in) is semidet,
+                 array(T)::array_di, array(T)::array_uo) is det.
+heapsort(Less_than, !Arr) :-
+  heapsort(Less_than, size(!.Arr), !Arr).
+
+:- pred heapsort(pred(T, T)::pred(in, in) is semidet, int::in,
+                 array(T)::array_di, array(T)::array_uo) is det.
+heapsort(Less_than, Count, !Arr) :-
+  heapify(Less_than, Count, !Arr),
+  heapsort_loop(Less_than, Count, Count - 1, !Arr).
+
+:- pred heapsort_loop(pred(T, T)::pred(in, in) is semidet,
+                      int::in, int::in,
+                      array(T)::array_di, array(T)::array_uo) is det.
+heapsort_loop(Less_than, Count, End, !Arr) :-
+  if (End = 0) then true
+  else (swap(End, 0, !Arr),
+        sift_down(Less_than, 0, End - 1, !Arr),
+        heapsort_loop(Less_than, Count, End - 1, !Arr)).
+
+:- pred heapify(pred(T, T)::pred(in, in) is semidet, int::in,
+                array(T)::array_di, array(T)::array_uo) is det.
+heapify(Less_than, Count, !Arr) :-
+  heapify(Less_than, Count, (Count - 2) // 2, !Arr).
+
+:- pred heapify(pred(T, T)::pred(in, in) is semidet,
+                int::in, int::in,
+                array(T)::array_di, array(T)::array_uo) is det.
+heapify(Less_than, Count, Start, !Arr) :-
+  if (Start = -1) then true
+  else (sift_down(Less_than, Start, Count - 1, !Arr),
+        heapify(Less_than, Count, Start - 1, !Arr)).
+
+:- pred sift_down(pred(T, T)::pred(in, in) is semidet,
+                  int::in, int::in,
+                  array(T)::array_di, array(T)::array_uo) is det.
+sift_down(Less_than, Root, End, !Arr) :-
+  if (End < (Root * 2) + 1) then true
+  else (locate_child(Less_than, Root, End, !.Arr, Child),
+        (if not Less_than(!.Arr^elem(Root), !.Arr^elem(Child))
+         then true
+         else (swap(Root, Child, !Arr),
+               sift_down(Less_than, Child, End, !Arr)))).
+
+:- pred locate_child(pred(T, T)::pred(in, in) is semidet,
+                     int::in, int::in,
+                     array(T)::in, int::out) is det.
+locate_child(Less_than, Root, End, Arr, Child) :-
+  Child0 = (Root * 2) + 1,
+  (if (End =< Child0 + 1)
+   then (Child = Child0)
+   else if not Less_than(Arr^elem(Child0), Arr^elem(Child0 + 1))
+   then (Child = Child0)
+   else (Child = Child0 + 1)).
+
+%%%-------------------------------------------------------------------
+
+main(!IO) :-
+  R = (sfc16.init),
+  make_io_random(R, M, !IO),
+  Generate = (pred(Index::in, Number::out, IO1::di, IO::uo) is det :-
+                uniform_int_in_range(M, min(0, Index), 10, Number,
+                                     IO1, IO)),
+  generate_foldl(30, Generate, Arr0, !IO),
+  print_line(Arr0, !IO),
+  heapsort(<, Arr0, Arr1),
+  print_line(Arr1, !IO),
+  heapsort(>=, Arr1, Arr2),
+  print_line(Arr2, !IO).
+
+%%%-------------------------------------------------------------------
+%%% local variables:
+%%% mode: mercury
+%%% prolog-indent-width: 2
+%%% end:

@@ -1,0 +1,197 @@
+theory Scratch
+  imports Main
+begin
+
+section‹100 Doors›
+
+  datatype doorstate = Open | Closed
+
+  fun toggle :: "doorstate ⇒ doorstate" where
+    "toggle Open   = Closed"
+  | "toggle Closed = Open"
+
+  fun walk :: "('a ⇒ 'a) ⇒ nat ⇒ nat ⇒ 'a list ⇒ 'a list" where
+    "walk f _     _       []     = []"
+  | "walk f every 0       (x#xs) = (f x) # walk f every every xs"
+  | "walk f every (Suc n) (x#xs) = x # walk f every n xs"
+
+  text‹Example: \<^const>‹toggle› every second door. (second = 1, because of 0 indexing)›
+  lemma "walk toggle 1 1 [Open, Open, Open, Open, Open, Open] =
+                         [Open, Closed, Open, Closed, Open, Closed]" by code_simp
+
+  text‹Example: \<^const>‹toggle› every third door.›
+  lemma "walk toggle 2 2 [Open, Open, Open, Open, Open, Open] =
+                         [Open, Open, Closed, Open, Open, Closed]" by code_simp
+
+  text‹Walking each door is essentially the same as the common \<^const>‹map› function.›
+  lemma "walk f 0 0 xs = map f xs"
+    by(induction xs) (simp)+
+
+  lemma walk_beginning:
+    "walk f every n xs = (walk f every n (take (Suc n) xs)) @ (walk f every every (drop (Suc n) xs))"
+    by(induction f every n xs rule:walk.induct) (simp)+
+
+  text‹A convenience definition to take the off-by-one into account and setting the starting position.›
+  definition visit_every :: "('a ⇒ 'a) ⇒ nat ⇒ 'a list ⇒ 'a list" where
+    "visit_every f every xs ≡ walk f (every - 1) (every - 1) xs"
+
+
+  fun iterate :: "nat ⇒ (nat ⇒ 'a ⇒ 'a) ⇒ nat ⇒ 'a ⇒ 'a" where
+    "iterate 0       _ _ a = a"
+  | "iterate (Suc i) f n a = iterate i f (Suc n) (f n a)"
+
+  text‹The 100 doors problem.›
+  definition "onehundred_doors ≡ iterate 100 (visit_every toggle) 1 (replicate 100 Closed)"
+
+  lemma "onehundred_doors =
+    [Open, Closed, Closed, Open, Closed, Closed, Closed,
+     Closed, Open, Closed, Closed, Closed, Closed, Closed,
+     Closed, Open, Closed, Closed, Closed, Closed, Closed,
+     Closed, Closed, Closed, Open, Closed, Closed, Closed,
+     Closed, Closed, Closed, Closed, Closed, Closed, Closed,
+     Open, Closed, Closed, Closed, Closed, Closed, Closed,
+     Closed, Closed, Closed, Closed, Closed, Closed, Open,
+     Closed, Closed, Closed, Closed, Closed, Closed, Closed,
+     Closed, Closed, Closed, Closed, Closed, Closed, Closed,
+     Open, Closed, Closed, Closed, Closed, Closed, Closed,
+     Closed, Closed, Closed, Closed, Closed, Closed, Closed,
+     Closed, Closed, Closed, Open, Closed, Closed, Closed,
+     Closed, Closed, Closed, Closed, Closed, Closed, Closed,
+     Closed, Closed, Closed, Closed, Closed, Closed, Closed,
+     Closed, Open]" by code_simp
+
+  text‹Filtering for the open doors, we get the same result as the Haskell implementation.›
+  lemma
+    "[(i, door) ← enumerate 1 onehundred_doors. door = Open] =
+     [(1,Open),(4,Open),(9,Open),(16,Open),(25,Open),(36,Open),(49,Open),(64,Open),(81,Open),(100,Open)]"
+    by code_simp
+
+section‹Equivalence to Haskell Implementation›
+text‹
+We will now present an alternative implementation, which is similar to the Haskell implementation
+on 🌐‹https://rosettacode.org/wiki/100_doors#Haskell›. We will prove, that the two behave the same;
+in general, not just for a fixed set of 100 doors.
+›
+
+  definition map_every_start :: "('a ⇒ 'a) ⇒ nat ⇒ nat ⇒ 'a list ⇒ 'a list" where
+    "map_every_start f every start xs ≡
+      map (λ(i, x). if i mod every = 0 then f x else x) (enumerate start xs)"
+
+  definition visit_every_alt :: "('a ⇒ 'a) ⇒ nat ⇒ 'a list ⇒ 'a list" where
+    "visit_every_alt f every xs ≡ map_every_start f every 1 xs"
+
+  text‹Essentially, \<^term>‹start› and \<^term>‹start mod every› behave the same.›
+  lemma map_every_start_cycle:
+    "map_every_start f every (start + k*every) xs = map_every_start f every start xs"
+    proof(induction xs arbitrary: start)
+      case Nil
+      show "map_every_start f every (start + k * every) [] = map_every_start f every start []"
+        by(simp add: map_every_start_def)
+    next
+      case (Cons x xs)
+      from Cons.IH[of "Suc start"]
+        show "map_every_start f every (start + k * every) (x # xs) =
+              map_every_start f every start (x # xs)"
+        by(simp add: map_every_start_def)
+    qed
+  corollary map_every_start_cycle_zero:
+    "map_every_start f every every xs = map_every_start f every 0 xs"
+    using map_every_start_cycle[where k=1 and start=0, simplified] by blast
+
+  lemma map_every_start_fst_zero:
+    "map_every_start f every 0 (x # xs) = f x # map_every_start f every (Suc 0) xs"
+    by(simp add: map_every_start_def)
+
+  text‹
+  The first \<^term>‹n› elements are not processed by \<^term>‹f›,
+  as long as \<^term>‹n› is less than the \<^term>‹every› cycle.
+  ›
+  lemma map_every_start_skip_first: "Suc n < every ⟹
+         map_every_start f every (every - (Suc n)) (x # xs) =
+         x # map_every_start f every (every - n) xs"
+    by(simp add: map_every_start_def Suc_diff_Suc)
+
+  lemma map_every_start_append:
+    "map_every_start f n s (ds1 @ ds2) =
+     map_every_start f n s ds1 @ map_every_start f n (s + length ds1) ds2"
+    by(simp add: map_every_start_def enumerate_append_eq)
+
+  text‹
+  The \<^const>‹walk› function and \<^const>‹map_every_start› behave the same,
+  as long as the starting \<^term>‹n› is less than the \<^term>‹every› cycle,
+  because \<^const>‹walk› allows pushing the start arbitrarily far and
+  \<^const>‹map_every_start› only allows deferring the start within
+  the \<^term>‹every› cycle.
+  This generalization is needed to strengthen the induction hypothesis
+  for the proof.
+  ›
+  lemma walk_eq_map_every_start:
+    "n ≤ every ⟹ walk f every n xs = map_every_start f (Suc every) (Suc every - n) xs"
+    proof(induction xs arbitrary: n)
+      case Nil
+      show "walk f every n [] = map_every_start f (Suc every) (Suc every - n) []"
+        by(simp add: map_every_start_def)
+    next
+      case (Cons x xs)
+      then show "walk f every n (x # xs) = map_every_start f (Suc every) (Suc every - n) (x # xs)"
+      proof(cases n)
+        case 0
+        with Cons.IH show ?thesis
+          by(simp add: map_every_start_cycle_zero map_every_start_fst_zero)
+      next
+        case (Suc n2)
+        with Cons.prems map_every_start_skip_first[of n2 "Suc every"] have
+          "map_every_start f (Suc every) (Suc every - Suc n2) (x # xs) =
+           x # map_every_start f (Suc every) (Suc every - n2) xs"
+          by fastforce
+        with Suc Cons show ?thesis
+          by(simp)
+      qed
+    qed
+
+  corollary walk_eq_visit_every_alt:
+    "walk f every every xs = visit_every_alt f (Suc every) xs"
+    unfolding visit_every_alt_def
+    using walk_eq_map_every_start by fastforce
+
+  text‹
+  Despite their very different implementations, our alternative visit function behaves the same
+  as our original visit function.
+  Text the theorem includes \<^term>‹Suc every› to express that we exclude \<^term>‹every = 0›.
+  ›
+  theorem visit_every_eq_visit_every_alt:
+    "visit_every f (Suc every) xs = visit_every_alt f (Suc every) xs"
+    unfolding visit_every_def
+    using walk_eq_visit_every_alt by fastforce
+
+  text‹Also, the \<^const>‹iterate› function we implemented above can be implemented by a simple \<^const>‹fold›.›
+  lemma fold_upt_helper: assumes n_geq_1: "Suc 0 ≤ n"
+    shows "fold f [Suc s..<n + s] (f s xs) = fold f [s..<n + s] xs"
+  proof -
+    from n_geq_1 have "[s..<n + s] = s#[Suc s..<n + s]" by (simp add: Suc_le_lessD upt_rec)
+    from this have "fold f [s..<n + s] xs = fold f (s#[Suc s..<n + s]) xs" by simp
+    also have "fold f (s#[Suc s..<n + s]) xs = fold f [Suc s..<n + s] (f s xs)" by(simp)
+    ultimately show ?thesis by simp
+  qed
+
+  theorem iterate_eq_fold: "iterate n f s xs = fold f [s ..< n+s] xs"
+  proof(induction n arbitrary: s xs)
+    case 0
+    then show "iterate 0 f s xs = fold f [s..<0 + s] xs" by simp
+  next
+    case (Suc n)
+    from Suc show "iterate (Suc n) f s xs = fold f [s..<Suc n + s] xs"
+      by(simp add: fold_upt_helper not_less_eq_eq)
+  qed
+
+section‹Efficient Implementation›
+text ‹
+As noted on this page, the only doors that remain open are those whose numbers are perfect squares.
+Yet, rosettacode does not want us to take this shortcut, since we want to compare implementations
+across programming languages. But we can prove that our code computes the same result as reporting
+all doors with a perfect square number as open:
+›
+  theorem "[(i, door) ← enumerate 1 onehundred_doors. door = Open] =
+           [(i*i, Open). i ← [1..<11]]"
+    by code_simp
+end

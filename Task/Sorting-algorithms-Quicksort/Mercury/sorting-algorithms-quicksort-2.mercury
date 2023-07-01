@@ -1,0 +1,183 @@
+%%%-------------------------------------------------------------------
+
+:- module quicksort_task_for_arrays.
+
+:- interface.
+:- import_module io.
+:- pred main(io, io).
+:- mode main(di, uo) is det.
+
+:- implementation.
+:- import_module array.
+:- import_module int.
+:- import_module list.
+
+%%%-------------------------------------------------------------------
+%%%
+%%% Partitioning a subarray into two halves: one with elements less
+%%% than or equal to a pivot, the other with elements greater than or
+%%% equal to a pivot.
+%%%
+%%% The implementation is tail-recursive.
+%%%
+
+:- pred partition(pred(T, T), T, int, int, array(T), array(T), int).
+:- mode partition(pred(in, in) is semidet, in, in, in,
+                  array_di, array_uo, out).
+partition(Less_than, Pivot, I_first, I_last, Arr0, Arr, I_pivot) :-
+  I = I_first - 1,
+  J = I_last + 1,
+  partition_loop(Less_than, Pivot, I, J, Arr0, Arr, I_pivot).
+
+:- pred partition_loop(pred(T, T), T, int, int,
+                       array(T), array(T), int).
+:- mode partition_loop(pred(in, in) is semidet, in, in, in,
+                       array_di, array_uo, out).
+partition_loop(Less_than, Pivot, I, J, Arr0, Arr, Pivot_index) :-
+  if (I = J) then (Arr = Arr0,
+                   Pivot_index = I)
+  else (I1 = I + 1,
+        I2 = search_right(Less_than, Pivot, I1, J, Arr0),
+        (if (I2 = J) then (Arr = Arr0,
+                           Pivot_index = J)
+         else (J1 = J - 1,
+               J2 = search_left(Less_than, Pivot, I2, J1, Arr0),
+               swap(I2, J2, Arr0, Arr1),
+               partition_loop(Less_than, Pivot, I2, J2, Arr1, Arr,
+                              Pivot_index)))).
+
+:- func search_right(pred(T, T), T, int, int, array(T)) = int.
+:- mode search_right(pred(in, in) is semidet,
+                     in, in, in, in) = out is det.
+search_right(Less_than, Pivot, I, J, Arr0) = K :-
+  if (I = J) then (I = K)
+  else if Less_than(Pivot, Arr0^elem(I)) then (I = K)
+  else (search_right(Less_than, Pivot, I + 1, J, Arr0) = K).
+
+:- func search_left(pred(T, T), T, int, int, array(T)) = int.
+:- mode search_left(pred(in, in) is semidet,
+                    in, in, in, in) = out is det.
+search_left(Less_than, Pivot, I, J, Arr0) = K :-
+  if (I = J) then (J = K)
+  else if Less_than(Arr0^elem(J), Pivot) then (J = K)
+  else (search_left(Less_than, Pivot, I, J - 1, Arr0) = K).
+
+%%%-------------------------------------------------------------------
+%%%
+%%% Quicksort with median of three as pivot.
+%%%
+%%% Like most quicksort implementations, this one is *not*
+%%% tail-recursive.
+%%%
+
+%% quicksort/3 sorts an entire array.
+:- pred quicksort(pred(T, T), array(T), array(T)).
+:- mode quicksort(pred(in, in) is semidet, array_di, array_uo) is det.
+quicksort(Less_than, Arr0, Arr) :-
+  bounds(Arr0, I_first, I_last),
+  quicksort(Less_than, I_first, I_last, Arr0, Arr).
+
+%% quicksort/5 sorts a subarray.
+:- pred quicksort(pred(T, T), int, int, array(T), array(T)).
+:- mode quicksort(pred(in, in) is semidet, in, in,
+                  array_di, array_uo) is det.
+quicksort(Less_than, I_first, I_last, Arr0, Arr) :-
+  if (I_last - I_first >= 2)
+  then (median_of_three(Less_than, I_first, I_last,
+                        Arr0, Arr1, Pivot),
+
+        %% Partition only from I_first to I_last - 1.
+        partition(Less_than, Pivot, I_first, I_last - 1,
+                  Arr1, Arr2, K),
+
+        %% Now everything that is less than the pivot is to the
+        %% left of K.
+
+        %% Put the pivot at K, moving the element that had been there
+        %% to the end. If K = I_last, then this element is actually
+        %% garbage and will be overwritten with the pivot, which turns
+        %% out to be the greatest element. Otherwise, the moved
+        %% element is not less than the pivot and so the partitioning
+        %% is preserved.
+        Arr2^elem(K) = Elem_to_move,
+        (Arr2^elem(I_last) := Elem_to_move) = Arr3,
+        (Arr3^elem(K) := Pivot) = Arr4,
+
+        %% Sort the subarray on either side of the pivot.
+        quicksort(Less_than, I_first, K - 1, Arr4, Arr5),
+        quicksort(Less_than, K + 1, I_last, Arr5, Arr))
+
+  else if (I_last - I_first = 1) % Two elements.
+  then (Elem_first = Arr0^elem(I_first),
+        Elem_last = Arr0^elem(I_last),
+        (if Less_than(Elem_first, Elem_last)
+         then (Arr = Arr0)
+         else ((Arr0^elem(I_first) := Elem_last) = Arr1,
+               (Arr1^elem(I_last) := Elem_first) = Arr)))
+
+  else (Arr = Arr0).            % Zero or one element.
+
+%% median_of_three/6 both chooses a pivot and rearranges the array
+%% elements so one may partition them from I_first to I_last - 1,
+%% leaving the pivot element out of the array.
+:- pred median_of_three(pred(T, T), int, int, array(T), array(T), T).
+:- mode median_of_three(pred(in, in) is semidet, in, in,
+                        array_di, array_uo, out) is det.
+median_of_three(Less_than, I_first, I_last, Arr0, Arr, Pivot) :-
+  I_middle = I_first + ((I_last - I_first) // 2),
+  Elem_first = Arr0^elem(I_first),
+  Elem_middle = Arr0^elem(I_middle),
+  Elem_last = Arr0^elem(I_last),
+  (if pred_xor(Less_than, Less_than,
+               Elem_middle, Elem_first,
+               Elem_last, Elem_first)
+   then (Pivot = Elem_first,
+         (if Less_than(Elem_middle, Elem_last)
+          then (Arr1 = (Arr0^elem(I_first) := Elem_middle),
+                Arr = (Arr1^elem(I_middle) := Elem_last))
+          else (Arr = (Arr0^elem(I_first) := Elem_last))))
+   else if pred_xor(Less_than, Less_than,
+                    Elem_middle, Elem_first,
+                    Elem_middle, Elem_last)
+   then (Pivot = Elem_middle,
+         (if Less_than(Elem_first, Elem_last)
+          then (Arr = (Arr0^elem(I_middle) := Elem_last))
+          else (Arr1 = (Arr0^elem(I_first) := Elem_last),
+                Arr = (Arr1^elem(I_middle) := Elem_first))))
+   else (Pivot = Elem_last,
+         (if Less_than(Elem_first, Elem_middle)
+          then (Arr = Arr0)
+          else (Arr1 = (Arr0^elem(I_first) := Elem_middle),
+                Arr = (Arr1^elem(I_middle) := Elem_first))))).
+
+:- pred pred_xor(pred(T, T), pred(T, T), T, T, T, T).
+:- mode pred_xor(pred(in, in) is semidet,
+                 pred(in, in) is semidet,
+                 in, in, in, in) is semidet.
+pred_xor(P, Q, W, X, Y, Z) :-
+  if P(W, X) then (not Q(Y, Z)) else Q(Y, Z).
+
+%%%-------------------------------------------------------------------
+
+:- func example_numbers = list(int).
+example_numbers = [1, 3, 9, 5, 8, 6, 5, 0, 1, 7, 9, 8, 6, 4, 2, -28,
+                   30, 31, 1, 3, 9, 5, 8, 6, 5, 1, 6, 4, 2, -28, 30,
+                   -50, 500, -1234, 1234, 12].
+
+main(!IO) :-
+  (array.from_list(example_numbers, Arr0)),
+  print_line("", !IO),
+  print_line(Arr0, !IO),
+  print_line("", !IO),
+  print_line("                                               |", !IO),
+  print_line("                                               V", !IO),
+  print_line("", !IO),
+  quicksort(<, Arr0, Arr1),
+  print_line(Arr1, !IO),
+  print_line("", !IO).
+
+%%%-------------------------------------------------------------------
+%%% local variables:
+%%% mode: mercury
+%%% prolog-indent-width: 2
+%%% end:

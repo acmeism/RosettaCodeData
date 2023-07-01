@@ -1,0 +1,218 @@
+PROGRAM "truthtables"
+VERSION "0.001"
+
+$$MaxTop = 80
+
+TYPE VARIABLE
+  STRING*1 .name
+  SBYTE .value
+END TYPE
+
+TYPE STACKOFBOOL
+  SSHORT .top
+  SBYTE .elements[$$MaxTop]
+END TYPE
+
+DECLARE FUNCTION Entry()
+INTERNAL FUNCTION IsOperator(c$)
+INTERNAL FUNCTION VariableIndex(c$)
+INTERNAL FUNCTION SetVariables(pos%)
+INTERNAL FUNCTION ProcessExpression()
+INTERNAL FUNCTION EvaluateExpression()
+
+' Stack manipulation functions
+INTERNAL FUNCTION IsFull(STACKOFBOOL @s)
+INTERNAL FUNCTION IsEmpty(STACKOFBOOL @s)
+INTERNAL FUNCTION Peek(STACKOFBOOL @s)
+INTERNAL FUNCTION Push(STACKOFBOOL @s, val@)
+INTERNAL FUNCTION Pop(STACKOFBOOL @s)
+INTERNAL FUNCTION MakeEmpty(STACKOFBOOL @s)
+INTERNAL FUNCTION ElementsCount(STACKOFBOOL @s)
+
+FUNCTION Entry()
+  SHARED VARIABLE variables[]
+  SHARED variablesLength%
+  SHARED expression$
+
+  DIM variables[23]
+  PRINT "Accepts single-character variables (except for 'T' and 'F',"
+  PRINT "which specify explicit true or false values), postfix, with"
+  PRINT "&|!^ for and, or, not, xor, respectively; optionally"
+  PRINT "seperated by space. Just enter nothing to quit."
+  DO
+    PRINT
+    expression$ = INLINE$("Boolean expression: ")
+    ProcessExpression()
+    IF LEN(expression$) = 0 THEN
+      EXIT DO
+    END IF
+    variablesLength% = 0
+    FOR i% = 0 TO LEN(expression$) - 1
+      e$ = CHR$(expression${i%})
+      IF (!IsOperator(e$)) && (e$ <> "T") && (e$ <> "F") && (VariableIndex(e$) = -1) THEN
+        variables[variablesLength%].name = LEFT$(e$, 1)
+        variables[variablesLength%].value = $$FALSE
+        INC variablesLength%
+      END IF
+    NEXT i%
+    PRINT
+    IF variablesLength% = 0 THEN
+      PRINT "No variables were entered."
+    ELSE
+      FOR i% = 0 TO variablesLength% - 1
+        PRINT variables[i%].name; "  ";
+      NEXT i%
+      PRINT expression$
+      PRINT CHR$(ASC("="), variablesLength% * 3 + LEN(expression$))
+      SetVariables(0)
+    END IF
+  LOOP
+END FUNCTION
+
+' Removes space and converts to upper case
+FUNCTION ProcessExpression()
+  SHARED expression$
+  '
+  exprTmp$ = ""
+  FOR i% = 0 TO LEN(expression$) - 1
+    IF CHR$(expression${i%}) <> " " THEN
+      exprTmp$ = exprTmp$ + UCASE$(CHR$(expression${i%}))
+    END IF
+  NEXT i%
+  expression$ = exprTmp$
+END FUNCTION
+
+FUNCTION IsOperator(c$)
+  RETURN (c$ = "&") || (c$ = "|") || (c$ = "!") || (c$ = "^")
+END FUNCTION
+
+FUNCTION VariableIndex(c$)
+  SHARED VARIABLE variables[]
+  SHARED variablesLength%
+  '
+  FOR i% = 0 TO variablesLength% - 1
+    IF variables[i%].name = c$ THEN
+      RETURN i%
+    END IF
+  NEXT i%
+  RETURN -1
+END FUNCTION
+
+FUNCTION SetVariables(pos%)
+  SHARED VARIABLE variables[]
+  SHARED variablesLength%
+  '
+  SELECT CASE TRUE
+    CASE pos% > variablesLength%:
+      PRINT
+      PRINT "Argument to SetVariables cannot be greater than the number of variables."
+      QUIT(1)
+    CASE pos% = variablesLength%:
+      FOR i% = 0 TO variablesLength% - 1
+        IF variables[i%].value THEN
+          PRINT "T  ";
+        ELSE
+          PRINT "F  ";
+        END IF
+      NEXT i%
+      IF EvaluateExpression() THEN
+        PRINT "T"
+      ELSE
+        PRINT "F"
+      END IF
+    CASE ELSE:
+      variables[pos%].value = $$FALSE
+      SetVariables(pos% + 1)
+      variables[pos%].value = $$TRUE
+      SetVariables(pos% + 1)
+  END SELECT
+END FUNCTION
+
+FUNCTION EvaluateExpression()
+  SHARED VARIABLE variables[]
+  SHARED expression$
+  STACKOFBOOL s
+  '
+  MakeEmpty(@s)
+  FOR i% = 0 TO LEN(expression$) - 1
+    e$ = CHR$(expression${i%})
+    vi% = VariableIndex(e$)
+    SELECT CASE TRUE
+      CASE e$ = "T":
+        Push(@s, $$TRUE)
+      CASE e$ = "F":
+        Push(@s, $$FALSE)
+      CASE vi% >= 0:
+        Push(@s, variables[vi%].value)
+      CASE ELSE:
+        SELECT CASE e$
+          CASE "&":
+            Push(@s, Pop(@s) & Pop(@s))
+          CASE "|":
+            Push(@s, Pop(@s) | Pop(@s))
+          CASE "!":
+            Push(@s, !Pop(@s))
+          CASE "^":
+            Push(@s, Pop(@s) ^ Pop(@s))
+          CASE ELSE:
+            PRINT
+            PRINT "Non-conformant character "; e$; " in expression.";
+            QUIT(1)
+        END SELECT
+    END SELECT
+  NEXT i%
+  IF ElementsCount(@s) <> 1 THEN
+    PRINT
+    PRINT "Stack should contain exactly one element."
+    QUIT(1)
+  END IF
+  RETURN Peek(@s)
+END FUNCTION
+
+FUNCTION IsFull(STACKOFBOOL s)
+  RETURN s.top = $$MaxTop
+END FUNCTION
+
+FUNCTION IsEmpty(STACKOFBOOL s)
+  RETURN s.top = -1
+END FUNCTION
+
+FUNCTION Peek(STACKOFBOOL s)
+  IF !IsEmpty(@s) THEN
+    RETURN s.elements[s.top]
+  ELSE
+    PRINT "Stack is empty."
+    QUIT(1)
+  END IF
+END FUNCTION
+
+FUNCTION Push(STACKOFBOOL s, val@)
+  IF !IsFull(@s) THEN
+    INC s.top
+    s.elements[s.top] = val@
+  ELSE
+    PRINT "Stack is full."
+    QUIT(1)
+  END IF
+END FUNCTION
+
+FUNCTION Pop(STACKOFBOOL s)
+  IF !IsEmpty(@s) THEN
+    res@ = s.elements[s.top]
+    DEC s.top
+    RETURN res@
+  ELSE
+    PRINT
+    PRINT "Stack is empty."
+    QUIT(1)
+  END IF
+END FUNCTION
+
+FUNCTION MakeEmpty(STACKOFBOOL s)
+  s.top = -1
+END FUNCTION
+
+FUNCTION ElementsCount(STACKOFBOOL s)
+  RETURN s.top + 1
+END FUNCTION
+END PROGRAM

@@ -1,0 +1,1 @@
+p Thread.current.backtrace

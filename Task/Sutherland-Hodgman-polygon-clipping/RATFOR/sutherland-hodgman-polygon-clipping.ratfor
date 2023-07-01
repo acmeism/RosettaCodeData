@@ -1,0 +1,269 @@
+# Sutherland-Hodgman polygon clipping.
+#
+# On a POSIX platform, the program can be compiled with f2c and run
+# somewhat as follows:
+#
+#    ratfor77 sutherland-hodgman.r > sutherland-hodgman.f
+#    f2c -C sutherland-hodgman.f
+#    cc sutherland-hodgman.c -lf2c
+#    ./a.out
+#
+# With gfortran, a little differently:
+#
+#    ratfor77 sutherland-hodgman.r > sutherland-hodgman.f
+#    gfortran -fcheck=all -std=legacy sutherland-hodgman.f
+#    ./a.out
+
+function evalln (x1, y1, x2, y2, x)
+  #
+  # Given the line (x1,y1)--(x2,y2), evaluate it at x.
+  #
+  implicit none
+  real evalln
+  real x1, y1, x2, y2, x
+  real dy, dx, slope, xcept
+  dy = y2 - y1
+  dx = x2 - x1
+  slope = dy / dx
+  xcept = ((dx * y1) - (dy * x1)) / dx
+  evalln = (slope * x) + xcept
+end
+
+subroutine xsctln (x1, y1, x2, y2, x3, y3, x4, y4, x, y)
+  #
+  # Given lines (x1,y1)--(x2,y2) and (x3,y3)--(x4,y4), find their
+  # intersection (x,y).
+  #
+  implicit none
+  real x1, y1, x2, y2, x3, y3, x4, y4, x, y
+  real evalln
+  real denom, xnumer, ynumer, xyyx12, xyyx34
+  if (x1 == x2)
+    {
+      x = x1
+      y = evalln (x3, y3, x4, y4, x1)
+    }
+  else if (x3 == x4)
+    {
+      x = x3
+      y = evalln (x1, y1, x2, y2, x3)
+    }
+  else
+    {
+      denom = ((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4))
+      xyyx12 = (x1 * y2) - (y1 * x2)
+      xyyx34 = (x3 * y4) - (y3 * x4)
+      xnumer = (xyyx12 * (x3 - x4)) - ((x1 - x2) * xyyx34)
+      ynumer = (xyyx12 * (y3 - y4)) - ((y1 - y2) * xyyx34)
+      x = xnumer / denom
+      y = ynumer / denom
+    }
+end
+
+function ptleft (x, y, x1, y1, x2, y2)
+  #
+  # Is the point (x,y) left of the edge (x1,y1)--(x2,y2)?
+  #
+  implicit none
+  logical ptleft
+  real x, y, x1, y1, x2, y2
+  ptleft = (((x - x1) * (y2 - y1)) - ((x2 - x1) * (y - y1)) < 0)
+end
+
+subroutine clpsbe (xs1, ys1, xs2, ys2, xc1, yc1, xc2, yc2, n, pts)
+  #
+  # Clip subject edge (xs1,ys1)--(xs2,ys2) with clip edge
+  # (xc1,yc1)--(xc2,yc2).
+  #
+  implicit none
+  real xs1, ys1, xs2, ys2, xc1, yc1, xc2, yc2
+  integer n
+  real pts(2,*), x, y
+  logical ptleft, s2left, s1left
+  s2left = ptleft (xs2, ys2, xc1, yc1, xc2, yc2)
+  s1left = ptleft (xs1, ys1, xc1, yc1, xc2, yc2)
+  if (s2left)
+    {
+      if (s1left)
+        {
+          n = n + 1
+          pts(1,n) = xs2
+          pts(2,n) = ys2
+        }
+      else
+        {
+          call xsctln (xs1, ys1, xs2, ys2, xc1, yc1, xc2, yc2, x, y)
+          n = n + 1
+          pts(1,n) = x
+          pts(2,n) = y
+          n = n + 1
+          pts(1,n) = xs2
+          pts(2,n) = ys2
+        }
+    }
+  else if (s1left)
+    {
+      call xsctln (xs1, ys1, xs2, ys2, xc1, yc1, xc2, yc2, x, y)
+      n = n + 1
+      pts(1,n) = x
+      pts(2,n) = y
+    }
+end
+
+subroutine sublp (nsub, ptssub, xc1, yc1, xc2, yc2, n, pts)
+  #
+  # Loop over the subject points in ptssub, clipping the edges
+  # therein. Produce a result in pts.
+  #
+  implicit none
+  integer nsub, n
+  real ptssub(2,*), pts(2,*)
+  real xc1, yc1, xc2, yc2
+  real xs1, ys1, xs2, ys2
+  integer i, j
+  for (i = 1; i <= nsub; i = i + 1)
+    {
+      xs2 = ptssub(1,i)
+      ys2 = ptssub(2,i)
+      j = i - 1
+      if (j == 0) j = nsub
+      xs1 = ptssub(1,j)
+      ys1 = ptssub(2,j)
+      call clpsbe (xs1, ys1, xs2, ys2, xc1, yc1, xc2, yc2, n, pts)
+    }
+end
+
+subroutine clip (nsub, ptssub, nclp, ptsclp, ptswrk)
+  #
+  # Loop over the clip points in ptsclp, clipping the subject stored
+  # in ptssub. Use ptswrk as workspace.
+  #
+  implicit none
+  integer nsub, nclp
+  real ptssub(2,*), ptsclp(2,*), ptswrk(2,*)
+  integer i, j, nwrk
+  real xc1, yc1, xc2, yc2
+  for (i = 1; i <= nclp; i = i + 1)
+    {
+      xc2 = ptsclp(1,i)
+      yc2 = ptsclp(2,i)
+      j = i - 1
+      if (j == 0) j = nclp
+      xc1 = ptsclp(1,j)
+      yc1 = ptsclp(2,j)
+      nwrk = 0
+      call sublp (nsub, ptssub, xc1, yc1, xc2, yc2, nwrk, ptswrk)
+
+      # Copy the new subject over the old subject.
+      for (j = 1; j <= nwrk; j = j + 1)
+        {
+          ptssub(1,j) = ptswrk(1,j)
+          ptssub(2,j) = ptswrk(2,j)
+        }
+      nsub = nwrk
+    }
+end
+
+subroutine wrtpts (eps, n, pts, linclr, filclr)
+  #
+  # Write a polygon as PostScript code.
+  #
+  implicit none
+  character*10 linclr, filclr
+  integer eps, n, i
+  real pts(2,*)
+
+10 format (F12.6, ' ', F12.6, ' moveto')
+20 format (F12.6, ' ', F12.6, ' lineto')
+30 format ('closepath')
+40 format ('gsave')
+50 format ('grestore')
+60 format ('fill')
+70 format ('stroke')
+80 format (A10, ' setrgbcolor')
+
+  write (eps, 10) pts(1,1), pts(2,1)
+  for (i = 2; i <= n; i = i + 1)
+    write (eps, 20) pts(1,i), pts(2,i)
+  write (eps, 30)
+  write (eps, 80) linclr
+  write (eps, 40)
+  write (eps, 80) filclr
+  write (eps, 60)
+  write (eps, 50)
+  write (eps, 70)
+end
+
+subroutine wrteps (eps, nsub, ptssub, nclp, ptsclp, nres, ptsres)
+  #
+  # Write an Encapsulated PostScript file.
+  #
+  implicit none
+  integer eps
+  integer nsub, nclp, nres
+  real ptssub(2,*), ptsclp(2,*), ptsres(2,*)
+
+10 format ('%!PS-Adobe-3.0 EPSF-3.0')
+20 format ('%%BoundingBox: 40 40 360 360')
+30 format ('0 setlinewidth ')
+40 format ('2 setlinewidth')
+50 format ('[10 8] 0 setdash')
+60 format ('%%EOF')
+
+  write (eps, 10)
+  write (eps, 20)
+  write (eps, 30)
+  call wrtpts (eps, nclp, ptsclp, '.5 0 0    ', '1 .7 .7   ')
+  call wrtpts (eps, nsub, ptssub, '0 .2 .5   ', '.4 .7 1   ')
+  write (eps, 40)
+  write (eps, 50)
+  call wrtpts (eps, nres, ptsres, '.5 0 .5   ', '.7 .3 .8  ')
+  write (eps, 60)
+end
+
+define(NMAX,100)              # Maximum number of points in a polygon.
+define(EPSF,9)                # Unit number for the EPS file.
+
+program shclip
+  implicit none
+  integer nsub, nclp, nres
+  real ptssub(2,NMAX), ptsclp(2,NMAX), ptsres(2,NMAX), ptswrk(2,NMAX)
+  integer i
+  integer eps
+
+  nsub = 9
+  ptssub(1,1) = 50; ptssub(2,1) = 150
+  ptssub(1,2) = 200; ptssub(2,2) = 50
+  ptssub(1,3) = 350; ptssub(2,3) = 150
+  ptssub(1,4) = 350; ptssub(2,4) = 300
+  ptssub(1,5) = 250; ptssub(2,5) = 300
+  ptssub(1,6) = 200; ptssub(2,6) = 250
+  ptssub(1,7) = 150; ptssub(2,7) = 350
+  ptssub(1,8) = 100; ptssub(2,8) = 250
+  ptssub(1,9) = 100; ptssub(2,9) = 200
+
+  nclp = 4
+  ptsclp(1,1) = 100; ptsclp(2,1) = 100
+  ptsclp(1,2) = 300; ptsclp(2,2) = 100
+  ptsclp(1,3) = 300; ptsclp(2,3) = 300
+  ptsclp(1,4) = 100; ptsclp(2,4) = 300
+
+  # Copy the subject points to the "result" array.
+  for (i = 1; i <= nsub; i = i + 1)
+    {
+      ptsres(1,i) = ptssub(1,i)
+      ptsres(2,i) = ptssub(2,i)
+    }
+  nres = nsub
+
+  call clip (nres, ptsres, nclp, ptsclp, ptswrk)
+  for (i = 1; i <= nres; i = i + 1)
+    write (*, 1000) ptsres(1,i), ptsres(2,i)
+1000 format ('(', F8.4, ', ', F8.4, ')')
+
+  eps = EPSF
+  open (unit=eps, file='sutherland-hodgman.eps')
+  call wrteps (eps, nsub, ptssub, nclp, ptsclp, nres, ptsres)
+  write (*, 1010)
+1010 format ('Wrote sutherland-hodgman.eps')
+end

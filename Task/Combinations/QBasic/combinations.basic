@@ -1,0 +1,12 @@
+SUB iterate (curr$, start, stp, depth)
+  FOR i = start TO stp
+    IF depth = 0 THEN PRINT curr$ + " " + STR$(i)
+    CALL iterate(curr$ + " " + STR$(i), i + 1, stp, depth - 1)
+  NEXT i
+END SUB
+
+INPUT "Enter n comb m.  ", n, m
+
+outstr$ = ""
+CALL iterate(outstr$, 0, m - 1, n - 1)
+END

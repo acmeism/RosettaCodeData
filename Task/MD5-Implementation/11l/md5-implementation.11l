@@ -1,0 +1,59 @@
+-V
+   rotate_amounts = [7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+                     5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20, 5,  9, 14, 20,
+                     4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+                     6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21]
+
+   constants = (0.<64).map(i -> UInt32(UInt64(abs(sin(i + 1)) * 2.0 ^ 32) [&] FFFF'FFFF))
+
+   init_values = (UInt32(6745'2301), UInt32(EFCD'AB89), UInt32(98BA'DCFE), UInt32(1032'5476))
+
+[((UInt32, UInt32, UInt32) -> UInt32)] functions
+functions [+]= (b, c, d) -> (b [&] c) [|] ((-)b [&] d)
+functions [+]= (b, c, d) -> (d [&] b) [|] ((-)d [&] c)
+functions [+]= (b, c, d) -> b (+) c (+) d
+functions [+]= (b, c, d) -> c (+) (b [|] (-)d)
+
+[(Int -> Int)] index_functions
+index_functions [+]= i -> i
+index_functions [+]= i -> (5 * i + 1) % 16
+index_functions [+]= i -> (3 * i + 5) % 16
+index_functions [+]= i -> (7 * i) % 16
+
+F md5(=message)
+   V orig_len_in_bits = UInt64(8) * message.len
+   message.append(8'0)
+   L message.len % 64 != 56
+      message.append(0)
+   message.extend(bytes_from_int(orig_len_in_bits))
+
+   V hash_pieces = init_values
+
+   L(chunk_ofst) (0 .< message.len).step(64)
+      V (a, b, c, d) = hash_pieces
+      V chunk = message[chunk_ofst .+ 64]
+      L(i) 64
+         V f = :functions[i I/ 16](b, c, d)
+         V g = :index_functions[i I/ 16](i)
+         V to_rotate = a + f + :constants[i] + UInt32(bytes' chunk[4 * g .+ 4])
+         V new_b = UInt32(b + rotl(to_rotate, :rotate_amounts[i]))
+         (a, b, c, d) = (d, new_b, b, c)
+      L(val) (a, b, c, d)
+         hash_pieces[L.index] += val
+
+   [Byte] r
+   L(x) hash_pieces
+      r.extend([x [&] F'F, (x >> 8) [&] F'F, (x >> 16) [&] F'F, (x >> 24) [&] F'F])
+   R r
+
+F md5_to_hex(digest)
+   V s = ‘’
+   L(d) digest
+      s ‘’= hex(d).lowercase().zfill(2)
+   R s
+
+V demo = [Bytes(‘’), Bytes(‘a’), Bytes(‘abc’), Bytes(‘message digest’), Bytes(‘abcdefghijklmnopqrstuvwxyz’),
+          Bytes(‘ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789’),
+          Bytes(‘12345678901234567890123456789012345678901234567890123456789012345678901234567890’)]
+L(message) demo
+   print(md5_to_hex(md5(message))‘ <= "’message.decode(‘ascii’)‘"’)

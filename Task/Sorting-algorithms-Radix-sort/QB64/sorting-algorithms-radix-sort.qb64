@@ -1,0 +1,304 @@
+#lang QB64
+'* don't be an a$$. Keep this credit notice with the source:
+'* written/refactored by CodeGuy, 2018.
+'* also works with negative numbers.
+TESTN& = 63
+A$ = ""
+REDIM b(0 TO TESTN&) AS DOUBLE
+FOR s& = -1 TO 1 STEP 2
+    A$ = A$ + CHR$(13) + CHR$(10) + "Random order:"
+    FOR i = 0 TO TESTN&
+        b(i) = (1000 * RND) AND 1023
+        IF i MOD 2 THEN b(i) = -b(i)
+        IF i < TESTN& THEN
+            A$ = A$ + LTRIM$(STR$(b(i))) + ","
+        ELSE
+            A$ = A$ + LTRIM$(STR$(b(i))) + CHR$(13) + CHR$(10)
+        END IF
+    NEXT
+    RadixSort b(), 0, TESTN&, s&
+    IF s& = -1 THEN
+        A$ = A$ + "descending order" + CHR$(13) + CHR$(10)
+    ELSE
+        A$ = A$ + "ascending order" + CHR$(13) + CHR$(10)
+    END IF
+
+    FOR i = 0 TO TESTN&
+        PRINT b(i);
+        IF i < TESTN& THEN
+            A$ = A$ + LTRIM$(STR$(b(i))) + ","
+        ELSE
+            A$ = A$ + LTRIM$(STR$(b(i))) + CHR$(13) + CHR$(10)
+        END IF
+    NEXT
+NEXT
+PRINT A$
+TYPE MinMaxRec
+    min AS LONG
+    max AS LONG
+END TYPE
+
+SUB RadixSort (CGSortLibArr() AS DOUBLE, start&, finish&, order&)
+    ArrayIsInteger CGSortLibArr(), start&, finish&, errindex&, errcon&
+    IF errcon& THEN
+        '* use another stable sort and sort anyway
+        MergeSort CGSortLibArr(), start&, finish&, order&
+    ELSE
+        DIM RSMMrec AS MinMaxRec
+        GetMinMaxArray CGSortLibArr(), start&, finish&, RSMMrec
+        IF CGSortLibArr(RSMMrec.min) = CGSortLibArr(RSMMrec.max) THEN EXIT SUB '* no div0 bombs
+        delta# = CGSortLibArr(RSMMrec.max) - CGSortLibArr(RSMMrec.min)
+        DIM pow2 AS _UNSIGNED _INTEGER64
+        DIM NtmpN AS _UNSIGNED _INTEGER64
+        DIM Int64MaxShift AS _INTEGER64: Int64MaxShift = 2 ^ 64
+        REDIM ct&(-1 TO 1)
+        REDIM RadixCGSortLibArr(0 TO 1, finish& - start&) AS DOUBLE
+        SELECT CASE order&
+            CASE 1
+                pow2 = Int64MaxShift
+                bits& = LEN(Int64MaxShift) * 8
+                DO UNTIL bits& < 0
+                    FOR i& = start& TO finish&
+                        NtmpN = Int64MaxShift * (CGSortLibArr(i&) - CGSortLibArr(RSMMrec.min)) / (delta#)
+                        IF NtmpN AND pow2 THEN
+                            tmpradix% = 1
+                        ELSE
+                            tmpradix% = 0
+                        END IF
+                        RadixCGSortLibArr(tmpradix%, ct&(tmpradix%)) = CGSortLibArr(i&)
+                        ct&(tmpradix%) = ct&(tmpradix%) + 1
+                    NEXT
+                    c& = start&
+                    FOR i& = 0 TO 1
+                        FOR j& = 0 TO ct&(i&) - 1
+                            CGSortLibArr(c&) = RadixCGSortLibArr(i&, j&)
+                            c& = c& + 1
+                        NEXT
+                        ct&(i&) = 0
+                    NEXT
+                    pow2 = pow2 / 2
+                    bits& = bits& - 1
+                LOOP
+            CASE ELSE
+                pow2 = 1
+                FOR bits& = 0 TO 63
+                    FOR i& = start& TO finish&
+                        NtmpN = Int64MaxShift * (CGSortLibArr(i&) - CGSortLibArr(RSMMrec.min)) / (delta#)
+                        IF NtmpN AND pow2 THEN
+                            tmpradix% = 1
+                        ELSE
+                            tmpradix% = 0
+                        END IF
+                        RadixCGSortLibArr(tmpradix%, ct&(tmpradix%)) = CGSortLibArr(i&)
+                        ct&(tmpradix%) = ct&(tmpradix%) + 1
+                    NEXT
+                    c& = start&
+                    FOR i& = 0 TO 1
+                        FOR j& = 0 TO ct&(i&) - 1
+                            CGSortLibArr(c&) = RadixCGSortLibArr(i&, j&)
+                            c& = c& + 1
+                        NEXT
+                        ct&(i&) = 0
+                    NEXT
+                    pow2 = pow2 * 2
+                NEXT
+        END SELECT
+        ERASE RadixCGSortLibArr, ct&
+    END IF
+END SUB
+
+SUB ArrayIsInteger (CGSortLibArr() AS DOUBLE, start&, finish&, errorindex&, IsInt&)
+    IsInt& = 1
+    errorindex& = start&
+    FOR IsIntegerS& = start& TO finish&
+        IF CGSortLibArr(IsIntegerS&) MOD 1 THEN
+            errorindex& = IsIntegerS&
+            IsInt& = 0
+            EXIT FUNCTION
+        END IF
+    NEXT
+END FUNCTION
+
+SUB MergeSort (CGSortLibArr() AS DOUBLE, start&, finish&, order&)
+    SELECT CASE finish& - start&
+        CASE IS > 31
+            middle& = start& + (finish& - start&) \ 2
+            MergeSort CGSortLibArr(), start&, middle&, order&
+            MergeSort CGSortLibArr(), middle& + 1, finish&, order&
+            'IF order& = 1 THEN
+            EfficientMerge CGSortLibArr(), start&, finish&, order&
+            'ELSE
+            '    MergeRoutine CGSortLibArr(), start&, finish&, order&
+            'END IF
+        CASE IS > 0
+            InsertionSort CGSortLibArr(), start&, finish&, order&
+    END SELECT
+END SUB
+
+SUB EfficientMerge (right() AS DOUBLE, start&, finish&, order&)
+    half& = start& + (finish& - start&) \ 2
+    REDIM left(start& TO half&) AS DOUBLE '* hold the first half of the array in left() -- must be the same type as right()
+    FOR LoadLeft& = start& TO half&
+        left(LoadLeft&) = right(LoadLeft&)
+    NEXT
+    SELECT CASE order&
+        CASE 1
+            i& = start&
+            j& = half& + 1
+            insert& = start&
+            DO
+                IF i& > half& THEN '* left() exhausted
+                    IF j& > finish& THEN '* right() exhausted
+                        EXIT DO
+                    ELSE
+                        '* stuff remains in right to be inserted, so flush right()
+                        WHILE j& <= finish&
+                            right(insert&) = right(j&)
+                            j& = j& + 1
+                            insert& = insert& + 1
+                        WEND
+                        EXIT DO
+                        '* and exit
+                    END IF
+                ELSE
+                    IF j& > finish& THEN
+                        WHILE i& < LoadLeft&
+                            right(insert&) = left(i&)
+                            i& = i& + 1
+                            insert& = insert& + 1
+                        WEND
+                        EXIT DO
+                    ELSE
+                        IF right(j&) < left(i&) THEN
+                            right(insert&) = right(j&)
+                            j& = j& + 1
+                        ELSE
+                            right(insert&) = left(i&)
+                            i& = i& + 1
+                        END IF
+                        insert& = insert& + 1
+                    END IF
+                END IF
+            LOOP
+        CASE ELSE
+            i& = start&
+            j& = half& + 1
+            insert& = start&
+            DO
+                IF i& > half& THEN '* left() exhausted
+                    IF j& > finish& THEN '* right() exhausted
+                        EXIT DO
+                    ELSE
+                        '* stuff remains in right to be inserted, so flush right()
+                        WHILE j& <= finish&
+                            right(insert&) = right(j&)
+                            j& = j& + 1
+                            insert& = insert& + 1
+                        WEND
+                        EXIT DO
+                        '* and exit
+                    END IF
+                ELSE
+                    IF j& > finish& THEN
+                        WHILE i& < LoadLeft&
+                            right(insert&) = left(i&)
+                            i& = i& + 1
+                            insert& = insert& + 1
+                        WEND
+                        EXIT DO
+                    ELSE
+                        IF right(j&) > left(i&) THEN
+                            right(insert&) = right(j&)
+                            j& = j& + 1
+                        ELSE
+                            right(insert&) = left(i&)
+                            i& = i& + 1
+                        END IF
+                        insert& = insert& + 1
+                    END IF
+                END IF
+            LOOP
+    END SELECT
+    ERASE left
+END SUB
+
+SUB GetMinMaxArray (CGSortLibArr() AS DOUBLE, Start&, Finish&, GetMinMaxArray_minmax AS MinMaxRec)
+    DIM GetGetMinMaxArray_minmaxArray_i AS LONG
+    DIM GetMinMaxArray_n AS LONG
+    DIM GetMinMaxArray_TT AS LONG
+    DIM GetMinMaxArray_NMod2 AS INTEGER
+    '* this is a workaround for the irritating malfunction
+    '* of MOD using larger numbers and small divisors
+    GetMinMaxArray_n = Finish& - Start&
+    GetMinMaxArray_TT = GetMinMaxArray_n MOD 10000
+    GetMinMaxArray_NMod2 = GetMinMaxArray_n - 10000 * ((GetMinMaxArray_n - GetMinMaxArray_TT) / 10000)
+    IF (GetMinMaxArray_NMod2 MOD 2) THEN
+        GetMinMaxArray_minmax.min = Start&
+        GetMinMaxArray_minmax.max = Start&
+        GetGetMinMaxArray_minmaxArray_i = Start& + 1
+    ELSE
+        IF CGSortLibArr(Start&) > CGSortLibArr(Finish&) THEN
+            GetMinMaxArray_minmax.max = Start&
+            GetMinMaxArray_minmax.min = Finish&
+        ELSE
+            GetMinMaxArray_minmax.min = Finish&
+            GetMinMaxArray_minmax.max = Start&
+        END IF
+        GetGetMinMaxArray_minmaxArray_i = Start& + 2
+    END IF
+
+    WHILE GetGetMinMaxArray_minmaxArray_i < Finish&
+        IF CGSortLibArr(GetGetMinMaxArray_minmaxArray_i) > CGSortLibArr(GetGetMinMaxArray_minmaxArray_i + 1) THEN
+            IF CGSortLibArr(GetGetMinMaxArray_minmaxArray_i) > CGSortLibArr(GetMinMaxArray_minmax.max) THEN
+                GetMinMaxArray_minmax.max = GetGetMinMaxArray_minmaxArray_i
+            END IF
+            IF CGSortLibArr(GetGetMinMaxArray_minmaxArray_i + 1) < CGSortLibArr(GetMinMaxArray_minmax.min) THEN
+                GetMinMaxArray_minmax.min = GetGetMinMaxArray_minmaxArray_i + 1
+            END IF
+        ELSE
+            IF CGSortLibArr(GetGetMinMaxArray_minmaxArray_i + 1) > CGSortLibArr(GetMinMaxArray_minmax.max) THEN
+                GetMinMaxArray_minmax.max = GetGetMinMaxArray_minmaxArray_i + 1
+            END IF
+            IF CGSortLibArr(GetGetMinMaxArray_minmaxArray_i) < CGSortLibArr(GetMinMaxArray_minmax.min) THEN
+                GetMinMaxArray_minmax.min = GetGetMinMaxArray_minmaxArray_i
+            END IF
+        END IF
+        GetGetMinMaxArray_minmaxArray_i = GetGetMinMaxArray_minmaxArray_i + 2
+    WEND
+END SUB
+
+SUB InsertionSort (CGSortLibArr() AS DOUBLE, start AS LONG, finish AS LONG, order&)
+    DIM InSort_Local_ArrayTemp AS DOUBLE
+    DIM InSort_Local_i AS LONG
+    DIM InSort_Local_j AS LONG
+    SELECT CASE order&
+        CASE 1
+            FOR InSort_Local_i = start + 1 TO finish
+                InSort_Local_ArrayTemp = CGSortLibArr(InSort_Local_i)
+                InSort_Local_j = InSort_Local_i - 1
+                DO UNTIL InSort_Local_j < start
+                    IF (InSort_Local_ArrayTemp < CGSortLibArr(InSort_Local_j)) THEN
+                        CGSortLibArr(InSort_Local_j + 1) = CGSortLibArr(InSort_Local_j)
+                        InSort_Local_j = InSort_Local_j - 1
+                    ELSE
+                        EXIT DO
+                    END IF
+                LOOP
+                CGSortLibArr(InSort_Local_j + 1) = InSort_Local_ArrayTemp
+            NEXT
+        CASE ELSE
+            FOR InSort_Local_i = start + 1 TO finish
+                InSort_Local_ArrayTemp = CGSortLibArr(InSort_Local_i)
+                InSort_Local_j = InSort_Local_i - 1
+                DO UNTIL InSort_Local_j < start
+                    IF (InSort_Local_ArrayTemp > CGSortLibArr(InSort_Local_j)) THEN
+                        CGSortLibArr(InSort_Local_j + 1) = CGSortLibArr(InSort_Local_j)
+                        InSort_Local_j = InSort_Local_j - 1
+                    ELSE
+                        EXIT DO
+                    END IF
+                LOOP
+                CGSortLibArr(InSort_Local_j + 1) = InSort_Local_ArrayTemp
+            NEXT
+    END SELECT
+END SUB

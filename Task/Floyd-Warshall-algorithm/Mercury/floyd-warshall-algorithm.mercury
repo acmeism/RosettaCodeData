@@ -1,0 +1,206 @@
+:- module floyd_warshall_task.
+
+:- interface.
+:- import_module io.
+:- pred main(io, io).
+:- mode main(di, uo) is det.
+
+:- implementation.
+:- import_module float.
+:- import_module int.
+:- import_module list.
+:- import_module string.
+:- import_module version_array2d.
+
+%%%-------------------------------------------------------------------
+
+%% Square arrays with 1-based indexing.
+
+:- func arr_init(int, T) = version_array2d(T).
+arr_init(N, Fill) = version_array2d.init(N, N, Fill).
+
+:- func arr_get(version_array2d(T), int, int) = T.
+arr_get(Arr, I, J) = Elem :-
+  I1 = I - 1,
+  J1 = J - 1,
+  Elem = Arr^elem(I1, J1).
+
+:- func arr_set(version_array2d(T), int, int, T) = version_array2d(T).
+arr_set(Arr0, I, J, Elem) = Arr :-
+  I1 = I - 1,
+  J1 = J - 1,
+  Arr = (Arr0^elem(I1, J1) := Elem).
+
+%%%-------------------------------------------------------------------
+
+:- func find_max_vertex(list({int, float, int})) = int.
+find_max_vertex(Edges) = find_max_vertex_(Edges, 0).
+
+:- func find_max_vertex_(list({int, float, int}), int) = int.
+find_max_vertex_([], MaxVertex0) = MaxVertex0.
+find_max_vertex_([{U, _, V} | Tail], MaxVertex0) = MaxVertex :-
+  MaxVertex = find_max_vertex_(Tail, max(max(MaxVertex0, U), V)).
+
+%%%-------------------------------------------------------------------
+
+:- func arbitrary_float = float.
+arbitrary_float = (12345.0).
+
+:- func nil_vertex = int.
+nil_vertex = 0.
+
+:- func floyd_warshall(list({int, float, int})) =
+   {int, version_array2d(float), version_array2d(int)}.
+floyd_warshall(Edges) = {N, Dist, Next} :-
+  N = find_max_vertex(Edges),
+  Dist0 = arr_init(N, arbitrary_float),
+  Next0 = arr_init(N, nil_vertex),
+  (if (N = 0) then (Dist = Dist0,
+                    Next = Next0)
+   else ({Dist1, Next1} = floyd_warshall_initialize(Edges, N,
+                                                    Dist0, Next0),
+         {Dist, Next} = floyd_warshall_loop_k(N, 1, Dist1, Next1))).
+
+:- func floyd_warshall_initialize(list({int, float, int}),
+                                  int,
+                                  version_array2d(float),
+                                  version_array2d(int)) =
+   {version_array2d(float), version_array2d(int)}.
+floyd_warshall_initialize(Edges, N, Dist0, Next0) = {Dist1, Next1} :-
+  floyd_warshall_read_edges(Edges, Dist0, Next0) = {D1, X1},
+  floyd_warshall_diagonals(N, 1, D1, X1) = {Dist1, Next1}.
+
+:- func floyd_warshall_read_edges(list({int, float, int}),
+                                  version_array2d(float),
+                                  version_array2d(int)) =
+   {version_array2d(float), version_array2d(int)}.
+floyd_warshall_read_edges([], Dist0, Next0) = {Dist0, Next0}.
+floyd_warshall_read_edges([{U, Weight, V} | Tail],
+                          Dist0, Next0) = {Dist1, Next1} :-
+  D1 = arr_set(Dist0, U, V, Weight),
+  X1 = arr_set(Next0, U, V, V),
+  floyd_warshall_read_edges(Tail, D1, X1) = {Dist1, Next1}.
+
+:- func floyd_warshall_diagonals(int, int,
+                                 version_array2d(float),
+                                 version_array2d(int)) =
+   {version_array2d(float), version_array2d(int)}.
+floyd_warshall_diagonals(N, I, Dist0, Next0) = {Dist1, Next1} :-
+  N1 = N + 1,
+  (if (I = N1) then (Dist1 = Dist0,
+                     Next1 = Next0)
+   else (
+     %% The distance from a vertex to itself = 0.0.
+     D1 = arr_set(Dist0, I, I, 0.0),
+     X1 = arr_set(Next0, I, I, I),
+     I1 = I + 1,
+     floyd_warshall_diagonals(N, I1, D1, X1) = {Dist1, Next1})).
+
+:- func floyd_warshall_loop_k(int, int,
+                              version_array2d(float),
+                              version_array2d(int)) =
+   {version_array2d(float), version_array2d(int)}.
+floyd_warshall_loop_k(N, K, Dist0, Next0) = {Dist1, Next1} :-
+  N1 = N + 1,
+  (if (K = N1) then (Dist1 = Dist0,
+                     Next1 = Next0)
+   else ({D1, X1} = floyd_warshall_loop_i(N, K, 1, Dist0, Next0),
+         K1 = K + 1,
+         {Dist1, Next1} = floyd_warshall_loop_k(N, K1, D1, X1))).
+
+:- func floyd_warshall_loop_i(int, int, int,
+                              version_array2d(float),
+                              version_array2d(int)) =
+   {version_array2d(float), version_array2d(int)}.
+floyd_warshall_loop_i(N, K, I, Dist0, Next0) = {Dist1, Next1} :-
+  N1 = N + 1,
+  (if (I = N1) then (Dist1 = Dist0,
+                     Next1 = Next0)
+   else ({D1, X1} = floyd_warshall_loop_j(N, K, I, 1, Dist0, Next0),
+         I1 = I + 1,
+         {Dist1, Next1} = floyd_warshall_loop_i(N, K, I1, D1, X1))).
+
+:- func floyd_warshall_loop_j(int, int, int, int,
+                              version_array2d(float),
+                              version_array2d(int)) =
+   {version_array2d(float), version_array2d(int)}.
+floyd_warshall_loop_j(N, K, I, J, Dist0, Next0) = {Dist1, Next1} :-
+  J1 = J + 1,
+  N1 = N + 1,
+  (if (J = N1) then (Dist1 = Dist0,
+                     Next1 = Next0)
+   else (if ((arr_get(Next0, I, K) = nil_vertex);
+             (arr_get(Next0, K, J) = nil_vertex))
+        then ({Dist1, Next1} =
+              floyd_warshall_loop_j(N, K, I, J1, Dist0, Next0))
+        else (Dist_ikj = arr_get(Dist0, I, K) + arr_get(Dist0, K, J),
+              (if (arr_get(Next0, I, J) = nil_vertex;
+                   Dist_ikj < arr_get(Dist0, I, J))
+               then (D1 = arr_set(Dist0, I, J, Dist_ikj),
+                     X1 = arr_set(Next0, I, J, arr_get(Next0, I, K)),
+                     {Dist1, Next1} =
+                     floyd_warshall_loop_j(N, K, I, J1, D1, X1))
+               else ({Dist1, Next1} =
+                     floyd_warshall_loop_j(N, K, I, J1,
+                                           Dist0, Next0)))))).
+
+%%%-------------------------------------------------------------------
+
+:- func path_string(version_array2d(int), int, int) = string.
+path_string(Next, U, V) = S :-
+  if (arr_get(Next, U, V) = nil_vertex) then S = ""
+  else S = path_string_(Next, U, V, int_to_string(U)).
+
+:- func path_string_(version_array2d(int), int, int, string) = string.
+path_string_(Next, U, V, S0) = S :-
+  (if (U = V) then (S = S0)
+   else (U1 = arr_get(Next, U, V),
+         S1 = append(append(S0, " -> "), int_to_string(U1)),
+         path_string_(Next, U1, V, S1) = S)).
+
+%%%-------------------------------------------------------------------
+
+main(!IO) :-
+  Example_graph = [{1, -2.0, 3},
+                   {3, 2.0, 4},
+                   {4, -1.0, 2},
+                   {2, 4.0, 1},
+                   {2, 3.0, 3}],
+  {N, Dist, Next} = floyd_warshall(Example_graph),
+  format("  pair    distance   path\n", [], !IO),
+  format("-------------------------------------\n", [], !IO),
+  main_loop_u(N, 1, Dist, Next, !IO).
+
+:- pred main_loop_u(int, int,
+                    version_array2d(float),
+                    version_array2d(int),
+                    io, io).
+:- mode main_loop_u(in, in, in, in, di, uo) is det.
+main_loop_u(N, U, Dist, Next, !IO) :-
+  N1 = N + 1,
+  (if (U = N1) then true
+   else (main_loop_v(N, U, 1, Dist, Next, !IO),
+         U1 = U + 1,
+         main_loop_u(N, U1, Dist, Next, !IO))).
+
+:- pred main_loop_v(int, int, int,
+                    version_array2d(float),
+                    version_array2d(int),
+                    io, io).
+:- mode main_loop_v(in, in, in, in, in, di, uo) is det.
+main_loop_v(N, U, V, Dist, Next, !IO) :-
+  V1 = V + 1,
+  N1 = N + 1,
+  (if (V = N1) then true
+   else if (U = V) then main_loop_v(N, U, V1, Dist, Next, !IO)
+   else (format(" %d -> %d    %4.1f     %s\n",
+                [i(U), i(V), f(arr_get(Dist, U, V)),
+                 s(path_string(Next, U, V))],
+                !IO),
+         main_loop_v(N, U, V1, Dist, Next, !IO))).
+
+%%%-------------------------------------------------------------------
+%%% local variables:
+%%% mode: mercury
+%%% prolog-indent-width: 2
+%%% end:

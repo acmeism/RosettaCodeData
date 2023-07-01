@@ -1,0 +1,223 @@
+		;; On the 44th day of Discord in the YOLD 3186, ddate
+		;; has finally come to CP/M.
+bdos:		equ	5	; CP/M syscalls
+puts:		equ	9
+putch:		equ	2
+fcb:		equ	5ch
+month:		equ	fcb + 1		; use the FCB as the date argument
+day:		equ	month + 2
+year:		equ	day + 2
+		org	100h
+		;; CP/M will try to parse the command line arguments as if
+		;; they are filenames. As luck would have it, MMDDYYYY is
+		;; 8 characters. It would be a shame not to use this.
+		lxi	h,month		; check that the 'filename' is
+		lxi	b,0800h		; all digits (and zero out C)
+argcheck:	mov	a,m
+		call	isdigit
+		jnc	argerror	; if not, give an error and exit
+		inx	h
+		dcr	b
+		jnz	argcheck
+		;; Fix the year (add 1166 to it, digit by digit)
+		lxi	d,year + 3
+		lxi	h,yearoffset + 3
+		mvi	b,4
+		ana	a		; Clear carry
+yeardgt:	ldax	d		; Get digit
+		adc	m		; Add offset digit
+		cpi	'9' + 1		; Did we overshoot?
+		cmc			; Carry is opposite of what we need
+		jnc	yearnextdgt	; No carry = no adjustment
+		sui	10		; Compensate
+		stc			; Carry the one
+yearnextdgt:	stax	d		; Save digit
+		dcx	d		; Look at more significant digit
+		dcx	h		
+		dcr	b		; Until we're out of digits
+		jnz	yeardgt
+		lxi	h,year + 4	; Terminate the year with a $
+		mvi	m,'$'		; for easy output.
+		;; Is it St. Tib's Day?
+		lxi	d,month		; Check month and day
+		lxi	h,leap		; Against '0229'
+		mvi	b,4
+tibcheck:	ldax	d		; Get date byte
+		cmp	m		; Match against leap day
+		jnz	notibs		; No match = not Tibs
+		inx	h
+		inx	d
+		dcr 	b
+		jnz	tibcheck	; if they all match it _is_ Tibs
+		;; Print "St. Tib's Day in the YOLD NNNN."
+		lxi	d,tibsday
+		call	outs		; fall through into printyear
+		;; Print " in the YOLD NNNN."
+printyear:	lxi	d,yold
+		call	outs
+		lxi	d,year
+		jmp	outs		; if Tibs, this ends the program
+		;; It isn't St. Tib's Day. We'll need to do real work :(
+notibs:		lxi	h,month		; Find days at beginning of month
+		call	parsenum	; (not counting Tibs)
+		dcr	a		; subtract one (table is 0-indexed)
+		cpi	12		; check that month < 12
+		jnc	argerror	; otherwise, argument error
+		ana	a		; multiply month by 2
+		ral			; (entries are 2 bytes wide)
+		lxi	h,monthdays	; get days table
+		mov	d,c		; look up the entry (C is zero here)
+		mov	e,a
+		dad	d
+		mov	e,m		; load the 16-bit entry into DE
+		inx	h
+		mov	d,m
+		lxi	h,day		; Find day number
+		call	parsenum
+		mov	l,a		; Add it to the start of the month
+		mov	h,c		; (C is still zero) - to get the day
+		dad	d		; number (still not counting Tibs)
+		dcx	h		; One less (so we have day numbering at 0)
+		push	h		; Keep day number
+		lxi	d,-365		; Make sure it isn't >365
+		dad	d
+		jc	argerror	; Give an error otherwise
+		pop	h		; Restore day number
+		push	h 		; Keep it around
+		;; Calculate Erisian weekday
+		lxi	d,-5		; It's not worth it being clever here
+weekcalc:	dad 	d
+		jc	weekcalc
+		lxi	d,5
+		dad	d
+		mov	b,l
+		lxi	h,weekdays	; Print the day of the week
+		call	strselect
+		lxi	d,commaday	; Print ", day "
+		call	outs	
+		;; Calculate season and season day number
+		pop	h		; Restore day number
+		mvi	b,-1		; B will be season
+		lxi	d,-73		; L will be day
+seasoncalc:	inr	b		; One season further on
+		dad	d		; Is 73 days less
+		jc 	seasoncalc
+		lxi	d,73		; Correct overshoot
+		dad	d
+		mov	h,b		; H:L = season:day
+		inr	l		; One based for output
+		push	h		; Push season and day
+		mov	a,l		; Print day of season
+		mvi	c,'0'-1		; Tens digit in C	
+seasondgts:	inr	c
+		sui	10
+		jnc	seasondgts
+		adi	'0' + 10 	; Ones digit in A
+		mov	e,c		; Tens digit
+		call	oute
+		mov	e,a		; Ones digit
+		call	oute
+		lxi	d,of		; Print " of "
+		call	outs
+		pop	b		; Retrieve season:day
+		push	b
+		lxi	h,seasons	; Print the season name
+		call	strselect
+		call	printyear	; "... in the YOLD NNNN ..."
+		;; Is there any reason to celebrate? (day=5 or day=50)
+		pop 	b		; Retrieve season:day
+		mov	a,c		; Day.
+		cpi	5		; is it 5?
+		jz	party		; Then we party
+		cpi	50 		; otherwise, is it 50?
+		rnz			; If not, we're done
+party:		push	b		; Keep day
+		lxi	d,celebrate	; "... Celebrate ..."
+		call	outs
+		pop	b		; Retrieve day
+		push	b
+		lxi	h,holydays5	; Get holyday from 5 or 50 table
+		mov	a,c
+		cpi	50
+		jnz	dayname
+		lxi	h,holydays50
+dayname:	call	strselect	; the season is still in B
+		lxi	d,xday
+		pop	b		; Retrieve day once more
+		mov	a,c
+		cpi	50
+		jnz	outs		; Print 'day' or 'flux' depending
+		lxi	d,xflux
+		jmp	outs
+		;; Parse the 2-digit number in HL. Return in B (and A)
+parsenum:	mvi	b,0		; zero accumulator
+		call	parsedigit	; this runs it twice
+parsedigit:	mov	a,b		; B *= 10
+		add	a
+		mov	b,a
+		add	a
+		add	a
+		add	b
+		add	m		; Add the digit
+		sui	'0'		; Subtract '0'
+		mov	b,a
+		inx	h
+		ret
+		;; Print the B'th string from HL
+strselect:	mvi	a,'$'
+strsearcho:	dcr	b
+		jm	strfound
+strsearchi:	cmp	m
+		inx	h
+		jnz	strsearchi
+		jmp	strsearcho
+strfound:	xchg
+		jmp	outs
+		;; Print the argument error, and exit
+argerror:	lxi	d,argfmt
+		;; Print the string in DE and exit
+error:		call	outs
+		rst	0
+		;; Returns with carry flag set if A is a digit ('0'-'9').
+isdigit:	cpi	'0'
+		cmc
+		rnc
+		cpi	'9' + 1
+		ret
+		;; Print the string in D.
+outs:		mvi	c,puts
+		jmp	bdos
+		;; Print character in E, keeping registers.
+oute:		push	psw
+		push	b
+		push 	d
+		push	h
+		mvi	c,putch
+		call	bdos
+		pop	h
+		pop	d
+		pop	b
+		pop	psw
+		ret
+		;; Accumulated days at start of Gregorian months
+		;; (in a non-leap year)
+monthdays:	dw	0,31,59,90,120,151,181,212,243,273,304,334
+		;; Difference between Gregorian and Erisian year count
+		;; (we don't need to bother with the year otherwise)
+yearoffset:	db	1,1,6,6
+		;; This is matched to MMDD to handle St. Tib's Day
+leap:		db	'0229'
+		;; Strings
+argfmt:		db	'DDATE MMDDYYYY$'
+weekdays:	db	'Sweetmorn$Boomtime$Pungenday$Prickle-Prickle$'
+		db	'Setting Orange$'
+commaday:	db	', day $'
+of:		db	' of $'
+seasons:	db	'Chaos$Discord$Confusion$Bureaucracy$The Aftermath$'
+celebrate:	db	': celebrate $'
+holydays5:	db	'Mung$Mojo$Sya$Zara$Mala$'
+xday:		db	'day!$'
+holydays50:	db	'Chao$Disco$Confu$Bure$Af$'		
+xflux:		db	'flux!$'
+tibsday:	db	'Saint Tib',39,'s Day$'
+yold:		db	' in the YOLD $'

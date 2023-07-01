@@ -1,0 +1,1 @@
+all(mcNuggets == mcNuggets2)

@@ -1,0 +1,122 @@
+puts:	equ	9	; CP/M call to print a string
+	org	100h
+	;;;	Generate the first 1000 members of the Q sequence
+	lxi	b,3	; Start at 3rd element (1 and 2 already defined)
+genq:	dcx	b	; BC = N-1
+	call	q
+	mov	e,m	; DE = Q(N-1)
+	inx	h
+	mov	d,m
+	inx	b	; BC = (N-1)+1 = N
+	xchg		; HL = Q(N-1)
+	call	neg	; HL = -Q(N-1)
+	dad 	b	; HL = N-Q(N-1)
+	push	b	; Keep N
+	mov	b,h	; BC = N-Q(N-1)
+	mov	c,l
+	call	q	; HL = *Q(N-Q(N-1))
+	mov	e,m	; DE = Q(N-Q(N-1))
+	inx	h
+	mov	d,m
+	pop	b	; Restore N
+	push	d	; push Q(N-Q(N-1))
+	dcx	b	; BC = N-2
+	dcx	b
+	call	q	; DE = Q(N-2)
+	mov	e,m
+	inx	h
+	mov	d,m
+	inx	b	; BC = (N-2)+2 = N
+	inx	b
+	xchg		; HL = Q(N-2)
+	call	neg	; HL = -Q(N-2)
+	dad 	b	; HL = N-Q(N-2)
+	push	b	; Keep N
+	mov 	b,h	; BC = N-Q(N-2)
+	mov	c,l
+	call	q	; HL = *Q(N-Q(N-2))
+	mov	a,m	; HL = Q(N-Q(N-2))
+	inx	h
+	mov	h,m
+	mov	l,a
+	pop	b	; Restore N
+	pop	d	; pop Q(N-Q(N-1))
+	dad	d	; HL = Q(N-Q(N-1))+Q(N-Q(N-2))
+	xchg		; DE = Q(N-Q(N-1))+Q(N-Q(N-2))
+	call	q	; HL = *Q(N)
+	mov	m,e	; Store Q(N)
+	inx	h
+	mov	m,d
+	inx	b	; N = N+1
+	lxi	h,-1001
+	dad	b	; Are we there yet?
+	jnc	genq
+	;;;	Print first 10 terms
+	lxi	d,m10
+	mvi	c,puts
+	call	5
+	lxi	b,1	; Start at term 1
+	mvi	d,10	; 10 terms
+p10:	push	b	; Save counters
+	push	d
+	call	prterm	; Print current term
+	pop	d	; Restore counters
+	pop 	b
+	inx	b	; Next term
+	dcr	d	; Repeat 10 times
+	jnz 	p10
+	;;;	Print 1000th term
+	lxi	d,m1000
+	mvi	c,puts
+	call	5
+	lxi	b,1000	; 1000th term
+	;;;	Print Q(BC)
+prterm:	call	q 	; Load term into HL
+	mov	a,m
+	inx	h
+	mov	h,m
+	mov	l,a
+	lxi	b,num	; Push pointer to end of number buffer
+	push 	b
+	lxi	b,-10	; Divisor
+dgt:	lxi	d,-1	; Quotient
+divlp:	inx	d
+	dad	b
+	jc	divlp
+	mvi	a,'0'+10
+	add	l	; Make ASCII digit
+	pop	h	; Get pointer
+	dcx	h
+	mov	m,a	; Store digit
+	push	h
+	xchg		; HL = next quotient
+	mov	a,h	; More digits?
+	ora	l
+	jnz	dgt
+	pop	d	; Print string
+	mvi	c,puts
+	jmp	5
+	;;;	Set HL = -HL
+neg:	dcx	h
+	mov	a,h
+	cma
+	mov	h,a
+	mov	a,l
+	cma
+	mov	l,a
+	ret
+	;;;	Set HL to memory location of Q(BC)
+q:	push	d	; Keep DE
+	mov	h,b	; HL = 2*(BC-1)
+	mov	l,c
+	dcx	h
+	dad	h
+	lxi	d,qq	; Add to start of sequence
+	dad	d
+	pop	d
+	ret
+m10:	db	'The first 10 terms are: $'
+m1000:	db	13,10,'The 1000th term is: $' 	
+	db	'*****'	; Placeholder for number
+num:	db	' $'
+qq:	dw	1,1	; Q sequence stored here, starting with 1, 1

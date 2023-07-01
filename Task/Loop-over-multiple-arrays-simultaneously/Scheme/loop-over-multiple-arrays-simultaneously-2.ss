@@ -1,0 +1,10 @@
+(let ((a (vector "a" "b" "c"))
+      (b (vector "A" "B" "C"))
+      (c (vector 1 2 3)))
+  (vector-for-each
+    (lambda (current-index i1 i2 i3)
+      (display i1)
+      (display i2)
+      (display i3)
+      (newline))
+    a b c))

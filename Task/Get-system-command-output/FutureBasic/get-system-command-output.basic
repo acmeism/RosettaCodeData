@@ -1,0 +1,31 @@
+include "NSLog.incl"
+
+local fn ObserverOne( ref as NotificationRef )
+  FileHandleRef fh = fn NotificationObject( ref )
+  CFDataRef    dta = fn FileHandleAvailableData( fh )
+
+  if ( fn DataLength( dta ) > 0 )
+    CFStringRef string = fn StringWithData( dta, NSUTF8StringEncoding )
+    NSLog( @"%@", string )
+    FileHandleWaitForDataInBackgroundAndNotify( fh )
+  else
+    NotificationCenterRemoveObserver(  @fn ObserverOne, NSFileHandleDataAvailableNotification )
+  end if
+end fn
+
+local fn RunCommand( cmdStr as CFStringRef )
+  TaskRef task = fn TaskInit
+  TaskSetExecutableURL( task, fn URLFileURLWithPath( @"/bin/sh" ) )
+  CFArrayRef arguments = fn ArrayWithObjects( @"-c", cmdStr, NULL )
+  TaskSetArguments( task, arguments )
+  PipeRef p = fn PipeInit
+  TaskSetStandardOutput( task, p )
+  FileHandleRef fh = fn PipeFileHandleForReading( p )
+  NotificationCenterAddObserver( @fn ObserverOne, NSFileHandleDataAvailableNotification, (FileHandleRef)fh )
+  fn TaskLaunch( task, NULL )
+  FileHandleWaitForDataInBackgroundAndNotify( fh )
+end fn
+
+fn RunCommand( @"man mdls | col -b" )
+
+HandleEvents

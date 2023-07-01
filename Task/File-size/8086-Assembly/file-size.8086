@@ -1,0 +1,68 @@
+putch:	equ	2	; Print character
+puts:	equ	9	; Print $-terminated string
+setdta:	equ	1Ah	; Set DTA
+stat:	equ	4Eh	; Get file info
+	cpu	8086
+	bits	16
+	org	100h
+section	.text
+	mov	si,curf		; Print file size for 'INPUT.TXT'
+	call	pfsize		; (in current directory),
+	mov	si,rootf	; Then for '\INPUT.TXT' in root directory	
+	;;;	Print file name and size for file in DS:SI
+pfsize:	mov	ah,setdta	; Set disc transfer area pointer
+	mov	dx,dta
+	int	21h
+	call	puts0		; Print the filename in SI
+	mov	ah,puts		; Print colon and space
+	mov	dx,colspc
+	int	21h
+	mov	ah,stat		; Find file info
+	xor	cx,cx		; We want a normal file
+	mov	dx,si		; Filename is in SI
+	int	21h
+	jnc	.ok		; Carry clear = found
+	mov	ah,puts		; Carry set = not found = print 'not found'
+	mov	dx,nofile
+	int	21h
+	ret
+.ok:	les	bp,[dta+26]	; 32-bit file size in bytes at DTA+26
+	mov	di,es		; DI:BP = 32-bit file size
+	mov	bx,numbuf	; ASCII number buffer
+	mov	cx,10		; Divisor (10)
+.dgt:	xor	dx,dx		; 32-bit division (to get digits)
+	mov	ax,di		; can be done with chained DIVs
+	div	cx
+	mov	di,ax
+	mov	ax,bp
+	div	cx
+	mov	bp,ax
+	add	dl,'0'		; DX is now remainder, i.e. digit
+	dec	bx		; Move digit pointer backwards,
+	mov	[bx],dl		; Store ASCII digit,
+	or	ax,di		; If the new divisor is not zero,
+	jnz	.dgt		; then there is another digit.
+	mov	ah,puts		; If so, the number is done,
+	mov	dx,bx		; and we can print it.
+	int	21h
+	ret
+	;;;	Print 0-terminated string in SI
+puts0:	push	si		; Save SI register
+	mov	ah,putch	; Print char syscall
+.loop:	lodsb			; Load character from SI
+	test	al,al		; If zero,
+	jz	.out		; then stop.
+	mov	dl,al		; Tell DOS to print character
+	int	21h
+	jmp	.loop		; go get another.
+.out:	pop	si		; Restore SI register
+	ret
+section	.data
+rootf:	db	'\'		; \INPUT.TXT (for root) and
+curf:	db	'INPUT.TXT',0	; INPUT.TXT (for current directory)
+nofile:	db	'Not found.',13,10,'$'	; "Not found" message
+	db	'0000000000'	; Number output buffer
+numbuf:	db	' bytes',13,10,'$'
+colspc:	db	': $'		; Colon and space
+section	.bss
+dta:	resb	512		; Disc transfer area

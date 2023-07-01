@@ -1,0 +1,2 @@
+PRINT "Goodbye, World!";
+END

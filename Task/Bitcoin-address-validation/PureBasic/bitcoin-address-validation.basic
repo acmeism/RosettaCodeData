@@ -1,0 +1,76 @@
+; using PureBasic 5.50 (x64)
+EnableExplicit
+
+Macro IsValid(expression)
+  If expression
+    PrintN("Valid")
+  Else
+    PrintN("Invalid")
+  EndIf
+EndMacro
+
+Procedure.i DecodeBase58(Address$, Array result.a(1))
+  Protected i, j, p
+  Protected charSet$ = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+  Protected c$
+
+  For i = 1 To Len(Address$)
+    c$ = Mid(Address$, i, 1)
+    p = FindString(charSet$, c$) - 1
+    If p = -1 : ProcedureReturn #False : EndIf; Address contains invalid Base58 character
+    For j = 24 To 1 Step -1
+      p + 58 * result(j)
+      result(j) = p % 256
+      p  / 256
+    Next j
+    If p <> 0 : ProcedureReturn #False : EndIf ; Address is too long
+  Next i
+  ProcedureReturn #True
+EndProcedure
+
+Procedure HexToBytes(hex$, Array result.a(1))
+  Protected i
+  For i = 1 To Len(hex$) - 1 Step 2
+    result(i/2) = Val("$" + Mid(hex$, i, 2))
+  Next
+EndProcedure
+
+Procedure.i IsBitcoinAddressValid(Address$)
+  Protected format$, digest$
+  Protected i, isValid
+  Protected Dim result.a(24)
+  Protected Dim result2.a(31)
+  Protected result$, result2$
+   ; Address length must be between 26 and 35 - see 'https://en.bitcoin.it/wiki/Address'
+  If Len(Address$) < 26 Or Len(Address$) > 35 : ProcedureReturn #False : EndIf
+  ; and begin with either 1 or 3 which is the format number
+  format$ = Left(Address$, 1)
+  If format$ <> "1" And format$ <> "3" : ProcedureReturn #False : EndIf
+  isValid = DecodeBase58(Address$, result())
+  If Not isValid : ProcedureReturn #False : EndIf
+  UseSHA2Fingerprint(); Using functions from PB's built-in Cipher library
+  digest$ = Fingerprint(@result(), 21, #PB_Cipher_SHA2, 256); apply SHA2-256 to first 21 bytes
+  HexToBytes(digest$, result2()); change hex string to ascii array
+  digest$ = Fingerprint(@result2(), 32,  #PB_Cipher_SHA2, 256); apply SHA2-256 again to all 32 bytes
+  HexToBytes(digest$, result2())
+  result$ = PeekS(@result() + 21, 4, #PB_Ascii); last 4 bytes
+  result2$ = PeekS(@result2(), 4, #PB_Ascii); first 4 bytes
+  If result$ <> result2$ : ProcedureReturn #False : EndIf
+  ProcedureReturn #True
+EndProcedure
+
+If OpenConsole()
+  Define address$ = "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i"
+  Define address2$ = "1BGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i"
+  Define address3$ = "1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62I"
+  Print(address$ + " -> ")
+  IsValid(IsBitcoinAddressValid(address$))
+  Print(address2$ + " -> ")
+  IsValid(IsBitcoinAddressValid(address2$))
+  Print(address3$ + " -> ")
+  IsValid(IsBitcoinAddressValid(address3$))
+  PrintN("")
+  PrintN("Press any key to close the console")
+  Repeat: Delay(10) : Until Inkey() <> ""
+  CloseConsole()
+EndIf

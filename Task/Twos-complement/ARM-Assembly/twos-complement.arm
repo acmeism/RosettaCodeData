@@ -1,0 +1,4 @@
+MOV R0,#0x0000000F
+MOV R1,#1
+MVN R0,R0    ;flips the bits of R0, R0 = 0xFFFFFFF0
+ADD R0,R0,R1 ;R0 = 0xFFFFFFF1

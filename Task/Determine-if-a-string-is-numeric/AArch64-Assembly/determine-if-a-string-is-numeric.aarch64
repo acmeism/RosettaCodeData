@@ -1,0 +1,203 @@
+/* ARM assembly Raspberry PI  */
+/*  program strNumber.s   */
+
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ BUFFERSIZE,          100
+
+
+/* Initialized data */
+.data
+szMessNum: .asciz "Enter number : \n"
+
+szMessError:            .asciz "String is not a number !!!\n"
+szMessInteger:          .asciz "String is a integer.\n"
+szMessFloat:            .asciz "String is a float.\n"
+szMessFloatExp:         .asciz "String is a float with exposant.\n"
+szCarriageReturn:       .asciz "\n"
+
+/* UnInitialized data */
+.bss
+sBuffer:              .skip BUFFERSIZE
+
+/*  code section */
+.text
+.global main
+main:
+
+loop:
+    ldr x0,qAdrszMessNum
+    bl affichageMess
+    mov x0,#STDIN                               // Linux input console
+    ldr x1,qAdrsBuffer                          // buffer address
+    mov x2,#BUFFERSIZE                          // buffer size
+    mov x8, #READ                               // request to read datas
+    svc 0                                       // call system
+    ldr x1,qAdrsBuffer                          // buffer address
+    mov x2,#0                                   // end of string
+    sub x0,x0,#1                                   // replace character 0xA
+    strb w2,[x1,x0]                             // store byte at the end of input string (x0 contains number of characters)
+    ldr x0,qAdrsBuffer
+    bl controlNumber                            // call routine
+    cmp x0,#0
+    bne 1f
+    ldr x0,qAdrszMessError                      // not a number
+    bl affichageMess
+    b 5f
+1:
+    cmp x0,#1
+    bne 2f
+    ldr x0,qAdrszMessInteger                    // integer
+    bl affichageMess
+    b 5f
+2:
+    cmp x0,#2
+    bne 3f
+    ldr x0,qAdrszMessFloat                      // float
+    bl affichageMess
+    b 5f
+3:
+    cmp x0,#3
+    bne 5f
+    ldr x0,qAdrszMessFloatExp                   // float with exposant
+    bl affichageMess
+5:
+    b loop
+
+100:                                            // standard end of the program
+    mov x0, #0                                  // return code
+    mov x8, #EXIT                               // request to exit program
+    svc 0                                       // perform system call
+qAdrszMessNum:            .quad szMessNum
+qAdrszMessError:          .quad szMessError
+qAdrszMessInteger:        .quad szMessInteger
+qAdrszMessFloat:          .quad szMessFloat
+qAdrszMessFloatExp:       .quad szMessFloatExp
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsBuffer:              .quad sBuffer
+/******************************************************************/
+/*     control if string is number                          */
+/******************************************************************/
+/* x0 contains the address of the string */
+/* x0 return 0 if not a number       */
+/* x0 return 1 if integer   eq 12345 or -12345      */
+/* x0 return 2 if float     eq 123.45 or 123,45  or -123,45     */
+/* x0 return 3 if float with exposant  eq 123.45E30 or -123,45E-30        */
+controlNumber:
+    stp x1,lr,[sp,-16]!    // save  registers
+    stp x2,x3,[sp,-16]!    // save  registers
+    stp x4,x5,[sp,-16]!    // save  registers
+    mov x1,#0
+    mov x3,#0              // point counter
+1:
+    ldrb w2,[x0,x1]
+    cmp x2,#0              // end string ?
+    beq 7f
+    cmp x2,#' '            // space ?
+    bne 3f
+    add x1,x1,#1
+    b   1b                 // loop
+3:
+    cmp x2,#'-'            // negative ?
+    bne 4f
+    add x1,x1,#1
+    b 5f
+4:
+    cmp x2,#'+'            // positive ?
+    bne 5f
+    add x1,x1,#1
+5:
+    ldrb w2,[x0,x1]        // control space
+    cmp x2,#0              // end ?
+    beq 7f
+    cmp x2,#' '            // space ?
+    bne 6f
+    add x1,x1,#1
+    b 5b                   // loop
+6:
+    ldrb w2,[x0,x1]
+    cmp x2,#0              // end ?
+    beq 14f
+    cmp x2,#'E'            // exposant ?
+    beq 9f
+    cmp x2,#'e'            // exposant ?
+    beq 9f
+    cmp x2,#'.'            // point ?
+    bne 7f
+    add x3,x3,#1           // yes increment counter
+    add x1,x1,#1
+    b 6b                   // and loop
+7:
+    cmp x2,#','            // comma ?
+    bne 8f
+    add x3,x3,#1           // yes increment counter
+    add x1,x1,#1
+    b 6b                   // and loop
+8:
+    cmp x2,#'0'            // control digit < 0
+    blt 99f
+    cmp x2,#'9'            // control digit > 0
+    bgt 99f
+    add x1,x1,#1           // no error loop digit
+    b 6b
+
+9:                         // float with exposant
+    add x1,x1,#1
+    ldrb w2,[x0,x1]
+    cmp x2,#0              // end ?
+    beq 99f
+
+    cmp x2,#'-'            // negative exposant ?
+    bne 10f
+    add x1,x1,#1
+10:
+    mov x4,#0              // nombre de chiffres
+11:
+    ldrb w2,[x0,x1]
+    cmp x2,#0              // end ?
+    beq 13f
+    cmp x2,#'0'            // control digit < 0
+    blt 99f
+    cmp x2,#'9'            // control digit > 9
+    bgt 99f
+    add x1,x1,#1
+    add x4,x4,#1           // counter digit
+    b 11b                  // and loop
+
+13:
+    cmp x4,#0              // number digit exposant = 0 -> error
+    beq 99f                // error
+    cmp x4,#2              // number digit exposant > 2 -> error
+    bgt 99f                // error
+
+    mov x0,#3              // valid float with exposant
+    b 100f
+14:
+    cmp x3,#0
+    bne 15f
+    mov x0,#1              // valid integer
+    b 100f
+15:
+    cmp x3,#1             // number of point or comma = 1 ?
+    blt 100f
+    bgt 99f               // error
+    mov x0,#2             // valid float
+    b 100f
+99:
+    mov x0,#0             // error
+100:
+    ldp x4,x5,[sp],16     // restaur  2 registres
+    ldp x2,x3,[sp],16     // restaur  2 registres
+    ldp x1,lr,[sp],16     // restaur  2 registres
+    ret
+
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

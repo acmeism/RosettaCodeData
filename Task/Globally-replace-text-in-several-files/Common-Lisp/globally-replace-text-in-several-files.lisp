@@ -1,0 +1,16 @@
+(defun hello-goodbye (files)
+  (labels ((replace-from-file (file)
+             (with-open-file (in file)
+               (loop for line = (read-line in nil)
+                  while line do
+                    (loop for index = (search "Goodbye London!" line)
+                       while index do
+                         (setf (subseq line index) "Hello New York!"))
+                  collecting line)))
+           (write-lines-to-file (lines file)
+             (with-open-file (out file :direction :output :if-exists :overwrite)
+               (dolist (line lines)
+                 (write-line line out))))
+           (replace-in-file (file)
+             (write-lines-to-file (replace-from-file file) file)))
+    (map nil #'replace-in-file files)))

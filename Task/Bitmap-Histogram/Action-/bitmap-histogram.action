@@ -1,0 +1,109 @@
+INCLUDE "H6:LOADPPM5.ACT"
+
+DEFINE HISTSIZE="256"
+
+PROC PutBigPixel(INT x,y BYTE col)
+  IF x>=0 AND x<=79 AND y>=0 AND y<=47 THEN
+    y==LSH 2
+    col==RSH 4
+    IF col<0 THEN col=0
+    ELSEIF col>15 THEN col=15 FI
+    Color=col
+    Plot(x,y)
+    DrawTo(x,y+3)
+  FI
+RETURN
+
+PROC DrawImage(GrayImage POINTER image INT x,y)
+  INT i,j
+  BYTE c
+
+  FOR j=0 TO image.gh-1
+  DO
+    FOR i=0 TO image.gw-1
+    DO
+      c=GetGrayPixel(image,i,j)
+      PutBigPixel(x+i,y+j,c)
+    OD
+  OD
+RETURN
+
+PROC CalcHistogram(GrayImage POINTER image INT ARRAY hist)
+  INT i,j
+  BYTE c
+
+  Zero(hist,HISTSIZE*2)
+  FOR j=0 TO image.gh-1
+  DO
+    FOR i=0 TO image.gw-1
+    DO
+      c=GetGrayPixel(image,i,j)
+      hist(c)==+1
+    OD
+  OD
+RETURN
+
+BYTE FUNC CalcThresholdValue(INT width,height INT ARRAY hist)
+  INT i,sum,total,curr
+
+  total=width*height
+  sum=0
+  FOR i=0 TO HISTSIZE-1
+  DO
+    curr=hist(i)
+    IF sum>=(total-curr)/2 THEN
+      RETURN (i)
+    FI
+    sum==+curr
+  OD
+RETURN (HISTSIZE-1)
+
+PROC Binarize(GrayImage POINTER src,dst BYTE threshold)
+  INT i,j
+  BYTE c
+
+  FOR j=0 TO src.gh-1
+  DO
+    FOR i=0 TO src.gw-1
+    DO
+      c=GetGrayPixel(src,i,j)
+      IF c<threshold THEN
+        c=0
+      ELSE
+        c=255
+      FI
+      SetGrayPixel(dst,i,j,c)
+    OD
+  OD
+RETURN
+
+PROC Main()
+  BYTE CH=$02FC ;Internal hardware value for last key pressed
+  BYTE ARRAY dataIn(900),dataOut(900)
+  GrayImage in,out
+  INT ARRAY hist(HISTSIZE)
+  BYTE threshold
+  INT size=[30],x,y
+
+  Put(125) PutE() ;clear the screen
+
+  InitGrayImage(in,size,size,dataIn)
+  InitGrayImage(out,size,size,dataOut)
+  PrintE("Loading source image...")
+  LoadPPM5(in,"H6:LENA30G.PPM")
+  PrintE("Calc histogram...")
+  CalcHistogram(in,hist)
+  PrintE("Calc threshold value...")
+  threshold=CalcThresholdValue(in.gw,in.gh,hist)
+  PrintE("Binarization...")
+  Binarize(in,out,threshold)
+
+  Graphics(9)
+  x=(40-size)/2
+  y=(48-size)/2
+  DrawImage(in,x,y)
+  DrawImage(out,x+40,y)
+
+  DO UNTIL CH#$FF OD
+  CH=$FF
+RETURN

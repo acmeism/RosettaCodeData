@@ -1,0 +1,100 @@
+100H: /* CALCULATE THE LEVENSHTEIN DISTANCE BETWEEN STRINGS                  */
+      /* TRANS:ATED FROM THE ACTION! SAMPLE                                  */
+
+   /* CP/M BDOS SYSTEM CALL, IGNORE THE RETURN VALUE                         */
+   BDOS: PROCEDURE( FN, ARG ); DECLARE FN BYTE, ARG ADDRESS; GOTO 5;     END;
+   PR$CHAR:   PROCEDURE( C );  DECLARE C BYTE;    CALL BDOS( 2, C );     END;
+   PR$STRING: PROCEDURE( S );  DECLARE S ADDRESS; CALL BDOS( 9, S );     END;
+   PR$NL:     PROCEDURE; CALL PR$CHAR( 0DH ); CALL PR$CHAR( 0AH );       END;
+   PR$NUMBER: PROCEDURE( N ); /* PRINTS A NUMBER IN THE MINIMUN FIELD WIDTH  */
+      DECLARE N ADDRESS;
+      DECLARE V ADDRESS, N$STR ( 6 )BYTE, W BYTE;
+      V = N;
+      W = LAST( N$STR );
+      N$STR( W ) = '$';
+      N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      DO WHILE( ( V := V / 10 ) > 0 );
+         N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      END;
+      CALL PR$STRING( .N$STR( W ) );
+   END PR$NUMBER;
+
+   DECLARE WIDTH       LITERALLY '17';  /* ALLOW STRINGS UP TO 16 CHARACTERS */
+   DECLARE MATRIX$SIZE LITERALLY '289'; /* 17*17 ELEMENTS                    */
+   DECLARE STRING      LITERALLY '( WIDTH )BYTE';
+
+   SCOPY: PROCEDURE( WORD, STR );    /* CONVEET PL/M STYLE STRING TO ACTION! */
+      DECLARE ( WORD, STR ) ADDRESS;
+      DECLARE ( W BASED WORD, S BASED STR ) STRING;
+      DECLARE ( I, C ) BYTE;
+
+      I = 0;
+      DO WHILE( ( C := S( I ) ) <> '$' );
+         W( I := I + 1 ) = C;
+      END;
+      W( 0 ) = I;
+   END SCOPY;
+
+   SET2DM: PROCEDURE( MATRIX, X, Y, VAL );
+      DECLARE ( MATRIX, X, Y, VAL ) ADDRESS;
+      DECLARE M BASED MATRIX ( MATRIX$SIZE )ADDRESS;
+      M( X + ( Y * WIDTH ) ) = VAL;
+   END SET2DM;
+
+   GET2DM: PROCEDURE( MATRIX, X, Y )ADDRESS;
+      DECLARE ( MATRIX, X, Y, VAL ) ADDRESS;
+      DECLARE M BASED MATRIX ( MATRIX$SIZE )ADDRESS;
+      RETURN M( X + ( Y * WIDTH ) );
+   END GET2DM;
+
+   LEVENSHTEIN$DISTANCE: PROCEDURE( S1, S2 )ADDRESS;
+      DECLARE ( S1, S2 ) ADDRESS;
+      DECLARE STR1 BASED S1 STRING, STR2 BASED S2 STRING;
+      DECLARE MATRIX ( MATRIX$SIZE ) ADDRESS;
+      DECLARE ( MIN, K, L, I, J, M, N ) BYTE;
+
+      M = STR1( 0 );
+      N = STR2( 0 );
+
+      DO I = 0 TO MATRIX$SIZE - 1; MATRIX( I ) = 0; END;
+      DO I = 0 TO M; CALL SET2DM( .MATRIX, I, 1, I ); END;
+      DO J = 0 TO N; CALL SET2DM( .MATRIX, 1, J, J ); END;
+
+      DO J = 1 TO N;
+         DO I = 1 TO M;
+            IF STR1( I ) = STR2( J ) THEN DO;
+               CALL SET2DM( .MATRIX, I, J, GET2DM( .MATRIX, I - 1, J - 1 ) );
+               END;
+            ELSE DO;
+               MIN = GET2DM( .MATRIX, I - 1, J     ) + 1; /* DELETION        */
+               K   = GET2DM( .MATRIX, I,     J - 1 ) + 1; /* INSERTION       */
+               L   = GET2DM( .MATRIX, I - 1, J - 1 ) + 1; /* SUBSTITUTION    */
+               IF K < MIN THEN MIN = K;
+               IF L < MIN THEN MIN = L;
+               CALL SET2DM( .MATRIX, I, J, MIN );
+            END;
+         END;
+      END;
+      RETURN GET2DM( .MATRIX, M, N );
+   END LEVENSHTEIN$DISTANCE;
+
+   TEST: PROCEDURE( W1, W2 );
+      DECLARE ( W1, W2 ) ADDRESS;
+      DECLARE ( WORD$1, WORD$2 ) STRING;
+
+      CALL SCOPY( .WORD$1, W1 );
+      CALL SCOPY( .WORD$2, W2 );
+
+      CALL PR$STRING( W1 ); CALL PR$STRING( .' -> $' ); CALL PR$STRING( W2 );
+      CALL PR$STRING( .', LEVENSHTEIN DISTANCE: $' );
+      CALL PR$NUMBER( LEVENSHTEIN$DISTANCE( .WORD$1, .WORD$2 ) );
+      CALL PR$NL;
+   END TEST;
+
+   /* TEST CASES                                                         */
+   CALL TEST( .'KITTEN$',      .'SITTING$'       );
+   CALL TEST( .'ROSETTACODE$', .'RAISETHYSWORD$' );
+   CALL TEST( .'QWERTY$',      .'QWERYT$'        );
+   CALL TEST( .( 'ACTION', 33, '$' ), .'PL/M$'   );
+
+EOF

@@ -1,0 +1,345 @@
+	;;;	---------------------------------------------------------------
+	;;;	SUBLEQ for CP/M. The word size is 16 bits, and the program
+	;;;	is given 16 Kwords (32 KB) of memory. (If the system doesn't
+	;;;	have enough, the program will not run.)
+	;;;	I/O is via the console; since it cannot normally be redirected,
+	;;;	CR/LF translation is on by default. It can be turned off with
+	;;;	the 'R' switch.
+	;;;	---------------------------------------------------------------
+	;;;	CP/M system calls
+getch:	equ	1h
+putch:	equ	2h
+puts:	equ	9h
+fopen:	equ	0Fh
+fread:	equ	14h
+	;;;	RAM locations
+fcb1:	equ	5ch	; FCB 1 (automatically preloaded with 1st file name)
+fcb2:	equ	6ch	; FCB 2 (we're abusing this one for the switch)
+dma:	equ	80h	; default DMA is located at 80h
+bdos:	equ	5h 	; CP/M entry point
+memtop:	equ	6h	; First reserved memory address (below this is ours)
+	;;;	Constants
+CR:	equ	13	; CR and LF
+LF:	equ	10
+EOF:	equ	26	; EOF marker (as we don't have exact filesizes)
+MSTART:	equ	2048	; Reserve 2K of memory for this program + the stack
+MSIZE:	equ	32768	; Reserve 32K of memory (16Kwords) for the SUBLEQ code
+PB:	equ	0C6h	; PUSH B opcode.
+	org	100h
+	;;;	-- Memory initialization --------------------------------------
+	;;;	The fastest way to zero out a whole bunch of memory on the 8080
+	;;;	is to push zeroes onto the stack. Since we need to do 32K,
+	;;;	and it's slow already to begin with, let's do it that way.
+	lxi	d,MSTART+MSIZE	; Top address we need
+	lhld	memtop		; See if we even have enough memory
+	call	cmp16		; Compare the two
+	xchg			; Put top address in HL
+	lxi	d,emem		; Memory error message
+	jnc	die		; If there isn't enough memory, stop.
+	sphl			; Set the stack pointer to the top of memory
+	lxi	b,0 		; 2 zero bytes to push
+	xra	a		; Zero out A.
+	;;;	Each PUSH pushes 2 zeroes. 256 * 64 * 2 = 32768 zeroes.
+	;;;	In the interests of "speedy" (ha!) execution, let's unroll this
+	;;;	loop a bit. In the interest of the reader, let's not write out
+	;;;	64 lines of "PUSH B". 'PB' is set to the opcode for PUSH B, and
+	;;;	4*16=64. This costs some memory, but since we're basically
+	;;;	assuming a baller >48K system anyway to run any non-trivial
+	;;;	SUBLEQ code (ha!), we can spare the 64 bytes.
+memini:	db	PB,PB,PB,PB, PB,PB,PB,PB, PB,PB,PB,PB, PB,PB,PB,PB
+	db	PB,PB,PB,PB, PB,PB,PB,PB, PB,PB,PB,PB, PB,PB,PB,PB
+	db	PB,PB,PB,PB, PB,PB,PB,PB, PB,PB,PB,PB, PB,PB,PB,PB	
+	db	PB,PB,PB,PB, PB,PB,PB,PB, PB,PB,PB,PB, PB,PB,PB,PB
+	inr	a		; This will loop around 256 times
+	jnz	memini
+	push	b
+	;;;	This conveniently leaves SP pointing just below SUBLEQ memory.
+	;;;	-- Check the raw switch ---------------------------------------
+	;;;	CP/M conveniently parses the command line for us, under the
+	;;;	assumption that there are two whitespace-separated filenames,
+	;;;	which are also automatically made uppercase.
+	;;;	We only have to see if the second filename starts with 'R'.
+	lda	fcb2+1 		; Filename starts at offset 1 in the FCB
+	cpi	'R'		; Is it 'R'?
+	jnz	readfl		; If not, go read the file (in FCB1).
+	lxi	h,chiraw	; If so, rewrite the jumps to use the raw fns
+	shld	chin+1
+	lxi	h,choraw
+	shld	chout+1
+	;;;	-- Parse the input file ---------------------------------------
+	;;;	The input file should consist of signed integers written in
+	;;;	decimal, separated by whitespace. (For simplicity, we'll call
+	;;;	all control characters whitespace). CP/M can only read files
+	;;;	128 bytes at a time, so we'll process it 128 bytes at a time
+	;;;	as well.
+readfl:	lda	fcb1+1		; See if a file was given
+	cpi	' '		; If not, the filename will be empty (spaces)
+	lxi	d,eusage	; Print the usage string if that is the case
+	jz	die
+	mvi	c,fopen		; Otherwise, try to open the file.
+	lxi	d,fcb1
+	call	bdos
+	inr	a		; FF is returned on error
+	lxi	d,efile		; Print 'file error' and stop.
+	jz	die
+	;;;	Start parsing 16-bit numbers
+	lxi	h,MSTART	; Start of SUBLEQ memory
+	push	h		; Keep that on the stack
+skipws:	call	fgetc		; Get character from file
+	jc	rddone		; If EOF, we're done
+	cpi	' '+1 		; Is it whitespace?
+	jc	skipws		; Then get next character
+rdnum:	lxi	h,0		; H = accumulator to store the number
+	mov	b,h		; Set B if number should be negative.
+	cpi	'-'		; Did we read a minus sign?
+	jnz	rddgt		; If not, then this should be a digit.
+	inr	b		; But if so, set B,
+	call	fgetc		; and get the next character.
+	jc	rddone
+rddgt:	sui	'0'		; Make ASCII digit
+	cpi	10 		; Which should now be less than 10
+	jnc	fmterr		; Otherwise, print an error and stop
+	mov	d,h		; Set HL=HL*10
+	mov	e,l		; DE = HL
+	dad	h		; HL *= 2
+	dad	h		; HL *= 4
+	dad	d 		; HL *= 5
+	dad	h 		; HL *= 10
+	mvi	d,0		; Add in the digit
+	mov	e,a
+	dad 	d
+	call	fgetc		; Get next character
+	jc	rdeof		; EOF while reading number
+	cpi	' '+1 		; Is it whitespace?
+	jnc	rddgt		; If not, then it should be the next digit
+	xchg			; If so, write the number to SUBLEQ memory
+	pop	h 		; Number in DE and pointer in HL
+	call	wrnum		; Write the number
+	push	h		; Put the pointer back
+	jmp	skipws		; Then skip to next number and parse it
+rdeof:	xchg			; EOF, but we still have a number to write
+	pop	h		; Number in DE and pointer in HL
+	call	wrnum		; Write the number
+	push	h
+rddone:	pop	h		; We're done, discard pointer
+	;;;	-- Run the SUBLEQ code ----------------------------------------
+	lxi	h,MSTART	; Initialize IP
+	;;; 	At the start of step, HL = IP (in system memory)
+step:	mov	e,m		; Load A into DE
+	inx	h
+	mov	d,m
+	inx	h
+	mov	c,m		; Load B into BC
+	inx	h
+	mov	b,m
+	inx	h
+	mov	a,e		; Check if A=-1
+	ana	d
+	inr	a
+	jz 	sbin		; If so, read input
+	mov	a,b		; Otherwise, check if B=-1
+	ana	c
+	inr	a
+	jz	sbout		; If so, write output
+	;;;	Perform the SUBLEQ instruction
+	push	h		; Store the IP (-2) on the stack
+	mov	a,d		; Obtain [A] (set DE=[DE])
+	ani	3Fh		; Make sure address is in 16K words
+	mov	d,a
+	lxi	h,MSTART	; Add to start address twice
+	dad	d		; (SUBLEQ addresses words, we're addressing
+	dad 	d		; bytes)
+	mov	e,m		; Load low byte
+	inx	h
+	mov	d,m		; Load high byte
+	mov	a,b		; Obtain [B] (set BC=[BC])
+	ani	3Fh		; This adress should also be in the 16K words
+	mov	b,a
+	lxi	h,MSTART	; Add to start address twice, again
+	dad	b
+	dad	b
+	mov	c,m		; Load low byte
+	inx	h
+	mov	b,m		; Load high byte
+	mov	a,c		; BC (B) -= DE (A)
+	sub	e		; Subtract low bytes
+	mov	c,a
+	mov	a,b		; Subtract high bytes
+	sbb	d
+	mov	b,a
+	mov	m,b		; HL is still pointing to the high byte of [B]
+	dcx	h
+	mov	m,c		; Store the low byte back too
+	pop	h		; Restore IP
+	ral			; Check sign bit of [B] (which is still in A)
+	jc	sujmp		; If set, it's negative, and we need to jump
+	rar
+	ora	c		; If we're still here, it wasn't set. OR with
+	jz	sujmp		; low bit, if zero then we also need to jump
+	inx	h 		; We don't need to jump, so we should ignore C;
+	inx 	h		; increment the IP to advance past it.
+	jmp	step		; Next step
+sujmp:	mov	c,m		; We do need to jump, load BC=C
+	inx	h
+	mov	a,m		; High byte into A
+	ral			; See if it is negative
+	jc	quit		; If so, stop
+	rar
+	ani	3Fh		; Don't jump outside the address space
+	mov	b,a		; High byte into B
+	lxi	h,MSTART	; Calculate new IP
+	dad	b
+	dad	b
+	jmp	step		; Do next step
+	;;;	Input: A=-1
+sbin:	inx	h		; Advance IP past C
+	inx	h
+	xchg			; IP in DE
+	mov	a,b		; Calculate address for BC (B)
+	ani	3Fh
+	mov	b,a
+	lxi	h,MSTART	
+	dad	b
+	dad	b
+	call	chin		; Read character
+	mov	m,a		; Store in low byte
+	inx	h
+	mvi	m,0 		; Store zero in high byte
+	xchg			; IP back in HL
+	jmp	step		; Next step
+	;;;	Output: B=-1
+sbout:	inx	h		; Advance IP past C
+	inx	h
+	xchg			; IP in DE and A in HL
+	mov	a,h		; Calculate address for A
+	ani	3Fh
+	mov	h,a
+	dad	h
+	lxi	b,MSTART
+	dad	b
+	mov	a,m		; Retrieve low byte (character)
+	call	chout		; Write character
+	xchg			; IP back in HL
+	jmp	step		; Next step
+quit:	rst	0
+	;;;	-- Write number to SUBLEQ memory ------------------------------
+	;;;	Assuming: DE holds the number, B=1 if number should be negated,
+	;;;	HL holds the pointer to SUBLEQ memory.
+wrnum:	dcr	b		; Should the number be negated?
+	jnz	wrpos		; If not, just write it
+	dcx	d		; Otherwise, negate it: decrement,
+	mov	a,e		; Then complement low byte,
+	cma
+	mov	e,a
+	mov	a,d		; Then complement high byte
+	cma
+	mov	d,a		; And then write it
+wrpos:	mov	m,e		; Write low byte
+	inx	h		; Advance pointer
+	mov	m,d		; Write high byte
+	inx	h		; Advance pointer
+	ret
+	;;;	-- Read file byte by byte -------------------------------------
+	;;;	The next byte from the file in FCB1 is returned in A, and all
+	;;;	other registers are preserved. When 128 bytes have been read,
+	;;;	the next record is loaded automatically. Carry set on EOF.
+fgetc:	push	h		; Keep HL registers
+	lda	fgptr		; Where are we in the record?
+	ana	a		
+	jz	nxtrec		; If at 0 (rollover), load new record.
+frecc:	mvi	h,0		; HL = A
+	mov	l,a 		
+	inr	a		; Next A
+	sta	fgptr 		; Write A back
+	mov	a,m		; Retrieve byte
+	pop	h		; Restore HL registers
+	cpi	EOF		; Is it EOF?
+	rnz			; If not, we're done (ANA clears carry)
+	stc			; But otherwise, set carry
+	ret
+nxtrec:	push	d		; Keep the other registers too
+	push	b
+	mvi	c,fread		; Read record from file
+	lxi	d,fcb1
+	call	bdos
+	dcr	a		; A=1 on EOF
+	jz	fgeof	
+	inr	a		; A<>0 = error
+	lxi	d,efile
+	jnz	die
+	mvi	a,80h		; If we're still here, record read correctly
+	sta	fgptr		; Set pointer back to beginning of DMA.
+	pop	b		; Restore B and D
+	pop	d
+	jmp	frecc		; Get first character from the record.
+fgeof:	stc			; On EOF (no more records), set carry
+	jmp	resbdh		; And restore the registers
+fgptr:	db 	0		; Pointer (80h-FFh) into DMA area. Reload on 0.
+	;;;	-- Compare DE to HL -------------------------------------------
+cmp16:	mov	a,d		; Compare high bytes
+	cmp	h
+	rnz			; If they are not equal, we know the ordering
+	mov	a,e		; If they are equal, compare lower bytes
+	cmp 	l
+	ret
+	;;;	-- Register-preserving I/O routines ---------------------------
+chin:	jmp	chitr		; These are rewritten to jump to the raw I/O
+chout:	jmp	chotr		; instructions to turn translation off.
+	;;;	-- Read character into A with translation ---------------------
+chitr:	call	chiraw		; Get raw character
+	cpi	CR		; Is it CR?
+	rnz			; If not, return character unchanged
+	mvi	a,LF		; Otherwise, return LF (terminal sends only CR)
+	ret
+	;;;	-- Read character into A. -------------------------------------
+chiraw:	push	h		; Save all registers except A
+	push	d
+	push	b
+	mvi 	c,getch		; Get character from terminal
+	call	bdos		; Character ends up in A
+	jmp	resbdh		; Restore registers afterwards
+	;;;	-- Write character in A to terminal with translation ----------
+chotr:	cpi	LF		; Is it LF?
+	jnz	choraw		; If not, just print it
+	mvi	a,CR		; Otherwise, print a CR first,
+	call	choraw
+	mvi	a,LF		; And then a LF. (fall through)
+	;;;	-- Write character in A to terminal ---------------------------
+choraw:	push	h		; Store all registers
+	push	d
+	push	b
+	push	psw		
+	mvi	c,putch		; Write character to terminal
+	mov	e,a
+	call	bdos
+	;;;	-- Restore registers ------------------------------------------
+restor:	pop	psw		; Restore all registers
+resbdh:	pop	b		; Restore B D H
+	pop	d
+	pop	h
+	ret
+	;;;	-- Make parse error message and stop --------------------------
+	;;;	A should hold the offending character _after_ '0' has already
+	;;; 	been subtracted.
+fmterr:	adi	'0'		; Undo subtraction of ASCII 0
+	lxi	h,eiloc		; Write the characters in the error message
+	mov	m,a
+	inx	h
+	mvi	b,4		; Max. 4 more characters
+fmtelp:	call	fgetc		; Get next character
+	jc	fmtdne		; If EOF, stop
+	mov	m,a		; If not, store the character
+	inx	h		; Advance pointer
+	dcr	b		; Should we do more characters?
+	jnz	fmtelp		; If so, go get another
+fmtdne:	lxi	d,einv		; Print 'invalid integer' error message.
+	;;;	-- Print an error message and stop ----------------------------
+die:	mvi	c,puts
+	call	bdos
+	rst	0
+	;;;	-- Error messages ---------------------------------------------
+eusage:	db	'SUBLEQ <file> [R]: Run the SUBLEQ program in <file>.$'
+efile:	db	'File error$'	
+emem:	db	'Memory error$'
+einv:	db	'Invalid integer: '
+eiloc:	db	'     $'	

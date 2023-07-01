@@ -1,0 +1,82 @@
+' version 18-09-2015
+' compile with: fbc -s console
+
+#Include Once "gmp.bi"
+
+#Macro init_big_int (a)
+    Dim As Mpz_ptr a = Allocate( Len(__mpz_struct))
+    Mpz_init(a)
+#EndMacro
+
+' ------=< MAIN >=------
+
+Const As UInteger max = 12000  ' 230 sec., 10000 about 125 sec.
+
+Dim As UInteger p, x
+Dim As Byte sieve(max)
+
+Dim As String buffer = Space(Len(Str(max))+1)
+
+init_big_int(m)
+init_big_int(s)
+init_big_int(r)
+
+' sieve to find the primes
+' remove even numbers except 2
+For p = 4 To Sqr(max) Step 2
+    sieve(p) = 1
+Next
+
+For p = 3 To Sqr(max) Step 2
+    For x = p * p To max Step p * 2
+        sieve(x) = 1
+    Next
+Next
+
+' exception: the test will not work for p = 2
+
+For p = 3 To max Step 2            ' odd numbers only
+
+    If sieve(p) = 1 Then Continue For
+
+    Mpz_set_ui(s, 4)                 ' s(0) = 4
+    Mpz_set_ui(m, 1)                 ' set m to 1
+    Mpz_mul_2exp(m, m, p)            ' m = m shl p =  2 ^ p
+    Mpz_sub_ui(m, m, 1)              ' m = m - 1 =  2 ^ p - 1
+
+    For x = 2 To p - 1
+        Mpz_mul(s, s, s)               ' s = s * s
+        Mpz_sub_ui(s, s, 2)            ' s = s - 2
+        ' Mpz_fdiv_r(s, s, m)          ' s = s mod m
+        If Mpz_sgn(s) < 0 Then
+            Mpz_add(s, s ,m)
+        Else
+            Mpz_tdiv_r_2exp(r, s, p)
+            Mpz_tdiv_q_2exp(s, s, p)
+            Mpz_add(s, s, r)
+        End If
+        If (Mpz_cmp(s, m) >= 0) Then Mpz_sub(s, s, m)
+    Next
+
+    'If Mpz_cmp_ui(s, 0) = 0 Then
+    '   LSet buffer = Str(p)
+    '   Print "M"; buffer; " is prime"
+    'End If
+    If Mpz_cmp_ui(s, 0) = 0 Then
+        Print "M";Str(p),
+    End If
+Next
+Print
+
+Mpz_clear (m)  ' cleanup
+DeAllocate(m)
+Mpz_clear (s)
+DeAllocate(s)
+Mpz_clear (r)
+DeAllocate(r)
+
+' empty keyboard buffer
+While InKey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

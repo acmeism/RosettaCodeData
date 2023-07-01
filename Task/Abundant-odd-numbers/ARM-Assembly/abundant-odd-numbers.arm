@@ -1,0 +1,516 @@
+/* ARM assembly Raspberry PI  */
+/* program abundant.s   */
+
+ /* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+.equ NBDIVISORS,             1000
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessStartPgm:          .asciz "Program start \n"
+szMessEndPgm:            .asciz "Program normal end.\n"
+szMessErrorArea:         .asciz "\033[31mError : area divisors too small.\n"
+szMessError:             .asciz "\033[31mError  !!!\n"
+szMessErrGen:            .asciz "Error end program.\n"
+szMessNbPrem:            .asciz "This number is prime !!!.\n"
+szMessResultFact:        .asciz "@ "
+
+szCarriageReturn:        .asciz "\n"
+
+/* datas message display */
+szMessEntete:            .asciz "The first 25 abundant odd numbers are:\n"
+szMessResult:            .asciz "Number : @  sum : @ \n"
+
+szMessEntete1:           .asciz "The 1000 odd abundant number :\n"
+szMessEntete2:           .asciz "First odd abundant number > 1000000000 :\n"
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+.align 4
+sZoneConv:               .skip 24
+tbZoneDecom:             .skip 4 * NBDIVISORS       // facteur 4 octets
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                               @ program start
+    ldr r0,iAdrszMessStartPgm       @ display start message
+    bl affichageMess
+
+    ldr r0,iAdrszMessEntete         @ display result message
+    bl affichageMess
+    mov r2,#1
+    mov r3,#0
+1:
+    mov r0,r2                       @  number
+    bl testAbundant
+    cmp r0,#1
+    bne 3f
+    add r3,#1
+    mov r0,r2
+    mov r4,r1                        @ save sum
+    ldr r1,iAdrsZoneConv
+    bl conversion10                  @ convert ascii string
+    ldr r0,iAdrszMessResult
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc               @ and put in message
+    mov r5,r0
+    mov r0,r4                        @ sum
+    ldr r1,iAdrsZoneConv
+    bl conversion10                  @ convert ascii string
+    mov r0,r5
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc               @ and put in message
+
+    bl affichageMess
+3:
+    add r2,r2,#2
+    cmp r3,#25
+    blt 1b
+
+    /* 1000 abundant number  */
+    ldr r0,iAdrszMessEntete1
+    bl affichageMess
+    mov r2,#1
+    mov r3,#0
+4:
+    mov r0,r2                       @  number
+    bl testAbundant
+    cmp r0,#1
+    bne 6f
+    add r3,#1
+6:
+    cmp r3,#1000
+    addlt r2,r2,#2
+    blt 4b
+    mov r0,r2
+    mov r4,r1                        @ save sum
+    ldr r1,iAdrsZoneConv
+    bl conversion10                  @ convert ascii string
+    ldr r0,iAdrszMessResult
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc               @ and put in message
+    mov r5,r0
+    mov r0,r4                        @ sum
+    ldr r1,iAdrsZoneConv
+    bl conversion10                  @ convert ascii string
+    mov r0,r5
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc                @ and put in message
+
+    bl affichageMess
+
+    /* abundant number>1000000000   */
+    ldr r0,iAdrszMessEntete2
+    bl affichageMess
+    ldr r2,iN10P9
+    add r2,#1
+    mov r3,#0
+7:
+    mov r0,r2                       @  number
+    bl testAbundant
+    cmp r0,#1
+    beq 8f
+    add r2,r2,#2
+    b 7b
+8:
+    mov r0,r2
+    mov r4,r1                        @ save sum
+    ldr r1,iAdrsZoneConv
+    bl conversion10                  @ convert ascii string
+    ldr r0,iAdrszMessResult
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc               @ and put in message
+    mov r5,r0
+    mov r0,r4                        @ sum
+    ldr r1,iAdrsZoneConv
+    bl conversion10                  @ convert ascii string
+    mov r0,r5
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc                @ and put in message
+
+    bl affichageMess
+
+
+
+    ldr r0,iAdrszMessEndPgm         @ display end message
+    bl affichageMess
+    b 100f
+99:                                 @ display error message
+    ldr r0,iAdrszMessError
+    bl affichageMess
+100:                                @ standard end of the program
+    mov r0, #0                      @ return code
+    mov r7, #EXIT                   @ request to exit program
+    svc 0                           @ perform system call
+iAdrszMessStartPgm:        .int szMessStartPgm
+iAdrszMessEndPgm:          .int szMessEndPgm
+iAdrszMessError:           .int szMessError
+iAdrszCarriageReturn:      .int szCarriageReturn
+iAdrtbZoneDecom:           .int tbZoneDecom
+iAdrszMessEntete:          .int szMessEntete
+iAdrszMessEntete1:         .int szMessEntete1
+iAdrszMessEntete2:         .int szMessEntete2
+iAdrszMessResult:          .int szMessResult
+iAdrsZoneConv:             .int sZoneConv
+iN10P9:                    .int 1000000000
+/******************************************************************/
+/*     test if number is abundant number                         */
+/******************************************************************/
+/* r0 contains the number  */
+/* r0 return 1 if Zumkeller number else return 0  */
+testAbundant:
+    push {r2-r6,lr}              @ save  registers
+    mov r6,r0                    @ save number
+    ldr r1,iAdrtbZoneDecom
+    bl decompFact                @ create area of divisors
+    cmp r0,#1                    @ no divisors
+    movle r0,#0
+    ble 100f
+    lsl r5,r6,#1                 @ abondant number ?
+    cmp r5,r2
+    movgt r0,#0
+    bgt 100f                     @ no -> end
+    mov r0,#1
+    sub r1,r2,r6                 @ sum
+100:
+    pop {r2-r6,lr}               @ restaur registers
+    bx lr                        @ return
+
+
+
+/******************************************************************/
+/*     factor decomposition                                               */
+/******************************************************************/
+/* r0 contains number */
+/* r1 contains address of divisors area */
+/* r0 return divisors items in table */
+/* r1 return the number of odd divisors  */
+/* r2 return the sum of divisors  */
+decompFact:
+    push {r3-r8,lr}              @ save  registers
+    mov r5,r1
+    mov r8,r0                    @ save number
+    bl isPrime                   @ prime ?
+    cmp r0,#1
+    beq 98f                      @ yes is prime
+    mov r1,#1
+    str r1,[r5]                  @ first factor
+    mov r12,#1                   @ divisors sum
+    mov r11,#1                   @ number odd divisors
+    mov r4,#1                    @ indice divisors table
+    mov r1,#2                    @ first divisor
+    mov r6,#0                    @ previous divisor
+    mov r7,#0                    @ number of same divisors
+2:
+    mov r0,r8                    @ dividende
+    bl division                  @  r1 divisor r2 quotient r3 remainder
+    cmp r3,#0
+    bne 5f                       @ if remainder <> zero  -> no divisor
+    mov r8,r2                    @ else quotient -> new dividende
+    cmp r1,r6                    @ same divisor ?
+    beq 4f                       @ yes
+    mov r7,r4                    @ number factors in table
+    mov r9,#0                    @ indice
+21:
+    ldr r10,[r5,r9,lsl #2 ]      @ load one factor
+    mul r10,r1,r10               @ multiply
+    str r10,[r5,r7,lsl #2]       @ and store in the table
+    tst r10,#1                   @ divisor odd ?
+    addne r11,#1
+    add r12,r10
+    add r7,r7,#1                 @ and increment counter
+    add r9,r9,#1
+    cmp r9,r4
+    blt 21b
+    mov r4,r7
+    mov r6,r1                    @ new divisor
+    b 7f
+4:                               @ same divisor
+    sub r9,r4,#1
+    mov r7,r4
+41:
+    ldr r10,[r5,r9,lsl #2 ]
+    cmp r10,r1
+    subne r9,#1
+    bne 41b
+    sub r9,r4,r9
+42:
+    ldr  r10,[r5,r9,lsl #2 ]
+    mul r10,r1,r10
+    str r10,[r5,r7,lsl #2]       @ and store in the table
+    tst r10,#1                   @ divsor odd ?
+    addne r11,#1
+    add r12,r10
+    add r7,r7,#1                 @ and increment counter
+    add r9,r9,#1
+    cmp r9,r4
+    blt 42b
+    mov r4,r7
+    b 7f                         @ and loop
+
+    /* not divisor -> increment next divisor */
+5:
+    cmp r1,#2                    @ if divisor = 2 -> add 1
+    addeq r1,#1
+    addne r1,#2                  @ else add 2
+    b 2b
+
+    /* divisor -> test if new dividende is prime */
+7:
+    mov r3,r1                    @ save divisor
+    cmp r8,#1                    @ dividende = 1 ? -> end
+    beq 10f
+    mov r0,r8                    @ new dividende is prime ?
+    mov r1,#0
+    bl isPrime                   @ the new dividende is prime ?
+    cmp r0,#1
+    bne 10f                      @ the new dividende is not prime
+
+    cmp r8,r6                    @ else dividende is same divisor ?
+    beq 9f                       @ yes
+    mov r7,r4                    @ number factors in table
+    mov r9,#0                    @ indice
+71:
+    ldr r10,[r5,r9,lsl #2 ]      @ load one factor
+    mul r10,r8,r10               @ multiply
+    str r10,[r5,r7,lsl #2]       @ and store in the table
+    tst r10,#1                   @ divsor odd ?
+    addne r11,#1
+    add r12,r10
+    add r7,r7,#1                 @ and increment counter
+    add r9,r9,#1
+    cmp r9,r4
+    blt 71b
+    mov r4,r7
+    mov r7,#0
+    b 11f
+9:
+    sub r9,r4,#1
+    mov r7,r4
+91:
+    ldr r10,[r5,r9,lsl #2 ]
+    cmp r10,r8
+    subne r9,#1
+    bne 91b
+    sub r9,r4,r9
+92:
+    ldr  r10,[r5,r9,lsl #2 ]
+    mul r10,r8,r10
+    str r10,[r5,r7,lsl #2]       @ and store in the table
+    tst r10,#1                   @ divisor odd ?
+    addne r11,#1
+    add r12,r10
+    add r7,r7,#1                 @ and increment counter
+    add r9,r9,#1
+    cmp r9,r4
+    blt 92b
+    mov r4,r7
+    b 11f
+
+10:
+    mov r1,r3                    @ current divisor = new divisor
+    cmp r1,r8                    @ current divisor  > new dividende ?
+    ble 2b                       @ no -> loop
+
+    /* end decomposition */
+11:
+    mov r0,r4                    @ return number of table items
+    mov r2,r12                   @ return sum
+    mov r1,r11                   @ return number of odd divisor
+    mov r3,#0
+    str r3,[r5,r4,lsl #2]        @ store zéro in last table item
+    b 100f
+
+
+98:
+    //ldr r0,iAdrszMessNbPrem
+    //bl   affichageMess
+    mov r0,#1                   @ return code
+    b 100f
+99:
+    ldr r0,iAdrszMessError
+    bl   affichageMess
+    mov r0,#-1                  @ error code
+    b 100f
+100:
+    pop {r3-r8,lr}              @ restaur registers
+    bx lr
+iAdrszMessNbPrem:           .int szMessNbPrem
+/***************************************************/
+/*   check if a number is prime              */
+/***************************************************/
+/* r0 contains the number            */
+/* r0 return 1 if prime  0 else */
+@2147483647
+@4294967297
+@131071
+isPrime:
+    push {r1-r6,lr}    @ save registers
+    cmp r0,#0
+    beq 90f
+    cmp r0,#17
+    bhi 1f
+    cmp r0,#3
+    bls 80f            @ for 1,2,3 return prime
+    cmp r0,#5
+    beq 80f            @ for 5 return prime
+    cmp r0,#7
+    beq 80f            @ for 7 return prime
+    cmp r0,#11
+    beq 80f            @ for 11 return prime
+    cmp r0,#13
+    beq 80f            @ for 13 return prime
+    cmp r0,#17
+    beq 80f            @ for 17 return prime
+1:
+    tst r0,#1          @ even ?
+    beq 90f            @ yes -> not prime
+    mov r2,r0          @ save number
+    sub r1,r0,#1       @ exposant n - 1
+    mov r0,#3          @ base
+    bl moduloPuR32     @ compute base power n - 1 modulo n
+    cmp r0,#1
+    bne 90f            @ if <> 1  -> not prime
+
+    mov r0,#5
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#7
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#11
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#13
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#17
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+80:
+    mov r0,#1        @ is prime
+    b 100f
+90:
+    mov r0,#0        @ no prime
+100:                 @ fin standard de la fonction
+    pop {r1-r6,lr}   @ restaur des registres
+    bx lr            @ retour de la fonction en utilisant lr
+/********************************************************/
+/*   Calcul modulo de b puissance e modulo m  */
+/*    Exemple 4 puissance 13 modulo 497 = 445         */
+/*                                             */
+/********************************************************/
+/* r0  nombre  */
+/* r1 exposant */
+/* r2 modulo   */
+/* r0 return result  */
+moduloPuR32:
+    push {r1-r7,lr}    @ save registers
+    cmp r0,#0          @ verif <> zero
+    beq 100f
+    cmp r2,#0          @ verif <> zero
+    beq 100f           @ TODO: vérifier les cas d erreur
+1:
+    mov r4,r2          @ save modulo
+    mov r5,r1          @ save exposant
+    mov r6,r0          @ save base
+    mov r3,#1          @ start result
+
+    mov r1,#0          @ division de r0,r1 par r2
+    bl division32R
+    mov r6,r2          @ base <- remainder
+2:
+    tst r5,#1          @  exposant even or odd
+    beq 3f
+    umull r0,r1,r6,r3
+    mov r2,r4
+    bl division32R
+    mov r3,r2          @ result <- remainder
+3:
+    umull r0,r1,r6,r6
+    mov r2,r4
+    bl division32R
+    mov r6,r2          @ base <- remainder
+
+    lsr r5,#1          @ left shift 1 bit
+    cmp r5,#0          @ end ?
+    bne 2b
+    mov r0,r3
+100:                   @ fin standard de la fonction
+    pop {r1-r7,lr}     @ restaur des registres
+    bx lr              @ retour de la fonction en utilisant lr
+
+/***************************************************/
+/*   division number 64 bits in 2 registers by number 32 bits */
+/***************************************************/
+/* r0 contains lower part dividende   */
+/* r1 contains upper part dividende   */
+/* r2 contains divisor   */
+/* r0 return lower part quotient    */
+/* r1 return upper part quotient    */
+/* r2 return remainder               */
+division32R:
+    push {r3-r9,lr}    @ save registers
+    mov r6,#0          @ init upper upper part remainder  !!
+    mov r7,r1          @ init upper part remainder with upper part dividende
+    mov r8,r0          @ init lower part remainder with lower part dividende
+    mov r9,#0          @ upper part quotient
+    mov r4,#0          @ lower part quotient
+    mov r5,#32         @ bits number
+1:                     @ begin loop
+    lsl r6,#1          @ shift upper upper part remainder
+    lsls r7,#1         @ shift upper  part remainder
+    orrcs r6,#1
+    lsls r8,#1         @ shift lower  part remainder
+    orrcs r7,#1
+    lsls r4,#1         @ shift lower part quotient
+    lsl r9,#1          @ shift upper part quotient
+    orrcs r9,#1
+                       @ divisor sustract  upper  part remainder
+    subs r7,r2
+    sbcs  r6,#0        @ and substract carry
+    bmi 2f             @ négative ?
+
+                       @ positive or equal
+    orr r4,#1          @ 1 -> right bit quotient
+    b 3f
+2:                     @ negative
+    orr r4,#0          @ 0 -> right bit quotient
+    adds r7,r2         @ and restaur remainder
+    adc  r6,#0
+3:
+    subs r5,#1         @ decrement bit size
+    bgt 1b             @ end ?
+    mov r0,r4          @ lower part quotient
+    mov r1,r9          @ upper part quotient
+    mov r2,r7          @ remainder
+100:                   @ function end
+    pop {r3-r9,lr}     @ restaur registers
+    bx lr
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

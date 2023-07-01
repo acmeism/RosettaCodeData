@@ -1,0 +1,112 @@
+# -*- ObjectIcon -*-
+#
+# Object Icon has a "Number" class (with subclasses) that has "add"
+# and "mul" methods. These methods can be implemented in a modular
+# numbers class, even though we cannot redefine the symbolic operators
+# "+" and "*". Neither can we inherit from Number, but that turns out
+# not to get in our way.
+#
+
+import io
+import ipl.types
+import numbers (Rat)
+import util (need_integer)
+
+procedure main ()
+  local x
+
+  x := Rat (10)     # The number 10 as a rational with denominator 1.
+  write ("no modulus:  ", f(x).n)
+
+  x := Modular (10, 13)
+  write ("modulus 13:  ", f(x).least_residue)
+end
+
+procedure f(x)
+  return npow(x, 100).add(x).add(1)
+end
+
+procedure npow (x, i)
+  # Raise a number to a non-negative power, using the methods of its
+  # class. The algorithm is the squaring method.
+
+  local accum, i_halved
+
+  if i < 0 then runerr ("Non-negative number expected", i)
+
+  accum := typeof(x) (1)
+
+  # Perhaps the following hack can be eliminated?
+  if is (x, Modular) then accum := Modular (1, x.modulus)
+
+  while i ~= 0 do
+  {
+    i_halved := i / 2
+    if i_halved + i_halved ~= i then accum := x.mul(accum)
+    x := x.mul(x)
+    i := i_halved
+  }
+  return accum
+end
+
+class Modular ()
+  public const least_residue
+  public const modulus
+
+  public new (num, m)
+    if /m & is (num, Modular) then
+    {
+      self.least_residue := num.least_residue
+      self.modulus := num.modulus
+    }
+    else
+    {
+      /m := 0
+      m := need_integer (m)
+      if m < 0 then runerr ("Non-negative number expected", m)
+      self.modulus := m
+      num := need_integer (num)
+      if m = 0 then
+        self.least_residue := num # A regular integer.
+      else
+        self.least_residue := residue (num, modulus)
+    }
+    return
+  end
+
+  public add (x)
+    if is (x, Modular) then x := x.least_residue
+    return Modular (least_residue + x, need_modulus (self, x))
+  end
+
+  public mul (x)
+    if is (x, Modular) then x := x.least_residue
+    return Modular (least_residue * x, need_modulus (self, x))
+  end
+end
+
+procedure need_modulus (x, y)
+  local mx, my
+
+  mx := if is (x, Modular) then x.modulus else 0
+  my := if is (y, Modular) then y.modulus else 0
+  if mx = 0 then
+  {
+    if my = 0 then runerr ("Cannot determine the modulus", [x, y])
+    mx := my
+  }
+  else if my = 0 then
+    my := mx
+  if mx ~= my then runerr ("Mismatched moduli", [x, y])
+  return mx
+end
+
+procedure residue(i, m, j)
+  # Residue for j-based integers, taken from the Arizona Icon IPL
+  # (which is in the public domain). With the default value j=0, this
+  # is what we want for reducing numbers to their least residues.
+  /j := 0
+  i %:= m
+  if i < j then i +:= m
+  return i
+end

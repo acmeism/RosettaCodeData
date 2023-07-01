@@ -1,0 +1,72 @@
+bits 32
+
+section .data
+
+stdout equ 1
+
+sys_write equ 4
+sys_exit equ 1
+
+kernel equ 0x80
+
+program db "Program: ", 0
+programlen equ $-program
+
+nl db "", 10, 0
+nllen equ $-nl
+
+section .bss
+
+scriptname resd 1
+scriptnamelen resd 1
+
+section .text
+
+global _start
+
+strlen:							; eax: a string ending in 0
+	push eax						; cache eax
+
+	.strloop:
+		mov bl, byte [eax]
+		cmp bl, 0
+		je .strret						; return len if bl == 0
+		inc eax							; else eax++
+		jmp .strloop
+
+	.strret:
+		pop ebx							; ebx = cached eax
+		sub eax, ebx					; eax -= ebx
+		ret								; eax = len
+
+_start:
+	mov eax, esp
+	add eax, 4
+	mov eax, [eax]
+	mov dword [scriptname], eax
+
+	mov eax, sys_write
+	mov ebx, stdout
+	mov ecx, program
+	mov edx, programlen
+	int kernel
+
+	mov dword eax, [scriptname]
+	call strlen
+	mov dword [scriptnamelen], eax
+
+	mov eax, sys_write
+	mov ebx, stdout
+	mov dword ecx, [scriptname]
+	mov dword edx, [scriptnamelen]
+	int kernel
+
+	mov eax, sys_write
+	mov ebx, stdout
+	mov ecx, nl
+	mov edx, nllen
+	int kernel
+
+	mov eax, sys_exit
+	mov ebx, 0
+	int kernel

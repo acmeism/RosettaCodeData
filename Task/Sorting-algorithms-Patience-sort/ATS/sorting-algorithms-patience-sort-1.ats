@@ -1,0 +1,680 @@
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+
+vtypedef array_tup_vt (a : vt@ype+, p : addr, n : int) =
+  (* An array, without size information attached. *)
+  @(array_v (a, p, n),
+    mfree_gc_v p |
+    ptr p)
+
+extern fn {a : t@ype}
+patience_sort
+          {ifirst, len   : int | 0 <= ifirst}
+          {n             : int | ifirst + len <= n}
+          (arr           : &RD(array (a, n)),
+           ifirst        : size_t ifirst,
+           len           : size_t len)
+    :<!wrt> (* Return an array of indices into arr. *)
+            [p : addr]
+            array_tup_vt
+              ([i : int | len == 0 ||
+                          (ifirst <= i && i < ifirst + len)] size_t i,
+               p, len)
+
+(* patience_sort$lt : the order predicate. *)
+extern fn {a : t@ype}
+patience_sort$lt (x : a, y : a) :<> bool
+
+(*------------------------------------------------------------------*)
+(*
+
+  In the following implementation of next_power_of_two:
+
+    * I implement it as a template for all types of kind g1uint. This
+      includes dependent forms of uint, usint, ulint, ullint, size_t,
+      and yet more types in the prelude; also whatever others one may
+      create.
+
+    * I prove the result is not less than the input.
+
+    * I prove the result is less than twice the input.
+
+    * I prove the result is a power of two. This last proof is
+      provided in the form of an EXP2 prop.
+
+    * I do NOT return what number two is raised to (though I easily
+      could have). I leave that number "existentially defined". In
+      other words, I prove only that some such non-negative number
+      exists.
+
+*)
+
+fn {tk : tkind}
+next_power_of_two
+          {i : pos}
+          (i : g1uint (tk, i))
+    :<> [k : int | i <= k; k < 2 * i]
+        [n : nat]
+        @(EXP2 (n, k) | g1uint (tk, k)) =
+  let
+    (* This need not be a fast implementation. *)
+
+    val one : g1uint (tk, 1) = g1u2u 1u
+
+    fun
+    loop {j  : pos | j < i} .<i + i - j>.
+         (pf : [n : nat] EXP2 (n, j) |
+          j  : g1uint (tk, j))
+        :<> [k : int | i <= k; k < 2 * i]
+            [n : nat]
+            @(EXP2 (n, k) | g1uint (tk, k)) =
+      let
+        val j2 = j + j
+      in
+        if i <= j2 then
+          @(EXP2ind pf | j2)
+        else
+          loop (EXP2ind pf | j2)
+      end
+  in
+    if i = one then
+      @(EXP2bas () | one)
+    else
+      loop (EXP2bas () | one)
+  end
+
+(*------------------------------------------------------------------*)
+
+stadef link (ifirst : int, ilast : int, i : int) : bool =
+  0 <= i && i <= ilast - ifirst + 1
+
+typedef link_t (ifirst : int, ilast : int, i : int) =
+  (* A size_t within legal range for a normalized link, including the
+     "nil" link 0. *)
+  [link (ifirst, ilast, i)]
+  size_t i
+typedef link_t (ifirst : int, ilast : int) =
+  [i : int]
+  link_t (ifirst, ilast, i)
+
+fn {a : t@ype}
+find_pile {ifirst, ilast : int | ifirst <= ilast}
+          {n             : int | ilast < n}
+          {num_piles     : nat | num_piles <= ilast - ifirst + 1}
+          {n_piles       : int | ilast - ifirst + 1 <= n_piles}
+          {q             : pos | q <= ilast - ifirst + 1}
+          (ifirst        : size_t ifirst,
+           arr           : &RD(array (a, n)),
+           num_piles     : size_t num_piles,
+           piles         : &RD(array (link_t (ifirst, ilast),
+                               n_piles)),
+           q             : size_t q)
+    :<> [i : pos | i <= num_piles + 1]
+        size_t i =
+  (*
+    Bottenbruch search for the leftmost pile whose top is greater than
+    or equal to the next value dealt by "deal".
+
+    References:
+
+      * H. Bottenbruch, "Structure and use of ALGOL 60", Journal of
+        the ACM, Volume 9, Issue 2, April 1962, pp.161-221.
+        https://doi.org/10.1145/321119.321120
+
+        The general algorithm is described on pages 214 and 215.
+
+      * https://en.wikipedia.org/w/index.php?title=Binary_search_algorithm&oldid=1062988272#Alternative_procedure
+  *)
+  if num_piles = i2sz 0 then
+    i2sz 1
+  else
+    let
+      macdef lt = patience_sort$lt<a>
+
+      prval () = lemma_g1uint_param ifirst
+      prval () = prop_verify {0 <= ifirst} ()
+
+      fun
+      loop {j, k  : nat | j <= k; k < num_piles}
+           .<k - j>.
+           (arr   : &RD(array (a, n)),
+            piles : &array (link_t (ifirst, ilast), n_piles),
+            j     : size_t j,
+            k     : size_t k)
+          :<> [i : pos | i <= num_piles + 1]
+              size_t i =
+        if j = k then
+          begin
+            if succ j <> num_piles then
+              succ j
+            else
+              let
+                val piles_j = piles[j]
+                val () = $effmask_exn assertloc (piles_j <> g1u2u 0u)
+
+                val x1 = arr[pred q + ifirst]
+                and x2 = arr[pred piles_j + ifirst]
+              in
+                if x2 \lt x1 then
+                  succ (succ j)
+                else
+                  succ j
+              end
+          end
+        else
+          let
+            typedef index (i : int) = [0 <= i; i < n] size_t i
+            typedef index = [i : int] index i
+
+            stadef i = j + ((k - j) / 2)
+            val i : size_t i = j + ((k - j) / g1u2u 2u)
+
+            val piles_j = piles[j]
+            val () = $effmask_exn assertloc (piles_j <> g1u2u 0u)
+
+            val x1 = arr[pred q + ifirst]
+            and x2 = arr[pred piles_j + ifirst]
+          in
+            if x2 \lt x1 then
+              loop (arr, piles, i + 1, k)
+            else
+              loop (arr, piles, j, i)
+          end
+    in
+      loop (arr, piles, g1u2u 0u, pred num_piles)
+    end
+
+fn {a : t@ype}
+deal {ifirst, ilast : int | ifirst <= ilast}
+     {n             : int | ilast < n}
+     (ifirst : size_t ifirst,
+      ilast  : size_t ilast,
+      arr    : &RD(array (a, n)))
+    :<!wrt> [num_piles   : int | num_piles <= ilast - ifirst + 1]
+            [n_piles     : int | ilast - ifirst + 1 <= n_piles]
+            [n_links     : int | ilast - ifirst + 1 <= n_links]
+            [p_piles     : addr]
+            [p_links     : addr]
+            @(size_t num_piles,
+              array_tup_vt (link_t (ifirst, ilast),
+                            p_piles, n_piles),
+              array_tup_vt (link_t (ifirst, ilast),
+                            p_links, n_links)) =
+  let
+    prval () = prop_verify {0 < ilast - ifirst + 1} ()
+
+    stadef num_elems = ilast - ifirst + 1
+    val num_elems : size_t num_elems = succ (ilast - ifirst)
+
+    typedef link_t (i : int) = link_t (ifirst, ilast, i)
+    typedef link_t = link_t (ifirst, ilast)
+
+    val zero : size_t 0 = g1u2u 0u
+    val one : size_t 1 = g1u2u 1u
+    val link_nil : link_t 0 = g1u2u 0u
+
+    fun
+    loop {q         : pos | q <= num_elems + 1}
+         {m         : nat | m <= num_elems}
+         .<num_elems + 1 - q>.
+         (arr       : &RD(array (a, n)),
+          q         : size_t q,
+          piles     : &array (link_t, num_elems),
+          links     : &array (link_t, num_elems),
+          m         : size_t m)
+        :<!wrt> [num_piles : nat | num_piles <= num_elems]
+                size_t num_piles =
+      if q = succ (num_elems) then
+        m
+      else
+        let
+          val i = find_pile {ifirst, ilast} (ifirst, arr, m, piles, q)
+
+          (* We have no proof the number of elements will not exceed
+             storage. However, we know it will not, because the number
+             of piles cannot exceed the size of the input. Let us get
+             a "proof" by runtime check. *)
+          val () = $effmask_exn assertloc (i <= num_elems)
+        in
+          links[pred q] := piles[pred i];
+          piles[pred i] := q;
+          if i = succ m then
+            loop {q + 1} (arr, succ q, piles, links, succ m)
+          else
+            loop {q + 1} (arr, succ q, piles, links, m)
+        end
+
+    val piles_tup = array_ptr_alloc<link_t> num_elems
+    macdef piles = !(piles_tup.2)
+    val () = array_initize_elt<link_t> (piles, num_elems, link_nil)
+
+    val links_tup = array_ptr_alloc<link_t> num_elems
+    macdef links = !(links_tup.2)
+    val () = array_initize_elt<link_t> (links, num_elems, link_nil)
+
+    val num_piles = loop (arr, one, piles, links, zero)
+  in
+    @(num_piles, piles_tup, links_tup)
+  end
+
+fn {a : t@ype}
+k_way_merge {ifirst, ilast : int | ifirst <= ilast}
+            {n             : int | ilast < n}
+            {n_piles       : int | ilast - ifirst + 1 <= n_piles}
+            {num_piles     : pos | num_piles <= ilast - ifirst + 1}
+            {n_links       : int | ilast - ifirst + 1 <= n_links}
+            (ifirst        : size_t ifirst,
+             ilast         : size_t ilast,
+             arr           : &RD(array (a, n)),
+             num_piles     : size_t num_piles,
+             piles         : &array (link_t (ifirst, ilast), n_piles),
+             links         : &array (link_t (ifirst, ilast), n_links))
+    :<!wrt> (* Return an array of indices into arr. *)
+            [p : addr]
+            array_tup_vt
+              ([i : int | ifirst <= i; i <= ilast] size_t i,
+               p, ilast - ifirst + 1) =
+  (*
+    k-way merge by tournament tree.
+
+    See Knuth, volume 3, and also
+    https://en.wikipedia.org/w/index.php?title=K-way_merge_algorithm&oldid=1047851465#Tournament_Tree
+
+    However, I store a winners tree instead of the recommended losers
+    tree. If the tree were stored as linked nodes, it would probably
+    be more efficient to store a losers tree. However, I am storing
+    the tree as an array, and one can find an opponent quickly by
+    simply toggling the least significant bit of a competitor's array
+    index.
+  *)
+  let
+    typedef link_t (i : int) = link_t (ifirst, ilast, i)
+    typedef link_t = [i : int] link_t i
+
+    val link_nil : link_t 0 = g1u2u 0u
+
+    typedef index_t (i : int) = [ifirst <= i; i <= ilast] size_t i
+    typedef index_t = [i : int] index_t i
+
+    val [total_external_nodes : int]
+        @(_ | total_external_nodes) = next_power_of_two num_piles
+    prval () = prop_verify {num_piles <= total_external_nodes} ()
+
+    stadef total_nodes = (2 * total_external_nodes) - 1
+    val total_nodes : size_t total_nodes =
+      pred (g1u2u 2u * total_external_nodes)
+
+    (* We will ignore index 0 of the winners tree arrays. *)
+    stadef winners_size = total_nodes + 1
+    val winners_size : size_t winners_size = succ total_nodes
+
+    val winners_values_tup = array_ptr_alloc<link_t> winners_size
+    macdef winners_values = !(winners_values_tup.2)
+    val () = array_initize_elt<link_t> (winners_values, winners_size,
+                                        link_nil)
+
+    val winners_links_tup = array_ptr_alloc<link_t> winners_size
+    macdef winners_links = !(winners_links_tup.2)
+    val () = array_initize_elt<link_t> (winners_links, winners_size,
+                                        link_nil)
+
+    (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
+    (* Record which pile a winner will have come from.     *)
+
+    fun
+    init_pile_links
+              {i : nat | i <= num_piles}
+              .<num_piles - i>.
+              (winners_links : &array (link_t, winners_size),
+               i             : size_t i)
+        :<!wrt> void =
+      if i <> num_piles then
+        begin
+          winners_links[total_external_nodes + i] := succ i;
+          init_pile_links (winners_links, succ i)
+        end
+
+    val () = init_pile_links (winners_links, g1u2u 0u)
+
+    (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
+    (* The top of each pile becomes a starting competitor. *)
+
+    fun
+    init_competitors
+              {i : nat | i <= num_piles}
+              .<num_piles - i>.
+              (winners_values : &array (link_t, winners_size),
+               piles          : &array (link_t, n_piles),
+               i              : size_t i)
+        :<!wrt> void =
+      if i <> num_piles then
+        begin
+          winners_values[total_external_nodes + i] := piles[i];
+          init_competitors (winners_values, piles, succ i)
+        end
+
+    val () = init_competitors (winners_values, piles, g1u2u 0u)
+
+    (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
+    (* Discard the top of each pile.                       *)
+
+    fun
+    discard_tops {i : nat | i <= num_piles}
+                 .<num_piles - i>.
+                 (piles : &array (link_t, n_piles),
+                  links : &array (link_t, n_links),
+                  i     : size_t i)
+        :<!wrt> void =
+      if i <> num_piles then
+        let
+          val link = piles[i]
+
+          (* None of the piles should have been empty. *)
+          val () = $effmask_exn assertloc (link <> g1u2u 0u)
+        in
+          piles[i] := links[pred link];
+          discard_tops (piles, links, succ i)
+        end
+
+    val () = discard_tops (piles, links, g1u2u 0u)
+
+    (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
+    (* How to play a game.                                 *)
+
+    fn
+    play_game {i              : int | 2 <= i; i <= total_nodes}
+              (arr            : &RD(array (a, n)),
+               winners_values : &array (link_t, winners_size),
+               i              : size_t i)
+        :<> [iwinner : pos | iwinner <= total_nodes]
+            size_t iwinner =
+      let
+        macdef lt = patience_sort$lt<a>
+
+        fn
+        find_opponent {i : int | 2 <= i; i <= total_nodes}
+                      (i : size_t i)
+            :<> [j : int | 2 <= j; j <= total_nodes]
+                size_t j =
+          let
+            (* The prelude contains bitwise operations only for
+               non-dependent unsigned integer. We will not bother to
+               add them ourselves, but instead go back and forth
+               between dependent and non-dependent. *)
+            val i0 = g0ofg1 i
+            val j0 = g0uint_lxor<size_kind> (i0, g0u2u 1u)
+            val j = g1ofg0 j0
+
+            (* We have no proof the opponent is in the proper
+               range. Create a "proof" by runtime checks. *)
+            val () = $effmask_exn assertloc (g1u2u 2u <= j)
+            val () = $effmask_exn assertloc (j <= total_nodes)
+          in
+            j
+          end
+
+        val j = find_opponent i
+        val winner_i = winners_values[i]
+        and winner_j = winners_values[j]
+      in
+        if winner_i = link_nil then
+          j
+        else if winner_j = link_nil then
+          i
+        else
+          let
+            val i1 = pred winner_i + ifirst
+            and i2 = pred winner_j + ifirst
+            prval () = lemma_g1uint_param i1
+            prval () = lemma_g1uint_param i2
+          in
+            if arr[i2] \lt arr[i1] then j else i
+          end
+      end
+
+    (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
+
+    fun
+    build_tree {istart : pos | istart <= total_external_nodes}
+               .<istart>.
+               (arr            : &RD(array (a, n)),
+                winners_values : &array (link_t, winners_size),
+                winners_links  : &array (link_t, winners_size),
+                istart         : size_t istart)
+        :<!wrt> void =
+      if istart <> 1 then
+        let
+          fun
+          play_initial_games
+                    {i : int | istart <= i; i <= (2 * istart) + 1}
+                    .<(2 * istart) + 1 - i>.
+                    (arr            : &RD(array (a, n)),
+                     winners_values : &array (link_t, winners_size),
+                     winners_links  : &array (link_t, winners_size),
+                     i              : size_t i)
+              :<!wrt> void =
+            if i <= pred (istart + istart) then
+              let
+                val iwinner = play_game (arr, winners_values, i)
+                and i2 = i / g1u2u 2u
+              in
+                winners_values[i2] := winners_values[iwinner];
+                winners_links[i2] := winners_links[iwinner];
+                play_initial_games (arr, winners_values,
+                                    winners_links, succ (succ i))
+              end
+        in
+          play_initial_games (arr, winners_values, winners_links,
+                              istart);
+          build_tree (arr, winners_values, winners_links,
+                      istart / g1u2u 2u)
+        end
+
+    val () = build_tree (arr, winners_values, winners_links,
+                         total_external_nodes)
+
+    (* - - - - - - - - - - - - - - - - - - - - - - - - - - *)
+
+    fun
+    replay_games {i : pos | i <= total_nodes}
+                 .<i>.
+                 (arr            : &RD(array (a, n)),
+                  winners_values : &array (link_t, winners_size),
+                  winners_links  : &array (link_t, winners_size),
+                  i              : size_t i)
+        :<!wrt> void =
+      if i <> g1u2u 1u then
+        let
+          val iwinner = play_game (arr, winners_values, i)
+          and i2 = i / g1u2u 2u
+        in
+          winners_values[i2] := winners_values[iwinner];
+          winners_links[i2] := winners_links[iwinner];
+          replay_games (arr, winners_values, winners_links, i2)
+        end
+
+    stadef num_elems = ilast - ifirst + 1
+    val num_elems : size_t num_elems = succ (ilast - ifirst)
+
+    val sorted_tup = array_ptr_alloc<index_t> num_elems
+
+    fun
+    merge {isorted  : nat | isorted <= num_elems}
+          {p_sorted : addr}
+          .<num_elems - isorted>.
+          (pf_sorted      : !array_v (index_t?, p_sorted,
+                                      num_elems - isorted)
+                                >> array_v (index_t, p_sorted,
+                                            num_elems - isorted) |
+           arr            : &RD(array (a, n)),
+           piles          : &array (link_t, n_piles),
+           links          : &array (link_t, n_links),
+           winners_values : &array (link_t, winners_size),
+           winners_links  : &array (link_t, winners_size),
+           p_sorted       : ptr p_sorted,
+           isorted        : size_t isorted)
+        :<!wrt> void =
+      (* This function not only fills in the "sorted_tup" array, but
+         transforms it from "uninitialized" to "initialized". *)
+      if isorted <> num_elems then
+        let
+          prval @(pf_elem, pf_rest) = array_v_uncons pf_sorted
+          val winner = winners_values[1]
+          val () = $effmask_exn assertloc (winner <> link_nil)
+          val () = !p_sorted := pred winner + ifirst
+
+          (* Move to the next element in the winner's pile. *)
+          val ilink = winners_links[1]
+          val () = $effmask_exn assertloc (ilink <> link_nil)
+          val inext = piles[pred ilink]
+          val () = (if inext <> link_nil then
+                      piles[pred ilink] := links[pred inext])
+
+          (* Replay games, with the new element as a competitor. *)
+          val i = (total_nodes / g1u2u 2u) + ilink
+          val () = $effmask_exn assertloc (i <= total_nodes)
+          val () = winners_values[i] := inext
+          val () =
+            replay_games (arr, winners_values, winners_links, i)
+
+          val () = merge (pf_rest | arr, piles, links,
+                                    winners_values, winners_links,
+                                    ptr_succ<index_t> p_sorted,
+                                    succ isorted)
+          prval () = pf_sorted := array_v_cons (pf_elem, pf_rest)
+        in
+        end
+      else
+        let
+          prval () = pf_sorted :=
+            array_v_unnil_nil{index_t?, index_t} pf_sorted
+        in
+        end
+
+    val () = merge (sorted_tup.0 | arr, piles, links,
+                                   winners_values, winners_links,
+                                   sorted_tup.2, i2sz 0)
+
+    val () = array_ptr_free (winners_values_tup.0,
+                             winners_values_tup.1 |
+                             winners_values_tup.2)
+    val () = array_ptr_free (winners_links_tup.0,
+                             winners_links_tup.1 |
+                             winners_links_tup.2)
+  in
+    sorted_tup
+  end
+
+implement {a}
+patience_sort (arr, ifirst, len) =
+  let
+    prval () = lemma_g1uint_param ifirst
+    prval () = lemma_g1uint_param len
+  in
+    if len = i2sz 0 then
+      let
+        val sorted_tup = array_ptr_alloc<size_t 0> len
+        prval () = sorted_tup.0 :=
+          array_v_unnil_nil{Size_t?, Size_t} sorted_tup.0
+      in
+        sorted_tup
+      end
+    else
+      let
+        val ilast = ifirst + pred len
+        val @(num_piles, piles_tup, links_tup) =
+          deal<a> (ifirst, ilast, arr)
+        macdef piles = !(piles_tup.2)
+        macdef links = !(links_tup.2)
+        prval () = lemma_g1uint_param num_piles
+        val () = $effmask_exn assertloc (num_piles <> i2sz 0)
+        val sorted_tup = k_way_merge<a> (ifirst, ilast, arr,
+                                         num_piles, piles, links)
+      in
+        array_ptr_free (piles_tup.0, piles_tup.1 | piles_tup.2);
+        array_ptr_free (links_tup.0, links_tup.1 | links_tup.2);
+        sorted_tup
+      end
+  end
+
+(*------------------------------------------------------------------*)
+
+fn
+int_patience_sort_ascending
+          {ifirst, len   : int | 0 <= ifirst}
+          {n             : int | ifirst + len <= n}
+          (arr           : &RD(array (int, n)),
+           ifirst        : size_t ifirst,
+           len           : size_t len)
+    :<!wrt> [p : addr]
+            array_tup_vt
+              ([i : int | len == 0 ||
+                          (ifirst <= i && i < ifirst + len)] size_t i,
+               p, len) =
+  let
+    implement
+    patience_sort$lt<int> (x, y) =
+      x < y
+  in
+    patience_sort<int> (arr, ifirst, len)
+  end
+
+fn {a : t@ype}
+find_length {n   : int}
+            (lst : list (a, n))
+    :<> [m : int | m == n] size_t m =
+  let
+    prval () = lemma_list_param lst
+  in
+    g1i2u (length lst)
+  end
+
+implement
+main0 () =
+  let
+    val example_list =
+      $list (22, 15, 98, 82, 22, 4, 58, 70, 80, 38, 49, 48, 46, 54,
+             93, 8, 54, 2, 72, 84, 86, 76, 53, 37, 90)
+
+    val ifirst = i2sz 10
+    val [len : int] len = find_length example_list
+
+    #define ARRSZ 100
+    val () = assertloc (i2sz 10 + len <= ARRSZ)
+
+    var arr : array (int, ARRSZ)
+    val () = array_initize_elt<int> (arr, i2sz ARRSZ, 0)
+
+    prval @(pf_left, pf_right) =
+      array_v_split {int} {..} {ARRSZ} {10} (view@ arr)
+    prval @(pf_middle, pf_right) =
+      array_v_split {int} {..} {90} {len} pf_right
+
+    val p = ptr_add<int> (addr@ arr, 10)
+    val () = array_copy_from_list<int> (!p, example_list)
+
+    prval pf_right = array_v_unsplit (pf_middle, pf_right)
+    prval () = view@ arr := array_v_unsplit (pf_left, pf_right)
+
+    val @(pf_sorted, pfgc_sorted | p_sorted) =
+      int_patience_sort_ascending (arr, i2sz 10, len)
+
+    macdef sorted = !p_sorted
+
+    var i : [i : nat | i <= len] size_t i
+  in
+    print! ("unsorted  ");
+    for (i := i2sz 0; i <> len; i := succ i)
+      print! (" ", arr[i2sz 10 + i]);
+    println! ();
+
+    print! ("sorted    ");
+    for (i := i2sz 0; i <> len; i := succ i)
+      print! (" ", arr[sorted[i]]);
+    println! ();
+
+    array_ptr_free (pf_sorted, pfgc_sorted | p_sorted)
+  end
+
+(*------------------------------------------------------------------*)

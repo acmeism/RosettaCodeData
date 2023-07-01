@@ -1,0 +1,146 @@
+/* ARM assembly Raspberry PI  */
+/*  program inputLoop.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*********************************************/
+/*constantes                                */
+/********************************************/
+.equ STDOUT, 1     @ Linux output console
+.equ EXIT,   1     @ Linux syscall
+.equ READ,   3
+.equ WRITE,  4
+.equ OPEN,   5
+.equ CLOSE,  6
+.equ CREATE,  8
+/*  file */
+.equ O_RDONLY,    0x0        @ open for reading only
+
+.equ BUFSIZE,  10000
+.equ LINESIZE, 100
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessErreur:     .asciz "Erreur ouverture fichier input.\n"
+szMessErreur1:    .asciz "Erreur fermeture fichier.\n"
+szMessErreur2:    .asciz "Erreur lecture fichier.\n"
+szCarriageReturn: .asciz "\n"
+szMessEndLine:    .asciz "<<<<<< End line.\n"
+
+szNameFileInput:    .asciz "input.txt"
+
+/*******************************************/
+/* DONNEES NON INITIALISEES                */
+/*******************************************/
+.bss
+sBuffer:      .skip BUFSIZE
+sBufferWord:  .skip LINESIZE
+/**********************************************/
+/* -- Code section                            */
+/**********************************************/
+.text
+.global main
+main:
+    /* open file */
+    ldr r0,iAdrszNameFileInput      @ file name
+    mov r1,#O_RDONLY                @  flags
+    mov r2,#0                       @ mode
+    mov r7,#OPEN                    @ call system OPEN
+    svc #0
+    cmp r0,#0                       @ open error ?
+    ble erreur
+    /* read file  */
+    mov r9,r0                       @ save File Descriptor
+    ldr r1,iAdrsBuffer              @ buffer address
+    mov r2,#BUFSIZE                 @ buffer size
+    mov r7, #READ                   @ call system  READ
+    svc 0
+    cmp r0,#0                       @ read error ?
+    ble erreur2
+    mov r2,r0                       @ length read characters
+    /* buffer analyze   */
+    ldr r3,iAdrsBuffer              @ buffer address
+    ldr r5,iAdrsBufferWord          @ buffer address
+    mov r7,#0                       @ word byte counter
+    mov r4,#0                       @ byte counter
+1:
+    ldrb r6,[r3,r4]                 @ load byte buffer
+    cmp r6,#' '                     @ space ?
+    moveq r8,#0                     @ yes
+    beq 2f
+    cmp r6,#0xA                     @ end line ?
+    moveq r8,#1
+    beq 2f
+    cmp r6,#0xD                     @ end line ?
+    beq 3f
+    strb r6,[r5,r7]                 @ store byte
+    add r7,#1                       @ increment word byte counter
+    b 4f
+2:                                  @ word end
+    cmp r7,#0
+    beq 3f
+    mov r6,#0                       @ store 0 final
+    strb r6,[r5,r7]
+    mov r0,r5                       @ display word
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    mov r7,#0                       @ raz word byte counter
+3:
+    cmp r8,#1                       @ end line ?
+    bne 4f
+    ldr r0,iAdrszMessEndLine
+    bl affichageMess
+4:
+    add r4,#1                       @ increment read buffer counter
+    cmp r4,r2                       @ end bytes ?
+    blt 1b                          @ no -> loop
+
+4:
+    /* close imput file */
+    mov r0,r9                       @ Fd
+    mov r7, #CLOSE                  @ call system CLOSE
+    svc 0
+    cmp r0,#0                       @ close error ?
+    blt erreur1
+
+
+    mov r0,#0     @ return code OK
+    b 100f
+erreur:
+    ldr r1,iAdrszMessErreur
+    bl displayError
+    mov r0,#1       @ error return code
+    b 100f
+erreur1:
+    ldr r1,iAdrszMessErreur1
+    bl displayError
+    mov r0,#1       @ error return code
+    b 100f
+erreur2:
+    ldr r1,iAdrszMessErreur2
+    bl displayError
+    mov r0,#1       @ error return code
+    b 100f
+
+
+100:        @ end program
+    mov r7, #EXIT
+    svc 0
+iAdrszNameFileInput:      .int szNameFileInput
+iAdrszMessErreur:         .int szMessErreur
+iAdrszMessErreur1:        .int szMessErreur1
+iAdrszMessErreur2:        .int szMessErreur2
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszMessEndLine:        .int szMessEndLine
+iAdrsBuffer:              .int sBuffer
+iAdrsBufferWord:          .int sBufferWord
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

@@ -1,0 +1,332 @@
+%{^
+#include <math.h>
+#include <float.h>
+%}
+
+#include "share/atspre_staload.hats"
+
+macdef NAN = g0f2f ($extval (float, "NAN"))
+macdef Zero = g0i2f 0
+macdef One = g0i2f 1
+
+(* The sqrt(3) function made part of the ‘g0float’ typekind series.
+   (The ats2-xprelude package will do this for you, but it is easy
+   to do if you are not using a lot of math functions. *)
+extern fn {tk : tkind} g0float_sqrt : g0float tk -<> g0float tk
+overload sqrt with g0float_sqrt
+implement g0float_sqrt<fltknd> x = $extfcall (float, "sqrtf", x)
+implement g0float_sqrt<dblknd> x = $extfcall (double, "sqrt", x)
+implement g0float_sqrt<ldblknd> x = $extfcall (ldouble, "sqrtl", x)
+
+(*------------------------------------------------------------------*)
+(* A "very little matrix library"                                   *)
+
+typedef Matrix_Index_Map (m1 : int, n1 : int, m0 : int, n0 : int) =
+  {i1, j1 : pos | i1 <= m1; j1 <= n1}
+  (int i1, int j1) -<cloref0>
+  [i0, j0 : pos | i0 <= m0; j0 <= n0]
+    @(int i0, int j0)
+
+datatype Real_Matrix (tk : tkind,
+                      m1 : int, n1 : int,
+                      m0 : int, n0 : int) =
+| Real_Matrix of (matrixref (g0float tk, m0, n0),
+                  int m1, int n1, int m0, int n0,
+                  Matrix_Index_Map (m1, n1, m0, n0))
+typedef Real_Matrix (tk : tkind, m1 : int, n1 : int) =
+  [m0, n0 : pos] Real_Matrix (tk, m1, n1, m0, n0)
+typedef Real_Vector (tk : tkind, m1 : int, n1 : int) =
+  [m1 == 1 || n1 == 1] Real_Matrix (tk, m1, n1)
+typedef Real_Row (tk : tkind, n1 : int) = Real_Vector (tk, 1, n1)
+typedef Real_Column (tk : tkind, m1 : int) = Real_Vector (tk, m1, 1)
+
+extern fn {tk : tkind}
+Real_Matrix_make_elt :
+  {m0, n0 : pos}
+  (int m0, int n0, g0float tk) -< !wrt >
+    Real_Matrix (tk, m0, n0, m0, n0)
+
+extern fn {tk : tkind}
+Real_Matrix_copy :
+  {m1, n1 : pos}
+  Real_Matrix (tk, m1, n1) -< !refwrt > Real_Matrix (tk, m1, n1)
+
+extern fn {tk : tkind}
+Real_Matrix_copy_to :
+  {m1, n1 : pos}
+  (Real_Matrix (tk, m1, n1),    (* destination *)
+   Real_Matrix (tk, m1, n1)) -< !refwrt >
+    void
+
+extern fn {}
+Real_Matrix_dimension :
+  {tk : tkind}
+  {m1, n1 : pos}
+  Real_Matrix (tk, m1, n1) -<> @(int m1, int n1)
+
+extern fn {tk : tkind}
+Real_Matrix_get_at :
+  {m1, n1 : pos}
+  {i1, j1 : pos | i1 <= m1; j1 <= n1}
+  (Real_Matrix (tk, m1, n1), int i1, int j1) -< !ref > g0float tk
+
+extern fn {tk : tkind}
+Real_Matrix_set_at :
+  {m1, n1 : pos}
+  {i1, j1 : pos | i1 <= m1; j1 <= n1}
+  (Real_Matrix (tk, m1, n1), int i1, int j1, g0float tk) -< !refwrt >
+    void
+
+extern fn {}
+Real_Matrix_reflect_lower_triangle :
+  (* This operation makes every It is a change in how INDEXING
+     works. All the storage is still in the lower triangle. *)
+  {tk     : tkind}
+  {n1     : pos}
+  {m0, n0 : pos}
+  Real_Matrix (tk, n1, n1, m0, n0) -<>
+    Real_Matrix (tk, n1, n1, m0, n0)
+
+extern fn {tk : tkind}
+Real_Matrix_fprint :
+  {m, n : pos}
+  (FILEref, Real_Matrix (tk, m, n)) -<1> void
+
+overload copy with Real_Matrix_copy
+overload copy_to with Real_Matrix_copy_to
+overload dimension with Real_Matrix_dimension
+overload [] with Real_Matrix_get_at
+overload [] with Real_Matrix_set_at
+overload reflect_lower_triangle with
+  Real_Matrix_reflect_lower_triangle
+
+(*------------------------------------------------------------------*)
+(* Implementation of the "very little matrix library"               *)
+
+implement {tk}
+Real_Matrix_make_elt (m0, n0, elt) =
+  Real_Matrix (matrixref_make_elt<g0float tk> (i2sz m0, i2sz n0, elt),
+               m0, n0, m0, n0, lam (i1, j1) => @(i1, j1))
+
+implement {}
+Real_Matrix_dimension A =
+  case+ A of Real_Matrix (_, m1, n1, _, _, _) => @(m1, n1)
+
+implement {tk}
+Real_Matrix_get_at (A, i1, j1) =
+  let
+    val+ Real_Matrix (storage, _, _, _, n0, index_map) = A
+    val @(i0, j0) = index_map (i1, j1)
+  in
+    matrixref_get_at<g0float tk> (storage, pred i0, n0, pred j0)
+  end
+
+implement {tk}
+Real_Matrix_set_at (A, i1, j1, x) =
+  let
+    val+ Real_Matrix (storage, _, _, _, n0, index_map) = A
+    val @(i0, j0) = index_map (i1, j1)
+  in
+    matrixref_set_at<g0float tk> (storage, pred i0, n0, pred j0, x)
+  end
+
+implement {}
+Real_Matrix_reflect_lower_triangle {..} {n1} A =
+  let
+    typedef t = intBtwe (1, n1)
+    val+ Real_Matrix (storage, n1, _, m0, n0, index_map) = A
+  in
+    Real_Matrix (storage, n1, n1, m0, n0,
+                 lam (i, j) =>
+                  index_map ((if j <= i then i else j) : t,
+                             (if j <= i then j else i) : t))
+  end
+
+implement {tk}
+Real_Matrix_copy A =
+  let
+    val @(m1, n1) = dimension A
+    val C = Real_Matrix_make_elt<tk> (m1, n1, A[1, 1])
+    val () = copy_to<tk> (C, A)
+  in
+    C
+  end
+
+implement {tk}
+Real_Matrix_copy_to (Dst, Src) =
+  let
+    val @(m1, n1) = dimension Src
+    prval [m1 : int] EQINT () = eqint_make_gint m1
+    prval [n1 : int] EQINT () = eqint_make_gint n1
+
+    var i : intGte 1
+  in
+    for* {i : pos | i <= m1 + 1} .<(m1 + 1) - i>.
+         (i : int i) =>
+      (i := 1; i <> succ m1; i := succ i)
+        let
+          var j : intGte 1
+        in
+          for* {j : pos | j <= n1 + 1} .<(n1 + 1) - j>.
+               (j : int j) =>
+            (j := 1; j <> succ n1; j := succ j)
+              Dst[i, j] := Src[i, j]
+        end
+  end
+
+implement {tk}
+Real_Matrix_fprint {m, n} (outf, A) =
+  let
+    val @(m, n) = dimension A
+    var i : intGte 1
+  in
+    for* {i : pos | i <= m + 1} .<(m + 1) - i>.
+         (i : int i) =>
+      (i := 1; i <> succ m; i := succ i)
+        let
+          var j : intGte 1
+        in
+          for* {j : pos | j <= n + 1} .<(n + 1) - j>.
+               (j : int j) =>
+            (j := 1; j <> succ n; j := succ j)
+              let
+                typedef FILEstar = $extype"FILE *"
+                extern castfn FILEref2star : FILEref -<> FILEstar
+                val _ = $extfcall (int, "fprintf", FILEref2star outf,
+                                   "%16.6g", A[i, j])
+              in
+              end;
+          fprintln! (outf)
+        end
+  end
+
+(*------------------------------------------------------------------*)
+(* Cholesky-Banachiewicz, in place. See
+   https://en.wikipedia.org/w/index.php?title=Cholesky_decomposition&oldid=1149960985#The_Cholesky%E2%80%93Banachiewicz_and_Cholesky%E2%80%93Crout_algorithms
+
+   I would use Cholesky-Crout if my matrices were stored in column
+   major order. But it makes little difference. *)
+
+extern fn {tk : tkind}
+Real_Matrix_cholesky_decomposition :
+  (* Only the lower triangle is considered. *)
+  {n : pos}
+  Real_Matrix (tk, n, n) -< !refwrt > void
+
+overload cholesky_decomposition with
+  Real_Matrix_cholesky_decomposition
+
+implement {tk}
+Real_Matrix_cholesky_decomposition {n} A =
+  let
+    val @(n, _) = dimension A
+
+    (* I arrange the nested loops somewhat differently from how it is
+       done in the Wikipedia article's C snippet. *)
+    fun
+    repeat {i, j : pos | j <= i; i <= n + 1} (* <-- allowed values *)
+           .<(n + 1) - i, i - j>. (* <-- proof of termination *)
+           (i : int i, j : int j) :<!refwrt> void =
+      if i = n + 1 then
+        ()                      (* All done. *)
+      else
+        let
+          fun
+          _sum {k : pos | k <= j} .<j - k>.
+               (x : g0float tk, k : int k) :<!refwrt> g0float tk =
+            if k = j then
+              x
+            else
+              _sum (x + (A[i, k] * A[j, k]), succ k)
+
+          val sum = _sum (Zero, 1)
+        in
+          if j = i then
+            begin
+              A[i, j] := sqrt (A[i, i] - sum);
+              repeat (succ i, 1)
+            end
+          else
+            begin
+              A[i, j] := (One / A[j, j]) * (A[i, j] - sum);
+              repeat (i, succ j)
+            end
+        end
+  in
+    repeat (1, 1)
+  end
+
+(*------------------------------------------------------------------*)
+
+fn {tk : tkind}           (* We like Fortran, so COLUMN major here. *)
+column_major_list_to_square_matrix
+          {n   : pos}
+          (n   : int n,
+           lst : list (g0float tk, n * n))
+    : Real_Matrix (tk, n, n) =
+  let
+    #define :: list_cons
+    prval () = mul_gte_gte_gte {n, n} ()
+    val A = Real_Matrix_make_elt (n, n, NAN)
+    val lstref : ref (List0 (g0float tk)) = ref lst
+    var j : intGte 1
+  in
+    for* {j : pos | j <= n + 1} .<(n + 1) - j>.
+         (j : int j) =>
+      (j := 1; j <> succ n; j := succ j)
+        let
+          var i : intGte 1
+        in
+          for* {i : pos | i <= n + 1} .<(n + 1) - i>.
+               (i : int i) =>
+            (i := 1; i <> succ n; i := succ i)
+              case- !lstref of
+              | hd :: tl =>
+                begin
+                  A[i, j] := hd;
+                  !lstref := tl
+                end
+        end;
+    A
+  end
+
+implement
+main0 () =
+  let
+    val _A =
+      column_major_list_to_square_matrix
+        (3, $list (25.0, 15.0, ~5.0,
+                   0.0, 18.0, 0.0,
+                   0.0, 0.0, 11.0))
+    val A = reflect_lower_triangle _A
+    and B = copy _A
+    val () =
+      begin
+        cholesky_decomposition B;
+        print! ("\nThe Cholesky decomposition of\n\n");
+        Real_Matrix_fprint (stdout_ref, A);
+        print! ("is\n");
+        Real_Matrix_fprint (stdout_ref, B)
+      end
+
+    val _A =
+      column_major_list_to_square_matrix
+        (4, $list (18.0, 22.0, 54.0, 42.0,
+                   0.0, 70.0, 86.0, 62.0,
+                   0.0, 0.0, 174.0, 134.0,
+                   0.0, 0.0, 0.0, 106.0))
+    val A = reflect_lower_triangle _A
+    and B = copy _A
+    val () =
+      begin
+        cholesky_decomposition B;
+        print! ("\nThe Cholesky decomposition of\n\n");
+        Real_Matrix_fprint (stdout_ref, A);
+        print! ("is\n");
+        Real_Matrix_fprint (stdout_ref, B)
+      end
+  in
+    println! ()
+  end
+
+(*------------------------------------------------------------------*)

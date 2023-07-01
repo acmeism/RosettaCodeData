@@ -1,0 +1,219 @@
+'Graphic fast Fourier transform demo,
+'press any key for the next image.
+'131072 samples: the FFT is fast indeed.
+
+'screen resolution
+const dW = 800, dH = 600
+'--------------------------------------
+type samples
+declare constructor (byval p as integer)
+
+   'sw = 0 forward transform
+   'sw = 1 reverse transform
+   declare sub FFT (byval sw as integer)
+
+   'draw mythical birds
+   declare sub oiseau ()
+
+   'plot frequency and amplitude
+   declare sub famp ()
+
+   'plot transformed samples
+   declare sub bird ()
+
+as double x(any), y(any)
+as integer fl, m, n, n2
+end type
+
+constructor samples (byval p as integer)
+   m = p
+  'number of points
+   n = 1 shl p
+   n2 = n shr 1
+  'real and complex values
+redim x(n - 1), y(n - 1)
+end constructor
+
+
+'--------------------------------------
+'in-place complex-to-complex FFT adapted from
+'[ http://paulbourke.net/miscellaneous/dft/ ]
+
+sub samples.FFT (byval sw as integer)
+dim as double c1, c2, t1, t2, u1, u2, v
+dim as integer i, j = 0, k, L, l1, l2
+
+   'bit reversal sorting
+   for i = 0 to n - 2
+      if i < j then
+         swap x(i), x(j)
+         swap y(i), y(j)
+      end if
+
+      k = n2
+      while k <= j
+         j -= k: k shr= 1
+      wend
+      j += k
+   next i
+
+   'initial cosine & sine
+   c1 = -1.0
+   c2 = 0.0
+   'loop for each stage
+   l2 = 1
+   for L = 1 to m
+      l1 = l2: l2 shl= 1
+
+      'initial vertex
+      u1 = 1.0
+      u2 = 0.0
+      'loop for each sub DFT
+      for k = 1 to l1
+         'butterfly dance
+         for i = k - 1 to n - 1 step l2
+            j = i + l1
+            t1 = u1 * x(j) - u2 * y(j)
+            t2 = u1 * y(j) + u2 * x(j)
+            x(j) = x(i) - t1
+            y(j) = y(i) - t2
+            x(i) += t1
+            y(i) += t2
+         next i
+
+         'next polygon vertex
+         v =  u1 * c1 - u2 * c2
+         u2 = u1 * c2 + u2 * c1
+         u1 = v
+      next k
+
+      'half-angle sine
+      c2 = sqr((1.0 - c1) * .5)
+      if sw = 0 then c2 = -c2
+      'half-angle cosine
+      c1 = sqr((1.0 + c1) * .5)
+   next L
+
+   'scaling for reverse transform
+   if sw then
+      for i = 0 to n - 1
+         x(i) /= n
+         y(i) /= n
+      next i
+   end if
+end sub
+
+'--------------------------------------
+'Gumowski-Mira attractors "Oiseaux mythiques"
+'[ http://www.atomosyd.net/spip.php?article98 ]
+
+sub samples.oiseau
+dim as double a, b, c, t, u, v, w
+dim as integer dx, y0, dy, i, k
+
+'bounded non-linearity
+if fl then
+   a = -0.801
+   dx = 20: y0 =-1: dy = 12
+else
+   a = -0.492
+   dx = 17: y0 =-3: dy = 14
+end if
+   window (-dx, y0-dy)-(dx, y0+dy)
+
+   'dissipative coefficient
+   b = 0.967
+   c = 2 - 2 * a
+
+   u = 1: v = 0.517: w = 1
+
+   for i = 0 to n - 1
+      t = u
+      u = b * v + w
+      w = a * u + c * u * u / (1 + u * u)
+      v = w - t
+
+      'remove bias
+      t = u - 1.830
+      x(i) = t
+      y(i) = v
+      k = 5 + point(t, v)
+      pset (t, v), 1 + k mod 14
+   next i
+   sleep
+end sub
+
+'--------------------------------------
+sub samples.famp
+dim as double a, s, f = n / dW
+dim as integer i, k
+   window
+
+   k = iif(fl, dW / 5, dW / 3)
+   for i = k to dW step k
+      line (i, 0)-(i, dH), 1
+   next i
+
+   a = 0
+   k = 0: s = f - 1
+   for i = 0 to n - 1
+      a += x(i) * x(i) + y(i) * y(i)
+
+      if i > s then
+         a = log(1 + a / f) * 0.045
+         if k then
+            line -(k, (1 - a) * dH), 15
+         else
+            pset(0, (1 - a) * dH), 15
+         end if
+
+         a = 0
+         k += 1: s += f
+      end if
+   next i
+   sleep
+end sub
+
+sub samples.bird
+dim as integer dx, y0, dy, i, k
+
+if fl then
+   dx = 20: y0 =-1: dy = 12
+else
+   dx = 17: y0 =-3: dy = 14
+end if
+   window (-dx, y0-dy)-(dx, y0+dy)
+
+   for i = 0 to n - 1
+      k = 2 + point(x(i), y(i))
+      pset (x(i), y(i)), 1 + k mod 14
+   next i
+   sleep
+end sub
+
+'main
+'--------------------------------------
+dim as integer i, p = 17
+'n = 2 ^ p
+dim as samples z = p
+
+screenres dW, dH, 4, 1
+
+for i = 0 to 1
+   z.fl = i
+   z.oiseau
+
+   'forward
+   z.FFT(0)
+
+   'amplitude plot with peaks at the
+   '± winding numbers of the orbits.
+   z.famp
+
+   'reverse
+   z.FFT(1)
+
+   z.bird
+   cls
+next i
+end

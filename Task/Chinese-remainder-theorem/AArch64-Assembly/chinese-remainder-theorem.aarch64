@@ -1,0 +1,186 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program chineserem64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResult:       .asciz "Result = "
+szCarriageReturn:   .asciz "\n"
+.align 2
+arrayN:           .quad 3,5,7
+arrayA:           .quad 2,3,2
+      .equ ARRAYSIZE,  (. - arrayA)/8
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:           .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr x0,qAdrarrayN            // N array address
+    ldr x1,qAdrarrayA            // A array address
+    mov x2,#ARRAYSIZE            //  array size
+    bl chineseremainder
+
+    ldr x1,qAdrsZoneConv
+    bl conversion10             // call décimal conversion
+    mov x0,#3
+    ldr x1,qAdrszMessResult
+    ldr x2,qAdrsZoneConv        // insert conversion in message
+    ldr x3,qAdrszCarriageReturn
+    bl displayStrings           // display message
+
+100:                            // standard end of the program
+    mov x0, #0                  // return code
+    mov x8,EXIT
+    svc #0                      // perform the system call
+qAdrszCarriageReturn:    .quad szCarriageReturn
+qAdrsZoneConv:           .quad sZoneConv
+qAdrszMessResult:        .quad szMessResult
+qAdrarrayA:              .quad arrayA
+qAdrarrayN:              .quad arrayN
+
+/******************************************************************/
+/*     compute chinese remainder                                  */
+/******************************************************************/
+/* x0 contains n array address */
+/* x1 contains a array address */
+/* x2 contains array size      */
+chineseremainder:
+    stp x1,lr,[sp,-16]!       // save  registers
+    stp x2,x3,[sp,-16]!       // save  registers
+    stp x4,x5,[sp,-16]!       // save  registers
+    stp x6,x7,[sp,-16]!       // save  registers
+    stp x8,x9,[sp,-16]!       // save  registers
+    mov x4,#1                 // product
+    mov x5,#0                 // sum
+    mov x6,#0                 // indice
+1:
+    ldr x3,[x0,x6,lsl #3]     // load a value
+    mul x4,x3,x4              // compute product
+    add x6,x6,#1
+    cmp x6,x2
+    blt 1b
+    mov x6,#0
+    mov x7,x0                 // save entry
+    mov x8,x1
+    mov x9,x2
+2:
+    mov x0,x4                 // product
+    ldr x1,[x7,x6,lsl #3]     // value of n
+    sdiv x2,x0,x1
+    mov x0,x2                 //  p
+    bl inverseModulo
+    mul x0,x2,x0              // = product / n * invmod
+    ldr x3,[x8,x6,lsl #3]     //  value a
+    madd x5,x0,x3,x5          // sum = sum + (result1 * a)
+    add x6,x6,#1
+    cmp x6,x9
+    blt 2b
+    sdiv x1,x5,x4             // divide sum by produc
+    msub x0,x1,x4,x5          // compute remainder
+100:
+    ldp x8,x9,[sp],16        // restaur  registers
+    ldp x6,x7,[sp],16        // restaur  registers
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x2,x3,[sp],16        // restaur  registers
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+/***************************************************/
+/*   Calcul modulo inverse                            */
+/***************************************************/
+/* x0 cont.quad number, x1 modulo              */
+/* x0 return result               */
+inverseModulo:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    stp x6,x7,[sp,-16]!          // save  registers
+    mov x7,x1            // save Modulo
+    mov x6,x1            // A   x0=B
+    mov x4,#1            // X
+    mov x5,#0            // Y
+1:   //
+    cmp x0,#0            // B = 0
+    beq 2f
+    mov x1,x0            // T = B
+    mov x0,x6            // A
+    sdiv x2,x0,x1        // A / T
+    msub x0,x2,x1,x0     // B and x2=Q
+    mov x6,x1            // A=T
+    mov x1,x4            // T=X
+    msub x4,x2,x1,x5     // X=Y-(Q*T)
+    mov x5,x1            // Y=T
+    b 1b
+2:
+    add x7,x7,x5         // = Y + N
+    cmp x5,#0            // Y > 0
+    bge 3f
+    mov x0,x7
+    b 100f
+3:
+    mov x0,x5
+100:
+    ldp x6,x7,[sp],16        // restaur  registers
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x2,x3,[sp],16        // restaur  registers
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+/***************************************************/
+/*   display multi strings                    */
+/***************************************************/
+/* x0  contains number strings address */
+/* x1 address string1 */
+/* x2 address string2 */
+/* x3 address string3 */
+/* other address on the stack */
+/* thinck to add  number other address * 4 to add to the stack */
+displayStrings:            // INFO:  affichageStrings
+    stp x1,lr,[sp,-16]!    // save  registers
+    stp x2,x3,[sp,-16]!    // save  registers
+    stp x4,x5,[sp,-16]!    // save  registers
+    add fp,sp,#48          // save paraméters address (6 registers saved * 8 bytes)
+    mov x4,x0              // save strings number
+    cmp x4,#0              // 0 string -> end
+    ble 100f
+    mov x0,x1              // string 1
+    bl affichageMess
+    cmp x4,#1              // number > 1
+    ble 100f
+    mov x0,x2
+    bl affichageMess
+    cmp x4,#2
+    ble 100f
+    mov x0,x3
+    bl affichageMess
+    cmp x4,#3
+    ble 100f
+    mov x3,#3
+    sub x2,x4,#4
+1:                          // loop extract address string on stack
+    ldr x0,[fp,x2,lsl #3]
+    bl affichageMess
+    subs x2,x2,#1
+    bge 1b
+100:
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x2,x3,[sp],16        // restaur  registers
+    ldp x1,lr,[sp],16        // restaur  registers
+    ret
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

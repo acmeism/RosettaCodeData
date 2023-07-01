@@ -1,0 +1,133 @@
+100H: /* READ A SPECIFIC LINE FROM A FILE                                    */
+
+   DECLARE FALSE    LITERALLY '0', TRUE LITERALLY '0FFH';
+   DECLARE NL$CHAR  LITERALLY '0AH';                     /* NEWLINE: CHAR 10 */
+   DECLARE EOF$CHAR LITERALLY '26';                      /* EOF: CTRL-Z      */
+   /* CP/M BDOS SYSTEM CALL, RETURNS A VALUE                                 */
+   BDOS: PROCEDURE( FN, ARG )BYTE; DECLARE FN BYTE, ARG ADDRESS; GOTO 5; END;
+   /* CP/M BDOS SYSTEM CALL, NO RETURN VALUE */
+   BDOS$P: PROCEDURE( FN, ARG );   DECLARE FN BYTE, ARG ADDRESS; GOTO 5; END;
+   EXIT:      PROCEDURE; CALL BDOS$P( 0, 0 ); END;      /* CP/M SYSTEM RESET */
+   PR$CHAR:   PROCEDURE( C ); DECLARE C BYTE;    CALL BDOS$P( 2, C );    END;
+   PR$STRING: PROCEDURE( S ); DECLARE S ADDRESS; CALL BDOS$P( 9, S );    END;
+   PR$NL:     PROCEDURE; CALL PR$STRING( .( 0DH, NL$CHAR, '$' ) );       END;
+   PR$NUMBER: PROCEDURE( N ); /* PRINTS A NUMBER IN THE MINIMUN FIELD WIDTH  */
+      DECLARE N ADDRESS;
+      DECLARE V ADDRESS, N$STR ( 6 )BYTE, W BYTE;
+      V = N;
+      W = LAST( N$STR );
+      N$STR( W ) = '$';
+      N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      DO WHILE( ( V := V / 10 ) > 0 );
+         N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      END;
+      CALL PR$STRING( .N$STR( W ) );
+   END PR$NUMBER;
+   FL$EXISTS: PROCEDURE( FCB )BYTE; /* RETURNS TRUE IF THE FILE NAMED IN THE */
+      DECLARE FCB ADDRESS;          /*                 FCB EXISTS            */
+      RETURN ( BDOS( 17, FCB ) < 4 );
+   END FL$EXISTS ;
+   FL$OPEN:   PROCEDURE( FCB )BYTE; /* OPEN THE FILE WITH THE SPECIFIED FCB  */
+      DECLARE FCB ADDRESS;
+      RETURN ( BDOS( 15, FCB ) < 4 );
+   END FL$OPEN;
+   FL$READ:   PROCEDURE( FCB )BYTE; /* READ THE NEXT RECORD FROM FCB         */
+      DECLARE FCB ADDRESS;
+      RETURN ( BDOS( 20, FCB ) = 0 );
+   END FL$READ;
+   FL$CLOSE:  PROCEDURE( FCB )BYTE; /* CLOSE THE FILE WITH THE SPECIFIED FCB */
+      DECLARE FCB ADDRESS;
+      RETURN ( BDOS( 16, FCB ) < 4 );
+   END FL$CLOSE;
+
+   PR$BYTE:   PROCEDURE( B );       /* PRINT B EITHER AS A CHAR OR IN HEX    */
+      DECLARE B BYTE;
+      PR$HEX: PROCEDURE( H );       /* PRINT A HEX DIGIT                     */
+         DECLARE H BYTE;
+         IF H < 10 THEN CALL PR$CHAR(   H        + '0' );
+         ELSE           CALL PR$CHAR( ( H - 10 ) + 'A' );
+      END PR$HEX;
+      IF B >= ' ' AND B < 7FH AND B <> '$' THEN DO;
+         /* PRINTABLE CHAR AND NOT A $, SHOW AS A CHARACTER                  */
+         CALL PR$CHAR( B );
+         END;
+      ELSE DO;
+         /* NON-PRINTING CHAR OR $ - SHOW IN HEX                             */
+         CALL PR$CHAR( '$' );
+         CALL PR$HEX( SHR( B, 4 ) );
+         CALL PR$HEX( B AND 0FH );
+      END;
+   END PR$BYTE;
+
+   /* I/O USES FILE CONTROL BLOCKS CONTAINING THE FILE-NAME, POSITION, ETC.  */
+   /* WHEN THE PROGRAM IS RUN, THE CCP WILL FIRST PARSE THE COMMAND LINE AND */
+   /* PUT THE FIRST PARAMETER IN FCB1, THE SECOND PARAMETER IN FCB2          */
+   /* BUT FCB2 OVERLAYS THE END OF FCB1 AND THE DMA BUFFER OVERLAYS THE END  */
+   /* OF FCB2, SO WE NEED TO GET THE LINE NUMBER FROM FCB2 FIRST             */
+
+   DECLARE FCB$SIZE      LITERALLY '36';  /* SIZE OF A FCB                   */
+   DECLARE FCB1          LITERALLY '5CH'; /* ADDRESS OF FIRST  FCB           */
+   DECLARE FCB2          LITERALLY '6CH'; /* ADDRESS OF SECOND FCB           */
+   DECLARE DMA$BUFFER    LITERALLY '80H'; /* DEFAULT DMA BUFFER ADDRESS      */
+   DECLARE DMA$SIZE      LITERALLY '128'; /* SIZE OF THE DMA BUFFER          */
+
+   DECLARE F$PTR ADDRESS, F$CHAR BASED F$PTR BYTE;
+
+   /* GET THE LINE NUMBER FROM THE SECOND PARAMETER                          */
+   DECLARE LINE$NUMBER ADDRESS;
+   LINE$NUMBER = 0;
+   DO F$PTR = FCB2 + 1 TO FCB2 + 8;
+      IF F$CHAR >= '0' AND F$CHAR <= '9' THEN DO;
+         LINE$NUMBER = ( LINE$NUMBER * 10 ) + ( F$CHAR - '0' );
+      END;
+   END;
+   /* CLEAR THE PARTS OF FCB1 OVERLAYED BY FCB2                              */
+   DO F$PTR = FCB1 + 12 TO FCB1 + ( FCB$SIZE - 1 );
+      F$CHAR = 0;
+   END;
+
+   /* SHOW THE REQUIRED LINE FROM THE FILE, IF THE FILE AND LINE EXIST       */
+   IF NOT FL$EXISTS( FCB1 ) THEN DO;    /* THE FILE DOES NOT EXIST           */
+      CALL PR$STRING( .'FILE NOT FOUND$' );CALL PR$NL;
+      END;
+   ELSE IF NOT FL$OPEN( FCB1 ) THEN DO; /* UNABLE TO OPEN THE FILE           */
+      CALL PR$STRING( .'UNABLE TO OPEN THE FILE$' );CALL PR$NL;
+      END;
+   ELSE DO; /* FILE EXISTS AND OPENED OK - ATTEMPT TO FIND THE LINE          */
+      DECLARE LN ADDRESS, GOT$RCD BYTE, GOT$LINE BYTE, DMA$END ADDRESS;
+      DMA$END  = DMA$BUFFER + ( DMA$SIZE - 1 );
+      GOT$RCD  = FL$READ( FCB1 ); /* GET THE FIRST RECORD                    */
+      GOT$LINE = FALSE;
+      F$PTR    = DMA$BUFFER;
+      LN       = 1;
+      CALL PR$NUMBER( LINE$NUMBER ); CALL PR$STRING( .': <$' );
+      DO WHILE( GOT$RCD AND LN <= LINE$NUMBER );
+         IF F$PTR > DMA$END THEN DO;
+            /* AT THE END OF THE BUFFER - GET THE NEXT RECORD                */
+            GOT$RCD = FL$READ( FCB1 );
+            F$PTR   = DMA$BUFFER;
+            END;
+         ELSE IF F$CHAR = NL$CHAR     THEN DO;                /* END OF LINE */
+            LN = LN + 1;
+            IF LN = LINE$NUMBER       THEN GOT$LINE = TRUE;
+            END;
+         ELSE IF F$CHAR = EOF$CHAR    THEN GOT$RCD  = FALSE;  /* END OF FILE */
+         ELSE IF LN     = LINE$NUMBER THEN CALL PR$BYTE( F$CHAR );
+         F$PTR = F$PTR + 1;
+      END;
+      CALL PR$CHAR( '>' ); CALL PR$NL;
+      /* SHOULD NOW HAVE EOF OR THE END OF THE REQUIRED LINE                 */
+      IF NOT GOT$LINE THEN DO;
+         /* COULDN'T READ THE SPECIFIED LINE                                 */
+         CALL PR$STRING( .'CANNOT READ LINE $' );
+         CALL PR$NUMBER( LINE$NUMBER );
+      END;
+      /* CLOSE THE FILE                                                      */
+      IF NOT FL$CLOSE( FCB1 ) THEN DO;
+         CALL PR$STRING( .'UNABLE TO CLOSE THE FILE$' ); CALL PR$NL;
+      END;
+   END;
+
+   CALL EXIT;
+
+EOF

@@ -1,0 +1,56 @@
+BEGIN %   DISCORDIAN DATE CALCULATION - TRANSLATION OF MAD                %
+    INTEGER          GREG, GMONTH, GDAY, GYEAR;
+    STRING(16) ARRAY HOLY5  ( 0 ::  4 );
+    STRING(16) ARRAY HOLY50 ( 0 ::  4 );
+    STRING(16) ARRAY DISDAY ( 0 ::  4 );
+    STRING(16) ARRAY DISSSN ( 0 ::  4 );
+    INTEGER    ARRAY MLENGT ( 0 :: 12 );
+    INTEGER          APOS;
+    STRING(1)        SLASH1, SLASH2;
+
+    % WRITES A "$" TERMINATED STRING                                      %
+    PROCEDURE WRITEONTEXT( STRING(16) VALUE TEXT ) ;
+    BEGIN
+        INTEGER TPOS;
+        TPOS := 0;
+        WHILE TPOS < 16 DO BEGIN
+            IF TEXT( TPOS // 1 ) = "$"
+            THEN TPOS := 32
+            ELSE WRITEON( TEXT( TPOS // 1 ) );
+            ;
+            TPOS := TPOS + 1
+        END WHILE_TPOS_LT_16
+    END WRITEONTEXT;
+
+    APOS := 0;
+    FOR M := 0,0,31,59,90,120,151,181,212,243,273,304,334 DO BEGIN MLENGT(APOS) := M; APOS := APOS + 1 END;
+    HOLY5 (0) := "MUNG$";HOLY5 (1) := "MOJO$"; HOLY5 (2) := "SYA$";  HOLY5 (3) := "ZARA$"; HOLY5 (4) := "MALA$";
+    HOLY50(0) := "CHAO$";HOLY50(1) := "DISCO$";HOLY50(2) := "CONFU$";HOLY50(3) := "BURE$"; HOLY50(4) := "AF$";
+    DISDAY(0) := "SWEETMORN$";       DISDAY(1) := "BOOMTIME$";      DISDAY(2) := "PUNGENDAY$";
+    DISDAY(3) := "PRICKLE-PRICKLE$"; DISDAY(4) := "SETTING ORANGE$";
+    DISSSN(0) := "CHAOS$"; DISSSN(1) := "DISCORD$"; DISSSN(2) := "CONFUSION$";
+    DISSSN(3) := "BUREAUCRACY$"; DISSSN(4) := "THE AFTERMATH$";
+
+    % INPUT DATE SHOULD CONTAIN MM/DD/YYYY IN GREGORIAN CALENDAR          %
+    READ( GMONTH, SLASH1, GDAY, SLASH2, GYEAR );
+
+    IF GMONTH = 2 AND GDAY = 29
+    THEN WRITE( I_W := 4, S_W := 0, "SAINT TIB'S DAY IN THE Y.O.L.D. ", GYEAR + 1166 )
+    ELSE BEGIN
+        INTEGER YRDAY, SEASON, DAY, WKDAY;
+        YRDAY  := MLENGT(GMONTH)+GDAY;
+        SEASON := YRDAY DIV 73;
+        DAY    := YRDAY-SEASON*73;
+        WKDAY  := (YRDAY-1) REM 5;
+        WRITEONTEXT( DISDAY(WKDAY) );
+        WRITEON( S_W := 0, ", DAY ", I_W := 2, DAY, " OF " );
+        WRITEONTEXT( DISSSN(SEASON) );
+        WRITEON( S_W := 0, " IN THE Y.O.L.D ", I_W := 4, GYEAR + 1166 );
+        IF      DAY = 5  THEN BEGIN
+            WRITE( "CELEBRATE " );WRITEONTEXT( HOLY5(SEASON) );  WRITEON( "DAY"  )
+            END
+        ELSE IF DAY = 50 THEN BEGIN
+            WRITE( "CELEBRATE " );WRITEONTEXT( HOLY50(SEASON) ); WRITEON( "FLUX" )
+        END IF_FAY_EQ_5__DAY_EQ_50
+    END
+END.

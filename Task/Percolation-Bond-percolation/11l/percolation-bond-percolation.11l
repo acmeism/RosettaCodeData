@@ -1,0 +1,80 @@
+UInt32 seed = 0
+F nonrandom()
+   :seed = 1664525 * :seed + 1013904223
+   R Int(:seed >> 16) / Float(FF'FF)
+
+T Grid
+   [[Int]] cell, hwall, vwall
+   F (cell, hwall, vwall)
+      .cell = cell
+      .hwall = hwall
+      .vwall = vwall
+
+V (M, nn, t) = (10, 10, 100)
+
+T PercolatedException
+   (Int, Int) t
+   F (t)
+      .t = t
+
+V HVF = ([‘ .’, ‘ _’], [‘:’, ‘|’], [‘ ’, ‘#’])
+
+F newgrid(p)
+   V hwall = (0 .. :nn).map(n -> (0 .< :M).map(m -> Int(nonrandom() < @@p)))
+   V vwall = (0 .< :nn).map(n -> (0 .. :M).map(m -> (I m C (0, :M) {1} E Int(nonrandom() < @@p))))
+   V cell = (0 .< :nn).map(n -> (0 .< :M).map(m -> 0))
+   R Grid(cell, hwall, vwall)
+
+F pgrid(grid, percolated)
+   V (cell, hwall, vwall) = grid
+   V (h, v, f) = :HVF
+   L(n) 0 .< :nn
+      print(‘    ’(0 .< :M).map(m -> @h[@hwall[@n][m]]).join(‘’))
+      print(‘#.)  ’.format(n % 10)‘’(0 .. :M).map(m -> @v[@vwall[@n][m]]‘’@f[I m < :M {@cell[@n][m]} E 0]).join(‘’)[0 .< (len)-1])
+   V n = :nn
+   print(‘    ’(0 .< :M).map(m -> @h[@hwall[@n][m]]).join(‘’))
+   I percolated != (-1, -1)
+      V where = percolated[0]
+      print(‘!)  ’(‘  ’ * where)‘ ’f[1])
+
+F flood_fill(m, n, &cell, hwall, vwall) -> N
+   cell[n][m] = 1
+   I n < :nn - 1 & !hwall[n + 1][m] & !cell[n + 1][m]
+      flood_fill(m, n + 1, &cell, hwall, vwall)
+   E I n == :nn - 1 & !hwall[n + 1][m]
+      X PercolatedException((m, n + 1))
+   I m & !vwall[n][m] & !cell[n][m - 1]
+      flood_fill(m - 1, n, &cell, hwall, vwall)
+   I m < :M - 1 & !vwall[n][m + 1] & !cell[n][m + 1]
+      flood_fill(m + 1, n, &cell, hwall, vwall)
+   I n != 0 & !hwall[n][m] & !cell[n - 1][m]
+      flood_fill(m, n - 1, &cell, hwall, vwall)
+
+F pour_on_top(Grid &grid) -> (Int, Int)?
+   V n = 0
+   X.try
+      L(m) 0 .< :M
+         I grid.hwall[n][m] == 0
+            flood_fill(m, n, &grid.cell, grid.hwall, grid.vwall)
+   X.catch PercolatedException ex
+      R ex.t
+   R N
+
+V sample_printed = 0B
+[Float = Int] pcount
+L(p10) 11
+   V p = (10 - p10) / 10.0
+   pcount[p] = 0
+   L(tries) 0 .< t
+      V grid = newgrid(p)
+      (Int, Int)? percolated = pour_on_top(&grid)
+      I percolated != N
+         pcount[p]++
+         I !sample_printed
+            print("\nSample percolating #. x #. grid".format(M, nn))
+            pgrid(grid, percolated ? (-1, -1))
+            sample_printed = 1B
+print("\n p: Fraction of #. tries that percolate through".format(t))
+
+L(p, c) sorted(pcount.items())
+   print(‘#.1: #.’.format(p, c / Float(t)))

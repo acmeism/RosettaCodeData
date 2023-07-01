@@ -1,0 +1,25 @@
+READ d$
+DO
+    READ x$
+    PRINT x$
+LOOP UNTIL LEN(x$) < 1
+RESTORE
+DO
+    READ x$
+    PRINT d$; CHR$(34); x$; CHR$(34)
+LOOP UNTIL LEN(x$) < 1
+END
+
+DATA "DATA "
+DATA "READ d$"
+DATA "DO"
+DATA "    READ x$"
+DATA "    PRINT x$"
+DATA "LOOP UNTIL LEN(x$) < 1"
+DATA "RESTORE"
+DATA "DO"
+DATA "    READ x$"
+DATA "    PRINT d$; CHR$(34); x$; CHR$(34)"
+DATA "LOOP UNTIL LEN(x$) < 1"
+DATA "END"
+DATA ""

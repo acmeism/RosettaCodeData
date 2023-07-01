@@ -1,0 +1,13 @@
+(define (levenshtein s t)
+  (define (%levenshtein s sl t tl)
+    (cond ((zero? sl) tl)
+          ((zero? tl) sl)
+          (else
+	    (min (+ (%levenshtein (cdr s) (- sl 1) t tl) 1)
+                 (+ (%levenshtein s sl (cdr t) (- tl 1)) 1)
+                 (+ (%levenshtein (cdr s) (- sl 1) (cdr t) (- tl 1))
+		    (if (char=? (car s) (car t)) 0 1))))))
+  (%levenshtein (string->list s)
+		(string-length s)		
+		(string->list t)
+		(string-length t)))

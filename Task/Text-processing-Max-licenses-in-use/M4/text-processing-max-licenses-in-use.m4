@@ -1,0 +1,12 @@
+divert(-1)
+define(`current',0)
+define(`max',0)
+define(`OUT',`define(`current',incr(current))`'ifelse(eval(current>max),1,
+   `define(`max',current)`'divert(-1)`'undivert(1)`'divert(1)',
+   `ifelse(current,max,`divert(1)undivert(1)')')')
+define(`IN',`define(`current',decr(current))')
+define(`for',`divert(-1)')
+include(mlijobs.txt))
+divert
+max
+undivert(1)

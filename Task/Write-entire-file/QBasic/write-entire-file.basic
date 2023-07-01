@@ -1,0 +1,4 @@
+f = FREEFILE
+OPEN "output.txt" FOR OUTPUT AS #f
+PRINT #f, "This string is to be written to the file"
+CLOSE #

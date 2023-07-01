@@ -1,0 +1,134 @@
+temp   = $FB   ; this works on a VIC-20 or C-64; adjust for other machines. Need two bytes zero-page space unused by the OS.
+
+; kernal print-char routine
+chrout  = $FFD2
+
+; Main Towers of Hanoi routine. To call, load the accumulator with the number of disks to move,
+; the X register with the source peg (1-3), and the Y register with the target peg.
+
+hanoi:   cmp #$00       ; do nothing if the number of disks to move is zero
+         bne nonzero
+         rts
+
+nonzero: pha            ; save registers on stack
+         txa
+         pha
+         tya
+         pha
+         pha            ; and make room for the spare peg number
+
+         ; Parameters are now on the stack at these offsets:
+         count  = $0104
+         source = $0103
+         target = $0102
+         spare  = $0101
+
+         ; compute spare rod number (6 - source - dest)
+         tsx
+         lda #6
+         sec
+         sbc source, x
+         sec
+         sbc target, x
+         sta spare, x
+
+         ; prepare for first recursive call
+         tay                ; target is the spare peg
+
+         tsx
+         lda source, x      ; source is the same
+         sta temp           ; we're using X to access the stack, so save its value here for now
+
+         lda count, x       ; move count - 1 disks
+         sec
+         sbc #1
+         ldx temp           ; now load X for call
+
+         ; and recurse
+         jsr hanoi
+
+         ; restore X and Y for print call
+         tsx
+         ldy target, x
+         lda source, x
+         tax
+
+         ; print instructions to move the last disk
+         jsr print_move
+
+         ; prepare for final recursive call
+         tsx
+         lda spare, x    ; source is now spare
+         sta temp
+         lda target, x   ; going to the original target
+         tay
+         lda count, x    ; and again moving count-1 disks
+         sec
+         sbc #1
+         ldx temp
+         jsr hanoi
+
+         ; pop our stack frame, restore registers, and return
+         pla
+         pla
+         tay
+         pla
+         tax
+         pla
+         rts
+
+; constants for printing
+prelude:   .asciiz "MOVE DISK FROM "
+interlude: .asciiz " TO "
+postlude:  .byte 13,0
+
+; print instructions: move disk from (X) to (Y)
+print_move:
+         pha
+         txa
+         pha
+         tya
+         pha
+
+         ; Parameters are now on the stack at these offsets:
+         from   = $0102
+           to   = $0101
+
+         lda #<prelude
+         ldx #>prelude
+         jsr print_string
+         tsx
+         lda from,x
+         clc
+         adc #$30
+         jsr chrout
+         lda #<interlude
+         ldx #>interlude
+         jsr print_string
+         tsx
+         lda to,x
+         clc
+         adc #$30
+         jsr chrout
+         lda #<postlude
+         ldx #>postlude
+         jsr print_string
+         pla
+         tay
+         pla
+         tax
+         pla
+         rts
+
+; utility routine: print null-terminated string at address AX
+print_string:
+         sta temp
+         stx temp+1
+         ldy #0
+loop:    lda (temp),y
+         beq done_print
+         jsr chrout
+         iny
+         bne loop
+done_print:
+         rts

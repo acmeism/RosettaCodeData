@@ -1,0 +1,64 @@
+procedure main()
+   infix := "3 + 4 * 2 / ( 1 - 5 ) ^ 2 ^ 3"
+   printf("Infix = %i\n",infix)
+   printf("RPN   = %i\n",Infix2RPN(infix))
+end
+
+link printf
+
+record op_info(pr,as)            # p=precedence, a=associativity (left=null)
+
+procedure Infix2RPN(expr)        #: Infix to RPN parser - shunting yard
+static oi
+initial {
+   oi := table()                                # precedence & associativity
+   every oi[!"+-"]   := op_info(2)                    # 2L
+   every oi[!"*/"]   := op_info(3)                    # 3L
+   oi["^"]           := op_info(4,1)                  # 4R
+   }
+
+   ostack := []                                       # operator stack
+   rpn    := ""                                       # rpn
+
+   pat := sprintf("%%5s  :  %%-%ds  :  %%s\n",*expr)  # fmt
+   printf(pat,"Token","Output","Op Stack")            # header
+
+   expr ? until pos(0) do {                     # while tokens
+      tab(many(' '))                                  # consume any seperator
+      token := tab(upto(' ')|0)                       # get token
+      printf(pat,token,rpn,list2string(ostack))       # report
+      if token := numeric(token) then           # ... numeric
+         rpn ||:= token || " "
+      else
+         if member(oi,token) then {             # ... operator
+            while member(oi,op2 := ostack[1]) &
+                  ( /oi[token].as & oi[token].pr <= oi[op2].pr ) |
+                  ( \oi[token].as & oi[token].pr <  oi[op2].pr ) do
+               rpn ||:= pop(ostack) || " "
+            push(ostack,token)
+            }
+         else                                   # ... parenthesis
+            if token == "(" then
+               push(ostack,token)
+            else if token == ")" then {
+               until ostack[1] == "(" do
+                  rpn ||:= pop(ostack) || " " |
+                     stop("Unbalanced parenthesis")
+               pop(ostack)                            # discard "("
+               }
+      }
+
+   while token := pop(ostack) do                # ... input exhausted
+      if token == ("("|")") then stop("Unbalanced parenthesis")
+      else {
+         rpn ||:= token || " "
+         printf(pat,"",rpn,list2string(ostack))
+         }
+
+   return rpn
+end
+
+procedure list2string(L)         #: format list as a string
+   every (s := "[ ") ||:= !L || " "
+   return s || "]"
+end

@@ -1,0 +1,1 @@
+raku -pe'.lines'

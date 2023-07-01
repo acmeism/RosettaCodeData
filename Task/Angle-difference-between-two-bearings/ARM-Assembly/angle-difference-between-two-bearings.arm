@@ -1,0 +1,507 @@
+/* ARM assembly Raspberry PI or android with termux */
+/*  program diffAngle.s   */
+
+ /* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szCarriageReturn:   .asciz "\n"
+szMessResult:       .asciz "Difference between @ and @ = @ \n"
+
+.align 4
+fB1:            .float 20.0
+fB2:            .float 45.0
+fB3:            .float -45.0
+fB4:            .float -85.0
+fB5:            .float 90.0
+fB6:            .float -95.0
+fB7:            .float 125.0
+fB8:            .float 145.0
+fB9:            .float 29.4803
+fB10:           .float -88.6381
+fB11:           .float -78.3251
+fB12:           .float -159.036
+fB13:           .float -70099.74233810938
+fB14:           .float 29840.67437876723
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:           .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr r0,iAdrfB1
+    ldr r1,iAdrfB2
+    bl testComputeAngle
+
+    ldr r0,iAdrfB3
+    ldr r1,iAdrfB2
+    bl testComputeAngle
+
+    ldr r0,iAdrfB4
+    ldr r1,iAdrfB5
+    bl testComputeAngle
+
+    ldr r0,iAdrfB6
+    ldr r1,iAdrfB5
+    bl testComputeAngle
+
+    ldr r0,iAdrfB3
+    ldr r1,iAdrfB7
+    bl testComputeAngle
+
+    ldr r0,iAdrfB3
+    ldr r1,iAdrfB8
+    bl testComputeAngle
+
+    ldr r0,iAdrfB9
+    ldr r1,iAdrfB10
+    bl testComputeAngle
+
+    ldr r0,iAdrfB11
+    ldr r1,iAdrfB12
+    bl testComputeAngle
+
+    ldr r0,iAdrfB13
+    ldr r1,iAdrfB14
+    bl testComputeAngle
+
+100:                            @ standard end of the program
+    mov r0, #0                  @ return code
+    mov r7, #EXIT               @ request to exit program
+    svc #0                      @ perform the system call
+iAdrszCarriageReturn:    .int szCarriageReturn
+iAdrsZoneConv:           .int sZoneConv
+iAdrfB1:                .int fB1
+iAdrfB2:                .int fB2
+iAdrfB3:                .int fB3
+iAdrfB4:                .int fB4
+iAdrfB5:                .int fB5
+iAdrfB6:                .int fB6
+iAdrfB7:                .int fB7
+iAdrfB8:                .int fB8
+iAdrfB9:                .int fB9
+iAdrfB10:               .int fB10
+iAdrfB11:               .int fB11
+iAdrfB12:               .int fB12
+iAdrfB13:               .int fB13
+iAdrfB14:               .int fB14
+/******************************************************************/
+/*     compute difference and display result                      */
+/******************************************************************/
+/* s0 contains bearing 1  */
+/* s1 contains bearing 2  */
+testComputeAngle:
+    push {r1-r3,lr}           @ save  registers
+    vldr.f32 s0,[r0]
+    vmov s2,s0
+    vldr.f32 s1,[r1]
+    bl computeDiffAngle
+    vmov s3,s0
+    vmov s0,s2
+    ldr r0,iAdrsZoneConv
+    bl convertirFloat
+    ldr r0,iAdrszMessResult
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    mov r3,r0
+    vmov s0,s1
+    ldr r0,iAdrsZoneConv
+    bl convertirFloat
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    mov r3,r0
+    vmov s0,s3
+    ldr r0,iAdrsZoneConv
+    bl convertirFloat
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    bl affichageMess
+
+100:
+    pop {r1-r3,pc}             @ restaur registers
+iAdrszMessResult:      .int szMessResult
+/******************************************************************/
+/*     compute difference of two bearing                                  */
+/******************************************************************/
+/* s0 contains bearing 1  */
+/* s1 contains bearing 2  */
+computeDiffAngle:
+    push {r1-r4,lr}           @ save  registers
+    vpush {s1-s4}
+    mov r1,#360
+    mov r4,#0                 @ top positive/negative
+    vcvt.s32.f32  s4,s0       @ conversion integer
+    vcvt.f32.s32  s2,s4       @ conversion float
+    vsub.f32 s2,s0,s2         @ partie décimale
+    vmov r0,s4                @ partie entière
+    cmp r0,#0                 @ negative ?
+    neglt r0,r0               @ yes -> inversion
+    movlt r4,#1
+    bl division               @ divide by 360 (r0 dividende r1 divisor r2 quotient r3 remainder)
+    cmp r4,#0                 @ value negative ?
+    negne r3,r3               @ inversion remainder
+    vmov s3,r3
+    vcvt.f32.s32  s3,s3       @ and conversion float
+    vadd.f32 s0,s3,s2         @ add decimal part
+
+    mov r4,#0                 @ bearing 2
+    vcvt.s32.f32  s4,s1       @ conversion integer
+    vcvt.f32.s32  s2,s4       @ conversion float
+    vsub.f32 s2,s1,s2         @ partie décimale
+    vmov r0,s4
+    cmp r0,#0
+    neglt r0,r0
+    movlt r4,#1
+    bl division               @ divide by 360
+    cmp r4,#0
+    negne r3,r3               @ negate remainder
+    vmov s3,r3
+    vcvt.f32.s32  s3,s3       @ conversion float
+    vadd.f32 s1,s3,s2
+
+    vsub.f32 s0,s1,s0         @ calculate the difference between the 2 values
+
+    mov r0,#180
+    vmov s3,r0
+    vcvt.f32.s32  s3,s3       @ conversion float 180
+    vmov s4,r1                @ 360
+    vcvt.f32.s32  s4,s4       @ conversion float 360
+
+    vcmp.f32 s0,#0.0          @ difference is negative ?
+    vmrs APSR_nzcv, FPSCR     @ flags transfert (do not forget this instruction !!!)
+    blt 2f
+                              @ difference is positive
+    vcmp.f32 s0,s4            @ difference > 360
+    vmrs APSR_nzcv, FPSCR     @ flags transfert (do not forget this instruction !!!)
+    vsubgt.f32  s0,s4         @ yes -> difference - 360
+    vcmp.f32 s0,s3            @ compare difference and 180
+    vmrs APSR_nzcv, FPSCR     @ flags transfert (do not forget this instruction !!!)
+    vsubgt.f32 s0,s4,s0       @ > 180 calculate 360 - difference
+    vneggt.f32 s0,s0          @ and negate
+    b 100f
+
+2:                            @ différence is négative
+    vneg.f32 s2,s4            @ -360
+    vcmp.f32 s0,s2            @ compare différence et - 360
+    vmrs APSR_nzcv, FPSCR     @ flags transfert (do not forget this instruction !!!)
+    vsubgt.f32  s0,s4         @ sub 360 to différence
+
+    vneg.f32 s3,s3            @ -180
+    vcmp.f32 s0,s3            @ compare difference and -180
+    vmrs APSR_nzcv, FPSCR     @ flags transfert (do not forget this instruction !!!)
+    vaddlt.f32 s0,s4,s0       @ calculate 360 + différence
+
+100:
+    vpop {s1-s4}
+    pop {r1-r4,pc}             @ restaur registers
+
+/******************************************************************/
+/*     Conversion Float                                            */
+/******************************************************************/
+/* s0  contains Float */
+/* r0 contains address conversion area  mini 20 charactèrs*/
+/* r0 return result length */
+convertirFloat:
+    push {r1-r7,lr}
+    vpush {s0-s2}
+    mov r6,r0                 @ save area address
+    vmov r0,s0
+    movs r7,#0                @ result length
+    movs r3,#'+'
+    strb r3,[r6]              @ sign + forcing
+    mov r2,r0
+    lsls r2,#1                @ extraction bit 31
+    bcc 1f                    @ positive ?
+    lsrs r0,r2,#1             @ raz sign if negative
+    movs r3,#'-'              @ sign -
+    strb r3,[r6]
+1:
+    adds r7,#1                @ next position
+    cmp r0,#0                 @ case of positive or negative 0
+    bne 2f
+    movs r3,#'0'
+    strb r3,[r6,r7]           @ store character 0
+    adds r7,#1                @ next position
+    movs r3,#0
+    strb r3,[r6,r7]           @ store  0 final
+    mov r0,r7                 @ return length
+    b 100f                    @ and end
+2:
+    ldr r2,iMaskExposant
+    mov r1,r0
+    ands r1,r2                @ exposant = 255 ?
+    cmp r1,r2
+    bne 4f
+    lsls r0,#10               @ bit 22 à 0 ?
+    bcc 3f                    @ yes
+    movs r2,#'N'              @ case of Nan. store byte, if not possible store int
+    strb r2,[r6]              @ area no aligned
+    movs r2,#'a'
+    strb r2,[r6,#1]
+    movs r2,#'n'
+    strb r2,[r6,#2]
+    movs r2,#0                @ 0 final
+    strb r2,[r6,#3]
+    movs r0,#3                @ return length 3
+    b 100f
+3:                            @ case infini positive or négative
+    movs r2,#'I'
+    strb r2,[r6,r7]
+    adds r7,#1
+    movs r2,#'n'
+    strb r2,[r6,r7]
+    adds r7,#1
+    movs r2,#'f'
+    strb r2,[r6,r7]
+    adds r7,#1
+    movs r2,#0
+    strb r2,[r6,r7]
+    mov r0,r7
+    b 100f
+4:
+    bl normaliserFloat
+    mov r5,r0                @ save exposant
+    VCVT.U32.f32  s2,s0      @ integer value of  integer part
+    vmov r0,s2               @ integer part
+    VCVT.F32.U32  s1,s2      @ conversion float
+    vsub.f32 s1,s0,s1        @ extraction fract part
+    vldr s2,iConst1
+    vmul.f32 s1,s2,s1        @ to crop it in full
+
+    VCVT.U32.f32  s1,s1      @ integer conversion
+    vmov r4,s1               @ fract value
+                             @ integer conversion in  r0
+    mov r2,r6                @ save address area begin
+    adds r6,r7
+    mov r1,r6
+    bl conversion10
+    add r6,r0
+    movs r3,#','
+    strb r3,[r6]
+    adds r6,#1
+
+    mov r0,r4                @ conversion fractional part
+    mov r1,r6
+    bl conversion10SP        @ spécial routine with conservation begin 0
+    add r6,r0
+    subs r6,#1
+                             @ remove trailing zeros
+5:
+    ldrb r0,[r6]
+    cmp r0,#'0'
+    bne 6f
+    subs r6,#1
+    b 5b
+6:
+    cmp r0,#','
+    bne 7f
+    subs r6,#1
+7:
+    adds r6,#1
+    movs r3,#'E'
+    strb r3,[r6]
+    adds r6,#1
+    mov r0,r5                  @ conversion exposant
+    mov r3,r0
+    lsls r3,#1
+    bcc 4f
+    rsbs r0,r0,#0
+    movs r3,#'-'
+    strb r3,[r6]
+    adds r6,#1
+4:
+    mov r1,r6
+    bl conversion10
+    add r6,r0
+
+    movs r3,#0
+    strb r3,[r6]
+    adds r6,#1
+    mov r0,r6
+    subs r0,r2                 @ return length result
+    subs r0,#1                 @ - 0 final
+
+100:
+    vpop {s0-s2}
+    pop {r1-r7,pc}
+iMaskExposant:            .int 0xFF<<23
+iConst1:                  .float 0f1E9
+
+/***************************************************/
+/*   normaliser float                              */
+/***************************************************/
+/* r0 contain float value (always positive value and <> Nan) */
+/* s0 return new value  */
+/* r0 return exposant */
+normaliserFloat:
+    push {lr}               @ save  registre
+    vmov s0,r0              @ value float
+    movs r0,#0              @ exposant
+    vldr s1,iConstE7        @ no normalisation for value < 1E7
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 10f                 @ if s0  < iConstE7
+
+    vldr s1,iConstE32
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 1f
+    vldr s1,iConstE32
+    vdiv.f32 s0,s0,s1
+    adds r0,#32
+1:
+    vldr s1,iConstE16
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 2f
+    vldr s1,iConstE16
+    vdiv.f32 s0,s0,s1
+    adds r0,#16
+2:
+    vldr s1,iConstE8
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 3f
+    vldr s1,iConstE8
+    vdiv.f32 s0,s0,s1
+    adds r0,#8
+3:
+    vldr s1,iConstE4
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 4f
+    vldr s1,iConstE4
+    vdiv.f32 s0,s0,s1
+    adds r0,#4
+4:
+    vldr s1,iConstE2
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 5f
+    vldr s1,iConstE2
+    vdiv.f32 s0,s0,s1
+    adds r0,#2
+5:
+    vldr s1,iConstE1
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 10f
+    vldr s1,iConstE1
+    vdiv.f32 s0,s0,s1
+    adds r0,#1
+
+10:
+    vldr s1,iConstME5        @ pas de normalisation pour les valeurs > 1E-5
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 100f
+    vldr s1,iConstME31
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 11f
+    vldr s1,iConstE32
+
+    vmul.f32 s0,s0,s1
+    subs r0,#32
+11:
+    vldr s1,iConstME15
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 12f
+    vldr s1,iConstE16
+    vmul.f32 s0,s0,s1
+    subs r0,#16
+12:
+    vldr s1,iConstME7
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 13f
+    vldr s1,iConstE8
+    vmul.f32 s0,s0,s1
+    subs r0,#8
+13:
+    vldr s1,iConstME3
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 14f
+    vldr s1,iConstE4
+    vmul.f32 s0,s0,s1
+    subs r0,#4
+14:
+    vldr s1,iConstME1
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 15f
+    vldr s1,iConstE2
+    vmul.f32 s0,s0,s1
+    subs r0,#2
+15:
+    vldr s1,iConstE0
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 100f
+    vldr s1,iConstE1
+    vmul.f32 s0,s0,s1
+    subs r0,#1
+
+100:                       @ fin standard de la fonction
+    pop {pc}               @ restaur des registres
+.align 2
+iConstE7:             .float 0f1E7
+iConstE32:            .float 0f1E32
+iConstE16:            .float 0f1E16
+iConstE8:             .float 0f1E8
+iConstE4:             .float 0f1E4
+iConstE2:             .float 0f1E2
+iConstE1:             .float 0f1E1
+iConstME5:            .float 0f1E-5
+iConstME31:           .float 0f1E-31
+iConstME15:           .float 0f1E-15
+iConstME7:            .float 0f1E-7
+iConstME3:            .float 0f1E-3
+iConstME1:            .float 0f1E-1
+iConstE0:             .float 0f1E0
+/******************************************************************/
+/*     Décimal Conversion                                         */
+/******************************************************************/
+/* r0 contain value et r1 address conversion area   */
+conversion10SP:
+    push {r1-r6,lr}            @ save  registers
+    mov r5,r1
+    mov r4,#8
+    mov r2,r0
+    mov r1,#10                 @ conversion decimale
+1:                             @ begin loop
+    mov r0,r2                  @ copy number or quotients
+    bl division                @ r0 dividende r1 divisor r2 quotient r3 remainder
+    add r3,#48                 @ compute digit
+    strb r3,[r5,r4]            @ store byte area address (r5) + offset (r4)
+    subs r4,r4,#1              @ position précedente
+    bge 1b                     @ and loop if not < zero
+    mov r0,#8
+    mov r3,#0
+    strb r3,[r5,r0]            @ store 0 final
+100:
+    pop {r1-r6,pc}             @ restaur registers
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

@@ -1,0 +1,83 @@
+include "cowgol.coh";
+include "strings.coh";
+include "file.coh";
+
+var filename: [uint8] := "unixdict.txt";
+
+# Call a subroutine for every line in a file
+interface LineCb(line: [uint8]);
+sub ForEachLine(fcb: [FCB], fn: LineCb) is
+    var linebuf: uint8[256];
+    var bufptr := &linebuf[0];
+
+    var len := FCBExt(fcb); # get length of file
+    FCBSeek(fcb, 0); # start at beginning of file
+
+    while len > 0 loop
+        var ch := FCBGetChar(fcb);
+        if ch == '\n' then
+            # end of line, terminate string
+            [bufptr] := 0;
+            fn(&linebuf[0]);
+            bufptr := &linebuf[0];
+        else
+            # add char to buffer
+            [bufptr] := ch;
+            bufptr := @next bufptr;
+        end if;
+        len := len - 1;
+    end loop;
+
+    # If the file doesn't cleanly end on a line terminator,
+    # also call for last incomplete line
+    if ch != '\n' then
+        [bufptr] := 0;
+        fn(&linebuf[0]);
+    end if;
+end sub;
+
+# Check if the letters in a word appear in alphabetical order
+sub isOrdered(word: [uint8]): (r: uint8) is
+    var cr := [word];
+    word := @next word;
+    loop
+        var cl := cr;
+        cr := [word];
+        word := @next word;
+        if cr < 32 then
+            r := 1;
+            return;
+        elseif (cl | 32) > (cr | 32) then
+            r := 0;
+            return;
+        end if;
+    end loop;
+end sub;
+
+# Find maximum length of ordered words
+var maxLen: uint8 := 0;
+sub MaxOrderedLength implements LineCb is
+    var len := StrLen(line) as uint8;
+    if maxLen < len and isOrdered(line) != 0 then
+        maxLen := len;
+    end if;
+end sub;
+
+# Print all ordered words matching maximum length
+sub PrintMaxLenWord implements LineCb is
+    if maxLen == StrLen(line) as uint8 and isOrdered(line) != 0 then
+        print(line);
+        print_nl();
+    end if;
+end sub;
+
+var fcb: FCB;
+if FCBOpenIn(&fcb, filename) != 0 then
+    print("cannot open unixdict.txt\n");
+    ExitWithError();
+end if;
+
+ForEachLine(&fcb, MaxOrderedLength);
+ForEachLine(&fcb, PrintMaxLenWord);
+
+var foo := FCBClose(&fcb);

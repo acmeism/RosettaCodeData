@@ -1,0 +1,10 @@
+FUNCTION multSum35 (n)
+  IF n = 0 THEN multSum35 = 0
+  suma = 0
+  FOR i = 1 TO n
+    IF (i MOD 3 = 0) OR (i MOD 5 = 0) THEN suma = suma + i
+  NEXT i
+  multSum35 = suma
+END FUNCTION
+
+PRINT multSum35(999)

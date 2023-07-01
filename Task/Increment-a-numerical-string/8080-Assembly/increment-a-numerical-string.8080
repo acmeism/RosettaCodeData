@@ -1,0 +1,55 @@
+	org	100h
+	jmp	demo
+	;;; Increment the number in the $-terminated string under HL.
+	;;; The new string is written back to the original location.
+	;;; It may grow by one byte (e.g. 999 -> 1000).
+incstr:	mvi	a,'$'	; End marker
+	lxi	d,303Ah	; D='0', E='9'+1
+	lxi	b,0	; Find the end of the string and find the length
+isrch:	cmp	m	; Are we there yet?
+	inx	b	; If not, try next character
+	inx	h
+	jnz	isrch
+	dcx	h
+	dcx	b
+	mov	a,b	; Is the string empty?
+	ora	c
+	rz		; Then return (do nothing)
+	inx	b
+idigit:	dcx	b	; Go to previous digit
+	dcx	h
+	mov	a,b	; Are we at the beginning of the string?
+	ora	c
+	jz	igrow	; Then the string grows (999 -> 1000)
+	inr 	m	; Otherwise, increment the digit
+	mov	a,e
+	cmp	m	; Did we try to increment '9'?
+	rnz		; If not, we're done, return
+	mov	m,d	; But if so, this digit is now a 0
+	jmp	idigit	; And we should do the next digit
+igrow:	inx	h
+	mvi	m,'1'	; The string should now be '10000...'
+	inx	h	; We know the string is at least one char long
+	mvi	a,'$'
+izero:	cmp 	m	; Are we at the end yet?
+	mov	m,d	; In any case, write a zero
+	inx	h
+	jnz	izero	; If not done, write a zero
+	mov	m,a	; Finally, reterminate the string
+	ret
+	;;;	Demo code: increment the CP/M command line argument
+demo:	lxi	h,80h	; $-terminate the string
+	mov	a,m
+	adi	81h	; Length is at 80h, the argument itself at 81h
+	mov	l,a
+	mvi	m,'$'
+	mvi	l,80h	; Skip any spaces
+	mvi	a,' '
+space:	inx	h
+	cmp	m
+	jz 	space
+	push	h	; Store the beginning of the string
+	call	incstr	; Increment the number in the string
+	pop	d	; Print the string
+	mvi	c,9
+	jmp	5

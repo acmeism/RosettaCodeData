@@ -1,0 +1,148 @@
+N_ROWS = 4 : N_COLS = 5
+
+dim supply(N_ROWS)
+dim demand(N_COLS)
+
+restore sup
+for n = 0 to N_ROWS - 1
+	read supply(n)
+next n
+
+restore dem
+for n = 0 to N_COLS - 1
+	read demand(n)
+next n
+
+label sup
+data 50, 60, 50, 50
+
+label dem
+data 30, 20, 70, 30, 60
+
+dim costs(N_ROWS, N_COLS)
+
+label cost
+data 16, 16, 13, 22, 17
+data 14, 14, 13, 19, 15
+data 19, 19, 20, 23, 50
+data 50, 12, 50, 15, 11
+
+restore cost
+for i = 0 to N_ROWS - 1
+	for j = 0 to N_COLS - 1
+		read costs(i, j)
+	next j
+next i
+
+dim row_done(N_ROWS)
+dim col_done(N_COLS)
+
+sub diff(j, leng, is_row, res())
+    local i, c, min1, min2, min_p, test
+
+    min1 = 10e300 : min2 = min1 : min_p = -1
+
+    for i = 0 to leng - 1
+    	if is_row then
+    		test = col_done(i)
+    	else
+    		test = row_done(i)
+    	end if
+    	if test continue
+    	if is_row then
+    		c = costs(j, i)
+    	else
+    		c = costs(i, j)
+    	end if
+        if c < min1 then
+            min2 = min1
+            min1 = c
+            min_p = i
+        elseif c < min2 then
+        	min2 = c
+        end if
+    next i
+    res(0) = min2 - min1
+    res(1) = min1
+    res(2) = min_p
+end sub
+
+sub max_penalty(len1, len2, is_row, res())
+    local i, pc, pm, mc, md, res2(3), test
+
+    pc = -1 : pm = -1 : mc = -1 : md = -10e300
+
+    for i = 0 to len1 - 1
+        if is_row then
+    		test = row_done(i)
+    	else
+    		test = col_done(i)
+    	end if
+        if test continue
+       	diff(i, len2, is_row, res2())
+        if res2(0) > md then
+            md = res2(0)  //* max diff */
+            pm = i        //* pos of max diff */
+            mc = res2(1)  //* min cost */
+            pc = res2(2)  //* pos of min cost */
+        end if
+    next i
+
+    if is_row then
+        res(0) = pm : res(1) = pc
+    else
+        res(0) = pc : res(1) = pm
+    end if
+    res(2) = mc : res(3) = md
+end sub
+
+sub next_cell(res())
+    local i, res1(4), res2(4)
+
+    max_penalty(N_ROWS, N_COLS, TRUE, res1())
+    max_penalty(N_COLS, N_ROWS, FALSE, res2())
+
+    if res1(3) = res2(3) then
+        if res1(2) < res2(2) then
+            for i = 0 to 3 : res(i) = res1(i) : next i
+        else
+            for i = 0 to 3 : res(i) = res2(i) : next i
+        end if
+        return
+    end if
+    if res1(3) > res2(3) then
+        for i = 0 to 3 : res(i) = res2(i) : next i
+    else
+        for i = 0 to 3 : res(i) = res1(i) : next i
+    end if
+end sub
+
+supply_left = 0 : total_cost = 0 : dim cell(4)
+
+dim results(N_ROWS, N_COLS)
+
+for i = 0 to N_ROWS - 1 : supply_left = supply_left + supply(i) : next i
+
+while(supply_left > 0)
+    next_cell(cell())
+    r = cell(0)
+    c = cell(1)
+    q = min(demand(c), supply(r))
+    demand(c) = demand(c) - q
+    if not demand(c) col_done(c) = TRUE
+    supply(r) = supply(r) - q
+    if not supply(r) row_done(r) = TRUE
+    results(r, c) = q
+    supply_left = supply_left - q
+    total_cost = total_cost + q * costs(r, c)
+wend
+
+print "    A   B   C   D   E\n"
+for i = 0 to N_ROWS - 1
+    print chr$(asc("W") + i), " ";
+    for j = 0 to N_COLS - 1
+    	print results(i, j) using "###";
+    next j
+    print
+next i
+print "\nTotal cost = ", total_cost

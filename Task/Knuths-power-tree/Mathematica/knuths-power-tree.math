@@ -1,0 +1,52 @@
+ClearAll[NextStep, TreePow]
+NextStep[pows_List] := Module[{maxlen, sel, new, vals, knows},
+  maxlen = Max[Length /@ pows[[All, "Path"]]];
+  sel = Select[pows, Length[#["Path"]] == maxlen &];
+  knows = pows[[All, "P"]];
+  new = {};
+  Do[
+   vals = s["P"] + s["Path"];
+   vals = DeleteCases[vals, Alternatives @@ Join[s["Path"], knows]];
+   new =
+    Join[
+     new, <|"Path" -> Append[s["Path"], #], "P" -> #|> & /@ vals];
+   ,
+   {s, sel}
+   ];
+  new //= DeleteDuplicatesBy[#["P"] &];
+  SortBy[Join[pows, new], #["P"] &]
+  ]
+TreePow[path_List, base_] := Module[{db, tups},
+  db = <|1 -> base|>;
+  Do[
+   tups = Tuples[Keys[db], 2];
+   tups = Select[tups, #[[2]] >= #[[1]] &];
+   tups = Select[tups, Total[#] == next &];
+   If[Length[tups] < 1, Abort[]];
+   tups //= First;
+   AssociateTo[db, Total[tups] -> (Times @@ (db /@ tups))]
+   ,
+   {next, Rest[path]}
+   ];
+  db[Last[path]]
+  ]
+
+pows = {<|"Path" -> {1}, "P" -> 1|>};
+steps = Nest[NextStep, pows, 7];
+LayeredGraphPlot[DirectedEdge @@@ steps[[2 ;;, "Path", -2 ;;]], VertexLabels -> Automatic]
+
+pows = {<|"Path" -> {1}, "P" -> 1|>};
+steps = Nest[NextStep, pows, 5];
+assoc = Association[#["P"] -> #["Path"] & /@ steps];
+Dataset[assoc]
+TreePow[assoc[#], 2] & /@ Range[1, 17]
+
+pows = {<|"Path" -> {1}, "P" -> 1|>};
+steps = NestWhile[NextStep, pows, Not[MemberQ[#[[All, "P"]], 191]] &];
+SelectFirst[steps, #["P"] == 191 &]["Path"];
+TreePow[%, 3]
+
+pows = {<|"Path" -> {1}, "P" -> 1|>};
+steps = NestWhile[NextStep, pows, Not[MemberQ[#[[All, "P"]], 81]] &];
+SelectFirst[steps, #["P"] == 81 &]["Path"];
+TreePow[%, 1.1]

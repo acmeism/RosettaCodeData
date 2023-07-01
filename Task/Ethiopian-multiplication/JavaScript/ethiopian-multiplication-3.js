@@ -1,0 +1,1 @@
+ethMult('Ethiopian', 34)

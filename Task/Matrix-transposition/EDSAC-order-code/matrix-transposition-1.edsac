@@ -1,0 +1,112 @@
+  [Demo of matrix transposition. Not in place, creates a new matrix.
+   EDSAC, Initial Orders 2.]
+             ..PZ      [blank tape and terminator]
+             T   50 K  [to call matrix transpose subroutine with 'G X']
+             P  200 F  [address of matrix transpose subroutine]
+             T   47 K  [to call matrix print subroutine with 'G M']
+             P  100 F  [address of matrix print subroutine]
+             T   46 K  [to call print subroutine with 'G N']
+             P   56 F  [address of print subroutine (EDSAC library P1)]
+
+  [Subroutine to transpose a matrix of 17-bit real numbers, not in place.
+   Caller must ensure original and transpose don't overlap.
+   Parameters, all in the address field (i.e. denote n by P n F)
+   10F = width (number of columns)
+   11F = height (number of rows)
+   12F = start address of input matrix
+   13F = start address of output matrix]
+             E25K  TX  GK
+
+    [The subroutine loads elements by working down each column in turn.
+     Elements are stored at consecutive locations in the transposed matrix.]
+             A3F  T31@         [set up return to caller]
+             A13F  A33@  T14@  [initialize T order for storing transpose]
+             A12F  A32@  U13@  [initialize A order for loading original]
+             T36@              [also save as A order for top of current column]
+             S10 F             [negative of width]
+        [10] T35@              [initialize negative counter]
+             S11 F             [negative of height]
+        [12] T34@              [initialize negative counter]
+        [13] AF                [maunfactured order; load matrix element]
+        [14] TF                [maunfactured order; store matrix element]
+             A14@  A2F  T14@   [update address in T order]
+             A13@  A10F  T13@  [update address in A order]
+             A34@  A2F  G12@   [inner loop till finished this column]
+             A36@  A2F  U36@  T13@  [update address for start of column]
+             A35@  A2F  G10@   [outer loop till finished all columns]
+        [31] ZF  [exit]
+        [32] AF  [added to an address to make A order for that address]
+        [33] TF  [added to an address to make T order for that address]
+        [34] PF  [negative counter for rows]
+        [35] PF  [negative counter for columns]
+        [36] AF  [load order for first element in current column]
+
+  [Subroutine to print a matrix of 17-bit real numbers.
+   Straightforward, so given in condensed form.
+   Parameters (in the address field, i.e. pass n as PnF):
+   10F = width (number of columns)
+   11F = height (number of rows)
+   12F = start address of matrix
+   13F = number of decimals]
+               E25K  TM
+    GKA3FT30@A13FT18@A12FA31@T14@S11FT36@S10FT37@O34@O35@TDAFT1FA16@
+    GN  [call library subroutine P1]
+    PFA14@A2FT14@A37@A2FG10@O32@O33@A36@A2FG8@ZFAF@F&F!FMFPFPF
+
+  [Library subroutine P1.
+   Prints number in 0D to n places of decimals, where
+   n is specified by 'P n F' pseudo-order after subroutine call.]
+             E25K  TN
+   GKA18@U17@S20@T5@H19@PFT5@VDUFOFFFSFL4FTDA5@A2FG6@EFU3FJFM1F
+
+   [Main routine]
+             PK T300K GK
+      [Constants]
+         [0] #F     [figures shift on teleprinter]
+         [1] @F     [carriage return]
+         [2] &F     [line feed]
+         [3] P3F    [number of columns (in address field)]
+         [4] P5F    [number of rows (in address field)]
+         [5] P400F  [address of matrix]
+         [6] P500F  [address of transposed matrix]
+         [7] P2F    [number of decimals when printing matrix]
+         [8] TF     [add to address to make T order]
+         [9] P328F  [0.0100097...., matrix elements are multiples of this]
+      [Variables]
+        [10] PF     [matrix element, initialized to 0.00]
+        [11] PF     [negative counter]
+
+           [Enter with acc = 0]
+        [12] O@     [set figures mode on teleprinter]
+             A5@    [address of matrix]
+             A8@    [make T order to store first elememt]
+             T24@   [plant in code]
+             H4@  N3@  L64F  L32F  [acc := negative number of entries]
+        [20] T11@   [initialize negative counter]
+             A10@  A9@  U10@  [increment matrix element]
+        [24] TF               [store in matrix]
+             A24@  A2F  T24@  [inc store address]
+             A11@  A2F  G20@  [inc negative counter, loop till zero]
+
+           [Matrix is set up, now print it]
+             A3@  T10F  [10F := width]
+             A4@  T11F  [11F := height]
+             A5@  T12F  [12F := address of matrix]
+             A7@  T13F  [13F := number of decimals]
+        [39] A39@  GM   [call print subroutine]
+             O1@  O2@   [add CR LF]
+
+           [Transpose matrix: 10F, 11F, 12F stay the same]
+             A6@  T13F  [13F := address of transpose]
+        [45] A45@  GX   [call transpose routine]
+
+           [Print transpose]
+             A10F  TF  A11F  T10F  AF  T11F  [swap width and height]
+             A13F  T12F [12F := address of transpose]
+             A7@  T13F  [13F := number of decimals]
+        [57] A57@  GM   [call print subroutine]
+
+             O@    [figures mode, dummy to flush teleprinter buffer]
+             ZF    [stop]
+             E12Z  [enter at 12 (relative)]
+             PF    [accumulator = 0 on entry]

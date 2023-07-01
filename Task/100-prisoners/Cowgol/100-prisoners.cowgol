@@ -1,0 +1,152 @@
+include "cowgol.coh";
+include "argv.coh";
+
+# Parameters
+const Drawers     := 100;   # Amount of drawers (and prisoners)
+const Attempts    := 50;    # Amount of attempts a prisoner may make
+const Simulations := 2000;  # Amount of simulations to run
+
+typedef NSim is int(0, Simulations);
+
+# Random number generator
+record RNG is
+    x: uint8;
+    a: uint8;
+    b: uint8;
+    c: uint8;
+    state @at(0): int32;
+end record;
+
+sub RandomByte(r: [RNG]): (byte: uint8) is
+    r.x := r.x + 1;
+    r.a := r.a ^ r.c ^ r.x;
+    r.b := r.b + r.a;
+    r.c := r.c + (r.b >> 1) ^ r.a;
+    byte := r.c;
+end sub;
+
+sub RandomUpTo(r: [RNG], limit: uint8): (rslt: uint8) is
+    var x: uint8 := 1;
+    while x < limit loop
+        x := x << 1;
+    end loop;
+    x := x - 1;
+
+    loop
+        rslt := RandomByte(r) & x;
+        if rslt < limit then
+            break;
+        end if;
+    end loop;
+end sub;
+
+# Drawers (though marked 0..99 instead of 1..100)
+var drawers: uint8[Drawers];
+typedef Drawer is @indexof drawers;
+typedef Prisoner is Drawer;
+
+# Place cards randomly in drawers
+sub InitDrawers(r: [RNG]) is
+    var x: Drawer := 0;
+    while x < Drawers loop
+        drawers[x] := x;
+        x := x + 1;
+    end loop;
+
+    x := 0;
+    while x < Drawers - 1 loop
+        var y := x + RandomUpTo(r, Drawers-x);
+        var t := drawers[x];
+        drawers[x] := drawers[y];
+        drawers[y] := t;
+        x := x + 1;
+    end loop;
+end sub;
+
+# A prisoner can apply a strategy and either succeed or not
+interface Strategy(p: Prisoner, r: [RNG]): (success: uint8);
+
+# The stupid strategy: open drawers randomly.
+sub Stupid implements Strategy is
+    # Let's assume the prisoner is smart enough not to reopen an open drawer
+    var opened: Drawer[Drawers];
+    MemZero(&opened[0], @bytesof opened);
+
+    # Open random drawers
+    success := 0;
+    var triesLeft: uint8 := Attempts;
+    while triesLeft != 0 loop
+        var d := RandomUpTo(r, Drawers); # grab a random drawer
+        if opened[d] != 0 then
+            continue; # Ignore it if a drawer was already open
+        else
+            triesLeft := triesLeft - 1;
+            opened[d] := 1;
+            if drawers[d] == p then # found it!
+                success := 1;
+                return;
+            end if;
+        end if;
+    end loop;
+end sub;
+
+# The optimal strategy: open the drawer for each number
+sub Optimal implements Strategy is
+    var current := p;
+    var triesLeft: uint8 := Attempts;
+    success := 0;
+    while triesLeft != 0 loop
+        current := drawers[current];
+        if current == p then
+            success := 1;
+            return;
+        end if;
+        triesLeft := triesLeft - 1;
+    end loop;
+end sub;
+
+# Run a simulation
+sub Simulate(s: Strategy, r: [RNG]): (success: uint8) is
+    InitDrawers(r); # place cards randomly in drawer
+    var p: Prisoner := 0;
+    success := 1; # if they all succeed the simulation succeeds
+    while p < Drawers loop # but for each prisoner...
+        if s(p, r) == 0 then # if he fails, the simulation fails
+            success := 0;
+            return;
+        end if;
+        p := p + 1;
+    end loop;
+end sub;
+
+# Run an amount of simulations and report the amount of successes
+sub Run(n: NSim, s: Strategy, r: [RNG]): (successes: NSim) is
+    successes := 0;
+    while n > 0 loop
+        successes := successes + Simulate(s, r) as NSim;
+        n := n - 1;
+    end loop;
+end sub;
+
+# Initialize RNG with number given on command line (defaults to 0)
+var rng: RNG; rng.state := 0;
+ArgvInit();
+var arg := ArgvNext();
+if arg != 0 as [uint8] then
+    (rng.state, arg) := AToI(arg);
+end if;
+
+sub RunAndPrint(name: [uint8], strat: Strategy) is
+    print(name);
+    print(" strategy: ");
+    var succ := Run(Simulations, strat, &rng) as uint32;
+    print_i32(succ);
+    print(" out of ");
+    print_i32(Simulations);
+    print(" - ");
+    print_i32(succ * 100 / Simulations);
+    print("%\n");
+end sub;
+
+RunAndPrint("Stupid", Stupid);
+RunAndPrint("Optimal", Optimal);

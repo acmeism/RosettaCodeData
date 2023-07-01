@@ -1,0 +1,5 @@
+$ inquire a "Please provide an integer"
+$ inquire b "Please provide another"
+$ if a .lt. b then $ write sys$output "the first integer is less"
+$ if a .eq. b then $ write sys$output "the integers have the same value"
+$ if a .gt. b then $ write sys$output "the first integer is greater"

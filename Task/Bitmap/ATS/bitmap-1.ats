@@ -1,0 +1,252 @@
+#define ATS_PACKNAME "Rosetta_Code.bitmap_task"
+
+(*------------------------------------------------------------------*)
+
+(* I am going to do this at the most primitive level. So here is the
+   "abstractified" type, or really a whole set of different types:
+   w-by-h pixmap of values of type a, with pixel storage at address
+   p. The type is linear (‘use it once and only once’). We will make
+   pixmap a boxed type, so its size will be equal to that of a
+   pointer. (This is actually a general 2-dimensional array type!
+   But let us ignore that.) *)
+absvtype pixmap (a : t@ype, w : int, h : int, p : addr) = ptr
+
+(* A shorthand for a pixmap with its pixel storage at "some"
+   address. *)
+vtypedef pixmap (a : t@ype, w : int, h : int) =
+  [p : addr] pixmap (a, w, h, p)
+
+(* A shorthand for a pixmap with "some" width and height, and with its
+   pixel storage at "some" address. *)
+vtypedef pixmap (a : t@ype) = [w, h : int] pixmap (a, w, h)
+
+(* A shorthand for a pixmap with "some" POSITIVE width and POSITIVE
+   height, and with its pixel storage at "some" address. *)
+vtypedef pixmap1 (a : t@ype) = [w, h : pos] pixmap (a, w, h)
+
+(*------------------------------------------------------------------*)
+(* Here are definitions for a small set of operations, including the
+   ones requested in the task document.
+
+   But note that, in ATS, we are careful about uninitialized data. It
+   is POSSIBLE to create an uninitialized pixmap, but NOT possible to
+   set or get individual pixels, if the pixmap is not already fully
+   initialized by some other means (such as "fill" or "load"). *)
+
+fn {}
+pixmap_width :
+  {a    : t@ype}
+  {w, h : int}
+  (!pixmap (a, w, h)) -<> size_t w
+
+fn {}
+pixmap_height :
+  {a    : t@ype}
+  {w, h : int}
+  (!pixmap (a, w, h)) -<> size_t h
+
+fn {a : t@ype}
+pixmap_make_array :
+  (* Make a new pixmap from an existing array. The array may be
+     anywhere (for instance, a stack frame or the heap), and need not
+     be initialized. *)
+  {w, h : int} {p : addr}
+  (array_v (a, p, w * h) | size_t w, size_t h, ptr p) ->
+    pixmap (a, w, h, p)
+
+fn {a : t@ype}
+pixmap_unmake :
+  (* Essentially the reverse of pixmap_make_array. Temporarily treat a
+     pixmap as an array. The array will be organized as rows from left
+     to right, with the rows themselves going from top to bottom. Thus
+     an index would be i = x + (y * w). *)
+  {w, h : int} {p : addr}
+  pixmap (a, w, h, p) ->
+    @(array_v (a, p, w * h) | size_t w, size_t h, ptr p)
+
+prfn
+pixmap_prove_index_bounds :
+  (* A proof that i = x + (y * w) is within bounds of the array
+     returned by pixmap_unmake. *)
+  {w, h : int}
+  {x, y : nat | x < w; y < h}
+  () -<prf>
+    [0 <= x + (y * w);
+     x + (y * w) < w * h]
+     void
+
+fn {a : t@ype}
+pixmap_make_uninitized :
+  (* Make a new uninitialized pixmap, with the pixels stored in the
+     heap. *)
+  {w, h : int}
+  (size_t w, size_t h) ->
+    [p : addr | null < p] @(mfree_gc_v p | pixmap (a?, w, h, p))
+
+fn {a : t@ype}
+pixmap_make_elt :
+  (* Make a new pixmap, initialized with a given element, with the
+     pixels stored in the heap. *)
+  {w, h : int}
+  (size_t w, size_t h, a) ->
+    [p : addr | null < p] @(mfree_gc_v p | pixmap (a, w, h, p))
+
+fn {}
+pixmap_free_storage_return :
+  (* Free a pixmap, returning the storage array to the user. *)
+  {a : t@ype}
+  {w, h : int} {p : addr}
+  pixmap (a, w, h, p) -> @(array_v (a, p, w * h) | ptr p)
+
+fn {}
+pixmap_free_storage_free :
+  (* If a pixmap's pixels were allocated in the heap, then free its
+     storage. *)
+  {a : t@ype}
+  {w, h : int} {p : addr}
+  (mfree_gc_v p | pixmap (a, w, h, p)) -> void
+
+fn {a : t@ype}
+pixmap_fill_elt :
+  (* Fill a pixmap with the given element. (Technically speaking, the
+     value of the first argument is consumed, and replaced by a new
+     value. Its type before and after is linear.) *)
+  {w, h : int} {p : addr}
+  (* The question mark means that the pixmap elements can start out
+     uninitialized. *)
+  (!pixmap (a?, w, h, p) >> pixmap (a, w, h, p), a) -> void
+
+fn {a  : t@ype}
+          {tk : tkind}
+pixmap_set_at_guint :
+  (* Set a pixel at unsigned integer coordinates. You can do this only
+     on a pixmap that has been initialized. (It would be prohibitively
+     tedious to safely work with randomly located pixels, if the array
+     were not already fully initialized.) *)
+  {w, h : int}
+  {x, y : int | x < w; y < h}
+  (!pixmap (a, w, h), g1uint (tk, x), g1uint (tk, y), a) -> void
+
+fn {a  : t@ype}
+          {tk : tkind}
+pixmap_set_at_gint :
+  (* Set a pixel, but with signed integer coordinates. *)
+  {w, h : int}
+  {x, y : nat | x < w; y < h}
+  (!pixmap (a, w, h), g1int (tk, x), g1int (tk, y), a) -> void
+
+fn {a : t@ype} {tk : tkind}
+pixmap_get_at_guint :
+  (* Get a pixel at unsigned integer coordinates. You can do this only
+     on a pixmap that has been initialized. *)
+  {w, h : int}
+  {x, y : int | x < w; y < h}
+  (!pixmap (a, w, h), g1uint (tk, x), g1uint (tk, y)) -> a
+
+fn {a : t@ype} {tk : tkind}
+pixmap_get_at_gint :
+  (* Get a pixel, but with signed integer coordinates. *)
+  {w, h : int}
+  {x, y : nat | x < w; y < h}
+  (!pixmap (a, w, h), g1int (tk, x), g1int (tk, y)) -> a
+
+fn {a : t@ype}
+pixmap_dump :
+  (* Dump the contents of a pixmap to an output stream, row by row as
+     in a PPM. You must implement the pixmap$pixels_dump template
+     function. (We are anticipating the task to write a PPM file, and
+     wish to do it in a nice way. I am likely to end up actually using
+     this code, after all.) *)
+  {w, h : int}
+  (* I return a success-or-failure value, to avoid committing to using
+     an exception here. There are circumstances in which exceptions are
+     not the best approach. *)
+  (FILEref, !pixmap (a, w, h)) -> bool (* success *)
+
+fn {a : t@ype}
+pixmap$pixels_dump :
+  (* A function that the writes n pixels to an output stream. (It
+     could be one pixel, it could be the entire image. From the user's
+     standpoint, it makes no difference. It is an implementation
+     detail HOW the function is called by pixmap_dump.) *)
+  {n : int}
+  (FILEref, &array (a, n), size_t n) -> bool (* success *)
+
+fn {a : t@ype}
+pixmap_load :
+  (* Load the contents of a pixmap from an input stream, row by row as
+     in a PPM. You must implement the pixmap$pixels_load template
+     function. A value of type a has to be given, to initialize the
+     array with if the loading fails. *)
+  {w, h : int} {p : addr}
+  (FILEref, !pixmap (a?, w, h, p) >> pixmap (a, w, h, p), a) ->
+    bool (* success *)
+
+fn {a : t@ype}
+pixmap$pixels_load :
+  (* A function that the reads n pixels from an input stream. (It
+     could be one pixel, it could be the entire image. From the user's
+     standpoint, it makes no difference. It is an implementation
+     detail HOW the function is called by pixmap_load.) *)
+  {n : int}
+  (FILEref, &array (a?, n) >> array (a, n), size_t n, a) ->
+    bool (* success *)
+
+overload pixmap_make with pixmap_make_array
+overload pixmap_make with pixmap_make_uninitized
+overload pixmap_make with pixmap_make_elt
+
+overload pixmap_free with pixmap_free_storage_return
+overload pixmap_free with pixmap_free_storage_free
+overload free with pixmap_free_storage_free
+
+overload fill with pixmap_fill_elt
+
+overload pixmap_set_at with pixmap_set_at_guint
+overload pixmap_set_at with pixmap_set_at_gint
+overload [] with pixmap_set_at
+
+overload pixmap_get_at with pixmap_get_at_guint
+overload pixmap_get_at with pixmap_get_at_gint
+overload [] with pixmap_get_at
+
+overload dump with pixmap_dump
+overload load with pixmap_load
+
+overload width with pixmap_width
+overload height with pixmap_height
+
+(*------------------------------------------------------------------*)
+(* Here is a type for 24-bit RGB data. An RGB pixmap type thus can be
+   written as "pixmap (rgb24, w, h, p)".
+
+   There are, though you cannot see it here (they are in the dynamic
+   file), default implementations of pixmap$pixels_dump<rgb24> and
+   pixmap$pixels_load<rgb24>. These implementations are for dumping
+   raw data in PPM format. *)
+
+(* It is an abstract type, the size of a triple of uint8. (It is, in
+   fact, a triple of uint8, but we hide this fact, so the template
+   system will not confuse the type with other triples of uint8. It is
+   a subtle matter. *)
+abst@ype rgb24 = @(uint8, uint8, uint8)
+
+fn {tk : tkind}
+rgb24_make_uint_uint_uint :
+  (g0uint tk, g0uint tk, g0uint tk) -<> rgb24
+
+fn {tk : tkind}
+rgb24_make_int_int_int :
+  (g0int tk, g0int tk, g0int tk) -<> rgb24
+
+fn {}
+rgb24_make_tuple : @(uint8, uint8, uint8) -<> rgb24
+
+fn {}
+rgb24_values : rgb24 -<> @(uint8, uint8, uint8)
+
+overload rgb24_make with rgb24_make_uint_uint_uint
+overload rgb24_make with rgb24_make_int_int_int
+overload rgb24_make with rgb24_make_tuple
+
+(*------------------------------------------------------------------*)

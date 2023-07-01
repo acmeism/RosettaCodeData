@@ -1,0 +1,351 @@
+/* ARM assembly Raspberry PI  */
+/*  program yahoosearch.s   */
+/* access RosettaCode.org and data extract       */
+/* use openssl  for access to port 443 */
+/* test openssl : package libssl-dev  */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.equ STDOUT, 1           @ Linux output console
+.equ EXIT,   1           @ Linux syscall
+.equ WRITE,  4           @ Linux syscall
+.equ BRK,    0x2d        @ Linux syscall
+.equ CHARPOS,     '@'
+
+.equ EXIT,          1
+.equ TAILLEBUFFER,  500
+
+.equ SSL_OP_NO_SSLv3,        0x02000000
+.equ SSL_OP_NO_COMPRESSION,  0x00020000
+.equ SSL_MODE_AUTO_RETRY,    0x00000004
+.equ SSL_CTRL_MODE,          33
+
+.equ BIO_C_SET_CONNECT,      100
+.equ BIO_C_DO_STATE_MACHINE, 101
+.equ BIO_C_SET_SSL,          109
+.equ BIO_C_GET_SSL,          110
+
+.equ LGBUFFERREQ,       512001
+.equ LGBUFFER2,         128001
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:       .asciz "Début du programme. \n"
+szRetourLigne:        .asciz "\n"
+szMessFinOK:          .asciz "Fin normale du programme. \n"
+szMessErreur:         .asciz "Erreur  !!!"
+szMessExtractArea:    .asciz "Extraction = "
+szNomSite1:           .asciz "search.yahoo.com:443"   @ host name and port
+szLibStart:           .asciz ">Rosetta Code"          @ search string
+szNomrepCertif:       .asciz "/pi/certificats"
+szRequete1:           .asciz "GET /search?p=\"Rosettacode.org\"&b=1 HTTP/1.1 \r\nHost: search.yahoo.com\r\nConnection: keep-alive\r\nContent-Type: text/plain\r\n\r\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+sBufferreq:           .skip LGBUFFERREQ
+szExtractArea:        .skip TAILLEBUFFER
+stNewSSL:             .skip 200
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess                             @ start message
+
+    /* connexion host port 443 and send query */
+    bl envoiRequete
+    cmp r0,#-1
+    beq 99f                                       @ error ?
+
+    bl analyseReponse
+
+    ldr r0,iAdrszMessFinOK                        @ end message
+    bl affichageMess
+    mov r0, #0                                    @ return code ok
+    b 100f
+99:
+    ldr r0,iAdrszMessErreur                       @ error
+    bl affichageMess
+    mov r0, #1                                    @ return code error
+    b 100f
+100:
+    mov r7,#EXIT                                  @ program end
+    svc #0                                        @ system call
+iAdrszMessDebutPgm:          .int szMessDebutPgm
+iAdrszMessFinOK:             .int szMessFinOK
+iAdrszMessErreur:            .int szMessErreur
+
+/*********************************************************/
+/*   connexion host port 443 and send query            */
+/*********************************************************/
+envoiRequete:
+    push {r2-r8,lr}                 @ save registers
+    @*************************************
+    @ openSsl functions use              *
+    @*************************************
+                                    @init ssl
+    bl OPENSSL_init_crypto
+    bl ERR_load_BIO_strings
+    mov r2, #0
+    mov r1, #0
+    mov r0, #2
+    bl OPENSSL_init_crypto
+    mov r2, #0
+    mov r1, #0
+    mov r0, #0
+    bl OPENSSL_init_ssl
+    cmp r0,#0
+    blt erreur
+    bl TLS_client_method
+    bl SSL_CTX_new
+    cmp r0,#0
+    ble erreur
+    mov r6,r0                       @ save ctx
+    ldr r1,iFlag
+    bl SSL_CTX_set_options
+    mov r0,r6
+    mov r1,#0
+    ldr r2,iAdrszNomrepCertif
+    bl SSL_CTX_load_verify_locations
+    cmp r0,#0
+    ble erreur
+    mov r0,r6
+    bl BIO_new_ssl_connect
+    cmp r0,#0
+    ble erreur
+    mov r5,r0                       @ save bio
+    mov r1,#BIO_C_GET_SSL
+    mov r2,#0
+    ldr r3,iAdrstNewSSL
+    bl BIO_ctrl
+    ldr r0,iAdrstNewSSL
+    ldr r0,[r0]
+    mov r1,#SSL_CTRL_MODE
+    mov r2,#SSL_MODE_AUTO_RETRY
+    mov r3,#0
+    bl SSL_ctrl
+    mov r0,r5                       @ bio
+    mov r1,#BIO_C_SET_CONNECT
+    mov r2,#0
+    ldr r3,iAdrszNomSite1
+    bl BIO_ctrl
+    mov r0,r5                       @ bio
+    mov r1,#BIO_C_DO_STATE_MACHINE
+    mov r2,#0
+    mov r3,#0
+    bl  BIO_ctrl
+                                    @ compute query length
+    mov r2,#0
+    ldr r1,iAdrszRequete1           @ query
+1:
+    ldrb r0,[r1,r2]
+    cmp r0,#0
+    addne r2,#1
+    bne 1b
+                                    @ send query
+    mov r0,r5                       @ bio
+                                    @ r1 = address query
+                                    @ r2 = length query
+    mov r3,#0
+    bl BIO_write                    @ send query
+    cmp r0,#0
+    blt erreur
+    ldr r7,iAdrsBufferreq           @ buffer address
+2:                                  @ begin loop to read datas
+    mov r0,r5                       @ bio
+    mov r1,r7                       @ buffer address
+    mov r2,#LGBUFFERREQ - 1
+    mov r3,#0
+    bl BIO_read
+    cmp r0,#0
+    ble 4f                          @ error ou pb server
+    add r7,r0
+    sub r2,r7,#6
+    ldr r2,[r2]
+    ldr r3,iCharEnd
+    cmp r2,r3                       @ text end ?
+    beq 4f
+    mov r1,#0xFFFFFF                @ delay loop
+3:
+    subs r1,#1
+    bgt 3b
+    b 2b                            @ loop read other chunk
+4:                                  @ read end
+    //ldr r0,iAdrsBufferreq           @ to display buffer response of the query
+    //bl affichageMess
+    mov r0, r5                      @ close bio
+    bl BIO_free_all
+    mov r0,#0
+    b 100f
+erreur:                             @ error display
+    ldr r1,iAdrszMessErreur
+    bl   afficheerreur
+    mov r0,#-1                      @ error code
+    b 100f
+100:
+    pop {r2-r8,lr}                  @ restaur registers
+    bx lr
+iAdrszRequete1:             .int szRequete1
+iAdrsBufferreq:             .int sBufferreq
+iFlag:                      .int SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION
+iAdrstNewSSL:               .int stNewSSL
+iAdrszNomSite1:             .int szNomSite1
+iAdrszNomrepCertif:         .int szNomrepCertif
+iCharEnd:                   .int 0x0A0D300A
+/*********************************************************/
+/*   response analyze                                    */
+/*********************************************************/
+analyseReponse:
+    push {r1-r4,lr}                           @ save registers
+    ldr r0,iAdrsBufferreq                     @ buffer address
+    ldr r1,iAdrszLibStart                     @ key text address
+    mov r2,#2                                 @ occurence key text
+    mov r3,#-11                               @ offset
+    ldr r4,iAdrszExtractArea                  @ address result area
+    bl extChaine
+    cmp r0,#-1
+    beq 99f
+    ldr r0,iAdrszMessExtractArea
+    bl affichageMess
+    ldr r0,iAdrszExtractArea                  @ résult display
+    bl affichageMess
+    ldr r0,iAdrszRetourLigne
+    bl affichageMess
+    b 100f
+99:
+    ldr r0,iAdrszMessErreur                   @ error
+    bl affichageMess
+    mov r0, #-1                               @ error return code
+    b 100f
+100:
+    pop {r1-r4,lr}                            @ restaur registers
+    bx lr
+iAdrszLibStart:                 .int szLibStart
+iAdrszExtractArea:              .int szExtractArea
+iAdrszMessExtractArea:          .int szMessExtractArea
+iAdrszRetourLigne:              .int szRetourLigne
+/*********************************************************/
+/*   Text Extraction behind text key                     */
+/*********************************************************/
+/* r0  buffer address   */
+/* r1  key text to search */
+/* r2  number occurences to key text */
+/* r3  offset */
+/* r4  result address */
+extChaine:
+    push {r2-r8,lr}      @ save registers
+    mov r5,r0            @ save buffer address
+    mov r6,r1            @ save key text
+                         @ compute text length
+    mov r7,#0
+1:                       @ loop
+    ldrb r0,[r5,r7]      @ load a byte
+    cmp r0,#0            @ end ?
+    addne r7,#1          @ no -> loop
+    bne 1b
+    add r7,r5            @ compute text end
+
+    mov r8,#0
+2:                       @ compute length text key
+    ldrb r0,[r6,r8]
+    cmp r0,#0
+    addne r8,#1
+    bne 2b
+
+3:                       @ loop to search nième(r2)  key text
+    mov r0,r5
+    mov r1,r6
+    bl rechercheSousChaine
+    cmp r0,#0
+    blt 100f
+    subs r2,#1
+    addgt r5,r0
+    addgt r5,r8
+    bgt 3b
+    add r0,r5           @ add address text to index
+    add r3,r0           @ add offset
+    sub r3,#1
+                        @ and add length key text
+    add r3,r8
+    cmp r3,r7           @ > at text end
+    movge r0,#-1        @ yes -> error
+    bge 100f
+    mov r0,#0
+4:                      @ character loop copy
+    ldrb r2,[r3,r0]
+    strb r2,[r4,r0]
+    cmp r2,#0           @ text end ?
+    moveq r0,#0         @ return zero
+    beq 100f
+    cmp r0,#48          @ extraction length
+    beq 5f
+    add r0,#1
+    b 4b                @ and loop
+5:
+    mov r2,#0           @ store final zéro
+    strb r2,[r4,r0]
+    add r0,#1
+    add r0,r3           @ r0 return the last position of extraction
+                        @ it is possible o search another text
+100:
+   	pop {r2-r8,lr}      @ restaur registers
+    bx lr
+
+/******************************************************************/
+/*   search substring in string                                   */
+/******************************************************************/
+/* r0 contains address string */
+/* r1 contains address substring */
+/* r0 return start index substring or -1 if not find */
+rechercheSousChaine:
+    push {r1-r6,lr}                       @ save registers
+    mov r2,#0                             @ index position string
+    mov r3,#0                             @ index position substring
+    mov r6,#-1                            @ search index
+    ldrb r4,[r1,r3]                       @ load first byte substring
+    cmp r4,#0                             @ zero final ?
+    moveq r0,#-1                          @ error
+    beq 100f
+1:
+    ldrb r5,[r0,r2]                       @ load string byte
+    cmp r5,#0                             @ zero final ?
+    moveq r0,#-1                          @ yes -> not find
+    beq 100f
+    cmp r5,r4                             @ compare character two strings
+    beq 2f
+    mov r6,#-1                            @ not equal - > raz index
+    mov r3,#0                             @ and raz byte counter
+    ldrb r4,[r1,r3]                       @ and load byte
+    add r2,#1                             @ and increment byte counter
+    b 1b                                  @ and loop
+2:                                        @ characters equal
+    cmp r6,#-1                            @ first character equal ?
+    moveq r6,r2                           @ yes -> start index in r6
+    add r3,#1                             @ increment substring counter
+    ldrb r4,[r1,r3]                       @ and load next byte
+    cmp r4,#0                             @ zero final ?
+    beq 3f                                @ yes -> search end
+    add r2,#1                             @ else increment string index
+    b 1b                                  @ and loop
+3:
+    mov r0,r6                             @ return start index substring in the string
+100:
+    pop {r1-r6,lr}                        @ restaur registres
+    bx lr
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

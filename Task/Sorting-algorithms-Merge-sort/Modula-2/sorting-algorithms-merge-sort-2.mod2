@@ -1,0 +1,82 @@
+IMPLEMENTATION MODULE MSIterat;
+
+IMPORT Storage;
+
+PROCEDURE IterativeMergeSort( VAR a : ARRAY OF INTEGER);
+VAR
+  n, bufLen, len, endBuf : CARDINAL;
+  k, nL, nR, b, h, i, j, startR, endR: CARDINAL;
+  temp : INTEGER; (* array element *)
+  pbuf : POINTER TO ARRAY CARDINAL OF INTEGER;
+BEGIN
+  n := HIGH(a) + 1; (* length of array *)
+  IF (n < 2) THEN RETURN; END;
+  (* Sort blocks of length 2 by swapping elements if necessary.
+     Start at high end of array; ignore a[0] if n is odd.*)
+  k := n;
+  REPEAT
+    DEC(k, 2);
+    IF (a[k] > a[k + 1]) THEN
+      temp := a[k]; a[k] := a[k + 1]; a[k + 1] := temp;
+    END;
+  UNTIL (k < 2);
+  IF (n = 2) THEN RETURN; END;
+
+  (* Set up a buffer for temporary storage when merging. *)
+  (* TopSpeed Modula-2 doesn't seem to have dynamic arrays,
+     so we use a workaround *)
+  bufLen := n DIV 2;
+  Storage.ALLOCATE( pbuf, bufLen*SIZE(INTEGER));
+
+  nR := 2; (* length of right-hand block when merging *)
+  REPEAT
+    len := 2*nR; (* maximum length of a merged block in this iteration *)
+    k := n; (* start at the high end of the array *)
+    WHILE (k > nR) DO
+      IF (k >= len) THEN
+        nL := nR; DEC(k, len);
+      ELSE
+        nL := k - nR; k := 0; END;
+
+      (* Merging 2 adjacent blocks, already sorted.
+         k = start index of left block;
+         nL, nR = lengths of left and right blocks *)
+      startR := k + nL;  endR := startR + nR;
+
+      (* Skip elements in left block that are already in correct place *)
+      temp := a[startR]; (* first (smallest) element in right block *)
+      j := k;
+      WHILE (j < startR) AND (a[j] <= temp) DO INC(j); END;
+
+      endBuf := startR - j; (* length of buffer actually used *)
+      IF (endBuf > 0) THEN (* if endBuf = 0 then already sorted *)
+        (* Copy from left block to buffer, omitting elements
+           that are already in correct place *)
+        h := j;
+        FOR b := 0 TO endBuf - 1 DO
+          pbuf^[b] := a[h]; INC(h);
+        END;
+        (* Fill in values from right block or buffer *)
+        b := 0;
+        i := startR;
+     (* j = startR - endBuf from above *)
+        WHILE (b < endBuf) AND (i < endR) DO
+          IF (pbuf^[b] <= a[i]) THEN
+            a[j] := pbuf^[b]; INC(b)
+          ELSE
+            a[j] := a[i]; INC(i); END;
+          INC(j);
+        END;
+        (* If now b = endBuf then the merge is complete.
+           Else just copy the remaining elements in the buffer. *)
+        WHILE (b < endBuf) DO
+          a[j] := pbuf^[b]; INC(j); INC(b);
+        END;
+      END;
+    END;
+    nR := len;
+  UNTIL (nR >= n);
+  Storage.DEALLOCATE( pbuf, bufLen*SIZE(INTEGER));
+END IterativeMergeSort;
+
+END MSIterat.

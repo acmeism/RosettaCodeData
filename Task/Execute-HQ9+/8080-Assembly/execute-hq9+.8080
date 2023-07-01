@@ -1,0 +1,139 @@
+putch:	equ	2	; Write character
+puts:	equ	9	; Write string
+fopen:	equ	15	; Open file
+fread:	equ	20	; Read record
+setdma:	equ	26	; Set DMA address
+fcb:	equ	5Ch	; FCB for first file on command line
+	org	100h
+	;;;	Open source file given on command line
+	lxi	d,fcb
+	mvi	c,fopen
+	call	5	; Open file
+	inr	a	; A=FF = error
+	lxi	d,efile
+	jz	s_out	; If error, print error message and stop
+	lxi	d,src	; Start reading file at src
+	;;;	Load the entire source file into memory	
+block:	push	d	; Set DMA address to next free location
+	mvi	c,setdma
+	call	5
+	lxi	d,fcb	; Read 128-byte record
+	mvi	c,fread
+	call	5
+	pop	d	; Advance pointer by 128 bytes
+	lxi	h,128
+	dad	d
+	xchg
+	dcr	a	; A=1 = end of file
+	jz	block	; If not EOF, read next block
+	xchg
+	mvi	m,26	; Terminate last block with EOF byte to be sure
+	lxi	b,src	; BC = source pointer
+ins:	ldax	b	; Get current instruction
+	cpi	26	; If EOF, stop
+	rz
+	ori	32	; Make lowercase
+	push	b	; Keep source pointer
+	cpi	'h'	; H=hello
+	cz	hello
+	cpi	'q'	; Q=quine
+	cz	quine
+	cpi	'9'	; 9=bottles
+	cz	botls
+	cpi	'+'	; +=increment
+	cz	incr
+	pop	b	; Restore source pointer
+	inx	b	; Next instruction
+	jmp 	ins
+	;;;	Increment accumulator
+incr:	lxi	h,accum
+	inr	m
+	ret
+	;;;	Print "Hello, World"
+hello:	lxi	d,histr
+	jmp	s_out
+	;;;	Print the source
+quine:	lxi	h,src	; Pointer to source
+qloop:	mov	a,m	; Load byte
+	cpi	26	; Reached the end?
+	rz		; If so, stop
+	push	h	; Otherwise, keep pointer
+	mov	e,a
+	mvi	c,putch	; Print character
+	call	5
+	pop	h	; Restore pointer
+	inx	h	; Next byte
+	jmp	qloop
+	;;;	99 bottles of beer
+botls:	mvi	e,99	; 99 bottles
+bverse:	call	nbeer	; _ bottle(s) of beer
+	lxi	h,otw	; on the wall
+	call	bstr
+	call	nbeer	; _ bottle(s) of beer
+	lxi	h,nl	; \r\n
+	call	bstr
+	lxi	h,tod	; Take one down and pass it around
+	call	bstr
+	dcr	e	; Decrement counter
+	push	psw	; Keep status
+	call 	nbeer	; _ bottle(s) of beer
+	lxi	h,otw
+	call	bstr	; on the wall
+	lxi	h,nl	; \r\n
+	call	bstr
+	pop	psw	; restore status
+	jnz	bverse	; If not at 0, next verse
+	ret
+nbeer:	push	d	; keep counter
+	call	btlstr	; _ bottle(s)
+	lxi	d,ofbeer
+	call	s_out	; of beer
+	pop 	d
+	ret
+bstr:	push	d	; keep counter
+	xchg		; print string in HL
+	call	s_out
+	pop	d	; restore counter
+	ret
+	;;;	Print "N bottle(s)"
+btlstr:	push	d	; Keep counter
+	mov	a,e	; Print number
+	call 	num
+	lxi	d,bottle
+	call	s_out	; Print " bottle"
+	pop 	d	; Restore counter
+	dcr	e	; If counter is 1,
+	rz		; then stop,
+	mvi	e,'s'	; otherwise, print S
+	mvi	c,putch
+	jmp	5
+	;;;	Print number (0-99) in A
+num:	ana	a	; If 0, print "no more"
+	lxi	d,nomore
+	jz	s_out
+	mvi	b,'0'-1	; Tens digit
+nloop:	inr	b	; Increment tens digit
+	sui	10	; Subtract 10
+	jnc	nloop
+	adi	'0'+10	; Ones digit
+	lxi	d,snum-1
+	stax	d	; Store ones digit
+	mov	a,b	; Tens digit zero?
+	cpi	'0'
+	jz	s_out	; If so, only print ones digit
+	dcx	d	; Otherwise, store tens digit
+	stax	d
+s_out:	mvi	c,puts	; Print result
+	jmp	5
+efile:	db	'File error.$'
+histr:	db	'Hello, world!',13,10,'$'
+	db	'..'
+snum:	db	'$'
+nomore:	db	'No more$'
+bottle:	db	' bottle$'
+ofbeer:	db	' of beer$'
+otw:	db	' on the wall',13,10,'$'
+tod:	db	'Take one down and pass it around'
+nl:	db	13,10,'$'
+accum:	db	0 	; Accumulator
+src:	equ	$	; Program source

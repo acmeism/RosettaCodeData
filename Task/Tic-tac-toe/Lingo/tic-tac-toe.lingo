@@ -1,0 +1,237 @@
+global $ -- object representing simple framework
+global gBoard -- current board image
+global gBoardTemplate -- empty board image
+global gHumanChip -- cross image
+global gComputerChip -- circle image
+global gM -- 3x3 matrix storing game state: 0=free cell, 1=human cell, -1=computer cell
+global gStep -- index of current move (1..9)
+global gGameOverFlag -- TRUE if current game is over
+
+----------------------------------------
+-- Entry point
+----------------------------------------
+on startMovie
+
+    -- libs
+    $.import("sprite")
+
+    -- window properties
+    _movie.stage.title = "Tic-Tac-Toe"
+    _movie.stage.rect = rect(0, 0, 224, 310)
+    _movie.centerStage = TRUE
+
+    -- load images from filesystem
+    m = new(#bitmap)
+    m.importFileInto($.@("resources/cross.bmp"), [#trimWhiteSpace:FALSE])
+    gHumanChip = m.image
+
+    m = new(#bitmap)
+    m.importFileInto($.@("resources/circle.bmp"), [#trimWhiteSpace:FALSE])
+    gComputerChip = m.image
+
+    -- create GUI
+    m = new(#bitmap)
+    m.importFileInto($.@("resources/board.bmp"))
+    m.regpoint = point(0, 0)
+    s = $.sprite.make(m, [#loc:point(20, 20)], TRUE)
+    s.addListener(#mouseDown, _movie, #humanMove)
+
+    gBoard = m.image
+    gBoardTemplate = gBoard.duplicate()
+
+    m = $.sprite.newMember(#button, [#text:"New Game (Human starts)", #fontstyle:"bold", #rect:rect(0, 0, 180, 0)])
+    s = $.sprite.make(m, [#loc:point(20, 220)], TRUE)
+    s.addListener(#mouseDown, _movie, #newGame, 1)
+
+    m = $.sprite.newMember(#button, [#text:"New Game (Computer starts)", #fontstyle:"bold", #rect:rect(0, 0, 180, 0)])
+    s = $.sprite.make(m, [#loc:point(20, 250)], TRUE)
+    s.addListener(#mouseDown, _movie, #newGame, -1)
+
+    m = $.sprite.newMember(#field, [#name:"feedback", #editable:FALSE, #fontstyle:"bold", #alignment:"center",\
+        #border:0, #color:rgb(255, 0, 0), #rect:rect(0, 0, 180, 0)])
+    s = $.sprite.make(m, [#loc:point(20, 280)], TRUE)
+
+    newGame(1)
+
+    -- show the application window
+    _movie.updateStage()
+    _movie.stage.visible = TRUE
+end
+
+----------------------------------------
+-- Starts a new game
+----------------------------------------
+on newGame (whoStarts)
+    -- reset board
+    gBoard.copyPixels(gBoardTemplate, gBoardTemplate.rect, gBoardTemplate.rect)
+    -- clear feedback
+    member("feedback").text = ""
+    -- reset states
+    gM = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+    gStep = 0
+    gGameOverFlag = FALSE
+    if whoStarts=-1 then computerMove()
+end
+
+----------------------------------------
+-- Handles a human move (mouse click)
+----------------------------------------
+on humanMove ()
+    if gGameOverFlag then return
+    -- find cell for mouse position
+    p = _mouse.clickLoc - sprite(1).loc
+    if p.locH mod 60<4 or p.locV mod 60<4 then return
+    p = p / 60
+    x = p[1] + 1
+    y = p[2] + 1
+    if gM[x][y] then return -- ignore illegal moves
+    gM[x][y] = 1
+    -- update cell image
+    p = p * 60
+    gBoard.copyPixels(gHumanChip, gHumanChip.rect.offset(4+p[1], 4+p[2]), gHumanChip.rect)
+    -- proceed (unless game over)
+    gStep = gStep + 1
+    if not checkHumanMove(x, y) then computerMove()
+end
+
+----------------------------------------
+-- Checks if human has won or game ended with draw
+----------------------------------------
+on checkHumanMove (x, y)
+    if sum([gM[x][1], gM[x][2], gM[x][3]])=3 then return gameOver(1, [[x, 1], [x, 2], [x, 3]])
+    if sum([gM[1][y], gM[2][y], gM[3][y]])=3 then return gameOver(1, [[1, y], [2, y], [3, y]])
+    if x=y and sum([gM[1][1], gM[2][2], gM[3][3]])=3 then return gameOver(1, [[1, 1], [2, 2], [3, 3]])
+    if x+y=4 and sum([gM[1][3], gM[2][2], gM[3][1]])=3 then return gameOver(1, [[1, 3], [2, 2], [3, 1]])
+    if gStep=9 then return gameOver(0)
+    return FALSE
+end
+
+----------------------------------------
+-- Checks if selecting specified empty cell makes computer or human win
+----------------------------------------
+on checkCellWins (x, y, who)
+    wins = who*2
+    if sum([gM[1][y], gM[2][y], gM[3][y]]) = wins then return [[1, y], [2, y], [3, y]]
+    if sum([gM[x][1], gM[x][2], gM[x][3]]) = wins then return [[x, 1], [x, 2], [x, 3]]
+    if x=y and sum([gM[1][1], gM[2][2], gM[3][3]]) = wins then return [[1, 1], [2, 2], [3, 3]]
+    if x+y=4 and sum([gM[1][3], gM[2][2], gM[3][1]]) = wins then return [[1, 3], [2, 2], [3, 1]]
+    return FALSE
+end
+
+----------------------------------------
+-- Handles game over
+----------------------------------------
+on gameOver (winner, cells)
+    gGameOverFlag = TRUE
+    if winner = 0 then
+        member("feedback").text = "It's a draw!"
+    else
+        -- hilite winning line with yellow
+        img = image(56, 56, 32)
+        img.fill(img.rect, rgb(255, 255, 0))
+        repeat with c in cells
+            x = (c[1]-1)*60 + 4
+            y = (c[2]-1)*60 + 4
+            gBoard.copyPixels(img, img.rect.offset(x, y), img.rect, [#ink:#darkest])
+        end repeat
+        member("feedback").text = ["Human", "Computer"][1+(winner=-1)] & " has won!"
+    end if
+    return TRUE
+end
+
+----------------------------------------
+-- Calculates next computer move
+----------------------------------------
+on computerMove ()
+    gStep = gStep + 1
+
+    -- move 1: select center
+    if gStep=1 then return doComputerMove(2, 2)
+
+    -- move 2 (human started)
+    if gStep=2 then
+        if gM[2][2]=1 then
+            -- if center, select arbitrary corner
+            return doComputerMove(1, 1)
+        else
+            -- otherwise select center
+            return doComputerMove(2, 2)
+        end if
+    end if
+
+    -- move 3 (computer started)
+    if gStep=3 then
+        -- if corner, select diagonally opposite corner
+        if gM[1][1]=1 then return doComputerMove(3, 3)
+        if gM[3][3]=1 then return doComputerMove(1, 1)
+        if gM[1][3]=1 then return doComputerMove(3, 1)
+        return doComputerMove(1, 1) -- top left corner as default
+    end if
+
+    -- get free cells
+    free = []
+    repeat with x = 1 to 3
+        repeat with y = 1 to 3
+            if gM[x][y]=0 then free.add([x, y])
+        end repeat
+    end repeat
+
+    -- check if computer can win now
+    repeat with c in free
+        res = checkCellWins(c[1], c[2], -1)
+        if res<>FALSE then
+            doComputerMove(c[1], c[2])
+            return gameOver(-1, res)
+        end if
+    end repeat
+
+    -- check if human could win with next move (if yes, prevent it)
+    repeat with c in free
+        res = checkCellWins(c[1], c[2], 1)
+        if res<>FALSE then return doComputerMove(c[1], c[2], TRUE)
+    end repeat
+
+    -- move 4 (human started): prevent "double mills"
+    if gStep=4 then
+        if gM[2][2]=1 and (gM[1][1]=1 or gM[3][3]=1) then return doComputerMove(3, 1)
+        if gM[2][2]=1 and (gM[1][3]=1 or gM[3][1]=1) then return doComputerMove(1, 1)
+        if gM[2][3]+gM[3][2]=2 then return doComputerMove(3, 3)
+        if gM[1][2]+gM[2][3]=2 then return doComputerMove(1, 3)
+        if gM[1][2]+gM[2][1]=2 then return doComputerMove(1, 1)
+        if gM[2][1]+gM[3][2]=2 then return doComputerMove(3, 1)
+        if (gM[1][3]+gM[3][1]=2) or (gM[1][1]+gM[3][3]=2) then return doComputerMove(2, 1)
+    end if
+
+    -- move 5 (computer started): try to create a "double mill"
+    if gStep=5 then
+        repeat with x = 1 to 3
+            col = [gM[x][1], gM[x][2], gM[x][3]]
+            if not (sum(col)=-1 and max(col)=0) then next repeat
+            repeat with y = 1 to 3
+                row = [gM[1][y], gM[2][y], gM[3][y]]
+                if not (sum(row)=-1 and max(row)=0 and gM[x][y]=0) then next repeat
+                return doComputerMove(x, y)
+            end repeat
+        end repeat
+    end if
+
+    -- otherwise use first free cell
+    c = free[1]
+    doComputerMove(c[1], c[2])
+end
+
+----------------------------------------
+-- Updates state matrix and cell image
+----------------------------------------
+on doComputerMove (x, y, checkDraw)
+    gM[x][y] = -1
+    gBoard.copyPixels(gComputerChip, gComputerChip.rect.offset(4+(x-1)*60, 4+(y-1)*60), gComputerChip.rect)
+    if checkDraw and gStep=9 then gameOver(0)
+end
+
+----------------------------------------
+--
+----------------------------------------
+on sum (aLine)
+    return aLine[1]+aLine[2]+aLine[3]
+end

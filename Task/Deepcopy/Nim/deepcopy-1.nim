@@ -1,0 +1,1 @@
+deepCopy(newObj, obj)

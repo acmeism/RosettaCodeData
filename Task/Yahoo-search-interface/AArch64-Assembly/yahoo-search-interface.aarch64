@@ -1,0 +1,365 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program yahoosearch64.s   */
+
+/* access RosettaCode.org and data extract       */
+/* use openssl  for access to port 443 */
+/* test openssl : package libssl-dev  */
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ TAILLEBUFFER,  500
+
+.equ SSL_OP_NO_SSLv3,        0x02000000
+.equ SSL_OP_NO_COMPRESSION,  0x00020000
+.equ SSL_MODE_AUTO_RETRY,    0x00000004
+.equ SSL_CTRL_MODE,          33
+
+.equ BIO_C_SET_CONNECT,      100
+.equ BIO_C_DO_STATE_MACHINE, 101
+.equ BIO_C_SET_SSL,          109
+.equ BIO_C_GET_SSL,          110
+
+.equ LGBUFFERREQ,       512001
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:       .asciz "Début du programme. \n"
+szRetourLigne:        .asciz "\n"
+szMessFinOK:          .asciz "Fin normale du programme. \n"
+szMessErreur:         .asciz "Erreur  !!!"
+szMessExtractArea:    .asciz "Extraction = "
+szNomSite1:           .asciz "search.yahoo.com:443"   // host name and port
+szLibStart:           .asciz ">Rosetta Code"          // search string
+szNomrepCertif:       .asciz "/pi/certificats"
+szRequete1:           .asciz "GET /search?p=\"Rosettacode.org\"&b=1 HTTP/1.1 \r\nHost: search.yahoo.com\r\nConnection: keep-alive\r\nContent-Type: text/plain\r\n\r\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+sBufferreq:           .skip LGBUFFERREQ
+szExtractArea:        .skip TAILLEBUFFER
+stNewSSL:             .skip 200
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess                             // start message
+
+    /* connexion host port 443 and send query */
+    bl envoiRequete
+    cmp x0,#-1
+    beq 99f                                       // error ?
+
+    bl analyseReponse
+
+    ldr x0,qAdrszMessFinOK                        // end message
+    bl affichageMess
+    mov x0, #0                                    // return code ok
+    b 100f
+99:
+    ldr x0,qAdrszMessErreur                       // error
+    bl affichageMess
+    mov x0, #1                                    // return code error
+    b 100f
+100:
+    mov x8,EXIT                                   // program end
+    svc 0                                         // system call
+qAdrszMessDebutPgm:          .quad szMessDebutPgm
+qAdrszMessFinOK:             .quad szMessFinOK
+qAdrszMessErreur:            .quad szMessErreur
+
+/*********************************************************/
+/*   connexion host port 443 and send query            */
+/*********************************************************/
+envoiRequete:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    stp x4,x5,[sp,-16]!            // save  registers
+    //*************************************
+    // openSsl functions use              *
+    //*************************************
+                                    //init ssl
+    bl OPENSSL_init_crypto
+    bl ERR_load_BIO_strings
+    mov x2, #0
+    mov x1, #0
+    mov x0, #2
+    bl OPENSSL_init_crypto
+    mov x2, #0
+    mov x1, #0
+    mov x0, #0
+    bl OPENSSL_init_ssl
+    cmp x0,#0
+    blt erreur
+    bl TLS_client_method
+    bl SSL_CTX_new
+    cmp x0,#0
+    ble erreur
+    mov x20,x0                       // save contex
+    ldr x1,iFlag
+    bl SSL_CTX_set_options
+    mov x0,x20                      // contex
+    mov x1,#0
+    ldr x2,qAdrszNomrepCertif
+    bl SSL_CTX_load_verify_locations
+    cmp x0,#0
+    ble erreur
+    mov x0,x20                       // contex
+    bl BIO_new_ssl_connect
+    cmp x0,#0
+    ble erreur
+    mov x21,x0                       // save bio
+    mov x1,#BIO_C_GET_SSL
+    mov x2,#0
+    ldr x3,qAdrstNewSSL
+    bl BIO_ctrl
+    ldr x0,qAdrstNewSSL
+    ldr x0,[x0]
+    mov x1,#SSL_CTRL_MODE
+    mov x2,#SSL_MODE_AUTO_RETRY
+    mov x3,#0
+    bl SSL_ctrl
+    mov x0,x21                       // bio
+    mov x1,#BIO_C_SET_CONNECT
+    mov x2,#0
+    ldr x3,qAdrszNomSite1
+    bl BIO_ctrl
+    mov x0,x21                       // bio
+    mov x1,#BIO_C_DO_STATE_MACHINE
+    mov x2,#0
+    mov x3,#0
+    bl  BIO_ctrl
+                                    // compute query length
+    mov x2,#0
+    ldr x1,qAdrszRequete1           // query
+1:
+    ldrb w0,[x1,x2]
+    cmp x0,#0
+    add x8,x2,1
+    csel x2,x8,x2,ne
+    bne 1b
+                                    // send query
+    mov x0,x21                       // bio
+                                    // x1 = address query
+                                    // x2 = length query
+    mov x3,#0
+    bl BIO_write                    // send query
+    cmp x0,#0
+    blt erreur
+    ldr x22,qAdrsBufferreq           // buffer address
+2:                                  // begin loop to read datas
+    mov x0,x21                       // bio
+    mov x1,x22                       // buffer address
+    ldr x2,qLgBuffer
+    mov x3,#0
+    bl BIO_read
+    cmp x0,#0
+    ble 4f                          // error ou pb server
+    add x22,x22,x0
+    sub x2,x22,#8
+    ldr x2,[x2]
+    ldr x3,qCharEnd
+    cmp x2,x3                       // text end ?
+    beq 4f
+    mov x1,#0xFFFFFF                // delay loop
+3:
+    subs x1,x1,1
+    bgt 3b
+    b 2b                            // loop read other chunk
+4:                                  // read end
+    //ldr x0,qAdrsBufferreq           // to display buffer response of the query
+    //bl affichageMess
+    mov x0, x21                      // close bio
+    bl BIO_free_all
+    mov x0,#0
+    b 100f
+erreur:                             // error display
+    ldr x1,qAdrszMessErreur
+    bl   afficheErreur
+    mov x0,#-1                      // error code
+    b 100f
+100:
+    ldp x4,x5,[sp],16              // restaur  2 registers
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrszRequete1:             .quad szRequete1
+qAdrsBufferreq:             .quad sBufferreq
+iFlag:                      .quad SSL_OP_NO_SSLv3 | SSL_OP_NO_COMPRESSION
+qAdrstNewSSL:               .quad stNewSSL
+qAdrszNomSite1:             .quad szNomSite1
+qAdrszNomrepCertif:         .quad szNomrepCertif
+qCharEnd:                   .quad 0x0A0D0A0D300A0D0A
+qLgBuffer:                  .quad LGBUFFERREQ - 1
+/*********************************************************/
+/*   response analyze                                    */
+/*********************************************************/
+analyseReponse:
+    stp x1,lr,[sp,-16]!                       // save  registers
+    stp x2,x3,[sp,-16]!                       // save  registers
+    ldr x0,qAdrsBufferreq                     // buffer address
+    ldr x1,qAdrszLibStart                     // key text address
+    mov x2,#2                                 // occurence key text
+    mov x3,#-11                               // offset
+    ldr x4,qAdrszExtractArea                  // address result area
+    bl extChaine
+    cmp x0,#-1
+    beq 99f
+    ldr x0,qAdrszMessExtractArea
+    bl affichageMess
+    ldr x0,qAdrszExtractArea                  // résult display
+    bl affichageMess
+    ldr x0,qAdrszRetourLigne
+    bl affichageMess
+    b 100f
+99:
+    ldr x0,qAdrszMessErreur                   // error
+    bl affichageMess
+    mov x0, #-1                               // error return code
+    b 100f
+100:
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrszLibStart:                 .quad szLibStart
+qAdrszExtractArea:              .quad szExtractArea
+qAdrszMessExtractArea:          .quad szMessExtractArea
+qAdrszRetourLigne:              .quad szRetourLigne
+/*********************************************************/
+/*   Text Extraction behind text key                     */
+/*********************************************************/
+/* x0  buffer address   */
+/* x1  key text to search */
+/* x2  number occurences to key text */
+/* x3  offset */
+/* x4  result address */
+extChaine:
+    stp x1,lr,[sp,-16]!  // save  registers
+    stp x2,x3,[sp,-16]!  // save  registers
+    stp x4,x5,[sp,-16]!  // save  registers
+    stp x6,x7,[sp,-16]!  // save  registers
+    mov x5,x0            // save buffer address
+    mov x6,x1            // save key text
+                         // compute text length
+    mov x8,#0
+1:                       // loop
+    ldrb w0,[x5,x8]      // load a byte
+    cmp x0,#0            // end ?
+    add x9,x8,1
+    csel x8,x9,x8,ne
+    bne 1b               // no -> loop
+    add x8,x8,x5            // compute text end
+
+    mov x7,#0
+2:                       // compute length text key
+    ldrb w0,[x6,x7]
+    cmp x0,#0
+    add x9,x7,1
+    csel x7,x9,x7,ne
+    bne 2b
+
+3:                       // loop to search niéme(x2)  key text
+    mov x0,x5
+    mov x1,x6
+    bl rechercheSousChaine
+    cmp x0,#0
+    blt 100f
+    subs x2,x2,1
+    ble 31f
+    add x5,x5,x0
+    add x5,x5,x7
+    b 3b
+31:
+    add x0,x0,x5           // add address text to index
+    add x3,x3,x0           // add offset
+    sub x3,x3,1
+                        // and add length key text
+    add x3,x3,x7
+    cmp x3,x8           // > at text end
+    bge 98f
+    mov x0,0
+4:                      // character loop copy
+    ldrb w2,[x3,x0]
+    strb w2,[x4,x0]
+    cbz x2,99f           // text end ?  return zero
+    cmp x0,48           // extraction length
+    beq 5f
+    add x0,x0,1
+    b 4b                // and loop
+5:
+    mov x2,0            // store final zéro
+    strb w2,[x4,x0]
+    add x0,x0,1
+    add x0,x0,x3        // x0 return the last position of extraction
+                        // it is possible o search another text
+    b 100f
+98:
+    mov x0,-1           // error
+    b 100f
+99:
+    mov x0,0
+100:
+    ldp x6,x7,[sp],16   // restaur  2 registers
+    ldp x4,x5,[sp],16   // restaur  2 registers
+    ldp x2,x3,[sp],16   // restaur  2 registers
+    ldp x1,lr,[sp],16   // restaur  2 registers
+    ret                 // return to address lr x30
+/******************************************************************/
+/*   search substring in string                                   */
+/******************************************************************/
+/* x0 contains address string */
+/* x1 contains address substring */
+/* x0 return start index substring or -1 if not find */
+rechercheSousChaine:
+    stp x1,lr,[sp,-16]!                   // save  registers
+    stp x2,x3,[sp,-16]!                   // save  registers
+    stp x4,x5,[sp,-16]!                   // save  registers
+    stp x6,x7,[sp,-16]!                   // save  registers
+    mov x2,#0                             // index position string
+    mov x3,#0                             // index position substring
+    mov x6,#-1                            // search index
+    ldrb w4,[x1,x3]                       // load first byte substring
+    cbz x4,99f                             // zero final ?  error
+1:
+    ldrb w5,[x0,x2]                       // load string byte
+    cbz x5,99f                            // zero final ?  yes -> not found
+    cmp x5,x4                             // compare character two strings
+    beq 2f
+    mov x6,-1                             // not equal - > raz index
+    mov x3,0                              // and raz byte counter
+    ldrb w4,[x1,x3]                       // and load byte
+    add x2,x2,1                           // and increment byte counter
+    b 1b                                  // and loop
+2:                                        // characters equal
+    cmp x6,-1                            // first character equal ?
+    csel x6,x2,x6,eq                      // yes -> start index in x6
+    add x3,x3,1                           // increment substring counter
+    ldrb w4,[x1,x3]                       // and load next byte
+    cbz x4,3f                             // zero final ?  yes -> search end
+    add x2,x2,1                           // else increment string index
+    b 1b                                  // and loop
+3:
+    mov x0,x6                             // return start index substring in the string
+    b 100f
+99:
+    mov x0,-1                             // not found
+100:
+    ldp x6,x7,[sp],16                     // restaur  2 registers
+    ldp x4,x5,[sp],16                     // restaur  2 registers
+    ldp x2,x3,[sp],16                     // restaur  2 registers
+    ldp x1,lr,[sp],16                     // restaur  2 registers
+    ret                                   // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

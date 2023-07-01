@@ -1,0 +1,87 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Array setup
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+Create_2D_Array:
+ARRAY_2D equ $100000
+ARRAY_POINTER_VARIABLE equ $200000
+; input: D0 = width, D1 = height
+; assume the input is byte length and unsigned, ranging from 1 to FF.
+
+AND.L #$000000FF,D0
+AND.L #$000000FF,D1 ;sanitize the input to byte length.
+
+LEA ARRAY_2D,A0     ;get base array address.
+
+;The array's size will be measured in bytes, as this is how memory offsetting is measured.
+;For this example the elements will all be 32-bit.
+;Therefore, the dimensions need to be multiplied by the byte count of each element.
+
+LSL.W #2,D0         ;four bytes per element = multiply by 4
+LSL.W #2,D1
+
+;Next, these values are multiplied to get the array's size.
+MOVE.L D0,D2
+MULU D1,D2
+;D2 is the array's size (measured in bytes) and will be placed at the beginning.
+;This does not count as an element of the array for the purposes of row/column indexing.
+;The array's base address will be offset by 4 bytes prior to any indexing.
+
+MOVE.L D2,(A0)+     ;store D2 in A0, add 4 to A0
+MOVEA.L A0,[ARRAY_POINTER_VARIABLE]
+
+;the brackets are optional, they show that this is a memory address label.
+;this is still a move to a memory address with or without the brackets.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Storing a value in the array
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+LEA ARRAY_POINTER_VARIABLE,A1    ;load the address where the array's base address is stored.
+MOVE.L (A1),A1                   ;dereference the pointer and get ARRAY_2D+4 into A1.
+
+; for this example the arbitrary row/column indices (2,5) will be used.
+
+MOVE.L #2,D4
+MULU D0,D4                       ;there are D0 entries per row, multiply row index by elements per row.
+MOVE.L #5,D5
+MOVE.L #$00112233,D7             ;determine the value we want to store in the array.
+
+; The bytes per element was factored into D0 when the array was created. So D4 is already where it should be.
+LSL.L #2,D5                      ;column index still needs to be scaled by the bytes per element.
+
+LEA (A1,D4),A1                   ;select the desired row.
+
+;68000 doesn't allow you to use more than 1 data register at a time to offset. So we have to offset separately.
+;Despite the use of parentheses this is NOT a dereference like it would be with "MOVE.L (A1),D7". D4 is merely added to the address in A1.
+
+MOVE.L D7,(A1,D5)                ;store #$00112233 in row 2, column 5 of the array.
+
+;Loading a value is the same as storing it, except the operands in the last instruction are reversed, and MOVE.L #$00112233,D7
+;is omitted.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Destroying the array
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; The array is destroyed by storing something else in its location. If you really want to reset it to zero, you can
+; do so with the following:
+
+LEA ARRAY_POINTER_VARIABLE,A1
+MOVE.L (A1),A1
+MOVE.L -(A1),D7
+;get the array size into D7. Remember that the array's size was stored just before its data.
+This value is potentially too large for a single DBRA, but it can be split up.
+
+SWAP D7
+MOVE.W D7,D6                    ;get the top half of D7 into D6. D6 will be the outer loop's DBRA value.
+SWAP D7
+SUBQ.L #1,D7                    ;D7 needs to be decremented by 1. D6 is fine the way it is.
+
+MOVE.L (A0)+,D0                 ;dummy move to increment the pointer back to the array base.
+MOVEQ #0,D0                     ;faster than MOVE.L #0,D0
+
+loop_destroyArray:
+MOVE.L D0,(A0)+
+DBRA D7,loop_destroyArray       ;loop using bottom 2 bytes of the array size as a loop counter
+DBRA D6,loop_destroyArray       ;decrement this, D7 is $FFFF each time execution gets here so this acts as a "carry" of sorts.
+                                ;if this value was 0 prior to the loop, the loop ends immediately.

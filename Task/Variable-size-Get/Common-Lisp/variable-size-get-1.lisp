@@ -1,0 +1,6 @@
+(let ((a (cons 1 2))
+      (b (make-array 10))
+      (c "a string"))
+  (list (hcl:find-object-size a)
+        (hcl:find-object-size b)
+        (hcl:find-object-size c)))

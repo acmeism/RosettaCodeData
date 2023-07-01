@@ -1,0 +1,873 @@
+(********************************************************************)
+(* Usage: lex [INPUTFILE [OUTPUTFILE]]
+   If INPUTFILE or OUTPUTFILE is "-" or missing, then standard input
+   or standard output is used, respectively. *)
+
+#define ATS_DYNLOADFLAG 0
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+%{^
+/* alloca(3) is needed for ATS exceptions. */
+#include <alloca.h>
+%}
+
+(********************************************************************)
+
+#define NUM_TOKENS 31
+#define RESERVED_WORD_HASHTAB_SIZE 9
+
+#define TOKEN_ELSE          0
+#define TOKEN_IF            1
+#define TOKEN_PRINT         2
+#define TOKEN_PUTC          3
+#define TOKEN_WHILE         4
+#define TOKEN_MULTIPLY      5
+#define TOKEN_DIVIDE        6
+#define TOKEN_MOD           7
+#define TOKEN_ADD           8
+#define TOKEN_SUBTRACT      9
+#define TOKEN_NEGATE       10
+#define TOKEN_LESS         11
+#define TOKEN_LESSEQUAL    12
+#define TOKEN_GREATER      13
+#define TOKEN_GREATEREQUAL 14
+#define TOKEN_EQUAL        15
+#define TOKEN_NOTEQUAL     16
+#define TOKEN_NOT          17
+#define TOKEN_ASSIGN       18
+#define TOKEN_AND          19
+#define TOKEN_OR           20
+#define TOKEN_LEFTPAREN    21
+#define TOKEN_RIGHTPAREN   22
+#define TOKEN_LEFTBRACE    23
+#define TOKEN_RIGHTBRACE   24
+#define TOKEN_SEMICOLON    25
+#define TOKEN_COMMA        26
+#define TOKEN_IDENTIFIER   27
+#define TOKEN_INTEGER      28
+#define TOKEN_STRING       29
+#define TOKEN_END_OF_INPUT 30
+
+typedef token_t =
+  [i : int | TOKEN_ELSE <= i; i <= TOKEN_END_OF_INPUT]
+  int i
+typedef tokentuple_t = (token_t, String, ullint, ullint)
+typedef token_names_vt = @[string][NUM_TOKENS]
+
+vtypedef reserved_words_vt =
+  @[String][RESERVED_WORD_HASHTAB_SIZE]
+vtypedef reserved_word_tokens_vt =
+  @[token_t][RESERVED_WORD_HASHTAB_SIZE]
+
+vtypedef lookups_vt =
+  [p_toknames : addr]
+  [p_wordtab  : addr]
+  [p_toktab   : addr]
+  @{
+    pf_toknames = token_names_vt @ p_toknames,
+    pf_wordtab = reserved_words_vt @ p_wordtab,
+    pf_toktab = reserved_word_tokens_vt @ p_toktab |
+    toknames = ptr p_toknames,
+    wordtab = ptr p_wordtab,
+    toktab = ptr p_toktab
+  }
+
+fn
+reserved_word_lookup
+          (s         : String,
+           lookups   : !lookups_vt,
+           line_no   : ullint,
+           column_no : ullint) : tokentuple_t =
+  if string_length s < 2 then
+    (TOKEN_IDENTIFIER, s, line_no, column_no)
+  else
+    let
+      macdef wordtab = !(lookups.wordtab)
+      macdef toktab = !(lookups.toktab)
+      val hashval =
+        g1uint_mod (g1ofg0 (char2ui s[0] + char2ui s[1]),
+                    g1i2u RESERVED_WORD_HASHTAB_SIZE)
+      val token = toktab[hashval]
+    in
+      if token = TOKEN_IDENTIFIER || s <> wordtab[hashval] then
+        (TOKEN_IDENTIFIER, s, line_no, column_no)
+      else
+        (token, s, line_no, column_no)
+    end
+
+(********************************************************************)
+(* Input allows pushback into a buffer. *)
+
+typedef ch_t =
+  @{
+    ichar = int,
+    line_no = ullint,
+    column_no = ullint
+  }
+
+typedef inp_t (n : int) =
+  [0 <= n]
+  @{
+    file = FILEref,
+    pushback = list (ch_t, n),
+    line_no = ullint,
+    column_no = ullint
+  }
+typedef inp_t = [n : int] inp_t n
+
+fn
+get_ch (inp : inp_t) : (ch_t, inp_t) =
+  case+ (inp.pushback) of
+  | NIL =>
+    let
+      val c = fileref_getc (inp.file)
+      val ch =
+        @{
+          ichar = c,
+          line_no = inp.line_no,
+          column_no = inp.column_no
+        }
+    in
+      if c = char2i '\n' then
+        let
+          val inp =
+            @{
+              file = inp.file,
+              pushback = inp.pushback,
+              line_no = succ (inp.line_no),
+              column_no = 1ULL
+            }
+        in
+          (ch, inp)
+        end
+      else
+        let
+          val inp =
+            @{
+              file = inp.file,
+              pushback = inp.pushback,
+              line_no = inp.line_no,
+              column_no = succ (inp.column_no)
+            }
+        in
+          (ch, inp)
+        end
+    end
+  | ch :: pushback =>
+    let
+      val inp =
+        @{
+          file = inp.file,
+          pushback = pushback,
+          line_no = inp.line_no,
+          column_no = inp.column_no
+        }
+    in
+      (ch, inp)
+    end
+
+fn
+push_back_ch (ch  : ch_t,
+              inp : inp_t) : [n : pos] inp_t n =
+  let
+    prval _ = lemma_list_param (inp.pushback)
+  in
+    @{
+      file = inp.file,
+      pushback = ch :: (inp.pushback),
+      line_no = inp.line_no,
+      column_no = inp.column_no
+    }
+  end
+
+(********************************************************************)
+
+exception unterminated_comment of (ullint, ullint)
+exception unterminated_character_literal of (ullint, ullint)
+exception multicharacter_literal of (ullint, ullint)
+exception unterminated_string_literal of (ullint, ullint, bool)
+exception unsupported_escape of (ullint, ullint, int)
+exception invalid_integer_literal of (ullint, ullint, String)
+exception unexpected_character of (ullint, ullint, int)
+
+fn
+scan_comment (inp       : inp_t,
+              line_no   : ullint,
+              column_no : ullint) : inp_t =
+  let
+    fun
+    loop (inp : inp_t) : inp_t =
+      let
+        val (ch, inp) = get_ch inp
+      in
+        if (ch.ichar) < 0 then
+          $raise unterminated_comment (line_no, column_no)
+        else if (ch.ichar) = char2i '*' then
+          let
+            val (ch1, inp) = get_ch inp
+          in
+            if (ch.ichar) < 0 then
+              $raise unterminated_comment (line_no, column_no)
+            else if (ch1.ichar) = char2i '/' then
+              inp
+            else
+              loop inp
+          end
+        else
+          loop inp
+      end
+  in
+    loop inp
+  end
+
+fn
+skip_spaces_and_comments (inp : inp_t) : [n : pos] inp_t n =
+  let
+    fun
+    loop (inp : inp_t) : [n : pos] inp_t n =
+      let
+        val (ch, inp) = get_ch inp
+      in
+        if isspace (ch.ichar) then
+          loop inp
+        else if (ch.ichar) = char2i '/' then
+          let
+            val (ch1, inp) = get_ch inp
+          in
+            if (ch1.ichar) = char2i '*' then
+              loop (scan_comment (inp, ch.line_no, ch.column_no))
+            else
+              let
+                val inp = push_back_ch (ch1, inp)
+                val inp = push_back_ch (ch, inp)
+              in
+                inp
+              end
+          end
+        else
+          push_back_ch (ch, inp)
+      end
+  in
+    loop inp
+  end
+
+fn
+reverse_list_to_string
+          {m   : int}
+          (lst : list (char, m)) : string m =
+  let
+    fun
+    fill_array {n : nat | n <= m} .<n>.
+               (arr : &(@[char][m + 1]),
+                lst : list (char, n),
+                n   : size_t n) : void =
+      case+ lst of
+      | NIL => ()
+      | c :: tail =>
+        begin
+          arr[pred n] := c;
+          fill_array (arr, tail, pred n)
+        end
+
+    prval _ = lemma_list_param lst
+    val m : size_t m = i2sz (list_length lst)
+    val (pf, pfgc | p) = array_ptr_alloc<char> (succ m)
+    val _ = array_initize_elt<char> (!p, succ m, '\0')
+    val _ = fill_array (!p, lst, m)
+  in
+    $UN.castvwtp0 @(pf, pfgc | p)
+  end
+
+extern fun {}
+simple_scan$pred : int -> bool
+fun {}
+simple_scan {u : nat}
+            (lst : list (char, u),
+             inp : inp_t) :
+    [m : nat]
+    [n : pos]
+    (list (char, m), inp_t n) =
+  let
+    val (ch, inp) = get_ch inp
+  in
+    if simple_scan$pred (ch.ichar) then
+      simple_scan<> (int2char0 (ch.ichar) :: lst, inp)
+    else
+      let
+        val inp = push_back_ch (ch, inp)
+      in
+        (lst, inp)
+      end
+  end
+
+fn
+is_ident_start (c : int) :<> bool =
+  isalpha (c) || c = char2i '_'
+
+fn
+is_ident_continuation (c : int) :<> bool =
+  isalnum (c) || c = char2i '_'
+
+fn
+scan_identifier_or_reserved_word
+          (inp     : inp_t,
+           lookups : !lookups_vt) :
+    (tokentuple_t, [n : pos] inp_t n) =
+  let
+    val (ch, inp) = get_ch inp
+    val _ = assertloc (is_ident_start (ch.ichar))
+
+    implement simple_scan$pred<> c = is_ident_continuation c
+    val (lst, inp) = simple_scan (int2char0 (ch.ichar) :: NIL, inp)
+
+    val s = reverse_list_to_string lst
+    val toktup =
+      reserved_word_lookup (s, lookups, ch.line_no, ch.column_no)
+  in
+    (toktup, inp)
+  end
+
+fn
+scan_integer_literal
+          (inp     : inp_t,
+           lookups : !lookups_vt) :
+    (tokentuple_t, [n : pos] inp_t n) =
+  let
+    val (ch, inp) = get_ch inp
+    val _ = assertloc (isdigit (ch.ichar))
+
+    implement simple_scan$pred<> c = is_ident_continuation c
+    val (lst, inp) = simple_scan (int2char0 (ch.ichar) :: NIL, inp)
+
+    val s = reverse_list_to_string lst
+
+    fun
+    check_they_are_all_digits
+              {n : nat} .<n>.
+              (lst : list (char, n)) : void =
+      case+ lst of
+      | NIL => ()
+      | c :: tail =>
+        if isdigit c then
+          check_they_are_all_digits tail
+        else
+          $raise invalid_integer_literal (ch.line_no, ch.column_no, s)
+
+    val _ = check_they_are_all_digits lst
+  in
+    ((TOKEN_INTEGER, s, ch.line_no, ch.column_no), inp)
+  end
+
+fn
+ichar2integer_literal (c : int) : String0 =
+  let
+    var buf = @[char][100] ('\0')
+    val _ = $extfcall (int, "snprintf", addr@ buf, i2sz 99, "%d", c)
+    val s = string1_copy ($UN.castvwtp0{String0} buf)
+  in
+    strnptr2string s
+  end
+
+fn
+scan_character_literal_without_checking_end (inp : inp_t) :
+    (tokentuple_t, inp_t) =
+  let
+    val (ch, inp) = get_ch inp
+    val _ = assertloc ((ch.ichar) = '\'')
+
+    val (ch1, inp) = get_ch inp
+  in
+    if (ch1.ichar) < 0 then
+      $raise unterminated_character_literal (ch.line_no, ch.column_no)
+    else if (ch1.ichar) = char2i '\\' then
+      let
+        val (ch2, inp) = get_ch inp
+      in
+        if (ch2.ichar) < 0 then
+          $raise unterminated_character_literal (ch.line_no,
+                                                 ch.column_no)
+        else if (ch2.ichar) = char2i 'n' then
+          let
+            val s = ichar2integer_literal (char2i '\n')
+          in
+            ((TOKEN_INTEGER, s, ch.line_no, ch.column_no), inp)
+          end
+        else if (ch2.ichar) = char2i '\\' then
+          let
+            val s = ichar2integer_literal (char2i '\\')
+          in
+            ((TOKEN_INTEGER, s, ch.line_no, ch.column_no), inp)
+          end
+        else
+          $raise unsupported_escape (ch1.line_no, ch1.column_no,
+                                     ch2.ichar)
+      end
+    else
+      let
+        val s = ichar2integer_literal (ch1.ichar)
+      in
+        ((TOKEN_INTEGER, s, ch.line_no, ch.column_no), inp)
+      end
+  end
+
+fn
+scan_character_literal (inp : inp_t) : (tokentuple_t, inp_t) =
+  let
+    val (tok, inp) =
+      scan_character_literal_without_checking_end inp
+    val line_no = (tok.2)
+    val column_no = (tok.3)
+
+    fun
+    check_end (inp : inp_t) : inp_t =
+      let
+        val (ch, inp) = get_ch inp
+      in
+        if (ch.ichar) = char2i '\'' then
+          inp
+        else
+          let
+            fun
+            loop_to_end (ch1 : ch_t,
+                         inp : inp_t) : inp_t =
+              if (ch1.ichar) < 0 then
+                $raise unterminated_character_literal (line_no,
+                                                       column_no)
+              else if (ch1.ichar) = char2i '\'' then
+                $raise multicharacter_literal (line_no, column_no)
+              else
+                let
+                  val (ch1, inp) = get_ch inp
+                in
+                  loop_to_end (ch1, inp)
+                end
+
+            val inp = loop_to_end (ch, inp)
+          in
+            inp
+          end
+      end
+
+    val inp = check_end inp
+  in
+    (tok, inp)
+  end
+
+fn
+scan_string_literal (inp : inp_t) : (tokentuple_t, inp_t) =
+  let
+    val (ch, inp) = get_ch inp
+    val _ = assertloc ((ch.ichar) = '"')
+
+    fun
+    scan {u : pos}
+         (lst : list (char, u),
+          inp : inp_t) :
+        [m : pos] (list (char, m), inp_t) =
+      let
+        val (ch1, inp) = get_ch inp
+      in
+        if (ch1.ichar) < 0 then
+          $raise unterminated_string_literal (ch.line_no,
+                                              ch.column_no, false)
+        else if (ch1.ichar) = char2i '\n' then
+          $raise unterminated_string_literal (ch.line_no,
+                                              ch.column_no, true)
+        else if (ch1.ichar) = char2i '"' then
+          (lst, inp)
+        else if (ch1.ichar) <> char2i '\\' then
+          scan (int2char0 (ch1.ichar) :: lst, inp)
+        else
+          let
+            val (ch2, inp) = get_ch inp
+          in
+            if (ch2.ichar) = char2i 'n' then
+              scan ('n' :: '\\' :: lst, inp)
+            else if (ch2.ichar) = char2i '\\' then
+              scan ('\\' :: '\\' :: lst, inp)
+            else
+              $raise unsupported_escape (ch1.line_no, ch1.column_no,
+                                         ch2.ichar)
+          end
+      end
+
+    val lst = '"' :: NIL
+    val (lst, inp) = scan (lst, inp)
+    val lst = '"' :: lst
+    val s = reverse_list_to_string lst
+  in
+    ((TOKEN_STRING, s, ch.line_no, ch.column_no), inp)
+  end
+
+fn
+get_next_token (inp     : inp_t,
+                lookups : !lookups_vt) : (tokentuple_t, inp_t) =
+  let
+    val inp = skip_spaces_and_comments inp
+    val (ch, inp) = get_ch inp
+    val ln = ch.line_no
+    val cn = ch.column_no
+  in
+    if ch.ichar < 0 then
+      ((TOKEN_END_OF_INPUT, "", ln, cn), inp)
+    else
+      case+ int2char0 (ch.ichar) of
+      | ',' => ((TOKEN_COMMA, ",", ln, cn), inp)
+      | ';' => ((TOKEN_SEMICOLON, ";", ln, cn), inp)
+      | '\(' => ((TOKEN_LEFTPAREN, "(", ln, cn), inp)
+      | ')' => ((TOKEN_RIGHTPAREN, ")", ln, cn), inp)
+      | '\{' => ((TOKEN_LEFTBRACE, "{", ln, cn), inp)
+      | '}' => ((TOKEN_RIGHTBRACE, "}", ln, cn), inp)
+      | '*' => ((TOKEN_MULTIPLY, "*", ln, cn), inp)
+      | '/' => ((TOKEN_DIVIDE, "/", ln, cn), inp)
+      | '%' => ((TOKEN_MOD, "%", ln, cn), inp)
+      | '+' => ((TOKEN_ADD, "+", ln, cn), inp)
+      | '-' => ((TOKEN_SUBTRACT, "-", ln, cn), inp)
+      | '<' =>
+        let
+          val (ch1, inp) = get_ch inp
+        in
+          if (ch1.ichar) = char2i '=' then
+            ((TOKEN_LESSEQUAL, "<=", ln, cn), inp)
+          else
+            let
+              val inp = push_back_ch (ch1, inp)
+            in
+              ((TOKEN_LESS, "<", ln, cn), inp)
+            end
+        end
+      | '>' =>
+        let
+          val (ch1, inp) = get_ch inp
+        in
+          if (ch1.ichar) = char2i '=' then
+            ((TOKEN_GREATEREQUAL, ">=", ln, cn), inp)
+          else
+            let
+              val inp = push_back_ch (ch1, inp)
+            in
+              ((TOKEN_GREATER, ">", ln, cn), inp)
+            end
+        end
+      | '=' =>
+        let
+          val (ch1, inp) = get_ch inp
+        in
+          if (ch1.ichar) = char2i '=' then
+            ((TOKEN_EQUAL, "==", ln, cn), inp)
+          else
+            let
+              val inp = push_back_ch (ch1, inp)
+            in
+              ((TOKEN_ASSIGN, "=", ln, cn), inp)
+            end
+        end
+      | '!' =>
+        let
+          val (ch1, inp) = get_ch inp
+        in
+          if (ch1.ichar) = char2i '=' then
+            ((TOKEN_NOTEQUAL, "!=", ln, cn), inp)
+          else
+            let
+              val inp = push_back_ch (ch1, inp)
+            in
+              ((TOKEN_NOT, "!", ln, cn), inp)
+            end
+        end
+      | '&' =>
+        let
+          val (ch1, inp) = get_ch inp
+        in
+          if (ch1.ichar) = char2i '&' then
+            ((TOKEN_AND, "&&", ln, cn), inp)
+          else
+            $raise unexpected_character (ch.line_no, ch.column_no,
+                                         ch.ichar)
+        end
+      | '|' =>
+        let
+          val (ch1, inp) = get_ch inp
+        in
+          if (ch1.ichar) = char2i '|' then
+            ((TOKEN_OR, "||", ln, cn), inp)
+          else
+            $raise unexpected_character (ch.line_no, ch.column_no,
+                                         ch.ichar)
+        end
+      | '"' =>
+        let
+          val inp = push_back_ch (ch, inp)
+        in
+          scan_string_literal inp
+        end
+      | '\'' =>
+        let
+          val inp = push_back_ch (ch, inp)
+        in
+          scan_character_literal inp
+        end
+      | _ when isdigit (ch.ichar) =>
+        let
+          val inp = push_back_ch (ch, inp)
+        in
+          scan_integer_literal (inp, lookups)
+        end
+      | _ when is_ident_start (ch.ichar) =>
+        let
+          val inp = push_back_ch (ch, inp)
+        in
+          scan_identifier_or_reserved_word (inp, lookups)
+        end
+      | _ => $raise unexpected_character (ch.line_no, ch.column_no,
+                                          ch.ichar)
+  end
+
+fn
+fprint_ullint_rightjust (outf : FILEref,
+                         num  : ullint) : void =
+  if num < 10ULL then
+    fprint! (outf, "    ", num)
+  else if num < 100ULL then
+    fprint! (outf, "   ", num)
+  else if num < 1000ULL then
+    fprint! (outf, "  ", num)
+  else if num < 10000ULL then
+    fprint! (outf, " ", num)
+  else
+    fprint! (outf, num)
+
+fn
+print_token (outf    : FILEref,
+             toktup  : tokentuple_t,
+             lookups : !lookups_vt) : void =
+  let
+    macdef toknames = !(lookups.toknames)
+    val name = toknames[toktup.0]
+    val str = (toktup.1)
+    val line_no = (toktup.2)
+    val column_no = (toktup.3)
+
+    val _ = fprint_ullint_rightjust (outf, line_no)
+    val _ = fileref_puts (outf, " ")
+    val _ = fprint_ullint_rightjust (outf, column_no)
+    val _ = fileref_puts (outf, "  ")
+    val _ = fileref_puts (outf, name)
+  in
+    begin
+      case+ toktup.0 of
+      | TOKEN_IDENTIFIER => fprint! (outf, "     ", str)
+      | TOKEN_INTEGER => fprint! (outf, "        ", str)
+      | TOKEN_STRING => fprint! (outf, "         ", str)
+      | _ => ()
+    end;
+
+    fileref_putc (outf, '\n')
+  end
+
+fn
+scan_text (outf    : FILEref,
+           inp     : inp_t,
+           lookups : !lookups_vt) : void =
+  let
+    fun
+    loop (inp     : inp_t,
+          lookups : !lookups_vt) : void =
+      let
+        val (toktup, inp) = get_next_token (inp, lookups)
+      in
+        print_token (outf, toktup, lookups);
+        if toktup.0 <> TOKEN_END_OF_INPUT then
+          loop (inp, lookups)
+      end
+  in
+    loop (inp, lookups)
+  end
+
+(********************************************************************)
+
+fn
+main_program (inpf : FILEref,
+              outf : FILEref) : int =
+  let
+    (* Using a simple Scheme program, I found the following perfect
+       hash for the reserved words, using the sum of the first two
+       characters as the hash value. *)
+    var reserved_words =
+      @[String][RESERVED_WORD_HASHTAB_SIZE]
+        ("if", "print", "else", "", "putc", "", "", "while", "")
+    var reserved_word_tokens =
+      @[token_t][RESERVED_WORD_HASHTAB_SIZE]
+        (TOKEN_IF, TOKEN_PRINT, TOKEN_ELSE, TOKEN_IDENTIFIER,
+         TOKEN_PUTC, TOKEN_IDENTIFIER, TOKEN_IDENTIFIER, TOKEN_WHILE,
+         TOKEN_IDENTIFIER)
+
+    var token_names =
+      @[string][NUM_TOKENS]
+        ("Keyword_else",
+         "Keyword_if",
+         "Keyword_print",
+         "Keyword_putc",
+         "Keyword_while",
+         "Op_multiply",
+         "Op_divide",
+         "Op_mod",
+         "Op_add",
+         "Op_subtract",
+         "Op_negate",
+         "Op_less",
+         "Op_lessequal",
+         "Op_greater",
+         "Op_greaterequal",
+         "Op_equal",
+         "Op_notequal",
+         "Op_not",
+         "Op_assign",
+         "Op_and",
+         "Op_or",
+         "LeftParen",
+         "RightParen",
+         "LeftBrace",
+         "RightBrace",
+         "Semicolon",
+         "Comma",
+         "Identifier",
+         "Integer",
+         "String",
+         "End_of_input")
+
+    var lookups : lookups_vt =
+      @{
+        pf_toknames = view@ token_names,
+        pf_wordtab = view@ reserved_words,
+        pf_toktab = view@ reserved_word_tokens |
+        toknames = addr@ token_names,
+        wordtab = addr@ reserved_words,
+        toktab = addr@ reserved_word_tokens
+      }
+
+    val inp =
+      @{
+        file = inpf,
+        pushback = NIL,
+        line_no = 1ULL,
+        column_no = 1ULL
+      }
+
+    val _ = scan_text (outf, inp, lookups)
+
+    val @{
+          pf_toknames = pf_toknames,
+          pf_wordtab = pf_wordtab,
+          pf_toktab = pf_toktab |
+          toknames = toknames,
+          wordtab = wordtab,
+          toktab = toktab
+        } = lookups
+    prval _ = view@ token_names := pf_toknames
+    prval _ = view@ reserved_words := pf_wordtab
+    prval _ = view@ reserved_word_tokens := pf_toktab
+  in
+    0
+  end
+
+macdef lex_error = "Lexical error: "
+
+implement
+main (argc, argv) =
+  let
+    val inpfname =
+      if 2 <= argc then
+        $UN.cast{string} argv[1]
+      else
+        "-"
+    val outfname =
+      if 3 <= argc then
+        $UN.cast{string} argv[2]
+      else
+        "-"
+  in
+    try
+      let
+        val inpf =
+          if (inpfname : string) = "-" then
+            stdin_ref
+          else
+            fileref_open_exn (inpfname, file_mode_r)
+
+        val outf =
+          if (outfname : string) = "-" then
+            stdout_ref
+          else
+            fileref_open_exn (outfname, file_mode_w)
+      in
+        main_program (inpf, outf)
+      end
+    with
+    | ~ unterminated_comment (line_no, column_no) =>
+      begin
+        fprintln! (stderr_ref, lex_error,
+                   "unterminated comment starting at ",
+                   line_no, ":", column_no);
+        1
+      end
+    | ~ unterminated_character_literal (line_no, column_no) =>
+      begin
+        fprintln! (stderr_ref, lex_error,
+                   "unterminated character literal starting at ",
+                   line_no, ":", column_no);
+        1
+      end
+    | ~ multicharacter_literal (line_no, column_no) =>
+      begin
+        fprintln! (stderr_ref, lex_error,
+                   "unsupported multicharacter literal starting at ",
+                   line_no, ":", column_no);
+        1
+      end
+    | ~ unterminated_string_literal (line_no, column_no,
+                                     end_of_line) =>
+      let
+        val s =
+          begin
+            if end_of_line then
+              "end of line"
+            else
+              "end of input"
+          end : String
+      in
+        fprintln! (stderr_ref, lex_error,
+                   "unterminated string literal (", s,
+                   ") starting at ", line_no, ":", column_no);
+        1
+      end
+    | ~ unsupported_escape (line_no, column_no, c) =>
+      begin
+        fprintln! (stderr_ref, lex_error,
+                   "unsupported escape \\",
+                   int2char0 c, " starting at ",
+                   line_no, ":", column_no);
+        1
+      end
+    | ~ invalid_integer_literal (line_no, column_no, s) =>
+      begin
+        fprintln! (stderr_ref, lex_error,
+                   "invalid integer literal ", s,
+                   " starting at ", line_no, ":", column_no);
+        1
+      end
+    | ~ unexpected_character (line_no, column_no, c) =>
+      begin
+        fprintln! (stderr_ref, lex_error,
+                   "unexpected character '", int2char0 c,
+                   "' at ", line_no, ":", column_no);
+        1
+      end
+end
+
+(********************************************************************)

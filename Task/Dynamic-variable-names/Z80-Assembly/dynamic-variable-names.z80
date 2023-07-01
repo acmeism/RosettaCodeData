@@ -1,0 +1,85 @@
+org &8000
+WaitChar equ &BB06  ;Amstrad CPC BIOS call, loops until user presses a key. That key's ASCII value is returned in A.
+PrintChar equ &BB5A ;Amstrad CPC BIOS call, A is treated as an ASCII value and is printed to the screen.
+	
+getInput:
+	call WaitChar
+	;returns key press in A
+
+	
+	or a ;set flags according to accumulator
+	jp m,getInput
+	;most keyboards aren't capable of going over ascii 127
+	;but just in case they can prevent it.
+        ;IX/IY offsets are signed, thus a key press outside of 7-bit ASCII would index out of bounds
+	
+	push af
+	call PrintChar          ;prints the user variable name to the screen.
+	pop af
+	
+	call NewLine
+
+	ld (LoadFromUserNamedVariable+2),a ;offset byte is at addr+2
+	ld (StoreToUserNamedVariable+2),a
+
+; This self-modifying code turns both instances of (IX+0) into (IX+varname)
+	
+	
+	ld a,&42 		;set the value of the dynamically named variable
+				; to &42
+					
+	ld ix,ExtraRam          ;storage location of dynamically named variables
+	
+StoreToUserNamedVariable:
+	ld (IX+0),a		;store 42 at the named offset
+	                        ;"+0" is overwritten with the dynamic user ram name
+	
+	xor a
+	dec a
+	;just to prove that the value is indeed stored where the code
+	;   is intending to, set A to 255 so that the next section of
+	;   code will show that the variable is indeed retrieved and
+	;   is shown to the screen
+	
+LoadFromUserNamedVariable:
+	ld a,(IX+0)	          ;retrieve the value at the stored offset. The "+0" was overwritten with the user-defined offset.
+	
+	call ShowHex              ;prints to the terminal the value stored at the dynamically named user variable
+
+	
+ReturnToBasic
+	RET
+
+ShowHex:	                   ;credit to Keith S. of Chibiakumas
+	push af
+		and %11110000
+			rrca
+			rrca
+			rrca
+			rrca
+		call PrintHexChar
+	pop af
+	and %00001111
+	;call PrintHexChar
+	;execution flows into it naturally.
+PrintHexChar:
+	or a	;Clear Carry Flag
+	daa
+	add a,&F0
+	adc a,&40
+	jp PrintChar
+	;ret
+
+NewLine:
+	push af
+	ld a,13		;Carriage return
+	call PrintChar
+	ld a,10		;Line Feed
+	call PrintChar
+	pop af
+	ret
+
+
+        org &9000
+ExtraRam:
+       ds 256,0         ;256 bytes of ram, each initialized to zero

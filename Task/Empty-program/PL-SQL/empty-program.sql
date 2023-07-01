@@ -1,0 +1,3 @@
+BEGIN
+    NULL;
+END;

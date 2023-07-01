@@ -1,0 +1,257 @@
+% Bidirectional 'infinite' tape
+tape = cluster [T: type] is make, left, right, get_cell, set_cell,
+                            elements, get_size
+    rep = record[
+        blank: T,
+        loc: int,
+        data: array[T]
+    ]
+
+    % Make a new tape with a given blank value and initial value
+    make = proc (blank: T, init: sequence[T]) returns (cvt)
+        data: array[T]
+        if sequence[T]$empty(init) then
+            data := array[T]$[blank]
+        else
+            data := sequence[T]$s2a(init)
+        end
+        return(rep${
+            blank: blank,
+            loc: 1,
+            data: data
+        })
+    end make
+
+    % Move the tape head left
+    left = proc (tap: cvt)
+        tap.loc := tap.loc - 1
+        if tap.loc < array[T]$low(tap.data) then
+            array[T]$addl(tap.data,tap.blank)
+        end
+    end left
+
+    % Move the tape head right
+    right = proc (tap: cvt)
+        tap.loc := tap.loc + 1
+        if tap.loc > array[T]$high(tap.data) then
+            array[T]$addh(tap.data,tap.blank)
+        end
+    end right
+
+    % Get the value of the current cell
+    get_cell = proc (tap: cvt) returns (T)
+        return(tap.data[tap.loc])
+    end get_cell
+
+    % Set the value of the current cell
+    set_cell = proc (tap: cvt, val: T)
+        tap.data[tap.loc] := val
+    end set_cell
+
+    % Retrieve all touched values, one by one, from left to right
+    elements = iter (tap: cvt) yields (T)
+        for v: T in array[T]$elements(tap.data) do
+            yield(v)
+        end
+    end elements
+
+    % Get the current size of the tape
+    get_size = proc (tap: cvt) returns (int)
+        return(array[T]$size(tap.data))
+    end get_size
+end tape
+
+% Turing machine state table
+turing = cluster [T: type] is make, add_rule, run
+         where T has equal: proctype (T,T) returns (bool)
+    A_LEFT = 'L'
+    A_RIGHT = 'R'
+    A_STAY = 'S'
+
+    state = record[name: string, term: bool]
+    rule = struct[
+        cur_state: int,
+        read_sym, write_sym: T,
+        action: char,
+        next_state: int
+    ]
+
+    rep = struct[
+        states: array[state],
+        rules: array[rule],
+        init_state: int
+    ]
+
+    % Find the index of a state given its name
+    find_state = proc (states: array[state], name: string)
+                 returns (int) signals (bad_state)
+        for i: int in array[state]$indexes(states) do
+            if states[i].name = name then return(i) end
+        end
+        signal bad_state
+    end find_state
+
+    % Make a new Turing machine given a list of states
+    make = proc (state_seq: sequence[string], init: string, term: sequence[string])
+           returns (cvt) signals (bad_state)
+        states: array[state] := array[state]$[]
+        for s: string in sequence[string]$elements(state_seq) do
+            array[state]$addh(states, state${name: s, term: false} )
+        end
+
+        init_n: int := find_state(states, init) resignal bad_state
+        for s: string in sequence[string]$elements(term) do
+            term_n: int := find_state(states, s) resignal bad_state
+            states[term_n].term := true
+        end
+        return(rep${states: states,
+                    init_state: init_n,
+                    rules: array[rule]$[]})
+    end make
+
+    % Add a rule to the Turing machine
+    add_rule = proc (tur: cvt,
+                     in_state: string,
+                     read_sym, write_sym: T,
+                     action: string,
+                     out_state: string)
+               signals (bad_state, bad_action)
+        cur_state: int := find_state(tur.states, in_state) resignal bad_state
+        next_state: int := find_state(tur.states, out_state) resignal bad_state
+
+        act: char
+        if action = "left" then act := A_LEFT
+        elseif action = "right" then act := A_RIGHT
+        elseif action = "stay" then act := A_STAY
+        else signal bad_action
+        end
+
+        array[rule]$addh(tur.rules,
+            rule${cur_state: cur_state,
+                  read_sym: read_sym,
+                  write_sym: write_sym,
+                  action: act,
+                  next_state: next_state})
+    end add_rule
+
+    % Find first matching rule
+    find_rule = proc (rules: array[rule], st: int, sym: T)
+                returns (rule) signals (no_rule)
+        for r: rule in array[rule]$elements(rules) do
+            if r.cur_state = st & r.read_sym = sym then
+                return(r)
+            end
+        end
+        signal no_rule
+    end find_rule
+
+    % Run the Turing machine on a given tape until it terminates
+    run = proc (tur: cvt, tap: tape[T]) signals (no_rule)
+        cur: int := tur.init_state
+        while ~tur.states[cur].term do
+            r: rule := find_rule(tur.rules, cur, tap.cell) resignal no_rule
+            tap.cell := r.write_sym
+            if r.action = A_LEFT then tape[T]$left(tap)
+            elseif r.action = A_RIGHT then tape[T]$right(tap)
+            end
+            cur := r.next_state
+        end
+    end run
+end turing
+
+
+% Simple incrementer
+simple_incrementer = proc () returns (turing[char])
+    tc = turing[char]
+    t: tc := tc$make(
+        sequence[string]$["q0", "qf"],
+        "q0",
+        sequence[string]$["qf"]
+    )
+
+    tc$add_rule(t, "q0", '1', '1', "right", "q0")
+    tc$add_rule(t, "q0", 'B', '1', "stay", "qf")
+    return(t)
+end simple_incrementer
+
+% Three state beaver
+three_state_beaver = proc () returns (turing[char])
+    tc = turing[char]
+    t: tc := tc$make(
+        sequence[string]$["a", "b", "c", "halt"],
+        "a",
+        sequence[string]$["halt"]
+    )
+
+    tc$add_rule(t, "a", '0', '1', "right", "b")
+    tc$add_rule(t, "a", '1', '1', "left", "c")
+    tc$add_rule(t, "b", '0', '1', "left", "a")
+    tc$add_rule(t, "b", '1', '1', "right", "b")
+    tc$add_rule(t, "c", '0', '1', "left", "b")
+    tc$add_rule(t, "c", '1', '1', "stay", "halt")
+    return(t)
+end three_state_beaver
+
+% Five state beaver
+five_state_beaver = proc () returns (turing[char])
+    tc = turing[char]
+    t: tc := tc$make(
+        sequence[string]$["A", "B", "C", "D", "E", "H"],
+        "A",
+        sequence[string]$["H"]
+    )
+
+    tc$add_rule(t, "A", '0', '1', "right", "B")
+    tc$add_rule(t, "A", '1', '1', "left", "C")
+    tc$add_rule(t, "B", '0', '1', "right", "C")
+    tc$add_rule(t, "B", '1', '1', "right", "B")
+    tc$add_rule(t, "C", '0', '1', "right", "D")
+    tc$add_rule(t, "C", '1', '0', "left", "E")
+    tc$add_rule(t, "D", '0', '1', "left", "A")
+    tc$add_rule(t, "D", '1', '1', "left", "D")
+    tc$add_rule(t, "E", '0', '1', "stay", "H")
+    tc$add_rule(t, "E", '1', '0', "left", "A")
+    return(t)
+end five_state_beaver
+
+% Print the first 32 touched symbols on a tape
+print_tape = proc (s: stream, t: tape[char])
+    n: int := 32
+    for c: char in tape[char]$elements(t) do
+        stream$putc(s, c)
+        n := n - 1
+        if n=0 then break end
+    end
+
+    if n=0 then
+        stream$puts(s, "... (length: " || int$unparse(t.size) || ")")
+    end
+    stream$putl(s, "")
+end print_tape
+
+% Run the three Turing machines and show the results
+start_up = proc ()
+    turing_factory = proctype () returns (turing[char])
+    test = record[name: string, tf: turing_factory, tap: tape[char]]
+    stest = sequence[test]
+    sc = sequence[char]
+
+    tests: stest := stest$[
+        test${name: "Simple incrementer",
+              tf: simple_incrementer,
+              tap: tape[char]$make('B', sc$['1','1','1'])},
+        test${name: "Three-state busy beaver",
+              tf: three_state_beaver,
+              tap: tape[char]$make('0', sc$[])},
+        test${name: "Five-state probable busy beaver",
+              tf: five_state_beaver,
+              tap: tape[char]$make('0', sc$[])}]
+
+    po: stream := stream$primary_output()
+    for t: test in stest$elements(tests) do
+        stream$puts(po, t.name || ": ")
+        tm: turing[char] := t.tf()
+        turing[char]$run(tm, t.tap)
+        print_tape(po, t.tap)
+    end
+end start_up

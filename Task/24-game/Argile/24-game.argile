@@ -1,0 +1,110 @@
+use std, array, list
+
+do
+  generate random digits
+  show random digits
+  let result = parse expression (get input line)
+  if result != ERROR
+    if some digits are unused
+      print "Wrong ! (you didn't use all digits)" ; failure++
+    else if result == 24.0
+      print "Correct !" ; success++
+    else
+      print "Wrong ! (you got "result")" ; failure++
+ while play again ?
+print "success:"success" failure:"failure" total:"(success+failure) as int
+
+let success = 0, failure = 0.
+
+.: generate random digits :.
+   our nat seed = 0xc6f31 (: default seed when /dev/urandom doesn't exist :)
+   let urandom = fopen "/dev/urandom" "r"
+   if  urandom isn't nil
+     fread &seed size of seed 1 urandom
+     fclose urandom
+   Cfunc srandom seed
+   seed = (Cfunc random) as nat
+   for each (val int d) from 0 to 3
+     digits[d] = '1' + (seed % 9)
+     seed /= 9
+
+let digits be an array of 4 byte
+
+.: show random digits :.
+   print "Enter an expression that equates to 24 using only all these digits:"
+   printf "%c , %c , %c , %c\n"(digits[0])(digits[1])(digits[2])(digits[3])
+   printf "24 = "
+
+.: some digits are unused :. -> bool
+   for each (val int d) from 0 to 3
+     return true if digits[d] != '\0'
+   false
+
+.: get input line :. -> text
+   our array of 64 byte line
+   Cfunc fgets (line) (size of line) (stdin)
+   let int i
+   for (i = 0) (line[i] != 0) (i++)
+     line[i] = '\0' if (line[i] == '\n')
+   line as text
+
+.: play again ? :. -> bool
+   while true
+     printf "Play again ? (y/n) " ; Cfunc fflush stdout
+     let answer = get input line
+     switch answer[0]
+       case 'n' {return false}
+       case 'y' {return true }
+       default  {continue    }
+   false
+
+=: ERROR := -> real {-32202.0}
+
+.: parse expression <text expr> :. -> real
+   let x = 0.0, x_is_set = false, op = ' '.
+   let stack be a list of State ; class State {byte op; real x}
+   for (stack = nil) (*expr != 0) (expr++)
+     switch *expr
+       case '+' ; case '-' ; case '*' ; case '/'
+         error "bad syntax" if not x_is_set
+	 op = *expr
+       case '1' ; case '2' ; case '3' ; case '4' ; case '5'
+       case '6' ; case '7' ; case '8' ; case '9'
+	 error "missing operator" if (x_is_set and op == ' ')
+	 error "unavailable digit" unless consume digit expr[0]
+	 do operation with (expr[0] - '0') as real
+       case (Cgen "'('")
+	 error "missing operator" if (op == ' ' but x_is_set)
+	 (new list (new State) (code of del State())) << stack
+	 op = ' ' ; x_is_set = false (: start fresh state :)
+       case (Cgen "')'")
+         error "mismatched parenthesis" if stack is nil
+	 error "wrong syntax" if not x_is_set
+	 let y = x
+	 x = stack.data.x ; op = stack.data.op
+	 delete pop stack
+	 do operation with y
+       default {error "disallowed character"}
+
+       .:new State          :. -> State {let s=new(State); s.x=x; s.op=op; s}
+       .:del State <State s>:.          {               free s              }
+       .:do operation with <real y>:.
+  	 switch op
+	   case '+' {x += y}
+	   case '-' {x -= y}
+	   case '*' {x *= y}
+	   case '/' {x /= y}
+	   default  {x  = y; x_is_set = true}
+         op = ' '
+   =:error<text msg>:= ->real {eprint "Error: "msg" at ["expr"]";return ERROR}
+   .:consume digit <byte b>:. -> bool
+     for each (val int d) from 0 to 3
+       if digits[d] == b
+         digits[d] = '\0'
+       	 return true
+     false
+
+   if stack isn't nil
+     delete all stack
+     error "unclosed parenthesis"
+   return x

@@ -1,0 +1,189 @@
+Structure decDigitFmt ;decimal digit format
+  Array Digit.b(0) ;contains each digit of number, right-most digit is index 0
+  digitCount.i ;zero based
+  sign.i ; {x < 0} = -1, {x = 0} = 0,  {x > 0} = 1
+EndStructure
+
+Global zero_decDigitFmt.decDigitFmt ;represents zero in the decimal digit format
+
+;converts string representation of integer into the digit format, number can include signus but no imbedded spaces
+Procedure stringToDecDigitFmt(numString.s, *x.decDigitFmt)
+  Protected *c.Character, digitIdx, digitCount
+  If numString And *x
+    *c.Character = @numString
+    Repeat
+      Select *c\c
+        Case '0' To '9', '-', '+'
+          *c + SizeOf(Character)
+        Default
+          numString = Left(numString, *c - @numString)
+          Break
+      EndSelect
+    ForEver
+    *c = @numString
+    Select  *c\c
+      Case '-'
+        *x\sign = -1
+        *c + SizeOf(Character)
+      Case '+'
+        *x\sign = 1
+        *c + SizeOf(Character)
+      Case '0' To '9'
+        *x\sign = 1
+    EndSelect
+
+    numString = LTrim(PeekS(*c), "0") ;remove leading zeroes
+    If numString = "" ;is true if equal to zero or if only a signus is present
+      CopyStructure(@zero_decDigitFmt, *x, decDigitFmt)
+      ProcedureReturn
+    EndIf
+    *c = @numString
+
+    digitCount = Len(PeekS(*c)) - 1
+    Dim *x\Digit(digitCount)
+    *x\digitCount = digitCount
+
+    digitIdx = 0
+    While *c\c
+      If *c\c >= '0' And *c\c <= '9'
+        *x\Digit(digitCount - digitIdx) = *c\c - '0'
+        digitIdx + 1
+        *c + SizeOf(Character)
+      Else
+        Break
+      EndIf
+    Wend
+
+  EndIf
+EndProcedure
+
+;converts digit format representation of integer into string representation
+Procedure.s decDigitFmtToString(*x.decDigitFmt)
+  Protected i, number.s
+  If *x
+    If *x\sign = 0
+      number = "0"
+    Else
+
+      For i = *x\digitCount To 0 Step -1
+        number + Str(*x\Digit(i))
+      Next
+      number = LTrim(number, "0")
+      If *x\sign = -1
+        number = "-" + number
+      EndIf
+    EndIf
+  EndIf
+
+  ProcedureReturn number
+EndProcedure
+
+;handles only positive numbers and zero, negative numbers left as an exercise for the reader ;)
+Procedure add_decDigitFmt(*a.decDigitFmt, *b.decDigitFmt, *sum.decDigitFmt, digitPos = 0) ;*sum contains the result of (*a ) * 10^digitPos + (*b)
+  Protected carry, i, newDigitCount, workingSum, a_dup.decDigitFmt
+
+  If *a And *b And *sum
+
+    If *a = *sum: CopyStructure(*a, @a_dup, decDigitFmt): *a = @a_dup: EndIf ;handle special case of  *sum + *b = *sum
+    If *b <> *sum: CopyStructure(*b, *sum, decDigitFmt): EndIf ;handle general case of *a + *b = *sum and special case of *a + *sum = *sum
+
+    ;calculate number of digits needed for sum and resize array of digits if necessary
+    newDigitCount = *a\digitCount + digitPos
+    If newDigitCount >= *sum\digitCount
+      If *sum\digitCount = newDigitCount And *sum\Digit(*sum\digitCount) <> 0
+        newDigitCount + 1
+      EndIf
+
+      If *sum\digitCount <> newDigitCount
+        *sum\digitCount = newDigitCount
+        Redim *sum\Digit(*sum\digitCount)
+      EndIf
+    EndIf
+
+    i = 0
+    Repeat
+      If i <= *a\digitCount
+        workingSum = *a\Digit(i) + *sum\Digit(digitPos) + carry
+      Else
+        workingSum = *sum\Digit(digitPos) + carry
+      EndIf
+
+      If workingSum > 9
+        carry = 1
+        workingSum - 10
+      Else
+        carry = 0
+      EndIf
+      *sum\Digit(digitPos)  = workingSum
+      digitPos + 1
+      i + 1
+    Until i > *a\digitCount And carry = 0
+
+    If *a\sign <> 0 Or *sum\sign <> 0
+      *sum\sign = 1 ;only handle positive numbers and zero for now
+    EndIf
+  EndIf
+EndProcedure
+
+Procedure multiply_decDigitFmt(*a.decDigitFmt, *b.decDigitFmt, *product.decDigitFmt) ;*product contains the result of (*a) * (*b)
+  Protected i, digitPos, productSignus
+  Protected Dim multTable.decDigitFmt(9)
+  Protected NewList digitProduct.decDigitFmt()
+
+  If *a And *b And *product
+    If *a\sign = 0 Or *b\sign = 0
+      CopyStructure(zero_decDigitFmt, *product, decDigitFmt)
+      ProcedureReturn
+    EndIf
+
+    If *b\digitCount > *a\digitCount: Swap *a, *b: EndIf
+
+    ;build multiplication table
+    CopyStructure(*a, @multTable(1), decDigitFmt): multTable(1)\sign = 1 ;always positive
+    For i = 2 To 9
+      add_decDigitFmt(*a, multTable(i - 1), multTable(i))
+    Next
+
+    ;collect individual digit products for later summation; these could also be added as we go along
+    For i = 0 To *b\digitCount
+      AddElement(digitProduct())
+      digitProduct() = multTable(*b\Digit(i))
+    Next
+
+    ;determine sign of product
+    If *a\sign <> *b\sign
+      productSignus = -1
+    Else
+      productSignus = 1
+    EndIf
+
+    digitPos = 0
+    CopyStructure(zero_decDigitFmt, *product, decDigitFmt)
+    ForEach digitProduct()
+      add_decDigitFmt(digitProduct(), *product, *product, digitPos)
+      digitPos + 1
+    Next
+    *product\sign = productSignus ;set sign of product
+  EndIf
+EndProcedure
+
+;handles only positive integer exponents or an exponent of zero, does not raise an error for 0^0
+Procedure exponent_decDigitFmt(*a.decDigitFmt, exponent, *product.decDigitFmt)
+  Protected i, a_dup.decDigitFmt
+  If *a And *product And exponent >= 0
+    If *a = *product: CopyStructure(*a, @a_dup, decDigitFmt): *a = @a_dup: EndIf
+    stringToDecDigitFmt("1", *product)
+    For i = 1 To exponent: multiply_decDigitFmt(*product, *a, *product): Next
+  EndIf
+EndProcedure
+
+If OpenConsole()
+  Define a.decDigitFmt, product.decDigitFmt
+
+  stringToDecDigitFmt("2", a)
+  exponent_decDigitFmt(a, 64, a) ;2^64
+  multiply_decDigitFmt(a, a, product)
+  PrintN("The result of 2^64 * 2^64 is " + decDigitFmtToString(product))
+  Print(#crlf$ + #crlf$ + "Press ENTER to exit"): Input()
+  CloseConsole()
+EndIf

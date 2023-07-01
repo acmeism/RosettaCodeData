@@ -1,0 +1,83 @@
+*        Tokenize a string -       08/06/2018
+TOKSTR   CSECT
+         USING  TOKSTR,R13         base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         SAVE   (14,12)            save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         MVC    N,=A(1)            n=1
+         LA     R7,1               i1=1
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,LENS)     do i=1 to length(s);
+         LA     R4,S-1             @s-1
+         AR     R4,R6              +i
+         MVC    C,0(R4)            c=substr(s,i,1)
+       IF CLI,C,EQ,C',' THEN       if c=',' then do
+         BAL    R14,TOK              call tok
+         LR     R2,R8                i2
+         SR     R2,R7                i2-i1
+         LA     R2,1(R2)             i2-i1+1
+         L      R1,N                 n
+         SLA    R1,1                 *2
+         STH    R2,TALEN-2(R1)       talen(n)=i2-i1+1
+         L      R2,N                 n
+         LA     R2,1(R2)             n+1
+         ST     R2,N                 n=n+1
+         LA     R7,1(R6)             i1=i+1
+       ENDIF    ,                    endif
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         BAL    R14,TOK            call tok
+         LR     R2,R8              i2
+         SR     R2,R7              i2-i1
+         LA     R2,1(R2)           i2-i1+1
+         L      R1,N               n
+         SLA    R1,1               *2
+         STH    R2,TALEN-2(R1)     talen(n)=i2-i1+1
+         LA     R11,PG             pgi=@pg
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,N)        do i=1 to n
+         LR     R1,R6                i
+         SLA    R1,1                 *2
+         LH     R10,TALEN-2(R1)      l=talen(i)
+         LR     R1,R6                i
+         SLA    R1,3                 *8
+         LA     R4,TABLE-8(R1)       @table(i)
+         LR     R2,R10               l
+         BCTR   R2,0                 ~
+         EX     R2,MVCX              output table(i) length(l)
+         AR     R11,R10              pgi=pgi+l
+       IF C,R6,NE,N THEN             if i^=n then
+         MVC    0(1,R11),=C'.'         output '.'
+         LA     R11,1(R11)             pgi=pgi+1
+       ENDIF    ,                    endif
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         XPRNT  PG,L'PG            print
+         L      R13,4(0,R13)       restore previous savearea pointer
+         RETURN (14,12),RC=0       restore registers from calling sav
+TOK      LR     R5,R6              i                              <--
+         BCTR   R5,0               i-1                              |
+         LR     R8,R5              i2=i-1
+         SR     R5,R7              i2-i1
+         LA     R5,1(R5)           l=i2-i1+1  source length
+         L      R1,N               n
+         SLA    R1,3               *8
+         LA     R2,TABLE-8(R1)     @table(n)
+         LA     R4,S-1             @s-1
+         AR     R4,R7              @s+i1-1
+         LA     R3,8               target length
+         MVCL   R2,R4              table(n)=substr(s,i1,i2-i1+1)    |
+         BR     R14                End TOK subroutine             <--
+MVCX     MVC    0(0,R11),0(R4)     output table(i)
+S        DC     CL80'Hello,How,Are,You,Today'  <== input string ==
+LENS     DC     F'23'              length(s)   <==
+TABLE    DC     8CL8' '            table(8)
+TALEN    DC     8H'0'              talen(8)
+C        DS     CL1                char
+N        DS     F                  number of tokens
+PG       DC     CL80' '            buffer
+         YREGS
+         END    TOKSTR

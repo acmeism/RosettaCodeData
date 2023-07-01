@@ -1,0 +1,1 @@
+say qx[dir]

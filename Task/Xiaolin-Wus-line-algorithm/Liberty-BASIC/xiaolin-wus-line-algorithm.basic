@@ -1,0 +1,155 @@
+NoMainWin
+WindowWidth = 270
+WindowHeight = 290
+UpperLeftX=int((DisplayWidth-WindowWidth)/2)
+UpperLeftY=int((DisplayHeight-WindowHeight)/2)
+
+Global variablesInitialized : variablesInitialized = 0
+Global BackColor$ : BackColor$ = "0 0 0"
+'    BackColor$ = "255 255 255"
+    'now, right click randomizes BG
+Global size : size = 1'4
+global mousepoints.mouseX0,  mousepoints.mouseY0, mousepoints.mouseX1, mousepoints.mouseY1
+
+'StyleBits #main.gbox, 0, _WS_BORDER, 0, 0
+GraphicBox #main.gbox, 0, 0, 253, 252
+
+Open "Click Twice to Form Line" For Window As #main
+Print #main, "TrapClose quit"
+Print #main.gbox, "Down; Color Black"
+Print #main.gbox, "Down; fill ";BackColor$
+Print #main.gbox, "When leftButtonUp gBoxClick"
+Print #main.gbox, "When rightButtonUp RandomBG"
+Print #main.gbox, "Size "; size
+
+result = drawAntiAliasedLine(126.5, 0, 126.5, 252, "255 0 0")
+result = drawAntiAliasedLine(0, 126, 253, 126, "255 0 0")
+result = drawAntiAliasedLine(0, 0, 253, 252, "255 0 0")
+result = drawAntiAliasedLine(253, 0, 0, 252, "255 0 0")
+Wait
+
+
+    Sub quit handle$
+        Close #main
+        End
+    End Sub
+
+sub RandomBG handle$, MouseX, MouseY
+    BackColor$ = int(rnd(1)*256);" ";int(rnd(1)*256);" ";int(rnd(1)*256)
+    Print #main.gbox, "CLS; fill ";BackColor$
+    variablesInitialized = 0
+end sub
+
+    Sub gBoxClick handle$, MouseX, MouseY
+        'We will use the mousepoints "struct" to hold the values
+        'that way they are retained between subroutine calls
+        If variablesInitialized = 0 Then
+            Print #main.gbox, "CLS; fill ";BackColor$
+            mousepoints.mouseX0 = MouseX
+            mousepoints.mouseY0 = MouseY
+            variablesInitialized = 1
+        Else
+            If variablesInitialized = 1 Then
+                mousepoints.mouseX1 = MouseX
+                mousepoints.mouseY1 = MouseY
+                variablesInitialized = 0
+                result = drawAntiAliasedLine(mousepoints.mouseX0, mousepoints.mouseY0, mousepoints.mouseX1, mousepoints.mouseY1, "255 0 0")
+            End If
+        End If
+    End Sub
+
+    Function Swap(Byref a,Byref b)
+        aTemp = b
+        b = a
+        a = aTemp
+    End Function
+
+    Function RoundtoInt(val)
+        RoundtoInt = Int(val + 0.5)
+    End Function
+
+    Function PlotAntiAliased(x, y, RGB$, b, steep)
+
+        RGB$ = Int(Val(Word$(BackColor$, 1))*(1-b) + Val(Word$(RGB$, 1)) * b) ; " " ; _
+               Int(Val(Word$(BackColor$, 2))*(1-b) + Val(Word$(RGB$, 3)) * b) ; " " ; _
+               Int(Val(Word$(BackColor$, 3))*(1-b) + Val(Word$(RGB$, 2)) * b)
+
+        if steep then 'x and y reversed
+            Print #main.gbox, "Down; Color " + RGB$ + "; Set " + str$(y) + " " + str$(x)
+        else
+            Print #main.gbox, "Down; Color " + RGB$ + "; Set " + str$(x) + " " + str$(y)
+        end if
+    End Function
+
+    Function fracPart(x)
+        fracPart = (x Mod 1)
+    End function
+
+    Function invFracPart(x)
+        invFracPart = (1 - fracPart(x))
+    End Function
+
+    Function drawAntiAliasedLine(x1, y1, x2, y2, RGB$)
+        If (x2 - x1)=0 Or (y2 - y1)=0 Then
+            Print #main.gbox, "Down; Color " + RGB$
+            result = BresenhamLine(x1, y1, x2, y2)
+            Exit Function
+        End If
+        steep = abs(x2 - x1) < abs(y2 - y1)
+        if steep then   'x and y should be reversed
+            result = Swap(x1, y1)
+            result = Swap(x2, y2)
+        end if
+
+        If (x2 < x1) Then
+            result = Swap(x1, x2)
+            result = Swap(y1, y2)
+        End If
+        dx = (x2 - x1)
+        dy = (y2 - y1)
+        grad = (dy/ dx)
+        'Handle the First EndPoint
+        xend = RoundtoInt(x1)
+        yend = y1 + grad * (xend - x1)
+        xgap = invFracPart(x1 + 0.5)
+        ix1 = xend
+        iy1 = Int(yend)
+        result = PlotAntiAliased(ix1, iy1, RGB$, invFracPart(yend) * xgap, steep )
+        result = PlotAntiAliased(ix1, (iy1 + size), RGB$, fracPart(yend) * xgap, steep )
+        yf = (yend + grad)
+        'Handle the Second EndPoint
+        xend = RoundtoInt(x2)
+        yend = y2 + grad * (xend - x2)
+        xgap = fracPart(x2 + 0.5)
+        ix2 = xend
+        iy2 = Int(yend)
+        result = PlotAntiAliased(ix2, iy2, RGB$, invFracPart(yend) * xgap, steep )
+        result = PlotAntiAliased(ix2, (iy2 + size), RGB$, fracPart(yend) * xgap, steep )
+        For x = ix1 + 1 To ix2 - 1
+            result = PlotAntiAliased(x, Int(yf), RGB$, invFracPart(yf), steep )
+            result = PlotAntiAliased(x, (Int(yf) + size), RGB$, fracPart(yf), steep )
+            yf = (yf + grad)
+        Next x
+    End Function
+
+
+    Function BresenhamLine(x0, y0, x1, y1)
+        dx = Abs(x1 - x0)
+        dy = Abs(y1 - y0)
+        sx = ((x1 > x0) + Not(x0 < x1))
+        sy = ((y1 > y0) + Not(y0 < y1))
+        errornum = (dx - dy)
+        Do While 1
+            Print #main.gbox, "Set " + str$(x0) + " " + str$(y0)
+            If (x0 = x1) And (y0 = y1) Then Exit Do
+            errornum2 = (2 * errornum)
+            If errornum2 > (-1 * dy) Then
+                errornum = (errornum - dy)
+                x0 = (x0 + sx)
+            End If
+            If errornum2 < dx Then
+                errornum = (errornum + dx)
+                y0 = (y0 + sy)
+            End If
+        Loop
+    End Function

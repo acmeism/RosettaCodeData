@@ -1,0 +1,149 @@
+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+	@@@	ARM SUBLEQ for Linux			@@@
+	@@@	Word size is 32 bits. The program is	@@@
+	@@@	given 8 MB (2 Mwords) to run in.	@@@
+	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+.text
+.global	_start
+	@@@ Linux syscalls
+.equ	exit,	1
+.equ	read,	3
+.equ	write,	4
+.equ	open,	5
+_start:	pop	{r6}		@ Retrieve amount of arguments
+	cmp	r6,#2		@ There should be exactly 2 (incl program)
+	ldrne	r1,=usage	@ Otherwise, print usage and stop
+	bne 	die
+	pop	{r0,r1}		@ Retrieve filename
+	mov	r0,r1
+	mov	r1,#0		@ Try to open the file in read mode
+	mov	r2,#0
+	mov	r7,#open
+	swi	#0
+	movs	r5,r0		@ File handle in R5
+	ldrmi	r1,=efile	@ If the file can't be opened, error
+	bmi	die
+	ldr	r8,=prog	@ R8 = pointer into program
+	mov	r6,#0		@ At the beginning, there is no data
+rdnum:	bl	fchar		@ Skip past whitespace
+	cmp	r0,#32
+	bls 	rdnum
+	mov	r9,#0		@ R9 = current number being read
+	subs	r10,r0,#'-	@ R10 is zero if number is negative
+	bleq	fchar		@ And get next character
+1:	sub	r0,r0,#'0	@ Subtract ASCII 0
+	cmp	r0,#9
+	ldrhi	r1,=echar
+	bhi	die		@ Invalid digit = error
+	mov	r1,#10
+	mla	r0,r9,r1,r0	@ Multiply accumulator by 10 and add digit
+	mov	r9,r0 		
+	bl	fchar		@ Get next character
+	cmp 	r0,#32		@ If it isn't whitespace...
+	bhi	1b		@ ...then it's the next digit
+	tst	r10,r10		@ If the number should be negative,
+	rsbeq	r9,r9,#0	@ ...then negate it
+	str	r9,[r8],#4	@ Store the number
+	b	rdnum		@ And get the next number.
+setup:	ldr	r0,=prog	@ Zero out the rest of program memory
+	sub	r0,r8,r0	@ Zero to 8-word (32-byte) boundary
+	orr	r0,r0,#31	@ Find address of last byte within
+	add	r0,r0,r8	@ current 31-byte block
+	mov	r1,#0		@ R1 = zero to write
+1:	str	r1,[r8],#4	@ Write zeroes,
+	cmp	r0,r8		@ until boundary reached.
+	blo	1b
+	mov	r0,#0		@ 8 words of zeroes in r0-r7
+	umull	r2,r3,r0,r1	@ A trick to produce 2 zero words in one
+	umull	r4,r5,r0,r1	@ go: 0*0 = 0, long multiplication
+	umull	r6,r7,r0,r1	@ results in 2 words.
+	ldr	r9,=mem_end
+2:	stmia	r8!,{r0-r7}	@ Write 8 zero words at a time
+	cmp	r8,r9		@ Are we at mem_end yet?
+	blo	2b		@ If not, keep going
+	ldr	r8,=prog	@ R8 = IP, starts at beginning
+	ldr	r6,=prog	@ R6 = base address for memory
+	mov	r12,#0xFFFF	@ 0x1FFFFF = address mask
+	movt	r12,#0x1F
+instr:	ldmia	r8!,{r9-r11}	@ R9, R10, R11 = A, B, C
+	cmp	r9,#-1		@ If A=-1, get character
+	beq	rchar
+	cmp	r10,#-1		@ Otherwise, if B=-1, write character
+	beq	wchar
+	and	r9,r9,r12	@ Keep addresses within 2 Mwords
+	and	r10,r10,r12
+	ldr	r0,[r6,r9,lsl #2]	@ Grab [A] and [B]
+	ldr	r1,[r6,r10,lsl #2]
+	subs	r1,r1,r0		@ Subtract
+	str	r1,[r6,r10,lsl #2]	@ Store back in [B]
+	cmpmi	r0,r0		@ Set zero flag if negative
+	bne	instr		@ If result is positive, next instruction
+	lsls	r8,r11,#2	@ Otherwise, C becomes the new IP
+	add	r8,r8,r6
+	bpl	instr		@ If result is positive, keep going
+	mov	r0,#0		@ Otherwise, we exit
+	mov	r7,#exit
+	swi	#0
+	@@@ 	Read character into [B]
+rchar:	mov	r0,#0		@ STDIN
+	and	r10,r10,r12	@ Address of B
+	add	r10,r6,r10,lsl #2	@ Kept in R10 out of harm's way
+	mov	r1,r10
+	mov	r2,#1		@ Read one character
+	mov	r7,#read
+	swi	#0
+	cmp	r0,#1		@ We should have received 1 byte
+	movne	r1,#-1		@ If not, write -1
+	ldreqb	r1,[r10]	@ Otherwise, blank out the top 3 bytes
+	str	r1,[r10]
+	b	instr
+	@@@	Write character in [A]
+wchar:	mov	r0,#1		@ STDIN
+	and	r1,r9,r12	@ Address of [A]
+	add	r1,r6,r1,lsl #2
+	mov	r2,#1		@ Write one character
+	mov	r7,#write
+	swi	#0
+	b	instr
+	@@@	Read character from file into R0. Tries to read more
+	@@@	if the buffer is empty (as given by R6). Buffer in R11.
+fchar:	tst	r6,r6		@ Any bytes in the buffer?
+	ldrneb	r0,[r11],#1	@ If so, return next character from buffer
+	subne	r6,r6,#1
+	bxne	lr
+	mov	r12,lr		@ Save link register
+	mov	r0,r5		@ If not, read from file into buffer
+	ldr	r1,=fbuf
+	mov	r2,#0x400000
+	mov	r7,#read
+	swi	#0
+	movs	r6,r0		@ Amount of bytes in r6
+	beq	setup		@ If no more bytes, start the program
+	ldr	r11,=fbuf	@ Otherwise, R11 = start of buffer
+	mov	lr,r12
+	b	fchar
+	@@@	Write a zero-terminated string, in [r1], to stdout.
+print:	push	{lr}
+	mov	r2,r1	
+1:	ldrb	r0,[r2],#1	@ Get character and advance pointer
+	tst	r0,r0		@ Zero yet?
+	bne	1b		@ If not, keep scanning
+	sub	r2,r2,r1	@ If so, calculate length
+	mov	r0,#1		@ STDOUT
+	mov	r7,#write	@ Write to STDOUT
+	swi	#0
+	pop	{pc}
+	@@@	Print error message in [r1], then end.
+die:	bl	print
+	mov	r0,#255
+	mov	r7,#exit
+	swi	#0
+usage:	.asciz	"Usage: subleq <filename>\n"
+efile:	.asciz	"Cannot open file\n"
+echar:	.asciz	"Invalid number in file\n"
+	@@@ Memory
+.bss
+.align	4
+prog:	.space	0x400000	@ Lower half of program memory
+fbuf:	.space	0x400000	@ File buffer and top half of program memory
+mem_end	=	.

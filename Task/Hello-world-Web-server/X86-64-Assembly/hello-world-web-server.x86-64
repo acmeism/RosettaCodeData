@@ -1,0 +1,213 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Crossplatform(?) Web Server example using UASM's OO Language extention
+;;
+;; Linux Build:
+;;   $ uasm -elf64 websrv.asm
+;;   $ gcc -o websrv websrv.o -no-pie
+;;  With MUSL libc
+;;   $ musl-gcc -o websrv websrv.o -e main -nostartfiles -no-pie
+;;
+;; Windows Build:
+;;   $ uasm64 -win64 websrv.asm
+;;   $ link /machine:x64 /subsystem:console /release websrv.obj
+;;         kernel32.lib msvcrt.lib ws2_32.lib
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+option casemap:none
+option literals:on          ;; Usually on by default buuuuuut...
+
+WIN64   equ 1
+LIN64   equ 3
+
+
+ifndef __WEBSRV_CLASS__
+__WEBSERV_CLASS__   equ 1
+
+    AF_INET     equ 2
+    SOCK_STREAM equ 1
+    INADDR_ANY  equ 0
+
+    in_addr struct
+        s_addr  dd ?
+    in_addr ends
+
+    sockaddr struct
+        sa_family   dw ?
+        sa_data     db 14 dup (?)
+    sockaddr ends
+
+    sockaddr_in struct
+        sin_family  dw ?
+        sin_port    dw ?
+        sin_addr    in_addr <?>
+        sin_zero    db 8 dup (?)
+    sockaddr_in ends
+
+    WSADATA struct
+        wVersion        dw ?
+        wHighVersion    dw ?
+        iMaxSockets     dw ?
+        iMaxUdpDg       dw ?
+        szDescription   db 256 dup (?)
+        szSystemStatus  db 128 dup (?)
+        lpVendorInfo    dq ?
+    WSADATA ends
+
+    ;; Platform specific requirements etc..
+    if @Platform eq WIN64
+        ;;include/includelibs can be used here. But this works too.
+        option dllimport:<kernel32>
+            ExitProcess     proto ucode:dword
+            HeapAlloc       proto fd:qword, flgs:dword, hlen:qword
+            HeapFree        proto fd:qword, flgs:dword, lpmem:qword
+            GetProcessHeap  proto
+        option dllimport:<msvcrt>
+            printf      proto fmt:qword, args:VARARG
+            strlen      proto buff:qword
+        option dllimport:<ws2_32>
+            WSAStartup  proto ver:word, wsa:qword
+            WSACleanup  proto wsa:qword
+            closesocket proto fd:dword
+            socket      proto d:dword, s:dword, prtl:dword
+            bind        proto fd:dword, saddr:qword, slen:dword
+            listen      proto fd:dword, blog:dword
+            accept      proto fd:dword, caddr:qword, slen:qword
+            send        proto fd:dword, buff:qword, blen:dword, flgs:dword
+        option dllimport:none
+        exit    equ ExitProcess
+        close   equ closesocket
+    elseif @Platform eq LIN64
+        ;; Required proto from Libc stuff.
+        malloc  proto SYSTEMV mem:qword         ;; Required by the class macros.
+        free    proto SYSTEMV mem:qword         ;; It uses HeapAlloc on windows.
+        printf  proto SYSTEMV fmt:qword, args:VARARG
+        strlen  proto SYSTEMV buff:qword
+        socket  proto SYSTEMV d:dword, s:dword, prtl:dword
+        bind    proto SYSTEMV fd:dword, saddr:qword, slen:dword
+        listen  proto SYSTEMV fd:dword, blog:dword
+        accept  proto SYSTEMV fd:dword, saddr:qword, slen:qword
+        send    proto SYSTEMV fd:dword, buff:qword, blen:dword, flgs:dword
+        close   proto SYSTEMV fd:dword
+        exit    proto SYSTEMV uexit:dword
+    else
+        ;; Could do some OSX or w/e specific crap, but I don't use
+        ;; a Mac so, I dunno shit about it's API :]
+    endif
+
+    ;; Class definitions etc..
+    CLASS websrv
+        ;; Class Method definitions
+        CMETHOD serve
+    ENDMETHODS
+        ;; Class Variables.
+        if @Platform eq WIN64
+            wsa  WSADATA <?>
+        endif
+        tmpl    db  "[websrv->%s] - %s",10,0
+        http    db  "HTTP/1.1 200 OK",13,10,
+                    "Content-Type: text/html; charset=UTF-8",13,10,13,10,
+                    "<html><head><title>Goodbye</title></head><body>Goodbye, World!</body></html>",0
+        sock    dd 0
+        port    dw 8080
+    ENDCLASS
+
+    pwebsrv typedef ptr websrv
+
+    ;; Method implementation..
+    ;   Syntax:
+    ;       METHOD ClassName, MethodName, <ReturnType>, <USE extra regs for ret>, args..
+    METHOD websrv, Init, <VOIDARG>, <>
+        local x:sockaddr_in
+
+        mov rbx, thisPtr            ;; Force the ThisPtr reference reg to be RBX 'cause of windoze
+        assume rbx:ptr websrv       ;; its default is RCX, and RDI on linux. *shrugs*
+        invoke printf, addr [rbx].tmpl,CSTR("init"), CSTR("Starting...")
+        if @Platform eq WIN64
+            invoke WSAStartup, 200h, addr [rbx].wsa
+        endif
+        invoke socket, AF_INET, SOCK_STREAM, 0
+        .if rax == -1
+            invoke printf, addr [rbx].tmpl, CSTR("init:ERROR"), CSTR("Socket() returned < 0")
+            mov rax, rbx
+            ret
+        .endif
+        mov [rbx].sock, eax
+        invoke printf, CSTR("[websrv->init:socket] - %d",10), eax
+        mov x.sin_family, AF_INET
+        mov x.sin_addr.s_addr, INADDR_ANY
+        mov ax, [rbx].port
+        xchg al,ah
+        mov x.sin_port, ax
+        invoke bind, [rbx].sock, addr x, sizeof(x)
+        .if eax == -1
+            invoke printf, addr [rbx].tmpl, CSTR("init:ERROR") , CSTR("Bind failed.")
+            xor eax, eax
+            mov [rbx].sock, 0
+            mov rax, rbx
+            ret
+        .endif
+        invoke printf, addr [rbx].tmpl, CSTR("init"), CSTR("Bind successful.")
+        mov rax, rbx
+        assume rbx: nothing
+        ret
+    ENDMETHOD
+
+    METHOD websrv, serve, <VOIDARG>, <>
+        local tmp:qword
+        local cfd:dword
+        local x:sockaddr
+
+        mov rbx, thisPtr
+        assume rbx:ptr websrv
+        .if [rbx].sock == 0
+            ret
+        .endif
+        invoke printf, addr [rbx].tmpl,CSTR("serve"), CSTR("Listening for incomming connections")
+        invoke listen, [rbx].sock, 5
+        .if rax == -1
+            invoke printf, addr [rbx].tmpl, CSTR("serve:ERROR"), CSTR("Listen() returned -1")
+            ret
+        .endif
+
+        .while(1)
+            mov tmp, sizeof(x)
+            invoke accept, [rbx].sock, addr x, addr tmp
+            .if eax == -1
+                invoke printf, addr [rbx].tmpl, CSTR("serve:ERROR"), CSTR("Accept() returned -1")
+                ret
+            .endif
+            mov cfd, eax
+            invoke printf, addr [rbx].tmpl, CSTR("serve"), CSTR("Connection established.")
+            invoke strlen, addr [rbx].http
+            invoke send, cfd, addr [rbx].http, eax , 0
+            invoke close, cfd
+        .endw
+        assume rbx:nothing
+        ret
+    ENDMETHOD
+
+    METHOD websrv, Destroy, <VOIDARG>, <>
+        mov rbx, thisPtr
+        assume rbx:ptr websrv
+        invoke printf, addr [rbx].tmpl,CSTR("destroy"), CSTR("Calling Close and exit.")
+        invoke close,  [rbx].sock
+        if @Platform eq WIN64
+            invoke WSACleanup, addr [rbx].wsa
+        endif
+        assume rbx:nothing
+        invoke exit, 0
+        ret
+    ENDMETHOD
+endif                       ;; __WEBSRV_CLASS__
+
+;; Start of main run code...
+.code
+main proc
+    local server:ptr websrv
+
+    mov server, _NEW(websrv)
+    server->serve()
+    _DELETE(server)
+    ret
+main endp
+end

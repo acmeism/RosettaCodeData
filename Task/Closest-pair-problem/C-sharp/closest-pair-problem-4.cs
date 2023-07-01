@@ -1,0 +1,11 @@
+var randomizer = new Random(10);
+var points = Enumerable.Range( 0, 10000).Select( i => new PointF( (float)randomizer.NextDouble(), (float)randomizer.NextDouble())).ToList();
+Stopwatch sw = Stopwatch.StartNew();
+var r1 = Closest_BruteForce(points);
+sw.Stop();
+Debugger.Log(1, "", string.Format("Time used (Brute force) (float): {0} ms", sw.Elapsed.TotalMilliseconds));
+Stopwatch sw2 = Stopwatch.StartNew();
+var result2 = Closest_Recursive(points);
+sw2.Stop();
+Debugger.Log(1, "", string.Format("Time used (Divide & Conquer): {0} ms",sw2.Elapsed.TotalMilliseconds));
+Assert.Equal(r1.Length(), result2.Length());

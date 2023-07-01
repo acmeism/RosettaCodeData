@@ -1,0 +1,591 @@
+(*------------------------------------------------------------------*)
+(* In this implementation, memory is allocated only for linear
+   types. Thus discipline is maintained in the freeing of allocated
+   space. There is, however, no memoization. *)
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+(* We need consistent definitions of division and remainder. Let us
+   set those here. For convenience (because the prelude provides it),
+   we will use truncation towards zero. *)
+infixl ( / ) div
+infixl ( mod ) rem
+macdef div = g0int_div
+macdef rem = g0int_mod
+
+(* We will be using linear lists. Define a convenient notation. *)
+#define NIL list_vt_nil ()
+#define ::  list_vt_cons
+
+(*------------------------------------------------------------------*)
+(* Something we will use: copy the contents of one arrayptr to
+   another arrayptr. *)
+
+extern fn {a : t@ype}
+arrayptr_copy_over
+          {n : int}
+          (n   : int n,
+           src : !arrayptr (a, n),
+           dst : !arrayptr (a, n))
+    : void
+
+implement {a}
+arrayptr_copy_over {n} (n, src, dst) =
+  let
+    fun
+    loop (i   : intGte 0,
+          src : !arrayptr (a, n),
+          dst : !arrayptr (a, n))
+        : void =
+      if i < n then
+        begin
+          dst[i] := src[i];
+          loop (succ i, src, dst)
+        end
+  in
+    loop (0, src, dst)
+  end
+
+overload copy_over with arrayptr_copy_over
+
+(*------------------------------------------------------------------*)
+(* The basics. *)
+
+(* For this pedagogical example, let us choose a particular integer
+   type, thus avoiding the clutter of template notation. *)
+typedef integer = int
+
+(* A generator is a recursive type that forms a tree. *)
+datavtype generator_vt =
+| generator_vt_nil of ()        (* The nil generator. *)
+| {n : int}
+  generator_vt_cons of          (* A non-nil generator. *)
+    (generator_func_vt n,       (* What does the work. *)
+     int n,                     (* The size of workspace. *)
+     arrayptr (integer, n),     (* The initial value of workspace. *)
+     arrayptr (integer, n),     (* The workspace. *)
+     List_vt generator_vt)      (* The sources. *)
+where generator_func_vt (n : int) =
+  (int n,                         (* The size of workspace. *)
+   !arrayptr (integer, n),        (* The workspace. *)
+   !List_vt generator_vt,         (* The sources. *)
+   &bool? >> bool b,              (* Is there a term? *)
+   &integer? >> opt (integer, b)) (* The term, if any. *)
+    -> #[b : bool] void
+
+(* Reinitializes a generator. (Needed because there is no
+   memoization.) *)
+extern fn generator_vt_initialize : (&generator_vt) -> void
+overload initialize with generator_vt_initialize
+
+(* Frees a generator. *)
+extern fn generator_vt_free : generator_vt -> void
+overload free with generator_vt_free
+
+(*------------------------------------------------------------------*)
+(* A function to print the output of a generator as Plain TeX. *)
+
+extern fn
+fprinttex_generator_output
+          (outf      : FILEref,
+           gen       : &generator_vt,
+           max_terms : intGte 1)
+    : void
+
+(*------------------------------------------------------------------*)
+(* Some functions to make generators. *)
+
+extern fn                       (* For a rational number. *)
+r2cf_make (n : integer,
+           d : integer)
+    : generator_vt
+
+extern fn                       (* For the square root of 2. *)
+sqrt2_make ()
+    : generator_vt
+
+extern fn                       (* For a homographic function. *)
+hfunc_make (a1      : integer,
+            a       : integer,
+            b1      : integer,
+            b       : integer,
+            sources : List1_vt generator_vt)
+    : generator_vt
+
+(*------------------------------------------------------------------*)
+
+implement
+generator_vt_initialize gen =
+  let
+    fun
+    recurs (gen : &generator_vt) : void =
+      case+ gen of
+      | generator_vt_nil () => ()
+      | @ generator_vt_cons (_, worksize, initial, workspace,
+                             sources) =>
+        let
+          fun
+          initialize_recursively
+                    (p : !List_vt generator_vt)
+              : void =
+            case+ p of
+            | NIL => ()
+            | @ (gen :: tail) =>
+              begin
+                recurs gen;
+                initialize_recursively tail;
+                fold@ p
+              end
+        in
+          copy_over (worksize, initial, workspace);
+          initialize_recursively sources;
+          fold@ gen
+        end
+  in
+    recurs gen
+  end
+
+implement
+generator_vt_free gen =
+  let
+    fun
+    recurs (gen : generator_vt) : void =
+      case+ gen of
+      | ~ generator_vt_nil () => ()
+      | ~ generator_vt_cons (_, _, initial, workspace, sources) =>
+        begin
+          free initial;
+          free workspace;
+          list_vt_freelin_fun (sources, lam x =<fun1> recurs x)
+        end
+  in
+    recurs gen
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+fprinttex_generator_output (outf, gen, max_terms) =
+  let
+    fun
+    loop (gen         : &generator_vt >> _,
+          sep         : int,
+          terms_count : intGte 0)
+        : void =
+      if terms_count = max_terms then
+        fprint! (outf, ",\\cdots\\,]")
+      else
+        let
+          var term_exists : bool?
+          var term : integer?
+        in
+          case+ gen of
+          | generator_vt_nil () => ()
+          | @ generator_vt_cons (run, worksize, _, workspace,
+                                 sources) =>
+            let
+              var term_exists : bool?
+              var term : integer?
+            in
+              run (worksize, workspace, sources, term_exists, term);
+              if term_exists then
+                let
+                  prval () = opt_unsome term
+                  prval () = fold@ gen
+                in
+                  case+ sep of
+                  | 0 => fprint! (outf, "[\\,")
+                  | 1 => fprint! (outf, ";")
+                  | _ => fprint! (outf, ",");
+                  fprint! (outf, term);
+                  loop (gen, if sep = 0 then 1 else 2,
+                        succ terms_count)
+                end
+              else
+                let
+                  prval () = opt_unnone term
+                  prval () = fold@ gen
+                in
+                  fprint! (outf, "\\,]")
+                end
+            end
+        end
+  in
+    initialize gen;
+    loop (gen, 0, 0);
+    initialize gen
+  end
+
+(*------------------------------------------------------------------*)
+
+fn
+r2cf_run : generator_func_vt 2 =
+  lam (worksize, workspace, _sources, term_exists, term) =>
+    let
+      prval () = lemma_arrayptr_param workspace
+      val () = assertloc (2 <= worksize)
+      val d = arrayptr_get_at<integer> (workspace, 1)
+    in
+      if d = 0 then
+        begin
+          term_exists := false;
+          {prval () = opt_none term}
+        end
+      else
+        let
+          val n = workspace[0]
+          val @(q, r) = @(n div d, n rem d)
+        in
+          workspace[0] := d;
+          workspace[1] := r;
+          term_exists := true;
+          term := q;
+          {prval () = opt_some term}
+        end
+    end
+
+implement
+r2cf_make (n, d) =
+  let
+    val workspace = arrayptr_make_elt (i2sz 2, 0)
+    val initial = arrayptr_make_elt (i2sz 2, 0)
+    val () = initial[0] := n
+    and () = initial[1] := d
+  in
+    copy_over (2, initial, workspace);
+    generator_vt_cons (r2cf_run, 2, initial, workspace, NIL)
+  end
+
+(*------------------------------------------------------------------*)
+
+fn
+sqrt2_run : generator_func_vt 1 =
+  lam (worksize, workspace, _sources, term_exists, term) =>
+    let
+      prval () = lemma_arrayptr_param workspace
+      val () = assertloc (1 <= worksize)
+    in
+      term_exists := true;
+      term := arrayptr_get_at<integer> (workspace, 0);
+      {prval () = opt_some term};
+      arrayptr_set_at<integer> (workspace, 0, 2)
+    end
+
+implement
+sqrt2_make () =
+  let
+    val workspace = arrayptr_make_elt (i2sz 1, 0)
+    val initial = arrayptr_make_elt (i2sz 1, 0)
+    val () = initial[0] := 1
+  in
+    copy_over (1, initial, workspace);
+    generator_vt_cons (sqrt2_run, 1, initial, workspace, NIL)
+  end
+
+(*------------------------------------------------------------------*)
+
+fn
+hfunc_run : generator_func_vt 4 =
+  lam (worksize, workspace, sources, term_exists, term) =>
+    let
+      prval () = lemma_arrayptr_param workspace
+      val () = assertloc (4 <= worksize)
+
+      fun
+      loop (workspace   : !arrayptr (integer, 4),
+            sources     : !List_vt generator_vt,
+            term_exists : &bool? >> bool b,
+            term        : &integer? >> opt (integer, b))
+          : #[b : bool] void =
+        let
+          val b1 = arrayptr_get_at<integer> (workspace, 2)
+          and b = arrayptr_get_at<integer> (workspace, 3)
+        in
+          if b1 = 0 && b = 0 then
+            begin
+              term_exists := false;
+              {prval () = opt_none term}
+            end
+          else
+            let
+              val a1 = workspace[0]
+              and a = workspace[1]
+
+              fn
+              take_term (workspace : !arrayptr (integer, 4),
+                         sources   : !List_vt generator_vt)
+                  : void =
+                let
+                  val- @ (source :: _) = sources
+                  val- @ generator_vt_cons
+                          (run1, worksize1, _, workspace1,
+                           sources1) = source
+
+                  var term_exists1 : bool?
+                  var term1 : integer?
+                in
+                  run1 (worksize1, workspace1, sources1,
+                        term_exists1, term1);
+                  if term_exists1 then
+                    let
+                      prval () = opt_unsome term1
+                    in
+                      workspace[0] := a + (a1 * term1);
+                      workspace[1] := a1;
+                      workspace[2] := b + (b1 * term1);
+                      workspace[3] := b1;
+                      fold@ source;
+                      fold@ sources
+                    end
+                  else
+                    let
+                      prval () = opt_unnone term1
+                    in
+                      workspace[1] := a1;
+                      workspace[3] := b1;
+                      fold@ source;
+                      fold@ sources
+                    end
+                end
+            in
+              if b1 <> 0 && b <> 0 then
+                let
+                  val q1 = a1 div b1
+                  and q = a div b
+                in
+                  if q1 = q then
+                    begin
+                      workspace[0] := b1;
+                      workspace[1] := b;
+                      workspace[2] := a1 - (b1 * q);
+                      workspace[3] := a - (b * q);
+                      term_exists := true;
+                      term := q;
+                      {prval () = opt_some term}
+                    end
+                  else
+                    begin
+                      take_term (workspace, sources);
+                      loop (workspace, sources, term_exists, term)
+                    end
+                end
+              else
+                begin
+                  take_term (workspace, sources);
+                  loop (workspace, sources, term_exists, term)
+                end
+            end
+        end
+    in
+      loop (workspace, sources, term_exists, term)
+    end
+
+implement
+hfunc_make (a1, a, b1, b, sources) =
+  let
+    val workspace = arrayptr_make_elt (i2sz 4, 0)
+    val initial = arrayptr_make_elt (i2sz 4, 0)
+    val () = initial[0] := a1
+    val () = initial[1] := a
+    val () = initial[2] := b1
+    val () = initial[3] := b
+  in
+    copy_over (4, initial, workspace);
+    generator_vt_cons (hfunc_run, 4, initial, workspace, sources)
+  end
+
+(*------------------------------------------------------------------*)
+
+#define MAX_TERMS 20
+#define GOES_TO "&\\rightarrow "
+#define END_LINE "\\cr\n"
+
+fn
+fprinttex_rational_number
+          (outf : FILEref,
+           n    : integer,
+           d    : integer)
+    : void =
+  let
+    var gen = r2cf_make (n, d)
+  in
+    fprint! (outf, n, "\\over ", d, GOES_TO);
+    fprinttex_generator_output (outf, gen, MAX_TERMS);
+    fprint! (outf, END_LINE);
+    free gen
+  end
+
+fn
+fprinttex_sqrt2
+          (outf : FILEref)
+    : void =
+  let
+    var gen = sqrt2_make ()
+  in
+    fprint! (outf, "\\sqrt 2", GOES_TO);
+    fprinttex_generator_output (outf, gen, MAX_TERMS);
+    fprint! (outf, END_LINE);
+    free gen
+  end
+
+fn
+fprinttex_hfunc_of_rational_number
+          (outf : FILEref,
+           expr : string,
+           a1   : integer,
+           a    : integer,
+           b1   : integer,
+           b    : integer,
+           n    : integer,
+           d    : integer)
+    : void =
+  let
+    var gen = hfunc_make (a1, a, b1, b, r2cf_make (n, d) :: NIL)
+  in
+    fprint! (outf, expr, GOES_TO);
+    fprinttex_generator_output (outf, gen, MAX_TERMS);
+    fprint! (outf, END_LINE);
+    free gen
+  end
+
+fn
+fprinttex_hfunc_of_sqrt2
+          (outf : FILEref,
+           expr : string,
+           a1   : integer,
+           a    : integer,
+           b1   : integer,
+           b    : integer)
+    : void =
+  let
+    var gen = hfunc_make (a1, a, b1, b, sqrt2_make () :: NIL)
+  in
+    fprint! (outf, expr, GOES_TO);
+    fprinttex_generator_output (outf, gen, MAX_TERMS);
+    fprint! (outf, END_LINE);
+    free gen
+  end
+
+fn
+fprinttex_complicated
+          (outf : FILEref)
+    : void =
+  (* Here we demonstrate a more complicated nesting of generators. *)
+  let
+    (* gen1 = 1/sqrt(2) *)
+    val gen1 = hfunc_make (0, 1, 1, 0, sqrt2_make () :: NIL)
+
+    (* gen2 = 1 + gen1 *)
+    val gen2 = hfunc_make (1, 1, 0, 1, gen1 :: NIL)
+
+    (* gen = gen2 / 2 *)
+    var gen = hfunc_make (1, 0, 0, 2, gen2 :: NIL)
+  in
+    fprint! (outf, "{1 + {1\\over\\sqrt 2}}\\over 2", GOES_TO);
+    fprinttex_generator_output (outf, gen, MAX_TERMS);
+    fprint! (outf, END_LINE);
+    free gen
+  end
+
+(*------------------------------------------------------------------*)
+
+fn
+fprint_14point (outf : FILEref) : void =
+  begin
+    fprintln! (outf, "%%% This file is public domain.");
+    fprintln! (outf, "%%% Originally written 1992, Don Hosek.");
+    fprintln! (outf, "%%% This declaration added by Clea F. Rees 2008/11/16 with the permission of Dan Hosek.");
+    fprintln! (outf, "%%%");
+    fprintln! (outf, "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+    fprintln! (outf, "% This file sets up a fourteen point environment for TeX. It can be initialized");
+    fprintln! (outf, "% with the '\\fourteenpoint' macro.");
+    fprintln! (outf, "% It also sets up a '\\tenpoint' macro in case you want to go back down.");
+    fprintln! (outf, "% By Don Hosek");
+    fprintln! (outf, "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+    fprintln! (outf, " ");
+    fprintln! (outf, "\\ifx\\tenpoint\\undefined\\let\\loadedfrommacro=Y");
+    fprintln! (outf, "         \\input 10point");
+    fprintln! (outf, "         \\let\\loadedfrommacro=N\\fi");
+    fprintln! (outf, " ");
+    fprintln! (outf, "%%%");
+    fprintln! (outf, "%%% Load in the fonts");
+    fprintln! (outf, "%%%");
+    fprintln! (outf, "\\font\\fourteenrm=cmr12 scaled \\magstep1");
+    fprintln! (outf, "\\font\\fourteeni=cmmi12 scaled \\magstep1");
+    fprintln! (outf, "\\font\\fourteensy=cmsy10 scaled \\magstep2");
+    fprintln! (outf, "\\font\\fourteenex=cmex10 scaled \\magstep2");
+    fprintln! (outf, "\\font\\fourteenbf=cmbx12 scaled \\magstep1");
+    fprintln! (outf, "\\font\\fourteensl=cmsl12 scaled \\magstep1");
+    fprintln! (outf, "\\font\\fourteentt=cmtt12 scaled \\magstep1");
+    fprintln! (outf, "\\font\\fourteenit=cmti12 scaled \\magstep1");
+    fprintln! (outf, "\\font\\fourteencsc=cmcsc10 scaled \\magstep2");
+    fprintln! (outf, " ");
+    fprintln! (outf, "%%%");
+    fprintln! (outf, "%%% Set up the fourteenpoint macros");
+    fprintln! (outf, "%%%");
+    fprintln! (outf, "\\ifx\\fourteenpoint\\undefined");
+    fprintln! (outf, "   \\def\\fourteenpoint{\\def\\rm{\\fam0\\fourteenrm}% switch to 14-point type");
+    fprintln! (outf, "       \\textfont0=\\fourteenrm \\scriptfont0=\\tenrm \\scriptscriptfont0=\\sevenrm");
+    fprintln! (outf, "       \\textfont1=\\fourteeni  \\scriptfont1=\\teni  \\scriptscriptfont1=\\seveni");
+    fprintln! (outf, "       \\textfont2=\\fourteensy \\scriptfont2=\\tensy \\scriptscriptfont2=\\sevensy");
+    fprintln! (outf, "       \\textfont3=\\fourteenex \\scriptfont3=\\fourteenex");
+    fprintln! (outf, "                              \\scriptscriptfont3=\\fourteenex");
+    fprintln! (outf, "       \\textfont\\itfam=\\fourteenit  \\def\\it{\\fam\\itfam\\fourteenit}%");
+    fprintln! (outf, "       \\textfont\\slfam=\\fourteensl  \\def\\sl{\\fam\\slfam\\fourteensl}%");
+    fprintln! (outf, "       \\textfont\\ttfam=\\fourteentt  \\def\\tt{\\fam\\ttfam\\fourteentt}%");
+    fprintln! (outf, "       \\textfont\\bffam=\\fourteenbf  \\scriptfont\\bffam=\\tenbf");
+    fprintln! (outf, "        \\scriptscriptfont\\bffam=\\sevenbf  \\def\\bf{\\fam\\bffam\\fourteenbf}%");
+    fprintln! (outf, "       \\textfont\\scfam=\\fourteencsc \\def\\sc{\\fam\\scfam\\fourteencsc}%");
+    fprintln! (outf, "       \\normalbaselineskip=17pt");
+    fprintln! (outf, "       \\setbox\\strutbox=\\hbox{\\vrule height11.9pt depth6.3pt width0pt}%");
+    fprintln! (outf, "       \\normalbaselines\\rm}");
+    fprintln! (outf, "   \\fi")
+  end
+
+implement
+main () =
+  let
+    val outf = stdout_ref
+  in
+    (* I assume the TeX processor is LuaTeX. *)
+    fprintln! (outf, "\\pagewidth 6in\\hoffset-1in\\hsize 6in");
+    fprintln! (outf, "\\pageheight 6in\\voffset-1.05in\\vsize 6in");
+
+    (* Suppress the page number. *)
+    fprintln! (outf, "\\footline={}");
+
+    (* Print large. *)
+    fprint_14point (outf);
+    fprintln! (outf, "\\fourteenpoint");
+
+    fprintln! (outf, "\\normallineskip 6pt");
+    fprintln! (outf, "\\normalbaselines");
+
+    fprintln! (outf, "$$\\eqalign{");
+
+    fprinttex_rational_number (outf, 13, 11);
+    fprinttex_rational_number (outf, 22, 7);
+    fprinttex_sqrt2 (outf);
+
+    fprinttex_hfunc_of_rational_number
+      (outf, "{13\\over 11} + {1\\over 2}", 2, 1, 0, 2, 13, 11);
+    fprinttex_hfunc_of_rational_number
+      (outf, "{22\\over 7} + {1\\over 2}", 2, 1, 0, 2, 22, 7);
+    fprinttex_hfunc_of_rational_number
+      (outf, "{22\\over 7}\\over 4", 1, 0, 0, 4, 22, 7);
+    fprinttex_hfunc_of_sqrt2
+      (outf, "{\\sqrt 2}\\over 2", 1, 0, 0, 2);
+    fprinttex_hfunc_of_sqrt2
+      (outf, "1\\over\\sqrt 2", 0, 1, 1, 0);
+    fprinttex_hfunc_of_sqrt2
+      (outf, "{2 + \\sqrt 2}\\over 4", 1, 2, 0, 4);
+    fprinttex_complicated outf;
+
+    fprintln! (outf, "}$$");
+    fprintln! (outf, "\\bye");
+    0
+  end
+
+(*------------------------------------------------------------------*)

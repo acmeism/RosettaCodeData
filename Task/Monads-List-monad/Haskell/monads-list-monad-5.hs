@@ -1,0 +1,5 @@
+pythagoreanTriples :: Integer -> [(Integer, Integer, Integer)]
+pythagoreanTriples n = do x <- [1 .. n]
+                          y <- [x+1 .. n]
+                          z <- [y+1 .. n]
+                          if x^2 + y^2 == z^2 then return (x,y,z) else []

@@ -1,0 +1,727 @@
+(*
+  Find Knight’s Tours.
+
+  Using Warnsdorff’s heuristic, find multiple solutions.
+  Optionally accept only closed tours.
+
+  Compile with:
+      patscc -O3 -DATS_MEMALLOC_GCBDW -o knights_tour knights_tour.dats -lgc
+
+  Usage: ./knights_tour [START_POSITION [MAX_TOURS [closed]]]
+  Examples:
+      ./knights_tour     (prints one tour starting from a1)
+      ./knights_tour c5
+      ./knights_tour c5 2000
+      ./knights_tour c5 2000 closed
+*)
+
+#define ATS_DYNLOADFLAG 0       (* No initialization is needed. *)
+
+#include "share/atspre_define.hats"
+#include "share/atspre_staload.hats"
+
+#define EMPTY_SQUARE ~1
+macdef nil_move = @(~1, ~1)
+
+fn
+int_right_justified
+          {i : int}
+          {n : int | 0 <= n; n < 100}
+          (i : int i,
+           n : int n) :
+    string =
+  let
+    var buffer : @[char][100] = @[char][100] ('\0')
+    val _ = $extfcall (int, "snprintf", buffer, 100, "%*i", n, i)
+  in
+    strnptr2string (string1_copy ($UNSAFE.cast{string n} buffer))
+  end
+
+typedef move_t (i : int,
+                j : int) =
+  @(int i, int j)
+typedef move_t =
+  [i, j : int]
+  move_t (i, j)
+
+fn
+move_t_is_nil (move : move_t) :<>
+    bool =
+  let
+    val @(i, j) = move
+    val @(i_nil, j_nil) = nil_move
+  in
+    (i = i_nil && j = j_nil)
+  end
+
+fn
+move_t_fprint (f    : FILEref,
+               move : move_t) :
+    void =
+  let
+    val @(i, j) = move
+    val letter = char2i 'a' + j - 1
+    val digit = char2i '0' + i
+  in
+    fileref_putc (f, letter);
+    fileref_putc (f, digit);
+  end
+
+vtypedef chessboard_vt (t       : t@ype,
+                        n_ranks : int,
+                        n_files : int,
+                        p       : addr) =
+  @{
+    pf_board = @[t][n_ranks * n_files] @ p |
+    n_ranks = uint n_ranks,
+    n_files = uint n_files,
+    n_squares = uint (n_ranks * n_files),
+    p_board = ptr p
+  }
+vtypedef chessboard_vt (t       : t@ype,
+                        n_ranks : int,
+                        n_files : int) =
+  [p : addr]
+  chessboard_vt (t, n_ranks, n_files, p)
+vtypedef chessboard_vt (t : t@ype) =
+  [n_ranks, n_files : int]
+  chessboard_vt (t, n_ranks, n_files)
+
+fn {t : t@ype}
+chessboard_vt_make
+          {n_ranks, n_files : pos}
+          (n_ranks : uint n_ranks,
+           n_files : uint n_files,
+           fill    : t) :
+    chessboard_vt (t, n_ranks, n_files) =
+  let
+    val size = u2sz (n_ranks * n_files)
+    val @(pf, pfgc | p) = array_ptr_alloc<t> (size)
+    val _ = array_initize_elt<t> (!p, size, fill)
+    prval _ = mfree_gc_v_elim pfgc (* Let the memory leak. *)
+  in
+    @{
+      pf_board = pf |
+      n_ranks = n_ranks,
+      n_files = n_files,
+      n_squares = n_ranks * n_files,
+      p_board = p
+    }
+  end
+
+fn {t : t@ype}
+chessboard_vt_get
+          {n_ranks, n_files : pos}
+          {i, j       : int}
+          (chessboard : !chessboard_vt (t, n_ranks, n_files),
+           i          : int i,
+           j          : int j) :
+    t =
+  let
+    val index = (i - 1) + (u2i (chessboard.n_ranks) * (j - 1))
+    val _ = assertloc (0 <= index)
+    val _ = assertloc (index < u2i (chessboard.n_squares))
+  in
+    array_get_at (!(chessboard.p_board), index)
+  end
+
+fn {t : t@ype}
+chessboard_vt_set
+          {n_ranks, n_files : pos}
+          {i, j       : int}
+          (chessboard : !chessboard_vt (t, n_ranks, n_files),
+           i          : int i,
+           j          : int j,
+           value      : t) :
+    void =
+  let
+    val index = (i - 1) + (u2i (chessboard.n_ranks) * (j - 1))
+    val _ = assertloc (0 <= index)
+    val _ = assertloc (index < u2i (chessboard.n_squares))
+  in
+    array_set_at (!(chessboard.p_board), index, value)
+  end
+
+extern fn {t : t@ype}
+find_nth_position$equal (x : t,
+                         y : t) :
+    bool
+
+fn {t : t@ype}
+find_nth_position
+          {n_ranks, n_files : pos}
+          (chessboard : !chessboard_vt (t, n_ranks, n_files),
+           n          : t) :
+    [i, j : int]
+    move_t (i, j) =
+  let
+    val n_ranks = chessboard.n_ranks
+    val n_files = chessboard.n_files
+
+    fun
+    outer_loop {i : pos | i <= n_ranks + 1} .<n_ranks + 1 - i>.
+               (chessboard : !chessboard_vt (t, n_ranks, n_files),
+                i : int i) :
+        [i, j : int]
+        move_t (i, j) =
+      let
+        fun
+        inner_loop {j : pos | j <= n_files + 1} .<n_files + 1 - j>.
+                   (chessboard : !chessboard_vt (t, n_ranks, n_files),
+                    j : int j) :
+            [j : int]
+            int j =
+          if u2i n_files < j then
+            j
+          else
+            let
+              val v = chessboard_vt_get<t> (chessboard, i, j)
+            in
+              if find_nth_position$equal<t> (n, v) then
+                j
+              else
+                inner_loop (chessboard, succ j)
+            end
+      in
+        if u2i n_ranks < i then
+          nil_move
+        else
+          let
+            val j = inner_loop (chessboard, 1)
+          in
+            if j <= u2i n_files then
+              @(i, j)
+            else
+              outer_loop (chessboard, succ i)
+          end
+      end
+  in
+    outer_loop (chessboard, 1)
+  end
+
+implement
+find_nth_position$equal<int> (x, y) =
+  x = y
+
+fn
+knights_tour_is_closed
+          {n_ranks, n_files : pos}
+          (chessboard : !chessboard_vt (int, n_ranks, n_files)) :
+    bool =
+  let
+    val n_squares = chessboard.n_squares
+    val @(i1, j1) = find_nth_position<int> (chessboard, 1)
+    val @(i2, j2) = find_nth_position<int> (chessboard, u2i n_squares)
+    val i_diff = abs (i1 - i2)
+    val j_diff = abs (j1 - j2)
+  in
+    (i_diff = 1 && j_diff = 2) || (i_diff = 2 && j_diff = 1)
+  end
+
+fn
+knights_tour_board_fprint
+          {n_ranks, n_files : pos}
+          (f          : FILEref,
+           chessboard : !chessboard_vt (int, n_ranks, n_files)) :
+    void =
+  {
+    val n_ranks = chessboard.n_ranks
+    val n_files = chessboard.n_files
+
+    fun
+    outer_loop {i : int | 0 <= i; i <= n_ranks} .<i>.
+               (chessboard : !chessboard_vt (int, n_ranks, n_files),
+                i : int i) :
+        void =
+      if 0 < i then
+        {
+          val _ = fileref_puts (f, "    ")
+          val _ =
+            let
+              var j : [j : int] int j
+            in
+              for (j := 1; j <= u2i n_files; j := succ j)
+                fileref_puts (f, "+----")
+            end
+          val _ = fileref_puts (f, "+\n")
+          val _ = fileref_puts (f, int_right_justified (i, 2))
+          val _ = fileref_puts (f, " ")
+
+          fun
+          inner_loop {j : int | 1 <= j; j <= n_files + 1}
+                     (chessboard : !chessboard_vt (int, n_ranks,
+                                                   n_files),
+                      j : int j) :
+              void =
+            if j <= u2i n_files then
+              {
+                val v = chessboard_vt_get<int> (chessboard, i, j)
+                val v = g1ofg0 v
+                val _ = fileref_puts (f, " | ")
+                val _ =
+                  if v = EMPTY_SQUARE then
+                    fileref_puts (f, "  ")
+                  else
+                    fileref_puts (f, int_right_justified (g1ofg0 v, 2))
+                val _ = inner_loop (chessboard, succ j)
+              }
+
+          val _ = inner_loop (chessboard, 1)
+          val _ = fileref_puts (f, " |\n")
+
+          val _ = outer_loop (chessboard, pred i)
+        }
+
+    val _ = outer_loop (chessboard, u2i n_ranks)
+    val _ = fileref_puts (f, "    ")
+    val _ =
+      let
+        var j : [j : int] int j
+      in
+        for (j := 1; j <= u2i n_files; j := succ j)
+          fileref_puts (f, "+----")
+      end
+    val _ = fileref_puts (f, "+\n")
+    val _ = fileref_puts (f, "   ")
+    val _ =
+      let
+        var j : [j : int] int j
+      in
+        for (j := 1; j <= u2i n_files; j := succ j)
+          let
+            val letter = char2i 'a' + j - 1
+          in
+            fileref_puts (f, "    ");
+            fileref_putc (f, letter)
+          end
+      end
+  }
+
+fn
+knights_tour_moves_fprint
+          {n_ranks, n_files : pos}
+          (f          : FILEref,
+           chessboard : !chessboard_vt (int, n_ranks, n_files)) :
+    void =
+  {
+    prval _ = mul_pos_pos_pos (mul_make {n_ranks, n_files} ())
+
+    val n_ranks = chessboard.n_ranks
+    val n_files = chessboard.n_files
+    val n_squares = chessboard.n_squares
+
+    val @(pf, pfgc | p_positions) =
+      array_ptr_alloc<move_t> (u2sz n_squares)
+    val _ = array_initize_elt<move_t> (!p_positions, u2sz n_squares,
+                                       nil_move)
+
+    macdef positions = !p_positions
+
+    fun
+    loop {k : int | 0 <= k; k <= n_ranks * n_files}
+         .<n_ranks * n_files - k>.
+         (positions  : &(@[move_t][n_ranks * n_files]),
+          chessboard : !chessboard_vt (int, n_ranks, n_files),
+          k          : int k) :
+        void =
+      if k < u2i n_squares then
+        {
+          val i = u2i ((i2u k) mod n_ranks) + 1
+          val j = u2i ((i2u k) / n_ranks) + 1
+          val v = chessboard_vt_get<int> (chessboard, i, j)
+          val v = g1ofg0 v
+          val _ = assertloc (1 <= v)
+          val _ = assertloc (v <= u2i n_squares)
+          val _ = positions[v - 1] := @(i, j)
+          val _ = loop (positions, chessboard, succ k)
+        }
+    val _ = loop (positions, chessboard, 0)
+
+    fun
+    loop {k : int | 0 <= k; k < n_ranks * n_files}
+         .<n_ranks * n_files - k>.
+         (positions : &(@[move_t][n_ranks * n_files]),
+          k         : int k) :
+        void =
+      if k < u2i (pred n_squares) then
+        {
+          val _ = move_t_fprint (f, positions[k])
+          val line_end = (((i2u (k + 1)) mod n_files) = 0U)
+          val _ =
+            fileref_puts (f, (if line_end then " ->\n" else " -> "))
+          val _ = loop (positions, succ k)
+        }
+    val _ = loop (positions, 0)
+    val _ = move_t_fprint (f, positions[pred n_squares])
+    val _ =
+      if knights_tour_is_closed (chessboard) then
+        fileref_puts (f, " -> cycle")
+
+    val _ = array_ptr_free (pf, pfgc | p_positions)
+  }
+
+typedef knights_moves_t =
+  @(move_t, move_t, move_t, move_t,
+    move_t, move_t, move_t, move_t)
+
+fn
+possible_moves {n_ranks, n_files : pos}
+               {i, j       : int}
+               (chessboard : !chessboard_vt (int, n_ranks, n_files),
+                i          : int i,
+                j          : int j) :
+    knights_moves_t =
+  let
+    fn
+    try_move {istride, jstride : int}
+             (chessboard : !chessboard_vt (int, n_ranks, n_files),
+              istride    : int istride,
+              jstride    : int jstride) :
+        move_t =
+      let
+        val i1 = i + istride
+        val j1 = j + jstride
+      in
+        if i1 < 1 then
+          nil_move
+        else if u2i (chessboard.n_ranks) < i1 then
+          nil_move
+        else if j1 < 1 then
+          nil_move
+        else if u2i (chessboard.n_files) < j1 then
+          nil_move
+        else
+          let
+            val v = chessboard_vt_get (chessboard, i1, j1) : int
+          in
+            if v <> EMPTY_SQUARE then
+              nil_move
+            else
+              @(i1, j1)
+          end
+      end
+
+    val move0 = try_move (chessboard, 1, 2)
+    val move1 = try_move (chessboard, 2, 1)
+    val move2 = try_move (chessboard, 1, ~2)
+    val move3 = try_move (chessboard, 2, ~1)
+    val move4 = try_move (chessboard, ~1, 2)
+    val move5 = try_move (chessboard, ~2, 1)
+    val move6 = try_move (chessboard, ~1, ~2)
+    val move7 = try_move (chessboard, ~2, ~1)
+  in
+    @(move0, move1, move2, move3, move4, move5, move6, move7)
+  end
+
+fn
+count_following_moves
+          {n_ranks, n_files : pos}
+          {i, j       : int}
+          {n_position : int}
+          (chessboard : !chessboard_vt (int, n_ranks, n_files),
+           move       : move_t (i, j),
+           n_position : int n_position) :
+    uint =
+  if move_t_is_nil move then
+    0U
+  else
+    let
+      fn
+      succ_if_move_is_not_nil
+                {i, j : int}
+                (w    : uint,
+                 move : move_t (i, j)) :<>
+          uint =
+        if move_t_is_nil move then
+          w
+        else
+          succ w
+
+      val @(i, j) = move
+      val _ = chessboard_vt_set<int> (chessboard, i, j,
+                                      succ n_position)
+      val following_moves = possible_moves (chessboard, i, j)
+
+      val w = 0U
+      val w = succ_if_move_is_not_nil (w, following_moves.0)
+      val w = succ_if_move_is_not_nil (w, following_moves.1)
+      val w = succ_if_move_is_not_nil (w, following_moves.2)
+      val w = succ_if_move_is_not_nil (w, following_moves.3)
+      val w = succ_if_move_is_not_nil (w, following_moves.4)
+      val w = succ_if_move_is_not_nil (w, following_moves.5)
+      val w = succ_if_move_is_not_nil (w, following_moves.6)
+      val w = succ_if_move_is_not_nil (w, following_moves.7)
+
+      val _ = chessboard_vt_set<int> (chessboard, i, j, EMPTY_SQUARE)
+    in
+      w
+    end
+
+fn
+pick_w (w0 : uint,
+        w1 : uint,
+        w2 : uint,
+        w3 : uint,
+        w4 : uint,
+        w5 : uint,
+        w6 : uint,
+        w7 : uint) :<>
+    uint =
+  let
+    fn
+    next_pick (u : uint,
+               v : uint) :<>
+        uint =
+      if v = 0U then
+        u
+      else if u = 0U then
+        v
+      else
+        min (u, v)
+
+    val w = 0U
+    val w = next_pick (w, w0)
+    val w = next_pick (w, w1)
+    val w = next_pick (w, w2)
+    val w = next_pick (w, w3)
+    val w = next_pick (w, w4)
+    val w = next_pick (w, w5)
+    val w = next_pick (w, w6)
+    val w = next_pick (w, w7)
+  in
+    w
+  end
+
+fn
+next_moves {n_ranks, n_files : pos}
+           {i, j       : int}
+           {n_position : int}
+           (chessboard : !chessboard_vt (int, n_ranks, n_files),
+            i          : int i,
+            j          : int j,
+            n_position : int n_position) :
+    knights_moves_t =
+  (* Prune and sort the moves according to Warnsdorff’s heuristic,
+     keeping only moves that have the minimum number of legal
+     following moves. *)
+  let
+    val moves = possible_moves (chessboard, i, j)
+    val w0 = count_following_moves (chessboard, moves.0, n_position)
+    val w1 = count_following_moves (chessboard, moves.1, n_position)
+    val w2 = count_following_moves (chessboard, moves.2, n_position)
+    val w3 = count_following_moves (chessboard, moves.3, n_position)
+    val w4 = count_following_moves (chessboard, moves.4, n_position)
+    val w5 = count_following_moves (chessboard, moves.5, n_position)
+    val w6 = count_following_moves (chessboard, moves.6, n_position)
+    val w7 = count_following_moves (chessboard, moves.7, n_position)
+    val w = pick_w (w0, w1, w2, w3, w4, w5, w6, w7)
+  in
+    if w = 0U then
+      @(nil_move, nil_move, nil_move, nil_move,
+        nil_move, nil_move, nil_move, nil_move)
+    else
+      @(if w0 = w then moves.0 else nil_move,
+        if w1 = w then moves.1 else nil_move,
+        if w2 = w then moves.2 else nil_move,
+        if w3 = w then moves.3 else nil_move,
+        if w4 = w then moves.4 else nil_move,
+        if w5 = w then moves.5 else nil_move,
+        if w6 = w then moves.6 else nil_move,
+        if w7 = w then moves.7 else nil_move)
+  end
+
+fn
+make_and_fprint_tours
+          {n_ranks, n_files : int}
+          {i, j        : int}
+          {max_tours   : int}
+          (f           : FILEref,
+           n_ranks     : int n_ranks,
+           n_files     : int n_files,
+           i           : int i,
+           j           : int j,
+           max_tours   : int max_tours,
+           closed_only : bool) :
+    void =
+  {
+    val n_ranks = max (1, n_ranks)
+    val n_files = max (1, n_files)
+    val i = max (1, min (n_ranks, i))
+    val j = max (1, min (n_files, j))
+    val max_tours = max (1, max_tours)
+
+    val n_ranks = i2u n_ranks
+    val n_files = i2u n_files
+
+    val i_start = i
+    val j_start = j
+
+    var tours_printed : int = 0
+
+    val chessboard =
+      chessboard_vt_make<int> (n_ranks, n_files, g1ofg0 EMPTY_SQUARE)
+
+    fun
+    explore {n_ranks, n_files : pos}
+            {i, j          : int}
+            {n_position    : int}
+            (chessboard    : !chessboard_vt (int, n_ranks, n_files),
+             i             : int i,
+             j             : int j,
+             n_position    : int n_position,
+             tours_printed : &int) :
+        void =
+      if tours_printed < max_tours then
+        let
+          fn
+          print_board {i1, j1 : int}
+                      (chessboard    : !chessboard_vt (int, n_ranks,
+                                                        n_files),
+                       tours_printed : &int) :
+              void =
+            begin
+              tours_printed := succ tours_printed;
+              fprintln! (f, "Tour number ", tours_printed);
+              knights_tour_moves_fprint (f, chessboard);
+              fprintln! (f);
+              knights_tour_board_fprint (f, chessboard);
+              fprintln! (f);
+              fprintln! (f)
+            end
+
+          fn
+          satisfies_closedness
+                    {i1, j1 : int}
+                    (move : move_t (i1, j1)) :
+              bool =
+            if closed_only then
+              let
+                val @(i1, j1) = move
+                val i_diff = abs (i1 - i_start)
+                val j_diff = abs (j1 - j_start)
+              in
+                (i_diff = 1 && j_diff = 2)
+                  || (i_diff = 2 && j_diff = 1)
+              end
+            else
+              true
+
+          fn
+          try_last_move
+                    {i1, j1 : int}
+                    (chessboard    : !chessboard_vt (int, n_ranks,
+                                                     n_files),
+                     move          : move_t (i1, j1),
+                     tours_printed : &int) :
+              void =
+            if ~move_t_is_nil move && satisfies_closedness move then
+              let
+                val @(i1, j1) = move
+              in
+                chessboard_vt_set<int> (chessboard, i1, j1,
+                                        n_position + 1);
+                print_board (chessboard, tours_printed);
+                chessboard_vt_set<int> (chessboard, i1, j1,
+                                        EMPTY_SQUARE)
+              end
+
+          fun
+          explore_inner (chessboard : !chessboard_vt (int, n_ranks,
+                                                      n_files),
+                         tours_printed : &int) :
+              void =
+            if u2i (chessboard.n_squares) - n_position = 1 then
+              (* Is the last move possible? If so, make it and print
+                 the board. (Only zero or one of the moves can be
+                 non-nil.) *)
+              let
+                val moves = possible_moves (chessboard, i, j)
+              in
+                try_last_move (chessboard, moves.0, tours_printed);
+                try_last_move (chessboard, moves.1, tours_printed);
+                try_last_move (chessboard, moves.2, tours_printed);
+                try_last_move (chessboard, moves.3, tours_printed);
+                try_last_move (chessboard, moves.4, tours_printed);
+                try_last_move (chessboard, moves.5, tours_printed);
+                try_last_move (chessboard, moves.6, tours_printed);
+                try_last_move (chessboard, moves.7, tours_printed)
+              end
+            else
+              let
+                val moves = next_moves (chessboard, i, j, n_position)
+                macdef explore_move (move) =
+                  begin
+                    if ~move_t_is_nil ,(move) then
+                      explore (chessboard, (,(move)).0, (,(move)).1,
+                               succ n_position, tours_printed)
+                  end
+              in
+                explore_move (moves.0);
+                explore_move (moves.1);
+                explore_move (moves.2);
+                explore_move (moves.3);
+                explore_move (moves.4);
+                explore_move (moves.5);
+                explore_move (moves.6);
+                explore_move (moves.7)
+              end
+        in
+          chessboard_vt_set<int> (chessboard, i, j, n_position);
+          explore_inner (chessboard, tours_printed);
+          chessboard_vt_set<int> (chessboard, i, j, EMPTY_SQUARE)
+        end
+
+    val _ = explore (chessboard, i, j, 1, tours_printed)
+
+    val _ = $UNSAFE.castvwtp0{void} chessboard
+  }
+
+fn
+algebraic_notation_to_move (s : string) :
+    move_t =
+  let
+    val s = g1ofg0 s
+    val n = string_length s
+  in
+    if n = 2 then
+      let
+        val i = g1ofg0 (char2i (s[1]) - char2i ('0'))
+        val j = g1ofg0 (char2i (s[0]) - char2i ('a') + 1)
+      in
+        @(i, j)
+      end
+    else
+      @(1, 1)
+  end
+
+implement
+main0 (argc, argv) =
+  {
+    val @(i, j) =
+      begin
+        if 2 <= argc then
+          algebraic_notation_to_move (argv[1])
+        else
+          @(1, 1)
+      end : move_t
+
+    val max_tours =
+      begin
+        if 3 <= argc then
+          $extfcall (int, "atoi", argv[2])
+        else
+          1
+      end : int
+    val max_tours = g1ofg0 max_tours
+
+    val closed_only =
+      begin
+        if 4 <= argc then
+          argv[3] = "closed"
+        else
+          false
+      end : bool
+
+    val _ = make_and_fprint_tours (stdout_ref, 8, 8, i, j, max_tours,
+                                   closed_only)
+  }

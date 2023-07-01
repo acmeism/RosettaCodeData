@@ -1,0 +1,1 @@
+stat -c %n * |sort

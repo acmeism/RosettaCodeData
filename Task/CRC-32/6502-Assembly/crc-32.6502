@@ -1,0 +1,113 @@
+PRHEX	EQU  $FDDA ; <= REPLACE THIS WITH THE PRHEX ROUTINE FOR YOUR MACHINE
+
+string	EQU  $EC
+length	EQU  $EE
+crc0	EQU  $FA
+crc1	EQU  $FB
+crc2	EQU  $FC
+crc3	EQU  $FD
+table0	EQU  $9200
+table1	EQU  $9300
+table2	EQU  $9400
+table3	EQU  $9500
+	ORG  $9114
+	LDA #<text
+	STA  string
+	LDA #>text
+	STA  string+1
+	LDA #$2b ; length of text
+	STA  length
+	LDA #$00
+	STA  length+1
+	STA  crc0
+	STA  crc1
+	STA  crc2
+	STA  crc3
+	JSR  crc32
+	LDA  crc3
+	JSR  PRHEX
+	LDA  crc2
+	JSR  PRHEX
+	LDA  crc1
+	JSR  PRHEX
+	LDA  crc0
+	JMP  PRHEX
+text
+	ASC 'The quick brown fox jumps over the lazy dog'
+	; ORG  $916E
+crc32
+	JSR  start
+	LDY  string
+	STX  string
+loop
+	LDA length
+	BNE no_borrow
+	LDA length+1
+	BEQ ones_complement
+	DEC length+1
+no_borrow
+	DEC length
+	LDA (string),Y
+	EOR  crc0
+	TAX
+	LDA  table0,X
+	EOR  crc1
+	STA  crc0
+	LDA  table1,X
+	EOR  crc2
+	STA  crc1
+	LDA  table2,X
+	EOR  crc3
+	STA  crc2
+	LDA  table3,X
+	STA  crc3
+	INY
+	BNE  loop
+	INC  string+1
+	BNE  loop
+start
+have_table
+	LDX #$00
+	BNE  loop4 ; LDX #$04 BNE ones_complement
+loop256
+	LDA #$00
+	STA  table3,X
+	STA  table2,X
+	STA  table1,X
+	TXA
+	STA  table0,X
+	LDY #$08
+loop8
+	LSR  table3,X
+	ROR  table2,X
+	ROR  table1,X
+	ROR  table0,X
+	BCC  no_xor
+	LDA  table3,X
+	EOR #$ED
+	STA  table3,X
+	LDA  table2,X
+	EOR #$B8
+	STA  table2,X
+	LDA  table1,X
+	EOR #$83
+	STA  table1,X
+	LDA  table0,X
+	EOR #$20
+	STA  table0,X
+no_xor
+	DEY
+	BNE  loop8
+	INX
+	BNE  loop256
+ones_complement
+	LDX #$04
+	STX  have_table+1 ; self-modify
+loop4
+	DEX
+	LDA  crc0,X
+	EOR #$FF
+	STA  crc0,X
+	TXA
+	BNE loop4
+	RTS

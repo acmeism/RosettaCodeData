@@ -1,0 +1,62 @@
+#
+# A mandelbrot generator that outputs a PBM file. This can be used to measure
+# performance differences between LIL versions and measure performance
+# bottlenecks (although keep in mind that LIL is not supposed to be a fast
+# language, but a small one which depends on C for the slow parts - in a real
+# program where for some reason mandelbrots are required, the code below would
+# be written in C). The code is based on the mandelbrot test for the Computer
+# Language Benchmarks Game at http://shootout.alioth.debian.org/
+#
+# In my current computer (Intel Core2Quad Q9550 @ 2.83GHz) running x86 Linux
+# the results are (using the default 256x256 size):
+#
+#  2m3.634s  - commit 1c41cdf89f4c1e039c9b3520c5229817bc6274d0 (Jan 10 2011)
+#
+# To test call
+#
+#  time ./lil mandelbrot.lil > mandelbrot.pbm
+#
+# with an optimized version of lil (compiled with CFLAGS=-O3 make).
+#
+
+set width [expr $argv]
+if not $width { set width 256 }
+set height $width
+set bit_num 0
+set byte_acc 0
+set iter 50
+set limit 2.0
+
+write "P4\n${width} ${height}\n"
+
+for {set y 0} {$y < $height} {inc y} {
+   for {set x 0} {$x < $width} {inc x} {
+       set Zr 0.0 Zi 0.0 Tr 0.0 Ti 0.0
+       set Cr [expr 2.0 * $x / $width - 1.5]
+       set Ci [expr 2.0 * $y / $height - 1.0]
+       for {set i 0} {$i < $iter && $Tr + $Ti <= $limit * $limit} {inc i} {
+           set Zi [expr 2.0 * $Zr * $Zi + $Ci]
+           set Zr [expr $Tr - $Ti + $Cr]
+           set Tr [expr $Zr * $Zr]
+           set Ti [expr $Zi * $Zi]
+       }
+
+       set byte_acc [expr $byte_acc << 1]
+       if [expr $Tr + $Ti <= $limit * $limit] {
+           set byte_acc [expr $byte_acc | 1]
+       }
+
+       inc bit_num
+
+       if [expr $bit_num == 8] {
+           writechar $byte_acc
+           set byte_acc 0
+           set bit_num 0
+       } {if [expr $x == $width - 1] {
+           set byte_acc [expr 8 - $width % 8]
+           writechar $byte_acc
+           set byte_acc 0
+           set bit_num 0
+       }}
+   }
+}

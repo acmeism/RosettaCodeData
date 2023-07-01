@@ -1,0 +1,109 @@
+INCLUDE "D2:REAL.ACT" ;from the Action! Tool Kit
+
+DEFINE TEXT_SIZE="40"
+BYTE ARRAY text(TEXT_SIZE)
+
+CARD FUNC GetFrame()
+  BYTE RTCLOK1=$13,RTCLOK2=$14
+  CARD res
+  BYTE lsb=res,msb=res+1
+
+  lsb=RTCLOK2
+  msb=RTCLOK1
+RETURN (res)
+
+PROC CalcFPS(CARD frames REAL POINTER fps)
+  BYTE PALNTSC=$D014
+  REAL ms,r1000
+
+  IF PALNTSC=15 THEN
+    frames==*60
+  ELSE
+    frames==*50
+  FI
+
+  IntToReal(1000,r1000)
+  IntToReal(frames,ms)
+  RealDiv(r1000,ms,fps)
+RETURN
+
+PROC FillNoise()
+  BYTE POINTER ptr
+  BYTE x,y,rnd=$D20A
+
+  ptr=PeekC(88)
+  FOR y=0 TO 191
+  DO
+    FOR x=0 TO 39
+    DO
+      ptr^=rnd
+      ptr==+1
+    OD
+  OD
+RETURN
+
+PROC PrepareScreen()
+  BYTE COLOR1=$02C5,COLOR2=$02C6
+  CARD SDLSTL=$0230,ptr
+  BYTE i,v
+  BYTE ARRAY dlist(205)
+
+  Graphics(8+16)
+  COLOR1=$0F
+  COLOR2=$00
+
+  ;prepare text
+  FOR i=0 TO TEXT_SIZE-1
+  DO
+    text(i)=0
+  OD
+  text(6)='F-32
+  text(7)='P-32
+  text(8)='S-32
+
+  ;modify display list to add one row with text on the top
+  dlist(0)=$70
+  dlist(1)=$70
+  dlist(2)=$42
+  PokeC(dlist+3,text)
+
+  ptr=SDLSTL
+  ptr==+3
+  FOR i=5 TO 202
+  DO
+    dlist(i)=Peek(ptr)
+    ptr==+1
+  OD
+  PokeC(dlist+203,dlist)
+
+  SDLSTL=dlist
+RETURN
+
+PROC PrintFPS(REAL POINTER fps)
+  CHAR ARRAY tmp(20)
+  BYTE i
+
+  StrR(fps,tmp)
+  FOR i=1 TO 5
+  DO
+    text(i-1)=tmp(i)-32
+  OD
+RETURN
+
+PROC Main()
+  BYTE CH=$02FC
+  CARD beg,end
+  REAL fps
+
+  PrepareScreen()
+  beg=GetFrame()
+  DO
+    FillNoise()
+    end=GetFrame()
+    CalcFPS(end-beg,fps)
+    PrintFPS(fps)
+    beg=end
+  UNTIL CH#$FF
+  OD
+  CH=$FF
+RETURN

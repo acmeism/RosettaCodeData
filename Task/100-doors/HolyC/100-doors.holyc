@@ -1,0 +1,14 @@
+U8 is_open[100];
+U8 pass = 0, door = 0;
+
+/* do the 100 passes */
+for (pass = 0; pass < 100; ++pass)
+  for (door = pass; door < 100; door += pass + 1)
+    is_open[door] = !is_open[door];
+
+/* output the result */
+for (door = 0; door < 100; ++door)
+  if (is_open[door])
+    Print("Door #%d is open.\n", door + 1);
+  else
+    Print("Door #%d is closed.\n", door + 1);

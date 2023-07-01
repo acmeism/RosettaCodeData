@@ -1,0 +1,3 @@
+bagOfChars := Bag new.
+'someFile' asFilename readingLinesDo:[:eachLine | bagOfChars addAll:eachLine].
+bag sortedCounts ...

@@ -1,0 +1,2 @@
+puts [bitcoin_addressValid 1Q1pE5vPGEEMqRcVRMbtBK842Y6Pzo6nK9]
+puts [bitcoin_addressValid 1AGNa15ZQXAZUgFiqJ2i7Z2DPU2J6hW62i]

@@ -1,0 +1,35 @@
+FUNCTION isPrime (ValorEval)
+    IF ValorEval < 2 THEN isPrime = False
+    IF ValorEval MOD 2 = 0 THEN isPrime = 2
+    IF ValorEval MOD 3 = 0 THEN isPrime = 3
+    d = 5
+    WHILE d * d <= ValorEval
+        IF ValorEval MOD d = 0 THEN isPrime = False ELSE d = d + 2
+    WEND
+    isPrime = True
+END FUNCTION
+
+FUNCTION isWilson (n, p)
+    IF p < n THEN isWilson = False
+    prod = 1
+    p2 = p ^ 2
+    FOR i = 1 TO n - 1
+        prod = (prod * i) MOD p2
+    NEXT i
+    FOR i = 1 TO p - n
+        prod = (prod * i) MOD p2
+    NEXT i
+    prod = (p2 + prod - (-1) ^ n) MOD p2
+    IF prod = 0 THEN isWilson = True ELSE isWilson = False
+END FUNCTION
+
+PRINT " n:      Wilson primes"
+PRINT "----------------------"
+FOR n = 1 TO 11
+    PRINT USING "##:      "; n;
+    FOR p = 3 TO 10099 STEP 2
+        If isPrime(p) AND isWilson(n, p) Then Print p; " ";
+    NEXT p
+    PRINT
+NEXT n
+END

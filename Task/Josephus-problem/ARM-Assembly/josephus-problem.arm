@@ -1,0 +1,198 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/* ARM assembly Raspberry PI  */
+/*  program josephus.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.equ STDOUT, 1           @ Linux output console
+.equ EXIT,   1           @ Linux syscall
+.equ WRITE,  4           @ Linux syscall
+.equ BRK,    0x2d        @ Linux syscall
+.equ CHARPOS,     '@'
+
+.equ FIRSTNODE,        0              //identification first node
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure linkedlist*/
+    .struct  0
+llist_next:                            // next element
+    .struct  llist_next + 4
+llist_value:                           // element value
+    .struct  llist_value + 4
+llist_fin:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:          .asciz "Start program.\n"
+szMessFinPgm:            .asciz "Program End ok.\n"
+szRetourLigne:            .asciz "\n"
+szMessValElement:        .asciz "Value : @ \n"
+szMessListeVide:         .asciz "List empty.\n"
+szMessImpElement:        .asciz "Node display: @ Value : @ Next @ \n"
+szMessErrComm:           .asciz "Incomplete Command line  : josephus <maxi> <intervalle>\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:         .skip 24
+.align 4
+qDebutListe1:      .skip llist_fin
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                   // entry of program
+    mov fp,sp                           // copy stack address  register r29 fp
+    ldr r0,iAdrszMessDebutPgm
+    bl affichageMess
+    ldr r0,[fp]                        // parameter number command line
+    cmp r0,#2                          // correct ?
+    ble erreurCommande                 // error
+
+    add r0,fp,#8                       // address parameter 2
+    ldr r0,[r0]
+    bl conversionAtoD
+    add r2,r0,#FIRSTNODE               // save maxi
+    add r0,fp,#12                      // address parameter 3
+    ldr r0,[r0]
+    bl conversionAtoD
+    mov r8,r0                          // save gap
+
+    mov r0,#FIRSTNODE                  // create first node
+    mov r1,#0
+    bl createNode
+    mov r5,r0                          // first node address
+    mov r6,r0
+    mov r4,#FIRSTNODE + 1
+    mov r3,#1
+1:                                     // loop create others nodes
+    mov r0,r4                          // key value
+    mov r1,#0
+    bl createNode
+    str r0,[r6,#llist_next]             // store current node address in prev node
+    mov r6,r0
+    add r4,r4,#1
+    add r3,r3,#1
+    cmp r3,r2                          // maxi ?
+    blt 1b
+    str r5,[r6,#llist_next]            // store first node address in last pointer
+    mov r4,r6
+2:
+    mov r2,#1                          // counter for gap
+3:
+    ldr r4,[r4,#llist_next]
+    add r2,r2,#1
+    cmp r2,r8                          // intervalle ?
+    blt 3b
+    ldr r5,[r4,#llist_next]            // removing the node from the list
+    ldr r2,[r5,#llist_value]
+    ldr r7,[r5,#llist_next]            // load pointer next
+    str r7,[r4,#llist_next]            // ans store in prev node
+    //mov r0,r25
+    //bl displayNode
+    cmp r7,r4
+    moveq r4,r7
+    bne 2b                              // and loop
+
+    mov r0,r4
+    bl displayNode                      // display last node
+
+    b 100f
+erreurCommande:
+    ldr r0,iAdrszMessErrComm
+    bl affichageMess
+    mov r0,#1                          // error code
+    b 100f
+100:                                   // program end standard
+    ldr r0,iAdrszMessFinPgm
+    bl affichageMess
+    mov r0,#0                          // return code Ok
+    mov r7,#EXIT                       // system call "Exit"
+    svc #0
+
+iAdrszMessDebutPgm:      .int szMessDebutPgm
+iAdrszMessFinPgm:        .int szMessFinPgm
+iAdrszRetourLigne:       .int szRetourLigne
+iAdrqDebutListe1:        .int qDebutListe1
+iAdrszMessErrComm:       .int szMessErrComm
+
+/******************************************************************/
+/*     create node                                             */
+/******************************************************************/
+/* r0 contains key   */
+/* r1 contains zero or address next node */
+/* r0 returns address heap node  */
+createNode:
+    push {r1-r11,lr}            // save  registers
+    mov r9,r0                   // save key
+    mov r10,r1                  // save key
+    mov r0,#0                   // allocation place heap
+    mov r7,#BRK                 // call system 'brk'
+    svc #0
+    mov r11,r0                  // save address heap for node
+    add r0,r0,#llist_fin        // reservation place node length
+    mov r7,#BRK                 // call system 'brk'
+    svc #0
+    cmp r0,#-1                  // allocation error
+    beq 100f
+
+    str r9,[r11,#llist_value]
+    str r10,[r11,#llist_next]
+    mov r0,r11
+100:
+    pop {r1-r11,lr}            // restaur registers
+    bx lr                      // return
+
+/******************************************************************/
+/*     display infos node                                     */
+/******************************************************************/
+/* r0 contains node address */
+displayNode:
+    push {r1-r4,lr}           // save  registers
+    mov r2,r0
+    ldr r1,iAdrsZoneConv
+    bl conversion16
+    mov r4,#0
+    strb r4,[r1,r0]           // store zero final
+    ldr r0,iAdrszMessImpElement
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    mov r3,r0
+    ldr r0,[r2,#llist_value]
+    ldr r1,iAdrsZoneConv
+    bl conversion10S
+    mov r4,#0
+    strb r4,[r1,r0]           // store zero final
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    mov r3,r0
+    ldr r0,[r2,#llist_next]
+    ldr r1,iAdrsZoneConv
+    bl conversion16
+    mov r4,#0
+    strb r4,[r1,#8]           // store zero final
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    bl affichageMess
+
+100:
+    pop {r1-r4,lr}            // restaur registers
+    bx lr                     // return
+iAdrsZoneConv:               .int sZoneConv
+iAdrszMessImpElement:        .int szMessImpElement
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

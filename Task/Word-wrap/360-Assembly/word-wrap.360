@@ -1,0 +1,223 @@
+*        Word wrap                 29/01/2017
+WORDWRAP CSECT
+         USING  WORDWRAP,R13
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    prolog
+         ST     R13,4(R15)         " <-
+         ST     R15,8(R13)         " ->
+         LR     R13,R15            " addressability
+         MVC    S2,=CL96' '        s2=''
+         SR     R0,R0
+         STH    R0,LENS2           lens2=0
+         LA     R8,1               i=1
+LOOPI    CH     R8,=AL2(NTS)       do i=1 to hbound(ts)
+         BH     ELOOPI             --
+         LH     R4,LENS2
+         LTR    R4,R4              if lens2=0
+         BNZ    IFLENS2            then
+         LR     R1,R8                i
+         MH     R1,=H'48'
+         LA     R14,TS-48(R1)
+         MVC    S(48),0(R14)         s=ts(i)
+         MVC    S+48(48),=CL48' '
+         LA     R12,L'TS             jmax=length(ts)
+         B      EIFLENS2           else
+IFLENS2  MVC    S,=CL96' '           s=''
+         LA     R6,S                 @s
+         LH     R7,LENS2
+         LA     R4,S2                @s2
+         LH     R5,LENS2
+         MVCL   R6,R4              substr(s,1,lens2)=substr(s2,1,lens2)
+         LH     R2,LENS2
+         LA     R2,1(R2)             lens2+1
+         LR     R1,R8                i
+         MH     R1,=H'48'
+         LA     R14,TS-48(R1)        @ts(i)
+         LA     R15,S-1
+         AR     R15,R2
+         MVC    0(48,R15),0(R14)     substr(s,lens2+1,48)=ts(i)
+         LA     R12,L'S              jmax=length(s)
+EIFLENS2 MVI    OKS2,X'01'         oks2=true
+WHILEOK  CLI    OKS2,X'01'         do while(oks2)
+         BNE    EWHILEOK           --
+         LR     R9,R12             j=jmax  /*loop1*/
+LOOPJ1   CH     R9,=H'1'           do j=jmax to 1 by -1
+         BL     ELOOPJ1            --
+         LA     R14,S-1              @s-1
+         AR     R14,R9               j
+         MVC    CJ(1),0(R14)         cj=substr(s,j,1)
+         CLI    CJ,C' '              if cj^=' '
+         BNE    ELOOPJ1              then leave j
+         BCTR   R9,0                 j=j-1
+         B      LOOPJ1             end do j
+ELOOPJ1  STH    R9,LENS            lens=j  {length of s}
+         MVI    OKJ,X'00'          okj=false  /*loop2*/
+         LH     R11,W              js=w
+         LH     R4,W
+         CH     R4,LENS            if w>lens
+         BNH    IFWLENS
+         LH     R11,LENS           js=lens
+IFWLENS  LR     R9,R11             j=js
+LOOPJ2   CH     R9,=H'1'           do j=js to 1 by -1
+         BL     ELOOPJ2            --
+         LA     R14,S-1              @s-1
+         AR     R14,R9               +j
+         MVC    CJ(1),0(R14)         cj=substr(s,j,1)
+         CLI    CJ,C' '              if cj=' '
+         BNE    ITERJ2               then
+         MVI    OKJ,X'01'              okj=true
+         B      ELOOPJ2                leave j
+ITERJ2   BCTR   R9,0                 j=j-1
+         B      LOOPJ2             end do j
+ELOOPJ2  CLI    OKJ,X'00'          if ^okj
+         BNE    ELOOPK
+         MVI    OKK,X'00'          okk=false  /*loop3*/
+         LH     R10,W              k=w
+LOOPK    CH     R10,LENS           do k=w to lens
+         BH     ELOOPK             --
+         LA     R14,S-1              @s-1
+         AR     R14,R10              +k
+         MVC    CK(1),0(R14)         ck=substr(s,k,1)
+         CLI    CK,C' '              if ck=' '
+         BNE    ITERK                then
+         MVI    OKK,X'01'              okk=true
+         B      ELOOPK                 leave k
+ITERK    LA     R10,1(R10)           k=k+1
+         B      LOOPK              end do k
+ELOOPK   MVC    S2,=CL96' '        s2=' '
+         SR     R0,R0
+         STH    R0,LENS2           lens2=0
+         MVI    CAS,X'01'          cas=true
+         LH     R1,LENS
+         CH     R1,W               lens<w
+         BL     IFLENSLW
+         MVI    CAS,X'00'          cas=false
+IFLENSLW CLI    CAS,X'00'          if ^cas
+         BNE    IFNOTCAS           then
+         CLI    OKJ,X'01'            if okj
+         BNE    NOKJ                 then
+         STH    R9,LENS1               lens1=j
+         LH     R2,LENS
+         SR     R2,R9                  -j
+         LA     R2,1(R2)
+         STH    R2,LENS2               lens2=lens-j+1
+         LA     R6,S1
+         LR     R7,R9                  j
+         LA     R4,S
+         LR     R5,R7
+         MVCL   R6,R4                  s1=substr(s,1,j)
+         LH     R4,LENS2
+         LTR    R4,R4                  if lens2>0
+         BNP    ELJLENS2               then
+         LA     R6,S2
+         LH     R7,LENS2
+         LA     R4,S(R9)                 @s(j+1)
+         LR     R5,R7
+         MVCL   R6,R4                    s2=substr(s,j+1,lens2)
+         B      EFJLENS2
+ELJLENS2 SR     R0,R0                  else
+         STH    R0,LENS2                 lens2=0
+EFJLENS2 B      IFNOTCAS
+NOKJ     CLI    OKK,X'01'            else if okk
+         BNE    NOTOKK
+         STH    R10,LENS1              lens1=k
+         LH     R2,LENS
+         SR     R2,R10                 -k
+         LA     R2,1(R2)
+         STH    R2,LENS2               lens2=lens-k+1
+         LA     R6,S1
+         LR     R7,R10                 k
+         LA     R4,S
+         LR     R5,R7
+         MVCL   R6,R4                  s1=substr(s,1,k)
+         LH     R4,LENS2
+         LTR    R4,R4                  if lens2>0
+         BNP    ELKLENS2               then
+         LA     R6,S2
+         LH     R7,LENS2
+         LA     R4,S(R10)                @s(k+1)
+         LR     R5,R7
+         MVCL   R6,R4                    s2=substr(s,k+1,lens2)
+         B      EFKLENS2               else
+ELKLENS2 SR     R0,R0
+         STH    R0,LENS2                 lens2=0
+EFKLENS2 B      IFNOTCAS             else
+NOTOKK   LH     R0,LENS
+         STH    R0,LENS1               lens1=lens
+         MVC    S1,S                   s1=s
+IFNOTCAS CLI    CAS,X'01'          if cas
+         BNE    ELCAS              then
+         LH     R7,LENS
+         LA     R7,1(R7)
+         LA     R6,S2
+         LA     R4,S
+         LR     R5,R7
+         MVCL   R6,R4                s2=substr(s,1,lens+1)
+         LH     R2,LENS
+         LA     R2,1(R2)
+         STH    R2,LENS2             lens2=lens+1
+         B      EFCAS              else
+ELCAS    LA     R6,PG
+         LA     R7,L'PG
+         LA     R4,S1
+         LH     R5,LENS1
+         ICM    R5,B'1000',=C' '     padding
+         MVCL   R6,R4                pg=substr(s1,1,lens1)
+         XPRNT  PG,L'PG              put skip list(pg)
+EFCAS    MVI    OKS2,X'00'         oks2=false
+         LH     R4,LENS2
+         CH     R4,W               if lens2>w
+         BNH    EFWLENS2           then
+         MVI    OKS2,X'01'           oks2=true
+         LH     R0,LENS2
+         STH    R0,LENS              lens=lens2
+         MVC    S,S2                 s=s2
+EFWLENS2 B      WHILEOK            end while
+EWHILEOK LA     R8,1(R8)           i=i+1
+         B      LOOPI              end do i
+ELOOPI   LH     R4,LENS2
+         LTR    R4,R4              if lens2^=0
+         BZ     EFLENS2N           then
+         LA     R6,PG
+         LA     R7,L'PG
+         LA     R4,S2
+         LH     R5,LENS2
+         ICM    R5,B'1000',=C' '     padding
+         MVCL   R6,R4                pg=substr(s2,1,lens2)
+         XPRNT  PG,L'PG              put skip list(pg)
+EFLENS2N L      R13,4(0,R13)       epilog
+         LM     R14,R12,12(R13)    " restore
+         XR     R15,R15            " rc=0
+         BR     R14                exit
+TS       DC     CL48'In olden times when wishing still helped one,'
+         DC     CL48'there lived a king whose daughters were all,'
+         DC     CL48'beautiful, but the youngest was so beautiful'
+         DC     CL48'that the sun itself, which has seen so much,'
+         DC     CL48'was astonished whenever it shone in her face.'
+         DC     CL48'Close by the king''s castle lay a great dark'
+         DC     CL48'forest, and under an old lime tree in the'
+         DC     CL48'forest was a well, and when the day was very'
+         DC     CL48'warm, the king''s child went out into the forest'
+         DC     CL48'and sat down by the side of the cool fountain,'
+         DC     CL48'and when she was bored she took a golden ball,'
+         DC     CL48'and threw it up on high and caught it, and this'
+         DC     CL48'ball was her favorite plaything.'
+TSE      DC     0C
+NTS      EQU    (TSE-TS)/L'TS
+W        DC     H'36'              <-- input width  12<=w<=80
+LENS     DS     H
+S        DS     CL96
+LENS1    DS     H
+S1       DS     CL96
+LENS2    DS     H
+S2       DS     CL96
+OKJ      DS     X
+OKK      DS     X
+OKS2     DS     X
+CAS      DS     X
+CJ       DS     CL1
+CK       DS     CL1
+PG       DS     CL80
+         YREGS
+         END    WORDWRAP

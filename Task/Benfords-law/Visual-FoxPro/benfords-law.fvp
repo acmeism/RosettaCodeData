@@ -1,0 +1,40 @@
+#DEFINE CTAB CHR(9)
+#DEFINE COMMA ","
+#DEFINE CRLF CHR(13) + CHR(10)
+LOCAL i As Integer, n As Integer, n1 As Integer, rho As Double, c As String
+n = 1000
+LOCAL ARRAY a[n,2], res[1]
+CLOSE DATABASES ALL
+CREATE CURSOR fibo(dig C(1))
+INDEX ON dig TAG dig COLLATE "Machine"
+SET ORDER TO 0
+*!* Populate the cursor with the leading digit of the first 1000 Fibonacci numbers
+a[1,1] = "1"
+a[1,2] = 1
+a[2,1] = "1"
+a[2,2] = 1
+FOR i = 3 TO n
+    a[i,2] = a[i-2,2] + a[i-1,2]
+    a[i,1] = LEFT(TRANSFORM(a[i,2]), 1)
+ENDFOR
+APPEND FROM ARRAY a FIELDS dig
+CREATE CURSOR results (digit I, count I, prob B(6), expected B(6))
+INSERT INTO results ;
+SELECT dig, COUNT(1), COUNT(1)/n, Pr(VAL(dig)) FROM fibo GROUP BY dig ORDER BY dig
+n1 = RECCOUNT()
+*!* Correlation coefficient
+SELECT (n1*SUM(prob*expected) - SUM(prob)*SUM(expected))/;
+(SQRT(n1*SUM(prob*prob) - SUM(prob)*SUM(prob))*SQRT(n1*SUM(expected*expected) - SUM(expected)*SUM(expected))) ;
+FROM results INTO ARRAY res
+rho = CAST(res[1] As B(6))
+SET SAFETY OFF
+COPY TO benford.txt TYPE CSV
+c = FILETOSTR("benford.txt")
+*!* Replace commas with tabs
+c = STRTRAN(c, COMMA, CTAB) + CRLF + "Correlation Coefficient: " + TRANSFORM(rho)
+STRTOFILE(c, "benford.txt", 0)
+SET SAFETY ON
+
+FUNCTION Pr(d As Integer) As Double
+RETURN LOG10(1 + 1/d)
+ENDFUNC

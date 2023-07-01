@@ -1,0 +1,93 @@
+var bucket
+var bucket-size
+
+\ The 'bucket' will be a simple array of some values:
+: genbucket \ n --
+  a:new swap
+  (
+    \ make a random int up to 1000
+    rand-pcg n:abs 1000 n:mod
+    a:push
+  ) swap times
+  bucket ! ;
+
+\ display bucket and its total:
+: .bucket
+  bucket lock @
+    dup . space
+    ' n:+ 0 a:reduce . cr
+  bucket unlock drop ;
+
+\ Get current value of bucket #x
+: bucket@ \ n -- bucket[n]
+  bucket @
+  swap a:@ nip ;
+
+\ Transfer x from bucket n to bucket m
+: bucket-xfer \ m n x --
+  >r bucket @
+  \ m n bucket
+  over a:@ r@ n:-
+  rot swap a:!
+  \ m bucket
+  over a:@ r> n:+
+  rot swap a:!
+  drop ;
+
+\ Get two random indices to check (ensure they're not the same):
+: pick2
+  rand-pcg n:abs bucket-size @ n:mod dup >r
+  repeat
+    drop
+    rand-pcg n:abs bucket-size @ n:mod
+    r@ over n:=
+  while!
+  r> ;
+
+\ Pick two buckets and make them more equal (by a quarter of their difference):
+: make-equal
+  repeat
+    pick2
+    bucket lock @
+    third a:@ >r
+    over a:@ r> n:-
+    \ if they are equal, do nothing
+    dup not if
+      \ equal, so do nothing
+      drop -rot 2drop
+    else
+      4 n:/ n:int
+      >r -rot r>
+      bucket-xfer
+    then
+    drop
+    bucket unlock drop
+  again ;
+
+\ Moves a quarter of the smaller value from one (random) bucket to another:
+: make-redist
+  repeat
+    pick2 bucket lock @
+      \ n m bucket
+      over a:@ >r \ n m b b[m]
+      third a:@ r>  \ n m b b[n]
+      n:min 4 n:/ n:int
+      nip bucket-xfer
+
+    bucket unlock drop
+  again ;
+
+: app:main
+  \ create 10 buckets with random positive integer values:
+  10 genbucket bucket @ a:len bucket-size ! drop
+
+  \ print the bucket
+  .bucket
+
+  \ the problem's tasks:
+  ' make-equal t:task
+  ' make-redist t:task
+
+  \ the print-the-bucket task. We'll do it just 10 times and then quit:
+  ( 1 sleep .bucket ) 10 times
+  bye ;

@@ -1,0 +1,108 @@
+	;;; 	Show attractive numbers up to 120
+MAX:	equ	120	; can be up to 255 (8 bit math is used)
+	;;;	CP/M calls
+puts:	equ	9
+bdos:	equ	5
+	org	100h
+	;;;	-- Zero memory ------------------------------------------------
+	lxi	b,fctrs	; page 2
+	mvi	e,2	; zero out two pages
+	xra	a
+	mov	d,a	
+zloop:	stax	b
+	inx	b
+	dcr	d
+	jnz	zloop
+	dcr	e
+	jnz	zloop
+	;;; 	-- Generate primes --------------------------------------------
+	lxi	h,plist	; pointer to beginning of primes list
+	mvi	e,2	; first prime is 2
+pstore:	mov	m,e	; begin prime list
+pcand:	inr	e	; next candidate
+	jz	factor	; if 0, we've rolled over, so we're done
+	mov	l,d	; beginning of primes list (D=0 here)
+	mov	c,m	; C = prime to test against
+ptest:	mov	a,e
+ploop:	sub	c	; test by repeated subtraction
+	jc	notdiv	; if carry, not divisible
+	jz	pcand	; if zero, next candidate
+	jmp	ploop
+notdiv:	inx	h	; get next prime
+	mov	c,m
+	mov	a,c	; is it zero?
+	ora	a	
+	jnz	ptest	; if not, test against next prime
+	jmp	pstore	; otherwise, add E to the list of primes
+	;;;	-- Count factors ----------------------------------------------
+factor:	mvi	c,2	; start with two
+fnum:	mvi	a,MAX	; is candidate beyond maximum?
+	cmp	c
+	jc	output	; then stop
+	mvi	d,0	; D = number of factors of C
+	mov	l,d	; L = first prime
+	mov	e,c	; E = number we're factorizing
+fprim:	mvi	h,ppage	; H = current prime
+	mov	h,m
+ftest:	mvi	b,0
+	mov	a,e
+	cpi	1	; If one, we've counted all the factors
+	jz	nxtfac
+fdiv:	sub	h
+	jz	divi
+	jc	ndivi
+	inr	b
+	jmp	fdiv
+divi:	inr	d	; we found a factor
+	inr	b
+	mov	e,b	; we've removed it, try again
+	jmp	ftest
+ndivi:	inr	l	; not divisible, try next prime
+	jmp	fprim
+nxtfac:	mov	a,d	; store amount of factors
+	mvi	b,fcpage
+	stax	b
+	inr	c	; do next number
+	jmp	fnum
+	;;;	-- Check which numbers are attractive and print them ----------
+output:	lxi	b,fctrs+2	; start with two
+	mvi	h,ppage	; H = page of primes
+onum:	mvi	a,MAX	; is candidate beyond maximum?
+	cmp	c
+	rc		; then stop
+	ldax	b	; get amount of factors
+	mvi	l,0	; start at beginning of prime list
+chprm:	cmp 	m	; check against current prime
+	jz	print	; if it's prime, then print the number
+	inr	l	; otherwise, check next prime
+	jp	chprm
+next:	inr	c	; check next number
+	jmp	onum
+print:	push	b	; keep registers
+	push	h
+	mov	a,c	; print number
+	call	printa
+	pop	h	; restore registers
+	pop	b
+	jmp	next
+	;;;	Subroutine: print the number in A
+printa:	lxi	d,num	; DE = string
+	mvi	b,10	; divisor
+digit:	mvi	c,-1	; C = quotient
+divlp:	inr	c
+	sub	b
+	jnc	divlp
+	adi	'0'+10	; make digit
+	dcx	d	; store digit
+	stax	d
+	mov	a,c	; again with new quotient
+	ora	a	; is it zero?
+	jnz	digit	; if not, do next digit
+	mvi	c,puts	; CP/M print string (in DE)
+	jmp	bdos
+	db	'000'	; placeholder for number
+num:	db	' $'
+fcpage:	equ	2	; factors in page 2
+ppage:	equ	3	; primes in page 3
+fctrs:	equ	256*fcpage
+plist:	equ	256*ppage

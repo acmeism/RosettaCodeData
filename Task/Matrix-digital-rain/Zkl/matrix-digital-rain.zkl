@@ -1,0 +1,39 @@
+var [const] codes=Walker.chain(  // a bunch of UTF non ascii chars
+         [0x0391..0x03a0], [0x03a3..0x0475], [0x0400..0x0475],
+         [0x048a..0x052f], [0x03e2..0x03ef], [0x2c80..0x2ce9],
+         [0x2200..0x2217], [0x2100..0x213a], [0x2a00..0x2aff])
+	 .apply(fcn(utf){ utf.toString(-8) }),  // jeez this is lame
+    codeSz=codes.len(),	// 970
+    c=L("\e[38;2;255;255;255m",[255..30,-15].apply("\e[38;2;0;%d;0m".fmt),
+        (250).pump(List,T(Void,"\e[38;2;0;25;0m"))).flatten(),
+    csz=c.len(); // 267, c is ANSI escape code fg colors: 38;2;<r;g;b>m
+
+// query the ANSI terminal
+rows,cols := System.popen("stty size","r").readln().split().apply("toInt");
+
+o,s,fg := buildScreen(rows,cols);
+ssz:=s.len();
+
+print("\e[?25l\e[48;5;232m");  // hide the cursor, set background color to dark
+while(1){		       // ignore screen resizes
+   print("\e[1;1H");	       // move cursor to 1,1
+   foreach n in (ssz){	       // print a screen full
+      print( c[fg[n]], s[n] ); // forground color, character
+      fg[n]=(fg[n] + 1)%csz;   // fade to black
+   }
+   do(100){ s[(0).random(ssz)]=codes[(0).random(codeSz)] }  // some new chars
+   Atomic.sleep(0.1);	       // frame rate for my system, up to 200x41 terminal
+}
+
+fcn buildScreen(rows,cols){    // build a row major array as list
+   // s --> screen full of characters
+   s:=(rows*cols).pump(List(), fcn{ codes[(0).random(codeSz)]});
+   // array fb-->( fg color, fg ..) where fg is an ANSI term 48;5;<n>m color
+   fg:=List.createLong(s.len(),0);
+   o:=csz.pump(List()).shuffle()[0,cols];  // cols random #s
+   foreach row in (rows){		   // set fg indices
+      foreach col in (cols){ fg[row*cols + col] = o[col] }
+      o=o.apply(fcn(n){ n-=1; if(n<0) n=csz-1; n%csz });  // fade out
+   }
+   return(o,s,fg);
+}

@@ -1,0 +1,162 @@
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+(* For simplicity, I implement this task only for sorting values of
+   non-linear type. That would include all the basic integer types,
+   garbage-collected strings, etc.
+
+   Also I freely create arrays as workspace, although the size of any
+   workspace array is equal only to the number of indices (not to the
+   number of values). *)
+
+extern fn {a : t@ype}
+sort_disjoint_sublist$cmp : (a, a) -<> int
+
+fn {a : t@ype}
+sort_disjoint_sublist
+          {m       : int}
+          {n       : int}
+          (values  : &list_vt (a, m) >> _,
+           indices : list ([i : nat | i < m] int i, n))
+    : void =
+  let
+    typedef index = [i : nat | i < m] int i
+
+    prval () = lemma_list_vt_param values
+    prval () = lemma_list_param indices
+    val num_values : size_t m = i2sz (list_vt_length values)
+    and num_indices : size_t n = i2sz (list_length indices)
+
+    (* Put the indices in ascending order. *)
+    val @(pf_ix, pfgc_ix | p_ix) =
+      array_ptr_alloc<index> num_indices
+    macdef ix = !p_ix
+    val () = array_initize_list<index> (ix, sz2i num_indices, indices)
+    implement
+    array_quicksort$cmp<index> (x, y) =
+      if x < y then ~1 else 1
+    val () = array_quicksort<index> (ix, num_indices)
+
+    (* Initialize a "refs" array with pointers to the relevant list
+       nodes. The pointers will be in ascending index order. *)
+    val @(pf_refs, pfgc_refs | p_refs) =
+      array_ptr_alloc<ptr> num_indices
+    fun
+    init_refs {j      : nat | j <= m}
+              {i      : nat | i <= n}
+              {p_refs : addr}
+              .<m - j>.
+              (pf_refs : !array_v (ptr?, p_refs + (i * sizeof ptr),
+                                   n - i)
+                          >> array_v (ptr, p_refs + (i * sizeof ptr),
+                                      n - i) |
+               ix      : &array (index, n),
+               p_refs  : ptr p_refs,
+               i       : size_t i,
+               values  : &list_vt (a, m - j),
+               j       : size_t j)
+        :<!wrt> void =
+      if i < num_indices then
+        case+ values of
+        | list_vt_nil () => $effmask_exn assertloc (false)
+        | @ list_vt_cons (head, tail) =>
+          if j = ix[i] then
+            let
+              prval @(pf_elem, pf_rest) = array_v_uncons pf_refs
+              val p = ptr_add<ptr> (p_refs, i)
+              val () = ptr_set<ptr> (pf_elem | p, addr@ values)
+              val () = init_refs (pf_rest | ix, p_refs, succ i,
+                                            tail, succ j)
+              prval () = pf_refs := array_v_cons (pf_elem, pf_rest)
+              prval () = fold@ values
+            in
+            end
+          else
+            let
+              val () = init_refs (pf_refs | ix, p_refs, i,
+                                            tail, succ j)
+              prval () = fold@ values
+            in
+            end
+      else
+        let
+          prval () = pf_refs := array_v_unnil_nil{ptr?, ptr} pf_refs
+        in
+        end
+    val () = init_refs (pf_refs | ix, p_refs, i2sz 0, values, i2sz 0)
+
+    (* Sort through the "refs" pointers. Here we will do that by
+       copying the values to an array, sorting the array, then writing
+       the sorted values back. One could also do the sort in place,
+       however. *)
+    val @(pf_vals, pfgc_vals | p_vals) =
+      array_ptr_alloc<a> num_indices
+    macdef vals = !p_vals
+    implement
+    array_initize$init<a> (i, x) =
+      let
+        val @(pf1, fpf1 | p1) = $UN.ptr_vtake{array (ptr, n)} p_refs
+        macdef refs = !p1
+        val i1 = g1ofg0 i
+        prval () = lemma_g1uint_param i1
+        val () = assertloc (i1 < num_indices)
+        val @(pf2, fpf2 | p2) = $UN.ptr_vtake{List1_vt a} (refs[i1])
+        val+ @ list_vt_cons (head, tail) = !p2
+        val () = x := head
+        prval () = fold@ (!p2)
+        prval () = fpf2 pf2
+        prval () = fpf1 pf1
+      in
+      end
+    val () = array_initize<a> (vals, num_indices)
+    implement
+    array_quicksort$cmp<a> (x, y) =
+      sort_disjoint_sublist$cmp<a> (x, y)
+    val () = array_quicksort<a> (vals, num_indices)
+    fun
+    write_back_values
+              {i       : nat | i <= n}
+              {p_refs  : addr}
+              (pf_refs : !array_v (ptr, p_refs, n) |
+               p_refs  : ptr p_refs,
+               vals    : &array (a, n),
+               i       : size_t i)
+        : void =
+      if i <> num_indices then
+        let
+          macdef refs = !p_refs
+          val @(pf1, fpf1 | p1) = $UN.ptr_vtake{List1_vt a} (refs[i])
+          val+ @ list_vt_cons (head, tail) = !p1
+          val () = head := vals[i]
+          prval () = fold@ (!p1)
+          prval () = fpf1 pf1
+        in
+          write_back_values (pf_refs | p_refs, vals, succ i)
+        end
+    val () = write_back_values (pf_refs | p_refs, vals, i2sz 0)
+  in
+    array_ptr_free (pf_ix, pfgc_ix | p_ix);
+    array_ptr_free (pf_refs, pfgc_refs | p_refs);
+    array_ptr_free (pf_vals, pfgc_vals | p_vals)
+  end
+
+implement
+sort_disjoint_sublist$cmp<int> (x, y) =
+  if x < y then
+    ~1
+  else if y < x then
+    1
+  else
+    0
+
+implement
+main0 () =
+  let
+    var values = $list_vt{int} (7, 6, 5, 4, 3, 2, 1, 0)
+    val indices = $list{[i : nat | i < 8] int i} (6, 1, 7)
+  in
+    println! values;
+    sort_disjoint_sublist<int> (values, indices);
+    println! values;
+    free values
+  end

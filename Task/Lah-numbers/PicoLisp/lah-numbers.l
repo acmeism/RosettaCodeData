@@ -1,0 +1,25 @@
+(de fact (N)
+   (if (=0 N)
+      1
+      (* N (fact (dec N))) ) )
+(de lah (N K)
+   (cond
+      ((=1 K) (fact N))
+      ((= N K) 1)
+      ((> K N) 0)
+      ((or (> 1 N) (> 1 K)) 0)
+      (T
+         (/
+            (* (fact N) (fact (dec N)))
+            (* (fact K) (fact (dec K)))
+            (fact (- N K)) ) ) ) )
+(prin (align -12 "n/k"))
+(apply tab (range 0 12) (need 13 -11))
+(for A (range 0 12)
+   (prin (align -2 A))
+   (for B (range 0 A)
+      (prin (align 11 (lah A B))) )
+   (prinl) )
+(prinl "Maximum value from the L(100, *) row:")
+(maxi '((N) (lah 100 N)) (range 0 100))
+(prinl @@)

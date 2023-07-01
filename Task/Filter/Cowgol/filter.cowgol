@@ -1,0 +1,72 @@
+include "cowgol.coh";
+
+# Cowgol has strict typing and there are no templates either.
+# Defining the type this way makes it easy to change.
+typedef FilterT is uint32;
+
+# In order to pass functions around, we need to define an
+# interface. The 'FilterPredicate' interface will take an argument
+# and return zero if it should be filtered out.
+interface FilterPredicate(x: FilterT): (keep: uint8);
+
+# Filter an array and store it a new location. Returns the new length.
+sub Filter(f:         FilterPredicate,
+           items:     [FilterT],
+           length:    intptr,
+           result:    [FilterT]):
+          (newLength: intptr) is
+    newLength := 0;
+    while length > 0 loop
+        var item := [items];
+        items := @next items;
+        if f(item) != 0 then
+            [result] := item;
+            result := @next result;
+            newLength := newLength + 1;
+        end if;
+        length := length - 1;
+    end loop;
+end sub;
+
+# Filter an array in place. Returns the new length.
+sub FilterInPlace(f:         FilterPredicate,
+                  items:     [FilterT],
+                  length:    intptr):
+                 (newLength: intptr) is
+    newLength := Filter(f, items, length, items);
+end sub;
+
+# Filter that selects even numbers
+sub Even implements FilterPredicate is
+    keep := (~ x as uint8) & 1;
+end sub;
+
+# Filter an array
+var array: uint32[] := {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+var filtered: uint32[@sizeof array];
+var length := Filter(Even, &array[0], @sizeof array, &filtered[0]);
+
+# Print result
+var i: uint8 := 0;
+while i < length as uint8 loop
+    print_i32(filtered[i]);
+    print_char(' ');
+    i := i + 1;
+end loop;
+print_nl();
+
+# Filter the result again in place for numbers less than 8
+sub LessThan8 implements FilterPredicate is
+    if x < 8 then keep := 1;
+    else keep := 0;
+    end if;
+end sub;
+
+length := FilterInPlace(LessThan8, &filtered[0], length);
+i := 0;
+while i < length as uint8 loop
+    print_i32(filtered[i]);
+    print_char(' ');
+    i := i + 1;
+end loop;
+print_nl();

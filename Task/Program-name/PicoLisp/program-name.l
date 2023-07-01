@@ -1,0 +1,2 @@
+: (cmd)
+-> "/usr/bin/picolisp"

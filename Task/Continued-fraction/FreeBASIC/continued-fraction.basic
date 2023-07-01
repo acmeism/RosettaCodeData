@@ -1,0 +1,38 @@
+#define MAX 70000
+
+function sqrt2_a( n as uinteger ) as uinteger
+    return iif(n,2,1)
+end function
+
+function sqrt2_b( n as uinteger ) as uinteger
+    return 1
+end function
+
+function napi_a( n as uinteger ) as uinteger
+   return iif(n,n,2)
+end function
+
+function napi_b( n as uinteger ) as uinteger
+   return iif(n>1,n-1,1)
+end function
+
+function pi_a( n as uinteger ) as uinteger
+    return iif(n,6,3)
+end function
+
+function pi_b( n as uinteger ) as uinteger
+    return (2*n-1)^2
+end function
+
+function calc_contfrac( an as function (as uinteger) as uinteger, bn as function (as uinteger) as uinteger, byval iter as uinteger ) as double
+    dim as double r
+    dim as integer i
+    for i = iter to 1 step -1
+        r = bn(i)/(an(i)+r)
+    next i
+    return an(0)+r
+end function
+
+print calc_contfrac( @sqrt2_a, @sqrt2_b, MAX )
+print calc_contfrac( @napi_a, @napi_b, MAX )
+print calc_contfrac( @pi_a, @pi_b, MAX )

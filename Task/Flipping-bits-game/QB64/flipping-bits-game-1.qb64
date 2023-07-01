@@ -1,0 +1,179 @@
+RANDOMIZE TIMER
+DIM SHARED cellsPerSide, legalMoves$, startB$, currentB$, targetB$, moveCount
+
+restart
+DO
+    displayStatus
+    IF currentB$ = targetB$ THEN 'game done!
+        PRINT " Congratulations, done in"; moveCount; " moves."
+        PRINT "": PRINT " Press y for yes, if you want to start over > ";
+        yes$ = getKey$: PRINT yes$: _DELAY .4: vcls
+        IF yes$ = "y" THEN restart ELSE nomore = -1
+    ELSE 'get next move
+        m$ = " ": PRINT
+        WHILE INSTR(legalMoves$, m$) = 0
+            PRINT " Press a lettered column or a numbered row to flip (or 0,q,?,!) > ";
+            m$ = getKey$: PRINT m$: _DELAY .4
+            IF m$ = "!" THEN
+                showSolution = -1: m$ = " ": EXIT WHILE
+            ELSEIF m$ = "?" THEN: m$ = " ": cp CSRLIN, "Hint: " + hint$
+            ELSEIF m$ = "0" OR m$ = "q" THEN: vcls: CLOSE: END
+            ELSEIF m$ = "" THEN: m$ = " "
+            END IF
+        WEND
+        IF showSolution THEN 'run the solution from hints function
+            showSolution = 0: mv$ = hint$
+            cp CSRLIN + 1, "For the next move, the AI has chosen: " + mv$
+            cp CSRLIN + 1, "Running the solution with 4 sec screen delays..."
+            _DELAY 4: vcls
+            WHILE mv$ <> "Done?"
+                moveCount = moveCount + 1: makeMove mv$: displayStatus: mv$ = hint$
+                cp CSRLIN + 1, "For the next move, the AI has chosen: " + mv$
+                cp CSRLIN + 1, "Running the solution with 4 sec screen delays..."
+                _DELAY 4: vcls
+            WEND
+            displayStatus
+            cp CSRLIN + 1, "Done! Current board matches Target"
+            cp CSRLIN + 1, "Press y for yes, if you want to start over: > "
+            yes$ = getKey$: PRINT yes$: _DELAY .4: vcls
+            IF yes$ = "y" THEN restart ELSE nomore = -1
+        ELSE
+            vcls: moveCount = moveCount + 1: makeMove m$
+        END IF
+    END IF
+LOOP UNTIL nomore
+CLOSE
+
+SUB displayStatus
+    COLOR 9: showBoard 2, 2, currentB$, "Current:"
+    COLOR 12: showBoard 2, 2 + 2 * cellsPerSide + 6, targetB$, "Target:"
+    COLOR 13: PRINT: PRINT " Number of moves taken so far is" + STR$(moveCount)
+    COLOR 14
+END SUB
+
+
+FUNCTION hint$ 'compare the currentB to targetB and suggest letter or digit or done
+    FOR i = 1 TO 2 * cellsPerSide 'check cols first then rows as listed in legalMoves$
+        r$ = MID$(legalMoves$, i, 1)
+        IF i <= cellsPerSide THEN
+            currentbit$ = MID$(currentB$, i, 1): targetBit$ = MID$(targetB$, i, 1)
+            IF currentbit$ <> targetBit$ THEN flag = -1: EXIT FOR
+        ELSE
+            j = i - cellsPerSide
+            currentbit$ = MID$(currentB$, (j - 1) * cellsPerSide + 1, 1)
+            targetBit$ = MID$(targetB$, (j - 1) * cellsPerSide + 1, 1)
+            IF currentbit$ <> targetBit$ THEN flag = -1: EXIT FOR
+        END IF
+    NEXT
+    IF flag THEN hint$ = r$ ELSE hint$ = "Done?"
+END FUNCTION
+
+SUB restart
+    CLOSE
+    OPEN "Copy Flipping Bits Game.txt" FOR OUTPUT AS #3
+    cellsPerSide = 0: legalMoves$ = "": moveCount = 0
+    COLOR 9: cp 3, "Flipping Bits Game, now with AI!  b+ 2017-12-18"
+    COLOR 5
+    cp 5, "You will be presented with a square board marked Current and"
+    cp 6, "another marked Target. The object of the game is to match"
+    cp 7, "the Current board to Target in the least amount of moves."
+    cp 9, "To make a move, enter a letter for a column to flip or"
+    cp 10, "a digit for a row to flip. In a flip, all 1's are"
+    cp 11, "changed to 0's and all 0's changed to 1's."
+    cp 13, "You may enter 0 or q at any time to quit."
+    cp 14, "You may press ? when prompted for move to get a hint."
+    cp 15, "You may press ! to have the program solve the puzzle."
+    COLOR 14: PRINT: PRINT
+    WHILE cellsPerSide < 2 OR cellsPerSide > 9
+        LOCATE CSRLIN, 13: PRINT "Please press how many cells you want per side 2 to 9 > ";
+        in$ = getKey$: PRINT in$: _DELAY .4
+        IF in$ = "0" OR in$ = "q" THEN END ELSE cellsPerSide = VAL(in$)
+    WEND
+    vcls
+    FOR i = 1 TO cellsPerSide: legalMoves$ = legalMoves$ + CHR$(96 + i): NEXT
+    FOR i = 1 TO cellsPerSide: legalMoves$ = legalMoves$ + LTRIM$(STR$(i)): NEXT
+    startB$ = startBoard$: currentB$ = startB$: targetB$ = makeTarget$: currentB$ = startB$
+END SUB
+
+FUNCTION startBoard$
+    FOR i = 1 TO cellsPerSide ^ 2: r$ = r$ + LTRIM$(STR$(INT(RND * 2))): NEXT
+    startBoard$ = r$
+END FUNCTION
+
+SUB showBoard (row, col, board$, title$)
+    LOCATE row - 1, col: PRINT title$
+    FOR i = 1 TO cellsPerSide
+        LOCATE row, col + 2 * (i - 1) + 3: PRINT MID$(legalMoves$, i, 1);
+    NEXT
+    PRINT
+    FOR i = 1 TO cellsPerSide
+        LOCATE row + i, col - 1: PRINT STR$(i);
+        FOR j = 1 TO cellsPerSide
+            LOCATE row + i, col + 2 * j: PRINT " " + MID$(board$, (i - 1) * cellsPerSide + j, 1);
+        NEXT
+        PRINT
+    NEXT
+END SUB
+
+SUB makeMove (move$)
+    ac = ASC(move$)
+    IF ac > 96 THEN 'letter
+        col = ac - 96
+        FOR i = 1 TO cellsPerSide
+            bit$ = MID$(currentB$, (i - 1) * cellsPerSide + col, 1)
+            IF bit$ = "0" THEN
+                MID$(currentB$, (i - 1) * cellsPerSide + col, 1) = "1"
+            ELSE
+                MID$(currentB$, (i - 1) * cellsPerSide + col, 1) = "0"
+            END IF
+        NEXT
+    ELSE 'number
+        row = ac - 48
+        FOR i = 1 TO cellsPerSide
+            bit$ = MID$(currentB$, (row - 1) * cellsPerSide + i, 1)
+            IF bit$ = "0" THEN
+                MID$(currentB$, (row - 1) * cellsPerSide + i, 1) = "1"
+            ELSE
+                MID$(currentB$, (row - 1) * cellsPerSide + i, 1) = "0"
+            END IF
+        NEXT
+    END IF
+END SUB
+
+FUNCTION makeTarget$
+    WHILE currentB$ = startB$
+        FOR i = 1 TO cellsPerSide * cellsPerSide
+            m$ = MID$(legalMoves$, INT(RND * LEN(legalMoves$)) + 1, 1): makeMove m$
+        NEXT
+    WEND
+    makeTarget$ = currentB$
+END FUNCTION
+
+SUB cp (row, text$) 'center print at row
+    LOCATE row, (80 - LEN(text$)) / 2: PRINT text$;
+END SUB
+
+SUB vcls 'print the screen to file then clear it
+    DIM s$(23)
+    FOR lines = 1 TO 23
+        FOR t = 1 TO 80: scan$ = scan$ + CHR$(SCREEN(lines, t)): NEXT
+        s$(lines) = RTRIM$(scan$): scan$ = ""
+    NEXT
+    FOR fini = 23 TO 1 STEP -1
+        IF s$(fini) <> "" THEN EXIT FOR
+    NEXT
+    PRINT #3, ""
+    FOR i = 1 TO fini: PRINT #3, s$(i): NEXT
+    PRINT #3, "": PRINT #3, STRING$(80, "-"): CLS
+END SUB
+
+FUNCTION getKey$ 'just want printable characters
+    k$ = ""
+    WHILE LEN(k$) = 0
+        k$ = INKEY$
+        IF LEN(k$) THEN 'press something so respond
+            IF LEN(k$) = 2 OR ASC(k$) > 126 OR ASC(k$) < 32 THEN k$ = "*": BEEP
+        END IF
+    WEND
+    getKey$ = k$
+END FUNCTION

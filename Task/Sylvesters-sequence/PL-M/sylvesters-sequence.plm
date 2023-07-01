@@ -1,0 +1,121 @@
+100H: /* CALCULATE ELEMENTS OF SYLVESTOR'S SEQUENCE                          */
+
+   BDOS: PROCEDURE( FN, ARG ); /* CP/M BDOS SYSTEM CALL                      */
+      DECLARE FN BYTE, ARG ADDRESS;
+      GOTO 5;
+   END BDOS;
+   PRINT$CHAR:   PROCEDURE( C ); DECLARE C BYTE;    CALL BDOS( 2, C ); END;
+   PRINT$STRING: PROCEDURE( S ); DECLARE S ADDRESS; CALL BDOS( 9, S ); END;
+   DECLARE PRINT$NL LITERALLY 'PRINT$STRING( .( 0DH, 0AH, ''$'' ) )';
+
+   DECLARE LONG$INTEGER  LITERALLY '(201)BYTE';
+   DECLARE DIGIT$BASE    LITERALLY '10';
+
+   /* PRINTS A LONG INTEGER                                                  */
+   PRINT$LONG$INTEGER: PROCEDURE( N$PTR );
+      DECLARE N$PTR ADDRESS;
+      DECLARE N BASED N$PTR LONG$INTEGER;
+      DECLARE ( D, F ) BYTE;
+      F = N( 0 );
+      DO D = 1 TO N( 0 );
+         CALL PRINT$CHAR( N( F ) + '0' );
+         F = F - 1;
+      END;
+   END PRINT$LONG$INTEGER;
+   /* IMPLEMENTS LONG MULTIPLICATION, C IS SET TO A * B                      */
+   /*     C CAN BE THE SAME LONG$INTEGER AS A OR B                           */
+   LONG$MULTIPLY: PROCEDURE( A$PTR, B$PTR, C$PTR );
+      DECLARE ( A$PTR, B$PTR, C$PTR ) ADDRESS;
+      DECLARE ( A BASED A$PTR, B BASED B$PTR, C BASED C$PTR ) LONG$INTEGER;
+      DECLARE MRESULT LONG$INTEGER;
+      DECLARE RPOS    BYTE;
+
+      /* MULTIPLIES THE LONG INTEGER IN B BY THE INTEGER A, THE RESULT       */
+      /*     IS ADDED TO C, STARTING FROM DIGIT START                        */
+      /*     OVERFLOW IS IGNORED                                             */
+      MULTIPLY$ELEMENT: PROCEDURE( A, B$PTR, C$PTR, START );
+         DECLARE ( B$PTR, C$PTR )                 ADDRESS;
+         DECLARE ( A, START )                     BYTE;
+         DECLARE ( B BASED B$PTR, C BASED C$PTR ) LONG$INTEGER;
+         DECLARE ( CDIGIT, D$CARRY, BPOS, CPOS )  BYTE;
+         D$CARRY = 0;
+         CPOS    = START;
+         DO BPOS = 1 TO B( 0 );
+            CDIGIT = C( CPOS ) + ( A * B( BPOS ) ) + D$CARRY;
+            IF CDIGIT < DIGIT$BASE THEN D$CARRY = 0;
+            ELSE DO;
+               /* HAVE DIGITS TO CARRY                                       */
+               D$CARRY = CDIGIT  /  DIGIT$BASE;
+               CDIGIT  = CDIGIT MOD DIGIT$BASE;
+            END;
+            C( CPOS ) = CDIGIT;
+            CPOS = CPOS + 1;
+         END;
+         C( CPOS ) = D$CARRY;
+         /* REMOVE LEADING ZEROS BUT IF THE NUMBER IS 0, KEEP THE FINAL 0    */
+         DO WHILE( CPOS > 1 AND C( CPOS ) = 0 );
+            CPOS = CPOS - 1;
+         END;
+         C( 0 ) = CPOS;
+      END MULTIPLY$ELEMENT ;
+
+      /* THE RESULT WILL BE COMPUTED IN MRESULT, ALLOWING A OR B TO BE C     */
+      DO RPOS = 1 TO LAST( MRESULT ); MRESULT( RPOS ) = 0; END;
+      /* MULTIPLY BY EACH DIGIT AND ADD TO THE RESULT                        */
+      DO RPOS = 1 TO A( 0 );
+         IF A( RPOS ) <> 0 THEN DO;
+            CALL MULTIPLY$ELEMENT( A( RPOS ), B$PTR, .MRESULT, RPOS );
+         END;
+      END;
+      /* RETURN THE RESULT IN C                                              */
+      DO RPOS = 0 TO MRESULT( 0 ); C( RPOS ) = MRESULT( RPOS ); END;
+   END;
+   /* ADDS THE INTEGER A TO THE LONG$INTEGER N                               */
+   ADD$BYTE$TO$LONG$INTEGER: PROCEDURE( A, N$PTR );
+      DECLARE A BYTE, N$PTR ADDRESS;
+      DECLARE N BASED N$PTR LONG$INTEGER;
+      DECLARE ( D, D$CARRY, DIGIT ) BYTE;
+      D       = 1;
+      D$CARRY = A;
+      DO WHILE( D$CARRY > 0 );
+         DIGIT = N( D ) + D$CARRY;
+         IF DIGIT < DIGIT$BASE THEN DO;
+            N( D )  = DIGIT;
+            D$CARRY = 0;
+            END;
+         ELSE DO;
+             D$CARRY = DIGIT  /  DIGIT$BASE;
+             N( D )  = DIGIT MOD DIGIT$BASE;
+             D       = D + 1;
+             IF D > N( 0 ) THEN DO;
+                /* THE NUMBER NOW HAS AN EXTRA DIGIT                         */
+                N( 0 )  = D;
+                N( D )  = D$CARRY;
+                D$CARRY = 0;
+             END;
+         END;
+      END;
+   END ADD$BYTE$TO$LONG$INTEGER;
+   /* FIND THE FIRST 10 ELEMENTS OF SYLVESTOR'S SEQUENCE                     */
+   DECLARE ( SEQ$ELEMENT, PRODUCT ) LONG$INTEGER;
+   DECLARE ( I, D )                 BYTE;
+   DO D = 2 TO LAST( PRODUCT     ); PRODUCT(     D ) = 0; END;
+   DO D = 2 TO LAST( SEQ$ELEMENT ); SEQ$ELEMENT( D ) = 0; END;
+   SEQ$ELEMENT( 0 ) = 1; /* THE FIRST SEQUENCE ELEMENT HAS 1 DIGIT...        */
+   SEQ$ELEMENT( 1 ) = 2; /* WHICH IS 2                                       */
+   PRODUCT(     0 ) = 1;
+   PRODUCT(     1 ) = 2;
+   CALL PRINT$LONG$INTEGER( .SEQ$ELEMENT );     /* SHOW ELEMENT 1            */
+   CALL PRINT$NL;
+   DO I = 2 TO 9;
+      DO D = 0 TO PRODUCT( 0 ); SEQ$ELEMENT( D ) = PRODUCT( D ); END;
+      CALL ADD$BYTE$TO$LONG$INTEGER( 1, .SEQ$ELEMENT );
+      CALL PRINT$LONG$INTEGER( .SEQ$ELEMENT );
+      CALL LONG$MULTIPLY( .SEQ$ELEMENT, .PRODUCT, .PRODUCT );
+      CALL PRINT$NL;
+   END;
+   /* THE FINAL ELEMENT IS THE PRODUCT PLUS 1                                */
+   CALL ADD$BYTE$TO$LONG$INTEGER( 1, .PRODUCT );
+   CALL PRINT$LONG$INTEGER( .PRODUCT );
+   CALL PRINT$NL;
+EOF

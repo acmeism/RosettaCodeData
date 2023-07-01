@@ -1,0 +1,66 @@
+(typedef XID uint32)
+
+(typedef Window XID)
+
+(typedef Drawable XID)
+
+(typedef Display (cptr Display))
+
+(typedef GC (cptr GC))
+
+(typedef XEventType (enum _XEventType
+                      (KeyPress 2)
+                      (Expose 12)))
+
+(defvarl KeyPressMask (ash 1 0))
+(defvarl ExposureMask (ash 1 15))
+
+(typedef XEvent (union _XEvent
+                  (type XEventType)
+                  (pad (array 24 long))))
+
+(defvarl NULL cptr-null)
+
+(with-dyn-lib "libX11.so"
+  (deffi XOpenDisplay "XOpenDisplay" Display (bstr))
+  (deffi XCloseDisplay "XCloseDisplay" int (Display))
+  (deffi XDefaultScreen "XDefaultScreen"  int (Display))
+  (deffi XRootWindow "XRootWindow" Window (Display int))
+  (deffi XBlackPixel "XBlackPixel" ulong (Display int))
+  (deffi XWhitePixel "XWhitePixel" ulong (Display int))
+  (deffi XCreateSimpleWindow "XCreateSimpleWindow" Window (Display
+                                                           Window
+                                                           int int
+                                                           uint uint uint
+                                                           ulong ulong))
+  (deffi XSelectInput "XSelectInput" int (Display Window long))
+  (deffi XMapWindow "XMapWindow" int (Display Window))
+  (deffi XNextEvent "XNextEvent" int (Display (ptr-out XEvent)))
+  (deffi XDefaultGC "XDefaultGC" GC (Display int))
+  (deffi XFillRectangle "XFillRectangle" int (Display Drawable GC
+                                              int int uint uint))
+  (deffi XDrawString "XDrawString" int (Display Drawable GC
+                                        int int bstr int)))
+
+(let* ((msg "Hello, world!")
+       (d (XOpenDisplay nil)))
+  (when (equal d NULL)
+    (put-line "Cannot-open-display" *stderr*)
+    (exit 1))
+
+  (let* ((s (XDefaultScreen d))
+         (w (XCreateSimpleWindow d (XRootWindow d s) 10 10 100 100 1
+                                 (XBlackPixel d s) (XWhitePixel d s))))
+    (XSelectInput d w (logior ExposureMask KeyPressMask))
+    (XMapWindow d w)
+
+    (while t
+      (let ((e (make-union (ffi XEvent))))
+        (XNextEvent d e)
+        (caseq (union-get e 'type)
+          (Expose
+            (XFillRectangle d w (XDefaultGC d s) 20 20 10 10)
+            (XDrawString d w (XDefaultGC d s) 10 50 msg (length msg)))
+          (KeyPress (return)))))
+
+    (XCloseDisplay d)))

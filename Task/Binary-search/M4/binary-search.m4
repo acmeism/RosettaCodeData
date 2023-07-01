@@ -1,0 +1,10 @@
+define(`notfound',`-1')dnl
+define(`midsearch',`ifelse(defn($1[$4]),$2,$4,
+`ifelse(eval(defn($1[$4])>$2),1,`binarysearch($1,$2,$3,decr($4))',`binarysearch($1,$2,incr($4),$5)')')')dnl
+define(`binarysearch',`ifelse(eval($4<$3),1,notfound,`midsearch($1,$2,$3,eval(($3+$4)/2),$4)')')dnl
+dnl
+define(`setrange',`ifelse(`$3',`',$2,`define($1[$2],$3)`'setrange($1,incr($2),shift(shift(shift($@))))')')dnl
+define(`asize',decr(setrange(`a',1,1,3,5,7,11,13,17,19,23,29)))dnl
+dnl
+binarysearch(`a',5,1,asize)
+binarysearch(`a',8,1,asize)

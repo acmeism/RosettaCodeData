@@ -1,0 +1,17 @@
+function equindex2pass(data::Array)
+    rst = Vector{Int}(0)
+    suml, sumr, ddelayed = 0, sum(data), 0
+    for (i, d) in enumerate(data)
+        suml += ddelayed
+        sumr -= d
+        ddelayed = d
+        if suml == sumr
+            push!(rst, i)
+        end
+    end
+    return rst
+end
+
+@show equindex2pass([1, -1, 1, -1, 1, -1, 1])
+@show equindex2pass([1, 2, 2, 1])
+@show equindex2pass([-7, 1, 5, 2, -4, 3, 0])

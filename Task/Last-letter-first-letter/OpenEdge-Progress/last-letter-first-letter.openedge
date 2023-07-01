@@ -1,0 +1,84 @@
+DEFINE VARIABLE cpokemon AS CHARACTER INITIAL "audino bagon baltoy banette bidoof braviary bronzor carracosta charmeleon ~
+cresselia croagunk darmanitan deino emboar emolga exeggcute gabite ~
+girafarig gulpin haxorus heatmor heatran ivysaur jellicent jumpluff kangaskhan ~
+kricketune landorus ledyba loudred lumineon lunatone machamp magnezone mamoswine ~
+nosepass petilil pidgeotto pikachu pinsir poliwrath poochyena porygon2 ~
+porygonz registeel relicanth remoraid rufflet sableye scolipede scrafty seaking ~
+sealeo silcoon simisear snivy snorlax spoink starly tirtouga trapinch treecko ~
+tyrogue vigoroth vulpix wailord wartortle whismur wingull yamask".
+
+DEFINE TEMP-TABLE tt NO-UNDO
+   FIELD cname    AS CHARACTER
+   FIELD cfirst   AS CHARACTER
+   FIELD clast    AS CHARACTER
+   FIELD lused    AS LOGICAL
+   FIELD ilength  AS INTEGER
+   FIELD imax     AS INTEGER
+   FIELD cchain   AS CHARACTER
+INDEX ttname   cname
+INDEX ttfirst  cfirst lused
+INDEX ttlast   clast  lused
+.
+
+DEFINE VARIABLE ii AS INTEGER NO-UNDO.
+
+DO  ii = 1 TO NUM-ENTRIES( cpokemon, " " ):
+   CREATE tt.
+   ASSIGN
+      tt.cname    =  ENTRY( ii, cpokemon, " " )
+      tt.cfirst   =  SUBSTRING( tt.cname, 1, 1 )
+      tt.clast    =  SUBSTRING( tt.cname, LENGTH( tt.cname ), 1 )
+      .
+END.
+
+FUNCTION getChain RETURNS INTEGER (
+   i_cname     AS CHARACTER,
+   i_clast     AS CHARACTER,
+   i_ilength   AS INTEGER,
+   i_cchain    AS CHARACTER
+):
+   DEFINE BUFFER tt FOR tt.
+
+   DEFINE VARIABLE lend_of_chain AS LOGICAL     NO-UNDO INITIAL TRUE.
+
+   FOR EACH tt
+      WHERE tt.cfirst   =  i_clast
+      AND   tt.lused    =  FALSE
+      OR    i_clast     =  ""
+   :
+      lend_of_chain = FALSE.
+      tt.lused = TRUE.
+      getChain( tt.cname, tt.clast, i_ilength + 1, i_cchain + tt.cname + " " ).
+      tt.lused = FALSE.
+   END.
+   IF lend_of_chain THEN DO:
+      FIND tt WHERE tt.cname = ENTRY( 1, i_cchain, " " ).
+      IF i_ilength = tt.ilength THEN
+         tt.imax = tt.imax + 1.
+      ELSE IF i_ilength > tt.ilength THEN
+         ASSIGN
+            tt.ilength  =  i_ilength
+            tt.cchain   =  i_cchain
+            tt.imax     =  1
+            .
+   END.
+
+END FUNCTION. /* getChain */
+
+DEFINE VARIABLE itime      AS INTEGER     NO-UNDO EXTENT 2.
+DEFINE VARIABLE lcontinue  AS LOGICAL     NO-UNDO.
+
+itime[1] = ETIME.
+getChain( "", "", 0, "" ).
+itime[2] = ETIME.
+
+FOR EACH tt BY tt.ilength DESCENDING:
+   MESSAGE
+      "Maximum path length:"  tt.ilength SKIP
+      "Paths of that length:" tt.imax SKIP(1)
+      "Example path of that length:" tt.cchain SKIP(1)
+      "Time taken:" STRING( INTEGER( ( itime[2] - itime[1] ) / 1000 ), "HH:MM:SS" )
+   VIEW-AS ALERT-BOX BUTTONS YES-NO TITLE tt.cname UPDATE lcontinue.
+   IF lcontinue = FALSE THEN
+      STOP.
+END.

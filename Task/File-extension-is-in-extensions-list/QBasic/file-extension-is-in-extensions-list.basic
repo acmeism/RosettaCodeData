@@ -1,0 +1,26 @@
+DIM extensions$(7)
+FOR i = 1 TO 7
+    READ d$: extensions$(i) = d$
+NEXT i
+
+DIM filenames$(8)
+FOR i = 1 TO 8
+    READ d$: filenames$(i) = d$
+NEXT i
+
+FOR n = 1 TO UBOUND(filenames$)
+    flag = 0
+    FOR m = 1 TO UBOUND(extensions$)
+        IF RIGHT$(filenames$(n), LEN(extensions$(m))) = extensions$(m) THEN
+            flag = 1
+            PRINT filenames$(n); " -> "; extensions$(m); " -> "; " true"
+            EXIT FOR
+        END IF
+    NEXT m
+    IF flag = 0 THEN PRINT filenames$(n); " -> "; "false"
+NEXT n
+END
+
+DATA ".zip", ".rar", ".7z", ".gz", ".archive", ".a##", ".tar.bz2"
+DATA "MyData.a##", "MyData.tar.gz", "MyData.gzip", "MyData.7z.backup"
+DATA "MyData...", "MyData", "MyData_v1.0.tar.bz2", "MyData_v1.0.bz2"

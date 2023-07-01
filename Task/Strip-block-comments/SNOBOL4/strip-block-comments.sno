@@ -1,0 +1,89 @@
+* Program: strip_block_comments.sbl
+* To run: sbl -r extract_extension.sbl
+* Description: Strip block comments.
+*              Can use different begin and end delimiters.
+*              Handles comment nesting and unmatched end delimiters.
+*              Unmatched begin delimiters remove text to end of file.
+*              Does not handle quoted delimiters.
+*              Most null lines are removed, which may not be
+*              what is desired.
+* Comment: Tested using the Spitbol for Linux version of SNOBOL4
+
+
+* Function strip_block_comments will read a file, or the text after
+* the END statement below. Parameter bcom is the beginning comment
+* string and parameter ecom is the ending comment string.
+*
+	define('strip_block_comments(bcom,ecom)break_chars,c,newc,pre,pc,b')
+		pat1 = breakx(*break_chars) . pre (*bcom | *gt(b,0) *ecom) . pc
+	:(strip_block_comments_end)
+strip_block_comments
+	break_chars = substr(bcom,1,1) substr(ecom,1,1)
+	newc = ""
+	b = 0
+in1
+	c = input :f(p60)
+
+p10
+	c ? pat1 = "" :f(p20)
+
+* matches
+	le(b,0) :s(leb)f(gtb)
+leb
+	b = leq(pc,bcom) b + 1 :f(leb2)
+	newc = newc pre :(p10)
+leb2
+	b = leq(pc,ecom) b - 1 :f(error)
+	:(p10)
+gtb
+	b = leq(pc,bcom) b + 1
+	b = leq(pc,ecom) b - 1
+	:(p10)
+
+* nomatches
+p20
+	newc = lt(b,1) newc c
+	ident(newc) :s(in1)
+	:(p50)
+
+p50
+	output = newc
+	newc = "" :(in1)
+
+p60
+	output = differ(newc) newc
+	:(return)
+strip_block_comments_end
+
+
+* Set "begin" comment delimiter (bcom) and "end" comment delimiter (ecom) below
+	bcom = "/*"
+	ecom = "*/"
+*	bcom = "{{*"
+*	ecom = "?/"
+
+* Strip block comments from the text lines after the END statement
+	strip_block_comments(bcom,ecom)
+
+END
+/**
+ * Some comments
+ * longer comments here that we can parse.
+ *
+ * Rahoo
+ */
+ function subroutine() {
+  a = /* inline comment */ b + c ;
+ }
+ /*/ <-- tricky comments */
+
+ /**
+  * Another comment.
+  */
+  function something() {
+  }
+
+----------------------------------------------
+With nested comments/* Nested /* comment*/s*/*/!
+Unmatched"/*" end delimiters simply remove
+to end of file

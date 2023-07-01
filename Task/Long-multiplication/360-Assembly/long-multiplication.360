@@ -1,0 +1,273 @@
+LONGINT  CSECT
+         USING  LONGINT,R13
+SAVEAREA B      PROLOG-SAVEAREA(R15)
+         DC     17F'0'
+         DC     CL8'LONGINT'
+PROLOG   STM    R14,R12,12(R13)
+         ST     R13,4(R15)
+         ST     R15,8(R13)
+         LR     R13,R15
+         MVC    XX(1),=C'1'
+         MVC    LENXX,=H'1'        xx=1
+         LA     R2,64
+LOOPII   ST     R2,RLOOPII         do for 64
+         MVC    X-2(LL+2),XX-2     x=xx
+         MVC    Y(1),=C'2'
+         MVC    LENY,=H'1'         y=2
+         BAL    R14,LONGMULT
+         MVC    XX-2(LL+2),Z-2     xx=longmult(xx,2)   xx=xx*2
+         L      R2,RLOOPII
+ELOOPII  BCT    R2,LOOPII          loop
+         MVC    X-2(LL+2),XX-2
+         MVC    Y-2(LL+2),XX-2
+         BAL    R14,LONGMULT
+         MVC    YY-2(LL+2),Z-2     yy=longmult(xx,xx)  yy=xx*xx
+         XPRNT  XX,LL              output xx
+         XPRNT  YY,LL              output yy
+RETURN   L      R13,4(0,R13)       epilog
+         LM     R14,R12,12(R13)
+         XR     R15,R15            set return code
+         BR     R14                return to caller
+RLOOPII  DS     F
+*
+LONGMULT EQU    *                  function longmult z=(x,y)
+         MVC    LENSHIFT,=H'0'     shift=''
+         MVC    LENZ,=H'0'         z=''
+         LH     R6,LENX
+         LA     R6,1(R6)           from lenx
+         XR     R8,R8
+         BCTR   R8,0               by -1
+         LA     R9,0               to 1
+LOOPI    BXLE   R6,R8,ELOOPI       do i=lenx to 1 by -1
+         LA     R2,X
+         AR     R2,R6              +i
+         BCTR   R2,0
+         MVC    CI,0(R2)           ci=substr(x,i,1)
+         IC     R0,CI              ni=integer(ci)
+         N      R0,=X'0000000F'
+         STH    R0,NI
+         MVC    LENT,=H'0'         t=''
+         SR     R0,R0
+         STH    R0,CARRY           carry=0
+         LH     R7,LENY
+         LA     R7,1(R7)           from lenx
+         XR     R10,R10
+         BCTR   R10,0              by -1
+         LA     R11,0              to 1
+LOOPJ1   BXLE   R7,R10,ELOOPJ1     do j=leny to 1 by -1
+         LA     R2,Y
+         AR     R2,R7              +j
+         BCTR   R2,0
+         MVC    CJ,0(R2)           cj=substr(y,j,1)
+         IC     R0,CJ
+         N      R0,=X'0000000F'
+         STH    R0,NJ              nj=integer(cj)
+         LH     R2,NI
+         MH     R2,NJ
+         AH     R2,CARRY
+         STH    R2,NKR             nkr=ni*nj+carry
+         LH     R2,NKR
+         LA     R1,10
+         SRDA   R2,32
+         DR     R2,R1
+         STH    R2,NK              nk=nkr//10
+         STH    R3,CARRY           carry=nkr/10
+         LH     R2,NK
+         O      R2,=X'000000F0'
+         STC    R2,CK              ck=string(nk)
+         MVC    TEMP,T
+         MVC    T(1),CK
+         MVC    T+1(LL-1),TEMP
+         LH     R2,LENT
+         LA     R2,1(R2)
+         STH    R2,LENT            t=ck!!t
+         B      LOOPJ1             next j
+ELOOPJ1  EQU    *
+         LH     R2,CARRY
+         O      R2,=X'000000F0'
+         STC    R2,CK              ck=string(carry)
+         MVC    TEMP,T
+         MVC    T(1),CK
+         MVC    T+1(LL-1),TEMP
+         LH     R2,LENT
+         LA     R2,1(R2)
+         STH    R2,LENT            t=ck!!t
+         LA     R2,T
+         AH     R2,LENT
+         LH     R3,LENSHIFT
+         LA     R4,SHIFT
+         LH     R5,LENSHIFT
+         MVCL   R2,R4
+         LH     R2,LENT
+         AH     R2,LENSHIFT
+         STH    R2,LENT            t=t!!shift
+IF1      LH     R4,LENZ
+         CH     R4,LENT            if lenz>lent
+         BNH    ELSE1
+         LH     R2,LENZ            then
+         LA     R2,1(R2)
+         STH    R2,L               l=lenz+1
+         B      EIF1
+ELSE1    LH     R2,LENT            else
+         LA     R2,1(R2)
+         STH    R2,L               l=lent+1
+EIF1     EQU    *
+         MVI    TEMP,C'0'          to
+         MVC    TEMP+1(LL-1),TEMP
+         LA     R2,TEMP
+         AH     R2,L
+         SH     R2,LENZ
+         LH     R3,LENZ
+         LA     R4,Z
+         LH     R5,LENZ
+         MVCL   R2,R4
+         MVC    LENZ,L
+         MVC    Z,TEMP             z=right(z,l,'0')
+         MVI    TEMP,C'0'          to
+         MVC    TEMP+1(LL-1),TEMP
+         LA     R2,TEMP
+         AH     R2,L
+         SH     R2,LENT
+         LH     R3,LENT
+         LA     R4,T
+         LH     R5,LENT
+         MVCL   R2,R4
+         MVC    LENT,L
+         MVC    T,TEMP             t=right(t,l,'0')
+         MVC    LENW,=H'0'         w=''
+         SR     R0,R0
+         STH    R0,CARRY           carry=0
+         LH     R7,L
+         LA     R7,1(R7)           from l
+         XR     R10,R10
+         BCTR   R10,0              by -1
+         LA     R11,0              to 1
+LOOPJ2   BXLE   R7,R10,ELOOPJ2     do j=l to 1 by -1
+         LA     R2,Z
+         AR     R2,R7              +j
+         BCTR   R2,0
+         MVC    CZ,0(R2)           cz=substr(z,j,1)
+         IC     R0,CZ
+         N      R0,=X'0000000F'
+         STH    R0,NZ              nz=integer(cz)
+         LA     R2,T
+         AR     R2,R7              -j
+         BCTR   R2,0
+         MVC    CT,0(R2)           ct=substr(t,j,1)
+         IC     R0,CT
+         N      R0,=X'0000000F'
+         STH    R0,NT              nt=integer(ct)
+         LH     R2,NZ
+         AH     R2,NT
+         AH     R2,CARRY
+         STH    R2,NKR             nkr=nz+nt+carry
+         LH     R2,NKR
+         LA     R1,10
+         SRDA   R2,32
+         DR     R2,R1
+         STH    R2,NK
+         STH    R3,CARRY           nk=nkr//10; carry=nkr/10
+         LH     R2,NK
+         O      R2,=X'000000F0'
+         STC    R2,CK              ck=string(nk)
+         MVC    TEMP,W
+         MVC    W(1),CK
+         MVC    W+1(LL-1),TEMP
+         LH     R2,LENW
+         LA     R2,1(R2)
+         STH    R2,LENW            w=ck!!w
+         B      LOOPJ2             next j
+ELOOPJ2  EQU    *
+         LH     R2,CARRY
+         O      R2,=X'000000F0'
+         STC    R2,CK             ck=string(carry)
+         MVC    Z(1),CK
+         MVC    Z+1(LL-1),W
+         LH     R2,LENW
+         LA     R2,1(R2)
+         STH    R2,LENZ            z=ck!!w
+         LA     R7,0               from 1
+         LA     R10,1              by 1
+         LH     R11,LENZ           to lenz
+LOOPJ3   BXH    R7,R10,ELOOPJ3     do j=1 to lenz
+         LA     R2,Z
+         AR     R2,R7              j
+         BCTR   R2,0
+         MVC    ZJ(1),0(R2)        zj=substr(z,j,1)
+         CLI    ZJ,C'0'            if zj^='0'
+         BNE    ELOOPJ3            then leave j
+         B      LOOPJ3             next j
+ELOOPJ3  EQU    *
+IF2      CH     R7,LENZ            if j>lenz
+         BNH    EIF2
+         LH     R7,LENZ            then j=lenz
+EIF2     EQU    *
+         LA     R2,TEMP            to
+         LH     R3,LENZ
+         SR     R3,R7              -j
+         LA     R3,1(R3)
+         STH    R3,LENTEMP
+         LA     R4,Z               from
+         AR     R4,R7              +j
+         BCTR   R4,0
+         LR     R5,R3
+         MVCL   R2,R4
+         MVC    Z-2(LL+2),TEMP-2   z=substr(z,j)
+         LA     R2,SHIFT
+         AH     R2,LENSHIFT
+         MVI    0(R2),C'0'
+         LH     R3,LENSHIFT
+         LA     R3,1(R3)
+         STH    R3,LENSHIFT        shift=shift!!'0'
+         MVC    TEMP,Z
+         LA     R2,TEMP
+         AH     R2,LENZ
+         MVC    0(2,R2),=C'  '
+         B      LOOPI              next i
+ELOOPI   EQU    *
+         MVI    TEMP,C' '
+         LA     R2,Z
+         AH     R2,LENZ
+         LH     R3,=AL2(LL)
+         SH     R3,LENZ
+         LA     R4,TEMP
+         LH     R5,=H'1'
+         ICM    R5,8,=C' '
+         MVCL   R2,R4              z=clean(z)
+         BR     R14                end function longmult
+*
+L        DS     H
+NI       DS     H
+NJ       DS     H
+NK       DS     H
+NZ       DS     H
+NT       DS     H
+CARRY    DS     H
+NKR      DS     H
+CI       DS     CL1
+CJ       DS     CL1
+CZ       DS     CL1
+CT       DS     CL1
+CK       DS     CL1
+ZJ       DS     CL1
+LENXX    DS     H
+XX       DS     CL94
+LENYY    DS     H
+YY       DS     CL94
+LENX     DS     H
+X        DS     CL94
+LENY     DS     H
+Y        DS     CL94
+LENZ     DS     H
+Z        DS     CL94
+LENT     DS     H
+T        DS     CL94
+LENW     DS     H
+W        DS     CL94
+LENSHIFT DS     H
+SHIFT    DS     CL94
+LENTEMP  DS     H
+TEMP     DS     CL94
+LL       EQU    94
+         YREGS
+         END    LONGINT

@@ -1,0 +1,138 @@
+include "Tlbx AVFoundation.incl"
+
+include resources "Here Comes the Sun.mp3"
+include resources "Wake Me Up.mp3"
+include resources "I Walk the Line.aif"
+
+_window = 1
+begin enum 1
+  _progInd
+  _timeLabel
+  _durLabel
+  _playBtn
+  _pauseBtn
+  _stopBtn
+  _selectBtn
+end enum
+
+void local fn FixButtons
+  dispatchmain // configure UI elements on main thread
+    AVAudioPlayerRef player = fn AppProperty( @"Player" )
+    if ( player )
+      button _playBtn, NO
+      if ( fn AVAudioPlayerIsPlaying( player ) )
+        button _pauseBtn, YES,, @"Pause"
+        button _stopBtn, YES
+      else
+        button _pauseBtn, YES,, @"Resume"
+      end if
+    else
+      textlabel _timeLabel, @"--.-"
+      progressindicator _progInd, 0.0
+      textlabel _durLabel, @"--.-"
+      button _playBtn, YES
+      button _pauseBtn, NO,, @"Pause"
+      button _stopBtn, NO
+    end if
+  dispatchend
+end fn
+
+void local fn BuildWindow
+  window _window, @"AVAudioPlayer", (0,0,480,87), NSWindowStyleMaskTitled + NSWindowStyleMaskClosable
+  textlabel _timeLabel, @"--.-", (18,52,38,16)
+  ControlSetAlignment( _timeLabel, NSTextAlignmentRight )
+  progressindicator _progInd,, (62,48,356,20)
+  ProgressIndicatorSetUsesThreadedAnimation( _progInd, NO )
+  textlabel _durLabel, @"--.-", (424,52,38,16)
+  button _playBtn,,, @"Start", (14,13,89,32)
+  button _pauseBtn, NO,, @"Pause", (103,13,89,32)
+  button _stopBtn, NO,, @"Stop", (192,13,89,32)
+  popupbutton _selectBtn,,, @"Here Comes the Sun;Wake Me Up;I Walk the Line", (290,17,170,25)
+end fn
+
+void local fn Cleanup
+  fn FixButtons
+  AppRemoveProperty( @"Player" )
+  AppRemoveProperty( @"Timer" )
+end fn
+
+void local fn DidFinishPlayingHandler( player as AVAudioPlayerRef, success as BOOL, userData as ptr )
+  fn Cleanup
+end fn
+
+local fn MyAppTimer( timer as CFRunLoopTimerRef )
+  dispatchmain // configure UI elements on main thread
+    CFTimeInterval   ti, dur
+    AVAudioPlayerRef player = fn AppProperty( @"Player" )
+    if ( player )
+      ti = fn AVAudioPlayerCurrentTime( player )
+      dur = fn AVAudioPlayerDuration( player )
+      ProgressIndicatorSetDoubleValue( _progInd, ti*100/dur )
+      textlabel _timeLabel, fn StringWithFormat( @"%.1f", ti )
+    end if
+  dispatchend
+end fn
+
+void local fn PlayAction
+  CFURLRef url = fn AppProperty( @"songURL" )
+  AVAudioPlayerRef player = fn AVAudioPlayerWithContentsOfURL( url, NULL )
+  AVAudioPlayerSetDidFinishPlayingHandler( player, @fn DidFinishPlayingHandler, NULL )
+  AppSetProperty( @"Player", player )
+  textlabel _durLabel, fn StringWithFormat(@"%.1f",fn AVAudioPlayerDuration(player))
+  CFRunLoopTimerRef t = fn AppSetTimer( 0.1, @fn MyAppTimer, YES )
+  AppSetProperty( @"Timer", t )
+  fn AVAudioPlayerPlay( player )
+  fn FixButtons
+end fn
+
+void local fn PauseAction
+  AVAudioPlayerRef player = fn AppProperty( @"Player" )
+  if ( player )
+    if ( fn AVAudioPlayerIsPlaying( player ) )
+      AVAudioPlayerPause( player )
+    else
+      fn AVAudioPlayerPlay( player )
+    end if
+  end if
+  fn FixButtons
+end fn
+
+void local fn StopAction
+  AVAudioPlayerRef player = fn AppProperty( @"Player" )
+  if ( player )
+    AVAudioPlayerStop( player )
+  end if
+  fn Cleanup
+end fn
+
+
+void local fn SongURL( songTitle as CFStringRef )
+  CFURLRef url
+
+  select (songTitle)
+    case @"Here Comes the Sun" : url = fn BundleURLForResource( fn BundleMain, songTitle, @"mp3", NULL )
+    case @"Wake Me Up"         : url = fn BundleURLForResource( fn BundleMain, songTitle, @"mp3", NULL )
+    case @"I Walk the Line"    : url = fn BundleURLForResource( fn BundleMain, songTitle, @"aif", NULL )
+  end select
+  AppSetProperty( @"songURL", url )
+end fn
+
+
+void local fn DoDialog( ev as long, tag as long )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case _playBtn   : fn StopAction : fn SongURL( fn PopUpButtonTitleOfSelectedItem( _selectBtn ) ) : fn PlayAction
+        case _pauseBtn  : fn PauseAction
+        case _stopBtn   : fn StopAction
+        case _selectBtn : fn StopAction : fn SongURL( fn PopUpButtonTitleOfSelectedItem( _selectBtn ) ) : fn PlayAction
+      end select
+    case _windowWillClose : end
+  end select
+end fn
+
+fn BuildWindow
+
+on dialog fn DoDialog
+
+HandleEvents

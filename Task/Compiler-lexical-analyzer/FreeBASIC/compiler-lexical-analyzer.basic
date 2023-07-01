@@ -1,0 +1,287 @@
+enum Token_type
+    tk_EOI
+    tk_Mul
+    tk_Div
+    tk_Mod
+    tk_Add
+    tk_Sub
+    tk_Negate
+    tk_Not
+    tk_Lss
+    tk_Leq
+    tk_Gtr
+    tk_Geq
+    tk_Eq
+    tk_Neq
+    tk_Assign
+    tk_And
+    tk_Or
+    tk_If
+    tk_Else
+    tk_While
+    tk_Print
+    tk_Putc
+    tk_Lparen
+    tk_Rparen
+    tk_Lbrace
+    tk_Rbrace
+    tk_Semi
+    tk_Comma
+    tk_Ident
+    tk_Integer
+    tk_String
+end enum
+
+const NewLine     = chr(10)
+const DoubleQuote = chr(34)
+const BackSlash   = chr(92)
+
+' where we store keywords and variables
+type Symbol
+    s_name as string
+    tok as Token_type
+end type
+
+dim shared symtab() as Symbol
+
+dim shared cur_line as string
+dim shared cur_ch as string
+dim shared line_num as integer
+dim shared col_num as integer
+
+function is_digit(byval ch as string) as long
+    is_digit = ch >= "0" AndAlso ch <= "9"
+end function
+
+function is_alnum(byval ch as string) as long
+    is_alnum = (ucase(ch) >= "A" AndAlso ucase(ch) <= "Z") OrElse is_digit(ch)
+end function
+
+sub error_msg(byval eline as integer, byval ecol as integer, byval msg as string)
+    print "("; eline; ":"; ecol; ") "; msg
+    print : print "Hit any to end program"
+    sleep
+    system
+end sub
+
+' add an identifier to the symbol table
+function install(byval s_name as string, byval tok as Token_type) as integer
+    dim n as integer = ubound(symtab) + 1
+    redim preserve symtab(n)
+
+    symtab(n).s_name = s_name
+    symtab(n).tok    = tok
+    return n
+end function
+
+' search for an identifier in the symbol table
+function lookup(byval s_name as string) as integer
+    dim i as integer
+
+    for i = lbound(symtab) to ubound(symtab)
+        if symtab(i).s_name = s_name then return i
+    next
+    return -1
+end function
+
+sub next_line()         ' read the next line of input from the source file
+    cur_line = ""
+    cur_ch  = ""        ' empty cur_ch means end-of-file
+    if eof(1) then exit sub
+    line input #1, cur_line
+    cur_line = cur_line + NewLine
+    line_num += + 1
+    col_num = 1
+end sub
+
+sub next_char()         ' get the next char
+    cur_ch = ""
+    col_num += 1
+    if col_num > len(cur_line) then next_line()
+    if col_num <= len(cur_line) then cur_ch = mid(cur_line, col_num, 1)
+end sub
+
+function follow(byval err_line as integer, byval err_col as integer, byval expect as string, byval ifyes as Token_type, byval ifno as Token_type) as Token_type
+    if cur_ch = expect then
+        next_char()
+        return ifyes
+    end if
+    if ifno = tk_eoi then error_msg(err_line, err_col, "follow unrecognized character: " + cur_ch)
+    return ifno
+end function
+
+sub gettok(byref err_line as integer, byref err_col as integer, byref tok as Token_type, byref v as string)
+    ' skip whitespace
+    do while (cur_ch = " " or cur_ch = chr(9) or cur_ch = NewLine) and (cur_ch <> "")
+        next_char()
+    loop
+
+    err_line = line_num
+    err_col  = col_num
+
+    select case cur_ch
+        case "":  tok = tk_eoi: exit sub
+        case "{": tok = tk_lbrace: next_char(): exit sub
+        case "}": tok = tk_rbrace: next_char(): exit sub
+        case "(": tok = tk_lparen: next_char(): exit sub
+        case ")": tok = tk_rparen: next_char(): exit sub
+        case "+": tok = tk_add:    next_char(): exit sub
+        case "-": tok = tk_sub:    next_char(): exit sub
+        case "*": tok = tk_mul:    next_char(): exit sub
+        case "%": tok = tk_Mod:    next_char(): exit sub
+        case ";": tok = tk_semi:   next_char(): exit sub
+        case ",": tok = tk_comma:  next_char(): exit sub
+        case "/": ' div or comment
+            next_char()
+            if cur_ch <> "*" then
+                tok = tk_div
+                exit sub
+            end if
+            ' skip comments
+            next_char()
+            do
+                if cur_ch = "*" then
+                    next_char()
+                    if cur_ch = "/" then
+                        next_char()
+                        gettok(err_line, err_col, tok, v)
+                        exit sub
+                    end if
+                elseif cur_ch = "" then error_msg(err_line, err_col, "EOF in comment")
+                else
+                    next_char()
+                end if
+            loop
+        case "'":   ' single char literals
+            next_char()
+            v = str(asc(cur_ch))
+            if cur_ch = "'" then error_msg(err_line, err_col, "empty character constant")
+            if cur_ch = BackSlash then
+                next_char()
+                if cur_ch = "n" then
+                    v = "10"
+                elseif cur_ch = BackSlash then
+                    v = "92"
+                else error_msg(err_line, err_col, "unknown escape sequence: " + cur_ch)
+                end if
+            end if
+            next_char()
+            if cur_ch <> "'" then error_msg(err_line, err_col, "multi-character constant")
+            next_char()
+            tok = tk_integer
+            exit sub
+        case "<": next_char(): tok = follow(err_line, err_col, "=", tk_Leq, tk_Lss): exit sub
+        case ">": next_char(): tok = follow(err_line, err_col, "=", tk_Geq, tk_Gtr): exit sub
+        case "!": next_char(): tok = follow(err_line, err_col, "=", tk_Neq, tk_Not): exit sub
+        case "=": next_char(): tok = follow(err_line, err_col, "=", tk_Eq,  tk_Assign): exit sub
+        case "&": next_char(): tok = follow(err_line, err_col, "&", tk_And, tk_EOI): exit sub
+        case "|": next_char(): tok = follow(err_line, err_col, "|", tk_Or,  tk_EOI): exit sub
+        case DoubleQuote: ' string
+            v = cur_ch
+            next_char()
+            do while cur_ch <> DoubleQuote
+                if cur_ch = NewLine then error_msg(err_line, err_col, "EOL in string")
+                if cur_ch = "" then error_msg(err_line, err_col, "EOF in string")
+                v += cur_ch
+                next_char()
+            loop
+            v += cur_ch
+            next_char()
+            tok = tk_string
+            exit sub
+        case else   ' integers or identifiers
+            dim is_number as boolean = is_digit(cur_ch)
+            v = ""
+            do while is_alnum(cur_ch) orelse cur_ch = "_"
+                if not is_digit(cur_ch) then is_number = false
+                v += cur_ch
+                next_char()
+            loop
+            if len(v) = 0 then error_msg(err_line, err_col, "unknown character: " + cur_ch)
+            if is_digit(mid(v, 1, 1)) then
+                if not is_number then error_msg(err_line, err_col, "invalid number: " + v)
+                tok = tk_integer
+                exit sub
+            end if
+            dim as integer index = lookup(v)
+            if index = -1 then
+                tok = tk_ident
+            else
+                tok = symtab(index).tok
+            end if
+            exit sub
+    end select
+end sub
+
+sub init_lex(byval filein as string)
+    install("else",  tk_else)
+    install("if",    tk_if)
+    install("print", tk_print)
+    install("putc",  tk_putc)
+    install("while", tk_while)
+
+    open filein for input as #1
+
+    cur_line = ""
+    line_num = 0
+    col_num = 0
+    next_char()
+end sub
+
+sub scanner()
+    dim err_line as integer
+    dim err_col as integer
+    dim tok as Token_type
+    dim v as string
+    dim tok_list(tk_eoi to tk_string) as string
+
+    tok_list(tk_EOI    ) = "End_of_input"
+    tok_list(tk_Mul    ) = "Op_multiply"
+    tok_list(tk_Div    ) = "Op_divide"
+    tok_list(tk_Mod    ) = "Op_mod"
+    tok_list(tk_Add    ) = "Op_add"
+    tok_list(tk_Sub    ) = "Op_subtract"
+    tok_list(tk_Negate ) = "Op_negate"
+    tok_list(tk_Not    ) = "Op_not"
+    tok_list(tk_Lss    ) = "Op_less"
+    tok_list(tk_Leq    ) = "Op_lessequal"
+    tok_list(tk_Gtr    ) = "Op_greater"
+    tok_list(tk_Geq    ) = "Op_greaterequal"
+    tok_list(tk_Eq     ) = "Op_equal"
+    tok_list(tk_Neq    ) = "Op_notequal"
+    tok_list(tk_Assign ) = "Op_assign"
+    tok_list(tk_And    ) = "Op_and"
+    tok_list(tk_Or     ) = "Op_or"
+    tok_list(tk_If     ) = "Keyword_if"
+    tok_list(tk_Else   ) = "Keyword_else"
+    tok_list(tk_While  ) = "Keyword_while"
+    tok_list(tk_Print  ) = "Keyword_print"
+    tok_list(tk_Putc   ) = "Keyword_putc"
+    tok_list(tk_Lparen ) = "LeftParen"
+    tok_list(tk_Rparen ) = "RightParen"
+    tok_list(tk_Lbrace ) = "LeftBrace"
+    tok_list(tk_Rbrace ) = "RightBrace"
+    tok_list(tk_Semi   ) = "Semicolon"
+    tok_list(tk_Comma  ) = "Comma"
+    tok_list(tk_Ident  ) = "Identifier"
+    tok_list(tk_Integer) = "Integer"
+    tok_list(tk_String ) = "String"
+
+    do
+        gettok(err_line, err_col, tok, v)
+        print using "#####  ##### \               " + BackSlash; err_line; err_col; tok_list(tok);
+        if tok = tk_integer orelse tok = tk_ident orelse tok = tk_string then print " " + v;
+        print
+    loop until tok = tk_eoi
+end sub
+
+sub main()
+    if command(1) = "" then print "filename required" : exit sub
+    init_lex(command(1))
+    scanner()
+end sub
+
+main()
+print : print "Hit any to end program"
+sleep
+system

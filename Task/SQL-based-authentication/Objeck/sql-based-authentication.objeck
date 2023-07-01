@@ -1,0 +1,104 @@
+use ODBC;
+use Encryption;
+
+class SqlTest {
+  @conn : Connection;
+
+  function : Main(args : String[]) ~ Nil {
+    SqlTest->New()->Run();
+  }
+
+  New() {
+    @conn := Connection->New("test", "root", "helloworld");
+  }
+
+  method : Run() ~ Nil {
+    CreateUser("objeck", "beer");
+    AuthenticateUser("objeck", "beer");
+    leaving {
+      @conn->Close();
+    };
+  }
+
+  method : AuthenticateUser(username : String, password : String) ~ Nil {
+    status := false;
+    ps : ParameterStatement;
+    result : ResultSet;
+    if(@conn->IsOpen()) {
+      sql := "SELECT pass_salt, pass_md5 FROM users WHERE username = ?";
+      ps := @conn->CreateParameterStatement(sql);
+      ps->SetVarchar(1, username);
+
+      result := ps->Select();
+      if(result <> Nil & result->Next()) {
+        salt_buffer := Byte->New[16];
+        result->GetBlob(1, salt_buffer);
+        salt := "";
+        for(i := 0; i < 16; i+=1;) {
+          salt->Append(salt_buffer[i]);
+        };
+
+        db_password_buffer := Byte->New[16];
+        result->GetBlob(2, db_password_buffer);
+
+        password->Append(salt);
+        user_password_buffer := Hash->MD5(password->ToByteArray());
+
+        IO.Console->Print("user: authenticated=")->PrintLine(IsEqual(db_password_buffer, user_password_buffer));
+      };
+
+    };
+
+    leaving {
+      if(ps <> Nil) {
+        ps->Close();
+      };
+
+      if(ps <> Nil) {
+        ps->Close();
+      };
+    };
+  }
+
+  method : CreateUser(username : String, password : String) ~ Nil {
+    salt := "";
+    for(i := 0; i < 16; i+=1;) { salt->Append((Float->Random() * 100)->As(Int)); };
+    salt := salt->SubString(16);
+
+    password->Append(salt);
+    md5_password := Hash->MD5(password->ToByteArray());
+
+    ps : ParameterStatement;
+    if(@conn->IsOpen()) {
+      sql := "INSERT INTO users(username, pass_salt, pass_md5) VALUES (?, ?, ?)";
+      ps := @conn->CreateParameterStatement(sql);
+      ps->SetVarchar(1, username);
+      ps->SetBytes(2, salt->ToByteArray());
+      ps->SetBytes(3, md5_password);
+
+      IO.Console->Print("adding user: username=")->Print(username)
+        ->Print(", salt=")->Print(salt)
+        ->Print(", status=")->PrintLine(ps->Update());
+    };
+
+    leaving {
+      if(ps <> Nil) {
+        ps->Close();
+      };
+    };
+  }
+
+  method : IsEqual(left : Byte[], right : Byte[]) ~ Bool {
+    if(left->Size() <> right->Size()) {
+      return false;
+    };
+
+    each(i : left) {
+      if(left[i] <> right[i]) {
+        return false;
+      };
+    };
+
+    return true;
+  }
+}

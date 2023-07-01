@@ -1,0 +1,367 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program keyboardInput64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ IOCTL,     0x1D  // Linux syscall
+.equ SIGACTION, 0x86  // Linux syscall
+.equ SYSPOLL,   0x16  // Linux syscall
+.equ CREATPOLL, 0x14  // Linux syscall
+.equ CTLPOLL,   0x15  // Linux syscall
+.equ TCGETS,    0x5401
+.equ TCSETS,    0x5402
+.equ ICANON,    2
+.equ ECHO,     10
+.equ POLLIN,    1
+.equ EPOLL_CTL_ADD,    1
+
+.equ SIGINT,   2    // Issued if the user sends an interrupt signal (Ctrl + C)
+.equ SIGQUIT,  3    // Issued if the user sends a quit signal (Ctrl + D)
+.equ SIGTERM, 15    // Software termination signal (sent by kill by default)
+.equ SIGTTOU, 22    //
+
+.equ BUFSIZE,   80
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure termios see doc linux*/
+    .struct  0
+term_c_iflag:                    // input modes
+    .struct  term_c_iflag + 4
+term_c_oflag:                    // output modes
+    .struct  term_c_oflag + 4
+term_c_cflag:                    // control modes
+    .struct  term_c_cflag + 4
+term_c_lflag:                    // local modes
+    .struct  term_c_lflag + 4
+term_c_cc:                       // special characters
+    .struct  term_c_cc + 20      // see length if necessary
+term_fin:
+
+/* structure sigaction see doc linux */
+    .struct  0
+sa_handler:
+    .struct  sa_handler + 8
+sa_mask:
+    .struct  sa_mask + 8
+sa_flags:
+    .struct  sa_flags + 8
+sa_sigaction:
+    .struct  sa_sigaction + 8
+sa_fin:
+
+/* structure poll see doc linux */
+    .struct  0
+poll_event:
+    .struct  poll_event + 8
+poll_fd:                            //   File Descriptor
+    .struct  poll_fd + 8
+poll_fin:
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessPgmOk:        .asciz "End program OK.\n"
+szMessErreur:       .asciz "Error detected.\n"
+szCarriageReturn:   .asciz "\n"
+szMessCodeErr:      .asciz "Error code décimal :  @ \n"
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+iEnd:           .skip 8                          // 0 loop  1 = end loop
+iTouche:        .skip BUFSIZE                    // value key pressed
+stOldtio:       .skip term_fin                   // old terminal state
+stCurtio:       .skip term_fin                   // current terminal state
+stSigAction:    .skip sa_fin                     // area signal structure
+stSigAction1:   .skip sa_fin
+stSigAction2:   .skip sa_fin
+stSigAction3:   .skip sa_fin
+stevents:       .skip 16
+sZoneConv:      .skip 24
+szBuffer:       .skip BUFSIZE
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                     // entry of program
+    bl initTerm                           // terminal init
+    cmp x0,0                              // error ?
+    blt 100f
+    bl initPoll                           // epoll instance init
+    cmp x0,0
+    blt 100f
+    mov x22,x0                            // save epfd
+    mov x20,0                             // indice
+    ldr x21,qAdrszBuffer
+1:
+    mov x0,x22                            // epfd
+    bl waitKey
+    cmp x0,0
+    beq 1b                                // no ket pressed -> loop
+    blt 3f                                // error ?
+
+    bl readKey                            // read one key
+    cmp x0,3                              // ctrl-C
+    beq 3f
+    cmp x0,113                            // saisie q (quit) ?
+    beq 3f
+    cmp x0,81                             // saisie Q  (Quit)?
+    beq 3f
+    cmp x0,0xD                            // <enter> ?
+    beq 2f
+    strb w0,[x21,x20]                     // store byte in buffer
+    add x20,x20,1                         // increment indice
+    b 1b                                  // and loop
+2:                                        // display buffer
+    mov x0,0                              // store 0 final
+    strb w0,[x21,x20]
+    mov x0,x21                            // display buffer
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    mov x20,0
+    b 1b                                  // and loop for other entry
+3:
+    bl restauTerm                         // terminal restaur
+    ldr x0,qAdrszMessPgmOk                // display end message
+    bl affichageMess
+100:                                      // standard end of the program
+    mov x0,0                              // return code
+    mov x8,EXIT                           // request to exit program
+    svc 0                                 // perform the system call
+qAdrszBuffer:             .quad szBuffer
+qAdrstevents:             .quad stevents
+qAdrszMessErreur:         .quad szMessErreur
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrstOldtio:             .quad stOldtio
+qAdrstCurtio:             .quad stCurtio
+qAdrstSigAction:          .quad stSigAction
+qAdrstSigAction1:         .quad stSigAction1
+qAdrszMessPgmOk:          .quad szMessPgmOk
+qAdrSIG_IGN:              .quad 1
+qAdriEnd:                 .quad iEnd
+qAdriTouche:              .quad iTouche
+/*********************************/
+/* init terminal state            */
+/*********************************/
+initTerm:
+    stp x1,lr,[sp,-16]!            // save  registers
+    /* read terminal state */
+    mov x0,STDIN                   // input console
+    mov x1,TCGETS
+    ldr x2,qAdrstOldtio
+    mov x8,IOCTL                   // call system Linux
+    svc 0
+    cbnz x0,98f                    // error ?
+
+    adr x0,sighandler              // adresse routine traitement signal
+    ldr x1,qAdrstSigAction         // adresse structure sigaction
+    str x0,[x1,sa_handler]         // maj handler
+    mov x0,SIGINT                  // signal type
+    ldr x1,qAdrstSigAction
+    mov x2,0
+    mov x3,8
+    mov x8,SIGACTION               // call system
+    svc 0
+
+    cmp x0,0                       // error ?
+    bne 98f
+    mov x0,SIGQUIT
+    ldr x1,qAdrstSigAction
+    mov x2,0                       // NULL
+    mov x8,SIGACTION               // call system
+    svc 0
+    cmp x0,0                       // error ?
+    bne 98f
+    mov x0,SIGTERM
+    ldr x1,qAdrstSigAction
+    mov x2,0                       // NULL
+    mov x8,SIGACTION               // appel systeme
+    svc 0
+    cmp x0,0
+    bne 98f
+    //
+    adr x0,qAdrSIG_IGN             // address signal igonre function
+    ldr x1,qAdrstSigAction1
+    str x0,[x1,sa_handler]
+    mov x0,SIGTTOU                 //invalidate other process signal
+    ldr x1,qAdrstSigAction1
+    mov x2,0                       // NULL
+    mov x8,SIGACTION               // call system
+    svc 0
+    cmp x0,0
+    bne 98f
+    //
+    /* read terminal current state  */
+    mov x0,STDIN
+    mov x1,TCGETS
+    ldr x2,qAdrstCurtio            // address current termio
+    mov x8,IOCTL                   // call systeme
+    svc 0
+    cmp x0,0                       // error ?
+    bne 98f
+    mov x2,ICANON | ECHO           // no key pressed echo on display
+    mvn x2,x2                      // and one key
+    ldr x1,qAdrstCurtio
+    ldr x3,[x1,#term_c_lflag]
+    and x3,x2,x2                   // add flags
+    str x3,[x1,#term_c_lflag]      // and store
+    mov x0,STDIN                   // maj terminal current state
+    mov x1,TCSETS
+    ldr x2,qAdrstCurtio
+    mov x8,IOCTL                   // call system
+    svc 0
+    cbz x0,100f
+98:                                // error display
+    ldr x1,qAdrszMessErreur        // error message
+    bl   displayError
+    mov x0,-1
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrstSigAction2:    .quad stSigAction2
+qAdrstSigAction3:    .quad stSigAction3
+/*********************************/
+/* init instance epool            */
+/*********************************/
+initPoll:
+    stp x1,lr,[sp,-16]!            // save  registers
+    ldr x0,qAdrstevents
+    mov x1,STDIN                   // maj structure events
+    str x1,[x0,#poll_fd]           // maj FD
+    mov x1,POLLIN                  // action code
+    str x1,[x0,#poll_event]
+    mov x0,0
+    mov x8,CREATPOLL               // create epoll instance
+    svc 0
+    cmp x0,0                       // error ?
+    ble 98f
+    mov x10,x0                     // return FD epoll instance
+    mov x1,EPOLL_CTL_ADD
+    mov x2,STDIN                   // Fd to we want add
+    ldr x3,qAdrstevents            // structure events address
+    mov x8,CTLPOLL                 // call system control epoll
+    svc 0
+    cmp x0,0                       // error ?
+    blt 98f                       // no
+    mov x0,x10                     // return FD epoll instance
+    b 100f
+98:                                               // error display
+    ldr x1,qAdrszMessErreur                       // error message
+    bl   displayError
+    mov x0,-1
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/*********************************/
+/* wait key                      */
+/*********************************/
+/* x0 contains FD poll    */
+waitKey:
+    stp x1,lr,[sp,-16]!            // save  registers
+    ldr x11,qAdriTouche            // key address
+    str xzr,[x11]                  // raz key
+1:
+    ldr x10,qAdriEnd               // if signal ctrl-c  -> end
+    ldr x10,[x10]
+    cbnz x10,100f
+
+    ldr x1,qAdrstevents
+    mov x2,12                      // size events
+    mov x3,1                       // timeout = 1  TODO: ??
+    mov x4,0
+    mov x8,SYSPOLL                 // call system wait POLL
+    svc 0
+    cmp x0,0                       // key pressed ?
+    bge 100f
+98:                                // error display
+    ldr x1,qAdrszMessErreur        // error message
+    bl   displayError
+    mov x0,-1
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/*********************************/
+/* read key                      */
+/*********************************/
+/* x0 returns key value */
+readKey:
+    stp x1,lr,[sp,-16]!            // save  registers
+    mov x0,STDIN                   // File Descriptor
+    ldr x1,qAdriTouche             // buffer address
+    mov x2,BUFSIZE                 // buffer size
+    mov x8,READ                    // read key
+    svc #0
+    cmp x0,0                       // error ?
+    ble 98f
+    ldr x2,qAdriTouche             // key address
+    ldr x0,[x2]
+    b 100f
+98:                                // error display
+    ldr x1,qAdrszMessErreur        // error message
+    bl   displayError
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/*********************************/
+/* restaur terminal state        */
+/*********************************/
+restauTerm:
+    stp x1,lr,[sp,-16]!            // save  registers
+    mov x0,STDIN                   // end then restaur begin state terminal
+    mov x1,TCSETS
+    ldr x2,qAdrstOldtio
+    mov x8,IOCTL                   // call system
+    svc 0
+    cbz x0,100f
+    ldr x1,qAdrszMessErreur        // error message
+    bl   displayError
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+
+/******************************************************************/
+/*     signal processing                                     */
+/******************************************************************/
+sighandler:
+    stp x1,lr,[sp,-16]!            // save  registers
+    ldr x0,qAdriEnd
+    mov x1,#1                      // maj zone end
+    str x1,[x0]
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*     display error message                                      */
+/******************************************************************/
+/* x0 contains error code */
+/* x1 contains address error message    */
+displayError:
+    stp x2,lr,[sp,-16]!            // save  registers
+    mov x2,x0                      // save error code
+    mov x0,x1                      // display message error
+    bl affichageMess
+    mov x0,x2
+    ldr x1,qAdrsZoneConv           // conversion error code
+    bl conversion10S               // decimal conversion
+    ldr x0,qAdrszMessCodeErr
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc          // insert result at @ character
+    bl affichageMess               // display message final
+    ldp x2,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrsZoneConv:        .quad sZoneConv
+qAdrszMessCodeErr:    .quad szMessCodeErr
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

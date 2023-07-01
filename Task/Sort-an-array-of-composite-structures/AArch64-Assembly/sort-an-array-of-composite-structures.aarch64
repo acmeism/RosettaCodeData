@@ -1,0 +1,267 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program shellSort64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* city structure      */
+    .struct  0
+city_name:                             //
+    .struct  city_name + 8             // string pointer
+city_habitants:                        //
+    .struct  city_habitants + 8        // integer
+city_end:
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessResult:        .asciz "Name : @  number habitants : @ \n"
+szMessSortHab:      .asciz "Sort table for number of habitants :\n"
+szMessSortName:     .asciz "Sort table for name of city :\n"
+szCarriageReturn:   .asciz "\n"
+
+// cities name
+szCeret:           .asciz "Ceret"
+szMaureillas:      .asciz "Maureillas"
+szTaillet:         .asciz "Taillet"
+szReynes:          .asciz "Reynes"
+szVives:           .asciz "Vivés"
+szBoulou:          .asciz "Le Boulou"
+szSaintJean:       .asciz "Saint Jean Pla de Corts"
+szCluses:          .asciz "Les Cluses"
+szAlbere:          .asciz "L'Albère"
+szPerthus:         .asciz "Le Perthus"
+
+.align 4
+TableCities:
+                 .quad szCluses         // address name string
+                 .quad 251              // number of habitants
+                 .quad szCeret
+                 .quad 7705
+                 .quad szMaureillas
+                 .quad 2596
+                 .quad szBoulou
+                 .quad 5554
+                 .quad szSaintJean
+                 .quad 2153
+                 .quad szAlbere
+                 .quad 83
+                 .quad szVives
+                 .quad 174
+                 .quad szTaillet
+                 .quad 115
+                 .quad szPerthus
+                 .quad 586
+                 .quad szReynes
+                 .quad 1354
+.equ NBELEMENTS,  (. - TableCities) / city_end
+                 .skip city_end         // temp area for element in shellSort
+                                        // see other soluce to use stack
+                                        // in programm arm assembly in this forum
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:              .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                             // entry of program
+
+    ldr x0,qAdrszMessSortHab
+    bl affichageMess
+
+    ldr x0,qAdrTableCities        // address table
+    mov x1,0                      // not use in routine
+    mov x2,NBELEMENTS             // number of élements
+    mov x3,#city_habitants        // sort by number habitants
+    mov x4,#'N'                   // numeric
+    bl shellSort
+    ldr x0,qAdrTableCities        // address table
+    bl displayTable
+
+     ldr x0,qAdrszMessSortName
+    bl affichageMess
+
+    ldr x0,qAdrTableCities        // address table
+    mov x1,0                      // not use in routine
+    mov x2,NBELEMENTS             // number of élements
+    mov x3,#city_name             // sort by city name
+    mov x4,#'A'                   // alphanumeric
+    bl shellSort
+    ldr x0,qAdrTableCities        // address table
+    bl displayTable
+
+100:                              // standard end of the program
+    mov x0,0                      // return code
+    mov x8,EXIT                   // request to exit program
+    svc 0                         // perform the system call
+
+qAdrsZoneConv:            .quad sZoneConv
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsMessResult:          .quad sMessResult
+qAdrTableCities:          .quad TableCities
+qAdrszMessSortHab:        .quad szMessSortHab
+qAdrszMessSortName:        .quad szMessSortName
+/***************************************************/
+/*   shell Sort                                    */
+/***************************************************/
+/* x0 contains the address of table */
+/* x1 contains the first element but not use !!   */
+/*   this routine use first element at index zero !!!  */
+/* x2 contains the number of element */
+/* x3 contains the offset of sort zone */
+/* x4 contains type of sort zone N = numeric A = alphanumeric */
+shellSort:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    stp x6,x7,[sp,-16]!          // save  registers
+    stp x8,x9,[sp,-16]!          // save  registers
+    stp x10,x11,[sp,-16]!          // save  registers
+    stp x12,x13,[sp,-16]!          // save  registers
+    mov x8,x3                    // save offset area sort
+    mov x9,x4                    // save type sort
+    mov x7,city_end              // element size
+    sub x12,x2,1                 // index last item
+    mov x11,x12                  // init gap = last item
+1:                               // start loop 1
+    lsr x11,x11,1                // gap = gap / 2
+    cbz x11,100f                 // if gap = 0 -> end
+    mov x3,x11                   // init loop indice 1
+2:                               // start loop 2
+    mul x1,x3,x7                 // offset élement
+    mov x2,NBELEMENTS
+    mul x2,x7,x2
+    bl copyElement
+    add x1,x1,x8                 // + offset sort zone
+    ldr x4,[x0,x1]               // load first value
+    mov x5,x3                    // init loop indice 2
+3:                               // start loop 3
+    cmp x5,x11                   // indice < gap
+    blt 7f                       // yes -> end loop 2
+    sub x6,x5,x11                // index = indice - gap
+    mul x1,x6,x7                 // compute offset
+    add x10,x1,x8                // + offset sort zone
+    ldr x2,[x0,x10]              // load second value
+    cmp x9,#'A'                  // sort area alapha ?
+    beq 4f                       // yes
+    cmp x4,x2                    //  else compare numeric values
+    bge 7f                       // highter
+    b 6f                         // lower
+4:                               // compare area alphanumeric
+    mov x10,#0                   // counter
+5:
+    ldrb w13,[x4,x10]            // byte string 1
+    ldrb w6,[x2,x10]             // byte string 2
+    cmp w13,w6
+    bgt 7f
+    blt 6f
+
+    cmp w13,#0                   //  end string 1
+    beq 7f                       // end comparaison
+    add x10,x10,#1               // else add 1 in counter
+    b 5b                         // and loop
+
+6:
+    mul x2,x5,x7                 // offset élement
+    bl copyElement               // copy element x1 to element x2
+    sub x5,x5,x11                // indice = indice - gap
+    b 3b                         // and loop
+7:
+    mov x1,NBELEMENTS
+    mul x1,x7,x1
+    mul x2,x7,x5
+    bl copyElement
+    add x3,x3,1                  // increment indice 1
+    cmp x3,x12                   // end ?
+    ble 2b                       // no -> loop 2
+    b 1b                         // yes loop for new gap
+
+100:                             // end function
+    ldp x12,x13,[sp],16          // restaur  2 registers
+    ldp x10,x11,[sp],16          // restaur  2 registers
+    ldp x8,x9,[sp],16            // restaur  2 registers
+    ldp x6,x7,[sp],16            // restaur  2 registers
+    ldp x4,x5,[sp],16            // restaur  2 registers
+    ldp x2,x3,[sp],16            // restaur  2 registers
+    ldp x1,lr,[sp],16            // restaur  2 registers
+    ret                          // return to address lr x30
+
+/******************************************************************/
+/*      copy table element                                */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 offset origin element */
+/* r2 offset destination element */
+copyElement:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    mov x3,0
+    add x1,x1,x0
+    add x2,x2,x0
+1:
+    ldrb w4,[x1,x3]
+    strb w4,[x2,x3]
+    add x3,x3,1
+    cmp x3,city_end
+    blt 1b
+100:
+    ldp x4,x5,[sp],16            // restaur  2 registers
+    ldp x2,x3,[sp],16            // restaur  2 registers
+    ldp x1,lr,[sp],16            // restaur  2 registers
+    ret                          // return to address lr x30
+/******************************************************************/
+/*      Display table elements                                */
+/******************************************************************/
+/* x0 contains the address of table */
+displayTable:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    stp x6,x7,[sp,-16]!          // save  registers
+    mov x2,x0                    // table address
+    mov x3,0
+    mov x6,city_end
+1:                               // loop display table
+    mul x4,x3,x6
+    add x4,x4,city_name
+    ldr x1,[x2,x4]
+    ldr x0,qAdrsMessResult
+    bl strInsertAtCharInc        // put name in message
+    mov x5,x0                     // save address of new message
+    mul x4,x3,x6
+    add x4,x4,city_habitants       // and load value
+    ldr x0,[x2,x4]
+    ldr x1,qAdrsZoneConv         // display value
+    bl conversion10              // call function
+    mov x0,x5
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc        // insert result at @ character
+    bl affichageMess             // display message
+    add x3,x3,1
+    cmp x3,#NBELEMENTS - 1
+    ble 1b
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+100:
+    ldp x6,x7,[sp],16            // restaur  2 registers
+    ldp x4,x5,[sp],16            // restaur  2 registers
+    ldp x2,x3,[sp],16            // restaur  2 registers
+    ldp x1,lr,[sp],16            // restaur  2 registers
+    ret                          // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

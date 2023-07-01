@@ -1,0 +1,7 @@
+(de nuggets1 (M)
+   (let Lst (range 0 M)
+      (for A (range 0 M 6)
+         (for B (range A M 9)
+            (for C (range B M 20)
+               (set (nth Lst (inc C))) ) ) )
+      (apply max Lst) ) )

@@ -1,0 +1,28 @@
+using Printf
+
+analytical(n::Integer) = sum(factorial(n) / big(n) ^ i / factorial(n - i) for i = 1:n)
+
+function test(n::Integer, times::Integer = 1000000)
+    c = 0
+    for i = range(0, times)
+        x, bits = 1, 0
+        while (bits & x) == 0
+            c += 1
+            bits |= x
+            x = 1 << rand(0:(n - 1))
+        end
+    end
+    return c / times
+end
+
+function main(n::Integer)
+    println(" n\tavg\texp.\tdiff\n-------------------------------")
+    for n in 1:n
+        avg = test(n)
+        theory = analytical(n)
+        diff = (avg / theory - 1) * 100
+        @printf(STDOUT, "%2d %8.4f %8.4f %6.3f%%\n", n, avg, theory, diff)
+    end
+end
+
+main(20)

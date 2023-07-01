@@ -1,0 +1,1 @@
+assert 'abcdefghijklmnopqrstuvwxyz' == lower.join('')

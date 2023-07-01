@@ -1,0 +1,109 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program nroot64.s   */
+/* link with gcc. Use C function for display float */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szFormat1:         .asciz "Root= %+09.15f\n"
+.align 4
+qNumberA:          .quad 1024
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+.align 4
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                                   // entry of program
+
+    /* root 10ieme de 1024  */
+    ldr x0,qAdriNumberA                 // number address
+    ldr d0,[x0]                         // load number in registre d0
+    scvtf d0,d0                         // conversion in float
+    mov x0,#10                          // N
+    bl nthRoot
+    ldr x0,qAdrszFormat1                // format
+    bl printf                           // call C function !!!
+                                        // Attention register dn lost !!!
+    /* square root of 2   */
+    fmov d0,2                           // conversion 2 in float register d0
+    mov x0,#2                           // N
+    bl nthRoot
+    ldr x0,qAdrszFormat1                // format
+                                        // d0 contains résult
+    bl printf                           // call C function !!!
+
+100:                                    // standard end of the program
+    mov x0, #0                          // return code
+    mov x8, #EXIT                       // request to exit program
+    svc 0                               // perform the system call
+
+qAdrszFormat1:           .quad szFormat1
+qAdriNumberA:            .quad qNumberA
+
+/******************************************************************/
+/*     compute  nth root                                          */
+/******************************************************************/
+/* x0 contains N   */
+/* d0 contains the value                 */
+/* x0 return result                      */
+nthRoot:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    stp d1,d2,[sp,-16]!            // save float registers
+    stp d3,d4,[sp,-16]!            // save float registers
+    stp d5,d6,[sp,-16]!            // save float registers
+    stp d7,d8,[sp,-16]!            // save float registers
+    fmov d6,x0                     //
+    scvtf d6,d6                    // N conversion in float double précision (64 bits)
+    sub x1,x0,#1                   // N - 1
+    fmov d8,x1                     //
+    scvtf d4,d8                    //conversion in float double précision
+    fmov d2,d0                     // a = A
+    fdiv d3,d0,d6                  // b = A/n
+    adr x2,dfPrec                  // load précision
+    ldr d8,[x2]
+1:                                 // begin loop
+    fmov d2,d3                     // a <- b
+    fmul d5,d3,d4                  // (N-1)*b
+
+    fmov d1,1                      // constante 1 -> float
+    mov x2,0                       // loop indice
+2:                                 // compute pow (n-1)
+    fmul d1,d1,d3                  //
+    add x2,x2,1
+    cmp x2,x1                      // n -1 ?
+    blt 2b                         // no -> loop
+    fdiv d7,d0,d1                  // A / b pow (n-1)
+    fadd d7,d7,d5                  // + (N-1)*b
+    fdiv d3,d7,d6                  // / N -> new b
+    fsub d1,d3,d2                  // compute gap
+    fabs d1,d1                     // absolute value
+    fcmp d1,d8                     // compare float maj FPSCR
+    bgt 1b                         // if gap > précision -> loop
+    fmov d0,d3                     // end return result in d0
+100:
+    ldp d7,d8,[sp],16              // restaur  2 float registers
+    ldp d5,d6,[sp],16              // restaur  2 float registers
+    ldp d3,d4,[sp],16              // restaur  2 float registers
+    ldp d1,d2,[sp],16              // restaur  2 float registers
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+dfPrec:        .double 0f1E-10     // précision
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

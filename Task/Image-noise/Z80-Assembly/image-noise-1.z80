@@ -1,0 +1,58 @@
+forever:
+	ld hl,frametimer
+	ld a,(hl)
+	rrca
+	rrca
+	rrca			
+	xor (hl)	  ;crude xorshift rng used to select a "random" location to draw to.
+
+	ld h,0
+	ld L,a            ;this random value becomes the low byte of HL
+
+	rlc L
+	rl h              ;reduce the RNG's bias towards the top of the screen by shifting one bit into H.
+	ld a,&98	  ;high byte of gb vram
+	add h             ;h will equal either 0 or 1.
+	ld H,a            ;now H will either equal &98 or &99
+	
+	ld a,(frametimer) ;it's possible that this value is different from before since every vblank it increments.
+                          ;the vblank code was omitted because it's mostly irrelevant to the task.
+	and &0f           ;select one of sixteen tiles to draw to the screen at the randomly chosen VRAM location.
+	call LCDWait      ;disable interrupts, and wait until the Game Boy is ready to update the tilemap
+	ei                ;enable interrupts again.
+	ld (hl),a         ;now we can store the frame timer AND &0F into video ram.
+	
+
+	ld hl,vblankflag  ;set to 1 by the vblank routine.
+        xor a
+wait:
+        halt              ;waits for an interrupt.
+        cp (hl)           compare 0 to vblankflag
+        jr z,wait         ;vblank flag is still 1 so keep waiting.
+        ld (hl),a         ;clear vblank flag.
+
+
+	ld hl,&FFFF       ;master interrupt register
+	res 1,(hl)        ;disable hblank interrupt.
+
+		ld bc,2
+		ld a,(frametimer)
+		bit 4,a   ;check bit 4 of frametimer, if zero, we'll do sine instead of cosine. Bit 4 was chosen arbitrarily.
+		jr nz,doSine
+			ld hl,cos
+			jr nowStore
+doSine:
+			ld hl,sin
+nowStore:	;store desired routine as the CALL address
+			ld a,L
+			LD (&A000+(callpoint-TV_Static_FX+1)),a
+                        ;using label arithmetic we can work out the place to modify the code.
+                        ;hblank interrupt immediately jumps to cartridge RAM at &A000
+			ld a,H
+			LD (&A000+(callpoint-TV_Static_FX+2)),a   ;store the high byte.
+
+	ld hl,&FFFF
+	set 1,(hl)      ;re-enable hblank interrupt
+
+	
+	jp forever

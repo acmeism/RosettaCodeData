@@ -1,0 +1,199 @@
+/* ARM assembly Raspberry PI  */
+/*  program loopnrange.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/*********************************/
+/* Constantes                    */
+/*********************************/
+.equ STDOUT, 1     @ Linux output console
+.equ EXIT,   1     @ Linux syscall
+.equ WRITE,  4     @ Linux syscall
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResult:      .ascii ""                    @ message result
+sMessValeur:       .fill 11, 1, ' '
+szCarriageReturn:  .asciz "\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+iSum:                      .skip 4         @ this program store sum and product in memory
+iProd:                     .skip 4         @ it is possible to use registers r2 and r11
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                       @ entry of program
+    ldr r0,iAdriProd
+    mov r1,#1
+    str r1,[r0]                             @ init product
+    ldr r0,iAdriSum
+    mov r1,#0
+    str r1,[r0]                             @ init sum
+
+    mov r5,#5                               @ x
+    mov r4,#-5                              @ y
+    mov r6,#-2                              @ z
+    mov r8,#1                               @ one
+    mov r3,#3                               @ three
+    mov r7,#7                               @ seven
+
+                                            @ loop one
+    mov r0,#3
+    mov r1,#3
+    bl computePow                           @ compute 3 pow 3
+    mov r10,r0                              @ save result
+    mvn r9,r3                               @ r9 = - three
+    add r9,#1
+1:
+    mov r0,r9
+    bl computeSumProd
+    add r9,r3                               @ increment with three
+    cmp r9,r10
+    ble 1b
+                                            @ loop two
+    mvn r9,r7                               @ r9 = - seven
+    add r9,#1
+2:
+    mov r0,r9
+    bl computeSumProd
+    add r9,r5                               @ increment with x
+    cmp r9,r7                               @ compare to seven
+    ble 2b
+
+                                            @ loop three
+    mov r9,#550
+    sub r10,r9,r4                           @ r10 = 550 - y
+    mov r9,#555
+3:
+    mov r0,r9
+    bl computeSumProd
+    add r9,#1
+    cmp r9,r10
+    ble 3b
+                                            @ loop four
+    mov r9,#22
+4:
+    mov r0,r9
+    bl computeSumProd
+    sub r9,r3                               @ decrement with three
+    cmp r9,#-28
+    bge 4b
+                                            @ loop five
+    mov r9,#1927
+    ldr r10,iVal1939
+5:
+    mov r0,r9
+    bl computeSumProd
+    add r9,#1
+    cmp r9,r10
+    ble 5b
+                                            @ loop six
+    mov r9,r5                               @ r9 = x
+    mvn r10,r6                              @ r10 = - z
+    add r10,#1
+6:
+    mov r0,r9
+    bl computeSumProd
+    sub r9,r10
+    cmp r9,r4
+    bge 6b
+                                            @ loop seven
+    mov r0,r5
+    mov r1,#11
+    bl computePow                           @ compute 11 pow x
+    add r10,r0,r8                           @ + one
+    mov r9,r0
+7:
+    mov r0,r9
+    bl computeSumProd
+    add r9,#1
+    cmp r9,r10
+    ble 7b
+                                            @ display result
+    ldr r0,iAdriSum
+    ldr r0,[r0]
+    ldr r1,iAdrsMessValeur                  @ signed conversion value
+    bl conversion10S                        @ decimal conversion
+    ldr r0,iAdrszMessResult
+    bl affichageMess                        @ display message
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess                        @ display return line
+    ldr r0,iAdriProd
+    ldr r0,[r0]
+    ldr r1,iAdrsMessValeur                  @ conversion value
+    bl conversion10S                        @ signed decimal conversion
+    ldr r0,iAdrszMessResult
+    bl affichageMess                        @ display message
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess                        @ display return line
+
+
+100:                                        @ standard end of the program
+    mov r0, #0                              @ return code
+    mov r7, #EXIT                           @ request to exit program
+    svc #0                                  @ perform the system call
+
+iAdrsMessValeur:          .int sMessValeur
+iAdrszMessResult:         .int szMessResult
+iAdrszCarriageReturn:     .int szCarriageReturn
+iVal1939:                 .int 1939
+/******************************************************************/
+/*     compute the sum and prod                         */
+/******************************************************************/
+/* r0 contains the number  */
+computeSumProd:
+    push {r1-r4,lr}             @ save  registers
+    asr r1,r0,#31
+    eor r2,r0,r1
+    sub r2,r2,r1                @ compute absolue value
+    //vidregtit somme
+    ldr r3,iAdriSum             @ load sum
+    ldr r1,[r3]
+    add r1,r2                   @ add sum
+    str r1,[r3]                 @ store sum
+    cmp r0,#0                   @ j = 0 ?
+    beq 100f                    @ yes
+    ldr r3,iAdriProd
+    ldr r1,[r3]
+    asr r2,r1,#31               @ compute absolute value of prod
+    eor r4,r1,r2
+    sub r2,r4,r2
+    cmp r2,#1<<27               @ compare 2 puissance 27
+    bgt 100f
+    mul r1,r0,r1
+    str r1,[r3]                 @ store prod
+100:
+    pop {r1-r4,lr}              @ restaur registers
+    bx lr                       @ return
+iAdriSum:                .int iSum
+iAdriProd:               .int iProd
+/******************************************************************/
+/*     compute pow                         */
+/******************************************************************/
+/* r0 contains pow  */
+/* r1 contains number */
+computePow:
+    push {r1-r2,lr}             @ save  registers
+    mov r2,r0
+    mov r0,#1
+1:
+    cmp r2,#0
+    ble 100f
+    mul r0,r1,r0
+    sub r2,#1
+    b 1b
+100:
+    pop {r1-r2,lr}              @ restaur registers
+    bx lr                       @ return
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

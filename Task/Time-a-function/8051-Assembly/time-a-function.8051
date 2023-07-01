@@ -1,0 +1,105 @@
+TC	EQU	8 ; number of counter registers
+TSTART	EQU	08h ; first register of timer counter
+TEND	EQU	TSTART + TC - 1 ; end register of timer counter
+; Note: The multi-byte value is stored in Big-endian
+
+; Some timer reloads
+_6H	EQU	085h ; 6MHz
+_6L	EQU	0edh
+_12H	EQU	00bh ; 12MHz
+_12L	EQU	0dbh
+_110592H	EQU	01eh ; 11.0592MHz
+_110592L	EQU	0ffh
+
+; How to calculate timer reload (e.g. for 11.0592MHz):
+; Note: 1 machine cycle takes 12 oscillator periods
+; 11.0592MHz / 12 * 0.0625 seconds = 57,600 cycles = e100h
+; ffffh - e100h = NOT e100h = 1effh
+
+; assuming a 11.0592MHz crystal
+TIMERH	EQU	_110592H
+TIMERL	EQU	_110592L
+
+;; some timer macros (using timer0)
+start_timer macro
+	setb tr0
+endm
+stop_timer macro
+	clr tr0
+endm
+reset_timer macro
+	mov tl0, #TIMERL
+	mov th0, #TIMERH
+endm
+
+increment_counter macro ;; increment counter (multi-byte increment)
+	push psw
+	push acc
+	push 0 ; r0
+	mov r0, #TEND+1
+	setb c
+inc_reg:
+	dec r0
+	clr a
+	addc a, @r0
+	mov @r0, a
+	jnc inc_reg_	; end prematurally if the higher bytes are unchanged
+	cjne r0, #TSTART, inc_reg
+inc_reg_:
+	; if the carry is set here then the multi byte value has overflowed
+	pop 0
+	pop acc
+	pop psw
+endm	
+	
+ORG RESET
+	jmp init
+ORG TIMER0
+	jmp timer_0
+
+timer_0: ; interrupt every 6.25ms
+	stop_timer		; we only want to time the function
+	reset_timer
+	increment_counter
+	start_timer
+	reti
+		
+init:
+	mov sp, #TEND
+	setb ea			; enable interrupts
+	setb et0		; enable timer0 interrupt
+	mov tmod, #01h		; timer0 16-bit mode
+	reset_timer
+	
+	; reset timer counter registers
+	clr a
+	mov r0, #TSTART
+clear:
+	mov @r0, a
+	inc r0
+	cjne r0, #TEND, clear
+	
+	start_timer
+	call function		; the function to time
+	stop_timer
+	
+	; at this point the registers from TSTART
+	; through TEND indicate the current time
+	; multiplying the 8/16/24/etc length value by 0.0625 (2^-4) gives
+	; the elapsed number of seconds
+	; e.g. if the three registers were 02a0f2h then the elapsed time is:
+	; 02a0f2h = 172,274 and 172,274 * 0.0625 = 10,767.125 seconds
+	;
+	; Or alternatively:
+	; (high byte) 02h = 2 and 2 * 2^(16-4) = 8192
+	; (mid byte) a0h = 160 and 160 * 2^(8-4) = 2560
+	; (low byte) f2h = 242 and 242 * 2^(0-4) = 15.125
+	; 8192 + 2560 + 15.125 = 10,767.125 seconds
+	
+	jmp $
+	
+function:
+	; do whatever here
+	ret
+
+END

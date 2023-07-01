@@ -1,0 +1,163 @@
+{{Stub}}{{language}}{{assembler language}}[[Category:Assembly]]8086 Assembly is the assembly language used by the Intel 8086 processor. This processor was used for the first time in the IBM PC, and in its various clones. The 8086 gave birth, starting with the 80186 processor, to the X86 family, that nowadays is the most used processor family in desktop computers. All the 32 and 64 bit processors from this family are able to operate in a 8086 compatibility mode, for backward compatibility with legacy software and running very low-level code (like the BIOS). For the evolution of this assembly implementation to 32 bits, see [[X86 assembly]].
+
+==Architecture Overview==
+===Segmented Memory===
+The 8086 uses a segmented memory model, similar to the Super Nintendo Entertainment System. Unlike banked memory models used in the Commodore 64 and late NES games, segment addresses are held in <i>segment registers</i>. These segment registers are 16 bit and get left-shifted by 4 and added to the pointer register of interest to determine the memory address to look up. The 8086 has four in total, but only the <code>DS</code> and <code>ES</code> registers can be used by the programmer. (The other two work with the stack pointer and instruction pointer, and are loaded for you.) On the 8086, you can only load segment registers with the value in a data register, or with the <code>POP</code> command. So first you must load a segment into a data register, THEN into a segment register.
+
+<lang asm>;This is NOT valid code!
+mov ds, @data  ;you're trying to move the data segment location directly into DS. You can't!
+
+
+;This is the proper way:
+mov ax, @data  ;I chose AX but I could have used BX, CX, or DX.
+mov ds, ax     ;load DS with the data segment.</lang>
+
+It's important to remember the subtle distinction between a ''segment'' and a ''segment register.'' Your program might have labeled ''segments'' such as <code>.data</code> and <code>.code</code>, but in order to properly read from/write to these sections you'll need to load their memory locations into ''segment registers.''
+
+===Data Registers===
+There are four data registers: <code>AX</code>, <code>BX</code>, <code>CX</code>, and <code>DX</code>. While most commands can use any of them, some only work with particular data registers. System calls in particular are very specific about which registers can be used for what. On [[MS-DOS]], the <code>AX</code> register is used for selecting the desired interrupt to use with the <code>INT</code> command.
+
+Each data register is 16-bit, but has two eight bit halves ending in H or L, e.g. <code>AH, AL</code>. Instructions can be executed using the whole register or just half of it.
+<lang asm>mov ax, 1000h ;move 1000h into AX, or equivalently, move 10h into AH and 00h into AL.</lang>
+Moving a value smaller than 16 bits into <code>?X</code> is the same as moving it into <code>?L</code>, and moving 0 into <code>?H</code>. (? represents the data register of your choice. They are all the same in this regard.)
+
+<lang asm>mov ax,0030h
+;is the same as:
+mov al, 30h
+mov ah, 0h</lang>
+
+Commands that alter the contents of a single register will not affect the other half.
+<lang asm>mov ax,00FFh
+inc al</lang>
+If we had executed <code>INC AX</code>, then <code>AX</code> would have been incremented to 0x100. Since we only incremented <code>AL</code>, only <code>AL</code> was incremented in this case, and <code>AH</code> '''still equals 0x00!'''
+
+Generally speaking, the 8086's registers serve the following purposes:
+* <code>AX</code> is the "Accumulator" and is used for advanced mathematics routines, as well as the source/destination for the <code>STOSW</code> and <code>LODSW</code> commands when loading/storing bytes from consecutive regions of memory. 
+* <code>BX</code> can be used as a variable offset on the Source Index/Destination Index registers (more on those later).
+* <code>CX</code> is used as a loop counter. The <code>JCXZ</code> command jumps to the specified address, but only if <code>CX = 0</code>. In addition, <code>CL</code> is used to specify a shift amount when performing bit shifts and rotates. On later x86 CPUs, this can be any constant value, but on the original 8086 you can only specify 1 or <code>CL</code>.
+* <code>DX</code> contains the "high word" of a 32-bit product when multiplying <code>AX</code> with another 16-bit register. For example, if <code>AX</code> contains 0x2000 and <code>BX</code> contains 0x10, the command <code>MUL BX</code> will create the product 0x20000, with <code>DX</code> containing 0x0002 and <code>AX</code> containing 0x0000. In addition, DX is also used with the <code>IN</code> and <code>OUT</code> commands when selecting which ports to read from/write to external hardware.
+
+===Other Registers===
+When writing to or reading from consecutive sections of memory, it is helpful to apply an offset from a base value. The Base Pointer register <code>BP</code>, Source Index <code>SI</code>, and Destination Index <code>DI</code> can point to various regions of memory. Many commands that work with these registers can auto-increment or decrement them after each load or store. In addition, they can be optionally offset by a constant, the value stored in <code>BX</code>, or both at the same time. (<code>BX</code> cannot be added to <code>BP</code> in this manner, but it can be added to <code>DI</code>, and <code>SI</code>.) Unlike the data registers, <code>BP</code>,<code>DI</code>, and <code>SI</code> cannot be split in half and worked on separately. Only data registers allow you to work in 8-bit.
+
+The syntax for offsetting an index register will vary depending on your assembler. Many assemblers will often accept multiple different ways of writing it, and it comes down to personal preference.
+
+<lang asm>mov si, offset MyArray
+mov bx,2
+
+mov al,[bx+si] ;loads decimal 30 into AL
+
+MyArray:
+byte 10,20,30,40,50</lang>
+
+===The Stack===
+As with [[Z80 Assembly]], you can't push 8-bit registers onto the stack. For data registers, you have to push/pop both halves.
+<lang asm>;This is valid code.
+push ax
+push bx
+
+pop bx
+pop ax</lang>
+
+<lang asm>;This is NOT valid code.
+push ah
+push al
+push bh
+push bl
+
+
+pop bl
+pop bh
+pop al
+pop ah</lang>
+
+As with all processors that use a stack, if you push one or more registers and want to restore the backed-up values correctly, you must pop them in the reverse order. You can pop them out of order on purpose to swap registers around. In fact, this is a quick way to move the segment from <code>DS</code> into <code>ES</code>, or vice-versa:
+<lang asm>push DS
+pop ES ;you can't do "mov es, ds" but you can do this!</lang>
+
+The proper way to use the stack to preserve registers:
+<lang asm>
+call foo
+
+mov ax,4C00h
+int 21h          ;exit program and return to DOS. Instruction pointer cannot move beyond this except with a function call.
+
+
+foo:
+push ax
+push bx
+push cx
+
+pop cx
+pop bx
+pop ax
+ret</lang>
+
+If one of the push/pop commands in the routine above were missing, the <code>RET</code> instruction would not properly return to where it came from. As long as you pop at the end the same number of registers you pushed at the start, the stack is "balanced" and your return instruction will return correctly. This is because <code>RET</code> is actually <code>POP IP</code> (<code>IP</code> being the instruction pointer, which you can think of as what "line" of code the CPU is on.) The CPU assumes the top of the stack is the correct place to return to, but has no way of actually verifying it. If the function you just wrote causes the CPU to crash or jump to a completely different part of the code, there's a good chance you might have forgotten to balance the stack properly.
+
+===Arithmetic===
+The 8086 has a lot of advanced mathematics commands. Like the 68000 it can multiply and divide. Although the 8086 doesn't work with 32 bit numbers in a single register, it has many more options for Binary Coded Decimal values, including commands for both "packed" (two digits per byte) and "unpacked" (one digit per byte.) By contrast, [[68000 Assembly]] only has commands for the "packed" format.
+
+The 8087 co-processor adds many different commands for floating-point mathematics. These instructions typically start with the letter "F" (e.g. <code>FADD</code>, <code>FMUL</code>, etc.) When the 8086 reads an instruction that is meant for the 8087, it passes that instruction to the 8087 which then executes it. The 8087's registers are more complicated than that of the 8086; the 8087 uses a stack-based register system. 
+
+While both the 8086 and the 8087 can read the same code, data, and memory, they cannot read the contents of each other's registers. So for example, if you wanted to use the 8087 to perform a calculation and then output the result to the screen, you'd need to give the 8087 the command to do the math and store the result into RAM. Then, the 8086 would read that RAM and output the result to the screen. The 8087 also doesn't have the robust indexed addressing modes of the 8086 - so the 8086 will often do the job of looking up a value from a table, then dumping that value into a temporary "loading zone" at a known location where the 8087 can more easily read from. In order to make sure that the 8086 and 8087 stay in sync, the 8086 can <code>WAIT</code> for the 8087 to finish its current instruction before executing more instructions. This is incredibly useful in the event that the 8086 needs to use a calculation that the 8087 did - it might end up reading from the "loading zone" before the 8087 actually has put the result of the calculation in it! (Most assemblers will handle this for you.)
+
+One other caveat to mention: On early IBM PCs and compatibles, the 8087 was not built into the CPU like it is now. Back then, it was sold separately. So if you're programming on original hardware and the floating point commands don't work, it might be because you don't have the coprocessor installed!
+
+===Looping Constructs===
+The 8086 has a lot more of these than most CPUs. The most obvious one is <code>LOOP</code>, which will subtract 1 from <code>CX</code>, then jump back to a specified label if <code>CX</code> is nonzero after the subtraction. If <code>CX</code> becomes zero after subtracting 1, then no jump will occur and the instruction pointer simply moves to the next instruction.
+
+<lang asm>mov cx,0100h ;set the loop counter's starting value. This must be outside the loop, otherwise you'll loop forever!
+
+foo:
+;; your code that you want to loop goes here
+loop foo </lang>
+
+It's important not to alter <code>CX</code> inside the loop. It's easy to make a mistake like this if you're in a hurry:
+
+<lang asm>foobar:
+mov cx,1000h
+;your code goes here
+loop foobar</lang>
+
+It may not be obvious at first but the above loop will never end. <code>CX</code> decrements to 0x0FFF with the <code>LOOP</code> instruction but the <code>mov cx,1000h</code> was mistakenly placed ''inside'' the loop, resetting the loop counter back to 0x1000, which means no progress is really being made. The correct way to do this is to set the starting loop counter '''outside''' the loop, like so:
+
+<lang asm>mov cx,1000h
+foobar:
+;your code goes here
+loop foobar</lang>
+
+Sometimes you'll have to change <code>CX</code> during a loop, like if you want to do bit shifts with a shift amount other than 1, for example. There's a simple fix - use the stack to stash and retrieve the loop counter.
+<lang asm>mov cx,0100h
+
+foo:
+push cx
+   mov cl,2
+   ror ax,cl   ;starting with the 80186 you don't need CL for bit shifting.
+pop cx
+loop foo</lang>
+
+By using <code>PUSH CX</code> and <code>POP CX</code>, you can temporarily use <code>CX</code> for something else, as long as you restore it before the <code>LOOP</code> instruction.
+
+You can use other registers as loop counters as well, but not with the <code>LOOP</code> instruction - it's hardcoded to only work with <code>CX</code>. But you can do this:
+<lang asm>mov dx,0100h
+baz:
+;your code goes here
+dec dx
+jnz baz
+; A minor note for advanced programmers:
+; If you're expecting the flags to be in a particular state based on the loop body, tough luck!
+; They'll only reflect the decrement of DX from 1 to 0 at this point in the code.
+; LOOP doesn't change the flags, which makes it more useful for loops meant to compare things.</lang>
+
+
+Another frequently used looping construct is <code>REP</code>. <code>REP</code> can be combined with certain instructions to repeat that instruction until <code>CX</code> equals zero. However, unlike <code>LOOP</code>, which can be used to repeat a block of instructions, <code>REP</code> can only repeat one. It doesn't work on all instructions, only the "string" instructions which operate on a block of memory. Typically these include <code>MOVSB</code>, <code>LODSB</code>, <code>STOSB</code>, <code>CMPSB</code>, and <code>SCASB</code> (each has a variant that ends in W instead of B, for 16-bit data.) There are also <code>REPZ</code> and <code>REPNZ</code>, which stand for "Repeat if Zero" and "Repeat if Nonzero" respectively. These two only work properly with <code>CMPSB</code> and <code>SCASB</code>, as <code>MOVSB</code>, <code>LODSB</code>, <code>STOSB</code> do not affect the flags. (The CPU doesn't detect whether <code>CX</code> equals zero using the flags, as the flags never reflect this equality to zero like you would expect.)
+
+==Citations==
+#'Akuyou', Keith. <i>Learn Multiplatform Assembly Programming with Chibiakumas!</i> Las Vegas, NV. Self-published, 05 April 2021.
+
+==See Also==
+[http://ctyme.com/rbrown.htm| Ralf Brown's Interrupt List - a detailed documentation of MS-DOS system calls]
+
+
+[[category: x86 Assembly]]

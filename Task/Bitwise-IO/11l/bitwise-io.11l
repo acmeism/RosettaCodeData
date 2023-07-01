@@ -1,0 +1,70 @@
+T BitWriter
+   File out
+   accumulator = 0
+   bcount = 0
+
+   F (fname)
+      .out = File(fname, ‘w’)
+
+   F _writebit(bit)
+      I .bcount == 8
+         .flush()
+      I bit > 0
+         .accumulator [|]= 1 << (7 - .bcount)
+      .bcount++
+
+   F writebits(bits, =n)
+      L n > 0
+         ._writebit(bits [&] 1 << (n - 1))
+         n--
+
+   F flush()
+      .out.write_bytes([Byte(.accumulator)])
+      .accumulator = 0
+      .bcount = 0
+
+   F close()
+      .flush()
+      .out.close()
+
+T BitReader
+   File input
+   accumulator = 0
+   bcount = 0
+   read = 0
+
+   F (fname)
+      .input = File(fname, ‘r’)
+
+   F _readbit()
+      I .bcount == 0
+         V a = .input.read_bytes(1)
+         I !a.empty
+            .accumulator = a[0]
+         .bcount = 8
+         .read = a.len
+      V rv = (.accumulator [&] (1 << (.bcount - 1))) >> (.bcount - 1)
+      .bcount--
+      R rv
+
+   F readbits(=n)
+      V v = 0
+      L n > 0
+         v = (v << 1) [|] ._readbit()
+         n--
+      R v
+
+V writer = BitWriter(‘bitio_test.dat’)
+V chars = ‘12345abcde’
+L(ch) chars
+   writer.writebits(ch.code, 7)
+writer.close()
+
+V reader = BitReader(‘bitio_test.dat’)
+[Char] charsa
+L
+   V x = reader.readbits(7)
+   I reader.read == 0
+      L.break
+   charsa.append(Char(code' x))
+print(charsa.join(‘’))

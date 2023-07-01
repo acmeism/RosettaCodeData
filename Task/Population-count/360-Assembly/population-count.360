@@ -1,0 +1,82 @@
+*        Population count          09/05/2019
+POPCNT   CSECT
+         USING  POPCNT,R13         base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         SAVE   (14,12)            save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LD     F0,UN              1
+         STD    F0,BB              bb=1
+         MVC    PG(7),=C'pow  3:'  init buffer
+         L      R10,NN             nn
+         BCTR   R10,0              nn-1
+         LA     R9,PG+7            @pg
+         LA     R6,0               i=0
+       DO WHILE=(CR,R6,LE,R10)     do i=0 to nn-1
+         LM     R0,R1,BB             r0r1=bb
+         BAL    R14,POPCOUNT         call popcount(bb)
+         LR     R1,R0                popcount(bb)
+         XDECO  R1,XDEC              edit popcount(bb)
+         MVC    0(3,R9),XDEC+9       output popcount(bb)
+         LD     F0,BB                bb
+         AW     F0,BB                bb*2
+         AW     F0,BB                bb*3
+         STD    F0,BB                bb=bb*3
+         LA     R9,3(R9)             @pg
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         XPRNT  PG,L'PG            print buffer
+         SR     R7,R7              j=0
+       DO WHILE=(C,R7,LE,=F'1')    do j=0 to 1
+         MVC    PG,=CL132' '         clear buffer
+       IF   LTR,R7,Z,R7 THEN         if j=0 then
+         MVC    PG(7),=C'evil:  '      init buffer
+       ELSE     ,                    else
+         MVC    PG(7),=C'odious:'      init buffer
+       ENDIF    ,                    endif
+         LA     R9,PG+7              @pg
+         SR     R8,R8                n=0
+         SR     R6,R6                i=0
+       DO WHILE=(C,R8,LT,NN)         do i=0 by 1 while(n<nn)
+         XR     R0,R0                  r0=0
+         LR     R1,R6                  r1=i
+         BAL    R14,POPCOUNT           r0=popcount(i)
+         SRDA   R0,32                  ~
+         D      R0,=F'2'               popcount(i)/2
+       IF    CR,R0,EQ,R7 THEN          if popcount(i)//2=j then
+         LA     R8,1(R8)                 n=n+1
+         XDECO  R6,XDEC                  edit i
+         MVC    0(3,R9),XDEC+9           output i
+         LA     R9,3(R9)                 @pg
+       ENDIF    ,                      endif
+         LA     R6,1(R6)             i++
+       ENDDO    ,                    enddo i
+         XPRNT  PG,L'PG              print buffer
+         LA     R7,1(R7)             j++
+       ENDDO    ,                  enddo j
+         L      R13,4(0,R13)       restore previous savearea pointer
+         RETURN (14,12),RC=0       restore registers from calling sav
+*------- ----   ------------------
+POPCOUNT EQU    *                  popcount(x)
+         ICM    R0,B'1000',=X'00'  zap exponant part
+         XR     R3,R3              y=0
+         LA     R4,56              mantissa size = 56
+LOOP     STC    R1,CC              do i=1 to 56
+         TM     CC,X'01'             if bit(x,i)=1
+         BNO    NOTONE               then{
+         LA     R3,1(R3)               y++}
+NOTONE   SRDA   R0,1                 shift right double arithmetic
+         BCT    R4,LOOP            enddo i
+         LR     R0,R3              return(y)
+         BR     R14                return
+*------- ----   ------------------
+NN       DC     F'30'              nn=30
+BB       DS     D                  bb
+UN       DC     X'4E00000000000001'  un=1 (unnormalized)
+PG       DC     CL132' '           buffer
+XDEC     DS     CL12               temp for xdeco
+CC       DS     C
+         REGEQU
+         END    POPCNT

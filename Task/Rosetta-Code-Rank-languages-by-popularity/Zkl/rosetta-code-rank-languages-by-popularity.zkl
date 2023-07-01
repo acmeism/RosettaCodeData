@@ -1,0 +1,38 @@
+var [const] CURL=Import("zklCurl"), YAJL=Import("zklYAJL")[0];
+
+fcn getLangCounts(language){ // -->( (count,lang), ...)
+   continueValue,tasks,curl := "",List(), CURL();  // "nm\0nm\0...."
+   do{	// eg 5 times
+      page:=curl.get(("http://rosettacode.org/mw/api.php?"
+         "format=json"
+	 "&action=query"
+	 "&generator=categorymembers"
+	 "&gcmtitle=Category:Programming%%20Languages"
+	 "&gcmlimit=500"
+	 "&prop=categoryinfo"
+	 "&rawcontinue"		// remove warning
+	 "&gcmcontinue=%s")
+	 .fmt(continueValue));
+      page=page[0].del(0,page[1]);  // get rid of HTML header
+      json:=YAJL().write(page).close();
+
+      json["query"]["pages"].howza(9).pump(tasks,fcn(d){ #dictionary values,only
+         // { title:Category:AWK,categoryinfo:{ pages:398,size:401,... },... }
+         // Gotta take care of no categoryinfo case
+	 count:=d.find("categoryinfo",Dictionary).find("size",0);  // or pages?
+	 if(count<300) return(Void.Skip);  // prune
+         T(count,d["title"].del(0,9));     // "Category:RPL" --> "RPL"
+      });
+
+      if(continueValue=json.find("query-continue"))
+      	// subcat|524558580a52455858|4331 or void
+	 continueValue=continueValue["categorymembers"]["gcmcontinue"];
+   }while(continueValue);
+   tasks
+}
+
+langCounts:=getLangCounts()   .sort(fcn(a,b){ a[0]>b[0] });	// reverse sort
+
+println("Most popular Rosetta Code languages as of ",Time.Date.prettyDay());
+foreach n,name in ([1..15].zip(langCounts))
+   { println("%2d: %3d %s".fmt(n,name.xplode())) }

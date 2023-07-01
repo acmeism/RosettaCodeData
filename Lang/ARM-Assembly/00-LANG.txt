@@ -1,0 +1,199 @@
+{{stub}}{{language}}{{assembler language}}
+The ARM architecture is widely used on mobile phones and tablets. It falls under the category of RISC (Reduced Instruction Set Computer) processors, which means it has fewer opcodes than a CPU such as those in the x86 family. However, it makes up for this with its speed. The ARM and its variants are used in many well-known systems such as the Raspberry Pi, Nintendo DS, iPad, and more.
+
+===Instruction Size===
+Every instruction that the ARM can execute is 32 bits. While other processors can have variable length instructions, the ARM does not. This means that the ARM doesn't need to parse where an instruction begins and ends, which makes it run very fast. What you might not expect is that this 32-bit instruction size includes both the actual instruction and the operands! Let's take a look at a [[Z80 Assembly]] instruction and compare it to an ARM instruction.
+
+<lang z80>LD HL,&8040           ;bytecode is 0x21 0x40 0x80</lang>
+
+<lang ARM Assembly>mov r4,#0x04000000   ;bytecode is 0xE3A04301</lang>
+
+So where did the <code>0x04000000</code> go? It's actually been compressed and fit within those 4 bytes you saw earlier. The ARM is very good at decompressing it, since it's been shrunk to an 8-bit number that can be rotated by an even number of bits. Unfortunately, this compression method is a double-edged sword - some 32-bit numbers can't be compressed this way, and thus many instructions can't work with them!
+
+===Registers===
+The ARM has 15 main registers the programmer can use, numbered <code>R0</code> through <code>R15</code>. The higher-numbered ones have special purposes, but <code>R0</code> through <code>R10</code> can be used for anything. In other words, there are no commands that only work with <code>R0</code> (system calls notwithstanding). Registers with a specific purpose have alternate abbreviations that your assembler allows you to use for clarity.
+
+Registers are much more flexible than immediate operands. Unlike immediate operands, which must be 8-bit rotateable, the ARM can simply reference a register operand by its register number. This means that any value in a register is fair game. Certain instructions such as <code>MUL</code> cannot use immediate operands at all, so loading the values you want to multiply into registers will be necessary. 
+
+Getting an address in a register can be achieved with the <code>MOV</code> command, but there are limitations to that which will be explained in detail later. It's more reliable to use <code>ADR</code> which loads a nearby address into a register. This address has to be within a certain distance from the current program counter or it can't be loaded, so it's not a reliable way to load from the heap on many machines. It's mostly intended for loading from nearby read-only data, such as text strings or stored immediates (more on that later). When you type <code>ADR R0,LABEL</code>, the assembler will convert this to <code>MOV R0,PC,#N</code>, where N is the difference between the current program counter value and the label you specified.
+
+<code>LDR</code> can be used in a similar fashion to <code>ADR</code> but there is a subtle distinction between the two. Assume that the section below is assembled starting at memory address <code>0x04000000</code>:
+<lang ARM Assembly>DataBlock:
+.long 0xDEADBEEF   ;VASM uses .long for 32-bit data and .word for 16-bit data. Your assembler will probably use .word for 32 bit and 
+.long 0xFFFFFFFF   ;    .hword for 16-bit.
+
+MyCode:
+adr r0, DataBlock   ;loads the value 0x04000000 into R0
+
+ldr r1, DataBlock   ;loads the value 0xDEADBEEF into R1
+
+adr r2, DataBlock+4 ;loads the value 0x04000004 into R2
+
+ldr r3, DataBlock+4 ;loads the value 0xFFFFFFFF into R3</lang>
+
+As you can see, <code>ADR</code> only gives you the memory location of a value in memory, where <code>LDR</code> loads ''from'' that memory location.
+
+
+===Data Addressing using LDR and STR===
+Unlike its "cousin," the Motorola 68000 (which isn't really related but has a somewhat similar design), the ARM cannot directly write immediate values to memory. Those values must be contained in registers first. Unlike the 68000, the ARM has no "address registers." Rather, enclosing a register name in square brackets turns its value into a reference to a memory location. You'll need to load that memory location's numeric "value" as a constant first. Then you can read from it with <code>LDR</code> and write to it with <code>STR</code>. Not only can you read from a given address, you can also adjust how you read from it, and what you do before or after the read.
+
+<lang ARM Assembly>RAM_ADDRESS:
+.long 0               ;for simplicity we'll assume that this can actually be written to. Represents a placeholder for 32-bit data.
+                      ;Your assembler's syntax may be different.
+
+.long 0               ;another placeholder for 32-bit data
+
+MyCode:
+adr R2,RAM_Address    ;get the address of a nearby place to store values.
+MOV R0,#0x12345678    ;the value to store.
+STR R0,[R2]           ;store 0x12345678 into the first 32-bit slot.</lang>
+
+This is the basic way to store into memory, but there are other options, such as offsetting and post-increment.
+<lang ARM Assembly>RAM_ADDRESS:
+.long 0             
+.long 0              ;we'll store here this time.
+
+MyCode:
+adr R2,RAM_Address   ;point R2 to the first storage slot
+MOV R0,#0x12345678                       
+STR R0,[R2,#4]       ;store into the SECOND slot. R2 still points to the first slot - the #4 is added to R2 only temporarily.</lang>
+
+There's a limit on the size of an immediate value used to offset when loading/storing. You can also use a register as an offset, whose value will be added to the address. 
+
+<lang ARM Assembly>RAM_AREA:
+.space 64,0   ;64 bytes of ram
+
+;assume that R2 contains the address of "RAM_AREA"
+MyCode:
+MOV R0,#0x12345678
+MOV R1,#20
+STR R0,[R2,R1]   ;equivalent of "STR R0,[R2,#20]"</lang>
+
+Now let's say you wanted to actually alter the pointer to R2, so that it remains pointing to where you offset it to after the store or load. That's an option you have - all you have to do is type "!" after the brackets. This is called "pre-increment" or "pre-indexing."
+
+<lang ARM Assembly>RAM_ADDRESS:
+.long 0             
+.long 0              ;we'll store here this time, and we want R2 to still be pointing here after we write to it.
+
+MyCode:
+adr R2,RAM_Address   ;point R2 to the first storage slot
+MOV R0,#0x12345678                       
+STR R0,[R2,#4]!      ;store into the SECOND slot. R2 also points to the second slot now, even after this instruction has concluded.</lang>
+
+Here, the offset is performed ''before'' the storage operation. What if you want to offset afterwards? That would be useful for reading in a data stream. Good news - you can do that simply by having the offset value or register '''outside''' the brackets. This is called "post-increment" or "post-indexing." Unlike pre-indexing, these changes to the pointer are not temporary. 
+
+<lang ARM Assembly>LDR R0,[R1],#4       ;load the 32-bit value stored at memory location R1 into R0, THEN add 4 to R1. This offset remains even after this
+                     ;   instruction is finished.</lang>
+
+===Barrel Shifter===
+The ARM can add a bit shift or rotate to one of its operands at no additional cost to execution time or bytecode. If the operand being shifted is a register, the value of that register is not actually changed. The shift or rotate only applies during that instruction.
+
+<lang ARM Assembly>add r0,r0,r1 lsl 2 ;shift r1 left 2 bits, add r0 to r1, store the result in r0. r1 is unchanged after this instruction</lang>
+
+===Separate Destination for Math===
+With the x86, 68000, and other similar processors, arithmetic functions take two operands: the source and the destination. Anytime you add two numbers, one of them gets changed. This is not the case with the ARM. The destination can be a third register that isn't involved in the arithmetic whatsoever!
+
+<lang ARM Assembly> add r3,r2,r1 ;add r2 to r1 and store the result in r3. r1 and r2 are unchanged.</lang>
+
+===Conditional Opcodes===
+Checking for condition codes isn't just limited to branching on the ARM. Almost every instruction can be made conditional. If the condition is not met, the opcode will have no effect. This saves a lot of cycles that would be spent branching just to execute a single instruction.
+
+Compare the following snippets of code. The first is written in 8086 Assembly, the second in ARM. Both do the same thing, but ARM can do it without branching.
+
+<lang asm>mov ax, word ptr [ds:TestData] ;dereference the pointer to TestData and store the value contained within that address into ax
+add ax,1                       ;add 1 to ax
+jo OverflowSet                 ;the addition caused an overflow, jump to this label.
+ret                            ;return from subroutine
+
+OverflowSet:
+sub ax,1                       ;rollback the previous addition.
+ret                            ;return from subroutine.</lang>
+
+The same code translated to ARM doesn't need to branch:
+<lang ARM Assembly>mov r1,#TestData ;get the address of TestData
+ldr r0,[r1]      ;load the 32-bit value stored at TestData into r0
+adds r0,r0,#1    ;add 1 to r0 and store the result in r0, updating the flags accordingly.
+subvs r0,r0,#1   ;subtract 1 from r0 and store the result in r0, only if the overflow flag was set.</lang>
+
+
+If your code does one thing when a flag is set and another when that same flag is clear, the ARM can select the correct option without having to branch at all:
+
+<lang ARM Assembly>;ARM ASSEMBLY
+mov r1,#TestData ;get the address of TestData
+ldrs r0,[r1]     ;load the 32-bit value stored at TestData into r0, updating the flags accordingly.
+addeq r0,r0,r2   ;if r0 equals zero, add r2 to r0 and store the result in r0.
+subne r0,r0,r2   ;if r0 doesn't equal zero, subtract r2 from r0 and store the result in r0.</lang>
+
+The equivalent in x86 would take at least one branch, maybe 2 depending on the outcome:
+<lang asm>;x86 ASSEMBLY 
+    mov ax, word ptr [ds:TestData]
+    cmp ax,0
+    jne subtract_bx
+    add ax,bx
+    jmp done
+subtract_bx:
+    sub ax,bx
+done:</lang>
+
+===Setting Flags===
+The flags, or condition codes, are only set by instructions that end in an "s," or by compare commands such as <code>CMP</code>. This lets you "preserve" the processor's state after an important calculation, but do some other things before execution branches depending on the result of that calculation. On any other processor, the calculation that determines whether a branch occurs ''must happen immediately before that branch statement or the branch will be taken/not taken based on the wrong data.''
+
+<lang ARM Assembly>cmp r0,r1   ;compare r0 to r1
+ldr r2,[r3] ;load r2 from the address stored in r3
+ldr r3,[r4] ;load r3 from the address stored in r4
+bne myLabel ;branch to myLabel if the result of "cmp r0,r1" was not equal to zero.</lang>
+
+Most processors would have to push and pop the condition code register between the compare and the branch. Otherwise, the act of loading <code>r2</code> and <code>r3</code> would affect the outcome of the branch. Not so on the ARM!
+
+''NB: On many Intel-based machines, loading from memory won't affect the flags, but the point still stands: even math operations can be done on the ARM between a calculation that set the flags and the branch based on those flags, and as long as the instructions in between do not update the flags, they won't change the outcome of the branch.''
+
+===Call Stack===
+Most processors, including the x86 family, will use the same hardware stack for function arguments, local variables, and return addresses. The ARM doesn't actually need to store a return address onto the stack until subroutines are nested (though ARM Assembly written by a compiler will most likely do so anyway.) This is because the <i>link register</i> or <code>r13</code> is responsible for holding the return address. <code>BL</code> is the equivalent of <code>CALL</code> on the x86 architecture, and instead of pushing the program counter to the stack, it gets copied to the link register before the branch. Once the function is complete, execution returns by moving the value in the link register back into the program counter. For nested subroutines, the link register will need to be pushed onto the stack, as the link register can only "remember" the return address of the most recent <code>BL</code> instruction.
+
+Actually using the stack to save registers and retrieve them has somewhat strange syntax. I'd recommend using the ''unified syntax'' option if your assembler has it - which lets you use the simple <code>PUSH</code> and <code>POP</code> commands to back up and restore register contents. Normally, these two instructions are only valid in THUMB mode, but with unified syntax you can use them in 32-bit ARM programming as well. Arguments for the <code>PUSH</code> and <code>POP</code> instructions are all enclosed in curly braces, and separated by dashes to specify a range of registers, or commas to separate individual registers. It doesn't matter what order you type them in - they all get pushed/popped in the same order regardless. Standard calling conventions dictate that the stack shall be aligned to 8 bytes at all times - in order to do this, always push/pop an even number of registers, even if you end up having to push/pop one more than necessary. It won't hurt anything if you do, as long as you put it back where you got it.
+
+<lang ARM Assembly>PUSH {R4,R5,R6,R7}   ;the contents of these registers are stored on the stack.
+POP {R4,R5,R6,R7} ;you don't need to list these in reverse order like you would on x86 - the assembler takes care of that for you.</lang>
+
+If you don't have unified syntax, you'll need to use the commands below for 32-bit ARM. (<code>PUSH</code> and <code>POP</code> are valid in THUMB mode even if you don't have unified syntax.)
+<lang ARM Assembly>STMFD sp!,{r0-r12,lr} ;equivalent of PUSH {r0-r12,lr}
+LDMFD sp!,{r0-r12,lr} ;equivalent of POP {r0-r12,lr}</lang>
+
+===Limitations of the ARM===
+While the ARM has a rich amount of features that other processors only dream of having, there are a few limitations.
+The biggest one is the limitation of the <code>MOV</code> command. Arguably the most important command any processor has (apart from <code>JMP</code>), the <code>MOV</code> command on the ARM is often limited in what can be loaded into a register in a single command. Depending on the pattern of bits, some immediate values cannot be loaded into a register directly. The key features of the ARM instructions (barrel shifter, conditional commands, etc) all take up bytes in each command, whether they are used in a given instance of a command or not. So in order to store 32 bit numbers in a <code>MOV</code> command, the value has to be "8-bit rotatable," meaning that it can be expressed as an 8 bit number if you shift it enough times. Basically if there are too many 1s in the binary equivalent of the number you're trying to load, it can't be done in one go. 
+
+Looking at the following in C and its ARM assembly equivalent (I've cut the stack twiddling and the return statement for clarity) we can see just what exactly happens:
+
+<lang C>int main(){
+return 0xFFFF;
+}</lang>
+
+<lang ARM Assembly>mov     r0, #255            ;MOV R0,#0xFF
+orr     r0, r0, #65280      ;ORR R0,#0xFF00   (0xFF00|0x00FF = 0xFFFF)</lang>           
+
+
+It's very common to store "complicated" numbers into a nearby data block and just load from that data block with PC-relative addressing. These data blocks are usually placed after the nearest return statement so that they don't get executed as instructions.
+<lang ARM Assembly>ldr r0,testData   ;load 0xABCD1234 into R0
+bx lr             ;return
+testData:
+.long 0xABCD1234</lang>
+
+
+Thankfully, there's an even easier solution than this. The GNU Assembler saves the day with the following special notation.
+<lang ARM Assembly>mov r0, =#value</lang>
+
+This isn't actually valid ARM code, it's more of a built-in macro. Essentially, the value will be loaded in one go as an immediate if it can. If not, it will get placed nearby as a data block and the <code>MOV</code> will be changed to an <code>LDR</code> command. Basically you can take everything in the above paragraph and forget about it, since equals notation does the work for you.
+
+===THUMB Mode===
+THUMB Mode is a more limited version of the ARM instruction set. The advantage to using it is that each instruction only takes 16 bits to represent rather than 32. This makes it handy for programming on systems that have very little space to work with. It can do almost anything 32-bit ARM can do, but not as easily. There are a few key limitations:
+* Immediate operands can only be 8-bit values, period. In other words, only numbers ranging from 0 to 255 are allowed.
+* You can still use LDR and ADR to retrieve embedded constants; however they have to be "further along" in memory than the current value of the program counter. In THUMB mode the program counter offsets cannot be negative.
+* Registers R0-R7 can do almost anything, but registers of a higher number are harder to use. For registers R8 and above, you can no longer store immediate values into them, for example - you have to load them from registers.
+* In THUMB mode you cannot use the barrel shifter, nor can you conditionally set the flags. THUMB Mode works more like an x86 CPU, where each instruction affects the flags differently (or sometimes not at all), and you just have to know which instructions affect which flags. 
+* Operations you would normally use the barrel shifter for are now separate commands. (You might be used to using these even in 32-bit ARM mode thanks to unified syntax.)
+* The stack can still be interacted with using <code>PUSH</code> and <code>POP</code> (again, you were likely doing this anyway.)
+
+That being said, it's not all doom and gloom. The registers are still 32-bit, and you can still do most of what the 32-bit ARM can do. If you're coding in C or some other language that gets compiled to ARM Assembly, the compiler will decide whether to use THUMB or 32-bit ARM, but you can request one or the other with command line arguments. 
+
+[[Category:Assembly]]

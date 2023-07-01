@@ -1,0 +1,100 @@
+markov = cluster is make, run
+    rule = struct[from, to: string, term: bool]
+    rep = array[rule]
+
+    % Remove leading and trailing whitespace from a string
+    trim = proc (s: string) returns (string)
+        ac = array[char]
+        sc = sequence[char]
+        own ws: string := "\n\t "
+        a: ac := string$s2ac(s)
+        while ~ac$empty(a) cand string$indexc(ac$bottom(a), ws) ~= 0 do
+            ac$reml(a)
+        end
+        while ~ac$empty(a) cand string$indexc(ac$top(a), ws) ~= 0 do
+            ac$remh(a)
+        end
+        return(string$sc2s(sc$a2s(a)))
+    end trim
+
+    % Parse a single Markov rule
+    parse = proc (s: string) returns (rule) signals (comment, invalid(string))
+        if string$empty(s) cor s[1]='#' then signal comment end
+        arrow: int := string$indexs(" -> ", s)
+        if arrow=0 then signal invalid(s) end
+        left: string := trim(string$substr(s, 1, arrow-1))
+        right: string := trim(string$rest(s, arrow+4))
+
+        if ~string$empty(right) cand right[1] = '.' then
+            right := string$rest(right, 2)
+            return(rule${from: left, to: right, term: true})
+        else
+            return(rule${from: left, to: right, term: false})
+        end
+    end parse
+
+    % Add a rule to the list
+    add_rule = proc (m: cvt, s: string) signals (invalid(string))
+        rep$addh(m, parse(s)) resignal invalid
+        except when comment: end
+    end add_rule
+
+    % Read rules in sequence from a stream
+    add_rules = proc (m: cvt, s: stream) signals (invalid(string))
+        while true do
+            add_rule(up(m), stream$getl(s)) resignal invalid
+            except when end_of_file: break end
+        end
+    end add_rules
+
+    make = proc (s: stream) returns (cvt) signals (invalid(string))
+        a: rep := rep$new()
+        add_rules(up(a), s)
+        return(a)
+    end make
+
+    % Apply a rule to a string
+    apply_rule = proc (r: rule, s: string) returns (string) signals (no_match)
+        match: int := string$indexs(r.from, s)
+        if match = 0 then signal no_match end
+        new: string := string$substr(s, 1, match-1)
+                    || r.to
+                    || string$rest(s, match+string$size(r.from))
+        return(new)
+    end apply_rule
+
+    % Apply all rules to a string repeatedly
+    run = proc (c: cvt, s: string) returns (string)
+        i: int := 1
+        while i <= rep$high(c) do
+            r: rule := c[i]
+            begin
+                s := apply_rule(r, s)
+                i := 1
+                if r.term then break end
+            end except when no_match:
+                i := i+1
+            end
+        end
+        return(s)
+    end run
+end markov
+
+start_up = proc ()
+    po: stream := stream$primary_output()
+    eo: stream := stream$error_output()
+
+    begin
+        args: sequence[string] := get_argv()
+        file: string := args[1]
+        input: string := args[2]
+        fs: stream := stream$open(file_name$parse(file), "read")
+        mkv: markov := markov$make(fs)
+        stream$close(fs)
+        stream$putl(po, markov$run(mkv, input))
+    end except
+        when bounds: stream$putl(eo, "Arguments: markov [filename] [string]")
+        when not_possible(s: string): stream$putl(eo, "File error: " || s)
+        when invalid(s: string): stream$putl(eo, "Parse error: " || s)
+    end
+end start_up

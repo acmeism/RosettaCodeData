@@ -1,0 +1,166 @@
+(*------------------------------------------------------------------*)
+(* Mergesort in ATS2, for linear lists.                             *)
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+
+staload UN = "prelude/SATS/unsafe.sats"
+
+#define NIL list_vt_nil ()
+#define ::  list_vt_cons
+
+(*------------------------------------------------------------------*)
+
+(* Destructive stable merge. *)
+extern fun {a : vt@ype}
+list_vt_merge {m, n : int}
+              (lst1 : list_vt (a, m),
+               lst2 : list_vt (a, n))
+    :<!wrt> list_vt (a, m + n)
+
+(* Order predicate for list_vt_merge. You have to implement this to
+   suit your needs. *)
+extern fun {a : vt@ype}
+list_vt_merge$lt : (&a, &a) -<> bool
+
+(* Destructive stable mergesort. *)
+extern fun {a : vt@ype}
+list_vt_mergesort {n   : int}
+                  (lst : list_vt (a, n))
+    :<!wrt> list_vt (a, n)
+
+(* Order predicate for list_vt_mergesort. You have to implement this
+   to suit your needs. *)
+extern fun {a : vt@ype}
+list_vt_mergesort$lt : (&a, &a) -<> bool
+
+(*------------------------------------------------------------------*)
+
+implement {a}
+list_vt_merge {m, n} (lst1, lst2) =
+  let
+    macdef lt = list_vt_merge$lt<a>
+
+    fun
+    loop {m, n       : nat} .<m + n>.
+         (lst1       : list_vt (a, m),
+          lst2       : list_vt (a, n),
+          lst_merged : &List_vt a? >> list_vt (a, m + n))
+        :<!wrt> void =
+      case+ lst1 of
+      | ~ NIL => lst_merged := lst2
+      | @ elem1 :: tail1 =>
+        begin
+          case+ lst2 of
+          | ~ NIL =>
+            let
+              prval () = fold@ lst1
+            in
+              lst_merged := lst1
+            end
+          | @ elem2 :: tail2 =>
+            if ~(elem2 \lt elem1) then
+              let
+                val () = lst_merged := lst1
+                prval () = fold@ lst2
+                val () = loop (tail1, lst2, tail1)
+                prval () = fold@ lst_merged
+              in
+              end
+            else
+              let
+                val () = lst_merged := lst2
+                prval () = fold@ lst1
+                val () = loop (lst1, tail2, tail2)
+                prval () = fold@ lst_merged
+              in
+              end
+        end
+
+    prval () = lemma_list_vt_param lst1 (* Proves 0 <= m. *)
+    prval () = lemma_list_vt_param lst2 (* Proves 0 <= n. *)
+    prval () = prop_verify {0 <= m} ()
+    prval () = prop_verify {0 <= n} ()
+
+    var lst_merged : List_vt a?
+    val () = loop {m, n} (lst1, lst2, lst_merged)
+  in
+    lst_merged
+  end
+
+(*------------------------------------------------------------------*)
+
+implement {a}
+list_vt_mergesort {n} lst =
+  let
+    implement
+    list_vt_merge$lt<a> (x, y) =
+      list_vt_mergesort$lt<a> (x, y)
+
+    (* You can make SMALL larger than 1 and write small_sort as a fast
+       stable sort for small lists. *)
+    #define SMALL 1
+    fn
+    small_sort {m   : pos | m <= SMALL}
+               (lst : list_vt (a, m),
+                m   : int m)
+        :<!wrt> list_vt (a, m) =
+      lst
+
+    fun
+    recurs {m   : pos} .<m>.
+           (lst : list_vt (a, m),
+            m   : int m)
+        :<!wrt> list_vt (a, m) =
+      if m <= SMALL then
+        small_sort (lst, m)
+      else
+        let
+          prval () = prop_verify {2 <= m} ()
+          val i = m / 2
+          val @(lst1, lst2) = list_vt_split_at<a> (lst, i)
+          val lst1 = recurs (lst1, i)
+          val lst2 = recurs (lst2, m - i)
+        in
+          list_vt_merge<a> (lst1, lst2)
+        end
+
+    prval () = lemma_list_vt_param lst (* Proves 0 <= n. *)
+    prval () = prop_verify {0 <= n} ()
+  in
+    case+ lst of
+    | NIL => lst
+    | _ :: _ => recurs (lst, length lst)
+  end
+
+(*------------------------------------------------------------------*)
+
+extern fun
+list_vt_mergesort_int {n   : int}
+                      (lst : list_vt (int, n))
+    :<!wrt> list_vt (int, n)
+
+implement
+list_vt_mergesort_int {n} lst =
+  let
+    implement
+    list_vt_mergesort$lt<int> (x, y) =
+      x < y
+  in
+    list_vt_mergesort<int> {n} lst
+  end
+
+implement
+main0 () =
+  let
+    val lst = $list_vt (22, 15, 98, 82, 22, 4, 58, 70, 80, 38, 49,
+                        48, 46, 54, 93, 8, 54, 2, 72, 84, 86, 76,
+                        53, 37, 90)
+    val () = println! ("before : ", $UN.castvwtp1{List int} lst)
+    val lst = list_vt_mergesort_int lst
+    val () = println! ("after  : ", $UN.castvwtp1{List int} lst)
+  in
+    list_vt_free<int> lst
+  end
+
+(*------------------------------------------------------------------*)

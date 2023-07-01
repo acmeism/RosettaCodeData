@@ -1,0 +1,187 @@
+#
+# snusp.icn, A Modular SNUSP interpreter
+#
+
+$define VERSION 0.6
+
+# allow a couple of cli options
+link options
+
+# directions
+$define DRIGHT 1
+$define DLEFT  2
+$define DUP    3
+$define DDOWN  4
+
+record position(row, col)
+global dir, ip, ram
+
+procedure main(argv)
+   local ch, codespace, col, dp, fn, line
+   local row := 1
+   local wid := 0
+   local dirs := []
+   local ips := []
+   local opts, verbose, debug
+
+   opts := options(argv, "-h! -v! -d!", errorproc)
+   \opts["v"] & verbose := 1
+   \opts["h"] & show_help(verbose)
+   \opts["d"] & debug := 1
+
+   ip := position(1,1)
+
+   # initial direction
+   dir := DRIGHT
+
+   # prepare initial memory
+   ram := list(1, 0)
+
+   # prepare code field
+   codespace := []
+
+   fn := open(argv[1], "r") | &input
+   if (fn === &input) & \opts["h"] then return
+
+   while line := read(fn) do {
+      put(codespace, line)
+      wid := max(*line, wid)
+   }
+   if *codespace = 0 then return
+   every line := !codespace do {
+      codespace[row] := left(codespace[row], wid)
+      # track starting indicator
+      if /col := find("$", codespace[row]) then {
+         ip.row := row
+         ip.col := col
+      }
+      row +:= 1
+   }
+
+   if \verbose then {
+      write("Starting at ", ip.row, ", ", ip.col, " with codespace:")
+      every write(!codespace)
+   }
+
+   dp := 1
+   repeat {
+      if not (ch := codespace[ip.row][ip.col]) then break
+      if \debug then {
+         write(&errout, "dir: ", dir, " ch: ", ch, " [", ord(ch), "]",
+                        " row: ", ip.row, " col: ", ip.col,
+                        " dp: ", dp, " ram[dp]: ", ram[dp])
+      }
+      case ch of {
+         # six of the bf instructions
+         "+": ram[dp] +:= 1
+         "-": ram[dp] -:= 1
+         ">": resize(dp +:= 1)
+         "<": dp -:= 1
+         ".": writes(char(ram[dp]) | char(0))
+         ",": ram[dp] := getche()
+         # direction change, LURD, RULD, SKIP, SKIPZ
+         "\\": { # LURD
+            case dir of {
+               DRIGHT: dir := DDOWN
+               DLEFT:  dir := DUP
+               DUP:    dir := DLEFT
+               DDOWN:  dir := DRIGHT
+            }
+         }
+         "/": { # RULD
+            case dir of {
+               DRIGHT: dir := DUP
+               DLEFT:  dir := DDOWN
+               DUP:    dir := DRIGHT
+               DDOWN:  dir := DLEFT
+            }
+         }
+         "!": step()
+         "?": { # skipz
+            if ram[dp] = 0 then {
+               step()
+            }
+         }
+         # modular SNUSP
+         "@": { # Enter
+            push(dirs, dir)
+            push(ips, copy(ip))
+         }
+         "#": { # Leave
+            if *dirs < 1 then break
+            dir := pop(dirs)
+            ip := pop(ips)
+            step()
+         }
+      }
+      step()
+   }
+end
+
+# advance the ip depending on direction
+procedure step()
+   case dir of {
+      DRIGHT: ip.col +:= 1
+      DLEFT:  ip.col -:= 1
+      DUP:    ip.row -:= 1
+      DDOWN:  ip.row +:= 1
+   }
+end
+
+# enlarge memory when needed
+procedure resize(elements)
+   until *ram >= elements do put(ram, 0)
+end
+
+# quick help or verbose help
+procedure show_help(verbose)
+   write("SNUSP interpeter in Unicon, version ", VERSION)
+   write("CORE and MODULAR, not yet BLOATED")
+   write()
+   write("Usage: unicon snusp.icn -x [filename] [-h|-v|-d]")
+   write(" -h, help")
+   write(" -v, verbose (and verbose help")
+   write(" -d, debug (step tracer)")
+   if \verbose then {
+      write()
+      write("Instructions:")
+      write(" + INCR,  Increment current memory location")
+      write(" - DECR,  Decrement current memory location")
+      write(" > RIGHT, Advance memory pointer")
+      write(" < LEFT,  Retreat memory pointer")
+      write(" . WRITE, Output contents of current memory cell, in ASCII")
+      write(" , READ,  Accept key and place byte value in current memory cell")
+      write(" \\ LURD, If going:")
+      write("           left,  go up")
+      write("           up,    go left")
+      write("           right, go down")
+      write("           down,  go right")
+      write(" / RULD, If going:")
+      write("           right, go up")
+      write("           up,    go right")
+      write("           left,  go down")
+      write("           down,  go left")
+      write(" !, SKIP,  Move forward one step in current direction")
+      write(" ?, SKIPZ, If current memory cell is zero then SKIP")
+      write("Modular SNUSP adds:")
+      write(" @, ENTER, Push direction and instruction pointer")
+      write(" #, LEAVE, Pop direction and instruction pointer and SKIP")
+      write()
+      write("All other characters are NOOP, explicitly includes =,|,spc")
+      write(" $, can set the starting location; first one found")
+      write()
+      write("Hello world examples:")
+      write()
+      write("CORE SNUSP:")
+      write("/++++!/===========?\\>++.>+.+++++++..+++\\")
+      write("\\+++\\ | /+>+++++++>/ /++++++++++<<.++>./")
+      write("$+++/ | \\+++++++++>\\ \\+++++.>.+++.-----\\")
+      write("      \\==-<<<<+>+++/ /=.>.+>.--------.-/")
+      write()
+      write("Modular SNUSP:")
+      write("      /@@@@++++#               #+++@@\                #-----@@@\\n")
+      write("$@\\H.@/e.+++++++l.l.+++o.>>++++.< .<@/w.@\\o.+++r.++@\\l.@\\d.>+.@/.#")
+      write("  \\@@@@=>++++>+++++<<@+++++#       #---@@/!=========/!==/")
+      write()
+   }
+end

@@ -1,0 +1,1 @@
+NSLog(@"%@", [NSDate date]);

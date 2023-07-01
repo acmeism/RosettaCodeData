@@ -1,0 +1,104 @@
+INCLUDE "D2:REAL.ACT" ;from the Action! Tool Kit
+
+DEFINE PTR="CARD"
+
+CARD FUNC GetFrame()
+  BYTE RTCLOK1=$13,RTCLOK2=$14
+  CARD res
+  BYTE lsb=res,msb=res+1
+
+  lsb=RTCLOK2
+  msb=RTCLOK1
+RETURN (res)
+
+CARD FUNC FramesToMs(CARD frames)
+  BYTE PALNTSC=$D014
+  CARD res
+
+  IF PALNTSC=15 THEN
+    res=frames*60
+  ELSE
+    res=frames*50
+  FI
+RETURN (res)
+
+CARD FUNC ItersPerSecond(CARD timeMs,iters)
+  REAL rTime,rIters,r1000,tmp
+  CARD res
+
+  IntToReal(timeMs,tmp)
+  IntToReal(iters,rIters)
+  IntToReal(1000,r1000)
+  RealDiv(tmp,r1000,rTime)
+  RealDiv(rIters,rTime,tmp)
+  res=RealToInt(tmp)
+RETURN (res)
+
+;jump addr is stored in X and A registers
+PROC Action=*(PTR jumpAddr)
+  DEFINE STX="$8E"
+  DEFINE STA="$8D"
+  DEFINE JSR="$20"
+  DEFINE RTS="$60"
+  [STX Action+8
+   STA Action+7
+   JSR $00 $00
+   RTS]
+
+PROC Benchmark(PTR ARRAY actions,times BYTE count CARD iters)
+  BYTE i
+  CARD j,beg,end,diff,diffMs
+  PTR act
+
+  FOR i=0 TO count-1
+  DO
+    act=actions(i)
+    beg=GetFrame()
+    FOR j=0 TO iters-1
+    DO
+      Action(act)
+    OD
+    end=GetFrame()
+    diff=end-beg
+    times(i)=FramesToMs(diff)
+  OD
+RETURN
+
+PROC Action1()
+RETURN
+
+PROC Action2()
+  INT a=[12345],b=[23456],c
+
+  c=a+b
+RETURN
+
+PROC Action3()
+  INT i=[12345]
+  CHAR ARRAY s(6)
+
+  StrI(i,s)
+RETURN
+
+PROC Main()
+  DEFINE COUNT="3"
+  DEFINE ITERS="10000"
+  PTR ARRAY actions(COUNT)
+  CARD ARRAY times(COUNT),prec,rate
+  BYTE i
+
+  Put(125) PutE() ;clear the screen
+  prec=FramesToMs(1)
+  PrintF("Iteration count: %U%E",ITERS)
+  PrintF("Clock precision: %U ms%E%E",prec)
+  actions(0)=Action1
+  actions(1)=Action2
+  actions(2)=Action3
+  Benchmark(actions,times,COUNT,ITERS)
+
+  FOR i=0 TO COUNT-1
+  DO
+    rate=ItersPerSecond(times(i),iters)
+    PrintF("Action%B: %U ms, %U times per sec%E",i+1,times(i),rate)
+  OD
+RETURN

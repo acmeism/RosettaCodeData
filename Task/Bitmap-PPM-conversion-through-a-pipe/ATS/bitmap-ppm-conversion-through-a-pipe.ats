@@ -1,0 +1,117 @@
+(* This program uses ImageMagick to convert an image, with the target
+   file specified according to the conventions of ImageMagick. That
+   allows such things as "gif:foobar.jpg" to mean a GIF named
+   "foobar.jpg". But, if you leave out the "gif:" prefix, ImageMagick
+   will make a JPEG. (I notice that one can also insert options to
+   magick, although this was an unexpected result of my design.) *)
+
+(*
+
+##myatsccdef=\
+patscc -std=gnu2x -g -O2 -DATS_MEMALLOC_LIBC \
+  -o $fname($1) $1 \
+  bitmap{,_{read,write}_ppm}_task.{s,d}ats
+
+*)
+
+#include "share/atspre_staload.hats"
+
+staload "bitmap_task.sats"
+staload "bitmap_read_ppm_task.sats"
+staload "bitmap_write_ppm_task.sats"
+
+staload _ = "bitmap_task.dats"
+staload _ = "bitmap_read_ppm_task.dats"
+staload _ = "bitmap_write_ppm_task.dats"
+
+(*------------------------------------------------------------------*)
+(* There is support for pipe-I/O in libats/libc, but I cannot (at
+   least when in a hurry) figure out how it is supposed to be
+   used. So, as elsewhere in the "raster graphics operations"
+   category, what is not in the prelude itself I implement with the
+   foreign function interfaces. :) Using FFI is a typical part of ATS
+   programming, and one should get used to doing it.
+
+   Anyway, here is some UNSAFE support for pipe-I/O. *)
+
+typedef charstar = $extype"char *"
+typedef FILEstar = $extype"FILE *"
+
+fn {}
+fileref_popen_unsafe (command : string,
+                      mode    : string)
+    : Option_vt FILEref =
+  let
+    val p = $extfcall (ptr, "popen", $UNSAFE.cast{charstar} command,
+                       $UNSAFE.cast{charstar} mode)
+  in
+    if iseqz p then
+      None_vt ()
+    else
+      Some_vt ($UNSAFE.cast{FILEref} p)
+  end
+
+fn {}
+fileref_pclose_unsafe (f : FILEref)
+    : int =              (* Returns the exit status of the command. *)
+  $extfcall (int, "pclose", $UNSAFE.cast{FILEstar} f)
+
+(*------------------------------------------------------------------*)
+
+implement
+main0 (argc, argv) =
+  let
+    val args = listize_argc_argv (argc, argv)
+    val nargs = length args
+
+    val inpf =
+      if nargs < 2 then
+        stdin_ref
+      else if args[1] = "-" then
+        stdin_ref
+      else
+        fileref_open_exn (args[1], file_mode_r)
+    val pix_opt = pixmap_read_ppm<rgb24> inpf
+    val () = fileref_close inpf
+  in
+    case+ pix_opt of
+    | ~ None_vt () =>
+      begin
+        free args;
+        println! ("For some reason, I failed to read the image.");
+        exit 1
+      end
+    | ~ Some_vt @(pfgc1 | pix1) =>
+      let
+        val outf_name = if nargs < 3 then "-" else args[2]
+        val command = string_append ("magick ppm:- ", outf_name)
+        val () = free args
+        val pipe_opt =
+          (* Temporarily treating a strptr as a string, just to make a
+             function call of this sort, is not actually unsafe. *)
+          fileref_popen_unsafe ($UNSAFE.strptr2string command, "w")
+        val () = free command
+      in
+        case+ pipe_opt of
+        | ~ None_vt () =>
+          begin
+            free (pfgc1 | pix1);
+            println! ("For some reason, I failed to open a pipe ",
+                      "to magick.");
+            exit 3
+          end
+        | ~ Some_vt outf =>
+          let
+            val success = pixmap_write_ppm (outf, pix1)
+          in
+            ignoret (fileref_pclose_unsafe outf);
+            free (pfgc1 | pix1);
+            if ~success then
+              begin
+                println! ("For some reason, I failed to pipe the ",
+                          "image to magick.");
+                exit 2
+              end
+          end
+      end
+  end

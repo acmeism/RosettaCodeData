@@ -1,0 +1,106 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program guessNumber.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ BUFFERSIZE,          100
+
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessNum: .asciz "I'm thinking of a number between 1 and 10. \n Try to guess it:\n"
+
+szMessError:            .asciz "That's not my number. Try another guess:\n"
+szMessSucces:           .asciz "Correct.\n"
+
+szCarriageReturn:       .asciz "\n"
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+sBuffer:              .skip BUFFERSIZE
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:
+    mov x0,1
+    mov x1,10
+    bl extRandom                                // generate random number
+    mov x5,x0
+
+    ldr x0,qAdrszMessNum
+    bl affichageMess
+loop:
+    mov x0,#STDIN                               // Linux input console
+    ldr x1,qAdrsBuffer                          // buffer address
+    mov x2,#BUFFERSIZE                          // buffer size
+    mov x8,#READ                                // request to read datas
+    svc 0                                       // call system
+    ldr x1,qAdrsBuffer                          // buffer address
+    mov x2,#0                                   // end of string
+    sub x0,x0,#1                                // replace character 0xA
+    strb w2,[x1,x0]                             // store byte at the end of input string (x0 contains number of characters)
+    ldr x0,qAdrsBuffer
+    bl conversionAtoD                           // call routine conversion ascii to décimal
+    cmp x0,x5
+    beq 1f
+    ldr x0,qAdrszMessError                      // not Ok
+    bl affichageMess
+    b loop
+1:
+    ldr x0,qAdrszMessSucces                     // ok
+    bl affichageMess
+
+100:                                            // standard end of the program
+    mov x0, #0                                  // return code
+    mov x8, #EXIT                               // request to exit program
+    svc 0                                       // perform system call
+qAdrszMessNum:            .quad szMessNum
+qAdrszMessError:          .quad szMessError
+qAdrszMessSucces:         .quad szMessSucces
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsBuffer:              .quad sBuffer
+/******************************************************************/
+/*     random number                                          */
+/******************************************************************/
+/*  x0 contains inferior value */
+/*  x1 contains maxi value */
+/*  x0 return random number */
+extRandom:
+    stp x1,lr,[sp,-16]!        // save  registers
+    stp x2,x8,[sp,-16]!        // save  registers
+    stp x19,x20,[sp,-16]!      // save  registers
+    sub sp,sp,16               // reserve 16 octets on stack
+    mov x19,x0
+    add x20,x1,1
+    mov x0,sp                  // store result on stack
+    mov x1,8                   // length 8 bytes
+    mov x2,0
+    mov x8,278                 //  call system Linux 64 bits Urandom
+    svc 0
+    mov x0,sp                  // load résult on stack
+    ldr x0,[x0]
+    sub x2,x20,x19             // calculation of the range of values
+    udiv x1,x0,x2              // calculation range modulo
+    msub x0,x1,x2,x0
+    add  x0,x0,x19             // and add inferior value
+100:
+    add sp,sp,16               // alignement stack
+    ldp x19,x20,[sp],16        // restaur  2 registers
+    ldp x2,x8,[sp],16          // restaur  2 registers
+    ldp x1,lr,[sp],16          // restaur  2 registers
+    ret                        // retour adresse lr x30
+
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

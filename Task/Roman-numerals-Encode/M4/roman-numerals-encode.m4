@@ -1,0 +1,15 @@
+define(`roman',`ifelse(eval($1>=1000),1,`M`'roman(eval($1-1000))',
+`ifelse(eval($1>=900),1,`CM`'roman(eval($1-900))',
+`ifelse(eval($1>=500),1,`D`'roman(eval($1-500))',
+`ifelse(eval($1>=100),1,`C`'roman(eval($1-100))',
+`ifelse(eval($1>=90),1,`XC`'roman(eval($1-90))',
+`ifelse(eval($1>=50),1,`L`'roman(eval($1-50))',
+`ifelse(eval($1>=40),1,`XL`'roman(eval($1-40))',
+`ifelse(eval($1>=10),1,`X`'roman(eval($1-10))',
+`ifelse(eval($1>=9),1,`IX`'roman(eval($1-9))',
+`ifelse(eval($1>=5),1,`V`'roman(eval($1-5))',
+`ifelse(eval($1>=4),1,`IV`'roman(eval($1-4))',
+`ifelse(eval($1>=1),1,`I`'roman(eval($1-1))'
+)')')')')')')')')')')')')dnl
+dnl
+roman(3675)

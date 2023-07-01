@@ -1,0 +1,1 @@
+agda-mode compile

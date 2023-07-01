@@ -1,0 +1,1 @@
+Load 'file.ring'

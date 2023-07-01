@@ -1,0 +1,143 @@
+#build CheckArrayBounds NO
+output file "Julia Fractal Viewer
+include "NSLog.incl"
+
+begin record Complex
+  float real  // real component of Complex Number
+  float imag  // imaginary component of Complex Number
+end record
+
+_window = 1
+begin enum output 1
+  _juliaView
+end enum
+
+void local fn BuildWindow
+  CGRect r = fn CGRectMake( 0, 0, 520, 600 )
+  window _window, @"Rosetta Code Julia Set", r, NSWindowStyleMaskTitled + NSWindowStyleMaskClosable + NSWindowStyleMaskMiniaturizable
+
+  r = fn CGRectMake( 10, 10, 500, 580 )
+  imageview _juliaView, YES,,r, NSImageScaleAxesIndependently, NSImageAlignCenter, NSImageFramePhoto, _window
+end fn
+
+local fn JuliaPoint( c as Complex, w as long, h as long, xl as float, xr as float, yb as float, yt as float, i as long, j as long ) as long
+  float   ai, ar, cr, ci, t, x, y
+  long    k, value
+
+  value = 1
+
+  cr = c.real
+  ci = c.imag
+
+  x = ( ( float ) ( w - i - 1 ) * xl + ( float ) ( i ) * xr ) / ( float ) ( w - 1 )
+  y = ( ( float ) ( h - j - 1 ) * yb + ( float ) ( j ) * yt ) / ( float ) ( h - 1 )
+
+  ar = x
+  ai = y
+  for k = 0 to 199
+    t  = ar * ar - ai * ai + cr
+    ai = ar * ai + ai * ar + ci
+    ar = t
+    if ( 1000 < ar * ar + ai * ai )
+      value = 0
+      exit fn
+    end if
+  next k
+end fn = value
+
+void local fn JuliaRGB( c as Complex, w as long, h as long, xl as float, xr as float, yb as float, yt as float, rgb(0) as unsigned char )
+  long i, j, juliaValue, k
+
+  k = 0
+  for j = 0 to h - 1
+    for i = 0 to w - 1
+      juliaValue = fn JuliaPoint( c, w, h, xl, xr, yb, yt, i, j )
+      rgb(k)   = 255 * (1-juliaValue)
+      rgb(k+1) = 255 * (1-juliaValue)
+      rgb(k+2) = 255
+      k += 3
+    next i
+  next j
+end fn
+
+void local fn TGAWrite( w as long, h as long, rgb(0) as ^unsigned char, url as CFURLRef )
+  CFMutableDataRef   dta
+  unsigned char      header1(11), header2(5)
+
+  BlockZero( @header1(0), 12 * sizeof(unsigned char) )
+  header1(2) = 2
+
+  header2(0) = w mod 256
+  header2(1) = w/256
+  header2(2) = h mod 256
+  header2(3) = h/256
+  header2(4) = 24
+  header2(5) = 0
+
+  dta = fn MutableDataWithCapacity(0)
+  MutableDataAppendBytes( dta, @header1(0), 12 * sizeof(unsigned char) )
+  MutableDataAppendBytes( dta, @header2(0), 6 * sizeof(unsigned char) )
+  MutableDataAppendBytes( dta, @rgb(0), w * h * 3 * sizeof(unsigned char) )
+  fn DataWriteToURL( dta, url, NSDataWritingAtomic, NULL )
+
+  ImageRef image = fn ImageWithData( dta )
+  ImageViewSetImage( _juliaView, image )
+end fn
+
+void local fn BuildJuliaSet( c as Complex )
+  long     h, w
+  float    xl, xr, yb, yt
+  ptr      p
+  CFURLRef url
+
+  // Create 1000x1000-pixel canvas for image
+  h = 1000
+  w = 1000
+
+  // Locate image on canvas
+  xl = -1.5
+  xr = 1.5
+  yb = -1.5
+  yt = 1.5
+
+  p = fn malloc( w * h * 3 * sizeof(unsigned char) )
+
+  xref rgb(1) as unsigned char
+  rgb = p
+
+  // Create image data
+  fn JuliaRGB( c, w, h, xl, xr, yb, yt, @rgb(0) )
+
+  // Create path to final image
+  url = fn URLFileURLWithPath( fn StringByExpandingTildeInPath( @"~/Desktop/julia_set.png" ) )
+
+  // Write image data to file
+  fn TGAWrite( w, h, @rgb(0), url )
+
+  free(p)
+end fn
+
+dim as Complex c
+
+c.real =  0.355534
+c.imag = -0.337292
+
+// c.real = -0.8
+// c.imag = 0.156
+
+// c.real = 0.26
+// c.imag = 0.0016
+
+// c.real = 0.355
+// c.imag = 0.355
+
+// c.real = -0.4
+// c.imag = -0.59
+
+// c.real = -0.54
+// c.imag = 0.54
+
+fn BuildWindow
+fn BuildJuliaSet( c )
+
+HandleEvents

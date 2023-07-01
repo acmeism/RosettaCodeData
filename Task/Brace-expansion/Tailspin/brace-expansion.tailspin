@@ -1,0 +1,34 @@
+templates braceExpansion
+  composer braceParse
+    [ <part|'[{}\\,]'>* ] // This is not simply <production> because there may be unbalanced special chars
+    rule production: [ <part>* ]
+    rule part: <alternation|balancedBraces|escapedCharacter|'[^{}\\,]+'>+
+    rule alternation: (<='{'>) [ <production> <alternate>+ ] (<='}'>)
+    rule alternate: (<=','>) <production>
+    rule balancedBraces: <='{'> <part>* <='}'>
+    rule escapedCharacter: <'\\.'>
+  end braceParse
+
+  templates collateSequence
+    data part <[]|''> local
+    @: [''];
+    $... -> #
+    $@!
+    when <´part´ '.*'> do
+      def part: $;
+      @: [$@... -> '$;$part;'];
+    otherwise
+      def alternates: [ $... -> collateSequence ... ];
+      @: [$@... -> \(def prefix: $; $alternates... -> '$prefix;$;' ! \)];
+  end collateSequence
+
+  $ -> braceParse -> collateSequence !
+end braceExpansion
+
+'~/{Downloads,Pictures}/*.{jpg,gif,png}' -> '"$;" expands to:$ -> braceExpansion ... -> '$#10;$;';$#10;$#10;' -> !OUT::write
+
+'It{{em,alic}iz,erat}e{d,}, please.' -> '"$;" expands to $ -> braceExpansion ... -> '$#10;$;';$#10;$#10;' -> !OUT::write
+
+'{,{,gotta have{ ,\, again\, }}more }cowbell!' -> '"$;" expands to $ -> braceExpansion ... -> '$#10;$;';$#10;$#10;' -> !OUT::write
+
+'{}} some }{,{\\{ edge, edge} \,}{ cases, {here} \\\\\}' -> '"$;" expands to $ -> braceExpansion ... -> '$#10;$;';$#10;$#10;' -> !OUT::write

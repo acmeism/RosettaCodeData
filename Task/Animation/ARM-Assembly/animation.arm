@@ -1,0 +1,643 @@
+/* ARM assembly Raspberry PI or android 32 bits with termux application */
+/*  program animLetter.s        */
+
+/* compile with as         */
+/* link with gcc and options -lX11 -L/usr/lpp/X11/lib   */
+
+/* REMARK: This program was written for android with the termux app.
+ It works very well on raspberry pi but in this case the memory access relocation instructions
+ can be simplified.
+*/
+
+ /* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+/********************************************/
+/*Constantes                                */
+/********************************************/
+.equ STDOUT,              1     @ Linux output console
+.equ EXIT,                1     @ Linux syscall
+.equ WRITE,               4     @ Linux syscall
+/* constantes X11 */
+.equ KeyPressed,          2
+.equ ButtonPress,         4
+.equ MotionNotify,        6
+.equ EnterNotify,         7
+.equ LeaveNotify,         8
+.equ Expose,              12
+.equ ClientMessage,       33
+.equ KeyPressMask,        1
+.equ ButtonPressMask,     4
+.equ ButtonReleaseMask,   8
+.equ ExposureMask,        1<<15
+.equ StructureNotifyMask, 1<<17
+.equ EnterWindowMask,     1<<4
+.equ LeaveWindowMask,     1<<5
+.equ ConfigureNotify,     22
+
+.equ GCForeground,        1<<2
+.equ GCFont,              1<<14
+
+/* constantes program */
+.equ WINDOWWIDTH,       400
+.equ WINDOWHEIGHT,      300
+
+/*******************************************/
+/* DONNEES INITIALISEES                    */
+/*******************************************/
+.data
+szWindowName:            .asciz "Windows Raspberry"
+szRetourligne:           .asciz  "\n"
+szMessDebutPgm:          .asciz "Program start. \n"
+szMessErreur:            .asciz "Server X not found.\n"
+szMessErrfen:            .asciz "Can not create window.\n"
+szMessErreurX11:         .asciz "Error call function X11. \n"
+szMessErrGc:             .asciz "Can not create graphics context.\n"
+szMessErrFont:           .asciz "Font not found.\n"
+szTitreFenRed:           .asciz "Pi"
+szTexte1:                .asciz "Hello world!  "
+.equ LGTEXTE1, . - szTexte1
+szTexte2:                .asciz "Press q for close window or clic X in system menu."
+.equ LGTEXTE2, . - szTexte2
+szLibDW:           .asciz "WM_DELETE_WINDOW"    @ special label for correct close error
+
+szfontname: .asciz  "-*-helvetica-bold-*-normal-*-12-*"         @ for font test
+szfontname2: .asciz "-*-fixed-*-*-*-*-13-*-*-*-*-*"
+.align 4
+stXGCValues:       .int 0,0,0xFFA0A0A0,0,0,0,0,0,0,0,0,0,0,0,0,0,0   @ for foreground color gris1
+//stXGCValues:       .int 0,0,0x00000000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0   @ for foreground color black
+stXGCValues1:      .int 0,0,0x00FFFFFF,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0   @ for foreground color white
+stXGCValues2:      .int 0,0,0x0000FF00,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0   @ for foreground color green
+/*******************************************/
+/* DONNEES NON INITIALISEES                    */
+/*******************************************/
+.bss
+.align 4
+ptDisplay:          .skip 4      @ pointer display
+ptEcranDef:         .skip 4      @ pointer screen default
+ptFenetre:          .skip 4      @ pointer window
+ptGC:               .skip 4      @ pointer graphic context
+ptGC1:              .skip 4      @ pointer graphic context
+ptFont:             .skip 4      @ pointer font
+key:                .skip 4      @ key code
+wmDeleteMessage:    .skip 8      @ ident close message
+event:              .skip 400    @ TODO: event size ??
+PrpNomFenetre:      .skip 100    @ window name proprety
+buffer:             .skip 500
+sbuffer1:             .skip 500
+iWhite:             .skip 4      @ rgb code for white pixel
+iBlack:             .skip 4      @ rgb code for black pixel
+iSens:              .skip 4      @ direction of travel
+/**********************************************/
+/* -- Code section                            */
+/**********************************************/
+.text
+.global main
+iOfWhite:           .int iWhite - .
+iOfBlack:           .int iBlack - .
+iOfszMessDebutPgm:  .int szMessDebutPgm - .
+iOfptDisplay:       .int ptDisplay - .
+iOfptEcranDef:      .int ptEcranDef - .
+iOfszLibDW:         .int szLibDW - .
+main:                           @ entry of program
+    adr r0,iOfszMessDebutPgm   @
+    ldr r1,[r0]
+    add r0,r1
+    bl affichageMess            @ display start message on console linux
+    /* attention r6  pointer display*/
+    /* attention r8  pointer graphic context 1  */
+    /* attention r9 ident window  */
+    /* attention r10  pointer graphic context 2  */
+    /*****************************/
+    /*    OPEN SERVER X11        */
+    /*****************************/
+    mov r0,#0
+    bl XOpenDisplay             @ open X server
+    cmp r0,#0                   @ error ?
+    beq erreurServeur
+    adr r2,iOfptDisplay
+    ldr r1,[r2]
+    add r1,r2
+    str r0,[r1]                 @ store display address
+
+    mov r6,r0                   @ and in register r6
+    ldr r2,[r0,#+132]           @ load default_screen
+    adr r1,iOfptEcranDef
+    ldr r3,[r1]
+    add r1,r3
+    str r2,[r1]                 @ store default_screen
+    mov r2,r0
+    ldr r0,[r2,#+140]           @ load pointer screen list
+    ldr r5,[r0,#+52]            @ load value white pixel
+    adr r4,iOfWhite             @ and store in memory
+    ldr r3,[r4]
+    add r4,r3
+    str r5,[r4]
+    ldr r7,[r0,#+56]            @ load value black pixel
+    adr r4,iOfBlack             @ and store in memory
+    ldr r5,[r4]
+    add r4,r5
+    str r7,[r4]
+    ldr r4,[r0,#+28]            @ load bits par pixel
+    ldr r1,[r0,#+8]             @ load root windows
+    /**************************/
+    /* CREATE WINDOW          */
+    /**************************/
+    mov r0,r6                   @ address display
+    mov r2,#0                   @ window position X
+    mov r3,#0                   @ window position Y
+    mov r8,#0                   @ for stack alignement
+    push {r8}
+    push {r7}                   @  background  = black pixel
+    push {r5}                   @  border = white pixel
+    mov r8,#2                   @  border size
+    push {r8}
+    mov r8,#WINDOWHEIGHT        @ height
+    push {r8}
+    mov r8,#WINDOWWIDTH         @ width
+    push {r8}
+    bl XCreateSimpleWindow
+    add sp,#24                  @ stack alignement  6 push (4 bytes * 6)
+    cmp r0,#0                   @ error ?
+    beq erreurF
+
+    adr r1,iOfptFenetre
+    ldr r3,[r1]
+    add r1,r3
+    str r0,[r1]                 @ store window address in memory
+    mov r9,r0                   @ and in register r9
+
+    /*****************************/
+    /* add window property       */
+    /*****************************/
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    adr r2,iOfszWindowName      @ window name
+    ldr r5,[r2]
+    add r2,r5
+    adr r3,iOfszTitreFenRed     @ window name reduced
+    ldr r5,[r3]
+    add r3,r5
+    mov r4,#0
+    push {r4}                   @ parameters not use
+    push {r4}
+    push {r4}
+    push {r4}
+    bl XSetStandardProperties
+    add sp,sp,#16               @ stack alignement for 4 push
+    /**************************************/
+    /* for correction window close error  */
+    /**************************************/
+    mov r0,r6                   @ display address
+    adr r1,iOfszLibDW           @ atom address
+    ldr r5,[r1]
+    add r1,r5
+    mov r2,#1                   @ False  créate atom if not exists
+    bl XInternAtom
+    cmp r0,#0                   @ error X11 ?
+    blt erreurX11               @ Modif avril 22 pour android (ble pour raspberry)
+    adr r1,iOfwmDeleteMessage  @ recept address
+    ldr r5,[r1]
+    add r1,r5
+    str r0,[r1]
+    mov r2,r1                   @ return address
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    mov r3,#1                   @ number of protocols
+    bl XSetWMProtocols
+    cmp r0,#0                   @ error X11 ?
+    ble erreurX11
+    /***********************************/
+    /* load font                       */
+    /* remark : see font list X11 on your system */
+    /***********************************/
+    mov r0,r6                   @ display address
+    bl loadFont
+
+    /**********************************/
+    /*  create graphic context        */
+    /**********************************/
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    bl createContextGraphic
+
+
+    /****************************/
+    /* modif window background  */
+    /****************************/
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    ldr r2,iGris1               @ background color
+    bl XSetWindowBackground
+    cmp r0,#0                   @ error ?
+    ble erreurX11
+
+    /***************************/
+    /* OUF!! window display    */
+    /***************************/
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    bl XMapWindow
+
+                                @ copy text in buffer
+    adr r0,iOfszTexte1          @ string address
+    ldr r5,[r0]
+    add r0,r5
+    adr r1,iOfsbuffer1          @ buffer address
+    ldr r5,[r1]
+    add r1,r5
+    mov r2,#0
+1:                              @ loop copy character
+    ldrb r3,[r0,r2]
+    strb r3,[r1,r2]
+    cmp r3,#0
+    addne r2,r2,#1
+    bne 1b
+
+    /****************************/
+    /* Autorisations            */
+    /****************************/
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window address
+    ldr r2,iFenetreMask         @ autorisation mask
+    bl XSelectInput
+    cmp r0,#0                   @ error ?
+    ble erreurX11
+
+    /****************************/
+    /* Events loop              */
+    /****************************/
+1:
+    mov r0,r6                   @ display address
+    bl XPending                 @ loading the number of events
+    cmp r0,#0
+    bne 2f                      @ a event is occurring
+    adr r3,iOfsbuffer1
+    ldr r5,[r3]
+    add r3,r5
+    mov r0,r6                   @ display address
+    mov r1,r9                   @ window ident
+    mov r2,r8                   @ graphic context
+    bl animate                  @ string display and move
+    b 1b
+2:
+    mov r0,r6                   @ display address
+    adr r1,iOfevent             @ events address
+    ldr r5,[r1]
+    add r1,r5
+    bl XNextEvent               @ event ?
+    adr r0,iOfevent
+    ldr r5,[r0]
+    add r0,r5
+    ldr r0,[r0]                 @ code event
+    cmp r0,#KeyPressed          @ key ?
+    bne 2f
+    adr r0,iOfevent            @ yes read key in buffer
+    ldr r5,[r0]
+    add r0,r5
+    adr r1,iOfbuffer
+    ldr r5,[r1]
+    add r1,r5
+    mov r2,#255
+    adr r3,iOfkey
+    ldr r5,[r3]
+    add r3,r5
+    mov r4,#0
+    push {r4}                   @ stack alignement
+    push {r4}
+    bl XLookupString
+    add sp,#8                   @ stack alignement 2 push
+    cmp r0,#1                   @ is character key ?
+    bne 2f
+    adr r0,iOfbuffer           @ yes -> load first buffer character
+    ldr r5,[r0]
+    add r0,r5
+    ldrb r0,[r0]
+    cmp r0,#0x71                @ character q for quit
+    beq 5f                      @ yes -> end
+    b 4f
+2:
+    /************************************/
+    /*  clic mouse button   */
+    /************************************/
+    cmp r0,#ButtonPress         @ clic mouse buton
+    bne 3f
+    adr r0,iOfevent
+    ldr r5,[r0]
+    add r0,r5
+    ldr r1,[r0,#+32]            @ position X mouse clic
+    ldr r2,[r0,#+36]            @ position Y
+    cmp r1,#50                  @ test if position clic is on the screen string approx.
+    blt 4f
+    cmp r1,#150
+    bgt 4f
+    cmp r2,#80
+    blt 4f
+    cmp r2,#105
+    bgt 4f
+    adr r1,iOfiSens             @ load direction
+    ldr r2,[r1]
+    add r1,r2
+    ldr r2,[r1]
+    cmp r2,#0                   @ direction inversion
+    moveq r2,#1
+    movne r2,#0
+    str r2,[r1]
+    b 4f
+3:
+    cmp r0,#ClientMessage       @ code for close window within error
+    bne 4f
+    adr r0,iOfevent
+    ldr r5,[r0]
+    add r0,r5
+    ldr r1,[r0,#+28]            @ code message address
+    adr r2,iOfwmDeleteMessage   @ equal code window créate ???
+    ldr r5,[r2]
+    add r2,r5
+    ldr r2,[r2]
+    cmp r1,r2
+    beq 5f                      @ yes -> end window
+
+4:  @ loop for other event
+    b 1b
+iOfptFenetre:       .int ptFenetre - .
+iOfszWindowName:    .int szWindowName - .
+iOfszTitreFenRed:   .int szTitreFenRed - .
+    /***********************************/
+    /* Close window -> free ressources */
+    /***********************************/
+5:
+    mov r0,r6                  @ display address
+    adr r1,iOfptGC
+    ldr r5,[r1]
+    add r1,r5
+    ldr r1,[r1]                @ load context graphic address
+    bl XFreeGC
+    mov r0,r6                  @ display address
+    adr r1,iOfptGC1
+    ldr r5,[r1]
+    add r1,r5
+    ldr r1,[r1]                @ load context graphic address
+    bl XFreeGC
+    cmp r0,#0
+    blt erreurX11
+    mov r0,r6                  @ display address
+    mov r1,r9                  @ window address
+    bl XDestroyWindow
+    cmp r0,#0
+    blt erreurX11
+    mov r0,r6                  @ display address
+    bl XCloseDisplay
+    cmp r0,#0
+    blt erreurX11
+    mov r0,#0                  @ return code OK
+    b 100f
+
+erreurF:   @ create error window but possible not necessary. Display error by server
+    adr r1,iOfszMessErrfen
+    ldr r5,[r1]
+    add r1,r5
+    bl   displayError
+    mov r0,#1                  @ return error code
+    b 100f
+erreurGC:                      @ error create graphic context
+    adr r1,iOfszMessErrGc
+    ldr r5,[r1]
+    add r1,r5
+    bl   displayError
+    mov r0,#1
+    b 100f
+erreurX11:    @ erreur X11
+    adr r1,iOfszMessErreurX11
+    ldr r5,[r1]
+    add r1,r5
+    bl   displayError
+    mov r0,#1
+    b 100f
+erreurServeur:                 @ error no found X11 server see doc putty and Xming
+    adr r1,iOfszMessErreur
+    ldr r5,[r1]
+    add r1,r5
+    bl   displayError
+    mov r0,#1
+    b 100f
+
+100:                           @ standard end of the program
+    mov r7, #EXIT
+    svc 0
+
+iOfevent:           .int event - .
+iOfbuffer:          .int buffer - .
+iOfsbuffer1:        .int sbuffer1 - .
+iOfkey:             .int key - .
+iOfszMessErreurX11: .int szMessErreurX11 - .
+iOfszMessErreur:    .int szMessErreur - .
+iOfszMessErrfen:    .int szMessErrfen - .
+iOfszTexte1:        .int szTexte1 - .
+iOfszTexte2:        .int szTexte2 - .
+iOfPrpNomFenetre:   .int PrpNomFenetre - .
+iOfwmDeleteMessage: .int wmDeleteMessage - .
+
+iFenetreMask:        .int  KeyPressMask|ButtonPressMask|StructureNotifyMask
+iGris1:              .int 0xFFA0A0A0
+iOfiSens:            .int iSens - .
+/******************************************************************/
+/*    load font                                                  */
+/******************************************************************/
+/* r0 contains display  */
+loadFont:
+    push {r1-r2,lr}           @ save  registers
+    adr r1,iOfszfontname       @ font name
+    ldr r2,[r1]
+    add r1,r2
+    bl XLoadQueryFont
+    cmp r0,#0
+    beq 99f                    @ font not find
+    adr r1,iOfptFont
+    ldr r2,[r1]
+    add r1,r2
+    str r0,[r1]
+    mov r0,#0
+    b 100f
+99:
+    adr r1,iOfszMessErrFont
+    ldr r5,[r1]
+    add r1,r5
+    bl   displayError
+    mov r0,#1
+100:
+    pop {r1-r2,pc}             @ restaur registers
+iOfszfontname:          .int szfontname2 - .
+iOfptFont:              .int ptFont - .
+iOfszMessErrFont:       .int szMessErrFont - .
+/******************************************************************/
+/*    Context Graphic création                                                  */
+/******************************************************************/
+/* r0 contains display  */
+/* r1 window address */
+/* REMARKS : no standard use registers  return GC1 in r8 and GC2 in r10 */
+createContextGraphic:
+    push {r1-r7,lr}             @ save  registers
+    /**********************************/
+    /*  create graphic context        */
+    /**********************************/
+    mov r6,r0                   @ save display address
+    mov r7,r1                   @ save window address
+    adr r3,iOfptFont            @ font pointer
+    ldr r1,[r3]
+    add r3,r1
+    ldr r3,[r3]
+    ldr r4,[r3,#4]              @ load font ident
+    adr r3,iOfstXGCValues2      @ green color in foreground
+    ldr r5,[r3]
+    add r3,r5                   @ this parameter is used by XcreateGC
+    str r4,[r3,#60]             @ store ident font in  offset 60
+    mov r0,r4
+    mov r0,r6                   @ display address
+    mov r1,r7                   @ window address
+    mov r2,#GCForeground|GCFont @  @ green color in foreground and font
+    bl XCreateGC
+    cmp r0,#0                   @ error ?
+    beq 99f
+    adr r1,iOfptGC
+    ldr r5,[r1]
+    add r1,r5
+    str r0,[r1]                 @ store address graphic context
+    mov r8,r0                   @ and in r8
+    /**********************************/
+    /*  create 2 graphic context        */
+    /**********************************/
+    mov r0,r6                   @ display address
+    mov r1,r7                   @ window address
+    mov r2,#GCForeground        @ red color in Foreground
+    adr r3,iOfstXGCValues
+    ldr r5,[r3]
+    add r3,r5
+    bl XCreateGC
+    cmp r0,#0                   @ error ?
+    beq erreurGC
+    adr r1,iOfptGC1
+    ldr r5,[r1]
+    add r1,r5
+    str r0,[r1]                 @ store address graphic context
+    mov r10,r0                  @ and in r10
+    b 100f
+99:                            @ create error
+    adr r1,iOfszMessErrGc
+    ldr r5,[r1]
+    add r1,r5
+    bl   displayError
+    mov r0,#1
+100:
+    pop {r1-r7,pc}             @ restaur registers
+iOfszMessErrGc:     .int szMessErrGc - .
+iOfptGC:            .int ptGC - .
+iOfptGC1:           .int ptGC1 - .
+iOfstXGCValues:     .int stXGCValues - .
+iOfstXGCValues1:     .int stXGCValues1 - .
+iOfstXGCValues2:     .int stXGCValues2 - .
+/******************************************************************/
+/*    animation                                                   */
+/******************************************************************/
+/* r0 contains display  */
+/* r1 contains window ident */
+/* r2 contains context graphic */
+/* r3 string address   */
+animate:
+    push {r2-r9,lr}            @ save  registers
+    mov r5,r3                   @ save string address
+    mov r6,r0                   @ save display
+    mov r7,r1                   @ save window
+    mov r8,r2                   @ save GC
+                                @ erase text in the windows
+    mov r0,r6                   @ display address
+    mov r1,r7                   @ window ident
+    mov r2,r10                  @ graphic context
+    mov r3,#50                  @ position x
+    mov r4,#LGTEXTE1  - 1       @ string lenght
+    push {r4}                   @ stack alignement
+    push {r4}                   @ to stack parameter
+
+    push {r5}                   @ string address
+    mov r4,#100                 @ position y
+    push {r4}
+    bl XDrawString
+    add sp,sp,#16               @ stack alignement (4 push)
+
+    mov r0,#LGTEXTE1 -2         @ string length
+    adr r1,iOfiSens             @ load direction
+    ldr r2,[r1]
+    add r1,r2
+    ldr r2,[r1]
+    cmp r2,#0                   @ test direction
+    bne 2f
+
+    ldrb r9,[r5,r0]             @ last character
+    sub r1,r0,#1
+1:                              @ loop to move character one position
+    ldrb r2,[r5,r1]
+    strb r2,[r5,r0]
+    sub r0,r0,#1
+    subs r1,r1,#1
+    bge 1b
+    add r1,r1,#1
+    strb r9,[r5,r1]             @ last character -> first character
+    b 4f
+2:
+    ldrb r9,[r5]                @ first character
+    mov r1,#1
+    sub r2,r1,#1
+3:                              @ loop to move character
+    ldrb r3,[r5,r1]
+    strb r3,[r5,r2]
+    add r2,r2,#1
+    add r1,r1,#1
+    cmp r1,r0
+    ble 3b
+    strb r9,[r5,r2]             @ first character -> last character
+
+4:
+                                @ write text in the windows
+    mov r0,r6                   @ display address
+    mov r1,r7                   @ window ident
+    mov r2,r8                   @ graphic context
+    mov r3,#50                  @ position x
+    mov r4,#LGTEXTE1  - 1       @ string lenght
+    push {r4}                   @ stack alignement
+    push {r4}                   @ to stack parameter
+    push {r5}                   @ string address
+    mov r4,#100                 @ position y
+    push {r4}
+    bl XDrawString
+    add sp,sp,#16               @ stack alignement (4 push)
+    mov r0,#20                  @ timeout 5s approx.
+    bl delay
+
+100:
+    pop {r2-r9,pc}             @ restaur registers
+/******************************************************************/
+/*    timeout                                                   */
+/******************************************************************/
+/* r0 contains delay  */
+
+delay:
+    push {r1,lr}           @ save  registers
+    ldr r1,iCst30000000
+    mul r0,r1,r0
+1:
+    subs r0,r0,#1
+    bge 1b
+100:
+    pop {r1,pc}             @ restaur registers
+iCst30000000:       .int 30000000
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

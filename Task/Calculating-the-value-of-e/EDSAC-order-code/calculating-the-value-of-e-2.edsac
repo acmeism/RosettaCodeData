@@ -1,0 +1,290 @@
+  [Calculate  e  by multilength variables.
+  EDSAC program, Initial Orders 2.
+
+  Subroutine to print 4-digit number in 0F.
+  6F >= 0 to print leading zeros, 6F < 0 to suppress them.
+  42 locations.]
+            T   56 K
+  GKA3FT36@T40@A6FE8@T1FA13@T40@T1FS2FL1FT39@H37@VFL2FA2FTFA40@E23@AFG27@
+  T1FT40@OFH38@CFTFT1FA39@A2FE36@T39@H26@VFL8FE16@EFI393FP2047DPFPF
+
+  [Division subroutine for positive 35-bit integers.
+  Input:  dividend at 4D, divisor at 6D
+  Output: remainder at 4D, quotient at 6D.
+  37 locations; working locations 0D, 8D.]
+            T   98 K
+  GKA3FT35@A6DU8DTDA4DRDSDG13@T36@ADLDE4@T36@T6DA4DSDG23@
+  T4DA6DYFYFT6DT36@A8DSDE35@T36@ADRDTDA6DLDT6DE15@EFPF
+
+  [Define multilength variables, to base 10^4 for simplicity in printing out.
+  Low address = low order digit.
+  Variable starting at 360 is result = 1/0! + 1/1! + 1/2! + 1/3! + ...
+  Variable starting at 692 is the term 1/n!]
+            T   54 K  [instruction to loader: store at 54, 55, ...]
+            P  360 F  [address of result in 54; referred to by code letter C]
+            P  692 F  [address of term in 55; referred to by code letter V]
+
+            T  135 K  [instruction to loader: store at 135, 136, ...]
+            G      K  [instruction to loader: store 135 at address 42]
+
+  [Constants]
+      [0]   #      F  [figure shift]
+      [1]   M      F  [(1) decimal point for printing
+                        (2) subtracted from A order to make T order]
+      [2]   @      F  [carriage return]
+      [3]   &      F  [line feed]
+      [4]   K 4096 F  [null character]
+      [5]   P   12 F  [groups of 4 digits per line, as an address]
+      [6]   P  332 F  [length of variable, as an address
+                        (max is 332 at present, 2020-07-04)]
+      [7]   P      D  [1]
+      [8]   W  904 F  [10000 = base for multibyte variables]
+      [9]   A      C  [used to manufacture orders]
+     [10]   A      V  [used to manufacture orders
+
+  Variables]
+     [11]   P      F  [(address of term) - (address of result)]
+     [12]   A      C  ['A m C' order where m = length of result]
+     [13]   A      V  ['A m V' order where m = length of term 1/n!]
+     [14]   A      V  [divisor := 2, 3, 4, ... to get term 1/n!]
+
+ [Subroutine to set top word of multilength value and clear rest.
+  Input: 4F = A order for lowest value of multibyte
+         5F = value, assumed < base]
+     [15]   A    3 F  [make and plant link for return]
+            T   32 @
+            A    4 F  [load A order]
+            S    1 @  [convert to T order]
+            U   24 @  [plant in code]
+            A    6 @  [make T order for top word]
+            S    2 F
+            T   31 @  [plant in code]
+     [23]   T      F  [clear acc]
+     [24]   T      F  [clear word in variable]
+            A   24 @  [load T order]
+            A    2 F  [inc address]
+            U   24 @  [store back]
+            S   31 @  [reached top word?]
+            G   23 @  [no, loop back]
+            A    5 F  [yes, load passed-in value]
+     [31]   T      F  [store it]
+     [32]   E      F  [return]
+
+ [Subroutine to set result := result + term, where term = 1/n!]
+     [33]   A    3 F  [make and plant link for return]
+            T   66 @
+            T    1 F  [carry in 1F, initially := 0]
+            A    9 @  [load A order for start of result]
+     [37]   U   44 @  [plant A order for result]
+            A   11 @  [make A order for term]
+            T   45 @  [plant A order for term]
+            A   44 @  [load A order for result]
+            S    1 @  [make T order for result]
+            U   50 @  [plant in code, 2 places]
+            T   56 @
+     [44]   A      C  [load word from result]
+     [45]   A      V  [add word from term]
+            A    1 F  [add carry from last time]
+            S    8 @  [is sum >= base?]
+            E   56 @  [yes, jump]
+            A    8 @  [no, restore sum after test]
+     [50]   T      C  [store in result]
+         [No carry. If rest of term is all 0's we can finish.]
+            A   45 @  [load A order for term]
+            S   13 @  [beyond end of non-zero part?]
+            E   65 @  [yes, jump to finish]
+            T      F  [no, clear acc]
+            E   58 @  [jump to set carry := 0]
+         [Here if there's a carry]
+     [56]   T      C  [save word of result]
+            A    7 @  [load 1 for carry]
+     [58]   T    1 F  [update carry for next time]
+            A   44 @  [load A order for result]
+            A    2 F  [inc address]
+            S   12 @  [reached end?]
+            E   65 @  [yes, jump to finish]
+            A   12 @  [no, restore A order after test]
+            G   37 @  [loop back]
+     [65]   T      F  [clear acc]
+     [66]   E      F  [return]
+
+ [Subroutine to round term 1/n!
+  Increments low word of term by 1. Assume this doesn't increase the length.]
+     [67]   A    3 F  [make and plant return link]
+            T   84 @
+            A   10 @  [load A order for start of term]
+     [70]   U   74 @  [plant A order in code]
+            S    1 @  [convert to T order]
+            U   78 @  [plant T order, 2 places]
+            T   83 @
+     [74]   A      V  [load word from term]
+            A    7 @  [add 1]
+            S    8 @  [carry needed?]
+            G   82 @  [no, store and exit]
+     [78]   T      V  [yes, store dec'd word (must be 0)]
+            A   74 @  [load A order]
+            A    2 F  [inc address]
+            G   70 @  [loop back]
+     [82]   A    8 @  [no carry, restore sum after test]
+     [83]   T      V  [store in word of term]
+     [84]   E      F  [exit]
+
+ [Subroutine to divide term 1/n! by the 17-bit positive number in location 0.
+  Called when n is incremented; location 0 contains new value of n.
+  Adjusts the value of endAV if necessary.]
+     [85]   A    3 F  [make and plant return link]
+            T  130 @
+            A      F  [load divisor]
+            T  131 @  [store locally]
+            A   13 @  [load A order for end of term]
+            T  102 @  [plant in code]
+            T    1 F  [carry in 1F, initially := 0]
+         [Start of loop]
+     [92]   T      F  [clear acc]
+            A  102 @  [load A order for word in term]
+            S    2 F  [dec address]
+            S   10 @  [now beyond start?]
+            G  119 @  [yes, jump to finish off]
+            A   10 @  [no, restore order after test]
+            U  102 @  [plant in code]
+            S    1 @  [convert to T order]
+            T  115 @  [plant in code]
+            T    4 D  [clear 5F and sandwich bit]
+    [102]   A      V  [load word from term]
+            T    4 F  [store as double in 4D]
+            T    6 D  [clear 7F and sandwich bit]
+            A  131 @  [load divisor]
+            T    6 F  [store as double in 6D]
+            H    8 @  [multiplier register := base]
+            V    1 F  [acc := base*carry]
+            R    1 F  [shift 2 right]
+            A    4 D  [add word from term]
+            T    4 D  [to $D as dividend]
+            A  112 @  [call division routine]
+            G   98 F
+            A    6 F  [load quotient]
+    [115]   T      V  [to word in term]
+            A    4 F  [load remainder]
+            T    1 F  [to carry]
+            E   92 @  [loop for next]
+         [Done division, round quotient if necessary]
+    [119]   T      F  [clear acc]
+            A    1 F  [load carry out of last digit]
+            L      D  [carry*2]
+            S  131 @  [subtract divisor]
+            G  127 @  [if carry < divisor/2, skip rounding]
+            T      F  [clear acc]
+            A  125 @  [call routine to inc low word of term by 1]
+            G   67 @
+    [127]   T      F  [clear acc]
+            A  128 @  [call routine to adjust endAV]
+            G  132 @
+    [130]   E      F  [exit with acc = 0]
+    [131]   P      F  [divisor]
+
+ [Subroutine to update endAV, i.e. the A order for start of zero words in the term 1/n!
+  The address *before* endAV must be either (1) less than ordAV or (2) contain non-zero.]
+    [132]   A    3 F  [make and plant return link]
+            T  148 @
+          [Start of loop. here acc = 0.]
+    [134]   A   13 @  [load current endAV]
+            S    2 F  [tentative new value]
+            U  140 @  [plant in code]
+            S   10 @  [less than ordAV?]
+            G  147 @  [yes, done]
+            T      F  [no, clear acc]
+    [140]   A      V  [load word in term]
+            S    7 @  [greater than 0?]
+            E  147 @  [yes, done]
+            T      F  [no, clear acc]
+            A  140 @  [update endAV to tentative value]
+            T   13 @
+            E  134 @  [loop back to test new value]
+    [147]   T      F
+    [148]   E      F
+
+  [Subroutine to print multibyte result with formatting.
+  Assumes top word (integer part) is <= 9; OK since integer part = 2 here.
+  Uses 5F for countdown of words on current line.]
+    [149]   A    3 F  [make and plant return link]
+            T  183 @
+            A   12 @  [start at top end]
+            S    2 F  [point to top word]
+            U  156 @  [plant A order, 2 places]
+            T  176 @
+            T    5 F  [countdown := 0 to force newline]
+    [156]   A      F  [load top word]
+            T      F  [to 0F for printing]
+            S    7 @  [acc := -1]
+            T    6 F  [make 6F < 0 to suppress leading 0's]
+            A  160 @
+            G   56 F
+            O    1 @  [print decimal point]
+         [Start of loop to print fractional part of result. Assumes acc = 0.]
+    [163]   A  176 @  [load A order for result]
+            S    2 F  [dec address]
+            S    9 @  [now beyond start?]
+            G  182 @  [yes, exit]
+            A    9 @  [no, restore order after test]
+            T  176 @  [plant in code]
+            A    5 F  [load printing countdown]
+            S    2 F  [decrement]
+            E  175 @  [skip if not gone negative]
+            A    5 @  [reset print countdown]
+            O    2 @  [start new line]
+            O    3 @
+    [175]   T    5 F
+    [176]   A      C  [load word]
+            T      F  [to 0F for printing]
+            T    6 F  [print leading 0's]
+            A  179 @  [call subroutine to print 0F]
+            G   56 F    [(clears acc)]
+            E  163 @  [loop back]
+    [182]   T      F  [exit with acc = 0]
+    [183]   E      F
+
+          [Enter with acc = 0]
+    [184]   O      @
+            A   10 @  [acc := A order for start of term 1/n!]
+            S    9 @  [subtract A order for start of result]
+            T   11 @  [store difference of addresses]
+            A    9 @  [A order for start of result]
+            A    6 @  [add length of result]
+            T   12 @  [store result]
+            A   10 @  [similarly for term]
+            A    6 @
+            T   13 @
+            A    9 @  [load A order for start of result]
+            T    4 F  [to 4F for subroutine]
+            A    7 @  [load 1]
+            T    5 F  [to 5F for subroutine]
+            A  198 @  [call subroutine to set result := 1]
+            G   15 @
+            A   10 @  [similarly term := 1]
+            T    4 F
+            A    7 @
+            U   14 @
+            T    5 F
+            A  205 @
+            G   15 @
+    [207]   T      F
+            A  208 @  [result := result + term]
+            G   33 @
+            T      F
+            A   14 @  [inc n]
+            A    7 @
+            U   14 @
+            T      F  [also in 0F]
+            A  215 @  [divide term by n]
+            G   85 @
+            A   10 @
+            S   13 @
+            G  207 @
+          [Here 1/n! has been reduced to 0; time to stop]
+            T      F  [clear acc]
+            A  221 @  [call subroutine to print result]
+            G  149 @
+            O    4 @  [null to flush printer buffer]
+            Z      F  [stop]
+            E  184 Z  [define entry point]
+            P      F  [acc = 0 on entry]

@@ -1,0 +1,2 @@
+(DEFUN NUMERICP (X)
+    (IF (STRING->NUMBER X) T))

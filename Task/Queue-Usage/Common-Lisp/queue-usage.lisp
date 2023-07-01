@@ -1,0 +1,7 @@
+(let ((queue (make-queue)))
+  (enqueue 38 queue)
+  (assert (not (queue-empty-p queue)))
+  (enqueue 23 queue)
+  (assert (eql 38 (dequeue queue)))
+  (assert (eql 23 (dequeue queue)))
+  (assert (queue-empty-p queue)))

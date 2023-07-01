@@ -1,0 +1,1778 @@
+(*
+
+  UTF-8 encoding and decoding in ATS2.
+
+  This is adapted from library code I wrote long ago and actually
+  handles the original 1-to-6-byte encoding, as well. Valid Unicode
+  requires only 1 to 4 bytes.
+
+  What is remarkable about the following rather lengthy code is its
+  use of proofs of what is and what is not valid UTF-8. Much of what
+  follows is proofs rather than executable code. It seemed simpler to
+  "mostly copy" my old code, than to try to pare that code down to a
+  minimum that still demonstrated some of what makes ATS different
+  from all but a few (if any) other languages.
+
+*)
+
+#define ATS_EXTERN_PREFIX "utf8_encoding_"
+
+#include "share/atspre_define.hats"
+#include "share/atspre_staload.hats"
+
+(* A variant of ‘andalso’, with dependent types. *)
+fn {}
+andalso1 {b1, b2 : bool} (b1 : bool b1, b2 : bool b2) :<>
+    [b3 : bool | b3 == (b1 && b2)] bool b3 =
+  if b1 then
+    b2
+  else
+    false
+
+infixl (&&) &&&
+macdef &&& = andalso1
+
+(*###################### C CODE ####################################*)
+
+%{^
+
+_Static_assert (4 <= sizeof (int),
+                "sizeof(int) must equal at least 4");
+
+#define utf8_encoding_2_entries(v)   \
+  (v), (v)
+
+#define utf8_encoding_4_entries(v)   \
+  utf8_encoding_2_entries (v),       \
+    utf8_encoding_2_entries (v)
+
+#define utf8_encoding_8_entries(v)   \
+  utf8_encoding_4_entries (v),       \
+    utf8_encoding_4_entries (v)
+
+#define utf8_encoding_16_entries(v)  \
+  utf8_encoding_8_entries (v),       \
+    utf8_encoding_8_entries (v)
+
+#define utf8_encoding_32_entries(v)  \
+  utf8_encoding_16_entries (v),      \
+    utf8_encoding_16_entries (v)
+
+#define utf8_encoding_64_entries(v)  \
+  utf8_encoding_32_entries (v),      \
+    utf8_encoding_32_entries (v)
+
+#define utf8_encoding_128_entries(v) \
+  utf8_encoding_64_entries (v),      \
+    utf8_encoding_64_entries (v)
+
+static const atstype_int8 utf8_encoding_extended_utf8_lengths__[256] = {
+  utf8_encoding_128_entries (1),
+  utf8_encoding_64_entries (-1),
+  utf8_encoding_32_entries (2),
+  utf8_encoding_16_entries (3),
+  utf8_encoding_8_entries (4),
+  utf8_encoding_4_entries (5),
+  utf8_encoding_2_entries (6),
+  utf8_encoding_2_entries (-1)
+};
+
+static const atstype_int8 utf8_encoding_utf8_lengths__[256] = {
+  utf8_encoding_128_entries (1),
+  utf8_encoding_64_entries (-1),
+  utf8_encoding_32_entries (2),
+  utf8_encoding_16_entries (3),
+  utf8_encoding_8_entries (4),
+  utf8_encoding_4_entries (-1),
+  utf8_encoding_2_entries (-1),
+  utf8_encoding_2_entries (-1)
+};
+
+#define utf8_encoding_extended_utf8_character_length(c)      \
+  (utf8_encoding_extended_utf8_lengths__[(atstype_uint8) (c)])
+
+#define utf8_encoding_utf8_character_length(c)               \
+  (utf8_encoding_utf8_lengths__[(atstype_uint8) (c)])
+
+%}
+
+(*###################### INTERFACE #################################*)
+
+stadef
+is_valid_unicode_code_point (u : int) : bool =
+  (0x0 <= u && u < 0xD800) || (0xE000 <= u && u <= 0x10FFFF)
+
+extern fun {}
+is_valid_unicode_code_point :
+  {u : int} int u -<>
+    [b : bool | b == is_valid_unicode_code_point u]
+    bool b
+
+(*------------------------------------------------------------------*)
+
+stadef
+is_extended_utf8_1byte_first_byte (c0 : int) : bool =
+  0x00 <= c0 && c0 <= 0x7F
+
+stadef
+is_extended_utf8_2byte_first_byte (c0 : int) : bool =
+  0xC0 <= c0 && c0 <= 0xDF
+
+stadef
+is_extended_utf8_3byte_first_byte (c0 : int) : bool =
+  0xE0 <= c0 && c0 <= 0xEF
+
+stadef
+is_extended_utf8_4byte_first_byte (c0 : int) : bool =
+  0xF0 <= c0 && c0 <= 0xF7
+
+stadef
+is_extended_utf8_5byte_first_byte (c0 : int) : bool =
+  0xF8 <= c0 && c0 <= 0xFB
+
+stadef
+is_extended_utf8_6byte_first_byte (c0 : int) : bool =
+  0xFC <= c0 && c0 <= 0xFD
+
+stadef
+extended_utf8_character_length (c0 : int) : int =
+  ifint (is_extended_utf8_1byte_first_byte c0, 1,
+    ifint (is_extended_utf8_2byte_first_byte c0, 2,
+      ifint (is_extended_utf8_3byte_first_byte c0, 3,
+        ifint (is_extended_utf8_4byte_first_byte c0, 4,
+          ifint (is_extended_utf8_5byte_first_byte c0, 5,
+            ifint (is_extended_utf8_6byte_first_byte c0, 6, ~1))))))
+
+stadef
+extended_utf8_char_length_relation (c0 : int, n : int) : bool =
+  (n == 1 && is_extended_utf8_1byte_first_byte c0) ||
+  (n == 2 && is_extended_utf8_2byte_first_byte c0) ||
+  (n == 3 && is_extended_utf8_3byte_first_byte c0) ||
+  (n == 4 && is_extended_utf8_4byte_first_byte c0) ||
+  (n == 5 && is_extended_utf8_5byte_first_byte c0) ||
+  (n == 6 && is_extended_utf8_6byte_first_byte c0)
+
+extern prfun
+extended_utf8_char_length_relation_to_length :
+  {c0 : int}
+  {n : int | extended_utf8_char_length_relation (c0, n) ||
+             (n == ~1 && ((c0 < 0x00) ||
+                          (0x7F < c0 && c0 < 0xC0) ||
+                          (0xFD < c0)))}
+  () -<prf> [n == extended_utf8_character_length c0] void
+
+extern prfun
+extended_utf8_char_length_to_length_relation :
+  {c0 : int}
+  {n : int | n == extended_utf8_character_length c0}
+  () -<prf>
+    [extended_utf8_char_length_relation (c0, n) ||
+     (n == ~1 && ((c0 < 0x00) || (0x7F < c0 && c0 < 0xC0) || (0xFD < c0)))]
+    void
+
+// extended_utf8_character_length:
+//
+// Return value = 1, 2, 3, or 4 indicates that there may be a valid
+// UTF-8 character, of the given length. It may also be a `valid'
+// overlong sequence. Otherwise there definitely is not a valid
+// character of any sort starting with the given byte. Return
+// value = 5 or 6 indicates the possible start of an `extended
+// UTF-8' character of the given length, including code points up
+// to 0xffffffff. Return value = ~1 means the byte is not the
+// start of a valid sequence.
+extern fun
+extended_utf8_character_length :
+  {c0 : int | 0x00 <= c0; c0 <= 0xFF} int c0 -<>
+    [n : int | n == extended_utf8_character_length c0] int n = "mac#%"
+
+stadef
+utf8_character_length (c0 : int) : int =
+  ifint (is_extended_utf8_1byte_first_byte c0, 1,
+    ifint (is_extended_utf8_2byte_first_byte c0, 2,
+      ifint (is_extended_utf8_3byte_first_byte c0, 3,
+        ifint (is_extended_utf8_4byte_first_byte c0, 4, ~1))))
+
+stadef
+utf8_char_length_relation (c0 : int, n : int) : bool =
+  (n == 1 && is_extended_utf8_1byte_first_byte c0) ||
+  (n == 2 && is_extended_utf8_2byte_first_byte c0) ||
+  (n == 3 && is_extended_utf8_3byte_first_byte c0) ||
+  (n == 4 && is_extended_utf8_4byte_first_byte c0)
+
+extern prfun
+utf8_char_length_relation_to_length :
+  {c0 : int}
+  {n : int | utf8_char_length_relation (c0, n) ||
+             (n == ~1 && ((c0 < 0x00) ||
+                          (0x7F < c0 && c0 < 0xC0) ||
+                          (0xF7 < c0)))}
+  () -<prf> [n == utf8_character_length c0] void
+
+extern prfun
+utf8_char_length_to_length_relation :
+  {c0 : int}
+  {n : int | n == utf8_character_length c0}
+  () -<prf>
+    [utf8_char_length_relation (c0, n) ||
+     (n == ~1 && ((c0 < 0x00) || (0x7F < c0 && c0 < 0xC0) || (0xF7 < c0)))]
+    void
+
+extern fun
+utf8_character_length :
+  {c0 : int | 0x00 <= c0; c0 <= 0xFF} int c0 -<>
+    [n : int | n == utf8_character_length c0] int n = "mac#%"
+
+(*------------------------------------------------------------------*)
+
+stadef
+is_valid_utf8_continuation_byte (c : int) : bool =
+  0x80 <= c && c <= 0xBF
+
+stadef
+is_invalid_utf8_continuation_byte (c : int) : bool =
+  c < 0x80 || 0xBF < c
+
+extern fun {}
+is_valid_utf8_continuation_byte :
+  {c : int} int c -<>
+    [b : bool | b == is_valid_utf8_continuation_byte c] bool b
+
+(*------------------------------------------------------------------*)
+
+stadef
+extended_utf8_char_1byte_decoding (c0 : int) : int =
+  c0
+
+stadef
+extended_utf8_char_2byte_decoding (c0 : int, c1 : int) : int =
+  64 * (c0 - 0xC0) + (c1 - 0x80)
+
+stadef
+extended_utf8_char_3byte_decoding (c0 : int, c1 : int, c2 : int) : int =
+  64 * 64 * (c0 - 0xE0) + 64 * (c1 - 0x80) + (c2 - 0x80)
+
+stadef
+extended_utf8_char_4byte_decoding (c0 : int, c1 : int, c2 : int,
+                                   c3 : int) : int =
+  64 * 64 * 64 * (c0 - 0xF0) + 64 * 64 * (c1 - 0x80) +
+    64 * (c2 - 0x80) + (c3 - 0x80)
+
+stadef
+extended_utf8_char_5byte_decoding (c0 : int, c1 : int, c2 : int,
+                                   c3 : int, c4 : int) : int =
+  64 * 64 * 64 * 64 * (c0 - 0xF8) + 64 * 64 * 64 * (c1 - 0x80) +
+    64 * 64 * (c2 - 0x80) + 64 * (c3 - 0x80) + (c4 - 0x80)
+
+stadef
+extended_utf8_char_6byte_decoding (c0 : int, c1 : int, c2 : int,
+                                   c3 : int, c4 : int, c5 : int) : int =
+  64 * 64 * 64 * 64 * 64 * (c0 - 0xFC) + 64 * 64 * 64 * 64 * (c1 - 0x80) +
+    64 * 64 * 64 * (c2 - 0x80) + 64 * 64 * (c3 - 0x80) +
+       64 * (c4 - 0x80) + (c5 - 0x80)
+
+dataprop EXTENDED_UTF8_CHAR (length : int, u : int, c0 : int, c1 : int,
+                             c2 : int, c3 : int, c4 : int, c5 : int) =
+  | {u, c0 : int |
+     0 <= u; u <= 0x7F;
+     is_extended_utf8_1byte_first_byte c0;
+     u == extended_utf8_char_1byte_decoding (c0)}
+    EXTENDED_UTF8_CHAR_1byte (1, u, c0, ~1, ~1, ~1, ~1, ~1)
+    //
+  | {u, c0, c1 : int |
+     0 <= u; u <= 0x7FF;
+     is_extended_utf8_2byte_first_byte c0;
+     is_valid_utf8_continuation_byte c1;
+     u == extended_utf8_char_2byte_decoding (c0, c1)}
+    EXTENDED_UTF8_CHAR_2byte (2, u, c0, c1, ~1, ~1, ~1, ~1)
+    //
+  | {u, c0, c1, c2 : int |
+     0 <= u; u <= 0xFFFF;
+     is_extended_utf8_3byte_first_byte c0;
+     is_valid_utf8_continuation_byte c1;
+     is_valid_utf8_continuation_byte c2;
+     u == extended_utf8_char_3byte_decoding (c0, c1, c2)}
+    EXTENDED_UTF8_CHAR_3byte (3, u, c0, c1, c2, ~1, ~1, ~1)
+    //
+  | {u, c0, c1, c2, c3 : int |
+     0 <= u; u <= 0x1FFFFF;
+     is_extended_utf8_4byte_first_byte c0;
+     is_valid_utf8_continuation_byte c1;
+     is_valid_utf8_continuation_byte c2;
+     is_valid_utf8_continuation_byte c3;
+     u == extended_utf8_char_4byte_decoding (c0, c1, c2, c3)}
+    EXTENDED_UTF8_CHAR_4byte (4, u, c0, c1, c2, c3, ~1, ~1)
+    //
+  | {u, c0, c1, c2, c3, c4 : int |
+     0 <= u; u <= 0x3FFFFFF;
+     is_extended_utf8_5byte_first_byte c0;
+     is_valid_utf8_continuation_byte c1;
+     is_valid_utf8_continuation_byte c2;
+     is_valid_utf8_continuation_byte c3;
+     is_valid_utf8_continuation_byte c4;
+     u == extended_utf8_char_5byte_decoding (c0, c1, c2, c3, c4)}
+    EXTENDED_UTF8_CHAR_5byte (5, u, c0, c1, c2, c3, c4, ~1)
+    //
+  | {u, c0, c1, c2, c3, c4, c5 : int |
+     0 <= u; u <= 0x7FFFFFFF;
+     is_extended_utf8_6byte_first_byte c0;
+     is_valid_utf8_continuation_byte c1;
+     is_valid_utf8_continuation_byte c2;
+     is_valid_utf8_continuation_byte c3;
+     is_valid_utf8_continuation_byte c4;
+     is_valid_utf8_continuation_byte c5;
+     u == extended_utf8_char_6byte_decoding (c0, c1, c2, c3, c4, c5)}
+    EXTENDED_UTF8_CHAR_6byte (6, u, c0, c1, c2, c3, c4, c5)
+
+extern prfun
+decode_extended_utf8_istot :
+  {n : int | 1 <= n; n <= 6}
+  {c0, c1, c2, c3, c4, c5 : int |
+   extended_utf8_char_length_relation (c0, n);
+   n <= 1 || is_valid_utf8_continuation_byte c1;
+   n <= 2 || is_valid_utf8_continuation_byte c2;
+   n <= 3 || is_valid_utf8_continuation_byte c3;
+   n <= 4 || is_valid_utf8_continuation_byte c4;
+   n <= 5 || is_valid_utf8_continuation_byte c5;
+   1 < n || c1 == ~1;
+   2 < n || c2 == ~1;
+   3 < n || c3 == ~1;
+   4 < n || c4 == ~1;
+   5 < n || c5 == ~1}
+   () -<prf> [u : int] EXTENDED_UTF8_CHAR (n, u, c0, c1, c2, c3, c4, c5)
+
+extern prfun
+decode_extended_utf8_isfun :
+  {na : int | 1 <= na; na <= 6}
+  {ua : int}
+  {c0a, c1a, c2a, c3a, c4a, c5a : int}
+  {nb : int | nb == na}
+  {ub : int}
+  {c0b, c1b, c2b, c3b, c4b, c5b : int |
+   c0b == c0a;
+   c1b == c1a;
+   c2b == c2a;
+   c3b == c3a;
+   c4b == c4a;
+   c5b == c5a}
+  (EXTENDED_UTF8_CHAR (na, ua, c0a, c1a, c2a, c3a, c4a, c5a),
+   EXTENDED_UTF8_CHAR (nb, ub, c0b, c1b, c2b, c3b, c4b, c5b)) -<prf>
+    [ua == ub] void
+
+extern prfun
+lemma_extended_utf8_char_length :
+  {n : int} {u : int} {c0, c1, c2, c3, c4, c5 : int}
+  EXTENDED_UTF8_CHAR (n, u, c0, c1, c2, c3, c4, c5) -<prf>
+    [n == extended_utf8_character_length c0] void
+
+extern fun {}
+decode_extended_utf8_1byte :
+  {c0 : int | 0x00 <= c0; c0 <= 0x7F} int c0 -<>
+    [u : int] (EXTENDED_UTF8_CHAR (1, u, c0, ~1, ~1, ~1, ~1, ~1) | int u)
+
+extern fun {}
+decode_extended_utf8_2byte :
+  {c0, c1 : int | 0xC0 <= c0; c0 <= 0xDF;
+                  is_valid_utf8_continuation_byte c1}
+  (int c0, int c1) -<>
+    [u : int] (EXTENDED_UTF8_CHAR (2, u, c0, c1, ~1, ~1, ~1, ~1) | int u)
+
+extern fun {}
+decode_extended_utf8_3byte :
+  {c0, c1, c2 : int | 0xE0 <= c0; c0 <= 0xEF;
+                      is_valid_utf8_continuation_byte c1;
+                      is_valid_utf8_continuation_byte c2}
+  (int c0, int c1, int c2) -<>
+    [u : int] (EXTENDED_UTF8_CHAR (3, u, c0, c1, c2, ~1, ~1, ~1) | int u)
+
+extern fun {}
+decode_extended_utf8_4byte :
+  {c0, c1, c2, c3 : int | 0xF0 <= c0; c0 <= 0xF7;
+                          is_valid_utf8_continuation_byte c1;
+                          is_valid_utf8_continuation_byte c2;
+                          is_valid_utf8_continuation_byte c3}
+  (int c0, int c1, int c2, int c3) -<>
+    [u : int] (EXTENDED_UTF8_CHAR (4, u, c0, c1, c2, c3, ~1, ~1) | int u)
+
+extern fun {}
+decode_extended_utf8_5byte :
+  {c0, c1, c2, c3, c4 : int | 0xF8 <= c0; c0 <= 0xFB;
+                              is_valid_utf8_continuation_byte c1;
+                              is_valid_utf8_continuation_byte c2;
+                              is_valid_utf8_continuation_byte c3;
+                              is_valid_utf8_continuation_byte c4}
+  (int c0, int c1, int c2, int c3, int c4) -<>
+    [u : int] (EXTENDED_UTF8_CHAR (5, u, c0, c1, c2, c3, c4, ~1) | int u)
+
+extern fun {}
+decode_extended_utf8_6byte :
+  {c0, c1, c2, c3, c4, c5 : int | 0xFC <= c0; c0 <= 0xFD;
+                                  is_valid_utf8_continuation_byte c1;
+                                  is_valid_utf8_continuation_byte c2;
+                                  is_valid_utf8_continuation_byte c3;
+                                  is_valid_utf8_continuation_byte c4;
+                                  is_valid_utf8_continuation_byte c5}
+  (int c0, int c1, int c2, int c3, int c4, int c5) -<>
+    [u : int]
+    (EXTENDED_UTF8_CHAR (6, u, c0, c1, c2, c3, c4, c5) | int u)
+
+(*------------------------------------------------------------------*)
+
+stadef extended_utf8_shortest_length (u : int) =
+  ifint (u < 0, ~1,
+    ifint (u <= 0x7F, 1,
+      ifint (u <= 0x7FF, 2,
+        ifint (u <= 0xFFFF, 3,
+          ifint (u <= 0x1FFFFF, 4,
+            ifint (u <= 0x3FFFFFF, 5,
+              ifint (u <= 0x7FFFFFFF, 6, ~1)))))))
+
+dataprop EXTENDED_UTF8_SHORTEST (length : int, u : int, c0 : int, c1 : int,
+                                 c2 : int, c3 : int, c4 : int, c5 : int) =
+  | {u, c0 : int |
+     0 <= u; u <= 0x7F;
+     c0 == u}
+    EXTENDED_UTF8_SHORTEST_1byte (1, u, c0, ~1, ~1, ~1, ~1, ~1) of
+      EXTENDED_UTF8_CHAR (1, u, c0, ~1, ~1, ~1, ~1, ~1)
+    //
+  | {u, c0, c1 : int |
+     0x7F < u; u <= 0x7FF;
+     c0 == 0xC0 + (u \ndiv 64);
+     c1 == 0x80 + (u \nmod 64)}
+    EXTENDED_UTF8_SHORTEST_2byte (2, u, c0, c1, ~1, ~1, ~1, ~1) of
+      EXTENDED_UTF8_CHAR (2, u, c0, c1, ~1, ~1, ~1, ~1)
+    //
+  | {u, c0, c1, c2 : int |
+     0x7FF < u; u <= 0xFFFF;
+     c0 == 0xE0 + (u \ndiv (64 * 64));
+     c1 == 0x80 + ((u \ndiv 64) \nmod 64);
+     c2 == 0x80 + (u \nmod 64)}
+    EXTENDED_UTF8_SHORTEST_3byte (3, u, c0, c1, c2, ~1, ~1, ~1) of
+      EXTENDED_UTF8_CHAR (3, u, c0, c1, c2, ~1, ~1, ~1)
+    //
+  | {u, c0, c1, c2, c3 : int |
+     0xFFFF < u; u <= 0x1FFFFF;
+     c0 == 0xF0 + (u \ndiv (64 * 64 * 64));
+     c1 == 0x80 + ((u \ndiv (64 * 64)) \nmod 64);
+     c2 == 0x80 + ((u \ndiv 64) \nmod 64);
+     c3 == 0x80 + (u \nmod 64)}
+    EXTENDED_UTF8_SHORTEST_4byte (4, u, c0, c1, c2, c3, ~1, ~1) of
+      EXTENDED_UTF8_CHAR (4, u, c0, c1, c2, c3, ~1, ~1)
+    //
+  | {u, c0, c1, c2, c3, c4 : int |
+     0x1FFFFF < u; u <= 0x3FFFFFF;
+     c0 == 0xF8 + (u \ndiv (64 * 64 * 64 * 64));
+     c1 == 0x80 + ((u \ndiv (64 * 64 * 64)) \nmod 64);
+     c2 == 0x80 + ((u \ndiv (64 * 64)) \nmod 64);
+     c3 == 0x80 + ((u \ndiv 64) \nmod 64);
+     c4 == 0x80 + (u \nmod 64)}
+    EXTENDED_UTF8_SHORTEST_5byte (5, u, c0, c1, c2, c3, c4, ~1) of
+      EXTENDED_UTF8_CHAR (5, u, c0, c1, c2, c3, c4, ~1)
+    //
+  | {u, c0, c1, c2, c3, c4, c5 : int |
+     0x3FFFFFF < u; u <= 0x7FFFFFFF;
+     c0 == 0xFC + (u \ndiv (64 * 64 * 64 * 64 * 64));
+     c1 == 0x80 + ((u \ndiv (64 * 64 * 64 * 64)) \nmod 64);
+     c2 == 0x80 + ((u \ndiv (64 * 64 * 64)) \nmod 64);
+     c3 == 0x80 + ((u \ndiv (64 * 64)) \nmod 64);
+     c4 == 0x80 + ((u \ndiv 64) \nmod 64);
+     c5 == 0x80 + (u \nmod 64)}
+    EXTENDED_UTF8_SHORTEST_6byte (6, u, c0, c1, c2, c3, c4, c5) of
+      EXTENDED_UTF8_CHAR (6, u, c0, c1, c2, c3, c4, c5)
+
+extern prfun
+extended_utf8_shortest_is_char :
+  {n : int} {u : int} {c0, c1, c2, c3, c4, c5 : int}
+  EXTENDED_UTF8_SHORTEST (n, u, c0, c1, c2, c3, c4, c5) -<prf>
+    EXTENDED_UTF8_CHAR (n, u, c0, c1, c2, c3, c4, c5)
+
+extern prfun
+lemma_extended_utf8_shortest_length :
+  {n : int} {u : int} {c0, c1, c2, c3, c4, c5 : int}
+  EXTENDED_UTF8_SHORTEST (n, u, c0, c1, c2, c3, c4, c5) -<prf>
+    [n == extended_utf8_shortest_length u] void
+
+extern fun {}
+encode_extended_utf8_character :
+  {u : nat | u <= 0x7FFFFFFF}
+  int u -<>
+    [n : int] [c0, c1, c2, c3, c4, c5 : int]
+    @(EXTENDED_UTF8_SHORTEST (n, u, c0, c1, c2, c3, c4, c5) |
+      int n, int c0, int c1, int c2, int c3, int c4, int c5)
+
+(*------------------------------------------------------------------*)
+//
+// A valid UTF-8 character is one that encodes a valid Unicode
+// code point and is not overlong.
+//
+
+dataprop UTF8_CHAR_INVALID_CASES (c0 : int, c1 : int, c2 : int, c3 : int) =
+  // The cases are not mutually exclusive.
+  | {c0, c1, c2, c3 : int | extended_utf8_character_length c0 == ~1}
+    // We might not be using this case, presently (has that changed?),
+    // but it is included for completeness.
+    UTF8_CHAR_INVALID_bad_c0 (c0, c1, c2, c3)
+  | {c0, c1, c2, c3 : int | 2 <= extended_utf8_character_length c0;
+                            ~(is_valid_utf8_continuation_byte c1)}
+    UTF8_CHAR_INVALID_bad_c1 (c0, c1, c2, c3)
+  | {c0, c1, c2, c3 : int | 3 <= extended_utf8_character_length c0;
+                            ~(is_valid_utf8_continuation_byte c2)}
+    UTF8_CHAR_INVALID_bad_c2 (c0, c1, c2, c3)
+  | {c0, c1, c2, c3 : int | extended_utf8_character_length c0 == 4;
+                            ~(is_valid_utf8_continuation_byte c3)}
+    UTF8_CHAR_INVALID_bad_c3 (c0, c1, c2, c3)
+  | {c0, c1, c2, c3 : int |
+     extended_utf8_character_length c0 == 2;
+     extended_utf8_char_2byte_decoding (c0, c1) <= 0x7F}
+    UTF8_CHAR_INVALID_invalid_2byte (c0, c1, c2, c3)
+  | {c0, c1, c2, c3 : int |
+     extended_utf8_character_length c0 == 3
+       && (extended_utf8_char_3byte_decoding (c0, c1, c2) <= 0x7FF
+             || ~(is_valid_unicode_code_point
+                    (extended_utf8_char_3byte_decoding (c0, c1, c2))))}
+    UTF8_CHAR_INVALID_invalid_3byte (c0, c1, c2, c3)
+  | {c0, c1, c2, c3 : int |
+     extended_utf8_character_length c0 == 4
+       && (extended_utf8_char_4byte_decoding (c0, c1, c2, c3) <= 0xFFFF
+             || ~(is_valid_unicode_code_point
+                    (extended_utf8_char_4byte_decoding (c0, c1, c2, c3))))}
+    UTF8_CHAR_INVALID_invalid_4byte (c0, c1, c2, c3)
+
+dataprop UTF8_CHAR_VALID_BYTES (c0 : int, c1 : int, c2 : int, c3 : int) =
+  | {c0 : int | 0 <= c0 && c0 <= 0x7F}
+    UTF8_CHAR_VALID_BYTES_1byte (c0, ~1, ~1, ~1)
+  | {c0, c1 : int | 0xC2 <= c0 && c0 <= 0xDF;
+                    is_valid_utf8_continuation_byte c1}
+    UTF8_CHAR_VALID_BYTES_2byte (c0, c1, ~1, ~1)
+  | {c0, c1, c2 : int | (0xE1 <= c0 && c0 <= 0xEC)
+                          || c0 == 0xEE
+                          || c0 == 0xEF
+                          || (c0 == 0xE0 && 0xA0 <= c1)
+                          || (c0 == 0xED && c1 < 0xA0);
+                        is_valid_utf8_continuation_byte c1;
+                        is_valid_utf8_continuation_byte c2}
+    UTF8_CHAR_VALID_BYTES_3byte (c0, c1, c2, ~1)
+  | {c0, c1, c2, c3 : int | (0xF1 <= c0 && c0 <= 0xF3)
+                              || (c0 == 0xF0 && 0x90 <= c1)
+                              || (c0 == 0xF4 && c1 < 0x90);
+                            is_valid_utf8_continuation_byte c1;
+                            is_valid_utf8_continuation_byte c2;
+                            is_valid_utf8_continuation_byte c3}
+    UTF8_CHAR_VALID_BYTES_4byte (c0, c1, c2, c3)
+
+dataprop UTF8_CHAR_INVALID_BYTES (c0 : int, c1 : int, c2 : int, c3 : int) =
+  | // This should never occur.
+    {c0 : int | is_extended_utf8_1byte_first_byte c0}
+    UTF8_CHAR_INVALID_BYTES_1byte (c0, ~1, ~1, ~1)
+  | {c0, c1 : int | is_extended_utf8_2byte_first_byte c0;
+                    c0 == 0xC0 || c0 == 0xC1 ||
+                    is_invalid_utf8_continuation_byte c1}
+    UTF8_CHAR_INVALID_BYTES_2byte (c0, c1, ~1, ~1)
+  | {c0, c1, c2 : int | is_extended_utf8_3byte_first_byte c0;
+                        (c0 == 0xE0 && c1 < 0xA0) ||
+                        (c0 == 0xED && 0xA0 <= c1) ||
+                        is_invalid_utf8_continuation_byte c1 ||
+                        is_invalid_utf8_continuation_byte c2}
+    UTF8_CHAR_INVALID_BYTES_3byte (c0, c1, c2, ~1)
+  | {c0, c1, c2, c3 : int | is_extended_utf8_4byte_first_byte c0;
+                            0xF4 < c0 ||
+                            (c0 == 0xF0 && c1 < 0x90) ||
+                            (c0 == 0xF4 && 0x90 <= c1) ||
+                            is_invalid_utf8_continuation_byte c1 ||
+                            is_invalid_utf8_continuation_byte c2 ||
+                            is_invalid_utf8_continuation_byte c3}
+    UTF8_CHAR_INVALID_BYTES_4byte (c0, c1, c2, c3)
+  | {c0, c1, c2, c3 : int | ~(is_extended_utf8_1byte_first_byte c0);
+                            ~(is_extended_utf8_2byte_first_byte c0);
+                            ~(is_extended_utf8_3byte_first_byte c0);
+                            ~(is_extended_utf8_4byte_first_byte c0)}
+    UTF8_CHAR_INVALID_BYTES_bad_c0 (c0, c1, c2, c3)
+
+dataprop UTF8_CHAR_VALIDITY (n : int, u : int, c0 : int, c1 : int,
+                             c2 : int, c3 : int, b : bool) =
+  | {n : int} {u : int | is_valid_unicode_code_point u}
+    {c0, c1, c2, c3 : int}
+    UTF8_CHAR_valid (n, u, c0, c1, c2, c3, true) of
+      (EXTENDED_UTF8_SHORTEST (n, u, c0, c1, c2, c3, ~1, ~1),
+       UTF8_CHAR_VALID_BYTES (c0, c1, c2, c3))
+  | {n : int} {u : int} {c0, c1, c2, c3 : int}
+    UTF8_CHAR_invalid (n, u, c0, c1, c2, c3, false) of
+      (UTF8_CHAR_INVALID_CASES (c0, c1, c2, c3),
+       UTF8_CHAR_INVALID_BYTES (c0, c1, c2, c3))
+
+propdef UTF8_CHAR_VALID (n : int, u : int, c0 : int, c1 : int,
+                         c2 : int, c3 : int) =
+  UTF8_CHAR_VALIDITY (n, u, c0, c1, c2, c3, true)
+
+propdef UTF8_CHAR_INVALID (c0 : int, c1 : int, c2 : int, c3 : int) =
+  [n : int] [u : int] UTF8_CHAR_VALIDITY (n, u, c0, c1, c2, c3, false)
+
+extern prfun
+utf8_char_valid_implies_shortest :
+  {n : int} {u : int} {c0, c1, c2, c3 : int}
+  UTF8_CHAR_VALID (n, u, c0, c1, c2, c3) -<prf>
+    EXTENDED_UTF8_SHORTEST (n, u, c0, c1, c2, c3, ~1, ~1)
+
+extern prfun
+lemma_valid_utf8_character_1byte :
+  {u, c0 : int |
+   is_extended_utf8_1byte_first_byte c0;
+   u == extended_utf8_char_1byte_decoding c0;
+   0 <= u; u <= 0x7F}
+  () -<prf> UTF8_CHAR_VALID (1, u, c0, ~1, ~1, ~1)
+
+extern prfun
+lemma_valid_utf8_character_2byte :
+  {u, c0, c1 : int |
+   is_extended_utf8_2byte_first_byte c0;
+   is_valid_utf8_continuation_byte c1;
+   u == extended_utf8_char_2byte_decoding (c0, c1);
+   0x7F < u; u <= 0x7FF}
+  () -<prf> UTF8_CHAR_VALID (2, u, c0, c1, ~1, ~1)
+
+extern prfun
+lemma_valid_utf8_character_3byte :
+  {u, c0, c1, c2 : int |
+   is_extended_utf8_3byte_first_byte c0;
+   is_valid_utf8_continuation_byte c1;
+   is_valid_utf8_continuation_byte c2;
+   u == extended_utf8_char_3byte_decoding (c0, c1, c2);
+   0x7FF < u; u <= 0xFFFF;
+   //
+   // Exclude the UTF-16 surrogate halves.
+   //
+   ~(0xD800 <= u && u < 0xE000)}
+  () -<prf> UTF8_CHAR_VALID (3, u, c0, c1, c2, ~1)
+
+extern prfun
+lemma_valid_utf8_character_4byte :
+  {u, c0, c1, c2, c3 : int |
+   is_extended_utf8_4byte_first_byte c0;
+   is_valid_utf8_continuation_byte c1;
+   is_valid_utf8_continuation_byte c2;
+   is_valid_utf8_continuation_byte c3;
+   u == extended_utf8_char_4byte_decoding (c0, c1, c2, c3);
+   0xFFFF < u; u <= 0x10FFFF}
+  () -<prf> UTF8_CHAR_VALID (4, u, c0, c1, c2, c3)
+
+extern prfun
+utf8_character_1byte_valid_bytes :
+  // This does not really do anything, but is included
+  // for completeness.
+  {u, c0 : int | is_extended_utf8_1byte_first_byte c0}
+  UTF8_CHAR_VALID (1, u, c0, ~1, ~1, ~1) -<prf> void
+
+extern prfun
+utf8_character_2byte_valid_bytes :
+  {u, c0, c1 : int | is_extended_utf8_2byte_first_byte c0}
+  UTF8_CHAR_VALID (2, u, c0, c1, ~1, ~1) -<prf>
+    [0xC2 <= c0; c0 <= 0xDF;
+     is_valid_utf8_continuation_byte c1]
+    void
+
+extern prfun
+utf8_character_3byte_valid_bytes :
+  {u, c0, c1, c2 : int | is_extended_utf8_3byte_first_byte c0}
+  UTF8_CHAR_VALID (3, u, c0, c1, c2, ~1) -<prf>
+    [(0xE1 <= c0 && c0 <= 0xEC)
+        || c0 == 0xEE
+        || c0 == 0xEF
+        || (c0 == 0xE0 && 0xA0 <= c1)
+        || (c0 == 0xED && c1 < 0xA0);
+     is_valid_utf8_continuation_byte c1;
+     is_valid_utf8_continuation_byte c2]
+    void
+
+extern prfun
+utf8_character_4byte_valid_bytes :
+  {u, c0, c1, c2, c3 : int | is_extended_utf8_4byte_first_byte c0}
+  UTF8_CHAR_VALID (4, u, c0, c1, c2, c3) -<prf>
+    [(0xF1 <= c0 && c0 <= 0xF3)
+        || (c0 == 0xF0 && 0x90 <= c1)
+        || (c0 == 0xF4 && c1 < 0x90);
+     is_valid_utf8_continuation_byte c1;
+     is_valid_utf8_continuation_byte c2;
+     is_valid_utf8_continuation_byte c3]
+    void
+
+extern prfun
+utf8_character_1byte_invalid_bytes :
+  // This does not really do anything, but is included
+  // for completeness.
+  {c0 : int | is_extended_utf8_1byte_first_byte c0}
+  UTF8_CHAR_INVALID (c0, ~1, ~1, ~1) -<prf> void
+
+extern prfun
+utf8_character_2byte_invalid_bytes :
+  {c0, c1 : int | is_extended_utf8_2byte_first_byte c0}
+  UTF8_CHAR_INVALID (c0, c1, ~1, ~1) -<prf>
+    [c0 == 0xC0 || c0 == 0xc1 || is_invalid_utf8_continuation_byte c1]
+    void
+
+extern prfun
+utf8_character_3byte_invalid_bytes :
+  {c0, c1, c2 : int | is_extended_utf8_3byte_first_byte c0}
+  UTF8_CHAR_INVALID (c0, c1, c2, ~1) -<prf>
+    [(c0 == 0xE0 && c1 < 0xA0) ||
+     (c0 == 0xED && 0xA0 <= c1) ||
+     is_invalid_utf8_continuation_byte c1 ||
+     is_invalid_utf8_continuation_byte c2]
+    void
+
+extern prfun
+utf8_character_4byte_invalid_bytes :
+  {c0, c1, c2, c3 : int | is_extended_utf8_4byte_first_byte c0}
+  UTF8_CHAR_INVALID (c0, c1, c2, c3) -<prf>
+    [0xF4 < c0 ||
+     (c0 == 0xF0 && c1 < 0x90) ||
+     (c0 == 0xF4 && 0x90 <= c1) ||
+     is_invalid_utf8_continuation_byte c1 ||
+     is_invalid_utf8_continuation_byte c2 ||
+     is_invalid_utf8_continuation_byte c3]
+    void
+
+extern fun {}
+is_valid_utf8_character_1byte :
+  {c0 : int | is_extended_utf8_1byte_first_byte c0}
+  int c0 -<>
+    [b : bool | b == true] [u : int]
+    (UTF8_CHAR_VALIDITY (1, u, c0, ~1, ~1, ~1, b) | bool b)
+
+extern fun {}
+is_valid_utf8_character_2byte :
+  {c0, c1 : int | is_extended_utf8_2byte_first_byte c0}
+  (int c0, int c1) -<>
+    [b : bool] [u : int]
+    (UTF8_CHAR_VALIDITY (2, u, c0, c1, ~1, ~1, b) | bool b)
+
+extern fun {}
+is_valid_utf8_character_3byte :
+  {c0, c1, c2 : int | is_extended_utf8_3byte_first_byte c0}
+  (int c0, int c1, int c2) -<>
+    [b : bool] [u : int]
+    (UTF8_CHAR_VALIDITY (3, u, c0, c1, c2, ~1, b) | bool b)
+
+extern fun {}
+is_valid_utf8_character_4byte :
+  {c0, c1, c2, c3 : int | is_extended_utf8_4byte_first_byte c0}
+  (int c0, int c1, int c2, int c3) -<>
+    [b : bool] [u : int]
+    (UTF8_CHAR_VALIDITY (4, u, c0, c1, c2, c3, b) | bool b)
+
+extern fun {}
+decode_utf8_1byte :
+  {c0 : int | is_extended_utf8_1byte_first_byte c0}
+  int c0 -<> [u : int | 0 <= u; u <= 0x7F] int u
+
+extern fun {}
+decode_utf8_2byte :
+  {c0, c1 : int | 0xC2 <= c0; c0 <= 0xDF;
+                  is_valid_utf8_continuation_byte c1}
+  (int c0, int c1) -<> [u : int | 0x7F < u; u <= 0x7FF] int u
+
+extern fun {}
+decode_utf8_3byte :
+  {c0, c1, c2 : int | (0xE1 <= c0 && c0 <= 0xEC)
+                        || c0 == 0xEE
+                        || c0 == 0xEF
+                        || (c0 == 0xE0 && 0xA0 <= c1)
+                        || (c0 == 0xED && c1 < 0xA0);
+                      is_valid_utf8_continuation_byte c1;
+                      is_valid_utf8_continuation_byte c2}
+  (int c0, int c1, int c2) -<>
+    [u : int | 0x7FF < u; u <= 0xFFFF; u < 0xD800 || 0xE000 <= u] int u
+
+extern fun {}
+decode_utf8_4byte :
+  {c0, c1, c2, c3 : int | (0xF1 <= c0 && c0 <= 0xF3)
+                            || (c0 == 0xF0 && 0x90 <= c1)
+                            || (c0 == 0xF4 && c1 < 0x90);
+                          is_valid_utf8_continuation_byte c1;
+                          is_valid_utf8_continuation_byte c2;
+                          is_valid_utf8_continuation_byte c3}
+  (int c0, int c1, int c2, int c3) -<>
+    [u : int | 0xFFFF < u; u <= 0x10FFFF] int u
+
+extern fun {}
+encode_utf8_character :
+  {u : int | is_valid_unicode_code_point u}
+  int u -<>
+    [n : int]
+    [c0, c1, c2, c3 : int | extended_utf8_char_length_relation (c0, n)]
+    @(UTF8_CHAR_VALID (n, u, c0, c1, c2, c3) |
+      int n, int c0, int c1, int c2, int c3)
+
+(*------------------------------------------------------------------*)
+
+#define utf8_decode_next_error_char ~1
+
+(* Returns @(utf8_decode_next_error_char, ..) on error. *)
+extern fun
+utf8_array_decode_next {utf8len    : int | 0 < utf8len}
+                       {n_utf8arr  : int | utf8len <= n_utf8arr}
+                       {i          : int | i < utf8len}
+                       (utf8len    : size_t utf8len,
+                        utf8arr    : &(@[char][n_utf8arr]),
+                        i          : size_t i) :<>
+    [c      : int | is_valid_unicode_code_point c ||
+                    c == utf8_decode_next_error_char]
+    [i_next : int | i_next == i + 1 || i_next == i + 2 ||
+                    i_next == i + 3 || i_next == i + 4;
+                    i_next <= utf8len]
+    @(int c, size_t i_next)
+
+extern fun
+utf8_string_decode_next {utf8len    : int | 0 < utf8len}
+                        {n_utf8str  : int | utf8len <= n_utf8str}
+                        {i          : int | i < utf8len}
+                        (utf8len    : size_t utf8len,
+                         utf8str    : string n_utf8str,
+                         i          : size_t i) :<>
+    [c      : int | is_valid_unicode_code_point c ||
+                    c == utf8_decode_next_error_char]
+    [i_next : int | i_next == i + 1 || i_next == i + 2 ||
+                    i_next == i + 3 || i_next == i + 4;
+                    i_next <= utf8len]
+    @(int c, size_t i_next)
+
+overload utf8_decode_next with utf8_array_decode_next
+overload utf8_decode_next with utf8_string_decode_next
+
+(*###################### IMPLEMENTATION ############################*)
+
+// Integer division by 64 is equivalent to shifting right
+// by 6 bits.
+
+extern prfun _shift_right_twelve :
+  {x, y, z : nat | y == (x \ndiv 64);
+                   z == (y \ndiv 64)}
+  (int x, int y, int z) -<prf> [z == (x \ndiv (64 * 64))] void
+
+primplement _shift_right_twelve (x, y, z) =
+  ()
+
+extern prfun _shift_right_eighteen :
+  {x, y, z, u : nat | y == (x \ndiv 64);
+                      z == (y \ndiv 64);
+                      u == (z \ndiv 64)}
+  (int x, int y, int z, int u) -<prf> [u == (x \ndiv (64 * 64 * 64))] void
+
+primplement _shift_right_eighteen (x, y, z, u) = ()
+
+
+extern prfun _shift_right_twenty_four :
+  {x, y, z, u, v : nat | y == (x \ndiv 64);
+                         z == (y \ndiv 64);
+                         u == (z \ndiv 64);
+                         v == (u \ndiv 64)}
+  (int x, int y, int z, int u, int v) -<prf>
+    [v == (x \ndiv (64 * 64 * 64 * 64))] void
+
+primplement _shift_right_twenty_four (x, y, z, u, v) = ()
+
+(*------------------------------------------------------------------*)
+
+implement {}
+is_valid_unicode_code_point u =
+  ((0x0 <= u) * (u < 0xD800)) + ((0xE000 <= u) * (u <= 0x10FFFF))
+
+(*------------------------------------------------------------------*)
+
+primplement
+extended_utf8_char_length_relation_to_length () = ()
+
+primplement
+extended_utf8_char_length_to_length_relation () = ()
+
+primplement
+utf8_char_length_relation_to_length () = ()
+
+primplement
+utf8_char_length_to_length_relation () = ()
+
+(*------------------------------------------------------------------*)
+
+implement {}
+is_valid_utf8_continuation_byte c =
+  (0x80 <= c) * (c <= 0xBF)
+
+(*------------------------------------------------------------------*)
+
+primplement
+decode_extended_utf8_istot {n} {c0, c1, c2, c3, c4, c5} () =
+  sif n == 1 then
+    let
+      prfn
+      make_pf {u : int | u == extended_utf8_char_1byte_decoding (c0)}
+              () :<prf>
+          EXTENDED_UTF8_CHAR (n, u, c0, c1, c2, c3, c4, c5) =
+        EXTENDED_UTF8_CHAR_1byte ()
+      stadef u = extended_utf8_char_1byte_decoding (c0)
+    in
+      make_pf {u} ()
+    end
+  else sif n == 2 then
+    let
+      prfn
+      make_pf {u : int | u == extended_utf8_char_2byte_decoding (c0, c1)}
+              () :<prf>
+          EXTENDED_UTF8_CHAR (n, u, c0, c1, c2, c3, c4, c5) =
+        EXTENDED_UTF8_CHAR_2byte ()
+      stadef u = extended_utf8_char_2byte_decoding (c0, c1)
+    in
+      make_pf {u} ()
+    end
+  else sif n == 3 then
+    let
+      prfn
+      make_pf {u : int | u == extended_utf8_char_3byte_decoding (c0, c1, c2)}
+              () :<prf>
+          EXTENDED_UTF8_CHAR (n, u, c0, c1, c2, c3, c4, c5) =
+        EXTENDED_UTF8_CHAR_3byte ()
+      stadef u = extended_utf8_char_3byte_decoding (c0, c1, c2)
+    in
+      make_pf {u} ()
+    end
+  else sif n == 4 then
+    let
+      prfn
+      make_pf {u : int |
+               u == extended_utf8_char_4byte_decoding (c0, c1, c2, c3)}
+              () :<prf>
+          EXTENDED_UTF8_CHAR (n, u, c0, c1, c2, c3, c4, c5) =
+        EXTENDED_UTF8_CHAR_4byte ()
+      stadef u = extended_utf8_char_4byte_decoding (c0, c1, c2, c3)
+    in
+      make_pf {u} ()
+    end
+  else sif n == 5 then
+    let
+      prfn
+      make_pf {u : int |
+               u == extended_utf8_char_5byte_decoding (c0, c1, c2, c3, c4)}
+              () :<prf>
+          EXTENDED_UTF8_CHAR (n, u, c0, c1, c2, c3, c4, c5) =
+        EXTENDED_UTF8_CHAR_5byte ()
+      stadef u = extended_utf8_char_5byte_decoding (c0, c1, c2, c3, c4)
+    in
+      make_pf {u} ()
+    end
+  else
+    let
+      prfn
+      make_pf {u : int |
+               u == extended_utf8_char_6byte_decoding (c0, c1, c2, c3, c4, c5)}
+              () :<prf>
+          EXTENDED_UTF8_CHAR (n, u, c0, c1, c2, c3, c4, c5) =
+        EXTENDED_UTF8_CHAR_6byte ()
+      stadef u = extended_utf8_char_6byte_decoding (c0, c1, c2, c3, c4, c5)
+    in
+      make_pf {u} ()
+    end
+
+primplement
+decode_extended_utf8_isfun {na} (pf_a, pf_b) =
+  sif na == 1 then
+    let
+      prval EXTENDED_UTF8_CHAR_1byte () = pf_a
+      prval EXTENDED_UTF8_CHAR_1byte () = pf_b
+    in
+    end
+  else sif na == 2 then
+    let
+      prval EXTENDED_UTF8_CHAR_2byte () = pf_a
+      prval EXTENDED_UTF8_CHAR_2byte () = pf_b
+    in
+    end
+  else sif na == 3 then
+    let
+      prval EXTENDED_UTF8_CHAR_3byte () = pf_a
+      prval EXTENDED_UTF8_CHAR_3byte () = pf_b
+    in
+    end
+  else sif na == 4 then
+    let
+      prval EXTENDED_UTF8_CHAR_4byte () = pf_a
+      prval EXTENDED_UTF8_CHAR_4byte () = pf_b
+    in
+    end
+  else sif na == 5 then
+    let
+      prval EXTENDED_UTF8_CHAR_5byte () = pf_a
+      prval EXTENDED_UTF8_CHAR_5byte () = pf_b
+    in
+    end
+  else
+    let
+      prval EXTENDED_UTF8_CHAR_6byte () = pf_a
+      prval EXTENDED_UTF8_CHAR_6byte () = pf_b
+    in
+    end
+
+
+primplement
+lemma_extended_utf8_char_length pf_char =
+  case+ pf_char of
+  | EXTENDED_UTF8_CHAR_1byte () => ()
+  | EXTENDED_UTF8_CHAR_2byte () => ()
+  | EXTENDED_UTF8_CHAR_3byte () => ()
+  | EXTENDED_UTF8_CHAR_4byte () => ()
+  | EXTENDED_UTF8_CHAR_5byte () => ()
+  | EXTENDED_UTF8_CHAR_6byte () => ()
+
+implement {}
+decode_extended_utf8_1byte c0 =
+  (EXTENDED_UTF8_CHAR_1byte () | c0)
+
+implement {}
+decode_extended_utf8_2byte (c0, c1) =
+  let
+    val u0 = c0 - 0xC0
+    val u1 = c1 - 0x80
+  in
+    (EXTENDED_UTF8_CHAR_2byte () | 64 * u0 + u1)
+  end
+
+implement {}
+decode_extended_utf8_3byte (c0, c1, c2) =
+  let
+    val u0 = c0 - 0xE0
+    val u1 = c1 - 0x80
+    val u2 = c2 - 0x80
+  in
+    (EXTENDED_UTF8_CHAR_3byte () | 64 * (64 * u0 + u1) + u2)
+  end
+
+implement {}
+decode_extended_utf8_4byte (c0, c1, c2, c3) =
+  let
+    val u0 = c0 - 0xF0
+    val u1 = c1 - 0x80
+    val u2 = c2 - 0x80
+    val u3 = c3 - 0x80
+  in
+    (EXTENDED_UTF8_CHAR_4byte () | 64 * (64 * (64 * u0 + u1) + u2) + u3)
+  end
+
+implement {}
+decode_extended_utf8_5byte (c0, c1, c2, c3, c4) =
+  let
+    val u0 = c0 - 0xF8
+    val u1 = c1 - 0x80
+    val u2 = c2 - 0x80
+    val u3 = c3 - 0x80
+    val u4 = c4 - 0x80
+  in
+    (EXTENDED_UTF8_CHAR_5byte () |
+     64 * (64 * (64 * (64 * u0 + u1) + u2) + u3) + u4)
+  end
+
+implement {}
+decode_extended_utf8_6byte (c0, c1, c2, c3, c4, c5) =
+  let
+    val u0 = c0 - 0xFC
+    val u1 = c1 - 0x80
+    val u2 = c2 - 0x80
+    val u3 = c3 - 0x80
+    val u4 = c4 - 0x80
+    val u5 = c5 - 0x80
+  in
+    (EXTENDED_UTF8_CHAR_6byte () |
+     64 * (64 * (64 * (64 * (64 * u0 + u1) + u2) + u3) + u4) + u5)
+  end
+
+(*------------------------------------------------------------------*)
+
+primplement
+extended_utf8_shortest_is_char pf_shortest =
+  case+ pf_shortest of
+  | EXTENDED_UTF8_SHORTEST_1byte pf_char => pf_char
+  | EXTENDED_UTF8_SHORTEST_2byte pf_char => pf_char
+  | EXTENDED_UTF8_SHORTEST_3byte pf_char => pf_char
+  | EXTENDED_UTF8_SHORTEST_4byte pf_char => pf_char
+  | EXTENDED_UTF8_SHORTEST_5byte pf_char => pf_char
+  | EXTENDED_UTF8_SHORTEST_6byte pf_char => pf_char
+
+primplement
+lemma_extended_utf8_shortest_length pf_shortest =
+  case+ pf_shortest of
+  | EXTENDED_UTF8_SHORTEST_1byte pf_char =>
+    { prval EXTENDED_UTF8_CHAR_1byte () = pf_char }
+  | EXTENDED_UTF8_SHORTEST_2byte pf_char =>
+    { prval EXTENDED_UTF8_CHAR_2byte () = pf_char }
+  | EXTENDED_UTF8_SHORTEST_3byte pf_char =>
+    { prval EXTENDED_UTF8_CHAR_3byte () = pf_char }
+  | EXTENDED_UTF8_SHORTEST_4byte pf_char =>
+    { prval EXTENDED_UTF8_CHAR_4byte () = pf_char }
+  | EXTENDED_UTF8_SHORTEST_5byte pf_char =>
+    { prval EXTENDED_UTF8_CHAR_5byte () = pf_char }
+  | EXTENDED_UTF8_SHORTEST_6byte pf_char =>
+    { prval EXTENDED_UTF8_CHAR_6byte () = pf_char }
+
+implement {}
+encode_extended_utf8_character u =
+  if u <= 0x7F then
+    let
+      val c0 = u
+    in
+      @(EXTENDED_UTF8_SHORTEST_1byte (EXTENDED_UTF8_CHAR_1byte ()) |
+        1, c0, ~1, ~1, ~1, ~1, ~1)
+    end
+  else if u <= 0x7FF then
+    let
+      val c1 = 0x80 + (u \nmod 64)
+      val u1 = u \ndiv 64
+      val c0 = 0xC0 + u1
+    in
+      @(EXTENDED_UTF8_SHORTEST_2byte (EXTENDED_UTF8_CHAR_2byte ()) |
+        2, c0, c1, ~1, ~1, ~1, ~1)
+    end
+  else if u <= 0xFFFF then
+    let
+      val c2 = 0x80 + (u \nmod 64)
+      val u1 = u \ndiv 64
+      val c1 = 0x80 + (u1 \nmod 64)
+      val u2 = u1 \ndiv 64
+      val c0 = 0xE0 + u2
+    in
+      @(EXTENDED_UTF8_SHORTEST_3byte (EXTENDED_UTF8_CHAR_3byte ()) |
+        3, c0, c1, c2, ~1, ~1, ~1)
+    end
+  else if u <= 0x1FFFFF then
+    let
+      val c3 = 0x80 + (u \nmod 64)
+      val u1 = u \ndiv 64
+      val c2 = 0x80 + (u1 \nmod 64)
+      val u2 = u1 \ndiv 64
+      val c1 = 0x80 + (u2 \nmod 64)
+      val u3 = u2 \ndiv 64
+      val c0 = 0xF0 + u3
+      prval () = _shift_right_twelve (u, u1, u2)
+    in
+      @(EXTENDED_UTF8_SHORTEST_4byte (EXTENDED_UTF8_CHAR_4byte ()) |
+        4, c0, c1, c2, c3, ~1, ~1)
+    end
+  else if u <= 0x3FFFFFF then
+    let
+      val c4 = 0x80 + (u \nmod 64)
+      val u1 = u \ndiv 64
+      val c3 = 0x80 + (u1 \nmod 64)
+      val u2 = u1 \ndiv 64
+      val c2 = 0x80 + (u2 \nmod 64)
+      val u3 = u2 \ndiv 64
+      val c1 = 0x80 + (u3 \nmod 64)
+      val u4 = u3 \ndiv 64
+      val c0 = 0xF8 + u4
+      prval () = _shift_right_twelve (u, u1, u2)
+      prval () = _shift_right_eighteen (u, u1, u2, u3)
+    in
+      @(EXTENDED_UTF8_SHORTEST_5byte (EXTENDED_UTF8_CHAR_5byte ()) |
+        5, c0, c1, c2, c3, c4, ~1)
+    end
+  else
+    let
+      val c5 = 0x80 + (u \nmod 64)
+      val u1 = u \ndiv 64
+      val c4 = 0x80 + (u1 \nmod 64)
+      val u2 = u1 \ndiv 64
+      val c3 = 0x80 + (u2 \nmod 64)
+      val u3 = u2 \ndiv 64
+      val c2 = 0x80 + (u3 \nmod 64)
+      val u4 = u3 \ndiv 64
+      val c1 = 0x80 + (u4 \nmod 64)
+      val u5 = u4 \ndiv 64
+      val c0 = 0xFC + u5
+      prval () = _shift_right_twelve (u, u1, u2)
+      prval () = _shift_right_eighteen (u, u1, u2, u3)
+      prval () = _shift_right_twenty_four (u, u1, u2, u3, u4)
+    in
+      @(EXTENDED_UTF8_SHORTEST_6byte (EXTENDED_UTF8_CHAR_6byte ()) |
+        6, c0, c1, c2, c3, c4, c5)
+    end
+
+(*------------------------------------------------------------------*)
+
+primplement
+utf8_char_valid_implies_shortest pf_valid =
+  case+ pf_valid of
+  | UTF8_CHAR_valid (pf_shortest, _) => pf_shortest
+
+primplement
+lemma_valid_utf8_character_1byte {u, c0} () =
+  let
+    prfn
+    make_pf {u : int | u == extended_utf8_char_1byte_decoding (c0)}
+            () :<prf> EXTENDED_UTF8_CHAR (1, u, c0, ~1, ~1, ~1, ~1, ~1) =
+      EXTENDED_UTF8_CHAR_1byte ()
+    prval pf_char = make_pf {u} ()
+    prval pf_shortest = EXTENDED_UTF8_SHORTEST_1byte pf_char
+    prval pf_bytes = UTF8_CHAR_VALID_BYTES_1byte ()
+    prval pf_valid = UTF8_CHAR_valid (pf_shortest, pf_bytes)
+  in
+    pf_valid
+  end
+
+primplement
+lemma_valid_utf8_character_2byte {u, c0, c1} () =
+  let
+    prfn
+    make_pf {u : int | u == extended_utf8_char_2byte_decoding (c0, c1)}
+            () :<prf> EXTENDED_UTF8_CHAR (2, u, c0, c1, ~1, ~1, ~1, ~1) =
+      EXTENDED_UTF8_CHAR_2byte ()
+    prval pf_char = make_pf {u} ()
+    prval pf_shortest = EXTENDED_UTF8_SHORTEST_2byte pf_char
+    prval pf_bytes = UTF8_CHAR_VALID_BYTES_2byte ()
+    prval pf_valid = UTF8_CHAR_valid (pf_shortest, pf_bytes)
+  in
+    pf_valid
+  end
+
+primplement
+lemma_valid_utf8_character_3byte {u, c0, c1, c2} () =
+  let
+    prfn
+    make_pf {u : int | u == extended_utf8_char_3byte_decoding (c0, c1, c2)}
+            () :<prf> EXTENDED_UTF8_CHAR (3, u, c0, c1, c2, ~1, ~1, ~1) =
+      EXTENDED_UTF8_CHAR_3byte ()
+    prval pf_char = make_pf {u} ()
+    prfn lemma_c1 () :<prf> [c1 == 0x80 + ((u \ndiv 64) \nmod 64)] void =
+      {
+        // Convert to Horner form.
+        stadef u1 = 64 * (64 * (c0 - 0xE0) + (c1 - 0x80)) + (c2 - 0x80)
+        prval EQINT () = eqint_make {u, u1} ()
+      }
+    prval () = lemma_c1 ()
+    prval pf_shortest = EXTENDED_UTF8_SHORTEST_3byte pf_char
+    prval pf_bytes = UTF8_CHAR_VALID_BYTES_3byte ()
+    prval pf_valid = UTF8_CHAR_valid (pf_shortest, pf_bytes)
+  in
+    pf_valid
+  end
+
+primplement
+lemma_valid_utf8_character_4byte {u, c0, c1, c2, c3} () =
+  let
+    prfn
+    make_pf {u : int | u == extended_utf8_char_4byte_decoding (c0, c1, c2, c3)}
+            () :<prf> EXTENDED_UTF8_CHAR (4, u, c0, c1, c2, c3, ~1, ~1) =
+      EXTENDED_UTF8_CHAR_4byte ()
+    prval pf_char = make_pf {u} ()
+    prfn lemma_c1 () :<prf> [c1 == 0x80 + ((u \ndiv (64 * 64)) \nmod 64)] void =
+      {
+        prval EQINT () =
+          eqint_make {(64 * 64 * (c0 - 0xE0)) \ndiv (64 * 64), c0 - 0xE0} ()
+        prval pfd = divmod_istot {u \ndiv (64 * 64), 64} ()
+        prval pfm = divmod_elim pfd
+        prval () = mul_elim pfm
+      }
+    prval () = lemma_c1 ()
+    prfn lemma_c2 () :<prf> [c2 == 0x80 + ((u \ndiv 64) \nmod 64)] void =
+      {
+        // Convert to Horner form.
+        stadef u1 = 64 * (64 * (64 * (c0 - 0xF0) + (c1 - 0x80)) + (c2 - 0x80))
+                     + (c3 - 0x80)
+        prval EQINT () = eqint_make {u, u1} ()
+      }
+    prval () = lemma_c2 ()
+    prval pf_shortest = EXTENDED_UTF8_SHORTEST_4byte pf_char
+    prval pf_bytes = UTF8_CHAR_VALID_BYTES_4byte ()
+    prval pf_valid = UTF8_CHAR_valid (pf_shortest, pf_bytes)
+  in
+    pf_valid
+  end
+
+primplement
+utf8_character_1byte_valid_bytes pf_valid = ()
+
+primplement
+utf8_character_2byte_valid_bytes pf_valid =
+  {
+    prval UTF8_CHAR_valid (_, pf_bytes) = pf_valid
+    prval UTF8_CHAR_VALID_BYTES_2byte () = pf_bytes
+  }
+
+primplement
+utf8_character_3byte_valid_bytes pf_valid =
+  {
+    prval UTF8_CHAR_valid (_, pf_bytes) = pf_valid
+    prval UTF8_CHAR_VALID_BYTES_3byte () = pf_bytes
+  }
+
+primplement
+utf8_character_4byte_valid_bytes pf_valid =
+  {
+    prval UTF8_CHAR_valid (_, pf_bytes) = pf_valid
+    prval UTF8_CHAR_VALID_BYTES_4byte () = pf_bytes
+  }
+
+primplement
+utf8_character_1byte_invalid_bytes pf_invalid =
+  {
+    prval UTF8_CHAR_invalid (_, pf_bytes) = pf_invalid
+    prval UTF8_CHAR_INVALID_BYTES_1byte () = pf_bytes
+  }
+
+primplement
+utf8_character_2byte_invalid_bytes pf_invalid =
+  {
+    prval UTF8_CHAR_invalid (_, pf_bytes) = pf_invalid
+    prval UTF8_CHAR_INVALID_BYTES_2byte () = pf_bytes
+  }
+
+primplement
+utf8_character_3byte_invalid_bytes pf_invalid =
+  {
+    prval UTF8_CHAR_invalid (_, pf_bytes) = pf_invalid
+    prval UTF8_CHAR_INVALID_BYTES_3byte () = pf_bytes
+  }
+
+primplement
+utf8_character_4byte_invalid_bytes pf_invalid =
+  {
+    prval UTF8_CHAR_invalid (_, pf_bytes) = pf_invalid
+    prval UTF8_CHAR_INVALID_BYTES_4byte () = pf_bytes
+  }
+
+implement {}
+is_valid_utf8_character_1byte {c0} c0 =
+  let
+    stadef u = extended_utf8_char_1byte_decoding c0
+  in
+    (lemma_valid_utf8_character_1byte {u, c0} () | true)
+  end
+
+implement {}
+is_valid_utf8_character_2byte {c0, c1} (c0, c1) =
+  let
+    stadef u = extended_utf8_char_2byte_decoding (c0, c1)
+  in
+    if not (is_valid_utf8_continuation_byte c1) then
+      (UTF8_CHAR_invalid (UTF8_CHAR_INVALID_bad_c1 (),
+                          UTF8_CHAR_INVALID_BYTES_2byte ()) |
+       false)
+    else if c0 < 0xC2 then
+      // The sequence is overlong.
+      (UTF8_CHAR_invalid (UTF8_CHAR_INVALID_invalid_2byte (),
+                          UTF8_CHAR_INVALID_BYTES_2byte ()) |
+       false)
+    else
+      (lemma_valid_utf8_character_2byte {u, c0, c1} () | true)
+  end
+
+implement {}
+is_valid_utf8_character_3byte {c0, c1, c2} (c0, c1, c2) =
+  let
+    stadef u = extended_utf8_char_3byte_decoding (c0, c1, c2)
+  in
+    if not (is_valid_utf8_continuation_byte c1) then
+      (UTF8_CHAR_invalid (UTF8_CHAR_INVALID_bad_c1 (),
+                          UTF8_CHAR_INVALID_BYTES_3byte ()) |
+       false)
+    else if not (is_valid_utf8_continuation_byte c2) then
+      (UTF8_CHAR_invalid (UTF8_CHAR_INVALID_bad_c2 (),
+                          UTF8_CHAR_INVALID_BYTES_3byte ()) |
+       false)
+    else if (0xE1 <= c0) * (c0 <= 0xEC) then
+      (lemma_valid_utf8_character_3byte {u, c0, c1, c2} () | true)
+    else if c0 = 0xEE then
+      (lemma_valid_utf8_character_3byte {u, c0, c1, c2} () | true)
+    else if c0 = 0xEF then
+      (lemma_valid_utf8_character_3byte {u, c0, c1, c2} () | true)
+    else if (c0 = 0xE0) * (0xA0 <= c1) then
+      (lemma_valid_utf8_character_3byte {u, c0, c1, c2} () | true)
+    else if (c0 = 0xED) * (c1 < 0xA0) then
+      (lemma_valid_utf8_character_3byte {u, c0, c1, c2} () | true)
+    else
+      // Either the sequence is overlong or it decodes to
+      // an invalid code point.
+      (UTF8_CHAR_invalid (UTF8_CHAR_INVALID_invalid_3byte (),
+                          UTF8_CHAR_INVALID_BYTES_3byte ()) |
+       false)
+  end
+
+implement {}
+is_valid_utf8_character_4byte {c0, c1, c2, c3} (c0, c1, c2, c3) =
+  let
+    stadef u = extended_utf8_char_4byte_decoding (c0, c1, c2, c3)
+  in
+    if not (is_valid_utf8_continuation_byte c1) then
+      (UTF8_CHAR_invalid (UTF8_CHAR_INVALID_bad_c1 (),
+                          UTF8_CHAR_INVALID_BYTES_4byte ()) |
+       false)
+    else if not (is_valid_utf8_continuation_byte c2) then
+      (UTF8_CHAR_invalid (UTF8_CHAR_INVALID_bad_c2 (),
+                          UTF8_CHAR_INVALID_BYTES_4byte ()) |
+       false)
+    else if not (is_valid_utf8_continuation_byte c3) then
+      (UTF8_CHAR_invalid (UTF8_CHAR_INVALID_bad_c3 (),
+                          UTF8_CHAR_INVALID_BYTES_4byte ()) |
+       false)
+    else if (0xF1 <= c0) * (c0 <= 0xF3) then
+      (lemma_valid_utf8_character_4byte {u, c0, c1, c2, c3} () | true)
+    else if (c0 = 0xF0) * (0x90 <= c1) then
+      (lemma_valid_utf8_character_4byte {u, c0, c1, c2, c3} () | true)
+    else if (c0 = 0xF4) * (c1 < 0x90) then
+      (lemma_valid_utf8_character_4byte {u, c0, c1, c2, c3} () | true)
+    else
+      // Either the sequence is overlong or it decodes to
+      // an invalid code point.
+      (UTF8_CHAR_invalid (UTF8_CHAR_INVALID_invalid_4byte (),
+                          UTF8_CHAR_INVALID_BYTES_4byte ()) |
+       false)
+  end
+
+implement {}
+decode_utf8_1byte c0 = c0
+
+implement {}
+decode_utf8_2byte (c0, c1) =
+  let
+    val u0 = c0 - 0xC0
+    val u1 = c1 - 0x80
+  in
+    64 * u0 + u1
+  end
+
+implement {}
+decode_utf8_3byte (c0, c1, c2) =
+  let
+    val u0 = c0 - 0xE0
+    val u1 = c1 - 0x80
+    val u2 = c2 - 0x80
+  in
+    64 * (64 * u0 + u1) + u2
+  end
+
+implement {}
+decode_utf8_4byte (c0, c1, c2, c3) =
+  let
+    val u0 = c0 - 0xF0
+    val u1 = c1 - 0x80
+    val u2 = c2 - 0x80
+    val u3 = c3 - 0x80
+  in
+    64 * (64 * (64 * u0 + u1) + u2) + u3
+  end
+
+implement {}
+encode_utf8_character {u} u =
+  if u <= 0x7F then
+    let
+      val c0 = u
+      stadef c0 = u
+    in
+      @(lemma_valid_utf8_character_1byte {u, c0} () | 1, c0, ~1, ~1, ~1)
+    end
+  else if u <= 0x7FF then
+    let
+      val c1 = 0x80 + (u \nmod 64)
+      val u1 = u \ndiv 64
+      val c0 = 0xC0 + u1
+      stadef c1 = 0x80 + (u \nmod 64)
+      stadef u1 = u \ndiv 64
+      stadef c0 = 0xC0 + u1
+    in
+      @(lemma_valid_utf8_character_2byte {u, c0, c1} () | 2, c0, c1, ~1, ~1)
+    end
+  else if u <= 0xFFFF then
+    let
+      val c2 = 0x80 + (u \nmod 64)
+      val u1 = u \ndiv 64
+      val c1 = 0x80 + (u1 \nmod 64)
+      val u2 = u1 \ndiv 64
+      val c0 = 0xE0 + u2
+      stadef c2 = 0x80 + (u \nmod 64)
+      stadef u1 = u \ndiv 64
+      stadef c1 = 0x80 + (u1 \nmod 64)
+      stadef u2 = u1 \ndiv 64
+      stadef c0 = 0xE0 + u2
+    in
+      @(lemma_valid_utf8_character_3byte {u, c0, c1, c2} () | 3, c0, c1, c2, ~1)
+    end
+  else
+    let
+      val c3 = 0x80 + (u \nmod 64)
+      val u1 = u \ndiv 64
+      val c2 = 0x80 + (u1 \nmod 64)
+      val u2 = u1 \ndiv 64
+      val c1 = 0x80 + (u2 \nmod 64)
+      val u3 = u2 \ndiv 64
+      val c0 = 0xF0 + u3
+      stadef c3 = 0x80 + (u \nmod 64)
+      stadef u1 = u \ndiv 64
+      stadef c2 = 0x80 + (u1 \nmod 64)
+      stadef u2 = u1 \ndiv 64
+      stadef c1 = 0x80 + (u2 \nmod 64)
+      stadef u3 = u2 \ndiv 64
+      stadef c0 = 0xF0 + u3
+      prval () = _shift_right_twelve (u, u1, u2)
+    in
+      @(lemma_valid_utf8_character_4byte {u, c0, c1, c2, c3} () |
+        4, c0, c1, c2, c3)
+    end
+
+(*------------------------------------------------------------------*)
+
+implement
+utf8_array_decode_next (utf8len, utf8arr, i) =
+  let
+    macdef getchr (j) = g1ofg0 (char2u2i (utf8arr[,(j)]))
+    macdef error_return = @(utf8_decode_next_error_char, i + i2sz 1)
+
+    prval _ = lemma_g1uint_param (i)
+
+    val c0 = getchr (i)
+  in
+    if 0x00 <= c0 &&& c0 <= 0xFF then
+      let
+        val seqlen = utf8_character_length c0
+      in
+        case+ seqlen of
+        | 1 => @(c0, i + i2sz 1)
+
+        | 2 =>
+          if utf8len < i + i2sz 2 then
+            error_return
+          else
+            let
+              val c1 = getchr (i + i2sz 1)
+              val (pf | valid) =
+                is_valid_utf8_character_2byte (c0, c1)
+            in
+              if valid then
+                let
+                  prval _ = utf8_character_2byte_valid_bytes pf
+                  val code_point = decode_utf8_2byte (c0, c1)
+                in
+                  @(code_point, i + i2sz 2)
+                end
+              else
+                error_return
+            end
+
+        | 3 =>
+          if utf8len < i + i2sz 3 then
+            error_return
+          else
+            let
+              val c1 = getchr (i + i2sz 1)
+              val c2 = getchr (i + i2sz 2)
+              val (pf | valid) =
+                is_valid_utf8_character_3byte (c0, c1, c2)
+            in
+              if valid then
+                let
+                  prval _ = utf8_character_3byte_valid_bytes pf
+                  val code_point = decode_utf8_3byte (c0, c1, c2)
+                in
+                  @(code_point, i + i2sz 3)
+                end
+              else
+                error_return
+            end
+
+        | 4 =>
+          if utf8len < i + i2sz 4 then
+            error_return
+          else
+            let
+              val c1 = getchr (i + i2sz 1)
+              val c2 = getchr (i + i2sz 2)
+              val c3 = getchr (i + i2sz 3)
+              val (pf | valid) =
+                is_valid_utf8_character_4byte (c0, c1, c2, c3)
+            in
+              if valid then
+                let
+                  prval _ = utf8_character_4byte_valid_bytes pf
+                  val code_point = decode_utf8_4byte (c0, c1, c2, c3)
+                in
+                  @(code_point, i + i2sz 4)
+                end
+              else
+                error_return
+            end
+
+        | _ => error_return
+      end
+    else
+      (* This branch should never be run on a system
+         with 8-bit char. *)
+      error_return
+  end
+
+implement
+utf8_string_decode_next {..} {n_utf8str} (utf8len, utf8str, i) =
+  let
+    val [p : addr] p = string2ptr utf8str
+    val (pf, consume_pf | p) =
+      $UNSAFE.ptr1_vtake{@[char][n_utf8str]} p
+    val result = utf8_array_decode_next (utf8len, !p, i)
+    prval _ = consume_pf pf
+  in
+    result
+  end
+
+(*###################### DEMONSTRATION #############################*)
+
+fn
+encode_LATIN_CAPITAL_LETTER_A () : void =
+  {
+    val u = 0x0041
+
+    (* Return both a proof of valid encoding and the encoding. *)
+    val (pf_valid | n, c0, c1, c2, c3) = encode_utf8_character (u)
+
+    (* Verify the encoding. *)
+    val _ = assertloc (n = 1)
+    val _ = assertloc (c0 = 0x41)
+  }
+
+fn
+decode_LATIN_CAPITAL_LETTER_A () : void =
+  {
+    val str = "\x41\0"
+    val n = length str
+    val (c, i) = utf8_decode_next (n, str, i2sz 0)
+
+    (* Verify that the decoding is correct. *)
+    val _ = assertloc (c = 0x0041)
+
+    (* Verify that the next index is 1. *)
+    val _ = assertloc (i = i2sz 1)
+  }
+
+fn
+encode_LATIN_SMALL_LETTER_O_WITH_DIAERESIS () : void =
+  {
+    val u = 0x00F6
+
+    (* Return both a proof of valid encoding and the encoding. *)
+    val (pf_valid | n, c0, c1, c2, c3) = encode_utf8_character (u)
+
+    (* Verify the encoding. *)
+    val _ = assertloc (n = 2)
+    val _ = assertloc (c0 = 0xC3)
+    val _ = assertloc (c1 = 0xB6)
+  }
+
+fn
+decode_LATIN_SMALL_LETTER_O_WITH_DIAERESIS () : void =
+  {
+    val str = "\xC3\xB6\0"
+    val n = length str
+    val (c, i) = utf8_decode_next (n, str, i2sz 0)
+
+    (* Verify that the decoding is correct. *)
+    val _ = assertloc (c = 0x00F6)
+
+    (* Verify that the next index is 2. *)
+    val _ = assertloc (i = i2sz 2)
+  }
+
+fn
+encode_CYRILLIC_CAPITAL_LETTER_ZHE () : void =
+  {
+    val u = 0x0416
+
+    (* Return both a proof of valid encoding and the encoding. *)
+    val (pf_valid | n, c0, c1, c2, c3) = encode_utf8_character (u)
+
+    (* Verify the encoding. *)
+    val _ = assertloc (n = 2)
+    val _ = assertloc (c0 = 0xD0)
+    val _ = assertloc (c1 = 0x96)
+  }
+
+fn
+decode_CYRILLIC_CAPITAL_LETTER_ZHE () : void =
+  {
+    val str = "\xD0\x96\0"
+    val n = length str
+    val (c, i) = utf8_decode_next (n, str, i2sz 0)
+
+    (* Verify that the decoding is correct. *)
+    val _ = assertloc (c = 0x0416)
+
+    (* Verify that the next index is 2. *)
+    val _ = assertloc (i = i2sz 2)
+  }
+
+fn
+encode_EURO_SIGN () : void =
+  {
+    val u = 0x20AC
+
+    (* Return both a proof of valid encoding and the encoding. *)
+    val (pf_valid | n, c0, c1, c2, c3) = encode_utf8_character (u)
+
+    (* Verify the encoding. *)
+    val _ = assertloc (n = 3)
+    val _ = assertloc (c0 = 0xE2)
+    val _ = assertloc (c1 = 0x82)
+    val _ = assertloc (c2 = 0xAC)
+  }
+
+fn
+decode_EURO_SIGN () : void =
+  {
+    val str = "\xE2\x82\xAC\0"
+    val n = length str
+    val (c, i) = utf8_decode_next (n, str, i2sz 0)
+
+    (* Verify that the decoding is correct. *)
+    val _ = assertloc (c = 0x20AC)
+
+    (* Verify that the next index is 3. *)
+    val _ = assertloc (i = i2sz 3)
+  }
+
+fn
+encode_MUSICAL_SYMBOL_G_CLEF () : void =
+  {
+    val u = 0x1D11E
+
+    (* Return both a proof of valid encoding and the encoding. *)
+    val (pf_valid | n, c0, c1, c2, c3) = encode_utf8_character (u)
+
+    (* Verify the encoding. *)
+    val _ = assertloc (n = 4)
+    val _ = assertloc (c0 = 0xF0)
+    val _ = assertloc (c1 = 0x9D)
+    val _ = assertloc (c2 = 0x84)
+    val _ = assertloc (c3 = 0x9E)
+  }
+
+fn
+decode_MUSICAL_SYMBOL_G_CLEF () : void =
+  {
+    val str = "\xF0\x9D\x84\x9E\0"
+    val n = length str
+    val (c, i) = utf8_decode_next (n, str, i2sz 0)
+
+    (* Verify that the decoding is correct. *)
+    val _ = assertloc (c = 0x1D11E)
+
+    (* Verify that the next index is 4. *)
+    val _ = assertloc (i = i2sz 4)
+  }
+
+implement
+main0 () =
+  begin
+    encode_LATIN_CAPITAL_LETTER_A ();
+    decode_LATIN_CAPITAL_LETTER_A ();
+
+    encode_LATIN_SMALL_LETTER_O_WITH_DIAERESIS ();
+    decode_LATIN_SMALL_LETTER_O_WITH_DIAERESIS ();
+
+    encode_CYRILLIC_CAPITAL_LETTER_ZHE ();
+    decode_CYRILLIC_CAPITAL_LETTER_ZHE ();
+
+    encode_EURO_SIGN ();
+    decode_EURO_SIGN ();
+
+    encode_MUSICAL_SYMBOL_G_CLEF ();
+    decode_MUSICAL_SYMBOL_G_CLEF ();
+
+    println! ("SUCCESS")
+  end

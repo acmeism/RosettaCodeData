@@ -1,0 +1,13 @@
+$$ MODE TUSCRIPT
+LOOP
+row=""
+ LOOP/CLEAR x=1,10
+ x=RANDOM_NUMBERS (1,20,1)
+ row=APPEND(row," ",x)
+  IF (x==20) THEN
+   PRINT row
+   EXIT,EXIT
+  ENDIF
+ ENDLOOP
+ PRINT row
+ENDLOOP

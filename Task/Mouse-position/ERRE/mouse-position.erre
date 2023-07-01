@@ -1,0 +1,79 @@
+!
+! MOUSE WITH 'MOUSE.LIB' LIBRARY
+!
+
+PROGRAM MOUSE
+
+!$KEY
+
+!$INCLUDE="PC.LIB"
+
+!$INCLUDE="MOUSE.LIB"
+
+PROCEDURE GETMONITORTYPE(->MONITOR$)
+      !$RCODE="DEF SEG=0"
+      STATUS=PEEK($463)
+      !$RCODE="DEF SEG"
+      MONITOR$=""
+      IF STATUS=$B4 THEN
+         !$RCODE="STATUS=(INP(&H3BA) AND &H80)"
+         FOR DELAYLOOP=1 TO 30000 DO
+             !$RCODE="XX=((INP(&H3BA) AND &H80)<>STATUS)"
+             IF XX THEN MONITOR$="HERC" END IF
+         END FOR
+         IF MONITOR$="" THEN MONITOR$="MONO" END IF
+       ELSE
+          REGAX%=$1A00
+          EXECUTEASM($10)
+          IF (REGAX% AND $FF)=$1A THEN
+                MONITOR$="VGA"
+             ELSE
+                REGAX%=$1200  REGBX%=$10
+                EXECUTEASM($10)
+                IF (REGBX% AND $FF)=$10 THEN
+                     MONITOR$="CGA"
+                  ELSE
+                     MONITOR$="EGA"
+                END IF
+          END IF
+      END IF
+END PROCEDURE
+
+BEGIN
+    INITASM
+    GETMONITORTYPE(->MONITOR$)
+    COLOR(7,0)
+    CLS
+    LOCATE(1,50)  PRINT("MONITOR TYPE  ";MONITOR$)
+    MOUSE_RESETANDSTATUS(->STATUS,BUTTONS)
+    IF STATUS<>-1 THEN
+        BEEP
+        CLS
+        PRINT("MOUSE DRIVER NOT INSTALLED OR MOUSE NOT FOUND")
+        REPEAT
+           GET(IN$)
+        UNTIL IN$<>""
+     ELSE
+        MOUSE_SETEXTCURSOR
+        MOUSE_SETCURSORLIMITS(8,199,0,639)
+        MOUSE_SETSENSITIVITY(30,30,50)
+        MOUSE_SHOWCURSOR
+        REPEAT
+          OLDX=X  OLDY=Y
+          MOUSE_GETCURSORPOSITION(->X,Y,LEFT%,RIGHT%,BOTH%,MIDDLE%)
+          GET(IN$)
+          COLOR(15,0)
+          LOCATE(1,2)
+          PRINT("X =";INT(X/8)+1;"  Y =";INT(Y/8)+1;"  ";)
+          IF LEFT%   THEN LOCATE(1,37) COLOR(10,0)  PRINT("LEFT";) END IF
+          IF RIGHT%  THEN LOCATE(1,37) COLOR(12,0)  PRINT("RIGHT";) END IF
+          IF MIDDLE% THEN LOCATE(1,37) COLOR(14,0)  PRINT("MIDDLE";) END IF
+          IF NOT RIGHT% AND NOT LEFT% AND NOT MIDDLE% THEN
+              LOCATE(1,37)  PRINT("       ";)
+          END IF
+          IF NOT (X=OLDX AND Y=OLDY) THEN MOUSE_SHOWCURSOR END IF
+        UNTIL IN$=CHR$(27)
+   END IF
+   MOUSE_HIDECURSOR
+   CLS
+END PROGRAM

@@ -1,0 +1,364 @@
+:- module patience_sort_task.
+
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+
+:- implementation.
+:- import_module array.
+:- import_module int.
+:- import_module list.
+:- import_module string.
+
+%%%-------------------------------------------------------------------
+%%%
+%%% patience_sort/5 -- sorts Array[Ifirst..Ilast] out of place,
+%%%                    returning indices in Sorted[0..Ilast-Ifirst].
+%%%
+
+:- pred patience_sort(pred(T, T), int, int, array(T), array(int)).
+:- mode patience_sort(pred(in, in) is semidet,
+                      in, in, in, out) is det.
+patience_sort(Less, Ifirst, Ilast, Array, Sorted) :-
+  deal(Less, Ifirst, Ilast, Array, Num_piles, Piles, Links),
+  k_way_merge(Less, Ifirst, Ilast, Array,
+              Num_piles, Piles, Links, Sorted).
+
+%%%-------------------------------------------------------------------
+%%%
+%%% deal/7 -- deals array elements into piles.
+%%%
+
+:- pred deal(pred(T, T), int, int, array(T),
+             int, array(int), array(int)).
+:- mode deal(pred(in, in) is semidet, in, in, in,
+             out, array_uo, array_uo).
+deal(Less, Ifirst, Ilast, Array, Num_piles, Piles, Links) :-
+  Piles_last = Ilast - Ifirst + 1,
+  %% I do not use index zero of arrays, so must allocate one extra
+  %% entry per array.
+  init(Piles_last + 1, 0, Piles0),
+  init(Piles_last + 1, 0, Links0),
+  deal_loop(Less, Ifirst, Ilast, Array, 1,
+            0, Num_piles,
+            Piles0, Piles,
+            Links0, Links).
+
+:- pred deal_loop(pred(T, T), int, int, array(T),
+                  int, int, int,
+                  array(int), array(int),
+                  array(int), array(int)).
+:- mode deal_loop(pred(in, in) is semidet, in, in, in,
+                  in, in, out,
+                  array_di, array_uo,
+                  array_di, array_uo) is det.
+deal_loop(Less, Ifirst, Ilast, Array, Q,
+          !Num_piles, !Piles, !Links) :-
+  Piles_last = Ilast - Ifirst + 1,
+  (if (Q =< Piles_last)
+   then (find_pile(Less, Ifirst, Array, !.Num_piles, !.Piles, Q) = I,
+         (!.Piles^elem(I)) = L1,
+         (!.Piles^elem(I) := Q) = !:Piles,
+         (!.Links^elem(Q) := L1) = !:Links,
+         max(!.Num_piles, I) = !:Num_piles,
+         deal_loop(Less, Ifirst, Ilast, Array, Q + 1,
+                   !Num_piles, !Piles, !Links))
+   else true).
+
+:- func find_pile(pred(T, T), int, array(T),
+                  int, array(int), int) = int.
+:- mode find_pile(pred(in, in) is semidet,
+                  in, in, in, in, in) = out is det.
+find_pile(Less, Ifirst, Array, Num_piles, Piles, Q) = Index :-
+  %%
+  %% Bottenbruch search for the leftmost pile whose top is greater
+  %% than or equal to x. Return an index such that:
+  %%
+  %%   * if x is greater than the top element at the far right, then
+  %%   the index returned will be num-piles.
+  %%
+  %%   * otherwise, x is greater than every top element to the left of
+  %%     index, and less than or equal to the top elements at index
+  %%     and to the right of index.
+  %%
+  %% References:
+  %%
+  %%   * H. Bottenbruch, "Structure and use of ALGOL 60", Journal of
+  %%     the ACM, Volume 9, Issue 2, April 1962, pp.161-221.
+  %%     https://doi.org/10.1145/321119.321120
+  %%
+  %%     The general algorithm is described on pages 214 and 215.
+  %%
+  %%   * https://en.wikipedia.org/w/index.php?title=Binary_search_algorithm&oldid=1062988272#Alternative_procedure
+  %%
+  %% Note:
+  %%
+  %%   * There is a binary search in the array module of the standard
+  %%   library, but our search algorithm is known to work in other
+  %%   programming languages and is written specifically for the
+  %%   situation.
+  %%
+  (if (Num_piles = 0) then (Index = 1)
+   else (find_pile_loop(Less, Ifirst, Array, Piles, Q,
+                        0, Num_piles - 1, J),
+         (if (J = Num_piles - 1)
+          then (I1 = Piles^elem(J + 1) + Ifirst - 1,
+                I2 = Q + Ifirst - 1,
+                (if Less(Array^elem(I1), Array^elem(I2))
+                 then (Index = J + 2)
+                 else (Index = J + 1)))
+          else (Index = J + 1)))).
+
+:- pred find_pile_loop(pred(T, T), int, array(T), array(int),
+                       int, int, int, int).
+:- mode find_pile_loop(pred(in, in) is semidet,
+                       in, in, in, in, in, in, out) is det.
+find_pile_loop(Less, Ifirst, Array, Piles, Q, J, K, J1) :-
+  (if (J = K) then (J1 = J)
+   else ((J + K) // 2 = I,
+         I1 = Piles^elem(J + 1) + Ifirst - 1,
+         I2 = Q + Ifirst - 1,
+         (if Less(Array^elem(I1), Array^elem(I2))
+          then find_pile_loop(Less, Ifirst, Array, Piles, Q,
+                              I + 1, K, J1)
+          else find_pile_loop(Less, Ifirst, Array, Piles, Q,
+                              J, I, J1)))).
+
+%%%-------------------------------------------------------------------
+%%%
+%%% k_way_merge/8 --
+%%%
+%%% k-way merge by tournament tree (specific to this patience sort).
+%%%
+%%% See Knuth, volume 3, and also
+%%% https://en.wikipedia.org/w/index.php?title=K-way_merge_algorithm&oldid=1047851465#Tournament_Tree
+%%%
+%%% However, I store a winners tree instead of the recommended losers
+%%% tree. If the tree were stored as linked nodes, it would probably
+%%% be more efficient to store a losers tree. However, I am storing
+%%% the tree as an array, and one can find an opponent quickly by
+%%% simply toggling the least significant bit of a competitor's array
+%%% index.
+%%%
+
+:- pred k_way_merge(pred(T, T), int, int, array(T), int,
+                    array(int), array(int), array(int)).
+:- mode k_way_merge(pred(in, in) is semidet,
+                    in, in, in, in, array_di, in, out) is det.
+%% Contrary to the arrays used internally, the Sorted array is indexed
+%% starting at zero.
+k_way_merge(Less, Ifirst, Ilast, Array,
+            Num_piles, Piles, Links, Sorted) :-
+  init(Ilast - Ifirst + 1, 0, Sorted0),
+  build_tree(Less, Ifirst, Array, Num_piles, Links, Piles, Piles1,
+             Total_external_nodes, Winners_values, Winners_indices),
+  k_way_merge_(Less, Ifirst, Array, Piles1, Links,
+               Total_external_nodes, Winners_values, Winners_indices,
+               0, Sorted0, Sorted).
+
+:- pred k_way_merge_(pred(T, T), int, array(T),
+                     array(int), array(int), int,
+                     array(int), array(int), int,
+                     array(int), array(int)).
+:- mode k_way_merge_(pred(in, in) is semidet, in, in, array_di,
+                     in, in, array_di, array_di,
+                     in, array_di, array_uo) is det.
+%% Contrary to the arrays used internally, the Sorted array is indexed
+%% starting at zero.
+k_way_merge_(Less, Ifirst, Array, Piles, Links, Total_external_nodes,
+             Winners_values, Winners_indices, Isorted, !Sorted) :-
+  Total_nodes = (2 * Total_external_nodes) - 1,
+  (Winners_values^elem(1)) = Value,
+  (if (Value = 0) then true
+   else (set(Isorted, Value + Ifirst - 1, !Sorted),
+         (Winners_indices^elem(1)) = Index,
+         (Piles^elem(Index)) = Next, % The next top of pile Index.
+         (if (Next \= 0)        % Drop that top of pile.
+          then (Links^elem(Next) = Link,
+                set(Index, Link, Piles, Piles1))
+          else (Piles = Piles1)),
+         (Total_nodes // 2) + Index = I,
+         (Winners_values^elem(I) := Next) = Winners_values1,
+         replay_games(Less, Ifirst, Array, I,
+                      Winners_values1, Winners_values2,
+                      Winners_indices, Winners_indices1),
+         k_way_merge_(Less, Ifirst, Array, Piles1, Links,
+                      Total_external_nodes, Winners_values2,
+                      Winners_indices1, Isorted + 1, !Sorted))).
+
+:- pred build_tree(pred(T, T), int, array(T), int, array(int),
+                   array(int), array(int), int, array(int),
+                   array(int)).
+:- mode build_tree(pred(in, in) is semidet, in, in, in, in,
+                   array_di, array_uo, out, out, out) is det.
+build_tree(Less, Ifirst, Array, Num_piles, Links, !Piles,
+           Total_external_nodes, Winners_values, Winners_indices) :-
+  Total_external_nodes = next_power_of_two(Num_piles),
+  Total_nodes = (2 * Total_external_nodes) - 1,
+  %% I do not use index zero of arrays, so must allocate one extra
+  %% entry per array.
+  init(Total_nodes + 1, 0, Winners_values0),
+  init(Total_nodes + 1, 0, Winners_indices0),
+  init_winners_pile_indices(Total_external_nodes, 1,
+                            Winners_indices0, Winners_indices1),
+  init_starting_competitors(Total_external_nodes, Num_piles,
+                            (!.Piles), 1, Winners_values0,
+                            Winners_values1),
+  discard_initial_tops_of_piles(Num_piles, Links, 1, !Piles),
+  play_initial_games(Less, Ifirst, Array,
+                     Total_external_nodes,
+                     Winners_values1, Winners_values,
+                     Winners_indices1, Winners_indices).
+
+:- pred init_winners_pile_indices(int::in, int::in,
+                                  array(int)::array_di,
+                                  array(int)::array_uo) is det.
+init_winners_pile_indices(Total_external_nodes, I,
+                          !Winners_indices) :-
+  (if (I = Total_external_nodes + 1) then true
+   else (set(Total_external_nodes - 1 + I, I, !Winners_indices),
+         init_winners_pile_indices(Total_external_nodes, I + 1,
+                                   !Winners_indices))).
+
+:- pred init_starting_competitors(int::in, int::in,
+                                  array(int)::in, int::in,
+                                  array(int)::array_di,
+                                  array(int)::array_uo) is det.
+init_starting_competitors(Total_external_nodes, Num_piles,
+                          Piles, I, !Winners_values) :-
+  (if (I = Num_piles + 1) then true
+   else (Piles^elem(I) = Value,
+         set(Total_external_nodes - 1 + I, Value, !Winners_values),
+         init_starting_competitors(Total_external_nodes, Num_piles,
+                                   Piles, I + 1, !Winners_values))).
+
+:- pred discard_initial_tops_of_piles(int::in, array(int)::in,
+                                      int::in, array(int)::array_di,
+                                      array(int)::array_uo) is det.
+discard_initial_tops_of_piles(Num_piles, Links, I, !Piles) :-
+  (if (I = Num_piles + 1) then true
+   else ((!.Piles^elem(I)) = Old_value,
+         Links^elem(Old_value) = New_value,
+         set(I, New_value, !Piles),
+         discard_initial_tops_of_piles(Num_piles, Links, I + 1,
+                                       !Piles))).
+
+:- pred play_initial_games(pred(T, T), int, array(T), int,
+                           array(int), array(int),
+                           array(int), array(int)).
+:- mode play_initial_games(pred(in, in) is semidet,
+                           in, in, in,
+                           array_di, array_uo,
+                           array_di, array_uo) is det.
+play_initial_games(Less, Ifirst, Array, Istart,
+                   !Winners_values, !Winners_indices) :-
+  (if (Istart = 1) then true
+   else (play_an_initial_round(Less, Ifirst, Array, Istart, Istart,
+                               !Winners_values, !Winners_indices),
+         play_initial_games(Less, Ifirst, Array, Istart // 2,
+                            !Winners_values, !Winners_indices))).
+
+:- pred play_an_initial_round(pred(T, T), int, array(T), int, int,
+                              array(int), array(int),
+                              array(int), array(int)).
+:- mode play_an_initial_round(pred(in, in) is semidet,
+                              in, in, in, in,
+                              array_di, array_uo,
+                              array_di, array_uo) is det.
+play_an_initial_round(Less, Ifirst, Array, Istart, I,
+                      !Winners_values, !Winners_indices) :-
+  (if ((2 * Istart) - 1 < I) then true
+   else (play_game(Less, Ifirst, Array,
+                   !.Winners_values, I) = Iwinner,
+         (!.Winners_values^elem(Iwinner)) = Value,
+         (!.Winners_indices^elem(Iwinner)) = Index,
+         I // 2 = Iparent,
+         set(Iparent, Value, !Winners_values),
+         set(Iparent, Index, !Winners_indices),
+         play_an_initial_round(Less, Ifirst, Array, Istart, I + 2,
+                               !Winners_values, !Winners_indices))).
+
+:- pred replay_games(pred(T, T), int, array(T), int,
+                     array(int), array(int),
+                     array(int), array(int)).
+:- mode replay_games(pred(in, in) is semidet, in, in, in,
+                     array_di, array_uo,
+                     array_di, array_uo) is det.
+replay_games(Less, Ifirst, Array, I,
+             !Winners_values, !Winners_indices) :-
+  (if (I = 1) then true
+   else (Iwinner = play_game(Less, Ifirst, Array,
+                             !.Winners_values, I),
+         (!.Winners_values^elem(Iwinner)) = Value,
+         (!.Winners_indices^elem(Iwinner)) = Index,
+         I // 2 = Iparent,
+         set(Iparent, Value, !Winners_values),
+         set(Iparent, Index, !Winners_indices),
+         replay_games(Less, Ifirst, Array, Iparent,
+                      !Winners_values, !Winners_indices))).
+
+:- func play_game(pred(T, T), int, array(T), array(int), int) = int.
+:- mode play_game(pred(in, in) is semidet,
+                  in, in, in, in) = out is det.
+play_game(Less, Ifirst, Array, Winners_values, I) = Iwinner :-
+  J = xor(I, 1),                % Find an opponent.
+  Winners_values^elem(I) = Value_I,
+  (if (Value_I = 0) then (Iwinner = J)
+   else (Winners_values^elem(J) = Value_J,
+         (if (Value_J = 0) then (Iwinner = I)
+          else (AJ = Array^elem(Value_J + Ifirst - 1),
+                AI = Array^elem(Value_I + Ifirst - 1),
+                (if Less(AJ, AI) then (Iwinner = J)
+                 else (Iwinner = I)))))).
+
+%%%-------------------------------------------------------------------
+
+:- func next_power_of_two(int) = int.
+%% This need not be a fast implemention.
+next_power_of_two(N) = next_power_of_two_(N, 1).
+
+:- func next_power_of_two_(int, int) = int.
+next_power_of_two_(N, I) = Pow2 :-
+  if (I < N) then (Pow2 = next_power_of_two_(N, I + I))
+  else (Pow2 = I).
+
+%%%-------------------------------------------------------------------
+
+:- func example_numbers = list(int).
+example_numbers = [22, 15, 98, 82, 22, 4, 58, 70, 80, 38, 49, 48, 46,
+                   54, 93, 8, 54, 2, 72, 84, 86, 76, 53, 37, 90].
+
+main(!IO) :-
+  from_list(example_numbers, Array),
+  bounds(Array, Ifirst, Ilast),
+  patience_sort(<, Ifirst, Ilast, Array, Sorted),
+  print("unsorted  ", !IO),
+  print_int_array(Array, Ifirst, !IO),
+  print_line("", !IO),
+  print("sorted    ", !IO),
+  print_indirect_array(Sorted, Array, 0, !IO),
+  print_line("", !IO).
+
+:- pred print_int_array(array(int)::in, int::in,
+                        io::di, io::uo) is det.
+print_int_array(Array, I, !IO) :-
+  bounds(Array, _, Ilast),
+  (if (I = Ilast + 1) then true
+   else (print(" ", !IO),
+         print(from_int(Array^elem(I)), !IO),
+         print_int_array(Array, I + 1, !IO))).
+
+:- pred print_indirect_array(array(int)::in, array(int)::in,
+                             int::in, io::di, io::uo) is det.
+print_indirect_array(Sorted, Array, I, !IO) :-
+  bounds(Sorted, _, Ilast),
+  (if (I = Ilast + 1) then true
+   else (print(" ", !IO),
+         print(from_int(Array^elem(Sorted^elem(I))), !IO),
+         print_indirect_array(Sorted, Array, I + 1, !IO))).
+
+%%%-------------------------------------------------------------------
+%%% local variables:
+%%% mode: mercury
+%%% prolog-indent-width: 2
+%%% end:

@@ -1,0 +1,134 @@
+*        Proper divisors           14/06/2016
+PROPDIV  CSECT
+         USING  PROPDIV,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    prolog
+         ST     R13,4(R15)         "
+         ST     R15,8(R13)         "
+         LR     R13,R15            "
+         LA     R10,1              n=1
+LOOPN1   C      R10,=F'10'         do n=1 to 10
+         BH     ELOOPN1
+         LR     R1,R10             n
+         BAL    R14,PDIV           pdiv(n)
+         ST     R0,NN              nn=pdiv(n)
+         MVC    PG,PGT             init buffer
+         LA     R11,PG             pgi=0
+         XDECO  R10,XDEC           edit n
+         MVC    0(3,R11),XDEC+9    output n
+         LA     R11,7(R11)         pgi=pgi+7
+         L      R1,NN              nn
+         XDECO  R1,XDEC            edit nn
+         MVC    0(3,R11),XDEC+9    output nn
+         LA     R11,20(R11)        pgi=pgi+20
+         LA     R5,1               i=1
+LOOPNI   C      R5,NN              do i=1 to nn
+         BH     ELOOPNI
+         LR     R1,R5              i
+         SLA    R1,2               *4
+         L      R2,TDIV-4(R1)      tdiv(i)
+         XDECO  R2,XDEC            edit tdiv(i)
+         MVC    0(3,R11),XDEC+9    output tdiv(i)
+         LA     R11,3(R11)         pgi=pgi+3
+         LA     R5,1(R5)           i=i+1
+         B      LOOPNI
+ELOOPNI  XPRNT  PG,80              print buffer
+         LA     R10,1(R10)         n=n+1
+         B      LOOPN1
+ELOOPN1  SR     R0,R0              0
+         ST     R0,M               m=0
+         LA     R10,1              n=1
+LOOPN2   C      R10,=F'20000'      do n=1 to 20000
+         BH     ELOOPN2
+         LR     R1,R10             n
+         BAL    R14,PDIV           nn=pdiv(n)
+         C      R0,M               if nn>m
+         BNH    NNNHM
+         ST     R10,II             ii=n
+         ST     R0,M               m=nn
+NNNHM    LA     R10,1(R10)         n=n+1
+         B      LOOPN2
+ELOOPN2  MVC    PG,PGR             init buffer
+         L      R1,II              ii
+         XDECO  R1,XDEC            edit ii
+         MVC    PG(5),XDEC+7       output ii
+         L      R1,M               m
+         XDECO  R1,XDEC            edit m
+         MVC    PG+9(4),XDEC+8     output m
+         XPRNT  PG,80              print buffer
+         L      R13,4(0,R13)       epilog
+         LM     R14,R12,12(R13)    "
+         XR     R15,R15            "
+         BR     R14                exit
+*------- pdiv   --function(x)----->number of divisors---
+PDIV     ST     R1,X               x
+         C      R1,=F'1'           if x=1
+         BNE    NOTONE
+         LA     R0,0               return(0)
+         BR     R14
+NOTONE   LR     R4,R1              x
+         N      R4,=X'00000001'    mod(x,2)
+         LA     R4,1(R4)           +1
+         ST     R4,ODD             odd=mod(x,2)+1
+         LA     R8,1               ia=1
+         LA     R0,1               1
+         ST     R0,TDIV            tdiv(1)=1
+         SR     R9,R9              ib=0
+         L      R7,ODD             odd
+         LA     R7,1(R7)           j=odd+1
+LOOPJ    LR     R5,R7              do j=odd+1 by odd
+         MR     R4,R7              j*j
+         C      R5,X               while j*j<x
+         BNL    ELOOPJ
+         L      R4,X               x
+         SRDA   R4,32              .
+         DR     R4,R7              /j
+         LTR    R4,R4              if mod(x,j)=0
+         BNZ    ITERJ
+         LA     R8,1(R8)           ia=ia+1
+         LR     R1,R8              ia
+         SLA    R1,2               *4 (F)
+         ST     R7,TDIV-4(R1)      tdiv(ia)=j
+         LA     R9,1(R9)           ib=ib+1
+         L      R4,X               x
+         SRDA   R4,32              .
+         DR     R4,R7              j
+         LR     R2,R9              ib
+         SLA    R2,2               *4 (F)
+         ST     R5,TDIVB-4(R2)     tdivb(ib)=x/j
+ITERJ    A      R7,ODD             j=j+odd
+         B      LOOPJ
+ELOOPJ   LR     R5,R7              j
+         MR     R4,R7              j*j
+         C      R5,X               if j*j=x
+         BNE    JTJNEX
+         LA     R8,1(R8)           ia=ia+1
+         LR     R1,R8              ia
+         SLA    R1,2               *4 (F)
+         ST     R7,TDIV-4(R1)      tdiv(ia)=j
+JTJNEX   LA     R1,TDIV(R1)        @tdiv(ia+1)
+         LA     R2,TDIVB-4(R2)     @tdivb(ib)
+         LTR    R6,R9              do i=ib to 1 by -1
+         BZ     ELOOPI
+LOOPI    MVC    0(4,R1),0(R2)      tdiv(ia)=tdivb(i)
+         LA     R8,1(R8)           ia=ia+1
+         LA     R1,4(R1)           r1+=4
+         SH     R2,=H'4'           r2-=4
+         BCT    R6,LOOPI           i=i-1
+ELOOPI   LR     R0,R8              return(ia)
+         BR     R14                return to caller
+*        ----   ----------------------------------------
+TDIV     DS     80F
+TDIVB    DS     40F
+M        DS     F
+NN       DS     F
+II       DS     F
+X        DS     F
+ODD      DS     F
+PGT      DC     CL80'... has .. proper divisors:'
+PGR      DC     CL80'..... has ... proper divisors.'
+PG       DC     CL80' '
+XDEC     DS     CL12
+         YREGS
+         END    PROPDIV

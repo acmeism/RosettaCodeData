@@ -1,0 +1,154 @@
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+(* First, let us implement a proper method of division of signed
+   integers, in which the remainder is always non-negative. (I
+   implement such division in my ats2-xprelude package at
+   https://sourceforge.net/p/chemoelectric/ats2-xprelude and have
+   copied the implementation from there.) *)
+
+extern fn {tk : tkind}
+g0int_eucliddivrem :
+  (g0int tk, g0int tk) -<> @(g0int tk, g0int tk)
+
+implement {tk}
+g0int_eucliddivrem (n, d) =
+  let
+    (* The C optimizer most likely will reduce these these two
+       divisions to just one. They are simply synonyms for C '/' and
+       '%', and perform division that rounds the quotient towards
+       zero. *)
+    val q0 = g0int_div (n, d)
+    val r0 = g0int_mod (n, d)
+  in
+    (* The following calculation results in 'floor division', if the
+       divisor is positive, or 'ceiling division', if the divisor is
+       negative. This choice of method results in the remainder never
+       being negative. *)
+    if isgtez n then
+      @(q0, r0)
+    else if iseqz r0 then
+      @(q0, r0)
+    else if isltz d then
+      @(succ q0, r0 - d)
+    else
+      @(pred q0, r0 + d)
+  end
+
+(*------------------------------------------------------------------*)
+(* I implement the lazy evaluation by having r2cf explicitly create
+   a thunk that returns the digits. *)
+
+fn {tk : tkind}
+step (N1 : ref (g0int tk),
+      N2 : ref (g0int tk))
+    : g0int tk =
+  let
+    val @(q, r) = g0int_eucliddivrem (!N1, !N2)
+  in
+    !N1 := !N2;
+    !N2 := r;
+    q
+  end
+
+fn {tk : tkind}
+r2cf (N1 : g0int tk,
+      N2 : g0int tk)
+    : () -<cloref1> Option (g0int tk) =
+  let
+    val N1 = ref<g0int tk> N1
+    and N2 = ref<g0int tk> N2
+  in
+    lam () =>
+      if iseqz !N2 then
+        None ()
+      else
+        Some (step (N1, N2))
+  end
+
+(*------------------------------------------------------------------*)
+
+fn {tk : tkind}
+print_digits (f : () -<cloref1> Option (g0int tk))
+    : void =
+  let
+    fun
+    loop (sep : string)
+        : void =
+      case+ f () of
+      | None () => println! ("]")
+      | Some d =>
+        begin
+          print! sep;
+          fprint_val<g0int tk> (stdout_ref, d);
+          if sep = "[" then
+            loop "; "
+          else
+            loop ", "
+        end
+  in
+    loop "["
+  end
+
+fn {tk : tkind}
+print_continued_fraction
+          (ratnum : @(g0int tk, g0int tk))
+    : void =
+  let
+    val @(N1, N2) = ratnum
+  in
+    fprint_val<g0int tk> (stdout_ref, N1);
+    print! "/";
+    fprint_val<g0int tk> (stdout_ref, N2);
+    print! " => ";
+    print_digits (r2cf<tk> (N1, N2))
+  end
+
+(*------------------------------------------------------------------*)
+
+val test_cases =
+  $list (@(1LL, 2LL),
+         @(3LL, 1LL),
+         @(23LL, 8LL),
+         @(13LL, 11LL),
+         @(22LL, 7LL),
+         @(~151LL, 77LL),       (* The numerator is negative. *)
+         @(151LL, ~77LL),       (* The denominator is negative. *)
+         @(14142LL, 10000LL),
+         @(141421LL, 100000LL),
+         @(1414214LL, 1000000LL),
+         @(14142136LL, 10000000LL),
+         @(1414213562373095049LL, 1000000000000000000LL),
+         @(31LL, 10LL),
+         @(314LL, 100LL),
+         @(3142LL, 1000LL),
+         @(31428LL, 10000LL),
+         @(314285LL, 100000LL),
+         @(3142857LL, 1000000LL),
+         @(31428571LL, 10000000LL),
+         @(314285714LL, 100000000LL),
+         @(3142857142857143LL, 1000000000000000LL),
+         @(2200000000000000000LL, 700000000000000000LL),
+         @(2200000000000000001LL, 700000000000000000LL),
+         @(2200000000000000000LL, 700000000000000001LL))
+
+implement
+main0 () =
+  let
+    var p : List0 @(llint, llint)
+  in
+    println! ();
+    print! ("The continued fractions shown here are calculated by ");
+    println! ("'Euclidean division',");
+    println! ("where the remainder is always non-negative:");
+    println! ();
+    for (p := test_cases; ~list_is_nil p; p := list_tail p)
+      print_continued_fraction<llintknd> (list_head p);
+    println! ();
+    println! ("Note that [3; 6, 1] is equal to [3; 7].");
+    println! ()
+  end
+
+(*------------------------------------------------------------------*)

@@ -1,0 +1,136 @@
+puts:	equ	9	; CP/M syscall to print a string
+	org	100h
+	;;;	Generate the first 1200 elements of the Stern-Brocot sequence
+	lxi	b,600	; 2 elements generated per loop
+	lxi	h,seq
+	mov	e,m	; Initialization
+	inx	h
+	push	h	; Save considered member pointer
+	inx	h	; Insertion pointer
+genseq:	xthl		; Load considered member pointer
+	mov	d,e	; D = predecessor
+	mov	e,m	; E = considered member
+	inx	h	; Point at next considered member
+	xthl		; Load insertion pointer
+	mov	a,d	; A = sum of both members
+	add	e
+	mov	m,a	; Append the sum
+	inx	h
+	mov	m,e	; Append the considered member
+	inx	h
+	dcx 	b	; Decrement counter
+	mov	a,b	; Zero?
+	ora	c
+	jnz	genseq	; If not, generate next members of sequence
+	pop	h	; Remove pointer from stack
+	;;;	Print first 15 members of sequence
+	lxi	d,seq
+	mvi	b,15	; 15 members
+	mvi	h,0
+p15:	ldax	d	; Get current member
+	mov	l,a
+	call	prhl	; Print member
+	inx	d	; Increment pointer
+	dcr	b	; Decrement counter
+	jnz	p15	; If not zero, print another one
+	lxi	d,nl
+	mvi	c,puts
+	call	5
+	;;;	Print indices of first occurrence of 1..10
+	lxi	b,010Ah	; B = number, C = counter
+	call	fnext
+	;;;	Print index of first occurrence of 100
+	lxi	b,6401h
+	call	fnext
+	;;;	Check if the GCD of first 1000 consecutive elements is 0
+	xra	a	; Zero out 1001th element as end marker
+	sta	seq+1000
+	lxi	h,seq	; Start of array
+	mov	e,m
+	inx	h
+gcdchk:	mov	d,e	; (D,E) = next pair
+	mov	e,m
+	inx	h
+	mov	a,e
+	mov	b,d
+	ana	a	; Reached the end?
+	jz	done
+	call	gcd	; If not, check GCD
+	dcr	a	; Check that it is 1
+	jz	gcdchk	; If so, check next pair
+	push	h	; GCD not 1 - save pointer
+	lxi	d,gcdn	; Print message
+	mvi	c,puts
+	call	5
+	pop	h	; Calculate offset in array
+	lxi	d,-seq
+	dad	d
+	jmp	prhl	; Print offset of pair whose GCD is not 1
+done:	lxi	d,gcdy	; Print OK message
+	mvi	c,puts
+	jmp	5
+	;;;	GCD(A,B)
+gcd:	cmp	b	
+	rz		; If A=B, result = A
+	jc	b_le_a	; B>A?
+	sub	b	; If A>B, subtract B
+	jmp 	gcd	; and loop
+b_le_a:	mov	c,a	
+	mov	a,b	
+	sub	c
+	mov	b,a
+	mov	a,c
+	jmp	gcd
+	;;;	Print indices of occurrences of C numbers
+	;;;	starting at B
+fnext:	lxi	d,seq
+fsrch:	ldax	d	; Get current member
+	cmp	b	; Is it the number we are looking for?
+	inx	d	; Increment number
+	jnz	fsrch	; If no match, check next number
+	lxi	h,-seq	; Match - subtract start of array
+	dad	d
+	call	prhl	; Print index
+	inr	b	; Look for next number
+	dcr	c	; If we need more numbers
+	jnz	fnext
+	push	d	; Save sequence pointer
+	lxi	d,nl	; Print newline
+	mvi	c,puts
+	call	5
+	pop	d	; Restore sequence pointer
+	ret
+	;;;	Print HL as ASCII number.
+prhl:	push	h	; Save all registers
+	push	d
+	push	b
+	lxi	b,pnum	; Store pointer to num string on stack
+	push	b
+	lxi	b,-10	; Divisor
+prdgt:	lxi	d,-1
+prdgtl:	inx	d	; Divide by 10 through trial subtraction
+	dad	b
+	jc	prdgtl
+	mvi	a,'0'+10
+	add	l	; L = remainder - 10
+	pop	h	; Get pointer from stack
+	dcx	h	; Store digit
+	mov	m,a
+	push	h	; Put pointer back on stack
+	xchg		; Put quotient in HL
+	mov	a,h	; Check if zero
+	ora	l
+	jnz	prdgt	; If not, next digit
+	pop	d	; Get pointer and put in DE
+	mvi	c,9	; CP/M print string
+	call	5
+	pop	b	; Restore registers
+	pop	d
+	pop	h
+	ret
+	db	'*****'	; Placeholder for number
+pnum:	db	' $'
+nl:	db	13,10,'$'
+gcdn:	db	'GCD not 1 at: $'
+gcdy:	db	'GCD of all pairs of consecutive members is 1.$'
+seq:	db	1,1	; Sequence stored here

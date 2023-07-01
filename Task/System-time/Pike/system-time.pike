@@ -1,0 +1,1 @@
+write( ctime(time()) );

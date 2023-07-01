@@ -1,0 +1,347 @@
+/* ARM assembly Raspberry PI  */
+/*  program dateFormat.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.equ STDOUT, 1           @ Linux output console
+.equ EXIT,   1           @ Linux syscall
+.equ WRITE,  4           @ Linux syscall
+.equ BRK,    0x2d        @ Linux syscall
+.equ CHARPOS,     '@'
+
+.equ GETTIME,   0x4e     @ call system linux gettimeofday
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* example structure  time  */
+    .struct  0
+timeval_sec:                     @
+    .struct  timeval_sec + 4
+timeval_usec:                     @
+    .struct  timeval_usec + 4
+timeval_end:
+    .struct  0
+timezone_min:                     @
+    .struct  timezone_min + 4
+timezone_dsttime:                 @
+    .struct  timezone_dsttime + 4
+timezone_end:
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessError:       .asciz "Error detected !!!!. \n"
+szMessResult:      .asciz "Date : @/@/@ \n"  @ message result
+szMessResult1:     .asciz "Date day : @ @ @ @ \n"  @ message result
+szJan:             .asciz "Janvier"
+szFev:             .asciz "Février"
+szMars:            .asciz "Mars"
+szAvril:            .asciz "Avril"
+szMai:             .asciz "Mai"
+szJuin:            .asciz "Juin"
+szJuil:            .asciz "Juillet"
+szAout:            .asciz "Aout"
+szSept:            .asciz "Septembre"
+szOct:             .asciz "Octobre"
+szNov:             .asciz "Novembre"
+szDec:             .asciz "Décembre"
+szLundi:           .asciz "Lundi"
+szMardi:           .asciz "Mardi"
+szMercredi:        .asciz "Mercredi"
+szJeudi:           .asciz "Jeudi"
+szVendredi:        .asciz "Vendredi"
+szSamedi:          .asciz "Samedi"
+szDimanche:        .asciz "Dimanche"
+szCarriageReturn:  .asciz "\n"
+.align 4
+tbDayMonthYear:    .int  0,  31,  60,  91, 121, 152, 182, 213, 244, 274, 305, 335
+                   .int 366, 397, 425, 456, 486, 517, 547, 578, 609, 639, 670, 700
+                   .int 731, 762, 790, 821, 851, 882, 912, 943, 974,1004,1035,1065
+                   .int 1096,1127,1155,1186,1216,1247,1277,1308,1339,1369,1400,1430
+tbMonthName:       .int szJan
+                   .int szFev
+                   .int szMars
+                   .int szAvril
+                   .int szMai
+                   .int szJuin
+                   .int szJuil
+                   .int szAout
+                   .int szSept
+                   .int szOct
+                   .int szNov
+                   .int szDec
+tbDayName:         .int szLundi
+                   .int szMardi
+                   .int szMercredi
+                   .int szJeudi
+                   .int szVendredi
+                   .int szSamedi
+                   .int szDimanche
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+stTVal:                .skip timeval_end
+stTZone:               .skip timezone_end
+sZoneConv:             .skip 100
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                              @ entry of program
+    ldr r0,iAdrstTVal
+    ldr r1,iAdrstTZone
+    mov r7,#GETTIME
+    svc 0
+    cmp r0,#-1                     @ error ?
+    beq 99f
+    ldr r1,iAdrstTVal
+    ldr r0,[r1,#timeval_sec]       @ timestemp in second
+    bl dateFormatNum
+    ldr r0,[r1,#timeval_sec]       @ timestemp in second
+    bl dateFormatAlpha
+    ldr r0,iTStest1
+    bl dateFormatNum
+    ldr r0,iTStest1
+    bl dateFormatAlpha
+    ldr r0,iTStest2
+    bl dateFormatNum
+    ldr r0,iTStest2
+    bl dateFormatAlpha
+    ldr r0,iTStest3
+    bl dateFormatNum
+    ldr r0,iTStest3
+    bl dateFormatAlpha
+    b 100f
+99:
+    ldr r0,iAdrszMessError
+    bl affichageMess
+100:                               @ standard end of the program
+    mov r0,#0                      @ return code
+    mov r7,#EXIT                   @ request to exit program
+    svc 0                          @ perform the system call
+
+iAdrszMessError:          .int szMessError
+iAdrstTVal:               .int stTVal
+iAdrstTZone:              .int stTZone
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrsZoneConv:            .int sZoneConv
+iTStest1:                 .int 1609508339    @ 01/01/2021
+iTStest2:                 .int 1657805939    @ 14/07/2022
+iTStest3:                 .int 1767221999    @ 31/12/2025
+/******************************************************************/
+/*     date format numeric                                        */
+/******************************************************************/
+/* r0 contains the  timestamp in seconds */
+dateFormatNum:
+    push {r1-r11,lr}                             @ save  registers
+    ldr r2,iSecJan2020
+    sub r0,r0,r2                   @ total secondes to 01/01/2020
+    mov r1,#60
+    bl division
+    mov r0,r2
+    mov r6,r3                      @ compute secondes
+    mov r1,#60
+    bl division
+    mov r7,r3                      @ compute minutes
+    mov r0,r2
+    mov r1,#24
+    bl division
+    mov r8,r3                      @ compute hours
+    mov r0,r2
+    mov r11,r0
+    mov r1,#(365 * 4 + 1)
+    bl division
+    lsl r9,r2,#2                   @ multiply by 4 = year1
+    mov r1,#(365 * 4 + 1)
+    mov r0,r11
+    bl division
+    mov r10,r3
+
+    ldr r1,iAdrtbDayMonthYear
+    mov r2,#3
+    mov r3,#12
+1:
+    mul r11,r3,r2
+    ldr r4,[r1,r11,lsl #2]         @ load days by year
+    cmp r10,r4
+    bge 2f
+    sub r2,r2,#1
+    cmp r2,#0
+    bne 1b
+2:                                 @ r2 = year2
+    mov r5,#11
+    mul r11,r3,r2
+    lsl r11,#2
+    add r11,r1                     @ table address
+3:
+    ldr r4,[r11,r5,lsl #2]         @ load days by month
+    cmp r10,r4
+    bge 4f
+    subs r5,r5,#1
+    bne 3b
+4:                                 @ r5 = month - 1
+    mul r11,r3,r2
+    add r11,r5
+    ldr r1,iAdrtbDayMonthYear
+    ldr r3,[r1,r11,lsl #2]
+    sub r0,r10,r3
+    add r0,r0,#1                   @ final compute day
+    ldr r1,iAdrsZoneConv
+    bl conversion10                @ this function do not zero final
+    mov r11,#0                     @ store zero final
+    strb r11,[r1,r0]
+    ldr r0,iAdrszMessResult
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc          @ insert result at first @ character
+    mov r3,r0
+    add r0,r5,#1                   @ final compute month
+    cmp r0,#12
+    subgt r0,#12
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r11,#0                      @ store zero final
+    strb r11,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc          @ insert result at next @ character
+    mov r3,r0
+    ldr r11,iYearStart
+    add r0,r9,r11
+    add r0,r0,r2                   @ final compute year = 2020 + year1 + year2
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r11,#0                     @ store zero final
+    strb r11,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc          @ insert result at next @ character
+    bl affichageMess
+100:
+    pop {r1-r11,lr}                @ restaur registers
+    bx lr                          @ return
+iAdrszMessResult:         .int szMessResult
+/******************************************************************/
+/*     date format alphanumeric                                   */
+/******************************************************************/
+/* r0 contains the  timestamp in seconds */
+dateFormatAlpha:
+    push {r1-r10,lr}               @ save  registers
+    ldr r2,iSecJan2020
+    sub r0,r0,r2                   @ total secondes to 01/01/2020
+    mov r6,r0
+    mov r1,#60
+    bl division
+    mov r0,r2
+    mov r1,#60
+    bl division
+    mov r0,r2
+    mov r1,#24
+    bl division
+    mov r0,r2
+    mov r8,r0
+    mov r1,#(365 * 4 + 1)
+    bl division
+    lsl r9,r2,#2                   @ multiply by 4 = year1
+    mov r1,#(365 * 4 + 1)
+    mov r0,r8
+    bl division
+    mov r10,r3                     @ reste
+
+    ldr r1,iAdrtbDayMonthYear
+    mov r7,#3
+    mov r3,#12
+1:
+    mul r8,r3,r7
+    ldr r4,[r1,r8,lsl #2]          @ load days by year
+    cmp r10,r4
+    bge 2f
+    sub r7,r7,#1
+    cmp r7,#0
+    bne 1b
+2:                                 @ r7 = year2
+    mov r5,#11
+    mul r8,r3,r7
+    lsl r8,#2
+    add r8,r1
+3:
+    ldr r4,[r8,r5,lsl #2]          @ load days by month
+    cmp r10,r4
+    bge 4f
+    subs r5,r5,#1
+    bne 3b
+4:                                 @ r5 = month - 1
+
+    mov r0,r6                      @ number secondes depuis 01/01/2020
+    ldr r1,iNbSecByDay
+    bl division
+    mov r0,r2
+    mov r1,#7
+    bl division
+    add r2,r3,#2
+    cmp r2,#7
+    subge r2,#7
+    ldr r1,iAdrtbDayName
+    ldr r1,[r1,r2,lsl #2]
+    ldr r0,iAdrszMessResult1
+    bl strInsertAtCharInc          @ insert result at next @ character
+    mov r3,r0
+    mov r8,#12
+    mul r11,r8,r7
+    add r11,r5
+    ldr r1,iAdrtbDayMonthYear
+    ldr r8,[r1,r11,lsl #2]
+    sub r0,r10,r8
+    add r0,r0,#1                   @ final compute day
+    ldr r1,iAdrsZoneConv
+    bl conversion10                @ this function do not zero final
+    mov r8,#0                      @ store zero final
+    strb r8,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc          @ insert result at first @ character
+    mov r3,r0
+    ldr r1,iAdrtbMonthName
+    cmp r5,#12
+    subge r5,#12
+    ldr r1,[r1,r5,lsl #2]          @ month name
+    mov r0,r3
+    bl strInsertAtCharInc          @ insert result at first @ character
+    mov r3,r0
+    ldr r0,iYearStart
+    add r0,r7
+    add r0,r9                      @ final compute year = 2020 + year1 + year2
+
+    ldr r1,iAdrsZoneConv
+    bl conversion10                @ this function do not zero final
+    mov r8,#0                      @ store zero final
+    strb r8,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc          @ insert result at first @ character
+    bl affichageMess
+100:
+    pop {r1-r10,lr}                @ restaur registers
+    bx lr                          @ return
+iAdrszMessResult1:         .int szMessResult1
+iSecJan2020:              .int 1577836800
+iAdrtbDayMonthYear:       .int tbDayMonthYear
+iYearStart:               .int 2020
+iAdrtbMonthName:          .int tbMonthName
+iAdrtbDayName:            .int tbDayName
+iNbSecByDay:              .int 3600 * 24
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

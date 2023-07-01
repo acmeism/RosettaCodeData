@@ -1,0 +1,1 @@
+print sprintf("%09.3f", 7.125)

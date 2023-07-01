@@ -1,0 +1,49 @@
+const PORT=23;
+
+var users=Dictionary(); // ( handle:socket, ...)
+pipe:=Thread.Pipe(); // how server tells thread to connect to user
+
+fcn accept(pipe){ // a thread waiting for the server to send a socket
+   while(socket:=pipe.read()){
+      println("Somebody is connecting ...");
+      socket.read();  // telnet stuff
+      while(True){    // get credentials
+	 reg name;
+	 socket.write("Your handle: ");  // bottle neck
+	 try{ name = socket.read().text.strip() } catch(IOError){ continue }
+	 if(users.holds(name)) socket.write("Handle is already in use.\n");
+	 else if(name){
+	    users[name] = socket;
+	    chat.launch(name,socket);	// thread
+	    broadcast(name, "+++ %s arrived +++".fmt(name));
+	    break;	// wait for next connection
+	 }
+      }//while
+   }//while
+}.launch(pipe); // thread
+
+fcn chat(name,socket){		// a thread, one per user
+   try{
+      socket.write("^D to disconnect\n");
+      while(True){
+	 message:=socket.read().text.strip();
+	 if(message=="\xff\xec") break; // ^D to disconnect.
+	 broadcast(name, "%s> %s".fmt(name,message));
+      }
+   }catch{}  // eg socket pukes
+   users.del(name); socket.close();
+   broadcast(name, "--- %s leaves ---".fmt(name));
+}
+
+    // Send a message to all users from the given name.
+fcn broadcast(name, message){ // called from user thread
+   println(message);  // log message to server console
+   users.pump(Void,'wrap([(toName,socket)]){
+      if(toName != name) try{ socket.write(message + "\n") } catch(IOError){}
+   });
+}
+
+   // Set up the server socket.
+server:=Network.TCPServerSocket.open(PORT);
+println("Listening on %s:%s".fmt(server.hostname,server.port));
+server.listen(pipe);  // Main event loop

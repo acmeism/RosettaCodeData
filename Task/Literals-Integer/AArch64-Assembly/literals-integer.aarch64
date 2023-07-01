@@ -1,0 +1,71 @@
+.equ STDOUT, 1
+.equ SVC_WRITE, 64
+.equ SVC_EXIT, 93
+
+.text
+.global _start
+
+_start:
+	stp x29, x30, [sp, -16]!
+	mov x29, sp
+	mov x0, #123 // decimal
+	bl print_uint64
+	mov x0, #0b01111011 // binary
+	bl print_uint64
+	mov x0, #0173 // octal
+	bl print_uint64
+	mov x0, #0x7b // hexadecimal
+	bl print_uint64
+	mov x0, #'{ // ascii value
+	bl print_uint64
+	mov x0, #'\{ // ascii value in another way
+	bl print_uint64
+	ldp x29, x30, [sp], 16
+	mov x0, #0
+	b _exit // exit(0);
+
+// void print_uint64(uint64_t x) - print an unsigned integer in base 10.
+print_uint64:
+	// x0 = remaining number to convert
+	// x1 = pointer to most significant digit
+	// x2 = 10
+	// x3 = x0 / 10
+	// x4 = x0 % 10
+	// compute x0 divmod 10, store a digit, repeat if x0 > 0
+	ldr x1, =strbuf_end
+	mov x2, #10
+1:	udiv x3, x0, x2
+	msub x4, x3, x2, x0
+	add x4, x4, #48
+	mov x0, x3
+	strb w4, [x1, #-1]!
+	cbnz x0, 1b
+	// compute the number of digits to print, then call write()
+	ldr x3, =strbuf_end_newline
+	sub x2, x3, x1
+	mov x0, #STDOUT
+	b _write
+
+.data
+strbuf:
+	.space 31
+strbuf_end:
+	.ascii "\n"
+strbuf_end_newline:
+.align 4
+
+.text
+//////////////// system call wrappers
+// ssize_t _write(int fd, void *buf, size_t count)
+_write:
+	stp x29, x30, [sp, -16]!
+	mov x8, #SVC_WRITE
+	mov x29, sp
+	svc #0
+	ldp x29, x30, [sp], 16
+	ret
+
+// void _exit(int retval)
+_exit:
+	mov x8, #SVC_EXIT
+	svc #0

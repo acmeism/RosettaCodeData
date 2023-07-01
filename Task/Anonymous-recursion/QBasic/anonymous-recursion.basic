@@ -1,0 +1,20 @@
+DECLARE FUNCTION Fibonacci! (num!)
+
+PRINT Fibonacci(20)
+PRINT Fibonacci(30)
+PRINT Fibonacci(-10)
+PRINT Fibonacci(10)
+END
+
+FUNCTION Fibonacci (num)
+  IF num < 0 THEN
+    PRINT "Invalid argument: ";
+    Fibonacci = num
+  END IF
+
+  IF num < 2 THEN
+    Fibonacci = num
+  ELSE
+    Fibonacci = Fibonacci(num - 1) + Fibonacci(num - 2)
+  END IF
+END FUNCTION

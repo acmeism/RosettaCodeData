@@ -1,0 +1,40 @@
+(import (scheme base))
+(import (scheme write))
+(import (format)) ;; Common Lisp formatting for CHICKEN Scheme.
+
+(define (find-a-power-of-4-greater-than-x x)
+  (let loop ((q 1))
+    (if (< x q)
+        q
+        (loop (* 4 q)))))
+
+(define (isqrt+remainder x)
+  (let loop ((q (find-a-power-of-4-greater-than-x x))
+             (z x)
+             (r 0))
+    (if (= q 1)
+        (values r z)
+        (let* ((q (truncate-quotient q 4))
+               (t (- z r q))
+               (r (truncate-quotient r 2)))
+          (if (negative? t)
+              (loop q z r)
+              (loop q t (+ r q)))))))
+
+(define (isqrt x)
+  (let-values (((q r) (isqrt+remainder x)))
+    q))
+
+(format #t "isqrt(i) for ~D <= i <= ~D:~2%" 0 65)
+(do ((i 0 (+ i 1)))
+    ((= i 65))
+  (format #t "~D " (isqrt i)))
+(format #t "~D~3%" (isqrt 65))
+
+(format #t "isqrt(7**i) for ~D <= i <= ~D, i odd:~2%" 1 73)
+(format #t "~2@A ~84@A ~43@A~%" "i" "7**i" "sqrt(7**i)")
+(format #t "~A~%" (make-string 131 #\-))
+(do ((i 1 (+ i 2)))
+    ((= i 75))
+  (let ((7**i (expt 7 i)))
+    (format #t "~2D ~84:D ~43:D~%" i 7**i (isqrt 7**i))))

@@ -1,0 +1,28 @@
+(import (scheme base)
+        (scheme write)
+        (srfi 1)
+        (only (srfi 13) string-join))
+
+(define *seconds-in-minute* 60)
+(define *seconds-in-hour* (* 60 *seconds-in-minute*))
+(define *seconds-in-day* (* 24 *seconds-in-hour*))
+(define *seconds-in-week* (* 7 *seconds-in-day*))
+
+(define (seconds->duration seconds)
+  (define (format val unit)
+    (if (zero? val) "" (string-append (number->string val) " " unit)))
+  (let*-values (((weeks wk-remainder) (floor/ seconds *seconds-in-week*))
+                ((days dy-remainder) (floor/ wk-remainder *seconds-in-day*))
+                ((hours hr-remainder) (floor/ dy-remainder *seconds-in-hour*))
+                ((minutes mn-remainder) (floor/ hr-remainder *seconds-in-minute*)))
+               (string-join (delete ""
+                                    (list (format weeks "wk")
+                                          (format days "d")
+                                          (format hours "hr")
+                                          (format minutes "min")
+                                          (format mn-remainder "sec"))
+                                    string=?) ", ")))
+
+(display (seconds->duration 7259)) (newline)
+(display (seconds->duration 86400)) (newline)
+(display (seconds->duration 6000000)) (newline)

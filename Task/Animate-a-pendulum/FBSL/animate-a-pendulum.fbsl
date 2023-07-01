@@ -1,0 +1,57 @@
+#INCLUDE <Include\Windows.inc>
+
+FBSLSETTEXT(ME, "Pendulum")
+FBSL.SETTIMER(ME, 1000, 10)
+RESIZE(ME, 0, 0, 300, 200)
+CENTER(ME)
+SHOW(ME)
+
+BEGIN EVENTS
+	SELECT CASE CBMSG
+		CASE WM_TIMER
+			' Request redraw
+			InvalidateRect(ME, NULL, FALSE)
+			RETURN 0
+		CASE WM_PAINT
+			Swing()
+		CASE WM_CLOSE
+			FBSL.KILLTIMER(ME, 1000)
+	END SELECT
+END EVENTS
+
+SUB Swing()
+	TYPE RECT: %rcLeft, %rcTop, %rcRight, %rcBottom: END TYPE
+	STATIC rc AS RECT, !!acceleration, !!velocity, !!angle = M_PI_2, %pendulum = 100
+	
+	GetClientRect(ME, @rc)
+	
+	' Recalculate
+	DIM headX = rc.rcRight / 2, headY = rc.rcBottom / 4
+	DIM tailX = headX + SIN(angle) * pendulum
+	DIM tailY = headY + COS(angle) * pendulum
+	
+	acceleration = -9.81 / pendulum * SIN(angle)
+	INCR(velocity, acceleration * 0.1)(angle, velocity * 0.1)
+	
+	' Create backbuffer
+	CreateCompatibleDC(GetDC(ME))
+	SelectObject(CreateCompatibleDC, CreateCompatibleBitmap(GetDC, rc.rcRight, rc.rcBottom))
+	
+	' Draw to backbuffer
+	FILLSTYLE(FILL_SOLID): FILLCOLOR(RGB(200, 200, 0))
+	LINE(CreateCompatibleDC, 0, 0, rc.rcRight, rc.rcBottom, GetSysColor(COLOR_BTNHILIGHT), TRUE, TRUE)
+	LINE(CreateCompatibleDC, 0, headY, rc.rcRight, headY, GetSysColor(COLOR_3DSHADOW))
+	DRAWWIDTH(3)
+	LINE(CreateCompatibleDC, headX, headY, tailX, tailY, RGB(200, 0, 0))
+	DRAWWIDTH(1)
+	CIRCLE(CreateCompatibleDC, headX, headY, 2, GetSysColor, 0, 360, 1, TRUE)
+	CIRCLE(CreateCompatibleDC, tailX, tailY, 10, GetSysColor, 0, 360, 1, FALSE)
+
+	' Blit to window
+	BitBlt(GetDC, 0, 0, rc.rcRight, rc.rcBottom, CreateCompatibleDC, 0, 0, SRCCOPY)
+	ReleaseDC(ME, GetDC)
+
+	' Delete backbuffer	
+	DeleteObject(SelectObject(CreateCompatibleDC, SelectObject))
+	DeleteDC(CreateCompatibleDC)
+END SUB

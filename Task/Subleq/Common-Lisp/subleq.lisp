@@ -1,0 +1,21 @@
+(defun run (memory)
+  (loop for pc = 0 then next-pc
+        until (minusp pc)
+        for a = (aref memory pc)
+        for b = (aref memory (+ pc 1))
+        for c = (aref memory (+ pc 2))
+        for next-pc = (cond ((minusp a)
+                             (setf (aref memory b) (char-code (read-char)))
+                             (+ pc 3))
+                            ((minusp b)
+                             (write-char (code-char (aref memory a)))
+                             (+ pc 3))
+                            ((plusp (setf (aref memory b)
+                                          (- (aref memory b) (aref memory a))))
+                             (+ pc 3))
+                            (t c))))
+
+(defun main ()
+  (let ((memory (vector 15 17 -1 17 -1 -1 16 1 -1 16 3 -1 15 15 0 0 -1 72
+                        101 108 108 111 44 32 119 111 114 108 100 33 10 0)))
+    (run memory)))

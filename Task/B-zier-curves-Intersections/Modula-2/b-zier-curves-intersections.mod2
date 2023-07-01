@@ -1,0 +1,330 @@
+(* This program does not do any subdivision, but instead takes
+   advantage of monotonicity.
+
+   It is possible for points accidentally to be counted twice, for
+   instance if they lie right on an interval boundary. We will avoid
+   that by the crude (but likely satisfactory) mechanism of requiring
+   a minimum max norm between intersections. *)
+
+MODULE bezierIntersectionsInModula2;
+
+(* ISO Modula-2 libraries. *)
+FROM Storage IMPORT ALLOCATE, DEALLOCATE;
+FROM SYSTEM IMPORT TSIZE;
+IMPORT SLongIO;
+IMPORT STextIO;
+
+(* GNU Modula-2 gm2-libs *)
+FROM Assertion IMPORT Assert;
+
+(* Schumaker's and Volk's algorithm for evaluating a Bézier spline in
+   Bernstein basis. This is faster than de Casteljau, though not quite
+   as numerical stable. *)
+PROCEDURE SchumakerVolk (c0, c1, c2, t : LONGREAL) : LONGREAL;
+  VAR s, u, v : LONGREAL;
+BEGIN
+  s := 1.0 - t;
+  IF t <= 0.5 THEN
+    (* Horner form in the variable u = t/s, taking into account the
+       binomial coefficients = 1,2,1. *)
+    u := t / s;
+    v := c0 + (u * (c1 + c1 + (u * c2)));
+    (* Multiply by s raised to the degree of the spline. *)
+    v := v * s * s;
+  ELSE
+    (* Horner form in the variable u = s/t, taking into account the
+       binomial coefficients = 1,2,1. *)
+    u := s / t;
+    v := c2 + (u * (c1 + c1 + (u * c0)));
+    (* Multiply by t raised to the degree of the spline. *)
+    v := v * t * t;
+  END;
+  RETURN v;
+END SchumakerVolk;
+
+PROCEDURE FindExtremePoint (c0, c1, c2 : LONGREAL;
+                            VAR LiesInside01 : BOOLEAN;
+                            VAR ExtremePoint : LONGREAL);
+  VAR numer, denom : LONGREAL;
+BEGIN
+  (* If the spline has c0=c2 but not c0=c1=c2, then treat it as having
+     an extreme point at 0.5. *)
+  IF (c0 = c2) AND (c0 <> c1) THEN
+    LiesInside01 := TRUE;
+    ExtremePoint := 0.5
+  ELSE
+    (* Find the root of the derivative of the spline. *)
+    LiesInside01 := FALSE;
+    numer := c0 - c1;
+    denom := c2 - c1 - c1 + c0;
+    IF (denom <> 0.0) AND (numer * denom >= 0.0)
+       AND (numer <= denom) THEN
+      LiesInside01 := TRUE;
+      ExtremePoint := numer / denom
+    END
+  END
+END FindExtremePoint;
+
+TYPE StartIntervCount = [2 .. 4];
+     StartIntervArray = ARRAY [1 .. 4] OF LONGREAL;
+
+PROCEDURE PossiblyInsertExtremePoint
+            (c0, c1, c2 : LONGREAL;
+             VAR numStartInterv : StartIntervCount;
+             VAR startInterv : StartIntervArray);
+  VAR liesInside01 : BOOLEAN;
+      extremePt : LONGREAL;
+BEGIN
+  FindExtremePoint (c0, c1, c2, liesInside01, extremePt);
+  IF liesInside01 AND (0.0 < extremePt) AND (extremePt < 1.0) THEN
+    IF numStartInterv = 2 THEN
+      startInterv[3] := 1.0;
+      startInterv[2] := extremePt;
+      numStartInterv := 3
+    ELSIF extremePt < startInterv[2] THEN
+      startInterv[4] := 1.0;
+      startInterv[3] := startInterv[2];
+      startInterv[2] := extremePt;
+      numStartInterv := 4
+    ELSIF extremePt > startInterv[2] THEN
+      startInterv[4] := 1.0;
+      startInterv[3] := extremePt;
+      numStartInterv := 4
+    END
+  END
+END PossiblyInsertExtremePoint;
+
+PROCEDURE minimum2 (x, y : LONGREAL) : LONGREAL;
+  VAR w : LONGREAL;
+BEGIN
+  IF x <= y THEN
+    w := x
+  ELSE
+    w := y
+  END;
+  RETURN w;
+END minimum2;
+
+PROCEDURE maximum2 (x, y : LONGREAL) : LONGREAL;
+  VAR w : LONGREAL;
+BEGIN
+  IF x >= y THEN
+    w := x
+  ELSE
+    w := y
+  END;
+  RETURN w;
+END maximum2;
+
+PROCEDURE RectanglesOverlap (xa0, ya0, xa1, ya1 : LONGREAL;
+                             xb0, yb0, xb1, yb1 : LONGREAL) : BOOLEAN;
+BEGIN
+  (* It is assumed that xa0<=xa1, ya0<=ya1, xb0<=xb1, and yb0<=yb1. *)
+  RETURN ((xb0 <= xa1) AND (xa0 <= xb1)
+          AND (yb0 <= ya1) AND (ya0 <= yb1))
+END RectanglesOverlap;
+
+PROCEDURE TestIntersection (xp0, xp1 : LONGREAL;
+                            yp0, yp1 : LONGREAL;
+                            xq0, xq1 : LONGREAL;
+                            yq0, yq1 : LONGREAL;
+                            tol : LONGREAL;
+                            VAR exclude, accept : BOOLEAN;
+                            VAR x, y : LONGREAL);
+  VAR xpmin, ypmin, xpmax, ypmax : LONGREAL;
+      xqmin, yqmin, xqmax, yqmax : LONGREAL;
+      xmin, xmax, ymin, ymax : LONGREAL;
+BEGIN
+  xpmin := minimum2 (xp0, xp1);
+  ypmin := minimum2 (yp0, yp1);
+  xpmax := maximum2 (xp0, xp1);
+  ypmax := maximum2 (yp0, yp1);
+
+  xqmin := minimum2 (xq0, xq1);
+  yqmin := minimum2 (yq0, yq1);
+  xqmax := maximum2 (xq0, xq1);
+  yqmax := maximum2 (yq0, yq1);
+
+  exclude := TRUE;
+  accept := FALSE;
+  IF RectanglesOverlap (xpmin, ypmin, xpmax, ypmax,
+                        xqmin, yqmin, xqmax, yqmax) THEN
+    exclude := FALSE;
+    xmin := maximum2 (xpmin, xqmin);
+    xmax := minimum2 (xpmax, xqmax);
+    Assert (xmax >= xmin);
+    IF xmax - xmin <= tol THEN
+      ymin := maximum2 (ypmin, yqmin);
+      ymax := minimum2 (ypmax, yqmax);
+      Assert (ymax >= ymin);
+      IF ymax - ymin <= tol THEN
+        accept := TRUE;
+        x := (0.5 * xmin) + (0.5 * xmax);
+        y := (0.5 * ymin) + (0.5 * ymax);
+      END;
+    END;
+  END;
+END TestIntersection;
+
+TYPE WorkPile = POINTER TO WorkTask;
+     WorkTask =
+     RECORD
+       tp0, tp1 : LONGREAL;
+       tq0, tq1 : LONGREAL;
+       next : WorkPile
+     END;
+
+PROCEDURE WorkIsDone (workload : WorkPile) : BOOLEAN;
+BEGIN
+  RETURN workload = NIL
+END WorkIsDone;
+
+PROCEDURE DeferWork (VAR workload : WorkPile;
+                     tp0, tp1 : LONGREAL;
+                     tq0, tq1 : LONGREAL);
+  VAR work : WorkPile;
+BEGIN
+  ALLOCATE (work, TSIZE (WorkTask));
+  work^.tp0 := tp0;
+  work^.tp1 := tp1;
+  work^.tq0 := tq0;
+  work^.tq1 := tq1;
+  work^.next := workload;
+  workload := work
+END DeferWork;
+
+PROCEDURE DoSomeWork (VAR workload : WorkPile;
+                      VAR tp0, tp1 : LONGREAL;
+                      VAR tq0, tq1 : LONGREAL);
+  VAR work : WorkPile;
+BEGIN
+  Assert (NOT WorkIsDone (workload));
+  work := workload;
+  tp0 := work^.tp0;
+  tp1 := work^.tp1;
+  tq0 := work^.tq0;
+  tq1 := work^.tq1;
+  workload := work^.next;
+  DEALLOCATE (work, TSIZE (WorkTask));
+END DoSomeWork;
+
+CONST px0 = -1.0;  px1 =  0.0;  px2 =  1.0;
+      py0 =  0.0;  py1 = 10.0;  py2 =  0.0;
+      qx0 =  2.0;  qx1 = -8.0;  qx2 =  2.0;
+      qy0 =  1.0;  qy1 =  2.0;  qy2 =  3.0;
+      tol = 0.0000001;
+      spacing = 100.0 * tol;
+
+TYPE IntersectionCount = [0 .. 4];
+     IntersectionRange = [1 .. 4];
+
+VAR pxHasExtremePt, pyHasExtremePt : BOOLEAN;
+    qxHasExtremePt, qyHasExtremePt : BOOLEAN;
+    pxExtremePt, pyExtremePt : LONGREAL;
+    qxExtremePt, qyExtremePt : LONGREAL;
+    pNumStartInterv, qNumStartInterv : StartIntervCount;
+    pStartInterv, qStartInterv : StartIntervArray;
+    workload : WorkPile;
+    i, j : StartIntervCount;
+    numIntersections, k : IntersectionCount;
+    intersectionsX : ARRAY IntersectionRange OF LONGREAL;
+    intersectionsY : ARRAY IntersectionRange OF LONGREAL;
+    tp0, tp1, tq0, tq1 : LONGREAL;
+    xp0, xp1, xq0, xq1 : LONGREAL;
+    yp0, yp1, yq0, yq1 : LONGREAL;
+    exclude, accept : BOOLEAN;
+    x, y : LONGREAL;
+    tpMiddle, tqMiddle : LONGREAL;
+
+PROCEDURE MaybeAddIntersection (x, y : LONGREAL;
+                                spacing : LONGREAL);
+  VAR i : IntersectionRange;
+  VAR TooClose : BOOLEAN;
+BEGIN
+  IF numIntersections = 0 THEN
+    intersectionsX[1] := x;
+    intersectionsY[1] := y;
+    numIntersections := 1;
+  ELSE
+    TooClose := FALSE;
+    FOR i := 1 TO numIntersections DO
+        IF (ABS (x - intersectionsX[i]) < spacing)
+           AND (ABS (y - intersectionsY[i]) < spacing) THEN
+          TooClose := TRUE
+        END
+    END;
+    IF NOT TooClose THEN
+      numIntersections := numIntersections + 1;
+      intersectionsX[numIntersections] := x;
+      intersectionsY[numIntersections] := y
+    END
+  END
+END MaybeAddIntersection;
+
+BEGIN
+  (* Find monotonic sections of the curves, and use those as the
+     starting jobs. *)
+  pNumStartInterv := 2;
+  pStartInterv[1] := 0.0;  pStartInterv[2] := 1.0;
+  PossiblyInsertExtremePoint (px0, px1, px2,
+                              pNumStartInterv, pStartInterv);
+  PossiblyInsertExtremePoint (py0, py1, py2,
+                              pNumStartInterv, pStartInterv);
+  qNumStartInterv := 2;
+  qStartInterv[1] := 0.0;  qStartInterv[2] := 1.0;
+  PossiblyInsertExtremePoint (qx0, qx1, qx2,
+                              qNumStartInterv, qStartInterv);
+  PossiblyInsertExtremePoint (qy0, qy1, qy2,
+                              qNumStartInterv, qStartInterv);
+  workload := NIL;
+  FOR i := 2 TO pNumStartInterv DO
+    FOR j := 2 TO qNumStartInterv DO
+      DeferWork (workload, pStartInterv[i - 1], pStartInterv[i],
+                 qStartInterv[j - 1], qStartInterv[j])
+    END;
+  END;
+
+  (* Go through the workload, deferring work as necessary. *)
+  numIntersections := 0;
+  WHILE NOT WorkIsDone (workload) DO
+    (* The following code recomputes values of the splines
+       sometimes. You may wish to store such values in the work pile,
+       to avoid recomputing them. *)
+    DoSomeWork (workload, tp0, tp1, tq0, tq1);
+    xp0 := SchumakerVolk (px0, px1, px2, tp0);
+    yp0 := SchumakerVolk (py0, py1, py2, tp0);
+    xp1 := SchumakerVolk (px0, px1, px2, tp1);
+    yp1 := SchumakerVolk (py0, py1, py2, tp1);
+    xq0 := SchumakerVolk (qx0, qx1, qx2, tq0);
+    yq0 := SchumakerVolk (qy0, qy1, qy2, tq0);
+    xq1 := SchumakerVolk (qx0, qx1, qx2, tq1);
+    yq1 := SchumakerVolk (qy0, qy1, qy2, tq1);
+    TestIntersection (xp0, xp1, yp0, yp1,
+                      xq0, xq1, yq0, yq1, tol,
+                      exclude, accept, x, y);
+    IF accept THEN
+      MaybeAddIntersection (x, y, spacing)
+    ELSIF NOT exclude THEN
+      tpMiddle := (0.5 * tp0) + (0.5 * tp1);
+      tqMiddle := (0.5 * tq0) + (0.5 * tq1);
+      DeferWork (workload, tp0, tpMiddle, tq0, tqMiddle);
+      DeferWork (workload, tp0, tpMiddle, tqMiddle, tq1);
+      DeferWork (workload, tpMiddle, tp1, tq0, tqMiddle);
+      DeferWork (workload, tpMiddle, tp1, tqMiddle, tq1);
+    END
+  END;
+
+  IF numIntersections = 0 THEN
+    STextIO.WriteString ("no intersections");
+    STextIO.WriteLn;
+  ELSE
+    FOR k := 1 TO numIntersections DO
+      STextIO.WriteString ("(");
+      SLongIO.WriteReal (intersectionsX[k], 10);
+      STextIO.WriteString (", ");
+      SLongIO.WriteReal (intersectionsY[k], 10);
+      STextIO.WriteString (")");
+      STextIO.WriteLn;
+    END
+  END
+END bezierIntersectionsInModula2.

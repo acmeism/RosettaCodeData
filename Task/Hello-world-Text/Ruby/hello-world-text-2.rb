@@ -1,0 +1,1 @@
+$stdout.puts "Hello world!"

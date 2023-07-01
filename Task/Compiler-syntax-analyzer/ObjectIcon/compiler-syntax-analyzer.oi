@@ -1,0 +1,357 @@
+# -*- ObjectIcon -*-
+#
+# The Rosetta Code Tiny-Language Parser, in Object Icon.
+#
+# This implementation is based closely on the pseudocode and the C
+# reference implementation.
+#
+
+import io
+
+record token_record (line_no, column_no, tok, tokval)
+record token_getter (nxt, curr)
+
+procedure main (args)
+  local inpf_name, outf_name
+  local inpf, outf
+  local nexttok, currtok, current_token, gettok
+  local ast
+
+  inpf_name := "-"
+  outf_name := "-"
+  if 1 <= *args then inpf_name := args[1]
+  if 2 <= *args then outf_name := args[2]
+
+  inpf :=
+      if inpf_name == "-" then
+         FileStream.stdin
+      else
+        (FileStream(inpf_name, FileOpt.RDONLY) | stop(&why))
+  outf :=
+      if outf_name == "-" then
+         FileStream.stdout
+      else
+        (FileStream(outf_name, ior(FileOpt.WRONLY,
+                                   FileOpt.TRUNC,
+                                   FileOpt.CREAT)) | stop(&why))
+
+  current_token := [&null]
+  nexttok := create generate_tokens(inpf, current_token)
+  currtok := create get_current_token (current_token)
+  gettok := token_getter(nexttok, currtok)
+  ast := parse(gettok)
+  prt_ast(outf, ast)
+
+  close(inpf)
+  close(outf)
+end
+
+procedure prt_ast (outf, ast)
+  if *ast = 0 then {
+    write(outf, ";")
+  } else {
+    writes(outf, ast[1])
+    if ast[1] == ("Identifier" | "Integer" | "String") then {
+      write(outf, " ", ast[2])
+    } else {
+      write(outf)
+      prt_ast(outf, ast[2])
+      prt_ast(outf, ast[3])
+    }
+  }
+end
+
+procedure generate_tokens (inpf, current_token)
+  local s
+
+  while s := read(inpf) do {
+    if trim(s) ~== "" then {
+      current_token[1] := string_to_token_record(s)
+      suspend current_token[1]
+    }
+  }
+end
+
+procedure get_current_token (current_token)
+  repeat (suspend current_token[1])
+end
+
+procedure string_to_token_record (s)
+  local line_no, column_no, tok, tokval
+
+  static spaces
+
+  initial {
+    spaces := ' \t\f\v\r\n'
+  }
+
+  trim(s) ? {
+    tab(many(spaces))
+    line_no := integer(tab(many(&digits)))
+    tab(many(spaces))
+    column_no := integer(tab(many(&digits)))
+    tab(many(spaces))
+    tok := tab(many(&letters ++ '_'))
+    tab(many(spaces))
+    tokval := tab(0)
+  }
+  return token_record(line_no, column_no, tok, tokval)
+end
+
+procedure parse (gettok)
+  local tok
+  local t
+
+  t := []
+  @gettok.nxt
+  tok := "Not End_of_input"
+  while tok ~== "End_of_input" do {
+    t := ["Sequence", t, stmt(gettok)]
+    tok := (@gettok.curr).tok
+  }
+  return t
+end
+
+procedure stmt (gettok)
+  local e, s, t, v
+  local tok
+  local done
+
+  t := []
+  if accept(gettok, "Keyword_if") then {
+    e := paren_expr(gettok)
+    s := stmt(gettok)
+    t := ["If", e, ["If", s,
+                    if accept(gettok, "Keyword_else")
+                    then stmt(gettok) else []]]
+  } else if accept(gettok, "Keyword_putc") then {
+    t := ["Prtc", paren_expr(gettok), []]
+    expect(gettok, "Putc", "Semicolon")
+  } else if accept(gettok, "Keyword_print") then {
+    expect(gettok, "Print", "LeftParen")
+    done := &no
+    while /done do {
+      tok := @gettok.curr
+      if tok.tok == "String" then {
+        e := ["Prts", ["String", tok.tokval], []]
+        @gettok.nxt
+      } else {
+        e := ["Prti", expr(gettok, 0), []]
+      }
+      t := ["Sequence", t, e]
+      accept(gettok, "Comma") | (done := &yes)
+    }
+    expect(gettok, "Print", "RightParen")
+    expect(gettok, "Print", "Semicolon")
+  } else if (@gettok.curr).tok == "Semicolon" then {
+    @gettok.nxt
+  } else if (@gettok.curr).tok == "Identifier" then {
+    v := ["Identifier", (@gettok.curr).tokval]
+    @gettok.nxt
+    expect(gettok, "assign", "Op_assign")
+    t := ["Assign", v, expr(gettok, 0)]
+    expect(gettok, "assign", "Semicolon")
+  } else if accept(gettok, "Keyword_while") then {
+    e := paren_expr(gettok)
+    t := ["While", e, stmt(gettok)]
+  } else if accept(gettok, "LeftBrace") then {
+    until (@gettok.curr).tok == ("RightBrace" | "End_of_input") do {
+      t := ["Sequence", t, stmt(gettok)]
+    }
+    expect(gettok, "Lbrace", "RightBrace")
+  } else if (@gettok.curr).tok ~== "End_of_input" then {
+    tok := @gettok.curr
+    error(tok, ("expecting start of statement, found '" ||
+                tok_text(tok.tok) || "'"))
+  }
+  return t
+end
+
+procedure paren_expr (gettok)
+  local x
+
+  expect(gettok, "paren_expr", "LeftParen");
+  x := expr(gettok, 0);
+  expect(gettok, "paren_expr", "RightParen");
+  return x
+end
+
+procedure expr (gettok, p)
+  local tok, save_tok
+  local x, y
+  local q
+
+  tok := @gettok.curr
+  case tok.tok of {
+    "LeftParen" : {
+      x := paren_expr(gettok)
+    }
+    "Op_subtract" : {
+      @gettok.nxt
+      y := expr(gettok, precedence("Op_negate"))
+      x := ["Negate", y, []]
+    }
+    "Op_add" : {
+      @gettok.nxt
+      x := expr(gettok, precedence("Op_negate"))
+    }
+    "Op_not" : {
+      @gettok.nxt
+      y := expr(gettok, precedence("Op_not"))
+      x := ["Not", y, []]
+    }
+    "Identifier" : {
+      x := ["Identifier", tok.tokval]
+      @gettok.nxt
+    }
+    "Integer" : {
+      x := ["Integer", tok.tokval]
+      @gettok.nxt
+    }
+    default : {
+      error(tok, "Expecting a primary, found: " || tok_text(tok.tok))
+    }
+  }
+
+  while (tok := @gettok.curr &
+         is_binary(tok.tok) &
+         p <= precedence(tok.tok)) do
+      {
+        save_tok := tok
+        @gettok.nxt
+        q := precedence(save_tok.tok)
+        if not is_right_associative(save_tok.tok) then q +:= 1
+        x := [operator(save_tok.tok), x, expr(gettok, q)]
+      }
+
+  return x
+end
+
+procedure accept (gettok, tok)
+  local nxt
+
+  if (@gettok.curr).tok == tok then nxt := @gettok.nxt else fail
+  return nxt
+end
+
+procedure expect (gettok, msg, tok)
+  if (@gettok.curr).tok ~== tok then {
+    error(@gettok.curr,
+          msg || ": Expecting '" || tok_text(tok) || "', found '" ||
+          tok_text((@gettok.curr).tok) || "'")
+  }
+  return @gettok.nxt
+end
+
+procedure error (token, msg)
+  write("(", token.line_no, ", ", token.column_no, ") error: ", msg)
+  exit(1)
+end
+
+procedure precedence (tok)
+  local p
+
+  case tok of {
+    "Op_multiply" : p := 13
+    "Op_divide" : p := 13
+    "Op_mod" : p := 13
+    "Op_add" : p := 12
+    "Op_subtract" : p := 12
+    "Op_negate" : p := 14
+    "Op_not" : p := 14
+    "Op_less" : p := 10
+    "Op_lessequal" : p := 10
+    "Op_greater" : p := 10
+    "Op_greaterequal" : p := 10
+    "Op_equal" : p := 9
+    "Op_notequal" : p := 9
+    "Op_and" : p := 5
+    "Op_or" : p := 4
+    default : p := -1
+  }
+  return p
+end
+
+procedure is_binary (tok)
+  return ("Op_add" |
+          "Op_subtract" |
+          "Op_multiply" |
+          "Op_divide" |
+          "Op_mod" |
+          "Op_less" |
+          "Op_lessequal" |
+          "Op_greater" |
+          "Op_greaterequal" |
+          "Op_equal" |
+          "Op_notequal" |
+          "Op_and" |
+          "Op_or") == tok
+  fail
+end
+
+procedure is_right_associative (tok)
+  # None of the current operators is right associative.
+  fail
+end
+
+procedure operator (tok)
+  local s
+
+  case tok of {
+    "Op_multiply" : s := "Multiply"
+    "Op_divide" : s := "Divide"
+    "Op_mod" : s := "Mod"
+    "Op_add" : s := "Add"
+    "Op_subtract" : s := "Subtract"
+    "Op_negate" : s := "Negate"
+    "Op_not" : s := "Not"
+    "Op_less" : s := "Less"
+    "Op_lessequal" : s := "LessEqual"
+    "Op_greater" : s := "Greater"
+    "Op_greaterequal" : s := "GreaterEqual"
+    "Op_equal" : s := "Equal"
+    "Op_notequal" : s := "NotEqual"
+    "Op_and" : s := "And"
+    "Op_or" : s := "Or"
+  }
+  return s
+end
+
+procedure tok_text (tok)
+  local s
+
+  case tok of {
+    "Keyword_else"    :  s := "else"
+    "Keyword_if"      :  s := "if"
+    "Keyword_print"   :  s := "print"
+    "Keyword_putc"    :  s := "putc"
+    "Keyword_while"   :  s := "while"
+    "Op_multiply"     :  s := "*"
+    "Op_divide"       :  s := "/"
+    "Op_mod"          :  s := "%"
+    "Op_add"          :  s := "+"
+    "Op_subtract"     :  s := "-"
+    "Op_negate"       :  s := "-"
+    "Op_less"         :  s := "<"
+    "Op_lessequal"    :  s := "<="
+    "Op_greater"      :  s := ">"
+    "Op_greaterequal" :  s := ">="
+    "Op_equal"        :  s := "=="
+    "Op_notequal"     :  s := "!="
+    "Op_not"          :  s := "!"
+    "Op_assign"       :  s := "="
+    "Op_and"          :  s := "&&"
+    "Op_or"           :  s := "||"
+    "LeftParen"       :  s := "("
+    "RightParen"      :  s := ")"
+    "LeftBrace"       :  s := "{"
+    "RightBrace"      :  s := "}"
+    "Semicolon"       :  s := ";"
+    "Comma"           :  s := ","
+    "Identifier"      :  s := "Ident"
+    "Integer"         :  s := "Integer literal"
+    "String"          :  s := "String literal"
+    "End_of_input"    :  s := "EOI"
+  }
+  return s
+end

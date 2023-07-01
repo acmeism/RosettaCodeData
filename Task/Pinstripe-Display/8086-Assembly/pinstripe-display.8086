@@ -1,0 +1,80 @@
+	;;; Display pinstripes on a PC, using 8086 assembly.
+	;;; The 640x200 CGA video mode is used. If you are on an MDA, the
+	;;; program does not run.
+	bits	16
+	cpu	8086
+	;;; IBM BIOS (INT 10h) calls
+vmode:	equ	0Fh	; Get current video mode
+	;;; Video modes
+MDATXT:	equ	7	; MDA text mode (to check current mode against)
+CGAHI:	equ	6	; CGA "high resolution" mode (640x200)
+	;;; Video memory
+M_EVEN:	equ	0B800h	; Video memory segment for even scanlines
+M_ODD:	equ	0BA00h	; Video memory segment for odd scanlines
+section .text
+	org	100h	
+	cld			; Make sure string instructions go forward
+	mov	ah,vmode	; Get current video mode
+	int	10h
+	cmp	al,MDATXT	; Are we in MDA text mode?
+	jne	gr_ok
+	ret			; Then stop (no graphics support)
+gr_ok:	mov	[oldmod],al	; otherwise, store old graphics mode,
+	mov	ax,CGAHI 	; and switch to hi-res CGA mode
+	int	10h
+	;;;	There are 200 lines on the screen, but even and odd scanlines
+	;;;	are stored separately. Because we're drawing vertical lines
+	;;;	at a quarter of the screen, every odd scanline matches the
+	;;;	even one before it. This means we really only need 100 lines,
+	;;;	which means a quarter of the screen is 25 lines. There are
+	;;;	640 pixels per line, so each quarter consists of 16.000 pixels,
+	;;;	or 2000 bytes, or 1000 words.
+	mov	bp,1000		; Keep a '1000' constant loaded
+	mov	ax,M_EVEN	; Start with the even scan lines
+	mov	dl,2		; Let DL = 2 (we are doing the loop twice)
+screen:	mov	es,ax		; Let ES be the video segment
+	xor	di,di		; Start at the beginning
+	mov	si,one		; Starting with pattern one
+	lodsw
+	mov	cx,bp		; Write 1000 words of pattern one
+	rep	stosw
+	lodsw
+	mov	cx,bp		; Write 1000 words of pattern two
+	rep	stosw
+	lodsb			; Pattern three is more complicated
+	xchg	al,bl 		; Let BL be the 3rd byte,
+	lodsw			; and AX be the first two.
+	mov	bh,25		; We need to write 25 lines, 	
+quart3:	mov	cx,26		; and every line we need to write 26*3 bytes
+line3:	stosw
+	xchg	al,bl
+	stosb
+	xchg	al,bl
+	loop	line3
+	stosw			; Plus two final bytes per line
+	dec	bh
+	jnz	quart3
+	lodsw			; Finally, write 1000 words of pattern four
+	mov	cx,bp		
+	rep	stosw
+	mov	ax,M_ODD	; Then, do the odd scanlines
+	dec	dl		; If we haven't already done them
+	jnz	screen
+	;;;	We are now done. Wait for a key, restore the old video mode,
+	;;;	and exit.
+	xor	ah,ah		; Wait for a key
+	int	16h
+	xor	ah,ah		; Restore the old video mode
+	mov	al,[oldmod]
+	int	10h
+	ret			; And exit
+section	.data
+	;;; Pattern data
+one:	dw	0AAAAh	; one on, one off pattern
+two:	dw	0CCCCh	; two on, two off pattern
+three:	db	38h	; three isn't divisible by 16
+	dw	8EE3h	; we need 24 bits for the pattern to repeat
+four:	dw	0F0F0h	; four on, four off pattern
+section	.bss
+oldmod:	resb	1	; place to keep old video mode, in order to
+			; restore it.

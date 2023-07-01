@@ -1,0 +1,3 @@
+class Animal{
+   //contents go here...
+}

@@ -1,0 +1,20 @@
+"First 1000000 primes: transitions between end digits of consecutive primes.
+1 → 1     count: 42853     preference for 1: 17.15%     overall occurrence: 4.29%
+1 → 3     count: 77475     preference for 3: 31.0%     overall occurrence: 7.75%
+1 → 7     count: 79453     preference for 7: 31.79%     overall occurrence: 7.95%
+1 → 9     count: 50153     preference for 9: 20.07%     overall occurrence: 5.02%
+2 → 3     count: 1     preference for 3: 100.0%     overall occurrence: 0.0%
+3 → 1     count: 58255     preference for 1: 23.29%     overall occurrence: 5.83%
+3 → 3     count: 39668     preference for 3: 15.86%     overall occurrence: 3.97%
+3 → 5     count: 1     preference for 5: 0.0%     overall occurrence: 0.0%
+3 → 7     count: 72827     preference for 7: 29.12%     overall occurrence: 7.28%
+3 → 9     count: 79358     preference for 9: 31.73%     overall occurrence: 7.94%
+5 → 7     count: 1     preference for 7: 100.0%     overall occurrence: 0.0%
+7 → 1     count: 64230     preference for 1: 25.69%     overall occurrence: 6.42%
+7 → 3     count: 68595     preference for 3: 27.44%     overall occurrence: 6.86%
+7 → 7     count: 39603     preference for 7: 15.84%     overall occurrence: 3.96%
+7 → 9     count: 77586     preference for 9: 31.03%     overall occurrence: 7.76%
+9 → 1     count: 84596     preference for 1: 33.85%     overall occurrence: 8.46%
+9 → 3     count: 64371     preference for 3: 25.75%     overall occurrence: 6.44%
+9 → 7     count: 58130     preference for 7: 23.26%     overall occurrence: 5.81%
+9 → 9     count: 42843     preference for 9: 17.14%     overall occurrence: 4.28%"

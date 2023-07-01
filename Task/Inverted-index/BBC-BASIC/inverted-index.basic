@@ -1,0 +1,72 @@
+      DIM FileList$(4)
+      FileList$() = "BBCKEY0.TXT", "BBCKEY1.TXT", "BBCKEY2.TXT", \
+      \             "BBCKEY3.TXT", "BBCKEY4.TXT"
+
+      DictSize% = 30000
+      DIM Index{(DictSize%-1) word$, link%}
+
+      REM Build inverted index:
+      FOR file% = DIM(FileList$(),1) TO 0 STEP -1
+        filename$ = FileList$(file%)
+        F% = OPENIN(filename$)
+        IF F% = 0 ERROR 100, "Failed to open file"
+
+        WHILE NOT EOF#F%
+          REPEAT C%=BGET#F% : UNTIL C%>64 OR EOF#F% : word$ = CHR$(C%)
+          REPEAT C%=BGET#F% : word$ += CHR$(C%) : UNTIL C%<65
+          word$ = FNlower(LEFT$(word$))
+
+          hash% = FNhash(word$)
+          WHILE Index{(hash%)}.word$<>"" AND Index{(hash%)}.word$<>word$
+            hash% = (hash% + 1) MOD DictSize% : REM Collision
+          ENDWHILE
+          Index{(hash%)}.word$ = word$
+          link% = Index{(hash%)}.link%
+          IF link%=0 OR link%!4<>file% THEN
+            DIM heap% 7 : heap%!4 = file%
+            !heap% = link%
+            Index{(hash%)}.link% = heap% : REM Linked list
+          ENDIF
+        ENDWHILE
+
+        CLOSE #F%
+      NEXT file%
+
+      REM Now query the index:
+      PRINT FNquery("random")
+      PRINT FNquery("envelope")
+      PRINT FNquery("zebra")
+      PRINT FNquery("the")
+      END
+
+      DEF FNquery(A$)
+      LOCAL hash%, link%, temp%
+      A$ = FNlower(A$)
+      hash% = FNhash(A$)
+      temp% = hash%
+      WHILE Index{(hash%)}.word$ <> A$
+        hash% = (hash% + 1) MOD DictSize%
+        IF hash% = temp% THEN = """" + A$ + """ not found"
+      ENDWHILE
+      link% = Index{(hash%)}.link%
+      A$ = """" + A$ + """ found in "
+      WHILE link%
+        A$ += FileList$(link%!4) + ", "
+        link% = !link%
+      ENDWHILE
+      = LEFT$(LEFT$(A$))
+
+      DEF FNhash(A$)
+      LOCAL hash%
+      IF LEN(A$) < 4 A$ += STRING$(4-LEN(A$),CHR$0)
+      hash% = !!^A$
+      IF LEN(A$) > 4 hash% EOR= !(!^A$ + LEN(A$) - 4)
+      = hash% MOD DictSize%
+
+      DEF FNlower(A$)
+      LOCAL A%,C%
+      FOR A% = 1 TO LEN(A$)
+        C% = ASCMID$(A$,A%)
+        IF C% >= 65 IF C% <= 90 MID$(A$,A%,1) = CHR$(C%+32)
+      NEXT
+      = A$

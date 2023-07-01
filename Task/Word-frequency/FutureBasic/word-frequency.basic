@@ -1,0 +1,96 @@
+include "NSLog.incl"
+
+local fn WordFrequency( textStr as CFStringRef, caseSensitive as Boolean, ascendingOrder as Boolean ) as CFStringRef
+'~'1
+CFStringRef     wrd
+CFDictionaryRef dict
+
+// Depending on the value of the caseSensitive Boolean function parameter above, lowercase incoming text
+if caseSensitive == NO then textStr = fn StringLowercaseString( textStr )
+
+// Trim non-alphabetic characters from string, and separate individual words with a space
+CFStringRef tempStr = fn ArrayComponentsJoinedByString( fn StringComponentsSeparatedByCharactersInSet( textStr, fn CharacterSetInvertedSet( fn CharacterSetLetterSet ) ), @" " )
+
+// Prepare separators to parse string into array
+CFMutableCharacterSetRef separators = fn MutableCharacterSetInit
+
+// Informally, this set is the set of all non-whitespace characters used to separate linguistic units in scripts, such as periods, dashes, parentheses, and so on.
+MutableCharacterSetFormUnionWithCharacterSet( separators, fn CharacterSetPunctuationSet )
+
+// A character set containing all the whitespace and newline characters including characters in Unicode General Category Z*, U+000A U+000D, and U+0085.
+MutableCharacterSetFormUnionWithCharacterSet( separators, fn CharacterSetWhitespaceAndNewlineSet )
+
+// Create array of separated words
+CFArrayRef tempArr = fn StringComponentsSeparatedByCharactersInSet( tempStr, separators )
+
+// Create a counted set with each word and its frequency
+CountedSetRef freqencies = fn CountedSetWithArray( tempArr )
+
+// Enumerate each word-frequency pair in the counted set...
+EnumeratorRef enumRef = fn CountedSetObjectEnumerator( freqencies )
+
+// .. and use it to create array of words in counted set
+CFArrayRef array = fn EnumeratorAllObjects( enumRef )
+
+// Create an empty mutable array
+CFMutableArrayRef wordArr = fn MutableArrayWithCapacity( 0 )
+
+// Create word counter
+NSInteger totalWords = 0
+// Enumerate each unique word, get its frequency, create its own key/value pair dictionary, add each dictionary into master array
+for wrd in array
+totalWords++
+// Create dictionary with frequency and matching word
+dict = @{ @"count":fn NumberWithUnsignedInteger( fn CountedSetCountForObject( freqencies, wrd ) ), @"object":wrd }
+// Add each dictionary to the master mutable array, checking for a valid word by length
+if ( fn StringLength( wrd ) != 0 )
+MutableArrayAddObject( wordArr, dict )
+end if
+next
+
+// Store the total words as a global application property
+AppSetProperty( @"totalWords", fn StringWithFormat( @"%d", totalWords - 1 ) )
+
+// Sort the array in ascending or descending order as determined by the ascendingOrder Boolean function input parameter
+SortDescriptorRef descriptors = fn SortDescriptorWithKey( @"count", ascendingOrder )
+CFArrayRef sortedArray = fn ArraySortedArrayUsingDescriptors( wordArr, @[descriptors] )
+
+// Create an empty mutable string
+CFMutableStringRef mutStr = fn MutableStringWithCapacity( 0 )
+
+// Use each dictionary in sorted array to build the formatted output string
+NSInteger count = 1
+for dict in sortedArray
+MutableStringAppendString( mutStr, fn StringWithFormat( @"%-7d %-7lu %@\n", count, fn StringIntegerValue( fn DictionaryValueForKey( dict, @"count" ) ), fn DictionaryValueForKey( dict, @"object"  ) ) )
+count++
+next
+
+// Create an immutable output string from mutable the string
+CFStringRef resultStr = fn StringWithFormat( @"%@", mutStr )
+end fn = resultStr
+
+
+local fn ParseTextFromWebsite( webSite as CFStringRef )
+// Convert incoming string to URL
+CFURLRef textURL = fn URLWithString( webSite )
+// Read contents of URL into a string
+CFStringRef textStr = fn StringWithContentsOfURL( textURL, NSUTF8StringEncoding, NULL )
+
+// Start timer
+CFAbsoluteTime startTime = fn CFAbsoluteTimeGetCurrent
+// Calculate frequency of words in text and sort by occurrence
+CFStringRef frequencyStr = fn WordFrequency( textStr, NO, NO )
+// Log results and post post processing time
+NSLogClear
+NSLog( @"%@", frequencyStr )
+NSLog( @"Total unique words in document: %@", fn AppProperty( @"totalWords" ) )
+// Stop timer and log elapsed processing time
+NSLog( @"Elapsed time: %f milliseconds.", ( fn CFAbsoluteTimeGetCurrent - startTime ) * 1000.0 )
+end fn
+
+dispatchglobal
+// Pass url for Les Misérables on Project Gutenberg and parse in background
+fn ParseTextFromWebsite( @"https://www.gutenberg.org/files/135/135-0.txt" )
+dispatchend
+
+HandleEvents

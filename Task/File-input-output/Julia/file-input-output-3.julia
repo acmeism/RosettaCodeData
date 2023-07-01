@@ -1,0 +1,5 @@
+infile = open("file1", "r")
+outfile = open("file2", "w")
+write(outfile, read(infile, String))
+close(outfile)
+close(infile)

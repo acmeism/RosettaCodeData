@@ -1,0 +1,23 @@
+BEGIN
+
+INTEGER FUNCTION DIVBY(N, D);
+INTEGER N;
+INTEGER D;
+BEGIN
+  DIVBY := 1 - (N - D * (N / D));
+END;
+
+INTEGER I;
+FOR I := 1 STEP 1 UNTIL 100 DO
+BEGIN
+  IF DIVBY(I, 15) = 1 THEN
+    WRITE("FizzBuzz")
+  ELSE IF DIVBY(I, 5) = 1 THEN
+    WRITE("Buzz")
+  ELSE IF DIVBY(I, 3) = 1 THEN
+    WRITE("Fizz")
+  ELSE
+    WRITE(I);
+END;
+
+END

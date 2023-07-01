@@ -1,0 +1,2 @@
+trace("foo", recover)
+foo()

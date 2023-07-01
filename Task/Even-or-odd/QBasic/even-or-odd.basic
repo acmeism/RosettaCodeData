@@ -1,0 +1,3 @@
+FOR i = 1 TO 10
+  IF i AND 1 THEN PRINT i; " is odd" ELSE PRINT i; " is even"
+NEXT i

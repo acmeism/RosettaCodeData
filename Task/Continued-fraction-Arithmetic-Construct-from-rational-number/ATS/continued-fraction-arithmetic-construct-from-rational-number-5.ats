@@ -1,0 +1,134 @@
+(* Continued fractions as linear lazy lists (stream_vt types).
+
+   I use the shorthands stream_vt_make_nil and stream_vt_make_cons,
+   rather than explicitly write "$ldelay". To see how the shorthands
+   are implemented, see prelude/DATS/stream_vt.dats *)
+
+#include "share/atspre_staload.hats"
+
+vtypedef cf_vt (tk : tkind) = stream_vt (g0int tk)
+
+extern fn {tk : tkind}
+r2cf_vt : (g0int tk, g0int tk) -> cf_vt tk
+
+(* Note that cf_vt2strptr CONSUMES the stream. The stream will no
+   longer exist.
+
+   If you are using linear streams, I would imagine you might want to
+   (for instance) convert to list_vt the parts you want to reuse. *)
+extern fn {tk : tkind}
+cf_vt2strptr : cf_vt tk -> Strptr1
+
+implement {tk}
+r2cf_vt (n, d) =
+  let
+    typedef integer = g0int tk
+    fun
+    recurs (n : integer,
+            d : integer)
+        : cf_vt tk =
+      if iseqz d then
+        stream_vt_make_nil<integer> ()
+      else
+        let
+          val q = n / d
+          and r = n mod d
+        in
+          stream_vt_make_cons<integer> (q, recurs (d, r))
+        end
+  in
+    recurs (n, d)
+  end
+
+implement {tk}
+cf_vt2strptr cf =
+  let
+    val max_terms = 2000
+
+    typedef integer = g0int tk
+
+    fun
+    loop (i     : intGte 0,
+          cf    : cf_vt tk,
+          slist : List0_vt Strptr1)
+        : List0_vt Strptr1 =
+      let
+        val cf_con = !cf        (* Force evaluation. *)
+      in
+        case+ cf_con of
+        | ~ stream_vt_nil () => list_vt_cons (copy "]", slist)
+        | ~ stream_vt_cons (term, tail) =>
+          if i = max_terms then
+            let
+              val slist = list_vt_cons (copy ",...]", slist)
+            in
+              ~ tail;
+              slist
+            end
+          else
+            let
+              val sep_str =
+                copy ((case+ i of
+                       | 0 => ""
+                       | 1 => ";"
+                       | _ => ",") : string)
+              val term_str = tostrptr_val<g0int tk> term
+              val slist = list_vt_cons (term_str,
+                                        list_vt_cons (sep_str, slist))
+          in
+            loop (succ i, tail, slist)
+          end
+      end
+
+    val slist = loop (0, cf, list_vt_sing (copy "["))
+    val slist = reverse slist
+    val s = strptrlst_concat slist
+    val () = assertloc (isneqz s)
+  in
+    s
+  end
+
+fn {tk : tkind}
+show (n : g0int tk,
+      d : g0int tk)
+    : void =
+  let
+    val n_str = tostrptr_val<g0int tk> n
+    and d_str = tostrptr_val<g0int tk> d
+    and cf_str = cf_vt2strptr<tk> (r2cf_vt<tk> (n, d))
+  in
+    print! n_str;
+    print! "/";
+    print! d_str;
+    print! " => ";
+    println! cf_str;
+    strptr_free n_str;
+    strptr_free d_str;
+    strptr_free cf_str
+  end
+
+implement
+main () =
+  begin
+    show<intknd> (1, 2);
+    show<lintknd> (g0i2i 3, g0i2i 1);
+    show<llintknd> (g0i2i 23, g0i2i 8);
+    show (13, 11);
+    show (22L, 11L);
+    show (~151LL, 77LL);
+    show (14142LL, 10000LL);
+    show (141421LL, 100000LL);
+    show (1414214LL, 1000000LL);
+    show (14142136LL, 10000000LL);
+    show (1414213562373095049LL, 1000000000000000000LL);
+    show (31LL, 10LL);
+    show (314LL, 100LL);
+    show (3142LL, 1000LL);
+    show (31428LL, 10000LL);
+    show (314285LL, 100000LL);
+    show (3142857LL, 1000000LL);
+    show (31428571LL, 10000000LL);
+    show (314285714LL, 100000000LL);
+    show (3142857142857143LL, 1000000000000000LL);
+    0
+  end;

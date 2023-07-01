@@ -1,0 +1,6 @@
+(defun sum-3-5 (n)
+  (let ((sum 0))
+    (dotimes (x n)
+      (when (or (zerop (% x 3)) (zerop (% x 5)))
+        (setq sum (+ sum x))))
+    sum))

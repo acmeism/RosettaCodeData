@@ -1,0 +1,374 @@
+(*------------------------------------------------------------------*)
+
+#define ATS_DYNLOADFLAG 0
+#define ATS_PACKNAME "Rosetta_Code.bitmap_task"
+
+#include "share/atspre_staload.hats"
+
+staload "bitmap_task.sats"
+
+(*------------------------------------------------------------------*)
+
+(* The actual type, normally not seen by the user, is a boxed
+   record. *)
+datavtype _pixmap (a : t@ype, w : int, h : int, p : addr) =
+| _pixmap of
+    @{
+      pf = array_v (a, p, w * h) |
+      w  = size_t w,
+      h  = size_t h,
+      p  = ptr p
+    }
+
+(* Here is one of the ways to tie an abstract type to its
+   implementation: *)
+assume pixmap (a, w, h, p) = _pixmap (a, w, h, p)
+(* Another way is to use casts. *)
+
+(*------------------------------------------------------------------*)
+
+implement {}
+pixmap_width pix =
+  case+ pix of _pixmap record => record.w
+
+implement {}
+pixmap_height pix =
+  case+ pix of _pixmap record => record.h
+
+implement {a}
+pixmap_make_array (pf | w, h, p) =
+  _pixmap @{pf = pf | w = w, h = h, p = p}
+
+implement {a}
+pixmap_unmake pix =
+  case+ pix of
+  | ~ _pixmap @{pf = pf | w = w, h = h, p = p} => @(pf | w, h, p)
+
+primplement
+pixmap_prove_index_bounds {w, h} {x, y} () =
+  let
+    prval () = mul_gte_gte_gte {y, w} ()
+    prval () = mul_gte_gte_gte {h - (y + 1), w} ()
+  in
+  end
+
+implement {a}
+pixmap_make_uninitized {w, h} (w, h) =
+  let
+    prval () = lemma_g1uint_param w      (* Proves w >= 0. *)
+    prval () = lemma_g1uint_param h      (* Proves h >= 0. *)
+    prval () = mul_gte_gte_gte {w, h} () (* Proves w*h >= 0. *)
+
+    val @(pf, pfgc | p) = array_ptr_alloc<a> (w * h)
+    val pix = pixmap_make<a?> (pf | w, h, p)
+  in
+    @(pfgc | pix)
+  end
+
+implement {a}
+pixmap_make_elt (w, h, elt) =
+  let
+    val @(pfgc | pix) = pixmap_make<a> (w, h)
+  in
+    fill<a> (pix, elt);
+    @(pfgc | pix)
+  end
+
+implement {}
+pixmap_free_storage_return pix =
+  case+ pix of
+  | ~ _pixmap record => @(record.pf | record.p)
+
+implement {}
+pixmap_free_storage_free (pfgc | pix) =
+  let
+    val @(pf | p) = pixmap_free pix
+  in
+    array_ptr_free (pf, pfgc | p)
+  end
+
+implement {a}
+pixmap_fill_elt {w, h} {p} (pix, elt) =
+  case+ pix of
+  | @ _pixmap record =>
+    let
+      prval () = lemma_g1uint_param (record.w)
+      prval () = lemma_g1uint_param (record.h)
+      prval () = mul_gte_gte_gte {w, h} ()
+      stadef n = w * h
+      val n : size_t n = record.w * record.h
+      and p : ptr p = record.p
+
+      fun
+      loop {i : nat | i <= n}
+           .<n - i>.
+           (pf_lft : array_v (a, p, i),
+            pf_rgt : array_v (a?, p + (i * sizeof a), n - i) |
+            i      : size_t i)
+          : @(array_v (a, p, n) | ) =
+        if i = n then
+          let
+            prval () = array_v_unnil pf_rgt
+          in
+            @(pf_lft | )
+          end
+        else
+          let
+            prval @(pf_elt, pf_rgt) = array_v_uncons pf_rgt
+            val () = ptr_set<a> (pf_elt | ptr_add<a> (p, i), elt)
+            prval pf_lft = array_v_extend (pf_lft, pf_elt)
+          in
+            loop (pf_lft, pf_rgt | succ i)
+          end
+
+      val @(pf | ) = loop (array_v_nil (), record.pf | i2sz 0)
+      prval () = record.pf := pf
+      prval () = fold@ pix
+    in
+    end
+
+implement {a} {tk}
+pixmap_set_at_guint {w, h} {x, y} (pix, x, y, elt) =
+  case+ pix of
+  | @ _pixmap record =>
+    let
+      prval () = lemma_g1uint_param x
+      prval () = lemma_g1uint_param y
+
+      stadef n = w * h
+      stadef i = x + (y * w)
+
+      prval () = pixmap_prove_index_bounds {w, h} {x, y} ()
+      prval () = prop_verify {0 <= i && i < n} ()
+
+      (* I purposely store the data in an order such that you can
+         write something such as a PPM without looping separately
+         over x and y. Also, even if you did do an outer loop over y
+         and an inner loop over x, you would get the advantage of
+         data locality. *)
+      val i : size_t i = g1u2u x + (g1u2u y * record.w)
+      macdef pixels = !(record.p)
+      val () = pixels[i] := elt
+
+      prval () = fold@ pix
+    in
+    end
+
+implement {a} {tk}
+pixmap_set_at_gint (pix, x, y, elt) =
+  pixmap_set_at_guint<a><sizeknd> (pix, g1i2u x, g1i2u y, elt)
+
+implement {a} {tk}
+pixmap_get_at_guint {w, h} {x, y} (pix, x, y) =
+  case+ pix of
+  | @ _pixmap record =>
+    let
+      prval () = lemma_g1uint_param x
+      prval () = lemma_g1uint_param y
+
+      stadef n = w * h
+      stadef i = x + (y * w)
+
+      prval () = pixmap_prove_index_bounds {w, h} {x, y} ()
+      prval () = prop_verify {0 <= i && i < n} ()
+
+      val i : size_t i = g1u2u x + (g1u2u y * record.w)
+      macdef pixels = !(record.p)
+      val elt = pixels[i]
+
+      prval () = fold@ pix
+    in
+      elt
+    end
+
+implement {a} {tk}
+pixmap_get_at_gint (pix, x, y) =
+  pixmap_get_at_guint<a><sizeknd> (pix, g1i2u x, g1i2u y)
+
+implement {a}
+pixmap_dump (outf, pix) =
+  case+ pix of
+  | @ _pixmap record =>
+    let
+      macdef pixels = !(record.p)
+      val n = record.w * record.h
+      val success = pixmap$pixels_dump<a> (outf, pixels, n)
+      prval () = fold@ pix
+    in
+      success
+    end
+
+implement {a}
+pixmap_load (inpf, pix, elt) =
+  case+ pix of
+  | @ _pixmap record =>
+    let
+      macdef pixels = !(record.p)
+      val n = record.w * record.h
+      val success = pixmap$pixels_load<a> (inpf, pixels, n, elt)
+      prval () = fold@ pix
+    in
+      success
+    end
+
+(*------------------------------------------------------------------*)
+
+typedef FILEstar = $extype"FILE *"
+extern castfn FILEref2star : FILEref -<> FILEstar
+
+implement
+pixmap$pixels_dump<rgb24> (outf, pixels, n) =
+  let
+    val num_written =
+      $extfcall (size_t, "fwrite", addr@ pixels, sizeof<rgb24>, n,
+                 FILEref2star outf)
+  in
+    num_written = n
+  end
+
+implement
+pixmap$pixels_load<rgb24> (inpf, pixels, n, elt) =
+  let
+    prval [n : int] EQINT () = eqint_make_guint n
+    val num_read =
+      $extfcall (size_t, "fread", addr@ pixels, sizeof<rgb24>, n,
+                 FILEref2star inpf)
+  in
+    if num_read = n then
+      let
+        prval () = $UNSAFE.castvwtp2void{@[rgb24][n]} pixels
+      in
+        true
+      end
+    else
+      begin
+        array_initize_elt<rgb24> (pixels, n, elt);
+        false
+      end
+  end
+
+(*------------------------------------------------------------------*)
+
+assume rgb24 = @(uint8, uint8, uint8)
+
+implement {tk}
+rgb24_make_uint_uint_uint (r, g, b) =
+  let
+    (* The prelude tends to miss implementations for type conversions
+       to uint8, so let us at least implement conversion from uint to
+       uint8. (I do not wish to use a general unsafe cast, because
+       that sort of code has caused me bugs before. C does not always
+       know how to do a type conversion correctly.) The ats2-xprelude
+       package has a much more complete set of implementations
+       (generated en masse by m4 macros), but for this task I am
+       avoiding such dependencies. *)
+    implement
+    g0uint2uint<uintknd,uint8knd> i =
+      let
+        extern castfn g0uint2uint_uint_uint8 : uint -<> uint8
+      in
+        g0uint2uint_uint_uint8 i
+      end
+  in
+    rgb24_make_tuple @(g0u2u r, g0u2u g, g0u2u b)
+  end
+
+implement {tk}
+rgb24_make_int_int_int (r, g, b) =
+  let
+    (* See the comment in rgb24_make_uint_uint_uint. *)
+    implement
+    g0int2uint<intknd,uint8knd> i =
+      let
+        extern castfn g0int2uint_int_uint8 : int -<> uint8
+      in
+        g0int2uint_int_uint8 i
+      end
+  in
+    rgb24_make @(g0i2u r, g0i2u g, g0i2u b)
+  end
+
+implement {}
+rgb24_make_tuple tup = tup
+
+implement {}
+rgb24_values rgb = rgb
+
+(*------------------------------------------------------------------*)
+
+#ifdef BITMAP_TASK_TEST #then
+
+%{^
+#include <limits.h>
+%}
+
+fn
+test_sizeof_rgb24 () : void =
+  (* We want to be sure rgb24 takes up exactly 24 bits. Our dump and
+     load implementations depend on that. (If it prove not the case on
+     some platform, one can write, for that unanticipated platform,
+     special implementations of dump and load.) *)
+  let
+    val- true = sizeof<rgb24> = i2sz 3
+    val- true = sizeof<rgb24> * $extval (size_t, "CHAR_BIT") = i2sz 24
+  in
+  end
+
+fn
+test_pixel_load_copy_dump () : void =
+  (* Test loading, copying, and dumping of raw 24-bit RGB data from
+     SIPI image "Peppers", 4.2.07.tiff:
+     https://sipi.usc.edu/database/database.php?volume=misc&image=13#top
+     I have the data stored as "4.2.07.raw". *)
+  let
+    val failure_color = rgb24_make (0xFF, 0x00, 0x00)
+
+    val @(pfgc1 | pix1) = pixmap_make<rgb24> (i2sz 512, i2sz 512)
+    val inpf = fileref_open_exn ("4.2.07.raw", file_mode_r)
+    val success = load<rgb24> (inpf, pix1, failure_color)
+    val () = fileref_close inpf
+    val- true = success
+
+    val @(pfgc2 | pix2) = pixmap_make<rgb24> (i2sz 512, i2sz 512,
+                                              failure_color)
+    fun
+    copy_pixels {x, y : nat | x <= 512; y <= 512}
+                .<512 - x, 512 - y>.
+                (pix1 : !pixmap (rgb24, 512, 512),
+                 pix2 : !pixmap (rgb24, 512, 512),
+                 x    : int x,
+                 y    : int y) : void =
+      if x = 512 then
+        ()
+      else if y = 512 then
+        copy_pixels (pix1, pix2, succ x, 0)
+      else
+        begin
+          pix2[x, y] := pix1[x, y];
+          copy_pixels (pix1, pix2, x, succ y)
+        end
+    val () = copy_pixels (pix1, pix2, 0, 0)
+
+    val outf = fileref_open_exn ("4.2.07.raw.dumped", file_mode_w)
+    val success = dump<rgb24> (outf, pix2)
+    val () = fileref_close outf
+    val- true = success
+
+    val status = $extfcall (int, "system",
+                            "cmp 4.2.07.raw 4.2.07.raw.dumped")
+    val- true = status = 0
+  in
+    free (pfgc1 | pix1);
+    free (pfgc2 | pix2)
+  end
+
+implement
+main0 () =
+  begin
+    test_sizeof_rgb24 ();
+    test_pixel_load_copy_dump ()
+  end
+
+#endif
+
+(*------------------------------------------------------------------*)

@@ -1,0 +1,33 @@
+Dim Shared As String B64
+B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ" & _
+"abcdefghijklmnopqrstuvwxyz" & _
+"0123456789+/"
+
+Function MIMEDecode(s As String ) As Integer
+    If Len(s) Then
+        MIMEdecode = Instr(B64,s) - 1
+    Else
+        MIMEdecode = -1
+    End If
+End Function
+
+Function Decode64(s As String) As String
+    Dim As Integer w1, w2, w3, w4
+    Dim As String  mD
+    For n As Integer = 1 To Len(s) Step 4
+        w1 = MIMEdecode(Mid(s,n+0,1))
+        w2 = MIMEdecode(Mid(s,n+1,1))
+        w3 = MIMEdecode(Mid(s,n+2,1))
+        w4 = MIMEdecode(Mid(s,n+3,1))
+        If w2 >-1 Then mD+= Chr(((w1* 4 + Int(w2/16)) And 255))
+        If w3 >-1 Then mD+= Chr(((w2*16 + Int(w3/ 4)) And 255))
+        If w4 >-1 Then mD+= Chr(((w3*64 + w4        ) And 255))
+    Next n
+    Return mD
+End Function
+
+Dim As String msg64 = "VG8gZXJyIGlzIGh1bWFuLCBidXQgdG8gcmVhbGx5IGZvdWwgdGhpbmdzIHVw" & _
+"IHlvdSBuZWVkIGEgY29tcHV0ZXIuCiAgICAtLSBQYXVsIFIuIEVocmxpY2g="
+Print msg64
+Print: Print(Decode64(msg64))
+Sleep

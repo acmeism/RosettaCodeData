@@ -1,0 +1,402 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program square4_64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ NBBOX,  7
+
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessDeb:           .asciz "a= @ b= @ c= @ d= @ e= @ f= @ g= @ \n***********************\n"
+
+szCarriageReturn:   .asciz "\n************************\n"
+
+sMessNbSolution:    .asciz "Number of solutions : @  \n\n\n"
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 8
+sZoneConv:                .skip 24
+qValues_a:                .skip 8 * NBBOX
+qValues_b:                .skip 8 * NBBOX - 1
+qValues_c:                .skip 8 * NBBOX - 2
+qValues_d:                .skip 8 * NBBOX - 3
+qValues_e:                .skip 8 * NBBOX - 4
+qValues_f:                .skip 8 * NBBOX - 5
+qValues_g:                .skip 8 * NBBOX - 6
+qCounterSol:              .skip 8
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            // entry of program
+    mov x0,#1
+    mov x1,#7
+    mov x2,#3                    // 0 = rien 1 = display 2 = count 3 = les deux
+    bl searchPb
+    mov x0,#3
+    mov x1,#9
+    mov x2,#3                    // 0 = rien 1 = display 2 = count 3 = les deux
+    bl searchPb
+    mov x0,#0
+    mov x1,#9
+    mov x2,#2                    // 0 = rien 1 = display 2 = count 3 = les deux
+    bl prepSearchNU
+
+100:                             // standard end of the program
+    mov x0, #0                   // return code
+    mov x8, #EXIT                // request to exit program
+    svc #0                       // perform the system call
+
+qAdrszCarriageReturn:            .quad szCarriageReturn
+
+/******************************************************************/
+/*     search problèm  value not unique                           */
+/******************************************************************/
+/* x0 contains start digit */
+/* x1 contains end digit */
+/* x2 contains action (0 display 1 count) */
+prepSearchNU:
+    stp x12,lr,[sp,-16]!         // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,x9,[sp,-16]!          // save  registres
+    stp x10,fp,[sp,-16]!         // save  registres
+    mov x5,#0                    // counter
+    mov x12,x0                   // a
+1:
+    mov x11,x0                   // b
+2:
+    mov x10,x0                   // c
+3:
+    mov x9,x0                    // d
+4:
+    add x4,x12,x11               // a + b reference
+    add x3,x11,x10
+    add x3,x3,x9                    // b + c + d
+    cmp x4,x3
+    bne 10f
+    mov x8,x0                    // e
+5:
+    mov x7,x0                    // f
+6:
+    add x3,x9,x8
+    add x3,x3,x7                    // d + e + f
+    cmp x3,x4
+    bne 9f
+    mov x6,x0                    // g
+7:
+    add x3,x7,x6                 // f + g
+    cmp x3,x4
+    bne 8f                       // not OK
+                                 // OK
+    add x5,x5,1                  // increment counter
+
+8:
+    add x6,x6,1                    // increment g
+    cmp x6,x1
+    ble 7b
+9:
+    add x7,x7,1                   // increment f
+    cmp x7,x1
+    ble 6b
+    add x8,x8,1                   // increment e
+    cmp x8,x1
+    ble 5b
+10:
+    add x9,x9,1                   // increment d
+    cmp x9,x1
+    ble 4b
+    add x10,x10,1                  // increment c
+    cmp x10,x1
+    ble 3b
+    add x11,x11,1                  // increment b
+    cmp x11,x1
+    ble 2b
+    add x12,x12,1                  // increment a
+    cmp x12,x1
+    ble 1b
+
+    // end
+    tst x2,#0b10                // print count ?
+    beq 100f
+    mov x0,x5                   // counter
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrsMessNbSolution
+    ldr x1,qAdrsZoneConv        // insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+
+
+100:
+
+    ldp x10,fp,[sp],16          // restaur des  2 registres
+    ldp x8,x9,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x12,lr,[sp],16           // restaur des  2 registres
+    ret
+//qAdrsMessCounter:                .quad sMessCounter
+qAdrsMessNbSolution:             .quad sMessNbSolution
+qAdrsZoneConv:                   .quad sZoneConv
+/******************************************************************/
+/*     search problem  unique solution                            */
+/******************************************************************/
+/* x0 contains start digit */
+/* x1 contains end digit */
+/* x2 contains action (0 display 1 count) */
+searchPb:
+    stp x12,lr,[sp,-16]!         // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,x9,[sp,-16]!          // save  registres
+    stp x10,fp,[sp,-16]!         // save  registres
+    mov x14,x2                   // save action
+    // init
+    ldr x3,qAdrqValues_a         // area value a
+    mov x4,#0
+1:                               // loop init value a
+    str x0,[x3,x4,lsl #3]
+    add x4,x4,1
+    add x0,x0,1
+    cmp x0,x1
+    ble 1b
+    mov x5,#0                    // solution counter
+    mov x12,#-1
+2:
+    add x12,x12,1                   // increment indice a
+    cmp x12,#NBBOX-1
+    bgt 90f
+    ldr x0,qAdrqValues_a         // area value a
+    ldr x1,qAdrqValues_b         // area value b
+    mov x2,x12                   // indice  a
+    mov x3,#NBBOX                // number of origin values
+    bl prepValues
+    mov x11,#-1
+3:
+    add x11,x11,1                                        // increment indice b
+    cmp x11,#NBBOX - 2
+    bgt 2b
+    ldr x0,qAdrqValues_b                              // area value b
+    ldr x1,qAdrqValues_c                              // area value c
+    mov x2,x11                                        // indice b
+    mov x3,#NBBOX -1                                  // number of origin values
+    bl prepValues
+    mov x10,#-1
+4:
+    add x10,x10,1
+    cmp x10,#NBBOX - 3
+    bgt 3b
+    ldr x0,qAdrqValues_c
+    ldr x1,qAdrqValues_d
+    mov x2,x10
+    mov x3,#NBBOX - 2
+    bl prepValues
+    mov x9,#-1
+5:
+    add x9,x9,1
+    cmp x9,#NBBOX - 4
+    bgt 4b
+    // control 2 firsts squares
+    ldr x0,qAdrqValues_a
+    ldr x0,[x0,x12,lsl #3]
+    ldr x1,qAdrqValues_b
+    ldr x1,[x1,x11,lsl #3]
+    add x4,x0,x1                               // a + b   value first square
+    ldr x0,qAdrqValues_c
+    ldr x0,[x0,x10,lsl #3]
+    add x7,x1,x0                               // b + c
+    ldr x1,qAdrqValues_d
+    ldr x1,[x1,x9,lsl #3]
+    add x7,x7,x1                                  // b + c + d
+    cmp x7,x4                                  // equal first square ?
+    bne 5b
+    ldr x0,qAdrqValues_d
+    ldr x1,qAdrqValues_e
+    mov x2,x9
+    mov x3,#NBBOX - 3
+    bl prepValues
+    mov x8,#-1
+6:
+    add x8,x8,1
+    cmp x8,#NBBOX - 5
+    bgt 5b
+    ldr x0,qAdrqValues_e
+    ldr x1,qAdrqValues_f
+    mov x2,x8
+    mov x3,#NBBOX - 4
+    bl prepValues
+    mov x7,#-1
+7:
+    add x7,x7,1
+    cmp x7,#NBBOX - 6
+    bgt 6b
+    ldr x0,qAdrqValues_d
+    ldr x0,[x0,x9,lsl #3]
+    ldr x1,qAdrqValues_e
+    ldr x1,[x1,x8,lsl #3]
+    add x3,x0,x1                                // d + e
+    ldr x1,qAdrqValues_f
+    ldr x1,[x1,x7,lsl #3]
+    add x3,x3,x1                                   // d + e + f
+    cmp x3,x4                                   // equal first square ?
+    bne 7b
+    ldr x0,qAdrqValues_f
+    ldr x1,qAdrqValues_g
+    mov x2,x7
+    mov x3,#NBBOX - 5
+    bl prepValues
+    mov x6,#-1
+8:
+    add x6,x6,1
+    cmp x6,#NBBOX - 7
+    bgt 7b
+    ldr x0,qAdrqValues_f
+    ldr x0,[x0,x7,lsl #3]
+    ldr x1,qAdrqValues_g
+    ldr x1,[x1,x6,lsl #3]
+    add x3,x0,x1                               // f +g
+    cmp x4,x3                                  // equal first square ?
+    bne 8b
+
+    add x5,x5,1                                  // increment counter
+    tst x14,#0b1
+    beq 9f                                     // display solution ?
+    ldr x0,qAdrqValues_a
+    ldr x0,[x0,x12,lsl #3]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrsMessDeb
+    ldr x1,qAdrsZoneConv            // insert conversion in message
+    bl strInsertAtCharInc
+    mov x2,x0
+    ldr x0,qAdrqValues_b
+    ldr x0,[x0,x11,lsl #3]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,x2
+    ldr x1,qAdrsZoneConv            // insert conversion in message
+    bl strInsertAtCharInc
+    mov x2,x0
+    ldr x0,qAdrqValues_c
+    ldr x0,[x0,x10,lsl #3]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,x2
+    ldr x1,qAdrsZoneConv            // insert conversion in message
+    bl strInsertAtCharInc
+    mov x2,x0
+    ldr x0,qAdrqValues_d
+    ldr x0,[x0,x9,lsl #3]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,x2
+    ldr x1,qAdrsZoneConv            // insert conversion in message
+    bl strInsertAtCharInc
+    mov x2,x0
+    ldr x0,qAdrqValues_e
+    ldr x0,[x0,x8,lsl #3]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,x2
+    ldr x1,qAdrsZoneConv            // insert conversion in message
+    bl strInsertAtCharInc
+    mov x2,x0
+    ldr x0,qAdrqValues_f
+    ldr x0,[x0,x7,lsl #3]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,x2
+    ldr x1,qAdrsZoneConv            // insert conversion in message
+    bl strInsertAtCharInc
+    mov x2,x0
+    ldr x0,qAdrqValues_g
+    ldr x0,[x0,x6,lsl #3]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,x2
+    ldr x1,qAdrsZoneConv            // insert conversion in message
+    bl strInsertAtCharInc
+
+    bl affichageMess
+9:
+    b 8b    // suite
+
+90:
+    tst x14,#0b10
+    beq 100f                    // display counter ?
+    mov x0,x5
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrsMessNbSolution
+    ldr x1,qAdrsZoneConv        // insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+100:
+    ldp x10,fp,[sp],16          // restaur des  2 registres
+    ldp x8,x9,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x12,lr,[sp],16           // restaur des  2 registres
+    ret
+qAdrqValues_a:                   .quad qValues_a
+qAdrqValues_b:                   .quad qValues_b
+qAdrqValues_c:                   .quad qValues_c
+qAdrqValues_d:                   .quad qValues_d
+qAdrqValues_e:                   .quad qValues_e
+qAdrqValues_f:                   .quad qValues_f
+qAdrqValues_g:                   .quad qValues_g
+
+qAdrsMessDeb:                    .quad sMessDeb
+qAdrqCounterSol:                 .quad qCounterSol
+/******************************************************************/
+/*     copy value area  and substract value of indice             */
+/******************************************************************/
+/* x0 contains the address of values origin */
+/* x1 contains the address of values destination */
+/* x2 contains value indice to substract     */
+/* x3 contains origin values number          */
+prepValues:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    mov x4,#0                    // indice origin value
+    mov x5,#0                    // indice destination value
+1:
+    cmp x4,x2                    // substract indice ?
+    beq 2f                       // yes -> jump
+    ldr x6,[x0,x4,lsl #3]        // no -> copy value
+    str x6,[x1,x5,lsl #3]
+    add x5,x5,1                  // increment destination indice
+2:
+   add x4,x4,1                   // increment origin indice
+   cmp x4,x3                     // end ?
+   blt 1b
+100:
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16          // restaur des  2 registres
+    ret
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

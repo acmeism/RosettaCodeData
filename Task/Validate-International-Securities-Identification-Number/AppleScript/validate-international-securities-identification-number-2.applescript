@@ -1,0 +1,1 @@
+{{testNumber:"US0378331005", valid:true}, {testNumber:"US0373831005", valid:false}, {testNumber:"U50378331005", valid:false}, {testNumber:"US03378331005", valid:false}, {testNumber:"AU0000XVGZA3", valid:true}, {testNumber:"AU0000VXGZA3", valid:true}, {testNumber:"FR0000988040", valid:true}}

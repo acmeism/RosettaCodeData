@@ -1,0 +1,1 @@
+declare L = {Lock.new}

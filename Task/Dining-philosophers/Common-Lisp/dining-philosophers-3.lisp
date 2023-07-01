@@ -1,0 +1,44 @@
+DINING-PHILOSOPHERS> (scenario)
+Aristotle is hungry
+Aristotle is eating
+Kant is hungry
+Spinoza is hungry
+Spinoza is eating
+Marx is hungry
+NIL
+Russell is hungry
+Aristotle is thinking
+Russell is eating
+Spinoza is thinking
+Kant is eating
+Spinoza is hungry
+Russell is thinking
+Marx is eating
+Kant is thinking
+Aristotle is hungry
+Aristotle is eating
+Marx is thinking
+Spinoza is eating
+Spinoza is thinking
+Marx is hungry
+Marx is eating
+Russell is hungry
+Marx is thinking
+Kant is hungry
+Aristotle is thinking
+Russell is eating
+Kant is eating
+Marx is hungry
+Spinoza is hungry
+Kant is thinking
+Spinoza is eating
+Kant is hungry
+Aristotle is hungry
+Russell is thinking
+Aristotle is eating
+Aristotle is thinking
+Aristotle is hungry
+Aristotle is eating
+Spinoza is thinking
+Marx is eating
+...

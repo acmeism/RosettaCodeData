@@ -1,0 +1,20 @@
+(defun longest-increasing-subseq (list)
+  (let ((subseqs nil))
+    (dolist (item list)
+      (let ((longest-so-far (longest-list-in-lists (remove-if-not #'(lambda (l) (> item (car l))) subseqs))))
+	(push (cons item longest-so-far) subseqs)))
+    (reverse (longest-list-in-lists subseqs))))
+
+(defun longest-list-in-lists (lists)
+  (let ((longest nil)
+	(longest-len 0))
+    (dolist (list lists)
+      (let ((len (length list)))
+	(when (> len longest-len)
+	  (setf longest list
+		longest-len len))))
+    longest))
+
+(dolist (l (list (list 3 2 6 4 5 1)
+		 (list 0 8 4 12 2 10 6 14 1 9 5 13 3 11 7 15)))
+  (format t "~A~%" (longest-increasing-subseq l))))

@@ -1,0 +1,8 @@
+MODE UNIONX = UNION(
+   STRUCT(REAL r, INT i),
+   INT,
+   REAL,
+   STRUCT(INT ii),
+   STRUCT(REAL rr),
+   STRUCT([]REAL r)
+);

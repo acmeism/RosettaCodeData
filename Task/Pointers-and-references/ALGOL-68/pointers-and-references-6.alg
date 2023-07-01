@@ -1,0 +1,1 @@
+REF INT alias = var;

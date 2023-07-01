@@ -1,0 +1,58 @@
+MAXPRM:	equ	5000		; Change this value for more primes
+	cpu	8086
+	bits	16
+	org	100h
+section	.text
+erato:	mov	cx,MAXPRM	; Initialize array (set all items to prime)
+	mov	bp,cx		; Keep a copy in BP
+	mov	di,sieve
+	mov	al,1
+	rep	stosb
+	;;;	Sieve
+	mov	bx,sieve	; Set base register to array
+	inc	cx		; CX=1 (CH=0, CL=1); CX was 0 before
+	mov	si,cx		; Start at number 2 (1+1)
+.next:	inc	si		; Next number
+	cmp	cl,[bx+si]	; Is this number marked as prime?
+	jne	.next		; If not, try next number
+	mov	ax,si		; Otherwise, calculate square,
+	mul	si
+	mov	di,ax		; and put it in DI
+	cmp	di,bp		; Check array bounds
+	ja	output		; We're done when SI*SI>MAXPRM
+.mark:	mov	[bx+di],ch	; Mark byte as composite
+	add	di,si		; Next composite
+	cmp 	di,bp		; While maximum not reached
+	jbe	.mark
+	jmp	.next
+	;;;	Output
+output:	mov	si,2		; Start at 2
+.test:	dec	byte [bx+si]	; Prime?
+	jnz	.next		; If not, try next number
+	mov	ax,si		; Otherwise, print number
+	call	prax
+.next:	inc	si
+	cmp	si,MAXPRM
+	jbe	.test
+	ret
+	;;;	Write number in AX to standard output (using MS-DOS)
+prax:	push	bx		; Save BX
+	mov	bx,numbuf
+	mov	bp,10		; Divisor
+.loop:	xor	dx,dx		; Divide AX by 10, modulus in DX
+	div	bp
+	add	dl,'0'		; ASCII digit
+	dec	bx
+	mov	[bx],dl		; Store ASCII digit
+	test	ax,ax		; More digits?
+	jnz	.loop
+	mov	dx,bx		; Print number
+	mov	ah,9		; 9 = MS-DOS syscall to print string
+	int	21h
+	pop	bx		; Restore BX
+	ret
+section	.data
+	db	'*****'		; Room for number
+numbuf:	db	13,10,'$'
+section	.bss
+sieve:	resb	MAXPRM

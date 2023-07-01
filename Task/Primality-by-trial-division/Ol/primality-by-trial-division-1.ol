@@ -1,0 +1,11 @@
+(define (prime? number)
+   (define max (sqrt number))
+   (define (loop divisor)
+      (or (> divisor max)
+          (and (> (modulo number divisor) 0)
+               (loop (+ divisor 2)))))
+   (or (= number 1)
+       (= number 2)
+       (and
+          (> (modulo number 2) 0)
+          (loop 3))))

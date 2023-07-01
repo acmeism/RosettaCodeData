@@ -1,0 +1,107 @@
+putch:	equ	2	; CP/M syscall to print character
+puts:	equ	9	; CP/M syscall to print string
+	org	100h
+	lxi	b,0500h	; B C D E hold 4 digits of number
+	lxi	d,0000h	; we work backwards from 5000
+	lxi	h,-5000	; HL holds negative binary representation of number
+test:	push	h	; Keep current number
+	push	d	; Keep last two digits (to use DE as scratch register)
+	push	h 	; Keep current number (to test against)
+	lxi	h,0	; Digit power sum = 0
+	mov	a,b	
+	call	addap
+	mov	a,c
+	call	addap
+	mov	a,d
+	call 	addap
+	mov	a,e
+	call 	addap
+	xra	a	; Correct for leading zeroes
+	ora	b
+	jnz	calc
+	dcx	h
+	ora	c
+	jnz	calc
+	dcx	h
+	ora	d
+	jnz 	calc
+	dcx	h
+calc:	pop	d	; Load current number (as negative) into DE
+	dad	d 	; Add to sum of digits (if equal, should be 0)
+	mov	a,h	; See if they are equal
+	ora	l
+	pop	d	; Restore last two digits
+	pop	h	; Restore current number
+	jnz	next	; If not equal, this is not a Munchhausen number
+	mov	a,b	; Otherwise, print the number
+	call	pdgt
+	mov	a,c
+	call	pdgt
+	mov	a,d
+	call	pdgt
+	mov	a,e
+	call	pdgt
+	call	pnl
+next:	inx	h	; Increment negative binary representation
+	mvi	a,5
+	dcr	e	; Decrement last digit
+	jp	test	; If not negative, try next number
+	mov	e,a	; Otherwise, set to 5,
+	inx	h	; Add 4 extra to HL,
+	inx	h
+	inx	h
+	inx	h
+	dcr	d
+	jp	test
+	mov	d,a
+	push	d	; Add 40 extra to HL,
+	lxi	d,40
+	dad	d
+	pop	d
+	dcr 	c
+	jp	test
+	mov	c,a
+	push	d	; Add 400 extra to HL,
+	lxi	d,400
+	dad	d
+	pop	d
+	dcr	b
+	jp	test
+	ret		; When B<0, we're done
+	;;;	Print A as digit
+pdgt:	adi	'0'
+	push	b	; Save all registers (CP/M tramples them)
+	push	d
+	push	h
+	mov	e,a	; Print character
+	mvi	c,putch
+	call	5
+restor:	pop	h	; Restore registers
+	pop	d
+	pop 	b
+	ret
+	;;;	Print newline
+pnl:	push	b	; Save all registers
+	push	d
+	push	h
+	lxi	d,nl	; Print newline
+	mvi	c,puts
+	call	5
+	jmp	restor	; Restore registers
+nl:	db	13,10,'$'	
+	;;;	Add A^A to HL
+addap:	push	d	; Keep DE
+	push	h	; Keep HL
+	add	a	; A *= 2 (entries are 2 bytes wide)
+	mvi	d,0	; DE = lookup table index
+	mov	e,a 	
+	lxi	h,dpow	; Calculate table address
+	dad	d
+	mov	e,m	; Load low byte into E
+	inx	h
+	mov	d,m	; Load high byte into D
+	pop	h	; Retrieve old HL
+	dad	d	; Add power
+	pop	d	; Restore DE
+	ret	
+dpow:	dw	1,1,4,27,256,3125	; 0^0 to 5^5 lookup table

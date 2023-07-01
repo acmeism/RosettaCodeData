@@ -1,0 +1,224 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program primeDecomp64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ NBFACT,            100
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structurea area factors  */
+    .struct  0
+fac_value:                     // factor
+    .struct  fac_value + 8
+fac_number:                    // number of identical factors
+    .struct  fac_number + 8
+fac_end:
+/*******************************************/
+/* Initialized data */
+/*******************************************/
+.data
+szMessStartPgm:            .asciz "Program start \n"
+szMessEndPgm:              .asciz "Program normal end.\n"
+szMessNotPrime:            .asciz "Not prime.\n"
+szMessPrime:               .asciz "Prime\n"
+szCarriageReturn:          .asciz "\n"
+szSpaces:                  .asciz "  "
+szMessNumber:              .asciz " The factors of @ are :\n"
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+sZoneConv:           .skip 32
+.align 4
+tbZoneDecom:         .skip fac_end * NBFACT
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                                    // program start
+    ldr x0,qAdrszMessStartPgm            // display start message
+    bl affichageMess
+    ldr x20,qVal
+    //mov x20,17
+    mov x0,x20
+    ldr x1,qAdrtbZoneDecom
+    bl decompFact                        // decomposition
+    cmp x0,#0
+    beq 1f
+    mov x2,x0
+    mov x0,x20
+    ldr x1,qAdrtbZoneDecom
+    bl displayFactors                    // display factors
+    b 2f
+1:
+    ldr x0,qAdrszMessPrime              // prime
+    bl affichageMess
+
+2:
+
+    ldr x0,qAdrszMessEndPgm            // display end message
+    bl affichageMess
+
+100:                                   // standard end of the program
+    mov x0,0                           // return code
+    mov x8,EXIT                        // request to exit program
+    svc 0                              // perform system call
+qAdrszMessStartPgm:        .quad szMessStartPgm
+qAdrszMessEndPgm:          .quad szMessEndPgm
+qAdrszCarriageReturn:      .quad szCarriageReturn
+qAdrszMessNotPrime:        .quad szMessNotPrime
+qAdrszMessPrime:           .quad szMessPrime
+qAdrtbZoneDecom:           .quad tbZoneDecom
+//qVal:                      .quad 2 <<31
+qVal:                      .quad 1047552       // test not prime
+//qVal:                      .quad 1429671721    // test not prime (37811 * 37811)
+
+/******************************************************************/
+/*     prime decomposition                                               */
+/******************************************************************/
+/* x0 contains the number */
+/* x1 contains address factors array */
+/* REMARK no save register x9-x19   */
+decompFact:
+    stp x1,lr,[sp,-16]!       // save  registers
+    mov x12,x0                // save number
+    bl isPrime                // prime ?
+    cbnz x0,12f               // yes -> no decomposition
+    mov x19,fac_end           // element area size
+    mov x18,0                 // raz indice
+    mov x16,0                 // prev divisor
+    mov x17,0                 // number of identical divisors
+    mov x13,2                 // first divisor
+2:
+    cmp x12,1
+    beq 10f
+    udiv x14,x12,x13          // division
+    msub x15,x14,x13,x12      // remainder = x12 -(x13*x14)
+    cbnz x15,5f               // if remainder <> zero  x13 not divisor
+    mov x12,x14               // quotient -> new dividende
+    cmp x13,x16               // same divisor ?
+    beq 4f                    // yes
+    cbz x16,3f                // yes it is first divisor ?
+    madd x11,x18,x19,x1       // no -> store prev divisor in the area
+    str x16,[x11,fac_value]
+    str x17,[x11,fac_number]  // and store number of same factor
+    add x18,x18,1             // increment indice
+    mov x17,0                 // raz number of same factor
+3:
+    mov x16,x13               // save new divisor
+4:
+    add x17,x17,1             // increment number of same factor
+    mov x0,x12                // the new dividende is prime ?
+    bl isPrime
+    cbnz x0,10f               // yes
+    b 2b                      // else loop
+5:                            // divisor is not a factor
+    cmp x13,2                 // begin ?
+    cinc x13,x13,ne           // if divisor <> 2 add 1
+    add x13,x13,1
+    b 2b                      // and loop
+
+10:                           // new dividende is prime
+    cmp x16,x12               // divisor = dividende ?
+    cinc x17,x17,eq           //add 1 if last dividende = diviseur
+    madd x11,x18,x19,x1
+    str x16,[x11,fac_value]   // store divisor in area
+    str x17,[x11,fac_number]  // and store number
+    add x18,x18,1             // increment indice
+    cmp x16,x12               //store last dividende if <> diviseur
+    beq 11f
+    madd x11,x18,x19,x1
+    str x12,[x11,fac_value]   // sinon stockage dans la table
+    mov x17,1
+    str x17,[x11,fac_number]  // store 1 in number
+    add x18,x18,1
+11:
+    mov x0,x18                // return nb factors
+    b 100f
+12:
+    mov x0,#0                 // number is prime
+    b 100f
+
+100:
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret                       // retour adresse lr x30
+/******************************************************************/
+/*     prime decomposition                                               */
+/******************************************************************/
+/* x0 contains the number */
+/* x1 contains address factors array */
+/* x2 number of factors */
+displayFactors:
+    stp x1,lr,[sp,-16]!        // save  registres
+    mov x19,fac_end            // element area size
+    mov x13,x1                 // save area address
+    ldr x1,qAdrsZoneConv       // load zone conversion address
+    bl conversion10
+    ldr x0,qAdrszMessNumber
+    bl strInsertAtCharInc                   // insert result at Second @ character
+    bl affichageMess
+    mov x9,0                   // indice
+1:
+    madd x10,x9,x19,x13        // compute address area element
+    ldr x0,[x10,fac_value]
+    ldr x12,[x10,fac_number]
+    bl conversion10            // decimal conversion
+2:
+    mov x0,x1
+    bl affichageMess
+    ldr x0,qAdrszSpaces
+    bl affichageMess
+    subs x12,x12,#1
+    bgt 2b
+    add x9,x9,1
+    cmp x9,x2
+    blt 1b
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+100:
+    ldp x1,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+qAdrsZoneConv:          .quad sZoneConv
+qAdrszSpaces:           .quad szSpaces
+qAdrszMessNumber:       .quad szMessNumber
+/******************************************************************/
+/*     test if number is prime                                    */
+/******************************************************************/
+/* x0 contains the number  */
+/* x0 return 1 if prime else return 0 */
+isPrime:
+    stp x1,lr,[sp,-16]!       // save  registers
+    cmp x0,1                  // <= 1 ?
+    ble 98f
+    cmp x0,3                  // 2 and 3 prime
+    ble 97f
+    tst x0,1                  //  even ?
+    beq 98f
+    mov x9,3                  // first divisor
+1:
+    udiv x11,x0,x9
+    msub x10,x11,x9,x0        // compute remainder
+    cbz x10,98f               // end if zero
+    add x9,x9,#2              // increment divisor
+    cmp x9,x11                // divisors<=quotient ?
+    ble 1b                    // loop
+97:
+    mov x0,1                  // return prime
+    b 100f
+98:
+    mov x0,0                  // not prime
+    b 100f
+100:
+    ldp x1,lr,[sp],16         // restaur  2 registers
+    ret                       // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

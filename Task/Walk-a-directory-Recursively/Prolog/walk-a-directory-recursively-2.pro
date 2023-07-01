@@ -1,0 +1,16 @@
+?- test_run.
+File: GMFBridge.ax
+File: libeay32.dll
+File: ssleay32.dll
+File: license.txt
+Directory: C:\vvvv\vvvv_beta_39_x64/licenses
+Directory: .
+Directory: ..
+File: Apache.txt
+File: BSD.txt
+File: LGPL.txt
+File: MIT.txt
+File: MPL.txt
+File: MS-PL-Eula.rtf
+File: MS-PL.txt
+File: MSR-SSLA.txt

@@ -1,0 +1,85 @@
+// main registers
+p	IS	$255	% pointer
+pp	GREG		% backup for p
+A	GREG		% first int
+B	GREG		% second int
+
+// arg registers
+argc	IS	$0
+argv	IS	$1
+
+	LOC	Data_Segment
+	GREG	@
+ERR	BYTE	"Wrong number of arguments",#a,0
+ILLH	BYTE	"Argument -> ",0
+ILLT	BYTE	" <- contains an illegal character",#a,0
+LT	BYTE	"A is less than B",#a,0
+EQ	BYTE	"A equals B",#a,0
+GT	BYTE	"A is greater than B",#a,0
+
+	LOC	#1000
+	GREG	@
+// call: p points to the start of a 0-terminated numeric string
+//       leading chars + and - are allowed
+//       reg $72   0 if negative int
+//	 reg $73   gen. purpose
+// return: reg $70 contains integer value
+readInt	XOR	$70,$70,$70	% reset result reg: N=0.
+	LDA	pp,p		% remember &p
+	LDBU	$72,p
+	CMP	$73,$72,'+'	% ignore '+'
+	BZ	$73,2F
+	CMP	$72,$72,'-'
+	BNZ	$72,1F
+2H	INCL	p,1
+	JMP	1F
+				% repeat
+3H	CMP	$73,$71,'0'	%  if c < '0' or c > '9'
+	BN	$73,4F		%  then print err and halt program
+	CMP	$73,$71,'9'
+	BP	$73,4F
+	SUB	$71,$71,'0'	%  'extract' number	
+	MUL	$70,$70,10
+	ADD	$70,$70,$71	%  N = 10 * N + digit
+	INCL	p,1
+1H	LDBU	$71,p		%  get next digit
+	PBNZ	$71,3B		% until end of string
+	CMP	$72,$72,0
+	BNZ	$72,2F		% if marked negative
+	NEG	$70,$70		%  then make negative
+2H	GO	$127,$127,0	% return (N)
+
+4H	LDA	p,ILLH
+	TRAP	0,Fputs,StdErr
+	LDA	p,pp
+	TRAP	0,Fputs,StdErr
+	LDA	p,ILLT
+	TRAP	0,Fputs,StdErr
+	TRAP	0,Halt,0	
+
+// entrance of program
+// e.g. ~> mmix compare2ints A B
+//
+Main	CMP	p,argc,3	% main (argc, argv) {
+	BZ	p,1F		%  if argc == 3 then continue
+	LDA	p,ERR		%  else print wrong number of args
+	TRAP	0,Fputs,StdErr
+	TRAP	0,Halt,0
+// get ints A and B
+1H	LDOU	p,argv,8	% fetch addres of first int
+	GO	$127,readInt	% read int A
+	ADD	A,$70,0
+
+	LDOU	p,argv,16
+	GO	$127,readInt	% read int B
+	ADD	B,$70,0
+
+// perform comparison
+	CMP	A,A,B		% case compare A B
+	LDA	p,LT
+	BN	A,2F		% LT:   print 'LT'
+	LDA	p,EQ
+	BZ	A,2F		% EQ:   print 'EQ'
+	LDA	p,GT		% _ :   print 'GT'
+2H	TRAP	0,Fputs,StdOut	% print result
+	TRAP	0,Halt,0

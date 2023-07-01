@@ -1,0 +1,1 @@
+Console::Write("Goodbye, World!")

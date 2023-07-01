@@ -1,0 +1,47 @@
+;; TXR Lisp's :delegate implementation is hard delegation: the indicated
+;; delegate object must exist and take the method call. To do soft
+;; delegation, we develop a macro (delegate-or-fallback x y z)
+;; which chooses x if x is an object which supports a z method,
+;; or else chooses y.
+
+(defun delegate-or-fallback-impl (del-inst fb-inst required-meth)
+  (let (del-type)
+    (if (and (structp del-inst)
+             (set del-type (struct-type del-inst))
+             (static-slot-p del-type required-meth)
+             (functionp (static-slot del-type required-meth)))
+      del-inst
+      fb-inst)))
+
+(defmacro delegate-or-fallback (delegate-expr fallback-obj : required-meth)
+  ^(delegate-or-fallback-impl ,delegate-expr ,fallback-obj ',required-meth))
+
+;; With the above, we can use the defstruct delegate clause syntax:
+;;
+;;  (:delegate source-method (obj) target-obj target-method)
+;;
+;; which writes a delegate method called source-method, that delegates
+;; to target-method on target-obj. We calculate target-obj using
+;; our macro and ensure that the delegator itself imlpements target-method.
+
+(defstruct delegator ()
+  delegate
+  (:delegate operation (me) (delegate-or-fallback me.delegate me thing) thing)
+
+  (:method thing (me)
+    "default implementation"))
+
+(defstruct delegate ()
+  (:method thing (me)
+    "delegate implementation"))
+
+;; Tests:
+
+;; no delegate
+(prinl (new delegator).(operation))
+
+;; struct delegate, but not with thing method
+(prinl (new delegator delegate (new time)).(operation))
+
+;; delegate with thing method
+(prinl (new delegator delegate (new delegate)).(operation))

@@ -1,0 +1,122 @@
+(* The Rosetta Code array concatenation task, in ATS2. *)
+
+(* In a way, the task is misleading: in a language such as ATS, one
+   can always devise a very-easy-to-use array type, put the code for
+   that in a library, and overload operators. Thus we can have
+   "array1 + array2" as array concatenation in ATS, complete with
+   garbage collection when the result no longer is needed.
+
+   It depends on what libraries are in one's repertoire.
+
+   Nevertheless, it seems fair to demonstrate how to concatenate two
+   barebones arrays at the nitpicking lowest level, without anything
+   but the barest contents of the ATS2 prelude. It will make ATS
+   programming look difficult; but ATS programming *is* difficult,
+   when you are using it to overcome the programming safety
+   deficiencies of a language such as C, without losing the runtime
+   efficiency of C code.
+
+   What we want is the kind of routine that would be used *in the
+   implementation* of "array1 + array2". So let us begin ... *)
+
+#include "share/atspre_staload.hats" (* Loads some needed template
+                                        code. *)
+
+fn {t : t@ype}
+
+(* The demonstration will be for arrays of a non-linear type t. Were
+   the arrays to contain a *linear* type (vt@ype), then either the old
+   arrays would have to be destroyed or a copy procedure would be
+   needed for the elements. *)
+
+arrayconcat1 {m, n : nat}
+             {pa, pb, pc : addr}
+             (pfa  : !(@[t][m]) @ pa,
+              pfb  : !(@[t][n]) @ pb,
+              pfc  : !(@[t?][m + n]) @ pc >> @[t][m + n] @ pc |
+              pa   : ptr pa,
+              pb   : ptr pb,
+              pc   : ptr pc,
+              m    : size_t m,
+              n    : size_t n) : void =
+
+(* The routine takes as arguments three low-level arrays, passed by
+   value, as pointers with associated views. The first array is of
+   length m, with elements of type t, and the array must have been
+   initialized; the second is a similar array of length n. The third
+   array is uninitialized (thus the "?" character) and must have
+   length m+n; its type will change to "initialized". *)
+
+  {
+    prval (pfleft, pfright) = array_v_split {t?} {pc} {m + n} {m} pfc
+
+(* We have had to split the view of array c into a left part pfleft,
+   of length m, and a right part pfright of length n. Arrays a and b
+   will be copied into the respective parts of c. *)
+
+    val _ = array_copy<t> (!pc, !pa, m)
+    val _ = array_copy<t> (!(ptr_add<t> (pc, m)), !pb, n)
+
+(* Copying an array *safely* is more complex than what we are doing
+   here, but above the task has been given to the "array_copy"
+   template in the prelude. The "!" signs appear because array_copy is
+   call-by-reference but we are passing it pointers. *)
+
+(* pfleft and pfright now refer to *initialized* arrays: one of length
+   m, starting at address pc; the other of length n, starting at
+   address pc+(m*sizeof<t>). *)
+
+    prval _ = pfc := array_v_unsplit {t} {pc} {m, n} (pfleft, pfright)
+
+(* Before we can exit, the view of array c has to be replaced. It is
+   replaced by "unsplitting" the (now initialized) left and right
+   parts of the array. *)
+
+(* We are done. Everything should now work, and the result will be
+   safe from buffer overruns or underruns, and against accidental
+   misuse of uninitialized data. *)
+
+  }
+
+(* arrayconcat2 is a pass-by-reference interface to arrayconcat1. *)
+fn {t : t@ype}
+arrayconcat2 {m, n : nat}
+             (a    : &(@[t][m]),
+              b    : &(@[t][n]),
+              c    : &(@[t?][m + n]) >> @[t][m + n],
+              m    : size_t m,
+              n    : size_t n) : void =
+  arrayconcat1 (view@ a, view@ b, view@ c |
+                addr@ a, addr@ b, addr@ c, m, n)
+
+(* Overloads to let you say "arrayconcat" for either routine above. *)
+overload arrayconcat with arrayconcat1
+overload arrayconcat with arrayconcat2
+
+implement
+main0 () =
+
+(* A demonstration program. *)
+
+  let
+    (* Some arrays on the stack. Because they are on the stack, they
+       will not need explicit freeing. *)
+    var a = @[int][3] (1, 2, 3)
+    var b = @[int][4] (5, 6, 7, 8)
+    var c : @[int?][7]
+
+  in
+
+    (* Compute c as the concatenation of a and b. *)
+    arrayconcat<int> (a, b, c, i2sz 3, i2sz 4);
+
+    (* The following simply prints the result. *)
+    let
+      (* Copy c to a linear linked list, because the prelude provides
+         means to easily print such a list. *)
+      val lst = array2list (c, i2sz 7)
+    in
+      println! (lst);      (* Print the list. *)
+      free lst             (* The list is linear and must be freed. *)
+    end
+  end

@@ -1,0 +1,133 @@
+(* Typecheck this file with ‘patscc -tcats gcd-proofs.dats’. *)
+
+(* Definition of the gcd by Euclid’s algorithm, using subtractions;
+   gcd(0,0) is defined to equal zero. (I do not prove that this
+   definition is equivalent to the common meaning of ‘greatest common
+   divisor’; that’s not a sort of thing ATS is good at.) *)
+dataprop GCD (int, int, int) =
+| GCD_0_0 (0, 0, 0)
+| {u : pos}
+  GCD_u_0 (u, 0, u)
+| {v : pos}
+  GCD_0_v (0, v, v)
+| {u, v : pos | u <= v}
+  {d    : pos}
+  GCD_u_le_v (u, v, d) of
+    GCD (u, v - u, d)
+| {u, v : pos | u > v}
+  {d    : pos}
+  GCD_u_gt_v (u, v, d) of
+    GCD (u - v, v, d)
+| {u, v : int | u < 0 || v < 0}
+  {d : pos}
+  GCD_u_or_v_neg (u, v, d) of
+    GCD (abs u, abs v, d)
+
+(* Here is a proof, by construction, of the proposition
+   ‘The gcd of 12 and 8 is 4’. *)
+prfn
+gcd_12_8 () :<prf>
+    GCD (12, 8, 4)  =
+  let
+    prval pf = GCD_u_0 {4} ()
+    prval pf = GCD_u_le_v {4, 4} {4} (pf)
+    prval pf = GCD_u_le_v {4, 8} {4} (pf)
+    prval pf = GCD_u_gt_v {12, 8} {4} (pf)
+  in
+    pf
+  end
+
+(* A lemma: the gcd is total. That is, it is defined for all
+   integers. *)
+extern prfun
+gcd_istot :
+  {u, v : int}
+  () -<prf>
+    [d : int]
+    GCD (u, v, d)
+
+(* Another lemma: the gcd is a function: it has a unique value for
+   any given pair of arguments. *)
+extern prfun
+gcd_isfun :
+  {u, v : int}
+  {d, e : int}
+  (GCD (u, v, d),
+   GCD (u, v, e)) -<prf>
+    [d == e] void
+
+(* Proof of gcd_istot. This source file will not pass typechecking
+   unless the proof is valid. *)
+primplement
+gcd_istot {u, v} () =
+  let
+    prfun
+    gcd_istot__nat_nat__ {u, v : nat | u != 0 || v != 0} .<u + v>.
+                         () :<prf> [d : pos] GCD (u, v, d) =
+      sif v == 0 then
+        GCD_u_0 ()
+      else sif u == 0 then
+        GCD_0_v ()
+      else sif u <= v then
+        GCD_u_le_v (gcd_istot__nat_nat__ {u, v - u} ())
+      else
+        GCD_u_gt_v (gcd_istot__nat_nat__ {u - v, v} ())
+
+    prfun
+    gcd_istot__int_int__ {u, v : int | u != 0 || v != 0} .<>.
+                         () :<prf> [d : pos] GCD (u, v, d) =
+      sif u < 0 || v < 0 then
+        GCD_u_or_v_neg (gcd_istot__nat_nat__ {abs u, abs v} ())
+      else
+        gcd_istot__nat_nat__ {u, v} ()
+  in
+    sif u == 0 && v == 0 then
+      GCD_0_0 ()
+    else
+      gcd_istot__int_int__ {u, v} ()
+  end
+
+(* Proof of gcd_isfun. This source file will not pass typechecking
+   unless the proof is valid. *)
+primplement
+gcd_isfun {u, v} {d, e} (pfd, pfe) =
+  let
+    prfun
+    gcd_isfun__nat_nat__ {u, v : nat}
+                         {d, e : int}
+                         .<u + v>.
+                         (pfd  : GCD (u, v, d),
+                          pfe  : GCD (u, v, e)) :<prf> [d == e] void =
+      case+ pfd of
+      | GCD_0_0 () =>
+        {
+          prval GCD_0_0 () = pfe
+        }
+      | GCD_u_0 () =>
+        {
+          prval GCD_u_0 () = pfe
+        }
+      | GCD_0_v () =>
+        {
+          prval GCD_0_v () = pfe
+        }
+      | GCD_u_le_v pfd1 =>
+        {
+          prval GCD_u_le_v pfe1 = pfe
+          prval _ = gcd_isfun__nat_nat__ (pfd1, pfe1)
+        }
+      | GCD_u_gt_v pfd1 =>
+        {
+          prval GCD_u_gt_v pfe1 = pfe
+          prval _ = gcd_isfun__nat_nat__ (pfd1, pfe1)
+        }
+  in
+    sif u < 0 || v < 0 then
+      {
+        prval GCD_u_or_v_neg pfd1 = pfd
+        prval GCD_u_or_v_neg pfe1 = pfe
+        prval _ = gcd_isfun__nat_nat__ (pfd1, pfe1)
+      }
+    else
+      gcd_isfun__nat_nat__ (pfd, pfe)
+  end

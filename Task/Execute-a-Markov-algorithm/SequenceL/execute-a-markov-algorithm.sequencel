@@ -1,0 +1,47 @@
+import <Utilities/Sequence.sl>;
+
+Rule ::= ( pattern : char(1),
+           replacement : char(1),
+           terminal : bool);
+
+ReplaceResult ::= (newString : char(1), wasReplaced : bool);
+
+main(args(2)) := markov(createRule(split(args[1], '\n')), 1, args[2]);
+
+createRule(line(1)) :=
+    let
+        containsComments := firstIndexOf(line, '#');
+        removedComments := line when containsComments = 0 else
+                           line[1 ... containsComments - 1];
+
+        arrowLocation := startOfArrow(removedComments, 1);
+        lhs := removedComments[1 ... arrowLocation-1];
+        rhs := removedComments[arrowLocation + 4 ... size(removedComments)];
+        isTerminal := size(rhs) > 0 and rhs[1] = '.';
+    in
+        (pattern : lhs,
+         replacement : rhs[2 ... size(rhs)] when isTerminal else rhs,
+         terminal : isTerminal) when size(removedComments) > 0 and arrowLocation /= -1;
+
+startOfArrow(line(1), n) :=
+    -1 when n > size(line) - 3 else
+    n when (line[n]=' ' or line[n]='\t') and
+           line[n+1] = '-' and line[n+2] = '>' and
+           (line[n+3]=' ' or line[n+3]='\t') else
+    startOfArrow(line, n+1);
+
+markov(rules(1), n, input(1)) :=
+    let
+        replaced := replaceSubString(input, rules[n].pattern, rules[n].replacement, 1);
+    in
+    input when n > size(rules) else
+    replaced.newString when replaced.wasReplaced and rules[n].terminal else
+    markov(rules, 1, replaced.newString) when replaced.wasReplaced else
+    markov(rules, n+1, input);
+
+replaceSubString(str(1), original(1), new(1), n) :=
+    (newString : str, wasReplaced : false)
+        when n > size(str) - size(original) + 1 else
+    (newString : str[1 ... n - 1] ++ new ++ str[n + size(original) ... size(str)], wasReplaced : true)
+        when equalList(str[n ... n + size(original) - 1], original) else
+    replaceSubString(str, original, new, n + 1);

@@ -1,0 +1,5 @@
+(defun agm (a0 g0 &optional (tolerance 1d-8))
+  (loop for a = a0 then (* (+ a g) 5d-1)
+     and g = g0 then (sqrt (* a g))
+     until (< (abs (- a g)) tolerance)
+     finally (return a)))

@@ -1,0 +1,154 @@
+Module Dining_philosophers (whichplan) {
+	Form 80, 32
+	Const MayChangePick=Random(True, False)
+	dim energy(1 to 5)=50
+	Document Doc$
+	const nl$={
+	}
+	Print $(,12),  ' set column width to 12
+	Pen 14
+	Pen 15	{
+		Doc$="Dining Philosophers"+nl$
+		\\ we can change thread plan only if no threads defined
+		if whichplan=1 then
+			Doc$="Sequential threads - to execute exclusive one threads code"+nl$
+			thread.plan sequential
+			\\ need time_to_think>time_to_eat, but time_to_appear maybe the same for all
+			time_to_think=150  ' one or more intervals
+			time_to_eat=100 ' one interval to eat only	
+			time_to_appear=(150,150,150,150,150)
+			Return time_to_appear, random(0,3):=300
+		else
+			Doc$="Concurrent threads  - to execute a statement or a block of code"+nl$
+			thread.plan concurrent
+			time_to_think=100  ' one or more intervals
+			time_to_eat=50 ' one interval to eat only
+			time_to_appear=(100,100,100,100,100)
+			Return time_to_appear, random(1,4):=200	
+		end if
+		Print #-2,Doc$
+		Print @(0,2),"Press left mouse button to exit"
+		Print Part $(1), time_to_appear
+		Print under
+	}
+	Pen 13 {Print "Aristotle", "Kant", "Spinoza", "Marx", "Russell"}
+	enum philosopher {
+		Aristotle, Kant, Spinoza, Marx, Russell
+	}
+	global enum forks {NoFork, Fork}
+	RoundTable =(Fork, Fork, Fork, Fork, Fork)
+	Getleft=lambda RoundTable (ph as philosopher) -> {
+		where=(ph+4) mod 5
+		= RoundTable#val(where)
+		Return RoundTable, where:=NoFork
+	}
+	GetRight=lambda RoundTable (ph as philosopher) -> {
+		where=ph mod 5
+		=RoundTable#val(where)
+		Return RoundTable, where:=NoFork
+	}
+	PlaceForks=lambda RoundTable (ph as philosopher) -> {
+		Return RoundTable,  (ph+4) mod 5:=Fork,ph mod 5:=Fork
+	}
+	PlaceAnyFork=lambda RoundTable (ph as philosopher, &ForkL, &ForkR) -> {
+		If ForkL=Fork then Return RoundTable,  (ph+4) mod 5:=Fork : ForkL=NoFork
+		If ForkR=Fork Then  Return RoundTable, ph mod 5:=Fork : ForkR=NoFork
+	}
+	ShowTable=lambda RoundTable -> {
+		m=each(RoundTable)
+		while m
+			print if$(array(m)=NoFork->"No Fork", "Fork"),
+		end while
+		Print
+	}
+	noforks=lambda RoundTable -> {
+		k=0
+		m=each(RoundTable)
+		while m
+			if array(m)=NoFork then k++
+		end while
+		=k=5
+	}
+
+	def critical as long, basetick
+	Document page$
+	m=each(philosopher)
+	while m {
+		\\ we make 5 threads
+		\\ a thread has module scope (except for own static variables, and stack of values)
+		thread {
+			if  energy(f)<1 then {
+					call PlaceAnyFork(f, ForkL, ForkR)
+					energy(f)=0
+					Page$=format$("{0::-12} - ",tick-basetick)+eval$(f)+" - Die"+nl$
+					thread this erase
+			} else	{
+					Page$=format$("{0::-12} - ",tick-basetick)+eval$(f)
+					Page$=if$(ForkL=Nofork or ForkR=Nofork->" thinking",  " eating"+str$(eatcount))
+					Page$=if$(R->"- R", " - L")+nl$
+			}
+			if not think then
+				{ \\ a block always run blocking all other threads
+					energy(f)++
+					eatcount--
+					if eatcount>0 then exit
+					Call PlaceForks(f) : ForkL=Nofork:ForkR=NoFork
+					eatcount=random(4,8)
+					if MayChangePick then R=random(-1,0)
+					think=true :thread this interval  time_to_think*random(1,5)
+				}
+			else.if energy(f)>70 or critical>5 then
+				{
+					call PlaceAnyFork(f, &ForkL, &ForkR)
+					if energy(f)>70  then energy(f)=60
+				}
+			else.if R then
+					if ForkR=Nofork then ForkR=GetRight(f)
+					if ForkR=fork and ForkL=Nofork then ForkL=GetLeft(f)
+					if ForkL=fork then think=false:thread this interval  time_to_eat else energy(f)--
+			else
+					if ForkL=Nofork then ForkL=GetLeft(f)
+					if ForkL=fork and ForkR=Nofork then ForkR=GetRight(f)
+					if ForkR=fork then think=false:thread this interval  time_to_eat else energy(f)--
+			end if
+			
+		} as a interval time_to_appear#val(m^)		
+		\\ a is a variable which hold the number of thread (as returned from task manager)
+		\\ so we can get 5 times a new number.
+		\\ for each thread we make some static variables (only for each thread)
+		\\ this statement execute a line of code in thread a
+		thread a execute {
+			\\ this executed on thread execution object
+			static f=eval(m), think=true, ForkL=NoFork
+			static ForkR=NoFork, eatcount=random(2,5)
+			static R=-1
+			if MayChangePick then  R=Random(-1,0)
+		}
+	}
+	cls ,5  ' set split screen from fifth row
+	\\ Main.Task is a thread also. Normaly exit if no other threads running in background
+	\\ also serve a the wait loop for task manager (we can use Every 200 {} but isn't a thread, is a kind of a wait statement)
+	\\ tick return the counter from  task manager which used to triger threads
+	basetick=tick
+	\\ 4hz display results
+	MaxCritical=0
+	Main.Task 1000/4 {
+		{ \\ a block always run blocking all other threads		
+			cls
+			Print Part $(1),$("####;\D\I\E;\D\I\E"),energy()
+			Print Under
+			Print "Table:"
+			Call ShowTable()
+			if noforks() then critical++  else critical=0
+			MaxCritical=if(MaxCritical<critical->critical,MaxCritical)
+			Print "noforks on table counter:";critical, "Max:";MaxCritical
+			Print #-2,Page$
+			Doc$=Page$
+			Clear Page$
+		}
+		if critical>40 or keypress(1) then exit
+	}
+	threads erase
+	Clipboard Doc$
+}
+Dining_philosophers Random(1,2)

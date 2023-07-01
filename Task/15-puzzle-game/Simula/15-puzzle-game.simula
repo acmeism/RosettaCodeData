@@ -1,0 +1,213 @@
+BEGIN
+    CLASS FIFTEENPUZZLE(NUMTILES, SIDE, WIDTH, SEED);
+        INTEGER NUMTILES, SIDE, WIDTH, SEED;
+    BEGIN
+        INTEGER ARRAY TILES(0:NUMTILES);
+        INTEGER BLANKPOS;
+
+        PROCEDURE INVARIANT;
+        BEGIN
+            INTEGER ARRAY UQ(0:NUMTILES);
+            INTEGER I;
+            FOR I := 0 STEP 1 UNTIL NUMTILES DO UQ(I) := -1;
+            FOR I := 0 STEP 1 UNTIL NUMTILES DO
+            BEGIN
+                INTEGER T;
+                T := TILES(I);
+                IF UQ(T) <> -1 THEN ERROR("TILES ARE NOT UNIQUE");
+                UQ(T) := T;
+            END;
+            IF TILES(BLANKPOS) <> 0 THEN ERROR("BLANKPOS IS NOT BLANK");
+        END;
+
+        PROCEDURE SHUFFLE;
+        BEGIN
+            BOOLEAN B;
+            WHILE NOT B DO
+            BEGIN
+                INTEGER N;
+                RESET;
+                ! DON'T INCLUDE THE BLANK SPACE IN THE SHUFFLE, LEAVE IT
+                ! IN THE HOME POSITION ;
+                N := NUMTILES;
+                WHILE N > 1 DO
+                BEGIN
+                    INTEGER R, TMP;
+                    R := UNIFORM(0, N, SEED); N := N - 1;
+                    TMP := TILES(R);
+                    TILES(R) := TILES(N);
+                    TILES(N) := TMP;
+                END;
+                B := ISSOLVABLE;
+            END;
+            INVARIANT;
+        END;
+
+        PROCEDURE RESET;
+        BEGIN
+            INTEGER I;
+            FOR I := 0 STEP 1 UNTIL NUMTILES DO
+                TILES(I) := MOD((I + 1), NUMTILES + 1);
+            BLANKPOS := NUMTILES;
+            INVARIANT;
+        END;
+
+        ! ONLY HALF THE PERMUTATIONS OF THE PUZZLE ARE SOLVABLE.
+        ! WHENEVER A TILE IS PRECEDED BY A TILE WITH HIGHER VALUE IT COUNTS
+        ! AS AN INVERSION. IN OUR CASE, WITH THE BLANK SPACE IN THE HOME
+        ! POSITION, THE NUMBER OF INVERSIONS MUST BE EVEN FOR THE PUZZLE
+        ! TO BE SOLVABLE.
+        ! SEE ALSO:
+        ! WWW.CS.BHAM.AC.UK/~MDR/TEACHING/MODULES04/JAVA2/TILESSOLVABILITY.HTML
+        ;
+
+        BOOLEAN PROCEDURE ISSOLVABLE;
+        BEGIN
+            INTEGER COUNTINVERSIONS;
+            INTEGER I, J;
+            FOR I := 0 STEP 1 UNTIL NUMTILES - 1 DO
+                FOR J := 0 STEP 1 UNTIL I - 1 DO
+                    IF TILES(J) > TILES(I) THEN
+                        COUNTINVERSIONS := COUNTINVERSIONS + 1;
+            ISSOLVABLE := MOD(COUNTINVERSIONS, 2) = 0;
+        END;
+
+        PROCEDURE PRINTBOARD;
+        BEGIN
+            INTEGER I, J;
+
+            PROCEDURE PRINTLINE;
+            BEGIN
+              INTEGER ROW, COL;
+              !      +-----+-----+-----+-----+ ;
+              FOR ROW := 1 STEP 1 UNTIL SIDE DO
+              BEGIN
+                  OUTCHAR('+');
+                  FOR COL := 0 STEP 1 UNTIL WIDTH DO OUTCHAR('-');
+              END;
+              OUTCHAR('+');
+              OUTIMAGE;
+            END;
+
+            PROCEDURE PRINTCELL(T); INTEGER T;
+            BEGIN
+                IF T = 0 THEN
+                BEGIN
+                    INTEGER R;
+                    FOR R := 1 STEP 1 UNTIL WIDTH DO
+                        OUTCHAR(' ');
+                END
+                ELSE OUTINT(T, WIDTH);
+                OUTCHAR(' ');
+            END;
+
+            !      +-----+-----+-----+-----+
+            !      |  1  |  2  |  3  |  4  |
+            !      +-----+-----+-----+-----+
+            !      |  5  |  6  |  7  |  8  |
+            !      +-----+-----+-----+-----+
+            !      |  9  |  10 |  11 |     |
+            !      +-----+-----+-----+-----+
+            !      |  13 |  14 |  15 |  12 |
+            !      +-----+-----+-----+-----+   ;
+
+            FOR I := 1 STEP 1 UNTIL SIDE DO
+            BEGIN
+                PRINTLINE;
+                OUTCHAR('|');
+                FOR J := 1 STEP 1 UNTIL SIDE DO
+                BEGIN
+                    INTEGER T;
+                    T := TILES((I - 1) * SIDE + (J - 1));
+                    PRINTCELL(T);
+                    OUTCHAR('|');
+                END;
+                OUTIMAGE;
+            END;
+            PRINTLINE;
+        END;
+
+        BOOLEAN PROCEDURE DONE;
+        BEGIN
+            BOOLEAN ORDERED;
+            INTEGER I, EXPECT;
+            ORDERED := TRUE;
+            EXPECT := 1;
+            FOR I := 0 STEP 1 UNTIL NUMTILES - 1 DO
+            BEGIN
+                IF I <> BLANKPOS THEN
+                BEGIN
+                    IF TILES(I) <> EXPECT THEN
+                        ORDERED := FALSE;
+                    EXPECT := EXPECT + 1;
+                END;
+            END;
+            DONE := ORDERED;
+        END;
+
+        PROCEDURE REQUEST;
+        BEGIN
+            INTEGER ARRAY CANDIDATES(1:4);
+            INTEGER I, CANDCOUNT, CHOOSE;
+            BOOLEAN VALIDINPUT;
+
+            PROCEDURE ADDCAND(IDX); INTEGER IDX;
+            BEGIN
+                IF IDX >= 0 AND IDX <= NUMTILES THEN
+                BEGIN
+                    CANDCOUNT := CANDCOUNT + 1;
+                    CANDIDATES(CANDCOUNT) := TILES(IDX);
+                END;
+            END;
+
+            PRINTBOARD;
+
+            IF BLANKPOS <= NUMTILES - SIDE     THEN ADDCAND(BLANKPOS + SIDE);
+            IF BLANKPOS >= SIDE                THEN ADDCAND(BLANKPOS - SIDE);
+            IF MOD(BLANKPOS, SIDE) <> SIDE - 1 THEN ADDCAND(BLANKPOS + 1);
+            IF MOD(BLANKPOS, SIDE) <> 0        THEN ADDCAND(BLANKPOS - 1);
+
+            WHILE NOT VALIDINPUT DO
+            BEGIN
+                OUTTEXT("YOUR MOVE: ");
+
+                FOR I := 1 STEP 1 UNTIL CANDCOUNT DO
+                    OUTINT(CANDIDATES(I), SIDE);
+                OUTIMAGE;
+                CHOOSE := ININT;
+
+                FOR I := 1 STEP 1 UNTIL CANDCOUNT DO
+                    IF CHOOSE = CANDIDATES(I) THEN
+                    BEGIN
+                        INTEGER LOOKUP;
+                        FOR LOOKUP := 0 STEP 1 UNTIL NUMTILES DO
+                            IF NOT VALIDINPUT AND TILES(LOOKUP) = CHOOSE THEN
+                            BEGIN
+                                TILES(BLANKPOS) := TILES(LOOKUP);
+                                TILES(LOOKUP) := 0;
+                                BLANKPOS := LOOKUP;
+                                INVARIANT;
+                                VALIDINPUT := TRUE;
+                            END;
+                    END;
+
+                IF NOT VALIDINPUT THEN
+                BEGIN
+                    OUTTEXT("INVALID INPUT!");
+                    OUTIMAGE;
+                END;
+            END;
+        END;
+
+        SHUFFLE;
+    END;
+
+    REF(FIFTEENPUZZLE) P;
+
+    OUTTEXT("INPUT RANDOM SEED: ");
+    OUTIMAGE;
+    P :- NEW FIFTEENPUZZLE(15, 4, 3, ININT); ! ININT = RANDOM SEED ;
+    WHILE NOT P.DONE DO
+        P.REQUEST;
+    P.PRINTBOARD;
+END.

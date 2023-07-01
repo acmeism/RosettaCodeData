@@ -1,0 +1,197 @@
+include "cowgol.coh";
+include "strings.coh";
+include "malloc.coh";
+include "argv.coh";
+include "file.coh";
+
+record Rule is
+    pattern: [uint8];
+    replacement: [uint8];
+    next: [Rule];
+    terminates: uint8;
+end record;
+
+sub AllocRule(): (rule: [Rule]) is
+    rule := Alloc(@bytesof Rule) as [Rule];
+    MemZero(rule as [uint8], @bytesof Rule);
+end sub;
+
+sub ParseRule(text: [uint8]): (rule: [Rule]) is
+    sub ParseError() is
+        print("Failed to parse rule: ");
+        print(text);
+        print_nl();
+        ExitWithError();
+    end sub;
+
+    var cur := text;
+    sub SkipWs() is
+        while [cur] != 0 and [cur] <= ' ' loop cur := @next cur; end loop;
+    end sub;
+
+    sub AllocAndCopy(src: [uint8], length: intptr): (copy: [uint8]) is
+        copy := Alloc(length + 1);
+        MemCopy(src, length, copy);
+        [copy + length] := 0;
+    end sub;
+
+    SkipWs();
+    if [cur] == '#' or [cur] == 0 then # comment or empty line
+        rule := 0 as [Rule];
+        return;
+    end if;
+    var patternStart := cur;
+
+    # find the " ->"
+    while [cur] != 0
+    and ([cur] > ' ' or [cur+1] != '-' or [cur+2] != '>') loop
+        cur := @next cur;
+    end loop;
+    if [cur] == 0 then ParseError(); end if;
+
+    # find last char of pattern
+    var patternEnd := cur;
+    while patternStart < patternEnd and [patternEnd] <= ' ' loop
+        patternEnd := @prev patternEnd;
+    end loop;
+
+    cur := cur + 3; # whitespace + '->'
+    SkipWs();
+    var replacementStart := cur;
+
+    # find last char of replacement
+    while [cur] != 0 loop cur := @next cur; end loop;
+    while replacementStart < cur and [cur] <= ' ' loop
+        cur := @prev cur;
+    end loop;
+
+    # make rule object
+    rule := AllocRule();
+    rule.pattern := AllocAndCopy(patternStart, patternEnd-patternStart+1);
+    if [replacementStart] == '.' then
+        rule.terminates := 1;
+        replacementStart := @next replacementStart;
+    end if;
+    rule.replacement := AllocAndCopy(replacementStart, cur-replacementStart+1);
+end sub;
+
+sub FindMatch(needle: [uint8], haystack: [uint8]): (match: [uint8]) is
+    match := 0 as [uint8];
+    while [haystack] != 0 loop
+        var n := needle;
+        var h := haystack;
+        while [n] != 0 and [h] != 0 and [n] == [h] loop
+            n := @next n;
+            h := @next h;
+        end loop;
+        if [n] == 0 then
+            match := haystack;
+            return;
+        end if;
+        haystack := @next haystack;
+    end loop;
+end sub;
+
+const NO_MATCH := 0;
+const HALT := 1;
+const CONTINUE := 2;
+sub ApplyRule(rule: [Rule], in: [uint8], out: [uint8]): (result: uint8) is
+    var match := FindMatch(rule.pattern, in);
+    if match == 0 as [uint8] then
+        result := NO_MATCH;
+    else
+        var len := StrLen(rule.replacement);
+        var patlen := StrLen(rule.pattern);
+        var rest := match + patlen;
+        MemCopy(in, match-in, out);
+        MemCopy(rule.replacement, len, out+(match-in));
+        CopyString(rest, out+(match-in)+len);
+        if rule.terminates != 0 then
+            result := HALT;
+        else
+            result := CONTINUE;
+        end if;
+    end if;
+end sub;
+
+sub ApplyRules(rules: [Rule], buffer: [uint8]): (r: [uint8]) is
+    var outbuf: uint8[256];
+    var rule := rules;
+    r := buffer;
+
+    while rule != 0 as [Rule] loop
+        case ApplyRule(rule, buffer, &outbuf[0]) is
+            when NO_MATCH:
+                rule := rule.next;
+            when HALT:
+                CopyString(&outbuf[0], buffer);
+                return;
+            when CONTINUE:
+                CopyString(&outbuf[0], buffer);
+                rule := rules;
+        end case;
+    end loop;
+end sub;
+
+sub ReadFile(filename: [uint8]): (rules: [Rule]) is
+    var linebuf: uint8[256];
+    var fcb: FCB;
+    var bufptr := &linebuf[0];
+
+    rules := 0 as [Rule];
+    var prevRule := 0 as [Rule];
+
+    if FCBOpenIn(&fcb, filename) != 0 then
+        print("Cannot open file: ");
+        print(filename);
+        print_nl();
+        ExitWithError();
+    end if;
+
+    var length := FCBExt(&fcb);
+    var ch: uint8 := 1;
+    while length != 0 and ch != 0 loop
+        ch := FCBGetChar(&fcb);
+        length := length - 1;
+        [bufptr] := ch;
+        bufptr := @next bufptr;
+
+        if ch == '\n' then
+            [bufptr] := 0;
+            bufptr := &linebuf[0];
+            var rule := ParseRule(&linebuf[0]);
+            if rule != 0 as [Rule] then
+                if rules == 0 as [Rule] then rules := rule; end if;
+                if prevRule != 0 as [Rule] then prevRule.next := rule; end if;
+                prevRule := rule;
+            end if;
+        end if;
+    end loop;
+
+    var dummy := FCBClose(&fcb);
+end sub;
+
+ArgvInit();
+var fname := ArgvNext();
+if fname == 0 as [uint8] then
+    print("usage: markov [pattern file] [pattern]\n");
+    ExitWithError();
+end if;
+
+var patbuf: uint8[256];
+var patptr := &patbuf[0];
+loop
+    var patpart := ArgvNext();
+    if patpart == 0 as [uint8] then
+        if patptr != &patbuf[0] then patptr := @prev patptr; end if;
+        [patptr] := 0;
+        break;
+    end if;
+    var partlen := StrLen(patpart);
+    MemCopy(patpart, partlen, patptr);
+    patptr := patptr + partlen + 1;
+    [@prev patptr] := ' ';
+end loop;
+
+print(ApplyRules(ReadFile(fname), &patbuf[0]));
+print_nl();

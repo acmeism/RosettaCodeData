@@ -1,0 +1,579 @@
+(*------------------------------------------------------------------*)
+
+#define ATS_DYNLOADFLAG 0
+
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+(* String hashing using XXH3_64bits from the xxHash suite.          *)
+
+#define ATS_EXTERN_PREFIX "hashmaps_postiats_"
+
+%{^ /* Embedded C code. */
+
+#include <xxhash.h>
+
+ATSinline() atstype_uint64
+hashmaps_postiats_mem_hash (atstype_ptr data, atstype_size len)
+{
+  return (atstype_uint64) XXH3_64bits (data, len);
+}
+
+%}
+
+extern fn mem_hash : (ptr, size_t) -<> uint64 = "mac#%"
+
+fn
+string_hash (s : string) :<> uint64 =
+  let
+    val len = string_length s
+  in
+    mem_hash ($UNSAFE.cast{ptr} s, len)
+  end
+
+(*------------------------------------------------------------------*)
+(* A trimmed down version of the AVL trees from the AVL Tree task.  *)
+
+datatype bal_t =
+| bal_minus1
+| bal_zero
+| bal_plus1
+
+datatype avl_t (key_t  : t@ype+,
+                data_t : t@ype+,
+                size   : int) =
+| avl_t_nil (key_t, data_t, 0)
+| {size_L, size_R : nat}
+  avl_t_cons (key_t, data_t, size_L + size_R + 1) of
+    (key_t, data_t, bal_t,
+     avl_t (key_t, data_t, size_L),
+     avl_t (key_t, data_t, size_R))
+typedef avl_t (key_t  : t@ype+,
+               data_t : t@ype+) =
+  [size : int] avl_t (key_t, data_t, size)
+
+extern fun {key_t : t@ype}
+avl_t$compare (u : key_t, v : key_t) :<> int
+
+#define NIL avl_t_nil ()
+#define CONS avl_t_cons
+#define LNIL list_nil ()
+#define :: list_cons
+#define F false
+#define T true
+
+typedef fixbal_t = bool
+
+prfn
+lemma_avl_t_param {key_t : t@ype} {data_t : t@ype} {size : int}
+                  (avl : avl_t (key_t, data_t, size)) :<prf>
+    [0 <= size] void =
+  case+ avl of NIL => () | CONS _ => ()
+
+fn {}
+minus_neg_bal (bal : bal_t) :<> bal_t =
+  case+ bal of
+  | bal_minus1 () => bal_plus1
+  | _ => bal_zero ()
+
+fn {}
+minus_pos_bal (bal : bal_t) :<> bal_t =
+  case+ bal of
+  | bal_plus1 () => bal_minus1
+  | _ => bal_zero ()
+
+fn
+avl_t_is_empty {key_t : t@ype} {data_t : t@ype} {size   : int}
+               (avl : avl_t (key_t, data_t, size)) :<>
+    [b : bool | b == (size == 0)] bool b =
+  case+ avl of
+  | NIL => T
+  | CONS _ => F
+
+fn
+avl_t_isnot_empty {key_t : t@ype} {data_t : t@ype} {size   : int}
+                  (avl : avl_t (key_t, data_t, size)) :<>
+    [b : bool | b == (size <> 0)] bool b =
+  ~avl_t_is_empty avl
+
+fn {key_t : t@ype} {data_t : t@ype}
+avl_t_search_ref {size  : int}
+                 (avl   : avl_t (key_t, data_t, size),
+                  key   : key_t,
+                  data  : &data_t? >> opt (data_t, found),
+                  found : &bool? >> bool found) :<!wrt>
+    #[found : bool] void =
+  let
+    fun
+    search (p     : avl_t (key_t, data_t),
+            data  : &data_t? >> opt (data_t, found),
+            found : &bool? >> bool found) :<!wrt,!ntm>
+        #[found : bool] void =
+      case+ p of
+      | NIL =>
+        {
+          prval _ = opt_none {data_t} data
+          val _ = found := F
+        }
+      | CONS (k, d, _, left, right) =>
+        begin
+          case+ avl_t$compare<key_t> (key, k) of
+          | cmp when cmp < 0 => search (left, data, found)
+          | cmp when cmp > 0 => search (right, data, found)
+          | _ =>
+            {
+              val _ = data := d
+              prval _ = opt_some {data_t} data
+              val _ = found := T
+            }
+        end
+  in
+    $effmask_ntm search (avl, data, found)
+  end
+
+fn {key_t : t@ype} {data_t : t@ype}
+avl_t_search_opt {size : int}
+                 (avl  : avl_t (key_t, data_t, size),
+                  key  : key_t) :<>
+    Option (data_t) =
+  let
+    var data : data_t?
+    var found : bool?
+    val _ = $effmask_wrt avl_t_search_ref (avl, key, data, found)
+  in
+    if found then
+      let
+        prval _ = opt_unsome data
+      in
+        Some {data_t} data
+      end
+    else
+      let
+        prval _ = opt_unnone data
+      in
+        None {data_t} ()
+      end
+  end
+
+fn {key_t : t@ype} {data_t : t@ype}
+avl_t_insert_or_replace {size : int}
+                        (avl  : avl_t (key_t, data_t, size),
+                         key  : key_t,
+                         data : data_t) :<>
+    [sz : pos] (avl_t (key_t, data_t, sz), bool) =
+  let
+    fun
+    search {size   : nat}
+           (p      : avl_t (key_t, data_t, size),
+            fixbal : fixbal_t,
+            found  : bool) :<!ntm>
+        [sz : pos]
+        (avl_t (key_t, data_t, sz), fixbal_t, bool) =
+      case+ p of
+      | NIL => (CONS (key, data, bal_zero, NIL, NIL), T, F)
+      | CONS (k, d, bal, left, right) =>
+        case+ avl_t$compare<key_t> (key, k) of
+        | cmp when cmp < 0 =>
+          let
+            val (p1, fixbal, found) = search (left, fixbal, found)
+          in
+            case+ (fixbal, bal) of
+            | (F, _) => (CONS (k, d, bal, p1, right), F, found)
+            | (T, bal_plus1 ()) =>
+              (CONS (k, d, bal_zero (), p1, right), F, found)
+            | (T, bal_zero ()) =>
+              (CONS (k, d, bal_minus1 (), p1, right), fixbal, found)
+            | (T, bal_minus1 ()) =>
+              let
+                val+ CONS (k1, d1, bal1, left1, right1) = p1
+              in
+                case+ bal1 of
+                | bal_minus1 () =>
+                  let
+                    val q = CONS (k, d, bal_zero (), right1, right)
+                    val q1 = CONS (k1, d1, bal_zero (), left1, q)
+                  in
+                    (q1, F, found)
+                  end
+                | _ =>
+                  let
+                    val p2 = right1
+                    val- CONS (k2, d2, bal2, left2, right2) = p2
+                    val q = CONS (k, d, minus_neg_bal bal2,
+                                  right2, right)
+                    val q1 = CONS (k1, d1, minus_pos_bal bal2,
+                                   left1, left2)
+                    val q2 = CONS (k2, d2, bal_zero (), q1, q)
+                  in
+                    (q2, F, found)
+                  end
+              end
+          end
+        | cmp when cmp > 0 =>
+          let
+            val (p1, fixbal, found) = search (right, fixbal, found)
+          in
+            case+ (fixbal, bal) of
+            | (F, _) => (CONS (k, d, bal, left, p1), F, found)
+            | (T, bal_minus1 ()) =>
+              (CONS (k, d, bal_zero (), left, p1), F, found)
+            | (T, bal_zero ()) =>
+              (CONS (k, d, bal_plus1 (), left, p1), fixbal, found)
+            | (T, bal_plus1 ()) =>
+              let
+                val+ CONS (k1, d1, bal1, left1, right1) = p1
+              in
+                case+ bal1 of
+                | bal_plus1 () =>
+                  let
+                    val q = CONS (k, d, bal_zero (), left, left1)
+                    val q1 = CONS (k1, d1, bal_zero (), q, right1)
+                  in
+                    (q1, F, found)
+                  end
+                | _ =>
+                  let
+                    val p2 = left1
+                    val- CONS (k2, d2, bal2, left2, right2) = p2
+                    val q = CONS (k, d, minus_pos_bal bal2,
+                                  left, left2)
+                    val q1 = CONS (k1, d1, minus_neg_bal bal2,
+                                   right2, right1)
+                    val q2 = CONS (k2, d2, bal_zero (), q, q1)
+                  in
+                    (q2, F, found)
+                  end
+              end
+          end
+        | _ => (CONS (key, data, bal, left, right), F, T)
+  in
+    if avl_t_is_empty avl then
+      (CONS (key, data, bal_zero, NIL, NIL), F)
+    else
+      let
+        prval _ = lemma_avl_t_param avl
+        val (avl, _, found) = $effmask_ntm search (avl, F, F)
+      in
+        (avl, found)
+      end
+  end
+
+fn {key_t : t@ype} {data_t : t@ype}
+avl_t_insert {size : int}
+             (avl  : avl_t (key_t, data_t, size),
+              key  : key_t,
+              data : data_t) :<>
+    [sz : pos] avl_t (key_t, data_t, sz) =
+  (avl_t_insert_or_replace<key_t><data_t> (avl, key, data)).0
+
+fun {key_t : t@ype} {data_t : t@ype}
+push_all_the_way_left (stack : List (avl_t (key_t, data_t)),
+                       p     : avl_t (key_t, data_t)) :
+    List0 (avl_t (key_t, data_t)) =
+  let
+    prval _ = lemma_list_param stack
+  in
+    case+ p of
+    | NIL => stack
+    | CONS (_, _, _, left, _) =>
+      push_all_the_way_left (p :: stack, left)
+  end
+
+fun {key_t : t@ype} {data_t : t@ype}
+update_generator_stack (stack     : List (avl_t (key_t, data_t)),
+                        right     : avl_t (key_t, data_t)) :
+    List0 (avl_t (key_t, data_t)) =
+  let
+    prval _ = lemma_list_param stack
+  in
+    if avl_t_is_empty right then
+      stack
+    else
+      push_all_the_way_left<key_t><data_t> (stack, right)
+  end
+
+fn {key_t : t@ype} {data_t : t@ype}
+avl_t_make_data_generator {size : int}
+                          (avl  : avl_t (key_t, data_t, size)) :
+    () -<cloref1> Option data_t =
+  let
+    typedef avl_t = avl_t (key_t, data_t)
+
+    val stack = push_all_the_way_left<key_t><data_t> (LNIL, avl)
+    val stack_ref = ref stack
+
+    (* Cast stack_ref to its (otherwise untyped) pointer, so it can be
+       enclosed within ‘generate’. *)
+    val p_stack_ref = $UNSAFE.castvwtp0{ptr} stack_ref
+
+    fun
+    generate () :<cloref1> Option data_t =
+      let
+        (* Restore the type information for stack_ref. *)
+        val stack_ref =
+          $UNSAFE.castvwtp0{ref (List avl_t)} p_stack_ref
+
+        var stack : List0 avl_t = !stack_ref
+        var retval : Option data_t
+      in
+        begin
+          case+ stack of
+          | LNIL => retval := None ()
+          | p :: tail =>
+            let
+              val- CONS (_, d, _, left, right) = p
+            in
+              retval := Some d;
+              stack :=
+                update_generator_stack<key_t><data_t> (tail, right)
+            end
+        end;
+        !stack_ref := stack;
+        retval
+      end
+  in
+    generate
+  end
+
+(*------------------------------------------------------------------*)
+(* Hashmaps implemented with AVL trees and association lists.       *)
+
+(* The interface  - - - - - - - - - - - - - - - - - - - - - - - - - *)
+
+typedef hashmap_t (key_t  : t@ype+,
+                   data_t : t@ype+) =
+  avl_t (uint64, List1 @(key_t, data_t))
+
+(* For simplicity, let us support only 64-bit hashes. *)
+extern fun {key_t : t@ype}  (* Implement a hash function with this. *)
+hashmap_t$hashfunc : key_t -<> uint64
+
+extern fun {key_t : t@ype}     (* Implement key equality with this. *)
+hashmap_t$key_eq : (key_t, key_t) -<> bool
+
+extern fun
+hashmap_t_nil :
+  {key_t : t@ype} {data_t : t@ype}
+  () -<> hashmap_t (key_t, data_t)
+
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+hashmap_t_set (map  : hashmap_t (key_t, data_t),
+               key  : key_t,
+               data : data_t) :<>
+    hashmap_t (key_t, data_t)
+
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+hashmap_t_get (map : hashmap_t (key_t, data_t),
+               key : key_t) :<>
+    Option data_t
+
+(*
+  Notes:
+    * Generators for hashmap_t produce their output in unspecified
+      order.
+    * Generators for keys and data values can be made by analogy to
+      the following generator for pairs, or can be written in terms
+      of the generator for pairs. (The former approach seems better;
+      it might copy less data.)
+*)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+hashmap_t_make_pairs_generator (map : hashmap_t (key_t, data_t)) :
+    () -<cloref1> Option @(key_t, data_t)
+
+(* The implementation - - - - - - - - - - - - - - - - - - - - - - - *)
+
+implement
+avl_t$compare<uint64> (u, v) =
+  if u < v then
+    ~1
+  else if v < u then
+    1
+  else
+    0
+
+implement
+hashmap_t_nil () =
+  avl_t_nil ()
+
+fun {key_t  : t@ype}
+    {data_t : t@ype}
+remove_association {n : nat} .<n>.
+                   (lst : list (@(key_t, data_t), n),
+                    key : key_t) :<>
+    List0 @(key_t, data_t) =
+  (* This implementation uses linear stack space, and so presumes the
+     list is not extremely long. It preserves the order of the list,
+     although doing so is not necessary for persistence. (You might
+     wish to think about that, taking into account that the
+     order of traversal through a hashmap usually is considered
+     "unspecified".) *)
+  case+ lst of
+  | list_nil () => lst
+  | list_cons (head, tail) =>
+    if hashmap_t$key_eq<key_t> (key, head.0) then
+      tail                      (* Assume there is only one match. *)
+    else
+      list_cons (head, remove_association (tail, key))
+
+fun {key_t  : t@ype}
+    {data_t : t@ype}
+find_association {n : nat} .<n>.
+                 (lst : list (@(key_t, data_t), n),
+                  key : key_t) :<>
+    List0 @(key_t, data_t) =
+  (* This implementation is tail recursive. It will not build up the
+     stack. *)
+  case+ lst of
+  | list_nil () => lst
+  | list_cons (head, tail) =>
+    if hashmap_t$key_eq<key_t> (key, head.0) then
+      lst
+    else
+      find_association (tail, key)
+
+implement {key_t} {data_t}
+hashmap_t_set (map, key, data) =
+  let
+    typedef lst_t = List1 @(key_t, data_t) (* Association list. *)
+    val hash = hashmap_t$hashfunc<key_t> key
+    val lst_opt = avl_t_search_opt<uint64><lst_t> (map, hash)
+    val lst =
+      begin
+        case+ lst_opt of
+        | Some lst =>
+          (* There is already an association list for this hash value.
+             Remove any association already in it. *)
+          remove_association<key_t><data_t> (lst, key)
+        | None () =>
+          (* Start a new association list. *)
+          list_nil ()
+      end : List0 @(key_t, data_t)
+    val lst = list_cons (@(key, data), lst)
+  in
+    avl_t_insert<uint64><lst_t> (map, hash, lst)
+  end
+
+implement {key_t} {data_t}
+hashmap_t_get (map, key) =
+  let
+    typedef lst_t = List1 @(key_t, data_t) (* Association list. *)
+    val hash = hashmap_t$hashfunc<key_t> key
+    val lst_opt = avl_t_search_opt<uint64><lst_t> (map, hash)
+  in
+    case+ lst_opt of
+    | None () => None{data_t} ()
+    | Some lst =>
+      begin
+        case+ find_association<key_t><data_t> (lst, key) of
+        | list_nil () => None{data_t} ()
+        | list_cons (@(_, data), _) => Some{data_t} data
+      end
+  end
+
+implement {key_t} {data_t}
+hashmap_t_make_pairs_generator (map) =
+  let
+    typedef pair_t = @(key_t, data_t)
+    typedef lst_t = List1 pair_t
+    typedef lst_t_0 = List0 pair_t
+
+    val avl_gen = avl_t_make_data_generator<uint64><lst_t> (map)
+
+    val current_alist_ref : ref lst_t_0 = ref (list_nil ())
+    val current_alist_ptr =
+      $UNSAFE.castvwtp0{ptr} current_alist_ref
+  in
+    lam () =>
+      let
+        val current_alist_ref =
+          $UNSAFE.castvwtp0{ref lst_t_0} current_alist_ptr
+      in
+        case+ !current_alist_ref of
+        | list_nil () =>
+          begin
+            case+ avl_gen () of
+            | None () => None ()
+            | Some lst =>
+              begin
+                case+ lst of
+                | list_cons (head, tail) =>
+                  begin
+                    !current_alist_ref := tail;
+                    Some head
+                  end
+              end
+          end
+        | list_cons (head, tail) =>
+          begin
+            !current_alist_ref := tail;
+            Some head
+          end
+      end
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+hashmap_t$hashfunc<string> (s) =
+  string_hash s
+
+implement
+hashmap_t$key_eq<string> (s, t) =
+  s = t
+
+typedef s2i_hashmap_t = hashmap_t (string, int)
+
+fn
+s2i_hashmap_t_set (map  : s2i_hashmap_t,
+                   key  : string,
+                   data : int) :<> s2i_hashmap_t =
+  hashmap_t_set<string><int> (map, key, data)
+
+fn
+s2i_hashmap_t_set_ref (map  : &s2i_hashmap_t >> _,
+                       key  : string,
+                       data : int) :<!wrt> void =
+  (* Update a reference to a persistent hashmap. *)
+  map := s2i_hashmap_t_set (map, key, data)
+
+fn
+s2i_hashmap_t_get (map  : s2i_hashmap_t,
+                   key  : string) :<> Option int =
+  hashmap_t_get<string><int> (map, key)
+
+extern fun {}        (* {} = a template without template parameters *)
+s2i_hashmap_t_get_dflt$dflt :<> () -> int
+fn {}                (* {} = a template without template parameters *)
+s2i_hashmap_t_get_dflt (map  : s2i_hashmap_t,
+                        key  : string) : int =
+  case+ s2i_hashmap_t_get (map, key) of
+  | Some x => x
+  | None () => s2i_hashmap_t_get_dflt$dflt<> ()
+
+overload [] with s2i_hashmap_t_set_ref
+overload [] with s2i_hashmap_t_get_dflt
+
+implement
+main0 () =
+  let
+    implement s2i_hashmap_t_get_dflt$dflt<> () = 0
+    var map = hashmap_t_nil ()
+    var gen : () -<cloref1> @(string, int)
+    var pair : Option @(string, int)
+  in
+    map["one"] := 1;
+    map["two"] := 2;
+    map["three"] := 3;
+    println! ("map[\"one\"] = ", map["one"]);
+    println! ("map[\"two\"] = ", map["two"]);
+    println! ("map[\"three\"] = ", map["three"]);
+    println! ("map[\"four\"] = ", map["four"]);
+    gen := hashmap_t_make_pairs_generator<string><int> map;
+    for (pair := gen (); option_is_some pair; pair := gen ())
+      println! (pair)
+  end
+
+(*------------------------------------------------------------------*)

@@ -1,0 +1,218 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program balencebrac64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResult:          .asciz "Expression : "
+szMessBalenced:        .asciz " balanced"
+szMessNotBalenced:     .asciz " not balanced"
+szMessStart:           .asciz "Program 64 bits start.\n"
+szCarriageReturn:      .asciz "\n"
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:             .skip 24   // conversion buffer
+sBuffer:               .skip 80
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+
+    mov x0,0b111000              // bit 1 = open bracket bit 0 = close bracket
+    bl testBalanced
+
+    mov x0,0b110100
+    bl testBalanced
+    mov x0,0b11001001
+    bl testBalanced
+
+    mov x19,10                   // number random test
+1:
+    mov x0,1                     // mini number
+    mov x1,10000                 // maxi random number
+    bl extRandom                 // generate random number
+    bl testBalanced
+    subs x19,x19,1
+    bge 1b
+
+100:                             // standard end of the program
+    mov x0, #0                   // return code
+    mov x8,EXIT
+    svc #0                       // perform the system call
+
+qAdrszCarriageReturn:        .quad szCarriageReturn
+qAdrszMessResult:            .quad szMessResult
+qAdrszMessNotBalenced:       .quad szMessNotBalenced
+qAdrszMessBalenced:          .quad szMessBalenced
+qAdrszMessStart:             .quad szMessStart
+qAdrsBuffer:                 .quad sBuffer
+/***************************************************/
+/*   routine to test expression                    */
+/***************************************************/
+/* x0 expression   */
+testBalanced:
+    stp x1,lr,[sp,-16]!      // save  registres
+    stp x2,x3,[sp,-16]!      // save  registres
+    ldr x1,qAdrsBuffer
+    bl isBalanced
+    cmp x0,0
+    ldr x3,qAdrszMessNotBalenced
+    ldr x4,qAdrszMessBalenced
+    csel x3,x3,x4,eq
+
+    mov x0,#4                    // string number to display
+    ldr x1,qAdrszMessResult
+    ldr x2,qAdrsBuffer
+    ldr x4,qAdrszCarriageReturn
+    bl displayStrings            // display message
+100:
+    ldp x2,x3,[sp],16         // restaur registres
+    ldp x1,lr,[sp],16         // restaur registres
+    ret
+/***************************************************/
+/*   control if expression is balenced             */
+/***************************************************/
+/* x0 expression   */
+/* x1 buffer address */
+/* x0 return 1 if balanced else zero */
+isBalanced:
+    stp x1,lr,[sp,-16]!   // save  registres
+    stp x2,x3,[sp,-16]!   // save  registres
+    mov x3,63
+    clz x2,x0             // number of zeros on the left
+    sub x2,x3,x2          // so many useful numbers right
+    mov x4,1              // mask to test bit
+    lsl x4,x4,x2          // shift left begin expression
+    mov x3,0              // top if right bracket > left bracket
+    mov x7,0              // indice display buffer expression
+    mov x5,0              // counter brackets
+1:                        // begin loop to test bits
+    tst x0,x4
+    beq 2f                // bit = 0
+    mov x6,'('            // else bit = 1 -> open bracket
+    strb w6,[x1,x7]       // store in buffer
+    add x7,x7,1           // increment indice
+    add x5,x5,1           // increment open bracket
+    b 3f
+2:                        // bit = 0
+    mov x6,')'            // close bracket
+    strb w6,[x1,x7]       // store in buffer
+    add x7,x7,1           // increment indice
+    subs x5,x5,1          // decrement open bracket
+    bge 3f                // if negative
+    mov x3,1              // top error
+3:
+    lsr x4,x4,1           // shift mask right
+    cbnz x4,1b            // and loop if not zero
+    strb wzr,[x1,x7]      // zero final on buffer
+    cmp x5,0              // right bracket <> left bracket -> error
+    bne 4f
+    cmp x3,0              // in expression left bracket > right bracket
+    bne 4f
+    mov x0,1              // balanced
+    b 100f
+4:
+    mov x0,0              // not balanced
+100:
+    ldp x2,x3,[sp],16     // restaur registres
+    ldp x1,lr,[sp],16     // restaur registres
+    ret
+/***************************************************/
+/*   display multi strings                         */
+/*   new version 24/05/2023                        */
+/***************************************************/
+/* x0  contains number strings address */
+/* x1 address string1 */
+/* x2 address string2 */
+/* x3 address string3 */
+/* x4 address string4 */
+/* x5 address string5 */
+/* x6 address string5 */
+/* x7 address string6 */
+displayStrings:            // INFO:  displayStrings
+    stp x8,lr,[sp,-16]!    // save  registers
+    stp x2,fp,[sp,-16]!    // save  registers
+    add fp,sp,#32          // save paraméters address (4 registers saved * 8 bytes)
+    mov x8,x0              // save strings number
+    cmp x8,#0              // 0 string -> end
+    ble 100f
+    mov x0,x1              // string 1
+    bl affichageMess
+    cmp x8,#1              // number > 1
+    ble 100f
+    mov x0,x2
+    bl affichageMess
+    cmp x8,#2
+    ble 100f
+    mov x0,x3
+    bl affichageMess
+    cmp x8,#3
+    ble 100f
+    mov x0,x4
+    bl affichageMess
+    cmp x8,#4
+    ble 100f
+    mov x0,x5
+    bl affichageMess
+    cmp x8,#5
+    ble 100f
+    mov x0,x6
+    bl affichageMess
+    cmp x8,#6
+    ble 100f
+    mov x0,x7
+    bl affichageMess
+
+100:
+    ldp x2,fp,[sp],16        // restaur  registers
+    ldp x8,lr,[sp],16        // restaur  registers
+    ret
+/******************************************************************/
+/*     random number                                          */
+/******************************************************************/
+/*  x0 contains inferior value */
+/*  x1 contains maxi value */
+/*  x0 return random number */
+extRandom:
+    stp x1,lr,[sp,-16]!        // save  registers
+    stp x2,x8,[sp,-16]!        // save  registers
+    stp x19,x20,[sp,-16]!      // save  registers
+    sub sp,sp,16               // reserve 16 octets on stack
+    mov x19,x0
+    add x20,x1,1
+    mov x0,sp                  // store result on stack
+    mov x1,8                   // length 8 bytes
+    mov x2,0
+    mov x8,278                 //  call system Linux 64 bits Urandom
+    svc 0
+    mov x0,sp                  // load résult on stack
+    ldr x0,[x0]
+    sub x2,x20,x19             // calculation of the range of values
+    udiv x1,x0,x2              // calculation range modulo
+    msub x0,x1,x2,x0
+    add  x0,x0,x19             // and add inferior value
+100:
+    add sp,sp,16               // alignement stack
+    ldp x19,x20,[sp],16        // restaur  2 registers
+    ldp x2,x8,[sp],16          // restaur  2 registers
+    ldp x1,lr,[sp],16          // restaur  2 registers
+    ret                        // retour adresse lr x30
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

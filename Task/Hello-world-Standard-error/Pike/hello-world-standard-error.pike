@@ -1,0 +1,1 @@
+werror("Goodbye, World!");

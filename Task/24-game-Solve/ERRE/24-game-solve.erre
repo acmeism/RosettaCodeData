@@ -1,0 +1,311 @@
+PROGRAM 24SOLVE
+
+LABEL 98,99,2540,2550,2560
+
+! possible brackets
+CONST NBRACKETS=11,ST_CONST$="+-*/^("
+
+DIM D[4],PERM[24,4]
+DIM BRAKETS$[NBRACKETS]
+DIM OP$[3]
+DIM STACK$[50]
+
+PROCEDURE COMPATTA_STACK
+   IF NS>1 THEN
+      R=1
+      WHILE R<NS DO
+         IF INSTR(ST_CONST$,STACK$[R])=0 AND INSTR(ST_CONST$,STACK$[R+1])=0 THEN
+            FOR R1=R TO NS-1 DO
+              STACK$[R1]=STACK$[R1+1]
+            END FOR
+            NS=NS-1
+         END IF
+         R=R+1
+      END WHILE
+   END IF
+END PROCEDURE
+
+PROCEDURE CALC_ARITM
+     L=NS1
+     WHILE L<=NS2 DO
+        IF STACK$[L]="^" THEN
+            IF L>=NS2 THEN GOTO 99 END IF
+            N1#=VAL(STACK$[L-1]) N2#=VAL(STACK$[L+1]) NOP=NOP-1
+            IF STACK$[L]="^" THEN
+                RI#=N1#^N2#
+            END IF
+            STACK$[L-1]=STR$(RI#)
+            N=L
+            WHILE N<=NS2-2 DO
+               STACK$[N]=STACK$[N+2]
+               N=N+1
+            END WHILE
+            NS2=NS2-2
+            L=NS1-1
+        END IF
+        L=L+1
+     END WHILE
+
+     L=NS1
+     WHILE L<=NS2 DO
+        IF STACK$[L]="*" OR STACK$[L]="/" THEN
+            IF L>=NS2 THEN GOTO 99 END IF
+            N1#=VAL(STACK$[L-1]) N2#=VAL(STACK$[L+1]) NOP=NOP-1
+            IF STACK$[L]="*" THEN
+                 RI#=N1#*N2#
+              ELSE
+                 IF N2#<>0 THEN RI#=N1#/N2# ELSE NERR=6 RI#=0 END IF
+            END IF
+            STACK$[L-1]=STR$(RI#)
+            N=L
+            WHILE N<=NS2-2 DO
+               STACK$[N]=STACK$[N+2]
+               N=N+1
+            END WHILE
+            NS2=NS2-2
+            L=NS1-1
+        END IF
+        L=L+1
+     END WHILE
+
+     L=NS1
+     WHILE L<=NS2 DO
+        IF STACK$[L]="+" OR STACK$[L]="-" THEN
+            EXIT IF L>=NS2
+            N1#=VAL(STACK$[L-1]) N2#=VAL(STACK$[L+1])  NOP=NOP-1
+            IF STACK$[L]="+" THEN RI#=N1#+N2# ELSE RI#=N1#-N2# END IF
+            STACK$[L-1]=STR$(RI#)
+            N=L
+            WHILE N<=NS2-2 DO
+               STACK$[N]=STACK$[N+2]
+               N=N+1
+            END WHILE
+            NS2=NS2-2
+            L=NS1-1
+        END IF
+        L=L+1
+     END WHILE
+99:
+     IF NOP<2 THEN   ! precedenza tra gli operatori
+          DB#=VAL(STACK$[NS1])
+       ELSE
+          IF NOP<3 THEN
+               DB#=VAL(STACK$[NS1+2])
+             ELSE
+               DB#=VAL(STACK$[NS1+4])
+          END IF
+     END IF
+END PROCEDURE
+
+PROCEDURE SVOLGI_PAR
+   NPA=NPA-1
+   FOR J=NS TO 1 STEP -1 DO
+      EXIT IF STACK$[J]="("
+   END FOR
+   IF J=0 THEN
+       NS1=1  NS2=NS  CALC_ARITM NERR=7
+     ELSE
+       FOR R=J TO NS-1 DO
+         STACK$[R]=STACK$[R+1]
+       END FOR
+       NS1=J  NS2=NS-1  CALC_ARITM
+       IF NS1=2 THEN
+           NS1=1 STACK$[1]=STACK$[2]
+       END IF
+       NS=NS1
+       COMPATTA_STACK
+   END IF
+END PROCEDURE
+
+PROCEDURE MYEVAL(EXPRESSION$,DB#,NERR->DB#,NERR)
+
+     NOP=0 NPA=0 NS=1 K$="" NERR=0
+     STACK$[1]="@"          ! init stack
+
+     FOR W=1 TO LEN(EXPRESSION$) DO
+        LOOP
+           CODE=ASC(MID$(EXPRESSION$,W,1))
+           IF (CODE>=48 AND CODE<=57) OR CODE=46 THEN
+                K$=K$+CHR$(CODE)
+                W=W+1 IF W>LEN(EXPRESSION$) THEN GOTO 98 END IF
+              ELSE
+                EXIT IF K$=""
+                IF NS>1 OR (NS=1 AND STACK$[1]<>"@") THEN NS=NS+1 END IF
+                IF FLAG=0 THEN
+                      STACK$[NS]=K$
+                   ELSE
+                      STACK$[NS]=STR$(VAL(K$)*FLAG)
+                END IF
+                K$=""  FLAG=0
+                EXIT
+           END IF
+        END LOOP
+        IF CODE=43 THEN K$="+" END IF
+        IF CODE=45 THEN K$="-" END IF
+        IF CODE=42 THEN K$="*" END IF
+        IF CODE=47 THEN K$="/" END IF
+        IF CODE=94 THEN K$="^" END IF
+
+        CASE CODE OF
+          43,45,42,47,94->  ! +-*/^
+             IF MID$(EXPRESSION$,W+1,1)="-" THEN FLAG=-1  W=W+1 END IF
+             IF INSTR(ST_CONST$,STACK$[NS])<>0 THEN
+                 NERR=5
+               ELSE
+                 NS=NS+1 STACK$[NS]=K$ NOP=NOP+1
+                 IF NOP>=2 THEN
+                    FOR J=NS TO 1 STEP -1 DO
+                       IF STACK$[J]<>"(" THEN GOTO 2540 END IF
+                       IF J<NS-2 THEN GOTO 2550 ELSE GOTO 2560 END IF
+2540:               END FOR
+2550:               NS1=J+1 NS2=NS CALC_ARITM
+                    NS=NS2  STACK$[NS]=K$
+                    REGISTRO_X#=VAL(STACK$[NS-1])
+                 END IF
+             END IF
+2560:     END ->
+
+          40->  ! (
+             IF NS>1 OR (NS=1 AND STACK$[1]<>"@") THEN NS=NS+1 END IF
+             STACK$[NS]="(" NPA=NPA+1
+             IF MID$(EXPRESSION$,W+1,1)="-" THEN FLAG=-1 W=W+1 END IF
+          END ->
+
+          41-> ! )
+             SVOLGI_PAR
+             IF NERR=7 THEN
+                  NERR=0 NOP=0 NPA=0 NS=1
+               ELSE
+                  IF NERR=0 OR NERR=1 THEN
+                      DB#=VAL(STACK$[NS])
+                      REGISTRO_X#=DB#
+                    ELSE
+                      NOP=0 NPA=0 NS=1
+                  END IF
+             END IF
+          END ->
+
+          OTHERWISE
+             NERR=8
+        END CASE
+        K$=""
+   END FOR
+98:
+   IF K$<>"" THEN
+        IF NS>1 OR (NS=1 AND STACK$[1]<>"@") THEN NS=NS+1 END IF
+        IF FLAG=0 THEN STACK$[NS]=K$ ELSE STACK$[NS]=STR$(VAL(K$)*FLAG) END IF
+   END IF
+
+   IF INSTR(ST_CONST$,STACK$[NS])<>0 THEN
+         NERR=6
+       ELSE
+         WHILE NPA<>0 DO
+             SVOLGI_PAR
+         END WHILE
+         IF NERR<>7 THEN NS1=1  NS2=NS CALCARITM END IF
+    END IF
+
+    NS=1  NOP=0  NPA=0
+
+END PROCEDURE
+
+BEGIN
+   PRINT(CHR$(12);) ! CLS
+
+   ! possible brackets
+   DATA("4#4#4#4")
+   DATA("(4#4)#4#4")
+   DATA("4#(4#4)#4")
+   DATA("4#4#(4#4)")
+   DATA("(4#4)#(4#4)")
+   DATA("(4#4#4)#4")
+   DATA("4#(4#4#4)")
+   DATA("((4#4)#4)#4")
+   DATA("(4#(4#4))#4")
+   DATA("4#((4#4)#4)")
+   DATA("4#(4#(4#4))")
+   FOR I=1 TO NBRACKETS DO
+     READ(BRAKETS$[I])
+   END FOR
+
+   INPUT("ENTER 4 DIGITS: ",A$)
+   ND=0
+   FOR I=1 TO LEN(A$) DO
+      C$=MID$(A$,I,1)
+      IF INSTR("123456789",C$)>0 THEN
+        ND=ND+1
+        D[ND]=VAL(C$)
+      END IF
+   END FOR
+   ! precompute permutations. dumb way.
+   NPERM=1*2*3*4
+   N=0
+   FOR I=1 TO 4 DO
+      FOR J=1 TO 4 DO
+        FOR K=1 TO 4 DO
+            FOR L=1 TO 4 DO
+            ! valid permutation (no dupes)
+                IF I<>J AND I<>K AND I<>L  AND J<>K AND J<>L AND K<>L THEN
+                    N=N+1
+! actually,we can as well permute given digits
+                    PERM[N,1]=D[I]
+                    PERM[N,2]=D[J]
+                    PERM[N,3]=D[K]
+                    PERM[N,4]=D[L]
+                END IF
+            END FOR
+        END FOR
+      END FOR
+   END FOR
+
+   ! operations: full search
+   COUNT=0
+   OPS$="+-*/"
+   FOR OP1=1 TO 4 DO
+      OP$[1]=MID$(OPS$,OP1,1)
+      FOR OP2=1 TO 4 DO
+        OP$[2]=MID$(OPS$,OP2,1)
+        FOR OP3=1 TO 4 DO
+            OP$[3]=MID$(OPS$,OP3,1)
+            ! substitute all brackets
+            FOR T=1 TO NBRACKETS DO
+                TMPL$=BRAKETS$[T]
+                ! now,substitute all digits: permutations.
+                FOR P=1 TO NPERM DO
+                    RES$=""
+                    NOP=0
+                    ND=0
+                    FOR I=1 TO LEN(TMPL$) DO
+                        C$=MID$(TMPL$,I,1)
+                        CASE C$ OF
+                        "#"->                ! operations
+                            NOP=NOP+1
+                            RES$=RES$+OP$[NOP]
+                        END ->
+                        "4"->                ! digits
+                            ND=NOP+1
+                            RES$=RES$+MID$(STR$(PERM[P,ND]),2)
+                        END ->
+                        OTHERWISE            ! brackets goes here
+                            RES$=RES$+C$
+                        END CASE
+                    END FOR
+                    ! eval here
+                    MY_EVAL(RES$,DB#,NERR->DB#,NERR)
+                    IF DB#=24 AND NERR=0 THEN
+                        PRINT("24=";RES$)
+                        COUNT=COUNT+1
+                    END IF
+                END FOR
+            END FOR
+        END FOR
+      END FOR
+    END FOR
+
+    IF COUNT=0 THEN
+       PRINT("If you see this, probably task cannot be solved with these digits")
+     ELSE
+       PRINT("Total=";COUNT)
+    END IF
+
+END PROGRAM

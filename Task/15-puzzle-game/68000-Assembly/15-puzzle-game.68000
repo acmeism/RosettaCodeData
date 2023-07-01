@@ -1,0 +1,657 @@
+;15 PUZZLE GAME
+;Ram Variables
+Cursor_X equ $00FF0000		;Ram for Cursor Xpos
+Cursor_Y equ $00FF0000+1	;Ram for Cursor Ypos
+joypad1 equ $00FF0002
+
+GameRam equ $00FF1000		;Ram for where the pieces are
+GameRam_End equ $00FF100F	;the last valid slot in the array
+;Video Ports
+VDP_data	EQU	$C00000	; VDP data, R/W word or longword access only
+VDP_ctrl	EQU	$C00004	; VDP control, word or longword writes only
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 					VECTOR TABLE
+;org $00000000
+	DC.L	$00FFFFFE		;SP register value
+	DC.L	ProgramStart	;Start of Program Code
+	DC.L	IntReturn		; bus err
+	DC.L	IntReturn		; addr err
+	DC.L	IntReturn		; illegal inst
+	DC.L	IntReturn		; divzero
+	DC.L	IntReturn		; CHK
+	DC.L	IntReturn		; TRAPV
+	DC.L	IntReturn		; privilege viol
+	DC.L	IntReturn		; TRACE
+	DC.L	IntReturn		; Line A (1010) emulator
+	DC.L	IntReturn		; Line F (1111) emulator
+	DC.L	IntReturn,IntReturn,IntReturn,IntReturn		; Reserved /Coprocessor/Format err/ Uninit Interrupt
+	DC.L	IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn
+	DC.L	IntReturn		; spurious interrupt
+	DC.L	IntReturn		; IRQ level 1
+	DC.L	IntReturn		; IRQ level 2 EXT
+	DC.L	IntReturn		; IRQ level 3
+	DC.L	IntReturn		; IRQ level 4 Hsync
+	DC.L	IntReturn		; IRQ level 5
+	DC.L	IntReturn		; IRQ level 6 Vsync
+	DC.L	IntReturn		; IRQ level 7 (NMI)
+;org $00000080
+;TRAPS
+	DC.L	IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn
+	DC.L	IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn
+;org $000000C0
+;FP/MMU
+	DC.L	IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn
+	DC.L	IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn,IntReturn
+
+	
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;					Header
+HEADER:
+	DC.B	"SEGA GENESIS    "	        ;System Name	MUST TAKE UP 16 BYTES, USE PADDING IF NECESSARY
+	DC.B	"(C)PDS  "			;Copyright	MUST TAKE UP 8 BYTES, USE PADDING IF NECESSARY
+ 	DC.B	"2022.JUN"			;Date		MUST TAKE UP 8 BYTES, USE PADDING IF NECESSARY
+CARTNAME:
+	DC.B 	"15 PUZZLE"
+CARTNAME_END:
+	DS.B 48-(CARTNAME_END-CARTNAME)	;ENSURES PROPER SPACING
+CARTNAMEALT:
+	DC.B	"15 PUZZLE"
+CARTNAMEALT_END:
+	DS.B 48-(CARTNAMEALT_END-CARTNAMEALT)	;ENSURES PROPER SPACING
+gameID:
+	DC.B	"GM PUPPY001-00"	        ;TT NNNNNNNN-RR T=Type (GM=Game) N=game Num  R=Revision
+	DC.W	$0000				;16-bit Checksum (Address $000200+)
+CTRLDATA:
+	DC.B	"J               "	        ;Control Data (J=3button K=Keyboard 6=6button C=cdrom)
+                                                ;(MUST TAKE UP 16 BYTES, USE PADDING IF NECESSARY)
+ROMSTART:
+	DC.L	$00000000			;ROM Start
+ROMLEN:
+	DC.L	$003FFFFF			;ROM Length
+RAMSTART:
+	DC.L	$00FF0000
+RAMEND:
+	DC.L	$00FFFFFF	;RAM start/end (fixed)
+
+	DC.B	"            "		;External RAM Data	(MUST TAKE UP 12 BYTES, USE PADDING IF NECESSARY)
+	DC.B	"            "		;Modem Data		(MUST TAKE UP 12 BYTES, USE PADDING IF NECESSARY)
+MEMO:
+	DC.B	"                                        "      ;(MUST TAKE UP 40 BYTES, USE PADDING IF NECESSARY)
+REGION:
+	DC.B	"JUE             "	;Regions Allowed        (MUST TAKE UP 16 BYTES, USE PADDING IF NECESSARY)
+	even
+HEADER_END:
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;					Generic Interrupt Handler
+IntReturn:
+	rte                            ;immediately return to game
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;					Program Start
+ProgramStart:
+	;initialize TMSS (TradeMark Security System)
+	move.b ($A10001),D0		;A10001 test the hardware version
+	and.b #$0F,D0
+	beq	NoTmss				;branch if no TMSS chip
+	move.l #'SEGA',($A14000);A14000 disable TMSS
+NoTmss:
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;					Set Up Graphics
+
+	lea VDPSettings,A5		      ;Initialize Screen Registers
+	move.l #VDPSettingsEnd-VDPSettings,D1 ;length of Settings
+	
+	move.w (VDP_ctrl),D0	              ;C00004 read VDP status (interrupt acknowledge?)
+	move.l #$00008000,d5	              ;VDP Reg command (%8rvv)
+	
+NextInitByte:
+	move.b (A5)+,D5			      ;get next video control byte
+	move.w D5,(VDP_ctrl)	              ;C00004 send write register command to VDP
+		;   8RVV - R=Reg V=Value
+	add.w #$0100,D5			      ;point to next VDP register
+	dbra D1,NextInitByte	              ;loop for rest of block
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;       Set up palette
+	
+	;Define palette
+	move.l #$C0000000,d0	;Color 0 (background)
+	move.l d0,VDP_Ctrl
+	;        ----BBB-GGG-RRR-
+	move.w #%0000011000000000,VDP_data
+	
+	move.l #$C01E0000,d0	;Color 15 (Font)
+	move.l d0,VDP_Ctrl
+	move.w #%0000000011101110,VDP_data
+	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;					Set up Font
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; FONT IS 1BPP, THIS ROUTINE CONVERTS IT TO A 4BPP FORMAT.
+	lea Font,A1					 ;Font Address in ROM
+	move.l #Font_End-Font,d6	                 ;Our font contains 96 letters 8 lines each
+	
+	move.l #$40000000,(VDP_Ctrl);Start writes to VRAM address $0000
+NextFont:
+	move.b (A1)+,d0		;Get byte from font
+	moveq.l #7,d5		;Bit Count (8 bits)
+	clr.l d1		;Reset BuildUp Byte
+	
+Font_NextBit:			;1 color per nibble = 4 bytes
+
+	rol.l #3,d1		;Shift BuildUp 3 bits left
+	roxl.b #1,d0		;Shift a Bit from the 1bpp font into the Pattern
+	roxl.l #1,d1		;Shift bit into BuildUp
+	dbra D5,Font_NextBit    ;Next Bit from Font
+	
+	move.l d1,d0		; Make fontfrom Color 1 to color 15
+	rol.l #1,d1		;Bit 1
+	or.l d0,d1
+	rol.l #1,d1		;Bit 2
+	or.l d0,d1
+	rol.l #1,d1		;Bit 3
+	or.l d0,d1
+	
+	move.l d1,(VDP_Data);Write next Long of char (one line) to VDP
+	dbra d6,NextFont	;Loop until done
+
+	
+
+	clr.b Cursor_X		;Clear Cursor XY
+	clr.b Cursor_Y
+	
+	;Turn on screen
+	move.w	#$8144,(VDP_Ctrl);C00004 reg 1 = 0x44 unblank display
+	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; all of the above was just the prep work to boot the Sega Genesis, and had nothing to do with a 15 Puzzle.
+; That's hardware for you!
+
+	LEA GameRam,A0
+        ;load the initial state of the puzzle. There is no randomization here unfortunately, as creating a sufficient pseudo-RNG
+        ;to make the game "believable" is more difficult than programming the game itself!
+        ;so instead we'll start in such a manner that the player has to do quite a bit of work to win.
+	MOVE.B #'F',(A0)+
+	MOVE.B #'E',(A0)+
+	MOVE.B #'D',(A0)+
+	MOVE.B #'C',(A0)+
+	MOVE.B #'B',(A0)+
+	MOVE.B #'A',(A0)+
+	MOVE.B #'9',(A0)+
+	MOVE.B #'8',(A0)+
+	MOVE.B #'7',(A0)+
+	MOVE.B #'6',(A0)+
+	MOVE.B #'5',(A0)+
+	MOVE.B #'4',(A0)+
+	MOVE.B #'3',(A0)+
+	MOVE.B #'2',(A0)+
+	MOVE.B #'1',(A0)+
+	MOVE.B #' ',(A0)+
+
+       ;puzzle will look like:
+       ;FEDC
+       ;BA98
+       ;7654
+       ;321
+
+main:
+	JSR Player_ReadControlsDual     ;get controller input
+	move.w d0,(joypad1)
+
+
+	;adjust the number of these as you see fit.
+	;this affects the game's overall speed.
+	JSR waitVBlank
+	JSR waitVBlank
+	JSR waitVBlank
+	JSR waitVBlank
+	JSR waitVBlank
+	JSR waitVBlank
+	JSR waitVBlank
+	JSR waitVBlank
+	JSR waitVBlank
+	JSR waitVBlank
+
+        ;find where the blank space is among GameRAM
+	LEA GameRAM,a0
+	MOVE.B #' ',D0
+	JSR REPNE_SCASB
+	MOVE.L A0,A1	
+	
+;;;;;;;;;;;;;;;;;;; check controller presses
+JOYPAD_BITFLAG_M equ 2048
+JOYPAD_BITFLAG_Z equ 1024
+JOYPAD_BITFLAG_Y equ 512
+JOYPAD_BITFLAG_X equ 256
+JOYPAD_BITFLAG_S equ 128
+JOYPAD_BITFLAG_C equ 64
+JOYPAD_BITFLAG_B equ 32
+JOYPAD_BITFLAG_A equ 16
+JOYPAD_BITFLAG_R equ 8
+JOYPAD_BITFLAG_L equ 4
+JOYPAD_BITFLAG_D equ 2
+JOYPAD_BITFLAG_U equ 1
+
+JOYPAD_BITNUM_M equ 11
+JOYPAD_BITNUM_Z equ 10
+JOYPAD_BITNUM_Y equ 9
+JOYPAD_BITNUM_X equ 8
+JOYPAD_BITNUM_S equ 7
+JOYPAD_BITNUM_C equ 6
+JOYPAD_BITNUM_B equ 5
+JOYPAD_BITNUM_A equ 4
+JOYPAD_BITNUM_R equ 3
+JOYPAD_BITNUM_L equ 2
+JOYPAD_BITNUM_D equ 1
+JOYPAD_BITNUM_U equ 0
+
+
+
+
+	move.w (joypad1),D0
+
+	BTST #JOYPAD_BITNUM_U,D0
+	BNE JoyNotUp
+		MOVEM.L D0/A1,-(SP)
+			ADDA.L #4,A1
+			CMPA.L #GameRam_End,A1
+			BHI .doNothing
+			;OTHERWISE SWAP THE EMPTY SPACE WITH THE BYTE BELOW IT.
+				MOVE.B (A1),D7
+				MOVE.B (A0),(A1)
+				MOVE.B D7,(A0)	
+.doNothing
+		MOVEM.L (SP)+,D0/A1
+		bra vdraw	
+JoyNotUp:
+	BTST #JOYPAD_BITNUM_D,D0
+	BNE JoyNotDown
+		MOVEM.L D0/A1,-(SP)
+
+			SUBA.L #4,A1		;CHECK ONE ROW ABOVE WHERE WE ARE
+			CMPA.L #GameRam,A1
+			BCS .doNothing		;if A1-4 IS BELOW THE START OF GAME RAM, DON'T MOVE
+			;OTHERWISE SWAP THE EMPTY SPACE WITH THE BYTE ABOVE IT.
+				MOVE.B (A1),D7
+				MOVE.B (A0),(A1)
+				MOVE.B D7,(A0)				
+.doNothing:
+		MOVEM.L (SP)+,D0/A1
+		bra vdraw
+JoyNotDown:
+	BTST #JOYPAD_BITNUM_L,D0
+	BNE JoyNotLeft
+		MOVEM.L D0/A1,-(SP)
+			ADDA.L #1,A1
+			MOVE.L A1,D4
+			MOVE.L A0,D3
+			AND.L #3,D4
+			AND.L #3,D3
+			CMP.L D3,D4	
+			BCS .doNothing
+			;OTHERWISE SWAP THE EMPTY SPACE WITH THE BYTE TO THE LEFT
+				MOVE.B (A1),D7
+				MOVE.B (A0),(A1)
+				MOVE.B D7,(A0)				
+.doNothing:
+		MOVEM.L (SP)+,D0/A1
+		bra vdraw
+JoyNotLeft:
+	BTST #JOYPAD_BITNUM_R,D0
+	BNE JoyNotRight
+		MOVEM.L D0/A1,-(SP)
+			SUBA.L #1,A1
+			MOVE.L A1,D4
+			MOVE.L A0,D3
+			AND.L #3,D4
+			AND.L #3,D3
+			CMP.L D3,D4	
+			BHI .doNothing
+			;OTHERWISE SWAP THE EMPTY SPACE WITH THE BYTE TO THE RIGHT
+				MOVE.B (A1),D7
+				MOVE.B (A0),(A1)
+				MOVE.B D7,(A0)				
+.doNothing:
+		MOVEM.L (SP)+,D0/A1
+		bra vdraw
+JoyNotRight:
+
+vdraw:
+	;this actually draws the current state of the puzzle to the screen.
+	LEA GameRam,A0
+	CLR.B (Cursor_X)   ;reset text cursors to top left of screen
+	CLR.B (Cursor_Y)
+	
+;draw the puzzle
+
+;anything insize a REPT N...ENDR block is in-lined N times, back to back.
+       rept 4
+
+	      MOVE.B (A0)+,D0
+	      JSR PrintChar
+
+	      MOVE.B (A0)+,D0
+	      JSR PrintChar
+
+	      MOVE.B (A0)+,D0
+	      JSR PrintChar
+
+	      MOVE.B (A0)+,D0
+	      JSR PrintChar         ;we just finished drawing one row of the puzzle. Now, begin a new line and continue drawing.
+
+              jsr newline
+       endr
+	
+	
+checkIfWin:
+	;YES THIS IS MESSY, I TRIED IT WITH A LOOP BUT IT WOULDN'T WORK SO I JUST UNROLLED THE LOOP.
+	LEA GameRam,a4
+	MOVE.B (A4)+,D5
+	CMP.B #'1',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'2',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'3',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'4',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'5',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'6',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'7',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'8',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'9',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'A',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'B',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'C',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'D',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'E',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #'F',D5
+	BNE .keepGoing
+
+	MOVE.B (A4)+,D5
+	CMP.B #' ',D5
+	BNE .keepGoing
+	
+	clr.b (Cursor_X)
+	move.b #7,(Cursor_Y)
+	LEA victoryMessage,a3
+	jsr PrintString
+	jmp *  ;game freezes after you win.
+
+.keepGoing:
+;it's unlikely that the label "main" is in range of here so I didn't bother checking and just assumed it was out of range.
+;Otherwise I would have said "BEQ main" instead of BNE .keepGoing
+	jmp main
+		
+
+VictoryMessage:
+	DC.B "A WINNER IS YOU",255
+	EVEN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+REPNE_SCASB:
+	;INPUT:
+	;A0 = POINTER TO START OF MEMORY
+	;D0 = THE BYTE TO SEARCH FOR
+	;OUTPUT = A0 POINTS TO THE BYTE THAT CONTAINED D0
+	MOVE.B (A0),D1
+	CMP.B D0,D1
+	BEQ .done
+	ADDA.L #1,A0
+	BRA REPNE_SCASB
+.done:
+	RTS
+	
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+Player_ReadControlsDual:
+	
+	move.b #%01000000,($A1000B)	; Set direction IOIIIIII (I=In O=Out)
+	move.l #$A10003,a0		;RW port for player 1
+
+	move.b  #$40,(a0)	; TH = 1
+	nop		;Delay
+	nop
+	move.b  (a0),d2		; d0.b = --CBRLDU	Store in D2
+	
+	move.b	#$0,(a0)	; TH = 0
+	nop		;Delay
+	nop
+	move.b	(a0),d1		; d1.b = --SA--DU	Store in D1
+	
+	move.b  #$40,(a0)	; TH = 1
+	nop		;Delay
+	nop
+	move.b	#$0,(a0)	; TH = 0
+	nop		;Delay
+	nop
+	move.b  #$40,(a0)	; TH = 1
+	nop		;Delay
+	nop
+	move.b	(a0),d3		; d1.b = --CBXYZM	Store in D3
+	move.b	#$0,(a0)	; TH = 0
+	
+	clr.l d0			;Clear buildup byte
+	roxr.b d2
+	roxr.b d0			;U
+	roxr.b d2
+	roxr.b d0			;D
+	roxr.b d2
+	roxr.b d0			;L
+	roxr.b d2
+	roxr.b d0			;R
+	roxr.b #5,d1
+	roxr.b d0			;A
+	roxr.b d2
+	roxr.b d0			;B
+	roxr.b d2
+	roxr.b d0			;C
+	roxr.b d1
+	roxr.b d0			;S
+	
+	move.l d3,d1
+	roxl.l #7,d1		;XYZ
+	and.l #%0000011100000000,d1
+	or.l d1,d0			
+	
+	move.l d3,d1
+	roxl.l #8,d1		;M
+	roxl.l #3,d1		
+	and.l #%0000100000000000,d1
+	or.l d1,d0
+	
+	or.l #$FFFFF000,d0	;Set unused bits to 1
+
+	
+	
+	;this returns player 1's buttons into D0 as the following:
+	;----MZYXSCBARLDU
+	rts
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+waitVBlank:							;Bit 3 defines if we're in Vblank
+	MOVE.L d0,-(sp)
+.wait:
+		move.w VDP_ctrl,d0
+		and.w #%0000000000001000,d0		;See if vblank is running
+		bne .wait					;wait until it is
+		
+waitVBlank2:
+		move.w VDP_ctrl,d0
+		and.w #%0000000000001000,d0		;See if vblank is running
+		beq waitVBlank2					;wait until it isnt
+	MOVE.L (SP)+,d0
+	rts		
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	
+PrintChar:				;Show D0 to screen
+	moveM.l d0-d7/a0-a7,-(sp)
+		and.l #$FF,d0			;Keep only 1 byte
+		sub #32,d0				;No Characters in our font below 32
+PrintCharAlt:		
+		Move.L  #$40000003,d5	;top 4=write, bottom $3=Cxxx range
+		clr.l d4					;Tilemap at $C000+
+
+		Move.B (Cursor_Y),D4	
+		rol.L #8,D4				;move $-FFF to $-FFF----
+		rol.L #8,D4
+		rol.L #7,D4				;2 bytes per tile * 64 tiles per line
+		add.L D4,D5				;add $4------3
+		
+		Move.B (Cursor_X),D4
+		rol.L #8,D4				;move $-FFF to $-FFF----
+		rol.L #8,D4
+		rol.L #1,D4				;2 bytes per tile
+		add.L D4,D5				;add $4------3
+		
+		MOVE.L	D5,(VDP_ctrl)	; C00004 write next character to VDP
+		MOVE.W	D0,(VDP_data)	; C00000 store next word of name data
+
+		addq.b #1,(Cursor_X)	;INC Xpos
+		move.b (Cursor_X),d0
+		cmp.b #39,d0
+		bls nextpixel_Xok
+		jsr NewLine			;If we're at end of line, start newline
+nextpixel_Xok:
+	moveM.l (sp)+,d0-d7/a0-a7
+	rts
+	
+PrintString:
+		move.b (a3)+,d0			;Read a character in from A3
+		cmp.b #255,d0
+		beq PrintString_Done	;return on 255
+		jsr PrintChar			;Print the Character
+		bra PrintString
+PrintString_Done:		
+	rts
+	
+NewLine:
+	addq.b #1,(Cursor_Y)		;INC Y
+	clr.b (Cursor_X)			;Zero X
+	rts	
+	
+Font:							
+;1bpp font - 8x8 96 characters
+;looks just like your typical "8-bit" font. You'll just have to take my word for it.
+     DC.B $00,$00,$00,$00,$00,$00,$00,$00,$18,$3c,$3c,$18,$18,$00,$18,$18
+     DC.B $36,$36,$12,$24,$00,$00,$00,$00,$00,$12,$7f,$24,$24,$fe,$48,$00
+     DC.B $00,$04,$1e,$28,$1c,$0a,$3c,$10,$00,$62,$64,$08,$10,$26,$46,$00
+     DC.B $00,$18,$24,$20,$12,$2c,$44,$3a,$18,$18,$08,$10,$00,$00,$00,$00
+     DC.B $08,$10,$20,$20,$20,$20,$10,$08,$10,$08,$04,$04,$04,$04,$08,$10
+     DC.B $00,$10,$38,$10,$28,$00,$00,$00,$00,$00,$10,$10,$7c,$10,$10,$00
+     DC.B $00,$00,$00,$00,$0c,$0c,$04,$08,$00,$00,$00,$00,$7e,$00,$00,$00
+     DC.B $00,$00,$00,$00,$00,$18,$18,$00,$01,$02,$04,$08,$10,$20,$40,$00
+     DC.B $1c,$26,$63,$63,$63,$32,$1c,$00,$0c,$1c,$0c,$0c,$0c,$0c,$3f,$00
+     DC.B $3e,$63,$07,$1e,$3c,$70,$7f,$00,$3f,$06,$0c,$1e,$03,$63,$3e,$00
+     DC.B $0e,$1e,$36,$66,$7f,$06,$06,$00,$7e,$60,$7e,$03,$03,$63,$3e,$00
+     DC.B $1e,$30,$60,$7e,$63,$63,$3e,$00,$7f,$63,$06,$0c,$18,$18,$18,$00
+     DC.B $3c,$62,$72,$3c,$4f,$43,$3e,$00,$3e,$63,$63,$3f,$03,$06,$3c,$00
+     DC.B $00,$18,$18,$00,$18,$18,$00,$00,$00,$0c,$0c,$00,$0c,$0c,$04,$08
+     DC.B $00,$00,$06,$18,$60,$18,$06,$00,$00,$00,$00,$7e,$00,$7e,$00,$00
+     DC.B $00,$00,$60,$18,$06,$18,$60,$00,$1c,$36,$36,$06,$0c,$00,$0c,$0c
+     DC.B $3c,$42,$99,$a1,$a1,$99,$42,$3c,$1c,$36,$63,$63,$7f,$63,$63,$00
+     DC.B $7e,$63,$63,$7e,$63,$63,$7e,$00,$1e,$33,$60,$60,$60,$33,$1e,$00
+     DC.B $7c,$66,$63,$63,$63,$66,$7c,$00,$3f,$30,$30,$3e,$30,$30,$3f,$00
+     DC.B $7f,$60,$60,$7e,$60,$60,$60,$00,$1f,$30,$60,$67,$63,$33,$1f,$00
+     DC.B $63,$63,$63,$7f,$63,$63,$63,$00,$3f,$0c,$0c,$0c,$0c,$0c,$3f,$00
+     DC.B $03,$03,$03,$03,$03,$63,$3e,$00,$63,$66,$6c,$78,$7c,$6e,$67,$00
+     DC.B $30,$30,$30,$30,$30,$30,$3f,$00,$63,$77,$7f,$7f,$6b,$63,$63,$00
+     DC.B $63,$73,$7b,$7f,$6f,$67,$63,$00,$3e,$63,$63,$63,$63,$63,$3e,$00
+     DC.B $7e,$63,$63,$63,$7e,$60,$60,$00,$3e,$63,$63,$63,$6f,$66,$3d,$00
+     DC.B $7e,$63,$63,$67,$7c,$6e,$67,$00,$3c,$66,$60,$3e,$03,$63,$3e,$00
+     DC.B $3f,$0c,$0c,$0c,$0c,$0c,$0c,$00,$63,$63,$63,$63,$63,$63,$3e,$00
+     DC.B $63,$63,$63,$77,$3e,$1c,$08,$00,$63,$63,$6b,$7f,$7f,$77,$63,$00
+     DC.B $63,$77,$3e,$1c,$3e,$77,$63,$00,$33,$33,$33,$1e,$0c,$0c,$0c,$00
+     DC.B $7f,$07,$0e,$1c,$38,$70,$7f,$00,$00,$38,$20,$20,$20,$20,$38,$00
+     DC.B $80,$40,$20,$10,$08,$04,$02,$00,$00,$1c,$04,$04,$04,$04,$1c,$00
+     DC.B $10,$28,$44,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$7e,$00
+     DC.B $00,$20,$10,$00,$00,$00,$00,$00,$00,$18,$04,$1c,$24,$2c,$1c,$00
+     DC.B $00,$20,$20,$38,$24,$24,$38,$00,$00,$00,$1c,$20,$20,$20,$1c,$00
+     DC.B $00,$04,$04,$1c,$24,$24,$1c,$00,$00,$00,$1c,$24,$3c,$20,$1c,$00
+     DC.B $00,$18,$24,$20,$30,$20,$20,$00,$00,$1c,$24,$24,$1c,$04,$3c,$00
+     DC.B $00,$20,$20,$38,$24,$24,$24,$00,$00,$10,$00,$10,$10,$10,$10,$00
+     DC.B $08,$00,$08,$08,$08,$08,$28,$10,$20,$20,$24,$28,$30,$28,$24,$00
+     DC.B $10,$10,$10,$10,$10,$10,$18,$00,$00,$00,$40,$68,$54,$54,$54,$00
+     DC.B $00,$00,$28,$34,$24,$24,$24,$00,$00,$00,$1c,$22,$22,$22,$1c,$00
+     DC.B $00,$00,$38,$24,$24,$38,$20,$20,$00,$00,$1c,$24,$24,$1c,$04,$04
+     DC.B $00,$00,$2c,$30,$20,$20,$20,$00,$00,$00,$1c,$20,$1c,$02,$3c,$00
+     DC.B $00,$10,$3c,$10,$10,$14,$08,$00,$00,$00,$24,$24,$24,$24,$1a,$00
+     DC.B $00,$00,$24,$24,$24,$14,$18,$00,$00,$00,$92,$92,$92,$5a,$6c,$00
+     DC.B $00,$00,$22,$14,$08,$14,$22,$00,$00,$00,$24,$24,$1c,$04,$18,$00
+     DC.B $00,$00,$3c,$04,$18,$20,$3c,$00,$00,$08,$10,$10,$20,$10,$10,$08
+     DC.B $18,$18,$18,$18,$18,$18,$18,$18,$00,$10,$08,$08,$04,$08,$08,$10
+     DC.B $00,$00,$00,$30,$4a,$04,$00,$00,$1c,$7f,$00,$7f,$55,$55,$55,$00
+Font_End:
+
+VDPSettings:
+	DC.B $04 ; 0 mode register 1											---H-1M-
+	DC.B $04 ; 1 mode register 2											-DVdP---
+	DC.B $30 ; 2 name table base for scroll A (A=top 3 bits)				--AAA--- = $C000
+	DC.B $3C ; 3 name table base for window (A=top 4 bits / 5 in H40 Mode)	--AAAAA- = $F000
+	DC.B $07 ; 4 name table base for scroll B (A=top 3 bits)				-----AAA = $E000
+	DC.B $6C ; 5 sprite attribute table base (A=top 7 bits / 6 in H40)		-AAAAAAA = $D800
+	DC.B $00 ; 6 unused register											--------
+	DC.B $00 ; 7 background color (P=Palette C=Color)						--PPCCCC
+	DC.B $00 ; 8 unused register											--------
+	DC.B $00 ; 9 unused register											--------
+	DC.B $FF ;10 H interrupt register (L=Number of lines)					LLLLLLLL
+	DC.B $00 ;11 mode register 3											----IVHL
+	DC.B $81 ;12 mode register 4 (C bits both1 = H40 Cell)					C---SIIC
+	DC.B $37 ;13 H scroll table base (A=Top 6 bits)							--AAAAAA = $FC00
+	DC.B $00 ;14 unused register											--------
+	DC.B $02 ;15 auto increment (After each Read/Write)						NNNNNNNN
+	DC.B $01 ;16 scroll size (Horiz & Vert size of ScrollA & B)				--VV--HH = 64x32 tiles
+	DC.B $00 ;17 window H position (D=Direction C=Cells)					D--CCCCC
+	DC.B $00 ;18 window V position (D=Direction C=Cells)					D--CCCCC
+	DC.B $FF ;19 DMA length count low										LLLLLLLL
+	DC.B $FF ;20 DMA length count high										HHHHHHHH
+	DC.B $00 ;21 DMA source address low										LLLLLLLL
+	DC.B $00 ;22 DMA source address mid										MMMMMMMM
+	DC.B $80 ;23 DMA source address high (C=CMD)							CCHHHHHH
+VDPSettingsEnd:
+	even

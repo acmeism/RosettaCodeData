@@ -1,0 +1,165 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program integerName64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ MAXI,   524
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessResult:        .asciz "Total  : @  pour @ \n"
+szMessError:        .asciz "Number too large !!.\n"
+szCarriageReturn:   .asciz "\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+tbNames:          .skip 8 * MAXI
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 // entry of program
+
+    mov x0,#5
+    bl functionG
+
+    mov x0,#23
+    bl functionG
+
+    mov x0,#123
+    bl functionG
+
+    mov x0,#524
+    bl functionG
+
+    mov x0,#1234
+    bl functionG
+100:                                  // standard end of the program
+    mov x0, #0                        // return code
+    mov x8, #EXIT                     // request to exit program
+    svc #0                            // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsMessResult:          .quad sMessResult
+qAdrtbNames:              .quad tbNames
+qAdrsZoneConv:            .quad sZoneConv
+/******************************************************************/
+/*            compute function G                                 */
+/******************************************************************/
+/* x0 contains N */
+functionG:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    cmp x0,#MAXI + 1
+    bge 2f
+    mov x3,x0
+    mov x2,#1
+1:                               // loop compute every item
+    mov x0,x2
+    bl computeNumber
+    add x2,x2,#1
+    cmp x2,x3
+    ble 1b
+
+    ldr x1,qAdrsZoneConv         // result display
+    bl conversion10              // call decimal conversion
+    ldr x0,qAdrsMessResult
+    ldr x1,qAdrsZoneConv         // insert conversion in message
+    bl strInsertAtCharInc
+    mov x4,x0
+    mov x0,x3
+    ldr x1,qAdrsZoneConv         // result display
+    bl conversion10              // call decimal conversion
+    mov x0,x4
+    ldr x1,qAdrsZoneConv         // insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+    mov x0,#0
+    b 100f
+2:
+    ldr x0,qAdrszMessError
+    bl affichageMess
+    mov x0,#-1
+100:
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+qAdrszMessError:         .quad szMessError
+/******************************************************************/
+/*            random door test strategy                           */
+/******************************************************************/
+/* x0 contains N */
+computeNumber:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    ldr x6,qAdrtbNames           // table address
+    mov x1,#1
+    str x1,[x6]                  // init item 0
+    mov x1,#0
+    str x1,[x6,x0,lsl #3]        // init item N
+    mov x2,#1                    // indice
+1:
+    add x3,x2,x2, lsl #1
+    sub x4,x3,#1
+    mul x4,x2,x4
+    lsr x4,x4,#1
+    subs x3,x0,x4                // compute new indice
+    blt 90f
+    tst x2,#1                    // indice owen ?
+    beq 2f
+    ldr x4,[x6,x3,lsl #3]
+    ldr x5,[x6,x0,lsl #3]
+    add x5,x5,x4                 // addition
+    str x5,[x6,x0,lsl #3]
+    b 3f
+2:                               // else substrac
+    ldr x4,[x6,x3,lsl #3]
+    ldr x5,[x6,x0,lsl #3]
+    sub x5,x5,x4
+    str x5,[x6,x0,lsl #3]
+3:
+    subs x3,x3,x2                // compute new indice
+    blt 90f
+
+    tst x2,#1                    // owen ?
+    beq 4f
+    ldr x4,[x6,x3,lsl #3]
+    ldr x5,[x6,x0,lsl #3]
+    add x5,x5,x4
+    str x5,[x6,x0,lsl #3]
+    b 5f
+4:
+    ldr x4,[x6,x3,lsl #3]
+    ldr x5,[x6,x0,lsl #3]
+    sub x5,x5,x4
+    str x5,[x6,x0,lsl #3]
+5:
+    add x2,x2,#1
+    cmp x2,x0
+    ble 1b
+90:
+   ldr x0,[x6,x0,lsl #3]         // return last item of table
+100:
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

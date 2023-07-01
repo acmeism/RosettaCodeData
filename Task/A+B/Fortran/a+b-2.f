@@ -1,0 +1,5 @@
+      READ  (1,100) I,J
+ 100  FORMAT(2I5)
+      WRITE (2,200) I+J
+ 200  FORMAT(1X,I5)
+      END

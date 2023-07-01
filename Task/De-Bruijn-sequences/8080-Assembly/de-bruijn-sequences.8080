@@ -1,0 +1,267 @@
+bdos:	equ	5	; BDOS entry point	
+putch:	equ	2	; Write character to console
+puts:	equ	9	; Write string to console
+	org	100h
+	lhld	bdos+1	; Put stack at highest usable address
+	sphl
+	;;;	Generate de_bruijn(10,4) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	mvi	c,40	; Zero out a[]
+	xra	a
+	lxi	d,arr
+zloop:	stax	d
+	inx	d
+	dcr	c
+	jnz	zloop
+	lxi	h,seq	; H = start of sequence
+	lxi	b,0101h	; db(1,1)
+	call	db_
+	lxi	d,seq	; Allow wrap-around by appending first 3 digits
+	mvi	c,3
+wrap:	ldax	d	; get one of first digits
+	mov	m,a	; store after last digit
+	inx	d	; advance pointers
+	inx	h
+	dcr	c	; do this 3 times
+	jnz	wrap
+	push	h	; store end of data
+	;;;	Print length ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	lxi	d,slen	; print "Length: "
+	call	pstr
+	lxi 	d,-seq	; calculate length (-seq+seqEnd)
+	dad	d
+	call	puthl	; print length
+	call	pnl	; print newline
+	;;;	Print first and last 130 digits ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	lxi	d,sfrst	; print "First 130: "
+	call	pstr
+	lxi 	h,seq	; print first 130 digits
+	call	p130
+	call	pnl	; print newline
+	lxi	d,slast	; print "Last 130: "
+	call	pstr
+	pop	h	; Get end of sequence
+	push	h
+	lxi	d,-130	; 130th last digit
+	dad	d
+	call	p130	; print last 130 digits
+	call	pnl
+	call	verify	; verify that all numbers are there
+	;;;	Reverse and verify ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	lxi	d,srev	; Print "reversing..."
+	call	pstr
+	pop	h	; HL = address of last digit
+	dcx	h
+	push	h	; stack = address of last digit
+	lxi	d,seq	; DE = address of first digit
+	call	rvrs	; Reverse
+	call	verify	; Verify that all numbers are there
+	lxi	d,seq	; Then reverse again (restoring it)
+	pop	h
+	call	rvrs
+	;;;	Replace 4444th digit with '.' and verify ;;;;;;;;;;;;;;;;;;;;;;
+	lxi	d,s4444
+	call	pstr
+	mvi	a,'.'
+	sta	seq+4444
+	call	verify
+	rst	0
+	;;;	db(t,p); t,p in B,C; end of sequence in HL ;;;;;;;;;;;;;;;;;;;;
+db_:	mov	a,b	; if t>n (n=4)
+	cpi	5	; t >= n+1
+	jc	dbelse
+	mov	a,c	; 4%p==0, for p in {1,2,3,4}, is false iff p=3
+	cpi	3
+	rz		; stop if p=3, i.e. 4%p<>0
+	lxi	d,arr+1	; copy P elements to seq forom arr[1..]
+dbextn:	ldax	d	; take from a[]
+	mov	m,a	; store in sequence
+	inx	h	; advance pointers
+	inx	d
+	dcr	c	; and do this P times
+	jnz	dbextn
+	ret
+dbelse:	mov	a,b	; t - p
+	sub	c
+	mvi	d,arr/256
+	mov	e,a	; a[] is page-aligned for easier indexing
+	ldax	d	; get a[t-p]
+	mov	e,b	; store in a[t]
+	stax	d
+	push	b	; keep T and P
+	inr	b	; db(t+1, p)
+	call	db_
+	pop	b	; restore T and P
+	mov	a,b	; get a[t-p]
+	sub	c
+	mvi	d,arr/256
+	mov	e,a
+	ldax	d	; j = a[t-p]
+dbloop:	inr	a	; j++
+	cpi	10	; reached K = 10?
+	rnc		; then stop
+	mvi	d,arr/256
+	mov	e,b
+	stax	d	; a[t] = j
+	push	psw	; keep j
+	push	b	; keep t and p
+	mov	c,b
+	inr	b
+	call	db_	; db(t+1, t)
+	pop	b	; restore t and p
+	pop	psw	; restore j
+	jmp	dbloop
+	;;;	Verify that all numbers are there ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+verify:	lxi	d,sver	; print "Verifying... "
+	call	pstr
+	mvi	d,0	; Zero out the flag array
+	lxi	b,10000	
+	lxi	h,val
+vzero:	mov	m,d
+	inx	h
+	dcx	b
+	mov	a,b
+	ora	c
+	jnz	vzero
+	lxi	h,seq	; Sequence pointer
+donum:	push	h	; Store sequence pointer
+	push	h	; Push two copies
+	lxi	h,0	; Current 4-digit number
+	mvi	c,4	; Number has 4 digits
+dgtadd:	mov	d,h	; HL *= 10
+	mov	e,l
+	dad	h
+	dad	h
+	dad	d
+	dad	h
+	xthl		; Get sequence pointer
+	mov	a,m	; Get digit
+	inx	h	; Advance pointer
+	cpi	10	; Valid digit?
+	jnc	dinval	; If not, go do next 4-digit number
+	xthl		; Back to number
+	mov	e,a
+	mvi	d,0
+	dad	d	; Add digit to number
+	dcr	c	; More digits?
+	jnz	dgtadd	; Then get digit
+	lxi	d,val	; HL is now the current 4-digit number
+	dad	d
+	inr	m 	; val[HL]++ (we've seen it)
+dinval:	pop	h	; Pointer to after last valid digit
+	pop	h	; Pointer to start of current number
+	inx	h	; Get 4-digit number that starts at next digit	
+	mov	d,h	; Next pointer in DE
+	mov	e,l
+	lxi	b,-(seq+10000)	; Are we there yet?
+	dad	b
+	mov	a,h
+	ora	l
+	xchg		; Next pointer back in HL
+	jnz	donum	; If not done, do next number.
+	lxi	h,val	; Done - get start of validation array
+	mvi	b,0	; B will be set if one is missing
+vnum:	mov	a,m	; Have we seen HL-val?
+	ana	a 	
+	jnz	vnext	; If so, do the next number
+	push	h	; Otherwise, keep current address,
+	lxi	d,-val	; Subtract val (to get the number)
+	dad	d
+	call	puthl	; Print this number as being missing
+	mvi	b,1	; Set B,
+	pop 	h	; and then restore the address
+vnext:	inx	h	; Increment the number
+	push	h
+	lxi	d,-(val+10000)	; Are we there yet?
+	dad	d
+	mov	a,h
+	ora	l
+	pop	h
+	jnz	vnum	; If not, check next number.
+	dcr	b	; At the end, if B was not set,
+	lxi	d,snone	; print "none missing",
+	jnz	pstr
+	lxi	d,smiss	; otherwise, print "missing"
+	jmp	pstr
+	;;;	Subroutines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	reverse memory starting at DE and ending at HL
+rvrs:	mov	b,m	; Load [HL]
+	ldax	d	; Load [DE]
+	mov	m,a	; [HL] = old [DE]
+	mov	a,b
+	stax	d	; [DE] = old [HL]
+	inx	d	; Move bottom pointer upwards,
+	dcx	h	; Move top pointer downwards,
+	mov	a,d	; D<H = not there yet
+	cmp	h
+	jc	rvrs
+	mov	a,e	; E<L = not there yet
+	cmp	l
+	jc	rvrs
+	ret
+	;;;	print number in HL, saving registers
+puthl:	push	h	; save registers
+	push	d
+	push	b
+	lxi	b,nbuf	; number buffer pointer
+	push	b	; keep it on the stack
+dgt:	lxi	b,-10
+	lxi	d,-1
+dgtdiv:	inx	d	; calculate digit
+	dad	b
+	jc	dgtdiv
+	mvi	a,'0'+10
+	add	l
+	pop	h	; get pointer from stack
+	dcx	h	; go to previous digit
+	mov	m,a	; store digit
+	push	h 	; put pointer back
+	xchg		; are there any more digits?
+	mov	a,h
+	ora	l
+	jnz	dgt	; if so, calculate next digit
+	pop	d 	; otherwise, get pointer to first digit
+	jmp	pstr_	; and print the resulting string	
+	;;;	print 130 digits from the sequence, starting at HL
+p130:	push	h
+	push	d
+	push	b
+	mvi	b,130	; 130 digits
+p130l:	mov	a,m	; get current digit
+	adi 	'0'	; make ASCII
+	inx	h	; advance pointer
+	push	b	; save pointer and counter
+	push	h
+	mvi	c,putch	; print character
+	mov	e,a
+	call	bdos
+	pop	h	; restore pointer and counter
+	pop	b
+	dcr	b	; one fewer character left
+	jnz	p130l	; if characters left, print next
+	jmp	rsreg	; otherwise, restore registers and return
+	;;;	print newline
+pnl:	lxi	d,snl
+	;;;	print string in DE, saving registers
+pstr:	push	h	; store registers
+	push	d
+	push 	b
+pstr_:	mvi	c,puts	; print string using CP/M
+	call	bdos
+rsreg:	pop	b	; restore registers
+	pop	d
+	pop 	h
+	ret
+snl:	db	13,10,'$'
+slen:	db	'Length: $'
+sfrst:	db	'First 130: $'
+slast:	db	'Last 130: $'
+srev:	db	'Reversing...',13,10,'$'
+s4444:	db	'Set seq[4444] to `.`...',13,10,'$'
+sver:	db	'Verifying... $'
+snone:	db	'none '
+smiss:	db	'missing',13,10,'$'
+	db	'00000'	; number output buffer
+nbuf:	db	' $'
+arr:	equ	($/256+1)*256	; Place to store a[] (page-aligned)
+val:	equ	arr+40		; Place to store validation flags
+seq:	equ	val+10000	; Place to store De Bruijn sequence

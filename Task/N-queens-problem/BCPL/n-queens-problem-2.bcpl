@@ -1,0 +1,134 @@
+GET "libhdr.h"
+GET "mc.h"
+
+MANIFEST {
+ lo=1; hi=16
+ dlevel=#b0000
+
+ // Register mnemonics
+ ld    = mc_a
+ row   = mc_b
+ rd    = mc_c
+ poss  = mc_d
+ p     = mc_e
+ count = mc_f
+}
+
+LET start() = VALOF
+{ // Load the dynamic code generation package
+  LET mcseg = globin(loadseg("mci386"))
+  LET mcb = 0
+
+  UNLESS mcseg DO
+  { writef("Trouble with MC package: mci386*n")
+    GOTO fin
+  }
+
+  // Create an MC instance for hi functions with a data space
+  // of 10 words and code space of 40000
+  mcb := mcInit(hi, 10, 40000)
+
+  UNLESS mcb DO
+  { writef("Unable to create an mci386 instance*n")
+    GOTO fin
+  }
+
+  mc := 0          // Currently no selected MC instance
+  mcSelect(mcb)
+
+  mcK(mc_debug, dlevel) // Set the debugging level
+
+  FOR n = lo TO hi DO
+  { mcComment("*n*n// Code for a %nx%n board*n", n, n)
+    gencode(n) // Compile the code for an nxn board
+  }
+
+  mcF(mc_end) // End of code generation
+
+  writef("Code generation complete*n")
+
+  FOR n = lo TO hi DO
+  { LET k = mcCall(n)
+    writef("Number of solutions to %i2-queens is %i9*n", n, k)
+  }
+
+fin:
+  IF mc    DO mcClose()
+  IF mcseg DO unloadseg(mcseg)
+
+  writef("*n*nEnd of run*n")
+}
+
+AND gencode(n) BE
+{ LET all = (1<<n) - 1
+  mcKKK(mc_entry, n, 3, 0)
+
+  mcRK(mc_mv, ld,    0)
+  mcRK(mc_mv, row,   0)
+  mcRK(mc_mv, rd,    0)
+  mcRK(mc_mv, count, 0)
+
+  cmpltry(1, n, all)        // Compile the outermost call of try
+
+  mcRR(mc_mv, mc_a, count)  // return count
+  mcF(mc_rtn)
+  mcF(mc_endfn)
+}
+
+AND cmpltry(i, n, all) BE
+{ LET L = mcNextlab()
+
+  mcComment("*n// Start of code from try(%n, %n, %n)*n", i, n, all)
+
+  mcRR(mc_mv,  poss, ld)         // LET poss = (~(ld | row | rd)) & all
+  mcRR(mc_or,  poss, row)
+  mcRR(mc_or,  poss, rd)
+  mcR (mc_not, poss)
+  mcRK(mc_and, poss, all)
+
+  mcRK(mc_cmp, poss, 0)          // IF poss DO
+  TEST n-i<=2
+  THEN mcJS(mc_jeq, L)           // (use a short jump if near the last row)
+  ELSE mcJL(mc_jeq, L)
+
+  TEST i=n
+  THEN { // We can place a queen in the final row.
+         mcR(mc_inc,  count)     //   count := count+1
+       }
+  ELSE { // We can place queen(s) in a non final row.
+         LET M = mcNextlab()
+
+         mcL (mc_lab,  M)        // { Start of REPEATWHILE loop
+
+         mcRR(mc_mv,   p, poss)  //   LET p = poss & -poss
+         mcR (mc_neg,  p)
+         mcRR(mc_and,  p, poss)  //   // p is a valid queens position
+         mcRR(mc_sub,  poss, p)  //   poss := poss - p
+
+
+         mcR (mc_push, ld)       //   Save current state
+         mcR (mc_push, row)
+         mcR (mc_push, rd)
+         mcR (mc_push, poss)
+                                 //   Call try((ld+p)<<1, row+p, (rd+p)>>1)
+         mcRR(mc_add,  ld,  p)
+         mcRK(mc_lsh,  ld,  1)   //   ld  := (ld+p)<<1
+         mcRR(mc_add,  row, p)   //   row := row+p
+         mcRR(mc_add,  rd,  p)
+         mcRK(mc_rsh,  rd,  1)   //   rd  := (rd+p)>>1
+
+         cmpltry(i+1, n, all)    //   Compile code for row i+1
+
+         mcR (mc_pop,  poss)     //   Restore the state
+         mcR (mc_pop,  rd)
+         mcR (mc_pop,  row)
+         mcR (mc_pop,  ld)
+
+         mcRK(mc_cmp,  poss, 0)
+         mcJL(mc_jne, M)         // } REPEATWHILE poss
+       }
+
+       mcL(mc_lab, L)
+       mcComment("// End   of code from try(%n, %n, %n)*n*n",
+                 i, n, all)
+}

@@ -1,0 +1,140 @@
+module checkit  {
+
+      Class Alfa {
+            k=1000
+            module a (x, y) {
+                  Print x, y
+            }
+            module NoParam {
+                  Print "ok"
+            }
+            Function Sqr(x) {
+                  =Sqrt(x)
+            }
+            Function NoParam {
+                  =.k
+            }
+            Function Sqr$(x) {
+                  =Str$(Sqrt(x),1033)  ' using locale 1033, no leading space for positive
+            }
+      }
+      \\ modules, functions numeric and string, and variables can use same name
+      \\ here we have module invoke, function invoke, and function invoke$
+      Module invoke (&a, method$) {
+            param=(,)
+            Read ? param
+            Function Check(&a, method$) {
+                  group b type "module "+method$+" {}"
+                   =valid(@a as b)
+            }
+            if check(&a, method$) then {
+                        for a {
+                              \\ we call this.methodname
+                              call "."+method$, !param
+                        }
+            }  else  Flush : Error  "unknown method "+method$   ' flush empty the stack
+      }
+      Function invoke (&a, method$) {
+            \\ functions have own stack of values
+            Function Check(&a, method$) {
+                  group b type "Function "+filter$(method$, "()")+" {}"
+                   =valid(@a as b)
+            }
+            if check(&a, method$) then {
+                        for a {
+                              =Function("."+method$, ![])
+                        }
+            }  else  Error  "unknown Function "+method$
+      }
+      \\ invoke string functions
+      Function invoke$ (&a, method$) {
+            \\ functions have own stack of values
+            Function Check(&a, method$) {
+                  group b type "Function "+filter$(method$, "()")+" {}"
+                   =valid(@a as b)
+            }
+            if check(&a, method$) then {
+                        for a {
+                              \\ [] is a function which return current stack as a stack object, and pass to current stack a new stack object.
+                              =Function$("."+method$, ![])
+                        }
+            }  else  Error  "unknown Function "+method$
+      }
+
+      Module obj.alfa {
+            Flush 'empty stack
+            Print "this is a fake module, is not part of obj"
+      }
+      Function obj.alfa {
+                  Print "this is a fake function, is not part of obj"
+      }
+      Obj=Alfa()
+      \\ normal invoke, interpreter not know that this is an object method
+      \\ this method has a weak reference to obj, so anytime we use This. or just dot, this weak reference make the real name to execute
+      Obj.a 10,20
+      \\ call the fake method (can't access object methods and properties), has empty weak reference to object
+      obj.alfa 10, 20
+
+      \\ check before call using custom invoke
+      \\ to check if a method (module) exist, we have to compare this object with other temporary object
+      \\ we make one with the method name and empty definition, and then check if obj has anything this temp object has
+      \\ arguments passed in a tuple (optional), so we didn't leave stack with unused items, if we have an unknown method.
+      invoke &obj, "a", (10, 20)
+      invoke &obj, "NoParam"
+      \\ now with an unknown method, using alfa
+      Try ok {
+            invoke &obj, "Alfa", (10, 20)
+      }
+      If Error Then Print Error$
+      \\ we can use invoke for functions
+      Print Invoke(&obj, "Sqr()", 4), Invoke(&obj, "NoParam()")
+      Print Invoke$(&obj, "Sqr$()",2)
+      \ without custom invoke
+      Print obj.Sqr(4), obj.Noparam(), obj.Sqr$(2)
+      \\ so now we try to call Alfa() and Alfa$()  (unknown functions)
+      Try ok {
+            Print Invoke(&obj, "Alfa()")
+      }
+      If Error Then Print Error$
+      Try ok {
+            Print Invoke$(&obj, "Alfa$()")
+      }
+      If Error Then Print Error$
+
+
+      \\ so now lets copy obj to obj2
+      \\ fake method didn't passed to new object
+      obj2=obj
+      Try ok {
+            invoke &obj2, "alfa", (10, 20)
+      }
+      If Error Then Print Error$
+
+      p->obj2
+      \\ if p is a pointer to named group we can pass it as is
+      invoke &p, "a", (10, 20)
+      \\ normal called
+      p=>a 10,20
+
+      For p {
+            invoke &this, "a", (10, 20)
+            Try ok {
+                  invoke &this, "alfa", (10, 20)
+            }
+            If Error Then Print Error$
+      }
+
+      p->(obj2)   ' p point to a copy of obj2 (an unnamed group)
+      For p {
+            invoke &this, "a", (10, 20)
+            \\ normal called
+            p=>a 10, 20
+            Try ok {
+                  invoke &this, "alfa", (10, 20)
+            }
+            If Error Then Print Error$
+
+      }
+
+}
+checkit

@@ -1,0 +1,20 @@
+using Statistics
+
+function meantime(times::Array, dlm::String=":")
+    c = π / (12 * 60 * 60)
+    a = map(x -> parse.(Int, x), split.(times, dlm))
+    ϕ = collect(3600t[1] + 60t[2] + t[3] for t in a)
+    d = angle(mean(exp.(c * im * ϕ))) / 2π # days
+    if d < 0 d += 1 end
+    # Convert to h:m:s
+    h = trunc(Int, d * 24)
+    m = trunc(Int, d * 24 * 60) - h * 60
+    s = trunc(Int, d * 24 * 60 * 60) - h * 60 * 60 - m * 60
+    return "$h:$m:$s"
+end
+
+times = String["23:00:17", "23:40:20", "00:12:45", "00:17:19"]
+mtime = meantime(times)
+println("Times:")
+println.(times)
+println("Mean: $mtime")

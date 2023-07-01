@@ -1,0 +1,420 @@
+/* ARM assembly Raspberry PI  or android 32 bits */
+/* program tonshan.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessStartPgm:          .asciz "Program 32 bits start \n"
+szMessEndPgm:            .asciz "Program normal end.\n"
+szMessError:             .asciz "\033[31mError  !!!\n"
+szMessErrGen:            .asciz "Error end program.\n"
+szMessOverflow:          .asciz "Overflow function modulo.\n"
+szMessNoSolution:        .asciz "No solution.\n"
+szCarriageReturn:        .asciz "\n"
+
+/* datas message display */
+szMessEntry:             .asciz "Number : @ modulo : @ ==> "
+szMessResult:            .asciz "Racine 1 : @ Racine 2 : @  \n"
+
+iNumberN:                .int 1030
+iNumberP:                .int 10009
+
+iNumberN1:               .int 1032
+iNumberP1:               .int 10009
+
+iNumberN2:               .int 44402
+iNumberP2:               .int 100049
+
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+.align 4
+sZoneConv:               .skip 24
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                               // program start
+    ldr r0,iAdrszMessStartPgm       // display start message
+    bl affichageMess
+
+    mov r0,#10
+    mov r1,#13
+    bl displayEntry                 // display entry number
+    bl computeTonSha                // compute roots
+    bl displayResult                // display roots
+
+    mov r0,#56
+    mov r1,#101
+    bl displayEntry
+    bl computeTonSha
+    bl displayResult
+
+
+    ldr r4,iAdriNumberN
+    ldr r0,[r4]
+    ldr r4,iAdriNumberP
+    ldr r1,[r4]
+    bl displayEntry
+    bl computeTonSha
+    bl displayResult
+
+    ldr r4,iAdriNumberN1
+    ldr r0,[r4]
+    ldr r4,iAdriNumberP1
+    ldr r1,[r4]
+    bl displayEntry
+    bl computeTonSha
+    bcs 1f
+    bl displayResult
+1:
+    ldr r4,iAdriNumberN2
+    ldr r0,[r4]
+    ldr r4,iAdriNumberP2
+    ldr r1,[r4]
+    bl displayEntry
+    bl computeTonSha
+    bl displayResult
+
+    ldr r0,iAdrszMessEndPgm         // display end message
+    bl affichageMess
+    b 100f
+99:                                 // display error message
+    ldr r0,iAdrszMessError
+    bl affichageMess
+100:                                // standard end of the program
+    mov r0, #0                      // return code
+    mov r7, #EXIT                   // request to exit program
+    svc 0                           // perform system call
+iAdrszMessStartPgm:        .int szMessStartPgm
+iAdrszMessEndPgm:          .int szMessEndPgm
+iAdrszMessError:           .int szMessError
+iAdrszMessNoSolution:      .int szMessNoSolution
+iAdrszCarriageReturn:      .int szCarriageReturn
+iAdriNumberN:              .int iNumberN
+iAdriNumberP:              .int iNumberP
+iAdriNumberN1:             .int iNumberN1
+iAdriNumberP1:             .int iNumberP1
+iAdriNumberN2:             .int iNumberN2
+iAdriNumberP2:             .int iNumberP2
+
+iAdrszMessResult:          .int szMessResult
+iAdrsZoneConv:             .int sZoneConv
+
+/******************************************************************/
+/*     algorithm Tonelli–Shanks                                   */
+/******************************************************************/
+/* r0 contains number */
+/* r1 contains modulus */
+/* r0 return root 1 */
+/* r1 return root 2 */
+computeTonSha:
+    push {r2-r12,lr}
+
+    mov r9,r0               // save number
+    mov r10,r1              // save modulo p
+    mov r2,r10
+    sub r1,r2,#1
+    lsr r1,r1,#1
+    bl moduloPuR32
+    cmp r0,#1
+    bne 20f
+    sub r5,r10,#1
+    mov r6,#1               // s
+1:
+    lsr r5,r5,#1            // div by 2
+    tst r5,#1                // even ?
+    addeq r6,#1
+    beq 1b                  // and loop
+                            // r5 = q
+    cmp r6,#1               // s = 1 ?
+    bne 3f
+    add r1,r10,#1            // compute root 1
+    lsr r1,r1,#2            // p + 1 / 4
+    mov r0,r9               // n
+    mov r2,r10              // p
+    bl moduloPuR32
+    neg r1,r0               // compute root 2 = - root 1
+    b 100f                  // and end
+3:
+    mov r7,#3               // z
+4:
+    mov r0,r7
+    mov r2,r10              //  p
+    sub r1,r2,#1
+    lsr r1,r1,#1             // power = p - 1 / 2
+    bl moduloPuR32
+    cmp r0,#1
+    addeq r7,#2
+    beq 4b
+    cmp r0,#0
+    addeq r7,#2
+    beq 4b
+    mov r0,r7               // z
+    mov r1,r5               // q
+    mov r2,r10              // p
+    bl moduloPuR32
+    mov r12,r0              // c = z pow q mod p
+
+    add r1,r5,#1             // = q +1
+    lsr r1,r1,#1             // div 2
+    mov r0,r9               // n
+    mov r2,r10              // p
+    bl moduloPuR32
+    mov r4,r0               // r =  n puis (q+1)/2 mod p
+
+    mov r0,r9               // n
+    mov r1,r5               // = q
+    mov r2,r10              // p
+    bl moduloPuR32
+    mov r5,r0               // reuse r5 = t = n pow q mod p
+
+8:                          // begin loop
+    cmp r5,#1
+    beq 10f
+    mov r0,r5               // t
+    mov r1,r6               // m
+    mov r2,r10              // p
+    bl searchI              // search i for t puis 2 puis i = 1 mod p
+    cmp r0,#-1               // not find -> no solution
+    beq 20f
+    mov r9,r0               // i
+    sub r8,r6,r0            // compute b
+    sub r8,r8,#1             // m - i - 1
+    mov r1,#1
+    lsl r1,r1,r8
+    mov r0,r12
+    mov r2,r10              // p
+    bl moduloPuR32
+    mov r7,r0               // b = c puis 2 puis 2 puis m-i-1  à verifier
+
+    umull r0,r1,r7,r4            // r = r * b mod p
+    mov r2,r10
+    bl division32R
+    mov r4,r2               // r mod p
+    umull r0,r1,r7,r7
+    mov r2,r10
+    bl division32R
+    mov r12,r2              // c mod p
+
+    umull r0,r1,r5,r12
+    mov r2,r10
+    bl division32R
+    mov r5,r2               // t mod p
+
+    mov r6,r9               // m = i
+    b 8b
+9:
+
+10:
+    mov r0,r4               // r0 return root 1
+    sub r1,r10,r0           //  r1 return root 2
+    cmn r0,#0               // carry à zero roots ok
+    b 100f
+20:
+    ldr r0,iAdrszMessNoSolution
+    bl affichageMess
+
+    mov r0,#0
+    mov r1,#0
+    cmp r0,#0               // carry to 1 No solution
+100:
+    pop {r2-r12,lr}         // restaur registers
+    bx lr                   // return
+/******************************************************************/
+/*     search i                                               */
+/******************************************************************/
+// r0 contains t
+// r1 contains maxi
+// r2 contains modulo
+// r0 return i
+searchI:
+    push {r1-r6,lr}
+
+    mov r4,r0               // t
+    mov r6,r1               // m
+    mov r3,#1               // i
+1:
+    mov r5,#1
+    lsl r5,r5,r3            // compute 2 power i
+
+    mov r0,r4
+    mov r1,r5
+    bl moduloPuR32          // compute t pow 2 pow i mod p
+    cmp r0,#1               // = 1 ?
+    beq 3f                  // yes it is ok
+    add r3,r3,#1            // next i
+    cmp r3,r6
+    blt 1b                  // loop
+    mov r0,#-1              // not find
+    b 100f
+3:
+    mov r0,r3              // return i
+100:
+    pop {r1-r6,lr}         // restaur registers
+    bx lr                  // return
+/******************************************************************/
+/*     display numbers                                             */
+/******************************************************************/
+/* r0 contains number */
+/* r1 contains modulo */
+displayEntry:
+    push {r0-r3,lr}
+    mov r2,r1                  // root 2
+    ldr r1,iAdrsZoneConv       // convert root 1 in r0
+    bl conversion10S           // convert ascii string
+    ldr r0,iAdrszMessEntry
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc      // and put in message
+    mov r3,r0
+    mov r0,r2                  // racine 2
+    ldr r1,iAdrsZoneConv
+    bl conversion10S           // convert ascii string
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc      // and put in message
+    bl affichageMess
+100:
+    pop {r0-r3,lr}             // restaur registers
+    bx lr                      // return
+iAdrszMessEntry:   .int szMessEntry
+/******************************************************************/
+/*     display roots                                               */
+/******************************************************************/
+/* r0 contains root 1 */
+/* r1 contains root 2 */
+displayResult:
+    push {r1-r3,lr}
+    mov r2,r1                  // root 2
+    ldr r1,iAdrsZoneConv       // convert root 1 in r0
+    bl conversion10S           // convert ascii string
+    ldr r0,iAdrszMessResult
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc      // and put in message
+    mov r3,r0
+    mov r0,r2                  // racine 2
+    ldr r1,iAdrsZoneConv
+    bl conversion10S           // convert ascii string
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc      // and put in message
+    bl affichageMess
+100:
+
+    pop {r1-r3,lr}             // restaur registers
+    bx lr                      // return
+/********************************************************/
+/*   Calcul modulo de b puissance e modulo m  */
+/*    Exemple 4 puissance 13 modulo 497 = 445         */
+/*                                             */
+/********************************************************/
+/* r0  nombre  */
+/* r1 exposant */
+/* r2 modulo   */
+/* r0 return result  */
+moduloPuR32:
+    push {r1-r7,lr}    @ save registers
+    cmp r0,#0          @ verif <> zero
+    beq 90f
+    cmp r1,#0          @ verif <> zero
+    moveq r0,#0
+    beq 90f
+    cmp r2,#0          @ verif <> zero
+    moveq r0,#0
+    beq 90f            @
+1:
+    mov r4,r2          @ save modulo
+    mov r5,r1          @ save exposant
+    mov r6,r0          @ save base
+    mov r3,#1          @ start result
+
+    mov r1,#0          @ division de r0,r1 par r2
+    bl division32R
+    mov r6,r2          @ base <- remainder
+2:
+    tst r5,#1          @  exposant even or odd
+    beq 3f
+    umull r0,r1,r6,r3
+    mov r2,r4
+    bl division32R
+    mov r3,r2          @ result <- remainder
+3:
+    umull r0,r1,r6,r6
+    mov r2,r4
+    bl division32R
+    mov r6,r2          @ base <- remainder
+
+    lsr r5,#1          @ left shift 1 bit
+    cmp r5,#0          @ end ?
+    bne 2b
+    mov r0,r3
+90:
+    cmn r0,#0          @ no error
+100:                   @ fin standard de la fonction
+    pop {r1-r7,lr}     @ restaur des registres
+    bx lr              @ retour de la fonction en utilisant lr
+
+/***************************************************/
+/*   division number 64 bits in 2 registers by number 32 bits */
+/***************************************************/
+/* r0 contains lower part dividende   */
+/* r1 contains upper part dividende   */
+/* r2 contains divisor   */
+/* r0 return lower part quotient    */
+/* r1 return upper part quotient    */
+/* r2 return remainder               */
+division32R:
+    push {r3-r9,lr}    @ save registers
+    mov r6,#0          @ init upper upper part remainder  !!
+    mov r7,r1          @ init upper part remainder with upper part dividende
+    mov r8,r0          @ init lower part remainder with lower part dividende
+    mov r9,#0          @ upper part quotient
+    mov r4,#0          @ lower part quotient
+    mov r5,#32         @ bits number
+1:                     @ begin loop
+    lsl r6,#1          @ shift upper upper part remainder
+    lsls r7,#1         @ shift upper  part remainder
+    orrcs r6,#1
+    lsls r8,#1         @ shift lower  part remainder
+    orrcs r7,#1
+    lsls r4,#1         @ shift lower part quotient
+    lsl r9,#1          @ shift upper part quotient
+    orrcs r9,#1
+                       @ divisor sustract  upper  part remainder
+    subs r7,r2
+    sbcs  r6,#0        @ and substract carry
+    bmi 2f             @ négative ?
+
+                       @ positive or equal
+    orr r4,#1          @ 1 -> right bit quotient
+    b 3f
+2:                     @ negative
+    orr r4,#0          @ 0 -> right bit quotient
+    adds r7,r2         @ and restaur remainder
+    adc  r6,#0
+3:
+    subs r5,#1         @ decrement bit size
+    bgt 1b             @ end ?
+    mov r0,r4          @ lower part quotient
+    mov r1,r9          @ upper part quotient
+    mov r2,r7          @ remainder
+100:                   @ function end
+    pop {r3-r9,lr}     @ restaur registers
+    bx lr
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

@@ -1,0 +1,108 @@
+    OPT --syntax=abf : OUTPUT "ackerman.com"
+    ORG $100
+    jr demo_start
+
+;--------------------------------------------------------------------------------------------------------------------
+; entry: ackermann_fn
+; input: bc = m, hl = n
+; output: hl = A(m,n) (16bit only)
+ackermann_fn.inc_n:
+    inc hl
+ackermann_fn:
+    inc hl
+    ld a,c
+    or b
+    ret z               ; m == 0 -> return n+1
+    ; m > 0 case        ; bc = m, hl = n+1
+    dec bc
+    dec hl              ; m-1, n restored
+    ld a,l
+    or h
+    jr z,.inc_n         ; n == 0 -> return A(m-1, 1)
+    ; m > 0, n > 0      ; bc = m-1, hl = n
+    push bc
+    inc bc
+    dec hl
+    call ackermann_fn   ; n = A(m, n-1)
+    pop bc
+    jp ackermann_fn     ; return A(m-1,A(m, n-1))
+
+;--------------------------------------------------------------------------------------------------------------------
+; helper functions for demo printing 4x9 table
+print_str:
+    push bc
+    push hl
+    ld c,9
+.call_cpm:
+    call 5
+    pop hl
+    pop bc
+    ret
+print_hl:
+    ld b,' '
+    ld e,b
+    call print_char
+    ld de,-10000
+    call extract_digit
+    ld de,-1000
+    call extract_digit
+    ld de,-100
+    call extract_digit
+    ld de,-10
+    call extract_digit
+    ld a,l
+print_digit:
+    ld b,'0'
+    add a,b
+    ld e,a
+print_char:
+    push bc
+    push hl
+    ld c,2
+    jr print_str.call_cpm
+extract_digit:
+    ld a,-1
+.digit_loop:
+    inc a
+    add hl,de
+    jr c,.digit_loop
+    sbc hl,de
+    or a
+    jr nz,print_digit
+    ld e,b
+    jr print_char
+
+;--------------------------------------------------------------------------------------------------------------------
+demo_start:             ; do m: [0,4) cross n: [0,9) table
+    ld bc,0
+.loop_m:
+    ld hl,0             ; bc = m, hl = n = 0
+    ld de,txt_m_is
+    call print_str
+    ld a,c
+    or '0'
+    ld e,a
+    call print_char
+    ld e,':'
+    call print_char
+.loop_n:
+    push bc
+    push hl
+    call ackermann_fn
+    call print_hl
+    pop hl
+    pop bc
+    inc hl
+    ld a,l
+    cp 9
+    jr c,.loop_n
+    ld de,crlf
+    call print_str
+    inc bc
+    ld a,c
+    cp 4
+    jr c,.loop_m
+    rst 0               ; return to CP/M
+
+txt_m_is:   db  "m=$"
+crlf:       db  10,13,'$'

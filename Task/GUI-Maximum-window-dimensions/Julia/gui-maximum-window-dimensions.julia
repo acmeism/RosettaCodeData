@@ -1,0 +1,5 @@
+win = GtkWindow("hello", 100, 100)
+fullscreen(win)
+sleep(10)
+println(width(win), " ", height(win))
+destroy(win)

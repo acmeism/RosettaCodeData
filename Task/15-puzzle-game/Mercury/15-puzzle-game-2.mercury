@@ -1,0 +1,81 @@
+:- module play_fifteen.
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+:- implementation.
+:- import_module string.
+:- use_module random, fifteen, exception.
+
+main(!IO) :-
+    seed(Seed, !IO),
+    random.init(Seed, RS),
+    fifteen.shuffled(Board, RS, _),
+    fifteen.print(Board, !IO),
+    play(Board, !IO).
+
+:- type input_command
+    --->    up ; down ; left ; right
+    ;       quit.
+
+:- type command
+    --->    move(fifteen.move)
+    ;       quit.
+
+:- pred input(input_command::in, command::out) is det.
+input(up, move(fifteen.up)).
+input(down, move(fifteen.down)).
+input(left, move(fifteen.left)).
+input(right, move(fifteen.right)).
+input(quit, quit).
+
+:- pred command(string::in, command::out) is semidet.
+command(String, C) :-
+    Term = chomp(String) ++ ".",
+    io.read_from_string("play_fifteen", Term, length(Term),
+        ok(I), io.posn(0, 0, 0), _),
+    input(I, C).
+
+:- pred play(fifteen.board::in, io::di, io::uo) is det.
+play(!.B, !IO) :-
+    io.write_string("Move? ", !IO),
+    io.read_line_as_string(Res, !IO),
+    (
+        Res = eof
+    ;
+        Res = error(_),
+        exception.throw(Res)
+    ;
+        Res = ok(String),
+        ( if command(String, Command) then
+            (
+                Command = quit,
+                io.write_string("Bye :(\n", !IO)
+            ;
+                Command = move(Move),
+                ( if fifteen.move(Move, !B) then
+                    ( if fifteen.init(!.B) then
+                        fifteen.print(!.B, !IO),
+                        io.write_string("You win!\n", !IO)
+                    else
+                        fifteen.print(!.B, !IO),
+                        play(!.B, !IO)
+                    )
+                else
+                    io.write_string("Invalid move.\n", !IO),
+                    play(!.B, !IO)
+                )
+            )
+        else
+            io.write_string("I didn't understand that.\n", !IO),
+            play(!.B, !IO)
+        )
+    ).
+
+:- pragma foreign_decl("C", "#include <time.h>").
+:- pred seed(int::out, io::di, io::uo) is det.
+:- pragma foreign_proc("C",
+    seed(Seed::out, _IO0::di, _IO::uo),
+    [promise_pure, will_not_call_mercury],
+"
+    Seed = time(NULL);
+").

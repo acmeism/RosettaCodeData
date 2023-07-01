@@ -1,0 +1,37 @@
+defmodule Cuboid do
+  @x 6
+  @y 2
+  @z 3
+  @dir %{-: {1,0}, |: {0,1}, /: {1,1}}
+
+  def draw(nx, ny, nz) do
+    IO.puts "cuboid #{nx} #{ny} #{nz}:"
+    {x, y, z} = {@x*nx, @y*ny, @z*nz}
+    area = Map.new
+    area = Enum.reduce(0..nz-1, area, fn i,acc -> draw_line(acc, x,      0,   @z*i, :-) end)
+    area = Enum.reduce(0..ny,   area, fn i,acc -> draw_line(acc, x,   @y*i, z+@y*i, :-) end)
+    area = Enum.reduce(0..nx-1, area, fn i,acc -> draw_line(acc, z,   @x*i,      0, :|) end)
+    area = Enum.reduce(0..ny,   area, fn i,acc -> draw_line(acc, z, x+@y*i,   @y*i, :|) end)
+    area = Enum.reduce(0..nz-1, area, fn i,acc -> draw_line(acc, y,      x,   @z*i, :/) end)
+    area = Enum.reduce(0..nx,   area, fn i,acc -> draw_line(acc, y,   @x*i,      z, :/) end)
+    Enum.each(y+z..0, fn j ->
+      IO.puts Enum.map_join(0..x+y, fn i -> Map.get(area, {i,j}, " ") end)
+    end)
+  end
+
+  defp draw_line(area, n, sx, sy, c) do
+    {dx, dy} = Map.get(@dir, c)
+    draw_line(area, n, sx, sy, c, dx, dy)
+  end
+
+  defp draw_line(area, n, _, _, _, _, _) when n<0, do: area
+  defp draw_line(area, n, i, j, c, dx, dy) do
+    Map.update(area, {i,j}, c, fn _ -> :+ end)
+    |> draw_line(n-1, i+dx, j+dy, c, dx, dy)
+  end
+end
+
+Cuboid.draw(2,3,4)
+Cuboid.draw(1,1,1)
+Cuboid.draw(2,4,1)
+Cuboid.draw(4,2,1)

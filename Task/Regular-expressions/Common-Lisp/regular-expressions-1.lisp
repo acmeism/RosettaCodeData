@@ -1,0 +1,5 @@
+(let ((string "I am a string"))
+  (when (cl-ppcre:scan "string$" string)
+    (write-line "Ends with string"))
+  (unless (cl-ppcre:scan "^You" string )
+    (write-line "Does not start with 'You'")))

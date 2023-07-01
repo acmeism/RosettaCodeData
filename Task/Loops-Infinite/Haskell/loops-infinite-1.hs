@@ -1,0 +1,1 @@
+forever (putStrLn "SPAM")

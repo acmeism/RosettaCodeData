@@ -1,0 +1,109 @@
+procedure main(A)
+    graph := getGraph()
+    repeat {
+        writes("What is the start node? ")
+        start := \graph.nodes[read()] | stop()
+        writes("What is the finish node? ")
+        finish := read() | stop()
+
+        QMouse(graph,start,finish)
+        waitForCompletion() # block until all quantum mice have finished
+
+        showPath(getBestMouse(),start.name,finish)
+        cleanGraph(graph)
+        }
+end
+
+procedure getGraph()
+    graph := Graph(table(),table())
+    write("Enter edges as 'n1,n2,weight' (blank line terminates)")
+    repeat {
+        if *(line := trim(read())) = 0 then break
+        line ? {
+            n1 := 1(tab(upto(',')),move(1))
+            n2 := 1(tab(upto(',')),move(1))
+            w  := tab(0)
+            /graph.nodes[n1] := Node(n1,set())
+            /graph.nodes[n2] := Node(n2,set())
+            insert(graph.nodes[n1].targets,graph.nodes[n2])
+            graph.weights[n1||":"||n2] := w
+            }
+        }
+    return graph
+end
+
+procedure showPath(mouse,start,finish)
+    if \mouse then {
+        path := mouse.getPath()
+        writes("Weight: ",path.weight," -> ")
+        every writes(" ",!path.nodes)
+        write("\n")
+        }
+    else write("No path from ",start," to ",finish,"\n")
+end
+
+# A "Quantum-mouse" for traversing graphs.  Each mouse lives for just
+#  one node but can spawn additional mice to search adjoining nodes.
+
+global qMice, goodMice, region, qMiceEmpty
+
+record Graph(nodes,weights)
+record Node(name,targets,weight)
+record Path(weight, nodes)
+
+class QMouse(graph, loc, finish, path)
+
+    method getPath(); return path; end
+    method atEnd(); return (finish == loc.name); end
+
+    method visit(n)  # Visit if we don't already have a cheaper route to n
+        newWeight := path.weight + graph.weights[loc.name||":"||n.name]
+        critical region[n]: if /n.weight | (newWeight < n.weight) then {
+            n.weight := newWeight
+            unlock(region[n])
+            return n
+            }
+    end
+
+initially (g, l, f, p)
+    initial {   # Construct critical region mutexes and completion condvar
+        qMiceEmpty := condvar()
+        region := table()
+        every region[n := !g.nodes] := mutex()
+        qMice := mutex(set())
+        cleanGraph(g)
+        }
+    graph := g
+    loc := l
+    finish := f
+    /p := Path(0,[])
+    path := Path(p.weight,copy(p.nodes))
+    if *path.nodes > 0 then
+        path.weight +:= g.weights[path.nodes[-1]||":"||loc.name]
+    put(path.nodes, loc.name)
+    insert(qMice,self)
+    thread {
+        if atEnd() then insert(goodMice, self)    # This mouse found a finish
+        every QMouse(g,visit(!loc.targets),f,path)
+        delete(qMice, self)                       # Kill this mouse
+        if *qMice=0 then signal(qMiceEmpty)       # All mice are dead
+        }
+end
+
+procedure cleanGraph(graph)
+    every (!graph.nodes).weight := &null
+    goodMice := mutex(set())
+end
+
+procedure getBestMouse()
+    every mouse := !goodMice do  { # Locate shortest path
+        weight := mouse.getPath().weight
+        /minPathWeight := weight
+        if minPathWeight >=:= weight then bestMouse := mouse
+        }
+    return bestMouse
+end
+
+procedure waitForCompletion()
+    critical qMiceEmpty: while *qMice > 0 do wait(qMiceEmpty)
+end

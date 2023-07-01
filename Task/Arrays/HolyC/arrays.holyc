@@ -1,0 +1,8 @@
+// Create an array of fixed size
+U8 array[10] = 1, 2, 3, 4, 5, 6, 7, 8, 9, 10;
+
+// The first element of a HolyC array is indexed at 0. To set a value:
+array[0] = 123;
+
+// Access an element
+Print("%d\n", array[0]);

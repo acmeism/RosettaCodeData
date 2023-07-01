@@ -1,0 +1,5 @@
+(define ((step-subdivision n method) F h)
+  (λ (x . y) (last (ODE-solve F (cons x y)
+                              #:x-max (+ x h)
+                              #:step (/ h n)
+                              #:method method))))

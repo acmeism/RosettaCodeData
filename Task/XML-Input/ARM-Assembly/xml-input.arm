@@ -1,0 +1,281 @@
+/* ARM assembly Raspberry PI  */
+/*  program inputXml.s   */
+
+/* Constantes    */
+.equ STDOUT, 1     @ Linux output console
+.equ EXIT,   1     @ Linux syscall
+.equ WRITE,  4     @ Linux syscall
+.equ XML_ELEMENT_NODE,          1
+.equ    XML_ATTRIBUTE_NODE,     2
+ .equ   XML_TEXT_NODE,          3
+.equ    XML_CDATA_SECTION_NODE, 4
+.equ    XML_ENTITY_REF_NODE,    5
+.equ    XML_ENTITY_NODE,        6
+.equ    XML_PI_NODE,            7
+.equ    XML_COMMENT_NODE,       8
+.equ    XML_DOCUMENT_NODE,      9
+.equ    XML_DOCUMENT_TYPE_NODE, 10
+.equ   XML_DOCUMENT_FRAG_NODE,  11
+.equ    XML_NOTATION_NODE,      12
+.equ    XML_HTML_DOCUMENT_NODE, 13
+.equ    XML_DTD_NODE,           14
+.equ    XML_ELEMENT_DECL,       15
+.equ    XML_ATTRIBUTE_DECL,     16
+.equ    XML_ENTITY_DECL,        17
+.equ    XML_NAMESPACE_DECL,     18
+.equ    XML_XINCLUDE_START,     19
+.equ    XML_XINCLUDE_END,       20
+.equ    XML_DOCB_DOCUMENT_NODE  21
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure linkedlist*/
+    .struct  0
+xmlNode_private:                         @ application data
+    .struct  xmlNode_private + 4
+xmlNode_type:                            @ type number, must be second !
+    .struct  xmlNode_type + 4
+xmlNode_name:                            @ the name of the node, or the entity
+    .struct  xmlNode_name + 4
+xmlNode_children:                        @ parent->childs link
+    .struct  xmlNode_children + 4
+xmlNode_last:                            @ last child link
+    .struct  xmlNode_last + 4
+xmlNode_parent:                          @ child->parent link
+    .struct  xmlNode_parent + 4
+xmlNode_next:                            @ next sibling link
+    .struct  xmlNode_next + 4
+xmlNode_prev:                            @ previous sibling link
+    .struct  xmlNode_prev + 4
+xmlNode_doc:                             @ the containing document
+    .struct  xmlNode_doc + 4
+xmlNode_ns:                              @ pointer to the associated namespace
+    .struct  xmlNode_ns + 4
+xmlNode_content:                         @ the content
+    .struct  xmlNode_content + 4
+xmlNode_properties:                      @ properties list
+    .struct  xmlNode_properties + 4
+xmlNode_nsDef:                           @ namespace definitions on this node
+    .struct  xmlNode_nsDef + 4
+xmlNode_psvi:                            @ for type/PSVI informations
+    .struct  xmlNode_psvi + 4
+xmlNode_line:                            @ line number
+    .struct  xmlNode_line + 4
+xmlNode_extra:                           @ extra data for XPath/XSLT
+    .struct  xmlNode_extra + 4
+xmlNode_fin:
+
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessEndpgm:      .asciz "Normal end of program.\n"
+szMessError:       .asciz "Error detected !!!!. \n"
+szText:            .ascii "<Students>\n"
+                   .ascii "<Student Name=\"April\" Gender=\"F\" DateOfBirth=\"1989-01-02\" />\n"
+                   .ascii "<Student Name=\"Bob\" Gender=\"M\"  DateOfBirth=\"1990-03-04\" />\n"
+                   .ascii "<Student Name=\"Chad\" Gender=\"M\"  DateOfBirth=\"1991-05-06\" />\n"
+                   .ascii "<Student Name=\"Dave\" Gender=\"M\"  DateOfBirth=\"1992-07-08\">\n"
+                   .ascii  "<Pet Type=\"dog\" Name=\"Rover\" />\n"
+                   .ascii "</Student>\n"
+                   .ascii "<Student DateOfBirth=\"1993-09-10\" Gender=\"F\" Name=\"&#x00C9;mily\" />\n"
+                   .asciz "</Students>"
+.equ LGSZTEXT,   . - szText            @ compute text size (. is current address)
+
+szLibExtract:      .asciz "Student"
+szLibName:         .asciz "Name"
+szCarriageReturn:  .asciz "\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                     @ entry of program
+    ldr r0,iAdrszText                     @ text buffer
+    mov r1,#LGSZTEXT                      @ text size
+    mov r2,#0                             @ param 3
+    mov r3,#0                             @ param 4
+    mov r4,#0                             @ param 5
+    sub sp,#4                             @ stack assignement
+    push {r4}                             @ param 5 on stack
+    bl xmlReadMemory                      @ read text in document
+    add sp,#8                             @ stack assignement for 1 push and align stack
+    cmp r0,#0                             @ error ?
+    beq 1f
+    mov r9,r0                             @ doc address
+    mov r0,r9
+    bl xmlDocGetRootElement               @ search root return in r0
+    bl affElement                         @ display elements
+
+    mov r0,r9
+    bl xmlFreeDoc
+1:
+    bl xmlCleanupParser
+    ldr r0,iAdrszMessEndpgm
+    bl affichageMess
+    b 100f
+99:
+    @ error
+    ldr r0,iAdrszMessError
+    bl affichageMess
+100:                                       @ standard end of the program
+    mov r0, #0                             @ return code
+    mov r7, #EXIT                          @ request to exit program
+    svc #0                                 @ perform the system call
+
+iAdrszMessError:          .int szMessError
+iAdrszMessEndpgm:         .int szMessEndpgm
+iAdrszText:               .int szText
+iAdrszCarriageReturn:     .int szCarriageReturn
+
+/******************************************************************/
+/*     display name of student                             */
+/******************************************************************/
+/* r0 contains the address of node */
+affElement:
+    push {r1-r4,lr}                   @ save  registres
+    mov r4,r0                         @ save node
+1:
+    ldr r2,[r4,#xmlNode_type]         @ type ?
+    cmp r2,#XML_ELEMENT_NODE
+    bne 2f
+    ldr r0,[r4,#xmlNode_name]         @ name = "Student" ?
+    ldr r1,iAdrszLibExtract
+    bl comparString
+    cmp r0,#0
+    bne 2f                            @ no
+    mov r0,r4
+    ldr r1,iAdrszLibName              @ load property of "Name"
+    bl xmlHasProp
+    cmp r0,#0
+    beq 2f
+    ldr r1,[r0,#xmlNode_children]     @ children node of property name
+    ldr r0,[r1,#xmlNode_content]      @ and address of content
+    bl affichageMess                  @ for display
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+2:
+    ldr r0,[r4,#xmlNode_children]     @ node have children ?
+    cmp r0,#0
+    blne affElement                   @ yes -> call procedure
+
+    ldr r1,[r4,#xmlNode_next]         @ other element ?
+    cmp r1,#0
+    beq 100f                          @ no -> end procedure
+
+    mov r4,r1                         @ else loop with next element
+    b 1b
+
+100:
+    pop {r1-r4,lr}                    @ restaur registers */
+    bx lr                             @ return
+iAdrszLibName:              .int szLibName
+iAdrszLibExtract:           .int szLibExtract
+/******************************************************************/
+/*     display text with size calculation                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+affichageMess:
+    push {r0,r1,r2,r7,lr}                   @ save  registres
+    mov r2,#0                               @ counter length
+1:                                          @ loop length calculation
+    ldrb r1,[r0,r2]                         @ read octet start position + index
+    cmp r1,#0                               @ if 0 its over
+    addne r2,r2,#1                          @ else add 1 in the length
+    bne 1b                                  @ and loop
+                                            @ so here r2 contains the length of the message
+    mov r1,r0                               @ address message in r1
+    mov r0,#STDOUT                          @ code to write to the standard output Linux
+    mov r7, #WRITE                          @ code call system "write"
+    svc #0                                  @ call systeme
+    pop {r0,r1,r2,r7,lr}                    @ restaur registers */
+    bx lr                                   @ return
+/******************************************************************/
+/*     Converting a register to a decimal                                 */
+/******************************************************************/
+/* r0 contains value and r1 address area   */
+.equ LGZONECAL,   10
+conversion10:
+    push {r1-r4,lr}                         @ save registers
+    mov r3,r1
+    mov r2,#LGZONECAL
+1:                                          @ start loop
+    bl divisionpar10                        @ r0 <- dividende. quotient ->r0 reste -> r1
+    add r1,#48                              @ digit
+    strb r1,[r3,r2]                         @ store digit on area
+    cmp r0,#0                               @ stop if quotient = 0
+    subne r2,#1                               @ previous position
+    bne 1b                                  @ else loop
+                                            @ end replaces digit in front of area
+    mov r4,#0
+2:
+    ldrb r1,[r3,r2]
+    strb r1,[r3,r4]                         @ store in area begin
+    add r4,#1
+    add r2,#1                               @ previous position
+    cmp r2,#LGZONECAL                       @ end
+    ble 2b                                  @ loop
+    mov r1,#' '
+3:
+    strb r1,[r3,r4]
+    add r4,#1
+    cmp r4,#LGZONECAL                       @ end
+    ble 3b
+100:
+    pop {r1-r4,lr}                          @ restaur registres
+    bx lr                                   @return
+/***************************************************/
+/*   division par 10   signé                       */
+/* Thanks to http://thinkingeek.com/arm-assembler-raspberry-pi/*
+/* and   http://www.hackersdelight.org/            */
+/***************************************************/
+/* r0 dividende   */
+/* r0 quotient */
+/* r1 remainder  */
+divisionpar10:
+  /* r0 contains the argument to be divided by 10 */
+    push {r2-r4}                           @ save registers  */
+    mov r4,r0
+    mov r3,#0x6667                         @ r3 <- magic_number  lower
+    movt r3,#0x6666                        @ r3 <- magic_number  upper
+    smull r1, r2, r3, r0                   @ r1 <- Lower32Bits(r1*r0). r2 <- Upper32Bits(r1*r0)
+    mov r2, r2, ASR #2                     @ r2 <- r2 >> 2
+    mov r1, r0, LSR #31                    @ r1 <- r0 >> 31
+    add r0, r2, r1                         @ r0 <- r2 + r1
+    add r2,r0,r0, lsl #2                   @ r2 <- r0 * 5
+    sub r1,r4,r2, lsl #1                   @ r1 <- r4 - (r2 * 2)  = r4 - (r0 * 10)
+    pop {r2-r4}
+    bx lr                                  @ return
+/************************************/
+/* comparaison de chaines           */
+/************************************/
+/* r0 et r1 contiennent les adresses des chaines */
+/* retour 0 dans r0 si egalite */
+/* retour -1 si chaine r0 < chaine r1 */
+/* retour 1  si chaine r0> chaine r1 */
+comparString:
+    push {r1-r4}                @ save des registres
+    mov r2,#0                   @ indice
+1:
+    ldrb r3,[r0,r2]             @ octet chaine 1
+    ldrb r4,[r1,r2]             @ octet chaine 2
+    cmp r3,r4
+    movlt r0,#-1                @ plus petite
+    movgt r0,#1                 @ plus grande
+    bne 100f                    @ pas egaux
+    cmp r3,#0                   @ 0 final
+    moveq r0,#0                 @ egalite
+    beq 100f                    @ c est la fin
+    add r2,r2,#1                @ sinon plus 1 dans indice
+    b 1b                        @ et boucle
+100:
+    pop {r1-r4}
+    bx lr

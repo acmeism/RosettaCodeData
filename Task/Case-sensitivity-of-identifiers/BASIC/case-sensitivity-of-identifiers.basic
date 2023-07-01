@@ -1,0 +1,4 @@
+DOG$ = "Benjamin"
+DOG$ = "Samba"
+DOG$ = "Bernie"
+PRINT "There is just one dog, named "; DOG$

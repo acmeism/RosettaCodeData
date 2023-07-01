@@ -1,0 +1,67 @@
+-->
+ <span style="color: #7060A8;">requires</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"0.8.2"</span><span style="color: #0000FF;">)</span>
+
+ <span style="color: #004080;">integer</span> <span style="color: #000000;">xlock</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">init_cs</span><span style="color: #0000FF;">()</span>
+
+ <span style="color: #008080;">class</span> <span style="color: #000000;">integrator</span>
+ <span style="color: #000080;font-style:italic;">--
+ -- Integrates input function f over time
+ -- v + (t1 - t0) * (f(t1) + f(t0)) / 2
+ --</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">f</span>   <span style="color: #000080;font-style:italic;">-- function f(atom t); (see note)</span>
+     <span style="color: #004080;">atom</span> <span style="color: #000000;">interval</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">t0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">k0</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">v</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+     <span style="color: #004080;">bool</span> <span style="color: #000000;">running</span>
+     <span style="color: #008080;">public</span> <span style="color: #004080;">integer</span> <span style="color: #000000;">id</span>
+
+     <span style="color: #008080;">procedure</span> <span style="color: #000000;">set_func</span><span style="color: #0000FF;">(</span><span style="color: #004080;">integer</span> <span style="color: #000000;">rid</span><span style="color: #0000FF;">)</span>
+         <span style="color: #008080;">this</span><span style="color: #0000FF;">.</span><span style="color: #000000;">f</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">rid</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+     <span style="color: #008080;">procedure</span> <span style="color: #000000;">update</span><span style="color: #0000FF;">()</span>
+         <span style="color: #7060A8;">enter_cs</span><span style="color: #0000FF;">(</span><span style="color: #000000;">xlock</span><span style="color: #0000FF;">)</span>
+         <span style="color: #004080;">integer</span> <span style="color: #000000;">f</span> <span style="color: #0000FF;">=</span> <span style="color: #008080;">this</span><span style="color: #0000FF;">.</span><span style="color: #000000;">f</span>  <span style="color: #000080;font-style:italic;">-- (nb: no "this")</span>
+         <span style="color: #004080;">atom</span> <span style="color: #000000;">t1</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">time</span><span style="color: #0000FF;">(),</span>
+              <span style="color: #000000;">k1</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">f</span><span style="color: #0000FF;">(</span><span style="color: #000000;">t1</span><span style="color: #0000FF;">)</span>
+         <span style="color: #000000;">v</span> <span style="color: #0000FF;">+=</span> <span style="color: #0000FF;">(</span><span style="color: #000000;">t1</span> <span style="color: #0000FF;">-</span> <span style="color: #000000;">t0</span><span style="color: #0000FF;">)</span> <span style="color: #0000FF;">*</span> <span style="color: #0000FF;">(</span><span style="color: #000000;">k1</span> <span style="color: #0000FF;">+</span> <span style="color: #000000;">k0</span><span style="color: #0000FF;">)</span> <span style="color: #0000FF;">/</span> <span style="color: #000000;">2</span>
+         <span style="color: #000000;">t0</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">t1</span>
+         <span style="color: #000000;">k0</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">k1</span>
+         <span style="color: #7060A8;">leave_cs</span><span style="color: #0000FF;">(</span><span style="color: #000000;">xlock</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+     <span style="color: #008080;">procedure</span> <span style="color: #000000;">tick</span><span style="color: #0000FF;">()</span>
+         <span style="color: #000000;">running</span> <span style="color: #0000FF;">=</span> <span style="color: #004600;">true</span>
+         <span style="color: #008080;">while</span> <span style="color: #000000;">running</span> <span style="color: #008080;">do</span>
+             <span style="color: #7060A8;">sleep</span><span style="color: #0000FF;">(</span><span style="color: #000000;">interval</span><span style="color: #0000FF;">)</span>
+             <span style="color: #000000;">update</span><span style="color: #0000FF;">()</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+     <span style="color: #008080;">procedure</span> <span style="color: #000000;">stop</span><span style="color: #0000FF;">()</span>
+         <span style="color: #000000;">running</span> <span style="color: #0000FF;">=</span> <span style="color: #004600;">false</span>
+         <span style="color: #000000;">wait_thread</span><span style="color: #0000FF;">(</span><span style="color: #000000;">id</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+     <span style="color: #008080;">function</span> <span style="color: #000000;">get_output</span><span style="color: #0000FF;">()</span>
+         <span style="color: #008080;">return</span> <span style="color: #000000;">v</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #008080;">end</span> <span style="color: #008080;">class</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">new_integrator</span><span style="color: #0000FF;">(</span><span style="color: #004080;">integer</span> <span style="color: #000000;">rid</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">atom</span> <span style="color: #000000;">interval</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000000;">integrator</span> <span style="color: #000000;">i</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">new</span><span style="color: #0000FF;">({</span><span style="color: #000000;">rid</span><span style="color: #0000FF;">,</span><span style="color: #000000;">interval</span><span style="color: #0000FF;">,</span><span style="color: #7060A8;">time</span><span style="color: #0000FF;">()})</span>
+     <span style="color: #000000;">i</span><span style="color: #0000FF;">.</span><span style="color: #000000;">update</span><span style="color: #0000FF;">()</span>
+     <span style="color: #000000;">i</span><span style="color: #0000FF;">.</span><span style="color: #000000;">id</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">create_thread</span><span style="color: #0000FF;">(</span><span style="color: #000000;">i</span><span style="color: #0000FF;">.</span><span style="color: #000000;">tick</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">i</span><span style="color: #0000FF;">})</span>
+     <span style="color: #008080;">return</span> <span style="color: #000000;">i</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">zero</span><span style="color: #0000FF;">(</span><span style="color: #004080;">atom</span> <span style="color: #000080;font-style:italic;">/*t*/</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">return</span> <span style="color: #000000;">0</span> <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+ <span style="color: #008080;">function</span> <span style="color: #000000;">sine</span><span style="color: #0000FF;">(</span><span style="color: #004080;">atom</span> <span style="color: #000000;">t</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">return</span> <span style="color: #7060A8;">sin</span><span style="color: #0000FF;">(</span><span style="color: #000000;">2</span><span style="color: #0000FF;">*</span><span style="color: #004600;">PI</span><span style="color: #0000FF;">*</span><span style="color: #000000;">0.5</span><span style="color: #0000FF;">*</span><span style="color: #000000;">t</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #000000;">integrator</span> <span style="color: #000000;">i</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">new_integrator</span><span style="color: #0000FF;">(</span><span style="color: #000000;">sine</span><span style="color: #0000FF;">,</span><span style="color: #000000;">0.01</span><span style="color: #0000FF;">);</span>
+ <span style="color: #7060A8;">sleep</span><span style="color: #0000FF;">(</span><span style="color: #000000;">2</span><span style="color: #0000FF;">)</span>
+ <span style="color: #0000FF;">?</span><span style="color: #000000;">i</span><span style="color: #0000FF;">.</span><span style="color: #000000;">get_output</span><span style="color: #0000FF;">()</span>
+ <span style="color: #000000;">i</span><span style="color: #0000FF;">.</span><span style="color: #000000;">set_func</span><span style="color: #0000FF;">(</span><span style="color: #000000;">zero</span><span style="color: #0000FF;">)</span>
+ <span style="color: #7060A8;">sleep</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0.5</span><span style="color: #0000FF;">)</span>
+ <span style="color: #000000;">i</span><span style="color: #0000FF;">.</span><span style="color: #000000;">stop</span><span style="color: #0000FF;">()</span>
+ <span style="color: #0000FF;">?</span><span style="color: #000000;">i</span><span style="color: #0000FF;">.</span><span style="color: #000000;">get_output</span><span style="color: #0000FF;">()</span>
+<!--

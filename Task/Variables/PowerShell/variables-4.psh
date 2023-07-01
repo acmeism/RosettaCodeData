@@ -1,0 +1,1 @@
+Remove-Item Variable:foo

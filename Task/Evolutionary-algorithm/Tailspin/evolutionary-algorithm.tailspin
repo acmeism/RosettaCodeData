@@ -1,0 +1,31 @@
+def alphabet: [' ABCDEFGHIJKLMNOPQRSTUVWXYZ'...];
+def target: ['METHINKS IT IS LIKE A WEASEL'...];
+def generationSize: 100;
+def mutationPercent: 10;
+
+source randomCharacter
+  $alphabet::length -> SYS::randomInt -> $alphabet($+1)!
+end randomCharacter
+
+templates countFitness
+  @:0;
+  $ -> \[i](when <=$target($i)> do @countFitness: $@countFitness + 1; \) -> !VOID
+  { candidate: $, fitness: $@countFitness } !
+end countFitness
+
+sink evolve
+  @: {generation: 0"1", parent: $};
+  $@.parent -> #
+  when <{fitness: <=$target::length>}> do
+    'Target "$target...;" reached after $@.generation; generations' -> !OUT::write
+  otherwise
+    'Fitness $.fitness; at generation $@.generation;: "$.candidate...;"$#10;' -> !OUT::write
+    @.generation: $@.generation + 1"1";
+    1..$generationSize -> [$@.parent.candidate... -> \(
+      when <?(100 -> SYS::randomInt <..~$mutationPercent>)> do $randomCharacter!
+      otherwise $!
+    \)] -> countFitness -> \(when <{fitness: <$@evolve.parent.fitness..>}> do @evolve.parent: $;\) -> !VOID
+    $@.parent -> #
+end evolve
+
+[1..$target::length -> $randomCharacter] -> countFitness -> !evolve

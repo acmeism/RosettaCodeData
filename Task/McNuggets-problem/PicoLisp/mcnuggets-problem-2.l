@@ -1,0 +1,11 @@
+(de nugg (M)
+   (co 'nugget
+      (for A (range 0 M 6)
+         (for B (range A M 9)
+            (for C (range B M 20)
+               (yield (inc C)) ) ) ) ) )
+(de nuggets2 (M)
+   (let Lst (range 0 M)
+      (while (nugg 100)
+         (set (nth Lst @)) )
+      (apply max Lst) ) )

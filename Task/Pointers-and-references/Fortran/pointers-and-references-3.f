@@ -1,0 +1,1 @@
+real, pointer :: apointer => NULL()

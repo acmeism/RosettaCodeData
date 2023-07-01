@@ -1,0 +1,110 @@
+(* Continued fractions as non-linear lazy lists (stream types).
+
+   I avoid the shorthands stream_make_nil and stream_make_cons,
+   so the thunk-making is visible. *)
+
+#include "share/atspre_staload.hats"
+
+typedef cf (tk : tkind) = stream (g0int tk)
+
+extern fn {tk : tkind}
+r2cf : (g0int tk, g0int tk) -> cf tk
+
+extern fn {tk : tkind}
+cf2string : cf tk -> string
+
+implement {tk}
+r2cf (n, d) =
+  let
+    fun
+    recurs (n : g0int tk,
+            d : g0int tk)
+        : cf tk =
+      if iseqz d then
+        $delay stream_nil ()
+      else
+        let
+          val q = n / d
+          and r = n mod d
+        in
+          $delay stream_cons (q, recurs (d, r))
+        end
+  in
+    recurs (n, d)
+  end
+
+implement {tk}
+cf2string cf =
+  let
+    val max_terms = 2000
+
+    fun
+    loop (i     : intGte 0,
+          cf    : cf tk,
+          slist : List0 string)
+        : List0 string =
+      (* One has to say "!cf" instead of just "cf", to force the lazy
+         evaluation. If you simply wrote "cf", typechecking would
+         fail. *)
+      case+ !cf of
+      | stream_nil () => list_cons ("]", slist)
+      | stream_cons (term, cf) =>
+        if i = max_terms then
+          list_cons (",...]", slist)
+        else
+          let
+            val sep_str =
+              case+ i of
+              | 0 => ""
+              | 1 => ";"
+              | _ => ","
+            val term_str = tostring_val<g0int tk> term
+            val slist = list_cons (term_str,
+                                   list_cons (sep_str, slist))
+          in
+            loop (succ i, cf, slist)
+          end
+
+    val slist = loop (0, cf, list_sing "[")
+    val slist = list_vt2t (reverse slist)
+  in
+    strptr2string (stringlst_concat slist)
+  end
+
+fn {tk : tkind}
+show (n : g0int tk,
+      d : g0int tk)
+    : void =
+  begin
+    print! (tostring_val<g0int tk> n);
+    print! "/";
+    print! (tostring_val<g0int tk> d);
+    print! " => ";
+    println! (cf2string<tk> (r2cf<tk> (n, d)))
+  end
+
+implement
+main () =
+  begin
+    show<intknd> (1, 2);
+    show<lintknd> (g0i2i 3, g0i2i 1);
+    show<llintknd> (g0i2i 23, g0i2i 8);
+    show (13, 11);
+    show (22L, 11L);
+    show (~151LL, 77LL);
+    show (14142LL, 10000LL);
+    show (141421LL, 100000LL);
+    show (1414214LL, 1000000LL);
+    show (14142136LL, 10000000LL);
+    show (1414213562373095049LL, 1000000000000000000LL);
+    show (31LL, 10LL);
+    show (314LL, 100LL);
+    show (3142LL, 1000LL);
+    show (31428LL, 10000LL);
+    show (314285LL, 100000LL);
+    show (3142857LL, 1000000LL);
+    show (31428571LL, 10000000LL);
+    show (314285714LL, 100000000LL);
+    show (3142857142857143LL, 1000000000000000LL);
+    0
+  end;

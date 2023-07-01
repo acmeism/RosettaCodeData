@@ -1,0 +1,21 @@
+U8 i, j, n = 12;
+for (j = 1; j <= n; j++)
+  if (j != n)
+    Print("%3d%c", j, ' ');
+  else
+    Print("%3d%c", j, '\n');
+
+for (j = 0; j <= n; j++)
+  if (j != n)
+    Print("----");
+  else
+    Print("+\n");
+
+for (i = 1; i <= n; i++) {
+  for (j = 1; j <= n; j++)
+    if (j < i)
+      Print("    ");
+    else
+      Print("%3d ", i * j);
+  Print("| %d\n", i);
+}

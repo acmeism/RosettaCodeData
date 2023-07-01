@@ -1,0 +1,7 @@
+DIM a$(27)
+
+FOR i = 1 to 26
+    LET a$(i) = CHR$(i + 96)
+    PRINT a$(i);
+NEXT i
+END

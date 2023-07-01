@@ -1,0 +1,102 @@
+implement Bf;
+
+include "sys.m"; sys: Sys;
+include "draw.m";
+
+Bf: module {
+	init: fn(nil: ref Draw->Context, args: list of string);
+	ARENASZ: con 1024 * 1024;
+	EXIT, INC, DEC, JZ, JNZ, INCP, DECP, READ, WRITE: con iota;
+};
+
+init(nil: ref Draw->Context, args: list of string)
+{
+	sys = load Sys Sys->PATH;
+	args = tl args;
+	if(args == nil || len args != 1) {
+		sys->fprint(sys->fildes(2), "usage: bf program");
+		raise "fail:usage";
+	}
+	code := compile(hd args);
+	execute(code, array[ARENASZ] of { * => byte 0 });
+}
+
+compile(p: string): array of int
+{
+	marks: list of int = nil;
+	code := array[len p * 2 + 1] of { * => EXIT };
+	pc := 0;
+	for(i := 0; i < len p; i++) {
+		case p[i] {
+		'-' => code[pc++] = DEC;
+		'+' => code[pc++] = INC;
+		'<' => code[pc++] = DECP;
+		'>' => code[pc++] = INCP;
+		',' => code[pc++] = READ;
+		'.' => code[pc++] = WRITE;
+		'[' =>
+			code[pc++] = JZ;
+			marks = pc++ :: marks;
+		']' =>
+			if(marks == nil) {
+				sys->fprint(sys->fildes(2), "bf: unmatched ']' at character %d.", pc);
+				raise "fail:errors";
+			}
+			c := hd marks;
+			marks = tl marks;
+			code[pc++] = JNZ;
+			code[c] = pc;
+			code[pc++] = c;
+		}
+	}
+	if(marks != nil) {
+		sys->fprint(sys->fildes(2), "bf: unmatched '['.");
+		raise "fail:errors";
+	}
+	return code;
+}
+
+execute(code: array of int, arena: array of byte)
+{
+	pc := 0;
+	p := 0;
+	buf := array[1] of byte;
+	stopreading := 0;
+	for(;;) {
+		case code[pc] {
+		DEC => arena[p]--;
+		INC => arena[p]++;
+		DECP =>
+			p--;
+			if(p < 0)
+				p = len arena - 1;
+		INCP =>
+			p = (p + 1) % len arena;
+		READ =>
+			if(!stopreading) {
+				n := sys->read(sys->fildes(0), buf, 1);
+				if(n < 1) {
+					arena[p] = byte 0;
+					stopreading = 1;
+				} else {
+					arena[p] = buf[0];
+				}
+			}
+		WRITE =>
+			buf[0] = arena[p];
+			sys->write(sys->fildes(1), buf, 1);
+		JNZ =>
+			if(arena[p] != byte 0)
+				pc = code[pc + 1];
+			else
+				pc++;
+		JZ =>
+			if(arena[p] == byte 0)
+				pc = code[pc + 1];
+			else
+				pc++;
+		EXIT => return;
+		}
+		pc++;
+	}
+}

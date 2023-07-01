@@ -1,0 +1,8 @@
+(* hmm, only valid for N >= 0 *)
+let rec myeven = function
+  | 0 -> true
+  | 1 -> false
+  | n -> myeven (n - 2)
+
+(* and here we have the not function in if form *)
+let myodd n = if myeven n then false else true

@@ -1,0 +1,179 @@
+' version 22-10-2016
+' compile with: fbc -s console
+
+Function RIPEMD_160(message As String) As String
+
+  #Macro ROtate_left(x, n)
+    (x Shl n Or x Shr (32 - n))
+  #EndMacro
+
+  #Macro    f1(x, y, z)
+    (x Xor y Xor z)               ' (0 <= j <= 15)
+  #EndMacro
+
+  #Macro    f2(x, y, z)
+    ((x And y) Or ((Not x) And z)) ' (16 <= j <= 31)
+  #EndMacro
+
+  #Macro    f3(x, y, z)
+    ((x Or (Not y)) Xor z)          ''(32 <= j <= 47)
+  #EndMacro
+
+  #Macro    f4(x, y, z)
+    ((x And z) Or (y And (Not z)))  ''(48 <= j <= 63)
+  #EndMacro
+
+  #Macro   f5(x, y, z)
+    (x Xor (y Or (Not z)))          ''(64 <= j <= 79)
+  #EndMacro
+
+  Dim As UInteger<32> K(1 To 5), K1(1 To 5)
+
+  K(1)  = &H00000000    '  (0 <= j <= 15)
+  K(2)  = &H5A827999    ' (16 <= j <= 31)
+  K(3)  = &H6ED9EBA1    ' (32 <= j <= 47)
+  K(4)  = &H8F1BBCDC    ' (48 <= j <= 63)
+  K(5)  = &HA953FD4E    ' (64 <= j <= 79)
+  K1(1) = &H50A28BE6    '  (0 <= j <= 15)
+  K1(2) = &H5C4DD124    ' (16 <= j <= 31)
+  K1(3) = &H6D703EF3    ' (32 <= j <= 47)
+  K1(4) = &H7A6D76E9    ' (48 <= j <= 63)
+  K1(5) = &H00000000    ' (64 <= j <= 79)
+
+  Dim As UByte r(16 To ...) = _
+  { 7, 4, 13, 1, 10, 6, 15, 3, 12, 0, 9, 5, 2, 14, 11, 8, _
+    3, 10, 14, 4, 9, 15, 8, 1, 2, 7, 0, 6, 13, 11, 5, 12, _
+    1, 9, 11, 10, 0, 8, 12, 4, 13, 3, 7, 15, 14, 5, 6, 2, _
+    4, 0, 5, 9, 7, 12, 2, 10, 14, 1, 3, 8, 11, 6, 15, 13 }
+
+  Dim As UByte r1(0 To ...) = _
+  { 5, 14, 7, 0, 9, 2, 11, 4, 13, 6, 15, 8, 1, 10, 3, 12, _
+    6, 11, 3, 7, 0, 13, 5, 10, 14, 15, 8, 12, 4, 9, 1, 2, _
+    15, 5, 1, 3, 7, 14, 6, 9, 11, 8, 12, 2, 10, 0, 4, 13, _
+    8, 6, 4, 1, 3, 11, 15, 0, 5, 12, 2, 13, 9, 7, 10, 14, _
+    12, 15, 10, 4, 1, 5, 8, 7, 6, 2, 13, 14, 0, 3, 9, 11 }
+
+  Dim As UByte s(0 To ...) = _
+  { 11, 14, 15, 12, 5, 8, 7, 9, 11, 13, 14, 15, 6, 7, 9, 8, _
+    7, 6, 8, 13, 11, 9, 7, 15, 7, 12, 15, 9, 11, 7, 13, 12, _
+    11, 13, 6, 7, 14, 9, 13, 15, 14, 8, 13, 6, 5, 12, 7, 5, _
+    11, 12, 14, 15, 14, 15, 9, 8, 9, 14, 5, 6, 8, 6, 5, 12, _
+    9, 15, 5, 11, 6, 8, 13, 12, 5, 12, 13, 14, 11, 8, 5, 6 }
+
+  Dim As UByte s1(0 To ...) = _
+  { 8, 9, 9, 11, 13, 15, 15, 5, 7, 7, 8, 11, 14, 14, 12, 6, _
+    9, 13, 15, 7, 12, 8, 9, 11, 7, 7, 12, 7, 6, 15, 13, 11, _
+    9, 7, 15, 11, 8, 6, 6, 14, 12, 13, 5, 14, 13, 13, 7, 5, _
+    15, 5, 8, 11, 14, 14, 6, 14, 6, 9, 12, 9, 12, 5, 15, 8, _
+    8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11 }
+
+  Dim As UInteger<32> h0 = &H67452301
+  Dim As UInteger<32> h1 = &HEFCDAB89
+  Dim As UInteger<32> h2 = &H98BADCFE
+  Dim As UInteger<32> h3 = &H10325476
+  Dim As UInteger<32> h4 = &HC3D2E1F0
+
+  Dim As Long i, j
+
+  Dim As ULongInt l = Len(message)
+  ' set the first bit after the message to 1
+  message = message + Chr(1 Shl 7)
+  ' add one char to the length
+  Dim As ULong padding = 64 - ((l +1) Mod (512 \ 8)) ' 512 \ 8 = 64 char.
+
+  ' check if we have enough room for inserting the length
+  If padding < 8 Then padding = padding + 64
+
+  message = message + String(padding, Chr(0))   ' adjust length
+  Dim As ULong l1 = Len(message)                ' new length
+
+  l = l * 8    ' orignal length in bits
+  ' create ubyte ptr to point to l ( = length in bits)
+  Dim As UByte Ptr ub_ptr = Cast(UByte Ptr, @l)
+
+  For i = 0 To 7  'copy length of message to the last 8 bytes
+    message[l1 -8 + i] = ub_ptr[i]
+  Next
+
+  Dim As UInteger<32> A, B, C, D, E, A1, B1, C1, D1, E1, T, T1
+
+  For i = 0 To (l1 -1) \ 64 ' split into 64 byte block
+
+    ' x point to 16 * 4byte block inside the string message
+    Dim As UInteger<32> Ptr X = Cast(UInteger<32> Ptr, @message[i*64])
+
+    A  = h0 : B  = h1 : C  = h2 : D  = h3 : E  = h4
+    A1 = h0 : B1 = h1 : C1 = h2 : D1 = h3 : E1 = h4
+
+    For j = 0 To 79
+      Select Case As Const j
+        Case 0 To 15
+          T = A + f1(B, C, D) + X[j] '+ K(1)
+          T = ROtate_Left(T, s(j)) + E
+          T1 = A1 + f5(B1, C1, D1) + X[r1(j)] + K1(1)
+          T1 = ROtate_Left(T1, s1(j)) + E1
+        Case 16 To 31
+          T = A + f2(B, C, D) + X[r(j)] + K(2)
+          T = ROtate_Left(T, s(j)) + E
+          T1 = A1 + f4(B1, C1, D1) + X[r1(j)] + K1(2)
+          T1 = ROtate_Left(T1, s1(j)) + E1
+        Case 32 To 47
+          T = A + f3(B, C, D) + X[r(j)] + K(3)
+          T = ROtate_Left(T, s(j)) + E
+          T1 = A1 + f3(B1, C1, D1) + X[r1(j)] + K1(3)
+          T1 = ROtate_Left(T1, s1(j)) + E1
+        Case 48 To 63
+          T = A + f4(B, C, D) + X[r(j)] + K(4)
+          T = ROtate_Left(T, s(j)) + E
+          T1 = A1 + f2(B1, C1, D1) + X[r1(j)] + K1(4)
+          T1 = ROtate_Left(T1, s1(j)) + E1
+        Case 64 To 79
+          T = A + f5(B, C, D) + X[r(j)] + K(5)
+          T = ROtate_Left(T, s(j)) + E
+          T1 = A1 + f1(B1, C1, D1) + X[r1(j)] '+ K1(5)
+          T1 = ROtate_Left(T1, s1(j)) + E1
+      End Select
+
+      A = E : E = D : D = ROtate_Left(C, 10) : C = B : B = T
+      A1 = E1 : E1 = D1 : D1 = ROtate_left(C1, 10) : C1 = B1 : B1 = T1
+
+    Next
+
+    T  = h1 + C + D1
+    h1 = h2 + D + E1
+    h2 = h3 + E + A1
+    h3 = h4 + A + B1
+    h4 = h0 + B + C1
+    h0 = T
+
+  Next
+
+  Dim As String answer
+  ' convert h0, h1, h2, h3 and h4 in hex, then add, low order first
+  Dim As String hs1 = Hex(h0, 8)
+  For i = 7 To 1 Step -2 : answer += Mid(hs1, i, 2) : Next
+  hs1 = Hex(h1, 8)
+  For i = 7 To 1 Step -2 : answer += Mid(hs1, i, 2) : Next
+  hs1 = Hex(h2, 8)
+  For i = 7 To 1 Step -2 : answer += Mid(hs1, i, 2) : Next
+  hs1 = Hex(h3, 8)
+  For i = 7 To 1 Step -2 : answer += Mid(hs1, i, 2) : Next
+  hs1 = Hex(h4, 8)
+  For i = 7 To 1 Step -2 : answer += Mid(hs1, i, 2) : Next
+
+Return LCase(answer)
+
+End Function
+
+' ------=< MAIN >=------
+
+Dim As String test = "Rosetta Code"
+
+Print
+Print test; " => "; RIPEMD_160(test)
+
+' empty keyboard buffer
+While Inkey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

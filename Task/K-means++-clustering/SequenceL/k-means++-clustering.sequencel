@@ -1,0 +1,137 @@
+import <Utilities/Sequence.sl>;
+import <Utilities/Random.sl>;
+import <Utilities/Math.sl>;
+import <Utilities/Conversion.sl>;
+
+Point ::= (x : float, y : float);
+Pair<T1, T2> ::= (first : T1, second : T2);
+
+W := 400;
+H := 400;
+
+// ------------ Utilities --------------
+distance(a, b) := (a.x-b.x)^2 + (a.y-b.y)^2;
+
+nearestDistance(point, centers(1)) :=
+    nearestCenterHelper(point, centers, 2, distance(point, centers[1]), 1).second;
+
+nearestCenter(point, centers(1)) :=
+    nearestCenterHelper(point, centers, 2, distance(point, centers[1]), 1).first;
+
+nearestCenterHelper(point, centers(1), counter, minDistance, minIndex) :=
+    let
+        d := distance(point, centers[counter]);
+    in
+    (first : minIndex, second : minDistance) when counter > size(centers) else
+    nearestCenterHelper(point, centers, counter + 1, d, counter) when minDistance > d else
+    nearestCenterHelper(point, centers, counter + 1, minDistance, minIndex);
+
+// ------------ KPP --------------
+kpp(points(1), k, RG) :=
+    let
+        randomValues := getRandomSequence(RG, k).Value;
+        centers := initialCenters(points, k, randomValues / (RG.RandomMax - 1.0),
+                    [points[randomValues[1] mod size(points)]]);
+    in
+        nearestCenter(points, centers);
+
+initialCenters(points(1), k, randoms(1), centers(1)) :=
+    let
+        distances := nearestDistance(points, centers);
+        randomSum := randoms[size(centers) + 1] * sum(distances);
+        newCenter := points[findNewCenter(randomSum, distances, 1)];
+    in
+        centers when size(centers) = k else
+        initialCenters(points, k, randoms, centers++[newCenter]);
+
+findNewCenter(s, distances(1), counter) :=
+    let
+        new_s := s - distances[counter];
+    in
+    counter when new_s <= 0 else
+    findNewCenter(new_s, distances, counter + 1);
+
+// ------------ K Means --------------
+kMeans(points(1), groups(1), k) :=
+    let
+        newCenters := clusterAverage(points, groups, k);
+        newGroups := nearestCenter(points, newCenters);
+        threshold := size(points)/1024;
+        // Calculate the number of changes between iterations
+        changes[i] := 1 when groups[i] /= newGroups[i] else 0;
+    in
+        (first : newGroups, second : newCenters) when sum(changes) < threshold else
+        kMeans(points, newGroups, k);
+
+clusterAverage(points(1), groups(1), k) :=
+        clusterAverageHelper(points, groups, 1, duplicate((x:0.0, y:0.0), k), duplicate(0, k));
+
+clusterAverageHelper(points(1), groups(1), counter, averages(1), sizes(1)) :=
+    let
+        group := groups[counter];
+        result[i] := (x : averages[i].x / sizes[i], y : averages[i].y / sizes[i]);
+    in
+    result when counter > size(points) else
+    clusterAverageHelper(points, groups, counter + 1,
+        setElementAt(averages, group,
+                          (x : averages[group].x + points[counter].x,
+                           y : averages[group].y + points[counter].y)),
+        setElementAt(sizes, group, sizes[group] + 1));
+
+// ------------ Generate Points --------------
+gen2DPoints(count, radius, RG) :=
+    let
+        randA := getRandomSequence(RG, count);
+        randR := getRandomSequence(randA.Generator, count);
+        angles := 2*pi*(randA.Value / (RG.RandomMax - 1.0));
+        radiuses := radius * (randR.Value / (RG.RandomMax - 1.0));
+        points[i] := (x: radiuses[i] * cos(angles[i]), y : radiuses[i] * sin(angles[i]));
+    in
+        (first : points, second : randR.Generator);
+
+// ------------ Visualize --------------
+printEPS(points(1),groups(1),centers(1),k,maxVal) :=
+    let
+          scale := min(W / (maxVal * 2), H / (maxVal * 2));
+          printedGroups := printGroup(points, groups, centers, k, 0.0, scale, 1 ... k);
+    in
+        "%!-PS-Adobe-3.0\n%%BoundingBox: -5 -5 " ++ toString(W + 10) ++ " " ++
+        toString(H + 10) ++
+        "\n/l {rlineto} def /m {rmoveto} def\n" ++
+        "/c { .25 sub exch .25 sub exch .5 0 360 arc fill } def\n" ++
+        "/s { moveto -2 0 m 2 2 l 2 -2 l -2 -2 l closepath " ++
+        "   gsave 1 setgray fill grestore gsave 3 setlinewidth" ++
+        " 1 setgray stroke grestore 0 setgray stroke }def\n" ++
+        join(printedGroups) ++
+        "\n%%EOF";
+
+printGroup(points(1), groups(1), centers(1), k, maxVal, scale, group) :=
+    let
+        printedPoints[i] :=
+            toString((points[i].x - maxVal) * scale + W/2) ++ " " ++
+            toString((points[i].y - maxVal) * scale + H/2) ++ " c\n"
+                when groups[i] = group;
+
+        colors := toString((3 * group mod k) / (k * 1.0)) ++ " " ++
+                  toString((7 * (group - 1) mod k) / (k * 1.0)) ++ " " ++
+                  toString((9 * (group - 1) mod k) / (k * 1.0)) ++
+                  " setrgbcolor\n";
+
+        printedCenters := "\n0 setgray " ++
+                   toString((centers[group].x - maxVal) * scale + W/2) ++ " " ++
+                   toString((centers[group].y - maxVal) * scale + H/2) ++ " s\n";
+    in
+        colors ++ join(printedPoints) ++ printedCenters;
+
+// Take number of points, K and seed for random data as command line inputs
+main(args(2)) :=
+    let
+        n := stringToInt(args[1]) when size(args) >= 1 else 1000;
+        k := stringToInt(args[2]) when size(args) >= 2 else 7;
+        seed := stringToInt(args[3]) when size(args) >= 3 else 13;
+
+        points := gen2DPoints(n, 10.0, seedRandom(seed));
+        initialGroups := kpp(points.first, k, points.second);
+        result := kMeans(points.first, initialGroups, k);
+    in
+        printEPS(points.first, result.first, result.second,k,10.0);

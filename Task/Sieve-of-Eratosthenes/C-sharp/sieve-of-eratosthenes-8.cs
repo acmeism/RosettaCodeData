@@ -1,0 +1,3 @@
+    static void Main(string[] args) {
+      Console.WriteLine(new PrimesXXX().ElementAt(1000000 - 1)); // zero based indexing...
+    }

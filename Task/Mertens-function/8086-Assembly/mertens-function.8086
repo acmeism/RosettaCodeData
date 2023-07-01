@@ -1,0 +1,102 @@
+MAX:	equ	1000		; Amount of Mertens numbers to generate
+puts:	equ	9		; MS-DOS syscall to print a string
+putch:	equ	2		; MS-DOS syscall to print a character
+	cpu	8086
+	org	100h
+section	.text
+	;;;	Generate Mertens numbers
+	mov	bx,M		; BX = pointer to start of Mertens numbers
+	mov	si,1		; Current Mertens number
+	mov	[si+bx],byte 1	; First Mertens number is 1
+outer:	inc	si		; Next Mertens number
+	mov	[si+bx],byte 1	; Starts out at 1...
+	mov	cx,2		; CX = from 2 to current number,
+inner:	mov	ax,si		; Divide current number,
+	xor	dx,dx
+	div	cx		; By CX
+	mov	di,ax
+	mov	al,[di+bx]	; Get value at that location
+	sub	[si+bx],al 	; Subtract from current number
+	inc	cx
+	cmp	cx,si
+	jbe	inner
+	cmp	si,MAX
+	jbe	outer
+	;;;	Print the table
+	mov	dx,frst99	; First string
+	call	outstr
+	mov	si,1		; Start at index 1
+	mov	dh,9		; Column count
+table:	mov	cl,[si+bx]	; Get item
+	test	cl,cl
+	mov	dl,' '
+	jns	.print		; Positive?
+	mov	dl,'-'		; Otherwise, it is negative,
+	neg	cl		; print ' ' and negate
+.print:	call	putc		; Print space or minus
+	add	cl,'0'		; Add ASCII 0
+	mov	dl,cl
+	call	putc		; Print number
+	mov 	dl,' '
+	call	putc		; Print space
+	dec	dh		; One less column left
+	jnz	.next
+	mov	dx,nl		; Print newline
+	call	outstr
+	mov	dh,10
+.next:	inc	si		; Done yet?
+	cmp	si,100
+	jb	table		; If not, print next item from table
+	;;;	Calculate zeroes and crossings
+	xor	cx,cx		; CL = zeroes, CH = crossings
+	mov	si,1
+	mov	al,[si+bx]	; AL = current item
+zc:	inc	si
+	mov	ah,al		; AH = previous item
+	mov	al,[si+bx]
+	test	al,al		; Zero?
+	jnz	.next
+	inc	cx		; Then increment zero counter
+	test	ah,ah		; Previous one also zero?
+	jz 	.next
+	inc	ch		; Then increment crossing counter
+.next:	cmp	si,MAX		; Done yet?
+	jbe	zc
+	;;;	Print zeroes and crossings
+	mov	dx,zero
+	call	outstr
+	mov	al,cl
+	call	putal
+	mov	dx,cross
+	call 	outstr
+	mov	al,ch
+	call	putal
+	mov	dx,tms
+	jmp	outstr
+putc:	mov	ah,putch	; Print character
+	int	21h
+	ret
+	;;;	Print AL in decimal format
+putal:	mov	di,num
+.loop:	aam			; Extract digit
+	add	al,'0'		; Store digit
+	dec	di
+	mov	[di],al
+	mov	al,ah		; Rest of number
+	test	al,al		; Done?
+	jnz	.loop		; If not, get more digits
+	mov	dx,di		; Otherwise, print string
+outstr:	mov	ah,puts
+	int	21h
+	ret
+section .data
+	db	'***'		; Number output placeholder
+num:	db	'$'
+frst99:	db	'First 99 Mertens numbers:',13,10,'   $'
+nl:	db	13,10,'$'	
+zero:	db	'M(N) is zero $'
+cross:	db	' times.',13,10,'M(N) crosses zero $'
+tms:	db	' times.$'
+section .bss
+mm:	resb	MAX	; Mertens numbers
+M:	equ	mm-1	; 1-based indexing

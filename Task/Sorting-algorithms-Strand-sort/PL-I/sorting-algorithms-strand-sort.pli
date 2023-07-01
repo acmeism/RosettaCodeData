@@ -1,0 +1,91 @@
+strand: procedure options (main); /* 27 Oct. 2012 */
+   declare A(100) fixed, used(100) bit (1), sorted fixed controlled;
+   declare (temp, work) fixed controlled;
+   declare (i, j, k, n) fixed binary;
+
+   n = hbound(A, 1);
+   used = '1'b;
+   A = random()*99;
+
+   put edit (A) (f(3));
+
+   do while (allocation(sorted) < n);
+      call fetch (A, work);
+      call move  (temp, work);
+
+      call merge(sorted, temp);
+         /* Merges elements in SORTED with elements in TEMP. */
+   end;
+   /* Transfer the sorted elements to A. */
+   do i = 1 to allocation(sorted);
+      A(i) = sorted; free sorted;
+   end;
+   /* Print the sorted values. */
+   put skip list ('The sorted values are:');
+   put skip edit (A) (f(3));
+
+/* Merges elements of SORTED with elements of TEMP and places  */
+/* the result in SORTED. */
+/* Elements in SORTED and TEMP are in forward order. */
+merge: procedure (sorted, temp);
+   declare (sorted, temp) fixed controlled;
+   declare work fixed controlled;
+   declare (j_ok, k_ok) bit (1);
+
+   do until ((k_ok | j_ok) = '0'b);
+      k_ok = allocation(sorted) > 0;
+      j_ok = allocation(temp)   > 0;
+      if k_ok & j_ok then
+         do;
+            if sorted <= temp then
+               do; allocate work; work = sorted; free sorted; end;
+            else
+               do; allocate work; work = temp; free temp; end;
+         end;
+      else
+         if allocation(temp) = 0 then
+             /* temp is empty; copy remainder of sorted into work */
+            do while (allocation(sorted) > 0);
+               allocate work; work = sorted; free sorted;
+            end;
+         else
+            /* sorted is empty; copy remainder of temp onto work */
+            do while (allocation(temp) > 0);
+               allocate work; work = temp; free temp;
+            end;
+   end;
+
+   call move (sorted, work); /* Move the values to SORTED. */
+
+end merge;
+
+/* Collect a thread of ascending values from aray A, and stack them in temp. */
+/* Note: the values in temp are in reverse order. */
+fetch: procedure (A, temp);
+   declare A(*) fixed, temp controlled fixed;
+   declare i fixed binary;
+
+   do i = 1 to hbound(A,1);
+      if used(i) then
+         do; allocate temp; temp = A(i); used(i) = '0'b; go to found; end;
+   end;
+found:
+   do i = i+1 to hbound(A,1);
+      if (temp <= A(i)) & used(i) then
+         do; allocate temp; temp = A(i); used(i) = '0'b; end;
+   end;
+end fetch;
+
+/* Copy the stack at TEMP to the stack at SORTED. */
+/* In TEMP, elements are in reverse order;   */
+/* in SORTED, elements are in forward order. */
+move: procedure (sorted, temp);
+   declare (sorted, temp) fixed controlled;
+
+   do while (allocation(sorted) > 0); free sorted; end;
+   do while (allocation (temp) > 0);
+      allocate sorted; sorted = temp; free temp;
+   end;
+end move;
+
+end strand;

@@ -1,0 +1,181 @@
+'CONFIGURATION
+'=============
+
+% max     8192  'Maximum amount of Prime Numbers (must be 2^n) (excluding 1 and 2)
+% cores   4     'CPU cores available (limited to 4 here)
+% share   2048  'Amount of numbers allocated to each core
+
+'SETUP
+'=====
+
+'SOURCE DATA BUFFERS
+
+sys primes[max]
+sys numbers[max]
+
+'RESULT BUFFER
+
+double pp[max] 'main thread
+
+
+'MULTITHREADING AND TIMING API
+'=============================
+
+extern lib "kernel32.dll"
+'
+void   QueryPerformanceCounter(quad*c)
+void   QueryPerformanceFrequency(quad*freq)
+sys    CreateThread (sys lpThreadAttributes, dwStackSize, lpStartAddress, lpParameter, dwCreationFlags, *lpThreadId)
+dword  WaitForMultipleObjects(sys nCount,*lpHandles, bWaitAll, dwMilliseconds)
+bool   CloseHandle(sys hObject)
+void   Sleep(sys dwMilliSeconds)
+'
+quad freq,t1,t2
+QueryPerformanceFrequency freq
+
+
+'MACROS AND FUNCTIONS
+'====================
+
+
+macro FindPrimes(p)
+'==================
+finit
+sys n=1
+sys c,k
+do
+  n+=2
+  if c>=max then exit do
+  '
+  'IS IT DIVISIBLE BE ANY PREVIOUS PRIME
+  '
+  for k=1 to c
+     if frac(n/p[k])=0 then exit for
+  next
+  '
+  if k>c then
+    c++
+    p[c]=n 'STORE PRIME
+  end if
+end do
+end macro
+
+
+macro ProcessNumbers(p,bb)
+'=========================
+finit
+sys i,b,e
+b=bb*share
+e=b+share
+sys v,w
+for i=b+1 to e
+  v=numbers(i)
+  for j=max to 1 step -1
+    w=primes(j)
+    if w<v then
+      if frac(v/w)=0 then
+        p(i)=primes(j)    'store highest factor
+        exit for          'process next number
+      end if
+    end if
+  next
+next
+end macro
+
+'THREAD FUNCTIONS
+
+function threadA(sys v) as sys
+ProcessNumbers(pp,v)
+end function
+
+
+function threadB(sys v) as sys
+ProcessNumbers(pp,v)
+end function
+
+
+function threadC(sys v) as sys
+ProcessNumbers(pp,v)
+end function
+
+
+end extern
+
+function mainThread(sys b)
+'===========================
+ProcessNumbers(pp,b)
+end function
+
+
+'SOURCE DATA GENERATION
+
+sys seed = 0x12345678
+
+function Rnd() as sys
+'====================
+'
+mov eax,seed
+rol eax,7
+imul eax,eax,13
+mov seed,eax
+return eax
+end function
+
+
+function GenerateNumbers()
+'=========================
+sys i,v,mask
+mask=max * 8 -1 'as bit mask
+for i=1 to max
+  v=rnd()
+  v and=mask
+  numbers(i)=v
+next
+end function
+
+
+
+FindPrimes(primes)
+
+GenerateNumbers()
+
+
+
+% threads Cores-1
+
+% INFINITE 0xFFFFFFFF  'Infinite timeout
+
+sys Funs[threads]={@threadA,@threadB,@threadC} '3 additional threads
+sys  hThread[threads], id[threads], i
+'
+'START TIMER
+'
+QueryPerformanceCounter   t1
+'
+for i=1 to threads
+  hThread(i) =  CreateThread 0,0,funs(i),i,0,id(i)
+next
+
+
+MainThread(0) 'process numbers in main thread (bottom share)
+
+if threads>0 then
+  WaitForMultipleObjects Threads, hThread, 1, INFINITE
+end if
+
+for i=1 to Threads
+  CloseHandle hThread(i)
+next
+
+'CAPTURE NUMBER WITH HIGHEST PRIME FACTOR
+
+sys n,f
+for i=1 to max
+  if pp(i)>f then f=pp(i) : n=i
+next
+
+'STOP TIMER
+
+QueryPerformanceCounter t2
+
+print str((t2-t1)/freq,3) " secs    " numbers(n) "    " f 'number with highest prime factor

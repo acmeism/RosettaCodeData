@@ -1,0 +1,347 @@
+ClearAll[NeighbourQ, CellDistance, VisualizeHidato, HiddenSingle, \
+NakedN, HiddenN, ChainSearch, HidatoSolve, Cornering, ValidPuzzle, \
+GapSearch, ReachDelete, GrowNeighbours]
+NeighbourQ[cell1_, cell2_] := (CellDistance[cell1, cell2] === 1)
+ValidPuzzle[cells_List, cands_List] :=
+ MemberQ[cands, {1}] \[And] MemberQ[cands, {Length[cells]}] \[And]
+  Length[cells] == Length[candidates] \[And]
+  MinMax[Flatten[cands]] === {1,
+    Length[cells]} \[And] (Union @@ cands === Range[Length[cells]])
+CellDistance[cell1_, cell2_] := ChessboardDistance[cell1, cell2]
+VisualizeHidato[cells_List, cands_List] := Module[{grid, nums, cb, hx},
+  grid = {EdgeForm[Thick],
+    MapThread[
+     If[Length[#2] > 1, {FaceForm[],
+        Rectangle[#1]}, {FaceForm[LightGray],
+        Rectangle[#1]}] &, {cells, cands}]};
+  nums =
+   MapThread[
+    If[Length[#1] == 1, Text[Style[First[#1], 16], #2 + 0.5 {1, 1}],
+      Text[
+       Tooltip[Style[Length[#1], Red, 10], #1], #2 +
+        0.5 {1, 1}]] &, {cands, cells}];
+  cb = CoordinateBounds[cells];
+  Graphics[{grid, nums}, PlotRange -> cb + {{-0.5, 1.5}, {-0.5, 1.5}},
+    ImageSize -> 60 (1 + cb[[1, 2]] - cb[[1, 1]])]
+  ]
+HiddenSingle[cands_List] := Module[{singles, newcands = cands},
+  singles = Cases[Tally[Flatten[cands]], {_, 1}];
+  If[Length[singles] > 0,
+   singles = Sort[singles[[All, 1]]];
+   newcands =
+    If[ContainsAny[#, singles], Intersection[#, singles], #] & /@
+     newcands;
+   newcands
+   ,
+   cands
+   ]
+  ]
+HiddenN[cands_List, n_Integer?(# > 1 &)] := Module[{tmp, out},
+  tmp = cands;
+  tmp = Join @@ MapIndexed[{#1, First[#2]} &, tmp, {2}];
+  tmp = Transpose /@ GatherBy[tmp, First];
+  tmp[[All, 1]] = tmp[[All, 1, 1]];
+  tmp = Select[tmp, 2 <= Length[Last[#]] <= n &];
+  If[Length[tmp] > 0,
+   tmp = Transpose /@ Subsets[tmp, {n}];
+   tmp[[All, 2]] = Union @@@ tmp[[All, 2]];
+   tmp = Select[tmp, Length[Last[#]] == n &];
+   If[Length[tmp] > 0,
+    (* for each tmp {cands,
+    cells} in each of the cells delete everything except the cands *)
+
+        out = cands;
+    Do[
+     Do[
+      out[[c]] = Select[out[[c]], MemberQ[t[[1]], #] &];
+      ,
+      {c, t[[2]]}
+      ]
+     ,
+     {t, tmp}
+     ];
+    out
+    ,
+    cands
+    ]
+   ,
+   cands
+   ]
+  ]
+NakedN[cands_List, n_Integer?(# > 1 &)] := Module[{tmp, newcands, ids},
+  tmp = {Range[Length[cands]], cands}\[Transpose];
+  tmp = Select[tmp, 2 <= Length[Last[#]] <= n &];
+  If[Length[tmp] > 0,
+   tmp = Transpose /@ Subsets[tmp, {n}];
+   tmp[[All, 2]] = Union @@@ tmp[[All, 2]];
+   tmp = Select[tmp, Length[Last[#]] == n &];
+   If[Length[tmp] > 0,
+    newcands = cands;
+    Do[
+     ids = Complement[Range[Length[newcands]], t[[1]]];
+     newcands[[ids]] =
+      DeleteCases[newcands[[ids]],
+       Alternatives @@ t[[2]], \[Infinity]];
+     ,
+     {t, tmp}
+     ];
+    newcands
+    ,
+    cands
+    ]
+   ,
+   cands
+   ]
+  ]
+Cornering[cells_List, cands_List] :=
+ Module[{newcands, neighbours, filled, neighboursfiltered, cellid,
+   filledneighours, begin, end, beginend},
+  filled = Flatten[MapIndexed[If[Length[#1] == 1, #2, {}] &, cands]];
+  begin = If[MemberQ[cands, {1}], {}, {1}];
+  end = If[MemberQ[cands, {Length[cells]}], {}, {Length[cells]}];
+  beginend = Join[begin, end];
+  neighbours = Outer[NeighbourQ, cells, cells, 1];
+  neighbours =
+   Association[
+    MapIndexed[
+     First[#2] -> {Complement[Flatten[Position[#1, True]], filled],
+        Intersection[Flatten[Position[#1, True]], filled]} &,
+     neighbours]];
+  KeyDropFrom[neighbours, filled];
+  neighbours = Select[neighbours, Length[First[#]] == 1 &];
+  If[Length[neighbours] > 0,
+   newcands = cands;
+   neighbours = KeyValueMap[List, neighbours];
+   Do[
+    cellid = n[[1]];
+    filledneighours = n[[2, 2]];
+    filledneighours = Join @@ cands[[filledneighours]];
+    filledneighours =
+     Union[filledneighours - 1, filledneighours + 1];
+    filledneighours = Union[filledneighours, beginend];
+    newcands[[cellid]] =
+     Intersection[newcands[[cellid]], filledneighours];
+    ,
+    {n, neighbours}
+    ];
+   newcands
+   ,
+   cands
+   ]
+  ]
+ChainSearch[cells_, cands_] := Module[{neighbours, sols, out},
+  neighbours = Outer[NeighbourQ, cells, cells, 1];
+  neighbours =
+   Association[
+    MapIndexed[First[#2] -> Flatten[Position[#1, True]] &,
+     neighbours]];
+  sols = Reap[ChainSearch[neighbours, cands, {}];][[2]];
+  If[Length[sols] > 0,
+   sols = sols[[1]];
+   If[Length[sols] > 1,
+    Print["multiple solutions found, showing first"];
+    ];
+   sols = First[sols];
+   out = cands;
+   out[[sols]] = List /@ Range[Length[out]];
+   out
+   ,
+   cands
+   ]
+  ]
+ChainSearch[neighbours_, cands_List, solcellids_List] :=
+ Module[{largest, largestid, next, poss},
+  largest = Length[solcellids];
+  largestid = Last[solcellids, 0];
+  If[largest < Length[cands],
+   next = largest + 1;
+   poss =
+    Flatten[MapIndexed[If[MemberQ[#1, next], First[#2], {}] &, cands]];
+   If[Length[poss] > 0,
+    If[largest > 0,
+     poss = Intersection[poss, neighbours[largestid]];
+     ];
+    poss = Complement[poss, solcellids]; (* can't be in previous path*)
+
+        If[Length[poss] > 0, (* there are 'next' ones iterate over,
+     calling this function *)
+     Do[
+      ChainSearch[neighbours, cands, Append[solcellids, p]]
+      ,
+      {p, poss}
+      ]
+     ]
+    ,
+    Print["There should be a next!"];
+    Abort[];
+    ]
+   ,
+   Sow[solcellids] (*
+   we found a solution with this ordering of cells *)
+   ]
+  ]
+GrowNeighbours[neighbours_, set_List] :=
+ Module[{lastdone, ids, newneighbours, old},
+  old = Join @@ set[[All, All, 1]];
+  lastdone = Last[set];
+  ids = lastdone[[All, 1]];
+  newneighbours = Union @@ (neighbours /@ ids);
+  newneighbours = Complement[newneighbours, old]; (*only new ones*)
+
+  If[Length[newneighbours] > 0,
+   Append[set, Thread[{newneighbours, lastdone[[1, 2]] + 1}]]
+   ,
+   set
+   ]
+  ]
+ReachDelete[cells_List, cands_List, neighbours_, startid_] :=
+ Module[{seed, distances, val, newcands},
+  If[MatchQ[cands[[startid]], {_}],
+   val = cands[[startid, 1]];
+   seed = {{{startid, 0}}};
+   distances =
+    Join @@ FixedPoint[GrowNeighbours[neighbours, #] &, seed];
+   If[Length[distances] > 0,
+    distances = Select[distances, Last[#] > 0 &];
+    If[Length[distances] > 0,
+     newcands = cands;
+     distances[[All, 2]] =
+      Transpose[
+       val + Outer[Times, {-1, 1}, distances[[All, 2]] - 1]];
+     Do[newcands[[\[CurlyPhi][[1]]]] =
+        Complement[newcands[[\[CurlyPhi][[1]]]],
+         Range @@ \[CurlyPhi][[2]]];
+      , {\[CurlyPhi], distances}
+      ];
+     newcands
+     ,
+     cands
+     ]
+    ,
+    cands
+    ]
+   ,
+   Print["invalid starting point for neighbour search"];
+   Abort[];
+   ]
+  ]
+GapSearch[cells_List, cands_List] :=
+ Module[{givensid, givens, neighbours},
+  givensid = Flatten[Position[cands, {_}]];
+  givens = {cells[[givensid]], givensid,
+     Flatten[cands[[givensid]]]}\[Transpose];
+  If[Length[givens] > 0,
+   givens = SortBy[givens, Last];
+   givens = Split[givens, Last[#2] == Last[#1] + 1 &];
+   givens = If[Length[#] <= 2, #, #[[{1, -1}]]] & /@ givens;
+   If[Length[givens] > 0,
+    givens = Join @@ givens;
+    If[Length[givens] > 0,
+     neighbours = Outer[NeighbourQ, cells, cells, 1];
+     neighbours =
+      Association[
+       MapIndexed[First[#2] -> Flatten[Position[#1, True]] &,
+        neighbours]];
+     givens = givens[[All, 2]];
+     Fold[ReachDelete[cells, #1, neighbours, #2] &, cands, givens]
+     ,
+     cands
+     ]
+    ,
+    cands
+    ]
+   ,
+   cands
+   ]
+  ]
+HidatoSolve[cells_List, cands_List] :=
+ Module[{newcands = cands, old},
+  If[ValidPuzzle[cells, cands] \[Or] 1 == 1,
+   old = -1;
+   newcands = GapSearch[cells, newcands];
+   While[old =!= newcands,
+    old = newcands;
+    newcands = GapSearch[cells, newcands];
+    If[old === newcands,
+     newcands = HiddenSingle[newcands];
+     If[old === newcands,
+      newcands = NakedN[newcands, 2];
+      newcands = HiddenN[newcands, 2];
+      If[old === newcands,
+       newcands = NakedN[newcands, 3];
+       newcands = HiddenN[newcands, 3];
+       If[old === newcands,
+        newcands = Cornering[cells, newcands];
+        If[old === newcands,
+         newcands = NakedN[newcands, 4];
+         newcands = HiddenN[newcands, 4];
+         If[old === newcands,
+          newcands = NakedN[newcands, 5];
+          newcands = HiddenN[newcands, 5];
+          If[old === newcands,
+           newcands = NakedN[newcands, 6];
+           newcands = HiddenN[newcands, 6];
+           If[old === newcands,
+            newcands = NakedN[newcands, 7];
+            newcands = HiddenN[newcands, 7];
+            If[old === newcands,
+             newcands = NakedN[newcands, 8];
+             newcands = HiddenN[newcands, 8];
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ];
+   If[Length[Flatten[newcands]] > Length[newcands], (*
+    if not solved do a depth-first brute force search*)
+
+    newcands = ChainSearch[cells, newcands];
+    ];
+   (*Print@VisualizeHidato[cells,newcands];*)
+   newcands
+   ,
+   Print[
+    "There seems to be something wrong with your Hidato puzzle. Check \
+if the begin and endpoints are given, the cells and candidates have \
+the same length, all the numbers are among the \
+candidates\[Ellipsis]"]
+   ]
+  ]
+cells = {{1, 4}, {1, 5}, {1, 6}, {1, 7}, {1, 8}, {2, 4}, {2, 5}, {2,
+   6}, {2, 7}, {2, 8}, {3, 3}, {3, 4}, {3, 5}, {3, 6}, {3, 7}, {3,
+   8}, {4, 3}, {4, 4}, {4, 5}, {4, 6}, {4, 7}, {4, 8}, {5, 2}, {5,
+   3}, {5, 4}, {5, 5}, {5, 6}, {5, 7}, {5, 8}, {6, 2}, {6, 3}, {6,
+   4}, {6, 5}, {6, 6}, {7, 1}, {7, 2}, {7, 3}, {7, 4}, {8, 1}, {8,
+   2}}; (* cartesian coordinates of the cells *)
+candidates =
+ ConstantArray[Range@Length[cells],
+  Length[
+   cells]]; (* all the cells start with candidates 1 through 40 *)
+
+hints = {
+   {{1, 4}, {27}},
+   {{2, 5}, {26}},
+   {{7, 1}, {5}},
+   {{6, 2}, {7}},
+   {{5, 3}, {18}},
+   {{5, 4}, {9}},
+   {{5, 5}, {40}},
+   {{6, 5}, {11}},
+   {{4, 5}, {13}},
+   {{4, 6}, {21}},
+   {{4, 7}, {22}},
+   {{3, 7}, {24}},
+   {{3, 8}, {35}},
+   {{2, 8}, {33}},
+   {{7, 4}, {1}}
+   };
+indices = Flatten[Position[cells, #] & /@ hints[[All, 1]]];
+candidates[[indices]] = hints[[All, 2]];
+VisualizeHidato[cells, candidates]
+out = HidatoSolve[cells, candidates];
+VisualizeHidato[cells, out]

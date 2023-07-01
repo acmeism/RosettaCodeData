@@ -1,0 +1,47 @@
+;; Works with: chibi, csi, gosh, gsi, guile
+(cond-expand
+ (r7rs (import (scheme base)
+               (scheme write)))
+ (gambit)
+ (chicken (import (r7rs))))
+
+(define char-rot13
+  (let* ((A (char->integer #\A))
+         (N (char->integer #\N))
+         (Z (char->integer #\Z))
+         (a (char->integer #\a))
+         (n (char->integer #\n))
+         (z (char->integer #\z))
+         (inc 13)
+         (dec (- inc))
+         (rot (lambda (c direction)
+                (integer->char (+ c direction)))))
+    (lambda (ch)
+      (let ((c (char->integer ch)))
+        (if (>= c A)
+            (if (< c N)
+                (rot c inc)
+                (if (<= c Z)
+                    (rot c dec)
+                    (if (>= c a)
+                        (if (< c n)
+                            (rot c inc)
+                            (if (<= c z)
+                                (rot c dec)
+                                ch))))))))))
+
+(define (string-rot13 str)
+  (string-map char-rot13 str))
+
+(if (not (and (string=? (string-rot13 "abcdefghijklmnopqrstuvwxyz")
+                        "nopqrstuvwxyzabcdefghijklm")
+              (string=? (string-rot13 "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+                        "NOPQRSTUVWXYZABCDEFGHIJKLM")))
+    (error "Test failed."))
+
+(let loop ((line (read-line)))
+  (if (string? line)
+      (begin
+        (display (string-rot13 line))
+        (newline)
+        (loop (read-line)))))

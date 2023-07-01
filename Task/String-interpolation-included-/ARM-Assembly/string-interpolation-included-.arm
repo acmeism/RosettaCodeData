@@ -1,0 +1,253 @@
+/* ARM assembly Raspberry PI  */
+/*  program insertString.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.equ STDOUT, 1           @ Linux output console
+.equ EXIT,   1           @ Linux syscall
+.equ WRITE,  4           @ Linux syscall
+.equ BRK,    0x2d        @ Linux syscall
+.equ CHARPOS,       '@'
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szString:           .asciz " string "
+szString1:          .asciz "insert"
+szString2:          .asciz "abcd@efg"
+szString3:          .asciz "abcdef @"
+szString4:          .asciz "@ abcdef"
+szCarriageReturn:   .asciz "\n"
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                            // entry of program
+
+    ldr r0,iAdrszString          // string address
+    ldr r1,iAdrszString1         // string address
+    mov r2,#0
+    bl strInsert                 //
+                                 // return new pointer
+    bl affichageMess             // display result string
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    ldr r0,iAdrszString          // string address
+    ldr r1,iAdrszString1         // string address
+    mov r2,#3
+    bl strInsert                 //
+                                 // return new pointer
+    bl affichageMess             // display result string
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    ldr r0,iAdrszString          // string address
+    ldr r1,iAdrszString1         // string address
+    mov r2,#40
+    bl strInsert                 //
+                                 // return new pointer
+    bl affichageMess             // display result string
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    ldr r0,iAdrszString2         // string address
+    ldr r1,iAdrszString1         // string address
+    bl strInsertAtChar           //
+                                 // return new pointer
+    bl affichageMess             // display result string
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    ldr r0,iAdrszString3         // string address
+    ldr r1,iAdrszString1         // string address
+    bl strInsertAtChar           //
+                                 // return new pointer
+    bl affichageMess             // display result string
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    ldr r0,iAdrszString4         // string address
+    ldr r1,iAdrszString1         // string address
+    bl strInsertAtChar           //
+                                 // return new pointer
+    bl affichageMess             // display result string
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+100:                             // standard end of the program
+    mov r0, #0                   // return code
+    mov r7, #EXIT                // request to exit program
+    svc 0                        // perform the system call
+iAdrszString:          .int szString
+iAdrszString1:         .int szString1
+iAdrszString2:         .int szString2
+iAdrszString3:         .int szString3
+iAdrszString4:         .int szString4
+iAdrszCarriageReturn:  .int szCarriageReturn
+/******************************************************************/
+/*   insertion of a sub-chain in a chain in the desired position  */
+/******************************************************************/
+/* r0 contains the address of string 1 */
+/* r1 contains the address of string to insert */
+/* r2 contains the position of insertion :
+      0 start string
+      if r2 > lenght string 1 insert at end of string*/
+/* r0 return the address of new string  on the heap */
+strInsert:
+    push {r1-r4,lr}                         @ save  registres
+    mov r3,#0                                // length counter
+1:                                           // compute length of string 1
+    ldrb r4,[r0,r3]
+    cmp r4,#0
+    addne r3,r3,#1                          // increment to one if not equal
+    bne 1b                                   // loop if not equal
+    mov r5,#0                                // length counter insertion string
+2:                                           // compute length of insertion string
+    ldrb r4,[r1,r5]
+    cmp r4,#0
+    addne r5,r5,#1                          // increment to one if not equal
+    bne 2b
+    cmp r5,#0
+    beq 99f                                  // string empty -> error
+    add r3,r3,r5                             // add 2 length
+    add r3,r3,#1                             // +1 for final zero
+    mov r6,r0                                // save address string 1
+    mov r0,#0                                // allocation place heap
+    mov r7,#BRK                               // call system 'brk'
+    svc #0
+    mov r5,r0                                // save address heap for output string
+    add r0,r0,r3                             // reservation place r3 length
+    mov r7,#BRK                               // call system 'brk'
+    svc #0
+    cmp r0,#-1                               // allocation error
+    beq 99f
+    //
+    mov r7,#0                                // index load characters string 1
+    cmp r2,#0                                // index insertion = 0
+    beq 5f                                   // insertion at string 1 begin
+3:                                           // loop copy characters string 1
+    ldrb r0,[r6,r7]                          // load character
+    cmp r0,#0                                // end string ?
+    beq 5f                                   // insertion at end
+    strb r0,[r5,r7]                          // store character in output string
+    add r7,r7,#1                             // increment index
+    cmp r7,r2                                // < insertion index ?
+    blt 3b                                   // yes -> loop
+5:
+    mov r4,r7                                // init index character output string
+    mov r3,#0                                // index load characters insertion string
+6:
+    ldrb r0,[r1,r3]                          // load characters insertion string
+    cmp r0,#0                                // end string ?
+    beq 7f
+    strb r0,[r5,r4]                          // store in output string
+    add r3,r3,#1                             // increment index
+    add r4,r4,#1                             // increment output index
+    b 6b                                     // and loop
+7:
+    ldrb r0,[r6,r7]                          // load other character string 1
+    strb r0,[r5,r4]                          // store in output string
+    cmp r0,#0                                // end string 1 ?
+    beq 8f                                   // yes -> end
+    add r4,r4,#1                             // increment output index
+    add r7,r7,#1                             // increment index
+    b 7b                                     // and loop
+8:
+    mov r0,r5                                // return output string address
+    b 100f
+99:                                          // error
+    mov r0,#-1
+100:
+    pop {r1-r4,lr}                          @ restaur registers
+    bx lr                                   @ return
+/******************************************************************/
+/*   insert string at character insertion                         */
+/******************************************************************/
+/* r0 contains the address of string 1 */
+/* r1 contains the address of insertion string   */
+/* r0 return the address of new string  on the heap */
+/* or -1 if error   */
+strInsertAtChar:
+    push {r1-r7,lr}                         @ save  registres
+    mov r3,#0                                // length counter
+1:                                           // compute length of string 1
+    ldrb r4,[r0,r3]
+    cmp r4,#0
+    addne r3,r3,#1                           // increment to one if not equal
+    bne 1b                                   // loop if not equal
+    mov r5,#0                                // length counter insertion string
+2:                                           // compute length to insertion string
+    ldrb r4,[r1,r5]
+    cmp r4,#0
+    addne r5,r5,#1                           // increment to one if not equal
+    bne 2b                                   // and loop
+    cmp r5,#0
+    beq 99f                                  // string empty -> error
+    add r3,r3,r5                             // add 2 length
+    add r3,r3,#1                             // +1 for final zero
+    mov r6,r0                                // save address string 1
+    mov r0,#0                                // allocation place heap
+    mov r7,#BRK                               // call system 'brk'
+    svc #0
+    mov r5,r0                                // save address heap for output string
+    add r0,r0,r3                             // reservation place r3 length
+    mov r7,#BRK                               // call system 'brk'
+    svc #0
+    cmp r0,#-1                               // allocation error
+    beq 99f
+
+    mov r2,#0
+    mov r4,#0
+3:                                           // loop copy string begin
+    ldrb r3,[r6,r2]
+    cmp r3,#0
+    beq 99f
+    cmp r3,#CHARPOS                           // insertion character ?
+    beq 5f                                   // yes
+    strb r3,[r5,r4]                          // no store character in output string
+    add r2,r2,#1
+    add r4,r4,#1
+    b 3b                                     // and loop
+5:                                           // r4 contains position insertion
+    add r7,r4,#1                              // init index character output string
+                                             // at position insertion + one
+    mov r3,#0                                // index load characters insertion string
+6:
+    ldrb r0,[r1,r3]                          // load characters insertion string
+    cmp r0,#0                                // end string ?
+    beq 7f                                   // yes
+    strb r0,[r5,r4]                          // store in output string
+    add r3,r3,#1                             // increment index
+    add r4,r4,#1                             // increment output index
+    b 6b                                     // and loop
+7:                                           // loop copy end string
+    ldrb r0,[r6,r7]                          // load other character string 1
+    strb r0,[r5,r4]                          // store in output string
+    cmp r0,#0                                // end string 1 ?
+    beq 8f                                   // yes -> end
+    add r4,r4,#1                             // increment output index
+    add r7,r7,#1                             // increment index
+    b 7b                                     // and loop
+8:
+    mov r0,r5                                // return output string address
+    b 100f
+99:                                          // error
+    mov r0,#-1
+100:
+    pop {r1-r7,lr}                          @ restaur registers
+    bx lr                                   @ return
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

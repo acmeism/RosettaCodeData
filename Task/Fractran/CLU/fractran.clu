@@ -1,0 +1,124 @@
+ratio = cluster is new, parse, unparse, get_num, get_denom, mul
+    rep = struct[num, denom: int]
+
+    new = proc (num, denom: int) returns (cvt)
+        return(simplify(rep${num: num, denom: denom}))
+    end new
+
+    parse = proc (rat: string) returns (ratio) signals (bad_format)
+        rat := trim(rat)
+        sep: int := string$indexc('/', rat)
+        if sep = 0 then signal bad_format end
+
+        num: string := string$substr(rat, 1, sep-1)
+        denom: string := string$rest(rat, sep+1)
+        return(new(int$parse(num), int$parse(denom))) resignal bad_format
+    end parse
+
+    trim = proc (s: string) returns (string)
+        start: int := 1
+        while start <= string$size(s) cand s[start] = ' ' do start := start + 1 end
+
+        end_: int := string$size(s)
+        while end_ >= 1 cand s[end_] = ' ' do end_ := end_ - 1 end
+        return(string$substr(s, start, end_-start+1))
+    end trim
+
+    unparse = proc (rat: cvt) returns (string)
+        return(int$unparse(rat.num) || "/" || int$unparse(rat.denom))
+    end unparse
+
+    get_num = proc (rat: cvt) returns (int)
+        return(rat.num)
+    end get_num
+
+    get_denom = proc (rat: cvt) returns (int)
+        return(rat.denom)
+    end get_denom
+
+    mul = proc (a, b: cvt) returns (ratio)
+        return(new(a.num * b.num, a.denom * b.denom))
+    end mul
+
+    simplify = proc (rat: rep) returns (rep)
+        num: int := int$abs(rat.num)
+        denom: int := int$abs(rat.denom)
+
+        sign: int
+        if (rat.num < 0) = (rat.denom < 0)
+            then sign := 1
+            else sign := -1
+        end
+
+        factor: int := gcd(num, denom)
+        return(rep${num: sign*num/factor, denom: denom/factor})
+    end simplify
+
+    gcd = proc (a, b: int) returns (int)
+        while b ~= 0 do
+            a, b := b, a // b
+        end
+        return(a)
+    end gcd
+end ratio
+
+fractran = cluster is parse, run
+    rep = sequence[ratio]
+
+    parse = proc (program: string) returns (cvt)
+        parsed: array[ratio] := array[ratio]$[]
+        for rat: ratio in ratioes(program) do
+            array[ratio]$addh(parsed, rat)
+        end
+        return(rep$a2s(parsed))
+    end parse
+
+    ratioes = iter (program: string) yields (ratio)
+        while true do
+            sep: int := string$indexc(',', program)
+            if sep = 0 then
+                yield(ratio$parse(program))
+                break
+            else
+                yield(ratio$parse(string$substr(program, 1, sep-1)))
+                program := string$rest(program, sep+1)
+            end
+        end
+    end ratioes
+
+    run = iter (program: cvt, n, maxiter: int) yields (int)
+        nrat: ratio := ratio$new(n, 1)
+        while maxiter > 0 do
+            yield(nrat.num)
+            begin
+                for rat: ratio in rep$elements(program) do
+                    mul: ratio := rat * nrat
+                    if mul.denom = 1 then
+                        exit found(mul)
+                    end
+                end
+                break
+            end except when found(new: ratio):
+                nrat := new
+            end
+            maxiter := maxiter - 1
+        end
+    end run
+end fractran
+
+start_up = proc ()
+    po: stream := stream$primary_output()
+
+    program: string := "17/91, 78/85, 19/51, 23/38, 29/33, 77/29, 95/23, "
+                    || "77/19, 1/17, 11/13, 13/11, 15/14, 15/2, 55/1"
+    parsed: fractran := fractran$parse(program)
+
+    index: int := 0
+    for result: int in fractran$run(parsed, 2, 20) do
+        stream$putright(po, int$unparse(index), 3)
+        stream$putc(po, ':')
+        stream$putright(po, int$unparse(result), 10)
+        stream$putl(po, "")
+        index := index + 1
+    end
+end start_up

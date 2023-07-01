@@ -1,0 +1,146 @@
+	;
+	; while loop, dividing 1024 repeatedly by 2, using Z80 assembly language
+	;
+	; Runs under CP/M 3.1 on YAZE-AG-2.51.2 Z80 emulator
+	; Assembled with zsm4 on same emulator/OS, uses macro capabilities of said assembler
+	; Created with vim under Windows
+	;
+	; Thanks to https://wikiti.brandonw.net for the idea for the conversion routine hl -> decimal ASCII
+	;
+	;
+	; 2023-05-19 Xorph
+	;
+
+	;
+	; Useful definitions
+	;
+
+	bdos	equ 05h		; Call to CP/M BDOS function
+	strdel	equ 6eh		; Set string delimiter
+	wrtstr	equ 09h		; Write string to console
+
+	nul	equ 00h		; ASCII control characters
+	cr	equ 0dh
+	lf	equ 0ah
+
+	cnull	equ '0'		; ASCII character constants
+
+	;
+	; Macros for BDOS calls
+	;
+
+setdel 	macro	char		; Set string delimiter to char
+	ld	c,strdel
+	ld	e,char
+	call	bdos
+	endm
+
+print 	macro	msg		; Output string to console
+	ld	c,wrtstr
+	ld	de,msg
+	call	bdos
+	endm
+
+newline	macro			; Print newline
+	ld	c,wrtstr
+	ld	de,crlf
+	call	bdos
+	endm
+
+	;
+	; =====================
+	; Start of main program
+	; =====================
+	;
+
+	cseg
+
+	setdel	nul		; Set string delimiter to 00h
+	ld	ix,value	; Register ix points to memory location of counter
+
+while:
+	ld	a,(ix)		; Z80 has no 16 bit compare, so we check the value byte by byte for 0
+	or	a		; In contrast to other CPUs, loading a register does NOT set the flags
+	jr	nz,docalc	; or-ing the accumulator with itself sets the flags and is faster than "cp 0"
+	ld	a,(ix+1)
+	or	a
+	jr	z,endprog	; If both bytes are 0, end program - this jump could be optimized away
+				; and replaced with a direct "ret z", but we want to simulate a "real"
+				; while loop, so we continue (jump to) after the last loop statement
+
+docalc:
+	ld	hl,(value)	; Print the current value, followed by newline
+	ld	iy,buffer	; Register iy points to memory location for current value as text for printout
+	call	dispHL		; dispHL modifies iy, so it must be reset to the buffer on every iteration
+
+	print	buffer
+	newline
+
+	srl	(ix+1)		; Neither has the Z80 a 16 bit shift operation for dividing by 2...
+	rr	(ix)		; Shift the MSB of value right and then rotate the LSB with carry to the right
+
+	jr	while		; Next iteration
+
+endprog:
+	ret			; Return to CP/M
+
+	;
+	; ===================
+	; End of main program
+	; ===================
+	;
+
+	;
+	; Helper routines - notice that the Z80 does not have a divide instruction
+	; Notice further that CP/M does not have any support for pretty-printing
+	; formatted numbers and stuff like that. So we have to do all this by hand...
+	;
+
+	;
+	; Converts the value (unsigned int) in register hl to its decimal representation
+	; Register iy has memory address of target for converted value
+	; String is terminated with nul character (\0)
+	;
+
+dispHL:
+	ld	b,1		; Flag for leading '0'
+	irp	x,<-10000,-1000,-100,-10,-1>
+	ld	de,x		; Subtract powers of 10 and determine digit
+	call	calcdig
+	endm
+
+	ld	a,nul		; Terminate result string with nul
+	ld	(iy+0),a
+
+	ret			; End of conversion routine
+
+calcdig:
+	ld	a,cnull-1	; Determine the digit character
+incrdig:
+	inc	a		; Start with '0'
+	add	hl,de		; As long as subtraction is possible, increment digit character
+	jr	c,incrdig
+
+	sbc	hl,de		; If negative, undo last subtraction and continue with remainder
+	cp	cnull		; Check for leading '0', these are ignored
+	jr	nz,adddig
+	bit	0,b		; Use bit instruction for check if flag set, register a contains digit
+	ret	nz		; If '0' found and flag set, it is a leading '0' and we return
+adddig:
+	ld	b,0		; Reset flag for leading '0', we are now outputting digits
+	ld	(iy+0),a	; Store character in memory and set iy to next location
+	inc	iy
+
+	ret			; End of conversion helper routine
+
+	;
+	; ================
+	; Data definitions
+	; ================
+	;
+
+	dseg
+
+value:	defw	1024d		; Starting value for loop, 16 bit little endian
+crlf:	defb	cr,lf,nul	; Generic newline
+buffer:	defs	10		; Buffer for conversion of number to text

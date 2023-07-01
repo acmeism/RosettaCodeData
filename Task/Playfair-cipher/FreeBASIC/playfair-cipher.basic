@@ -1,0 +1,156 @@
+' FB 1.05.0 Win64
+
+Enum PlayFairOption
+  noQ
+  iEqualsJ
+End Enum
+
+Dim Shared pfo As PlayFairOption  '' set this before calling buildTable
+Dim Shared table(1 To 5, 1 To 5) As UInteger
+
+Sub buildTable(keyword As String)
+  Dim used(1 To 26) As Boolean  '' all false by default
+  If pfo = noQ Then
+    used(17) = True
+  Else
+    used(10) = True
+  End If
+  Dim As String alphabet = UCase(keyword) + "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  Dim As UInteger i = 1, j = 1, k
+  Dim As Integer c
+  For k = 0 To Len(alphabet) - 1
+    c = alphabet[k] - 64
+    If c < 1 OrElse c > 26 Then Continue For
+    If Not used(c) Then
+      table(i, j) = c
+      used(c) = True
+      j += 1
+      If j = 6 Then
+        i += 1
+        If i = 6 Then Return  '' table has been filled
+        j = 1
+      End If
+    End If
+  Next k
+End Sub
+
+Function getCleanText(plainText As String) As String
+  plainText = UCase(plainText) '' ensure everything is upper case
+  ' get rid of any non-letters and insert X between duplicate letters
+  Dim As String cleanText = "", prevChar = "", nextChar
+  For i As UInteger = 1 To Len(plainText)
+    nextChar = Mid(plainText, i, 1)
+    ' It appears that Q should be omitted altogether if noQ option is specified - we assume so anyway
+    If nextChar < "A" OrElse nextChar > "Z"  OrElse (nextChar = "Q" AndAlso pfo = noQ) Then Continue For
+    ' If iEqualsJ option specified, replace J with I
+    If nextChar = "J" AndAlso pfo = iEqualsJ Then nextChar = "I"
+    If nextChar <> prevChar Then
+      cleanText += nextChar
+    Else
+      cleanText += "X" + nextChar
+    End If
+    prevChar = nextChar
+  Next
+  If Len(cleanText) Mod 2 = 1 Then  '' dangling letter at end so add another letter to complete digram
+    If Right(cleanText, 1) <> "X" Then
+      cleanText += "X"
+    Else
+      cleanText += "Z"
+    End If
+  End If
+  Return cleanText
+End Function
+
+Sub findChar(c As uInteger, ByRef row As UInteger, ByRef col As UInteger)
+  For i As UInteger = 1 To 5
+    For j As UInteger = 1 To 5
+      If table(i, j) = c Then
+        row = i
+        col = j
+        Return
+      End If
+    Next j
+  Next i
+End Sub
+
+Function encodePlayfair(plainText As String) As String
+  Dim As String cleanText = getCleanText(plainText)
+  Dim As String digram, cipherDigram, cipherText = ""
+  Dim As UInteger length = Len(cleanText)
+  Dim As UInteger char1, char2, row1, col1, row2, col2
+  For i As UInteger = 1 To length Step 2
+    digram = Mid(cleanText, i, 2)
+    char1 = digram[0] - 64
+    char2 = digram[1] - 64
+    findChar char1, row1, col1
+    findChar char2, row2, col2
+    If row1 = row2 Then
+      cipherDigram =  Chr(table(row1, col1 Mod 5 + 1) + 64)
+      cipherDigram += Chr(table(row2, col2 Mod 5 + 1) + 64)
+    ElseIf col1 = col2 Then
+      cipherDigram =  Chr(table(row1 Mod 5 + 1, col1) + 64)
+      cipherDigram += Chr(table(row2 Mod 5 + 1, col2) + 64)
+    Else
+      cipherDigram =  Chr(table(row1, col2) + 64)
+      cipherDigram += Chr(table(row2, col1) + 64)
+    End If
+    cipherText += cipherDigram
+    If i < length Then cipherText += " "
+  Next i
+  Return cipherText
+End Function
+
+Function decodePlayfair(cipherText As String) As String
+  Dim As String digram, cipherDigram, decodedText = ""
+  Dim As UInteger length = Len(cipherText)
+  Dim As UInteger char1, char2, row1, col1, row2, col2
+  For i As UInteger = 1 To length Step 3  '' cipherText will include spaces so we need to skip them
+    cipherDigram = Mid(cipherText, i, 2)
+    char1 = cipherDigram[0] - 64
+    char2 = cipherDigram[1] - 64
+    findChar char1, row1, col1
+    findChar char2, row2, col2
+    If row1 = row2 Then
+      digram =  Chr(table(row1, IIf(col1 > 1, col1 - 1, 5)) + 64)
+      digram += Chr(table(row2, IIf(col2 > 1, col2 - 1, 5)) + 64)
+    ElseIf col1 = col2 Then
+      digram =  Chr(table(IIf(row1 > 1, row1 - 1, 5), col1) + 64)
+      digram += Chr(table(IIf(row2 > 1, row2 - 1, 5), col2) + 64)
+    Else
+      digram =  Chr(table(row1, col2) + 64)
+      digram += Chr(table(row2, col1) + 64)
+    End If
+    decodedText += digram
+    If i < length Then decodedText += " "
+  Next i
+  Return decodedText
+End Function
+
+Dim As String keyword, ignoreQ, plainText, encodedText, decodedText
+Line Input "Enter Playfair keyword : "; keyword
+
+Do
+  Line Input "Ignore Q when buiding table  y/n : "; ignoreQ
+  ignoreQ = LCase(ignoreQ)
+Loop Until ignoreQ = "y" Or ignoreQ = "n"
+
+pfo = IIf(ignoreQ = "y", noQ, iEqualsJ)
+buildTable(keyword)
+Print "The table to be used is : " : Print
+For i As UInteger = 1 To 5
+  For j As UInteger = 1 To 5
+    Print Chr(table(i, j) + 64); " ";
+  Next j
+  Print
+Next i
+
+Print
+Line Input "Enter plain text : "; plainText
+Print
+encodedText = encodePlayfair(plainText)
+Print "Encoded text is : "; encodedText
+decodedText = decodePlayFair(encodedText)
+Print "Decoded text is : "; decodedText
+Print
+Print "Press any key to quit"
+Sleep

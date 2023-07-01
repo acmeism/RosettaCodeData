@@ -1,0 +1,66 @@
+	cpu	8086
+	org	100h
+section	.text
+	jmp	demo
+	;;;	Count non-overlapping substrings [ES:DI] in [DS:SI]
+	;;;	Return count in AX
+subcnt:	xor	ax,ax		; Set count to 0
+	xor	dl,dl		; Zero to compare to
+	mov	bp,di		; Keep copy of substring pointer
+.scan:	cmp	dl,[si]		; End of string?
+	je	.out		; Then we're done
+	mov	bx,si		; Keep copy of search position
+	mov	di,bp		; Start at beginning of substring
+.cmp:	xor	cx,cx	
+	dec	cx
+	repe	cmpsb		; Scan until no match
+	dec	si		; Go to first non-match
+	dec	di
+	cmp	dl,[es:di]	; Reached end of substring?
+	je	.match		; Then we found a match
+	mov	si,bx 		; If not, continue searching one
+	inc	si		; position further
+	jmp	.scan
+.match:	inc	ax		; Found a match - increment count
+	jmp	.scan
+.out:	ret
+	;;;	Test the routine on a few examples
+demo:	mov	si,pairs
+.loop:	lodsw			; Load string pointer
+	test	ax,ax		; If 0, stop
+	jz	.out
+	xchg	dx,ax
+	lodsw			; Load substring pointer
+	xchg	di,ax
+	push	si		; Keep example pointer
+	xchg	si,dx
+	call	subcnt		; Count substrings
+	call	prax		; Print amount of substrings
+	pop	si		; Restore example pointer
+	jmp	.loop
+.out:	ret
+	;;;	Print AX as number
+prax:	mov	bx,num		; Pointer to end of number string
+	mov	cx,10 		; Divisor
+.dgt:	xor	dx,dx		; Divide by 10
+	div	cx
+	add	dl,'0'		; Add ASCII 0 to remainder
+	dec	bx		; Store digit
+	mov	[bx],dl
+	test	ax,ax		; If number not zero yet
+	jnz	.dgt		; Find rest of digits
+	mov	dx,bx		; Print number string
+	mov	ah,9
+	int	21h
+	ret
+section	.data
+	db	'*****'		; Output number placeholder
+num:	db	' $'
+	;;;	Examples
+pairs:	dw	.str1,.sub1,.str2,.sub2,.str3,.sub3,0
+.str1:	db	'the three truths',0
+.sub1:	db	'th',0		; result should be 3
+.str2:	db	'ababababab',0
+.sub2:	db	'abab',0	; result should be 2
+.str3:	db	'cat',0
+.sub3:	db	'dog',0		; result should be 0

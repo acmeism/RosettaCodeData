@@ -1,0 +1,16 @@
+"North Carolina and South Dakota --> North Dakota and South Carolina
+New York and New Kory --> Wen Kory and York New
+New York and New Kory --> Wen Kory and Kory New
+New York and New Kory --> York New and Kory New
+New York and Wen Kory --> New Kory and York New
+New York and Wen Kory --> New Kory and Kory New
+New York and Wen Kory --> York New and Kory New
+New York and York New --> New Kory and Wen Kory
+New York and York New --> New Kory and Kory New
+New York and York New --> Wen Kory and Kory New
+New York and Kory New --> New Kory and Wen Kory
+New York and Kory New --> New Kory and York New
+New York and Kory New --> Wen Kory and York New
+New Kory and Wen Kory --> York New and Kory New
+New Kory and York New --> Wen Kory and Kory New
+New Kory and Kory New --> Wen Kory and York New"

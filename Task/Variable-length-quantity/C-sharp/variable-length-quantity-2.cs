@@ -1,0 +1,43 @@
+Original: 0xFE000000000000
+Sequence: 0xFF80808080808000
+Decoded: 0xFE000000000000
+Encoded: 0xFF80808080808000
+Decoded: 0xFE000000000000
+
+Original: 0x80
+Sequence: 0x8100
+Decoded: 0x80
+Encoded: 0x8100
+Decoded: 0x80
+
+Original: 0x2000
+Sequence: 0xC000
+Decoded: 0x2000
+Encoded: 0xC000
+Decoded: 0x2000
+
+Original: 0x3FFF
+Sequence: 0xFF7F
+Decoded: 0x3FFF
+Encoded: 0xFF7F
+Decoded: 0x3FFF
+
+Original: 0x4000
+Sequence: 0x818000
+Decoded: 0x4000
+Encoded: 0x818000
+Decoded: 0x4000
+
+Original: 0x200000
+Sequence: 0x81808000
+Decoded: 0x200000
+Encoded: 0x81808000
+Decoded: 0x200000
+
+Original: 0x1FFFFF
+Sequence: 0xFFFF7F
+Decoded: 0x1FFFFF
+Encoded: 0xFFFF7F
+Decoded: 0x1FFFFF
+
+Press any key to continue...

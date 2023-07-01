@@ -1,0 +1,288 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program calculPi64.s   */
+/* this program use gmp library */
+/* link with gcc option -lgmp */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ MAXI,      10
+.equ SIZEBIG,   100
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDebutPgm:     .asciz "Program 64 bits start. \n"
+szMessPi:           .asciz "\nPI = \n"
+szCarriageReturn:   .asciz "\n"
+
+szFormat:           .asciz " %Zd\n"
+szFormatFloat:      .asciz " %.*Ff\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+Result1:                    .skip SIZEBIG
+Result2:                    .skip SIZEBIG
+Result3:                    .skip SIZEBIG
+Result4:                    .skip SIZEBIG
+fIntex5:                    .skip SIZEBIG
+fIntex6:                    .skip SIZEBIG
+fIntex7:                    .skip SIZEBIG
+fSum:                       .skip SIZEBIG
+fSum1:                      .skip SIZEBIG
+sBuffer:                    .skip SIZEBIG
+fEpsilon:                   .skip SIZEBIG
+fPrec:                      .skip SIZEBIG
+fPI:                        .skip SIZEBIG
+fTEN:                       .skip SIZEBIG
+fONE:                       .skip SIZEBIG
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                             // entry of program
+    ldr x0,qAdrszMessDebutPgm
+    bl affichageMess
+    mov x20,#0                     // loop indice
+1:
+    mov x0,x20
+    bl computeAlmkvist            // compute
+    mov x1,x0
+    ldr x0,qAdrszFormat           // print big integer
+    bl __gmp_printf
+
+    add x20,x20,#1
+    cmp x20,#MAXI
+    blt 1b                        // and loop
+
+    mov x0,#560                   // float précision in bits
+    bl __gmpf_set_default_prec
+
+    mov x19,#0                     // compute indice
+    ldr x0,qAdrfSum               // init to zéro
+    bl __gmpf_init
+    ldr x0,qAdrfSum1              // init to zéro
+    bl __gmpf_init
+
+    ldr x0,qAdrfONE               // result address
+    mov x1,#1                     // init à 1
+    bl __gmpf_init_set_ui
+
+    ldr x0,qAdrfIntex5            // init to zéro
+    bl __gmpf_init
+    ldr x0,qAdrfIntex6            // init to zéro
+    bl __gmpf_init
+    ldr x0,qAdrfIntex7            // init to zéro
+    bl __gmpf_init
+    ldr x0,qAdrfEpsilon           // init to zéro
+    bl __gmpf_init
+    ldr x0,qAdrfPrec              // init to zéro
+    bl __gmpf_init
+    ldr x0,qAdrfPI                // init to zéro
+    bl __gmpf_init
+    ldr x0,qAdrfTEN
+    mov x1,#10                    // init to 10
+    bl __gmpf_init_set_ui
+
+    ldr x0,qAdrfIntex6            // compute 10 pow 70
+    ldr x1,qAdrfTEN
+    mov x2,#70
+    bl __gmpf_pow_ui
+
+    ldr x0,qAdrfEpsilon           // divide 1 by 10 pow 70
+    ldr x1,qAdrfONE               // dividende
+    ldr x2,qAdrfIntex6            // divisor
+    bl __gmpf_div
+
+2:                                // PI compute loop
+    mov x0,x19
+    bl computeAlmkvist
+    mov x20,x0
+    mov x1,#6
+    mul x2,x1,x19
+    add x6,x2,#3                  // compute 6n + 3
+
+    ldr x0,qAdrfIntex6            // compute 10 pow (6n+3)
+    ldr x1,qAdrfTEN
+    mov x2,x6
+    bl __gmpf_pow_ui
+
+    ldr x0,qAdrfIntex7             // compute 1 / 10 pow (6n+3)
+    ldr x1,qAdrfONE                // dividende
+    ldr x2,qAdrfIntex6             // divisor
+    bl __gmpf_div
+
+    ldr x0,qAdrfIntex6             // result big float
+    mov x1,x20                     // big integer Almkvist
+    bl __gmpf_set_z                // conversion in big float
+
+    ldr x0,qAdrfIntex5             // result Almkvist * 1 / 10 pow (6n+3)
+    ldr x1,qAdrfIntex7             // operator 1
+    ldr x2,qAdrfIntex6             // operator 2
+    bl __gmpf_mul
+
+    ldr x0,qAdrfSum1               // terms addition
+    ldr x1,qAdrfSum
+    ldr x2,qAdrfIntex5
+    bl __gmpf_add
+
+    ldr x0,qAdrfSum                // copy terms
+    ldr x1,qAdrfSum1
+    bl __gmpf_set
+
+
+    ldr x0,qAdrfIntex7             // compute 1 / sum
+    ldr x1,qAdrfONE                // dividende
+    ldr x2,qAdrfSum                // divisor
+    bl __gmpf_div
+
+    ldr x0,qAdrfPI                 // compute square root (1 / sum )
+    ldr x1,qAdrfIntex7
+    bl __gmpf_sqrt
+
+    ldr x0,qAdrfIntex6             // compute variation PI
+    ldr x1,qAdrfPrec
+    ldr x2,qAdrfPI
+    bl __gmpf_sub
+
+    ldr x0,qAdrfIntex6             // absolue value
+    ldr x1,qAdrfIntex5
+    bl __gmpf_abs
+
+    add x19,x19,#1                   // increment indice
+
+    ldr x0,qAdrfPrec               // copy PI -> prévious
+    ldr x1,qAdrfPI
+    bl __gmpf_set
+
+    ldr x0,qAdrfIntex6             // compare gap and epsilon
+    ldr x1,qAdrfEpsilon
+    bl __gmpf_cmp
+    cmp w0,#0                      // !!! cmp return result on 32 bits
+    bgt 2b                         // if gap is highter -> loop
+
+    ldr x0,qAdrszMessPi            // title display
+    bl affichageMess
+
+    ldr x2,qAdrfPI                 // PI display
+    ldr x0,qAdrszFormatFloat
+    mov x1,#70
+    bl __gmp_printf
+
+
+100:                              // standard end of the program
+    mov x0, #0                    // return code
+    mov x8, #EXIT                 // request to exit program
+    svc #0                        // perform the system call
+qAdrszMessDebutPgm:          .quad szMessDebutPgm
+qAdrszCarriageReturn:        .quad szCarriageReturn
+qAdrfIntex5:                 .quad fIntex5
+qAdrfIntex6:                 .quad fIntex6
+qAdrfIntex7:                 .quad fIntex7
+qAdrfSum:                    .quad fSum
+qAdrfSum1:                   .quad fSum1
+qAdrszFormatFloat:           .quad szFormatFloat
+qAdrszMessPi:                .quad szMessPi
+qAdrfEpsilon:                .quad fEpsilon
+qAdrfPrec:                   .quad fPrec
+qAdrfPI:                     .quad fPI
+qAdrfTEN:                    .quad fTEN
+qAdrfONE:                    .quad fONE
+/***************************************************/
+/*   compute  almkvist_giullera formula             */
+/***************************************************/
+/* x0 contains the number            */
+computeAlmkvist:
+    stp x19,lr,[sp,-16]!           // save  registers
+    mov x19,x0
+    mov x1,#6
+    mul x0,x1,x0
+    ldr x1,qAdrResult1            // result address
+    bl computeFactorielle         // compute (n*6)!
+    mov x1,#532
+    mul x2,x19,x19
+    mul x2,x1,x2
+    mov x1,#126
+    mul x3,x19,x1
+    add x2,x2,x3
+    add x2,x2,#9
+    lsl x2,x2,#5                   // * 32
+
+    ldr x0,qAdrResult2             // result
+    ldr x1,qAdrResult1             // operator
+    bl __gmpz_mul_ui
+
+    mov x0,x19
+    ldr x1,qAdrResult1
+    bl computeFactorielle
+
+    ldr x0,qAdrResult3
+    bl __gmpz_init                 // init to 0
+
+    ldr x0,qAdrResult3             // result
+    ldr x1,qAdrResult1             // operator
+    mov x2,#6
+    bl __gmpz_pow_ui
+
+    ldr x0,qAdrResult1             // result
+    ldr x1,qAdrResult3             // operator
+    mov x2,#3
+    bl __gmpz_mul_ui
+
+    ldr x0,qAdrResult3             // result
+    ldr x1,qAdrResult2             // operator
+    ldr x2,qAdrResult1             // operator
+    bl __gmpz_cdiv_q
+
+    ldr x0,qAdrResult3             // return result address
+100:
+    ldp x19,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrszFormat:         .quad szFormat
+qAdrResult1:          .quad Result1
+qAdrResult2:          .quad Result2
+qAdrResult3:          .quad Result3
+/***************************************************/
+/*   compute  factorielle N                        */
+/***************************************************/
+/* x0 contains the number            */
+/* x1 contains big number result address */
+computeFactorielle:
+    stp x19,lr,[sp,-16]!           // save  registers
+    stp x20,x21,[sp,-16]!           // save  registers
+    mov x19,x0                     // save N
+    mov x20,x1                     // save result address
+    mov x0,x1                     // result address
+    mov x1,#1                     // init to 1
+    bl __gmpz_init_set_ui
+    ldr x0,qAdrResult4
+    bl __gmpz_init                // init to 0
+    mov x21,#1
+1:                                // loop
+    ldr x0,qAdrResult4            // result
+    mov x1,x20                     // operator 1
+    mov x2,x21                     // operator 2
+    bl __gmpz_mul_ui
+    mov x0,x20                     // copy result4 -> result
+    ldr x1,qAdrResult4
+    bl __gmpz_set
+    add x21,x21,#1                  // increment indice
+    cmp x21,x19                     // N ?
+    ble 1b                        // no -> loop
+
+    ldr  x0,qAdrResult4
+    ldp x20,x21,[sp],16              // restaur  2 registers
+    ldp x19,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrResult4:          .quad Result4
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

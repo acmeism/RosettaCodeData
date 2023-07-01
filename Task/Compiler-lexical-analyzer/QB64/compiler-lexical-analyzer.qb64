@@ -1,0 +1,240 @@
+dim shared source as string, the_ch as string, tok as string, toktyp as string
+dim shared line_n as integer, col_n as integer, text_p as integer, err_line as integer, err_col as integer, errors as integer
+
+declare function isalnum&(s as string)
+declare function isalpha&(s as string)
+declare function isdigit&(s as string)
+declare sub divide_or_comment
+declare sub error_exit(line_n as integer, col_n as integer, msg as string)
+declare sub follow(c as string, typ2 as string, typ1 as string)
+declare sub nextch
+declare sub nexttok
+declare sub read_char_lit
+declare sub read_ident
+declare sub read_number
+declare sub read_string
+
+const c_integer = "Integer", c_ident = "Identifier", c_string = "String"
+
+dim out_fn as string, out_tok as string
+
+if command$(1) = "" then print "Expecting a filename": end
+open command$(1) for binary as #1
+source = space$(lof(1))
+get #1, 1, source
+close #1
+
+out_fn = command$(2): if out_fn <> "" then open out_fn for output as #1
+
+line_n = 1: col_n = 0: text_p = 1: the_ch = " "
+
+do
+    call nexttok
+    select case toktyp
+        case c_integer, c_ident, c_string: out_tok = tok
+        case else:                         out_tok = ""
+    end select
+    if out_fn = "" then
+        print err_line, err_col, toktyp, out_tok
+    else
+        print #1, err_line, err_col, toktyp, out_tok
+    end if
+loop until errors or tok = ""
+if out_fn <> "" then close #1
+end
+
+' get next tok, toktyp
+sub nexttok
+    toktyp = ""
+    restart: err_line = line_n: err_col = col_n: tok = the_ch
+    select case the_ch
+        case " ", chr$(9), chr$(10): call nextch:          goto restart
+        case "/": call divide_or_comment: if tok = "" then goto restart
+
+        case "%": call nextch: toktyp = "Op_mod"
+        case "(": call nextch: toktyp = "LeftParen"
+        case ")": call nextch: toktyp = "RightParen"
+        case "*": call nextch: toktyp = "Op_multiply"
+        case "+": call nextch: toktyp = "Op_add"
+        case ",": call nextch: toktyp = "Comma"
+        case "-": call nextch: toktyp = "Op_subtract"
+        case ";": call nextch: toktyp = "Semicolon"
+        case "{": call nextch: toktyp = "LeftBrace"
+        case "}": call nextch: toktyp = "RightBrace"
+
+        case "&": call follow("&", "Op_and",          "")
+        case "|": call follow("|", "Op_or",           "")
+        case "!": call follow("=", "Op_notequal",     "Op_not")
+        case "<": call follow("=", "Op_lessequal",    "Op_less")
+        case "=": call follow("=", "Op_equal",        "Op_assign")
+        case ">": call follow("=", "Op_greaterequal", "Op_greater")
+
+        case chr$(34): call read_string
+        case chr$(39): call read_char_lit
+
+        case "": toktyp = "End_of_input"
+
+        case else
+            if isdigit&(the_ch) then
+                call read_number
+            elseif isalpha&(the_ch) then
+                call read_ident
+            else
+                call nextch
+            end if
+    end select
+end sub
+
+sub follow(c as string, if_both as string, if_one as string)
+    call nextch
+    if the_ch = c then
+        tok = tok + the_ch
+        call nextch
+        toktyp = if_both
+    else
+        if if_one = "" then call error_exit(line_n, col_n, "Expecting " + c): exit sub
+        toktyp = if_one
+    end if
+end sub
+
+sub read_string
+    toktyp = c_string
+    call nextch
+    do
+        tok = tok + the_ch
+        select case the_ch
+            case chr$(10): call error_exit(line_n, col_n, "EOL in string"): exit sub
+            case "":       call error_exit(line_n, col_n, "EOF in string"): exit sub
+            case chr$(34): call nextch: exit sub
+            case else:     call nextch
+        end select
+    loop
+end sub
+
+sub read_char_lit
+    toktyp = c_integer
+    call nextch
+    if the_ch = chr$(39) then
+        call error_exit(err_line, err_col, "Empty character constant"): exit sub
+    end if
+
+    if the_ch = "\" then
+        call nextch
+        if the_ch = "n" then
+            tok = "10"
+        elseif the_ch = "\" then
+            tok = "92"
+        else
+            call error_exit(line_n, col_n, "Unknown escape sequence:" + the_ch): exit sub
+        end if
+    else
+        tok = ltrim$(str$(asc(the_ch)))
+    end if
+
+    call nextch
+    if the_ch <> chr$(39) then
+        call error_exit(line_n, col_n, "Multi-character constant"): exit sub
+    end if
+    call nextch
+end sub
+
+sub divide_or_comment
+    call nextch
+    if the_ch <> "*" then
+        toktyp = "Op_divide"
+    else  ' skip comments
+        tok = ""
+        call nextch
+        do
+            if the_ch = "*" then
+                call nextch
+                if the_ch = "/" then
+                    call nextch
+                    exit sub
+                end if
+            elseif the_ch = "" then
+                call error_exit(line_n, col_n, "EOF in comment"): exit sub
+            else
+                call nextch
+            end if
+        loop
+    end if
+end sub
+
+sub read_ident
+    do
+        call nextch
+        if not isalnum&(the_ch) then exit do
+        tok = tok + the_ch
+    loop
+    select case tok
+        case "else":  toktyp = "keyword_else"
+        case "if":    toktyp = "keyword_if"
+        case "print": toktyp = "keyword_print"
+        case "putc":: toktyp = "keyword_putc"
+        case "while": toktyp = "keyword_while"
+        case else:    toktyp = c_ident
+    end select
+end sub
+
+sub read_number
+    toktyp = c_integer
+    do
+        call nextch
+        if not isdigit&(the_ch) then exit do
+        tok = tok + the_ch
+    loop
+
+    if isalpha&(the_ch) then
+        call error_exit(err_line, err_col, "Bogus number: " + tok + the_ch): exit sub
+    end if
+end sub
+
+function isalpha&(s as string)
+  dim c as string
+  c = left$(s, 1)
+  isalpha& = c <> "" and instr("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_", c) > 0
+end function
+
+function isdigit&(s as string)
+  dim c as string
+  c = left$(s, 1)
+  isdigit& = c <> "" and instr("0123456789", c) > 0
+end function
+
+function isalnum&(s as string)
+  dim c as string
+  c = left$(s, 1)
+  isalnum& = c <> "" and instr("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", c) > 0
+end function
+
+' get next char - fold cr/lf into just lf
+sub nextch
+    the_ch = ""
+    col_n = col_n + 1
+    if text_p > len(source) then exit sub
+
+    the_ch = mid$(source, text_p, 1)
+    text_p = text_p + 1
+
+    if the_ch = chr$(13) then
+        the_ch = chr$(10)
+        if text_p <= len(source) then
+            if mid$(source, text_p, 1) = chr$(10) then
+                text_p = text_p + 1
+            end if
+        end if
+    end if
+
+    if the_ch = chr$(10) then
+        line_n = line_n + 1
+        col_n = 0
+    end if
+
+end sub
+
+sub error_exit(line_n as integer, col_n as integer, msg as string)
+    errors = -1
+    print line_n, col_n, msg
+    end
+end sub

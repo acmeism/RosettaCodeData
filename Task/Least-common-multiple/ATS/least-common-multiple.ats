@@ -1,0 +1,102 @@
+#define ATS_DYNLOADFLAG 0       (* No initialization is needed. *)
+
+#include "share/atspre_define.hats"
+#include "share/atspre_staload.hats"
+
+(********************************************************************)
+(*                                                                  *)
+(* Declarations.                                                    *)
+(*                                                                  *)
+(* (These could be ported to a .sats file.)                         *)
+(*                                                                  *)
+
+(* lcm for unsigned integer types without constraints. *)
+extern fun {tk : tkind}
+g0uint_lcm (u : g0uint tk,
+            v : g0uint tk) :<>
+    g0uint tk
+
+(* The gcd template function to be expanded when g0uint_lcm is
+   expanded. Set it to your favorite gcd function. *)
+extern fun {tk : tkind}
+g0uint_lcm$gcd (u : g0uint tk,
+                v : g0uint tk) :<>
+    g0uint tk
+
+(* lcm for signed integer types, giving unsigned results. *)
+extern fun {tk_signed, tk_unsigned : tkind}
+g0int_lcm (u : g0int tk_signed,
+           v : g0int tk_signed) :<>
+    g0uint tk_unsigned
+
+overload lcm with g0uint_lcm
+overload lcm with g0int_lcm
+
+(********************************************************************)
+(*                                                                  *)
+(* The implementations.                                             *)
+(*                                                                  *)
+
+implement {tk}
+g0uint_lcm (u, v) =
+  let
+    val d = g0uint_lcm$gcd<tk> (u, v)
+  in
+    (* There is no need to take the absolute value, because this
+       implementation is strictly for unsigned integers. *)
+    (u * v) / d
+  end
+
+implement {tk_signed, tk_unsigned}
+g0int_lcm (u, v) =
+  let
+    extern castfn
+    unsigned :
+      g0int tk_signed -<> g0uint tk_unsigned
+  in
+    g0uint_lcm (unsigned (abs u), unsigned (abs v))
+  end
+
+(********************************************************************)
+(*                                                                  *)
+(* A test that it actually works.                                   *)
+(*                                                                  *)
+
+implement
+main0 () =
+  let
+    implement {tk}
+    g0uint_lcm$gcd (u, v) =
+      (* An ugly gcd for the sake of demonstrating that it can be done
+         this way: Euclid’s algorithm written an the ‘Algol’ style,
+         which is not a natural style in ATS. Almost always you want
+         to write a tail-recursive function, instead. I did, however
+         find the ‘Algol’ style very useful when I was migrating
+         matrix routines from Fortran.
+
+         In reality, you would implement g0uint_lcm$gcd by having it
+         simply call whatever gcd template function you are using in
+         your program. *)
+      $effmask_all
+        begin
+          let
+            var x : g0uint tk = u
+            var y : g0uint tk = v
+          in
+            while (y <> 0)
+              let
+                val z = y
+              in
+                y := x mod z;
+                x := z
+              end;
+            x
+          end
+        end
+  in
+    assertloc (lcm (~6, 14) = 42U);
+    assertloc (lcm (2L, 0L) = 0ULL);
+    assertloc (lcm (12UL, 18UL) = 36UL);
+    assertloc (lcm (12, 22) = 132ULL);
+    assertloc (lcm (7ULL, 31ULL) = 217ULL)
+  end

@@ -1,0 +1,226 @@
+(*------------------------------------------------------------------*)
+
+#define ATS_DYNLOADFLAG 0
+
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+(* Interface                                                        *)
+
+(* You can put the interface in a .sats file. You will have to remove
+   the word "extern". *)
+
+typedef alist_t (key_t  : t@ype+,
+                 data_t : t@ype+,
+                 size   : int) =
+  list (@(key_t, data_t), size)
+typedef alist_t (key_t  : t@ype+,
+                 data_t : t@ype+) =
+  [size : int]
+  alist_t (key_t, data_t, size)
+
+extern prfun
+lemma_alist_t_param :
+  {size  : int} {key_t : t@ype} {data_t : t@ype}
+  alist_t (key_t, data_t, size) -<prf> [0 <= size] void
+
+extern fun {key_t : t@ype}     (* Implement key equality with this. *)
+alist_t$key_eq : (key_t, key_t) -<> bool
+
+(* alist_t_nil: create an empty association list. *)
+extern fun
+alist_t_nil :
+  {key_t : t@ype} {data_t : t@ype}
+  () -<> alist_t (key_t, data_t, 0)
+
+(* alist_t_set: add an association, deleting old associations with an
+   equal key. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+alist_t_set {size : int}
+            (alst : alist_t (key_t, data_t, size),
+             key  : key_t,
+             data : data_t) :<>
+    [sz : int | 1 <= sz]
+    alist_t (key_t, data_t, sz)
+
+(* alist_t_get: find an association and return its data, if
+   present. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+alist_t_get {size : int}
+            (alst : alist_t (key_t, data_t, size),
+             key  : key_t) :<>
+    Option data_t
+
+(* alist_t_delete: delete all associations with key. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+alist_t_delete {size : int}
+               (alst : alist_t (key_t, data_t, size),
+                key  : key_t ) :<>
+    [sz : int | 0 <= sz]
+    alist_t (key_t, data_t, sz)
+
+(* alist_t_make_pairs_generator: make a closure that returns
+   the association pairs, one by one. This is a form of iterator.
+   Analogous generators can be made for the keys or data values
+   alone. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+alist_t_make_pairs_generator
+          {size : int}
+          (alst : alist_t (key_t, data_t, size)) :<!wrt>
+    () -<cloref,!refwrt> Option @(key_t, data_t)
+
+(*------------------------------------------------------------------*)
+(* Implementation                                                   *)
+
+#define NIL list_nil ()
+#define :: list_cons
+
+primplement
+lemma_alist_t_param alst =
+  lemma_list_param alst
+
+implement
+alist_t_nil () =
+  NIL
+
+implement {key_t} {data_t}
+alist_t_set (alst, key, data) =
+  @(key, data) :: alist_t_delete (alst, key)
+
+implement {key_t} {data_t}
+alist_t_get (alst, key) =
+  let
+    fun
+    loop {n : nat}
+         .<n>.                  (* <-- proof of termination *)
+         (lst : alist_t (key_t, data_t, n)) :<>
+        Option data_t =
+      case+ lst of
+      | NIL => None ()
+      | head :: tail =>
+        if alist_t$key_eq (key, head.0) then
+          Some (head.1)
+        else
+          loop tail
+
+    prval _ = lemma_alist_t_param alst
+  in
+    loop alst
+  end
+
+implement {key_t} {data_t}
+alist_t_delete (alst, key) =
+  let
+    fun
+    delete {n : nat}
+           .<n>.                (* <-- proof of termination *)
+           (lst : alist_t (key_t, data_t, n)) :<>
+        [m : nat] alist_t (key_t, data_t, m) =
+      (* This implementation is *not* tail recursive, but has the
+         minor advantage of preserving the order of entries without
+         doing a lot of work. *)
+      case+ lst of
+      | NIL => lst
+      | head :: tail =>
+        if alist_t$key_eq (key, head.0) then
+          delete tail
+        else
+          head :: delete tail
+
+    prval _ = lemma_alist_t_param alst
+  in
+    delete alst
+  end
+
+implement {key_t} {data_t}
+alist_t_make_pairs_generator alst =
+  let
+    typedef alist_t = [sz : int] alist_t (key_t, data_t, sz)
+
+    val alst_ref = ref alst
+
+    (* Cast the ref to a pointer so it can be enclosed in the
+       closure. *)
+    val alst_ptr = $UNSAFE.castvwtp0{ptr} alst_ref
+  in
+    lam () =>
+      let
+        val alst_ref = $UNSAFE.castvwtp0{ref alist_t} alst_ptr
+      in
+        case+ !alst_ref of
+        | NIL => None ()
+        | head :: tail =>
+          begin
+            !alst_ref := tail;
+            (* For a keys generator, change the following line to
+               "Some (head.0)"; for a data values generator, change
+               it to "Some (head.1)". *)
+            Some head
+          end
+      end
+  end
+
+(*------------------------------------------------------------------*)
+(* Demonstration program                                            *)
+
+implement
+alist_t$key_eq<string> (s, t) =
+  s = t
+
+typedef s2i_alist_t = alist_t (string, int)
+
+fn
+s2i_alist_t_set (map  : s2i_alist_t,
+                 key  : string,
+                 data : int) :<> s2i_alist_t =
+  alist_t_set<string><int> (map, key, data)
+
+fn
+s2i_alist_t_set_ref (map  : &s2i_alist_t >> _,
+                     key  : string,
+                     data : int) :<!wrt> void =
+  (* Update a reference to a persistent alist. *)
+  map := s2i_alist_t_set (map, key, data)
+
+fn
+s2i_alist_t_get (map  : s2i_alist_t,
+                 key  : string) :<> Option int =
+  alist_t_get<string><int> (map, key)
+
+extern fun {}        (* {} = a template without template parameters *)
+s2i_alist_t_get_dflt$dflt :<> () -> int
+fn {}                (* {} = a template without template parameters *)
+s2i_alist_t_get_dflt (map  : s2i_alist_t,
+                      key  : string) : int =
+  case+ s2i_alist_t_get (map, key) of
+  | Some x => x
+  | None () => s2i_alist_t_get_dflt$dflt<> ()
+
+overload [] with s2i_alist_t_set_ref
+overload [] with s2i_alist_t_get_dflt
+
+implement
+main0 () =
+  let
+    implement s2i_alist_t_get_dflt$dflt<> () = 0
+    var map = alist_t_nil ()
+    var gen : () -<cloref1> @(string, int)
+    var pair : Option @(string, int)
+  in
+    map["one"] := 1;
+    map["two"] := 2;
+    map["three"] := 3;
+    println! ("map[\"one\"] = ", map["one"]);
+    println! ("map[\"two\"] = ", map["two"]);
+    println! ("map[\"three\"] = ", map["three"]);
+    println! ("map[\"four\"] = ", map["four"]);
+    gen := alist_t_make_pairs_generator<string><int> map;
+    for (pair := gen (); option_is_some pair; pair := gen ())
+      println! (pair)
+  end
+
+(*------------------------------------------------------------------*)

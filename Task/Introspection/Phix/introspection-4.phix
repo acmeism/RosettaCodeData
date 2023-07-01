@@ -1,0 +1,115 @@
+-->
+ <span style="color: #008080;">include</span> <span style="color: #000000;">builtins<span style="color: #0000FF;">/<span style="color: #000000;">VM<span style="color: #0000FF;">/<span style="color: #000000;">pStack<span style="color: #0000FF;">.<span style="color: #000000;">e</span> <span style="color: #000080;font-style:italic;">-- :%opGetST
+ -- copies from pglobals.e:</span>
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">S_Name</span>  <span style="color: #0000FF;">=</span> <span style="color: #000000;">1<span style="color: #0000FF;">,</span>   <span style="color: #000080;font-style:italic;">-- const/var/rtn name</span>
+          <span style="color: #000000;">S_NTyp</span>  <span style="color: #0000FF;">=</span> <span style="color: #000000;">2<span style="color: #0000FF;">,</span>   <span style="color: #000080;font-style:italic;">-- Const/GVar/TVar/Nspc/Type/Func/Proc</span>
+          <span style="color: #000000;">S_FPno</span>  <span style="color: #0000FF;">=</span> <span style="color: #000000;">3<span style="color: #0000FF;">,</span>   <span style="color: #000080;font-style:italic;">-- File and Path number</span>
+          <span style="color: #000000;">S_Slink</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">6<span style="color: #0000FF;">,</span>   <span style="color: #000080;font-style:italic;">-- scope/secondary chain (see below)</span>
+          <span style="color: #000000;">S_vtype</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">7<span style="color: #0000FF;">,</span>   <span style="color: #000080;font-style:italic;">-- variable type or namespace fileno</span>
+          <span style="color: #000000;">S_GVar2</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">2<span style="color: #0000FF;">,</span>   <span style="color: #000080;font-style:italic;">-- global or static variable</span>
+          <span style="color: #000000;">T_int</span>   <span style="color: #0000FF;">=</span> <span style="color: #000000;">1<span style="color: #0000FF;">,</span>
+          <span style="color: #000000;">T_EBP</span>   <span style="color: #0000FF;">=</span> <span style="color: #000000;">22<span style="color: #0000FF;">,</span>  <span style="color: #000080;font-style:italic;">-- compiled/listing=0, interpreted={ebp4,esp4,sym4} (set at last possible moment)</span>
+          <span style="color: #000000;">T_ds4</span>   <span style="color: #0000FF;">=</span> <span style="color: #000000;">23</span>   <span style="color: #000080;font-style:italic;">-- compiled = start of data section, same but /4 when interpreted ([T_EBP]!=0)</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">var_id<span style="color: #0000FF;">(<span style="color: #004080;">object</span> <span style="color: #000000;">s<span style="color: #0000FF;">)</span>
+ <span style="color: #000080;font-style:italic;">-- hacked copy of routine_id(), for local file-level integers only</span>
+ <span style="color: #004080;">integer</span> <span style="color: #000000;">res<span style="color: #0000FF;">,</span>            <span style="color: #000080;font-style:italic;">-- symidx for string s, else sum(local gvar integers)</span>
+         <span style="color: #000000;">rtn<span style="color: #0000FF;">,</span>            <span style="color: #000080;font-style:italic;">-- routine number of callee, from callstack</span>
+         <span style="color: #000000;">cFno<span style="color: #0000FF;">,</span>           <span style="color: #000080;font-style:italic;">-- calling fileno.</span>
+         <span style="color: #000000;">tidx<span style="color: #0000FF;">,</span>
+         <span style="color: #000000;">ds4</span>
+ <span style="color: #004080;">object</span> <span style="color: #000000;">symtab<span style="color: #0000FF;">,</span>
+        <span style="color: #000000;">si<span style="color: #0000FF;">,</span>              <span style="color: #000080;font-style:italic;">-- copy of symtab[i], speedwise</span>
+        <span style="color: #000000;">si_name</span>          <span style="color: #000080;font-style:italic;">-- copy of symtab[i][S_name], speedwise/thread-sfaety
+
+     -- get copy of symtab. NB read only! may contain nuts! (unassigned vars)</span>
+     <span style="color: #000000;">enter_cs<span style="color: #0000FF;">(<span style="color: #0000FF;">)</span>
+ <span style="color: #000000;">    #ilASM{
+         [32]
+             lea edi,[symtab]
+             call :%opGetST      -- [edi]=symtab (ie our local:=the real symtab)
+             mov edi,[ebp+20]    -- prev_ebp
+             mov edi,[edi+8]     -- calling routine no
+             mov [rtn],edi
+         [64]
+             lea rdi,[symtab]
+             call :%opGetST      -- [rdi]=symtab (ie our local:=the real symtab)
+             mov rdi,[rbp+40]    -- prev_ebp
+             mov rdi,[rdi+16]    -- calling routine no
+             mov [rtn],rdi
+         []
+           }</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">symtab<span style="color: #0000FF;">[<span style="color: #000000;">T_EBP<span style="color: #0000FF;">]<span style="color: #0000FF;">=<span style="color: #000000;">0</span> <span style="color: #008080;">then</span>             <span style="color: #000080;font-style:italic;">-- compiled</span>
+         <span style="color: #000000;">ds4</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">floor<span style="color: #0000FF;">(<span style="color: #000000;">symtab<span style="color: #0000FF;">[<span style="color: #000000;">T_ds4<span style="color: #0000FF;">]<span style="color: #0000FF;">/<span style="color: #000000;">4<span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">else</span>                                <span style="color: #000080;font-style:italic;">-- interpreted</span>
+         <span style="color: #000000;">ds4</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">symtab<span style="color: #0000FF;">[<span style="color: #000000;">T_ds4<span style="color: #0000FF;">]</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #000000;">cFno</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">symtab<span style="color: #0000FF;">[<span style="color: #000000;">rtn<span style="color: #0000FF;">]<span style="color: #0000FF;">[<span style="color: #000000;">S_FPno<span style="color: #0000FF;">]</span>      <span style="color: #000080;font-style:italic;">-- fileno of callee (whether routine or toplevel)</span>
+     <span style="color: #000000;">res</span> <span style="color: #0000FF;">=</span> <span style="color: #008080;">iff<span style="color: #0000FF;">(<span style="color: #000000;">s<span style="color: #0000FF;">=<span style="color: #000000;">0<span style="color: #0000FF;">?<span style="color: #000000;">0<span style="color: #0000FF;">:<span style="color: #0000FF;">-<span style="color: #000000;">1<span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">for</span> <span style="color: #000000;">i<span style="color: #0000FF;">=<span style="color: #000000;">1</span> <span style="color: #008080;">to</span> <span style="color: #7060A8;">length<span style="color: #0000FF;">(<span style="color: #000000;">symtab<span style="color: #0000FF;">)</span> <span style="color: #008080;">do</span>
+         <span style="color: #000000;">si</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">symtab<span style="color: #0000FF;">[<span style="color: #000000;">i<span style="color: #0000FF;">]</span>
+         <span style="color: #008080;">if</span> <span style="color: #004080;">sequence<span style="color: #0000FF;">(<span style="color: #000000;">si<span style="color: #0000FF;">)</span>
+         <span style="color: #008080;">and</span> <span style="color: #000000;">si<span style="color: #0000FF;">[<span style="color: #000000;">S_NTyp<span style="color: #0000FF;">]<span style="color: #0000FF;">=<span style="color: #000000;">S_GVar2</span>
+         <span style="color: #008080;">and</span> <span style="color: #000000;">si<span style="color: #0000FF;">[<span style="color: #000000;">S_FPno<span style="color: #0000FF;">]<span style="color: #0000FF;">=<span style="color: #000000;">cFno</span>
+         <span style="color: #008080;">and</span> <span style="color: #000000;">si<span style="color: #0000FF;">[<span style="color: #000000;">S_vtype<span style="color: #0000FF;">]<span style="color: #0000FF;">=<span style="color: #000000;">T_int</span> <span style="color: #008080;">then</span>
+             <span style="color: #000000;">si_name</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">si<span style="color: #0000FF;">[<span style="color: #000000;">S_Name<span style="color: #0000FF;">]</span>
+             <span style="color: #008080;">if</span> <span style="color: #000000;">s<span style="color: #0000FF;">=<span style="color: #000000;">0</span> <span style="color: #008080;">then</span>
+                 <span style="color: #000080;font-style:italic;">-- cut-down version of pDiagN.e/getGvarValue():</span>
+                 <span style="color: #004080;">integer</span> <span style="color: #000000;">gidx</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">si<span style="color: #0000FF;">[<span style="color: #000000;">S_Slink<span style="color: #0000FF;">]<span style="color: #0000FF;">,</span> <span style="color: #000000;">novalue<span style="color: #0000FF;">,</span> <span style="color: #000000;">o</span>
+                 #ilASM{
+                         mov [novalue],0
+                     [32]
+                         mov esi,[ds4]
+                         mov edx,[gidx]
+                         shl esi,2
+                         mov esi,[esi+edx*4+16] -- ([ds+(gidx+4)*4] == gvar[gidx])
+                         cmp esi,h4
+                         jl @f
+                             mov [novalue],1
+                             xor esi,esi
+                       @@:
+                         mov [o],esi
+                     [64]
+                         mov rsi,[ds4]
+                         mov rdx,[gidx]
+                         shl rsi,2
+                         mov rsi,[rsi+rdx*8+24] -- ([ds+(gidx+3)*8] == gvar[gidx])
+                         mov r15,h4
+                         cmp rsi,r15
+                         jl @f
+                             mov [novalue],1
+                             xor rsi,rsi
+                       @@:
+                         mov [o],rsi
+                     []
+                       }
+                 <span style="color: #008080;">if</span> <span style="color: #000000;">novalue</span> <span style="color: #008080;">then</span>
+                     <span style="color: #0000FF;">?<span style="color: #0000FF;">{<span style="color: #000000;">si_name<span style="color: #0000FF;">,<span style="color: #008000;">"no_value"<span style="color: #0000FF;">}</span>
+                 <span style="color: #008080;">else</span>
+                     <span style="color: #000000;">res</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">o</span>
+                 <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+             <span style="color: #008080;">elsif</span> <span style="color: #000000;">s<span style="color: #0000FF;">=<span style="color: #000000;">si_name</span> <span style="color: #008080;">then</span>
+                 <span style="color: #000000;">res</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">i</span>
+                 <span style="color: #008080;">exit</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+     <span style="color: #000000;">si_name</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+     <span style="color: #000000;">si</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+     <span style="color: #000000;">symtab</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+     <span style="color: #000000;">leave_cs<span style="color: #0000FF;">(<span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">return</span> <span style="color: #000000;">res</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #0000FF;">{<span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">routine_id<span style="color: #0000FF;">(<span style="color: #008000;">"blurgzmp"<span style="color: #0000FF;">)</span> <span style="color: #000080;font-style:italic;">-- force symtab name population..
+                             -- (alt: see rbldrqd in pDiagN.e)</span>
+ <span style="color: #004080;">integer</span> <span style="color: #000000;">bloop</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">5<span style="color: #0000FF;">,</span>
+ <span style="color: #000080;font-style:italic;">--      barf,               -- triggers {"barf","no_value"}</span>
+         <span style="color: #000000;">burp</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">35</span>
+ <span style="color: #000000;">bloop</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">6</span>
+ <span style="color: #000000;">burp</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+ <span style="color: #0000FF;">?<span style="color: #000000;">var_id<span style="color: #0000FF;">(<span style="color: #008000;">"bloop"<span style="color: #0000FF;">)</span>        <span style="color: #000080;font-style:italic;">-- >0 === exists</span>
+ <span style="color: #0000FF;">?<span style="color: #000000;">var_id<span style="color: #0000FF;">(<span style="color: #008000;">"blooop"<span style="color: #0000FF;">)</span>       <span style="color: #000080;font-style:italic;">-- -1 === does not exist</span>
+ <span style="color: #0000FF;">?<span style="color: #000000;">var_id<span style="color: #0000FF;">(<span style="color: #000000;">0<span style="color: #0000FF;">)</span>              <span style="color: #000080;font-style:italic;">-- bloop+burp = 42</span>
+ <span style="color: #0000FF;">?<span style="color: #000000;">bloop<span style="color: #0000FF;">+<span style="color: #000000;">burp</span>             <span style="color: #000080;font-style:italic;">--     "", doh
+<!--

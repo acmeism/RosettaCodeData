@@ -1,0 +1,172 @@
+	;
+	; Check if input string is a number using Z80 assembly language
+	;
+	; Runs under CP/M 3.1 on YAZE-AG-2.51.2 Z80 emulator
+	; Assembled with zsm4 on same emulator/OS, uses macro capabilities of said assembler
+	; Created with vim under Windows
+	;
+	; 2023-04-04 Xorph
+	;
+
+	;
+	; Useful definitions
+	;
+
+	bdos	equ 05h		; Call to CP/M BDOS function
+	strdel	equ 6eh		; Set string delimiter
+	readstr	equ 0ah		; Read string from console
+	wrtstr	equ 09h		; Write string to console
+
+	nul	equ 00h		; ASCII control characters
+	esc	equ 1bh
+	cr	equ 0dh
+	lf	equ 0ah
+
+	cnull	equ '0'		; ASCII character constants
+	cnine	equ '9'
+	cminus	equ '-'
+	cdot	equ '.'
+
+	buflen	equ 30h		; Length of input buffer
+	minbit	equ 00h		; Bit 0 is used as flag for '-'
+	dotbit	equ 01h		; Bit 1 is used as flag for '.'
+
+	;
+	; Macros for BDOS calls
+	;
+
+setdel 	macro	char		; Set string delimiter to char
+	ld	c,strdel
+	ld	e,char
+	call	bdos
+	endm
+
+print 	macro	msg		; Output string to console
+	ld	c,wrtstr
+	ld	de,msg
+	call	bdos
+	endm
+
+newline	macro			; Print newline
+	ld	c,wrtstr
+	ld	de,crlf
+	call	bdos
+	endm
+
+readln 	macro	buf		; Read a line from input
+	ld	c,readstr
+	ld	de,buf
+	call	bdos
+	endm
+
+	;
+	; =====================
+	; Start of main program
+	; =====================
+	;
+
+	cseg
+
+isnum:
+	setdel	nul		; Set string terminator to nul ('\0') - '$' is default in CP/M
+	print	help
+	newline
+	newline
+
+readnum:
+	ld	b,buflen	; Clear input buffer
+	ld	hl,bufcont
+clrloop:
+	ld	(hl),0
+	inc	hl
+	djnz	clrloop
+
+	readln	inputbuf	; Read a line from input
+	newline			; Newline is discarded during input, so write one...
+
+	ld	a,(inputbuf+1)	; Length of actual input
+	cp	0		; If empty input, quit
+	ret	z
+
+	ld	b,a		; Loop counter for djnz instruction
+	ld	c,0		; Use c for flags: '-' and '.' may be encountered at most once, '-' only at start
+	ld	hl,bufcont	; Start of actual input
+
+loop:
+	ld	a,(hl)		; Get next character into a
+
+	cp	cminus		; Check minus sign
+	jr	z,chkminus
+
+	cp	cdot		; Check dot
+	jr	z,chkdot
+
+	cp	cnull		; Check if below '0'
+	jr	c,notanum
+
+	cp	cnine+1		; Check if above '9'
+	jr	nc,notanum
+
+checknxt:
+	set	minbit,c	; Whatever the case, no more '-' are allowed after the first character
+	inc	hl		; Increase hl to next character and repeat until done
+	djnz	loop
+
+	print	bufcont		; If we made it this far, we are done and the string is numeric
+	print	yesmsg
+	newline
+	newline
+
+done:
+	jp	readnum		; Read next input from user until terminated with ^C or empty input
+	ret			; Return to CP/M (unreachable code)
+
+notanum:
+	print	bufcont		; Print failure message
+	print	nomsg
+	newline
+	newline
+	jr	done
+
+chkminus:
+	bit	minbit,c	; If a '-' is encountered and the flag is already set, the string is not numeric
+	jr	nz,notanum
+	set	minbit,c	; Otherwise, set flag and check next character
+	jr	checknxt
+
+chkdot:
+	bit	dotbit,c	; If a '.' is encountered and the flag is already set, the string is not numeric
+	jr	nz,notanum
+	set	dotbit,c	; Otherwise, set flag and check next character
+	jr	checknxt
+
+	;
+	; ===================
+	; End of main program
+	; ===================
+	;
+
+	;
+	; ================
+	; Data definitions
+	; ================
+	;
+
+	dseg
+
+help:
+	defz	'Enter numbers to check, end with empty line or ^C'
+
+inputbuf:			; Input buffer for CP/M BDOS call
+	defb	buflen		; Maximum possible length
+	defb	00h		; Returned length of actual input
+bufcont:
+	defs	buflen		; Actual input area
+	defb	nul		; Null terminator for output, if buffer is filled completely
+
+yesmsg:
+	defz	' is numeric'
+nomsg:
+	defz	' is not numeric'
+
+crlf:	defb	cr,lf,nul	; Generic newline

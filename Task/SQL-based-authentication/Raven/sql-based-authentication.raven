@@ -1,0 +1,31 @@
+ 'mysql://root@localhost/test' open as mysql
+'abcdefghijklmnopqrstuvwxyz0123456789' as $salt_chars
+
+# return userid for success and FALSE for failure.
+define create_user use $user, $pass
+    group 16 each as i
+        $salt_chars choose chr
+    join as $pass_salt
+     "%($pass_salt)s%($pass)s" md5 as $pass_md5
+    $user copy mysql escape as $user_name
+    group 'INSERT IGNORE into users (username, pass_md5, pass_salt)'
+        " VALUES ('%($user_name)s', unhex('%($pass_md5)s'), '%($pass_salt)s')"
+    join mysql query inserted
+
+# return userid for success and FALSE for failure.
+define authenticate_user use $user, $pass
+    FALSE as $userid
+    $user copy mysql escape as $user_name
+    group 'SELECT userid, pass_salt, hex(pass_md5)'
+        " FROM users WHERE username = '%($user_name)s'"
+    join mysql query as rs
+    rs selected
+    if  rs fetch values into $possible_userid, $pass_salt, $pass_md5
+        "%($pass_salt)s%($pass)s" md5 $pass_md5 lower =
+        if  $possible_userid as $userid
+    $userid
+
+'foo' 'bar' create_user       !if "could not create user\n"       print bye
+'foo' 'bar' authenticate_user !if "could not authenticate user\n" print bye
+
+"user successfully created and authenticated!\n" print

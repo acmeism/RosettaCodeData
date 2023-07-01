@@ -1,0 +1,9 @@
+fn main() {
+    let squares: Vec<_> = (1..11).map(|n| n * n).collect();
+    let is_square = |num| squares.binary_search(&num).is_ok();
+
+    for i in 1..101 {
+        let state = if is_square(i) { "open" } else { "closed" };
+        println!("Door {} is {}", i, state);
+    }
+}

@@ -1,0 +1,1 @@
+char mystring[21];

@@ -1,0 +1,80 @@
+Ja        IS $127
+
+          LOC Data_Segment
+DataSeg   GREG @
+Array     IS @-Data_Segment
+          OCTA   999,200,125,1,1020,40,4,5,60,100
+ArrayLen  IS (@-Array-Data_Segment)/8
+
+NL        IS  @-Data_Segment
+	  BYTE #a,0
+	  LOC  @+(8-@)&7
+
+Buffer    IS @-Data_Segment
+
+
+            LOC #1000
+            GREG @
+sorted      IS  $5
+i           IS  $6
+size        IS  $1
+a           IS  $0
+t           IS  $20
+t1          IS  $21
+t2          IS  $22
+% Input: $0 ptr to array, $1 its length (in octabyte)
+% Trashed: $5, $6, $1, $20, $21, $22
+BubbleSort  SETL  sorted,1          % sorted = true
+            SUB   size,size,1       % size--
+            SETL  i,0               % i = 0
+3H          CMP   t,i,size          % i < size ?
+            BNN   t,1F              % if false, end for loop
+            8ADDU $12,i,a           % compute addresses of the
+            ADDU  t,i,1             % octas a[i] and a[i+1]
+            8ADDU $11,t,a
+            LDO   t1,$12,0          % get their values
+            LDO   t2,$11,0
+            CMP   t,t1,t2           % compare
+            BN    t,2F              % if t1<t2, next
+            STO   t1,$11,0          % else swap them
+            STO   t2,$12,0
+            SETL  sorted,0          % sorted = false
+2H          INCL  i,1               % i++
+            JMP   3B                % next (for loop)
+1H          PBZ   sorted,BubbleSort % while sorted is false, loop
+            GO    Ja,Ja,0
+
+% Help function (Print an octabyte)
+% Input:    $0 (the octabyte)
+BufSize     IS    64
+            GREG  @
+PrintInt8   ADDU  t,DataSeg,Buffer  % get buffer address
+            ADDU  t,t,BufSize       % end of buffer
+            SETL  t1,0              % final 0 for Fputs
+            STB   t1,t,0
+1H          SUB   t,t,1             % t--
+            DIV   $0,$0,10          % ($0,rR) = divmod($0,10)
+            GET   t1,rR             % get reminder
+            INCL  t1,'0'            % turn it into ascii digit
+            STB   t1,t,0            % store it
+            PBNZ  $0,1B             % if $0 /= 0, loop
+            OR    $255,t,0          % $255 = t
+            TRAP  0,Fputs,StdOut
+            GO    Ja,Ja,0           % print and return
+
+
+Main        ADDU  $0,DataSeg,Array  % $0 = Array address
+            SETL  $1,ArrayLen       % $1 = Array Len
+            GO    Ja,BubbleSort     % BubbleSort it
+            SETL  $4,ArrayLen       % $4 = ArrayLen
+	    ADDU  $3,DataSeg,Array  % $3 = Array address
+2H          BZ    $4,1F             % if $4 == 0, break
+            LDO   $0,$3,0           % $0 = * ($3 + 0)
+            GO    Ja,PrintInt8      % print the octa
+            ADDU  $255,DataSeg,NL   % add a trailing newline
+	    TRAP  0,Fputs,StdOut
+            ADDU  $3,$3,8           % next octa
+            SUB   $4,$4,1           % $4--
+	    JMP   2B                % loop
+1H          XOR   $255,$255,$255
+            TRAP  0,Halt,0          % exit(0)

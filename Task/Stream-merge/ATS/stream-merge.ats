@@ -1,0 +1,188 @@
+(* ****** ****** *)
+//
+// This is a memory-clean implementation:
+// Every byte of allocated memory is freed
+// before the program exits.
+//
+(* ****** ****** *)
+//
+#include
+"share/atspre_define.hats"
+#include
+"share/atspre_staload.hats"
+//
+(*
+#include
+"share/HATS/atspre_staload_libats_ML.hats"
+*)
+//
+(* ****** ****** *)
+
+staload UN = $UNSAFE
+
+(* ****** ****** *)
+
+fun
+streamize_fileptr_line
+  (inp: FILEref) = let
+//
+val lines =
+  streamize_fileref_line(inp)
+//
+val
+closing =
+$ldelay
+(
+(
+fileref_close(inp);
+stream_vt_nil((*void*))
+)
+,
+fileref_close(inp)
+)
+//
+in
+//
+stream_vt_append(lines, closing)
+//
+end // end of [streamize_fileptr_line]
+
+(* ****** ****** *)
+//
+extern
+fun
+{a:vt@ype}
+stream_merge_2
+(
+xs: stream_vt(a), ys: stream_vt(a)
+) : stream_vt(a) // end-of-function
+//
+(* ****** ****** *)
+
+implement
+{a}(*tmp*)
+stream_merge_2
+  (xs, ys) =
+  aux0(xs, ys) where
+{
+//
+fun
+aux0
+(
+xs: stream_vt(a)
+,
+ys: stream_vt(a)
+) : stream_vt(a) = $ldelay
+(
+case+ !xs of
+| ~stream_vt_nil() => !ys
+| ~stream_vt_cons(x, xs) => !(aux1(x, xs, ys))
+,
+(~xs; ~ys)
+)
+//
+and
+aux1
+(
+x0: a
+,
+xs: stream_vt(a)
+,
+ys: stream_vt(a)
+) : stream_vt(a) = $ldelay
+(
+case+ !ys of
+| ~stream_vt_nil() => stream_vt_cons(x0, xs)
+| ~stream_vt_cons(y, ys) => !(aux2(x0, xs, y, ys))
+,
+(gfree_val<a>(x0); ~xs; ~ys)
+)
+//
+and
+aux2
+(
+x0: a
+,
+xs: stream_vt(a)
+,
+y0: a
+,
+ys: stream_vt(a)
+) : stream_vt(a) = $ldelay
+(
+let
+//
+var x0 = x0
+and y0 = y0
+//
+val sgn = gcompare_ref_ref<a>(x0, y0)
+//
+in
+//
+if
+(sgn <= 0)
+then stream_vt_cons(x0, aux1(y0, ys, xs))
+else stream_vt_cons(y0, aux1(x0, xs, ys))
+//
+end // end of [let]
+,
+(gfree_val<a>(x0); gfree_val<a>(y0); ~xs; ~ys)
+)
+//
+} (* end of [stream_merge_2] *)
+
+(* ****** ****** *)
+
+implement
+main0(argc, argv) =
+{
+//
+val () = assertloc(argc >= 3)
+//
+val xs =
+(
+case+
+fileref_open_opt
+(
+  argv[1], file_mode_r
+) of // case+
+| ~None_vt() => stream_vt_make_nil()
+| ~Some_vt(inp) => streamize_fileptr_line(inp)
+) : stream_vt(Strptr1)
+//
+val ys =
+(
+case+
+fileref_open_opt
+(
+argv[2], file_mode_r
+) of // case+
+| ~None_vt() => stream_vt_make_nil()
+| ~Some_vt(inp) => streamize_fileptr_line(inp)
+) : stream_vt(Strptr1)
+//
+local
+//
+implement
+(a:vt@ype)
+gfree_val<a>(z) =
+strptr_free($UN.castvwtp0{Strptr1}(z))
+//
+implement
+(a:vt@ype)
+gcompare_ref_ref<a>
+  (x, y) =
+(
+compare($UN.castvwtp1{String}(x), $UN.castvwtp1{String}(y))
+) (* end of [gcompare_ref_ref] *)
+//
+in
+//
+val zs = stream_merge_2<Strptr1>(xs, ys)
+//
+end // end of [local]
+//
+val ((*void*)) =
+stream_vt_foreach_cloptr(zs, lam(z) => (println!(z); strptr_free(z)))
+//
+} (* end of [main0] *)

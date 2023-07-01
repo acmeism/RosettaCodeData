@@ -1,0 +1,79 @@
+time:	equ	2Ch		; MS-DOS syscall to get current time
+puts:	equ	9		; MS-DOS syscall to print a string
+	cpu	8086
+	bits	16
+	org	100h
+section	.text
+	;;;	Initialize the RNG with the current time
+	mov	ah,time
+	int	21h
+	mov	di,cx		; RNG state is kept in DI and BP
+	mov	bp,dx
+	mov	dx,sw		; While switching doors,
+	mov	bl,1
+	call	simrsl		; run simulations,
+	mov	dx,nsw		; While not switching doors,
+	xor	bl,bl		; run simulations.
+	;;;	Print string in DX, run 65536 simulations (according to BL),
+	;;;	then print the amount of cars won.
+simrsl:	mov	ah,puts		; Print the string
+	int	21h
+	xor	cx,cx		; Run 65536 simulations
+	call	simul
+	mov	ax,si		; Print amount of cars
+	mov	bx,number	; String pointer
+	mov	cx,10		; Divisor
+.dgt:	xor	dx,dx		; Divide AX by ten
+	div	cx
+	add	dl,'0'		; Add ASCII '0' to the remainder
+	dec	bx		; Move string pointer backwards
+	mov	[bx],dl		; Store digit in string
+	test	ax,ax		; If quotient not zero,
+	jnz	.dgt		; calculate next digit.
+	mov	dx,bx		; Print string starting at first digit
+	mov	ah,puts
+	int	21h
+	ret
+	;;;	Run CX simulations.
+	;;;	If BL = 0, don't switch doors, otherwise, always switch
+simul:	xor	si,si		; SI is the amount of cars won
+.loop:	call	door		; Behind which door is the car?
+	xchg	dl,al		; DL = car door
+	call	door		; Which door does the contestant choose?
+	xchg	ah,al		; AH = contestant door
+.monty:	call	door		; Which door does Monty open?
+	cmp	al,dl		; It can't be the door with the car,
+	je	.monty
+	cmp	al,ah		; or the door the contestant picked.
+	je	.monty
+	test	bl,bl		; Will the contestant switch doors?
+	jz	.nosw
+	xor	ah,al		; If so, he switches
+.nosw:	cmp	ah,dl		; Did he get the car?
+	jne	.next
+	inc	si		; If so, add a car
+.next:	loop	.loop
+	ret
+	;;;	Generate a pseudorandom byte in AL using "X ABC" method
+	;;;	Use it to select a door (1,2,3).
+door:	xchg	bx,bp		; Load RNG state into byte-addressable
+	xchg	cx,di 		; registers.
+.loop:	inc	bl		; X++
+	xor	bh,ch		; A ^= C
+	xor	bh,bl		; A ^= X
+	add	cl,bh		; B += A
+	mov	al,cl		; C' = B
+	shr	al,1		; C' >>= 1
+	add	al,ch		; C' += C
+	xor	al,bh		; C' ^= A
+	mov	ch,al		; C = C'
+	and	al,3		; ...but we only want the last two bits,
+	jz	.loop		; and if it was 0, get a new random number.
+	xchg	bx,bp		; Restore the registers
+	xchg	cx,di
+	ret
+section	.data
+sw:	db	'When switching doors:     $'
+nsw:	db	'When not switching doors: $'
+	db	'*****'
+number:	db	13,10,'$'

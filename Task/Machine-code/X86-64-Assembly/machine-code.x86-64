@@ -1,0 +1,141 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Linux Build:
+;;   $ uasm -elf64 mexec.asm
+;;   $ gcc -o mexec mexec.o -no-pie
+;;  With MUSL libc
+;;   $ musl-gcc -o mexec mexec.o -e main -nostartfiles -no-pie
+;;
+;; Windows Build:
+;;   $ uasm64 -win64 mexec.asm
+;;   $ link /machine:x64 /subsystem:console /release mexec.obj
+;;         kernel32.lib msvcrt.lib
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+option casemap:none
+option literals:on
+
+WIN64 equ 1
+LIN64 equ 3
+
+ifndef __MEMEXEC_CLASS__
+__MEMEXEC_CLASS__ equ 1
+
+  if @Platform eq WIN64
+    option dllimport:<kernel32>
+      HeapAlloc       proto fd:qword, flgs:dword, hlen:qword
+      HeapFree        proto fd:qword, flgs:dword, lpmem:qword
+      GetProcessHeap  proto
+      ExitProcess     proto uexit:word
+    option dllimport:<msvcrt>
+      printf      proto fmt:qword, args:VARARG
+      memcpy      proto d:qword, s:qword, mlen:qword
+    option dllimport:none
+      exit equ ExitProcess
+  elseif @Platform eq LIN64
+    malloc        proto SYSTEMV len:qword
+    free          proto SYSTEMV m:qword
+    printf        proto SYSTEMV fmt:qword, args:VARARG
+    mprotect      proto SYSTEMV m:qword, s:qword, flgs:dword
+    memcpy        proto SYSTEMV d:qword, s:qword, mlen:qword
+    exit          proto SYSTEMV uexit:word
+
+    PROT_READ     equ 01h
+    PROT_WRITE    equ 02h
+    PROT_EXEC     equ 04h
+    PROT_NONE     equ 00h
+    PROT_ALL      equ PROT_READ + PROT_WRITE + PROT_EXEC
+  endif
+
+  CLASS memexec
+    CMETHOD run
+  ENDMETHODS
+    buff     db 048h, 089h, 0F8h         ;; mov rax, rdi
+            db 048h, 001h, 0F0h         ;; add rax, rsi
+            db 0C3h                     ;; ret
+    mem     dq ?                        ;; Memory address
+    mlen    dq 0                        ;; Memory size allocated?
+  ENDCLASS
+
+  pmemexec typedef ptr memexec
+
+  METHOD memexec, Init, <VOIDARG>, <uses rcx>
+    local tmp:qword
+
+    mov rbx, thisPtr
+    assume rbx:ptr memexec
+    lea rdx, [rbx].buff
+    invoke printf, CSTR("[mexec->Init] - bytecode addr: 0x%X",10), rdx
+    mov tmp, rdx
+    mov [rbx].mlen, sizeof(tmp)
+    invoke printf, CSTR("[mexec->Init] - bytecode len: %i",10), [rbx].mlen
+    ;; In Built memory allocator, used by the Class extention
+    ;; Uses either HeapAlloc for windows or malloc for everything else.
+    ;; Which is why I didn't use mmap in the first place.
+    MEMALLOC([rbx].mlen)
+    .if rax == -1
+      invoke printf, CSTR("[exec->Init->Error] - Malloc failed with -1",10)
+      mov rax, rbx
+      ret
+    .endif
+    mov [rbx].mem, rax
+    invoke printf, CSTR("[mexec->Init] - [rbx].mem addr: 0x%X",10), [rbx].mem
+    ;; Memory wont be executable by default from Malloc, So we make it
+    ;; so with mprotect. Not sure about windows, Might need to use a VirtualProtect
+    ;; call..
+    if @Platform eq LIN64
+      invoke mprotect, [rbx].mem, [rbx].mlen, PROT_ALL
+      .if rax == -1
+        invoke printf, CSTR("[exec]-Init->Error] - mprotect failed with -1",10)
+        mov rax, rbx
+        ret
+      .endif
+    endif
+    invoke printf, CSTR("[mexec->Init] Copying [rbx].buff bytecode to 0x%X",10), [rbx].mem
+    invoke memcpy, [rbx].mem, addr [rbx].buff, [rbx].mlen
+    .if rax == -1
+      invoke printf, CSTR("[mexec->Init->Error] - memcpy failed with -l",10)
+      mov rax, rbx
+      ret
+    .endif
+    mov rcx, [rbx].mem
+    mov rax, rbx
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+  METHOD memexec, run, <VOIDARG>, <>, arg1:qword, arg2:qword
+    mov rbx, thisPtr
+    assume rbx:ptr memexec
+    mov rdi, arg1
+    mov rsi, arg2
+    call [rbx].mem
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+  METHOD memexec, Destroy, <VOIDARG>, <>
+    mov rbx, thisPtr
+    assume rbx:ptr memexec
+    mov [rbx].mlen, 0
+    MEMFREE([rbx].mem)
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+endif      ;; __MEMEXEC_CLASS__
+.data
+a1   dq 7
+a2   dq 12
+
+.code
+main proc
+  local pmem:ptr memexec
+
+  mov pmem, _NEW(memexec)
+  pmem->run(a1,a2)
+  invoke printf, CSTR("[pmem->run(%i, %i)] - returned: %i",10), a1, a2, rax
+  _DELETE(pmem)
+  invoke exit, 0
+  ret
+main endp
+
+end

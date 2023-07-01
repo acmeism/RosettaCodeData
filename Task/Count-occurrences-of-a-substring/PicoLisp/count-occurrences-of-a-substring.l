@@ -1,0 +1,7 @@
+(de countSubstring (Str Sub)
+   (let (Cnt 0  H (chop Sub))
+      (for (S (chop Str)  S  (cdr S))
+         (when (head H S)
+            (inc 'Cnt)
+            (setq S (map prog2 H S)) ) )
+      Cnt ) )

@@ -1,0 +1,9 @@
+10 INPUT "Enter 1,2 or 3: ";v
+20 GOTO v * 100
+99 STOP
+100 PRINT "Apple"
+110 STOP
+200 PRINT "Banana"
+210 STOP
+300 PRINT "Cherry"
+310 STOP

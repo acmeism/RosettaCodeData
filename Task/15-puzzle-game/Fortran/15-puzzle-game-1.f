@@ -1,0 +1,1 @@
+LOCZ = MINLOC(BOARD)	!Find the zero. 0 = BOARD(LOCZ(1),LOCZ(2)) == BOARD(ZC,ZR)

@@ -1,0 +1,8 @@
+(struct stack ([items #:auto]) #:mutable #:auto-value '())
+(define (push! x stack)
+  (set-stack-items! stack (cons x (stack-items stack))))
+(define (pop! stack)
+  (begin0 (car (stack-items stack))
+    (set-stack-items! stack (cdr (stack-items stack)))))
+(define (empty? stack)
+  (null? (stack-items stack)))

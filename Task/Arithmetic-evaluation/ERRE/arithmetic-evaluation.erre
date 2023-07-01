@@ -1,0 +1,233 @@
+PROGRAM EVAL
+
+!
+! arithmetic expression evaluator
+!
+
+!$KEY
+
+LABEL 98,100,110
+
+DIM STACK$[50]
+
+PROCEDURE DISEGNA_STACK
+  !$RCODE="LOCATE 3,1"
+  !$RCODE="COLOR 0,7"
+  PRINT(TAB(35);"S T A C K";TAB(79);)
+  !$RCODE="COLOR 7,0"
+  FOR TT=1 TO 38 DO
+     IF TT>=20 THEN
+        !$RCODE="LOCATE 3+TT-19,40"
+      ELSE
+        !$RCODE="LOCATE 3+TT,1"
+     END IF
+     IF TT=NS THEN PRINT(">";)  ELSE PRINT(" ";)  END IF
+     PRINT(RIGHT$(STR$(TT),2);"³ ";STACK$[TT];"    ")
+  END FOR
+  REPEAT
+   GET(Z$)
+  UNTIL LEN(Z$)<>0
+END PROCEDURE
+
+PROCEDURE COMPATTA_STACK
+   IF NS>1 THEN
+      R=1
+      WHILE R<NS DO
+         IF INSTR(OP_LIST$,STACK$[R])=0 AND INSTR(OP_LIST$,STACK$[R+1])=0 THEN
+            FOR R1=R TO NS-1 DO
+                STACK$[R1]=STACK$[R1+1]
+            END FOR
+            NS=NS-1
+         END IF
+         R=R+1
+      END WHILE
+   END IF
+   DISEGNA_STACK
+END PROCEDURE
+
+PROCEDURE CALC_ARITM
+     L=NS1
+     WHILE L<=NS2 DO
+        IF STACK$[L]="^" THEN
+            IF L>=NS2 THEN GOTO 100 END IF
+            N1#=VAL(STACK$[L-1])  N2#=VAL(STACK$[L+1])  NOP=NOP-1
+            IF STACK$[L]="^" THEN
+                RI#=N1#^N2#
+            END IF
+            STACK$[L-1]=STR$(RI#)
+            N=L
+            WHILE N<=NS2-2 DO
+               STACK$[N]=STACK$[N+2]
+               N=N+1
+            END WHILE
+            NS2=NS2-2
+            L=NS1-1
+        END IF
+        L=L+1
+     END WHILE
+
+     L=NS1
+     WHILE L<=NS2 DO
+        IF STACK$[L]="*" OR STACK$[L]="/" THEN
+            IF L>=NS2 THEN GOTO 100 END IF
+            N1#=VAL(STACK$[L-1])  N2#=VAL(STACK$[L+1])  NOP=NOP-1
+            IF STACK$[L]="*" THEN RI#=N1#*N2# ELSE RI#=N1#/N2# END IF
+            STACK$[L-1]=STR$(RI#)
+            N=L
+            WHILE N<=NS2-2 DO
+               STACK$[N]=STACK$[N+2]
+               N=N+1
+            END WHILE
+            NS2=NS2-2
+            L=NS1-1
+        END IF
+        L=L+1
+     END WHILE
+
+     L=NS1
+     WHILE L<=NS2 DO
+        IF STACK$[L]="+" OR STACK$[L]="-" THEN
+            EXIT IF L>=NS2
+            N1#=VAL(STACK$[L-1])  N2#=VAL(STACK$[L+1])  NOP=NOP-1
+            IF STACK$[L]="+" THEN RI#=N1#+N2# ELSE RI#=N1#-N2# END IF
+            STACK$[L-1]=STR$(RI#)
+            N=L
+            WHILE N<=NS2-2 DO
+               STACK$[N]=STACK$[N+2]
+               N=N+1
+            END WHILE
+            NS2=NS2-2
+            L=NS1-1
+        END IF
+        L=L+1
+     END WHILE
+100:
+     IF NOP<2 THEN   ! operator priority
+          DB#=VAL(STACK$[NS1])
+       ELSE
+          IF NOP<3 THEN
+               DB#=VAL(STACK$[NS1+2])
+             ELSE
+               DB#=VAL(STACK$[NS1+4])
+          END IF
+     END IF
+END PROCEDURE
+
+PROCEDURE SVOLGI_PAR
+   NPA=NPA-1
+   FOR J=NS TO 1 STEP -1 DO
+      EXIT IF STACK$[J]="("
+   END FOR
+   IF J=0 THEN
+       NS1=1  NS2=NS  CALC_ARITM
+       NERR=7
+     ELSE
+       FOR R=J TO NS-1 DO
+          STACK$[R]=STACK$[R+1]
+       END FOR
+       NS1=J  NS2=NS-1  CALC_ARITM
+       IF NS1=2 THEN NS1=1  STACK$[1]=STACK$[2] END IF
+       NS=NS1
+       COMPATTA_STACK
+   END IF
+END PROCEDURE
+
+BEGIN
+     OP_LIST$="+-*/^("
+     NOP=0  NPA=0  NS=1  K$=""
+     STACK$[1]="@"              ! init stack
+
+     PRINT(CHR$(12);)
+     INPUT(LINE,EXPRESSION$)
+
+     FOR W=1 TO LEN(EXPRESSION$) DO
+        LOOP
+           CODE=ASC(MID$(EXPRESSION$,W,1))
+           IF (CODE>=48 AND CODE<=57) OR CODE=46 THEN
+                K$=K$+CHR$(CODE)
+                W=W+1  IF W>LEN(EXPRESSION$) THEN GOTO 98 END IF
+              ELSE
+                EXIT IF K$=""
+                IF NS>1 OR (NS=1 AND STACK$[1]<>"@") THEN NS=NS+1 END IF
+                IF FLAG=0 THEN STACK$[NS]=K$ ELSE STACK$[NS]=STR$(VAL(K$)*FLAG) END IF
+                K$=""  FLAG=0
+                EXIT
+           END IF
+        END LOOP
+        IF CODE=43 THEN K$="+" END IF
+        IF CODE=45 THEN K$="-" END IF
+        IF CODE=42 THEN K$="*" END IF
+        IF CODE=47 THEN K$="/" END IF
+        IF CODE=94 THEN K$="^" END IF
+
+     CASE CODE OF
+       43,45,42,47,94->
+             IF MID$(EXPRESSION$,W+1,1)="-" THEN FLAG=-1  W=W+1 END IF
+             IF INSTR(OP_LIST$,STACK$[NS])<>0 THEN
+                 NERR=5
+               ELSE
+                 NS=NS+1  STACK$[NS]=K$  NOP=NOP+1
+                 IF NOP>=2 THEN
+                    FOR J=NS TO 1 STEP -1 DO
+                       IF STACK$[J]<>"(" THEN
+                           CONTINUE FOR
+                       END IF
+                       IF J<NS-2 THEN
+                           EXIT
+                         ELSE
+                            GOTO 110
+                       END IF
+                    END FOR
+                    NS1=J+1  NS2=NS  CALC_ARITM
+                    NS=NS2  STACK$[NS]=K$
+                    REGISTRO_X#=VAL(STACK$[NS-1])
+                 END IF
+             END IF
+110:
+       END ->
+
+       40->
+             IF NS>1 OR (NS=1 AND STACK$[1]<>"@") THEN NS=NS+1 END IF
+             STACK$[NS]="("  NPA=NPA+1
+             IF MID$(EXPRESSION$,W+1,1)="-" THEN FLAG=-1  W=W+1 END IF
+       END ->
+
+       41->
+             SVOLGI_PAR
+             IF NERR=7 THEN
+                  NERR=0  NOP=0  NPA=0  NS=1
+               ELSE
+                  IF NERR=0 OR NERR=1 THEN
+                      DB#=VAL(STACK$[NS])
+                      REGISTRO_X#=DB#
+                    ELSE
+                      NOP=0  NPA=0  NS=1
+                  END IF
+            END IF
+       END ->
+
+       OTHERWISE
+            NERR=8
+   END CASE
+   K$=""
+   DISEGNA_STACK
+END FOR
+
+98:
+   IF K$<>"" THEN
+        IF NS>1 OR (NS=1 AND STACK$[1]<>"@") THEN NS=NS+1 END IF
+        IF FLAG=0 THEN STACK$[NS]=K$ ELSE STACK$[NS]=STR$(VAL(K$)*FLAG) END IF
+   END IF
+   DISEGNA_STACK
+   IF INSTR(OP_LIST$,STACK$[NS])<>0 THEN
+         NERR=6
+       ELSE
+         WHILE NPA<>0 DO
+             SVOLGI_PAR
+         END WHILE
+         IF NERR<>7 THEN NS1=1  NS2=NS  CALC_ARITM  END IF
+    END IF
+    NS=1  NOP=0  NPA=0
+    !$RCODE="LOCATE 23,1"
+    IF NERR>0 THEN PRINT("Internal Error #";NERR)  ELSE PRINT("Value is ";DB#) END IF
+END PROGRAM

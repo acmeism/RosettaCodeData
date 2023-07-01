@@ -1,0 +1,10 @@
+(lib 'sequences)
+
+(define (pernicious? n) (prime? (bit-count n)))
+
+(define pernicious (filter pernicious? [1 .. ]))
+(take pernicious 25)
+    → (3 5 6 7 9 10 11 12 13 14 17 18 19 20 21 22 24 25 26 28 31 33 34 35 36)
+
+(take (filter pernicious? [888888877 .. 888888889]) #:all)
+    → (888888877 888888878 888888880 888888883 888888885 888888886)

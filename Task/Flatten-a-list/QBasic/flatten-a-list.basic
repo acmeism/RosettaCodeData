@@ -1,0 +1,11 @@
+sString$ = "[[1], 2, [[3,4], 5], [[[]]], [[[6]]], 7, 8 []]"
+
+FOR siCount = 1 TO LEN(sString$)
+    IF INSTR("[] ,", MID$(sString$, siCount, 1)) = 0 THEN
+        sFlatter$ = sFlatter$ + sComma$ + MID$(sString$, siCount, 1)
+        sComma$ = ", "
+    END IF
+NEXT siCount
+
+PRINT "["; sFlatter$; "]"
+END

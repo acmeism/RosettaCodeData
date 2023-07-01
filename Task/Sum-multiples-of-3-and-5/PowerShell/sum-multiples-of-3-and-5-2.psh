@@ -1,0 +1,10 @@
+function SumMultiples ( [bigint]$Base, [bigint]$Upto )
+    {
+    $X = ($Upto - ( $Upto % $Base ) ) / $Base + ( [int] ( $Upto % $Base -ne 0 ) )
+    $Sum = ( $X * $X - $X ) * $Base / 2
+    Return $Sum
+    }
+
+#  Calculate the sum of the multiples of 3 and 5 up to 10 ^ 210
+$Upto = [bigint]::Pow( 10, 210 )
+( SumMultiples -Base 3 -Upto $Upto ) + ( SumMultiples -Base 5 -Upto $Upto ) - ( SumMultiples -Base 15 -Upto $Upto )

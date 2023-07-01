@@ -1,0 +1,110 @@
+100H: /* EXECUTE SOME COMPUTERZERO PROGRAMS                                  */
+
+   /* CP/M SYSTEM CALL AND I/O ROUTINES                                      */
+   BDOS:      PROCEDURE( FN, ARG ); DECLARE FN BYTE, ARG ADDRESS; GOTO 5; END;
+   PR$CHAR:   PROCEDURE( C ); DECLARE C BYTE;    CALL BDOS( 2, C );  END;
+   PR$STRING: PROCEDURE( S ); DECLARE S ADDRESS; CALL BDOS( 9, S );  END;
+   PR$NL:     PROCEDURE;   CALL PR$CHAR( 0DH ); CALL PR$CHAR( 0AH ); END;
+   PR$NUMBER: PROCEDURE( N ); /* PRINTS A NUMBER IN THE MINIMUN FIELD WIDTH  */
+      DECLARE N ADDRESS;
+      DECLARE V ADDRESS, N$STR ( 6 )BYTE, W BYTE;
+      V = N;
+      W = LAST( N$STR );
+      N$STR( W ) = '$';
+      N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      DO WHILE( ( V := V / 10 ) > 0 );
+         N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      END;
+      CALL PR$STRING( .N$STR( W ) );
+   END PR$NUMBER;
+
+   /* TASK                                                                   */
+
+   DECLARE FALSE      LITERALLY '0'
+         , TRUE       LITERALLY '0FFH'
+         ;
+   DECLARE NOP$C LITERALLY      '0'                      /* INSTRUCTION CODES */
+         , LDA$C LITERALLY     '32'
+         , STA$C LITERALLY  '(2*32)'
+         , ADD$C LITERALLY  '(3*32)'
+         , SUB$C LITERALLY  '(4*32)'
+         , BRZ$C LITERALLY  '(5*32)'
+         , JMP$C LITERALLY  '(6*32)'
+         , STP$C LITERALLY  '(7*32)'
+         ;
+   DECLARE CODE  LITERALLY 'PC=255'                 /* ASSEMBLER MNEMONICS */
+         , LOAD  LITERALLY 'PC=PC+1;PGM(PC)='
+         , NOP   LITERALLY 'LOAD NOP$C'
+         , LDA   LITERALLY 'LOAD LDA$C+'
+         , STA   LITERALLY 'LOAD STA$C+'
+         , ADD   LITERALLY 'LOAD ADD$C+'
+         , SUB   LITERALLY 'LOAD SUB$C+'
+         , BRZ   LITERALLY 'LOAD BRZ$C+'
+         , JMP   LITERALLY 'LOAD JMP$C+'
+         , STP   LITERALLY 'LOAD STP$C '
+         , VAL   LITERALLY 'LOAD '
+         , EDOC  LITERALLY 'CALL EXECUTE'
+         ;
+   DECLARE PGM (32)BYTE;                                     /* THE PROGRAM */
+   DECLARE PC      BYTE;                                 /* PROGRAM COUNTER */
+   EXECUTE: PROCEDURE;                              /* EXECUTES THE PROGRAM */
+      DECLARE ( RUNNING, A, OP, OPERAND ) BYTE;
+      PC, A   = 0;
+      RUNNING = TRUE;
+      DO WHILE RUNNING;
+         OP      = PGM( PC ) AND 0E0H;
+         OPERAND = PGM( PC ) AND  1FH;
+         PC      = ( PC + 1 ) MOD 32;
+         IF      OP = NOP$C THEN DO; /* NOTHING */ END;
+         ELSE IF OP = LDA$C THEN A = PGM( OPERAND );
+         ELSE IF OP = STA$C THEN PGM( OPERAND ) = A;
+         ELSE IF OP = ADD$C THEN A = A + PGM( OPERAND );
+         ELSE IF OP = SUB$C THEN A = A - PGM( OPERAND );
+         ELSE IF OP = BRZ$C THEN DO; IF A = 0 THEN PC = OPERAND MOD 32; END;
+         ELSE IF OP = JMP$C THEN PC = OPERAND MOD 32;
+         ELSE DO; /* MUST BE STP$C                                          */
+             RUNNING = FALSE;
+             CALL PR$NUMBER( A );
+             CALL PR$NL;
+         END;
+      END;
+   END EXECUTE ;
+   /* TEST PROGRAMS (FROM THE COMPUTER ZERO WEBSITE)                        */
+   CALL PR$STRING( .'       2+2: $' );
+   CODE; LDA  3; ADD  4; STP;    VAL  2; VAL  2; EDOC;
+
+   CALL PR$STRING( .'       7*8: $' );
+   CODE; LDA 12; ADD 10; STA 12; LDA 11; SUB 13; STA 11; BRZ  8; JMP  0;
+         LDA 12; STP;    VAL  8; VAL  7; VAL  0; VAL  1;
+   EDOC;
+
+   CALL PR$STRING( .' FIBONACCI: $' );
+   CODE; LDA 14; STA 15; ADD 13; STA 14; LDA 15; STA 13; LDA 16; SUB 17;
+         BRZ 11; STA 16; JMP  0; LDA 14; STP;
+         VAL  1; VAL  1; VAL  0; VAL  8; VAL  1;
+   EDOC;
+
+   CALL PR$STRING( .'LINKEDLIST: $' );
+   CODE; LDA 13; ADD 15; STA  5; ADD 16; STA  7; NOP;    STA 14; NOP;
+         BRZ 11; STA 15; JMP  0; LDA 14; STP;    LDA  0; VAL  0; VAL 28;
+         VAL  1; VAL  0; VAL  0; VAL  0; VAL  6; VAL  0; VAL  2; VAL 26;
+         VAL  5; VAL 20; VAL  3; VAL 30; VAL  1; VAL 22; VAL  4; VAL 24;
+   EDOC;
+
+   CALL PR$STRING( .'  PRISONER: $' );
+   CODE; NOP;    NOP;    STP;    VAL  0; LDA  3; SUB 29; BRZ 18; LDA  3;
+         STA 29; BRZ 14; LDA  1; ADD 31; STA  1; JMP  2; LDA  0; ADD 31;
+         STA  0; JMP  2; LDA  3; STA 29; LDA  1; ADD 30; ADD  3; STA  1;
+         LDA  0; ADD 30; ADD  3; STA  0; JMP  2; VAL  0; VAL  1; VAL  3;
+   EDOC;
+
+   /* SUBTRACTIONS YIELDING NEGATIVE RESULTS                                */
+   CALL PR$STRING( .'     0-255: $' );
+   CODE; LDA  3; SUB  4; STP;    VAL   0; VAL 255; EDOC;
+   CALL PR$STRING( .'       0-1: $' );
+   CODE; LDA  3; SUB  4; STP;    VAL   0; VAL   1; EDOC;
+   /* OVERFLOW ON ADDITION                                                  */
+   CALL PR$STRING( .'     1+255: $' );
+   CODE; LDA  3; ADD  4; STP;    VAL   1; VAL 255; EDOC;
+
+EOF

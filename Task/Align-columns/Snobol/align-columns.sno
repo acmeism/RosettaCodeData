@@ -1,0 +1,92 @@
+*              Since we don't know how much text we'll be reading in,
+*              we store the words and field widths in tables
+               Words = TABLE()
+               Widths = TABLE()
+
+*              Match text from start of string to the first dollar sign
+               WordPat = POS(0) BREAK('$') . Word LEN(1) REM . Rest
+
+*              We output the results aligned three different ways; these are the
+*              labels for those sections of output:
+               Labels = ARRAY(3)
+               Labels<1> = "Left-justified"
+               Labels<2> = "Right-justified"
+               Labels<3> = "Centered"
+
+*              There are built-in functions for left- and right- justification,
+*              but not necessarily one for centering (depending on
+*              implementation).  So we define one.
+               DEFINE('CPAD(Word,Width)Z,Left')      :(END_CPAD)
+
+CPAD           Z = SIZE(Word)
+               Left = Z + (Width - Z) / 2
+               CPAD = RPAD(LPAD(Word, Left), Width)  :(RETURN)
+END_CPAD
+
+*              Read in our text a line at a time and split into words on '$'
+InLineLoop     Line = INPUT                          :F(DoneReading)
+               LineCount = LineCount + 1
+               Column = 0
+InWordLoop     Column = Column + 1
+
+*              Separate Line into Word, Line=Rest at first dollar sign
+               Line WordPat = Rest                   :S(CheckMax)
+
+*              If there was no '$', the whole line is the next word
+               Word = Line
+               Line =
+
+*              Keep track of the largest number of columns on any line
+CheckMax       LE(Column, MaxColumn)                 :S(StoreWord)
+               MaxColumn = Column
+
+StoreWord      Words<LineCount ',' Column> = Word
+
+*              And the size of the longest word in each column
+               GT(SIZE(Word),Widths<Column>)         :F(NoNewMaxWidth)
+               Widths<Column> = SIZE(Word)
+
+*              Loop if the line isn't empty yet
+NoNewMaxWidth  GT(Size(Line))                        :S(InWordLoop) F(InLineLoop)
+DoneReading
+
+*              Now we print the results out in the three justification styles
+               Style = 0
+StyleLoop      Style = Style + 1
+               GT(Style, 3)                          :S(END)
+               OUTPUT =
+               OUTPUT =  Labels<Style> ':'
+
+               I = 0
+OutLineLoop    I = I + 1
+               GT(I, LineCount)                      :S(StyleLoop)
+
+*              Build up the output line by fields starting with the null string
+               Line =
+               J = 0
+OutWordLoop    J = J + 1
+               GT(J, MaxColumn)                      :S(PrintLine)
+               Word = Words<I ',' J>
+               GT(SIZE(Word))                        :F(PrintLine)
+
+*              Place the word within the column according to the pass we're on
+               EQ(Style, 1)                          :F(NotLeft)
+*              Left-justified
+               Word = RPAD(Word, Widths<J>)          :(AddWord)
+
+NotLeft        EQ(Style, 2)                          :F(NotRight)
+*              Right-justified
+               Word = LPAD(Word, Widths<J>)          :(AddWord)
+
+*              Centered
+NotRight       Word = CPAD(Word, Widths<J>)
+
+*              Add word to line and loop
+AddWord        Line = Line GT(SIZE(Line)) ' '
+               Line = Line Word                      :(OutWordLoop)
+
+
+*              Print the line
+PrintLine      OUTPUT = Line                         :(OutLineLoop)
+
+END

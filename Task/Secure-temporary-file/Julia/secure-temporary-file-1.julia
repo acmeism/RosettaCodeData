@@ -1,0 +1,7 @@
+msg = "Rosetta Code, Secure temporary file, implemented with Julia."
+
+(fname, tio) = mktemp()
+println(fname, " created as a temporary file.")
+println(tio, msg)
+close(tio)
+println("\"", msg, "\" written to ", fname)

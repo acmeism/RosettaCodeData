@@ -1,0 +1,137 @@
+class SnakeGame(w, h) {
+    const readkey = frequire('Term::ReadKey')
+    const ansi    = frequire('Term::ANSIColor')
+
+    enum (VOID, HEAD, BODY, TAIL, FOOD)
+
+    define (
+        LEFT  = [+0, -1],
+        RIGHT = [+0, +1],
+        UP    = [-1, +0],
+        DOWN  = [+1, +0],
+    )
+
+    define BG_COLOR    = "on_black"
+    define FOOD_COLOR  = ("red"        + " " + BG_COLOR)
+    define SNAKE_COLOR = ("bold green" + " " + BG_COLOR)
+    define SLEEP_SEC   = 0.02
+
+    const (
+        A_VOID  = ansi.colored(' ', BG_COLOR),
+        A_FOOD  = ansi.colored('❇', FOOD_COLOR),
+        A_BLOCK = ansi.colored('■', SNAKE_COLOR),
+    )
+
+    has dir = LEFT
+    has grid = [[]]
+    has head_pos = [0, 0]
+    has tail_pos = [0, 0]
+
+    method init {
+        grid = h.of { w.of { [VOID] } }
+
+        head_pos = [h//2, w//2]
+        tail_pos = [head_pos[0], head_pos[1]+1]
+
+        grid[head_pos[0]][head_pos[1]] = [HEAD, dir]    # head
+        grid[tail_pos[0]][tail_pos[1]] = [TAIL, dir]    # tail
+
+        self.make_food()
+    }
+
+    method make_food {
+        var (food_x, food_y)
+
+        do {
+            food_x = w.rand.int
+            food_y = h.rand.int
+        } while (grid[food_y][food_x][0] != VOID)
+
+        grid[food_y][food_x][0] = FOOD
+    }
+
+    method display {
+        print("\033[H", grid.map { |row|
+            row.map { |cell|
+                given (cell[0]) {
+                    when (VOID) { A_VOID }
+                    when (FOOD) { A_FOOD }
+                    default     { A_BLOCK }
+                }
+              }.join('')
+            }.join("\n")
+        )
+    }
+
+    method move {
+        var grew = false
+
+        # Move the head
+        var (y, x) = head_pos...
+
+        var new_y = (y+dir[0] % h)
+        var new_x = (x+dir[1] % w)
+
+        var cell = grid[new_y][new_x]
+
+        given (cell[0]) {
+            when (BODY) { die "\nYou just bit your own body!\n" }
+            when (TAIL) { die "\nYou just bit your own tail!\n" }
+            when (FOOD) { grew = true; self.make_food()         }
+        }
+
+        # Create a new head
+        grid[new_y][new_x] = [HEAD, dir]
+
+        # Replace the current head with body
+        grid[y][x] = [BODY, dir]
+
+        # Update the head position
+        head_pos = [new_y, new_x]
+
+        # Move the tail
+        if (!grew) {
+            var (y, x) = tail_pos...
+
+            var pos   = grid[y][x][1]
+            var new_y = (y+pos[0] % h)
+            var new_x = (x+pos[1] % w)
+
+            grid[y][x][0]         = VOID    # erase the current tail
+            grid[new_y][new_x][0] = TAIL    # create a new tail
+
+            tail_pos = [new_y, new_x]
+        }
+    }
+
+    method play {
+        STDOUT.autoflush(true)
+        readkey.ReadMode(3)
+
+        try {
+            loop {
+                var key
+                while (!defined(key = readkey.ReadLine(-1))) {
+                    self.move()
+                    self.display()
+                    Sys.sleep(SLEEP_SEC)
+                }
+
+                given (key) {
+                    when ("\e[A") { if (dir != DOWN ) { dir = UP    } }
+                    when ("\e[B") { if (dir != UP   ) { dir = DOWN  } }
+                    when ("\e[C") { if (dir != LEFT ) { dir = RIGHT } }
+                    when ("\e[D") { if (dir != RIGHT) { dir = LEFT  } }
+                }
+            }
+        }
+        catch {
+            readkey.ReadMode(0)
+        }
+    }
+}
+
+var w = `tput cols`.to_i
+var h = `tput lines`.to_i
+
+SnakeGame(w || 80, h || 24).play

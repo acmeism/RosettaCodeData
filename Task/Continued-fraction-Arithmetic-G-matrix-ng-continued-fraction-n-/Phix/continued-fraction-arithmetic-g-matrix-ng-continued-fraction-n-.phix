@@ -1,0 +1,144 @@
+requires("0.8.2")
+
+class baby_matrix
+
+  integer a1, a, b1, b
+
+  --
+  -- used by apply_baby_matrix to yield (a1*cf+a)/(b1*cf+b)
+  --
+  -- examples: (a1 a  b1 b) => above, simplified:
+  -- ========   =  =  =  =
+  --           {2, 1, 0, 2} => (2*cf+1)/2, aka cf+1/2
+  --           {1, 0, 0, 4} => cf/4
+  --           {1, 0, 0, 1} => cf/1, aka cf
+  --           {0, 1, 1, 0} => 1/cf
+  --           {1, 1, 0, 2} => (cf+1)/2
+  --
+
+  function need_term()
+    return b==0 or b1==0 or ((a/b)!=(a1/b1))
+  end function
+
+  function next_term()
+    integer n = floor(a/b)
+    {a1,a,b1,b} = {b1,b,a1-b1*n,a-b*n}
+    return n
+  end function
+
+  procedure in_term(object n={})
+    if integer(n) then
+        {a1,a,b,b1} = {a+a1*n,a1,b1,b+b1*n}
+    else
+        {a,b} = {a1,b1}
+    end if
+  end procedure
+
+  function done()
+    return b=0 and b1=0
+  end function
+
+end class
+
+function apply_baby_matrix(sequence m, cf)
+--
+--  for m of integer {a1,a,b1,b}, return (a1*cf+a)/(b1*cf+b):
+--
+    baby_matrix bm = new(m)
+    sequence res = {}
+    for i=1 to length(cf) do
+        if not bm.need_term() then
+            res &= bm.next_term()
+        end if
+        bm.in_term(cf[i])
+    end for
+    while true do
+        if bm.need_term() then
+            bm.in_term()
+        end if
+        res &= bm.next_term()
+        if bm.done() then exit end if
+    end while
+    return res
+end function
+
+function r2cf(sequence rat, integer count=20)
+    sequence s = {}
+    atom {num,den} = rat
+    while den!=0 and length(s)<count do
+        s &= trunc(num/den)
+        {num,den} = {den,num-s[$]*den}
+    end while
+    return s
+end function
+
+function root2(integer count=20)
+    return {1}&repeat(2,count-1)
+end function
+
+function recip_root2(integer count=20)
+    return {0,1}&repeat(2,count-2)
+end function
+
+function cf2s(sequence cf)
+    sequence s = join(apply(cf,sprint),",") -- eg "1,5,2"
+    return "["&substitute(s,",",";",1)&"]"  -- => "[1;5,2]"
+end function
+
+include mpfr.e
+
+function cf2r(sequence cf)
+    mpq res = mpq_init(), -- 0/1
+        cfn = mpq_init()
+    for n=length(cf) to 1 by -1 do
+        mpq_set_si(cfn,cf[n])
+        mpq_add(res,res,cfn)
+        if n=1 then exit end if
+        mpq_inv(res,res)
+    end for
+    mpz num = mpz_init(),
+        den = mpz_init()
+    mpq_get_num(num,res)
+    mpq_get_den(den,res)
+    mpfr x = mpfr_init()
+    mpfr_set_q(x,res)
+    string xs = mpfr_sprintf("%.15Rf",x),
+           ns = mpz_get_str(num),
+           ds = mpz_get_str(den),
+            s = sprintf("%s (%s/%s)",{xs,ns,ds})
+    return s
+end function
+
+function d2cf(atom d, integer count=20)
+    string res = "["
+    integer sep = ';'
+    while count do
+        atom div = floor(d),
+             rem = d - div
+        res &= sprintf("%d%c",{div,sep})
+        if rem==0 then exit end if
+        d = 1/rem
+        count -= 1
+        sep = ','
+    end while
+    res[$] = ']'
+    return res
+end function
+
+constant tests = {
+    {"[1;5,2] + 1/2  ", {2, 1, 0, 2}, r2cf({13,11}), 37/22},
+    {"[3;7] + 1/2    ", {2, 1, 0, 2}, r2cf({22, 7}), 3+1/7+1/2},
+    {"[3;7] / 4      ", {1, 0, 0, 4}, r2cf({22, 7}), (3+1/7)/4},
+    {"sqrt(2)        ", {1, 0, 0, 1}, root2(),       sqrt(2)},
+    {"sqrt(2) (inv)  ", {0, 1, 1, 0}, recip_root2(), 1/(1/sqrt(2))},
+    {"1/sqrt(2)      ", {1, 0, 0, 1}, recip_root2(), 1/sqrt(2)},
+    {"1/sqrt(2) (inv)", {0, 1, 1, 0}, root2(),       1/sqrt(2)},
+    {"(1+sqrt(2))/2  ", {1, 1, 0, 2}, root2(),       (1+sqrt(2))/2},
+    {"(1+1/sqrt(2))/2", {1, 1, 0, 2}, recip_root2(), (1+1/sqrt(2))/2}}
+
+for i=1 to length(tests) do
+    {string str, sequence bm, sequence cf, atom eres} = tests[i]
+    sequence res = apply_baby_matrix(bm, cf)
+    printf(1,"%s ->  %s --> %s\n",{str,cf2s(res),cf2r(res)})
+    printf(1,"           direct:  %s ==> %.15f\n",{d2cf(eres,length(res)),eres})
+end for

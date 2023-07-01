@@ -1,0 +1,152 @@
+tape = cluster is new, left, right, get_cell, set_cell
+    ac = array[char]
+    rep = record [
+        cells: ac,
+        index: int
+    ]
+
+    new = proc () returns (cvt)
+        t: rep := rep${
+            cells: ac$predict(0, 30000),
+            index: 0
+        }
+        ac$addh(t.cells, '\000')
+        return(t)
+    end new
+
+    left = proc (t: cvt)
+        t.index := t.index - 1
+        if t.index < ac$low(t.cells) then ac$addl(t.cells, '\000') end
+    end left
+
+    right = proc (t: cvt)
+        t.index := t.index + 1
+        if t.index > ac$high(t.cells) then ac$addh(t.cells, '\000') end
+    end right
+
+    get_cell = proc (t: cvt) returns (int)
+        return (char$c2i(t.cells[t.index]) // 256)
+    end get_cell
+
+    set_cell = proc (t: cvt, i: int)
+        t.cells[t.index] := char$i2c(i // 256)
+    end set_cell
+end tape
+
+program = cluster is parse, fetch, jump
+    loop_jump = struct[from, to: int]
+    alj = array[loop_jump]
+    slj = sequence[loop_jump]
+
+    rep = struct [
+        loops: slj,
+        code: string
+    ]
+
+    parse = proc (s: string) returns (cvt) signals (bad_loops)
+        ac = array[char]
+
+        prog: ac := ac$predict(1, string$size(s))
+        loops: alj := alj$[]
+        loop_stack: array[int] := array[int]$[]
+
+        for c: char in string$chars(s) do
+            if string$indexc(c, "+-<>,.[]") = 0 then continue end
+            ac$addh(prog, c)
+            if c = '[' then
+                array[int]$addh(loop_stack, ac$high(prog))
+            elseif c = ']' then
+                here: int := ac$high(prog)
+                there: int := array[int]$remh(loop_stack)
+                    except when bounds: signal bad_loops end
+                alj$addh(loops, loop_jump${from: here, to: there})
+                alj$addh(loops, loop_jump${from: there, to: here})
+            end
+        end
+
+        if ~array[int]$empty(loop_stack) then signal bad_loops end
+        return (rep${loops: slj$a2s(loops), code: string$ac2s(prog)})
+    end parse
+
+    fetch = proc (p: cvt, i: int) returns (char) signals (bounds)
+        return (p.code[i]) resignal bounds
+    end fetch
+
+    jump = proc (p: cvt, i: int) returns (int) signals (not_found)
+        for j: loop_jump in slj$elements(p.loops) do
+            if j.from = i then return (j.to) end
+        end
+        signal not_found
+    end jump
+end program
+
+brainf = cluster is make, run
+    rep = struct [
+        prog: program,
+        mem: tape,
+        inp, out: stream
+    ]
+
+    make = proc (p: program, i, o: stream) returns (cvt)
+        return (rep${
+            prog: p,
+            inp: i,
+            out: o,
+            mem: tape$new()
+        })
+    end make
+
+    read = proc (p: rep) returns (int)
+        return (char$c2i(stream$getc(p.inp)))
+        except when end_of_file:
+            return (0)
+        end
+    end read
+
+    write = proc (p: rep, c: int)
+        stream$putc(p.out, char$i2c(c))
+    end write
+
+    run = proc (p: cvt)
+        ip: int := 1
+        while true do
+            op: char := p.prog[ip] except when bounds: break end
+            if     op = '+' then p.mem.cell := p.mem.cell + 1
+            elseif op = '-' then p.mem.cell := p.mem.cell - 1
+            elseif op = '>' then tape$right(p.mem)
+            elseif op = '<' then tape$left(p.mem)
+            elseif op = ',' then p.mem.cell := read(p)
+            elseif op = '.' then write(p, p.mem.cell)
+            elseif op = '[' cand p.mem.cell = 0 then
+                ip := program$jump(p.prog, ip)
+            elseif op = ']' cand p.mem.cell ~= 0 then
+                ip := program$jump(p.prog, ip)
+            end
+            ip := ip + 1
+        end
+    end run
+end brainf
+
+read_whole_stream = proc (s: stream) returns (string)
+    chars: array[char] := array[char]$predict(1, 4096)
+    while true do
+        array[char]$addh(chars, stream$getc(s))
+        except when end_of_file: break end
+    end
+    return (string$ac2s(chars))
+end read_whole_stream
+
+start_up = proc ()
+    pi: stream := stream$primary_input()
+    po: stream := stream$primary_output()
+
+    stream$puts(po, "Filename? ")
+    fname: file_name := file_name$parse(stream$getl(pi))
+    file: stream := stream$open(fname, "read")
+    code: string := read_whole_stream(file)
+    stream$close(file)
+
+    prog: program := program$parse(code)
+    interp: brainf := brainf$make(prog, pi, po)
+    brainf$run(interp)
+end start_up

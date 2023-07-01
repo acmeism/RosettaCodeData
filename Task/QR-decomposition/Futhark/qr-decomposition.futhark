@@ -1,0 +1,30 @@
+import "lib/github.com/diku-dk/linalg/linalg"
+
+module linalg_f64 = mk_linalg f64
+
+let eye (n: i32): [n][n]f64 =
+  let arr = map (\ind -> let (i,j) = (ind/n,ind%n) in if (i==j) then 1.0 else 0.0) (iota (n*n))
+  in unflatten n n arr
+
+let norm v = linalg_f64.dotprod v v |> f64.sqrt
+
+let qr [n] [m] (a: [m][n]f64): ([m][m]f64, [m][n]f64) =
+
+  let make_householder [d] (x: [d]f64): [d][d]f64 =
+    let div = if x[0] > 0 then x[0] + norm x else x[0] - norm x
+    let v = map (/div) x
+    let v[0] = 1
+    let fac = 2.0 / linalg_f64.dotprod v v
+    in map2 (map2 (-)) (eye d) (map (map (*fac)) (linalg_f64.outer v v))
+
+  let step ((x,y):([m][m]f64,[m][n]f64)) (i:i32): ([m][m]f64,[m][n]f64) =
+    let h = eye m
+    let h[i:m,i:m] = make_householder y[i:m,i]
+    let q': [m][m]f64 = linalg_f64.matmul x h
+    let a': [m][n]f64 = linalg_f64.matmul h y
+    in (q',a')
+
+  let q = eye m
+  in foldl step (q,a) (iota n)
+
+entry main = qr [[12.0, -51.0, 4.0],[6.0, 167.0, -68.0],[-4.0, 24.0, -41.0]]

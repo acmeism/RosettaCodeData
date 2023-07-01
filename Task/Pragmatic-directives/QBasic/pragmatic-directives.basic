@@ -1,0 +1,4 @@
+TRON : REM activate system trace pragma
+TROFF : REM deactivate system trace pragma
+REM QBasic debugging features make these instructions unnecessary
+END

@@ -1,0 +1,54 @@
+import java.util.*
+
+abstract class HuffmanTree(var freq: Int) : Comparable<HuffmanTree> {
+    override fun compareTo(other: HuffmanTree) = freq - other.freq
+}
+
+class HuffmanLeaf(freq: Int, var value: Char) : HuffmanTree(freq)
+
+class HuffmanNode(var left: HuffmanTree, var right: HuffmanTree) : HuffmanTree(left.freq + right.freq)
+
+fun buildTree(charFreqs: IntArray) : HuffmanTree {
+    val trees = PriorityQueue<HuffmanTree>()
+
+    charFreqs.forEachIndexed { index, freq ->
+        if(freq > 0) trees.offer(HuffmanLeaf(freq, index.toChar()))
+    }
+
+    assert(trees.size > 0)
+    while (trees.size > 1) {
+        val a = trees.poll()
+        val b = trees.poll()
+        trees.offer(HuffmanNode(a, b))
+    }
+
+    return trees.poll()
+}
+
+fun printCodes(tree: HuffmanTree, prefix: StringBuffer) {
+    when(tree) {
+        is HuffmanLeaf -> println("${tree.value}\t${tree.freq}\t$prefix")
+        is HuffmanNode -> {
+            //traverse left
+            prefix.append('0')
+            printCodes(tree.left, prefix)
+            prefix.deleteCharAt(prefix.lastIndex)
+            //traverse right
+            prefix.append('1')
+            printCodes(tree.right, prefix)
+            prefix.deleteCharAt(prefix.lastIndex)
+        }
+    }
+}
+
+fun main(args: Array<String>) {
+    val test = "this is an example for huffman encoding"
+
+    val maxIndex = test.max()!!.toInt() + 1
+    val freqs = IntArray(maxIndex) //256 enough for latin ASCII table, but dynamic size is more fun
+    test.forEach { freqs[it.toInt()] += 1 }
+
+    val tree = buildTree(freqs)
+    println("SYMBOL\tWEIGHT\tHUFFMAN CODE")
+    printCodes(tree, StringBuffer())
+}

@@ -1,0 +1,3 @@
+with Ada.Assertions;  use Ada.Assertions;
+...
+Assert (A = 42, "Oops!");

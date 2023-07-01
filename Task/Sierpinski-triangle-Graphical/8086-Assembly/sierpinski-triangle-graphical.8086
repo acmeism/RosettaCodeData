@@ -1,0 +1,74 @@
+	;;;	Display a Sierpinski triangle on a CGA screen
+	;;;	(order 7 is the maximum that fits in 200 lines)
+mode:	equ	0Fh	; INT 10H call to get current video mode
+puts:	equ	9h	; MS-DOS call to print string
+cgaseg:	equ	0B800h	; Location of CGA video memory
+	cpu	8086
+	bits	16
+	org	100h
+section	.text
+	cmp	[80h],byte 2	; Argument length should be 2 (space + digit)
+	jne	eusage
+	mov	al,[82h]	; Get digit
+	sub	al,'0'+2	; 2->0, 7->5
+	cmp	al,5		; Then it must be <=5
+	jbe	argok
+eusage:	mov	dx,usage	; Print usage string
+estop:	mov	ah,puts
+	int	21h
+	ret			; And stop
+argok:	add	al,2		; Add 2, setting AL to the order
+	mov	[order],al	; Store the order
+	mov	ah,mode		; Get the current video mode
+	int	10h
+	cmp	al,7		; If MDA, we don't have graphics support
+	mov	dx,errcga
+	je	estop
+	mov	[vmode],al	; Otherwise, store the old mode
+	mov	ax,4		; and switch to mode 4 (320x200 graphics)
+	int	10h
+	mov	ch,1		; Size = 2^order
+	mov	cl,[order]
+	shl	ch,cl
+	xor	dh,dh		; Start at coords (0,0)
+	mov	bp,cgaseg	; Point ES at the CGA memory
+mkscr:	mov	es,bp
+	xor	di,di		; Start at the beginning
+mkline:	xor	dl,dl		; Start at coords (0,Y)
+mkbyte:	xor	al,al		; A byte has 4 pixels in it
+	mov	cl,4
+mkpx:	shl	al,1		; Make room for next pixel
+	shl	al,1
+	test	dl,dh		; X & Y == 0?
+	jnz	nextpx
+	or	al,3		; X & Y == 0, set pixel on
+nextpx:	inc	dl		; Increment X coordinate
+	dec	cl		; More pixels in this byte?
+	jnz	mkpx		; If so, add them in
+	stosb			; Otherwise, write it out to CGA memory
+	cmp	dl,ch		; And if the line is not done yet,
+	jb	mkbyte		; do the next byte on this line.
+	shr	dl,1		; Move ahead to start of next line
+	shr	dl,1
+	mov	ax,80		; 80 bytes per line
+	sub	al,dl
+	add	di,ax
+	add	dh,2		; Memory is interlaced so we're 2 lines further
+	cmp	dh,ch		; If we're not done yet,
+	jb	mkline		; Do the next line.
+	add	bp,200h		; Move ahead 8k to the area for the odd lines
+	cmp	bp,0BA00h	; Unless we were already there
+	mov	dh,1		; We'll have to start at line 1
+	jbe	mkscr
+	xor	ah,ah		; Wait for a keypress to get back to DOS
+	int	16h
+	xor	ah,ah		; Then, restore the old video mode,
+	mov	al,[vmode]
+	int	10h
+	ret			; And exit to DOS
+section	.data
+usage:	db	'SIERPCGA [2..7] - display Sierpinski triangle of order N$'
+errcga:	db	'Need at least CGA.$'
+section	.bss
+order:	resb	1		; Order of Sierpinski triangle
+vmode:	resb	1		; Store old video mode (to restore later)

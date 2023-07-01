@@ -1,0 +1,665 @@
+(*------------------------------------------------------------------*)
+(* The Rosetta Code topological sort task.                          *)
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+(* Macros for list construction. *)
+#define NIL list_nil ()
+#define ::  list_cons
+
+(*------------------------------------------------------------------*)
+(* A shorthand for list reversal. This could also have been written as
+   a macro. *)
+
+fn {a : t@ype}
+rev       {n   : int}
+          (lst : list (INV(a), n))
+    :<!wrt> list (a, n) =
+  (* The list_reverse template function returns a linear list. Convert
+     that result to a "regular" list. *)
+  list_vt2t (list_reverse<a> lst)
+
+(*------------------------------------------------------------------*)
+(* Some shorthands for string operations. These are written as
+   macros. *)
+
+macdef substr (s, i, n) =
+  (* string_make_substring returns a linear strnptr, but we want a
+     "regular" string. *)
+  strnptr2string (string_make_substring (,(s), ,(i), ,(n)))
+
+macdef copystr (s) =
+  (* string0 copy returns a linear strptr, but we want a "regular"
+     string. *)
+  strptr2string (string0_copy (,(s)))
+
+(*------------------------------------------------------------------*)
+
+local
+
+  (* A boolean type for setting marks, and a vector of those. *)
+  typedef _mark_t = [b : nat | b <= 1] uint8 b
+  typedef _marksvec_t (n : int) = arrayref (_mark_t, n)
+
+  (* Some type casts that seem not to be implemented in the
+     prelude. *)
+  implement g1int2uint<intknd, uint8knd> i = $UN.cast i
+  implement g1uint2int<uint8knd, intknd> i = $UN.cast i
+
+in
+
+  abstype marks (n : int)
+  assume marks n = _marksvec_t n
+
+  fn marks_make_elt
+            {n : nat}
+            {b : int | b == 0 || b == 1}
+            (n : size_t n,
+             b : int b)
+      :<!wrt> _marksvec_t n =
+    arrayref_make_elt (n, g1i2u b)
+
+  fn
+  marks_set_at
+            {n   : int}
+            {i   : nat | i < n}
+            {b   : int | b == 0 || b == 1}
+            (vec : _marksvec_t n,
+             i   : size_t i,
+             b   : int b)
+      :<!refwrt> void =
+    vec[i] := g1i2u b
+
+  fn
+  marks_get_at
+            {n   : int}
+            {i   : nat | i < n}
+            (vec : _marksvec_t n,
+             i   : size_t i)
+      :<!ref> [b : int | b == 0 || b == 1]
+              int b =
+    g1u2i vec[i]
+
+  fn
+  marks_setall
+            {n   : int}
+            {b   : int | b == 0 || b == 1}
+            (vec : _marksvec_t n,
+             n   : size_t n,
+             b   : int b)
+      :<!refwrt> void =
+    let
+      prval () = lemma_arrayref_param vec
+      var i : [i : nat | i <= n] size_t i
+    in
+      for* {i : nat | i <= n}
+           .<n - i>.
+           (i : size_t i) =>
+        (i := i2sz 0; i <> n; i := succ i)
+          vec[i] := g1i2u b
+    end
+
+  overload [] with marks_set_at of 100
+  overload [] with marks_get_at of 100
+  overload setall with marks_setall of 100
+
+end
+
+(*------------------------------------------------------------------*)
+(* Reading dependencies from a file. The format is kept very simple,
+   because this is not a task about parsing. (Though I have written
+   an S-expression parser in ATS, and there is JSON support in the
+   ATS contributions package.) *)
+
+(* The format of a dependencies description. The second and later
+   entries of each sublist forms the list of dependencies of the first
+   entry. Thus this is a kind of association list. *)
+typedef depdesc (n : int) = list (List1 String1, n)
+typedef depdesc = [n : nat] depdesc n
+
+typedef char_skipper =
+  {n : int}
+  {i : nat | i <= n}
+  (string n,
+   size_t n,
+   size_t i) -<cloref>          (* A closure. *)
+    [j : int | i <= j; j <= n]
+    size_t j
+
+fn
+make_char_skipper
+          (match : char -<> bool)
+    :<> char_skipper =
+  let
+    fun
+    skipper {n : int}
+            {i : nat | i <= n}
+            .<n - i>.
+            (s : string n,
+             n : size_t n,
+             i : size_t i)
+        :<cloref> [j : int | i <= j; j <= n]
+                  size_t j =
+      if i = n then
+        i
+      else if ~match s[i] then
+        i
+      else
+        skipper (s, n, succ i)
+  in
+    skipper                     (* Return a closure. *)
+  end
+
+val skip_spaces = make_char_skipper (lam c => isspace c)
+val skip_ident =
+  make_char_skipper (lam c => (~isspace c) * (c <> ';'))
+
+fn is_end_of_list (c : char) :<> bool = (c = ';')
+
+fn
+read_row {n : int}
+         {i : nat | i <= n}
+         (text : string n,
+          n    : size_t n,
+          i    : size_t i)
+    :<!wrt> [j : int | i <= j; j <= n]
+            @(List0 String1, size_t j) =
+  let
+    fun
+    loop {i : nat | i <= n}
+         .<n - i>.
+         (row : List0 String1,
+          i   : size_t i)
+        :<!wrt> [j : int | i <= j; j <= n]
+                @(List0 String1, size_t j) =
+      let
+        val i = skip_spaces (text, n, i)
+      in
+        if i = n then
+          @(rev row, i)
+        else if is_end_of_list text[i] then
+          @(rev row, succ i)
+        else
+          let
+            val j = skip_ident (text, n, i)
+            val () = $effmask_exn assertloc (i < j)
+            val nodename = substr (text, i, j - i)
+          in
+            loop (nodename :: row, j)
+          end
+      end
+  in
+    loop (NIL, i)
+  end
+
+fn
+read_desc {n    : int}
+          {i    : nat | i <= n}
+          (text : string n,
+           n    : size_t n,
+           i    : size_t i)
+    :<!wrt> [j : int | i <= j; j <= n]
+            @(depdesc, size_t j) =
+  let
+    fun
+    loop {i : nat | i <= n}
+         .<n - i>.
+         (desc : depdesc,
+          i    : size_t i)
+        :<!wrt> [j : int | i <= j; j <= n]
+                @(depdesc, size_t j) =
+      let
+        val i = skip_spaces (text, n, i)
+      in
+        if i = n then
+          @(rev desc, i)
+        else if is_end_of_list text[i] then
+          @(rev desc, succ i)
+        else
+          let
+            val @(row, j) = read_row (text, n, i)
+            val () = $effmask_exn assertloc (i < j)
+          in
+            if length row = 0 then
+              loop (desc, j)
+            else
+              loop (row :: desc, j)
+          end
+      end
+  in
+    loop (NIL, i)
+  end
+
+fn
+read_to_string ()
+    : String =
+  (* This simple implementation reads input only up to a certain
+     size. *)
+  let
+    #define BUFSIZE 8296
+    var buf = @[char][BUFSIZE] ('\0')
+    var c : int = $extfcall (int, "getchar")
+    var i : Size_t = i2sz 0
+  in
+    while ((0 <= c) * (i < pred (i2sz BUFSIZE)))
+      begin
+        buf[i] := int2char0 c;
+        i := succ i;
+        c := $extfcall (int, "getchar")
+      end;
+    copystr ($UN.cast{string} (addr@ buf))
+  end
+
+fn
+read_depdesc ()
+    : depdesc =
+  let
+    val text = read_to_string ()
+    prval () = lemma_string_param text
+    val n = strlen text
+    val @(desc, _) = read_desc (text, n, i2sz 0)
+  in
+    desc
+  end
+
+(*------------------------------------------------------------------*)
+(* Conversion of a dependencies description to the internal
+   representation for a topological sort. *)
+
+(* An ordered list of the node names. *)
+typedef nodenames (n : int) = list (String1, n)
+
+(* A more efficient representation for nodes: integers in 0..n-1. *)
+typedef nodenum (n : int) = [num : nat | num <= n - 1] size_t num
+
+(* A collection of directed edges. Edges go from the nodenum that is
+   represented by the array index, to each of the nodenums listed in
+   the corresponding array entry. *)
+typedef edges (n : int) = arrayref (List0 (nodenum n), n)
+
+(* An internal representation of data for a topological sort. *)
+typedef topodata (n : int) =
+  '{
+    n = size_t n,               (* The number of nodes. *)
+    edges = edges n,            (* Directed edges. *)
+    tempmarks = marks n,        (* Temporary marks. *)
+    permmarks = marks n         (* Permanent marks. *)
+  }
+
+fn
+collect_nodenames
+          (desc : depdesc)
+    :<!wrt> [n : nat]
+            @(nodenames n,
+              size_t n) =
+  let
+    fun
+    collect_row
+              {m  : nat}
+              {n0 : nat}
+              .<m>.
+              (row   : list (String1, m),
+               names : &nodenames n0 >> nodenames n1,
+               n     : &size_t n0 >> size_t n1)
+        :<!wrt> #[n1 : int | n0 <= n1]
+                void =
+      case+ row of
+      | NIL => ()
+      | head :: tail =>
+        let
+          implement list_find$pred<String1> s = (s = head)
+        in
+          case+ list_find_opt<String1> names of
+          | ~ None_vt () =>
+            begin
+              names := head :: names;
+              n := succ n;
+              collect_row (tail, names, n)
+            end
+          | ~ Some_vt _ => collect_row (tail, names, n)
+        end
+
+    fun
+    collect   {m  : nat}
+              {n0 : nat}
+              .<m>.
+              (desc  : list (List1 String1, m),
+               names : &nodenames n0 >> nodenames n1,
+               n     : &size_t n0 >> size_t n1)
+        :<!wrt> #[n1 : int | n0 <= n1]
+                void =
+      case+ desc of
+      | NIL => ()
+      | head :: tail =>
+        begin
+          collect_row (head, names, n);
+          collect (tail, names, n)
+        end
+
+    var names : List0 String1 = NIL
+    var n : Size_t = i2sz 0
+  in
+    collect (desc, names, n);
+    @(rev names, n)
+  end
+
+fn
+nodename_number
+          {n         : int}
+          (nodenames : nodenames n,
+           name      : String1)
+    :<> Option (nodenum n) =
+  let
+    fun
+    loop {i : nat | i <= n}
+         .<n - i>.
+         (names : nodenames (n - i),
+          i     : size_t i)
+        :<> Option (nodenum n) =
+      case+ names of
+      | NIL => None ()
+      | head :: tail =>
+        if head = name then
+          Some i
+        else
+          loop (tail, succ i)
+
+    prval () = lemma_list_param nodenames
+  in
+    loop (nodenames, i2sz 0)
+  end
+
+fn
+add_edge  {n     : int}
+          (edges : edges n,
+           from  : nodenum n,
+           to    : nodenum n)
+    :<!refwrt> void =
+  (* This implementation does not store duplicate edges. *)
+  let
+    val old_edges = edges[from]
+    implement list_find$pred<nodenum n> s = (s = to)
+  in
+    case+ list_find_opt<nodenum n> old_edges of
+    | ~ None_vt () => edges[from] := to :: old_edges
+    | ~ Some_vt _ => ()
+  end
+
+fn
+fill_edges
+          {n         : int}
+          {m         : int}
+          (edges     : edges n,
+           n         : size_t n,
+           desc      : depdesc m,
+           nodenames : nodenames n)
+    :<!refwrt> void =
+  let
+    prval () = lemma_list_param desc
+    prval () = lemma_list_param nodenames
+
+    fn
+    clear_edges ()
+        :<!refwrt> void =
+      let
+        var i : [i : nat | i <= n] size_t i
+      in
+        for* {i : nat | i <= n}
+             .<n - i>.
+             (i : size_t i) =>
+          (i := i2sz 0; i <> n; i := succ i)
+            edges[i] := NIL
+      end
+
+    fun
+    fill_from_desc_entry
+              {m1 : nat}
+              .<m1>.
+              (headnum : nodenum n,
+               lst     : list (String1, m1))
+        :<!refwrt> void =
+      case+ lst of
+      | NIL => ()
+      | name :: tail =>
+        let
+          val- Some num = nodename_number (nodenames, name)
+        in
+          if num <> headnum then
+            add_edge {n} (edges, num, headnum);
+          fill_from_desc_entry (headnum, tail)
+        end
+
+    fun
+    fill_from_desc
+              {m2 : nat}
+              .<m2>.
+              (lst : list (List1 String1, m2))
+        :<!refwrt> void =
+      case+ lst of
+      | NIL => ()
+      | list_entry :: tail =>
+        let
+          val+ headname :: desc_entry = list_entry
+          val- Some headnum = nodename_number (nodenames, headname)
+        in
+          fill_from_desc_entry (headnum, desc_entry);
+          fill_from_desc tail
+        end
+  in
+    clear_edges ();
+    fill_from_desc desc
+  end
+
+fn
+topodata_make
+          (desc : depdesc)
+    :<!refwrt> [n : nat]
+               @(topodata n,
+                 nodenames n) =
+  let
+    val @(nodenames, n) = collect_nodenames desc
+    prval () = lemma_g1uint_param n
+    prval [n : int] EQINT () = eqint_make_guint n
+
+    val edges = arrayref_make_elt<List0 (nodenum n)> (n, NIL)
+    val () = fill_edges {n} (edges, n, desc, nodenames)
+
+    val tempmarks = marks_make_elt (n, 0)
+    and permmarks = marks_make_elt (n, 0)
+
+    val topo =
+      '{
+        n = n,
+        edges = edges,
+        tempmarks = tempmarks,
+        permmarks = permmarks
+      }
+  in
+    @(topo, nodenames)
+  end
+
+(*------------------------------------------------------------------*)
+(*
+
+  Topological sort by depth-first search. See
+  https://en.wikipedia.org/w/index.php?title=Topological_sorting&oldid=1092588874#Depth-first_search
+
+*)
+
+(* What return values are made from. *)
+datatype toporesult (a : t@ype, n : int) =
+| {0 <= n}
+  Topo_SUCCESS (a, n) of list (a, n)
+| Topo_CYCLE (a, n) of List1 a
+typedef toporesult (a : t@ype) = [n : int] toporesult (a, n)
+
+fn
+find_unmarked_node
+          {n    : int}
+          (topo : topodata n)
+    :<!ref> Option (nodenum n) =
+  let
+    val n = topo.n
+    and permmarks = topo.permmarks
+
+    prval () = lemma_g1uint_param n
+
+    fun
+    loop {i : nat | i <= n}
+         .<n - i>.
+         (i : size_t i)
+        :<!ref> Option (nodenum n) =
+      if i = n then
+        None ()
+      else if permmarks[i] = 0 then
+        Some i
+      else
+        loop (succ i)
+  in
+    loop (i2sz 0)
+  end
+
+fun
+visit     {n       : int}
+          (topo    : topodata n,
+           nodenum : nodenum n,
+           accum   : List0 (nodenum n),
+           path    : List0 (nodenum n))
+    : toporesult (nodenum n) =
+  (* Probably it is cumbersome to include a proof this routine
+     terminates. Thus I will not try to write one. *)
+  let
+    val n = topo.n
+    and edges = topo.edges
+    and tempmarks = topo.tempmarks
+    and permmarks = topo.permmarks
+  in
+    if permmarks[nodenum] = 1 then
+      Topo_SUCCESS accum
+    else if tempmarks[nodenum] = 1 then
+      let
+        val () = assertloc (isneqz path)
+      in
+        Topo_CYCLE path
+      end
+    else
+      let
+        fun
+        recursive_visits
+                  {k  : nat}
+                  .<k>.
+                  (topo     : topodata n,
+                   to_visit : list (nodenum n, k),
+                   accum    : List0 (nodenum n),
+                   path     : List0 (nodenum n))
+            : toporesult (nodenum n) =
+          case+ to_visit of
+          | NIL => Topo_SUCCESS accum
+          | node_to_visit :: tail =>
+            begin
+              case+ visit (topo, node_to_visit, accum, path) of
+              | Topo_SUCCESS accum1 =>
+                recursive_visits (topo, tail, accum1, path)
+              | other => other
+            end
+      in
+        tempmarks[nodenum] := 1;
+        case+ recursive_visits (topo, edges[nodenum], accum,
+                                nodenum :: path) of
+        | Topo_SUCCESS accum1 =>
+          begin
+            tempmarks[nodenum] := 0;
+            permmarks[nodenum] := 1;
+            Topo_SUCCESS (nodenum :: accum1)
+          end
+        | other => other
+      end
+  end
+
+fn
+topological_sort
+          {n    : int}
+          (topo : topodata n)
+    : toporesult (nodenum n, n) =
+  let
+    prval () = lemma_arrayref_param (topo.edges)
+
+    fun
+    sort (accum : List0 (nodenum n))
+        : toporesult (nodenum n, n) =
+      case+ find_unmarked_node topo of
+      | None () =>
+        let
+          prval () = lemma_list_param accum
+          val () = assertloc (i2sz (length accum) = topo.n)
+        in
+          Topo_SUCCESS accum
+        end
+      | Some nodenum =>
+        begin
+          case+ visit (topo, nodenum, accum, NIL) of
+          | Topo_SUCCESS accum1 => sort accum1
+          | Topo_CYCLE cycle => Topo_CYCLE cycle
+        end
+
+    val () = setall (topo.tempmarks, topo.n, 0)
+    and () = setall (topo.permmarks, topo.n, 0)
+
+    val accum = sort NIL
+
+    val () = setall (topo.tempmarks, topo.n, 0)
+    and () = setall (topo.permmarks, topo.n, 0)
+  in
+    accum
+  end
+
+(*------------------------------------------------------------------*)
+(* The function asked for in the task. *)
+
+fn
+find_a_valid_order
+          (desc : depdesc)
+    : toporesult String1 =
+  let
+    val @(topo, nodenames) = topodata_make desc
+
+    prval [n : int] EQINT () = eqint_make_guint (topo.n)
+
+    val nodenames_array =
+      arrayref_make_list<String1> (sz2i (topo.n), nodenames)
+
+    implement
+    list_map$fopr<nodenum n><String1> i =
+      nodenames_array[i]
+
+    (* A shorthand for mapping from nodenum to string. *)
+    macdef map (lst) =
+      list_vt2t (list_map<nodenum n><String1> ,(lst))
+  in
+    case+ topological_sort topo of
+    | Topo_SUCCESS valid_order => Topo_SUCCESS (map valid_order)
+    | Topo_CYCLE cycle => Topo_CYCLE (map cycle)
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+main0 (argc, argv) =
+  let
+    val desc = read_depdesc ()
+  in
+    case+ find_a_valid_order desc of
+    | Topo_SUCCESS valid_order =>
+      println! (valid_order : List0 string)
+    | Topo_CYCLE cycle =>
+      let
+        val last = list_last cycle
+        val cycl = rev (last :: cycle)
+      in
+        println! ("COMPILATION CYCLE: ", cycl : List0 string)
+      end
+  end
+
+(*------------------------------------------------------------------*)

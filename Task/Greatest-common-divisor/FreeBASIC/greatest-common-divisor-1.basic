@@ -1,0 +1,26 @@
+' version 17-06-2015
+' compile with: fbc -s console
+
+Function gcd(x As ULongInt, y As ULongInt) As ULongInt
+    Dim As ULongInt t
+    While y
+        t = y
+        y = x Mod y
+        x = t
+    Wend
+    Return x
+End Function
+
+' ------=< MAIN >=------
+
+Dim As ULongInt a = 111111111111111
+Dim As ULongInt b = 11111
+
+Print : Print "GCD(";a;", ";b;") = "; gcd(a, b)
+Print : Print "GCD(";a;", 111) = "; gcd(a, 111)
+
+' empty keyboard buffer
+While InKey <> "" : Wend
+Print : Print : Print "hit any key to end program"
+Sleep
+End

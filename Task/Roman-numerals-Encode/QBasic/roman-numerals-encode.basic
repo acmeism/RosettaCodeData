@@ -1,0 +1,25 @@
+DIM SHARED arabic(0 TO 12)
+DIM SHARED roman$(0 TO 12)
+
+FUNCTION toRoman$ (value)
+    LET result$ = ""
+    FOR i = 0 TO 12
+        DO WHILE value >= arabic(i)
+           LET result$ = result$ + roman$(i)
+           LET value = value - arabic(i)
+        LOOP
+    NEXT i
+    toRoman$ = result$
+END FUNCTION
+
+FOR i = 0 TO 12
+    READ arabic(i), roman$(i)
+NEXT i
+
+DATA 1000, "M", 900, "CM", 500, "D", 400, "CD", 100, "C", 90, "XC"
+DATA 50, "L", 40, "XL", 10, "X", 9, "IX", 5, "V",  4, "IV", 1, "I"
+
+'Testing
+PRINT "2009 = "; toRoman$(2009)
+PRINT "1666 = "; toRoman$(1666)
+PRINT "3888 = "; toRoman$(3888)

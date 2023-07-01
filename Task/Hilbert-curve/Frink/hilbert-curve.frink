@@ -1,0 +1,114 @@
+// General description:
+// This code creates Lindenmayer rules via string manipulation
+// It can generate many of the examples from the Wikipedia page
+// discussing L-system fractals: http://en.wikipedia.org/wiki/L-system
+//
+// It does not support stochastic, context sensitive or parametric grammars
+//
+// It supports four special rules, and any number of variables in rules
+// f = move forward one unit
+// - = turn left one turn
+// + = turn right one turn
+// [ = save angle and position on a stack
+// ] = restore angle and position from the stack
+
+
+// The turn is how far each + or - in the final rule turns to either side
+turn = 90 degrees
+// This is how many times the rules get applied before we draw the result
+times = 5
+// This is our starting string
+start = "++a"
+// These are the rules we apply
+rules = [["f","f"],["a","-bf+afa+fb-"], ["b","+af-bfb-fa+"]]
+
+// L-System rules pulled from Wikipedia
+// Dragon
+// 90 degrees, "fx", [["f","f"],["x","x+yf"],["y","fx-y"]]
+
+// TerDragon
+// 120 degrees, "f", [["f","f+f-f"]]
+
+// Koch curve
+// 90 degrees, "f", [["f","f+f-f-f+f"]]
+// use "++f" as the start to flip it over
+
+// Sierpinski Triangle
+// 60 degrees, "bf", [["f","f"],["a","bf-af-b"],["b","af+bf+a"]]
+
+// Plant
+// 25 degrees, "--x", [["f","ff"],["x","f-[[x]+x]+f[+fx]-x"]]
+
+// Hilbert space filling curve
+// 90 degrees, "++a", [["f","f"],["a","-bf+afa+fb-"], ["b","+af-bfb-fa+"]]
+
+// Peano-Gosper curve
+// 60 degrees, "x", [["f","f"],["x","x+yf++yf-fx--fxfx-yf+"], ["y","-fx+yfyf++yf+fx--fx-y"]]
+
+// Lévy C curve
+// 45 degrees, "f", [["f","+f--f+"]]
+
+// This function will apply our rule once, using string substitutions based
+// on the rules we pass it
+// It does this in two passes to avoid problems with pairs of mutually referencing
+// rules such as in the Sierpinski Triangle
+// rules@k@1 could replace toString[k] and the entire second loop could
+// vanish without adversely affecting the Dragon or Koch curves.
+
+apply_rules[rules, current] :=
+{
+   n = current
+   for k = 0 to length[rules]-1
+   {
+      rep = subst[rules@k@0,toString[k],"g"]
+      n =~ rep
+   }
+   for k = 0 to length[rules]-1
+   {
+      rep = subst[toString[k],rules@k@1,"g"]
+      n =~ rep
+   }
+   return n
+}
+
+// Here we will actually apply our rules the number of times specified
+current = start
+for i = 0 to times - 1
+{
+   current = apply_rules[rules, current]
+   // Uncomment this line to see the string that is being produced at each stage
+   // println[current]
+}
+
+// Go ahead and plot the image now that we've worked it out
+g = new graphics
+g.antialiased[false]   // Comment this out for non-square rules. It looks better
+theta = 0 degrees
+x = 0
+y = 0
+stack = new array
+for i = 0 to length[current]-1
+{
+   // This produces a nice sort of rainbow effect where most colors appear
+   // comment it out for a plain black fractal
+   // g.color[abs[sin[i degrees]],abs[cos[i*2 degrees]],abs[sin[i*4 degrees]]]
+
+   cur = substrLen[current,i,1]
+   if cur == "-"
+      theta = theta - (turn)
+   if cur == "+"
+      theta = theta + (turn)
+   if cur == "f" or cur == "F"
+   {
+      g.line[x,y,x + cos[theta],y + sin[theta]]
+      x = x + cos[theta]
+      y = y + sin[theta]
+   }
+   if cur == "["
+      stack.push[[theta,x,y]]
+   if cur == "]"
+      [theta,x,y] = stack.pop[]
+}
+
+g.show[]
+g.write["hilbert.png",512,undef]

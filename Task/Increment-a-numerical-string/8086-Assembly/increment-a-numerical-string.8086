@@ -1,0 +1,51 @@
+	cpu	8086
+	bits	16
+section	.text
+	org	100h
+	jmp	demo		; Jump towards demo code
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Increment the number in the $-terminated string
+	;;;	in [ES:DI]. The string is written back to its original
+	;;;	location. It may grow by one byte.
+incnum:	mov	al,'$'		; Find string terminator
+	mov	bx,di		; Store the beginning of the string
+	mov	cx,-1
+	repne	scasb
+	dec	di		; Move to the terminator
+	cmp	bx,di		; If the string is empty, do nothing
+	je	.out
+.digit:	cmp	bx,di		; Is this the first digit?
+	je	.grow		; If so, the string grows
+	dec	di		; Go one digit backwards
+	inc	byte [es:di]	; Increment the digit
+	cmp	byte [es:di],'9'+1	; Did we increment past 9?
+	jne	.out		; If not, we're done
+	mov	byte [es:di],'0'	; Otherwise, write a zero
+	jmp	.digit		; And increment the next digit
+.grow:	mov	al,'1'		; Write an 1 first (we know the string
+	stosb			; is at least one character long)
+	dec	al		; Zero
+.zero:	cmp	byte [es:di],'$'	; Are we about to overwrite
+	stosb			; the terminator? First, do it anyway;
+	jne	.zero		; Keep writing zeroes until $ is reached
+	mov	al,'$'		; Finally, write a new terminator
+	stosb	
+.out:	ret
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Demo code: increment the number on the MS-DOS
+	;;;	command line.
+demo:	mov	si,80h		; $-terminate the string
+	lodsb
+	xor	bh,bh
+	mov	bl,al
+	mov	byte [si+bx],'$'
+	mov	al,' '		; Skip past any spaces
+	mov	cx,-1
+	mov	di,si
+	repe	scasb
+	dec	di
+	mov	dx,di		; Keep start of string in DX
+	call	incnum		; Increment the number in the string
+	mov	ah,9		; Print the string
+	int	21h
+	ret

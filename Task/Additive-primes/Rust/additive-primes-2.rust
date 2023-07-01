@@ -1,0 +1,19 @@
+// [dependencies]
+// primal = "0.3.0"
+
+fn sum_digits(u: usize) -> usize {
+    std::iter::successors(Some(u), |&n| (n > 9).then(|| n / 10)).fold(0, |s, n| s + n % 10)
+}
+
+fn main() {
+    let limit = 500;
+    let column_w = limit.to_string().len() + 1;
+    let sieve_primes = primal::Sieve::new(limit);
+    let count = sieve_primes
+        .primes_from(2)
+        .filter(|&p| p < limit && sieve_primes.is_prime(sum_digits(p)))
+        .zip(["\n"].iter().chain(&[""; 9]).cycle())
+        .inspect(|(u, sn)| print!("{sn}{u:column_w$}"))
+        .count();
+    println!("\n---\nFound {count} additive primes less than {limit}");
+}

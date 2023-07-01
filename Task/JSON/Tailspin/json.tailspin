@@ -1,0 +1,82 @@
+// Not all JSON object member keys can be represented, a fallback would need to be implemented
+// Currently Tailspin only supports integers so for now we leave numbers as strings, as we do for true, false and null
+
+templates hexToInt
+  templates hexDigit
+    <='0'> 0! <='1'> 1! <='2'> 2! <='3'> 3! <='4'> 4! <='5'> 5! <='6'> 6! <='7'> 7! <='8'> 8! <='9'> 9!
+    <'[Aa]'> 10! <'[Bb]'> 11! <'[Cc]'> 12! <'[Dd]'> 13! <'[Ee]'> 14! <'[Ff]'> 15!
+  end hexDigit
+  @: 0;
+  $... -> hexDigit -> @: $@ * 16 + $;
+  $@ !
+end hexToInt
+
+composer jsonParser
+  <value>
+  rule value: (<WS>?) <string|number|object|array|true|false|null> (<WS>?)
+
+  rule string: (<='"'>) <chars>  (<='"'>)
+  rule chars: [ <quote|backslash|slash|backspace|formfeed|linefeed|return|tab|unicode|'[^"]'>* ] -> '$...;'
+  rule quote: <='\"'> -> '"'
+  rule backslash: <='\\'> -> '\'
+  rule slash: <='\/'> -> '/'
+  rule backspace: <='\b'> -> '$#8;'
+  rule formfeed: <='\f'> -> '$#12;'
+  rule linefeed: <='\n'> -> '$#10;'
+  rule return: <='\r'> -> '$#13;'
+  rule tab: <='\t'> -> '$#9;'
+  rule unicode: (<='\u'>) <'[0-9A-Fa-f]{4}'> -> hexToInt -> '$#$;'
+
+  rule number: <'-?(0|[1-9][0-9]*)(\.[0-9]+)?((e|E)(\+|-)?[0-9]+)?'> // TODO: represent this other than string
+
+  rule object: (<='{'> <WS>?) { <keyValues>? } (<='}'>)
+  rule keyValues: <keyValue> <followingKeyValue>*
+  rule keyValue: <string>: (<WS>? <=':'>) <value>
+  rule followingKeyValue: (<=','> <WS>?) <keyValue>
+
+  rule array: (<='['>) [ <arrayValues>? ] (<=']'>)
+  rule arrayValues: <value> <followingArrayValue>*
+  rule followingArrayValue: (<=','>) <value>
+
+  rule true: <='true'> // TODO: represent this other than string
+  rule false: <='false'> // TODO: represent this other than string
+  rule null: <='null'> // TODO: represent this other than string
+end jsonParser
+
+templates printJson
+  templates printKeyValue
+    '$::key -> printJson;: $::value -> printJson;' !
+  end printKeyValue
+  templates encodeChars
+    <='"'> '\"' !
+    <='\'> '\\' !
+    <='/'> '\/' !
+    <='$#8;'> '\b' !
+    <='$#12;'> '\f' !
+    <='$#10;'> '\n' !
+    <='$#13;'> '\r' !
+    <='$#9;'> '\t' !
+    <> $ !
+  end encodeChars
+  $ -> #
+  when <[]> do
+    '[$(1) -> printJson;$(2..last)... -> ', $ -> printJson;';]' !
+  when <{}> do
+    [ $... ] -> '{$(1) -> printKeyValue;$(2..last)... -> ', $ -> printKeyValue;';}' !
+  when <..> do
+    '$;'!
+  when <''> do
+    [ $... -> encodeChars ] -> '"$...;"' !
+  otherwise 'WTF!' !
+  // Other types do not yet exist in Tailspin
+end printJson
+
+'{ "foo": 1, "bar": [10, "apples"] }' -> jsonParser -> '$.bar(2);
+' -> !OUT::write
+
+{ blue: [1,2], ocean: 'water' } -> printJson -> '$;
+' -> !OUT::write
+
+'plain string
+' -> printJson -> '$;
+' -> !OUT::write

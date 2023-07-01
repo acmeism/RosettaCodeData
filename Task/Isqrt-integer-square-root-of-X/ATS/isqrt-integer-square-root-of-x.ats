@@ -1,0 +1,220 @@
+(*
+
+Compile with "myatscc isqrt.dats", thus obtaining an executable called
+"isqrt".
+
+##myatsccdef=\
+patscc -O2 \
+  -I"${PATSHOME}/contrib/atscntrb" \
+  -IATS "${PATSHOME}/contrib/atscntrb" \
+  -D_GNU_SOURCE -DATS_MEMALLOC_LIBC \
+  -o $fname($1) $1 -lgmp
+
+*)
+
+#include "share/atspre_staload.hats"
+
+(* An interface to GNU Multiple Precision. The type system will help
+   ensure that you do "mpz_clear" on whatever you allocate. *)
+staload "atscntrb-hx-libgmp/SATS/gmp.sats"
+
+(* As of this writing, gmp.dats is empty, but it does no harm to
+   staload it. *)
+staload _ = "atscntrb-hx-libgmp/DATS/gmp.dats"
+
+fn
+find_a_power_of_4_greater_than_x
+          (x : &mpz,            (* Input. *)
+           q : &mpz? >> mpz)    (* Output. *)
+    : void =
+  let
+    fun
+    loop (x : &mpz, q : &mpz) : void =
+      if 0 <= mpz_cmp (x, q) then
+        begin
+          mpz_mul (q, 4u);
+          loop (x, q)
+        end
+  in
+    mpz_init_set (q, 1u);
+    loop (x, q)
+  end
+
+fn
+isqrt_and_remainder
+          (x : &mpz,            (* Input. *)
+           r : &mpz? >> mpz,    (* Output: square root. *)
+           z : &mpz? >> mpz)    (* Output: remainder. *)
+    : void =
+  let
+    fun
+    loop (q : &mpz, z : &mpz, r : &mpz, t : &mpz) : void =
+      if 0 < mpz_cmp (q, 1u) then
+        begin
+          mpz_tdiv_q (q, 4u);
+          mpz_set_mpz (t, z);
+          mpz_sub (t, r);
+          mpz_sub (t, q);
+          mpz_tdiv_q (r, 2u);
+          if 0 <= mpz_cmp (t, 0u) then
+            begin
+              mpz_set_mpz (z, t);
+              mpz_add (r, q);
+            end;
+          loop (q, z, r, t);
+        end
+
+    var q : mpz
+    var t : mpz
+  in
+    find_a_power_of_4_greater_than_x (x, q);
+    mpz_init_set (z, x);
+    mpz_init_set (r, 0u);
+    mpz_init (t);
+
+    loop (q, z, r, t);
+
+    mpz_clear (q);
+    mpz_clear (t);
+  end
+
+fn
+isqrt (x : &mpz,                (* Input. *)
+       r : &mpz? >> mpz)        (* Output: square root. *)
+    : void =
+  let
+    var z : mpz
+  in
+    isqrt_and_remainder (x, r, z);
+    mpz_clear (z);
+  end
+
+fn
+print_n_spaces (n : uint) : void =
+  let
+    var i : [i : nat] uint i
+  in
+    for (i := 0u; i < n; i := succ i)
+      print! (" ")
+  end
+
+fn
+print_with_commas (n           : &mpz,
+                   num_columns : uint) : void =
+  let
+    fun
+    make_list (q   : &mpz,
+               r   : &mpz,
+               lst : List0_vt char,
+               i   : uint) : List_vt char =
+      if mpz_cmp (q, 0u) = 0 then
+        lst
+      else
+        let
+          val _ = mpz_tdiv_qr (q, r, 10u)
+          val ones_place = mpz_get_int (r)
+          val digit = int2char0 (ones_place + char2i '0')
+        in
+          if i = 3u then
+            let
+              val lst = list_vt_cons (',', lst)
+              val lst = list_vt_cons (digit, lst)
+            in
+              make_list (q, r, lst, 1u)
+            end
+          else
+            let
+              val lst = list_vt_cons (digit, lst)
+            in
+              make_list (q, r, lst, succ i)
+            end
+        end
+
+    var q : mpz
+    var r : mpz
+
+    val _ = mpz_init_set (q, n)
+    val _ = mpz_init (r)
+    val char_lst = make_list (q, r, list_vt_nil (), 0u)
+    val _ = mpz_clear (q)
+    val _ = mpz_clear (r)
+
+    fun
+    print_and_consume_lst (char_lst : List0_vt char) : void =
+      case+ char_lst of
+      | ~ list_vt_nil () => ()
+      | ~ list_vt_cons (head, tail) =>
+        begin
+          print! (head);
+          print_and_consume_lst (tail);
+        end
+
+    prval _ = lemma_list_vt_param (char_lst)
+    val len = i2u (list_vt_length (char_lst))
+  in
+    assertloc (len <= num_columns);
+    print_n_spaces (num_columns - len);
+    print_and_consume_lst (char_lst)
+  end
+
+fn
+do_the_roots_of_0_to_65 () : void =
+  let
+    var i : mpz
+  in
+    mpz_init_set (i, 0u);
+    while (mpz_cmp (i, 65u) <= 0)
+      let
+        var r : mpz
+      in
+        isqrt (i, r);
+        fprint (stdout_ref, r);
+        print! (" ");
+        mpz_add (i, 1u);
+        mpz_clear (r);
+      end;
+    mpz_clear (i);
+  end
+
+fn
+do_the_roots_of_odd_powers_of_7 () : void =
+  let
+    var seven : mpz
+    var seven_raised_i : mpz
+    var i_mpz : mpz
+    var i : [i : pos] uint i
+  in
+    mpz_init_set (seven, 7u);
+    mpz_init (seven_raised_i);
+    mpz_init (i_mpz);
+    for (i := 1u; i <= 73u; i := succ (succ i))
+      let
+        var r : mpz
+      in
+        mpz_pow_uint (seven_raised_i, seven, i);
+        isqrt (seven_raised_i, r);
+        mpz_set_uint (i_mpz, i);
+        print_with_commas (i_mpz, 2u);
+        print! (" ");
+        print_with_commas (seven_raised_i, 84u);
+        print! (" ");
+        print_with_commas (r, 43u);
+        print! ("\n");
+        mpz_clear (r);
+      end;
+    mpz_clear (seven);
+    mpz_clear (seven_raised_i);
+    mpz_clear (i_mpz);
+  end
+
+implement
+main0 () =
+  begin
+    print! ("isqrt(i) for 0 <= i <= 65:\n\n");
+    do_the_roots_of_0_to_65 ();
+    print! ("\n\n\n");
+    print! ("isqrt(7**i) for 1 <= i <= 73, i odd:\n\n");
+    print! (" i                                                                                 7**i                                  sqrt(7**i)\n");
+    print! ("-----------------------------------------------------------------------------------------------------------------------------------\n");
+    do_the_roots_of_odd_powers_of_7 ();
+  end

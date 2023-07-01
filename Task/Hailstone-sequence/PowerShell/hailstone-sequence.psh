@@ -1,0 +1,20 @@
+function Get-HailStone {
+    param($n)
+
+    switch($n) {
+        1              {$n;return}
+        {$n % 2 -eq 0} {$n; return Get-Hailstone ($n = $n / 2)}
+        {$n % 2 -ne 0} {$n; return Get-Hailstone ($n = ($n * 3) +1)}
+    }
+}
+
+function Get-HailStoneBelowLimit {
+    param($UpperLimit)
+
+    for ($i = 1; $i -lt $UpperLimit; $i++) {
+        [pscustomobject]@{
+            'Number' = $i
+            'Count' = (Get-HailStone $i).count
+        }
+    }
+}

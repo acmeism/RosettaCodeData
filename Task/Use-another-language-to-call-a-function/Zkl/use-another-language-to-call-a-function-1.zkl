@@ -1,0 +1,47 @@
+// query.c
+// export zklRoot=/home/ZKL
+// clang query.c -I $zklRoot/VM -L $zklRoot/Lib -lzkl -pthread -lncurses -o query
+// LD_LIBRARY_PATH=$zklRoot/Lib ./query
+
+#include <stdio.h>
+#include <string.h>
+
+#include "zklObject.h"
+#include "zklImports.h"
+#include "zklClass.h"
+#include "zklFcn.h"
+#include "zklString.h"
+
+int query(char *buf, size_t *sz)
+{
+   Instance *r;
+   pVM       vm;
+   MLIST(mlist,10);
+
+   // Bad practice: not protecting things from the garbage collector
+
+   // build the call parameters: ("query.zkl",False,False,True)
+   mlistBuild(mlist,stringCreate("query.zkl",I_OWNED,NoVM),
+              BoolFalse,BoolFalse,BoolTrue,ZNIL);
+   // Import is in the Vault, a store of useful stuff
+   // We want to call TheVault.Import.import("query.zkl",False,False,True)
+   //    which will load/compile/run query.zkl
+   r = fcnRunith("Import","import",(Instance *)mlist,NoVM);
+   // query.zkl is a class with a var that has the query result
+   r = classFindVar(r,"query",0,NoVM);  // -->the var contents
+   strcpy(buf,stringText(r));     // decode the string into a char *
+   *sz = strlen(buf);   // screw overflow checking
+   return 1;
+}
+
+int main(int argc, char* argv[])
+{
+   char   buf[100];
+   size_t sz = sizeof(buf);
+
+   zklConstruct(argc,argv);	// initialize the zkl shared library
+   query(buf,&sz);
+   printf("Query() --> \"%s\"\n",buf);
+
+   return 0;
+}

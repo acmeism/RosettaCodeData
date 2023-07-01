@@ -1,0 +1,119 @@
+	bits	64
+section	.data
+	;;;	Header
+header:	db	'Gap no  Gap   Niven index    Niven number',10
+	db	'------  ---  -------------  --------------',10
+.len:	equ	$-header
+	;;;	Placeholder for line output
+line:	db	'XXXXXX'
+.gapno:	db	'  XXX'
+.gap:	db	'  XXXXXXXXXXXXX'
+.nivno:	db	'  XXXXXXXXXXXXXX'
+.niv:	db	10
+.len:	equ 	$-line
+section	.text
+global	_start
+_start:	xor	r8,r8		; Keep a 10 in R8 to divide by
+	mov	r8b,10
+	mov	rsi,header	; Write header
+	mov	rdx,header.len
+	call	write
+	xor	r15,r15		; Let R15 be the previous number
+	inc	r15
+	xor	r14,r14		; Let R14 be the gap
+	xor	r13,r13		; Let R13 be the digit sum
+	xor	r12,r12		; Let R12 be the index
+	mov	r11,r15		; Let R11 be the gap index
+	xor	r10,r10		; And let R10 be the Niven number
+	jmp	niven		; Jump over end of loop
+next: 	mov	r15,r10		; Previous number is now current number
+	inc	r12		; Increment index
+niven:	inc	r10 		; Check next Niven number
+	inc	r13		; Calculate next digit sum
+	mov	rax,r10		; rax = n/10
+	xor	rdx,rdx		; rdx = n%10
+digsum:	div	r8
+	sub	r13,9		; sum -= 9
+	test	rdx,rdx		; was it divisible by 10?
+	jnz	check		; if not, we're done
+	test	rax,rax		; otherwise, have we reached 0?
+	jnz	digsum		; if not, keep going
+check:	add	r13,9		; add 9 back
+	test	r13b,1		; sum divisible by 2?
+	jnz	chdiv		; if not try division
+	test	r10b,1		; number divisible by 2?
+	jnz	niven
+chdiv:	mov	rax,r10		; number divisible by sum?	
+	xor	rdx,rdx
+	div	r13
+	test	rdx,rdx
+	jnz	niven		; if not, try next number
+	mov	rax,r10		; calculate gap size
+	sub	rax,r15
+	cmp	rax,r14		; bigger than previous gap?
+	jbe	next		; If not, count but don't display
+	mov	r14,rax		; If so, store new gap size
+	mov	rbx,line.niv	; Format Niven number
+	mov	rax,r15
+	mov	cl,14
+	call	format
+	dec	rbx
+	dec	rbx
+	mov	rax,r12		; Niven index
+	mov	cl,13
+	call	format
+	dec	rbx
+	dec	rbx
+	mov	rax,r14		; Gap
+	mov	cl,3
+	call 	format
+	dec	rbx
+	dec 	rbx
+	mov	rax,r11		; Gap index
+	mov	cl,6
+	call	format
+	mov	rsi,rbx		; Write line
+	mov	rdx,line.len
+	call	write
+	inc	r11		; Increment gap index
+	cmp	r11b,32		; Done?
+	jbe	next		; If not, next number
+	mov	rax,60
+	xor 	rdi,rdi		; Otherwise, exit
+	syscall
+	;;;	Write RDX chars to STDOUT starting at RSI
+write:	xor	rax,rax		; Write syscall is 1
+	inc	rax
+	mov	rdi,rax		; STDOUT is also 1
+	push	r11		; R11 is clobbered, keep it
+	syscall
+	pop 	r11
+	ret
+	;;;	Format number in RAX as ASCII, with thousand
+	;;;	separators; storing at RBX going leftward,
+	;;;	padding with spaces for length CL.
+format:	mov	ch,3		; Thousands counter
+.loop:	xor	rdx,rdx		; Divide
+	div	r8
+	add	dl,'0'		; ASCII zero
+	dec	rbx		; Store value
+	mov	[rbx],dl
+	dec	cl		; One fewer char left
+	jz	.out		; Stop if field full
+	test	rax,rax		; Done whole number?
+	jz	.ndone
+	dec	ch		; Time for separator?
+	jnz	.loop		; If not, continue;
+	mov	ch,3		; If so, reset counter,
+	dec	rbx		; Add separator,
+	mov	[rbx],byte ','	
+	dec	cl		; One fewer char left
+	jmp 	.loop
+.ndone:	mov	al,' '		; Pad with spaces
+	test	cl,cl		; Done yet?
+	jz	.out
+.pad:	dec	rbx		; If not, add space
+	mov	[rbx],al
+	dec	cl
+	jnz	.pad
+.out:	ret

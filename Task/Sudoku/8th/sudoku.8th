@@ -1,0 +1,146 @@
+\
+\  Simple iterative backtracking Sudoku solver for 8th
+\
+needs array/each-slice
+
+[  00, 00, 00, 03, 03, 03, 06, 06, 06,
+   00, 00, 00, 03, 03, 03, 06, 06, 06,
+   00, 00, 00, 03, 03, 03, 06, 06, 06,
+   27, 27, 27, 30, 30, 30, 33, 33, 33,
+   27, 27, 27, 30, 30, 30, 33, 33, 33,
+   27, 27, 27, 30, 30, 30, 33, 33, 33,
+   54, 54, 54, 57, 57, 57, 60, 60, 60,
+   54, 54, 54, 57, 57, 57, 60, 60, 60,
+   54, 54, 54, 57, 57, 57, 60, 60, 60 ] constant top-left-cell
+
+\ Bit number presentations
+a:new 2 b:new b:clear a:push ( 2 b:new b:clear swap 1 b:bit! a:push ) 0 8 loop constant posbit
+
+: posbit?  \ n -- s
+  posbit swap a:@ nip ;
+
+: search  \ b -- n
+  null swap
+  ( dup -rot b:bit@ if rot drop break else nip then ) 0 8 loop
+  swap ;
+
+: b-or  \ b b -- b
+  ' n:bor b:op ;
+
+: b-and  \ b b -- b
+  ' n:band b:op ;
+
+: b-xor  \ b b -- b
+  b:xor
+  [ xff, x01 ] b:new
+  b-and ;
+
+: b-not  \ b -- b
+  xff b:xor
+  [ xff, x01 ] b:new
+  b-and ;
+
+: b-any  \ a -- b
+  ' b-or 0 posbit? a:reduce ;
+
+: row \ a row -- a
+  9 n:* 9 a:slice ;
+
+: col  \ a col -- a
+  -1 9 a:slice+ ;
+
+\ For testing sub boards
+: sub  \ a n -- a
+  top-left-cell swap a:@ nip over over 3 a:slice
+  -rot 9 n:+ 2dup 3 a:slice
+  -rot 9 n:+ 3 a:slice
+  a:+ a:+ ;
+
+a:new 0 args "Give Sudoku text file as param" thrownull
+f:slurp "Cannot read file" thrownull >s "" s:/
+' >n a:map ( posbit? a:push ) a:each! drop constant board
+
+: display-board
+  board ( search nip -1 ?: n:1+ ) a:map
+  "+-----+-----+-----+\n"
+  "|%d %d %d|%d %d %d|%d %d %d|\n" s:+
+  "|%d %d %d|%d %d %d|%d %d %d|\n" s:+
+  "|%d %d %d|%d %d %d|%d %d %d|\n" s:+
+  "+-----+-----+-----+\n" s:+
+  "|%d %d %d|%d %d %d|%d %d %d|\n" s:+
+  "|%d %d %d|%d %d %d|%d %d %d|\n" s:+
+  "|%d %d %d|%d %d %d|%d %d %d|\n" s:+
+  "+-----+-----+-----+\n" s:+
+  "|%d %d %d|%d %d %d|%d %d %d|\n" s:+
+  "|%d %d %d|%d %d %d|%d %d %d|\n" s:+
+  "|%d %d %d|%d %d %d|%d %d %d|\n" s:+
+  "+-----+-----+-----+\n" s:+
+  s:strfmt . ;
+
+\ Store move history
+a:new constant history
+
+\ Possible numbers for a cell
+: candidates?  \ n -- s
+  dup dup 9 n:/ n:int swap 9 n:mod \ row col
+  board swap col b-any
+  board rot row b-any
+  b-or
+  board rot sub b-any
+  b-or
+  b-not ;
+
+\ If found:     -- n T
+\ If not found: -- T
+: find-free-cell
+  false
+  board ( 0 posbit? b:= if nip true break else drop then ) a:each drop ;
+
+: validate
+  true
+  board
+  ( dup -rot a:@ swap 2 pick 0 posbit? a:! 2 pick candidates? 2 pick b:= if
+      -rot a:!
+    else
+      2drop drop
+      false swap
+      break
+    then ) 0 80 loop drop ;
+
+: solve
+  repeat
+    find-free-cell if
+      dup candidates?
+      repeat
+        search null? if
+          drop board -rot a:! drop
+          history a:len 0 n:= if
+            drop false ;;
+          then
+          a:pop nip
+          a:open
+        else
+          n:1+ posbit?
+          dup
+          board 4 pick rot a:! drop
+          b-xor
+          2 a:close
+          history swap a:push drop
+          break
+        then
+      again
+    else
+      validate
+      break
+    then
+  again ;
+
+: app:main
+  "Sudoku puzzle:\n" .
+  display-board cr
+  solve if
+    "Sudoku solved:\n" .
+    display-board
+  else
+    "No solution!\n" .
+  then ;

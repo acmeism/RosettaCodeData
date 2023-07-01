@@ -1,0 +1,36 @@
+MaxAntiPrime = 20
+n = 0
+MaxDivisors = 0
+AntiPrimeCount = 0
+PRINT "The first 20 anti-primes are: "
+WHILE AntiPrimeCount < MaxAntiPrime
+    n = n + 1
+    Divisors = DivisorCount(n)
+    IF Divisors > MaxDivisors THEN
+        PRINT n;
+        MaxDivisors = Divisors
+        AntiPrimeCount = AntiPrimeCount + 1
+    END IF
+WEND
+END
+
+FUNCTION DivisorCount (v)
+    total = 1
+    n = v
+    WHILE n MOD 2 = 0
+        total = total + 1
+        n = n \ 2
+    WEND
+    p = 3
+    WHILE (p * p) <= n
+        count = 1
+        WHILE n MOD p = 0
+            count = count + 1
+            n = n \ p
+        WEND
+        p = p + 2
+        total = total * count
+    WEND
+    IF n > 1 THEN total = total * 2
+    DivisorCount = total
+END FUNCTION

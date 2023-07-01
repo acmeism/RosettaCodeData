@@ -1,0 +1,781 @@
+(*------------------------------------------------------------------*)
+
+(* Dijkstra's algorithm. *)
+
+(* I demonstrate Dijkstra's algorithm using a rudimentary priority
+   queue. For a practical implementation, you would use a fast
+   implementation of priority queue. *)
+
+%{^
+#include <math.h>
+%}
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+typedef flt = double
+macdef zero = 0.0
+macdef infinity = $extval (flt, "INFINITY")
+
+prfn
+mul_compare_lte
+          {i, j, n : nat | i <= j}
+          ()
+    :<prf> [i * n <= j * n] void =
+  mul_gte_gte_gte {j - i, n} ()
+
+prfn
+mul_compare_lt
+          {i, j, n : int | 0 <= i; i < j; 1 <= n}
+          ()
+    :<prf> [i * n < j * n] void =
+  mul_compare_lte {i + 1, j, n} ()
+
+(*------------------------------------------------------------------*)
+(* Constructing a graph. *)
+
+fn
+extract_vertices
+          (edges : List @(string, string, double))
+    :<!wrt> [n : nat]
+            @(arrayref (string, n),
+              size_t n) =
+  let
+    fun
+    list_the_vertices
+              {m  : nat}
+              {n0 : nat}
+              .<m>.
+              (edges : list (@(string, string, double), m),
+               accum : list (string, n0),
+               n0    : size_t n0)
+        :<!wrt> [n1 : nat]
+                @(list (string, n1), size_t n1) =
+      case+ edges of
+      | NIL => @(accum, n0)
+      | @(v1, v2, _) :: tail =>
+        let
+          implement list_find$pred<string> x = (x = v1)
+        in
+          case+ list_find_opt accum of
+          | ~ None_vt () =>
+            let
+              implement list_find$pred<string> x = (x = v2)
+            in
+              case+ list_find_opt accum of
+              | ~ None_vt () =>
+                list_the_vertices (tail, v2 :: v1 :: accum,
+                                   succ (succ n0))
+              | ~ Some_vt _ =>
+                list_the_vertices (tail, v1 :: accum, succ n0)
+            end
+          | ~ Some_vt _ =>
+            let
+              implement list_find$pred<string> x = (x = v2)
+            in
+              case+ list_find_opt accum of
+              | ~ None_vt () =>
+                list_the_vertices (tail, v2 :: accum, succ n0)
+              | ~ Some_vt _ => list_the_vertices (tail, accum, n0)
+            end
+        end
+
+    prval () = lemma_list_param edges
+    val @(vertex_lst, n) = list_the_vertices (edges, NIL, i2sz 0)
+    val vertex_arr = arrayref_make_list<string> (sz2i n, vertex_lst)
+  in
+    @(vertex_arr, n)
+  end
+
+fn
+vertex_name_to_index
+          {n          : int}
+          (vertex_arr : arrayref (string, n),
+           n          : size_t n,
+           name       : string)
+    :<!ref> Option ([i : nat | i < n] size_t i) =
+  let
+    fun
+    loop {i : nat | i <= n}
+         .<n - i>.
+         (i : size_t i)
+        :<!ref> Option ([i : nat | i < n] size_t i) =
+      if i = n then
+        None ()
+      else if name = vertex_arr[i] then
+        Some i
+      else
+        loop (succ i)
+
+    prval () = lemma_arrayref_param vertex_arr
+  in
+    loop (i2sz 0)
+  end
+
+fn
+make_adjacency_matrix
+          (edges : List @(string, string, double))
+    :<!refwrt> [n : nat]
+               @(matrixref (flt, n, n),
+                 arrayref (string, n),
+                 size_t n) =
+  let
+    val @(vertex_arr, n) = extract_vertices edges
+    val adj_matrix = matrixref_make_elt<flt> (n, n, infinity)
+
+    fun
+    loop {m     : nat}
+         .<m>.
+         (edges : list (@(string, string, double), m))
+        :<!refwrt> void =
+      case+ edges of
+      | NIL => ()
+      | @(v1, v2, cost) :: tail =>
+        let
+          val- Some i = vertex_name_to_index (vertex_arr, n, v1)
+          and  Some j = vertex_name_to_index (vertex_arr, n, v2)
+        in
+          adj_matrix[i, n, j] := cost;
+          loop tail
+        end
+
+    prval () = lemma_list_param edges
+  in
+    loop edges;
+    @(adj_matrix, vertex_arr, n)
+  end
+
+fn
+fprint_vertex_path
+          {n              : int}
+          (outf           : FILEref,
+           vertex_arr     : arrayref (string, n),
+           path           : List ([i : nat | i < n] size_t i),
+           cost_opt       : Option flt,
+           cost_column_no : size_t)
+    : void =
+  let
+    fun
+    loop {m : nat}
+         .<m>.
+         (path      : list ([i : nat | i < n] size_t i, m),
+          column_no : size_t)
+        : size_t =
+      case+ path of
+      | NIL => column_no
+      | i :: NIL =>
+        begin
+          fprint! (outf, vertex_arr[i]);
+          column_no + strlen vertex_arr[i]
+        end
+      | i :: tail =>
+        begin
+          fprint! (outf, vertex_arr[i], " -> ");
+          loop (tail, column_no + strlen vertex_arr[i] + i2sz 4)
+        end
+
+    prval () = lemma_list_param path
+    val column_no = loop (path, i2sz 1)
+  in
+    case+ cost_opt of
+    | None () => ()
+    | Some cost =>
+      let
+        var i : size_t = column_no
+      in
+        while (i < cost_column_no)
+          begin
+            fprint! (outf, " ");
+            i := succ i
+          end;
+        fprint! (outf, "(cost = ", cost, ")")
+      end
+  end
+
+(*------------------------------------------------------------------*)
+(* A binary-heap priority queue, similar to the Pascal in Robert
+   Sedgewick, "Algorithms", 2nd ed. (reprinted with corrections),
+   1989. Note that Sedgewick does an extract-max, whereas we do an
+   extract-min.
+
+   Niklaus Wirth, within the heapsort implementation of "Algorithms +
+   Data Structures = Programs", has, I will note, some Pascal code
+   that is practically the same as Sedgewick's. Can we trace that code
+   back farther to Algol?
+
+   We do not have "goto" for Sedgewick's "downheap" (or Wirth's
+   "sift"), but do have mutual tail call as an obvious alternative to
+   the "goto". Nevertheless, because the code "jumped to" is small, I
+   simply use a macro to duplicate it. *)
+
+dataprop PQUEUE_N_MAX (n_max : int) =
+| {0 <= n_max}
+  PQUEUE_N_MAX (n_max)
+
+typedef pqueue (priority_t : t@ype+,
+                value_t    : t@ype+,
+                n          : int,
+                n_max      : int) =
+  [n <= n_max]
+  @{
+    (* An earlier version of this structure stored a copy of n_max,
+       but the following use of the PQUEUE_N_MAX prop eliminates the
+       need for that. Instead the information is kept only at
+       typechecking time. *)
+    pf    = PQUEUE_N_MAX (n_max) |
+    arr   = arrayref (@(priority_t, value_t), n_max + 1),
+    n     = size_t n
+  }
+
+prfn
+lemma_pqueue_param
+          {n_max : int}
+          {n     : int}
+          {priority_t, value_t : t@ype}
+          (pq : pqueue (priority_t, value_t, n, n_max))
+    :<prf> [0 <= n; n <= n_max] void =
+  lemma_g1uint_param (pq.n)
+
+extern praxi
+lemma_pqueue_size
+          {n_max : int}
+          {n     : int}
+          {priority_t, value_t : t@ype}
+          (pq : pqueue (priority_t, value_t, n, n_max))
+    :<prf> [n1 : int | n1 == n] void
+
+extern fn {priority_t : t@ype}
+pqueue$cmp :
+  (priority_t, priority_t) -<> int
+
+extern fn {priority_t : t@ype}
+pqueue$priority_min :
+  () -<> priority_t
+
+implement pqueue$cmp<double> (x, y) = compare (x, y)
+implement pqueue$priority_min<double> () = neg infinity
+
+fn {priority_t : t@ype}
+   {value_t    : t@ype}
+pqueue_make_empty
+          {n_max           : int}
+          (n_max           : size_t n_max,
+           arbitrary_entry : @(priority_t, value_t))
+    :<!wrt> pqueue (priority_t, value_t, 0, n_max) =
+  let
+    (* Currently an array is allocated whose size is the proven
+       bound. It might be better to use a smaller array and allow
+       reallocation up to this maximum size, or to break the array
+       into pieces. *)
+
+    prval () = lemma_g1uint_param n_max
+    val arr =
+      arrayref_make_elt<@(priority_t, value_t)>
+        (succ n_max, arbitrary_entry)
+  in
+    @{pf = PQUEUE_N_MAX {n_max} () |
+      arr = arr,
+      n = i2sz 0}
+  end
+
+fn {}
+pqueue_clear
+          {n_max      : int}
+          {n          : int}
+          {priority_t : t@ype}
+          {value_t    : t@ype}
+          (pq         : &pqueue (priority_t, value_t, n, n_max)
+                        >> pqueue (priority_t, value_t, 0, n_max))
+    :<!wrt> void =
+  let
+    prval PQUEUE_N_MAX () = pq.pf (* Proves 0 <= n_max. *)
+  in
+    pq := @{pf = pq.pf |
+            arr = pq.arr,
+            n = i2sz 0}
+  end
+
+fn {}
+pqueue_is_empty
+          {n_max      : int}
+          {n          : int}
+          {priority_t : t@ype}
+          {value_t    : t@ype}
+          (pq         : pqueue (priority_t, value_t, n, n_max))
+    :<> bool (n == 0) =
+  (pq.n) = i2sz 0
+
+fn {}
+pqueue_size
+          {n_max      : int}
+          {n          : int}
+          {priority_t : t@ype}
+          {value_t    : t@ype}
+          (pq         : pqueue (priority_t, value_t, n, n_max))
+    :<> size_t n =
+  pq.n
+
+fn {priority_t : t@ype}
+   {value_t    : t@ype}
+_upheap {n_max : pos}
+        {n     : int | n <= n_max}
+        {k0    : nat | k0 <= n}
+        (arr   : arrayref (@(priority_t, value_t), n_max + 1),
+         k0    : size_t k0)
+    :<!refwrt> void =
+  let
+    macdef lt (x, y) = (pqueue$cmp<priority_t> (,(x), ,(y)) < 0)
+    macdef prio x = ,(x).0
+
+    val entry = arr[k0]
+
+    fun
+    loop {k : nat | k <= n}
+         .<k>.
+         (k : size_t k)
+        :<!refwrt> void =
+      if k = i2sz 0 then
+        arr[k] := entry
+      else
+        let
+          val kh = half k
+        in
+          if (prio entry) \lt (prio arr[kh]) then
+            begin
+              arr[k] := arr[kh];
+              loop kh
+            end
+          else
+            arr[k] := entry
+        end
+  in
+    arr[0] := @(pqueue$priority_min<priority_t> (), arr[0].1);
+    loop k0
+  end
+
+fn {priority_t : t@ype}
+   {value_t    : t@ype}
+pqueue_insert
+          {n_max : int}
+          {n     : int | n < n_max}
+          (pq    : &pqueue (priority_t, value_t, n, n_max)
+                    >> pqueue (priority_t, value_t, n + 1, n_max),
+           entry : @(priority_t, value_t))
+    :<!refwrt> void =
+  let
+    prval () = lemma_g1uint_param (pq.n)
+    val arr = pq.arr
+    and n1 = succ (pq.n)
+  in
+    arr[n1] := entry;
+    _upheap {n_max} {n + 1} (arr, n1);
+    pq := @{pf = pq.pf |
+            arr = arr,
+            n = n1}
+  end
+
+fn {priority_t : t@ype}
+   {value_t    : t@ype}
+_downheap {n_max : pos}
+          {n     : pos | n <= n_max}
+          (arr   : arrayref (@(priority_t, value_t), n_max + 1),
+           n     : size_t n)
+    :<!refwrt> void =
+  let
+    macdef lt (x, y) = (pqueue$cmp<priority_t> (,(x), ,(y)) < 0)
+    macdef prio x = ,(x).0
+
+    val entry = arr[1]
+    and nh = half n
+
+    fun
+    loop {k : pos | k <= n}
+         .<n - k>.
+         (k : size_t k)
+        :<!refwrt> void =
+      let
+        macdef move_data i =
+          if (prio entry) \lt (prio arr[,(i)]) then
+            arr[k] := entry
+          else
+            begin
+              arr[k] := arr[,(i)];
+              loop ,(i)
+            end
+      in
+        if nh < k then
+          arr[k] := entry
+        else
+          let
+            stadef j = 2 * k
+            prval () = prop_verify {j <= n} ()
+            val j : size_t j = k + k
+          in
+            if j < n then
+              let
+                stadef j1 = j + 1
+                prval () = prop_verify {j1 <= n} ()
+                val j1 : size_t j1 = succ j
+              in
+                if ~((prio arr[j]) \lt (prio arr[j1])) then
+                  move_data j1
+                else
+                  move_data j
+              end
+            else
+              move_data j
+          end
+      end
+  in
+    loop (i2sz 1)
+  end
+
+fn {priority_t : t@ype}
+   {value_t    : t@ype}
+pqueue_peek
+          {n_max : int}
+          {n     : pos | n <= n_max}
+          (pq    : pqueue (priority_t, value_t, n, n_max))
+    :<!ref> @(priority_t, value_t) =
+  let
+    val arr = pq.arr
+  in
+    arr[1]
+  end
+
+fn {priority_t : t@ype}
+   {value_t    : t@ype}
+pqueue_delete
+          {n_max : int}
+          {n     : pos | n <= n_max}
+          (pq    : &pqueue (priority_t, value_t, n, n_max)
+                    >> pqueue (priority_t, value_t, n - 1, n_max))
+    :<!refwrt> void =
+  let
+    val @{pf = pf |
+          arr = arr,
+          n = n} = pq
+  in
+    if i2sz 0 < pred n then
+      begin
+        arr[1] := arr[n];
+        _downheap {n_max} {n - 1} (arr, pred n)
+      end;
+    pq := @{pf = pf |
+            arr = arr,
+            n = pred n}
+  end
+
+fn {priority_t : t@ype}
+   {value_t    : t@ype}
+pqueue_extract
+          {n_max : int}
+          {n     : pos | n <= n_max}
+          (pq    : &pqueue (priority_t, value_t, n, n_max)
+                    >> pqueue (priority_t, value_t, n - 1, n_max))
+    :<!refwrt> @(priority_t, value_t) =
+  let
+    val retval = pqueue_peek<priority_t><value_t> {n_max} {n} pq
+  in
+    pqueue_delete<priority_t><value_t> {n_max} {n} pq;
+    retval
+  end
+
+local                   (* A little unit testing of the priority queue
+                           implementation. *)
+  #define NMAX 10
+in
+  var pq = pqueue_make_empty<double><int> (i2sz NMAX, @(0.0, 0))
+  val- true = pqueue_is_empty pq
+  val- true = (pqueue_size pq = i2sz 0)
+  val () = pqueue_insert (pq, @(3.0, 3))
+  val () = pqueue_insert (pq, @(5.0, 5))
+  val () = pqueue_insert (pq, @(1.0, 1))
+  val () = pqueue_insert (pq, @(2.0, 2))
+  val () = pqueue_insert (pq, @(4.0, 4))
+  val- false = pqueue_is_empty pq
+  val- true = (pqueue_size pq = i2sz 5)
+  val- @(1.0, 1) = pqueue_extract<double> pq
+  val- @(2.0, 2) = pqueue_extract<double> pq
+  val- @(3.0, 3) = pqueue_extract<double> pq
+  val- @(4.0, 4) = pqueue_extract<double> pq
+  val- @(5.0, 5) = pqueue_extract<double> pq
+  val- true = pqueue_is_empty pq
+  val- true = (pqueue_size pq = i2sz 0)
+end
+
+(*------------------------------------------------------------------*)
+(* Dijkstra's algorithm. *)
+
+fn
+dijkstra_algorithm
+          {n          : int}
+          {source     : nat | source < n}
+          (adj_matrix : matrixref (flt, n, n),
+           n          : size_t n,
+           source     : size_t source)
+    (* Returns total-costs and previous-hops arrays. *)
+    :<!refwrt> @(arrayref (flt, n),
+                 arrayref ([i : nat | i <= n] size_t i, n)) =
+  let
+    prval () = lemma_matrixref_param adj_matrix
+
+    typedef index_t = [i : nat | i <= n] size_t i
+    typedef defined_index_t = [i : nat | i < n] size_t i
+    val index_t_undefined : size_t n = n
+
+    val arbitrary_pq_entry : @(flt, defined_index_t) =
+      @(0.0, i2sz 0)
+
+    val prev = arrayref_make_elt<index_t> (n, index_t_undefined)
+    and cost = arrayref_make_elt<flt> (n, infinity)
+    val () = cost[source] := zero
+
+    (* The priority queue never gets larger than m_max. There is code
+       below that proves this; thus there is no risk of overrunning
+       the queue's storage (unless the queue implementation itself is
+       made unsafe). FIXME: Is it possible to prove a tighter bound on
+       the size of the priority queue? *)
+    stadef m_max = (n * n) + n + n
+    prval () = mul_pos_pos_pos (mul_make {n, n} ())
+    prval () = prop_verify {n + n < m_max} ()
+    val m_max : size_t m_max = (n * n) + n + n
+
+    typedef pqueue_t (m : int) =
+      [0 <= m; m <= m_max]
+      pqueue (flt, defined_index_t, m, m_max)
+    typedef pqueue_t =
+      [m : int] pqueue_t m
+
+    fn
+    pq_make_empty ()
+        :<!wrt> pqueue_t 0 =
+      (* Create a priority queue, whose maximum size is our proven
+         upper bound on the queue size. *)
+      pqueue_make_empty<flt><defined_index_t>
+        (m_max, arbitrary_pq_entry)
+
+    var pq = pq_make_empty ()
+    val active = arrayref_make_elt<bool> (n, true)
+    var num_active : [i : nat | i <= n] size_t i = n
+
+    fun
+    fill_pq {i : nat | i <= n}
+            .<n - i>.
+            (pq : &pqueue_t i >> pqueue_t n,
+             i  : size_t i)
+        :<!refwrt> void =
+      if i <> n then
+        begin
+          pqueue_insert {m_max} {i} (pq, @(cost[i], i));
+          fill_pq {i + 1} (pq, succ i)
+        end
+
+    fun
+    extract_min
+              {m0 : pos | m0 + n <= m_max}
+              .<m0>.
+              (pq : &pqueue_t m0 >> pqueue_t m1)
+        :<!refwrt> #[m1 : nat | m1 < m0]
+                   @(flt, defined_index_t) =
+      let
+        val @(priority, vertex) =
+          pqueue_extract<flt><defined_index_t> {m_max} {m0} pq
+      in
+        if active[vertex] then
+          @(priority, vertex)
+        else if pqueue_is_empty {m_max} pq then
+          arbitrary_pq_entry
+        else
+          extract_min pq
+      end
+
+    fun
+    main_loop {num_active0 : nat | num_active0 <= n}
+              {qsize0      : nat}
+              {qlimit0     : int | 0 <= qlimit0;
+                                   qsize0 <= qlimit0 + n}
+              .<num_active0>.
+              (* The pf_qlimit0 prop helps us prove a bound on the
+                 size of the priority queue. We need it because the
+                 proof capabilities built into ATS have very limited
+                 ability to handle multiplication. *)
+              (pf_qlimit0 : MUL (n - num_active0, n, qlimit0) |
+               pq         : &pqueue_t qsize0 >> pqueue_t 0,
+               num_active : &size_t num_active0 >> size_t num_active1)
+        :<!refwrt> #[num_active1 : nat | num_active1 <= num_active0]
+                   void =
+      if num_active = i2sz 0 then
+        pqueue_clear pq
+      else if pqueue_is_empty {m_max} {qsize0} pq then
+        let                     (* This should not happen. *)
+          val- false = true
+        in
+        end
+      else
+        let
+          prval () = mul_elim pf_qlimit0
+          prval () =
+            prop_verify {qsize0 <= ((n - num_active0) * n) + n} ()
+          prval () = mul_compare_lt {n - num_active0, n, n} ()
+          prval () = prop_verify {qsize0 < m_max} ()
+
+          val @(priority, u) = extract_min pq
+          prval [qsize : int] () = lemma_pqueue_size {m_max} pq
+          prval () = lemma_pqueue_param {m_max} {qsize} pq
+          prval () = prop_verify {qsize < qsize0} ()
+          prval () = prop_verify {qsize < m_max} ()
+
+          val () = active[u] := false
+          and () = num_active := pred num_active
+
+          fun
+          loop_over_vertices
+                    {v  : nat | v <= n}
+                    {m0 : nat | qsize <= m0; m0 <= qsize + v}
+                    .<n - v>.
+                    (pq : &pqueue_t m0 >> pqueue_t m1,
+                     v  : size_t v)
+              :<!refwrt> #[m1 : int | qsize <= m1; m1 <= qsize + n]
+                         void =
+            if v = n then
+              ()
+            else if ~active[v] then
+              loop_over_vertices {v + 1} {m0} (pq, succ v)
+            else
+              let
+                val alternative = cost[u] + adj_matrix[u, n, v]
+              in
+                if alternative < cost[v] then
+                  let
+                    prval () = prop_verify {m0 < m_max} ()
+                  in
+                    cost[v] := alternative;
+                    prev[v] := u;
+
+                    (* Rather than lower the priority of v, this
+                       implementation inserts a new entry for v and
+                       ignores obsolete queue entries. Queue entries
+                       are obsolete if the vertex's entry in the
+                       "active" array is false. *)
+
+                    pqueue_insert<flt><defined_index_t>
+                      {m_max} {m0}
+                      (pq, @(alternative, v));
+
+                    loop_over_vertices {v + 1} {m0 + 1}
+                                       (pq, succ v)
+                  end
+                else
+                  loop_over_vertices {v + 1} {m0} (pq, succ v)
+              end
+
+          val () = loop_over_vertices {0} {qsize} (pq, i2sz 0)
+        in
+          main_loop {num_active0 - 1}
+                    (MULind pf_qlimit0 | pq, num_active)
+        end
+  in
+    fill_pq {0} (pq, i2sz 0);
+    main_loop {n} {n} (MULbas () | pq, num_active);
+    @(cost, prev)
+  end
+
+fn
+least_cost_path
+        {n           : int}
+        (source      : [i : nat | i < n] size_t i,
+         prev        : arrayref ([i : nat | i <= n] size_t i, n),
+         n           : size_t n,
+         destination : [i : nat | i < n] size_t i)
+    :<!refwrt> Option (List1 ([i : nat | i < n] size_t i)) =
+  let
+    prval () = lemma_arrayref_param prev
+
+    typedef index_t = [i : nat | i <= n] size_t i
+    typedef defined_index_t = [i : nat | i < n] size_t i
+    val index_t_undefined : size_t n = n
+
+    fun
+    loop {i : nat | i <= n}
+         .<n - i>.
+         (u            : defined_index_t,
+          accum        : List1 defined_index_t,
+          loop_counter : size_t i)
+        :<!refwrt> Option (List1 defined_index_t) =
+      if loop_counter = n then
+        None ()
+      else if u = source then
+        Some accum
+      else
+        let
+          val previous = prev[u]
+        in
+          if previous = index_t_undefined then
+            None ()
+          else
+            loop (previous, previous :: accum, succ loop_counter)
+        end
+  in
+    loop (destination, destination :: NIL, i2sz 0)
+  end
+
+(*------------------------------------------------------------------*)
+
+val example_edges =
+  $list (@("a", "b", 7.0),
+         @("a", "c", 9.0),
+         @("a", "f", 14.0),
+         @("b", "c", 10.0),
+         @("b", "d", 15.0),
+         @("c", "d", 11.0),
+         @("c", "f", 2.0),
+         @("d", "e", 6.0),
+         @("e", "f", 9.0))
+
+implement
+main0 () =
+  let
+    val @(adj_matrix, vertex_arr, n) =
+      make_adjacency_matrix example_edges
+
+    prval [n : int] EQINT () = eqint_make_guint n
+
+    val- Some a = vertex_name_to_index (vertex_arr, n, "a")
+    val- Some e = vertex_name_to_index (vertex_arr, n, "e")
+    val- Some f = vertex_name_to_index (vertex_arr, n, "f")
+
+    val @(cost, prev) = dijkstra_algorithm (adj_matrix, n, a)
+
+    val- Some path_a_to_e = least_cost_path {n} (a, prev, n, e)
+    val- Some path_a_to_f = least_cost_path {n} (a, prev, n, f)
+
+    var u : [i : nat | i <= n] size_t i
+    val cost_column_no = i2sz 20
+  in
+    println! ("The requested paths:");
+    fprint_vertex_path (stdout_ref, vertex_arr, path_a_to_e,
+                        Some cost[e], cost_column_no);
+    println! ();
+    fprint_vertex_path (stdout_ref, vertex_arr, path_a_to_f,
+                        Some cost[f], cost_column_no);
+    println! ();
+    println! ();
+    println! ("All paths (in no particular order):");
+    for (u := i2sz 0; u <> n; u := succ u)
+      case+ least_cost_path {n} (a, prev, n, u) of
+      | None () =>
+        println! ("There is no path from ", vertex_arr[a], " to ",
+                  vertex_arr[u], ".")
+      | Some path =>
+        begin
+          fprint_vertex_path (stdout_ref, vertex_arr, path,
+                              Some cost[u], cost_column_no);
+          println! ()
+        end
+  end
+
+(*------------------------------------------------------------------*)

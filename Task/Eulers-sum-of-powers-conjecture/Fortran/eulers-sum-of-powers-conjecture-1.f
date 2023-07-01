@@ -1,0 +1,21 @@
+C EULER SUM OF POWERS CONJECTURE - FORTRAN IV
+C FIND I1,I2,I3,I4,I5 : I1**5+I2**5+I3**5+I4**5=I5**5
+      INTEGER I,P5(250),SUMX
+      MAXN=250
+      DO 1 I=1,MAXN
+   1  P5(I)=I**5
+      DO 6 I1=1,MAXN
+      DO 6 I2=1,MAXN
+      DO 6 I3=1,MAXN
+      DO 6 I4=1,MAXN	
+      SUMX=P5(I1)+P5(I2)+P5(I3)+P5(I4)
+      I5=1
+   2  IF(I5-MAXN) 3,3,6
+   3  IF(P5(I5)-SUMX) 5,4,6
+   4  WRITE(*,300) I1,I2,I3,I4,I5
+      STOP
+   5  I5=I5+1
+      GOTO 2
+   6  CONTINUE
+ 300  FORMAT(5(1X,I3))
+      END

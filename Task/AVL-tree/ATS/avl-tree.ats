@@ -1,0 +1,1661 @@
+(*------------------------------------------------------------------*)
+
+#define ATS_DYNLOADFLAG 0
+
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+
+(*
+
+  Persistent AVL trees.
+
+  References:
+
+    * Niklaus Wirth, 1976. Algorithms + Data Structures =
+      Programs. Prentice-Hall, Englewood Cliffs, New Jersey.
+
+    * Niklaus Wirth, 2004. Algorithms and Data Structures. Updated
+      by Fyodor Tkachov, 2014.
+
+  (Note: Wirth’s implementations, which are in Pascal and Oberon, are
+  for non-persistent trees.)
+
+*)
+
+(*------------------------------------------------------------------*)
+
+(*
+
+  For now, a very simple interface, without much provided in the way
+  of proofs.
+
+  You could put all this interface stuff into a .sats file. (You would
+  have to remove the word ‘extern’ from the definitions.)
+
+  You might also make avl_t abstract, and put these details in the
+  .dats file; you would use ‘assume’ to identify the abstract type
+  with an implemented type. That approach would require some name
+  changes, and also would make pattern matching on the trees
+  impossible outside their implementation. Having users do pattern
+  matching on the AVL trees probably is a terrible idea, anyway.
+
+*)
+
+datatype bal_t =
+| bal_minus1
+| bal_zero
+| bal_plus1
+
+datatype avl_t (key_t  : t@ype+,
+                data_t : t@ype+,
+                size   : int) =
+| avl_t_nil (key_t, data_t, 0)
+| {size_L, size_R : nat}
+  avl_t_cons (key_t, data_t, size_L + size_R + 1) of
+    (key_t, data_t, bal_t,
+     avl_t (key_t, data_t, size_L),
+     avl_t (key_t, data_t, size_R))
+typedef avl_t (key_t  : t@ype+,
+               data_t : t@ype+) =
+  [size : int] avl_t (key_t, data_t, size)
+
+extern prfun
+lemma_avl_t_param :
+  {key_t, data_t : t@ype}
+  {size : int}
+  avl_t (key_t, data_t, size) -<prf> [0 <= size] void
+
+(* Implement this template, for whichever type of key you are
+   using. It should return a negative number if u < v, zero if
+   u = v, or a positive number if u > v. *)
+extern fun {key_t : t@ype}
+avl_t$compare (u : key_t, v : key_t) :<> int
+
+(* Is the AVL tree empty? *)
+extern fun
+avl_t_is_empty
+          {key_t  : t@ype}
+          {data_t : t@ype}
+          {size   : int}
+          (avl    : avl_t (key_t, data_t, size)) :<>
+    [b : bool | b == (size == 0)]
+    bool b
+
+(* Does the AVL tree contain at least one association? *)
+extern fun
+avl_t_isnot_empty
+          {key_t  : t@ype}
+          {data_t : t@ype}
+          {size   : int}
+          (avl    : avl_t (key_t, data_t, size)) :<>
+    [b : bool | b == (size <> 0)]
+    bool b
+
+(* How many associations are stored in the AVL tree? (Currently we
+   have no way to do an avl_t_size that preserves the ‘size’ static
+   value. This is the best we can do.) *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_size {size : int}
+           (avl  : avl_t (key_t, data_t, size)) :<>
+    [sz : int | (size == 0 && sz == 0) || (0 < size && 0 < sz)]
+    size_t sz
+
+(* Does the AVL tree contain the given key? *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_has_key
+          {size : int}
+          (avl  : avl_t (key_t, data_t, size),
+           key  : key_t) :<>
+    bool
+
+(* Search for a key. If the key is found, return the data value
+   associated with it. Otherwise return the value of ‘dflt’. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_search_dflt
+          {size : int}
+          (avl  : avl_t (key_t, data_t, size),
+           key  : key_t,
+           dflt : data_t) :<>
+    data_t
+
+(* Search for a key. If the key is found, return
+   ‘Some(data)’. Otherwise return ‘None()’. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_search_opt
+          {size : int}
+          (avl  : avl_t (key_t, data_t, size),
+           key  : key_t) :<>
+    Option (data_t)
+
+(* Search for a key. If the key is found, set ‘found’ to true, and set
+   ‘data’. Otherwise set ‘found’ to false. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_search_ref
+          {size  : int}
+          (avl   : avl_t (key_t, data_t, size),
+           key   : key_t,
+           data  : &data_t? >> opt (data_t, found),
+           found : &bool? >> bool found) :<!wrt>
+    #[found : bool]
+    void
+
+(* Overload avl_t_search; these functions are easy for the compiler to
+   distinguish. *)
+overload avl_t_search with avl_t_search_dflt
+overload avl_t_search with avl_t_search_opt
+overload avl_t_search with avl_t_search_ref
+
+(* If a key is not present in the AVL tree, insert the key-data
+   association; return the new AVL tree. If the key *is* present in
+   the AVL tree, then *replace* the key-data association; return the
+   new AVL tree. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_insert
+          {size : int}
+          (avl  : avl_t (key_t, data_t, size),
+           key  : key_t,
+           data : data_t) :<>
+    [sz : pos]
+    avl_t (key_t, data_t, sz)
+
+(* If a key is not present in the AVL tree, insert the key-data
+   association; return the new AVL tree and ‘true’. If the key *is*
+   present in the AVL tree, then *replace* the key-data association;
+   return the new AVL tree and ‘false’. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_insert_or_replace
+          {size : int}
+          (avl  : avl_t (key_t, data_t, size),
+           key  : key_t,
+           data : data_t) :<>
+    [sz : pos]
+    (avl_t (key_t, data_t, sz), bool)
+
+(* If a key is present in the AVL tree, delete the key-data
+   association; otherwise return the tree as it came. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_delete
+          {size : int}
+          (avl  : avl_t (key_t, data_t, size),
+           key  : key_t) :<>
+    [sz : nat]
+    avl_t (key_t, data_t, sz)
+
+(* If a key is present in the AVL tree, delete the key-data
+   association; otherwise return the tree as it came. Also, return a
+   bool to indicate whether or not the key was found; ‘true’ if found,
+   ‘false’ if not. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_delete_if_found
+          {size : int}
+          (avl  : avl_t (key_t, data_t, size),
+           key  : key_t) :<>
+    [sz : nat]
+    (avl_t (key_t, data_t, sz), bool)
+
+(* Return a sorted list of the association pairs in an AVL
+   tree. (Currently we have no way to do an avl_t_pairs that preserves
+   the ‘size’ static value. This is the best we can do.) *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_pairs {size : int}
+            (avl  : avl_t (key_t, data_t, size)) :<>
+    [sz : int | (size == 0 && sz == 0) || (0 < size && 0 < sz)]
+    list ((key_t, data_t), sz)
+
+(* Return a sorted list of the keys in an AVL tree. (Currently we have
+   no way to do an avl_t_keys that preserves the ‘size’ static
+   value. This is the best we can do.) *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_keys {size : int}
+           (avl  : avl_t (key_t, data_t, size)) :<>
+    [sz : int | (size == 0 && sz == 0) || (0 < size && 0 < sz)]
+    list (key_t, sz)
+
+(* Return a list of the data values in an AVL tree, sorted in the
+   order of their keys. (Currently we have no way to do an avl_t_data
+   that preserves the ‘size’ static value. This is the best we can
+   do.) *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_data {size : int}
+           (avl  : avl_t (key_t, data_t, size)) :<>
+    [sz : int | (size == 0 && sz == 0) || (0 < size && 0 < sz)]
+    list (data_t, sz)
+
+(* list2avl_t does the reverse of what avl_t_pairs does (although
+   they are not inverses of each other).
+   Currently we have no way to do a list2avl_t that preserves the
+   ‘size’ static value. This is the best we can do. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+list2avl_t {size : int}
+           (lst  : list ((key_t, data_t), size)) :<>
+    [sz : int | (size == 0 && sz == 0) || (0 < size && 0 < sz)]
+    avl_t (key_t, data_t, sz)
+
+(* Make a closure that returns association pairs in either forwards or
+   reverse order. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_make_pairs_generator
+          {size      : int}
+          (avl       : avl_t (key_t, data_t, size),
+           direction : int) :
+    () -<cloref1> Option @(key_t, data_t)
+
+(* Make a closure that returns keys in either forwards or reverse
+   order. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_make_keys_generator
+          {size      : int}
+          (avl       : avl_t (key_t, data_t, size),
+           direction : int) :
+    () -<cloref1> Option key_t
+
+(* Make a closure that returns data values in forwards or reverse
+   order of their keys. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_make_data_generator
+          {size      : int}
+          (avl       : avl_t (key_t, data_t, size),
+           direction : int) :
+    () -<cloref1> Option data_t
+
+(* Raise an assertion if the AVL condition is not met. This template
+   is for testing the code. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_check_avl_condition
+          {size : int}
+          (avl  : avl_t (key_t, data_t, size)) :
+    void
+
+(* Print an AVL tree to standard output, in some useful and perhaps
+   even pretty format. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_pretty_print
+          {size : int}
+          (avl  : avl_t (key_t, data_t, size)) :
+    void
+
+(* Implement this template for whichever types of keys and data you
+   wish to pretty print. *)
+extern fun {key_t  : t@ype}
+           {data_t : t@ype}
+avl_t_pretty_print$key_and_data
+          (key  : key_t,
+           data : data_t) :
+    void
+
+(*------------------------------------------------------------------*)
+
+(*
+
+  What follows is the implementation. It would go into a .dats
+  file. Note, however, that the .dats file would have to be staloaded!
+  (Preferably anonymously.) This is because the implementation
+  contains template functions.
+
+  Notice there are several assertions with ‘$effmask_ntm’ (as opposed
+  to proofs) that the routines are terminating. One hopes to remedy
+  that problem (with proofs).
+
+  Also there are some ‘$effmask_wrt’, but these effect masks are safe,
+  because the writing is to our own stack variables.
+
+*)
+
+#define NIL avl_t_nil ()
+#define CONS avl_t_cons
+#define LNIL list_nil ()
+#define :: list_cons
+#define F false
+#define T true
+
+typedef fixbal_t = bool
+
+primplement
+lemma_avl_t_param avl =
+  case+ avl of
+  | NIL => ()
+  | CONS _ => ()
+
+fn {}
+minus_neg_bal (bal : bal_t) :<> bal_t =
+  case+ bal of
+  | bal_minus1 () => bal_plus1
+  | _ => bal_zero ()
+
+fn {}
+minus_pos_bal (bal : bal_t) :<> bal_t =
+  case+ bal of
+  | bal_plus1 () => bal_minus1
+  | _ => bal_zero ()
+
+fn {}
+bal2int (bal : bal_t) :<> int =
+  case+ bal of
+  | bal_minus1 () => ~1
+  | bal_zero () => 0
+  | bal_plus1 () => 1
+
+implement
+avl_t_is_empty avl =
+  case+ avl of
+  | NIL => T
+  | CONS _ => F
+
+implement
+avl_t_isnot_empty avl =
+  ~avl_t_is_empty avl
+
+implement {key_t} {data_t}
+avl_t_size {siz} avl =
+  let
+    fun
+    traverse {size : int}
+             (p    : avl_t (key_t, data_t, size)) :<!ntm>
+        [sz : int | (size == 0 && sz == 0) ||
+                    (0 < size && 0 < sz)]
+        size_t sz =
+      case+ p of
+      | NIL => i2sz 0
+      | CONS (_, _, _, left, right) =>
+        let
+          val [sz_L : int] sz_L = traverse left
+          val [sz_R : int] sz_R = traverse right
+          prval _ = prop_verify {0 <= sz_L} ()
+          prval _ = prop_verify {0 <= sz_R} ()
+        in
+          succ (sz_L + sz_R)
+        end
+
+    val [sz : int] sz = $effmask_ntm (traverse {siz} avl)
+    prval _ = prop_verify {(siz == 0 && sz == 0) ||
+                           (0 < siz && 0 < sz)} ()
+  in
+    sz
+  end
+
+implement {key_t} {data_t}
+avl_t_has_key (avl, key) =
+  let
+    fun
+    search {size : int}
+           (p    : avl_t (key_t, data_t, size)) :<!ntm>
+        bool =
+      case+ p of
+      | NIL => F
+      | CONS (k, _, _, left, right) =>
+        begin
+          case+ avl_t$compare<key_t> (key, k) of
+          | cmp when cmp < 0 => search left
+          | cmp when cmp > 0 => search right
+          | _ => T
+        end
+  in
+    $effmask_ntm search avl
+  end
+
+implement {key_t} {data_t}
+avl_t_search_dflt (avl, key, dflt) =
+  let
+    var data : data_t?
+    var found : bool?
+    val _ = $effmask_wrt avl_t_search_ref (avl, key, data, found)
+  in
+    if found then
+      let
+        prval _ = opt_unsome data
+      in
+        data
+      end
+    else
+      let
+        prval _ = opt_unnone data
+      in
+        dflt
+      end
+  end
+
+implement {key_t} {data_t}
+avl_t_search_opt (avl, key) =
+  let
+    var data : data_t?
+    var found : bool?
+    val _ = $effmask_wrt avl_t_search_ref (avl, key, data, found)
+  in
+    if found then
+      let
+        prval _ = opt_unsome data
+      in
+        Some {data_t} data
+      end
+    else
+      let
+        prval _ = opt_unnone data
+      in
+        None {data_t} ()
+      end
+  end
+
+implement {key_t} {data_t}
+avl_t_search_ref (avl, key, data, found) =
+  let
+    fun
+    search (p     : avl_t (key_t, data_t),
+            data  : &data_t? >> opt (data_t, found),
+            found : &bool? >> bool found) :<!wrt,!ntm>
+        #[found : bool] void =
+      case+ p of
+      | NIL =>
+        {
+          prval _ = opt_none {data_t} data
+          val _ = found := F
+        }
+      | CONS (k, d, _, left, right) =>
+        begin
+          case+ avl_t$compare<key_t> (key, k) of
+          | cmp when cmp < 0 => search (left, data, found)
+          | cmp when cmp > 0 => search (right, data, found)
+          | _ =>
+            {
+              val _ = data := d
+              prval _ = opt_some {data_t} data
+              val _ = found := T
+            }
+        end
+  in
+    $effmask_ntm search (avl, data, found)
+  end
+
+implement {key_t} {data_t}
+avl_t_insert (avl, key, data) =
+  let
+    val (avl, _) =
+      avl_t_insert_or_replace<key_t><data_t> (avl, key, data)
+  in
+    avl
+  end
+
+implement {key_t} {data_t}
+avl_t_insert_or_replace (avl, key, data) =
+  let
+    fun
+    search {size   : nat}
+           (p      : avl_t (key_t, data_t, size),
+            fixbal : fixbal_t,
+            found  : bool) :<!ntm>
+        [sz : pos]
+        (avl_t (key_t, data_t, sz), fixbal_t, bool) =
+      case+ p of
+      | NIL =>
+        (* The key was not found. Insert a new node. The tree will
+            need rebalancing. *)
+        (CONS (key, data, bal_zero, NIL, NIL), T, F)
+      | CONS (k, d, bal, left, right) =>
+        case+ avl_t$compare<key_t> (key, k) of
+        | cmp when cmp < 0 =>
+          let
+            val (p1, fixbal, found) = search (left, fixbal, found)
+          in
+            (* If fixbal is T, then a node has been inserted
+               on the left, and rebalancing may be necessary. *)
+            case+ (fixbal, bal) of
+            | (F, _) =>
+              (* No rebalancing is necessary. *)
+              (CONS (k, d, bal, p1, right), F, found)
+            | (T, bal_plus1 ()) =>
+              (* No rebalancing is necessary. *)
+              (CONS (k, d, bal_zero (), p1, right), F, found)
+            | (T, bal_zero ()) =>
+              (* Rebalancing might still be necessary. *)
+              (CONS (k, d, bal_minus1 (), p1, right), fixbal, found)
+            | (T, bal_minus1 ()) =>
+              (* Rebalancing is necessary. *)
+              let
+                val+ CONS (k1, d1, bal1, left1, right1) = p1
+              in
+                case+ bal1 of
+                | bal_minus1 () =>
+                  (* A single LL rotation. *)
+                  let
+                    val q = CONS (k, d, bal_zero (), right1, right)
+                    val q1 = CONS (k1, d1, bal_zero (), left1, q)
+                  in
+                    (q1, F, found)
+                  end
+                | _ =>
+                  (* A double LR rotation. *)
+                  let
+                    val p2 = right1
+                    val- CONS (k2, d2, bal2, left2, right2) = p2
+                    val q = CONS (k, d, minus_neg_bal bal2,
+                                  right2, right)
+                    val q1 = CONS (k1, d1, minus_pos_bal bal2,
+                                   left1, left2)
+                    val q2 = CONS (k2, d2, bal_zero (), q1, q)
+                  in
+                    (q2, F, found)
+                  end
+              end
+          end
+        | cmp when cmp > 0 =>
+          let
+            val (p1, fixbal, found) = search (right, fixbal, found)
+          in
+            (* If fixbal is T, then a node has been inserted
+               on the right, and rebalancing may be necessary. *)
+            case+ (fixbal, bal) of
+            | (F, _) =>
+              (* No rebalancing is necessary. *)
+              (CONS (k, d, bal, left, p1), F, found)
+            | (T, bal_minus1 ()) =>
+              (* No rebalancing is necessary. *)
+              (CONS (k, d, bal_zero (), left, p1), F, found)
+            | (T, bal_zero ()) =>
+              (* Rebalancing might still be necessary. *)
+              (CONS (k, d, bal_plus1 (), left, p1), fixbal, found)
+            | (T, bal_plus1 ()) =>
+              (* Rebalancing is necessary. *)
+              let
+                val+ CONS (k1, d1, bal1, left1, right1) = p1
+              in
+                case+ bal1 of
+                | bal_plus1 () =>
+                  (* A single RR rotation. *)
+                  let
+                    val q = CONS (k, d, bal_zero (), left, left1)
+                    val q1 = CONS (k1, d1, bal_zero (), q, right1)
+                  in
+                    (q1, F, found)
+                  end
+                | _ =>
+                  (* A double RL rotation. *)
+                  let
+                    val p2 = left1
+                    val- CONS (k2, d2, bal2, left2, right2) = p2
+                    val q = CONS (k, d, minus_pos_bal bal2,
+                                  left, left2)
+                    val q1 = CONS (k1, d1, minus_neg_bal bal2,
+                                   right2, right1)
+                    val q2 = CONS (k2, d2, bal_zero (), q, q1)
+                  in
+                    (q2, F, found)
+                  end
+              end
+          end
+        | _ =>
+          (* The key was found; p is an existing node. Replace
+             it. The tree needs no rebalancing. *)
+          (CONS (key, data, bal, left, right), F, T)
+  in
+    if avl_t_is_empty avl then
+      (* Start a new tree. *)
+      (CONS (key, data, bal_zero, NIL, NIL), F)
+    else
+      let
+        prval _ = lemma_avl_t_param avl
+        val (avl, _, found) = $effmask_ntm search (avl, F, F)
+      in
+        (avl, found)
+      end
+  end
+
+fn {key_t  : t@ype}
+   {data_t : t@ype}
+balance_for_shrunken_left
+          {size : pos}
+          (p    : avl_t (key_t, data_t, size)) :<>
+    (* Returns a new avl_t, and a ‘fixbal’ flag. *)
+    [sz : pos]
+    (avl_t (key_t, data_t, sz), fixbal_t) =
+  let
+    val+ CONS (k, d, bal, left, right) = p
+  in
+    case+ bal of
+    | bal_minus1 () => (CONS (k, d, bal_zero, left, right), T)
+    | bal_zero () => (CONS (k, d, bal_plus1, left, right), F)
+    | bal_plus1 () =>
+      (* Rebalance. *)
+      let
+        val p1 = right
+        val- CONS (k1, d1, bal1, left1, right1) = p1
+      in
+        case+ bal1 of
+        | bal_zero () =>
+          (* A single RR rotation. *)
+          let
+            val q = CONS (k, d, bal_plus1, left, left1)
+            val q1 = CONS (k1, d1, bal_minus1, q, right1)
+          in
+            (q1, F)
+          end
+        | bal_plus1 () =>
+          (* A single RR rotation. *)
+          let
+            val q = CONS (k, d, bal_zero, left, left1)
+            val q1 = CONS (k1, d1, bal_zero, q, right1)
+          in
+            (q1, T)
+          end
+        | bal_minus1 () =>
+          (* A double RL rotation. *)
+          let
+            val p2 = left1
+            val- CONS (k2, d2, bal2, left2, right2) = p2
+            val q = CONS (k, d, minus_pos_bal bal2, left, left2)
+            val q1 = CONS (k1, d1, minus_neg_bal bal2, right2, right1)
+            val q2 = CONS (k2, d2, bal_zero, q, q1)
+          in
+            (q2, T)
+          end
+      end
+  end
+
+fn {key_t  : t@ype}
+   {data_t : t@ype}
+balance_for_shrunken_right
+          {size : pos}
+          (p    : avl_t (key_t, data_t, size)) :<>
+    (* Returns a new avl_t, and a ‘fixbal’ flag. *)
+    [sz : pos]
+    (avl_t (key_t, data_t, sz), fixbal_t) =
+  let
+    val+ CONS (k, d, bal, left, right) = p
+  in
+    case+ bal of
+    | bal_plus1 () => (CONS (k, d, bal_zero, left, right), T)
+    | bal_zero () => (CONS (k, d, bal_minus1, left, right), F)
+    | bal_minus1 () =>
+      (* Rebalance. *)
+      let
+        val p1 = left
+        val- CONS (k1, d1, bal1, left1, right1) = p1
+      in
+        case+ bal1 of
+        | bal_zero () =>
+          (* A single LL rotation. *)
+          let
+            val q = CONS (k, d, bal_minus1, right1, right)
+            val q1 = CONS (k1, d1, bal_plus1, left1, q)
+          in
+            (q1, F)
+          end
+        | bal_minus1 () =>
+          (* A single LL rotation. *)
+          let
+            val q = CONS (k, d, bal_zero, right1, right)
+            val q1 = CONS (k1, d1, bal_zero, left1, q)
+          in
+            (q1, T)
+          end
+        | bal_plus1 () =>
+          (* A double LR rotation. *)
+          let
+            val p2 = right1
+            val- CONS (k2, d2, bal2, left2, right2) = p2
+            val q = CONS (k, d, minus_neg_bal bal2, right2, right)
+            val q1 = CONS (k1, d1, minus_pos_bal bal2, left1, left2)
+            val q2 = CONS (k2, d2, bal_zero, q1, q)
+          in
+            (q2, T)
+          end
+      end
+  end
+
+implement {key_t} {data_t}
+avl_t_delete (avl, key) =
+  (avl_t_delete_if_found (avl, key)).0
+
+implement {key_t} {data_t}
+avl_t_delete_if_found (avl, key) =
+  let
+    fn
+    balance_L__ {size : pos}
+                (p    : avl_t (key_t, data_t, size)) :<>
+        [sz : pos]
+        (avl_t (key_t, data_t, sz), fixbal_t) =
+      balance_for_shrunken_left<key_t><data_t> p
+    fn
+    balance_R__ {size : pos}
+                (p    : avl_t (key_t, data_t, size)) :<>
+        [sz : pos]
+        (avl_t (key_t, data_t, sz), fixbal_t) =
+      balance_for_shrunken_right<key_t><data_t> p
+
+    fn {}
+    balance_L {size   : pos}
+              (p      : avl_t (key_t, data_t, size),
+               fixbal : fixbal_t) :<>
+        [sz : pos]
+        (avl_t (key_t, data_t, sz), fixbal_t) =
+      if fixbal then
+        balance_L__ p
+      else
+        (p, F)
+
+    fn {}
+    balance_R {size   : pos}
+              (p      : avl_t (key_t, data_t, size),
+               fixbal : fixbal_t) :<>
+        [sz : pos]
+        (avl_t (key_t, data_t, sz), fixbal_t) =
+      if fixbal then
+        balance_R__ p
+      else
+        (p, F)
+
+    fun
+    del {size   : pos}
+        (r      : avl_t (key_t, data_t, size),
+         fixbal : fixbal_t) :<!ntm>
+        (* Returns a new avl_t, a new fixbal, and key and data to be
+           ‘moved up the tree’. *)
+        [sz : nat]
+        (avl_t (key_t, data_t, sz), fixbal_t, key_t, data_t) =
+      case+ r of
+      | CONS (k, d, bal, left, right) =>
+        begin
+          case+ right of
+          | CONS _ =>
+            let
+              val (q, fixbalq, kq, dq) = del (right, fixbal)
+              val q1 = CONS (k, d, bal, left, q)
+              val (q1bal, fixbal) = balance_R (q1, fixbalq)
+            in
+              (q1bal, fixbal, kq, dq)
+            end
+          | NIL => (left, T, k, d)
+        end
+
+    fun
+    search {size   : nat}
+           (p      : avl_t (key_t, data_t, size),
+            fixbal : fixbal_t) :<!ntm>
+        (* Return three values: a new avl_t, a new fixbal, and
+           whether the key was found. *)
+        [sz : nat]
+        (avl_t (key_t, data_t, sz), fixbal_t, bool) =
+      case+ p of
+      | NIL => (p, F, F)
+      | CONS (k, d, bal, left, right) =>
+        case+ avl_t$compare<key_t> (key, k) of
+        | cmp when cmp < 0 =>
+          (* Recursive search down the left branch. *)
+          let
+            val (q, fixbal, found) = search (left, fixbal)
+            val (q1, fixbal) =
+              balance_L (CONS (k, d, bal, q, right), fixbal)
+          in
+            (q1, fixbal, found)
+          end
+        | cmp when cmp > 0 =>
+          (* Recursive search down the right branch. *)
+          let
+            val (q, fixbal, found) = search (right, fixbal)
+            val (q1, fixbal) =
+              balance_R (CONS (k, d, bal, left, q), fixbal)
+          in
+            (q1, fixbal, found)
+          end
+        | _ =>
+          if avl_t_is_empty right then
+            (* Delete p, replace it with its left branch, then
+               rebalance. *)
+            (left, T, T)
+          else if avl_t_is_empty left then
+            (* Delete p, replace it with its right branch, then
+               rebalance. *)
+            (right, T, T)
+          else
+            (* Delete p, but it has both left and right branches, and
+               therefore may have complicated branch structure. *)
+            let
+              val (q, fixbal, k1, d1) = del (left, fixbal)
+              val (q1, fixbal) =
+                balance_L (CONS (k1, d1, bal, q, right), fixbal)
+            in
+              (q1, fixbal, T)
+            end
+  in
+    if avl_t_is_empty avl then
+      (avl, F)
+    else
+      let
+        prval _ = lemma_avl_t_param avl
+        val (avl1, _, found) = $effmask_ntm search (avl, F)
+      in
+        (avl1, found)
+      end
+  end
+
+implement {key_t} {data_t}
+avl_t_pairs (avl) =
+  let
+    fun
+    traverse {size : pos}
+             {n    : nat}
+             (p    : avl_t (key_t, data_t, size),
+              lst  : list ((key_t, data_t), n)) :<!ntm>
+        [sz : pos] list ((key_t, data_t), sz) =
+      (* Reverse in-order traversal, to make an in-order list by
+         consing. *)
+      case+ p of
+      | CONS (k, d, _, left, right) =>
+        if avl_t_is_empty left then
+          begin
+            if avl_t_is_empty right then
+              (k, d) :: lst
+            else
+              (k, d) :: traverse (right, lst)
+          end
+        else
+          begin
+            if avl_t_is_empty right then
+              traverse (left, (k, d) :: lst)
+            else
+              traverse (left, (k, d) :: traverse (right, lst))
+          end
+  in
+    case+ avl of
+    | NIL => LNIL
+    | CONS _ => $effmask_ntm traverse (avl, LNIL)
+  end
+
+
+implement {key_t} {data_t}
+avl_t_keys (avl) =
+  let
+    fun
+    traverse {size : pos}
+             {n    : nat}
+             (p    : avl_t (key_t, data_t, size),
+              lst  : list (key_t, n)) :<!ntm>
+        [sz : pos] list (key_t, sz) =
+      (* Reverse in-order traversal, to make an in-order list by
+         consing. *)
+      case+ p of
+      | CONS (k, _, _, left, right) =>
+        if avl_t_is_empty left then
+          begin
+            if avl_t_is_empty right then
+              k :: lst
+            else
+              k :: traverse (right, lst)
+          end
+        else
+          begin
+            if avl_t_is_empty right then
+              traverse (left, k :: lst)
+            else
+              traverse (left, k :: traverse (right, lst))
+          end
+  in
+    case+ avl of
+    | NIL => LNIL
+    | CONS _ => $effmask_ntm traverse (avl, LNIL)
+  end
+
+implement {key_t} {data_t}
+avl_t_data (avl) =
+  let
+    fun
+    traverse {size : pos}
+             {n    : nat}
+             (p    : avl_t (key_t, data_t, size),
+              lst  : list (data_t, n)) :<!ntm>
+        [sz : pos] list (data_t, sz) =
+      (* Reverse in-order traversal, to make an in-order list by
+         consing. *)
+      case+ p of
+      | CONS (_, d, _, left, right) =>
+        if avl_t_is_empty left then
+          begin
+            if avl_t_is_empty right then
+              d :: lst
+            else
+              d :: traverse (right, lst)
+          end
+        else
+          begin
+            if avl_t_is_empty right then
+              traverse (left, d :: lst)
+            else
+              traverse (left, d :: traverse (right, lst))
+          end
+  in
+    case+ avl of
+    | NIL => LNIL
+    | CONS _ => $effmask_ntm traverse (avl, LNIL)
+  end
+
+implement {key_t} {data_t}
+list2avl_t lst =
+  let
+    fun
+    traverse {n    : pos}
+             {size : nat} .<n>.
+             (lst  : list ((key_t, data_t), n),
+              p    : avl_t (key_t, data_t, size)) :<>
+        [sz : pos] avl_t (key_t, data_t, sz) =
+      case+ lst of
+      | (k, d) :: LNIL => avl_t_insert<key_t><data_t> (p, k, d)
+      | (k, d) :: (_ :: _) =>
+        let
+          val+ _ :: tail = lst
+        in
+          traverse (tail, avl_t_insert<key_t><data_t> (p, k, d))
+        end
+  in
+    case+ lst of
+    | LNIL => NIL
+    | (_ :: _) => traverse (lst, NIL)
+  end
+
+fun {key_t  : t@ype}
+    {data_t : t@ype}
+push_all_the_way_left (stack : List (avl_t (key_t, data_t)),
+                       p     : avl_t (key_t, data_t)) :
+    List0 (avl_t (key_t, data_t)) =
+  let
+    prval _ = lemma_list_param stack
+  in
+    case+ p of
+    | NIL => stack
+    | CONS (_, _, _, left, _) =>
+      push_all_the_way_left (p :: stack, left)
+  end
+
+fun {key_t  : t@ype}
+    {data_t : t@ype}
+push_all_the_way_right (stack : List (avl_t (key_t, data_t)),
+                        p     : avl_t (key_t, data_t)) :
+    List0 (avl_t (key_t, data_t)) =
+  let
+    prval _ = lemma_list_param stack
+  in
+    case+ p of
+    | NIL => stack
+    | CONS (_, _, _, _, right) =>
+      push_all_the_way_right (p :: stack, right)
+  end
+
+fun {key_t  : t@ype}
+    {data_t : t@ype}
+push_all_the_way (stack     : List (avl_t (key_t, data_t)),
+                  p         : avl_t (key_t, data_t),
+                  direction : int) :
+    List0 (avl_t (key_t, data_t)) =
+  if direction < 0 then
+    push_all_the_way_right<key_t><data_t> (stack, p)
+  else
+    push_all_the_way_left<key_t><data_t> (stack, p)
+
+fun {key_t  : t@ype}
+    {data_t : t@ype}
+update_generator_stack (stack     : List (avl_t (key_t, data_t)),
+                        left      : avl_t (key_t, data_t),
+                        right     : avl_t (key_t, data_t),
+                        direction : int) :
+    List0 (avl_t (key_t, data_t)) =
+  let
+    prval _ = lemma_list_param stack
+  in
+    if direction < 0 then
+      begin
+        if avl_t_is_empty left then
+          stack
+        else
+          push_all_the_way_right<key_t><data_t> (stack, left)
+      end
+    else
+      begin
+        if avl_t_is_empty right then
+          stack
+        else
+          push_all_the_way_left<key_t><data_t> (stack, right)
+      end
+  end
+
+implement {key_t} {data_t}
+avl_t_make_pairs_generator (avl, direction) =
+  let
+    typedef avl_t = avl_t (key_t, data_t)
+
+    val stack = push_all_the_way (LNIL, avl, direction)
+    val stack_ref = ref stack
+
+    (* Cast stack_ref to its (otherwise untyped) pointer, so it can be
+       enclosed within ‘generate’. *)
+    val p_stack_ref = $UNSAFE.castvwtp0{ptr} stack_ref
+
+    fun
+    generate () :<cloref1> Option @(key_t, data_t) =
+      let
+        (* Restore the type information for stack_ref. *)
+        val stack_ref =
+          $UNSAFE.castvwtp0{ref (List avl_t)} p_stack_ref
+
+        var stack : List0 avl_t = !stack_ref
+        var retval : Option @(key_t, data_t)
+      in
+        begin
+          case+ stack of
+          | LNIL => retval := None ()
+          | p :: tail =>
+            let
+              val- CONS (k, d, _, left, right) = p
+            in
+              retval := Some @(k, d);
+              stack :=
+                update_generator_stack<key_t><data_t>
+                  (tail, left, right, direction)
+            end
+        end;
+        !stack_ref := stack;
+        retval
+      end
+  in
+    generate
+  end
+
+implement {key_t} {data_t}
+avl_t_make_keys_generator (avl, direction) =
+  let
+    typedef avl_t = avl_t (key_t, data_t)
+
+    val stack = push_all_the_way (LNIL, avl, direction)
+    val stack_ref = ref stack
+
+    (* Cast stack_ref to its (otherwise untyped) pointer, so it can be
+       enclosed within ‘generate’. *)
+    val p_stack_ref = $UNSAFE.castvwtp0{ptr} stack_ref
+
+    fun
+    generate () :<cloref1> Option key_t =
+      let
+        (* Restore the type information for stack_ref. *)
+        val stack_ref =
+          $UNSAFE.castvwtp0{ref (List avl_t)} p_stack_ref
+
+        var stack : List0 avl_t = !stack_ref
+        var retval : Option key_t
+      in
+        begin
+          case+ stack of
+          | LNIL => retval := None ()
+          | p :: tail =>
+            let
+              val- CONS (k, _, _, left, right) = p
+            in
+              retval := Some k;
+              stack :=
+                update_generator_stack<key_t><data_t>
+                  (tail, left, right, direction)
+            end
+        end;
+        !stack_ref := stack;
+        retval
+      end
+  in
+    generate
+  end
+
+implement {key_t} {data_t}
+avl_t_make_data_generator (avl, direction) =
+  let
+    typedef avl_t = avl_t (key_t, data_t)
+
+    val stack = push_all_the_way (LNIL, avl, direction)
+    val stack_ref = ref stack
+
+    (* Cast stack_ref to its (otherwise untyped) pointer, so it can be
+       enclosed within ‘generate’. *)
+    val p_stack_ref = $UNSAFE.castvwtp0{ptr} stack_ref
+
+    fun
+    generate () :<cloref1> Option data_t =
+      let
+        (* Restore the type information for stack_ref. *)
+        val stack_ref =
+          $UNSAFE.castvwtp0{ref (List avl_t)} p_stack_ref
+
+        var stack : List0 avl_t = !stack_ref
+        var retval : Option data_t
+      in
+        begin
+          case+ stack of
+          | LNIL => retval := None ()
+          | p :: tail =>
+            let
+              val- CONS (_, d, _, left, right) = p
+            in
+              retval := Some d;
+              stack :=
+                update_generator_stack<key_t><data_t>
+                  (tail, left, right, direction)
+            end
+        end;
+        !stack_ref := stack;
+        retval
+      end
+  in
+    generate
+  end
+
+implement {key_t} {data_t}
+avl_t_check_avl_condition (avl) =
+  (* If any of the assertions here is triggered, there is a bug. *)
+  let
+    fun
+    get_heights (p : avl_t (key_t, data_t)) : (int, int) =
+      case+ p of
+      | NIL => (0, 0)
+      | CONS (k, d, bal, left, right) =>
+        let
+          val (height_LL, height_LR) = get_heights left
+          val (height_RL, height_RR) = get_heights right
+        in
+          assertloc (abs (height_LL - height_LR) <= 1);
+          assertloc (abs (height_RL - height_RR) <= 1);
+          (height_LL + height_LR, height_RL + height_RR)
+        end
+  in
+    if avl_t_isnot_empty avl then
+      let
+        val (height_L, height_R) = get_heights avl
+      in
+        assertloc (abs (height_L - height_R) <= 1)
+      end
+  end
+
+implement {key_t} {data_t}
+avl_t_pretty_print (avl) =
+  let
+    fun
+    pad {depth : nat} .<depth>.
+        (depth : int depth) : void =
+      if depth <> 0 then
+        begin
+          print! ("  ");
+          pad (pred depth)
+        end
+
+    fun
+    traverse {size  : nat}
+             {depth : nat}
+             (p     : avl_t (key_t, data_t, size),
+              depth : int depth) : void =
+      if avl_t_isnot_empty p then
+        let
+          val+ CONS (k, d, bal, left, right) = p
+        in
+          traverse (left, succ depth);
+          pad depth;
+          avl_t_pretty_print$key_and_data<key_t><data_t> (k, d);
+          println! ("\t\tdepth = ", depth, " bal = ", bal2int bal);
+          traverse (right, succ depth)
+        end
+  in
+    if avl_t_isnot_empty avl then
+      let
+        val+ CONS (k, d, bal, left, right) = avl
+      in
+        traverse (left, 1);
+        avl_t_pretty_print$key_and_data<key_t><data_t> (k, d);
+        println! ("\t\tdepth = 0  bal = ", bal2int bal);
+        traverse (right, 1)
+      end
+  end
+
+(*------------------------------------------------------------------*)
+
+(*
+
+  Here is a little demonstration program.
+
+  Assuming you are using Boehm GC, compile this source file with
+
+      patscc -O2 -DATS_MEMALLOC_GCBDW avl_trees-postiats.dats -lgc
+
+  and run it with
+
+      ./a.out
+
+*)
+
+%{^
+#include <time.h>
+
+ATSinline() atstype_uint64
+get_the_time (void)
+{
+  return (atstype_uint64) time (NULL);
+}
+%}
+
+(* An implementation of avl_t$compare for keys of type ‘int’. *)
+implement
+avl_t$compare<int> (u, v) =
+  if u < v then
+    ~1
+  else if u > v then
+    1
+  else
+    0
+
+(* An implementation of avl_t_pretty_print$key_and_data for keys of
+   type ‘int’ and values of type ‘double’. *)
+implement
+avl_t_pretty_print$key_and_data<int><double> (key, data) =
+  print! ("(", key, ", ", data, ")")
+
+implement
+main0 () =
+  let
+    (* A linear congruential random number generator attributed
+       to Donald Knuth. *)
+    fn
+    next_random (seed : &uint64) : uint64 =
+      let
+        val a : uint64 = $UNSAFE.cast 6364136223846793005ULL
+        val c : uint64 = $UNSAFE.cast 1442695040888963407ULL
+        val retval = seed
+      in
+        seed := (a * seed) + c;
+        retval
+      end
+
+    fn {t : t@ype}
+    fisher_yates_shuffle
+              {n    : nat}
+              (a    : &(@[t][n]),
+               n    : size_t n,
+               seed : &uint64) : void =
+      let
+        var i : [i : nat | i <= n] size_t i
+      in
+        for (i := i2sz 0; i < n; i := succ i)
+          let
+            val randnum = $UNSAFE.cast{Size_t} (next_random seed)
+            val j = randnum mod n (* This is good enough for us. *)
+            val xi = a[i]
+            val xj = a[j]
+          in
+            a[i] := xj;
+            a[j] := xi
+          end
+      end
+
+    var seed : uint64 = $extfcall (uint64, "get_the_time")
+
+    #define N 20
+    var keys : @[int][N] = @[int][N] (0)
+
+    var a : avl_t (int, double)
+    var a_saved : avl_t (int, double)
+    var a1 : (avl_t (int, double), bool)
+
+    var i : [i : nat] int i
+
+    val dflt = ~99999999.0
+    val not_dflt = 123456789.0
+  in
+    println! ("----------------------------------------------------");
+    print! ("\n");
+
+    (* Initialize a shuffled array of keys. *)
+    for (i := 0; i < N; i := succ i)
+      keys[i] := succ i;
+    fisher_yates_shuffle<int> {N} (keys, i2sz N, seed);
+
+    print! ("The keys\n ");
+    for (i := 0; i < N; i := succ i)
+      print! (" ", keys[i]);
+    print! ("\n");
+
+    print! ("\nRunning some tests... ");
+
+    (* Insert key-data pairs in the shuffled order, checking aspects
+       of the implementation while doing so. *)
+    a := avl_t_nil ();
+    for (i := 0; i < N; i := succ i)
+      let
+        var j : [j : nat] int j
+      in
+        a := avl_t_insert<int> (a, keys[i], g0i2f keys[i]);
+        avl_t_check_avl_condition (a);
+        assertloc (avl_t_size a = succ i);
+        assertloc (avl_t_is_empty a = iseqz (avl_t_size a));
+        assertloc (avl_t_isnot_empty a = isneqz (avl_t_size a));
+        a := avl_t_insert<int> (a, keys[i], not_dflt);
+        avl_t_check_avl_condition (a);
+        assertloc (avl_t_search<int><double> (a, keys[i], dflt)
+                      = not_dflt);
+        assertloc (avl_t_size a = succ i);
+        assertloc (avl_t_is_empty a = iseqz (avl_t_size a));
+        assertloc (avl_t_isnot_empty a = isneqz (avl_t_size a));
+        a := avl_t_insert<int> (a, keys[i], g0i2f keys[i]);
+        avl_t_check_avl_condition (a);
+        assertloc (avl_t_size a = succ i);
+        assertloc (avl_t_is_empty a = iseqz (avl_t_size a));
+        assertloc (avl_t_isnot_empty a = isneqz (avl_t_size a));
+        for (j := 0; j < N; j := succ j)
+          let
+            val k = keys[j]
+            val has_key = avl_t_has_key<int> (a, k)
+            val data_opt = avl_t_search<int><double> (a, k)
+            val data_dflt = avl_t_search<int><double> (a, k, dflt)
+          in
+            assertloc (has_key = (j <= i));
+            assertloc (option_is_some data_opt = (j <= i));
+            if (j <= i) then
+              let
+                val- Some data = data_opt
+              in
+                assertloc (data = g0i2f k);
+                assertloc (data_dflt = g0i2f k);
+              end
+            else
+              let
+                val- None () = data_opt
+              in
+                assertloc (data_dflt = dflt);
+              end
+          end
+      end;
+
+    (* Do it again, but using avl_t_insert_or_replace and checking its
+       second return value. *)
+    a1 := (avl_t_nil (), false);
+    for (i := 0; i < N; i := succ i)
+      let
+        var j : [j : nat] int j
+      in
+        a1 :=
+          avl_t_insert_or_replace<int> (a1.0, keys[i], g0i2f keys[i]);
+        avl_t_check_avl_condition (a1.0);
+        assertloc (~(a1.1));
+        assertloc (avl_t_size (a1.0) = succ i);
+        assertloc (avl_t_is_empty a1.0 = iseqz (avl_t_size a1.0));
+        assertloc (avl_t_isnot_empty a1.0 = isneqz (avl_t_size a1.0));
+        a1 := avl_t_insert_or_replace<int> (a1.0, keys[i], not_dflt);
+        avl_t_check_avl_condition (a1.0);
+        assertloc (avl_t_search<int><double> (a1.0, keys[i], dflt)
+                      = not_dflt);
+        assertloc (avl_t_size (a1.0) = succ i);
+        assertloc (avl_t_is_empty a1.0 = iseqz (avl_t_size a1.0));
+        assertloc (avl_t_isnot_empty a1.0 = isneqz (avl_t_size a1.0));
+        a1 :=
+          avl_t_insert_or_replace<int> (a1.0, keys[i], g0i2f keys[i]);
+        avl_t_check_avl_condition (a1.0);
+        assertloc (a1.1);
+        assertloc (avl_t_size (a1.0) = succ i);
+        assertloc (avl_t_is_empty a1.0 = iseqz (avl_t_size a1.0));
+        assertloc (avl_t_isnot_empty a1.0 = isneqz (avl_t_size a1.0));
+        for (j := 0; j < N; j := succ j)
+          let
+            val k = keys[j]
+            val has_key = avl_t_has_key<int> (a1.0, k)
+            val data_opt = avl_t_search<int><double> (a1.0, k)
+            val data_dflt = avl_t_search<int><double> (a1.0, k, dflt)
+          in
+            assertloc (has_key = (j <= i));
+            assertloc (option_is_some data_opt = (j <= i));
+            if (j <= i) then
+              let
+                val- Some data = data_opt
+              in
+                assertloc (data = g0i2f k);
+                assertloc (data_dflt = g0i2f k);
+              end
+            else
+              let
+                val- None () = data_opt
+              in
+                assertloc (data_dflt = dflt);
+              end
+          end
+      end;
+    a := a1.0;
+
+    (* The trees are PERSISTENT, so SAVE THE CURRENT VALUE! *)
+    a_saved := a;
+
+    (* Reshuffle the keys, and test deletion, using the reshuffled
+       keys. *)
+    fisher_yates_shuffle<int> {N} (keys, i2sz N, seed);
+    for (i := 0; i < N; i := succ i)
+      let
+        val ix = keys[i]
+        var j : [j : nat] int j
+      in
+        a := avl_t_delete<int> (a, ix);
+        avl_t_check_avl_condition (a);
+        assertloc (avl_t_size a = N - succ i);
+        assertloc (avl_t_is_empty a = iseqz (avl_t_size a));
+        assertloc (avl_t_isnot_empty a = isneqz (avl_t_size a));
+        a := avl_t_delete<int> (a, ix);
+        avl_t_check_avl_condition (a);
+        assertloc (avl_t_size a = N - succ i);
+        assertloc (avl_t_is_empty a = iseqz (avl_t_size a));
+        assertloc (avl_t_isnot_empty a = isneqz (avl_t_size a));
+        for (j := 0; j < N; j := succ j)
+          let
+            val k = keys[j]
+            val has_key = avl_t_has_key<int> (a, k)
+            val data_opt = avl_t_search<int><double> (a, k)
+            val data_dflt = avl_t_search<int><double> (a, k, dflt)
+          in
+            assertloc (has_key = (i < j));
+            assertloc (option_is_some data_opt = (i < j));
+            if (i < j) then
+              let
+                val- Some data = data_opt
+              in
+                assertloc (data = g0i2f k);
+                assertloc (data_dflt = g0i2f k);
+              end
+            else
+              let
+                val- None () = data_opt
+              in
+                assertloc (data_dflt = dflt);
+              end
+          end
+      end;
+
+    (* Get back the PERSISTENT VALUE from before the deletions. *)
+    a := a_saved;
+
+    (* Reshuffle the keys, and test deletion again, this time using
+       avl_t_delete_if_found. *)
+    fisher_yates_shuffle<int> {N} (keys, i2sz N, seed);
+    for (i := 0; i < N; i := succ i)
+      let
+        val ix = keys[i]
+        var j : [j : nat] int j
+      in
+        a1 := avl_t_delete_if_found<int> (a, ix);
+        a := a1.0;
+        avl_t_check_avl_condition (a);
+        assertloc (a1.1);
+        assertloc (avl_t_size a = N - succ i);
+        assertloc (avl_t_is_empty a = iseqz (avl_t_size a));
+        assertloc (avl_t_isnot_empty a = isneqz (avl_t_size a));
+        a1 := avl_t_delete_if_found<int> (a, ix);
+        a := a1.0;
+        avl_t_check_avl_condition (a);
+        assertloc (~(a1.1));
+        assertloc (avl_t_size a = N - succ i);
+        assertloc (avl_t_is_empty a = iseqz (avl_t_size a));
+        assertloc (avl_t_isnot_empty a = isneqz (avl_t_size a));
+        for (j := 0; j < N; j := succ j)
+          let
+            val k = keys[j]
+            val has_key = avl_t_has_key<int> (a, k)
+            val data_opt = avl_t_search<int><double> (a, k)
+            val data_dflt = avl_t_search<int><double> (a, k, dflt)
+          in
+            assertloc (has_key = (i < j));
+            assertloc (option_is_some data_opt = (i < j));
+            if (i < j) then
+              let
+                val- Some data = data_opt
+              in
+                assertloc (data = g0i2f k);
+                assertloc (data_dflt = g0i2f k);
+              end
+            else
+              let
+                val- None () = data_opt
+              in
+                assertloc (data_dflt = dflt);
+              end
+          end
+      end;
+
+    print! ("passed\n");
+
+    (* Get back the PERSISTENT VALUE from before the deletions. *)
+    a := a_saved;
+
+    print! ("\n");
+    println! ("----------------------------------------------------");
+    print! ("\n");
+    print! ("*** PRETTY-PRINTING OF THE TREE ***\n\n");
+
+    avl_t_pretty_print<int><double> a;
+
+    print! ("\n");
+    println! ("----------------------------------------------------");
+    print! ("\n");
+    print! ("*** GENERATORS ***\n\n");
+
+    let
+      val gen = avl_t_make_pairs_generator (a, 1)
+      var x : Option @(int, double)
+    in
+      print! ("Association pairs in order\n ");
+      for (x := gen (); option_is_some (x); x := gen ())
+        let
+          val @(k, d) = option_unsome x
+        in
+          print! (" (", k : int, ", ", d : double, ")")
+        end
+    end;
+
+    print! ("\n\n");
+
+    let
+      val gen = avl_t_make_pairs_generator (a, ~1)
+      var x : Option @(int, double)
+    in
+      print! ("Association pairs in reverse order\n ");
+      for (x := gen (); option_is_some (x); x := gen ())
+        let
+          val @(k, d) = option_unsome x
+        in
+          print! (" (", k : int, ", ", d : double, ")")
+        end
+    end;
+
+    print! ("\n\n");
+
+    let
+      val gen = avl_t_make_keys_generator (a, 1)
+      var x : Option int
+    in
+      print! ("Keys in order\n ");
+      for (x := gen (); option_is_some (x); x := gen ())
+        print! (" ", (option_unsome x) : int)
+    end;
+
+    print! ("\n\n");
+
+    let
+      val gen = avl_t_make_keys_generator (a, ~1)
+      var x : Option int
+    in
+      print! ("Keys in reverse order\n ");
+      for (x := gen (); option_is_some (x); x := gen ())
+        print! (" ", (option_unsome x) : int)
+    end;
+
+    print! ("\n\n");
+
+    let
+      val gen = avl_t_make_data_generator (a, 1)
+      var x : Option double
+    in
+      print! ("Data values in order of their keys\n ");
+      for (x := gen (); option_is_some (x); x := gen ())
+        print! (" ", (option_unsome x) : double)
+    end;
+
+    print! ("\n\n");
+
+    let
+      val gen = avl_t_make_data_generator (a, ~1)
+      var x : Option double
+    in
+      print! ("Data values in reverse order of their keys\n ");
+      for (x := gen (); option_is_some (x); x := gen ())
+        print! (" ", (option_unsome x) : double)
+    end;
+
+    print! ("\n");
+
+    print! ("\n");
+    println! ("----------------------------------------------------");
+    print! ("\n");
+    print! ("*** AVL TREES TO LISTS ***\n\n");
+
+    print! ("Association pairs in order\n  ");
+    print! (avl_t_pairs<int><double> a);
+
+    print! ("\n\n");
+
+    print! ("Keys in order\n  ");
+    print! (avl_t_keys<int> a);
+    print! ("\n\n");
+
+    print! ("Data values in order of their keys\n  ");
+    print! (avl_t_data<int><double> a);
+    print! ("\n");
+
+    print! ("\n");
+    println! ("----------------------------------------------------");
+    print! ("\n");
+    print! ("*** LISTS TO AVL TREES ***\n\n");
+
+    let
+      val lst = (3, 3.0) :: (1, 1.0) :: (4, 4.0) :: (2, 2.0) :: LNIL
+      val avl = list2avl_t<int><double> lst
+    in
+      print! (lst : List @(int, double));
+      print! ("\n\n  =>\n\n");
+      avl_t_pretty_print<int><double> avl
+    end;
+
+    print! ("\n");
+    println! ("----------------------------------------------------")
+  end
+
+(*------------------------------------------------------------------*)

@@ -1,0 +1,6 @@
+x$ = "big"
+PRINT "Mary had a "; x$; " lamb"
+x$ = "little"
+PRINT USING "Mary also had a & lamb"; x$
+' this code above doesn't modify the first string subsustituting a piece of it with another string
+'surely it gives the right output on the screen

@@ -1,0 +1,69 @@
+theory Quicksort
+imports Main
+begin
+
+fun quicksort :: "('a :: linorder) list ⇒ 'a list" where
+  "quicksort [] = []"
+| "quicksort (x#xs) = (quicksort [y←xs. y<x]) @ [x] @ (quicksort [y←xs. y>x])"
+
+lemma "quicksort [4::int, 2, 7, 1] = [1, 2, 4, 7]"
+  by(code_simp)
+
+lemma set_first_second_partition:
+  fixes x :: "'a :: linorder"
+  shows "{y ∈ ys. y < x} ∪ {x} ∪ {y ∈ ys. x < y} =
+         insert x ys"
+  by fastforce
+
+lemma set_quicksort: "set (quicksort xs) = set xs"
+  by(induction xs rule: quicksort.induct)
+    (simp add: set_first_second_partition[simplified])+
+
+
+theorem "sorted (quicksort xs)"
+proof(induction xs rule: quicksort.induct)
+  case 1
+  show "sorted (quicksort [])" by simp
+next
+  case (2 x xs)
+  assume IH_less:    "sorted (quicksort [y←xs. y<x])"
+  assume IH_greater: "sorted (quicksort [y←xs. y>x])"
+  have pivot_geq_first_partition:
+    "∀z∈set (quicksort [y←xs. y<x]). z ≤ x"
+    by (simp add: set_quicksort less_imp_le)
+  have pivot_leq_second_partition:
+    "∀z ∈ (set (quicksort [y←xs. y>x])). (x ≤ z)"
+    by (simp add: set_quicksort less_imp_le)
+  have first_partition_leq_second_partition:
+    "∀p∈set (quicksort [y←xs. y<x]).
+        ∀z ∈ (set (quicksort [y←xs. y>x])). (p ≤ z)"
+    by (auto simp add: set_quicksort)
+
+  from IH_less IH_greater
+       pivot_geq_first_partition pivot_leq_second_partition
+       first_partition_leq_second_partition
+  show "sorted (quicksort (x # xs))"  by(simp add: sorted_append)
+qed
+
+
+text‹
+The specification on rosettacode says
+ ▪ All elements less than the pivot must be in the first partition.
+ ▪ All elements greater than the pivot must be in the second partition.
+Since this specification neither says "less than or equal" nor
+"greater or equal", this quicksort implementation removes duplicate elements.
+›
+lemma "quicksort [1::int, 1, 1, 2, 2, 3] = [1, 2, 3]"
+  by(code_simp)
+
+text‹If we try the following, we automatically get a counterexample›
+lemma "length (quicksort xs) = length xs"
+(*
+  Auto Quickcheck found a counterexample:
+    xs = [a⇩1, a⇩1]
+  Evaluated terms:
+    length (quicksort xs) = 1
+    length xs = 2
+*)
+  oops
+end

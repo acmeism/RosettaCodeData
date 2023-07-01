@@ -1,0 +1,62 @@
+V a = 12
+V k1_factrl = 1.0
+[Float] c
+c.append(sqrt(2.0 * math:pi))
+L(k) 1 .< a
+   c.append(exp(a - k) * (a - k) ^ (k - 0.5) / k1_factrl)
+   k1_factrl *= -k
+
+F gamma_spounge(z)
+   V accm = :c[0]
+   L(k) 1 .< :a
+      accm += :c[k] / (z + k)
+   accm *= exp(-(z + :a)) * (z + :a) ^ (z + 0.5)
+   R accm / z
+
+F GammaInc_Q(a, x)
+   V a1 = a - 1
+   V a2 = a - 2
+   F f0(t)
+      R t ^ @a1 * exp(-t)
+
+   F df0(t)
+      R (@a1 - t) * t ^ @a2 * exp(-t)
+
+   V y = a1
+   L f0(y) * (x - y) > 2.0e-8 & y < x
+      y += 0.3
+   I y > x
+      y = x
+
+   V h = 3.0e-4
+   V n = Int(y / h)
+   h = y / n
+   V hh = 0.5 * h
+   V gamax = h * sum(((n - 1 .< -1).step(-1).map(j -> @h * j)).map(t -> @f0(t) + @hh * @df0(t)))
+
+   R gamax / gamma_spounge(a)
+
+F chi2UniformDistance(dataSet)
+   V expected = sum(dataSet) * 1.0 / dataSet.len
+   V cntrd = (dataSet.map(d -> d - @expected))
+   R sum(cntrd.map(x -> x * x)) / expected
+
+F chi2Probability(dof, distance)
+   R 1.0 - GammaInc_Q(0.5 * dof, 0.5 * distance)
+
+F chi2IsUniform(dataSet, significance)
+   V dof = dataSet.len - 1
+   V dist = chi2UniformDistance(dataSet)
+   R chi2Probability(dof, dist) > significance
+
+V dset1 = [199809, 200665, 199607, 200270, 199649]
+V dset2 = [522573, 244456, 139979,  71531,  21461]
+
+L(ds) (dset1, dset2)
+   print(‘Data set: ’ds)
+   V dof = ds.len - 1
+   V distance = chi2UniformDistance(ds)
+   print(‘dof: #. distance: #.4’.format(dof, distance), end' ‘ ’)
+   V prob = chi2Probability(dof, distance)
+   print(‘probability: #.4’.format(prob), end' ‘ ’)
+   print(‘uniform?  ’(I chi2IsUniform(ds, 0.05) {‘Yes’} E ‘No’))

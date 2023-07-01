@@ -1,0 +1,181 @@
+# -*- ObjectIcon -*-
+#
+# Convex hulls by Andrew's monotone chain algorithm.
+#
+# For a description of the algorithm, see
+# https://en.wikibooks.org/w/index.php?title=Algorithm_Implementation/Geometry/Convex_hull/Monotone_chain&stableid=40169
+#
+
+import io
+import ipl.sort
+
+class PlanePoint ()           # Enough plane geometry for our purpose.
+
+  private readable x, y
+
+  public new (x, y)
+    self.x := x
+    self.y := y
+    return
+  end
+
+  public equals (other)
+    if self.x = other.x & self.y = other.y then
+      return
+    else
+      fail
+  end
+
+  # Impose a total order on points, making it one that will work for
+  # Andrew's monotone chain algorithm. *)
+  public comes_before (other)
+    if (self.x < other.x) | (self.x = other.x & self.y < other.y) then
+      return
+    else
+      fail
+  end
+
+  # Subtraction is really a vector or multivector operation.
+  public minus (other)
+    return PlanePoint (self.x - other.x, self.y - other.y)
+  end
+
+  # Cross product is really a multivector operation.
+  public cross (other)
+    return (self.x * other.y) - (self.y * other.x)
+  end
+
+  public to_string ()
+    return "(" || string (self.x) || " " || string (self.y) || ")"
+  end
+
+end
+
+# Comparison like C's strcmp(3).
+procedure compare_points (p, q)
+  local cmp
+
+  if p.comes_before (q) then
+    cmp := -1
+  else if q.comes_before (p) then
+    cmp := 1
+  else
+    cmp := 0
+  return cmp
+end
+
+procedure sort_points (points)
+  # Non-destructive sort.
+  return mergesort (points, compare_points)
+end
+
+procedure delete_neighbor_dups (arr, equals)
+  local arr1, i
+
+  if *arr = 0 then {
+    arr1 := []
+  } else {
+    arr1 := [arr[1]]
+    i := 2
+    while i <= *arr do {
+      unless equals (arr[i], arr1[-1]) then
+        put (arr1, arr[i])
+      i +:= 1
+    }
+  }
+  return arr1
+end
+
+procedure construct_lower_hull (pt)
+  local hull, i, j
+
+  hull := list (*pt)
+  hull[1] := pt[1]
+  hull[2] := pt[2]
+  j := 2
+  every i := 3 to *pt do {
+    while (j ~= 1 &
+           (hull[j].minus (hull[j - 1])).cross (pt[i].minus (hull[j - 1])) <= 0) do
+      j -:= 1
+    j +:= 1
+    hull[j] := pt[i]
+  }
+  return hull[1 : j + 1]
+end
+
+procedure construct_upper_hull (pt)
+  local hull, i, j
+
+  hull := list (*pt)
+  hull[1] := pt[-1]
+  hull[2] := pt[-2]
+  j := 2
+  every i := 3 to *pt do {
+    while (j ~= 1 &
+           (hull[j].minus (hull[j - 1])).cross (pt[-i].minus (hull[j - 1])) <= 0) do
+      j -:= 1
+    j +:= 1
+    hull[j] := pt[-i]
+  }
+  return hull[1 : j + 1]
+end
+
+procedure construct_hull (pt)
+  local lower_hull, upper_hull
+
+  lower_hull := construct_lower_hull (pt)
+  upper_hull := construct_upper_hull (pt)
+  return lower_hull[1 : -1] ||| upper_hull [1 : -1]
+end
+
+procedure points_equal (p, q)
+  if p.equals (q) then
+    return
+  else
+    fail
+end
+
+procedure find_convex_hull (points)
+  local pt, hull
+
+  if *points = 0 then {
+    hull := []
+  } else {
+    pt := delete_neighbor_dups (sort_points (points), points_equal)
+    if *pt <= 2 then
+      hull := pt
+    else
+      hull := construct_hull (pt)
+  }
+  return hull
+end
+
+procedure main ()
+  local example_points, hull
+
+  example_points :=
+    [PlanePoint (16.0, 3.0),
+     PlanePoint (12.0, 17.0),
+     PlanePoint (0.0, 6.0),
+     PlanePoint (-4.0, -6.0),
+     PlanePoint (16.0, 6.0),
+     PlanePoint (16.0, -7.0),
+     PlanePoint (16.0, -3.0),
+     PlanePoint (17.0, -4.0),
+     PlanePoint (5.0, 19.0),
+     PlanePoint (19.0, -8.0),
+     PlanePoint (3.0, 16.0),
+     PlanePoint (12.0, 13.0),
+     PlanePoint (3.0, -4.0),
+     PlanePoint (17.0, 5.0),
+     PlanePoint (-3.0, 15.0),
+     PlanePoint (-3.0, -9.0),
+     PlanePoint (0.0, 11.0),
+     PlanePoint (-9.0, -3.0),
+     PlanePoint (-4.0, -2.0),
+     PlanePoint (12.0, 10.0)]
+
+  hull := find_convex_hull (example_points)
+
+  every write ((!hull).to_string ())
+end

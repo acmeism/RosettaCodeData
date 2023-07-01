@@ -1,0 +1,10 @@
+(with-temp-buffer
+  (insert-file-contents "data.txt")
+  (goto-char (point-min))
+  (while (not (eobp))
+    (let* ((line (buffer-substring (line-beginning-position)
+                                   (line-end-position)))
+           (magn (nth 2 (split-string line "\\s-+"))))
+      (when (> (string-to-number magn) 6.0)
+        (message line)))
+    (forward-line 1)))

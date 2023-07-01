@@ -1,0 +1,86 @@
+(*==Number names==*)
+
+(*Mathematica has a built-in function for getting the name of an integer. It's a semantically rich function (dealing with many languages and grammatical variants), and consequently it would slow down our algorithm significantly. So, I've used the built-in function to seed/memoize special-purpose functions. Furthermore, the problem is suited to using a representation of the sentence that is an array of strings rather than a single monolithic string, and so these integer name functions will return arrays of strings.*)
+
+(*We'll define the function for small integers to use the built-in function and to trigger memoization on the first invocation. After that, the basic strategy is to chunk up an integer into groups of three digits, apply the name to what those digits usually represent and then add the 'scaling' term (e.g. 'thousand', 'million'). Just for laziness, I'll skip trying to handle the 'thousand and zero' case and just fall back to the built-in function--it shouldn't be called often enough to matter. Since this problem won't need number names exceeding the 'million' scale, I won't optimize beyond that.*)
+IntNameWords[n_]:=(IntNameWords[n]=StringSplit[IntegerName[n,"Words"]])/;n<1000;
+IntNameWords[n_]:=StringSplit[IntegerName[n,"Words"]]/;Divisible[n,1000];
+IntNameWords[n_]:=Flatten[Riffle[IntNameWords/@QuotientRemainder[n,1000],"thousand"]]/;n<1000000;
+IntNameWords[n_]:=Flatten[Riffle[IntNameWords/@QuotientRemainder[n,1000000],"million"]]/;n<1000000000;
+IntNameWords[n_]:=StringSplit[IntegerName[n,"Words"]];
+(*I'm using Scan to trigger the memoization.*)
+Scan[IntNameWords,Range[999]];
+
+(*The strategy is similar for ordinals. Note that I'm tacking on a comma to the ordinals. This makes this function quite specialized to this specific problem.*)
+OrdNameWords[n_]:=(OrdNameWords[n]=StringSplit[IntegerName[n,"Ordinal"]<>","])/;n<1000;
+OrdNameWords[n_]:=StringSplit[IntegerName[n,"Ordinal"]<>","]/;Divisible[n,1000];
+OrdNameWords[n_]:=Flatten[Riffle[Construct@@@Thread[{{IntNameWords,OrdNameWords},QuotientRemainder[n,1000]}],"thousand"]]/;n<1000000;
+OrdNameWords[n_]:=Flatten[Riffle[Construct@@@Thread[{{IntNameWords,OrdNameWords},QuotientRemainder[n,1000000]}],"million"]]/;n<1000000000;
+OrdNameWords[n_]:=StringSplit[IntegerName[n,"Ordinal"]<>","];
+(*Triggering memoization again.*)
+Scan[OrdNameWords,Range[999]];
+
+
+(*==Helper/driver functions==*)
+
+(*This could be generalized, but for this problem, the '-' and ',' are the only non-letter characters we need to worry about.*)
+LetterCount[str_]:=StringLength[StringDelete[str,"-"|","]];
+
+(*The seed/initial part of the sentence.*)
+SentenceHeadWords=StringSplit["Four is the number of letters in the first word of this sentence,"];
+
+(*Output formatters*)
+DisplayWordLengthSequence[wordSeq_]:=StringRiffle[{"First "<>StringRiffle[IntNameWords[Length@wordSeq]]<>" numbers in sequence:",LetterCount/@wordSeq},"\n"];
+DisplayCharacterCount[wordSeq_]:=StringRiffle[{"String length of sentence with "<>StringRiffle[IntNameWords[Length@wordSeq]]<>" words:",SentenceCharacterCount[wordSeq]}];
+DisplayWordInfo[wordSeq_,wordIdx_]:=StringForm["The `` word is '``' consisting of `` letters.",StringRiffle[OrdNameWords[Length@wordSeq]],wordSeq[[wordIdx]],StringRiffle[IntNameWords[StringLength@wordSeq[[wordIdx]]]]];
+
+(*There is a space between each 'word', so we can just add 1 less than the number of 'words' to get total characters in the full string representation of the sentence (if we were to create it). I could also subract another 1 for the trailing comma, but the requirements weren't precise in this regard.*)
+SentenceCharacterCount[chunks:{__String}]:=Total[StringLength[chunks]]+Length[chunks]-1;
+
+(*==Implementation A==*)
+
+(*A simple functional implementation that continues to extend the 'sentence' one fragment at a time until the number of words exceeds the requested number. This implementation takes several seconds to complete the 100,000 word case.*)
+ExtendCharChunks[{0,0,{}}]={1,Length[SentenceHeadWords],SentenceHeadWords};
+ExtendCharChunks[{fragCt_,wordCt_,chunks_}]:=
+With[
+{nextFrag=Flatten[{IntNameWords[LetterCount[chunks[[1+fragCt]]]],"in","the",OrdNameWords[1+fragCt]}]},
+{1+fragCt,wordCt+Length[nextFrag],Flatten[{chunks,nextFrag}]}
+];
+SentenceChunksFun[chunkCt_]:=Take[Last[NestWhile[ExtendCharChunks,ExtendCharChunks[{0,0,{}}],#[[2]]<chunkCt&]],chunkCt];
+
+
+(*==Implementation B==*)
+
+(*This implementation uses a pre-allocated array, an iterative strategy, and inlining of the fragment construction. It performs much better than the previous implementation but still takes about 20 seconds for the 10 million word case. One could try compiling the function for greater performance.*)
+SentenceChunksArray[targetCount_]:=
+Block[
+{
+chunks=ConstantArray["",targetCount],
+wordIdx=0,
+fragmentIdx=0
+},
+Scan[(chunks[[++wordIdx]]=#)&,SentenceHeadWords];
+++fragmentIdx;
+While[
+(*Since each new fragment is longer than one word, it is likely that we will try to insert more words into the array than it has been allocated to hold. This generates and error message, but does not otherwise interfere with processing (the insertion simply fails). I could include more checks, but it didn't seem necessary for this task.*)
+wordIdx<targetCount,
+Scan[(chunks[[++wordIdx]]=#)&,{Splice[IntNameWords[LetterCount[chunks[[++fragmentIdx]]]]],"in","the",Splice[OrdNameWords[fragmentIdx]]}]
+];
+chunks
+];
+
+
+(*==Output==*)
+
+StringRiffle[
+{
+DisplayWordLengthSequence[SentenceChunksArray[201]],
+DisplayCharacterCount[SentenceChunksArray[201]],
+DisplayWordInfo[SentenceChunksArray[1000],1000],
+DisplayWordInfo[SentenceChunksArray[10000],10000],
+DisplayWordInfo[SentenceChunksArray[100000],100000],
+DisplayWordInfo[SentenceChunksArray[1000000],1000000],
+DisplayWordInfo[SentenceChunksArray[10000000],10000000]
+},
+"\n\n"
+]

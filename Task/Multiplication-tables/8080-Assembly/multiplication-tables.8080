@@ -1,0 +1,97 @@
+	org	100h
+	lxi	h,output
+	;;;	Make the header
+	call	skip	; Four spaces,
+	mvi	m,'|'	; separator,
+	inx	h
+	lxi	d,0C01h	; 12 fields starting at 1
+fnum:	mov	a,e	; Field number
+	call	num
+	inr	e
+	dcr 	d	; If not 12 yet, next field number
+	jnz	fnum
+	call	nl	; Newline
+	mvi	a,'-'	; Four dashes,
+	mvi	b,4
+	call	bchr
+	mvi	m,'+'	; Plus,
+	inx	h
+	mvi	b,12*4	; and 12*4 more dashes
+	call	bchr
+	call	nl	; Newline
+	;;;	Write the 12 lines
+	mvi	d,1	; Start at line 1,
+line:	mov	a,d	; Add the line number
+	call	num
+	mvi	m,'|'	; separator
+	inx	h
+	mvi	e,1	; Start at column 1
+	mvi	c,0	; Cumulative sum at C
+field:	mov	a,c	; Add line number giving next column
+	add	d
+	mov	c,a
+	mov	a,e	; If column >= line, we need to print
+	cmp	d
+	mov	a,c	; the current total
+	cc	skip	; skip field if column >= line
+	cnc	num	; print field if column < line
+	inr	e	; next column
+	mov	a,e
+	cpi	13	; column 13?
+	jnz	field	; If not, next field on line
+	call 	nl	; But if so, add newline
+	inr	d	; next line
+	mov	a,d
+	cpi	13	; line 13?
+	jnz	line	; If not, next line
+	mvi	m,'$'	; Write a CP/M string terminator,
+	mvi	c,9	; And use CP/M to print the string
+	lxi	d,output
+	jmp	5
+	;;;	Add the character in A to the string at HL, B times
+bchr:	mov	m,a
+	inx	h
+	dcr	b
+	jnz	bchr
+	ret
+	;;;	Add newline to string at HL
+nl:	mvi	m,13	; CR
+	inx	h
+	mvi	m,10	; LF
+	inx	h
+	ret
+	;;;	Add four spaces to string at HL (skip field)
+skip:	mvi	b,' '
+	mov	m,b
+	inx	h
+	mov	m,b
+	inx	h
+	mov	m,b
+	inx	h
+	mov	m,b
+	inx	h
+	ret
+	;;;	Add 3-digit number in A to string at HL
+num:	mvi	m,' '	; Separator space
+	inx	h
+	ana	a	; Clear carry
+	mvi	b,100	; 100s digit
+	call	dspc
+	mvi	b,10	; 10s digit
+	call	dspc
+	mvi	b,1	; 1s digit
+dspc:	jc	dgt	; If carry, we need a digit		
+	cmp	b	; >= digit?
+	jnc	dgt	; If not, we need a digit
+	mvi	m,' '	; Otherwise, fill with space
+	inx	h
+	cmc		; Return with carry off
+	ret
+dgt:	mvi	m,'0'-1	; Calculate digit
+dloop:	inr	m	; Increment digit
+	sub	b	; while B can be subtracted
+	jnc	dloop
+	add	b
+	inx	h
+	ret
+output:	equ	$

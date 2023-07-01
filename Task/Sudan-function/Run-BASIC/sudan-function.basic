@@ -1,0 +1,16 @@
+FUNCTION F(n,x,y)
+    IF n = 0 THEN
+       LET F = x + y
+    ELSE
+       IF y = 0 THEN
+          LET F = x
+       ELSE
+          LET F = F(n - 1, F(n, x, y - 1), F(n, x, y - 1) + y)
+       END IF
+    END IF
+END FUNCTION
+
+PRINT "F(2,1,1) = "; F(2, 1, 1)
+PRINT "F(3,1,1) = "; F(3, 1, 1)
+PRINT "F(2,2,1) = "; F(2, 2, 1)
+END

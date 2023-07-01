@@ -1,0 +1,241 @@
+include arwen.ew
+include ..\arwen\dib256.ew
+
+constant HelpText = "Left-click drag with the mouse to move the image.\n"&
+                    " (the image is currently only redrawn on mouseup).\n"&
+                    "Right-click-drag with the mouse to select a region to zoom in to.\n"&
+                    "Use the mousewheel to zoom in and out (nb: can be slow).\n"&
+                    "Press F2 to select iterations, higher==more detail but slower.\n"&
+                    "Resize the window as you please, but note that going fullscreen, \n"&
+                    "especially at high iteration, may mean a quite long draw time.\n"&
+                    "Press Escape to close the window."
+
+procedure Help()
+    void = messageBox("Mandelbrot Set",HelpText,MB_OK)
+end procedure
+
+integer cWidth = 520    -- client area width
+integer cHeight = 480   -- client area height
+
+constant Main = create(Window, "Mandelbrot Set", 0, 0, 50, 50, cWidth+16, cHeight+38, 0),
+         mainHwnd = getHwnd(Main),
+         mainDC = getPrivateDC(Main),
+
+         mIter = create(Menu, "", 0, 0, 0,0,0,0,0),
+         iterHwnd = getHwnd(mIter),
+         mIter50 = create(MenuItem,"50 (fast, low detail)",     0, mIter, 0,0,0,0,0),
+         mIter100 = create(MenuItem,"100 (default)",            0, mIter, 0,0,0,0,0),
+         mIter500 = create(MenuItem,"500",                      0, mIter, 0,0,0,0,0),
+         mIter1000 = create(MenuItem,"1000 (slow, high detail)",0, mIter, 0,0,0,0,0),
+         m50to1000 = {mIter50,mIter100,mIter500,mIter1000},
+         i50to1000 = {     50,     100,     500,     1000}
+
+integer mainDib = 0
+
+constant whitePen = c_func(xCreatePen, {0,1,BrightWhite})
+constant NULL_BRUSH = 5,
+         NullBrushID = c_func(xGetStockObject,{NULL_BRUSH})
+
+atom t0
+integer iter
+atom x0, y0     -- top-left coords to draw
+atom scale      -- controls width/zoom
+
+procedure init()
+    x0 = -2
+    y0 = -1.25
+    scale = 2.5/cHeight
+    iter = 100
+    void = c_func(xSelectObject,{mainDC,whitePen})
+    void = c_func(xSelectObject,{mainDC,NullBrushID})
+end procedure
+init()
+
+function in_set(atom x, atom y)
+atom u,t
+    if x>-0.75 then
+        u = x-0.25
+        t = u*u+y*y
+        return ((2*t+u)*(2*t+u)>t)
+    else
+        return ((x+1)*(x+1)+y*y)>0.0625
+    end if
+end function
+
+function pixel_colour(atom x0, atom y0, integer iter)
+integer count = 1
+atom x = 0, y = 0
+    while (count<=iter) and (x*x+y*y<4) do
+        count += 1
+        {x,y} = {x*x-y*y+x0,2*x*y+y0}
+    end while
+    if count<=iter  then return count end if
+    return 0
+end function
+
+procedure mandel(atom x0, atom y0, atom scale)
+atom x,y
+integer c
+    t0 = time()
+    y = y0
+    for yi=1 to cHeight do
+        x = x0
+        for xi=1 to cWidth do
+            c = 0   -- default to black
+            if in_set(x,y) then
+                c = pixel_colour(x,y,iter)
+            end if
+            setDibPixel(mainDib, xi, yi, c)
+            x += scale
+        end for
+        y += scale
+    end for
+end procedure
+
+integer firsttime = 1
+integer drawBox = 0
+integer drawTime = 0
+
+procedure newDib()
+sequence pal
+
+    if mainDib!=0 then
+        {} = deleteDib(mainDib)
+    end if
+    mainDib = createDib(cWidth, cHeight)
+    pal = repeat({0,0,0},256)
+    for i=2 to 256 do
+        pal[i][1] = i*5
+        pal[i][2] = 0
+        pal[i][3] = i*10
+    end for
+    setDibPalette(mainDib, 1, pal)
+    mandel(x0,y0,scale)
+    drawTime = 2
+end procedure
+
+procedure reDraw()
+    setText(Main,"Please Wait...")
+    mandel(x0,y0,scale)
+    drawTime = 2
+    repaintWindow(Main,False)
+end procedure
+
+procedure zoom(integer z)
+    while z do
+        if z>0 then
+            scale /= 1.1
+            z -= 1
+        else
+            scale *= 1.1
+            z += 1
+        end if
+    end while
+    reDraw()
+end procedure
+
+integer dx=0,dy=0   -- mouse down coords
+integer mx=0,my=0   -- mouse move/up coords
+
+function mainHandler(integer id, integer msg, atom wParam, object lParam)
+integer x, y    -- scratch vars
+atom scale10
+
+    if msg=WM_SIZE then -- (also activate/firsttime)
+        {{},{},x,y} = getClientRect(Main)
+        if firsttime or cWidth!=x or cHeight!=y then
+            scale *= cWidth/x
+            {cWidth, cHeight} = {x,y}
+            newDib()
+            firsttime = 0
+        end if
+    elsif msg=WM_PAINT then
+        copyDib(mainDC, 0, 0, mainDib)
+        if drawBox then
+            void = c_func(xRectangle, {mainDC, dx, dy, mx, my})
+        end if
+        if drawTime then
+            if drawTime=2 then
+                setText(Main,sprintf("Mandelbrot Set [generated in %gs]",time()-t0))
+            else
+                setText(Main,"Mandelbrot Set")
+            end if
+            drawTime -= 1
+        end if
+    elsif msg=WM_CHAR then
+        if wParam=VK_ESCAPE then
+            closeWindow(Main)
+        elsif wParam='+' then zoom(+1)
+        elsif wParam='-' then zoom(-1)
+        end if
+    elsif msg=WM_LBUTTONDOWN
+       or msg=WM_RBUTTONDOWN then
+        {dx,dy} = lParam
+    elsif msg=WM_MOUSEMOVE then
+        if and_bits(wParam,MK_LBUTTON) then
+            {mx,my} = lParam
+            -- minus dx,dy (see WM_LBUTTONUP)
+            -- DEV maybe a timer to redraw, but probably too slow...
+            --  (this is where we need a background worker thread,
+            --   ideally one we can direct to abandon what it is
+            --   currently doing and start work on new x,y instead)
+        elsif and_bits(wParam,MK_RBUTTON) then
+            {mx,my} = lParam
+            drawBox = 1
+            repaintWindow(Main,False)
+        end if
+    elsif msg=WM_MOUSEWHEEL then
+        wParam = floor(wParam/#10000)
+        if wParam>=#8000 then   -- sign bit set
+            wParam-=#10000
+        end if
+        wParam = floor(wParam/120)  -- (gives +/-1, usually)
+        zoom(wParam)
+    elsif msg=WM_LBUTTONUP then
+        {mx,my} = lParam
+        drawBox = 0
+        x0 += (dx-mx)*scale
+        y0 += (dy-my)*scale
+        reDraw()
+    elsif msg=WM_RBUTTONUP then
+        {mx,my} = lParam
+        drawBox = 0
+        if mx!=dx and my!=dy then
+            x0 += min(mx,dx)*scale
+            y0 += min(my,dy)*scale
+            scale *= (abs(mx-dx))/cHeight
+            reDraw()
+        end if
+    elsif msg=WM_KEYDOWN then
+        if wParam=VK_F1 then
+            Help()
+        elsif wParam=VK_F2 then
+            {x,y} = getWindowRect(Main)
+            void = c_func(xTrackPopupMenu, {iterHwnd,TPM_LEFTALIGN,x+20,y+40,0,mainHwnd,NULL})
+        elsif find(wParam,{VK_UP,VK_DOWN,VK_LEFT,VK_RIGHT}) then
+            drawBox = 0
+            scale10 = scale*10
+            if wParam=VK_UP then
+                y0 += scale10
+            elsif wParam=VK_DOWN then
+                y0 -= scale10
+            elsif wParam=VK_LEFT then
+                x0 += scale10
+            elsif wParam=VK_RIGHT then
+                x0 -= scale10
+            end if
+            reDraw()
+        end if
+    elsif msg=WM_COMMAND then
+        id = find(id,m50to1000)
+        if id!=0 then
+            iter = i50to1000[id]
+            reDraw()
+        end if
+    end if
+    return 0
+end function
+setHandler({Main,mIter50,mIter100,mIter500,mIter1000}, routine_id("mainHandler"))
+
+WinMain(Main,SW_NORMAL)
+void = deleteDib(0)

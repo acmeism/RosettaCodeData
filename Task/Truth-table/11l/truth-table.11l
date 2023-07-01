@@ -1,0 +1,139 @@
+T Symbol
+   String id
+   Int lbp
+   Int nud_bp
+   Int led_bp
+   (ASTNode -> ASTNode) nud
+   ((ASTNode, ASTNode) -> ASTNode) led
+
+   F set_nud_bp(nud_bp, nud)
+      .nud_bp = nud_bp
+      .nud = nud
+
+   F set_led_bp(led_bp, led)
+      .led_bp = led_bp
+      .led = led
+
+T Var
+   String name
+   Int value
+   F (name)
+      .name = name
+[Var] vars
+
+T ASTNode
+   Symbol& symbol
+   Int var_index
+   ASTNode? first_child
+   ASTNode? second_child
+
+   F eval()
+      S .symbol.id
+         ‘(var)’
+            R :vars[.var_index].value
+         ‘|’
+            R .first_child.eval() [|] .second_child.eval()
+         ‘^’
+            R .first_child.eval() (+) .second_child.eval()
+         ‘&’
+            R .first_child.eval() [&] .second_child.eval()
+         ‘!’
+            R (-).first_child.eval() [&] 1
+         ‘(’
+            R .first_child.eval()
+         E
+            assert(0B)
+            R 0
+
+[String = Symbol] symbol_table
+[String] tokens
+V tokeni = -1
+ASTNode token_node
+
+F advance(sid = ‘’)
+   I sid != ‘’
+      assert(:token_node.symbol.id == sid)
+   :tokeni++
+   :token_node = ASTNode()
+   I :tokeni == :tokens.len
+      :token_node.symbol = :symbol_table[‘(end)’]
+      R
+   V token = :tokens[:tokeni]
+   I token[0].is_alpha()
+      :token_node.symbol = :symbol_table[‘(var)’]
+      L(v) :vars
+         I v.name == token
+            :token_node.var_index = L.index
+            L.break
+      L.was_no_break
+         :token_node.var_index = :vars.len
+         :vars.append(Var(token))
+   E
+      :token_node.symbol = :symbol_table[token]
+
+F expression(rbp = 0)
+   ASTNode t = move(:token_node)
+   advance()
+   V left = t.symbol.nud(move(t))
+   L rbp < :token_node.symbol.lbp
+      t = move(:token_node)
+      advance()
+      left = t.symbol.led(t, move(left))
+   R left
+
+F parse(expr_str) -> ASTNode
+   :tokens = re:‘\s*(\w+|.)’.find_strings(expr_str)
+   :tokeni = -1
+   :vars.clear()
+   advance()
+   R expression()
+
+F symbol(id, bp = 0) -> &
+   I id !C :symbol_table
+      V s = Symbol()
+      s.id = id
+      s.lbp = bp
+      :symbol_table[id] = s
+   R :symbol_table[id]
+
+F infix(id, bp)
+   F led(ASTNode self, ASTNode left)
+      self.first_child = left
+      self.second_child = expression(self.symbol.led_bp)
+      R self
+   symbol(id, bp).set_led_bp(bp, led)
+
+F prefix(id, bp)
+   F nud(ASTNode self)
+      self.first_child = expression(self.symbol.nud_bp)
+      R self
+   symbol(id).set_nud_bp(bp, nud)
+
+infix(‘|’, 1)
+infix(‘^’, 2)
+infix(‘&’, 3)
+prefix(‘!’, 4)
+
+F nud(ASTNode self)
+   R self
+symbol(‘(var)’).nud = nud
+symbol(‘(end)’)
+
+F nud_parens(ASTNode self)
+   V expr = expression()
+   advance(‘)’)
+   R expr
+symbol(‘(’).nud = nud_parens
+symbol(‘)’)
+
+L(expr_str) [‘!A | B’, ‘A ^ B’, ‘S | ( T ^ U )’, ‘A ^ (B ^ (C ^ D))’]
+   print(‘Boolean expression: ’expr_str)
+   print()
+   ASTNode p = parse(expr_str)
+   print(vars.map(v -> v.name).join(‘ ’)‘ : ’expr_str)
+   L(i) 0 .< (1 << vars.len)
+      L(v) vars
+         v.value = (i >> (vars.len - 1 - L.index)) [&] 1
+         print(v.value, end' ‘ ’)
+      print(‘: ’p.eval())
+   print()

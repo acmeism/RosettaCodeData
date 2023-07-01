@@ -1,0 +1,36 @@
+BEGIN;
+  TYPE Date UNION;
+  TYPE DateValid IS {Date POSSREP {year INTEGER, month INTEGER, day INTEGER}};
+  TYPE DateNone IS {Date POSSREP {}};
+  TYPE DateUnknown IS {Date POSSREP {}};
+END;
+
+VAR patient REAL RELATION {id INT, lastname CHAR} KEY {id};
+
+INSERT patient RELATION
+{TUPLE {id 1001, lastname 'Hopper'},
+ TUPLE {id 4004, lastname 'Wirth'},
+ TUPLE {id 3003, lastname 'Kemeny'},
+ TUPLE {id 2002, lastname 'Gosling'},
+ TUPLE {id 5005, lastname 'Kurtz'}
+ };
+
+VAR visit REAL RELATION {id INT, date Date, score RATIONAL} KEY {id, date};
+
+INSERT visit RELATION
+{
+TUPLE {id 2002, date DateValid(2020,09,10), score 6.8},
+TUPLE {id 1001, date DateValid(2020,09,17), score 5.5},
+TUPLE {id 4004, date DateValid(2020,09,24), score 8.4},
+TUPLE {id 2002, date DateValid(2020,10,08), score NAN},
+TUPLE {id 1001, date DateNone(), score 6.6},
+TUPLE {id 3003, date DateValid(2020,11,12), score NAN},
+TUPLE {id 4004, date DateValid(2020,11,05), score 7.0},
+TUPLE {id 1001, date DateValid(2020,11,19), score 5.3}
+};
+
+((SUMMARIZE (visit WHERE score>0.0) BY {id}: {sumscore := SUM(score), avgscore := AVG(score)}) UNION
+ (EXTEND (patient {id} MINUS ((visit WHERE score>0.0) {id})): {sumscore := NaN, avgscore := NaN})) JOIN
+    (SUMMARIZE visit BY {id}: {maxdate := MAX(date)} UNION
+     (EXTEND (patient {id} MINUS (visit {id})): {maxdate := DateUnknown()})) JOIN
+    patient

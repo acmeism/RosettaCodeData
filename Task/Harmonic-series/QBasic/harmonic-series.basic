@@ -1,0 +1,18 @@
+h = 0!
+
+PRINT "The first twenty harmonic numbers are:"
+FOR n = 1 TO 20
+    h = h + 1! / n
+    PRINT n, h
+NEXT n
+PRINT
+
+h = 1: n = 2
+FOR i = 2 TO 10
+    WHILE h < i
+        h = h + 1! / n
+        n = n + 1
+    WEND
+    PRINT "The first harmonic number greater than "; i; " is "; h; ", at position "; n - 1
+NEXT i
+END

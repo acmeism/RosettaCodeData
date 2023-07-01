@@ -1,0 +1,3 @@
+open System
+
+Console.Clear()

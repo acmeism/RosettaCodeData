@@ -1,0 +1,67 @@
+	org	100h
+	jmp	demo
+	;;;	---------------------------------------------------------------
+	;;;	Check if the string at BC is a valid ISBN-13 code.
+	;;;	Carry set if true, clear if not.
+isbn13:	lxi	h,0	; HL = accumulator
+	mov	d,h	; D = 0 (such that if E=A, DE=A).
+	call	isbngc	; Get first character
+	rnc		; Carry clear = invalid
+	dad	d	; Add to running total once
+	call	isbngc	; Get second character
+	rnc		; Carry clear = invalid
+	dad	d	; Add to running total thrice
+	dad	d
+	dad	d
+	call	isbngc	; Get third character
+	rnc		; Carry clear = invalid
+	dad	d	; Add to running total once
+	ldax	b	; Fourth character should be a dash '-'
+	inx	b
+	cpi	'-'
+	stc		; Clear carry w/o touching other flags
+	cmc
+	rnz		; If not equal, invalid.
+	push	h	; Keep loop counter on stack
+	mvi	l,5	; 5 times 2 characters
+isbnlp:	xthl		; Accumulator in HL
+	call	isbngc	; Get even character
+	jnc	isbnex	; If invalid, stop
+	dad	d	; Add to running total thrice
+	dad	d
+	dad 	d
+	call	isbngc	; Get odd character
+	jnc	isbnex	; If invalid, stop
+	dad	d	; Add to running total once
+	xthl		; Loop counter in (H)L
+	dcr	l	; Done yet?
+	jnz	isbnlp	; If not, do next two characters
+	pop	h	; Get accumulator
+	lxi	d,-10	; Trial division by ten
+isbndv:	dad	d	; Subtract 10
+	jc	isbndv 	; Until zero passed
+	mov	a,l	; Move low byte to A
+	adi	10 	; Add ten back (the mod loop went one step too far)
+	rz		; If zero, return (carry will have been set)
+	ana	a	; Otherwise, make sure carry is clear
+	ret		; And then return
+isbnex:	pop	h	; Test failed - throw away accumulator and return
+	ret
+isbngc:	ldax	b	; Get character from [BC]
+	inx	b	; Increment BC
+	sui	'0'	; Subtract ASCII '0' to get digit value
+	cpi	10	; If 10 or higher (unsigned), invalid digit.
+	mov	e,a	; Set (D)E = value
+	ret
+	;;;	---------------------------------------------------------------
+	;;;	Demo: see if the CP/M command line contains a valid ISBN13
+	;;; 	code.
+demo:	lxi	b,82h	; Start of command line argument, skipping first space
+	call	isbn13	; Is it valid?
+	mvi	c,9	; CP/M print string
+	lxi	d,good	; If carry is set, then yes
+	jc	5
+	lxi	d,bad	; Otherwise, no.
+	jmp	5
+good:	db	'good$'
+bad:	db	'bad$'

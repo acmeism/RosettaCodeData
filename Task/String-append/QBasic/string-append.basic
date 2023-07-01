@@ -1,0 +1,3 @@
+a$ = "Hello"
+a$ = a$ + " World!"
+PRINT a$

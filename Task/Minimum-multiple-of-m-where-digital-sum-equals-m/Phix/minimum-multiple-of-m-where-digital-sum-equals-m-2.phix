@@ -1,0 +1,357 @@
+(phixonline)-->
+ <span style="color: #000080;font-style:italic;">-- demo\rosetta\mmnn.exw</span>
+ <span style="color: #008080;">with</span> <span style="color: #008080;">javascript_semantics</span>
+ <span style="color: #008080;">include</span> <span style="color: #004080;">mpfr</span><span style="color: #0000FF;">.</span><span style="color: #000000;">e</span> <span style="color: #000080;font-style:italic;">-- (for the final divide only)</span>
+ <span style="color: #008080;">forward</span> <span style="color: #008080;">function</span> <span style="color: #000000;">rackup5</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">integer</span> <span style="color: #000000;">l</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">forward</span> <span style="color: #008080;">function</span> <span style="color: #000000;">rackup11</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">integer</span> <span style="color: #000000;">l</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">bool</span> <span style="color: #000000;">r5</span><span style="color: #0000FF;">=</span><span style="color: #004600;">false</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">forward</span> <span style="color: #008080;">function</span> <span style="color: #000000;">nextup11</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">integer</span> <span style="color: #000000;">l</span><span style="color: #0000FF;">)</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">mmnn</span><span style="color: #0000FF;">(</span><span style="color: #004080;">integer</span> <span style="color: #000000;">n</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000080;font-style:italic;">--
+     -- minimum multiple of n that sums to n
+     --
+     -- Just as we can emulate normal counting using an array of digits,
+     -- we can count while maintaining a sum of digits, which means we
+     -- have to find both a decrementable and an incrementable digit,
+     -- moving the former to the end(ish), or if no "" prepend a 1, eg
+     -- 5 -&gt; 14 -&gt; 23 -&gt; 32 -&gt; 41 -&gt; 50 -&gt; 104 -&gt; 113 -&gt; 122 -&gt; 131 -&gt;
+     -- 140 -&gt; 203 .. 230 -&gt; 302 .. 500 -&gt; 1004 .. 10004, etc.
+     -- Another example, this time summing to 14 (the above was to 5!):
+     -- 59 -&gt; 68 .. 95 -&gt; 149 .. 194 -&gt; 239 .. 293 -&gt; 329 .. 392 -&gt;
+     -- 419 .. 491 -&gt; 509 .. 590 -&gt; 608 .. 680 -&gt; 707 .. 770 -&gt; 806
+     -- .. 860 -&gt; 905 .. 950 -&gt; 1049, etc.
+     -- in that last case, what we actually need to do is decrement the
+     -- 5 (-&gt;940), then reverse the whole thing, and then prepend a 1,
+     -- likewise if we increment a middle digit, dec then reverse(rest).
+     -- In the extreme case you would want 1 -&gt; 10 -&gt; 100 -&gt; 1000, etc,
+     -- although since 1 passes muster we would never actually do that.
+     --</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">n</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #008080;">return</span> <span style="color: #008000;">"0"</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span> <span style="color: #000080;font-style:italic;">-- avoid remainder(x,0), and tz=inf</span>
+
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">l</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">ceil</span><span style="color: #0000FF;">(</span><span style="color: #000000;">n</span><span style="color: #0000FF;">/</span><span style="color: #000000;">9</span><span style="color: #0000FF;">)-</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span>        <span style="color: #000080;font-style:italic;">-- this many trailing 9s...</span>
+             <span style="color: #000000;">k</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">n</span><span style="color: #0000FF;">-</span><span style="color: #000000;">9</span><span style="color: #0000FF;">*</span><span style="color: #000000;">l</span><span style="color: #0000FF;">+</span><span style="color: #008000;">'0'</span><span style="color: #0000FF;">,</span>          <span style="color: #000080;font-style:italic;">-- ...and this first digit</span>
+             <span style="color: #000000;">n0</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">n</span>
+     <span style="color: #004080;">string</span> <span style="color: #000000;">digits</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">k</span><span style="color: #0000FF;">&</span><span style="color: #7060A8;">repeat</span><span style="color: #0000FF;">(</span><span style="color: #008000;">'9'</span><span style="color: #0000FF;">,</span><span style="color: #000000;">l</span><span style="color: #0000FF;">)</span> <span style="color: #000080;font-style:italic;">-- eg n=14 -&gt; "59"</span>
+     <span style="color: #000000;">l</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+
+     <span style="color: #000080;font-style:italic;">-- optimising for trailing zeroes makes a truly *huge* difference</span>
+     <span style="color: #008080;">while</span> <span style="color: #7060A8;">remainder</span><span style="color: #0000FF;">(</span><span style="color: #000000;">n0</span><span style="color: #0000FF;">,</span><span style="color: #000000;">10</span><span style="color: #0000FF;">)=</span><span style="color: #000000;">0</span> <span style="color: #008080;">do</span>
+         <span style="color: #000000;">n0</span> <span style="color: #0000FF;">/=</span> <span style="color: #000000;">10</span>
+         <span style="color: #000000;">digits</span> <span style="color: #0000FF;">&=</span> <span style="color: #008000;">'0'</span> <span style="color: #000080;font-style:italic;">-- (these be static, aka forever past "l")</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+
+     <span style="color: #004080;">bool</span> <span style="color: #000000;">r5</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">remainder</span><span style="color: #0000FF;">(</span><span style="color: #000000;">n0</span><span style="color: #0000FF;">,</span><span style="color: #000000;">5</span><span style="color: #0000FF;">)=</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>    <span style="color: #000080;font-style:italic;">-- ten-fold improvement on some</span>
+          <span style="color: #000000;">r11</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">remainder</span><span style="color: #0000FF;">(</span><span style="color: #000000;">n0</span><span style="color: #0000FF;">,</span><span style="color: #000000;">11</span><span style="color: #0000FF;">)=</span><span style="color: #000000;">0</span>   <span style="color: #000080;font-style:italic;">-- took 165 from 1min 25s to 6s,
+                                     -- (even faster now r5 working)</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">r5</span> <span style="color: #008080;">then</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #000000;">l</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">rackup5</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #000000;">l</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">r11</span> <span style="color: #008080;">then</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #000000;">l</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">rackup11</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #000000;">l</span><span style="color: #0000FF;">,</span><span style="color: #000000;">r5</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+
+     <span style="color: #004080;">atom</span> <span style="color: #000000;">t1</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">time</span><span style="color: #0000FF;">()+</span><span style="color: #000000;">1</span>
+     <span style="color: #008080;">while</span> <span style="color: #004600;">true</span> <span style="color: #008080;">do</span>
+
+         <span style="color: #000080;font-style:italic;">-- calculate remainder(digits,n) digit-wise; faster than mpz</span>
+         <span style="color: #004080;">integer</span> <span style="color: #000000;">rem</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">rn</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">1</span>
+         <span style="color: #008080;">for</span> <span style="color: #000000;">i</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">to</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">do</span> <span style="color: #000080;font-style:italic;">-- (nb not "l")</span>
+             <span style="color: #000000;">k</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">[-</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]-</span><span style="color: #008000;">'0'</span>
+             <span style="color: #000000;">rem</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">remainder</span><span style="color: #0000FF;">(</span><span style="color: #000000;">rem</span><span style="color: #0000FF;">+</span><span style="color: #000000;">rn</span><span style="color: #0000FF;">*</span><span style="color: #000000;">k</span><span style="color: #0000FF;">,</span><span style="color: #000000;">n</span><span style="color: #0000FF;">)</span>
+             <span style="color: #000000;">rn</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">remainder</span><span style="color: #0000FF;">(</span><span style="color: #000000;">rn</span><span style="color: #0000FF;">*</span><span style="color: #000000;">10</span><span style="color: #0000FF;">,</span><span style="color: #000000;">n</span><span style="color: #0000FF;">)</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">rem</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #008080;">exit</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+
+         <span style="color: #000080;font-style:italic;">-- (only triggers on eg 202, 222, 271 and higher)</span>
+         <span style="color: #008080;">if</span> <span style="color: #7060A8;">time</span><span style="color: #0000FF;">()></span><span style="color: #000000;">t1</span> <span style="color: #008080;">then</span> <span style="color: #000000;">t1</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">time</span><span style="color: #0000FF;">()+</span><span style="color: #000000;">1</span><span style="color: #0000FF;">;</span> <span style="color: #0000FF;">?{</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #000000;">n</span><span style="color: #0000FF;">}</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+
+         <span style="color: #008080;">if</span> <span style="color: #008080;">not</span> <span style="color: #000000;">r11</span> <span style="color: #008080;">then</span>
+
+             <span style="color: #004080;">integer</span> <span style="color: #000000;">d</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>  <span style="color: #000080;font-style:italic;">-- decrementable digit position</span>
+             <span style="color: #008080;">for</span> <span style="color: #000000;">i</span><span style="color: #0000FF;">=</span><span style="color: #000000;">l</span> <span style="color: #008080;">to</span> <span style="color: #000000;">1</span> <span style="color: #008080;">by</span> <span style="color: #0000FF;">-</span><span style="color: #000000;">1</span> <span style="color: #008080;">do</span>
+                 <span style="color: #008080;">if</span> <span style="color: #000000;">d</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">and</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]></span><span style="color: #008000;">'0'</span> <span style="color: #008080;">then</span>
+                     <span style="color: #000000;">d</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">i</span>
+                 <span style="color: #008080;">elsif</span> <span style="color: #000000;">d</span> <span style="color: #008080;">and</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]<</span><span style="color: #008000;">'9'</span> <span style="color: #008080;">then</span>
+                     <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">d</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">1</span>
+                     <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+                     <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">+</span><span style="color: #000000;">1</span><span style="color: #0000FF;">..</span><span style="color: #000000;">l</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">reverse</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">+</span><span style="color: #000000;">1</span><span style="color: #0000FF;">..</span><span style="color: #000000;">l</span><span style="color: #0000FF;">])</span>
+                     <span style="color: #008080;">exit</span>
+                 <span style="color: #008080;">elsif</span> <span style="color: #000000;">i</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">then</span>
+                     <span style="color: #000080;font-style:italic;">-- (so digits[1]=9 or no decrementable)</span>
+                     <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">d</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">1</span>
+                     <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">..</span><span style="color: #000000;">l</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">reverse</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">..</span><span style="color: #000000;">l</span><span style="color: #0000FF;">])</span>
+                     <span style="color: #000000;">digits</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">prepend</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #008000;">'1'</span><span style="color: #0000FF;">)</span>
+                     <span style="color: #000000;">l</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+                     <span style="color: #008080;">exit</span>
+                 <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+
+         <span style="color: #008080;">else</span>
+             <span style="color: #000080;font-style:italic;">-- Same as above but with additional rules</span>
+             <span style="color: #0000FF;">{</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #000000;">l</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">nextup11</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #000000;">l</span><span style="color: #0000FF;">)</span>
+
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+     <span style="color: #004080;">mpz</span> <span style="color: #000000;">z</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">mpz_init</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">assert</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">mpz_fdiv_q_ui</span><span style="color: #0000FF;">(</span><span style="color: #000000;">z</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">z</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">n</span><span style="color: #0000FF;">)=</span><span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+     <span style="color: #004080;">string</span> <span style="color: #000000;">res</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">mpz_get_str</span><span style="color: #0000FF;">(</span><span style="color: #000000;">z</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">return</span> <span style="color: #000000;">res</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">rackup5</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">integer</span> <span style="color: #000000;">l</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000080;font-style:italic;">--
+     -- converts digits to next (odd) number divisible by 5, while
+     -- maintaining the exact same sum of digits unaltered.
+     -- Techincally divisible by 5 is ends in 5 or 0, but since we
+     -- have already dealt with 10s, we know that n0 (above) must
+     -- be odd and hence digits[1..l] always end in 5, so we play
+     -- a neat and simple little trick of cropping the length by 1
+     -- to make the final 5 static, same as we do with trailing 0s.
+     --</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">d</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">l</span><span style="color: #0000FF;">]</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">d</span><span style="color: #0000FF;">!=</span><span style="color: #008000;">'5'</span> <span style="color: #008080;">then</span>
+         <span style="color: #7060A8;">assert</span><span style="color: #0000FF;">(</span><span style="color: #000000;">d</span><span style="color: #0000FF;">=</span><span style="color: #008000;">'9'</span><span style="color: #0000FF;">)</span>               <span style="color: #000080;font-style:italic;">-- eg 299 -&gt; 295    ie -4</span>
+         <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">l</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">'5'</span>             <span style="color: #000080;font-style:italic;">-- or 799 -&gt; 795    ""</span>
+         <span style="color: #000000;">d</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">]</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">d</span><span style="color: #0000FF;"><=</span><span style="color: #008000;">'5'</span> <span style="color: #008080;">then</span>
+             <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">d</span><span style="color: #0000FF;">+</span><span style="color: #000000;">4</span>         <span style="color: #000080;font-style:italic;">-- eg 295 -&gt; 695    == +4</span>
+         <span style="color: #008080;">else</span>
+             <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">'9'</span>
+             <span style="color: #000000;">digits</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">d</span><span style="color: #0000FF;">-</span><span style="color: #000000;">5</span> <span style="color: #0000FF;">&</span> <span style="color: #000000;">digits</span>   <span style="color: #000080;font-style:italic;">-- eg 795 -&gt; 2995   ie +2+2</span>
+             <span style="color: #000000;">l</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">return</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #000000;">l</span><span style="color: #0000FF;">-</span><span style="color: #000000;">1</span><span style="color: #0000FF;">}</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">swarpp11</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">s</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000080;font-style:italic;">--
+     -- special pairwise swapping/reversal for divisible by 11 numbers, eg:
+     --
+     --  | 7654321 | , | 653421 | , | 54321 | , | 4321 | , | 321 | , | 21 | , | 1 |
+     --  &gt; 1234567 &lt;   &gt; 213465 &lt;   &gt; 12345 &lt;   &gt; 2143 &lt;   &gt; 123 &lt;   &gt; 21 &lt;   &gt; 1 &lt;
+     --
+     -- (ie after bumping some prior digits following the rules (see below), we
+     --  need to make the remaining digits (7 or less in the above) as small as
+     --  legally possible but obviously without breaking any of the said rules.)
+     --</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">l</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">s</span><span style="color: #0000FF;">),</span> <span style="color: #000000;">i</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">1</span>
+     <span style="color: #008080;">if</span> <span style="color: #7060A8;">odd</span><span style="color: #0000FF;">(</span><span style="color: #000000;">l</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span> <span style="color: #008080;">return</span> <span style="color: #7060A8;">reverse</span><span style="color: #0000FF;">(</span><span style="color: #000000;">s</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">while</span> <span style="color: #000000;">l</span><span style="color: #0000FF;">-</span><span style="color: #000000;">i</span><span style="color: #0000FF;">>=</span><span style="color: #000000;">3</span> <span style="color: #008080;">do</span>
+         <span style="color: #004080;">integer</span> <span style="color: #000000;">si</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">s</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">],</span> <span style="color: #000000;">j</span><span style="color: #0000FF;">=</span><span style="color: #000000;">l</span><span style="color: #0000FF;">-</span><span style="color: #000000;">1</span>
+         <span style="color: #000000;">s</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">s</span><span style="color: #0000FF;">[</span><span style="color: #000000;">j</span><span style="color: #0000FF;">]</span>
+         <span style="color: #000000;">s</span><span style="color: #0000FF;">[</span><span style="color: #000000;">j</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">si</span>
+         <span style="color: #000000;">i</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+         <span style="color: #000000;">si</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">s</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span>
+         <span style="color: #000000;">s</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">s</span><span style="color: #0000FF;">[</span><span style="color: #000000;">l</span><span style="color: #0000FF;">]</span>
+         <span style="color: #000000;">s</span><span style="color: #0000FF;">[</span><span style="color: #000000;">l</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">si</span>
+         <span style="color: #000000;">i</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+         <span style="color: #000000;">l</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">2</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+     <span style="color: #008080;">return</span> <span style="color: #000000;">s</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">nextup11</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">integer</span> <span style="color: #000000;">l</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000080;font-style:italic;">--
+     -- Divisible by 11 uses the additional rule that the
+     -- sum of odd place digits - sum of even place digits
+     -- must be a multiple of 11 (including zero).
+     -- Hence we look for an odd/even decrementable digit
+     -- that can pair with an odd/even incrementable digit,
+     -- or an odd/even decrementable-by-11 set to pair off
+     -- with an even/odd incrementable-by-11 set/sum.
+     --  (for the latter see the bTransferable11 flag)
+     -- Likewise we use a slightly different method to
+     -- increase the number of digits, and kick-start
+     -- things off with the rackup11() routine below.
+     --
+     -- Aside: A variation is probably extendible to 101,
+     -- expressed using alternating pairs of digits, eg:
+     --       74*11 = 814,       8-1+4 = 11
+     --    7242*101 = 731442, 73-14+42 = 101
+     -- (which really is the same rule writ different)
+     -- There is also sum of pairs/triples for 11 and 111:
+     --       74*11 = 814,        8+14 = 22
+     --     237*111 = 26307,    26+307 = 333
+     -- (not entirely sure that can actually be applied)
+     --</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">d</span><span style="color: #0000FF;">,</span>          <span style="color: #000080;font-style:italic;">-- a digit</span>
+             <span style="color: #000000;">dd</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>     <span style="color: #000080;font-style:italic;">-- decrementable digit position (scratch)</span>
+             <span style="color: #000000;">ddd</span><span style="color: #0000FF;">,</span>        <span style="color: #000080;font-style:italic;">-- decrementable digit value       """</span>
+             <span style="color: #000000;">td</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>     <span style="color: #000080;font-style:italic;">-- total decrementable digits</span>
+             <span style="color: #000000;">ti</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>     <span style="color: #000080;font-style:italic;">-- total incrementable digits</span>
+             <span style="color: #000000;">od</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>     <span style="color: #000080;font-style:italic;">-- decrementable odd digit position</span>
+             <span style="color: #000000;">ed</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>     <span style="color: #000080;font-style:italic;">-- decrementable even digit position</span>
+             <span style="color: #000000;">dod</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>    <span style="color: #000080;font-style:italic;">-- decrementable odd digit value</span>
+             <span style="color: #000000;">ded</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>    <span style="color: #000080;font-style:italic;">-- decrementable even digit value</span>
+             <span style="color: #000000;">tod</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>    <span style="color: #000080;font-style:italic;">-- total odd decrementable digits</span>
+             <span style="color: #000000;">ted</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>    <span style="color: #000080;font-style:italic;">-- total even decrementable digits</span>
+             <span style="color: #000000;">iod</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>    <span style="color: #000080;font-style:italic;">-- total odd incrementable digits</span>
+             <span style="color: #000000;">ied</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>     <span style="color: #000080;font-style:italic;">-- total even incrementable digits</span>
+
+     <span style="color: #004080;">bool</span> <span style="color: #000000;">bIncAbleFound</span> <span style="color: #0000FF;">=</span> <span style="color: #004600;">false</span><span style="color: #0000FF;">,</span>
+          <span style="color: #000000;">bTransferable11</span>
+     <span style="color: #004080;">string</span> <span style="color: #000000;">wasdig</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">transdigits</span>
+
+     <span style="color: #008080;">for</span> <span style="color: #000000;">i</span><span style="color: #0000FF;">=</span><span style="color: #000000;">l</span> <span style="color: #008080;">to</span> <span style="color: #000000;">1</span> <span style="color: #008080;">by</span> <span style="color: #0000FF;">-</span><span style="color: #000000;">1</span> <span style="color: #008080;">do</span>
+         <span style="color: #000000;">d</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]-</span><span style="color: #008000;">'0'</span>
+         <span style="color: #008080;">if</span> <span style="color: #7060A8;">odd</span><span style="color: #0000FF;">(</span><span style="color: #000000;">i</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span>
+             <span style="color: #000000;">tod</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">d</span>
+             <span style="color: #000000;">iod</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">9</span><span style="color: #0000FF;">-</span><span style="color: #000000;">d</span>
+             <span style="color: #008080;">if</span> <span style="color: #000000;">od</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">and</span> <span style="color: #000000;">d</span><span style="color: #0000FF;">></span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span>
+                 <span style="color: #000000;">od</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">i</span>
+                 <span style="color: #000000;">dod</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">d</span>
+             <span style="color: #008080;">else</span>
+                 <span style="color: #000000;">dd</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">od</span>
+                 <span style="color: #000000;">ddd</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">dod</span>
+                 <span style="color: #000000;">bIncAbleFound</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">d</span><span style="color: #0000FF;"><</span><span style="color: #000000;">9</span> <span style="color: #008080;">and</span> <span style="color: #000000;">dd</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+             <span style="color: #000000;">bTransferable11</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">iod</span><span style="color: #0000FF;">>=</span><span style="color: #000000;">11</span> <span style="color: #008080;">and</span> <span style="color: #000000;">ted</span><span style="color: #0000FF;">>=</span><span style="color: #000000;">11</span>
+         <span style="color: #008080;">else</span>
+             <span style="color: #000000;">ted</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">d</span>
+             <span style="color: #000000;">ied</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">9</span><span style="color: #0000FF;">-</span><span style="color: #000000;">d</span>
+             <span style="color: #008080;">if</span> <span style="color: #000000;">ed</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">and</span> <span style="color: #000000;">d</span><span style="color: #0000FF;">></span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span>
+                 <span style="color: #000000;">ed</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">i</span>
+                 <span style="color: #000000;">ded</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">d</span>
+             <span style="color: #008080;">else</span>
+                 <span style="color: #000000;">dd</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">ed</span>
+                 <span style="color: #000000;">ddd</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">ded</span>
+                 <span style="color: #000000;">bIncAbleFound</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">d</span><span style="color: #0000FF;"><</span><span style="color: #000000;">9</span> <span style="color: #008080;">and</span> <span style="color: #000000;">dd</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+             <span style="color: #000000;">bTransferable11</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">ied</span><span style="color: #0000FF;">>=</span><span style="color: #000000;">11</span> <span style="color: #008080;">and</span> <span style="color: #000000;">tod</span><span style="color: #0000FF;">>=</span><span style="color: #000000;">11</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">bTransferable11</span> <span style="color: #008080;">then</span>
+             <span style="color: #0000FF;">{</span><span style="color: #000000;">od</span><span style="color: #0000FF;">,</span><span style="color: #000000;">ed</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #008080;">iff</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">odd</span><span style="color: #0000FF;">(</span><span style="color: #000000;">l</span><span style="color: #0000FF;">)=</span><span style="color: #7060A8;">odd</span><span style="color: #0000FF;">(</span><span style="color: #000000;">i</span><span style="color: #0000FF;">)?{</span><span style="color: #000000;">l</span><span style="color: #0000FF;">,</span><span style="color: #000000;">l</span><span style="color: #0000FF;">-</span><span style="color: #000000;">1</span><span style="color: #0000FF;">}:{</span><span style="color: #000000;">l</span><span style="color: #0000FF;">-</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">l</span><span style="color: #0000FF;">})</span>
+             <span style="color: #0000FF;">{</span><span style="color: #000000;">ti</span><span style="color: #0000FF;">,</span><span style="color: #000000;">td</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">11</span><span style="color: #0000FF;">,</span><span style="color: #000000;">11</span><span style="color: #0000FF;">}</span>
+             <span style="color: #000000;">transdigits</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">digits</span>
+             <span style="color: #004080;">integer</span> <span style="color: #000000;">t</span>
+             <span style="color: #008080;">while</span> <span style="color: #000000;">ti</span> <span style="color: #008080;">do</span>
+                 <span style="color: #7060A8;">assert</span><span style="color: #0000FF;">(</span><span style="color: #000000;">od</span><span style="color: #0000FF;">></span><span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+                 <span style="color: #000000;">t</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">min</span><span style="color: #0000FF;">(</span><span style="color: #008000;">'9'</span><span style="color: #0000FF;">-</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">od</span><span style="color: #0000FF;">],</span><span style="color: #000000;">ti</span><span style="color: #0000FF;">)</span>
+                 <span style="color: #000000;">ti</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">t</span>
+                 <span style="color: #000000;">transdigits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">od</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">t</span>
+                 <span style="color: #000000;">od</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">2</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+             <span style="color: #008080;">while</span> <span style="color: #000000;">td</span> <span style="color: #008080;">do</span>
+                 <span style="color: #7060A8;">assert</span><span style="color: #0000FF;">(</span><span style="color: #000000;">ed</span><span style="color: #0000FF;">></span><span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+                 <span style="color: #000000;">t</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">min</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">ed</span><span style="color: #0000FF;">]-</span><span style="color: #008000;">'0'</span><span style="color: #0000FF;">,</span><span style="color: #000000;">td</span><span style="color: #0000FF;">)</span>
+                 <span style="color: #000000;">td</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">t</span>
+                 <span style="color: #000000;">transdigits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">ed</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">t</span>
+                 <span style="color: #000000;">ed</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">2</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+             <span style="color: #000000;">transdigits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">+</span><span style="color: #000000;">1</span><span style="color: #0000FF;">..</span><span style="color: #000000;">l</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">swarpp11</span><span style="color: #0000FF;">(</span><span style="color: #000000;">transdigits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">+</span><span style="color: #000000;">1</span><span style="color: #0000FF;">..</span><span style="color: #000000;">l</span><span style="color: #0000FF;">])</span>
+             <span style="color: #008080;">if</span> <span style="color: #000000;">transdigits</span><span style="color: #0000FF;"><=</span><span style="color: #000000;">digits</span> <span style="color: #008080;">then</span>
+                 <span style="color: #000000;">bTransferable11</span> <span style="color: #0000FF;">=</span> <span style="color: #004600;">false</span>
+             <span style="color: #008080;">elsif</span> <span style="color: #008080;">not</span> <span style="color: #000000;">bIncAbleFound</span> <span style="color: #008080;">then</span>
+                 <span style="color: #000000;">digits</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">transdigits</span>
+                 <span style="color: #008080;">exit</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">bIncAbleFound</span> <span style="color: #008080;">then</span>
+             <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">dd</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">ddd</span><span style="color: #0000FF;">-</span><span style="color: #000000;">1</span><span style="color: #0000FF;">+</span><span style="color: #008000;">'0'</span>
+             <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">d</span><span style="color: #0000FF;">+</span><span style="color: #008000;">'1'</span>
+             <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">+</span><span style="color: #000000;">1</span><span style="color: #0000FF;">..</span><span style="color: #000000;">l</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">swarpp11</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">+</span><span style="color: #000000;">1</span><span style="color: #0000FF;">..</span><span style="color: #000000;">l</span><span style="color: #0000FF;">])</span>
+             <span style="color: #008080;">if</span> <span style="color: #000000;">bTransferable11</span> <span style="color: #008080;">and</span> <span style="color: #000000;">transdigits</span><span style="color: #0000FF;"><</span><span style="color: #000000;">digits</span> <span style="color: #008080;">then</span>
+                 <span style="color: #000000;">digits</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">transdigits</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+             <span style="color: #008080;">exit</span>
+         <span style="color: #008080;">elsif</span> <span style="color: #000000;">i</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">then</span>
+             <span style="color: #000080;font-style:italic;">-- (so digits[1]=9 or no o/e decrementable)</span>
+             <span style="color: #0000FF;">{</span><span style="color: #000000;">dd</span><span style="color: #0000FF;">,</span><span style="color: #000000;">ddd</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #008080;">iff</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">odd</span><span style="color: #0000FF;">(</span><span style="color: #000000;">l</span><span style="color: #0000FF;">)?{</span><span style="color: #000000;">ed</span><span style="color: #0000FF;">,</span><span style="color: #000000;">ded</span><span style="color: #0000FF;">}:{</span><span style="color: #000000;">od</span><span style="color: #0000FF;">,</span><span style="color: #000000;">dod</span><span style="color: #0000FF;">})</span>
+             <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">dd</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">ddd</span><span style="color: #0000FF;">-</span><span style="color: #000000;">1</span><span style="color: #0000FF;">+</span><span style="color: #008000;">'0'</span>
+             <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">..</span><span style="color: #000000;">l</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">reverse</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">..</span><span style="color: #000000;">l</span><span style="color: #0000FF;">])</span>
+             <span style="color: #000000;">digits</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">prepend</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #008000;">'1'</span><span style="color: #0000FF;">)</span>
+             <span style="color: #000000;">l</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+             <span style="color: #008080;">exit</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+     <span style="color: #008080;">return</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #000000;">l</span><span style="color: #0000FF;">}</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">rackup11</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">integer</span> <span style="color: #000000;">l</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">bool</span> <span style="color: #000000;">r5</span><span style="color: #0000FF;">=</span><span style="color: #004600;">false</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000080;font-style:italic;">--
+     -- Converts digits to next number divisible by 11, while
+     -- maintaining the exact same sum of digits unaltered, eg
+     -- 29 -&gt; 209, 499 -&gt; 2299, 6999 -&gt; 42999, 89999 -&gt; 449999,
+     -- 1999999 -&gt; 6499999, 39999999 -&gt; 66999999, 599999999 -&gt;
+     -- 869999999, 7999999999 -&gt; 8899999999, 99999999999 -&gt;
+     -- 1098999999999, 2999999999999 -&gt; 11999999999999.
+     --
+     -- For divisible by 55 we've already got the first divisible by 5 and
+     -- set that in stone, aka digits[l+1] is 5, so here we must take that
+     -- quickly into account.
+     --</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">r5</span> <span style="color: #008080;">then</span> <span style="color: #000000;">l</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #004080;">integer</span> <span style="color: #000000;">od</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">remainder</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">sum</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">sq_sub</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">extract</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #7060A8;">tagset</span><span style="color: #0000FF;">(</span><span style="color: #000000;">l</span><span style="color: #0000FF;">,</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">2</span><span style="color: #0000FF;">)),</span><span style="color: #008000;">'0'</span><span style="color: #0000FF;">)),</span><span style="color: #000000;">11</span><span style="color: #0000FF;">),</span>
+             <span style="color: #000000;">ed</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">remainder</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">sum</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">sq_sub</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">extract</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #7060A8;">tagset</span><span style="color: #0000FF;">(</span><span style="color: #000000;">l</span><span style="color: #0000FF;">,</span><span style="color: #000000;">2</span><span style="color: #0000FF;">,</span><span style="color: #000000;">2</span><span style="color: #0000FF;">)),</span><span style="color: #008000;">'0'</span><span style="color: #0000FF;">)),</span><span style="color: #000000;">11</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">assert</span><span style="color: #0000FF;">(</span><span style="color: #000000;">od</span><span style="color: #0000FF;">+</span><span style="color: #000000;">ed</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">or</span> <span style="color: #000000;">od</span><span style="color: #0000FF;">+</span><span style="color: #000000;">ed</span><span style="color: #0000FF;">=</span><span style="color: #000000;">11</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">r5</span> <span style="color: #008080;">then</span> <span style="color: #000000;">l</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">1</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+
+     <span style="color: #008080;">if</span> <span style="color: #000000;">od</span><span style="color: #0000FF;">!=</span><span style="color: #000000;">ed</span> <span style="color: #008080;">then</span>
+         <span style="color: #000080;font-style:italic;">--
+         -- Aside: I couldn't quite get my head around the apparently convoluted rules
+         --        of which way to go, but obviously if od=2 and ed=9 then either:
+         --          add 9 to the odd digits and subtract it from the even digits, or
+         --          add 2 to the even digits and subtract it from the odd digits,
+         --        and then in both cases add prefixes for anything you couldn't do.
+         --        The simplest thing is to just do both and select the smaller,
+         --        plus a couple of quick checks (wood|weod&gt;9) for odd-od busted.
+         --</span>
+         <span style="color: #004080;">integer</span> <span style="color: #000000;">d</span><span style="color: #0000FF;">,</span>  <span style="color: #000080;font-style:italic;">-- a digit</span>
+                 <span style="color: #000000;">woed</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">ed</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">weed</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">ed</span><span style="color: #0000FF;">,</span> <span style="color: #000080;font-style:italic;">-- work vars for odd+ed, even-ed</span>
+                 <span style="color: #000000;">wood</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">od</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">weod</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">od</span><span style="color: #0000FF;">,</span> <span style="color: #000080;font-style:italic;">-- work vars for odd-od, even+od</span>
+                 <span style="color: #000000;">loed</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">l</span> <span style="color: #000080;font-style:italic;">-- new value for l should we switch</span>
+         <span style="color: #004080;">string</span> <span style="color: #000000;">odd_ed</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">digits</span> <span style="color: #000080;font-style:italic;">-- (odd-od done in digits direct)</span>
+         <span style="color: #008080;">for</span> <span style="color: #000000;">i</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">to</span> <span style="color: #000000;">l</span> <span style="color: #008080;">do</span>
+             <span style="color: #008080;">if</span> <span style="color: #7060A8;">odd</span><span style="color: #0000FF;">(</span><span style="color: #000000;">i</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span>
+                 <span style="color: #000000;">d</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">min</span><span style="color: #0000FF;">(</span><span style="color: #008000;">'9'</span><span style="color: #0000FF;">-</span><span style="color: #000000;">odd_ed</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">],</span><span style="color: #000000;">woed</span><span style="color: #0000FF;">)</span>     <span style="color: #000080;font-style:italic;">-- add ed to odd digits</span>
+                 <span style="color: #000000;">odd_ed</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">d</span>
+                 <span style="color: #000000;">woed</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">d</span>
+                 <span style="color: #000000;">d</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">min</span><span style="color: #0000FF;">(</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]-</span><span style="color: #008000;">'0'</span><span style="color: #0000FF;">,</span><span style="color: #000000;">wood</span><span style="color: #0000FF;">)</span>     <span style="color: #000080;font-style:italic;">-- subtract od from ""</span>
+                 <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">d</span>
+                 <span style="color: #000000;">wood</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">d</span>
+             <span style="color: #008080;">else</span>
+                 <span style="color: #000000;">d</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">min</span><span style="color: #0000FF;">(</span><span style="color: #000000;">odd_ed</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]-</span><span style="color: #008000;">'0'</span><span style="color: #0000FF;">,</span><span style="color: #000000;">weed</span><span style="color: #0000FF;">)</span>     <span style="color: #000080;font-style:italic;">-- subtract ed from even</span>
+                 <span style="color: #000000;">odd_ed</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">d</span>
+                 <span style="color: #000000;">weed</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">d</span>
+                 <span style="color: #000000;">d</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">min</span><span style="color: #0000FF;">(</span><span style="color: #008000;">'9'</span><span style="color: #0000FF;">-</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">],</span><span style="color: #000000;">weod</span><span style="color: #0000FF;">)</span>     <span style="color: #000080;font-style:italic;">-- add od to even digits</span>
+                 <span style="color: #000000;">digits</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">d</span>
+                 <span style="color: #000000;">weod</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">d</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">woed</span> <span style="color: #008080;">or</span> <span style="color: #000000;">weed</span> <span style="color: #008080;">then</span>
+             <span style="color: #000000;">odd_ed</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">weed</span><span style="color: #0000FF;">+</span><span style="color: #008000;">'0'</span> <span style="color: #0000FF;">&</span> <span style="color: #000000;">odd_ed</span>
+             <span style="color: #000000;">loed</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+             <span style="color: #008080;">if</span> <span style="color: #000000;">woed</span> <span style="color: #008080;">then</span>
+                 <span style="color: #000000;">odd_ed</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">woed</span><span style="color: #0000FF;">+</span><span style="color: #008000;">'0'</span> <span style="color: #0000FF;">&</span> <span style="color: #000000;">odd_ed</span>
+                 <span style="color: #000000;">loed</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">wood</span> <span style="color: #008080;">or</span> <span style="color: #000000;">weod</span> <span style="color: #008080;">then</span>
+             <span style="color: #000000;">digits</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">weod</span><span style="color: #0000FF;">+</span><span style="color: #008000;">'0'</span> <span style="color: #0000FF;">&</span> <span style="color: #000000;">digits</span>
+             <span style="color: #000000;">l</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+             <span style="color: #008080;">if</span> <span style="color: #000000;">wood</span> <span style="color: #008080;">then</span>
+                 <span style="color: #000000;">digits</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">wood</span><span style="color: #0000FF;">+</span><span style="color: #008000;">'0'</span> <span style="color: #0000FF;">&</span> <span style="color: #000000;">digits</span>
+                 <span style="color: #000000;">l</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">loed</span><span style="color: #0000FF;"><</span><span style="color: #000000;">l</span>
+         <span style="color: #008080;">or</span> <span style="color: #000000;">weod</span><span style="color: #0000FF;">></span><span style="color: #000000;">9</span>
+         <span style="color: #008080;">or</span> <span style="color: #000000;">wood</span><span style="color: #0000FF;">></span><span style="color: #000000;">9</span>
+         <span style="color: #008080;">or</span> <span style="color: #0000FF;">(</span><span style="color: #000000;">loed</span><span style="color: #0000FF;">=</span><span style="color: #000000;">l</span> <span style="color: #008080;">and</span> <span style="color: #000000;">odd_ed</span><span style="color: #0000FF;"><</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span>
+             <span style="color: #000000;">digits</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">odd_ed</span>
+             <span style="color: #000000;">l</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">loed</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">return</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">digits</span><span style="color: #0000FF;">,</span><span style="color: #000000;">l</span><span style="color: #0000FF;">}</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #004080;">atom</span> <span style="color: #000000;">t0</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">time</span><span style="color: #0000FF;">()</span>
+ <span style="color: #008080;">for</span> <span style="color: #000000;">n</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">to</span> <span style="color: #000000;">200</span> <span style="color: #008080;">do</span> <span style="color: #000080;font-style:italic;">-- 0.7s
+ --for n=1 to 274 do -- 12.8s, but mmnn(275) takes 2 minutes and 25s
+ --for n=1 to 369 do -- 2 minutes 31s, but I gave up on 370
+ --for n=1 to 666 do -- 3 minutes 31s, skipping 11 tricky ones
+ --if not find(n,{275,370,(404),481,505,518,542,625,629,656,666}) then</span>
+     <span style="color: #008080;">if</span> <span style="color: #7060A8;">remainder</span><span style="color: #0000FF;">(</span><span style="color: #000000;">n</span><span style="color: #0000FF;">,</span><span style="color: #008080;">iff</span><span style="color: #0000FF;">(</span><span style="color: #000000;">n</span><span style="color: #0000FF;"><=</span><span style="color: #000000;">100</span><span style="color: #0000FF;">?</span><span style="color: #000000;">10</span><span style="color: #0000FF;">:</span><span style="color: #000000;">5</span><span style="color: #0000FF;">))=</span><span style="color: #000000;">1</span> <span style="color: #008080;">then</span> <span style="color: #7060A8;">printf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"\n%3d:"</span><span style="color: #0000FF;">,</span><span style="color: #000000;">n</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #7060A8;">printf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">" %-11s"</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">mmnn</span><span style="color: #0000FF;">(</span><span style="color: #000000;">n</span><span style="color: #0000FF;">)})</span>
+ <span style="color: #000080;font-style:italic;">--end if</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+ <span style="color: #7060A8;">printf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"\n1,000,000: %s\n"</span><span style="color: #0000FF;">,{</span><span style="color: #7060A8;">shorten</span><span style="color: #0000FF;">(</span><span style="color: #000000;">mmnn</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1e6</span><span style="color: #0000FF;">))})</span> <span style="color: #000080;font-style:italic;">-- (0.0s)</span>
+ <span style="color: #0000FF;">?</span><span style="color: #7060A8;">elapsed</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">time</span><span style="color: #0000FF;">()-</span><span style="color: #000000;">t0</span><span style="color: #0000FF;">)</span>
+<!--

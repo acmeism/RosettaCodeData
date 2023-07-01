@@ -1,0 +1,262 @@
+program MazeGenAndSolve
+
+    // First and last columns/rows are "dead" cells. Makes generating
+    // a maze with border walls much easier. Therefore, a visible
+    // 20x20 maze has a maze size of 22. 	
+    mazeSize int = 22;
+
+    south boolean[][];
+    west boolean[][];
+    visited boolean[][];
+
+    // Solution variables
+    solution Dictionary;
+    done boolean;
+    startingRow, startingCol, endingRow, endingCol int;
+
+    function main()
+        initMaze();
+        generateMaze();
+        drawMaze(false); // Draw maze without solution
+
+        solveMaze();
+        drawMaze(true); // Draw maze with solution
+    end
+
+    private function initMaze()
+
+        visited = createBooleanArray(mazeSize, mazeSize, false);
+
+        // Initialize border cells as already visited
+        for(col int from 1 to mazeSize)
+            visited[col][1] = true;
+            visited[col][mazeSize] = true;
+        end
+        for(row int from 1 to mazeSize)
+            visited[1][row] = true;
+            visited[mazeSize][row] = true;
+        end
+
+        // Initialize all walls as present
+        south = createBooleanArray(mazeSize, mazeSize, true);
+        west = createBooleanArray(mazeSize, mazeSize, true);
+
+    end
+
+    private function createBooleanArray(col int in, row int in, initialState boolean in) returns(boolean[][])
+
+        newArray boolean[][] = new boolean[0][0];
+
+        for(i int from 1 to col)
+            innerArray boolean[] = new boolean[0];
+            for(j int from 1 to row)
+                innerArray.appendElement(initialState);
+            end
+            newArray.appendElement(innerArray);
+        end
+
+        return(newArray);
+
+    end
+
+    private function createIntegerArray(col int in, row int in, initialValue int in) returns(int[][])
+
+        newArray int[][] = new int[0][0];
+
+        for(i int from 1 to col)
+            innerArray int[] = new int[0];
+            for(j int from 1 to row)
+                innerArray.appendElement(initialValue);
+            end
+            newArray.appendElement(innerArray);
+        end
+
+        return(newArray);
+
+    end
+
+    private function generate(col int in, row int in)
+
+	    // Mark cell as visited
+        visited[col][row] = true;
+
+        // Keep going as long as there is an unvisited neighbor
+        while(!visited[col][row + 1] || !visited[col + 1][row] ||
+                !visited[col][row - 1] || !visited[col - 1][row])
+
+            while(true)
+                r float = MathLib.random(); // Choose a random direction
+
+                case
+                    when(r < 0.25 && !visited[col][row + 1]) // Go south
+                        south[col][row] = false; // South wall down
+                        generate(col, row + 1);
+                        exit while;
+                    when(r >= 0.25 && r < 0.50 && !visited[col + 1][row]) // Go east
+                        west[col + 1][row] = false; // West wall of neighbor to the east down
+                        generate(col + 1, row);
+                        exit while;
+                    when(r >= 0.5 && r < 0.75 && !visited[col][row - 1]) // Go north
+                        south[col][row - 1] = false; // South wall of neighbor to the north down
+                        generate(col, row - 1);
+                        exit while;
+                    when(r >= 0.75 && r < 1.00 && !visited[col - 1][row]) // Go west
+                        west[col][row] = false; // West wall down
+                        generate(col - 1, row);
+                        exit while;
+                end
+            end
+        end
+
+    end
+
+    private function generateMaze()
+
+    	// Pick random start position (within the visible maze space)
+        randomStartCol int = MathLib.floor((MathLib.random() *(mazeSize - 2)) + 2);
+        randomStartRow int = MathLib.floor((MathLib.random() *(mazeSize - 2)) + 2);
+
+        generate(randomStartCol, randomStartRow);
+
+    end
+
+    private function drawMaze(solve boolean in)
+
+        line string;
+
+        // Iterate over wall arrays (skipping dead border cells as required).
+        // Construct a row at a time and output to console.
+        for(row int from 1 to mazeSize - 1)
+
+            if(row > 1)
+                line = "";
+                for(col int from 2 to mazeSize)
+                    if(west[col][row])
+                        line ::= cellTest(col, row, solve);
+                    else
+                        line ::= cellTest(col, row, solve);
+                    end
+                end
+                Syslib.writeStdout(line);
+            end
+
+            line = "";
+            for(col int from 2 to mazeSize - 1)
+                if(south[col][row])
+                    line ::= "+---";
+                else
+                    line ::= "+   ";
+                end
+            end
+            line ::= "+";
+            SysLib.writeStdout(line);
+
+        end
+
+    end
+
+    private function cellTest(col int in, row int in, solve boolean in) returns(string)
+
+        wall string;
+
+        // Determine cell wall structure. If in solve mode, show start, end and
+        // solution markers.
+        if(!solve)
+            if(west[col][row])
+                wall = "|   ";
+            else
+                wall = "    ";
+            end
+        else
+            if(west[col][row])
+
+                case
+                    when(col == startingCol and row == startingRow)
+                        wall = "| S ";
+                    when(col == endingCol and row == endingRow)
+                        wall = "| E ";
+                    when(solution.containsKey("x=" + col + "y=" + row))
+                        wall = "| * ";
+                    otherwise
+                        wall = "|   ";
+                end
+
+            else
+                case
+                    when(col == startingCol and row == startingRow)
+                        wall = "  S ";
+                    when(col == endingCol and row == endingRow)
+                        wall = "  E ";
+                    when(solution.containsKey("x=" + col + "y=" + row))
+                        wall = "  * ";
+                    otherwise
+                        wall = "    ";
+                end
+            end
+        end
+
+        return(wall);
+    end
+
+    private function solve(col int in, row int in)
+
+        if(col == 1 || row == 1 || col == mazeSize || row == mazeSize)
+            return;
+        end
+
+        if(done || visited[col][row])
+            return;
+        end
+
+        visited[col][row] = true;
+
+        solution["x=" + col + "y=" + row] = true;
+
+        // Reached the end point
+        if(col == endingCol && row == endingRow)
+            done = true;
+        end
+
+        if(!south[col][row]) // Go South
+            solve(col, row + 1);
+        end
+        if(!west[col + 1][row]) // Go East
+            solve(col + 1, row);
+        end
+        if(!south[col][row - 1]) // Go North
+            solve(col, row - 1);
+        end
+        if(!west[col][row]) // Go West
+            solve(col - 1, row);
+        end
+
+        if(done)
+            return;
+        end
+
+        solution.removeElement("x=" + col + "y=" + row);
+
+    end
+
+    private function solveMaze()
+        for(col int from 1 to mazeSize)
+            for(row int from 1 to mazeSize)
+                visited[col][row] = false;
+            end
+        end
+
+        solution = new Dictionary(false, OrderingKind.byInsertion);
+        done = false;
+
+        // Pick random start position on first visible row
+        startingCol = MathLib.floor((MathLib.random() *(mazeSize - 2)) + 2);
+        startingRow = 2;
+
+        // Pick random end position on last visible row
+        endingCol = MathLib.floor((MathLib.random() *(mazeSize - 2)) + 2);
+        endingRow = mazeSize - 1;
+
+        solve(startingCol, startingRow);
+    end
+
+end

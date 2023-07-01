@@ -1,0 +1,170 @@
+VREG:	equ	99h	; VDP register port
+VR0:	equ	0F3DFh	; Copy of VDP R0 in memory
+VR1:	equ	0F3E0h	; Copy of VDP R1 in memory
+NEWKEY:	equ	0FBE5h	; MSX BIOS puts key data here
+VDP:	equ	98h	; VDP data port
+ROM:	equ	0FCC0h	; Main ROM slot
+JIFFY:	equ	0FCE9h	; BIOS timer
+calslt:	equ	1Ch	; Interslot call routine
+initxt:	equ	6Ch	; Switch to default text mode
+	org	100h
+	ld	bc,(JIFFY)	; Initialize RNG with time
+	ld	d,b
+	ld	e,c
+	exx		; RNG state stored in alternate registers
+	di		; Set up the VDP for 256x192 graphics mode
+	ld	a,(VR0)	; Get old value of R0
+	and	112	; Blank out mode bits
+	or	6	; Set high 3 bits = 011(0)
+	out	(VREG),a
+	ld	a,128	; Store in register 0
+	out	(VREG),a
+	ld	a,(VR1)	; Get old value of R1
+	and	99	; Blank out mode bits
+	out	(VREG),a
+	ld	a,129	; Low mode bits are 0 so we can just send it
+	out	(VREG),a
+	ld	a,31	; Bitmap starts at beginning of VRAM
+	out	(VREG),a
+	ld	a,130
+	out	(VREG),a
+	xor	a	; Zero out the VRAM - set address to 0
+	out	(VREG),a
+	ld	a,142
+	out	(VREG),a
+	xor	a
+	out	(VREG),a
+	ld	a,64	; Tell VDP to allow writing to VRAM
+	out	(VREG),a
+	xor	a 	; Write zeroes to the VDP
+	ld	c,192	; 2 pixels per byte, meaning 128*192 bytes
+zero1:	ld	b,128
+zero2:	out	(VDP),a
+	djnz	zero2
+	dec	c
+	jr	nz,zero1
+	ei
+genX:	call	random	; Generate starting X coordinate
+	cp	200
+	jr	nc,genX
+	ld	b,a	; B = X
+genY:	call	random	; Generate starting Y coordinate
+	cp	173
+	jr	nc,genY
+	ld	c,a	; C = Y
+step:	call	random	; Get direction
+	and	a,3	; Directions {0,1,2}
+	cp 	a,3
+	jr	z,step
+	ld	ixh,a	; Store direction in IXH for color
+	dec	a	; Select direction
+	jr 	z,d1
+	dec	a
+	jr	z,d2
+	xor	a	; X /= 2
+	rr	b
+	xor	a	; Y /= 2
+	rr	c
+	jr	plot	
+d1:	xor	a	; There's a 16-bit SBC but not a 16-bit SUB
+	ld 	hl,100	; (16-bit math or intermediate values won't fit)
+	ld	d,a	; DE = X
+	ld	e,b
+	sbc	hl,de	; 100 - X
+	xor	a	
+	rr	h	; (100 - X) / 2
+	rr	l
+	ld	e,100	; (100 - X) / 2 + 100
+	add	hl,de
+	ld	b,l	; -> X	
+	xor	a
+	ld	hl,173	; 173
+	ld	e,c
+	sbc	hl,de	; (173 - Y)
+	rr	h	; (173 - Y) / 2
+	rr	l
+	ex	de,hl
+	ld	l,173
+	xor	a
+	sbc	hl,de	; 173 - (173-Y)/2
+	ld	c,l 	; -> Y
+	jr	plot	
+d2:	xor	a
+	rr 	c	; Y /= 2
+	xor	a
+	ld	hl,200
+	ld	d,a	; DE = X
+	ld	e,b
+	sbc	hl,de	; 200-X
+	xor	a
+	rr	h	; (200-X)/2
+	rr	l
+	ex	de,hl
+	ld 	l,200
+	sbc	hl,de	; 200 - (200-X)/2
+	ld	b,l	; -> X
+plot:	ld	d,c	; Write address = CB/2
+	ld	e,b
+	xor	a
+	rr	d
+	rr	e
+	ld	a,d	; First control byte =
+	rlca		; high 2 bytes of address
+	rlca
+	and	3
+	ld	h,a	; Keep this value, we'll need it again
+	di
+	out	(VREG),a
+	ld	a,142	; To port 14
+	out	(VREG),a
+	ld	a,e	; 2nd control byte = low 8 bits
+	out	(VREG),a
+	ld	a,d	; 3rd control byte = middle 6 bits
+	and	63	; Bit 6 off = read
+	out	(VREG),a
+	nop		; Give it some processing time
+	nop
+	in	a,(VDP)	; Read the two pixels there
+	ld	l,a	; Keep this byte
+	ld	a,h	; Now set the VDP to write to that address
+	out	(VREG),a
+	ld	a,142
+	out	(VREG),a
+	ld	a,e
+	out	(VREG),a
+	ld	a,d
+	and	63	; Bit 6 on = write
+	or	64
+	out	(VREG),a
+	ld	a,ixh	; Get color
+	add	a,12
+	ld	d,b	; Left or right pixel?
+	rr	d
+	jr 	c,wpix
+	rlca		; Shift left if X is even
+	rlca
+	rlca
+	rlca
+wpix:	or	l	; OR with other pixel in the byte
+	out	(VDP),a	; Write byte
+	ei
+wkey:	ld	a,(NEWKEY+8)
+	inc	a	; Check if space key pushed
+	jp	z,step	; If not, do another step
+	ld	iy,ROM	; Switch back to text mode and quit
+	ld	ix,initxt
+	jp	calslt
+random:	exx		; RNG state stored in alternate registers
+	inc	b	; X++
+	ld	a,b	; X,
+	xor	e	; ^ C,
+	xor	c	; ^ A,
+	ld	c,a	; -> A
+	add	a,d	; + B
+	ld	d,a	; -> B
+	rra		; >> 1
+	xor	c	; ^ A,
+	add	a,e	; + C,
+	ld	e,a	; -> C
+	exx
+	ret

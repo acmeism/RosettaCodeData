@@ -1,0 +1,7 @@
+String.isPrefix "ab" "abcd"; (* returns true *)
+String.isSuffix "zn" "abcd"; (* returns false *)
+String.isSubstring "bb" "abab"; (* returns false *)
+String.isSubstring "ab" "abab"; (* returns true *)
+#2 (Substring.base (#2 (Substring.position "bb" (Substring.full "abab")))); (* returns 4 *)
+val loc = #2 (Substring.base (#2 (Substring.position "ab" (Substring.full "abab")))); (* returns 0 *)
+val loc' = #2 (Substring.base (#2 (Substring.position "ab" (Substring.extract ("abab", loc+1, NONE))))); (* returns 2 *)

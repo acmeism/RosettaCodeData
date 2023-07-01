@@ -1,0 +1,72 @@
+' FB 1.05.0 Win64
+
+' List updated to release 72, 25 November 2016, of IBAN Registry (75 countries)
+Dim Shared countryCodes As String
+countryCodes = _
+    "AD24 AE23 AL28 AT20 AZ28 BA20 BE16 BG22 BH22 BR29 BY28 CH21 CR22 CY28 CZ24 DE22 " _
+    "DK18 DO28 EE20 ES24 FI18 FO18 FR27 GB22 GE22 GI23 GL18 GR27 GT28 HR21 HU28 IE22 " _
+    "IL23 IQ23 IS26 IT27 JO30 KW30 KZ20 LB28 LC32 LI21 LT20 LU20 LV21 MC27 MD24 ME22 " _
+    "MK19 MR27 MT31 MU30 NL18 NO15 PK24 PL28 PS29 PT25 QA29 RO24 RS22 SA24 SC31 SE24 " _
+    "SI19 SK24 SM27 ST25 SV28 TL23 TN24 TR26 UA29 VG24 XK20"
+
+Function checkCountryCode(cc As String) As Boolean
+  Return Instr(countryCodes, cc)
+End Function
+
+' To avoid having to use the GMP library, a piece-wise calculation is used
+Function mod97(s As String) As UInteger
+  Dim r As UInteger = ValULng(Left(s, 9)) Mod 97
+  Dim start As UInteger = 10
+  While start < Len(s)
+    r = ValULng(r & Mid(s, start, 7)) Mod 97
+    start += 7
+  Wend
+  Return r
+End Function
+
+Function validateIban(iban As Const String) As Boolean
+  ' remove spaces from IBAN
+  Dim s As String = iban
+  Dim count As Integer = 0
+  For i As Integer = 0 To Len(s) - 1
+    If s[i] = 32 Then
+      For j As Integer = i + 1 To Len(s) - 1
+         s[j - 1] = s[j]
+      Next
+      count += 1
+    End If
+    If i = Len(s) - 1 - count Then Exit For
+  Next i
+  If count > 0 Then
+    s[Len(s) - count] = 0
+    Dim p As UInteger Ptr = CPtr(UInteger Ptr, @s)
+    *(p + 1) = Len(s) - count ''change length of string in descriptor
+  End If
+
+  ' check country code
+  Dim isValid As Boolean = checkCountryCode(Left(s, 2) + Str(Len(s)))
+  If Not isValid Then Return False
+
+  ' move first 4 characters to end
+  s = Mid(s, 5) + Left(s, 4)
+
+  ' replace A to Z with numbers 10 To 35
+  For i As Integer = Len(s) To 1 Step -1
+    If s[i - 1] >= 65 AndAlso s[i - 1] <= 90 Then
+      s = Left(s, i - 1) + Str(s[i - 1] - 55) + Mid(s, i + 1)
+    End If
+  Next
+
+  ' do mod97 calculation
+  Return mod97(s) = 1  '' remainder needs to be 1 for validity
+End Function
+
+Dim As String ibans(1 To 2) = {"GB82 WEST 1234 5698 7654 32", "GB82 TEST 1234 5698 7654 32"}
+For i As Integer = 1 To 2
+  Dim isValid As Boolean = validateIban(ibans(i))
+  Print ibans(i); IIf(isValid, " : may be valid", " : is not valid")
+Next
+
+Print
+Print "Press any key to quit"
+Sleep

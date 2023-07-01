@@ -1,0 +1,54 @@
+include(zkl.h.zkl);
+const FLAGS=FILE.GLOB.IGNORE_CASE + FILE.GLOB.NO_DIRS;
+var [const] MsgHash=Import("zklMsgHash");
+var recurse=False, fileSpec, minSz=0, maxSz=(0).MAX;
+
+argh:=Utils.Argh(
+   T("+R","R","Recurse into subdirectories, starting at <arg>",
+    fcn(arg){ recurse=arg }),
+   T("+minSz","","Only consider files larger than <arg>",
+    fcn(arg){ minSz=arg.toInt() }),
+   T("+maxSz","","Only consider files less than <arg>",
+    fcn(arg){ maxSz=arg.toInt() }),
+);
+
+argh.parse(vm.arglist);
+try { fileSpec=argh.loners[0]; }
+catch{
+   argh.usage("Find duplicate files");
+   System.exit(1);
+}
+
+fnames:=Data(0,String);
+if (recurse) File.globular(recurse,fileSpec,True,FLAGS,fnames);
+else         File.glob(fileSpec,FLAGS).pump(fnames);
+
+files:=Dictionary();  // (len:(name,name...), ...)
+foreach fname in (fnames){
+   sz:=File.len(fname);
+   if(minSz<=sz<=maxSz) files.appendV(File.len(fname),fname);
+}
+
+    //////////////////////// group files by size
+files=files.pump(List,Void.Xplode,fcn(k,v){ v.len()>1 and v or Void.Skip });
+println("Found %d groups of same sized files, %d files total.".fmt(files.len(),
+   files.apply("len").sum(0)));
+
+if(not files) System.exit();    // no files found
+
+buffer:=Data(0d100_000);  // we'll resuse this buffer for hashing
+hashes:=files.pump(List,'wrap(fnames){ // get the MD5 hash for each file
+   fnames.pump(List,'wrap(fname){
+      file,hash := File(fname,"rb"), MsgHash.toSink("MD5");
+      file.pump(buffer,hash); file.close();
+      return(hash.close(),fname); // -->( (hash,name), (hash,name) ... )
+   })
+},T(Void.Write,Void.Write)); // flatten list of lists of lists to above
+
+   // Hash the file hashes, then scoop out the files with the same hash
+buffer:=Dictionary();
+files:=hashes.pump(Void,Void.Xplode,buffer.appendV)
+       .pump(List,Void.Xplode,fcn(k,v){ v.len()>1 and v or Void.Skip });
+
+println("Found %d duplicate files:".fmt(files.apply("len").sum(0)));
+foreach group in (files){ println("   ",group.concat(", ")) }

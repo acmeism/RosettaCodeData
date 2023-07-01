@@ -1,0 +1,113 @@
+  'Example of matrix layout mapped to an array of 4x4 cells
+  '
+  '  0 4 8 C
+  '  1 5 9 D
+  '  2 6 A E
+  '  3 7 B F
+  '
+
+  % MatrixType double
+
+  sub MatrixMul(MatrixType *A,*B,*C, sys n)
+  '========================================
+  '
+  '
+  #if leftmatch matrixtype single
+    % OneStep 4
+    % mtype single
+  #endif
+  '
+  #if leftmatch matrixtype double
+    % OneStep 8
+    % mtype double
+  #endif
+
+  sys pa=@A, pb=@B, pc=@C
+  sys ColStep=OneStep*n
+
+  mov ecx,pa
+  mov edx,pb
+  mov eax,pc
+
+  mov esi,n
+  (
+  call column : dec esi : jg repeat
+  )
+  exit sub
+
+  column:
+  '======
+
+  mov edi,n
+  (
+  call cell : dec edi : jg repeat
+  )
+  add edx,ColStep
+  sub ecx,ColStep
+  ret
+
+  cell: ' row A * column B
+  '=======================
+
+  'matrix data is stored ascending vertically then horizontally
+  'thus rows are minor, columns are major
+  '
+  push  ecx
+  push  edx
+  push  eax
+  mov   eax,4
+  fldz
+  (
+  fld   mtype [ecx]
+  fmul  mtype [edx]
+  faddp st1
+  add   ecx,ColStep 'next column of matrix A
+  add   edx,OneStep 'next row of matrix B
+  dec eax
+  jnz repeat
+  )
+  pop eax
+  fstp mtype [eax] 'assign to next row of matrix C
+  '
+  pop edx
+  pop ecx
+  add   eax,OneStep 'next cell in column of matrix C (columns then rows)
+  add   ecx,OneStep 'next row of matrix A
+  ret
+  '
+  end sub
+
+
+  function ShowMatrix(MatrixType*A,sys n) as string
+  '================================================
+    string cr=chr(13)+chr(10), tab=chr(9)
+    function="MATRIX " n "x" n cr cr
+    sys i,j,m
+    '
+    for i=1 to n
+      m=0
+      for j=1 to n
+        function+=str( A[m+i] ) tab
+        m+=n
+      next
+      function+=cr
+    next
+  end function
+
+  'TEST
+  '====
+
+  % n 4
+  MatrixType A[n*n],B[n*n],C[n*n]
+
+
+  'reading vertically (minor) then left to right (major)
+
+  A <= 4,0,0,1, 0,4,0,0, 0,0,4,0, 0,0,0,4
+
+  B <= 2,0,0,2, 0,2,0,0, 0,0,2,0, 0,0,0,2
+
+
+  MatrixMul A,B,C,n
+
+  Print ShowMatrix C,n

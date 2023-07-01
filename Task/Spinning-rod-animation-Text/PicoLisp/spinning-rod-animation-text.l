@@ -1,0 +1,5 @@
+(de rod ()
+   (until ()
+      (for R '(\\ | - /)
+         (prin R (wait 250) "\r")(flush) ) ) )
+(rod)

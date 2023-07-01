@@ -1,0 +1,41 @@
+(defun r2cf (n1 n2)
+  (lambda ()
+    (unless (zerop n2)
+      (multiple-value-bind (t1 r)
+          (floor n1 n2)
+        (setf n1 n2 n2 r)
+        t1))))
+
+;; Example usage
+
+(defun demo-generator (numbers)
+  (let* ((n1 (car numbers))
+         (n2 (cadr numbers))
+         (gen (r2cf n1 n2)))
+    (format t "~S  ; ~S~%"
+            `(r2cf ,n1 ,n2)
+            (loop
+              :for r = (funcall gen)
+              :until (null r)
+              :collect r))))
+
+(mapcar #'demo-generator
+        '((1 2)
+          (3 1)
+          (23 8)
+          (13 11)
+          (22 7)
+          (-151 77)
+          (14142 10000)
+          (141421 100000)
+          (1414214 1000000)
+          (14142136 10000000)
+          (31 10)
+          (314 100)
+          (3142 1000)
+          (31428 10000)
+          (314285 100000)
+          (3142857 1000000)
+          (31428571 10000000)
+          (314285714 100000000)
+          (3141592653589793 1000000000000000)))

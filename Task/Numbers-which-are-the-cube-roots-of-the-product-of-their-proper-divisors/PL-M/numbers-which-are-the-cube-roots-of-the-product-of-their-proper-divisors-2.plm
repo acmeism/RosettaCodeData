@@ -1,0 +1,175 @@
+100H: /* FIND NUMBERS THAT ARE THE CUBE ROOT OF THEIR PROPER DIVISORS        */
+
+   DECLARE FALSE LITERALLY '0', TRUE LITERALLY '0FFH';
+
+   /* CP/M SYSTEM CALL AND I/O ROUTINES                                      */
+   BDOS:      PROCEDURE( FN, ARG ); DECLARE FN BYTE, ARG ADDRESS; GOTO 5; END;
+   PR$CHAR:   PROCEDURE( C ); DECLARE C BYTE;    CALL BDOS( 2, C );  END;
+   PR$STRING: PROCEDURE( S ); DECLARE S ADDRESS; CALL BDOS( 9, S );  END;
+   PR$NL:     PROCEDURE;   CALL PR$CHAR( 0DH ); CALL PR$CHAR( 0AH ); END;
+   PR$NUMBER: PROCEDURE( N ); /* PRINTS A NUMBER IN THE MINIMUN FIELD WIDTH  */
+      DECLARE N ADDRESS;
+      DECLARE V ADDRESS, N$STR ( 6 )BYTE, W BYTE;
+      V = N;
+      W = LAST( N$STR );
+      N$STR( W ) = '$';
+      N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      DO WHILE( ( V := V / 10 ) > 0 );
+         N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      END;
+      CALL PR$STRING( .N$STR( W ) );
+   END PR$NUMBER;
+   /* END SYSTEM CALL AND I/O ROUTINES                                       */
+
+   DECLARE MAX$PF LITERALLY '200';
+
+   /* SETS PF$A AND PFC$A TO THE PRIME FACTORS AND COUNTS OF F, THE NUMBER   */
+   /* NUMBER OF FACTORS IS RETURNED IN PF$POS$PTR                            */
+   /* PF$POS$PTR MUST BE INITIALISED BEFORE THE CALL                         */
+   FACTORISE: PROCEDURE( F, PF$POS$PTR, PF$A, PFC$A );
+      DECLARE ( F, PF$POS$PTR, PF$A, PFC$A ) ADDRESS;
+      DECLARE PF$POS BASED PF$POS$PTR ADDRESS;
+      DECLARE PF  BASED PF$A  ( 0 )ADDRESS;
+      DECLARE PFC BASED PFC$A ( 0 )ADDRESS;
+
+      DECLARE ( FF, V, POWER ) ADDRESS;
+
+      /* START WITH 2                                                        */
+      V  = F;
+      FF = 2;
+      DO WHILE V > 1;
+         IF V MOD FF = 0 THEN DO;
+            /* FF IS A PRIME FACTOR OF V                                     */
+            DECLARE P ADDRESS;
+            POWER = 0;
+            DO WHILE V MOD FF = 0;
+               POWER = POWER + 1;
+               V     = V / FF;
+            END;
+            P = 0;
+            DO WHILE P < PF$POS AND PF( P ) <> FF;
+               P = P + 1;
+            END;
+            IF P >= PF$POS THEN DO;
+               /* FIRST TIME FF HAS APPEARED AS A PRIME FACTOR               */
+               P        = PF$POS;
+               PFC( P ) = 0;
+               PF$POS   = PF$POS + 1;
+            END;
+            PF(  P ) = FF;
+            PFC( P ) = PFC( P ) + POWER;
+         END;
+         IF FF = 2 THEN FF = 3; ELSE FF = FF + 2;
+      END;
+   END FACTORISE;
+
+   /* RETURNS TRUE  THE PRODUCT OF THE PROPER DIVISORS OF N IS THE CUBE OF N */
+   /*         FALSE OTHERWISE                                                */
+   PD$PRODUCT$IS$CUBE: PROCEDURE( N )ADDRESS;
+      DECLARE N ADDRESS;
+      DECLARE IS$CUBE BYTE;
+
+      IF N < 2
+      THEN IS$CUBE = TRUE;
+      ELSE DO;
+         DECLARE ( I, PF$POS, NF$POS ) ADDRESS;
+         DECLARE ( PF, PFC, NF, NFC ) ( MAX$PF ) ADDRESS;
+
+         PFC( 0 ), PF( 0 ), PF$POS, NFC( 0 ), NF( 0 ), NF$POS = 0;
+
+         /* FACTORISE N                                                      */
+         CALL FACTORISE( N, .NF$POS, .NF, .NFC );
+         /* COPY FACTORS BUT ZERO THE COUNTS SO WE CAN EASILY CHECK THE      */
+         /* FACTORS OF N ARE THE SAME AS THOSE OF THE PROPER DIVISOR PRODUCT */
+         DO I = 0 TO NF$POS - 1;
+            PF(  I ) = NF( I );
+            PFC( I ) = 0;
+         END;
+
+         /* FIND THE PROPER DIVISORS AND FACTORISE THEM, ACCUMULATING THE    */
+         /* PRIME FACTOR COUNTS                                              */
+         I = 2;
+         DO WHILE I * I <= N;
+            IF N MOD I = 0 THEN DO;
+               /* I IS A DIVISOR OF N                                        */
+               DECLARE ( F, G ) ADDRESS;
+               F = I;                                        /* FIRST FACTOR */
+               G = N / F;                                   /* SECOND FACTOR */
+               /* FACTORISE F, COUNTING THE PRIME FACTORS                    */
+               CALL FACTORISE( F, .PF$POS, .PF, .PFC );
+               /* FACTORISE G, IF IT IS NOT THE SAME AS F                    */
+               IF F <> G THEN CALL FACTORISE( G, .PF$POS, .PF, .PFC );
+            END;
+            I = I + 1;
+         END;
+
+         IS$CUBE = PF$POS = NF$POS;
+         IF IS$CUBE THEN DO;
+            /* N AND ITS PROPER DIVISOR PRODUCT HAVE THE SAME PRIME FACTOR   */
+            /* COUNT - CHECK THE PRIME FACTLORS ARE THE SAME AND THAT THE    */
+            /* PRODUCTS FACTORS APPEAR 3 TIMEs THOSE OF N                    */
+            I = 0;
+            DO WHILE I < PF$POS AND IS$CUBE;
+               IS$CUBE = ( PF(  I ) = NF(  I )     )
+                     AND ( PFC( I ) = NFC( I ) * 3 );
+               I = I + 1;
+            END;
+         END;
+      END;
+      RETURN IS$CUBE;
+   END;
+
+   /* RETURNS THE PROPER DIVISOR PRODUCT OF N, MOD 65536                     */
+   PDP: PROCEDURE( N )ADDRESS;
+      DECLARE N ADDRESS;
+      DECLARE ( I, I2, PRODUCT ) ADDRESS;
+
+      PRODUCT = 1;
+      I       = 2;
+      DO WHILE ( I2 := I * I ) <= N;
+         IF N MOD I = 0 THEN DO;
+            PRODUCT = PRODUCT * I;
+            IF I2 <> N THEN DO;
+               PRODUCT = PRODUCT * ( N / I );
+            END;
+         END;
+         I = I + 1;
+      END;
+      RETURN PRODUCT;
+   END PDP;
+
+   DECLARE ( I, I3, J, COUNT ) ADDRESS;
+
+   COUNT, I = 0;
+   DO WHILE COUNT < 5$000;
+      I  = I  + 1;
+      I3 = I * I * I;
+      IF PDP( I ) = I3 THEN DO;
+         /* THE PROPER DIVISOR PRODUCT MOD 65536 IS THE SAME AS N CUBED ALSO */
+         /* MOD 65536, IF THE CUBE IS 0 MOD 65536, WE NEED TO CHECK THE      */
+         /* PRIME FACTORS                                                    */
+         DECLARE IS$NUMBER BYTE;
+         IF I3 <> 0 THEN IS$NUMBER = TRUE;
+                    ELSE IS$NUMBER = PD$PRODUCT$IS$CUBE( I );
+         IF IS$NUMBER THEN DO;
+            IF ( COUNT := COUNT + 1 ) < 51 THEN DO;
+               CALL PR$CHAR( ' ' );
+               IF I <   10 THEN CALL PR$CHAR( ' ' );
+               IF I <  100 THEN CALL PR$CHAR( ' ' );
+               IF I < 1000 THEN CALL PR$CHAR( ' ' );
+               CALL PR$NUMBER( I );
+               IF COUNT MOD 10 = 0 THEN CALL PR$NL;
+               END;
+            ELSE IF COUNT = 500 OR COUNT = 5000 THEN DO;
+               IF COUNT < 1000 THEN CALL PR$CHAR( ' ' );
+               CALL PR$STRING( .'    $' );
+               CALL PR$NUMBER( COUNT );
+               CALL PR$STRING( .'TH: $' );
+               CALL PR$NUMBER( I );
+               CALL PR$NL;
+            END;
+         END;
+      END;
+   END;
+
+EOF

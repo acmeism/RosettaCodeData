@@ -1,0 +1,378 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program MD5_64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ MD5_DIGEST_LENGTH, 16
+.equ ZWORKSIZE,        1000
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessRosetta:         .asciz "Rosetta Code"
+szMessTest1:           .asciz ""
+szMessTest2:           .asciz "abc"
+szMessTest3:           .asciz "abcdefghijklmnopqrstuvwxyz"
+szMessTest4:           .asciz "12345678901234567890123456789012345678901234567890123456789012345678901234567890"
+szMessTest5:           .asciz "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+szMessFinPgm:          .asciz "Program End ok.\n"
+szMessResult:          .asciz "Result for "
+szMessResult1:         .asciz " => "
+szMessSizeError:       .asciz "\033[31mWork area too small !! \033[0m \n"
+szCarriageReturn:      .asciz "\n"
+
+/* array constantes K */
+tbConstK:  .int 0xd76aa478,0xe8c7b756,0x242070db,0xc1bdceee
+           .int 0xf57c0faf,0x4787c62a,0xa8304613,0xfd469501
+           .int 0x698098d8,0x8b44f7af,0xffff5bb1,0x895cd7be
+           .int 0x6b901122,0xfd987193,0xa679438e,0x49b40821
+           .int 0xf61e2562,0xc040b340,0x265e5a51,0xe9b6c7aa
+           .int 0xd62f105d,0x2441453,0xd8a1e681,0xe7d3fbc8
+           .int 0x21e1cde6,0xc33707d6,0xf4d50d87,0x455a14ed
+           .int 0xa9e3e905,0xfcefa3f8,0x676f02d9,0x8d2a4c8a
+           .int 0xfffa3942,0x8771f681,0x6d9d6122,0xfde5380c
+           .int 0xa4beea44,0x4bdecfa9,0xf6bb4b60,0xbebfbc70
+           .int 0x289b7ec6,0xeaa127fa,0xd4ef3085,0x4881d05
+           .int 0xd9d4d039,0xe6db99e5,0x1fa27cf8,0xc4ac5665
+           .int 0xf4292244,0x432aff97,0xab9423a7,0xfc93a039
+           .int 0x655b59c3,0x8f0ccc92,0xffeff47d,0x85845dd1
+           .int 0x6fa87e4f,0xfe2ce6e0,0xa3014314,0x4e0811a1
+           .int 0xf7537e82,0xbd3af235,0x2ad7d2bb,0xeb86d391
+
+/* array rotation coef R */
+tbRotaR:   .int  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22
+           .int  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20
+           .int  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23
+           .int  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21
+
+tbConstH:            .int 0x67452301       // H0
+                     .int 0xEFCDAB89       // H1
+                     .int 0x98BADCFE       // H2
+                     .int 0x10325476       // H3
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+//iNbBlocs:                    .skip 8
+sZoneConv:                   .skip 24
+sZoneResult:                 .skip 24
+tbH:                         .skip 4 * 4         // 4 variables H
+sZoneTrav:                   .skip ZWORKSIZE
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                      // entry of program
+
+    ldr x0,qAdrszMessTest1
+    bl computeExemple
+
+    ldr x0,qAdrszMessTest2
+    bl computeExemple
+
+    ldr x0,qAdrszMessTest3
+    bl computeExemple
+
+    ldr x0,qAdrszMessTest4
+    bl computeExemple
+
+    ldr x0,qAdrszMessTest5
+    bl computeExemple
+
+    ldr x0,qAdrszMessFinPgm
+    bl affichageMess                       // display message
+
+
+100:                                       // standard end of the program
+    mov x0,0                               // return code
+    mov x8,EXIT                            // request to exit program
+    svc 0                                  // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszMessResult:         .quad szMessResult
+qAdrszMessResult1:         .quad szMessResult1
+qAdrszMessRosetta:        .quad szMessRosetta
+qAdrszMessTest1:          .quad szMessTest1
+qAdrszMessTest2:          .quad szMessTest2
+qAdrszMessTest3:          .quad szMessTest3
+qAdrszMessTest4:          .quad szMessTest4
+qAdrszMessTest5:          .quad szMessTest5
+qAdrsZoneTrav:            .quad sZoneTrav
+qAdrsZoneConv:            .quad sZoneConv
+qAdrszMessFinPgm:         .quad szMessFinPgm
+/***********************************************/
+/*     compute exemple                         */
+/***********************************************/
+/* x0 contains the address of the message */
+computeExemple:
+    stp x18,lr,[sp,-16]!      // save  registers
+    mov x18,x0
+    bl computeMD5             // call routine MD5
+
+    ldr x0,qAdrszMessResult
+    bl affichageMess
+    mov x0,x18
+    bl affichageMess
+    ldr x0,qAdrszMessResult1
+    bl affichageMess
+    ldr x0, qAdrsZoneResult
+    bl displayMD5
+
+100:
+    ldp x18,lr,[sp],16        // restaur  2 registers
+    ret                       // return to address lr x30
+/******************************************************************/
+/*     compute MD5                         */
+/******************************************************************/
+/* x0 contains the address of the message */
+computeMD5:
+    stp x1,lr,[sp,-16]!       // save  registers
+    ldr x1,qAdrsZoneTrav
+    mov x2,#0                // counter length
+1:                           // copy string in work area
+    cmp x2,ZWORKSIZE
+    bge 99f
+    ldrb w3,[x0,x2]
+    strb w3,[x1,x2]
+    cmp x3,#0
+    add x4,x2,1
+    csel x2,x4,x2,ne
+    bne 1b
+                             // add bit et compute length
+    lsl x6,x2,#3             // initial message length in bits
+    mov x3,#0b10000000       // add bit 1 at end of string
+    strb w3,[x1,x2]
+    add x2,x2,#1             // length in bytes
+    lsl x4,x2,#3             // length in bits
+    mov x3,#0
+2:
+    lsr x5,x2,#6             // padding block 512 bytes
+    lsl x5,x5,#6
+    sub x5,x2,x5
+    cmp x5,#56
+    beq 3f                   // yes -> end add
+    strb w3,[x1,x2]          // add zero at message end
+    add x2,x2,#1             // increment length bytes
+    add x4,x4,#8             // increment length in bits
+    b 2b
+3:
+    str x6,[x1,x2]           // and store at end
+
+    ldr x7,qAdrtbConstH      // constantes H address
+    ldr x4,qAdrtbH           // start area H
+    mov x5,#0
+4:                           // init array H with start constantes
+    ldr w6,[x7,x5,lsl #2]    // load constante
+    str w6,[x4,x5,lsl #2]    // and store
+    add x5,x5,#1
+    cmp x5,#4                // constantes number
+    blt 4b
+
+                             // split into block of 64 bytes
+    add x2,x2,#4             //  TODO : à revoir
+    lsr x4,x2,#6             // blocks number
+    mov x7,#0                // no de block et x1 contient l'adresse zone de travail
+    ldr x3,qAdrtbConstK      // K constantes  address
+    ldr x5,qAdrtbRotaR       // R rotation address
+
+5:                           // begin loop of each block of 64 bytes
+                             // init variable a b c d with H0 H1 H2 H3
+    ldr x0,qAdrtbH
+    ldr w8,[x0]              // a
+    ldr w9,[x0,#4]           // b
+    ldr w10,[x0,#8]          // c
+    ldr w11,[x0,#12]         // d
+
+    mov x6,#0                // indice t
+                             /* x2  address begin each block */
+    ldr x1,qAdrsZoneTrav
+    add x2,x1,x7,lsl #6      //  compute block begin  indice * 4 * 16
+6:                           // begin loop one
+    cmp x6,15
+    bgt 7f
+                             // cas 1 f := (b et c) ou ((non b) et d)
+                             //   g := i
+    and w12,w9,w10
+    mvn w13,w9
+    and w13,w13,w11
+    orr w12,w12,w13        // f
+    mov x14,x6             // g
+    b 10f
+7:
+    cmp x6,31
+    bgt 8f
+                           //  f := (d et b) ou ((non d) et c)
+                           // g := (5×i + 1) mod 16
+    and w12,w11,w9
+    mvn w13,w11
+    and w13,w13,w10
+    orr w12,w12,w13        // f
+    mov x13,5
+    mul x13,x6,x13
+    add x13,x13,1
+    lsr x15,x13,4
+    lsl x15,x15,4
+    sub x14,x13,x15
+    b 10f
+8:
+    cmp x6,47
+    bgt 9f
+                           // f := b xor c xor d
+                           // g := (3×i + 5) mod 16
+    eor w12,w9,w10
+    eor w12,w12,w11
+    mov x13,3
+    mul x13,x6,x13
+    add x13,x13,5
+    lsr x15,x13,4
+    lsl x15,x15,4
+    sub x14,x13,x15
+
+    b 10f
+9:
+                           // f := c xor (b ou (non d))
+                           //  g := (7×i) mod 16
+    mvn w13,w11
+    orr w13,w13,w9
+    eor w12,w13,w10        // f
+    mov x13,7
+    mul x13,x6,x13
+    lsr x15,x13,4
+    lsl x15,x15,4
+    sub x14,x13,x15       // g
+
+10:
+    mov w15,w11
+    mov w11,w10              // d = c
+    mov w10,w9               // c = b
+    add w16,w8,w12           // a + f
+    ldr w17,[x2,x14,lsl #2]
+    add w16,w16,w17          // + valeur bloc g
+    ldr w13,[x3,x6,lsl #2]
+    add w16,w16,w13          // + valeur constante K de i
+    ldr w17,[x5,x6,lsl #2]   // rotate left value
+    mov w13,32
+    sub w17,w13,w17
+    ror w13,w16,w17
+    add w9,w9,w13            // new b
+    mov w8, w15              // new a
+
+    add x6,x6,1
+    cmp x6,63
+    ble 6b
+
+    ldr x0,qAdrtbH
+    ldr w1,[x0]                // H0
+    add w1,w1,w8               // + a
+    str w1,[x0]
+    ldr w1,[x0,#4]             // H1
+    add w1,w1,w9               // + b
+    str w1,[x0,#4]
+    ldr w1,[x0,#8]             // H2
+    add w1,w1,w10              // + c
+    str w1,[x0,#8]
+    ldr w1,[x0,#12]            // H3
+    add w1,w1,w11              // + d
+    str w1,[x0,#12]
+                               // other bloc
+    add x7,x7,1                // increment block
+    cmp x7,x4                  // maxi ?
+    ble 5b
+
+                               // compute final result
+    ldr x0,qAdrtbH             // start area H
+    ldr x2,qAdrsZoneResult
+    ldr w1,[x0]
+    str w1,[x2]
+    ldr w1,[x0,#4]
+    str w1,[x2,#4]
+    ldr w1,[x0,#8]
+    str w1,[x2,#8]
+    ldr w1,[x0,#12]
+    str w1,[x2,#12]
+
+    mov x0,#0                    // routine OK
+    b 100f
+99:                              // size error
+    ldr x0,qAdrszMessSizeError
+    bl affichageMess
+    mov x0,-1
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrtbConstH:             .quad tbConstH
+qAdrtbConstK:             .quad tbConstK
+qAdrtbRotaR:              .quad tbRotaR
+qAdrtbH:                  .quad tbH
+qAdrsZoneResult:          .quad sZoneResult
+qAdrszMessSizeError:      .quad szMessSizeError
+
+/******************************************************************/
+/*     display hash  MD5                         */
+/******************************************************************/
+/* x0 contains the address of hash  */
+displayMD5:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    mov x3,x0
+    mov x2,#0
+1:
+    ldr w0,[x3,x2,lsl #2]          // load 4 bytes
+    rev w0,w0                      // reverse bytes
+    ldr x1,qAdrsZoneConv
+    bl conversion16_4W             // conversion hexa
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    add x2,x2,#1
+    cmp x2,#MD5_DIGEST_LENGTH / 4
+    blt 1b                         // and loop
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess               // display message
+100:
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*     conversion  hexadecimal register 32 bits                   */
+/******************************************************************/
+/* x0 contains value and x1 address zone receptrice   */
+conversion16_4W:
+    stp x0,lr,[sp,-48]!        // save  registres
+    stp x1,x2,[sp,32]          // save  registres
+    stp x3,x4,[sp,16]          // save  registres
+    mov x2,#28                 // start bit position
+    mov x4,#0xF0000000         // mask
+    mov x3,x0                  // save entry value
+1:                             // start loop
+    and x0,x3,x4               // value register and mask
+    lsr x0,x0,x2               // right shift
+    cmp x0,#10                 // >= 10 ?
+    bge 2f                     // yes
+    add x0,x0,#48              // no is digit
+    b 3f
+2:
+    add x0,x0,#55              // else is a letter A-F
+3:
+    strb w0,[x1],#1            // load result  and + 1 in address
+    lsr x4,x4,#4               // shift mask 4 bits left
+    subs x2,x2,#4              // decrement counter 4 bits <= zero  ?
+    bge 1b                     // no -> loop
+
+100:                           // fin standard de la fonction
+    ldp x3,x4,[sp,16]          // restaur des  2 registres
+    ldp x1,x2,[sp,32]          // restaur des  2 registres
+    ldp x0,lr,[sp],48          // restaur des  2 registres
+    ret
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

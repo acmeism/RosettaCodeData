@@ -1,0 +1,28 @@
+using Printf
+
+function makesofn(n::Integer)
+    buf = Vector{typeof(n)}(0)
+    i = 0
+    return function sofn(item)
+        i += 1
+        if i ≤ n
+            push!(buf, item)
+        else
+            j = rand(1:i)
+            if j ≤ n buf[j] = item end
+        end
+        return buf
+    end
+end
+
+nhist = zeros(Int, 10)
+for _ in 1:10^5
+    kas = makesofn(3)
+    for j in 0:8 kas(j) end
+    for k in kas(9) nhist[k+1] += 1 end
+end
+
+println("Simulating sof3(0:9) 100000 times:")
+for (i, c) in enumerate(nhist)
+    @printf("%5d → %5d\n", i-1, c)
+end

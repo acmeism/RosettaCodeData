@@ -1,0 +1,147 @@
+*        Smith numbers -           02/05/2017
+SMITHNUM CSECT
+         USING  SMITHNUM,R13       base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R10,PG             pgi=0
+         LA     R6,4               i=4
+       DO WHILE=(C,R6,LE,N)        do i=4 to n
+         LR     R1,R6                i
+         BAL    R14,SUMD             call sumd(i)
+         ST     R0,SS                ss=sumd(i)
+         LR     R1,R6                i
+         BAL    R14,SUMFACTR         call sumfactr(i)
+       IF C,R0,EQ,SS THEN            if sumd(i)=sumfactr(i) then
+         L      R2,NN                  nn
+         LA     R2,1(R2)               nn+1
+         ST     R2,NN                  nn=nn+1
+         XDECO  R6,XDEC                i
+         MVC    0(5,R10),XDEC+7        output i
+         LA     R10,5(R10)             pgi+=5
+         L      R4,IPG                 ipg
+         LA     R4,1(R4)               ipg+1
+         ST     R4,IPG                 ipg=ipg+1
+       IF C,R4,EQ,=F'16' THEN          if ipg=16 then
+         XPRNT  PG,80                    print buffer
+         MVC    PG,=CL80' '              clear buffer
+         LA     R10,PG                   pgi=0
+         MVC    IPG,=F'0'                ipg=0
+       ENDIF    ,                      endif
+       ENDIF    ,                    endif
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         L      R4,IPG             ipg
+       IF LTR,R4,NZ,R4 THEN        if ipg<>0 then
+         XPRNT  PG,80                print buffer
+       ENDIF    ,                  endif
+         L      R1,NN              nn
+         XDECO  R1,XDEC            edit nn
+         MVC    PGT(4),XDEC+8      output nn
+         L      R1,N               n
+         XDECO  R1,XDEC            edit n
+         MVC    PGT+28(5),XDEC+7   output n
+         XPRNT  PGT,80             print
+         L      R13,4(0,R13)       restore previous savearea pointer
+         LM     R14,R12,12(R13)    restore previous context
+         XR     R15,R15            rc=0
+         BR     R14                exit
+*------- ----   ----------------------------------------
+SUMD     EQU    *                  sumd(x)
+         SR     R0,R0              s=0
+       DO WHILE=(LTR,R1,NZ,R1)     do while x<>0
+         LR     R2,R1                x
+         SRDA   R2,32                ~
+         D      R2,=F'10'            x/10
+         LR     R1,R3                x=x/10
+         AR     R0,R2                s=s+x//10
+       ENDDO    ,                  enddo while
+         BR     R14                return s
+*------- ----   ----------------------------------------
+SUMFACTR EQU    *                  sumfactr(z)
+         ST     R14,SAVER14        store r14
+         ST     R1,ZZ              z
+         SR     R8,R8              m=0
+         SR     R9,R9              f=0
+         L      R4,ZZ              z
+         SRDA   R4,32              ~
+         D      R4,=F'2'           z/2
+       DO WHILE=(LTR,R4,Z,R4)      do while z//2=0
+         LA     R8,2(R8)             m=m+2
+         LA     R9,1(R9)             f=f+1
+         L      R5,ZZ                z
+         SRA    R5,1                 z/2
+         ST     R5,ZZ                z=z/2
+         LA     R4,0                 z
+         D      R4,=F'2'             z/2
+       ENDDO    ,                  enddo while
+         L      R4,ZZ              z
+         SRDA   R4,32              ~
+         D      R4,=F'3'           z/3
+       DO WHILE=(LTR,R4,Z,R4)      do while z//3=0
+         LA     R8,3(R8)             m=m+3
+         LA     R9,1(R9)             f=f+1
+         L      R4,ZZ                z
+         SRDA   R4,32                ~
+         D      R4,=F'3'             z/3
+         ST     R5,ZZ                z=z/3
+         LA     R4,0                 z
+         D      R4,=F'3'             z/3
+       ENDDO    ,                  enddo while
+         LA     R7,5               do j=5 by 2 while j<=z and j*j<=n
+WHILEJ   C      R7,ZZ                if j>z
+         BH     EWHILEJ              then leave while
+         LR     R5,R7                j
+         MR     R4,R7                *j
+         C      R5,N                 if j*j>n
+         BH     EWHILEJ              then leave while
+         LR     R4,R7                j
+         SRDA   R4,32                ~
+         D      R4,=F'3'             j/3
+         LTR    R4,R4                if j//3=0
+         BZ     ITERJ                then goto iterj
+         L      R4,ZZ                z
+         SRDA   R4,32                ~
+         DR     R4,R7                z/j
+       DO WHILE=(LTR,R4,Z,R4)        do while z//j=0
+         LA     R9,1(R9)               f=f+1
+         LR     R1,R7                  j
+         BAL    R14,SUMD               call sumd(j)
+         AR     R8,R0                  m=m+sumd(j)
+         L      R4,ZZ                  z
+         SRDA   R4,32                  ~
+         DR     R4,R7                  z/j
+         ST     R5,ZZ                  z=z/j
+         LA     R4,0                   ~
+         DR     R4,R7                  z/j
+       ENDDO    ,                    enddo while
+ITERJ    LA     R7,2(R7)             j+=2
+         B      WHILEJ             enddo
+EWHILEJ  L      R4,ZZ              z
+       IF C,R4,NE,=F'1' THEN       if z<>1 then
+         LA     R9,1(R9)             f=f+1
+         L      R1,ZZ                z
+         BAL    R14,SUMD             call sumd(z)
+         AR     R8,R0                m=m+sumd(z)
+       ENDIF    ,                  endif
+       IF C,R9,LT,=F'2' THEN       if f<2 then
+         SR     R8,R8                mm=0
+       ENDIF    ,                  endif
+         LR     R0,R8              return m
+         L      R14,SAVER14        restore r14
+         BR     R14                return
+SAVER14  DS     A                  save r14
+*        ----   ----------------------------------------
+N        DC     F'10000'           n
+NN       DC     F'0'               nn
+IPG      DC     F'0'               ipg
+SS       DS     F                  ss
+ZZ       DS     F                  z
+PG       DC     CL80' '            buffer
+PGT      DC     CL80'xxxx smith numbers found <= xxxxx'
+XDEC     DS     CL12               temp
+         YREGS
+         END    SMITHNUM

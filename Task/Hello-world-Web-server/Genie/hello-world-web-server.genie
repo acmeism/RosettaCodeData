@@ -1,0 +1,76 @@
+/**
+ * Based on https://wiki.gnome.org/Projects/Genie/GIONetworkingSample
+ * Based on an example of Jezra Lickter http://hoof.jezra.net/snip/nV
+ *
+ * valac --pkg gio-2.0 --pkg gee-0.8 webserver.gs
+ * ./webserver
+ */
+[indent=8]
+uses
+        GLib
+        Gee
+
+init
+        var ws = new WebServer()
+        ws.run()
+
+struct Request
+        full_request : string
+        path : string
+        query : string
+
+struct Response
+        status_code : string
+        content_type : string
+        data : string
+
+class WebServer
+
+        def run()
+                port : uint16 = 8080
+                tss : ThreadedSocketService = new ThreadedSocketService(100)
+                ia : InetAddress = new InetAddress.any(SocketFamily.IPV4)
+                isaddr : InetSocketAddress = new InetSocketAddress(ia, port)
+                try
+                        tss.add_address(isaddr, SocketType.STREAM, SocketProtocol.TCP, null, null);
+                except e : Error
+                        stderr.printf("%s\n", e.message)
+                        return
+                // add connection handler
+                tss.run.connect( connection_handler )
+
+                ml : MainLoop = new MainLoop()
+                tss.start()
+                stdout.printf("Serving on port %d\n", port)
+                ml.run()
+
+        def connection_handler ( conn : SocketConnection ) : bool
+                first_line : string = ""
+                size : size_t = 0;
+                request : Request = Request()
+                dis : DataInputStream = new DataInputStream (conn.input_stream)
+                dos : DataOutputStream = new DataOutputStream (conn.output_stream)
+                try
+                        first_line = dis.read_line(out size)
+                        // here you could analyze request information
+                        var parts = first_line.split(" ");
+                        if parts.length > 1 do request.full_request = parts[1]
+                except e : Error
+                        stderr.printf("%s\n", e.message)
+                response : Response = Response()
+                response.status_code = "HTTP/1.1 200 OK\n"
+                response.content_type = "text/html"
+                response.data = "<html><body><h1>Goodbye, World!</h1></body></html>"
+                serve_response ( response, dos )
+                return false
+
+        def serve_response ( response : Response, dos : DataOutputStream )
+                try
+                        dos.put_string (response.status_code)
+                        dos.put_string ("Server: Genie Socket\n")
+                        dos.put_string("Content-Type: %s\n".printf(response.content_type))
+                        dos.put_string("Content-Length: %d\n".printf(response.data.length))
+                        dos.put_string("\n");//this is the end of the return headers
+                        dos.put_string(response.data)
+                except e : Error
+                        stderr.printf("%s\n", e.message)

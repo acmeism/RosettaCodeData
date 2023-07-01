@@ -1,0 +1,216 @@
+'TOPOLOGICAL SORT
+
+uses parseutil 'getword() lenw
+uses console
+
+string dat="
+LIBRARY          LIBRARY DEPENDENCIES
+=======          ====================
+des_system_lib   std synopsys std_cell_lib des_system_lib dw02 dw01 ramlib ieee
+dw01             ieee dw01 dware gtech
+dw02             ieee dw02 dware
+dw03             std synopsys dware dw03 dw02 dw01 ieee gtech
+dw04             dw04 ieee dw01 dware gtech
+dw05             dw05 ieee dware
+dw06             dw06 ieee dware
+dw07             ieee dware
+dware            ieee dware
+gtech            ieee gtech
+ramlib           std ieee
+std_cell_lib     ieee std_cell_lib
+synopsys
+"
+gosub Dims
+gosub CaptureData
+gosub GetSystemLibs
+gosub RemoveSelfReference
+gosub OrderByDependency
+gosub DisplayResults
+end
+
+/*RESULTS:
+  libraries in dependency order
+  -----------------------------
+  std
+  ieee
+  dware
+  gtech
+  ramlib
+  std_cell_lib
+  synopsys
+  dw01
+  dw02
+  des_system_lib
+  dw03
+  dw04
+  dw05
+  dw06
+  dw07
+<<
+
+  remainder:
+  ----------
+  <<
+*/
+
+
+
+Dims:
+=====
+'VARIABLES
+int p           'width of first column
+int h           'length of each line
+int i           'iterator / counter
+int j           'main iterator
+int b           'table char offset
+int e           'end of each line
+int bd          'each offset of dependencises line
+int le          'length of each lib name
+int lend        'size of table
+int k           'character indexer
+int m           'iterator
+int n           'iterator
+int cw          'presence flag
+int lw          'length of keyword
+int a           'iinstr result
+int dc          'new lib list indexer / counter
+string wr       'keyword
+string wn       'keyword
+'--arrays--
+string datl[64] 'list of lib names
+string datd[64] 'lists of lib dependencies
+string datn[64] 'new list in dependency ordert
+ret
+
+
+CaptureData:
+============
+dat=lcase dat
+'GET HEADING POSITION
+p=instr dat,"library depend"
+p-=3 'crlf -1
+'REMOVE HEADING
+h=instr 3,dat,cr
+h+=2
+h=instr h,dat,cr 'to remove underlines
+'print h cr
+h+=2
+dat=mid dat,h
+'print dat "<" cr
+b=1
+'PREPARE DATA
+lend=len dat
+do
+  i++
+  datl[i]=rtrim(mid(dat,b,p))
+  le=len datl[i]
+  e=instr b+le,dat,cr
+  bd=b+p
+  datd[i]=" "+mid(dat,bd,e-bd)+" "
+  'print datl[i] "," datd[i] cr
+  b=e+2
+  if b>lend-2
+    exit do
+  endif
+loop
+ret
+
+GetSystemLibs:
+==============
+'SCAN DEPENDENCIES
+'GET SYSTEM LIBS NOT LISTED
+for j=1 to i
+  k=1
+  do
+    wr=getword datd[j],k
+    if not wr
+      exit do
+    endif
+    cw=0
+    for m=1 to i
+      if wr=datl[m] 'on lib list
+        cw=m
+      endif
+    next
+    if cw=0 'lib not on library list
+      'add wr to new lib list
+      dc++ : datn[dc]=wr
+      'remove lib names from dependency lists
+      gosub BlankOutNames
+    endif
+  loop
+next 'j group of dependencies
+ret
+
+
+RemoveSelfReference:
+====================
+'REMOVE SELF REFERENCE + NO DEPENDENCIES
+for j=1 to i
+  wr=" "+datl[j]+" "
+  lw=len(wr)
+  a=instr(datd[j],wr)
+  if a
+    mid(datd[j],a,space(lw)) 'blank out self
+  endif
+  gosub RemoveLibFromLists
+next
+ret
+'
+OrderByDependency:
+==================
+'
+for j=1 to i
+  if datl[j]
+    gosub RemoveLibFromLists
+    if cw then j=0 'repeat cycle
+  endif
+next
+ret
+'
+DisplayResults:
+===============
+print cr cr
+print "libraries in dependency order" cr
+print "-----------------------------" cr
+for j=1 to dc
+  print datn[j] cr
+next
+print "<<" cr cr
+print "remainder:" cr
+print "----------" cr
+for j=1 to i
+  if datl[j]
+    print datl[j] " , " datd[j] cr
+  endif
+next
+print "<<" cr
+
+pause
+end
+
+RemoveLibFromLists:
+===================
+cw=0
+k=1 : wr=getword datd[j],k
+if lenw=0
+  dc++ : datn[dc]=datl[j] 'add to new lib list
+  datl[j]="" : datd[j]="" 'eliminate frecord rom further checks
+  gosub BlankOutNames     'eliminate all lib references from table
+  cw=1                    'flag alteration
+endif
+ret
+
+BlankOutNames:
+==============
+wn=" "+datn[dc]+" " 'add word boundaries
+lw=len wn
+for n=1 to i
+  if datd[n]
+    a=instr(datd[n],wn)
+    if a
+      mid datd[n],a,space(lw) 'blank out
+      endif
+  endif
+next
+ret

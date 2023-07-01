@@ -1,0 +1,1 @@
+sum_of_powers_conjecture(249)

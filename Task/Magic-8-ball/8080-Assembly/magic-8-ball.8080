@@ -1,0 +1,83 @@
+bdos:		equ	5	; CP/M calls
+puts:		equ	9
+gets: 		equ	10
+		org	100h
+		lxi	d,message	; Print message
+		mvi	c,puts
+		call	bdos
+question:	lxi	d,prompt	; Ask for question
+		mvi	c,puts
+		call	bdos
+		lxi	d,bufdef	; Read answer
+		mvi	c,gets
+		call	bdos
+		lxi	d,newline	; Print newline
+		mvi	c,puts
+		call	bdos
+		lxi	h,buf		; XOR the question w/ the RNG state
+		mvi	b,20		
+xorouter:	lxi	d,xabcdat + 1
+		mvi	c,3
+xorinner:	ldax	d
+		xra	m
+		stax	d
+		inx	d
+		inx	h
+		dcr	c
+		jnz	xorinner
+		dcr	b
+		jnz	xorouter
+getrnd:		call	xabcrand	; Generate random number <20
+		ani	1fh
+		cpi	20
+		jnc	getrnd
+		inr	a
+		mov	b,a		; That is the number of the message
+		lxi	h,responses	; Skip that many strings
+		mvi	a,'$'
+skipstring:	cmp	m
+		inx	h
+		jnz	skipstring
+		dcr	b
+		jnz	skipstring
+		xchg			; Print the chosen string
+		mvi	c,puts
+		call	bdos
+		jmp	question	; Get another question
+		;; RNG to make it a little less predictable
+xabcrand:       lxi     h,xabcdat
+                inr     m       ; X++
+                mov     a,m     ; X,
+                inx     h       ;
+                xra     m       ; ^ C,
+                inx     h       ;
+                xra     m       ; ^ A,
+                mov     m,a     ; -> A
+                inx     h
+                add     m       ; + B,
+                mov     m,a     ; -> B
+                rar             ; >>1
+                dcx     h
+                xra     m       ; ^ A,
+                dcx     h
+                add     m       ; + C
+                mov     m,a     ; -> C
+                ret		
+		;; Strings
+message:	db	'Magic 8 Ball$'
+newline:	db	13,10,'$'
+prompt:		db	13,10,13,10,'What is your question? '
+		;; The possible responses
+responses:	db	'$It is certain$It is decidedly so$Without a doubt$'
+		db	'Yes, definitely$You may rely on it$As I see it, yes$'
+		db	'Most likely$Outlook good$Signs point to yes$Yes$'
+		db	'Reply hazy, try again$Ask again later$'
+		db	'Better not tell you now$Cannot predict now$'
+		db	'Concentrate and ask again$Don',39,'t bet on it$'
+		db	'My reply is no$My sources say no$Outlook not so good$'
+		db	'Very doubtful$'
+		;; Variables
+bufdef:		db	60,0		; 60 = 20*3
+buf:		equ 	$		; question will be XOR'ed with the RNG state
+xabcdat:	equ	buf + 60 	; Point RNG data into uninitialized memory,
+					; to make it more exciting.

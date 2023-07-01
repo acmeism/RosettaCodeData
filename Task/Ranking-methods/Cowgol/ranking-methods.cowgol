@@ -1,0 +1,130 @@
+include "cowgol.coh";
+
+# List of competitors
+record Competitor is
+    score: uint8;
+    name: [uint8];
+end record;
+
+var cs: Competitor[] := {
+    {44, "Solomon"},
+    {42, "Jason"},
+    {42, "Errol"},
+    {41, "Garry"},
+    {41, "Bernard"},
+    {41, "Barry"},
+    {39, "Stephen"}
+};
+
+# Rank competitors given ranking method
+interface Ranking(c: [Competitor],
+                  n: intptr,
+                  len: intptr,
+                  last: uint16): (rank: uint16);
+sub Rank(cs: [Competitor], num: intptr, r: Ranking) is
+    var last: uint16 := 0;
+    var idx: intptr := 0;
+
+    while idx < num loop
+        last := r(cs, idx, num, last);
+        if last < 100 then
+            print_i16(last);
+        else
+            # print fixed-point rank nicely
+            print_i16(last / 100);
+            print_char('.');
+            print_i16((last % 100) / 10);
+            print_i16(last % 10);
+        end if;
+        print(". ");
+        print_i8(cs.score);
+        print(", ");
+        print(cs.name);
+        print_nl();
+        idx := idx + 1;
+        cs := @next cs;
+    end loop;
+end sub;
+
+# Standard ranking
+var stdcount: uint16 := 0;
+sub Standard implements Ranking is
+    if n==0 then stdcount := 0; end if;
+    stdcount := stdcount + 1;
+    if n>0 and c.score == [@prev c].score then
+        rank := last;
+    else
+        rank := stdcount;
+    end if;
+end sub;
+
+# Modified ranking
+sub Modified implements Ranking is
+    rank := last;
+    if n == 0 or c.score != [@prev c].score then
+        while n < len loop
+            rank := rank + 1;
+            c := @next c;
+            if c.score != [@prev c].score then
+                break;
+            end if;
+            n := n + 1;
+        end loop;
+    end if;
+end sub;
+
+# Dense ranking
+sub Dense implements Ranking is
+    if n>0 and c.score == [@prev c].score then
+        rank := last;
+    else
+        rank := last + 1;
+    end if;
+end sub;
+
+# Ordinal ranking
+sub Ordinal implements Ranking is
+    rank := last + 1;
+end sub;
+
+# Fractional ranking (with fixed point arithmetic)
+sub Fractional implements Ranking is
+    rank := last;
+    if n==0 or c.score != [@prev c].score then
+        var sum: uint16 := 0;
+        var ct: uint16 := 0;
+        while n < len loop
+            sum := sum + (n as uint16 + 1);
+            ct := ct + 1;
+            c := @next c;
+            if c.score != [@prev c].score then
+                break;
+            end if;
+            n := n + 1;
+        end loop;
+        rank := (sum * 100) / (ct as uint16);
+    end if;
+end sub;
+
+record Method is
+    name: [uint8];
+    method: Ranking;
+end record;
+
+var methods: Method[] := {
+    {"Standard", Standard},
+    {"Modified", Modified},
+    {"Dense", Dense},
+    {"Ordinal", Ordinal},
+    {"Fractional", Fractional}
+};
+
+var n: @indexof methods := 0;
+while n < @sizeof methods loop
+    print("--- ");
+    print(methods[n].name);
+    print(" ---\n");
+    Rank(&cs[0], @sizeof cs, methods[n].method);
+    print_nl();
+    n := n + 1;
+end loop;

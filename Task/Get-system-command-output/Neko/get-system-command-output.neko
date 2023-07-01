@@ -1,0 +1,58 @@
+/* Get system command output, neko */
+var process_run = $loader.loadprim("std@process_run", 2);
+var process_stdout_read = $loader.loadprim("std@process_stdout_read", 4);
+var process_stderr_read = $loader.loadprim("std@process_stderr_read", 4);
+var process_stdin_close = $loader.loadprim("std@process_stdin_close", 1);
+var process_exit = $loader.loadprim("std@process_exit", 1);
+var sys_exit = $loader.loadprim("std@sys_exit", 1);
+
+/* work buffer */
+var bufsize = 1024;
+var buffer = $smake(bufsize);
+
+/* default command is ls, otherwise pass command line arguments */
+var argc = $asize($loader.args);
+var cmd = "ls";
+var args;
+
+/* Check command line arguments */
+if argc > 0 {
+    cmd = $loader.args[0];
+}
+if argc > 1 {
+    args = $asub($loader.args, 1, argc - 1);
+}
+
+/* spawn process, with arguments */
+var proc = process_run(cmd, args);
+
+/* Close input channel - command might be waiting for input */
+process_stdin_close(proc);
+
+/* capture and print stdout */
+var not_done = true;
+var len = 0;
+do {
+    try {
+        len = process_stdout_read(proc, buffer, 0, bufsize);
+    } catch exc {
+        not_done = false;
+    }
+    if (not_done) $print($ssub(buffer, 0, len));
+} while not_done;
+
+/* capture and print any stderr */
+not_done = true;
+len = 0;
+do {
+    try {
+        len = process_stderr_read(proc, buffer, 0, bufsize);
+    } catch exc {
+        not_done = false;
+    }
+    if (not_done) $print($ssub(buffer, 0, len));
+} while not_done;
+
+/* Get the exit status */
+var ps = process_exit(proc);
+sys_exit(ps);

@@ -1,0 +1,84 @@
+require('Tk')
+
+class Honeycombs(
+    Number size   = 36,
+    Array letters = @('A' .. 'Z').shuffle.first(20),
+) {
+
+    define tk   = %S<Tk>
+    has changed = Hash()
+
+    func altitude(n) {
+        sqrt(3/4) * n
+    }
+
+    method polygon_coordinates(x, y, size) {
+        var alt = altitude(size)
+        return (x - size,       y,
+                x - size/2, y - alt,
+                x + size/2, y - alt,
+                x + size,       y,
+                x + size/2, y + alt,
+                x - size/2, y + alt,
+               );
+    }
+
+    method change(canvas, id, letter_id) {
+        return {
+            canvas.itemconfigure(id,        '-fill' => 'magenta')
+            canvas.itemconfigure(letter_id, '-fill' => 'black')
+            changed{id} = true
+
+            if (20 == changed.len) {
+                say "All letters pressed."
+                canvas.MainWindow.after(10, { tk.exit })
+            }
+        }
+    }
+
+    method comb(canvas, fromx, fromy, size, count) {
+        for x,y in (
+            RangeNum(fromx, 3*count*size - 1,          3*size) ~X
+            RangeNum(fromy,     7.5*size - 1, 2*altitude(size))
+        ) {
+            var id = canvas.createPolygon(
+                                  self.polygon_coordinates(x, y, size),
+                                  '-outline' => 'black',
+                                  '-fill'    => 'yellow',
+                                  '-width'   => 2,
+                                )
+            var letter = letters.shift
+            var letter_id = canvas.createText(x, y,
+                                     '-fill' => 'red',
+                                     '-text' => letter,
+                                     '-font' => "{sans} #{size * 0.9}",
+                                )
+            canvas.MainWindow.bind('all', letter.lc,
+                                      self.change(canvas, id, letter_id))
+            [id, letter_id].each { |b|
+                canvas.bind(b, '<Button-1>',
+                                      self.change(canvas, id, letter_id))
+            }
+        }
+    }
+
+    method display(title) {
+        {
+            var mw     = %s'MainWindow'.new('-title' => title)
+            var canvas = mw.Canvas('-width'  => 8*size,
+                                   '-height' => 8*size).pack
+
+            self.comb(canvas, size,       size,                  size, 3)
+            self.comb(canvas, size * 2.5, size + altitude(size), size, 2)
+
+            var btn = mw.Button('-text'      => 'Quit',
+                                '-underline' => 0,
+                                '-command'   => { tk.exit },
+                               ).pack
+            mw.bind('<Alt-q>', { btn.invoke })
+            tk.MainLoop()
+        }.fork
+    }
+}
+
+Honeycombs().display(title: 'Honeycombs')

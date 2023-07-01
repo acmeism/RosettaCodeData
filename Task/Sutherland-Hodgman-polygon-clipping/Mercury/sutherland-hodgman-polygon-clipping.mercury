@@ -1,0 +1,254 @@
+:- module sutherland_hodgman_task.
+
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+
+:- implementation.
+:- import_module exception.
+:- import_module float.
+:- import_module list.
+:- import_module pair.
+:- import_module string.
+
+:- type plane_point == pair(float).
+:- func xcoord(plane_point) = float.
+:- func ycoord(plane_point) = float.
+:- func plane_point(float, float) = plane_point.
+:- pred write_plane_point(plane_point::in, io::di, io::uo) is det.
+:- pred write_plane_point_list(list(plane_point)::in, string::in,
+                               io::di, io::uo) is det.
+xcoord(Pt) = fst(Pt).
+ycoord(Pt) = snd(Pt).
+plane_point(X, Y) = pair(X, Y).
+write_plane_point(Pt, !IO) :-
+  write_string("(", !IO),
+  write_float(xcoord(Pt), !IO),
+  write_string(", ", !IO),
+  write_float(ycoord(Pt), !IO),
+  write_string(")", !IO).
+write_plane_point_list(Pts, Separator, !IO) :-
+  write_list(Pts, Separator, write_plane_point, !IO).
+
+:- type plane_edge == pair(plane_point).
+:- func point0(plane_edge) = plane_point.
+:- func point1(plane_edge) = plane_point.
+:- func plane_edge(plane_point, plane_point) = plane_edge.
+point0(Edge) = fst(Edge).
+point1(Edge) = snd(Edge).
+plane_edge(Pt0, Pt1) = pair(Pt0, Pt1).
+
+:- func evaluate_line(float, float, float, float, float) = float.
+evaluate_line(X1, Y1, X2, Y2, X) = Y :-
+  %% Given the line (X1,Y1)--(X2,Y2), evaluate it at X.
+  Dy = Y2 - Y1,
+  Dx = X2 - X1,
+  Slope = Dy / Dx,
+  Intercept = ((Dx * Y1) - (Dy * X1)) / Dx,
+  Y = (Slope * X) + Intercept.
+
+:- func intersection_of_lines(float, float, float, float,
+                              float, float, float, float)
+   = plane_point.
+intersection_of_lines(X1, Y1, X2, Y2, X3, Y3, X4, Y4) = Pt :-
+  %% Given the lines (X1,Y1)--(X2,Y2) and (X3,Y3)--(X3,Y4), find their
+  %% point of intersection.
+  (if (X1 = X2)
+   then (Pt = plane_point(X1, evaluate_line(X3, Y3, X4, Y4, X1)))
+   else if (X3 = X4)
+   then (Pt = plane_point(X3, evaluate_line(X1, Y1, X2, Y2, X3)))
+   else (Pt = plane_point(X, Y),
+         X = Xnumerator / Denominator,
+         Y = Ynumerator / Denominator,
+         Denominator =
+         ((X1 - X2) * (Y3 - Y4)) - ((Y1 - Y2) * (X3 - X4)),
+         Xnumerator =
+         (X1Y2_Y1X2 * (X3 - X4)) - ((X1 - X2) * X3Y4_Y3X4),
+         Ynumerator =
+         (X1Y2_Y1X2 * (Y3 - Y4)) - ((Y1 - Y2) * X3Y4_Y3X4),
+         X1Y2_Y1X2 = (X1 * Y2) - (Y1 * X2),
+         X3Y4_Y3X4 = (X3 * Y4) - (Y3 * X4))).
+
+:- func intersection_of_edges(plane_edge, plane_edge) = plane_point.
+intersection_of_edges(E1, E2) = Pt :-
+  %% Given two edges, find their point of intersection (on the
+  %% assumption that there is such an intersection).
+  Pt = intersection_of_lines(X1, Y1, X2, Y2, X3, Y3, X4, Y4),
+  Pt1 = point0(E1), Pt2 = point1(E1),
+  Pt3 = point0(E2), Pt4 = point1(E2),
+  X1 = xcoord(Pt1), Y1 = ycoord(Pt1),
+  X2 = xcoord(Pt2), Y2 = ycoord(Pt2),
+  X3 = xcoord(Pt3), Y3 = ycoord(Pt3),
+  X4 = xcoord(Pt4), Y4 = ycoord(Pt4).
+
+:- pred point_is_left_of_edge(plane_point::in, plane_edge::in)
+   is semidet.
+point_is_left_of_edge(Pt, Edge) :-
+  %% Is Pt left of Edge?
+  (OP < 0.0),
+  %% OP = outer product of the vectors (x1,y1)-->(x,y) and
+  %% (x1,y1)-->(x2,y2). *)
+  OP = ((X - X1) * (Y2 - Y1)) - ((X2 - X1) * (Y - Y1)),
+  Pt1 = point0(Edge), Pt2 = point1(Edge),
+  X1 = xcoord(Pt1), Y1 = ycoord(Pt1),
+  X2 = xcoord(Pt2), Y2 = ycoord(Pt2),
+  X = xcoord(Pt), Y = ycoord(Pt).
+
+:- func clip_subject_edge(plane_edge, plane_edge,
+                          list(plane_point)) = list(plane_point).
+clip_subject_edge(Subject_edge, Clip_edge, Accum0) = Accum :-
+  S1 = point0(Subject_edge), S2 = point1(Subject_edge),
+  (if (point_is_left_of_edge(S2, Clip_edge))
+   then (if (point_is_left_of_edge(S1, Clip_edge))
+         then (Accum = [S2 | Accum0])
+         else (Accum = [S2, Intersection | Accum0],
+               Intersection =
+               intersection_of_edges(Subject_edge, Clip_edge)))
+   else (if (point_is_left_of_edge(S1, Clip_edge))
+         then (Accum = [Intersection | Accum0],
+               Intersection =
+               intersection_of_edges(Subject_edge, Clip_edge))
+         else (Accum = Accum0))).
+
+:- func plane_points_to_plane_edges(list(plane_point))
+   = list(plane_edge).
+plane_points_to_plane_edges(Pts) = Edges :-
+  plane_points_to_plane_edges_(Pt_first, Pts, [], Edges),
+  Pt_first = det_head(Pts).
+
+:- pred plane_points_to_plane_edges_(plane_point::in,
+                                     list(plane_point)::in,
+                                     list(plane_edge)::in,
+                                     list(plane_edge)::out) is det.
+%% Convert a list of points to a list of edges.
+plane_points_to_plane_edges_(Pt_first, [Pt0, Pt1 | Rest],
+                             Edges0, Edges) :-
+  plane_points_to_plane_edges_(Pt_first, [Pt1 | Rest],
+                               [plane_edge(Pt0, Pt1) | Edges0],
+                               Edges).
+plane_points_to_plane_edges_(Pt_first, [Pt_last], Edges0, Edges) :-
+  Edges = [plane_edge(Pt_last, Pt_first) | reverse(Edges0)].
+plane_points_to_plane_edges_(_, [], _, _) :-
+  throw("list(plane_point) was expected to have length >= 2").
+
+:- pred for_each_subject_edge(list(plane_edge)::in, plane_edge::in,
+                              list(plane_point)::in,
+                              list(plane_point)::out) is det.
+for_each_subject_edge([], _, Accum0, Accum) :-
+  (Accum = reverse(Accum0)).
+for_each_subject_edge([Subject_edge | Rest], Clip_edge,
+                      Accum0, Accum) :-
+  Accum1 = clip_subject_edge(Subject_edge, Clip_edge, Accum0),
+  for_each_subject_edge(Rest, Clip_edge, Accum1, Accum).
+
+:- func clip_subject_with_clip_edge(list(plane_point), plane_edge)
+   = list(plane_point).
+clip_subject_with_clip_edge(Subject_pts, Clip_edge) = Pts :-
+  for_each_subject_edge(Subject_edges, Clip_edge, [], Pts),
+  Subject_edges = plane_points_to_plane_edges(Subject_pts).
+
+:- pred for_each_clip_edge(list(plane_point)::in,
+                           list(plane_point)::out,
+                           list(plane_edge)::in) is det.
+for_each_clip_edge(Subject_pts0, Subject_pts, []) :-
+  (Subject_pts = Subject_pts0).
+for_each_clip_edge(Subject_pts0, Subject_pts,
+                   [Clip_edge | Rest]) :-
+  Subject_pts1 = clip_subject_with_clip_edge(Subject_pts0, Clip_edge),
+  for_each_clip_edge(Subject_pts1, Subject_pts, Rest).
+
+:- func clip(list(plane_point), list(plane_point))
+   = list(plane_point).
+clip(Subject_pts, Clip_pts) = Result_pts :-
+  for_each_clip_edge(Subject_pts, Result_pts, Clip_edges),
+  Clip_edges = plane_points_to_plane_edges(Clip_pts).
+
+:- pred moveto(text_output_stream::in, plane_point::in,
+               io::di, io::uo) is det.
+moveto(Stream, Pt, !IO) :-
+  write_float(Stream, xcoord(Pt), !IO),
+  write_string(Stream, " ", !IO),
+  write_float(Stream, ycoord(Pt), !IO),
+  write_string(Stream, " moveto\n", !IO).
+
+:- pred lineto(plane_point::in, io::di, io::uo) is det.
+lineto(Pt, !IO) :-
+  write_float(xcoord(Pt), !IO),
+  write_string(" ", !IO),
+  write_float(ycoord(Pt), !IO),
+  write_string(" lineto\n", !IO).
+
+:- pred setrgbcolor(text_output_stream::in,
+                    string::in, io::di, io::uo) is det.
+setrgbcolor(Stream, Color, !IO) :-
+  write_string(Stream, Color, !IO),
+  write_string(Stream, " setrgbcolor\n", !IO).
+
+:- pred write_polygon(text_output_stream::in,
+                      list(plane_point)::in,
+                      string::in, string::in,
+                      io::di, io::uo) is det.
+write_polygon(Stream, Pts, Line_color, Fill_color, !IO) :-
+  if ([First_pt | Rest] = Pts)
+  then (moveto(Stream, First_pt, !IO),
+        write_list(Stream, Rest, "", lineto, !IO),
+        write_string(Stream, "closepath\n", !IO),
+        setrgbcolor(Stream, Line_color, !IO),
+        write_string(Stream, "gsave\n", !IO),
+        setrgbcolor(Stream, Fill_color, !IO),
+        write_string(Stream, "fill\n", !IO),
+        write_string(Stream, "grestore\n", !IO),
+        write_string(Stream, "stroke\n", !IO))
+  else true.
+
+:- pred write_eps(text_output_stream::in,
+                  list(plane_point)::in,
+                  list(plane_point)::in,
+                  list(plane_point)::in,
+                  io::di, io::uo) is det.
+write_eps(Stream, Subject_pts, Clip_pts, Result_pts, !IO) :-
+  write_string(Stream, "%!PS-Adobe-3.0 EPSF-3.0\n", !IO),
+  write_string(Stream, "%%BoundingBox: 40 40 360 360\n", !IO),
+  write_string(Stream, "0 setlinewidth\n", !IO),
+  write_polygon(Stream, Clip_pts, ".5 0 0", "1 .7 .7", !IO),
+  write_polygon(Stream, Subject_pts, "0 .2 .5", ".4 .7 1", !IO),
+  write_string(Stream, "2 setlinewidth\n", !IO),
+  write_string(Stream, "[10 8] 0 setdash\n", !IO),
+  write_polygon(Stream, Result_pts, ".5 0 .5", ".7 .3 .8", !IO),
+  write_string(Stream, "%%EOF\n", !IO).
+
+:- pred write_eps_to_file(string::in,
+                          list(plane_point)::in,
+                          list(plane_point)::in,
+                          list(plane_point)::in,
+                          io::di, io::uo) is det.
+write_eps_to_file(Filename, Subject_pts, Clip_pts, Result_pts, !IO) :-
+  open_output(Filename, Open_result, !IO),
+  (if (Open_result = ok(Outp))
+   then write_eps(Outp, Subject_pts, Clip_pts, Result_pts, !IO)
+   else throw("Failed to open " ++ Filename ++ " for output.")).
+
+main(!IO) :-
+  Subject_pts = [plane_point(50.0, 150.0),
+                 plane_point(200.0, 50.0),
+                 plane_point(350.0, 150.0),
+                 plane_point(350.0, 300.0),
+                 plane_point(250.0, 300.0),
+                 plane_point(200.0, 250.0),
+                 plane_point(150.0, 350.0),
+                 plane_point(100.0, 250.0),
+                 plane_point(100.0, 200.0)],
+  Clip_pts = [plane_point(100.0, 100.0),
+              plane_point(300.0, 100.0),
+              plane_point(300.0, 300.0),
+              plane_point(100.0, 300.0)],
+  Result_pts = clip(Subject_pts, Clip_pts),
+  write_plane_point_list(Result_pts, "\n", !IO), nl(!IO),
+  EPSF = "sutherland-hodgman.eps",
+  write_eps_to_file(EPSF, Subject_pts, Clip_pts, Result_pts, !IO),
+  write_string("Wrote " ++ EPSF, !IO), nl(!IO).
+
+%%% local variables:
+%%% mode: mercury
+%%% prolog-indent-width: 2
+%%% end:

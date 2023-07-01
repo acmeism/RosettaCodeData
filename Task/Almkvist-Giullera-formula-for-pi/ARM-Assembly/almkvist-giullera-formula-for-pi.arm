@@ -1,0 +1,286 @@
+/* ARM assembly Raspberry PI  */
+/*  program calculPi.s   */
+/* this program use gmp library package : libgmp3-dev */
+/* link with gcc option -lgmp */
+
+ /* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+.equ MAXI,      10
+.equ SIZEBIG,   100
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessPi:            .asciz "\nPI = \n"
+szCarriageReturn:   .asciz "\n"
+
+szFormat:           .asciz " %Zd\n"
+szFormatFloat:      .asciz " %.*Ff\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+Result1:                    .skip SIZEBIG
+Result2:                    .skip SIZEBIG
+Result3:                    .skip SIZEBIG
+Result4:                    .skip SIZEBIG
+fInter5:                    .skip SIZEBIG
+fInter6:                    .skip SIZEBIG
+fInter7:                    .skip SIZEBIG
+fSum:                       .skip SIZEBIG
+fSum1:                      .skip SIZEBIG
+sBuffer:                    .skip SIZEBIG
+fEpsilon:                   .skip SIZEBIG
+fPrec:                      .skip SIZEBIG
+fPI:                        .skip SIZEBIG
+fTEN:                       .skip SIZEBIG
+fONE:                       .skip SIZEBIG
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                             @ entry of program
+    mov r4,#0                     @ loop indice
+1:
+    mov r0,r4
+    bl computeAlmkvist            @ compute
+    mov r1,r0
+    ldr r0,iAdrszFormat           @ print big integer
+    bl __gmp_printf
+
+    add r4,r4,#1
+    cmp r4,#MAXI
+    blt 1b                        @ and loop
+
+    mov r0,#560                   @ float précision in bits
+    bl __gmpf_set_default_prec
+
+    mov r4,#0                     @ compute indice
+    ldr r0,iAdrfSum               @ init to zéro
+    bl __gmpf_init
+    ldr r0,iAdrfSum1              @ init to zéro
+    bl __gmpf_init
+
+    ldr r0,iAdrfONE               @ result address
+    mov r1,#1                     @ init à 1
+    bl __gmpf_init_set_ui
+
+    ldr r0,iAdrfInter5            @ init to zéro
+    bl __gmpf_init
+    ldr r0,iAdrfInter6            @ init to zéro
+    bl __gmpf_init
+    ldr r0,iAdrfInter7            @ init to zéro
+    bl __gmpf_init
+    ldr r0,iAdrfEpsilon           @ init to zéro
+    bl __gmpf_init
+    ldr r0,iAdrfPrec              @ init to zéro
+    bl __gmpf_init
+    ldr r0,iAdrfPI                @ init to zéro
+    bl __gmpf_init
+    ldr r0,iAdrfTEN
+    mov r1,#10                    @ init to 10
+    bl __gmpf_init_set_ui
+
+    ldr r0,iAdrfInter6            @ compute 10 pow 70
+    ldr r1,iAdrfTEN
+    mov r2,#70
+    bl __gmpf_pow_ui
+
+    ldr r0,iAdrfEpsilon           @ divide 1 by 10 pow 70
+    ldr r1,iAdrfONE               @ dividende
+    ldr r2,iAdrfInter6            @ divisor
+    bl __gmpf_div
+
+2:                                @ PI compute loop
+    mov r0,r4
+    bl computeAlmkvist
+    mov r5,r0
+    mov r1,#6
+    mul r2,r1,r4
+    add r6,r2,#3                  @ compute 6n + 3
+
+    ldr r0,iAdrfInter6            @ compute 10 pow (6n+3)
+    ldr r1,iAdrfTEN
+    mov r2,r6
+    bl __gmpf_pow_ui
+
+    ldr r0,iAdrfInter7             @ compute 1 / 10 pow (6n+3)
+    ldr r1,iAdrfONE                @ dividende
+    ldr r2,iAdrfInter6             @ divisor
+    bl __gmpf_div
+
+    ldr r0,iAdrfInter6             @ result big float
+    mov r1,r5                      @ big integer Almkvist
+    bl __gmpf_set_z                @ conversion in big float
+
+    ldr r0,iAdrfInter5             @ result Almkvist * 1 / 10 pow (6n+3)
+    ldr r1,iAdrfInter7             @ operator 1
+    ldr r2,iAdrfInter6             @ operator 2
+    bl __gmpf_mul
+
+    ldr r0,iAdrfSum1               @ terms addition
+    ldr r1,iAdrfSum
+    ldr r2,iAdrfInter5
+    bl __gmpf_add
+
+    ldr r0,iAdrfSum                @ copy terms
+    ldr r1,iAdrfSum1
+    bl __gmpf_set
+
+
+    ldr r0,iAdrfInter7             @ compute 1 / sum
+    ldr r1,iAdrfONE                @ dividende
+    ldr r2,iAdrfSum                @ divisor
+    bl __gmpf_div
+
+    ldr r0,iAdrfPI                 @ compute square root (1 / sum )
+    ldr r1,iAdrfInter7
+    bl __gmpf_sqrt
+
+    ldr r0,iAdrfInter6             @ compute variation PI
+    ldr r1,iAdrfPrec
+    ldr r2,iAdrfPI
+    bl __gmpf_sub
+
+    ldr r0,iAdrfInter6             @ absolue value
+    ldr r1,iAdrfInter5
+    bl __gmpf_abs
+
+    add r4,r4,#1                   @ increment indice
+
+    ldr r0,iAdrfPrec               @ copy PI -> prévious
+    ldr r1,iAdrfPI
+    bl __gmpf_set
+
+    ldr r0,iAdrfInter6             @ compare gap and epsilon
+    ldr r1,iAdrfEpsilon
+    bl __gmpf_cmp
+    cmp r0,#0
+    bgt 2b                         @ if gap is highter -> loop
+
+    ldr r0,iAdrszMessPi            @ title display
+    bl affichageMess
+
+    ldr r2,iAdrfPI                 @ PI display
+    ldr r0,iAdrszFormatFloat
+    mov r1,#70
+    bl __gmp_printf
+
+
+100:                              @ standard end of the program
+    mov r0, #0                    @ return code
+    mov r7, #EXIT                 @ request to exit program
+    svc #0                        @ perform the system call
+iAdrszCarriageReturn:        .int szCarriageReturn
+iAdrfInter5:                 .int fInter5
+iAdrfInter6:                 .int fInter6
+iAdrfInter7:                 .int fInter7
+iAdrfSum:                    .int fSum
+iAdrfSum1:                   .int fSum1
+iAdrszFormatFloat:           .int szFormatFloat
+iAdrszMessPi:                .int szMessPi
+iAdrfEpsilon:                .int fEpsilon
+iAdrfPrec:                   .int fPrec
+iAdrfPI:                     .int fPI
+iAdrfTEN:                    .int fTEN
+iAdrfONE:                    .int fONE
+/***************************************************/
+/*   compute  almkvist_giullera formula             */
+/***************************************************/
+/* r0 contains the number            */
+computeAlmkvist:
+    push {r1-r4,lr}               @ save registers
+    mov r4,r0
+    mov r1,#6
+    mul r0,r1,r0
+    ldr r1,iAdrResult1            @ result address
+    bl computeFactorielle         @ compute (n*6)!
+
+    mov r1,#532
+    mul r2,r4,r4
+    mul r2,r1,r2
+    mov r1,#126
+    mul r3,r4,r1
+    add r2,r2,r3
+    add r2,#9
+    lsl r2,r2,#5                   @ * 32
+
+    ldr r0,iAdrResult2             @ result
+    ldr r1,iAdrResult1             @ operator
+    bl __gmpz_mul_ui
+
+    mov r0,r4
+    ldr r1,iAdrResult1
+    bl computeFactorielle
+
+    ldr r0,iAdrResult3
+    bl __gmpz_init                 @ init to 0
+
+    ldr r0,iAdrResult3             @ result
+    ldr r1,iAdrResult1             @ operator
+    mov r2,#6
+    bl __gmpz_pow_ui
+
+    ldr r0,iAdrResult1             @ result
+    ldr r1,iAdrResult3             @ operator
+    mov r2,#3
+    bl __gmpz_mul_ui
+
+    ldr r0,iAdrResult3             @ result
+    ldr r1,iAdrResult2             @ operator
+    ldr r2,iAdrResult1             @ operator
+    bl __gmpz_cdiv_q
+
+    ldr r0,iAdrResult3             @ return result address
+
+    pop {r1-r4,pc}                 @ restaur des registres
+iAdrszFormat:         .int szFormat
+iAdrResult1:          .int Result1
+iAdrResult2:          .int Result2
+iAdrResult3:          .int Result3
+/***************************************************/
+/*   compute  factorielle N                        */
+/***************************************************/
+/* r0 contains the number            */
+/* r1 contains big number result address */
+computeFactorielle:
+    push {r1-r6,lr}               @ save registers
+    mov r5,r0                     @ save N
+    mov r6,r1                     @ save result address
+    mov r0,r1                     @ result address
+    mov r1,#1                     @ init to 1
+    bl __gmpz_init_set_ui
+    ldr r0,iAdrResult4
+    bl __gmpz_init                @ init to 0
+    mov r4,#1
+1:                                @ loop
+    ldr r0,iAdrResult4            @ result
+    mov r1,r6                     @ operator 1
+    mov r2,r4                     @ operator 2
+    bl __gmpz_mul_ui
+    mov r0,r6                     @ copy result4 -> result
+    ldr r1,iAdrResult4
+    bl __gmpz_set
+    add r4,r4,#1                  @ increment indice
+    cmp r4,r5                     @ N ?
+    ble 1b                        @ no -> loop
+
+    mov r0,r1
+
+    pop {r1-r6,pc}                @ restaur des registres
+iAdrResult4:          .int Result4
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

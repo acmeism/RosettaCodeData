@@ -1,0 +1,1 @@
+10 IF INKEY$ <> "" THEN GO TO 10

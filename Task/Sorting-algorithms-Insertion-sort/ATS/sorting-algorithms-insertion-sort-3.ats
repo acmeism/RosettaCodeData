@@ -1,0 +1,186 @@
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+(* Interface                                                        *)
+
+extern fn {a : vt@ype}                (* The "less than" template. *)
+insertion_sort$lt : (&a, &a) -<> bool (* Arguments by reference. *)
+
+extern fn {a : vt@ype}
+insertion_sort
+          {n   : int}
+          (lst : list_vt (a, n))
+    :<!wrt> list_vt (a, n)
+
+(*------------------------------------------------------------------*)
+(* Implementation                                                   *)
+
+(* This implementation is based on the insertion-sort part of the
+   mergesort code of the ATS prelude.
+
+   Unlike the prelude, however, I build the sorted list in reverse
+   order. Building the list in reverse order actually makes the
+   implementation more like that for an array. *)
+
+(* Some convenient shorthands. *)
+#define NIL list_vt_nil ()
+#define ::  list_vt_cons
+
+(* Inserting in reverse order minimizes the work for a list already
+   nearly sorted, or for stably sorting a list whose entries often
+   have equal keys. *)
+fun {a : vt@ype}
+insert_reverse
+          {m       : nat}
+          {p_xnode : addr}
+          {p_x     : addr}
+          {p_xs    : addr}
+          .<m>.
+          (pf_x  : a @ p_x,
+           pf_xs : list_vt (a, 0)? @ p_xs |
+           dst   : &list_vt (a, m) >> list_vt (a, m + 1),
+           (* list_vt_cons_unfold is a viewtype created by the
+              unfolding of a list_vt_cons (our :: operator). *)
+           xnode : list_vt_cons_unfold (p_xnode, p_x, p_xs),
+           p_x   : ptr p_x,
+           p_xs  : ptr p_xs)
+    :<!wrt> void =
+  (* dst is some tail of the current (reverse-order) destination list.
+     xnode is a viewtype for the current node in the source list.
+     p_x points to the node's CAR.
+     p_xs points to the node's CDR. *)
+  case+ dst of
+  | @ (y :: ys) =>
+    if insertion_sort$lt<a> (!p_x, y) then
+      let                     (* Move to the next destination node. *)
+        val () = insert_reverse (pf_x, pf_xs | ys, xnode, p_x, p_xs)
+        prval () = fold@ dst
+      in
+      end
+    else
+      let                       (* Insert xnode here. *)
+        prval () = fold@ dst
+        val () = !p_xs := dst
+        val () = dst := xnode
+        prval () = fold@ dst
+      in
+      end
+  | ~ NIL =>
+    let                         (* Put xnode at the end. *)
+      val () = dst := xnode
+      val () = !p_xs := NIL
+      prval () = fold@ dst
+    in
+    end
+
+implement {a}
+insertion_sort {n} lst =
+  let
+    fun                         (* Create a list sorted in reverse. *)
+    loop {i : nat | i <= n}
+         .<n - i>.
+         (dst : &list_vt (a, i) >> list_vt (a, n),
+          src : list_vt (a, n - i))
+        :<!wrt> void =
+      case+ src of
+      | @ (x :: xs) =>
+        let
+          val tail = xs
+        in
+          insert_reverse<a> (view@ x, view@ xs |
+                             dst, src, addr@ x, addr@ xs);
+          loop (dst, tail)
+        end
+      | ~ NIL => ()             (* We are done. *)
+
+    prval () = lemma_list_vt_param lst
+
+    var dst : List_vt a = NIL
+  in
+    loop (dst, lst);
+
+    (* Reversing a linear list is an in-place operation. *)
+    list_vt_reverse<a> dst
+  end
+
+(*------------------------------------------------------------------*)
+
+(* The demonstration converts random numbers to linear strings, then
+   sorts the elements by their first character. Thus here is a simple
+   demonstration that the sort can handle elements of linear type, and
+   also that the sort is stable. *)
+
+implement
+main0 () =
+  let
+    implement
+    insertion_sort$lt<Strptr1> (x, y) =
+      let
+        val sx = $UNSAFE.castvwtp1{string} x
+        and sy = $UNSAFE.castvwtp1{string} y
+        val cx = $effmask_all $UNSAFE.string_get_at (sx, 0)
+        and cy = $effmask_all $UNSAFE.string_get_at (sy, 0)
+      in
+        cx < cy
+      end
+
+    implement
+    list_vt_freelin$clear<Strptr1> x =
+      strptr_free x
+
+    #define SIZE 30
+
+    fn
+    create_the_list ()
+        :<!wrt> list_vt (Strptr1, SIZE) =
+      let
+        fun
+        loop {i : nat | i <= SIZE}
+             .<SIZE - i>.
+             (lst : list_vt (Strptr1, i),
+              i   : size_t i)
+            :<!wrt> list_vt (Strptr1, SIZE) =
+          if i = i2sz SIZE then
+            list_vt_reverse lst
+          else
+            let
+              #define BUFSIZE 10
+              var buffer : array (char, BUFSIZE)
+
+              val () =
+                array_initize_elt<char> (buffer, i2sz BUFSIZE, '\0')
+              val _ = $extfcall (int, "snprintf", addr@ buffer,
+                                 i2sz BUFSIZE, "%d",
+                                 $extfcall (int, "rand") % 100)
+              val () = buffer[BUFSIZE - 1] := '\0'
+              val s = string0_copy ($UNSAFE.cast{string} buffer)
+            in
+              loop (s :: lst, succ i)
+            end
+      in
+        loop (NIL, i2sz 0)
+      end
+
+    var p : List string
+
+    val lst = create_the_list ()
+
+    val () =
+      for (p := $UNSAFE.castvwtp1{List string} lst;
+           isneqz p;
+           p := list_tail p)
+        print! (" ", list_head p)
+    val () = println! ()
+
+    val lst = insertion_sort<Strptr1> lst
+
+    val () =
+      for (p := $UNSAFE.castvwtp1{List string} lst;
+           isneqz p;
+           p := list_tail p)
+        print! (" ", list_head p)
+    val () = println! ()
+
+    val () = list_vt_freelin lst
+  in
+  end

@@ -1,0 +1,408 @@
+# -*- ObjectIcon -*-
+#
+# The Rosetta Code virtual machine in Object Icon.
+#
+# See https://rosettacode.org/wiki/Compiler/virtual_machine_interpreter
+#
+
+import io
+
+procedure main(args)
+  local f_inp, f_out
+  local vm
+
+  if 3 <= *args then {
+    write("Usage: ", &progname, " [INPUT_FILE [OUTPUT_FILE]]")
+    exit(1)
+  }
+
+  if 1 <= *args then {
+    f_inp := FileStream(args[1], FileOpt.RDONLY) | stop (&why)
+  } else {
+    f_inp := FileStream.stdin
+  }
+  f_inp := BufferStream(f_inp)
+
+  if 2 <= *args then {
+    f_out := FileStream(args[2], ior (FileOpt.WRONLY,
+                                      FileOpt.TRUNC,
+                                      FileOpt.CREAT)) | stop (&why)
+  } else {
+    f_out := FileStream.stdout
+  }
+
+  vm := VirtualMachine()
+  vm.read_assembly_code(f_inp)
+  vm.run(f_out)
+end
+
+procedure int2bytes (n)
+  local bytes
+
+  # The VM is little-endian.
+
+  bytes := "****"
+  bytes[1] := char (iand(n, 16rFF))
+  bytes[2] := char(iand(ishift(n, -8), 16rFF))
+  bytes[3] := char(iand(ishift(n, -16), 16rFF))
+  bytes[4] := char(iand(ishift(n, -24), 16rFF))
+  return bytes
+end
+
+procedure bytes2int(bytes, i)
+  local n0, n1, n2, n3, n
+
+  # The VM is little-endian.
+
+  n0 := ord(bytes[i])
+  n1 := ishift(ord(bytes[i + 1]), 8)
+  n2 := ishift(ord(bytes[i + 2]), 16)
+  n3 := ishift(ord(bytes[i + 3]), 24)
+  n := ior (n0, ior (n1, ior (n2, n3)))
+
+  # Do not forget to extend the sign bit.
+  return (if n3 <= 16r7F then n else ior(n, icom(16rFFFFFFFF)))
+end
+
+class OpcodeCollection()
+
+  public static const opcode_names
+  public static const opcode_values
+
+  public static const op_halt
+  public static const op_add
+  public static const op_sub
+  public static const op_mul
+  public static const op_div
+  public static const op_mod
+  public static const op_lt
+  public static const op_gt
+  public static const op_le
+  public static const op_ge
+  public static const op_eq
+  public static const op_ne
+  public static const op_and
+  public static const op_or
+  public static const op_neg
+  public static const op_not
+  public static const op_prtc
+  public static const op_prti
+  public static const op_prts
+  public static const op_fetch
+  public static const op_store
+  public static const op_push
+  public static const op_jmp
+  public static const op_jz
+
+  private static init()
+    local i
+
+    opcode_names :=
+        ["halt", "add", "sub", "mul", "div",
+         "mod", "lt", "gt", "le", "ge",
+         "eq", "ne", "and", "or", "neg",
+         "not", "prtc", "prti", "prts", "fetch",
+         "store", "push", "jmp", "jz"]
+
+    opcode_values := table()
+    every i := 1 to *opcode_names do
+      opcode_values[opcode_names[i]] := char(i)
+
+    op_halt := opcode_values["halt"]
+    op_add := opcode_values["add"]
+    op_sub := opcode_values["sub"]
+    op_mul := opcode_values["mul"]
+    op_div := opcode_values["div"]
+    op_mod := opcode_values["mod"]
+    op_lt := opcode_values["lt"]
+    op_gt := opcode_values["gt"]
+    op_le := opcode_values["le"]
+    op_ge := opcode_values["ge"]
+    op_eq := opcode_values["eq"]
+    op_ne := opcode_values["ne"]
+    op_and := opcode_values["and"]
+    op_or := opcode_values["or"]
+    op_neg := opcode_values["neg"]
+    op_not := opcode_values["not"]
+    op_prtc := opcode_values["prtc"]
+    op_prti := opcode_values["prti"]
+    op_prts := opcode_values["prts"]
+    op_fetch := opcode_values["fetch"]
+    op_store := opcode_values["store"]
+    op_push := opcode_values["push"]
+    op_jmp := opcode_values["jmp"]
+    op_jz := opcode_values["jz"]
+
+    return
+  end
+
+end
+
+class VirtualMachine(OpcodeCollection)
+
+  public code
+  public global_data
+  public strings
+  public stack
+  public pc
+
+  private static const whitespace_chars
+
+  private static init()
+    whitespace_chars := ' \t\n\r\f\v'
+    return
+  end
+
+  public read_assembly_code(f)
+    local data_size, number_of_strings
+    local line, ch
+    local i
+    local address
+    local opcode
+
+    # Read the header line.
+    line := f.read() | bad_vm()
+    line ? {
+      tab(many(whitespace_chars))
+      tab(match("Datasize")) | bad_vm()
+      tab(many(whitespace_chars))
+      tab(any(':')) | bad_vm()
+      tab(many(whitespace_chars))
+      data_size :=
+        integer(tab(many(&digits))) | bad_vm()
+      tab(many(whitespace_chars))
+      tab(match("Strings")) | bad_vm()
+      tab(many(whitespace_chars))
+      tab(any(':')) | bad_vm()
+      tab(many(whitespace_chars))
+      number_of_strings :=
+        integer(tab(many(&digits))) | bad_vm()
+    }
+
+    # Read the strings.
+    strings := list(number_of_strings)
+    every i := 1 to number_of_strings do {
+      strings[i] := ""
+      line := f.read() | bad_vm()
+      line ? {
+        tab(many(whitespace_chars))
+        tab(any('"')) | bad_vm()
+        while ch := tab(any(~'"')) do {
+          if ch == '\\' then {
+            ch := tab(any('n\\')) | bad_vm()
+            strings[i] ||:=
+              (if (ch == "n") then "\n" else "\\")
+          } else {
+            strings[i] ||:= ch
+          }
+        }
+      }
+    }
+
+    # Read the code.
+    code := ""
+    while line := f.read() do {
+      line ? {
+        tab(many(whitespace_chars))
+        address := integer(tab(many(&digits))) | bad_vm()
+        tab(many(whitespace_chars))
+        opcode := tab(many(~whitespace_chars)) | bad_vm()
+        code ||:= opcode_values[opcode]
+        case opcode of {
+          "push": {
+            tab(many(whitespace_chars))
+            code ||:=
+                int2bytes(integer(tab(many(&digits)))) |
+                int2bytes(integer(tab(any('-')) ||
+                                  tab(many(&digits)))) |
+                bad_vm()
+          }
+          "fetch" | "store": {
+            tab(many(whitespace_chars))
+            tab(any('[')) | bad_vm()
+            tab(many(whitespace_chars))
+            code ||:=
+              int2bytes(integer(tab(many(&digits)))) |
+              bad_vm()
+            tab(many(whitespace_chars))
+            tab(any(']')) | bad_vm()
+          }
+          "jmp" | "jz": {
+            tab(many(whitespace_chars))
+            tab(any('(')) | bad_vm()
+            tab(many(whitespace_chars))
+            code ||:=
+              int2bytes(integer(tab(many(&digits)))) |
+              int2bytes(integer(tab(any('-')) ||
+                                tab(many(&digits)))) |
+              bad_vm()
+            tab(many(whitespace_chars))
+            tab(any(')')) | bad_vm()
+            tab(many(whitespace_chars))
+            tab(many(&digits)) | bad_vm()
+          }
+          default: {
+            # Do nothing
+          }
+        }
+      }
+    }
+
+    # Create a global data area.
+    global_data := list(data_size, &null)
+
+    initialize()
+
+    return
+  end
+
+  public run(f_out)
+    initialize()
+    continue(f_out)
+    return
+  end
+
+  public continue(f_out)
+    while code[pc] ~== op_halt do
+      step(f_out)
+  end
+
+  public step(f_out)
+    local opcode
+
+    opcode := code[pc]
+    pc +:= 1
+    case opcode of {
+      op_add:   binop("+")
+      op_sub:   binop("-")
+      op_mul:   binop("*")
+      op_div:   binop("/")
+      op_mod:   binop("%")
+      op_lt:    comparison("<")
+      op_gt:    comparison(">")
+      op_le:    comparison("<=")
+      op_ge:    comparison(">=")
+      op_eq:    comparison("=")
+      op_ne:    comparison("~=")
+      op_and:   logical_and()
+      op_or:    logical_or()
+      op_neg:   negate()
+      op_not:   logical_not()
+      op_prtc:  printc(f_out)
+      op_prti:  printi(f_out)
+      op_prts:  prints(f_out)
+      op_fetch: fetch_global()
+      op_store: store_global()
+      op_push:  push_argument()
+      op_jmp:   jump()
+      op_jz:    jump_if_zero()
+      default:  bad_opcode()
+    }
+  end
+
+  private negate()
+    stack[1] := -stack[1]
+    return
+  end
+
+  private binop(func)
+    stack[2] := func(stack[2], stack[1])
+    pop(stack)
+    return
+  end
+
+  private comparison(func)
+    stack[2] := (if func(stack[2], stack[1]) then 1 else 0)
+    pop(stack)
+    return
+  end
+
+  private logical_and()
+    stack[2] := (if stack[2] ~= 0 & stack[1] ~= 0 then 1 else 0)
+    pop(stack)
+    return
+  end
+
+  private logical_or()
+    stack[2] := (if stack[2] ~= 0 | stack[1] ~= 0 then 1 else 0)
+    pop(stack)
+    return
+  end
+
+  private logical_not()
+    stack[1] := (if stack[1] ~= 0 then 0 else 1)
+    return
+  end
+
+  private printc(f_out)
+    /f_out := FileStream.stdout
+    f_out.writes(char(pop(stack)))
+    return
+  end
+
+  private printi(f_out)
+    /f_out := FileStream.stdout
+    f_out.writes(pop(stack))
+    return
+  end
+
+  private prints(f_out)
+    /f_out := FileStream.stdout
+    f_out.writes(strings[pop(stack) + 1])
+    return
+  end
+
+  private fetch_global()
+    push(stack, global_data[get_argument() + 1])
+    pc +:= 4
+    return
+  end
+
+  private store_global()
+    global_data[get_argument() + 1] := pop(stack)
+    pc +:= 4
+    return
+  end
+
+  private push_argument()
+    push(stack, get_argument())
+    pc +:= 4
+    return
+  end
+
+  private jump()
+    pc +:= get_argument()
+    return
+  end
+
+  private jump_if_zero()
+    if pop(stack) = 0 then
+      pc +:= get_argument()
+    else
+      pc +:= 4
+    return
+  end
+
+  private get_argument()
+    return bytes2int(code, pc)
+  end
+
+  public initialize()
+    # The program counter starts at 1, for convenient indexing into
+    # the code[] array. Icon indexing starts at 1 (for a *very* good
+    # reason, but that’s a topic for another day).
+    pc := 1
+    stack := []
+    return
+  end
+
+  private bad_vm()
+    write(FileStream.stderr, "Bad VM.")
+    exit(1)
+  end
+
+  private bad_opcode()
+    write(FileStream.stderr, "Bad opcode.")
+    exit(1)
+  end
+end

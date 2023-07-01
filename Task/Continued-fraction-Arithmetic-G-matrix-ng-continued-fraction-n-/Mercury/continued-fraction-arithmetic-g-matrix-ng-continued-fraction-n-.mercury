@@ -1,0 +1,229 @@
+%%%-------------------------------------------------------------------
+
+:- module univariate_continued_fraction_task_lazy.
+
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+
+:- implementation.
+:- import_module integer.       % Arbitrary-precision integers.
+:- import_module lazy.          % Lazy evaluation.
+:- import_module list.
+:- import_module rational.      % Arbitrary-precision fractions.
+:- import_module string.
+
+%%%-------------------------------------------------------------------
+%%%
+%%% The following lazy list implementation is suggested in the Mercury
+%%% Library Reference, although (for convenience) I have changed the
+%%% names.
+%%%
+
+:- type lzlist(T)
+   ---> lzlist(lazy(lzcell(T))).
+
+:- type lzcell(T)
+   ---> lzcons(T, lzlist(T))
+   ;    lznil.
+
+%%%-------------------------------------------------------------------
+%%%
+%%% Types of interest.
+%%%
+
+:- type cf == lzlist(integer).  % A continued fraction.
+:- type hf == {integer, integer,
+               integer, integer}. % A homographic function.
+:- type ng4 == hf.                % A synonym for hf.
+
+
+%%%-------------------------------------------------------------------
+%%%
+%%% Make a "continued fraction" that has no terms.
+%%%
+
+:- func cfnil = cf.
+cfnil = lzlist(delay((func) = lznil)).
+
+%%%-------------------------------------------------------------------
+%%%
+%%% Make a continued fraction that repeats the same term forever.
+%%%
+
+:- func repeat_forever(integer) = cf.
+
+repeat_forever(N) = CF :-
+  CF = lzlist(delay(Cons)),
+  Cons = ((func) = lzcons(N, repeat_forever(N))).
+
+%%%-------------------------------------------------------------------
+%%%
+%%% sqrt2 is a continued fraction for the square root of two.
+%%%
+
+:- func sqrt2 = cf.
+
+sqrt2 = lzlist(delay((func) = lzcons(one, repeat_forever(two)))).
+
+%%%-------------------------------------------------------------------
+%%%
+%%% r2cf takes a fraction, and returns a continued fraction as a lazy
+%%% list of terms.
+%%%
+
+:- func r2cf(rational) = cf.
+:- func r2cf(integer, integer) = cf.
+
+r2cf(Ratnum) = CF :-
+  r2cf(numer(Ratnum), denom(Ratnum)) = CF.
+
+r2cf(Numerator, Denominator) = CF :-
+  (if (Denominator = zero)
+   then (CF = cfnil)
+   else (CF = lzlist(delay(Cons)),
+         ((func) = X :-
+            (X = lzcons(Quotient, r2cf(Denominator, Remainder)),
+             %% What follows is division with truncation towards zero.
+             divide_with_rem(Numerator, Denominator,
+                             Quotient, Remainder))) = Cons)).
+
+%%%-------------------------------------------------------------------
+%%%
+%%% Homographic functions of continued fractions.
+%%%
+
+:- func apply_ng4(ng4, cf) = cf.
+
+:- func add_integer(cf, integer) = cf.
+:- func add_rational(cf, rational) = cf.
+:- func mul_integer(cf, integer) = cf.
+:- func mul_rational(cf, rational) = cf.
+:- func div_integer(cf, integer) = cf.
+:- func reciprocal(cf) = cf.
+
+add_integer(CF, I) = apply_ng4({one, I, zero, one}, CF).
+add_rational(CF, R) = CF1 :-
+  N = (rational.numer(R)),
+  D = (rational.denom(R)),
+  CF1 = apply_ng4({D, N, zero, D}, CF).
+mul_integer(CF, I) = apply_ng4({I, zero, zero, one}, CF).
+mul_rational(CF, R) = apply_ng4({numer(R), zero, zero, denom(R)}, CF).
+div_integer(CF, I) = apply_ng4({one, zero, zero, I}, CF).
+reciprocal(CF) = apply_ng4({zero, one, one, zero}, CF).
+
+apply_ng4({ A1, A, B1, B }, Other_CF) = CF :-
+  (if (B1 = zero, B = zero)
+   then (CF = cfnil)
+   else if (B1 \= zero, B \= zero)
+   then (
+     % The integer divisions here truncate towards zero. Say "div"
+     % instead of "//" to truncate towards negative infinity.
+     Q1 = A1 // B1,
+     Q = A // B,
+     (if (Q1 = Q)
+      then (CF = lzlist(delay(Cons)),
+            Cons = ((func) = lzcons(Q, ng4_eject_term(A1, A, B1, B,
+                                                      Other_CF, Q))))
+      else (CF = ng4_absorb_term(A1, A, B1, B, Other_CF)))
+   )
+   else (CF = ng4_absorb_term(A1, A, B1, B, Other_CF))).
+
+:- func ng4_eject_term(integer, integer, integer, integer, cf,
+                       integer) = cf.
+ng4_eject_term(A1, A, B1, B, Other_CF, Term) = CF :-
+  CF = apply_ng4({ B1, B, A1 - (B1 * Term), A - (B * Term) },
+                 Other_CF).
+
+:- func ng4_absorb_term(integer, integer, integer, integer, cf) = cf.
+ng4_absorb_term(A1, A, B1, B, Other_CF) = CF :-
+  (Other_CF = lzlist(Cell),
+   CF = (if (force(Cell) = lzcons(Term, Rest))
+         then apply_ng4({ A + (A1 * Term), A1,
+                          B + (B1 * Term), B1 },
+                        Rest)
+         else apply_ng4({ A1, A1, B1, B1 }, cfnil))).
+
+
+%%%-------------------------------------------------------------------
+%%%
+%%% cf2string and cf2string_with_max_terms convert a continued
+%%% fraction to a printable string.
+%%%
+
+:- func cf2string(cf) = string.
+:- func cf2string_with_max_terms(cf, integer) = string.
+
+cf2string(CF) = cf2string_with_max_terms(CF, integer(20)).
+
+cf2string_with_max_terms(CF, MaxTerms) = S :-
+  S = cf2string_loop(CF, MaxTerms, zero, "[").
+
+:- func cf2string_loop(cf, integer, integer, string) = string.
+cf2string_loop(CF, MaxTerms, I, Accum) = S :-
+  (CF = lzlist(ValCell),
+   force(ValCell) = Cell,
+   (if (Cell = lzcons(Term, Tail))
+    then (if (I = MaxTerms) then (S = Accum ++ ",...]")
+          else ((Separator = (if (I = zero) then ""
+                              else if (I = one) then ";"
+                              else ",")),
+                TermStr = to_string(Term),
+                S = cf2string_loop(Tail, MaxTerms, I + one,
+                                   Accum ++ Separator ++ TermStr)))
+    else (S = Accum ++ "]"))).
+
+%%%-------------------------------------------------------------------
+
+:- pred show(string::in, cf::in, io::di, io::uo) is det.
+show(Expression, CF, !IO) :-
+  print(Expression, !IO),
+  print(" => ", !IO),
+  print(cf2string(CF), !IO),
+  nl(!IO).
+
+main(!IO) :-
+  CF_13_11 = r2cf(rational(13, 11)),
+  CF_22_7 = r2cf(rational(22, 7)),
+
+  show("13/11", CF_13_11, !IO),
+  show("22/7", CF_22_7, !IO),
+  show("sqrt(2)", sqrt2, !IO),
+
+  show("13/11 + 1/2", add_rational(CF_13_11, rational(1, 2)), !IO),
+  show("22/7 + 1/2", add_rational(CF_22_7, rational(1, 2)), !IO),
+  show("(22/7)/4", div_integer(CF_22_7, integer(4)), !IO),
+  show("(22/7)*(1/4)", mul_rational(CF_22_7, rational(1, 4)), !IO),
+  show("1/sqrt(2)", reciprocal(sqrt2), !IO),
+  show("sqrt(2)/2", div_integer(sqrt2, two), !IO),
+  show("sqrt(2)*(1/2)", mul_rational(sqrt2, rational(1, 2)), !IO),
+
+  %% Getting (1 + 1/sqrt(2))/2 in a single step.
+  show("(2 + sqrt(2))/4",
+       apply_ng4({one, two, zero, integer(4)}, sqrt2),
+       !IO),
+
+  %% Different ways to compute the same thing.
+  show("(1/sqrt(2) + 1)/2",
+       div_integer(add_integer(reciprocal(sqrt2), one),
+                   two),
+       !IO),
+  show("(1/sqrt(2))*(1/2) + 1/2",
+       add_rational(mul_rational(reciprocal(sqrt2),
+                                 rational(1, 2)),
+                    rational(1, 2)),
+       !IO),
+  show("((sqrt(2)/2 + 1)/4)*2", % Contrived, to get in mul_integer.
+       mul_integer(div_integer(add_integer(div_integer(sqrt2, two),
+                                           one),
+                               integer(4)),
+                   two),
+       !IO),
+
+  true.
+
+%%%-------------------------------------------------------------------
+%%% local variables:
+%%% mode: mercury
+%%% prolog-indent-width: 2
+%%% end:

@@ -1,0 +1,210 @@
+Dim Shared As Integer celdasXLado, contarMovs
+Dim Shared As String movsValidos, inicioBS, actualBS, objetivoBS
+
+Sub mostrarTablero (fila As Integer, columna As Integer, junto As String, titulo As String)
+    Dim As Integer i, j
+
+    Locate fila - 1, columna: Print titulo
+    For i = 1 To celdasXLado
+        Locate fila, columna + 2 * (i-1) + 3: Print Mid(movsValidos, i, 1);
+    Next i
+    Print
+    For i = 1 To celdasXLado
+        Locate fila + i, columna - 1: Print Str(i);
+        For j = 1 To celdasXLado
+            Locate fila + i, columna + 2 * j: Print " " + Mid(junto, (i-1) * celdasXLado + j, 1);
+        Next j
+        Print
+    Next i
+End Sub
+
+Sub mostrarEstado
+    Color  9: mostrarTablero 2, 2, actualBS, "Current:"
+    Color 12: mostrarTablero 2, 2 + 2 * celdasXLado + 6, objetivoBS, " Target:"
+    Color 13: Print !"\n Number of moves taken so far is " + Str(contarMovs)
+    Color 14
+End Sub
+
+Function Pistas() As String 'compare the currentB to targetB and suggest letter or digit or done
+    Dim As Integer i, j
+    Dim As Boolean flag = False
+    Dim As String r, actualBitS, objetivoBitS
+
+    For i = 1 To 2 * celdasXLado 'check cols first then rows as listed in movsValidos
+        r = Mid(movsValidos, i, 1)
+        If i <= celdasXLado Then
+            actualBitS = Mid(actualBS, i, 1): objetivoBitS = Mid(objetivoBS, i, 1)
+            If actualBitS <> objetivoBitS Then flag = False: Exit For
+        Else
+            j = i - celdasXLado
+            actualBitS   = Mid(actualBS, (j - 1) * celdasXLado + 1, 1)
+            objetivoBitS = Mid(objetivoBS, (j - 1) * celdasXLado + 1, 1)
+            If actualBitS <> objetivoBitS Then flag = False: Exit For
+        End If
+    Next i
+    Pistas = Iif(flag, r, "Done?")
+End Function
+
+Sub Centrar (fila As Integer, texto As String) 'center print at fila
+    Locate fila, (80 - Len(texto)) / 2: Print texto;
+End Sub
+
+Sub vcls 'print the screen to file then clear it
+    Dim As String sc(23), scan
+    Dim As Integer lineas, t, final, i
+
+    For lineas = 1 To 23
+        For t = 1 To 80: scan &= Chr(Screen(lineas, t)): Next t
+        sc(lineas) = Rtrim(scan)
+        scan = ""
+    Next lineas
+    For final = 23 To 1 Step -1
+        If sc(final) <> "" Then Exit For
+    Next final
+    Print #3, ""
+    For i = 1 To final: Print #3, sc(i): Next i
+    Print #3, "": Print #3, String(80, "-"): Cls
+End Sub
+
+Function TeclaPulsada() As String 'just want printable characters
+    Dim As String KBD = ""
+
+    While Len(KBD) = 0
+        KBD = Inkey
+        If Len(KBD) Then 'press something so respond
+            If Len(KBD) = 2 Or Asc(KBD) > 126 Or Asc(KBD) < 32 Then KBD = "*"
+        End If
+    Wend
+    Return KBD
+End Function
+
+Function inicioTablero() As String
+    Dim As String r
+
+    For i As Integer = 1 To celdasXLado ^ 2
+        r &= Ltrim(Str(Int(Rnd * 2)))
+    Next i
+    Return r
+End Function
+
+Sub hacerMovim (moveS As String)
+    Dim As Uinteger ac = Asc(moveS)
+    Dim As Integer i, columna, fila
+    Dim As String bitS
+
+    If ac > 96 Then 'letter
+        columna = ac - 96
+        For i = 1 To celdasXLado
+            bitS = Mid(actualBS, (i - 1) * celdasXLado + columna, 1)
+            Mid(actualBS, (i-1) * celdasXLado + columna, 1) = Iif(bitS = "0", "1", "0")
+        Next
+    Else 'number
+        fila = ac - 48
+        For i = 1 To celdasXLado
+            bitS = Mid(actualBS, (fila-1) * celdasXLado + i, 1)
+            Mid(actualBS, (fila-1) * celdasXLado + i, 1) = Iif(bitS = "0", "1", "0")
+        Next i
+    End If
+End Sub
+
+Function hacerObjetivo() As String
+    While actualBS = inicioBS
+        For i As Integer = 1 To celdasXLado * celdasXLado
+            Dim As String mS = Mid(movsValidos, Int(Rnd * Len(movsValidos)) + 1, 1)
+            hacerMovim mS
+        Next i
+    Wend
+    Return actualBS
+End Function
+
+Sub Intro
+    Dim As Integer i
+    Dim As String inS
+
+    Close
+    Open "Copy Flipping Bits Game.txt" For Output As #3
+    celdasXLado = 0: movsValidos = "": contarMovs = 0
+    Color 9: Centrar 3, "Flipping Bits Game (with AI!)  JHG 31/05/2023"
+    Color 5
+    Centrar 5, "You will be presented with a square board marked Current and"
+    Centrar 6, "another marked Target. The object of the game is to match"
+    Centrar 7, "the Current board to Target in the least amount of moves."
+    Centrar 9, "To make a move, enter a letter for a column to flip or"
+    Centrar 10, "a digit for a fila to flip. In a flip, all 1's are"
+    Centrar 11, "changed to 0's and all 0's changed to 1's."
+    Centrar 13, "You may enter 0 or q at any time to quit."
+    Centrar 14, "You may press ? when prompted for move to get a hint."
+    Centrar 15, "You may press ! to have the program solve the puzzle."
+    Color 14: Print: Print
+    While celdasXLado < 2 Or celdasXLado > 9
+        Locate Csrlin, 13: Print "Please press how many cells you want per side 2 to 9 > ";
+        inS = TeclaPulsada: Print inS : Sleep .4
+        If inS = "0" Or inS = "q" Then End Else celdasXLado = Val(inS)
+    Wend
+    vcls
+    For i = 1 To celdasXLado: movsValidos = movsValidos + Chr(96 + i)  : Next i
+    For i = 1 To celdasXLado: movsValidos = movsValidos + Ltrim(Str(i)): Next i
+    inicioBS = inicioTablero
+    actualBS = inicioBS
+    objetivoBS = hacerObjetivo
+    actualBS = inicioBS
+End Sub
+
+Sub MenuPrincipal
+    Dim As String SiNo, mS, mvS
+    Dim As Boolean mostrarSolucion = False, salir = False
+
+    Do
+        mostrarEstado
+        If actualBS = objetivoBS Then 'game done!
+            Print !"\n Congratulations, done in"; contarMovs; " moves."
+            Print !"\n Press y for yes, if you want to start over > ";
+            SiNo = TeclaPulsada: Print SiNo: Sleep .4: vcls
+            If SiNo = "y" Then Intro Else salir = True
+        Else 'get next move
+            mS = " "
+            While Instr(movsValidos, mS) = 0
+                Print !"\n Press a lettered column or a numbered fila to flip (or 0,q,?,!) > ";
+                mS = TeclaPulsada: Print mS: Sleep .4
+                If mS = "!" Then
+                    mostrarSolucion = True: mS = " ": Exit While
+                    Elseif mS = "?" Then mS = " ": Centrar Csrlin, "Hint: " + Pistas
+                    Elseif mS = "0" Or mS = "q" Then vcls: Close: End
+                    Elseif mS = "" Then mS = " "
+                End If
+            Wend
+            If mostrarSolucion Then 'run the solution from hints function
+                mostrarSolucion = False: mvS = Pistas
+                Centrar Csrlin + 1, "For the next move, the AI has chosen: " + mvS
+                Centrar Csrlin + 1, "Running the solution with 4 sec screen sleeps..."
+                Sleep 4: vcls
+                While mvS <> "Done?"
+                    contarMovs += 1
+                    hacerMovim mvS
+                    mostrarEstado
+                    mvS = Pistas
+                    Centrar Csrlin + 1, "For the next move, the AI has chosen: " + mvS
+                    Centrar Csrlin + 1, "Running the solution with 4 sec screen sleeps..."
+                    Sleep 4: vcls
+                Wend
+                mostrarEstado
+                Centrar Csrlin + 1, "Done! Current board matches Target"
+                Centrar Csrlin + 1, "Press y for yes, if you want to start over: > "
+                SiNo = TeclaPulsada: Print SiNo: Sleep .4: vcls
+                If SiNo = "y" Then Intro Else salir = True
+            Else
+                vcls
+                contarMovs += 1
+                hacerMovim mS
+            End If
+        End If
+    Loop Until salir
+    Close
+End Sub
+
+'--- Programa Principal ---
+Randomize Timer
+Intro
+MenuPrincipal
+End
+'--------------------------

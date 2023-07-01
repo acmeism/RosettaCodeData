@@ -1,0 +1,66 @@
+      INSTALL @lib$+"TIMERLIB"
+
+      nSeats% = 5
+      DIM Name$(nSeats%-1), Fork%(nSeats%-1), tID%(nSeats%-1), Leftie%(nSeats%-1)
+
+      Name$() = "Aristotle", "Kant", "Spinoza", "Marx", "Russell"
+      Fork%() = TRUE : REM All forks are initially on the table
+      Leftie%(RND(nSeats%)-1) = TRUE : REM One philosopher is lefthanded
+
+      tID%(0) = FN_ontimer(10, PROCphilosopher0, 1)
+      tID%(1) = FN_ontimer(10, PROCphilosopher1, 1)
+      tID%(2) = FN_ontimer(10, PROCphilosopher2, 1)
+      tID%(3) = FN_ontimer(10, PROCphilosopher3, 1)
+      tID%(4) = FN_ontimer(10, PROCphilosopher4, 1)
+
+      ON CLOSE PROCcleanup : QUIT
+      ON ERROR PRINT REPORT$ : PROCcleanup : END
+
+      DEF PROCphilosopher0 : PROCtask(0) : ENDPROC
+      DEF PROCphilosopher1 : PROCtask(1) : ENDPROC
+      DEF PROCphilosopher2 : PROCtask(2) : ENDPROC
+      DEF PROCphilosopher3 : PROCtask(3) : ENDPROC
+      DEF PROCphilosopher4 : PROCtask(4) : ENDPROC
+
+      REPEAT
+        WAIT 0
+      UNTIL FALSE
+      END
+
+      DEF PROCtask(n%)
+      PRIVATE state%(), lh%(), rh%()
+      DIM state%(nSeats%-1), lh%(nSeats%-1), rh%(nSeats%-1)
+      REM States: 0 = waiting for forks, > 0 = eating, < 0 = left the room
+      CASE TRUE OF
+        WHEN state%(n%) < 0:
+          state%(n%) += 1 : REM Waiting to get hungry again
+          IF state%(n%) = 0 PRINT Name$(n%) " is hungry again"
+        WHEN state%(n%) > 0:
+          state%(n%) -= 1 : REM Eating
+          IF state%(n%) = 0 THEN
+            SWAP Fork%((n%-1+nSeats%) MOD nSeats%), lh%(n%)
+            SWAP Fork%((n% + 1) MOD nSeats%), rh%(n%)
+            state%(n%) = -RND(100)
+            PRINT Name$(n%) " is leaving the room"
+          ENDIF
+        WHEN state%(n%) = 0:
+          IF Leftie%(n%) THEN
+            IF NOT lh%(n%) SWAP Fork%((n%-1+nSeats%) MOD nSeats%), lh%(n%)
+            IF lh%(n%) IF NOT rh%(n%) SWAP Fork%((n% + 1) MOD nSeats%), rh%(n%)
+          ELSE
+            IF NOT rh%(n%) SWAP Fork%((n% + 1) MOD nSeats%), rh%(n%)
+            IF rh%(n%) IF NOT lh%(n%) SWAP Fork%((n%-1+nSeats%) MOD nSeats%), lh%(n%)
+          ENDIF
+          IF lh%(n%) AND rh%(n%) THEN
+            state%(n%) = RND(100)
+            PRINT Name$(n%) " is eating (" ; state%(n%) " ticks)"
+          ENDIF
+      ENDCASE
+      ENDPROC
+
+      DEF PROCcleanup
+      LOCAL I%
+      FOR I% = 0 TO nSeats%-1
+        PROC_killtimer(tID%(I%))
+      NEXT
+      ENDPROC

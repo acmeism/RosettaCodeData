@@ -1,0 +1,82 @@
+      *FLOAT64
+
+      SYS "LoadLibrary", "OPENGL32.DLL" TO opengl%
+      SYS "GetProcAddress", opengl%, "wglCreateContext" TO `wglCreateContext`
+      SYS "GetProcAddress", opengl%, "wglDeleteContext" TO `wglDeleteContext`
+      SYS "GetProcAddress", opengl%, "wglMakeCurrent"   TO `wglMakeCurrent`
+      SYS "GetProcAddress", opengl%, "glMatrixMode"     TO `glMatrixMode`
+      SYS "GetProcAddress", opengl%, "glClear"          TO `glClear`
+      SYS "GetProcAddress", opengl%, "glBegin"          TO `glBegin`
+      SYS "GetProcAddress", opengl%, "glColor3dv"       TO `glColor3dv`
+      SYS "GetProcAddress", opengl%, "glVertex2dv"      TO `glVertex2dv`
+      SYS "GetProcAddress", opengl%, "glEnd"            TO `glEnd`
+
+      MODE 8
+
+      PFD_MAIN_PLANE = 0
+      PFD_TYPE_RGBA = 0
+      PFD_DOUBLEBUFFER = 1
+      PFD_DRAW_TO_WINDOW = 4
+      PFD_SUPPORT_OPENGL = &20
+
+      GL_MODELVIEW  = &1700
+      GL_TRIANGLES = 4
+      GL_DEPTH_BUFFER_BIT = &00000100
+      GL_COLOR_BUFFER_BIT = &00004000
+
+      ON CLOSE PROCcleanup : QUIT
+      ON ERROR PROCcleanup : SYS "MessageBox", @hwnd%, REPORT$, 0, 48 : QUIT
+
+      DIM GLcolor{r#, g#, b#}, GLvertex{x#, y#}
+      DIM pfd{nSize{l&,h&}, nVersion{l&,h&}, dwFlags%, iPixelType&, cColorBits&, \
+      \       cRedBits&, cRedShift&, cGreenBits&, cGreenShift&, cBlueBits&, cBlueShift&, \
+      \       cAlphaBits&, cAlphaShift&, cAccumBits&, cAccumRedBits&, cAccumGreenBits&, \
+      \       cAccumBlueBits&, cAccumAlphaBits&, cDepthBits&, cStencilBits&, cAuxBuffers&, \
+      \       iLayerType&, bReserved&, dwLayerMask%, dwVisibleMask%, dwDamageMask%}
+
+      pfd.nSize.l& = DIM(pfd{})
+      pfd.nVersion.l& = 1
+      pfd.dwFlags% = PFD_DRAW_TO_WINDOW OR PFD_SUPPORT_OPENGL OR PFD_DOUBLEBUFFER
+      pfd.dwLayerMask% = PFD_MAIN_PLANE
+      pfd.iPixelType& = PFD_TYPE_RGBA
+      pfd.cColorBits& = 24
+      pfd.cDepthBits& = 16
+
+      SYS "GetDC", @hwnd% TO ghDC%
+
+      SYS "ChoosePixelFormat", ghDC%, pfd{} TO pixelformat%
+      IF pixelformat% = 0 ERROR 100, "ChoosePixelFormat failed"
+
+      SYS "SetPixelFormat", ghDC%, pixelformat%, pfd{} TO res%
+      IF res% = 0 ERROR 100, "SetPixelFormat failed"
+
+      SYS `wglCreateContext`, ghDC% TO ghRC%
+      SYS `wglMakeCurrent`, ghDC%, ghRC%
+      SYS `glMatrixMode`, GL_MODELVIEW
+
+      REPEAT
+        WAIT 2
+        SYS `glClear`, GL_COLOR_BUFFER_BIT OR GL_DEPTH_BUFFER_BIT
+        SYS `glBegin`, GL_TRIANGLES
+        GLcolor.r# = 1.0 : GLcolor.g# = 0.0 : GLcolor.b# = 0.0
+        SYS `glColor3dv`, GLcolor{}
+        GLvertex.x# = 0.0 : GLvertex.y# = 0.8
+        SYS `glVertex2dv`, GLvertex{}
+        GLcolor.r# = 0.0 : GLcolor.g# = 1.0 : GLcolor.b# = 0.0
+        SYS `glColor3dv`, GLcolor{}
+        GLvertex.x# = 0.8 : GLvertex.y# = -0.8
+        SYS `glVertex2dv`, GLvertex{}
+        GLcolor.r# = 0.0 : GLcolor.g# = 0.0 : GLcolor.b# = 1.0
+        SYS `glColor3dv`, GLcolor{}
+        GLvertex.x# = -0.8 : GLvertex.y# = -0.8
+        SYS `glVertex2dv`, GLvertex{}
+        SYS `glEnd`
+        SYS "SwapBuffers", ghDC%
+      UNTIL FALSE
+      END
+
+      DEF PROCcleanup
+      ON ERROR OFF
+      ghRC% += 0 : IF ghRC% SYS `wglDeleteContext`, ghRC%  : ghRC% = 0
+      ghDC% += 0 : IF ghDC% SYS "ReleaseDC", @hwnd%, ghDC% : ghDC% = 0
+      ENDPROC

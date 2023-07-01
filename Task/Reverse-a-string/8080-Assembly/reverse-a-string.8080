@@ -1,0 +1,74 @@
+		org	100h
+		jmp	test
+
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Reverse a string under HL in place
+		;; strrev0: reverse a zero-terminated string
+		;; strrev: reverse a string terminated by the value in A
+		;; arrayrev: reverse bytes starting at DE and ending at HL
+		;; Destroys a, b, d, e, h, l registers.
+
+strrev0:	xra	a	; Zero A
+strrev:		mov	d,h	; Copy string begin to DE
+		mov	e,l
+		dcx	h	
+strrev_end:	inx	h	; Find string end in HL
+		cmp	m
+		jnz	strrev_end
+		dcx	h	; Point HL to last character
+arrayrev:	mov	a,h	; If HL<DE, we're done
+		cmp	d		
+		rc
+		mov	a,l
+		cmp	e
+		rc
+		ldax	d	; Get low character in string
+		mov	b,m	; Get high character in string
+		mov	m,a	; Swap them
+		mov	a,b
+		stax	d
+		inx	d	; Move the low pointer up,
+		dcx	h	; and the high pointer down
+		jmp	arrayrev
+
+		
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Test code (CP/M): ask the user for a string, and reverse it
+		
+prompt:		db	" :gnirts a retne esaelP$"
+bufdef:		db	127, 0
+buf:		ds	128		; one extra byte that will remain 0
+
+newline:	lxi	d,newline_str
+		mvi	c,9
+		jmp	5
+newline_str:	db	13, 10, "$"
+
+test:		;; Reverse and output the prompt
+		mvi	a,'$'		; CP/M string is $-terminated
+		lxi	h,prompt	; Reverse the string
+		call	strrev
+		lxi	d,prompt	; Output the string
+		mvi	c,9
+		call	5
+		
+		;; Get input and reverse it
+		lxi	d,bufdef	
+		mvi	c,10
+		call	5
+		call	newline
+		lxi	h,buf
+		call	strrev0		; 0-terminated due to buffer definition
+		
+		;; Output reversed input
+		lxi	h,buf
+loop:		mov	e,m		
+		xra	a
+		ora	e
+		rz			; Stop when done
+		mvi	c,2
+		push	h
+		call	5
+		pop	h
+		inx	h
+		jmp	loop

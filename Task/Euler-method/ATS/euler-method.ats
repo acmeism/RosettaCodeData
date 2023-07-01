@@ -1,0 +1,93 @@
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+#define NIL list_vt_nil ()
+#define ::  list_vt_cons
+
+(* Approximate y(t) in dy/dt=f(t,y), y(a)=y0, t going from a to b with
+   positive step size h. This implementation of euler_method requires
+   f to be a unboxed linear closure. *)
+extern fn {tk : tkind}
+euler_method (f  : &(g0float tk, g0float tk) -<clo1> g0float tk,
+              y0 : g0float tk,
+              a  : g0float tk,
+              b  : g0float tk,
+              h  : g0float tk) : List1_vt @(g0float tk, g0float tk)
+
+implement {tk}
+euler_method (f, y0, a, b, h) =
+  let
+    typedef point_pair = @(g0float tk, g0float tk)
+
+    fun
+    loop (f : &(g0float tk, g0float tk) -<clo1> g0float tk,
+          t : g0float tk,
+          y : g0float tk,
+          point_pairs : List0_vt point_pair)
+        : List1_vt point_pair =
+      let
+        val point_pairs = @(t, y) :: point_pairs
+      in
+        if b <= t then
+          reverse<point_pair> point_pairs
+        else
+          loop (f, t + h, y + (h * f (t, y)), point_pairs)
+      end
+  in
+    loop (f, a, y0, NIL)
+  end
+
+fun {tk : tkind}
+write_point_pairs
+          (outf        : FILEref,
+           point_pairs : !List0_vt @(g0float tk, g0float tk))
+    : void =
+  case+ point_pairs of
+  | NIL => ()
+  | (@(t, y) :: tl) =>
+    begin
+      fprint_val<g0float tk> (outf, t);
+      fprint! (outf, " ");
+      fprint_val<g0float tk> (outf, y);
+      fprintln! (outf);
+      write_point_pairs (outf, tl)
+    end
+
+implement
+main0 () =
+  let
+    (* Implement f as a stack-allocated linear closure. *)
+    var f =
+      lam@ (t : double, y : double) : double => ~0.07 * (y - 20.0)
+
+    val data2 = euler_method<dblknd> (f, 100.0, 0.0, 100.0, 2.0)
+    and data5 = euler_method<dblknd> (f, 100.0, 0.0, 100.0, 5.0)
+    and data10 = euler_method<dblknd> (f, 100.0, 0.0, 100.0, 10.0)
+
+    val outf = stdout_ref
+  in
+    fprintln! (outf, "set encoding utf8");
+    fprintln! (outf, "set term png size 1000,750 font 'RTF Amethyst Pro,16'");
+    fprintln! (outf, "set output 'newton-cooling-ATS.png'");
+    fprintln! (outf, "set grid");
+    fprintln! (outf, "set title 'Newton’s Law of Cooling'");
+    fprintln! (outf, "set xlabel 'Elapsed time (seconds)'");
+    fprintln! (outf, "set ylabel 'Temperature (Celsius)'");
+    fprintln! (outf, "set xrange [0:100]");
+    fprintln! (outf, "set yrange [15:100]");
+    fprintln! (outf, "y(x) = 20.0 + (80.0 * exp (-0.07 * x))");
+    fprintln! (outf, "plot y(x) with lines title 'Analytic solution', \\");
+    fprintln! (outf, "     '-' with linespoints title 'Euler method, step size 2s', \\");
+    fprintln! (outf, "     '-' with linespoints title 'Step size 5s', \\");
+    fprintln! (outf, "     '-' with linespoints title 'Step size 10s'");
+    write_point_pairs (outf, data2);
+    fprintln! (outf, "e");
+    write_point_pairs (outf, data5);
+    fprintln! (outf, "e");
+    write_point_pairs (outf, data10);
+    fprintln! (outf, "e");
+
+    free data2;
+    free data5;
+    free data10
+  end

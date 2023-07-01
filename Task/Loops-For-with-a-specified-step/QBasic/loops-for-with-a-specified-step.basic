@@ -1,0 +1,3 @@
+FOR i = 1 TO 21 STEP 2
+  PRINT i;
+NEXT i

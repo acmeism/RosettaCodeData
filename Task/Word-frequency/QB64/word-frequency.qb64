@@ -1,0 +1,567 @@
+OPTION _EXPLICIT
+
+' SUBs and FUNCTIONs
+DECLARE SUB CountWords (FromString AS STRING)
+DECLARE SUB QuickSort (lLeftN AS LONG, lRightN AS LONG, iMode AS INTEGER)
+DECLARE SUB ShowResults ()
+DECLARE SUB ShowCompletion ()
+DECLARE SUB TopCounted ()
+DECLARE FUNCTION InsertWord& (WhichWord AS STRING)
+DECLARE FUNCTION BinarySearch& (LookFor AS STRING, RetPos AS INTEGER)
+DECLARE FUNCTION CleanWord$ (WhichWord AS STRING)
+
+' Var
+DIM iFile AS INTEGER
+DIM iCol AS INTEGER
+DIM iFil AS INTEGER
+DIM iStep AS INTEGER
+DIM iBar AS INTEGER
+DIM iBlock AS INTEGER
+DIM lIni AS LONG
+DIM lEnd AS LONG
+DIM lLines AS LONG
+DIM lLine AS LONG
+DIM lLenF AS LONG
+DIM iRuns AS INTEGER
+DIM lMaxWords AS LONG
+DIM sTimer AS SINGLE
+DIM strFile AS STRING
+DIM strKey AS STRING
+DIM strText AS STRING
+DIM strDate AS STRING
+DIM strTime AS STRING
+DIM strBar AS STRING
+DIM lWords AS LONG
+DIM strWords AS STRING
+CONST AddWords = 100
+CONST TopCount = 10
+CONST FALSE = 0, TRUE = NOT FALSE
+
+' Initialize
+iFile = FREEFILE
+lIni = 1
+strDate = DATE$
+strTime = TIME$
+lEnd = 0
+lMaxWords = 1000
+REDIM strWords(lIni TO lMaxWords) AS STRING
+REDIM lWords(lIni TO lMaxWords) AS LONG
+REDIM lTopWords(1) AS LONG
+REDIM strTopWords(1) AS STRING
+
+' ---Main program loop
+$RESIZE:SMOOTH
+DO
+    DO
+        CLS
+        PRINT "This program will count how many words are in a text file and shows the 10"
+        PRINT "most used of them."
+        PRINT
+        INPUT "Document to open (TXT file) (f=see files): ", strFile
+        IF UCASE$(strFile) = "F" THEN
+            strFile = ""
+            FILES
+            DO: LOOP UNTIL INKEY$ <> ""
+        END IF
+    LOOP UNTIL strFile <> ""
+    OPEN strFile FOR BINARY AS #iFile
+    IF LOF(iFile) > 0 THEN
+        iRuns = iRuns + 1
+        CLOSE #iFile
+
+        ' Opens the document file to analyze it
+        sTimer = TIMER
+        ON TIMER(1) GOSUB ShowAdvance
+        OPEN strFile FOR INPUT AS #iFile
+        lLenF = LOF(iFile)
+        PRINT "Looking for words in "; strFile; ". File size:"; STR$(lLenF); ". ";: iCol = POS(0): PRINT "Initializing";
+        COLOR 23: PRINT "...";: COLOR 7
+
+        ' Count how many lines has the file
+        lLines = 0
+        DO WHILE NOT EOF(iFile)
+            LINE INPUT #iFile, strText
+            lLines = lLines + 1
+        LOOP
+        CLOSE #iFile
+
+        ' Shows the bar
+        LOCATE , iCol: PRINT "Initialization complete."
+        PRINT
+        PRINT "Processing"; lLines; "lines";: COLOR 23: PRINT "...": COLOR 7
+        iFil = CSRLIN
+        iCol = POS(0)
+        iBar = 80
+        iBlock = 80 / lLines
+        IF iBlock = 0 THEN iBlock = 1
+        PRINT STRING$(iBar, 176)
+        lLine = 0
+        iStep = lLines * iBlock / iBar
+        IF iStep = 0 THEN iStep = 1
+        IF iStep > 20 THEN
+            TIMER ON
+        END IF
+        OPEN strFile FOR INPUT AS #iFile
+        DO WHILE NOT EOF(iFile)
+            lLine = lLine + 1
+            IF (lLine MOD iStep) = 0 THEN
+                strBar = STRING$(iBlock * (lLine / iStep), 219)
+                LOCATE iFil, 1
+                PRINT strBar
+                ShowCompletion
+            END IF
+            LINE INPUT #iFile, strText
+            CountWords strText
+            strKey = INKEY$
+        LOOP
+        ShowCompletion
+        CLOSE #iFile
+        TIMER OFF
+        LOCATE iFil - 1, 1
+        PRINT "Done!" + SPACE$(70)
+        strBar = STRING$(iBar, 219)
+        LOCATE iFil, 1
+        PRINT strBar
+        LOCATE iFil + 5, 1
+        PRINT "Finishing";: COLOR 23: PRINT "...";: COLOR 7
+        ShowResults
+
+        ' Frees the RAM
+        lMaxWords = 1000
+        lEnd = 0
+        REDIM strWords(lIni TO lMaxWords) AS STRING
+        REDIM lWords(lIni TO lMaxWords) AS LONG
+
+    ELSE
+        CLOSE #iFile
+        KILL strFile
+        PRINT
+        PRINT "Document does not exist."
+    END IF
+    PRINT
+    PRINT "Try again? (Y/n)"
+    DO
+        strKey = UCASE$(INKEY$)
+    LOOP UNTIL strKey = "Y" OR strKey = "N" OR strKey = CHR$(13) OR strKey = CHR$(27)
+LOOP UNTIL strKey = "N" OR strKey = CHR$(27) OR iRuns >= 99
+
+CLS
+IF iRuns >= 99 THEN
+    PRINT "Maximum runs reached for this session."
+END IF
+
+PRINT "End of program"
+PRINT "Start date/time: "; strDate; " "; strTime
+PRINT "End date/time..: "; DATE$; " "; TIME$
+END
+' ---End main program
+
+ShowAdvance:
+ShowCompletion
+RETURN
+
+FUNCTION BinarySearch& (LookFor AS STRING, RetPos AS INTEGER)
+    ' Var
+    DIM lFound AS LONG
+    DIM lLow AS LONG
+    DIM lHigh AS LONG
+    DIM lMid AS LONG
+    DIM strLookFor AS STRING
+    SHARED lIni AS LONG
+    SHARED lEnd AS LONG
+    SHARED lMaxWords AS LONG
+    SHARED strWords() AS STRING
+    SHARED lWords() AS LONG
+
+    ' Binary search for stated word in the list
+    lLow = lIni
+    lHigh = lEnd
+    lFound = 0
+    strLookFor = UCASE$(LookFor)
+    DO WHILE (lFound < 1) AND (lLow <= lHigh)
+        lMid = (lHigh + lLow) / 2
+        IF strWords(lMid) = strLookFor THEN
+            lFound = lMid
+        ELSEIF strWords(lMid) > strLookFor THEN
+            lHigh = lMid - 1
+        ELSE
+            lLow = lMid + 1
+        END IF
+    LOOP
+
+    ' Should I return the position if not found?
+    IF lFound = 0 AND RetPos THEN
+        IF lEnd < 1 THEN
+            lFound = 1
+        ELSEIF strWords(lMid) > strLookFor THEN
+            lFound = lMid
+        ELSE
+            lFound = lMid + 1
+        END IF
+    END IF
+
+    ' Return the value
+    BinarySearch = lFound
+
+END FUNCTION
+
+FUNCTION CleanWord$ (WhichWord AS STRING)
+    ' Var
+    DIM iSeek AS INTEGER
+    DIM iStep AS INTEGER
+    DIM bOK AS INTEGER
+    DIM strWord AS STRING
+    DIM strChar AS STRING
+
+    strWord = WhichWord
+
+    ' Look for trailing wrong characters
+    strWord = LTRIM$(RTRIM$(strWord))
+    IF LEN(strWord) > 0 THEN
+        iStep = 0
+        DO
+            ' Determines if step will be forward or backwards
+            IF iStep = 0 THEN
+                iStep = -1
+            ELSE
+                iStep = 1
+            END IF
+
+            ' Sets the initial value of iSeek
+            IF iStep = -1 THEN
+                iSeek = LEN(strWord)
+            ELSE
+                iSeek = 1
+            END IF
+
+            bOK = FALSE
+            DO
+                strChar = MID$(strWord, iSeek, 1)
+                SELECT CASE strChar
+                    CASE "A" TO "Z"
+                        bOK = TRUE
+                    CASE CHR$(129) TO CHR$(154)
+                        bOK = TRUE
+                    CASE CHR$(160) TO CHR$(165)
+                        bOK = TRUE
+                END SELECT
+
+                ' If it is not a character valid as a letter, please move one space
+                IF NOT bOK THEN
+                    iSeek = iSeek + iStep
+                END IF
+
+                ' If no letter was recognized, then exit the loop
+                IF iSeek < 1 OR iSeek > LEN(strWord) THEN
+                    bOK = TRUE
+                END IF
+            LOOP UNTIL bOK
+
+            IF iStep = -1 THEN
+                ' Reviews if a word was encountered
+                IF iSeek > 0 THEN
+                    strWord = LEFT$(strWord, iSeek)
+                ELSE
+                    strWord = ""
+                END IF
+            ELSEIF iStep = 1 THEN
+                IF iSeek <= LEN(strWord) THEN
+                    strWord = MID$(strWord, iSeek)
+                ELSE
+                    strWord = ""
+                END IF
+            END IF
+        LOOP UNTIL iStep = 1 OR strWord = ""
+    END IF
+
+    ' Return the result
+    CleanWord = strWord
+
+END FUNCTION
+
+SUB CountWords (FromString AS STRING)
+    ' Var
+    DIM iStart AS INTEGER
+    DIM iLenW AS INTEGER
+    DIM iLenS AS INTEGER
+    DIM iLenD AS INTEGER
+    DIM strString AS STRING
+    DIM strWord AS STRING
+    DIM lWhichWord AS LONG
+    SHARED lEnd AS LONG
+    SHARED lMaxWords AS LONG
+    SHARED strWords() AS STRING
+    SHARED lWords() AS LONG
+
+    ' Converts to Upper Case and cleans leading and trailing spaces
+    strString = UCASE$(FromString)
+    strString = LTRIM$(RTRIM$(strString))
+
+    ' Get words from string
+    iStart = 1
+    iLenW = 0
+    iLenS = LEN(strString)
+    DO WHILE iStart <= iLenS
+        iLenW = INSTR(iStart, strString, " ")
+        IF iLenW = 0 AND iStart <= iLenS THEN
+            iLenW = iLenS + 1
+        END IF
+        strWord = MID$(strString, iStart, iLenW - iStart)
+
+        ' Will remove mid dashes or apostrophe or "â€"
+        iLenD = INSTR(strWord, "-")
+        IF iLenD < 1 THEN
+            iLenD = INSTR(strWord, "'")
+            IF iLenD < 1 THEN
+                iLenD = INSTR(strWord, "â€")
+            END IF
+        END IF
+        IF iLenD >= 2 THEN
+            strWord = LEFT$(strWord, iLenD - 1)
+            iLenW = iStart + (iLenD - 1)
+        END IF
+        strWord = CleanWord(strWord)
+
+        IF strWord <> "" THEN
+            ' Look for the word to be counted
+            lWhichWord = BinarySearch(strWord, FALSE)
+
+            ' If the word doesn't exist in the list, add it
+            IF lWhichWord = 0 THEN
+                lWhichWord = InsertWord(strWord)
+            END IF
+
+            ' Count the word
+            IF lWhichWord > 0 THEN
+                lWords(lWhichWord) = lWords(lWhichWord) + 1
+            END IF
+        END IF
+        iStart = iLenW + 1
+    LOOP
+
+END SUB
+
+' Here a word will be inserted in the list
+FUNCTION InsertWord& (WhichWord AS STRING)
+    ' Var
+    DIM lFound AS LONG
+    DIM lWord AS LONG
+    DIM strWord AS STRING
+    SHARED lIni AS LONG
+    SHARED lEnd AS LONG
+    SHARED lMaxWords AS LONG
+    SHARED strWords() AS STRING
+    SHARED lWords() AS LONG
+
+    ' Look for the word in the list
+    strWord = UCASE$(WhichWord)
+    lFound = BinarySearch(WhichWord, TRUE)
+    IF lFound > 0 THEN
+        ' Add one word
+        lEnd = lEnd + 1
+
+        ' Verifies if there is still room for a new word
+        IF lEnd > lMaxWords THEN
+            lMaxWords = lMaxWords + AddWords ' Other words
+            IF lMaxWords > 32767 THEN
+                IF lEnd <= 32767 THEN
+                    lMaxWords = 32767
+                ELSE
+                    lFound = -1
+                END IF
+            END IF
+
+            IF lFound > 0 THEN
+                REDIM _PRESERVE strWords(lIni TO lMaxWords) AS STRING
+                REDIM _PRESERVE lWords(lIni TO lMaxWords) AS LONG
+            END IF
+        END IF
+
+        IF lFound > 0 THEN
+            ' Move the words below this
+            IF lEnd > 1 THEN
+                FOR lWord = lEnd TO lFound + 1 STEP -1
+                    strWords(lWord) = strWords(lWord - 1)
+                    lWords(lWord) = lWords(lWord - 1)
+                NEXT lWord
+            END IF
+
+            ' Insert the word in the position
+            strWords(lFound) = strWord
+            lWords(lFound) = 0
+        END IF
+    END IF
+
+    InsertWord = lFound
+END FUNCTION
+
+SUB QuickSort (lLeftN AS LONG, lRightN AS LONG, iMode AS INTEGER)
+    ' Var
+    DIM lPivot AS LONG
+    DIM lLeftNIdx AS LONG
+    DIM lRightNIdx AS LONG
+    SHARED lWords() AS LONG
+    SHARED strWords() AS STRING
+
+    ' Clasifies from highest to lowest
+    lLeftNIdx = lLeftN
+    lRightNIdx = lRightN
+    IF (lRightN - lLeftN) > 0 THEN
+        lPivot = (lLeftN + lRightN) / 2
+        DO WHILE (lLeftNIdx <= lPivot) AND (lRightNIdx >= lPivot)
+            IF iMode = 0 THEN ' Ascending
+                DO WHILE (lWords(lLeftNIdx) < lWords(lPivot)) AND (lLeftNIdx <= lPivot)
+                    lLeftNIdx = lLeftNIdx + 1
+                LOOP
+                DO WHILE (lWords(lRightNIdx) > lWords(lPivot)) AND (lRightNIdx >= lPivot)
+                    lRightNIdx = lRightNIdx - 1
+                LOOP
+            ELSE ' Descending
+                DO WHILE (lWords(lLeftNIdx) > lWords(lPivot)) AND (lLeftNIdx <= lPivot)
+                    lLeftNIdx = lLeftNIdx + 1
+                LOOP
+                DO WHILE (lWords(lRightNIdx) < lWords(lPivot)) AND (lRightNIdx >= lPivot)
+                    lRightNIdx = lRightNIdx - 1
+                LOOP
+            END IF
+            SWAP lWords(lLeftNIdx), lWords(lRightNIdx)
+            SWAP strWords(lLeftNIdx), strWords(lRightNIdx)
+            lLeftNIdx = lLeftNIdx + 1
+            lRightNIdx = lRightNIdx - 1
+            IF (lLeftNIdx - 1) = lPivot THEN
+                lRightNIdx = lRightNIdx + 1
+                lPivot = lRightNIdx
+            ELSEIF (lRightNIdx + 1) = lPivot THEN
+                lLeftNIdx = lLeftNIdx - 1
+                lPivot = lLeftNIdx
+            END IF
+        LOOP
+        QuickSort lLeftN, lPivot - 1, iMode
+        QuickSort lPivot + 1, lRightN, iMode
+    END IF
+END SUB
+
+SUB ShowCompletion ()
+    ' Var
+    SHARED iFil AS INTEGER
+    SHARED lLine AS LONG
+    SHARED lLines AS LONG
+    SHARED lEnd AS LONG
+
+    LOCATE iFil + 1, 1
+    PRINT "Lines analyzed :"; lLine
+    PRINT USING "% of completion: ###%"; (lLine / lLines) * 100
+    PRINT "Words found....:"; lEnd
+END SUB
+
+SUB ShowResults ()
+    ' Var
+    DIM iMaxL AS INTEGER
+    DIM iMaxW AS INTEGER
+    DIM lWord AS LONG
+    DIM lHowManyWords AS LONG
+    DIM strString AS STRING
+    DIM strFileR AS STRING
+    SHARED lIni AS LONG
+    SHARED lEnd AS LONG
+    SHARED lLenF AS LONG
+    SHARED lMaxWords AS LONG
+    SHARED sTimer AS SINGLE
+    SHARED strFile AS STRING
+    SHARED strWords() AS STRING
+    SHARED lWords() AS LONG
+    SHARED strTopWords() AS STRING
+    SHARED lTopWords() AS LONG
+    SHARED iRuns AS INTEGER
+
+    ' Show results
+
+    ' Creates file name
+    lWord = INSTR(strFile, ".")
+    IF lWord = 0 THEN lWord = LEN(strFile)
+    strFileR = LEFT$(strFile, lWord)
+    IF RIGHT$(strFileR, 1) <> "." THEN strFileR = strFileR + "."
+
+    ' Retrieves the longest word found and the highest count
+    FOR lWord = lIni TO lEnd
+        ' Gets the longest word found
+        IF LEN(strWords(lWord)) > iMaxL THEN
+            iMaxL = LEN(strWords(lWord))
+        END IF
+
+        lHowManyWords = lHowManyWords + lWords(lWord)
+    NEXT lWord
+    IF iMaxL > 60 THEN iMaxW = 60 ELSE iMaxW = iMaxL
+
+    ' Gets top counted
+    TopCounted
+
+    ' Shows the results
+    CLS
+    PRINT "File analyzed : "; strFile
+    PRINT "Length of file:"; lLenF
+    PRINT "Time lapse....:"; TIMER - sTimer;"seconds"
+    PRINT "Words found...:"; lHowManyWords; "(Unique:"; STR$(lEnd); ")"
+    PRINT "Longest word..:"; iMaxL
+    PRINT
+    PRINT "The"; TopCount; "most used are:"
+    PRINT STRING$(iMaxW, "-"); "+"; STRING$(80 - (iMaxW + 1), "-")
+    PRINT " Word"; SPACE$(iMaxW - 5); "| Count"
+    PRINT STRING$(iMaxW, "-"); "+"; STRING$(80 - (iMaxW + 1), "-")
+    strString = "\" + SPACE$(iMaxW - 2) + "\| #########,"
+    FOR lWord = lIni TO TopCount
+        PRINT USING strString; strTopWords(lWord); lTopWords(lWord)
+    NEXT lWord
+    PRINT STRING$(iMaxW, "-"); "+"; STRING$(80 - (iMaxW + 1), "-")
+    PRINT "See files "; strFileR + "S" + LTRIM$(STR$(iRuns)); " and "; strFileR + "C" + LTRIM$(STR$(iRuns)); " to see the full list."
+END SUB
+
+SUB TopCounted ()
+    ' Var
+    DIM lWord AS LONG
+    DIM strFileR AS STRING
+    DIM iFile AS INTEGER
+    CONST Descending = 1
+    SHARED lIni AS LONG
+    SHARED lEnd AS LONG
+    SHARED lMaxWords AS LONG
+    SHARED strWords() AS STRING
+    SHARED lWords() AS LONG
+    SHARED strTopWords() AS STRING
+    SHARED lTopWords() AS LONG
+    SHARED iRuns AS INTEGER
+    SHARED strFile AS STRING
+
+    ' Assigns new dimmentions
+    REDIM strTopWords(lIni TO TopCount) AS STRING
+    REDIM lTopWords(lIni TO TopCount) AS LONG
+
+    ' Saves the current values
+    lWord = INSTR(strFile, ".")
+    IF lWord = 0 THEN lWord = LEN(strFile)
+    strFileR = LEFT$(strFile, lWord)
+    IF RIGHT$(strFileR, 1) <> "." THEN strFileR = strFileR + "."
+    iFile = FREEFILE
+    OPEN strFileR + "S" + LTRIM$(STR$(iRuns)) FOR OUTPUT AS #iFile
+    FOR lWord = lIni TO lEnd
+        WRITE #iFile, strWords(lWord), lWords(lWord)
+    NEXT lWord
+    CLOSE #iFile
+
+    ' Classifies the counted in descending order
+    QuickSort lIni, lEnd, Descending
+
+    ' Now, saves the required values in the arrays
+    FOR lWord = lIni TO TopCount
+        strTopWords(lWord) = strWords(lWord)
+        lTopWords(lWord) = lWords(lWord)
+    NEXT lWord
+
+    ' Now, saves the order from the file
+    OPEN strFileR + "C" + LTRIM$(STR$(iRuns)) FOR OUTPUT AS #iFile
+    FOR lWord = lIni TO lEnd
+        WRITE #iFile, strWords(lWord), lWords(lWord)
+    NEXT lWord
+    CLOSE #iFile
+
+END SUB

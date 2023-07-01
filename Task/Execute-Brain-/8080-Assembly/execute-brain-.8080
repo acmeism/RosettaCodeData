@@ -1,0 +1,360 @@
+	;;; 	CP/M Brainfuck compiler/interpreter, with a few optimizations
+getch:	equ	1	; Read character from console
+putch:	equ	2	; Print character to console
+puts:	equ	9	; Print string to console
+fopen:	equ	15	; Open file
+fread:	equ	20	; Read from file
+dmaoff:	equ	26	; Set DMA address
+fcb:	equ	5Ch	; FCB for first command line argument
+EOFCH:	equ	-1	; Value stored on the tape on EOF
+	org	100h
+	jmp	start
+	;;;	Print the character on the tape, saving HL (tape location),
+	;;;	and including CR/LF translation.
+bfout:	push	h	; Keep tape location
+	mov	a,m	; What are we printing?
+	cpi	10	; Newline?
+	jnz	outch	; If not, just print the character.
+	mvi	e,13	; Otherwise, print a carriage return first.
+	mvi	c,putch
+	call	5
+	pop	h	; Then get the tape back
+	push	h
+outch:	mov	e,m	; Print the character in A.
+	mvi	c,putch
+	call	5
+	pop	h	; Restore tape location.
+	ret
+	;;;	Read a character and store it on the tape, including CR/LF
+	;;;	translation; ^Z is EOF.
+bfin:	push	h	; Keep tape location
+	lda	bfeoff	; Have we seen EOF yet?
+	ana	a
+	jnz	bfeof	; If so, return EOF.
+	mvi	c,getch	; Otherwise, read character
+	call	5
+	cpi	26	; Was it EOF?
+	jz	bfeof	; Then handle EOF.
+	cpi	13	; Was it CR? (Pressing 'Enter' only gives CR.)
+	jnz	bfin_s	; If not, just store the character.
+	mvi	c,putch	; Otherwise, output a LF (only CR is echoed as well)
+	mvi	e,10
+	call	5
+	mvi	a,10	; And then store a LF instead of the CR.
+bfin_s:	pop	h	; Restore tape location
+	mov	m,a	; Store the character
+	ret
+bfeof:	sta	bfeoff	; Set the EOF flag (A is nonzero here)
+	pop	h	; Restore tape location
+	mvi	m,EOFCH	; Store EOF return value.
+	ret
+bfeoff:	db	0	; EOF flag, EOF seen if nonzero.
+	;;;	Print mismatched brackets error
+brkerr:	lxi	d,ebrk
+	;;;	Print error message under DE and quit
+err:	mvi	c,puts	; Print string
+	call	5
+	rst	0	; Then quit
+	;;;	Error messages.
+efile:	db	'Cannot read file.$'
+ebrk:	db	'Mismatched brackets.$'
+	;;;	BF characters
+bfchr:	db	'+-<>,.[]',26
+	;;;	Main program
+start:	lhld	6 	; Set stack pointer to highest available address
+	sphl
+	mvi	c,fopen	; Try to open the file given on the command line
+	lxi	d,fcb
+	call	5
+	inr	a	; A=FF on error,
+	lxi	d,efile	; so if we couldn't open the file, say so, and stop
+	jz	err
+	;;;	Read file into memory in its entirety
+	lxi 	d,pgm	; Start of input
+block:	mvi	c,dmaoff
+	push	d	; Keep current address on stack
+	call	5	; Set DMA to location of current block
+	mvi	c,fread	; Read 128-byte block to that address
+	lxi	d,fcb
+	call	5
+	dcr	a	; A=1 = end of file
+	jz	fdone
+	inr	a	; Otherwise, A<>0 = error
+	lxi	d,efile
+	jnz	err
+	pop	h	; Retrieve DMA address
+	lxi	d,128	; Add 128 (advance to next block)
+	dad	d
+	xchg		; Put in DE
+	jmp	block	; Go get next block.
+fdone:	pop	h	; When done, find next address
+	mvi	m,26	; Write EOF, so file always ends with EOF.
+	;;;	Filter out all the non-BF characters
+	lxi 	h,pgm	; Output pointer
+	push	h 	; On stack
+	lxi	b,pgm	; Input pointer	
+filter:	ldax	b	; Get current character
+	inx	b	; Look at next char next time
+	lxi	h,bfchr	; Test against 9 brainfuck characters (8 + EOF)
+	mvi	e,9
+filchk:	cmp	m	; Is it a match?
+	jz	filfnd	; Then we found it
+	inx	h
+	dcr	e
+	jnz	filchk
+	jmp	filter	; Otherwise, try next character
+filfnd:	pop	h	; Get pointer from stack
+	mov	m,a	; Store current character
+	inx	h	; Move pointer
+	push	h	; Store pointer back on stack
+	cpi	26	; Reached the end?
+	jnz	filter	; If not, keep going.
+	;;;	Move the program as high up into memory as possible.
+	lxi	h,-1024	; Keep 1K stack space (allowing 512 levels of nested
+	dad	sp	; loops)
+	pop	d	; Source pointer in DE (destination in HL)
+move:	ldax	d	; Copy backwards
+	dcx	d
+	mov	m,a
+	dcx 	h
+	ana	a	; Until zero is reached
+	jnz	move
+	inx	h	; Move pointer to byte after zero
+	inx	h
+	;;;	Compile the Brainfuck code into 8080 machine code
+	lxi	b,0	; Push zero on stack (as boundary marker)
+	push	b
+	lxi 	d,pgm	; DE = start of binary area (HL at start of source)
+compil:	mov	a,m	; Get source byte
+	cpi	'+'	; Plus or minus - change the tape value
+	jz	tapval
+	cpi	'-'
+	jz	tapval
+	cpi	'<'	; Left or right - move the tape
+	jz	tapmov
+	cpi	'>'
+	jz 	tapmov
+	cpi	'.'	; Input and output
+	jz	chout
+	cpi	','
+	jz	chin
+	cpi	'['	; Start of loop
+	jz	loops	
+	cpi	']'	; End of loop
+	jz 	loope
+	cpi	26	; EOF?
+	jz	cdone
+	inx	h	; Anything else is ignored
+	jmp	compil
+	;;;	Write code for '+' or '-' (change cell value)
+tapval:	mvi	c,0	; C = change in value necessary
+tapv_s:	mov	a,m	; Get current byte
+	cpi	'+'	; If plus,
+	jz	tapinc	; Then we need to increment
+	cpi	'-'	; If minus,
+	jz	tapdec 	; Then we need to decrement
+	;;;	The effect of the last instructions should be to
+	;;;	change the cell at the tape head by C.
+	;;;	If -3 <= B <= 3, INR M/DCR M are most efficient.
+	;;;	Otherwise, MVI A,NN / ADD M / MOV M,A is most efficient.
+	mov	a,c
+	ana	a	; Zero?
+	jz	compil	; Then we do nothing.
+	cpi	4	; Larger than 3?
+	jc	tapinr	; If not, 'INR M' * C
+	cpi	-3	; Smaller than -3?
+	jnc	tapdcr	; Then, 'DCR M' * -C
+	xchg		; Otherwise, use an ADD instruction
+	mvi	m,3Eh	; 'MVI A,'
+	inx	h
+	mov	m,c	; C (all math is mod 256)
+	inx	h
+	mvi	m,86h	; 'ADD M'
+	inx	h
+	mvi 	m,77h	; 'MOV M,A'
+	inx	h
+	xchg
+	jmp	compil
+tapinc:	inr	c	; '+' means one more
+	inx	h	; Check next byte
+	jmp	tapv_s
+tapdec:	dcr	c	; '-' means one less
+	inx	h	; Check next byte
+	jmp	tapv_s
+tapinr:	mvi	a,34h	; INR M (increment cell)
+	jmp	wrbyte
+tapdcr:	mvi	a,35h	; DCR M (decrement cell)
+	jmp	wrnegc
+	;;;	Write code for '<' or '>' (move tape head)
+tapmov:	lxi	b,0	; BC = change in value necessary
+tapm_s:	mov	a,m	; Get current byte
+	cpi	'>'	; If right,
+	jz	taprgt	; Then we need to move the tape right
+	cpi	'<'	; If left,
+	jz	taplft	; Then we need to move the tape left
+	;;;	Move the tape by BC.
+	;;;	If -4 <= BC <= 4, INX H/DCX H are most efficient.
+	;;;	Otherwise, LXI B,NNNN / DAD B is most efficient.
+	mov	a,b	; Is the displacement zero?
+	ora	c
+	jz	compil	; Then do nothing
+	mov	a,b	; Otherwise, is the high byte 0?
+	ana	a
+	jnz	tbchi	; If not, it might be FF, but
+	mov	a,c	; if so, is low byte <= 4?
+	cpi	5
+	jc	tapinx	; Then we need to write 'INX H' C times
+	xra	a	; Otherwise, do it the long way
+tbchi:	inr	a	; Is the high byte FF?
+	jnz	tapwbc	; If not, we'll have to do it the long way
+	mov	a,c	; But if so, is low byte >= -4?
+	cpi	-4	
+	jnc	tapdcx	; Then we can write 'DCX H' -C times
+tapwbc:	xchg		; Otherwise, use a DAD instruction
+	mvi	m,1h	; 'LXI B,'
+	inx	h
+	mov	m,c	; Low byte
+	inx	h
+	mov	m,b	; High byte
+	inx	h
+	mvi	m,9h	; 'DAD B'
+	inx	h
+	xchg
+	jmp	compil
+taprgt:	inx	b	; '>' is one to the right
+	inx	h	; Check next byte
+	jmp	tapm_s
+taplft:	dcx	b	; '<' is one to the left
+	inx	h	; Check next byte
+	jmp	tapm_s
+tapinx:	mvi	a,23h	; INX H (move tape right)
+	jmp	wrbyte
+tapdcx:	mvi	a,2Bh	; DCX H (move tape left)
+	jmp	wrnegc
+	;;;	Write the byte in A, -C times, to [DE++]
+wrnegc: mov	b,a	; Keep A
+	mov	a,c	; Negate C
+	cma
+	inr	a
+	mov	c,a
+	mov	a,b
+	;;;	Write the byte in A, C times, to [DE++]
+wrbyte:	stax	d
+	inx	d
+	dcr	c
+	jnz	wrbyte
+	jmp	compil
+	;;;	Write code to print the current tape value
+chout:	inx	h	; We know the cmd is '.', so skip it
+	lxi	b,bfout	; Call the output routine
+	jmp	wrcall
+	;;;	Write code to read a character and store it on the tape
+chin:	inx	h	; We know the cmd is ',', so skip it
+	lxi	b,bfin
+	;;;	Write code to CALL the routine with address BC
+wrcall:	xchg
+	mvi	m,0CDh	; CALL
+	inx	h
+	mov	m,c	; Low byte
+	inx	h
+	mov	m,b	; High byte
+	inx	h
+	xchg
+	jmp	compil
+	;;;	Write code to start a loop
+loops:	inx	h	; We know the first cmd is '['
+	mov	b,h	; Check for '-]'
+	mov	c,l
+	ldax	b
+	cpi	'-'	
+	jnz	loopsw	; If not '-', it's a real loop
+	inx	b
+	ldax 	b
+	cpi	']'
+	jz	lzero	; If ']', we just need to set the cell to 0
+	;;;	Code for loop: MOV A,M / ANA A / JZ cmd-past-loop
+loopsw:	xchg		; Destination pointer in HL
+	mvi	m,7Eh	; MOV A,M
+	inx	h
+	mvi	m,0A7h	; ANA A
+	inx	h
+	mvi	m,0CAh	; JZ
+	inx	h
+	inx	h	; Advance past where the destination will go
+	inx	h	; (End of loop will fill it in)
+	push	h 	; Store the address to jump back to on the stack
+	xchg
+	jmp	compil
+	;;;	Code to set a cell to zero in one go: MVI M,0
+lzero:	inx	h	; Move past '-]'
+	inx	h
+	xchg		; Destination pointer in HL
+	mvi	m,36h	; MVI M,
+	inx	h
+	mvi	m,0	; 0
+	inx	h
+	xchg
+	jmp	compil
+	;;;	Write code to end a loop: MOV A,M / ANA A / JNZ loop-start
+loope:	inx	h	; We know the first cmd is ']'
+	xchg		; Destination pointer in HL
+	mvi	m,7Eh	; MOV A,M
+	inx	h
+	mvi	m,0A7h	; ANA A
+	inx	h
+	mvi	m,0C2h	; JNZ
+	inx	h
+	pop	b	; Get loop-start from the stack
+	mov	a,b	; If it is 0, we've hit the sentinel, which means
+	ora	c	; mismatched brackets
+	jz	brkerr
+	mov	m,c	; Store loop-start, low byte first,
+	inx	h
+	mov	m,b	; then high byte.
+	inx	h
+	dcx	b	; The two bytes before loop-start must be filled in
+	mov	a,h	; with the address of the cmd past the loop, high
+	stax	b	; byte last,
+	dcx	b
+	mov	a,l	; then low byte
+	stax 	b
+	xchg	
+	jmp	compil
+	;;;	Done: finish the code with a RST 0 to end the program
+cdone:	xchg
+	mvi	m,0C7h
+	pop 	b 	; If the brackets are all matched, there should be
+	mov	a,b	; a zero on the stack.
+	ora	c
+	jnz	brkerr
+	;;;	Initialize the tape. The fastest way to fill up memory on the
+	;;;	8080 is to push values to the stack, so we will fill it up
+	;;;	with zeroes, and position the tape there.
+	;;;	HL contains the top of the program.
+	lxi	d,32	; The Brainfuck program doesn't use the stack, so
+	dad	d	; reserving 16 levels for CP/M is more than enough.
+	mov	a,l	; Complement the value (almost negation, but low bit
+	cma		; doesn't really matter here)
+	mov	l,a
+	mov	a,h
+	cma
+	mov	h,a
+	dad	sp	; Add the current stack pointer, giving bytes to fill
+	ana	a	; Zero carry
+	mov	a,h	; Divide value by two (we push words)
+	rar
+	mov	h,a
+	mov	a,l
+	rar
+	mov	l,a
+	lxi	d,0
+ztape:	push	d	; Zero out the tape (on the stack)
+	dcx	h
+	mov	a,h
+	ora	l
+	jnz	ztape
+	dad	sp	; HL is now 0, add SP to get tape bottom
+	;;;	The compiled program is stored after this point, so we just
+	;;;	fall through into it.
+	nop		; No-op (sentinel value)
+pgm:	equ	$	; Compiled BF program stored here.

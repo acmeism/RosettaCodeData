@@ -1,0 +1,180 @@
+*        Align columns             12/04/2019
+ALICOL   CSECT
+         USING  ALICOL,R13         base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         SAVE   (14,12)            save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R8,1               i=1
+       DO WHILE=(C,R8,LE,=A(NI))   do r=1 to hbound(t)
+         LA     R7,1                 j=1
+         LA     R6,L'T               i=length(t)
+       DO WHILE=(C,R6,GE,=A(1))      do i=length(t) to 1 by -1
+         LR     R1,R8                  r
+         MH     R1,=AL2(L'T)           ~
+         LA     R4,T-L'T(R1)           t(r)
+         BCTR   R4,0                   -1
+         AR     R4,R6                  +i
+         MVC    CI,0(R4)               ci=substr(t(r),i,1)
+         CLI    CI,C' '                if ci=' '
+         BE     ITERI1                 then iterate i
+         CLI    CI,C'$'                if ci='$'
+         BE     ITERI1                 then iterate i
+         LR     R7,R6                  j=i
+         B      LEAVEI1                leave i
+ITERI1   BCTR   R6,0                   i--
+       ENDDO    ,                    enddo i
+LEAVEI1  LR     R1,R8                r
+         MH     R1,=AL2(L'T)         ~
+         LA     R4,T-L'T(R1)         @t(r)
+         LA     R2,WT                @wt
+         LR     R5,R7                j
+         ICM    R5,B'1000',=C' '     padding
+         LA     R3,L'T               length(wt)
+         MVCL   R2,R4                wt=substr(t(r),1,j)
+         LA     R0,1                 1
+         ST     R0,I0                i0=1
+         SR     R9,R9                c=0
+         LA     R6,1                 i=1
+       DO WHILE=(CR,R6,LE,R7)        do i=1 to j
+         LA     R4,WT-1                @wt
+         AR     R4,R6                  i
+         MVC    CI(1),0(R4)            ci=substr(wt,i,1)
+       IF   CLI,CI,EQ,C'$' THEN        if ci='$' then
+         BAL    R14,SEQ                  call seq
+         LR     R2,R6                    i
+         LA     R2,1(R2)                 +1
+         ST     R2,I0                    i0=i+1
+       ENDIF    ,                      endif
+         LA     R6,1(R6)               i++
+       ENDDO    ,                    enddo i
+         BAL    R14,SEQ            call seq
+       IF     C,R9,GT,COLS THEN    if c>cols then
+         ST     R9,COLS              cols=c
+       ENDIF    ,                  endif
+         LA     R8,1(R8)             r++
+       ENDDO    ,                  enddo r
+         LR     R2,R8              r
+         BCTR   R2,0               -1
+         ST     R2,ROWS            rows=r-1
+         LA     R7,1               j=1
+       DO WHILE=(C,R7,LE,=A(3))    do j=1 to 3
+         XPRNT  =C'--',2             print
+         LA     R8,1                 r=1
+       DO WHILE=(C,R8,LE,ROWS)       do r=1 to rows
+         MVC    PG,=CL120' '           pg=' '
+         LA     R0,1                   1
+         ST     R0,IB                  ib=1
+         LA     R9,1                   c=1
+       DO WHILE=(C,R9,LE,COLS)         do c=1 to cols
+         LR     R1,R8                    r
+         BCTR   R1,0                     -1
+         MH     R1,=AL2(NJ)              ~
+         AR     R1,R9                    c
+         MH     R1,=AL2(L'WOR)           ~
+         LA     R4,WOR-L'WOR(R1)         @wor(r,c)
+         MVC    W,0(R4)                  w=wor(r,c)
+         LA     R6,L'W                   i=length(w)
+       DO WHILE=(C,R6,GE,=A(1))          do i=length(w) to 1 by -1
+         LA     R4,W-1                     @w
+         AR     R4,R6                      i
+         MVC    CI,0(R4)                   ci=substr(w,i,1)
+         CLI    CI,C' '                    if ci^=' '
+         BNE    LEAVEI2                    then goto leavei2;
+         BCTR   R6,0                       i--
+       ENDDO    ,                        enddo i
+LEAVEI2  EQU    *                        ~
+       IF   LTR,R6,Z,R6 THEN             if i=0 then
+         LA     R10,1                      l=1
+       ELSE     ,                        else
+         LR     R10,R6                     l=i
+       ENDIF    ,                        endif
+       IF     C,R7,EQ,=F'1' THEN         if j=1 then
+         L      R11,IB                     ibx=ib
+       ENDIF    ,                        endif
+       IF     C,R7,EQ,=F'2' THEN         if j=2 then
+         LR     R1,R9                      c
+         SLA    R1,2                       ~
+         L      R11,WID-L'WID(R1)          wid(c)
+         A      R11,IB                     +ib
+         SR     R11,R10                    ibx=ib+wid(c)-l
+       ENDIF    ,                        endif
+       IF     C,R7,EQ,=F'3' THEN         if j=3 then
+         LR     R1,R9                      c
+         SLA    R1,2                       ~
+         L      R11,WID-L'WID(R1)          wid(c)
+         SR     R11,R10                    -l
+         SRA    R11,1                      /2
+         A      R11,IB                     ibx=ib+(wid(c)-l)/2
+       ENDIF    ,                        endif
+         LA     R2,PG-1                  @pg
+         AR     R2,R11                   +ibx
+         LR     R3,R10                   l
+         LA     R4,W                     @w
+         LR     R5,R10                   l
+         MVCL   R2,R4                    substr(pg,ibx,l)=substr(w,1,l)
+         LR     R1,R9                    c
+         SLA    R1,2                     ~
+         L      R2,WID-L'WID(R1)         wid(c)
+         A      R2,IB                    +ib
+         LA     R2,1(R2)                 +1
+         ST     R2,IB                    ib=ib+wid(c)+1
+         LA     R9,1(R9)                 c++
+       ENDDO    ,                      enddo c
+         XPRNT  PG,L'PG                print
+         LA     R8,1(R8)               r++
+       ENDDO    ,                    enddo r
+         LA     R7,1(R7)             j++
+       ENDDO    ,                  enddo j
+         L      R13,4(0,R13)       restore previous savearea pointer
+         RETURN (14,12),RC=0       restore registers from calling sav
+SEQ      EQU    *                  --begin seq
+         LA     R9,1(R9)           c=c+1
+         LR     R10,R6             i
+         S      R10,I0             l=i-i0
+         LA     R4,WT-1            @wt
+         A      R4,I0              +i0
+         LR     R5,R10             l
+         ICM    R5,B'1000',=C' '   padding
+         LR     R1,R8              r
+         BCTR   R1,0               -1
+         MH     R1,=AL2(NJ)        ~
+         AR     R1,R9              +c
+         MH     R1,=AL2(L'WOR)     ~
+         LA     R2,WOR-L'WOR(R1)   @wor(r,c)
+         LA     R3,L'WOR           length(wor)
+         MVCL   R2,R4              wor(r,c)=substr(wt,i0,l)
+         LR     R1,R9              c
+         SLA    R1,2               ~
+         L      R2,WID-L'WID(R1)   wid(c)
+       IF     CR,R2,LT,R10 THEN    if l>wid(c) then
+         LR     R1,R9                c
+         SLA    R1,2                 ~
+         ST     R10,WID-L'WID(R1)    wid(c)=l
+       ENDIF    ,                  endif
+         BR     R14                --end seq
+NI       EQU    6                  ni
+NJ       EQU    12                 nj
+T DC CL68'Given$a$text$file$of$many$lines,$where$fields$within$a$line$'
+  DC CL68'are$delineated$by$a$single$''dollar''$character,$write$a$progX
+               ramm'
+  DC CL68'that$aligns$each$column$of$fields$by$ensuring$that$words$in$eX
+               ach$'
+  DC CL68'column$are$separated$by$at$least$one$space.'
+  DC CL68'Further,$allow$for$each$word$in$a$column$to$be$either$left$'
+  DC CL68'justified,$right$justified,$or$center$justified$within$its$coX
+               lumn.'
+WOR      DC     (NI*NJ)CL10' '     wor(ni,nj) char(10)
+WID      DC     16F'0'             wid(16)
+COLS     DC     F'0'
+ROWS     DC     F'0'
+WT       DS     CL(L'T)
+W        DS     CL(L'WOR)
+CI       DS     CL1
+I0       DS     F
+IB       DS     F
+PG       DS     CL120
+         REGEQU
+         END    ALICOL

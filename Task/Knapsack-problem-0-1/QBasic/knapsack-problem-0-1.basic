@@ -1,0 +1,36 @@
+N = 7: G = 5: a = 2 ^ (N + 1) ' Author: DANILIN & Editor: Jjuanhdez or Unknow
+RANDOMIZE TIMER
+DIM L(N), C(N), j(N), q(a), d(a), q$(a)
+
+FOR i = a - 1 TO (a - 1) \ 2 STEP -1
+    k = i
+    DO  ' cipher 0-1
+        q$(i) = LTRIM$(STR$(k MOD 2)) + q$(i)
+        k = INT(k / 2)
+    LOOP UNTIL k = 0
+    q$(i) = MID$(q$(i), 2, LEN(q$(i)))
+NEXT i
+
+PRINT " #            Mass          Cost"
+FOR i = 1 TO N
+    L(i) = INT(RND * 3 + 1)' mass & cost
+    C(i) = 10 + INT(RND * 9)
+    PRINT i, L(i), C(i)
+NEXT i  ' origin
+
+PRINT CHR$(10) + "Mass          Cost           Chifer"
+FOR h = a - 1 TO (a - 1) / 2 STEP -1
+    FOR k = 1 TO N
+        j(k) = VAL(MID$(q$(h), k, 1))    ' j() = cipher
+        q(h) = q(h) + L(k) * j(k) * C(k) ' 0 or 1
+        d(h) = d(h) + L(k) * j(k)
+    NEXT k
+    IF d(h) <= G THEN PRINT d(h), q(h), q$(h)
+NEXT h
+
+PRINT CHR$(10) + "Mass          MAX            Chifer"
+max = 0: h = 1
+FOR i = 1 TO a
+    IF d(i) <= G AND q(i) > max THEN max = q(i): h = i
+NEXT i
+PRINT d(h), q(h), q$(h)

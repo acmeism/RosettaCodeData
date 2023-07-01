@@ -1,0 +1,97 @@
+#include "share/atspre_staload.hats"
+
+fun aitken                      (* Aitken's extrapolation *)
+      (f  : double -> double,   (* function double to double *)
+       p0 : double)             (* initial fixed point estimate *)
+    : double =
+  let
+    val p1 = f(p0)
+    val p2 = f(p1)
+    val p1m0 = p1 - p0
+  in
+    p0 - (p1m0 * p1m0) / (p2 - (2.0 * p1) + p0)
+  end
+
+fun steffensen_aitken     (* finds fixed point p such that f(p) = p *)
+      (f       : double -> double, (* function double to double *)
+       pinit   : double,           (* initial estimate *)
+       tol     : double,           (* tolerance *)
+       maxiter : int)              (* maximum number of iterations *)
+    : Option (double) =     (* return a double, IF tolerance is met *)
+  let
+    var p0   : double = pinit
+    var p    : double = aitken (f, p0)
+    var iter : int = 1          (* iteration counter *)
+  in
+    while (abs (p - p0) > tol andalso iter < maxiter)
+      begin
+        p0 := p;
+        p := aitken (f, p0);
+        iter := iter + 1
+      end;
+    if abs (p - p0) > tol then None () else Some (p)
+  end
+
+fun de_casteljau
+      (c0 : double,         (* control point coordinates (one axis) *)
+       c1 : double,
+       c2 : double,
+       t  : double)             (* the independent parameter *)
+    : double =                  (* value of x(t) or y(t) *)
+  let
+    val s = 1.0 - t
+    val c01 = (s * c0) + (t * c1)
+    val c12 = (s * c1) + (t * c2)
+    val c012 = (s * c01) + (t * c12)
+  in
+    c012
+  end
+
+fun x_convex_left_parabola (t : double) : double =
+  de_casteljau (2.0, ~8.0, 2.0, t)
+
+fun y_convex_left_parabola (t : double) : double =
+  de_casteljau (1.0, 2.0, 3.0, t)
+
+fun implicit_equation (x : double, y : double) : double =
+  (5.0 * x * x) + y - 5.0
+
+fun f (t : double) : double = (* find fixed points of this function *)
+  let
+    val x = x_convex_left_parabola (t)
+    val y = y_convex_left_parabola (t)
+  in
+    implicit_equation (x, y) + t
+  end
+
+implement main0 () =
+  let
+    var i : int = 0
+    var t0 : double = 0.0
+  in
+    while (not (i = 11))
+      begin
+        begin
+          print! ("t0 = ", t0, " : ");
+          case steffensen_aitken (f, t0, 0.00000001, 1000) of
+          | None () => println! ("no answer")
+          | Some (t) =>
+            let
+              val x = x_convex_left_parabola (t)
+              val y = y_convex_left_parabola (t)
+            in
+              if abs (implicit_equation (x, y)) <= 0.000001 then
+                println! ("intersection at (", x, ", ", y, ")")
+              else
+                (* In my experience, it is possible for the algorithm
+                   to achieve tolerance and yet give a spurious
+                   answer. Exploration of this phenomenon is beyond
+                   the scope of this task. Such spurious answers are
+                   easy to discard. *)
+                println! ("spurious solution")
+            end
+        end;
+        i := i + 1;
+        t0 := t0 + 0.1
+      end
+  end

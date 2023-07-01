@@ -1,0 +1,96 @@
+% This program uses the 'bigint' cluster from PCLU's 'misc.lib'
+
+% Remove leading and trailing whitespace (bigint$unparse adds a lot)
+strip = proc (s: string) returns (string)
+    ac = array[char]
+    sc = sequence[char]
+    cs: ac := string$s2ac(s)
+    while ~ac$empty(cs) cand ac$bottom(cs)=' ' do ac$reml(cs) end
+    while ~ac$empty(cs) cand ac$top(cs)=' ' do ac$remh(cs) end
+    % There's a bug in ac2s that makes it not return all elements
+    % This is a workaround
+    return(string$sc2s(sc$a2s(cs)))
+end strip
+
+divisor_sum = proc (n: bigint) returns (bigint)
+    own zero: bigint := bigint$i2bi(0)
+    own one: bigint := bigint$i2bi(1)
+    own two: bigint := bigint$i2bi(2)
+    own three: bigint := bigint$i2bi(3)
+
+    total: bigint := one
+    power: bigint := two
+    while n//two=zero do
+        total := total + power
+        power := power * two
+        n := n / two
+    end
+    p: bigint := three
+    while p*p <= n do
+        sum: bigint := one
+        power := p
+        while n//p = zero do
+            sum := sum + power
+            power := power * p
+            n := n/p
+        end
+        total := total * sum
+        p := p + two
+    end
+    if n>one then total := total * (n+one) end
+    return(total)
+end divisor_sum
+
+classify_aliquot_sequence = proc (n: bigint)
+    LIMIT = 16
+    abi = array[bigint]
+    own zero: bigint := bigint$i2bi(0)
+    po: stream := stream$primary_output()
+
+    terms: array[bigint] := abi$predict(0,LIMIT)
+    abi$addh(terms, n)
+
+    classification: string := "non-terminating"
+    for i: int in int$from_to(1, limit-1) do
+        abi$addh(terms, divisor_sum(abi$top(terms)) - abi$top(terms))
+        if abi$top(terms) = n then
+            if i=1 then classification := "perfect"
+            elseif i=2 then classification := "amicable"
+            else classification := "sociable"
+            end
+            break
+        end
+        j: int := 1
+        while j<i cand terms[i] ~= terms[i-j] do j := j+1 end
+        if j<i then
+            if j=1 then classification := "aspiring"
+            else classification := "cyclic"
+            end
+            break
+        end
+        if abi$top(terms) = zero then
+            classification := "terminating"
+            break
+        end
+    end
+
+    stream$puts(po, strip(bigint$unparse(n)) || ": " || classification || ", sequence: "
+                 || strip(bigint$unparse(terms[0])))
+    for i: int in int$from_to(1, abi$high(terms)) do
+        if terms[i] = terms[i-1] then break end
+        stream$puts(po, " " || strip(bigint$unparse(terms[i])))
+    end
+    stream$putl(po, "")
+end classify_aliquot_sequence
+
+start_up = proc ()
+    for i: int in int$from_to(1, 10) do
+        classify_aliquot_sequence(bigint$i2bi(i))
+    end
+    for i: int in array[int]$elements(array[int]$
+        [11,12,28,496,220,1184,12496,1264460,790,909,562,1064,1488]) do
+        classify_aliquot_sequence(bigint$i2bi(i))
+    end
+    classify_aliquot_sequence(bigint$parse("15355717786080"))
+    classify_aliquot_sequence(bigint$parse("153557177860800"))
+end start_up

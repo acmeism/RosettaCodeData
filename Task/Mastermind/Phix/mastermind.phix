@@ -1,0 +1,569 @@
+-- demo/rosetta/mastermind.exw
+constant SET_LIMIT = 1_000_000  -- above this, it uses random sampling.
+
+constant help_text = """
+The game of mastermind, with a Knuth solver.
+
+Specify the number of colours (1..20), the code length (1..10), the
+number of guesses allowed (1-20), and whether colours can be repeated
+(auto-ticked & greyed-out inactive when length>colours).
+
+Note that at the highest settings there are 10,240,000,000,000 possible
+answers: the (order n squared) analysis of that is simply not practical,
+as indeed is simply building the initial list of all possible answers,
+and therefore a fixed limit of 1,000,000 has been applied, which also
+just about manages to keep the program responsive. Obviously, should the
+actual answer not be among those samples, it cannot possibly find it,
+and it will tell you in plain english when that occurs. You can always
+trim the search space back to something more reasonable at any time, and
+still play the game when that limit is breached, with weaker hints.
+
+Conversely the lowest settings do not make for an interesting game, but
+proved quite useful when ironing out some bugs, so were left in.
+
+The Use button (disabled until something useful found) allows you to
+take the best found (so far), displayed at the top of the colours frame.
+Obviously "1/1 (100%)" means that it has deduced the correct answer.
+Below that the colours frame shows all available colours, which can be
+individually clicked in any order.
+
+Press Delete or click on the last peg (in the left-hand game frame)
+to remove it, before the last one is placed, however once full your
+turn is immediately scored and cannot be undone.
+
+New Game, Help, and Exit buttons are assumed to be self-explanatory.
+Changing the option settings implicitly triggers a new game, except
+for the number of permitted guesses, pre-game-over. Reducing the
+number of guesses can also be used as a means of conceding.
+
+When a correct guess is entered or all guesses have been used the hint
+and colours are replaced with "GAME OVER - YOU WIN/LOSE" under the
+actual answer.
+"""
+include pGUI.e
+
+Ihandle dlg, colours, codelen, maxgoes, repeats, progress,
+        usehint, game_canvas, colour_canvas
+integer ncolours, ncodelen, nmaxgoes
+bool brepeats
+
+sequence secret = {},
+         hint = {},
+         guesses = {{}},
+         scores = {}
+--
+-- note: while the game is ongoing, length(guesses) should always be
+--       length(scores)+1; equal lengths is equivalent to game over.
+--
+
+function get_score(sequence guess, goal)
+integer blacks = 0, -- (right colour & place)
+        whites = 0  -- ("" but wrong place)
+    for i=1 to length(guess) do
+        if guess[i]=goal[i] then
+            blacks += 1
+            guess[i] = ' '
+            goal[i] = ' '
+        end if
+    end for
+    for i=1 to length(guess) do
+        if guess[i]!=' ' then
+            integer k = find(guess[i],goal)
+            if k then
+                whites += 1
+                goal[k] = ' '
+            end if
+        end if
+    end for
+    return {blacks, whites}
+end function
+
+function random_set()
+-- create the secret code, and/or (when rqd) a SET_LIMIT random sample
+    sequence cset = tagset(ncolours),
+             res = repeat(0,ncodelen)
+    for i=1 to ncodelen do
+        integer c = rand(length(cset))
+        res[i] = cset[c]
+        if not brepeats then
+            cset[c..c] = {}
+        end if
+    end for
+    return res
+end function
+
+sequence initial_set
+atom is_len,    -- logically length(initial_set), except when > SET_LIMIT.
+     excluded   -- initialset[1..excluded-1], are not, [excluded..$] are.
+
+procedure create_initial_set()
+    is_len = iff(brepeats?power(ncolours,ncodelen):k_perm(ncolours,ncodelen))
+    if is_len<=SET_LIMIT then
+        --
+        -- generate the full set
+        --
+        initial_set = repeat(0,is_len)
+        excluded = is_len+1 -- (ie none)
+        sequence next = iff(brepeats?repeat(1,ncodelen):tagset(ncodelen))
+        for i=1 to is_len do
+            initial_set[i] = next
+            for ndx=length(next) to 1 by -1 do
+                integer n = next[ndx]
+                while n<=ncolours do
+                    n += 1
+                    if brepeats
+--                  or not find(n,next[1..ndx-1]) then
+                    or not find(n,next) then --(see below)
+                        exit
+                    end if
+                end while
+                next[ndx] = n
+                if n<=ncolours then
+                    if not brepeats then
+                        --
+                        -- Fill in the rest lowest-first, eg
+                        -- in the 4 colours and 4 holes case:
+                        --   (start)       (above)       (this)
+                        --  {1,2,3,4} --> {1,2,4,_} --> {1,2,4,3}
+                        --  {1,2,4,3} --> {1,3,_,_} --> {1,3,2,4}
+                        --  ...   (20 other cases omitted)
+                        --  {4,3,1,2} --> {4,3,2,_} --> {4,3,2,1}
+                        --
+                        -- (probably sub-optimal, but insignificant
+                        --  vs. the o(n^2) analysis which follows.)
+                        --
+                        for j=ndx+1 to length(next) do
+                            for k=1 to ncolours do
+--                              if not find(k,next[1..j-1]) then
+                                if not find(k,next) then --(see below)
+                                    next[j] = k
+                                    exit
+                                end if
+                            end for
+                        end for
+                    end if
+                    exit
+                end if
+                --
+                -- technical note: if not brepeats, we are going to
+                -- replace all next[ndx..$] later/above anyway, but
+                -- replacing with 0 means we can avoid those slices.
+                -- The next three all work: 1 is perfect for the
+                -- brepeats=true case, but brepeats=false needs the
+                -- above slices, while the 2nd & 3rd are equivalent
+                -- the latter is obviously somewhat faster, at the
+                -- cost of a wtf?!, without a comment such as this.
+                --
+--              next[ndx] = 1
+--              next[ndx] = iff(brepeats?1:0)
+                next[ndx] = brepeats -- (equivalent)
+            end for
+        end for
+    else
+        --
+        -- generate SET_LIMIT random codes
+        -- note that if (as is quite likely) the actual answer is
+        -- not present in initial_set, then obviously it cannot
+        -- possibly find it!
+        --
+        initial_set = repeat(0,SET_LIMIT)
+        excluded = SET_LIMIT+1  -- (ie none)
+        for i=1 to SET_LIMIT do
+            initial_set[i] = random_set()
+        end for
+    end if
+end procedure
+
+atom done, is_done, best
+
+function idle_action()
+    atom to_do = excluded-1,
+         t1 = time()+1
+    string samp = iff(is_len=length(initial_set)?"":sprintf(" samples of %,d",{is_len}))
+    for i=1 to 100000 do    -- reasonable slice of work
+        done += 1
+        is_done += (done<excluded)
+        sequence guest = initial_set[done],
+                 scores = {}, counts = {}
+        if not find(guest,guesses) then
+            for j=1 to excluded-1 do
+                sequence s = get_score(guest,initial_set[j])
+                integer k = find(s,scores)
+                if k=0 then
+                    scores = append(scores,s)
+                    counts = append(counts,1)
+                else
+                    counts[k] += 1
+                end if
+            end for
+            if length(counts)=0 then
+                IupSetStrAttribute(progress,"TITLE","[answer not in %,d%s]",{SET_LIMIT,samp})
+                return IUP_IGNORE   -- (stop idle)
+            end if
+            integer k = largest(counts,return_index:=true),
+                    ck = counts[k]
+            if ck<best then
+                best = ck
+                hint = guest
+                IupSetInt(usehint,"ACTIVE",true)
+                IupUpdate(colour_canvas)
+            end if
+        end if
+
+        if done=length(initial_set) then
+            IupSetStrAttribute(progress,"TITLE","%,d/%,d%s (100%%)",{is_done,to_do,samp})
+            return IUP_IGNORE   -- (stop idle)
+        end if
+        if time()>t1 then exit end if
+    end for
+    IupSetStrAttribute(progress,"TITLE","%,d/%,d%s (%d%%)",{is_done,to_do,samp,100*(is_done/to_do)})
+    return IUP_DEFAULT
+end function
+constant idle_action_cb = Icallback("idle_action")
+
+procedure start_idle()
+    done = 0
+    is_done = 0
+    best = length(initial_set)+1
+    IupSetGlobalFunction("IDLE_ACTION",idle_action_cb)
+end procedure
+
+procedure new_game()
+    ncolours = IupGetInt(colours,"VALUE")
+    ncodelen = IupGetInt(codelen,"VALUE")
+    nmaxgoes = IupGetInt(maxgoes,"VALUE")
+    brepeats = IupGetInt(repeats,"VALUE")
+    secret = random_set()
+    guesses = {{}}
+    scores = {}
+    hint = {}
+    create_initial_set()
+    start_idle()
+end procedure
+
+constant colour_table = {#e6194b,   -- Red
+                         #3cb44b,   -- Green
+                         #ffe119,   -- Yellow
+                         #4363d8,   -- Blue
+                         #f58231,   -- Orange
+                         #911eb4,   -- Purple
+                         #42d4f4,   -- Cyan
+                         #f032e6,   -- Magenta
+                         #bfef45,   -- Lime
+                         #fabebe,   -- Pink
+                         #469990,   -- Teal
+                         #e6beff,   -- Lavender
+                         #9A6324,   -- Brown
+                         #fffac8,   -- Beige
+                         #800000,   -- Maroon
+                         #aaffc3,   -- Mint
+                         #808000,   -- Olive
+                         #ffd8b1,   -- Apricot
+                         #000075,   -- Navy
+                         #a9a9a9}   -- Grey
+
+-- saved in redraw_cb(), for click testing in button_cb():
+sequence last_guess = {},
+         colour_centres = {}
+integer guess_r2 = 0,
+        colour_r2 = 0
+
+function redraw_cb(Ihandle ih, integer /*posx*/, integer /*posy*/)
+    Ihandle frame = IupGetParent(ih)
+    string title = IupGetAttribute(ih,"TITLE")
+    if not find(title,{"Game","Colours"}) then ?9/0 end if
+    integer {cw,ch} = IupGetIntInt(ih, "DRAWSIZE")
+
+    cdCanvas cddbuffer = IupGetAttributePtr(ih,"DBUFFER")
+    IupGLMakeCurrent(ih)
+    cdCanvasActivate(cddbuffer)
+    cdCanvasClear(cddbuffer)
+
+    if title="Game" then
+        integer mx = min(floor(cw/(ncodelen*1.5+0.5)),floor(ch/(nmaxgoes+1))),
+                diameter = floor(mx/2),
+                px = floor((cw-(ncodelen*1.5+0.5)*mx)/2), -- (set margin)
+                cy = ch, cx, c, r
+        last_guess = {}
+        for g=1 to length(guesses) do
+            cy -= mx
+            cx = px+floor(mx/2)
+            for i=1 to 2*ncodelen+1 do
+                if i!=ncodelen+1 then
+                    if i<=ncodelen then
+                        if i<=length(guesses[g]) then
+                            c = colour_table[guesses[g][i]]
+                            if g=length(guesses) then
+                                last_guess = {{cx,ch-cy}}
+                            end if
+                        else
+                            c = CD_GREY
+                        end if
+                        r = diameter
+                    else
+                        c = CD_GREY
+                        if g<=length(scores) then
+                            integer k = i-ncodelen-1,
+                                    {b,w} = scores[g]
+                            c = iff(k<=b ? CD_BLACK : iff(k<=b+w ? CD_WHITE : CD_GREY))
+                        end if
+                        r = floor(diameter*0.5)
+                    end if
+                    cdCanvasSetForeground(cddbuffer,c)
+                    cdCanvasSector(cddbuffer, cx, cy, r, r, 0, 360)
+                    cdCanvasSetForeground(cddbuffer,CD_DARK_GREY)
+                    cdCanvasCircle(cddbuffer, cx, cy, r)
+                end if
+                cx += iff(i<ncodelen?mx:floor(mx/2))
+            end for
+        end for
+        guess_r2 = floor(diameter*diameter/4)
+    elsif title="Colours" then
+        integer mx = min(floor(cw/ncodelen),floor(ch/2)),
+                r = floor(mx/2),
+                px = floor((cw-ncodelen*mx)/2), -- (set margin)
+                cy = ch-r, cx, c
+        cx = px+floor(mx/2)
+        bool active = length(hint)>0
+        if length(scores)=nmaxgoes then
+            hint = secret
+            active = true
+        end if
+        for i=1 to ncodelen do
+            c = iff(active?colour_table[hint[i]]:CD_GREY)
+            cdCanvasSetForeground(cddbuffer,c)
+            cdCanvasSector(cddbuffer, cx, cy, r, r, 0, 360)
+            cdCanvasSetForeground(cddbuffer,CD_DARK_GREY)
+            cdCanvasCircle(cddbuffer, cx, cy, r)
+            cx += mx
+        end for
+        if length(scores)=nmaxgoes
+        or guesses[$]=secret then
+            ch -= floor(mx/2)
+            {} = cdCanvasTextAlignment(cddbuffer, CD_CENTER)
+            string wl = iff(guesses[$]=secret?"WIN":"LOSE"),
+                   msg = sprintf("GAME OVER - YOU %s",{wl})
+            cdCanvasText(cddbuffer, cw/2, ch/2, msg)
+        else
+            integer ch0 = ch
+            ch -= mx
+            --
+            -- calculate the best nw*nh way to fit all the colours in:
+            -- (if nw ends up = ncodelen there is no clear separation
+            --  between the hint and the colour table; the start with
+            --  ncodelen+1 solves that and looks pretty good to me.)
+            --
+            integer nw = ncodelen+1,    -- (as above)
+                    nh = 1
+            while nw*nh<ncolours do
+                if (cw/(nw+1))>(ch/(nh+1)) then
+                    nw += 1
+                else
+                    nh += 1
+                end if
+            end while
+            --
+            -- now draw all the colours
+            --
+            mx = min(floor(cw/nw),floor(ch/nh))
+            r = floor(mx/2)
+            px = floor((cw-nw*mx)/2)
+            cx = px+floor(mx/2)
+            cy = ch-r
+            integer this_row = 0
+            colour_centres = repeat(0,ncolours)
+            colour_r2 = floor(r*r/4)
+            for i=1 to ncolours do
+                colour_centres[i] = {cx,ch0-cy}
+                c = colour_table[i]
+                cdCanvasSetForeground(cddbuffer,c)
+                cdCanvasSector(cddbuffer, cx, cy, r, r, 0, 360)
+                cdCanvasSetForeground(cddbuffer,CD_DARK_GREY)
+                cdCanvasCircle(cddbuffer, cx, cy, r)
+                cx += mx
+                this_row += 1
+                if this_row>=nw then
+                    this_row = 0
+                    cx = px + floor(mx/2)
+                    cy -= mx
+                end if
+            end for
+        end if
+    end if
+    cdCanvasFlush(cddbuffer)
+    return IUP_DEFAULT
+end function
+
+function map_cb(Ihandle ih)
+    IupGLMakeCurrent(ih)
+    atom res = IupGetDouble(NULL, "SCREENDPI")/25.4
+    cdCanvas cddbuffer = cdCreateCanvas(CD_GL, "10x10 %g", {res})
+    IupSetAttributePtr(ih,"DBUFFER",cddbuffer)
+    cdCanvasSetBackground(cddbuffer, CD_PARCHMENT)
+    return IUP_DEFAULT
+end function
+
+function canvas_resize_cb(Ihandle canvas)
+    cdCanvas cddbuffer = IupGetAttributePtr(canvas,"DBUFFER")
+    integer {canvas_width, canvas_height} = IupGetIntInt(canvas, "DRAWSIZE")
+    atom res = IupGetDouble(NULL, "SCREENDPI")/25.4
+    cdCanvasSetAttribute(cddbuffer, "SIZE", "%dx%d %g", {canvas_width, canvas_height, res})
+    return IUP_DEFAULT
+end function
+
+procedure redraw_all()
+    IupUpdate({game_canvas,colour_canvas})
+end procedure
+
+procedure undo_move()
+-- Called from button_cb and from K_DEL, but latter may be invalid.
+    if length(guesses[$])!=0 then
+        guesses[$] = guesses[$][1..$-1]
+        redraw_all()
+    end if
+end procedure
+
+procedure add_move(integer i)
+    if i!=0 then
+        guesses[$] &= i
+    end if
+    if length(guesses[$])=ncodelen then
+        sequence guest = guesses[$],
+                 score = get_score(guest,secret)
+        scores = append(scores,score)
+        if score!={ncodelen,0}  -- (not all black==game over)
+        and length(guesses)<nmaxgoes then
+            for i=excluded-1 to 1 by -1 do
+                sequence isi = initial_set[i]
+                if get_score(guest,isi)!=score then
+                    excluded -= 1
+                    if excluded!=i then
+                        initial_set[i] = initial_set[excluded]
+                        initial_set[excluded] = isi -- (swap)
+                    end if
+                end if
+            end for
+            guesses = append(guesses,{})
+            hint = {}
+            IupSetAttribute(progress,"TITLE","-")
+            IupSetInt(usehint,"ACTIVE",false)
+            start_idle()
+        end if
+    end if
+    redraw_all()
+end procedure
+
+function usehint_cb(Ihandle /*usehint*/)
+    guesses[$] = hint
+    add_move(0)
+    return IUP_DEFAULT
+end function
+
+function button_cb(Ihandle canvas, integer button, pressed, x, y, atom /*pStatus*/)
+    Ihandle frame = IupGetParent(canvas)
+    string title = IupGetAttribute(frame,"TITLE")
+    if not find(title,{"Game","Colours"}) then ?9/0 end if
+    if button=IUP_BUTTON1 and not pressed then      -- (left button released)
+        {sequence centres, integer r2} = iff(title="Game"?{last_guess,guess_r2}
+                                                         :{colour_centres,colour_r2})
+        for i=1 to length(centres) do
+            integer {cx,cy} = sq_sub(centres[i],{x,y})
+            if (cx*cx+cy*cy)<=r2 then
+                if title="Game" then
+                    undo_move()
+                else
+                    add_move(i)
+                end if
+                exit
+            end if
+        end for
+    end if
+    return IUP_CONTINUE
+end function
+
+function new_game_cb(Ihandle /*ih*/)
+    new_game()
+    redraw_all()
+    return IUP_DEFAULT
+end function
+
+function exit_cb(Ihandle /*ih*/)
+    return IUP_CLOSE
+end function
+constant cb_exit = Icallback("exit_cb")
+
+function help_cb(Ihandln /*ih*/)
+    IupMessage("Mastermind",help_text)
+    return IUP_DEFAULT
+end function
+
+function key_cb(Ihandle /*dlg*/, atom c)
+    if c=K_ESC then return IUP_CLOSE end if
+    if c=K_F1 then return help_cb(NULL) end if
+    if find(c,{K_DEL,K_BS}) then undo_move() end if
+    return IUP_CONTINUE
+end function
+
+function valuechanged_cb(Ihandle ih)
+    ncolours = IupGetInt(colours,"VALUE")
+    ncodelen = IupGetInt(codelen,"VALUE")
+    nmaxgoes = IupGetInt(maxgoes,"VALUE")
+    IupSetInt(repeats,"ACTIVE",ncodelen<=ncolours)
+    if ncodelen>ncolours then
+        IupSetInt(repeats,"VALUE",true)
+    end if
+    brepeats = IupGetInt(repeats,"VALUE")
+    if ih!=maxgoes
+    or length(scores)=length(guesses) then  -- (game over)
+        new_game()
+    elsif nmaxgoes<=length(scores) then
+        -- (signal/force game over state)
+        guesses = guesses[1..length(scores)]
+    end if
+    redraw_all()
+    return IUP_DEFAULT
+end function
+constant cb_valuechanged = Icallback("valuechanged_cb")
+
+procedure main()
+    IupOpen()
+
+    colours = IupText("SPIN=Yes, SPINMIN=1, SPINMAX=20, VALUE=6, RASTERSIZE=34x")
+    codelen = IupText("SPIN=Yes, SPINMIN=1, SPINMAX=10, VALUE=4, RASTERSIZE=34x")
+    maxgoes = IupText("SPIN=Yes, SPINMIN=1, SPINMAX=20, VALUE=7, RASTERSIZE=34x")
+    repeats = IupToggle("Repeatable?","VALUE=YES, RIGHTBUTTON=YES, PADDING=5x4")
+    progress = IupLabel("-","EXPAND=HORIZONTAL, PADDING=5x4")
+    usehint = IupButton("Use",Icallback("usehint_cb"),"PADDING=5x4, ACTIVE=NO")
+    game_canvas = IupGLCanvas("RASTERSIZE=200x")
+    colour_canvas = IupGLCanvas("RASTERSIZE=x200")
+    Ihandle newgame = IupButton("New Game",Icallback("new_game_cb"),"PADDING=5x4"),
+            help = IupButton("Help (F1)",Icallback("help_cb"),"PADDING=5x4"),
+            quit = IupButton("E&xit",Icallback("exit_cb"),"PADDING=5x4"),
+            vbox = IupVbox({IupHbox({IupLabel("Colours (1-20)","PADDING=5x4"),colours}),
+                            IupHbox({IupLabel("Code Length (1-10)","PADDING=5x4"),codelen}),
+                            IupHbox({IupLabel("Guesses (1-20)","PADDING=5x4"),maxgoes}),
+                            IupHbox({repeats},"MARGIN=10x5"),
+                            IupHbox({progress}),
+                            IupHbox({usehint,newgame,help,quit})},"MARGIN=5x5"),
+            game_frame = IupFrame(IupHbox({game_canvas},"MARGIN=3x3"),"TITLE=Game"),
+            option_frame = IupFrame(vbox,"TITLE=Options"),
+            colour_frame = IupFrame(colour_canvas,"TITLE=Colours"),
+            full = IupHbox({game_frame,IupVbox({option_frame,colour_frame})})
+    IupSetCallbacks({colours,codelen,maxgoes,repeats}, {"VALUECHANGED_CB", cb_valuechanged})
+    IupSetCallbacks({game_canvas,colour_canvas}, {"ACTION", Icallback("redraw_cb"),
+                                                  "MAP_CB", Icallback("map_cb"),
+                                                  "RESIZE_CB", Icallback("canvas_resize_cb"),
+                                                  "BUTTON_CB", Icallback("button_cb")})
+    dlg = IupDialog(IupHbox({full},"MARGIN=3x3"),"TITLE=Mastermind")
+    IupSetCallback(dlg, "K_ANY", Icallback("key_cb"))
+    IupSetAttributeHandle(dlg,"DEFAULTENTER", usehint)
+
+    new_game()
+
+    IupShowXY(dlg,IUP_CENTER,IUP_CENTER)
+    IupSetAttribute(dlg, "RASTERSIZE", NULL)
+    IupSetStrAttribute(dlg, "MINSIZE", IupGetAttribute(dlg,"RASTERSIZE"))
+    IupMainLoop()
+    IupClose()
+end procedure
+main()

@@ -1,0 +1,184 @@
+        org     100h
+        jmp     demo
+        ;;;     Traverse tree at DE according to method at BC.
+        ;;;     Call routine at HL with DE=<value> for each value encounterd.
+travrs: shld    trvcb+1         ; Store routine pointer
+        xchg                    ; Tree in HL
+        push    b               ; Jump to method BC
+        ret
+        ;;;     Preorder traversal
+preo:   mov     a,h
+        ora     l
+        rz                      ; Null node = stop
+        mov     e,m
+        inx     h
+        mov     d,m             ; Load value
+        inx     h
+        push    h               ; Handle value
+        call    trvcb
+        pop     h               ; Left node
+        mov     e,m
+        inx     h
+        mov     d,m
+        inx     h
+        push    h               ; Save pointer
+        xchg
+        call    preo
+        pop     h
+        mov     e,m
+        inx     h               ; Right node
+        mov     d,m
+        xchg
+        jmp     preo
+        ;;;     Inorder traversal
+ino:    mov     a,h
+        ora     l
+        rz                      ; Null node = stop
+        mov     e,m
+        inx     h
+        mov     d,m             ; Load value
+        inx     h
+        push    d               ; Save value on stack
+        mov     e,m
+        inx     h
+        mov     d,m
+        inx     h               ; Load left node
+        push    h               ; Save pointer on stack
+        xchg
+        call    ino             ; Traverse left node
+        pop     h
+        pop     d               ; Get value
+        push    h
+        call    trvcb           ; Handle value
+        pop     h
+        mov     e,m
+        inx     h
+        mov     d,m
+        xchg
+        jmp     ino             ; Traverse right node
+        ;;;     Postorder traversal
+posto:  mov     a,h
+        ora     l
+        rz                      ; Null node = stop
+        mov     e,m
+        inx     h
+        mov     d,m             ; Load value
+        inx     h
+        push    d               ; Keep value on stack
+        mov     e,m
+        inx     h
+        mov     d,m
+        inx     h               ; Load left node
+        push    h
+        xchg
+        call    posto           ; Traverse left node
+        pop     h
+        mov     e,m
+        inx     h
+        mov     d,m             ; Load right node
+        xchg
+        call    posto           ; Traverse right node
+        pop     d               ; Get value from stack
+        jmp     trvcb           ; Handle value
+        ;;;     Level-order traversal
+lvlo:   shld    queue           ; Store current node at beginning of queue
+        lxi     h,queue         ; HL = Queue start pointer
+        lxi     b,queue+2       ; BC = Queue end pointer
+lvllp:  mov     a,h             ; When start == end, stop
+        cmp     b
+        jnz     lvlt            ; Not equal
+        mov     a,l
+        cmp     c
+        rz                      ; Equal = stop
+lvlt:   mov     e,m             ; Load current node in DE
+        inx     h
+        mov     d,m
+        inx     h
+        mov     a,d             ; Null node = ignore
+        ora     e
+        jz      lvllp
+        push    h               ; Keep queue start pointer
+        xchg                    ; HL = current node
+        mov     e,m             ; Load value into DE
+        inx     h
+        mov     d,m
+        inx     h
+        push    h               ; Keep pointer to left and right nodes
+        push    b               ; And pointer to end of queue
+        call    trvcb           ; Handle value
+        pop     b               ; Restore pointer to end of queue
+        pop     h               ; Restore pointer to left and right nodes
+        mvi     d,4             ; D = copy counter
+lvlcp:  mov     a,m             ; Copy left and right nodes to queue
+        stax    b
+        inx     h
+        inx     b
+        dcr     d
+        jnz     lvlcp
+        pop     h               ; Restore queue stack pointer
+        jmp     lvllp
+trvcb:  jmp     0               ; Callback pointer
+
+        ;;;     Run examples
+demo:   lhld    6               ; Move stack to top of memory
+        sphl
+        lxi     h,0             ; So we can still RET out of the program
+        push    h
+        lxi     h,orders
+order:  mov     e,m             ; Get string
+        inx     h
+        mov     d,m
+        inx     h
+        mov     a,e             ; 0 = done
+        ora     d
+        rz
+        push    h               ; Print string
+        call    print
+        pop     h
+        mov     c,m             ; Load method in BC
+        inx     h
+        mov     b,m
+        inx     h
+        push    h
+        lxi     d,tree          ; Tree in DE
+        lxi     h,cb            ; Callback in HL
+        call    travrs          ; Traverse the tree
+        lxi     d,nl
+        call    print           ; Newline
+        pop     h               ; Restore table pointer
+        jmp     order
+
+        ;;;     Print the tree value. They're all <10 for the example, so we
+        ;;;     don't need multiple digits.
+cb:     mvi     a,'0'
+        add     e
+        sta     nstr
+        lxi     d,nstr
+print:  mvi     c,9             ; CP/M print string call
+        jmp     5
+nstr:   db      '* $'
+nl:     db      13,10,'$'
+
+        ;;;     Example tree
+tree:   dw      1, node2, node3
+node2:  dw      2, node4, node5
+node3:  dw      3, node6, 0
+node4:  dw      4, node7, 0
+node5:  dw      5, 0, 0
+node6:  dw      6, node8, node9
+node7:  dw      7, 0, 0
+node8:  dw      8, 0, 0
+node9:  dw      9, 0 ,0
+
+        ;;;     Table of names and orders
+orders: dw      spreo,preo
+        dw      sino,ino
+        dw      sposto,posto
+        dw      slvlo,lvlo
+        dw      0
+spreo:  db      'Preorder:    $'
+sino:   db      'Inorder:     $'
+sposto: db      'Postorder:   $'
+slvlo:  db      'Level-order: $'
+
+queue:  equ     $               ; Put level-order queue on heap

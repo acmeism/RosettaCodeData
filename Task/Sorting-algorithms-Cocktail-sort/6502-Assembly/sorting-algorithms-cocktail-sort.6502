@@ -1,0 +1,91 @@
+define z_HL $00
+define z_L  $00
+define z_H  $01
+define temp $02
+define temp2 $03
+
+define yINC $04
+define yDEC $05
+
+set_table:
+dex
+txa
+sta $1200,y
+iny
+bne set_table	;stores $ff at $1200, $fe at $1201, etc.
+
+lda #$12
+sta z_H
+lda #$00
+sta z_L         ;get the base address of the data table
+
+
+lda #0
+tax
+tay		;clear regs
+sty yINC        ;yINC = 0
+dey             ;LDY #255
+sty yDEC        ;yDEC = 255
+iny             ;LDY #0
+
+JSR COCKTAILSORT
+BRK
+
+COCKTAILSORT:
+;yINC starts at the beginning and goes forward, yDEC starts at the end and goes back.
+LDY yINC
+LDA (z_HL),y      ;get item Y
+STA temp
+INY
+LDA (z_HL),y      ;get item Y+1
+DEY
+STA temp2
+CMP temp
+bcs doNothing_Up  ;if Y<=Y+1, do nothing. Otherwise swap them.
+
+    ;we had to re-arrange an item.
+    lda temp
+    iny
+    sta (z_HL),y   ;store the higher value at base+y+1
+    inx ;sort count. If zero at the end, we're done.
+    dey
+    lda temp2
+    sta (z_HL),y   ;store the lower value at base+y
+
+doNothing_Up:
+LDY yDEC
+LDA (z_HL),y
+STA temp
+DEY
+LDA (z_HL),y
+INY
+STA temp2
+CMP temp
+bcc doNothing_Down ;if Y<=Y+1, do nothing. Otherwise swap them.
+
+    ;we had to re-arrange an item.
+    lda temp
+    dey
+    sta (z_HL),y   ;store the higher value at base+y+1
+    inx ;sort count. If zero at the end, we're done.
+    iny
+    lda temp2
+    sta (z_HL),y   ;store the lower value at base+y
+
+doNothing_Down:
+INC yINC
+DEC yDEC
+LDA yINC
+BPL COCKTAILSORT
+
+CPX #0
+BEQ doneSorting
+LDX #0          ;reset the counter
+LDY #0
+STY yINC
+DEY             ;LDY #$FF
+STY yDEC
+INY		;LDY #0
+JMP COCKTAILSORT
+doneSorting:
+RTS

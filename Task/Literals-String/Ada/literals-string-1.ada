@@ -1,0 +1,1 @@
+ch : character := 'a';

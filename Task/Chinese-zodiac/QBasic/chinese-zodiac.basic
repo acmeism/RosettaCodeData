@@ -1,0 +1,28 @@
+10 REM Chinese zodiac
+20 CLS
+30 DIM animals$(12)
+40 DIM elements$(5)
+50 DIM yinyang$(2)
+70 FOR i = 0 TO 11
+80 READ animals$(i)
+90 NEXT i
+110 FOR i = 0 TO 4
+120 READ elements$(i)
+130 NEXT i
+140 yinyang$(0) = "Yang": yinyang$(1) = "Yin"
+150 DIM years(7)
+170 FOR i = 0 TO 6
+180 READ years(i)
+190 NEXT i
+200 FOR i = 0 TO 6
+210 xyear = years(i)
+220 yelement$ = elements$(((xyear - 4) MOD 10) / 2)
+230 yanimal$ = animals$((xyear - 4) MOD 12)
+240 yyinyang$ = yinyang$(xyear MOD 2)
+250 nn = ((xyear - 4) MOD 60) + 1
+260 PRINT xyear; "is the year of the "; yelement$; " "; yanimal$; " ("; yyinyang$; ")."
+270 NEXT i
+280 END
+290 DATA "Rat","Ox","Tiger","Rabbit","Dragon","Snake","Horse","Goat","Monkey","Rooster","Dog","Pig"
+300 DATA "Wood","Fire","Earth","Metal","Water"
+310 DATA 1935,1938,1968,1972,1976,1984,2017

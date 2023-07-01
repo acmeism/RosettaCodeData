@@ -1,0 +1,162 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program amicable64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ NMAXI,      20000
+.equ TABMAXI,      100
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessResult:        .asciz " @ : @\n"
+szCarriageReturn:   .asciz "\n"
+szMessErr1:         .asciz "Array too small !!"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:                  .skip 24
+tResult:                    .skip 8 * TABMAXI
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                             // entry of program
+    ldr x3,qNMaxi                 // load limit
+    mov x4,#2                     // number begin
+1:
+    mov x0,x4                     // number
+    bl decFactor                  // compute sum factors
+    cmp x0,x4                     // equal ?
+    beq 2f
+    mov x2,x0                     // factor sum 1
+    bl decFactor
+    cmp x0,x4                     // equal number ?
+    bne 2f
+    mov x0,x4                     // yes -> search in array
+    mov x1,x2                     // and store sum
+    bl searchRes
+    cmp x0,#0                     // find ?
+    bne 2f                        // yes
+    mov x0,x4                     // no -> display number ans sum
+    mov x1,x2
+    bl displayResult
+2:
+    add x4,x4,#1                     // increment number
+    cmp x4,x3                     // end ?
+    ble 1b
+
+100:                              // standard end of the program
+    mov x0, #0                    // return code
+    mov x8, #EXIT                 // request to exit program
+    svc #0                        // perform the system call
+qAdrszCarriageReturn:        .quad szCarriageReturn
+qNMaxi:                      .quad NMAXI
+/***************************************************/
+/*   display message number                        */
+/***************************************************/
+/* x0 contains number 1           */
+/* x1 contains number 2               */
+displayResult:
+    stp x1,lr,[sp,-16]!           // save  registers
+    stp x2,x3,[sp,-16]!           // save  registers
+    mov x2,x1
+    ldr x1,qAdrsZoneConv
+    bl conversion10               // call décimal conversion
+    ldr x0,qAdrsMessResult
+    ldr x1,qAdrsZoneConv          // insert conversion in message
+    bl strInsertAtCharInc
+    mov x3,x0
+    mov x0,x2
+    ldr x1,qAdrsZoneConv
+    bl conversion10               // call décimal conversion
+    mov x0,x3
+    ldr x1,qAdrsZoneConv          // insert conversion in message
+    bl strInsertAtCharInc
+
+    bl affichageMess              // display message
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrsMessResult:     .quad sMessResult
+qAdrsZoneConv:       .quad sZoneConv
+/***************************************************/
+/*   compute factors sum                        */
+/***************************************************/
+/* x0 contains the number            */
+decFactor:
+    stp x1,lr,[sp,-16]!       // save  registers
+    stp x2,x3,[sp,-16]!       // save  registers
+    stp x4,x5,[sp,-16]!       // save  registers
+    mov x4,#1                 // init sum
+    mov x1,#2                 // start factor -> divisor
+1:
+    udiv x2,x0,x1
+    msub x3,x2,x1,x0          // remainder
+    cmp x1,x2                 // divisor > quotient ?
+    bgt 3f
+    cmp x3,#0                 // remainder = 0 ?
+    bne 2f
+    add x4,x4,x1              // add divisor to sum
+    cmp x1,x2                 // divisor = quotient ?
+    beq 3f                    // yes -> end
+    add x4,x4,x2              // no -> add quotient to sum
+2:
+    add x1,x1,#1              // increment factor
+    b 1b                      // and loop
+3:
+    mov x0,x4                 // return sum
+    ldp x4,x5,[sp],16         // restaur  2 registers
+    ldp x2,x3,[sp],16         // restaur  2 registers
+    ldp x1,lr,[sp],16         // restaur  2 registers
+    ret                       // return to address lr x30
+/***************************************************/
+/*   search and store result in array                        */
+/***************************************************/
+/* x0 contains the number            */
+/* x1 contains factors sum           */
+/* x0 return 1 if find 0 else  -1 if error      */
+searchRes:
+    stp x1,lr,[sp,-16]!       // save  registers
+    stp x2,x3,[sp,-16]!       // save  registers
+    stp x4,x5,[sp,-16]!       // save  registers
+    ldr x4,qAdrtResult        // array address
+    mov x2,#0                 // indice begin
+1:
+    ldr x3,[x4,x2,lsl #3]     // load one result array
+    cmp x3,#0                 // if 0 store new result
+    beq 2f
+    cmp x3,x0                 // equal ?
+    beq 3f                    // find -> return 1
+    add x2,x2,#1              // increment indice
+    cmp x2,#TABMAXI           // maxi array ?
+    blt 1b
+    ldr x0,qAdrszMessErr1     // error
+    bl affichageMess
+    mov x0,#-1
+    b 100f
+2:
+    str x1,[x4,x2,lsl #3]
+    mov x0,#0                 // not find -> store and retun 0
+    b 100f
+3:
+    mov x0,#1
+100:
+    ldp x4,x5,[sp],16         // restaur  2 registers
+    ldp x2,x3,[sp],16         // restaur  2 registers
+    ldp x1,lr,[sp],16         // restaur  2 registers
+    ret                       // return to address lr x30
+qAdrtResult:            .quad tResult
+qAdrszMessErr1:         .quad szMessErr1
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

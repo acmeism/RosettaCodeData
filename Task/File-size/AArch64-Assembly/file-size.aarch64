@@ -1,0 +1,203 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program filelen64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ FSTAT,  0x50
+
+/************************************/
+/* structure de type   stat  : file infos   */
+/************************************/
+    .struct  0
+Stat_dev_t:               /* ID of device containing file */
+    .struct Stat_dev_t + 8
+Stat_ino_t:              /* inode */
+    .struct Stat_ino_t + 8
+Stat_mode_t:              /* File type and mode */
+    .struct Stat_mode_t + 4
+Stat_nlink_t:               /* Number of hard links */
+    .struct Stat_nlink_t + 4
+Stat_uid_t:               /* User ID of owner */
+    .struct Stat_uid_t + 4
+Stat_gid_t:                 /* Group ID of owner */
+    .struct Stat_gid_t + 4
+Stat_rdev_t:                /* Device ID (if special file) */
+    .struct Stat_rdev_t + 8
+Stat_size_deb:           /* la taille est sur 8 octets si gros fichiers */
+     .struct Stat_size_deb + 8
+Stat_size_t:                /* Total size, in bytes */
+    .struct Stat_size_t + 8
+Stat_blksize_t:                /* Block size for filesystem I/O */
+    .struct Stat_blksize_t + 8
+Stat_blkcnt_t:               /* Number of 512B blocks allocated */
+    .struct Stat_blkcnt_t + 8
+Stat_atime:               /*   date et heure fichier */
+    .struct Stat_atime + 8
+Stat_mtime:               /*   date et heure modif fichier */
+    .struct Stat_atime + 8
+Stat_ctime:               /*   date et heure creation fichier */
+    .struct Stat_atime + 8
+Stat_End:
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResult:       .asciz " File size = "
+szCarriageReturn:   .asciz "\n"
+szMessErrOpen:      .asciz "Error open file\n"
+szMessErrStat:      .asciz "Error stats file\n"
+szFileName:         .asciz "input.txt"
+szFileName1:        .asciz "../../../input.txt"
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:           .skip 24
+sBuffer:             .skip Stat_End
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszFileName       // file name
+    bl filesize
+    cmp x0,#0
+    blt 100f
+    ldr x1,qAdrsZoneConv
+    bl conversion10             // call décimal conversion
+    mov x0,#4
+    ldr x1,qAdrszFileName
+    ldr x2,qAdrszMessResult
+    ldr x3,qAdrsZoneConv        // insert conversion in message
+    ldr x4,qAdrszCarriageReturn
+    stp x4,x4,[sp,-16]!         // save  registers
+    bl displayStrings           // display message
+    add sp,sp,#16                   // 1 parameter on stack
+
+    ldr x0,qAdrszFileName1       // file name
+    bl filesize
+    cmp x0,#0
+    blt 100f
+    ldr x1,qAdrsZoneConv
+    bl conversion10             // call décimal conversion
+    ldr x0,qAdrsZoneConv
+    mov x0,#4
+    ldr x1,qAdrszFileName1
+    ldr x2,qAdrszMessResult
+    ldr x3,qAdrsZoneConv        // insert conversion in message
+    ldr x4,qAdrszCarriageReturn
+    stp x4,x4,[sp,-16]!         // save  registers
+    bl displayStrings           // display message
+    add sp,sp,#16                  // 1 parameter on stack
+
+100:                            // standard end of the program
+    mov x0, #0                  // return code
+    mov x8,EXIT
+    svc #0                      // perform the system call
+qAdrszCarriageReturn:    .quad szCarriageReturn
+qAdrsZoneConv:           .quad sZoneConv
+qAdrszMessResult:        .quad szMessResult
+qAdrszFileName:          .quad szFileName
+qAdrszFileName1:         .quad szFileName1
+qAdrsBuffer:             .quad sBuffer
+qAdrszMessErrOpen:       .quad szMessErrOpen
+qAdrszMessErrStat:       .quad szMessErrStat
+/***************************************************/
+/*   display multi strings                    */
+/***************************************************/
+/* x0  contains number strings address */
+filesize:                       // INFO:  filesize
+    stp x1,lr,[sp,-16]!         // save  registers
+    stp x2,x3,[sp,-16]!         // save  registers
+    stp x4,x5,[sp,-16]!         // save  registers
+    stp x6,x7,[sp,-16]!         // save  registers
+    stp x8,x9,[sp,-16]!         // save  registers
+    mov x1,x0
+    mov x0,#AT_FDCWD
+    mov x2,#O_RDWR              //  flags
+    mov x3,#0                   // mode
+    mov x8,#OPEN
+    svc 0
+    cmp x0,#0                   // error ?
+    ble 99f
+    mov x8,x0                   // Fd save
+    ldr x1,qAdrsBuffer          // buffer address
+    mov x8,#FSTAT
+    svc 0
+    cmp x0,#0
+    blt 98f
+    ldr x1,qAdrsBuffer          // buffer address
+    ldr x4,[x1,#Stat_size_t]    // file size
+    mov x0,x8
+    mov x8,CLOSE
+    mov x0,x4                   // return size
+    b 100f
+98:
+    ldr x0,qAdrszMessErrStat
+    bl affichageMess
+    mov x0,#-1
+    b 100f
+99:
+    ldr x0,qAdrszMessErrOpen
+    bl affichageMess
+    mov x0,#-1
+100:
+    ldp x8,x9,[sp],16        // restaur  registers
+    ldp x6,x7,[sp],16        // restaur  registers
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x2,x3,[sp],16        // restaur  registers
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+/***************************************************/
+/*   display multi strings                    */
+/***************************************************/
+/* x0  contains number strings address */
+/* x1 address string1 */
+/* x2 address string2 */
+/* x3 address string3 */
+/* other address on the stack */
+/* thinck to add  number other address * 4 to add to the stack */
+displayStrings:            // INFO:  displayStrings
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    add fp,sp,#48          // save paraméters address (6 registers saved * 4 bytes)
+    mov x4,x0              // save strings number
+    cmp x4,#0              // 0 string -> end
+    ble 100f
+    mov x0,x1              // string 1
+    bl affichageMess
+    cmp x4,#1              // number > 1
+    ble 100f
+    mov x0,x2
+    bl affichageMess
+    cmp x4,#2
+    ble 100f
+    mov x0,x3
+    bl affichageMess
+    cmp x4,#3
+    ble 100f
+    mov x3,#3
+    sub x2,x4,#4
+1:                            // loop extract address string on stack
+    ldr x0,[fp,x2,lsl #3]
+    bl affichageMess
+    subs x2,x2,#1
+    bge 1b
+100:
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x2,x3,[sp],16        // restaur  registers
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

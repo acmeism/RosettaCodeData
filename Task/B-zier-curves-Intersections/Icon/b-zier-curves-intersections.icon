@@ -1,0 +1,339 @@
+# This program combines the methods of the 2nd C implementation (which
+# by itself is inefficient) with those of the Modula-2 implementation,
+# and then rearranges the computations to try to achieve greater
+# efficiency.
+#
+# The algorithm actually returns t-parameters for two curves, as a
+# pair for each intersection point. This is exactly what one might
+# want: for instance, to break a font glyph, made from two or more
+# other glyphs, into pieces at the points of intersection of all the
+# outlines.
+#
+# The code below is written to illustrate the algorithm rather than to
+# squeeze performance out of Icon. For instance, I use a "set" to
+# store the workload, and, when choosing the next workitem-pair to
+# work on, do so by random selection. It would be faster, certainly,
+# to use an Icon "list", as either a stack or a queue or both.
+#
+# It is also possible, of course, to cast the algorithm as a recursive
+# procedure.
+#
+#
+# References on the s-power basis:
+#
+#    J. Sánchez-Reyes, ‘The symmetric analogue of the polynomial power
+#        basis’, ACM Transactions on Graphics, vol 16 no 3, July 1997,
+#        page 319.
+#
+#    J. Sánchez-Reyes, ‘Applications of the polynomial s-power basis
+#        in geometry processing’, ACM Transactions on Graphics, vol 19
+#        no 1, January 2000, page 35.
+#
+
+record point (x, y)
+record spower (c0, c1, c2)
+record curve (x, y)
+record workitem (P, t0, t1, pt0, pt1)
+
+$define P_controls [point (-1, 0), point ( 0, 10), point ( 1,  0)]
+$define Q_controls [point ( 2, 1), point (-8,  2), point ( 2,  3)]
+
+$define DEFAULT_NUMPIECES 2     # Bisection.
+
+# Tolerance of the ratio of a bound on the non-linear component to the
+# length of the segment. I use a max norm but you can use your
+# favorite norm.
+$define DEFAULT_FLATNESS_TOLERANCE 0.0001
+
+# For demonstration, I choose a minimum spacing between intersection
+# points equal to several times single precision machine epsilon. I
+# measure distance using a max norm, but you can use your favorite
+# norm.
+$define DEFAULT_MINIMUM_SPACING 1e-6
+
+procedure main ()
+  local P, Q
+  local intersections, xsect
+
+  P := controls_to_curve ! P_controls
+  Q := controls_to_curve ! Q_controls
+
+  intersections := find_intersections (P, Q)
+
+  write ()
+  write_tabbed_line ("          convex up\t" ||
+                     "          convex left\t")
+  every xsect := !intersections do
+    write_tabbed_line (xsect[1] || "\t(" ||
+                       xsect[2].x || ", " || xsect[2].y || ")\t" ||
+                       xsect[3] || "\t(" ||
+                       xsect[4].x || ", " || xsect[4].y || ")")
+  write ()
+end
+
+procedure write_tabbed_line (line)
+  write (detab (line, 18, 56, 74))
+end
+
+procedure find_intersections (P, Q, tol, spacing)
+  # Return a list of [tP, pointP, tQ, pointQ] for the intersections,
+  # sorted by tP values.
+
+  local workload, ts
+  local tP, ptP
+  local tQ, ptQ
+  local tbl, intersections
+
+  /tol := DEFAULT_FLATNESS_TOLERANCE
+  /spacing := DEFAULT_MINIMUM_SPACING
+
+  workload := initial_workload (P, Q)
+
+  tbl := table ()
+  every ts := process_workload (tol, workload) do
+  {
+    tP := ts[1];  ptP := curve_eval (P, tP)
+    tQ := ts[2];  ptQ := curve_eval (Q, tQ)
+    not (max (abs ((!tbl)[2].x - ptP.x),
+              abs ((!tbl)[2].y - ptP.y)) < spacing) &
+      not (max (abs ((!tbl)[4].x - ptQ.x),
+                abs ((!tbl)[4].y - ptQ.y)) < spacing) &
+      tbl[tP] := [tP, ptP, tQ, ptQ]
+  }
+  tbl := sort (tbl, 1)
+  every put (intersections := [], (!tbl)[2])
+  return intersections
+end
+
+procedure process_workload (tol, workload)
+  # Generate pairs of t-parameters.
+
+  local pair, ts
+
+  while *workload ~= 0 do
+  {
+    pair := ?workload
+    delete (workload, pair)
+    if rectangles_overlap (pair[1].pt0, pair[1].pt1,
+                           pair[2].pt0, pair[2].pt1) then
+    {
+      if flat_enough (tol, pair[1]) then
+      {
+        if flat_enough (tol, pair[2]) then
+        {
+          if ts := segment_parameters (pair[1].pt0, pair[1].pt1,
+                                       pair[2].pt0, pair[2].pt1) then
+            suspend [(1 - ts[1]) * pair[1].t0 + ts[1] * pair[1].t1,
+                     (1 - ts[2]) * pair[2].t0 + ts[2] * pair[2].t1]
+        }
+        else
+          every insert (workload, [pair[1],
+                                   split_workitem (pair[2])])
+      }
+      else
+      {
+        if flat_enough (tol, pair[2]) then
+          every insert (workload, [split_workitem (pair[1]),
+                                   pair[2]])
+        else
+          every insert (workload, [split_workitem (pair[1]),
+                                   split_workitem (pair[2])])
+      }
+    }
+  }
+end
+
+procedure split_workitem (W, num_pieces)
+  # Split a workitem in pieces and generate the pieces.
+
+  local fraction, t1_t0, ts, pts, i
+
+  /num_pieces := DEFAULT_NUMPIECES
+
+  fraction := 1.0 / num_pieces
+  t1_t0 := W.t1 - W.t0
+
+  every put (ts := [],
+             W.t0 + (1 to num_pieces - 1) * fraction * t1_t0)
+  every put (pts := [], curve_eval (W.P, !ts))
+  ts := [W.t0] ||| ts ||| [W.t1]
+  pts := [W.pt0] ||| pts ||| [W.pt1]
+
+  every i := 1 to *pts - 1 do
+    suspend (workitem (W.P, ts[i], ts[i + 1], pts[i], pts[i + 1]))
+end
+
+procedure initial_workload (P, Q)
+  # Create an initial workload set, by breaking P and Q at any
+  # critical points.
+
+  local workload
+
+  every insert (workload := set (), [break_at_critical_points (P),
+                                     break_at_critical_points (Q)])
+  return workload
+end
+
+procedure break_at_critical_points (P)
+  # Generate workitems for the curve P, after breaking it at any
+  # critical points.
+
+  local ts, pts, i
+
+  ts := [0] ||| sort (curve_critical_points (P)) ||| [1]
+  every put (pts := [], curve_eval (P, !ts))
+  every i := 1 to *pts - 1 do
+    suspend (workitem (P, ts[i], ts[i + 1], pts[i], pts[i + 1]))
+end
+
+procedure flat_enough (tol, P, t0, t1, pt0, pt1)
+  # Is the [t0,t1] portion of the curve P flat enough to be treated as
+  # a straight line between pt0 and pt1, where pt0 and pt1 are the
+  # endpoints of the portion?
+
+  local error, length
+
+  # Let flat_enough be called this way, where W is a workitem:
+  # flat_enough(tol,W)
+  if /t0 then
+  {
+    pt1 := P.pt1
+    pt0 := P.pt0
+    t1 := P.t1
+    t0 := P.t0
+    P := P.P
+  }
+
+  # pt0 and pt1 probably have been computed before and saved, but if
+  # necessary they could be computed now:
+  /pt0 := curve_eval (P, t0)
+  /pt1 := curve_eval (P, t1)
+
+  # The degree-2 s-power polynomials are 1-t, t(1-t), t. We want to
+  # remove the terms in t(1-t). The maximum of t(1-t) is 1/4, reached
+  # at t=1/2. That accounts for the 1/4=0.25 in the following, which
+  # uses "max norm" length measurements. (Substitute your favorite
+  # norm.)
+  error := 0.25 * max (abs (spower_center_coef (P.x, t0, t1)),
+                       abs (spower_center_coef (P.y, t0, t1)))
+  length := max (abs (pt1.x - pt0.x), abs (pt1.y - pt0.y))
+  ((error <= length * tol) & return) | fail
+end
+
+procedure curve_eval (P, t)
+  # Return the point that lies on the curve P at parameter value t.
+  return point (spower_eval (P.x, t), spower_eval (P.y, t))
+end
+
+procedure curve_critical_points (P)
+  # Return a set containing parameter values (values of t) for the
+  # critical points of curve P.
+
+  local ts
+
+  ts := set ()
+  insert (ts, spower_critical_point (P.x))
+  insert (ts, spower_critical_point (P.y))
+  return ts
+end
+
+procedure spower_eval (p, t)
+  # Evaluate the s-power spline p at t.
+  return (p.c0 + (p.c1 * t)) * (1 - t) + (p.c2 * t)
+end
+
+procedure spower_center_coef (p, t0, t1)
+  # Return the center coefficient for the [t0,t1] portion of the
+  # s-power spline p.
+  if /t1 then { t1 := t0[2]; t0 := t0[1] } # Allow a list as t0.
+  return p.c1 * ((t1 - t0 - t0) * t1 + (t0 * t0))
+end
+
+procedure spower_critical_point (p)
+  # Return t in (0,1) where p is at a critical point, else fail.
+
+  local t
+
+  p.c1 = 0 & fail               # The spline is linear
+  p.c0 = p.c2 & return 0.5      # The spline is "pulse-like".
+
+  t := (0.5 * (p.c2 + p.c1 - p.c0)) / p.c1 # Root of the derivative.
+  0 < t < 1 & return t
+  fail
+end
+
+procedure rectangles_overlap (ptA0, ptA1, ptB0, ptB1)
+  # Do the rectangles with corners at (ptA0,ptA1) and (ptB0,ptB1)
+  # overlap?
+  local ax0, ay0, ax1, ay1
+  local bx0, by0, bx1, by1
+
+  ax0 := ptA0.x;  ax1 := ptA1.x
+  bx0 := ptB0.x;  bx1 := ptB1.x
+  if ax1 < ax0 then ax0 :=: ax1
+  if bx1 < bx0 then bx0 :=: bx1
+
+  bx1 < ax0 & fail
+  ax1 < bx0 & fail
+
+  ay0 := ptA0.y;  ay1 := ptA1.y
+  by0 := ptB0.y;  by1 := ptB1.y
+  if ay1 < ay0 then ay0 :=: ay1
+  if by1 < by0 then by0 :=: by1
+
+  by1 < ay0 & fail
+  ay1 < by0 & fail
+
+  return
+end
+
+procedure segment_parameters (ptA0, ptA1, ptB0, ptB1)
+  # Return the respective [0,1] parameters of line segments
+  # (ptA0,ptA1) and (ptB0,ptB1), for their intersection point. Fail if
+  # there are not such parameters.
+
+  local ax0, ax1, ay0, ay1
+  local bx0, bx1, by0, by1
+  local ax1_ax0, ay1_ay0
+  local bx1_bx0, by1_by0
+  local anumer, bnumer, denom
+  local tA, tB
+
+  ax0 := ptA0.x;  ax1 := ptA1.x
+  ay0 := ptA0.y;  ay1 := ptA1.y
+  bx0 := ptB0.x;  bx1 := ptB1.x
+  by0 := ptB0.y;  by1 := ptB1.y
+
+  ax1_ax0 := ax1 - ax0
+  ay1_ay0 := ay1 - ay0
+  bx1_bx0 := bx1 - bx0
+  by1_by0 := by1 - by0
+
+  denom := (ax1_ax0 * by1_by0) - (ay1_ay0 * bx1_bx0)
+
+  anumer :=
+    (bx1_bx0 * ay0) - (by1_by0 * ax0) + (bx0 * by1) - (bx1 * by0)
+  tA := anumer / denom
+  0 <= tA <= 1 | fail
+
+  bnumer :=
+    -((ax1_ax0 * by0) - (ay1_ay0 * bx0) + (ax0 * ay1) - (ax1 * ay0))
+  tB := bnumer / denom
+  0 <= tB <= 1 | fail
+
+  return [tA, tB]
+end
+
+procedure controls_to_curve (p0, p1, p2)
+  # Convert control points to a curve in s-power basis.
+  return curve (spower (p0.x, (2 * p1.x) - p0.x - p2.x, p2.x),
+                spower (p0.y, (2 * p1.y) - p0.y - p2.y, p2.y))
+end
+
+procedure abs (x)
+  return (if x < 0 then -x else x)
+end
+
+procedure max (x, y)
+  return (if x < y then y else x)
+end

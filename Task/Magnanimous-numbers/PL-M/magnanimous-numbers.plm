@@ -1,0 +1,159 @@
+100H: /* FIND SOME MAGNANIMOUS NUMBERS - THOSE WHERE INSERTING '+' BETWEEN  */
+   /* ANY TWO OF THE DIGITS AND EVALUATING THE SUM RESULTS IN A PRIME       */
+   BDOS: PROCEDURE( FN, ARG ); /* CP/M BDOS SYSTEM CALL */
+      DECLARE FN BYTE, ARG ADDRESS;
+      GOTO 5;
+   END BDOS;
+   PRINT$CHAR:   PROCEDURE( C ); DECLARE C BYTE; CALL BDOS( 2, C );    END;
+   PRINT$STRING: PROCEDURE( S ); DECLARE S ADDRESS; CALL BDOS( 9, S ); END;
+   PRINT$NL:     PROCEDURE; CALL PRINT$STRING( .( 0DH, 0AH, '$' ) );   END;
+   PRINT$NUMBER: PROCEDURE( N );
+      DECLARE N ADDRESS;
+      DECLARE V ADDRESS, N$STR( 6 ) BYTE, W BYTE;
+      V = N;
+      W = LAST( N$STR );
+      N$STR( W ) = '$';
+      N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      DO WHILE( ( V := V / 10 ) > 0 );
+         N$STR( W := W - 1 ) = '0' + ( V MOD 10 );
+      END;
+      IF N < 100 THEN DO;
+         IF N < 10 THEN CALL PRINT$CHAR( ' ' );
+         CALL PRINT$CHAR( ' ' );
+      END;
+      CALL PRINT$STRING( .N$STR( W ) );
+   END PRINT$NUMBER;
+   /* INTEGER SQUARE ROOT: BASED ON THE ONE IN THE PL/M FROBENIUS NUMBERS */
+   SQRT: PROCEDURE( N )ADDRESS;
+      DECLARE ( N, X0, X1 ) ADDRESS;
+      IF N <= 3 THEN DO;
+          IF N = 0 THEN X0 = 0; ELSE X0 = 1;
+          END;
+      ELSE DO;
+         X0 = SHR( N, 1 );
+         DO WHILE( ( X1 := SHR( X0 + ( N / X0 ), 1 ) ) < X0 );
+            X0 = X1;
+         END;
+      END;
+      RETURN X0;
+   END SQRT;
+
+   DECLARE MAGNANIMOUS (251)ADDRESS; /* MAGNANIMOUS NUMBERS              */
+   DECLARE FALSE           LITERALLY '0';
+   DECLARE TRUE            LITERALLY '0FFH';
+   /* TO FIND MAGNANIMOUS NUMBERS UP TO 30$000, WE NEED TO FIND PRIMES   */
+   /* UP TO 9$999 + 9 = 10$008                                           */
+   DECLARE MAX$PRIME       LITERALLY '10$008';
+   DECLARE DCL$PRIME       LITERALLY '10$009';
+   /* SIEVE THE PRIMES TO MAX$PRIME */
+   DECLARE ( I, S ) ADDRESS;
+   DECLARE PRIME ( DCL$PRIME )BYTE;
+   PRIME( 1 ) = FALSE; PRIME( 2 ) = TRUE;
+   DO I = 3 TO LAST( PRIME ) BY 2; PRIME( I ) = TRUE;  END;
+   DO I = 4 TO LAST( PRIME ) BY 2; PRIME( I ) = FALSE; END;
+   DO I = 3 TO SQRT( MAX$PRIME );
+      IF PRIME( I ) THEN DO;
+         DO S = I * I TO LAST( PRIME ) BY I + I;PRIME( S ) = FALSE; END;
+      END;
+   END;
+
+   /* FIND THE MAGNANIMOUS NUMBERS                                       */
+   FIND$MAGNANIMOUS: PROCEDURE;
+      DECLARE ( D1, D2, D3, D4, D5
+              , D12, D123, D1234
+              , D23, D234, D2345
+              , D34, D345, D45
+              ) ADDRESS;
+      DECLARE M$COUNT ADDRESS; /* COUNT OF MAGNANIMOUS NUMBERS FOUND     */
+      STORE$MAGNANIMOUS: PROCEDURE( N )BYTE;
+         DECLARE N ADDRESS;
+         M$COUNT = M$COUNT + 1;
+         IF M$COUNT <= LAST( MAGNANIMOUS ) THEN MAGNANIMOUS( M$COUNT ) = N;
+         RETURN M$COUNT <= LAST( MAGNANIMOUS );
+      END STORE$MAGNANIMOUS;
+
+      M$COUNT = 0;
+      /* 1 DIGIT MAGNANIMOUS NUMBERS                                        */
+      DO D1 = 0 TO 9; IF NOT STORE$MAGNANIMOUS( D1 ) THEN RETURN; END;
+      /* 2 DIGIT MAGNANIMOUS NUMBERS                                        */
+      DO D1 = 1 TO 9;
+         DO D2 = 0 TO 9;
+            IF PRIME( D1 + D2 ) THEN DO;
+               IF NOT STORE$MAGNANIMOUS( ( D1 * 10 ) + D2 ) THEN RETURN;
+            END;
+         END;
+      END;
+      /* 3 DIGIT MAGNANIMOUS NUMBERS                                        */
+      DO D1 = 1 TO 9;
+         DO D23 = 0 TO 99;
+            IF PRIME( D1 + D23 ) THEN DO;
+               D3  = D23 MOD 10;
+               D12 = ( D1 * 10 ) + ( D23 / 10 );
+               IF PRIME( D12 + D3 ) THEN DO;
+                  IF NOT STORE$MAGNANIMOUS( ( D12 * 10 ) + D3 ) THEN RETURN;
+               END;
+            END;
+         END;
+      END;
+      /* 4 DIGIT MAGNANIMOUS NUMBERS                                     */
+      DO D12 = 10 TO 99;
+         DO D34 = 0 TO 99;
+            IF PRIME( D12 + D34 ) THEN DO;
+               D123 = ( D12 * 10 ) + ( D34 / 10 );
+               D4   = D34 MOD 10;
+               IF PRIME( D123 + D4 ) THEN DO;
+                  D1   = D12 / 10;
+                  D234 = ( ( D12 MOD 10 ) * 100 ) + D34;
+                  IF PRIME( D1 + D234 ) THEN DO;
+                     IF NOT STORE$MAGNANIMOUS( ( D12 * 100 ) + D34 )
+                        THEN RETURN;
+                  END;
+               END;
+            END;
+         END;
+      END;
+      /* 5 DIGIT MAGNANIMOUS NUMBERS UP TO 30$000                        */
+      DO D12 = 10 TO 30;
+         DO D345 = 0 TO 999;
+            IF PRIME( D12 + D345 ) THEN DO;
+               D123 = ( D12 * 10 ) + ( D345 / 100 );
+               D45  = D345 MOD 100;
+               IF PRIME( D123 + D45 ) THEN DO;
+                  D1234 = ( D123 * 10 ) + ( D45 / 10 );
+                  D5    = D45 MOD 10;
+                  IF PRIME( D1234 + D5 ) THEN DO;
+                     D1    = D12 / 10;
+                     D2345 = ( ( D12 MOD 10 ) * 1000 ) + D345;
+                     IF PRIME( D1 + D2345 ) THEN DO;
+                        IF NOT STORE$MAGNANIMOUS( ( D12 * 1000 ) + D345 )
+                           THEN RETURN;
+                     END;
+                  END;
+               END;
+            END;
+         END;
+      END;
+   END FIND$MAGNANIMOUS ;
+
+   CALL FIND$MAGNANIMOUS;
+   DO I = 1 TO LAST( MAGNANIMOUS );
+      IF I = 1 THEN DO;
+         CALL PRINT$STRING( .'MAGNANIMOUS NUMBERS 1-45:$' ); CALL PRINT$NL;
+         CALL PRINT$NUMBER( MAGNANIMOUS( I ) );
+         END;
+      ELSE IF I < 46 THEN DO;
+         IF I MOD 15 = 1 THEN CALL PRINT$NL; ELSE CALL PRINT$CHAR( ' ' );
+         CALL PRINT$NUMBER( MAGNANIMOUS( I ) );
+         END;
+      ELSE IF I = 241 THEN DO;
+         CALL PRINT$NL;
+         CALL PRINT$STRING( .'MAGANIMOUS NUMBERS 241-250:$' ); CALL PRINT$NL;
+         CALL PRINT$NUMBER( MAGNANIMOUS( I ) );
+         END;
+      ELSE IF I > 241 AND I <= 250 THEN DO;
+         CALL PRINT$CHAR( ' ' );
+         CALL PRINT$NUMBER( MAGNANIMOUS( I ) );
+      END;
+   END;
+   CALL PRINT$NL;
+EOF

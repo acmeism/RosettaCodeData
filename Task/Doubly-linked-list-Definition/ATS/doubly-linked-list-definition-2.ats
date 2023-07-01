@@ -1,0 +1,381 @@
+#define ATS_DYNLOADFLAG 0
+
+#include "share/atspre_staload.hats"
+
+staload "dllist.sats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+(********************************************************************)
+(* The implementation in terms of linear types.                     *)
+
+absprop NODEPTR (t : t@ype+, is_root : bool, p : addr)
+
+vtypedef nodeptr_vt (t : t@ype+, is_root : bool, p : addr) =
+  @(NODEPTR (t, is_root, p) | ptr p)
+vtypedef nodeptr_vt (t : t@ype+, p : addr) =
+  [is_root : bool] nodeptr_vt (t, is_root, p)
+vtypedef nodeptr_vt (t : t@ype+, is_root : bool) =
+  [p : addr] nodeptr_vt (t, is_root, p)
+vtypedef nodeptr_vt (t : t@ype+) =
+  [is_root : bool] [p : addr] nodeptr_vt (t, is_root, p)
+
+datavtype node_vt (t : t@ype+, is_root : bool) =
+| node_vt_object (t, is_root) of
+    (bool is_root,              (* Is it the root node? *)
+     nodeptr_vt t,              (* previous*)
+     nodeptr_vt t,              (* next *)
+     t)                         (* element *)
+vtypedef node_vt (t : t@ype+) =
+  [is_root : bool] node_vt (t, is_root)
+
+extern castfn
+node2nodeptr_consuming :
+  {t : t@ype}
+  {is_root : bool}
+  node_vt (t, is_root) -<> nodeptr_vt (t, is_root)
+
+extern castfn
+nodeptr2node_consuming :
+  {t : t@ype}
+  {is_root : bool}
+  nodeptr_vt (t, is_root) -<> node_vt (t, is_root)
+
+extern castfn
+node2nodeptr_preserving :
+  {t : t@ype}
+  {is_root : bool}
+  (!node_vt (t, is_root) >> _) -<> nodeptr_vt (t, is_root)
+
+extern castfn
+nodeptr2node_preserving :
+  {t : t@ype}
+  {is_root : bool}
+  (!nodeptr_vt (t, is_root) >> _) -<> node_vt (t, is_root)
+
+fn {t : t@ype}
+node_refcopy {is_root : bool}
+             (node    : !node_vt (t, is_root)) :
+    node_vt (t, is_root) =
+  nodeptr2node_preserving (node2nodeptr_preserving node)
+
+fn {t : t@ype}
+make_root () : node_vt (t, true) =
+  (* Create a node that is marked as a root, points to itself, and has
+     no actual element stored in it. *)
+  let
+    var fake_elem : t?
+    prval _ = $UN.castview2void_at{t} (view@ fake_elem)
+
+    val node = node_vt_object (true,
+                               $UN.castvwtp0 the_null_ptr,
+                               $UN.castvwtp0 the_null_ptr,
+                               fake_elem)
+
+    val prev_val = node2nodeptr_preserving node
+    val next_val = node2nodeptr_preserving node
+
+    val+ @ node_vt_object (_, prev, next, _) = node
+    val _ = prev := prev_val
+    val _ = next := next_val
+    prval _ = fold@ node
+  in
+    node
+  end
+
+fn {t : t@ype}
+is_root {is_root : bool}
+        (node : !node_vt (t, is_root)) :
+    [b : bool | b == is_root] bool b =
+  case+ node of
+  | node_vt_object (is_root, _, _, _) => is_root
+
+fn {t : t@ype}
+isnot_root {is_root : bool}
+           (node : !node_vt (t, is_root)) :
+    [b : bool | b == ~is_root] bool b =
+  ~is_root<t> node
+
+fn {t : t@ype}
+find_root (node : !node_vt t) : node_vt (t, true) =
+  let
+    fun
+    loop (node : !node_vt t) : node_vt (t, true) =
+      case+ node of
+      | node_vt_object (true, _, _, _) => node_refcopy node
+      | node_vt_object (false, prev, _, _) =>
+        let
+          val prev_node = nodeptr2node_preserving prev
+          val retval = loop prev_node
+          val _ = $UN.castvwtp0{void} prev_node
+        in
+          retval
+        end
+  in
+    loop node
+  end
+
+fn {t : t@ype}
+get_prev (node : !node_vt t) : node_vt t =
+  let
+    val+ @ node_vt_object (_, prev, _, _) = node
+    val prev_node = nodeptr2node_preserving prev
+    prval _ = fold@ node
+  in
+    prev_node
+  end
+
+fn {t : t@ype}
+get_next (node : !node_vt t) : node_vt t =
+  let
+    val+ @ node_vt_object (_, _, next, _) = node
+    val next_node = nodeptr2node_preserving next
+    prval _ = fold@ node
+  in
+    next_node
+  end
+
+fn {t : t@ype}
+set_prev (node : !node_vt t, prev_val : !node_vt t) : void =
+  {
+    val+ @ node_vt_object (_, prev, _, _) = node
+    val _ = prev := node2nodeptr_preserving prev_val
+    prval _ = fold@ node
+  }
+
+fn {t : t@ype}
+set_next (node : !node_vt t, next_val : !node_vt t) : void =
+  {
+    val+ @ node_vt_object (_, _, next, _) = node
+    val _ = next := node2nodeptr_preserving next_val
+    prval _ = fold@ node
+  }
+
+fn {t : t@ype}
+insert_before (node : !node_vt t, elem : t) : void =
+  {
+    val prev_node = get_prev<t> node
+    val new_node =
+      node_vt_object (false, node2nodeptr_preserving prev_node,
+                      node2nodeptr_preserving node, elem)
+    val _ = set_next<t> (prev_node, new_node)
+    val _ = set_prev<t> (node, new_node)
+    val _ = $UN.castvwtp0{void} prev_node
+    val _ = $UN.castvwtp0{void} new_node
+  }
+
+fn {t : t@ype}
+insert_after (node : !node_vt t, elem : t) : void =
+  {
+    val next_node = get_next<t> node
+    val new_node =
+      node_vt_object (false, node2nodeptr_preserving node,
+                      node2nodeptr_preserving next_node, elem)
+    val _ = set_next<t> (node, new_node)
+    val _ = set_prev<t> (next_node, new_node)
+    val _ = $UN.castvwtp0{void} next_node
+    val _ = $UN.castvwtp0{void} new_node
+  }
+
+fn {t : t@ype}
+remove (node : !node_vt t) : void =
+  {
+    val _ = assertloc (isnot_root<t> node)
+    val prev_node = get_prev<t> node
+    val next_node = get_next<t> node
+    val _ = set_next<t> (prev_node, next_node)
+    val _ = set_prev<t> (next_node, prev_node)
+    val _ = $UN.castvwtp0{void} prev_node
+    val _ = $UN.castvwtp0{void} next_node
+  }
+
+fn {t : t@ype}
+get_element (node : !node_vt t) : t =
+  case+ node of
+  | node_vt_object (is_root, _, _, elem) =>
+    begin
+      assertloc (~is_root);
+      elem
+    end
+
+(********************************************************************)
+(* Implementation of the public interface.                          *)
+
+(* The public interface is "nonlinear"; that is, its types are
+   "ordinary", and will have to be managed by a garbage collector, if
+   you do not want them to leak freely. The need to free the linear
+   types is bypassed by these interface template functions.
+
+   A garbage collector, of course, is necessary for a great many
+   programming languages, and with more of them all the time. So it is
+   nothing extraordinary.
+
+   The usual garbage collector to use with ATS2 (Postiats) is Boehm
+   GC. *)
+
+assume dllist_t (t, is_root) = ptr
+
+implement {t}
+dllist_t_make () =
+  $UN.castvwtp0 (make_root<t> ())
+
+implement {t}
+dllist_t_is_root {is_root} dl =
+  let
+    val node = $UN.castvwtp0{node_vt (t, is_root)} dl
+    val retval = is_root<t> node
+    val _ = $UN.castvwtp0{void} node
+  in
+    retval
+  end
+
+implement {t}
+dllist_t_isnot_root {is_root} dl =
+  let
+    val node = $UN.castvwtp0{node_vt (t, is_root)} dl
+    val retval = isnot_root<t> node
+    val _ = $UN.castvwtp0{void} node
+  in
+    retval
+  end
+
+implement {t}
+dllist_t_root dl =
+  let
+    val node = $UN.castvwtp0{node_vt t} dl
+    val root = find_root<t> node
+    val _ = $UN.castvwtp0{void} node
+  in
+    $UN.castvwtp0 root
+  end
+
+implement {t}
+dllist_t_previous dl =
+  let
+    val node = $UN.castvwtp0{node_vt t} dl
+    val prev = get_prev<t> node
+    val _ = $UN.castvwtp0{void} node
+  in
+    $UN.castvwtp0 prev
+  end
+
+implement {t}
+dllist_t_next dl =
+  let
+    val node = $UN.castvwtp0{node_vt t} dl
+    val next = get_next<t> node
+    val _ = $UN.castvwtp0{void} node
+  in
+    $UN.castvwtp0 next
+  end
+
+implement {t}
+dllist_t_insert_before (dl, elem) =
+  let
+    val node = $UN.castvwtp0{node_vt t} dl
+    val next = insert_before<t> (node, elem)
+    val _ = $UN.castvwtp0{void} node
+  in
+  end
+
+implement {t}
+dllist_t_insert_after (dl, elem) =
+  let
+    val node = $UN.castvwtp0{node_vt t} dl
+    val next = insert_after<t> (node, elem)
+    val _ = $UN.castvwtp0{void} node
+  in
+  end
+
+implement {t}
+dllist_t_remove dl =
+  let
+    val node = $UN.castvwtp0{node_vt t} dl
+    val next = remove<t> node
+    val _ = $UN.castvwtp0{void} node
+  in
+  end
+
+implement {t}
+dllist_t_element dl =
+  let
+    val node = $UN.castvwtp0{node_vt t} dl
+    val elem = get_element<t> node
+    val _ = $UN.castvwtp0{void} node
+  in
+    elem
+  end
+
+implement {t}
+dllist_t_make_generator (dl, direction) =
+  if isltz direction then
+    let
+      val node_ref = ref (dllist_t_previous<t> (dllist_t_root<t> dl))
+      val p_node = $UN.castvwtp0{ptr} node_ref
+    in
+      lam () =>
+        let
+          val node_ref = $UN.castvwtp0{ref (dllist_t t)} p_node
+          val node = !node_ref
+        in
+          if dllist_t_is_root<t> node then
+            None ()
+          else
+            let
+              val elem = dllist_t_element<t> node
+            in
+              !node_ref := dllist_t_previous<t> node;
+              Some elem
+            end
+        end
+    end
+  else
+    let
+      val node_ref = ref (dllist_t_next<t> (dllist_t_root<t> dl))
+      val p_node = $UN.castvwtp0{ptr} node_ref
+    in
+      lam () =>
+        let
+          val node_ref = $UN.castvwtp0{ref (dllist_t t)} p_node
+          val node = !node_ref
+        in
+          if dllist_t_is_root<t> node then
+            None ()
+          else
+            let
+              val elem = dllist_t_element<t> node
+            in
+              !node_ref := dllist_t_next<t> node;
+              Some elem
+            end
+        end
+    end
+
+implement {t}
+dllist_t_to_list dl =
+  let
+    var lst : List0 t = list_nil ()
+    var xopt : Option t
+    val gen = dllist_t_make_generator<t> (dl, ~1)
+  in
+    for (xopt := gen (); option_is_some xopt; xopt := gen ())
+      case+ xopt of
+      | Some x => lst := list_cons (x, lst);
+    lst
+  end
+
+implement {t}
+list_to_dllist_t lst =
+  let
+    val root = dllist_t_make<t> ()
+    var dl : dllist_t t = root
+    var p : List t
+  in
+    for (p := lst; isneqz p; p := list_tail p)
+      begin
+        dllist_t_insert_after<t> (dl, list_head p);
+        dl := dllist_t_next<t> dl
+      end;
+    root
+  end
+
+(********************************************************************)

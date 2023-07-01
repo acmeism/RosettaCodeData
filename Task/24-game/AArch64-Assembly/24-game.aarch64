@@ -1,0 +1,485 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program game24_64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ NBDIGITS,   4       // digits number
+.equ TOTAL,      24
+.equ BUFFERSIZE, 100
+.equ STACKSIZE,  10      // operator and digits number items in stacks
+
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessRules:         .ascii "24 Game  64 bits.\n"
+                    .ascii "The program will display four randomly-generated \n"
+                    .ascii "single-digit numbers and will then prompt you to enter\n"
+                    .ascii "an arithmetic expression followed by <enter> to sum \n"
+                    .ascii "the given numbers to 24.\n"
+                    .asciz "Exemple : 9+8+3+4   or (7+5)+(3*4) \n\n"
+
+szMessExpr:         .asciz "Enter your expression (or type (q)uit to exit or (n) for other digits): \n"
+szMessDigits:       .asciz "The four digits are @ @ @ @ and the score is 24. \n"
+szMessNoDigit:      .asciz "Error : One digit is not in digits list !! \n"
+szMessSameDigit:    .asciz "Error : Two digits are same !! \n"
+szMessOK:           .asciz "It is OK. \n"
+szMessNotOK:        .asciz "Error, it is not ok  total = @ \n"
+szMessErrOper:      .asciz "Unknow Operator (+,-,$,/,(,)) \n"
+szMessNoparen:      .asciz "no opening parenthesis !! \n"
+szMessErrParen:     .asciz "Error parenthesis number !! \n"
+szMessNoalldigits:  .asciz "One or more digits not used !!\n"
+szMessNewGame:      .asciz "New game (y/n) ? \n"
+szCarriageReturn:   .asciz "\n"
+.align 4
+qGraine:  .quad 123456
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+sBuffer:          .skip BUFFERSIZE
+iTabDigit:        .skip 8 * NBDIGITS
+iTabTopDigit:     .skip 8 * NBDIGITS
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 // entry of program
+
+    ldr x0,qAdrszMessRules            // display rules
+    bl affichageMess
+1:
+    mov x3,#0
+    ldr x12,qAdriTabDigit
+    ldr x11,qAdriTabTopDigit
+    ldr x5,qAdrszMessDigits
+2:                                    // loop generate random digits
+    mov x0,#8
+    bl genereraleas
+    add x0,x0,#1
+    str x0,[x12,x3,lsl #3]            // store in table
+    mov x1,#0
+    str x1,[x11,x3,lsl #3]            // raz top table
+    ldr x1,qAdrsZoneConv
+    bl conversion10                   // call decimal conversion
+    //mov x2,#0
+    //strb w2,[x1,x0]                   // reduce size display area with zéro final
+    mov x0,x5
+    ldr x1,qAdrsZoneConv              // insert conversion in message
+    bl strInsertAtCharInc
+    mov x5,x0
+    add x3,x3,#1
+    cmp x3,#NBDIGITS                  // end ?
+    blt 2b                            // no -> loop
+    mov x0,x5
+    bl affichageMess
+3:                                    // loop human entry
+    ldr x0,qAdrszMessExpr
+    bl affichageMess
+    bl saisie                         // entry
+    cmp x0,#'q'
+    beq 100f
+    cmp x0,#'Q'
+    beq 100f
+    cmp x0,#'n'
+    beq 1b
+    cmp x0,#'N'
+    beq 1b
+
+    bl evalExpr                      // expression evaluation
+    cmp x0,#0                        // ok ?
+    bne 3b                           // no - > loop
+
+10:                                  // display new game ?
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    ldr x0,qAdrszMessNewGame
+    bl affichageMess
+    bl saisie
+    cmp x0,#'y'
+    beq 1b
+    cmp x0,#'Y'
+    beq 1b
+
+100:                                  // standard end of the program
+    mov x0, #0                        // return code
+    mov x8, #EXIT                     // request to exit program
+    svc #0                            // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszMessRules:          .quad szMessRules
+qAdrszMessDigits:         .quad szMessDigits
+qAdrszMessExpr:           .quad szMessExpr
+qAdrszMessNewGame:        .quad szMessNewGame
+qAdrsZoneConv:            .quad sZoneConv
+qAdriTabDigit:            .quad iTabDigit
+qAdriTabTopDigit:         .quad iTabTopDigit
+/******************************************************************/
+/*            evaluation expression                                       */
+/******************************************************************/
+/* x0 return 0 if ok -1 else */
+evalExpr:
+    stp x1,lr,[sp,-16]!        // save  registres
+    stp x2,x3,[sp,-16]!        // save  registres
+    stp x4,x5,[sp,-16]!        // save  registres
+    stp x6,x7,[sp,-16]!        // save  registres
+    stp x8,x9,[sp,-16]!        // save  registres
+    stp x10,fp,[sp,-16]!       // save  registres
+    mov x0,#0
+    ldr x1,qAdriTabTopDigit
+    mov x2,#0
+1:                             // loop init table top digits
+    str x0,[x1,x2,lsl #3]
+    add x2,x2,#1
+    cmp x2,#NBDIGITS
+    blt 1b
+
+    sub sp,sp,#STACKSIZE * 8   // stack operator
+    mov fp,sp
+    sub sp,sp,#STACKSIZE * 8   // stack digit
+    mov x1,sp
+    ldr x10,qAdrsBuffer
+    mov x8,#0                  // indice character in buffer
+    mov x7,#0                  // indice digits stack
+    mov x2,#0                  // indice operator stack
+    mov x9,0
+1:                             // begin loop
+    ldrb w9,[x10,x8]
+    cmp x9,#0xA               // end expression ?
+    beq 90f
+    cmp x9,#' '               // space  ?
+    cinc x8,x8,eq             // loop
+    beq 1b
+    cmp x9,#'('               // left parenthesis -> store in operator stack
+    bne 11f
+    str x9,[fp,x2,lsl 3]
+    add x2,x2,#1
+    add x8,x8,#1             // and loop
+    b 1b
+11:
+    cmp x9,#')'               // right parenthesis ?
+    bne 3f
+    mov x0,fp                  // compute operator stack until left parenthesis
+    sub x2,x2,#1
+2:
+    ldr x6,[fp,x2,lsl 3]
+    cmp x6,#'('                // left parenthesis
+    cinc x8,x8,eq              //  end ?
+    beq 1b                     // and loop
+    sub x7,x7,#1               // last digit
+    mov x3,x7
+    bl compute
+    sub x2,x2,#1
+    cmp x2,#0
+    bge 2b
+    ldr x0,qAdrszMessNoparen   // no left parenthesis in stack
+    bl affichageMess
+    mov x0,#-1
+    b 100f
+3:
+    cmp x9,#'+'               // addition
+    beq 4f
+    cmp x9,#'-'               // soustraction
+    beq 4f
+    cmp x9,#'*'               // multiplication
+    beq 4f
+    cmp x9,#'/'               // division
+    beq 4f
+
+    b 5f                       // not operator
+
+4:                             // control priority and depile stacks
+    mov x0,fp
+    mov x3,x7
+    mov x4,x9
+    bl depileOper
+    mov x7,x3
+    add x8,x8,#1
+    b 1b                       // and loop
+
+5:                             //  digit
+    sub x9,x9,#0x30
+    mov x0,x9
+    bl digitControl
+    cmp x0,#0                  // error ?
+    bne 100f
+    str x9,[x1,x7,lsl #3]     // store digit in digits stack
+    add x7,x7,#1
+
+    add x8,x8,#1
+    beq 1b
+
+    b 100f
+90:                            // compute all stack operators
+    mov x0,fp
+    sub x7,x7,#1
+91:
+    subs x2,x2,#1
+    blt 92f
+    mov x3,x7
+    bl compute
+    sub x7,x7,#1
+    b 91b
+92:
+    ldr x0,[x1]                 // total = first value on digits stack
+    cmp x0,#TOTAL               // control total
+    beq 93f                     // ok
+    ldr x1,qAdrsZoneConv
+    bl conversion10             // call decimal conversion
+    mov x2,#0
+    strb w2,[x1,x0]
+    ldr x0,qAdrszMessNotOK
+    ldr x1,qAdrsZoneConv        // insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+    mov x0,#-1
+    b 100f
+93:                             // control use all digits
+    ldr x1,qAdriTabTopDigit
+    mov x2,#0
+94:                             // begin loop
+    ldr x0,[x1,x2,lsl #3]       // load top
+    cmp x0,#0
+    bne 95f
+    ldr x0,qAdrszMessNoalldigits
+    bl affichageMess
+    mov x0,#-1
+    b 100f
+95:
+    add x2,x2,#1
+    cmp x2,#NBDIGITS
+    blt 94b
+96:                             // display message OK
+    ldr x0,qAdrszMessOK
+    bl affichageMess
+    mov x0,#0
+    b 100f
+
+100:
+    add sp,sp,8 * (STACKSIZE *2)    // stack algnement
+    ldp x10,fp,[sp],16          // restaur des  2 registres
+    ldp x8,x9,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+qAdrszMessNoparen:        .quad szMessNoparen
+qAdrszMessNotOK:          .quad szMessNotOK
+qAdrszMessOK:             .quad szMessOK
+qAdrszMessNoalldigits:    .quad szMessNoalldigits
+/******************************************************************/
+/*            depile operator                                     */
+/******************************************************************/
+/* x0 operator stack address  */
+/* x1 digits stack address */
+/* x2 operator indice */
+/* x3 digits indice */
+/* x4 operator */
+/* x2 return a new operator indice */
+/* x3 return a new digits indice */
+depileOper:
+    stp x4,lr,[sp,-16]!    // save  registres
+    stp x5,x6,[sp,-16]!    // save  registres
+    stp x7,x8,[sp,-16]!    // save  registres
+    cmp x2,#0              // first operator ?
+    beq 60f
+    sub x5,x2,#1
+1:
+    ldr x6,[x0,x5,lsl #3]  // load stack operator
+    cmp x6,x4              // same operators
+    beq 50f
+    cmp x6,#'*'            // multiplication
+    beq 50f
+    cmp x6,#'/'            // division
+    beq 50f
+    cmp x6,#'-'            // soustraction
+    beq 50f
+
+    b 60f
+50:                        // depile operators stack and compute
+    sub x2,x2,#1
+    sub x3,x3,#1
+    bl compute
+    sub x5,x5,#1
+    cmp x5,#0
+    bge 1b
+60:
+    str x4,[x0,x2,lsl #3]  // add operator in stack
+    add x2,x2,#1
+
+100:
+    ldp x7,x8,[sp],16           // restaur des  2 registres
+    ldp x5,x6,[sp],16           // restaur des  2 registres
+    ldp x4,lr,[sp],16           // restaur des  2 registres
+    ret
+/******************************************************************/
+/*            compute                                             */
+/******************************************************************/
+/* x0 operator stack address  */
+/* x1 digits stack address */
+/* x2 operator indice */
+/* x3 digits indice */
+compute:
+    stp x1,lr,[sp,-16]!   // save  registres
+    stp x2,x3,[sp,-16]!   // save  registres
+    stp x4,x5,[sp,-16]!   // save  registres
+    stp x6,x7,[sp,-16]!   // save  registres
+    stp x8,x9,[sp,-16]!   // save  registres
+    ldr x6,[x1,x3,lsl 3]  // load second digit
+    sub x5,x3,#1
+    ldr x7,[x1,x5,lsl 3]  // load first digit
+
+    ldr x8,[x0,x2,lsl 3]  // load operator
+    cmp x8,#'+'
+    bne 1f
+    add x7,x7,x6           // addition
+    str x7,[x1,x5,lsl 3]
+    b 100f
+1:
+    cmp x8,#'-'
+    bne 2f
+    sub x7,x7,x6           // soustaction
+    str x7,[x1,x5,lsl 3]
+    b 100f
+2:
+    cmp x8,#'*'
+    bne 3f                 // multiplication
+    mul x7,x6,x7
+    str x7,[x1,x5,lsl 3]
+    b 100f
+3:
+    cmp x8,#'/'
+    bne 4f
+    udiv x7,x7,x6          // division
+    str x7,[x1,x5,lsl 3]
+    b 100f
+4:
+    cmp x8,#'('            // left parenthesis ?
+    bne 5f
+    ldr x0,qAdrszMessErrParen //  error
+    bl affichageMess
+    mov x0,#-1
+    b 100f
+5:
+    ldr x0,qAdrszMessErrOper
+    bl affichageMess
+    mov x0,#-1
+100:
+    ldp x8,x9,[sp],16     // restaur des  2 registres
+    ldp x6,x7,[sp],16     // restaur des  2 registres
+    ldp x4,x5,[sp],16     // restaur des  2 registres
+    ldp x2,x3,[sp],16     // restaur des  2 registres
+    ldp x1,lr,[sp],16     // restaur des  2 registres
+    ret
+qAdrszMessErrOper:   .quad szMessErrOper
+qAdrszMessErrParen:  .quad szMessErrParen
+/******************************************************************/
+/*            control digits                                       */
+/******************************************************************/
+/* x0 return 0 if OK 1 if  not digit   */
+digitControl:
+    stp x1,lr,[sp,-16]!   // save  registres
+    stp x2,x3,[sp,-16]!   // save  registres
+    stp x4,x5,[sp,-16]!   // save  registres
+    ldr x1,qAdriTabTopDigit
+    ldr x2,qAdriTabDigit
+    mov x3,#0
+1:
+    ldr x4,[x2,x3,lsl #3]  // load digit
+    cmp x0,x4              // equal ?
+    beq 2f                 // yes
+    add x3,x3,#1           // no -> loop
+    cmp x3,#NBDIGITS       // end ?
+    blt 1b
+    ldr x0,qAdrszMessNoDigit // error
+    bl affichageMess
+    mov x0,#1
+    b 100f
+2:                         // control prev use
+    ldr x4,[x1,x3,lsl #3]
+    cmp x4,#0
+    beq 3f
+    add x3,x3,#1
+    cmp x3,#NBDIGITS
+    blt 1b
+    ldr x0,qAdrszMessSameDigit
+    bl affichageMess
+    mov x0,#1
+    b 100f
+3:
+    mov x4,#1
+    str x4,[x1,x3,lsl #3]
+    mov x0,#0
+100:
+    ldp x4,x5,[sp],16     // restaur des  2 registres
+    ldp x2,x3,[sp],16     // restaur des  2 registres
+    ldp x1,lr,[sp],16     // restaur des  2 registres
+    ret
+qAdrszMessNoDigit:     .quad szMessNoDigit
+qAdrszMessSameDigit:   .quad szMessSameDigit
+/******************************************************************/
+/*            string entry                                       */
+/******************************************************************/
+/* x0 return the first character of human entry */
+saisie:
+    stp x1,lr,[sp,-16]!   // save  registres
+    stp x2,x3,[sp,-16]!   // save  registres
+    stp x4,x5,[sp,-16]!   // save  registres
+    stp x6,x7,[sp,-16]!   // save  registres
+    mov x0,STDIN          // Linux input console
+    ldr x1,qAdrsBuffer    // buffer address
+    mov x2,BUFFERSIZE     // buffer size
+    mov x8,READ           // request to read datas
+    svc 0                 // call system
+    ldr x1,qAdrsBuffer    // buffer address
+    ldrb w0,[x1]          // load first character
+100:
+    ldp x6,x7,[sp],16     // restaur des  2 registres
+    ldp x4,x5,[sp],16     // restaur des  2 registres
+    ldp x2,x3,[sp],16     // restaur des  2 registres
+    ldp x1,lr,[sp],16     // restaur des  2 registres
+    ret
+qAdrsBuffer:         .quad sBuffer
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* x0 contains limit  */
+genereraleas:
+    stp x1,lr,[sp,-16]!   // save  registres
+    stp x2,x3,[sp,-16]!   // save  registres
+    stp x4,x5,[sp,-16]!   // save  registres
+    ldr x4,qAdrqGraine
+    ldr x2,[x4]
+    ldr x3,qNbDep1
+    mul x2,x3,x2
+    ldr x3,qNbDep2
+    add x2,x2,x3
+    str x2,[x4]           // maj de la graine pour l appel suivant
+    cmp x0,#0
+    beq 100f
+    add x0,x0,#1
+    udiv x3,x2,x0
+    msub x0,x3,x0,x2      // résult = remainder
+
+    ldp x4,x5,[sp],16     // restaur des  2 registres
+    ldp x2,x3,[sp],16     // restaur des  2 registres
+    ldp x1,lr,[sp],16     // restaur des  2 registres
+    ret
+
+/*****************************************************/
+qAdrqGraine: .quad qGraine
+qNbDep1:     .quad 0x0019660d
+qNbDep2:     .quad 0x3c6ef35f
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

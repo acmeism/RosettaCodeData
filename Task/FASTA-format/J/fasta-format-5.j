@@ -1,0 +1,3 @@
+   ;(,': ',,&LF)each/"1 fread each fasta
+Rosetta_Example_1: THERECANBENOSPACE
+Rosetta_Example_2: THERECANBESEVERALLINESBUTTHEYALLMUSTBECONCATENATED

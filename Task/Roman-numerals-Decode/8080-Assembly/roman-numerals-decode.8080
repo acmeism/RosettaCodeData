@@ -1,0 +1,110 @@
+		org	100h
+		jmp	test
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Takes a zero-terminated Roman numeral string in BC
+		;; and returns 16-bit integer in HL.
+		;; All registers destroyed.
+roman:		dcx	b
+romanfindend:	inx	b	; load next character
+		ldax	b	
+		inr	e
+		ana	a	; are we there yet
+		jnz	romanfindend
+		lxi	h,0	; zero HL to hold the total
+		push	h	; stack holds the previous roman numeral
+romanloop:	dcx	b	; get next roman numeral
+		ldax	b	; (work backwards)
+		call	romandgt
+		jc	romandone	; carry set = not Roman anymore
+		xthl		; load previous roman numeral
+		call	cmpdehl	; DE < HL?
+		mov	h,d	; in any case, DE is now the previous
+		mov	l,e	; Roman numeral
+		xthl		; bring back the total
+		jnc	romanadd
+		mov	a,d	; DE (current) < HL (previous)
+		cma		; so this Roman digit must be subtracted
+		mov	d,a	; from the total.
+		mov	a,e	; so we negate it before adding it
+		cma		; two's complement: -de = (~de)+1
+		mov	e,a
+		inx	d
+romanadd:	dad	d	; add to running total
+		jmp	romanloop
+romandone:	pop	d	; remove temporary variable from stack
+		ret
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; 16-bit compare DE with HL, set flags
+		;; accordingly. A destroyed.
+cmpdehl:	mov	a,d
+		cmp	h
+		rnz
+		mov	a,e
+		cmp	l
+		ret
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Takes a single Roman 'digit' in A,
+		;; and returns its value in DE (0 if invalid)
+		;; All other registers preserved.
+romandgt:	push	h	; preserve hl for the caller
+		lxi	h,romantab
+		mvi	e,7	; e=counter
+romandgtl:	cmp	m	; check table entry
+		jz	romanfound
+		inx	h	; move to next table entry
+		inx	h
+		inx	h
+		dcr	e	; decrease counter
+		jnz	romandgtl
+		pop	h	; we didn't find it
+		stc		; set carry
+		ret		; return with DE=0
+romanfound:	inx	h	; we did find it
+		mov	e,m	; load it into DE
+		inx	h
+		mov	d,m
+		pop	h
+		ana	a	; clear carry
+		ret
+romantab:	db	'I',1,0	; 16-bit little endian values
+		db	'V',5,0
+		db	'X',10,0
+		db	'L',50,0
+		db	'C',100,0
+		db	'D',0f4h,1
+		db	'M',0e8h,3
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; The following is testing and I/O code.
+test:		mvi	c,10	; read string from console
+		lxi	d,bufdef
+		call	5
+		mvi	c,9	; print newline
+		lxi	d,nl
+		call	5
+		lxi	b,buf	; run `roman' on the input string
+		call	roman	; the result is now in hl
+		lxi	d,-10000	
+		call	numout	; print 10000s digit
+		lxi	d,-1000		
+		call	numout	; print 1000s digit
+		lxi	d,-100
+		call 	numout	; print 100s digit
+		lxi	d,-10
+		call 	numout	; print 10s digit
+		lxi	d,-1	; ...print 1s digit
+numout:		mvi	a,-1	
+		push	h	
+numloop:	inr	a
+		pop	b
+		push	h
+		dad	d
+		jc	numloop
+		adi	'0'
+		mvi	c,2
+		mov	e,a
+		call	5
+		pop	h
+		ret
+nl:		db	13,10,'$'
+bufdef:		db	16,0
+buf:		ds	17

@@ -1,0 +1,1 @@
+gmean=:amean&.:^.

@@ -1,0 +1,1031 @@
+{{language|Guish
+|site=https://codeberg.org/phranz/guish
+}}
+
+= NAME =
+
+
+
+guish - A language to make and modify GUIs
+
+= SYNOPSIS =
+
+
+
+'''guish''' ['''-c''' &lt;code&gt;]['''-s''']['''-q''']['''-k''']['''-t''']['''-f''']['''-v''']['''-b''']['''-h'''][&lt;file&gt;][&lt;arguments&gt;]
+
+= DESCRIPTION =
+
+
+
+'''guish''' is a language to create and modify GUIs; it can be used to tie different programs together by embedding, or to make simple GUIs.
+
+This is version 2.x, which depends just on Xlib as all toolkits have been removed (there are some optional dependencies).
+
+= OPTIONS =
+
+
+
+; '''-c &lt;code&gt;'''
+: read and execute commands from command line.
+; '''-s'''
+: display elements when created.
+; '''-q'''
+: quit when closing last element/window.
+; '''-k'''
+: terminate all external programs when quitting.
+; '''-t'''
+: fallback on tty after reading data from other inputs.
+; '''-f'''
+: show available X11 fonts.
+; '''-v'''
+: show version.
+; '''-b'''
+: show build (compiled in) options.
+; '''-h'''
+: guess.
+
+= INPUTS AND SOURCES =
+
+
+
+guish reads commands from multiple source sequentially; these source are: command line (with '''-c''' option), file, standard input, and if '''-t''' option is given, controlling terminal. After reading commands from a source, it tries to switch to another one, and when there are no more sources, it simply stays idle.
+
+After executing from file or command line or standard input, then finally it switchs to controlling terminal (if '''-t''' option is given) and executes from there.
+
+If the file given is a named pipe, then it will be opened in non-blocking mode, allowing to issue commands from the other end of the pipe.
+
+= SYNTAX OVERVIEW =
+
+
+
+Being a command interpreter, guish has a little set of syntax rules. They comprises expressions, commands, quotes and special operators. Generic commands and signals are common to all elements, while there are ones which are specific to each element. A phrase is the execution unit, and ends if the program encounters a newline-like character, or a semicolon (&quot;;&quot;).
+
+== Comments ==
+
+
+
+Single line comments begin with a '''#''', and end at newline like character:
+
+<pre> a = 4 # this is a comment</pre>
+Multiline comments instead are embedded inside '''#[''' and ''']#''' (or end at the end of source):
+
+<pre> a = 4 #[ This,
+ is a multiline comment,
+ ending here. ]# puts &quot;a: @{a}&quot;</pre>
+== Elements and element expressions ==
+
+
+
+Elements are basically widgets and have some commands and signals associated with them; they can be created using element expressions, enclosing element name within '''||''':
+
+<pre> |b|+</pre>
+In this example, &quot;|b|&quot; is an expression which creates an element of type button, and returns its X11 window id (ex, &quot;65011718&quot;).
+
+The '''+''' command will then show the button (all elements are hidden by default unless '''-s''' option is given).
+
+== Subject and implied subject ==
+
+
+
+To refer to the last created/modified element, you can use it without naming it explicitly, for example:
+
+<pre> |i|;+</pre>
+The &quot;+&quot; command will by applied to element created by &quot;|i|&quot; expression automatically.
+
+== Variables and variable substitution ==
+
+
+
+We can refer to elements by using variable substitution, instead of using their window ids:
+
+<pre> bt = |b|</pre>
+and then:
+
+<pre> @bt &lt; &quot;new button&quot;</pre>
+== Commands ==
+
+
+
+Commands instead can be of three distinct types: special, generic and normal.
+
+Special commands are meant to change guish behaviour, generic ones are meant to modify an element of any type and normal ones are for a specific element type (every element can have specialized commands).
+
+== Signals ==
+
+
+
+Signals make it possible to run actions on UI changes (or, more generally, on some events).
+
+<pre> |b|=&gt;c{run free}</pre>
+Here, the user creates a button that when clicked will make guish execute a system command (free in this case) (see '''run''' in SPECIAL COMMANDS).
+
+<pre> |b|&lt;generator =&gt;c{|b|&lt;clone}</pre>
+A button which is a factory of buttons (run this with '''-s''' option).
+
+Here the evaluation of the code block is done when the click signal is triggered.
+
+== Scopes and closures ==
+
+
+
+All variables (functions too, as blocks can be assigned to variables) have a specific scope:
+
+<pre> a = 1
+ {b = 2}()
+ puts &quot;@{a}:@{b}&quot;</pre>
+Here the variable &quot;a&quot; is defined in the global scope, while &quot;b&quot; is defined in a temporarily block scope; hence just &quot;a&quot; is printed to stdout.
+
+When accessing reading/defining a variable in a local scope, if the variable is already defined in the enclosing scope then that variable is picked to be read/modified:
+
+<pre> a = 1
+ {
+     a = 5
+     puts@a
+ }()
+ puts@a</pre>
+Here &quot;a&quot; is defined in the global scope, then modified from block scope and printed from there, and its value doesn't change.
+
+If a variable is defined inside a block, then all embedded blocks that reference that variable will get its value at definition time (a closure):
+
+<pre> {
+     a = 1
+     return {
+         puts @a
+     }
+ }()()</pre>
+== Quotes, blocks and functions ==
+
+
+
+There are single and double quoting: anything embedded inside single quotes '', is treated literally (no escaping takes place) and as a single token.
+
+Variable and function interpolations (respectively via &quot;'''@{...}'''&quot; and &quot;'''@(...)'''&quot;) are used inside double quotes &quot;&quot;, external command substitution quotes `` and external window id substitution '''&lt;(...)'''.
+
+Escaping (&quot;\n\t\r\f\v\b&quot;) takes place only inside double quotes &quot;&quot;.
+
+<pre> a = 'my string'; puts &quot;this is:	 @{a}&quot;
+ puts &quot;sum of 1 + 5 is: @(add(1, 5))&quot;</pre>
+Anything embedded inside '''{}''' is treated as a code block and no variable substitution is done at definition time.
+
+To &quot;execute&quot; a block, simply use parens '''()'''. If arguments are given, they can be referenced inside block by using '''@n''', where &quot;n&quot; is a number which represents a specific argument by position, with indexes starting at 1 (works with command line parameters too). To refer to all arguments (at once) given to the block use '''@*''' operator (when in string interpolation, argument separator is a space).
+
+<pre> v = myvar
+ a = {puts &quot;here is @{v}&quot;}
+ a()</pre>
+Here the variable &quot;v&quot; is not substituted when assigning the block to &quot;a&quot;; it's substituted later, when function &quot;a&quot; is called.
+
+<pre> {
+     puts join(&quot;string length is: &quot;, len(@1))
+ }(&quot;home&quot;)</pre>
+Here instead, the block is defined and executed immediately, using &quot;home&quot; as the first argument.
+
+Being a block a piece of code, it can be used to define functions by simply being assigned to a variable:
+
+<pre> fn = {return add(@1, @2)}
+ puts join(&quot;my func res:&quot;, fn(2, 4)) </pre>
+In addition, when defining a new function, it's possible to &quot;overwrite&quot; the builtin functions in the current scope.
+
+When returning from a function, instead, it's possible to return multiple arguments (the remaining phrase) to the caller:
+
+<pre> fn = {return 1 2 3}
+ puts join(fn())</pre>
+== Conditionals ==
+
+
+
+Anything equal to 0, &quot;0&quot; or empty (like '''''''', '''&quot;&quot;''', '''{}''') is false, true otherwise. This is useful with '''if''' and '''else''' commands:
+
+<pre> if 1 { |b|&lt;text } else { |b|&lt;neverhere }</pre>
+or
+
+<pre> if ge(@a,4) { |l|&lt;4 }</pre>
+== Loops and iteration ==
+
+
+
+Here an example of a '''while''' loop:
+
+<pre> a = 1
+ after 4 {a = 0}
+ while {eq(@a, 1)} {
+     wait 1 puts 'true'
+ }
+ puts 'end'</pre>
+And here another one using '''each''' function:
+
+<pre> each({puts @1}, 1, 2, 3, 4, 5})</pre>
+And another one of a '''for''' loop:
+
+<pre> for x in 1 2 3 4: { puts @x }</pre>
+== Tail recursion optimization (TCO) ==
+
+
+
+Since '''2.2.1''' version, guish supports tail recursion optimization too, effectively turning a tail recursive function into a loop:
+
+<pre> upto = {
+     if gt(@1, @2) {
+         return
+     }
+     puts @1
+     return upto(add(@1, 1), @2)
+ }
+ upto(1, 7)</pre>
+To use TCO, the last phrase of a function must use '''return''' command directly (not inside another block like if-else).
+
+== External window id substitution ==
+
+
+
+Everything inside '''&lt;( )''' is recognized as an external command (X11 GUI), forked and executed, and its window id is substituted (using _NET_WM_PID).
+
+Note that this method will not work with programs that fork.
+
+For example:
+
+<pre> a = &lt;(xterm)</pre>
+xterm program is spawn, and can be driven (almost) like a normal element.
+
+== External command substitution ==
+
+
+
+Everything inside '''``''' is recognized as an external command and executed. Then the command output (STDOUT) is substituted inside source code and interpreted after that.
+
+For example:
+
+<pre> |b|&lt;`echo clickme`</pre>
+== Slicing ==
+
+
+
+Anything inside '''[]''' is trated as a slice expression. The usage is '''[&lt;n&gt;[,&lt;x&gt;]]''', when &lt;n&gt; is an index, and &lt;x&gt; is an optional end index (always inclusive); if the preceding argument is a regular token, then the expression will return its characters as specified by index(es), otherwise if it's a block, the expression will return its tokens:
+
+<pre> puts {1, 2, 3, 4, {a, b}, cat}[4][1]</pre>
+The output of this example is 'b'.
+
+If the index(es) given are out of range, an empty token is returned.
+
+= SPECIAL VARIABLES =
+
+
+
+; '''SW'''
+: primary screen width, in pixels.
+; '''SH'''
+: primary screen height, in pixels.
+; '''X'''
+: pointer's x coord.
+; '''Y'''
+: pointer's y coord.
+; '''self'''
+: variable holding the window id when in signal code.
+; '''args'''
+: refers to the block in which there are positional arguments and function arguments (alternative syntax).
+; '''FILE'''
+: variable holding the path of current source file.
+; '''LINE'''
+: variable holding current line number at &quot;that&quot; point in source code.
+
+= ENVIRONMENT VARIABLES =
+
+
+
+; '''GUISH_MAXWIDWAIT'''
+: the maximum number of seconds to wait when applying external window id substitution (defaults to 3 seconds)
+
+= ELEMENTS =
+
+
+
+Available elements are:
+
+; '''b'''
+: A button.
+; '''i'''
+: An input box.
+; '''l'''
+: A label.
+; '''p'''
+: A page (container of other elements; show and hide are applied to all subelements).
+; '''c'''
+: A checkbox.
+; '''t'''
+: A label with a totally transparent background (requires a compositor).
+
+= SPECIAL COMMANDS =
+
+
+
+Special commands are not tied to elements, they are like statements.
+
+; '''=&gt; &lt;signal&gt; &lt;subcmd&gt;'''
+: register a sub-command &lt;subcmd&gt; to run when &lt;signal&gt; triggers. For normal signals (eg. signals tied to elements), there must exist an implied subject.
+; '''!&gt; &lt;signal&gt;'''
+: unregister a sub-command &lt;subcmd&gt; previously registered on signal &lt;signal&gt;.
+; '''q'''
+: quit guish (exit status 0).
+; '''exit &lt;status&gt;'''
+: quit guish (exit status &lt;status&gt;).
+; '''cd &lt;path&gt;'''
+: change current working directory using &lt;path&gt;.
+; '''run &lt;cmd&gt;'''
+: execute shell command &lt;cmd&gt;.
+; '''puts [&lt;...&gt;]'''
+: prints remaining phrase to stdout with a newline added.
+; '''p [&lt;...&gt;]'''
+: prints remaining phrase to stdout.
+; '''e [&lt;...&gt;]'''
+: prints remaining phrase to stderr.
+; '''unset &lt;name|num|wid&gt; [&lt;attr&gt;]'''
+: unsets a variable (&lt;name&gt;) or timed scheduled procedure registered with &lt;num&gt;, see '''every''' command. If, instead of &lt;name|num&gt;, an element id &lt;wid&gt; is given and a name attribute &lt;attr&gt; is given, deletes that element attribute.
+; '''source &lt;file&gt;'''
+: execute commands from file.
+; '''vars [&lt;wid&gt;]'''
+: shows all variables present in the current scope or, if &lt;wid&gt; element id is given, shows all element attributes (uses stderr).
+; '''ls'''
+: display all existing widgets (stderr).
+; '''del &lt;wid&gt;'''
+: delete a widget with id &lt;wid&gt;.
+; '''every &lt;seconds&gt; &lt;block&gt;'''
+: schedule &lt;code&gt; to run after &lt;seconds&gt; seconds are elapsed.
+; '''after &lt;seconds&gt; &lt;block&gt;'''
+: schedule &lt;block&gt; to run once after &lt;seconds&gt; seconds are elapsed.
+; '''wait &lt;seconds&gt;'''
+: stop command execution and wait &lt;seconds&gt; seconds before resuming (accepts decimal values too). XEvent handling, schedules actions and signal execution are unaffected by this option.
+; '''if &lt;condition&gt; &lt;block&gt;'''
+: executes &lt;block&gt; if condition evaluates to true (see Conditionals).
+; '''unless &lt;condition&gt; &lt;block&gt;'''
+: executes &lt;block&gt; if condition evaluates to false (see Conditionals).
+; '''else &lt;block&gt;'''
+: executes &lt;block&gt; if last conditional command was successful (see Conditionals).
+; '''return &lt;phrase&gt;'''
+: when used inside a function, returns all its arguments (the remaining phrase) to the caller.
+; '''while &lt;condition&gt; &lt;block&gt;'''
+: executes &lt;block&gt; until &lt;condition&gt; evaluates to true (see Conditionals).
+; '''until &lt;condition&gt; &lt;block&gt;'''
+: executes &lt;block&gt; until &lt;condition&gt; evaluates to true (see Conditionals).
+; '''for [&lt;var1&gt;, &lt;var2&gt;, ...] in [&lt;val1&gt;, &lt;val2&gt;, ...] : &lt;block&gt;'''
+: executes the block &lt;block&gt; for each group of variables.
+; '''break'''
+: exit from current loop.
+; '''rel &lt;element1&gt; &lt;element2&gt; &lt;alignment&gt;'''
+: relates &lt;element1&gt; to &lt;element2&gt;, moving &lt;element1&gt; near &lt;element2&gt; using &lt;alignment&gt; (see alignment in STYLE AND ATTRIBUTES section, as &lt;alignment&gt; opts are similar) every time &lt;element2&gt; is moved. If &quot;0&quot; is specified as alignment, the relation is deleted.
+; '''pass [&lt;args&gt;]'''
+: do nothing, consuming remaining arguments.
+; '''send &lt;wid&gt; &lt;keysequence&gt;'''
+: send a keysequence to an element whose id si &lt;wid&gt; (must be enabled at compilation time).
+; '''ctrl &lt;wid&gt; &lt;keysequence&gt;'''
+: send control key sequence to an element whose id si &lt;wid&gt; (must be enabled at compilation time).
+
+= GENERIC COMMANDS =
+
+
+
+Generic commands are applicable to any element, regardless of its type (there are exceptions though).
+
+; '''G'''
+: element is undetectable in taskbar.
+; '''F'''
+: resize the element to fit the entire screen.
+; '''d'''
+: restore element's default window attributes.
+; '''!'''
+: bypass window manager.
+; '''!!'''
+: follow window manager as default.
+; '''n'''
+: center element in its parent.
+; '''-'''
+: hide element.
+; '''+'''
+: show element.
+; '''c'''
+: click element.
+; '''f'''
+: focus element.
+; '''t'''
+: make element stay at top.
+; '''b'''
+: make element stay at bottom.
+; '''x'''
+: hide element, or quit guish if quit-on-last-close is on and the element is the last closed one.
+; '''l'''
+: lower the element.
+; '''r'''
+: raise the element.
+; '''M'''
+: maximize the element.
+; '''D'''
+: disable the element.
+; '''E'''
+: enable the element.
+; '''o'''
+: fits element's size to its content.
+; '''w'''
+: resize an element in right-bottom directions to fit its parent, respecting limits of other elements.
+; '''nfill'''
+: resize an element in right-bottom directions to fit its parent.
+; '''rfill'''
+: resize an element in right direction to fit its parent, respecting limits of other elements.
+; '''nrfill'''
+: resize an element in right direction to fit its parent.
+; '''bfill'''
+: resize an element in bottom direction to fit its parent, respecting limits of other elements.
+; '''nbfill'''
+: resize an element in bottom direction to fit its parent.
+; '''L'''
+: clear element's data.
+; ''': &lt;title&gt;'''
+: set element title.
+; '''s &lt;text&gt;'''
+: set element style (see STYLE AND ATTRIBUTES section).
+; '''z &lt;w&gt; &lt;h&gt;'''
+: resize element by width and height.
+; '''m &lt;x&gt; &lt;y&gt;'''
+: move element to coords &lt;x&gt; &lt;y&gt;.
+; '''/ [&lt;l|L|a|A|p|x|n&gt; [&lt;...&gt;]]'''
+: draws/fills lines, points and arcs depending on operation (See Drawing operations subsection). Origin coordinates correspond to the bottom-left corner as default Cartesian axes (instead of upper-left one used for windows/elements). If no operation is given, then all drawings are discarded from the implied element.
+; '''A &lt;element&gt; &lt;alignment&gt;'''
+: moves implied element to &lt;element&gt; using &lt;alignment&gt; (see alignment in STYLE AND ATTRIBUTES section, as &lt;alignment&gt; opts are similar).
+; '''&lt; &lt;text&gt;'''
+: set element text using &lt;text&gt;.
+; '''&lt;+ &lt;text&gt;'''
+: add additional text to element text using &lt;text&gt;.
+; '''&gt; &lt;var&gt;'''
+: define a variable named &lt;var&gt; using element text to set its value.
+; '''g'''
+: enable/disable (toggle) moving the parent of the element by click-and-drag it. Enabling this will automatically exclude x/y moving flags below.
+; '''X'''
+: enable/disable (toggle) moving an element inside its parent by click-and-drag on x axis Enabling this will automatically exclude the flag to click-and-drag and move parent.
+; '''Y'''
+: enable/disable (toggle) moving an element inside its parent by click-and-drag on y axis Enabling this will automatically exclude the flag to click-and-drag and move parent.
+
+== Drawing operations ==
+
+
+
+; '''l [&lt;color&gt; &lt;x1&gt; &lt;y1&gt; &lt;x2&gt; &lt;y2&gt; [&lt;...&gt;]]'''
+: draws lines between given points using color &lt;color&gt; (beware this command consumes all the phrase). If no arguments are given, then all element lines are discarded.
+; '''L [&lt;color&gt; &lt;x1&gt; &lt;y1&gt; &lt;x2&gt; &lt;y2&gt; [&lt;...&gt;]]'''
+: fills the polygon described by given points using color &lt;color&gt; (beware this command consumes all the phrase). If no arguments are given, then all filled polygons are discarded.
+; '''a [&lt;color&gt; &lt;x&gt; &lt;y&gt; &lt;w&gt; &lt;h&gt; &lt;alpha&gt; &lt;beta&gt; [&lt;...&gt;]]'''
+: draws an arc using color &lt;color&gt; and whose &quot;center&quot; is at &lt;x&gt; &lt;y&gt;, major and minor axes are respectively &lt;w&gt; and &lt;h&gt;, start and stop angles are &lt;alpha&gt; and &lt;beta&gt; (consumes all the phrase). If no arguments are given, then all element arcs are discarded.
+; '''A [&lt;color&gt; &lt;x&gt; &lt;y&gt; &lt;w&gt; &lt;h&gt; &lt;alpha&gt; &lt;beta&gt; [&lt;...&gt;]]'''
+: fills an arc using color &lt;color&gt; and whose &quot;center&quot; is at &lt;x&gt; &lt;y&gt;, major and minor axes are respectively &lt;w&gt; and &lt;h&gt;, start and stop angles are &lt;alpha&gt; and &lt;beta&gt; (consumes all the phrase). If no arguments are given, then all element arcs are discarded.
+; '''p [&lt;color&gt; [&lt;...&gt;]]'''
+: draws given points using color &lt;color&gt; (beware this command consumes all the phrase). If no arguments are given, then all points are discarded.
+; '''x [&lt;color&gt; [&lt;...&gt;]]'''
+: draws given pixels using color &lt;color&gt; (beware this command consumes all the phrase). If no arguments are given, then all pixels are discarded.
+; '''n [&lt;color&gt; &lt;name&gt; &lt;x&gt; &lt;y&gt;]'''
+: draws given point using color &lt;color&gt; and putting the text &lt;name&gt; at that point. If no arguments are given, then all points are discarded.
+
+= NORMAL COMMANDS =
+
+
+
+== checkbox commands ==
+
+; '''C'''
+: check.
+; '''U'''
+: uncheck.
+
+== input commands ==
+
+; '''S'''
+: show input data as normal while typing.
+; '''H'''
+: hide input data while typing.
+; '''P'''
+: use password mode, displaying just asterisks.
+; '''W'''
+: toggles &quot;go to the next line&quot; when hitting return (triggers return signal anyway).
+
+== page commands ==
+
+; '''Q'''
+: make subelements equals (in size).
+; '''S &lt;style&gt;'''
+: style all subelements.
+; '''P'''
+: free all embedded elements.
+; '''&lt;&lt; &lt;element&gt;'''
+: embeds element (or an external client).
+; '''&lt;&lt;&lt; &lt;element&gt;'''
+: embeds element (or an external client), fitting the page to its content.
+; '''&gt;&gt; &lt;element&gt;'''
+: free element, reparenting it to root window.
+; '''&gt;&gt;&gt; &lt;element&gt;'''
+: free element, reparenting it to root window and fitting the page to its content.
+; '''v'''
+: set vertical layout readjusting all subwidgets.
+; '''h'''
+: set horizontal layout readjusting all subwidgets.
+; '''Z &lt;e1&gt; &lt;e2&gt;'''
+: swaps sub-elements position.
+; '''N'''
+: inverts the order of sub-elements.
+
+= SPECIAL SIGNALS =
+
+
+
+; Special signals are independent from elements, and are tied to internal guish events.
+: 
+; '''q'''
+: triggered at program exit.
+; '''t'''
+: triggered when program receives a SIGINT or a SIGTERM.
+
+= GENERIC SIGNALS =
+
+
+
+; Generic signals are common to all elements.
+: 
+; '''x'''
+: triggered when element is closed.
+; '''c'''
+: triggered when element is clicked.
+; '''lc'''
+: triggered when element is left-clicked.
+; '''rc'''
+: triggered when element is right-clicked.
+; '''mc'''
+: triggered when element is middle-clicked.
+; '''cc'''
+: triggered when element is double clicked.
+; '''lcc'''
+: triggered when element is double left-clicked.
+; '''rcc'''
+: triggered when element is double right-clicked.
+; '''mcc'''
+: triggered when element is double middle-clicked.
+; '''p'''
+: triggered when element is pressed.
+; '''lp'''
+: triggered when element is left-pressed.
+; '''rp'''
+: triggered when element is right-pressed.
+; '''mp'''
+: triggered when element is middle-pressed.
+; '''r'''
+: triggered when element is released.
+; '''lr'''
+: triggered when element is left-released.
+; '''rr'''
+: triggered when element is right-released.
+; '''mr'''
+: triggered when element is middle-released.
+; '''m'''
+: triggered when element is moved.
+; '''s'''
+: triggered when element scrolled down.
+; '''S'''
+: triggered when element scrolled up.
+; '''z'''
+: triggered when element is resized.
+; '''e'''
+: triggered when mouse pointer &quot;enters&quot; the element.
+; '''l'''
+: triggered when mouse pointer &quot;leaves&quot; the element.
+; '''f'''
+: triggered when focusing the element.
+; '''u'''
+: triggered when un-focusing the element.
+
+= NORMAL SIGNALS =
+
+
+
+; Normal signals are per element.
+: 
+
+== checkbox signals ==
+
+; '''U'''
+: triggered when checkbox is unchecked.
+; '''C'''
+: triggered when checkbox is checked.
+
+== input signals ==
+
+; '''R'''
+: triggered when input has focus and &quot;return&quot; is hit.
+
+= REDUNDANT TOKENS =
+
+
+
+These tokens are ignored: &quot;''','''&quot;, &quot;'''-&gt;'''&quot;.
+
+= EVALUATION ORDER AND SUBSTITUTIONS =
+
+
+
+Every time a new phrase is evaluated, it goes through a series of special substitutions/evaluations before it's commands are interpreted.
+
+The evaluation order is: hex substitution (at tokenizer level), evaluation of expressions (where code evaluation/execution, substitutions and functions are computed), evaluation of special commands and execution of generic/normal commands.
+
+Moreover if after the execution phase (the last one) the phrase is not empty, the evaluation cycle will restart from evaluation of expressions phase, and it will continue until there are no more tokens in the phrase.
+
+Every phrase is reduced to an empty phrase while evaluating:
+
+<pre> a=234;{i1=|i|;&lt;'input1'+}();{i2=|i|;&lt;'input2'+}()|b|&lt;btn+</pre>
+This example is composed by 2 phrases, and the code block in each phrase is executed before each assignment.
+
+== Hex substitution ==
+
+
+
+Non quoted tokens are subject to hex substitution: if a &quot;\x&quot; plus 2 hexadecimal characters is found, it's substituted with corresponding ascii characters.
+
+<pre> puts \x68\x6F\x6D\x65</pre>
+Here, the string &quot;home&quot; is printed.
+
+== Globbing ==
+
+
+
+If a &quot;'''*'''&quot; is given, then all widgets wids are substituted.
+
+<pre> |b||b||b|+
+ puts *</pre>
+== Variable substitution ==
+
+
+
+With the '''=''' operator (actually, it's a special statement command), it's possible to assign values to a variable, reusing it later by simply referencing it using '''@''' operator when not inside quotes or by wrapping it inside '''@{}''' when in double quotes, shell command substitution quotes '''``''', or external window id substitution '''&lt;( )'''.
+
+<pre> b = 123; puts @a</pre>
+There are two methods to define/create empty variables: by explicitely assing an empty string to a variable (ex. a = &quot;&quot;) or by simply omit the value (ex. a =).
+
+In addition, if there is more than one value to assign, a block is automatically created (embedding those values) and assigned to that variable:
+
+<pre> a = 1              # this simply assigns '1' to the variable 'a'
+ b = 1, 2, 3, 4     # this instead assigns the block '{1, 2, 3, 4}' to the variable 'a'
+ c = {1, 2, 3, 4}   # same but explicit</pre>
+Each block has it's own scope, and variable resolution works by searching from the last scope to the first. Ex:
+
+<pre> a = 1
+ puts(@a)
+ {
+     a=345
+     b=6534
+ }()
+ puts@a
+ puts&quot;b:@{b}&quot;</pre>
+In the last example, a is set to 1 and printed, then it's changed to 345 from another scope, in which another variable (b) is set. After code block, just &quot;a&quot; is updated, and &quot;b&quot; doesn't exist anymore.
+
+For example:
+
+<pre> gname = MY_GRIP_NAME
+ |l|&lt;@gname</pre>
+or
+
+<pre> gname = MY_GRIP_NAME
+ name = 'random name'
+ puts &quot;@{gname} is maybe @{name}&quot;</pre>
+== Element expressions ==
+
+
+
+Anything inside '''||''' is an element expression; a widget of a given element is created and its X11 window id substituted. The synopsis is: |&lt;element&gt;[{&lt;width&gt;, &lt;height&gt;}]| Ex.
+
+<pre> |b|+</pre>
+If an integer is given, instead of one of available element types, then the program tries to find an existing program having that integer as window id. Ex.
+
+<pre> |12341234|-</pre>
+This creates a widget (&quot;external&quot;) for the external program and hides it.
+
+== Shell command substitution ==
+
+
+
+Anything inside '''``''' is treated as a shell command, and it's output is substituted.
+
+<pre> d = `date`
+ ols = `ls -l`</pre>
+== External window id substitution ==
+
+
+
+Everything inside '''&lt;( )''' is recognized as an external command (X11 GUI), forked and executed, and its window id is substituted (using _NET_WM_PID).
+
+For example:
+
+<pre> a = &lt;(xterm)</pre>
+xterm program is spawn, and can be driven (almost) like a normal element.
+
+= OPERATORS =
+
+
+
+== Binary ==
+
+
+
+; '''&lt;s&gt; .. &lt;e&gt;'''
+: returns integers starting at &lt;s&gt; and ending at &lt;e&gt; (inclusive) as multiple tokens.
+; '''&lt;var&gt; = [&lt;val&gt;, [&lt;val1&gt;, ...]]'''
+: defines a variable (consumes all the phrase). If no value is given, an empty token is assigned to the variable. If a single value is given, that value is assigned to the variable. If multiple values are given, then all these values are wrapped inside a block, and this block is assigned to the variable.
+; '''&lt;attr&gt; .= [&lt;val&gt;, [&lt;val1&gt;, ...]]'''
+: defines an element using the implied subject attribute (consumes all the phrase). If no value is given, an empty token is assigned to the variable. If a single value is given, that value is assigned to the variable. If multiple values are given, then all these values are wrapped inside a block, and this block is assigned to the variable.
+
+== Unary ==
+
+
+
+; '''@&lt;varname|num&gt;'''
+: dereferences a variable name (or positional argument).
+; '''@*'''
+: returns all function parameters as tokens (usable with command line parameters too).
+; '''[&lt;eid&gt;].&lt;attr&gt;'''
+: dereferences an element attribute; if &lt;eid&gt; is given, uses that element, otherwise uses implied subject.
+
+= ELEMENT ATTRIBUTES =
+
+
+
+Every element can have some default readonly attributes and a variable number of custom attributes (which can be set by using assignment only, not by using '''let''' function). To set an attribute, use the &quot;'''.='''&quot; operator; to get it instead use the &quot;'''.'''&quot; operator.
+
+<pre> b = |b|; myattr .= 'here'; puts(@b.myattr)</pre>
+In the last example, a custom attribute, &quot;myattr&quot; is created and used.
+
+The following are default attributes (readonly):
+
+; '''t'''
+: widget's type.
+; '''w'''
+: widget's width.
+; '''h'''
+: widget's height.
+; '''x'''
+: widget's x coord.
+; '''y'''
+: widget's y coord.
+; '''b'''
+: widget's border width.
+; '''g'''
+: widget's margin width.
+; '''d'''
+: widget's text data.
+; '''T'''
+: widget's title.
+; '''c'''
+: widget's checked/unchecked status (only for checkbox).
+; '''n'''
+: widget's number of subwidgets (only for page).
+; '''s'''
+: widget's subwidgets ids (one token each, only for page).
+; '''pid'''
+: process ID associated with the widget.
+; '''v'''
+: widget is visible.
+; '''e'''
+: widget is enabled (freezed/unfreezed).
+; '''f'''
+: widget is focused.
+
+= BUILTIN FUNCTIONS =
+
+
+
+Symbol &quot;'''...'''&quot; means a variable number of arguments.
+
+; '''exists(&lt;eid&gt;)'''
+: returns 1 if a widget with id &lt;eid&gt; exists, 0 otherwise.
+; '''read([&lt;file&gt;])'''
+: reads and returns a line (excluding newline) from standard input; if an existing file is given, reads and returns all its content. Beware that this function blocks the GUI events, and returns nothing when reading from stdin and source is non-blocking.
+; '''write(&lt;text&gt;, &lt;file&gt;)'''
+: writes text into file and returns the number of characters written. Creates the file if it doesn't exist yet.
+; '''append(&lt;text&gt;, &lt;file&gt;)'''
+: append text to the end of file and returns the number of characters written. Creates the file if it doesn't exist yet.
+; '''eval(...)'''
+: evaluates code by first stringifying all given arguments and then returns the result of evaluation if any. Beware that this function runs in the &quot;current&quot; scope, and can modify it.
+; '''builtin(&lt;func&gt;, ...)'''
+: gets the name of a builtin function and a variable number of arguments, then calls the builtin function with those arguments and returns the result (if any). It's useful when overriding builtin functions.
+; '''each(&lt;function&gt;, ...)'''
+: executes &lt;function&gt; for each additional argument given passing it as the first argument to the block. If return values are present, they will be accumulated and then returned.
+; '''env(&lt;var&gt;)'''
+: returns the value of the environment variable &quot;var&quot;.
+; '''cwd()'''
+: returns the value of the current working directory.
+; '''rev([&lt;block&gt;], ...)'''
+: if a block is given as first argument, its element will be returned in reverse, otherwise '''rev''' will return all its arguments in reverse. This function is somewhat special, as when there are no arguments to get, it'll return nothing (statement behaviour).
+; '''let([&lt;var&gt;, &lt;val&gt;], ...)'''
+: sets variables, works exactly like assignment with special operator '''=''', but in expressions. This function is somewhat special, it'll return nothing (statement behaviour).
+; '''if(&lt;cond&gt;, [&lt;v1&gt;, [&lt;v2&gt;]])'''
+: if &lt;cond&gt; is true and &lt;v1&gt; is given, returns &lt;v1&gt;, else if &lt;cond&gt; is false and &lt;v2&gt; is given, returns &lt;v2&gt;.
+; '''unless(&lt;cond&gt;, [&lt;v1&gt;, [&lt;v2&gt;]])'''
+: if &lt;cond&gt; is false and &lt;v1&gt; is given, returns &lt;v1&gt;, else if &lt;cond&gt; is true and &lt;v2&gt; is given, returns &lt;v2&gt;.
+; '''and(...)'''
+: returns the first true argument; if there are no true arguments, returns the last one which is false. The function evaluates any block given.
+; '''or(...)'''
+: returns the last true argument if all arguments are true, otherwise returns the first false argument. The function evaluates any block given.
+; '''flat(...)'''
+: returns all given arguments; if a block is found, then it is flatted.
+; '''block(...)'''
+: returns a code block, embedding the given arguments into '''{}'''.
+; '''some(...)'''
+: returns given arguments. If nothing is given, returns an empty token.
+; '''puts(...)'''
+: prints given arguments to stdout. This function is somewhat special, it'll return nothing (statement behaviour).
+; '''push(...)'''
+: pushes given arguments to current function arguments (works with command line parameters too). This function is somewhat special, it'll return nothing (statement behaviour).
+; '''pushb(...)'''
+: pushes given arguments to current function arguments from the beginning (works with command line parameters too). This function is somewhat special, it'll return nothing (statement behaviour).
+; '''pop()'''
+: pops the last argument from function arguments (works with command line parameters too). This function is somewhat special, as if there are no arguments to pop, it'll return nothing (statement behaviour).
+; '''popb()'''
+: pops the first argument from function arguments (works with command line parameters too). This function is somewhat special, as if there are no arguments to pop.
+; '''times(&lt;n&gt;, &lt;arg&gt;)'''
+: returns a sequence of tokens made by &lt;n&gt; times &lt;arg&gt;. This function is somewhat special, as when there are 0 tokens to replicate, it'll return nothing (statement behaviour).
+; '''get(&lt;name&gt;)'''
+: returns the value of the variable with name &lt;name&gt;, or an empty token if the variable does not exist.
+; '''true(&lt;arg&gt;)'''
+: returns 1 if &lt;arg&gt; is true, 0 otherwise.
+; '''false(&lt;arg&gt;)'''
+: returns 0 if &lt;arg&gt; is true, 1 otherwise.
+; '''in(&lt;n&gt;, &lt;heap&gt;)'''
+: returns 1 if &lt;n&gt; is found in &lt;heap&gt;, 0 otherwise; the arguments can be of any type (single tokens and blocks).
+; '''join(...)'''
+: joins blocks and/or tokens by applying the following rules to all arguments given, and accumulates the result as the first operand. If the operands are blocks, then a single new block is created by joining them; if the operands are tokens, then a single new token is created by joining them, and its type will be that of the &quot;second&quot; token; if the operands are mixed (eg. a block and a token), then the token will be embedded inside the block.
+; '''isdef(&lt;token&gt;)'''
+: returns 1 if &lt;token&gt; is a variable, 0 otherwise.
+; '''isvar(&lt;token&gt;)'''
+: returns 1 if &lt;token&gt; is a (type) variable, 0 otherwise.
+; '''isfunc(&lt;token&gt;)'''
+: returns 1 if &lt;token&gt; refers to a function, 0 otherwise.
+; '''isblock(...)'''
+: returns 1 if just one argument is given and is a block, 0 otherwise.
+; '''isint(...)'''
+: returns 1 if just one argument is given and is an integer, 0 otherwise.
+; '''len(&lt;arg&gt;)'''
+: if a block is given, returns the number of its element, otherwise returns the number of characters of the token.
+; '''split(&lt;token&gt;, &lt;sep&gt;)'''
+: splits &quot;token&quot; using separator &quot;sep&quot; and returns resulting tokens having their type equal to that of &quot;token&quot;.
+; '''csplit(&lt;token&gt;, &lt;sep&gt;)'''
+: splits &quot;token&quot; using separator &quot;sep&quot; and returns resulting tokens as normal commands.
+; '''seq(&lt;t1&gt;, &lt;t2&gt;, ...)'''
+: returns 1 if all arguments are equal (string comparison), 0 otherwise.
+; '''add(...)'''
+: perform addition.
+; '''sub(...)'''
+: perform subtraction.
+; '''mul(...)'''
+: perform multiplication
+; '''div(...)'''
+: perform division.
+; '''mod(...)'''
+: perform modulus.
+; '''rand()'''
+: returns a random positive integer.
+; '''sqrt(&lt;n&gt;)'''
+: returns the square root of &lt;n&gt;.
+; '''cbrt(&lt;n&gt;)'''
+: returns the cube root of &lt;n&gt;.
+; '''pow(&lt;n&gt;, &lt;e&gt;)'''
+: returns the power of &lt;n&gt; raised to &lt;e&gt;.
+; '''log(&lt;n&gt;)'''
+: returns the base 10 logarithm of &lt;n&gt;.
+; '''ln(&lt;n&gt;)'''
+: returns the natural logarithm of &lt;n&gt;.
+; '''sin(&lt;n&gt;)'''
+: returns the sine of &lt;n&gt; (degrees).
+; '''cos(&lt;n&gt;)'''
+: returns the cosine of &lt;n&gt; (degrees).
+; '''tan(&lt;n&gt;)'''
+: returns the tangent of &lt;n&gt; (degrees).
+; '''hex(&lt;n&gt;)'''
+: returns &lt;n&gt; in its hexadecimal representation.
+; '''int(&lt;n&gt;)'''
+: returns integral part of given number &lt;n&gt;; rounds to nearest integer.
+; '''xor(&lt;n1&gt;, &lt;n2&gt;, ...)'''
+: perform bitwise XOR.
+; '''band(&lt;n1&gt;, &lt;n2&gt;, ...)'''
+: perform bitwise AND.
+; '''bor(&lt;n1&gt;, &lt;n2&gt;, ...)'''
+: perform bitwise OR.
+; '''lsh(&lt;n1&gt;, &lt;n2&gt;, ...)'''
+: perform bitwise left shift.
+; '''rsh(&lt;n1&gt;, &lt;n2&gt;, ...)'''
+: perform bitwise right shift.
+; '''not(&lt;n&gt;)'''
+: perform negation
+; '''eq(&lt;n1&gt;, &lt;n2&gt;, ...)'''
+: equal-to
+; '''ne(&lt;n1&gt;, &lt;n2&gt;, ...)'''
+: not-equal-to
+; '''lt(&lt;n1&gt;, &lt;n2&gt;, ...)'''
+: less-than
+; '''gt(&lt;n1&gt;, &lt;n2&gt;, ...)'''
+: greater-than
+; '''le(&lt;n1&gt;, &lt;n2&gt;, ...)'''
+: less-equal-than
+; '''ge(&lt;n1&gt;, &lt;n2&gt;, ...)'''
+: greater-equal-than
+; '''abs(&lt;n&gt;)'''
+: perform absolute value
+; '''neg(&lt;n&gt;)'''
+: unary minus.
+
+= STYLE AND ATTRIBUTES =
+
+
+
+Each element has some properties/attributes which can be set by using style command. This command takes a string that has a format like CSS:
+
+<pre> |l| s 'bg: blue; fg: white'</pre>
+Here, we create a label with a blue background and white foreground.
+
+Each field must be separated by newlines, ''';''' or '''|'''. Colors can be specified by using a common shortname, such as &quot;yellow&quot;, or by using RGB value, such as &quot;#ff32ae&quot;.
+
+; '''background | bg: &lt;color|/&lt;path to image&gt;&gt;'''
+: set background color or a background image by specifying image path; if the string &quot;null&quot; is given as &lt;path to image&gt;, current image is removed. (Background image loading requires building guish with Imlib2 support.)
+; '''color | foreground | fg: &lt;color&gt;'''
+: set foreground color
+; '''pressed-background | pbg: &lt;color&gt;'''
+: background color when element is pressed
+; '''pressed-color | pfg: &lt;color&gt;'''
+: foreground color when element is pressed
+; '''hovered-background | hbg: &lt;color&gt;'''
+: background color when element is hovered
+; '''hovered-color | hfg: &lt;color&gt;'''
+: foreground color when element is hovered
+; '''border-color | bc: &lt;color&gt;'''
+: set border color
+; '''width | w: &lt;value in pixels&gt;'''
+: set width
+; '''height | h: &lt;value in pixels&gt;'''
+: set height
+; '''border | b: &lt;value in pixels&gt;'''
+: set border width
+; '''line | l: &lt;value in pixels&gt;'''
+: set line width (use with &quot;/&quot; command)
+; '''margin | g: &lt;value in pixels&gt;'''
+: set margin width
+; '''mode | m: &lt;expanding mode&gt;'''
+: set expanding mode type (See Expanding mode)
+; '''align | a: &lt;alignment&gt;'''
+: set alignment type (See Alignment)
+; '''f | font: &lt;font name&gt;'''
+: set font type using a X11 font name
+
+== Expanding mode ==
+
+
+
+; '''fixed | f'''
+: width and height are fixed (default for all elements)
+; '''wfixed | w'''
+: width is fixed, height can change
+; '''hfixed | h'''
+: height is fixed, width can change
+; '''relaxed | r'''
+: width and height can change
+
+== Alignment ==
+
+
+
+Any element that's not a page has a particular text alignment that can be changed. If an alignment is specified for a page element instead, (whose defaults alignments are top-center for horizontal layout, and middle-left for vertical one), then its sub-elements will be aligned accordingly, depending from page layout type too.
+
+; '''l | left | middle-left'''
+: show text at middle left
+; '''r | right | middle-right'''
+: show text at middle right
+; '''c | center | middle-center'''
+: show text at middle center
+; '''tl | top-left'''
+: show text at top left
+; '''tr | top-right'''
+: show text at top right
+; '''t | top-center'''
+: show text at top center
+; '''bl | bottom-left'''
+: show text at bottom left
+; '''br | bottom-right'''
+: show text at bottom right
+; '''b | bottom-center'''
+: show text at bottom center
+
+= AUTHOR =
+
+
+
+Francesco Palumbo &lt;phranz@subfc.net&gt;
+
+= THANKS =
+
+
+
+La vera Napoli, Carme, Pico, Titina, Molly, Leo, i miei amati nonni, mio padre, mia madre, e tutti coloro su cui ho potuto e posso contare. Grazie mille.
+
+= LICENSE =
+
+
+
+'''GPL3'''

@@ -1,0 +1,122 @@
+GET "libhdr"
+
+LET lowbit(n) =
+    0 -> -1,
+    VALOF {
+        // The table is byte packed to conserve space; therefore we must
+        // unpack the structure.
+        //
+        LET deBruijn64 = TABLE
+            #x0001300239311C03, #x3D3A322A261D1104,
+            #x3E373B2435332B16, #x2D27211E18120C05,
+            #x3F2F381B3C292510, #x362334152C20170B,
+            #x2E1A280F22141F0A, #x190E13090D080706
+
+        LET x6 = (n & -n) * #x3F79D71B4CB0A89 >> 58
+        RESULTIS deBruijn64[x6 >> 3] >> (7 - (x6 & 7) << 3) & #xFF
+    }
+
+LET primes_upto(limit) =
+    limit < 3 -> 0,
+    VALOF {
+        LET bit_sz = (limit + 1) / 2 - 1
+        LET bit, p = ?, ?
+        LET q, r = bit_sz >> 6, bit_sz & #x3F
+        LET sz = q - (r > 0)
+        LET sieve = getvec(sz)
+
+        // Initialize the array
+        FOR i = 0 TO q - 1 DO
+            sieve!i := -1
+        IF r > 0 THEN sieve!q := ~(-1 << r)
+        sieve!sz := -1 // Sentinel value to mark the end -
+              // (after sieving, we'll never have 64 consecutive odd primes.)
+
+        // run the sieve
+        bit := 0
+        {
+            WHILE (sieve[bit >> 6] & 1 << (bit & #x3F)) = 0 DO
+                bit +:= 1
+            p := 2*bit + 3
+            q := p*p
+            IF q > limit THEN RESULTIS sieve
+            r := (q - 3) >> 1
+            UNTIL r >= bit_sz DO {
+                sieve[r >> 6] &:= ~(1 << (r & #x3F))
+                r +:= p
+            }
+            bit +:= 1
+        } REPEAT
+    }
+
+MANIFEST { // fields in an iterable
+    sieve_start; sieve_bits; sieve_ptr
+}
+
+LET prime_iter(sieve) = VALOF {
+    LET iter = getvec(2)
+    iter!sieve_start := 0
+    iter!sieve_bits := sieve!0
+    iter!sieve_ptr := sieve
+    RESULTIS iter
+}
+
+LET nextprime(iter) =
+    !iter!sieve_ptr = -1 -> 0,  // guard entry if at the end already
+    VALOF {
+        LET p, x = ?, ?
+
+        // iter!sieve_start is also a flag to yield 2.
+        IF iter!sieve_start = 0 {
+            iter!sieve_start := 3
+            RESULTIS 2
+        }
+        x := iter!sieve_bits
+        {
+            TEST x ~= 0
+            THEN {
+                p := (lowbit(x) << 1) + iter!sieve_start
+                x &:= x - 1
+                iter!sieve_bits := x
+                RESULTIS p
+            }
+            ELSE {
+                iter!sieve_start +:= 128
+                iter!sieve_ptr +:= 1
+                x := !iter!sieve_ptr
+                IF x = -1 RESULTIS 0
+            }
+        } REPEAT
+    }
+
+LET show(sieve) BE {
+    LET iter = prime_iter(sieve)
+    LET c, p = 0, ?
+    {
+        p := nextprime(iter)
+        IF p = 0 THEN {
+            wrch('*n')
+            freevec(iter)
+            RETURN
+        }
+        IF c MOD 10 = 0 THEN wrch('*n')
+        c +:= 1
+        writef("%8d", p)
+    } REPEAT
+}
+
+LET start() = VALOF {
+    LET n = ?
+    LET argv = VEC 20
+    LET sz = ?
+    LET primes = ?
+
+    sz := rdargs("upto/a/n/p", argv, 20)
+    IF sz = 0 RESULTIS 1
+    n := !argv!0
+    primes := primes_upto(n)
+    IF primes = 0 RESULTIS 1 // no array allocated because limit too small
+    show(primes)
+    freevec(primes)
+    RESULTIS 0
+}

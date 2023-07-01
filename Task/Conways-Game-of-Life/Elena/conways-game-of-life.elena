@@ -1,0 +1,116 @@
+import extensions;
+import system'threading;
+import cellular;
+
+const int maxX = 48;
+const int maxY = 28;
+
+const int DELAY = 50;
+
+sealed class Model
+{
+    Space   theSpace;
+    RuleSet theRuleSet;
+    bool    started;
+
+    event Func<Space, object> OnUpdate;
+
+    constructor newRandomset(RuleSet transformSet)
+    {
+        theSpace := new IntMatrixSpace.allocate(maxY, maxX, randomSet);
+
+        theRuleSet := transformSet;
+
+        started := false
+    }
+
+    constructor newLoaded(RuleSet initSet, RuleSet transformSet)
+    {
+        theSpace := IntMatrixSpace.allocate(maxY, maxX, initSet);
+
+        theRuleSet := transformSet;
+
+        started := false
+    }
+
+    private onUpdate()
+    {
+        OnUpdate.?(theSpace)
+    }
+
+    run()
+    {
+        if (started)
+        {
+            theSpace.update(theRuleSet)
+        }
+        else
+        {
+            started := true
+        };
+
+        self.onUpdate()
+    }
+}
+
+singleton gameOfLifeRuleSet : RuleSet
+{
+    proceed(Space s, int x, int y, ref int retVal)
+    {
+        int cell := s.at(x, y);
+        int number := s.LiveCell(x, y, 1); // NOTE : number of living cells around the self includes the cell itself
+
+        if (cell == 0 && number == 3)
+        {
+            retVal := 1
+        }
+        else if (cell == 1 && (number == 4 || number == 3))
+        {
+            retVal := 1
+        }
+        else
+        {
+            retVal := 0
+        }
+    }
+}
+
+public extension presenterOp : Space
+{
+    print()
+    {
+        console.setCursorPosition(0, 0);
+
+        int columns := self.Columns;
+        int rows := self.Rows;
+
+        for(int i := 0, i < rows, i += 1)
+        {
+            for(int j := 0, j < columns, j += 1)
+            {
+                int cell := self.at(i, j);
+
+                console.write((cell == 0).iif(" ","o"));
+            };
+
+            console.writeLine()
+        }
+    }
+}
+
+public program()
+{
+    auto model := Model.newRandomset(gameOfLifeRuleSet);
+    console.clear();
+
+    model.OnUpdate := (Space sp){ sp.print() };
+
+    until (console.KeyAvailable)
+    {
+        model.run();
+
+        threadControl.sleep:DELAY
+    };
+
+    console.readChar()
+}

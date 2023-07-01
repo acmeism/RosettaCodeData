@@ -1,0 +1,73 @@
+% Split string by whitespace
+split = iter (expr: string) yields (string)
+    own whitespace: string := " \r\n\t"
+    cur: array[char] := array[char]$[]
+    for c: char in string$chars(expr) do
+        if string$indexc(c, whitespace) = 0 then
+            array[char]$addh(cur, c)
+        else
+            if array[char]$empty(cur) then continue end
+            yield(string$ac2s(cur))
+            cur := array[char]$[]
+        end
+    end
+    if ~array[char]$empty(cur) then
+        yield(string$ac2s(cur))
+    end
+end split
+
+% Tokenize a RPN expression
+token = oneof[number: real, op: char]
+tokens = iter (expr: string) yields (token) signals (parse_error(string))
+    own operators: string := "+-*/^"
+    for t: string in split(expr) do
+        if string$size(t) = 1 cand string$indexc(t[1], operators)~=0 then
+            yield(token$make_op(t[1]))
+        else
+            yield(token$make_number(real$parse(t)))
+            except when bad_format:
+                signal parse_error(t)
+            end
+        end
+    end
+end tokens
+
+% Print the stack
+print_stack = proc (stack: array[real])
+    po: stream := stream$primary_output()
+    for num: real in array[real]$elements(stack) do
+        stream$puts(po, f_form(num, 5, 5) || " ")
+    end
+    stream$putl(po, "")
+end print_stack
+
+% Evaluate an expression, printing the stack at each point
+evaluate_rpn = proc (expr: string) returns (real) signals (parse_error(string), bounds)
+    stack: array[real] := array[real]$[]
+    for t: token in tokens(expr) do
+        tagcase t
+            tag number (n: real): array[real]$addh(stack, n)
+            tag op (f: char):
+                r: real := array[real]$remh(stack)
+                l: real := array[real]$remh(stack)
+                n: real
+                if     f='+' then n := l+r
+                elseif f='-' then n := l-r
+                elseif f='*' then n := l*r
+                elseif f='/' then n := l/r
+                elseif f='^' then n := l**r
+                end
+                array[real]$addh(stack, n)
+        end
+        print_stack(stack)
+    end resignal parse_error
+    return(array[real]$reml(stack))
+end evaluate_rpn
+
+start_up = proc ()
+    po: stream := stream$primary_output()
+    expr: string := "3 4 2 * 1 5 - 2 3 ^ ^ / +"
+
+    stream$putl(po, "Expression: " || expr)
+    stream$putl(po, "Result: " || f_form(evaluate_rpn(expr), 5, 5))
+end start_up

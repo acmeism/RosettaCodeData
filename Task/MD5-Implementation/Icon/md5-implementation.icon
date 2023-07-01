@@ -1,0 +1,102 @@
+procedure main()  # validate against the RFC test strings and more
+   testMD5("The quick brown fox jumps over the lazy dog", 16r9e107d9d372bb6826bd81d3542a419d6)
+   testMD5("The quick brown fox jumps over the lazy dog.", 16re4d909c290d0fb1ca068ffaddf22cbd0)
+   testMD5("", 16rd41d8cd98f00b204e9800998ecf8427e)    #R = MD5 test suite from RFC
+   testMD5("a", 16r0cc175b9c0f1b6a831c399e269772661)   #R
+   testMD5("abc", 16r900150983cd24fb0d6963f7d28e17f72) #R
+   testMD5("message digest", 16rf96b697d7cb7938d525a2f31aaf161d0) #R
+   testMD5("abcdefghijklmnopqrstuvwxyz", 16rc3fcd3d76192e4007dfb496cca67e13b) #R
+   testMD5("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 16rd174ab98d277d9f5a5611c2c9f419d9f) #R
+   testMD5("12345678901234567890123456789012345678901234567890123456789012345678901234567890", 16r57edf4a22be3c955ac49da2e2107b67a) #R
+end
+
+procedure testMD5(s,rh)  # compute the MD5 hash and compare it to reference value
+   write("Message(length=",*s,") = ",image(s))
+   write("Digest = ",hexstring(h := MD5(s)),if h = rh then " matches reference hash" else (" does not match reference hash = " || hexstring(rh)),"\n")
+end
+
+link hexcvt # for testMD5
+
+$define B32                     4   #  32 bits
+$define B64                     8   #  64 bits in bytes
+$define B512                   64   # 512 bits in bytes
+$define M32          16r100000000   # 2^32
+$define M64  16r10000000000000000   # 2^64
+
+procedure MD5(s)                                    #: return MD5 hash of message s
+local w,a,b,c,d,i,t,m
+local mlength,message,hash
+static rs,ks,istate,maxpad,g
+
+initial {
+   every (rs := []) |||:=
+      (t := [ 7, 12, 17, 22] | [ 5,  9, 14, 20] | [ 4, 11, 16, 23] | [ 6, 10, 15, 21]) ||| t ||| t ||| t
+   every put(ks := [],integer(M32 * abs(sin(i := 1 to 64))))
+   istate := [ 16r67452301, 16rEFCDAB89, 16r98BADCFE, 16r10325476 ]  # "Magic" IV
+   maxpad := left(char(16r80),B512+B64,char(16r00)) # maximum possible padding
+   g := []
+   every i := 0 to 63 do                            # precompute offsets
+      case round := i/16 of {
+         0 : put(g,i + 1)
+         1 : put(g,(5*i+1) % 16 + 1)
+	 2 : put(g,(3*i+5) % 16 + 1)
+         3 : put(g,(7*i) % 16 + 1)
+         }
+   if not (*rs = *ks = 64) then runerr(500,"MD5 setup error")
+   }
+                                                    # 1. Construct prefix
+   t := (*s*8)%M64                                  # original message length
+   s ||:= maxpad                                    # append maximum padding
+   s[0-:*s%B512] := ""                              # trim to final length
+   s[0-:B64] := reverse(unsigned2string(t,B64) )    # as little endian length
+
+   message := []                                    # 2. Subdivide message
+   s ? while put(message,move(B512))                #  into 512 bit blocks
+
+                                                    # 3. Transform message ...
+   state := copy(istate)                            # Initialize hashes
+   every m := !message do {                         # For each message block
+      w := []
+      m ? while put(w,unsigned(reverse(move(B32)))) # break into little-endian words
+
+      a := state[1]                                 # pick up hashes
+      b := state[2]
+      c := state[3]
+      d := state[4]
+
+      every i := 1 to 64 do  {                      # Process 4 rounds of hashes	
+         case round := (i-1)/16 of {
+	    0 : a +:= ixor(d, iand(b,ixor(c,d)))          # 0..15  - alternate F
+            1 : a +:= ixor(c,iand(d,ixor(b,c)))           # 16..31 - alternate G	
+            2 : a +:= ixor(b,ixor(c,d))                   # 32..47 - H
+            3 : a +:= ixor(c,ior(b,ixor(d,16rffffffff)))  # 48..64 - alternate I
+	    }                                       # Core of FF, GG, HH, II
+         a +:= ks[i] + w[g[i]]                      # and the rest
+         a %:= M32
+         a := ior( ishift(a,rs[i]), ishift(a,-(32-rs[i]))) # 32bit rotate
+         a +:= b
+         a :=: b :=: c :=: d                        # rotate variables
+	 }
+
+      state[1] +:= a                                # Add back new hashes
+      state[2] +:= b
+      state[3] +:= c
+      state[4] +:= d
+      every !state %:= M32                          # mod 2^32
+   }
+   every (hash := "") ||:= reverse(unsigned2string(!state,4)) # little-endian digest
+   return unsigned(hash)
+end
+
+procedure unsigned2string(i,w)                      # uint to string pad to w bytes
+local s
+   if i < 0 then runerr(500,i)
+   s := ""
+   while (0 < i) | (*s < \w) do {
+      s ||:= char(i % 256)
+      i /:= 256
+      }
+   return reverse(s)
+end
+
+link unsigned                                       # string to unsigned integer

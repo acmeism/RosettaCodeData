@@ -1,0 +1,1231 @@
+######################################################################
+#
+# The Rosetta Code scanner in Ratfor 77.
+#
+#
+# How to deal with FORTRAN 77 input is a problem. I use formatted
+# input, treating each line as an array of type CHARACTER--regrettably
+# of no more than some predetermined, finite length. It is a very
+# simple method and presents no significant difficulties, aside from
+# the restriction on line length of the input.
+#
+#
+# On a POSIX platform, the program can be compiled with f2c and run
+# somewhat as follows:
+#
+#    ratfor77 lex-in-ratfor.r > lex-in-ratfor.f
+#    f2c -C -Nc40 lex-in-ratfor.f
+#    cc -O lex-in-ratfor.c -lf2c
+#    ./a.out < compiler-tests/primes.t
+#
+# With gfortran, a little differently:
+#
+#    ratfor77 lex-in-ratfor.r > lex-in-ratfor.f
+#    gfortran -O2 -fcheck=all -std=legacy lex-in-ratfor.f
+#    ./a.out < compiler-tests/primes.t
+#
+#
+# I/O is strictly from default input and to default output, which, on
+# POSIX systems, usually correspond respectively to standard input and
+# standard output. (I did not wish to have to deal with unit numbers;
+# these are now standardized in ISO_FORTRAN_ENV, but that is not
+# available in FORTRAN 77.)
+#
+#---------------------------------------------------------------------
+
+# Some parameters you may with to modify.
+
+define(LINESZ, 256)           # Size of an input line.
+define(OUTLSZ, 512)           # Size of an output line.
+define(PSHBSZ, 10)            # Size of the character pushback buffer.
+define(STRNSZ, 4096)          # Size of the string pool.
+
+#---------------------------------------------------------------------
+
+define(EOF, -1)
+define(NEWLIN, 10)          # Unix newline (the LF control character).
+define(BACKSL, 92)          # ASCII backslash.
+
+define(ILINNO, 1)               # Line number's index.
+define(ICOLNO, 2)               # Column number's index.
+
+define(CHRSZ,  3)               # See ILINNO and ICOLNO above.
+define(ICHRCD, 3)               # Character code's index.
+
+define(TOKSZ,  5)               # See ILINNO and ICOLNO above.
+define(ITOKNO, 3)               # Token number's index.
+define(IARGIX, 4)               # Index of the string pool index.
+define(IARGLN, 5)               # Index of the string length.
+
+define(TKELSE,  0)
+define(TKIF,    1)
+define(TKPRNT,  2)
+define(TKPUTC,  3)
+define(TKWHIL,  4)
+define(TKMUL,   5)
+define(TKDIV,   6)
+define(TKMOD,   7)
+define(TKADD,   8)
+define(TKSUB,   9)
+define(TKNEG,  10)
+define(TKLT,   11)
+define(TKLE,   12)
+define(TKGT,   13)
+define(TKGE,   14)
+define(TKEQ,   15)
+define(TKNE,   16)
+define(TKNOT,  17)
+define(TKASGN, 18)
+define(TKAND,  19)
+define(TKOR,   20)
+define(TKLPAR, 21)
+define(TKRPAR, 22)
+define(TKLBRC, 23)
+define(TKRBRC, 24)
+define(TKSEMI, 25)
+define(TKCMMA, 26)
+define(TKID,   27)
+define(TKINT,  28)
+define(TKSTR,  29)
+define(TKEOI,  30)
+
+define(LOC10, 1)                # Location of "10" in the string pool.
+define(LOC92, 3)                # Location of "92" in the string pool.
+
+#---------------------------------------------------------------------
+
+subroutine addstr (strngs, istrng, src, i0, n0, i, n)
+
+  # Add a string to the string pool.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character src(*)              # Source string.
+  integer i0, n0                # Index and length in source string.
+  integer i, n                  # Index and length in string pool.
+
+  integer j
+
+  if (STRNSZ < istrng + (n0 - 1))
+    {
+      write (*, '(''string pool exhausted'')')
+      stop
+    }
+  for (j = 0; j < n0; j = j + 1)
+    strngs(istrng + j) = src(i0 + j)
+  i = istrng
+  n = n0
+  istrng = istrng + n0
+end
+
+subroutine cpystr (strngs, i, n, dst, i0)
+
+  # Copy a string from the string pool to an output string.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer i, n                  # Index and length in string pool.
+  character dst(OUTLSZ)         # Destination string.
+  integer i0                    # Index within destination string.
+
+  integer j
+
+  if (i0 < 1 || OUTLSZ < i0 + (n - 1))
+    {
+      write (*, '(''string boundary exceeded'')')
+      stop
+    }
+  for (j = 0; j < n; j = j + 1)
+    dst(i0 + j) = strngs(i + j)
+end
+
+#---------------------------------------------------------------------
+
+subroutine getchr (line, linno, colno, pushbk, npshbk, chr)
+
+  # Get a character, with its line number and column number.
+
+  implicit none
+
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+  integer chr(CHRSZ)
+
+  # End of file is indicated (as in C) by a negative "char code"
+  # called "EOF".
+
+  character*20 fmt
+  integer stat
+  integer chr1(CHRSZ)
+
+  if (0 < npshbk)
+    {
+      chr(ICHRCD) = pushbk(ICHRCD, npshbk)
+      chr(ILINNO) = pushbk(ILINNO, npshbk)
+      chr(ICOLNO) = pushbk(ICOLNO, npshbk)
+      npshbk =  npshbk - 1
+    }
+  else if (colno <= LINESZ)
+    {
+      chr(ICHRCD) = ichar (line(colno))
+      chr(ILINNO) = linno
+      chr(ICOLNO) = colno
+      colno = colno + 1
+    }
+  else
+    {
+      # Return a newline character.
+      chr(ICHRCD) = NEWLIN
+      chr(ILINNO) = linno
+      chr(ICOLNO) = colno
+
+      # Fetch a new line.
+      linno = linno + 1
+      colno = 1
+
+      # Read a line of text as an array of characters.
+      write (fmt, '(''('', I10, ''A1)'')') LINESZ
+      read (*, fmt, iostat = stat) line
+
+      if (stat != 0)
+        {
+          # If end of file has been reached, push an EOF.
+          chr1(ICHRCD) = EOF
+          chr1(ILINNO) = linno
+          chr1(ICOLNO) = colno
+          call pshchr (pushbk, npshbk, chr1)
+        }
+    }
+end
+
+subroutine pshchr (pushbk, npshbk, chr)
+
+  # Push back a character.
+
+  implicit none
+
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+  integer chr(CHRSZ)
+
+  if (PSHBSZ <= npshbk)
+    {
+      write (*, '(''pushback buffer overfull'')')
+      stop
+    }
+  npshbk = npshbk + 1
+  pushbk(ICHRCD, npshbk) = chr(ICHRCD)
+  pushbk(ILINNO, npshbk) = chr(ILINNO)
+  pushbk(ICOLNO, npshbk) = chr(ICOLNO)
+end
+
+subroutine getpos (line, linno, colno, pushbk, npshbk, ln, cn)
+
+  # Get the position of the next character.
+
+  implicit none
+
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+  integer ln, cn                # The line and column nos. returned.
+
+  integer chr(CHRSZ)
+
+  call getchr (line, linno, colno, pushbk, npshbk, chr)
+  ln = chr(ILINNO)
+  cn = chr(ICOLNO)
+  call pshchr (pushbk, npshbk, chr)
+end
+
+#---------------------------------------------------------------------
+
+function isspc (c)
+
+  # Is c character code for a space?
+
+  implicit none
+
+  integer c
+  logical isspc
+
+  #
+  # The following is correct for ASCII: 32 is the SPACE character, and
+  # 9 to 13 are control characters commonly regarded as spaces.
+  #
+  # In Unicode these are all code points for spaces, but so are others
+  # besides.
+  #
+  isspc = (c == 32 || (9 <= c && c <= 13))
+end
+
+function isdgt (c)
+
+  # Is c character code for a digit?
+
+  implicit none
+
+  integer c
+  logical isdgt
+
+  isdgt = (ichar ('0') <= c && c <= ichar ('9'))
+end
+
+function isalph (c)
+
+  # Is c character code for a letter?
+
+  implicit none
+
+  integer c
+  logical isalph
+
+  #
+  # The following is correct for ASCII and Unicode, but not for
+  # EBCDIC.
+  #
+  isalph = (ichar ('a') <= c && c <= ichar ('z')) _
+             || (ichar ('A') <= c && c <= ichar ('Z'))
+end
+
+function isid0 (c)
+
+  # Is c character code for the start of an identifier?
+
+  implicit none
+
+  integer c
+  logical isid0
+
+  logical isalph
+
+  isid0 = isalph (c) || c == ichar ('_')
+end
+
+function isid1 (c)
+
+  # Is c character code for the continuation of an identifier?
+
+  implicit none
+
+  integer c
+  logical isid1
+
+  logical isalph
+  logical isdgt
+
+  isid1 = isalph (c) || isdgt (c) || c == ichar ('_')
+end
+
+#---------------------------------------------------------------------
+
+function trimlf (str, n)
+
+  # "Trim left" leading spaces.
+
+  implicit none
+
+  character str(*)             # The string to "trim".
+  integer n                    # The length.
+  integer trimlf               # The index of the first non-space
+                               # character, or n + 1.
+
+  logical isspc
+
+  integer j
+  logical done
+
+  j = 1
+  done = .false.
+  while (!done)
+    {
+      if (j == n + 1)
+        done = .true.
+      else if (!isspc (ichar (str(j))))
+        done = .true.
+      else
+        j = j + 1
+    }
+  trimlf = j
+end
+
+function trimrt (str, n)
+
+  # "Trim right" trailing spaces.
+
+  implicit none
+
+  character str(*)             # The string to "trim".
+  integer n                    # The length including trailing spaces.
+  integer trimrt               # The length without trailing spaces.
+
+  logical isspc
+
+  integer j
+  logical done
+
+  j = n
+  done = .false.
+  while (!done)
+    {
+      if (j == 0)
+        done = .true.
+      else if (!isspc (ichar (str(j))))
+        done = .true.
+      else
+        j = j - 1
+    }
+  trimrt = j
+end
+
+#---------------------------------------------------------------------
+
+subroutine toknam (tokno, str, i)
+
+  # Copy a token name to the character array str, starting at i.
+
+  implicit none
+
+  integer tokno
+  character str(*)
+  integer i
+  integer j
+
+  character*16 names(0:30)
+  character*16 nm
+
+  data names / "Keyword_else    ", _
+               "Keyword_if      ", _
+               "Keyword_print   ", _
+               "Keyword_putc    ", _
+               "Keyword_while   ", _
+               "Op_multiply     ", _
+               "Op_divide       ", _
+               "Op_mod          ", _
+               "Op_add          ", _
+               "Op_subtract     ", _
+               "Op_negate       ", _
+               "Op_less         ", _
+               "Op_lessequal    ", _
+               "Op_greater      ", _
+               "Op_greaterequal ", _
+               "Op_equal        ", _
+               "Op_notequal     ", _
+               "Op_not          ", _
+               "Op_assign       ", _
+               "Op_and          ", _
+               "Op_or           ", _
+               "LeftParen       ", _
+               "RightParen      ", _
+               "LeftBrace       ", _
+               "RightBrace      ", _
+               "Semicolon       ", _
+               "Comma           ", _
+               "Identifier      ", _
+               "Integer         ", _
+               "String          ", _
+               "End_of_input    " /
+
+  nm = names(tokno)
+  for (j = 0; j < 16; j = j + 1)
+    str(i + j) = nm(1 + j : 1 + j)
+end
+
+subroutine intstr (str, i, n, x)
+
+  # Convert a positive integer to a substring.
+
+  implicit none
+
+  character str(*)              # Destination string.
+  integer i, n                  # Index and length of the field.
+  integer x                     # The positive integer to represent.
+
+  integer j
+  integer y
+
+  if (x == 0)
+    {
+      for (j = 0; j < n - 1; j = j + 1)
+        str(i + j) = ' '
+      str(i + j) = '0'
+    }
+  else
+    {
+      y = x
+      for (j = n - 1; 0 <= j; j = j - 1)
+        {
+          if (y == 0)
+            str(i + j) = ' '
+          else
+            {
+              str(i + j) = char (mod (y, 10) + ichar ('0'))
+              y = y / 10
+            }
+        }
+    }
+end
+
+subroutine prttok (strngs, tok)
+
+  # Print a token.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer tok(TOKSZ)            # The token.
+
+  integer trimrt
+
+  character line(OUTLSZ)
+  character*20 fmt
+  integer i, n
+  integer tokno
+
+  for (i = 1; i <= OUTLSZ; i = i + 1)
+    line(i) = ' '
+
+  call intstr (line, 1, 10, tok(ILINNO))
+  call intstr (line, 12, 10, tok(ICOLNO))
+
+  tokno = tok(ITOKNO)
+  call toknam (tokno, line, 25)
+  if (tokno == TKID || tokno == TKINT || tokno == TKSTR)
+    {
+      i = tok(IARGIX)
+      n = tok(IARGLN)
+      call cpystr (strngs, i, n, line, 45)
+    }
+
+  n = trimrt (line, OUTLSZ)
+  write (fmt, '(''('', I10, ''A)'')') n
+  write (*, fmt) (line(i), i = 1, n)
+end
+
+#---------------------------------------------------------------------
+
+subroutine wrtpos (ln, cn)
+
+  implicit none
+
+  integer ln, cn
+
+  write (*, 1000) ln, cn
+1000 format ('At line ', I5, ', column ' I5)
+end
+
+#---------------------------------------------------------------------
+
+subroutine utcmnt (ln, cn)
+
+  implicit none
+
+  integer ln, cn
+
+  call wrtpos (ln, cn)
+  write (*, '(''Unterminated comment'')')
+  stop
+end
+
+subroutine skpcmt (line, linno, colno, pushbk, npshbk, ln, cn)
+
+  # Skip to the end of a comment.
+
+  implicit none
+
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+  integer ln, cn                # Line and column of start of comment.
+
+  integer chr(CHRSZ)
+  logical done
+
+  done = .false.
+  while (!done)
+    {
+      call getchr (line, linno, colno, pushbk, npshbk, chr)
+      if (chr(ICHRCD) == ichar ('*'))
+        {
+          call getchr (line, linno, colno, pushbk, npshbk, chr)
+          if (chr(ICHRCD) == ichar ('/'))
+            done = .true.
+          else if (chr(ICHRCD) == EOF)
+            call utcmnt (ln, cn)
+        }
+      else if (chr(ICHRCD) == EOF)
+        call utcmnt (ln, cn)
+    }
+end
+
+subroutine skpspc (line, linno, colno, pushbk, npshbk)
+
+  # Skip spaces and comments.
+
+  implicit none
+
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+
+  logical isspc
+
+  integer chr(CHRSZ)
+  integer chr1(CHRSZ)
+  integer ln, cn
+  logical done
+
+  done = .false.
+  while (!done)
+    {
+      call getchr (line, linno, colno, pushbk, npshbk, chr)
+      if (!isspc (chr(ICHRCD)))
+        {
+          if (chr(ICHRCD) != ichar ('/'))
+            {
+              call pshchr (pushbk, npshbk, chr)
+              done = .true.
+            }
+          else
+            {
+              call getchr (line, linno, colno, pushbk, npshbk, chr1)
+              if (chr1(ICHRCD) != ichar ('*'))
+                {
+                  call pshchr (pushbk, npshbk, chr1)
+                  call pshchr (pushbk, npshbk, chr)
+                  done = .true.
+                }
+              else
+                {
+                  ln = chr(ILINNO)
+                  cn = chr(ICOLNO)
+                  call skpcmt (line, linno, colno, pushbk, npshbk, _
+                               ln, cn)
+                }
+            }
+        }
+    }
+end
+
+#---------------------------------------------------------------------
+
+subroutine rwdlkp (strngs, istrng, src, i0, n0, ln, cn, tok)
+
+  # Reserved word lookup
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character src(*)              # The source string.
+  integer i0, n0                # Index and length of the substring.
+  integer ln, cn                # Line and column number
+                                #   to associate with the token.
+  integer tok(TOKSZ)            # The output token.
+
+  integer tokno
+  integer i, n
+
+  tokno = TKID
+
+  if (n0 == 2)
+    {
+      if (src(i0) == 'i' && src(i0 + 1) == 'f')
+        tokno = TKIF
+    }
+  else if (n0 == 4)
+    {
+      if (src(i0) == 'e' && src(i0 + 1) == 'l' _
+            && src(i0 + 2) == 's' && src(i0 + 3) == 'e')
+        tokno = TKELSE
+      else if (src(i0) == 'p' && src(i0 + 1) == 'u' _
+                 && src(i0 + 2) == 't' && src(i0 + 3) == 'c')
+        tokno = TKPUTC
+    }
+  else if (n0 == 5)
+    {
+      if (src(i0) == 'p' && src(i0 + 1) == 'r' _
+            && src(i0 + 2) == 'i' && src(i0 + 3) == 'n' _
+            && src(i0 + 4) == 't')
+        tokno = TKPRNT
+      else if (src(i0) == 'w' && src(i0 + 1) == 'h' _
+                 && src(i0 + 2) == 'i' && src(i0 + 3) == 'l' _
+                 && src(i0 + 4) == 'e')
+        tokno = TKWHIL
+    }
+
+  i = 0
+  n = 0
+  if (tokno == TKID)
+    call addstr (strngs, istrng, src, i0, n0, i, n)
+
+  tok(ITOKNO) = tokno
+  tok(IARGIX) = i
+  tok(IARGLN) = n
+  tok(ILINNO) = ln
+  tok(ICOLNO) = cn
+end
+
+subroutine scnwrd (line, linno, colno, pushbk, npshbk, ln, cn, buf, n)
+
+  # Scan characters that may represent an identifier, reserved word,
+  # or integer literal.
+
+  implicit none
+
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+  integer ln, cn                # Line and column number of the start.
+  character buf(LINESZ)         # The output buffer.
+  integer n                     # The length of the string collected.
+
+  logical isid1
+
+  integer chr(CHRSZ)
+
+  n = 0
+  call getchr (line, linno, colno, pushbk, npshbk, chr)
+  ln = chr(ILINNO)
+  cn = chr(ICOLNO)
+  while (isid1 (chr(ICHRCD)))
+    {
+      n = n + 1
+      buf(n) = char (chr(ICHRCD))
+      call getchr (line, linno, colno, pushbk, npshbk, chr)
+    }
+  call pshchr (pushbk, npshbk, chr)
+end
+
+subroutine scnidr (strngs, istrng, _
+                   line, linno, colno, pushbk, npshbk, _
+                   tok)
+
+  # Scan an identifier or reserved word.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+  integer ln, cn                # Line and column number of the start.
+  integer tok(TOKSZ)            # The output token.
+
+  character buf(LINESZ)
+  integer n
+
+  call scnwrd (line, linno, colno, pushbk, npshbk, ln, cn, buf, n)
+  call rwdlkp (strngs, istrng, buf, 1, n, ln, cn, tok)
+end
+
+subroutine scnint (strngs, istrng, _
+                   line, linno, colno, pushbk, npshbk, _
+                   tok)
+
+  # Scan a positive integer literal.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+  integer ln, cn                # Line and column number of the start.
+  integer tok(TOKSZ)            # The output token.
+
+  logical isdgt
+
+  character buf(LINESZ)
+  integer n0, n
+  integer i, j, k
+  character*80 fmt
+
+  call scnwrd (line, linno, colno, pushbk, npshbk, ln, cn, buf, n0)
+  for (j = 1; j <= n0; j = j + 1)
+    if (!isdgt (ichar (buf(j))))
+      {
+        call wrtpos (ln, cn)
+        write (fmt, 1000) n0
+1000    format ('(''Not a legal word: "''', I10, 'A, ''"'')')
+        write (*, fmt) (buf(k), k = 1, n0)
+        stop
+      }
+
+  call addstr (strngs, istrng, buf, 1, n0, i, n)
+
+  tok(ITOKNO) = TKINT
+  tok(IARGIX) = i
+  tok(IARGLN) = n
+  tok(ILINNO) = ln
+  tok(ICOLNO) = cn
+end
+
+subroutine utclit (ln, cn)
+
+  implicit none
+
+  integer ln, cn
+
+  call wrtpos (ln, cn)
+  write (*, '(''Unterminated character literal'')')
+  stop
+end
+
+subroutine scnch1 (strngs, istrng, _
+                   line, linno, colno, pushbk, npshbk, _
+                   tok)
+
+  # Scan a character literal, without yet checking that the literal
+  # ends correctly.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+  integer tok(TOKSZ)            # The output token.
+
+  integer trimlf
+
+  integer bufsz
+  parameter (bufsz = 40)
+
+  integer chr(CHRSZ)
+  integer chr1(CHRSZ)
+  integer chr2(CHRSZ)
+  integer ln, cn
+  character buf(bufsz)
+  integer i, j, n
+
+  # Refetch the opening quote.
+  call getchr (line, linno, colno, pushbk, npshbk, chr)
+  ln = chr(ILINNO)
+  cn = chr(ICOLNO)
+
+  tok(ITOKNO) = TKINT
+  tok(ILINNO) = ln
+  tok(ICOLNO) = cn
+
+  call getchr (line, linno, colno, pushbk, npshbk, chr1)
+  if (chr1(ICHRCD) == EOF)
+    call utclit (ln, cn)
+  if (chr1(ICHRCD) == BACKSL)
+    {
+      call getchr (line, linno, colno, pushbk, npshbk, chr2)
+      if (chr2(ICHRCD) == EOF)
+        call utclit (ln, cn)
+      else if (chr2(ICHRCD) == ichar ('n'))
+        {
+          tok(IARGIX) = LOC10   # "10" = code for Unix newline
+          tok(IARGLN) = 2
+        }
+      else if (chr2(ICHRCD) == BACKSL)
+        {
+          tok(IARGIX) = LOC92   # "92" = code for backslash
+          tok(IARGLN) = 2
+        }
+      else
+        {
+          call wrtpos (ln, cn)
+          write (*, '(''Unsupported escape: '', 1A)') _
+                char (chr2(ICHRCD))
+          stop
+        }
+    }
+  else
+    {
+      # Character codes are non-negative, so we can use intstr.
+      call intstr (buf, 1, bufsz, chr1(ICHRCD))
+
+      j = trimlf (buf, bufsz)
+      call addstr (strngs, istrng, buf, j, bufsz - (j - 1), i, n)
+      tok(IARGIX) = i
+      tok(IARGLN) = n
+    }
+end
+
+subroutine scnch (strngs, istrng, _
+                  line, linno, colno, pushbk, npshbk, _
+                  tok)
+
+  # Scan a character literal.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+  integer tok(TOKSZ)            # The output token.
+
+  integer ln, cn
+  integer chr(CHRSZ)
+
+  call getpos (line, linno, colno, pushbk, npshbk, ln, cn)
+  call scnch1 (strngs, istrng, _
+               line, linno, colno, pushbk, npshbk, _
+               tok)
+  call getchr (line, linno, colno, pushbk, npshbk, chr)
+  if (chr(ICHRCD) != ichar (''''))
+    {
+      while (.true.)
+        {
+          if (chr(ICHRCD) == EOF)
+            {
+              call utclit (ln, cn)
+              stop
+            }
+          else if (chr(ICHRCD) == ichar (''''))
+            {
+              call wrtpos (ln, cn)
+              write (*, '(''Unsupported multicharacter literal'')')
+              stop
+            }
+          call getchr (line, linno, colno, pushbk, npshbk, chr)
+        }
+    }
+end
+
+subroutine scnstr (strngs, istrng, _
+                   line, linno, colno, pushbk, npshbk, _
+                   tok)
+
+  # Scan a string literal.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+  integer tok(TOKSZ)            # The output token.
+
+  integer ln, cn
+  integer chr1(CHRSZ)
+  integer chr2(CHRSZ)
+  character buf(LINESZ + 10)  # Enough space, with some room to spare.
+  integer n0
+  integer i, n
+
+  call getchr (line, linno, colno, pushbk, npshbk, chr1)
+  ln = chr1(ILINNO)
+  cn = chr1(ICOLNO)
+
+  tok(ITOKNO) = TKSTR
+  tok(ILINNO) = ln
+  tok(ICOLNO) = cn
+
+  n0 = 1
+  buf(n0) = '"'
+
+  call getchr (line, linno, colno, pushbk, npshbk, chr1)
+  while (chr1(ICHRCD) != ichar ('"'))
+    {
+      # Our input method always puts a NEWLIN before EOF, and so this
+      # test is redundant, unless someone changes the input method.
+      if (chr1(ICHRCD) == EOF || chr1(ICHRCD) == NEWLIN)
+        {
+          call wrtpos (ln, cn)
+          write (*, '(''Unterminated string literal'')')
+          stop
+        }
+      if (chr1(ICHRCD) == BACKSL)
+        {
+          call getchr (line, linno, colno, pushbk, npshbk, chr2)
+          if (chr2(ICHRCD) == ichar ('n'))
+            {
+              n0 = n0 + 1
+              buf(n0) = char (BACKSL)
+              n0 = n0 + 1
+              buf(n0) = 'n'
+            }
+          else if (chr2(ICHRCD) == BACKSL)
+            {
+              n0 = n0 + 1
+              buf(n0) = char (BACKSL)
+              n0 = n0 + 1
+              buf(n0) = char (BACKSL)
+            }
+          else
+            {
+              call wrtpos (chr1(ILINNO), chr1(ICOLNO))
+              write (*, '(''Unsupported escape sequence'')')
+              stop
+            }
+        }
+      else
+        {
+          n0 = n0 + 1
+          buf(n0) = char (chr1(ICHRCD))
+        }
+      call getchr (line, linno, colno, pushbk, npshbk, chr1)
+    }
+  n0 = n0 + 1
+  buf(n0) = '"'
+
+  call addstr (strngs, istrng, buf, 1, n0, i, n)
+  tok(IARGIX) = i
+  tok(IARGLN) = n
+end
+
+subroutine unxchr (chr)
+
+  implicit none
+
+  integer chr(CHRSZ)
+
+  call wrtpos (chr(ILINNO), chr(ICOLNO))
+  write (*, 1000) char (chr(ICHRCD))
+1000 format ('Unexpected character ''', A1, '''')
+  stop
+end
+
+subroutine scntok (strngs, istrng, _
+                   line, linno, colno, pushbk, npshbk, _
+                   tok)
+
+  # Scan a token.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+  integer tok(TOKSZ)            # The output token.
+
+  logical isdgt
+  logical isid0
+
+  integer chr(CHRSZ)
+  integer chr1(CHRSZ)
+  integer ln, cn
+
+  call getchr (line, linno, colno, pushbk, npshbk, chr)
+  ln = chr(ILINNO)
+  cn = chr(ICOLNO)
+  tok(ILINNO) = ln
+  tok(ICOLNO) = cn
+  tok(IARGIX) = 0
+  tok(IARGLN) = 0
+  if (chr(ICHRCD) == ichar (','))
+    tok(ITOKNO) = TKCMMA
+  else if (chr(ICHRCD) == ichar (';'))
+    tok(ITOKNO) = TKSEMI
+  else if (chr(ICHRCD) == ichar ('('))
+    tok(ITOKNO) = TKLPAR
+  else if (chr(ICHRCD) == ichar (')'))
+    tok(ITOKNO) = TKRPAR
+  else if (chr(ICHRCD) == ichar ('{'))
+    tok(ITOKNO) = TKLBRC
+  else if (chr(ICHRCD) == ichar ('}'))
+    tok(ITOKNO) = TKRBRC
+  else if (chr(ICHRCD) == ichar ('*'))
+    tok(ITOKNO) = TKMUL
+  else if (chr(ICHRCD) == ichar ('/'))
+    tok(ITOKNO) = TKDIV
+  else if (chr(ICHRCD) == ichar ('%'))
+    tok(ITOKNO) = TKMOD
+  else if (chr(ICHRCD) == ichar ('+'))
+    tok(ITOKNO) = TKADD
+  else if (chr(ICHRCD) == ichar ('-'))
+    tok(ITOKNO) = TKSUB
+  else if (chr(ICHRCD) == ichar ('<'))
+    {
+      call getchr (line, linno, colno, pushbk, npshbk, chr1)
+      if (chr1(ICHRCD) == ichar ('='))
+        tok(ITOKNO) = TKLE
+      else
+        {
+          call pshchr (pushbk, npshbk, chr1)
+          tok(ITOKNO) = TKLT
+        }
+    }
+  else if (chr(ICHRCD) == ichar ('>'))
+    {
+      call getchr (line, linno, colno, pushbk, npshbk, chr1)
+      if (chr1(ICHRCD) == ichar ('='))
+        tok(ITOKNO) = TKGE
+      else
+        {
+          call pshchr (pushbk, npshbk, chr1)
+          tok(ITOKNO) = TKGT
+        }
+    }
+  else if (chr(ICHRCD) == ichar ('='))
+    {
+      call getchr (line, linno, colno, pushbk, npshbk, chr1)
+      if (chr1(ICHRCD) == ichar ('='))
+        tok(ITOKNO) = TKEQ
+      else
+        {
+          call pshchr (pushbk, npshbk, chr1)
+          tok(ITOKNO) = TKASGN
+        }
+    }
+  else if (chr(ICHRCD) == ichar ('!'))
+    {
+      call getchr (line, linno, colno, pushbk, npshbk, chr1)
+      if (chr1(ICHRCD) == ichar ('='))
+        tok(ITOKNO) = TKNE
+      else
+        {
+          call pshchr (pushbk, npshbk, chr1)
+          tok(ITOKNO) = TKNOT
+        }
+    }
+  else if (chr(ICHRCD) == ichar ('&'))
+    {
+      call getchr (line, linno, colno, pushbk, npshbk, chr1)
+      if (chr1(ICHRCD) == ichar ('&'))
+        tok(ITOKNO) = TKAND
+      else
+        call unxchr (chr)
+    }
+  else if (chr(ICHRCD) == ichar ('|'))
+    {
+      call getchr (line, linno, colno, pushbk, npshbk, chr1)
+      if (chr1(ICHRCD) == ichar ('|'))
+        tok(ITOKNO) = TKOR
+      else
+        call unxchr (chr)
+    }
+  else if (chr(ICHRCD) == ichar ('"'))
+    {
+      call pshchr (pushbk, npshbk, chr)
+      call scnstr (strngs, istrng, _
+                   line, linno, colno, pushbk, npshbk, _
+                   tok)
+    }
+  else if (chr(ICHRCD) == ichar (''''))
+    {
+      call pshchr (pushbk, npshbk, chr)
+      call scnch (strngs, istrng, _
+                  line, linno, colno, pushbk, npshbk, _
+                  tok)
+    }
+  else if (isdgt (chr(ICHRCD)))
+    {
+      call pshchr (pushbk, npshbk, chr)
+      call scnint (strngs, istrng, _
+                   line, linno, colno, pushbk, npshbk, _
+                   tok)
+    }
+  else if (isid0 (chr(ICHRCD)))
+    {
+      call pshchr (pushbk, npshbk, chr)
+      call scnidr (strngs, istrng, _
+                   line, linno, colno, pushbk, npshbk, _
+                   tok)
+    }
+  else
+    call unxchr (chr)
+end
+
+subroutine scntxt (strngs, istrng, _
+                   line, linno, colno, pushbk, npshbk)
+
+  # Scan the text and print the token stream.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+
+  integer chr(CHRSZ)
+  integer tok(TOKSZ)
+
+  chr(ICHRCD) = ichar ('x')
+  while (chr(ICHRCD) != EOF)
+    {
+      call skpspc (line, linno, colno, pushbk, npshbk)
+      call getchr (line, linno, colno, pushbk, npshbk, chr)
+      if (chr(ICHRCD) != EOF)
+        {
+          call pshchr (pushbk, npshbk, chr)
+          call scntok (strngs, istrng, _
+                       line, linno, colno, pushbk, npshbk, _
+                       tok)
+          call prttok (strngs, tok)
+        }
+    }
+  tok(ITOKNO) = TKEOI
+  tok(ILINNO) = chr(ILINNO)
+  tok(ICOLNO) = chr(ICOLNO)
+  tok(IARGIX) = 0
+  tok(IARGLN) = 0
+  call prttok (strngs, tok)
+end
+
+#---------------------------------------------------------------------
+
+program lex
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character line(LINESZ)        # Input buffer.
+  integer linno, colno          # Current line and column numbers.
+  integer pushbk(CHRSZ, PSHBSZ) # Pushback buffer.
+  integer npshbk                # Number of characters pushed back.
+
+  integer i, n
+
+  istrng = 1
+
+  # Locate "10" (newline) at 1 in the string pool.
+  line(1) = '1'
+  line(2) = '0'
+  call addstr (strngs, istrng, line, 1, 2, i, n)
+  if (i != 1 && n != 2)
+    {
+      write (*, '(''internal error'')')
+      stop
+    }
+
+  # Locate "92" (backslash) at 3 in the string pool.
+  line(1) = '9'
+  line(2) = '2'
+  call addstr (strngs, istrng, line, 1, 2, i, n)
+  if (i != 3 && n != 2)
+    {
+      write (*, '(''internal error'')')
+      stop
+    }
+
+  linno = 0
+  colno = LINESZ + 1            # This will trigger a READ.
+  npshbk = 0
+
+  call scntxt (strngs, istrng, line, linno, colno, pushbk, npshbk)
+end
+
+######################################################################

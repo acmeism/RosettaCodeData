@@ -1,0 +1,62 @@
+        .model  tiny
+        .code
+        .486
+        org     100h            ;assume ax=0, bx=0, sp=-2
+start:  mov     al, 13h         ;(ah=0) set 320x200 video graphics mode
+        int     10h
+        push    0A000h
+        pop     es
+        mov     si, 8000h       ;color
+
+        mov     cx, 75*256+100  ;coordinates of initial horizontal line segment
+        mov     dx, 75*256+164  ;use power of 2 for length
+
+        call    dragon
+        mov     ah, 0           ;wait for keystroke
+        int     16h
+        mov     ax, 0003h       ;restore normal text mode
+        int     10h
+        ret
+
+dragon: cmp     sp, -100        ;at maximum recursion depth?
+        jne     drag30          ;skip if not
+        mov     bl, dh          ;draw at max depth to get solid image
+        imul    di, bx, 320     ;(bh=0) plot point at X=dl, Y=dh
+        mov     bl, dl
+        add     di, bx
+        mov     ax, si          ;color
+        shr     ax, 13
+        or      al, 8           ;use bright colors 8..F
+        stosb                   ;es:[di++]:= al
+        inc     si
+        ret
+drag30:
+        push    cx              ;preserve points P and Q
+        push    dx
+
+        xchg    ax, dx          ;DX:= Q(0)-P(0);
+        sub     al, cl
+        sub     ah, ch          ;DY:= Q(1)-P(1);
+
+        mov     dx, ax          ;new point
+        sub     dl, ah          ;R(0):= P(0) + (DX-DY)/2
+        jns     drag40
+         inc    dl
+drag40: sar     dl, 1           ;dl:= (al-ah)/2 + cl
+        add     dl, cl
+
+        add     dh, al          ;R(1):= P(1) + (DX+DY)/2;
+        jns     drag45
+         inc    dh
+drag45: sar     dh, 1           ;dh:= (al+ah)/2 + ch
+        add     dh, ch
+
+        call    dragon          ;Dragon(P, R);
+        pop     cx              ;get Q
+        push    cx
+        call    dragon          ;Dragon(Q, R);
+
+        pop     dx              ;restore points
+        pop     cx
+        ret
+        end     start

@@ -1,0 +1,1 @@
+(while (println "SPAM"))

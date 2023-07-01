@@ -1,0 +1,113 @@
+(*
+Using the algorithm described at
+https://en.wikipedia.org/w/index.php?title=Extended_Euclidean_algorithm&oldid=1135569411#Modular_integers
+*)
+
+#include "share/atspre_staload.hats"
+
+fn {tk : tkind}
+division_with_nonnegative_remainder
+          (n : g0int tk, d : g0int tk,
+          (* q and r are called by reference, and start out
+             uninitialized. *)
+          q : &g0int tk? >> g0int tk,
+          r : &g0int tk? >> g0int tk)
+    : void =
+  let
+    (* The C optimizer most likely will reduce these these two
+       divisions to just one. They are simply synonyms for C '/' and
+       '%', and perform division that rounds the quotient towards
+       zero. *)
+    val q0 = g0int_div (n, d)
+    val r0 = g0int_mod (n, d)
+  in
+    (* The following calculation results in 'floor division', if the
+       divisor is positive, or 'ceiling division', if the divisor is
+       negative. This choice of method results in the remainder never
+       being negative. *)
+    if isgtez n || iseqz r0 then
+      (q := q0; r := r0)
+    else if isltz d then
+      (q := succ q0; r := r0 - d)
+    else
+      (q := pred q0; r := r0 + d)
+  end
+
+fn {tk : tkind}
+inverse (a : g0int tk, n : g0int tk,
+         inverse_exists : &bool? >> bool exists,
+         inverse_value  : &g0int tk? >> opt (g0int tk, exists))
+    : #[exists: bool] void =
+  let
+    typedef integer = g0int tk
+
+    fun
+    loop (t : integer, newt : integer,
+          r : integer, newr : integer,
+          inverse_exists : &bool? >> bool exists,
+          inverse_value  : &g0int tk? >> opt (g0int tk, exists))
+        : #[exists: bool] void =
+      if iseqz newr then
+        begin
+          if r > g0i2i 1 then
+            let
+              val () = inverse_exists := false
+              prval () = opt_none inverse_value
+            in
+            end
+          else if t < g0i2i 0 then
+            let
+              val () = inverse_exists := true
+              val () = inverse_value := t + n
+              prval () = opt_some inverse_value
+            in
+            end
+          else
+            let
+              val () = inverse_exists := true
+              val () = inverse_value := t
+              prval () = opt_some inverse_value
+            in
+            end
+        end
+      else
+        let
+          (* These become C variables. *)
+          var quotient : g0int tk?
+          var remainder : g0int tk?
+
+          val () =
+            division_with_nonnegative_remainder
+              (r, newr, quotient, remainder)
+
+          val t = newt
+          and newt = t - (quotient * newt)
+          and r = newr
+          and newr = remainder
+        in
+          loop (t, newt, r, newr, inverse_exists, inverse_value)
+        end
+  in
+    loop (g0i2i 0, g0i2i 1, n, a, inverse_exists, inverse_value)
+  end
+
+implement
+main0 () =
+  let
+    var inverse_exists : bool?
+    var inverse_value  : llint?
+  in
+    inverse (42LL, 2017LL, inverse_exists, inverse_value);
+    if inverse_exists then
+      let
+        prval () = opt_unsome inverse_value
+      in
+        println! inverse_value
+      end
+    else
+      let
+        prval () = opt_unnone inverse_value
+      in
+        println! "There is no inverse."
+      end
+  end

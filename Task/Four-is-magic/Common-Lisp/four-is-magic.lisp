@@ -1,0 +1,7 @@
+(defun integer-to-text (int)
+  (format nil "~@(~A~)" (with-output-to-string (out)
+                          (loop for n = int then (length c)
+                                for c = (format nil "~R" n)
+                                while (/= n 4)
+                                do (format out "~A is ~R, " c (length c))
+                                finally (format out "four is magic.")))))

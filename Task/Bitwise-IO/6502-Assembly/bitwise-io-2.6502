@@ -1,0 +1,89 @@
+define StringRam $1200
+define BitRam $1400
+define z_BC $00
+define z_C $00
+define z_B $01
+define z_DE $02
+define z_E $02
+define z_D $03
+define tempMath $04
+define tempBitMask $05
+define tempY $06
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+LDA #0
+TAX
+TAY                 ;clear data regs (not needed on Easy6502 but it's a good practice at the start of a program on real hardware)
+
+loop_clearRam:
+STA $1200,x
+STA $1400,x
+inx
+bne loop_clearRam
+
+lda #$12
+sta z_B
+lda #$00
+sta z_C
+
+lda #$57
+jsr Hex2BinAscii     ;store first string
+
+lda #$50
+jsr Hex2BinAscii    ; store second string
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+LDA #$12
+STA z_B
+LDA #$00
+STA z_C             ; get address of string Ram (this step isn't necessary as they're already loaded but it's here for clarity)
+
+LDA #$14
+STA z_D
+LDA #$00
+STA z_E             ; get address of destination
+
+LDY #$00
+STY tempY           ; the indices into StringRam and BitRam are different.
+
+jsr CompressBits
+brk
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+Hex2BinAscii:
+; this procedure is the same as the above example.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+CompressBits:
+; takes a stream of ascii zeroes and ones,
+; and packs them into a series of bytes.
+
+LDX #8            ; repeat 8 times.
+LDA #0
+STA tempMath      ;zero out tempMath
+;;;;;;;;;;;;;;;;;;;;;;;;;
+loop_CompressBits:
+LDA (z_BC),y
+beq Terminated    ; if the value read is equal to the null terminator, we are done.
+                  ; value is assumed to equal #$30 for 0 or #$31 for 1.
+ror               ; bottom bit of accumulator is rotated into the carry flag.
+rol tempMath      ; the carry is shifted into the bottom of tempMath.
+; repeating this with each successive ascii bit representation
+; will preserve the order of the bits. It's hard to explain without drawing a picture
+; but trust me it just works.
+iny               ; next Y
+dex
+bne loop_CompressBits
+;;;;;;;;;;;;;;;;;;;;;;;;;
+; loop overhead
+tya
+pha               ; backup source index.
+   ldy tempY
+   lda tempMath
+   sta (z_DE),y
+   inc tempY      ; increment destination index
+pla
+tay               ; restore source index
+jmp CompressBits  ; back to top
+;;;;;;;;;;;;;;;;;;;;;;;;;
+Terminated:
+rts

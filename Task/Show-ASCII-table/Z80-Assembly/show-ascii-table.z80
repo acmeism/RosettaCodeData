@@ -1,0 +1,260 @@
+	;
+	; Print ASCII table using Z80 assembly language
+	;
+	; Runs under CP/M 3.1 on YAZE-AG-2.51.2 Z80 emulator
+	; Assembled with zsm4 on same emulator/OS, uses macro capabilities of said assembler
+	; Created with vim under Windows
+	;
+	; Thanks to https://wikiti.brandonw.net for the idea for the conversion routine hl -> decimal ASCII
+	;
+	; 2023-04-04 Xorph
+	;
+
+	;
+	; Useful definitions
+	;
+
+	bdos	equ 05h		; Call to CP/M BDOS function
+	strdel	equ 6eh		; Set string delimiter
+	wrtstr	equ 09h		; Write string to console
+
+	numrows	equ 16d		; Number of rows for output
+	numcols	equ 6d		; Number of columns for output
+
+	nul	equ 00h		; ASCII control characters
+	esc	equ 1bh
+	cr	equ 0dh
+	lf	equ 0ah
+
+	cnull	equ '0'		; ASCII character constants
+	spc	equ 20h
+	del	equ 7fh
+
+	;
+	; Macros for BDOS calls
+	;
+
+setdel 	macro	char		; Set string delimiter to char
+	ld	c,strdel
+	ld	e,char
+	call	bdos
+	endm
+
+print 	macro	msg		; Output string to console
+	ld	c,wrtstr
+	ld	de,msg
+	call	bdos
+	endm
+
+newline	macro			; Print newline
+	ld	c,wrtstr
+	ld	de,crlf
+	call	bdos
+	endm
+
+pushall	macro			; Save all registers to stack
+	push	af
+	push	bc
+	push	de
+	push	hl
+	push	ix
+	push	iy
+	endm
+
+popall	macro			; Recall all registers from stack
+	pop	iy
+	pop	ix
+	pop	hl
+	pop	de
+	pop	bc
+	pop	af
+	endm
+
+	;
+	; =====================
+	; Start of main program
+	; =====================
+	;
+
+	cseg
+
+asciitab:
+	setdel	nul		; Set string terminator to nul ('\0') - '$' is default in CP/M
+
+	ld	a,spc		; First ASCII code to print
+loop:
+	ld	(char),a	; Put ASCII code in output placeholder
+	ld	h,0		; Register pair hl is used for printing the number, register h remains 0
+	ld	l,a		; Put ASCII code in hl for decimal conversion
+	ld	ix,buffer
+	call	dispHL		; Create decimal representation
+
+	ld	d,3d		; Pad decimal representation to 3 places with leading blanks
+	ld	e,' '		; Registers d and e are modified in macro, so assign each time
+	ld	hl,buffer
+	ld	bc,format
+	call	padstrl
+
+	print	format		; Print the whole thing
+	print	colon
+
+chkspc:
+	ld	a,(char)	; Load again, register a was lost during BDOS calls
+	cp	spc		; Check if Spc
+	jr	nz,chkdel	; If not, check if Del
+	print	txtspc		; If yes, print the text for Spc
+	jr	nextcol		; ...and skip to the next column
+
+chkdel:
+	ld	a,(char)	; Load again, register a was lost during BDOS calls
+	cp	del		; Check if Del
+	jr	nz,printc	; If not, print normal char
+	print	txtdel		; If yes, print the text for Del
+	jr	nextcol		; ...and skip to the next column
+
+printc:
+	print	char		; Normal char
+
+nextcol:
+	ld	a,(curcol)	; Increase output column
+	inc	a
+	cp	numcols		; If last column, go to next row
+	jr	z,nextrow
+	
+	ld	(curcol),a	; Save column counter
+	ld	a,(char)	; Increase ASCII code by the number of rows for next column in same row
+	add	a,numrows
+	jr	loop		; Next code
+
+nextrow:
+	newline			; Display next row
+	xor	a		; Set column counter back to 0
+	ld	(curcol),a
+	ld	a,(currow)	; Increase row counter
+	inc	a
+	cp	numrows		; When last row has been finished, we are done
+	jr	z,exitprg
+
+	ld	(currow),a	; Save row counter
+	ld	a,(char)	; Set ASCII code back to starting code of next row
+	sub	a,numrows * (numcols - 1d) - 1d
+	jp	loop		; Use jp instead of jr because of jump distance!
+
+exitprg:
+	newline
+	ret			; Return to CP/M
+
+	;
+	; ===================
+	; End of main program
+	; ===================
+	;
+
+	;
+	; Helper routines - notice that the Z80 does not have a divide instruction
+	; Notice further that CP/M does not have any support for pretty-printing
+	; formatted numbers and stuff like that. So we have to do all this by hand...
+	;
+
+	;
+	; Converts the value (unsigned int) in register hl to its decimal representation
+	; Register ix has memory address of target for converted value
+	; String is terminated with nul character (\0)
+	;
+
+dispHL:
+	pushall
+	ld	b,1		; Flag for leading '0'
+	irp	x,<-10000,-1000,-100,-10,-1>
+	ld	de,x		; Subtract powers of 10 and determine digit
+	call	calcdig
+	endm
+
+	ld	a,nul		; Terminate result string with nul
+	ld	(ix+0),a
+
+	popall
+	ret			; End of conversion routine
+
+calcdig:
+	ld	a,cnull-1	; Determine the digit character
+incrdig:
+	inc	a		; Start with '0'
+	add	hl,de		; As long as subtraction is possible, increment digit character
+	jr	c,incrdig
+
+	sbc	hl,de		; If negative, undo last subtraction and continue with remainder
+	cp	cnull		; Check for leading '0', these are ignored
+	jr	nz,adddig
+	bit	0,b		; Use bit instruction for check if flag set, register a contains digit
+	ret	nz		; If '0' found and flag set, it is a leading '0' and we return
+adddig:
+	ld	b,0		; Reset flag for leading '0', we are now outputting digits
+	ld	(ix+0),a	; Store character in memory and set ix to next location
+	inc	ix
+
+	ret			; End of conversion helper routine
+
+	;
+	; Formats a string to the specified minimum width with the specified filler character
+	; Register hl has memory address of nul-terminated string
+	; Register bc has memory address of target for padded string
+	; Register d has width
+	; Register e has filler character/byte
+	; Padding is on the left (function is intended for padding integer numbers)
+	;
+
+padstrl:
+	pushall
+	push	hl		; Save address of source for copy later on
+	ld	a,d		; Check if width is 0, just copy string if so
+	cp	0
+	jr	z,copysrc
+	ld	a,nul		; Search for end of string. Each non-nul character decrements d
+
+findnul:
+	cp	(hl)
+	jr	z,nulfound	; Found end of string, d contains number of padding to add
+	dec	d
+	jr	z,copysrc
+	inc	hl
+	jr	findnul		; Repeat with next character
+
+nulfound:
+	ld	a,e		; Store as many padding characters to target as specified in register d
+inspad:
+	ld	(bc),a
+	inc	bc		; Move to next memory address and decrease d
+	dec	d
+	jr	nz,inspad
+
+copysrc:
+	pop	hl		; Transfer source to target, bc points to first memory address after padding
+movechar:
+	ld	a,(hl)
+	ld	(bc),a
+	inc	hl
+	inc	bc
+	cp	nul		; Check if nul character copied
+	jr	nz,movechar	; If no, repeat with next character
+
+	popall
+	ret			; End of padding routine
+
+	;
+	; ================
+	; Data definitions
+	; ================
+	;
+
+	dseg
+
+crlf:	defb	cr,lf,nul	; Generic newline
+buffer:	defs	10		; Buffer for conversion of number to text
+format:	defs	10		; Formatted number for output
+colon:	defz	' : '		; Separator number/character, nul-terminated
+char:	defz	'     '		; Placeholder for ASCII character, nul-terminated
+txtspc:	defz	'Spc  '		; Space character 20h
+txtdel:	defz	'Del  '		; Del character 7fh
+currow:	defb	0d		; Current row
+curcol:	defb	0d		; Current column

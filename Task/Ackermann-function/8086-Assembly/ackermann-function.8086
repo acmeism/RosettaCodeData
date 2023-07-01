@@ -1,0 +1,60 @@
+	cpu	8086
+	bits	16
+	org	100h
+section	.text
+	jmp	demo
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	ACK(M,N); DX=M, AX=N, return value in AX.
+ack:	and	dx,dx	; N=0?
+	jnz	.m
+	inc	ax	; If so, return N+1
+	ret
+.m:	and	ax,ax	; M=0?
+	jnz	.mn
+	mov	ax,1	; If so, N=1,
+	dec	dx	; M -= 1
+	jmp	ack	; ACK(M-1,1) - tail recursion
+.mn:	push	dx	; Keep M on the stack
+	dec	ax	; N-=1
+	call	ack	; N = ACK(M,N-1)
+	pop	dx	; Restore M
+	dec	dx	; M -= 1
+	jmp	ack	; ACK(M-1,ACK(M,N-1)) - tail recursion
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Print table of ack(m,n)
+MMAX:	equ	4	; Size of table to print. Noe that math is done
+NMAX:	equ	9	; in 16 bits.
+demo:	xor	si,si	; Let SI hold M,
+	xor	di,di	; and DI hold N.
+acknum:	mov	dx,si	; Calculate ack(M,N)
+	mov	ax,di
+	call	ack
+	call	prax	; Print number
+	inc	di	; N += 1
+	cmp	di,NMAX	; Row done?
+	jb	acknum	; If not, print next number on row
+	xor	di,di	; Otherwise, N=0,
+	inc	si	; M += 1
+	mov	dx,nl	; Print newline
+	call	prstr
+	cmp	si,MMAX	; Done?
+	jb	acknum	; If not, start next row
+	ret		; Otherwise, stop.
+	;;;	Print AX as ASCII number.
+prax:	mov	bx,pnum	; Pointer to number string
+	mov	cx,10	; Divisor
+.dgt:	xor	dx,dx	; Divide AX by ten
+	div	cx
+	add	dl,'0'	; DX holds remainder - add ASCII 0
+	dec	bx	; Move pointer backwards
+	mov	[bx],dl	; Save digit in string
+	and	ax,ax	; Are we done yet?
+	jnz	.dgt	; If not, next digit
+	mov	dx,bx	; Tell DOS to print the string
+prstr:	mov	ah,9
+	int	21h
+	ret
+section	.data
+	db	'*****'	; Placeholder for ASCII number
+pnum:	db	9,'$'
+nl:	db	13,10,'$'

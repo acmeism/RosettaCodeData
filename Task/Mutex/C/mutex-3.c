@@ -1,0 +1,1 @@
+ReleaseMutex(hMutex);

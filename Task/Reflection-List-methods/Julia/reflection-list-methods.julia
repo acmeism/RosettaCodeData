@@ -1,0 +1,2 @@
+methods(methods)
+methods(println)

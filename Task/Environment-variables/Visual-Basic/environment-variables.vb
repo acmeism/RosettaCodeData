@@ -1,0 +1,1 @@
+Debug.Print Environ$("PATH")

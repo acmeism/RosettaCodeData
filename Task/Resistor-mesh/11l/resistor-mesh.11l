@@ -1,0 +1,66 @@
+-V DIFF_THRESHOLD = 1e-40
+
+T.enum Fixed
+   FREE
+   A
+   B
+
+T Node
+   Float voltage
+   Fixed fixed
+   F (v = 0.0, f = Fixed.FREE)
+      .voltage = v
+      .fixed = f
+
+F set_boundary(&m)
+   m[1][1] = Node( 1.0, Fixed.A)
+   m[6][7] = Node(-1.0, Fixed.B)
+
+F calc_difference(m, &d)
+   V h = m.len
+   V w = m[0].len
+   V total = 0.0
+
+   L(i) 0 .< h
+      L(j) 0 .< w
+         V v = 0.0
+         V n = 0
+         I i != 0  {v += m[i - 1][j].voltage; n++}
+         I j != 0  {v += m[i][j - 1].voltage; n++}
+         I i < h-1 {v += m[i + 1][j].voltage; n++}
+         I j < w-1 {v += m[i][j + 1].voltage; n++}
+         v = m[i][j].voltage - v / n
+         d[i][j].voltage = v
+         I m[i][j].fixed == FREE
+            total += v ^ 2
+   R total
+
+F iter(&m)
+   V h = m.len
+   V w = m[0].len
+   V difference = [[Node()] * w] * h
+
+   L
+      set_boundary(&m)
+      I calc_difference(m, &difference) < :DIFF_THRESHOLD
+         L.break
+      L(di) difference
+         V i = L.index
+         L(dij) di
+            V j = L.index
+            m[i][j].voltage -= dij.voltage
+
+   V cur = [0.0] * 3
+   L(di) difference
+      V i = L.index
+      L(dij) di
+         V j = L.index
+         cur[Int(m[i][j].fixed)] += (dij.voltage *
+            (Int(i != 0) + Int(j != 0) + (i < h - 1) + (j < w - 1)))
+
+   R (cur[Int(Fixed.A)] - cur[Int(Fixed.B)]) / 2.0
+
+V w = 10
+V h = 10
+V mesh = [[Node()] * w] * h
+print(‘R = #.16’.format(2 / iter(&mesh)))

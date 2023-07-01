@@ -1,0 +1,1 @@
+local(copy) = #myobject->ascopydeep

@@ -1,0 +1,133 @@
+INCLUDE "D2:REAL.ACT" ;from the Action! Tool Kit
+
+DEFINE PTR="CARD"
+DEFINE ENTRY_SIZE="4"
+DEFINE STX="$8E"
+DEFINE STA="$8D"
+DEFINE JSR="$20"
+DEFINE RTS="$60"
+
+TYPE City=[
+  CARD
+    name, ;CHAR ARRAY
+    population] ;REAL POINTER
+
+BYTE ARRAY cities(100)
+BYTE count=[0]
+
+CHAR ARRAY nameParam ;param for name predicate
+REAL popParam ;param for population predicate
+CHAR letterParam ;param for letter predicate
+CITY POINTER c ;city used in predicates and actions
+BYTE index ;index of city used in index action
+
+PTR FUNC GetItemAddr(BYTE index)
+  PTR addr
+
+  addr=cities+index*ENTRY_SIZE
+RETURN (addr)
+
+PROC Append(CHAR ARRAY n REAL POINTER p)
+  City POINTER dst
+
+  dst=GetItemAddr(count)
+  dst.name=n
+  dst.population=p
+  count==+1
+RETURN
+
+PROC InitData()
+  REAL lg,ca,ki,gr,mo,kh,da,al,ab,cs
+
+  ValR("21.0",lg) ValR("15.2",ca)
+  ValR("11.3",ki) ValR("7.53",gr)
+  ValR("5.85",mo) ValR("4.98",kh)
+  ValR("4.7",da)  ValR("4.58",al)
+  ValR("4.4",ab)  ValR("3.98",cs)
+
+  Append("Lagos",lg)
+  Append("Cairo",ca)
+  Append("Kinshasa-Brazzaville",ki)
+  Append("Greater Johannesburg",gr)
+  Append("Mogadishu",mo)
+  Append("Khartoum-Omdurman",kh)
+  Append("Dar Es Salaam",da)
+  Append("Alexandria",al)
+  Append("Abidjan",ab)
+  Append("Casablanca",cs)
+RETURN
+
+BYTE FUNC NameEquals()
+RETURN (SCompare(c.name,nameParam)+1)
+
+BYTE FUNC PopulationLess()
+  REAL diff
+  BYTE ARRAY x
+
+  RealSub(popParam,c.population,diff)
+  x=diff
+  IF (x(0)&$80)=$00 THEN
+    RETURN (1)
+  FI
+RETURN (0)
+
+BYTE FUNC FirstLetter()
+  CHAR ARRAY n
+
+  n=c.name
+  IF n(0)>=1 AND n(1)=letterParam THEN
+    RETURN (1)
+  FI
+RETURN (0)
+
+;jump addr is stored in X and A registers
+BYTE FUNC Predicate=*(PTR jumpAddr)
+ [STX Predicate+8
+  STA Predicate+7
+  JSR $00 $00
+  RTS]
+
+PROC PrintIndex()
+  PrintF("index=%I%E",index)
+RETURN
+
+PROC PrintName()
+  PrintF("name=%S%E",c.name)
+RETURN
+
+PROC PrintPopulation()
+  Print("population=")
+  PrintRE(c.population)
+RETURN
+
+;jump addr is stored in X and A registers
+PROC Action=*(PTR jumpAddr)
+  [STX Action+8
+   STA Action+7
+   JSR $00 $00
+   RTS]
+
+PROC Find(PTR predicateFun,actionFun)
+  FOR index=0 TO count-1
+  DO
+    c=GetItemAddr(index)
+    IF Predicate(predicateFun) THEN
+      Action(actionFun)
+      EXIT
+    FI
+  OD
+RETURN
+
+PROC Main()
+  Put(125) PutE() ;clear screen
+  InitData()
+
+  nameParam="Dar Es Salaam"
+  Find(NameEquals,PrintIndex)
+
+  ValR("5.0",popParam)
+  Find(PopulationLess,PrintName)
+
+  letterParam='A
+  Find(FirstLetter,PrintPopulation)
+RETURN

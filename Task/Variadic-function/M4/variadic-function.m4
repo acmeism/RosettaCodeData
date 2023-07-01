@@ -1,0 +1,10 @@
+define(`showN',
+   `ifelse($1,0,`',`$2
+$0(decr($1),shift(shift($@)))')')dnl
+define(`showargs',`showN($#,$@)')dnl
+dnl
+showargs(a,b,c)
+dnl
+define(`x',`1,2')
+define(`y',`,3,4,5')
+showargs(x`'y)

@@ -1,0 +1,179 @@
+;
+; Non-recursive directory walk for Motorola 68000 under AmigaOs 2.04+ by Thorham
+;
+
+execBase equ 4
+
+;
+; from exec includes
+;
+_LVOOpenLibrary equ -552
+_LVOCloseLibrary equ -414
+_LVOAllocVec equ -684
+_LVOFreeVec equ -690
+
+MEMF_ANY equ 0
+
+;
+; from dos includes
+;
+_LVOVPrintf equ -954
+_LVOExamine equ -102
+_LVOExNext equ -108
+_LVOLock equ -84
+_LVOUnLock equ -90
+_LVOParsePatternNoCase equ -966
+_LVOMatchPatternNoCase equ -972
+
+ACCESS_READ equ -2
+                    rsset   0
+fib_DiskKey         rs.l    1
+fib_DirEntryType    rs.l    1
+fib_FileName        rs.b    108
+fib_Protection      rs.l    1
+fib_EntryType       rs.l    1
+fib_Size            rs.l    1
+fib_NumBlocks       rs.l    1
+fib_DateStamp       rs.b    12
+fib_Comment         rs.b    80
+fib_OwnerUID        rs.w    1
+fib_OwnerGID        rs.w    1
+fib_Reserved        rs.b    32
+fib_SIZEOF          rs.b    0
+
+;
+; main
+;
+
+start
+    move.l  execBase,a6
+
+; open dos.library
+
+    lea     dosName,a1
+    moveq   #37,d0
+    jsr     _LVOOpenLibrary(a6)
+    move.l  d0,dosBase
+    beq     exit
+
+; allocate memory for file info block
+
+    move.l  #fib_SIZEOF,d0
+    move.l  #MEMF_ANY,d1
+    jsr     _LVOAllocVec(a6)
+    move.l  d0,fib
+    beq     exit
+
+; get directory lock
+
+    move.l  dosBase,a6
+
+    move.l  #pathString,d1
+    move.l  #ACCESS_READ,d2
+    jsr     _LVOLock(a6)
+    move.l  d0,lock
+    beq     exit
+
+; examine directory for ExNext
+
+    move.l  lock,d1
+    move.l  fib,d2
+    jsr     _LVOExamine(a6)
+    tst.w   d0
+    beq     exit
+
+; parse pattern string
+
+    move.l  #patternString,d1
+    move.l  #patternParsed,d2
+    move.l  #sizeof_patternString*2+2,d3
+    jsr     _LVOParsePatternNoCase(a6)
+    tst.l   d0
+    blt     exit
+
+; get some pointers for use in the loop
+
+    lea     printfArgs,a2
+    move.l  fib,a3
+    lea     fib_FileName(a3),a3
+
+.loop
+
+; get next directory entry
+
+    move.l  lock,d1
+    move.l  fib,d2
+    jsr     _LVOExNext(a6)
+    tst.w   d0
+    beq     exit
+
+; match pattern
+
+    move.l  #patternParsed,d1
+    move.l  a3,d2
+    jsr     _LVOMatchPatternNoCase(a6)
+
+; if match then print file name
+
+    tst.l   d0
+    beq     .nomatch
+
+    move.l  a3,(a2)
+    move.l  #formatString,d1
+    move.l  #printfArgs,d2
+    jsr     _LVOVPrintf(a6)
+
+.nomatch
+    bra     .loop
+
+; cleanup and exit
+
+exit
+    move.l  dosBase,a6
+    move.l  lock,d1
+    jsr     _LVOUnLock(a6)
+
+    move.l  execBase,a6
+    move.l  fib,a1
+    tst.l   a1
+    beq     .l1
+    jsr     _LVOFreeVec(a6)
+.l1
+    move.l  dosBase,a1
+    jsr     _LVOCloseLibrary(a6)
+    rts
+
+    section data,data_p
+;
+; variables
+;
+dosBase
+    dc.l    0
+
+lock
+    dc.l    0
+
+fib
+    dc.l    0
+
+printfArgs
+    dc.l    0
+;
+; strings
+;
+dosName
+    dc.b    "dos.library",0
+
+pathString
+    dc.b    "ram:",0
+
+formatString
+    dc.b    "%s",10,0
+
+patternString
+    dc.b    "#?",0
+patternString_end
+sizeof_patternString=patternString_end-patternString
+
+patternParsed
+    dcb.b   sizeof_patternString*2+2

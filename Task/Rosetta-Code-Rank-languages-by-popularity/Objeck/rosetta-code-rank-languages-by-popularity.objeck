@@ -1,0 +1,80 @@
+use HTTP;
+use RegEx;
+use XML;
+use Collection;
+
+class RosettaRank {
+  function : Main(args : String[]) ~ Nil {
+    langs_xml := "";
+    client := HttpClient->New();
+    in := client->Get("http://rosettacode.org/mw/api.php?action=query&list=categorymembers&cmtitle=Category:Programming_Languages&cmlimit=5000&format=xml");
+    each(i : in) {
+      langs_xml += in->Get(i)->As(String);
+    };
+
+    langs := StringSet->New();
+    parser := XmlParser->New(langs_xml);
+    if(parser->Parse()) {
+      # get first item
+      results := parser->FindElements("/api/query/categorymembers/cm");
+      each(i : results) {
+        element := results->Get(i)->As(XmlElement);
+        name := element->GetAttribute("title")->GetValue();
+        offset := name->Find(':');
+        if(offset > -1) {
+          lang := name->SubString(offset + 1, name->Size() - offset - 1);
+          langs->Insert(lang->ReplaceAll("&#x20;", " "));
+        };
+      };
+    };
+
+    langs_counts := IntMap->New();
+    client := HttpClient->New();
+    html := client->Get("http://rosettacode.org/mw/index.php?title=Special:Categories&limit=5000");
+    each(i : html) {
+      lines := html->Get(i)->As(String);
+      html_elements := lines->Split("\n");
+      each(j : html_elements) {
+        element := html_elements[j];
+        name : String; count : String;
+        regex := RegEx->New("<li><a href=\"(\\w|\\s|/|\\?|\\&|;|:|#)+\"\\stitle=\"Category:(\\w|\\s|#)+\">");
+        found := regex->FindFirst(element);
+        if(found <> Nil) {
+          group1 := found->Size();
+          regex := RegEx->New("(\\w|\\s)+");
+          found := regex->Match(element, group1);
+          if(found <> Nil & found->Size() > 0) {
+            name := found;
+            # skip over some junk characters
+            group2 := group1 + found->Size() + 10;
+            regex := RegEx->New("\\s\\(");
+            found := regex->Match(element, group2);
+            if(found <> Nil) {
+              group3 := group2 + found->Size();
+              regex := RegEx->New("\\d+");
+              found := regex->Match(element, group3);
+              if(found <> Nil & found->Size() > 0) {
+                count := found;
+              };
+            };
+          };
+        };
+
+        if(name <> Nil & count <> Nil) {
+          if(langs->Has(name)) {
+            langs_counts->Insert(count->ToInt(), name);
+          };
+          name := Nil; count := Nil;
+        };
+      };
+    };
+
+    keys := langs_counts->GetKeys();
+    count := 1;
+    for(i := keys->Size() - 1; i >= 0; i -=1;) {
+      key := keys->Get(i);
+      IO.Console->Print(count)->Print(". ")->Print(key)->Print(" - ")->PrintLine(langs_counts->Find(key)->As(String));
+      count += 1;
+    };
+  }
+}

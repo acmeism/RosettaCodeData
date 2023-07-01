@@ -1,0 +1,95 @@
+	;-------------------------------------------------------
+	; useful equates
+	;-------------------------------------------------------
+bdos	equ	5	; CP/M BDOS entry
+conout	equ	2	; BDOS console output function
+cr	equ	13	; ASCII carriage return
+lf	equ	10	; ASCII line feed
+	;------------------------------------------------------
+	; main code begins here
+	;------------------------------------------------------
+	org	100h	; start of tpa under CP/M
+	lxi	h,0	; save CP/M's stack
+	dad	sp
+	shld	oldstk
+	lxi	sp,stack ; set our own stack
+	lxi	h,1	; start counting at 1
+count:	call	putoct
+	call	crlf
+	inx	h
+	mov	a,h	; check for overflow (hl = 0)
+	ora	l
+	jnz	count
+	;
+	; all finished. clean up and exit.
+	;
+	lhld	oldstk	; get CP/M's stack back
+	sphl		; restore it
+	ret		; exit to command prompt
+	;------------------------------------------------------
+	; Octal output routine
+	; entry:  hl = number to output on console in octal
+	; this is a recursive routine and uses 6 bytes of stack
+	; space for each digit
+	;------------------------------------------------------
+putoct: push	b
+	push	d
+	push	h
+	mvi	b,3	; hl = hl >> 3
+div2:	call	shlr	
+	dcr	b
+	jnz	div2
+	mov	a,l	; test if hl = 0
+	ora	h
+	cnz	putoct  ; recursive call
+	pop	h	; get unshifted hl back
+	push	h
+	mov	a,l	; get low byte
+	ani	7	; a = a mod 8
+	adi	'0'	; make printable
+	call	putchr
+	pop	h
+	pop	d
+	pop	b
+	ret
+	;-------------------------------------------------------
+	; logical right shift of 16-bit value in HL by one bit
+	;-------------------------------------------------------
+shlr:	ora	a	; clear carry
+	mov	a,h	; begin with most significant byte
+	rar		; bit 0 goes into carry
+	mov	h,a	; put shifted byte back
+	mov	a,l	; get least significant byte
+	rar		; bit 0 of MSB has shifted in
+	mov	l,a
+	ret
+	;------------------------------------------------------
+	; output CRLF to console
+	;------------------------------------------------------
+crlf:	mvi	a,cr
+	call	putchr
+	mvi	a,lf
+	call	putchr
+	ret
+	;------------------------------------------------------
+	; Console output routine
+	; print character in A register to console
+        ; preserves BC, DE, and HL
+	;------------------------------------------------------
+putchr:	push	h
+	push	d
+	push	b
+	mov	e,a	; character to E for CP/M
+	mvi	c,conout
+	call	bdos
+	pop	b
+	pop	d
+	pop	h
+	ret
+	;-------------------------------------------------------
+	;  data area
+	;-------------------------------------------------------
+oldstk:	dw	1
+stack	equ	$+128	; 64 level stack
+	;
+	end

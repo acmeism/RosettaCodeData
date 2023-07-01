@@ -1,0 +1,85 @@
+T.enum EntryType
+   EMPTY
+   ENABLED
+   DISABLED
+   COMMENT
+   IGNORE
+
+T Entry
+   EntryType etype
+   String name
+   String value
+
+   F (etype, name = ‘’, value = ‘’)
+      .etype = etype
+      .name = name
+      .value = value
+
+T Config
+   String path
+   [Entry] entries
+
+   F (path)
+      .path = path
+      L(=line) File(path).read_lines()
+         line = line.ltrim(‘ ’)
+         I line.empty
+            .entries.append(Entry(EntryType.EMPTY))
+         E I line[0] == ‘#’
+            .entries.append(Entry(EntryType.COMMENT, line))
+         E
+            line = line.replace(re:‘[^a-zA-Z0-9\x20;]’, ‘’)
+            V m = re:‘^(;*)\s*([a-zA-Z0-9]+)\s*([a-zA-Z0-9]*)’.search(line)
+            I m & !m.group(2).empty
+               V t = I m.group(1).empty {EntryType.ENABLED} E EntryType.DISABLED
+               .addOption(m.group(2), m.group(3), t)
+
+   F enableOption(name)
+      Int? i = .getOptionIndex(name)
+      I i != N
+         .entries[i].etype = EntryType.ENABLED
+
+   F disableOption(name)
+      Int? i = .getOptionIndex(name)
+      I i != N
+         .entries[i].etype = EntryType.DISABLED
+
+   F setOption(name, value)
+      Int? i = .getOptionIndex(name)
+      I i != N
+         .entries[i].value = value
+
+   F addOption(name, val, t = EntryType.ENABLED)
+      .entries.append(Entry(t, name.uppercase(), val))
+
+   F removeOption(name)
+      Int? i = .getOptionIndex(name)
+      I i != N
+         .entries[i].etype = EntryType.IGNORE
+
+   F getOptionIndex(name) -> Int?
+      L(e) .entries
+         I e.etype !C (EntryType.ENABLED, EntryType.DISABLED)
+            L.continue
+         I e.name == name.uppercase()
+            R L.index
+      R N
+
+   F store()
+      V f = File(.path, ‘w’)
+      L(e) .entries
+         I e.etype == EMPTY
+            f.write("\n")
+         E I e.etype == ENABLED
+            f.write("#. #.\n".format(e.name, e.value))
+         E I e.etype == DISABLED
+            f.write("; #. #.\n".format(e.name, e.value))
+         E I e.etype == COMMENT
+            f.write(e.name"\n")
+
+V cfg = Config(‘config.txt’)
+cfg.enableOption(‘seedsremoved’)
+cfg.disableOption(‘needspeeling’)
+cfg.setOption(‘numberofbananas’, ‘1024’)
+cfg.addOption(‘numberofstrawberries’, ‘62000’)
+cfg.store()

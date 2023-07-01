@@ -1,0 +1,5 @@
+perm <- function(n, k) choose(n, k) * factorial(k)
+print(perm(seq(from = 3, to = 12, by = 3), seq(from = 2, to = 8, by = 2)))
+print(choose(seq(from = 10, to = 60, by = 10), seq(from = 3, to = 18, by = 3)))
+print(perm(seq(from = 1500, to = 15000, by = 1500), seq(from = 55, to = 100, by = 5)))
+print(choose(seq(from = 100, to = 1000, by = 150), seq(from = 70, to = 100, by = 5)))

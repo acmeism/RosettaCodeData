@@ -1,0 +1,11 @@
+let rec fib_rec n =
+  if n < 2 then
+    n
+  else
+    fib_rec (n - 1) + fib_rec (n - 2)
+
+let rec fib = function
+    0 -> 0
+  | 1 -> 1
+  | n -> if n > 0 then fib (n-1) + fib (n-2)
+         else fib (n+2) - fib (n+1)

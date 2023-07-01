@@ -1,0 +1,17 @@
+(de nmbr (N)
+   (let (A 1  B 0)
+      (while (gt0 N)
+         (if (bit? 1 N)
+            (inc 'B A)
+            (inc 'A B) )
+         (setq N (>> 1 N)) )
+      B ) )
+
+(let Lst (mapcar nmbr (range 1 2000))
+   (println 'First-15: (head 15 Lst))
+   (for N 10
+      (println 'First N 'found 'at: (index N Lst)) )
+   (println 'First 100 'found 'at: (index 100 Lst))
+   (for (L Lst (cdr L) (cddr L))
+      (test 1 (gcd (car L) (cadr L))) )
+   (prinl "All consecutive pairs are relative prime!") )

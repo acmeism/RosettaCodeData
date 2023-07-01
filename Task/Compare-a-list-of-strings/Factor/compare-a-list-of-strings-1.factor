@@ -1,0 +1,2 @@
+USE: grouping
+all-equal?

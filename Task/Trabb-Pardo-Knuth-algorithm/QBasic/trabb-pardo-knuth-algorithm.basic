@@ -1,0 +1,25 @@
+FUNCTION f (n!)
+    f = SQR(ABS(n)) + 5 * n ^ 3
+END FUNCTION
+
+DIM s(1 TO 11)
+PRINT "enter 11 numbers"
+FOR i = 1 TO 11
+    PRINT STR$(i);
+    INPUT " => ", s(i)
+NEXT i
+
+PRINT : PRINT STRING$(20, "-")
+
+i = i - 1
+DO
+    PRINT "f("; STR$(s(i)); ") = ";
+    x = f(s(i))
+    IF x > 400 THEN
+        PRINT "-=< overflow >=-"
+    ELSE
+        PRINT x
+    END IF
+    i = i - 1
+LOOP UNTIL i < 1
+END

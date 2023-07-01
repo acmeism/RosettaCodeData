@@ -1,0 +1,50 @@
+ClearAll[ReverseFractionalPart, ReplacePixelWithAlpha, DrawEndPoint, DrawLine]
+ReverseFractionalPart[x_] := 1 - FractionalPart[x]
+ReplacePixelWithAlpha[img_Image, pos_ -> colvals : {_, _, _},
+  alpha_] := Module[{vals,},
+  vals = PixelValue[img, pos];
+  vals = (1 - alpha) vals + alpha colvals;
+  ReplacePixelValue[img, pos -> vals]
+  ]
+DrawEndPoint[img_Image, pt : {x_, y_}, grad_, p_] :=
+ Module[{xend, yend, xgap, px, py, i},
+  xend = Round[x];
+  yend = y + grad (xend - x);
+  xgap = ReverseFractionalPart[x + 0.5];
+  {px, py} = Floor[{xend, yend}];
+  i = ReplacePixelWithAlpha[img, p[{x, py}] -> {1, 1, 1}, ReverseFractionalPart[yend] xgap];
+  i = ReplacePixelWithAlpha[i, p[{x, py + 1}] -> {1, 1, 1}, FractionalPart[yend] xgap];
+  {px, i}
+  ]
+DrawLine[img_Image, p1 : {_, _}, p2 : {_, _}] :=
+ Module[{x1, x2, y1, y2, steep, p, grad, intery, xend, yend, x, y,
+   xstart, ystart, dx, dy, i},
+  {x1, y1} = p1;
+  {x2, y2} = p2;
+  dx = x2 - x1;
+  dy = y2 - y1;
+  steep = Abs[dx] < Abs[dy];
+  p = If[steep, Reverse[#], #] &;
+  If[steep,
+   {x1, y1, x2, y2, dx, dy} = {y1, x1, y2, x2, dy, dx}
+   ];
+  If[x2 < x1,
+   {x1, x2, y1, y2} = {x2, x1, y2, y1}
+   ];
+  grad = dy/dx;
+  intery = y1 + ReverseFractionalPart[x1] grad;
+  {xstart, i} = DrawEndPoint[img, p[p1], grad, p];
+  xstart += 1;
+  {xend, i} = DrawEndPoint[i, p[p2], grad, p];
+  Do[
+   y = Floor[intery];
+   i = ReplacePixelWithAlpha[i, p[{x, y}] -> {1, 1, 1}, ReverseFractionalPart[intery]];
+   i = ReplacePixelWithAlpha[i, p[{x, y + 1}] -> {1, 1, 1}, FractionalPart[intery]];
+   intery += grad
+   ,
+   {x, xstart, xend}
+   ];
+  i
+  ]
+image = ConstantImage[Black, {100, 100}];
+Fold[DrawLine[#1, {20, 10}, #2] &, image, AngleVector[{20, 10}, {75, #}] & /@ Subdivide[0, Pi/2, 10]]

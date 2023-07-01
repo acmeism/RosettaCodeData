@@ -1,0 +1,174 @@
+;ROMAN NUMERALS MODULE
+
+EncodeRoman:
+;takes a BCD value in AX and stores its Roman numeral equivalent in ram.
+
+	call UnpackBCD
+	
+	cmp dh,03h
+	jng continue_EncodeRoman
+	;roman numerals only go up to 3999.
+	jmp errorhandler_encodeRoman_inputTooBig
+continue_EncodeRoman:
+	mov si,offset StringRam
+	;using SI as destination of roman numerals.
+	push ax	
+	push cx
+		mov ch,0
+		mov cl,dh					;loop counter
+		cmp dh,0
+		jz skipThousands
+encodeRoman_handleThousands:
+		mov al,"M"
+		mov [ds:si],al				;store in string ram
+		inc si
+		; call PrintChar
+		loop encodeRoman_handleThousands
+skipThousands:
+	pop cx
+	pop ax
+	
+encodeRoman_HandleHundreds:
+	pushall
+		mov bh,0
+		mov bl,dl  ;use bx as an offset into Roman_Lookup_Master
+		SHL bl,1
+		SHL bl,1	;multiply by 2, we are indexing into a table with 4 bytes per row.
+		mov di,offset Roman_Lookup_Master
+		mov cx,4
+getChar_Hundreds:		
+		mov al,[bx+es:di] ;get first char index
+		push bx
+		push di
+			mov di,offset Roman_Hund
+			mov bl,al
+			mov al,[bx+es:di]
+			cmp al,0
+			jz skipNullChar_RomanHund
+			mov [ds:si],al	;store in ram
+			inc si
+			; call PrintChar			
+skipNullChar_RomanHund:
+		pop di
+		pop bx
+		inc di
+		loop getChar_Hundreds
+	popall
+	
+	
+encodeRoman_HandleTens:
+	pushall
+		mov bh,0
+		mov bl,ah  ;use bx as an offset into Roman_Lookup_Master
+		SHL bl,1
+		SHL bl,1	;multiply by 2, we are indexing into a table with 4 bytes per row.
+		mov di,offset Roman_Lookup_Master
+		mov cx,4
+getChar_Tens:		
+		mov al,[bx+es:di] ;get first char index
+		push bx
+		push di
+			mov di,offset Roman_Tens
+			mov bl,al
+			mov al,[bx+es:di]
+			cmp al,0
+			jz skipNullChar_RomanTens
+			mov [ds:si],al	;store in ram
+			inc si
+			; call PrintChar			
+skipNullChar_RomanTens:
+		pop di
+		pop bx
+		inc di
+		loop getChar_Tens
+	popall
+	
+encodeRoman_HandleOnes:
+	pushall
+		mov bh,0
+		mov bl,al  ;use bx as an offset into Roman_Lookup_Master
+		SHL bl,1
+		SHL bl,1	;multiply by 2, we are indexing into a table with 4 bytes per row.
+		mov di,offset Roman_Lookup_Master
+		mov cx,4
+getChar_Ones:		
+		mov al,[bx+es:di] ;get first char index
+		push bx
+		push di
+			mov di,offset Roman_Ones
+			mov bl,al
+			mov al,[bx+es:di]
+			cmp al,0
+			jz skipNullChar_RomanOnes
+			mov [ds:si],al	;store in ram
+			inc si
+			; call PrintChar			
+skipNullChar_RomanOnes:
+		pop di
+		pop bx
+		inc di
+		loop getChar_Ones
+	popall
+	
+	mov al,0
+	mov [ds:si],al ;place a null terminator at the end of the string.
+	ret
+
+			
+errorhandler_encodeRoman_inputTooBig:
+	push ds
+	push ax
+		LoadSegment ds,ax,@data
+		mov al,01h
+		mov byte ptr [ds:error_code],al
+		mov ax, offset EncodeRoman
+		mov word ptr [ds:error_routine],ax
+		
+		LoadSegment ds,ax,@code
+		mov si,offset Roman_Error
+		call PrintString
+	pop ax
+	pop ds
+	stc		;set carry, allowing program to branch if error occurred.
+	ret
+
+	
+
+Roman_Lookup_Master db 0,0,0,0	;0
+		    db 0,0,0,1	;1
+		    db 0,0,1,1	;2
+		    db 0,1,1,1	;3
+		    db 0,0,1,2	;4
+		    db 0,0,0,2	;5
+		    db 0,0,2,1	;6
+		    db 0,2,1,1	;7
+		    db 2,1,1,1	;8
+		    db 0,0,1,3	;9
+
+Roman_Ones	    db 0,"IVX"  ;the same pattern is used regardless of what power of 10 we're working with
+Roman_Tens	    db 0,"XLC"
+Roman_Hund	    db 0,"CDM"
+
+Roman_Error	    db "ERROR: BAD INPUT",0
+
+
+UnpackBCD:
+;converts a "packed" BCD value in AX to an "unpacked" value in DX.AX
+;DX is the high byte, AX is the low byte.
+;CLOBBERS DX AND AX.
+	mov dx,0
+	mov dl,ah
+	mov ah,0
+	push cx
+		mov cl,4
+		rol dx,cl
+		;BEFORE: DX = 00XYh
+		;AFTER:  DX = 0XY0h
+		ror dl,cl	;DX = 0X0Yh
+		
+		rol ax,cl	
+		;BEFORE: AX = 00XYh
+		;AFTER:  AX = 0XY0h
+		ror al,cl	;AX = 0X0Yh
+	pop cx
+	ret

@@ -1,0 +1,1 @@
+LPRINT "Hello World!"

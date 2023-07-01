@@ -1,0 +1,326 @@
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+
+staload UN = "prelude/SATS/unsafe.sats"
+
+(*------------------------------------------------------------------*)
+(* Continued fractions as processes for generating terms. The terms
+   are memoized and are accessed by their zero-based index. The terms
+   are represented as any one of the signed integer types for which
+   there is a typekind. *)
+
+abstype cf (tk : tkind) = ptr
+
+typedef cf_generator (tk : tkind) =
+  () -<cloref1> Option (g0int tk)
+
+extern fn {tk : tkind}
+cf_make :
+  cf_generator tk -> cf tk
+
+extern fn {tk  : tkind}
+          {tki : tkind}
+cf_get_at_guint :
+  {i : int}
+  (&cf tk >> _, g1uint (tki, i)) -> Option (g0int tk)
+
+extern fn {tk  : tkind}
+          {tki : tkind}
+cf_get_at_gint :
+  {i : nat}
+  (&cf tk >> _, g1int (tki, i)) -> Option (g0int tk)
+
+overload cf_get_at with cf_get_at_guint
+overload cf_get_at with cf_get_at_gint
+overload [] with cf_get_at
+
+extern fn {tk : tkind}
+cf2string_max_terms
+          (cf        : &cf tk >> _,
+           max_terms : size_t)
+    : string
+
+extern fn {tk : tkind}
+cf2string_default_max_terms
+          (cf : &cf tk >> _)
+    : string
+
+overload cf2string with cf2string_max_terms
+overload cf2string with cf2string_default_max_terms
+
+(*  -    -    -    -    -    -    -    -    -    -    -    -    -   *)
+
+local
+
+  typedef _cf (tk : tkind, terminated : bool, m : int, n : int) =
+    [m <= n]
+    '{
+      terminated = bool terminated, (* No more terms? *)
+      m = size_t m,         (* The number of terms computed so far. *)
+      n = size_t n,         (* The size of memo storage.*)
+      memo = arrayref (g0int tk, n), (* Memoized terms. *)
+      gen = cf_generator tk          (* A thunk to generate terms. *)
+    }
+  typedef _cf (tk : tkind, m : int) =
+    [terminated : bool]
+    [n : int | m <= n]
+    _cf (tk, terminated, m, n)
+  typedef _cf (tk : tkind) =
+    [m : int]
+    _cf (tk, m)
+
+  fn {tk : tkind}
+  _cf_get_more_terms
+            {terminated : bool}
+            {m          : int}
+            {n          : int}
+            {needed     : int | m <= needed; needed <= n}
+            (cf         : _cf (tk, terminated, m, n),
+             needed     : size_t needed)
+      : [m1 : int | m <= m1; m1 <= needed]
+        [n1 : int | m1 <= n1]
+        _cf (tk, m1 < needed, m1, n1) =
+    let
+      prval () = lemma_g1uint_param (cf.m)
+
+      macdef memo = cf.memo
+
+      fun
+      loop {i : int | m <= i; i <= needed}
+           .<needed - i>.
+           (i : size_t i)
+          : [m1 : int | m <= m1; m1 <= needed]
+            [n1 : int | m1 <= n1]
+            _cf (tk, m1 < needed, m1, n1) =
+        if i = needed then
+          '{
+            terminated = false,
+            m = needed,
+            n = (cf.n),
+            memo = memo,
+            gen = (cf.gen)
+          }
+        else
+          begin
+            case+ (cf.gen) () of
+            | None () =>
+              '{
+                terminated = true,
+                m = i,
+                n = (cf.n),
+                memo = memo,
+                gen = (cf.gen)
+              }
+            | Some term =>
+              begin
+                memo[i] := term;
+                loop (succ i)
+              end
+          end
+    in
+      loop (cf.m)
+    end
+
+  fn {tk : tkind}
+  _cf_update {terminated : bool}
+             {m          : int}
+             {n          : int | m <= n}
+             {needed     : int}
+             (cf         : _cf (tk, terminated, m, n),
+              needed     : size_t needed)
+      : [terminated1 : bool]
+        [m1 : int | m <= m1]
+        [n1 : int | m1 <= n1]
+        _cf (tk, terminated1, m1, n1) =
+    let
+      prval () = lemma_g1uint_param (cf.m)
+      macdef memo = cf.memo
+      macdef gen = cf.gen
+    in
+      if (cf.terminated) then
+        cf
+      else if needed <= (cf.m) then
+        cf
+      else if needed <= (cf.n) then
+        _cf_get_more_terms<tk> (cf, needed)
+      else
+        let         (* Provides about 50% more room than is needed. *)
+          val n1 = needed + half needed
+          val memo1 = arrayref_make_elt (n1, g0i2i 0)
+          val () =
+            let
+              var i : [i : nat] size_t i
+            in
+              for (i := i2sz 0; i < (cf.m); i := succ i)
+                memo1[i] := memo[i]
+            end
+          val cf1 =
+            '{
+              terminated = false,
+              m = (cf.m),
+              n = n1,
+              memo = memo1,
+              gen = (cf.gen)
+            }
+        in
+          _cf_get_more_terms<tk> (cf1, needed)
+        end
+    end
+
+in (* local *)
+
+  assume cf tk = _cf tk
+
+  implement {tk}
+  cf_make gen =
+    let
+      #ifndef CF_START_SIZE #then
+        #define CF_START_SIZE 8
+      #endif
+    in
+      '{
+        terminated = false,
+        m = i2sz 0,
+        n = i2sz CF_START_SIZE,
+        memo = arrayref_make_elt (i2sz CF_START_SIZE, g0i2i 0),
+        gen = gen
+      }
+    end
+
+  implement {tk} {tki}
+  cf_get_at_guint {i} (cf, i) =
+    let
+      prval () = lemma_g1uint_param i
+      val i : size_t i = g1u2u i
+      val cf1 = _cf_update<tk> (cf, succ i)
+    in
+      cf := cf1;
+      if i < (cf1.m) then
+        Some (arrayref_get_at<g0int tk> (cf1.memo, i))
+      else
+        None ()
+    end
+
+  implement {tk} {tki}
+  cf_get_at_gint (cf, i) =
+    cf_get_at_guint<tk><sizeknd> (cf, g1i2u i)
+
+end (* local *)
+
+implement {tk}
+cf2string_max_terms (cf, max_terms) =
+  let
+    fun
+    loop (i     : Size_t,
+          cf    : &cf tk >> _,
+          sep   : string,
+          accum : string)
+        : string =
+      if i = max_terms then
+        strptr2string (string_append (accum, ", ...]"))
+      else
+        begin
+          case+ cf[i] of
+          | None () =>
+            strptr2string (string_append (accum, "]"))
+          | Some term =>
+            let
+              val term_str = tostring_val<g0int tk> term
+              val accum =
+                strptr2string (string_append (accum, sep, term_str))
+              val sep = if sep = "[" then "; " else ", "
+            in
+              loop (succ i, cf, sep, accum)
+            end
+        end
+  in
+    loop (i2sz 0, cf, "[", "")
+  end
+
+implement {tk}
+cf2string_default_max_terms cf =
+  let
+    #ifndef DEFAULT_CF_MAX_TERMS #then
+      #define DEFAULT_CF_MAX_TERMS 20
+    #endif
+  in
+    cf2string_max_terms (cf, i2sz DEFAULT_CF_MAX_TERMS)
+  end
+
+(*------------------------------------------------------------------*)
+(* r2cf: transform a rational number to a continued fraction. *)
+
+extern fn {tk : tkind}
+r2cf :
+  (g0int tk, g0int tk) -> cf tk
+
+(*  -    -    -    -    -    -    -    -    -    -    -    -    -   *)
+
+implement {tk}
+r2cf (n, d) =
+  let
+    val n = ref<g0int tk> n
+    val d = ref<g0int tk> d
+
+    fn
+    gen () :<cloref1> Option (g0int tk) =
+      if iseqz !d then
+        None ()
+      else
+        let
+          (* The method of rounding the quotient seems unimportant,
+             and so let us simply use the truncation towards zero
+             that is native to C. *)
+          val numer = !n
+          and denom = !d
+          val q = numer / denom
+          and r = numer mod denom
+        in
+          !n := denom;
+          !d := r;
+          Some q
+        end
+  in
+    cf_make gen
+  end
+
+(*------------------------------------------------------------------*)
+
+val some_rationals =
+  $list (@(1LL, 2LL),
+         @(3LL, 1LL),
+         @(23LL, 8LL),
+         @(13LL, 11LL),
+         @(22LL, 7LL),
+         @(~151LL, 77LL),
+         @(14142LL, 10000LL),
+         @(141421LL, 100000LL),
+         @(1414214LL, 1000000LL),
+         @(14142136LL, 10000000LL),
+         @(1414213562373095049LL, 1000000000000000000LL),
+         @(31LL, 10LL),
+         @(314LL, 100LL),
+         @(3142LL, 1000LL),
+         @(31428LL, 10000LL),
+         @(314285LL, 100000LL),
+         @(3142857LL, 1000000LL),
+         @(31428571LL, 10000000LL),
+         @(314285714LL, 100000000LL),
+         @(3142857142857143LL, 1000000000000000LL))
+
+implement
+main0 () =
+  let
+    var p : List0 @(llint, llint)
+  in
+    for (p := some_rationals; ~list_is_nil p; p := list_tail p)
+      let
+        val @(n, d) = list_head<@(llint, llint)> p
+        var cf = r2cf (n, d)
+      in
+        println! (n, "/", d, " => ", cf2string cf)
+      end
+  end
+
+(*------------------------------------------------------------------*)

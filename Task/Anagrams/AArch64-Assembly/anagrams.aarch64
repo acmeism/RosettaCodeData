@@ -1,0 +1,386 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program anagram64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ MAXI,         40000
+.equ BUFFERSIZE,   300000
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szFileName:           .asciz "./listword.txt"
+szMessErreur:         .asciz "FILE ERROR."
+szCarriageReturn:     .asciz "\n"
+szMessSpace:          .asciz " "
+
+ptBuffex1:            .quad sBuffex1
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+ptTabBuffer:                .skip 8 * MAXI
+ptTabAna:                   .skip 8 * MAXI
+tbiCptAna:                  .skip 8 * MAXI
+iNBword:                    .skip 8
+sBuffer:                    .skip BUFFERSIZE
+sBuffex1:                   .skip BUFFERSIZE
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                      // entry of program
+    mov x4,#0              // loop indice
+    mov x0,AT_FDCWD        // current directory
+    ldr x1,qAdrszFileName  // file name
+    mov x2,#O_RDWR         // flags
+    mov x3,#0              // mode
+    mov x8,#OPEN           //
+    svc 0
+    cmp x0,#0              // error open
+    ble 99f
+    mov x19,x0              // FD save Fd
+    ldr x1,qAdrsBuffer     // buffer address
+    ldr x2,qSizeBuf        // buffersize
+    mov x8, #READ
+    svc 0
+    cmp x0,#0              // error read ?
+    blt 99f
+    mov x5,x0              // save size read bytes
+    ldr x4,qAdrsBuffer     // buffer address
+    ldr x0,qAdrsBuffer     // start word address
+    mov x2,#0
+    mov x1,#0              // word length
+1:
+    cmp x2,x5
+    bge 2f
+    ldrb w3,[x4,x2]
+    cmp w3,#0xD            // end word ?
+    cinc x1,x1,ne          // increment word length
+    cinc x2,x2,ne          // increment indice
+    bne 1b                 // and loop
+    strb wzr,[x4,x2]        // store final zero
+    bl anaWord             // sort word letters
+    add x2,x2,#2           // jump OD and 0A
+    add x0,x4,x2           // new address begin word
+    mov x1,#0              // init length
+    b 1b                   // and loop
+
+2:
+    strb wzr,[x4,x2]       // zero final
+    bl anaWord             // last word
+
+    mov x0,x19              // file Fd
+    mov x8, #CLOSE
+    svc 0
+    cmp x0,#0              // error close ?
+    blt 99f
+
+    ldr x0,qAdrptTabAna    // address sorted string area
+    mov x1,#0              // first indice
+    ldr x2,qAdriNBword
+    ldr x2,[x2]            // last indice
+    ldr x3,qAdrptTabBuffer // address sorted string area
+    bl triRapide           // quick sort
+    ldr x4,qAdrptTabAna    // address sorted string area
+    ldr x7,qAdrptTabBuffer // address sorted string area
+    ldr x10,qAdrtbiCptAna  // address counter occurences
+    mov x9,x2              // size word array
+    mov x8,#0              // indice first occurence
+    ldr x3,[x4,x8,lsl #3]  // load first value
+    mov x2,#1              // loop indice
+    mov x6,#0              // counter
+    mov x12,#0             // counter value max
+3:
+    ldr x5,[x4,x2,lsl #3]  // load next value
+    mov x0,x3
+    mov x1,x5
+    bl comparStrings
+    cmp x0,#0              // sorted strings equal ?
+    bne 4f
+    add x6,x6,#1           // yes increment counter
+    b 5f
+4:                         // no
+    str x6,[x10,x8,lsl #3] // store counter in first occurence
+    cmp x6,x12             // counter > value max
+    csel x12,x6,x12,gt     // yes  counter -> value max
+    //movgt x12,x6           // yes  counter -> value max
+    mov x6,#0              // raz counter
+    mov x8,x2              // init index first occurence
+    mov x3,x5              // init value first occurence
+5:
+    add x2,x2,#1           // increment indice
+    cmp x2,x9              // end word array ?
+    blt 3b                 // no -> loop
+
+    mov x2,#0              // raz indice
+6:                         // display loop
+    ldr x6,[x10,x2,lsl #3] // load counter
+    cmp x6,x12             // equal to max value ?
+    bne 8f
+    ldr x0,[x7,x2,lsl #3]  // load address first word
+    bl affichageMess
+    add x3,x2,#1           // increment new indixe
+    mov x4,#0              // counter
+7:
+    ldr x0,qAdrszMessSpace
+    bl affichageMess
+    ldr x0,[x7,x3,lsl #3]  // load address other word
+    bl affichageMess
+    add x3,x3,#1           // increment indice
+    add x4,x4,#1           // increment counter
+    cmp x4,x6              // max value ?
+    blt 7b                 // no loop
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+8:
+    add x2,x2,#1           // increment indice
+    cmp x2,x9              // maxi ?
+    blt 6b                 // no -> loop
+
+    b 100f
+99:                        // display error
+    ldr x0,qAdrszMessErreur
+    bl affichageMess
+
+100:                       // standard end of the program
+    mov x0, #0             // return code
+    mov x8, #EXIT          // request to exit program
+    svc #0                 // perform the system call
+qAdrszCarriageReturn:        .quad szCarriageReturn
+qAdrszFileName:              .quad szFileName
+qAdrszMessErreur:            .quad szMessErreur
+qAdrsBuffer:                 .quad sBuffer
+qSizeBuf:                    .quad BUFFERSIZE
+qAdrszMessSpace:             .quad szMessSpace
+qAdrtbiCptAna:               .quad tbiCptAna
+/******************************************************************/
+/*     analizing word                                   */
+/******************************************************************/
+/*  x0  word address */
+/*  x1 word length   */
+anaWord:
+    stp x1,lr,[sp,-16]!           // save  registers
+    stp x2,x3,[sp,-16]!           // save  registers
+    stp x4,x5,[sp,-16]!           // save  registers
+    stp x6,x7,[sp,-16]!           // save  registers
+    mov x5,x0
+    mov x6,x1
+    ldr x1,qAdrptTabBuffer
+    ldr x2,qAdriNBword
+    ldr x3,[x2]
+    str x0,[x1,x3,lsl #3]
+
+    ldr x1,qAdrptTabAna
+    ldr x4,qAdrptBuffex1
+    ldr x0,[x4]
+    add x6,x6,x0
+    add x6,x6,#1
+    str x6,[x4]
+    str x0,[x1,x3,lsl #3]
+
+    add x3,x3,#1
+    str x3,[x2]
+    mov x1,x0
+    mov x0,x5
+    bl triLetters         // sort word letters
+    mov x2,#0
+100:
+    ldp x6,x7,[sp],16              // restaur  2 registers
+    ldp x4,x5,[sp],16              // restaur  2 registers
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrptTabBuffer:        .quad ptTabBuffer
+qAdrptTabAna:           .quad ptTabAna
+qAdriNBword:            .quad iNBword
+qAdrptBuffex1:          .quad ptBuffex1
+/******************************************************************/
+/*     sort word letters                                  */
+/******************************************************************/
+/* x0  address begin word */
+/* x1  address recept array */
+triLetters:
+    stp x1,lr,[sp,-16]!     // save  registers
+    stp x2,x3,[sp,-16]!     // save  registers
+    stp x4,x5,[sp,-16]!     // save  registers
+    stp x6,x7,[sp,-16]!     // save  registers
+    mov x2,#0
+1:
+    ldrb w3,[x0,x2]         // load letter
+    cmp w3,#0               // end word ?
+    beq 6f
+    cmp x2,#0               // first letter ?
+    bne 2f
+    strb w3,[x1,x2]         // yes store in first position
+    add x2,x2,#1            // increment indice
+    b 1b                    // and loop
+2:
+    mov x4,#0
+3:                          // begin loop to search insertion position
+    ldrb w5,[x1,x4]         // load letter
+    cmp w3,w5               // compare
+    blt 4f                  // to low -> insertion
+    add x4,x4,#1            // increment indice
+    cmp x4,x2               // compare to letters number in place
+    blt 3b                  // search loop
+    strb w3,[x1,x2]         // else store in last position
+    add x2,x2,#1
+    b 1b                    // and loop
+4:                          // move first letters in one position
+    sub x6,x2,#1            // start indice
+5:
+    ldrb w5,[x1,x6]         // load letter
+    add x7,x6,#1            // store indice - 1
+    strb w5,[x1,x7]         // store letter
+    sub x6,x6,#1            // decrement indice
+    cmp x6,x4               // end ?
+    bge 5b                  // no loop
+    strb w3,[x1,x4]         // else store letter in free position
+    add x2,x2,#1
+    b 1b                    // and loop
+6:
+    strb wzr,[x1,x2]        // final zéro
+100:
+    ldp x6,x7,[sp],16       // restaur  2 registers
+    ldp x4,x5,[sp],16       // restaur  2 registers
+    ldp x2,x3,[sp],16       // restaur  2 registers
+    ldp x1,lr,[sp],16       // restaur  2 registers
+    ret                     // return to address lr x30
+/***************************************************/
+/*   Appel récursif Tri Rapide quicksort           */
+/***************************************************/
+/* x0 contains the address of table */
+/* x1 contains index of first item  */
+/* x2 contains the number of elements  > 0  */
+/* x3 contains the address of table 2 */
+triRapide:
+    stp x1,lr,[sp,-16]!     // save  registers
+    stp x2,x3,[sp,-16]!     // save  registers
+    stp x4,x5,[sp,-16]!     // save  registers
+    stp x6,x7,[sp,-16]!     // save  registers
+    mov x6,x3
+    sub x2,x2,#1               // last item index
+    cmp x1,x2               // first > last ?
+    bge 100f                // yes -> end
+    mov x4,x0               // save x0
+    mov x5,x2               // save x2
+    mov x3,x6
+    bl partition1           // cutting.quado 2 parts
+    mov x2,x0               // index partition
+    mov x0,x4               // table address
+    bl triRapide            // sort lower part
+    mov x0,x4               // table address
+    add x1,x2,#1            // index begin = index partition + 1
+    add x2,x5,#1            // number of elements
+    bl triRapide            // sort higter part
+
+ 100:                       // end function
+    ldp x6,x7,[sp],16       // restaur  2 registers
+    ldp x4,x5,[sp],16       // restaur  2 registers
+    ldp x2,x3,[sp],16       // restaur  2 registers
+    ldp x1,lr,[sp],16       // restaur  2 registers
+    ret                     // return to address lr x30
+
+/******************************************************************/
+/*      Partition table elements                                */
+/******************************************************************/
+/* x0 contains the address of table */
+/* x1 contains index of first item  */
+/* x2 contains index of last item   */
+/* x3 contains the address of table 2 */
+partition1:
+    stp x1,lr,[sp,-16]!     // save  registers
+    stp x2,x3,[sp,-16]!     // save  registers
+    stp x4,x5,[sp,-16]!     // save  registers
+    stp x6,x7,[sp,-16]!     // save  registers
+    stp x8,x9,[sp,-16]!     // save  registers
+    stp x10,x12,[sp,-16]!   // save  registers
+    mov x8,x0               // save address table 2
+    mov x9,x1
+    ldr x10,[x8,x2,lsl #3]  // load string address last index
+    mov x4,x9               // init with first index
+    mov x5,x9               // init with first index
+1:                          // begin loop
+    ldr x6,[x8,x5,lsl #3]   // load string address
+    mov x0,x6
+    mov x1,x10
+    bl comparStrings
+    cmp x0,#0
+    bge 2f
+    ldr x7,[x8,x4,lsl #3]    // if < swap value table
+    str x6,[x8,x4,lsl #3]
+    str x7,[x8,x5,lsl #3]
+    ldr x7,[x3,x4,lsl #3]    // swap array 2
+    ldr x12,[x3,x5,lsl #3]
+    str x7,[x3,x5,lsl #3]
+    str x12,[x3,x4,lsl #3]
+    add x4,x4,#1             // and increment index 1
+2:
+    add x5,x5,#1             // increment index 2
+    cmp x5,x2                // end ?
+    blt 1b                   // no -> loop
+    ldr x7,[x8,x4,lsl #3]    // swap value
+    str x10,[x8,x4,lsl #3]
+    str x7,[x8,x2,lsl #3]
+    ldr x7,[x3,x4,lsl #3]    // swap array 2
+    ldr x12,[x3,x2,lsl #3]
+    str x7,[x3,x2,lsl #3]
+    str x12,[x3,x4,lsl #3]
+
+    mov x0,x4                // return index partition
+100:
+    ldp x10,x12,[sp],16     // restaur  2 registers
+    ldp x8,x9,[sp],16       // restaur  2 registers
+    ldp x6,x7,[sp],16       // restaur  2 registers
+    ldp x4,x5,[sp],16       // restaur  2 registers
+    ldp x2,x3,[sp],16       // restaur  2 registers
+    ldp x1,lr,[sp],16       // restaur  2 registers
+    ret                     // return to address lr x30
+/************************************/
+/* Strings case sensitive comparisons  */
+/************************************/
+/* x0 et x1 contains the address of strings */
+/* return 0 in x0 if equals */
+/* return -1 if string x0 < string x1 */
+/* return 1  if string x0 > string x1 */
+comparStrings:
+    stp x1,lr,[sp,-16]! // save  registers
+    stp x2,x3,[sp,-16]! // save  registers
+    stp x4,x5,[sp,-16]! // save  registers
+    mov x2,#0           // counter
+1:
+    ldrb w3,[x0,x2]     // byte string 1
+    ldrb w4,[x1,x2]     // byte string 2
+    cmp w3,w4
+    blt 2f              // small
+    bgt 3f              // greather
+    cmp x3,#0           // 0 end string
+    beq 4f              // end string
+    add x2,x2,#1        // else add 1 in counter
+    b 1b                // and loop
+2:
+    mov x0,#-1          // small
+    b 100f
+3:
+    mov x0,#1           // greather
+    b 100f
+4:
+   mov x0,#0            // equal
+100:
+    ldp x4,x5,[sp],16   // restaur  2 registers
+    ldp x2,x3,[sp],16   // restaur  2 registers
+    ldp x1,lr,[sp],16   // restaur  2 registers
+    ret                 // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

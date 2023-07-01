@@ -1,0 +1,257 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program prisonniex64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ NBDOORS,   100
+.equ NBLOOP, 1000
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessResult:        .asciz "Random strategie  : @ sur 1000 \n"
+sMessResultOPT:     .asciz "Optimal strategie : @ sur 1000 \n"
+szCarriageReturn:   .asciz "\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+tbDoors:          .skip 8 * NBDOORS
+tbTest:           .skip 8 * NBDOORS
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 // entry of program
+
+    ldr x1,qAdrtbDoors
+    mov x2,#0
+1:                                    // loop init doors table
+    add x3,x2,#1
+    str x3,[x1,x2,lsl #3]
+    add x2,x2,#1
+    cmp x2,#NBDOORS
+    blt 1b
+
+    mov x9,#0                         // loop counter
+    mov x10,#0                        // counter successes random strategie
+    mov x11,#0                        // counter successes optimal strategie
+2:
+    ldr x0,qAdrtbDoors
+    mov x1,#NBDOORS
+    bl knuthShuffle
+
+    ldr x0,qAdrtbDoors
+    bl aleaStrategie
+    cmp x0,#NBDOORS
+    cinc x10,x10,eq
+
+    ldr x0,qAdrtbDoors
+    bl optimaStrategie
+    cmp x0,#NBDOORS
+    cinc x11,x11,eq
+
+    add x9,x9,#1
+    cmp x9,#NBLOOP
+    blt 2b
+
+    mov x0,x10                        // result display
+    ldr x1,qAdrsZoneConv
+    bl conversion10                   // call decimal conversion
+    ldr x0,qAdrsMessResult
+    ldr x1,qAdrsZoneConv              // insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+
+    mov x0,x11                        // result display
+    ldr x1,qAdrsZoneConv
+    bl conversion10                   // call decimal conversion
+    ldr x0,qAdrsMessResultOPT
+    ldr x1,qAdrsZoneConv              // insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+
+100:                                  // standard end of the program
+    mov x0,0                          // return code
+    mov x8,EXIT                       // request to exit program
+    svc 0                             // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsMessResult:          .quad sMessResult
+qAdrsMessResultOPT:       .quad sMessResultOPT
+qAdrtbDoors:              .quad tbDoors
+qAdrtbTest:               .quad tbTest
+qAdrsZoneConv:            .quad sZoneConv
+/******************************************************************/
+/*            random door test strategy                           */
+/******************************************************************/
+/* x0 contains the address of table */
+aleaStrategie:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,x9,[sp,-16]!          // save  registres
+    ldr x6,qAdrtbTest            // table doors tests address
+    mov x8,x0                    // save table doors address
+    mov x4,#0                    // counter number of successes
+    mov x2,#0                    // prisonners indice
+1:
+    bl razTable                  // zero to table doors tests
+    mov x5,#0                    // counter of door tests
+    add x7,x2,#1
+2:
+    mov x0,#1
+    mov x1,#NBDOORS
+    bl extRandom                 // random test
+    ldr x3,[x6,x0,lsl #3]        // doors also tested ?
+    cmp x3,#0
+    bne 2b                       // yes
+    ldr x3,[x8,x0,lsl #3]        // load N° door
+    cmp x3,x7                    // compar N° door N° prisonner
+    cinc x4,x4,eq
+    beq 3f
+    mov x3,#1                    // top test table item
+    str x3,[x6,x0,lsl #3]
+    add x5,x5,#1
+    cmp x5,#NBDOORS / 2          // number tests maxi ?
+    blt 2b                       // no -> loop
+3:
+    add x2,x2,#1                 // other prisonner
+    cmp x2,#NBDOORS
+    blt 1b
+
+    mov x0,x4                    // return number of successes
+100:
+    ldp x8,x9,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+/******************************************************************/
+/*     raz test table                                             */
+/******************************************************************/
+razTable:
+    stp x0,lr,[sp,-16]!        // save  registres
+    stp x1,x2,[sp,-16]!        // save  registres
+    ldr x0,qAdrtbTest
+    mov x1,#0                  // item indice
+    mov x2,#0
+1:
+    str x2,[x0,x1,lsl #3]      // store zero à item
+    add x1,x1,#1
+    cmp x1,#NBDOORS
+    blt 1b
+100:
+    ldp x1,x2,[sp],16          // restaur des  2 registres
+    ldp x0,lr,[sp],16          // restaur des  2 registres
+    ret
+/******************************************************************/
+/*            random door test strategy                           */
+/******************************************************************/
+/* x0 contains the address of table */
+optimaStrategie:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    mov x4,#0                    // counter number of successes
+    mov x2,#0                    // counter prisonner
+1:
+    mov x5,#0                    // counter test
+    mov x1,x2                    // first test = N° prisonner
+2:
+    ldr x3,[x0,x1,lsl #3]        // load N° door
+    cmp x3,x2
+    cinc x4,x4,eq                // equal -> succes
+    beq 3f
+    mov x1,x3                    // new test with N° door
+    add x5,x5,#1
+    cmp x5,#NBDOORS / 2          // test number maxi ?
+    blt 2b
+3:
+    add x2,x2,#1                 // other prisonner
+    cmp x2,#NBDOORS
+    blt 1b
+
+    mov x0,x4
+100:
+    ldp x4,x5,[sp],16          // restaur des  2 registres
+    ldp x2,x3,[sp],16          // restaur des  2 registres
+    ldp x1,lr,[sp],16          // restaur des  2 registres
+    ret
+/******************************************************************/
+/*     knuth Shuffle                                  */
+/******************************************************************/
+/* x0 contains the address of table */
+/* x1 contains the number of elements */
+knuthShuffle:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!         // save  registers
+    mov x5,x0                   // save table address
+    mov x6,x1                   // save number of elements
+    mov x2,0                    // start index
+1:
+    mov x0,0
+    mov x1,x2                   // generate aleas
+    bl extRandom
+    ldr x3,[x5,x2,lsl #3]        // swap number on the table
+    ldr x4,[x5,x0,lsl #3]
+    str x4,[x5,x2,lsl #3]
+    str x3,[x5,x0,lsl #3]
+    add x2,x2,#1                 // next number
+    cmp x2,x6                    // end ?
+    blt 1b                       // no -> loop
+100:
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+
+/******************************************************************/
+/*     random number                                          */
+/******************************************************************/
+/*  x0 contains inferior value */
+/*  x1 contains maxi value */
+/*  x0 return random number */
+extRandom:
+    stp x1,lr,[sp,-16]!        // save  registers
+    stp x2,x8,[sp,-16]!        // save  registers
+    stp x3,x4,[sp,-16]!        // save  registers
+    stp x19,x20,[sp,-16]!      // save  registers
+    sub sp,sp,16               // reserve 16 octets on stack
+    mov x19,x0
+    add x20,x1,1
+    mov x0,sp                  // store result on stack
+    mov x1,8                   // length 8 bytes
+    mov x2,0
+    mov x8,278                 //  call system Linux 64 bits Urandom
+    svc 0
+    mov x0,sp                  // load résult on stack
+    ldr x0,[x0]
+    sub x2,x20,x19             // calculation of the range of values
+    udiv x1,x0,x2              // calculation range modulo
+    msub x0,x1,x2,x0
+    add  x0,x0,x19             // and add inferior value
+100:
+    add sp,sp,16               // alignement stack
+    ldp x19,x20,[sp],16        // restaur  2 registers
+    ldp x3,x4,[sp],16          // restaur  2 registers
+    ldp x2,x8,[sp],16          // restaur  2 registers
+    ldp x1,lr,[sp],16          // restaur  2 registers
+    ret                        // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

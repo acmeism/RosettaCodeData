@@ -1,0 +1,1 @@
+pMyPointer : Pointer ;

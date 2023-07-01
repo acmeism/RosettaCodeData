@@ -1,0 +1,193 @@
+{{
+language|Z80 Assembly
+|LCT=no
+}}
+'''Z80 Assembly''' is an assembly language for the [[wp:Zilog Z80|Zilog Z80]] processor, which was introduced in 1976 and used in 1980s home computers such as the [[wp:ZX Spectrum|Sinclair ZX Spectrum]] and the [[wp:Amstrad CPC|Amstrad CPC]] series. In the late 1990s, some TI graphing calculators (e.g. the TI-83 series) were also Z80-based.
+
+The Z80 is binary compatible with the earlier Intel 8080, but the assembly code is different because instead of having several different commands for loading and storing data, there is only one,<tt>LD</tt>, on the Z80. Therefore, on the assembly level, Z80 code is actually closer to 8086 code when <tt>MOV</tt> is changed to <tt>LD</tt> and the different register structure is taken into account.<ref>http://en.wikipedia.org/wiki/Z80#Z80_assembly_language</ref>
+
+Today, the Z80 is still widely used in embedded systems and consumer electronics. Several cross assemblers exist for the Z80, e.g. [http://savannah.nongnu.org/projects/z80asm/ z80asm]. Also, some emulators of e.g. the Amstrad CPC feature a built-in assembler.
+
+==Registers==
+The Z80 has a lot of registers compared to other 8-bit hardware like the 6502. 
+* A is the accumulator. Most commands can only work with it, so you'll be using it the most. In particular, <code>and</code>,<code>or</code>,<code>xor</code>,<code>cp</code>,<code>cpl</code>, and <code>neg</code> are instructions that technically take two operands but one is forced to be the accumulator at all times.
+
+* B and C can be used as the 16-bit pair BC, or separately. Instructions that loop often decrement B or BC and repeat until the register equals zero. These include <code>DJNZ</code>, <code>LDIR</code>, and other similar instructions.
+
+* D and E can be used as the 16-bit pair DE, or separately. Together they often form the destination address for block transfer operations like <code>LDIR</code> (essentially the equivalent of memcpy in the C programming language.)
+
+* H and L can be used as the 16-bit pair HL, or separately. Together they often form the source address for block transfer operations like <code>LDIR</code>. In addition, HL can do many things that the other register pairs cannot.
+
+The tricky part of the Z80 language is knowing what each register can and can't do.
+
+*IX and IY are your index registers. They are slower to work with and not as easy to use as other commands, because of the way they work behind the scenes. (What actually happens is a prefix is applied to any instruction involving HL, and that prefix turns the instruction into one involving IX or IY instead.) The half-registers are IXH, IXL, IYH, and IYL. The Game Boy doesn't have these.
+
+*I is the interrupt register, and R is the memory refresh register. They have their uses on occasion but are best left alone for the most part. The Game Boy doesn't even have them.
+
+There is an alternative set of registers for AF, BC, DE and HL. These are accessed using the <code>EX AF, AF'</code> and <code>EXX</code> instructions.
+
+==Flags==
+The flags, or condition codes, are set or cleared as appropriate by various actions. This is just an overview of the flags - you'll need to check a hardware manual for a full list of which commands affect the flags and in what ways.
+
+* Zero flag = equals 1 when the last math operation resulted in a 0, and equals 0 if not. Note that loading a zero (or any value really) into a register does NOT affect this flag, which is not the case for every CPU out there.
+
+* Carry flag = equals 1 if the last math operation generated a carry or borrow (essentially a rollover from $FF to $00 or vice versa.) For comparisons, if Accumulator < Operand, carry is set. If Accumulator >= operand, carry clear. And for bit shifts/rotates, the carry represents the bit that was shifted/rotated "out" of the register. The carry can be set manually with <code>SCF</code>, flipped with <code>CCF</code>, or cleared with <code>OR A</code>.
+
+* Parity/Overflow flag = this flag can represent either Bit Parity or Signed Overflow depending on what instruction was executed last. For arithmetic instructions like ADD and SUB, this represents whether a signed overflow occurred (essentially a rollover from $7F to $80 or vice versa.) For bitwise operations, this flag equals 1 if there are an even number of 1s in the byte, and 0 otherwise. The Game Boy does not have this flag.
+
+* Half-Carry Flag = equals 1 if the last math operation resulted in a half-carry (essentially a rollover from $0F to $10 or vice versa.) The DAA (decimal adjust accumulator) instruction is the only one that uses this for any meaningful purpose.
+
+* Sign Flag = equals 1 if the last instruction resulted in a negative number (i.e. bit 7 of the byte is set, or bit 15 if 16-bit registers were used.) The Game Boy doesn't have this flag, but you can make up for that by using the BIT instruction to test bit 7 yourself.
+
+==Assembler Syntax==
+
+Assembler syntax varies a bit depending on the assembler, but most follow Intel syntax conventions, with a few minor differences.
+* Instructions with two operands have the destination on the left, and the source on the right, separated by a comma. For example, <code>LD C,A</code> loads the contents of the A register into the C register.
+* & or $ represents hexadecimal, and % represents binary.
+* A register or a 16-bit value in parentheses represents a pointer being dereferenced. The size of the data pointed to will be the same as the size of the destination.
+<syntaxhighlight lang="Z80">
+LD A,($4000)  ;load the BYTE at memory address $4000 into the accumulator.
+LD HL,($6000) ;load the WORD at memory address $6000 into HL.
+              ;Or, more accurately, load the BYTE at $6000 into L and the BYTE at $6001 into H.
+LD A,(HL)     ;The value stored in HL is treated as a memory address, and the BYTE at that address is loaded into the accumulator.
+</syntaxhighlight>
+
+==Efficient Coding Tricks==
+As with most assembly languages, there are techniques to abuse the "rules" of the CPU to squeeze out as much performance as you can. This can become a bit of a game to some people, to see how much they can optimize their code. There seems to be a law of nature when it comes to assembly programming, that anything you do to make your code faster takes up more memory, and vice versa. And trying to optimize either for speed or bytes will also make your code harder to read. It's unfortunate but it seems to be true more often than not. Thankfully, comments can make up for readability. Let's explore a few ways to make your code faster and/or more compact.
+
+===Everyone's favorite===
+This is where you start optimizing Z80 code:
+<syntaxhighlight lang="Z80">
+XOR A ; set A to zero
+      ; This saves 1 byte and 3 cycles, but also changes the flags.
+</syntaxhighlight>
+
+===Fast Checking for Odd or Even===
+Suppose you have a byte at some memory location and you want to know if it's odd or even.
+
+<syntaxhighlight lang=z80>
+LD A,(HL) ; 1 byte,  7 cycles
+BIT 0,A   ; 2 bytes, 8 cycles
+JR nz,odd
+</syntaxhighlight>
+
+If you don't need the actual value, you can use:
+<syntaxhighlight lang=z80>
+BIT 0,(HL) ; 2 bytes, 12 cycles
+JR nz,odd
+</syntaxhighlight>
+
+But there are also a few other ways to do it, which are faster and/or take fewer bytes to execute. <code>BIT 0,A</code> takes 2 bytes to encode. So does <code>AND 1</code> but it's a little faster. It does destroy the accumulator but if you don't care about that, it's better to use <code>AND 1</code>.
+
+<syntaxhighlight lang=z80>
+LD A,(HL) ; 1 byte,  7 cycles
+AND 1     ; 2 bytes, 7 cycles
+JR nz,odd
+</syntaxhighlight>
+
+Or is it? There's an even faster way than this that takes only ONE byte to encode:
+<syntaxhighlight lang=z80>
+LD A,(HL) ; 1 byte,  7 cycles
+RRCA      ; 1 byte,  4 cycles
+JR c,odd
+</syntaxhighlight>
+
+If you don't care about destroying the accumulator (i.e. you only need the result of the test and not the number being tested) then <code>RRCA</code> outperforms <code>AND 1</code> in every way. <code>AND 1</code> in this case still has its uses if you need bit 0 to reflect the result of the test. If you don't, use <code>RRCA</code> instead.
+
+===Bit Shifting===
+The Z80 does have bit shifting, but thanks to RLCA and RRCA it's often faster to rotate instead. Compare the following two code snippets:
+<syntaxhighlight lang="Z80">
+SLA A
+SLA A
+SLA A
+SLA A  ;8 bytes, 32 cycles total
+
+AND %00001111
+RLCA
+RLCA
+RLCA
+RLCA   ;6 bytes, 23 cycles total
+</syntaxhighlight>
+
+Not only is the second method shorter, it's also faster. The accumulator-specific bit rotates take 1 byte and 4 clock cycles each. They are different, however, because unlike the two-byte versions, these <i>do not affect the zero flag.</i> This isn't a big deal, however, as more often than not if you're rotating the accumulator you're not expecting to get zero as the output anyway.
+
+Correction: The <code>AND</code> <i>does</i> affect the Z flag. So the end result will be the same, right?
+Note that the Z flag is preserved through the rotates. And zero rotated is still zero.
+
+For 16-bit bit shifting, use A instead of the other half of the register pair for faster results (unless you're checking for equality to zero, or you need the accumulator for something else.)
+
+<syntaxhighlight lang="Z80">
+rept 4  ;inline the following 4 times, back to back:
+   SRL H
+   RR L
+endr
+
+rept 4  ;this version is faster.
+   SRL H
+   RRA
+endr
+</syntaxhighlight>
+
+===Inlined bytecode===
+Branches take a decent amount of clock cycles, even if they're not taken. A branch not taken is faster than one that is (except JP which takes 10 cycles regardless of the outcome), but either way you're taking a performance hit. It's really frustrating when you have to branch around a single instruction:
+<syntaxhighlight lang="Z80">
+jr nc,foo
+ld a,&44
+jr done    
+foo:
+ld a,&40
+done:
+pop hl
+ret
+</syntaxhighlight>
+
+But in this (admittedly contrived) example, there's an esoteric way to avoid the <code>jr done</code> while still having the same functionality. It has to do with the <code>LD a,&40</code>. As it turns out, &40 is the opcode for <code>LD b,b</code>, and since loading a register on the Z80 doesn't affect flags, this <code>LD b,b</code> instruction will have no effect on our program. We can actually trick the CPU into executing the operand &40 as an instruction, like so:
+
+<syntaxhighlight lang="Z80">
+jr nc,foo
+ld a,&44
+byte &26      ;opcode for LD L,# (next byte is operand.) Functionally identical to "JR done"
+foo:
+ld a,&40
+done:
+pop hl
+ret
+</syntaxhighlight>
+
+Since Z80 is an Intel-like CISC architecture, the same sequence of bytes can be interpreted different ways depending on how the Program Counter reads them. So even though our source code would appear as though there's a random data byte in the middle of instructions, what the CPU actually executes is this, in the event that <code>jr nc,foo</code> is <i>not</i> taken:
+
+<syntaxhighlight lang="Z80">
+ld a,&44
+ld L,&3e            ;&3E is the opcode for LD A,__ (next byte is operand)
+ld b,b              ;do nothing
+done:
+pop hl
+ret
+</syntaxhighlight>
+
+Since we're popping HL anyway, it won't hurt to load &3E into L beforehand, as it's just going to get wiped anyway. Effectively, we skipped the <code>LD a,&40</code> without branching. Now you may be wondering why you'd want to go through all this trouble. As it turns out, using <code>byte &26</code> in this situation actually saves 1 byte and 3 clock cycles compared to using <code>jr done</code>! The only thing you lose in this exchange is readability (which is why comments are so essential with tricks like these - I'd recommend commenting the "correct" instruction beside it so it's clear what you're optimizing.) Avoid the temptation to abuse these tricks because it makes you feel clever - it's just another tool in your toolbox, like anything else.
+
+===LDIR is slow===
+The only advantage of instructions like <code>LDIR</code> is the fact that they only takes up two bytes, regardless of the amount of work they'll be doing. The equivalent number of inlined <code>LDI</code> instructions will outspeed <code>LDIR</code> every time.
+Some programmers have taken this to its logical extreme by filling several kilobytes' worth of memory with <code>LDI</code> instructions, then pick how many they want to execute by offsetting a pointer to that section of memory. If you have plenty of bytes to burn and the need for speed, it can be a viable option.
+
+<syntaxhighlight lang="Z80">
+align 256   ;ensures that the first LDI begins at address &xx00
+rept &7FF
+LDI       ;LDI takes up two bytes each, so by storing &7FF of them we fill up &0FFE bytes, nearly 4k!
+endr
+RET
+</syntaxhighlight>
+
+==References==
+
+<references />
+
+==See also==
+*[https://www.assemblytutorial.com/z80/ Tutorials on Z80 assembly for various Z80-based hardware]
+*[http://www.z80.info/zaks.html ''Programming the Z80''] by Rodney Zaks, 1981 3rd ed. (PDF)—downloadable with permission of the author
+*[http://www.grimware.org/doku.php/documentations/devices/z80 Z80 instruction set and opcodes]
+*[http://www.produktinfo.conrad.com/datenblaetter/175000-199999/181862-da-01-en-Z_80_A_CPU.pdf Z80 product specification and data sheet] (PDF)
+*[http://www.z80.info/ Z80 information site]
+
+[[Category:Assembly]]{{assembler language}}

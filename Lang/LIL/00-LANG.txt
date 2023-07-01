@@ -1,0 +1,300 @@
+{{language|LIL
+|gc=no
+|parampass=value
+|express=implicit
+|checking=dynamic
+|safety=safe
+|strength=weak
+|site=http://runtimelegend.com/tech/lil/
+|hopl=no
+}}
+
+LIL is the '''L'''ittle '''I'''nterpreted '''L'''anguage, a [[Tcl]] like
+scripting language.  LIL is written by Kostas Michalopoulos, first released
+in 2010.
+
+The implementation is in C, and meant for embedding in other applications.  LIL
+also ships with a small interactive shell.  Embedding can be via linked library
+or directly including lil.h and lil.c in builds.
+
+Like Tcl, LIL uses a simple set of rules for parsing commands and arguments
+with everything treated as character data.  Various types of substitutions
+provide extraordinary flexibility within the grammar rules.
+
+Strings can be quoted with (using ") or without (using {}) dollar prefix
+and inner substitutions.  Command substitutions are provided within [] markers. 
+
+The complete core language (for the 2019 release) is only about 3500 lines of
+C. The reference REPL interactive shell is implemented in just 200 lines
+of code (which includes registering a few new commands for things like
+'''system''' access from the shell).
+
+==hello.lil==
+<lang tcl>#
+# Hello world in lil
+#
+
+print "Hello, world!"</lang>
+
+
+===The other LIL===
+From the author's readme.txt file:
+
+<blockquote style="color: grey; border: solid thin gray;">
+As a side note, LIL has nothing to do with the "Little Implementation
+Language" for PDP (which i learned about months after i chose the name
+LIL for my library).  Apparently that LIL was made during the same time as
+the UNIX system and the C language by P.J.  Plauger.  If you are interested
+in this historical language you can read about it here:
+
+    http://www.ultimate.com/phil/lil/
+</blockquote>
+
+==Reflective==
+LIL is reflective. There is a '''reflect''' command that accepts a wide range
+of subcommands.  These are useful both for exploring the language in the shell
+as well as providing a nice level of sophisticated script programming potentials.
+
+<pre>prompt$ ./lil
+Little Interpreted Language Interactive Shell
+# reflect funcs
+reflect info func rename unusedname quote set local write print puts eval
+topeval upeval downeval enveval jaileval count index indexof filter list append
+slice subst concat foreach return result expr inc incr dec read store if while
+for char charat codeat substr strpos length trim ltrim rtrim strcmp streq
+repstr split try error exit source lmap rand catcher watch writechar system
+readline
+#</pre>
+
+In the above list, '''writechar''', '''system''' and '''readline''' are
+commands registered in the reference LIL shell.
+
+'''reflect''' subcommands include:
+
+<pre>
+     reflect version
+       returns the LIL_VERSION_STRING
+ 
+     reflect args <func>
+       returns a list with the argument names for the given function
+     
+     reflect body <func>
+       returns the code of the given function
+     
+     reflect func-count
+       returns the number of the known functions
+     
+     reflect funcs
+       returns a list with all the known function names
+     
+     reflect vars
+       returns a list with all the known variable names (includes global
+       and local variables)
+     
+     reflect globals
+       returns a list with all the known global variable names
+
+     reflect has-func <name>
+       returns a true value (non-zero, non-empty value) if a function with
+       the given name is known
+     
+     reflect has-var <name>
+       returns a true value (non-zero, non-empty value) if a variable with
+       the given name is known
+     
+     reflect has-global <name>
+       returns a true value (non-zero, non-empty value) if a global
+       variable with the given name is known
+     
+     reflect error
+       returns the last error message or an empty string if there is no
+       error condition active (this is usually used with the try function)
+
+     reflect dollar-prefix [prefix]
+       if [prefix] is specified, then this changes the dollar prefix.  If no
+       arguments are given, the current dollar prefix is returned.  The dollar
+       prefix is the command to be executed for dollar expansions (like $foo).
+       The word after the dollar prefix is appended immediately after the
+       prefix and the whole is executed.  The default dollar prefix is 'set '
+       (notice the space which will separate the call to "set" from the word
+       following)
+
+     reflect this
+       returns the code of the current local environment.  This will return
+       the currently executed function's body, the current root (top-level)
+       code or the current catcher code (if the current environment is a
+       catcher environment)
+
+     reflect name
+       returns the name of the currently executed function or an empty string
+       if the code is executed at root level (or the name of the current
+       function is unknown)</pre>
+
+==Catcher==
+LIL includes '''catcher''' blocks which can be used to provided lazy loading of
+Domain Specific Language commands, as well as high level error trapping. There
+is also a '''try''' command for more localized exception handling.
+
+<lang tcl>#
+# Test for the 'catcher' function. The catcher function can be used to call
+# some code when an unknown function is called so that the script can 'catch'
+# unknown calls. It can be used to implement shell-like behavior or write small
+# mini/local languages for a specific purpose.
+#
+
+##############################################################################
+# Set a catcher that will print the command and its arguments. The catcher will
+# receive the command and arguments in an 'args' list, like if an anonymous
+# function without arguments was specified.
+
+print "Catcher test 1"
+
+catcher {
+    print "catcher: $args"
+}
+
+# Try some commands
+print "This will be printed just fine"
+foo bar
+etc
+this will not be printed
+however substitution is still done [expr 3 + 3]
+"since a list is what is displayed, this will appear in braces"
+
+##############################################################################
+# Define a set of functions which define a mini language. The catcher is used
+# to delegate the call to the proper function. In this example the functions
+# just print what they do. The catcher is only set temporary from the parsecfg
+# function (which is supposed to parse some sort of configuration script) and
+# reset to the previous catcher before the function ends.
+
+print "Catcher test 2"
+
+set level 0
+
+func print-level {} {
+    for {set i 0} {$i < $level} {inc i} {write "  "}
+}
+
+func add-field {name values} {
+    set previous-field $last-field
+    set global last-field $name
+    print-level
+    print "Adding field $last-field"
+    inc level
+    eval $values
+    dec level
+    set global last-field $previous-field
+}
+
+func set-attribute {name value} {
+    print-level
+    print "Adding attribute '${name}' with value '${value}' to the field $last-field"
+}
+
+func parsecfg {cfg} {
+    set prev_catcher [catcher]
+    
+    catcher {
+        set name [index $args 0]
+        set value [index $args 1]
+        if [streq [charat $name 0] .] {
+            set-attribute $name $value
+        } {
+            add-field $name $value
+        }
+    }
+    
+    eval $cfg
+
+    catcher $prev_catcher
+}
+
+print "We'll try to parse"
+
+parsecfg {
+    user {
+        .name "Kostas Michalopoulos"
+        .email badsector@runtimelegend.com
+        .www none
+        .nick "Bad Sector"
+        groups {
+            .group coder
+            .group maintainer
+        }
+        .flags [expr 3 + 3 + 0]         # this will be parsed as ".flags 6"
+    }
+    groups {
+        group {
+            .name coder
+            .info "LIL Coders"
+            .cando stuff
+        }
+        group {
+            .name maintainer
+            .info "LIL Maintainers"
+            .cando otherstuff
+        }
+    }
+}
+
+Done   # The previous catcher will be restored so this will display "Done!"
+
+##############################################################################
+# Remove catchers, etc. An empty string will remove the current catcher and
+# lil will report unknown function calls like previously (
+
+print "Catcher test 3"
+
+catcher {}
+
+"This will fail"
+And this will never be executed</lang>
+
+==Callbacks==
+Many of the lower level operations in LIL can be extended in an application via
+hooks provided by ''LIL_CALLBACK_xxxx'' routines.
+
+==Substitutions==
+Based on Tcl style command handling, LIL supports substitutions for strings and command evaluations.
+
+The dollar-prefix variable substitutions normally seen in Tcl and other
+languages can be customized to call a user defined function at runtime.
+
+<lang tcl>
+#
+# Test for "reflect dollar-prefix"
+#
+
+# Set some variable
+set foo bar
+
+# Use dollar expansion with the default prefix ('set ')
+print $foo
+
+# Define a custom set-like function which prints the variable in question
+func my-set {name} {
+    print "Requested the value of [set name]"
+    return [set [set name]]
+}
+
+# Try it
+print [my-set foo]
+
+# Now use reflect dollar-prefix to report and change the prefix
+print "Current dollar-prefix: '[reflect dollar-prefix]'"
+reflect dollar-prefix {my-set }
+print "New dollar prefix:     '[reflect dollar-prefix]'"
+
+# Try using the new dollar prefix
+print $foo</lang>
+
+{{out}}
+<pre>prompt$ ./lil dollar.lil
+bar
+Requested the value of foo
+bar
+Current dollar-prefix: 'set '
+New dollar prefix:     'my-set '
+Requested the value of foo
+bar</pre>

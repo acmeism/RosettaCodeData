@@ -1,0 +1,181 @@
+MODULE GLOBAL interpret {
+global filename$="base1.xml"
+module latest {
+	PrintConsoleLn("The latest entry is:")
+	if exist(filename$) else exit
+	declare xml xmlData
+	with xml, "xml" as doc$, "beautify" as beautify
+	doc$=string$(eval$(buffer(filename$)) as UTF8dec)
+	with  xml, "lastchild" set child
+	with child,"attr" as attr$()
+	PrintConsoleLn(attr$("name")+","+@tag$()+","+attr$("date"))
+	declare xml nothing
+}
+module latestForEachTag {
+	PrintConsoleLn("latest entry for each tag:")
+	if exist(filename$) else exit
+	declare xml xmlData
+	with xml, "xml" as doc$, "beautify" as beautify
+	doc$=string$(eval$(buffer("base1.xml")) as UTF8dec)
+	with xml, "firstchild" as firstchild
+	child=firstchild
+	with child,"attr" as attr$()
+	inventory alfa
+	do
+		if not exist(alfa, @tag$()) then
+			append alfa, @tag$():=child
+		else
+			return alfa, @tag$():=child
+		end if
+		Method xml, "EndOffChilds", &child as ok
+	when ok
+	sort alfa
+	k=each(alfa)
+	while k
+		child=eval(k)
+		PrintConsoleLn(attr$("name")+","+@tag$()+","+attr$("date"))
+	end while
+	declare xml nothing
+}
+module All {
+	PrintConsoleLn("All entries sorted by date:")
+	if exist(filename$) else exit
+	declare xml xmlData
+	with xml, "xml" as doc$, "beautify" as beautify
+	doc$=string$(eval$(buffer("base1.xml")) as UTF8dec)
+	with xml, "firstchild" as firstchild
+	child=firstchild
+	with child,"attr" as attr$()
+	inventory alfa
+	i=0
+	do
+		// prevent same keys using a unique patch key
+		append alfa, attr$("date")+str$(i,"000000"):=child
+		i++
+		Method xml, "EndOffChilds", &child as ok
+	when ok
+	sort alfa
+	k=each(alfa)
+	while k
+		child=eval(k)
+		PrintConsoleLn(attr$("name")+","+@tag$()+","+attr$("date"))
+	end while
+	declare xml nothing
+}
+module add (line$) {
+	line$=trim$(line$)
+	if line$="" then exit
+	declare xml xmlData
+	with xml, "xml" as doc$, "beautify" as beautify
+	bom$=str$(format$("\uef\ubb\ubf"))
+	//  len(bom$)=1.5 (1.5*2=3 bytes)
+	k=0
+	if exist(filename$) then try {k=filelen(filename$)}
+	if k<10 then
+		method xml, "PrepareNodeSimple", "xml" as ProcessInstructions
+		method xml, "PlaceAttributeToNode", ProcessInstructions, "version", "1.0"
+		method xml, "PlaceAttributeToNode", ProcessInstructions, "encoding", "utf-8-sig"
+		method xml, "PlaceProcessingInstructions", ProcessInstructions
+		method xml, "PrepareNode", "MyFile" as Node
+		method xml, "InsertNode", Node
+	else
+		 doc$=string$(eval$(buffer(filename$)) as UTF8dec)
+	end if
+	a$=""""+line$
+	def name$, tag$,date$
+	do
+		a$=rightpart$(a$, """") : what$=lcase$(trim$(leftpart$(a$, """")))
+		if what$="" then exit
+		a$=rightpart$(a$, """") :par$=leftpart$(a$, """")
+		select case what$
+		case "name"
+			name$=par$
+		case "tag"
+			tag$=par$
+		case "date"
+			date$=par$
+		end select
+	always
+	if name$<>"" and date$<>"" then
+			method xml, "PrepareNode", "Row", "" as Node1
+			method xml, "PlaceAttributeToNode", Node1, "name", name$
+			if tag$<>"" then method xml, "PlaceAttributeToNode", Node1, "tag", tag$
+			method xml, "PlaceAttributeToNode", Node1,  "date", date$
+			method xml, "AppendChild", Node1
+			open filename$ for wide output as #f
+			print #f, bom$;string$(doc$ as UTF8enc);
+			close #f
+			beautify=-4
+			PrintConsoleLn(doc$)
+	end if
+	declare xml nothing
+}
+declare FreeConsole lib "Kernel32.FreeConsole"
+declare GetStdHandle lib "Kernel32.GetStdHandle" {long a}
+declare AttachConsole lib "Kernel32.AttachConsole" {long a}
+declare CloseHandle lib "Kernel32.CloseHandle" {long a}
+declare global WriteCons Lib "Kernel32.WriteConsoleW" {long cons, a$,  long n, Long  p, long u}
+long STD_OUTPUT_HANDLE=-11
+global retvalue
+buffer clear retvalue as long
+ret=AttachConsole(-1)
+global m=GetStdHandle(STD_OUTPUT_HANDLE)
+if ret=0 then beep: exit
+if not islet then
+	try {
+		open "tool.bat" for output as #f
+		print #f, {@}+appdir$+{m2000.exe data {%*}: dir %cd%:load tool
+			}
+		close #f
+		}
+	PrintConsoleLn("")
+	dos "tool.bat"
+	
+else
+	read cmd$
+	cmd$=trim$(cmd$)+" "
+	select case lcase$(leftpart$(cmd$, " "))
+	case "add"
+		add rightpart$(cmd$," ")
+	case "latest"
+		latest
+	case "latest-per-tag"
+		latestForEachTag
+	case "all-entries"
+		all
+	case else
+		help()
+	end select
+end if
+call void closehandle(m)
+call void freeconsole()
+
+Sub PrintConsole(a$)
+      Call Void WriteCons(m, a$, Len(a$), retvalue(0), 0)
+End Sub
+Sub PrintConsoleLn(a$)
+	a$+={
+	}
+	Call Void WriteCons(m, a$, Len(a$), retvalue(0), 0)
+End Sub
+// function is static here but can be called from child modules, because there are in the same block of code
+// although attr$() must defined in each module. (scope constrain to module block, for local identifiers).
+function tag$()
+	try {   // if no tag exist error raised
+		=attr$("tag")
+	}
+end function
+Sub Help()
+h$={Commands:
+	tool add name "anyname" tag "tagtext" date "YYYY.MM.DD.HH:MM"
+	tool latest
+	tool latest-per-tag
+	tool all-entries
+}
+PrintConsole(h$)
+End Sub
+}
+module interpret1 {
+	try {interpret}
+}
+interpret1: end

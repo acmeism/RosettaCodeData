@@ -1,0 +1,27 @@
+DECLARE FUNCTION f! ()
+
+ON ERROR GOTO TratoError
+PRINT 0!
+PRINT 0 / -1.5
+PRINT 1.5 / 0
+PRINT 0 / 0
+PRINT f
+END
+
+TratoError:
+PRINT "Error "; ERR; " on line "; ERL; CHR$(9); " --> ";
+SELECT CASE ERR
+CASE 6
+    PRINT "Overflow"
+    RESUME NEXT
+CASE 11
+    PRINT "Division by zero"
+    RESUME NEXT
+CASE ELSE
+    PRINT "Unexpected error, ending program."
+    END
+END SELECT
+
+FUNCTION f!
+    f! = -1.5 / 0
+END FUNCTION

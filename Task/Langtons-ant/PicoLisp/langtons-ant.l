@@ -1,0 +1,17 @@
+(de ant (Width Height X Y)
+   (let (Field (make (do Height (link (need Width)))) Dir 0)
+      (until (or (le0 X) (le0 Y) (> X Width) (> Y Height))
+         (let Cell (nth Field X Y)
+            (setq Dir (% (+ (if (car Cell) 1 3) Dir) 4))
+            (set Cell (not (car Cell)))
+            (case Dir
+               (0 (inc 'X))
+               (1 (inc 'Y))
+               (2 (dec 'X))
+               (3 (dec 'Y)) ) ) )
+      (prinl "P1")
+      (prinl Width " " Height)
+      (for Row Field
+         (prinl (mapcar '[(X) (if X 1 0)] Row)) ) ) )
+(out '(display -) (ant 100 100 50 50))
+(bye)

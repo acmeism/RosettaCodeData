@@ -1,0 +1,362 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program longmulti64.s   */
+/* REMARK : this program use factors unsigned to 2 power 127
+              and the result is less than 2 power 255 */
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ BUFFERSIZE,   100
+
+/***********************************************/
+/* structures                                  */
+/**********************************************/
+/* Définition multi128 */
+    .struct  0
+multi128_N1:                      //   63-0
+    .struct  multi128_N1 + 8
+multi128_N2:                      //  127-64
+    .struct  multi128_N2 + 8
+multi128_N3:                      //  128-191
+    .struct  multi128_N3 + 8
+multi128_N4:                      //  192-255
+    .struct  multi128_N4 + 8
+multi128_end:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessFactor:         .asciz "Factor = "
+szMessResult:         .asciz "Result = "
+szMessStart:          .asciz "Program 64 bits start.\n"
+szCarriageReturn:     .asciz "\n"
+
+i128test1:            .quad  0,1,0,0   // 2 power 64
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:             .skip BUFFERSIZE   // conversion buffer
+i128Result1:           .skip multi128_end
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+    ldr x0,qAdri128test1         // origin number
+    ldr x1,qAdrsZoneConv
+    mov x2,#BUFFERSIZE
+    bl convertMultiForString     // convert multi number to string
+    mov x2,x0                    // insert conversion in message
+    mov x0,#3                    // string number to display
+    ldr x1,qAdrszMessFactor
+    ldr x3,qAdrszCarriageReturn
+    bl displayStrings            // display message
+
+    // multiplication
+    ldr x0,qAdri128test1         // factor 1
+    ldr x1,qAdri128test1         // factor 2
+    ldr x2,qAdri128Result1       // result
+    bl multiplierMulti128
+    ldr x0,qAdri128Result1
+    ldr x1,qAdrsZoneConv
+    mov x2,#BUFFERSIZE
+    bl convertMultiForString     // conversion multi to string
+    mov x2,x0                    // insert conversion in message
+    mov x0,#3                    // number string to display
+    ldr x1,qAdrszMessResult
+    ldr x3,qAdrszCarriageReturn
+    bl displayStrings            // display message
+
+100:                             // standard end of the program
+    mov x0, #0                   // return code
+    mov x8,EXIT
+    svc #0                       // perform the system call
+
+qAdrszCarriageReturn:        .quad szCarriageReturn
+qAdrsZoneConv:               .quad sZoneConv
+qAdri128test1:               .quad i128test1
+qAdri128Result1:             .quad i128Result1
+qAdrszMessResult:            .quad szMessResult
+qAdrszMessFactor:            .quad szMessFactor
+qAdrszMessStart:             .quad szMessStart
+/***************************************************/
+/*  multiplication multi128 by multi128             */
+/***************************************************/
+// x0 contains address multi128 1
+// x1 contains address multi128 2
+// x2 contains address result multi128
+// x0 return address result (= x2)
+multiplierMulti128:
+    stp x1,lr,[sp,-16]!          // save  registers
+    mov x9,x0                    // factor 1
+    mov x10,x1                   // factor 2
+    mov x7,x2                    // address result
+    mov x6,#3                    // multi128 size
+1:
+    str xzr,[x7,x6,lsl #3]       // init result
+    subs x6,x6,#1
+    bge 1b
+    mov x5,#0                    // indice loop 1
+2:                               // loop items factor 1
+    ldr x0,[x9,x5,lsl #3]        // load a item
+    mov x4,#0
+    mov x8,#0
+3:                               // loop item factor 2
+    add x6,x4,x5                 // compute result indice
+
+    ldr x1,[x10,x4,lsl #3]       // load a item factor 2
+    mul x2,x1,x0                 // multiply low 64 bits
+    umulh x3,x1,x0               // multiply high 64 bits
+    ldr x1,[x7,x6,lsl #3]        // load previous item of result
+    adds x1,x1,x2                // add low part result multiplication
+    mov x11,1
+    csel x2,x11,xzr,cs
+    adds  x1,x1,x8               // add high part precedente
+    adc  x8,x3,x2                // new high part with retenue
+    str x1,[x7,x6,lsl #3]        // store the sum in result
+
+    add x4,x4,#1
+    cmp x4,#3
+    blt 3b                       // and loop  2
+    cmp x8,#0                    // high part ?
+    beq 5f
+    add x6,x6,#1
+    cmp x6,#2                    // on last item ?
+    ble 4f
+    adr x0,szMessErrOverflow     // yes -> overflow
+    bl affichageMess
+    mov x0,#0                    // return 0
+    b 100f
+4:
+    str x8,[x7,x6,lsl #3]        // no store high part in next item
+5:
+    add x5,x5,#1
+    cmp x5,#3
+    blt 2b                       // and loop 1
+    mov x0,x7
+
+100:
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+szMessErrOverflow:        .asciz "\033[31mOverflow !!\033[0m \n"
+.align 4
+
+/***************************************************/
+/*   conversion multi128 unsigned to string    */
+/***************************************************/
+// x0 contains address multi128
+// x1 contains address buffer
+// x2 contains buffer length
+convertMultiForString:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    sub sp,sp,#multi128_end      // reserve place to stack
+    mov fp,sp                    // init address to quotient
+    mov x5,x1                    // save address buffer
+    mov x3,#0                    // init indice
+1:
+    ldr x4,[x0,x3,lsl #3]        // load one part of number
+    str x4,[fp,x3,lsl #3]        // copy part on stack
+    add x3,x3,#1
+    cmp x3,#4
+    blt 1b
+
+2:
+    strb wzr,[x5,x2]             // store final 0 in buffer
+    sub x4,x2,#1                 // end number storage
+3:
+    mov x0,fp
+    mov x1,#10
+    bl calculerModuloMultiEntier // compute modulo 10
+    add x0,x0,#0x30              // convert result to character
+    strb w0,[x5,x4]              // store character on buffer
+    subs x4,x4,#1                //
+    blt 99f                      //  buffer too low
+    ldr x0,[fp,#multi128_N1]     // test if quotient = zero
+    cmp x0,#0
+    bne 3b
+    ldr x0,[fp,#multi128_N2]
+    cmp x0,#0
+    bne 3b
+    ldr x0,[fp,#multi128_N3]
+    cmp x0,#0
+    bne 3b
+    ldr x0,[fp,#multi128_N4]
+    cmp x0,#0
+    bne 3b
+
+
+    add x0,x5,x4                 // return begin number in buffer
+    add x0,x0,#1
+    b 100f
+99:                              // display error if buffer est toop low
+    adr x0,szMessErrBuffer
+    bl affichageMess
+    mov x0,#-1
+100:
+    add sp,sp,#multi128_end      // stack alignement
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x2,x3,[sp],16        // restaur  registers
+    ldp x1,lr,[sp],16        // restaur  registers
+    ret
+szMessErrBuffer:        .asciz "\033[31mBuffer de conversion trop petit !!\033[0m \n"
+.align 4
+/***************************************************/
+/*    modulo  compute   unsigned                   */
+/***************************************************/
+// x0 contains address multi128
+// x1 contains modulo (positive)
+// x0 return  modulo
+// ATTENTION : le multientier origine est modifié et contient le quotient
+calculerModuloMultiEntier: // INFO: calculerModuloMultiEntier
+    stp x1,lr,[sp,-16]!    // save  registers
+    stp x2,x3,[sp,-16]!    // save  registers
+    stp x4,x5,[sp,-16]!    // save  registers
+    cmp x1,#0
+    ble 99f
+    mov x4,x1              // save modulo
+    mov x3,#3
+    mov x5,x0              // multi128 address
+    ldr x0,[x5,x3,lsl 3]   // load last part of number in low part of 128 bits
+    mov x1,#0              // init higt part 128 bits
+1:
+    cmp x3,#0              // end part ?
+    ble 2f
+    mov x2,x4              // modulo
+    bl division64R         // divide x0,x1 by x2 in x0,x1 and remainder in x2
+    str x0,[x5,x3,lsl #3]  // store result part low
+    sub x3,x3,#1           // other part ?
+    ldr x0,[x5,x3,lsl #3]  // load prev part
+    mov x1,x2              // store remainder on high part of 128 bits
+    b 1b
+2:
+    mov x2,x4              // modulo
+    bl division64R
+    str x0,[x5]            // stockage dans le 1er chunk
+    mov x0,x2              // return remainder
+    b 100f
+99:
+    adr x0,szMessNegatif
+    bl affichageMess
+    mov x0,#-1
+100:                       // fin standard de la fonction
+    ldp x4,x5,[sp],16      // restaur  registers
+    ldp x2,x3,[sp],16      // restaur  registers
+    ldp x1,lr,[sp],16      // restaur  registers
+    ret
+szMessNegatif:      .asciz "\033[31mLe diviseur doit être positif !\033[0m\n"
+.align 4
+/***************************************************/
+/*   division 128 bits number in 2 registers by 64 bits number */
+/***************************************************/
+/* x0 contains  dividende  low part */
+/* x1 contains  dividende  high part */
+/* x2 contains divisor             */
+/* x0 return quotient  low part  */
+/* x1 return quotient  high part  */
+/* x2 return remainder             */
+division64R:
+    stp x3,lr,[sp,-16]!  // save  registers
+    stp x4,x5,[sp,-16]!  // save  registers
+    stp x6,x7,[sp,-16]!  // save  registers
+    stp x8,x9,[sp,-16]!  // save  registers
+    mov x6,#0            // init high high part of remainder !!
+                         // x1 = high part of number in high part of remainder
+    mov x7,x0            // low part of number in low part of remainder
+    mov x3,#0            // init high part quotient
+    mov x4,#0            // init low part quotient
+    mov x5,#64
+1:                       // begin loop
+    lsl x6,x6,#1         // left shift high high part of remainder
+    cmp x1,0             // if negative ie bit 63 = 1
+    orr x8,x6,1
+    csel x6,x8,x6,lt     // add left bit  high part on high high part
+    lsl x1,x1,#1         // left shift high part of remainder
+    cmp x7,0
+    orr x8,x1,1
+    csel x1,x8,x1,lt     // add left bit  low part on high part
+    lsl x7,x7,#1         // left shift low part of remainder
+    cmp x4,0
+    lsl x4,x4,#1         // left shift low part quotient
+    lsl x3,x3,#1         // left shift high part quotient
+    orr x8,x3,1
+    csel x3,x8,x3,lt     // add left bit low part on high part
+                         // sub divisor to high part remainder
+    subs x1,x1,x2
+    sbcs  x6,x6,xzr      // sub restr.quad (retenue in french)
+    bmi 2f               // result negative ?
+                         // positive or equal
+    orr x4,x4,#1         // right bit quotient  to 1
+    b 3f
+2:                       // negative
+    orr x4,x4,xzr        // right bit quotient to 0
+    adds x1,x1,x2        // and restaure the remainder to precedent value
+    adc  x6,x6,xzr       // and restr.quad
+3:
+    subs x5,x5,#1        // decrement indice
+    bgt 1b               // and loop
+    mov x0,x4            // low part quotient
+    mov x2,x1            // remainder
+    mov x1,x3            // high part quotient
+100:
+    ldp x8,x9,[sp],16    // restaur  registers
+    ldp x6,x7,[sp],16    // restaur  registers
+    ldp x4,x5,[sp],16    // restaur  registers
+    ldp x3,lr,[sp],16    // restaur  registers
+    ret
+/***************************************************/
+/*   display multi strings                         */
+/*   new version 24/05/2023                        */
+/***************************************************/
+/* x0  contains number strings address */
+/* x1 address string1 */
+/* x2 address string2 */
+/* x3 address string3 */
+/* x4 address string4 */
+/* x5 address string5 */
+/* x6 address string5 */
+displayStrings:            // INFO:  displayStrings
+    stp x7,lr,[sp,-16]!          // save  registers
+    stp x2,fp,[sp,-16]!          // save  registers
+    add fp,sp,#32          // save paraméters address (4 registers saved * 8 bytes)
+    mov x7,x0              // save strings number
+    cmp x7,#0              // 0 string -> end
+    ble 100f
+    mov x0,x1              // string 1
+    bl affichageMess
+    cmp x7,#1              // number > 1
+    ble 100f
+    mov x0,x2
+    bl affichageMess
+    cmp x7,#2
+    ble 100f
+    mov x0,x3
+    bl affichageMess
+    cmp x7,#3
+    ble 100f
+    mov x0,x4
+    bl affichageMess
+    cmp x7,#4
+    ble 100f
+    mov x0,x5
+    bl affichageMess
+    cmp x7,#5
+    ble 100f
+    mov x0,x6
+    bl affichageMess
+100:
+    ldp x2,fp,[sp],16        // restaur  registers
+    ldp x7,lr,[sp],16            // restaur  registers
+    ret
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

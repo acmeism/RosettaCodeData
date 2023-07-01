@@ -1,0 +1,431 @@
+(* This program pours all the particles onto the square at once, with
+   one of them as seed, and then lets the particles move around.
+
+   Compile with
+   patscc -std=gnu2x -D_GNU_SOURCE -g -O3 -DATS_MEMALLOC_LIBC brownian_tree_task.dats
+
+   You may need the -D_GNU_SOURCE to get a declaration of the
+   random(3) function. *)
+(*------------------------------------------------------------------*)
+
+%{^
+#include <stdlib.h>
+%}
+
+#include "share/atspre_staload.hats"
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+extern castfn lint2int : {i : int} lint i -<> int i
+implement g1int2int<lintknd,intknd> i = lint2int i
+
+extern fn random () : [i : nat] lint i = "mac#random"
+extern fn srandom (seed : uint) : void = "mac#srandom"
+extern fn atoi (s : string) : int = "mac#atoi"
+
+(*------------------------------------------------------------------*)
+
+datatype grid_position =
+| Wall
+| Empty
+| Sticky
+| Freely_moving
+
+fn {}
+grid_position_equal
+          (x : grid_position,
+           y : grid_position)
+    :<> bool =
+  case+ x of
+  | Wall () => (case+ y of Wall () => true | _ => false)
+  | Empty () => (case+ y of Empty () => true | _ => false)
+  | Sticky () => (case+ y of Sticky () => true | _ => false)
+  | Freely_moving () =>
+    (case+ y of Freely_moving () => true | _ => false)
+
+fn {}
+grid_position_notequal
+          (x : grid_position,
+           y : grid_position)
+    :<> bool =
+  ~grid_position_equal (x, y)
+
+overload = with grid_position_equal
+overload <> with grid_position_notequal
+
+(*------------------------------------------------------------------*)
+
+abstype container (w : int, h : int) = ptr
+
+local
+
+  typedef _container (w : int, h : int) =
+    '{M = matrixref (grid_position, w, h),
+      w = int w,
+      h = int h}
+
+in (* local *)
+
+  assume container (w, h) = _container (w, h)
+
+  fn {}
+  container_make
+            {w, h : pos}
+            (w : int w,
+             h : int h)
+      : container (w, h) =
+    '{M = matrixref_make_elt<grid_position> (i2sz w, i2sz h, Empty),
+      w = w, h = h}
+
+  fn {}
+  container_width
+            {w, h : pos}
+            (C    : container (w, h))
+      : int w =
+    C.w
+
+  fn {}
+  container_height
+            {w, h : pos}
+            (C    : container (w, h))
+      : int h =
+    C.h
+
+  fn {}
+  container_get_at
+            {w, h : pos}
+            (C    : container (w, h),
+             x    : intBtwe (~1, w),
+             y    : intBtwe (~1, h))
+      : grid_position =
+    let
+      macdef M = C.M
+    in
+      if (0 <= x) * (x < C.w) * (0 <= y) * (y < C.h) then
+        M[x, C.h, y]
+      else
+        Wall
+    end
+
+  fn
+  container_set_at
+            {w, h : pos}
+            (C    : container (w, h),
+             x    : intBtw (0, w),
+             y    : intBtw (0, h),
+             gpos : grid_position)
+      : void =
+    let
+      macdef M = C.M
+    in
+      M[x, C.h, y] := gpos
+    end
+
+end (* local *)
+
+overload width with container_width
+overload height with container_height
+overload [] with container_get_at
+overload [] with container_set_at
+
+(*------------------------------------------------------------------*)
+
+fn
+random_direction () :
+    @(intBtwe (~1, 1), intBtwe (~1, 1)) =
+  let
+    val r1 = random ()
+    val r2 = random ()
+    val dx : intBtwe (0, 2) = g1i2i (r1 \nmod 3)
+    and dy : intBtwe (0, 2) = g1i2i (r2 \nmod 3)
+  in
+    @(pred dx, pred dy)
+  end
+
+fn
+in_sticky_position
+          {w, h : pos}
+          (C    : container (w, h),
+           x    : intBtw (0, w),
+           y    : intBtw (0, h))
+    : bool =
+  (C[pred x, pred y] = Sticky () ||
+   C[pred x, y] = Sticky () ||
+   C[pred x, succ y] = Sticky () ||
+   C[succ x, pred y] = Sticky () ||
+   C[succ x, y] = Sticky () ||
+   C[succ x, succ y] = Sticky () ||
+   C[x, pred y] = Sticky () ||
+   C[x, succ y] = Sticky ())
+
+fn
+find_placement_for_another_particle
+          {w, h : pos}
+          (C    : container (w, h))
+    : @(intBtw (0, w), intBtw (0, h)) =
+  let
+    val w = width C and h = height C
+
+    fun
+    loop () : @(intBtw (0, w), intBtw (0, h)) =
+      let
+        val r1 = random ()
+        val r2 = random ()
+        val x : intBtw (0, w) = g1i2i (r1 \nmod w)
+        and y : intBtw (0, h) = g1i2i (r2 \nmod h)
+      in
+        if C[x, y] <> Empty () then
+          loop ()
+        else
+          @(x, y)
+      end
+  in
+    loop ()
+  end
+
+fn
+move_particles
+          {w, h      : pos}
+          (C         : container (w, h),
+           particles : &List0 @(intBtw (0, w), intBtw (0, h)) >> _)
+    : void =
+  let
+    typedef coords = @(intBtw (0, w), intBtw (0, h))
+
+    fun
+    loop {n : nat} .<n>.
+         (particles : list (coords, n),
+          new_lst   : List0 coords)
+        : List0 coords =
+      case+ particles of
+      | NIL => new_lst
+      | @(x0, y0) :: tl =>
+        let
+          val @(dx, dy) = random_direction ()
+          val x1 = x0 + dx and y1 = y0 + dy
+        in
+          if C[x1, y1] = Empty () then
+            let
+              val () = assertloc (0 <= x1)
+              val () = assertloc (x1 < width C)
+              val () = assertloc (0 <= y1)
+              val () = assertloc (y1 < height C)
+            in
+              C[x1, y1] := C[x0, y0];
+              C[x0, y0] := Empty ();
+              loop (tl, @(x1, y1) :: new_lst)
+            end
+          else
+            (* Our rule is: if there is anything where it WOULD have
+               moved to, then the particle does not move. *)
+            loop (tl, @(x0, y0) :: new_lst)
+        end
+  in
+    particles := loop (particles, NIL)
+  end
+
+fn
+find_which_particles_are_stuck
+          {w, h      : pos}
+          (C         : container (w, h),
+           particles : &List0 @(intBtw (0, w), intBtw (0, h)) >> _)
+    : void =
+  (* Our rule is: if a particle is next to something that ALREADY was
+     stuck, then it too is stuck. Otherwise it remains free. *)
+  let
+    typedef coords = @(intBtw (0, w), intBtw (0, h))
+
+    fun
+    loop {n : nat} .<n>.
+         (particles : list (coords, n),
+          new_lst   : List0 coords)
+        : List0 coords =
+      case+ particles of
+      | NIL => new_lst
+      | @(x, y) :: tl =>
+        if in_sticky_position (C, x, y) then
+          begin
+            C[x, y] := Sticky ();
+            loop (tl, new_lst)
+          end
+        else
+          loop (tl, @(x, y) :: new_lst)
+  in
+    particles := loop (particles, NIL)
+  end
+
+fn
+pour_particles
+          {w, h           : pos}
+          {n              : nat}
+          (C              : container (w, h),
+           n              : int n,
+           free_particles : &List0 @(intBtw (0, w), intBtw (0, h))?
+                            >> List0 @(intBtw (0, w), intBtw (0, h)))
+    : void =
+  if n = 0 then
+    free_particles := NIL
+  else
+    let
+      typedef coords = @(intBtw (0, w), intBtw (0, h))
+
+      fun
+      loop {i : nat | i <= n - 1}
+           .<(n - 1) - i>.
+           (particles : list (coords, i),
+            i         : int i)
+          : list (coords, n - 1) =
+        if i = pred n then
+          particles
+        else
+          let
+            val @(x, y) = find_placement_for_another_particle C
+          in
+            C[x, y] := Freely_moving;
+            loop (@(x, y) :: particles, succ i)
+          end
+
+      val @(xseed, yseed) = find_placement_for_another_particle C
+    in
+      C[xseed, yseed] := Sticky ();
+      free_particles := loop (NIL, 0)
+    end
+
+fn
+go_until_all_particles_are_stuck
+          {w, h           : pos}
+          (C              : container (w, h),
+           free_particles : List0 @(intBtw (0, w), intBtw (0, h)))
+    : void =
+  let
+    typedef coords = @(intBtw (0, w), intBtw (0, h))
+
+    fun
+    loop (free_particles : &List0 coords >> _) : void =
+      case+ free_particles of
+      | NIL => ()
+      | _ :: _ =>
+        begin
+          move_particles (C, free_particles);
+          find_which_particles_are_stuck (C, free_particles);
+          loop free_particles
+        end
+
+    var free_particles : List0 coords = free_particles
+  in
+    find_which_particles_are_stuck (C, free_particles);
+    loop free_particles
+  end
+
+fn
+build_a_tree {w, h : pos}
+             {n    : nat}
+             (w    : int w,
+              h    : int h,
+              n    : int n)
+    : container (w, h) =
+  let
+    val C = container_make (w, h)
+    var free_particles : List0 @(intBtw (0, w), intBtw (0, h))
+  in
+    pour_particles (C, n, free_particles);
+    go_until_all_particles_are_stuck (C, free_particles);
+    C
+  end
+
+fn
+write_a_PAM_image
+          {w, h : pos}
+          (outf : FILEref,
+           C    : container (w, h),
+           seed : uint)
+    : void =
+  let
+    val w = width C and h = height C
+
+    fun
+    count_particles
+              {x, y : nat | x <= w; y <= h}
+              .<h - y, w - x>.
+              (x : int x,
+               y : int y,
+               n : int)
+        : int =
+      if y = h then
+        n
+      else if x = w then
+        count_particles (0, succ y, n)
+      else if C[x, y] = Empty () then
+        count_particles (succ x, y, n)
+      else
+        count_particles (succ x, y, succ n)
+
+    fun
+    loop {x, y : nat | x <= w; y <= h}
+         .<h - y, w - x>.
+         (x : int x,
+          y : int y)
+        : void =
+      if y = h then
+        ()
+      else if x = w then
+        loop (0, succ y)
+      else
+        begin
+          fprint_val<char>
+            (outf, if C[x, y] = Empty () then '\1' else '\0');
+          loop (succ x, y)
+        end
+  in
+    fprintln! (outf, "P7");
+    fprintln! (outf, "# Number of particles = ",
+               count_particles (0, 0, 0));
+    fprintln! (outf, "# Seed = ", seed);
+    fprintln! (outf, "WIDTH ", width C);
+    fprintln! (outf, "HEIGHT ", height C);
+    fprintln! (outf, "DEPTH 1");
+    fprintln! (outf, "MAXVAL 1");
+    fprintln! (outf, "TUPLTYPE BLACKANDWHITE");
+    fprintln! (outf, "ENDHDR");
+    loop (0, 0)
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+main0 (argc, argv) =
+  let
+    val args = list_vt2t (listize_argc_argv (argc, argv))
+    val nargs = argc
+  in
+    if nargs <> 5 then
+      begin
+        fprintln! (stderr_ref, "Usage: ", args[0],
+                   " width height num_particles seed");
+        exit 1
+      end
+    else
+      let
+        val w = g1ofg0 (atoi (args[1]))
+        and h = g1ofg0 (atoi (args[2]))
+        and num_particles = g1ofg0 (atoi (args[3]))
+        and seed = g1ofg0 (atoi (args[4]))
+      in
+        if (w < 1) + (h < 1) + (num_particles < 0) + (seed < 0) then
+          begin
+            fprintln! (stderr_ref, "Illegal command line argument.");
+            exit 1
+          end
+        else
+          let
+            val seed : uint = g0i2u seed
+            val () = srandom seed
+            val C = build_a_tree (w, h, num_particles)
+          in
+            write_a_PAM_image (stdout_ref, C, seed)
+          end
+      end
+  end
+
+(*------------------------------------------------------------------*)

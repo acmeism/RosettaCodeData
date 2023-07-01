@@ -1,0 +1,31 @@
+tasks[page_: ""] :=
+  Module[{res =
+     Import["http://rosettacode.org/mw/api.php?format=xml&action=\
+query&list=categorymembers&cmtitle=Category:Programming_Tasks&cmlimit=\
+500" <> page, "XML"]},
+   If[MemberQ[res[[2, 3]], XMLElement["query-continue", __]],
+    Join[res[[2, 3, 1, 3, 1, 3, All, 2, 3, 2]],
+     tasks["&cmcontinue=" <> res[[2, 3, 2, 3, 1, 2, 1, 2]]]],
+    res[[2, 3, 1, 3, 1, 3, All, 2, 3, 2]]]];
+bareTags = # -> (# -> StringCount[#2, "<lang>"] &) @@@
+      Partition[
+       Prepend[StringSplit[
+          Import["http://rosettacode.org/wiki?action=raw&title=" <>
+            URLEncode[#], "Text"],
+          Shortest["=={{header|" ~~ x__ ~~ "}}=="] :> x],
+         "no language"] //. {a___,
+          multi_String?StringContainsQ["}}" ~~ ___ ~~ "{{header|"],
+          bare_Integer, b___} :> {a, StringSplit[multi, "}"][[1]],
+          bare, StringSplit[multi, "|"][[-1]], bare, b}, 2] & /@
+   tasks[];
+Print[IntegerString[Total[Flatten[bareTags[[All, 2, All, 2]]]]] <>
+   " bare language tags.\n"];
+langCounts =
+  Normal[Total /@
+    GroupBy[Flatten[bareTags[[All, 2]]], Keys -> Values]];
+Print[IntegerString[#2] <> " in " <> # <> " ([[" <>
+     StringRiffle[
+      Keys[Select[bareTags,
+        Function[task, MemberQ[task[[2]], # -> _Integer?Positive]]]],
+      "]], [["] <> "]])"] & @@@
+  Select[SortBy[langCounts, Keys], #[[2]] > 0 &];

@@ -1,0 +1,119 @@
+(*------------------------------------------------------------------*)
+
+#define ATS_DYNLOADFLAG 0
+#define ATS_PACKNAME "Rosetta_Code.bitmap_write_ppm_task"
+
+#include "share/atspre_staload.hats"
+
+staload "bitmap_task.sats"
+
+(* You need to staload bitmap_task.dats, so the ATS compiler will have
+   access to its implementations of templates. But we staload it
+   anonymously, so the programmer will not have access. *)
+staload _ = "bitmap_task.dats"
+
+staload "bitmap_write_ppm_task.sats"
+
+(*------------------------------------------------------------------*)
+
+(* Realizing that MAXVAL, and how to represent depend on the
+   pixel type, we implement the template functions ONLY for pixels of
+   type rgb24. *)
+
+(* We will implement raw PPM using "dump", and plain PPM using the
+   "get a pixel" square brackets. The latter method is simpler than
+   writing a different implementation of pixmap$pixels_dump<rgb24>,
+   and also helps us satisfy the stated requirements of the task.
+   ("Dump" goes beyond what was asked for.) *)
+
+implement
+pixmap_write_ppm_raw_or_plain<rgb24> (outf, pix, plain) =
+  begin
+    fprintln! (outf, (if plain then "P3" else "P6") : string);
+    fprintln! (outf, width pix, " ", height pix);
+    fprintln! (outf, "255");
+    if ~plain then
+      dump<rgb24> (outf, pix)
+    else
+      let
+        val w = width pix and h = height pix
+        prval [w : int] EQINT () = eqint_make_guint w
+        prval [h : int] EQINT () = eqint_make_guint h
+
+        fun
+        loop {x, y : nat | x <= w; y <= h}
+             .<h - y, w - x>.
+             (pix : !pixmap (rgb24, w, h),
+              x   : size_t x,
+              y   : size_t y)
+            : void =
+          if y = h then
+            ()
+          else if x = w then
+            loop (pix, i2sz 0, succ y)
+          else
+            let
+              val @(r, g, b) = rgb24_values pix[x, y]
+            in
+              fprintln! (outf, r, " ", g, " ", b);
+              loop (pix, succ x, y)
+            end
+      in
+        loop (pix, i2sz 0, i2sz 0);
+        true
+      end
+  end
+
+implement
+pixmap_write_ppm_raw<rgb24> (outf, pix) =
+  pixmap_write_ppm_raw_or_plain<rgb24> (outf, pix, false)
+
+(*------------------------------------------------------------------*)
+
+#ifdef BITMAP_WRITE_PPM_TASK_TEST #then
+
+implement
+main0 () =
+  let
+    val bgcolor = rgb24_make (217u, 217u, 214u)
+    and fgcolor1 = rgb24_make (210, 0, 0)
+    and fgcolor2 = rgb24_make (0, 150, 0)
+    and fgcolor3 = rgb24_make (0, 0, 220)
+
+    stadef w = 300
+    stadef h = 200
+    val w : size_t w = i2sz 300
+    and h : size_t h = i2sz 200
+
+    val @(pfgc | pix) = pixmap_make<rgb24> (w, h, bgcolor)
+    val () =
+      let
+        var x : Size_t
+      in
+        for* {x : nat | x <= w}
+             .<w - x>.
+             (x : size_t x) =>
+          (x := i2sz 0; x <> w; x := succ x)
+            begin
+              pix[x, i2sz 50] := fgcolor1;
+              pix[x, i2sz 100] := fgcolor2;
+              pix[x, i2sz 150] := fgcolor3
+            end
+      end
+
+    val outf_raw = fileref_open_exn ("image-raw.ppm", file_mode_w)
+    and outf_plain = fileref_open_exn ("image-plain.ppm", file_mode_w)
+
+    val success = pixmap_write_ppm<rgb24> (outf_raw, pix)
+    val () = assertloc success
+    val success = pixmap_write_ppm<rgb24> (outf_plain, pix, true)
+    val () = assertloc success
+  in
+    fileref_close outf_raw;
+    fileref_close outf_plain;
+    free (pfgc | pix)
+  end
+
+#endif
+
+(*------------------------------------------------------------------*)

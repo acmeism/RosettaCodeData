@@ -1,0 +1,83 @@
+(notonline)-->
+ <span style="color: #000080;font-style:italic;">--
+ -- demo\rosetta\Same_Fringe.exw
+ -- ============================
+ --
+ --  In some cases it may help to replace the single res with a table, such
+ --  that if you have concurrent task pairs {1,2} and {3,4} with a table of
+ --  result indexes ridx = {1,1,2,2}, then each updates res[ridx[tidx]]. In
+ --  other words if extending tasks[] rather than overwriting it, you would
+ --  also extend res[] and ridx[] and sdata[], and need freelist handling.
+ --</span>
+ <span style="color: #008080;">without</span> <span style="color: #008080;">js</span> <span style="color: #000080;font-style:italic;">-- (multitasking)</span>
+
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">tests</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{{</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span><span style="color: #000000;">2</span><span style="color: #0000FF;">,</span><span style="color: #000000;">0</span><span style="color: #0000FF;">}},</span>
+                   <span style="color: #0000FF;">{{</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">0</span><span style="color: #0000FF;">},</span><span style="color: #000000;">2</span><span style="color: #0000FF;">,</span><span style="color: #000000;">0</span><span style="color: #0000FF;">},</span>
+                   <span style="color: #0000FF;">{{</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">0</span><span style="color: #0000FF;">},</span><span style="color: #000000;">2</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span><span style="color: #000000;">3</span><span style="color: #0000FF;">,</span><span style="color: #000000;">0</span><span style="color: #0000FF;">}},</span>
+                  <span style="color: #0000FF;">}</span>
+
+ <span style="color: #004080;">sequence</span> <span style="color: #000000;">tasks</span><span style="color: #0000FF;">,</span>
+          <span style="color: #000000;">sdata</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">repeat</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">,</span><span style="color: #000000;">2</span><span style="color: #0000FF;">)</span>
+ <span style="color: #004080;">integer</span> <span style="color: #000000;">res</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span><span style="color: #0000FF;">,</span>
+         <span style="color: #000000;">active_tasks</span>
+ <span style="color: #004080;">bool</span> <span style="color: #000000;">show_details</span> <span style="color: #0000FF;">=</span> <span style="color: #004600;">true</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">scan</span><span style="color: #0000FF;">(</span><span style="color: #004080;">sequence</span> <span style="color: #000000;">tree</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">integer</span> <span style="color: #000000;">level</span><span style="color: #0000FF;">,</span> <span style="color: #004080;">integer</span> <span style="color: #000000;">tidx</span><span style="color: #0000FF;">)</span>
+     <span style="color: #004080;">object</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">left</span><span style="color: #0000FF;">,</span><span style="color: #000000;">data</span><span style="color: #0000FF;">,</span><span style="color: #000000;">right</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">tree</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">res</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">left</span><span style="color: #0000FF;">!=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #000000;">scan</span><span style="color: #0000FF;">(</span><span style="color: #000000;">left</span><span style="color: #0000FF;">,</span><span style="color: #000000;">level</span><span style="color: #0000FF;">+</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">tidx</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #000000;">sdata</span><span style="color: #0000FF;">[</span><span style="color: #000000;">tidx</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">data</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">show_details</span> <span style="color: #008080;">then</span>
+             <span style="color: #7060A8;">printf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"task[%d] sets sdata[%d] to %v\n"</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">tidx</span><span style="color: #0000FF;">,</span><span style="color: #000000;">tidx</span><span style="color: #0000FF;">,</span><span style="color: #000000;">data</span><span style="color: #0000FF;">})</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">res</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span>
+             <span style="color: #000000;">task_suspend</span><span style="color: #0000FF;">(</span><span style="color: #000000;">task_self</span><span style="color: #0000FF;">())</span>
+             <span style="color: #000000;">task_yield</span><span style="color: #0000FF;">()</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">right</span><span style="color: #0000FF;">!=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #000000;">scan</span><span style="color: #0000FF;">(</span><span style="color: #000000;">right</span><span style="color: #0000FF;">,</span><span style="color: #000000;">level</span><span style="color: #0000FF;">+</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">tidx</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">level</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">then</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">show_details</span> <span style="color: #008080;">then</span>
+             <span style="color: #7060A8;">printf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"task[%d] ends\n"</span><span style="color: #0000FF;">,</span><span style="color: #000000;">tidx</span><span style="color: #0000FF;">)</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #000000;">active_tasks</span> <span style="color: #0000FF;">-=</span> <span style="color: #000000;">1</span>
+         <span style="color: #000000;">tasks</span><span style="color: #0000FF;">[</span><span style="color: #000000;">tidx</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+         <span style="color: #000000;">sdata</span><span style="color: #0000FF;">[</span><span style="color: #000000;">tidx</span><span style="color: #0000FF;">]</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">-</span><span style="color: #000000;">1</span> <span style="color: #000080;font-style:italic;">-- (or use a separate flag or tasks[tidx])</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">test</span><span style="color: #0000FF;">(</span><span style="color: #004080;">integer</span> <span style="color: #000000;">t1</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">t2</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000000;">tasks</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">task_create</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">routine_id</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"scan"</span><span style="color: #0000FF;">),{</span><span style="color: #000000;">tests</span><span style="color: #0000FF;">[</span><span style="color: #000000;">t1</span><span style="color: #0000FF;">],</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">1</span><span style="color: #0000FF;">}),</span>
+              <span style="color: #000000;">task_create</span><span style="color: #0000FF;">(</span><span style="color: #7060A8;">routine_id</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"scan"</span><span style="color: #0000FF;">),{</span><span style="color: #000000;">tests</span><span style="color: #0000FF;">[</span><span style="color: #000000;">t2</span><span style="color: #0000FF;">],</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">2</span><span style="color: #0000FF;">})}</span>
+     <span style="color: #000000;">active_tasks</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">2</span>
+     <span style="color: #000000;">res</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+     <span style="color: #008080;">while</span> <span style="color: #000000;">active_tasks</span><span style="color: #0000FF;">></span><span style="color: #000000;">0</span> <span style="color: #008080;">do</span>
+         <span style="color: #008080;">for</span> <span style="color: #000000;">i</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">to</span> <span style="color: #000000;">2</span> <span style="color: #008080;">do</span>
+             <span style="color: #008080;">if</span> <span style="color: #000000;">tasks</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">]</span> <span style="color: #008080;">then</span>
+                 <span style="color: #000000;">task_schedule</span><span style="color: #0000FF;">(</span><span style="color: #000000;">tasks</span><span style="color: #0000FF;">[</span><span style="color: #000000;">i</span><span style="color: #0000FF;">],</span><span style="color: #000000;">1</span><span style="color: #0000FF;">)</span>
+                 <span style="color: #000000;">task_yield</span><span style="color: #0000FF;">()</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">res</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span>
+             <span style="color: #000080;font-style:italic;">-- (nb next might only be valid for active_tasks==2)</span>
+             <span style="color: #000000;">res</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">compare</span><span style="color: #0000FF;">(</span><span style="color: #000000;">sdata</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">],</span><span style="color: #000000;">sdata</span><span style="color: #0000FF;">[</span><span style="color: #000000;">2</span><span style="color: #0000FF;">])</span>
+             <span style="color: #008080;">if</span> <span style="color: #000000;">show_details</span> <span style="color: #008080;">then</span>
+                 <span style="color: #7060A8;">printf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"compare(%v,%v) ==&gt; %d, active tasks:%d\n"</span><span style="color: #0000FF;">,</span>
+                          <span style="color: #0000FF;">{</span><span style="color: #000000;">sdata</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">],</span><span style="color: #000000;">sdata</span><span style="color: #0000FF;">[</span><span style="color: #000000;">2</span><span style="color: #0000FF;">],</span><span style="color: #000000;">res</span><span style="color: #0000FF;">,</span><span style="color: #000000;">active_tasks</span><span style="color: #0000FF;">})</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+     <span style="color: #7060A8;">printf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"test(%d,%d):%d\n"</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">t1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">t2</span><span style="color: #0000FF;">,</span><span style="color: #000000;">res</span><span style="color: #0000FF;">})</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #0000FF;">?</span><span style="color: #008000;">"started"</span>
+ <span style="color: #008080;">for</span> <span style="color: #000000;">l</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">to</span> <span style="color: #000000;">3</span> <span style="color: #008080;">do</span>
+     <span style="color: #008080;">for</span> <span style="color: #000000;">r</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">to</span> <span style="color: #000000;">3</span> <span style="color: #008080;">do</span>
+         <span style="color: #000000;">test</span><span style="color: #0000FF;">(</span><span style="color: #000000;">l</span><span style="color: #0000FF;">,</span><span style="color: #000000;">r</span><span style="color: #0000FF;">)</span>
+         <span style="color: #000000;">show_details</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">for</span>
+
+ <span style="color: #0000FF;">?</span><span style="color: #008000;">"done"</span>
+ <span style="color: #0000FF;">{}</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">wait_key</span><span style="color: #0000FF;">()</span>
+<!--

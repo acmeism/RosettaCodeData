@@ -1,0 +1,13 @@
+PRINT "--police--  --sanitation--  --fire--"
+
+FOR police = 2 TO 7 STEP 2
+    FOR fire = 1 TO 7
+        IF fire = police THEN GOTO cont
+    sanitation = 12 - police - fire
+    IF sanitation = fire OR sanitation = police THEN GOTO cont
+    IF sanitation >= 1 AND sanitation <= 7 THEN
+        PRINT USING "    #             #            #"; police; fire; sanitation
+    END IF
+cont:
+    NEXT fire
+NEXT police

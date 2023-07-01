@@ -1,0 +1,1 @@
+println sievePrimes(100)

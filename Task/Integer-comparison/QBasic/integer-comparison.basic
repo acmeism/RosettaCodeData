@@ -1,0 +1,5 @@
+INPUT "Please enter two integers, separated by a comma: ", x, y
+
+IF x < y THEN PRINT x; " is less than "; y
+IF x = y THEN PRINT x; " is equal to "; y
+IF x > y THEN PRINT x; " is greater than "; y

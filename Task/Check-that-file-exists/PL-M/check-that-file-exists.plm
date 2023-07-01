@@ -1,0 +1,84 @@
+100H:
+
+   DECLARE FCB$SIZE      LITERALLY '36';
+
+   BDOS: PROCEDURE( FN, ARG )BYTE; /* CP/M BDOS SYSTEM CALL, RETURNS A VALUE */
+      DECLARE FN BYTE, ARG ADDRESS;
+      GOTO 5;
+   END BDOS;
+   BDOS$P: PROCEDURE( FN, ARG );   /* CP/M BDOS SYSTEM CALL, NO RETURN VALUE */
+      DECLARE FN BYTE, ARG ADDRESS;
+      GOTO 5;
+   END BDOS$P;
+   PRINT$CHAR:   PROCEDURE( C ); DECLARE C BYTE;    CALL BDOS$P( 2, C );   END;
+   PRINT$STRING: PROCEDURE( S ); DECLARE S ADDRESS; CALL BDOS$P( 9, S );   END;
+   PRINT$NL:     PROCEDURE; CALL PRINT$STRING( .( 0DH, 0AH, '$' ) );       END;
+   SEARCH$FIRST: PROCEDURE( FCB )BYTE;   /* RETURN 0, 1, 2, 3 IF FILE IN FCB */
+      DECLARE FCB ADDRESS;               /*        EXISTS, 255 OTHERWISE     */
+      RETURN BDOS( 17, FCB );
+   END SEARCH$FIRST ;
+
+   INIT$FCB: PROCEDURE( FCB, NAME );  /* INITIALISE A FILE-CONTROL-BLOCK     */
+      DECLARE ( FCB, NAME ) ADDRESS;  /*     SETTING THE FILE NAME           */
+      DECLARE ( F$PTR, N$PTR, X$PTR ) ADDRESS;
+      DECLARE F BASED F$PTR BYTE, N BASED N$PTR BYTE;
+      DECLARE BLANKS ( 5 )BYTE INITIAL( ' ', ' ', ' ', ' ', '$' );
+      X$PTR = .BLANKS;
+      N$PTR = NAME + 1;
+      F$PTR = FCB;
+      IF N <> ':' THEN DO;            /* NO DRIVE LETTER                     */
+         F     = 0;
+         N$PTR = NAME;
+         END;
+      ELSE DO;                        /* FIRST CHAR IS THE DRIVE LETTER      */
+         N$PTR = NAME;
+         F     = ( N + 1 ) - 'A';
+         N$PTR = N$PTR + 2;
+      END;
+      DO F$PTR = FCB + 1 TO FCB + 8;  /* NAME                                */
+         IF      N = '$' THEN N$PTR = .BLANKS;
+         ELSE IF N = '.' THEN DO;     /* START OF THE EXTENSION              */
+            X$PTR =  N$PTR + 1;
+            N$PTR = .BLANKS;
+         END;
+         F     = N;
+         N$PTR = N$PTR + 1;
+      END;
+      N$PTR = X$PTR;                  /* EXTENSION                           */
+      DO F$PTR = FCB + 9 TO FCB + 11;
+         IF N = '$' THEN N$PTR =.BLANKS;
+         F     = N;
+         N$PTR = N$PTR + 1;
+      END;
+      DO F$PTR = FCB + 12 TO FCB + ( FCB$SIZE - 1 ); /* OTHER FIELDS         */
+         F = 0;
+      END;
+   END INIT$FCB ;
+
+   EXISTS: PROCEDURE( FCB )BYTE; /* RETURNS TRUE IF THE FILE NAMED IN THE    */
+      DECLARE FCB ADDRESS;       /*                 FCB EXISTS               */
+      RETURN ( SEARCH$FIRST( FCB ) < 4 );
+   END EXISTS ;
+
+   DECLARE FCB$1$DATA ( FCB$SIZE )BYTE;  /* DECLARE A FILE-CONTROL-BLOCK     */
+   DECLARE FCB$1 ADDRESS;
+   FCB$1 = .FCB$1$DATA;
+
+   /* CP/M DOES NOT HAVE DIRECTORIES/FOLDERS - THIS TESTS FOR INPUT.TXT IN   */
+   /* THE CURRENT DEFAULT DRIVE                                              */
+   CALL INIT$FCB( FCB$1, .'INPUT.TXT$' );
+   CALL PRINT$STRING( .'INPUT.TXT: $' );
+   IF EXISTS( FCB$1 ) THEN CALL PRINT$STRING( .'EXISTS$' );
+                      ELSE CALL PRINT$STRING( .'DOES NOT EXIST$' );
+   CALL PRINT$NL;
+
+   /* CHECK FOR INPUT.TXT IN THE D: DRIVE                                    */
+   /* !!! THIS WILL CAUSE AN ERROR IF THERE IS NO DRIVE D:               !!! */
+   /* !!! OR THERE IS NO DISC IN DRIVE D:                                !!! */
+   CALL INIT$FCB( FCB$1, .'D:INPUT.TXT$' );
+   CALL PRINT$STRING( .'D:INPUT.TXT: $' );
+   IF EXISTS( FCB$1 ) THEN CALL PRINT$STRING( .'EXISTS$' );
+                      ELSE CALL PRINT$STRING( .'DOES NOT EXIST$' );
+   CALL PRINT$NL;
+
+EOF

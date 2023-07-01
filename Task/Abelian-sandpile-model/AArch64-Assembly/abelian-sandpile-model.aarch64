@@ -1,0 +1,196 @@
+/* ARM assembly AARCH64 Raspberry PI 3B or android 64 bits */
+/*  program abelian64.s   */
+
+/* run : abelian 256 12 12  */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ MAXI, 25
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessValue:        .asciz "@ "
+szMessErrParam:     .asciz "error : command line = abelian size posx posy  \n"
+szMessFin:          .asciz "End display :\n"
+szCarriageReturn:   .asciz "\n"
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+iSandPile:        .skip 8 * MAXI * MAXI
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            // entry of program
+    mov fp,sp
+    ldr x4,[fp]                  // load number of parameters command line
+    cmp x4,#3                    // < 4 -> error
+    ble 99f
+    add x0,fp,#32                // load address param 4 = pos y
+    ldr x0,[x0]
+    bl conversionAtoD            // conversion ascii -> numeric
+    mov x3,x0
+    add x0,fp,#24                // load address param 3 = pos x
+    ldr x0,[x0]
+    bl conversionAtoD
+    mov x2,x0
+    add x0,fp,#16                 // load address param 2 = size begin pile
+    ldr x0,[x0]
+    bl conversionAtoD
+    ldr x4,qAdriSandPile
+    mov x5,#MAXI
+    madd x5,x3,x5,x2              // compute offset = maxi * y + x
+    str x0,[x4,x5,lsl #3]         // and store size in pos x,y
+    //mov x0,x4                   // display start position
+    //bl displaySandPile
+
+    mov x0,x4                     // sandpile address
+    mov x1,x2                     // pos x to start
+    mov x2,x3                     // pos y to start
+    bl addSand
+
+    ldr x0,qAdrszMessFin
+    bl affichageMess
+    mov x0,x4
+    bl displaySandPile
+    b 100f
+99:                               // line command error
+   ldr x0,qAdrszMessErrParam
+   bl affichageMess
+100:                              // standard end of the program
+    mov x0,0                      // return code
+    mov x8,EXIT                   // request to exit program
+    svc 0                         // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsZoneConv:            .quad sZoneConv
+qAdrszMessErrParam:       .quad szMessErrParam
+qAdrszMessFin:            .quad szMessFin
+qAdriSandPile:            .quad iSandPile
+/***************************************************/
+/*     display  sandpile               */
+/***************************************************/
+// x0 contains address to sandpile
+displaySandPile:
+    stp x1,lr,[sp,-16]!         // save  registres
+    stp x2,x3,[sp,-16]!         // save  registres
+    stp x4,x5,[sp,-16]!         // save  registres
+    stp x6,x7,[sp,-16]!         // save  registres
+    mov x6,x0
+    mov x3,#0                   // indice y
+    mov x4,#MAXI
+1:
+    mov x2,#0                   // indice x
+2:
+    madd x5,x3,x4,x2            // compute offset
+    ldr x0,[x6,x5,lsl #3]       // load value at pos x,y
+    ldr x1,qAdrsZoneConv
+    bl conversion10             // call decimal conversion
+    add x1,x1,1
+    mov x7,#0
+    strb w7,[x1,x0]
+    ldr x0,qAdrszMessValue
+    ldr x1,qAdrsZoneConv        // insert value conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+    add x2,x2,1
+    cmp x2,MAXI
+    blt 2b
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    add x3,x3,1
+    cmp x3,MAXI
+    blt 1b
+
+100:
+    ldp x6,x7,[sp],16         // restaur des  2 registres
+    ldp x4,x5,[sp],16         // restaur des  2 registres
+    ldp x2,x3,[sp],16         // restaur des  2 registres
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+qAdrszMessValue:       .quad szMessValue
+/***************************************************/
+/*     display  sandpile               */
+/***************************************************/
+// x0 contains address to sanspile
+// x1 contains position x
+// x2 contains position y
+addSand:
+    stp x1,lr,[sp,-16]!         // save  registres
+    stp x2,x3,[sp,-16]!         // save  registres
+    stp x4,x5,[sp,-16]!         // save  registres
+    mov x3,#MAXI
+    madd x4,x3,x2,x1            // compute offset
+    ldr x5,[x0,x4,lsl #3]
+1:
+    cmp x5,#4                   // 4 grains ?
+    blt 100f
+    sub x5,x5,4                 // yes sustract
+    str x5,[x0,x4,lsl #3]
+    cmp x1,MAXI-1               // right position ok ?
+    beq 2f
+    add x1,x1,1                 // yes
+    bl add1Sand                 // add 1 grain
+    bl addSand                  // and compute new pile
+    sub x1,x1,1
+2:
+    cmp x1,0                    // left position ok ?
+    beq 3f
+    sub x1,x1,1
+    bl add1Sand
+    bl addSand
+    add x1,x1,1
+3:
+    cmp x2,0                    // higt position ok ?
+    beq 4f
+    sub x2,x2,1
+    bl add1Sand
+    bl addSand
+    add x2,x2,1
+4:
+    cmp x2,MAXI-1               // low position ok ?
+    beq 5f
+    add x2,x2,1
+    bl add1Sand
+    bl addSand
+    sub x2,x2,1
+5:
+   ldr x5,[x0,x4,lsl #3]       // reload value
+   b 1b                        // and loop
+100:
+    ldp x4,x5,[sp],16         // restaur des  2 registres
+    ldp x2,x3,[sp],16         // restaur des  2 registres
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+/***************************************************/
+/*     add 1 grain of sand              */
+/***************************************************/
+// x0 contains address to sanspile
+// x1 contains position x
+// x2 contains position y
+add1Sand:
+    stp x3,lr,[sp,-16]!       // save  registres
+    stp x4,x5,[sp,-16]!       // save  registres
+    mov x3,#MAXI
+    madd x4,x3,x2,x1          // compute offset
+    ldr x5,[x0,x4,lsl #3]     // load value at pos x,y
+    add x5,x5,1
+    str x5,[x0,x4,lsl #3]     // and store
+100:
+    ldp x4,x5,[sp],16         // restaur des  2 registres
+    ldp x3,lr,[sp],16         // restaur des  2 registres
+    ret
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

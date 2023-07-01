@@ -1,0 +1,4 @@
+interface IEatable
+{
+    void Eat();
+}

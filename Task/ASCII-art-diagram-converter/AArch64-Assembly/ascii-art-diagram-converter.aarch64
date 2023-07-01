@@ -1,0 +1,458 @@
+/* ARM assembly AARCH64 Raspberry PI 3B or android 64 bits */
+/*  program asciiDiagram64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* Structure result  */
+    .struct  0
+res_name:                     //
+    .struct  res_name + 8
+res_startzone:                     //
+    .struct  res_startzone + 8
+res_endzone:                     //
+    .struct  res_endzone + 8
+res_size:                     //
+    .struct  res_size + 8
+res_end:
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessDiagram:         .asciz "Display diagramm :\n"
+szMessValBin:          .asciz "\nBinary Value  :\n"
+szMessValZone:         .asciz "\nZones values : \n"
+szMessResultTab:       .asciz "Name @ start @ end @ size @ \n"
+szMessSplitZone:       .asciz "Name @ value : @ \n"
+
+szMessErrSep:          .asciz "Error : no séparator in first position of line.\n"
+szMessErrlong:         .asciz "Error : string hexa size not multiple to 4. \n"
+szCarriageReturn:      .asciz "\n"
+
+szLine1:   .asciz "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+"
+           .equ LGLINE,  . - szLine1
+szLine2:   .asciz "|                      ID                       |"
+szLine3:   .asciz "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+"
+szLine4:   .asciz "|QR|   Opcode  |AA|TC|RD|RA|   Z    |   RCODE   |"
+szLine5:   .asciz "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+"
+szLine6:   .asciz "|                    QDCOUNT                    |"
+szLine7:   .asciz "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+"
+szLine8:   .asciz "|                    ANCOUNT                    |"
+szLine9:   .asciz "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+"
+szLine10:  .asciz "|                    NSCOUNT                    |"
+szLine11:  .asciz "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+"
+szLine12:  .asciz "|                    ARCOUNT                    |"
+szLine13:  .asciz "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+"
+           .equ NBLINES,  (. - szLine1) /  LGLINE
+bSeparator:  .byte '|'
+
+szValueHex:    .asciz "78477bbf5496e12e1bf169a4"
+szValueHexTest: .asciz "0ABCDEFabcdef123"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+tbZones:          .skip res_end * NBLINES * 5
+sBuffer:          .skip 100
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 // entry of program
+    ldr x0,qAdrszMessDiagram
+    bl affichageMess
+    ldr x1,qAdrszLine1
+    mov x3,#LGLINE
+    mov x2,#0
+1:                                    // display diagram lines
+    madd x0,x2,x3,x1
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    add x2,x2,#1
+    cmp x2,#NBLINES
+    blt 1b
+
+    ldr x0,qAdrszLine1          // first line address of diagram
+    bl decode                   // decode the diagram
+    mov x8,x0                   // save result number
+    mov x3,#0                   // indice
+    mov x4,#res_end             // one result size
+    ldr x5,qAdrtbZones          // table result address
+2:
+    madd x6,x3,x4,x5             // compute result offset
+    ldr x1,[x6,#res_name]       // zone name
+    ldr x0,qAdrszMessResultTab
+    bl strInsertAtCharInc       // insertion in message
+    mov x7,x0
+    ldr x0,[x6,#res_startzone]
+    ldr x1,qAdrsZoneConv
+    bl conversion10             // call decimal conversion
+    mov x0,x7
+    ldr x1,qAdrsZoneConv        // insert value conversion in message
+    bl strInsertAtCharInc
+    mov x7,x0
+    ldr x0,[x6,#res_endzone]
+    ldr x1,qAdrsZoneConv        // else display odd message
+    bl conversion10             // call decimal conversion
+    mov x0,x7
+    ldr x1,qAdrsZoneConv        // insert value conversion in message
+    bl strInsertAtCharInc
+    mov x7,x0
+    ldr x0,[x6,#res_size]
+    ldr x1,qAdrsZoneConv        // else display odd message
+    bl conversion10             // call decimal conversion
+    mov x0,x7
+    ldr x1,qAdrsZoneConv        // insert value conversion in message
+    bl strInsertAtCharInc
+    mov x7,x0
+    bl affichageMess
+    bl libererPlace             // liberation heap area
+    add x3,x3,#1
+    cmp x3,x8
+    blt 2b
+
+    ldr x0,qAdrtbZones
+    ldr x1,qAdrszValueHex
+    //ldr x1,qAdrszValueHexTest
+    bl extractValue             // convert string value hexa in binary string
+    mov x7,x0                   // string binary address
+    ldr x0,qAdrszMessValZone
+    bl affichageMess
+
+    mov x0,x7
+    ldr x1,qAdrtbZones
+    mov x2,x8                    // result number
+    bl splitZone
+
+100:                             // standard end of the program
+    mov x0, #0                   // return code
+    mov x8, #EXIT                // request to exit program
+    svc #0                       // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszMessResultTab:      .quad szMessResultTab
+qAdrszMessDiagram:        .quad szMessDiagram
+qAdrszMessValZone:        .quad szMessValZone
+qAdrsZoneConv:            .quad sZoneConv
+qAdrszLine1:              .quad szLine1
+qAdrszValueHex:           .quad szValueHex
+qAdrszValueHexTest:       .quad szValueHexTest
+/***************************************************/
+/*     decode lines                                */
+/***************************************************/
+// x0 contains diagram address
+// x0 return result counter
+decode:
+    stp x1,lr,[sp,-16]!         // save  registres
+    stp x2,x3,[sp,-16]!         // save  registres
+    stp x4,x5,[sp,-16]!         // save  registres
+    stp x6,x7,[sp,-16]!         // save  registres
+    mov x5,x0
+    mov x7,#LGLINE           // size line diagram
+    ldr x3,qAdrbSeparator    // séparator
+    ldrb w3,[x3]
+    ldr x1,qAdrtbZones       // result table address
+    mov x2,#0                // result counter
+    mov x6,#1                // line 2
+1:
+    madd x0,x6,x7,x5         // compute line offset
+    ldrb w4,[x0]             // load one byte
+    cmp w4,w3                // separator ?
+    bne 99f                  // no -> error
+    bl decodeOneLine         // decode a line
+    mov x2,x0                // new result number
+    add x6,x6,#2             // new line
+    cmp x6,#NBLINES          // end ?
+    blt 1b
+
+    mov x0,x2                // return result counter
+    b 100f
+99:
+    ldr x0,qAdrszMessErrSep
+    bl affichageMess
+    mov x0,#-1
+100:
+    ldp x6,x7,[sp],16         // restaur des  2 registres
+    ldp x4,x5,[sp],16         // restaur des  2 registres
+    ldp x2,x3,[sp],16         // restaur des  2 registres
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+qAdrbSeparator:            .quad bSeparator
+qAdrszMessErrSep:          .quad szMessErrSep
+qAdrtbZones:               .quad tbZones
+/***************************************************/
+/*     decode one line               */
+/***************************************************/
+// x0 contains line diagram address
+// x1 contains table result
+// x2 contains result number
+// x3 contains séparator
+// x0 return new result number
+decodeOneLine:
+    stp x1,lr,[sp,-16]!         // save  registres
+    stp x2,x3,[sp,-16]!         // save  registres
+    stp x4,x5,[sp,-16]!         // save  registres
+    stp x6,x7,[sp,-16]!         // save  registres
+    stp x8,x9,[sp,-16]!         // save  registres
+    stp x10,x11,[sp,-16]!         // save  registres
+    stp x12,x13,[sp,-16]!         // save  registres
+    mov x11,x0          // save address diagram
+    mov x7,x1           // save address table result
+    mov x4,x2           // save result counter
+    mov x0,#0           // zone size
+    mov x5,#-1          // name text begin address
+    mov x6,x3           // séparator
+    mov x8,#res_end
+    mov x10,#0          // zone start
+    mov x12,#1          // character indice
+1:
+    ldrb w1,[x11,x12]   // load one byte
+    cmp w1,#0           // line end ?
+    beq 10f
+    cmp w1,w6           // separator ?
+    beq 3f
+    cmp w1,#' '         // space ?
+    bne 2f
+    cmp x5,#0           // text name found ?
+    mov x1,#0
+    blt 11f
+    strb w1,[x11,x12]   // yes -> 0 final text
+11:
+    add x0,x0,#1        // increment zone size
+    add x12,x12,#1      // new byte
+    b 1b                // and loop
+2:
+    cmp x5,#0           // text name found ?
+    add x1,x11,x12      // no -> start zone
+    csel x5,x1,x5,lt
+    add x0,x0,#1        // increment zone size
+    add x12,x12,#1      // new byte
+    b 1b                // and loop
+3:                      // separator
+    cmp x5,#0           // zone name ?
+    blt 31f
+    mov x1,#0
+    strb w1,[x11,x12] // yes -> 0 final
+31:
+    madd x9,x4,x8,x7     // compute result offset
+    str x5,[x9,#res_name] // store address start name
+    add x0,x0,#1        // compute zone size
+    cmp x0,#3
+    mov x1,#2
+    mov x5,#3
+    csel x1,x5,x1,gt
+    udiv x2,x0,x1    // / by size characters zone
+    str x2,[x9,#res_size]
+    cmp x4,#0           // first result ?
+    csel x10,xzr,x10,eq
+    beq 4f
+    sub x10,x9,x8       // else start zone = prev end zone + 1
+    ldr x10,[x10,#res_endzone]
+    add x10,x10,#1
+4:
+    str x10,[x9,#res_startzone]
+    add x10,x10,x2      // end zone = start zone + size - 1
+    sub x10,x10,#1
+    str x10,[x9,#res_endzone]
+    add x4,x4,#1        // increment counter result
+    mov x0,#0           // raz size zone
+    add x10,x10,#1      // next byte
+    mov x5,#-1          // no text name
+    add x12,x12,#1      // next byte
+    b 1b                // and loop
+10:
+    mov x0,x4           // return result counter
+100:
+    ldp x12,x13,[sp],16         // restaur des  2 registres
+    ldp x10,x11,[sp],16         // restaur des  2 registres
+    ldp x8,x9,[sp],16         // restaur des  2 registres
+    ldp x6,x7,[sp],16         // restaur des  2 registres
+    ldp x4,x5,[sp],16         // restaur des  2 registres
+    ldp x2,x3,[sp],16         // restaur des  2 registres
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+/***************************************************/
+/*     convert strinh value hexa in binary string   */
+/***************************************************/
+// x0 contains diagram address
+// x1 contains string hex value
+extractValue:
+    stp x1,lr,[sp,-16]!         // save  registres
+    stp x2,x3,[sp,-16]!         // save  registres
+    stp x4,x5,[sp,-16]!         // save  registres
+    stp x6,x7,[sp,-16]!         // save  registres
+    stp x8,x9,[sp,-16]!         // save  registres
+    mov x5,x0                   // save address
+    ldr x0,qAdrszMessValBin
+    bl affichageMess
+    mov x6,x1                   // save address string hexa
+    mov x2,#0
+    mov x3,#0
+1:                              // compute string size
+    ldrb w4,[x1,x2]             // load byte
+    cmp w4,#0                   // end string ?
+    cinc x2,x2,ne
+    bne 1b
+    lsr x8,x2,#2                // control if multiple of 4
+    lsl x3,x8,#2
+    cmp x3,x2
+    bne 99f                     // no -> error
+    lsl x0,x2,#3                // compute size string * 8
+    add x0,x0,#1                // zero final
+    bl reserverPlace            // reserve array on the heap
+    mov x7,x0                   // address of heap array
+    mov x1,x0                   // for routine
+    mov x0,x6                   // address string value hexa
+    bl conversionBin            // conversion string hexa -> binary
+    mov x0,x7
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    mov x0,x7                   // return address string binary
+    b 100f
+99:
+    ldr x0,qAdrszMessErrlong
+    bl affichageMess
+    mov x0,#-1
+100:
+    ldp x8,x9,[sp],16         // restaur des  2 registres
+    ldp x6,x7,[sp],16         // restaur des  2 registres
+    ldp x4,x5,[sp],16         // restaur des  2 registres
+    ldp x2,x3,[sp],16         // restaur des  2 registres
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+qAdrszMessValBin:       .quad szMessValBin
+qAdrszMessErrlong:      .quad szMessErrlong
+/***************************************************/
+/*     decode lines               */
+/***************************************************/
+// x0 contains address string binary
+// x1 contains table zones address
+// x2 contains result number
+splitZone:
+    stp x1,lr,[sp,-16]!         // save  registres
+    stp x2,x3,[sp,-16]!         // save  registres
+    stp x4,x5,[sp,-16]!         // save  registres
+    stp x6,x7,[sp,-16]!         // save  registres
+    stp x8,x9,[sp,-16]!         // save  registres
+    stp x10,x11,[sp,-16]!         // save  registres
+    stp x12,x13,[sp,-16]!         // save  registres
+    mov x5,x0
+    mov x6,x1
+    mov x3,#0                // indice table
+    mov x4,#0                // indice string
+    mov x8,#res_end
+1:                           // loop
+    madd x7,x3,x8,x6          // compute result offset
+    ldr x0,[x7,#res_startzone]
+    ldr x1,[x7,#res_size]    // zone size
+    ldr x12,qAdrsBuffer
+    mov x9,#0
+    add x0,x0,x5
+2:                           // copy bytes
+    ldrb w10,[x0,x9]
+    strb w10,[x12,x9]
+    add x9,x9,#1
+    cmp x9,x1                // zone size maxi ?
+    blt 2b                   // no -> loop
+    mov x10,#0               // 0 final
+    strb w10,[x12,x9]
+                             // dislay name and value
+    ldr x0,qAdrszMessSplitZone
+    ldr x1,[x7,#res_name]
+    bl strInsertAtCharInc
+    mov x1,x12
+    bl strInsertAtCharInc
+    bl affichageMess
+    bl libererPlace
+    add x3,x3,#1
+    cmp x3,x2                // end result ?
+    blt 1b                   //  no -> loop
+100:
+
+    ldp x12,x13,[sp],16         // restaur des  2 registres
+    ldp x10,x11,[sp],16         // restaur des  2 registres
+    ldp x8,x9,[sp],16         // restaur des  2 registres
+    ldp x6,x7,[sp],16         // restaur des  2 registres
+    ldp x4,x5,[sp],16         // restaur des  2 registres
+    ldp x2,x3,[sp],16         // restaur des  2 registres
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+qAdrszMessSplitZone:     .quad szMessSplitZone
+qAdrsBuffer:             .quad sBuffer
+/***************************************************/
+/*     conversion chaine hexa en                   */
+/***************************************************/
+// x0 contains string address
+// x1 contains buffer address
+conversionBin:
+    stp x1,lr,[sp,-16]!         // save  registres
+    stp x2,x3,[sp,-16]!         // save  registres
+    stp x4,x5,[sp,-16]!         // save  registres
+    stp x6,x7,[sp,-16]!         // save  registres
+    stp x8,x9,[sp,-16]!         // save  registres
+    mov x2,#0
+    mov x3,#0
+1:
+    ldrb w4,[x0,x2]
+    cmp w4,#0                  // string end
+    beq 10f
+    subs w4,w4,#0x30           // conversion digits
+    blt 5f
+    cmp w4,#10
+    blt 2f                     // digits 0 à 9 OK
+    cmp w4,#18                 // < A ?
+    blt 5f
+    cmp w4,#24
+    sub w5,w4,#8               // letters A-F
+    csel w4,w5,w4,lt
+    blt 2f
+    cmp w4,#49                 // < a ?
+    blt 5f
+    cmp w4,#54                 // > f ?
+    bgt 5f
+    sub w4,w4,#39              // letters  a-f
+2:                             // x4 contains value on right 4 bits
+    mov x5,#0
+    add x3,x3,#4               // size ' bits
+    sub x7,x3,#1               // store indice
+3:
+    tst x4,#1                  // test first right bit
+    mov x6,#48                 //    character '0'
+    mov x8,#49                 //    character '1'
+    csel x6,x8,x6,ne
+    lsr x4,x4,1
+    strb w6,[x1,x7]            // character ->   display zone
+    sub x7,x7,#1               // prev position
+    add x5,x5,#1               // next bit
+    cmp x5,#4                  // end ?
+    blt 3b
+5:                             // loop to next byte
+    add x2,x2,#1
+    b 1b
+10:
+    mov x6,#0
+    strb w6,[x1,x3]            // zéro final
+100:
+    ldp x8,x9,[sp],16         // restaur des  2 registres
+    ldp x6,x7,[sp],16         // restaur des  2 registres
+    ldp x4,x5,[sp],16         // restaur des  2 registres
+    ldp x2,x3,[sp],16         // restaur des  2 registres
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

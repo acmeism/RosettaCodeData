@@ -1,0 +1,130 @@
+\ Convert infix expression to postfix, using 'shunting-yard' algorithm
+\ https://en.wikipedia.org/wiki/Shunting-yard_algorithm
+
+
+\ precedence of infix tokens.  negative means 'right-associative', otherwise left:
+with: n
+{
+  "+" : 2,
+  "-" : 2,
+  "/" : 3,
+  "*" : 3,
+  "^" : -4,
+  "(" : 1,
+  ")" : -1
+} var, tokens
+
+: precedence \ s -- s n
+  tokens @ over m:@ nip
+  null? if drop 0 then ;
+
+var ops
+var out
+
+: >out \ x --
+  out @ swap
+  a:push drop ;
+
+: >ops \ op prec --
+  2 a:close
+  ops @ swap
+  a:push drop ;
+
+: a:peek -1 a:@ ;
+
+\ Check the array for items with greater or equal precedence,
+\ and move them to the out queue:
+: pop-ops \ op prec ops -- op prec ops
+  \ empty array, do nothing:
+  a:len not if ;; then
+
+  \ Look at top of ops stack:
+  a:peek a:open            \ op p ops[] op2 p2
+
+  \ if the 'p2' is not less p (meaning item on top of stack is greater or equal
+  \ in precedence), then pop the item from the ops stack and push onto the out:
+  3 pick \ p2 p
+  < not if
+    \ op p ops[] op2
+    >out a:pop drop recurse ;;
+  then
+  drop ;
+
+
+: right-paren
+  "RIGHTPAREN" . cr
+  2drop
+  \ move non-left-paren from ops and move to out:
+  ops @
+  repeat
+    a:len not if
+      break
+    else
+      a:pop a:open
+      1 = if
+        2drop ;;
+      else
+        >out
+      then
+    then
+  again drop ;
+
+: .state \ n --
+drop \  "Token: %s\n" s:strfmt .
+  "Out:   " .
+    out @  ( . space drop ) a:each drop cr
+  "ops:   " .  ops @ ( 0 a:@ . space 2drop ) a:each drop cr cr ;
+
+: handle-number \ s n --
+  "NUMBER " . over . cr
+  drop >out ;
+
+: left-paren \ s n --
+  "LEFTPAREN" .  cr
+  >ops ;
+
+: handle-op \ s n --
+    "OPERATOR " . over . cr
+    \ op precedence
+    \ Is the current op left-associative?
+    dup sgn 1 = if
+      \ it is, so check the ops array for items with greater or equal precedence,
+      \ and move them to the out queue:
+      ops @ pop-ops drop
+    then
+    \ push the operator
+    >ops ;
+
+: handle-token \ s --
+  precedence dup not if
+    \ it's a number:
+    handle-number
+  else
+    dup 1 = if        left-paren
+    else dup -1 = if  right-paren
+    else              handle-op
+    then then
+  then ;
+
+: infix>postfix \ s -- s
+  /\s+/ s:/           \ split to indiviual whitespace-delimited tokens
+
+  \ Initialize our data structures
+  a:new ops !   a:new out !
+
+  (
+    nip dup >r
+    handle-token
+    r> .state
+  ) a:each drop
+  \ remove all remaining ops and put on output:
+  out @
+  ops @ a:rev
+  ( nip a:open drop a:push ) a:each drop
+  \ final string:
+  " " a:join ;
+
+"3 + 4 * 2 / ( 1 - 5 ) ^ 2 ^ 3" infix>postfix . cr
+
+"Expected: \n" . "3 4 2 * 1 5 - 2 3 ^ ^ / +" .  cr
+bye

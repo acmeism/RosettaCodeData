@@ -1,0 +1,164 @@
+*      Merge sort                  19/06/2016
+MAIN   CSECT
+       STM     R14,R12,12(R13)     save caller's registers
+       LR      R12,R15             set R12 as base register
+       USING   MAIN,R12            notify assembler
+       LA      R11,SAVEXA          get the address of my savearea
+       ST      R13,4(R11)          save caller's save area pointer
+       ST      R11,8(R13)          save my save area pointer
+       LR      R13,R11             set R13 to point to my save area
+       LA      R1,1                1
+       LA      R2,NN               hbound(a)
+       BAL     R14,SPLIT           call split(1,hbound(a))
+       LA      RPGI,PG             pgi=0
+       LA      RI,1                i=1
+       DO WHILE=(C,RI,LE,=A(NN))   do i=1 to hbound(a)
+         LR    R1,RI                 i
+         SLA   R1,2                  .
+         L     R2,A-4(R1)            a(i)
+         XDECO R2,XDEC               edit a(i)
+         MVC   0(4,RPGI),XDEC+8      output a(i)
+         LA    RPGI,4(RPGI)          pgi=pgi+4
+         LA    RI,1(RI)              i=i+1
+       ENDDO   ,                   end do
+       XPRNT   PG,80               print buffer
+       L       R13,SAVEXA+4        restore caller's savearea address
+       LM      R14,R12,12(R13)     restore caller's registers
+       XR      R15,R15             set return code to 0
+       BR      R14                 return to caller
+*      split(istart,iend)          ------recursive---------------------
+SPLIT  STM     R14,R12,12(R13)     save all registers
+       LR      R9,R1               save R1
+       LA      R1,72               amount of storage required
+       GETMAIN RU,LV=(R1)          allocate storage for stack
+       USING   STACK,R10           make storage addressable
+       LR      R10,R1              establish stack addressability
+       LA      R11,SAVEXB          get the address of my savearea
+       ST      R13,4(R11)          save caller's save area pointer
+       ST      R11,8(R13)          save my save area pointer
+       LR      R13,R11             set R13 to point to my save area
+       LR      R1,R9               restore R1
+       LR      RSTART,R1           istart=R1
+       LR      REND,R2             iend=R2
+       IF CR,REND,EQ,RSTART THEN   if iend=istart
+         B     RETURN                return
+       ENDIF   ,                   end if
+       BCTR    R2,0                iend-1
+       IF C,R2,EQ,RSTART THEN      if iend-istart=1
+         LR    R1,REND               iend
+         SLA   R1,2                  .
+         L     R2,A-4(R1)            a(iend)
+         LR    R1,RSTART             istart
+         SLA   R1,2                  .
+         L     R3,A-4(R1)            a(istart)
+         IF CR,R2,LT,R3 THEN         if a(iend)<a(istart)
+           LR  R1,RSTART               istart
+           SLA R1,2                    .
+           LA  R2,A-4(R1)              @a(istart)
+           LR  R1,REND                 iend
+           SLA R1,2                    .
+           LA  R3,A-4(R1)              @a(iend)
+           MVC TEMP,0(R2)              temp=a(istart)
+           MVC 0(4,R2),0(R3)           a(istart)=a(iend)
+           MVC 0(4,R3),TEMP            a(iend)=temp
+         ENDIF ,                     end if
+         B     RETURN                return
+       ENDIF   ,                   end if
+       LR      RMIDDL,REND         iend
+       SR      RMIDDL,RSTART       iend-istart
+       SRA     RMIDDL,1            (iend-istart)/2
+       AR      RMIDDL,RSTART       imiddl=istart+(iend-istart)/2
+       LR      R1,RSTART           istart
+       LR      R2,RMIDDL           imiddl
+       BAL     R14,SPLIT           call split(istart,imiddl)
+       LA      R1,1(RMIDDL)        imiddl+1
+       LR      R2,REND             iend
+       BAL     R14,SPLIT           call split(imiddl+1,iend)
+       LR      R1,RSTART           istart
+       LR      R2,RMIDDL           imiddl
+       LR      R3,REND             iend
+       BAL     R14,MERGE           call merge(istart,imiddl,iend)
+RETURN L       R13,SAVEXB+4        restore caller's savearea address
+       XR      R15,R15             set return code to 0
+       LA      R0,72               amount of storage to free
+       FREEMAIN A=(R10),LV=(R0)    free allocated storage
+       L       R14,12(R13)         restore caller's return address
+       LM      R2,R12,28(R13)      restore registers R2 to R12
+       BR      R14                 return to caller
+       DROP    R10                 base no longer needed
+*      merge(jstart,jmiddl,jend)   ------------------------------------
+MERGE  STM     R1,R3,JSTART        jstart=r1,jmiddl=r2,jend=r3
+       SR      R2,R1               jmiddl-jstart
+       LA      RBS,2(R2)           bs=jmiddl-jstart+2
+       LA      RI,1                i=1
+       LR      R3,RBS              bs
+       BCTR    R3,0                bs-1
+       DO WHILE=(CR,RI,LE,R3)      do i=0 to bs-1
+         L     R2,JSTART             jstart
+         AR    R2,RI                 jstart+i
+         SLA   R2,2                  .
+         L     R2,A-8(R2)            a(jstart+i-1)
+         LR    R1,RI                 i
+         SLA   R1,2                  .
+         ST    R2,B-4(R1)            b(i)=a(jstart+i-1)
+         LA    RI,1(RI)              i=i+1
+       ENDDO   ,                   end do
+       LA      RI,1                i=1
+       L       RJ,JMIDDL           j=jmiddl
+       LA      RJ,1(RJ)            j=jmiddl+1
+       L       RK,JSTART           k=jstart
+       DO UNTIL=(CR,RI,EQ,RBS,OR,  do until i=bs or                    X
+               C,RJ,GT,JEND)                j>jend
+         LR    R1,RI                 i
+         SLA   R1,2                  .
+         L     R4,B-4(R1)            r4=b(i)
+         LR    R1,RJ                 j
+         SLA   R1,2                  .
+         L     R3,A-4(R1)            r3=a(j)
+         LR    R9,RK                 k
+         SLA   R9,2                  r9 for a(k)
+         IF CR,R4,LE,R3 THEN         if b(i)<=a(j)
+           ST  R4,A-4(R9)              a(k)=b(i)
+           LA  RI,1(RI)                i=i+1
+         ELSE  ,                     else
+           ST  R3,A-4(R9)              a(k)=a(j)
+           LA  RJ,1(RJ)                j=j+1
+         ENDIF ,                     end if
+         LA    RK,1(RK)              k=k+1
+       ENDDO   ,                   end do
+       DO WHILE=(CR,RI,LT,RBS)     do while i<bs
+         LR    R1,RI                 i
+         SLA   R1,2                  .
+         L     R2,B-4(R1)            b(i)
+         LR    R1,RK                 k
+         SLA   R1,2                  .
+         ST    R2,A-4(R1)            a(k)=b(i)
+         LA    RI,1(RI)              i=i+1
+         LA    RK,1(RK)              k=k+1
+       ENDDO   ,                   end do
+       BR      R14                 return to caller
+*      ------- ------------------  ------------------------------------
+       LTORG
+SAVEXA DS      18F                 savearea of main
+NN     EQU     ((B-A)/L'A)         number of items
+A      DC F'4',F'65',F'2',F'-31',F'0',F'99',F'2',F'83',F'782',F'1'
+       DC F'45',F'82',F'69',F'82',F'104',F'58',F'88',F'112',F'89',F'74'
+B      DS      (NN/2+1)F           merge sort static storage
+TEMP   DS      F                   for swap
+JSTART DS      F                   jstart
+JMIDDL DS      F                   jmiddl
+JEND   DS      F                   jend
+PG     DC      CL80' '             buffer
+XDEC   DS      CL12                for edit
+STACK  DSECT                       dynamic area
+SAVEXB DS      18F                 " savearea of mergsort (72 bytes)
+       YREGS
+RI     EQU     6                   i
+RJ     EQU     7                   j
+RK     EQU     8                   k
+RSTART EQU     6                   istart
+REND   EQU     7                   i
+RMIDDL EQU     8                   i
+RPGI   EQU     3                   pgi
+RBS    EQU     0                   bs
+       END     MAIN

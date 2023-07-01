@@ -1,0 +1,680 @@
+' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' '
+' Read a Configuration File V1.0                    '
+'                                                   '
+' Developed by A. David Garza Marín in VB-DOS for   '
+' RosettaCode. December 2, 2016.                    '
+' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' ' '
+
+' OPTION EXPLICIT  ' For VB-DOS, PDS 7.1
+' OPTION _EXPLICIT  ' For QB64
+
+' SUBs and FUNCTIONs
+DECLARE SUB AppendCommentToConfFile (WhichFile AS STRING, WhichComment AS STRING, LeaveALine AS INTEGER)
+DECLARE SUB setNValToVarArr (WhichVariable AS STRING, WhichIndex AS INTEGER, WhatValue AS DOUBLE)
+DECLARE SUB setSValToVar (WhichVariable AS STRING, WhatValue AS STRING)
+DECLARE SUB setSValToVarArr (WhichVariable AS STRING, WhichIndex AS INTEGER, WhatValue AS STRING)
+DECLARE SUB doModifyArrValueFromConfFile (WhichFile AS STRING, WhichVariable AS STRING, WhichIndex AS INTEGER, WhatValue AS STRING, Separator AS STRING, ToComment AS INTEGER)
+DECLARE SUB doModifyValueFromConfFile (WhichFile AS STRING, WhichVariable AS STRING, WhatValue AS STRING, Separator AS STRING, ToComment AS INTEGER)
+DECLARE FUNCTION CreateConfFile% (WhichFile AS STRING)
+DECLARE FUNCTION ErrorMessage$ (WhichError AS INTEGER)
+DECLARE FUNCTION FileExists% (WhichFile AS STRING)
+DECLARE FUNCTION FindVarPos% (WhichVariable AS STRING)
+DECLARE FUNCTION FindVarPosArr% (WhichVariable AS STRING, WhichIndex AS INTEGER)
+DECLARE FUNCTION getArrayVariable$ (WhichVariable AS STRING, WhichIndex AS INTEGER)
+DECLARE FUNCTION getVariable$ (WhichVariable AS STRING)
+DECLARE FUNCTION getVarType% (WhatValue AS STRING)
+DECLARE FUNCTION GetDummyFile$ (WhichFile AS STRING)
+DECLARE FUNCTION HowManyElementsInTheArray% (WhichVariable AS STRING)
+DECLARE FUNCTION IsItAnArray% (WhichVariable AS STRING)
+DECLARE FUNCTION IsItTheVariableImLookingFor% (TextToAnalyze AS STRING, WhichVariable AS STRING)
+DECLARE FUNCTION NewValueForTheVariable$ (WhichVariable AS STRING, WhichIndex AS INTEGER, WhatValue AS STRING, Separator AS STRING)
+DECLARE FUNCTION ReadConfFile% (NameOfConfFile AS STRING)
+DECLARE FUNCTION YorN$ ()
+
+' Register for values located
+TYPE regVarValue
+  VarName AS STRING * 20
+  VarType AS INTEGER ' 1=String, 2=Integer, 3=Real, 4=Comment
+  VarValue AS STRING * 30
+END TYPE
+
+' Var
+DIM rVarValue() AS regVarValue, iErr AS INTEGER, i AS INTEGER, iHMV AS INTEGER
+DIM iArrayElements AS INTEGER, iWhichElement AS INTEGER, iCommentStat AS INTEGER
+DIM iAnArray AS INTEGER, iSave AS INTEGER
+DIM otherfamily(1 TO 2) AS STRING
+DIM sVar AS STRING, sVal AS STRING, sComment AS STRING
+CONST ConfFileName = "config2.fil"
+CONST False = 0, True = NOT False
+
+' ------------------- Main Program ------------------------
+DO
+  CLS
+  ERASE rVarValue
+  PRINT "This program reads a configuration file and shows the result."
+  PRINT
+  PRINT "Default file name: "; ConfFileName
+  PRINT
+  iErr = ReadConfFile(ConfFileName)
+  IF iErr = 0 THEN
+    iHMV = UBOUND(rVarValue)
+    PRINT "Variables found in file:"
+    FOR i = 1 TO iHMV
+      PRINT RTRIM$(rVarValue(i).VarName); " = "; RTRIM$(rVarValue(i).VarValue); " (";
+      SELECT CASE rVarValue(i).VarType
+        CASE 0: PRINT "Undefined";
+        CASE 1: PRINT "String";
+        CASE 2: PRINT "Integer";
+        CASE 3: PRINT "Real";
+        CASE 4: PRINT "Is a commented variable";
+      END SELECT
+      PRINT ")"
+    NEXT i
+    PRINT
+
+    INPUT "Type the variable name to modify (Blank=End)"; sVar
+    sVar = RTRIM$(LTRIM$(sVar))
+    IF LEN(sVar) > 0 THEN
+       i = FindVarPos%(sVar)
+       IF i > 0 THEN ' Variable found
+         iAnArray = IsItAnArray%(sVar)
+         IF iAnArray THEN
+           iArrayElements = HowManyElementsInTheArray%(sVar)
+           PRINT "This is an array of"; iArrayElements; " elements."
+           INPUT "Which one do you want to modify (Default=1)"; iWhichElement
+           IF iWhichElement = 0 THEN iWhichElement = 1
+         ELSE
+           iArrayElements = 1
+           iWhichElement = 1
+         END IF
+         PRINT "The current value of the variable is: "
+         IF iAnArray THEN
+           PRINT sVar; "("; iWhichElement; ") = "; RTRIM$(rVarValue(i + (iWhichElement - 1)).VarValue)
+         ELSE
+           PRINT sVar; " = "; RTRIM$(rVarValue(i + (iWhichElement - 1)).VarValue)
+         END IF
+       ELSE
+         PRINT "The variable was not found. It will be added."
+       END IF
+       PRINT
+       INPUT "Please, set the new value for the variable (Blank=Unmodified)"; sVal
+       sVal = RTRIM$(LTRIM$(sVal))
+       IF i > 0 THEN
+         IF rVarValue(i + (iWhichElement - 1)).VarType = 4 THEN
+           PRINT "Do you want to remove the comment status to the variable? (Y/N)"
+           iCommentStat = NOT (YorN = "Y")
+           iCommentStat = ABS(iCommentStat) ' Gets 0 (Toggle) or 1 (Leave unmodified)
+           iSave = (iCommentStat = 0)
+         ELSE
+           PRINT "Do you want to toggle the variable as a comment? (Y/N)"
+           iCommentStat = (YorN = "Y") ' Gets 0 (Uncommented) or -1 (Toggle as a Comment)
+           iSave = iCommentStat
+         END IF
+       END IF
+
+       ' Now, update or add the variable to the conf file
+       IF i > 0 THEN
+         IF sVal = "" THEN
+           sVal = RTRIM$(rVarValue(i).VarValue)
+         END IF
+       ELSE
+         PRINT "The variable will be added to the configuration file."
+         PRINT "Do you want to add a remark for it? (Y/N)"
+         IF YorN$ = "Y" THEN
+           LINE INPUT "Please, write your remark: ", sComment
+           sComment = LTRIM$(RTRIM$(sComment))
+           IF sComment <> "" THEN
+             AppendCommentToConfFile ConfFileName, sComment, True
+           END IF
+         END IF
+       END IF
+
+       ' Verifies if the variable will be modified, and applies the modification
+       IF sVal <> "" OR iSave THEN
+         IF iWhichElement > 1 THEN
+           setSValToVarArr sVar, iWhichElement, sVal
+           doModifyArrValueFromConfFile ConfFileName, sVar, iWhichElement, sVal, " ", iCommentStat
+         ELSE
+           setSValToVar sVar, sVal
+           doModifyValueFromConfFile ConfFileName, sVar, sVal, " ", iCommentStat
+         END IF
+       END IF
+
+    END IF
+  ELSE
+    PRINT ErrorMessage$(iErr)
+  END IF
+  PRINT
+  PRINT "Do you want to add or modify another variable? (Y/N)"
+LOOP UNTIL YorN$ = "N"
+' --------- End of Main Program -----------------------
+PRINT
+PRINT "End of program."
+END
+
+FileError:
+  iErr = ERR
+RESUME NEXT
+
+SUB AppendCommentToConfFile (WhichFile AS STRING, WhichComment AS STRING, LeaveALine AS INTEGER)
+   ' Parameters:
+   ' WhichFile: Name of the file where a comment will be appended.
+   ' WhichComment: A comment. It is suggested to add a comment no larger than 75 characters.
+   '               This procedure adds a # at the beginning of the string if there is no #
+   '               sign on it in order to ensure it will be added as a comment.
+
+   ' Var
+   DIM iFil AS INTEGER
+
+   iFil = FileExists%(WhichFile)
+   IF NOT iFil THEN
+     iFil = CreateConfFile%(WhichFile)  ' Here, iFil is used as dummy to save memory
+   END IF
+
+   IF iFil THEN  ' Everything is Ok
+     iFil = FREEFILE ' Now, iFil is used to be the ID of the file
+     WhichComment = LTRIM$(RTRIM$(WhichComment))
+
+     IF LEFT$(WhichComment, 1) <> "#" THEN  ' Is it in comment format?
+       WhichComment = "# " + WhichComment
+     END IF
+
+     ' Append the comment to the file
+     OPEN WhichFile FOR APPEND AS #iFil
+       IF LeaveALine THEN
+         PRINT #iFil, ""
+       END IF
+       PRINT #iFil, WhichComment
+     CLOSE #iFil
+   END IF
+
+END SUB
+
+FUNCTION CreateConfFile% (WhichFile AS STRING)
+  ' Var
+  DIM iFile AS INTEGER
+
+  ON ERROR GOTO FileError
+
+  iFile = FREEFILE
+  OPEN WhichFile FOR OUTPUT AS #iFile
+  CLOSE iFile
+
+  ON ERROR GOTO 0
+
+  CreateConfFile = FileExists%(WhichFile)
+END FUNCTION
+
+SUB doModifyArrValueFromConfFile (WhichFile AS STRING, WhichVariable AS STRING, WhichIndex AS INTEGER, WhatValue AS STRING, Separator AS STRING, ToComment AS INTEGER)
+    ' Parameters:
+    ' WhichFile: The name of the Configuration File. It can include the full path.
+    ' WhichVariable: The name of the variable to be modified or added to the conf file.
+    ' WhichIndex: The index number of the element to be modified in a matrix (Default=1)
+    ' WhatValue: The new value to set in the variable specified in WhichVariable.
+    ' Separator: The separator between the variable name and its value in the conf file. Defaults to a space " ".
+    ' ToComment: A value to set or remove the comment mode of a variable: -1=Toggle to Comment, 0=Toggle to not comment, 1=Leave as it is.
+
+    ' Var
+    DIM iFile AS INTEGER, iFile2 AS INTEGER, iError AS INTEGER
+    DIM iMod AS INTEGER, iIsComment AS INTEGER
+    DIM sLine AS STRING, sDummyFile AS STRING, sChar AS STRING
+
+    ' If conf file doesn't exists, create one.
+    iError = 0
+    iMod = 0
+    IF NOT FileExists%(WhichFile) THEN
+      iError = CreateConfFile%(WhichFile)
+    END IF
+
+    IF NOT iError THEN  ' File exists or it was created
+      Separator = RTRIM$(LTRIM$(Separator))
+      IF Separator = "" THEN
+        Separator = " "  ' Defaults to Space
+      END IF
+      sDummyFile = GetDummyFile$(WhichFile)
+
+      ' It is assumed a text file
+      iFile = FREEFILE
+      OPEN WhichFile FOR INPUT AS #iFile
+
+      iFile2 = FREEFILE
+      OPEN sDummyFile FOR OUTPUT AS #iFile2
+
+      ' Goes through the file to find the variable
+      DO WHILE NOT EOF(iFile)
+        LINE INPUT #iFile, sLine
+        sLine = RTRIM$(LTRIM$(sLine))
+        sChar = LEFT$(sLine, 1)
+        iIsComment = (sChar = ";")
+        IF iIsComment THEN  ' Variable is commented
+          sLine = LTRIM$(MID$(sLine, 2))
+        END IF
+
+        IF sChar <> "#" AND LEN(sLine) > 0 THEN ' Is not a comment?
+          IF IsItTheVariableImLookingFor%(sLine, WhichVariable) THEN
+             sLine = NewValueForTheVariable$(WhichVariable, WhichIndex, WhatValue, Separator)
+             iMod = True
+             IF ToComment = True THEN
+               sLine = "; " + sLine
+             END IF
+          ELSEIF iIsComment THEN
+             sLine = "; " + sLine
+          END IF
+
+        END IF
+
+        PRINT #iFile2, sLine
+      LOOP
+
+      ' Reviews if a modification was done, if not, then it will
+      '   add the variable to the file.
+      IF NOT iMod THEN
+        sLine = NewValueForTheVariable$(WhichVariable, 1, WhatValue, Separator)
+        PRINT #iFile2, sLine
+      END IF
+      CLOSE iFile2, iFile
+
+      ' Removes the conf file and sets the dummy file as the conf file
+      KILL WhichFile
+      NAME sDummyFile AS WhichFile
+    END IF
+
+END SUB
+
+SUB doModifyValueFromConfFile (WhichFile AS STRING, WhichVariable AS STRING, WhatValue AS STRING, Separator AS STRING, ToComment AS INTEGER)
+  ' To see details of parameters, please see doModifyArrValueFromConfFile
+  doModifyArrValueFromConfFile WhichFile, WhichVariable, 1, WhatValue, Separator, ToComment
+END SUB
+
+FUNCTION ErrorMessage$ (WhichError AS INTEGER)
+    ' Var
+    DIM sError AS STRING
+
+    SELECT CASE WhichError
+      CASE 0: sError = "Everything went ok."
+      CASE 1: sError = "Configuration file doesn't exist."
+      CASE 2: sError = "There are no variables in the given file."
+    END SELECT
+
+    ErrorMessage$ = sError
+END FUNCTION
+
+FUNCTION FileExists% (WhichFile AS STRING)
+    ' Var
+    DIM iFile AS INTEGER
+    DIM iItExists AS INTEGER
+    SHARED iErr AS INTEGER
+
+    ON ERROR GOTO FileError
+    iFile = FREEFILE
+    iErr = 0
+    OPEN WhichFile FOR BINARY AS #iFile
+    IF iErr = 0 THEN
+        iItExists = LOF(iFile) > 0
+        CLOSE #iFile
+
+        IF NOT iItExists THEN
+            KILL WhichFile
+        END IF
+    END IF
+    ON ERROR GOTO 0
+    FileExists% = iItExists
+
+END FUNCTION
+
+FUNCTION FindVarPos% (WhichVariable AS STRING)
+  ' Will find the position of the variable
+  FindVarPos% = FindVarPosArr%(WhichVariable, 1)
+END FUNCTION
+
+FUNCTION FindVarPosArr% (WhichVariable AS STRING, WhichIndex AS INTEGER)
+  ' Var
+  DIM i AS INTEGER, iHMV AS INTEGER, iCount AS INTEGER, iPos AS INTEGER
+  DIM sVar AS STRING, sVal AS STRING, sWV AS STRING
+  SHARED rVarValue() AS regVarValue
+
+  ' Looks for a variable name and returns its position
+  iHMV = UBOUND(rVarValue)
+  sWV = UCASE$(LTRIM$(RTRIM$(WhichVariable)))
+  sVal = ""
+  iCount = 0
+  DO
+    i = i + 1
+    sVar = UCASE$(RTRIM$(rVarValue(i).VarName))
+    IF sVar = sWV THEN
+      iCount = iCount + 1
+      IF iCount = WhichIndex THEN
+        iPos = i
+      END IF
+    END IF
+  LOOP UNTIL i >= iHMV OR iPos > 0
+
+  FindVarPosArr% = iPos
+END FUNCTION
+
+FUNCTION getArrayVariable$ (WhichVariable AS STRING, WhichIndex AS INTEGER)
+  ' Var
+  DIM i AS INTEGER
+  DIM sVal AS STRING
+  SHARED rVarValue() AS regVarValue
+
+  i = FindVarPosArr%(WhichVariable, WhichIndex)
+  sVal = ""
+  IF i > 0 THEN
+    sVal = RTRIM$(rVarValue(i).VarValue)
+  END IF
+
+  ' Found it or not, it will return the result.
+  ' If the result is "" then it didn't found the requested variable.
+  getArrayVariable$ = sVal
+
+END FUNCTION
+
+FUNCTION GetDummyFile$ (WhichFile AS STRING)
+    ' Var
+    DIM i AS INTEGER, j AS INTEGER
+
+    ' Gets the path specified in WhichFile
+    i = 1
+    DO
+        j = INSTR(i, WhichFile, "\")
+        IF j > 0 THEN i = j + 1
+    LOOP UNTIL j = 0
+
+    GetDummyFile$ = LEFT$(WhichFile, i - 1) + "$dummyf$.tmp"
+END FUNCTION
+
+FUNCTION getVariable$ (WhichVariable AS STRING)
+  ' Var
+  DIM i AS INTEGER, iHMV AS INTEGER
+  DIM sVal AS STRING
+
+  ' For a single variable, looks in the first (and only)
+  '   element of the array that contains the name requested.
+  sVal = getArrayVariable$(WhichVariable, 1)
+
+  getVariable$ = sVal
+END FUNCTION
+
+FUNCTION getVarType% (WhatValue AS STRING)
+  ' Var
+  DIM sValue AS STRING, dValue AS DOUBLE, iType AS INTEGER
+
+  sValue = RTRIM$(WhatValue)
+  iType = 0
+  IF LEN(sValue) > 0 THEN
+    IF ASC(LEFT$(sValue, 1)) < 48 OR ASC(LEFT$(sValue, 1)) > 57 THEN
+      iType = 1  ' String
+    ELSE
+      dValue = VAL(sValue)
+      IF CLNG(dValue) = dValue THEN
+        iType = 2 ' Integer
+      ELSE
+        iType = 3 ' Real
+      END IF
+    END IF
+  END IF
+
+  getVarType% = iType
+END FUNCTION
+
+FUNCTION HowManyElementsInTheArray% (WhichVariable AS STRING)
+  ' Var
+  DIM i AS INTEGER, iHMV AS INTEGER, iCount AS INTEGER, iPos AS INTEGER, iQuit AS INTEGER
+  DIM sVar AS STRING, sVal AS STRING, sWV AS STRING
+  SHARED rVarValue() AS regVarValue
+
+  ' Looks for a variable name and returns its value
+  iHMV = UBOUND(rVarValue)
+  sWV = UCASE$(LTRIM$(RTRIM$(WhichVariable)))
+  sVal = ""
+
+  ' Look for all instances of WhichVariable in the
+  '  list. This is because elements of an array will not alwasy
+  '  be one after another, but alternate.
+  FOR i = 1 TO iHMV
+    sVar = UCASE$(RTRIM$(rVarValue(i).VarName))
+    IF sVar = sWV THEN
+      iCount = iCount + 1
+    END IF
+  NEXT i
+
+  HowManyElementsInTheArray = iCount
+END FUNCTION
+
+FUNCTION IsItAnArray% (WhichVariable AS STRING)
+  ' Returns if a Variable is an Array
+  IsItAnArray% = (HowManyElementsInTheArray%(WhichVariable) > 1)
+
+END FUNCTION
+
+FUNCTION IsItTheVariableImLookingFor% (TextToAnalyze AS STRING, WhichVariable AS STRING)
+  ' Var
+  DIM sVar AS STRING, sDT AS STRING, sDV AS STRING
+  DIM iSep AS INTEGER
+
+  sDT = UCASE$(RTRIM$(LTRIM$(TextToAnalyze)))
+  sDV = UCASE$(RTRIM$(LTRIM$(WhichVariable)))
+  iSep = INSTR(sDT, "=")
+  IF iSep = 0 THEN iSep = INSTR(sDT, " ")
+  IF iSep > 0 THEN
+    sVar = RTRIM$(LEFT$(sDT, iSep - 1))
+  ELSE
+    sVar = sDT
+  END IF
+
+  ' It will return True or False
+  IsItTheVariableImLookingFor% = (sVar = sDV)
+END FUNCTION
+
+FUNCTION NewValueForTheVariable$ (WhichVariable AS STRING, WhichIndex AS INTEGER, WhatValue AS STRING, Separator AS STRING)
+  ' Var
+  DIM iItem AS INTEGER, iItems AS INTEGER, iFirstItem AS INTEGER
+  DIM i AS INTEGER, iCount AS INTEGER, iHMV AS INTEGER
+  DIM sLine AS STRING, sVar AS STRING, sVar2 AS STRING
+  SHARED rVarValue() AS regVarValue
+
+  IF IsItAnArray%(WhichVariable) THEN
+    iItems = HowManyElementsInTheArray(WhichVariable)
+    iFirstItem = FindVarPosArr%(WhichVariable, 1)
+  ELSE
+    iItems = 1
+    iFirstItem = FindVarPos%(WhichVariable)
+  END IF
+  iItem = FindVarPosArr%(WhichVariable, WhichIndex)
+  sLine = ""
+  sVar = UCASE$(WhichVariable)
+  iHMV = UBOUND(rVarValue)
+
+  IF iItem > 0 THEN
+    i = iFirstItem
+    DO
+      sVar2 = UCASE$(RTRIM$(rVarValue(i).VarName))
+
+      IF sVar = sVar2 THEN  ' Does it found an element of the array?
+        iCount = iCount + 1
+        IF LEN(sLine) > 0 THEN ' Add a comma
+          sLine = sLine + ", "
+        END IF
+        IF i = iItem THEN
+          sLine = sLine + WhatValue
+        ELSE
+          sLine = sLine + RTRIM$(rVarValue(i).VarValue)
+        END IF
+      END IF
+      i = i + 1
+    LOOP UNTIL i > iHMV OR iCount = iItems
+
+    sLine = WhichVariable + Separator + sLine
+  ELSE
+    sLine = WhichVariable + Separator + WhatValue
+  END IF
+
+  NewValueForTheVariable$ = sLine
+END FUNCTION
+
+FUNCTION ReadConfFile% (NameOfConfFile AS STRING)
+  ' Var
+  DIM iFile AS INTEGER, iType AS INTEGER, iVar AS INTEGER, iHMV AS INTEGER
+  DIM iVal AS INTEGER, iCurVar AS INTEGER, i AS INTEGER, iErr AS INTEGER
+  DIM dValue AS DOUBLE, iIsComment AS INTEGER
+  DIM sLine AS STRING, sVar AS STRING, sValue  AS STRING
+  SHARED rVarValue() AS regVarValue
+
+  ' This procedure reads a configuration file with variables
+  '  and values separated by the equal sign (=) or a space.
+  '  It needs the FileExists% function.
+  '  Lines begining with # or blank will be ignored.
+  IF FileExists%(NameOfConfFile) THEN
+    iFile = FREEFILE
+    REDIM rVarValue(1 TO 10) AS regVarValue
+    OPEN NameOfConfFile FOR INPUT AS #iFile
+      WHILE NOT EOF(iFile)
+        LINE INPUT #iFile, sLine
+        sLine = RTRIM$(LTRIM$(sLine))
+        IF LEN(sLine) > 0 THEN ' Does it have any content?
+          IF LEFT$(sLine, 1) <> "#" THEN   ' Is not a comment?
+            iIsComment = (LEFT$(sLine, 1) = ";")
+            IF iIsComment THEN ' It is a commented variable
+              sLine = LTRIM$(MID$(sLine, 2))
+            END IF
+            iVar = INSTR(sLine, "=")  ' Is there an equal sign?
+            IF iVar = 0 THEN iVar = INSTR(sLine, " ") ' if not then is there a space?
+
+            GOSUB AddASpaceForAVariable
+            iCurVar = iHMV
+            IF iVar > 0 THEN  ' Is a variable and a value
+              rVarValue(iHMV).VarName = LEFT$(sLine, iVar - 1)
+            ELSE              ' Is just a variable name
+              rVarValue(iHMV).VarName = sLine
+              rVarValue(iHMV).VarValue = ""
+            END IF
+
+            IF iVar > 0 THEN  ' Get the value(s)
+              sLine = LTRIM$(MID$(sLine, iVar + 1))
+              DO  ' Look for commas
+                iVal = INSTR(sLine, ",")
+                IF iVal > 0 THEN  ' There is a comma
+                  rVarValue(iHMV).VarValue = RTRIM$(LEFT$(sLine, iVal - 1))
+                  GOSUB AddASpaceForAVariable
+                  rVarValue(iHMV).VarName = rVarValue(iHMV - 1).VarName  ' Repeats the variable name
+                  sLine = LTRIM$(MID$(sLine, iVal + 1))
+                END IF
+              LOOP UNTIL iVal = 0
+              rVarValue(iHMV).VarValue = sLine
+
+            END IF
+
+            ' Determine the variable type of each variable found in this step
+            FOR i = iCurVar TO iHMV
+              IF iIsComment THEN
+                rVarValue(i).VarType = 4  ' Is a comment
+              ELSE
+                GOSUB DetermineVariableType
+              END IF
+            NEXT i
+
+          END IF
+        END IF
+      WEND
+    CLOSE iFile
+    IF iHMV > 0 THEN
+      REDIM PRESERVE rVarValue(1 TO iHMV) AS regVarValue
+      iErr = 0 ' Everything ran ok.
+    ELSE
+      REDIM rVarValue(1 TO 1) AS regVarValue
+      iErr = 2 ' No variables found in configuration file
+    END IF
+  ELSE
+    iErr = 1 ' File doesn't exist
+  END IF
+
+  ReadConfFile = iErr
+
+EXIT FUNCTION
+
+AddASpaceForAVariable:
+  iHMV = iHMV + 1
+
+  IF UBOUND(rVarValue) < iHMV THEN  ' Are there space for a new one?
+    REDIM PRESERVE rVarValue(1 TO iHMV + 9) AS regVarValue
+  END IF
+RETURN
+
+DetermineVariableType:
+  sValue = RTRIM$(rVarValue(i).VarValue)
+  IF LEN(sValue) > 0 THEN
+    IF ASC(LEFT$(sValue, 1)) < 48 OR ASC(LEFT$(sValue, 1)) > 57 THEN
+      rVarValue(i).VarType = 1  ' String
+    ELSE
+      dValue = VAL(sValue)
+      IF CLNG(dValue) = dValue THEN
+        rVarValue(i).VarType = 2 ' Integer
+      ELSE
+        rVarValue(i).VarType = 3 ' Real
+      END IF
+    END IF
+  END IF
+RETURN
+
+END FUNCTION
+
+SUB setNValToVar (WhichVariable AS STRING, WhatValue AS DOUBLE)
+  ' Sets a numeric value to a variable
+  setNValToVarArr WhichVariable, 1, WhatValue
+END SUB
+
+SUB setNValToVarArr (WhichVariable AS STRING, WhichIndex AS INTEGER, WhatValue AS DOUBLE)
+  ' Sets a numeric value to a variable array
+  ' Var
+  DIM sVal AS STRING
+  sVal = FORMAT$(WhatValue)
+  setSValToVarArr WhichVariable, WhichIndex, sVal
+END SUB
+
+SUB setSValToVar (WhichVariable AS STRING, WhatValue AS STRING)
+   ' Sets a string value to a variable
+   setSValToVarArr WhichVariable, 1, WhatValue
+END SUB
+
+SUB setSValToVarArr (WhichVariable AS STRING, WhichIndex AS INTEGER, WhatValue AS STRING)
+  ' Sets a string value to a variable array
+  ' Var
+  DIM i AS INTEGER
+  DIM sVar AS STRING
+  SHARED rVarValue() AS regVarValue
+
+  i = FindVarPosArr%(WhichVariable, WhichIndex)
+  IF i = 0 THEN  ' Should add the variable
+    IF UBOUND(rVarValue) > 0 THEN
+      sVar = RTRIM$(rVarValue(1).VarName)
+      IF sVar <> "" THEN
+        i = UBOUND(rVarValue) + 1
+        REDIM PRESERVE rVarValue(1 TO i) AS regVarValue
+      ELSE
+        i = 1
+      END IF
+    ELSE
+      REDIM rVarValue(1 TO i) AS regVarValue
+    END IF
+    rVarValue(i).VarName = WhichVariable
+  END IF
+
+  ' Sets the new value to the variable
+  rVarValue(i).VarValue = WhatValue
+  rVarValue(i).VarType = getVarType%(WhatValue)
+END SUB
+
+FUNCTION YorN$ ()
+    ' Var
+    DIM sYorN AS STRING
+
+    DO
+      sYorN = UCASE$(INPUT$(1))
+      IF INSTR("YN", sYorN) = 0 THEN
+        BEEP
+      END IF
+    LOOP UNTIL sYorN = "Y" OR sYorN = "N"
+
+    YorN$ = sYorN
+END FUNCTION

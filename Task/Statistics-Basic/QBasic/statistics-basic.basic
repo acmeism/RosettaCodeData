@@ -1,0 +1,40 @@
+SUB sample (n)
+  DIM samp(n)
+  FOR i = 1 TO n
+    samp(i) = RND(1)
+  NEXT i
+  REM calculate mean, standard deviation
+  sum = 0
+  sumsq = 0
+  FOR i = 1 TO n
+    sum = sum + samp(i)
+    sumsq = sumsq + samp(i) ^ 2
+  NEXT i
+  PRINT "Sample size "; n
+  mean = sum / n
+  PRINT
+  PRINT "  Mean    = "; mean
+  PRINT "  Std Dev = "; (sumsq / n - mean ^ 2) ^ .5
+  PRINT
+  REM------- Show histogram
+  scal = 10
+  DIM bins(scal)
+  FOR i = 1 TO n
+    z = INT(scal * samp(i))
+    bins(z) = bins(z) + 1
+  NEXT i
+  FOR b = 0 TO scal - 1
+    PRINT "  "; b; " : ";
+    FOR j = 1 TO INT(scal * bins(b)) / n * 70
+      PRINT "*";
+    NEXT j
+    PRINT
+  NEXT b
+  PRINT
+END SUB
+
+CLS
+sample (100)
+sample (1000)
+sample (10000)
+END

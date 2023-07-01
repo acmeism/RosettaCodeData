@@ -1,0 +1,1 @@
+.stderr~lineout("Goodbye, World!")

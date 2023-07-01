@@ -1,0 +1,108 @@
+link printf
+
+procedure main(A)
+   h := (0 < integer(\A[1])) | 4             # cells high
+   w := (0 < integer(\A[2])) | 5             # cells wide
+   u := (10 < integer(\A[3])) | 30           # length of cell side
+   HoneyComb(h,w,u)
+end
+
+$define INACTIVE "light yellow"
+$define ACTIVE   "light purple"
+
+procedure HoneyComb(h,w,u)                   #: run HoneyComb demo
+
+   wb := u/2                                 # window border
+   wmsg := 10                                # . message space
+   ww := 2*wb + u*(3*w+1)/2                  # . width
+   wh := 2*wb+wmsg+integer((h+1)*u*sqrt(3.)) # . height
+
+   chosen := sprintf("black,%d",wb)
+   fine   := sprintf("black,%d",wmsg)
+
+   wparms := [ title := sprintf("HoneyComb-%dx%d",h,w),
+               "g","bg=white","fg=black",
+               sprintf("size=%d,%d",ww,wh) ]
+   &window := open!wparms | stop("Unable to open window")
+
+   alpha := &ucase                           # per original spec
+   if h*w > *alpha then alpha ++:= &lcase    # more
+   if h*w > *alpha then alpha ++:= &digits   # more again
+   if h*w > *alpha then
+      stop("More than ",*alpha," cells.")    # choke
+
+   every put(letters := [],!string(alpha))
+   every !letters :=: ?letters               # randomize
+
+   Widgets := []                             # prepare widgets
+   every c := 1 to w do {                    # layout grid of cells
+      if /top then                           # start at top left
+         x := y := wb
+      else {                                 # continue right from top
+         x := top.rx
+         y := if c % 2 = 0 then top.ry0 else top.ry1
+         }
+      put(Widgets,W := top := HexWidget(x,y,u,get(letters)))
+      every 2 to h do                        # fill in rest of column
+         put(Widgets,W := HexWidget(x := W.dx,y := W.dy,u,get(letters)))
+      }
+
+   activated := ""
+   until *activated = *Widgets do {          # process widgets
+      e := Event()
+      every W := !Widgets do                          # select widget by
+         if ((e == &lpress) & W.inside(W,&x,&y)) |    # mouse (left press) or
+            (e == W.s) then                           # label character
+               if not find(W.s,activated) then        # activate if new
+                  break activated ||:= ( DrawCell(W,ACTIVE), W.s)
+      Font(chosen)
+      DrawString(wb,wh-wb-wmsg,"Chosen: "||activated) # update selected list
+      }
+   WriteImage(sprintf("%s-%d.gif",title,&now))        # save file
+   Font(fine)                                         # tell how to quit
+   DrawString(wb,wh-wmsg,"Right click to exit")
+   until Event() == &rpress
+   close(&window)
+end
+
+record HexWidgetData(s,u,w,h,ax,ay,cx,cy,poly,xx,xy,dx,dy,rx,ry0,ry1,inside)
+
+procedure HexWidget(ax,ay,u,s)               #: create widget s @ x,y & side u
+/u := 20.                                    # side
+x := integer(0 <= ax) | runerr(205,ax)       # ensure whole numbers
+y := integer(0 <= ay) | runerr(205,ay)
+u := integer(1 <= u)  | runerr(205,u)        # 1 is minimal if ridiculous
+h := integer(sqrt(3./4) * (w := 2 * u))      # h,w
+W := HexWidgetData(s,u,w,h,                  # string, side, width and height
+                  ax,ay,                     # absolute x,y
+                  ax+w/2,ay+h/2,             # center x,y
+                  [ax+u/2,ay, ax+(3*u)/2,ay, ax+2*u,ay+h/2,
+                   ax+(3*u)/2,ay+h, ax+u/2,ay+h, ax,ay+h/2],  # to draw polygon
+                   -u/2,h/2,                 # const for z of cross product
+                   x,ay+h,                   # next cell down
+                   ax+(3*u)/2,ay+h/2,ay-h/2, # next cells right up/down
+                   InHexWidget)              # is it activated proc
+return DrawCell(W,INACTIVE)
+end
+
+procedure DrawCell(W,colour)                 #: Draw the (general) Widget
+   Fg(colour)
+   FillPolygon!W.poly                        # can draw any polygon
+   Fg("black")
+   DrawPolygon!W.poly
+   Font(sprintf("Helvetica,%d",integer(W.h/2.)))
+   DrawString(W.cx - TextWidth(W.s)/2,
+               W.cy + (WAttrib("ascent") - WAttrib("descent"))/2 + 1,W.s)
+   return W
+end
+
+procedure InHexWidget(W,x,y)                 #: return W if x,y are inside W
+   if W.w < 0 then W.ax -:= (W.w := -W.w)                       # fix if -w
+   if W.h < 0 then W.ay -:= (W.h := -W.h)                       # fix if -h
+   if (0 < x - W.ax < W.w) & (0 < y - W.ay < W.h) then {        # disallow edge
+      if x > W.cx then x := W.cx - (x - W.cx)                   # reflect x->NW
+      if y > W.cy then y := W.cy - (y - W.cy)                   # reflect y->NW
+      if 0 > real(W.xx)*(y-W.poly[2]) - W.xy*(x-W.poly[1]) then # z from cross
+         return W
+      }
+end

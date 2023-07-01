@@ -1,0 +1,98 @@
+go ?=>
+  println("\nEnd terms with '.'.\n'quit.' ends the session.\n"),
+  Prev = findall(P,beats(P,_)),
+  ChoiceMap = new_map([P=0 : P in Prev]),
+  ResultMap = new_map([computer_wins=0,user_wins=0,draw=0]),
+  play(Prev,ChoiceMap,ResultMap),
+  nl,
+  println("Summary:"),
+  println(choiceMap=ChoiceMap),
+  println(resultMap=ResultMap),
+  nl.
+
+go => true.
+
+%
+% Play an interactive game.
+%
+play(Prev,ChoiceMap,ResultMap) =>
+  print("Your choice? "),
+  P = read_term(),
+  if P == quit then
+    nl,
+    print_result(ResultMap)
+  else
+    C = choice(ChoiceMap),
+    printf("The computer chose %w%n", C),
+    result(C,P,Prev,Next,Result),
+    ChoiceMap.put(P,ChoiceMap.get(P)+1),
+    ResultMap.put(Result,ResultMap.get(Result,0)+1),
+    play(Next,ChoiceMap,ResultMap)
+  end.
+
+%
+% Do a weighted random choice based on the user's previous choices.
+%
+weighted_choice(Map) = Choice =>
+  Map2 = [(V+1)=K : K=V in Map].sort, % ensure that all choices can be made
+  % Prepare the probability matrix M
+  Total = sum([P : P=_ in Map2]),
+  Len = Map2.len,
+  M = new_array(Len,2),
+  T = new_list(Len),
+  foreach({I,P=C} in zip(1..Len,Map2))
+    if I == 1 then
+      M[I,1] := 1,
+      M[I,2] := P
+    else
+      M[I,1] := M[I-1,2]+1,
+      M[I,2] := M[I,1]+P-1
+    end,
+    T[I] := C
+  end,
+  M[Len,2] := Total,
+
+  % Pick a random number in 1..Total
+  R = random(1,Total),
+  Choice = _,
+  % Check were R match
+  foreach(I in 1..Len, var(Choice))
+    if M[I,1] <= R, M[I,2] >= R then
+      Choice := T[I]
+    end
+  end.
+
+%
+% Check probably best counter choice.
+%
+choice(Map) = Choice =>
+  % what is the Player's probably choice
+  PlayersProbablyMove = weighted_choice(Map),
+  % select the choice that beats it
+  beats(Choice,PlayersProbablyMove).
+
+
+print_result(ResultMap) =>
+  foreach(C in ResultMap.keys)
+    println(C=ResultMap.get(C))
+  end,
+  nl.
+
+% This part is from the Prolog version.
+result(C,P,R,[C|R],Result) :-
+  beats(C,P),
+  Result = computer_wins,
+  printf("Computer wins.\n").
+result(C,P,R,[B|R],Result) :-
+  beats(P,C),
+  beats(B,P),
+  Result=user_wins,
+  printf("You win!%n").
+result(C,C,R,[B|R],Result) :-
+  beats(B,C),
+  Result=draw,
+  printf("It is a draw\n").
+
+beats(paper, rock).
+beats(rock, scissors).
+beats(scissors, paper).

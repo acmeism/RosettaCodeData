@@ -1,0 +1,10 @@
+/* MUMPS */
+MID3(N)  ;
+        N LEN,N2
+        S N2=$S(N<0:-N,1:N)
+        I N2<100 Q "NUMBER TOO SMALL"
+        S LEN=$L(N2)
+        I LEN#2=0 Q "EVEN NUMBER OF DIGITS"
+        Q $E(N2,LEN\2,LEN\2+2)
+
+F I=123,12345,1234567,987654321,10001,-10001,-123,-100,100,-12345,1,2,-1,-10,2002,-2002,0 W !,$J(I,10),": ",$$MID3^MID3(I)

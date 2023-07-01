@@ -1,0 +1,165 @@
+/* NetRexx */
+options replace format comments java crossref symbols nobinary
+
+-- input arguments:
+--   encipher/decipher IQ-switch key text
+--   encipher/decipher -
+--     a character E, D (default E; . is an alias for E)
+--   IQ-switch         -
+--     a character I, Q (default I for I==J, Q for exclude Q; . is an alias for I)
+--   key               -
+--     the cipher key - default plugh_xyzzy (really just PLUGHXYZ)
+--   text              -
+--     the text to encipher/decipher
+
+runSample(arg)
+return
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method cipher(d_, km, digraphs) public static
+  if d_.upper() = 'D' then d_ = -1 -- encode or decode adjustment
+  else                     d_ = +1
+  cipherText = ''
+  loop dw = 1 to digraphs.words()
+    -- process the digraphs one at a time
+    digraph = digraphs.word(dw)
+    cl = ''
+    cr = ''
+    -- get each letter from the digraph
+    parse digraph dl +1 dr
+    loop r_ = 1 to km[0] while (cl cr).words() < 4
+      -- locate the row/col of each letter in the cipher matrix
+      clx = km[r_].wordpos(dl)
+      crx = km[r_].wordpos(dr)
+      if clx > 0 then cl = r_ clx
+      if crx > 0 then cr = r_ crx
+      end r_
+
+    -- process the digraph's rows, columns or rectangles
+    select
+      when cl.word(1) = cr.word(1) then do
+        -- a row
+        rx  = cl.word(1)
+        clx = cl.word(2) + d_
+        crx = cr.word(2) + d_
+        if clx > 5 then clx = 1 -- wrap
+        if crx > 5 then crx = 1
+        if clx < 1 then clx = 5
+        if crx < 1 then crx = 5
+        cy = km[rx].word(clx) || km[rx].word(crx)
+        cipherText = cipherText cy
+        end
+      when cl.word(2) = cr.word(2) then do
+        -- a column
+        cx  = cl.word(2)
+        rlx = cl.word(1) + d_
+        rrx = cr.word(1) + d_
+        if rlx > 5 then rlx = 1 -- wrap
+        if rrx > 5 then rrx = 1
+        if rlx < 1 then rlx = 5
+        if rrx < 1 then rrx = 5
+        cy = km[rlx].word(cx) || km[rrx].word(cx)
+        cipherText = cipherText cy
+        end
+      otherwise do
+        -- a rectangle
+        r1  = cl.word(1)
+        r2  = cr.word(1)
+        cy = km[r1].word(cr.word(2)) || km[r2].word(cl.word(2))
+        cipherText = cipherText cy
+        end
+      end
+    end dw
+  return cipherText.strip()
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method encipher(km, digraphs) public static
+  return cipher('E', km, digraphs)
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method decipher(km, digraphs) public static
+  return cipher('D', km, digraphs)
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method getDigraphs(text, IorQ, ED) private static
+  a2z = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  if ED.upper() \= 'D' then eks = 'X'
+  else                      eks = ''
+  tp = text.upper().translate('', a2z)
+  text = text.upper().translate(' '.copies(tp.length()), tp).space(0)
+  rtext = ''
+  ll = ''
+
+  loop while text \= ''
+    parse text lc +1 text
+    if ll \= lc then rtext = rtext || lc
+    else             rtext = rtext || eks || lc
+    ll = lc
+    end
+
+  -- I == J or remove Q fixup
+  if IorQ \= 'Q' then
+    parse 'J I' IorQ sc .
+  else
+    sc = ''
+
+  rtext = rtext.changestr(IorQ, sc)
+  if rtext.length() // 2 \= 0 then rtext = rtext || eks
+  digraphs = ''
+  loop while rtext \= ''
+    parse rtext digraph +2 rtext
+    digraphs = digraphs digraph
+    end
+  return digraphs.space()
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method getKey(key, IorQ) private static
+  a2z = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  kp = (key || a2z).upper()
+  kr = ''
+  loop while kp \= ''
+    parse kp xx +1 kp
+    if \xx.datatype('u') then iterate
+    kr = kr xx
+    kp = kp.changestr(xx, '')
+    end
+
+  if IorQ = 'I' | IorQ = 'J' | IorQ = '' then
+    kr = kr.changestr('J', '')
+  else
+    kr = kr.changestr('Q', '')
+
+  return kr.space()
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method getKeyMatrix(kr) private static
+  km = ''
+  loop r_ = 1 while kr \= ''
+    parse kr kp +10 kr
+    km[0]  = r_
+    km[r_] = kp
+    end r_
+  return km
+
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+method runSample(arg) private static
+  parse arg ciph IorQ key text
+  if ciph = '' | ciph = '.' then ciph = 'E'
+  if IorQ = '' | IorQ = '.' then IorQ = 'I'
+  if key  = '' | key  = '.' then key  = 'plugh_xyzzy'
+  if text = '' | text = '.' then text = 'NetRexx; not just a programing language for kings & queens!'
+
+  kr = getKey(key.space(0), IorQ)
+  km = getKeyMatrix(kr)
+
+  digraphs = getDigraphs(text, IorQ, ciph)
+  -- fixup for a Q in the text when Q is excluded (substitute K for Q)
+  if IorQ.upper = 'Q' then digraphs = digraphs.changestr('Q', 'K')
+  if ciph = 'E' then say text
+  say digraphs
+  if ciph.upper() = 'E' then
+    say encipher(km, digraphs)
+  else
+    say decipher(km, digraphs)
+
+  return

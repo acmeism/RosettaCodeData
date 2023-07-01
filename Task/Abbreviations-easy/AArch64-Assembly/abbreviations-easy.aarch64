@@ -1,0 +1,421 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program abbrEasy64.s   */
+/* store list of command in a file */
+/* and run the program  abbrEasy64 command.file */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ BUFFERSIZE,   1000
+.equ NBMAXIELEMENTS, 100
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessTitre:            .asciz "Nom du fichier : "
+szCarriageReturn:      .asciz "\n"
+szMessErreur:          .asciz "Error detected.\n"
+szMessErrBuffer:       .asciz "buffer size too less !!"
+szMessErrorAbr:        .asciz "*error*"
+szMessInput:           .asciz "Enter command (or quit to stop) : "
+szCmdQuit:              .asciz "QUIT"
+szValTest1:            .asciz "Quit"
+szValTest2:            .asciz "Rep"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+sZoneConv:      .skip 24
+qAdrFicName:    .skip 8
+iTabAdrCmd:     .skip 8 * NBMAXIELEMENTS
+sBufferCmd:     .skip BUFFERSIZE
+sBuffer:        .skip BUFFERSIZE
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            // INFO: main
+    mov x0,sp                    // stack address for load parameter
+    bl traitFic                  // read file and store value in array
+    cmp x0,#-1
+    beq 100f                     // error ?
+    ldr x0,qAdriTabAdrCmd
+    bl controlLoad
+1:
+    ldr x0,qAdrszMessInput       // display input message
+    bl affichageMess
+    mov x0,#STDIN                // Linux input console
+    ldr x1,qAdrsBuffer           // buffer address
+    mov x2,#BUFFERSIZE           // buffer size
+    mov x8, #READ                // request to read datas
+    svc 0                        // call system
+    sub x0,x0,#1
+    mov x2,#0
+    strb w2,[x1,x0]              // replace character 0xA by zéro final
+    ldr x0,qAdrsBuffer
+    ldr x1,qAdriTabAdrCmd
+    bl controlCommand            // control text command
+    mov x2,x0
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    mov x0,x2
+    ldr x1,qAdrszCmdQuit         // command quit ?
+    bl comparStrings
+    cmp x0,#0
+    beq 100f                     // yes -> end
+    b 1b                         // else loop
+
+99:
+    ldr x0,qAdrszMessErrBuffer
+    bl affichageMess
+100:                             // standard end of the program
+    mov x0, #0                   // return code
+    mov x8, #EXIT                // request to exit program
+    svc #0                       // perform the system call
+
+qAdrszCarriageReturn:      .quad szCarriageReturn
+qAdrszMessErrBuffer:       .quad szMessErrBuffer
+qAdrsZoneConv:             .quad sZoneConv
+qAdrszMessInput:           .quad szMessInput
+qAdrszCmdQuit:             .quad szCmdQuit
+/******************************************************************/
+/*      control abbrevation command                               */
+/******************************************************************/
+/* x0 contains string input command */
+/* x1 contains address table string command */
+controlCommand:                   // INFO: controlCommand
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,x9,[sp,-16]!          // save  registres
+    mov x8,x0
+    mov x9,x1
+    bl computeLength              // length input command
+    mov x4,x0                     // save length input
+    mov x2,#0                     // indice
+    mov x3,#0                     // find counter
+1:                                // loop search command in table
+    ldr x1,[x9,x2,lsl #3]         // load a item
+    cmp x1,#0                     // end ?
+    beq 5f
+    mov x0,x8
+    bl comparStringSpe            //
+    cmp x0,#0                     // no found other search
+    beq 4f
+    mov x6,#0
+    mov x5,#0
+2:                                // loop count capital letters
+    ldrb w0,[x1,x6]
+    cmp x0,#0
+    beq 3f
+    tst x0,#0x20                  // capital letter ?
+    cinc x5,x5,eq
+    add x6,x6,#1
+    b 2b
+3:
+    cmp x4,x5                     // input < command capital letters
+    blt 4f                        // no correct
+    add x3,x3,#1                  // else increment counter
+    mov x7,x1                     // and save address command
+4:
+    add x2,x2,#1                  // increment indice
+    b 1b                          // and loop
+5:
+    cmp x3,#1                     // no find or multiple find ?
+    bne 99f                       // error
+                                  // one find
+
+    mov x0,x7                     // length command table
+    bl computeLength
+    cmp x4,x0                     // length input > command ?
+    bgt 99f                       // error
+
+    // OK
+    mov x4,#0x20                  // 5 bit to 1
+    mov x2,#0
+6:
+    ldrb w3,[x7,x2]
+    cmp x3,#0
+    beq 7f
+    bic x3,x3,x4                  // convert to capital letter
+    strb w3,[x8,x2]
+    add x2,x2,#1
+    b 6b
+7:
+    strb w3,[x8,x2]               // store zéro final
+    mov x0,x8                     // return string input address
+    b 100f
+99:
+    ldr x0,qAdrszMessErrorAbr     // return string "error"
+100:
+    ldp x8,x9,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+qAdrszMessErreur:           .quad szMessErreur
+qAdrszMessErrorAbr:         .quad szMessErrorAbr
+/******************************************************************/
+/*     comparaison first letters String                                          */
+/******************************************************************/
+/* x0 contains first String   */
+/* x1 contains second string */
+/* x0 return 0 if not find else returns number letters OK */
+comparStringSpe:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    mov x2,#0
+1:
+    ldrb w3,[x0,x2]           // input
+    orr x4,x3,#0x20           // convert capital letter
+    ldrb w5,[x1,x2]           // table
+    orr x6,x5,#0x20           // convert capital letter
+    cmp x4,x6
+    bne 2f
+    cmp x3,#0
+    beq 3f
+    add x2,x2,#1
+    b 1b
+2:
+   cmp x3,#0                  // fist letters Ok
+   beq 3f
+   mov x0,#0                  // no ok
+   b 100f
+3:
+   mov x0,x2
+100:
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+/******************************************************************/
+/*     compute length  String                                          */
+/******************************************************************/
+/* x0 contains  String   */
+/* x0 return length */
+computeLength:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    mov x1,#0
+1:
+    ldrb w2,[x0,x1]
+    cmp x2,#0                    // end ?
+    beq 2f
+    add x1,x1,#1
+    b 1b
+2:
+   mov x0,x1                  // return length in x0
+100:
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+/******************************************************************/
+/*     read file                                                   */
+/******************************************************************/
+/* x0 contains address stack begin           */
+traitFic:                             // INFO: traitFic
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,fp,[sp,-16]!          // save  registres
+    mov fp,x0                         //  fp <- start address
+    ldr x4,[fp]                       // number of Command line arguments
+    cmp x4,#1
+    ble 99f
+    add x5,fp,#16                      // second parameter address
+    ldr x5,[x5]
+    ldr x0,qAdrqAdrFicName
+    str x5,[x0]
+    ldr x0,qAdrszMessTitre
+    bl affichageMess                  // display string
+    mov x0,x5
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess                  // display carriage return
+
+    mov x0,AT_FDCWD
+    mov x1,x5                         // file name
+    mov x2,#O_RDWR                    // flags
+    mov x3,#0                         // mode
+    mov x8, #OPEN                     // call system OPEN
+    svc 0
+    cmp x0,#0                         // error ?
+    ble 99f
+    mov x7,x0                         // File Descriptor
+    ldr x1,qAdrsBufferCmd             // buffer address
+    mov x2,#BUFFERSIZE                // buffer size
+    mov x8,#READ                      // read file
+    svc #0
+    cmp x0,#0                         // error ?
+    blt 99f
+    // extraction datas
+    ldr x1,qAdrsBufferCmd             // buffer address
+    add x1,x1,x0
+    mov x0,#0                         // store zéro final
+    strb w0,[x1]
+    ldr x0,qAdriTabAdrCmd             // key string command table
+    ldr x1,qAdrsBufferCmd             // buffer address
+    bl extracDatas
+                                      // close file
+    mov x0,x7
+    mov x8, #CLOSE
+    svc 0
+    mov x0,#0
+    b 100f
+99:                                   // error
+    ldr x0,qAdrszMessErreur           // error message
+    bl   affichageMess
+    mov x0,#-1
+100:
+    ldp x8,fp,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+qAdrqAdrFicName:              .quad qAdrFicName
+qAdrszMessTitre:              .quad szMessTitre
+qAdrsBuffer:                  .quad sBuffer
+qAdrsBufferCmd:               .quad sBufferCmd
+qAdriTabAdrCmd:               .quad iTabAdrCmd
+/******************************************************************/
+/*     extrac digit file buffer                                   */
+/******************************************************************/
+/* x0 contains strings address           */
+/* x1 contains buffer address         */
+extracDatas:                     // INFO: extracDatas
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,fp,[sp,-16]!          // save  registres
+    mov x7,x0
+    mov x6,x1
+    mov x2,#0                    // string buffer indice
+    mov x4,x1                    // start string
+    mov x5,#0                    // string index
+    //vidregtit debextrac
+1:
+    ldrb w3,[x6,x2]
+    cmp x3,#0
+    beq 4f                       // end
+    cmp x3,#0xA
+    beq 2f
+    cmp x3,#' '                  // end string
+    beq 3f
+    add x2,x2,#1
+    b 1b
+2:
+    mov x3,#0
+    strb w3,[x6,x2]
+    ldrb w3,[x6,x2]
+    cmp x3,#0xD
+    bne 21f
+    add x2,x2,#2
+    b 4f
+21:
+    add x2,x2,#1
+    b 4f
+
+3:
+    mov x3,#0
+    strb w3,[x6,x2]
+    add x2,x2,#1
+4:
+    mov x0,x4
+    str x4,[x7,x5,lsl #3]
+    add x5,x5,#1
+5:
+    ldrb w3,[x6,x2]
+    cmp x3,#0
+    beq 100f
+    cmp x3,#' '
+    cinc x2,x2,eq
+    //addeq x2,x2,#1
+    beq 5b
+
+    add x4,x6,x2                 // new start address
+    b 1b
+100:
+    ldp x8,fp,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+/******************************************************************/
+/*     control load                                      */
+/******************************************************************/
+/* x0 contains string table           */
+controlLoad:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    mov x2,x0
+    mov x1,#0
+1:
+    ldr x0,[x2,x1,lsl #3]
+    cmp x0,#0
+    beq 100f
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    add x1,x1,#1
+    b 1b
+
+100:
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+/************************************/
+/* Strings case sensitive comparisons  */
+/************************************/
+/* x0 et x1 contains the address of strings */
+/* return 0 in x0 if equals */
+/* return -1 if string x0 < string x1 */
+/* return 1  if string x0 > string x1 */
+comparStrings:
+    stp x1,lr,[sp,-16]!      // save  registres
+    stp x2,x3,[sp,-16]!      // save  registres
+    stp x4,x5,[sp,-16]!      // save  registres
+    mov x2,#0                // counter
+1:
+    ldrb w3,[x0,x2]          // byte string 1
+    ldrb w4,[x1,x2]          // byte string 2
+    cmp x3,x4
+    blt 2f
+    bgt 3f
+    cmp x3,#0                // 0 end string
+    beq 4f                   // end string
+    add x2,x2,#1             // else add 1 in counter
+    b 1b                     // and loop
+2:
+    mov x0,#-1               // small
+    b 100f
+3:
+    mov x0,#1                // greather
+    b 100f
+4:
+    mov x0,#0                // equal
+100:
+    ldp x4,x5,[sp],16        // restaur des  2 registres
+    ldp x2,x3,[sp],16        // restaur des  2 registres
+    ldp x1,lr,[sp],16        // restaur des  2 registres
+    ret
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

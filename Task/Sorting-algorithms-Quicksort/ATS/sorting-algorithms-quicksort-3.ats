@@ -1,0 +1,216 @@
+(*------------------------------------------------------------------*)
+(* Quicksort in ATS2, for arrays of non-linear values.              *)
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+(*------------------------------------------------------------------*)
+
+(* A simple quicksort working on arrays of non-linear values, using
+   a programmer-selectible pivot.
+
+   It is based on the "in-place" task pseudocode. *)
+
+extern fun {a : t@ype}          (* A "less-than" predicate. *)
+array_quicksort$lt (x : a, y : a) : bool
+
+extern fun {a : t@ype}
+array_quicksort$select_pivot {n     : int}
+                             {i, j  : nat | i < j; j < n}
+                             (arr   : &array (a, n) >> _,
+                              first : size_t i,
+                              last  : size_t j) : a
+
+extern fun {a : t@ype}
+array_quicksort {n   : int}
+                (arr : &array (a, n) >> _,
+                 n   : size_t n) : void
+
+(* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - *)
+
+fn {a : t@ype}
+swap {n    : int}
+     {i, j : nat | i < n; j < n}
+     (arr  : &array(a, n) >> _,
+      i    : size_t i,
+      j    : size_t j) : void =
+  {
+    val x = arr[i] and y = arr[j]
+    val () = (arr[i] := y) and () = (arr[j] := x)
+  }
+
+implement {a}
+array_quicksort {n} (arr, n) =
+  let
+    sortdef index = {i : nat | i < n}
+    typedef index (i : int) = [0 <= i; i < n] size_t i
+    typedef index = [i : index] index i
+
+    macdef lt = array_quicksort$lt<a>
+
+    fun
+    quicksort {i, j  : index}
+              (arr   : &array(a, n) >> _,
+               first : index i,
+               last  : index j) : void =
+      if first < last then
+        {
+          val pivot : a =
+            array_quicksort$select_pivot<a> (arr, first, last)
+
+          fun
+          search_rightwards (arr  : &array (a, n),
+                             left : index) : index =
+            if arr[left] \lt pivot then
+              let
+                val () = assertloc (succ left <> n)
+              in
+                search_rightwards (arr, succ left)
+              end
+            else
+              left
+
+          fun
+          search_leftwards (arr   : &array (a, n),
+                            left  : index,
+                            right : index) : index =
+            if right < left then
+              right
+            else if pivot \lt arr[right] then
+              let
+                val () = assertloc (right <> i2sz 0)
+              in
+                search_leftwards (arr, left, pred right)
+              end
+            else
+              right
+
+          fun
+          partition (arr    : &array (a, n) >> _,
+                     left0  : index,
+                     right0 : index) : @(index, index) =
+            let
+              val left = search_rightwards (arr, left0)
+              val right = search_leftwards (arr, left, right0)
+            in
+              if left <= right then
+                let
+                  val () = assertloc (succ left <> n)
+                  and () = assertloc (right <> i2sz 0)
+                in
+                  swap (arr, left, right);
+                  partition (arr, succ left, pred right)
+                end
+              else
+                @(left, right)
+            end
+
+          val @(left, right) = partition (arr, first, last)
+
+          val () = quicksort (arr, first, right)
+          and () = quicksort (arr, left, last)
+        }
+  in
+    if i2sz 2 <= n then
+      quicksort {0, n - 1} (arr, i2sz 0, pred n)
+  end
+
+(*------------------------------------------------------------------*)
+
+val example_strings =
+  $list ("choose", "any", "element", "of", "the", "array",
+         "to", "be", "the", "pivot",
+         "divide", "all", "other", "elements", "except",
+         "the", "pivot", "into", "two", "partitions",
+         "all", "elements", "less", "than", "the", "pivot",
+         "must", "be", "in", "the", "first", "partition",
+         "all", "elements", "greater", "than", "the", "pivot",
+         "must", "be", "in", "the", "second", "partition",
+         "use", "recursion", "to", "sort", "both", "partitions",
+         "join", "the", "first", "sorted", "partition", "the",
+         "pivot", "and", "the", "second", "sorted", "partition")
+
+implement
+array_quicksort$lt<string> (x, y) =
+  strcmp (x, y) < 0
+
+implement
+array_quicksort$select_pivot<string> {n} (arr, first, last) =
+  (* Median of three, with swapping around of elements during pivot
+     selection. See https://archive.ph/oYENx *)
+  let
+    macdef lt = array_quicksort$lt<string>
+
+    val middle = first + ((last - first) / i2sz 2)
+
+    val xfirst = arr[first]
+    and xmiddle = arr[middle]
+    and xlast = arr[last]
+  in
+    if (xmiddle \lt xfirst) xor (xlast \lt xfirst) then
+      begin
+        swap (arr, first, middle);
+        if xlast \lt xmiddle then
+          swap (arr, first, last);
+        xfirst
+      end
+    else if (xmiddle \lt xfirst) xor (xmiddle \lt xlast) then
+      begin
+        if xlast \lt xfirst then
+          swap (arr, first, last);
+        xmiddle
+      end
+    else
+      begin
+        swap (arr, middle, last);
+        if xmiddle \lt xfirst then
+          swap (arr, first, last);
+        xlast
+      end
+  end
+
+implement
+main0 () =
+  let
+    prval () = lemma_list_param example_strings
+    val n = length example_strings
+
+    val @(pf, pfgc | p) = array_ptr_alloc<string> (i2sz n)
+    macdef arr = !p
+
+    val () = array_initize_list (arr, n, example_strings)
+    val () = array_quicksort<string> (arr, i2sz n)
+    val sorted_strings = list_vt2t (array2list (arr, i2sz n))
+
+    val () = array_ptr_free (pf, pfgc | p)
+
+    fun
+    print_strings {n       : nat} .<n>.
+                  (strings : list (string, n),
+                   i       : int) : void =
+      case+ strings of
+      | NIL => if i <> 1 then println! () else ()
+      | head :: tail =>
+        begin
+          print! head;
+          if i = 8 then
+            begin
+              println! ();
+              print_strings (tail, 1)
+            end
+          else
+            begin
+              print! " ";
+              print_strings (tail, succ i)
+            end
+        end
+  in
+    println! (length example_strings);
+    println! (length sorted_strings);
+    print_strings (sorted_strings, 1)
+  end
+
+(*------------------------------------------------------------------*)

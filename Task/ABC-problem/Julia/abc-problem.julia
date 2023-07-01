@@ -1,0 +1,19 @@
+using Printf
+
+function abc(str::AbstractString, list)
+    isempty(str) && return true
+    for i in eachindex(list)
+        str[end] in list[i] &&
+            any([abc(str[1:end-1], deleteat!(copy(list), i))]) &&
+            return true
+    end
+    return false
+end
+
+let test = ["A", "BARK","BOOK","TREAT","COMMON","SQUAD","CONFUSE"],
+    list = ["BO","XK","DQ","CP","NA","GT","RE","TG","QD","FS",
+            "JW","HU","VI","AN","OB","ER","FS","LY","PC","ZM"]
+    for str in test
+        @printf("%-8s |  %s\n", str, abc(str, list))
+    end
+end

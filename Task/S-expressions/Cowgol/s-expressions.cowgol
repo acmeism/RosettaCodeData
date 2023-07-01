@@ -1,0 +1,266 @@
+include "cowgol.coh";
+include "strings.coh";
+include "malloc.coh";
+
+const MAXDEPTH := 256; # Maximum depth (used for stack sizes)
+const MAXSTR := 256;   # Maximum string length
+
+# Type markers
+const T_ATOM := 1;
+const T_STRING := 2;
+const T_NUMBER := 3;
+const T_LIST := 4;
+
+# Value union
+record SVal is
+    number @at(0): int32;
+    string @at(0): [uint8]; # also used for atoms
+    list @at(0): [SExp];
+end record;
+
+# Holds a linked list of items
+record SExp is
+    type: uint8;
+    next: [SExp];
+    val: SVal;
+end record;
+
+# Free an S-Expression
+sub FreeSExp(exp: [SExp]) is
+    var stack: [SExp][MAXDEPTH];
+    stack[0] := exp;
+    var sp: @indexof stack := 1;
+
+    while sp > 0 loop
+        sp := sp - 1;
+        exp := stack[sp];
+        while exp != 0 as [SExp] loop
+            var next := exp.next;
+            case exp.type is
+                when T_ATOM:
+                    Free(exp.val.string);
+                when T_STRING:
+                    Free(exp.val.string);
+                when T_LIST:
+                    stack[sp] := exp.val.list;
+                    sp := sp + 1;
+            end case;
+            Free(exp as [uint8]);
+            exp := next;
+        end loop;
+    end loop;
+end sub;
+
+# Build an S-Expression
+sub ParseSExp(in: [uint8]): (out: [SExp]) is
+    out := 0 as [SExp];
+
+    sub SkipSpace() is
+        while ([in] != 0) and ([in] <= 32) loop
+            in := @next in;
+        end loop;
+    end sub;
+
+    sub AtomEnd(): (space: [uint8]) is
+        space := in;
+        while ([space] > 32)
+        and   ([space] != '(')
+        and   ([space] != ')') loop
+            space := @next space;
+        end loop;
+    end sub;
+
+    record Stk is
+        start: [SExp];
+        cur: [SExp];
+    end record;
+
+    var strbuf: uint8[MAXSTR];
+    var stridx: @indexof strbuf := 0;
+    var item: [SExp];
+    var stack: Stk[MAXDEPTH];
+    var sp: @indexof stack := 0;
+    stack[0].start := 0 as [SExp];
+    stack[0].cur := 0 as [SExp];
+
+    sub Store(item: [SExp]) is
+        if stack[sp].start == 0 as [SExp] then
+            stack[sp].start := item;
+        end if;
+        if stack[sp].cur != 0 as [SExp] then
+            stack[sp].cur.next := item;
+        end if;
+        stack[sp].cur := item;
+    end sub;
+
+    # called on error to clean up memory
+    sub FreeAll() is
+        loop
+            FreeSExp(stack[sp].start);
+            stack[sp].start := 0;
+            if sp == 0 then break; end if;
+            sp := sp - 1;
+        end loop;
+    end sub;
+
+    loop
+        SkipSpace();
+        case [in] is
+            when 0: break;
+            when '"':
+                var escape: uint8 := 0;
+                stridx := 0;
+                loop
+                    in := @next in;
+                    if [in] == 0 then break;
+                    elseif escape == 1 then
+                        strbuf[stridx] := [in];
+                        stridx := stridx + 1;
+                        escape := 0;
+                    elseif [in] == '\\' then escape := 1;
+                    elseif [in] == '"' then break;
+                    else
+                        strbuf[stridx] := [in];
+                        stridx := stridx + 1;
+                    end if;
+                end loop;
+
+                if [in] == 0 then
+                    # missing _"_
+                    FreeAll();
+                    return;
+                end if;
+                in := @next in;
+                strbuf[stridx] := 0;
+                stridx := stridx + 1;
+
+                item := Alloc(@bytesof SExp) as [SExp];
+                item.type := T_STRING;
+                item.val.string := Alloc(stridx as intptr);
+                CopyString(&strbuf[0], item.val.string);
+                Store(item);
+            when '(':
+                in := @next in;
+                sp := sp + 1;
+                stack[sp].start := 0 as [SExp];
+                stack[sp].cur := 0 as [SExp];
+            when ')':
+                in := @next in;
+                if sp == 0 then
+                    # stack underflow, error
+                    FreeAll();
+                    return;
+                else
+                    item := Alloc(@bytesof SExp) as [SExp];
+                    item.type := T_LIST;
+                    item.val.list := stack[sp].start;
+                    sp := sp - 1;
+                    Store(item);
+                end if;
+            when else:
+                var aend := AtomEnd();
+                item := Alloc(@bytesof SExp) as [SExp];
+
+                # if this is a valid integer number then store as number
+                var ptr: [uint8];
+                (item.val.number, ptr) := AToI(in);
+                if ptr == aend then
+                    # a number was parsed and the whole atom consumed
+                    item.type := T_NUMBER;
+                else
+                    # not a valid integer number, store as atom
+                    item.type := T_ATOM;
+                    var length := aend - in;
+                    item.val.string := Alloc(length + 1);
+                    MemCopy(in, length, item.val.string);
+                    [item.val.string + length] := 0;
+                end if;
+                in := aend;
+                Store(item);
+        end case;
+    end loop;
+
+    if sp != 0 then
+        # unterminated list!
+        FreeAll();
+        return;
+    else
+        # return start of list
+        out := stack[0].start;
+    end if;
+end sub;
+
+# Prettyprint an S-Expression with types
+sub prettyprint(sexp: [SExp]) is
+    sub PrintNum(n: int32) is
+        var buf: uint8[16];
+        [IToA(n, 10, &buf[0])] := 0;
+        print(&buf[0]);
+    end sub;
+
+    sub PrintQuoteStr(s: [uint8]) is
+        print_char('"');
+        while [s] != 0 loop
+            if [s] == '"' or [s] == '\\' then
+                print_char('\\');
+            end if;
+            print_char([s]);
+            s := @next s;
+        end loop;
+        print_char('"');
+    end sub;
+
+    var stack: [SExp][MAXDEPTH];
+    var sp: @indexof stack := 1;
+    stack[0] := sexp;
+
+    sub Indent(n: @indexof stack) is
+        while n > 0 loop
+            print("    ");
+            n := n - 1;
+        end loop;
+    end sub;
+
+    loop
+        sp := sp - 1;
+        while stack[sp] != 0 as [SExp] loop
+            Indent(sp);
+            case stack[sp].type is
+                when T_ATOM:
+                    print(stack[sp].val.string);
+                    print(" :: Atom");
+                    stack[sp] := stack[sp].next;
+                when T_STRING:
+                    PrintQuoteStr(stack[sp].val.string);
+                    print(" :: String");
+                    stack[sp] := stack[sp].next;
+                when T_NUMBER:
+                    PrintNum(stack[sp].val.number);
+                    print(" :: Number");
+                    stack[sp] := stack[sp].next;
+                when T_LIST:
+                    print_char('(');
+                    sp := sp + 1;
+                    stack[sp] := stack[sp-1].val.list;
+                    stack[sp-1] := stack[sp-1].next;
+            end case;
+            print_nl();
+        end loop;
+        if sp == 0 then
+            break;
+        end if;
+        Indent(sp-1);
+        print_char(')');
+        print_nl();
+    end loop;
+end sub;
+
+var str := "((data \"quoted data\" 123 4.5)\n (data (!@# (4.5) \"(more\" \"data)\")))";
+
+print("Input:\n");
+print(str);
+print_nl();
+
+print("Parsed:\n");
+prettyprint(ParseSExp(str));
+print_nl();

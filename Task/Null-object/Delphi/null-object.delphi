@@ -1,0 +1,6 @@
+  // the following are equivalent
+  if lObject = nil then
+  ...
+
+  if not Assigned(lObject) then
+  ...

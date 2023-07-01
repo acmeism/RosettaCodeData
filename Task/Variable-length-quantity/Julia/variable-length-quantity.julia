@@ -1,0 +1,33 @@
+using Printf
+
+mutable struct VLQ
+    quant::Vector{UInt8}
+end
+
+function VLQ(n::T) where T <: Integer
+    quant = UInt8.(digits(n, 128))
+    @inbounds for i in 2:length(quant) quant[i] |= 0x80 end
+    VLQ(reverse(quant))
+end
+
+import Base.UInt64
+function Base.UInt64(vlq::VLQ)
+    quant = reverse(vlq.quant)
+    n = shift!(quant)
+    p = one(UInt64)
+    for i in quant
+        p *= 0x80
+        n += p * ( i & 0x7f)
+    end
+    return n
+end
+
+const test = [0x00200000, 0x001fffff, 0x00000000, 0x0000007f,
+              0x00000080, 0x00002000, 0x00003fff, 0x00004000,
+              0x08000000, 0x0fffffff]
+
+for i in test
+    vlq = VLQ(i)
+    j = UInt(vlq)
+    @printf "0x%-8x => [%-25s] => 0x%x\n" i join(("0x" * hex(r, 2) for r in vlq.quant), ", ") j
+end

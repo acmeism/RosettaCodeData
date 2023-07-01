@@ -1,0 +1,4 @@
+DO WHILE INKEY$ <> ""
+LOOP
+PRINT "Keyboard buffer flushed"
+END

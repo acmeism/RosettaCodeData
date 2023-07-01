@@ -1,0 +1,1 @@
+(JNIDemo/callStrdup "Hello World!")

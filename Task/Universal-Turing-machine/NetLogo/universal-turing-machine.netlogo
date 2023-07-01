@@ -1,0 +1,373 @@
+;; "A Turing Turtle": a Turing Machine implemented in NetLogo
+;;    by Dan Dewey 1/16/2016
+;;
+;; This NetLogo code implements a Turing Machine, see, e.g.,
+;;    http://en.wikipedia.org/wiki/Turing_machine
+;; The Turing machine fits nicely into the NetLogo paradigm in which
+;; there are agents (aka the turtles), that move around
+;; in a world of "patches" (2D cells).
+;; Here, a single agent represents the Turing machine read/write head
+;; and the patches represent the Turing tape values via their colors.
+;; The 2D array of patches is treated as a single long 1D tape in an
+;; obvious way.
+
+;; This program is presented as a NetLogo example on the page:
+;;    http://rosettacode.org/wiki/Universal_Turing_machine
+;;    This file may be larger than others on that page, note however
+;;    that I include many comments in the code and I have made no
+;;    effort to 'condense' the code, prefering clarity over compactness.
+;; A demo and discussion of this program is on the web page:
+;;    http://sites.google.com/site/dan3deweyscspaimsportfolio/extra-turing-machine
+;; The Copy example machine was taken from:
+;;    http://en.wikipedia.org/wiki/Turing_machine_examples
+;; The "Busy Beaver" machines encoded below were taken from:
+;;    http://www.logique.jussieu.fr/~michel/ha.html
+
+;; The implementation here allows 3 symbols (blank, 0, 1) on the tape
+;; and 3 head motions (left, stay, right).
+
+;; The 2D world is nominally set to be 29x29, going from (-14,-14) to
+;; (14,14) from lower left to upper right and with (0,0) at the center.
+;; This gives a total Turing tape length of 29^2 = 841 cells, sufficient for the
+;; "Lazy" Beaver 5,2 example.
+;; Since the max-pxcor variable is used in the code below (as opposed to
+;; a hard-coded number), the effective tape size can be changed by
+;; changing the size of the 2D world with the Settings...  button on the interface.
+
+;; The "Info" tab of the NetLogo interface contains some further comments.
+;; - - - - - - -
+
+
+;; - - - - - - - - - - - Global/Agent variables
+;; These three 2D arrays (lists of lists) encode the Turing Machine rules:
+;;    WhatToWrite:  -1 (Blank), 0, 1
+;;    HowToMove:    -1 (left), 0(stay), 1 (right)
+;;    NextState:    0 to N-1, negative value goes to a halt state.
+;; The above are a function of the current state and the current tape (patch) value.
+;; MachineState is used by the turtle to pass the current state of the Turing machine
+;; (or the halt code) to the observer.
+globals [ WhatToWrite HowToMove NextState MachineState
+   ;; some other golobals of secondary importance...
+   ;; set different patch colors to record the Turing tape values
+    BlankColor ZeroColor OneColor
+   ;; a delay constant to slow down the operation
+    RealTimePerTick ]
+
+;; We'll have one turtle which is the Turing machine read/write head
+;; it will keep track of the current Turing state in its own MyState value
+turtles-own [ MyState ]
+
+
+;; - - - - - - - - - - -
+to Setup  ;; sets up the world
+  clear-all  ;; clears the world first
+
+  ;; Try to not have (too many) ad hoc numbers in the code,
+  ;; collect and set various values here especially if they might be used in multiple places:
+  ;;    The colors for Blank, Zero and One :   (user can can change as desired)
+  set BlankColor 2 ;; dark gray
+  set OneColor green
+  set ZeroColor red
+  ;;    slow it down for the humans to watch
+  set RealTimePerTick 0.2  ;; have simulation go at nice realtime speed
+
+  create-turtles 1   ;; create the one Turing turtle
+  [                  ;; set default parameters
+    set size 2       ;; set a nominal size
+    set color yellow ;; color of border
+    ;; set the starting location, some Turing programs will adjust this if needed:
+    setxy 0 0 ;; -1 * max-pxcor -1 * max-pxcor
+    set shape "square2empty"   ;; edited version of "square 2" to have clear in middle
+
+    ;; set the starting state - always 0
+    set MyState 0
+    set MachineState 0   ;; the turtle will update this global value from now on
+  ]
+
+  ;; Define the Turing machine rules with 2D lists.
+  ;; Based on the selection made on interface panel, setting the string Turing_Program_Selection.
+  ;; This routine has all the Turing 'programs' in it - it's at the very bottom of this file.
+  LoadTuringProgram
+
+  ;; the environment, e.g. the Turing tape
+  ask patches
+  [
+    ;; all patches are set to the blank color
+    set pcolor BlankColor
+  ]
+
+  ;; keep track of time; each tick is a Turing step
+  reset-ticks
+end
+
+
+;; - - - - - - - - - - - - - - - -
+to Go  ;; this  repeatedly does steps
+
+  ;; The turtle does the main work
+  ask turtles
+  [
+    DoOneStep
+    wait RealTimePerTick
+  ]
+
+  tick
+
+  ;; The Turing turtle will die if it tries to go beyond the cells,
+  ;; in that case (no turtles left) we'll stop.
+  ;; Also stop if the MachineState has been set to a negative number (a halt state).
+  if ((count turtles = 0) or (MachineState < 0))
+  [ stop ]
+
+end
+
+to DoOneStep
+   ;; have the turtle do one Turing step
+   ;; First, 'read the tape', i.e., based on the patch color here:
+   let tapeValue GetTapeValue
+
+   ;; using the tapeValue and MyState, get the desired actions here:
+   ;; (the item commands extract the appropriate value from the list-of-lists)
+   let myWrite item (tapeValue + 1) (item MyState WhatToWrite)
+   let myMove item (tapeValue + 1) (item MyState HowToMove)
+   let myNextState item (tapeValue + 1) (item MyState NextState)
+
+   ;; Write to the tape as appropriate
+   SetTapeValue myWrite
+
+   ;; Move as appropriate
+   if (myMove = 1) [MoveForward]
+   if (myMove = -1) [MoveBackward]
+
+   ;; Go to the next state; check if it is a halt state.
+   ;; Update the global MachineState value
+   set MachineState myNextState
+   ifelse (myNextState < 0)
+   [
+     ;; It's a halt state.  The negative MachineState will signal the stop.
+     ;; Go back to the starting state so it can be re-run if desired.
+     set MyState 0]
+   [
+     ;; Not a halt state, so change to the desired next state
+     set MyState myNextState
+     ]
+end
+
+to MoveForward
+  ;; move the turtle forward one cell, including line wrapping.
+  set heading 90
+  ifelse (xcor = max-pxcor)
+    [set xcor -1 * max-pxcor
+      ;; and go up a row if possible... otherwise die
+      ifelse ycor = max-pxcor
+      [ die ]  ;; tape too short - a somewhat crude end of things ;-)
+      [set ycor ycor + 1]
+    ]
+    [jump 1]
+end
+
+to MoveBackward
+  ;; move the turtle backward one cell, including line-wrapping.
+  set heading -90
+  ifelse (xcor = -1 * max-pxcor)
+    [
+      set xcor max-pxcor
+      ;; and go down a row... or die
+      ifelse ycor = -1 * max-pxcor
+      [ die ]  ;; tape too short - a somewhat crude end of things ;-)
+      [set ycor ycor - 1]
+    ]
+    [jump 1]
+end
+
+to-report GetTapeValue
+  ;; report the tape color equivalent value
+  if (pcolor = ZeroColor) [report 0]
+  if (pcolor = OneColor) [report 1]
+  report -1
+end
+
+to SetTapeValue [ value ]
+  ;; write the appropriate color on the tape
+  ifelse (value = 1)
+  [set pcolor OneColor]
+  [ ifelse (value = 0)
+    [set pcolor ZeroColor][set pcolor BlankColor]]
+end
+
+
+;; - - - - - OK, here are the data for the various Turing programs...
+;; Note that besdes settting the rules (array values) these sections can also
+;; include commands to clear the tape, position the r/w head, adjust wait time, etc.
+to LoadTuringProgram
+
+  ;; A template of the rules structure: a list of lists
+  ;; E.g. values are given for States 0 to 4, when looking at Blank, Zero, One:
+  ;; For 2-symbol machines use Blank(-1) and One(1) and ignore the middle values (never see zero).
+  ;; Normal Halt will be state -1, the -9 default shows an unexpected halt.
+  ;;                       state 0       state 1       state 2       state 3       state 4
+  set WhatToWrite (list (list -1 0 1) (list -1 0 1) (list -1 0 1) (list -1 0 1) (list -1 0 1) )
+  set HowToMove    (list (list 0 0 0)  (list 0 0 0)  (list 0 0 0)  (list 0 0 0)  (list 0 0 0) )
+  set NextState(list (list -9 -9 -9) (list -9 -9 -9) (list -9 -9 -9) (list -9 -9 -9) (list -9 -9 -9) )
+
+  ;; Fill the rules based on the selected case
+  if (Turing_Program_Selection = "Simple Incrementor")
+  [
+    ;; simple Incrementor - this is from the RosettaCode Universal Turing Machine page - very simple!
+    set WhatToWrite (list (list 1 0 1) )
+    set HowToMove   (list (list 0 0 1) )
+    set NextState   (list (list -1 -9 0) )
+  ]
+
+  ;; Fill the rules based on the selected case
+  if (Turing_Program_Selection = "Incrementor w/Return")
+  [
+    ;; modified Incrementor: it returns to the first 1 on the left.
+    ;; This version allows the "Copy Ones to right" program to directly follow it.
+    ;;                     move right    append one    back to beginning
+    set WhatToWrite (list (list -1 0 1) (list 1 0 1)   (list -1 0 1) )
+    set HowToMove   (list (list 1 0 1)  (list 0 0 1)   (list 1 0 -1) )
+    set NextState   (list (list 1 -9 1) (list 2 -9 1)  (list -1 -9 2) )
+  ]
+
+  ;; Fill the rules based on the selected case
+  if (Turing_Program_Selection = "Copy Ones to right")
+  [
+    ;; "Copy" from Wiki "Turing machine examples" page; slight mod so that it ends on first 1
+    ;; of the copy allowing Copy to be re-executed to create another copy.
+    ;; Has 5 states and uses Blank and 1 to make a copy of a string of ones;
+    ;; this can be run after runs of the "Incrementor w/Return".
+    ;;                       state 0       state 1        state 2       state 3       state 4
+    set WhatToWrite (list (list -1 0 -1) (list -1 0 1)  (list 1 0 1)   (list -1 0 1)  (list 1 0 1) )
+    set HowToMove   (list (list 1 0 1)   (list 1 0 1)   (list -1 0 1)   (list -1 0 -1)   (list 1 0 -1) )
+    set NextState   (list (list -1 -9 1)  (list 2 -9 1)  (list 3 -9 2)  (list 4 -9 3)  (list 0 -9 4) )
+  ]
+
+  ;; Fill the rules based on the selected case
+  if (Turing_Program_Selection = "Binary Counter")
+  [
+    ;; Count in binary - can start on a blank space.
+    ;;         States:       start          carry-1          back-to-beginning
+    set WhatToWrite (list (list 1 1 0)      (list 1 1 0)      (list -1 0 1)  )
+    set HowToMove (list   (list 0 0 -1)     (list 0 0 -1)     (list -1 1 1)  )
+    set NextState (list   (list -1 -1 1)    (list 2 2 1)      (list -1 2 2)  )
+    ;; Select line above from these two:
+    ;; can either count by 1 each time it is run:
+    ;;    set NextState (list   (list -1 -1 1)    (list 2 2 1)      (list -1 2 2)  )
+    ;; or count forever once started:
+    ;;    set NextState (list   (list 0 0 1)      (list 2 2 1)      (list 0 2 2)  )
+    set RealTimePerTick 0.2
+  ]
+
+  if (Turing_Program_Selection = "Busy-Beaver 3-State, 2-Sym")
+  [
+    ;; from the RosettaCode.org Universal Turing Machine page
+    ;;      state name:           a             b             c
+    set WhatToWrite (list (list 1 0 1) (list 1 0 1) (list 1 0 1) (list -1 0 1) (list -1 0 1) )
+    set HowToMove (list (list 1 0 -1) (list -1 0 1) (list -1 0 0) (list 0 0 0) (list 0 0 0) )
+    set NextState (list (list 1 -9 2) (list 0 -9 1) (list 1 -9 -1) (list -9 -9 -9) (list -9 -9 -9) )
+    ;; Clear the tape
+    ask Patches [set pcolor BlankColor]
+  ]
+
+  ;; should output 13 ones and take 107 steps to do it...
+  if (Turing_Program_Selection = "Busy-Beaver 4-State, 2-Sym")
+  [
+    ;; from the RosettaCode.org Universal Turing Machine page
+    ;;      state name:           A            B            C             D
+    set WhatToWrite (list (list 1 0 1) (list 1 0 -1) (list 1 0 1) (list 1 0 -1) (list -1 0 1) )
+    set HowToMove (list (list 1 0 -1) (list -1 0 -1) (list 1 0 -1) (list 1 0 1) (list 0 0 0) )
+    set NextState (list (list 1 -9 1) (list 0 -9 2) (list -1 -9 3) (list 3 -9 0) (list -9 -9 -9) )
+    ;; Clear the tape
+    ask Patches [set pcolor BlankColor]
+  ]
+
+  ;; This takes 38 steps to write 9 ones/zeroes
+  if (Turing_Program_Selection = "Busy-Beaver 2-State, 3-Sym")
+  [
+    ;;                            A            B
+    set WhatToWrite (list (list 0 1 0) (list 1 1 0) (list -1 0 1) (list -1 0 1) (list -1 0 1) )
+    set HowToMove    (list (list 1 -1 1)  (list -1 1 -1)  (list 0 0 0)  (list 0 0 0)  (list 0 0 0) )
+    set NextState(list (list 1 1 -1) (list 0 1 1) (list -9 -9 -9) (list -9 -9 -9) (list -9 -9 -9) )
+    ;; Clear the tape
+    ask Patches [set pcolor BlankColor]
+  ]
+
+  ;; This only makes 501 ones and stops after 134,467 steps -- it does do that !!!
+  if (Turing_Program_Selection = "Lazy-Beaver 5-State, 2-Sym")
+  [
+    ;; from the RosettaCode.org Universal Turing Machine page
+    ;;      state name:           A0            B1           C2             D3           E4
+    set WhatToWrite (list (list 1 0 -1) (list 1 0 1) (list 1 0 -1) (list -1 0 1) (list 1 0 1) )
+    set HowToMove (list (list 1 0 -1) (list 1 0 1) (list -1 0 1) (list 1 0 1) (list -1 0 1) )
+    set NextState (list (list 1 -9 2) (list 2 -9 3) (list 0 -9 1) (list 4 -9 -1) (list 2 -9 0) )
+    ;; Clear the tape
+    ask Patches [set pcolor BlankColor]
+    ;; Looks like it goes much more forward than back on the tape
+    ;; so start the head just a row from the bottom:
+    ask turtles [setxy 0 -1 * max-pxcor + 1]
+    ;; and go faster
+    set RealTimePerTick 0.02
+  ]
+
+  ;; The rest have large outputs and run for a long time, so I haven't confirmed
+  ;; that they work as advertised...
+
+  ;; This is the 5,2 record holder: 4098 ones in 47,176,870 steps.
+  ;; With max-pxcor of 14 and offset r/w head start (below), this will
+  ;; run off the tape at about 150,000+steps...
+  if (Turing_Program_Selection = "Busy-Beaver 5-State, 2-Sym")
+  [
+    ;; from the RosettaCode.org Universal Turing Machine page
+    ;;      state name:           A            B            C             D             E
+    set WhatToWrite (list (list 1 0 1) (list 1 0 1) (list 1 0 -1) (list 1 0 1) (list 1 0 -1) )
+    set HowToMove (list (list 1 0 -1) (list 1 0 1) (list 1 0 -1) (list -1 0 -1) (list 1 0 -1) )
+    set NextState (list (list 1 -9 2) (list 2 -9 1) (list 3 -9 4) (list 0 -9 3) (list -1 -9 0) )
+    ;; Clear the tape
+    ask Patches [set pcolor BlankColor]
+    ;; Writes more backward than forward, so start a few rows from the top:
+    ask turtles [setxy 0 max-pxcor - 3]
+    ;; and go faster
+    set RealTimePerTick 0.02
+  ]
+
+  if (Turing_Program_Selection = "Lazy-Beaver 3-State, 3-Sym")
+  [
+    ;; This should write 5600 ones/zeros and take 29,403,894 steps.
+    ;; Ran it to 175,000+ steps and only covered 1/2 of the cells (w/max-pxcor = 14)...
+    ;;      state name:           A            B            C
+    set WhatToWrite (list (list 0 1 0) (list 1 -1 0) (list 0 1 0) (list -1 0 1) (list -1 0 1) )
+    set HowToMove (list (list 1 1 -1) (list -1 1 1) (list 1 -1 1) (list 0 0 0) (list 0 0 0) )
+    set NextState (list (list 1 0 0) (list 2 2 1) (list -1 0 1) (list -9 -9 -9) (list -9 -9 -9) )
+    ;; Clear the tape
+    ask Patches [set pcolor BlankColor]
+    ;; It goes much more forward than back on the tape
+    ;; so start the head just a row from the bottom:
+    ask turtles [setxy 0 -1 * max-pxcor + 1]
+    ;; and go faster
+    set RealTimePerTick 0.02
+  ]
+
+  if (Turing_Program_Selection = "Busy-Beaver 3-State, 3-Sym")
+  [
+    ;; This should write 374,676,383 ones/zeros and take 119,112,334,170,342,540 (!!!) steps.
+    ;; Rn it to ~ 175,000 steps covering about 2/3 of the max-pxcor=14 cells.
+    ;;      state name:           A            B            C
+    set WhatToWrite (list (list 0 1 0) (list -1 1 0) (list 0 0 0) (list -1 0 1) (list -1 0 1) )
+    set HowToMove (list (list 1 -1 -1) (list -1 1 -1) (list 1 1 1) (list 0 0 0) (list 0 0 0) )
+    set NextState (list (list 1 0 2) (list 0 1 1) (list -1 0 2) (list -9 -9 -9) (list -9 -9 -9) )
+    ;; Clear the tape
+    ask Patches [set pcolor BlankColor]
+    ;; Writes more backward than forward, so start a rowish from the top:
+    ask turtles [setxy 0 max-pxcor - 1]
+    ;; and go faster
+    set RealTimePerTick 0.02
+  ]
+
+  ;; in all cases reset the machine state to 0:
+  ask turtles [set MyState 0]
+  set MachineState 0
+  ;; and the ticks
+  reset-ticks
+
+end

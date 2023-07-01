@@ -1,0 +1,101 @@
+link printf
+
+procedure main(A)
+ShowTour(KnightsTour(Board(8)))
+end
+
+procedure KnightsTour(B,sq,tbrk,debug)  #: Warnsdorff’s algorithm
+
+/B := Board(8)                          # create 8x8 board if none given
+/sq := ?B.files || ?B.ranks             # random initial position (default)
+sq2fr(sq,B)                             # validate initial sq
+if type(tbrk) == "procedure" then
+   B.tiebreak := tbrk                   # override tie-breaker
+if \debug then write("Debug log : move#, move : (accessibility) choices")
+
+choices := []                           # setup to track moves and choices
+every (movesto := table())[k := key(B.movesto)] := copy(B.movesto[k])
+
+B.tour := []                            # new tour
+repeat {
+   put(B.tour,sq)                       # record move
+
+   ac := 9                              # accessibility counter > maximum
+   while get(choices)                   # empty choices for tiebreak
+   every delete(movesto[nextsq := !movesto[sq]],sq) do {  # make sq unavailable
+      if ac >:= *movesto[nextsq] then   # reset to lower accessibility count
+         while get(choices)             # . re-empty choices
+      if ac = *movesto[nextsq] then
+         put(choices,nextsq)            # keep least accessible sq and any ties
+      }
+
+   if \debug then {                     # move#, move, (accessibility), choices
+      writes(sprintf("%d. %s : (%d) ",*B.tour,sq,ac))
+      every writes(" ",!choices|"\n")
+      }
+   sq := B.tiebreak(choices,B) | break  # choose next sq until out of choices
+   }
+return B
+end
+
+procedure RandomTieBreaker(S,B)                   # random choice
+return ?S
+end
+
+procedure FirstTieBreaker(S,B)                    # first one in the list
+return !S
+end
+
+procedure RothTieBreaker(S,B)                    # furthest from the center
+if *S = 0 then fail                              # must fail if []
+every fr := sq2fr(s := !S,B) do {
+   d := sqrt(abs(fr[1]-1 - (B.N-1)*0.5)^2 + abs(fr[2]-1 - (B.N-1)*0.5)^2)
+   if (/md := d) | ( md >:= d) then msq := s     # save sq
+   }
+return msq
+end
+
+record board(N,ranks,files,movesto,tiebreak,tour)  # structure for board
+
+procedure Board(N)                      #: create board
+N := *&lcase >=( 0 < integer(N)) | stop("N=",image(N)," is out of range.")
+B := board(N,[],&lcase[1+:N],table(),RandomTieBreaker)       # setup
+every put(B.ranks,N to 1 by -1)                              # add rank #s
+every sq := !B.files || !B.ranks do                          # for each sq add
+   every insert(B.movesto[sq] := set(), KnightMoves(sq,B))   # moves to next sq
+return B
+end
+
+procedure sq2fr(sq,B)                   #: return numeric file & rank
+f := find(sq[1],B.files)                | runerr(205,sq)
+r := integer(B.ranks[sq[2:0]])          | runerr(205,sq)
+return [f,r]
+end
+
+procedure KnightMoves(sq,B)         #: generate all Kn accessible moves from sq
+fr := sq2fr(sq,B)
+every ( i := -2|-1|1|2 ) & ( j := -2|-1|1|2 ) do
+   if (abs(i)~=abs(j)) & (0<(ri:=fr[2]+i)<=B.N) & (0<(fj:=fr[1]+j)<=B.N) then
+      suspend B.files[fj]||B.ranks[ri]
+end
+
+procedure ShowTour(B)                   #: show the tour
+write("Board size = ",B.N)
+write("Tour length = ",*B.tour)
+write("Tie Breaker = ",image(B.tiebreak))
+
+every !(squares := list(B.N)) := list(B.N,"-")
+every fr := sq2fr(B.tour[m := 1 to *B.tour],B) do
+   squares[fr[2],fr[1]] := m
+
+every (hdr1 := "     ") ||:= right(!B.files,3)
+every (hdr2 := "    +") ||:= repl((1 to B.N,"-"),3) | "-+"
+
+every write(hdr1|hdr2)
+every r := 1 to B.N do {
+   writes(right(B.ranks[r],3)," |")
+   every writes(right(squares[r,f := 1 to B.N],3))
+   write(" |",right(B.ranks[r],3))
+   }
+every write(hdr2|hdr1|&null)
+end

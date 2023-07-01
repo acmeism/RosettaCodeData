@@ -1,0 +1,183 @@
+/* ARM assembly Raspberry PI  */
+/*  program problemABC.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+.equ TRUE, 1
+.equ FALSE, 0
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessTitre1:        .asciz "Can_make_word: @ \n"
+szMessTrue:          .asciz "True.\n"
+szMessFalse:         .asciz "False.\n"
+szCarriageReturn:    .asciz "\n"
+
+szTablBloc:          .asciz "BO"
+                     .asciz "XK"
+                     .asciz "DQ"
+                     .asciz "CP"
+                     .asciz "NA"
+                     .asciz "GT"
+                     .asciz "RE"
+                     .asciz "TG"
+                     .asciz "QD"
+                     .asciz "FS"
+                     .asciz "JW"
+                     .asciz "HU"
+                     .asciz "VI"
+                     .asciz "AN"
+                     .asciz "OB"
+                     .asciz "ER"
+                     .asciz "FS"
+                     .asciz "LY"
+                     .asciz "PC"
+                     .asciz "ZM"
+                     .equ NBBLOC, (. -  szTablBloc) / 3
+
+szWord1:             .asciz "A"
+szWord2:             .asciz "BARK"
+szWord3:             .asciz "BOOK"
+szWord4:             .asciz "TREAT"
+szWord5:             .asciz "COMMON"
+szWord6:             .asciz "SQUAD"
+szWord7:             .asciz "CONFUSE"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+itabTopBloc:         .skip 4 * NBBLOC
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                @ entry of program
+    ldr r0,iAdrszWord1
+    bl traitBlock                    @ control word
+
+    ldr r0,iAdrszWord2
+    bl traitBlock                    @ control word
+
+    ldr r0,iAdrszWord3
+    bl traitBlock                    @ control word
+
+    ldr r0,iAdrszWord4
+    bl traitBlock                    @ control word
+
+    ldr r0,iAdrszWord5
+    bl traitBlock                    @ control word
+
+    ldr r0,iAdrszWord6
+    bl traitBlock                    @ control word
+
+    ldr r0,iAdrszWord7
+    bl traitBlock                    @ control word
+
+100:                                  @ standard end of the program
+    mov r0, #0                        @ return code
+    mov r7, #EXIT                     @ request to exit program
+    svc #0                            @ perform the system call
+
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszWord1:              .int szWord1
+iAdrszWord2:              .int szWord2
+iAdrszWord3:              .int szWord3
+iAdrszWord4:              .int szWord4
+iAdrszWord5:              .int szWord5
+iAdrszWord6:              .int szWord6
+iAdrszWord7:              .int szWord7
+/******************************************************************/
+/*          traitement                                           */
+/******************************************************************/
+/* r0 contains word */
+traitBlock:
+    push {r1,lr}        @ save registers
+    mov r1,r0
+    ldr r0,iAdrszMessTitre1   @ insertion word in message
+    bl strInsertAtCharInc
+    bl affichageMess          @ display title message
+    mov r0,r1
+    bl controlBlock           @ control
+    cmp r0,#TRUE              @ ok ?
+    bne 1f
+    ldr r0,iAdrszMessTrue     @ yes
+    bl affichageMess
+    b 100f
+1:                            @ no
+    ldr r0,iAdrszMessFalse
+    bl affichageMess
+100:
+    pop {r1,lr}
+    bx lr                     @ return
+iAdrszMessTitre1:         .int szMessTitre1
+iAdrszMessFalse:          .int szMessFalse
+iAdrszMessTrue:           .int szMessTrue
+/******************************************************************/
+/*        control if letters are in block                       */
+/******************************************************************/
+/* r0 contains word */
+controlBlock:
+    push {r1-r9,lr}        @ save registers
+    mov r5,r0              @ save word address
+    ldr r4,iAdritabTopBloc
+    ldr r6,iAdrszTablBloc
+    mov r2,#0
+    mov r3,#0
+1:                          @ init table top block used
+    str r3,[r4,r2,lsl #2]
+    add r2,r2,#1
+    cmp r2,#NBBLOC
+    blt 1b
+    mov r2,#0
+2:                          @ loop to load letters
+    ldrb r3,[r5,r2]
+    cmp r3,#0
+    beq 10f                 @ end
+    and r3,r3,#0xDF         @ transform in capital letter
+    mov r8,#0
+3:                          @ begin loop control block
+    ldr r7,[r4,r8,lsl #2]   @ block already used ?
+    cmp r7,#0
+    bne 5f                  @ yes
+    add r9,r8,r8,lsl #1     @ no -> index * 3
+    ldrb r7,[r6,r9]         @ first block letter
+    cmp r3,r7               @ equal ?
+    beq 4f
+    add r9,r9,#1
+    ldrb r7,[r6,r9]         @ second block letter
+    cmp r3,r7               @ equal ?
+    beq 4f
+    b 5f
+4:
+    mov r7,#1               @ top block
+    str r7,[r4,r8,lsl #2]   @ block used
+    add r2,r2,#1
+    b 2b                    @ next letter
+5:
+    add r8,r8,#1
+    cmp r8,#NBBLOC
+    blt 3b
+    mov r0,#FALSE           @ no letter find on block -> false
+    b 100f
+10:                         @ all letters are ok
+    mov r0,#TRUE
+100:
+    pop {r1-r9,lr}
+    bx lr                   @ return
+iAdritabTopBloc:   .int itabTopBloc
+iAdrszTablBloc:    .int szTablBloc
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

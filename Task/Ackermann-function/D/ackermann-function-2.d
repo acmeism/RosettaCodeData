@@ -1,0 +1,44 @@
+import std.stdio, std.bigint, std.conv;
+
+BigInt ipow(BigInt base, BigInt exp) pure nothrow {
+    auto result = 1.BigInt;
+    while (exp) {
+        if (exp & 1)
+            result *= base;
+        exp >>= 1;
+        base *= base;
+    }
+
+    return result;
+}
+
+BigInt ackermann(in uint m, in uint n) pure nothrow
+out(result) {
+    assert(result >= 0);
+} body {
+    static BigInt ack(in uint m, in BigInt n) pure nothrow {
+        switch (m) {
+            case 0: return n + 1;
+            case 1: return n + 2;
+            case 2: return 3 + 2 * n;
+            //case 3: return 5 + 8 * (2 ^^ n - 1);
+            case 3: return 5 + 8 * (ipow(2.BigInt, n) - 1);
+            default: return (n == 0) ?
+                        ack(m - 1, 1.BigInt) :
+                        ack(m - 1, ack(m, n - 1));
+        }
+    }
+
+    return ack(m, n.BigInt);
+}
+
+void main() {
+    foreach (immutable m; 1 .. 4)
+        foreach (immutable n; 1 .. 9)
+            writefln("ackermann(%d, %d): %s", m, n, ackermann(m, n));
+    writefln("ackermann(4, 1): %s", ackermann(4, 1));
+
+    immutable a = ackermann(4, 2).text;
+    writefln("ackermann(4, 2)) (%d digits):\n%s...\n%s",
+             a.length, a[0 .. 94], a[$ - 96 .. $]);
+}

@@ -1,0 +1,472 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program abbrAuto64.s   */
+/* store list of day in a file listDays.txt*/
+/* and run the program  abbrAuto64 listDays.txt */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ BUFFERSIZE,   10000
+.equ NBMAXIDAYS, 7
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessTitre:            .asciz "Nom du fichier : "
+szCarriageReturn:      .asciz "\n"
+szMessErreur:          .asciz "Error detected.\n"
+szMessErrBuffer:       .asciz "buffer size too less !!"
+szSpace:               .asciz " "
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+sZoneConv:      .skip 24
+qAdrFicName:    .skip 8
+iTabAdrDays:    .skip 8 * NBMAXIDAYS
+iTabAdrDays2:   .skip 8 * NBMAXIDAYS
+sBufferDays:    .skip BUFFERSIZE
+sBuffer:        .skip BUFFERSIZE
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                // INFO: main
+    mov x0,sp                        // stack address for load parameter
+    bl traitFic                      // read file and process
+
+100:                                 // standard end of the program
+    mov x0, #0                       // return code
+    mov x8, #EXIT                    // request to exit program
+    svc #0                           // perform the system call
+
+qAdrszCarriageReturn:      .quad szCarriageReturn
+qAdrsZoneConv:             .quad sZoneConv
+
+/******************************************************************/
+/*     read file                                                   */
+/******************************************************************/
+/* x0 contains address stack begin           */
+traitFic:                             // INFO: traitFic
+    stp x1,lr,[sp,-16]!               // save  registres
+    stp x2,x3,[sp,-16]!               // save  registres
+    stp x4,x5,[sp,-16]!               // save  registres
+    stp x6,x7,[sp,-16]!               // save  registres
+    stp x8,fp,[sp,-16]!               // save  registres
+    mov fp,x0                         //  fp <- start address
+    ldr x4,[fp]                       // number of Command line arguments
+    cmp x4,#1
+    ble 99f
+    add x5,fp,#16                      // second parameter address
+    ldr x5,[x5]
+    ldr x0,qAdrqAdrFicName
+    str x5,[x0]
+    ldr x0,qAdrszMessTitre
+    bl affichageMess                  // display string
+    mov x0,x5
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess                  // display carriage return
+
+    mov x0,AT_FDCWD
+    mov x1,x5                         // file name
+    mov x2,#O_RDWR                    // flags
+    mov x3,#0                         // mode
+    mov x8, #OPEN                     // call system OPEN
+    svc 0
+    cmp x0,#0                         // error ?
+    ble 99f
+    mov x7,x0                         // File Descriptor
+    ldr x1,qAdrsBufferDays             // buffer address
+    mov x2,#BUFFERSIZE                // buffer size
+    mov x8,#READ                      // read file
+    svc #0
+    cmp x0,#0                         // error ?
+    blt 99f
+    // extraction datas
+    ldr x1,qAdrsBufferDays             // buffer address
+    add x1,x1,x0
+    mov x0,#0                         // store zéro final
+    strb w0,[x1]
+    ldr x0,qAdriTabAdrDays             // key string command table
+    ldr x1,qAdrsBufferDays             // buffer address
+    bl extracDatas
+                                       // close file
+    mov x0,x7
+    mov x8, #CLOSE
+    svc 0
+    mov x0,#0
+    b 100f
+99:                                    // error
+    ldr x0,qAdrszMessErreur            // error message
+    bl  affichageMess
+    mov x0,#-1
+100:
+    ldp x8,fp,[sp],16                  // restaur des  2 registres
+    ldp x6,x7,[sp],16                  // restaur des  2 registres
+    ldp x4,x5,[sp],16                  // restaur des  2 registres
+    ldp x2,x3,[sp],16                  // restaur des  2 registres
+    ldp x1,lr,[sp],16                  // restaur des  2 registres
+    ret
+qAdrqAdrFicName:              .quad qAdrFicName
+qAdrszMessTitre:              .quad szMessTitre
+qAdrszMessErreur:             .quad szMessErreur
+qAdrsBuffer:                  .quad sBuffer
+qAdrsBufferDays:              .quad sBufferDays
+qAdriTabAdrDays:              .quad iTabAdrDays
+/******************************************************************/
+/*     extrac lines file buffer                                   */
+/******************************************************************/
+/* x0 contains strings address           */
+/* x1 contains buffer address         */
+extracDatas:                     // INFO: extracDatas
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,fp,[sp,-16]!          // save  registres
+    mov x7,x0
+    mov x6,x1
+    mov x2,#0                    // string buffer indice
+    mov x4,x1                    // start string
+    mov x5,#0                    // string index
+1:
+    ldrb w3,[x6,x2]
+    cmp w3,#0
+    beq 4f                       // end
+    cmp w3,#0xA
+    beq 2f
+    cmp w3,#' '                  // end string
+    beq 3f
+    add x2,x2,#1
+    b 1b
+2:
+    mov x3,#0
+    strb w3,[x6,x2]
+    ldrb w3,[x6,x2]
+    cmp w3,#0xD
+    bne 21f
+    add x2,x2,#2
+    b 22f
+21:
+    add x2,x2,#1
+22:
+    mov x0,x4                   // store last day of line in table
+    str x4,[x7,x5,lsl #3]
+    mov x0,x5                   // days number
+    bl traitLine                // process a line of days
+    mov x5,#0                   // new line
+    b 5f
+
+3:
+    mov x3,#0
+    strb w3,[x6,x2]
+    add x2,x2,#1
+4:
+    mov x0,x4
+    str x4,[x7,x5,lsl #3]
+    add x5,x5,#1
+5:                              // supress spaces
+    ldrb w3,[x6,x2]
+    cmp w3,#0
+    beq 100f
+    cmp w3,#' '
+    cinc x2,x2,eq
+    beq 5b
+
+    add x4,x6,x2                 // new start address
+    b 1b
+100:
+    ldp x8,fp,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+/******************************************************************/
+/*     processing a line                                          */
+/******************************************************************/
+/* x0 contains days number in table   */
+traitLine:                    // INFO: traitLine
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,x9,[sp,-16]!          // save  registres
+    stp x10,x11,[sp,-16]!          // save  registres
+    stp x12,x13,[sp,-16]!          // save  registres
+    cmp x0,#1                 // one day ?
+    bgt 1f                    // no
+
+    ldr x0,qAdrszCarriageReturn // yes display empty line
+    bl affichageMess
+    b 100f
+1:                            // line OK
+    mov x6,x0                 // days number
+    ldr x0,qAdriTabAdrDays
+    ldr x1,qAdriTabAdrDays2
+    mov x2,#0
+11:                           // copy days table into other for display final
+    ldr x3,[x0,x2,lsl #3]
+    str x3,[x1,x2,lsl #3]
+    add x2,x2,#1
+    cmp x2,x6
+    ble 11b
+    ldr x0,qAdriTabAdrDays    // and sort first table
+    mov x1,#0
+    add x2,x6,#1
+    bl insertionSort
+
+    mov x8,#1                 // abbrevations counter
+    ldr x12,qAdriTabAdrDays
+    mov x2,#0
+    ldr x10,[x12,x2,lsl #3]   // load first sorting day
+    mov x11,#0
+    mov x3,#1
+2:                            // begin loop
+    ldr x4,[x12,x3,lsl #3]    // load other day
+    mov x0,x10                // day1
+    mov x1,x4                 // day 2
+    mov x2,#0                 // position 0
+    bl compareChar
+    cmp x0,#0                 // first letter equal ?
+    beq 3f
+    mov x10,x4                // no -> move day 2 in day 1
+    b 6f
+3:                            // if equal
+    mov x7,x1                 // characters length (1,2,3)
+    mov x11,#1                // letters position
+4:                            // loop to compare letters days
+    mov x0,x10
+    mov x1,x4
+    mov x2,x7
+    bl compareChar
+    cmp x0,#0
+    bne 5f
+    cmp x5,#0                 // if end
+    beq 5f
+    add x7,x7,x1              // next character
+    add x11,x11,#1            // count letter
+    b 4b
+5:
+    add x11,x11,#1            // increment letters position
+    cmp x11,x8                // and store if > position précedente
+    csel x8,x11,x8,gt
+    //movgt x8,x11
+    mov x10,x4                 // and day1 = day2
+
+6:
+    add x3,x3,#1              // increment day
+    cmp x3,x6
+    ble 2b                    // and loop
+
+    mov x0,x8                 // display position letter
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    //mov x2,#0
+    //strb x2,[x1,x0]
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    ldr x0,qAdrszSpace
+    bl affichageMess
+    ldr x0,qAdriTabAdrDays2   // and display list origine days
+    mov x1,x6
+    bl displayListDays
+
+100:
+    ldp x12,x13,[sp],16         // restaur des  2 registres
+    ldp x10,x11,[sp],16         // restaur des  2 registres
+    ldp x8,x9,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+qAdrszSpace:          .quad szSpace
+qAdriTabAdrDays2:     .quad iTabAdrDays2
+/******************************************************************/
+/*     comparison character unicode                               */
+/******************************************************************/
+/* x0 contains address first string            */
+/* x1 contains address second string */
+/* x2 contains the character position to compare  */
+/* x0 return 0 if equal 1 if > -1 if < */
+/* x1 return character S1 size in octet if equal */
+/* x2 return character S2 size in octet */
+compareChar:
+    stp lr,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,x9,[sp,-16]!          // save  registres
+    ldrb w3,[x0,x2]
+    ldrb w4,[x1,x2]
+    cmp w3,w4                    // compare first byte
+    blt 3f
+    bgt 4f
+    bne 100f
+    and w3,w3,#0b11100000           // 3 bytes ?
+    cmp w3,#0b11100000
+    bne 1f
+    add x2,x2,#1
+    ldrb w3,[x0,x2]
+    ldrb w4,[x1,x2]
+    cmp w3,w4
+    blt 3f
+    bgt 4f
+    bne 100f
+    add x2,x2,#1
+    ldrb w3,[x0,x2]
+    ldrb w4,[x1,x2]
+    cmp w3,w4
+    blt 3f
+    bgt 4f
+    bne 100f
+    mov x0,#0
+    mov x1,#3
+    b 100f
+1:
+    cmp w3,#0b11000000           // 2 bytes ?
+    bne 2f
+    add x2,x2,#1
+    ldrb w3,[x0,x2]
+    ldrb w4,[x1,x2]
+    cmp w3,w4
+    blt 3f
+    bgt 4f
+    bne 100f
+    mov x0,#0
+    mov x1,#2
+    b 100f
+2:                              // 1 byte
+    mov x0,#0
+    mov x1,#1
+    b 100f
+3:
+    mov x0,#-1
+    b 100f
+4:
+    mov x0,#1
+100:
+    ldp x8,x9,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp lr,x3,[sp],16           // restaur des  2 registres
+    ret
+/******************************************************************/
+/*     control load                                      */
+/******************************************************************/
+/* x0 contains string table           */
+/* x1 contains days number */
+displayListDays:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,x9,[sp,-16]!          // save  registres
+    mov x5,x0
+    mov x2,#0
+1:
+    cmp x2,x1
+    bgt 2f
+    ldr x0,[x5,x2,lsl #3]
+    bl affichageMess
+    ldr x0,qAdrszSpace
+    bl affichageMess
+    add x2,x2,#1
+    b 1b
+2:
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+100:
+    ldp x8,x9,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+/************************************/
+/* Strings case sensitive comparisons  */
+/************************************/
+/* x0 et x1 contains the address of strings */
+/* return 0 in x0 if equals */
+/* return -1 if string x0 < string x1 */
+/* return 1  if string x0 > string x1 */
+comparStrings:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    mov x2,#0                // counter
+1:
+    ldrb w3,[x0,x2]          // byte string 1
+    ldrb w4,[x1,x2]          // byte string 2
+    cmp w3,w4
+    blt 2f
+    bgt 3f
+    bne 100f                 // not equals
+    cmp w3,#0                // 0 end string
+    beq 4f                   // end string
+    add x2,x2,#1             // else add 1 in counter
+    b 1b                     // and loop
+2:
+    mov x0,#-1               // small
+    b 100f
+3:
+    mov x0,#1                // greather
+    b 100f
+4:
+    mov x0,#0                // equal
+100:
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+/******************************************************************/
+/*         insertion sort                                              */
+/******************************************************************/
+/* x0 contains the address of table */
+/* x1 contains the first element    */
+/* x2 contains the number of element */
+insertionSort:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    mov x6,x0
+    add x3,x1,#1                       // start index i
+1:                                     // start loop
+    ldr x1,[x6,x3,lsl #3]              // load value A[i]
+    sub x5,x3,#1                       // index j
+2:
+    ldr x4,[x6,x5,lsl #3]              // load value A[j]
+    mov x0,x4
+    bl comparStrings
+    cmp x0,#1                          // compare value
+    bne 3f
+    add x5,x5,#1                          // increment index j
+    str x4,[x6,x5,lsl #3]              // store value A[j+1]
+    subs x5,x5,#2                         // j = j - 1
+    bge 2b                             // loop if j >= 0
+3:
+    add x5,x5,#1                          // increment index j
+    str x1,[x6,x5,lsl #3]              // store value A[i] in A[j+1]
+    add x3,x3,#1                          // increment index i
+    cmp x3,x2                          // end ?
+    blt 1b                             // no -> loop
+
+100:
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

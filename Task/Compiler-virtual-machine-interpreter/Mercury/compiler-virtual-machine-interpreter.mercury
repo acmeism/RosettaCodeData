@@ -1,0 +1,892 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% The Rosetta Code Virtual Machine, in Mercury.
+%%%
+%%% (This particular machine is arbitrarily chosen to be big-endian.)
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+:- module vm.
+
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+
+:- implementation.
+:- import_module array.
+:- import_module bool.
+:- import_module char.
+:- import_module exception.
+:- import_module int.
+:- import_module int32.
+:- import_module list.
+:- import_module string.
+:- import_module uint.
+:- import_module uint8.
+:- import_module uint32.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% uint32 operations.
+%%%
+
+:- func twos_cmp(uint32) = uint32.
+:- mode twos_cmp(in) = out is det.
+:- pragma inline(twos_cmp/1).
+twos_cmp(U) = NegU :-
+  (NegU = (\U) + 1_u32).
+
+:- func unsigned_add(uint32, uint32) = uint32.
+:- mode unsigned_add(in, in) = out is det.
+:- pragma inline(unsigned_add/2).
+unsigned_add(U, V) = U_plus_V :-
+  (U_plus_V = U + V).
+
+:- func unsigned_sub(uint32, uint32) = uint32.
+:- mode unsigned_sub(in, in) = out is det.
+:- pragma inline(unsigned_sub/2).
+unsigned_sub(U, V) = U_minus_V :-
+  (U_minus_V = U - V).
+
+:- func signed_mul(uint32, uint32) = uint32.
+:- mode signed_mul(in, in) = out is det.
+:- pragma inline(signed_mul/2).
+signed_mul(U, V) = UV :-
+  UV = cast_from_int32(cast_from_uint32(U) * cast_from_uint32(V)).
+
+:- func signed_quot(uint32, uint32) = uint32.
+:- mode signed_quot(in, in) = out is det.
+:- pragma inline(signed_quot/2).
+signed_quot(U, V) = U_quot_V :- % Truncation towards zero.
+  U_quot_V = cast_from_int32(cast_from_uint32(U)
+                             // cast_from_uint32(V)).
+
+:- func signed_rem(uint32, uint32) = uint32.
+:- mode signed_rem(in, in) = out is det.
+:- pragma inline(signed_rem/2).
+signed_rem(U, V) = U_rem_V :-   % Truncation towards zero, sign of U.
+  U_rem_V = cast_from_int32(cast_from_uint32(U)
+                            rem cast_from_uint32(V)).
+
+:- func signed_lt(uint32, uint32) = uint32.
+:- mode signed_lt(in, in) = out is det.
+:- pragma inline(signed_lt/2).
+signed_lt(U, V) = U_lt_V :-
+  if (int32.cast_from_uint32(U) < int32.cast_from_uint32(V))
+  then (U_lt_V = 1_u32)
+  else (U_lt_V = 0_u32).
+
+:- func signed_le(uint32, uint32) = uint32.
+:- mode signed_le(in, in) = out is det.
+:- pragma inline(signed_le/2).
+signed_le(U, V) = U_le_V :-
+  if (int32.cast_from_uint32(U) =< int32.cast_from_uint32(V))
+  then (U_le_V = 1_u32)
+  else (U_le_V = 0_u32).
+
+:- func signed_gt(uint32, uint32) = uint32.
+:- mode signed_gt(in, in) = out is det.
+:- pragma inline(signed_gt/2).
+signed_gt(U, V) = U_gt_V :-
+  U_gt_V = signed_lt(V, U).
+
+:- func signed_ge(uint32, uint32) = uint32.
+:- mode signed_ge(in, in) = out is det.
+:- pragma inline(signed_ge/2).
+signed_ge(U, V) = U_ge_V :-
+  U_ge_V = signed_le(V, U).
+
+:- func unsigned_eq(uint32, uint32) = uint32.
+:- mode unsigned_eq(in, in) = out is det.
+:- pragma inline(unsigned_eq/2).
+unsigned_eq(U, V) = U_eq_V :-
+  if (U = V)
+  then (U_eq_V = 1_u32)
+  else (U_eq_V = 0_u32).
+
+:- func unsigned_ne(uint32, uint32) = uint32.
+:- mode unsigned_ne(in, in) = out is det.
+:- pragma inline(unsigned_ne/2).
+unsigned_ne(U, V) = U_ne_V :-
+  if (U \= V)
+  then (U_ne_V = 1_u32)
+  else (U_ne_V = 0_u32).
+
+:- func logical_cmp(uint32) = uint32.
+:- mode logical_cmp(in) = out is det.
+:- pragma inline(logical_cmp/1).
+logical_cmp(U) = NotU :-
+  if (U = 0_u32)
+  then (NotU = 1_u32)
+  else (NotU = 0_u32).
+
+:- func logical_and(uint32, uint32) = uint32.
+:- mode logical_and(in, in) = out is det.
+:- pragma inline(logical_and/2).
+logical_and(U, V) = U_and_V :-
+  if (U \= 0_u32, V \= 0_u32)
+  then (U_and_V = 1_u32)
+  else (U_and_V = 0_u32).
+
+:- func logical_or(uint32, uint32) = uint32.
+:- mode logical_or(in, in) = out is det.
+:- pragma inline(logical_or/2).
+logical_or(U, V) = U_or_V :-
+  if (U \= 0_u32; V \= 0_u32)
+  then (U_or_V = 1_u32)
+  else (U_or_V = 0_u32).
+
+:- pred to_bytes(uint32, uint8, uint8, uint8, uint8).
+:- mode to_bytes(in, out, out, out, out) is det.
+:- pragma inline(to_bytes/5).
+to_bytes(U, B3, B2, B1, B0) :-
+  (B0 = cast_from_int(cast_to_int(U /\ 0xFF_u32))),
+  (B1 = cast_from_int(cast_to_int((U >> 8) /\ 0xFF_u32))),
+  (B2 = cast_from_int(cast_to_int((U >> 16) /\ 0xFF_u32))),
+  (B3 = cast_from_int(cast_to_int((U >> 24) /\ 0xFF_u32))).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% String operations.
+%%%
+
+:- pred digit_u32(char, uint32).
+:- mode digit_u32(in, out) is semidet.
+digit_u32(('0'), 0_u32).
+digit_u32(('1'), 1_u32).
+digit_u32(('2'), 2_u32).
+digit_u32(('3'), 3_u32).
+digit_u32(('4'), 4_u32).
+digit_u32(('5'), 5_u32).
+digit_u32(('6'), 6_u32).
+digit_u32(('7'), 7_u32).
+digit_u32(('8'), 8_u32).
+digit_u32(('9'), 9_u32).
+
+:- pred is_not_digit(char).
+:- mode is_not_digit(in) is semidet.
+is_not_digit(C) :-
+  not is_digit(C).
+
+:- pred is_not_alnum_nor_minus(char).
+:- mode is_not_alnum_nor_minus(in) is semidet.
+is_not_alnum_nor_minus(C) :-
+  not (is_alnum(C); C = ('-')).
+
+:- pred det_string_to_uint32(string, uint32).
+:- mode det_string_to_uint32(in, out) is det.
+det_string_to_uint32(S, U) :-
+  to_char_list(S) = CL,
+  (if (det_string_to_uint32_loop(CL, 0_u32, U1))
+   then (U = U1)
+   else throw("cannot convert string to uint32")).
+
+:- pred det_string_to_uint32_loop(list(char), uint32, uint32).
+:- mode det_string_to_uint32_loop(in, in, out) is semidet.
+det_string_to_uint32_loop([], U0, U1) :- U1 = U0.
+det_string_to_uint32_loop([C | Tail], U0, U1) :-
+  digit_u32(C, Digit),
+  det_string_to_uint32_loop(Tail, (U0 * 10_u32) + Digit, U1).
+
+:- pred det_signed_string_to_uint32(string, uint32).
+:- mode det_signed_string_to_uint32(in, out) is det.
+det_signed_string_to_uint32(S, U) :-
+  if prefix(S, "-")
+  then (det_remove_prefix("-", S, S1),
+        det_string_to_uint32(S1, U1),
+        U = twos_cmp(U1))
+  else det_string_to_uint32(S, U).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Parsing the "assembly" language.
+%%%
+
+:- func opcode_halt  = uint8.
+:- func opcode_add   = uint8.
+:- func opcode_sub   = uint8.
+:- func opcode_mul   = uint8.
+:- func opcode_div   = uint8.
+:- func opcode_mod   = uint8.
+:- func opcode_lt    = uint8.
+:- func opcode_gt    = uint8.
+:- func opcode_le    = uint8.
+:- func opcode_ge    = uint8.
+:- func opcode_eq    = uint8.
+:- func opcode_ne    = uint8.
+:- func opcode_and   = uint8.
+:- func opcode_or    = uint8.
+:- func opcode_neg   = uint8.
+:- func opcode_not   = uint8.
+:- func opcode_prtc  = uint8.
+:- func opcode_prti  = uint8.
+:- func opcode_prts  = uint8.
+:- func opcode_fetch = uint8.
+:- func opcode_store = uint8.
+:- func opcode_push  = uint8.
+:- func opcode_jmp   = uint8.
+:- func opcode_jz    = uint8.
+opcode_halt  = 0_u8.
+opcode_add   = 1_u8.
+opcode_sub   = 2_u8.
+opcode_mul   = 3_u8.
+opcode_div   = 4_u8.
+opcode_mod   = 5_u8.
+opcode_lt    = 6_u8.
+opcode_gt    = 7_u8.
+opcode_le    = 8_u8.
+opcode_ge    = 9_u8.
+opcode_eq    = 10_u8.
+opcode_ne    = 11_u8.
+opcode_and   = 12_u8.
+opcode_or    = 13_u8.
+opcode_neg   = 14_u8.
+opcode_not   = 15_u8.
+opcode_prtc  = 16_u8.
+opcode_prti  = 17_u8.
+opcode_prts  = 18_u8.
+opcode_fetch = 19_u8.
+opcode_store = 20_u8.
+opcode_push  = 21_u8.
+opcode_jmp   = 22_u8.
+opcode_jz    = 23_u8.
+
+:- pred opcode(string, uint8).
+:- mode opcode(in, out) is semidet.
+%:- mode opcode(out, in) is semidet.  <-- Not needed.
+opcode("halt",  opcode_halt).
+opcode("add",   opcode_add).
+opcode("sub",   opcode_sub).
+opcode("mul",   opcode_mul).
+opcode("div",   opcode_div).
+opcode("mod",   opcode_mod).
+opcode("lt",    opcode_lt).
+opcode("gt",    opcode_gt).
+opcode("le",    opcode_le).
+opcode("ge",    opcode_ge).
+opcode("eq",    opcode_eq).
+opcode("ne",    opcode_ne).
+opcode("and",   opcode_and).
+opcode("or",    opcode_or).
+opcode("neg",   opcode_neg).
+opcode("not",   opcode_not).
+opcode("prtc",  opcode_prtc).
+opcode("prti",  opcode_prti).
+opcode("prts",  opcode_prts).
+opcode("fetch", opcode_fetch).
+opcode("store", opcode_store).
+opcode("push",  opcode_push).
+opcode("jmp",   opcode_jmp).
+opcode("jz",    opcode_jz).
+
+:- pred parse_header(string, uint32, uint32).
+:- mode parse_header(in, out, out) is det.
+parse_header(S, Datasize, Strings_Count) :-
+  % Split S on any non-digit characters, leaving a list of the two
+  % runs of digits.
+  if (words_separator(is_not_digit, S) = [S_Datasize, S_Strings])
+  % Convert the runs of digits to uint32.
+  then (det_string_to_uint32(S_Datasize, Datasize),
+        det_string_to_uint32(S_Strings, Strings_Count))
+  else throw("cannot parse the header").
+
+:- pred parse_string_literal(string, string).
+:- mode parse_string_literal(in, out) is det.
+parse_string_literal(S0, S) :-
+  % Strip leading/trailing space.
+  S1 = strip(S0),
+  % Remove the " characters.
+  det_remove_prefix("\"", S1, S2),
+  det_remove_suffix(S2, "\"") = S3,
+  % Deal with "\\" and "\n".
+  replace_escapes(S3, S).
+
+:- pred replace_escapes(string, string).
+:- mode replace_escapes(in, out) is det.
+replace_escapes(S0, S) :-
+  CL0 = to_char_list(S0),
+  replace_escapes(CL0, [], CL),
+  S = from_rev_char_list(CL).
+
+:- pred replace_escapes(list(char), list(char), list(char)).
+:- mode replace_escapes(in, in, out) is det.
+replace_escapes([], Dst0, Dst) :-
+  Dst = Dst0.
+replace_escapes([C | Tail], Dst0, Dst) :-
+  if (C \= ('\\'))
+  then replace_escapes(Tail, [C | Dst0], Dst)
+  else (if (Tail = [C1 | Tail1])
+        then (if (C1 = ('n'))
+              then replace_escapes(Tail1, [('\n') | Dst0], Dst)
+              else if (C1 = ('\\'))
+              then replace_escapes(Tail1, [('\\') | Dst0], Dst)
+              else throw("illegal escape sequence"))
+        else throw("truncated escape sequence")).
+
+:- pred parse_instruction(string, {uint32, uint8, uint32}).
+:- mode parse_instruction(in, out) is det.
+parse_instruction(S, {Address, Opcode, Arg}) :-
+  words_separator(is_not_alnum_nor_minus, S) = Lst,
+  (if parse_instr_lst(Lst, {Addr, Op, A})
+   then (Address = Addr, Opcode = Op, Arg = A)
+   else throw("cannot parse instruction")).
+
+:- pred parse_instr_lst(list(string), {uint32, uint8, uint32}).
+:- mode parse_instr_lst(in, out) is semidet.
+parse_instr_lst([S_Address, S_Opcode],
+                {Address, Opcode, Arg}) :-
+  det_string_to_uint32(S_Address, Address),
+  opcode(S_Opcode, Opcode),
+  Arg = 0_u32.
+parse_instr_lst([S_Address, S_Opcode, S_Arg | _],
+                {Address, Opcode, Arg}) :-
+  det_string_to_uint32(S_Address, Address),
+  opcode(S_Opcode, Opcode),
+  det_signed_string_to_uint32(S_Arg, Arg).
+
+:- pred parse_assembly((io.text_input_stream), uint32, uint32,
+                       array(string),
+                       list({uint32, uint8, uint32}),
+                       io, io).
+:- mode parse_assembly(in, out, out, out, out, di, uo) is det.
+parse_assembly(InpF, Datasize, Strings_Count, Strings,
+               Instructions, !IO) :-
+  read_line_as_string(InpF, Res, !IO),
+  (if (Res = ok(Line))
+   then (parse_header(Line, Datasize, Strings_Count),
+         read_and_parse_strings(InpF, Strings_Count, Strings, !IO),
+         read_and_parse_instructions(InpF, Instructions, !IO))
+   else if (Res = eof)
+   then throw("empty input")
+   else throw("read error")).
+
+:- pred read_and_parse_strings((io.text_input_stream), uint32,
+                               array(string), io, io).
+:- mode read_and_parse_strings(in, in, out, di, uo) is det.
+read_and_parse_strings(InpF, Strings_Count, Strings, !IO) :-
+  read_n_string_literals(InpF, Strings_Count, [], Lst, !IO),
+  Strings = array(Lst).
+
+:- pred read_n_string_literals((io.text_input_stream), uint32,
+                               list(string), list(string),
+                               io, io).
+:- mode read_n_string_literals(in, in, in, out, di, uo) is det.
+read_n_string_literals(InpF, N, Lst0, Lst, !IO) :-
+  if (N = 0_u32)
+  then (Lst = reverse(Lst0))
+  else (read_line_as_string(InpF, Res, !IO),
+        (if (Res = ok(Line))
+         then (parse_string_literal(Line, S),
+               read_n_string_literals(InpF, N - 1_u32,
+                                      [S | Lst0], Lst, !IO))
+         else if (Res = eof)
+         then throw("premature end of input")
+         else throw("read error"))).
+
+:- pred read_and_parse_instructions((io.text_input_stream),
+                                    list({uint32, uint8, uint32}),
+                                    io, io).
+:- mode read_and_parse_instructions(in, out, di, uo) is det.
+read_and_parse_instructions(InpF, Instructions, !IO) :-
+  read_all_instructions(InpF, [], Instructions, !IO).
+
+:- pred read_all_instructions((io.text_input_stream),
+                              list({uint32, uint8, uint32}),
+                              list({uint32, uint8, uint32}),
+                              io, io).
+:- mode read_all_instructions(in, in, out, di, uo) is det.
+read_all_instructions(InpF, Lst0, Lst, !IO) :-
+  read_line_as_string(InpF, Res, !IO),
+  (if (Res = eof)
+   then (Lst = Lst0)           % There is no need to reverse the list.
+   else if (Res = ok(Line))
+   then (strip(Line) = S,
+         (if is_empty(S)
+          then read_all_instructions(InpF, Lst0, Lst, !IO)
+          else (parse_instruction(S, Instr),
+                read_all_instructions(InpF, [Instr | Lst0], Lst,
+                                      !IO))))
+   else throw("read error")).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Constructing the executable memory.
+%%%
+
+:- func greatest_address(list({uint32, uint8, uint32}),
+                         uint32) = uint32.
+:- mode greatest_address(in, in) = out is det.
+greatest_address([], Min_Result) = Result :-
+  Result = Min_Result.
+greatest_address([{Addr, _, _} | Tail], Min_Result) = Result :-
+  if (Min_Result < Addr)
+  then (Result = greatest_address(Tail, Addr))
+  else (Result = greatest_address(Tail, Min_Result)).
+
+:- pred executable_memory(list({uint32, uint8, uint32}),
+                          array(uint8)).
+:- mode executable_memory(in, out) is det.
+executable_memory(Instructions, Code) :-
+  greatest_address(Instructions, 0_u32) = Addr,
+  Code_Size = (Addr + 5_u32),   % At least enough memory.
+  init(cast_to_int(Code_Size), opcode_halt, Code0),
+  fill_executable_memory(Instructions, Code0, Code).
+
+:- pred fill_executable_memory(list({uint32, uint8, uint32}),
+                               array(uint8), array(uint8)).
+:- mode fill_executable_memory(in, array_di, array_uo) is det.
+fill_executable_memory([], !Code) :- true.
+fill_executable_memory([Instr | Tail], !Code) :-
+  Instr = {Address, Opcode, Arg},
+  Addr = cast_to_int(Address),
+  set(Addr, Opcode, !Code),
+  (if (Opcode = opcode_fetch;
+       Opcode = opcode_store;
+       Opcode = opcode_push;
+       Opcode = opcode_jmp;
+       Opcode = opcode_jz)
+   then (to_bytes(Arg, B3, B2, B1, B0),
+         % Store the argument in big-endian order.
+         set(Addr + 1, B3, !Code),
+         set(Addr + 2, B2, !Code),
+         set(Addr + 3, B1, !Code),
+         set(Addr + 4, B0, !Code))
+   else true),
+  fill_executable_memory(Tail, !Code).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%e
+%%%
+%%% Executing the code.
+%%%
+
+:- pred machine_add(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_add(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_add/4).
+machine_add(Stack0, Stack, SP0, SP) :-
+  Result = unsigned_add(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                        lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_sub(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_sub(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_sub/4).
+machine_sub(Stack0, Stack, SP0, SP) :-
+  Result = unsigned_sub(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                        lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_mul(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_mul(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_mul/4).
+machine_mul(Stack0, Stack, SP0, SP) :-
+  Result = signed_mul(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                      lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_div(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_div(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_div/4).
+machine_div(Stack0, Stack, SP0, SP) :-
+  Result = signed_quot(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                       lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_mod(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_mod(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_mod/4).
+machine_mod(Stack0, Stack, SP0, SP) :-
+  Result = signed_rem(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                      lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_lt(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_lt(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_lt/4).
+machine_lt(Stack0, Stack, SP0, SP) :-
+  Result = signed_lt(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                     lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_le(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_le(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_le/4).
+machine_le(Stack0, Stack, SP0, SP) :-
+  Result = signed_le(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                     lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_gt(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_gt(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_gt/4).
+machine_gt(Stack0, Stack, SP0, SP) :-
+  Result = signed_gt(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                     lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_ge(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_ge(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_ge/4).
+machine_ge(Stack0, Stack, SP0, SP) :-
+  Result = signed_ge(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                     lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_eq(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_eq(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_eq/4).
+machine_eq(Stack0, Stack, SP0, SP) :-
+  Result = unsigned_eq(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                       lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_ne(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_ne(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_ne/4).
+machine_ne(Stack0, Stack, SP0, SP) :-
+  Result = unsigned_ne(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                       lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_and(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_and(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_and/4).
+machine_and(Stack0, Stack, SP0, SP) :-
+  Result = logical_and(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                       lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_or(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_or(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_or/4).
+machine_or(Stack0, Stack, SP0, SP) :-
+  Result = logical_or(lookup(Stack0, cast_to_int(SP - 1_u32)),
+                      lookup(Stack0, cast_to_int(SP))),
+  set(cast_to_int(SP - 1_u32), Result, Stack0, Stack),
+  SP = SP0 - 1_u32.
+
+:- pred machine_neg(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_neg(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_neg/4).
+machine_neg(Stack0, Stack, SP0, SP) :-
+  SP = SP0,
+  (I = uint32.cast_to_int(SP0)),
+  Result = twos_cmp(lookup(Stack0, I - 1)),
+  set(I - 1, Result, Stack0, Stack).
+
+:- pred machine_not(array(uint32), array(uint32), uint32, uint32).
+:- mode machine_not(array_di, array_uo, in, out) is det.
+:- pragma inline(machine_not/4).
+machine_not(Stack0, Stack, SP0, SP) :-
+  SP = SP0,
+  (I = uint32.cast_to_int(SP0)),
+  Result = logical_cmp(lookup(Stack0, I - 1)),
+  set(I - 1, Result, Stack0, Stack).
+
+:- pred machine_prtc((io.text_output_stream),
+                     array(uint32), array(uint32),
+                     uint32, uint32, io, io).
+:- mode machine_prtc(in, array_di, array_uo, in, out,
+                     di, uo) is det.
+machine_prtc(OutF, Stack0, Stack, SP0, SP, !IO) :-
+  Stack = Stack0,
+  (I = uint32.cast_to_int(SP0)),
+  X = lookup(Stack0, I - 1),
+  C = (char.det_from_int(uint32.cast_to_int(X))),
+  (io.write_char(OutF, C, !IO)),
+  SP = SP0 - 1_u32.
+
+:- pred machine_prti((io.text_output_stream),
+                     array(uint32), array(uint32),
+                     uint32, uint32, io, io).
+:- mode machine_prti(in, array_di, array_uo, in, out,
+                     di, uo) is det.
+machine_prti(OutF, Stack0, Stack, SP0, SP, !IO) :-
+  Stack = Stack0,
+  (I = uint32.cast_to_int(SP0)),
+  (X = int32.cast_from_uint32(lookup(Stack0, I - 1))),
+  (io.write_int32(OutF, X, !IO)),
+  SP = SP0 - 1_u32.
+
+:- pred machine_prts((io.text_output_stream),
+                     array(string),
+                     array(uint32), array(uint32),
+                     uint32, uint32, io, io).
+:- mode machine_prts(in, in, array_di, array_uo, in, out,
+                     di, uo) is det.
+machine_prts(OutF, Strings, Stack0, Stack, SP0, SP, !IO) :-
+  Stack = Stack0,
+  (I = uint32.cast_to_int(SP0)),
+  (K = uint32.cast_to_int(lookup(Stack0, I - 1))),
+  S = lookup(Strings, K),
+  (io.write_string(OutF, S, !IO)),
+  SP = SP0 - 1_u32.
+
+:- func get_immediate(array(uint8), uint32) = uint32.
+:- mode get_immediate(in, in) = out is det.
+:- pragma inline(get_immediate/2).
+get_immediate(Code, IP) = Immediate_Value :-
+  % Big-endian order.
+  I = cast_to_int(IP),
+  B3 = lookup(Code, I),
+  B2 = lookup(Code, I + 1),
+  B1 = lookup(Code, I + 2),
+  B0 = lookup(Code, I + 3),
+  Immediate_Value = from_bytes_be(B3, B2, B1, B0).
+
+:- pred machine_fetch(array(uint32), array(uint32),
+                      array(uint8), uint32, uint32,
+                      array(uint32), array(uint32),
+                      uint32, uint32).
+:- mode machine_fetch(array_di, array_uo, in, in, out,
+                      array_di, array_uo, in, out) is det.
+:- pragma inline(machine_fetch/9).
+machine_fetch(Data0, Data, Code, IP0, IP, !Stack, SP0, SP) :-
+  Data = Data0,
+  K = get_immediate(Code, IP0),
+  IP = IP0 + 4_u32,
+  X = lookup(Data0, cast_to_int(K)),
+  set(cast_to_int(SP0), X, !Stack),
+  SP = SP0 + 1_u32.
+
+:- pred machine_store(array(uint32), array(uint32),
+                      array(uint8), uint32, uint32,
+                      array(uint32), array(uint32),
+                      uint32, uint32).
+:- mode machine_store(array_di, array_uo, in, in, out,
+                      array_di, array_uo, in, out) is det.
+:- pragma inline(machine_store/9).
+machine_store(!Data, Code, IP0, IP, Stack0, Stack, SP0, SP) :-
+  Stack = Stack0,
+  K = get_immediate(Code, IP0),
+  IP = IP0 + 4_u32,
+  SP = SP0 - 1_u32,
+  X = lookup(Stack0, cast_to_int(SP)),
+  set(cast_to_int(K), X, !Data).
+
+:- pred machine_push(array(uint8), uint32, uint32,
+                     array(uint32), array(uint32),
+                     uint32, uint32).
+:- mode machine_push(in, in, out, array_di, array_uo, in, out) is det.
+:- pragma inline(machine_push/7).
+machine_push(Code, IP0, IP, !Stack, SP0, SP) :-
+  X = get_immediate(Code, IP0),
+  IP = IP0 + 4_u32,
+  set(cast_to_int(SP0), X, !Stack),
+  SP = SP0 + 1_u32.
+
+:- pred machine_jmp(array(uint8), uint32, uint32).
+:- mode machine_jmp(in, in, out) is det.
+:- pragma inline(machine_jmp/3).
+machine_jmp(Code, IP0, IP) :-
+  Offset = get_immediate(Code, IP0),
+  IP = unsigned_add(IP0, Offset).
+
+:- pred machine_jz(array(uint8), uint32, uint32,
+                   array(uint32), array(uint32),
+                   uint32, uint32).
+:- mode machine_jz(in, in, out, array_di, array_uo, in, out) is det.
+:- pragma inline(machine_jz/7).
+machine_jz(Code, IP0, IP, Stack0, Stack, SP0, SP) :-
+  Stack = Stack0,
+  SP = SP0 - 1_u32,
+  X = lookup(Stack0, cast_to_int(SP)),
+  (if (X = 0_u32)
+   then (Offset = get_immediate(Code, IP0),
+         IP = unsigned_add(IP0, Offset))
+   else (IP = IP0 + 4_u32)).
+
+:- pred run_one_instruction((io.text_output_stream),
+                            array(string),
+                            array(uint32), array(uint32),
+                            array(uint8), uint32, uint32,
+                            array(uint32), array(uint32),
+                            uint32, uint32, bool, io, io).
+:- mode run_one_instruction(in, in, array_di, array_uo,
+                            in, in, out, array_di, array_uo,
+                            in, out, out, di, uo) is det.
+run_one_instruction(OutF, Strings, !Data,
+                    Code, IP0, IP, !Stack, !SP,
+                    Halt, !IO) :-
+  %
+  % In the following implementation, any unrecognized instruction
+  % causes a HALT, just as an actual "halt" opcode would.
+  %
+  Opcode = lookup(Code, cast_to_int(IP0)),
+  IP1 = IP0 + 1_u32,
+  I = (Opcode >> 2),
+  J = (Opcode /\ 0x03_u8),
+  (if (I = 0_u8)
+   then (IP = IP1,
+         (if (J = 0_u8)
+          then (Halt = yes)
+          else if (J = 1_u8)
+          then (machine_add(!Stack, !SP),
+                Halt = no)
+          else if (J = 2_u8)
+          then (machine_sub(!Stack, !SP),
+                Halt = no)
+          else (machine_mul(!Stack, !SP),
+                Halt = no)))
+   else if (I = 1_u8)
+   then (Halt = no,
+         IP = IP1,
+         (if (J = 0_u8)
+          then machine_div(!Stack, !SP)
+          else if (J = 1_u8)
+          then machine_mod(!Stack, !SP)
+          else if (J = 2_u8)
+          then machine_lt(!Stack, !SP)
+          else machine_gt(!Stack, !SP)))
+   else if (I = 2_u8)
+   then (Halt = no,
+         IP = IP1,
+         (if (J = 0_u8)
+          then machine_le(!Stack, !SP)
+          else if (J = 1_u8)
+          then machine_ge(!Stack, !SP)
+          else if (J = 2_u8)
+          then machine_eq(!Stack, !SP)
+          else machine_ne(!Stack, !SP)))
+   else if (I = 3_u8)
+   then (Halt = no,
+         IP = IP1,
+         (if (J = 0_u8)
+          then machine_and(!Stack, !SP)
+          else if (J = 1_u8)
+          then machine_or(!Stack, !SP)
+          else if (J = 2_u8)
+          then machine_neg(!Stack, !SP)
+          else machine_not(!Stack, !SP)))
+   else if (I = 4_u8)
+   then (Halt = no,
+         (if (J = 0_u8)
+          then (machine_prtc(OutF, !Stack, !SP, !IO),
+                IP = IP1)
+          else if (J = 1_u8)
+          then (machine_prti(OutF, !Stack, !SP, !IO),
+                IP = IP1)
+          else if (J = 2_u8)
+          then (machine_prts(OutF, Strings, !Stack, !SP, !IO),
+                IP = IP1)
+          else machine_fetch(!Data, Code, IP1, IP, !Stack, !SP)))
+   else if (I = 5_u8)
+   then (Halt = no,
+         (if (J = 0_u8)
+          then machine_store(!Data, Code, IP1, IP, !Stack, !SP)
+          else if (J = 1_u8)
+          then machine_push(Code, IP1, IP, !Stack, !SP)
+          else if (J = 2_u8)
+          then machine_jmp(Code, IP1, IP)
+          else machine_jz(Code, IP1, IP, !Stack, !SP)))
+   else (Halt = yes, IP = IP1)).
+
+:- pred run_program((io.text_output_stream), array(string),
+                    array(uint32), array(uint32),
+                    array(uint8), uint32, uint32,
+                    array(uint32), array(uint32),
+                    uint32, uint32, io, io).
+:- mode run_program(in, in, array_di, array_uo,
+                    in, in, out, array_di, array_uo,
+                    in, out, di, uo) is det.
+run_program(OutF, Strings, !Data, Code, !IP, !Stack, !SP, !IO) :-
+  run_one_instruction(OutF, Strings, !Data, Code, !IP, !Stack, !SP,
+                      Halt, !IO),
+  (if (Halt = yes)
+   then true
+   else run_program(OutF, Strings, !Data, Code, !IP, !Stack,
+                    !SP, !IO)).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+:- pred open_InpF(text_input_stream, string, io, io).
+:- mode open_InpF(out, in, di, uo) is det.
+open_InpF(InpF, InpF_filename, !IO) :-
+  if (InpF_filename = "-")
+  then (InpF = io.stdin_stream)
+  else (open_input(InpF_filename, InpF_result, !IO),
+        (if (InpF_result = ok(F))
+         then (InpF = F)
+         else throw("Error: cannot open " ++ InpF_filename ++
+                    " for input"))).
+
+:- pred open_OutF(text_output_stream, string, io, io).
+:- mode open_OutF(out, in, di, uo) is det.
+open_OutF(OutF, OutF_filename, !IO) :-
+  if (OutF_filename = "-")
+  then (OutF = io.stdout_stream)
+  else (open_output(OutF_filename, OutF_result, !IO),
+        (if (OutF_result = ok(F))
+         then (OutF = F)
+         else throw("Error: cannot open " ++ OutF_filename ++
+                    " for output"))).
+
+:- pred main_program(string, string, io, io).
+:- mode main_program(in, in, di, uo) is det.
+main_program(InpF_filename, OutF_filename, !IO) :-
+  open_InpF(InpF, InpF_filename, !IO),
+  open_OutF(OutF, OutF_filename, !IO),
+  parse_assembly(InpF, Datasize, _Strings_Count, Strings,
+                 Instructions, !IO),
+  (if (InpF_filename = "-")
+   then true
+   else close_input(InpF, !IO)),
+  executable_memory(Instructions, Code),
+  init(cast_to_int(Datasize), 0_u32, Data0),
+  init(2048, 0_u32, Stack0),    % Stack is 2048 words.
+  IP0 = 0_u32,
+  SP0 = 0_u32,
+  run_program(OutF, Strings, Data0, _Data, Code, IP0, _IP,
+              Stack0, _Stack, SP0, _SP, !IO),
+  (if (OutF_filename = "-")
+   then true
+   else close_output(OutF, !IO)).
+
+:- pred usage_error(io, io).
+:- mode usage_error(di, uo) is det.
+usage_error(!IO) :-
+  progname("lex", ProgName, !IO),
+  (io.format("Usage: %s [INPUT_FILE [OUTPUT_FILE]]\n",
+             [s(ProgName)], !IO)),
+  (io.write_string(
+        "If INPUT_FILE is \"-\" or not present then standard input is used.\n",
+        !IO)),
+  (io.write_string(
+        "If OUTPUT_FILE is \"-\" or not present then standard output is used.\n",
+        !IO)),
+  set_exit_status(1, !IO).
+
+main(!IO) :-
+  command_line_arguments(Args, !IO),
+  (if (Args = [])
+   then (InpF_filename = "-",
+         OutF_filename = "-",
+         main_program(InpF_filename, OutF_filename, !IO))
+   else if (Args = [F1])
+   then (InpF_filename = F1,
+         OutF_filename = "-",
+         main_program(InpF_filename, OutF_filename, !IO))
+   else if (Args = [F1, F2])
+   then (InpF_filename = F1,
+         OutF_filename = F2,
+         main_program(InpF_filename, OutF_filename, !IO))
+   else usage_error(!IO)).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Instructions for GNU Emacs--
+%%% local variables:
+%%% mode: mercury
+%%% prolog-indent-width: 2
+%%% end:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -1,0 +1,139 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program strTokenize64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ NBPOSTESECLAT,          20
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessFinal:         .asciz "Words are : \n"
+
+szString:            .asciz "Hello,How,Are,You,Today"
+szMessError:         .asciz "Error tokenize !!\n"
+szCarriageReturn:    .asciz "\n"
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszString                           // string address
+    mov x1,','                                    // separator
+    bl stTokenize
+    cmp x0,-1                                     // error ?
+    beq 99f
+    mov x2,x0                                     // table address
+    ldr x0,qAdrszMessFinal                        // display message
+    bl affichageMess
+    ldr x4,[x2]                                   // number of areas
+    add x2,x2,8                                   // first area
+    mov x3,0                                      // loop counter
+    mov x0,x2
+1:                                                // display loop
+    ldr x0,[x2,x3, lsl 3]                         // address area
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn                   // display carriage return
+    bl affichageMess
+    add x3,x3,1                                  // counter + 1
+    cmp x3,x4                                     // end ?
+    blt 1b                                        // no -> loop
+
+    b 100f
+99:                                               // display error message
+    ldr x0,qAdrszMessError
+    bl affichageMess
+
+100:                                              // standard end of the program
+    mov x0,0                                       // return code
+    mov x8,EXIT                                   // request to exit program
+    svc 0                                         // perform the system call
+qAdrszString:             .quad szString
+//qAdrszFinalString:        .quad szFinalString
+qAdrszMessFinal:          .quad szMessFinal
+qAdrszMessError:          .quad szMessError
+qAdrszCarriageReturn:     .quad szCarriageReturn
+
+/*******************************************************************/	
+/* Separate string by separator into an array                     */
+/* areas are store on the heap Linux                               */
+/*******************************************************************/	
+/* x0 contains string address */
+/* x1 contains separator character (, or . or : )    */
+/* x0 returns table address with first item = number areas */
+/* and other items contains pointer of each string     */
+stTokenize:
+    stp x1,lr,[sp,-16]!           // save  registers
+    mov x16,x0
+    mov x9,x1                     // save separator
+    mov x14,0
+1:                                // compute length string for place reservation on the heap
+    ldrb w12,[x0,x14]
+    cbz x12, 2f
+    add x14,x14,1
+    b 1b
+2:
+    ldr x12,qTailleTable
+    add x15,x12,x14
+    and x15,x15,0xFFFFFFFFFFFFFFF0
+    add x15,x15,16                 // align word on the heap
+                                  // place reservation on the heap
+    mov x0,0                      // heap address
+    mov x8,BRK                    // call system linux 'brk'
+    svc 0                         // call system
+    cmp x0,-1                     // error call system
+    beq 100f
+    mov x14,x0                    // save address  heap begin = begin array
+    add x0,x0,x15                 // reserve x15 byte on the heap
+    mov x8,BRK                    // call system linux 'brk'
+    svc 0
+    cmp x0,-1
+    beq 100f
+                                  // string copy on the heap
+    add x13,x14,x12               // behind the array
+    mov x0,x16
+    mov x1,x13
+3:                                // loop copy string
+    ldrb w12,[x0],1               // read one byte and increment pointer one byte
+    strb w12,[x1],1               // store one byte and increment pointer one byte
+    cbnz x12,3b                   // end of string ? no -> loop
+
+    mov x0,#0
+    str x0,[x14]
+    str x13,[x14,8]
+    mov x12,#1                     // areas counter
+4:                                // loop load string character
+    ldrb w0,[x13]
+    cbz x0,5f                     // end string
+    cmp x0,x9                     // separator ?
+    cinc x13,x13,ne               // no -> next location
+    bne 4b                        // and loop
+    strb wzr,[x13]                // store zero final of string
+    add x13,x13,1                 // next character
+    add x12,x12,1                 // areas counter + 1
+    str x13,[x14,x12, lsl #3]     // store address area in the table at index x2
+    b 4b                          // and loop
+
+5:
+    str x12,[x14]                 // store number areas
+    mov x0,x14                    // returns array address
+100:
+    ldp x1,lr,[sp],16             // restaur  2 registers
+    ret                           // return to address lr x30
+qTailleTable:      .quad 8 * NBPOSTESECLAT
+
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

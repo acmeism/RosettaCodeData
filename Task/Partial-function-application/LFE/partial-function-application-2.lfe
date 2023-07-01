@@ -1,0 +1,17 @@
+(defun fs (f s) (lists:map f s))
+(defun f1 (i) (* i 2))
+(defun f2 (i) (math:pow i 2))
+
+(set fsf1 (partial #'fs/2 #'f1/1))
+(set fsf2 (partial #'fs/2 #'f2/1))
+(set seq1 '((0 1 2 3)))
+(set seq2 '((2 4 6 8)))
+
+> (funcall fsf1 seq1)
+(0 2 4 6)
+> (funcall fsf2 seq1)
+(0.0 1.0 4.0 9.0)
+> (funcall fsf1 seq2)
+(4 8 12 16)
+> (funcall fsf2 seq2)
+(4.0 16.0 36.0 64.0)

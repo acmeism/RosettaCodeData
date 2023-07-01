@@ -1,0 +1,41 @@
+NextPrimeMemo[n_] := (NextPrimeMemo[n] = NextPrime[n]);(*This improves performance by 30% or so*)
+PrimeList[count_] := Prime/@Range[count];(*Just a helper to create an initial list of primes of the desired length*)
+AppendPrime[list_] := Append[list,NextPrimeMemo[Last@list]];(*Another helper that makes creating the next candidate less verbose*)
+
+NextCandidate[{list_, target_}] :=
+ With[
+  {len = Length@list, nextHead = NestWhile[Drop[#, -1] &, list, Total[#] > target &]},
+  Which[
+   {} == nextHead, {{}, target},
+   Total[nextHead] == target && Length@nextHead == len, {nextHead, target},
+   True, {NestWhile[AppendPrime, MapAt[NextPrimeMemo, nextHead, -1], Length[#] < Length[list] &], target}
+   ]
+  ];(*This is the meat of the matter. If it determines that the job is impossible, it returns a structure with an empty list of summands. If the input satisfies the success criteria, it just returns it (this will be our fixed point). Otherwise, it generates a subsequent candidate.*)
+
+FormatResult[{list_, number_}, targetCount_] :=
+ StringForm[
+  "Partitioned `1` with `2` prime`4`: `3`",
+  number,
+  targetCount,
+  If[0 == Length@list, "no solutions found", StringRiffle[list, "+"]],
+  If[1 == Length@list, "", "s"]]; (*Just a helper for pretty-printing the output*)
+
+PrimePartition[number_, count_] := FixedPoint[NextCandidate, {PrimeList[count], number}];(*This is where things kick off. NextCandidate will eventually return the failure format or a success, and either of those are fixed points of the function.*)
+
+TestCases =
+  {
+   {99809, 1},
+   {18, 2},
+   {19, 3},
+   {20, 4},
+   {2017, 24},
+   {22699, 1},
+   {22699, 2},
+   {22699, 3},
+   {22699, 4},
+   {40355, 3}
+   };
+
+TimedResults = ReleaseHold[Hold[AbsoluteTiming[FormatResult[PrimePartition @@ #, Last@#]]] & /@TestCases](*I thought it would be interesting to include the timings, which are in seconds*)
+
+TimedResults // TableForm

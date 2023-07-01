@@ -1,0 +1,76 @@
+import system'routines;
+import extensions;
+import extensions'text;
+
+const string Target = "METHINKS IT IS LIKE A WEASEL";
+const string AllowedCharacters = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+const int C = 100;
+const real P = 0.05r;
+
+rnd = randomGenerator;
+
+randomChar
+    = AllowedCharacters[rnd.nextInt(AllowedCharacters.Length)];
+
+extension evoHelper
+{
+    randomString()
+        = 0.repeatTill(self).selectBy:(x => randomChar).summarize(new StringWriter());
+
+    fitnessOf(s)
+        = self.zipBy(s, (a,b => a==b ? 1 : 0)).summarize(new Integer()).toInt();
+
+    mutate(p)
+        = self.selectBy:(ch => rnd.nextReal() <= p ? randomChar : ch).summarize(new StringWriter());
+}
+
+class EvoAlgorithm : Enumerator
+{
+    object theTarget;
+    object theCurrent;
+    object theVariantCount;
+
+    constructor new(s,count)
+    {
+        theTarget := s;
+        theVariantCount := count.toInt();
+    }
+
+    get() = theCurrent;
+
+    bool next()
+    {
+        if (nil == theCurrent)
+            { theCurrent := theTarget.Length.randomString(); ^ true };
+
+        if (theTarget == theCurrent)
+            { ^ false };
+
+        auto variants := Array.allocate(theVariantCount).populate:(x => theCurrent.mutate:P );
+
+        theCurrent := variants.sort:(a,b => a.fitnessOf:Target > b.fitnessOf:Target ).at:0;
+
+        ^ true
+    }
+
+    reset()
+    {
+        theCurrent := nil
+    }
+
+    enumerable() => theTarget;
+}
+
+public program()
+{
+    var attempt := new Integer();
+    EvoAlgorithm.new(Target,C).forEach:(current)
+    {
+        console
+            .printPaddingLeft(10,"#",attempt.append(1))
+            .printLine(" ",current," fitness: ",current.fitnessOf(Target))
+    };
+
+    console.readChar()
+}

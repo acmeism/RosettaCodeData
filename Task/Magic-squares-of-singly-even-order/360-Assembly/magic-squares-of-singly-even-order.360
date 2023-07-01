@@ -1,0 +1,261 @@
+*        Magic squares of singly even order - 21/04/2021
+MAGSQSE  CSECT
+         USING  MAGSQSE,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         SAVE   (14,12)            save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LH     R2,N               n
+         MH     R2,N               *n
+         LA     R2,1(R2)           +1
+         MH     R2,N               *n
+         SRA    R2,1               /2
+         STH    R2,MAGSUM          magsum=n*(n^2+1)/2
+         LH     R2,N               n
+         SRA    R2,1               /2
+         STH    R2,ND              nd=n/2
+         LH     R2,ND              n
+         MH     R2,ND              *n
+         STH    R2,ND2             nd2=nd^2
+         LH     R2,N               n
+         SH     R2,=H'2'           -2
+         SRA    R2,2               /4
+         STH    R2,LL              ll=(n-2)/4
+         LH     R6,ND              nd
+         SRA    R6,1               /2
+         LA     R6,1(R6)           i=nd/2+1
+         LA     R7,1               j=1
+         LR     R5,R7              nr=1
+         LH     R4,N               n
+       IF    CH,R4,LT,=H'6' THEN   if n<6 then
+         XPRNT  =C'Error: too small',16
+         B      FIN                  stop
+       ENDIF    ,                  endif
+         LH     R2,N               n
+         SH     R2,=H'2'           -2
+         SRDA   R2,32              ~
+         D      R2,=F'4'           /4
+       IF   LTR,R2,NZ,R2 THEN      if mod(n-2,4)<>0 then
+         XPRNT  =C'Error: not possible',19
+         B      FIN                  stop
+       ENDIF    ,                  endif
+LOOP     EQU    *                  do loop --------------v
+         LR     R1,R6                i
+         LR     R2,R7                j
+         BAL    R14,SQXY             r1=@sq(i,j)
+         LH     R2,SQ(R1)            sq(i,j)
+       IF   LTR,R2,Z,R2 THEN         if sq(i,j)=0 then
+         STH    R5,SQ(R1)              sq(i,j)=nr             _A
+         LR     R1,R6                  i
+         AH     R1,ND                  +nd
+         LR     R2,R7                  j
+         AH     R2,ND                  +nd
+         BAL    R14,SQXY               r1=@sq(i+nd,j+nd)
+         LR     R3,R5                  nr
+         AH     R3,ND2                 +nd2
+         STH    R3,SQ(R1)              sq(i+nd,j+nd)=nr+nd2   _B
+         LR     R1,R6                  i
+         AH     R1,ND                  +nd
+         LR     R2,R7                  j
+         BAL    R14,SQXY               r1=@sq(i+nd,j)
+         LH     R3,ND2                 nd2
+         SLA    R3,1                   *2
+         AR     R3,R5                  +nr
+         STH    R3,SQ(R1)              sq(i+nd,j)=nr+nd2*2;   _C
+         LR     R1,R6                  i
+         LR     R2,R7                  j
+         AH     R2,ND                  +nd
+         BAL    R14,SQXY               r1=@sq(i,j+nd)
+         LH     R3,ND2                 nd2
+         MH     R3,=H'3'               *3
+         AR     R3,R5                  +nr
+         STH    R3,SQ(R1)              sq(i,j+nd)=nr+nd2*3;   _D
+         LR     R2,R5                  nr
+         LH     R0,ND                  nd
+         SRDA   R2,32                  ~
+         DR     R2,R0                  nr/nd
+       IF   LTR,R2,Z,R2 THEN           if mod(nr,nd)=0 then
+         LA     R7,1(R7)                 j=j+1
+       ELSE     ,                      else
+         LA     R6,1(R6)                 i=i+1
+         BCTR   R7,0                     j=j-1
+       ENDIF    ,                      endif
+         LA     R5,1(R5)               nr=nr+1
+       ENDIF    ,                    endif
+       IF    CH,R6,GT,ND THEN        if i>nd then
+         LA     R6,1                   i=1
+         BAL    R12,SQIJ               r2=sq(i,j)
+       DO WHILE=(LTR,R2,NZ,R2)         do while sq(i,j)<>0
+         LA     R6,1(R6)                 i=i+1
+         BAL    R12,SQIJ                 r2=sq(i,j)
+       ENDDO    ,                      enddo
+       ENDIF    ,                    endif
+       IF    CH,R7,LT,=H'1' THEN     if j<1 then
+         LH     R7,ND                  j=nd
+         BAL    R12,SQIJ               r2=sq(i,j)
+       DO WHILE=(LTR,R2,NZ,R2)         do while sq(i,j)<>0
+         BCTR   R7,0                     j=j-1
+         BAL    R12,SQIJ                 r2=sq(i,j)
+       ENDDO    ,                      enddo
+       ENDIF    ,                    endif
+         CH     R5,ND2             nr>nd2
+         BNH    LOOP               until nr>nd2 ---------^
+         LA     R7,1               j=1 -- swap left side
+       DO WHILE=(CH,R7,LE,ND)      do j=1 to nd
+         LA     R6,1                 i=1
+       DO WHILE=(CH,R6,LE,LL)        do i=1 to ll
+         BAL    R12,SWAPIJ             swap sq(i,j),sq(i,j+nd)
+         LA     R6,1(R6)               i++
+       ENDDO    ,                    enddo i
+         LA     R7,1(R7)             j++
+       ENDDO    ,                  enddo j
+         LH     R7,ND              nd
+         SRA    R7,1               /2
+         LA     R7,1(R7)           j=nd/2+1
+         LA     R1,1               1
+         LR     R2,R7              j
+         BAL    R14,SQXY           r1=@sq(1,j)
+         LR     R3,R1              r3=@sq(1,j)
+         LA     R1,1               1
+         LR     R2,R7              j
+         AH     R2,ND              j+nd
+         BAL    R14,SQXY           r1=@sq(1,j+nd)
+         BAL    R14,SWAPXY         swap sq(1,j),sq(1,j+nd)
+         LH     R1,LL              ll
+         LA     R1,1(R1)           ll+1
+         LR     R2,R7              j
+         BAL    R14,SQXY           r1=@sq(ll+1,j)
+         LR     R3,R1              r3=@sq(ll+1,j)
+         LH     R1,LL              ll
+         LA     R1,1(R1)           +1
+         LR     R2,R7              j
+         AH     R2,ND              +nd
+         BAL    R14,SQXY           r1=@sq(ll+1,j+nd)
+         BAL    R14,SWAPXY         swap sq(ll+1,j),sq(ll+1,j+nd)
+         LH     R5,N               n
+         SH     R5,LL              -ll
+         LA     R5,2(R5)           r5=n-ll+2
+         LA     R7,1               j=1 -- swap right side
+       DO WHILE=(CH,R7,LE,ND)      do j=1 to nd
+         LR     R6,R5                i=n-ll+2
+       DO WHILE=(CH,R6,LE,N)         do i=n-ll+2 to n
+         BAL    R12,SWAPIJ             swap sq(i,j),sq(i,j+nd)
+         LA     R6,1(R6)               i++
+       ENDDO    ,                    enddo i
+         LA     R7,1(R7)             j++
+       ENDDO    ,                  enddo j
+         LA     R7,1               j=1  check columms and rows
+       DO WHILE=(CH,R7,LE,N)       do j=1 to n
+         SR     R4,R4                nr=0
+         SR     R5,R5                nc=0
+         LA     R6,1                 i=1
+       DO WHILE=(CH,R6,LE,N)         do i=1 to n
+         LR     R1,R6                  i
+         LR     R2,R7                  j
+         BAL    R14,SQXY               r1=@sq(i,j)
+         AH     R4,SQ(R1)              nr=nr+sq(i,j)
+         LR     R1,R7                  j
+         LR     R2,R6                  i
+         BAL    R14,SQXY               r1=@sq(j,i)
+         AH     R5,SQ(R1)              nc=nc+sq(j,i)
+         LA     R6,1(R6)               i++
+       ENDDO    ,                    enddo i
+       IF    CH,R4,NE,MAGSUM,OR,CH,R5,NE,MAGSUM THEN
+         XPRNT  =C'Error: row/col value<>magsum',28
+         B      FIN                    stop
+       ENDIF    ,                    endif
+         LA     R7,1(R7)             j++
+       ENDDO    ,                  enddo j
+         SR     R4,R4              nr=0
+         SR     R5,R5              nc=0
+         LA     R6,1               i=1
+       DO WHILE=(CH,R6,LE,N)       do i=1 to n
+         LR     R1,R6                i
+         LR     R2,R6                i
+         BAL    R14,SQXY             r1=@sq(i,i)
+         AH     R4,SQ(R1)            nr=nr+sq(i,i)
+         LH     R1,N                 n
+         SR     R1,R6                n-i
+         LA     R1,1(R1)             n-i+1
+         LR     R2,R1                n-i+1
+         BAL    R14,SQXY             r1=@sq(i,i)
+         AH     R5,SQ(R1)            nc=nc+sq(n-i+1,n-i+1)
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+       IF    CH,R4,NE,MAGSUM,OR,CH,R5,NE,MAGSUM THEN
+         XPRNT  =C'Error: diag value<>magsum',25
+         B      FIN                  stop
+       ENDIF    ,                  endif
+         MVC    PG(31),=C'Single even magic square size: '
+         LH     R1,N               n
+         XDECO  R1,XDEC            edit n
+         MVC    PG+31(3),XDEC+9    output n
+         XPRNT  PG,34              print buffer
+         MVC    PG(15),=C'The magic sum= '
+         LH     R1,MAGSUM          magsum
+         XDECO  R1,XDEC            edit magsum
+         MVC    PG+15(4),XDEC+8    output magsum
+         XPRNT  PG,19              print buffer
+         LA     R7,1               j=1
+       DO WHILE=(CH,R7,LE,N)       do j=1 to n
+         MVC    PG,=CL120' '         clear buffer
+         LA     R9,PG                @buffer
+         LA     R6,1                 i=1
+       DO WHILE=(CH,R6,LE,N)         do i=1 to n
+         LR     R1,R6                  i
+         LR     R2,R7                  j
+         BAL    R14,SQXY               r1=@sq(i,i)
+         LH     R2,SQ(R1)              sq(i,j)
+         XDECO  R2,XDEC                edit sq(i,j)
+         MVC    0(4,R9),XDEC+8         output  sq(i,j)
+         LA     R9,4(R9)               @buffer+=4
+         LA     R6,1(R6)               i++
+       ENDDO    ,                    enddo i
+         XPRNT  PG,L'PG              print buffer
+         LA     R7,1(R7)             j++
+       ENDDO    ,                  enddo j
+FIN      L      R13,4(0,R13)       restore previous savearea pointer
+         RETURN (14,12),RC=0       restore registers from calling save
+SQIJ     CNOP   0,4                routine sq(i,j)
+         LR     R1,R6              i
+         LR     R2,R7              j
+         BAL    R14,SQXY           r1=@sq(i,j)
+         LH     R2,SQ(R1)          sq(i,j)
+         BR     R12                return
+SQXY     CNOP   0,4                routine sq(r1,r2)
+         BCTR   R1,0               -1
+         MH     R1,N               *n
+         BCTR   R2,0               -1
+         AR     R1,R2              (r1-1)*n+(r2-1)
+         SLA    R1,1               *2 (H)
+         BR     R14                return
+SWAPIJ   CNOP   0,4                routine swap sq(i,j),sq(i,j+nd)
+         LR     R1,R6              i
+         LR     R2,R7              j
+         BAL    R14,SQXY           r1=@sq(i,j)
+         LR     R3,R1              r3=@sq(i,j)
+         LR     R1,R6              i
+         LR     R2,R7              j
+         AH     R2,ND              +nd
+         BAL    R14,SQXY           r1=@sq(i,j+nd)
+         BAL    R14,SWAPXY         swap
+         BR     R12                return
+SWAPXY   CNOP   0,4                routine swap sq(r1),sq(r3)
+         LH     R0,SQ(R3)          r0=sq(r3)
+         LH     R2,SQ(R1)          r2=sq(r1)
+         STH    R2,SQ(R3)          sq(r3)=r2
+         STH    R0,SQ(R1)          sq(r1)=r0
+         BR     R14                return
+NN       EQU    6                  <== parameter (6,10,14,18,22,26,...)
+N        DC     AL2(NN)            n
+SQ       DC     (NN*NN)H'0'        array sq(n,n)
+MAGSUM   DS     H                  magsum
+ND       DS     H                  nd
+ND2      DS     H                  nd2
+LL       DS     H                  ll
+PG       DC     CL120' '           buffer
+XDEC     DS     CL12               temp for xdeco
+         REGEQU
+         END    MAGSQSE

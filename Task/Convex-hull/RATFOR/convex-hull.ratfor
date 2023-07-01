@@ -1,0 +1,350 @@
+#
+# Convex hulls by Andrew's monotone chain algorithm.
+#
+# For a description of the algorithm, see
+# https://en.wikibooks.org/w/index.php?title=Algorithm_Implementation/Geometry/Convex_hull/Monotone_chain&stableid=40169
+#
+# As in the Fortran 2018 version upon which this code is based, I
+# shall use the built-in "complex" type to represent "points" in the
+# plane. This is merely for convenience, rather than to express a
+# mathematical equivalence.
+#
+
+define(point, complex)
+
+function x (u)
+
+  # Return the x-coordinate of "point" u.
+
+  implicit none
+
+  point u
+  real x
+
+  x = real (u)
+end
+
+function y (u)
+
+  # Return the y-coordinate of "point" u.
+
+  implicit none
+
+  point u
+  real y
+
+  y = aimag (u)
+end
+
+function cross (u, v)
+
+  # Return, as a signed scalar, the cross product of "points" u and v
+  # (regarded as "vectors" or multivectors).
+
+  implicit none
+
+  point u, v
+  real cross, x, y
+
+  cross = (x (u) * y (v)) - (y (u) * x (v))
+end
+
+subroutine sortpt (numpt, pt)
+
+  # Sort "points" in ascending order, first by the x-coordinates and
+  # then by the y-coordinates. Any decent sort algorithm will suffice;
+  # for the sake of interest, here is the Shell sort of
+  # https://en.wikipedia.org/w/index.php?title=Shellsort&oldid=1084744510
+
+  implicit none
+
+  integer numpt
+  point pt(0:*)
+
+  real x, y
+  integer i, j, k, gap, offset
+  point temp
+  logical done
+
+  integer gaps(1:8)
+  data gaps / 701, 301, 132, 57, 23, 10, 4, 1 /
+
+  for (k = 1; k <= 8; k = k + 1)
+    {
+      gap = gaps(k)
+      for (offset = 0; offset <= gap - 1; offset = offset + 1)
+        for (i = offset; i <= numpt - 1; i = i + gap)
+          {
+            temp = pt(i)
+            j = i
+            done = .false.
+            while (!done)
+              {
+                if (j < gap)
+                  done = .true.
+                else if (x (pt(j - gap)) < x (temp))
+                  done = .true.
+                else if (x (pt(j - gap)) == x (temp)      _
+                          && (y (pt(j - gap)) <= y (temp)))
+                  done = .true.
+                else
+                  {
+                    pt(j) = pt(j - gap)
+                    j = j - gap
+                  }
+              }
+            pt(j) = temp
+          }
+    }
+end
+
+subroutine deltrd (n, pt)
+
+  # Delete trailing neighbor duplicates.
+
+  implicit none
+
+  integer n
+  point pt(0:*)
+
+  integer i
+  logical done
+
+  i = n - 1
+  done = .false.
+  while (!done)
+    {
+      if (i == 0)
+        {
+          n = 1
+          done = .true.
+        }
+      else if (pt(i - 1) != pt(i))
+        {
+          n = i + 1
+          done = .true.
+        }
+      else
+        i = i - 1
+    }
+end
+
+subroutine delntd (n, pt)
+
+  # Delete non-trailing neighbor duplicates.
+
+  implicit none
+
+  integer n
+  point pt(0:*)
+
+  integer i, j, numdel
+  logical done
+
+  i = 0
+  while (i < n - 1)
+    {
+      j = i + 1
+      done = .false.
+      while (!done)
+        {
+          if (j == n)
+            done = .true.
+          else if (pt(j) != pt(i))
+            done = .true.
+          else
+            j = j + 1
+        }
+      if (j != i + 1)
+        {
+          numdel = j - i - 1
+          while (j != n)
+            {
+              pt(j - numdel) = pt(j)
+              j = j + 1
+            }
+          n = n - numdel
+        }
+      i = i + 1
+    }
+end
+
+subroutine deldup (n, pt)
+
+  # Delete neighbor duplicates.
+
+  implicit none
+
+  integer n
+  point pt(0:*)
+
+  call deltrd (n, pt)
+  call delntd (n, pt)
+end
+
+subroutine cxlhul (n, pt, hullsz, hull)
+
+  # Construct the lower hull.
+
+  implicit none
+
+  integer n                     # Number of points.
+  point pt(0:*)
+  integer hullsz                # Output.
+  point hull(0:*)               # Output.
+
+  real cross
+  integer i, j
+  logical done
+
+  j = 1
+  hull(0) = pt(0)
+  hull(1) = pt(1)
+  for (i = 2; i <= n - 1; i = i + 1)
+    {
+      done = .false.
+      while (!done)
+        {
+          if (j == 0)
+            {
+              j = j + 1
+              hull(j) = pt(i)
+              done = .true.
+            }
+          else if (0.0 < cross (hull(j) - hull(j - 1), _
+                                pt(i) - hull(j - 1)))
+            {
+              j = j + 1
+              hull(j) = pt(i)
+              done = .true.
+            }
+          else
+            j = j - 1
+        }
+    }
+  hullsz = j + 1
+end
+
+subroutine cxuhul (n, pt, hullsz, hull)
+
+  # Construct the upper hull.
+
+  implicit none
+
+  integer n                     # Number of points.
+  point pt(0:*)
+  integer hullsz                # Output.
+  point hull(0:*)               # Output.
+
+  real cross
+  integer i, j
+  logical done
+
+  j = 1
+  hull(0) = pt(n - 1)
+  hull(1) = pt(n - 2)
+  for (i = n - 3; 0 <= i; i = i - 1)
+    {
+      done = .false.
+      while (!done)
+        {
+          if (j == 0)
+            {
+              j = j + 1
+              hull(j) = pt(i)
+              done = .true.
+            }
+          else if (0.0 < cross (hull(j) - hull(j - 1), _
+                                pt(i) - hull(j - 1)))
+            {
+              j = j + 1
+              hull(j) = pt(i)
+              done = .true.
+            }
+          else
+            j = j - 1
+        }
+    }
+  hullsz = j + 1
+end
+
+subroutine cxhull (n, pt, hullsz, lhull, uhull)
+
+  # Construct the hull.
+
+  implicit none
+
+  integer n                     # Number of points.
+  point pt(0:*)                 # Overwritten with hull.
+  integer hullsz                # Output.
+  point lhull(0:*)              # Workspace.
+  point uhull(0:*)              # Workspace
+
+  integer lhulsz, uhulsz, i
+
+  # A side note: the calls to construct_lower_hull and
+  # construct_upper_hull could be done in parallel.
+  call cxlhul (n, pt, lhulsz, lhull)
+  call cxuhul (n, pt, uhulsz, uhull)
+
+  hullsz = lhulsz + uhulsz - 2
+
+  for (i = 0; i <= lhulsz - 2; i = i + 1)
+    pt(i) = lhull(i)
+  for (i = 0; i <= uhulsz - 2; i = i + 1)
+    pt(lhulsz - 1 + i) = uhull(i)
+end
+
+subroutine cvxhul (n, pt, hullsz, lhull, uhull)
+
+  # Find a convex hull.
+
+  implicit none
+
+  integer n            # Number of points.
+  point pt(0:*)        # The contents of pt is replaced with the hull.
+  integer hullsz       # Output.
+  point lhull(0:*)     # Workspace.
+  point uhull(0:*)     # Workspace
+
+  integer numpt
+
+  numpt = n
+
+  call sortpt (numpt, pt)
+  call deldup (numpt, pt)
+
+  if (numpt == 0)
+    hullsz = 0
+  else if (numpt <= 2)
+    hullsz = numpt
+  else
+    call cxhull (numpt, pt, hullsz, lhull, uhull)
+end
+
+program cvxtsk
+
+  # The Rosetta Code convex hull task.
+
+  implicit none
+
+  integer n, i
+  point points(0:100)
+  point lhull(0:100)
+  point uhull(0:100)
+  character*100 fmt
+
+  point exampl(0:19)
+  data exampl / (16, 3), (12, 17), (0, 6), (-4, -6), (16, 6),    _
+                (16, -7), (16, -3), (17, -4), (5, 19), (19, -8), _
+                (3, 16), (12, 13), (3, -4), (17, 5), (-3, 15),   _
+                (-3, -9), (0, 11), (-9, -3), (-4, -2), (12, 10) /
+
+  n = 20
+  for (i = 0; i <= n - 1; i = i + 1)
+    points(i) = exampl(i)
+  call cvxhul (n, points, n, lhull, uhull)
+
+  write (fmt, '("(", I20, ''("(", F3.0, 1X, F3.0, ") ")'', ")")') n
+  write (*, fmt) (points(i), i = 0, n - 1)
+end

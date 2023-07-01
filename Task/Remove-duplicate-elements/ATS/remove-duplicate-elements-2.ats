@@ -1,0 +1,198 @@
+(* Remove duplicate elements.
+
+   This implementation is for elements that have an "equals" (or
+   "equivalence") predicate. It runs O(n*n) in the number of
+   elements. It uses a linked list and supports linear types.
+
+   The equality predicate is implemented as a template function. *)
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+#define NIL list_vt_nil ()
+#define ::  list_vt_cons
+
+(*------------------------------------------------------------------*)
+(* Interfaces                                                       *)
+
+extern fn {a : vt@ype}
+array_remove_dups
+          {n      : int}
+          {p_arr  : addr}
+          (pf_arr : array_v (a, p_arr, n) |
+           p_arr  : ptr p_arr,
+           n      : size_t n)
+    :<!wrt> [m : nat | m <= n]
+            @(array_v (a, p_arr, m),
+              array_v (a?, p_arr + (m * sizeof a), n - m) |
+              size_t m)
+
+extern fn {a : vt@ype}
+list_vt_remove_dups
+          {n   : int}
+          (lst : list_vt (a, n))
+    :<!wrt> [m : nat | m <= n]
+            list_vt (a, m)
+
+extern fn {a : vt@ype}
+remove_dups$eq :
+  (&a, &a) -<> bool
+
+extern fn {a : vt@ype}
+remove_dups$clear :
+  (&a >> a?) -< !wrt > void
+
+(*------------------------------------------------------------------*)
+(* Implementation of array_remove_dups                              *)
+
+(* The implementation for arrays converts to a list_vt, does the
+   removal duplicates, and then writes the data back into the original
+   array. *)
+implement {a}
+array_remove_dups {n} {p_arr} (pf_arr | p_arr, n) =
+  let
+    var lst = array_copy_to_list_vt<a> (!p_arr, n)
+    var m : int
+    val lst = list_vt_remove_dups<a> lst
+    val m = list_vt_length lst
+    prval [m : int] EQINT () = eqint_make_gint m
+    prval @(pf_uniq, pf_rest) =
+      array_v_split {a?} {p_arr} {n} {m} pf_arr
+    val () = array_copy_from_list_vt<a> (!p_arr, lst)
+  in
+    @(pf_uniq, pf_rest | i2sz m)
+  end
+
+(*------------------------------------------------------------------*)
+(* Implementation of list_vt_remove_dups                            *)
+
+(* The list is worked on "in place". That is, no nodes are copied or
+   moved to new locations, except those that are removed and freed. *)
+
+fn {a : vt@ype}
+remove_equal_elements
+          {n   : int}
+          (x   : &a,
+           lst : &list_vt (a, n) >> list_vt (a, m))
+    :<!wrt> #[m : nat | m <= n]
+            void =
+  let
+    fun {a : vt@ype}
+    remove_elements
+              {n : nat}
+              .<n>.
+              (x   : &a,
+               lst : &list_vt (a, n) >> list_vt (a, m))
+        :<!wrt> #[m : nat | m <= n]
+                void =
+      case+ lst of
+      | NIL => ()
+      | @ (head :: tail) =>
+        if remove_dups$eq (head, x) then
+          let
+            val new_lst = tail
+            val () = remove_dups$clear<a> head
+            val () = free@{a}{0} lst
+            val () = lst := new_lst
+          in
+            remove_elements {n - 1} (x, lst)
+          end
+        else
+          let
+            val () = remove_elements {n - 1} (x, tail)
+            prval () = fold@ lst
+          in
+          end
+
+    prval () = lemma_list_vt_param lst
+  in
+    remove_elements {n} (x, lst)
+  end
+
+fn {a : vt@ype}
+remove_dups
+          {n   : int}
+          (lst : &list_vt (a, n) >> list_vt (a, m))
+    :<!wrt> #[m : nat | m <= n]
+            void =
+  let
+    fun
+    rmv_dups  {n : nat}
+              .<n>.
+              (lst : &list_vt (a, n) >> list_vt (a, m))
+        :<!wrt> #[m : nat | m <= n]
+                void =
+      case+ lst of
+      | NIL => ()
+      | head :: NIL => ()
+      | @ head :: tail =>
+        let
+          val () = remove_equal_elements (head, tail)
+          val () = rmv_dups tail
+          prval () = fold@ lst
+        in
+        end
+
+    prval () = lemma_list_vt_param lst
+  in
+    rmv_dups {n} lst
+  end
+
+implement {a}
+list_vt_remove_dups {n} lst =
+  let
+    var lst = lst
+  in
+    remove_dups {n} lst;
+    lst
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+remove_dups$eq<Strptr1> (s, t) =
+  ($UN.strptr2string s = $UN.strptr2string t)
+
+implement
+remove_dups$clear<Strptr1> s =
+  strptr_free s
+
+implement
+array_uninitize$clear<Strptr1> (i, s) =
+  strptr_free s
+
+implement
+fprint_ref<Strptr1> (outf, s) =
+  fprint! (outf, $UN.strptr2string s)
+
+implement                   (* A demonstration with linear strings. *)
+main0 () =
+  let
+    #define N 10
+
+    val data =
+      $list_vt{Strptr1}
+        (string0_copy "a", string0_copy "c", string0_copy "b",
+         string0_copy "e", string0_copy "a", string0_copy "a",
+         string0_copy "d", string0_copy "d", string0_copy "b",
+         string0_copy "c")
+    var arr : @[Strptr1][N]
+    val () = array_copy_from_list_vt<Strptr1> (arr, data)
+
+    prval pf_arr = view@ arr
+    val p_arr = addr@ arr
+
+    val [m : int]
+        @(pf_uniq, pf_abandoned | m) =
+      array_remove_dups<Strptr1> (pf_arr | p_arr, i2sz N)
+
+    val () = fprint_array_sep<Strptr1> (stdout_ref, !p_arr, m, " ")
+    val () = println! ()
+
+    val () = array_uninitize<Strptr1> (!p_arr, m)
+    prval () = view@ arr :=
+      array_v_unsplit (pf_uniq, pf_abandoned)
+  in
+  end
+
+(*------------------------------------------------------------------*)

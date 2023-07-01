@@ -1,0 +1,6 @@
+MsgBox, 262144, , % eban_numbers(0, 1000, 1)
+MsgBox, 262144, , % eban_numbers(1000, 4000, 1)
+MsgBox, 262144, , % eban_numbers(0, 10000)
+MsgBox, 262144, , % eban_numbers(0, 100000)
+MsgBox, 262144, , % eban_numbers(0, 1000000)
+MsgBox, 262144, , % eban_numbers(0, 100000000)

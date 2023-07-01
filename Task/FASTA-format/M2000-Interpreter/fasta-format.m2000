@@ -1,0 +1,103 @@
+Module CheckIt {
+      Class FASTA_MACHINE {
+            Events "GetBuffer", "header", "DataLine", "Quit"
+      Public:
+            Module Run {
+                  Const lineFeed$=chr$(13)+chr$(10)
+                  Const WhiteSpace$=" "+chr$(9)+chrcode$(160)
+                  Def long state=1, idstate=1
+                  Def boolean Quit=False
+                  Def Buf$, waste$, Packet$
+            GetNextPacket:
+                        Call Event "Quit", &Quit
+                        If Quit then exit
+                        Call Event "GetBuffer", &Packet$
+                        Buf$+=Packet$
+                        If len(Buf$)=0 Then exit
+                        On State Goto GetStartIdentifier, GetIdentifier, GetStartData, GetData, GetStartIdentifier2
+                        exit
+            GetStartIdentifier:
+                        waste$=rightpart$(Buf$, ">")
+            GetStartIdentifier2:
+                        If len(waste$)=0 Then waste$=rightpart$(Buf$, ";") : idstate=2
+                        If len(waste$)=0 Then idstate=1 : Goto GetNextPacket ' we have to read more
+                        buf$=waste$
+                        state=2
+            GetIdentifier:
+                        If Len(Buf$)=len(lineFeed$) then {
+                              if buf$<>lineFeed$ then Goto GetNextPacket
+                              waste$=""
+                        } Else {
+                              if instr(buf$, lineFeed$)=0 then Goto GetNextPacket
+                              waste$=rightpart$(Buf$, lineFeed$)
+                          }
+                        If idstate=2 Then {
+                            idstate=1
+                            \\ it's a comment, drop it
+                            state=1
+                            Goto GetNextPacket
+                        } Else Call Event "header", filter$(leftpart$(Buf$,lineFeed$), WhiteSpace$)
+                        Buf$=waste$
+                        State=3
+            GetStartData:
+                        while left$(buf$, 2)=lineFeed$ {buf$=Mid$(buf$,3)}
+                        waste$=Leftpart$(Buf$, lineFeed$)
+                        If len(waste$)=0 Then  Goto GetNextPacket ' we have to read more
+                        waste$=Filter$(waste$,WhiteSpace$)
+                        Call Event "DataLine", leftpart$(Buf$,lineFeed$)
+                        Buf$=Rightpart$(Buf$,lineFeed$)
+                        state=4
+            GetData:
+                        while left$(buf$, 2)=lineFeed$ {buf$=Mid$(buf$,3)}
+                        waste$=Leftpart$(Buf$, lineFeed$)
+                        If len(waste$)=0 Then  Goto GetNextPacket ' we have to read more
+                        If Left$(waste$,1)=";" Then wast$="": state=5 : Goto GetStartIdentifier2
+                        If Left$(waste$,1)=">" Then state=1 : Goto GetStartIdentifier
+                        waste$=Filter$(waste$,WhiteSpace$)
+                        Call Event "DataLine", waste$
+                        Buf$=Rightpart$(Buf$,lineFeed$)
+                        Goto GetNextPacket
+            }
+      }
+      Group WithEvents K=FASTA_MACHINE()
+      Document Final$, Inp$
+
+      \\ In documents, "="" used for append data. Final$="append this"
+      Const NewLine$=chr$(13)+chr$(10)
+      Const Center=2
+      \\ Event's Functions
+      Function K_GetBuffer (New &a$) {
+            Input "IN:", a$
+            inp$=a$+NewLine$
+            while right$(a$, 1)="\" {
+                  Input "IN:", b$
+                  inp$=b$+NewLine$
+                  if b$="" then b$="n"
+                  a$+=b$
+            }
+            a$= replace$("\N","\n", a$)
+            a$= replace$("\n",NewLine$, a$)
+      }
+      Function K_header (New a$) {
+            iF Doc.Len(Final$)=0 then {
+                  Final$=a$+": "
+            } Else Final$=Newline$+a$+": "
+      }
+      Function K_DataLine (New a$) {
+            Final$=a$
+      }
+      Function K_Quit (New &q) {
+            q=keypress(1)
+      }
+      Cls , 0
+      Report Center, "FASTA Format"
+      Report "Simulate input channel in packets (\n for new line). Use empty input to exit after new line, or press left mouse button and Enter to quit. Use ; to write comments. Use > to open a title"
+      Cls, row  ' scroll from current row
+      K.Run
+      Cls
+      Report Center, "Input File"
+      Report Inp$
+      Report Center, "Output File"
+      Report Final$
+}
+checkit

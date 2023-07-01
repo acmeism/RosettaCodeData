@@ -1,0 +1,1 @@
+"Hello" dup " World!" + .s

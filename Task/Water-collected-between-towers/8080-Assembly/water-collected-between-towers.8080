@@ -1,0 +1,105 @@
+	org	100h
+	jmp	demo
+	;;;	Calculate the amount of water a row of towers will hold
+	;;;	Note: this will destroy the input array.
+	;;;	Input: DE = tower array, BC = length of array
+	;;;	Output: A = amount of water
+water:	xra	a	; Start with no water
+	sta	w_out+1
+wscanr:	mov	h,d	; HL = right edge
+	mov	l,e
+	dad	b
+wscrlp:	dcx	h
+	call	cmp16	; Reached beginning?
+	jnc	w_out	; Then stop
+	mov	a,m	; Otherwise, if current tower is zero
+	ora	a
+	jz	wscrlp	; Then keep scanning
+	push	b	; Keep length
+	push	d	; Keep array begin
+	mvi	b,0	; No blocks yet
+	xchg		; HL = left scanning edge, DE = right
+wscanl:	mov	a,m	; Get current column
+	ora	a	; Is zero?
+	jz	wunit	; Then see if an unit of water must be added
+	dcr	m	; Otherwise, decrease column
+	inr	b	; Increase blocks
+	jmp	wnext
+wunit:	mov	a,b	; Any blocks?
+	ora	a
+	jz	wnext
+	lda	w_out+1	; If so, add water
+	inr	a
+	sta	w_out+1
+wnext:	inx	h	; Next column
+	call	cmp16
+	jnc	wscanl	; Until right edge reached
+	mov	a,b
+	cmc		; Check if more than 1 block left
+	rar
+	ora	a
+	pop 	d	; Restore array begin
+	pop	b	; and length
+	jnz	wscanr	; If more than 1 block, keep scanning
+w_out:	mvi	a,0	; Load water into A
+	ret 	
+	;;;	16-bit compare DE to HL
+cmp16:	mov	a,d
+	cmp	h
+	rnz
+	mov	a,e
+	cmp 	l
+	ret
+	;;;	Calculate and print the amount of water for each input
+demo:	lxi	h,series
+load:	mov	e,m	; Load pointer
+	inx	h
+	mov	d,m
+	inx	h
+	mov	c,m	; Load length
+	inx	h
+	mov	b,m
+	inx	h
+	mov	a,d	; If pointer is zero,
+	ora	e
+	rz		; stop.
+	push 	h	; Otherwise, save the series pointer
+	call	water	; Calculate amount of water
+	call	printa	; Output amount of water
+	pop	h	; Restore series pointer
+	jmp	load	; Load next example
+	;;;	Print A as integer value
+printa:	lxi	d,num	; Pointer to number string
+	mvi	c,10	; Divisor
+digit:	mvi	b,-1	; Quotient
+dloop:	inr	b	; Divide (by trial subtraction)
+	sub	c
+	jnc	dloop
+	adi	'0'+10	; ASCII digit from remainder
+	dcx	d	; Store ASCII digit
+	stax	d
+	mov	a,b	; Continue with quotient
+	ana	a	; If not zero
+	jnz	digit
+	mvi	c,9	; 9 = CP/M print string syscall
+	jmp	5	; Print number string
+	db	'***'	; Output number placeholder
+num:	db	' $'
+	;;;	Series
+t1:	db	1,5,3,7,2
+t2:	db	5,3,7,2,6,4,5,9,1,2
+t3:	db	2,6,3,5,2,8,1,4,2,2,5,3,5,7,4,1
+t4:    	db	5,5,5,5
+t5:	db	5,6,7,8
+t6:    	db	8,7,7,6
+t7:	db    	6,7,10,7,6
+t_end:	equ	$
+	;;;	Lengths and pointers
+series:	dw	t1,t2-t1
+	dw	t2,t3-t2
+	dw	t3,t4-t3
+	dw	t4,t5-t4
+	dw	t5,t6-t5
+	dw	t6,t7-t6
+	dw	t7,t_end-t7
+	dw	0

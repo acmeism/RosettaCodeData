@@ -1,0 +1,90 @@
+fcb1n:	equ	5Ch+1	; "Filename" in first FCB
+fcb2n:	equ	6Ch+1	; "Filename" in second FCB
+puts:	equ	9	; CP/M call to write string to console
+bdos:	equ	5	; CP/M syscall address
+	org	100h
+	lxi	d,fcb1n	; Get first "file name" (i.e, first number on cmdline)
+	call	parse	; Parse it
+	push	h	; Store the number on the stack
+	lxi	d,fcb2n	; Get the second one
+	call	parse	; Parse that one too
+	pop	d	; Retrieve our first number and put it in DE
+	dad	d 	; <-- add DE to HL, giving our answer, then fall into:
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Routine: print the signed integer in HL. 		    ;;;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+puthl:	mov	a,h	; Get the sign bit of the integer,
+	ral		; which is the top bit of the high byte
+	sbb	a	; A=00 if positive, FF if negative
+	sta	negf	; Store it as the negative flag
+	cnz	neghl	; And if HL was negative, make it positive
+	lxi	d,num	; Load pointer to end of number string
+	push	d	; Onto the stack
+	lxi	b,-10	; Divide by ten (by trial subtraction)
+digit:	lxi	d,-1	; DE = quotient. There is no 16-bit subtraction,
+dgtdiv:	dad	b	; so we just add a negative value,
+	inx	d
+	jc	dgtdiv	; while that overflows.
+	mvi	a,'0'+10	; The loop runs once too much so we're 10 out
+	add	l 	; The remainder (minus 10) is in L
+	xthl		; Swap HL with top of stack (i.e., the string pointer)
+	dcx	h	; Go back one byte
+	mov	m,a	; And store the digit
+	xthl		; Put the pointer back on the stack
+	xchg		; Do all of this again with the quotient
+	mov	a,h	; If it is zero, we're done
+	ora	l
+	jnz	digit	; But if not, there are more digits
+	mvi	c,puts	; Prepare to call CP/M and print the string
+	pop	d	; Put the string pointer from the stack in DE
+	lda	negf	; See if the number was supposed to be negative
+	inr	a
+	jnz	bdos	; If not, print the string we have and return
+	dcx	d	; But if so, we need to add a minus in front
+	mvi	a,'-'
+	stax	d
+	jmp	bdos	; And only then print the string
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Routine: parse (possibly negative) 16-bit integer at [DE],  ;;;
+	;;;	result in HL.                                               ;;;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+parse:	lxi	h,negf	; Zero out the negative flag
+	mvi	m,0
+	ldax	d	; Get first byte of number string
+	cpi	'-'	; If minus, it should be negative
+	jnz	prspos	; If not, parse as positive number
+	inr	m	; Set negative flag
+	inx	d	; The actual number starts one byte further on
+prspos:	lxi	h,0	; Set our 16-bit accumulator to zero
+prsdgt:	ldax	d	; Get current digit
+	sui	'0'	; It's ASCII, so subtract '0'
+	cpi	10	; Check if it is a valid digit (<10)
+	jnc	prsdon	; If not, that was the last character, we're done
+	dad	h	; Multiply accumulator by ten
+	mov	b,h	; There is no MUL instruction, but 10*HL = 5*(2*HL),
+	mov	c,l	; = 2*HL + 8*HL. BC=2*HL
+	dad	h	; HL *= 2
+	dad	h	; HL *= 2
+	dad	b	; HL += BC
+	mov	c,a	; Then, add the digit, extended to 16 bits
+	mvi	b,0	; by setting the top byte to zero.
+	dad	b
+	inx	d	; Then, get the next digit
+	jmp	prsdgt
+prsdon:	lda	negf	; Check if the result was supposed to be negative
+	dcr	a
+	rnz		; If not, we're done, otherwise, fall through into...
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Routine: negate the 16-bit integer in HL. 		    ;;;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+neghl:	mov	a,h	; HL = -HL; i.e. HL = (~HL) + 1
+	cma		; Get bitwise complement of the high byte,
+	mov	h,a
+	mov	a,l	; And the low byte
+	cma		; We have to do it byte for byte since it is an 8-bit
+	mov	l,a	; processor.
+	inx	h	; Then add one
+	ret		
+negf:	db	0	; Space for negative flag
+	db	'-00000'
+num:	db	'$'	; Space for number

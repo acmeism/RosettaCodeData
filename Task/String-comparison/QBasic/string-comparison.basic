@@ -1,0 +1,29 @@
+FUNCTION StringCompare$ (s1 AS STRING, s2 AS STRING, ignoreCase)
+    DIM s AS STRING, t AS STRING
+    IF ignoreCase THEN
+        s = LCASE$(s1)
+        t = LCASE$(s2)
+    ELSE
+        s = s1
+        t = s2
+    END IF
+    IF s < t THEN StringCompare$ = " comes before ": EXIT FUNCTION
+    IF s = t THEN StringCompare$ = " is equal to ": EXIT FUNCTION
+    StringCompare$ = " comes after "
+END FUNCTION
+
+DIM s1 AS STRING, s2 AS STRING, s3 AS STRING
+
+s1 = "Dog": s2 = "Dog"
+PRINT s1; StringCompare$(s1, s2, 0); s2
+s2 = "Cat"
+PRINT s1; StringCompare$(s1, s2, 0); s2
+s2 = "Rat"
+PRINT s1; StringCompare$(s1, s2, 0); s2
+s2 = "dog"
+PRINT s1; StringCompare$(s1, s2, 0); s2
+PRINT s1; StringCompare$(s1, s2, 1); s2; " if case is ignored"
+s1 = "Dog": s2 = "Pig"
+s3 = StringCompare$(s1, s2, 0)
+IF s3 <> " is equal to " THEN PRINT s1; " is not equal to "; s2
+END

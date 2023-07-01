@@ -1,0 +1,2 @@
+/* Rexx */
+say 'Hello world!'

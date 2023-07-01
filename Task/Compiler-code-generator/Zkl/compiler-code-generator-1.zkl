@@ -1,0 +1,113 @@
+// This is a little endian machine
+
+const WORD_SIZE=4;
+const{ var _n=-1; var[proxy]N=fcn{ _n+=1 }; }  // enumerator
+const FETCH=N, STORE=N, PUSH=N, ADD=N,  SUB=N,  MUL=N, DIV=N, MOD=N,
+      LT=N,    GT=N,    LE=N,   GE=N,   EQ=N,   NE=N,
+      AND=N,   OR=N,    NEG=N,  NOT=N,
+      JMP=N,   JZ=N,    PRTC=N, PRTS=N, PRTI=N, HALT=N;
+const nd_String=N, nd_Sequence=N, nd_If=N, nd_While=N;
+var all_syms=Dictionary(
+    "Identifier"  ,FETCH,       "String"      ,nd_String,
+    "Integer"     ,PUSH,        "Sequence"    ,nd_Sequence,
+    "If"          ,nd_If,       "Prtc"        ,PRTC,
+    "Prts"        ,PRTS,        "Prti"        ,PRTI,
+    "While"       ,nd_While,    "Assign"      ,STORE,
+    "Negate"      ,NEG,         "Not"         ,NOT,
+    "Multiply"    ,MUL,         "Divide"      ,DIV,
+    "Mod"         ,MOD,         "Add"         ,ADD,
+    "Subtract"    ,SUB,         "Less"        ,LT,
+    "LessEqual"   ,LE,          "Greater"     ,GT,
+    "GreaterEqual",GE,          "Equal"       ,EQ,
+    "NotEqual"    ,NE,          "And"         ,AND,
+    "Or"          ,OR,		"halt"	      ,HALT);
+var binOps=T(LT,GT,LE,GE,EQ,NE, AND,OR, SUB,ADD,DIV,MUL,MOD),
+    unaryOps=T(NEG,NOT);
+
+class Node{
+   fcn init(_node_type, _value, _left=Void, _right=Void){
+      var type=_node_type, left=_left, right=_right, value=_value;
+   }
+}
+
+var vars=Dictionary(), strings=Dictionary(); // ( value:offset, ...)
+fcn doVar(value){
+   var offset=-1;  // fcn local static var
+   offset=_doValue(value,vars,offset)
+}
+fcn doString(str){ str=str[1,-1];	// str is \"text\"
+   var offset=-1;  // fcn local static var
+   str=str.replace("\\n","\n");
+   offset=_doValue(str,strings,offset)
+}
+fcn _doValue(value,vars,offset){  //--> offset of value in vars
+   if(Void!=(n:=vars.find(value))) return(n);	// fetch existing value
+   vars[value]=offset+=1;			// store new value
+}
+
+fcn asm(node,code){
+   if(Void==node) return(code);
+   emitB:='wrap(n){ code.append(n) };
+   emitW:='wrap(n){ code.append(n.toLittleEndian(WORD_SIZE)) }; // signed
+   switch(node.type){
+      case(FETCH)    { emitB(FETCH); emitW(doVar(node.value));    }
+      case(PUSH)     { emitB(PUSH);  emitW(node.value);           }
+      case(nd_String){ emitB(PUSH);  emitW(doString(node.value)); }
+      case(STORE){
+         asm(node.right,code);
+	 emitB(STORE); emitW(doVar(node.left.value));
+      }
+      case(nd_If){
+	 asm(node.left,code);		# expr
+	 emitB(JZ);			# if false, jump
+	 p1,p2 := code.len(),0;
+	 emitW(0);			# place holder for jump dest
+	 asm(node.right.left,code);	# if true statements
+	 if (node.right.right!=Void){
+	    emitB(JMP);			# jump over else statements
+	    p2=code.len();
+	    emitW(0);
+	 }
+	 code[p1,WORD_SIZE]=(code.len() - p1).toLittleEndian(WORD_SIZE);
+	 if(node.right.right!=Void){
+	    asm(node.right.right,code);	# else statements
+	    code[p2,WORD_SIZE]=(code.len() - p2).toLittleEndian(WORD_SIZE)
+	 }
+      }
+      case(nd_While){
+	 p1:=code.len();
+	 asm(node.left,code);
+	 emitB(JZ);
+	 p2:=code.len();
+	 emitW(0);			# place holder
+	 asm(node.right,code);
+	 emitB(JMP);			# jump back to the top
+	 emitW(p1 - code.len());
+	 code[p2,WORD_SIZE]=(code.len() - p2).toLittleEndian(WORD_SIZE);
+      }
+      case(nd_Sequence){ asm(node.left,code); asm(node.right,code); }
+      case(PRTC,PRTI,PRTS){ asm(node.left,code); emitB(node.type); }
+      else{
+	 if(binOps.holds(node.type)){
+	    asm(node.left,code); asm(node.right,code);
+	    emitB(node.type);
+	 }
+	 else if(unaryOps.holds(node.type))
+	    { asm(node.left,code); emitB(node.type); }
+	 else throw(Exception.AssertionError(
+	    "error in code generator - found %d, expecting operator"
+	    .fmt(node.type)))
+      }
+   }
+   code
+}
+fcn code_finish(code){
+   code.append(HALT);
+   // prepend the strings to the code,
+   // using my magic [66,1 byte len,text], no trailing '\0' needed
+   idxs:=strings.pump(Dictionary(),"reverse");
+   idxs.keys.sort().reverse().pump(Void,'wrap(n){
+      text:=idxs[n];
+      code.insert(0,66,text.len(),text);
+   })
+}

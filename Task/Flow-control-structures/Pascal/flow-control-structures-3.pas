@@ -1,0 +1,1 @@
+procedure halt(errnum: Byte);

@@ -1,0 +1,2 @@
+ OPTION BASE 1
+ DIM myArray(100) AS INTEGER

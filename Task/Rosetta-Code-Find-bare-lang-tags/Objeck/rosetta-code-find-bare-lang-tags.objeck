@@ -1,0 +1,94 @@
+use Web.HTTP;
+use Query.RegEx;
+use Collection.Generic;
+
+class Program {
+  function : Main(args : String[]) ~ Nil {
+    master_tasks := ProcessTasks(["100_doors", "99_bottles_of_beer", "Filter", "Array_length", "Greatest_common_divisor", "Greatest_element_of_a_list", "Greatest_subsequential_sum"]);
+    "---"->PrintLine();
+    PrintTasks(master_tasks);
+  }
+
+  function : ProcessTasks(tasks : String[]) ~ MultiMap<String, String> {
+    master_tasks := MultiMap->New()<String, String>;
+
+    each(i : tasks) {
+      task := tasks[i];
+      "Processing '{$task}'..."->PrintLine();
+      matches := ProcessTask(task);
+      langs := matches->GetKeys()<String>;
+      each(j : langs) {
+        master_tasks->Insert(langs->Get(j), task);
+      };
+    };
+
+    return master_tasks;
+  }
+
+  function : ProcessTask(task : String) ~ Set<String> {
+    langs := Set->New()<String>;
+
+    header_regex := RegEx->New("==\\{\\{header\\|(\\w|/|-|_)+\\}\\}==");
+    lang_regex := RegEx->New("<(\\s)*lang(\\s)*>");
+
+    url := "http://rosettacode.org/mw/index.php?action=raw&title={$task}";
+    lines := HttpClient->New()->GetAll(url)->Split("\n");
+
+    last_header : String;
+    each(i : lines) {
+      line := lines[i];
+
+      # get header
+      header := header_regex->FindFirst(line);
+      if(<>header->IsEmpty()) {
+        last_header := HeaderName(header);
+      };
+
+      # get language
+      lang := lang_regex->FindFirst(line);
+      if(lang->Size() > 0) {
+        if(last_header <> Nil) {
+          langs->Insert("{$last_header}");
+        }
+        else {
+          langs->Insert("no language");
+        };
+      };
+    };
+
+    return langs;
+  }
+
+  function : HeaderName(lang_str : String) ~ String {
+    start := lang_str->Find('|');
+    if(start > -1) {
+      start += 1;
+      end := lang_str->Find(start, '}');
+      return lang_str->SubString(start, end - start);
+    };
+
+    return "";
+  }
+
+  function : PrintTasks(tasks : MultiMap<String, String>) ~ Nil {
+    keys := tasks->GetKeys()<String>;
+    each(i : keys) {
+      buffer := "";
+
+      key := keys->Get(i);
+      values := tasks->Find(key)<String>;
+      count := values->Size();
+      buffer += "{$count} in {$key} (";
+      each(j : values) {
+        value := values->Get(j);
+        buffer += "[[{$value}]]";
+        if(j + 1 < values->Size()) {
+          buffer += ", ";
+        };
+      };
+      buffer += ")";
+
+      buffer->PrintLine();
+    };
+  }
+}

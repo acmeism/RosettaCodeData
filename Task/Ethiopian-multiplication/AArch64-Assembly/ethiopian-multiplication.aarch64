@@ -1,0 +1,127 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program multieth64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../includeConstantesARM64.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResult:         .asciz "Result : "
+szMessStart:          .asciz "Program 64 bits start.\n"
+szCarriageReturn:     .asciz "\n"
+szMessErreur:         .asciz "Error overflow. \n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:             .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+    mov x0,#17
+    mov x1,#34
+    bl multEthiop
+    ldr x1,qAdrsZoneConv
+    bl conversion10              // decimal conversion
+    mov x0,#3                    // number string to display
+    ldr x1,qAdrszMessResult
+    ldr x2,qAdrsZoneConv         // insert conversion in message
+    ldr x3,qAdrszCarriageReturn
+    bl displayStrings            // display message
+
+100:                              // standard end of the program
+    mov x0, #0                    // return code
+    mov x8,EXIT
+    svc #0                        // perform the system call
+qAdrszCarriageReturn:        .quad szCarriageReturn
+qAdrsZoneConv:               .quad sZoneConv
+qAdrszMessResult:            .quad szMessResult
+qAdrszMessErreur:            .quad szMessErreur
+qAdrszMessStart:             .quad szMessStart
+/******************************************************************/
+/*     Ethiopian multiplication   unsigned                        */
+/******************************************************************/
+/*  x0  first factor */
+/*  x1   2th  factor  */
+/*  x0 return résult  */
+multEthiop:
+    stp x1,lr,[sp,-16]!        // save  registers
+    stp x2,x3,[sp,-16]!        // save  registers
+    mov x2,#0                  // init result
+ 1:                            // loop
+    cmp x0,#1                  // end ?
+    blt 3f
+    ands x3,x0,#1              //
+    add x3,x2,x1               // add factor2 to result
+    csel x2,x2,x3,eq
+    mov x3,1
+    lsr x0,x0,x3               // divide factor1 by 2
+    cmp x1,0                  // overflow ? if bit 63 = 1 ie negative number
+    blt 2f
+    mov x4,1
+    lsl x1,x1,x4               // multiply factor2 by 2
+    b 1b                       // or loop
+ 2:                            // error display
+    ldr x0,qAdrszMessErreur
+    bl affichageMess
+    mov x2,#0
+ 3:
+    mov x0,x2                  // return result
+    ldp x2,x3,[sp],16          // restaur  registers
+    ldp x1,lr,[sp],16          // restaur  registers
+    ret
+/***************************************************/
+/*   display multi strings                    */
+/***************************************************/
+/* x0  contains number strings address */
+/* x1 address string1 */
+/* x2 address string2 */
+/* x3 address string3 */
+/* other address on the stack */
+/* thinck to add  number other address * 8 to add to the stack */
+displayStrings:            // INFO:  displayStrings
+    stp x1,lr,[sp,-16]!    // save  registers
+    stp x2,x3,[sp,-16]!    // save  registers
+    stp x4,x5,[sp,-16]!    // save  registers
+    add fp,sp,#48          // save paraméters address (6 registers saved * 4 bytes)
+    mov x4,x0              // save strings number
+    cmp x4,#0              // 0 string -> end
+    ble 100f
+    mov x0,x1              // string 1
+    bl affichageMess
+    cmp x4,#1              // number > 1
+    ble 100f
+    mov x0,x2
+    bl affichageMess
+    cmp x4,#2
+    ble 100f
+    mov x0,x3
+    bl affichageMess
+    cmp x4,#3
+    ble 100f
+    mov x3,#3
+    sub x2,x4,#8
+1:                         // loop extract address string on stack
+    ldr x0,[fp,x2,lsl #3]
+    bl affichageMess
+    subs x2,x2,#1
+    bge 1b
+100:
+    ldp x4,x5,[sp],16      // restaur  registers
+    ldp x2,x3,[sp],16      // restaur  registers
+    ldp x1,lr,[sp],16      // restaur  registers
+    ret
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../includeARM64.inc"

@@ -1,0 +1,14 @@
+FUNCTION BIN$ (N)
+    N = ABS(INT(N))
+    B$ = ""
+    DO
+        B$ = STR$(N MOD 2) + B$
+        N = INT(N / 2)
+    LOOP WHILE N > 0
+    BIN$ = B$
+END FUNCTION
+
+fmt$ = "#### -> &"
+PRINT USING fmt$; 5; BIN$(5)
+PRINT USING fmt$; 50; BIN$(50)
+PRINT USING fmt$; 9000; BIN$(9000)

@@ -1,0 +1,28 @@
+(defun value (x)
+  (assert (> (length x) 1))
+  (coerce x 'simple-bit-vector))
+
+(defun count-neighbors-and-self (value i)
+  (flet ((ref (i)
+           (if (array-in-bounds-p value i)
+               (bit value i)
+               0)))
+    (declare (inline ref))
+    (+ (ref (1- i))
+       (ref i)
+       (ref (1+ i)))))
+
+(defun next-cycle (value)
+  (let ((new-value (make-array (length value) :element-type 'bit)))
+    (loop for i below (length value)
+          do (setf (bit new-value i)
+                   (if (= 2 (count-neighbors-and-self value i))
+                       1
+                       0)))
+    new-value))
+
+(defun print-world (value &optional (stream *standard-output*))
+  (loop for i below (length value)
+        do (princ (if (zerop (bit value i)) #\. #\#)
+                  stream))
+  (terpri stream))

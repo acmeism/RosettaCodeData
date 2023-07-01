@@ -1,0 +1,22 @@
+(define (split-by l p k)
+  (let loop ((low '())
+             (high '())
+             (l l))
+    (cond ((null? l)
+           (k low high))
+          ((p (car l))
+           (loop low (cons (car l) high) (cdr l)))
+          (else
+           (loop (cons (car l) low) high (cdr l))))))
+
+(define (quicksort l gt?)
+  (if (null? l)
+      '()
+      (split-by (cdr l)
+                (lambda (x) (gt? x (car l)))
+                (lambda (low high)
+                  (append (quicksort low gt?)
+                          (list (car l))
+                          (quicksort high gt?))))))
+
+(quicksort '(1 3 5 7 9 8 6 4 2) >)

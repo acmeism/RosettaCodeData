@@ -1,0 +1,157 @@
+V ALPHABET_SIZE = 256
+
+F alphabet_index(Char c) -> Int
+   ‘Return the index of the given ASCII character.’
+   V val = c.code
+   assert(Int(val) C 0 .< :ALPHABET_SIZE)
+   R val
+
+F match_length(String s, Int =idx1, Int =idx2) -> Int
+   ‘Return the length of the match of the substrings of S beginning at idx1 and idx2.’
+   I idx1 == idx2
+      R s.len - idx1
+   V match_count = 0
+   L idx1 < s.len & idx2 < s.len & s[idx1] == s[idx2]
+      match_count++
+      idx1++
+      idx2++
+   R match_count
+
+F fundamental_preprocess(String s) -> [Int]
+   ‘Return Z, the Fundamental Preprocessing of S.
+
+    Z[i] is the length of the substring beginning at i which is also a prefix of S.
+    This pre-processing is done in O(n) time, where n is the length of S.’
+   I s.empty
+      R []
+   I s.len == 1
+      R [1]
+   V z = [0] * s.len
+   z[0] = s.len
+   z[1] = match_length(s, 0, 1)
+   L(i) 2 .< 1 + z[1]
+      z[i] = z[1] - i + 1
+   V l = 0
+   V r = 0
+   L(i) 2 + z[1] .< s.len
+      I i <= r
+         V k = i - l
+         V b = z[k]
+         V a = r - i + 1
+         I b < a
+            z[i] = b
+         E
+            z[i] = a + match_length(s, a, r + 1)
+            l = i
+            r = i + z[i] - 1
+      E
+         z[i] = match_length(s, 0, i)
+         I z[i] > 0
+            l = i
+            r = i + z[i] - 1
+   R z
+
+F bad_character_table(String s) -> [[Int]]
+   ‘
+    Generates R for S, which is an array indexed by the position of some character c in the
+    ASCII table. At that index in R is an array of length |S|+1, specifying for each
+    index i in S (plus the index after S) the next location of character c encountered when
+    traversing S from right to left starting at i. This is used for a constant-time lookup
+    for the bad character rule in the Boyer-Moore string search algorithm, although it has
+    a much larger size than non-constant-time solutions.
+   ’
+   I s.empty
+      R [[Int]()] * :ALPHABET_SIZE
+   V r = [[-1]] * :ALPHABET_SIZE
+   V alpha = [-1] * :ALPHABET_SIZE
+   L(c) s
+      alpha[alphabet_index(c)] = L.index
+      L(a) alpha
+         r[L.index].append(a)
+   R r
+
+F good_suffix_table(String s) -> [Int]
+   ‘
+    Generates L for S, an array used in the implementation of the strong good suffix rule.
+    L[i] = k, the largest position in S such that S[i:] (the suffix of S starting at i) matches
+    a suffix of S[:k] (a substring in S ending at k). Used in Boyer-Moore, L gives an amount to
+    shift P relative to T such that no instances of P in T are skipped and a suffix of P[:L[i]]
+    matches the substring of T matched by a suffix of P in the previous match attempt.
+    Specifically, if the mismatch took place at position i-1 in P, the shift magnitude is given
+    by the equation len(P) - L[i]. In the case that L[i] = -1, the full shift table is used.
+    Since only proper suffixes matter, L[0] = -1.
+   ’
+   V l = [-1] * s.len
+   V _n_ = fundamental_preprocess(reversed(s))
+   _n_.reverse()
+   L(j) 0 .< s.len - 1
+      V i = s.len - _n_[j]
+      I i != s.len
+         l[i] = j
+   R l
+
+F full_shift_table(String s) -> [Int]
+   ‘
+    Generates F for S, an array used in a special case of the good suffix rule in the Boyer-Moore
+    string search algorithm. F[i] is the length of the longest suffix of S[i:] that is also a
+    prefix of S. In the cases it is used, the shift magnitude of the pattern P relative to the
+    text T is len(P) - F[i] for a mismatch occurring at i-1.
+   ’
+   V f = [0] * s.len
+   V Z = fundamental_preprocess(s)
+   V longest = 0
+   L(zv) reversed(Z)
+      V i = L.index
+      longest = I zv == i + 1 {max(zv, longest)} E longest
+      f[(len)-i - 1] = longest
+   R f
+
+F string_search(P, _t_) -> [Int]
+   ‘
+    Implementation of the Boyer-Moore string search algorithm. This finds all occurrences of P
+    in T, and incorporates numerous ways of pre-processing the pattern to determine the optimal
+    amount to shift the string and skip comparisons. In practice it runs in O(m) (and even
+    sublinear) time, where m is the length of T. This implementation performs a case-sensitive
+    search on ASCII characters. P must be ASCII as well.
+   ’
+   I P.empty | _t_.empty | _t_.len < P.len
+      R []
+
+   [Int] matches
+
+   V r = bad_character_table(P)
+   V l = good_suffix_table(P)
+   V f = full_shift_table(P)
+
+   V k = P.len - 1
+   V previous_k = -1
+   L k < _t_.len
+      V i = P.len - 1
+      V h = k
+      L i >= 0 & h > previous_k & P[i] == _t_[h]
+         i--
+         h--
+      I i == -1 | h == previous_k
+         matches.append(k - P.len + 1)
+         k += I P.len > 1 {P.len - f[1]} E 1
+      E
+         V char_shift = i - r[alphabet_index(_t_[h])][i]
+         Int suffix_shift
+         I i + 1 == P.len
+            suffix_shift = 1
+         E I l[i + 1] == -1
+            suffix_shift = P.len - f[i + 1]
+         E
+            suffix_shift = P.len - 1 - l[i + 1]
+         V shift = max(char_shift, suffix_shift)
+         previous_k = I shift >= i + 1 {k} E previous_k
+         k += shift
+   R matches
+
+V TEXT1 = ‘InhisbookseriesTheArtofComputerProgrammingpublishedbyAddisonWesleyDKnuthusesanimaginarycomputertheMIXanditsassociatedmachinecodeandassemblylanguagestoillustratetheconceptsandalgorithmsastheyarepresented’
+V TEXT2 = ‘Nearby farms grew a half acre of alfalfa on the dairy's behalf, with bales of all that alfalfa exchanged for milk.’
+V (PAT1, PAT2, PAT3) = (‘put’, ‘and’, ‘alfalfa’)
+
+print(‘Found ’PAT1‘ at: ’string_search(PAT1, TEXT1))
+print(‘Found ’PAT2‘ at: ’string_search(PAT2, TEXT1))
+print(‘Found ’PAT3‘ at: ’string_search(PAT3, TEXT2))

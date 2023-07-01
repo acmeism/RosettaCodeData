@@ -1,0 +1,1 @@
+object emptyProgram extends App {}

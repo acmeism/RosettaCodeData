@@ -1,0 +1,209 @@
+/* ARM assembly AARCH64 Raspberry PI 3B or android 64 bits */
+/*  program AKS64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ MAXI,       64
+.equ NUMBERLOOP, 10
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResult:        .asciz " (x-1)^@ = "
+szMessResult1:       .asciz " @ x^@   "
+szMessResPrime:      .asciz "Number @ is prime. \n"
+szCarriageReturn:    .asciz "\n"
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+qTabCoef:         .skip 8 * MAXI
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                               // entry of program
+
+    mov x4,#1
+1:                                  // loop
+    mov x0,x4
+    bl computeCoef                  // compute coefficient
+    ldr x0,qAdrqTabCoef
+    mov x0,x4
+    bl displayCoef                  // display coefficient
+    add x4,x4,1
+    cmp x4,NUMBERLOOP
+    blt 1b
+
+    mov x4,1
+2:
+    mov x0,x4
+    bl isPrime                      // is prime ?
+    cmp x0,1
+    bne 3f
+    mov x0,x4
+    ldr x1,qAdrsZoneConv
+    bl conversion10                  // call decimal conversion
+    add x1,x1,x0
+    strb wzr,[x1]
+    ldr x0,qAdrszMessResPrime
+    ldr x1,qAdrsZoneConv             // insert value conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+
+3:
+    add x4,x4,1
+    cmp x4,MAXI
+    blt 2b
+
+100:                                 // standard end of the program
+    mov x0,0                         // return code
+    mov x8,EXIT                      // request to exit program
+    svc 0                            // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsZoneConv:            .quad sZoneConv
+qAdrqTabCoef:             .quad qTabCoef
+qAdrszMessResPrime:       .quad szMessResPrime
+/***************************************************/
+/*     display coefficients                        */
+/***************************************************/
+// x0 contains a number
+displayCoef:
+    stp x1,lr,[sp,-16]!         // save  registres
+    stp x2,x3,[sp,-16]!         // save  registres
+    stp x4,x5,[sp,-16]!         // save  registres
+    stp x6,x7,[sp,-16]!         // save  registres
+    mov x2,x0
+    ldr x1,qAdrsZoneConv        //
+    bl conversion10             // call decimal conversion
+    add x1,x1,x0
+    strb wzr,[x1]
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv        // insert value conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+    ldr x3,qAdrqTabCoef
+1:
+    ldr x0,[x3,x2,lsl #3]
+    ldr x1,qAdrsZoneConv        //
+    bl conversion10S            // call decimal conversion
+2:                              // removing spaces
+    ldrb w6,[x1]
+    cmp x6,' '
+    cinc x1,x1,eq
+    beq 2b
+
+    ldr x0,qAdrszMessResult1
+    bl strInsertAtCharInc
+    mov x4,x0
+    mov x0,x2
+    ldr x1,qAdrsZoneConv        // else display odd message
+    bl conversion10             // call decimal conversion
+    add x1,x1,x0
+    strb wzr,[x1]
+    mov x0,x4
+    ldr x1,qAdrsZoneConv        // insert value conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+    subs x2,x2,#1
+    bge 1b
+
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+100:
+    ldp x6,x7,[sp],16         // restaur des  2 registres
+    ldp x4,x5,[sp],16         // restaur des  2 registres
+    ldp x2,x3,[sp],16         // restaur des  2 registres
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+qAdrszMessResult:    .quad szMessResult
+qAdrszMessResult1:   .quad szMessResult1
+/***************************************************/
+/*     compute coefficient               */
+/***************************************************/
+// x0 contains a number
+computeCoef:
+    stp x1,lr,[sp,-16]!         // save  registres
+    stp x2,x3,[sp,-16]!         // save  registres
+    stp x4,x5,[sp,-16]!         // save  registres
+    stp x6,x7,[sp,-16]!         // save  registres
+    ldr x1,qAdrqTabCoef         // address coefficient array
+    mov x2,1
+    str x2,[x1]                 // store 1 to coeff [0]
+    mov x3,0                    // indice 1
+1:
+    add x4,x3,1
+    mov x5,1
+    str x5,[x1,x4,lsl #3]
+    mov x6,x3                   // indice 2 = indice 1
+2:
+    cmp x6,0                    // zero ? -> end loop
+    ble 3f
+    sub x4,x6,1
+    ldr x5,[x1,x4,lsl 3]
+    ldr x4,[x1,x6,lsl 3]
+    sub x5,x5,x4
+    str x5,[x1,x6,lsl 3]
+    sub x6,x6,1
+    b 2b
+3:
+    ldr x2,[x1]                 // inversion coeff [0]
+    neg x2,x2
+    str x2,[x1]
+    add x3,x3,1
+    cmp x3,x0
+    blt 1b
+
+100:
+    ldp x6,x7,[sp],16         // restaur des  2 registres
+    ldp x4,x5,[sp],16         // restaur des  2 registres
+    ldp x2,x3,[sp],16         // restaur des  2 registres
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+/***************************************************/
+/*     verify number is prime              */
+/***************************************************/
+// x0 contains a number
+isPrime:
+    stp x1,lr,[sp,-16]!         // save  registres
+    stp x2,x3,[sp,-16]!         // save  registres
+    stp x4,x5,[sp,-16]!         // save  registres
+    bl computeCoef
+    ldr x4,qAdrqTabCoef         // address coefficient array
+    ldr x2,[x4]
+    add x2,x2,1
+    str x2,[x4]
+    ldr x2,[x4,x0,lsl 3]
+    sub x2,x2,#1
+    str x2,[x4,x0,lsl 3]
+    mov x5,x0                  // number start
+1:
+    ldr x1,[x4,x5,lsl 3]       // load one coeff
+    sdiv x2,x1,x0
+    msub x3,x2,x0,x1           // compute remainder
+    cmp x3,#0                  // remainder = zéro ?
+    bne 99f                    // if <> no prime
+    subs x5,x5,#1              // next coef
+    bgt 1b                     // and loop
+    mov x0,#1                  // prime
+    b 100f
+99:
+    mov x0,0                   // no prime
+100:
+    ldp x4,x5,[sp],16         // restaur des  2 registres
+    ldp x2,x3,[sp],16         // restaur des  2 registres
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

@@ -1,0 +1,3 @@
+MOV R1,#0x04000000
+MOV R0,#0x403
+STR r0,[r1]      ;the game boy advance is little-endian, so I would have expected this not to work. However it does indeed work.

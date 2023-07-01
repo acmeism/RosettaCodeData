@@ -1,0 +1,1 @@
+: jortSort  dup sort == ;

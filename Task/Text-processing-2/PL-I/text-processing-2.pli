@@ -1,0 +1,52 @@
+/* To process readings produced by automatic reading stations. */
+
+check: procedure options (main);
+   declare 1 date, 2 (yy, mm, dd) character (2),
+           (j1, j2) character (1);
+   declare old_date character (6);
+   declare line character (330) varying;
+   declare R(24) fixed decimal, Machine(24) fixed binary;
+   declare (i, k, n, faulty static initial (0)) fixed binary;
+   declare input file;
+
+   open file (input) title ('/READINGS.TXT,TYPE(CRLF),RECSIZE(300)');
+
+   on endfile (input) go to done;
+
+   old_date = '';
+   k = 0;
+   do forever;
+      k = k + 1;
+
+      get file (input) edit (line) (L);
+      get string(line) edit (yy, j1, mm, j2, dd) (a(4), a(1), a(2), a(1), a(2));
+
+      line = substr(line, 11);
+
+      do i = 1 to length(line);
+         if substr(line, i, 1) = '09'x then substr(line, i, 1) = ' ';
+      end;
+      line = trim(line);
+      n = tally(line, ' ') - tally (line, '  ') + 1;
+
+      if n ^= 48 then
+         do;
+            put skip list ('There are ' || n || ' readings in line ' || k);
+         end;
+
+      n = n/2;
+      line = line || ' ';
+
+      get string(line) list ((R(i), Machine(i) do i = 1 to n));
+
+      if any(Machine < 1) ^= '0'B then
+         faulty = faulty + 1;
+      if old_date ^= ' ' then if old_date = string(date) then
+         put skip list ('Dates are the same at line' || k);
+      old_date = string(date);
+   end;
+done:
+   put skip list ('There were ' || k || ' sets of readings');
+   put skip list ('There were ' || faulty || ' faulty readings' );
+   put skip list ('There were ' || k-faulty || ' good readings' );
+end check;

@@ -1,0 +1,342 @@
+(*------------------------------------------------------------------*)
+(* I will not bother with threads. All we need is the ability to get
+   the time from the operating system. This is available as
+   clock(3). *)
+
+#define ATS_PACKNAME "rosettacode.activeobject"
+#define ATS_EXTERN_PREFIX "rosettacode_activeobject_"
+
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+(* Some math functionality, for all the standard floating point
+   types. The ats2-xprelude package includes this, and more, but one
+   may wish to avoid the dependency. And there is support for math
+   functions in libats/libc, but not with typekinds. *)
+
+%{^
+#include <math.h>
+// sinpi(3) would be better than sin(3), but I do not yet have
+// sinpi(3).
+#define rosettacode_activeobject_pi \
+  3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214L
+#define rosettacode_activeobject_sinpi_float(x) \
+  (sinf (((atstype_float) rosettacode_activeobject_pi) * (x)))
+#define rosettacode_activeobject_sinpi_double \
+  (sin (((atstype_double) rosettacode_activeobject_pi) * (x)))
+#define rosettacode_activeobject_sinpi_ldouble \
+  (sinl (((atstype_ldouble) rosettacode_activeobject_pi) * (x)))
+%}
+
+extern fn sinpi_float : float -<> float = "mac#%"
+extern fn sinpi_double : double -<> double = "mac#%"
+extern fn sinpi_ldouble : ldouble -<> ldouble = "mac#%"
+extern fn {tk : tkind} g0float_sinpi : g0float tk -<> g0float tk
+implement g0float_sinpi<fltknd> x = sinpi_float x
+implement g0float_sinpi<dblknd> x = sinpi_double x
+implement g0float_sinpi<ldblknd> x = sinpi_ldouble x
+
+overload sinpi with g0float_sinpi
+
+(*------------------------------------------------------------------*)
+(* Some clock(3) functionality for the three standard floating point
+   types. *)
+
+%{^
+#include <time.h>
+
+typedef clock_t rosettacode_activeobject_clock_t;
+
+ATSinline() rosettacode_activeobject_clock_t
+rosettacode_activeobject_clock () // C23 drops the need for "void".
+{
+  return clock ();
+}
+
+ATSinline() rosettacode_activeobject_clock_t
+rosettacode_activeobject_clock_difference
+          (rosettacode_activeobject_clock_t t,
+           rosettacode_activeobject_clock_t t0)
+{
+  return (t - t0);
+}
+
+ATSinline() atstype_float
+rosettacode_activeobject_clock_scaled2float
+          (rosettacode_activeobject_clock_t t)
+{
+  return ((atstype_float) t) / CLOCKS_PER_SEC;
+}
+
+ATSinline() atstype_double
+rosettacode_activeobject_clock_scaled2double
+          (rosettacode_activeobject_clock_t t)
+{
+  return ((atstype_double) t) / CLOCKS_PER_SEC;
+}
+
+ATSinline() atstype_ldouble
+rosettacode_activeobject_clock_scaled2ldouble
+          (rosettacode_activeobject_clock_t t)
+{
+  return ((atstype_ldouble) t) / CLOCKS_PER_SEC;
+}
+%}
+
+typedef clock_t = $extype"clock_t"
+extern fn clock : () -<> clock_t = "mac#%"
+extern fn clock_difference : (clock_t, clock_t) -<> clock_t = "mac#%"
+extern fn clock_scaled2float : clock_t -<> float = "mac#%"
+extern fn clock_scaled2double : clock_t -<> double = "mac#%"
+extern fn clock_scaled2ldouble : clock_t -<> ldouble = "mac#%"
+
+extern fn {tk : tkind} clock_scaled2g0float : clock_t -<> g0float tk
+
+implement clock_scaled2g0float<fltknd> t = clock_scaled2float t
+implement clock_scaled2g0float<dblknd> t = clock_scaled2double t
+implement clock_scaled2g0float<ldblknd> t = clock_scaled2ldouble t
+
+overload - with clock_difference
+overload clock2f with clock_scaled2g0float
+
+(*------------------------------------------------------------------*)
+
+%{^
+#if defined __GNUC__ && (defined __i386__ || defined __x86_64__)
+// A small, machine-dependent pause, for improved performance of spin
+// loops.
+#define rosettacode_activeobject_pause() __builtin_ia32_pause ()
+#else
+// Failure to insert a small, machine-dependent pause may overwork
+// your hardware, but the task can be done anyway.
+#define rosettacode_activeobject_pause() do{}while(0)
+#endif
+%}
+
+extern fn pause : () -<> void = "mac#%"
+
+(*------------------------------------------------------------------*)
+
+(* Types such as this can have their internals hidden, but here I will
+   not bother with such details. *)
+vtypedef sinusoidal_generator (tk : tkind) =
+  @{
+    phase   = g0float tk,
+    afreq   = g0float tk,    (* angular frequency IN UNITS OF 2*pi. *)
+    clock0  = clock_t,
+    stopped = bool
+  }
+
+fn {tk : tkind}
+sinusoidal_generator_Initize
+          (gen   : &sinusoidal_generator tk?
+                    >> sinusoidal_generator tk,
+           phase : g0float tk,
+           afreq : g0float tk) : void =
+  gen := @{phase = phase,
+           afreq = afreq,
+           clock0 = clock (),
+           stopped = true}
+
+fn {tk : tkind}
+sinusoidal_generator_Start
+          (gen : &sinusoidal_generator tk) : void =
+  gen.stopped := false
+
+(* IMO changing the integrator's input is bad OO design: akin to
+   unplugging one generator and plugging in another. What we REALLY
+   want is to have the generator produce a different signal. So
+   gen.Stop() will connect the output to a constant
+   zero. (Alternatively, the channel between the signal source and the
+   integrator could effect the shutoff.) *)
+fn {tk : tkind}
+sinusoidal_generator_Stop
+          (gen : &sinusoidal_generator tk) : void =
+  gen.stopped := true
+
+fn {tk : tkind}
+sinusoidal_generator_Sample
+          (gen : !sinusoidal_generator tk) : g0float tk =
+  let
+    val @{phase = phase,
+          afreq = afreq,
+          clock0 = clock0,
+          stopped = stopped} = gen
+  in
+    if stopped then
+      g0i2f 0
+    else
+      let
+        val t = (clock2f (clock () - clock0)) : g0float tk
+      in
+        sinpi ((afreq * t) + phase)
+      end
+  end
+
+overload .Initize with sinusoidal_generator_Initize
+overload .Start with sinusoidal_generator_Start
+overload .Stop with sinusoidal_generator_Stop
+overload .Sample with sinusoidal_generator_Sample
+
+(*------------------------------------------------------------------*)
+
+vtypedef inputter (tk : tkind, p : addr) =
+  (* This is a closure type that can reside either in the heap or on
+     the stack. *)
+  @((() -<clo1> g0float tk) @ p | ptr p)
+
+vtypedef active_integrator (tk : tkind, p : addr) =
+  @{
+    inputter    = inputter (tk, p),
+    t_last      = clock_t,
+    sample_last = g0float tk,
+    integral    = g0float tk
+  }
+vtypedef active_integrator (tk : tkind) =
+  [p : addr] active_integrator (tk, p)
+
+fn {tk : tkind}
+active_integrator_Input
+          {p : addr}
+          (igrator  : &active_integrator tk?
+                        >> active_integrator (tk, p),
+           inputter : inputter (tk, p)) : void =
+  let
+    val now = clock ()
+  in
+    igrator := @{inputter = inputter,
+                 t_last = now,
+                 sample_last = g0i2f 0,
+                 integral = g0i2f 0}
+  end
+
+fn {tk : tkind}
+active_integrator_Output
+          {p : addr}
+          (igrator : !active_integrator (tk, p)) : g0float tk =
+  igrator.integral
+
+fn {tk : tkind}
+active_integrator_Integrate
+          {p : addr}
+          (igrator : &active_integrator (tk, p)) : void =
+  let
+    val @{inputter = @(pf | p),
+          t_last = t_last,
+          sample_last = sample_last,
+          integral = integral} = igrator
+    macdef inputter_closure = !p
+
+    val t_now = clock ()
+    val sample_now = inputter_closure ()
+
+    val integral = integral + ((sample_last + sample_now)
+                               * clock2f (t_last - t_now)
+                               * g0f2f 0.5)
+    val sample_last = sample_now
+    val t_last = t_now
+
+    val () = igrator := @{inputter = @(pf | p),
+                          t_last = t_last,
+                          sample_last = sample_last,
+                          integral = integral}
+  in
+  end
+
+overload .Input with active_integrator_Input
+overload .Output with active_integrator_Output
+overload .Integrate with active_integrator_Integrate
+
+(*------------------------------------------------------------------*)
+
+implement
+main () =
+  let
+    (* We put on the stack all objects that are not in registers. Thus
+       we avoid the need for malloc/free. *)
+
+    vtypedef gen_vt = sinusoidal_generator float_kind
+    vtypedef igrator_vt = active_integrator float_kind
+
+    var gen : gen_vt
+    var igrator : igrator_vt
+
+    val phase = 0.0f
+    and afreq = 1.0f            (* Frequency of 0.5 Hz. *)
+    val () = gen.Initize (phase, afreq)
+    val () = gen.Start ()
+
+    (* Create a thunk on the stack. This thunk acts as a channel
+       between the sinusoidal generator and the active integrator. We
+       could probably work this step into the OO style of most of the
+       code, but doing that is left as an exercise. The mechanics of
+       creating a closure on the stack are already enough for a person
+       to absorb. (Of course, rather than use a closure, we could have
+       set up a type hierarchy. However, IMO a type hierarchy is
+       needlessly clumsy. Joining the objects with a closure lets any
+       thunk of the correct type serve as input.) *)
+    val p_gen = addr@ gen
+    var gen_clo_on_stack =
+      lam@ () : float =<clo1>
+        let
+          (* A little unsafeness is needed here. AFAIK there is no way
+             to SAFELY enclose the stack variable "gen" in the
+             closure. A negative effect is that (at least without some
+             elaborate scheme) it becomes POSSIBLE to use this
+             closure, even after "gen" has been destroyed. But we will
+             be careful not to do that. *)
+          extern praxi p2view :
+            {p : addr} ptr p -<prf>
+              (gen_vt @ p, gen_vt @ p -<lin,prf> void)
+          prval @(pf, fpf) = p2view p_gen
+          macdef gen = !p_gen
+          val sample = gen.Sample ()
+          prval () = fpf pf
+        in
+          sample
+        end
+    val sinusoidal_inputter =
+      @(view@ gen_clo_on_stack | addr@ gen_clo_on_stack)
+
+    val () = igrator.Input (sinusoidal_inputter)
+
+    fn {}
+    integrate_for_seconds
+              (igrator : &igrator_vt,
+               seconds : float) : void =
+      let
+        val t0 = clock2f (clock ())
+        fun
+        loop (igrator : &igrator_vt) : void =
+          if clock2f (clock ()) - t0 < seconds then
+            begin
+              igrator.Integrate ();
+              pause ();
+              loop igrator
+            end
+      in
+        loop igrator
+      end
+
+    (* Start the sinusoid and then integrate for 2.0 seconds. *)
+    val () = gen.Start ()
+    val () = integrate_for_seconds (igrator, 2.0f)
+
+    (* Stop the sinusoid and then integrate for 0.5 seconds. *)
+    val () = gen.Stop ()
+    val () = integrate_for_seconds (igrator, 0.5f)
+
+    val () = println! ("integrator output = ", igrator.Output ());
+
+    (* The following "prval" lines are necessary for type-safety, and
+       produce no executable code. *)
+    prval @{inputter = @(pf | _),
+            t_last = _,
+            sample_last = _,
+            integral = _} = igrator
+    prval () = view@ gen_clo_on_stack := pf
+  in
+    0
+  end
+
+(*------------------------------------------------------------------*)

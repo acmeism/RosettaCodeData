@@ -1,0 +1,65 @@
+// Command table:
+Buf_Switch(#10=Buf_Free)
+Ins_Text("
+   Add ALTer  BAckup Bottom  CAppend Change SCHANGE  CInsert CLAst COMPress COpy
+   COUnt COVerlay CURsor DELete CDelete Down DUPlicate Xedit EXPand EXTract Find
+   NFind NFINDUp NFUp CFind FINdup FUp FOrward GET Help HEXType Input POWerinput
+   Join SPlit SPLTJOIN  LOAD  Locate CLocate  LOWercase UPPercase  LPrefix MACRO
+   MErge MODify MOve MSG Next Overlay PARSE PREServe PURge PUT PUTD  Query  QUIT
+   READ  RECover REFRESH RENum REPeat  Replace CReplace  RESet  RESTore  RGTLEFT
+   RIght LEft  SAVE  SET SHift SI  SORT  SOS  STAck STATus  TOP TRAnsfer Type Up
+")
+
+// Example input:
+Buf_Switch(#11=Buf_Free)
+Ins_Text("riG rePEAT copies  put mo   rest    types   fup.    6       poweRin ")
+BOF
+
+// Main program
+#20 = Reg_Free()			// Text register for the word to be converted
+Repeat(ALL) {
+    Buf_Switch(#11)			// Buffer for example input
+    Search("|!|X", ERRBREAK)		// Find next non-space character
+    #30 = Cur_Pos			// #30 = begin of a word
+    Search("|X", NOERR+NORESTORE)	// Find whitespace (end of the word)
+    Reg_Copy_Block(#20, #30, Cur_Pos)	// Get the word to text register #20
+    Call("acronym_to_word")		// Convert acronym to full word
+    Reg_Type(#20)			// Display the full word
+    Type_Char(' ')			// Display a space character
+}
+Buf_Switch(#10) Buf_Quit(OK)		// Clean-up
+Buf_Switch(#11) Buf_Quit(OK)
+Reg_Empty(#20)
+Return
+
+// Convert an acronym to full word in uppercase
+// Input:  @(#20) = the acronym
+// Return: @(#20) = the full word
+//
+:acronym_to_word:
+if (Reg_Size(#20) == 0) {		// If zero length input,
+    return				// return zero length string
+}
+Buf_Switch(#10)				// Switch to command table
+BOF
+While (!At_EOF) {
+    if (Search("|S|@(#20)", NOERR)) {		// Find (the first part of) the word
+	Char					// Skip the separator
+	#31 = Cur_Pos				// #31 = Begin of the acronym
+	Char(Reg_Size(#20))			// Check if the acronym is log enough
+	if (Cur_Char < 'A' || Cur_Char > 'Z') {	// Not a capital letter, verified
+	    Search("|X")			// Find the end of the word
+	    Reg_Copy_Block(#20, #31, Cur_Pos)	// Get the word into text register #20
+	    Buf_Switch(Buf_Free)		// Convert to upper case using tmp buffer
+	    Reg_Ins(#20)
+	    Case_Upper_Block(0, Cur_Pos)
+	    Reg_Copy_Block(#20, 0, Cur_Pos)
+	    Buf_Quit(OK)
+	    break				// Word found, exit loop
+	}
+    } else {					// Not found
+	Reg_Set(#20, "*error*")
+	break
+    }
+}
+Return

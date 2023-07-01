@@ -1,0 +1,14 @@
+Transcript show:'5 negated**2 => '; showCR: 5 negated**2. "negates 5"
+Transcript show:'5 negated**3 => '; showCR: 5 negated**3.
+Transcript show:'5**2 negated => '; showCR: 5**2 negated. "negates 2"
+Transcript show:'5**3 negated => '; showCR: 5**3 negated. "negates 3"
+Transcript show:'5 negated**a => '; showCR: 5 negated**a.
+Transcript show:'5 negated**b => '; showCR: 5 negated**b.
+Transcript show:'5**a negated => '; showCR: 5**a negated.
+Transcript show:'5**b negated => '; showCR: 5**b negated.
+Transcript show:'(5**a) negated => '; showCR: (5**a) negated.
+Transcript show:'(5**b) negated => '; showCR: (5**b) negated.
+Transcript show:'(-5**a) negated => '; showCR: (-5**a) negated.
+Transcript show:'(-5**b) negated => '; showCR: (-5**b) negated.
+Transcript show:'-5 negated**2 => '; showCR: -5 negated**2. "negates the negative 5"
+Transcript show:'-5 negated**3 => '; showCR: -5 negated**3.

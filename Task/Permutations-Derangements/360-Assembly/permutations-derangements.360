@@ -1,0 +1,252 @@
+*        Permutations/Derangements 01/04/2017
+DERANGE  CSECT
+         USING  DERANGE,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         XPRNT  PG1,L'PG1          print title
+         LA     R1,4               4
+         LA     R2,1               1 : combinations print
+         BAL    R14,DERGEN         call dergen
+         STH    R0,COUNT           count=dergen(4,1)
+         XPRNT  PG2,L'PG2          print table headings
+         XPRNT  PG3,L'PG3          print hyphens
+         SR     R4,R4
+         STH    R4,II              ii=0
+       DO WHILE=(CH,R4,LE,=H'9')   do ii=0 to 9
+         MVC    PG,=CL80' '          clear buffer
+         XDECO  R4,PG                edit ii
+         LR     R1,R4                ii
+         LA     R2,0                 0 : no combination print
+         BAL    R14,DERGEN           dergen(ii,0)
+         XDECO  R0,PG+12             edit
+         LH     R1,II                ii
+         BAL    R14,SUBFACT          subfact(ii)
+         XDECO  R0,PG+24             edit
+         XPRNT  PG,L'PG              print
+         LH     R4,II                ii
+         LA     R4,1(R4)             i+1
+         STH    R4,II                i=i+1
+       ENDDO    ,                  enddo i
+         LA     R0,12              12
+         STH    R0,II              ii=12
+         MVC    PG,=CL16'!xx='     init buffer
+         XDECO  R0,XDEC            edit ii
+         MVC    PG+1(2),XDEC+10    output
+         LH     R1,II              ii
+         BAL    R14,SUBFACT        subfact(ii)
+         XDECO  R0,PG+4            edit subfact(ii)
+         XPRNT  PG,16              print
+         L      R13,4(0,R13)       restore previous savearea pointer
+         LM     R14,R12,12(R13)    restore previous context
+         XR     R15,R15            rc=0
+         BR     R14                exit
+*------- ----   -------------------------------------------
+DERGEN   EQU    *                  dergen(n,fprt)
+         ST     R14,SAVEDG
+         ST     R1,N               n
+         ST     R2,FPRT            fprt
+       IF LTR,R1,Z,R1 THEN         if n=0 then
+         LA     R0,1                 1
+         B      RETDG                return(1)
+       ENDIF    ,                  endif
+         MVC    C,=F'0'            c=0
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,N)        do i=1 to 2
+         LR     R1,R6                i
+         SLA    R1,1
+         STH    R6,A-2(R1)           a(i)=i
+         STH    R6,AO-2(R1)          ao(i)=i
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         L      R1,N               n
+         BAL    R14,FACT
+         ST     R0,FACTNM1         fact(n)-1
+         SR     R6,R6              i=0
+       DO WHILE=(C,R6,LE,FACTNM1)  do i=0 to fact(n)-1
+         L      R1,N                 n
+         BAL    R14,NEXTPER          call nextper(n)
+         MVI    D,X'01'              d=true
+         LA     R7,1
+       DO WHILE=(C,R7,LE,N)          do j=1 to n
+         LR     R1,R7                  j
+         SLA    R1,1
+         LH     R2,A-2(R1)             a(j)
+         LH     R3,AO-2(R1)            ao(j)
+       IF CR,R2,EQ,R3 THEN             if a(j)=ao(j) then
+         MVI    D,X'00'                  d=false
+       ENDIF    ,                      endif
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+       IF CLI,D,EQ,X'01' THEN        if d then
+         L      R2,C                   c
+         LA     R2,1(R2)               c+1
+         ST     R2,C                   c=c+1
+       IF CLI,FPRT+3,EQ,X'01' THEN     if fprt=1 then
+         MVC    PG,=CL80' '              clear buffer
+         LA     R10,PG                   pgi=0
+         LA     R7,1                     j=1
+       DO WHILE=(C,R7,LE,N)              do j=1 to n
+         LR     R1,R7                      j
+         SLA    R1,1
+         LH     R2,A-2(R1)                 a(j)
+         XDECO  R2,XDEC                    edit
+         MVC    0(1,R10),XDEC+11           output
+         LA     R10,2(R10)                 pgi=pgi+2
+         LA     R7,1(R7)                   j++
+        ENDDO    ,                        enddo j
+         XPRNT  PG,L'PG                   print
+       ENDIF    ,                      endif
+       ENDIF    ,                    endif
+         LA     R6,1(R6)             i++
+        ENDDO    ,                 enddo i
+         L      R0,C               c
+         B      RETDG              return(c)
+RETDG    L      R14,SAVEDG
+         BR     R14
+SAVEDG   DS     A
+*------- ----   -------------------------------------------
+NEXTPER  EQU    *                  nextper(nk)
+         ST     R14,SAVENP
+         ST     R1,NK              nk
+         BCTR   R1,0               nk-1
+         ST     R1,NELEM           nelem=nk-1
+       IF C,R1,LT,=F'1' THEN       if nelem<1 then
+         LA     R0,0                 return(0)
+         B      RETNP
+       ENDIF    ,                  endif
+         L      R8,NELEM           nelem
+         BCTR   R8,0               pos=nelem-1
+LOOPW1   EQU    *                  while a(pos+1)>=a(pos+2)
+         LR     R1,R8                pos
+         SLA    R1,1
+         LH     R2,A(R1)             a(pos+1)
+         CH     R2,A+2(R1)           if a(pos+1)<a(pos+2)
+         BL     ELOOPW1              then exit while
+         BCTR   R8,0                 pos=pos-1
+       IF LTR,R8,M,R8 THEN           if pos<0 then
+         LA     R1,0                   0
+         L      R2,NELEM               nelem
+         BAL    R14,PERMREV            call permrev(0,nelem)
+         LA     R0,0                   return(0)
+         B      RETNP
+       ENDIF    ,                    endif
+         B      LOOPW1             endwhile
+ELOOPW1  L      R9,NELEM           last=nelem
+LOOPW2   EQU    *                  do while a(last+1)<=a(pos+1)
+         LR     R1,R9                last
+         SLA    R1,1
+         LH     R2,A(R1)             a(last+1)
+         LR     R1,R8                pos
+         SLA    R1,1
+         CH     R2,A(R1)             if a(last+1)>a(pos+1)
+         BH     ELOOPW2              then exit while
+         BCTR   R9,0                 last=last-1
+         B      LOOPW2             endwhile
+ELOOPW2  LR     R1,R8              pos
+         SLA    R1,1               *2
+         LA     R2,A(R1)           @a(pos+1)
+         LR     R1,R9              last
+         SLA    R1,1
+         LA     R3,A(R1)           @a(last+1)
+         LH     R0,0(R2)           w=a(pos+1)
+         MVC    0(2,R2),0(R3)      a(pos+1)=a(last+1)
+         STH    R0,0(R3)           a(last+1)=w
+         LA     R1,1(R8)           pos+1
+         L      R2,NELEM           nelem
+         BAL    R14,PERMREV        call permrev(pos+1,nelem)
+RETNP    L      R14,SAVENP
+         BR     R14
+SAVENP   DS     A
+*------- ----   -------------------------------------------
+PERMREV  EQU    *                  permrev(firstix,lastix)
+         LR     R4,R1              xfirst
+         LR     R5,R2              xlast
+       DO WHILE=(CR,R4,LT,R5)      do while(xfirst<xlast)
+         LR     R1,R4                xfirst
+         SLA    R1,1                 *2
+         LA     R2,A(R1)             @a(xfirst+1)
+         LR     R1,R5                xlast
+         SLA    R1,1                 *2
+         LA     R3,A(R1)             @a(xlast+1)
+         LH     R0,0(R2)             w=a(xfirst+1)
+         MVC    0(2,R2),0(R3)        a(xfirst+1)=a(xlast+1)
+         STH    R0,0(R3)             a(xlast+1)=w
+         LA     R4,1(R4)             xfirst=xfirst+1
+         BCTR   R5,0                 xlast=xlast-1
+       ENDDO    ,                  enddo
+         BR     R14
+*------- ----   ----------------------------------------
+FACT     EQU    *                  fact(n)
+       IF C,R1,LE,=F'1' THEN       if n<=1 then
+         LA     R0,1                 return(1)
+       ELSE     ,                  else
+         LA     R5,1                 f=1
+         LA     R2,1                 i=1
+       DO WHILE=(CR,R2,LE,R1)        do i=1 to n
+         MR     R4,R2                  f*i
+         LA     R2,1(R2)               i++
+       ENDDO    ,                    enddo
+         LR     R0,R5                return(f)
+       ENDIF    ,                  endif
+         BR     R14
+*------- ----   -------------------------------------------
+SUBFACT  EQU    *                  subfact(n)
+         ST     R1,NY              n
+       IF LTR,R1,Z,R1 THEN         if n=0 then
+         LA     R0,1                 return(1)
+       ELSE     ,                  else
+         LA     R4,1                 1
+         ST     R4,TT                tt(0)=1
+         ST     R4,IY                i=1
+       DO WHILE=(C,R4,LE,NY)         do i=1 to n
+         L      R4,IY                  i
+         SRDA   R4,32
+         D      R4,=F'2'               i/2
+       IF LTR,R4,Z,R4 THEN             if i//2=0 then
+         LA     R0,1                     nn=1
+       ELSE     ,                      else
+         L      R0,=F'-1'                nn=-1
+       ENDIF    ,                      endif
+         L      R1,IY                  i
+         SLA    R1,2
+         L      R3,TT-4(R1)            tt(i-1)
+         M      R2,IY                  *i
+         AR     R3,R0                  +nn
+         L      R1,IY                  i
+         SLA    R1,2
+         ST     R3,TT(R1)              tt(i)=i*tt(i-1)+nn
+         L      R4,IY                  i
+         LA     R4,1(R4)               i++
+         ST     R4,IY                  i
+       ENDDO    ,                    enddo
+         L      R1,NY                n
+         SLA    R1,2
+         L      R0,TT(R1)            return(tt(n))
+       ENDIF    ,                  endif
+         BR     R14
+*        ----   -------------------------------------------
+A        DS     12H                A work
+AO       DS     12H                A origin
+II       DS     H
+COUNT    DS     H
+N        DS     F
+FPRT     DS     F                  flag for printing
+C        DS     F
+D        DS     X                  boolean : a(i) different ao(i)
+FACTNM1  DS     F                  fact(n)-1
+NK       DS     F                  n           in nextper
+NELEM    DS     F                  n elements  in nextper
+NY       DS     F                  n           in subfact
+IY       DS     F                  i           in subfact
+TT       DS     13F                tt(0:12)
+PG1      DC     CL44'derangements for the numbers : 1 2 3 4 are :'
+PG2      DC     CL38'  table of n     counted  calculated :'
+PG3      DC     CL36' ----------- ----------- -----------'
+XDEC     DS     CL12               temp for xdeco
+PG       DC     CL80' '            buffer
+         YREGS
+         END    DERANGE

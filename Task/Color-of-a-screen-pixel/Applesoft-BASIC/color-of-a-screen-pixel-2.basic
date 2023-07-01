@@ -1,0 +1,41 @@
+ 100  REM GET HCOLOR
+ 110  REM  PARAMETERS: X Y
+ 120  REM  RETURNS: C
+ 130  REM
+ 140 P = 0:X = X + 1
+ 150  ON (X < 280) GOSUB 300
+ 160 PR = P:P = 0:X = X - 2
+ 170  ON (X >  = 0) GOSUB 300
+ 180 PL = P:X = X + 1: GOSUB 300
+ 190 ODD = X -  INT (X / 2) * 2
+ 200 C = H * 4
+ 210  IF  NOT ((PL = PR) AND (PL <  > P)) THEN C = C + P * 3: RETURN
+ 220  IF ODD THEN P =  NOT P
+ 230 C = C + P + 1
+ 240  RETURN
+ 250  REM
+ 260  REM GET PIXEL
+ 270  REM  PARAMETERS: X Y
+ 280  REM  RETURNS: H P
+ 290  REM
+ 300 H =  INT (X / 7)
+ 310 V =  INT (Y / 8)
+ 320 VO =  PEEK (37)
+ 330 HO =  PEEK (36)
+ 340  VTAB V + 1: HTAB 1
+ 350 A =  PEEK (41) * 256
+ 360 A = A +  PEEK (40) + H
+ 370  VTAB VO + 1: HTAB HO + 1
+ 380 A = A + 8192 - 1024
+ 390 P =  PEEK (230) / 32
+ 400  IF P = 2 THEN A = A + 8192
+ 410 A = A + (Y - V * 8) * 1024
+ 420 B = X - H * 7
+ 430 V =  PEEK (A)
+ 440 H =  INT (V / 128)
+ 450 V =  INT (V / (2 ^ B))
+ 460 P = V -  INT (V / 2) * 2
+ 470  RETURN
+
+X = 267 : Y =  166 : GOSUB 100
+HCOLOR=  C

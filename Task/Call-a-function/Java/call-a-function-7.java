@@ -1,0 +1,2 @@
+String methodA();
+void methodB();

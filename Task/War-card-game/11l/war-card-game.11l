@@ -1,0 +1,70 @@
+UInt32 seed = 0
+F nonrandom(n)
+   :seed = (1664525 * :seed + 1013904223) [&] FFFF'FFFF
+   R Int(:seed >> 16) % n
+
+F nonrandom_shuffle(&x)
+   L(i) (x.len - 1 .< 0).step(-1)
+      V j = nonrandom(i + 1)
+      swap(&x[i], &x[j])
+
+V SUITS = [‘♣’, ‘♦’, ‘♥’, ‘♠’]
+V FACES = [‘2’, ‘3’, ‘4’, ‘5’, ‘6’, ‘7’, ‘8’, ‘9’, ‘10’, ‘J’, ‘Q’, ‘K’, ‘A’]
+V DECK = multiloop(FACES, SUITS, (f, s) -> f‘’s)
+V CARD_TO_RANK = Dict((0 .< DECK.len).map(i -> (:DECK[i], (i + 3) I/ 4)))
+
+T WarCardGame
+   [String] deck1, deck2, pending
+
+   F ()
+      V deck = copy(:DECK)
+      nonrandom_shuffle(&deck)
+      .deck1 = deck[0.<26]
+      .deck2 = deck[26..]
+
+   F gameover()
+      ‘ game over who won message ’
+      I .deck2.empty
+         I .deck1.empty
+            print("\nGame ends as a tie.")
+         E
+            print("\nPlayer 1 wins the game.")
+      E
+         print("\nPlayer 2 wins the game.")
+      R 0B
+
+   F turn()
+      ‘ one turn, may recurse on tie ’
+      I .deck1.empty | .deck2.empty
+         R .gameover()
+
+      V card1 = .deck1.pop(0)
+      V card2 = .deck2.pop(0)
+      V (rank1, rank2) = (:CARD_TO_RANK[card1], :CARD_TO_RANK[card2])
+      print(‘#<10#<10’.format(card1, card2), end' ‘’)
+      I rank1 > rank2
+         print(‘Player 1 takes the cards.’)
+         .deck1.extend([card1, card2])
+         .deck1.extend(.pending)
+         .pending.clear()
+      E I rank1 < rank2
+         print(‘Player 2 takes the cards.’)
+         .deck2.extend([card2, card1])
+         .deck2.extend(.pending)
+         .pending.clear()
+      E
+         print(‘Tie!’)
+         I .deck1.empty | .deck2.empty
+            R .gameover()
+
+         V card3 = .deck1.pop(0)
+         V card4 = .deck2.pop(0)
+         .pending.extend([card1, card2, card3, card4])
+         print(‘#<10#<10’.format(‘?’, ‘?’)‘Cards are face down.’)
+         R .turn()
+
+      R 1B
+
+V WG = WarCardGame()
+L WG.turn()
+   L.continue

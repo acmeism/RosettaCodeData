@@ -1,0 +1,941 @@
+/* ARM assembly Raspberry PI  */
+/*  program puzzle15solver.s   */
+/* my first other program find à solution in 134 moves !!! */
+/* this second program is a adaptation algorithme C++ and go rosetta code */
+/* thanck for the creators */
+/* 1 byte by box on game board */
+
+/* create a file with nano  */
+/*  15,  2,   3,   4
+    5,   6,   7,   1
+    9,   10,  8,   11
+   13,  14,  12, 0     */
+
+/*   Run this programm : puzzle15solver <file name> */
+/*   wait several minutes for résult */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+.equ STDIN,  0     @ Linux input console
+.equ STDOUT, 1     @ Linux output console
+.equ EXIT,   1     @ Linux syscall
+.equ READ,   3     @ Linux syscall
+.equ WRITE,  4     @ Linux syscall
+.equ OPEN,   5     @ Linux syscall
+.equ CLOSE,  6     @ Linux syscall
+
+.equ TRUE, 1
+.equ FALSE, 0
+
+.equ O_RDWR,    0x0002        @ open for reading and writing
+
+.equ SIZE,           4
+.equ NBBOX,          SIZE * SIZE
+.equ TAILLEBUFFER,   100
+.equ NBMAXIELEMENTS, 100
+
+.equ CONST_I,    1
+.equ CONST_G,    8
+.equ CONST_E,    2
+.equ CONST_L,    4
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessTitre:            .asciz "Nom du fichier : "
+sMessResult:           .ascii " "
+sMessValeur:           .fill 11, 1, ' '             @ size => 11
+szCarriageReturn:      .asciz "\n"
+szMessCounterSolution: .asciz "Solution in @ moves : \n"
+
+//szMessMoveError:       .asciz "Huh... Impossible move !!!!\n"
+szMessErreur:          .asciz "Error detected.\n"
+szMessImpossible:      .asciz "!!! Impossible solution !!!\n"
+szMessErrBuffer:       .asciz "buffer size too less !!"
+szMessSpaces:          .asciz "    "
+
+iTabNr:  .int 3, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3
+iTabNc:  .int 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+sZoneConv:      .skip 24
+iAdrHeap:       .skip 4
+ibox:           .skip SIZE * SIZE           @ game boxes
+iAdrFicName:    .skip 4
+iTabN0:         .skip 4 * NBMAXIELEMENTS    @ empty box
+iTabN3:         .skip 4 * NBMAXIELEMENTS    @ moves
+iTabN4:         .skip 4 * NBMAXIELEMENTS    @ ????
+iTabN2:         .skip 4 * NBMAXIELEMENTS    @ table game address
+sBuffer:        .skip TAILLEBUFFER
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            @ INFO: main
+    mov r0,sp                    @ stack address for load parameter
+    bl traitFic                  @ read file and store value in array
+    cmp r0,#-1
+    beq 100f                     @ error ?
+
+    ldr r0,iAdribox
+    bl displayGame               @ display array game
+
+    ldr r0,iAdribox              @ control if solution exists
+    bl controlSolution
+    cmp r0,#TRUE
+    beq 1f
+    ldr r0,iAdrszMessImpossible  @ no solution !!!
+    bl affichageMess
+    b 100f
+
+1:
+    ldr r0,iAdribox
+    ldr r9,iAdriTabN2
+    str r0,[r9]                  @ N2 address global
+
+    mov r10,#0                   @ variable _n global
+    mov r12,#0                   @ variable n global
+    bl searchSolution
+    cmp r0,#TRUE
+    bne 100f                     @ no solution ?
+    ldr r3,iAdriTabN2
+    ldr r0,[r3,r12,lsl #2]       @ visual solution control
+    bl displayGame
+    mov r0,r12                   @ move counter
+    ldr r1,iAdrsZoneConv
+    bl conversion10              @ conversion counter
+    mov r2,#0
+    strb r2,[r1,r0]              @ and display
+    ldr r0,iAdrszMessCounterSolution
+    bl strInsertAtCharInc
+    ldr r1,iAdrsZoneConv
+    bl affichageMess
+    ldr r5,iAdriTabN3
+    ldr r3,iAdrsBuffer
+    mov r2,#1
+    mov r4,#0
+2:                                @ loop solution display
+    ldrb r1,[r5,r2,lsl #2]
+    cmp r2,#TAILLEBUFFER
+    bge 99f
+    strb r1,[r3,r4]
+    add r4,r4,#1
+    add r2,r2,#1
+    cmp r2,r12
+    ble 2b
+    mov r1,#0
+    str r1,[r3,r4]                 @ zéro final
+    mov r0,r3
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    b 100f
+
+99:
+    ldr r0,iAdrszMessErrBuffer
+    bl affichageMess
+100:                                 @ standard end of the program
+    mov r0, #0                       @ return code
+    mov r7, #EXIT                    @ request to exit program
+    svc #0                           @ perform the system call
+
+iAdribox:                  .int ibox
+iAdriTabN0:                .int iTabN0
+iAdriTabN2:                .int iTabN2
+iAdriTabN3:                .int iTabN3
+iAdriTabN4:                .int iTabN4
+iAdrszMessCounterSolution: .int szMessCounterSolution
+iAdrszMessImpossible:      .int szMessImpossible
+iAdrszMessErrBuffer:       .int szMessErrBuffer
+iAdrsZoneConv:             .int sZoneConv
+/******************************************************************/
+/*      search    Solution                                        */
+/******************************************************************/
+searchSolution:                      @ INFO: searchSolution
+    push {r1-r8,lr}                  @ save  registers
+                                     @ address allocation place on the heap
+    mov r0,#0                        @ allocation place heap
+    mov r7,#0x2D                     @ call system 'brk'
+    svc #0
+    cmp r0,#-1                       @ allocation error
+    beq 99f
+    ldr r1,iAdriAdrHeap
+    str r0,[r1]                      @ store heap address
+    bl functionFN
+    ldr r3,iAdriTabN2
+    ldr r0,[r3,r12,lsl #2]           @ last current game
+    bl gameOK                        @ it is Ok ?
+    cmp r0,#TRUE
+    beq 100f                         @ yes --> end
+
+    ldr r1,iAdriAdrHeap              @ free up resources
+    ldr r0,[r1]                      @ restaur start address heap
+    mov r7,#0x2D                     @ call system 'brk'
+    svc #0
+    cmp r0,#-1                       @ allocation error
+    beq 99f
+    add r10,r10,#1                   @ _n
+    mov r12,#0                       @ n
+    bl searchSolution                @ next recursif call
+    b 100f
+99:
+    ldr r0,iAdrszMessErreur
+    bl affichageMess
+100:
+    pop {r1-r8,lr}                   @ restaur registers
+    bx lr                            @return
+iAdrszMessErreur:           .int szMessErreur
+iAdriAdrHeap:               .int iAdrHeap
+/******************************************************************/
+/*     Fonction FN                                                */
+/******************************************************************/
+functionFN:                          @ INFO: functionFN
+    push {lr}                        @ save  register
+    ldr r4,iAdriTabN3
+    ldr r3,[r4,r12,lsl #2]
+    ldr r5,iAdriTabN0                @ load position empty box
+    ldr r6,[r5,r12,lsl #2]
+    cmp r6,#15                       @ last box
+    bne 2f
+    cmp r3,#'R'
+    bne 11f
+    mov r0,#CONST_G
+    bl functionFZ
+    b 100f
+11:
+    cmp r3,#'D'
+    bne 12f
+    mov r0,#CONST_L
+    bl functionFZ
+    b 100f
+12:
+    mov r0,#CONST_G + CONST_L
+    bl functionFZ
+    b 100f
+
+2:
+    cmp r6,#12
+    bne 3f
+    cmp r3,#'L'
+    bne 21f
+    mov r0,#CONST_G
+    bl functionFZ
+    b 100f
+21:
+    cmp r3,#'D'
+    bne 22f
+    mov r0,#CONST_E
+    bl functionFZ
+    b 100f
+22:
+    mov r0,#CONST_E + CONST_G
+    bl functionFZ
+    b 100f
+3:
+    cmp r6,#13
+    beq 30f
+    cmp r6,#14
+    bne 4f
+30:
+    cmp r3,#'L'
+    bne 31f
+    mov r0,#CONST_G + CONST_L
+    bl functionFZ
+    b 100f
+31:
+    cmp r3,#'R'
+    bne 32f
+    mov r0,#CONST_G + CONST_E
+    bl functionFZ
+    b 100f
+32:
+    cmp r3,#'D'
+    bne 33f
+    mov r0,#CONST_E + CONST_L
+    bl functionFZ
+    b 100f
+33:
+    mov r0,#CONST_L + CONST_E + CONST_G
+    bl functionFZ
+    b 100f
+4:
+    cmp r6,#3
+    bne 5f
+    cmp r3,#'R'
+    bne 41f
+    mov r0,#CONST_I
+    bl functionFZ
+    b 100f
+41:
+    cmp r3,#'U'
+    bne 42f
+    mov r0,#CONST_L
+    bl functionFZ
+    b 100f
+42:
+    mov r0,#CONST_I + CONST_L
+    bl functionFZ
+    b 100f
+5:
+    cmp r6,#0
+    bne 6f
+    cmp r3,#'L'
+    bne 51f
+    mov r0,#CONST_I
+    bl functionFZ
+    b 100f
+51:
+    cmp r3,#'U'
+    bne 52f
+    mov r0,#CONST_E
+    bl functionFZ
+    b 100f
+52:
+    mov r0,#CONST_I + CONST_E
+    bl functionFZ
+    b 100f
+6:
+    cmp r6,#1
+    beq 60f
+    cmp r6,#2
+    bne 7f
+60:
+    cmp r3,#'L'
+    bne 61f
+    mov r0,#CONST_I + CONST_L
+    bl functionFZ
+    b 100f
+61:
+    cmp r3,#'R'
+    bne 62f
+    mov r0,#CONST_E + CONST_I
+    bl functionFZ
+    b 100f
+62:
+    cmp r3,#'U'
+    bne 63f
+    mov r0,#CONST_E + CONST_L
+    bl functionFZ
+    b 100f
+63:
+    mov r0,#CONST_I + CONST_E + CONST_L
+    bl functionFZ
+    b 100f
+7:
+    cmp r6,#7
+    beq 70f
+    cmp r6,#11
+    bne 8f
+70:
+    cmp r3,#'R'
+    bne 71f
+    mov r0,#CONST_I + CONST_G
+    bl functionFZ
+    b 100f
+71:
+    cmp r3,#'U'
+    bne 72f
+    mov r0,#CONST_G + CONST_L
+    bl functionFZ
+    b 100f
+72:
+    cmp r3,#'D'
+    bne 73f
+    mov r0,#CONST_I + CONST_L
+    bl functionFZ
+    b 100f
+73:
+    mov r0,#CONST_I + CONST_G + CONST_L
+    bl functionFZ
+    b 100f
+8:
+    cmp r6,#4
+    beq 80f
+    cmp r6,#8
+    bne 9f
+80:
+    cmp r3,#'D'
+    bne 81f
+    mov r0,#CONST_I + CONST_E
+    bl functionFZ
+    b 100f
+81:
+    cmp r3,#'U'
+    bne 82f
+    mov r0,#CONST_G + CONST_E
+    bl functionFZ
+    b 100f
+82:
+    cmp r3,#'L'
+    bne 83f
+    mov r0,#CONST_I + CONST_G
+    bl functionFZ
+    b 100f
+83:
+    mov r0,#CONST_G + CONST_E + CONST_I
+    bl functionFZ
+    b 100f
+9:
+    cmp r3,#'D'
+    bne 91f
+    mov r0,#CONST_I + CONST_E + CONST_L
+    bl functionFZ
+    b 100f
+91:
+    cmp r3,#'L'
+    bne 92f
+    mov r0,#CONST_I + CONST_G + CONST_L
+    bl functionFZ
+    b 100f
+92:
+    cmp r3,#'R'
+    bne 93f
+    mov r0,#CONST_I + CONST_G + CONST_E
+    bl functionFZ
+    b 100f
+93:
+    cmp r3,#'U'
+    bne 94f
+    mov r0,#CONST_G + CONST_E +  CONST_L
+    bl functionFZ
+    b 100f
+94:
+    mov r0,#CONST_G + CONST_L + CONST_I + CONST_E
+    bl functionFZ
+    b 100f
+
+99:                                  @ error
+    ldr r0,iAdrszMessErreur
+    bl affichageMess
+100:
+    pop {lr}                         @ restaur registers
+    bx lr                            @return
+
+/******************************************************************/
+/*     function FZ                           */
+/*                                                 */
+/***************************************************************/
+/* r0 contains variable w           */
+functionFZ:                    @ INFO: functionFZ
+    push {r1,r2,lr}            @ save  registers
+    mov r2,r0
+    and r1,r2,#CONST_I
+    cmp r1,#0
+    ble 1f
+    bl functionFI
+    bl functionFY
+    cmp r0,#TRUE
+    beq 100f
+    sub r12,r12,#1              @ variable n
+1:
+    ands r1,r2,#CONST_G
+    ble 2f
+    bl functionFG
+    bl functionFY
+    cmp r0,#TRUE
+    beq 100f
+    sub r12,r12,#1              @ variable n
+2:
+    ands r1,r2,#CONST_E
+    ble 3f
+    bl functionFE
+    bl functionFY
+    cmp r0,#TRUE
+    beq 100f
+    sub r12,r12,#1              @ variable n
+3:
+    ands r1,r2,#CONST_L
+    ble 4f
+    bl functionFL
+    bl functionFY
+    cmp r0,#TRUE
+    beq 100f
+    sub r12,r12,#1              @ variable n
+4:
+    mov r0,#FALSE
+100:
+    pop {r1,r2,lr}              @ restaur registers
+    bx lr                       @return
+/******************************************************************/
+/*               function FY                                 */
+/******************************************************************/
+functionFY:                    @ INFO: functionFY
+    push {lr}                  @ save  registers
+    ldr r1,iAdriTabN2
+    ldr r0,[r1,r12,lsl #2]
+    bl gameOK                  @ game OK ?
+    cmp r0,#TRUE
+    beq 100f
+    ldr r1,iAdriTabN4
+    ldr r0,[r1,r12,lsl #2]
+    cmp r0,r10
+    bgt 1f
+    bl functionFN
+    b 100f
+1:
+    mov r0,#FALSE
+100:
+    pop {lr}                     @ restaur registers
+    bx lr                        @return
+
+/******************************************************************/
+/*     the empty box is down                                     */
+/******************************************************************/
+functionFI:                       @ INFO: functionFI
+    push {r0-r8,lr}               @ save  registers
+    ldr r0,iAdriTabN0
+    ldr r1,[r0,r12,lsl #2]        @ empty box
+    add r2,r1,#4
+    ldr r3,[r9,r12,lsl #2]        @ load game current
+    ldrb r4,[r3,r2]               @ load box down empty box
+    add r5,r12,#1                 @ n+1
+    add r8,r1,#4                  @ new position empty case
+    str r8,[r0,r5,lsl #2]         @ store new position empty case
+    ldr r6,iAdriTabN3
+
+    mov r7,#'D'                   @ down
+    str r7,[r6,r5,lsl #2]         @ store move
+    ldr r6,iAdriTabN4
+    ldr r7,[r6,r12,lsl #2]
+    str r7,[r6,r5,lsl #2]         @ N4 (n+1) = n4(n)
+    mov r0,r3
+    bl createGame                 @ create copy game
+    ldrb r3,[r0,r1]               @ and inversion box
+    ldrb r8,[r0,r2]
+    strb r8,[r0,r1]
+    strb r3,[r0,r2]
+    str r0,[r9,r5,lsl #2]         @ store new game in table
+    lsr r1,r1,#2                  @ line position empty case = N°/ 4
+    ldr r0,iAdriTabNr
+    ldr r2,[r0,r4,lsl #2]         @ load N° line box moved
+    cmp r2,r1                     @ compare ????
+    ble 1f
+    add r7,r7,#1                  @ and increment ????
+    str r7,[r6,r5,lsl #2]
+1:
+    add r12,r12,#1                @ increment N
+    pop {r0-r8,lr}
+    bx lr                         @return
+iAdriTabNr:        .int iTabNr
+iAdriTabNc:        .int iTabNc
+/******************************************************************/
+/*     empty case UP   see explain in english in function FI      */
+/******************************************************************/
+functionFG:                      @ INFO: functionFG
+    push {r0-r8,lr}              @ save  registers
+    ldr r0,iAdriTabN0
+    ldr r1,[r0,r12,lsl #2]       @ case vide
+    sub r2,r1,#4                 @ position case au dessus
+    ldr r3,[r9,r12,lsl #2]       @ extrait jeu courant
+    ldrb r4,[r3,r2]              @ extrait le contenu case au dessus
+    add r5,r12,#1                @ N+1 = N
+    sub r8,r1,#4                 @ nouvelle position case vide
+    str r8,[r0,r5,lsl #2]        @ et on la stocke
+    ldr r6,iAdriTabN3
+    mov r7,#'U'                  @ puis on stocke le code mouvement
+    str r7,[r6,r5,lsl #2]
+    ldr r6,iAdriTabN4
+    ldr r7,[r6,r12,lsl #2]
+    str r7,[r6,r5,lsl #2]        @ N4 (N+1) = N4 (N)
+    mov r0,r3                    @ jeu courant
+    bl createGame                @ création nouveau jeu
+    ldrb r3,[r0,r1]              @ et echange les 2 cases
+    ldrb r8,[r0,r2]
+    strb r8,[r0,r1]
+    strb r3,[r0,r2]
+    str r0,[r9,r5,lsl #2]        @ stocke la nouvelle situation
+    lsr r1,r1,#2                 @ ligne case vide = position /4
+    ldr r0,iAdriTabNr
+    ldr r2,[r0,r4,lsl #2]        @ extrait table à la position case
+    cmp r2,r1                    @ et comparaison ???
+    bge 1f
+    add r7,r7,#1                 @ puis increment N4 de 1  ???
+    str r7,[r6,r5,lsl #2]
+1:
+    add r12,r12,#1               @ increment de N
+    pop {r0-r8,lr}
+    bx lr                        @return
+/******************************************************************/
+/*    empty case go right see explain finction FI ou FG en français */
+/******************************************************************/
+functionFE:                       @ INFO: functionFE
+    push {r0-r8,lr}               @ save  registers
+    ldr r0,iAdriTabN0
+    ldr r1,[r0,r12,lsl #2]
+    add r2,r1,#1
+    ldr r3,[r9,r12,lsl #2]
+    ldrb r4,[r3,r2]               @ extrait le contenu case
+    add r5,r12,#1
+    add r8,r1,#1
+    str r8,[r0,r5,lsl #2]         @ nouvelle case vide
+    ldr r6,iAdriTabN3
+    mov r7,#'R'
+    str r7,[r6,r5,lsl #2]         @ mouvement
+    ldr r6,iAdriTabN4
+    ldr r7,[r6,r12,lsl #2]
+    str r7,[r6,r5,lsl #2]         @ N4 ??
+    mov r0,r3
+    bl createGame
+    ldrb r3,[r0,r1]               @ exchange two boxes
+    ldrb r8,[r0,r2]
+    strb r8,[r0,r1]
+    strb r3,[r0,r2]
+    str r0,[r9,r5,lsl #2]         @ stocke la nouvelle situation
+    lsr r3,r1,#2
+    sub r1,r1,r3,lsl #2
+    ldr r0,iAdriTabNc
+    ldr r2,[r0,r4,lsl #2]         @ extrait table à la position case
+    cmp r2,r1
+    ble 1f
+    add r7,r7,#1
+    str r7,[r6,r5,lsl #2]
+1:
+    add r12,r12,#1
+    pop {r0-r8,lr}
+    bx lr                        @return
+/******************************************************************/
+/*     empty box go left see explain function FI ou FG en français */
+/******************************************************************/
+functionFL:                       @ INFO: functionFL
+    push {r0-r8,lr}               @ save  registers
+    ldr r0,iAdriTabN0
+    ldr r1,[r0,r12,lsl #2]        @ case vide
+    sub r2,r1,#1
+    ldr r3,[r9,r12,lsl #2]       @ extrait jeu courant
+    ldrb r4,[r3,r2]              @ extrait le contenu case
+    add r5,r12,#1
+    sub r8,r1,#1
+    str r8,[r0,r5,lsl #2]         @ nouvelle case vide
+    ldr r6,iAdriTabN3
+    mov r7,#'L'
+    str r7,[r6,r5,lsl #2]         @ mouvement
+    ldr r6,iAdriTabN4
+    ldr r7,[r6,r12,lsl #2]
+    str r7,[r6,r5,lsl #2]         @ N4 ??
+    mov r0,r3
+    bl createGame
+    ldrb r3,[r0,r1]               @ exchange two boxes
+    ldrb r8,[r0,r2]
+    strb r8,[r0,r1]
+    strb r3,[r0,r2]
+    str r0,[r9,r5,lsl #2]         @ stocke la nouvelle situation
+    lsr r3,r1,#2
+    sub r1,r1,r3,lsl #2           @ compute remainder
+    ldr r0,iAdriTabNc
+    ldr r2,[r0,r4,lsl #2]         @ extrait table colonne à la position case
+    cmp r2,r1
+    bge 1f
+    add r7,r7,#1
+    str r7,[r6,r5,lsl #2]
+1:
+    add r12,r12,#1
+    pop {r0-r8,lr}
+    bx lr                         @return
+/******************************************************************/
+/*     create new Game                                            */
+/******************************************************************/
+/* r0 contains box address            */
+/* r0 return address new game  */
+createGame:                          @ INFO: createGame
+    push {r1-r8,lr}                  @ save  registers
+    mov r4,r0                        @ save value
+    mov r0,#0                        @ allocation place heap
+    mov r7,#0x2D                     @ call system 'brk'
+    svc #0
+    cmp r0,#-1                       @ allocation error
+    beq 99f
+    mov r5,r0                        @ save address heap for output string
+    add r0,#SIZE * SIZE              @ reservation place one element
+    mov r7,#0x2D                     @ call system 'brk'
+    svc #0
+    cmp r0,#-1                       @ allocation error
+    beq 99f
+    mov r2,#0
+1:                                   @ loop copy boxes
+    ldrb r3,[r4,r2]
+    strb r3,[r5,r2]
+    add r2,r2,#1
+    cmp r2,#NBBOX
+    blt 1b
+    add r11,r11,#1
+    mov r0,r5
+    b 100f
+99:                                  @ error
+    ldr r0,iAdrszMessErreur
+    bl affichageMess
+100:
+    pop {r1-r8,lr}                   @ restaur registers
+    bx lr                            @return
+/******************************************************************/
+/*     read file                                                   */
+/******************************************************************/
+/* r0 contains address stack begin           */
+traitFic:                             @ INFO: traitFic
+    push {r1-r8,fp,lr}                @ save  registers
+    mov fp,r0                         @  fp <- start address
+    ldr r4,[fp]                       @ number of Command line arguments
+    cmp r4,#1
+    movle r0,#-1
+    ble 99f
+    add r5,fp,#8                      @ second parameter address
+    ldr r5,[r5]
+    ldr r0,iAdriAdrFicName
+    str r5,[r0]
+    ldr r0,iAdrszMessTitre
+    bl affichageMess                  @ display string
+    mov r0,r5
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess                  @ display carriage return
+
+    mov r0,r5                         @ file name
+    mov r1,#O_RDWR                    @ flags
+    mov r2,#0                         @ mode
+    mov r7, #OPEN                     @ call system OPEN
+    svc 0
+    cmp r0,#0                         @ error ?
+    ble 99f
+    mov r8,r0                         @ File Descriptor
+    ldr r1,iAdrsBuffer                @ buffer address
+    mov r2,#TAILLEBUFFER              @ buffer size
+    mov r7,#READ                      @ read file
+    svc #0
+    cmp r0,#0                         @ error ?
+    blt 99f
+    @ extraction datas
+    ldr r1,iAdrsBuffer                @ buffer address
+    add r1,r0
+    mov r0,#0                         @ store zéro final
+    strb r0,[r1]
+    ldr r0,iAdribox                   @ game box address
+    ldr r1,iAdrsBuffer                @ buffer address
+    bl extracDatas
+                                      @ close file
+    mov r0,r8
+    mov r7, #CLOSE
+    svc 0
+    mov r0,#0
+    b 100f
+99:                                   @ error
+    ldr r1,iAdrszMessErreur           @ error message
+    bl   displayError
+    mov r0,#-1
+100:
+    pop {r1-r8,fp,lr}                 @ restaur registers
+    bx lr                             @return
+iAdriAdrFicName:              .int iAdrFicName
+iAdrszMessTitre:              .int szMessTitre
+iAdrsBuffer:                  .int sBuffer
+/******************************************************************/
+/*     extrac digit file buffer                                   */
+/******************************************************************/
+/* r0 contains boxs address           */
+/* r1 contains buffer address         */
+extracDatas:                     @ INFO: extracDatas
+    push {r1-r8,lr}              @ save  registers
+    mov r7,r0
+    mov r6,r1
+    mov r2,#0                    @ string buffer indice
+    mov r4,r1                    @ start digit ascii
+    mov r5,#0                    @ box index
+1:
+    ldrb r3,[r6,r2]
+    cmp r3,#0
+    beq 4f                       @ end
+    cmp r3,#0xA
+    beq 2f
+    cmp r3,#','
+    beq 3f
+    add r2,#1
+    b 1b
+2:
+    mov r3,#0
+    strb r3,[r6,r2]
+    ldrb r3,[r6,r2]
+    cmp r3,#0xD
+    addeq r2,#2
+    addne r2,#1
+    b 4f
+
+3:
+    mov r3,#0
+    strb r3,[r6,r2]
+    add r2,#1
+4:
+    mov r0,r4
+    bl conversionAtoD
+    strb r0,[r7,r5]
+    cmp r0,#0
+    ldreq r0,iAdriTabN0
+    streq r5,[r0]                @ empty box in item zéro
+    add r5,#1
+    cmp r5,#NBBOX                @ number box = maxi ?
+    bge 100f
+    add r4,r6,r2                 @ new start address digit ascii
+    b 1b
+100:
+    pop {r1-r8,lr}               @ restaur registers
+    bx lr                        @return
+/******************************************************************/
+/*     control of the game solution                                      */
+/******************************************************************/
+/* r0 contains boxs address           */
+/* r0 returns 0 if not possible       */
+/* r0 returns 1 if possible           */
+controlSolution:                 @ INFO: controlSolution
+    push {r1-r8,lr}              @ save  registers
+    mov r5,r0
+    ldr r8,iAdriTabN0
+    ldr r8,[r8]                  @ empty box
+    @ empty box
+    mov r7,#0
+    cmp r8,#1
+    moveq r7,#1
+    beq 1f
+    cmp r8,#3
+    moveq r7,#1
+    beq 1f
+    cmp r8,#4
+    moveq r7,#1
+    beq 1f
+    cmp r8,#6
+    moveq r7,#1
+    beq 1f
+    cmp r8,#9
+    moveq r7,#1
+    beq 1f
+    cmp r8,#11
+    moveq r7,#1
+    beq 1f
+    cmp r8,#12
+    moveq r7,#1
+    beq 1f
+    cmp r8,#14
+    moveq r7,#1
+1:
+    rsb r6,r8,#NBBOX - 1
+    add r7,r6
+                                 @ count permutations
+    mov r1,#-1
+    mov r6,#0
+2:
+    add r1,#1
+    cmp r1,#NBBOX
+    bge 80f
+    cmp r1,r8
+    beq 2b
+    ldrb r3,[r5,r1]
+    mov r2,r1
+3:
+    add r2,#1
+    cmp r2,#NBBOX
+    bge 2b
+    cmp r2,r8
+    beq 3b
+    ldrb r4,[r5,r2]
+    cmp r4,r3
+    addlt r6,#1
+    b 3b
+80:
+    add r6,r7
+    tst r6,#1
+    movne r0,#0                  @ impossible
+    moveq r0,#1                  @ OK
+
+100:
+    pop {r1-r8,lr}               @ restaur registers
+    bx lr                        @return
+/******************************************************************/
+/*     game Ok ?                                      */
+/******************************************************************/
+/* r0 contains boxs address           */
+gameOK:                          @ INFO: gameOK
+    push {r1-r4,lr}              @ save  registers
+    mov r2,#0
+    ldrb r3,[r0,r2]
+    cmp r3,#0
+    moveq r3,#0xF
+    add r2,#1
+1:
+    ldrb r4,[r0,r2]
+    cmp r4,#0
+    moveq r3,#0xF
+    cmp r4,r3
+    movle  r0,#FALSE              @ game not Ok
+    ble 100f
+    mov r3,r4
+    add r2,#1
+    cmp r2,#NBBOX -2
+    ble 1b
+    mov r0,#TRUE                  @ game Ok
+
+100:
+    pop {r1-r4,lr}                @ restaur registers
+    bx lr                         @return
+/******************************************************************/
+/*     display game                                       */
+/******************************************************************/
+/* r0 contains boxs address           */
+displayGame:                            @ INFO: displayGame
+    push {r0-r5,lr}                     @ save  registers
+    mov r4,r0
+    ldr r0,iAdrszMessTitre
+    bl affichageMess                    @ display string
+    ldr r0,iAdriAdrFicName
+    ldr r0,[r0]
+    bl affichageMess                    @ display string
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess                    @ display line return
+    mov r2,#0
+    ldr r1,iAdrsMessValeur
+1:
+    ldrb r0,[r4,r2]
+    cmp r0,#0
+    ldreq r0,iSpaces                    @ store spaces
+    streq r0,[r1]
+    beq 2f
+    bl conversion10                     @ call conversion decimal
+    mov r0,#0
+    strb r0,[r1,#3]                     @ zéro final
+2:
+
+    ldr r0,iAdrsMessResult
+    bl affichageMess                    @ display message
+    add r0,r2,#1
+    tst r0,#0b11
+    bne 3f
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess                    @ display message
+3:
+    add r2,#1
+    cmp r2,#NBBOX - 1
+    ble 1b
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess                    @ display line return
+
+100:
+    pop {r0-r5,lr}                      @ restaur registers
+    bx lr                               @return
+iSpaces:                       .int 0x00202020       @ spaces
+//iAdrszMessMoveError:           .int szMessMoveError
+iAdrszCarriageReturn:          .int szCarriageReturn
+iAdrsMessValeur:               .int sMessValeur
+iAdrsMessResult:               .int sMessResult
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

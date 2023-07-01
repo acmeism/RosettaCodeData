@@ -1,0 +1,268 @@
+// constants
+constant EMX  = 64      // exponent maximum (if indexing starts at -EMX)
+constant DMX  = 1e5     // approximation loop maximum
+constant AMX  = 1048576 // argument maximum
+constant PMAX = 32749   // prime maximum
+
+// global variables
+integer p1 = 0
+integer p  = 7    // default prime
+integer k  = 11   // precision
+
+type Ratio(sequence r)
+    return length(r)=2 and integer(r[1]) and integer(r[2])
+end type
+
+procedure pad_to(string fmt, sequence data, integer len)
+    fmt = sprintf(fmt,data)
+    puts(1,fmt&repeat(' ',len-length(fmt)))
+end procedure
+
+class Padic
+    integer v = 0
+    sequence d = repeat(0,EMX*2)
+
+    // (re)initialize 'this' from Ratio, set 'sw' to print
+    function r2pa(Ratio q, integer sw)
+        integer {a,b} = q
+        if b=0 then return 1 end if
+        if b<0 then
+            b = -b
+            a = -a
+        end if
+        if abs(a)>AMX or b>AMX then return -1 end if
+        if p<2 or k<1 then return 1 end if
+        p = min(p, PMAX)  // maximum short prime
+        k = min(k, EMX-1) // maximum array length
+        if sw!=0 then
+             -- numerator, denominator, prime, precision
+            pad_to("%d/%d + O(%d^%d)",{a,b,p,k},30)
+        end if
+
+        // (re)initialize
+        v = 0
+        p1 = p - 1
+        sequence ntd = repeat(0,2*EMX) -- (new this.d)
+        if a=0 then return 0 end if
+
+        // find -exponent of p in b
+        integer i = 0
+        while remainder(b,p)=0 do
+            b /= p
+            i -= 1
+        end while
+        integer s = 0,
+                r = remainder(b,p)
+
+        // modular inverse for small P
+        integer b1 = 1
+        while b1<=p1 do
+            s += r
+            if s>p1 then s -= p end if
+            if s=1 then exit end if
+            b1 += 1
+        end while
+        if b1=p then
+            printf(1,"r2pa: impossible inverse mod")
+            return -1
+        end if
+        v = EMX
+        while true do
+            // find exponent of P in a
+            while remainder(a,p)=0 do
+                a /= p
+                i += 1
+            end while
+
+            // valuation
+            if v=EMX then v = i end if
+
+            // upper bound
+            if i>=EMX then exit end if
+
+            // check precision
+            if i-v>k then exit end if
+
+            // next digit
+            integer rdx = remainder(a*b1,p)
+            if rdx<0 then rdx += p end if
+            if rdx<0 or rdx>=p then ?9/0 end if -- sanity chk
+            ntd[i+EMX+1] = rdx
+
+            // remainder - digit * divisor
+            a -= rdx*b
+            if a=0 then exit end if
+        end while
+        this.d = ntd
+        return 0
+    end function
+
+    // Horner's rule
+    function dsum()
+        integer t = min(v, 0),
+                s = 0
+        for i=k-1+t to t by -1 do
+            integer r = s
+            s *= p
+            if r!=0 and floor(s/r)-p!=0 then
+                // overflow
+                s = -1
+                exit
+            end if
+            s += d[i+EMX+1]
+        end for
+        return s
+    end function
+
+    // add b to 'this'
+    function add(Padic b)
+        integer c = 0
+        Padic r = new({min(v,b.v)})
+        sequence rd = r.d
+        for i=r.v to k+r.v do
+            integer dx = i+EMX+1
+            c += d[dx] + b.d[dx]
+            if c>p1 then
+                rd[dx] = c - p
+                c = 1
+            else
+                rd[dx] = c
+                c = 0
+            end if
+        end for
+        r.d  = rd
+        return r
+    end function
+
+    // complement
+    function complement()
+        integer c = 1
+        Padic r = new({v})
+        sequence rd = r.d
+        for i=v to k+v do
+            integer dx = i+EMX+1
+            c += p1 - this.d[dx]
+            if c>p1 then
+                rd[dx] = c - p
+                c = 1
+            else
+                rd[dx] = c
+                c = 0
+            end if
+        end for
+        r.d = rd
+        return r
+    end function
+
+    // rational reconstruction
+    procedure crat()
+        integer sgn = 1
+        Padic s = this
+        integer j = 0,
+                i = 1
+
+        // denominator count
+        while i<=DMX do
+            // check for integer
+            j = k-1+v
+            while j>=v and s.d[j+EMX+1]=0 do
+                j -= 1
+            end while
+            if ((j-v)*2)<k then exit end if
+
+            // check for negative integer
+            j = k-1+v
+            while j>=v and p1-s.d[j+EMX+1]=0 do
+                j -= 1
+            end while
+            if ((j-v)*2)<k then
+                s = s.complement()
+                sgn = -1
+                exit
+            end if
+
+            // repeatedly add self to s
+            s = s.add(this)
+            i += 1
+        end while
+
+        // numerator: weighted digit sum
+        integer x = s.dsum(),
+                y = i
+        if x<0 or y>DMX then
+            printf(1,"crat: fail")
+        else
+            // negative powers
+            for i=v to -1 do
+                y *= p
+            end for
+            pad_to(iff(y=1?"%d":"%d/%d"),{x*sgn,y},26)
+            printf(1,"+ = ")
+        end if
+    end procedure
+
+    // print expansion
+    procedure prntf(bool sw)
+        integer t = min(v, 0)
+        // rational approximation
+        if sw!=0 then crat() end if
+        for i=k-1+t to t by -1 do
+            printf(1,"%d",d[i+EMX+1])
+            printf(1,iff(i=0 and v<0?". ":" "))
+        end for
+        printf(1,"\n")
+    end procedure
+end class
+
+sequence data = {
+    /* rational reconstruction limits are relative to the precision */
+    {{2, 1}, 2, 4, {1, 1}},
+    {{4, 1}, 2, 4, {3, 1}},
+    {{4, 1}, 2, 5, {3, 1}},
+    {{4, 9}, 5, 4, {8, 9}},
+-- all tested, but let's keep the output reasonable:
+--  {{-7, 5}, 7, 4, {99, 70}},
+--  {{26, 25}, 5, 4, {-109, 125}},
+--  {{49, 2}, 7, 6, {-4851, 2}},
+--  {{-9, 5}, 3, 8, {27, 7}},
+--  {{5, 19}, 2, 12, {-101, 384}},
+--  /* four decadic pairs */
+--  {{6, 7}, 10, 7, {-5, 7}},
+--  {{2, 7}, 10, 7, {-3, 7}},
+--  {{2, 7}, 10, 7, {-1, 7}},
+--  {{34, 21}, 10, 9, {-39034, 791}},
+--  /* familiar digits */
+--  {{11, 4}, 2, 43, {679001, 207}},
+--  {{11, 4}, 3, 27, {679001, 207}},
+--  {{11, 4}, 11, 13, {679001, 207}},
+--  {{-22, 7}, 2, 37, {46071, 379}},
+--  {{-22, 7}, 3, 23, {46071, 379}},
+--  {{-22, 7}, 7, 13, {46071, 379}},
+--  {{-101, 109}, 2, 40, {583376, 6649}},
+--  {{-101, 109}, 61, 7, {583376, 6649}},
+--  {{-101, 109}, 32749, 3, {583376, 6649}},
+--  {{-25, 26}, 7, 13, {5571, 137}},
+--  {{1, 4}, 7, 11, {9263, 2837}},
+--  {{122, 407}, 7, 11, {-517, 1477}},
+    /* more subtle */
+    {{5, 8}, 7, 11, {353, 30809}}
+}
+
+integer sw = 0,qa,qb
+Padic a = new()
+Padic b = new()
+
+for i=1 to length(data) do
+    {Ratio q, p, k, Ratio q2} = data[i]
+    sw = a.r2pa(q, 1)
+    if sw=1 then exit end if
+    a.prntf(0)
+    sw = sw or b.r2pa(q2, 1)
+    if sw=1 then exit end if
+    if sw=0 then
+        b.prntf(0)
+        Padic c = a.add(b)
+        c.prntf(1)
+    end if
+    printf(1,"\n")
+end for

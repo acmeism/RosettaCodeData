@@ -1,0 +1,188 @@
+*        Bitmap/Bresenham's line algorithm - 13/05/2019
+BRESENH  CSECT
+         USING  BRESENH,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         SAVE   (14,12)            save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R10,DATAXY         @dataxy
+         LA     R8,1               p=1
+     DO WHILE=(C,R8,LE,=A(POINTS)) do p=1 to points
+         L      R6,0(R10)            x=dataxy((p-1)*2+1)
+         L      R7,4(R10)            y=dataxy((p-1)*2+2)
+       IF     C,R8,EQ,=F'1' THEN     if p=1 then
+         ST     R6,MINX                minx=x
+         ST     R6,MAXX                maxx=x
+         ST     R7,MINY                miny=y
+         ST     R7,MAXY                maxy=y
+       ENDIF    ,                    endif
+       IF     C,R6,LT,MINX THEN      if x<minx then
+         ST     R6,MINX                minx=x
+       ENDIF    ,                    endif
+       IF     C,R6,GT,MAXX THEN      if x>maxx then
+         ST     R6,MAXX                maxx=x
+       ENDIF    ,                    endif
+       IF     C,R7,LT,MINY THEN      if y<miny then
+         ST     R7,MINY                miny=y
+       ENDIF    ,                    endif
+       IF     C,R7,GT,MAXY THEN      if y>maxy then
+         ST     R7,MAXY                maxy=y
+       ENDIF    ,                    endif
+         LA     R10,8(R10)           @dataxy+=8
+         LA     R8,1(R8)             p++
+     ENDDO      ,                  enddo p
+         L      R1,MINX            minx
+         S      R1,=A(BORDER*2)    -border*2
+         ST     R1,MINX            minx=minx-border*2
+         L      R1,MAXX            maxx
+         A      R1,=A(BORDER*2)    +border*2
+         ST     R1,MAXX            maxx=maxx+border*2
+         L      R1,MINY            miny
+         S      R1,=A(BORDER)      -border
+         ST     R1,MINY            miny=miny-border
+         L      R1,MAXY            maxy
+         A      R1,=A(BORDER)      +border
+         ST     R1,MAXY            maxy=maxy+border
+         L      R1,MINX            minx
+         LCR    R1,R1              -
+         A      R1,=F'1'           +1
+         ST     R1,OX              ox=-minx+1
+         L      R1,MINY            miny
+         LCR    R1,R1              -
+         A      R1,=F'1'           +1
+         ST     R1,OY              oy=-miny+1
+         LA     R1,HMAPX           hbound(map,1)
+         S      R1,OX              wx=hbound(map,1)-ox
+       IF     C,R1,LT,MAXX THEN    if maxx>wx then
+         ST     R1,MAXX              maxx=wx
+       ENDIF    ,                  endif
+         LA     R1,HMAPY           hbound(map,2)
+         S      R1,OY              wy=hbound(map,2)-oy
+       IF     C,R1,LT,MAXY THEN    if maxy>wy then
+         ST     R1,MAXY              maxy=wy
+       ENDIF    ,                  endif
+         L      R6,MINX            x=minx
+       DO WHILE=(C,R6,LE,MAXX)     do x=minx to maxx
+         L      R1,OY                oy
+         BCTR   R1,0                 1
+         MH     R1,=AL2(HMAPX)       dim(x)
+         AR     R1,R6                x
+         A      R1,OX                ox
+         LA     R1,MAP-1(R1)         map(0+oy,x+ox)
+         MVC    0(1,R1),=C'-'        map(0+oy,x+ox)='-'
+         A      R6,=F'1'             x++
+       ENDDO    ,                  enddo x
+         L      R7,MINY            y=miny
+       DO WHILE=(C,R7,LE,MAXY)     do y=miny to maxy
+         LR     R1,R7                y
+         A      R1,OY                +oy
+         BCTR   R1,0                 -1
+         MH     R1,=AL2(HMAPX)       *dim(x)
+         A      R1,OX                +ox
+         LA     R1,MAP-1(R1)         @map(y+oy,0+ox)
+         MVC    0(1,R1),=C'|'        map(y+oy,0+ox)='|'
+         A      R7,=F'1'             y++
+       ENDDO    ,                  enddo y
+         L      R1,OY              +oy
+         BCTR   R1,0               -1
+         MH     R1,=AL2(HMAPX)     *dim(x)
+         A      R1,OX              +ox
+         LA     R1,MAP-1(R1)       @map(0+oy,0+ox)
+         MVC    0(1,R1),=C'+'      map(0+oy,0+ox)='+'
+         LA     R10,POINTS         points
+         BCTR   R10,0              pn=points-1
+         LA     R9,DATAXY          @dataxy
+         LA     R8,1               p=1
+       DO WHILE=(CR,R8,LE,R10)     do p=1 to points-1
+         L      R6,0(R9)             x=dataxy((p-1)*2+1)
+         L      R7,4(R9)             y=dataxy((p-1)*2+2)
+         L      R4,8(R9)             xf=dataxy(p*2+1)
+         L      R5,12(R9)            yf=dataxy(p*2+2)
+         LR     R2,R4                xf
+         SR     R2,R6                -x
+         LPR    R2,R2                abs()
+         ST     R2,DX                dx=abs(xf-x)
+         LR     R2,R5                xf
+         SR     R2,R7                -y
+         LPR    R2,R2                abs()
+         ST     R2,DY                dy=abs(yf-y)
+       IF    CR,R6,LT,R4 THEN        if x<xf then
+         MVC    SX,=F'1'               sx=+1
+       ELSE     ,                    else
+         MVC    SX,=F'-1'              sx=-1
+       ENDIF    ,                    endif
+       IF    CR,R7,LT,R5 THEN        if y<yf then
+         MVC    SY,=F'1'               sy=+1
+       ELSE     ,                    else
+         MVC    SY,=F'-1'              sy=-1
+       ENDIF    ,                    endif
+         L      R2,DX                dx
+         S      R2,DY                -dy
+         ST     R2,ERR               err=dx-dy
+LOOP     EQU    *                    loop forever
+         LR     R1,R7                  y
+         A      R1,OY                  +oy
+         BCTR   R1,0                   -1
+         MH     R1,=AL2(HMAPX)         *dim(x)
+         AR     R1,R6                  +x
+         A      R1,OX                  +ox
+         LA     R1,MAP-1(R1)           @map(y+oy,x+ox)
+         MVC    0(1,R1),=C'X'          map(y+oy,x+ox)='X'
+         CR     R6,R4                  if x=xf
+         BNE    STAYDO                 ~
+         CR     R7,R5                  if y=yf
+         BE     EXITLOOP               if x=xf and y=yf then leave loop
+STAYDO   L      R0,ERR                 err
+         A      R0,ERR                 err+err
+         ST     R0,ERR2                err2=err+err
+         L      R0,DY                  dy
+         LCR    R0,R0                  -dy
+       IF     C,R0,LT,ERR2 THEN        if err2>-dy then
+         A      R0,ERR                   -dy+err
+         ST     R0,ERR                   err=err-dy
+         A      R6,SX                    x=x+sx
+       ENDIF    ,                      endif
+         L      R0,DX                  dx
+       IF     C,R0,GT,ERR2 THEN        if err2<dx then
+         L      R0,ERR                   err
+         A      R0,DX                    +dx
+         ST     R0,ERR                   err=err+dx
+         A      R7,SY                    y=y+sy
+       ENDIF    ,                      endif
+         B      LOOP                 endloop
+EXITLOOP LA     R9,8(R9)             @dataxy+=2
+         LA     R8,1(R8)             p++
+       ENDDO    ,                  enddo p
+         LA     R9,MAP+(HMAPX*HMAPY)-HMAPX  @map
+         L      R7,MAXY            y=maxy
+       DO WHILE=(C,R7,GE,MINY)     do y=maxy to miny by -1
+         MVC    PG(HMAPX),0(R9)      output map(x,*)
+         XPRNT  PG,L'PG              print buffer
+         S      R9,=A(HMAPX)         @pg
+         S      R7,=F'1'             y--
+       ENDDO    ,                  enddo y
+         L      R13,4(0,R13)       restore previous savearea pointer
+         RETURN (14,12),RC=0       restore registers from calling sav
+BORDER   EQU    2                  border size
+POINTS   EQU    (MAP-DATAXY)/L'DATAXY/2
+HMAPX    EQU    24                 dim(map,1)
+HMAPY    EQU    20                 dim(map,2)
+DATAXY   DC     F'1',F'8',F'8',F'16',F'16',F'8',F'8',F'1',F'1',F'8'
+MAP      DC     (HMAPX*HMAPY)CL1'.'    map(hmapx,hmapy)
+OX       DS     F
+OY       DS     F
+MINX     DS     F
+MAXX     DS     F
+MINY     DS     F
+MAXY     DS     F
+DX       DS     F
+DY       DS     F
+SX       DS     F
+SY       DS     F
+ERR      DS     F
+ERR2     DS     F
+PG       DC     CL80' '            buffer
+         REGEQU
+         END    BRESENH

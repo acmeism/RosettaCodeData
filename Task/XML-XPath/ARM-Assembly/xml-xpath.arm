@@ -1,0 +1,232 @@
+/* ARM assembly Raspberry PI  */
+/*  program xpathXml.s   */
+
+/* Constantes    */
+.equ STDOUT, 1     @ Linux output console
+.equ EXIT,   1     @ Linux syscall
+.equ WRITE,  4     @ Linux syscall
+
+.equ NBMAXELEMENTS,    100
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure xmlNode*/
+    .struct  0
+xmlNode_private:                         @ application data
+    .struct  xmlNode_private + 4
+xmlNode_type:                            @ type number, must be second !
+    .struct  xmlNode_type + 4
+xmlNode_name:                            @ the name of the node, or the entity
+    .struct  xmlNode_name + 4
+xmlNode_children:                        @ parent->childs link
+    .struct  xmlNode_children + 4
+xmlNode_last:                            @ last child link
+    .struct  xmlNode_last + 4
+xmlNode_parent:                          @ child->parent link
+    .struct  xmlNode_parent + 4
+xmlNode_next:                            @ next sibling link
+    .struct  xmlNode_next + 4
+xmlNode_prev:                            @ previous sibling link
+    .struct  xmlNode_prev + 4
+xmlNode_doc:                             @ the containing document
+    .struct  xmlNode_doc + 4
+xmlNode_ns:                              @ pointer to the associated namespace
+    .struct  xmlNode_ns + 4
+xmlNode_content:                         @ the content
+    .struct  xmlNode_content + 4
+xmlNode_properties:                      @ properties list
+    .struct  xmlNode_properties + 4
+xmlNode_nsDef:                           @ namespace definitions on this node
+    .struct  xmlNode_nsDef + 4
+xmlNode_psvi:                            @ for type/PSVI informations
+    .struct  xmlNode_psvi + 4
+xmlNode_line:                            @ line number
+    .struct  xmlNode_line + 4
+xmlNode_extra:                           @ extra data for XPath/XSLT
+    .struct  xmlNode_extra + 4
+xmlNode_fin:
+/********************************************/
+/* structure xmlNodeSet*/
+    .struct  0
+xmlNodeSet_nodeNr:                       @ number of nodes in the set
+    .struct  xmlNodeSet_nodeNr + 4
+xmlNodeSet_nodeMax:                      @ size of the array as allocated
+    .struct  xmlNodeSet_nodeMax + 4
+xmlNodeSet_nodeTab:                      @ array of nodes in no particular order
+    .struct  xmlNodeSet_nodeTab + 4
+xmlNodeSet_fin:
+/********************************************/
+/* structure xmlXPathObject*/
+    .struct  0
+xmlPathObj_type:                         @
+    .struct  xmlPathObj_type + 4
+xmlPathObj_nodesetval:                   @
+    .struct  xmlPathObj_nodesetval + 4
+xmlPathObj_boolval:                      @
+    .struct  xmlPathObj_boolval + 4
+xmlPathObj_floatval:                     @
+    .struct  xmlPathObj_floatval + 4
+xmlPathObj_stringval:                    @
+    .struct  xmlPathObj_stringval + 4
+xmlPathObj_user:                         @
+    .struct  xmlPathObj_user + 4
+xmlPathObj_index:                        @
+    .struct  xmlPathObj_index + 4
+xmlPathObj_user2:                        @
+    .struct  xmlPathObj_user2 + 4
+xmlPathObj_index2:                       @
+    .struct  xmlPathObj_index2 + 4
+
+
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessEndpgm:      .asciz "\nNormal end of program.\n"
+szMessDisVal:      .asciz "\nDisplay set values.\n"
+szMessDisArea:     .asciz "\nDisplay area values.\n"
+szFileName:        .asciz "testXml.xml"
+szMessError:       .asciz "Error detected !!!!. \n"
+
+
+szLibName:         .asciz "name"
+szLibPrice:        .asciz "//price"
+szLibExtName:      .asciz "//name"
+szCarriageReturn:  .asciz "\n"
+
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+tbExtract:          .skip 4 * NBMAXELEMENTS      @ result extract area
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                     @ entry of program
+    ldr r0,iAdrszFileName
+    bl xmlParseFile                       @ create doc
+    mov r9,r0                             @ doc address
+    mov r0,r9                             @ doc
+    bl xmlDocGetRootElement               @ get root
+    bl xmlFirstElementChild               @ get first section
+    bl xmlFirstElementChild               @ get first item
+    bl xmlFirstElementChild               @ get first name
+    bl xmlNodeGetContent                  @ extract content
+    bl affichageMess                      @ for display
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    ldr r0,iAdrszMessDisVal
+    bl affichageMess
+    mov r0,r9
+    ldr r1,iAdrszLibPrice                  @ extract prices
+    bl extractValue
+    mov r0,r9
+    ldr r1,iAdrszLibExtName                @ extact names
+    bl extractValue
+    ldr r0,iAdrszMessDisArea
+    bl affichageMess
+    mov r4,#0                              @ display string result area
+    ldr r5,iAdrtbExtract
+1:
+    ldr r0,[r5,r4,lsl #2]
+    cmp r0,#0
+    beq 2f
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    add r4,#1
+    b 1b
+
+2:
+    mov r0,r9
+    bl xmlFreeDoc
+    bl xmlCleanupParser
+    ldr r0,iAdrszMessEndpgm
+    bl affichageMess
+    b 100f
+99:
+    @ error
+    ldr r0,iAdrszMessError
+    bl affichageMess
+100:                                       @ standard end of the program
+    mov r0, #0                             @ return code
+    mov r7, #EXIT                          @ request to exit program
+    svc #0                                 @ perform the system call
+
+iAdrszMessError:          .int szMessError
+iAdrszMessEndpgm:         .int szMessEndpgm
+iAdrszLibName:            .int szLibName
+iAdrszLibPrice:           .int szLibPrice
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszFileName:           .int szFileName
+iAdrszLibExtName:         .int szLibExtName
+iAdrtbExtract:            .int tbExtract
+iAdrszMessDisVal:          .int szMessDisVal
+iAdrszMessDisArea:         .int szMessDisArea
+/******************************************************************/
+/*     extract value of set                                       */
+/******************************************************************/
+/* r0 contains the doc address
+/* r1 contains the address of the libel to extract */
+extractValue:
+    push {r1-r10,lr}                     @ save  registres
+    mov r4,r1                            @ save address libel
+    mov r9,r0                            @ save doc
+    ldr r8,iAdrtbExtract
+    bl xmlXPathNewContext                @ create context
+    mov r10,r0
+    mov r1,r0
+    mov r0,r4
+    bl xmlXPathEvalExpression
+    mov r5,r0
+    mov r0,r10
+    bl xmlXPathFreeContext               @ free context
+    cmp r5,#0
+    beq 100f
+    ldr r4,[r5,#xmlPathObj_nodesetval]   @ values set
+    ldr r6,[r4,#xmlNodeSet_nodeNr]       @ set size
+    mov r7,#0                            @ index
+    ldr r4,[r4,#xmlNodeSet_nodeTab]      @ area of nods
+1:                                       @ start loop
+    ldr r3,[r4,r7,lsl #2]                @ load node
+    mov r0,r9
+    ldr r1,[r3,#xmlNode_children]        @ load string value
+    mov r2,#1
+    bl xmlNodeListGetString
+    str r0,[r8,r7,lsl #2]                @ store string pointer in area
+    bl affichageMess                     @ and display string result
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    add r7,#1
+    cmp r7,r6
+    blt 1b
+100:
+    pop {r1-r10,lr}                      @ restaur registers */
+    bx lr                                @ return
+
+/******************************************************************/
+/*     display text with size calculation                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+affichageMess:
+    push {r0,r1,r2,r7,lr}                   @ save  registres
+    mov r2,#0                               @ counter length
+1:                                          @ loop length calculation
+    ldrb r1,[r0,r2]                         @ read octet start position + index
+    cmp r1,#0                               @ if 0 its over
+    addne r2,r2,#1                          @ else add 1 in the length
+    bne 1b                                  @ and loop
+                                            @ so here r2 contains the length of the message
+    mov r1,r0                               @ address message in r1
+    mov r0,#STDOUT                          @ code to write to the standard output Linux
+    mov r7, #WRITE                          @ code call system "write"
+    svc #0                                  @ call systeme
+    pop {r0,r1,r2,r7,lr}                    @ restaur registers */
+    bx lr                                   @ return

@@ -1,0 +1,167 @@
+function startTwentyFourGame()
+{
+	if($numbers !$= "")
+	{
+		echo("Ending current 24 game...");
+		endTwentyFourGame();
+	}
+	
+	echo("Welcome to the 24 game!");
+	echo("Generating 4 numbers...");
+	for(%a = 0; %a < 4; %a++)
+		$numbers = setWord($numbers, %a, getRandom(0, 9));
+	
+	echo("Numbers generated! Here are your numbers:");
+	echo($numbers);
+	echo("Use try24Equation( equation ); to try and guess the equation.");
+	
+	$TwentyFourGame = 1;
+}
+
+function endTwentyFourGame()
+{
+	if(!$TwentyFourGame)
+	{
+		echo("No 24 game is active!");
+		return false;
+	}
+	
+	echo("Ending the 24 game.");
+	$numbers = "";
+	$TwentyFourGame = 0;
+}
+
+function try24Equation(%equ)
+{
+	if(!$TwentyFourGame)
+	{
+		echo("No 24 game is active!");
+		return false;
+	}
+	%numbers = "0123456789";
+	%operators = "+-*x/()";
+	%tempchars = $numbers;
+	%other = strReplace(%tempchars, " ", "");
+	
+	//Check it and make sure it has all the stuff
+	%equ = strReplace(%equ, " ", "");
+	%length = strLen(%equ);
+	
+	for(%a = 0; %a < %Length; %a++)
+	{
+		%Char = getSubStr(%equ, %a, 1);
+		if(%a+1 != %Length)
+			%Next = getSubStr(%equ, %a+1, 1);
+		else
+			%Next = " ";
+		
+		if(strPos(%numbers @ %operators, %char) < 0)
+		{
+			echo("The equation you entered is invalid! Try again.");
+			return false;
+		}
+		if(strPos(%tempchars, %char) < 0 && strPos(%operators, %char) < 0)
+		{
+			echo("The equation you entered uses a number you were not given! Try again.");
+			return false;
+		}
+		else if(strPos(%numbers, %next) >= 0 && strPos(%numbers, %char) >= 0)
+		{
+			echo("No numbers above 9 please! Try again.");
+			echo(%next SPC %char SPC %a);
+			return false;
+		}
+		else if(strPos(%operators, %char) > 0)
+			continue;
+		
+		%pos = 2*strPos(%other, %char);
+		if(%pos < 0)
+			return "ERROROMG";
+		
+		//Remove it from the allowed numbers
+		%tempchars = removeWord(%tempchars, %pos/2);
+		%other = getSubStr(%other, 0, %pos) @ getSubStr(%other, %pos+1, strLen(%other));
+    }
+
+    %result = doEquation(%equ);
+
+    if(%result != 24)
+    {
+        echo("Your equation resulted to" SPC %result @ ", not 24! Try again.");
+        return false;
+    }
+
+    for(%a = 0; %a < 4; %a++)
+        $numbers = setWord($numbers, %a, getRandom(0, 9));
+
+    echo("Great job!" SPC %equ SPC "Does result to 24! Here's another set for you:");
+    echo($numbers);
+}
+
+//Evaluates an equation without using eval.
+function doEquation(%equ)
+{   //Validate the input
+    %equ = strReplace(%equ, " ", "");%equ = strReplace(%equ, "*", "x");
+    %equ = strReplace(%equ, "+", " + ");%equ = strReplace(%equ, "x", " x ");
+    %equ = strReplace(%equ, "/", " / ");%equ = strReplace(%equ, "-", " - ");
+
+    //Parenthesis'
+    while(strPos(%equ, "(") > -1 && strPos(%equ, ")") > 0)
+    {
+        %start = strPos(%equ, "(");
+        %end = %start;
+        %level = 1;
+        while(%level != 0 && %end != strLen(%equ))
+        {
+            %end++;
+            if(getsubStr(%equ, %end, 1) $= "(") %level++;
+            if(getsubStr(%equ, %end, 1) $= ")") %level--;
+        }
+        if(%level != 0)
+            return "ERROR";
+        %inbrackets = getsubStr(%equ, %start+1, %end - strLen(getsubStr(%equ, 0, %start + 1)));
+        %leftofbrackets = getsubStr(%equ, 0, %start);
+        %rightofbrackets = getsubStr(%equ, %end + 1, strLen(%equ) - %end);
+        %equ = %leftofbrackets @ doEquation(%inbrackets) @ %rightofbrackets;
+    }
+
+    if(strPos(%equ, "ERROR") >= 0)
+        return "ERROR";
+
+    //Multiplication/Division loop
+    for(%a = 0; %a < getWordCount(%equ); %a++)
+    {
+        if(getWord(%equ, %a) $= "x" || getWord(%equ, %a) $= "/" && %a != 0)
+        {
+            %f = getWord(%equ, %a - 1);
+            %l = getWord(%equ, %a + 1);
+            %o = getWord(%equ, %a);
+            switch$(%o)
+            {
+                case "x": %a--;
+                    %equ = removeWord(removeWord(setWord(%equ, %a+1, %f * %l), %a+2), %a);
+                case "/": %a--;
+                    %equ = removeWord(removeWord(setWord(%equ, %a+1, %f / %l), %a+2), %a);
+            }
+        }
+    }
+
+    //Addition/Subraction loop
+    for(%a = 0; %a < getWordCount(%equ); %a++)
+    {
+        if(getWord(%equ, %a) $= "+" || getWord(%equ, %a) $= "-" && %a != 0)
+        {
+            %f = getWord(%equ, %a - 1);
+            %l = getWord(%equ, %a + 1);
+            %o = getWord(%equ, %a);
+            switch$(%o)
+            {
+                case "+": %a--;
+                    %equ = removeWord(removeWord(setWord(%equ, %a+1, %f + %l), %a+2), %a);
+                case "-": %a--;
+                    %equ = removeWord(removeWord(setWord(%equ, %a+1, %f - %l), %a+2), %a);
+            }
+        }
+    }
+    return %equ;
+}

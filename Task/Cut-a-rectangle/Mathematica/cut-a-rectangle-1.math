@@ -1,0 +1,66 @@
+ClearAll[CutRectangle]
+dirs = AngleVector /@ Most[Range[0, 2 Pi, Pi/2]];
+CutRectangle[nm : {n_, m_}] := Module[{start, stop, count, sols},
+  If[OddQ[n] \[And] OddQ[m], Return[<|"Count" -> 0, "Solutions" -> {}|>]];
+
+  start = {0, 0};
+  stop = nm;
+  ClearAll[ValidPosition, ValidRoute, ProceedStep];
+  ValidPosition[{x_, y_}] := 0 <= x <= n \[And] 0 <= y <= m;
+  ValidRoute[route_List] := Module[{},
+    If[MatchQ[route[[All, 1]], {0 .., Except[0] .., 0, ___}], Return[False]]; (* once it leaves the left border, don't return (disjoint pieces) *)
+    If[MatchQ[route[[All, 2]], {0 .., Except[0] .., 0, ___}], Return[False]];(* once it leaves the bottom border, don't return (disjoint pieces) *)
+
+    True
+    ];
+  ProceedStep[nnmm : {nn_, mm_}, steps1_List, steps2_List] := Module[{nextposs, newsteps1, newsteps2, route},
+    If[Last[steps1] == Last[steps2],
+     route = Join[Most[steps1], Reverse[steps2]];
+     If[ValidRoute[route],
+      count++;
+      AppendTo[sols, route];
+      ]
+     ,
+     If[Length[steps1] >= 2,
+      If[Take[steps1, -2] == Reverse[Take[steps2, -2]],
+       route = Join[Most[steps1], Reverse[Most[steps2]]];
+       If[ValidRoute[route],
+        count++;
+        AppendTo[sols, route];
+        ]
+       ]
+      ]
+     ];
+    nextposs = {Last[steps1] + #, Last[steps2] - #} & /@ dirs;
+    nextposs //= Select[First/*ValidPosition];
+    nextposs //= Select[Last/*ValidPosition];
+    nextposs //= Select[! MemberQ[steps1, First[#]] &];
+    nextposs //= Select[! MemberQ[steps2, Last[#]] &];
+    nextposs //= Select[! MemberQ[Most[steps2], First[#]] &];
+    nextposs //= Select[! MemberQ[Most[steps1], Last[#]] &];
+
+    Do[
+     newsteps1 = Append[steps1, First[np]];
+     newsteps2 = Append[steps2, Last[np]];
+     ProceedStep[nnmm, newsteps1, newsteps2]
+     ,
+     {np, nextposs}
+     ]
+    ];
+  count = 0;
+  sols = {};
+  ProceedStep[nm, {start}, {stop}];
+  <|"Count" -> count, "Solutions" -> sols|>
+  ]
+
+maxsize = 6;
+sols = Reap[Do[
+     If[EvenQ[i] \[Or] EvenQ[j],
+      If[i >= j,
+       Sow@{i, j, CutRectangle[{i, j}]["Count"]}
+       ]
+      ],
+     {i, maxsize},
+     {j, maxsize}
+     ]][[2, 1]];
+Column[Row[{#1, " \[Times] ", #2, ": ", #3}] & @@@ sols]

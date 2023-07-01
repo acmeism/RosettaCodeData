@@ -1,0 +1,136 @@
+INCLUDE "H6:RGB2GRAY.ACT" ;from task Grayscale image
+
+PROC DecodeSize(CHAR ARRAY s BYTE POINTER width,height)
+  BYTE i
+
+  width^=ValB(s)
+  i=1
+  WHILE i<=s(0) AND s(i)#32
+  DO
+    s(i)=32
+    i==+1
+  OD
+  height^=ValB(s)
+RETURN
+
+PROC LoadHeader(RgbImage POINTER img
+  CHAR ARRAY format BYTE dev)
+  CHAR ARRAY line(255)
+  BYTE header,size,max,width,height
+
+  header=0 size=0 max=0
+  WHILE max=0
+  DO
+    InputSD(dev,line)
+    IF line(0)>0 AND line(1)#'# THEN
+      IF header=0 THEN
+        IF SCompare(format,format)#0 THEN
+          Break()
+        FI
+        header=1
+      ELSEIF size=0 THEN
+        DecodeSize(line,@width,@height)
+        IF width=0 OR height=0 THEN
+          Break()
+        FI
+        img.w=width img.h=height
+        size=1
+      ELSEIF max=0 THEN
+        max=ValB(line)
+        IF max#255 THEN
+          Break()
+        FI
+      FI
+    FI
+  OD
+RETURN
+
+PROC LoadPPM6(RgbImage POINTER img CHAR ARRAY path)
+  BYTE dev=[1],x,y
+  RGB c
+
+  Close(dev)
+  Open(dev,path,4)
+  LoadHeader(img,"P6",dev)
+  FOR y=0 TO img.h-1
+  DO
+    FOR x=0 TO img.w-1
+    DO
+      c.r=GetD(dev)
+      c.g=GetD(dev)
+      c.b=GetD(dev)
+      SetRgbPixel(img,x,y,c)
+    OD
+  OD
+  Close(dev)
+RETURN
+
+PROC SaveHeader(GrayImage POINTER img
+  CHAR ARRAY format BYTE dev)
+
+  PrintDE(dev,format)
+  PrintBD(dev,img.w)
+  PutD(dev,32)
+  PrintBDE(dev,img.h)
+  PrintBDE(dev,255)
+RETURN
+
+PROC SavePPM2(RgbImage POINTER img CHAR ARRAY path)
+  BYTE dev=[1],x,y,c
+
+  Close(dev)
+  Open(dev,path,8)
+  SaveHeader(img,"P2",dev)
+  FOR y=0 TO img.h-1
+  DO
+    FOR x=0 TO img.w-1
+    DO
+      c=GetGrayPixel(img,x,y)
+      PrintBD(dev,c)
+      IF x=img.w-1 THEN
+        PutDE(dev)
+      ELSE
+        PutD(dev,32)
+      FI
+    OD
+  OD
+  Close(dev)
+RETURN
+
+PROC Load(CHAR ARRAY path)
+  CHAR ARRAY line(255)
+  BYTE dev=[1]
+
+  Close(dev)
+  Open(dev,path,4)
+  WHILE Eof(dev)=0
+  DO
+    InputSD(dev,line)
+    PrintE(line)
+  OD
+  Close(dev)
+RETURN
+
+PROC Main()
+  BYTE ARRAY rgbdata(300),graydata(100)
+  RgbImage rgbimg
+  GrayImage grayimg
+  CHAR ARRAY path2="D:PPM2.PPM"
+  CHAR ARRAY path6="D:PPM6.PPM"
+
+  Put(125) PutE() ;clear the screen
+  InitRgbImage(rgbimg,0,0,rgbdata)
+  InitRgbToGray()
+
+  PrintF("Loading %S...%E%E",path6)
+  LoadPPM6(rgbimg,path6)
+
+  PrintF("Converting RGB to grayscale...%E%E")
+  InitGrayImage(grayimg,rgbimg.w,rgbimg.h,graydata)
+  RgbToGray(rgbimg,grayimg)
+
+  PrintF("Saving %S...%E%E",path2)
+  SavePPM2(grayimg,path2)
+  PrintF("Loading %S...%E%E",path2)
+  Load(path2)
+RETURN

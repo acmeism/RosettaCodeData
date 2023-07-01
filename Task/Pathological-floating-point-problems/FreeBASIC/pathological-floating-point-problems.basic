@@ -1,0 +1,98 @@
+' FB 1.05.0 Win64
+
+' As FB's native types have only 64 bit precision at most we need to use the
+' C library, GMP v6.1.0, for arbitrary precision arithmetic
+
+#Include Once "gmp.bi"
+mpf_set_default_prec(640) '' 640 bit precision, enough for this exercise
+
+Function v(n As UInteger, prev As __mpf_struct, prev2 As __mpf_struct) As __mpf_struct
+  Dim As __mpf_struct a, b, c
+  mpf_init(@a) : mpf_init(@b) : mpf_init(@c)
+  If n = 0 Then mpf_set_ui(@a, 0UL)
+  If n = 1 Then mpf_set_ui(@a, 2UL)
+  If n = 2 Then mpf_set_si(@a, -4L)
+  If n < 3 Then Return a
+  mpf_ui_div(@a, 1130UL, @prev)
+  mpf_mul(@b, @prev, @prev2)
+  mpf_ui_div(@c, 3000UL, @b)
+  mpf_ui_sub(@b, 111UL, @a)
+  mpf_add(@a, @b, @c)
+  mpf_clear(@b)
+  mpf_clear(@c)
+  Return a
+End Function
+
+Function f(a As Double, b As Double) As __mpf_Struct
+  Dim As __mpf_struct temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8
+  mpf_init(@temp1) : mpf_init(@temp2) : mpf_init(@temp3) : mpf_init(@temp4)
+  mpf_init(@temp5) : mpf_init(@temp6) : mpf_init(@temp7) : mpf_init(@temp8)
+  mpf_set_d(@temp1, a)               '' a
+  mpf_set_d(@temp2, b)               '' b
+  mpf_set_d(@temp3, 333.75)          '' 333.75
+  mpf_pow_ui(@temp4, @temp2, 6UL)    '' b ^ 6
+  mpf_mul(@temp3, @temp3, @temp4)    '' 333.75 * b^6
+  mpf_pow_ui(@temp5, @temp1, 2UL)    '' a^2
+  mpf_pow_ui(@temp6, @temp2, 2UL)    '' b^2
+  mpf_mul_ui(@temp7, @temp5, 11UL)   '' 11 * a^2
+  mpf_mul(@temp7, @temp7, @temp6)    '' 11 * a^2 * b^2
+  mpf_sub(@temp7, @temp7, @temp4)    '' 11 * a^2 * b^2 - b^6
+  mpf_pow_ui(@temp4, @temp2, 4UL)    '' b^4
+  mpf_mul_ui(@temp4, @temp4, 121UL)  '' 121 * b^4
+  mpf_sub(@temp7, @temp7, @temp4)    '' 11 * a^2 * b^2 - b^6 - 121 * b^4
+  mpf_sub_ui(@temp7, @temp7, 2UL)    '' 11 * a^2 * b^2 - b^6 - 121 * b^4 - 2
+  mpf_mul(@temp7, @temp7, @temp5)    '' (11 * a^2 * b^2 - b^6 - 121 * b^4 - 2) * a^2
+  mpf_add(@temp3, @temp3, @temp7)    '' 333.75 * b^6 + (11 * a^2 * b^2 - b^6 - 121 * b^4 - 2) * a^2
+  mpf_set_d(@temp4, 5.5)             '' 5.5
+  mpf_pow_ui(@temp5, @temp2, 8UL)    '' b^8
+  mpf_mul(@temp4, @temp4, @temp5)    '' 5.5 * b^8
+  mpf_add(@temp3, @temp3, @temp4)    '' 333.75 * b^6 + (11 * a^2 * b^2 - b^6 - 121 * b^4 - 2) * a^2 + 5.5 * b^8
+  mpf_mul_ui(@temp4, @temp2, 2UL)    '' 2 * b
+  mpf_div(@temp5, @temp1, @temp4)    '' a / (2 * b)
+  mpf_add(@temp3, @temp3, @temp5)    '' 333.75 * b^6 + (11 * a^2 * b^2 - b^6 - 121 * b^4 - 2) * a^2 + 5.5 * b^8 + a / (2 * b)
+  mpf_clear(@temp1) : mpf_clear(@temp2) : mpf_clear(@temp4) : mpf_clear(@temp5)
+  mpf_clear(@temp6) : mpf_clear(@temp7) : mpf_clear(@temp8)
+  Return temp3
+End Function
+
+Dim As Zstring * 60 z
+Dim As __mpf_struct result, prev, prev2
+' We cache the two previous results to avoid recursive calls to v
+For i As Integer = 1 To 100
+  result = v(i, prev, prev2)
+  If (i >= 3 AndAlso i <= 8) OrElse i = 20 OrElse i = 30 OrElse i = 50 OrElse i = 100 Then
+    gmp_sprintf(@z,"%53.50Ff",@result) '' express result to 50 decimal places
+    Print "n ="; i , z
+  End If
+  prev2 = prev
+  prev = result
+Next
+
+mpf_clear(@prev) : mpf_clear(@prev2) '' note : prev = result
+
+Dim As __mpf_struct e, balance, ii, temp
+mpf_init(@e) : mpf_init(@balance) : mpf_init(@ii) : mpf_init(@temp)
+mpf_set_str(@e, "2.71828182845904523536028747135266249775724709369995", 10) '' e to 50 decimal places
+mpf_sub_ui(@balance, @e, 1UL)
+
+For i As ULong = 1 To 25
+  mpf_set_ui(@ii, i)
+  mpf_mul(@temp, @balance, @ii)
+  mpf_sub_ui(@balance, @temp, 1UL)
+Next
+
+Print
+Print "Chaotic B/S balance after 25 years : ";
+gmp_sprintf(@z,"%.16Ff",@balance) '' express balance to 16 decimal places
+Print z
+mpf_clear(@e) : mpf_clear(@balance) : mpf_clear(@ii) : mpf_clear(@temp)
+
+Print
+Dim rump As __mpf_struct
+rump = f(77617.0, 33096.0)
+gmp_sprintf(@z,"%.16Ff", @rump) '' express rump to 16 decimal places
+Print "f(77617.0, 33096.0) = "; z
+
+Print
+Print "Press any key to quit"
+Sleep

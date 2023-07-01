@@ -1,0 +1,1 @@
+$scores | Get-Ranking -Dense

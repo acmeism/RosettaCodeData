@@ -1,0 +1,51 @@
+record badrun(count,fromdate,todate)  # record to track bad runs
+
+procedure main()
+return mungetask1("readings1-input.txt","readings1-output.txt")
+end
+
+procedure mungetask1(fin,fout)
+
+fin  := open(fin)      | stop("Unable to open input file ",fin)
+fout := open(fout,"w") | stop("Unable to open output file ",fout)
+
+F_tot := F_acc := F_rej := 0                       # data set totals
+rejmax := badrun(-1)                               # longest reject runs
+rejcur := badrun(0)                                # current reject runs
+
+while line := read(fin) do {
+   line ? {
+      ldate := tab(many(&digits ++ '-'))           # date (poorly checked)
+      fields := tot := rej := 0                    # record counters & totals
+
+      while tab(many(' \t')) do {                  # whitespace before every pair
+         value := real(tab(many(&digits++'-.')))   | stop("Bad value in ",ldate)
+         tab(many(' \t'))
+         flag := integer(tab(many(&digits++'-')))  | stop("Bad flag in ",ldate)
+         fields +:= 1
+
+         if flag > 0 then {                        # good data, ends a bad run
+            if rejcur.count > rejmax.count then rejmax := rejcur
+            rejcur := badrun(0)
+            tot +:= value
+            }
+         else {                                    # bad (flagged) data
+            if rejcur.count = 0 then rejcur.fromdate := ldate
+            rejcur.todate := ldate
+            rejcur.count +:= 1
+            rej +:= 1
+            }
+         }
+      }
+   F_tot +:= tot
+   F_acc +:= acc := fields - rej
+   F_rej +:= rej
+   write(fout,"Line: ",ldate," Reject: ", rej," Accept: ", acc," Line_tot: ",tot," Line_avg: ", if acc > 0 then tot / acc else 0)
+   }
+
+write(fout,"\nTotal    = ",F_tot,"\nReadings = ",F_acc,"\nRejects  = ",F_rej,"\nAverage  = ",F_tot / F_acc)
+if rejmax.count > 0 then
+   write(fout,"Maximum run of bad data was ",rejmax.count," readings from ",rejmax.fromdate," to ",rejmax.todate)
+else
+   write(fout,"No bad runs of data")
+end

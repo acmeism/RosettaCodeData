@@ -1,0 +1,262 @@
+output file "FB Piano Keyboard"
+
+include "Tlbx AudioToolbox.incl"
+
+_window = 1
+begin enum output 1
+  _whiteKey01
+  _whiteKey02
+  _whiteKey03
+  _whiteKey04
+  _whiteKey05
+  _whiteKey06
+  _whiteKey07
+  _whiteKey08
+  _whiteKey09
+  _whiteKey10
+  _whiteKey11
+  _whiteKey12
+  _whiteKey13
+  _whiteKey14
+  _whiteKey15
+  _whiteKey16
+  _whiteKey17
+  _whiteKey18
+  _whiteKey19
+  _whiteKey20
+  _whiteKey21
+  _whiteKey22
+
+  _blackKey23
+  _blackKey24
+  _blackKey25
+  _blackKey26
+  _blackKey27
+  _blackKey28
+  _blackKey29
+  _blackKey30
+  _blackKey31
+  _blackKey32
+  _blackKey33
+  _blackKey34
+  _blackKey35
+  _blackKey36
+  _blackKey37
+
+  _infoField
+  _playBtn
+
+  _note01
+  _note02
+  _note03
+  _note04
+  _note05
+  _note06
+  _note07
+  _note08
+  _note09
+  _note10
+  _note11
+  _note12
+  _note13
+  _note14
+  _note15
+  _note16
+  _note17
+  _note18
+  _note19
+  _note20
+  _note21
+  _note22
+end enum
+
+begin enum output
+  _kMidiMessageControlChange   = 0xB
+  _kMidiMessageProgramChange   = 0xC
+  _kMidiMessageBankMSBControl  = 0
+  _kMidiMessageBankLSBControl  = 32
+  _kMidiMessageNoteOn          = 0x9
+end enum
+
+BeginCDeclaration
+  AudioUnit synthUnit;
+  AUGraph graph;
+EndC
+
+void local fn PlayNote( noteNum as UInt32 )
+  BeginCCode
+    UInt8 midiChannelInUse = 0;
+
+    MusicDeviceMIDIEvent( synthUnit, kMidiMessageControlChange << 4 | midiChannelInUse, kMidiMessageBankMSBControl, 0, 0 ); //2022-Jan-04 Brian
+    MusicDeviceMIDIEvent( synthUnit, kMidiMessageProgramChange << 4 | midiChannelInUse, 0, 0, 0 );
+    AUGraphStart( graph );
+
+    UInt32 onVelocity = 127;
+    UInt32 noteOnCommand = kMidiMessageNoteOn << 4 | midiChannelInUse; //2022-Jan-04 Brian
+
+    MusicDeviceMIDIEvent( synthUnit, noteOnCommand, noteNum, onVelocity, 0 );
+    usleep ( 1 * 500 * 600 ); // 0.6 second sleep
+    MusicDeviceMIDIEvent( synthUnit, noteOnCommand, noteNum, 0, 0);
+  EndC
+end fn
+
+void local fn InitializeSynth
+  BeginCCode
+    AUNode synthNode, limiterNode, outNode;
+    AudioComponentDescription cd;
+
+    graph = 0;
+    synthUnit = 0;
+
+    cd.componentManufacturer = kAudioUnitManufacturer_Apple;
+    cd.componentFlags = 0;
+    cd.componentFlagsMask = 0;
+    NewAUGraph (&graph);
+
+    cd.componentType = kAudioUnitType_MusicDevice;
+    cd.componentSubType = kAudioUnitSubType_DLSSynth;
+    AUGraphAddNode (graph, &cd, &synthNode);
+
+    cd.componentType = kAudioUnitType_Effect;
+    cd.componentSubType = kAudioUnitSubType_PeakLimiter;
+    AUGraphAddNode (graph, &cd, &limiterNode);
+
+    cd.componentType = kAudioUnitType_Output;
+    cd.componentSubType = kAudioUnitSubType_DefaultOutput;
+    AUGraphAddNode (graph, &cd, &outNode);
+    AUGraphOpen (graph);
+
+    AUGraphConnectNodeInput (graph, synthNode, 0, limiterNode, 0);
+    AUGraphConnectNodeInput (graph, limiterNode, 0, outNode, 0);
+    AUGraphNodeInfo ( graph, synthNode, 0, &synthUnit );
+    AUGraphInitialize (graph);
+  EndC
+end fn
+
+local fn CreateKeyImage
+  CGRect r = {0,0,28,162}
+  ImageRef image = fn ImageWithSize( fn CGSizeMake( 28.0, 162.0 ) )
+  ImageLockFocus( image )
+  BezierPathFillRect( r, fn ColorBlack )
+  ImageUnlockFocus( image )
+  ImageSetName( image, @"KeyImage" )
+end fn
+
+void local fn BuildWindow
+  NSInteger   i, count
+
+  NSInteger wndStyleMask  = NSWindowStyleMaskTitled
+  wndStyleMask += NSWindowStyleMaskClosable
+  wndStyleMask += NSWindowStyleMaskMiniaturizable
+
+  CGRect r = {0,0,850,340}
+  window _window, @"FB Piano Keyboard", r, wndStyleMask
+  WindowSetBackgroundColor( _window, fn ColorWithRGB( 0.400, 0.400, 0.400, 1.0 ) )
+
+  // White keys
+  r = fn CGRectMake( 30, 30, 38, 250 )
+  for i = _whiteKey01 to _whiteKey22
+    button i,,,@"", r, NSButtonTypeMomentaryLight, NSBezelStyleTexturedSquare, _window
+    CALayerRef layer = fn CALayerInit
+    CALayerSetBackgroundColor( layer, fn ColorWithRGB( 0.800, 0.800, 0.800, 1.0 ) )
+    ViewSetWantsLayer( i, YES )
+    ViewSetLayer( i, layer )
+    r = fn CGRectOffset( r, 36, 0 )
+  next
+
+  // Black keys
+  r = fn CGRectMake( 52, 110, 28, 169 )
+  for i = _blackKey23 to _blackKey37
+    button i,,,@"", r, NSButtonTypeMomentaryLight, NSBezelStyleShadowlessSquare, _window
+    ButtonSetImageNamed( i, @"KeyImage" )
+    if ( i == 24 ) or ( i == 27 ) or ( i == 29 ) or ( i == 32 ) or ( i == 34 )
+      r = fn CGRectOffset( r, 72, 0 )
+    else
+      r = fn CGRectOffset( r, 36, 0 )
+    end if
+  next
+
+  r = fn CGRectMake( 30, 290, 240, 24 )
+  textfield _infoField,,,r, _window
+  TextFieldSetEditable( _infoField, NO )
+  TextFieldSetSelectable( _infoField, NO )
+  TextFieldSetDrawsBackground( _infoField, NO )
+  TextFieldSetBordered( _infoField, NO )
+
+  CFStringRef s = @"C,D,E,F,G,A,B,C,D,E,F,G,A,B,C,D,E,F,G,A,B,C"
+  CFArrayRef a = fn StringComponentsSeparatedByString( s, @"," )
+  r = fn CGRectMake( 30, 10, 38, 19  )
+  count = 0
+  for i = _note01 to _note22
+    textfield i,, fn ArrayObjectAtIndex( a, count ), r, _window
+    TextFieldSetDrawsBackground( i, NO )
+    TextFieldSetBordered( i, NO )
+    TextFieldSetEditable( i, NO )
+    TextFieldSetSelectable( i, NO )
+    TextSetAlignment( i, NSTextAlignmentCenter )
+    TextSetFontWithName( i, @"Menlo", 14.0 )
+    r = fn CGRectOffset( r, 36, 0 )
+    count++
+  next
+end fn
+
+local fn DoDialog( ev as NSUInteger, tag as NSUInteger, wnd as NSUInteger )
+  select (ev)
+    case _btnClick
+      select (tag)
+        case 1  : fn PlayNote( 53 ) : ControlSetStringValue( _infoField, @"C, Note 53, White key No. 1"  )
+        case 2  : fn PlayNote( 55 ) : ControlSetStringValue( _infoField, @"D, Note 55, White key No. 2"  )
+        case 3  : fn PlayNote( 57 ) : ControlSetStringValue( _infoField, @"E, Note 57, White key No. 3"  )
+        case 4  : fn PlayNote( 58 ) : ControlSetStringValue( _infoField, @"F, Note 58, White key No. 4"  )
+        case 5  : fn PlayNote( 60 ) : ControlSetStringValue( _infoField, @"G, Note 60, White key No. 5"  )
+        case 6  : fn PlayNote( 62 ) : ControlSetStringValue( _infoField, @"A, Note 62, White key No. 6"  )
+        case 7  : fn PlayNote( 64 ) : ControlSetStringValue( _infoField, @"B, Note 64, White key No. 7"  )
+        case 8  : fn PlayNote( 65 ) : ControlSetStringValue( _infoField, @"C, Note 65, White key No. 8"  )
+        case 9  : fn PlayNote( 67 ) : ControlSetStringValue( _infoField, @"D, Note 67, White key No. 9"  )
+        case 10 : fn PlayNote( 69 ) : ControlSetStringValue( _infoField, @"E, Note 69, White key No. 10" )
+        case 11 : fn PlayNote( 70 ) : ControlSetStringValue( _infoField, @"F, Note 70, White key No. 11" )
+        case 12 : fn PlayNote( 72 ) : ControlSetStringValue( _infoField, @"G, Note 72, White key No. 12" )
+        case 13 : fn PlayNote( 74 ) : ControlSetStringValue( _infoField, @"A, Note 74, White key No. 13" )
+        case 14 : fn PlayNote( 76 ) : ControlSetStringValue( _infoField, @"B, Note 76, White key No. 14" )
+        case 15 : fn PlayNote( 77 ) : ControlSetStringValue( _infoField, @"C, Note 77, White key No. 15" )
+        case 16 : fn PlayNote( 79 ) : ControlSetStringValue( _infoField, @"D, Note 79, White key No. 16" )
+        case 17 : fn PlayNote( 81 ) : ControlSetStringValue( _infoField, @"E, Note 81, White key No. 17" )
+        case 18 : fn PlayNote( 82 ) : ControlSetStringValue( _infoField, @"F, Note 82, White key No. 18" )
+        case 19 : fn PlayNote( 84 ) : ControlSetStringValue( _infoField, @"G, Note 84, White key No. 19" )
+        case 20 : fn PlayNote( 86 ) : ControlSetStringValue( _infoField, @"A, Note 86, White key No. 20" )
+        case 21 : fn PlayNote( 88 ) : ControlSetStringValue( _infoField, @"B, Note 88, White key No. 21" )
+        case 22 : fn PlayNote( 89 ) : ControlSetStringValue( _infoField, @"C, Note 88, White key No. 22" )
+
+        case 23 : fn PlayNote( 54 ) : ControlSetStringValue( _infoField, @"C#/D\u266D, Note 54, Black key No. 23" )
+        case 24 : fn PlayNote( 56 ) : ControlSetStringValue( _infoField, @"D#/E\u266D, Note 56, Black key No. 24" )
+        case 25 : fn PlayNote( 59 ) : ControlSetStringValue( _infoField, @"F#/G\u266D, Note 59, Black key No. 25" )
+        case 26 : fn PlayNote( 61 ) : ControlSetStringValue( _infoField, @"G#/A\u266D, Note 61, Black key No. 26" )
+        case 27 : fn PlayNote( 63 ) : ControlSetStringValue( _infoField, @"A#/B\u266D, Note 63, Black key No. 27" )
+        case 28 : fn PlayNote( 66 ) : ControlSetStringValue( _infoField, @"C#/D\u266D, Note 66, Black key No. 28" )
+        case 29 : fn PlayNote( 68 ) : ControlSetStringValue( _infoField, @"D#/E\u266D, Note 68, Black key No. 29" )
+        case 30 : fn PlayNote( 71 ) : ControlSetStringValue( _infoField, @"F#/G\u266D, Note 71, Black key No. 30" )
+        case 31 : fn PlayNote( 73 ) : ControlSetStringValue( _infoField, @"G#/A\u266D, Note 73, Black key No. 31" )
+        case 32 : fn PlayNote( 75 ) : ControlSetStringValue( _infoField, @"A#/B\u266D, Note 75, Black key No. 32" )
+        case 33 : fn PlayNote( 78 ) : ControlSetStringValue( _infoField, @"C#/C\u266D, Note 78, Black key No. 33" )
+        case 34 : fn PlayNote( 80 ) : ControlSetStringValue( _infoField, @"D#/E\u266D, Note 80, Black key No. 34" )
+        case 35 : fn PlayNote( 83 ) : ControlSetStringValue( _infoField, @"F#/G\u266D, Note 83, Black key No. 35" )
+        case 36 : fn PlayNote( 85 ) : ControlSetStringValue( _infoField, @"G#/A\u266D, Note 85, Black key No. 36" )
+        case 37 : fn PlayNote( 87 ) : ControlSetStringValue( _infoField, @"A#/B\u266D, Note 87, Black key No. 37" )
+      end select
+    case _windowWillClose : end
+  end select
+end fn
+
+void local fn DoAppEvent( ev as long )
+  select (ev)
+    case _appWillFinishLaunching
+      fn InitializeSynth
+      fn CreateKeyImage
+      fn BuildWindow
+  end select
+end fn
+
+on appevent fn DoAppEvent
+on dialog fn DoDialog
+
+HandleEvents

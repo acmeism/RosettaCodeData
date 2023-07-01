@@ -1,0 +1,45 @@
+dac_data equ $2A
+dac_enable equ $2B
+			LEA pcmsample,a1
+			LEA $A04000,A3
+			MOVEQ #$2B,D0
+			MOVEQ #$80,D1    ;assembler might not allow this notation, but MOVEQ #-128,D0 is equivalent.
+			jsr FMRegWrite   ;this part is not time-critical so we can use the function call here.
+			subq.b #1,d0     ;move.b #dac_data,D0
+.dac_loop:
+			MOVE.B (a1)+,d1
+			beq .dac_done    ;exit on a zero value.
+
+;the core functionality of FMRegWrite had to be reproduced inline
+;in order to play the sample back quickly enough for it to sound correct.
+
+.wait1:
+			BTST #7,(A3)      ;check if sound chip is busy
+			BNE .wait1        ;loop until it's not busy
+			MOVE.B D0,(A3)	  ;write to DAC_DATA register
+.wait2:
+			BTST #7,(A3)
+			BNE .wait2
+			MOVE.B D1,(1,A3)  ;data to write
+			
+			BRA .dac_loop
+.dac_done:
+        RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+FMRegWrite:
+	MOVE.L A0,-(SP)
+	;IN: D0.B, D1.B
+		MOVEA.L #$A04000,A0     ;$A04000 = register selector, $A04001 = data to write.
+.wait1:
+		BTST #7,(A0)            ;read the YM2612's busy state from $A04000. Bit 7 equals 1 if busy
+		BNE .wait1              ;loop until not busy
+		MOVE.B D0,(A0)		;select the register ID held in D0.B and write it to $A04000.
+.wait2:
+		BTST #7,(A0)            ;read the YM2612's busy state from $A04000. Bit 7 equals 1 if busy
+		BNE .wait2              ;loop until not busy
+		MOVE.B D1,(1,A0)	;write the data for the selected register into $A04001.
+	MOVE.L (SP)+,A0
+	rts
+
+pcmSample:
+        incbin "X:\ResAll\pcmSample.bin"

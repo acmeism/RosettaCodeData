@@ -1,0 +1,116 @@
+;Macros
+	macro pushRegs 1
+		MOVEM.L \1,-(SP)
+	endm
+;---------------------------------------------------------------------------
+	macro popRegs 1
+		MOVEM.L (SP)+,\1
+	endm
+;---------------------------------------------------------------------------
+
+;Ram Variables
+ramArea equ $00FF0000
+Cursor_X equ ramArea	;Ram for Cursor Xpos
+Cursor_Y equ ramArea+1	;Ram for Cursor Ypos
+
+
+;cartridge header and init routine go here, I'll leave them out to keep things short. Execution falls through into here
+;after the screen has been activated and the bitmap font loaded into VRAM
+
+
+        LEA earthquake,A3
+	move.l #3-1,d7			;total line count in the file.
+mainloop:
+	MOVE.B #'.',D0			;find the period in each line.
+	MOVE.B #10,D1
+	jsr CharInThisLine
+	CMP.B #255,D0
+	BNE foundIt
+	jsr lineseek
+	jmp mainloop
+foundIt:
+	;print only if magnitude is 6.1 or greater
+	suba.l #2,a4
+	cmp.b #'6',(a4)
+	bcs .skip
+		adda.l #2,a4
+		cmp.b #'0',(a4)
+		beq .skip
+		jsr printline
+.skip:
+	DBRA D7,mainloop
+	
+	jmp *						;end program
+	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; unixdict functions:
+PrintLine:
+		MOVE.B (A3)+,D0
+		CMP.B #10,D0
+		BEQ .done
+		CMP.B #255,D0
+		BEQ .done
+		jsr PrintChar
+		bra PrintLine
+.done:
+	ADDA.L #1,A0 ;inc past the line feed to the next word.
+	;fallthrough is intentional here
+NewLine:
+	addq.b #1,(Cursor_Y)		;INC Y
+	clr.b (Cursor_X)		;Zero X
+	rts	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+IgnoreCase:
+;forces lower case.
+;input: d0.b
+;output: d0.b
+	CMP.B #'A',D0       ;compare to ascii code for A
+	BCS .done      		;if less than A, keep looping.
+
+	CMP.B #'Z'+1,D0       ;compare to ascii code for Z
+	BCC .done      		;if greater than Z, keep looping
+
+	OR.B #%00100000,D0  ;this "magic constant" turns upper case to lower case, since they're always 32 apart.
+.done
+	RTS
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+CharInThisLine:
+	pushregs d2-d4/a3
+		;input: d0 = char to search for. d1 = terminator of choice
+		MOVEQ #0,D3
+.again:
+		MOVE.B (A3)+,D2
+		CMP.B D1,D2
+		BEQ .didntFindIt
+		pushlong d0
+			move.b d2,d0
+			jsr ignoreCase
+			move.b d0,d2
+		poplong d0
+		CMP.B D0,D2
+		BEQ .foundIt
+		addq.l #1,d3
+		bra .again
+		
+.didntFindIt:
+		MOVE.B #255,D0		;RETURN 255 ON FAILURE
+		bra .exit
+.foundIt:
+		MOVE.L D3,D0		;RETURN ZERO-INDEXED POSITION OF CHAR ON SUCCESS
+		bra .exit
+		
+.exit:
+	move.l a3,a4
+	popregs d2-d4/a3
+	rts
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+lineseek:
+;advances pointer to the "next" word without printing anything.
+		MOVE.B (A3)+,D0
+		CMP.B #10,D0
+		BEQ .done
+		CMP.B #255,D0
+		BEQ .done
+		bra lineseek
+.done:
+	RTS

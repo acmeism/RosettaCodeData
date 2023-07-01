@@ -1,0 +1,135 @@
+; Spiral matrix in Z80 assembly (for CP/M OS - you can use `tnylpo` or `z88dk-ticks` on PC)
+    OPT --syntax=abf : OUTPUT "spiralmt.com"    ; asm syntax for z00m's variant of sjasmplus
+    ORG $100
+spiral_matrix:
+    ld a,5              ; N matrix size (argument for the code) (valid range: 1..150)
+    ; setup phase
+    push af
+    ld l,a
+    ld h,0
+    add hl,hl
+    ld (delta_d),hl     ; down-direction address delta = +N*2
+    neg
+    ld l,a
+    ld h,$FF
+    add hl,hl
+    ld (delta_u),hl     ; up-direction address delta = -N*2
+    neg
+    ld hl,matrix
+    ld de,2             ; delta_r value to move right in matrix
+    ld bc,0             ; starting value
+    dec a               ; first sequences will be N-1 long
+    jr z,.finish        ; 1x1 doesn't need any sequence, just set last element
+    call set_sequence   ; initial entry sequence has N-1 elements (same as two more)
+    ; main loop - do twice same length sequence, then decrement length, until zero
+.loop:
+    call set_sequence_twice
+    dec a
+    jr nz,.loop
+.finish:                ; whole spiral is set except last element, set it now
+    ld (hl),c
+    inc hl
+    ld (hl),b
+    ; print matrix - reading it by POP HL (destructive, plus some memory ahead of matrix too)
+    pop de              ; d = N
+    ld (.oldsp+1),sp
+    ld sp,matrix        ; set stack to beginning of matrix (call/push does damage memory ahead)
+    ld c,d              ; c = N (lines counter)
+.print_rows:
+    ld b,d              ; b = N (value per row counter)
+.print_row:
+    pop hl
+    push de
+    push bc
+    call print_hl
+    pop bc
+    pop de
+    djnz .print_row
+    push de
+    call print_crlf
+    pop de
+    dec c
+    jr nz,.print_rows
+.oldsp:
+    ld sp,0
+    rst 0               ; return to CP/M
+
+print_crlf:
+    ld e,10
+    call print_char
+    ld e,13
+    jr print_char
+print_hl:
+    ld b,' '
+    ld e,b
+    call print_char
+    ld de,-10000
+    call extract_digit
+    ld de,-1000
+    call extract_digit
+    ld de,-100
+    call extract_digit
+    ld de,-10
+    call extract_digit
+    ld a,l
+print_digit:
+    ld b,'0'
+    add a,b
+    ld e,a
+print_char:
+    push bc
+    push hl
+    ld c,2
+    call 5
+    pop hl
+    pop bc
+    ret
+extract_digit:
+    ld a,-1
+.digit_loop:
+    inc a
+    add hl,de
+    jr c,.digit_loop
+    sbc hl,de
+    or a
+    jr nz,print_digit
+    ld e,b
+    jr print_char
+
+set_sequence_twice:
+    call set_sequence
+set_sequence:
+    ; A = length, HL = next_to_matrix, DE = delta to advance hl, BC = next_value
+    push af
+.set_loop:
+    ld (hl),c
+    inc hl
+    ld (hl),b
+    dec hl              ; [HL] = BC
+    add hl,de           ; HL += DE
+    inc bc              ; ++BC
+    dec a
+    jr nz,.set_loop
+    push hl             ; change DE for next direction (right->down->left->up->right->...)
+.d: ld hl,delta_d       ; self-modify-code: pointer to next delta
+    ld e,(hl)
+    inc hl
+    ld d,(hl)           ; de = address delta for next sequence
+    inc hl
+    ld a,low delta_u+2  ; if hl == delta_u+2 => reset it back to delta_r
+    cp l
+    jr nz,.next_delta
+    ld hl,delta_r
+.next_delta:
+    ld (.d+1),hl        ; self modify code pointer for next delta value
+    pop hl
+    pop af
+    ret
+
+delta_r:    dw      +2  ; value to add to move right in matrix
+delta_d:    dw      0   ; value to add to move down in matrix (set to +N*2)
+delta_l:    dw      -2  ; value to add to move left in matrix
+delta_u:    dw      0   ; value to add to move up in matrix (set to -N*2)
+
+matrix:
+    ; following memory is used for NxN matrix of uint16_t values (150x150 needs 45000 bytes)

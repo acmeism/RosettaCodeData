@@ -1,0 +1,81 @@
+-- Code based on
+-- https://github.com/allisio/pointless/blob/master/lib/examples/brainfuck.ptls
+
+output =
+  iterate(run, vm)
+  |> takeUntil(isFinished)
+  |> map(vm => vm.outVal)
+  |> filter(notEq(None))
+  |> map(char)
+  |> printElems
+
+----------------------------------------------------------
+
+vm = VM {
+  ip = 0
+  dp = 0
+  data = zeroArray(1000)
+  inVals = map(ord, readLines)
+  outVal = None
+}
+
+----------------------------------------------------------
+-- "hello.bf" contains brainf*** hello world code
+
+ops = toArray(readFile("hello.bf"))
+
+----------------------------------------------------------
+
+run(vm) = vm |> clearOutput |> eval |> advance
+
+advance(vm)     = vm with $.ip += 1
+isFinished(vm)  = vm.ip >= length(ops)
+clearOutput(vm) = vm with $.outVal = None
+
+----------------------------------------------------------
+
+jumps = getJumps(0, [], {})
+
+getJumps(i, stack, jumps) = cond {
+  case (i == length(ops)) jumps
+
+  case (ops[i] == "[")
+    getJumps(i + 1, [i] ++ stack, jumps)
+
+  case (ops[i] == "]")
+    getJumps(i + 1, tail(stack), jumps with {
+      $[i] = head(stack)
+      $[head(stack)] = i
+    })
+
+  else getJumps(i + 1, stack, jumps)
+}
+
+----------------------------------------------------------
+
+eval(vm) = cond {
+  case (op == ">") vm with $.dp += 1
+  case (op == "<") vm with $.dp -= 1
+  case (op == "+") vm with $.data[vm.dp] += 1
+  case (op == "-") vm with $.data[vm.dp] -= 1
+  case (op == ".") vm with $.outVal = byte
+
+  case (op == ",") vm with {
+    $.data[vm.dp] = head(vm.inVals)
+    $.inVals = tail(vm.inVals)
+  }
+
+  case (op == "[")
+    if byte != 0 then vm
+    else (vm with $.ip = jumps[vm.ip])
+
+  case (op == "]")
+    if byte == 0 then vm
+    else (vm with $.ip = jumps[vm.ip])
+
+  else vm
+
+} where {
+  op = ops[vm.ip]
+  byte = vm.data[vm.dp]
+}

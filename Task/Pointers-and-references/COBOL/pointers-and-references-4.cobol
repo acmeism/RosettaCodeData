@@ -1,0 +1,2 @@
+SET ptr1 UP BY 10
+SET ptr2 DOWN BY LENGTH OF foo

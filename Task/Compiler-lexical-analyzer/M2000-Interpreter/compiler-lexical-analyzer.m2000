@@ -1,0 +1,255 @@
+Module lexical_analyzer {
+	a$={/*
+	  All lexical tokens - not syntactically correct, but that will
+	  have to wait until syntax analysis
+	 */
+	/* Print   */  print    /* Sub     */  -
+	/* Putc    */  putc     /* Lss     */  <
+	/* If      */  if       /* Gtr     */  >
+	/* Else    */  else     /* Leq     */  <=
+	/* While   */  while    /* Geq     */  >=
+	/* Lbrace  */  {        /* Eq      */  ==
+	/* Rbrace  */  }        /* Neq     */  !=
+	/* Lparen  */  (        /* And     */  &&
+	/* Rparen  */  )        /* Or      */  ||
+	/* Uminus  */  -        /* Semi    */  ;
+	/* Not     */  !        /* Comma   */  ,
+	/* Mul     */  *        /* Assign  */  =
+	/* Div     */  /        /* Integer */  42
+	/* Mod     */  %        /* String  */  "String literal"
+	/* Add     */  +        /* Ident   */  variable_name
+	/* character literal */  '\n'
+	/* character literal */  '\\'
+	/* character literal */  ' '
+	}
+	lim=Len(a$)
+	LineNo=1
+	ColumnNo=1
+	Document Output$
+	Buffer Scanner as Integer*lim
+	Return Scanner, 0:=a$
+	offset=0
+	buffer1$=""
+	flag_rem=true
+	Ahead=lambda Scanner (a$, offset)->{
+		=false
+		Try {
+			\\ second parameter is the offset in buffer units
+			\\ third parameter is length in bytes
+			=Eval$(Scanner, offset,2*len(a$))=a$
+		}
+	}
+	Ahead2=lambda Scanner (a$, offset)->{
+		=false
+		Try {
+			=Eval$(Scanner, offset,2) ~ a$
+		}
+	}
+	const nl$=chr$(13)+chr$(10), quo$="""", er$="@", Ansi=3
+	Try {
+		Do
+		If Ahead("/*", offset) Then {
+			offset+=2 : 	ColumnNo+=2
+			While not Ahead("*/", offset)
+				If Ahead(nl$, offset) Then
+					lineNo++: ColumnNo=1 : offset+=2
+				Else
+					offset++ : ColumnNo++
+				End If
+				if offset>lim then
+					Error "End-of-file in comment. Closing comment characters not found"+er$
+				End if
+			End While
+			offset+=2 : ColumnNo+=2
+		} Else.if Ahead(nl$, offset) Then{
+			LineNo++: ColumnNo=1
+			offset+=2
+		} Else.if Ahead(quo$, offset) Then {
+			Output$=format$("{0::-10}{1::-10} ", LineNo, ColumnNo)
+			offset++ : ColumnNo++
+			strin=offset
+			While not Ahead(quo$, offset)
+				If Ahead("/", offset) Then
+					offset+=2 : ColumnNo+=2
+				else
+					offset++ : ColumnNo++
+				End if
+				checkerror()
+			End While
+			Output$="String "+quote$(Eval$(Scanner, strin, (offset-strin)*2))+nl$
+			offset++ : ColumnNo++
+		} Else.if Ahead("'", offset) Then {
+			Output$=format$("{0::-10}{1::-10} ", LineNo, ColumnNo)
+			offset++ : ColumnNo++
+			strin=offset
+			While not Ahead("'", offset)
+				If Ahead("/", offset) Then
+					offset+=2 : ColumnNo+=2
+				else
+					offset++ : ColumnNo++
+				End if
+				checkerror()
+			End While
+			lit$=format$(Eval$(Scanner, strin, (offset-strin)*2))
+			select case len(lit$)
+			case 1
+				Output$="Integer "+str$(asc(lit$),0)+nl$
+			case >1
+				{Error "Multi-character constant."+er$}
+			case 0
+				{Error "Empty character constant."+er$}
+			end select
+			offset++ : ColumnNo++
+		} Else.if Ahead2("[a-z]", offset) Then {
+			strin=offset
+			Output$=format$("{0::-10}{1::-10} ", LineNo, ColumnNo)
+			offset++ : ColumnNo++
+			While Ahead2("[a-zA-Z0-9_]", offset)
+					offset++ : ColumnNo++
+			End While
+			Keywords(Eval$(Scanner, strin, (offset-strin)*2))
+		} Else.if Ahead2("[0-9]", offset) Then {
+			strin=offset
+			Output$=format$("{0::-10}{1::-10} Integer ", LineNo, ColumnNo)
+			offset++ : ColumnNo++
+			While Ahead2("[0-9]", offset)
+					offset++ : ColumnNo++
+			End While
+			if Ahead2("[a-zA-Z_]", offset) then
+				{Error " Invalid number. Starts like a number, but ends in non-numeric characters."+er$}
+			else
+				Output$=Eval$(Scanner, strin, (offset-strin)*2)+nl$
+			end if
+		} Else {
+			Symbols(Eval$(Scanner, Offset, 2))		
+			offset++ : ColumnNo++
+		}
+		Until offset>=lim
+	}
+	er1$=leftpart$(error$,er$)
+	if er1$<>"" then
+		Print
+		Report "Error:"+er1$
+		Output$="(Error)"+nl$+"Error:"+er1$
+	else
+		Output$=format$("{0::-10}{1::-10}", LineNo, ColumnNo)+" End_of_Input"+nl$
+	end if
+	Clipboard Output$
+	Save.Doc Output$, "lex.t", Ansi
+	document lex$
+	Load.Doc lex$,"lex.t", Ansi
+	Report lex$
+	
+	Sub Keywords(a$)
+		select case a$
+		case "if"
+			a$="Keyword_if"
+		case "else"
+			a$="Keyword_else"
+		case "while"
+			a$="Keyword_while"
+		case "print"
+			a$="Keyword_print"
+		case "putc"
+			a$="Keyword_putc"
+		else case
+			a$="Identifier "+a$
+		end select
+		Output$=a$+nl$
+	End sub
+	Sub Symbols(a$)
+		select case a$
+		case " ", chr$(9)
+			a$=""
+		case "("
+			a$="LeftParen"
+		case ")"
+			a$="RightParen"
+		case "{"
+			a$="LeftBrace"
+		case "}"
+			a$="RightBrace"
+		case ";"
+			a$="Semicolon"
+		case ","
+			a$="Comma"
+		case "*"
+			a$="Op_multiply"
+		case "/"
+			a$="Op_divide"
+		case "+"
+			a$="Op_add"
+		case "-"
+			a$="Op_subtract"
+		case "%"
+			a$="Op_mod"
+		case "<"
+		{	if Ahead("=", offset+1) Then
+				offset++
+				a$="Op_lessequal"
+				ColumnNo++
+			else
+				a$="Op_less"
+			end if
+		}
+		case ">"
+		{	if Ahead("=", offset+1) Then
+				offset++
+				ColumnNo++
+				a$="Op_greaterequal"
+			else
+				a$="Op_greater"
+			end if
+		}
+		case "="
+		{	if Ahead("=", offset+1) Then
+				offset++
+				ColumnNo++
+				a$="Op_equal"
+			else
+				a$="Op_assign"
+			end if
+		}
+		case "!"
+		{	if Ahead("=", offset+1) Then
+				offset++
+				ColumnNo++
+				a$="Op_notequal"
+			else
+				a$="Op_not"
+			end if
+		}
+		case "&"
+		{	if Ahead("&", offset+1) Then
+				offset++
+				ColumnNo++
+				a$="Op_and"
+			else
+				a$=""
+			end if
+		}
+		case "|"
+		{	if Ahead("|", offset+1) Then
+				offset++
+				ColumnNo++
+				a$="Op_or"
+			else
+				a$=""
+			end if
+		}
+		else case
+			{Error "Unrecognized character."+er$}
+		end select
+		if a$<>"" then
+		Output$=format$("{0::-10}{1::-10} ", LineNo, ColumnNo)+a$+nl$
+		end if
+	End Sub
+	Sub checkerror()
+		if offset>lim then {
+			Error "End-of-line while scanning string literal. Closing string character not found before end-of-line."+er$
+		} else.if  Ahead(nl$,offset) then {
+			Error "End-of-file while scanning string literal. Closing string character not found."+er$
+		}
+	End Sub
+}
+lexical_analyzer

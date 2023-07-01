@@ -1,0 +1,300 @@
+include "cowgol.coh";
+include "strings.coh";
+include "malloc.coh";
+
+###############################################################################
+########################## Turing machine definition ##########################
+###############################################################################
+typedef Symbol is uint8; # 256 symbols ought to be enough for everyone
+
+const LEFT := 1;
+const RIGHT := 2;
+const STAY := 3;
+typedef Action is int(LEFT, STAY);
+
+# Linked list
+record Linked is
+    next: [Linked];
+end record;
+
+record DoublyLinked: Linked is
+    prev: [DoublyLinked];
+end record;
+
+sub FreeLinked(r: [Linked]) is
+    while r != 0 as [Linked] loop
+        var v := r.next;
+        Free(r as [uint8]);
+        r := v;
+    end loop;
+end sub;
+
+sub FreeDoublyLinked(r: [DoublyLinked]) is
+    FreeLinked(r.next);
+    while r != 0 as [DoublyLinked] loop
+        var v := r.prev;
+        Free(r as [uint8]);
+        r := v;
+    end loop;
+end sub;
+
+# Turing machine
+typedef Turing is [TuringR];
+record StateR: Linked is
+    tm: Turing;     # turing machine this state belongs to
+    term: uint8;    # whether state is terminating
+end record;
+typedef State is [StateR];
+
+record Cell: DoublyLinked is
+    sym: Symbol;
+end record;
+
+record RuleR: Linked is
+    instate: State;
+    insym: Symbol;
+    outsym: Symbol;
+    action: Action;
+    outstate: State;
+end record;
+typedef Rule is [RuleR];
+
+record TuringR is
+    states: State;
+    rules: Rule;
+    initial: State;
+    current: State;
+    blank: Symbol;
+    head: [Cell];
+end record;
+
+sub MakeCell(): (c: [Cell]) is
+    c := Alloc(@bytesof Cell) as [Cell];
+    MemZero(c as [uint8], @bytesof Cell);
+end sub;
+
+# Define a Turing machine
+sub MakeTuring(blank: Symbol, init: [Symbol]): (t: Turing) is
+    t := Alloc(@bytesof TuringR) as Turing;
+    MemZero(t as [uint8], @bytesof TuringR);
+    t.blank := blank;
+    t.head := MakeCell();
+    t.head.sym := blank;
+
+    var c := t.head;
+    var d: [Cell];
+    while [init] != 0 loop
+        c.sym := [init];
+        init := @next init;
+        if [init] == 0 then break; end if;
+        d := Alloc(@bytesof Cell) as [Cell];
+        d.prev := c as [DoublyLinked];
+        d.next := 0 as [Linked];
+        c.next := d as [Linked];
+        c := d;
+    end loop;
+end sub;
+
+# Add a state to a Turing machine
+const T_NONE := 0;
+const T_INIT := 1;
+const T_HALT := 2;
+sub MakeState(t: Turing, type: uint8): (s: State) is
+    s := Alloc(@bytesof StateR) as State;
+    s.tm := t;
+    s.next := t.states as [Linked];
+    t.states := s;
+
+    if type & T_INIT != 0 then
+        t.initial := s;
+        t.current := s;
+    end if;
+    s.term := 0;
+    if type & T_HALT != 0 then
+        s.term := 1;
+    end if;
+end sub;
+
+# Add a rule to a Turing machine
+sub MakeRule(t: Turing,
+             instate: State,
+             insym: Symbol,
+             outsym: Symbol,
+             action: Action,
+             outstate: State): (r: Rule) is
+    r := Alloc(@bytesof RuleR) as Rule;
+    r.instate := instate;
+    r.insym := insym;
+    r.outsym := outsym;
+    r.action := action;
+    r.outstate := outstate;
+    r.next := t.rules as [Linked];
+    t.rules := r;
+end sub;
+
+# Free a Turing machine
+sub FreeTuring(t: Turing) is
+    FreeDoublyLinked(t.head as [DoublyLinked]);
+    FreeLinked(t.states as [Linked]);
+    FreeLinked(t.rules as [Linked]);
+    Free(t as [uint8]);
+end sub;
+
+# Move the head
+sub MoveHead(t: Turing, a: Action) is
+    var c: [Cell];
+    case a is
+        when STAY: return;
+        when LEFT:
+            if t.head.prev == 0 as [DoublyLinked] then
+                c := Alloc(@bytesof Cell) as [Cell];
+                c.prev := 0 as [DoublyLinked];
+                c.next := t.head as [Linked];
+                c.sym := t.blank;
+                t.head.prev := c as [DoublyLinked];
+            end if;
+            t.head := t.head.prev as [Cell];
+            return;
+        when RIGHT:
+            if t.head.next == 0 as [Linked] then
+                c := Alloc(@bytesof Cell) as [Cell];
+                c.next := 0 as [Linked];
+                c.prev := t.head as [DoublyLinked];
+                c.sym := t.blank;
+                t.head.next := c as [Linked];
+            end if;
+            t.head := t.head.next as [Cell];
+            return;
+        when else:
+            print("Invalid action\n");
+            ExitWithError();
+    end case;
+end sub;
+
+# Step a Turing machine
+sub Step(t: Turing): (halt: uint8) is
+    # If we're in a halt state, do nothing
+    if t.current.term != 0 then
+        halt := 1;
+        return;
+    end if;
+
+    var r := t.rules;
+    while r != 0 as Rule loop
+        # Check each rule to see if it matches the current configuration
+        if  t.current  == r.instate
+        and t.head.sym == r.insym then
+            # Found a match
+            t.head.sym := r.outsym;
+            MoveHead(t, r.action);
+            t.current := r.outstate;
+            halt := t.current.term;
+            return;
+        end if;
+        r := r.next as Rule;
+    end loop;
+    print("No valid rule!\n");
+    ExitWithError();
+end sub;
+
+# Run a Turing machine until it halts
+sub Run(t: Turing) is
+    while Step(t) == 0 loop
+    end loop;
+end sub;
+
+# Print the touched part of the tape of a Turing machine
+sub PrintTape(t: Turing, max: uint32) is
+    var c := t.head;
+    var len: uint32 := 0;
+    while c.prev != 0 as [DoublyLinked] loop
+        c := c.prev as [Cell];
+    end loop;
+    while c != 0 as [Cell] loop
+        if len < max then
+            print_char(c.sym as uint8);
+        end if;
+        c := c.next as [Cell];
+        len := len + 1;
+    end loop;
+    if len >= max then
+        print("... (total length: ");
+        print_i32(len);
+        print(")");
+    end if;
+end sub;
+
+###############################################################################
+######################## Turing machines from the task ########################
+###############################################################################
+
+interface TuringFactory(): (t: Turing);
+
+sub SimpleIncrementer implements TuringFactory is
+    var r: Rule;
+    t := MakeTuring('B', "111");
+    var q0 := MakeState(t, T_INIT);
+    var qf := MakeState(t, T_HALT);
+    r := MakeRule(t, q0, '1', '1', RIGHT, q0);
+    r := MakeRule(t, q0, 'B', '1', STAY, qf);
+end sub;
+
+sub ThreeStateBeaver implements TuringFactory is
+    var r: Rule;
+    t := MakeTuring('0', "");
+    var a := MakeState(t, T_INIT);
+    var b := MakeState(t, T_NONE);
+    var c := MakeState(t, T_NONE);
+    var halt := MakeState(t, T_HALT);
+    r := MakeRule(t, a, '0', '1', RIGHT, b);
+    r := MakeRule(t, a, '1', '1', LEFT, c);
+    r := MakeRule(t, b, '0', '1', LEFT, a);
+    r := MakeRule(t, b, '1', '1', RIGHT, b);
+    r := MakeRule(t, c, '0', '1', LEFT, b);
+    r := MakeRule(t, c, '1', '1', STAY, halt);
+end sub;
+
+sub FiveStateBeaver implements TuringFactory is
+    var r: Rule;
+    t := MakeTuring('0', "");
+    var A := MakeState(t, T_INIT);
+    var B := MakeState(t, T_NONE);
+    var C := MakeState(t, T_NONE);
+    var D := MakeState(t, T_NONE);
+    var E := MakeState(t, T_NONE);
+    var H := MakeState(t, T_HALT);
+    r := MakeRule(t, A, '0', '1', RIGHT, B);
+    r := MakeRule(t, A, '1', '1', LEFT,  C);
+    r := MakeRule(t, B, '0', '1', RIGHT, C);
+    r := MakeRule(t, B, '1', '1', RIGHT, B);
+    r := MakeRule(t, C, '0', '1', RIGHT, D);
+    r := MakeRule(t, C, '1', '0', LEFT,  E);
+    r := MakeRule(t, D, '0', '1', LEFT,  A);
+    r := MakeRule(t, D, '1', '1', LEFT,  D);
+    r := MakeRule(t, E, '0', '1', STAY,  H);
+    r := MakeRule(t, E, '1', '0', LEFT,  A);
+end sub;
+
+record TF is
+    name: [uint8];
+    tf: TuringFactory;
+end record;
+
+var machines: TF[] := {
+    {"Simple incrementer", SimpleIncrementer},
+    {"Three state beaver", ThreeStateBeaver},
+    {"Five state beaver", FiveStateBeaver}
+};
+
+var i: @indexof machines;
+i := 0;
+while i < @sizeof machines loop
+    print(machines[i].name);
+    print(": ");
+    var t := (machines[i].tf) ();
+    Run(t);
+    PrintTape(t, 32);
+    FreeTuring(t);
+    print_nl();
+    i := i + 1;
+end loop;

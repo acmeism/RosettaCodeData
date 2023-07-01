@@ -1,0 +1,33 @@
+defmodule Dutch_national_flag do
+  defp ball(:red),   do: 1
+  defp ball(:white), do: 2
+  defp ball(:blue),  do: 3
+
+  defp random_ball, do: Enum.random([:red, :white, :blue])
+
+  defp random_ball(n), do: (for _ <- 1..n, do: random_ball())
+
+  defp is_dutch([]), do: true
+  defp is_dutch([_]), do: true
+  defp is_dutch([b,h|l]), do: ball(b) < ball(h) and is_dutch([h|l])
+  defp is_dutch(_), do: false
+
+  def  dutch(list), do: dutch([], [], [], list)
+
+  defp dutch(r, w, b, []),              do: r ++ w ++ b
+  defp dutch(r, w, b, [:red   | list]), do: dutch([:red | r],  w,  b, list)
+  defp dutch(r, w, b, [:white | list]), do: dutch(r, [:white | w], b, list)
+  defp dutch(r, w, b, [:blue  | list]), do: dutch(r, w,  [:blue | b], list)
+
+  def problem(n \\ 10) do
+    list = random_ball(n)
+    if is_dutch(list) do
+      IO.puts "The random sequence #{inspect list} is already in the order of the Dutch flag!"
+    else
+      IO.puts "The starting random sequence is #{inspect list};"
+      IO.puts "The ordered sequence is #{inspect dutch(list)}."
+    end
+  end
+end
+
+Dutch_national_flag.problem

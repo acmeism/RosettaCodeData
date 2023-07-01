@@ -1,0 +1,893 @@
+(*-*- ATS -*-*)
+
+(* This program requires ats2-xprelude:
+   https://sourceforge.net/p/chemoelectric/ats2-xprelude
+
+   Also required is the SDL2 library for C. Not everything in the SDL
+   interface below is used. The interface is meant to be relatively
+   safe. For instance, you cannot create a window or renderer without
+   later destroying it, and you cannot use one at all that was not
+   properly created. Also you cannot accidentally use an
+   SDL_WindowEvent as an SDL_TextInputEvent, etc.
+
+   The program uses 32+32-bit fixed point to calculate escape times.
+   One does not need so many bits left of the decimal point, but this
+   is the fixed point format available from ats2-xprelude.
+
+   There are some "FIXME" notes below that refer to a few of the ways
+   the program could be improved. This is a demo version of something
+   I am likely to expand into a better program.
+
+   Compile the program with (for example)
+   "myatscc mandelbrot_task_interactive.dats"
+
+##myatsccdef=\
+patscc -std=gnu2x -O3 \
+  -DATS_MEMALLOC_GCBDW \
+  `pkg-config --define-variable=PATSHOME="${PATSHOME}" \
+              --cflags sdl2 ats2-xprelude bdw-gc` \
+  `pkg-config --define-variable=PATSHOME="${PATSHOME}" \
+              --variable=PATSCCFLAGS ats2-xprelude` \
+  -o $fname($1) $1 \
+  `pkg-config --define-variable=PATSHOME="${PATSHOME}" \
+              --libs sdl2 ats2-xprelude bdw-gc`
+
+*)
+
+(* How to use the program:
+
+     Left click          : re-center the image
+     Double left-click   : zoom in
+     Double right-click  : zoom out
+     p or P              : save an image as a Portable Arbitrary Map
+     q or Q              : quit the program
+
+   The window is resizable.
+   Closing the window quits the program, just as the Q key does. *)
+
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+#include "xprelude/HATS/xprelude.hats"
+
+(* To use 32+32-bit fixed point: *)
+staload "xprelude/SATS/fixed32p32.sats"
+staload _ = "xprelude/DATS/fixed32p32.dats"
+stadef realknd = fix32p32knd
+typedef real = fixed32p32
+(* Actually, one could use different kinds of real number for
+   different algorithms: fixed point, floating point,
+   multiple-precision rational, interval arithmetic, ... even
+   continued fractions. *)
+
+(*------------------------------------------------------------------*)
+
+(* This is a weak choice of ATS_EXTERN_PREFIX, but will spare us from
+   having to do a lot of writing. *)
+#define ATS_EXTERN_PREFIX ""
+
+extern fn atexit : (() -> void) -> int = "mac#%"
+
+%{^
+
+#define SDL_MAIN_HANDLED 1
+#include <SDL.h>
+
+ATSinline() atstype_bool
+SDL_bool2ATS (SDL_bool b)
+{
+  return (b == SDL_FALSE) ? atsbool_false : atsbool_true;
+}
+
+%}
+
+typedef SDL_bool = $extype"SDL_bool"
+extern fn SDL_bool2ATS (b : SDL_bool) :<> bool = "mac#%"
+
+(* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - *)
+(* Housekeeping. *)
+
+extern fn SDL_SetMainReady () : void = "mac#%"
+extern fn SDL_Init (flags : uint32) : void = "mac#%"
+extern fn SDL_Quit () : void = "mac#%"
+
+(* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - *)
+(* Timers. *)
+
+extern fn SDL_Delay (ms : uint32) : void = "mac#%"
+
+(* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - *)
+(* Video handling. *)
+
+(* Screensavers are disabled by default, except in very early versions
+   of SDL2. *)
+extern fn SDL_DisableScreenSaver () : void = "mac#%"
+extern fn SDL_EnableScreenSaver () : void = "mac#%"
+extern fn SDL_IsScreenSaverEnabled () : SDL_bool = "mac#%"
+
+absvtype SDL_Window_ptr (p : addr) = ptr p
+vtypedef SDL_Window_ptr0 = [p : addr] SDL_Window_ptr p
+vtypedef SDL_Window_ptr1 = [p : agz] SDL_Window_ptr p
+
+absvtype SDL_Renderer_ptr (p : addr) = ptr p
+vtypedef SDL_Renderer_ptr0 = [p : addr] SDL_Renderer_ptr p
+vtypedef SDL_Renderer_ptr1 = [p : agz] SDL_Renderer_ptr p
+
+extern castfn SDL_Window_ptr2ptr :
+  {p : addr} (!SDL_Window_ptr p) -<> ptr p
+extern castfn SDL_Renderer_ptr2ptr :
+  {p : addr} (!SDL_Renderer_ptr p) -<> ptr p
+
+macdef SDL_INIT_EVENTS = $extval (uint32, "SDL_INIT_EVENTS")
+macdef SDL_INIT_TIMER = $extval (uint32, "SDL_INIT_TIMER")
+macdef SDL_INIT_VIDEO = $extval (uint32, "SDL_INIT_VIDEO")
+
+macdef SDL_WINDOWPOS_CENTERED = $extval (int, "SDL_WINDOWPOS_CENTERED")
+macdef SDL_WINDOWPOS_UNDEFINED = $extval (int, "SDL_WINDOWPOS_UNDEFINED")
+
+macdef SDL_WINDOW_OPENGL = $extval (uint32, "SDL_WINDOW_OPENGL")
+macdef SDL_WINDOW_RESIZABLE = $extval (uint32, "SDL_WINDOW_RESIZABLE")
+
+extern fn
+SDL_CreateWindow (title : string,
+                  x : int, y : int,
+                  w : int, h : int,
+                  flags : uint32) : SDL_Window_ptr0 = "mac#%"
+
+extern fn
+SDL_DestroyWindow : SDL_Window_ptr1 -> void = "mac#%"
+fn {}
+SDL_DestroyWindow_null
+          (window : SDL_Window_ptr null) : void =
+  $UN.castvwtp0{void} window
+
+extern fn
+SDL_CreateRenderer (window : !SDL_Window_ptr1,
+                    index  : int,
+                    flags  : uint32) : SDL_Renderer_ptr0 = "mac#%"
+
+extern fn
+SDL_DestroyRenderer : SDL_Renderer_ptr1 -> void = "mac#%"
+fn {}
+SDL_DestroyRenderer_null
+          (renderer : SDL_Renderer_ptr null) : void =
+  $UN.castvwtp0{void} renderer
+
+extern fn
+SDL_GetRendererOutputSize (renderer : !SDL_Renderer_ptr1,
+                           w        : &int? >> int,
+                           h        : &int? >> int) : int = "mac#%"
+
+extern fn
+SDL_SetRenderDrawColor (renderer : !SDL_Renderer_ptr1,
+                        r        : uint8,
+                        g        : uint8,
+                        b        : uint8,
+                        a        : uint8) : int = "mac#%"
+
+extern fn
+SDL_RenderClear (renderer : !SDL_Renderer_ptr1) : int = "mac#%"
+
+extern fn
+SDL_RenderDrawPoint (renderer : !SDL_Renderer_ptr1,
+                     x        : int,
+                     y        : int) : int = "mac#%"
+extern fn
+SDL_RenderPresent (renderer : !SDL_Renderer_ptr1) : void = "mac#%"
+
+(* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - *)
+(* Event handling. *)
+
+typedef SDL_Event (t : int) =
+  $extype_struct"SDL_Event" of
+    {
+      type = uint32 t,
+      timestamp = uint32
+    }
+typedef SDL_Event = [t : int] SDL_Event t
+
+extern fn
+SDL_PollEvent (event : &SDL_Event? >> SDL_Event)
+    : intBtwe (0, 1) = "mac#%"
+
+extern fn
+SDL_GetMouseState (x : &int? >> int,
+                   y : &int? >> int) : uint32 = "mac#%"
+
+macdef SDL_BUTTON_LMASK = $extval (uint32, "SDL_BUTTON_LMASK")
+macdef SDL_BUTTON_MMASK = $extval (uint32, "SDL_BUTTON_MMASK")
+macdef SDL_BUTTON_RMASK = $extval (uint32, "SDL_BUTTON_RMASK")
+macdef SDL_BUTTON_X1MASK = $extval (uint32, "SDL_BUTTON_X1MASK")
+macdef SDL_BUTTON_X2MASK = $extval (uint32, "SDL_BUTTON_X2MASK")
+
+(*  -    -    -    -    -    -    -    -    -    -    -    -    -   *)
+
+stacst SDL_QUIT : int
+macdef SDL_QUIT = $extval (uint32 SDL_QUIT, "SDL_QUIT")
+
+typedef SDL_QuitEvent =
+  $extype_struct"SDL_QuitEvent" of
+    {
+      type = uint32 SDL_QUIT,
+      timestamp = uint32
+    }
+
+extern praxi
+SDL_Event2QuitEvent_v :
+  {p : addr}
+  SDL_Event SDL_QUIT @ p -<prf>
+    @(SDL_QuitEvent @ p,
+      SDL_QuitEvent @ p -<lin,prf> SDL_Event SDL_QUIT @ p)
+
+(*  -    -    -    -    -    -    -    -    -    -    -    -    -   *)
+
+stacst SDL_WINDOWEVENT : int
+macdef SDL_WINDOWEVENT = $extval (uint32 SDL_WINDOWEVENT, "SDL_WINDOWEVENT")
+
+typedef SDL_WindowEvent =
+  $extype_struct"SDL_WindowEvent" of
+    {
+      type = uint32 SDL_WINDOWEVENT,
+      timestamp = uint32,
+      windowID = uint32,
+      event = uint8,
+      padding1 = uint8,
+      padding2 = uint8,
+      padding3 = uint8,
+      data1 = int32,
+      data2 = int32
+    }
+
+extern praxi
+SDL_Event2WindowEvent_v :
+  {p : addr}
+  SDL_Event SDL_WINDOWEVENT @ p -<prf>
+    @(SDL_WindowEvent @ p,
+      SDL_WindowEvent @ p -<lin,prf> SDL_Event SDL_WINDOWEVENT @ p)
+
+macdef SDL_WINDOWEVENT_NONE = $extval (uint8, "SDL_WINDOWEVENT_NONE")
+macdef SDL_WINDOWEVENT_SHOWN = $extval (uint8, "SDL_WINDOWEVENT_SHOWN")
+macdef SDL_WINDOWEVENT_HIDDEN = $extval (uint8, "SDL_WINDOWEVENT_HIDDEN")
+macdef SDL_WINDOWEVENT_EXPOSED = $extval (uint8, "SDL_WINDOWEVENT_EXPOSED")
+macdef SDL_WINDOWEVENT_MOVED = $extval (uint8, "SDL_WINDOWEVENT_MOVED")
+macdef SDL_WINDOWEVENT_RESIZED = $extval (uint8, "SDL_WINDOWEVENT_RESIZED")
+macdef SDL_WINDOWEVENT_SIZE_CHANGED = $extval (uint8, "SDL_WINDOWEVENT_SIZE_CHANGED")
+macdef SDL_WINDOWEVENT_MINIMIZED = $extval (uint8, "SDL_WINDOWEVENT_MINIMIZED")
+macdef SDL_WINDOWEVENT_MAXIMIZED = $extval (uint8, "SDL_WINDOWEVENT_MAXIMIZED")
+macdef SDL_WINDOWEVENT_RESTORED = $extval (uint8, "SDL_WINDOWEVENT_RESTORED")
+macdef SDL_WINDOWEVENT_ENTER = $extval (uint8, "SDL_WINDOWEVENT_ENTER")
+macdef SDL_WINDOWEVENT_LEAVE = $extval (uint8, "SDL_WINDOWEVENT_LEAVE")
+macdef SDL_WINDOWEVENT_FOCUS_GAINED = $extval (uint8, "SDL_WINDOWEVENT_FOCUS_GAINED")
+macdef SDL_WINDOWEVENT_FOCUS_LOST = $extval (uint8, "SDL_WINDOWEVENT_FOCUS_LOST")
+macdef SDL_WINDOWEVENT_CLOSE = $extval (uint8, "SDL_WINDOWEVENT_CLOSE")
+macdef SDL_WINDOWEVENT_TAKE_FOCUS = $extval (uint8, "SDL_WINDOWEVENT_TAKE_FOCUS")
+macdef SDL_WINDOWEVENT_HIT_TEST = $extval (uint8, "SDL_WINDOWEVENT_HIT_TEST")
+macdef SDL_WINDOWEVENT_ICCPROF_CHANGED = $extval (uint8, "SDL_WINDOWEVENT_ICCPROF_CHANGED")
+macdef SDL_WINDOWEVENT_DISPLAY_CHANGED = $extval (uint8, "SDL_WINDOWEVENT_DISPLAY_CHANGED")
+
+(*  -    -    -    -    -    -    -    -    -    -    -    -    -   *)
+
+stacst SDL_MOUSEMOTION : int
+macdef SDL_MOUSEMOTION = $extval (uint32 SDL_MOUSEMOTION, "SDL_MOUSEMOTION")
+
+typedef SDL_MouseMotionEvent =
+  $extype_struct"SDL_MouseMotionEvent" of
+    {
+      type = uint32 SDL_MOUSEMOTION,
+      timestamp = uint32,
+      windowID = uint32,
+      which = uint32,
+      state = uint32,
+      x = int32,
+      y = int32,
+      xrel = int32,
+      yrel = int32
+    }
+
+extern praxi
+SDL_Event2MouseMotionEvent_v :
+  {p : addr}
+  SDL_Event SDL_MOUSEMOTION @ p -<prf>
+    @(SDL_MouseMotionEvent @ p,
+      SDL_MouseMotionEvent @ p -<lin,prf> SDL_Event SDL_MOUSEMOTION @ p)
+
+(*  -    -    -    -    -    -    -    -    -    -    -    -    -   *)
+
+stacst SDL_MOUSEBUTTONDOWN : int
+macdef SDL_MOUSEBUTTONDOWN = $extval (uint32 SDL_MOUSEBUTTONDOWN, "SDL_MOUSEBUTTONDOWN")
+
+stacst SDL_MOUSEBUTTONUP : int
+macdef SDL_MOUSEBUTTONUP = $extval (uint32 SDL_MOUSEBUTTONUP, "SDL_MOUSEBUTTONUP")
+
+typedef SDL_MouseButtonEvent (t : int) =
+  [t == SDL_MOUSEBUTTONDOWN || t == SDL_MOUSEBUTTONUP]
+  $extype_struct"SDL_MouseButtonEvent" of
+    {
+      type = uint32 t,
+      timestamp = uint32,
+      windowID = uint32,
+      which = uint32,
+      button = uint8,
+      state = uint8,
+      clicks = uint8,
+      padding1 = uint8,
+      x = int32,
+      y = int32
+    }
+typedef SDL_MouseButtonEvent = [t : int] SDL_MouseButtonEvent t
+
+extern praxi
+SDL_Event2MouseButtonEvent_v :
+  {p : addr}
+  {t : int | t == SDL_MOUSEBUTTONDOWN || t == SDL_MOUSEBUTTONUP}
+  SDL_Event t @ p -<prf>
+    @(SDL_MouseButtonEvent t @ p,
+      SDL_MouseButtonEvent t @ p -<lin,prf> SDL_Event t @ p)
+
+macdef SDL_BUTTON_LEFT = $extval (uint8, "SDL_BUTTON_LEFT")
+macdef SDL_BUTTON_MIDDLE = $extval (uint8, "SDL_BUTTON_MIDDLE")
+macdef SDL_BUTTON_RIGHT = $extval (uint8, "SDL_BUTTON_RIGHT")
+macdef SDL_BUTTON_X1 = $extval (uint8, "SDL_BUTTON_X1")
+macdef SDL_BUTTON_X2 = $extval (uint8, "SDL_BUTTON_X2")
+
+macdef SDL_PRESSED = $extval (uint8, "SDL_PRESSED")
+macdef SDL_RELEASED = $extval (uint8, "SDL_RELEASED")
+
+(*  -    -    -    -    -    -    -    -    -    -    -    -    -   *)
+
+stacst SDL_TEXTINPUT : int
+macdef SDL_TEXTINPUT = $extval (uint32 SDL_TEXTINPUT, "SDL_TEXTINPUT")
+
+#define SDL_TEXTINPUTEVENT_TEXT_SIZE 32
+
+typedef SDL_TextInputEvent =
+  $extype_struct"SDL_TextInputEvent" of
+    {
+      type = uint32 SDL_TEXTINPUT,
+      timestamp = uint32,
+      windowID = uint32,
+      text = @[char][SDL_TEXTINPUTEVENT_TEXT_SIZE]
+    }
+
+extern praxi
+SDL_Event2TextInputEvent_v :
+  {p : addr}
+  SDL_Event SDL_TEXTINPUT @ p -<prf>
+    @(SDL_TextInputEvent @ p,
+      SDL_TextInputEvent @ p -<lin,prf> SDL_Event SDL_TEXTINPUT @ p)
+
+(*------------------------------------------------------------------*)
+
+exception bailout of string
+
+typedef rgba = @(uint8, uint8, uint8, uint8)
+
+val empty_scene_color =
+  @(g0i2u 200, g0i2u 200, g0i2u 200, g0i2u 255) : rgba
+
+typedef rgba_array (w : int, h : int) =
+  matrixref (rgba, w, h)
+
+typedef scene_computer =
+  {w, h : nat}
+  (int w, int h, real, real, real) -<cloref1>
+    rgba_array (w, h)
+
+vtypedef situation (p : addr, q : addr,
+                    w : int, h : int) =
+  [null < p; null < q; 0 <= w; 0 <= h]
+  @{window   = SDL_Window_ptr p,
+    renderer = SDL_Renderer_ptr q,
+    width    = int w,
+    height   = int h,
+    xcenter  = real,
+    ycenter  = real,
+    pixels_per_unit = real,
+    compute_scene = scene_computer}
+vtypedef situation (w : int, h : int) =
+  [p, q : agz]
+  situation (p, q, w, h)
+vtypedef situation =
+  [w, h : nat]
+  situation (w, h)
+
+fn
+destroy_situation (situation : situation) : void =
+  begin
+    SDL_DestroyRenderer (situation.renderer);
+    SDL_DestroyWindow (situation.window)
+  end
+
+fn
+get_renderer_size (situation : &situation)
+    : [renderer_width, renderer_height : nat]
+      @(int renderer_width, int renderer_height) =
+  let
+    var w : int
+    var h : int
+    val status = SDL_GetRendererOutputSize (situation.renderer, w, h)
+    val w = g1ofg0 w and h = g1ofg0 h
+  in
+    if (status < 0) + (w < 0) + (h < 0) then
+      begin
+        destroy_situation situation;
+        $raise bailout "rendering error"
+      end
+    else
+      @(w, h)
+  end
+
+fn
+resize_needed (situation : &situation) : bool =
+  let
+    val @(w, h) = get_renderer_size situation
+  in
+    (w <> situation.width) + (h <> situation.height)
+  end
+
+(*------------------------------------------------------------------*)
+
+fn
+compute_escape_times
+          {w, h : nat}
+          {mxtm : nat}
+          (width           : int w,
+           height          : int h,
+           xcenter         : real,
+           ycenter         : real,
+           pixels_per_unit : real,
+           max_time        : uint16 mxtm)
+    : matrixref ([tm : nat | tm <= mxtm] uint16 tm, w, h) =
+  let
+    typedef tm = [tm : nat | tm <= mxtm] uint16 tm
+
+    val times = matrixref_make_elt<tm> (i2sz width, i2sz height,
+                                        max_time)
+    and ppu2 = pixels_per_unit + pixels_per_unit
+
+    fun
+    ij_loop {i, j : nat | i <= w; j <= h}
+            .<w - i, h - j>.
+            (i : int i,
+             j : int j) :<!refwrt> void =
+      if i = width then
+        ()
+      else if j = height then
+        ij_loop (succ i, 0)
+      else
+        let
+          val cx = xcenter + (g0i2f ((i + i) - width) / ppu2)
+          and cy = ycenter + (g0i2f (height - (j + j)) / ppu2)
+
+          fun
+          tm_loop {tm : nat | tm <= mxtm}
+                  .<mxtm - tm>.
+                  (x     : real,
+                   y     : real,
+                   xx    : real,
+                   yy    : real,
+                   tm    : uint16 tm)
+              :<> [tm1 : nat | tm1 <= mxtm] uint16 tm1 =
+            if tm = max_time then
+              tm
+            else if g0i2f 4 < xx + yy then
+              tm
+            else
+              let
+                val x = xx - yy + cx and y = ((x + x) * y) + cy
+                val xx = x * x and yy = y * y
+              in
+                tm_loop (x, y, xx, yy, succ tm)
+              end
+
+          val tm = tm_loop (g0i2f 0, g0i2f 0,
+                            g0i2f 0, g0i2f 0,
+                            g1i2u 0)
+        in
+          times[i, height, j] := tm;
+          ij_loop (i, succ j)
+        end
+  in
+    ij_loop (0, 0);
+    times
+  end
+
+fn
+the_durn_simplest_scene_computer
+          {w, h            : nat}
+          (width           : int w,
+           height          : int h,
+           xcenter         : real,
+           ycenter         : real,
+           pixels_per_unit : real)
+    :<cloref1> rgba_array (w, h) =
+  let
+    val escape_times =
+      compute_escape_times (width, height, xcenter, ycenter,
+                            pixels_per_unit, g1i2u 255)
+    and points = matrixref_make_elt<rgba> (i2sz width, i2sz height,
+                                           empty_scene_color)
+
+    fn {}
+    time2rgba {tm : nat | tm <= 255}
+              (tm : uint16 tm) : rgba =
+      let
+        val v = (g0u2u (g1i2u 255 - tm)) : uint8
+      in
+        @(v, v, v, g0i2u 255)
+      end
+
+    fun
+    loop {i, j : nat | i <= w; j <= h}
+         .<w - i, h - j>.
+         (i : int i,
+          j : int j) : void =
+      if i = width then
+        ()
+      else if j = height then
+        loop (succ i, 0)
+      else
+        begin
+          points[i, height, j] :=
+            time2rgba escape_times[i, height, j];
+          loop (i, succ j)
+        end
+  in
+    loop (0, 0);
+    points
+  end
+
+(*------------------------------------------------------------------*)
+(* Writing an image to a Portable Arbitrary Map. *)
+
+fn
+write_rgba_points_as_pam
+           {w, h   : nat}
+           (outf   : FILEref,
+            width  : int w,
+            height : int h,
+            points : rgba_array (w, h)) : void =
+  let
+    fun
+    loop {i, j : nat | i <= w; j <= h}
+         .<h - j, w - i>.
+         (i : int i,
+          j : int j) : void =
+      if j = height then
+        ()
+      else if i = width then
+        loop (0, succ j)
+      else
+        let
+          val @(r, g, b, a) = points[i, height, j]
+        in
+          fprint! (outf, int2uchar0 (g0u2i r));
+          fprint! (outf, int2uchar0 (g0u2i g));
+          fprint! (outf, int2uchar0 (g0u2i b));
+          fprint! (outf, int2uchar0 (g0u2i a));
+          loop (succ i, j)
+        end
+  in
+    (* Portable Arbitrary Map:
+       https://netpbm.sourceforge.net/doc/pam.html *)
+    fprintln! (outf, "P7");
+    fprintln! (outf, "WIDTH ", width);
+    fprintln! (outf, "HEIGHT ", height);
+    fprintln! (outf, "DEPTH 4");
+    fprintln! (outf, "MAXVAL 255");
+    fprintln! (outf, "TUPLTYPE RGB_ALPHA");
+    fprintln! (outf, "ENDHDR");
+    loop (0, 0)
+  end
+
+(* For this demo, simply number the images, starting at 1 on each run
+   of the program. *)
+val image_number : ref uint = ref 1U
+fn
+write_image {w, h     : nat}
+            (width    : int w,
+             height   : int h,
+             points   : rgba_array (w, h)) : void =
+  let
+    val filename =
+      strptr2string (string_append ("mandelbrot-image-",
+                                    tostring_val<uint> !image_number,
+                                    ".pam"))
+  in
+    case+ fileref_open_opt (filename, file_mode_w) of
+    | ~ None_vt () =>
+      println! ("ERROR: could not open ", filename, " for writing.")
+    | ~ Some_vt outf =>
+      begin
+        write_rgba_points_as_pam (outf, width, height, points);
+        fileref_close (outf);
+        println! ("SUCCESS: wrote ", filename);
+        !image_number := succ !image_number
+      end
+  end
+
+(*------------------------------------------------------------------*)
+
+val initial_width : intGte 0 = 400
+val initial_height : intGte 0 = 400
+val initial_xcenter : real = g0f2f ~0.75
+val initial_ycenter : real = g0f2f 0.0
+val initial_pixels_per_unit : real = g0f2f 150.0
+val initial_scene_computer : scene_computer =
+  the_durn_simplest_scene_computer
+
+(* Zoom factor could be adjustable, but is not in this simple demo. *)
+val zoom_factor : real = g0f2f 2.0
+val min_pixels_per_unit : real = g0f2f 10.0
+
+fn
+set_render_rgba (renderer : !SDL_Renderer_ptr1,
+                 rgba     : rgba) : int =
+  let
+    val @(r, g, b, a) = rgba
+  in
+    SDL_SetRenderDrawColor (renderer, r, g, b, a)
+  end
+
+fn
+draw_scene {w, h : nat}
+           (renderer : !SDL_Renderer_ptr1,
+            width    : int w,
+            height   : int h,
+            points   : rgba_array (w, h)) : void =
+  let
+    prval () = mul_gte_gte_gte {w, h} ()
+
+    fun
+    loop {i, j : nat | i <= w; j <= h}
+         .<w - i, h - j>.
+         (renderer : !SDL_Renderer_ptr1,
+          i        : int i,
+          j        : int j) : void =
+      if i = width then
+        ()
+      else if j = height then
+        loop (renderer, succ i, 0)
+      else
+        let
+          val rgba = points[i, height, j]
+          val _ = set_render_rgba (renderer, rgba)
+          val _ = SDL_RenderDrawPoint (renderer, i, j)
+        in
+          loop (renderer, i, succ j)
+        end
+  in
+    ignoret (set_render_rgba (renderer, empty_scene_color));
+    ignoret (SDL_RenderClear (renderer));
+    loop (renderer, 0, 0);
+  end
+
+fnx
+situation_changed
+          {w, h : nat}
+          (situation   : &situation (w, h) >> situation,
+           event       : &SDL_Event? >> SDL_Event) : void =
+  let
+    val compute_scene = situation.compute_scene
+    val points =
+      compute_scene (situation.width, situation.height,
+                     situation.xcenter, situation.ycenter,
+                     situation.pixels_per_unit)
+  in
+    SDL_Delay (g0i2u 16);
+    event_loop (situation, points, event)
+  end
+and
+event_loop {w, h : nat}
+           (situation   : &situation (w, h) >> situation,
+            points      : rgba_array (w, h),
+            event       : &SDL_Event? >> SDL_Event) : void =
+  let
+    macdef quit_the_event_loop =
+      ()
+    macdef present_the_scene =
+      present_scene (situation, points, event)
+    macdef deal_with_changed_situation =
+      situation_changed (situation, event)
+    macdef write_an_image =
+      write_image (situation.width, situation.height, points);
+  in
+    if resize_needed situation then
+      let
+        val @(w, h) = get_renderer_size situation
+      in
+        situation.width := w;
+        situation.height := h;
+        deal_with_changed_situation
+      end
+    else
+      let
+      in
+        draw_scene (situation.renderer,
+                    situation.width, situation.height,
+                    points);
+        case+ SDL_PollEvent (event) of
+        | 0 => present_the_scene
+        | 1 =>
+          if event.type = SDL_QUIT then
+            quit_the_event_loop
+          else if event.type = SDL_WINDOWEVENT then
+            let
+              prval @(pf, fpf) = SDL_Event2WindowEvent_v (view@ event)
+              prval () = view@ event := pf
+              val window_event = event
+              prval () = view@ event := fpf (view@ event)
+            in
+              if window_event.event = SDL_WINDOWEVENT_SIZE_CHANGED then
+                deal_with_changed_situation
+              else if window_event.event = SDL_WINDOWEVENT_CLOSE then
+                quit_the_event_loop
+              else
+                present_the_scene
+            end
+          else if event.type = SDL_MOUSEBUTTONDOWN then
+            let
+              prval @(pf, fpf) = SDL_Event2MouseButtonEvent_v (view@ event)
+              prval () = view@ event := pf
+              val button_event = event
+              prval () = view@ event := fpf (view@ event)
+            in
+              if button_event.button = SDL_BUTTON_LEFT then
+                begin
+                  if button_event.clicks = g0i2u 1 then
+                    let         (* Re-center. *)
+                      val x = g0i2i button_event.x
+                      and y = g0i2i button_event.y
+                      and w = situation.width
+                      and h = situation.height
+                      and ppu = situation.pixels_per_unit
+                      val ppu2 = ppu + ppu
+                    in
+                      situation.xcenter :=
+                        situation.xcenter + (g0i2f (x + x - w) / ppu2);
+                      situation.ycenter :=
+                        situation.ycenter + (g0i2f (h - y - y) / ppu2);
+                      deal_with_changed_situation
+                    end
+                  else
+                    let         (* Zoom in. *)
+                      val new_ppu = situation.pixels_per_unit * zoom_factor
+                    in
+                      situation.pixels_per_unit := new_ppu;
+                      deal_with_changed_situation
+                    end
+                end
+              else if button_event.button = SDL_BUTTON_RIGHT then
+                begin
+                  if button_event.clicks = g0i2u 1 then
+                    present_the_scene
+                  else
+                    let         (* Zoom out *)
+                      val new_ppu = situation.pixels_per_unit / zoom_factor
+                    in
+                      if min_pixels_per_unit <= new_ppu then
+                        situation.pixels_per_unit := new_ppu;
+                      deal_with_changed_situation
+                    end
+                end
+              else
+                present_the_scene
+            end
+          else if event.type = SDL_TEXTINPUT then
+            let
+              prval @(pf, fpf) = SDL_Event2TextInputEvent_v (view@ event)
+              prval () = view@ event := pf
+              var text_event = event
+              prval () = view@ event := fpf (view@ event)
+              macdef text = text_event.text
+            in
+              case+ @(text[0], text[1]) of
+              | @('q', '\0') => quit_the_event_loop
+              | @('Q', '\0') => quit_the_event_loop
+              | @('p', '\0') =>
+                begin
+                  write_an_image;
+                  present_the_scene
+                end
+              | @('P', '\0') =>
+                begin
+                  write_an_image;
+                  present_the_scene
+                end
+              | _ => present_the_scene
+            end
+          else
+            present_the_scene
+      end
+  end
+and
+present_scene {w, h : nat}
+              (situation   : &situation (w, h) >> situation,
+               points      : rgba_array (w, h),
+               event       : &SDL_Event? >> SDL_Event) : void =
+  begin
+    SDL_RenderPresent (situation.renderer);
+    SDL_Delay (g0i2u 16);
+    event_loop (situation, points, event)
+  end
+
+fn
+run_program () : void =
+  let
+    (* FIXME: For best form, we should also set up a signal handler
+       that runs SDL_Quit, so the display does not get stuck in an
+       undesired state even if the program crashes. For instance,
+       there could be a signaled divide by zero or overflow event. And
+       we are at least changing whether the screensaver is enabled. *)
+    val _ = atexit SDL_Quit
+
+    val () = SDL_Init (SDL_INIT_EVENTS
+                        lor SDL_INIT_TIMER
+                        lor SDL_INIT_VIDEO)
+
+    (* FIXME: Find out whether the screensaver was enabled BEFORE we
+       started SDL2, and set SDL2 to whichever setting it was. *)
+    val () = SDL_EnableScreenSaver ()
+
+    val window = SDL_CreateWindow ("mandelbrot_task_interactive",
+                                   SDL_WINDOWPOS_CENTERED,
+                                   SDL_WINDOWPOS_CENTERED,
+                                   initial_width, initial_height,
+                                   SDL_WINDOW_RESIZABLE)
+    val p_window = SDL_Window_ptr2ptr window
+    prval () = lemma_ptr_param p_window
+  in
+    if iseqz p_window then
+      begin
+        SDL_DestroyWindow_null window;
+        $raise bailout "failed to initialize a window"
+      end
+    else
+      let
+        val renderer = SDL_CreateRenderer (window, ~1, g0i2u 0)
+        val p_renderer = SDL_Renderer_ptr2ptr renderer
+        prval () = lemma_ptr_param p_renderer
+      in
+        if iseqz p_renderer then
+          begin
+            SDL_DestroyRenderer_null renderer;
+            SDL_DestroyWindow window;
+            $raise bailout "failed to initialize a renderer"
+          end
+        else
+          let
+            var situation : situation =
+              @{window = window,
+                renderer = renderer,
+                width = initial_width,
+                height = initial_height,
+                xcenter = initial_xcenter,
+                ycenter = initial_ycenter,
+                pixels_per_unit = initial_pixels_per_unit,
+                compute_scene = initial_scene_computer}
+            var event : SDL_Event?
+          in
+            situation_changed (situation, event);
+            destroy_situation situation
+          end
+      end
+  end
+
+implement
+main () =
+  try
+    begin
+      SDL_SetMainReady ();
+      run_program ();
+      0
+    end
+  with
+  | ~ bailout msg =>
+    begin
+      println! ("Error: ", msg);
+      1
+    end
+
+(*------------------------------------------------------------------*)

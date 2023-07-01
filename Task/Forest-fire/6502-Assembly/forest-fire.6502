@@ -1,0 +1,420 @@
+	ORG	$4357
+; SYS 17239 or CALL 17239
+
+EMPTY2	=	$00
+TREE2	=	$44
+FIRE2	=	$99
+
+; common available zero page
+
+
+GBASL	=	$26
+GBASH	=	$27
+
+SEED2	=	$28
+SEED0	=	$29
+SEED1	=	$2A
+
+H2	=	$2B
+V2	=	$2C
+PLOTC	=	$2D
+COLOR	=	$2E
+PAGE	=	$2F
+TOPL	=	$30
+TOPH	=	$31
+MIDL	=	$32
+MIDH	=	$33
+BTML	=	$34
+BTMH	=	$35
+PLOTL	=	$36
+PLOTH	=	$37
+lastzp	=	$38
+
+tablelo	=	$5000
+tablehi = tablelo+25
+
+	JSR START
+	STA V2
+	LDA #$4C ; JMP instruction
+	STA SEED2 ; temporary JMP
+	LDX #$00 ; y coord
+table:
+	TXA
+	JSR SEED2 ; temporary JMP GBASCALC
+	LDA GBASL
+	STA tablelo,X
+	LDA GBASH
+	STA tablehi,X
+	LDY #$00
+	TYA
+clrline:
+	STA (GBASL),Y
+	INY
+	CPY #40
+	BNE clrline
+
+	INX
+	CPX V2
+	BNE table
+
+	JSR sseed0
+	JSR sseed2
+
+	LDX #$60
+	STX PAGE
+	STX TOPH
+	LDY #$00
+	STY TOPL
+	TYA
+zero:	STA (TOPL),Y
+	INY
+	BNE zero
+	INX
+	STX TOPH
+	CPX #$80
+	BNE zero
+
+loop3:
+	LDX #0
+	STX TOPL
+	LDA #41
+	STA MIDL
+	STA PLOTL
+	LDA #83
+	STA BTML
+	LDA PAGE
+	STA TOPH
+	STA MIDH
+	STA BTMH
+	EOR #$10
+	STA PLOTH
+	STA PAGE
+loop2:
+	TXA
+	STX V2
+	LSR       ; F800 PLOT-like...
+	; PHP       ; F801
+	TAY	 ; save A in Y without touching C
+	LDA #$0F
+	BCC over2
+	ADC #$E0
+over2:	STA PLOTC   ; PLOT...
+	LDA tablelo,Y ; lookup instead of GBASCALC
+	STA GBASL
+	LDA tablehi,Y
+	STA GBASH
+	; PLP     ; continue PLOT
+	LDY #$01 ; x coord
+loop1:
+	STY H2
+	LDA (MIDL),Y
+	STA (PLOTL),Y
+	BEQ empty
+	BPL tree
+	LDA #EMPTY2
+doplot:	LDY H2
+	STA (PLOTL),Y
+	DEY
+	EOR (GBASL),Y
+	AND PLOTC
+	EOR (GBASL),Y
+	STA (GBASL),Y
+noplot:
+	LDY H2
+	INY
+	CPY #41
+	BNE loop1
+	LDA MIDL
+	STA TOPL
+	LDA MIDH
+	STA TOPH
+	LDA BTML
+	STA MIDL
+	STA PLOTL
+	CLC
+	ADC #42
+	STA BTML
+	LDA BTMH
+	EOR #$10
+	STA PLOTH
+	EOR #$10		
+	STA MIDH
+	ADC #$00
+	STA BTMH
+	LDX V2
+	INX
+	CPX #48
+	BNE loop2
+	JSR QUIT
+	JMP loop3
+empty:
+	DEC SEED2
+	BNE noplot
+	JSR sseed2 ; probability f
+	LDA #TREE2
+	BNE doplot
+ignite:
+	LDA #FIRE2
+	BNE doplot
+tree:
+	DEC SEED0
+	BNE check
+	DEC SEED1
+	BNE check
+	JSR sseed0 ; probability p
+	BNE ignite
+check:
+	LDA (TOPL),Y ; n
+	ORA (BTML),Y ; s
+	DEY
+	ORA (TOPL),Y ; nw
+	ORA (MIDL),Y ; w
+	ORA (BTML),Y ; sw
+	INY
+	INY
+	ORA (TOPL),Y ; ne
+	ORA (MIDL),Y ; e
+	ORA (BTML),Y ; se
+	BMI ignite
+	BPL noplot
+
+sseed0:
+	LDA #$17 ; 1 in 10007 (prime)
+	STA SEED0
+	LDA #$27
+	STA SEED1
+	RTS
+sseed2:
+	LDA #$65  ; 1 in 101 (prime)
+	STA SEED2
+	RTS
+
+default:
+	LDA #<GBASCALC ; setup GBASCALC
+	STA SEED0
+	LDA #>GBASCALC
+	STA SEED1
+	LDA #25 ; screen rows
+	RTS
+GBASCALC:
+	LDY #$00
+	STY GBASH		
+	ASL
+	ASL
+	ASL
+	STA GBASL
+	ASL
+	ROL GBASH
+	ASL
+	ROL GBASH
+	ADC GBASL
+	STA GBASL
+	LDA GBASH
+	ADC #$04
+	STA GBASH
+	RTS
+
+QUIT:
+	LDA $E000
+
+; APPLE II
+
+	CMP #$4C
+	BNE c64quit
+
+	BIT $C000 ; apple ii keypress?
+	BPL CONTINUE ; no keypressed then continue
+	BIT $C010 ; clear keyboard strobe
+	BIT $C051 ; text mode
+
+; end APPLE II specific
+
+ABORT:
+	PLA
+	PLA
+
+	LDX #GBASL
+restorzp:
+	LDA $5100,X
+	STA $00,X
+	INX
+	CPX #lastzp
+	BNE restorzp
+
+CONTINUE:
+	RTS
+
+START:
+	LDX #GBASL
+savezp:
+	LDA $00,X
+	STA $5100,X
+	INX
+	CPX #lastzp
+	BNE savezp
+
+; machine ???
+
+	LDA $E000 ; terribly unreliable, oh well
+
+; APPLE II
+
+	CMP #$4C ; apple ii?
+	BNE c64start ; nope, try another
+
+	BIT $C056 ; low resolution
+	BIT $C052 ; full screen
+	BIT $C054 ; page one
+	BIT $C050 ; graphics
+; GBASCALC = $F847
+	LDA #$47
+	STA SEED0
+	LDA #$F8
+	STA SEED1
+	LDA #24 ; screen rows
+	RTS
+
+; end APPLE II specific
+
+; COMMODORE 64 specific
+
+c64quit:
+
+; COMMODORE 64
+
+	CMP #$85 ; commodore 64?
+	BNE CONTINUE ; nope, default to no keypress
+
+	LDA $C6 ; commodore keyboard buffer length
+	BEQ CONTINUE ; no keypressed then continue
+
+	LDA #$00
+	STA $C6
+	LDA $D016 ; Screen control register #2
+	AND #$EF  ; Bit #4: 0 = Multicolor mode off.
+	STA $D016
+	LDA #21 ; default character set
+	STA $D018
+	BNE ABORT
+
+c64start:
+
+	CMP #$85 ; commodore 64?
+	BEQ c64yes ; yes
+	JMP default ; no, default to boringness
+c64yes:
+	LDA #$00  ; black
+	STA $D020 ; border
+	LDA #$00  ; black
+	STA $D021 ; background
+	LDA #$05  ; dark green
+	STA $D022 ; Extra background color #1
+	LDA #$08  ; orange
+	STA $D023 ; Extra background color #2
+	LDA $D016 ; Screen control register #2
+	ORA #$10  ; Bit #4: 1 = Multicolor mode on.
+	STA $D016
+
+	LDA #$30  ; 0011 0000 $3000 charset page
+	STA PLOTH
+	LSR
+	LSR
+	STA PLOTC ; 0000 1100 #$0C
+; 53272 $D018
+; POKE 53272,(PEEK(53272)AND240)+12: REM SET CHAR POINTER TO MEM. 12288
+;     Bits #1-#3: In text mode, pointer to character memory
+;    (bits #11-#13), relative to VIC bank, memory address $DD00
+;     %110, 6: $3000-$37FF, 12288-14335.
+	LDA $D018
+	AND #$F0
+	ORA PLOTC
+	STA $D018
+; setup nine characters
+
+; 00- 00 00
+	LDA #$00 ; chr(0) * 8
+	STA PLOTL
+	; --- LDA #$00 ; already zero
+	TAX ; LDX #$00
+	JSR charset
+
+; 04- 00 55
+	LDA #32 ; chr(4) * 8
+	STA PLOTL
+	LDA #$55
+	; LDX #$00 ; already zero
+	JSR charset
+
+; 09- 00 AA
+	LDA #72 ; chr(9) * 8
+	STA PLOTL
+	LDA #$AA
+	; LDX #$00 ; already zero
+	JSR charset
+
+; 40- 55 00
+	LDA PLOTH ; 512 = chr(64) * 8
+	CLC
+	ADC #$02
+	STA PLOTH
+	LDX #$00
+	STX PLOTL
+	LDA #$00
+	LDX #$55
+	JSR charset
+
+; 44- 55 55
+	LDA #32 ; chr(68) * 8
+	STA PLOTL
+	TXA ; LDA #$55
+	; LDX #$55 ; already 55
+	JSR charset
+
+; 49- 55 AA
+	LDA #72 ; chr(73) * 8
+	STA PLOTL
+	LDA #$AA
+	; LDX #$55 ; already 55
+	JSR charset
+
+; 90- AA 00
+	LDA PLOTH ; chr(144) * 8
+	CLC
+	ADC #$02
+	STA PLOTH
+	LDA #128
+	STA PLOTL
+	LDA #$00
+	LDX #$AA
+	JSR charset
+
+; 94- AA 55
+	LDA #160 ; chr(148) * 8
+	STA PLOTL
+	LDA #$55
+	; LDX #$AA ; already AA
+	JSR charset
+
+; 99- AA AA
+	LDA #200 ; chr(153) * 8
+	STA PLOTL
+	TXA ; LDA #$AA
+	; LDX #$AA ; already AA
+	JSR charset
+	JMP default
+charset:
+	LDY #$00
+chartop:
+	STA (PLOTL),Y
+	INY
+	CPY #$04
+	BNE chartop
+	TXA
+charbtm:
+	STA (PLOTL),Y
+	INY
+	CPY #$08
+	BNE charbtm
+	RTS
+
+; end COMMODORE 64 specific

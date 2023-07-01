@@ -1,0 +1,326 @@
+    OPTION _EXPLICIT
+    _TITLE "Puzzle Builder for Rosetta" 'by B+ started 2018-10-31
+    ' 2018-11-02 Now that puzzle is working with basic and plus starters remove them and make sure puzzle works as well.
+    ' Added Direction legend to printout.
+    ' OverHauled LengthLimit()
+    ' Reorgnize this to try a couple of times at given Randomize number
+    ' TODO create alphabetical copy of word list and check grid for all words embedded in it.
+    ' LoadWords makes a copy of word list in alpha order
+    ' FindAllWords finds all the items from the dictionary
+    ' OK it all seems to be working OK
+
+    RANDOMIZE TIMER ' OK getting a good puzzle every time
+
+    'overhauled
+    DIM SHARED LengthLimit(3 TO 10) AS _BYTE 'reset in Initialize, track and limit longer words
+
+    'LoadWords opens file of words and sets
+    DIM SHARED NWORDS 'set in LoadWords, number of words with length: > 2 and < 11  and just letters
+
+    ' word file words (shuffled) to be fit into puzzle and index position
+    DIM SHARED WORDS$(1 TO 24945), CWORDS$(1 TO 24945), WORDSINDEX AS INTEGER 'the file has 24945 words but many are unsuitable
+
+    'words placed in Letters grid, word itself (W$) x, y head (WX, WY) and direction (WD), WI is the index to all these
+    DIM SHARED W$(1 TO 100), WX(1 TO 100) AS _BYTE, WY(1 TO 100) AS _BYTE, WD(1 TO 100) AS _BYTE, WI AS _BYTE
+
+    ' letters grid and direction arrays
+    DIM SHARED L$(0 TO 9, 0 TO 9), DX(0 TO 7) AS _BYTE, DY(0 TO 7) AS _BYTE
+    DX(0) = 1: DY(0) = 0
+    DX(1) = 1: DY(1) = 1
+    DX(2) = 0: DY(2) = 1
+    DX(3) = -1: DY(3) = 1
+    DX(4) = -1: DY(4) = 0
+    DX(5) = -1: DY(5) = -1
+    DX(6) = 0: DY(6) = -1
+    DX(7) = 1: DY(7) = -1
+
+    'to store all the words found embedded in the grid L$()
+    DIM SHARED ALL$(1 TO 200), AllX(1 TO 200) AS _BYTE, AllY(1 TO 200) AS _BYTE, AllD(1 TO 200) AS _BYTE 'to store all the words found embedded in the grid L$()
+    DIM SHARED ALLindex AS INTEGER
+
+    ' signal successful fill of puzzle
+    DIM SHARED FILLED AS _BIT
+    FILLED = 0
+    DIM try AS _BYTE
+    try = 1
+    LoadWords 'this sets NWORDS count to work with
+    WHILE try < 11
+        Initialize
+        ShowPuzzle
+        FOR WORDSINDEX = 1 TO NWORDS
+            PlaceWord
+            ShowPuzzle
+            IF FILLED THEN EXIT FOR
+        NEXT
+        IF FILLED AND WI > 24 THEN
+            FindAllWords
+            FilePuzzle
+            LOCATE 23, 1: PRINT "On try #"; Trm$(try); " a successful puzzle was built and filed."
+            EXIT WHILE
+        ELSE
+            try = try + 1
+        END IF
+    WEND
+    IF FILLED = 0 THEN LOCATE 23, 1: PRINT "Sorry, 10 tries and no success."
+    END
+
+    SUB LoadWords
+        DIM wd$, i AS INTEGER, m AS INTEGER, ok AS _BIT
+        OPEN "unixdict.txt" FOR INPUT AS #1
+        WHILE EOF(1) = 0
+            INPUT #1, wd$
+            IF LEN(wd$) > 2 AND LEN(wd$) < 11 THEN
+                ok = -1
+                FOR m = 1 TO LEN(wd$)
+                    IF ASC(wd$, m) < 97 OR ASC(wd$, m) > 122 THEN ok = 0: EXIT FOR
+                NEXT
+                IF ok THEN i = i + 1: WORDS$(i) = wd$: CWORDS$(i) = wd$
+            END IF
+        WEND
+        CLOSE #1
+        NWORDS = i
+    END SUB
+
+    SUB Shuffle
+        DIM i AS INTEGER, r AS INTEGER
+        FOR i = NWORDS TO 2 STEP -1
+            r = INT(RND * i) + 1
+            SWAP WORDS$(i), WORDS$(r)
+        NEXT
+    END SUB
+
+    SUB Initialize
+        DIM r AS _BYTE, c AS _BYTE, x AS _BYTE, y AS _BYTE, d AS _BYTE, wd$
+        FOR r = 0 TO 9
+            FOR c = 0 TO 9
+                L$(c, r) = " "
+            NEXT
+        NEXT
+
+        'reset word arrays by resetting the word index back to zero
+        WI = 0
+
+        'fun stuff for me but doubt others would like that much fun!
+        'pluggin "basic", 0, 0, 2
+        'pluggin "plus", 1, 0, 0
+
+        'to assure the spreading of ROSETTA CODE
+        L$(INT(RND * 5) + 5, 0) = "R": L$(INT(RND * 9) + 1, 1) = "O"
+        L$(INT(RND * 9) + 1, 2) = "S": L$(INT(RND * 9) + 1, 3) = "E"
+        L$(1, 4) = "T": L$(9, 4) = "T": L$(INT(10 * RND), 5) = "A"
+        L$(INT(10 * RND), 6) = "C": L$(INT(10 * RND), 7) = "O"
+        L$(INT(10 * RND), 8) = "D": L$(INT(10 * RND), 9) = "E"
+
+        'reset limits
+        LengthLimit(3) = 200
+        LengthLimit(4) = 6
+        LengthLimit(5) = 3
+        LengthLimit(6) = 2
+        LengthLimit(7) = 1
+        LengthLimit(8) = 0
+        LengthLimit(9) = 0
+        LengthLimit(10) = 0
+
+        'reset word order
+        Shuffle
+    END SUB
+
+    'for fun plug-in of words
+    SUB pluggin (wd$, x AS INTEGER, y AS INTEGER, d AS INTEGER)
+        DIM i AS _BYTE
+        FOR i = 0 TO LEN(wd$) - 1
+            L$(x + i * DX(d), y + i * DY(d)) = MID$(wd$, i + 1, 1)
+        NEXT
+        WI = WI + 1
+        W$(WI) = wd$: WX(WI) = x: WY(WI) = y: WD(WI) = d
+    END SUB
+
+    FUNCTION Trm$ (n AS INTEGER)
+        Trm$ = RTRIM$(LTRIM$(STR$(n)))
+    END FUNCTION
+
+    SUB ShowPuzzle
+        DIM i AS _BYTE, x AS _BYTE, y AS _BYTE, wate$
+        CLS
+        PRINT "    0 1 2 3 4 5 6 7 8 9"
+        LOCATE 3, 1
+        FOR i = 0 TO 9
+            PRINT Trm$(i)
+        NEXT
+        FOR y = 0 TO 9
+            FOR x = 0 TO 9
+                LOCATE y + 3, 2 * x + 5: PRINT L$(x, y)
+            NEXT
+        NEXT
+        FOR i = 1 TO WI
+            IF i < 20 THEN
+                LOCATE i + 1, 30: PRINT Trm$(i); " "; W$(i)
+            ELSEIF i < 40 THEN
+                LOCATE i - 20 + 1, 45: PRINT Trm$(i); " "; W$(i)
+            ELSEIF i < 60 THEN
+                LOCATE i - 40 + 1, 60: PRINT Trm$(i); " "; W$(i)
+            END IF
+        NEXT
+        LOCATE 18, 1: PRINT "Spaces left:"; CountSpaces%
+        LOCATE 19, 1: PRINT NWORDS
+        LOCATE 20, 1: PRINT SPACE$(16)
+        IF WORDSINDEX THEN LOCATE 20, 1: PRINT Trm$(WORDSINDEX); " "; WORDS$(WORDSINDEX)
+        'LOCATE 15, 1: INPUT "OK, press enter... "; wate$
+    END SUB
+
+    'used in PlaceWord
+    FUNCTION CountSpaces% ()
+        DIM x AS _BYTE, y AS _BYTE, count AS INTEGER
+        FOR y = 0 TO 9
+            FOR x = 0 TO 9
+                IF L$(x, y) = " " THEN count = count + 1
+            NEXT
+        NEXT
+        CountSpaces% = count
+    END FUNCTION
+
+    'used in PlaceWord
+    FUNCTION Match% (word AS STRING, template AS STRING)
+        DIM i AS INTEGER, c AS STRING
+        Match% = 0
+        IF LEN(word) <> LEN(template) THEN EXIT FUNCTION
+        FOR i = 1 TO LEN(template)
+            IF ASC(template, i) <> 32 AND (ASC(word, i) <> ASC(template, i)) THEN EXIT FUNCTION
+        NEXT
+        Match% = -1
+    END FUNCTION
+
+    'heart of puzzle builder
+    SUB PlaceWord
+        ' place the words randomly in the grid
+        ' start at random spot and work forward or back 100 times = all the squares
+        ' for each open square try the 8 directions for placing the word
+        ' even if word fits Rossetta Challenge task requires leaving 11 openings to insert ROSETTA CODE,
+        ' exactly 11 spaces needs to be left, if/when this occurs FILLED will be set true to signal finished to main loop
+        ' if place a word update L$, WI, W$(WI), WX(WI), WY(WI), WD(WI)
+
+        DIM wd$, wLen AS _BYTE, spot AS _BYTE, testNum AS _BYTE, rdir AS _BYTE
+        DIM x AS _BYTE, y AS _BYTE, d AS _BYTE, dNum AS _BYTE, rdd AS _BYTE
+        DIM template$, b1 AS _BIT, b2 AS _BIT
+        DIM i AS _BYTE, j AS _BYTE, wate$
+
+        wd$ = WORDS$(WORDSINDEX) 'the right side is all shared
+        'skip too many long words
+        IF LengthLimit(LEN(wd$)) THEN LengthLimit(LEN(wd$)) = LengthLimit(LEN(wd$)) - 1 ELSE EXIT SUB 'skip long ones
+        wLen = LEN(wd$) - 1 '     from the spot there are this many letters to check
+        spot = INT(RND * 100) '   a random spot on grid
+        testNum = 1 '             when this hits 100 we've tested all possible spots on grid
+        IF RND < .5 THEN rdir = -1 ELSE rdir = 1 ' go forward or back from spot for next test
+        WHILE testNum < 101
+            y = INT(spot / 10)
+            x = spot MOD 10
+            IF L$(x, y) = MID$(wd$, 1, 1) OR L$(x, y) = " " THEN
+                d = INT(8 * RND)
+                IF RND < .5 THEN rdd = -1 ELSE rdd = 1
+                dNum = 1
+                WHILE dNum < 9
+                    'will wd$ fit? from  at x, y
+                    template$ = ""
+                    b1 = wLen * DX(d) + x >= 0 AND wLen * DX(d) + x <= 9
+                    b2 = wLen * DY(d) + y >= 0 AND wLen * DY(d) + y <= 9
+                    IF b1 AND b2 THEN 'build the template of letters and spaces from Letter grid
+                        FOR i = 0 TO wLen
+                            template$ = template$ + L$(x + i * DX(d), y + i * DY(d))
+                        NEXT
+                        IF Match%(wd$, template$) THEN 'the word will fit but does it fill anything?
+                            FOR j = 1 TO LEN(template$)
+                                IF ASC(template$, j) = 32 THEN 'yes a space to fill
+                                    FOR i = 0 TO wLen
+                                        L$(x + i * DX(d), y + i * DY(d)) = MID$(wd$, i + 1, 1)
+                                    NEXT
+                                    WI = WI + 1
+                                    W$(WI) = wd$: WX(WI) = x: WY(WI) = y: WD(WI) = d
+                                    IF CountSpaces% = 0 THEN FILLED = -1
+                                    EXIT SUB 'get out now that word is loaded
+                                END IF
+                            NEXT
+                            'if still here keep looking
+                        END IF
+                    END IF
+                    d = (d + 8 + rdd) MOD 8
+                    dNum = dNum + 1
+                WEND
+            END IF
+            spot = (spot + 100 + rdir) MOD 100
+            testNum = testNum + 1
+        WEND
+    END SUB
+
+    SUB FindAllWords
+        DIM wd$, wLen AS _BYTE, i AS INTEGER, x AS _BYTE, y AS _BYTE, d AS _BYTE
+        DIM template$, b1 AS _BIT, b2 AS _BIT, j AS _BYTE, wate$
+
+        FOR i = 1 TO NWORDS
+            wd$ = CWORDS$(i)
+            wLen = LEN(wd$) - 1
+            FOR y = 0 TO 9
+                FOR x = 0 TO 9
+                    IF L$(x, y) = MID$(wd$, 1, 1) THEN
+                        FOR d = 0 TO 7
+                            b1 = wLen * DX(d) + x >= 0 AND wLen * DX(d) + x <= 9
+                            b2 = wLen * DY(d) + y >= 0 AND wLen * DY(d) + y <= 9
+                            IF b1 AND b2 THEN 'build the template of letters and spaces from Letter grid
+                                template$ = ""
+                                FOR j = 0 TO wLen
+                                    template$ = template$ + L$(x + j * DX(d), y + j * DY(d))
+                                NEXT
+                                IF template$ = wd$ THEN 'founda word
+                                    'store it
+                                    ALLindex = ALLindex + 1
+                                    ALL$(ALLindex) = wd$: AllX(ALLindex) = x: AllY(ALLindex) = y: AllD(ALLindex) = d
+                                    'report it
+                                    LOCATE 22, 1: PRINT SPACE$(50)
+                                    LOCATE 22, 1: PRINT "Found: "; wd$; " ("; Trm$(x); ", "; Trm$(y); ") >>>---> "; Trm$(d);
+                                    INPUT " Press enter...", wate$
+                                END IF
+                            END IF
+                        NEXT d
+                    END IF
+                NEXT x
+            NEXT y
+        NEXT i
+    END SUB
+
+    SUB FilePuzzle
+        DIM i AS _BYTE, r AS _BYTE, c AS _BYTE, b$
+        OPEN "WS Puzzle.txt" FOR OUTPUT AS #1
+        PRINT #1, "    0 1 2 3 4 5 6 7 8 9"
+        PRINT #1, ""
+        FOR r = 0 TO 9
+            b$ = Trm$(r) + "   "
+            FOR c = 0 TO 9
+                b$ = b$ + L$(c, r) + " "
+            NEXT
+            PRINT #1, b$
+        NEXT
+        PRINT #1, ""
+        PRINT #1, "Directions >>>---> 0 = East, 1 = SE, 2 = South, 3 = SW, 4 = West, 5 = NW, 6 = North, 7 = NE"
+        PRINT #1, ""
+        PRINT #1, "              These are the items from unixdict.txt used to build the puzzle:"
+        PRINT #1, ""
+        FOR i = 1 TO WI STEP 2
+            PRINT #1, RIGHT$(SPACE$(7) + Trm$(i), 7); ") "; RIGHT$(SPACE$(7) + W$(i), 10); " ("; Trm$(WX(i)); ", "; Trm$(WY(i)); ") >>>---> "; Trm$(WD(i));
+            IF i + 1 <= WI THEN
+                PRINT #1, RIGHT$(SPACE$(7) + Trm$(i + 1), 7); ") "; RIGHT$(SPACE$(7) + W$(i + 1), 10); " ("; Trm$(WX(i + 1)); ", "; Trm$(WY(i + 1)); ") >>>---> "; Trm$(WD(i + 1))
+            ELSE
+                PRINT #1, ""
+            END IF
+        NEXT
+        PRINT #1, ""
+        PRINT #1, "            These are the items from unixdict.txt found embedded in the puzzle:"
+        PRINT #1, ""
+        FOR i = 1 TO ALLindex STEP 2
+            PRINT #1, RIGHT$(SPACE$(7) + Trm$(i), 7); ") "; RIGHT$(SPACE$(7) + ALL$(i), 10); " ("; Trm$(AllX(i)); ", "; Trm$(AllY(i)); ") >>>---> "; Trm$(AllD(i));
+            IF i + 1 <= ALLindex THEN
+                PRINT #1, RIGHT$(SPACE$(7) + Trm$(i + 1), 7); ") "; RIGHT$(SPACE$(7) + ALL$(i + 1), 10); " ("; Trm$(AllX(i + 1)); ", "; Trm$(AllY(i + 1)); ") >>>---> "; Trm$(AllD(i + 1))
+            ELSE
+                PRINT #1, ""
+            END IF
+        NEXT
+        CLOSE #1
+    END SUB

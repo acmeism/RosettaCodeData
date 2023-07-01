@@ -1,0 +1,759 @@
+(* There is a "little matrix library" included below. Not all of it is
+   used, though unused parts may prove useful for playing with the
+   code.
+
+   One might, by the way, find interesting how I get the P matrix from
+   a permutation vector. *)
+
+%{^
+#include <math.h>
+#include <float.h>
+%}
+
+#include "share/atspre_staload.hats"
+
+macdef NAN = g0f2f ($extval (float, "NAN"))
+macdef Zero = g0i2f 0
+macdef One = g0i2f 1
+
+(* You can substitute an "fma" function for this definition: *)
+macdef multiply_and_add (x, y, z) = (,(x) * ,(y)) + ,(z)
+
+exception Exc_degenerate_problem of string
+
+(*------------------------------------------------------------------*)
+(* A "little matrix library"                                        *)
+
+typedef Matrix_Index_Map (m1 : int, n1 : int, m0 : int, n0 : int) =
+  {i1, j1 : pos | i1 <= m1; j1 <= n1}
+  (int i1, int j1) -<cloref0>
+  [i0, j0 : pos | i0 <= m0; j0 <= n0]
+    @(int i0, int j0)
+
+datatype Real_Matrix (tk : tkind,
+                      m1 : int, n1 : int,
+                      m0 : int, n0 : int) =
+| Real_Matrix of (matrixref (g0float tk, m0, n0),
+                  int m1, int n1, int m0, int n0,
+                  Matrix_Index_Map (m1, n1, m0, n0))
+typedef Real_Matrix (tk : tkind, m1 : int, n1 : int) =
+  [m0, n0 : pos] Real_Matrix (tk, m1, n1, m0, n0)
+typedef Real_Vector (tk : tkind, m1 : int, n1 : int) =
+  [m1 == 1 || n1 == 1] Real_Matrix (tk, m1, n1)
+typedef Real_Row (tk : tkind, n1 : int) = Real_Vector (tk, 1, n1)
+typedef Real_Column (tk : tkind, m1 : int) = Real_Vector (tk, m1, 1)
+
+extern fn {tk : tkind}
+Real_Matrix_make_elt :
+  {m0, n0 : pos}
+  (int m0, int n0, g0float tk) -< !wrt >
+    Real_Matrix (tk, m0, n0, m0, n0)
+
+extern fn {tk : tkind}
+Real_Matrix_copy :
+  {m1, n1 : pos}
+  Real_Matrix (tk, m1, n1) -< !refwrt > Real_Matrix (tk, m1, n1)
+
+extern fn {tk : tkind}
+Real_Matrix_copy_to :
+  {m1, n1 : pos}
+  (Real_Matrix (tk, m1, n1),    (* destination *)
+   Real_Matrix (tk, m1, n1)) -< !refwrt >
+    void
+
+extern fn {tk : tkind}
+Real_Matrix_fill_with_elt :
+  {m1, n1 : pos}
+  (Real_Matrix (tk, m1, n1), g0float tk) -< !refwrt > void
+
+extern fn {}
+Real_Matrix_dimension :
+  {tk : tkind}
+  {m1, n1 : pos}
+  Real_Matrix (tk, m1, n1) -<> @(int m1, int n1)
+
+extern fn {tk : tkind}
+Real_Matrix_get_at :
+  {m1, n1 : pos}
+  {i1, j1 : pos | i1 <= m1; j1 <= n1}
+  (Real_Matrix (tk, m1, n1), int i1, int j1) -< !ref > g0float tk
+
+extern fn {tk : tkind}
+Real_Matrix_set_at :
+  {m1, n1 : pos}
+  {i1, j1 : pos | i1 <= m1; j1 <= n1}
+  (Real_Matrix (tk, m1, n1), int i1, int j1, g0float tk) -< !refwrt >
+    void
+
+extern fn {}
+Real_Matrix_apply_index_map :
+  {tk : tkind}
+  {m1, n1 : pos}
+  {m0, n0 : pos}
+  (Real_Matrix (tk, m0, n0), int m1, int n1,
+   Matrix_Index_Map (m1, n1, m0, n0)) -<>
+    Real_Matrix (tk, m1, n1)
+
+extern fn {}
+Real_Matrix_transpose :
+  (* This is transposed INDEXING. It does NOT copy the data. *)
+  {tk : tkind}
+  {m1, n1 : pos}
+  {m0, n0 : pos}
+  Real_Matrix (tk, m1, n1, m0, n0) -<>
+    Real_Matrix (tk, n1, m1, m0, n0)
+
+extern fn {}
+Real_Matrix_block :
+  (* This is block (submatrix) INDEXING. It does NOT copy the data. *)
+  {tk : tkind}
+  {p0, p1 : pos | p0 <= p1}
+  {q0, q1 : pos | q0 <= q1}
+  {m1, n1 : pos | p1 <= m1; q1 <= n1}
+  {m0, n0 : pos}
+  (Real_Matrix (tk, m1, n1, m0, n0),
+   int p0, int p1, int q0, int q1) -<>
+    Real_Matrix (tk, p1 - p0 + 1, q1 - q0 + 1, m0, n0)
+
+extern fn {tk : tkind}
+Real_Matrix_unit_matrix :
+  {m : pos}
+  int m -< !refwrt > Real_Matrix (tk, m, m)
+
+extern fn {tk : tkind}
+Real_Matrix_unit_matrix_to :
+  {m : pos}
+  Real_Matrix (tk, m, m) -< !refwrt > void
+
+extern fn {tk : tkind}
+Real_Matrix_matrix_sum :
+  {m, n : pos}
+  (Real_Matrix (tk, m, n), Real_Matrix (tk, m, n)) -< !refwrt >
+    Real_Matrix (tk, m, n)
+
+extern fn {tk : tkind}
+Real_Matrix_matrix_sum_to :
+  {m, n : pos}
+  (Real_Matrix (tk, m, n),      (* destination*)
+   Real_Matrix (tk, m, n),
+   Real_Matrix (tk, m, n)) -< !refwrt >
+    void
+
+extern fn {tk : tkind}
+Real_Matrix_matrix_difference :
+  {m, n : pos}
+  (Real_Matrix (tk, m, n), Real_Matrix (tk, m, n)) -< !refwrt >
+    Real_Matrix (tk, m, n)
+
+extern fn {tk : tkind}
+Real_Matrix_matrix_difference_to :
+  {m, n : pos}
+  (Real_Matrix (tk, m, n),      (* destination*)
+   Real_Matrix (tk, m, n),
+   Real_Matrix (tk, m, n)) -< !refwrt >
+    void
+
+extern fn {tk : tkind}
+Real_Matrix_matrix_product :
+  {m, n, p : pos}
+  (Real_Matrix (tk, m, n), Real_Matrix (tk, n, p)) -< !refwrt >
+    Real_Matrix (tk, m, p)
+
+extern fn {tk : tkind}
+Real_Matrix_matrix_product_to :
+  (* For the matrix product, the destination should not be the same as
+     either of the other matrices. *)
+  {m, n, p : pos}
+  (Real_Matrix (tk, m, p),      (* destination*)
+   Real_Matrix (tk, m, n),
+   Real_Matrix (tk, n, p)) -< !refwrt >
+    void
+
+extern fn {tk : tkind}
+Real_Matrix_scalar_product :
+  {m, n : pos}
+  (Real_Matrix (tk, m, n), g0float tk) -< !refwrt >
+    Real_Matrix (tk, m, n)
+
+extern fn {tk : tkind}
+Real_Matrix_scalar_product_2 :
+  {m, n : pos}
+  (g0float tk, Real_Matrix (tk, m, n)) -< !refwrt >
+    Real_Matrix (tk, m, n)
+
+extern fn {tk : tkind}
+Real_Matrix_scalar_product :
+  {m, n : pos}
+  (Real_Matrix (tk, m, n), g0float tk) -< !refwrt >
+    Real_Matrix (tk, m, n)
+
+extern fn {tk : tkind}
+Real_Matrix_scalar_product_2 :
+  {m, n : pos}
+  (g0float tk, Real_Matrix (tk, m, n)) -< !refwrt >
+    Real_Matrix (tk, m, n)
+
+extern fn {tk : tkind}
+Real_Matrix_scalar_product_to :
+  {m, n : pos}
+  (Real_Matrix (tk, m, n),      (* destination*)
+   Real_Matrix (tk, m, n),
+   g0float tk) -< !refwrt >
+    void
+
+extern fn {tk : tkind}          (* Useful for debugging. *)
+Real_Matrix_fprint :
+  {m, n : pos}
+  (FILEref, Real_Matrix (tk, m, n)) -<1> void
+
+overload copy with Real_Matrix_copy
+overload copy_to with Real_Matrix_copy_to
+overload fill_with_elt with Real_Matrix_fill_with_elt
+overload dimension with Real_Matrix_dimension
+overload [] with Real_Matrix_get_at
+overload [] with Real_Matrix_set_at
+overload apply_index_map with Real_Matrix_apply_index_map
+overload transpose with Real_Matrix_transpose
+overload block with Real_Matrix_block
+overload unit_matrix with Real_Matrix_unit_matrix
+overload unit_matrix_to with Real_Matrix_unit_matrix_to
+overload matrix_sum with Real_Matrix_matrix_sum
+overload matrix_sum_to with Real_Matrix_matrix_sum_to
+overload matrix_difference with Real_Matrix_matrix_difference
+overload matrix_difference_to with Real_Matrix_matrix_difference_to
+overload matrix_product with Real_Matrix_matrix_product
+overload matrix_product_to with Real_Matrix_matrix_product_to
+overload scalar_product with Real_Matrix_scalar_product
+overload scalar_product with Real_Matrix_scalar_product_2
+overload scalar_product_to with Real_Matrix_scalar_product_to
+overload + with matrix_sum
+overload - with matrix_difference
+overload * with matrix_product
+overload * with scalar_product
+
+(*------------------------------------------------------------------*)
+(* Implementation of the "little matrix library"                    *)
+
+implement {tk}
+Real_Matrix_make_elt (m0, n0, elt) =
+  Real_Matrix (matrixref_make_elt<g0float tk> (i2sz m0, i2sz n0, elt),
+               m0, n0, m0, n0, lam (i1, j1) => @(i1, j1))
+
+implement {}
+Real_Matrix_dimension A =
+  case+ A of Real_Matrix (_, m1, n1, _, _, _) => @(m1, n1)
+
+implement {tk}
+Real_Matrix_get_at (A, i1, j1) =
+  let
+    val+ Real_Matrix (storage, _, _, _, n0, index_map) = A
+    val @(i0, j0) = index_map (i1, j1)
+  in
+    matrixref_get_at<g0float tk> (storage, pred i0, n0, pred j0)
+  end
+
+implement {tk}
+Real_Matrix_set_at (A, i1, j1, x) =
+  let
+    val+ Real_Matrix (storage, _, _, _, n0, index_map) = A
+    val @(i0, j0) = index_map (i1, j1)
+  in
+    matrixref_set_at<g0float tk> (storage, pred i0, n0, pred j0, x)
+  end
+
+implement {}
+Real_Matrix_apply_index_map (A, m1, n1, index_map) =
+  (* This is not the most efficient way to acquire new indexing, but
+     it will work. It requires three closures, instead of the two
+     needed by our implementations of "transpose" and "block". *)
+  let
+    val+ Real_Matrix (storage, m1a, n1a, m0, n0, index_map_1a) = A
+  in
+    Real_Matrix (storage, m1, n1, m0, n0,
+                 lam (i1, j1) =>
+                   index_map_1a (i1a, j1a) where
+                     { val @(i1a, j1a) = index_map (i1, j1) })
+  end
+
+implement {}
+Real_Matrix_transpose A =
+  let
+    val+ Real_Matrix (storage, m1, n1, m0, n0, index_map) = A
+  in
+    Real_Matrix (storage, n1, m1, m0, n0,
+                 lam (i1, j1) => index_map (j1, i1))
+  end
+
+implement {}
+Real_Matrix_block (A, p0, p1, q0, q1) =
+  let
+    val+ Real_Matrix (storage, m1, n1, m0, n0, index_map) = A
+  in
+    Real_Matrix (storage, succ (p1 - p0), succ (q1 - q0), m0, n0,
+                 lam (i1, j1) =>
+                  index_map (p0 + pred i1, q0 + pred j1))
+  end
+
+implement {tk}
+Real_Matrix_copy A =
+  let
+    val @(m1, n1) = dimension A
+    val C = Real_Matrix_make_elt<tk> (m1, n1, A[1, 1])
+    val () = copy_to<tk> (C, A)
+  in
+    C
+  end
+
+implement {tk}
+Real_Matrix_copy_to (Dst, Src) =
+  let
+    val @(m1, n1) = dimension Src
+    prval [m1 : int] EQINT () = eqint_make_gint m1
+    prval [n1 : int] EQINT () = eqint_make_gint n1
+
+    var i : intGte 1
+  in
+    for* {i : pos | i <= m1 + 1} .<(m1 + 1) - i>.
+         (i : int i) =>
+      (i := 1; i <> succ m1; i := succ i)
+        let
+          var j : intGte 1
+        in
+          for* {j : pos | j <= n1 + 1} .<(n1 + 1) - j>.
+               (j : int j) =>
+            (j := 1; j <> succ n1; j := succ j)
+              Dst[i, j] := Src[i, j]
+        end
+  end
+
+implement {tk}
+Real_Matrix_fill_with_elt (A, elt) =
+  let
+    val @(m1, n1) = dimension A
+    prval [m1 : int] EQINT () = eqint_make_gint m1
+    prval [n1 : int] EQINT () = eqint_make_gint n1
+
+    var i : intGte 1
+  in
+    for* {i : pos | i <= m1 + 1} .<(m1 + 1) - i>.
+         (i : int i) =>
+      (i := 1; i <> succ m1; i := succ i)
+        let
+          var j : intGte 1
+        in
+          for* {j : pos | j <= n1 + 1} .<(n1 + 1) - j>.
+               (j : int j) =>
+            (j := 1; j <> succ n1; j := succ j)
+              A[i, j] := elt
+        end
+  end
+
+implement {tk}
+Real_Matrix_unit_matrix {m} m =
+  let
+    val A = Real_Matrix_make_elt<tk> (m, m, Zero)
+    var i : intGte 1
+  in
+    for* {i : pos | i <= m + 1} .<(m + 1) - i>.
+         (i : int i) =>
+      (i := 1; i <> succ m; i := succ i)
+        A[i, i] := One;
+    A
+  end
+
+implement {tk}
+Real_Matrix_unit_matrix_to A =
+  let
+    val @(m, _) = dimension A
+    prval [m : int] EQINT () = eqint_make_gint m
+
+    var i : intGte 1
+  in
+    for* {i : pos | i <= m + 1} .<(m + 1) - i>.
+         (i : int i) =>
+      (i := 1; i <> succ m; i := succ i)
+        let
+          var j : intGte 1
+        in
+          for* {j : pos | j <= m + 1} .<(m + 1) - j>.
+               (j : int j) =>
+               (j := 1; j <> succ m; j := succ j)
+            A[i, j] := (if i = j then One else Zero)
+        end
+  end
+
+implement {tk}
+Real_Matrix_matrix_sum (A, B) =
+  let
+    val @(m, n) = dimension A
+    val C = Real_Matrix_make_elt<tk> (m, n, NAN)
+    val () = matrix_sum_to<tk> (C, A, B)
+  in
+    C
+  end
+
+implement {tk}
+Real_Matrix_matrix_sum_to (C, A, B) =
+  let
+    val @(m, n) = dimension A
+    prval [m : int] EQINT () = eqint_make_gint m
+    prval [n : int] EQINT () = eqint_make_gint n
+
+    var i : intGte 1
+  in
+    for* {i : pos | i <= m + 1} .<(m + 1) - i>.
+         (i : int i) =>
+      (i := 1; i <> succ m; i := succ i)
+        let
+          var j : intGte 1
+        in
+          for* {j : pos | j <= n + 1} .<(n + 1) - j>.
+               (j : int j) =>
+            (j := 1; j <> succ n; j := succ j)
+              C[i, j] := A[i, j] + B[i, j]
+        end
+  end
+
+implement {tk}
+Real_Matrix_matrix_difference (A, B) =
+  let
+    val @(m, n) = dimension A
+    val C = Real_Matrix_make_elt<tk> (m, n, NAN)
+    val () = matrix_difference_to<tk> (C, A, B)
+  in
+    C
+  end
+
+implement {tk}
+Real_Matrix_matrix_difference_to (C, A, B) =
+  let
+    val @(m, n) = dimension A
+    prval [m : int] EQINT () = eqint_make_gint m
+    prval [n : int] EQINT () = eqint_make_gint n
+
+    var i : intGte 1
+  in
+    for* {i : pos | i <= m + 1} .<(m + 1) - i>.
+         (i : int i) =>
+      (i := 1; i <> succ m; i := succ i)
+        let
+          var j : intGte 1
+        in
+          for* {j : pos | j <= n + 1} .<(n + 1) - j>.
+               (j : int j) =>
+            (j := 1; j <> succ n; j := succ j)
+              C[i, j] := A[i, j] - B[i, j]
+        end
+  end
+
+implement {tk}
+Real_Matrix_matrix_product (A, B) =
+  let
+    val @(m, n) = dimension A and @(_, p) = dimension B
+    val C = Real_Matrix_make_elt<tk> (m, p, NAN)
+    val () = matrix_product_to<tk> (C, A, B)
+  in
+    C
+  end
+
+implement {tk}
+Real_Matrix_matrix_product_to (C, A, B) =
+  let
+    val @(m, n) = dimension A and @(_, p) = dimension B
+    prval [m : int] EQINT () = eqint_make_gint m
+    prval [n : int] EQINT () = eqint_make_gint n
+    prval [p : int] EQINT () = eqint_make_gint p
+
+    var i : intGte 1
+  in
+    for* {i : pos | i <= m + 1} .<(m + 1) - i>.
+         (i : int i) =>
+      (i := 1; i <> succ m; i := succ i)
+        let
+          var k : intGte 1
+        in
+          for* {k : pos | k <= p + 1} .<(p + 1) - k>.
+               (k : int k) =>
+            (k := 1; k <> succ p; k := succ k)
+              let
+                var j : intGte 1
+              in
+                C[i, k] := A[i, 1] * B[1, k];
+                for* {j : pos | j <= n + 1} .<(n + 1) - j>.
+                     (j : int j) =>
+                  (j := 2; j <> succ n; j := succ j)
+                    C[i, k] :=
+                      multiply_and_add (A[i, j], B[j, k], C[i, k])
+              end
+        end
+  end
+
+implement {tk}
+Real_Matrix_scalar_product (A, r) =
+  let
+    val @(m, n) = dimension A
+    val C = Real_Matrix_make_elt<tk> (m, n, NAN)
+    val () = scalar_product_to<tk> (C, A, r)
+  in
+    C
+  end
+
+implement {tk}
+Real_Matrix_scalar_product_2 (r, A) =
+  Real_Matrix_scalar_product<tk> (A, r)
+
+implement {tk}
+Real_Matrix_scalar_product_to (C, A, r) =
+  let
+    val @(m, n) = dimension A
+    prval [m : int] EQINT () = eqint_make_gint m
+    prval [n : int] EQINT () = eqint_make_gint n
+
+    var i : intGte 1
+  in
+    for* {i : pos | i <= m + 1} .<(m + 1) - i>.
+         (i : int i) =>
+      (i := 1; i <> succ m; i := succ i)
+        let
+          var j : intGte 1
+        in
+          for* {j : pos | j <= n + 1} .<(n + 1) - j>.
+               (j : int j) =>
+            (j := 1; j <> succ n; j := succ j)
+              C[i, j] := A[i, j] * r
+        end
+  end
+
+implement {tk}
+Real_Matrix_fprint {m, n} (outf, A) =
+  let
+    val @(m, n) = dimension A
+    var i : intGte 1
+  in
+    for* {i : pos | i <= m + 1} .<(m + 1) - i>.
+         (i : int i) =>
+      (i := 1; i <> succ m; i := succ i)
+        let
+          var j : intGte 1
+        in
+          for* {j : pos | j <= n + 1} .<(n + 1) - j>.
+               (j : int j) =>
+            (j := 1; j <> succ n; j := succ j)
+              let
+                typedef FILEstar = $extype"FILE *"
+                extern castfn FILEref2star : FILEref -<> FILEstar
+                val _ = $extfcall (int, "fprintf", FILEref2star outf,
+                                   "%12.6lf", A[i, j])
+              in
+              end;
+          fprintln! (outf)
+        end
+  end
+
+(*------------------------------------------------------------------*)
+(* LUP decomposition. Based on
+   https://en.wikipedia.org/w/index.php?title=LU_decomposition&oldid=1146366204#C_code_example
+   *)
+
+extern fn {tk : tkind}
+Real_Matrix_LUP_decomposition :
+  {n : pos}
+  (Real_Matrix (tk, n, n),
+   g0float tk (* tolerance *) ) -< !exnrefwrt >
+    @(Real_Matrix (tk, n, n),
+      Real_Matrix (tk, n, n),
+      Real_Matrix (tk, n, n))
+
+overload LUP_decomposition with Real_Matrix_LUP_decomposition
+
+implement {tk}
+Real_Matrix_LUP_decomposition {n} (A, tol) =
+  let
+    val @(n, _) = dimension A
+    typedef one_to_n = intBtwe (1, n)
+
+    (* The initial permutation is [1,2,3,...,n]. *)
+    implement
+    array_tabulate$fopr<one_to_n> i =
+      let
+        val i = g1ofg0 (sz2i (succ i))
+        val () = assertloc ((1 <= i) * (i <= n))
+      in
+        i
+      end
+    val permutation =
+      $effmask_all arrayref_tabulate<one_to_n> (i2sz n)
+    fn
+    index_map : Matrix_Index_Map (n, n, n, n) =
+      lam (i1, j1) => $effmask_ref
+        (@(i0, j1) where { val i0 = permutation[i1 - 1] })
+
+    val A = apply_index_map (copy<tk> A, n, n, index_map)
+
+    fun
+    select_pivot {i, k : pos | i <= k; k <= n + 1}
+                 .<(n + 1) - k>.
+                 (i         : int i,
+                  k         : int k,
+                  max_abs   : g0float tk,
+                  k_max_abs : intBtwe (i, n))
+        :<!ref> @(g0float tk, intBtwe (i, n)) =
+      if k = succ n then
+        @(max_abs, k_max_abs)
+      else
+        let
+          val absval = A[k, i]
+        in
+          if absval > max_abs then
+            select_pivot (i, succ k, absval, k)
+          else
+            select_pivot (i, succ k, max_abs, k_max_abs)
+        end
+
+    fn {}
+    exchange_rows (i1 : one_to_n,
+                   i2 : one_to_n) :<!refwrt> void =
+      if i1 <> i2 then
+        let
+          val k1 = permutation[pred i1]
+          and k2 = permutation[pred i2]
+        in
+          permutation[pred i1] := k2;
+          permutation[pred i2] := k1
+        end
+
+    val () =
+      let
+        var i : Int
+      in
+        for* {i : pos | i <= n + 1} .<(n + 1) - i>.
+             (i : int i) =>
+          (i := 1; i <> succ n; i := succ i)
+            let
+              val @(maxabs, i_pivot) = select_pivot (i, i, Zero, i)
+              prval [i_pivot : int] EQINT () = eqint_make_gint i_pivot
+              var j : Int
+            in
+              if maxabs < tol then
+                $raise Exc_degenerate_problem
+                  ("Real_Matrix_LUP_decomposition");
+              exchange_rows (i_pivot, i);
+              for* {j : int | i + 1 <= j; j <= n + 1}
+                   .<(n + 1) - j>.
+                   (j : int j) =>
+                (j := succ i; j <> succ n; j := succ j)
+                  let
+                    var k : Int
+                  in
+                    A[j, i] := A[j, i] / A[i, i];
+                    for* {k : int | i + 1 <= k; k <= n + 1}
+                         .<(n + 1) - k>.
+                         (k : int k) =>
+                      (k := succ i; k <> succ n; k := succ k)
+                        A[j, k] :=
+                          multiply_and_add
+                            (~A[j, i],  A[i, k], A[j, k])
+                  end
+            end
+      end
+
+    val U = A
+    val L = Real_Matrix_unit_matrix<tk> n
+    val () =
+      let
+        var i : Int
+      in
+        for* {i : int | 2 <= i; i <= n + 1} .<(n + 1) - i>.
+             (i : int i) =>
+          (i := 2; i <> succ n; i := succ i)
+            let
+              var j : Int
+            in
+              for* {j : pos | j <= i} .<i - j>.
+                   (j : int j) =>
+                (j := 1; j <> i; j := succ j)
+                  begin
+                    L[i, j] := U[i, j];
+                    U[i, j] := Zero
+                  end
+            end
+      end
+    val P = apply_index_map (Real_Matrix_unit_matrix<tk> n,
+                             n, n, index_map)
+  in
+    @(L, U, P)
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+main0 () =
+  (* I use tolerances of zero, secure in the knowledge that IEEE
+     floating point will not crash the program just because a matrix
+     was singular. :) *)
+  let
+    val A = Real_Matrix_make_elt<dblknd> (3, 3, NAN)
+    val () =
+      (A[1, 1] := 1.0;  A[1, 2] := 3.0;  A[1, 3] := 5.0;
+       A[2, 1] := 2.0;  A[2, 2] := 4.0;  A[2, 3] := 7.0;
+       A[3, 1] := 1.0;  A[3, 2] := 1.0;  A[3, 3] := 0.0)
+    val @(L, U, P) = LUP_decomposition (A, 0.0)
+    val () = println! "A"
+    val () = Real_Matrix_fprint (stdout_ref, A)
+    val () = println! "L"
+    val () = Real_Matrix_fprint (stdout_ref, L)
+    val () = println! "U"
+    val () = Real_Matrix_fprint (stdout_ref, U)
+    val () = println! "P"
+    val () = Real_Matrix_fprint (stdout_ref, P)
+    val () = println! "PA - LU"
+    val () = Real_Matrix_fprint (stdout_ref, P * A - L * U)
+
+    val () = println! "\n------------------------------------------\n"
+
+    val A = Real_Matrix_make_elt<dblknd> (4, 4, NAN)
+    val () =
+      (A[1, 1] := 11.0;  A[1, 2] := 9.0;  A[1, 3] := 24.0;  A[1, 4] := 2.0;
+       A[2, 1] := 1.0;  A[2, 2] := 5.0;  A[2, 3] := 2.0;  A[2, 4] := 6.0;
+       A[3, 1] := 3.0;  A[3, 2] := 17.0;  A[3, 3] := 18.0;  A[3, 4] := 1.0;
+       A[4, 1] := 2.0;  A[4, 2] := 5.0;  A[4, 3] := 7.0;  A[4, 4] := 1.0)
+    val @(L, U, P) = LUP_decomposition (A, 0.0)
+    val () = println! "A"
+    val () = Real_Matrix_fprint (stdout_ref, A)
+    val () = println! "L"
+    val () = Real_Matrix_fprint (stdout_ref, L)
+    val () = println! "U"
+    val () = Real_Matrix_fprint (stdout_ref, U)
+    val () = println! "P"
+    val () = Real_Matrix_fprint (stdout_ref, P)
+    val () = println! "PA - LU"
+    val () = Real_Matrix_fprint (stdout_ref, P * A - L * U)
+
+    val () = println! "\n------------------------------------------\n"
+
+    val () = println! ("I have added an example having an asymmetric",
+                       " permutation\nmatrix, ",
+                       "because I needed one for testing:")
+    val () = println! ()
+
+    val A = Real_Matrix_make_elt<dblknd> (4, 4, NAN)
+    val () =
+      (A[1, 1] := 11.0;  A[1, 2] := 9.0;  A[1, 3] := 24.0;  A[1, 4] := 2.0;
+       A[2, 1] := 1.0;  A[2, 2] := 5.0;  A[2, 3] := 2.0;  A[2, 4] := 6.0;
+       A[3, 1] := 3.0;  A[3, 2] := 175.0;  A[3, 3] := 18.0;  A[3, 4] := 1.0;
+       A[4, 1] := 2.0;  A[4, 2] := 5.0;  A[4, 3] := 7.0;  A[4, 4] := 1.0)
+    val @(L, U, P) = LUP_decomposition (A, 0.0)
+    val () = println! "A"
+    val () = Real_Matrix_fprint (stdout_ref, A)
+    val () = println! "L"
+    val () = Real_Matrix_fprint (stdout_ref, L)
+    val () = println! "U"
+    val () = Real_Matrix_fprint (stdout_ref, U)
+    val () = println! "P"
+    val () = Real_Matrix_fprint (stdout_ref, P)
+    val () = println! "PA - LU"
+    val () = Real_Matrix_fprint (stdout_ref, P * A - L * U)
+  in
+  end
+
+(*------------------------------------------------------------------*)

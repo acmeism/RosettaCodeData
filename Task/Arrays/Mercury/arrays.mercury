@@ -1,0 +1,56 @@
+:- module array_example.
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+:- implementation.
+:- import_module array, int.
+:- use_module exception.
+
+:- type example_error ---> impossible.
+
+main(!IO) :-
+    some [!A] ( % needed to introduce a state variable not present in the head
+        % Create an array(int) of length 10, with initial values of 0
+        array.init(10, 0, !:A),
+
+        % create an empty array (with no initial value)
+        % since the created array is never used, type inference can't tell what
+        % kind of array it is, and there's an unresolved polymorphism warning.
+        array.make_empty_array(_Empty),
+
+        % resize our first array, so that we can then set its 17th member
+        % new values are set to -1
+        array.resize(20, -1, !A),
+        !A ^ elem(17) := 5,
+
+        % Mercury data structures tend to have deterministic (exception thrown
+        % on error), semideterministic (logical failure on error), and unsafe
+        % (undefined behavior on error) access methods.
+        array.lookup(!.A, 5, _), % det
+        ( if array.semidet_lookup(!.A, 100, _) then  % semidet
+            exception.throw(impossible)
+        else
+            true
+        ),
+        array.unsafe_lookup(!.A, 5, _), % could cause a segfault on a smaller array
+
+        % output: array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, 5, -1, -1])
+        io.print_line(!.A, !IO),
+
+        plusminus(2, 0, !A),
+
+        % output: array([2, -2, 2, -2, 2, -2, 2, -2, 2, -2, 1, -3, 1, -3, 1, -3, 1, 3, 1, -3])
+        io.print_line(!.A, !IO)
+    ).
+
+    % Sample predicate operating on an array.
+    % Note the array_* modes instead of in/out.
+:- pred plusminus(int, int, array(int), array(int)).
+:- mode plusminus(in, in, array_di, array_uo) is det.
+plusminus(N, I, !A) :-
+    ( if array.semidet_lookup(!.A, I, X) then
+        !A ^ unsafe_elem(I) := X + N,
+        plusminus(-N, I+1, !A)
+    else
+        true
+    ).

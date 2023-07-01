@@ -1,0 +1,7 @@
+iex(1)> f = fn str1,str2,sep -> [str1,"",str2] |> Enum.join(sep) end # Join list on separator
+iex(2)> g = fn str1,str2,sep -> str1 <> sep <> sep <> str2 end       # Or concatenate strings
+
+iex(3)> defmodule JoinStrings do
+...(3)>   def f(str1,str2,sep), do: [str1,"",str2] |> Enum.join(sep)
+...(3)>   def g(str1,str2,sep), do: str1 <> sep <> sep <> str2
+...(3)> end

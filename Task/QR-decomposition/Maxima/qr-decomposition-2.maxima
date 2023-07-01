@@ -1,0 +1,44 @@
+load("linearalgebra")$
+load("eigen")$
+unitVector(n) := ematrix(n,1,1,1,1);
+signValue(r) := block([s:sign(r)],
+  if s='pos then 1 else if s='zero then 0 else -1);
+householder(a) := block([m : length(a),u,v,beta],
+  u : a + sqrt(a .  a)*signValue(a[1,1])*unitVector(m),
+  v : u / u[1,1],
+  beta : 2/(v . v),
+  diagmatrix(m,1) - beta*transpose(v . transpose(v)));
+getSubmatrix(obj,i1,j1,i2,j2) :=
+genmatrix(lambda([i,j], obj[i+i1-1,j+j1-1]),i2-i1+1,j2-j1+1);
+setSubmatrix(obj,i1,j1,subobj) := block([m,n],
+  [m,n] : matrix_size(subobj),
+  for i: 0 thru m-1 do
+  (for j: 0 thru n-1 do
+    obj[i1+i,j1+j] : subobj[i+1,j+1]));
+qr(obj) := block([m,n,qm,rm,i],
+  [m,n] : matrix_size(obj),
+  qm : diagmatrix(m,1),
+  rm : copymatrix(obj),
+  for i: 1 thru (if m=n then n-1 else n) do
+  block([x,h],
+    x : getSubmatrix(rm,i,i,m,i),
+    h : diagmatrix(m,1),
+    setSubmatrix(h,i,i,householder(x)),
+    qm : qm . h,
+    rm : h . rm),
+  [qm,rm]);
+solveUpperTriangular(r,b) := block([n,x,index,k],
+  n : second(matrix_size(r)),
+  x : genmatrix(lambda([a, b], 0), n, 1),
+  for k: n thru 1 step -1 do
+  (index : min(n,k+1),
+    x[k,1] : (b[k,1] - (getSubmatrix(r,k,index,k,n) . getSubmatrix(x,index,1,n,1)))/r[k,k]),
+  x);
+lsqr(a,b) := block([q,r,n],
+  [q,r] : qr(a),
+  n : second(matrix_size(r)),
+  solveUpperTriangular(getSubmatrix(r,1,1,n,n), transpose(q) . b));
+polyfit(x,y,n) := block([a,j],
+  a : genmatrix(lambda([i,j], if j=1 then 1.0b0 else bfloat(x[i,1]^(j-1))),
+    length(x),n+1),
+  lsqr(a,y));

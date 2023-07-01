@@ -1,0 +1,47 @@
+#define MaxThreads  10
+
+Dim Shared As Any Ptr ttylock
+
+' Teletype unfurls some text across the screen at a given location
+Sub teletype(Byref texto As String, Byval x As Integer, Byval y As Integer)
+    ' This MutexLock makes simultaneously running threads wait for each other,
+    ' so only one at a time can continue and print output.
+    ' Otherwise, their Locates would interfere, since there is only one cursor.
+    '
+    ' It's impossible to predict the order in which threads will arrive here and
+    ' which one will be the first to acquire the lock thus causing the rest to wait.
+
+    Mutexlock ttylock
+
+    For i As Integer = 0 To (Len(texto) - 1)
+        Locate x, y + i : Print Chr(texto[i])
+        Sleep 25, 1
+    Next i
+
+    ' MutexUnlock releases the lock and lets other threads acquire it.
+    Mutexunlock ttylock
+End Sub
+
+Sub thread(Byval userdata As Any Ptr)
+    Dim As Integer id = Cint(userdata)
+    teletype "Thread #" & id & " .........", 1 + id, 1
+End Sub
+
+' Create a mutex to syncronize the threads
+ttylock = Mutexcreate()
+
+' Create child threads
+Dim As Any Ptr handles(0 To MaxThreads-1)
+For i As Integer = 0 To MaxThreads-1
+    handles(i) = Threadcreate(@thread, Cptr(Any Ptr, i))
+    If handles(i) = 0 Then Print "Error creating thread:"; i : Exit For
+Next i
+
+' This is the main thread. Now wait until all child threads have finished.
+For i As Integer = 0 To MaxThreads-1
+    If handles(i) <> 0 Then Threadwait(handles(i))
+Next i
+
+' Clean up when finished
+Mutexdestroy(ttylock)
+Sleep

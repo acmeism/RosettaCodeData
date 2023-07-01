@@ -1,0 +1,13 @@
+TYPE TipoUsuario
+    nombre AS STRING * 15
+    apellido AS STRING * 30
+    edad AS INTEGER
+END TYPE
+
+DIM usuario(1 TO 20) AS TipoUsuario
+
+usuario(1).nombre = "Juan"
+usuario(1).apellido = "Hdez."
+usuario(1).edad = 49
+
+PRINT usuario(1).nombre, usuario(1).apellido, usuario(1).edad

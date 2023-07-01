@@ -1,0 +1,43 @@
+#-- directly find n-th Hamming number, in ~ O(n^{2/3}) time
+#-- by Will Ness, based on "top band" idea by Louis Klauder, from DDJ discussion
+#--   http://drdobbs.com/blogs/architecture-and-design/228700538
+
+var BN=Import("zklBigNum");
+var lg3 = (3.0).log()/(2.0).log(), lg5 = (5.0).log()/(2.0).log();
+fcn logval(i,j,k){ lg5*k + lg3*j + i }
+fcn trival(i,j,k){ BN(2).pow(i) * BN(3).pow(j) * BN(5).pow(k) }
+fcn estval(n){ (6.0*lg3*lg5*n).pow(1.0/3) } #-- estimated logval, base 2
+fcn rngval(n){
+   if(n > 500000) return(2.4496 , 0.0076);	#-- empirical estimation
+   if(n > 50000)  return(2.4424 , 0.0146);	#--   correction, base 2
+   if(n > 500)	  return(2.3948 , 0.0723);	#--     (dist,width)
+   if(n > 1)	  return(2.2506 , 0.2887);	#-- around (log $ sqrt 30),
+		  return(2.2506 , 0.5771);	#--   says WP
+}
+
+fcn nthHam(n){ // -> (Double, (Int, Int, Int))  #-- n: 1-based: 1,2,3...
+  d,w := rngval(n);				#-- correction dist, width
+  hi  := estval(n.toFloat()) - d;		#--   hi > logval > hi-w
+  c,b := band(hi,w);				#-- total count, the band
+  s   := b.sort(fcn(a,b){ a[0]>b[0] });		#-- sorted decreasing, result
+  m   := c - n;					#-- m 0-based from top
+  nb  := b.len();				#-- |band|
+  res := s[m];					#-- result
+
+  if(w >= 1) throw(Exception.Generic("Breach of contract: (w < 1):  " + w));
+  if(m <  0) throw(Exception.Generic("Not enough triples generated: " +c+n));
+  if(m >= nb)throw(Exception.Generic("Generated band is too narrow: " +m+nb));
+  return(res);
+}
+
+fcn band(hi,w){ //--> #-- total count, the band
+   b := Sink(List); cnt := 0;
+   foreach k in ([0 .. (hi/lg5).floor()]){        p := lg5*k;
+      foreach j in ([0 .. ((hi-p)/lg3).floor()]){ q := lg3*j + p;
+         i,frac := (hi-q).modf(); r := hi-frac;		#-- r = i + q
+	 cnt+=(i+1);					#-- total count
+	 if(frac<w) b.write(T(r,T(i,j,k)));		#-- store it, if inside band
+      }
+   }
+   return(cnt,b.close());
+}

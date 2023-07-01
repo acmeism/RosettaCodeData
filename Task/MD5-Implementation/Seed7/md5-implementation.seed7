@@ -1,0 +1,120 @@
+$ include "seed7_05.s7i";
+  include "bytedata.s7i";
+  include "bin32.s7i";
+  include "float.s7i";
+  include "math.s7i";
+
+# Use binary integer part of the sines of integers (Radians) as constants:
+const func array integer: createMd5Table is func
+  result
+    var array integer: k is 64 times 0;
+  local
+    var integer: index is 0;
+  begin
+    for index range 1 to 64 do
+      k[index] := trunc(abs(sin(flt(index))) * 2.0 ** 32);
+    end for;
+  end func;
+
+const func string: md5 (in var string: message) is func
+  result
+    var string: digest is "";
+  local
+    # Specify the per-round shift amounts
+    const array integer: shiftAmount is [] (
+        7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,
+        5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,
+        4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,
+        6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21);
+    const array integer: k is createMd5Table;
+    var integer: length is 0;
+    var integer: chunkIndex is 0;
+    var integer: index is 0;
+    var array bin32: m is 16 times bin32.value;
+    var integer: a0 is 16#67452301;   # a
+    var integer: b0 is 16#efcdab89;   # b
+    var integer: c0 is 16#98badcfe;   # c
+    var integer: d0 is 16#10325476;   # d
+    var bin32: a is bin32(0);
+    var bin32: b is bin32(0);
+    var bin32: c is bin32(0);
+    var bin32: d is bin32(0);
+    var bin32: f is bin32(0);
+    var integer: g is 0;
+    var bin32: temp is bin32(0);
+  begin
+    length := length(message);
+    # Append the bit '1' to the message.
+    message &:= '\16#80;';
+    # Append '0' bits, so that the resulting bit length is congruent to 448 (mod 512).
+    message &:= "\0;" mult 63 - (length + 8) mod 64;
+    # Append length of message (before pre-processing), in bits, as 64-bit little-endian integer.
+    message &:= int64AsEightBytesLe(8 * length);
+
+    # Process the message in successive 512-bit chunks:
+    for chunkIndex range 1 to length(message) step 64 do
+      # Break chunk into sixteen 32-bit little-endian words.
+      for index range 1 to 16 do
+        m[index] := bin32(bytes2Int(message[chunkIndex + 4 * pred(index) len 4], UNSIGNED, LE));
+      end for;
+
+      a := bin32(a0 mod 16#100000000);
+      b := bin32(b0 mod 16#100000000);
+      c := bin32(c0 mod 16#100000000);
+      d := bin32(d0 mod 16#100000000);
+
+      for index range 1 to 64 do
+        if index <= 16 then
+          f := d >< (b & (c >< d));
+          g := index;
+        elsif index <= 32 then
+          f := c >< (d & (b >< c));
+          g := (5 * index - 4) mod 16 + 1;
+        elsif index <= 48 then
+          f := b >< c >< d;
+          g := (3 * index + 2) mod 16 + 1;
+        else
+          f := c >< (b | (bin32(16#ffffffff) >< d));
+          g := (7 * pred(index)) mod 16 + 1;
+        end if;
+
+        temp := d;
+        d := c;
+        c := b;
+        b := bin32((ord(b) +
+             ord(rotLeft(bin32((ord(a) + ord(f) + k[index] + ord(m[g])) mod 16#100000000),
+                         shiftAmount[index]))) mod 16#100000000);
+        a := temp;
+      end for;
+
+      # Add this chunk's hash to result so far:
+      a0 +:= ord(a);
+      b0 +:= ord(b);
+      c0 +:= ord(c);
+      d0 +:= ord(d);
+    end for;
+
+    # Produce the final hash value:
+    digest := int32AsFourBytesLe(a0) &
+              int32AsFourBytesLe(b0) &
+              int32AsFourBytesLe(c0) &
+              int32AsFourBytesLe(d0);
+  end func;
+
+const func boolean: checkMd5 (in string: message, in string: hexMd5) is
+  return hex(md5(message)) = hexMd5;
+
+const proc: main is func
+  begin
+    if  checkMd5("", "d41d8cd98f00b204e9800998ecf8427e") and
+        checkMd5("a", "0cc175b9c0f1b6a831c399e269772661") and
+        checkMd5("abc", "900150983cd24fb0d6963f7d28e17f72") and
+        checkMd5("message digest", "f96b697d7cb7938d525a2f31aaf161d0") and
+        checkMd5("abcdefghijklmnopqrstuvwxyz", "c3fcd3d76192e4007dfb496cca67e13b") and
+        checkMd5("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", "d174ab98d277d9f5a5611c2c9f419d9f") and
+        checkMd5("12345678901234567890123456789012345678901234567890123456789012345678901234567890", "57edf4a22be3c955ac49da2e2107b67a") then
+      writeln("md5 is computed correct");
+    else
+      writeln("There is an error in the md5 function");
+    end if;
+  end func;

@@ -1,0 +1,547 @@
+/* ARM assembly AARCH64 Raspberry PI 3B or android 64 bits */
+/* program abundant64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ NBDIVISORS,             1000
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessStartPgm:          .asciz "Program start \n"
+szMessEndPgm:            .asciz "Program normal end.\n"
+szMessErrorArea:         .asciz "\033[31mError : area divisors too small.\n"
+szMessError:             .asciz "\033[31mError  !!!\n"
+szMessErrGen:            .asciz "Error end program.\n"
+szMessNbPrem:            .asciz "This number is prime !!!.\n"
+szMessOverflow:          .asciz "Dépassement de capacité vérification premier.\n"
+szMessResultFact:        .asciz "// "
+
+szCarriageReturn:        .asciz "\n"
+
+/* datas message display */
+szMessEntete:            .asciz "The first 25 abundant odd numbers are:\n"
+szMessResult:            .asciz "Number : @  sum : @ \n"
+
+szMessEntete1:           .asciz "The 1000 odd abundant number :\n"
+szMessEntete2:           .asciz "First odd abundant number > 1000000000 :\n"
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+.align 4
+sZoneConv:               .skip 24
+tbZoneDecom:             .skip 16 * NBDIVISORS       // facteur 8 octets nombre 8 octets
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                               // program start
+    ldr x0,qAdrszMessStartPgm       // display start message
+    bl affichageMess
+
+    ldr x0,qAdrszMessEntete         // display result message
+    bl affichageMess
+    mov x2,#1
+    mov x3,#0
+1:
+    mov x0,x2                       //  number
+    bl testAbundant
+    cmp x0,#1
+    bne 3f
+    add x3,x3,#1
+    mov x0,x2
+    mov x4,x1                        // save sum
+    ldr x1,qAdrsZoneConv
+    bl conversion10                  // convert ascii string
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc               // and put in message
+    mov x5,x0
+    mov x0,x4                        // sum
+    ldr x1,qAdrsZoneConv
+    bl conversion10                  // convert ascii string
+    mov x0,x5
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc               // and put in message
+
+    bl affichageMess
+3:
+    add x2,x2,#2
+    cmp x3,#25
+    blt 1b
+
+    /* 1000 abundant number  */
+    ldr x0,qAdrszMessEntete1
+    bl affichageMess
+    mov x2,#1
+    mov x3,#0
+4:
+    mov x0,x2                       //  number
+    bl testAbundant
+    cmp x0,#1
+    bne 6f
+    add x3,x3,#1
+6:
+    cmp x3,#1000
+    cinc x2,x2,lt                    // add two
+    cinc x2,x2,lt
+    blt 4b
+    mov x0,x2
+    mov x4,x1                        // save sum
+    ldr x1,qAdrsZoneConv
+    bl conversion10                  // convert ascii string
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc               // and put in message
+    mov x5,x0
+    mov x0,x4                        // sum
+    ldr x1,qAdrsZoneConv
+    bl conversion10                  // convert ascii string
+    mov x0,x5
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc                // and put in message
+
+    bl affichageMess
+
+    /* abundant number>1000000000   */
+    ldr x0,qAdrszMessEntete2
+    bl affichageMess
+    ldr x2,iN10P9
+    add x2,x2,#1
+    mov x3,#0
+7:
+    mov x0,x2                       //  number
+    bl testAbundant
+    cmp x0,#1
+    beq 8f
+    add x2,x2,#2
+    b 7b
+8:
+    mov x0,x2
+    mov x4,x1                        // save sum
+    ldr x1,qAdrsZoneConv
+    bl conversion10                  // convert ascii string
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc               // and put in message
+    mov x5,x0
+    mov x0,x4                        // sum
+    ldr x1,qAdrsZoneConv
+    bl conversion10                  // convert ascii string
+    mov x0,x5
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc                // and put in message
+
+    bl affichageMess
+
+
+
+    ldr x0,qAdrszMessEndPgm         // display end message
+    bl affichageMess
+    b 100f
+99:                                 // display error message
+    ldr x0,qAdrszMessError
+    bl affichageMess
+100:                                // standard end of the program
+    mov x0, #0                      // return code
+    mov x8, #EXIT                   // request to exit program
+    svc 0                           // perform system call
+qAdrszMessStartPgm:        .quad szMessStartPgm
+qAdrszMessEndPgm:          .quad szMessEndPgm
+qAdrszMessError:           .quad szMessError
+qAdrszCarriageReturn:      .quad szCarriageReturn
+qAdrtbZoneDecom:           .quad tbZoneDecom
+qAdrszMessEntete:          .quad szMessEntete
+qAdrszMessEntete1:         .quad szMessEntete1
+qAdrszMessEntete2:         .quad szMessEntete2
+qAdrszMessResult:          .quad szMessResult
+qAdrsZoneConv:             .quad sZoneConv
+iN10P9:                    .quad 1000000000
+/******************************************************************/
+/*     test if number is abundant number                         */
+/******************************************************************/
+/* x0 contains the number  */
+/* x0 return 1 if abundant number else return 0  */
+/* x1 return sum                                 */
+testAbundant:
+    stp x2,lr,[sp,-16]!         // save  registres
+    stp x3,x4,[sp,-16]!         // save  registres
+    stp x5,x6,[sp,-16]!         // save  registres
+    mov x6,x0                    // save number
+    ldr x1,qAdrtbZoneDecom
+    bl decompFact                // create area of divisors
+    cmp x0,#1                    // no divisors
+    ble 99f
+    lsl x5,x6,#1                 // abondant number ?
+    cmp x5,x2
+    bgt 99f                     // no -> end
+    mov x0,#1
+    sub x1,x2,x6                 // sum
+    b 100f
+99:
+    mov x0,0
+100:
+    ldp x5,x6,[sp],16         // restaur des  2 registres
+    ldp x3,x4,[sp],16         // restaur des  2 registres
+    ldp x2,lr,[sp],16         // restaur des  2 registres
+    ret
+/******************************************************************/
+/*     decomposition en facteur                                               */
+/******************************************************************/
+/* x0 contient le nombre à decomposer */
+decompFact:
+    stp x3,lr,[sp,-16]!        // save  registres
+    stp x4,x5,[sp,-16]!        // save  registres
+    stp x6,x7,[sp,-16]!        // save  registres
+    stp x8,x9,[sp,-16]!        // save  registres
+    stp x10,x11,[sp,-16]!        // save  registres
+    mov x5,x1
+    mov x8,x0                    // save number
+    bl isPrime                   // prime ?
+    cmp x0,#1
+    beq 98f                      // yes is prime
+    mov x1,#1
+    str x1,[x5]                  // first factor
+    mov x12,#1                   // divisors sum
+    mov x11,#1                   // number odd divisors
+    mov x4,#1                    // indice divisors table
+    mov x1,#2                    // first divisor
+    mov x6,#0                    // previous divisor
+    mov x7,#0                    // number of same divisors
+2:
+    mov x0,x8                    // dividende
+    udiv x2,x0,x1                //  x1 divisor x2 quotient x3 remainder
+    msub x3,x2,x1,x0
+    cmp x3,#0
+    bne 5f                       // if remainder <> zero  -> no divisor
+    mov x8,x2                    // else quotient -> new dividende
+    cmp x1,x6                    // same divisor ?
+    beq 4f                       // yes
+    mov x7,x4                    // number factors in table
+    mov x9,#0                    // indice
+21:
+    ldr x10,[x5,x9,lsl #3 ]      // load one factor
+    mul x10,x1,x10               // multiply
+    str x10,[x5,x7,lsl #3]       // and store in the table
+    tst x10,#1                   // divisor odd ?
+    cinc x11,x11,ne
+    add x12,x12,x10
+    add x7,x7,#1                 // and increment counter
+    add x9,x9,#1
+    cmp x9,x4
+    blt 21b
+    mov x4,x7
+    mov x6,x1                    // new divisor
+    b 7f
+4:                               // same divisor
+    sub x9,x4,#1
+    mov x7,x4
+41:
+    ldr x10,[x5,x9,lsl #3 ]
+    cmp x10,x1
+    sub x13,x9,1
+    csel x9,x13,x9,ne
+    bne 41b
+    sub x9,x4,x9
+42:
+    ldr  x10,[x5,x9,lsl #3 ]
+    mul x10,x1,x10
+    str x10,[x5,x7,lsl #3]       // and store in the table
+    tst x10,#1                   // divsor odd ?
+    cinc  x11,x11,ne
+    add x12,x12,x10
+    add x7,x7,#1                 // and increment counter
+    add x9,x9,#1
+    cmp x9,x4
+    blt 42b
+    mov x4,x7
+    b 7f                         // and loop
+
+    /* not divisor -> increment next divisor */
+5:
+    cmp x1,#2                    // if divisor = 2 -> add 1
+    add x13,x1,#1                // add 1
+    add x14,x1,#2                // else add 2
+    csel x1,x13,x14,eq
+    b 2b
+
+    /* divisor -> test if new dividende is prime */
+7:
+    mov x3,x1                    // save divisor
+    cmp x8,#1                    // dividende = 1 ? -> end
+    beq 10f
+    mov x0,x8                    // new dividende is prime ?
+    mov x1,#0
+    bl isPrime                   // the new dividende is prime ?
+    cmp x0,#1
+    bne 10f                      // the new dividende is not prime
+
+    cmp x8,x6                    // else dividende is same divisor ?
+    beq 9f                       // yes
+    mov x7,x4                    // number factors in table
+    mov x9,#0                    // indice
+71:
+    ldr x10,[x5,x9,lsl #3 ]      // load one factor
+    mul x10,x8,x10               // multiply
+    str x10,[x5,x7,lsl #3]       // and store in the table
+    tst x10,#1                   // divsor odd ?
+    cinc x11,x11,ne
+    add x12,x12,x10
+    add x7,x7,#1                 // and increment counter
+    add x9,x9,#1
+    cmp x9,x4
+    blt 71b
+    mov x4,x7
+    mov x7,#0
+    b 11f
+9:
+    sub x9,x4,#1
+    mov x7,x4
+91:
+    ldr x10,[x5,x9,lsl #3 ]
+    cmp x10,x8
+    sub x13,x9,#1
+    csel x9,x13,x9,ne
+    bne 91b
+    sub x9,x4,x9
+92:
+    ldr  x10,[x5,x9,lsl #3 ]
+    mul x10,x8,x10
+    str x10,[x5,x7,lsl #3]       // and store in the table
+    tst x10,#1                   // divisor odd ?
+    cinc x11,x11,ne
+    add x12,x12,x10
+    add x7,x7,#1                 // and increment counter
+    add x9,x9,#1
+    cmp x9,x4
+    blt 92b
+    mov x4,x7
+    b 11f
+
+10:
+    mov x1,x3                    // current divisor = new divisor
+    cmp x1,x8                    // current divisor  > new dividende ?
+    ble 2b                       // no -> loop
+
+    /* end decomposition */
+11:
+    mov x0,x4                    // return number of table items
+    mov x2,x12                   // return sum
+    mov x1,x11                   // return number of odd divisor
+    mov x3,#0
+    str x3,[x5,x4,lsl #3]        // store zéro in last table item
+    b 100f
+
+
+98:
+    //ldr x0,qAdrszMessNbPrem
+    //bl   affichageMess
+    mov x0,#1                   // return code
+    b 100f
+99:
+    ldr x0,qAdrszMessError
+    bl   affichageMess
+    mov x0,#-1                  // error code
+    b 100f
+
+
+100:
+    ldp x10,x11,[sp],16          // restaur des  2 registres
+    ldp x8,x9,[sp],16          // restaur des  2 registres
+    ldp x6,x7,[sp],16          // restaur des  2 registres
+    ldp x4,x5,[sp],16          // restaur des  2 registres
+    ldp x3,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+qAdrszMessErrGen:          .quad szMessErrGen
+qAdrszMessNbPrem:          .quad szMessNbPrem
+/***************************************************/
+/*   Verification si un nombre est premier         */
+/***************************************************/
+/* x0 contient le nombre à verifier */
+/* x0 retourne 1 si premier  0 sinon */
+isPrime:
+    stp x1,lr,[sp,-16]!        // save  registres
+    stp x2,x3,[sp,-16]!        // save  registres
+    mov x2,x0
+    sub x1,x0,#1
+    cmp x2,0
+    beq 99f                    // retourne zéro
+    cmp x2,2                   // pour 1 et 2 retourne 1
+    ble 2f
+    mov x0,#2
+    bl moduloPux64
+    bcs 100f                   // erreur overflow
+    cmp x0,#1
+    bne 99f                    // Pas premier
+    cmp x2,3
+    beq 2f
+    mov x0,#3
+    bl moduloPux64
+    blt 100f                   // erreur overflow
+    cmp x0,#1
+    bne 99f
+
+    cmp x2,5
+    beq 2f
+    mov x0,#5
+    bl moduloPux64
+    bcs 100f                   // erreur overflow
+    cmp x0,#1
+    bne 99f                    // Pas premier
+
+    cmp x2,7
+    beq 2f
+    mov x0,#7
+    bl moduloPux64
+    bcs 100f                   // erreur overflow
+    cmp x0,#1
+    bne 99f                    // Pas premier
+
+    cmp x2,11
+    beq 2f
+    mov x0,#11
+    bl moduloPux64
+    bcs 100f                   // erreur overflow
+    cmp x0,#1
+    bne 99f                    // Pas premier
+
+    cmp x2,13
+    beq 2f
+    mov x0,#13
+    bl moduloPux64
+    bcs 100f                   // erreur overflow
+    cmp x0,#1
+    bne 99f                    // Pas premier
+2:
+    cmn x0,0                   // carry à zero pas d'erreur
+    mov x0,1                   // premier
+    b 100f
+99:
+    cmn x0,0                   // carry à zero pas d'erreur
+    mov x0,#0                  // Pas premier
+100:
+    ldp x2,x3,[sp],16          // restaur des  2 registres
+    ldp x1,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+
+/**************************************************************/
+/********************************************************/
+/*   Calcul modulo de b puissance e modulo m  */
+/*    Exemple 4 puissance 13 modulo 497 = 445         */
+/********************************************************/
+/* x0  nombre  */
+/* x1 exposant */
+/* x2 modulo   */
+moduloPux64:
+    stp x1,lr,[sp,-16]!        // save  registres
+    stp x3,x4,[sp,-16]!        // save  registres
+    stp x5,x6,[sp,-16]!        // save  registres
+    stp x7,x8,[sp,-16]!        // save  registres
+    stp x9,x10,[sp,-16]!        // save  registres
+    cbz x0,100f
+    cbz x1,100f
+    mov x8,x0
+    mov x7,x1
+    mov x6,1                   // resultat
+    udiv x4,x8,x2
+    msub x9,x4,x2,x8           // contient le reste
+1:
+    tst x7,1
+    beq 2f
+    mul x4,x9,x6
+    umulh x5,x9,x6
+    //cbnz x5,99f
+    mov x6,x4
+    mov x0,x6
+    mov x1,x5
+    bl divisionReg128U
+    cbnz x1,99f                // overflow
+    mov x6,x3
+2:
+    mul x8,x9,x9
+    umulh x5,x9,x9
+    mov x0,x8
+    mov x1,x5
+    bl divisionReg128U
+    cbnz x1,99f                // overflow
+    mov x9,x3
+    lsr x7,x7,1
+    cbnz x7,1b
+    mov x0,x6                  // result
+    cmn x0,0                   // carry à zero pas d'erreur
+    b 100f
+99:
+    ldr x1,qAdrszMessOverflow
+    bl   afficheErreur
+    cmp x0,0                   // carry à un car erreur
+    mov x0,-1                  // code erreur
+
+100:
+    ldp x9,x10,[sp],16          // restaur des  2 registres
+    ldp x7,x8,[sp],16          // restaur des  2 registres
+    ldp x5,x6,[sp],16          // restaur des  2 registres
+    ldp x3,x4,[sp],16          // restaur des  2 registres
+    ldp x1,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+qAdrszMessOverflow:         .quad  szMessOverflow
+/***************************************************/
+/*   division d un nombre de 128 bits par un nombre de 64 bits */
+/***************************************************/
+/* x0 contient partie basse dividende */
+/* x1 contient partie haute dividente */
+/* x2 contient le diviseur */
+/* x0 retourne partie basse quotient */
+/* x1 retourne partie haute quotient */
+/* x3 retourne le reste */
+divisionReg128U:
+    stp x6,lr,[sp,-16]!        // save  registres
+    stp x4,x5,[sp,-16]!        // save  registres
+    mov x5,#0                  // raz du reste R
+    mov x3,#128                // compteur de boucle
+    mov x4,#0                  // dernier bit
+1:
+    lsl x5,x5,#1               // on decale le reste de 1
+    tst x1,1<<63               // test du bit le plus à gauche
+    lsl x1,x1,#1               // on decale la partie haute du quotient de 1
+    beq 2f
+    orr  x5,x5,#1              // et on le pousse dans le reste R
+2:
+    tst x0,1<<63
+    lsl x0,x0,#1               // puis on decale la partie basse
+    beq 3f
+    orr x1,x1,#1               // et on pousse le bit de gauche dans la partie haute
+3:
+    orr x0,x0,x4               // position du dernier bit du quotient
+    mov x4,#0                  // raz du bit
+    cmp x5,x2
+    blt 4f
+    sub x5,x5,x2                // on enleve le diviseur du reste
+    mov x4,#1                   // dernier bit à 1
+4:
+                               // et boucle
+    subs x3,x3,#1
+    bgt 1b
+    lsl x1,x1,#1               // on decale le quotient de 1
+    tst x0,1<<63
+    lsl x0,x0,#1              // puis on decale la partie basse
+    beq 5f
+    orr x1,x1,#1
+5:
+    orr x0,x0,x4                  // position du dernier bit du quotient
+    mov x3,x5
+100:
+    ldp x4,x5,[sp],16          // restaur des  2 registres
+    ldp x6,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

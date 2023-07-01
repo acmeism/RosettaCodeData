@@ -1,0 +1,5 @@
+INPUT "Enter two positive integers, separated by a comma"; i, j
+DIM array(1 TO i, 1 TO j)
+array(i, j) = i * j
+PRINT "a("; STR$(i); ","; STR$(j); " ) = "; array(i, j)
+ERASE array

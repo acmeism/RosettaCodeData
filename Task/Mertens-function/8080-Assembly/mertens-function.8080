@@ -1,0 +1,199 @@
+MAX:	equ	1000	; Amount of numbers to generate
+	org	100h
+	;;;	Generate Mertens numbers
+	lxi	b,1	; Start at place 1; BC = current Mertens number	
+	lxi	h,MM	; First one is 1
+	dad	b
+	mvi	m,1
+outer:	inx 	b	; Next Mertens number
+	lxi	h,MM
+	dad	b
+	mvi	m,1	; Initialize at 1
+	lxi	d,2	; DE = inner loop counter ('k'), starts at 2
+	;;;	Now we need to find BC/DE, but there is no hardware divide
+	;;;	We also need to be somewhat clever so it doesn't take forever
+inner:	push	d	; Keep both loop counters safe on the stack
+	push 	b
+	xchg		; Divisor in HL
+	mov	d,b	; Dividend in DE
+	mov	e,c
+	lxi	b,100h	; B = counter, C = zero
+double:	dad	h	; Double divisor
+	inr	b	; Increment counter
+	call	cdehl	; Dividend <= divisor?
+	jnc	double	; If so, keep doubling	
+	mov	a,b	; Keep counter
+	mov	b,c	; BC = 0
+	push 	b	; Push result variable on stakc (initial 0)
+	mov	b,a	; Restore counter
+	xchg		; HL = dividend, DE = doubled divisor
+subtr:	mov	a,l	; Try HL -= DE
+	sub	e
+	mov	l,a
+	mov	a,h
+	sbb	d
+	mov	h,a	
+	xthl		; Get result accumulator from stack
+	cmc		; Flip borrow
+	mov	a,l	; Rotate into result
+	ral
+	mov	l,a
+	mov	a,h
+	ral
+	mov	h,a
+	mov	a,l	; Retrieve flag
+	rar
+	xthl		; Retrieve rest of divisor
+	jc	$+4	; If borrow,
+	dad	d	; Add dividend back into divisor	
+	xra     a       ; DE >> 1
+	ora     d
+	rar
+	mov     d,a
+	mov     a,e
+	rar
+	mov     e,a
+	dcr     b       ; Are we there yet?
+	jnz     subtr   ; If not, try another subtraction
+	pop	h  	; HL = quotient
+	;;;	Division is done, do lookup and subraction
+	lxi	d,MM	; Look up M[outer/inner]
+	dad	d
+	mov	e,m	; E = M[BC/DE]
+	pop	b	; Restore BC (n)
+	lxi	h,MM
+	dad	b
+	mov	a,m 	; A = M[BC]
+	sub	e	; A = M[BC] - M[BC/DE]
+	mov	m,a	; M[BC] = A
+	pop	d	; Restore DE (k)
+	;;;	Update loops
+	inx	d	; k++	
+	call	cbcde	; DE <= BC?
+	jnc	inner
+	lxi	h,MAX
+	call	chlbc	; BC <= MAX?
+	jnc	outer
+	;;;	Print table
+	lxi	d,frst99
+	call	puts
+	lxi	h,MM+1	; Start of Merten numbers
+	mvi	c,9	; Column counter
+table:	mov	a,m	; Get Merten number
+	ana	a	; Set flags
+	mvi	b,' '	; Space
+	jp 	prtab	; If positive, print space-number-space
+	mvi	b,'-'	; Otherwise, print minus sign
+	cma		; And negate the number (make positive)
+	inr	a
+prtab:	adi	'0'	; Make ASCII digit
+	mov	d,a	; Keep number
+	mov	a,b	; Print space or minus sign
+	call	putc
+	mov	a,d	; Restore number
+	call	putc	; Print number
+	mvi	a,' '	; Print space
+	call	putc
+	dcr	c	; Decrement column counter
+	jnz	tnext
+	lxi	d,nl	; End of columns - print newline
+	call	puts
+	mvi	c,10	; Column counter
+tnext:	inx	h	; Table done?
+	mov	a,l
+	cpi	100
+	jnz	table	; If not, keep going
+	;;;	Find zeroes and crossings
+	lxi	b,0	; B=zeroes, C=crossings
+	lxi	d,MAX	; Counter
+	lxi	h,MM+1
+count:	mov	a,m	; Get number
+	ana	a 	; Zero?
+	jnz	cnext
+	inr	b	; If so, add zero
+	dcx	h	; Previous number also zero?
+	mov	a,m
+	inx	h
+	ana	a
+	jz	cnext
+	inr	c	; If not, add crossiong
+cnext:	inx	h
+	dcx	d
+	mov	a,d
+	ora	e
+	jnz	count
+	lxi	d,zero	; Print zeroes
+	call	puts
+	mov	a,b
+	call	puta
+	lxi	d,cross ; Print crossings
+	call	puts
+	mov	a,c
+	call	puta
+	lxi	d,tms
+	jmp	puts
+	;;;	Print character in A using CP/M, keeping registers
+putc:	push	b
+	push	d
+	push	h
+	mov	e,a
+	mvi	c,2
+	call	5
+	jmp	resrgs
+	;;;	Print number in A, keeping registers
+puta:	push	b
+	push	d
+	push 	h
+	lxi	h,num
+putad:	mvi	c,-1	
+putal:	inr 	c
+	sui	10
+	jnc	putal
+	adi	10+'0'
+	dcx	h
+	mov	m,a
+	mov	a,c
+	ana	a
+	jnz	putad
+	xchg
+	mvi	c,9
+	call	5
+	jmp	resrgs
+	;;;	Print string in DE using CP/M, keeping registers
+puts:	push	b
+	push	d
+	push	h
+	mvi	c,9
+	call	5
+resrgs:	pop	h
+	pop	d
+	pop 	b
+	ret
+cdehl:	mov	a,d
+	cmp 	h
+	rnz
+	mov	a,e
+	cmp	l
+	ret
+cbcde:	mov	a,b
+	cmp	d
+	rnz
+	mov	a,c
+	cmp	e
+	ret
+chlbc:	mov	a,h
+	cmp	b
+	rnz
+	mov	a,l
+	cmp	c
+	ret
+	;;;	Strings
+	db	'***'
+num:	db	'$'
+frst99:	db	'First 99 Mertens numbers:',13,10,'   $'
+nl:	db	13,10,'$'	
+zero:	db	'M(N) is zero $'
+cross:	db	' times.',13,10,'M(N) crosses zero $'
+tms:	db	' times.$'
+	;;; Numbers are stored page-aligned after program
+MM:	equ	($/256)*256+256	

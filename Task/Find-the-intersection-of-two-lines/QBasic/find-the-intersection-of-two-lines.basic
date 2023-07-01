@@ -1,0 +1,11 @@
+xa = 4: xb = 6: xc = 0: xd = 10
+ya = 0: yb = 10: yc = 3: yd = 7
+PRINT "The two lines are:"
+PRINT "yab ="; (ya - xa * ((yb - ya) / (xb - xa))); "+ x*"; ((yb - ya) / (xb - xa))
+PRINT "ycd ="; (yc - xc * ((yd - yc) / (xd - xc))); "+ x*"; ((yd - yc) / (xd - xc))
+x = ((yc - xc * ((yd - yc) / (xd - xc))) - (ya - xa * ((yb - ya) / (xb - xa)))) / (((yb - ya) / (xb - xa)) - ((yd - yc) / (xd - xc)))
+PRINT "x ="; x
+y = ya - xa * ((yb - ya) / (xb - xa)) + x * ((yb - ya) / (xb - xa))
+PRINT "yab ="; y
+PRINT "ycd ="; (yc - xc * ((yd - yc) / (xd - xc)) + x * ((yd - yc) / (xd - xc)))
+PRINT "intersection: ("; x; ","; y; ")"

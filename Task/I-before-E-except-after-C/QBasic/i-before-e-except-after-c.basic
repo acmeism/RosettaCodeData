@@ -1,0 +1,22 @@
+DEFINT A-Z
+DIM W AS STRING
+CLS
+OPEN "I", 1, "UNIXDICT.TXT"
+DO
+    LINE INPUT #1, W
+    IF INSTR(W, "ie") THEN IF INSTR(W, "cie") THEN CI = CI + 1 ELSE XI = XI + 1
+    IF INSTR(W, "ei") THEN IF INSTR(W, "cei") THEN CE = CE + 1 ELSE XE = XE + 1
+LOOP WHILE NOT EOF(1)
+CLOSE #1
+
+PRINT "CIE:"; CI
+PRINT "xIE:"; XI
+PRINT "CEI:"; CE
+PRINT "xEI:"; XE
+PRINT
+PRINT "I before E when not preceded by C: ";
+IF 2 * XI <= CI THEN PRINT "not ";
+PRINT "plausible."
+PRINT "E before I when preceded by C: ";
+IF 2 * CE <= XE THEN PRINT "not ";
+PRINT "plausible."

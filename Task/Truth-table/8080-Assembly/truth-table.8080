@@ -1,0 +1,379 @@
+	;;;	CP/M truth table generator
+	;;;	Supported operators:
+	;;;	~ (not), & (and), | (or), ^ (xor) and => (implies)
+	;;;	Variables are A-Z, constants are 0 and 1.
+putch:	equ	2
+puts:	equ	9	
+TVAR:	equ	32
+TCONST:	equ	64
+TOP:	equ	96
+TPAR:	equ	128
+TMASK:	equ	31
+TTYPE:	equ	224
+	org	100h
+	lxi	h,80h	; Have we got a command line argument?
+	mov	a,m
+	ana	a
+	lxi	d,noarg	; If not, print error message and stop.
+	mvi	c,puts
+	jz	5
+	add 	l	; Otherwise, 0-terminate the argument string
+	inr	a
+	mov	l,a
+	mvi	m,0
+	inx	h
+	mvi	m,'$'	; And $-terminate it also for error messages
+	lxi	h,opstk	; Pointer to operator stack on the system stack
+	push	h
+	lxi	h,80h	; Start of command line
+	lxi	b,expr	; Start of expression (output queue for shunting yard)
+parse:	inx	h
+	mvi	a,' '	; Ignore all whitespace
+	cmp	m
+	jz	parse
+	mov	a,m 	; Load current character
+	ana	a	; Done?
+	jz	pdone
+	mov	d,a	; Store copy in D
+	ori	32	; Check for variable
+	sui	'a'
+	cpi	26	
+	jnc	pconst	; If not variable, go check constants
+	ori	TVAR	; It _is_ a variable
+	stax	b	; Store token
+	inx	b
+	jmp	parse	; Next token
+pconst:	mov	a,d	; Restore character
+	sui	'0'	; 0 or 1 are constants
+	cpi	2
+	jnc	pparen	; If not constant, go check parenthesis
+	ori	TCONST	; It _is_ a constant
+	stax	b	; Store token
+	inx	b
+	jmp	parse
+pparen:	mov	a,d	; Restore character
+	sui	'('	; ( and ) are parentheses
+	jz	ppopen	; Open parenthesis
+	dcr	a
+	jnz	poper	; If not ( or ), check operators
+	xthl		; Closing parenthesis - get operator stack
+closep:	mov 	a,l	; If at beginning, missing ( - give error
+	ana	a
+	jz	emiss
+	dcx	h	; Back up pointer
+	mov	a,m	; Found it?
+	cpi	TPAR
+	jnz	closes	; If not, keep scanning
+	xthl		; Get input string back
+	jmp	parse	; Keep parsing
+closes:	stax	b	; Not parenthesis - put token in output queue
+	inx	b
+	jmp	closep	; And keep going
+ppopen:	xthl		; Get operator stack
+	mvi	m,TPAR	; Store open parenthesis
+	inx	h
+	xthl		; Get input string
+	jmp	parse
+poper:	push	h	; Check tokens - keep input string
+	mvi	e,0	; Counter
+	lxi	h,opers	; Operator pointer
+opscan:	mov	a,m	; Check against character
+	cmp	d	; Found it?
+	jz	opfind
+	inr	e	; Increment counter
+	ana	a	; Otherwise, is it zero?
+	inx	h
+	jnz	opscan	; If not, keep scanning
+eparse:	lxi 	d,pserr	; It is zero - print a parse error
+	mvi	c,puts
+	call	5
+	pop	d
+	mvi	c,puts
+	call 	5
+	rst	0
+opfind: cpi 	'='	; Special case - is it '='?
+	jnz	opfin2	; If so it should be followed by '>'
+	xthl
+	inx	h
+	mov	a,m
+	xthl
+	cpi	'>'
+	jnz	eparse	; '=' not part of '=>' is parse error
+opfin2:	mvi	d,0	; Look up the precedence for this operator
+	lxi	h,prec
+	dad	d
+	mov	d,m	; Store it in D (D=prec E=operator number)
+	pop	h	; Restore input string
+	xthl		; Get operator stack pointer
+oppop:	mov	a,l	; At beginning of operator stack?
+	ana	a
+	jz 	oppush	; Then done - push current operator
+	dcx	h	; Check what's on top
+	mov	a,m
+	inx	h
+	cpi	TPAR	; Parenthesis?
+	jz 	oppush	; Then done - push current operator
+	push	b	; Store output pointer for a while
+	push	h	; As well as operator stack pointer
+	mvi	b,0	; Get index of operator from stack
+	ani	TMASK
+	mov	c,a
+	lxi	h,prec	; Find precedence
+	dad	b
+	mov	a,m 	; Load precedence into A
+	pop	h	; Restore operator stack pointer
+	pop	b	; As well as output pointer
+	cmp	d	; Compare to operator from input
+	jc	oppush	; If input precedence higher, then push operator
+	dcx	h	; Otherwise, pop from operator stack,
+	mov	a,m
+	stax	b	; And store in output queue
+	inx	b		
+	jmp	oppop	; Keep popping from operator stack
+oppush:	mov	a,e	; Get input operator
+	ori	TOP
+	mov	m,a	; Store on operator stack
+	inx	h
+	xthl		; Switch to input string
+	jmp	parse
+emiss:	lxi	d,missp	; Error message for missing parentheses
+	mvi	c,puts
+	call	5
+	rst	0
+pdone:	pop	h	; Get operator stack pointer
+ppop:	mov	a,l	; Pop whatever is left off
+	ana	a
+	jz	cntvar	
+	dcx	h
+	mov	a,m	; Get value
+	cpi	TPAR	; If we find a paranthesis then the parentheses
+	jz	emiss 	; don't match
+	stax	b	; Store in output queue
+	inx	b
+	jmp 	ppop
+cntvar:	stax	b	; Zero-terminate the expression
+	lxi	h,vused+25	; See which variables are used in the expr
+	xra	a
+vzero:	mov	m,a
+	dcr	l
+	jp	vzero
+	lxi	d,expr
+vscan:	ldax	d	; Load expression element
+	inx	d	; Next one next time
+	ana	a	; Was it zero?
+	jz	vdone	; Then we're done
+	mov	b,a	; Store copy
+	ani	TTYPE	; Is it a variable?
+	cpi	TVAR
+	jnz	vscan	; If not, ignore it
+	mov	a,b
+	ani	TMASK
+	mov	l,a	; If so, mark it
+	inr	m
+	jmp	vscan
+vdone:	call	eval	; Run the evaluation once to catch errors
+	lxi	h,vused ; Print header
+	mvi	b,0	; Character counter
+varhdr:	mov	a,m	; Current variable used?
+	ana	a
+	jz	varnxt	; If not, skip it
+	inr	b	; Two characters
+	inr	b
+	push	h	; Keep registers
+	push	b
+	mvi	c,putch	; Print letter
+	mov	a,l
+	adi	'A'
+	mov	e,a
+	call	5
+	mvi	c,putch	; Print space
+	mvi	e,' '
+	call 	5
+	pop	b	; Restore registers
+	pop	h
+varnxt: inr	l
+	mov	a,l
+	cpi	26
+	jnz	varhdr
+	inr	b	; Two characters for "| "
+	inr	b
+	push 	b
+	lxi	d,dvdr
+	mvi	c,puts
+	call	5
+	pop 	b
+	lxi	h,81h	; Print expression
+exhdr:	inr	b	; One character
+	push	b
+	push	h
+	mov	e,m
+	mvi	c,putch
+	call 	5
+	pop	h
+	pop 	b
+	mov	a,m	; Until zero reached
+	ana	a
+	inx	h
+	jnz	exhdr
+	push	b	; Keep count
+	lxi	d,nwln	; Print newline
+	mvi	c,puts
+	call	5
+	pop	b
+linhdr:	push 	b	; Print dashes	
+	mvi	c,putch
+	mvi	e,'-'
+	call	5
+	pop 	b
+	dcr 	b
+	jnz	linhdr
+	lxi	h,vars	; Set all variables to 0
+	xra	a
+zero:	mov	m,a
+	inr	l
+	jnz	zero
+mloop:	lxi	d,nwln	; Print newline
+	mvi	c,puts
+	call	5
+	lxi	h,vars	; Print current state
+	lxi	d,vused
+	lxi	b,1A00h
+pstate:	ldax	d	; Is variable in use?
+	ana	a
+	jz	pnext	; If not, try next one
+	mov	c,e	; Keep highest used variable
+	mov	a,m	; Otherwise, get value
+	ani	1	; 0 or 1
+	ori	'0'
+	push	b	; Keep state
+	push 	d
+	push	h
+	mvi	c,putch	; Print variable
+	mov	e,a	
+	call	5
+	mvi	c,putch	; And space
+	mvi	e,' '	
+	call 	5
+	pop	h	; Restore state
+	pop	d
+	pop 	b
+pnext:	inx	h	; Print next one
+	inx	d
+	dcr	b
+	jnz	pstate
+	push	b	; Keep last variable
+	lxi	d,dvdr	; Print "| "
+	mvi	c,puts
+	call	5
+	call 	eval	; Evaluate expr using current state
+	ani	1	; Print result
+	ori	'0'
+	mvi	c,putch
+	mov	e,a
+	call	5
+	pop	b	; Restore last used variable
+	inr	c
+	lxi	h,vars	; Find next state
+	lxi	d,vused
+istate:	ldax	d	; Is variable in use?
+	ana	a
+	jz	inext	; If not, try next one
+	mov	a,m	; Otherwise, get value
+	ana	a	; Is it zero?
+	jnz	iinc	; If not, keep going,
+	inr	m 	; But if so, set it to one
+	jmp 	mloop	; And print next state
+iinc:	dcr	m	; If one, set it to zero
+inext:	inx	d	; And try next variable
+	inx	h
+	dcr	c	; Test if we have variables left
+	jnz	istate	; If not, try next one
+	rst	0	; But if so, we're done
+eval:	lxi	b,expr	; Evaluate the expression
+	lxi	h,opstk	; Evaluation stack
+eloop:	ldax	b	; Load expression element	
+	inx	b
+	ana	a	; Done?
+	jz	edone
+	mov	d,a	; Keep copy
+	ani 	TTYPE
+	cpi	TCONST	; Constant?
+	jz	econst
+	cpi	TVAR	; Variable?
+	jz	evar
+	mov	a,d	; Otherwise it's an operator
+	ani	TMASK
+	mov 	d,a
+	ana	a	; Not?
+	jnz	e2
+	dcr	l	; Error if stack empty
+	jm	errop
+	mov	a,m	; Not
+	cma
+	mov	m,a
+	inr	l
+	jmp 	eloop
+e2: 	dcr	l	; 2 values needed - error if stack empty
+	mov	e,m	; Right hand value
+	dcr	l
+	mov	a,m	; Left hand value
+	jm 	errop
+	dcr	d 	; And?
+	jz 	eand
+	dcr 	d	; Or?
+	jz 	eor
+	dcr	d	; Xor?
+	jz	exor
+eimpl:	ana 	a	; Implies - if A=1 then E else 1
+	jnz	e_lde
+	mvi	m,-1
+	inr	l
+	jmp	eloop
+e_lde:	mov	m,e
+	inr	l
+	jmp	eloop
+exor:	xra	e
+	jmp	estore
+eor:	ora	e
+	jmp	estore
+eand:	ana 	e
+estore:	mov	m,a
+	inr	l
+	jmp 	eloop
+econst:	mov	a,d	; Constant
+	ani	TMASK
+	mov	m,a
+	inr	l
+	jmp	eloop
+evar:	mov	a,d	; Variable
+	ani	TMASK
+	push	h
+	mvi	h,vars/256
+	mov	l,a
+	mov	a,m
+	pop	h
+	mov	m,a
+	inr	l
+	jmp	eloop
+edone:	dcr	l	; Should be at 0
+	mov	a,m
+	rz
+	lxi	d,mop	; Missing operator (not all values used)
+	jmp	errop+3
+errop:	lxi	d,mval	; Missing operand (stack underflow)
+	mvi	c,puts
+	call	5
+	rst	0
+nwln:	db	13,10,'$'
+dvdr:	db	'| $'
+noarg:	db	'Please enter a boolean expression on the command line.$'
+missp:	db	'Missing parenthesis.$'
+pserr:	db	'Parse error at: $'
+mval:	db	'Missing operand.$'
+mop:	db	'Missing operator.$'
+opers:	db	'~&|^=',0	; Operators - note that impl is actually =>
+prec:	db	4,3,2,2,1	; Precedence
+opstk:	equ	($/256)*256+256	; Operator stack (for shunting yard)
+vars:	equ	opstk+256	; Space for variables
+vused:	equ	vars+256	; Marks which variables are used
+expr:	equ	vused+26	; Parsed expression is stored here

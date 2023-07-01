@@ -1,0 +1,6 @@
+(defvar *buffer* (make-rgb-pixel-buffer 10 10))
+(fill-rgb-pixel-buffer *buffer* +white+)
+(setf (rgb-pixel *buffer* 0 0) +red+)
+(setf (rgb-pixel *buffer* 0 9) +red+)
+(setf (rgb-pixel *buffer* 9 0) +red+)
+(setf (rgb-pixel *buffer* 9 9) +red+)

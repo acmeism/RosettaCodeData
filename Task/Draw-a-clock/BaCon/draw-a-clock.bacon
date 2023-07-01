@@ -1,0 +1,74 @@
+OPTION GUI TRUE
+PRAGMA GUI gtk3
+
+CONST HLEN = 140
+CONST ALEN = 90
+
+id = GUIDEFINE(" \
+    { type=WINDOW name=window callback=delete-event resizable=0 title=\"Analog Clock\" } \
+    { type=DRAWING_AREA name=drawing parent=window callback=draw width-request=300 height-request=300 } ")
+
+WHILE TRUE
+    SELECT GUIEVENT$(id)
+        CASE "window"
+            BREAK
+        CASE "drawing"
+            CALL Draw
+    ENDSELECT
+WEND
+
+SUB Draw
+
+    LOCAL context TYPE GdkDrawingContext*
+    LOCAL cr TYPE cairo_t*
+    LOCAL gdk TYPE GdkWindow*
+
+    ' Get drawing window
+    CALL GUIGET(id, "drawing", "window", &gdk)
+
+    ' Setup drawing context
+    context = gdk_window_begin_draw_frame(gdk, gdk_window_get_clip_region(gdk))
+
+    ' Get cairo context
+    cr = gdk_drawing_context_get_cairo_context(context)
+
+    ' Clear
+    CALL cairo_set_source_rgba(cr, 1, 1, 1, 1)
+    CALL cairo_rectangle(cr, 0, 0, 300, 300)
+    CALL cairo_fill(cr)
+
+    ' Draw centre
+    CALL cairo_set_source_rgba(cr, 0, 0, 0, 1)
+    CALL cairo_arc(cr, 150, 150, 10, 0, 2*PI)
+    CALL cairo_fill(cr)
+
+    ' Draw second
+    s = SECOND(NOW)*6-90
+    CALL cairo_set_line_width(cr, 1)
+    CALL cairo_move_to(cr, 150, 150)
+    CALL cairo_line_to(cr, 150 + HLEN*COS(RAD(s)), 150 + HLEN*SIN(RAD(s)))
+    CALL cairo_stroke(cr)
+    CALL cairo_fill(cr)
+
+    ' Draw minute
+    m = MINUTE(NOW)*6-90
+    CALL cairo_set_line_width(cr, 2)
+    CALL cairo_move_to(cr, 150, 150)
+    CALL cairo_line_to(cr, 150 + HLEN*COS(RAD(m)), 150 + HLEN*SIN(RAD(m)))
+    CALL cairo_stroke(cr)
+    CALL cairo_fill(cr)
+
+    ' Draw hour
+    h = IIF(HOUR(NOW)>12, HOUR(NOW)-12, HOUR(NOW))*30+(MINUTE(NOW)/12)*6-90
+    CALL cairo_move_to(cr, 150, 150)
+    CALL cairo_line_to(cr, 150 + ALEN*COS(RAD(h)), 150 + ALEN*SIN(RAD(h)))
+    CALL cairo_stroke(cr)
+    CALL cairo_fill(cr)
+
+    ' Finish drawing
+    CALL gdk_window_end_draw_frame(gdk, context)
+
+    ' Draw each second
+    ALARM Draw, 1000
+
+ENDSUB

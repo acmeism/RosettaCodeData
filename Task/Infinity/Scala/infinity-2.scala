@@ -1,0 +1,1 @@
+val biggestNumber = Double.MaxValue

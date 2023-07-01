@@ -1,0 +1,5 @@
+test_variable = [1, 9, 8, 3]
+test_variable.sort    # => [1, 3, 8, 9]
+test_variable         # => [1, 9, 8, 3]
+test_variable.sort!   # => [1, 3, 8, 9]
+test_variable         # => [1, 3, 8, 9]

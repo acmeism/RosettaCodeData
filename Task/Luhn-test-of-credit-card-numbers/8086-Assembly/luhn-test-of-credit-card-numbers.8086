@@ -1,0 +1,68 @@
+	bits	16
+	cpu	8086
+	org	100h
+section	.text
+	jmp	demo	
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;; 	Check whether the 0-terminated string at DS:SI passes the Luhn
+	;;; 	test. Returns with carry clear if the string passes, carry
+	;;;	set if the string fails.
+luhn:	push	es	; Keep original ES, and set ES=DS so SCASB can be used.
+	push	ds	; "REP DS:SCASB" is a bad idea, because the 286 has a
+	pop	es	; bug where it "forgets" the 2nd prefix if interrupted!
+	mov	di,si	; DI = pointer
+	xor	ax,ax	; Zero to test against
+	xor	bl,bl	; BL = S1+S2
+	mov	dx,0A30h	; DH = 10 (divisor), DL = '0' (ASCII zero)
+	xor	cx,cx	; Set counter to 65535
+	dec	cx
+	cld		; Seek forwards
+	repnz	scasb	; Find zero
+	dec	di	; SCASB goes one byte too far
+	xchg	si,di	; SI = pointer, DI = end (or rather, beginning)
+	mov	cx,si	; CX = counter
+	sub	cx,di
+	jcxz	.done	; Empty string = stop
+	dec	si	; We don't need the zero itself
+	std		; Seek backwards
+.loop:	lodsb		; Get number in odd position
+	sub	al,dl	; Subtract ASCII zero
+	add	bl,al	; Add to total
+	dec	cx	; One fewer character
+	jz	.done	; No more characters = stop
+	lodsb		; Get number in even position
+	sub	al,dl	; Subtract ASCII zero
+	add	al,al	; Multiply by two
+	xor	ah,ah	; AX = AL
+	div	dh	; Divide by 10; AL=quotient, AH=remainder
+	add	al,ah	; Add the two "digits" together
+	add	bl,al	; Add to total
+	loop 	.loop	; Decrement CX and loop
+.done:	xor	ah,ah	; Divide total by 10
+	mov	al,bl
+	div	dh
+	and	ah,ah	; If remainder 0, then return with carry clear
+	jz	.out
+	stc		; Set carry (remainder wasn't 0, the test failed)
+.out:	cld		; Clean up: clear direction flag,
+	pop	es	; and restore ES.
+	ret
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Run the 'luhn' routine on the argument given on the MS-DOS
+	;;;	command line.
+demo:	mov	si,80h			; Zero-terminate the argument
+	xor	bh,bh
+	mov	bl,[si]
+	mov	[si+bx+1],bh
+	inc	si
+	inc	si
+	call 	luhn			; Call the routine
+	mov	ah,9
+	mov	dx,pass			; If carry is clear, print 'Pass'
+	jnc	print
+	mov	dx,fail			; Otherwise, print 'fail'
+print:	int	21h
+	ret
+section	.data
+pass:	db	'Pass$'
+fail:	db	'Fail$'

@@ -1,0 +1,1 @@
+fputs(stderr,"Goodbye, World!")

@@ -1,0 +1,18 @@
+CLS
+RANDOMIZE TIMER    ' set a seed based on system time
+nmax = 20
+chosen = INT(RND * nmax) + 1
+
+PRINT "Guess a whole number between 1 a"; nmax; CHR$(10)
+DO
+    INPUT "Enter your number"; guess
+    IF guess < n OR guess > nmax THEN
+        PRINT "That was an invalid number"
+        EXIT DO
+    ELSE
+        IF guess < chosen THEN PRINT "Sorry, your number was too low"
+        IF guess > chosen THEN PRINT "Sorry, your number was too high"
+        IF guess = chosen THEN PRINT "Well guessed!"
+    END IF
+LOOP UNTIL guess = chosen
+END

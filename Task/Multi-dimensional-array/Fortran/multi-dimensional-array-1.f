@@ -1,0 +1,3 @@
+      DIMENSION A(5,4,3,2)                 !Declares a (real) array A of four dimensions, storage permitting.
+      X = 3*A(2,I,1,K)                     !Extracts a certain element, multiplies its value by three, result to X.
+      A(1,2,3,4) = X + 1                   !Places a value (the result of the expression X + 1) ... somewhere...

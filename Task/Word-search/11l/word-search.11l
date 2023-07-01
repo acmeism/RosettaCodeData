@@ -1,0 +1,139 @@
+-V
+   dirs = [[1,  0], [ 0,  1], [ 1, 1],
+           [1, -1],           [-1, 0],
+           [0, -1], [-1, -1], [-1, 1]]
+   n_rows = 10
+   n_cols = 10
+   grid_size = n_rows * n_cols
+   min_words = 25
+
+T Grid
+   num_attempts = 0
+   [[String]] cells = [[‘’] * :n_cols] * :n_rows
+   [String] solutions
+
+F read_words(filename)
+   [String] words
+   L(line) File(filename).read_lines()
+      V s = line.lowercase()
+      I re:‘^[a-z]{3,10}’.match(s)
+         words.append(s)
+   R words
+
+F place_message(Grid &grid; =msg)
+   msg = msg.uppercase().replace(re:‘[^A-Z]’, ‘’)
+   V message_len = msg.len
+   I message_len C 0 <.< :grid_size
+      V gap_size = :grid_size I/ message_len
+
+      L(i) 0 .< message_len
+         V pos = i * gap_size + random:(0 .. gap_size)
+         grid.cells[pos I/ :n_cols][pos % :n_cols] = msg[i]
+
+      R message_len
+   R 0
+
+F try_location(Grid &grid; word, direction, pos)
+   V r = pos I/ :n_cols
+   V c = pos % :n_cols
+   V length = word.len
+
+   I (:dirs[direction][0] ==  1 & (length + c) > :n_cols) |
+     (:dirs[direction][0] == -1 & (length - 1) > c) |
+     (:dirs[direction][1] ==  1 & (length + r) > :n_rows) |
+     (:dirs[direction][1] == -1 & (length - 1) > r)
+      R 0
+
+   V rr = r
+   V cc = c
+   V i = 0
+   V overlaps = 0
+
+   L i < length
+      I grid.cells[rr][cc] != ‘’ & grid.cells[rr][cc] != word[i]
+         R 0
+      cc += :dirs[direction][0]
+      rr += :dirs[direction][1]
+      i++
+
+   rr = r
+   cc = c
+   i = 0
+
+   L i < length
+      I grid.cells[rr][cc] == word[i]
+         overlaps++
+      E
+         grid.cells[rr][cc] = word[i]
+
+      I i < length - 1
+         cc += :dirs[direction][0]
+         rr += :dirs[direction][1]
+      i++
+
+   V letters_placed = length - overlaps
+   I letters_placed > 0
+      grid.solutions.append(‘#<10 (#.,#.)(#.,#.)’.format(word, c, r, cc, rr))
+
+   R letters_placed
+
+F try_place_word(Grid &grid; word)
+   V rand_dir = random:(0 .. :dirs.len)
+   V rand_pos = random:(0 .. :grid_size)
+
+   L(=direction) 0 .< :dirs.len
+      direction = (direction + rand_dir) % :dirs.len
+
+      L(=pos) 0 .< :grid_size
+         pos = (pos + rand_pos) % :grid_size
+         V letters_placed = try_location(&grid, word, direction, pos)
+         I letters_placed > 0
+            R letters_placed
+   R 0
+
+F create_word_search(&words)
+   V grid = Grid()
+   V num_attempts = 0
+
+   L num_attempts < 100
+      num_attempts++
+      random:shuffle(&words)
+      grid = Grid()
+      V message_len = place_message(&grid, ‘Rosetta Code’)
+      V target = :grid_size - message_len
+      V cells_filled = 0
+      L(word) words
+         cells_filled += try_place_word(&grid, word)
+         I cells_filled == target
+            I grid.solutions.len >= :min_words
+               grid.num_attempts = num_attempts
+               R grid
+            E
+               L.break
+   R grid
+
+F print_result(grid)
+   I grid.num_attempts == 0
+      print(‘No grid to display’)
+      R
+
+   V size = grid.solutions.len
+
+   print(‘Attempts: #.’.format(grid.num_attempts))
+   print(‘Number of words: #.’.format(size))
+
+   print("\n     0  1  2  3  4  5  6  7  8  9\n")
+   L(r) 0 .< :n_rows
+      print(‘#.   ’.format(r), end' ‘’)
+      L(c) 0 .< :n_cols
+         print(‘ #. ’.format(grid.cells[r][c]), end' ‘’)
+      print()
+   print()
+
+   L(i) (0 .< size - 1).step(2)
+      print(‘#.   #.’.format(grid.solutions[i], grid.solutions[i + 1]))
+
+   I size % 2 == 1
+      print(grid.solutions[size - 1])
+
+print_result(create_word_search(&read_words(‘unixdict.txt’)))

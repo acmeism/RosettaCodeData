@@ -1,0 +1,54 @@
+LOCAL i As Integer, n As Integer
+CLOSE DATABASES ALL
+*!* Create and populate the hash tables
+CREATE CURSOR people_ids(id I, used L DEFAULT .F.)
+INDEX ON id TAG id COLLATE "Machine"
+INDEX ON used TAG used BINARY COLLATE "Machine"
+SET ORDER TO 0
+CREATE CURSOR nem_ids(id I, used L DEFAULT .F.)
+INDEX ON id TAG id COLLATE "Machine"
+INDEX ON used TAG used BINARY COLLATE "Machine"
+SET ORDER TO 0
+n = 100
+FOR i = 1 TO n
+    INSERT INTO people_ids (id) VALUES (i)
+    INSERT INTO nem_ids (id) VALUES (i)
+ENDFOR	
+
+CREATE CURSOR people (age I, name V(16), id I)
+INDEX ON id TAG id COLLATE "Machine"
+INDEX ON name TAG name COLLATE "Machine"
+SET ORDER TO 0
+INSERT INTO people (age, name) VALUES (27, "Jonah")
+INSERT INTO people (age, name) VALUES (18, "Alan")
+INSERT INTO people (age, name) VALUES (28, "Glory")
+INSERT INTO people (age, name) VALUES (18, "Popeye")
+INSERT INTO people (age, name) VALUES (28, "Alan")
+REPLACE id WITH HashMe("people_ids") ALL
+
+*!* The plural of nemesis is nemeses
+CREATE CURSOR nemeses (name V(16), nemesis V(16), p_id I, id I)
+INDEX ON id TAG id COLLATE "Machine"
+INDEX ON p_id TAG p_id COLLATE "Machine"
+INDEX ON name TAG name COLLATE "Machine"
+SET ORDER TO 0
+
+INSERT INTO nemeses (name, nemesis) VALUES ("Jonah", "Whales")
+INSERT INTO nemeses (name, nemesis) VALUES ("Jonah", "Spiders")
+INSERT INTO nemeses (name, nemesis) VALUES ("Alan", "Ghosts")
+INSERT INTO nemeses (name, nemesis) VALUES ("Alan", "Zombies")
+INSERT INTO nemeses (name, nemesis) VALUES ("Glory", "Buffy")
+REPLACE id WITH HashMe("nem_ids") ALL
+UPDATE nemeses SET p_id = people.id FROM people ;
+WHERE nemeses.name = people.name
+
+*!* Show the join
+SELECT pe.age, pe.name, ne.nemesis FROM people pe ;
+JOIN nemeses ne ON pe.id = ne.p_id TO FILE "hashjoin.txt"
+
+FUNCTION HashMe(cTable As String) As Integer
+LOCAL ARRAY a[1]
+SELECT MIN(id) FROM (cTable) WHERE NOT used INTO ARRAY a
+UPDATE (cTable) SET used = .T. WHERE id = a[1]
+RETURN a[1]
+ENDFUNC

@@ -1,0 +1,67 @@
+vector = cluster [T: type] is make, dot_product, cross_product,
+                              equal, power, mul, unparse
+         where T has add: proctype (T,T) returns (T) signals (overflow),
+                     sub: proctype (T,T) returns (T) signals (overflow),
+                     mul: proctype (T,T) returns (T) signals (overflow),
+                     equal: proctype (T,T) returns (bool),
+                     unparse: proctype (T) returns (string)
+
+    rep = struct[x, y, z: T]
+
+    make = proc (x, y, z: T) returns (cvt)
+        return(rep${x:x, y:y, z:z})
+    end make
+
+    dot_product = proc (a, b: cvt) returns (T) signals (overflow)
+        return (a.x*b.x + a.y*b.y + a.z*b.z) resignal overflow
+    end dot_product
+
+    cross_product = proc (a, b: cvt) returns (cvt) signals (overflow)
+        begin
+            x: T := a.y * b.z - a.z * b.y
+            y: T := a.z * b.x - a.x * b.z
+            z: T := a.x * b.y - a.y * b.x
+            return(down(make(x,y,z)))
+        end resignal overflow
+    end cross_product
+
+    equal = proc (a, b: cvt) returns (bool)
+        return (a.x = b.x & a.y = b.y & a.z = b.z)
+    end equal
+
+    % Allow cross_product to be written as ** and dot_product to be written as *
+    power = proc (a, b: cvt) returns (cvt) signals (overflow)
+        return(down(cross_product(up(a),up(b)))) resignal overflow
+    end power
+
+    mul = proc (a, b: cvt) returns (T) signals (overflow)
+        return(dot_product(up(a),up(b))) resignal overflow
+    end mul
+
+    % Standard to_string routine. Properly, `parse' should also be defined,
+    % and x = parse(unparse(x)) forall x; but I'm not bothering here.
+    unparse = proc (v: cvt) returns (string)
+        return( "(" || T$unparse(v.x)
+            || ", " || T$unparse(v.y)
+            || ", " || T$unparse(v.z) || ")" )
+    end unparse
+end vector
+
+start_up = proc ()
+    vi = vector[int] % integer math is good enough for the examples
+
+    po: stream := stream$primary_output()
+
+    a, b, c: vi
+    a := vi$make(3, 4, 5)
+    b := vi$make(4, 3, 5)
+    c := vi$make(-5, -12, -13)
+
+    stream$putl(po, "          a = " || vi$unparse(a))
+    stream$putl(po, "          b = " || vi$unparse(b))
+    stream$putl(po, "          c = " || vi$unparse(c))
+    stream$putl(po, "      a . b = " || int$unparse(a * b))
+    stream$putl(po, "      a x b = " || vi$unparse(a ** b))
+    stream$putl(po, "a . (b x c) = " || int$unparse(a * b ** c))
+    stream$putl(po, "a x (b x c) = " || vi$unparse(a ** b ** c))
+end start_up

@@ -1,0 +1,1 @@
+Write "Hello world!",!

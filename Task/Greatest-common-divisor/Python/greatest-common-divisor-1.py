@@ -1,0 +1,1 @@
+from fractions import gcd

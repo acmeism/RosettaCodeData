@@ -1,0 +1,12 @@
+/* assign an empty string */
+U8 *str = StrNew("");
+/* or */
+U8 *str = "";
+
+/* to test if string is empty */
+if (StrLen(str) == 0) { ... }
+/* or compare to a known empty string. "== 0" means strings are equal */
+if (StrCmp(str, "") == 0) { ... }
+
+/* to test if string is not empty */
+if (StrLen(str)) { ... }

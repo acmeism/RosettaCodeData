@@ -1,0 +1,1 @@
+Array.from(Array(100).keys()).splice(1).reverse().forEach(n => console.log(`${n} bottle${n !== 1 ? 's' : ''} of beer on the wall\n${n} bottle${n !== 1 ? 's' : ''} of beer\nTake one down, pass it around\n${n - 1} bottle${n - 1 !== 1 ? 's' : ''} of beer on the wall\n\n`));

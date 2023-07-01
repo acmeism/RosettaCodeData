@@ -1,0 +1,58 @@
+; Execute a file - the equivalent of system() in stdio
+;
+; On entry, r1=>nul-terminated command string
+; On exit,  VS=Couldn't fork
+;           VC=Forked successfully, r0=return value
+;
+.CLIsystem
+trap 2			; fork()
+br   CLIchild		; Child process returns here
+bcc  CLIparent		; Parent process returns here
+mov  (sp)+,r1
+tst  (sp)+
+sev			; Couldn't fork, set V
+rts  pc
+.CLIparent
+mov  r0,-(sp)		; Save child's PID
+.CLIwait
+trap 7			; wait()
+cmp  r0,(sp)
+beq  CLIfinished
+cmp  r0,#&FFFF
+bne  CLIwait		; Loop until child finished
+.CLIfinished
+tst  (sp)+		; Drop child's PID
+mov  r1,r0		; R0=return value
+mov  (sp)+,r1		; Restore R1
+tst  (sp)+		; Drop original R0
+swab r0			; Move return value to bottom byte
+rts  pc
+
+; CLI child process
+; -----------------
+.CLIchild
+clr  -(sp)			; end of string array
+mov  r1,-(sp)			; => command string
+mov  #UXsh3,-(sp)		; => "-c"
+mov  #UXsh2,-(sp)		; => "sh"
+mov  #&890B,TRAP_BUF		; exec
+mov  #UXsh1,TRAP_BUF+2		; => "/bin/sh"
+mov  sp,TRAP_BUF+4		; => pointers to command strings
+;mov  SV_ENVPTR,TRAP_BUF+6	; => "PATH=etc"
+trap 0				; indir()
+EQUW TRAP_BUF			; exec(shell, parameters)
+add  #8,sp			; If we get back, we didn't fork, we spawned
+mov  (sp)+,r1			; So, restore registers
+clr  (sp)+			; and return exit value in R0
+rts  pc
+
+.UXsh1	EQUS "/bin/sh",0
+.UXsh2	EQUS "sh",0
+.UXsh3	EQUS "-c",0
+ALIGN
+
+.TRAP_BUF
+EQUW 0
+EQUW 0
+EQUW 0
+EQUW 0

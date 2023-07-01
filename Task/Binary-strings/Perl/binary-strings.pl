@@ -1,0 +1,12 @@
+$s = undef;
+say 'Nothing to see here' if ! defined $s;  # 'Nothing to see here'
+say $s = '';                                # ''
+say 'Empty string' if $s eq '';             # 'Empty string'
+say $s = 'be';                              # 'be'
+say $t = $s;                                # 'be'
+say 'Same' if $t eq $s;                     # 'Same'
+say $t = $t .'e'                            # 'bee'
+say $t .= 'keeper';                         # 'beekeeper'
+$t =~ s/ee/ook/; say $t;                    # 'bookkeeper'
+say $u = substr $t, 2, 2;                   # 'ok'
+say 'Oklahoma' . ' is ' . uc $u;            # 'Oklahoma is OK'

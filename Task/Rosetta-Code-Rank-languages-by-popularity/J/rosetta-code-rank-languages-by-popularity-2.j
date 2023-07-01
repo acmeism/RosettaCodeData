@@ -1,0 +1,11 @@
+   10 {. rcPopLangs 'http://www.rosettacode.org/w/index.php?title=Special:Categories&limit=2000'
+   1. 687 - Tcl
+   2. 646 - Python
+   3. 637 - C
+   4. 626 - PicoLisp
+   5. 612 - J
+   6. 587 - Go
+   7. 556 - Ada
+   8. 550 - D
+   9. 549 - Mathematica
+  10. 526 - Perl

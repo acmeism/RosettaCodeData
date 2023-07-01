@@ -1,0 +1,172 @@
+constant help = """
+
+Minesweeper
+===========
+
+Enter eg A1 to open a cell, FA1 to flag a cell, Q to quit.
+
+The board is initially displayed with 10-20% of cells mined, as follows:
+
+. - an unknown cell (unopened and not flagged)
+_ - an empty cell, with no surrounding mines
+1..8 - an empty cell, with some nearby mines
+? - a cell you have flagged as a mine
+    (a flag can only be cleared by opening)
+
+On completion:
+X - the mine you detonated (if any)
+* - a mine which was not flagged
++ - a mine which was correctly flagged
+"""
+
+string board = """
+
+ 123456
+A......
+B......
+C......
+D......
+"""
+
+sequence data = repeat(repeat(0,6),4)
+-- 0: empty, no nearby mines
+-- 1-8: empty, with surrounding mines
+-- 9: a mine
+
+-- data[row][col] maps to board[row*8+4+col], lets quickly verify that:
+if find('.',board)!=13 then ?9/0 end if
+if rfind('.',board)!=42 then ?9/0 end if
+-- (above may trigger if copy/paste/dowload etc messed up whitespace)
+
+constant prompt = "\nEnter eg A1 to open a cell, FA1 to flag a cell, Q to quit, or ? for help:"
+
+integer mines = round((6*4)*0.10+rand(6*4)*0.10),  -- 10-20%
+        cleared = 0,
+        flagged = 0,
+        flag = false,
+        row = 0,
+        col
+
+procedure plant_mines()
+    for i=1 to mines do
+        while 1 do
+            row = rand(4)
+            col = rand(6)
+            if data[row][col]!=9 then
+                data[row][col] = 9
+                for rx=row-1 to row+1 do
+                    if rx>=1 and rx<=4 then
+                        for cx=col-1 to col+1 do
+                            if cx>=1 and cx<=6 then
+                                if data[rx][cx]!=9 then
+                                    data[rx][cx] += 1
+                                end if
+                            end if
+                        end for
+                    end if
+                end for
+                exit
+            end if
+        end while
+    end for
+    printf(1,"%d mines planted\n",mines)
+    row = 0
+end procedure
+
+procedure clear_cell(integer row, col, drc)
+    board[row*8+4+col] = iff(drc?drc+'0':' ')
+    cleared += 1
+    if drc=0 then
+        for rx=row-1 to row+1 do
+            if rx>=1 and rx<=4 then
+                for cx=col-1 to col+1 do
+                    if cx>=1 and cx<=6 then
+                        drc = data[rx][cx]
+                        if drc!=9
+                        and board[rx*8+4+cx]='.' then
+                            clear_cell(rx,cx,drc)
+                        end if
+                    end if
+                end for
+            end if
+        end for
+    end if
+end procedure
+
+function make_move()
+    integer brc = row*8+4+col
+    if flag then
+        if board[brc]='.' then
+            board[brc] = '?'
+            flagged += 1
+        end if
+    else
+        integer drc = data[row][col]
+        if drc=9 then
+            board[brc] = 'X'
+            puts(1,"\n\n***BOOM!***")
+            return true
+        end if
+        if find(board[brc],".?") then
+            clear_cell(row,col,drc)
+        end if
+    end if
+    row = 0
+    flag = false
+    -- nb: flagged and cleared may be wrong following incorrect input.
+    if flagged=mines
+    or cleared=6*4-mines then
+        puts(1,"\n\n***You Win!***")
+        return true
+    end if
+    return false    -- no "BOOM" yet!
+end function
+
+procedure disclose()
+    for row=1 to 4 do
+        for col=1 to 6 do
+            if data[row][col]=9 then
+                integer bdx = row*8+4+col,
+                        bch = board[bdx]
+                if bch='.' then
+                    bch = '*'
+                elsif bch='?' then
+                    bch = '+'
+                elsif bch!='X' then
+                    ?9/0
+                end if
+                board[bdx] = bch
+            end if
+        end for
+    end for
+end procedure
+
+plant_mines()
+while 1 do
+    if not flag and row=0 then
+        puts(1,board)
+        puts(1,prompt)
+    end if
+    integer ch = upper(getc(0))
+    puts(1,ch)
+    if ch='Q' then exit end if
+    if ch='?' then
+        puts(1,help)
+    elsif ch='F' then
+        flag = true
+    elsif ch>='A'
+      and ch<='D' then
+        row = ch-'@'
+    elsif ch>='1'
+      and ch<='6' then
+        col = ch-'0'
+        if make_move() then exit end if
+    else
+        printf(1,"\n\nunrecognised:%c\n\n",ch)
+        flag = false
+        row = 0
+    end if
+end while
+disclose()
+puts(1,board&"game over\n\n")
+{} = wait_key()

@@ -1,0 +1,7 @@
+require 'base64'
+
+raku_example ='
+VG8gZXJyIGlzIGh1bWFuLCBidXQgdG8gcmVhbGx5IGZvdWwgdGhpbmdzIHVwIHlvdSBuZWVkIGEgY2
+9tcHV0ZXIuCiAgICAtLSBQYXVsIFIuIEVocmxpY2g=
+'
+puts Base64.decode64 raku_example

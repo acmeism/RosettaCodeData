@@ -1,0 +1,33 @@
+% This will catch a divide-by-zero exception and
+% return a oneof instead, with either the result or div_by_zero.
+% Overflow and underflow are resignaled.
+check_div = proc [T: type] (a, b: T) returns (otype)
+            signals (overflow, underflow)
+            where T has div: proctype (T,T) returns (T)
+                             signals (zero_divide, overflow, underflow)
+    otype = oneof[div_by_zero: null, result: T]
+
+    return(otype$make_result(a/b))
+    except when zero_divide:
+        return(otype$make_div_by_zero(nil))
+    end resignal overflow, underflow
+end check_div
+
+% Try it
+start_up = proc ()
+    pair = struct[n, d: int]
+    pairs: sequence[pair] := sequence[pair]$[
+        pair${n: 10, d: 2},   % OK
+        pair${n: 10, d: 0},   % divide by zero
+        pair${n: 20, d: 2}    % another OK one to show the program doesn't stop
+    ]
+
+    po: stream := stream$primary_output()
+    for p: pair in sequence[pair]$elements(pairs) do
+        stream$puts(po, int$unparse(p.n) || "/" || int$unparse(p.d) || " = ")
+        tagcase check_div[int](p.n, p.d)
+            tag div_by_zero: stream$putl(po, "divide by zero")
+            tag result (r: int): stream$putl(po, int$unparse(r))
+        end
+    end
+end start_up

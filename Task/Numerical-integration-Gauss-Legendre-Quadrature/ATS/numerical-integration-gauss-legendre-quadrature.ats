@@ -1,0 +1,182 @@
+#include "share/atspre_staload.hats"
+
+%{^
+#include <float.h>
+#include <math.h>
+%}
+
+extern fn {tk : tkind} g0float_pi : () -<> g0float tk
+extern fn {tk : tkind} g0float_cos : g0float tk -<> g0float tk
+extern fn {tk : tkind} g0float_exp : g0float tk -<> g0float tk
+implement g0float_pi<dblknd> () = $extval (double, "M_PI")
+implement g0float_cos<dblknd> x = $extfcall (double, "cos", x)
+implement g0float_exp<dblknd> x = $extfcall (double, "exp", x)
+
+macdef PI = g0float_pi ()
+overload cos with g0float_cos
+overload exp with g0float_exp
+
+macdef NAN = g0f2f ($extval (float, "NAN"))
+macdef Zero = g0i2f 0
+macdef One = g0i2f 1
+macdef Two = g0i2f 2
+
+(* Computes the initial guess for the root i of a n-order Legendre
+   polynomial. *)
+fn {tk : tkind}
+guess {n, i : int | 1 <= i; i <= n}
+      (n : int n, i : int i) :<> g0float tk =
+  cos (PI * ((g0i2f i - g0f2f 0.25) / (g0i2f n + g0f2f 0.5)))
+
+(* Computes and evaluates the degree-n Legendre polynomial at the
+   point x. *)
+fn {tk : tkind}
+legpoly {n : pos}
+        (n : int n, x : g0float tk) :<> g0float tk =
+  let
+    fun
+    loop {i  : int | 2 <= i; i <= n + 1} .<n + 1 - i>.
+         (i  : int i, pa : g0float tk, pb : g0float tk)
+        :<> g0float tk =
+      if i = succ n then
+        pb
+      else
+        let
+          val iflt = (g0i2f i) : g0float tk
+          val pn = (((iflt + iflt - One) / iflt) * x * pb)
+                        - (((iflt - One) / iflt) * pa)
+        in
+          loop (succ i, pb, pn)
+        end
+  in
+    if n = 0 then
+      One
+    else if n = 1 then
+      x
+    else
+      loop (2, One, x)
+  end
+
+(* Computes and evaluates the derivative of an n-order Legendre
+   polynomial at point x. *)
+fn {tk : tkind}
+legdiff {n : int | 2 <= n}
+        (n : int n, x : g0float tk) :<> g0float tk =
+  (g0i2f n / ((x * x) - One))
+      * ((x * legpoly<tk> (n, x)) - legpoly<tk> (pred n, x))
+
+(* Computes the n nodes for an n-point quadrature rule (the n roots of
+   a degree-n polynomial). *)
+fn {tk : tkind}
+nodes {n : int | 2 <= n}
+      (n : int n) :<!refwrt> arrayref (g0float tk, n) =
+  let
+    val x = arrayref_make_elt<g0float tk> (i2sz n, Zero)
+    fn
+    v_update (v : g0float tk) :<> g0float tk =
+      v - (legpoly<tk> (n, v) / legdiff<tk> (n, v))
+    var i : Int
+  in
+    for* {i : nat | i <= n} .<n - i>.
+         (i : int i) =>
+      (i := 0; i <> n; i := succ i)
+        let
+          val v = guess<tk> (n, succ i)
+          val v = v_update v
+          val v = v_update v
+          val v = v_update v
+          val v = v_update v
+          val v = v_update v
+        in
+          x[i] := v
+        end;
+    x
+  end
+
+(* Computes the weight for an degree-n polynomial at the node x. *)
+fn {tk : tkind}
+legwts {n : int | 2 <= n}
+       (n : int n, x : g0float tk) :<> g0float tk =
+  (* Here I am having slightly excessive fun with notation: *)
+  Two / ((One - (x * x)) * (y * y where {val y = legdiff<tk> (n, x)}))
+  (* Normally I would not write code in such fashion. :) Nevertheless,
+     it is interesting that this works. *)
+
+(* Takes an array of nodes x and computes an array of corresponding
+   weights w. Note that x is an arrayref, not an arrszref, and so
+   (unlike in the Common Lisp) we have to tell the function the size
+   of the new array w. That information is not otherwise stored AT
+   RUNTIME. The ATS compiler, however, will force us AT COMPILE TIME
+   to pass the correct size. *)
+fn {tk : tkind}
+weights {n : int | 2 <= n}
+        (n : int n, x : arrayref (g0float tk, n))
+    :<!refwrt> arrayref (g0float tk, n) =
+  let
+    val w = arrayref_make_elt<g0float tk> (i2sz n, Zero)
+    var i : Int
+  in
+    for* {i : nat | i <= n} .<n - i>.
+         (i : int i) =>
+      (i := 0; i <> n; i := succ i)
+        w[i] := legwts (n, x[i]);
+    w
+  end
+
+(* Estimates the definite integral of a function on [a,b], using an
+   n-point Gauss-Legendre quadrature rule. *)
+fn {tk : tkind}
+quad {n : int | 2 <= n}
+     (f : g0float tk -<> g0float tk,
+      n : int n,
+      a : g0float tk,
+      b : g0float tk) :<> g0float tk =
+  let
+    val x = $effmask_ref ($effmask_wrt (nodes<tk> n))
+    val w = $effmask_ref ($effmask_wrt (weights<tk> (n, x)))
+
+    val ahalf = g0f2f 0.5 * a and bhalf = g0f2f 0.5 * b
+    val C1 = bhalf - ahalf and C2 = ahalf + bhalf
+
+    fun
+    loop {i : nat | i <= n} .<n - i>.
+         (i : int i, sum : g0float tk) :<> g0float tk =
+      if i = n then
+        sum
+      else
+        let
+          val y = $effmask_ref (w[i] * f ((C1 * x[i]) + C2))
+        in
+          loop (succ i, sum + y)
+        end
+  in
+    C1 * loop (0, Zero)
+  end
+
+implement
+main () =
+  let
+    val outf = stdout_ref
+  in
+    fprintln! (outf, "nodes<dblknd> 5");
+    fprint_arrayref_sep<double> (outf, nodes<dblknd> (5),
+                                 i2sz 5, " ");
+    fprintln! (outf); fprintln! (outf);
+    fprintln! (outf, "weights (nodes<dblknd> 5)");
+    fprint_arrayref_sep<double> (outf, weights (5, nodes<dblknd> (5)),
+                                 i2sz 5, " ");
+    fprintln! (outf); fprintln! (outf);
+    fprintln! (outf, "quad (lam x => exp x, 5, ~3.0, 3.0) = ",
+               quad (lam x => exp x, 5, ~3.0, 3.0));
+    fprintln! (outf);
+    fprintln! (outf, "More examples, borrowed from the Common Lisp:");
+    fprintln! (outf, "quad (lam x => x ** 3, 5, 0.0, 1.0) = ",
+               quad (lam x => x ** 3, 5, 0.0, 1.0));
+    fprintln! (outf, "quad (lam x => 1.0 / x, 5, 1.0, 100.0) = ",
+               quad (lam x => 1.0 / x, 5, 1.0, 100.0));
+    fprintln! (outf, "quad (lam x => x, 5, 0.0, 5000.0) = ",
+               quad (lam x => x, 5, 0.0, 5000.0));
+    fprintln! (outf, "quad (lam x => x, 5, 0.0, 6000.0) = ",
+               quad (lam x => x, 5, 0.0, 6000.0));
+    0
+  end

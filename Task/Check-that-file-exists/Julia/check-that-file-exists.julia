@@ -1,0 +1,6 @@
+@show isfile("input.txt")
+@show isfile("/input.txt")
+@show isdir("docs")
+@show isdir("/docs")
+@show isfile("")
+@show isfile("`Abdu'l-Bahá.txt")

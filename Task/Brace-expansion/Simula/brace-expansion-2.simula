@@ -1,0 +1,150 @@
+EXTERNAL CLASS ARRAYLISTS;
+ARRAYLISTS
+BEGIN
+
+
+    CLASS TUPLE(TLIST,T);
+        REF(TEXTARRAYLIST) TLIST;
+        TEXT T;
+    BEGIN
+    END TUPLE;
+
+
+    REF(TUPLE) PROCEDURE GETITEM(S, DEPTH);
+        TEXT S;
+        INTEGER DEPTH;
+    BEGIN
+        REF(TUPLE) RESULT;
+        REF(TEXTARRAYLIST) OUT;
+        OUT :- NEW TEXTARRAYLIST;
+        OUT.ADD("");
+
+    CONTINUE:
+        WHILE S.LENGTH > 0 DO BEGIN
+            CHARACTER C;
+            TEXT CTEXT;
+
+            S.SETPOS(1); C := S.GETCHAR; CTEXT :- BLANKS(1); CTEXT.PUTCHAR(C);
+            IF DEPTH > 0 AND (C = ',' OR C = '}') THEN
+                GOTO RETURN;
+
+            IF C = '{' THEN BEGIN
+                REF(TUPLE) X;
+
+                X :- GETGROUP(S.SUB(2,S.LENGTH-1), DEPTH + 1);
+                IF X =/= NONE THEN BEGIN
+                    REF(TEXTARRAYLIST) OUT2;
+                    INTEGER A,B;
+                    ! OUT,S = [A+B FOR A IN OUT FOR B IN X[0]], X[1] ;
+                    OUT2 :- NEW TEXTARRAYLIST;
+                    FOR A := 1 STEP 1 UNTIL OUT.SIZE DO
+                        FOR B := 1 STEP 1 UNTIL X.TLIST.SIZE DO
+                            OUT2.ADD(OUT.GET(A) & X.TLIST.GET(B));
+                    OUT :- OUT2;
+                    S :- X.T;
+                    GOTO CONTINUE;
+                END;
+            END;
+
+            IF C = '\' AND S.LENGTH > 1 THEN BEGIN
+                TEXT NEWCTEXT;
+
+                NEWCTEXT :- BLANKS(CTEXT.LENGTH + 1);
+                NEWCTEXT := CTEXT;
+                NEWCTEXT.SETPOS(CTEXT.LENGTH+1);
+                S.SETPOS(2); NEWCTEXT.PUTCHAR(S.GETCHAR);
+                CTEXT :- NEWCTEXT;
+                S :- S.SUB(2,S.LENGTH-1);
+            END;
+
+            BEGIN
+                REF(TEXTARRAYLIST) OUT2;
+                INTEGER A;
+                ! OUT, S = [A+CTEXT FOR A IN OUT], S[1:] ;
+                OUT2 :- NEW TEXTARRAYLIST;
+                FOR A := 1 STEP 1 UNTIL OUT.SIZE DO
+                    OUT2.ADD(OUT.GET(A) & CTEXT);
+                OUT :- OUT2;
+                S :- S.SUB(2,S.LENGTH-1);
+            END;
+        END;
+
+    RETURN:
+        RESULT :- NEW TUPLE(OUT,S);
+        GETITEM :- RESULT;
+    END GETITEM;
+
+
+    REF(TUPLE) PROCEDURE GETGROUP(S, DEPTH);
+        TEXT S;
+        INTEGER DEPTH;
+    BEGIN
+        REF(TUPLE) RESULT;
+        REF(TEXTARRAYLIST) OUT;
+        BOOLEAN COMMA,BREAK;
+
+        OUT :- NEW TEXTARRAYLIST;
+        COMMA := FALSE;
+        BREAK := FALSE;
+        WHILE S.LENGTH > 0 AND NOT BREAK DO BEGIN
+            REF(TUPLE) GS;
+            REF(TEXTARRAYLIST) G;
+
+            GS :- GETITEM(S, DEPTH); G :- GS.TLIST; S :- GS.T;
+            IF S.LENGTH = 0 THEN BREAK := TRUE ELSE
+            BEGIN
+                CHARACTER S1;
+                INTEGER I;
+
+                ! out += g ;
+                FOR I := 1 STEP 1 UNTIL G.SIZE DO OUT.ADD(G.GET(I));
+
+                S.SETPOS(1); S1 := S.GETCHAR;
+                IF S1 = '}' THEN BEGIN
+                    IF COMMA THEN BEGIN
+                        BREAK := TRUE;
+                        RESULT :- NEW TUPLE(OUT, S.SUB(2,S.LENGTH-1));
+                    END ELSE
+                    BEGIN
+                        REF(TEXTARRAYLIST) OUT2;
+                        INTEGER I;
+
+                        OUT2 :- NEW TEXTARRAYLIST;
+                        FOR I := 1 STEP 1 UNTIL OUT.SIZE DO
+                            OUT2.ADD("{" & OUT.GET(I) & "}");
+                        BREAK := TRUE;
+                        RESULT :- NEW TUPLE(OUT2, S.SUB(2,S.LENGTH-1));
+                    END;
+                END ELSE
+                IF S1 = ',' THEN BEGIN
+                    COMMA := TRUE;
+                    S :- S.SUB(2,S.LENGTH-1);
+                END;
+            END;
+        END;
+        GETGROUP :- RESULT;
+    END GETGROUP;
+
+
+    TEXT INP;
+
+    FOR INP :- "~/{Downloads,Pictures}/*.{jpg,gif,png}",
+               "It{{em,alic}iz,erat}e{d,}, please.",
+               "{,{,gotta have{ ,\, again\, }}more }cowbell!",
+               "{}} some }{,{\\{ edge, edge} \,}{ cases, {here} \\\\\}" DO
+    BEGIN
+        REF(TUPLE) RES;
+        INTEGER I;
+
+        RES :- GETITEM(INP,0);
+        OUTTEXT(INP);
+        OUTIMAGE;
+        FOR I := 1 STEP 1 UNTIL RES.TLIST.SIZE DO BEGIN
+            OUTTEXT("        ");
+            OUTTEXT(RES.TLIST.GET(I));
+            OUTIMAGE;
+        END;
+        OUTIMAGE;
+    END;
+
+END

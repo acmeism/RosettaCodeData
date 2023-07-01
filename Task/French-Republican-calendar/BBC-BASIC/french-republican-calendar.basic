@@ -1,0 +1,137 @@
+REM >frrepcal
+:
+DIM gregorian$(11)
+DIM gregorian%(11)
+DIM republican$(11)
+DIM sansculottides$(5)
+gregorian$() = "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"
+gregorian%() = 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+REM 7-bit ASCII encoding, so no accents on French words
+republican$() = "Vendemiaire", "Brumaire", "Frimaire", "Nivose", "Pluviose", "Ventose", "Germinal", "Floreal", "Prairial", "Messidor", "Thermidor", "Fructidor"
+sansculottides$() = "Fete de la vertu", "Fete du genie", "Fete du travail", "Fete de l'opinion", "Fete des recompenses", "Fete de la Revolution"
+:
+PRINT "*** French  Republican ***"
+PRINT "*** calendar converter ***"
+PRINT "Enter a date to convert, in the format 'day month year'"
+PRINT "e.g.: 1 Prairial 3,"
+PRINT "      20 May 1795."
+PRINT "For Sansculottides, use 'day year'"
+PRINT "e.g.: Fete de l'opinion 9."
+PRINT "Or just press 'RETURN' to exit the program."
+PRINT
+REPEAT
+  INPUT LINE "> " src$
+  IF src$ <> "" THEN
+    PROC_split(src$, day%, month%, year%)
+    REM for simplicity, we assume that years up to 1791 are Republican
+    REM and years from 1792 onwards are Gregorian
+    IF year% < 1792 THEN
+      REM convert Republican date to number of days elapsed
+      REM since 21 September 1792, then convert that number
+      REM to the Gregorian date
+      PROC_day_to_gre(FN_rep_to_day(day%, month%, year%), day%, month%, year%)
+      PRINT; day%; " "; gregorian$(month% - 1); " " year%
+    ELSE
+      REM convert Gregorian date to Republican, via
+      REM number of days elapsed since 21 September 1792
+      PROC_day_to_rep(FN_gre_to_day(day%, month%, year%), day%, month%, year%)
+      IF month% = 13 THEN
+        PRINT sansculottides$(day% - 1); " "; year%
+      ELSE
+        PRINT; day%; " "; republican$(month% - 1); " "; year%
+      ENDIF
+    ENDIF
+  ENDIF
+UNTIL src$ = ""
+END
+:
+DEF PROC_split(s$, RETURN d%, RETURN m%, RETURN y%)
+LOCAL month_and_year$, month$, months$(), i%
+DIM months$(11)
+IF LEFT$(s$, 4) = "Fete" THEN
+  m% = 13
+  FOR i% = 0 TO 5
+    IF LEFT$(s$, LEN sansculottides$(i%)) = sansculottides$(i%) THEN
+      d% = i% + 1
+      y% = VAL(RIGHT$(s$, LEN s$ - LEN sansculottides$(i%) - 1))
+    ENDIF
+  NEXT
+ELSE
+  d% = VAL(LEFT$(s$, INSTR(s$, " ") - 1))
+  month_and_year$ = MID$(s$, INSTR(s$, " ") + 1)
+  month$ = LEFT$(month_and_year$, INSTR(month_and_year$, " ") - 1)
+  y% = VAL(MID$(month_and_year$, INSTR(month_and_year$, " ") + 1))
+  IF y% < 1792 THEN months$() = republican$() ELSE months$() = gregorian$()
+  FOR i% = 0 TO 11
+    IF months$(i%) = month$ THEN m% = i% + 1
+  NEXT
+ENDIF
+ENDPROC
+:
+DEF FN_gre_to_day(d%, m%, y%)
+REM modified & repurposed from code given at
+REM https://www.staff.science.uu.nl/~gent0113/calendar/isocalendar_text5.htm
+IF m% < 3 THEN
+  y% -= 1
+  m% += 12
+ENDIF
+= INT(365.25 * y%) - INT(y% / 100) + INT(y% / 400) + INT(30.6 * (m% + 1)) + d% - 654842
+:
+DEF FN_rep_to_day(d%, m%, y%)
+REM assume that a year is a leap year iff the _following_ year is
+REM divisible by 4, but not by 100 unless also by 400
+REM
+REM other methods for computing Republican leap years exist
+IF m% = 13 THEN
+  m% -= 1
+  d% += 30
+ENDIF
+IF FN_rep_leap(y%) THEN d% -= 1
+= 365 * y% + INT((y% + 1) / 4) - INT((y% + 1) / 100) + INT((y% + 1) / 400) + 30 * m% + d% - 395
+:
+DEF PROC_day_to_gre(day%, RETURN d%, RETURN m%, RETURN y%)
+y% = INT(day% / 365.25)
+d% = day% - INT(365.25 * y%) + 21
+y% += 1792
+d% += INT(y% / 100) - INT(y% / 400) - 13
+m% = 8
+WHILE d% > gregorian%(m%)
+  d% -= gregorian%(m%)
+  m% += 1
+  IF m% = 12 THEN
+    m% = 0
+    y% += 1
+    IF FN_gre_leap(y%) THEN gregorian%(1) = 29 ELSE gregorian%(1) = 28
+  ENDIF
+ENDWHILE
+m% += 1
+ENDPROC
+:
+DEF PROC_day_to_rep(day%, RETURN d%, RETURN m%, RETURN y%)
+LOCAL sansculottides%
+y% = INT(day% / 365.25)
+IF FN_rep_leap(y%) THEN y% -= 1
+d% = day% - INT(365.25 * y%) + INT((y% + 1) / 100) - INT((y% + 1) / 400)
+y% += 1
+m% = 1
+IF FN_rep_leap(y%) THEN sansculottides% = 6 ELSE sansculottides% = 5
+WHILE d% > 30
+  d% -= 30
+  m% += 1
+  IF m% = 13 THEN
+    IF d% > sansculottides% THEN
+      d% -= sansculottides%
+      m% = 1
+      y% += 1
+      IF FN_rep_leap(y%) THEN sansculottides% = 6 ELSE sansculottides% = 5
+    ENDIF
+  ENDIF
+ENDWHILE
+ENDPROC
+:
+DEF FN_rep_leap(year%)
+REM see comment at the beginning of FN_rep_to_day
+= ((year% + 1) MOD 4 = 0 AND ((year% + 1) MOD 100 <> 0 OR (year% + 1) MOD 400 = 0))
+:
+DEF FN_gre_leap(year%)
+= (year% MOD 4 = 0 AND (year% MOD 100 <> 0 OR year% MOD 400 = 0))

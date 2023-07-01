@@ -1,0 +1,24 @@
+' Primality by trial division
+
+' Test and display primes 1 .. 50
+DECLARE FUNCTION prime% (n!)
+FOR n = 1 TO 50
+  IF prime(n) = 1 THEN PRINT n;
+NEXT n
+
+FUNCTION prime% (n!)
+  STATIC i AS INTEGER
+  IF n = 2 THEN
+    prime = 1
+  ELSEIF n <= 1 OR n MOD 2 = 0 THEN
+    prime = 0
+  ELSE
+    prime = 1
+    FOR i = 3 TO INT(SQR(n)) STEP 2
+      IF n MOD i = 0 THEN
+        prime = 0
+        EXIT FUNCTION
+      END IF
+    NEXT i
+  END IF
+END FUNCTION

@@ -1,0 +1,278 @@
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+(* For convenience (because the prelude provides it), we will use
+   integer division with truncation towards zero. *)
+infixl ( / ) div
+infixl ( mod ) rem
+macdef div = g0int_div
+macdef rem = g0int_mod
+
+(*------------------------------------------------------------------*)
+(* The definition of a continued fraction, and a few simple ones. *)
+
+typedef cf (tk : tkind) = stream (g0int tk)
+
+(* A "continued fraction" with no terms. *)
+fn {tk : tkind}
+cfnil ()
+    : cf tk =
+  stream_make_nil<g0int tk> ()
+
+(* A continued fraction of one term followed by more terms. *)
+fn {tk : tkind}
+cfcons (term : g0int tk,
+        more : cf tk)
+    : cf tk =
+  stream_make_cons<g0int tk> (term, more)
+
+(* A continued fraction with all terms equal. *)
+fn {tk : tkind}
+repeat_forever (term : g0int tk)
+    : cf tk =
+  let
+    fun recurs () : stream_con (g0int tk) =
+      stream_cons (term, $delay recurs ())
+  in
+    $delay recurs ()
+  end
+
+(* The square root of two. *)
+fn {tk : tkind}
+sqrt2 ()
+    : cf tk =
+  cfcons<tk> (g0i2i 1, repeat_forever<tk> (g0i2i 2))
+
+(*------------------------------------------------------------------*)
+(* A continued fraction for a rational number. *)
+
+typedef ratnum (tk : tkind) = @(g0int tk, g0int tk)
+
+fn {tk : tkind}
+r2cf_integers (n : g0int tk,
+               d : g0int tk)
+    : cf tk =
+  let
+    fun recurs (n : g0int tk,
+                d : g0int tk)
+        : cf tk =
+      if iseqz d then
+        cfnil<tk> ()
+      else
+        cfcons<tk> (n div d, recurs (d, n rem d))
+  in
+    recurs (n, d)
+  end
+
+fn {tk : tkind}
+r2cf_ratnum (r : ratnum tk)
+    : cf tk =
+  r2cf_integers (r.0, r.1)
+
+overload r2cf with r2cf_integers
+overload r2cf with r2cf_ratnum
+
+(*------------------------------------------------------------------*)
+(* Application of a homographic function to a continued fraction. *)
+
+typedef ng4 (tk : tkind) = @(g0int tk, g0int tk,
+                             g0int tk, g0int tk)
+
+fn {tk : tkind}
+apply_ng4 (ng4      : ng4 tk,
+           other_cf : cf tk)
+    : cf tk =
+  let
+    typedef t = g0int tk
+
+    fun
+    recurs (a1       : t,
+            a        : t,
+            b1       : t,
+            b        : t,
+            other_cf : cf tk)
+        : stream_con t =
+      let
+        fn {}
+        eject_term (a1       : t,
+                    a        : t,
+                    b1       : t,
+                    b        : t,
+                    other_cf : cf tk,
+                    term     : t)
+            : stream_con t =
+          stream_cons (term, $delay recurs (b1, b, a1 - (b1 * term),
+                                            a - (b * term), other_cf))
+
+        fn {}
+        absorb_term (a1       : t,
+                     a        : t,
+                     b1       : t,
+                     b        : t,
+                     other_cf : cf tk)
+            : stream_con t =
+          case+ !other_cf of
+          | stream_nil () =>
+            recurs (a1, a1, b1, b1, other_cf)
+          | stream_cons (term, rest) =>
+            recurs (a + (a1 * term), a1, b + (b1 * term), b1, rest)
+      in
+        if iseqz b1 && iseqz b then
+          stream_nil ()
+        else if iseqz b1 || iseqz b then
+          absorb_term (a1, a, b1, b, other_cf)
+        else
+          let
+            val q1 = a1 div b1
+            and q = a div b
+          in
+            if q1 = q then
+              eject_term (a1, a, b1, b, other_cf, q)
+            else
+              absorb_term (a1, a, b1, b, other_cf)
+          end
+      end
+
+    val @(a1, a, b1, b) = ng4
+  in
+    $delay recurs (a1, a, b1, b, other_cf)
+  end
+
+(*------------------------------------------------------------------*)
+(* Some special cases of homographic functions. *)
+
+fn {tk : tkind}
+integer_add_cf (n  : g0int tk,
+                cf : cf tk)
+    : cf tk =
+  apply_ng4 (@(g0i2i 1, n, g0i2i 0, g0i2i 1), cf)
+
+fn {tk : tkind}
+cf_add_ratnum (cf : cf tk,
+               r  : ratnum tk)
+    : cf tk =
+  let
+    val @(n, d) = r
+  in
+    apply_ng4 (@(d, n, g0i2i 0, d), cf)
+  end
+
+fn {tk : tkind}
+cf_mul_ratnum (cf : cf tk,
+               r  : ratnum tk)
+    : cf tk =
+  let
+    val @(n, d) = r
+  in
+    apply_ng4 (@(n, g0i2i 0, g0i2i 0, d), cf)
+  end
+
+fn {tk : tkind}
+cf_div_integer (cf : cf tk,
+                n  : g0int tk)
+    : cf tk =
+  apply_ng4 (@(g0i2i 1, g0i2i 0, g0i2i 0, g0i2i n), cf)
+
+fn {tk : tkind}
+integer_div_cf (n  : g0int tk,
+                cf : cf tk)
+    : cf tk =
+  apply_ng4 (@(g0i2i 0, g0i2i n, g0i2i 1, g0i2i 0), cf)
+
+overload + with integer_add_cf
+overload + with cf_add_ratnum
+overload * with cf_mul_ratnum
+overload / with cf_div_integer
+overload / with integer_div_cf
+
+(*------------------------------------------------------------------*)
+(* cf2string: convert a continued fraction to a string. *)
+
+fn {tk : tkind}
+cf2string_max_terms_given
+          (cf        : cf tk,
+           max_terms : intGte 1)
+    : string =
+  let
+    fun
+    loop (i     : intGte 0,
+          cf    : cf tk,
+          accum : List0 string)
+        : List0 string =
+      case+ !cf of
+      | stream_nil () => list_cons ("]", accum)
+      | stream_cons (term, rest) =>
+        if i = max_terms then
+          list_cons (",...]", accum)
+        else
+          let
+            val accum =
+              list_cons
+                (tostring_val<g0int tk> term,
+                 (case+ i of
+                  | 0 => accum
+                  | 1 => list_cons (";", accum)
+                  | _ => list_cons (",", accum)) : List0 string)
+          in
+            loop (succ i, rest, accum)
+          end
+
+    val string_lst = list_vt2t (reverse (loop (0, cf, list_sing "[")))
+  in
+    strptr2string (stringlst_concat string_lst)
+  end
+
+extern fn {tk : tkind}
+cf2string$max_terms :
+  () -> intGte 1
+
+implement {tk} cf2string$max_terms () = 20
+
+fn {tk : tkind}
+cf2string_max_terms_default
+          (cf : cf tk)
+    : string =
+  cf2string_max_terms_given<tk> (cf, cf2string$max_terms<tk> ())
+
+overload cf2string with cf2string_max_terms_given
+overload cf2string with cf2string_max_terms_default
+
+(*------------------------------------------------------------------*)
+
+fn {tk : tkind}
+show (expression : string,
+      cf         : cf tk)
+    : void =
+  begin
+    print! expression;
+    print! " => ";
+    println! (cf2string<tk> cf);
+  end
+
+implement
+main () =
+  let
+    val cf_13_11 = r2cf (13, 11)
+    val cf_22_7 = r2cf (22, 7)
+    val cf_sqrt2 = sqrt2<intknd> ()
+    val cf_1_sqrt2 = 1 / cf_sqrt2
+  in
+    show ("13/11", cf_13_11);
+    show ("22/7", cf_22_7);
+    show ("sqrt(2)", cf_sqrt2);
+    show ("13/11 + 1/2", cf_13_11 + @(1, 2));
+    show ("22/7 + 1/2", cf_22_7 + @(1, 2));
+    show ("(22/7)/4", cf_22_7 * @(1, 4));
+    show ("1/sqrt(2)", cf_1_sqrt2);
+    show ("(2 + sqrt(2))/4", apply_ng4 (@(1, 2, 0, 4), cf_sqrt2));
+
+    (* To show it can be done, write the following without using
+       results already obtained: *)
+    show ("(1 + 1/sqrt(2))/2", (1 + 1/sqrt2())/2);
+
+    0
+  end
+
+(*------------------------------------------------------------------*)

@@ -1,0 +1,150 @@
+        .org 0x08000000
+
+        b ProgramStart
+
+        ;cartridge header goes here
+
+
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
+; Program Start
+
+	.equ ramarea, 0x02000000
+	.equ CursorX,ramarea		
+	.equ CursorY,ramarea+1
+	.equ hailstoneram,0x02000004
+	
+	
+ProgramStart:
+	mov sp,#0x03000000			;Init Stack Pointer
+	
+	mov r4,#0x04000000  		        ;DISPCNT - LCD Video Controller
+	mov r2,#0x403    			;4= Layer 2 on / 3= ScreenMode 3
+	str	r2,[r4]         	        ;now the user can see the screen
+
+	bl ResetTextCursors			;set text cursors to top left of screen. This routine, as well as the other I/O
+	                                        ;     routines, were omitted to keep this entry short.
+	mov r0,#27
+	adr r1,HailStoneMessage_Init
+	bl PrintString
+	bl NewLine
+	bl ShowHex32
+	bl NewLine
+	bl NewLine
+	
+	
+	bl Hailstone
+	
+                ;function is complete, return the output
+	        adr r1,HailStoneMessage_0
+		bl PrintString
+		bl NewLine
+		ldr r1,HailStoneRam_Mirror		;mov r2,0x02000004
+		
+		
+		ldr r0,[r1],#4
+		bl ShowHex32
+		bl NewLine
+		
+		ldr r0,[r1],#4
+		bl ShowHex32
+		bl NewLine
+		
+		ldr r0,[r1],#4
+		bl ShowHex32
+		bl NewLine
+		
+		ldr r0,[r1],#4
+		bl ShowHex32
+		bl NewLine
+		bl NewLine
+		
+		adr r1,HailStoneMessage_1
+		bl PrintString
+		bl NewLine
+		
+		ldr r0,[r2],#4
+		bl ShowHex32
+		bl NewLine
+		
+		ldr r0,[r2],#4
+		bl ShowHex32
+		bl NewLine
+		
+		ldr r0,[r2],#4
+		bl ShowHex32
+		bl NewLine
+		
+		ldr r0,[r2],#4
+		bl ShowHex32
+		bl NewLine
+		bl NewLine
+		
+		adr r1,HailStoneMessage_2
+		bl PrintString
+		bl NewLine
+		mov r0,r3
+		bl ShowHex32	
+
+forever:
+	b forever              ;we're done, so trap the program counter.
+	
+Hailstone:
+	;input: R0 = n.
+	;out: 	r2 = pointer to last 4 entries
+	;	r3 = length of sequence
+	
+	
+	;reg usage:
+	;R1 = scratchpad
+	;R3 = counter for entries in the sequence.
+	;R5 = pointer to output ram
+	stmfd sp!,{r4-r12,lr}
+
+		mov r5,#0x02000000
+		add r5,r5,#4
+		str r0,[r5],#4				;store in hailstone ram and post-inc by 4
+		mov r3,#0
+loop_hailstone:
+		add r3,r3,#1				;represents number of entries in the sequence
+		cmp r0,#1
+		beq hailstone_end
+		tst r0,#1
+		;;;; executes only if r0 was even
+		moveq r0,r0,lsr #1			;divide 		
+		
+		;;;; executes only if r0 was odd
+		movne r1,r0
+		movne r0,r0,lsl #1
+		addne r0,r1,r0
+		addne r0,r0,#1
+		
+		str r0,[r5],#4			;store in hailstone ram, post inc by 4
+		
+		b loop_hailstone
+		
+		
+hailstone_end:
+		sub r5,r5,#16			;subtract 16 to get pointer to last 4 entries.
+		mov r2,r5				;output ptr to last 4 entries to r2.
+		;pointer to first 4 entries is 0x02000004
+		ldmfd sp!,{r4-r12,pc}
+	
+HailStoneRam_Mirror:
+	.long 0x02000004
+HailstoneMessage_Init:
+	.byte "Your input was:",255
+	.align 4
+HailstoneMessage_0:
+	.byte "First 4 numbers are:",255
+	.align 4
+HailstoneMessage_1:
+	.byte "Last 4 numbers are:",255
+	.align 4	
+HailstoneMessage_2:
+	.byte "Sequence length is:",255
+	.align 4
+
+;;;;;;;;;;; EVERYTHING PAST THIS POINT IS JUST I/O ROUTINES FOR PRINTING NUMBERS AND WORDS TO THE GAME BOY ADVANCE'S SCREEN
+;;;;;;;;;;; I ASSURE YOU THAT ALL OF IT WORKS BUT CHANCES ARE YOU DIDN'T COME HERE TO SEE THAT.
+;;;;;;;;;;; THANKS TO KEITH OF CHIBIAKUMAS.COM FOR WRITING THEM!

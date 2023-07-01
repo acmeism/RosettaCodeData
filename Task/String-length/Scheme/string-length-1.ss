@@ -1,0 +1,1 @@
+(string-size "Hello world")

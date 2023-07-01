@@ -1,0 +1,73 @@
+org &8000
+PrintChar equ &BB5A   ;syscall - prints accumulator to Amstrad CPC's screen
+
+
+main:
+
+	ld hl,TestData0
+	call PrintBinary_NoLeadingZeroes
+
+	ld hl,TestData1
+	call PrintBinary_NoLeadingZeroes
+
+	ld hl,TestData2
+	call PrintBinary_NoLeadingZeroes
+
+	ret
+
+TestData0:
+	byte 5,255
+TestData1:
+	byte 5,0,255
+TestData2:
+	byte 9,0,0,0,255
+
+temp:
+    byte 0	
+	;temp storage for the accumulator
+	;	we can't use the stack to preserve A since that would also preserve the flags.
+
+
+PrintBinary_NoLeadingZeroes:
+;setup:
+	ld bc,&8000            ;B is the revolving bit mask, C is the "have we seen a zero yet" flag
+
+
+NextDigit:
+	ld a,(hl)
+	inc hl
+	cp 255
+	jp z,Terminated
+	
+	ld (temp),a
+NextBit:
+	ld a,(temp)
+	and b
+	jr z,PrintZero
+	; else, print one
+	ld a,'1'                ;&31
+	call &BB5A
+	set 0,b			;bit 0 of B is now 1, so we can print zeroes now.
+	jr Predicate
+	
+PrintZero:
+	ld a,b
+	or a
+	jr z,Predicate		;if we haven't seen a zero yet, don't print a zero.
+	ld a,'0'		;&30
+	call &BB5A
+	
+	
+Predicate:
+	rrc b				
+	;rotate the mask right by one. If it sets the carry,
+	;	it's back at the start, and we need to load the next byte.
+	jr nc,NextBit
+	
+	jr NextDigit		;back to top
+	
+Terminated:
+	ld a,13
+	call &BB5A
+	ld a,10
+	jp &BB5A		;its ret will return for us.

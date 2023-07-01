@@ -1,0 +1,147 @@
+;;;;;;;;;;;;;;;;;;; HEADER   ;;;;;;;;;;;;;;;;;;;
+read "\SrcCPC\winape_macros.asm"
+read "\SrcCPC\MemoryMap.asm"
+read "\SrcALL\winapeBuildCompat.asm"
+;;;;;;;;;;;;;;;;;;; PROGRAM  ;;;;;;;;;;;;;;;;;;;
+
+org &8000
+ld de,27
+call doHailstone	
+;returns length of sequence, and writes each entry in the sequence
+;	to RAM
+
+;print the sequence length (in hex)
+ld a,h
+call ShowHex	
+ld a,l
+ld (memdump_smc),a
+;just to prove I didn't need to know the sequence length at
+;	compile time, I'll store the calculated length as the operand
+;	of "doMemDump" which normally takes a constant embedded after
+;	it as the number of bytes to display.
+
+;      If that doesn't make sense, don't worry.
+;      This has nothing to do with calculating the hailstone sequence, just showing the results.
+call ShowHex
+
+call NewLine		;prints CRLF
+call NewLine
+
+call doMemDump
+memdump_smc:
+byte 0			;operand of "doMemDump" (gets overwritten with the sequence length)
+word HailstoneBuffer	;operand of "doMemDump"
+
+
+ret
+
+;;;;;;;;;;;;;;;;;;; LIBRARY  ;;;;;;;;;;;;;;;;;;;
+read "\SrcCPC\winape_stringop.asm"
+read "\SrcCPC\winape_showhex.asm"
+
+
+doHailstone:
+;you need the proper input for the function "hailstone"
+;returns addr. of last element in IX.
+call hailstone
+ld de,HailstoneBuffer
+or a	;clear carry
+push ix
+pop hl		;returns element count in HL.
+sbc hl,de	;subtract the two to get the length of the array.
+
+SRL H
+RR L		;divide array size by 2, since each entry is 2 bytes.
+INC L
+ret nz		;if no carry, don't increment H.
+INC H
+ret
+
+
+hailstone:
+;input - de = n
+ld ix,HailstoneBuffer
+ld a,d
+or e
+ret z	;zero is not allowed.
+loop_hailstone:
+ld (IX+0),e
+ld (IX+1),d
+ld a,e
+cp 1
+jr nz,continue_hailstone
+ld a,d
+or a
+ret z	;if de = 1, stop.
+continue_hailstone:
+bit 0,e
+jr z,DE_IS_EVEN
+;de is odd
+push de
+pop hl		;ld hl,de
+
+SLA E
+RL D
+add hl,de	;hl = de*3
+
+ld de,1
+add hl,de
+
+push hl	
+pop de		;ld de,hl
+
+inc ix
+inc ix
+jr loop_hailstone
+
+DE_IS_EVEN:
+SRL D		;A/2
+RR E
+inc ix
+inc ix
+jr loop_hailstone
+
+
+doMemDump:
+;show the hailstone sequence to the screen. This is just needed to display the data, if you don't care about that
+;you can stop reading here.
+pop hl		;get PC
+ld b,(hl)	;get byte count
+inc hl
+ld e,(hl)	;get low byte of start addr.
+inc hl
+ld d,(hl)	;get high byte of start addr.
+inc hl
+push hl		;now when we return we'll skip the data block.
+ex de,hl
+
+
+call NewLine
+
+;we'll dump 8 words per line.
+
+ld c,8
+loop_doMemDump:
+inc hl
+ld a,(hl)
+call ShowHex
+dec hl
+ld a,(hl)
+call ShowHex
+ld a,' '
+call PrintChar
+inc hl
+inc hl
+dec c
+ld a,c
+and %00001111
+jr nz,continueMemdump
+ld c,8
+continueMemdump:
+djnz loop_doMemDump
+ret
+
+
+
+HailstoneBuffer:
+ds 512,0

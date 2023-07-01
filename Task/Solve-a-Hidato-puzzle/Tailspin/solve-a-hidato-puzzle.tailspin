@@ -1,0 +1,46 @@
+def input:
+'__ 33 35 __ __  .  .  .
+ __ __ 24 22 __  .  .  .
+ __ __ __ 21 __ __  .  .
+ __ 26 __ 13 40 11  .  .
+ 27 __ __ __  9 __  1  .
+  .  . __ __ 18 __ __  .
+  .  .  .  . __  7 __ __
+  .  .  .  .  .  .  5 __';
+
+templates hidato
+  composer setup
+    data givenInput <n´1:[<´{}´ ={}|{row: <row>, col: <col>}>*]> local
+    @: {row: 1, col: 1, givenInput:n´1:[]};
+    { board: row´1:[ <line>+ ], given: $@.givenInput -> \[i](<~´{}´ ={}> { n: $i, $...} !\) }
+    rule line: col´1:[ <cell>+ ] (<'\n '>?) (..|@: {row: $@.row::raw + 1, col: 1};)
+    rule cell: <open|blocked|given> (<' '>?) (@.col: $@.col::raw + 1;)
+    rule open: <'__'> -> n´0
+    rule blocked: <' \.'> -> n´-1
+    rule given: (<' '>?) (def given: <n´INT>;)
+      ($given -> ..|@.givenInput: $@.givenInput::length+1..$::raw -> {};)
+      ($given -> @.givenInput($): { row: $@.row, col: $@.col };)
+      $given
+  end setup
+
+  templates solve
+    when <~{row: <1..$@hidato.board::length>, col: <1..$@hidato.board(row´1)::length>}> do !VOID
+    when <{ n: <=$@hidato.given(last).n>, row: <=$@hidato.given(last).row>, col: <=$@hidato.given(last).col> }> do $@hidato.board !
+    when <?($@hidato.board($.row; $.col) <~=n´0|=$.n>)> do !VOID
+    when <?($@hidato.board($.row; $.col) <=n´0>)?($@hidato.given($.next) <{n: <=$.n>}>)> do !VOID
+    otherwise
+      def guess: $;
+      def back: $@hidato.board($.row; $.col);
+      def next: $ -> \(when <{n: <=$back>}> do n´($.next::raw + 1)! otherwise $.next!\);
+      @hidato.board($.row; $.col): $.n;
+      0..8 -> { next: $next, n: $guess.n::raw + 1, row: $guess.row::raw + $ ~/ 3 - 1, col: $guess.col::raw + $ mod 3 - 1 } -> #
+      @hidato.board($.row; $.col): $back;
+  end solve
+
+  @: $ -> setup;
+  { next: n´1, $@.given(first)... } -> solve !
+end hidato
+
+$input -> hidato -> '$... -> '$... -> ' $ -> \(when <=n´-1> do ' .' ! when <n´10..> do '$;' ! otherwise ' $;' !\);';
+';
+' ->!OUT::write

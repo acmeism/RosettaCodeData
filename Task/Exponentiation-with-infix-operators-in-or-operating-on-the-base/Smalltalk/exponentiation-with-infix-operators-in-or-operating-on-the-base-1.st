@@ -1,0 +1,10 @@
+a := 2.
+b := 3.
+Transcript show:'-5**2 => '; showCR: -5**2.
+Transcript show:'-5**a => '; showCR: -5**a.
+Transcript show:'-5**b => '; showCR: -5**b.
+Transcript show:'5**2 => '; showCR: 5**2.
+Transcript show:'5**a => '; showCR: 5**a.
+Transcript show:'5**b => '; showCR: 5**b.
+" Transcript show:'-(5**b) => '; showCR: -(5**b).  -- invalid: syntax error "
+" Transcript show:'5**-b => '; showCR: 5**-b.      -- invalid: syntax error "

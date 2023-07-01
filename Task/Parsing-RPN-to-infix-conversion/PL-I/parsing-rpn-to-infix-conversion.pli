@@ -1,0 +1,54 @@
+/* Uses a push-down pop-up stack for the stack (instead of array) */
+cvt: procedure options (main);                /* 10 Sept. 2012 */
+   declare (true initial ('1'b), false initial ('0'b) ) bit (1);
+   declare list character (1) controlled, written bit (1) controlled;
+   declare (RPN, out) character (100) varying;
+   declare s character (1);
+   declare input_priority (5) fixed (1) static initial (1, 1, 2, 2, 3);
+   declare stack_priority (5) fixed (1) static initial (1, 1, 2, 2, 4);
+   declare (i, ki, kl) fixed binary;
+
+   put ('Convert a Reverse Polish expression to orthodox.');
+   put skip list ('Enclose the expression in apostrophes:');
+   get list (RPN);
+   put skip list ('The original Reverse Polish expression = ' || RPN);
+   out = '';
+
+   allocate list, written;
+   list = substr(RPN, length(RPN), 1); written = false;
+
+translation:
+   do i = length (RPN)-1 to 1 by -1;
+      s = substr(RPN, i, 1);
+      if s = ' ' then iterate;
+      ki = index('+-*/^', s);
+      kl = index('+-*/^', list);
+      if ki > 0 then /* we have an operator */
+         do;
+            if input_priority (ki) < stack_priority (kl) then
+               do; /* transfer ')' to list, then operator. */
+                  allocate list, written;
+                  list = '('; written = false;
+                  out = ')' || out;
+               end;
+            allocate list, written;
+            list = s; written = false;
+         end;
+      else /* It's a variable name */
+         do;
+            out = s || out;
+next_list:
+            if allocation(list) > 0 then if written then free written, list;
+            if allocation(list) > 0 then if list = '(' then
+               do; out = list || out; free written, list; end;
+            if allocation (list) = 0 then leave translation;
+            if written then go to next_list;
+            written = true;
+            out = list || out; /* Output an operator. */
+         end;
+      put skip edit ('INPUT=' || s) (a); call show_stack;
+      put edit (' OUTPUT=', out) (col(30), 2 a);
+   end;
+   put skip list ('ALGEBRAIC EXPRESSION=', out);
+
+end cvt;

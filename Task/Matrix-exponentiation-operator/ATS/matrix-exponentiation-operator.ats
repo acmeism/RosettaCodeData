@@ -1,0 +1,135 @@
+(* I will write a GENERAL template for raising something to a
+   non-negative integer power, and then apply that template to matrix
+   multiplication. *)
+
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+(* The interface. *)
+
+extern fn {a : t@ype} nonnegative_integer_power : (a, intGte 0) -> a
+extern fn {a : t@ype} zeroth_power : () -> a
+extern fn {a : t@ype} product : (a, a) -> a
+
+(*------------------------------------------------------------------*)
+(* The implementation of "nonnegative_integer_power". *)
+
+(* I use the squaring method. See
+https://en.wikipedia.org/w/index.php?title=Exponentiation_by_squaring&oldid=1144956501
+*)
+
+implement {a}
+nonnegative_integer_power (M, i) =
+  let
+    fun
+    repeat {i : nat}     (* <-- This number consistently shrinks. *)
+           .<i>.         (* <-- Proof the recursion will terminate. *)
+           (Accum : a,   (* "Accumulator" *)
+            Base  : a,
+            i     : int i)
+        : a =
+      if i = 0 then
+        Accum
+      else
+        let
+          val i_halved = half i (* Integer division. *)
+          and Base_squared = product<a> (Base, Base)
+        in
+          if i_halved + i_halved = i then
+            repeat (Accum, Base_squared, i_halved)
+          else
+            repeat (product<a> (Base, Accum), Base_squared, i_halved)
+        end
+  in
+    repeat (zeroth_power<a> (), M, i)
+  end
+
+(*------------------------------------------------------------------*)
+(* Application of nonnegative_integer_power to mtrxszref. *)
+
+fn {tk : tkind}
+npow_mtrxszref (M : mtrxszref (g0float tk),
+                p : intGte 0)
+    : mtrxszref (g0float tk) =
+  let
+    typedef a = g0float tk
+
+    val n = mtrxszref_get_nrow M
+    val () =
+      if mtrxszref_get_ncol M <> n then
+        $raise IllegalArgExn ("npow_mtrxszref:matrix_not_square")
+
+    implement
+    zeroth_power<mtrxszref a> () =
+      (* Return an n-by-n identity matrix. *)
+      let
+        val I = mtrxszref_make_elt<a> (n, n, g0i2f 0)
+        var k : Size_t
+      in
+        for (k := i2sz 0; k <> n; k := succ k)
+          I[k, k] := g0i2f 1;
+        I
+      end
+
+    implement
+    product<mtrxszref a> (A, B) =
+      (* Return the matrix product of A and B. *)
+      let
+        val C = mtrxszref_make_elt<a> (n, n, g0i2f 0)
+        var i : Size_t
+      in
+        for (i := i2sz 0; i <> n; i := succ i)
+          let
+            var j : Size_t
+          in
+            for (j := i2sz 0; j <> n; j := succ j)
+              let
+                var k : Size_t
+              in
+                for (k := i2sz 0; k <> n; k := succ k)
+                  C[i, j] := C[i, j] + (A[i, k] * B[k, j])
+              end
+          end;
+        C
+      end
+  in
+    nonnegative_integer_power<mtrxszref a> (M, p)
+  end
+
+overload ** with npow_mtrxszref
+
+(*------------------------------------------------------------------*)
+
+implement
+main0 () =
+  let
+    (* This matrix is borrowed from the entry for the programming
+       language Chapel:
+
+          1 2 0
+          0 3 1
+          1 0 0
+
+    *)
+    val A = mtrxszref_make_elt (i2sz 3, i2sz 3, 0.0)
+    val () = A[0, 0] := 1.0
+    val () = A[0, 1] := 2.0
+    val () = A[1, 1] := 3.0
+    val () = A[1, 2] := 1.0
+    val () = A[2, 0] := 1.0
+
+    var p : intGte 0
+  in
+    for (p := 0; p <> 11; p := succ p)
+      let
+        val B = A ** p
+      in
+        fprint_val<string> (stdout_ref, "power = ");
+        fprint_val<int> (stdout_ref, p);
+        fprint_val<string> (stdout_ref, "\n");
+        fprint_mtrxszref_sep<double> (stdout_ref, B, "\t", "\n");
+        fprint_val<string> (stdout_ref, "\n\n")
+      end
+  end
+
+(*------------------------------------------------------------------*)

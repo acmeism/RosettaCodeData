@@ -1,0 +1,200 @@
+; Prove Euler's sum of powers conjecture false by finding
+; positive a,b,c,d,e such that a⁵+b⁵+c⁵+d⁵=e⁵.
+
+; we're only looking for the first counterexample, which occurs with all
+; integers less than this value
+max_value      = $fa  ; decimal 250
+
+; this header turns our code into a LOADable and RUNnable BASIC program
+.include "basic_header.s"
+
+; this contains the first 256 integers to the power of 5 broken up into
+; 5 tables of one-byte values (power5byte0 with the LSBs through
+; power5byte4 with the MSBs)
+.include "power5table.s"
+
+; this defines subroutines and macros for printing messages to
+; the console, including `puts` for printing out a NUL-terminated string,
+; puthex to display a one-byte value in hexadecimal, and putdec through
+; putdec5 to display an N-byte value in decimal
+.include "output.s"
+
+; label strings for the result output
+.feature string_escapes
+success:   .asciiz "\r\rFOUND EXAMPLE:\r\r"
+between:   .asciiz "^5 + "
+penult:    .asciiz "^5 = "
+eqend:     .asciiz "^5\r\r(SUM IS "
+
+; the BASIC loader program prints the elapsed time at the end, so we include a
+; label for that, too
+tilabel:   .asciiz ")\r\rTIME:"
+
+; ZP locations to store the integers to try
+x0 = $f7
+x1 = x0 + 1
+x2 = x0 + 2
+x3 = x0 + 3
+
+; we use binary search to find integer roots; current bounds go here
+low = x0 + 4
+hi  = x0 + 5
+
+; sum of powers of current candidate integers
+sum: .res 5
+
+; when we find a sum with an integer 5th root, we put it here
+x4: .res 1
+
+main: ; loop for x0 from 1 to max_value
+       ldx #01
+       stx x0
+
+loop0: ; loop for x1 from x0+1 to max_value
+       ldx x0
+       inx
+       stx x1
+
+loop1: ; loop for x2 from x1+1 to max_value
+       ldx x1
+       inx
+       stx x2
+
+loop2: ; loop for x3 from x2+1 to max_value
+       ldx x2
+       inx
+       stx x3
+
+loop3: ; add up the fifth powers of the four numbers
+       ; initialize to 0
+       lda #00
+       sta sum
+       sta sum+1
+       sta sum+2
+       sta sum+3
+       sta sum+4
+
+       ; we use indexed addressing, taking advantage of the fact that the xn's
+       ; are consecutive, so x0,1 = x1, etc.
+       ldy #0
+addloop:
+       ldx x0,y
+       lda sum
+       clc
+       adc power5byte0,x
+       sta sum
+       lda sum+1
+       adc power5byte1,x
+       sta sum+1
+       lda sum+2
+       adc power5byte2,x
+       sta sum+2
+       lda sum+3
+       adc power5byte3,x
+       sta sum+3
+       lda sum+4
+       adc power5byte4,x
+       sta sum+4
+       iny
+       cpy #4
+       bcc addloop
+       ; now sum := x₀⁵+x₁⁵+x₂⁵+x₃⁵
+       ; set initial bounds for binary search
+       ldx x3
+       inx
+       stx low
+       ldx #max_value
+       dex
+       stx hi
+
+binsearch:
+       ; compute midpoint
+       lda low
+       cmp hi
+       beq notdone
+       bcs done_search
+notdone:
+       ldx #0
+       clc
+       adc hi
+
+       ; now a + carry bit = low+hi; rotating right will get the midpoint
+       ror
+       ; compare square of midpoint to sum
+       tax
+       lda sum+4
+       cmp power5byte4,x
+       bne notyet
+       lda sum+3
+       cmp power5byte3,x
+       bne notyet
+       lda sum+2
+       cmp power5byte2,x
+       bne notyet
+       lda sum+1
+       cmp power5byte1,x
+       bne notyet
+       lda sum
+       cmp power5byte0,x
+       beq found
+notyet:
+       bcc sum_lt_guess
+       inx
+       stx low
+       bne endbin
+       beq endbin
+sum_lt_guess:
+       dex
+       stx hi
+endbin:
+       bne binsearch
+       beq binsearch
+
+done_search:
+       inc x3
+       lda x3
+       cmp #max_value
+       bcs end_loop3
+       jmp loop3
+
+end_loop3:
+       inc x2
+       lda x2
+       cmp #max_value
+       bcs end_loop2
+       jmp loop2
+
+end_loop2:
+       inc x1
+       lda x1
+       cmp #max_value
+       bcs end_loop1
+       jmp loop1
+
+end_loop1:
+       inc x0
+       lda x0
+       cmp #max_value
+       bcs end_loop0
+       jmp loop0
+
+end_loop0:
+       ; should never get here, means we didn't find an example.
+       brk
+
+found: stx x4
+       puts success
+       putdec x0
+       ldy #1
+
+ploop: puts between
+       putdec {x0,y}
+       iny
+       cpy #4
+       bcc ploop
+       puts penult
+       putdec {x0,y}
+       puts eqend
+       putdec5 sum
+       puts tilabel
+       rts

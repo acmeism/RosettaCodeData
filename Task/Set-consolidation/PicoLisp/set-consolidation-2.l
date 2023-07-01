@@ -1,0 +1,8 @@
+: (consolidate '((A B) (C D)))
+-> ((A B) (C D))
+: (consolidate '((A B) (B D)))
+-> ((B D A))
+: (consolidate '((A B) (C D) (D B)))
+-> ((D B C A))
+: (consolidate '((H I K) (A B) (C D) (D B) (F G H)))
+-> ((F G H I K) (D B C A))

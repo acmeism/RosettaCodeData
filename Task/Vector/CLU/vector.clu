@@ -1,0 +1,90 @@
+% Parameterized vector class
+vector = cluster [T: type] is make, add, sub, mul, div,
+                              get_x, get_y, to_string
+         % The inner type must support basic math
+         where T has add: proctype (T,T) returns (T)
+                          signals (overflow, underflow),
+                     sub: proctype (T,T) returns (T)
+                          signals (overflow, underflow),
+                     mul: proctype (T,T) returns (T)
+                          signals (overflow, underflow),
+                     div: proctype (T,T) returns (T)
+                          signals (zero_divide, overflow, underflow)
+    rep = struct [x,y: T]
+
+    % instantiate
+    make = proc (x,y: T) returns (cvt)
+        return(rep${x:x, y:y})
+    end make
+
+    % vector addition and subtraction
+    add = proc (a,b: cvt) returns (cvt)
+          signals (overflow, underflow)
+        return(rep${x: up(a).x + up(b).x,
+                    y: up(a).y + up(b).y})
+        resignal overflow, underflow
+    end add
+
+    sub = proc (a,b: cvt) returns (cvt)
+          signals (overflow, underflow)
+        return(rep${x: up(a).x - up(b).x,
+                    y: up(a).y - up(b).y})
+        resignal overflow, underflow
+    end sub
+
+    % scalar multiplication and division
+    mul = proc (a: cvt, b: T) returns (cvt)
+          signals (overflow, underflow)
+        return(rep${x: up(a).x*b, y: up(a).y*b})
+        resignal overflow, underflow
+    end mul
+
+    div = proc (a: cvt, b: T) returns (cvt)
+          signals (zero_divide, overflow, underflow)
+        return(rep${x: up(a).x/b, y: up(a).y/b})
+        resignal zero_divide, overflow, underflow
+    end div
+
+    % accessors
+    get_x = proc (v: cvt) returns (T) return(v.x) end get_x
+    get_y = proc (v: cvt) returns (T) return(v.y) end get_y
+
+    % we can't just use T$unparse for pretty-printing, since
+    % for floats it always prints the exponential form, and
+    % that's not very pretty.
+    % passing in a conversion function at the moment of
+    % generating the string form is the least bad way.
+    to_string = proc (v: cvt, f: proctype (T) returns (string))
+                returns (string)
+        return("(" || f(v.x) || ", " || f(v.y) || ")")
+    end to_string
+end vector
+
+% this function formats a real somewhat neatly without needing
+% extra parameters
+format_real = proc (r: real) returns (string)
+    return(f_form(r, 2, 4))
+end format_real
+
+start_up = proc ()
+    vr = vector[real]  % use real numbers
+    po: stream := stream$primary_output()
+
+    % vectors
+    a: vr := vr$make(5.0, 7.0)
+    b: vr := vr$make(2.0, 3.0)
+
+    % do some math
+    a_plus_b:   vr := a + b
+    a_minus_b:  vr := a - b
+    a_times_11: vr := a * 11.0
+    a_div_2:    vr := a / 2.0
+
+    % show the results
+    stream$putl(po, "     a = " || vr$to_string(a, format_real))
+    stream$putl(po, "     b = " || vr$to_string(b, format_real))
+    stream$putl(po, " a + b = " || vr$to_string(a_plus_b, format_real))
+    stream$putl(po, " a - b = " || vr$to_string(a_minus_b, format_real))
+    stream$putl(po, "a * 11 = " || vr$to_string(a_times_11, format_real))
+    stream$putl(po, " a / 2 = " || vr$to_string(a_div_2, format_real))
+end start_up

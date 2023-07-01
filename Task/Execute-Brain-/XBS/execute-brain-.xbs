@@ -1,0 +1,93 @@
+#>
+newsyntax
+@in:PE
+@token:bf
+@PE:"function(Stack){
+	this.TestNext(Stack,\"Paren\",\"TK_POPEN\");
+	this.Move(Stack,2);
+	let Check = function(t,v){
+		return AST.IsPreciseToken(Stack.Token,t,v);
+	}
+	let Write = function(v){
+		AST.ChunkWrite(Stack,v);
+	}
+	this.OpenChunk(Stack);
+	while(!this.IsPreciseToken(Stack.Token,\"Paren\",\"TK_PCLOSE\")){
+		if(Check(\"None\",\"TK_DOT\")){
+			Write(\"output\");
+		}else if(Check(\"None\",\"TK_COMMA\")){
+			Write(\"input\");
+		}else if(Check(\"Operator\",\"TK_ADD\")){
+			Write(\"inc\");
+		}else if(Check(\"Operator\",\"TK_SUB\")){
+			Write(\"deinc\");
+		}else if(Check(\"Compare\",\"TK_GT\")){
+			Write(\"meminc\");
+		}else if(Check(\"Compare\",\"TK_LT\")){
+			Write(\"memdeinc\");
+		}else if(Check(\"Brace\",\"TK_IOPEN\")){
+			this.OpenChunk(Stack);
+		}else if(Check(\"Brace\",\"TK_ICLOSE\")){
+			this.CloseChunk(Stack);
+		}
+		this.Next(Stack);
+	}
+	this.CloseChunk(Stack);
+	if(!this.CheckNext(Stack,\"None\",\"TK_LINEEND\")&&!this.CheckNext(Stack,\"None\",\"TK_COMMA\")){
+		this.Next(Stack);
+		this.ChunkWrite(Stack,this.ParseExpression(Stack));
+	}
+}"
+@Interpret:"function(AST,Token){
+	let BF = Token[3];
+	let Chunk = BF[0];
+	let Input = BF[1];
+	if(Input){
+		Input=this.Parse(AST,Input);
+	}
+	let IPos=0;
+	let Memory = [],MemPos=0;
+	let UpdateMemory = function(){
+		if(Memory[MemPos]===undefined){
+			Memory[MemPos]=0;
+		}
+	}
+	let Read = function(v){
+		if(v==\"output\"){
+			AST.LibGlobals.log(Memory[MemPos]);
+		}else if(v==\"input\"){
+			Memory[MemPos]=Input.charCodeAt(IPos)||0;
+			IPos++;
+		}else if(v==\"inc\"){
+			UpdateMemory();
+			Memory[MemPos]++;
+		}else if(v==\"deinc\"){
+			UpdateMemory();
+			Memory[MemPos]--;
+		}else if(v==\"meminc\"){
+			MemPos++;
+			UpdateMemory();
+		}else if(v==\"memdeinc\"){
+			MemPos--;
+			UpdateMemory();
+		}else if(v instanceof Array){
+			UpdateMemory();
+			while(Memory[MemPos]!=0){
+				for(let vv of v){
+					Read(vv);
+				}
+				UpdateMemory();
+			}
+		}
+	}
+	UpdateMemory();
+	for(let v of Chunk){
+		Read(v);
+	}
+	UpdateMemory();
+	return Memory[MemPos];
+}"
+<#
+
+set x = bf ( + + + > + + [ < + > - ] < );
+log(x);

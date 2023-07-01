@@ -1,0 +1,20 @@
+(defun insert-item (item piles)
+  (multiple-value-bind
+	(i prev)
+      (do* ((prev nil (car x))
+	    (x piles (cdr x))
+	    (i 0 (1+ i)))
+	   ((or (null x) (<= item (caaar x))) (values i prev)))
+    (if (= i (length piles))
+	(append piles (list (list (cons item (caar (last piles))))))
+	(progn (push (cons item (car prev)) (elt piles i))
+	       piles))))
+
+(defun longest-inc-seq (input)
+  (do* ((piles nil (insert-item (car x) piles))
+	(x input (cdr x)))
+       ((null x) (reverse (caar (last piles))))))
+
+(dolist (l (list (list 3 2 6 4 5 1)
+		   (list 0 8 4 12 2 10 6 14 1 9 5 13 3 11 7 15)))
+    (format t "~A~%" (longest-inc-seq l)))

@@ -1,0 +1,43 @@
+(defpackage :dinesman
+  (:use :cl
+        :screamer)
+  (:export :dinesman :dinesman-list))
+(in-package :dinesman)
+
+(defun distinctp (list)
+  (equal list (remove-duplicates list)))
+
+(defun dinesman ()
+  (all-values
+    (let ((baker (an-integer-between 1 5))
+          (cooper (an-integer-between 1 5))
+          (fletcher (an-integer-between 1 5))
+          (miller (an-integer-between 1 5))
+          (smith (an-integer-between 1 5)))
+      (unless (distinctp (list baker cooper fletcher miller smith)) (fail))
+      (when (= 5 baker) (fail))
+      (when (= 1 cooper) (fail))
+      (when (or (= 1 fletcher) (= 5 fletcher)) (fail))
+      (unless (> miller cooper) (fail))
+      (when (= 1 (abs (- fletcher smith))) (fail))
+      (when (= 1 (abs (- fletcher cooper))) (fail))
+      (format t "~{~A: ~A~%~}" (list 'baker baker 'cooper cooper 'fletcher fletcher 'miller  miller 'smith smith)))))
+
+(defun dinesman-list ()
+  (all-values
+   (let* ((men '(baker cooper fletcher miller smith))
+          (building (list (a-member-of men) (a-member-of men) (a-member-of men) (a-member-of men) (a-member-of men))))
+     (unless (distinctp building) (fail))
+     (when (eql (car (last building)) 'baker) (fail))
+     (when (eql (first building) 'cooper) (fail))
+     (when (or (eql (car (last building)) 'fletcher)
+               (eql (first building) 'fletcher))
+       (fail))
+     (unless (> (position 'miller building)
+                (position 'cooper building))
+       (fail))
+     (when (= 1 (abs (- (position 'fletcher building) (position 'smith building))))
+       (fail))
+     (when (= 1 (abs (- (position 'fletcher building) (position 'cooper building))))
+       (fail))
+     (format t "(~{~A~^ ~})~%" building))))

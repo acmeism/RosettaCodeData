@@ -1,0 +1,8 @@
+using Printf
+
+println("Classification Tests:")
+tests = [1:12, 28, 496, 220, 1184, 12496, 1264460, 790, 909, 562, 1064, 1488]
+for i in tests
+    (class, a) = aliquotclassifier(i)
+    println(@sprintf("%8d => ", i), @sprintf("%16s, ", class), a)
+end

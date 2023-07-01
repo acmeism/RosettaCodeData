@@ -1,0 +1,121 @@
+Form 80,50
+Print "Forth's Blocks"
+\\ Forth Blocks
+Structure Line16 {
+      a`Line as byte*64
+}
+NewBlock=lambda Line16 -> {
+      Buffer a`Block as Line16*16
+      \\ fill spaces
+      Return a`Block, 0:=str$(string$(" ",1024))
+      =a`Block
+}
+\\ Events are value types, but for closures and groups are reference types
+Event Doit {
+      Read something$
+}
+Header=Doit
+DisplayBlock= Lambda NewBlock, Line16, Doit, Header (Blocks`File$,Block`Number, UseLocale=1033)->{
+      Page1=NewBlock()
+      Open Blocks`File$ for input as #f
+            Seek #f, 1024*(Block`Number-1)+1
+            Get #f,Page1
+      Close #f
+      Document NewDoc$
+      \\ need to convert from Ansi
+      Call Event Header, "Block:"+Str$(Block`Number)
+      oldlocale=locale
+      locale UseLocale
+      For i=0 to 15
+            lineAny$=chr$(Eval$(Page1,i, Len(Line16)))
+            Call Event Doit, format$("{0::-2} {1}",i,chr$(Eval$(Page1,i, Len(Line16))))
+      Next i
+      locale oldlocale
+}
+Document ForthCode$={( Large letter F)
+      : STAR    [CHAR] * EMIT ;
+      : STARS   0 DO  STAR  LOOP ;
+      : MARGIN  CR 30 SPACES ;
+      : BLIP    MARGIN STAR ;
+      : BAR     MARGIN 5 STARS ;
+      : F       BAR BLIP BAR BLIP BLIP CR ;
+      }
+\\ Make Document bigger than 16 lines
+\\ doc.par(ForthCode$)  return paragraphs (here we have no wrap)
+\\ actuall lines per layer can be found from Report (the renderer)
+\\ using Reportlines. layer can be the printer page.
+ForthCode$=string$(ForthCode$,5)
+Print "Make Block"
+Page1=NewBlock()
+Locale 1033
+Blocks`File$="Forth Blocks"
+Block`Number=1
+\\ Apppend three times same blocks
+For Pass=1 to 3
+      If Doc.Len(ForthCode$)>0 then
+            For i=1 to Doc.par(ForthCode$)-1
+            \\ we give order number but Paragraph$ use unique number for paragraphs
+            \\ if we didn't delete or insert lines, then these two are the same
+                  Print Paragraph$(ForthCode$, Paragraph(ForthCode$,i))
+                  \\ convert to Ansi using Locale
+                  \\ offset from 0, so minus 1
+                  \\ offset 1 is at len(Line16)
+                  \\ Page1(0) is the real address, but here doesn't matter
+                  Return Page1, (i-1) mod 16:=Str$(Paragraph$(ForthCode$, Paragraph(ForthCode$,i)))
+                  if i mod 16=0 then Gosub SaveBlock
+            Next i
+            i--
+            if Not i mod 16=0 then  Gosub SaveBlock
+      End if
+Next Pass
+\\ now we read from disk
+Class DocumentKeeper {
+      Document Text$
+      Function AppendLine(aline$) {
+            \\ right trim$
+            .Text$<=Mid$(Trim$("*"+aline$),2)+{
+            }
+      }
+}
+Function Disp(aline$) {
+      Print aline$
+}
+DocumentKeeper=DocumentKeeper()
+Event Doit New Disp()
+Event Header New Disp()
+For i=1 to Block`Number-1
+      Call DisplayBlock(Blocks`File$, i)
+      Print "Press any key"
+      Push key$ : Drop
+Next i
+Event Doit Drop Disp()
+Event Doit New DocumentKeeper.AppendLine()
+Event Header Hold
+For i=1 to Block`Number-1
+      Call DisplayBlock(Blocks`File$, i)
+Next i
+Report DocumentKeeper.Text$
+
+End
+SaveBlock:
+      Print "Save as Number ";Block`Number
+      If Exist(Blocks`File$) then
+            \\ check if there is space for this block
+            If Not filelen(Blocks`File$) div 1024>=Block`Number-1 Then
+                  Error "Wrong Block Number"
+            End if
+      Else
+            Print "not exist"
+            Open Blocks`File$ for output as #f
+            Close #f
+            Wait 100
+            \\ or Error "Empty File" if we wish only read
+            If Block`Number<>1 then Error "Wrong Block Number"
+      End if
+      Open Blocks`File$ for append as #f
+      Seek #f, Block`Number*1024-1023 ' so we seek to first byte
+      Put #f, Page1
+      Close #f
+      Block`Number++
+      Page1=NewBlock()
+Return

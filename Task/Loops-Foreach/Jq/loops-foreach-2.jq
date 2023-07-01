@@ -1,0 +1,2 @@
+example | .[]
+# or equivalently: example[]

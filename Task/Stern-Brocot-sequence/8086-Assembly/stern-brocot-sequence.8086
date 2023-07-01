@@ -1,0 +1,101 @@
+puts:	equ	9
+	cpu	8086
+	bits	16
+	org	100h
+section	.text
+	;;;	Generate the first 1200 elemets of the Stern-Brocot sequence
+	mov	cx,600	; 2 elements generated per loop
+	mov	si,seq
+	mov	di,seq+2
+	lodsb
+	mov	ah,al	; AH = predecessor
+genseq:	lodsb		; AL = considered member
+	add	ah,al	; AH = sum
+	xchg	ah,al	; Swap them (AL = sum, AH = member)
+	stosw		; Write sum and current considered member
+	loop	genseq	; Loop 600 times
+	;;;	Print first 15 members of sequence
+	mov	si,seq
+	mov	cx,15
+p15:	lodsb		; Get member
+	cbw
+	call	prax 	; Print member
+	loop	p15
+	call	prnl
+	;;;	Print first occurrences of [1..10]
+	mov	al,1
+	mov	cx,10
+	call	find
+	call	prnl
+	;;;	Print first occurrence of 100
+	mov	al,100
+	mov	cx,1
+	call	find
+	call	prnl
+	;;;	Check pairs of GCDs
+	mov	cx,1000	; 1000 times
+	mov	si,seq
+	lodsb
+gcdchk:	mov	ah,al	; AH = last member, AL = current member
+	lodsb
+	mov	dx,ax	; Calculate GCD
+	call	gcd
+	dec	dl	; See if it is 1
+	jnz	.fail	; If not, failure
+	loop	gcdchk	; Otherwise, check next pair
+	mov	dx,gcdy	; GCD of all pairs is 0
+	jmp	pstr
+.fail:	mov	dx,gcdn	; GCD of current pair is not 0
+	call	pstr
+	mov	ax,si
+	sub	ax,seq+1
+	jmp	prax
+	;;;	DL = gcd(DL,DH)
+gcd:	cmp	dl,dh
+	jl	.lt	; DL < DH
+	jg	.gt	; DL > DH
+	ret
+.lt:	sub	dh,dl	; DL < DH
+	jmp	gcd
+.gt: 	sub	dl,dh	; DL > DH
+	jmp	gcd
+	;;;	Print indices of CX consecutive numbers starting
+	;;;	at AL.
+find:	mov	di,seq
+	push	cx	; Keep loop counter
+	mov	cx,-1
+	repne	scasb	; Find AL starting at [DI]
+	pop	cx	; Restore loop counter
+	xchg	si,ax	; Keep AL in SI
+	mov	ax,di	; Calculate index in sequence
+	sub	ax,seq
+	call	prax	; Output
+	xchg	si,ax	; Restore AL
+	inc	ax	; Increment
+	loop 	find	; Keep going CX times
+	ret
+	;;;	Print newline
+prnl:	mov	dx,nl
+	jmp	pstr
+	;;;	Print number in AX
+	;;;	Destroys AX, BX, DX, BP
+prax:	mov	bp,10	; Divisor
+	mov	bx,numbuf
+.loop:	xor	dx,dx	; DX = 0
+	div	bp	; Divide DX:AX by 10; DX = remainder
+	dec	bx	; Move string pointer back
+	add	dl,'0'	; Make ASCII digit
+	mov	[bx],dl	; Write digit
+	test	ax,ax	; Any digits left?
+	jnz	.loop
+	mov	dx,bx
+pstr:	mov	ah,puts	; Print number string
+	int	21h
+	ret
+section	.data
+gcdn:	db	'GCD not 1 at: $'
+gcdy:	db	'GCD of all pairs of consecutive members is 1.$'
+	db	'*****'
+numbuf:	db	' $'
+nl:	db	13,10,'$'
+seq:	db	1,1

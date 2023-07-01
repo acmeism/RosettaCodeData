@@ -1,0 +1,170 @@
+(*------------------------------------------------------------------*)
+(* Quicksort in ATS2, for linear lists.                             *)
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+
+#define NIL list_vt_nil ()
+#define ::  list_vt_cons
+
+(*------------------------------------------------------------------*)
+
+(* A simple quicksort working on linear linked lists, with first
+   element as pivot. This is meant as a demonstration, not as a
+   superior sort algorithm.
+
+   It is based on the "not-in-place" task pseudocode. *)
+
+#define FIRST_IS_LESS_THAN_SECOND     1
+#define FIRST_IS_EQUAL_TO_SECOND      2
+#define FIRST_IS_GREATER_THAN_SECOND  3
+
+typedef comparison_result =
+  [i : int | (i == FIRST_IS_LESS_THAN_SECOND    ||
+              i == FIRST_IS_EQUAL_TO_SECOND     ||
+              i == FIRST_IS_GREATER_THAN_SECOND)]
+  int i
+
+extern fun {a : vt@ype}
+list_vt_quicksort$comparison (x : !a, y : !a) :<> comparison_result
+
+extern fun {a : vt@ype}
+list_vt_quicksort {n   : int}
+                  (lst : list_vt (a, n)) :<!wrt> list_vt (a, n)
+
+(* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - *)
+
+implement {a}
+list_vt_quicksort {n} (lst) =
+  let
+    fun
+    partition {n     : nat}
+              .<n>.             (* Proof of termination. *)
+              (lst   : list_vt (a, n),
+               pivot : !a)
+        :<> [n1, n2, n3 : int | n1 + n2 + n3 == n]
+            @(list_vt (a, n1), list_vt (a, n2), list_vt (a, n3)) =
+      (* This implementation is *not* tail recursive. I may get a
+         scolding for using ATS to risk stack overflow! However, I
+         need more practice writing non-tail routines. :) Also, a lot
+         of programmers in other languages would do it this
+         way--especially if the lists are evaluated lazily. *)
+      case+ lst of
+      | ~ NIL => @(NIL, NIL, NIL)
+      | ~ head :: tail =>
+        let
+          val @(lt, eq, gt) = partition (tail, pivot)
+          prval () = lemma_list_vt_param lt
+          prval () = lemma_list_vt_param eq
+          prval () = lemma_list_vt_param gt
+        in
+          case+ list_vt_quicksort$comparison<a> (head, pivot) of
+          | FIRST_IS_LESS_THAN_SECOND    => @(head :: lt, eq, gt)
+          | FIRST_IS_EQUAL_TO_SECOND     => @(lt, head :: eq, gt)
+          | FIRST_IS_GREATER_THAN_SECOND => @(lt, eq, head :: gt)
+        end
+
+    fun
+    quicksort {n   : nat}
+              .<n>.             (* Proof of termination. *)
+              (lst : list_vt (a, n))
+        :<!wrt> list_vt (a, n) =
+      case+ lst of
+      | NIL => lst
+      | _ :: NIL => lst
+      | ~ head :: tail =>
+        let
+          (* We are careful here to run "partition" on "tail" rather
+             than "lst", so the termination metric will be provably
+             decreasing. (Really the compiler *forces* us to take such
+             care, or else to add !ntm to the effects.) *)
+          val pivot = head
+          prval () = lemma_list_vt_param tail
+          val @(lt, eq, gt) = partition {n - 1} (tail, pivot)
+          prval () = lemma_list_vt_param lt
+          prval () = lemma_list_vt_param eq
+          prval () = lemma_list_vt_param gt
+          val eq = pivot :: eq
+          and lt = quicksort lt
+          and gt = quicksort gt
+        in
+          list_vt_append (lt, list_vt_append (eq, gt))
+        end
+
+    prval () = lemma_list_vt_param lst
+  in
+    quicksort {n} lst
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+list_vt_quicksort$comparison<Strptr1> (x, y) =
+  let
+    val i = compare (x, y)
+  in
+    if i < 0 then
+      FIRST_IS_LESS_THAN_SECOND
+    else if i = 0 then
+      FIRST_IS_EQUAL_TO_SECOND
+    else
+      FIRST_IS_GREATER_THAN_SECOND
+  end
+
+implement
+list_vt_map$fopr<string><Strptr1> (s) = string0_copy s
+
+implement
+list_vt_freelin$clear<Strptr1> (x) = strptr_free x
+
+implement
+main0 () =
+  let
+    val example_strings =
+      $list_vt
+        ("choose", "any", "element", "of", "the", "array",
+         "to", "be", "the", "pivot",
+         "divide", "all", "other", "elements", "except",
+         "the", "pivot", "into", "two", "partitions",
+         "all", "elements", "less", "than", "the", "pivot",
+         "must", "be", "in", "the", "first", "partition",
+         "all", "elements", "greater", "than", "the", "pivot",
+         "must", "be", "in", "the", "second", "partition",
+         "use", "recursion", "to", "sort", "both", "partitions",
+         "join", "the", "first", "sorted", "partition", "the",
+         "pivot", "and", "the", "second", "sorted", "partition")
+
+    val example_strptrs =
+      list_vt_map<string><Strptr1> (example_strings)
+    val sorted_strptrs = list_vt_quicksort<Strptr1> example_strptrs
+
+    fun
+    print_strptrs {n       : nat} .<n>.
+                  (strptrs : !list_vt (Strptr1, n),
+                   i       : int) : void =
+      case+ strptrs of
+      | NIL => if i <> 1 then println! () else ()
+      | @ head :: tail =>
+        begin
+          print! head;
+          if i = 8 then
+            begin
+              println! ();
+              print_strptrs (tail, 1)
+            end
+          else
+            begin
+              print! " ";
+              print_strptrs (tail, succ i)
+            end;
+          fold@ strptrs
+        end
+  in
+    println! (length example_strings);
+    println! (length sorted_strptrs);
+    print_strptrs (sorted_strptrs, 1);
+    list_vt_freelin<Strptr1> sorted_strptrs;
+    list_vt_free<string> example_strings
+  end
+
+(*------------------------------------------------------------------*)

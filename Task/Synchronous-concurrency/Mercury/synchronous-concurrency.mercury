@@ -1,0 +1,59 @@
+:- module synchronous_concurrency.
+:- interface.
+:- import_module io.
+
+:- pred main(io::di, io::uo) is cc_multi.
+
+:- implementation.
+:- import_module int, list, string, thread, thread.channel, thread.mvar.
+
+:- type line_or_stop
+    --->    line(string)
+    ;       stop.
+
+main(!IO) :-
+    io.open_input("input.txt", Res, !IO),
+    (
+        Res = ok(Input),
+        channel.init(Channel, !IO),
+        mvar.init(MVar, !IO),
+        thread.spawn(writer(Channel, MVar, 0), !IO),
+        reader(Input, Channel, MVar, !IO)
+    ;
+        Res = error(Err),
+        io.format("Error opening file: %s\n", [s(io.error_message(Err))], !IO)
+    ).
+
+:- pred reader(io.text_input_stream::in, channel(line_or_stop)::in, mvar(int)::in,
+    io::di, io::uo) is det.
+
+reader(Input, Channel, MVar, !IO) :-
+    io.read_line_as_string(Input, Res, !IO),
+    (
+        Res = ok(Line),
+        channel.put(Channel, line(Line), !IO),
+        reader(Input, Channel, MVar, !IO)
+    ;
+        Res = eof,
+        channel.put(Channel, stop, !IO),
+        mvar.take(MVar, Count, !IO),
+        io.format("%d lines printed.\n", [i(Count)], !IO)
+    ;
+        Res = error(Err),
+        channel.put(Channel, stop, !IO),
+        io.format("Error reading file: %s\n", [s(io.error_message(Err))], !IO)
+    ).
+
+:- pred writer(channel(line_or_stop)::in, mvar(int)::in, int::in,
+    io::di, io::uo) is cc_multi.
+
+writer(Channel, MVar, Count, !IO) :-
+    channel.take(Channel, LineOrStop, !IO),
+    (
+        LineOrStop = line(Line),
+        io.write_string(Line, !IO),
+        writer(Channel, MVar, Count + 1, !IO)
+    ;
+        LineOrStop = stop,
+        mvar.put(MVar, Count, !IO)
+    ).

@@ -1,0 +1,42 @@
+DECLARE FUNCTION IsPangram! (sentence AS STRING)
+
+DIM x AS STRING
+
+x = "My dog has fleas."
+GOSUB doIt
+x = "The lazy dog jumps over the quick brown fox."
+GOSUB doIt
+x = "Jackdaws love my big sphinx of quartz."
+GOSUB doIt
+x = "What's a jackdaw?"
+GOSUB doIt
+
+END
+
+doIt:
+    PRINT IsPangram!(x), x
+    RETURN
+
+FUNCTION IsPangram! (sentence AS STRING)
+    'returns -1 (true) if sentence is a pangram, 0 (false) otherwise
+    DIM l AS INTEGER, s AS STRING, t AS INTEGER
+    DIM letters(25) AS INTEGER
+
+    FOR l = 1 TO LEN(sentence)
+        s = UCASE$(MID$(sentence, l, 1))
+        SELECT CASE s
+            CASE "A" TO "Z"
+                t = ASC(s) - 65
+                letters(t) = 1
+        END SELECT
+    NEXT
+
+    FOR l = 0 TO 25
+        IF letters(l) < 1 THEN
+            IsPangram! = 0
+            EXIT FUNCTION
+        END IF
+    NEXT
+
+    IsPangram! = -1
+END FUNCTION

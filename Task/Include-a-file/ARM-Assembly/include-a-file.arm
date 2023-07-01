@@ -1,0 +1,438 @@
+'file constantes.inc'
+/************************************/
+/* Constantes                       */
+/************************************/
+.equ STDOUT, 1              @ Linux output console
+.equ EXIT,   1              @ Linux syscall end program
+.equ WRITE,  4              @ Linux syscall write
+.equ BRK,    0x2d           @ Linux syscall heap
+.equ MKDIR, 0x27            @ Linux Syscal  create directory
+.equ CHGDIR, 0xC            @ Linux Syscal  change directory
+.equ CREATE, 0x8            @ Linux Syscal  create file
+.equ CLOSE,   0x6           @ Linux Syscal  close file
+
+.equ HEAPSIZE,  100000
+.equ CHARPOS, '@'           @ character insertion
+
+'file source include '
+/* file affichage.inc */
+.data
+/*************************************************/
+szMessErr: .ascii "Error code hexa : "
+sHexa:     .space 9,' '
+           .ascii "  decimal :  "
+sDeci:     .space 15,' '
+           .asciz "\n"
+ptzZoneHeap:   .int zZoneHeap
+/*************************************************/
+.bss
+.align 4
+zZoneHeap:              .skip HEAPSIZE
+zEndZoneHeap:
+.text
+/******************************************************************/
+/*     display text with size calculation                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+affichageMess:
+    push {r0,r1,r2,r7,lr}                          @ save  registres
+    mov r2,#0                                      @ counter length
+1:                                                 @ loop length calculation
+    ldrb r1,[r0,r2]                                @ read octet start position + index
+    cmp r1,#0                                       @ if 0 its over
+    addne r2,r2,#1                                 @ else add 1 in the length
+    bne 1b                                         @ and loop
+                                                    @ so here r2 contains the length of the message
+    mov r1,r0                                       @ address message in r1
+    mov r0,#STDOUT                                 @ code to write to the standard output Linux
+    mov r7, #WRITE                                 @ code call system "write"
+    svc #0                                         @ call systeme
+    pop {r0,r1,r2,r7,lr}                            @ restaur des  2 registres */
+    bx lr                                           @ return
+/******************************************************************/
+/*     Converting a register to a decimal unsigned                */
+/******************************************************************/
+/* r0 contains value and r1 address area   */
+/* r0 return size of result (no zero final in area) */
+/* area size => 11 bytes          */
+.equ LGZONECAL,   10
+conversion10:
+    push {r1-r4,lr}                                 @ save registers
+    mov r3,r1
+    mov r2,#LGZONECAL
+1:                                                  @ start loop
+    bl divisionpar10U                               @ unsigned  r0 <- dividende. quotient ->r0 reste -> r1
+    add r1,#48                                      @ digit
+    strb r1,[r3,r2]                                 @ store digit on area
+    cmp r0,#0                                       @ stop if quotient = 0
+    subne r2,#1                                     @ else previous position
+    bne 1b                                          @ and loop
+                                                    @ and move digit from left of area
+    mov r4,#0
+2:
+    ldrb r1,[r3,r2]
+    strb r1,[r3,r4]
+    add r2,#1
+    add r4,#1
+    cmp r2,#LGZONECAL
+    ble 2b
+                                                      @ and move spaces in end on area
+    mov r0,r4                                         @ result length
+    mov r1,#' '                                       @ space
+3:
+    strb r1,[r3,r4]                                   @ store space in area
+    add r4,#1                                         @ next position
+    cmp r4,#LGZONECAL
+    ble 3b                                            @ loop if r4 <= area size
+
+100:
+    pop {r1-r4,lr}                                    @ restaur registres
+    bx lr
+/***************************************************/
+/*  Converting a register to a signed decimal      */
+/***************************************************/
+/* r0 contains value and r1 area address    */
+conversion10S:
+    push {r0-r4,lr}       @ save registers
+    mov r2,r1             @ debut zone stockage
+    mov r3,#'+'           @ par defaut le signe est +
+    cmp r0,#0             @ negative number ?
+    movlt r3,#'-'         @ yes
+    mvnlt r0,r0           @ number inversion
+    addlt r0,#1
+    mov r4,#10            @ length area
+1:                        @ start loop
+    bl divisionpar10U
+    add r1,#48            @ digit
+    strb r1,[r2,r4]       @ store digit on area
+    sub r4,r4,#1          @ previous position
+    cmp r0,#0             @ stop if quotient = 0
+    bne 1b	
+
+    strb r3,[r2,r4]       @ store signe
+    subs r4,r4,#1         @ previous position
+    blt  100f             @ if r4 < 0 -> end
+
+    mov r1,#' '           @ space
+2:
+    strb r1,[r2,r4]       @store byte space
+    subs r4,r4,#1         @ previous position
+    bge 2b                @ loop if r4 > 0
+100:
+    pop {r0-r4,lr}        @ restaur registers
+    bx lr
+
+/***************************************************/
+/*   division par 10   unsigned                    */
+/***************************************************/
+/* r0 dividende   */
+/* r0 quotient */	
+/* r1 remainder  */
+divisionpar10U:
+    push {r2,r3,r4, lr}
+    mov r4,r0                                          @ save value
+    //mov r3,#0xCCCD                                   @ r3 <- magic_number lower  raspberry 3
+    //movt r3,#0xCCCC                                  @ r3 <- magic_number higter raspberry 3
+    ldr r3,iMagicNumber                                @ r3 <- magic_number    raspberry 1 2
+    umull r1, r2, r3, r0                               @ r1<- Lower32Bits(r1*r0) r2<- Upper32Bits(r1*r0)
+    mov r0, r2, LSR #3                                 @ r2 <- r2 >> shift 3
+    add r2,r0,r0, lsl #2                               @ r2 <- r0 * 5
+    sub r1,r4,r2, lsl #1                               @ r1 <- r4 - (r2 * 2)  = r4 - (r0 * 10)
+    pop {r2,r3,r4,lr}
+    bx lr                                              @ leave function
+iMagicNumber:  	.int 0xCCCCCCCD
+/***************************************************/
+/*   display error message                        */
+/***************************************************/
+/* r0 contains error code  r1 : message address */
+displayError:
+    push {r0-r2,lr}                         @ save registers
+    mov r2,r0                               @ save error code
+    mov r0,r1
+    bl affichageMess
+    mov r0,r2                               @ error code
+    ldr r1,iAdrsHexa
+    bl conversion16                         @ conversion hexa
+    mov r0,r2                               @ error code
+    ldr r1,iAdrsDeci                        @ result address
+    bl conversion10S                        @ conversion decimale
+    ldr r0,iAdrszMessErr                    @ display error message
+    bl affichageMess
+100:
+    pop {r0-r2,lr}                          @ restaur registers
+    bx lr                                   @ return
+iAdrszMessErr:                 .int szMessErr
+iAdrsHexa:                     .int sHexa
+iAdrsDeci:                     .int sDeci
+/******************************************************************/
+/*     Convert a string to a number stored in a registry          */
+/******************************************************************/
+/* r0 contains the address of the area terminated by 0 or 0A */
+/* r0 returns a number                           */
+conversionAtoD:
+    push {fp,lr}         @ save 2 registers
+    push {r1-r7}         @ save others registers
+    mov r1,#0
+    mov r2,#10           @ factor
+    mov r3,#0            @ counter
+    mov r4,r0            @ save address string -> r4
+    mov r6,#0            @ positive sign by default
+    mov r0,#0            @ initialization to 0
+1:     /* early space elimination loop */
+    ldrb r5,[r4,r3]     @ loading in r5 of the byte located at the beginning + the position
+    cmp r5,#0            @ end of string -> end routine
+    beq 100f
+    cmp r5,#0x0A        @ end of string -> end routine
+    beq 100f
+    cmp r5,#' '          @ space ?
+    addeq r3,r3,#1      @ yes we loop by moving one byte
+    beq 1b
+    cmp r5,#'-'          @ first character is -
+    moveq r6,#1         @  1 -> r6
+    beq 3f              @ then move on to the next position
+2:   /* beginning of digit processing loop */
+    cmp r5,#'0'          @ character is not a number
+    blt 3f
+    cmp r5,#'9'          @ character is not a number
+    bgt 3f
+    /* character is a number */
+    sub r5,#48
+    ldr r1,iMaxi       @ check the overflow of the register
+    cmp r0,r1
+    bgt 99f            @ overflow error
+    mul r0,r2,r0         @ multiply par factor 10
+    add r0,r5            @ add to  r0
+3:
+    add r3,r3,#1         @ advance to the next position
+    ldrb r5,[r4,r3]     @ load byte
+    cmp r5,#0            @ end of string -> end routine
+    beq 4f
+    cmp r5,#0x0A            @ end of string -> end routine
+    beq 4f
+    b 2b                 @ loop
+4:
+    cmp r6,#1            @ test r6 for sign
+    moveq r1,#-1
+    muleq r0,r1,r0       @ if negatif, multiply par -1
+    b 100f
+99:  /* overflow error */
+    ldr r0,=szMessErrDep
+    bl   affichageMess
+    mov r0,#0      @ return  zero  if error
+100:
+    pop {r1-r7}          @ restaur other registers
+    pop {fp,lr}          @ restaur   2 registers
+    bx lr                 @return procedure
+/* constante program */
+iMaxi: .int 1073741824
+szMessErrDep:  .asciz  "Too large: overflow 32 bits.\n"
+.align 4
+/******************************************************************/
+/*     Converting a register to hexadecimal                      */
+/******************************************************************/
+/* r0 contains value and r1 address area   */
+conversion16:
+    push {r1-r4,lr}                                    @ save registers
+    mov r2,#28                                         @ start bit position
+    mov r4,#0xF0000000                                 @ mask
+    mov r3,r0                                          @ save entry value
+1:                                                     @ start loop
+    and r0,r3,r4                                       @value register and mask
+    lsr r0,r2                                          @ move right
+    cmp r0,#10                                         @ compare value
+    addlt r0,#48                                       @ <10  ->digit	
+    addge r0,#55                                       @ >10  ->letter A-F
+    strb r0,[r1],#1                                    @ store digit on area and + 1 in area address
+    lsr r4,#4                                          @ shift mask 4 positions
+    subs r2,#4                                         @  counter bits - 4 <= zero  ?
+    bge 1b                                             @  no -> loop
+
+100:
+    pop {r1-r4,lr}                                     @ restaur registers
+    bx lr                                              @return
+/***************************************************/
+/* integer division unsigned                       */
+/***************************************************/
+division:
+    /* r0 contains dividend */
+    /* r1 contains divisor */
+    /* r2 returns quotient */
+    /* r3 returns remainder */
+    push {r4, lr}
+    mov r2, #0                                         @ init quotient
+    mov r3, #0                                         @ init remainder
+    mov r4, #32                                        @ init counter bits
+    b 2f
+1:                                                     @ loop
+    movs r0, r0, LSL #1                                @ r0 <- r0 << 1 updating cpsr (sets C if 31st bit of r0 was 1)
+    adc r3, r3, r3                                     @ r3 <- r3 + r3 + C. This is equivalent to r3 ? (r3 << 1) + C
+    cmp r3, r1                                         @ compute r3 - r1 and update cpsr
+    subhs r3, r3, r1                                   @ if r3 >= r1 (C=1) then r3 <- r3 - r1
+    adc r2, r2, r2                                     @ r2 <- r2 + r2 + C. This is equivalent to r2 <- (r2 << 1) + C
+2:
+    subs r4, r4, #1                                    @ r4 <- r4 - 1
+    bpl 1b                                             @ if r4 >= 0 (N=0) then loop
+    pop {r4, lr}
+    bx lr
+/***************************************************/
+/*   reserve heap area                             */
+/***************************************************/
+// r0 contains size in byte to reserve */
+// r0 returne  begin address of area */
+reserverPlace:              @ INFO: reserverPlace
+    push {r1,r2,r3,lr}      @ save des registres
+    mov r1,r0
+    tst r1,#0b11            @ size multiple of 4 ?
+    beq 1f                  @ yes
+    and r1,#0xFFFFFFFC      @ else align to 4 superior
+    add r1,#4
+1:
+    ldr r2,iAdrptzZoneHeap
+    ldr r0,[r2]
+    add r1,r1,r0            @  size too large ?
+    ldr r3,iAdrzEndZoneHeap
+    cmp r1,r3
+    blt 2f                  @ no it is ok
+    adr r0,szMessErrTas     @ yes -> error
+    bl affichageMess
+    mov r0,#-1
+    b 100f
+2:
+    str r1,[r2]           @ store new pointer
+100:                      @ fin standard de la fonction
+    pop {r1,r2,r3,lr}     @ restaur des registres
+    bx lr                 @ retour de la fonction en utilisant lr
+iAdrptzZoneHeap:       .int ptzZoneHeap
+iAdrzEndZoneHeap:      .int zEndZoneHeap
+szMessErrTas:          .asciz "Error : heap not large !!!\n"
+.align 4
+/***************************************************/
+/*   liberer place sur le tas                     */
+/***************************************************/
+// r0 contains begin address area
+libererPlace:               @ INFO: libererPlace
+    push {r1,lr}            @ save des registres
+    ldr r1,iAdrzZoneHeap
+    cmp r0,r1
+    blt 99f
+    ldr r1,iAdrzEndZoneHeap
+    cmp r0,r1
+    bge 99f
+    ldr r1,iAdrptzZoneHeap
+    str r0,[r1]
+    b 100f
+99:
+    adr r0,szMessErrTas1
+    bl affichageMess
+    mov r0,#-1
+100:
+    pop {r1,lr}                          @ restaur registers
+    bx lr
+iAdrzZoneHeap:    .int zZoneHeap
+szMessErrTas1:    .asciz "Error : address  < or > heap addresses !!!\n"
+.align 4
+/******************************************************************/
+/*   insert string at character insertion                         */
+/******************************************************************/
+/* r0 contains the address of string 1 */
+/* r1 contains the address of insertion string   */
+/* r0 return the address of new string  on the heap */
+/* or -1 if error   */
+strInsertAtCharInc:
+    push {r1-r7,lr}                         @ save  registres
+    mov r3,#0                                // length counter
+1:                                           // compute length of string 1
+    ldrb r4,[r0,r3]
+    cmp r4,#0
+    addne r3,r3,#1                           // increment to one if not equal
+    bne 1b                                   // loop if not equal
+    mov r5,#0                                // length counter insertion string
+2:                                           // compute length to insertion string
+    ldrb r4,[r1,r5]
+    cmp r4,#0
+    addne r5,r5,#1                           // increment to one if not equal
+    bne 2b                                   // and loop
+    cmp r5,#0
+    beq 99f                                  // string empty -> error
+    add r3,r3,r5                             // add 2 length
+    add r3,r3,#1                             // +1 for final zero
+    mov r6,r0                                // save address string 1
+    mov r0,r3
+    bl reserverPlace
+    mov r5,r0                                // save address heap for output string
+    cmp r0,#-1                               // allocation error
+    beq 99f
+
+    mov r2,#0
+    mov r4,#0
+3:                                           // loop copy string begin
+    ldrb r3,[r6,r2]
+    cmp r3,#0
+    beq 99f
+    cmp r3,#CHARPOS                           // insertion character ?
+    beq 5f                                   // yes
+    strb r3,[r5,r4]                          // no store character in output string
+    add r2,r2,#1
+    add r4,r4,#1
+    b 3b                                     // and loop
+5:                                           // r4 contains position insertion
+    add r7,r4,#1                              // init index character output string
+                                             // at position insertion + one
+    mov r3,#0                                // index load characters insertion string
+6:
+    ldrb r0,[r1,r3]                          // load characters insertion string
+    cmp r0,#0                                // end string ?
+    beq 7f                                   // yes
+    strb r0,[r5,r4]                          // store in output string
+    add r3,r3,#1                             // increment index
+    add r4,r4,#1                             // increment output index
+    b 6b                                     // and loop
+7:                                           // loop copy end string
+    ldrb r0,[r6,r7]                          // load other character string 1
+    strb r0,[r5,r4]                          // store in output string
+    cmp r0,#0                                // end string 1 ?
+    beq 8f                                   // yes -> end
+    add r4,r4,#1                             // increment output index
+    add r7,r7,#1                             // increment index
+    b 7b                                     // and loop
+8:
+    mov r0,r5                                // return output string address
+    b 100f
+99:                                          // error
+    mov r0,#-1
+100:
+    pop {r1-r7,lr}                          @ restaur registers
+    bx lr                                   @ return
+
+'File Main program'
+
+/* ARM assembly Raspberry PI  */
+/*  program include.s   */
+
+/* Constantes               */
+.include "./constantes.inc"
+/* Initialized data */
+.data
+szMessageOK:        .asciz "Hello \n"
+
+/*  code section */
+.text
+.global main
+main:                                   @ entry of program
+    push {fp,lr}                        @ saves registers
+    ldr r0,iAdrszMessageOK
+    bl affichageMess
+
+
+100:                                    @ standard end of the program
+    mov r0, #0                          @ return code
+    pop {fp,lr}                         @restaur  registers
+    mov r7, #EXIT                       @ request to exit program
+    swi 0                               @ perform the system call
+
+iAdrszMessageOK:           .int szMessageOK
+
+/*********************************/
+/* include source display        */
+/*********************************/
+.include "./affichage.inc"

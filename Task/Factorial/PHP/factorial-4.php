@@ -1,0 +1,1 @@
+gmp_fact($n)

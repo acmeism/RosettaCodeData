@@ -1,0 +1,190 @@
+get "libhdr"
+
+static $( randstate = 0 $)
+
+manifest $(
+    nummask  = #XF
+    flagmask = #X10
+    bombmask = #X20
+    revealed = #X40
+    MAXINT = (~0)>>1
+    MININT = ~MAXINT
+$)
+
+let min(x,y) = x<y -> x, y
+and max(x,y) = x>y -> x, y
+
+let rand() = valof
+$(  randstate := random(randstate)
+    resultis randstate >> 7
+$)
+
+let randto(x) = valof
+$(  let r, mask = ?, 1
+    while mask<x do mask := (mask << 1) | 1
+    r := rand() & mask repeatuntil r < x
+    resultis r
+$)
+
+// Place a bomb on the field (if not already a bomb)
+let placebomb(field, xsize, ysize, x, y) =
+    (field!(y*xsize+x) & bombmask) ~= 0 -> false,
+    valof
+$(  for xa = max(x-1, 0) to min(x+1, xsize-1)
+        for ya = max(y-1, 0) to min(y+1, ysize-1)
+        $(  let loc = ya*xsize+xa
+            let n = field!loc & nummask
+            field!loc := (field!loc & ~nummask) | (n + 1)
+        $)
+    field!(y*xsize+x) := field!(y*xsize+x) | bombmask
+    resultis true
+$)
+
+// Populate the field with N bombs
+let populate(field, xsize, ysize, nbombs) be
+$(  for i=0 to xsize*ysize-1 do field!i := 0
+    while nbombs > 0
+    $(  let x, y = randto(xsize), randto(ysize)
+        if placebomb(field, xsize, ysize, x, y) then
+            nbombs := nbombs - 1
+    $)
+$)
+
+// Reveal field (X,Y) - returns true if stepped on a bomb
+let reveal(field, xsize, ysize, x, y) =
+    (field!(y*xsize+x) & bombmask) ~= 0 -> true,
+    valof
+$(  let loc = y*xsize+x
+    field!loc := field!loc | revealed
+    if (field!loc & nummask) = 0 then
+        for xa = max(x-1, 0) to min(x+1, xsize-1)
+            for ya = max(y-1, 0) to min(y+1, ysize-1)
+                if (field!(ya*xsize+xa) &
+                        (bombmask | flagmask | revealed)) = 0 do
+                    reveal(field, xsize, ysize, xa, ya)
+    resultis false
+$)
+
+// Toggle flag
+let toggleflag(field, xsize, ysize, x, y) be
+$(  let loc = y*xsize+x
+    field!loc := field!loc neqv flagmask
+$)
+
+// Show the field. Returns true if won.
+let showfield(field, xsize, ysize, kaboom) = valof
+$(  let bombs, flags, hidden, found = 0, 0, 0, 0
+    for i=0 to xsize*ysize-1
+    $(  if (field!i & revealed) = 0 do hidden := hidden + 1
+        unless (field!i & bombmask) = 0 do bombs := bombs + 1
+        unless (field!i & flagmask) = 0 do flags := flags + 1
+        if (field!i & bombmask) ~= 0 & (field!i & flagmask) ~= 0
+            do found := found + 1
+    $)
+    writef("Bombs: %N - Flagged: %N - Hidden: %N*N", bombs, flags, hidden)
+    wrch('+')
+    for x=0 to xsize-1 do wrch('-')
+    writes("+*N")
+    for y=0 to ysize-1
+    $(  wrch('|')
+        for x=0 to xsize-1
+        $(  let loc = y*xsize+x
+            test kaboom & (field!loc & bombmask) ~= 0 do
+                wrch('**')
+            or test (field!loc & (flagmask | revealed)) = flagmask do
+                wrch('?')
+            or test (field!loc & revealed) = 0 do
+                wrch('.')
+            or test (field!loc & nummask) = 0 do
+                wrch(' ')
+            or
+                wrch('0' + (field!loc & nummask))
+        $)
+        writes("|*N")
+    $)
+    wrch('+')
+    for x=0 to xsize-1 do wrch('-')
+    writes("+*N")
+    resultis found = bombs
+$)
+
+// Ask a question, get number
+let ask(q, min, max) = valof
+$(  let n = ?
+    $(  writes(q)
+        n := readn()
+    $) repeatuntil min <= n <= max
+    resultis n
+$)
+
+// Read string
+let reads(v) = valof
+$(  let ch = ?
+    v%0 := 0
+    $(  ch := rdch()
+        if ch = endstreamch then resultis false
+        v%0 := v%0 + 1
+        v%(v%0) := ch
+    $) repeatuntil ch = '*N'
+    resultis true
+$)
+
+// Play game given field
+let play(field, xsize, ysize) be
+$(  let x = ?
+    let y = ?
+    let ans = vec 80
+    if showfield(field, xsize, ysize, false)
+    $(  writes("*NYou win!*N")
+        finish
+    $)
+    $(  writes("*NR)eveal, F)lag, Q)uit? ")
+        unless reads(ans) finish
+        unless ans%0 = 2 & ans%2='*N' loop
+        ans%1 := ans%1 | 32
+        if ans%1 = 'q' then finish
+    $) repeatuntil ans%1='r' | ans%1='f'
+
+    y := ask("Row? ", 1, ysize)-1
+    x := ask("Column? ", 1, xsize)-1
+
+    switchon ans%1 into
+    $(  case 'r':
+            unless (field!(y*xsize+x) & flagmask) = 0
+            $(  writes("*NError: that field is flagged, unflag it first.*N")
+                endcase
+            $)
+            unless (field!(y*xsize+x) & revealed) = 0
+            $(  writes("*NError: that field is already revealed.*N")
+                endcase
+            $)
+            if reveal(field, xsize, ysize, x, y)
+            $(  writes("*N K A B O O M *N*N")
+                showfield(field, xsize, ysize, true)
+                finish
+            $)
+            endcase
+        case 'f':
+            test (field!(y*xsize+x) & revealed) = 0
+               do toggleflag(field, xsize, ysize, x, y)
+               or writes("*NError: that field is already revealed.*N")
+            endcase
+    $)
+    wrch('*N')
+$) repeat
+
+let start() be
+$(  let field, xsize, ysize, bombs = ?, ?, ?, ?
+
+    writes("Minesweeper*N-----------*N*N")
+    randstate := ask("Random seed? ", MININT, MAXINT)
+    xsize := ask("Width (4-64)? ", 4, 64)
+    ysize := ask("Height (4-22)? ", 4, 22)
+
+    // 10 to 20% bombs
+    bombs := muldiv(xsize,ysize,10) + randto(muldiv(xsize,ysize,10)+1)
+
+    field := getvec(xsize*ysize)
+    populate(field, xsize, ysize, bombs)
+    play(field, xsize, ysize)
+$)

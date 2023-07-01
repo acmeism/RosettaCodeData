@@ -1,0 +1,82 @@
+REM FreeBASIC no tiene la capacidad de emitir sonido de forma nativa.
+REM La función Sound no es mía, incluyo los créditos correspondientes.
+' Sound Function v0.3 For DOS/Linux/Win by yetifoot
+' Credits:
+'    http://www.frontiernet.net/~fys/snd.htm
+'    http://delphi.about.com/cs/adptips2003/a/bltip0303_3.htm
+#ifdef __FB_WIN32__
+#include Once "windows.bi"
+#endif
+Sub Sound_DOS_LIN(Byval freq As Uinteger, dur As Uinteger)
+    Dim t As Double
+    Dim As Ushort fixed_freq = 1193181 \ freq
+
+    Asm
+        mov  dx, &H61                  ' turn speaker on
+        in   al, dx
+        or   al, &H03
+        out  dx, al
+        mov  dx, &H43                  ' get the timer ready
+        mov  al, &HB6
+        out  dx, al
+        mov  ax, word Ptr [fixed_freq] ' move freq to ax
+        mov  dx, &H42                  ' port to out
+        out  dx, al                    ' out low order
+        xchg ah, al
+        out  dx, al                    ' out high order
+    End Asm
+
+    t = Timer
+    While ((Timer - t) * 1000) < dur ' wait for out specified duration
+        Sleep(1)
+    Wend
+
+    Asm
+        mov  dx, &H61                  ' turn speaker off
+        in   al, dx
+        and  al, &HFC
+        out  dx, al
+    End Asm
+End Sub
+
+Sub Sound(Byval freq As Uinteger, dur As Uinteger)
+    #ifndef __fb_win32__
+    ' If not windows Then call the asm version.
+    Sound_DOS_LIN(freq, dur)
+    #Else
+    ' If Windows
+    Dim osv As OSVERSIONINFO
+
+    osv.dwOSVersionInfoSize = Sizeof(OSVERSIONINFO)
+    GetVersionEx(@osv)
+
+    Select Case osv.dwPlatformId
+    Case VER_PLATFORM_WIN32_NT
+        ' If NT then use Beep from API
+        Beep_(freq, dur)
+    Case Else
+        ' If not on NT then use the same as DOS/Linux
+        Sound_DOS_LIN(freq, dur)
+    End Select
+    #endif
+End Sub
+
+'----------
+
+Sub metronome()
+    Dim As Double bpm = 120.0  ' beats por minuto
+    Dim As Long retardo = 1000*(60.0 / bpm)
+    Dim As Integer bpb = 4     ' beats por compás
+    Dim As Integer counter = 0 ' contador interno
+    Do
+        counter += 1
+        If counter Mod bpb <> 0 Then
+            Sound(100, 60)
+            Color 10: Print "tick ";
+        Else
+            Sound(119, 60)
+            Color 11: Print "TICK "
+        End If
+        Sleep(retardo)
+    Loop
+End Sub

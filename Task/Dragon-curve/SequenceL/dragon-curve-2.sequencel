@@ -1,0 +1,74 @@
+#include <iostream>
+#include <vector>
+#include "SL_Generated.h"
+
+#include "Cimg.h"
+
+using namespace cimg_library;
+using namespace std;
+
+int main(int argc, char** argv)
+{
+	int threads = 0;
+	if(argc > 1) threads = atoi(argv[1]);
+	Sequence< Sequence<int> > result;
+
+	sl_init(threads);
+
+	int width = 500;
+	if(argc > 2) width = atoi(argv[2]);
+	int height = width;
+	if(argc > 3) height = atoi(argv[3]);
+
+	CImg<unsigned char> visu(width, height, 1, 3, 0);
+	CImgDisplay draw_disp(visu);
+
+	SLTimer compTimer;
+	SLTimer drawTimer;
+
+	int steps = 0;
+	int maxSteps = 18;
+	if(argc > 4) maxSteps = atoi(argv[4]);
+	int waitTime = 200;
+	if(argc > 5) waitTime = atoi(argv[5]);
+	bool adding = true;
+	while(!draw_disp.is_closed())
+	{
+		compTimer.start();
+		sl_entry(steps, width, height, threads, result);
+		compTimer.stop();
+
+		drawTimer.start();
+		visu.fill(0);
+
+		double thirdSize = ((result.size() / 2.0) / 3.0);
+		thirdSize = (int)thirdSize == 0 ? 1 : thirdSize;
+
+		for(int i = 1; i <= result.size(); i+=2)
+		{
+			unsigned char shade = (unsigned char)(255 * ((((i / 2) % (int)thirdSize) / thirdSize)) + 0.5);
+
+			unsigned char r = i / 2 <= thirdSize ? shade : 255/2;
+			unsigned char g = thirdSize < i / 2 && i / 2 <= thirdSize * 2 ? shade : 255/2;
+			unsigned char b = thirdSize * 2 < i / 2 && i / 2 <= thirdSize * 3 ? shade : 255/2;
+			const unsigned char color[] = {r,g,b};
+
+			visu.draw_line(result[i][1], result[i][2], 0, result[i + 1][1], result[i + 1][2], 0, color);
+		}
+		visu.display(draw_disp);
+		drawTimer.stop();
+
+		draw_disp.set_title("Dragon Curve in SequenceL: %d Threads | Steps: %d | CompTime: %f Seconds | Draw Time: %f Seconds", threads, steps, drawTimer.getTime(), compTimer.getTime());
+
+		if(adding) steps++;
+		else steps--;
+
+		if(steps <= 0) adding = true;
+		else if(steps >= maxSteps) adding = false;
+
+		draw_disp.wait(waitTime);
+	}
+
+	sl_done();
+	return 0;
+}

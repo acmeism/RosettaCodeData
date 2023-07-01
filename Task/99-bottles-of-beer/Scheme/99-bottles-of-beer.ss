@@ -1,0 +1,12 @@
+(define (sing)
+ (define (sing-to-x n)
+  (if (> n -1)
+    (begin
+        (display n)
+        (display "bottles of beer on the wall")
+        (newline)
+        (display "Take one down, pass it around")
+        (newline)
+        (sing-to-x (- n 1)))
+    (display "would you wanna me to sing it again?")))
+ (sing-to-x 99))

@@ -1,0 +1,1 @@
+(String new:n) atAllPut:$*

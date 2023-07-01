@@ -1,0 +1,9 @@
+defmodule RC do
+  def stripchars(str, chars) do
+    String.replace(str, ~r/[#{chars}]/, "")
+  end
+end
+
+str = "She was a soul stripper. She took my heart!"
+RC.stripchars(str, "aei")
+# => Sh ws  soul strppr. Sh took my hrt!

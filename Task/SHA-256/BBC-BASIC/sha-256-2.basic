@@ -1,0 +1,124 @@
+      REM SHA-256 calculation by Richard Russell in BBC BASIC for Windows
+
+      REM Must run in FLOAT64 mode:
+      *FLOAT64
+
+      REM Test message for validation:
+      message$ = "Rosetta code"
+
+      REM Initialize variables:
+      h0% = &6A09E667
+      h1% = &BB67AE85
+      h2% = &3C6EF372
+      h3% = &A54FF53A
+      h4% = &510E527F
+      h5% = &9B05688C
+      h6% = &1F83D9AB
+      h7% = &5BE0CD19
+
+      REM Create table of constants:
+      DIM k%(63) : k%() = \
+      \ &428A2F98, &71374491, &B5C0FBCF, &E9B5DBA5, &3956C25B, &59F111F1, &923F82A4, &AB1C5ED5, \
+      \ &D807AA98, &12835B01, &243185BE, &550C7DC3, &72BE5D74, &80DEB1FE, &9BDC06A7, &C19BF174, \
+      \ &E49B69C1, &EFBE4786, &0FC19DC6, &240CA1CC, &2DE92C6F, &4A7484AA, &5CB0A9DC, &76F988DA, \
+      \ &983E5152, &A831C66D, &B00327C8, &BF597FC7, &C6E00BF3, &D5A79147, &06CA6351, &14292967, \
+      \ &27B70A85, &2E1B2138, &4D2C6DFC, &53380D13, &650A7354, &766A0ABB, &81C2C92E, &92722C85, \
+      \ &A2BFE8A1, &A81A664B, &C24B8B70, &C76C51A3, &D192E819, &D6990624, &F40E3585, &106AA070, \
+      \ &19A4C116, &1E376C08, &2748774C, &34B0BCB5, &391C0CB3, &4ED8AA4A, &5B9CCA4F, &682E6FF3, \
+      \ &748F82EE, &78A5636F, &84C87814, &8CC70208, &90BEFFFA, &A4506CEB, &BEF9A3F7, &C67178F2
+
+      Length% = LEN(message$)*8
+
+      REM Pre-processing:
+      REM append the bit '1' to the message:
+      message$ += CHR$&80
+
+      REM append k bits '0', where k is the minimum number >= 0 such that
+      REM the resulting message length (in bits) is congruent to 448 (mod 512)
+      WHILE (LEN(message$) MOD 64) <> 56
+        message$ += CHR$0
+      ENDWHILE
+
+      REM append length of message (before pre-processing), in bits, as
+      REM 64-bit big-endian integer:
+      FOR I% = 56 TO 0 STEP -8
+        message$ += CHR$(Length% >>> I%)
+      NEXT
+
+      REM Process the message in successive 512-bit chunks:
+      REM break message into 512-bit chunks, for each chunk
+      REM break chunk into sixteen 32-bit big-endian words w[i], 0 <= i <= 15
+
+      DIM w%(63)
+      FOR chunk% = 0 TO LEN(message$) DIV 64 - 1
+
+        FOR i% = 0 TO 15
+          w%(i%) = !(!^message$ + 64*chunk% + 4*i%)
+          SWAP ?(^w%(i%)+0),?(^w%(i%)+3)
+          SWAP ?(^w%(i%)+1),?(^w%(i%)+2)
+        NEXT i%
+
+        REM Extend the sixteen 32-bit words into sixty-four 32-bit words:
+        FOR i% = 16 TO 63
+          s0% = FNrr(w%(i%-15),7) EOR FNrr(w%(i%-15),18) EOR (w%(i%-15) >>> 3)
+          s1% = FNrr(w%(i%-2),17) EOR FNrr(w%(i%-2),19) EOR (w%(i%-2) >>> 10)
+          w%(i%) = FN32(w%(i%-16) + s0% + w%(i%-7) + s1%)
+        NEXT i%
+
+        REM Initialize hash value for this chunk:
+        a% = h0%
+        b% = h1%
+        c% = h2%
+        d% = h3%
+        e% = h4%
+        f% = h5%
+        g% = h6%
+        h% = h7%
+
+        REM Main loop:
+        FOR i% = 0 TO 63
+          s0% = FNrr(a%,2) EOR FNrr(a%,13) EOR FNrr(a%,22)
+          maj% = (a% AND b%) EOR (a% AND c%) EOR (b% AND c%)
+          t2% = FN32(s0% + maj%)
+          s1% = FNrr(e%,6) EOR FNrr(e%,11) EOR FNrr(e%,25)
+          ch% = (e% AND f%) EOR ((NOT e%) AND g%)
+          t1% = FN32(h% + s1% + ch% + k%(i%) + w%(i%))
+
+          h% = g%
+          g% = f%
+          f% = e%
+          e% = FN32(d% + t1%)
+          d% = c%
+          c% = b%
+          b% = a%
+          a% = FN32(t1% + t2%)
+
+        NEXT i%
+
+        REM Add this chunk's hash to result so far:
+        h0% = FN32(h0% + a%)
+        h1% = FN32(h1% + b%)
+        h2% = FN32(h2% + c%)
+        h3% = FN32(h3% + d%)
+        h4% = FN32(h4% + e%)
+        h5% = FN32(h5% + f%)
+        h6% = FN32(h6% + g%)
+        h7% = FN32(h7% + h%)
+
+      NEXT chunk%
+
+      REM Produce the final hash value (big-endian):
+      hash$ = FNhex(h0%) + " " + FNhex(h1%) + " " + FNhex(h2%) + " " + FNhex(h3%) + \
+      \ " " + FNhex(h4%) + " " + FNhex(h5%) + " " + FNhex(h6%) + " " + FNhex(h7%)
+
+      PRINT hash$
+      END
+
+      DEF FNrr(A%,I%) = (A% >>> I%) OR (A% << (32-I%))
+
+      DEF FNhex(A%) = RIGHT$("0000000"+STR$~A%,8)
+
+      DEF FN32(n#)
+      WHILE n# > &7FFFFFFF : n# -= 2^32 : ENDWHILE
+      WHILE n# < &80000000 : n# += 2^32 : ENDWHILE
+      = n#

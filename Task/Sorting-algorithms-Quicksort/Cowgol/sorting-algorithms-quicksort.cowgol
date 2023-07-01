@@ -1,0 +1,102 @@
+include "cowgol.coh";
+
+# Comparator interface, on the model of C, i.e:
+# foo < bar => -1, foo == bar => 0, foo > bar => 1
+typedef CompRslt is int(-1, 1);
+interface Comparator(foo: intptr, bar: intptr): (rslt: CompRslt);
+
+# Quicksort an array of pointer-sized integers given a comparator function
+# (This is the closest you can get to polymorphism in Cowgol).
+# Because Cowgol does not support recursion, a pointer to free memory
+# for a stack must also be given.
+sub qsort(A: [intptr], len: intptr, comp: Comparator, stack: [intptr]) is
+    # The partition function can be taken almost verbatim from Wikipedia
+    sub partition(lo: intptr, hi: intptr): (p: intptr) is
+        # This is not quite as bad as it looks: /2 compiles into a single shift
+        # and "@bytesof intptr" is always power of 2 so compiles into shift(s).
+        var pivot := [A + (hi/2 + lo/2) * @bytesof intptr];
+        var i := lo - 1;
+        var j := hi + 1;
+        loop
+            loop
+                i := i + 1;
+                if comp([A + i*@bytesof intptr], pivot) != -1 then
+                    break;
+                end if;
+            end loop;
+            loop
+                j := j - 1;
+                if comp([A + j*@bytesof intptr], pivot) != 1 then
+                    break;
+                end if;
+            end loop;
+            if i >= j then
+                p := j;
+                return;
+            end if;
+            var ii := i * @bytesof intptr;
+            var jj := j * @bytesof intptr;
+            var t := [A+ii];
+            [A+ii] := [A+jj];
+            [A+jj] := t;
+        end loop;
+    end sub;
+
+    # Cowgol lacks recursion, so we'll have to solve it by implementing
+    # the stack ourselves.
+    var sp: intptr := 0; # stack index
+    sub push(n: intptr) is
+        sp := sp + 1;
+        [stack] := n;
+        stack := @next stack;
+    end sub;
+    sub pop(): (n: intptr) is
+        sp := sp - 1;
+        stack := @prev stack;
+        n := [stack];
+    end sub;
+
+    # start by sorting [0..length-1]
+    push(len-1);
+    push(0);
+    while sp != 0 loop
+        var lo := pop();
+        var hi := pop();
+        if lo < hi then
+            var p := partition(lo, hi);
+            push(hi);   # note the order - we need to push the high pair
+            push(p+1);  # first for it to be done last
+            push(p);
+            push(lo);
+        end if;
+    end loop;
+end sub;
+
+# Test: sort a list of numbers
+sub NumComp implements Comparator is
+    # Compare the inputs as numbers
+    if foo < bar then rslt := -1;
+    elseif foo > bar then rslt := 1;
+    else rslt := 0;
+    end if;
+end sub;
+
+# Numbers
+var numbers: intptr[] := {
+    65,13,4,84,29,5,96,73,5,11,17,76,38,26,44,20,36,12,44,51,79,8,99,7,19,95,26
+};
+
+# Room for the stack
+var stackbuf: intptr[256];
+
+# Sort the numbers in place
+qsort(&numbers as [intptr], @sizeof numbers, NumComp, &stackbuf as [intptr]);
+
+# Print the numbers (hopefully in order)
+var i: @indexof numbers := 0;
+while i < @sizeof numbers loop
+    print_i32(numbers[i] as uint32);
+    print_char(' ');
+    i := i + 1;
+end loop;
+print_nl();

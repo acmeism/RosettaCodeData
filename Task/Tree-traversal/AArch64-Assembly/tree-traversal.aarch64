@@ -1,0 +1,387 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program deftree64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ NBVAL,    9
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure tree     */
+    .struct  0
+tree_root:                             // root pointer
+    .struct  tree_root + 8
+tree_size:                             // number of element of tree
+    .struct  tree_size + 8
+tree_fin:
+/* structure node tree */
+    .struct  0
+node_left:                             // left pointer
+    .struct  node_left + 8
+node_right:                            // right pointer
+    .struct  node_right + 8
+node_value:                            // element value
+    .struct  node_value + 8
+node_fin:
+/* structure queue*/
+    .struct  0
+queue_begin:                           // next pointer
+    .struct  queue_begin + 8
+queue_end:                             // element value
+    .struct  queue_end + 8
+queue_fin:
+/* structure node queue    */
+    .struct  0
+queue_node_next:                       // next pointer
+    .struct  queue_node_next + 8
+queue_node_value:                      // element value
+    .struct  queue_node_value + 8
+queue_node_fin:
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessInOrder:        .asciz "inOrder :\n"
+szMessPreOrder:       .asciz "PreOrder :\n"
+szMessPostOrder:      .asciz "PostOrder :\n"
+szMessLevelOrder:     .asciz "LevelOrder :\n"
+szCarriageReturn:     .asciz "\n"
+/* datas error display */
+szMessErreur:         .asciz "Error detected.\n"
+/* datas message display */
+szMessResult:         .ascii "Element value : @ \n"
+
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+.align 4
+sZoneConv:            .skip 24
+stTree:               .skip tree_fin    // place to structure tree
+stQueue:              .skip queue_fin   // place to structure queue
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:
+    mov x1,1                            // node tree value
+1:
+    ldr x0,qAdrstTree                   // structure tree address
+    bl insertElement                    // add element value x1
+    cmp x0,-1
+    beq 99f
+    add x1,x1,1                         // increment value
+    cmp x1,NBVAL                        // end ?
+    ble 1b                              // no -> loop
+
+    ldr x0,qAdrszMessPreOrder
+    bl affichageMess
+    ldr x3,qAdrstTree                   // tree root address (begin structure)
+    ldr x0,[x3,#tree_root]
+    ldr x1,qAdrdisplayElement           // function to execute
+    bl preOrder
+
+    ldr x0,qAdrszMessInOrder
+    bl affichageMess
+    ldr x3,qAdrstTree
+    ldr x0,[x3,#tree_root]
+    ldr x1,qAdrdisplayElement           // function to execute
+    bl inOrder
+
+    ldr x0,qAdrszMessPostOrder
+    bl affichageMess
+    ldr x3,qAdrstTree
+    ldr x0,[x3,#tree_root]
+    ldr x1,qAdrdisplayElement           // function to execute
+    bl postOrder
+
+    ldr x0,qAdrszMessLevelOrder
+    bl affichageMess
+    ldr x3,qAdrstTree
+    ldr x0,[x3,#tree_root]
+    ldr x1,qAdrdisplayElement           // function to execute
+    bl levelOrder
+    b 100f
+99:                                     // display error
+    ldr x0,qAdrszMessErreur
+    bl affichageMess
+100:                                    // standard end of the program
+    mov x8,EXIT                         // request to exit program
+    svc 0                               // perform system call
+qAdrszMessInOrder:         .quad szMessInOrder
+qAdrszMessPreOrder:        .quad szMessPreOrder
+qAdrszMessPostOrder:       .quad szMessPostOrder
+qAdrszMessLevelOrder:      .quad szMessLevelOrder
+qAdrszMessErreur:          .quad szMessErreur
+qAdrszCarriageReturn:      .quad szCarriageReturn
+qAdrstTree:                .quad stTree
+qAdrstQueue:               .quad stQueue
+qAdrdisplayElement:        .quad displayElement
+/******************************************************************/
+/*     insert element in the tree                                 */
+/******************************************************************/
+/* x0 contains the address of the tree structure */
+/* x1 contains the value of element              */
+/* x0 returns address of element or - 1 if error */
+insertElement:
+    stp x1,lr,[sp,-16]!           // save  registers
+    mov x4,x0
+    mov x0,node_fin               // reservation place one element
+    bl allocHeap
+    cmp x0,-1                     // allocation error
+    beq 100f
+    mov x5,x0
+    str x1,[x5,node_value]        // store value in address heap
+    mov x1,0
+    str x1,[x5,node_left]         // init left pointer with zero
+    str x1,[x5,node_right]        // init right pointer with zero
+    ldr x2,[x4,tree_size]         // load tree size
+    cbnz x2,1f                    // 0 element ?
+    str x5,[x4,tree_root]         // yes -> store in root
+    b 6f
+1:                                // else search free address in tree
+    ldr x3,[x4,tree_root]         // start with address root
+    add x6,x2,1                   // increment tree size
+    clz x7,x6                     // compute zeroes left bits
+    add x7,x7,1                   // for sustract the first left bit
+    lsl x6,x6,x7                  // shift number in left
+2:
+    tst x6,1<<63                  // test left bit
+    lsl x6,x6,1                   // shift left bit
+    bne 3f                        // bit at one
+    ldr x1,[x3,node_left]         // no store node address in left pointer
+    cbz x1,4f                     // if equal zero
+    mov x3,x1                     // else loop with next node
+    b 2b
+3:                                    // yes
+    ldr x1,[x3,node_right]           // store node address in right pointer
+    cbz x1,5f                         // if equal zero
+    mov x3,x1                         // else loop with next node
+    b 2b
+4:
+    str x5,[x3,node_left]
+    b 6f
+5:
+    str x5,[x3,node_right]
+6:
+    add x2,x2,1                         // increment tree size
+    str x2,[x4,tree_size]
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*     preOrder                                  */
+/******************************************************************/
+/* x0 contains the address of the node */
+/* x1 function address                 */
+preOrder:
+    stp x1,lr,[sp,-16]!           // save  registers
+    stp x2,x3,[sp,-16]!           // save  registers
+    cmp x0,#0
+    beq 100f
+    mov x2,x0
+    blr x1                                // call function
+
+    ldr x0,[x2,#node_left]
+    bl preOrder
+    ldr x0,[x2,#node_right]
+    bl preOrder
+100:
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*     inOrder                                  */
+/******************************************************************/
+/* x0 contains the address of the node */
+/* x1 function address                 */
+inOrder:
+    stp x1,lr,[sp,-16]!           // save  registers
+    stp x2,x3,[sp,-16]!           // save  registers
+    cbz x0,100f
+    mov x3,x0
+    mov x2,x1
+    ldr x0,[x3,node_left]
+    bl inOrder
+    mov x0,x3
+    blr x2                        // call function
+
+    ldr x0,[x3,node_right]
+    mov x1,x2
+    bl inOrder
+100:
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*     postOrder                                  */
+/******************************************************************/
+/* x0 contains the address of the node */
+/* x1 function address                 */
+postOrder:
+    stp x1,lr,[sp,-16]!           // save  registers
+    stp x2,x3,[sp,-16]!           // save  registers
+    cbz x0,100f
+    mov x3,x0
+    mov x2,x1
+    ldr x0,[x3,#node_left]
+    bl postOrder
+
+    ldr x0,[x3,#node_right]
+    mov x1,x2
+    bl postOrder
+    mov x0,x3
+    blr x2                         // call function
+100:
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*     levelOrder                                  */
+/******************************************************************/
+/* x0 contains the address of the node */
+/* x1 function address                 */
+levelOrder:
+    stp x1,lr,[sp,-16]!           // save  registers
+    stp x2,x3,[sp,-16]!           // save  registers
+    cbz x0,100f
+    mov x2,x1
+    mov x1,x0
+    ldr x0,qAdrstQueue                    // adresse queue
+    bl enqueueNode                        // queue the node
+1:                                        // begin loop
+    ldr x0,qAdrstQueue
+    bl isEmptyQueue                       // is queue empty
+    cbz x0,100f                           // yes -> end
+    ldr x0,qAdrstQueue
+    bl dequeueNode
+    mov x3,x0                             // save node
+    blr x2                                // call function
+    ldr x14,[x3,#node_left]                // left node ok ?
+    cbz x14,2f
+    ldr x0,qAdrstQueue                    // yes -> enqueue
+    mov x1,x14
+    bl enqueueNode
+2:
+    ldr x14,[x3,#node_right]               // right node ok ?
+    cbz x14,3f
+    ldr x0,qAdrstQueue                    // yes -> enqueue
+    mov x1,x14
+    bl enqueueNode
+3:
+    b 1b                                  // and loop
+100:
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*     display node                                               */
+/******************************************************************/
+/* x0 contains node  address          */
+displayElement:
+    stp x1,lr,[sp,-16]!           // save  registers
+    ldr x0,[x0,#node_value]
+    ldr x1,qAdrsZoneConv
+    bl conversion10S
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc         // insert result at @ character
+    bl affichageMess
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrszMessResult:          .quad szMessResult
+qAdrsZoneConv:             .quad sZoneConv
+/******************************************************************/
+/*     enqueue node                                  */
+/******************************************************************/
+/* x0 contains the address of the queue */
+/* x1 contains the value of element  */
+/* x0 returns address of element or - 1 if error */
+enqueueNode:
+    stp x1,lr,[sp,-16]!           // save  registers
+    stp x2,x3,[sp,-16]!           // save  registers
+    mov x14,x0
+    mov x0,#queue_node_fin                // allocation place heap
+    bl allocHeap
+    cmp x0,#-1                            // allocation error
+    beq 100f
+    mov x15,x0                             // save heap address
+    str x1,[x15,#queue_node_value]         // store node value
+    mov x1,#0
+    str x1,[x15,#queue_node_next]          // init pointer next
+    ldr x0,[x14,#queue_end]
+    cbz x0,1f
+    str x15,[x0,#queue_node_next]
+    b 2f
+1:
+    str x15,[x14,#queue_begin]
+2:
+    str x15,[x14,#queue_end]
+    mov x0,#0
+100:
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*     dequeue node                                  */
+/******************************************************************/
+/* x0 contains the address of the queue */
+/* x0 returns address of element or - 1 if error */
+dequeueNode:
+    stp x1,lr,[sp,-16]!           // save  registers
+    ldr x14,[x0,#queue_begin]
+    ldr x15,[x14,#queue_node_value]
+    ldr x16,[x14,#queue_node_next]
+    str x16,[x0,#queue_begin]
+    cbnz x16,1f
+    str x16,[x0,#queue_end]
+1:
+    mov x0,x15
+100:
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*     dequeue node                                  */
+/******************************************************************/
+/* x0 contains the address of the queue */
+/* x0 returns 0 if empty else 1  */
+isEmptyQueue:
+    ldr x0,[x0,#queue_begin]
+    cmp x0,#0
+    cset x0,ne
+    ret                             // return
+/******************************************************************/
+/*     memory allocation on the heap                                  */
+/******************************************************************/
+/* x0 contains the size to allocate */
+/* x0 returns address of memory heap or - 1 if error */
+/* CAUTION : The size of the allowance must be a multiple of 4  */
+allocHeap:
+    stp x8,lr,[sp,-16]!          // save  registers
+                                 // allocation
+    mov x16,x0                   // save size
+    mov x0,0                     // read address start heap
+    mov x8,BRK                   // call system 'brk'
+    svc 0
+    mov x15,x0                   // save address heap for return
+    add x0,x0,x16                   // reservation place for size
+    mov x8,BRK                   // call system 'brk'
+    svc 0
+    cmp x0,-1                    // allocation error
+    beq 100f
+    mov x0,x15                    // return address memory heap
+100:
+    ldp x8,lr,[sp],16            // restaur  2 registers
+    ret                          // return to address lr x30
+/***********************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

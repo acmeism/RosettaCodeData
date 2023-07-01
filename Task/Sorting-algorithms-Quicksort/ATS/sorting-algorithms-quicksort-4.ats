@@ -1,0 +1,364 @@
+(*------------------------------------------------------------------*)
+(* Quicksort in ATS2, for arrays of (possibly) linear values.       *)
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+
+#define NIL list_vt_nil ()
+#define ::  list_vt_cons
+
+(*------------------------------------------------------------------*)
+
+(* A simple quicksort working on arrays of non-linear values, using
+   a programmer-selectible pivot.
+
+   It is based on the "in-place" task pseudocode. *)
+
+extern fun {a : vt@ype}          (* A "less-than" predicate. *)
+array_quicksort$lt {px, py : addr}
+                   (pfx    : !(a @ px),
+                    pfy    : !(a @ py) |
+                    px     : ptr px,
+                    py     : ptr py) : bool
+
+extern fun {a : vt@ype}
+array_quicksort$select_pivot_index {n     : int}
+                                   {i, j  : nat | i < j; j < n}
+                                   (arr   : &array (a, n),
+                                    first : size_t i,
+                                    last  : size_t j)
+    : [k : int | i <= k; k <= j] size_t k
+
+extern fun {a : vt@ype}
+array_quicksort {n   : int}
+                (arr : &array (a, n) >> _,
+                 n   : size_t n) : void
+
+(* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - *)
+
+prfn                   (* Subdivide an array view into three views. *)
+array_v_subdivide3 {a : vt@ype} {p : addr} {n1, n2, n3 : nat}
+                   (pf : @[a][n1 + n2 + n3] @ p)
+    :<prf> @(@[a][n1] @ p,
+           @[a][n2] @ (p + n1 * sizeof a),
+           @[a][n3] @ (p + (n1 + n2) * sizeof a)) =
+  let
+    prval (pf1, pf23) =
+      array_v_split {a} {p} {n1 + n2 + n3} {n1} pf
+    prval (pf2, pf3) =
+      array_v_split {a} {p + n1 * sizeof a} {n2 + n3} {n2} pf23
+  in
+    @(pf1, pf2, pf3)
+  end
+
+prfn            (* Join three contiguous array views into one view. *)
+array_v_join3 {a : vt@ype} {p : addr} {n1, n2, n3 : nat}
+              (pf1 : @[a][n1] @ p,
+               pf2 : @[a][n2] @ (p + n1 * sizeof a),
+               pf3 : @[a][n3] @ (p + (n1 + n2) * sizeof a))
+    :<prf> @[a][n1 + n2 + n3] @ p =
+  let
+    prval pf23 =
+      array_v_unsplit {a} {p + n1 * sizeof a} {n2, n3} (pf2, pf3)
+    prval pf = array_v_unsplit {a} {p} {n1, n2 + n3} (pf1, pf23)
+  in
+    pf
+  end
+
+fn {a : vt@ype}            (* Safely swap two elements of an array. *)
+swap_elems_1 {n     : int}
+             {i, j  : nat | i <= j; j < n}
+             {p     : addr}
+             (pfarr : !array_v(a, p, n) >> _ |
+              p     : ptr p,
+              i     : size_t i,
+              j     : size_t j) : void =
+
+  let
+    fn {a : vt@ype}
+    swap {n     : int}
+         {i, j  : nat | i < j; j < n}
+         {p     : addr}
+         (pfarr : !array_v(a, p, n) >> _ |
+          p     : ptr p,
+          i     : size_t i,
+          j     : size_t j) : void =
+      {
+
+        (* Safely swapping linear elements requires that views of
+           those elements be split off from the rest of the
+           array. Why? Because those elements will temporarily be in
+           an uninitialized state. (Actually they will be "?!", but
+           the difference is unimportant here.)
+
+           Remember, a linear value is consumed by using it.
+
+           The view for the whole array can be reassembled only after
+           new values have been stored, making the entire array once
+           again initialized. *)
+
+        prval @(pf1, pf2, pf3) =
+          array_v_subdivide3 {a} {p} {i, j - i, n - j} pfarr
+        prval @(pfi, pf2_) = array_v_uncons pf2
+        prval @(pfj, pf3_) = array_v_uncons pf3
+
+        val pi = ptr_add<a> (p, i)
+        and pj = ptr_add<a> (p, j)
+
+        val xi = ptr_get<a> (pfi | pi)
+        and xj = ptr_get<a> (pfj | pj)
+
+        val () = ptr_set<a> (pfi | pi, xj)
+        and () = ptr_set<a> (pfj | pj, xi)
+
+        prval pf2 = array_v_cons (pfi, pf2_)
+        prval pf3 = array_v_cons (pfj, pf3_)
+        prval () = pfarr := array_v_join3 (pf1, pf2, pf3)
+      }
+  in
+    if i < j then
+      swap {n} {i, j} {p} (pfarr | p, i, j)
+    else
+      ()   (* i = j must be handled specially, due to linear typing.*)
+  end
+
+fn {a : vt@ype}            (* Safely swap two elements of an array. *)
+swap_elems_2 {n    : int}
+             {i, j : nat | i <= j; j < n}
+             (arr  : &array(a, n) >> _,
+              i     : size_t i,
+              j     : size_t j) : void =
+  swap_elems_1 (view@ arr | addr@ arr, i, j)
+
+overload swap_elems with swap_elems_1
+overload swap_elems with swap_elems_2
+overload swap with swap_elems
+
+fn {a : vt@ype}         (* Safely compare two elements of an array. *)
+lt_elems_1 {n     : int}
+           {i, j  : nat | i < n; j < n}
+           {p     : addr}
+           (pfarr : !array_v(a, p, n) |
+            p     : ptr p,
+            i     : size_t i,
+            j     : size_t j) : bool =
+  let
+    fn
+    compare {n     : int}
+            {i, j  : nat | i < j; j < n}
+            {p     : addr}
+            (pfarr : !array_v(a, p, n) |
+             p     : ptr p,
+             i     : size_t i,
+             j     : size_t j,
+             gt    : bool) : bool =
+      let
+        prval @(pf1, pf2, pf3) =
+          array_v_subdivide3 {a} {p} {i, j - i, n - j} pfarr
+        prval @(pfi, pf2_) = array_v_uncons pf2
+        prval @(pfj, pf3_) = array_v_uncons pf3
+
+        val pi = ptr_add<a> (p, i)
+        and pj = ptr_add<a> (p, j)
+
+        val retval =
+          if gt then
+            array_quicksort$lt<a> (pfj, pfi | pj, pi)
+          else
+            array_quicksort$lt<a> (pfi, pfj | pi, pj)
+
+        prval pf2 = array_v_cons (pfi, pf2_)
+        prval pf3 = array_v_cons (pfj, pf3_)
+        prval () = pfarr := array_v_join3 (pf1, pf2, pf3)
+      in
+        retval
+      end
+  in
+    if i < j then
+      compare {n} {i, j} {p} (pfarr | p, i, j, false)
+    else if j < i then
+      compare {n} {j, i} {p} (pfarr | p, j, i, true)
+    else
+      false
+  end
+
+fn {a : vt@ype}         (* Safely compare two elements of an array. *)
+lt_elems_2 {n    : int}
+           {i, j : nat | i < n; j < n}
+           (arr  : &array (a, n),
+            i    : size_t i,
+            j    : size_t j) : bool =
+  lt_elems_1 (view@ arr | addr@ arr, i, j)
+
+overload lt_elems with lt_elems_1
+overload lt_elems with lt_elems_2
+
+implement {a}
+array_quicksort {n} (arr, n) =
+  let
+    sortdef index = {i : nat | i < n}
+    typedef index (i : int) = [0 <= i; i < n] size_t i
+    typedef index = [i : index] index i
+
+    macdef lt = array_quicksort$lt<a>
+
+    fun
+    quicksort {i, j  : index}
+              (arr   : &array(a, n) >> _,
+               first : index i,
+               last  : index j) : void =
+      if first < last then
+        {
+          val pivot =
+            array_quicksort$select_pivot_index<a> (arr, first, last)
+
+          (* Swap the pivot with the last element. *)
+          val () = swap (arr, pivot, last)
+          val pivot = last
+
+          fun
+          search_rightwards (arr  : &array (a, n),
+                             left : index) : index =
+            if lt_elems<a> (arr, left, pivot) then
+              let
+                val () = assertloc (succ left <> n)
+              in
+                search_rightwards (arr, succ left)
+              end
+            else
+              left
+
+          fun
+          search_leftwards (arr   : &array (a, n),
+                            left  : index,
+                            right : index) : index =
+            if right < left then
+              right
+            else if lt_elems<a> (arr, pivot, right) then
+              let
+                val () = assertloc (right <> i2sz 0)
+              in
+                search_leftwards (arr, left, pred right)
+              end
+            else
+              right
+
+          fun
+          partition (arr    : &array (a, n) >> _,
+                     left0  : index,
+                     right0 : index) : @(index, index) =
+            let
+              val left = search_rightwards (arr, left0)
+              val right = search_leftwards (arr, left, right0)
+            in
+              if left <= right then
+                let
+                  val () = assertloc (succ left <> n)
+                  and () = assertloc (right <> i2sz 0)
+                in
+                  swap (arr, left, right);
+                  partition (arr, succ left, pred right)
+                end
+              else
+                @(left, right)
+            end
+
+          val @(left, right) = partition (arr, first, pred last)
+
+          val () = quicksort (arr, first, right)
+          and () = quicksort (arr, left, last)
+        }
+  in
+    if i2sz 2 <= n then
+      quicksort {0, n - 1} (arr, i2sz 0, pred n)
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+array_quicksort$lt<Strptr1> (pfx, pfy | px, py) =
+  compare (!px, !py) < 0
+
+implement
+array_quicksort$select_pivot_index<Strptr1> {n} (arr, first, last) =
+  (* Median of three. *)
+  let
+    val middle = first + ((last - first) / i2sz 2)
+  in
+    if lt_elems<Strptr1> (arr, middle, first)
+          xor lt_elems<Strptr1> (arr, last, first) then
+      first
+    else if lt_elems<Strptr1> (arr, middle, first)
+              xor lt_elems<Strptr1> (arr, middle, last) then
+      middle
+    else
+      last
+  end
+
+implement
+list_vt_map$fopr<string><Strptr1> (s) = string0_copy s
+
+implement
+list_vt_freelin$clear<Strptr1> (x) = strptr_free x
+
+implement
+main0 () =
+  let
+    val example_strings =
+      $list_vt
+        ("choose", "any", "element", "of", "the", "array",
+         "to", "be", "the", "pivot",
+         "divide", "all", "other", "elements", "except",
+         "the", "pivot", "into", "two", "partitions",
+         "all", "elements", "less", "than", "the", "pivot",
+         "must", "be", "in", "the", "first", "partition",
+         "all", "elements", "greater", "than", "the", "pivot",
+         "must", "be", "in", "the", "second", "partition",
+         "use", "recursion", "to", "sort", "both", "partitions",
+         "join", "the", "first", "sorted", "partition", "the",
+         "pivot", "and", "the", "second", "sorted", "partition")
+
+    val example_strptrs =
+      list_vt_map<string><Strptr1> (example_strings)
+
+    prval () = lemma_list_vt_param example_strptrs
+    val n = length example_strptrs
+
+    val @(pf, pfgc | p) = array_ptr_alloc<Strptr1> (i2sz n)
+    macdef arr = !p
+
+    val () = array_initize_list_vt<Strptr1> (arr, n, example_strptrs)
+    val () = array_quicksort<Strptr1> (arr, i2sz n)
+    val sorted_strptrs = array2list (arr, i2sz n)
+
+    fun
+    print_strptrs {n       : nat} .<n>.
+                  (strptrs : !list_vt (Strptr1, n),
+                   i       : int) : void =
+      case+ strptrs of
+      | NIL => if i <> 1 then println! () else ()
+      | @ head :: tail =>
+        begin
+          print! head;
+          if i = 8 then
+            begin
+              println! ();
+              print_strptrs (tail, 1)
+            end
+          else
+            begin
+              print! " ";
+              print_strptrs (tail, succ i)
+            end;
+          fold@ strptrs
+        end
+  in
+    println! (length example_strings);
+    println! (length sorted_strptrs);
+    print_strptrs (sorted_strptrs, 1);
+    list_vt_freelin<Strptr1> sorted_strptrs;
+    array_ptr_free (pf, pfgc | p);
+    list_vt_free<string> example_strings
+  end
+
+(*------------------------------------------------------------------*)

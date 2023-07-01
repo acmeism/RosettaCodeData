@@ -1,0 +1,367 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% The Rosetta Code Virtual Machine, for GNU Prolog.
+%%%
+%%% The following code uses GNU Prolog's extensions for global
+%%% variables.
+%%%
+%%% Usage: vm [INPUTFILE [OUTPUTFILE]]
+%%% The notation "-" means to use standard input or standard output.
+%%% Leaving out an argument is equivalent to specifying "-".
+%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+make_and_run_machine(Input, Output) :-
+  make_machine(Input),
+  run_machine(Output).
+
+run_machine(Output) :-
+  repeat,
+  next_instruction(Opcode, Arg),
+  (Opcode == ('halt')
+  -> true
+  ; (run_instruction(Output, Opcode, Arg),
+     fail                       % Backtracks to the 'repeat'.
+    )).
+
+run_instruction(Output, Opcode, Arg) :-
+  (
+    (Opcode == ('add'),
+     pop_value(Y),
+     pop_value(X),
+     is(Z, X + Y),
+     push_value(Z))
+  ; (Opcode == ('sub'),
+     pop_value(Y),
+     pop_value(X),
+     is(Z, X - Y),
+     push_value(Z))
+  ; (Opcode == ('mul'),
+     pop_value(Y),
+     pop_value(X),
+     is(Z, X * Y),
+     push_value(Z))
+  ; (Opcode == ('div'),
+     pop_value(Y),
+     pop_value(X),
+     is(Z, X // Y),
+     push_value(Z))
+  ; (Opcode == ('mod'),
+     pop_value(Y),
+     pop_value(X),
+     is(Z, X rem Y),
+     push_value(Z))
+  ; (Opcode == ('lt'),
+     pop_value(Y),
+     pop_value(X),
+     (X < Y -> Z = 1; Z = 0),
+     push_value(Z))
+  ; (Opcode == ('le'),
+     pop_value(Y),
+     pop_value(X),
+     (X =< Y -> Z = 1; Z = 0),
+     push_value(Z))
+  ; (Opcode == ('gt'),
+     pop_value(Y),
+     pop_value(X),
+     (X > Y -> Z = 1; Z = 0),
+     push_value(Z))
+  ; (Opcode == ('ge'),
+     pop_value(Y),
+     pop_value(X),
+     (X >= Y -> Z = 1; Z = 0),
+     push_value(Z))
+  ; (Opcode == ('eq'),
+     pop_value(Y),
+     pop_value(X),
+     (X =:= Y -> Z = 1; Z = 0),
+     push_value(Z))
+  ; (Opcode == ('ne'),
+     pop_value(Y),
+     pop_value(X),
+     (X =\= Y -> Z = 1; Z = 0),
+     push_value(Z))
+  ; (Opcode == ('and'),
+     pop_value(Y),
+     pop_value(X),
+     ((X =\= 0, Y =\= 0) -> Z = 1; Z = 0),
+     push_value(Z))
+  ; (Opcode == ('or'),
+     pop_value(Y),
+     pop_value(X),
+     ((X =\= 0; Y =\= 0) -> Z = 1; Z = 0),
+     push_value(Z))
+  ; (Opcode == ('neg'),
+     pop_value(X),
+     is(Z, -X),
+     push_value(Z))
+  ; (Opcode == ('not'),
+     pop_value(X),
+     (X =:= 0 -> Z = 1; Z = 0),
+     push_value(Z))
+  ; (Opcode == ('prtc'),
+     pop_value(X),
+     char_code(C, X),
+     write(Output, C))
+  ; (Opcode == ('prti'),
+     pop_value(X),
+     write(Output, X))
+  ; (Opcode == ('prts'),
+     pop_value(K),
+     g_read(the_strings(K), S),
+     write(Output, S))
+  ; (Opcode == ('fetch'),
+     g_read(the_data(Arg), X),
+     push_value(X),
+     skip_argument)
+  ; (Opcode == ('store'),
+     pop_value(X),
+     g_assign(the_data(Arg), X),
+     skip_argument)
+  ; (Opcode == ('push'),
+     push_value(Arg),
+     skip_argument)
+  ; (Opcode == ('jmp'),
+     relative_jump(Arg))
+  ; (Opcode == ('jz'),
+     pop_value(X),
+     (X =:= 0
+     -> relative_jump(Arg)
+     ;  skip_argument))
+  ).
+
+relative_jump(Offset) :-
+  g_read(the_program_counter, PC),
+  is(PC1, PC + Offset),
+  g_assign(the_program_counter, PC1).
+
+skip_argument :-
+  g_read(the_program_counter, PC),
+  is(PC1, PC + 4),
+  g_assign(the_program_counter, PC1).
+
+next_instruction(Opcode, Arg) :-
+  g_read(the_program_counter, PC),
+  is(PC1, PC + 1),
+  g_assign(the_program_counter, PC1),
+  g_read(the_code(PC), {Opcode, Arg}).
+
+push_value(X) :-
+  g_read(the_stack_pointer, SP),
+  is(SP1, SP + 1),
+  g_assign(the_stack_pointer, SP1),
+  g_assign(the_stack(SP), X).
+
+pop_value(X) :-
+  g_read(the_stack_pointer, SP),
+  is(SP1, SP - 1),
+  g_assign(the_stack_pointer, SP1),
+  g_read(the_stack(SP1), X).
+
+make_machine(Input) :-
+  get_and_parse_the_header(Input, Datasize, Strings_Count),
+  (Strings_Count =:= 0
+  -> true
+  ;  get_and_parse_the_strings(Input, Strings_Count)),
+  get_and_parse_the_instructions(Input),
+  (Datasize =:= 0
+  -> true
+  ;  g_assign(the_data, g_array(Datasize))),
+  g_assign(the_stack, g_array(2048)),
+  g_assign(the_stack_pointer, 0),
+  g_assign(the_program_counter, 0).
+
+get_and_parse_the_header(Stream, Datasize, Strings_Count) :-
+  get_line(Stream, Line, ('\n')),
+  parse_header(Line, Datasize, Strings_Count).
+
+get_and_parse_the_strings(Stream, Strings_Count) :-
+  % Make 'the_strings' an array of the string literals.
+  get_and_parse_the_strings(Stream, Strings_Count, Lst),
+  g_assign(the_strings, g_array(Lst)).
+get_and_parse_the_strings(Stream, I, Lst) :-
+  % Note: this implementation is non-tail recursive.
+  (I == 0
+  -> Lst = []
+  ;  (get_line(Stream, Line, ('\n')),
+      parse_string_literal(Line, S),
+      is(I1, I - 1),
+      get_and_parse_the_strings(Stream, I1, Lst1),
+      Lst = [S | Lst1])).
+
+get_and_parse_the_instructions(Stream) :-
+  get_and_parse_the_instructions(Stream, Lst),
+  keysort(Lst, Lst1),
+  last(Lst1, Addr_Max-_),
+  is(Code_Size, Addr_Max + 5),
+  g_assign(the_code, g_array(Code_Size, {('halt'), 0})),
+  maplist(fill_instruction, Lst1).
+get_and_parse_the_instructions(Stream, Lst) :-
+  get_and_parse_the_instructions(Stream, [], Lst).
+get_and_parse_the_instructions(Stream, Lst0, Lst) :-
+  % This implementation is tail recursive. We consider the order of
+  % the resulting list to be arbitrary.
+  (get_line(Stream, Line, Terminal),
+   drop_spaces(Line, S),
+   (S = []
+   -> (Terminal = end_of_file
+      -> Lst = Lst0
+      ;  get_and_parse_the_instructions(Stream, Lst0, Lst))
+   ;  (parse_instruction(S, Address, Opcode, Arg),
+       Instr = Address-{Opcode, Arg},
+       (Terminal = end_of_file
+       -> reverse([Instr | Lst0], Lst)
+       ;  get_and_parse_the_instructions(Stream, [Instr | Lst0],
+                                         Lst))))).
+
+fill_instruction(Addr-Instr) :-
+  g_assign(the_code(Addr), Instr).
+
+parse_header(Line, Datasize, Strings_Count) :-
+  drop_nondigits(Line, Lst1),
+  split_digits(Lst1, Datasize_Digits, Rest1),
+  drop_nondigits(Rest1, Lst2),
+  split_digits(Lst2, Strings_Digits, _Rest2),
+  number_chars(Datasize, Datasize_Digits),
+  number_chars(Strings_Count, Strings_Digits).
+
+parse_string_literal(Line, S) :-
+  drop_spaces(Line, Lst1),
+  Lst1 = ['"' | Lst2],
+  rework_escape_sequences(Lst2, Lst3),
+  atom_chars(S, Lst3).
+
+rework_escape_sequences(Lst0, Lst) :-
+  (Lst0 = [('"') | _]
+  -> Lst = []
+  ;  (Lst0 = [('\\'), ('n') | Tail1]
+     -> (rework_escape_sequences(Tail1, Lst1),
+         Lst = [('\n') | Lst1])
+     ;  (Lst0 = [('\\'), ('\\') | Tail1]
+        -> (rework_escape_sequences(Tail1, Lst1),
+            Lst = [('\\') | Lst1])
+        ;  (Lst0 = [C | Tail1],
+            rework_escape_sequences(Tail1, Lst1),
+            Lst = [C | Lst1])))).
+
+parse_instruction(Line, Address, Opcode, Arg) :-
+  drop_spaces(Line, Lst1),
+  split_digits(Lst1, Address_Digits, Rest1),
+  number_chars(Address, Address_Digits),
+  drop_spaces(Rest1, Lst2),
+  split_nonspaces(Lst2, Opcode_Chars, Rest2),
+  atom_chars(Opcode, Opcode_Chars),
+  drop_spaces(Rest2, Lst3),
+  (Lst3 = []
+  -> Arg = 0
+  ;  (Lst3 = [C | Rest3],
+      (is_digit(C)
+      -> (split_digits(Lst3, Arg_Chars, _),
+          number_chars(Arg, Arg_Chars))
+      ; (C = ('(')
+        -> (split_before_char((')'), Rest3, Arg_Chars, _),
+            number_chars(Arg, Arg_Chars))
+        ; (C = ('['),
+           split_before_char((']'), Rest3, Arg_Chars, _),
+           number_chars(Arg, Arg_Chars)))))).
+
+is_space(C) :-
+  (C = (' '); C = ('\t'); C = ('\n');
+   C = ('\v'); C = ('\f'); C = ('\r')).
+
+is_digit(C) :-
+  (C = ('0'); C = ('1'); C = ('2'); C = ('3'); C = ('4');
+   C = ('5'); C = ('6'); C = ('7'); C = ('8'); C = ('9')).
+
+drop_spaces([], Lst) :-
+  Lst = [].
+drop_spaces([C | Tail], Lst) :-
+  (is_space(C)
+  -> drop_spaces(Tail, Lst)
+  ;  Lst = [C | Tail]).
+
+drop_nondigits([], Lst) :-
+  Lst = [].
+drop_nondigits([C | Tail], Lst) :-
+  (is_digit(C)
+  -> Lst = [C | Tail]
+  ;  drop_nondigits(Tail, Lst)).
+
+split_nonspaces([], Word, Rest) :-
+  (Word = [], Rest = []).
+split_nonspaces([C | Tail], Word, Rest) :-
+  (is_space(C)
+  -> (Word = [], Rest = [C | Tail])
+  ;  (split_nonspaces(Tail, Word1, Rest),
+      Word = [C | Word1])).
+
+split_digits([], Digits, Rest) :-
+  (Digits = [], Rest = []).
+split_digits([C | Tail], Digits, Rest) :-
+  (is_digit(C)
+  -> (split_digits(Tail, Digits1, Rest),
+      Digits = [C | Digits1])
+  ;  (Digits = [], Rest = [C | Tail])).
+
+split_before_char(_, [], Before, After) :-
+  (Before = [], After = []).
+split_before_char(C, [C1 | Rest], Before, After) :-
+  (C = C1
+  -> (Before = [], After = [C1 | Rest])
+  ;  (split_before_char(C, Rest, Before1, After),
+      Before = [C1 | Before1])).
+
+get_line(Stream, Line, Terminal) :-
+  % Reads a line of input as a list of characters. The character that
+  % terminates the line is returned separately; it may be either '\n'
+  % or end_of_file.
+  get_line_chars(Stream, [], Line, Terminal).
+
+get_line_chars(Stream, Chars0, Chars, Terminal) :-
+  % Helper predicate for get_line.
+  get_char(Stream, C),
+  ((C = end_of_file; C = ('\n'))
+  -> (reverse(Chars0, Chars), Terminal = C)
+  ;  get_line_chars(Stream, [C | Chars0], Chars, Terminal)).
+
+main(Args) :-
+  (Args = []
+  -> current_input(Input),
+     current_output(Output),
+     make_and_run_machine(Input, Output)
+  ; (Args = [Inp_Name]
+    -> (Inp_Name = ('-')
+       -> main([])
+       ;  (open(Inp_Name, 'read', Input),
+           current_output(Output),
+           make_and_run_machine(Input, Output),
+           close(Input)))
+    ; (Args = [Inp_Name, Out_Name | _],
+       (Inp_Name = ('-')
+       -> (Out_Name = ('-')
+          -> main([])
+          ;  (current_input(Input),
+              open(Out_Name, 'write', Output),
+              make_and_run_machine(Input, Output),
+              close(Output)))
+       ;  (Out_Name = ('-')
+          -> main([Inp_Name])
+          ;  (open(Inp_Name, 'read', Input),
+              open(Out_Name, 'write', Output),
+              make_and_run_machine(Input, Output),
+              close(Input),
+              close(Output))))))).
+
+main :-
+  argument_list(Args),
+  main(Args).
+
+:- initialization(main).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Instructions for GNU Emacs--
+%%% local variables:
+%%% mode: prolog
+%%% prolog-indent-width: 2
+%%% end:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

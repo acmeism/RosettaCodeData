@@ -1,0 +1,20 @@
+FUNCTION SumDigits (number, nBase)
+    IF number < 0 THEN number = -number
+    IF nBase < 2 THEN nBase = 2
+    sum = 0
+
+    DO WHILE number > 0
+       sum = sum + (number MOD nBase)
+       number = number \ nBase
+    LOOP
+
+    SumDigits = sum
+END FUNCTION
+
+PRINT "The sums of the digits are:"
+PRINT
+PRINT "1    base 10 :"; SumDigits(1, 10)
+PRINT "1234 base 10 :"; SumDigits(1234, 10)
+PRINT "fe   base 16 :"; SumDigits(&HFE, 16)
+PRINT "f0e  base 16 :"; SumDigits(&HF0E, 16)
+END

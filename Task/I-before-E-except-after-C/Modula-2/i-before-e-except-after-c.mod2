@@ -1,0 +1,96 @@
+MODULE IEC;
+IMPORT SeqIO;
+IMPORT Texts;
+FROM InOut IMPORT WriteString, WriteCard, WriteLn;
+FROM Strings IMPORT Pos;
+
+VAR words, cie, cei, xie, xei: CARDINAL;
+    xie_plausible, cei_plausible: BOOLEAN;
+
+PROCEDURE Classify(word: ARRAY OF CHAR);
+    VAR end: CARDINAL;
+BEGIN
+    INC(words);
+    end := Pos("", word);
+
+    IF Pos("ie", word) # end THEN
+        IF Pos("cie", word) # end
+        THEN INC(cie);
+        ELSE INC(xie);
+        END;
+    ELSIF Pos("ei", word) # end THEN
+        IF Pos("cei", word) # end
+        THEN INC(cei);
+        ELSE INC(xei);
+        END;
+    END;
+END Classify;
+
+PROCEDURE ProcessFile(filename: ARRAY OF CHAR);
+    VAR file: SeqIO.FILE;
+        dict: Texts.TEXT;
+        word: ARRAY [0..63] OF CHAR;
+        fs: SeqIO.FileState;
+        ts: Texts.TextState;
+BEGIN
+    fs := SeqIO.Open(file, filename);
+    ts := Texts.Connect(dict, file);
+
+    WHILE NOT Texts.EOT(dict) DO
+        Texts.ReadLn(dict, word);
+        Classify(word);
+    END;
+
+    ts := Texts.Disconnect(dict);
+    fs := SeqIO.Close(file);
+END ProcessFile;
+
+PROCEDURE WriteStat(name: ARRAY OF CHAR; num: CARDINAL);
+BEGIN
+    WriteString(name);
+    WriteString(": ");
+    WriteCard(num, 0);
+    WriteLn;
+END WriteStat;
+
+PROCEDURE Plausible(feature: ARRAY OF CHAR; match, nomatch: CARDINAL): BOOLEAN;
+    VAR plausible: BOOLEAN;
+BEGIN
+    WriteString(feature);
+    WriteString(": ");
+    plausible := 2 * match > nomatch;
+    IF NOT plausible THEN
+        WriteString("not ");
+    END;
+    WriteString("plausible.");
+    WriteLn;
+    RETURN plausible;
+END Plausible;
+
+BEGIN
+    words := 0;
+    cie := 0;
+    cei := 0;
+    xie := 0;
+    xei := 0;
+
+    ProcessFile("unixdict.txt");
+    WriteStat("Amount of words", words);
+    WriteStat("CIE", cie);
+    WriteStat("xIE", xie);
+    WriteStat("CEI", cei);
+    WriteStat("xEI", xei);
+    WriteLn;
+
+    xie_plausible :=
+        Plausible("I before E when not preceded by C", xie, cie);
+    cei_plausible :=
+        Plausible("E before I when preceded by C", cei, xei);
+
+    WriteString("I before E, except after C: ");
+    IF NOT (xie_plausible AND cei_plausible) THEN
+        WriteString("not ");
+    END;
+    WriteString("plausible.");
+    WriteLn;
+END IEC.

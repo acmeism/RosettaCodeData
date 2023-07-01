@@ -1,0 +1,304 @@
+(* Sutherland-Hodgman polygon clipping, for ISO Modula-2. *)
+
+MODULE Sutherland_Hodgman_Task;
+
+IMPORT STextIO, SRealIO;
+IMPORT TextIO, RealIO;
+IMPORT IOChan, StreamFile;
+
+TYPE PlanePoint =
+     RECORD
+       x : REAL;
+       y : REAL;
+     END;
+
+     PlaneEdge =
+     RECORD
+       pt0 : PlanePoint;        (* The start point. *)
+       pt1 : PlanePoint;        (* The end point. *)
+     END;
+
+PROCEDURE evaluate_line (x1, y1, x2, y2, x : REAL) : REAL;
+  VAR dy, dx, slope, intercept : REAL;
+BEGIN
+  dy := y2 - y1;
+  dx := x2 - x1;
+  slope := dy / dx;
+  intercept := ((dx * y1) - (dy * x1)) / dx;
+  RETURN (slope * x) + intercept
+END evaluate_line;
+
+PROCEDURE intersection_of_lines
+            (x1, y1, x2, y2, x3, y3, x4, y4 : REAL) : PlanePoint;
+  VAR intersection : PlanePoint;
+      denominator, xnumerator, ynumerator : REAL;
+      x1y2_y1x2, x3y4_y3x4 : REAL;
+BEGIN
+  IF x1 = x2 THEN
+    intersection.x := x1;
+    intersection.y := evaluate_line (x3, y3, x4, y4, x1);
+  ELSIF x3 = x4 THEN
+    intersection.x := x3;
+    intersection.y := evaluate_line (x1, y1, x2, y2, x3);
+  ELSE
+    denominator := ((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4));
+    x1y2_y1x2 := (x1 * y2) - (y1 * x2);
+    x3y4_y3x4 := (x3 * y4) - (y3 * x4);
+    xnumerator := (x1y2_y1x2 * (x3 - x4)) - ((x1 - x2) * x3y4_y3x4);
+    ynumerator := (x1y2_y1x2 * (y3 - y4)) - ((y1 - y2) * x3y4_y3x4);
+    intersection.x := xnumerator / denominator;
+    intersection.y := ynumerator / denominator;
+  END;
+  RETURN intersection;
+END intersection_of_lines;
+
+PROCEDURE intersection_of_edges
+            (e1, e2 : PlaneEdge) : PlanePoint;
+BEGIN
+  RETURN intersection_of_lines (e1.pt0.x, e1.pt0.y,
+                                e1.pt1.x, e1.pt1.y,
+                                e2.pt0.x, e2.pt0.y,
+                                e2.pt1.x, e2.pt1.y);
+END intersection_of_edges;
+
+PROCEDURE point_is_left_of_edge
+            (pt   : PlanePoint;
+             edge : PlaneEdge) : BOOLEAN;
+  VAR x, y, x1, y1, x2, y2, op : REAL;
+BEGIN
+  x := pt.x;
+  y := pt.y;
+  x1 := edge.pt0.x;
+  y1 := edge.pt0.y;
+  x2 := edge.pt1.x;
+  y2 := edge.pt1.y;
+
+  (* Outer product of the vectors (x1,y1)-->(x,y) and
+     (x1,y1)-->(x2,y2). *)
+  op := ((x - x1) * (y2 - y1)) - ((x2 - x1) * (y - y1));
+
+  RETURN (op < 0.0);
+END point_is_left_of_edge;
+
+PROCEDURE clip_subject_edge
+            (subject_edge : PlaneEdge;
+             clip_edge    : PlaneEdge;
+             VAR n        : CARDINAL;
+             VAR points   : ARRAY OF PlanePoint);
+  VAR s1, s2 : PlanePoint;
+      s2_is_inside, s1_is_inside : BOOLEAN;
+BEGIN
+  s1 := subject_edge.pt0;
+  s2 := subject_edge.pt1;
+  s2_is_inside := point_is_left_of_edge (s2, clip_edge);
+  s1_is_inside := point_is_left_of_edge (s1, clip_edge);
+  IF s2_is_inside THEN
+    IF s1_is_inside THEN
+      points[n] := s2;
+      n := n + 1;
+    ELSE
+      points[n] := intersection_of_edges (subject_edge, clip_edge);
+      n := n + 1;
+      points[n] := s2;
+      n := n + 1;
+    END;
+  ELSIF s1_is_inside THEN
+    points[n] := intersection_of_edges (subject_edge, clip_edge);
+    n := n + 1;
+  END;
+END clip_subject_edge;
+
+PROCEDURE for_each_subject_edge
+            (nsubject       : CARDINAL;
+             subject_points : ARRAY OF PlanePoint;
+             clip_edge      : PlaneEdge;
+             VAR n          : CARDINAL;
+             VAR points     : ARRAY OF PlanePoint);
+  VAR subject_edge : PlaneEdge;
+      i, j         : CARDINAL;
+BEGIN
+  n := 0;
+  FOR i := 0 TO nsubject - 1 DO
+    IF i = 0 THEN
+      j := nsubject - 1;
+    ELSE
+      j := i - 1;
+    END;
+    subject_edge.pt1 := subject_points[i];
+    subject_edge.pt0 := subject_points[j];
+    clip_subject_edge (subject_edge, clip_edge, n, points);
+  END;
+END for_each_subject_edge;
+
+PROCEDURE clip (VAR nsubject       : CARDINAL;
+                VAR subject_points : ARRAY OF PlanePoint;
+                nclip              : CARDINAL;
+                clip_points        : ARRAY OF PlanePoint;
+                VAR workspace      : ARRAY OF PlanePoint);
+  VAR clip_edge   : PlaneEdge;
+      i, j, nwork : CARDINAL;
+BEGIN
+  FOR i := 0 TO nclip - 1 DO
+    IF i = 0 THEN
+      j := nclip - 1;
+    ELSE
+      j := i - 1;
+    END;
+    clip_edge.pt1 := clip_points[i];
+    clip_edge.pt0 := clip_points[j];
+    for_each_subject_edge (nsubject, subject_points, clip_edge,
+                           nwork, workspace);
+    FOR j := 0 TO nwork - 1 DO
+      subject_points[j] := workspace[j];
+    END;
+    nsubject := nwork;
+  END;
+END clip;
+
+PROCEDURE set_point
+            (VAR points : ARRAY OF PlanePoint;
+             i          : CARDINAL;
+             x, y       : REAL);
+BEGIN
+  points[i].x := x;
+  points[i].y := y;
+END set_point;
+
+PROCEDURE write_polygon
+            (cid        : IOChan.ChanId;
+             npoly      : CARDINAL;
+             polygon    : ARRAY OF PlanePoint;
+             line_color : ARRAY OF CHAR;
+             fill_color : ARRAY OF CHAR);
+  VAR i : CARDINAL;
+BEGIN
+  RealIO.WriteReal (cid, polygon[0].x, 10);
+  TextIO.WriteString (cid, ' ');
+  RealIO.WriteReal (cid, polygon[0].y, 10);
+  TextIO.WriteString (cid, ' moveto');
+  TextIO.WriteLn (cid);
+  FOR i := 1 TO npoly - 1 DO
+    RealIO.WriteReal (cid, polygon[i].x, 10);
+    TextIO.WriteString (cid, ' ');
+    RealIO.WriteReal (cid, polygon[i].y, 10);
+    TextIO.WriteString (cid, ' lineto');
+    TextIO.WriteLn (cid);
+  END;
+  TextIO.WriteString (cid, 'closepath');
+  TextIO.WriteLn (cid);
+  TextIO.WriteString (cid, line_color);
+  TextIO.WriteString (cid, ' setrgbcolor');
+  TextIO.WriteLn (cid);
+  TextIO.WriteString (cid, 'gsave');
+  TextIO.WriteLn (cid);
+  TextIO.WriteString (cid, fill_color);
+  TextIO.WriteString (cid, ' setrgbcolor');
+  TextIO.WriteLn (cid);
+  TextIO.WriteString (cid, 'fill');
+  TextIO.WriteLn (cid);
+  TextIO.WriteString (cid, 'grestore');
+  TextIO.WriteLn (cid);
+  TextIO.WriteString (cid, 'stroke');
+  TextIO.WriteLn (cid);
+END write_polygon;
+
+PROCEDURE write_eps
+            (cid             : IOChan.ChanId;
+             nsubject        : CARDINAL;
+             subject_polygon : ARRAY OF PlanePoint;
+             nclip           : CARDINAL;
+             clip_polygon    : ARRAY OF PlanePoint;
+             nresult         : CARDINAL;
+             result_polygon  : ARRAY OF PlanePoint);
+BEGIN
+  TextIO.WriteString (cid, '%!PS-Adobe-3.0 EPSF-3.0');
+  TextIO.WriteLn (cid);
+  TextIO.WriteString (cid, '%%BoundingBox: 40 40 360 360');
+  TextIO.WriteLn (cid);
+  TextIO.WriteString (cid, '0 setlinewidth');
+  TextIO.WriteLn (cid);
+  write_polygon (cid, nclip, clip_polygon,
+                 '.5 0 0', '1 .7 .7');
+  write_polygon (cid, nsubject, subject_polygon,
+                 '0 .2 .5', '.4 .7 1');
+  TextIO.WriteString (cid, '2 setlinewidth');
+  TextIO.WriteLn (cid);
+  TextIO.WriteString (cid, '[10 8] 0 setdash');
+  TextIO.WriteLn (cid);
+  write_polygon (cid, nresult, result_polygon,
+                 '.5 0 .5', '.7 .3 .8');
+  TextIO.WriteString (cid, '%%EOF');
+  TextIO.WriteLn (cid);
+END write_eps;
+
+PROCEDURE write_eps_to_file
+            (filename        : ARRAY OF CHAR;
+             nsubject        : CARDINAL;
+             subject_polygon : ARRAY OF PlanePoint;
+             nclip           : CARDINAL;
+             clip_polygon    : ARRAY OF PlanePoint;
+             nresult         : CARDINAL;
+             result_polygon  : ARRAY OF PlanePoint);
+VAR cid          : IOChan.ChanId;
+    open_results : StreamFile.OpenResults;
+BEGIN
+  StreamFile.Open (cid, filename,
+                   StreamFile.write,
+                   open_results);
+  write_eps (cid,
+             nsubject, subject_polygon,
+             nclip, clip_polygon,
+             nresult, result_polygon);
+  StreamFile.Close (cid);
+END write_eps_to_file;
+
+CONST NMax = 100;
+
+VAR subject_polygon : ARRAY [0 .. NMax - 1] OF PlanePoint;
+    clip_polygon    : ARRAY [0 .. NMax - 1] OF PlanePoint;
+    workspace       : ARRAY [0 .. NMax - 1] OF PlanePoint;
+    result_polygon  : ARRAY [0 .. NMax - 1] OF PlanePoint;
+    nsubject, nclip, nresult, i : CARDINAL;
+
+BEGIN
+  nsubject := 9;
+  set_point (subject_polygon, 0, 50.0, 150.0);
+  set_point (subject_polygon, 1, 200.0, 50.0);
+  set_point (subject_polygon, 2, 350.0, 150.0);
+  set_point (subject_polygon, 3, 350.0, 300.0);
+  set_point (subject_polygon, 4, 250.0, 300.0);
+  set_point (subject_polygon, 5, 200.0, 250.0);
+  set_point (subject_polygon, 6, 150.0, 350.0);
+  set_point (subject_polygon, 7, 100.0, 250.0);
+  set_point (subject_polygon, 8, 100.0, 200.0);
+
+  nclip := 4;
+  set_point (clip_polygon, 0, 100.0, 100.0);
+  set_point (clip_polygon, 1, 300.0, 100.0);
+  set_point (clip_polygon, 2, 300.0, 300.0);
+  set_point (clip_polygon, 3, 100.0, 300.0);
+
+  FOR i := 0 TO nsubject - 1 DO
+    result_polygon[i] := subject_polygon[i];
+  END;
+  nresult := nsubject;
+
+  clip (nresult, result_polygon, nclip, clip_polygon,
+        workspace);
+
+  FOR i := 0 TO nsubject - 1 DO
+    STextIO.WriteString ('(');
+    SRealIO.WriteReal (result_polygon[i].x, 8);
+    STextIO.WriteString (', ');
+    SRealIO.WriteReal (result_polygon[i].y, 8);
+    STextIO.WriteString (')');
+    STextIO.WriteLn;
+  END;
+
+  write_eps_to_file ('sutherland-hodgman.eps',
+                     nsubject, subject_polygon,
+                     nclip, clip_polygon,
+                     nresult, result_polygon);
+  STextIO.WriteString ('Wrote sutherland-hodgman.eps');
+  STextIO.WriteLn;
+END Sutherland_Hodgman_Task.

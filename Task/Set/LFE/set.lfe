@@ -1,0 +1,28 @@
+> (set set-1 (sets:new))
+#(set 0 16 16 8 80 48 ...)
+> (set set-2 (sets:add_element 'a set-1))
+#(set 1 16 16 8 80 48 ...)
+> (set set-3 (sets:from_list '(a b)))
+#(set 2 16 16 8 80 48 ...)
+> (sets:is_element 'a set-2)
+true
+> (set union (sets:union set-2 set-3))
+#(set 2 16 16 8 80 48 ...)
+> (sets:to_list union)
+(a b)
+> (set intersect (sets:intersection set-2 set-3))
+#(set 1 16 16 8 80 48 ...)
+> (sets:to_list intersect)
+(a)
+> (set subtr (sets:subtract set-3 set-2))
+#(set 1 16 16 8 80 48 ...)
+> (sets:to_list subtr)
+(b)
+> (sets:is_subset set-2 set-3)
+true
+> (=:= set-2 set-3)
+false
+> (set set-4 (sets:add_element 'b set-2))
+#(set 2 16 16 8 80 48 ...)
+> (=:= set-3 set-4)
+true

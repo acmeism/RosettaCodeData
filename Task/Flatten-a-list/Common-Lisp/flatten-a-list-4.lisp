@@ -1,0 +1,5 @@
+(defun flatten (x &optional stack out)
+  (cond ((consp x) (flatten (rest x) (cons (first x) stack) out))
+        (x         (flatten (first stack) (rest stack) (cons x out)))
+        (stack     (flatten (first stack) (rest stack) out))
+        (t out)))

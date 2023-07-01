@@ -1,0 +1,163 @@
+		bits	16
+		cpu	8086
+		;;;	MS-DOS PSP locations
+cmdlen:		equ	80h		; Amount of characters on cmdline
+cmdtail:	equ	82h		; Command line tail
+		;;;	MS-DOS system calls
+puts:		equ	9h		; Print string to console
+date:		equ	2Ah		; Get system date
+time:		equ	2Ch		; Get system time
+creat:		equ	3Ch		; Create file
+open:		equ	3Dh		; Open file
+close:		equ	3Eh		; Close file
+read: 		equ	3Fh		; Read from file
+write:		equ	40h		; Write to file
+lseek:		equ	42h		; Set current file position
+exit:		equ	4ch		; Exit
+		;;;	File modes
+O_RDONLY:	equ	0
+O_WRONLY:	equ	1
+		;;;	Error codes (well, we only need the one)
+ENOTFOUND:	equ	2
+		;;;	File positions (again we need only the one)
+FP_END:		equ	2
+		;;;	File buffer size
+BUFSZ:		equ	4096
+section		.text
+		org	100h
+		cmp	byte [cmdlen],0	; Is the command line empty?
+		je	printnotes	; Then, go print current notes
+		;;;	Retrieve and format current date and time
+		mov	ah,date		; Retrieve date
+		int	21h
+		mov	di,datefmt	; Fill in date string
+		xor	ah,ah
+		mov	al,dh		; Write month
+		mov	bl,2		; Two digits
+		call	asciinum
+		add	di,3		; Onwards three positions
+		mov	al,dl		; Write day
+		mov	bl,2		; Two digits
+		call	asciinum
+		add	di,3		; Onwards three positions
+		mov	ax,cx		; Write year
+		mov	bl,4		; Four digits
+		call	asciinum
+		mov	ah,time		; Get system time
+		int	21h
+		mov	di,timefmt+6	; Fill in time string
+		xor	ah,ah
+		mov	al,dh		; Write seconds
+		mov	bl,2		; Two digits
+		call	asciinum
+		sub	di,3		; Back three positions
+		mov	al,cl		; Write minutes
+		mov	bl,2		; Two digits
+		call	asciinum
+		cmp	ch,12		; AM or PM?
+		jbe 	houram		; <=12, AM
+		sub	ch,12 		; PM - subtract 12 hours,
+		mov	byte [ampm],'P'	; And set the AM/PM to 'P'(M)
+		jmp	wrhours
+houram:		and	ch,ch		; Hour 0 is 12:XX:XX AM.
+		jnz	wrhours
+		mov	ch,12
+wrhours:	sub	di,3		; Back three positions
+		mov 	al,ch		; Write hours
+		mov	bl,2		; Two digits
+		call	asciinum
+		;;;	Open or create the NOTES.TXT file
+		mov	dx,filnam
+		mov	ax,open<<8|O_WRONLY
+		int	21h		; Try to open the file
+		jnc	writenote	; If successful, go write the note
+		cmp 	al,ENOTFOUND	; File not found?
+		jne	diefile		; Some other error = print error msg
+		mov	ah,creat	; No notes file, try to create it
+		xor	cx,cx		; Normal file (no attributes set)
+		int	21h
+		jc	diefile		; If that fails too, print error msg
+		;;;	Write the note to the file
+writenote:	mov	bx,ax		; File handle in BX
+		mov	ax,lseek<<8|FP_END	; Seek to end of file
+		xor	cx,cx		; Offset 0
+		xor	dx,dx
+		int	21h
+		jc	diefile		; Error if it fails
+		mov	dx,datetime	; Write the date/time string first
+		mov	cx,dtsize
+		mov	ah,write
+		int	21h
+		jc	diefile		; Error if it fails
+		mov	cx,bx		; Store file handle in CX
+		;;;	Terminate note with \r\n
+		xor	bx,bx		; BX = length of command line
+		mov	bl,[cmdlen]	; Find 2 bytes past cmd input
+		add	bx,cmdlen+1	; Note: this might overwrite the first
+		mov	word [bx],0A0Dh	; instruction, but we don't need it
+		sub	bx,cmdtail-2	; Get length (add 2 for the 0D0A)
+		xchg	bx,cx		; File handle in BX, length in CX
+		mov	dx,cmdtail	; Write what's on the command line
+		mov	ah,write
+		int	21h
+		jc	diefile		; Error if it fails.
+		jmp	closeexit	; Close file and exit if it succeeds.	
+		;;;	Print the contents of the NOTES.TXT file
+printnotes:	mov	dx,filnam	; Open file for reading
+		mov	ax,open<<8|O_RDONLY
+		int	21h
+		jnc	readnotes	; Carry flag set = error.
+		cmp	al,ENOTFOUND	; File not found?
+		jne	diefile		; Some other error = print error msg
+		jmp	exitok 		; Not found = no notes = just exit
+readnotes:	mov	di,ax 		; Keep the file handle in DI.
+.loop		mov	bx,di		; Get file handle for file
+		mov	cx,BUFSZ	; Read as many bytes as will fit in the
+		mov	ah,read		; buffer
+		int	21h
+		jc	diefile		; Carry flag set = error
+		and	ax,ax		; If 0 bytes read, we're done.
+		jz	.done
+		xor	bx,bx		; File handle 0 = standard output
+		mov	cx,ax		; Write as many bytes as we read
+		mov 	ah,write
+		int	21h
+		jc	diefile
+		jmp	.loop		; Go get more bytes if there are any
+.done		mov	bx,di		; Done: close the file
+closeexit:	mov	ah,close
+		int	21h
+exitok:		mov	ax,exit<<8|0	; Exit with errorlevel 0 (success)
+		int	21h
+		;;;	Print 'File error' and exit.
+diefile:	mov 	dx,fileerror
+		;;;	Print error message in DX and exit
+die:		mov	ah,puts		; Print error message
+		int	21h
+		mov	ax,exit<<8|2	; Exit with errorlevel 2.
+		int	21h	
+		;;;	Subroutine: write AX as BL-digit ASCII number at [DI]
+asciinum:	push	dx		; Store DX and CX
+		push	cx
+		mov	cx,10 		; CX = divisor
+		xor	bh,bh		; We never need >255.
+.loop:		xor	dx,dx		; Set high word of division to 0.
+		div	cx 		; AX /= CX; DX = AX % CX
+		add	dl,'0'		; Make digit ASCII
+		dec	bl		; Move forward one digit
+		mov	[di+bx],dl	; Store digit
+		jnz	.loop		; Are we there yet?
+		pop 	cx		; Restore DX and CX
+		pop 	dx
+		ret
+section		.data
+datetime:	equ	$		; Start of date/time string.
+datefmt:	db	'**/**/**** '	; Date placeholder,
+timefmt:	db	'**:**:** '	; Time placeholder,
+ampm:		db	'AM'		; AM/PM placeholder.
+		db	13,10,9		; \r\n\t
+dtsize:		equ	$-datetime	; Size of date/time string.
+fileerror:	db	'File error.$'	; Printed on error
+filnam:		db	'NOTES.TXT',0	; File name to use
+section		.bss
+filebuf:	resb	BUFSZ		; 4K file buffer

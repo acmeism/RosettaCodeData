@@ -1,0 +1,572 @@
+[[Category:Assembly]]
+{{language|6502 Assembly
+|site=http://www.6502.org/
+}}{{assembler language}}
+
+The MOS Technology 6502 is an 8-bit microprocessor that was designed by Chuck Peddle and Bill Mensch for MOS Technology in 1975. When it was introduced, it was the least expensive full-featured microprocessor on the market by a considerable margin, costing less than one-sixth the price of competing designs from larger companies such as Motorola and Intel. It was nevertheless fully comparable with them, and, along with the Zilog Z80, sparked a series of computer projects that would eventually result in the home computer revolution of the 1980s. The 6502 design, with about 4,000 transistors, was originally second-sourced by Rockwell and Synertek and later licensed to a number of companies. It is still made for embedded systems.
+
+One of the first "public" uses for the design was the Apple I computer, introduced in 1976. The 6502 was next used in the Commodore PET and the Apple II. It was later used in the Atari home computers, the BBC Micro family, the Commodore VIC-20 and a large number of other designs both for home computers and business, such as Ohio Scientific and Oric.
+
+==Registers==
+The 6502 has three main data registers: A (the accumulator), X, and Y. Most mathematical operations can only be done with the accumulator. X and Y are often limited to loop counters and offsets for indirect addressing. It also has the system flags, the stack pointer, and the program counter.
+
+Like with other assembly languages, 6502's A, X, and Y registers have a few key properties, which are fairly straightforward:
+* A data register maintains its contents unless a command explicitly alters the contents (or the hardware is powered off).
+* If a new value is loaded into a data register, the old value is destroyed. The computer "forgets" what used to be in that register. If you want to preserve a value, you will need to "push" it onto the stack, or store its value in RAM and retrieve it later.
+* Commands that "move" or "transfer" the value from one register to another actually <i>copy</i> that value. The value in the source register is unchanged; only the value in the destination is updated. For example, if the X register contains 4 and the accumulator contains 7, the <code>TXA</code> command (transfer X to accumulator) will set the accumulator to 4, and X still contains 4.
+* A register's contents at startup are undefined. Emulators of 6502-based hardware will typically initialize them to zero, but on real hardware this is not guaranteed.
+
+==RAM==
+The first 256 bytes of the 6502's address space is known as "zero page RAM" and can be accessed more quickly than other sections of RAM. If a 8 bit address is used as an instruction parameter, it is actually referring to the zero page. (The high byte equals $00 and is thus omitted). This saves space, as the $00 high byte is not actually included in the bytecode, so a load/store to/from zero page takes one less byte than a load/store to/from anywhere else. In addition, instructions that take a zero page memory location as their operand execute more quickly than their absolute counterparts, and some instructions can only operate on memory that resides in the zero page.
+
+Furthermore, although every machine that uses the 6502 architecture is different in some way, almost all of them, regardless of their total capacity for RAM, have the zero page dedicated for RAM (with the exception of the PC Engine/Turbografx-16 whose zero page is located at $2000.) Whether you're programming on the Apple II, the Commodore 64, or the NES, the zero page is still the zero page.
+
+The 6502 has much fewer registers than its contemporaries, and as such the zero page is useful as a set of "registers," albeit slower. The 6502 is also limited in its stack operations, as it cannot push X or Y onto the stack directly, and must destroy the accumulator in order to do so. This creates a problem when a function needs to preserve multiple registers yet takes its input from the accumulator. The easiest solution is to use a zero page memory address to preserve the accumulator and the stack for X and Y. (Or vice versa.)
+
+On the 65816, the zero page is called the "direct page," and it can be relocated. The 65816's D register points to the direct page. The location of the direct page can be changed at runtime using the <code>TCD</code> command. This feature lets the programmer set up different pages of RAM for different tasks, and switch the direct page to that page temporarily to speed up that task. Unfortunately, this also makes it very difficult to read someone else's assembly and figure out what they're actually doing, as it's not clear what memory addresses they're actually loading from.
+
+==Little-Endian==
+The 6502 is little-endian, meaning that the bytes are stored backwards. For example, the instruction <code>LDA $3056</code> converts to the following bytes: <code>$AD $56 $30</code> (the $AD is the LDA instruction and the other two are the operand.) Understanding this concept is very important when loading 16-bit values into consecutive zero-page addresses for indirect addressing modes. Unlike the z80 and 8086 there are no 16 bit registers on the 6502. (Those systems are also little-endian but it's not as relevant since loading a value into a 16 bit register will arrange the bytes in the intended order automatically.)
+
+==Ports==
+Unlike the z80 and the x86 computers, the 6502 has no dedicated <code>IN</code> or <code>OUT</code> commands. Rather, connected equipment such as keyboards, joysticks, graphics cards, etc. are "memory-mapped," meaning that the programmer interacts with them indirectly by reading or writing to/from a specific memory address. The memory address of interest depends on the hardware you are programming for, and is different for every system. In addition, memory-mapped ports often have different properties than normal RAM:
+
+* A read-only port is what it sounds like. Attempting to write to this address will not affect the contents.
+
+
+* A write-only port can be written to, but reading it will result in undefined behavior. The value read from the address is not necessarily what was last stored in it. Often, programmers will keep a "shadow register" in RAM containing the value intended for the port, and the port is only ever actually written to by copying from the shadow register. If the value in the port is ever needed for a calculation, such as checking which video mode is currently active, the shadow register is read for the purposes of that calculation.
+
+
+* A port can be in ROM as well as RAM. Ports whose address is located in ROM are always write-only. For example, Castlevania 3 on the Famicom updates its sound hardware by writing to sections of the cartridge ROM. Needless to say, the cartridge ROM is not altered by these writes. Attempting to read from memory-mapped ports in ROM will return whatever opcode, operand, or data is stored at that address, not the value that was last written to it.
+
+
+* It is possible that a reading a port will alter its contents, or alter the contents of other related ports. This includes both <code>LDA/LDX/LDY</code> and other commands that need to read the contents of the address in order to execute, such as <code>BIT</code>,<code>LSR</code>,etc.
+
+
+* Writing to ports with commands other than <code>LDA/LDX/LDY</code> can sometimes fail or result in undefined behavior. For example, <code>INC</code> or <code>DEC</code> may not have the desired result.
+
+
+* Some registers can only be written to by bit shifting, these so-called "shift registers" require you to load a value into the accumulator, then repeatedly alternating between <code>ROR</code>ing the accumulator and <code>ROL</code>ing the port.
+
+
+* The contents of a port can be updated by the hardware. Reading a port will not always return the same value each time it is read, even if it is never written to, and even if the value is not altered by the read itself. It is not the 6502 changing the contents of these ports, but rather the connected hardware. For example, [http://www.lang="6502asm".com/ lang="6502asm"] and [https://skilldrick.github.io/easy6502/ Easy6502] have two memory-mapped ports in the zero page. <code>$FE</code> returns a random 8-bit value when read, and <code>$FF</code> returns the last key pressed when read, acting as a keyboard input buffer. These ports can be read from and written to, but their values can also change independently of any code the user writes.
+
+
+<b>Ultimately, the programmer will need to refer to the instruction manual for the hardware they are programming to find the locations of memory-mapped ports, and how to interact with them properly.</b>
+
+==Interrupts==
+The 6502 has two interrupt types: <code>NMI</code> (Non-Maskable Interrupt) and <code>IRQ</code>(Interrupt Request). 6502 machines use the last 6 bytes of their address space to hold a vector table containing (in order) the addresses of the NMI routine, the program's start, and the IRQ routine. On most computers this is defined by the firmware, but on the NES or other similar embedded hardware you will need to declare these locations yourself. 
+
+As the name implies, the Non-Maskable Interrupt is one that can occur regardless of whether the processor has interrupts disabled. In other words, the <code>SEI</code> and <code>CLI</code> commands <i>cannot enable or disable the NMI</i>. The name "Non-Maskable" is a bit of a misnomer; while it's true that the 6502 cannot prevent <code>NMI</code> from occurring, the source of the <code>NMI</code> signal can still be disconnected, effectively preventing its occurrence. For example, on the NES, the <code>NMI</code> occurs every 1/60th of a second and only if bit 7 of memory address $2000 is set. If this bit is clear, no <code>NMI</code>. For a given hardware, the <code>NMI</code> comes from exactly one source, since an <code>NMI</code> cannot be detected during an <code>NMI</code>.
+
+When an <code>NMI</code> occurs, these things typically happen:
+* The current instruction finishes executing.
+* The program counter is pushed onto the stack.
+* The processor flag register is pushed onto the stack.
+* An indirect jump occurs to the memory address stored in address $FFFA.
+
+
+By contrast, an <code>IRQ</code> can be enabled/disabled by <code>SEI</code> and <code>CLI</code>. However this is typically not enough to enable an <code>IRQ</code>. Memory-mapped ports are typically responsible for controlling if an <code>IRQ</code> can occur at all, and which ones can or have occurred. For an <code>IRQ</code> to occur, the relevant <code>IRQ</code> memory mapped register(s) must be set up properly, <i>and</i> the Interrupt flag must be clear. When an <code>IRQ</code> occurs, the same thing happens as an <code>NMI</code>, except the program counter jumps to the address stored in $FFFE instead.
+
+==A True 8-Bit Computer==
+The 6502 is an 8-bit computer in the purest sense. Unlike the Z80, the 6502 is not capable of 16 bit operations within a single register. To work with a 16 bit number you will need to split it in two and work with each half individually. The carry flag is useful for this, as (like on other CPUs with a carry flag) it acts as a conditional addition, as in the example below.
+
+<syntaxhighlight lang="C">unsigned short foo = 0x00C0;
+foo = foo + 0x50;</syntaxhighlight>
+
+Equivalent 6502 Assembly:
+<syntaxhighlight lang="6502asm">LDA #$C0
+STA $20   ;we'll use $20 as the memory location of foo, just to keep things simple. A real C compiler would use the stack.
+LDA #$00
+STA $21   ;low byte was #$C0, high byte was #$00
+
+;now we add #$50
+
+LDA $20   ;load #$C0
+CLC
+ADC #$50
+STA $20
+
+LDA $21    
+;this time we DON'T clear the carry before adding.
+ADC #0  ;since there's a carry from the last addition, this actually adds 1! If there was no carry, it would add 0.
+STA $21</syntaxhighlight>
+
+==Processor Flags==
+The status flags of the 6502 are what allow it to branch to different areas of code, among other things. This is an 8-bit register whose value is updated after certain instructions. It doesn't need to be read from or written to in most cases - but its value can be preserved on the stack for later use. The flags are often displayed as such: <code>NV-BDIZC</code>. Each letter represents a bit in an 8-bit binary value. (The dash means that this value is unused.)
+The flags are typically updated after a "math instruction" takes place. These include but are not limited to:
+* Loading a value into a register
+* Adding or subtracting
+* Bit shifts/rotates
+<br><br>
+Storing values into memory, jumping, or returning from subroutines will not set the flags. Furthermore, each command sets the flags differently, and some don't set the flags at all!
+
+<b>Flag terminology: A bit or flag is "clear" if it equals 0 and "set" if it equals 1.</b>
+
+===Negative===
+
+Denoted with the letter N. 
+
+This bit equals 1 if the last math operation resulted in a number that was negative (i.e. between #$80 and #$FF, inclusive).
+
+* Set with: N/A (There is no explicit command for this but you can do it by loading a value #$80 or greater into a register, or with <code>BIT $addr</code> where <code>$addr</code> is a zero-page or absolute address containing a value #$80 or greater)
+* Cleared with: N/A (There is no explicit command for this but you can do it by loading a value #$7F or less into a register, or with <code>BIT $addr</code> where <code>$addr</code> is a zero-page or absolute address containing a value #$7F or less)
+* <code>BMI</code> branches if this flag is clear.
+* <code>BPL</code> branches if this flag is set.
+===Overflow===
+Denoted with the letter V. 
+
+If a number crosses the "boundary" between #$7F and #$80, this flag is set. Note that adding #1 to #$FF does <i>not</i> set this flag. On certain systems, this flag is also set by external hardware. The <code>BIT</code> command also sets this flag if the specified address's value has bit 6 set.
+
+* Set with: N/A (There is no explicit command for this but you can do it with <code>BIT $addr</code> where <code>$addr</code> is a zero-page or absolute address containing a value where bit 6 is set, i.e. the left hex digit equals 4, 5, 6, 7, C, D, E, or F)
+* Cleared with: <code>CLV</code>
+* <code>BVC</code> branches if this flag is clear.
+* <code>BVS</code> branches if this flag is set.
+<br><br>
+
+===Break===
+Denoted with the letter B. 
+
+This flag is set if the <code>BRK</code> command was executed. The BRK basically does the same thing as <code>JMP ($FFFE)</code>, and is mainly used for debugging.
+* Set with: <code>BRK</code>
+* Cleared with: <code>RTI</code>
+* There are no branches associated with this command.
+<br><br>
+
+===Decimal===
+Denoted with the letter D. 
+
+This flag is set if Decimal Mode is active. There are no explicit branches based on its status. <code>CLD</code> clears this flag and <code>SED</code> sets it. A proper reset routine should clear this flag at the start.
+* Set with: <code>SED</code>
+* Cleared with: <code>CLD</code>
+* There are no branches associated with this command.
+<br><br>
+===Interrupt===
+
+Denoted with the letter I. 
+
+This flag is set if Interrupts are disabled. Note that this only disables the <code>IRQ</code> (Interrupt Request) line and has no effect on the <code>NMI</code> (Non-Maskable Interrupt.) A proper reset routine should set this flag at the start, but some systems like the NES do so automatically. <code>CLI</code> clears this flag and <code>SEI</code> sets it. There are no explicit branches on this condition.
+* Set with: <code>SEI</code>
+* Cleared with: <code>CLI</code>
+* There are no branches associated with this command.
+<br><br>
+===Zero===
+Denoted with the letter Z.
+This flag is set if the last math operation resulted in zero, or if zero was loaded into A, X, or Y. This is mostly used for testing the equality of two values, using the <code>CMP</code>, <code>CPX</code>, or <code>CPY</code> instructions.
+* Set with: N/A (there is no explicit command for this but you can easily do it by loading #0 into a register.)
+* Cleared with: N/A (there is no explicit command for this but you can easily do it by loading a nonzero value into a register)
+* <code>BNE</code> branches if this flag is clear.
+* <code>BEQ</code> branches if this flag is set.
+<br><br>
+===Carry===
+Denoted with the letter C.
+
+This flag is set under the following conditions:
+
+* A <code>CMP/CPX/CPY</code> operation was performed and the value in the register is greater than or equal to the operand. If the register was strictly less than the operand, the carry flag will be clear.
+
+* A bit shift or rotate caused a value of 1 to be "pushed out" of the operand.
+
+* An <code>ADC</code> or <code>SBC</code> operation resulted in a "wraparound" from #$FF to #$00.
+<br><br>
+
+The carry has an effect on math operations:
+* If the carry flag is set, <code>ADC</code> will add an additional 1 to the result.
+* If the carry flag is clear, <code>SBC</code> will subtract an additional 1 to the result.
+<br><br>
+
+The carry is incredibly useful for 16-bit math, among other things. There are no <code>ADD</code> or <code>SUB</code> commands on the 6502, but you can achieve the same result with <code>CLC ADC</code> and <code>SEC SBC</code>, respectively.
+* Set with: <code>SEC</code>
+* Cleared with: <code>CLC</code>
+* <code>BCC</code> branches if this flag is clear.
+* <code>BCS</code> branches if this flag is set.
+
+If an addition results in a wraparound from 255 to 0, the carry will be set. If the carry flag is set, the <code>ADC</code> instruction adds an additional 1 to the accumulator. In the example below, the labels <code>numLO</code> and <code>numHI</code> represent zero-page memory addresses, storing the 8 bit halves of a 16-bit variable. Also assume that <code>numLO</code> equals hexadecimal value F0 and <code>numHI</code> equals 03.
+
+<syntaxhighlight lang="6502asm">
+LDA numLO ;load #$F0 into the accumulator
+CLC       ;clear the carry
+ADC #$10  ;add #$10 to the accumulator. The accumulator now equals #$00, and the carry is set due to the wraparound.
+STA numLO ;store #$00 in the accumulator. The carry is still set. (Load and store operations do not update the carry flag.)
+LDA numHI ;load #$03 into the accumulator
+ADC #$00  ;add just the carry to the accumulator. If the carry flag is clear, the accumulator is unchanged. 
+          ;if the carry is set, the accumulator increases by 1.
+STA numHI</syntaxhighlight>
+
+The beauty of the above code is that its functionality doesn't result in an off-by-one error if the carry were not set by the first addition. In other words, if the addition of <code>numLO</code> and <code>#$10</code> didn't result in a wraparound, then the carry would not be set and the <code>ADC #$00</code> would leave <code>numHI</code> unchanged. This lets the programmer conditionally add 1 to the high byte based on the previous calculation, without having to branch.
+<br><br>
+
+==Decimal Mode==
+The 8086, 68000, and z80 have special commands for Binary Coded Decimal math, where hex values are used to represent decimal numbers (the base 10 system we use, not to be confused with floating point.) The 6502 has a special Decimal Flag as part of its status register. If the Decimal Flag is set, instructions such as <code>ADC</code> and <code>SBC</code> will produce a result that is a valid decimal number (i.e. not containing digits A through F). The Decimal Flag is only affected by the two commands responsible for setting and clearing it, as well as interrupts on certain 6502 revisions.
+<syntaxhighlight 6502>sed           ;set the decimal flag, enabling decimal mode
+lda #$19
+clc
+adc #$01      ;now the value in the accumulator equals #$20 rather than #$1A
+cld           ;resume normal operations</syntaxhighlight>
+
+A few notes on Decimal Mode:
+* If a register already contains a value that has an A,B,C,D,E or F digit, setting or clearing the decimal flag <b>will not change that.</b>
+* In your assembler, your values need to be encoded as hexadecimal, like the example above. Using decimal numbers in your assembly in decimal mode will result in inaccurate values. This is because the numbers are internally adjusted to only show digits below 9, rather than a true decimal output. The value is still technically stored in hexadecimal.
+* The Decimal Mode <b>does not function on the Nintendo Entertainment System or its derivatives</b> (i.e. the Famicom, Vs. System, or Play Choice 10). The flag can be set or cleared, but has <i>no effect on the calculation</i>. If you are programming for those systems you will have to re-create its functionality with your own code (which isn't too difficult considering almost every game kept score).
+* On the 65C02, <code>ADC</code> and <code>SBC</code> take an additional CPU cycle to execute while the processor is in decimal mode.
+
+==Addressing Modes==
+
+===Implied===
+Some commands have no operands at all, or if none is given, the operand is assumed to be the accumulator. 
+<syntaxhighlight lang="6502asm">RTS ;return from subroutine, no operand needed.
+ASL ;if no operand supplied, the accumulator is used. Some assemblers require you to type "ASL A" but others do not.</syntaxhighlight>
+
+===Immediate===
+A constant value is directly used as the argument for a command.
+<syntaxhighlight lang="6502asm">LDA #3             ;load the number 3 into the accumulator
+AND #%10000000     ;bitwise AND the binary value 1000 0000 with the value in the accumulator
+SBC #$30           ;subtract hexadecimal 0x30 from the accumulator. If the carry flag is clear, also subtract 1 after that.</syntaxhighlight>
+
+===Zero Page===
+A zero page memory address is supplied as the argument for a command, and the actual operation is performed using the value stored within. This is similar to the dereference operator in C/C++. This is faster than other addressing modes that work with memory, and takes up fewer bytes in your program. Furthermore, certain commands work with zero page but not longer addresses.
+
+For these examples, assume that the zero page memory address $05 contains #$40 (hexadecimal 0x40).
+<syntaxhighlight 6502>LDA $05 ;dereferences to whatever is stored at $05, in this case, #$40. #$40 is loaded into the accumulator.
+ADC $05 ;add the value stored at address $05 to whatever is stored in the accumulator. If the carry flag is set, add 1 to the result.
+ROR $05 ;rotate right the bits of the value stored at memory address $05. The value stored there changes from #$40 to #$20.</syntaxhighlight>
+
+===Absolute===
+A memory address stored outside the zero page is used as the argument for a command. This is slower and takes longer than the zero page. However, there are still certain things that absolute addressing is needed to do, such as jumping and reading/writing to or from memory-mapped ports.
+
+<syntaxhighlight lang="6502asm">JMP $8000 ;move the program counter to address $8000. Execution resumes there.
+STA $2007 ;store the value in the accumulator into address $2007 (this is the memory-mapped port on the NES for background graphics)</syntaxhighlight>
+
+===Zero Page Offset By X/Y===
+A zero page memory address offset by X or Y. The value in X or Y is added to the supplied address, and the resulting address is used as the operand. Only the X register can use the "Zero Page Offset by Y" mode. If you want to store the accumulator in a zero page address offset by Y, you'll need to use the absolute address by padding the front of the address with 00. Some assemblers do this automatically, which is why I got this wrong!
+
+<syntaxhighlight lang="6502asm">LDX #$05  ;load 5 into X
+LDA $02,x ;load the value stored in $07 into the accumulator. (2 + 5 = 7)
+LDY #$04  ;load 4 into Y
+LDX $12,y ;load the value stored in $16 into X. ($12 + $4 = $16)</syntaxhighlight>
+
+===Absolute Offset By X/Y===
+An absolute memory address offset by X or Y. This works similar to the zero page version. However, not all commands work with this mode. For example, the LDX and LDY commands work with this mode, but STX and STY do not. (LDA and STA work with all addressing modes except Zero Page Offset By Y.)
+<syntaxhighlight lang="6502asm">LDX #$15
+LDY #$20
+LDA $4000,x ;evaluates to LDA $4015
+SBC $7000,y ;the accumulator is reduced by the value stored at $7020. If the carry is clear, 1 is subtracted from the result</syntaxhighlight>
+
+===Zero Page Indirect With Y===
+This one's a bit confusing. The values at a pair of consecutive zero page memory addresses are dereferenced, their order is swapped, the two values are concatenated into a 16-bit memory address, THEN the value of y is added to that address, and <b><i>the value at that address</i></b> is used as the operand. Whew! Let's break it up into steps.
+
+<syntaxhighlight lang="6502asm">LDA #$40
+STA $02     ; $02 contains #$40
+
+LDA #$20    
+STA $03     ; $03 contains #$20, $02 contains #$40
+
+LDY #$06    ; Y contains #$06
+
+LDA ($02),y ; load the value at address $2040+y = load the value at address $2046</syntaxhighlight>
+
+Note that for this mode, you are <b>required</b> to offset by Y. If you really don't want to offset by Y, load #0 into Y first.
+
+===Zero Page Indirect With X===
+This is similar to the one above. In fact, the only difference besides the register we use is the order of operations. Rather than adding Y after the dereference and concatenation, X is added BEFORE that step. X is placed <i>inside</i> the parentheses to show this. This mode is useful for writing to non-consecutive memory addresses in quick succession, by storing the addresses at consecutive zero page locations. Once again, let's break it down:
+
+<syntaxhighlight lang="6502asm">LDA #$40
+STA $06
+LDA #$20
+STA $07  ;$07 contains #$20, $06 contains #$40
+
+LDX #$06 ;X contains #$06
+
+LDA ($00,x) ;adds x to $00. Then the same thing happens as LDA ($06),y where y=0. This evaluates to LDA $2040, loading the accumulator
+            ;with whatever value happens to be stored there.</syntaxhighlight>
+
+Like before, you are <b>required</b> to use X in this mode. If you don't want to offset, just have X equal zero. In fact, when x and y both equal zero, <code>($HH,x) = ($HH),y</code> for all 8-bit hexadecimal values $HH.
+
+===Zero Page Indirect, No X or Y===
+This one isn't available on the original 6502, only on its revision, the 65c02. This behaves just like the two above, except it doesn't involve X or Y. Essentially this saves you the trouble of setting X or Y to zero temporarily just to do an indirect lookup without offsetting.
+
+<syntaxhighlight lang="6502asm"> LDA ($00)  ;same as "LDA ($00),y" when y = 0</syntaxhighlight>
+
+==Quirks and Tricks For Efficient Coding==
+===Looping Backwards Is Faster===
+Looping is generally faster if the loop counter goes down rather than up. This is because <code>DEX</code> and <code>DEY</code> set the zero and negative flags if their value is zero or #$80 or greater. Generally speaking, this means that when your loop counter goes down, you don't have to use the <code>CMP</code> command to determine if the end of the loop is reached.
+<syntaxhighlight lang="6502asm">LDX #3 ;set loop counter to 3.
+loop:
+;whatever you want to do in a loop goes here
+DEX ;this statement basically has CPX #0 built-in at no additional cost
+BNE loop</syntaxhighlight>
+
+compared to:
+<syntaxhighlight lang="6502asm">LDX #0 ;set loop counter to 0.
+loop:
+;whatever you want to do in a loop goes here
+INX
+CPX #3
+BCC loop</syntaxhighlight>
+
+The second version takes an additional command per loop for no added benefit. Sometimes you may need X to represent something else in addition to the loop counter, or you may have a large amount of data from an external source, which would take a lot of time to manually reverse the order of the entries. In those cases it may be better to take the "branch penalty" as-is.
+
+===Order Of Importance===
+This concept is related to the one above. If you are implementing your own flags variable in software for controlling the execution of some function, bits 7 and 6 (the leftmost two bits) are the easiest to check. The 6502 does not have the same "bit test" command that is seen on the 68000, z80, 8086, or ARM. The 6502's <code>BIT</code> command can quickly check the value of bits 7 or 6 of a number stored in memory, but the other bits take longer since you have no choice but to load that variable into the accumulator and <code>AND</code> it with a bit mask.
+
+<syntaxhighlight 6502>softwareFlags equ $00
+
+;check bit 7
+BIT $00       ;alternatively, LDA $00 will work here too.
+BMI bit7set   ;if bit 7 of the value in $00 is set, the BIT command will set the negative flag.
+
+;check bit 6
+BIT $00       ;if bit 6 of the value in $00 is set, this command will set the overflow flag.
+BVS bit6set
+
+;check bit 5
+LDA $00
+AND #%00100000
+BNE bit5set
+
+;check bit 4
+LDA $00
+AND #%00010000
+BNE bit4set
+
+;etc</syntaxhighlight>
+
+The moral of the story is, since two of the flags are easier to check than the rest, the ones that need to be checked the fastest or most frequently should be flags 7 or 6.
+
+===Know Your Opcodes===
+Many of the best practices and "no-nos" you've been taught in computer science courses should be taken with a grain (or rather metric ton) of salt when programming on the 6502. For modern computers, with their blazing processor speeds and massive memory pools, neither the programmer nor the end user will notice that a few bytes here and there were wasted. For example, the rule that "every function can only have one exit point" can result in several wasted bytes and CPU cycles. While these are good principles for maintaining readability, there is a nonzero cost to performance, and this adds up on the 6502 far more than it would on any 32-bit architecture. Unfortunately, just like speed and bytecode, readability and efficiency are a trade-off you'll have to make in the world of assembly programming. It comes down to knowing the byte size and execution time of each CPU instruction (while each opcode is 1 byte, many take operands of 1 or 2 bytes).
+
+<syntaxhighlight lang="6502asm">myRoutine:
+lda testVariable            ;2 bytes, 3 cycles
+bne continue                ;2 bytes, 2 cycles, 3 if branch taken
+jmp end                     ;3 bytes, 3 cycles
+continue:
+; rest of code goes here
+end:
+rts ;exit subroutine        ;1 byte, 6 cycles</syntaxhighlight> 
+<b>Total:                   8 bytes, 12 cycles if branch taken, 14 cycles if not.</b>
+
+This version saves 1 byte that the <code>JMP</code> instruction wastes.
+<syntaxhighlight lang="6502asm">myRoutine:
+lda testVariable            ;2 bytes, 3 cycles
+bne continue                ;2 bytes, 2 cycles, 3 if branch taken
+beq end                     ;2 bytes, 3 cycles (is always taken if the BNE continue isn't taken)
+continue:
+; rest of code goes here
+end:
+rts ;exit subroutine        ;1 byte, 6 cycles</syntaxhighlight> 
+<b>Total:                   7 bytes, 12 cycles if branch taken, 14 cycles if not.</b>
+And this version saves you even more:
+<syntaxhighlight lang="6502asm">myRoutine:
+lda testVariable            ;2 bytes, 3 cycles
+bne continue                ;2 bytes, 2 cycles, 3 if branch taken
+rts                         ;1 byte,  6 cycles (Don't add this to the other RTS's cycle count, you're only doing one or the other.)
+continue:
+; rest of code goes here
+end:
+rts ;exit subroutine        ;1 byte,  6 cycles</syntaxhighlight>
+<b>Total:                   6 bytes, 12 cycles if branch taken, 11 cycles if not.</b>
+
+
+Here's another example of the trade-off between readability and efficient code.
+<syntaxhighlight lang="6502asm">; compares the accumulator to a constant range of values.
+; If the accumulator is within the bounds stored in the temp variables "lowerbound" and "upperbound" then y = 1, otherwise y = 0.
+CompareRange_Constant:
+CMP lowerbound
+BCC outOfBounds
+
+CMP upperbound
+BCS outOfBounds ;assume the true upper bound is one less than the value stored here.
+
+;number was in bounds
+LDY #1
+JMP end
+
+outOfBounds:
+LDY #0
+end:
+rts</syntaxhighlight>
+
+The more efficient way is to do this, which yields the same result:
+<syntaxhighlight lang="6502asm">; compares the accumulator to a constant range of values.
+; If the accumulator is within the bounds stored in the temp variables "lowerbound" and "upperbound" then y = 1, otherwise y = 0.
+CompareRange_Constant:
+LDY #0          ;load this here at the beginning, before we even know the result.
+CMP lowerbound  ;compare ACCUMULATOR to lowerbound, not Y.
+BCC outOfBounds
+
+CMP upperbound
+BCS outOfBounds ;assume the true upper bound is one less than the value stored here.
+
+;number was in bounds
+
+INY             ;takes fewer bytes to encode than LDY #1. If out of bounds, this will get skipped and the function returns 0.
+
+outOfBounds:
+RTS</syntaxhighlight>
+
+Often, 6502 Assembly will feel like hacking, and you'll be using some "shady" techniques to get things done. Most of the taboos of modern programming are valuable tools in the 6502 programmer's toolbox, but as always you should use them not for the sake of being a rebel, but when they are the best solution. Diligent commenting is a must, as these tools are not easy to understand when someone else is reading your code. For the most part, shaving off a few bytes really doesn't matter (unless you're programming for the Atari 2600 or something time-critical like vBlank or a scanline IRQ) so it's not a huge deal if you have a few wasted bytes here and there. The 6502 can still operate faster than you can blink. But it's important to know that there will be occasions where the "proper" methods of programming need to be tossed aside.
+
+===Arrays and Structs===
+Structs are a little strange in 6502 compared to other languages, and this is probably the reason why C is often considered a poor fit for the language. The biggest problem is that the 6502 has a hardware limit of 255 for pointer arithmetic essentially, because the indexed/offset addressing modes use an unsigned 8-bit offset. If you're using the <code>($??),y</code> indexed indirect addressing mode, you CAN do pointer arithmetic the way other processors would and increment $?? directly, but that's very slow.
+
+We'll consider the following C struct (here, an int is 32-bit, a short is 16-bit, and a char is 8-bit. I'm not sure what cc65 uses)
+
+<syntaxhighlight C>struct foo
+{
+unsigned short spam;
+unsigned char eggs;
+};
+
+struct foo bar[4];   //create an array of four "foo" structs</syntaxhighlight>
+
+And we'll pretend that some values have been assigned to the elements of the array (I can't remember the syntax at the moment, sorry!)
+
+Normally, you would expect the structs to be laid out in memory like so:
+<syntaxhighlight asm>word 0x1234 ;bar [0]
+byte 0xAA
+word 0x5678 ;bar [1]
+byte 0xBB
+word 0x9999 ;bar [2]
+byte 0xCC
+word 0xABCD ;bar [3]
+byte 0xDD</syntaxhighlight>
+
+However, this doesn't scale well with the 6502 since you're limited to an 8-bit offset. It's much more efficient to flip things "sideways" so to speak and create a structure of arrays. Doing things this way has a few advantages:
+* Each element of the array can be searched directly by using X or Y as the index, without the need for complex pointer arithmetic.
+* You do not modify the base address, so you can get it back just by setting X or Y to zero again. You don't need to back it up on the stack or in memory.
+* In our example, if you stored this array of structs the way that C would when compiling to x86, you would only be able to make it about 85 elements wide before you needed to adjust your base address. With the method below, the size of each struct does not affect your total maximum size of the array. 
+
+<syntaxhighlight 6502>bar_spam_lo:
+byte $34,$78,$99,$CD
+bar_spam_hi:
+byte $12,$56,$99,$AB
+bar_eggs:
+byte $AA,$BB,$CC,$DD</syntaxhighlight>
+
+==Assembler Syntax==
+Syntax is mostly dependent on the assembler itself. However, there are a few common standards:
+* A numeral with a dollar sign in front <code>$</code> represents a hexadecimal value.
+* A numeral with a percent sign in front <code>%</code> represents a binary value.
+* A numeral with no <code>$</code> or <code>%</code> in front represents a decimal value.
+* A numeral without a <code>#</code> in front is interpreted as a memory address, regardless of whether it is decimal, binary, or hexadecimal. <code>LDA 0</code> will load <i>the value at zero page memory address $00</i> into the accumulator. If you want to load the number 0 into the accumulator you need to type <code>LDA #0</code>.
+===ORG===
+In the modern era, the advent of linkers, dynamically linked libraries, and the use of <code>INT</code> and <code>SVC</code> to perform I/O operations have rendered this concept mostly obsolete. The <code>org</code> directive (sometimes preceded with a period) tells the assembler where the beginning of a section of code is. Some sections of code will only function in a specific location, so this is often necessary to ensure the code or data table goes where it should. You wouldn't want your executable code in the zero page, for example.
+
+Example:
+<syntaxhighlight lang="6502asm">;typical skeleton for an NES ROM
+
+.org $8000
+RESET:
+
+maingameloop:
+   jmp maingameloop
+NMI:
+   RTI
+IRQ:
+   RTI
+
+.org $FFFA
+dw NMI
+dw RESET
+dw IRQ    ;you can use whatever names you want as long as they match. This is just for clarity.</syntaxhighlight>
+
+===Value Labels===
+Whether a given number is written in binary, hexadecimal, or decimal does not affect the assembled code. The resulting bytecode is the same regardless. For example,
+* <code>LDA #$20</code>
+* <code>LDA #32</code>
+* <code>LDA #%00100000</code> 
+are all equivalent in the eyes of the assembler. It is best to write a number in the way it is meant to be interpreted for clarity's sake. For example, memory addresses are best written in hexadecimal, and the operand of a bitwise <code>AND</code> should be written in binary, since it is being used to compare individual bits.
+
+Labeled values can be defined with a <code>define</code>, <code>=</code> or <code>equ</code> directive. This is useful for communicating the purpose of a zero page variable or constant. However, you must still place a <code>#</code> in front of the label if you wish for it to be interpreted as a constant value rather than a memory address.
+<syntaxhighlight lang="6502asm">tempStorage equ $00    ;intended as a zero page memory address
+maxScreenWidth equ $40 ;intended as a constant
+
+LDA #maxScreenWidth
+STA tempStorage</syntaxhighlight>
+All labels <i>must</i> be uniquely named, however you may assign any number of differently named labels to the same value. Labels cannot begin with a number.
+
+===Code Labels===
+Sections of code can also be given a label. The assembler dereferences the label at compile time to the memory address of the byte just below that label. This is arguably the most powerful feature of assemblers, as it removes the tedium of having to manually update your labels every time you add new code to your source document. Labeled sections of code do not use an <code>equ</code> directive; rather, they typically end in a colon and the actual instruction they point to is underneath. Code labels are useful for naming functions, or being used as a pointer to the beginning of a data table.
+
+Like value labels, code labels must be unique. Some assemblers allow the use of local labels, which do not have to be unique throughout the entire program. Local labels often begin with a period or an @, depending on the assembler. A branch or jump to a local label is interpreted as a branch or jump to the closest local label with that name. Often these labels and any code that references them must all be contained between two global labels.
+<syntaxhighlight lang="6502asm">
+MyRoutine:    ;this label is global. You cannot use the label "MyRoutine" anywhere else in your program
+lda tempData
+beq .skip     
+lda #$50
+.skip:        ;this label is local. You can use ".skip" multiple times, but not in the same function.
+sta tempStorage
+rts</syntaxhighlight>
+
+===Defining Data===
+Data can be defined with a <code>db</code> or <code>byte</code> directive for byte-length data or a <code>dw</code> or <code>word</code> directive for word-length (16-bit) data. (Some assemblers require a period before the directive name.) Each entry can be separated by commas or separate lines, each beginning with the appropriate directive. Each entry is placed in the order they are typed, from left to right, up to down. For example, the following data blocks are identical (apart from their labels and memory location), though they look different:
+
+<syntaxhighlight lang="6502asm">
+MyData: 
+db $00,$01,$02,$03
+
+MyData2: db $00,$01,$02,$03
+
+MyData3: 
+db $00
+db $01
+db $02
+db $03
+
+MyData4:
+db $00,$01
+db $02,$03</syntaxhighlight>
+
+Unlike immediate operands, data does not get a # in front of the value. The values loaded are loaded as immediates regardless.
+<syntaxhighlight lang="6502asm">LDA MyData ;load the value #$00 into the accumulator</syntaxhighlight>
+
+Word data is a little different than byte data. Since the 6502 is little-endian, the bytes are stored in reverse order.
+<syntaxhighlight lang="6502asm">WordData:
+dw $2000,$3010,$4020
+
+EquivalentByteData:
+db $00,$20  ;each pair of bytes was stored on its own row for clarity. It makes no difference to the assembler.
+db $10,$30   
+db $20,$40</syntaxhighlight>
+
+===Label Arithmetic===
+Assemblers offer varying degrees of label arithmetic. The operators +,-,*,or / that are typical in other programming languages can be applied to constants or labels. In addition, most 6502 assemblers offer special operators that are specific to the language. Some assemblers allow the [[C]] standard operators for bitwise operations, bit shifts, etc.
+<syntaxhighlight lang="6502asm">pointer equ $20
+
+LDA #$20+3     ;load #$23 into the accumulator
+LDA #$30+$10   ;load #$40 into the accumulator
+LDA #$50+20    ;load #$64 into the accumulator (notice the lack of a $ in front of 20)
+
+LDA #0-8       ;load #$F8 into the accumulator
+LDA #1000/64   ;load decimal 15 into the accumulator. This is valid as long as the entire expression equals 255 or less.
+
+LDX #<$3001    ;load #$01 into X (#$01 is the low byte)
+LDY #>$0534    ;load #05 into Y (#$05 is the high byte)
+
+LDA #<myTable   ;load the low byte of the memory address that myTable represents.
+sta pointer     ;store this into the low byte of a zero page entry named "pointer"
+LDA #>myTable   ;load the high byte of the memory address that myTable represents.
+sta pointer+1   ;store this into the zero page entry immediately after the address of "pointer"
+
+LDA (pointer),y ;load the value stored at myTable, offset by positive 5. (Remember we loaded 5 into Y earlier with LDY #>$0534)
+                ;the accumulator now contains #$60.
+rts
+
+myTable:
+db #$10,#$20,#$30,#$40
+db #$50,#$60,#$70,#$80</syntaxhighlight>
+
+
+
+==Citations==
+#[[wp:MOS_Technology_6502|Wikipedia: MOS Technology 6502]]
+#[[wp:Ricoh_2A03|Wikipedia: Ricoh 2A03]]
+#[[https://skilldrick.github.io/easy6502/| 6502 assembler in JavaScript]]
+#[[http://wilsonminesco.com/6502interrupts/| 6502 Interrupts]]
+
+==See Also==
+*[http://en.wikibooks.org/wiki/6502_Assembly 6502 Assembly From Wikibooks]
+*[http://www.6502asm.com/ 6502 compatible assembler and emulator in javascript]
+*[http://e-tradition.net/bytes/6502/ 6502 assembler and debugger in JavaScript]
+*[https://skilldrick.github.io/easy6502/ 6502 assembler and debugger in JavaScript]

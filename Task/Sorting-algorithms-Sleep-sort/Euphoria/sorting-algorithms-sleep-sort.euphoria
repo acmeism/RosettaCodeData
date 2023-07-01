@@ -1,0 +1,31 @@
+include get.e
+
+integer count
+
+procedure sleeper(integer key)
+    ? key
+    count -= 1
+end procedure
+
+sequence s, val
+atom task
+
+s = command_line()
+s = s[3..$]
+if length(s)=0 then
+    puts(1,"Nothing to sort.\n")
+else
+    count = 0
+    for i = 1 to length(s) do
+        val = value(s[i])
+        if val[1] = GET_SUCCESS then
+            task = task_create(routine_id("sleeper"),{val[2]})
+            task_schedule(task,{val[2],val[2]}/10)
+            count += 1
+        end if
+    end for
+
+    while count do
+        task_yield()
+    end while
+end if

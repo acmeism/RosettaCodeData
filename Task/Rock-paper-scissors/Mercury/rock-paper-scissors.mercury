@@ -1,0 +1,66 @@
+:- module rps.
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+:- implementation.
+:- use_module random, exception.
+:- import_module list, string.
+
+:- type play
+    --->    rock
+    ;       paper
+    ;       scissors.
+
+:- pred beats(play, play).
+:- mode beats(in, in) is semidet.
+beats(rock, scissors).
+beats(paper, rock).
+beats(scissors, paper).
+
+:- pred random(play::out, random.supply::mdi, random.supply::muo) is det.
+random(Play, !RS) :-
+    random.random(1, 3, N, !RS),
+    ( if N = 1 then
+        Play = rock
+    else if N = 2 then
+        Play = paper
+    else
+        Play = scissors
+    ).
+
+main(!IO) :-
+    seed(Seed, !IO),
+    random.init(Seed, RS),
+    play(RS, !IO).
+
+:- pred play(random.supply::mdi, io::di, io::uo) is det.
+play(!.RS, !IO) :-
+    io.write_string("Your choice? ", !IO),
+    io.read(Res, !IO),
+    (
+        Res = ok(Play),
+        random(Counter, !RS),
+        io.format("The computer chose %s\n", [s(string(Counter))], !IO),
+        ( if beats(Counter, Play) then
+            io.write_string("Computer wins.\n", !IO)
+        else if beats(Play, Counter) then
+            io.write_string("You win!\n", !IO)
+        else
+            io.write_string("It is a draw\n", !IO)
+        ),
+        play(!.RS, !IO)
+    ;
+        Res = eof
+    ;
+        Res = error(_, _),
+        exception.throw(Res)
+    ).
+
+:- pragma foreign_decl("C", "#include <time.h>").
+:- pred seed(int::out, io::di, io::uo) is det.
+:- pragma foreign_proc("C",
+    seed(Seed::out, _IO0::di, _IO::uo),
+    [promise_pure, will_not_call_mercury],
+"
+    Seed = time(NULL);
+").

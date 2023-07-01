@@ -1,0 +1,5 @@
+IO.inspect d = Map.new([foo: 1, bar: 2, baz: 3])
+Enum.each(d, fn kv -> IO.inspect kv end)
+Enum.each(d, fn {k,v} -> IO.puts "#{inspect k} => #{v}" end)
+Enum.each(Map.keys(d), fn key -> IO.inspect key end)
+Enum.each(Map.values(d), fn value -> IO.inspect value end)

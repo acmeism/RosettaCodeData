@@ -1,0 +1,32 @@
+using Printf
+
+struct KPCSupply{T<:Real}
+    item::String
+    weight::T
+    value::T
+    uvalue::T
+end
+function KPCSupply(item::AbstractString, weight::Real, value::Real)
+    w, v = promote(weight, value)
+    KPCSupply(item, w, v, v / w)
+end
+
+Base.show(io::IO, s::KPCSupply) = print(io, s.item, @sprintf " (%.2f kg, %.2f €, %.2f €/kg)" s.weight s.value s.uvalue)
+Base.isless(a::KPCSupply, b::KPCSupply) = a.uvalue < b.uvalue
+
+function solve(store::Vector{KPCSupply{T}}, capacity::Real) where T<:Real
+    sack = similar(store, 0) # vector like store, but of length 0
+    kweight = zero(T)
+    for s in sort(store, rev = true)
+        if kweight + s.weight ≤ capacity
+            kweight += s.weight
+            push!(sack, s)
+        else
+            w = capacity - kweight
+            v = w * s.uvalue
+            push!(sack, KPCSupply(s.item, w, v, s.value))
+            break
+        end
+    end
+    return sack
+end

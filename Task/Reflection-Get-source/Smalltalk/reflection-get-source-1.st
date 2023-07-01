@@ -1,0 +1,1 @@
+mthd := someClass compiledMethodAt:#nameOfMethod

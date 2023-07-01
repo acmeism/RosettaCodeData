@@ -1,0 +1,55 @@
+order: procedure options (main);               /* 24/11/2011 */
+   declare word      character (20) varying;
+   declare word_list character (20) varying controlled;
+   declare max_length fixed binary;
+   declare input file;
+
+   open file (input) title ('/ORDER.DAT,TYPE(TEXT),RECSIZE(100)');
+
+   on endfile (input) go to completed_search;
+
+   max_length = 0;
+   do forever;
+      get file (input) edit (word) (L);
+      if length(word) > max_length then
+         do;
+            if in_order(word) then
+               do;
+                  /* Get rid of any stockpiled shorter words. */
+                  do while (allocation(word_list) > 0);
+                     free word_list;
+                  end;
+                  /* Add the eligible word to the stockpile. */
+                  allocate word_list;
+                  word_list = word;
+                  max_length = length(word);
+               end;
+         end;
+      else if max_length = length(word) then
+         do; /* we have an eligle word of the same (i.e., maximum) length. */
+            if in_order(word) then
+               do; /* Add it to the stockpile. */
+                  allocate word_list;
+                  word_list = word;
+               end;
+         end;
+   end;
+completed_search:
+   put skip list ('There are ' || trim(allocation(word_list)) ||
+      ' eligible words of length ' || trim(length(word)) || ':');
+   do while (allocation(word_list) > 0);
+      put skip list (word_list);
+      free word_list;
+   end;
+
+/* Check that the letters of the word are in non-decreasing order of rank. */
+in_order: procedure (word) returns (bit(1));
+   declare word character (*) varying;
+   declare i fixed binary;
+
+   do i = 1 to length(word)-1;
+      if substr(word, i, 1) > substr(word, i+1, 1) then return ('0'b);
+   end;
+   return ('1'b);
+end in_order;
+end order;

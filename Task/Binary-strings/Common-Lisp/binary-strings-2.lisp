@@ -1,0 +1,1 @@
+(defvar *string* "string")

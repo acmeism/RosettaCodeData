@@ -1,0 +1,2 @@
+ILY(X) ;IS IT A LEAP YEAR?
+ QUIT ((X#4=0)&(X#100'=0))!((X#100=0)&(X#400=0))

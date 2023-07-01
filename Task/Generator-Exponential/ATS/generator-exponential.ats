@@ -1,0 +1,183 @@
+(* "Generators" *)
+
+(* I implement "generators" as non-linear closures. *)
+
+#include "share/atspre_staload.hats"
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+(* Integer powers where base and power are of any unsigned integer
+   types. *)
+fn {tk_b, tk_p : tkind}
+g1uint_ipow
+          (base  : g1uint tk_b,
+           power : g1uint tk_p)
+    :<> g1uint tk_b =
+  let
+    fun
+    loop {p : nat}
+         .<p>.
+         (b     : g1uint tk_b,
+          p     : g1uint (tk_p, p),
+          accum : g1uint tk_b)
+        :<> g1uint tk_b =
+      let
+        val ph = half p
+        val accum = (if ph + ph = p then accum else accum * b)
+      in
+        if ph = g1i2u 0 then
+          accum
+        else
+          loop (b * b, ph, accum)
+      end
+
+    prval () = lemma_g1uint_param base
+    prval () = lemma_g1uint_param power
+  in
+    loop (base, power, g1i2u 1)
+  end
+
+overload ipow with g1uint_ipow of 100
+
+(* Some unit tests of ipow. *)
+val- 0U = ipow (0U, 100U)
+val- 1U = ipow (0U, 0U)         (* Sometimes a convenient result. *)
+val- 9UL = ipow (3UL, 2ULL)
+val- 81ULL = ipow (3ULL, 4U)
+
+typedef generator (tk : tkind) =
+  () -<cloref1> g1uint tk
+
+typedef option_generator (tk : tkind) =
+  () -<cloref1> Option (g1uint tk)
+
+fn {tk_b : tkind}
+   {tk_p : tkind}
+make_powers_generator
+          (power : g1uint tk_p)
+    :<!wrt> generator tk_b =
+  let
+    val base : ref (g1uint tk_b) = ref (g1i2u 0)
+  in
+    lam () =>
+      let
+        val b = !base
+        val result = ipow (b, power)
+      in
+        !base := succ b;
+        result
+      end
+  end
+
+fn {tk : tkind}
+make_generator_of_1_that_are_not_also_2
+          (gen1 : generator tk,
+           gen2 : generator tk)
+    :<!wrt> generator tk =
+  let
+    val initialized : ref bool = ref false
+    val x2 : ref (g1uint tk) = ref (g1i2u 0)
+
+    fn
+    check (x1 : g1uint tk)
+        :<1> bool =
+      let
+        fun
+        loop ()
+            :<1> bool =
+          if x1 <= !x2 then
+            (x1 <> !x2)
+          else
+            begin
+              !x2 := gen2 ();
+              loop ()
+            end
+      in
+        loop ()
+      end
+  in
+    lam () =>
+      let
+        var result : g1uint tk = g1i2u 0
+        var found_one : bool = false
+      in
+        if ~(!initialized) then
+          begin
+            !x2 := gen2 ();
+            !initialized := true
+          end;
+        while (~found_one)
+          let
+            val next1 = gen1 ()
+          in
+            if check next1 then
+              begin
+                result := next1;
+                found_one := true
+              end
+          end;
+        result
+      end
+  end
+
+fn {tk : tkind}
+make_dropper
+          (n   : size_t,
+           gen : generator tk)
+    :<!wrt> generator tk =
+  let
+    val counter : ref size_t = ref n
+  in
+    lam () =>
+      begin
+        while (isneqz (!counter))
+          let
+            val _ = gen ()
+          in
+            !counter := pred (!counter)
+          end;
+        gen ()
+      end
+  end
+
+fn {tk : tkind}
+make_taker
+          (n   : size_t,
+           gen : generator tk)
+    :<!wrt> option_generator tk =
+  let
+    val counter : ref size_t = ref n
+  in
+    lam () =>
+      if iseqz (!counter) then
+        None ()
+      else
+        begin
+          !counter := pred (!counter);
+          Some (gen ())
+        end
+  end
+
+implement
+main0 () =
+  let
+    stadef tk = uintknd
+    macdef filter = make_generator_of_1_that_are_not_also_2<tk>
+
+    val squares_generator = make_powers_generator<tk> 2U
+    val cubes_generator = make_powers_generator<tk> 3U
+    val gen = filter (squares_generator, cubes_generator)
+    val gen = make_dropper<tk> (i2sz 20, gen)
+    val gen = make_taker<tk> (i2sz 10, gen)
+
+    var done : bool = false
+  in
+    while (~done)
+      begin
+        case+ gen () of
+        | None () => done := true
+        | Some x => print! (" ", x)
+      end;
+    println! ()
+  end

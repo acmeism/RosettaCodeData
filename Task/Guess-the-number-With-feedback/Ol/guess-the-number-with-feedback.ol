@@ -1,0 +1,26 @@
+(import (otus random!))
+
+(define from 0)
+(define to 100)
+
+(define number (+ from (rand! (+ from to 1))))
+
+(let loop ()
+   (for-each display `("Pick a number from " ,from " through " ,to ": "))
+   (let ((guess (read)))
+      (cond
+         ((not (number? guess))
+            (print "Not a number!")
+            (loop))
+         ((or (< guess from)
+              (< to guess))
+            (print "Out of range!")
+            (loop))
+         ((< guess number)
+            (print "Too low!")
+            (loop))
+         ((> guess number)
+            (print "Too high!")
+            (loop))
+         ((= guess number)
+            (print "Well guessed!")))))

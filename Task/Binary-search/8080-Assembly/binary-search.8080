@@ -1,0 +1,102 @@
+		org	100h	; Entry for test code
+		jmp	test
+
+
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Binary search in array of unsigned 8-bit integers
+		;; B = value to look for
+		;; HL = begin of array (low)
+		;; DE = end of array, inclusive (high)
+		;; The entry point is 'binsrch'
+		;; On return, HL = location of value (if contained
+		;; in array), or insertion point (if not)
+
+binsrch_lo:	inx	h	; low = mid + 1
+		inx	sp	; throw away 'low'
+		inx	sp
+
+binsrch:	mov	a,d	; low > high? (are we there yet?)
+		cmp	h	; test high byte
+		rc
+		mov	a,e	; test low byte
+		cmp	l
+		rc
+
+		push	h	; store 'low'
+
+		dad	d	; mid = (low+high)>>1
+		mov	a,h	; rotate the carry flag back in
+		rar		; to take care of any overflow
+		mov	h,a
+		mov	a,l
+		rar
+		mov	l,a
+	
+		mov	a,m	; A[mid] >= value?
+		cmp	b
+		jc	binsrch_lo
+
+		xchg		; high = mid - 1
+		dcx	d
+		pop	h	; restore 'low'
+		jmp	binsrch
+
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Test data
+
+primes:		db	2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37
+		db	41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83
+		db	89, 97, 101, 103, 107, 109, 113, 127, 131
+		db	137, 139, 149, 151, 157, 163, 167, 173, 179
+		db	181, 191, 193, 197, 199, 211, 223, 227, 229
+		db	233, 239, 241, 251
+primes_last:	equ	$ - 1
+
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Test code (CP/M compatible)
+
+yep:		db	": yes", 13, 10, "$"
+nope:		db	": no", 13, 10, "$"
+
+num_out:	mov	a,b		;; Output number in B as decimal
+		mvi	c,100
+		call	dgt_out
+		mvi	c,10
+		call	dgt_out
+		mvi	c,1
+dgt_out:	mvi	e,'0' - 1	;; Output 100s, 10s or 1s
+dgt_out_loop:	inr	e		;; (depending on C)
+		sub	c		
+		jnc	dgt_out_loop
+		add	c
+e_out:		push	psw		;; Output character in E
+		push	b		;; preserving working registers
+		mvi	c,2
+		call	5
+		pop	b
+		pop	psw
+		ret
+
+		;; Main test code
+test:		mvi	b,0		; Test value
+		
+test_loop:	call	num_out		; Output current number to test
+		
+		lxi	h,primes	; Set up input for binary search
+		lxi	d,primes_last
+		call	binsrch		; Search for B in array
+		
+		lxi	d,nope		; Location of "no" string
+		mov	a,b		; Check if location binsrch returned
+		cmp	m		; contains the value we were looking for
+		jnz	str_out		; If not, print the "no" string
+		lxi	d,yep		; But if so, use location of "yes" string
+str_out:	push	b		; Preserve B across CP/M call
+		mvi	c,9		; Print the string
+		call	5
+		pop	b		; Restore B				
+		
+		inr	b		; Test next value
+		jnz	test_loop			
+
+		rst	0

@@ -1,0 +1,20 @@
+(* default values *)
+let somebool = ref false
+let somestr = ref ""
+let someint = ref 0
+
+let usage = "usage: " ^ Sys.argv.(0) ^ " [-b] [-s string] [-d int]"
+
+let speclist = [
+    ("-b", Arg.Set somebool, ": set somebool to true");
+    ("-s", Arg.Set_string somestr, ": what follows -s sets some string");
+    ("-d", Arg.Set_int someint, ": some int parameter");
+  ]
+
+let () =
+  (* Read the arguments *)
+  Arg.parse
+    speclist
+    (fun x -> raise (Arg.Bad ("Bad argument : " ^ x)))
+    usage;
+  Printf.printf " %b %d '%s'\n" !somebool !someint !somestr

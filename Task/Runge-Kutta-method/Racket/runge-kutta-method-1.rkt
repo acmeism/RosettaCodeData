@@ -1,0 +1,8 @@
+(define (RK4 F δt)
+  (λ (t y)
+    (define δy1 (* δt (F t y)))
+    (define δy2 (* δt (F (+ t (* 1/2 δt)) (+ y (* 1/2 δy1)))))
+    (define δy3 (* δt (F (+ t (* 1/2 δt)) (+ y (* 1/2 δy2)))))
+    (define δy4 (* δt (F (+ t δt) (+ y δy1))))
+    (list (+ t δt)
+          (+ y (* 1/6 (+ δy1 (* 2 δy2) (* 2 δy3) δy4))))))

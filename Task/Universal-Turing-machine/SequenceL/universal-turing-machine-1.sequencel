@@ -1,0 +1,218 @@
+//region Imports
+
+import <Utilities/Conversion.sl>;
+import <Utilities/Sequence.sl>;
+
+//endregion
+
+//region Types
+
+MCONFIG ::= (Label: char(1), Symbols: char(2), Operations: char(2), FinalConfig: char(1));
+STATE ::= (CurrentConfig: char(1), CurrentPosition: int(0), Tape: char(1));
+INPUT_DATA ::= (Iterations: int(0), InitialTape: char(1), StartingPosition: int(0), InitialConfig: char(1), MConfigs: MCONFIG(1));
+
+//endregion
+
+//region Constants
+
+SPACE_CHAR := '_';
+DELIMITTER := '|';
+
+NULL_CONFIG := (Label: "", Symbols: [], Operations: [], FinalConfig: "");
+
+TRACE_HEADER := ["Config:\t| Place:\t| Tape:"];
+
+//endregion
+
+//region Helpers
+
+StateToString(state(0)) :=
+    state.CurrentConfig ++
+    "  \t\t| " ++ intToString(state.CurrentPosition) ++
+    "  \t| " ++ state.Tape;
+
+StateToArrowString(state(0)) :=
+    state.Tape ++ "\n" ++
+    duplicate(' ', state.CurrentPosition - 1) ++ "|\n" ++
+    duplicate(' ', state.CurrentPosition - 1) ++ state.CurrentConfig ++ "\n";
+
+HeadOfEach(strings(2))[i] :=
+    head(strings[i]);
+
+RemoveCharacter(character(0), string(1))[i] :=
+    string[i] when not(string[i] = character);
+
+GetFSquares(Tape(1))[i] :=
+    Tape[i] when (i mod 2) = 1;
+
+//endregion
+
+//region Parsing
+
+ParseConfig(Line(1)) :=
+    let
+        entries := split(Line, DELIMITTER);
+        label := entries[1];
+        symbols := split(entries[2], ',');
+        operations := split(entries[3], ',');
+        finalConfig := entries[4];
+    in
+        ((Label: label, Symbols: symbols, Operations: operations, FinalConfig: finalConfig) when not((Line[1] = '/') and (Line[2] = '/')))
+            when size(Line) > 0;
+
+ParseTextFile(Text(1)) :=
+    let
+        noSpaces := RemoveCharacter('\t', RemoveCharacter('\r', RemoveCharacter(' ', Text)));
+        lines := split(noSpaces, '\n');
+        iterations := stringToInt(lines[1]);
+        initialTape := lines[2];
+        initialPosition := stringToInt(lines[3]);
+        initialConfig := lines[4];
+        mConfigs := ParseConfig(lines[5 ... size(lines)]);
+    in
+        (Iterations: iterations, InitialTape: initialTape, StartingPosition: initialPosition, InitialConfig: initialConfig, MConfigs: mConfigs);
+
+//endregion
+
+//region Config Finding
+
+Matches: char(0) * char(2) -> bool;
+Matches(currentSymbol(0), symbols(2)) :=
+        true when size(symbols) = 0 //some(equalListNT("", symbols))
+    else
+        true when currentSymbol = SPACE_CHAR and some(equalListNT("none", symbols))
+    else
+        true when not(currentSymbol = SPACE_CHAR) and some(equalListNT("any", symbols))
+    else
+        true when some(currentSymbol = HeadOfEach(symbols))
+    else
+        false;
+
+GetCurrentSymbol(State(0)) :=
+        State.Tape[State.CurrentPosition] when size(State.Tape) >= State.CurrentPosition and State.CurrentPosition > 0
+    else
+        SPACE_CHAR;
+
+GetConfigHelper(label(1), symbol(0), mConfigs(1))[i] :=
+    mConfigs[i] when equalList(mConfigs[i].Label, label) and Matches(symbol, mConfigs[i].Symbols);
+
+GetConfig(label(1), symbol(0), mConfigs(1)) :=
+    let
+        searchResults := GetConfigHelper(label, symbol, mConfigs);
+    in
+            NULL_CONFIG when size(searchResults) = 0
+        else
+            searchResults[1];
+
+//endregion
+
+//region Operations
+
+TrimTapeEnd(tape(1), position(0)) :=
+        tape when position = size(tape)
+    else
+        tape when not(last(tape) = SPACE_CHAR)
+    else
+        TrimTapeEnd(allButLast(tape), position);
+
+ApplyOperations(State(0), Operations(2)) :=
+    let
+        newState := ApplyOperation(State, head(Operations));
+    in
+            State when size(Operations) = 0
+        else
+            ApplyOperations(newState, tail(Operations));
+
+ApplyOperation(State(0), Operation(1)) :=
+    let
+        newTape :=
+                PrintOperation(head(tail(Operation)), State.CurrentPosition, State.Tape) when head(Operation) = 'P'
+            else
+                EraseOperation(State.CurrentPosition, State.Tape) when head(Operation) = 'E'
+            else
+                [SPACE_CHAR] ++ State.Tape when head(Operation) = 'L' and State.CurrentPosition = 1
+            else
+                State.Tape ++ [SPACE_CHAR] when head(Operation) = 'R' and State.CurrentPosition = size(State.Tape)
+            else
+                State.Tape;
+
+        newPosition :=
+                1 when head(Operation) = 'L' and State.CurrentPosition = 1
+            else
+                State.CurrentPosition + 1 when head(Operation) = 'R'
+            else
+                State.CurrentPosition - 1 when head(Operation) = 'L'
+            else
+                State.CurrentPosition;
+
+        trimmedTape := TrimTapeEnd(newTape, newPosition);
+    in
+            State when size(Operation) = 0
+        else
+            (CurrentPosition: newPosition, Tape: trimmedTape);
+
+PrintOperation(Symbol(0), Position(0), Tape(1)) :=
+    let
+        diff := Position - size(Tape) when Position > size(Tape) else 0;
+        expandedTape := Tape ++ duplicate(SPACE_CHAR, diff);
+        finalTape := setElementAt(expandedTape, Position, Symbol);
+    in
+        finalTape;
+
+EraseOperation(Position(0), Tape(1)) :=
+    PrintOperation(SPACE_CHAR, Position, Tape);
+
+//endregion
+
+//region Execution
+
+RunMachine(Text(1), Flag(1)) :=
+    let
+        input := ParseTextFile(Text);
+        initialState := (CurrentConfig: input.InitialConfig, CurrentPosition: input.StartingPosition, Tape: input.InitialTape);
+
+        processed := Process(initialState, input.MConfigs, input.Iterations);
+        processedWithTrace := ProcessWithTrace(initialState, input.MConfigs, input.Iterations);
+    in
+            "\n" ++ delimit(TRACE_HEADER ++ StateToString(processedWithTrace), '\n') when equalList(Flag, "trace")
+        else
+            "\n" ++ delimit(StateToArrowString(processedWithTrace), '\n') when equalList(Flag, "arrow-trace")
+        else
+            processed.Tape when equalList(Flag, "tape")
+        else
+            TrimTapeEnd(GetFSquares(processed.Tape), 1) when equalList(Flag, "f-squares")
+        else
+            boolToString(DoesMachineHalt(initialState, input.MConfigs, input.Iterations)) when equalList(Flag, "halts")
+        else
+            StateToString(processed);
+
+DoesMachineHalt(InitialState(0), mConfigs(1), Iterations(0)) :=
+    let
+        resultState := Process(InitialState, mConfigs, Iterations);
+    in
+        equalList(resultState.CurrentConfig, "halt");
+
+ProcessWithTrace(InitialState(0), mConfigs(1), Iterations(0)) :=
+        [InitialState] when Iterations <= 0 or size(InitialState.CurrentConfig) = 0 or equalList(InitialState.CurrentConfig, "halt")
+    else
+        [InitialState] ++ ProcessWithTrace(Iterate(InitialState, mConfigs), mConfigs, Iterations - 1);
+
+Process(InitialState(0), mConfigs(1), Iterations(0)) :=
+        InitialState when Iterations = 0 or size(InitialState.CurrentConfig) = 0 or equalList(InitialState.CurrentConfig, "halt")
+    else
+        Process(Iterate(InitialState, mConfigs), mConfigs, Iterations - 1);
+
+Iterate(State(0), mConfigs(1)) :=
+    let
+        currentConfig := GetConfig(State.CurrentConfig, GetCurrentSymbol(State), mConfigs);
+        newState := Execute(State, currentConfig);
+    in
+        newState;
+
+Execute(State(0), mConfig(0)) :=
+    let
+        newState := ApplyOperations(State, mConfig.Operations);
+    in
+        (CurrentConfig: mConfig.FinalConfig, CurrentPosition: newState.CurrentPosition, Tape: newState.Tape);
+
+//endregion

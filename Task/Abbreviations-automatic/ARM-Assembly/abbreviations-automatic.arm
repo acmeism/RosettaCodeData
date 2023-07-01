@@ -1,0 +1,420 @@
+/* ARM assembly Raspberry PI  */
+/*  program abbrAuto.s   */
+/* store list of day in a file listDays.txt*/
+/* and run the program  abbrAuto listDays.txt */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+.equ STDIN,  0     @ Linux input console
+.equ STDOUT, 1     @ Linux output console
+.equ EXIT,   1     @ Linux syscall
+.equ READ,   3     @ Linux syscall
+.equ WRITE,  4     @ Linux syscall
+.equ OPEN,   5     @ Linux syscall
+.equ CLOSE,  6     @ Linux syscall
+
+.equ O_RDWR,    0x0002        @ open for reading and writing
+
+.equ BUFFERSIZE,   10000
+.equ NBMAXIDAYS, 7
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessTitre:            .asciz "Nom du fichier : "
+szCarriageReturn:      .asciz "\n"
+szMessErreur:          .asciz "Error detected.\n"
+szMessErrBuffer:       .asciz "buffer size too less !!"
+szSpace:               .asciz " "
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+sZoneConv:      .skip 24
+iAdrFicName:    .skip 4
+iTabAdrDays:    .skip 4 * NBMAXIDAYS
+iTabAdrDays2:   .skip 4 * NBMAXIDAYS
+sBufferDays:    .skip BUFFERSIZE
+sBuffer:        .skip BUFFERSIZE
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                @ INFO: main
+    mov r0,sp                        @ stack address for load parameter
+    bl traitFic                      @ read file and process
+
+100:                                 @ standard end of the program
+    mov r0, #0                       @ return code
+    mov r7, #EXIT                    @ request to exit program
+    svc #0                           @ perform the system call
+
+iAdrszCarriageReturn:      .int szCarriageReturn
+//iAdrszMessErrBuffer:       .int szMessErrBuffer
+iAdrsZoneConv:             .int sZoneConv
+
+
+/******************************************************************/
+/*     read file                                                   */
+/******************************************************************/
+/* r0 contains address stack begin           */
+traitFic:                             @ INFO: traitFic
+    push {r1-r8,fp,lr}                @ save  registers
+    mov fp,r0                         @  fp <- start address
+    ldr r4,[fp]                       @ number of Command line arguments
+    cmp r4,#1
+    movle r0,#-1
+    ble 99f
+    add r5,fp,#8                      @ second parameter address
+    ldr r5,[r5]
+    ldr r0,iAdriAdrFicName
+    str r5,[r0]
+    ldr r0,iAdrszMessTitre
+    bl affichageMess                  @ display string
+    mov r0,r5
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess                  @ display carriage return
+
+    mov r0,r5                         @ file name
+    mov r1,#O_RDWR                    @ flags
+    mov r2,#0                         @ mode
+    mov r7, #OPEN                     @ call system OPEN
+    svc 0
+    cmp r0,#0                         @ error ?
+    ble 99f
+    mov r8,r0                         @ File Descriptor
+    ldr r1,iAdrsBufferDays             @ buffer address
+    mov r2,#BUFFERSIZE                @ buffer size
+    mov r7,#READ                      @ read file
+    svc #0
+    cmp r0,#0                         @ error ?
+    blt 99f
+    @ extraction datas
+    ldr r1,iAdrsBufferDays             @ buffer address
+    add r1,r0
+    mov r0,#0                         @ store zéro final
+    strb r0,[r1]
+    ldr r0,iAdriTabAdrDays             @ key string command table
+    ldr r1,iAdrsBufferDays             @ buffer address
+    bl extracDatas
+                                      @ close file
+    mov r0,r8
+    mov r7, #CLOSE
+    svc 0
+    mov r0,#0
+    b 100f
+99:                                   @ error
+    ldr r1,iAdrszMessErreur           @ error message
+    bl   displayError
+    mov r0,#-1
+100:
+    pop {r1-r8,fp,lr}                 @ restaur registers
+    bx lr                             @return
+iAdriAdrFicName:              .int iAdrFicName
+iAdrszMessTitre:              .int szMessTitre
+iAdrszMessErreur:             .int szMessErreur
+iAdrsBuffer:                  .int sBuffer
+iAdrsBufferDays:              .int sBufferDays
+iAdriTabAdrDays:              .int iTabAdrDays
+/******************************************************************/
+/*     extrac lines file buffer                                   */
+/******************************************************************/
+/* r0 contains strings address           */
+/* r1 contains buffer address         */
+extracDatas:                     @ INFO: extracDatas
+    push {r1-r8,lr}              @ save  registers
+    mov r7,r0
+    mov r6,r1
+    mov r2,#0                    @ string buffer indice
+    mov r4,r1                    @ start string
+    mov r5,#0                    @ string index
+1:
+    ldrb r3,[r6,r2]
+    cmp r3,#0
+    beq 4f                       @ end
+    cmp r3,#0xA
+    beq 2f
+    cmp r3,#' '                  @ end string
+    beq 3f
+    add r2,#1
+    b 1b
+2:
+    mov r3,#0
+    strb r3,[r6,r2]
+    ldrb r3,[r6,r2]
+    cmp r3,#0xD
+    addeq r2,#2
+    addne r2,#1
+    mov r0,r4                   @ store last day of line in table
+    str r4,[r7,r5,lsl #2]
+    mov r0,r5                   @ days number
+    bl traitLine                @ process a line of days
+    mov r5,#0                   @ new line
+    b 5f
+
+3:
+    mov r3,#0
+    strb r3,[r6,r2]
+    add r2,#1
+4:
+    mov r0,r4
+    str r4,[r7,r5,lsl #2]
+    add r5,#1
+5:                              @ supress spaces
+    ldrb r3,[r6,r2]
+    cmp r3,#0
+    beq 100f
+    cmp r3,#' '
+    addeq r2,r2,#1
+    beq 5b
+
+    add r4,r6,r2                 @ new start address
+    b 1b
+100:
+    pop {r1-r8,lr}               @ restaur registers
+    bx lr                        @return
+
+/******************************************************************/
+/*     processing a line                                          */
+/******************************************************************/
+/* r0 contains days number in table   */
+traitLine:                    @ INFO: traitLine
+    push {r1-r12,lr}           @ save  register
+    cmp r0,#1                 @ one day ?
+    bgt 1f                    @ no
+
+    ldr r0,iAdrszCarriageReturn @ yes display empty line
+    bl affichageMess
+    b 100f
+1:                            @ line OK
+    mov r6,r0                 @ days number
+    ldr r0,iAdriTabAdrDays
+    ldr r1,iAdriTabAdrDays2
+    mov r2,#0
+11:                           @ copy days table into other for display final
+    ldr r3,[r0,r2,lsl #2]
+    str r3,[r1,r2,lsl #2]
+    add r2,#1
+    cmp r2,r6
+    ble 11b
+    ldr r0,iAdriTabAdrDays    @ and sort first table
+    mov r1,#0
+    add r2,r6,#1
+    bl insertionSort
+
+    mov r8,#1                 @ abbrevations counter
+    ldr r12,iAdriTabAdrDays
+    mov r2,#0
+    ldr r10,[r12,r2,lsl #2]   @ load first sorting day
+    mov r11,#0
+    mov r3,#1
+2:                            @ begin loop
+    ldr r4,[r12,r3,lsl #2]    @ load other day
+    @ 1er lettre identique
+    mov r0,r10                @ day1
+    mov r1,r4                 @ day 2
+    mov r2,#0                 @ position 0
+    bl compareChar
+    cmp r0,#0                 @ first letter equal ?
+    movne r10,r4              @ no -> move day 2 in day 1
+    bne 6f
+3:                            @ if equal
+    mov r7,r1                 @ characters length (1,2,3)
+    mov r11,#1                @ letters position
+4:                            @ loop to compare letters days
+    mov r0,r10
+    mov r1,r4
+    mov r2,r7
+    bl compareChar
+    cmp r0,#0
+    bne 5f
+    cmp r5,#0                 @ if end
+    beq 5f
+    add r7,r7,r1              @ next character
+    add r11,r11,#1            @ count letter
+    b 4b
+5:
+    add r11,r11,#1            @ increment letters position
+    cmp r11,r8                @ and store if > position précedente
+    movgt r8,r11
+    mov r10,r4                 @ and day1 = day2
+
+6:
+    add r3,r3,#1              @ increment day
+    cmp r3,r6
+    ble 2b                    @ and loop
+
+    mov r0,r8                 @ display position letter
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r2,#0
+    strb r2,[r1,r0]
+    ldr r0,iAdrsZoneConv
+    bl affichageMess
+    ldr r0,iAdrszSpace
+    bl affichageMess
+    ldr r0,iAdriTabAdrDays2   @ and display list origine days
+    mov r1,r6
+    bl displayListDays
+
+100:
+    pop {r1-r12,lr}              @ restaur registers
+    bx lr                        @return
+iAdrszSpace:          .int szSpace
+iAdriTabAdrDays2:     .int iTabAdrDays2
+/******************************************************************/
+/*     comparison character unicode                               */
+/******************************************************************/
+/* r0 contains address first string            */
+/* r1 contains address second string */
+/* r2 contains the character position to compare  */
+/* r0 return 0 if equal 1 if > -1 if < */
+/* r1 return character S1 size in octet if equal */
+/* r2 return character S2 size in octet */
+compareChar:
+    push {r3-r8,lr}              @ save  registers
+    ldrb r3,[r0,r2]
+    ldrb r4,[r1,r2]
+    cmp r3,r4                    @ compare first byte
+    movlt r0,#-1
+    movgt r0,#1
+    bne 100f
+    and r3,#0b11100000           @ 3 bytes ?
+    cmp r3,#0b11100000
+    bne 1f
+    add r2,#1
+    ldrb r3,[r0,r2]
+    ldrb r4,[r1,r2]
+    cmp r3,r4
+    movlt r0,#-1
+    movgt r0,#1
+    bne 100f
+    add r2,#1
+    ldrb r3,[r0,r2]
+    ldrb r4,[r1,r2]
+    cmp r3,r4
+    movlt r0,#-1
+    movgt r0,#1
+    bne 100f
+    mov r0,#0
+    mov r1,#3
+    b 100f
+1:
+    and r3,#0b11100000           @ 2 bytes ?
+    cmp r3,#0b11000000
+    bne 2f
+    add r2,#1
+    ldrb r3,[r0,r2]
+    ldrb r4,[r1,r2]
+    cmp r3,r4
+    movlt r0,#-1
+    movgt r0,#1
+    bne 100f
+    mov r0,#0
+    mov r1,#2
+    b 100f
+2:                              @ 1 byte
+    mov r0,#0
+    mov r1,#1
+
+100:
+    pop {r3-r8,lr}              @ restaur registers
+    bx lr                       @return
+/******************************************************************/
+/*     control load                                      */
+/******************************************************************/
+/* r0 contains string table           */
+/* r1 contains days number */
+displayListDays:
+    push {r1-r8,lr}              @ save  registers
+    mov r5,r0
+    mov r2,#0
+1:
+    cmp r2,r1
+    bgt 2f
+    ldr r0,[r5,r2,lsl #2]
+    bl affichageMess
+    ldr r0,iAdrszSpace
+    bl affichageMess
+    add r2,r2,#1
+    b 1b
+2:
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+100:
+    pop {r1-r8,lr}               @ restaur registers
+    bx lr                        @return
+/************************************/
+/* Strings case sensitive comparisons  */
+/************************************/
+/* r0 et r1 contains the address of strings */
+/* return 0 in r0 if equals */
+/* return -1 if string r0 < string r1 */
+/* return 1  if string r0 > string r1 */
+comparStrings:
+    push {r1-r4}             @ save des registres
+    mov r2,#0                @ counter
+1:
+    ldrb r3,[r0,r2]          @ byte string 1
+    ldrb r4,[r1,r2]          @ byte string 2
+    cmp r3,r4
+    movlt r0,#-1             @ small
+    movgt r0,#1              @ greather
+    bne 100f                 @ not equals
+    cmp r3,#0                @ 0 end string
+    moveq r0,#0              @ equal
+    beq 100f                 @ end string
+    add r2,r2,#1             @ else add 1 in counter
+    b 1b                     @ and loop
+100:
+    pop {r1-r4}
+    bx lr
+/******************************************************************/
+/*         insertion sort                                              */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains the first element    */
+/* r2 contains the number of element */
+insertionSort:
+    push {r1-r6,lr}                    @ save registers
+    mov r6,r0
+    add r3,r1,#1                       @ start index i
+1:                                     @ start loop
+    ldr r1,[r6,r3,lsl #2]              @ load value A[i]
+    sub r5,r3,#1                       @ index j
+2:
+    ldr r4,[r6,r5,lsl #2]              @ load value A[j]
+    mov r0,r4
+    bl comparStrings
+    cmp r0,#1                          @ compare value
+    bne 3f
+    add r5,#1                          @ increment index j
+    str r4,[r6,r5,lsl #2]              @ store value A[j+1]
+    subs r5,#2                         @ j = j - 1
+    bge 2b                             @ loop if j >= 0
+3:
+    add r5,#1                          @ increment index j
+    str r1,[r6,r5,lsl #2]              @ store value A[i] in A[j+1]
+    add r3,#1                          @ increment index i
+    cmp r3,r2                          @ end ?
+    blt 1b                             @ no -> loop
+
+100:
+    pop {r1-r6,lr}
+    bx lr
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

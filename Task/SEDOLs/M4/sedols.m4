@@ -1,0 +1,17 @@
+divert(-1)
+changequote(`[',`]')
+define([_bar],include(sedol.inp))
+define([eachlineA],
+   [ifelse(eval($2>0),1,
+      [$3(substr([$1],0,$2))[]eachline(substr([$1],incr($2)),[$3])])])
+define([eachline],[eachlineA([$1],index($1,[
+]),[$2])])
+define([_idx],
+   [index([0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ],substr($1,$2,1))])
+define([_wsum],
+   [eval(_idx($1,0)+_idx($1,1)*3+_idx($1,2)+_idx($1,3)*7+_idx($1,4)*3+_idx($1,5)*9)])
+define([checksum],
+   [$1[]eval((10-_wsum($1)%10)%10)
+])
+divert
+eachline(_bar,[checksum])

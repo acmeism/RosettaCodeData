@@ -1,0 +1,15 @@
+{for(n=1,100,
+  print(if(n%3,
+    if(n%5,
+      n
+    ,
+      "Buzz"
+    )
+  ,
+    if(n%5,
+      "Fizz"
+    ,
+      "FizzBuzz"
+    )
+  ))
+)}

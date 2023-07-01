@@ -1,0 +1,6 @@
+(defun pythagorean-triples (n)
+  (listc (list x y z)
+    (for x from 1 to n)
+    (for y from x to n)
+    (for z from y to n)
+    (when (= (+ (expt x 2) (expt y 2)) (expt z 2)))))

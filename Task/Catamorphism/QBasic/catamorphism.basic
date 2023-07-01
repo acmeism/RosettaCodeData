@@ -1,0 +1,34 @@
+DIM SHARED n(10)
+FOR i = 1 TO 10: n(i) = i: NEXT i
+
+FUNCTION FNMIN (a, b)
+IF (a < b) THEN FNMIN = a ELSE FNMIN = b
+END FUNCTION
+FUNCTION FNMAX (a, b)
+IF (a < b) THEN FNMAX = b ELSE FNMAX = a
+END FUNCTION
+
+FUNCTION cat# (cont, op$)
+temp = n(1)
+FOR i = 2 TO cont
+ IF op$ = "+" THEN temp = temp + n(i)
+ IF op$ = "-" THEN temp = temp - n(i)
+ IF op$ = "*" THEN temp = temp * n(i)
+ IF op$ = "/" THEN temp = temp / n(i)
+ IF op$ = "^" THEN temp = temp ^ n(i)
+ IF op$ = "max" THEN temp = FNMAX(temp, n(i))
+ IF op$ = "min" THEN temp = FNMIN(temp, n(i))
+ IF op$ = "avg" THEN temp = temp + n(i)
+NEXT i
+IF op$ = "avg" THEN temp = temp / cont
+cat = temp
+END FUNCTION
+
+PRINT "  +: "; " "; cat(10, "+")
+PRINT "  -: "; " "; cat(10, "-")
+PRINT "  *: "; " "; cat(10, "*")
+PRINT "  /: "; " "; cat(10, "/")
+PRINT "  ^: "; " "; cat(10, "^")
+PRINT "min: "; " "; cat(10, "min")
+PRINT "max: "; " "; cat(10, "max")
+PRINT "avg: "; " "; cat(10, "avg")

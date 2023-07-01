@@ -1,0 +1,48 @@
+* Pattern to match any number of digits
+              D = SPAN('0123456789')
+
+* Convert a dotted-decimal IP address to an integer
+              DEFINE('INET_ATON(Str),B3,B2,B1,B0')                   :(END_INET_ATON)
+INET_ATON     Str D . B3 '.' D . B2 '.' D . B1 '.' D . B0            :F(FRETURN)
+              INET_ATON = B3 * 16777216 + B2 * 65536 + B1 * 256 + B0 :(RETURN)
+END_INET_ATON
+
+* Convert an integer to dotted-decimal
+              DEFINE('INET_NTOA(Addr),Count,Byte')                   :(END_INET_NTOA)
+INET_NTOA     Count = 0
+N2ALOOP       Byte = REMDR(Addr,256)
+              Addr = (Addr - Byte) / 256
+              INET_NTOA = Byte '.' INET_NTOA
+              Count = Count + 1
+              LT(Count,4)                                            :S(N2ALOOP)
+              INET_NTOA '.' RPOS(0) = ''                             :(RETURN)
+END_INET_NTOA
+
+* Convert a CIDR range to canonical form
+            DEFINE('FIXCIDR(Cidr),IP,Net,In,Host,Count,Pow,Out,Bit') :(END_FIXCIDR)
+FIXCIDR     Cidr Arb . IP '/' D . Net                                :F(FRETURN)
+            In = INET_ATON(IP)
+            Host = 32 - Net
+
+* Compute result of treating all bits in the host part as 0
+            Out = 0
+            Count = 0
+            Pow = 1
+MASKLOOP    Bit = REMDR(In, 2)
+            In = (In - Bit) / 2
+            Out = GE(Count, Host) Out + Bit * Pow
+            Count = Count + 1
+            Pow = Pow * 2
+            LT(Count, 32)                                            :S(MASKLOOP)
+
+* Convert back to dotted-decimal
+            FIXCIDR = INET_NTOA(Out) '/' Net                         :(RETURN)
+END_FIXCIDR
+
+            OUTPUT = FIXCIDR('87.70.141.1/22')
+            OUTPUT = FIXCIDR('36.18.154.103/12')
+            OUTPUT = FIXCIDR('62.62.197.11/29')
+            OUTPUT = FIXCIDR('67.137.119.181/4')
+            OUTPUT = FIXCIDR('161.214.74.21/24')
+            OUTPUT = FIXCIDR('184.232.176.184/18')
+END

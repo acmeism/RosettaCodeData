@@ -1,0 +1,156 @@
+MODULE Anagrams;
+IMPORT Files,Out,In,Strings;
+CONST
+	MAXPOOLSZ = 1024;
+
+TYPE
+	String = ARRAY 80 OF CHAR;
+
+	Node = POINTER TO NodeDesc;
+	NodeDesc = RECORD;
+		count: INTEGER;
+		word: String;
+		desc: Node;
+		next: Node;
+	END;
+	
+	Pool = POINTER TO PoolDesc;
+	PoolDesc = RECORD
+		capacity,max: INTEGER;
+		words: POINTER TO ARRAY OF Node;
+	END;
+	
+	PROCEDURE InitNode(n: Node);
+	BEGIN
+		n^.count := 0;
+		n^.word := "";
+		n^.desc := NIL;
+		n^.next := NIL;
+	END InitNode;
+	
+	PROCEDURE Index(s: ARRAY OF CHAR;cap: INTEGER): INTEGER;
+	VAR
+		i,sum: INTEGER;
+	BEGIN
+		sum := 0;
+		FOR i := 0 TO  Strings.Length(s) DO
+			INC(sum,ORD(s[i]))
+		END;
+		RETURN sum MOD cap
+	END Index;
+	
+	PROCEDURE ISort(VAR s: ARRAY OF CHAR);
+	VAR
+        i, j: INTEGER;
+        t: CHAR;
+	BEGIN
+        FOR i := 0 TO Strings.Length(s) - 1 DO
+			j := i;
+			t := s[j];
+			WHILE (j > 0) & (s[j -1] > t) DO
+					s[j] := s[j - 1];
+					DEC(j)
+			END;
+			s[j] := t
+        END
+	END ISort;
+	
+	PROCEDURE SameLetters(x,y: ARRAY OF CHAR): BOOLEAN;
+	BEGIN
+        ISort(x);ISort(y);
+        RETURN (Strings.Compare(x,y) = 0)
+	END SameLetters;
+	
+	PROCEDURE InitPool(p:Pool);
+	BEGIN
+		InitPoolWith(p,MAXPOOLSZ);
+	END InitPool;
+	
+	PROCEDURE InitPoolWith(p:Pool;cap: INTEGER);
+	VAR
+		i: INTEGER;
+	BEGIN
+		p^.capacity := cap;
+		p^.max := 0;
+		NEW(p^.words,cap);
+		i := 0;
+		WHILE i < p^.capacity DO
+			p^.words^[i] := NIL;
+			INC(i);
+		END;
+	END InitPoolWith;
+	
+	PROCEDURE (p: Pool) Add(w: ARRAY OF CHAR);
+	VAR
+		idx: INTEGER;
+		iter,n: Node;
+	BEGIN
+		idx := Index(w,p^.capacity);
+		iter := p^.words^[idx];
+		NEW(n);InitNode(n);COPY(w,n^.word);
+		WHILE(iter # NIL) DO
+			IF SameLetters(w,iter^.word) THEN
+				INC(iter^.count);
+				IF iter^.count > p^.max THEN p^.max := iter^.count END;
+				n^.desc := iter^.desc;
+				iter^.desc := n;
+				RETURN
+			END;
+			iter := iter^.next
+		END;
+		ASSERT(iter = NIL);
+		n^.next := p^.words^[idx];p^.words^[idx] := n
+	END Add;
+	
+	PROCEDURE ShowAnagrams(l: Node);
+	VAR
+		iter: Node;
+	BEGIN
+		iter := l;
+		WHILE iter # NIL DO
+			Out.String(iter^.word);Out.String(" ");
+			iter := iter^.desc
+		END;
+		Out.Ln
+	END ShowAnagrams;
+	
+	PROCEDURE (p: Pool) ShowMax();
+	VAR
+		i: INTEGER;
+		iter: Node;
+	BEGIN
+		FOR i := 0 TO LEN(p^.words^) - 1 DO
+			IF p^.words^[i] # NIL THEN
+				iter := p^.words^[i];
+				WHILE iter # NIL DO
+					IF iter^.count = p^.max THEN
+						ShowAnagrams(iter);
+					END;
+					iter := iter^.next
+				END
+			END
+		END
+	END ShowMax;
+	
+	PROCEDURE DoProcess(fnm: ARRAY OF CHAR);
+	VAR
+		stdinBck,istream: Files.File;
+		line: String;
+		p: Pool;
+	BEGIN
+		istream := Files.Open(fnm,"r");
+		stdinBck := Files.stdin;
+		Files.stdin := istream;
+		NEW(p);InitPool(p);
+		WHILE In.Done DO
+			In.Line(line);
+			p.Add(line);
+		END;
+		Files.stdin := stdinBck;
+		Files.Close(istream);
+		p^.ShowMax();
+	END DoProcess;
+	
+BEGIN
+	DoProcess("unixdict.txt");
+END Anagrams.

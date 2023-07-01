@@ -1,0 +1,34 @@
+implement Epoch;
+
+include "sys.m"; sys: Sys;
+include "draw.m";
+include "daytime.m"; daytime: Daytime;
+	Tm: import daytime;
+
+Epoch: module {
+	init: fn(nil: ref Draw->Context, nil: list of string);
+};
+
+init(nil: ref Draw->Context, nil: list of string)
+{
+	sys = load Sys Sys->PATH;
+	daytime = load Daytime Daytime->PATH;
+
+	# Create a file containing a zero:
+	fd := sys->open("/tmp/0", Sys->OWRITE);
+	if(fd == nil) {
+		sys->fprint(sys->fildes(2), "Couldn't open /tmp/0 for writing: %r\n");
+		raise "fail:errors";
+	}
+	sys->fprint(fd, "0");
+	fd = nil; # Files with no references are closed immediately.
+
+	# Fork the namespace so as not to disturb the parent
+	# process's concept of time:
+	sys->pctl(Sys->FORKNS, nil);
+	# Bind that file over /dev/time:
+	sys->bind("/tmp/0", "/dev/time", Sys->MREPL);
+	
+	# Print the "current" date, now the epoch:
+	sys->print("%s\n", daytime->text(daytime->gmt(daytime->now())));
+}

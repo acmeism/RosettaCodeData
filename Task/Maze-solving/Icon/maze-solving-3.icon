@@ -1,0 +1,130 @@
+global showMice
+
+import Utils	# To get 'Args' singleton class
+
+procedure main(A)
+   Args(A)
+   if \Args().get("help","yes") then helpMesg()
+   showMice := Args().get("showmice","yes") # Show movements of all mice
+   mh := Args().get("rows") | 32            # Maze height (rows)
+   mw := Args().get("cols") | 48            # Maze width (columns)
+
+   mz := DisplayMaze(GenerateMaze(mh,mw))   # Build and show maze
+
+   QMouse(mz.maze,findStart(mz.maze),&null,0)   # Start first quantum mouse
+   waitForCompletion() # block until all quantum mice have finished
+
+   # Mark the best path into the maze and display it.
+   if showPath(mz.maze) then DisplayMazeSolution(mz) else write("No path found!")
+end
+
+procedure helpMesg()
+    write(&errout,"Usage: qSolve [--showmice] [--cols=C] [--rows=R]")
+    write(&errout,"\twhere:")
+    write(&errout,"\t\t--showmice # displays all mice paths as they search")
+    write(&errout,"\t\t--cols=C   # sets maze width to C (default 16) columns")
+    write(&errout,"\t\t--rows=R   # sets maze height to R (default 12) rows")
+    stop()
+end
+
+# A "Quantum-mouse" for traversing mazes. Each mouse lives for just one cell, but
+#   can spawn other mice to search from adjoining cells.
+
+global qMice, bestMouse, bestMouseLock, region, qMiceEmpty
+record Position(r,c)
+
+# Must match values used in maze generation!
+$define FINISH 64 # exit
+$define START  32 # entrance
+$define PATH  128
+$define SEEN   16 # bread crumbs for generator
+$define NORTH   8 # sides ...
+$define EAST    4
+$define SOUTH   2
+$define WEST    1
+$define EMPTY   0 # like new
+
+class QMouse(maze, loc, parent, len, val)
+
+   method getLoc(); return loc; end
+   method getParent(); return \parent; end
+   method getLen(); return len; end
+   method atEnd();   return EMPTY ~= iand(val, FINISH); end
+   method goNorth(); if EMPTY ~= iand(val,NORTH) then return visit(loc.r-1, loc.c); end
+   method goSouth(); if EMPTY ~= iand(val,SOUTH) then return visit(loc.r+1, loc.c); end
+   method goEast();  if EMPTY ~= iand(val,EAST)  then return visit(loc.r, loc.c+1); end
+   method goWest();  if EMPTY ~= iand(val,WEST)  then return visit(loc.r, loc.c-1); end
+
+   method visit(r,c)
+       critical region[r,c]: if EMPTY = iand(maze[r,c],SEEN) then {
+           if /bestMouse | (len <= bestMouse.getLen()) then { # Keep going?
+               mark(maze, r,c)
+               unlock(region[r,c])
+               return Position(r,c)
+               }
+           }
+   end
+
+initially (m, l, p, n)
+    initial {   # Construct critical region mutexes and completion condvar
+        qMice := mutex(set())
+        qMiceEmpty := condvar()
+        bestMouseLock := mutex()
+        region := list(*m)            # Minimize critical region size
+        every r := 1 to *m do region[r] := list(*m[1])
+        every !!region := mutex()
+        }
+    maze := m
+    loc := l
+    parent := p
+    len := n+1
+    val := maze[loc.r,loc.c] | fail   # Fail if outside maze
+    insert(qMice, self)
+    thread {
+        if atEnd() then {
+            critical bestMouseLock:
+                if /bestMouse | (len < bestMouse.getLen()) then bestMouse := self
+            }
+        else {         # Spawn more mice to look for finish
+            QMouse(maze, goNorth(), self, len)
+            QMouse(maze, goSouth(), self, len)
+            QMouse(maze, goEast(), self, len)
+            QMouse(maze, goWest(), self, len)
+            }
+
+        delete(qMice, self)
+        if *qMice=0 then signal(qMiceEmpty)
+        }
+end
+
+procedure mark(maze, r,c)
+    ior(maze[r,c],SEEN)
+    if \showMice then markCell(r,c,"grey",5)
+    return Position(r,c)
+end
+
+procedure clearMaze(maze)  # Clear out dregs from maze creation
+    every r := 1 to *maze & c := 1 to *maze[1] do  # remove breadcrumbs
+        maze[r,c] := iand(maze[r,c],NORTH+EAST+SOUTH+WEST+START+FINISH)
+end
+
+procedure findStart(maze)  # Anywhere in maze
+    clearMaze(maze)                                # Remove breadcrumbs
+    every r := 1 to *maze & c := 1 to *maze[1] do  # Locate START cell
+        if EMPTY ~= iand(maze[r,c],START) then return mark(maze, r,c)
+end
+
+procedure showPath(maze)
+    if path := \bestMouse then {   # Mark it in maze
+       repeat {
+           loc := path.getLoc()
+           maze[loc.r,loc.c] +:= PATH
+           path := \path.getParent() | break
+           }
+       return
+       }
+end
+
+procedure waitForCompletion()
+   critical qMiceEmpty: while *qMice > 0 do wait(qMiceEmpty)
+end

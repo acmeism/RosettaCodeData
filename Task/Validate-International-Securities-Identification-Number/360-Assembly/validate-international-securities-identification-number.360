@@ -1,0 +1,176 @@
+*        Validate ISIN             08/03/2019
+VALISIN  CSECT
+         USING  VALISIN,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         SAVE   (14,12)            save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R7,1               j=1
+       DO WHILE=(C,R7,LE,=A(NN))   do j=1 to hbound(tt)
+         LR     R1,R7              j
+         SLA    R1,4               ~
+         LA     R4,TT-16(R1)       @tt(j)
+         MVC    CC,0(R4)           cc=tt(j)
+         MVC    C,=CL28' '         c=' '
+         MVC    R,=CL28' '         r=' '
+         MVI    ERR,X'00'          err=false
+         MVC    LCC,=F'0'          lcc=0
+         LA     R1,L'CC            i=length(cc)
+LENTRIA  LA     R5,CC-1            @cc
+         AR     R5,R1              +i
+         CLI    0(R5),C' '         if cc[i]=' '
+         BE     LENTRIB            then iterate loop
+         ST     R1,LCC             lcc=lentrim(cc)
+         B      LENTRIC            leave loop
+LENTRIB  BCT    R1,LENTRIA         i--; if i<>0 then loop
+LENTRIC  L      R4,LCC             lcc
+       IF    CH,R4,EQ,=H'12' THEN  if lcc=12 then
+         MVC    LC,=F'0'           lc=0
+         MVC    WW,=CL28' '        ww=''
+         LA     R10,WW             @ww
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,LCC)      do i=1 to lcc
+         LA     R4,CC-1            @cc
+         AR     R4,R6              +i
+         MVC    CI(1),0(R4)        ci=substr(cc,i,1)
+         LA     R2,BASE36          @base36
+         LA     R3,L'BASE36        length(base36)
+         BAL    R14,INDEX          r0=index(base36,ci)
+       IF   LTR,R0,NZ,R0 THEN      if p<>0 then
+         LR     R1,R0                ip
+         BCTR   R1,0                 -1
+         XDECO  R1,XDEC              str(ip-1)
+         MVC    0(2,R10),XDEC+10     ww=ww||str(p-1)
+       ELSE     ,                  else
+         MVI    ERR,X'FF'            err=true
+       ENDIF    ,                  endif
+         LA     R10,2(R10)           @ww+=2
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         MVC    C,=CL28' '         c=''
+         LA     R8,WW              @ww
+         LA     R9,C               @c
+         LA     R10,0              length(c)
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,=A(L'WW)) do i=1 to length(ww)
+       IF   CLI,0(R8),NE,C' ' THEN   if ww[i]<>' ' then
+         MVC    0(1,R9),0(R8)          c=ww[i]
+         LA     R9,1(R9)               @c++
+         LA     R10,1(R10)             length(c)++
+       ENDIF    ,                    endif
+         LA     R8,1(R8)             @ww++
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         ST     R10,LC             lc=length(c)
+         LA     R6,1               i=1
+       DO WHILE=(CH,R6,LE,=H'2')   do i=1 to 2
+         LA     R4,CC-1              @cc
+         AR     R4,R6                +i
+         MVC    CI(1),0(R4)          ci=substr(cc,i,1)
+         LA     R2,ALPHA             @alpha
+         LA     R3,L'ALPHA           length(alpha)
+         BAL    R14,INDEX            r0=index(alpha,ci)
+       IF   LTR,R0,Z,R0 THEN         if index(alpha,ci)=0 then
+         MVI    ERR,X'FF'              err=true
+       ENDIF    ,                    endif
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         SR     R8,R8              i1=0
+         SR     R9,R9              i2=0
+       IF   CLI,ERR,EQ,X'00' THEN  if not err then
+         SR     R0,R0              0
+         L      R6,LC              i=lc
+         MVC    R,=CL28' '         r=''
+         LA     R10,C              @c
+         LA     R11,R-1            @r
+         A      R11,LC             @r=@r+length(strip((c))
+       DO WHILE=(CH,R6,GE,=H'1')    do i=lc to 1 step -1
+         MVC    0(1,R11),0(R10)      r[k]=c[i]
+         BCTR   R11,0                @r--
+         LA     R10,1(R10)           @c++
+         BCTR   R6,0                 i--
+       ENDDO    ,                  enddo i
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,LC)       do i=1 to lc step 2
+         LA     R4,R-1               @r
+         AR     R4,R6                +i
+         MVC    CI(1),0(R4)          ci=substr(r,i,1)
+         MVC    XDEC,=CL12' '        ~
+         MVC    XDEC(L'CI),CI        ci
+         XDECI  R2,XDEC              int(ci)
+         AR     R8,R2                i1=i1+int(ci)
+         LA     R6,2(R6)             i+=2
+       ENDDO    ,                  enddo i
+         LA     R6,2               i=2
+       DO WHILE=(C,R6,LE,LC)       do i=2 to lc step 2
+         LA     R4,R-1               @r
+         AR     R4,R6                +i
+         MVC    CI(1),0(R4)          ci=substr(r,i,1)
+         MVC    XDEC,=CL12' '        ~
+         MVC    XDEC(L'CI),CI        ci
+         XDECI  R10,XDEC             int(ci)
+         SLA    R10,1                ii=int(ci)*2
+       IF CH,R10,GE,=H'10' THEN       if ii>=10 then
+         SH     R10,=H'9'              ii=ii-9
+       ENDIF     ,                   endif
+         AR     R9,R10               i2=i2+ii
+         LA     R6,2(R6)             i++
+       ENDDO    ,                  enddo i
+         LR     R2,R8              i1
+         AR     R2,R9              +i2
+         XDECO  R2,XDEC               s=str(i1+i2)
+       IF CLI,XDEC+11,EQ,C'0' THEN if substr(s,length(s),1)='0' then
+         MVC    MSG,=CL6'OK'         msg='ok'
+       ELSE     ,                  else
+         MVC    MSG,=CL6'?err1'      msg='?1'
+       ENDIF    ,                  endif
+       ELSE     ,                  else
+         MVC    MSG,=CL6'?err2'      msg='?2'
+       ENDIF    ,                  endif
+       ELSE     ,                  else
+         MVC    MSG,=CL6'?err3'      msg='?3'
+       ENDIF    ,                  endif
+         XDECO  R7,XDEC            edit j
+         MVC    PG(2),XDEC+10      j
+         MVC    PG+3(16),CC        cc
+         MVC    PG+20(6),MSG       msg
+         XPRNT  PG,L'PG            print buffer
+         LA     R7,1(R7)           j++
+       ENDDO    ,                  enddo j
+         L      R13,4(0,R13)       restore previous savearea pointer
+         RETURN (14,12),RC=0       restore registers from calling sav
+MVCX     MVC    0(0,R4),0(R5)      pattern svc
+INDEX    SR     R0,R0              index(r2,ci) r3=len
+         LA     R1,1               k=1
+SINDEXA  CR     R1,R3              do k=1 to length(ca)
+         BH     SINDEXC              ~
+         CLC    0(1,R2),CI           if ca[k]=ci
+         BNE    SINDEXB              then iterate loop
+         LR     R0,R1                ii=k
+         B      SINDEXC              exit loop
+SINDEXB  LA     R2,1(R2)             @ca++
+         LA     R1,1(R1)             k++
+         B      SINDEXA            enddo
+SINDEXC  BR     R14                end index
+NN       EQU    (BASE36-TT)/16     number of items
+TT       DC     CL16'US0378331005',CL16'US0373831005'
+         DC     CL16'U50378331005',CL16'US03378331005'
+         DC     CL16'AU0000XVGZA3',CL16'AU0000VXGZA3'
+         DC     CL16'FR0000988040'
+BASE36   DC     CL36'0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+ALPHA    DC     CL26'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+ERR      DS     X                  error
+LCC      DS     F                  length of cc
+LC       DS     F                  length of c
+CI       DS     CL1
+CC       DS     CL16               current element of tt
+C        DS     CL28
+R        DS     CL28
+WW       DS     CL28
+MSG      DS     CL6                message
+PG       DC     CL80' '            buffer
+XDEC     DS     CL12               temp for xdeco and xdeci
+         REGEQU
+         END    VALISIN

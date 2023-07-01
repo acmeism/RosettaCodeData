@@ -1,0 +1,7 @@
+churchToNat(addAlt(three)(four))
+churchToNat(multAlt(three)(four))
+churchToNat(exptAlt(three)(four))
+churchToNat(exptAlt(four)(three))
+churchToNat(succ(four))
+churchToNat(succAlt(four))
+churchToNat(succAltAlt(four))

@@ -1,0 +1,5 @@
+try {
+  Print("%d\n", 10 / 0);
+} catch {
+  Print("Divide by zero");
+}

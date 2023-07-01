@@ -1,0 +1,319 @@
+/* ARM assembly Raspberry PI  or android 32 bits */
+/*  program notes.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+.equ BUFFERSIZE,   10000
+.equ READ,     3                          @ system call
+.equ WRITE,    4                          @ Linux syscall
+.equ OPEN,     5                          @ system call
+.equ CLOSE,    6                          @ system call
+.equ O_RDONLY, 0
+.equ O_RDWR,   0x0002                     @ open for reading and writing
+.equ O_APPEND, 0x400
+.equ O_CREAT,  0x40
+.equ GETTIME,  0x4e                       @ call system linux gettimeofday
+
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* example structure  time  */
+    .struct  0
+timeval_sec:                     @
+    .struct  timeval_sec + 4
+timeval_usec:                     @
+    .struct  timeval_usec + 4
+timeval_end:
+    .struct  0
+timezone_min:                     @
+    .struct  timezone_min + 4
+timezone_dsttime:                 @
+    .struct  timezone_dsttime + 4
+timezone_end:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szCarriageReturn:   .asciz "\n"
+szSpace:            .asciz " "
+szLibNoFile:        .asciz "no file notes.txt in this directory\n"
+szFileName:         .asciz "notes.txt"
+szMessAnoRead:      .asciz "Error read file \n"
+szMessAnoTime:      .asciz "Error call time \n"
+szMessAnoWrite:     .asciz "Error file write \n"
+szMessDate:         .asciz " @/@/@  @:@:@ \n"  @ message time
+.align 4
+tbDayMonthYear:    .int  0,  31,  60,  91, 121, 152, 182, 213, 244, 274, 305, 335
+                   .int 366, 397, 425, 456, 486, 517, 547, 578, 609, 639, 670, 700
+                   .int 731, 762, 790, 821, 851, 882, 912, 943, 974,1004,1035,1065
+                   .int 1096,1127,1155,1186,1216,1247,1277,1308,1339,1369,1400,1430
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+stTVal:           .skip timeval_end
+stTZone:          .skip timezone_end
+sBuffer:          .skip BUFFERSIZE
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 @ entry of program
+    mov fp,sp                         @ stack address
+    ldr r4,[fp]                       @ load number of parameters command line
+    cmp r4,#1                         @ >1  insertion text
+    bgt 10f
+    ldr r0,iAdrszFileName             @ file name
+    mov r1,#O_RDONLY                  @ flags
+    mov r2,#0                         @ mode in octal
+    mov r7,#OPEN                      @ oen file, create if not exist
+    svc 0
+    cmp r0,#0                         @ error open
+    ble 99f                           @ file no exists ?
+    mov r8,r0                         @ save FD                                                      @ if exist display text
+    ldr r1,iAdrsBuffer                @ buffer address
+    ldr r2,#iBufferSize               @ buffersize
+    mov r7, #READ                     @ read file
+    svc 0
+    cmp r0,#0                         @ error read ?
+    blt 98f
+    ldr r0,iAdrsBuffer                @ buffer address
+    bl affichageMess                  @ and display
+    b 50f
+10:                                   @ multiple parameters in command line
+    ldr r0,iAdrszFileName             @ file name
+    ldr r1,iFlag                      @ flags
+    mov r2,#0644                      @ mode in octal
+    mov r7,#OPEN                      @ open file, create if not exist
+    svc 0
+    cmp r0,#0                         @ error open
+    ble 96f
+    mov r8,r0                         @ save FD
+    ldr r0,iAdrstTVal
+    ldr r1,iAdrstTZone
+    mov r7,#GETTIME                   @ call system function time
+    svc 0
+    cmp r0,#-1                        @ error ?
+    beq 97f
+    ldr r0,iAdrstTVal
+    bl formatTime                     @ format date and hour
+    mov r1,r0
+    mov r2,#0
+11:                                   @ compute length of time message
+    ldrb r3,[r1,r2]
+    cmp r3,#0
+    beq 12f
+    add r2,#1
+    b 11b
+12:
+    mov r0,r8                         @ write time message
+    mov r7,#WRITE
+    svc 0
+    cmp r0,#0                         @ error ?
+    ble 96f
+    mov r5,#2                         @ start parameters command line
+13:
+    mov r0,r8                         @ file FD
+    ldr r1,[fp,r5,lsl #2]             @ load parameter address
+    mov r2,#0
+14:                                   @ compute parameter length
+    ldrb r3,[r1,r2]
+    cmp r3,#0
+    beq 15f
+    add r2,#1
+    b 14b
+15:                                   @ write parameter
+    mov r7,#WRITE
+    svc 0
+    cmp r0,#0                         @ error ?
+    ble 96f
+    mov r0,r8                         @ file FD
+    ldr r1,iadrszSpace                @ write a space betwin parameters
+    mov r2,#1
+    mov r7,#WRITE
+    svc 0
+    add r5,#1                         @ increment indixe
+    cmp r5,r4                         @ parameters maxi ?
+    ble 13b                           @ no -> loop
+    mov r0,r8
+    ldr r1,iAdrszCarriageReturn       @ write line end
+    mov r2,#1
+    mov r7,#WRITE
+    svc 0
+
+50:                                   @ close the file
+    mov r0,r8
+    mov r7, #CLOSE
+    svc 0
+    b 100f
+
+96:                                   @ error write
+    ldr r0,iAdrszMessAnoWrite
+    bl affichageMess
+    b 100f
+97:                                   @ error function time
+    ldr r0,iAdrszMessAnoTime
+    bl affichageMess
+    b 100f
+98:                                   @ error read
+    ldr r0,iAdrszMessAnoRead
+    bl affichageMess
+    b 100f
+
+99:                                   @ display message no file in this directory
+    ldr r0,iAdrszLibNoFile
+    bl affichageMess
+100:                                  @ standard end of the program
+    mov r0, #0                        @ return code
+    mov r7, #EXIT                     @ request to exit program
+    svc #0                            @ perform the system call
+
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrsZoneConv:            .int sZoneConv
+iAdrszFileName:           .int szFileName
+iAdrszLibNoFile:          .int szLibNoFile
+iAdrsBuffer:              .int sBuffer
+iBufferSize:              .int BUFFERSIZE
+iAdrszMessAnoRead:        .int szMessAnoRead
+iAdrszMessAnoTime:        .int szMessAnoTime
+iAdrszMessAnoWrite:       .int szMessAnoWrite
+iFlag:                    .int O_RDWR|O_APPEND|O_CREAT
+iAdrstTVal:               .int stTVal
+iAdrstTZone:              .int stTZone
+iadrszSpace:              .int szSpace
+/***************************************************/
+/*      formatting time area                       */
+/***************************************************/
+// r0 contains time area
+// r0 return address result string
+formatTime:
+    push {r2-r12,lr}               @ save  registers
+    ldr r1,[r0,#timeval_sec]       @ timestemp in second
+    ldr r2,iSecJan2020
+    sub r0,r1,r2                   @ total secondes to 01/01/2020
+    mov r1,#60
+    bl division
+    mov r0,r2
+    mov r6,r3                      @ compute secondes
+    mov r1,#60
+    bl division
+    mov r7,r3                      @ compute minutes
+    mov r0,r2
+    mov r1,#24
+    bl division
+    mov r8,r3                      @ compute hours
+    mov r0,r2
+    mov r11,r0
+    mov r1,#(365 * 4 + 1)
+    bl division
+    lsl r9,r2,#2                   @ multiply by 4 = year1
+    mov r1,#(365 * 4 + 1)
+    mov r0,r11
+    bl division
+    mov r10,r3
+    ldr r1,iAdrtbDayMonthYear
+    mov r2,#3
+    mov r3,#12
+1:
+    mul r11,r3,r2
+    ldr r12,[r1,r11,lsl #2]         @ load days by year
+    cmp r10,r12
+    bge 2f
+    sub r2,r2,#1
+    cmp r2,#0
+    bne 1b
+2:                                 @ r2 = year2
+    mov r5,#11
+    mul r4,r3,r2
+    lsl r4,#2
+    add r4,r1
+3:
+    ldr r12,[r4,r5,lsl #2]         @ load days by month
+    cmp r10,r12
+    bge 4f
+    subs r5,r5,#1
+    bne 3b
+4:                                 @ r5 = month - 1
+    mul r11,r3,r2
+    add r11,r5
+    ldr r1,iAdrtbDayMonthYear
+    ldr r3,[r1,r11,lsl #2]
+    sub r0,r10,r3
+
+    add r0,r0,#1                   @ final compute day
+    ldr r1,iAdrsZoneConv
+    bl conversion10                @ this function do not zero final
+    mov r4,#0                      @ store zero final
+    strb r4,[r1,r0]
+    ldr r0,iAdrszMessDate
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc          @ insert result at first @ character
+    mov r3,r0
+    add r0,r5,#1                   @ final compute month
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r4,#0                      @ store zero final
+    strb r4,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc          @ insert result at next @ character
+    mov r3,r0
+    ldr r11,iYearStart
+    add r0,r9,r11
+    add r0,r0,r2                   @ final compute year = 2020 + year1 + year2
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r4,#0                      @ store zero final
+    strb r4,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc          @ insert result at next @ character
+    mov r3,r0
+    mov r0,r8                      @ hours
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r4,#0                      @ store zero final
+    strb r4,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc          @ insert result at next @ character
+    mov r3,r0
+    mov r0,r7                      @ minutes
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r4,#0                      @ store zero final
+    strb r4,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc          @ insert result at next @ character
+    mov r3,r0
+    mov r0,r6                      @ secondes
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r4,#0                      @ store zero final
+    strb r4,[r1,r0]
+    mov r0,r3
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc          @ insert result at next @ character
+
+100:
+    pop {r2-r12,pc}              @ restaur registers
+iAdrszMessDate:           .int szMessDate
+iSecJan2020:              .int 1577836800
+iAdrtbDayMonthYear:       .int tbDayMonthYear
+iYearStart:               .int 2020
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

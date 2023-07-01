@@ -1,0 +1,25 @@
+(define (hamming)
+  (define (foldl f z l)
+    (define (foldls zs ls)
+      (if (null? ls) zs (foldls (f zs (car ls)) (cdr ls))))
+    (foldls z l))
+  (define (merge a b)
+    (if (null? a) b
+      (let ((x (car a)) (y (car b)))
+        (if (< x y) (cons x (delay (merge (force (cdr a)) b)))
+                    (cons y (delay (merge a (force (cdr b)))))))))
+  (define (smult m s) (cons (* m (car s)) ;; equiv to map (* m) s; faster
+             (delay (smult m (force (cdr s))))))
+  (define (u s n) (letrec ((a (merge s (smult n (cons 1 (delay a)))))) a))
+  (cons 1 (delay (foldl u '() '(5 3 2)))))
+
+;;; test...
+(define (stream-take->list n strm)
+  (if (= n 0) (list) (cons (car strm)
+    (stream-take->list (- n 1) (force (cdr strm))))))
+(define (stream-ref strm nth)
+  (do ((nxt strm (force (cdr nxt))) (cnt 0 (+ cnt 1)))
+      ((>= cnt nth) (car nxt))))
+(display (stream-take->list 20 (hamming))) (newline)
+(display (stream-ref (hamming) (- 1691 1))) (newline)
+(display (stream-ref (hamming) (- 1000000 1))) (newline)

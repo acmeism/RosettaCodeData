@@ -1,0 +1,10 @@
+#lang lazy
+(define nats (cons 1 (map add1 nats)))
+(define (sift n l) (filter (λ(x) (not (zero? (modulo x n)))) l))
+(define (when-bigger n l f)
+  (if (< (car l) n) (cons (car l) (when-bigger n (cdr l) f)) (f l)))
+(define (sieve l ps)
+  (cons (car l) (when-bigger (* (car ps) (car ps)) (cdr l)
+                             (λ(t) (sieve (sift (car ps) t) (cdr ps))))))
+(define primes (sieve (cdr nats) primes))
+(!! (take 25 primes))

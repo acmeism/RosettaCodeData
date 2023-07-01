@@ -1,0 +1,118 @@
+type Expr = Bin(op, Expr left, Expr right) or Literal(Float val)
+    with Lookup
+
+type Token(val, Char kind) with Lookup
+func Token.ToString() => this.val.ToString()
+
+func tokenize(str) {
+    func isSep(c) =>
+        c is '+' or '-' or '*' or '/' or ' ' or '\t' or '\n' or '\r' or '(' or ')' or '\0'
+
+    var idx = -1
+    let len = str.Length()
+    let tokens = []
+
+    func next() {
+        idx += 1
+        return '\0' when idx >= len
+        str[idx]
+    }
+
+    while true {
+        let c = next()
+
+        match c {
+            '\0' => { break },
+            '+' => tokens.Add(Token(c, '+')),
+            '-' => tokens.Add(Token(c, '-')),
+            '*' => tokens.Add(Token(c, '*')),
+            '/'  => tokens.Add(Token(c, '/')),
+            '(' => tokens.Add(Token(c, '(')),
+            ')' => tokens.Add(Token(c, ')')),
+            _ => {
+                let i = idx
+                while !isSep(next()) { }
+                idx -= 1
+                tokens.Add(Token(Float.Parse(str[i..idx]), 'F'))
+            }
+        }
+    }
+
+    tokens
+}
+
+func parse(tokens) {
+    var idx = -1
+    let len = tokens.Length()
+    let eol = Token(val: nil, kind: 'E')
+    func pop() {
+        idx += 1
+        return eol when idx == len
+        tokens[idx]
+    }
+    func peek() {
+        let t = pop()
+        idx -=1
+        t
+    }
+    func expect(kind) {
+        peek().kind == kind
+    }
+    var add_or_sub1
+
+    func literal() {
+        return false when !expect('F')
+        Expr.Literal(pop().val)
+    }
+
+    func group() {
+        return false when !expect('(')
+        pop()
+        var ret = add_or_sub1()
+        throw "Invalid group" when !expect(')')
+        pop()
+        ret
+    }
+
+    func mul_or_div() {
+        var fst = group()
+        fst = literal() when !fst
+        return fst when !expect('*') && !expect('/')
+        let op = pop().val
+        var snd = group()
+        snd = literal() when !snd
+        Expr.Bin(op, fst, snd)
+    }
+
+    func add_or_sub() {
+        let fst = mul_or_div()
+        return fst when !expect('+') && !expect('-')
+        let op = pop().val
+        let snd = mul_or_div()
+        Expr.Bin(op, fst, snd)
+    }
+    add_or_sub1 = add_or_sub
+
+    add_or_sub()
+}
+
+func exec(ast) {
+    match ast {
+        Bin(op, left, right) => {
+            return exec(left) + exec(right) when op == '+'
+            return exec(left) - exec(right) when op == '-'
+            return exec(left) * exec(right) when op == '*'
+            return exec(left) / exec(right) when op == '/'
+        },
+        Literal(value) => value
+    }
+}
+
+func eval(str) {
+    let tokens = tokenize(str)
+    let ast = parse(tokens)
+    exec(ast)
+}
+
+print( eval("(1+33.23)*7") )
+print( eval("1+33.23*7") )

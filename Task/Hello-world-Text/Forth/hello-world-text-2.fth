@@ -1,0 +1,1 @@
+: goodbye ( -- )   ." Hello world!" CR ;

@@ -1,0 +1,93 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program terminalSize64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ TIOCGWINSZ,   0x5413
+.equ IOCTL,        0x1D  // Linux syscall
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure terminal size */
+    .struct  0
+term_s_lines:                    // input modes
+    .struct  term_s_lines + 2
+term_s_cols:                    // output modes
+    .struct  term_s_cols + 2
+term_s_filler:                    // control modes
+    .struct  term_s_filler + 12
+term_fin:
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessStartPgm:            .asciz "Program start \n"
+szMessEndPgm:              .asciz "Program normal end.\n"
+szMessResult:              .asciz "Terminal lines : @  cols : @ \n"
+szMessErreur:              .asciz "\033[31mError IOCTL.\n"
+szCarriageReturn:          .asciz "\n"
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+.align 4
+sZoneConv:         .skip 24
+stTerminal:        .skip term_fin      // structure terminal
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessStartPgm                   //display start message
+    bl affichageMess
+
+     /* read terminal dimensions */
+    mov x0,STDIN                   // input console
+    mov x1,TIOCGWINSZ              // code IOCTL
+    ldr x2,qAdrstTerminal          // structure address
+    mov x8,IOCTL                   // call system Linux
+    svc 0
+    cbnz x0,98f                    // error ?
+
+    ldr x2,qAdrstTerminal
+    ldrh w0,[x2,term_s_lines]      // load two bytes
+    ldr x1,qAdrsZoneConv
+    bl conversion10                // and decimal conversion
+    ldr x0,qAdrszMessResult
+    bl strInsertAtChar             // and insertion in message
+    mov x5,x0                      // save address of new message
+    ldrh w0,[x2,term_s_cols]       // load two bytes
+    ldr x1,qAdrsZoneConv
+    bl conversion10                // and decimal conversion
+    mov x0,x5                      // restaur address of message
+    bl strInsertAtChar             // and insertion in message
+    bl affichageMess
+
+    ldr x0,qAdrszMessEndPgm        //display end message
+    bl affichageMess
+    b 100f
+ 98:                               // error display
+    ldr x0,qAdrszMessErreur
+    bl affichageMess
+    mov x0,-1
+100:                                            //standard end of the program
+    mov x0,0                                    //return code
+    mov x8,EXIT                                 //request to exit program
+    svc 0                                       //perform system call
+qAdrszMessStartPgm:        .quad szMessStartPgm
+qAdrszMessEndPgm:          .quad szMessEndPgm
+qAdrszMessErreur:          .quad szMessErreur
+qAdrszCarriageReturn:      .quad szCarriageReturn
+qAdrstTerminal:            .quad stTerminal
+qAdrszMessResult:          .quad szMessResult
+qAdrsZoneConv:             .quad sZoneConv
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

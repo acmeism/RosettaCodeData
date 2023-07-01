@@ -1,0 +1,70 @@
+{{stub}}
+{{language
+|hopl=no
+}}
+{{assembler language}}
+[[Category:Assembly]]
+
+
+==Registers==
+MIPS has a whopping 32 registers. Most of them are technically general purpose but calling conventions dictate what each should be used for. Unlike most assembly languages, where you have to remember what the calling conventions are, MIPS assemblers typically give the registers abbreviated names that imply how to use them. For example, <code>$v0</code> and <code>$v1</code> are the return values of functions, and <code>$a0</code> through <code>$a3</code> are function arguments. While a frame pointer does exist, having four registers dedicated to passing function arguments means you won't have to twiddle around with stack frames nearly as much as you would on other CPUs.
+
+==RISC CPU==
+MIPS is a <b>R</b>educed '''I'''nstruction '''S'''et '''C'''omputer architecture, which means that it has fewer instructions than an architecture like [[x86 Assembly]], in exchange for more registers and quicker overall processing. As with most RISC CPUs, all instructions are the same size, in this case, 32 bit. Unfortunately, this poses a problem: How do you encode an instruction like <code>li $t0,0x12345678</code> into 32 bits, where the instruction itself has a 32-bit operand? Well, you can't. Like ARM, there are some numbers that are too big for MIPS to load in a single instruction. 
+<lang mips>li t0,0xFFFFFFFF ;this won't compile as the operand is too large.</lang>
+Instead you'll have to do a little trickery:
+<lang mips>li t0, 0
+subiu t0,1</lang>
+
+==Alignment==
+Unlike other RISC CPUs, MIPS actually <i>can</i> load data from unaligned memory without faulting. However, it can't use the normal <code>LW</code> and <code>SW</code> commands in order to do so. It should be noted that this only applies to data; instructions do need to be 32-bit aligned at all times. Most assemblers have an <code>.align</code> directive that can do the job easily.
+
+==Pseudo-instructions==
+MIPS has a form of "hardware macros" that help out with tasks that it can't do alone. It has a special register that exists solely for the execution of these macros, which is not usable by the programmer directly. Assemblers will generally let you use these "pseudo-instructions" as if they were real instructions, even if they technically don't exist. Knowing what instructions are "real" and which ones aren't usually doesn't matter much, since you won't be doing self-modifying code on the MIPS anyway (for reasons we'll get into later)
+
+==Bi-Endian==
+MIPS's endianness is not set in stone like the x86 or Motorola 68000. Different MIPS CPUs can have different endianness. For example, the PlayStation 1's CPU is little-endian, whereas the Nintendo 64 is big-endian.
+
+==Out-of-Order Execution==
+MIPS uses an instruction pipeline, which means that while an instruction is finishing up, the one after it is currently being executed. 8-bit CPUs, and some early 16-bit CPUs didn't have pipelining like this. On those machines, the only instruction being executed is the current one, and anything after it may as well not exist. This is not the case with MIPS, as it starts executing the next instruction before the current one finishes. This is very common for most CPUs today, as it makes the CPU much faster. However, pipelining fundamentally changes how branches must be handled.
+
+===Load Delay Slots===
+This is only a concern on the first generation of MIPS hardware. When loading a value from memory, the register that is loaded with the value won't actually have it by the time the next instruction has already been executed. The way around this is to place a <code>NOP</code> after the load, or alternatively, an instruction that doesn't depend on the new value of that register. 
+
+<lang mips>lw t0,(a0)
+addiu t0,1  ;when this instruction is executed, t0 hasn't updated yet with its value from the previous instruction.</lang>
+
+The Nintendo 64 doesn't have to worry about load delay slots, but the PlayStation 1 does, therefore care must be taken when programming for that system. (Chances are you're programming in C anyway, which would take care of all this for you, but still.)
+
+===Branch Delay Slots===
+Branch delay slots affect all versions of MIPS. This is the phenomenon where the instruction immediately after a branch is actually executed <i>before</i> the branch takes place. 
+<lang mips>jal PrintString
+addiu $a0,1 ;once the program counter becomes the address of PrintString, this instruction has already finished.</lang>
+On a "normal" CPU with no pipeline, the instruction after a call is not executed whatsoever until after it returns.
+
+This would have the same outcome as the following, except the above version is faster than this one:
+<lang mips>addiu $a0,1
+jal PrintString
+nop</lang>
+
+Occasionally you'll be able to use the scenario like the first one to your advantage; however, you can guarantee that your code is executed correctly (albeit slightly inefficiently) if you use a <code>nop</code> after every branch or function call.
+<lang mips>jal foo
+nop
+jal bar
+nop</lang>
+
+Most assemblers will refuse to allow your code to compile if certain instructions are in the branch delay slot. A branch delay slot cannot contain a branch.
+<lang mips>bne $t0,$t1,skip
+jal DoThing ;this can't be in a branch delay slot, and therefore won't compile.
+skip:</lang>
+
+Placing a <tt>nop</tt> in the slot instead will fix this.
+<lang mips>bne $t0,$t1,skip
+nop  ;branch delay slot
+jal DoThing
+skip:</lang>
+
+==See Also==
+* [[wp:MIPS_architecture|MIPS architecture]]
+* [https://en.m.wikibooks.org/wiki/N64_Programming/CPU_overview Overview of N64 Architecture]
+* [https://www.chibialiens.com/mips/ A multiplatform tutorial of MIPS Assembly programming with examples and downloadable dev tools]

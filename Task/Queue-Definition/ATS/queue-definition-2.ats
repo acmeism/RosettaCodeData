@@ -1,0 +1,208 @@
+(*------------------------------------------------------------------*)
+(*
+
+  The following implementation prevents us from trying to dequeue
+  from an empty queue. A program that tries to do so cannot be
+  compiled.
+
+  However, it does not prove there are no buffer overruns.
+
+  It contains much embedded C code, for which I used the quick and
+  dirty "$extfcall" method.
+
+*)
+(*------------------------------------------------------------------*)
+
+#define ATS_DYNLOADFLAG 0
+
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+
+(* For the demonstration, let us set BUFSIZE_INITIAL to the minimum
+   possible. If you try setting it any lower, though, you cannot
+   compile the program. *)
+#define BUFSIZE_INITIAL 2
+
+prval _ = prop_verify {2 <= BUFSIZE_INITIAL} ()
+
+datatype queue_t (t : t@ype+,
+                  n : int) =
+| queue_t_empty (t, 0) of (size_t, ptr)
+| {1 <= n}
+  queue_t_nonempty (t, n) of
+    (size_t, ptr, size_t n, size_t, size_t)
+
+fn
+queue_t_new {t : t@ype}
+            () : queue_t (t, 0) =
+  queue_t_empty (i2sz 0, the_null_ptr)
+
+fn
+queue_t_is_empty
+          {n : int}
+          {t : t@ype}
+          (q : queue_t (t, n)) :
+    [b : bool | b == (n == 0)]
+    bool b =
+  case+ q of
+  | queue_t_empty _ => true
+  | queue_t_nonempty _ => false
+
+fn {t : t@ype}
+queue_t_enqueue
+          {n : int}
+          (q : queue_t (t, n),
+           x : t) :
+    [m : int | 1 <= m; m == n + 1]
+    queue_t (t, m) =
+  let
+    macdef tsz = sizeof<t>
+    macdef zero = i2sz 0
+    macdef one = i2sz 1
+    var xvar = x
+    val px = addr@ xvar
+  in
+    case+ q of
+    | queue_t_empty (bufsize, pbuf) =>
+      if bufsize = zero then
+        let
+          val bufsize = i2sz BUFSIZE_INITIAL
+          val pbuf =
+            $extfcall (ptr, "ATS_MALLOC", bufsize * tsz)
+          val _ = $extfcall (ptr, "memcpy", pbuf, px, tsz)
+        in
+          queue_t_nonempty (bufsize, pbuf, one, zero, one)
+        end
+      else
+        let
+          val _ = $extfcall (ptr, "memcpy", pbuf, px, tsz)
+        in
+          queue_t_nonempty (bufsize, pbuf, one, zero, one)
+        end
+    | queue_t_nonempty (bufsize, pbuf, n, ihead, itail) =>
+      if n = bufsize then
+        let
+          (* Resize the buffer. *)
+          val bsize = i2sz 2 * bufsize
+          val _ = assertloc (itail = ihead)   (* Sanity check. *)
+          val _ = assertloc (bufsize < bsize) (* Overflow? *)
+          val p = $extfcall (ptr, "ATS_MALLOC", bsize * tsz)
+          val _ = $extfcall (ptr, "memcpy", p,
+                             ptr_add<t> (pbuf, ihead),
+                             (bufsize - ihead) * tsz)
+          val _ = $extfcall (ptr, "memcpy",
+                             ptr_add<t> (p, bufsize - ihead),
+                             pbuf, ihead * tsz)
+          val _ = $extfcall (ptr, "memcpy", ptr_add<t> (p, n),
+                             px, tsz)
+        in
+          queue_t_nonempty (bsize, p, succ n, zero, succ n)
+        end
+      else
+        let
+          val _ = $extfcall (ptr, "memcpy", ptr_add<t> (pbuf, itail),
+                             px, tsz)
+          val itail = (succ itail) mod bufsize
+        in
+          queue_t_nonempty (bufsize, pbuf, succ n, ihead, itail)
+        end
+  end
+
+fn {t : t@ype}
+queue_t_dequeue
+          {n : int | 1 <= n}
+          (q : queue_t (t, n)) :
+    [m : int | m == n - 1]
+    @(t, queue_t (t, m)) =
+  let
+    macdef tsz = sizeof<t>
+    macdef zero = i2sz 0
+    macdef one = i2sz 1
+    var xvar : t
+    val px = addr@ xvar
+    val queue_t_nonempty (bufsize, pbuf, n, ihead, itail) = q
+    val _ = $extfcall (ptr, "memcpy", px, ptr_add<t> (pbuf, ihead),
+                       tsz)
+    val ihead = (succ ihead) mod bufsize
+    val x = $UNSAFE.cast{t} xvar
+  in
+    if n = one then
+      @(x, queue_t_empty (bufsize, pbuf))
+    else
+      @(x, queue_t_nonempty (bufsize, pbuf, pred n, ihead, itail))
+  end
+
+(*------------------------------------------------------------------*)
+(* An example: a queue of strings. *)
+
+vtypedef strq_t (n : int) = queue_t (string, n)
+
+fn
+strq_t_new () : strq_t 0 =
+  queue_t_new ()
+
+fn {}                  (* A parameterless template, for efficiency. *)
+strq_t_is_empty {n : int} (q : strq_t n) :
+    [is_empty : bool | is_empty == (n == 0)] bool is_empty =
+  queue_t_is_empty q
+
+fn
+strq_t_enqueue {n : int} (q : strq_t n, x : string) :
+    [m : int | 1 <= m; m == n + 1] strq_t m =
+  queue_t_enqueue<string> (q, x)
+
+fn (* Impossible to...    VVVVVV   ...call with an empty queue. *)
+strq_t_dequeue {n : int | 1 <= n} (q : strq_t n) :
+    [m : int | 0 <= m; m == n - 1] @(string, strq_t m) =
+  queue_t_dequeue<string> q
+
+overload strq with strq_t_new
+overload iseqz with strq_t_is_empty
+overload << with strq_t_enqueue
+overload pop with strq_t_dequeue
+
+implement
+main0 () =
+  {
+    val q = strq ()
+    val _ = println! ("val q = strq ()")
+    val _ = println! ("iseqz q = ", iseqz q)
+    val _ = println! ("val q = q << \"one\" << \"two\" << \"three\"")
+    val q = q << "one" << "two" << "three"
+    val _ = println! ("val q = q << \"ett\" << \"två\" << \"tre\"")
+    val q = q << "ett" << "två" << "tre"
+    val _ = println! ("iseqz q = ", iseqz q)
+    val _ = println! ("val (x, q) = pop q")
+    val (x, q) = pop q
+    val _ = println! ("x = ", x)
+    val _ = println! ("val (x, q) = pop q")
+    val (x, q) = pop q
+    val _ = println! ("x = ", x)
+    val _ = println! ("val q = q << \"four\"")
+    val q = q << "four"
+    val _ = println! ("val (x, q) = pop q")
+    val (x, q) = pop q
+    val _ = println! ("x = ", x)
+    val _ = println! ("val (x, q) = pop q")
+    val (x, q) = pop q
+    val _ = println! ("x = ", x)
+    val _ = println! ("val q = q << \"fyra\"")
+    val q = q << "fyra"
+    val _ = println! ("val (x, q) = pop q")
+    val (x, q) = pop q
+    val _ = println! ("x = ", x)
+    val _ = println! ("val (x, q) = pop q")
+    val (x, q) = pop q
+    val _ = println! ("x = ", x)
+    val _ = println! ("val (x, q) = pop q")
+    val (x, q) = pop q
+    val _ = println! ("x = ", x)
+    val _ = println! ("val (x, q) = pop q")
+    val (x, q) = pop q
+    val _ = println! ("x = ", x)
+    val _ = println! ("iseqz q = ", iseqz q)
+    //val (x, q) = pop q  // If you uncomment this you cannot compile!
+  }
+
+(*------------------------------------------------------------------*)

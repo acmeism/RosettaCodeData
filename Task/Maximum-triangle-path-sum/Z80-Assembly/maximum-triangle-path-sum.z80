@@ -1,0 +1,403 @@
+	;
+	; Find maximum triangle path sum using Z80 assembly language
+	;
+	; Runs under CP/M 3.1 on YAZE-AG-2.51.2 Z80 emulator
+	; Assembled with zsm4 on same emulator/OS, uses macro capabilities of said assembler
+	; Created with vim under Windows
+	;
+	; Thanks to https://wikiti.brandonw.net for the idea for the conversion routine hl -> decimal ASCII
+	;
+	;
+	; 2023-04-28 Xorph
+	;
+
+	;
+	; Useful definitions
+	;
+
+	bdos	equ 05h		; Call to CP/M BDOS function
+	strdel	equ 6eh		; Set string delimiter
+	wrtstr	equ 09h		; Write string to console
+
+	nul	equ 00h		; ASCII control characters
+	cr	equ 0dh
+	lf	equ 0ah
+
+	cnull	equ '0'		; ASCII character constants
+
+	trisize	equ 171		; Number of elements in triangle, must be counted manually - elements are 16 bit words
+
+	;
+	; Macros for BDOS calls
+	;
+
+setdel 	macro	char		; Set string delimiter to char
+	ld	c,strdel
+	ld	e,char
+	call	bdos
+	endm
+
+print 	macro	msg		; Output string to console
+	ld	c,wrtstr
+	ld	de,msg
+	call	bdos
+	endm
+
+newline	macro			; Print newline
+	ld	c,wrtstr
+	ld	de,crlf
+	call	bdos
+	endm
+
+pushall	macro			; Save all registers to stack
+	push	af
+	push	bc
+	push	de
+	push	hl
+	push	ix
+	push	iy
+	endm
+
+popall	macro			; Recall all registers from stack
+	pop	iy
+	pop	ix
+	pop	hl
+	pop	de
+	pop	bc
+	pop	af
+	endm
+
+	;
+	; =====================
+	; Start of main program
+	; =====================
+	;
+
+	cseg
+
+	;
+	; The total number of elements in a triangle with N rows is the sum of the numbers 1..N, and we need to
+	; determine N for the given number of elements (trisize from above).
+	; Since the Z80 has no multiplication instruction, we can not use the Gauss formula N * (N + 1) / 2. Instead, we
+	; just sum up all the numbers beginning with 1, until we exceed the number of elements.
+	;
+
+	ld	a,trisize	; a holds number of elements for comparison
+	ld	de,1		; de is the counter from 1..N
+	ld	hl,0		; hl holds the accumulated sum. Since a must be used for comparison, we need hl as accumulator
+
+sum1toN:
+	add	hl,de		; Add next number to hl
+	cp	l		; Comparison is only 8 bit! The maximum number of elements is limited to 255
+	jr	c,foundN	; If l exceeds trisize, we are finished and need to reduce de again
+	inc	de		; Otherwise, increase de and repeat
+	jr	sum1toN
+
+foundN:
+	dec	de		; We overshot the target and need to reduce de again. de now holds N, the number of rows = elements in last row
+	ld	b,e		; Our actual counters will be b and c
+
+	ld	ix,triangle	; Set ix to LSB of very last element (16 bit word) of triangle
+	ld	de,2*trisize-2
+	add	ix,de		; Everything is 0-based! Here we need the bytes instead of the number of elements
+
+	push	ix		; Set iy to last element of penultimate row
+	pop	hl		; Need to use hl for subtraction of number of bytes in last row
+	ld	c,b		; Get number of bytes in c, b shall keep the number of elements
+	sla	c		; bytes = 2 * elements
+	ld	d,0		; Use de for 16 bit subtraction of c from hl
+	ld	e,c
+	sbc	hl,de		
+	push	hl		; and then move it to iy via stack, no direct load
+	pop	iy
+
+	dec	b		; b runs over the penultimate row, which has 1 element less
+	ld	c,b		; c is the row counter, b the element counter - each row contains as many elements as is its number
+
+loop:				; Loop entry point is the same for inner and outer loop
+	push	bc		; Save bc to stack, it will hold the maximum of right and left successor
+	ld	l,(ix)		; Right successor of iy
+	ld	h,(ix+1)
+	ld	e,(ix-2)	; Left successor of iy
+	ld	d,(ix-1)
+	push	hl		; Save hl, it is modified by the comparison/subtraction
+	or	a		; Clear carry flag
+	sbc	hl,de		; 16 bit comparison by subtracting left from right
+	pop	hl		; Restore hl
+	jr	c,delarger	; If carry, then the left successor in de is larger
+
+	push	hl		; hl is larger, move it to bc
+	pop	bc
+	jr	addmax
+
+delarger:
+	push	de		; de is larger, move it to bc
+	pop	bc
+
+addmax:
+	ld	l,(iy)		; Get "parent" element into hl and add maximum of its two successors
+	ld	h,(iy+1)
+	add	hl,bc		; Add maximum, which is in bc
+	ld	(iy),l		; Store hl back to triangle
+	ld	(iy+1),h
+	pop	bc		; Restore bc with loop counters
+
+	dec	ix		; Decrement element pointers (by 2 bytes)
+	dec	ix
+	dec	iy
+	dec	iy
+
+	dec	b		; Decrement element counter
+	jp	nz,loop		; Check if penultimate row finished - this is the inner loop
+
+	ld	b,c		; Restore inner loop counter, check if more rows above current
+	dec	ix		; Decrement element pointer of row below again (by 2 bytes), skip leftmost element
+	dec	ix
+	dec	b		; Decrement loop counters, first the element counter
+	dec	c		; ...then the row counter
+	jp	nz,loop		; Check if triangle finished - this is the outer loop
+
+	ld	hl,(triangle)	; Root element now contains maximum sum
+	ld	ix,buffer	; Set ix to output buffer
+	call	dispHL		; Create decimal representation
+
+	setdel	nul		; Set string delimiter to 00h
+	print	buffer		; Display result
+	newline
+
+	ret			; Return to CP/M
+
+	;
+	; ===================
+	; End of main program
+	; ===================
+	;
+
+	;
+	; Helper routines - notice that the Z80 does not have a divide instruction
+	; Notice further that CP/M does not have any support for pretty-printing
+	; formatted numbers and stuff like that. So we have to do all this by hand...
+	;
+
+	;
+	; Converts the value (unsigned int) in register hl to its decimal representation
+	; Register ix has memory address of target for converted value
+	; String is terminated with nul character (\0)
+	;
+
+dispHL:
+	pushall
+	ld	b,1		; Flag for leading '0'
+	irp	x,<-10000,-1000,-100,-10,-1>
+	ld	de,x		; Subtract powers of 10 and determine digit
+	call	calcdig
+	endm
+
+	ld	a,nul		; Terminate result string with nul
+	ld	(ix+0),a
+
+	popall
+	ret			; End of conversion routine
+
+calcdig:
+	ld	a,cnull-1	; Determine the digit character
+incrdig:
+	inc	a		; Start with '0'
+	add	hl,de		; As long as subtraction is possible, increment digit character
+	jr	c,incrdig
+
+	sbc	hl,de		; If negative, undo last subtraction and continue with remainder
+	cp	cnull		; Check for leading '0', these are ignored
+	jr	nz,adddig
+	bit	0,b		; Use bit instruction for check if flag set, register a contains digit
+	ret	nz		; If '0' found and flag set, it is a leading '0' and we return
+adddig:
+	ld	b,0		; Reset flag for leading '0', we are now outputting digits
+	ld	(ix+0),a	; Store character in memory and set ix to next location
+	inc	ix
+
+	ret			; End of conversion helper routine
+
+	;
+	; ================
+	; Data definitions
+	; ================
+	;
+
+	dseg
+
+crlf:	defb	cr,lf,nul	; Generic newline
+buffer:	defs	10		; Buffer for conversion of number to text
+
+triangle:			; Triangle data, number of elements is "trisize" equ further above
+	defw	55
+	defw	94
+	defw	48
+	defw	95
+	defw	30
+	defw	96
+	defw	77
+	defw	71
+	defw	26
+	defw	67
+	defw	97
+	defw	13
+	defw	76
+	defw	38
+	defw	45
+	defw	07
+	defw	36
+	defw	79
+	defw	16
+	defw	37
+	defw	68
+	defw	48
+	defw	07
+	defw	09
+	defw	18
+	defw	70
+	defw	26
+	defw	06
+	defw	18
+	defw	72
+	defw	79
+	defw	46
+	defw	59
+	defw	79
+	defw	29
+	defw	90
+	defw	20
+	defw	76
+	defw	87
+	defw	11
+	defw	32
+	defw	07
+	defw	07
+	defw	49
+	defw	18
+	defw	27
+	defw	83
+	defw	58
+	defw	35
+	defw	71
+	defw	11
+	defw	25
+	defw	57
+	defw	29
+	defw	85
+	defw	14
+	defw	64
+	defw	36
+	defw	96
+	defw	27
+	defw	11
+	defw	58
+	defw	56
+	defw	92
+	defw	18
+	defw	55
+	defw	02
+	defw	90
+	defw	03
+	defw	60
+	defw	48
+	defw	49
+	defw	41
+	defw	46
+	defw	33
+	defw	36
+	defw	47
+	defw	23
+	defw	92
+	defw	50
+	defw	48
+	defw	02
+	defw	36
+	defw	59
+	defw	42
+	defw	79
+	defw	72
+	defw	20
+	defw	82
+	defw	77
+	defw	42
+	defw	56
+	defw	78
+	defw	38
+	defw	80
+	defw	39
+	defw	75
+	defw	02
+	defw	71
+	defw	66
+	defw	66
+	defw	01
+	defw	03
+	defw	55
+	defw	72
+	defw	44
+	defw	25
+	defw	67
+	defw	84
+	defw	71
+	defw	67
+	defw	11
+	defw	61
+	defw	40
+	defw	57
+	defw	58
+	defw	89
+	defw	40
+	defw	56
+	defw	36
+	defw	85
+	defw	32
+	defw	25
+	defw	85
+	defw	57
+	defw	48
+	defw	84
+	defw	35
+	defw	47
+	defw	62
+	defw	17
+	defw	01
+	defw	01
+	defw	99
+	defw	89
+	defw	52
+	defw	06
+	defw	71
+	defw	28
+	defw	75
+	defw	94
+	defw	48
+	defw	37
+	defw	10
+	defw	23
+	defw	51
+	defw	06
+	defw	48
+	defw	53
+	defw	18
+	defw	74
+	defw	98
+	defw	15
+	defw	27
+	defw	02
+	defw	92
+	defw	23
+	defw	08
+	defw	71
+	defw	76
+	defw	84
+	defw	15
+	defw	52
+	defw	92
+	defw	63
+	defw	81
+	defw	10
+	defw	44
+	defw	10
+	defw	69
+	defw	93

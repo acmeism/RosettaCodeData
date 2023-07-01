@@ -1,0 +1,78 @@
+puts:	equ	9		; MS-DOS print string
+	cpu	8086
+	bits	16
+	org	100h
+section	.text
+	mov	bp,98h		; BP:DI = 989680h = ten million
+	mov	di,9680h
+	;;;	Print first 200 numbers
+	mov	dx,first	; Print message
+	mov	ah,puts
+	int	21h
+n200:	call	next		; Get next number
+	call	pnum		; Print the number
+	cmp	di,95B8h	; Have we had 200 yet?
+	ja	n200		; If not, print next number
+	;;;	Print the 10 millionth number
+	mov	dx,tenmil	; Print message
+	mov	ah,puts
+	int	21h
+n1e7:	call	next		; Get next number
+	jnz	n1e7		; Until we have the 10 millionth
+	;;;	Print the current number
+pnum:	std			; Read backwards
+	xchg	si,di		; Keep DI safe
+	mov	di,num
+	mov	cx,9
+	xor	al,al		; Find the first zero
+	repnz	scasb
+	inc	di		; Go to first digit
+	inc	di
+	xchg	si,di		; Put DI back
+	mov	dx,si		; Call DOS to print the number
+	mov	ah,puts
+	int	21h
+	ret
+	;;;	Increment number until rises and falls are equal
+next:	std			; Read number backwards
+.inc:	mov	bx,num
+.iloop:	mov	al,[bx]		; Get digit
+	test	al,al		; If uninitialized, write a 1
+	jz	.grow
+	inc	ax		; Otherwise, increment
+	mov	[bx],al		; Write it back
+	cmp	al,'9'+1	; Rollover?
+	jnz	.idone		; If not, the increment is done
+	mov	[bx],byte '0'	; But if so, this digit should be 0,
+	dec	bx		; and the next digit incremented.
+	jmp	.iloop
+.grow:	mov	[bx],byte '1'	; The number gains an extra digit
+.idone:	xor	bl,bl		; BL = rise and fall counter
+	mov	si,num
+	lodsb			; Read first digit to compare to
+.pair:	xchg	ah,al		; Previous digit to compare
+	lodsb			; Read next digit
+	test	al,al		; Done yet?
+	jz	.done
+	cmp	al,ah		; If not, compare the digits
+	ja	.fall		; If they are different,	
+	jb	.rise		; there is a fall or a rise
+	jmp	.pair		; Otherwise, try next pair
+.fall:	dec	bl		; Fall: decrement BL
+	jmp	.pair
+.rise:	inc	bl		; Rise: increment BL
+	jmp	.pair
+.done:	test	bl,bl		; At the end, check if BL is zero
+	jnz	.inc		; If not, try next number
+	sub	di,1		; Decrement the million counter in BP:DI
+	sbb	bp,0
+	mov	ax,di		; Test if BP:DI is zero
+	or	ax,bp
+	ret
+section	.data
+	;;;	Strings
+first:	db	'The first 200 numbers are:',13,10,'$'
+tenmil:	db	13,10,10,'The 10,000,000th number is: $'
+	;;;	Current number, stored as ASCII
+	db	0,0,0,0,0,0,0,0
+num:	db	'0 $'

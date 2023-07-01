@@ -1,0 +1,152 @@
+' version 19-10-2016
+' translation of the (pseudo) code in RFC 1320
+' compile with: fbc -s console
+
+Function MD4(test_str As String) As String
+
+  Dim As String message = test_str ' string are passed as ByRef
+
+  ' some macro's
+  #Macro F(X, Y, Z)
+    (((X) And (Y)) Or ((Not(X)) And (Z)))
+  #EndMacro
+
+  #Macro G(X, Y, Z)
+    (((X) And (Y)) Or (((X) And (Z)) Or ((Y) And (Z))))
+  #EndMacro
+
+  #Macro H(X, Y, Z)
+    ((X) Xor (Y) Xor (Z))
+  #EndMacro
+
+  ' a little piece of inline asm to do a rotate left on a 32bit variable
+  #Macro ROtate_Left(x, n) ' rotate left
+    Asm
+      rol dword Ptr [x], n
+    End Asm
+  #EndMacro
+
+  ' #Macro ROtate_left(x, n)
+    ' x = x Shl n + x Shr (32 - n)
+  ' #EndMacro
+
+  Dim As Long i
+  Dim As String answer, s1
+
+  Dim As ULongInt l = Len(message)
+  ' set the first bit after the message to 1
+  message = message + Chr(1 Shl 7)
+  ' add one char to the length
+  Dim As ULong padding = 64 - ((l +1) Mod (512 \ 8)) ' 512 \ 8 = 64 char.
+
+  ' check if we have enough room for inserting the length
+  If padding < 8 Then padding = padding + 64
+
+  message = message + String(padding, Chr(0))   ' adjust length
+  Dim As ULong l1 = Len(message)                ' new length
+
+  l = l * 8    ' orignal length in bits
+  ' create ubyte ptr to point to l ( = length in bits)
+  Dim As UByte Ptr ub_ptr = Cast(UByte Ptr, @l)
+
+  For i = 0 To 7  'copy length of message to the last 8 bytes
+    message[l1 -8 + i] = ub_ptr[i]
+  Next
+
+  ' unsigned 32bit integers only
+  Dim As UInteger<32> AA, A = &H67452301
+  Dim As UInteger<32> BB, B = &Hefcdab89
+  Dim As UInteger<32> CC, C = &H98badcfe
+  Dim As UInteger<32> DD, D = &H10325476
+
+  For i = 0 To (l1 -1) \ 64 ' split into 64 byte block
+
+    AA = A : BB = B : CC = C : DD = D
+
+    ' x point to 64 byte block inside the string message
+    Dim As UInteger<32> Ptr x = Cast(UInteger<32> Ptr, @message[i*64])
+
+    ' round 1
+    A = A + F(B, C, D) + x[ 0] : ROtate_Left(A,  3)
+    D = D + F(A, B, C) + x[ 1] : ROtate_Left(D,  7)
+    C = C + F(D, A, B) + x[ 2] : ROtate_Left(C, 11)
+    B = B + F(C, D, A) + x[ 3] : ROtate_Left(B, 19)
+    A = A + F(B, C, D) + x[ 4] : ROtate_Left(A,  3)
+    D = D + F(A, B, C) + x[ 5] : ROtate_Left(D,  7)
+    C = C + F(D, A, B) + x[ 6] : ROtate_Left(C, 11)
+    B = B + F(C, D, A) + x[ 7] : ROtate_Left(B, 19)
+    A = A + F(B, C, D) + x[ 8] : ROtate_Left(A,  3)
+    D = D + F(A, B, C) + x[ 9] : ROtate_Left(D,  7)
+    C = C + F(D, A, B) + x[10] : ROtate_Left(C, 11)
+    B = B + F(C, D, A) + x[11] : ROtate_Left(B, 19)
+    A = A + F(B, C, D) + x[12] : ROtate_Left(A,  3)
+    D = D + F(A, B, C) + x[13] : ROtate_Left(D,  7)
+    C = C + F(D, A, B) + x[14] : ROtate_Left(C, 11)
+    B = B + F(C, D, A) + x[15] : ROtate_Left(B, 19)
+
+    ' round 2
+    A = A + G(B, C, D) + x[ 0] + &H5A827999 : ROtate_Left(A,  3)
+    D = D + G(A, B, C) + x[ 4] + &H5A827999 : ROtate_Left(D,  5)
+    C = C + G(D, A, B) + x[ 8] + &H5A827999 : ROtate_Left(C,  9)
+    B = B + G(C, D, A) + x[12] + &H5A827999 : ROtate_Left(B, 13)
+    A = A + G(B, C, D) + x[ 1] + &H5A827999 : ROtate_Left(A,  3)
+    D = D + G(A, B, C) + x[ 5] + &H5A827999 : ROtate_Left(D,  5)
+    C = C + G(D, A, B) + x[ 9] + &H5A827999 : ROtate_Left(C,  9)
+    B = B + G(C, D, A) + x[13] + &H5A827999 : ROtate_Left(B, 13)
+    A = A + G(B, C, D) + x[ 2] + &H5A827999 : ROtate_Left(A,  3)
+    D = D + G(A, B, C) + x[ 6] + &H5A827999 : ROtate_Left(D,  5)
+    C = C + G(D, A, B) + x[10] + &H5A827999 : ROtate_Left(C,  9)
+    B = B + G(C, D, A) + x[14] + &H5A827999 : ROtate_Left(B, 13)
+    A = A + G(B, C, D) + x[ 3] + &H5A827999 : ROtate_Left(A,  3)
+    D = D + G(A, B, C) + x[ 7] + &H5A827999 : ROtate_Left(D,  5)
+    C = C + G(D, A, B) + x[11] + &H5A827999 : ROtate_Left(C,  9)
+    B = B + G(C, D, A) + x[15] + &H5A827999 : ROtate_Left(B, 13)
+
+    ' round 3
+    A = A + H(B, C, D) + x[ 0] + &H6ED9EBA1 : ROtate_Left(A,  3)
+    D = D + H(A, B, C) + x[ 8] + &H6ED9EBA1 : ROtate_Left(D,  9)
+    C = C + H(D, A, B) + x[ 4] + &H6ED9EBA1 : ROtate_Left(C, 11)
+    B = B + H(C, D, A) + x[12] + &H6ED9EBA1 : ROtate_Left(B, 15)
+    A = A + H(B, C, D) + x[ 2] + &H6ED9EBA1 : ROtate_Left(A,  3)
+    D = D + H(A, B, C) + x[10] + &H6ED9EBA1 : ROtate_Left(D,  9)
+    C = C + H(D, A, B) + x[ 6] + &H6ED9EBA1 : ROtate_Left(C, 11)
+    B = B + H(C, D, A) + x[14] + &H6ED9EBA1 : ROtate_Left(B, 15)
+    A = A + H(B, C, D) + x[ 1] + &H6ED9EBA1 : ROtate_Left(A,  3)
+    D = D + H(A, B, C) + x[ 9] + &H6ED9EBA1 : ROtate_Left(D,  9)
+    C = C + H(D, A, B) + x[ 5] + &H6ED9EBA1 : ROtate_Left(C, 11)
+    B = B + H(C, D, A) + x[13] + &H6ED9EBA1 : ROtate_Left(B, 15)
+    A = A + H(B, C, D) + x[ 3] + &H6ED9EBA1 : ROtate_Left(A,  3)
+    D = D + H(A, B, C) + x[11] + &H6ED9EBA1 : ROtate_Left(D,  9)
+    C = C + H(D, A, B) + x[ 7] + &H6ED9EBA1 : ROtate_Left(C, 11)
+    B = B + H(C, D, A) + x[15] + &H6ED9EBA1 : ROtate_Left(B, 15)
+
+    A += AA : B += BB : C += CC : D += DD
+
+  Next
+
+  ' convert A, B, C and D in hex, then add low order first
+  s1 = Hex(A, 8)
+  For i = 7 To 1 Step -2 : answer +=Mid(s1, i, 2) : Next
+  s1 = Hex(B, 8)
+  For i = 7 To 1 Step -2 : answer +=Mid(s1, i, 2) : Next
+  s1 = Hex(C, 8)
+  For i = 7 To 1 Step -2 : answer +=Mid(s1, i, 2) : Next
+  s1 = Hex(D, 8)
+  For i = 7 To 1 Step -2 : answer +=Mid(s1, i, 2) : Next
+
+Return LCase(answer)
+
+End Function
+
+' ------=< MAIN >=------
+
+Dim As String test = "Rosetta Code"
+Print
+Print  test; " => "; MD4(test)
+
+
+' empty keyboard buffer
+While Inkey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

@@ -1,0 +1,89 @@
+def  \Node\ Left, Data, Right;
+def  IntSize = 4;
+int  Stack(16);
+int  SP;        \stack pointer
+
+proc Push(N);
+int  N;
+[Stack(SP):= N;  SP:= SP+1];
+
+func Pop;
+[SP:= SP-1;  return Stack(SP)];
+
+func Precedence(Op);
+int  Op;
+case Op of
+  ^+, ^-: return 2;
+  ^*, ^/: return 3;
+  ^^:     return 4
+other [];
+
+proc PostOrder(Node);           \Traverse tree at Node in postorder, and
+int  Node, Top;                 \ return its evaluation on the stack
+[if Node # 0 then
+    [PostOrder(Node(Left));
+    PostOrder(Node(Right));
+    case Node(Data) of
+       ^+: [Top:= Pop;  Push(Pop+Top)];
+       ^-: [Top:= Pop;  Push(Pop-Top)];
+       ^*: [Top:= Pop;  Push(Pop*Top)];
+       ^/: [Top:= Pop;  Push(Pop/Top)]
+    other Push(Node(Data) - ^0);        \convert ASCII to binary
+    ];
+];
+
+char Str;
+int  Token, Op1, Op2, Node;
+[Str:= "3 + 4 * 2 / ( 1 - 5 ) ";        \RPN: 342*15-/+
+Text(0, Str);
+\Convert infix expression to RPN (postfix) using shunting-yard algorithm
+SP:= 0;
+OpenO(8);       \discard (overwrite) arguments in RPi's command line
+loop    [repeat Token:= Str(0);  Str:= Str+1;
+        until   Token # ^ ;             \strip out space characters
+        case Token of
+          ^+, ^-, ^*, ^/, ^^:
+                [Op1:= Token;
+                loop    [if SP <= 0 then quit;  \stack is empty
+                        Op2:= Stack(SP-1);
+                        if Op2 = ^( then quit;
+                        if Precedence(Op2) < Precedence(Op1) then quit;
+                        if Precedence(Op2) = Precedence(Op1) then
+                            if Op1 = ^^ then quit;
+                        ChOut(8, Pop);
+                        ];
+                Push(Op1);
+                ];
+          ^(:   Push(Token);
+          ^):   [while SP > 0 and Stack(SP-1) # ^( do
+                    ChOut(8, Pop);
+                Pop;                    \discard left parenthesis
+                ];
+          $A0:  quit                    \terminating space with its MSB set
+        other   ChOut(8, Token);        \output the single-digit number
+        ];
+while SP > 0 do ChOut(8, Pop);          \output any remaining operators
+\Build AST from RPN expression
+OpenI(8);       \(for safety)
+loop    [Token:= ChIn(8);
+        if Token = $1A\EOF\ then quit
+        else if Token >= ^0 and Token <= ^9 then
+                [Node:= Reserve(3*IntSize);
+                Node(Data):= Token;
+                Node(Left):= 0;
+                Node(Right):= 0;
+                Push(Node);
+                ]
+        else    \must be an operator
+                [Node:= Reserve(3*IntSize);
+                Node(Data):= Token;
+                Node(Right):= Pop;
+                Node(Left):= Pop;
+                Push(Node);
+                ];
+        ];
+\Evaluate expression in AST
+PostOrder(Pop);
+Text(0, "= ");
+IntOut(0, Pop);
+]

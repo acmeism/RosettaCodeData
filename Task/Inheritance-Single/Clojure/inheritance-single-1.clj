@@ -1,0 +1,5 @@
+(gen-class :name Animal)
+(gen-class :name Dog :extends Animal)
+(gen-class :name Cat :extends Animal)
+(gen-class :name Lab :extends Dog)
+(gen-class :name Collie :extends Dog)

@@ -1,0 +1,117 @@
+/* ARM assembly Raspberry PI  */
+/*  program splitcar.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+.equ STDOUT, 1     @ Linux output console
+.equ EXIT,   1     @ Linux syscall
+.equ WRITE,  4     @ Linux syscall
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szCarriageReturn:   .asciz "\n"
+szString1:          .asciz "gHHH5YY++///\\"
+/*   IMPORTANT REMARK for compiler as
+The way to get special characters into a string is to escape these characters: precede them
+with a backslash ‘\’ character. For example ‘\\’ represents one backslash: the first \ is
+an escape which tells as to interpret the second character literally as a backslash (which
+prevents as from recognizing the second \ as an escape character).
+*/
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sBuffer:               .skip  100
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                             @ entry of program
+
+    ldr r0,iAdrszString1                          @ input string address
+    ldr r1,iAdrsBuffer                            @ output buffer address
+    bl split
+
+    ldr r0,iAdrsBuffer
+    bl affichageMess                              @ display message
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+
+100:                                              @ standard end of the program
+    mov r0, #0                                    @ return code
+    mov r7, #EXIT                                 @ request to exit program
+    svc #0                                        @ perform the system call
+
+iAdrszString1:            .int szString1
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrsBuffer:              .int sBuffer
+
+/******************************************************************/
+/*     generate value                                  */
+/******************************************************************/
+/* r0 contains the address of input string  */
+/* r1 contains the address of output buffer  */
+
+split:
+    push {r1-r5,lr}                           @ save registers
+    mov r4,#0                                 @ indice loop input string
+    mov r5,#0                                 @ indice buffer
+    ldrb r2,[r0,r4]                           @ read first char in reg r2
+    cmp r2,#0                                 @ if null -> end
+    beq 3f
+    strb r2,[r1,r5]                           @ store char in buffer
+    add r5,#1                                 @ increment location buffer
+1:
+    ldrb r3,[r0,r4]                           @read char[r4] in reg r3
+    cmp r3,#0                                 @ if null  end
+    beq 3f
+    cmp r2,r3                                 @ compare two characters
+    streqb r3,[r1,r5]                         @ = -> store char in buffer
+    beq 2f                                    @ loop
+
+    mov r2,#','                               @ else store comma in buffer
+    strb r2,[r1,r5]                           @ store char in buffer
+    add r5,#1
+    mov r2,#' '                               @ and store space in buffer
+    strb r2,[r1,r5]
+    add r5,#1
+    strb r3,[r1,r5]                           @ and store input char in buffer
+    mov r2,r3                                 @ and maj r2 with new char
+2:
+    add r5,#1                                 @ increment indices
+    add r4,#1
+    b 1b                                      @ and loop
+3:
+    strb r3,[r1,r5]                           @ store zero final in buffer
+100:
+    pop {r1-r5,lr}
+    bx lr                                     @ return
+
+/******************************************************************/
+/*     display text with size calculation                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+affichageMess:
+    push {r0,r1,r2,r7,lr}                          @ save  registres
+    mov r2,#0                                      @ counter length
+1:                                                 @ loop length calculation
+    ldrb r1,[r0,r2]                                @ read octet start position + index
+    cmp r1,#0                                      @ if 0 its over
+    addne r2,r2,#1                                 @ else add 1 in the length
+    bne 1b                                         @ and loop
+                                                   @ so here r2 contains the length of the message
+    mov r1,r0                                      @ address message in r1
+    mov r0,#STDOUT                                 @ code to write to the standard output Linux
+    mov r7, #WRITE                                 @ code call system "write"
+    svc #0                                         @ call systeme
+    pop {r0,r1,r2,r7,lr}                           @ restaur des  2 registres */
+    bx lr                                          @ return
+
+output : gg, HHH, 5, YY, ++, ///, \

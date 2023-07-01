@@ -1,0 +1,128 @@
+Procedure handleError(value, msg.s)
+  If value = 0
+    MessageRequester("Error", msg)
+    End
+  EndIf
+EndProcedure
+
+Structure languageInfo
+  name.s
+  pageCount.i
+EndStructure
+
+#JSON_web_data = 0 ;ID# for our parsed JSON web data object
+
+Define NewList languages.languageInfo()
+
+Define blah.s, object_val, allPages_mem, title_mem, page_mem, categoryInfo_mem, continue_mem
+Define url$, title$, currentPage$, language$, langPageCount, gcmcontinue$, *bufferPtr
+
+handleError(InitNetwork(), "Unable to initialize network functions.")
+
+Repeat
+  url$ = "http://www.rosettacode.org/mw/api.php?action=query" +
+         "&generator=categorymembers&gcmtitle=Category:Programming%20Languages" +
+         "&gcmlimit=500" + "&gcmcontinue=" + gcmcontinue$ +
+         "&prop=categoryinfo&format=json"
+
+  *bufferPtr = ReceiveHTTPMemory(url$)
+  handleError(*bufferPtr, "Unable to receive web page data.")
+  If CatchJSON(#JSON_web_data, *bufferPtr, MemorySize(*bufferPtr)) = 0
+    MessageRequester("Error", JSONErrorMessage() + " at position " +
+                              JSONErrorPosition() + " in line " +
+                              JSONErrorLine() + " of JSON web Data")
+    End
+  EndIf
+  FreeMemory(*bufferPtr)
+
+  object_val = JSONValue(#JSON_web_data)
+  allPages_mem = GetJSONMember(GetJSONMember(object_val, "query"), "pages")
+  If ExamineJSONMembers(allPages_mem)
+    While NextJSONMember(allPages_mem)
+      page_mem = JSONMemberValue(allPages_mem)
+      title_mem = GetJSONMember(page_mem, "title")
+      If title_mem
+        title$ = GetJSONString(title_mem)
+        If Left(title$, 9) = "Category:"
+          language$ = Mid(title$, 10)
+          categoryInfo_mem = GetJSONMember(page_mem, "categoryinfo")
+          If categoryInfo_mem
+            langPageCount = GetJSONInteger(GetJSONMember(categoryInfo_mem, "pages"))
+          Else
+            langPageCount = 0
+          EndIf
+
+          AddElement(languages())
+          languages()\name = language$
+          languages()\pageCount = langPageCount
+        EndIf
+      EndIf
+    Wend
+  EndIf
+
+  ;check for continue
+  continue_mem = GetJSONMember(object_val, "continue")
+  If continue_mem
+    gcmcontinue$ = GetJSONString(GetJSONMember(continue_mem, "gcmcontinue"))
+  Else
+    gcmcontinue$ = ""
+  EndIf
+
+  FreeJSON(#JSON_web_data)
+Until gcmcontinue$ = ""
+
+;all data has been aquired, now process and display it
+SortStructuredList(languages(), #PB_Sort_Descending, OffsetOf(languageInfo\pageCount), #PB_Integer)
+
+If OpenConsole()
+
+  If ListSize(languages())
+    Define i, *startOfGroupPtr.languageInfo, *lastElementPtr, groupSize, rank
+    Define outputSize = 100, outputLine
+
+    PrintN(Str(ListSize(languages())) + " languages." + #CRLF$)
+    LastElement(languages())
+    *lastElementPtr = @languages() ;pointer to last element
+    FirstElement(languages())
+    *startOfGroupPtr = @languages() ;pointer to first element
+    groupSize = 1
+    rank = 1
+
+    While NextElement(languages())
+      If languages()\pageCount <> *startOfGroupPtr\pageCount Or *lastElementPtr = @languages()
+        ;display a group of languages at the same rank
+        ChangeCurrentElement(languages(), *startOfGroupPtr)
+        For i = 1 To groupSize
+          ;display output in groups to allow viewing of all entries
+          If outputLine = 0
+            PrintN(" Rank   Tasks  Language")
+            PrintN(" ------ -----  --------")
+          EndIf
+
+          PrintN(RSet(Str(rank), 6) + ".  " +
+                 RSet(Str(languages()\pageCount), 4) + "  " +
+                 languages()\name)
+
+          outputLine + 1
+          If outputLine >= outputSize
+            Print(#CRLF$ + #CRLF$ + "Press ENTER to continue" + #CRLF$): Input()
+            outputLine = 0
+          EndIf
+
+          NextElement(languages())
+        Next
+
+        rank + groupSize
+        groupSize = 1
+        *startOfGroupPtr = @languages()
+      Else
+        groupSize + 1
+      EndIf
+    Wend
+  Else
+    PrintN("No language categories found.")
+  EndIf
+
+  Print(#CRLF$ + #CRLF$ + "Press ENTER to exit"): Input()
+  CloseConsole()
+EndIf

@@ -1,0 +1,348 @@
+	;;;	MS-DOS Brainf*** interpreter/compiler
+	cpu	8086
+putch:	equ	2h		; Print character
+puts:	equ	9h		; Print string
+open:	equ	3Dh		; Open file
+read:	equ	3Fh		; Read from file
+exit:	equ	4Ch		; Exit to DOS
+flags:	equ	33h		; Set break flags
+CMDLEN:	equ	80h		; Address of length of command line argument
+CMDARG:	equ	81h		; Address of text of command line argument
+BRK:	equ	1		; Break flag
+EOFCH:	equ	-1		; Written to the tape on EOF
+section	.text
+	org	100h
+	;;;	See if there is enough memory
+	mov	sp,stack.top	; Move stack inward to free up memory
+	mov	ax,cs		; Get allocated memory size from DOS
+	dec	ax		; (It is at location 3 in the MCB, which
+	mov	es,ax		; is located one paragraph above CS.)
+	mov	ax,[es:3]
+	mov	bx,sp		; The amount of memory the program itself
+	mov	cl,4		; needs is from CS:0 up to CS:SP in bytes,
+	shr	bx,cl		; shifted right by 4 to give paragraphs;
+	inc	bx		; making sure to round up.
+	mov	bp,cs		; The paragraph right after this is used
+	add	bp,bx 		; as the segment base for BF's memory.
+	sub	ax,bx		; Free mem = allocated mem - program mem
+	cmp	ax,128*1024/16	; We'll require at least 128k bytes
+	jae	mem_ok		; (for two separate code and data segments)
+	mov	dx,err.mem	; If we don't have enough,
+	jmp	error		; give an error message.
+	;;;	Stop on Ctrl+C
+mem_ok:	mov	ax,flags<<8|BRK
+	mov	dl,1
+	int	21h
+	;;;	See if a command line argument was given
+	mov	bl,[CMDLEN]	; Get length of argument
+	test	bl,bl		; See if it's zero
+	jnz	arg_ok
+	mov	dx,err.usage	; Print usage string if no argument given
+	jmp	error
+arg_ok:	xor	bh,bh
+	mov	[CMDARG+bx],bh	; Terminate the argument string with a zero
+	mov	ax,open<<8	; Try to open the file for reading
+	mov	dx,CMDARG+1	; Skip first item (always 1)
+	int	21h
+	jnc	fileok
+	mov	dx,err.file	; Print file error if it fails
+	jmp	error
+fileok: mov	di,ax		; Keep file handle in DI
+	xor	si,si		; Keep pointer in SI
+	mov	ds,bp		; Start reading into the memory past our stack
+block:	mov	ah,read		; Read from file
+	mov	bx,di
+	mov	cx,0FFFEh
+	mov	dx,si		; To the place just beyond the last read
+	int	21h
+	jnc	.rdok
+	mov	dx,err.file	; Read error
+	jmp	error
+.rdok:	test	ax,ax		; If zero bytes read, we're done
+	jz	.done
+	add	si,ax		; Move pointer past read
+	jnc	block		; If there's still room, do another read
+	mov	dx,err.mem	; If we overshot, then give memory error
+	jmp	error
+.done:	mov	[si],byte 0	; Zero-terminate the data
+	;;;	Filter out all non-BF characters
+	push	ds		; Set ES to DS
+	pop	es
+	xor	si,si		; Source and destination pointer to beginning
+	xor	di,di
+filter:	lodsb			; Get byte from source
+	xor	bx,bx		; See if byte is BF command
+.test:	cmp	al,[cs:bx+bfchar]	; Test against current character
+	je	.match		; If a match, we found it
+	inc	bx		; If not, try next possible command
+	cmp	bx,8
+	jbe	.test
+	jmp	filter		; If we didn't find it, ignore this character
+.match:	stosb			; We found it, keep it
+	test	al,al		; If zero, we found the end,
+	jnz	filter		; Otherwise, do next character
+	;;;	Compile the BF source into 8086 machine code
+	add	bp,65536/16	; Set ES to point to the start of the second
+	mov	es,bp		; 64k (4k paragraphs) that we allocated earlier
+	xor	di,di		; Start at address zero,
+	push	di		; Store a zero on the stack as boundary marker,
+	mov	ax,stop		; At 0000, store a far pointer to the
+	stosw			; cleanup routine,
+	mov	ax,cs
+	stosw
+	mov	ax,bfout	; At 0004, store a far pointer to the
+	stosw			; output routine,
+	mov	ax,cs
+	stosw
+	mov	ax,bfin		; At 0008, store a far pointer to the
+	stosw			; input routine,
+	mov	ax,cs
+	stosw			; Compiled BF code starts at 000C.
+	xor	si,si		; Start at beginning of BF source code	
+compil:	lodsb			; Get current command
+.ch:	cmp	di,-16		; See if we still have 16 bytes free
+	jb	.fch		; (Loop is 11 bytes, +5 for INT 21h/4Ch at end)
+	mov	dx,err.mem	; If not, we're out of memory
+	jmp	error
+.fch:	cmp	al,'+'		; + and - change the value of the current cell
+	je	tapval
+	cmp	al,'-'
+	je	tapval
+	cmp	al,'>'		; < and > move the tape
+	je	tapmov
+	cmp	al,'<'
+	je	tapmov
+	cmp	al,','		; I/O
+	jne	.tsout		; Conditional jumps are limited to 128-byte
+	jmp	chin		; displacement
+.tsout:	cmp	al,'.'
+	jne	.tsls
+	jmp	chout
+.tsls:	cmp	al,'['		; Loops
+	jne	.tsle
+	jmp	loops
+.tsle:	cmp	al,']'
+	jne	.tsend
+	jmp	loope
+.tsend:	test	al,al 		; Reached zero?
+	jnz 	compil		; If not, next command
+	jmp	cdone		; If so, we're done
+	;;;	Compile a string of +s and -s into an 8086 instruction
+tapval:	xor	cl,cl		; Count up contiguous +s and -s modulo 256
+.ch:	cmp	al,'+'		
+	je	.inc
+	cmp	al,'-'
+	je	.dec
+	test	cl,cl		; If zero,
+	jz	compil.ch	; it's a no-op.
+	mov	bl,al		; Otherwise, keep next character
+	cmp	cl,-1		; If -1, decrement cell
+	mov	ax,0FFEh	; DEC BYTE [BX]
+	je	.wword
+	cmp	cl,1		; If 1, increment cell
+	mov	ax,07FEh	; INC BYTE [BX]
+	je	.wword
+	mov	ax,0780h	; ADD BYTE [BX],
+	stosw
+	mov	al,cl		; change to cell
+	stosb
+	mov	al,bl		; Move next character back into AL
+	jmp	compil.ch	; Compile next command
+.inc:	inc	cl		; Increment cell
+	lodsb	
+	jmp	.ch
+.dec:	dec	cl		; Decrement cell
+	lodsb
+	jmp	.ch
+.wword:	stosw			; Write instruction word
+	mov	al,bl		; Move next character back into AL
+	jmp 	compil.ch	; Compile next command
+	;;;	Compile a string of <s and >s into an 8086 instruction
+tapmov:	xor	cx,cx		; Count up contiguous <s and >s modulo 65536
+.ch:	cmp	al,'>'
+	je	.right
+	cmp	al,'<'
+	je	.left
+	test	cx,cx		; Is there any net movement at all?
+	jnz	.move		; If so, generate a move instruction
+	jmp	compil.ch	; But otherwise it's a no-op, ignore it
+.move:	mov	bl,al		; Otherwise, keep next character
+	cmp	cx,4		; If CX<4, a series of INC BX are best
+	mov	al,43h		; INC BX
+	jb	.wbyte
+	neg	cx
+	cmp	cx,4		; If -CX<4, a series of DEC BX are best
+	mov	al,4Bh		; DEC BX
+	jb	.wbyte
+	neg	cx
+	mov	ax,0C381h	; ADD BX,
+	stosw
+	mov	ax,cx		; tape movement
+	stosw
+	mov	al,bl		; Move next character back into AL
+	jmp	compil.ch	; Compile next command
+.left:	dec	cx		; Left: decrement pointer
+	lodsb
+	jmp	.ch
+.right:	inc	cx		; Right: increment pointer
+	lodsb
+	jmp	.ch
+.wbyte:	rep	stosb		; Write AL, CX times.
+	mov	al,bl		; Move next character back into AL
+	jmp	compil.ch	; Compile next command
+	;;;	Compile BF input
+chin:	mov	al,2Eh		; CS segment override
+	stosb
+	mov	ax,1EFFh	; CALL FAR PTR
+	stosw
+	mov	ax,8		; Pointer to input routine at address 8
+	stosw
+	jmp	compil		; Compile next command
+	;;;	Compile BF output
+chout:	mov	al,2Eh		; CS segment override
+	stosb
+	mov	ax,1EFFh	; CALL FAR PTR
+	stosw
+	mov	ax,4		; Pointer to output routine at address 4
+	stosw
+	jmp	compil
+	;;;	Compile start of loop
+loops:	cmp	word [si],5D2Dh	; Are the next two characters '-]'?
+	je	.zero		; Then just set the cell to zero
+	mov	ax,078Ah	; Otherwise, write out a real loop
+	stosw			; ^- MOV AL,[BX]
+	mov	ax,0C084h	; TEST AL,AL
+	stosw
+	mov	ax,0575h	; JNZ loop-body
+	stosw
+	mov	al,0B8h		; MOV AX,  (simulate absolute near jmp)
+	stosb
+	xor	ax,ax		; loop-end (we don't know it yet so 0)
+	stosw
+	mov	ax,0E0FFh	; JMP AX
+	stosw
+	push	di		; Store addr of loop body on stack
+	jmp	compil		; Compile next command
+.zero:	mov	ax,07C6h	; MOV BYTE [BX],
+	stosw
+	xor	al,al		; 0
+	stosb
+	inc	si		; Move past -]
+	inc	si
+	jmp	compil		; Compile next command
+	;;;	Compile end of loop
+loope:	pop	bx		; Retrieve address of loop body from stack
+	test	bx,bx 		; If it is zero, we've hit the top of stack
+	jz	.ebrkt		; so the brackets aren't balanced.
+	mov	ax,078Ah	; MOV AL,[BX]
+	stosw
+	mov	ax,0C084h	; TEST AL,AL
+	stosw
+	mov	ax,0574h	; JZ loop-end
+	stosw
+	mov	al,0B8h		; MOV AX, (simulate absolute near jmp)
+	stosb
+	mov	ax,bx		; loop-start
+	stosw
+	mov	ax,0E0FFh	; JMP AX
+	stosw
+	mov	[es:bx-4],di	; Store loop-end in matching loop start code
+	jmp	compil
+.ebrkt:	mov	dx,err.brk
+	jmp	error
+	;;;	Compilation is done.
+cdone:	mov	al,2Eh		; Code to jump to cleanup routine
+	stosb			; ^- CS segment override
+	mov	ax,2EFFh	; JMP FAR PTR
+	stosw
+	pop	ax		; Should be zero if all loops closed
+	stosw
+	test	ax,ax		; Were all loops closed?
+	jz	.lp_ok
+	mov	dx,err.brk	; If not, print error
+	jmp	error
+.lp_ok:	mov	[cs:cp],word 12	; Make far pointer to start of BF code
+	mov	[cs:cp+2],bp	; (which starts at ES:0C = BP:0C)
+	mov	ax,ds		; Set both DS and ES to BF tape segment
+	mov	es,ax		; (also the initial source segment)
+	xor	ax,ax		; Clear the tape (set all bytes to zero)
+	mov	cx,32768	
+	rep	stosw
+	xor	bx,bx		; Tape begins at address 0
+	xor	cx,cx		; No EOF and char buffer is empty
+	jmp	far [cs:cp]	; Jump into the BF code
+	;;;	BF program jumps here to stop the program
+stop:	mov	ax,exit<<8|0	; Quit to DOS with return code 0
+	int	21h
+	;;;	Print error message in CS:DX and quit with errorlevel 2
+error:	push	cs		; Set DS to CS
+	pop	ds
+	mov	ah,puts		; Print DS:DX
+	int	21h
+	mov	ax,exit<<8|2	; Quit to DOS
+	int	21h
+	;;;	Output subroutine called by the BF program (far call)
+bfout:	mov	ah,putch	; Prepare to write character
+	mov	dl,[bx] 	; Get character from tape
+	cmp 	dl,10		; Is it LF?
+	jne	.wr		; If not, just write it
+	mov	dl,13		; Otherwise, print CR first,
+	int	21h
+	mov	dl,10		; then LF.
+.wr:	int	21h		; Write character
+	retf
+	;;;	Input subroutine called by the BF program (far call)
+	;;;	Buffered input with CR/LF translation
+	;;;	Note: this keeps state in registers!
+	;;;	CL = chars left in buffer, CH = set if EOF seen,
+	;;;	SI = buffer pointer, ES = BF data segment
+bfin:	test	ch,ch		; EOF seen?
+	jnz	.r_eof
+	mov	ax,cs		; Set DS to our segment
+	mov	ds,ax
+.getch:	test	cl,cl		; Characters left in buffer?
+	jnz	.retch		; If so, return next character
+	mov	bp,bx		; Keep BF tape pointer
+	mov	ah,read		; Read
+	xor	bx,bx		; From STDIN
+	mov	cx,255		; Max 255 characters
+	mov	dx,ibuf		; Into the buffer
+	int	21h
+	mov	bx,bp		; Restore tape pointer
+	jc	.ioerr		; If carry set, I/O error
+	test	ax,ax		; If nothing returned, EOF
+	jz	.s_eof
+	mov	cx,ax		; Otherwise, set character count,
+	mov	si,ibuf		; set buffer pointer back to start,
+	jmp	.getch		; and return first character from buffer.
+.s_eof:	inc	ch		; We've seen EOF now
+.r_eof:	mov	al,EOFCH	; Return EOF
+	jmp	.ret
+.retch:	lodsb			; Get char from buffer
+	dec	cl		; One fewer character left
+	cmp	al,26		; ^Z = EOF when reading from keyboard
+	je	.s_eof
+	cmp	al,10		; If it is LF, ignore it and get another
+	je	.getch
+	cmp	al,13		; If it is CR, return LF instead
+	jne	.ret
+	mov	al,10
+.ret:	mov	dx,es		; Set DS back to BF's data segment
+	mov	ds,dx
+	mov	[bx],al		; Put character on tape
+	retf
+.ioerr:	mov	dx,err.io	; Print I/O error and quit
+	jmp	error
+section	.data
+bfchar:	db	'+-<>,.[]',0
+err:	;;;	Error messages
+.usage:	db	'BRAINFK PGM.B',13,10,10,9,'Run the BF program in PGM.B$'
+.file:	db	'Cannot read file$'
+.brk:	db	'Mismatched brackets$'
+.mem:	db	'Out of memory$'
+.io:	db	'I/O Error$'
+section	.bss
+cp:	resw	2		; Far pointer to start of BF code
+ibuf:	resb	256		; 255 char input buffer
+stack:	resw	512		; 512 words for the stack
+.top:	equ	$

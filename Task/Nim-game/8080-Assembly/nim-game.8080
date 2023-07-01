@@ -1,0 +1,89 @@
+bdos:		equ	5		; CP/M syscalls
+puts:		equ	9
+putch:		equ	2
+getch:		equ	1
+
+maxtokens:	equ	12		; you can change this for more tokens
+
+		org	100h
+		lxi	d,nim
+		call	outs
+		mvi	b,maxtokens	; 12 tokens
+gameloop:	lxi	d,tokens	; Show tokens
+		call	outs
+		mov	c,b
+showtokens:	dcr	c
+		jm	tokensdone
+		mvi	a,'|'
+		call	outa
+		jmp	showtokens
+tokensdone:	lxi	d,nl
+		call	outs
+		lxi	d,prompt	; Show prompt
+		call	outs
+readinput:	call	ina		; Read input
+		sui	'1'		; Subtract '1' (lowest acceptable
+		jc	wrong		; input)
+		cpi	3		; range of values is [0..2]
+		jnc	wrong
+		cmp	b		; can't take more than there are either
+		jnc	wrong
+		cma			; negate; -a = ~(a-1)
+		mov	c,a		; keep value
+		add	b		; subtract from tokens
+		mov	b,a		
+		mvi	a,4		; computer take 4-X tokens
+		add	c
+		mov	c,a
+		lxi	d,response	; print how many I take
+		call	outs
+		mvi	a,'0'
+		add	c
+		call	outa
+		mov	a,b		; subtract the ones I take
+		sub	c
+		jz	done		; if I took the last one, I won
+		mov	b,a
+		lxi	d,nl
+		call	outs
+		call	outs
+		jmp	gameloop
+done:		lxi	d,lose		; there's no win condition
+		jmp	outs
+		;; Invalid input
+wrong:		lxi	d,wronginp
+		call	outs
+		jmp 	readinput
+		;; Read character into A and keep registers
+ina:		push	b
+		push	d
+		push	h
+		mvi	c,getch
+		call	bdos
+		jmp	restore
+		;; Print A and keep registers
+outa:		push	b
+		push	d
+		push	h
+		mvi	c,putch
+		mov	e,a
+		call	bdos
+		jmp	restore
+		;; Print string and keep registers
+outs:		push	b
+		push	d
+		push	h
+		mvi	c,puts
+		call	bdos
+		;; Restore registers
+restore:	pop	h
+		pop 	d
+		pop	b
+		ret
+nim:		db	'Nim',13,10,13,10,'$'
+prompt:		db	'How many will you take (1-3)? $'
+response:	db	13,10,'I take $'
+tokens:		db	'Tokens: $'
+lose:		db	13,10,'You lose!$'
+nl:		db	13,10,'$'
+wronginp:	db	8,7,32,8,'$'		; beep and erase choice

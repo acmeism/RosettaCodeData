@@ -1,0 +1,99 @@
+*        Combinations with repetitions - 16/04/2019
+COMBREP  CSECT
+         USING  COMBREP,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         SAVE   (14,12)            save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         MVC    FLAVORS(9),SET1    flavors=3,draws=2,tell=1
+         BAL    R14,COMBINE        call combine
+         MVC    FLAVORS(9),SET2    flavors=10,draws=3,tell=0
+         BAL    R14,COMBINE        call combine
+         L      R13,4(0,R13)       restore previous savearea pointer
+         RETURN (14,12),RC=0       restore registers from calling sav
+COMBINE  SR     R9,R9              n=0
+         MVI    V,X'00'            ~
+         MVC    V+1(NN*L'V-1),V    v=0
+       IF   CLI,TELL,EQ,X'01' THEN if tell then
+         XPRNT  =C'list:',5          print
+       ENDIF    ,                  endif
+LOOP     LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,DRAWS)    do i=1 to draws
+         LR     R1,R6                i
+         SLA    R1,2                 ~
+         L      R2,V-4(R1)           v(i)
+         L      R3,FLAVORS           flavors
+         BCTR   R3,0                 flavors-1
+       IF    CR,R2,GT,R3 THEN        if v(i)>flavors-1 then
+         LR     R1,R6                  i
+         SLA    R1,2                   ~
+         LA     R1,V(R1)               @v(i+1)
+         L      R2,0(R1)               v(i+1)
+         LA     R2,1(R2)               v(i+1)+1
+         ST     R2,0(R1)               v(i+1)=v(i+1)+1
+         LR     R7,R6                  j=i
+       DO WHILE=(C,R7,GE,=A(1))        do j=i to 1 by -1
+         LR     R1,R6                    i
+         SLA    R1,2                     ~
+         L      R2,V(R1)                 v(i+1)
+         LR     R1,R7                    j
+         SLA    R1,2                     ~
+         ST     R2,V-4(R1)               v(j)=v(i+1)
+         BCTR   R7,0                     j--
+       ENDDO    ,                      enddo j
+       ENDIF    ,                    endif
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         L      R1,DRAWS           draws
+         LA     R1,1(R1)           draws+1
+         SLA    R1,2               ~
+         L      R2,V-4(R1)         v(draws+1)
+         LTR    R2,R2              if v(draws+1)>0
+         BP     EXITLOOP           then exit loop
+         LA     R9,1(R9)           n=n+1
+       IF   CLI,TELL,EQ,X'01' THEN if tell then
+         MVC    BUF,=CL60' '         buf=' '
+         LA     R10,1                ibuf=1
+         LA     R6,1                 i=1
+       DO WHILE=(C,R6,LE,DRAWS)      do i=1 to draws
+         LR     R1,R6                  i
+         SLA    R1,2                   ~
+         L      R1,V-4(R1)             v(i)
+         MH     R1,=AL2(L'ITEMS)       ~
+         LA     R4,ITEMS(R1)           @items(v(i)+1)
+         LA     R5,BUF-1               @buf-1
+         AR     R5,R10                 +ibuf
+         MVC    0(6,R5),0(R4)          substr(buf,ibuf,6)=items(v(i)+1)
+         LA     R10,L'ITEMS(R10)       ibuf=ibuf+length(items)
+         LA     R6,1(R6)               i++
+       ENDDO    ,                    enddo i
+         XPRNT  BUF,L'BUF            print buf
+       ENDIF    ,                    endif
+         L      R2,V                 v(1)
+         LA     R2,1(R2)             v(1)+1
+         ST     R2,V                 v(1)=v(1)+1
+         B      LOOP               loop
+EXITLOOP L      R1,FLAVORS           flavors
+         XDECO  R1,XDEC              edit flavors
+         MVC    PG+4(2),XDEC+10      output flavors
+         L      R1,DRAWS             draws
+         XDECO  R1,XDEC              edit draws
+         MVC    PG+7(2),XDEC+10      output draws
+         XDECO  R9,PG+11             edit & output n
+         XPRNT  PG,L'PG              print buffer
+         BR     R14                return
+NN       EQU    16
+ITEMS    DC     CL6'iced',CL6'jam',CL6'plain'
+FLAVORS  DS     F
+DRAWS    DS     F
+TELL     DS     X
+SET1     DC     F'3',F'2',X'01'    flavors=3,draws=2,tell=1
+SET2     DC     F'10',F'3',X'00'   flavors=10,draws=3,tell=0
+V        DS     (NN)F              v(nn)
+BUF      DS     CL60               buf
+PG       DC     CL40'cwr(..,..)=............'
+XDEC     DS     CL12               temp for xdeco
+         REGEQU
+         END    COMBREP

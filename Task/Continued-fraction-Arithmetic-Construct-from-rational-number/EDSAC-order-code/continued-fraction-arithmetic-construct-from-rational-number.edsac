@@ -1,0 +1,240 @@
+ [Continued fractions from rationals.
+  EDSAC program, Initial Orders 2.]
+
+ [Memory usage:
+   56..109  Print subroutine, modified from the EDSAC library
+  110..146  Division subroutine for long positive integers
+  148..196  Continued fraction subroutine, as specified by Rosetta Code
+  200..260  Main routine
+  262..     List of rationals, variable number of items]
+
+ [Define where to store the list of rationals.]
+          T  45 K [store address in location 45;
+                   values are then accessed by code letter H (*)]
+          P 262 F [<------ address here]
+ [(*) Arbitrary choice. We could equally well use 46 and N, 47 and M, etc.]
+
+ [Library subroutine R2. Reads positive integers during input of orders,
+    and is then overwritten (so doesn't take up any memory).
+  Negative numbers can be input by adding 2^35.
+  Each integer is followed by 'F', except the last is followed by '#TZ'.]
+  GKT20FVDL8FA40DUDTFI40FA40FS39FG@S2FG23FA5@T5@E4@E13Z
+          T    #H  [Tell R2 the storage location defined above]
+
+ [Rationals to be read by R2. First item is count, then num/den pairs.]
+  8F 1F2F 3F1F 33F8F 13F11F 22F7F 34359738217F77F
+  141421356F100000000F 314285714F100000000#TZ
+
+ [----------------------------------------------------------------------
+  Modification of library subroutine P7.
+  Prints signed integer up to 10 digits, left-justified.
+  54 storage locations; working position 4D.
+  Must be loaded at an even address.
+  Input: Number is at 0D.]
+          T  56 K
+  GKA3FT42@A49@T31@ADE10@T31@A48@T31@SDTDH44#@NDYFLDT4DS43@TF
+  H17@S17@A43@G23@UFS43@T1FV4DAFG50@SFLDUFXFOFFFSFL4FT4DA49@
+  T31@A1FA43@G20@XFP1024FP610D@524D!FO46@O26@XFSFL8FT4DE39@
+
+ [----------------------------------------------------------------------
+  Division subroutine for long positive integers.
+  35-bit dividend and divisor (max 2^34 - 1)
+    returning quotient and remainder.
+  Input:  dividend at 4D, divisor at 6D
+  Output: remainder at 4D, quotient at 6D.
+  Working locations 0D, 8D.]
+          T 110 K
+          G     K
+          A   3 F [plant link]
+          T  35 @
+          A   6 D [load divisor]
+          U   8 D [save at 8D (6D is required for quotient)]
+    [4]   T     D [initialize shifted divisor]
+          A   4 D [load dividend]
+          R     D [shift 1 right]
+          S     D [shifted divisor > dividend/2 yet?]
+          G  13 @ [yes, start subtraction]
+          T  36 @ [no, clear acc]
+          A     D [shift divisor 1 more]
+          L     D
+          E   4 @ [loop back (always, since acc >= 0)]
+   [13]   T  36 @ [clear acc]
+          T   6 D [initialize quotient to 0]
+   [15]   A   4 D [load remainder (initially = dividend)]
+          S     D [trial subtraction]
+          G  23 @ [skip if can't subtract]
+          T   4 D [update remainder]
+          A   6 D [load quotient]
+          Y     F [add 1 by rounding twice (*)]
+          Y     F
+          T   6 D
+   [23]   T  36 @ [clear acc]
+          A   8 D [load original divisor]
+          S     D [is shifted divisor back to original?]
+          E  35 @ [yes, exit (with accumulator = 0,
+                   in accordance with EDSAC convention)]
+          T  36 @ [no, clear acc]
+          A     D [shift divisor 1 right]
+          R     D
+          T     D
+          A   6 D [shift quotient 1 left]
+          L     D
+          T   6 D
+          E  15 @ [loop back (always, since acc = 0)]
+   [35]   E     F [return; order set up at runtime]
+   [36]   P     F [junk word, to clear accumulator]
+
+ [(*) This saves the bother of defining a double-word constant 1
+      and making sure that it's at an even address.]
+
+ [----------------------------------------------------------------------
+  Subroutine for lazy evaluation of continued fraction.
+  Must be loaded at an even address.
+  Locations relative to start of subroutine:
+  0:    Entry point
+  1:    Flag, < 0 if c.f. is finished, >= 0 if there's another term
+  2, 3: Next term of c.f., provided the flag (location 1) is >= 0
+  4, 5: Caller places numerator here before first call
+  6, 7: Caller places denominator here before first call; must be > 0
+
+  After setting up the numerator and denominator of the rational number,
+    the caller should repeatedly call location 0, reading the result
+    from location 1 and double location 2.
+  Locations 4..7 are maintained by the subroutine and should not be changed
+    by the caller until a new continued fraction is required.]
+
+          T  46 K [place address of subroutine in location 46]
+          P 148 F
+          E  25 K [load the code below to that address (WWG page 18)]
+          T     N
+          G     K
+    [0]   G   8 @ [entry point]
+    [1]   P     F [flag returned here]
+    [2]   P F P F [term returned here, if flag >= 0;
+                   also used as temporary store]
+    [4]   P F P F [caller puts numerator here]
+    [6]   P F P F [caller puts denominator here]
+    [8]   A   3 F [plant link]
+          T  28 @
+          S   6#@ [load negative of denominator]
+          E  44 @ [if denom <= 0, no more terms]
+          T     F [clear acc]
+          A   4#@ [load numerator]
+          T   2#@ [save before overwriting]
+          A   6#@ [load denominator]
+          U   4#@ [make it numerator for next call]
+          T   6 D [also to 6D for division]
+          A   2#@ [load numerator]
+          G  29 @ [special action if negative]
+          T   4 D [to 4D for division]
+   [21]   A  21 @ [for return from next]
+          G 110 F [call the above division subroutine]
+          A   4 D [load remainder]
+          T   6#@ [make it denominator for next call]
+          A   6 D [load quotient]
+   [26]   T   2#@ [return it as next term]
+   [27]   T   1 @ [flag >= 0 means term is valid]
+   [28]   E     F [exit with acc = 0]
+
+         [Here if rational = -n/d where n, d > 0. Principle is:
+          if  n + d - 1 = qd + r  then  -n = -qd + (d - 1 - r)]
+   [29]   T   4 D [save numerator in 4D]
+          S   6 D [acc := -den]
+          Y     F [add 1 by rounding twice]
+          Y     F
+          T   2#@ [save (1 - den) for later]
+          S   4 D [load abs(num)]
+          S   2#@ [add (den - 1)]
+          T   4 D [to 4D for division]
+   [37]   A  37 @ [for return from next]
+          G 110 F [call the above division subroutine]
+          S   2#@ [load (den - 1)]
+          S   4 D [subtract remainder]
+          T   6#@ [result is new denominator]
+          S   6 D [load negated quotient]
+          G  26 @ [join common code]
+
+         [Here if there are no more terms of the c.f.]
+   [44]   T     F [clear acc]
+          A   8 @ [this is negative since 'A' = -4]
+          G  27 @ [exit with negative flag]
+
+ [----------------------------------------------------------------------
+  Main routine]
+          T 200 K
+          G     K
+    [Variables]
+    [0]   P     F [negative counter of continued fractions]
+    [1]   P     F [character before term, first '=' then ',']
+    [Constants]
+    [2]   P     D [single-word 1]
+    [3]   A   2#H [order to load first numerator]
+    [4]   P   2 F [to inc addresses by 2]
+    [5]   #     F [teleprinter figures shift]
+    [6]   X     F [slash (in figures mode)]
+    [7]   V     F [equals sign (in figures mode)]
+    [8]   N     F [comma (in figures mode)]
+    [9]   !     F [space]
+   [10]   @     F [carriage return]
+   [11]   &     F [line feed]
+   [12]   K4096 F [teleprinter null]
+
+          [Enter with acc = 0]
+   [13]   O   5 @ [set teleprinter to figures]
+          S     H [negative of number of c.f.s]
+          T     @ [initialize counter]
+          A   3 @ [initial load order]
+   [17]   U  22 @ [plant order to load numerator]
+          A   4 @ [inc address by 2]
+          T  28 @ [plant order to load denominator]
+          A   7 @ [set to print '=' before first term]
+          T   1 @
+
+          [Demonstrate the subroutine above.
+          Since its address was placed in location 46,
+          we can use code letter N to refer to it.]
+   [22]   A    #H [load numerator (order set up at runtime)]
+          U   4#N [pass to subroutine]
+          T     D [also to 0D for printing]
+   [25]   A  25 @ [for return from print subroutine]
+          G  56 F [print numerator]
+          O   6 @ [followed by slash]
+   [28]   A    #H [load denominator (order set up at runtime)]
+          U   6#N [pass to subroutine]
+          T     D [also to 0D for printing]
+   [31]   A  31 @ [for return from print subroutine]
+          G  56 F [print denominator]
+          O   9 @ [followed by space]
+   [34]   A  34 @ [for return from subroutine]
+          G     N [call subroutine for next term]
+          A   1 N [load flag]
+          G  48 @ [if < 0, c.f. is finished, jump out]
+          O   1 @ [print equals or comma]
+          O   9 @ [print space]
+          T     F [clear acc]
+          A   2#N [load term]
+          T     D [to 0D for printing]
+   [43]   A  43 @ [for return from print subroutine]
+          G  56 F [print term; clears acc]
+          A   8 @ [set to print ',' before subsequent terms]
+          T   1 @
+          E  34 @ [loop back for next term]
+
+         [On to next continued fraction]
+   [48]   O  10 @ [print new line]
+          O  11 @
+          T     F [clear acc]
+          A     @ [load negative count of c.f.s]
+          A   2 @ [add 1]
+          E  59 @ [exit if count = 0]
+          T     @ [store back]
+          A  22 @ [order to load numerator]
+          A   4 @ [inc address by 4 for next c.f.]
+          A   4 @
+          G  17 @ [loop back (always, since 'A' < 0)]
+
+   [59]   O  12 @ [print null to flush teleprinter buffer]
+          Z     F [stop]
+
+          E  13 Z [define entry point]
+          P     F [acc = 0 on entry]

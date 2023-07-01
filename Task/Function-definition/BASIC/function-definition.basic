@@ -1,0 +1,5 @@
+DECLARE FUNCTION multiply% (a AS INTEGER, b AS INTEGER)
+
+FUNCTION multiply% (a AS INTEGER, b AS INTEGER)
+    multiply = a * b
+END FUNCTION

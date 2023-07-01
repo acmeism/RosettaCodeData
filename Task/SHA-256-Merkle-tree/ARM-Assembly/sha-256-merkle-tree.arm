@@ -1,0 +1,610 @@
+/* ARM assembly Raspberry PI  */
+/*  program merkleRoot.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+.equ READ,   3
+.equ OPEN,   5
+
+.equ O_RDWR,  0x0002             @ open for reading and writing
+
+.equ BUFFERSIZE,         65535   @ file buffer
+.equ LGBLOCK,            1024    @ block length
+
+.equ LGHASH, 32                  @ hash length
+.equ NBELEMENTS, 40              @ array size
+.equ LGZONETRAV, 2048            @ process array size
+
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/*  structure  variables hash compute */
+    .struct  0
+var_a:                     @ a
+    .struct  var_a + 4
+var_b:                     @ b
+    .struct  var_b + 4
+var_c:                     @ c
+    .struct  var_c + 4
+var_d:                     @ d
+    .struct  var_d + 4
+var_e:                     @ e
+    .struct  var_e + 4
+var_f:                     @ f
+    .struct  var_f + 4
+var_g:                     @ g
+    .struct  var_g + 4
+var_h:                     @ h
+    .struct  var_h + 4
+/* structure linkedlist*/
+    .struct  0
+@llist_next:                    @ next element
+@    .struct  llist_next + 4
+@llist_value:                   @ element value
+@    .struct  llist_value + 4
+@llist_fin:
+/***********************************/
+/* Initialized data                */
+/***********************************/
+.data
+szFileName:              .asciz "title.png"
+szCarriageReturn:        .asciz "\n"
+szMessErreur:            .asciz "Error detected.\n"
+szMessNbHash:            .asciz "Start hash number : @ \n"
+.align 4
+/* array constantes Hi */
+tbConstHi:           .int 0x6A09E667       @ H0
+                     .int 0xBB67AE85       @ H1
+                     .int 0x3C6EF372       @ H2
+                     .int 0xA54FF53A       @ H3
+                     .int 0x510E527F       @ H4
+                     .int 0x9B05688C       @ H5
+                     .int 0x1F83D9AB       @ H6
+                     .int 0x5BE0CD19       @ H7
+/* array  64 constantes Kt */
+tbConstKt:
+  .int 0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5
+  .int 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174
+  .int 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da
+  .int 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967
+  .int 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85
+  .int 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070
+  .int 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3
+  .int 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+/***********************************/
+/* UnInitialized data              */
+/***********************************/
+.bss
+sBuffer:                     .skip BUFFERSIZE     @ file buffer
+.align 4
+iNbBlocs:                    .skip 4
+iNbHash:                     .skip 4
+sZoneConv:                   .skip 24
+sZoneTrav:                   .skip LGZONETRAV
+HashResult:                  .skip LGHASH + 4
+HashProcess:                 .skip LGHASH * 2
+.align 8
+tbListHash:                  .skip LGHASH * NBELEMENTS
+tbH:                         .skip 4 * 8         @ 8 variables H
+tbabcdefgh:                  .skip 4 * 8
+tbW:                         .skip 4 * 64        @ 64 words W
+
+/***********************************/
+/*  code section                   */
+/***********************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszFileName               @ File name
+    mov r1,#O_RDWR                      @  flags
+    mov r2,#0                           @ mode
+    mov r7,#OPEN                        @ open file
+    svc #0
+    cmp r0,#0                           @ error ?
+    ble error
+    mov r12,r0                          @ save fd
+    ldr r1,iAdrsBuffer
+    mov r2,#BUFFERSIZE
+    mov r7,#READ                        @ call system read file
+    svc 0
+    cmp r0,#0                           @ error read ?
+    ble error
+    mov r7,r0                           @ number of read characters
+    ldr r6,iAdrsBuffer
+    mov r5,#0                           @ counter characters block
+1:
+    add r0,r6,r5                        @ start address of each block
+    mov r1,#LGBLOCK
+    bl computeSHA256
+    bl storeHash                        @ store hash in start array
+    cmp r0,#-1
+    beq error
+    add r5,#LGBLOCK                     @ new buffer offset
+    sub r0,r7,r5                        @
+    cmp r0,#LGBLOCK                     @ last block
+    bge 1b                              @ and loop
+    sub r1,r7,r5                        @ length last block
+    add r0,r6,r5                        @ address last block
+    bl computeSHA256
+    bl storeHash
+    cmp r0,#-1
+    beq error
+    ldr r0,iAdriNbHash
+    ldr r0,[r0]
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    ldr r0,iAdrszMessNbHash
+    ldr r1,iAdrsZoneConv
+    bl strInsertAtCharInc
+    bl affichageMess
+    ldr r0,iAdrtbListHash
+    ldr r1,iAdrHashResult
+
+    bl calculerMerkleRoot
+    ldr r0,iAdrHashResult
+    bl displaySHA256                   @ display résult
+
+end:
+    mov r0,r12                          @ FD
+    mov r7, #CLOSE                      @ call system close file
+    svc #0
+    cmp r0,#0
+    blt error
+    mov r0,#0                           @ return code
+    b 100f
+error:
+    ldr r1,iAdrszMessErreur             @ error message
+    bl   displayError
+    mov r0,#1                           @ return error code
+100:                                    @ standard end of the program
+    mov r7, #EXIT                       @ request to exit program
+    svc 0                               @ perform system call
+iAdrsBuffer:               .int sBuffer
+iAdrszFileName:            .int szFileName
+iAdrszMessErreur:          .int szMessErreur
+iAdrszCarriageReturn:      .int szCarriageReturn
+iAdrHashResult:            .int HashResult
+iAdrszMessNbHash:          .int szMessNbHash
+/******************************************************************/
+/*     store hash in start array                   */
+/******************************************************************/
+/* r0 hash address              */
+storeHash:
+    push {r1-r5,lr}
+    ldr r2,iAdriNbHash           @ number element counter
+    ldr r3,[r2]
+    ldr r1,iAdrtbListHash        @ address array hash
+    mov r4,#LGHASH               @ hash length
+    mla r5,r4,r3,r1              @ compute store address
+    mov r1,#0                    @ counter
+1:
+    ldr r4,[r0,r1]               @ load four bytes
+    str r4,[r5,r1]               @ store four bytes
+    add r1,#4
+    cmp r1,#LGHASH               @ 32 bytes ?
+    blt 1b                       @ no -> loop
+    add r3,#1
+    cmp r3,#NBELEMENTS
+    movge r0,#-1                 @ error ?
+    bge 100f
+    str r3,[r2]                  @ store new counter hash
+
+100:
+    pop {r1-r5,lr}               @ restaur registers
+    bx lr
+iAdriNbHash:    .int iNbHash
+iAdrtbListHash: .int tbListHash
+/******************************************************************/
+/*     compute hash root Merkle                                   */
+/******************************************************************/
+@ r0 start array hash address
+@ r1 result array address   (32 bytes)
+calculerMerkleRoot:
+    push {r1-r12,lr}         @ save  registers
+    mov r10,r1
+    mov r12,sp               @ save stack adresse
+    ldr r3,iAdriNbHash
+    ldr r3,[r3]
+    cmp r3,#0                @ 0 hash ?
+    moveq r0,#-1             @ error
+    beq 100f
+    mov r4,#LGHASH * 2
+    mul r1,r3,r4             @ compute hash size * blocks number * 2
+    sub sp,sp,r1             @ reserve array
+    mov fp,sp                @ address previousTreeLayer
+    lsr r1,#1                @ reserve size / 2
+    add r7,fp,r1             @ address TreeLayer
+
+    mov r2,#0                @ counter
+    mov r4,#LGHASH
+1:
+    mul r1,r2,r4
+    add r6,r0,r1
+    add r8,fp,r1
+    mov r5,#0
+2:                          @ loop copying 32 octets hash
+    ldr r9,[r6,r5]
+    str r9,[r8,r5]
+    add r5,r5,#4             @ count
+    cmp r5,#LGHASH
+    blt 2b
+    add r2,#1                @ next hash block
+    cmp r2,r3                @ maxi ?
+    blt 1b
+    mov r0,fp
+    mov r2,#0               @ indice TreeLayer
+    mov r5,#0               @ indice layer
+3:                          @ loop
+    cmp r3,#1               @ one hash ?
+    beq 12f                 @ yes -> end
+    sub r3,#1
+    mov r4,#LGHASH
+    mla r8,r2,r4,fp         @ address hash 1
+    mov r9,r7               @ raz TreeLayer
+4:
+    cmp r2,r3
+    bgt 11f                 @ end loop ?
+    blt 5f
+    mov r0,r8               @ last odd hash
+    add r2,#1               @ no concatenation
+    b 9f
+5:                          @ other hashes
+    add r6,r8,#LGHASH       @ address hash  N + 1
+6:
+    add r2,#1
+    ldr r1,iAdrHashProcess  @ address array hash concatenation
+    mov r0,#0
+7:                          @ loop copy element N
+    ldr r4,[r8,r0]
+    rev r4,r4               @ inversion byte in word
+    str r4,[r1,r0]
+    add r0,r0,#4
+    cmp r0,#LGHASH
+    blt 7b
+    add r1,r1,#LGHASH
+    mov r0,#0
+8:                          @ loop copy element N + 1
+    ldr r4,[r6,r0]
+    rev r4,r4               @ inversion byte in word
+    str r4,[r1,r0]
+    add r0,r0,#4
+    cmp r0,#LGHASH
+    blt 8b
+
+    ldr r0,iAdrHashProcess
+    mov r1,#LGHASH * 2
+    bl computeSHA256        @ calcul du hash complet
+
+9:
+    mov r1,#0
+10:                         @ loop copy hash in treelayer
+    ldr r4,[r0,r1]
+    str r4,[r9,r1]
+    add r1,r1,#4
+    cmp r1,#LGHASH
+    blt 10b
+
+    mov r1,r9
+
+    add r2,r2,#1           @ incremente counter previousTreeLayer
+    add r5,r5,#1           @ incremente counter treeLayer
+    add r9,#LGHASH         @ next address treeLayer
+    add r8,r6,#LGHASH      @ maj element N avec N + 2
+    b 4b
+
+11:
+    mov r0,fp
+    mov fp,r7             @ treelayer in previous
+    mov r7,r0
+    mov r3,r5             @ counter previous = counter treelayer
+    mov r5,#0             @ raz treelayer
+    mov r2,#0             @ raz previousTreeLayer
+    b 3b                  @ and loop
+
+12:                       @ end process
+    mov r1,fp
+    mov r2,#0
+13:                       @ loop copy result
+    ldr r3,[r1,r2]
+    str r3,[r10,r2]
+    add r2,r2,#4
+    cmp r2,#LGHASH
+    blt 13b
+    mov r0,r10            @ return address result
+    b 100f
+99:                       @ error
+   mov r0,#-1
+
+100:
+    mov sp,r12            @ restaur stack
+    pop {r1-r12,lr}       @ restaur registers
+    bx lr                 @ return
+iAdrHashProcess:     .int HashProcess
+/******************************************************************/
+/*     compute SHA1                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+/* r1 contains string length  */
+computeSHA256:
+    push {r1-r12,lr}         @ save  registres
+    mov r5,r1                @ counter length
+    ldr r1,iAdrtbH
+    mov r3,#0
+    mov r4,#0
+razTB:
+    str r4,[r1,r3]
+    add r3,#4
+    cmp r3,#8 + 8 + 64
+    blt razTB
+    ldr r1,iAdrsZoneTrav
+    mov r3,#0
+    mov r4,#0
+razZone:
+    str r4,[r1,r3]
+    add r3,#4
+    cmp r3,#LGZONETRAV
+    blt razZone
+    @vidregtit apresraz
+    mov r2,#0
+debCopy:                     @ copy string in work area
+    ldrb r3,[r0,r2]
+    strb r3,[r1,r2]
+    cmp r2,r5
+    addne r2,r2,#1
+    bne debCopy
+    @vidregtit aprescopie
+    lsl r6,r2,#3             @ initial message length in bits
+    mov r3,#0b10000000       @ add bit 1 at end of string
+    strb r3,[r1,r2]
+    add r2,r2,#1             @ length in bytes
+    lsl r4,r2,#3             @ length in bits
+    mov r3,#0
+addZeroes:
+    lsr r5,r2,#6
+    lsl r5,r5,#6
+    sub r5,r2,r5
+    cmp r5,#56
+    beq storeLength          @ yes -> end add
+    strb r3,[r1,r2]          @ add zero at message end
+    add r2,#1                @ increment lenght bytes
+    add r4,#8                @ increment length in bits
+    b addZeroes
+storeLength:
+    add r2,#4                @ add four bytes
+    rev r6,r6                @ inversion bits initials message length
+    str r6,[r1,r2]           @ and store at end
+
+    ldr r7,iAdrtbConstHi     @ constantes H address
+    ldr r4,iAdrtbH           @ start area H
+    mov r5,#0
+loopConst:                   @ init array H with start constantes
+    ldr r6,[r7,r5,lsl #2]    @ load constante
+    str r6,[r4,r5,lsl #2]    @ and store
+    add r5,r5,#1
+    cmp r5,#8
+    blt loopConst
+                             @ split into block of 64 bytes
+    add r2,#4                @  TODO : à revoir
+    lsr r4,r2,#6             @ blocks number
+    ldr r0,iAdriNbBlocs
+    str r4,[r0]              @ save block maxi
+    mov r7,#0                @ n° de block et r1 contient l adresse zone de travail
+loopBlock:                   @ begin loop of each block of 64 bytes
+    mov r0,r7
+    bl inversion             @ inversion each word because little indian
+    ldr r3,iAdrtbW           @ working area W address
+    mov r6,#0                @ indice t
+                             /* r2  address begin each block */
+    ldr r1,iAdrsZoneTrav
+    add r2,r1,r7,lsl #6      @  compute block begin  indice * 4 * 16
+    @vidregtit avantloop
+    @mov r0,r2
+    @vidmemtit  verifBloc r0 10
+loopPrep:                    @ loop for expand 80 words
+    cmp r6,#15               @
+    bgt expand1
+    ldr r0,[r2,r6,lsl #2]    @ load byte message
+    str r0,[r3,r6,lsl #2]    @ store in first 16 block
+    b expandEnd
+
+expand1:
+    sub r8,r6,#2
+    ldr r9,[r3,r8,lsl #2]
+    ror r10,r9,#17           @ fonction e1 (256)
+    ror r11,r9,#19
+    eor r10,r10,r11
+    lsr r11,r9,#10
+    eor r10,r10,r11
+    sub r8,r6,#7
+    ldr r9,[r3,r8,lsl #2]
+    add r9,r9,r10            @ + w - 7
+    sub r8,r6,#15
+    ldr r10,[r3,r8,lsl #2]
+    ror r11,r10,#7          @ fonction e0 (256)
+    ror r12,r10,#18
+    eor r11,r12
+    lsr r12,r10,#3
+    eor r10,r11,r12
+    add r9,r9,r10
+    sub r8,r6,#16
+    ldr r11,[r3,r8,lsl #2]
+    add r9,r9,r11
+
+    str r9,[r3,r6,lsl #2]
+expandEnd:
+    add r6,r6,#1
+    cmp r6,#64                 @ 64 words ?
+    blt loopPrep               @ and loop
+
+
+    /* COMPUTING THE MESSAGE DIGEST */
+    /* r1  area H constantes address */
+    /* r3  working area W address  */
+    /* r5  address constantes K   */
+    /* r6  counter t */
+    /* r7  block counter */
+    /* r8  addresse variables a b c d e f g h  */
+    @ldr r0,iAdrtbW
+    @vidmemtit  verifW80 r0 20
+                               @ init variable a b c d e f g h
+    ldr r0,iAdrtbH
+    ldr r8,iAdrtbabcdefgh
+    mov r1,#0
+loopInita:
+    ldr r9,[r0,r1,lsl #2]
+    str r9,[r8,r1,lsl #2]
+    add r1,r1,#1
+    cmp r1,#8
+    blt loopInita
+
+
+    ldr r1,iAdrtbConstHi
+    ldr r5,iAdrtbConstKt
+    mov r6,#0
+loop64T:                     @ begin loop 64 t
+    ldr r9,[r8,#var_h]
+    ldr r10,[r8,#var_e]      @ calcul T1
+    ror r11,r10,#6           @ fonction sigma 1
+    ror r12,r10,#11
+    eor r11,r12
+    ror r12,r10,#25
+    eor r11,r12
+    add r9,r9,r11             @ h + sigma1 (e)
+    ldr r0,[r8,#var_f]        @  fonction ch  x and y xor (non x and z)
+    ldr r4,[r8,#var_g]
+    and r11,r10,r0
+    mvn r12,r10
+    and r12,r12,r4
+    eor r11,r12
+    add r9,r9,r11             @ h + sigma1 (e) + ch (e,f,g)
+    ldr r0,[r5,r6,lsl #2]     @ load constantes k0
+    add r9,r9,r0
+    ldr r0,[r3,r6,lsl #2]     @ Wt
+    add r9,r9,r0
+                              @ calcul T2
+    ldr r10,[r8,#var_a]       @ fonction sigma 0
+    ror r11,r10,#2
+    ror r12,r10,#13
+    eor r11,r11,r12
+    ror r12,r10,#22
+    eor r11,r11,r12
+    ldr r2,[r8,#var_b]
+    ldr r4,[r8,#var_c]
+                              @ fonction maj x and y xor x and z xor y and z
+    and r12,r10,r2
+    and r0,r10,r4
+    eor r12,r12,r0
+    and r0,r2,r4
+    eor r12,r12,r0            @
+    add r12,r12,r11           @ T2
+                              @ compute variables
+    ldr r4,[r8,#var_g]
+    str r4,[r8,#var_h]
+    ldr r4,[r8,#var_f]
+    str r4,[r8,#var_g]
+    ldr r4,[r8,#var_e]
+    str r4,[r8,#var_f]
+    ldr r4,[r8,#var_d]
+    add r4,r4,r9              @ add T1
+    str r4,[r8,#var_e]
+    ldr r4,[r8,#var_c]
+    str r4,[r8,#var_d]
+    ldr r4,[r8,#var_b]
+    str r4,[r8,#var_c]
+    ldr r4,[r8,#var_a]
+    str r4,[r8,#var_b]
+    add r4,r9,r12             @ add T1 T2
+    str r4,[r8,#var_a]
+    mov r0,r8
+
+    add r6,r6,#1              @ increment t
+    cmp r6,#64
+    blt loop64T
+                              @ End block
+    ldr r0,iAdrtbH            @ start area H
+    mov r10,#0
+loopStoreH:
+    ldr r9,[r8,r10,lsl #2]
+    ldr r3,[r0,r10,lsl #2]
+    add r3,r9
+    str r3,[r0,r10,lsl #2]    @ store variables in H0
+    add r10,r10,#1
+    cmp r10,#8
+    blt loopStoreH
+                              @ other bloc
+    add r7,#1                 @ increment block
+    ldr r0,iAdriNbBlocs
+    ldr r4,[r0]               @ restaur maxi block
+    cmp r7,r4                 @ maxi ?
+
+    blt loopBlock             @  loop other block
+
+    ldr r0,iAdrtbH            @ return result area H
+100:
+    pop {r1-r12,lr}           @ restaur registers
+    bx lr                     @ return
+iAdrtbConstHi:            .int tbConstHi
+iAdrtbConstKt:            .int tbConstKt
+iAdrtbH:                  .int tbH
+iAdrtbW:                  .int tbW
+iAdrtbabcdefgh:           .int tbabcdefgh
+iAdriNbBlocs:             .int iNbBlocs
+iAdrsZoneTrav:            .int sZoneTrav
+/******************************************************************/
+/*     inversion des mots de 32 bits d un bloc                    */
+/******************************************************************/
+/* r0 contains N° block   */
+inversion:
+    push {r1-r3,lr}            @ save registers
+    ldr r1,iAdrsZoneTrav
+    add r1,r0,lsl #6           @ debut du bloc
+    mov r2,#0
+1:                             @ start loop
+    ldr r3,[r1,r2,lsl #2]
+    rev r3,r3
+    str r3,[r1,r2,lsl #2]
+    add r2,r2,#1
+    cmp r2,#16
+    blt 1b
+100:
+    pop {r1-r3,lr}             @ restaur registres
+    bx lr                      @return
+/******************************************************************/
+/*     display hash  SHA256                         */
+/******************************************************************/
+/* r0 contains the address of hash  */
+displaySHA256:
+    push {r1-r3,lr}                @ save  registres
+    mov r3,r0
+    mov r2,#0
+1:
+    ldr r0,[r3,r2,lsl #2]          @ load 4 bytes
+    @rev r0,r0                      @ reverse bytes
+    ldr r1,iAdrsZoneConv
+    bl conversion16                @ conversion hexa
+    mov r4,#0
+    strb r4,[r1,r0]                @ 0 final
+    ldr r0,iAdrsZoneConv
+    bl affichageMess
+    add r2,r2,#1
+    cmp r2,#LGHASH / 4
+    blt 1b                         @ and loop
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess               @ display message
+100:
+    pop {r1-r3,lr}                 @ restaur registers
+    bx lr                          @ return
+iAdrsZoneConv:           .int sZoneConv
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

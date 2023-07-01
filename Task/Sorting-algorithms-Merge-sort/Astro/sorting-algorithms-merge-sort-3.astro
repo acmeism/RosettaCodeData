@@ -1,0 +1,223 @@
+//--------------------------------------------------------------------
+//
+//  A mergesort for 32-bit signed integers.
+//
+//--------------------------------------------------------------------
+
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+
+#define ENTIER_MAX 2147483647
+
+(* We do not include the most negative two's-complement number. *)
+stadef entier (i : int) = ~ENTIER_MAX <= i && i <= ENTIER_MAX
+sortdef entier          = {i : int | entier i}
+
+typedef entier (i : int) = [entier i] int i
+typedef entier           = [i : entier] entier i
+
+datatype sorted_entier_list (int, int) =
+| sorted_entier_list_nil (0, ENTIER_MAX)
+| {n : nat}
+  {i, j : entier | ~(j < i)}
+  sorted_entier_list_cons (n + 1, i) of
+    (entier i, sorted_entier_list (n, j))
+typedef sorted_entier_list (n : int) =
+  [i : entier] sorted_entier_list (n, i)
+typedef sorted_entier_list =
+  [n : int] sorted_entier_list n
+
+infixr ( :: ) :::
+#define NIL  list_nil ()
+#define ::   list_cons
+#define SNIL sorted_entier_list_nil ()
+#define :::  sorted_entier_list_cons
+
+(*------------------------------------------------------------------*)
+
+extern prfn
+lemma_sorted_entier_list_param
+          {n   : int}
+          (lst : sorted_entier_list n)
+    :<prf> [0 <= n] void
+
+extern fn
+sorted_entier_list_length
+          {n   : int}
+          (lst : sorted_entier_list n)
+    :<> [0 <= n] int n
+
+extern fn
+sorted_entier_list_merge
+          {m, n : int}
+          {i, j : entier}
+          (lst1 : sorted_entier_list (m, i),
+           lst2 : sorted_entier_list (n, j))
+    :<> sorted_entier_list (m + n, min (i, j))
+
+extern fn
+entier_list_mergesort
+          {n   : int}
+          (lst : list (entier, n)) (* An ordinary list. *)
+    :<!wrt> sorted_entier_list n
+
+extern fn
+sorted_entier_list2list
+          {n   : int}
+          (lst : sorted_entier_list n)
+    :<> list (entier, n)
+
+overload length with sorted_entier_list_length
+overload merge with sorted_entier_list_merge
+overload mergesort with entier_list_mergesort
+overload to_list with sorted_entier_list2list
+
+(*------------------------------------------------------------------*)
+
+primplement
+lemma_sorted_entier_list_param {n} lst =
+  case+ lst of
+  | SNIL => ()
+  | _ ::: _ => ()
+
+implement
+sorted_entier_list_length {n} lst =
+  (* This implementation is tail-recursive. *)
+  let
+    fun
+    count {m   : nat | m <= n} .<n - m>.
+          (lst : sorted_entier_list (n - m),
+           m   : int m)
+        :<> [0 <= n] int n =
+      case+ lst of
+      | SNIL => m
+      | _ ::: tail => count {m + 1} (tail, succ m)
+
+    prval () = lemma_sorted_entier_list_param lst
+  in
+    count (lst, 0)
+  end
+
+implement
+sorted_entier_list_merge (lst1, lst2) =
+  (* This implementation is *NOT* tail recursive. It will use O(m+n)
+     stack space. *)
+  let
+    fun
+    recurs {m, n : nat}
+           {i, j : entier} .<m + n>.
+           (lst1 : sorted_entier_list (m, i),
+            lst2 : sorted_entier_list (n, j))
+        :<> sorted_entier_list (m + n, min (i, j)) =
+      case+ lst1 of
+      | SNIL => lst2
+      | i ::: tail1 =>
+        begin
+          case+ lst2 of
+          | SNIL => lst1
+          | j ::: tail2 =>
+            if ~(j < i) then
+              i ::: recurs (tail1, lst2)
+            else
+              j ::: recurs (lst1, tail2)
+        end
+
+    prval () = lemma_sorted_entier_list_param lst1
+    prval () = lemma_sorted_entier_list_param lst2
+  in
+    recurs (lst1, lst2)
+  end
+
+implement
+entier_list_mergesort lst =
+  let
+    fun
+    recurs {m   : nat} .<m>.
+           (lst : list (entier, m),
+            m   : int m)
+        :<!wrt> sorted_entier_list m =
+      if m = 1 then
+        let
+          val+ head :: NIL = lst
+        in
+          head ::: SNIL
+        end
+      else if m = 0 then
+        SNIL
+      else
+        let
+          val m_left = m \g1int_ndiv 2
+          val m_right = m - m_left
+          val @(left, right) = list_split_at (lst, m_left)
+          val left = recurs (list_vt2t left, m_left)
+          and right = recurs (right, m_right)
+        in
+          left \merge right
+        end
+
+    prval () = lemma_list_param lst
+  in
+    recurs (lst, length lst)
+  end
+
+implement
+sorted_entier_list2list lst =
+  (* This implementation is *NOT* tail recursive. It will use O(n)
+     stack space. *)
+  let
+    fun
+    recurs {n   : nat} .<n>.
+           (lst : sorted_entier_list n)
+        :<> list (entier, n) =
+      case+ lst of
+      | SNIL => NIL
+      | head ::: tail => head :: recurs tail
+
+    prval () = lemma_sorted_entier_list_param lst
+  in
+    recurs lst
+  end
+
+(*------------------------------------------------------------------*)
+
+fn
+print_Int_list
+          {n   : int}
+          (lst : list (Int, n))
+    : void =
+  let
+    fun
+    loop {n   : nat} .<n>.
+         (lst : list (Int, n))
+        : void =
+      case+ lst of
+      | NIL => ()
+      | head :: tail =>
+        begin
+          print! (" ");
+          print! (head);
+          loop tail
+        end
+    prval () = lemma_list_param lst
+  in
+    loop lst
+  end
+
+implement
+main0 () =
+  let
+    val example_list =
+      $list (22, 15, 98, 82, 22, 4, 58, 70, 80, 38, 49, 48, 46, 54,
+             93, 8, 54, 2, 72, 84, 86, 76, 53, 37, 90)
+    val sorted_list = mergesort example_list
+  in
+    print! ("unsorted  ");
+    print_Int_list example_list;
+    println! ();
+    print! ("sorted    ");
+    print_Int_list (to_list sorted_list);
+    println! ()
+  end
+
+(*------------------------------------------------------------------*)

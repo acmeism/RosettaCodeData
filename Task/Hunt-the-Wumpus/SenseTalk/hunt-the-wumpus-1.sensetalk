@@ -1,0 +1,264 @@
+-- HUNT THE WUMPUS
+--  BY GREGORY YOB
+-- SenseTalk adaptation by Jonathan Gover
+
+answer "INSTRUCTIONS (Y-N)" with "No" or "Yes"
+if it is "Yes" then showInstructions
+
+-- SET UP CAVE (DODECAHEDRAL NODE LIST)
+set rooms to [
+	[2,5,8],[1,3,10],[2,4,12],[3,5,14],[1,4,6],
+	[5,7,15],[6,8,17],[1,7,9],[8,10,18],[2,9,11],
+	[10,12,19],[3,11,13],[12,14,20],[4,13,15],[6,14,16],
+	[15,17,20],[7,16,18],[9,17,19],[11,18,20],[13,16,19]
+]
+
+-- LOCATE L ARRAY ITEMS
+set locations to the randomLocations
+set initialLocations to locations
+
+repeat
+	-- SET# ARROWS
+	set arrowCount to 5
+	
+	-- RUN THE GAME
+	put "HUNT THE WUMPUS"
+	
+	repeat
+		-- HAZARD WARNINGS & LOCATION
+		locationAndHazardWarnings locations, rooms
+		
+		-- MOVE OR SHOOT
+		answer "SHOOT OR MOVE (S-M)" with "Move" or "Shoot" or "Quit"
+		if it is "Quit" then exit all
+		
+		-- SHOOT
+		if it is "Shoot" then
+			shoot reference to locations, rooms, reference to arrowCount
+			winOrLose the result
+			if the result isn't empty then exit repeat
+		end if
+		
+		-- MOVE
+		if it is "Move" then
+			move reference to locations, rooms
+			winOrLose the result
+			if the result isn't empty then exit repeat
+		end if
+		
+	end repeat
+	
+	answer "PLAY AGAIN? (Y-N)" with "No" or "Yes"
+	if it is "No" then exit repeat
+	
+	answer "SAME SET-UP (Y-N)" with "No" or "Yes"
+	if it is "Yes" then
+		set locations to initialLocations
+	else
+		set locations to the randomLocations
+		set initialLocations to locations
+	end if
+	
+end repeat
+
+
+to handle randomLocations
+	put 1..20 shuffled into potentialLocations
+	
+	set locations to {
+		player:first item of potentialLocations,
+		wumpus:second item of potentialLocations,
+		pits:third to fourth items of potentialLocations,
+		bats:fifth to sixth items of potentialLocations
+	}
+	return locations
+end randomLocations
+
+
+to handle winOrLose result
+	if result is "lose" then put "HA HA HA - YOU LOSE!"
+	if result is "win" then put "HEE HEE HEE - THE WUMPUS'LL GETCHA NEXT TIME!!"
+	return result
+end winOrLose
+
+
+-- INSTRUCTIONS
+to handle showInstructions
+	answer {{
+WELCOME TO 'HUNT THE WUMPUS'
+  THE WUMPUS LIVES IN A CAVE OF 20 ROOMS. EACH ROOM
+HAS 3 TUNNELS LEADING TO OTHER ROOMS. (LOOK AT A
+DODECAHEDRON TO SEE HOW THIS WORKS-IF YOU DON'T KNOW
+WHAT A DODECAHEDRON IS, ASK SOMEONE)
+
+     HAZARDS:
+ BOTTOMLESS PITS - TWO ROOMS HAVE BOTTOMLESS PITS IN THEM
+     IF YOU GO THERE, YOU FALL INTO THE PIT (& LOSE!)
+ SUPER BATS - TWO OTHER ROOMS HAVE SUPER BATS. IF YOU
+     GO THERE, A BAT GRABS YOU AND TAKES YOU TO SOME OTHER
+     ROOM AT RANDOM. (WHICH MIGHT BE TROUBLESOME)
+
+     WUMPUS:
+ THE WUMPUS IS NOT BOTHERED BY THE HAZARDS (HE HAS SUCKER
+ FEET AND IS TOO BIG FOR A BAT TO LIFT).  USUALLY
+ HE IS ASLEEP. TWO THINGS WAKE HIM UP: YOUR ENTERING
+ HIS ROOM OR YOUR SHOOTING AN ARROW.
+     IF THE WUMPUS WAKES, HE MOVES (P=.75) ONE ROOM
+ OR STAYS STILL (P=.25). AFTER THAT, IF HE IS WHERE YOU
+ ARE, HE EATS YOU UP (& YOU LOSE!)
+
+     YOU:
+ EACH TURN YOU MAY MOVE OR SHOOT A CROOKED ARROW
+   MOVING: YOU CAN GO ONE ROOM (THRU ONE TUNNEL)
+   ARROWS: YOU HAVE 5 ARROWS. YOU LOSE WHEN YOU RUN OUT.
+   EACH ARROW CAN GO FROM 1 TO 5 ROOMS. YOU AIM BY TELLING
+   THE COMPUTER THE ROOM#S YOU WANT THE ARROW TO GO TO.
+   IF THE ARROW CAN'T GO THAT WAY (IE NO TUNNEL) IT MOVES
+   AT RANDOM TO THE NEXT ROOM.
+     IF THE ARROW HITS THE WUMPUS, YOU WIN.
+     IF THE ARROW HITS YOU, YOU LOSE.
+
+    WARNINGS:
+     WHEN YOU ARE ONE ROOM AWAY FROM WUMPUS OR HAZARD,
+    THE COMPUTER SAYS:
+ WUMPUS-  'I SMELL A WUMPUS'
+ BAT   -  'BATS NEARBY'
+ PIT   -  'I FEEL A DRAFT'
+
+}}
+end showInstructions
+
+
+-- PRINT LOCATION & HAZARD WARNINGS
+to handle locationAndHazardWarnings locations, rooms
+	put empty
+	
+	set currentRoomNumber to locations.player
+	set tunnelsLeadingTo to item currentRoomNumber of rooms
+	
+	repeat with each item of tunnelsLeadingTo
+		if it is locations.wumpus then put "I SMELL A WUMPUS!"
+		if it is in locations.pits then put "I FEEL A DRAFT"
+		if it is in locations.bats then put "BATS NEARBY!"
+	end repeat
+	
+	put !"YOU ARE IN ROOM [[currentRoomNumber]]"
+	put !"TUNNELS LEAD TO [[tunnelsLeadingTo joined by space]]"
+	put empty
+	
+end locationAndHazardWarnings
+
+
+-- ARROW ROUTINE
+to handle shoot locations, rooms, arrowCount
+	-- PATH OF ARROW
+	answer "NO. OF ROOMS(1-5)" from list 1..5
+	set numberOfRooms to it
+	
+	set intendedPath to []
+
+	repeat until the number of items in intendedPath equals numberOfRooms
+		answer "ROOM #" from list 1..20
+		set nextRoom to it
+		
+		if the number of items in intendedPath is more than 1
+			if nextRoom equals the penultimate item in intendedPath
+				put "ARROWS AREN'T THAT CROOKED - TRY ANOTHER ROOM"
+				next repeat
+			end if
+		end if
+		
+		insert nextRoom into intendedPath
+		
+	end repeat
+	
+	-- SHOOT ARROW
+	set arrowLocation to locations.player
+	
+	repeat with pathIndex from 1 to number of items in intendedPath
+		set nextRoom to item pathIndex of intendedPath
+		set tunnelsLeadingTo to item arrowLocation of rooms
+		
+		if tunnelsLeadingTo contains nextRoom then
+			set arrowLocation to nextRoom
+		else
+			-- NO TUNNEL FOR ARROW
+			set arrowLocation to any item of tunnelsLeadingTo
+		end if
+		
+		-- SEE IF ARROW IS AT L(1) OR L(2)
+		if arrowLocation equals locations.wumpus then
+			put "AHA! YOU GOT THE WUMPUS!"
+			return "win"
+		end if
+		
+		if arrowLocation equals locations.player then
+			put "OUCH! ARROW GOT YOU!"
+			return "lose"
+		end if
+		
+		put "MISSED"
+		
+		-- MOVE WUMPUS
+		moveWumpus reference to locations, rooms
+		if the result is "lose" then return "lose"
+		
+		-- AMMO CHECK
+		subtract 1 from arrowCount
+		if arrowCount is 0 then
+			put "NO ARROWS LEFT"
+			return "lose"
+		end if
+	end repeat
+	
+end shoot
+
+
+-- MOVE WUMPUS ROUTINE
+to handle moveWumpus locations, rooms
+	if random of 4 isn't 4 then
+		set currentRoomNumber to locations.wumpus
+		set tunnelsLeadingTo to item currentRoomNumber of rooms
+		
+		set locations.wumpus to any item of tunnelsLeadingTo
+	end if
+	
+	if locations.player equals locations.wumpus then
+		put "TSK TSK TSK- WUMPUS GOT YOU!"
+		return "lose"
+	end if
+	
+	return empty
+end moveWumpus
+
+
+-- MOVE ROUTINE
+to handle move locations, rooms
+	set currentRoomNumber to locations.player
+	set tunnelsLeadingTo to item currentRoomNumber of rooms
+	
+	answer "WHERE TO" from list tunnelsLeadingTo
+	set locations.player to it
+	
+	-- CHECK FOR HAZARDS
+	-- WUMPUS
+	if locations.player equals locations.wumpus then
+		put "...OOPS! BUMPED A WUMPUS!"
+		
+		-- MOVE WUMPUS
+		moveWumpus reference to locations, rooms
+		if the result is "lose" then return "lose"
+	end if
+	
+	-- PIT
+	if locations.pits contains locations.player then
+		put "YYYIIIIEEEE . . . FELL IN PIT"
+		return "lose"
+	end if
+	
+	-- BATS
+	if locations.bats contains locations.player then
+		put "ZAP--SUPER BAT SNATCH! ELSEWHEREVILLE FOR YOU!"
+		set locations.player to any item of 1..20
+	end if
+end move

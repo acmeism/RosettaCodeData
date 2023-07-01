@@ -1,0 +1,95 @@
+ processor EinsteinSolver
+  @: [{|{}|}]; // A list of possible relations, start with one relation with an empty tuple
+  $ -> \(
+    when <[](1..)> do
+      def variableRange: $(1);
+      @EinsteinSolver: [($@EinsteinSolver(1) join {|{by $variableRange...}|})];
+      $(2..last) -> #
+  \) -> !VOID
+
+  sink isFact
+    def fact: $;
+    def parts: [$... -> {$}];
+    @EinsteinSolver: [$@EinsteinSolver... -> \(
+      def new: ($ matching {|$fact|});
+      @: $;
+      $parts... -> @: ($@ notMatching {| $ |});
+      ($new union $@) !
+    \)];
+  end isFact
+
+  operator (a nextTo&{byField:, bMinusA:} b)
+    data ES_temp__ <"1"> local
+    @EinsteinSolver: [$@EinsteinSolver... -> \(
+      def in: $;
+      def temp: {| $... -> {$, ES_temp__: ($(byField)::raw)"1"} |};
+      def numbers: [$temp({ES_temp__:})... -> $.ES_temp__];
+      $numbers... -> \(
+        def aNumber: $;
+        def bNumbers: [$bMinusA... -> ($ + $aNumber)"1"];
+        def new: ($temp matching {| {$a, ES_temp__: $aNumber} |});
+        @: ($new union (($temp notMatching {| $a |}) notMatching {| {ES_temp__: $aNumber} |}));
+        $numbers... -> \(<~ ?($bNumbers <[<=$>]>)> $! \) -> @: ($@ notMatching {| {$b, ES_temp__: $} |});
+        ($in matching $@) !
+      \) !
+    \)];
+  end nextTo
+
+  source solutions&{required:}
+    templates resolve&{rows:}
+      when <?($rows <=1>)?($::count <=1>)> do $ !
+      when <?($::count <$rows..>)> do
+        def in: $;
+        def selected: [$...] -> $(1);
+        ($in minus {|$selected|}) -> resolve&{rows: $rows} ! // Alternative solutions
+        @: $;
+        $selected... -> {$} -> @: ($@ notMatching {| $ |});
+        [$@ -> resolve&{rows: $rows-1}] -> \(
+            when <~=[]> do
+              $... -> {| $..., $selected |} !
+        \) !
+    end resolve
+    [$@EinsteinSolver... -> resolve&{rows: $required}] !
+  end solutions
+end EinsteinSolver
+
+def numbers: [1..5 -> (no: $)];
+def nationalities: [['Englishman', 'Swede', 'Dane', 'Norwegian', 'German']... -> (nationality:$)];
+def colours: [['red', 'green', 'white', 'yellow', 'blue']... -> (colour:$)];
+def pets: [['dog', 'birds', 'cats', 'horse', 'zebra']... -> (pet:$)];
+def drinks: [['tea', 'coffee', 'milk', 'beer', 'water']... -> (drink:$)];
+def smokes: [['Pall Mall', 'Dunhill', 'Blend', 'Blue Master', 'Prince']... -> (smoke: $)];
+
+
+def solutions: [$numbers, $nationalities, $colours, $pets, $drinks, $smokes] -> \(
+  def solver: $ -> EinsteinSolver;
+
+  {nationality: 'Englishman', colour: 'red'} -> !solver::isFact
+  {nationality: 'Swede', pet: 'dog'} -> !solver::isFact
+  {nationality: 'Dane', drink: 'tea'} -> !solver::isFact
+  ({colour: 'green'} solver::nextTo&{byField: :(no:), bMinusA: [1]} {colour: 'white'}) -> !VOID
+  {drink: 'coffee', colour: 'green'} -> !solver::isFact
+  {smoke: 'Pall Mall', pet: 'birds'} -> !solver::isFact
+  {colour: 'yellow', smoke: 'Dunhill'} -> !solver::isFact
+  {no: 3, drink: 'milk'} -> !solver::isFact
+  {nationality: 'Norwegian', no: 1} -> !solver::isFact
+  ({smoke: 'Blend'} solver::nextTo&{byField: :(no:), bMinusA: [-1, 1]} {pet: 'cats'}) -> !VOID
+  ({smoke: 'Dunhill'} solver::nextTo&{byField: :(no:), bMinusA: [-1, 1]} {pet: 'horse'}) -> !VOID
+  {smoke: 'Blue Master', drink: 'beer'} -> !solver::isFact
+  {nationality: 'German', smoke: 'Prince'} -> !solver::isFact
+  ({nationality: 'Norwegian'} solver::nextTo&{byField: :(no:), bMinusA: [-1, 1]} {colour: 'blue'}) -> !VOID
+  ({drink: 'water'} solver::nextTo&{byField: :(no:), bMinusA: [-1, 1]} {smoke: 'Blend'}) -> !VOID
+
+  $solver::solutions&{required: 5}!
+\);
+
+$solutions... -> ($ matching {| {pet: 'zebra'} |}) ... -> 'The $.nationality; owns the zebra.
+
+' -> !OUT::write
+
+$solutions -> \[i]('Solution $i;:
+$... -> '$;
+';
+'! \)... -> !OUT::write
+'No more solutions
+' -> !OUT::write

@@ -1,0 +1,15 @@
+SCREEN 12
+CLS
+a = 200
+b = 200
+n = 2.5
+na = 2 / n
+t = .01
+
+LINE -(520, 245), 0, BF
+FOR i = 0 TO 314
+    xp = a * SGN(COS(t)) * ABS((COS(t))) ^ na + 320
+    yp = b * SGN(SIN(t)) * ABS((SIN(t))) ^ na + 240
+    t = t + .02
+    LINE -(xp, yp), 1, BF
+NEXT i

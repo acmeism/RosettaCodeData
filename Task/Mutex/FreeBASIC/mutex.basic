@@ -1,0 +1,54 @@
+' Threading synchronization using Mutexes
+' If you comment out the lines containing "MutexLock" and "MutexUnlock", the
+' threads will not be in sync and some of the data may be printed out of place.
+
+Const max_hilos = 10
+
+Dim Shared As Any Ptr bloqueo_tty
+
+' Teletipo unfurls some text across the screen at a given location
+Sub Teletipo(Byref texto As String, Byval x As Integer, Byval y As Integer)
+    '
+    ' This MutexLock makes simultaneously running threads wait for each
+    ' other, so only one at a time can continue and print output.
+    ' Otherwise, their Locates would interfere, since there is only one cursor.
+    '
+    ' It's impossible to predict the order in which threads will arrive here and
+    ' which one will be the first to acquire the lock thus causing the rest to wait.
+    Mutexlock bloqueo_tty
+
+    For i As Integer = 0 To (Len(texto) - 1)
+        Locate x, y + i : Print Chr(texto[i])
+        Sleep 25, 1
+    Next i
+
+    ' MutexUnlock releases the lock and lets other threads acquire it.
+    Mutexunlock bloqueo_tty
+End Sub
+
+Sub Hilo(Byval datos_usuario As Any Ptr)
+    Dim As Integer id = Cint(datos_usuario)
+    Teletipo "Hilo (" & id & ").........", 1 + id, 1
+End Sub
+
+' Create a mutex to syncronize the threads
+bloqueo_tty = Mutexcreate()
+
+' Create child threads
+Dim As Any Ptr sucesos(0 To max_hilos - 1)
+For i As Integer = 0 To max_hilos - 1
+    sucesos(i) = Threadcreate(@Hilo, Cptr(Any Ptr, i))
+    If sucesos(i) = 0 Then
+        Print "Error al crear el hilo:"; i
+        Exit For
+    End If
+Next i
+
+' This is the main thread. Now wait until all child threads have finished.
+For i As Integer = 0 To max_hilos - 1
+    If sucesos(i) <> 0 Then Threadwait(sucesos(i))
+Next i
+
+' Clean up when finished
+Mutexdestroy(bloqueo_tty)
+Sleep

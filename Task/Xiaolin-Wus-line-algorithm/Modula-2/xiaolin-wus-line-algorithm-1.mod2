@@ -1,0 +1,241 @@
+MODULE Xiaolin_Wu_Task;
+
+(* The program is for ISO Modula-2. To compile with GNU Modula-2
+   (gm2), use the "-fiso" option. *)
+
+IMPORT RealMath;
+IMPORT SRawIO;
+IMPORT STextIO;
+IMPORT SWholeIO;
+IMPORT SYSTEM;
+
+CONST MaxDrawingSurfaceIndex = 1999;
+CONST MaxDrawingSurfaceSize =
+      (MaxDrawingSurfaceIndex + 1) * (MaxDrawingSurfaceIndex + 1);
+
+TYPE DrawingSurfaceIndex = [0 .. MaxDrawingSurfaceIndex];
+TYPE PixelsIndex = [0 .. MaxDrawingSurfaceSize - 1];
+TYPE DrawingSurface =
+     RECORD
+       u0, v0, u1, v1 : INTEGER;
+       pixels : ARRAY PixelsIndex OF REAL;
+     END;
+TYPE PointPlotter = PROCEDURE (VAR DrawingSurface,
+                               INTEGER, INTEGER, REAL);
+
+PROCEDURE InitializeDrawingSurface (VAR s : DrawingSurface;
+                                    u0, v0, u1, v1 : INTEGER);
+  VAR i : PixelsIndex;
+BEGIN
+  s.u0 := u0; s.v0 := v0;
+  s.u1 := u1; s.v1 := v1;
+  FOR i := 0 TO MaxDrawingSurfaceSize - 1 DO
+    s.pixels[i] := 0.0
+  END
+END InitializeDrawingSurface;
+
+PROCEDURE DrawingSurfaceRef (VAR s : DrawingSurface;
+                             x, y : DrawingSurfaceIndex) : REAL;
+  VAR c : REAL;
+BEGIN
+  IF (s.u0 <= x) AND (x <= s.u1) AND (s.v0 <= y) AND (y <= s.v1) THEN
+    c := s.pixels[(x - s.u0) + ((s.v1 - y) * (s.u1 - s.u0 + 1))]
+  ELSE
+    (* (x,y) is outside the drawing surface. Return a somewhat
+       arbitrary value. "Not a number" would be better. *)
+    c := 0.0
+  END;
+  RETURN c
+END DrawingSurfaceRef;
+
+PROCEDURE DrawingSurfaceSet (VAR s : DrawingSurface;
+                             x, y : DrawingSurfaceIndex;
+                             c : REAL);
+BEGIN
+  (* Store the value only if (x,y) is within the drawing surface. *)
+  IF (s.u0 <= x) AND (x <= s.u1) AND (s.v0 <= y) AND (y <= s.v1) THEN
+    s.pixels[(x - s.u0) + ((s.v1 - y) * (s.u1 - s.u0 + 1))] := c
+  END
+END DrawingSurfaceSet;
+
+PROCEDURE WriteTransparencyMask (VAR s : DrawingSurface);
+  VAR w, h : INTEGER;
+      i : DrawingSurfaceIndex;
+      byteval : [0 .. 255];
+      byte : SYSTEM.LOC;
+BEGIN
+  (* Send to standard output a transparency map in raw Portable Gray
+     Map format. *)
+  w := s.u1 - s.u0 + 1;
+  h := s.v1 - s.v0 + 1;
+  STextIO.WriteString ('P5');
+  STextIO.WriteLn;
+  STextIO.WriteString ('# transparency mask');
+  STextIO.WriteLn;
+  SWholeIO.WriteCard (VAL (CARDINAL, w), 0);
+  STextIO.WriteString (' ');
+  SWholeIO.WriteCard (VAL (CARDINAL, h), 0);
+  STextIO.WriteLn;
+  STextIO.WriteString ('255');
+  STextIO.WriteLn;
+  FOR i := 0 TO (w * h) - 1 DO
+    byteval := RealMath.round (255.0 * s.pixels[i]);
+    byte := SYSTEM.CAST (SYSTEM.LOC, byteval);
+    SRawIO.Write (byte)
+  END
+END WriteTransparencyMask;
+
+PROCEDURE ipart (x : REAL) : INTEGER;
+  VAR i : INTEGER;
+BEGIN
+  i := VAL (INTEGER, x);
+  IF x < VAL (REAL, i) THEN
+    i := i - 1;
+  END;
+  RETURN i
+END ipart;
+
+PROCEDURE iround (x : REAL) : INTEGER;
+BEGIN
+  RETURN ipart (x + 0.5)
+END iround;
+
+PROCEDURE fpart (x : REAL) : REAL;
+BEGIN
+  RETURN x - VAL (REAL, ipart (x))
+END fpart;
+
+PROCEDURE rfpart (x : REAL) : REAL;
+BEGIN
+  RETURN 1.0 - fpart (x)
+END rfpart;
+
+PROCEDURE PlotShallow (VAR s : DrawingSurface;
+                       x, y : INTEGER;
+                       opacity : REAL);
+  VAR combined_opacity : REAL;
+BEGIN
+  (* Let us simply add opacities, up to the maximum of 1.0. You might,
+     of course, wish to do something different. *)
+  combined_opacity := opacity + DrawingSurfaceRef (s, x, y);
+  IF combined_opacity > 1.0 THEN
+    combined_opacity := 1.0
+  END;
+  DrawingSurfaceSet (s, x, y, combined_opacity)
+END PlotShallow;
+
+PROCEDURE PlotSteep (VAR s : DrawingSurface;
+                     x, y : INTEGER;
+                     opacity : REAL);
+BEGIN
+  PlotShallow (s, y, x, opacity)
+END PlotSteep;
+
+PROCEDURE drawln (VAR s : DrawingSurface;
+                  x0, y0, x1, y1 : REAL;
+                  plot : PointPlotter);
+  VAR dx, dy, gradient : REAL;
+      yend, xgap : REAL;
+      first_y_intersection, intery : REAL;
+      xend : INTEGER;
+      xpxl1, ypxl1 : INTEGER;
+      xpxl2, ypxl2 : INTEGER;
+      x : INTEGER;
+BEGIN
+  dx := x1 - x0;  dy := y1 - y0;
+  IF dx = 0.0 THEN
+    gradient := 1.0
+  ELSE
+    gradient := dy / dx
+  END;
+
+  (* Handle the first endpoint. *)
+  xend := iround (x0);
+  yend := y0 + (gradient * (VAL (REAL, xend) - x0));
+  xgap := rfpart (x0 + 0.5);
+  xpxl1 := xend;
+  ypxl1 := ipart (yend);
+  plot (s, xpxl1, ypxl1, rfpart (yend) * xgap);
+  plot (s, xpxl1, ypxl1 + 1, fpart (yend) * xgap);
+
+  first_y_intersection := yend + gradient;
+
+  (* Handle the second endpoint. *)
+  xend := iround (x1);
+  yend := y1 + (gradient * (VAL (REAL, xend) - x1));
+  xgap := fpart (x1 + 0.5);
+  xpxl2 := xend;
+  ypxl2 := ipart (yend);
+  plot (s, xpxl2, ypxl2, (rfpart (yend) * xgap));
+  plot (s, xpxl2, ypxl2 + 1, fpart (yend) * xgap);
+
+  (* Loop over the rest of the points. *)
+  intery := first_y_intersection;
+  FOR x := xpxl1 + 1 TO xpxl2 - 1 DO
+    plot (s, x, ipart (intery), rfpart (intery));
+    plot (s, x, ipart (intery) + 1, fpart (intery));
+    intery := intery + gradient
+  END
+END drawln;
+
+PROCEDURE DrawLine (VAR s : DrawingSurface;
+                    x0, y0, x1, y1 : REAL);
+  VAR xdiff, ydiff : REAL;
+BEGIN
+  xdiff := ABS (x1 - x0);
+  ydiff := ABS (y1 - y0);
+  IF ydiff <= xdiff THEN
+    IF x0 <= x1 THEN
+      drawln (s, x0, y0, x1, y1, PlotShallow)
+    ELSE
+      drawln (s, x1, y1, x0, y0, PlotShallow)
+    END
+  ELSE
+    IF y0 <= y1 THEN
+      drawln (s, y0, x0, y1, x1, PlotSteep)
+    ELSE
+      drawln (s, y1, x1, y0, x0, PlotSteep)
+    END
+  END
+END DrawLine;
+
+CONST u0 = -299;
+      u1 = 300;
+      v0 = -20;
+      v1 = 379;
+CONST Kx = 4.0;
+      Ky = 0.1;
+VAR s : DrawingSurface;
+    i : INTEGER;
+    t : REAL;
+    x0, y0, x1, y1 : REAL;
+    x, y, u, v : REAL;
+BEGIN
+  InitializeDrawingSurface (s, u0, v0, u1, v1);
+
+  (* Draw a parabola. *)
+  FOR i := -101 TO 100 DO
+    t := VAL (REAL, i);  x0 := Kx * t;  y0 := Ky * t * t;
+    t := VAL (REAL, i + 1);  x1 := Kx * t;  y1 := Ky * t * t;
+    DrawLine (s, x0, y0, x1, y1)
+  END;
+
+  (* Draw normals to that parabola. The parabola has equation y=A*x*x,
+     where A=Ky/(Kx*Kx). Therefore the slope at x is dy/dx=2*A*x. The
+     slope of the normal is the negative reciprocal, and so equals
+     -1/(2*A*x)=-(Kx*Kx)/(2*Ky*(Kx*t))=-Kx/(2*Ky*t). *)
+  FOR i := -101 TO 101 DO
+    t := VAL (REAL, i);
+    x := Kx * t;  y := Ky * t * t; (* (x,y) = a point on the parabola *)
+    IF ABS (t) <= 0.000000001 THEN (* (u,v) = a normal vector *)
+      u := 0.0;  v := 1.0
+    ELSE
+      u := 1.0;  v := -Kx / (2.0 * Ky * t)
+    END;
+    x0 := x - (1000.0 * u);  y0 := y - (1000.0 * v);
+    x1 := x + (1000.0 * u);  y1 := y + (1000.0 * v);
+    DrawLine (s, x0, y0, x1, y1);
+  END;
+
+  WriteTransparencyMask (s)
+END Xiaolin_Wu_Task.

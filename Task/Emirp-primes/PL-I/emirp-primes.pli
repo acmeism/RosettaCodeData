@@ -1,0 +1,164 @@
+*process or(!);
+ pt1: Proc(run) Options(main);
+ /*********************************************************************
+ * 25.03.2014 Walter Pachl
+ * Note: Prime number computations are extended as needed
+ *********************************************************************/
+ Dcl debug Bit(1) Init('0'b);
+ Dcl run Char(100) Var;
+ Dcl primes(200000) Bin Fixed(31) Init(2,3,5,7,11,13,17,(200000-7)0);
+ Dcl nn Bin Fixed(31) Init(0);
+ Dcl np Bin Fixed(31) Init(7);
+ Dcl hp Bin Fixed(31) Init(17);
+ Dcl ip Bin Fixed(31);
+ Dcl (p,r) Bin Fixed(31);
+ Put Edit('run=',run,'<')(Skip,a,a,a);
+ np=7;
+ call cprimes(20,1,'A');
+
+ main_loop:
+ Do ip=1 To 100000;                    /* loop over all primes       */
+   p=primes(ip);                       /* candidate                  */
+   If p=0 Then
+     call cprimes(20,hp+1,'.');
+   p=primes(ip);                       /* candidate                  */
+   r=rev(p);                           /* reversed candidate         */
+   If p=r Then;                        /* skip palindromic prime     */
+   Else Do;                            /* p is eligible              */
+     If is_prime(r) Then Do;           /* reversed p is a prime      */
+       nn=nn+1;                        /* increment number of hits   */
+       Select;
+         When(run<='1') Do;
+           If nn<21 Then Call show_1;  /* call appropriate output    */
+           If nn=20 Then
+             Leave main_loop;
+           End;
+         When(run='2') Do;
+           If hp<8000 Then
+             Call cprimes(1,8000,'B');
+           If 7700<p & p<8000 Then Call show_2;
+           If p>8000 Then
+             Leave main_loop;
+           End;
+         When(run='3') Do;
+           If np<10000 Then
+             Call cprimes(10000,1,'C');
+           If nn=10000 Then Do;
+             Call show_3;
+             Leave main_loop;
+             End;
+           End;
+         Otherwise Do;
+           Put skip list('Invoke as pt1 1/2/3');
+           Return;
+           End;
+         End;
+       End;
+     End;
+   End;
+
+ show_1: Proc;
+ Dcl first Bit(1) Static Init('1'b);
+ If first Then Do;
+   Put Edit('the first 20 emirps:')(Skip,a);
+   first='0'b;
+   Put Skip;
+   End;
+ If nn=11 Then
+   Put Skip;
+ Put Edit(p)(F(4));
+ End;
+
+ show_2: Proc;
+ Dcl first Bit(1) Static Init('1'b);
+ If first Then Do;
+   Put Edit('emirps between 7700 and 8000:')(Skip,a);
+   first='0'b;
+   Put Skip;
+   End;
+ Put Edit(p)(F(5));
+ End;
+
+ show_3: Proc;
+ Dcl first Bit(1) Static Init('1'b);
+ If first Then Do;
+   Put Edit('the 10000th emirp:')(Skip,a);
+   first='0'b;
+   Put Skip;
+   End;
+ Put Edit(p)(F(6));
+ End;
+
+ cprimes: Proc(num,mp,s);
+ /*********************************************************************
+ * Fill the array primes with prime numbers
+ * so that it contains at least num primes and all primes<=mp
+ *********************************************************************/
+ dcl o Char(60) Var;
+ If debug Then
+   Put String(o) Edit('cprimes: ',s,np,hp)(a,a,2(f(6)));
+ Dcl num Bin Fixed(31);                /* number of primes needed    */
+ Dcl mp  Bin Fixed(31);                /* max prime must be > mp     */
+ Dcl p   Bin Fixed(31);                /* candidate for next prime   */
+ Dcl s   Char(1);                      /* place of invocation        */
+ loop:
+ Do p=hp+2 By 2 Until(np>=num & hp>mp); /* only odd numbers are elig.*/
+   If mod(p, 3)=0 Then Iterate;
+   If mod(p, 5)=0 Then Iterate;
+   If mod(p, 7)=0 Then Iterate;
+   If mod(p,11)=0 Then Iterate;
+   If mod(p,13)=0 Then Iterate;
+   Do k=7 By 1 While(primes(k)**2<=p);
+     If mod(p,primes(k))=0 Then
+       Iterate loop;
+     End;
+   np=np+1;
+   primes(np)=p;
+   hp=p;
+   End;
+  If debug Then
+    Put Edit(o,' -> ',np,hp)(Skip,a,a,2(f(6)));
+  End;
+
+ rev: Proc(x) Returns(Bin Fixed(31));
+ /*********************************************************************
+ * reverse the given number
+ *********************************************************************/
+ Dcl x Bin Fixed(31);
+ Dcl p Pic'ZZZZZZ9';
+ Dcl qq Char(7) Init('');
+ Dcl q Pic'ZZZZZZ9' based(addr(qq));
+ Dcl v Char(8) Var;
+ p=x;
+ v=trim(p);
+ v=reverse(v);
+ substr(qq,8-length(v))=v;
+ Return(q);
+ End;
+
+ is_prime: Proc(x) Returns(Bit(1));
+ /*********************************************************************
+ * check if x is a prime number (binary search in primes)
+ *********************************************************************/
+ Dcl x  Bin Fixed(31);
+ Dcl lo Bin Fixed(31) Init(1);
+ Dcl hi Bin Fixed(31);
+ Dcl m  Bin Fixed(31);
+ If x>hp Then Do;                 /* x is outside of range in primes */
+   If debug Then
+     Put Edit('is_prime x=',x,'hp=',hp)(Skip,2(a,f(8),x(1)));
+   Call cprimes(1,x,'D');         /* extend range of primes          */
+   End;
+ hi=np;
+ Do While(lo<=hi);                /* lookup                          */
+   m=(lo+hi)/2;
+   Select;
+     When        (x=primes(m))   Return('1'b); /* x is a prime number*/
+     When        (x<primes(m))   hi=m-1;
+     Otherwise /* x>primes(m) */ lo=m+1;
+     End;
+   End;
+ Return('0'b);                    /* x is not a prime number         */
+ End;
+
+ End;

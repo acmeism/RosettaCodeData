@@ -1,0 +1,94 @@
+eban = cluster is numbers
+    rep = null
+
+    % Next valid E-ban number in the range [0..999]
+    next = proc (n: int) returns (int) signals (no_more)
+        if n>=66 then signal no_more end
+        if n<0 then return(0) end
+
+        % advance low digit (two four six)
+        if     (n//10=0) then n := (n/10)*10 + 2
+        elseif (n//10=2) then n := (n/10)*10 + 4
+        elseif (n//10=4) then n := (n/10)*10 + 6
+        elseif (n//10=6) then n := (n/10)*10 + 10
+        end
+
+        % this might put us into tEn, twEnty which are invalid
+        if     (n//100/10 =  1) then n := n + 20   % ten + 20    = 30
+        elseif (n//100/10 =  2) then n := n + 10   % twEnty + 10 = 30
+        end
+        return(n)
+    end next
+
+    % Yield all valid E_ban numbers
+    % (sextillion and upwards aren't handled)
+    numbers = iter () yields (int)
+        parts: array[int] := array[int]$[0: 2]
+
+        while true do
+            num: int := 0
+            for m: int in array[int]$indexes(parts) do
+                num := num + parts[m] * 1000 ** m
+            end
+            yield(num)
+
+            for m: int in array[int]$indexes(parts) do
+                begin
+                    parts[m] := next(parts[m])
+                    break
+                end except when no_more:
+                    parts[m] := 0
+                end
+            end
+
+            if array[int]$top(parts) = 0 then
+                array[int]$addh(parts,2)
+            end
+       end
+    end numbers
+end eban
+
+start_up = proc ()
+    maxmagn = 1000000000000
+    po: stream := stream$primary_output()
+
+    count: int := 0
+    upto_1k: int := 0
+    between_1k_4k: int := 0
+
+    disp_1k: bool := false
+    disp_4k: bool := false
+
+    nextmagn: int := 10000
+
+    for i: int in eban$numbers() do
+        while i>nextmagn do
+            stream$putl(po, int$unparse(count)
+                        || " eban numbers <= "
+                        || int$unparse(nextmagn))
+            nextmagn := nextmagn * 10
+        end
+
+        count := count + 1
+
+        if i<1000 then upto_1k := upto_1k + 1
+        elseif i<=4000 then between_1k_4k := between_1k_4k + 1
+        end
+
+        if i>1000 & ~disp_1k then
+            disp_1k := true
+            stream$putl(po, "\n" || int$unparse(upto_1k)
+                        || " eban numbers <= 1000\n")
+        end
+
+        if i<=4000 then stream$putright(po, int$unparse(i), 5) end
+
+        if i>4000 & ~disp_4k then
+            disp_4k := true
+            stream$putl(po, "\n" || int$unparse(between_1k_4k)
+                        || " eban numbers 1000 <= x <= 4000\n")
+        end
+
+        if nextmagn>maxmagn then break end
+    end
+end start_up

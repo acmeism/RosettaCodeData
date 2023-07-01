@@ -1,0 +1,94 @@
+#APPTYPE CONSOLE
+
+#INCLUDE <Include\Windows.inc>
+
+DIM Entity AS NEW Integrator(): Sleep(2000) ' respawn and do the job
+
+Entity.Relax(): Sleep(500) ' get some rest
+
+PRINT ">>> ", Entity.Yield(): DELETE Entity ' report and die
+
+PAUSE
+
+' ------------- End Program Code -------------
+
+#DEFINE SpawnMutex CreateMutex(NULL, FALSE, "mutex")
+#DEFINE LockMutex WaitForSingleObject(mutex, INFINITE)
+#DEFINE UnlockMutex ReleaseMutex(mutex)
+#DEFINE KillMutex CloseHandle(mutex)
+
+CLASS Integrator
+	
+	PRIVATE:
+	
+	TYPE LARGE_INTEGER
+		lowPart AS INTEGER
+		highPart AS INTEGER
+	END TYPE
+	
+	DIM dfreq AS DOUBLE, dlast AS DOUBLE, dnow AS DOUBLE, llint AS LARGE_INTEGER
+	DIM dret0 AS DOUBLE, dret1 AS DOUBLE, mutex AS INTEGER, sum AS DOUBLE, thread AS INTEGER
+	
+	' --------------------------------------------
+	SUB INITIALIZE()
+		mutex = SpawnMutex
+		QueryPerformanceFrequency(@llint)
+		dfreq = LargeInt2Double(llint)
+		QueryPerformanceCounter(@llint)
+		dlast = LargeInt2Double(llint) / dfreq
+		thread = FBSLTHREAD(ADDRESSOF Sampler)
+		FBSLTHREADRESUME(thread)
+	END SUB
+	SUB TERMINATE()
+		' nothing special
+	END SUB
+	' --------------------------------------------
+	
+	SUB Sampler()
+		DO
+			LockMutex
+			Sleep(5)
+			QueryPerformanceCounter(@llint)
+			dnow = LargeInt2Double(llint) / dfreq
+			dret0 = Task(dlast): dret1 = Task(dnow)
+			sum = sum + (dret1 + dret0) * (dnow - dlast) / 2
+			dlast = dnow
+			UnlockMutex
+		LOOP
+	END SUB
+	
+	FUNCTION LargeInt2Double(obj AS VARIANT) AS DOUBLE
+		STATIC ret
+		ret = obj.highPart
+		IF obj.highPart < 0 THEN ret = ret + (2 ^ 32)
+		ret = ret * 2 ^ 32
+		ret = ret + obj.lowPart
+		IF obj.lowPart < 0 THEN ret = ret + (2 ^ 32)
+		RETURN ret
+	END FUNCTION
+	
+	PUBLIC:
+	
+	METHOD Relax()
+		LockMutex
+		ADDRESSOF Task = ADDRESSOF Idle
+		UnlockMutex
+	END METHOD
+	
+	METHOD Yield() AS DOUBLE
+		LockMutex
+		Yield = sum
+		FBSLTHREADKILL(thread)
+		UnlockMutex
+		KillMutex
+	END METHOD
+	
+END CLASS
+
+FUNCTION Idle(BYVAL t AS DOUBLE) AS DOUBLE
+	RETURN 0.0
+END FUNCTION
+
+FUNCTION Task(BYVAL t AS DOUBLE) AS DOUBLE
+	RETURN SIN(2 * PI * 0.5 * t)
+END FUNCTION

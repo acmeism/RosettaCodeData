@@ -1,0 +1,180 @@
+/* ARM assembly Raspberry PI  or android 32 bits */
+/*  program complength.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+/************************************/
+/* structures                       */
+/************************************/
+   .struct  0
+list_string:                             @ string address
+    .struct  list_string + 4
+list_length:                             @ string length
+    .struct  list_length + 4
+list_end:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResult:       .asciz "@ length : @\n"
+szCarriageReturn:   .asciz "\n"
+szLibSort:          .asciz "\nAfter sort\n"
+szString1:          .asciz "abcd"
+szString2:          .asciz "123456789"
+szString3:          .asciz "abcdef"
+szString4:          .asciz "1234567"
+
+.align 4
+tabStrings:        .int szString1           @ string address array
+                   .int 0
+                   .int szString2
+                   .int 0
+                   .int szString3
+                   .int 0
+                   .int szString4
+                   .int 0
+.equ NBTABSTRINGS, (. - tabStrings) / list_end  @ compute items number
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 @ entry of program
+    ldr r4,iAdrtabStrings             @ string array address
+    mov r5,#0                         @ indice
+    mov r6,#list_end                  @ structure size
+1:                                    @ item loop
+    mla r3,r5,r6,r4                   @ compute item address
+    ldr r0,[r3,#list_string]          @ load string address
+    bl stringRoutine                  @ length string compute
+    str r0,[r3,#list_length]          @ store result in array
+    add r5,#1                         @ increment indice
+    cmp r5,#NBTABSTRINGS              @ end ?
+    blt 1b                            @ no -> loop
+
+    mov r0,r4                         @ string array address
+    mov r1,#0                         @ first item
+    mov r2,#NBTABSTRINGS              @ item number
+    bl insertionSort                  @ sort
+
+    ldr r0,iAdrszLibSort
+    bl affichageMess
+    mov r0,r4                         @ string array address
+    mov r5,#0                         @ indice
+    mov r6,#list_end
+2:                                    @ item loop
+    mla r3,r5,r6,r4
+    ldr r0,[r3,#list_string]
+    bl stringRoutine                  @ use same routine for display result after sort
+    add r5,#1
+    cmp r5,#NBTABSTRINGS              @ end ?
+    blt 2b                            @ no -> loop
+
+100:                                  @ standard end of the program
+    mov r0, #0                        @ return code
+    mov r7, #EXIT                     @ request to exit program
+    svc #0                            @ perform the system call
+
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszMessResult:         .int szMessResult
+iAdrsZoneConv:            .int sZoneConv
+iAdrtabStrings:           .int tabStrings
+iAdrszLibSort:            .int szLibSort
+/***************************************************/
+/*      string exec               */
+/***************************************************/
+// r0 contains string address
+// r0 return length
+stringRoutine:
+    push {r1-r3,lr}             @ save  registers
+    mov r3,r0                   @ save string address
+    mov r1,r0
+    ldr r0,iAdrszMessResult
+    bl strInsertAtCharInc       @ insert string in result message
+    mov r2,r0                   @ save new message address
+    mov r0,r3                   @ restaur string address
+    bl stringlength             @ compute length
+    mov r3,r0
+    ldr r1,iAdrsZoneConv
+    bl conversion10             @ call decimal conversion
+    mov r0,r2
+    ldr r1,iAdrsZoneConv        @ insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess            @ display result message
+    mov r0,r3
+100:
+    pop {r1-r3,pc}              @ restaur registers
+/***************************************************/
+/*     compute string length               */
+/***************************************************/
+// r0 contains string address
+stringlength:
+    push {r1-r2,lr}             @ save  registers
+    mov r1,#-1                  @ init counter
+1:                              @ loop
+    add r1,#1                   @ increment counter
+    ldrb r2,[r0,r1]             @ load byte string
+    cmp r2,#0                   @ zero final ?
+    bne 1b                      @ no -> loop
+    mov r0,r1                   @ return length
+100:
+    pop {r1-r2,pc}              @ restaur registers
+/******************************************************************/
+/*         insertion sort                                              */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains the first element    */
+/* r2 contains the number of element */
+insertionSort:
+    push {r1-r10,lr}                    @ save registers
+    mov r6,r0
+    mov r7,#list_end
+    add r3,r1,#1                       @ start index i
+1:                                     @ start loop
+    mla r8,r7,r3,r6
+    ldr r10,[r8,#list_length]          @ load value A[i]
+    ldr r0,[r8,#list_string]           @ load string address A[i]
+    sub r5,r3,#1                       @ index j
+2:
+    mla r9,r7,r5,r6
+    ldr r4,[r9,#list_length]           @ load value A[j]
+    cmp r4,r10                         @ compare value
+    bge 3f
+    add r5,#1                          @ increment index j
+    mla r8,r7,r5,r6
+    str r4,[r8,#list_length]           @ store value A[j+1]
+    ldr r4,[r9,#list_string]           @ load string address
+    str r4,[r8,#list_string]           @ store string address
+    subs r5,#2                         @ j = i - 1
+    cmp r5,r1                          @ compare with first item
+    bge 2b                             @ loop if j >= first item
+3:
+    add r5,#1                          @ increment index j
+    mla r9,r7,r5,r6
+    str r10,[r9,#list_length]          @ store value A[i] in A[j+1]
+    str r0,[r9,#list_string]           @ and store string address
+    add r3,#1                          @ increment index i
+    cmp r3,r2                          @ end ?
+    blt 1b                             @ no -> loop
+
+100:
+    pop {r1-r10,lr}
+    bx lr
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

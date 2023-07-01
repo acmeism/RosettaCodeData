@@ -1,0 +1,1 @@
+let addN n = (+) n

@@ -1,0 +1,10 @@
+(let ((sum 0)
+      (ints '()))
+  (loop for pkg in (list-all-packages)
+        do (do-symbols (s pkg)
+                       (when (and (boundp s)
+                                  (integerp (symbol-value s)))
+                            (push s ints)
+                            (incf sum (symbol-value s)))))
+  (format t "there are ~d integer variables adding up to ~d~%"
+          (length ints) sum))

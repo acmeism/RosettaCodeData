@@ -1,0 +1,2 @@
+valueWithExit
+    ^ self value:[^ nil]

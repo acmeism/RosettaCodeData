@@ -1,0 +1,77 @@
+		org	100h
+		jmp	demo
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Given a 16-bit unsigned integer in HL, return a string
+		;; consisting of its ASCII representation plus an ordinal
+		;; suffix in HL.
+nth:		lxi	b,-10		; Divisor for digit loop
+		push	h		; Push integer to stack
+		lxi	h,nthsfx	; Pointer to end of digit area
+		xthl			; Swap digit pointer with integer
+nthdigit:	lxi	d,-1		; Get current digit - DE holds quotient
+nthdiv10:	inx	d		; Increment quotient,
+		dad	b		; subtract 10 from integer,
+		jc	nthdiv10	; Keep going until HL<0
+		mvi	a,'0'+10	; Calculate ASCII value for digit
+		add	l		; Modulus is in (H)L
+		xthl			; Swap integer with pointer
+		dcx	h		; Point to one digit further left
+		mov	m,a		; Store the digit
+		xthl			; Swap pointer with integer
+		xchg			; Put quotient in HL
+		mov	a,h		; Is it zero?
+		ora	l
+		jnz	nthdigit	; If not, go calculate next digit
+		mvi	e,0		; Default suffix is 'th'.
+		lxi	h,nthnum+3	; Look at tens digit
+		mov	a,m
+		cpi	'1'		; Is it '1'?
+		jz	nthsetsfx	; Then it is always 'th'.
+		inx	h		; Look at zeroes digit
+		mov	a,m
+		sui	'0'		; Subtract ASCII '0'
+		cpi	4		; 4 or higher?
+		jnc	nthsetsfx	; Then it is always 'th'.
+		rlc			; Otherwise, suffix is at N*2+nthord
+		mov	e,a
+nthsetsfx:	mvi	d,0		; Look up suffix in list
+		lxi	h,nthord
+		dad	d		; Pointer to suffix in HL
+		lxi	d,nthsfx	; Pointer to space for suffix in DE
+		mov	a,m		; Get first letter of suffix
+		stax	d		; Store it in output
+		inx	h		; Increment both pointers
+		inx	d
+		mov 	a,m		; Get second letter of suffix
+		stax	d		; Store it in output
+		pop	h		; Return pointer to leftmost digit
+		ret
+nthord:		db	'thstndrd'	; Ordinal suffixes
+nthnum:		db	'*****'		; Room for digits
+nthsfx:		db	'**$'		; Room for suffix
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+demo:		;; Demo code
+		lxi	h,0		; Starting at 0...
+		mvi	b,26		; ...print 26 numbers [0..25]
+		call	printnums
+		lxi	h,250		; Starting at 250...
+		mvi	b,16		; ...print 16 numbers [250..265]
+		call	printnums
+		lxi	h,1000		; Starting at 1000...
+		mvi	b,26		; ...print 26 numbers [1000..1025]
+		;; Print values from HL up to HL+B
+printnums:	push	h		; Keep number
+		push	b		; Keep counter
+		call	nth		; Get string for current HL
+		xchg			; Put it in DE
+		mvi	c,9		; CP/M print string
+		call	5
+		mvi	e,' '		; Separate numbers with spaces
+		mvi	c,2		; CP/M print character
+		call	5
+		pop	b		; Restore counter
+		pop	h		; Restore number
+		inx	h 		; Increment number
+		dcr	b		; Decrement counter
+		jnz	printnums	; If not zero, print next number
+		ret

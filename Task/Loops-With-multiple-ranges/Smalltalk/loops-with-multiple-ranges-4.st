@@ -1,0 +1,2 @@
+** arg
+    ^ self raisedTo: arg

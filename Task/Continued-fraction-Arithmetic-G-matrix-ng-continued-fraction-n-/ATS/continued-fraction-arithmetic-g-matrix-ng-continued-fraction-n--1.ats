@@ -1,0 +1,703 @@
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+
+(* We need consistent definitions of division and remainder. Let us
+   set those here. For convenience (because the prelude provides it),
+   we will use truncation towards zero. *)
+infixl ( / ) div
+infixl ( mod ) rem
+macdef div = g0int_div
+macdef rem = g0int_mod
+
+(* Some useful math Unicode, so we do not need entities in markup
+   using these characters. *)
+val plus_sign = "&#x002B;"
+val dot_operator = "&#x22C5;"
+val centered_ellipsis = "&#x22EF;"
+val right_arrow = "&#x2192;"
+
+(*------------------------------------------------------------------*)
+(* Continued fractions as processes for generating terms. The terms
+   are memoized and are accessed by their zero-based index. The terms
+   are represented as any one of the signed integer types for which
+   there is a typekind. *)
+
+abstype cf (tk : tkind) = ptr
+
+(* A ref of a cf has the advantage, over a cf itself, that it can be
+   more safely used in a closure. *)
+typedef cfref (tk : tkind) = ref (cf tk)
+
+typedef cf_generator (tk : tkind) =
+  () -<cloref1> Option (g0int tk)
+
+extern fn {tk : tkind}
+cf_make :
+  cf_generator tk -> cf tk
+
+extern fn {tk : tkind}
+cfref_make :
+  cf_generator tk -> cfref tk
+
+extern fn {tk  : tkind}
+          {tki : tkind}
+cf_get_at_guint :
+  {i : int}
+  (&cf tk >> _, g1uint (tki, i)) -> Option (g0int tk)
+
+extern fn {tk  : tkind}
+          {tki : tkind}
+cf_get_at_gint :
+  {i : nat}
+  (&cf tk >> _, g1int (tki, i)) -> Option (g0int tk)
+
+overload cf_get_at with cf_get_at_guint
+overload cf_get_at with cf_get_at_gint
+overload [] with cf_get_at
+
+macdef cfref_get_at (cfref, i) =
+  let
+    val @(pf, fpf | p) = ref_vtakeout ,(cfref)
+    val retval = cf_get_at (!p, ,(i))
+    prval () = fpf pf
+  in
+    retval
+  end
+
+extern fn {tk : tkind}
+cf2mathml_max_terms
+          (cf        : &cf tk >> _,
+           max_terms : size_t)
+    : string
+
+extern fn {tk : tkind}
+cf2mathml_default_max_terms
+          (cf : &cf tk >> _)
+    : string
+
+extern fn {tk : tkind}
+cfref2mathml_max_terms
+          (cfref     : cfref tk,
+           max_terms : size_t)
+    : string
+
+extern fn {tk : tkind}
+cfref2mathml_default_max_terms
+          (cfref : cfref tk)
+    : string
+
+overload cf2mathml with cf2mathml_max_terms
+overload cf2mathml with cf2mathml_default_max_terms
+overload cfref2mathml with cfref2mathml_max_terms
+overload cfref2mathml with cfref2mathml_default_max_terms
+
+(* To use a cfref as a generator, you need cfref2generator. It would
+   do no good to use the cf object's internal generator directly,
+   because its state would be wrong. In any case, the internals of a
+   cf are hidden from the programmer. *)
+extern fn {tk : tkind}
+cfref2generator :
+  cfref tk -> cf_generator tk
+
+(*  -    -    -    -    -    -    -    -    -    -    -    -    -   *)
+
+local
+
+  typedef _cf (tk         : tkind,
+               terminated : bool,
+               m          : int,
+               n          : int) =
+    [m <= n]
+    '{
+      terminated = bool terminated, (* No more terms? *)
+      m = size_t m,         (* The number of terms computed so far. *)
+      n = size_t n,         (* The size of memo storage.*)
+      memo = arrayref (g0int tk, n), (* Memoized terms. *)
+      gen = cf_generator tk          (* A thunk to generate terms. *)
+    }
+  typedef _cf (tk : tkind, m : int) =
+    [terminated : bool]
+    [n : int | m <= n]
+    _cf (tk, terminated, m, n)
+  typedef _cf (tk : tkind) =
+    [m : int]
+    _cf (tk, m)
+
+  fn {tk : tkind}
+  _cf_get_more_terms
+            {terminated : bool}
+            {m          : int}
+            {n          : int}
+            {needed     : int | m <= needed; needed <= n}
+            (cf         : _cf (tk, terminated, m, n),
+             needed     : size_t needed)
+      : [m1 : int | m <= m1; m1 <= needed]
+        [n1 : int | m1 <= n1]
+        _cf (tk, m1 < needed, m1, n1) =
+    let
+      prval () = lemma_g1uint_param (cf.m)
+
+      macdef memo = cf.memo
+
+      fun
+      loop {i : int | m <= i; i <= needed}
+           .<needed - i>.
+           (i : size_t i)
+          : [m1 : int | m <= m1; m1 <= needed]
+            [n1 : int | m1 <= n1]
+            _cf (tk, m1 < needed, m1, n1) =
+        if i = needed then
+          '{
+            terminated = false,
+            m = needed,
+            n = (cf.n),
+            memo = memo,
+            gen = (cf.gen)
+          }
+        else
+          begin
+            case+ (cf.gen) () of
+            | None () =>
+              '{
+                terminated = true,
+                m = i,
+                n = (cf.n),
+                memo = memo,
+                gen = (cf.gen)
+              }
+            | Some term =>
+              begin
+                memo[i] := term;
+                loop (succ i)
+              end
+          end
+    in
+      loop (cf.m)
+    end
+
+  fn {tk : tkind}
+  _cf_update {terminated : bool}
+             {m          : int}
+             {n          : int | m <= n}
+             {needed     : int}
+             (cf         : _cf (tk, terminated, m, n),
+              needed     : size_t needed)
+      : [terminated1 : bool]
+        [m1 : int | m <= m1]
+        [n1 : int | m1 <= n1]
+        _cf (tk, terminated1, m1, n1) =
+    let
+      prval () = lemma_g1uint_param (cf.m)
+      macdef memo = cf.memo
+      macdef gen = cf.gen
+    in
+      if (cf.terminated) then
+        cf
+      else if needed <= (cf.m) then
+        cf
+      else if needed <= (cf.n) then
+        _cf_get_more_terms<tk> (cf, needed)
+      else
+        let                     (* Provides twice the room needed. *)
+          val n1 = needed + needed
+          val memo1 = arrayref_make_elt (n1, g0i2i 0)
+          val () =
+            let
+              var i : [i : nat] size_t i
+            in
+              for (i := i2sz 0; i < (cf.m); i := succ i)
+                memo1[i] := memo[i]
+            end
+          val cf1 =
+            '{
+              terminated = false,
+              m = (cf.m),
+              n = n1,
+              memo = memo1,
+              gen = (cf.gen)
+            }
+        in
+          _cf_get_more_terms<tk> (cf1, needed)
+        end
+    end
+
+in (* local *)
+
+  assume cf tk = _cf tk
+
+  implement {tk}
+  cf_make gen =
+    let
+      #ifndef CF_START_SIZE #then
+        #define CF_START_SIZE 8
+      #endif
+    in
+      '{
+        terminated = false,
+        m = i2sz 0,
+        n = i2sz CF_START_SIZE,
+        memo = arrayref_make_elt (i2sz CF_START_SIZE, g0i2i 0),
+        gen = gen
+      }
+    end
+
+  implement {tk}
+  cfref_make gen =
+    ref (cf_make gen)
+
+  implement {tk} {tki}
+  cf_get_at_guint {i} (cf, i) =
+    let
+      prval () = lemma_g1uint_param i
+      val i : size_t i = g1u2u i
+      val cf1 = _cf_update<tk> (cf, succ i)
+    in
+      cf := cf1;
+      if i < (cf1.m) then
+        Some (arrayref_get_at<g0int tk> (cf1.memo, i))
+      else
+        None ()
+    end
+
+  implement {tk} {tki}
+  cf_get_at_gint (cf, i) =
+    cf_get_at_guint<tk><sizeknd> (cf, g1i2u i)
+
+end (* local *)
+
+implement {tk}
+cf2mathml_max_terms (cf, max_terms) =
+  let
+    fun
+    loop (i     : Size_t,
+          cf    : &cf tk >> _,
+          sep   : string,
+          accum : string)
+        : string =
+      if i = max_terms then
+        strptr2string
+          (string_append
+            (accum, "<mo>,</mo><mo>",
+             centered_ellipsis, "</mo><mo>]</mo>"))
+      else
+        begin
+          case+ cf[i] of
+          | None () =>
+            strptr2string (string_append (accum, "<mo>]</mo>"))
+          | Some term =>
+            let
+              val term_str = tostring_val<g0int tk> term
+              val accum =
+                strptr2string (string_append (accum, sep, "<mn>",
+                                              term_str, "</mn>"))
+              val sep =
+                if sep = "<mo>[</mo>" then
+                  "<mo>;</mo>"
+                else
+                  "<mo>,</mo>"
+            in
+              loop (succ i, cf, sep, accum)
+            end
+        end
+  in
+    loop (i2sz 0, cf, "<mo>[</mo>", "")
+  end
+
+implement {tk}
+cf2mathml_default_max_terms cf =
+  let
+    #ifndef DEFAULT_CF_MAX_TERMS #then
+      #define DEFAULT_CF_MAX_TERMS 20
+    #endif
+  in
+    cf2mathml_max_terms (cf, i2sz DEFAULT_CF_MAX_TERMS)
+  end
+
+implement {tk}
+cfref2mathml_max_terms (cfref, max_terms) =
+  let
+    val @(pf, fpf | p) = ref_vtakeout cfref
+    val retval = cf2mathml_max_terms (!p, max_terms)
+    prval () = fpf pf
+  in
+    retval
+  end
+
+implement {tk}
+cfref2mathml_default_max_terms cfref =
+  let
+    val @(pf, fpf | p) = ref_vtakeout cfref
+    val retval = cf2mathml_default_max_terms !p
+    prval () = fpf pf
+  in
+    retval
+  end
+
+implement {tk}
+cfref2generator cfref =
+  let
+    val index : ref Size_t = ref (i2sz 0)
+  in
+    lam () =>
+      let
+        val i = !index
+        val retval = cfref_get_at (cfref, i)
+      in
+        !index := succ i;
+        retval
+      end
+  end
+
+(*------------------------------------------------------------------*)
+(* A homographic function. *)
+
+typedef hfunc (tk : tkind) =
+  @{
+    a1 = g0int tk,
+    a = g0int tk,
+    b1 = g0int tk,
+    b = g0int tk
+  }
+
+extern fn {tk : tkind}
+hfunc_make :
+  (g0int tk, g0int tk, g0int tk, g0int tk) -<> hfunc tk
+
+extern fn {tk : tkind}
+hfunc_apply_generator2generator :
+  (hfunc tk, cf_generator tk) -> cf_generator tk
+
+extern fn {tk : tkind}
+hfunc_apply_cfref2cfref :
+  (hfunc tk, cfref tk) -> cfref tk
+
+overload hfunc_apply with hfunc_apply_generator2generator
+overload hfunc_apply with hfunc_apply_cfref2cfref
+
+(*  -    -    -    -    -    -    -    -    -    -    -    -    -   *)
+
+implement {tk}
+hfunc_make (a1, a, b1, b) =
+  @{
+    a1 = a1,
+    a = a,
+    b1 = b1,
+    b = b
+  }
+
+fn {tk : tkind}
+take_term_from_ngen
+          (state : ref (hfunc tk),
+           ngen  : cf_generator tk)
+    : void =
+  let
+    val @{
+          a1 = a1,
+          a = a,
+          b1 = b1,
+          b = b
+        } = !state
+  in
+    case+ ngen () of
+    | Some term =>
+      !state :=
+        @{
+          a1 = a + (a1 * term),
+          a = a1,
+          b1 = b + (b1 * term),
+          b = b1
+        }
+    | None () =>
+      !state :=
+        @{
+          a1 = a1,
+          a = a1,
+          b1 = b1,
+          b = b1
+        }
+  end
+
+fn {tk : tkind}
+adjust_state_for_term_output
+          (state : ref (hfunc tk),
+           term  : g0int tk)
+    : void =
+  let
+    val @{
+          a1 = a1,
+          a = a,
+          b1 = b1,
+          b = b
+        } = !state
+  in
+    !state :=
+      @{
+        a1 = b1,
+        a = b,
+        b1 = a1 - (b1 * term),
+        b = a - (b * term)
+      }
+  end
+
+implement {tk}
+hfunc_apply_generator2generator (f, ngen) =
+  let
+    val state : ref (hfunc tk) = ref f
+
+    val hgen =
+      lam () =<cloref1>
+        let
+          fun
+          loop () : Option (g0int tk) =
+            let
+              val b1_iseqz = iseqz (!state.b1)
+              and b_iseqz = iseqz (!state.b)
+            in
+              if b1_iseqz * b_iseqz then
+                None ()
+              else if (~b1_iseqz) * (~b_iseqz) then
+                let
+                  val q1 = (!state.a1) div (!state.b1)
+                  and q = (!state.a) div (!state.b)
+                in
+                  if q1 = q then
+                    begin
+                      adjust_state_for_term_output<tk> (state, q);
+                      Some q
+                    end
+                  else
+                    begin
+                      take_term_from_ngen (state, ngen);
+                      loop ()
+                    end
+                end
+              else
+                begin
+                  take_term_from_ngen (state, ngen);
+                  loop ()
+                end
+            end
+        in
+          loop ()
+        end
+  in
+    hgen : cf_generator tk
+  end
+
+implement {tk}
+hfunc_apply_cfref2cfref (f, cfref) =
+  let
+    val gen1 = cfref2generator<tk> cfref
+    val gen2 = hfunc_apply_generator2generator<tk> (f, gen1)
+  in
+    cfref_make<tk> gen2
+  end
+
+(*------------------------------------------------------------------*)
+(* Let us create some continued fractions. *)
+
+extern fn {tk : tkind}
+r2cf :
+  (g0int tk, g0int tk) -> cf tk
+
+implement {tk}
+r2cf (n, d) =
+  let
+    val n = ref<g0int tk> n
+    val d = ref<g0int tk> d
+
+    fn
+    gen () :<cloref1> Option (g0int tk) =
+      if iseqz !d then
+        None ()
+      else
+        let
+          val @(numer, denom) = @(!n, !d)
+          val q = numer div denom
+          and r = numer rem denom
+        in
+          !n := denom;
+          !d := r;
+          Some q
+        end
+  in
+    cf_make gen
+  end
+
+val cfref_13_11 = ref (r2cf (13LL, 11LL)) (* 13/11 = [1;5,2] *)
+val cfref_22_7 = ref (r2cf (22LL, 7LL))   (* 22/7 = [3;7] *)
+val cfref_sqrt2 =               (* sqrt(2) = [1;2,2,2,...] *)
+  let
+    val term : ref llint = ref 1LL
+    val gen =
+      lam () =<cloref1>
+        let
+          val retval = !term
+        in
+          if retval = 1LL then
+            !term := 2LL;
+          Some retval
+        end
+  in
+    cfref_make (gen : cf_generator llintknd)
+  end
+
+(*------------------------------------------------------------------*)
+(* Let us create some homographic functions that correspond to unary
+   arithmetic operations. *)
+
+val add_one_half = hfunc_make (2LL, 1LL, 0LL, 2LL)
+val add_one = hfunc_make (1LL, 1LL, 0LL, 1LL)
+val divide_by_two = hfunc_make (1LL, 0LL, 0LL, 2LL)
+val divide_by_four = hfunc_make (1LL, 0LL, 0LL, 4LL)
+val take_reciprocal = hfunc_make (0LL, 1LL, 1LL, 0LL)
+val add_one_then_div_two = hfunc_make (1LL, 1LL, 0LL, 2LL)
+val add_two_then_div_four = hfunc_make (1LL, 2LL, 0LL, 4LL)
+
+(*------------------------------------------------------------------*)
+(* Now let us derive some continued fractions. *)
+
+local
+  macdef apply = hfunc_apply<llintknd>
+  macdef cfref2ml = cfref2mathml<llintknd>
+in
+  val cfref_13_11_plus_1_2 = apply (add_one_half, cfref_13_11)
+  val cfref_22_7_plus_1_2 = apply (add_one_half, cfref_22_7)
+  val cfref_22_7_div_4 = apply (divide_by_four, cfref_22_7)
+
+  (* The following two give the same result: *)
+  val cfref_sqrt2_div_2 = apply (divide_by_two, cfref_sqrt2)
+  val cfref_1_div_sqrt2 = apply (take_reciprocal, cfref_sqrt2)
+  val () = assertloc (cfref2ml cfref_sqrt2_div_2
+                          = cfref2ml cfref_1_div_sqrt2)
+
+  (* The following three give the same result: *)
+  val cfref_2_plus_sqrt2_grouped_div_4 =
+    apply (add_two_then_div_four, cfref_sqrt2)
+  val cfref_half_of_1_plus_half_sqrt2 =
+    apply (add_one_then_div_two, cfref_sqrt2_div_2)
+  val cfref_half_of_1_plus_1_div_sqrt2 =
+    apply (divide_by_two, (apply (add_one, cfref_sqrt2_div_2)))
+  val () = assertloc (cfref2ml cfref_2_plus_sqrt2_grouped_div_4
+                          = cfref2ml cfref_half_of_1_plus_half_sqrt2)
+  val () = assertloc (cfref2ml cfref_half_of_1_plus_half_sqrt2
+                          = cfref2ml cfref_half_of_1_plus_1_div_sqrt2)
+end
+
+(*------------------------------------------------------------------*)
+
+implement
+main () =
+  let
+    macdef cfref2ml = cfref2mathml<llintknd>
+    macdef apply = hfunc_apply<llintknd>
+
+    macdef text (s) =
+      strptr2string (string_append ("<p>", ,(s), "</p>"))
+
+    macdef becomes =
+      strptr2string (string_append ("<mo>", right_arrow, "</mo>"))
+
+    macdef start_math =
+      "<math xmlns='http://www.w3.org/1998/Math/MathML'>"
+    macdef stop_math = "</math>"
+
+    macdef start_table = "<mtable>"
+    macdef stop_table = "</mtable>"
+
+    macdef left_side (s) =
+      strptr2string
+        (string_append
+          ("<mtd columnalign='right'>", ,(s), "</mtd>"))
+    macdef middle (s) =
+      strptr2string
+        (string_append
+          ("<mtd columnalign='center'>", ,(s), "</mtd>"))
+    macdef right_side (s) =
+      strptr2string
+        (string_append
+          ("<mtd columnalign='left'>", ,(s), "</mtd>"))
+    macdef entry (left, right) =
+      strptr2string
+        (string_append
+          ("<mtr>",
+           left_side (,(left)),
+           middle becomes,
+           right_side (,(right)),
+           "</mtr>"))
+
+    macdef num s =
+      strptr2string (string_append ("<mn>", ,(s), "</mn>"))
+    macdef id s =
+      strptr2string (string_append ("<mi>", ,(s), "</mi>"))
+    macdef oper s =
+      strptr2string (string_append ("<mo>", ,(s), "</mo>"))
+
+    macdef frac (n, d) =
+      strptr2string (string_append ("<mfrac>", ,(n), ,(d),
+                                    "</mfrac>"))
+    macdef numfrac (n, d) = frac (num ,(n), num ,(d))
+
+    macdef sqrt_of (s) =
+      strptr2string (string_append ("<msqrt>", ,(s), "</msqrt>"))
+  in
+    println! (start_math);
+    println! (start_table);
+
+    println! (entry (numfrac ("13", "11"), cfref2ml cfref_13_11));
+    println! (entry (numfrac ("22", "7"), cfref2ml cfref_22_7));
+    println! (entry (sqrt_of (num "2"), cfref2ml cfref_sqrt2));
+
+    println! (entry (strptr2string
+                        (string_append (numfrac ("13", "11"),
+                                        oper plus_sign,
+                                        numfrac ("1", "2"))),
+                     cfref2ml cfref_13_11_plus_1_2));
+    println! (entry (strptr2string
+                        (string_append (numfrac ("22", "7"),
+                                        oper plus_sign,
+                                        numfrac ("1", "2"))),
+                     cfref2ml cfref_22_7_plus_1_2));
+    println! (entry (frac (numfrac ("22", "7"), num ("4")),
+                     cfref2ml cfref_22_7_div_4));
+    println! (entry (frac (sqrt_of (num "2"), num ("2")),
+                     cfref2ml cfref_sqrt2_div_2));
+    println! (entry (frac (num ("1"), sqrt_of (num "2")),
+                     cfref2ml cfref_1_div_sqrt2));
+    println! (entry (strptr2string
+                        (string_append
+                            (numfrac ("1", "4"),
+                             oper dot_operator,
+                             strptr2string
+                                (string_append
+                                  (oper "(", num "2", oper plus_sign,
+                                   sqrt_of (num "2"), oper ")")))),
+                     cfref2ml cfref_2_plus_sqrt2_grouped_div_4));
+    println! (entry (strptr2string
+                        (string_append
+                            (numfrac ("1", "2"),
+                             oper dot_operator,
+                             strptr2string
+                                (string_append
+                                  (oper "(", num "1", oper plus_sign,
+                                   frac (sqrt_of (num "2"), num "2"),
+                                   oper ")")))),
+                     cfref2ml cfref_half_of_1_plus_half_sqrt2));
+    println! (entry (strptr2string
+                        (string_append
+                            (numfrac ("1", "2"),
+                             oper dot_operator,
+                             strptr2string
+                                (string_append
+                                  (oper "(", num "1", oper plus_sign,
+                                   frac (num "1", sqrt_of (num "2")),
+                                   oper ")")))),
+                     cfref2ml cfref_half_of_1_plus_1_div_sqrt2));
+
+    println! (stop_table);
+    println! (stop_math);
+    0
+  end
+
+(*------------------------------------------------------------------*)

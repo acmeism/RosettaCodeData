@@ -1,0 +1,68 @@
+#50 = Buf_Num		// Current edit buffer (source data)
+File_Open("output.txt")
+#51 = Buf_Num		// Edit buffer for output file
+Buf_Switch(#50)
+#10 = 0			// total sum of file data
+#11 = 0			// number of valid data items in file
+#12 = 0			// Current run of consecutive flags<0 in lines of file
+#13 = -1		// Max consecutive flags<0 in lines of file
+Reg_Empty(15)		// ... and date tag(s) at line(s) where it occurs
+
+While(!At_EOF) {
+    #20 = 0		// sum of line data
+    #21 = 0		// number of line data items with flag>0
+    #22 = 0		// number of line data items with flag<0
+    Reg_Copy_Block(14, Cur_Pos, Cur_Pos+10)	// date field
+
+    // extract field info, skipping initial date field
+    Repeat(ALL) {
+	Search("|{|T,|N}", ADVANCE+ERRBREAK)	// next Tab or Newline
+	if (Match_Item==2) { Break }		// end of line
+	#30 = Num_Eval(ADVANCE) * 1000		// #30 = value
+	Char					//  fixed point, 3 decimal digits
+	#30 += Num_Eval(ADVANCE+SUPPRESS)
+	#31 = Num_Eval(ADVANCE)			// #31 = flag
+	if (#31 < 1) {				// not valid field?
+	    #12++
+	    #22++
+	} else {				// valid field
+	    // check run of data-absent fields
+	    if(#13 == #12 && #12 > 0) {
+	        Reg_Set(15, ", ", APPEND)
+	        Reg_Set(15, @14, APPEND)
+	    }
+	    if(#13 < #12 && #12 > 0) {
+	        #13 = #12
+	        Reg_Set(15, @14)
+	    }
+
+	    // re-initialise run of nodata counter
+	    #12 = 0
+	    // gather values for averaging
+	    #20 += #30
+	    #21++
+	}
+    }
+
+    // totals for the file so far
+    #10 += #20
+    #11 += #21
+
+    Buf_Switch(#51)	// buffer for output data
+    IT("Line: ") Reg_Ins(14)
+    IT("  Reject:") Num_Ins(#22, COUNT, 3)
+    IT("  Accept:") Num_Ins(#21, COUNT, 3)
+    IT("  Line tot:") Num_Ins(#20, COUNT, 8) Char(-3) IC('.') EOL
+    IT("  Line avg:") Num_Ins((#20+#21/2)/#21, COUNT, 7) Char(-3) IC('.') EOL IN
+    Buf_Switch(#50)	// buffer for input data
+}
+
+Buf_Switch(#51)		// buffer for output data
+IN
+IT("Total:   ") Num_Ins(#10, FORCE+NOCR) Char(-3) IC('.') EOL IN
+IT("Readings: ") Num_Ins(#11, FORCE)
+IT("Average: ") Num_Ins((#10+#11/2)/#11, FORCE+NOCR) Char(-3) IC('.') EOL IN
+IN
+IT("Maximum run(s) of ") Num_Ins(#13, LEFT+NOCR)
+IT(" consecutive false readings ends at line starting with date(s): ") Reg_Ins(15)
+IN

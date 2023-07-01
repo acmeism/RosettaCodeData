@@ -1,0 +1,3 @@
+zipWith (flip (!!)) [0..]    -- or: take n . last . take n ...
+     . scanl1 minus
+     . scanl1 (zipWith (+)) $ repeat [2..]

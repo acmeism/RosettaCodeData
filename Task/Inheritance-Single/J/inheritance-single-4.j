@@ -1,0 +1,2 @@
+coclass 'Lab'
+coinsert 'Dog'

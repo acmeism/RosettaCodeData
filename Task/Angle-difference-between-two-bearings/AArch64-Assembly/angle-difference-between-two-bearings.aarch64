@@ -1,0 +1,570 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program diffAngle64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../includeConstantesARM64.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szCarriageReturn:   .asciz "\n"
+szMessResult:       .asciz "Difference between @ and @ = @ \n"
+
+.align 8
+fB1:            .double 0F20.0
+fB2:            .double 0F45.0
+fB3:            .double 0F-45.0
+fB4:            .double 0F-85.0
+fB5:            .double 90.0
+fB6:            .double -95.0
+fB7:            .double 125.0
+fB8:            .double 145.0
+fB9:            .double 0F29.4803
+fB10:           .double 0F-88.6381
+fB11:           .double 0F-78.3251
+fB12:           .double 0F-159.036
+fB13:           .double 0F-70099.74233810938
+fB14:           .double 0F29840.67437876723
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:           .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    ldr x0,qAdrfB1
+    ldr x1,qAdrfB2
+    bl testComputeAngle
+    //b 100f
+    ldr x0,qAdrfB3
+    ldr x1,qAdrfB2
+    bl testComputeAngle
+
+    ldr x0,qAdrfB4
+    ldr x1,qAdrfB5
+    bl testComputeAngle
+
+    ldr x0,qAdrfB6
+    ldr x1,qAdrfB5
+    bl testComputeAngle
+
+    ldr x0,qAdrfB3
+    ldr x1,qAdrfB7
+    bl testComputeAngle
+
+    ldr x0,qAdrfB3
+    ldr x1,qAdrfB8
+    bl testComputeAngle
+
+    ldr x0,qAdrfB9
+    ldr x1,qAdrfB10
+    bl testComputeAngle
+
+    ldr x0,qAdrfB11
+    ldr x1,qAdrfB12
+    bl testComputeAngle
+
+    ldr x0,qAdrfB13
+    ldr x1,qAdrfB14
+    bl testComputeAngle
+
+100:                            // standard end of the program
+    mov x0, #0                  // return code
+    mov x8,EXIT
+    svc #0                      // perform the system call
+qAdrszCarriageReturn:    .quad szCarriageReturn
+qAdrsZoneConv:           .quad sZoneConv
+qAdrfB1:                .quad fB1
+qAdrfB2:                .quad fB2
+qAdrfB3:                .quad fB3
+qAdrfB4:                .quad fB4
+qAdrfB5:                .quad fB5
+qAdrfB6:                .quad fB6
+qAdrfB7:                .quad fB7
+qAdrfB8:                .quad fB8
+qAdrfB9:                .quad fB9
+qAdrfB10:               .quad fB10
+qAdrfB11:               .quad fB11
+qAdrfB12:               .quad fB12
+qAdrfB13:               .quad fB13
+qAdrfB14:               .quad fB14
+/******************************************************************/
+/*     compute difference and display result                      */
+/******************************************************************/
+/* s0 contains bearing 1  */
+/* s1 contains bearing 2  */
+testComputeAngle:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    ldr d0,[x0]
+    fmov d2,d0
+    ldr d1,[x1]
+    bl computeDiffAngle
+    fmov d3,d0
+    fmov d0,d2
+    ldr x0,qAdrsZoneConv
+    bl convertirFloat
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc
+    mov x3,x0
+    fmov d0,d1
+    ldr x0,qAdrsZoneConv
+    bl convertirFloat
+    mov x0,x3
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc
+    mov x3,x0
+    fmov d0,d3
+    ldr x0,qAdrsZoneConv
+    bl convertirFloat
+    mov x0,x3
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc
+    bl affichageMess
+
+100:
+    ldp x2,x3,[sp],16        // restaur  registers
+    ldp x1,lr,[sp],16        // restaur  registers
+    ret
+qAdrszMessResult:      .quad szMessResult
+/******************************************************************/
+/*     compute difference of two bearing                                  */
+/******************************************************************/
+/* d0 contains bearing 1  */
+/* d1 contains bearing 2  */
+computeDiffAngle:
+    stp x1,lr,[sp,-16]!        // save  registers
+    stp x2,x3,[sp,-16]!        // save  registers
+    stp x4,x5,[sp,-16]!        // save  registers
+    stp d1,d2,[sp,-16]!        // save  registres
+    stp d3,d4,[sp,-16]!        // save  registres
+    mov x1,#360
+    mov x4,#0                  // top positive/negative
+    fcvtzs d4,d0               // conversion.integer
+    scvtf d2,d4                // conversion float
+    fsub d2,d0,d2              // partie décimale
+    fmov x0,d4                 // partie entière
+    cmp x0,#0                  // negative ?
+    bge 1f
+    neg x0,x0                  // yes -> inversion
+    mov x4,#1
+1:
+    udiv x2,x0,x1              // divide by 360
+    msub x3,x2,x1,x0
+    cmp x4,#0                  // value negative ?
+    neg x5,x3
+    csel x3,x5,x3,ne           // inversion remainder
+    fmov d3,x3
+    scvtf d3,d3                // and conversion float
+    fadd d0,d3,d2              // add decimal part
+
+    mov x4,#0                  // bearing 2
+    fcvtzs d4,d1               // conversion integer
+    scvtf d2,d4                // conversion float
+    fsub d2,d1,d2              // partie décimale
+    fmov x0,d4
+    cmp x0,#0
+    bge 2f
+    neg x0,x0
+    mov x4,#1
+2:
+    udiv x2,x0,x1              // divide by 360
+    msub x3,x2,x1,x0
+    cmp x4,#0
+    neg x5,x3
+    csel x3,x5,x3,ne           // inversion remainder
+    fmov d3,x3
+    scvtf d3,d3                // conversion float
+    fadd d1,d3,d2
+
+    fsub d0,d1,d0              // calculate the difference between the 2 values
+
+    mov x0,180
+    fmov d3,x0
+    scvtf d3,d3                // conversion float 180
+    fmov d4,x1                 // 360
+    scvtf d4,d4                // conversion float 360
+    fcmp d0,#0.0               // difference is negative ?
+    blt 2f
+                               // difference is positive
+    fcmp d0,d4                 // difference > 360
+    ble 3f
+    fsub  d0,d0,d4             // yes -> difference - 360
+3:
+    fcmp d0,d3                 // compare difference and 180
+    ble 100f
+    fsub d0,d4,d0              // > 180 calculate 360 - difference
+    fneg d0,d0                 // and negate
+    b 100f
+
+2:                            // différence is négative
+    fneg d2,d4                // -360
+    fcmp d0,d2                // compare différence et - 360
+    ble 3f
+    fsub  d0,d0,d4            // sub 360 to différence
+3:
+    fneg d3,d3                // -180
+    fcmp d0,d3                // compare difference and -180
+    bge 100f
+    fadd d0,d4,d0             // calculate 360 + différence
+
+100:
+    ldp d3,d4,[sp],16         // restaur  registers
+    ldp d1,d2,[sp],16         // restaur  registers
+    ldp x4,x5,[sp],16         // restaur  registers
+    ldp x2,x3,[sp],16         // restaur  registers
+    ldp x1,lr,[sp],16         // restaur  registers
+    ret
+
+/******************************************************************/
+/*     Conversion Float                                            */
+/******************************************************************/
+/* d0 contains Float */
+/* x0 contains address conversion area  mini 20 charactèrs */
+/* x0 return result length */
+/* see https://blog.benoitblanchon.fr/lightweight-float-to-string/ */
+convertirFloat:
+    stp x1,lr,[sp,-16]!       // save  registres
+    stp x2,x3,[sp,-16]!       // save  registres
+    stp x4,x5,[sp,-16]!       // save  registres
+    stp x6,x7,[sp,-16]!       // save  registres
+    stp x8,x9,[sp,-16]!       // save  registres
+    stp d1,d2,[sp,-16]!       // save  registres
+    mov x6,x0                 // save area address
+    fmov x0,d0
+    mov x8,#0                 // result length
+    mov x3,#'+'
+    strb w3,[x6]              // signe + forcing
+    mov x2,x0
+    tbz x2,63,1f
+    mov x2,1
+    lsl x2,x2,63
+    bic x0,x0,x2
+    mov x3,#'-'               // sign -
+    strb w3,[x6]
+1:
+    adds x8,x8,#1             // next position
+    cmp x0,#0                 // case 0 positive or negative
+    bne 2f
+    mov x3,#'0'
+    strb w3,[x6,x8]           // store character 0
+    adds x8,x8,#1
+    strb wzr,[x6,x8]          // store 0 final
+    mov x0,x8                 // return length
+    b 100f
+2:
+    ldr x2,iMaskExposant
+    mov x1,x0
+    and x1,x1,x2              // exposant
+    cmp x1,x2
+    bne 4f
+    tbz x0,51,3f              // test bit 51 to zéro
+    mov x2,#'N'               // case Nan. store byte  no possible store integer
+    strb w2,[x6]              // area no aligned
+    mov x2,#'a'
+    strb w2,[x6,#1]
+    mov x2,#'n'
+    strb w2,[x6,#2]
+    mov x2,#0                  // 0 final
+    strb w2,[x6,#3]
+    mov x0,#3
+    b 100f
+3:                             // case infini positive or négative
+    mov x2,#'I'
+    strb w2,[x6,x8]
+    adds x8,x8,#1
+    mov x2,#'n'
+    strb w2,[x6,x8]
+    adds x8,x8,#1
+    mov x2,#'f'
+    strb w2,[x6,x8]
+    adds x8,x8,#1
+    mov x2,#0
+    strb w2,[x6,x8]
+    mov x0,x8
+    b 100f
+4:
+    bl normaliserFloat
+    mov x5,x0                // save exposant
+    fcvtzu d2,d0
+    fmov x0,d2               // part integer
+    scvtf d1,d2              // conversion float
+    fsub d1,d0,d1            // extraction part fractional
+    ldr d2,dConst1
+    fmul d1,d2,d1            // to crop it in full
+    fcvtzu d1,d1             // convertion integer
+    fmov x4,d1               // fract value
+                             // conversion part integer to x0
+    mov x2,x6                // save address begin area
+    adds x6,x6,x8
+    mov x1,x6
+    bl conversion10
+    add x6,x6,x0
+    mov x3,#','
+    strb w3,[x6]
+    adds x6,x6,#1
+
+    mov x0,x4                // conversion part fractionnaire
+    mov x1,x6
+    bl conversion10SP
+    add x6,x6,x0
+    sub x6,x6,#1
+                             //  remove trailing zeros
+5:
+    ldrb w0,[x6]
+    cmp w0,#'0'
+    bne 6f
+    sub x6,x6,#1
+    b 5b
+6:
+    cmp w0,#','
+    bne 7f
+    sub x6,x6,#1
+7:
+    cmp x5,#0                  // if exposant = 0 no display
+    bne 8f
+    add x6,x6,#1
+    b 10f
+8:
+    add x6,x6,#1
+    mov x3,#'E'
+    strb w3,[x6]
+    add x6,x6,#1
+    mov x0,x5                  // conversion exposant
+    mov x3,x0
+    tbz x3,63,9f               // exposant negative ?
+    neg x0,x0
+    mov x3,#'-'
+    strb w3,[x6]
+    adds x6,x6,#1
+9:
+    mov x1,x6
+    bl conversion10
+    add x6,x6,x0
+10:
+    strb wzr,[x6]              // store 0 final
+    adds x6,x6,#1
+    mov x0,x6
+    subs x0,x0,x2              // retour de la longueur de la zone
+    subs x0,x0,#1              // sans le 0 final
+
+100:
+    ldp d1,d2,[sp],16          // restaur  registres
+    ldp x8,x9,[sp],16          // restaur  registres
+    ldp x6,x7,[sp],16          // restaur  registres
+    ldp x4,x5,[sp],16          // restaur  registres
+    ldp x2,x3,[sp],16          // restaur  registres
+    ldp x1,lr,[sp],16          // restaur registres
+    ret
+
+iMaskExposant:            .quad 0x7FF<<52
+dConst1:                  .double 0f1E17
+
+/***************************************************/
+/*   normaliser float                              */
+/***************************************************/
+/* x0 contain float value (always positive value and <> Nan) */
+/* d0 return new value */
+/* x0 return exposant */
+normaliserFloat:
+    stp x1,lr,[sp,-16]!       // save  registers
+    fmov d0,x0                // value float
+    mov x0,#0                 // exposant
+    ldr d1,dConstE7           // no normalisation for value  < 1E7
+    fcmp d0,d1
+    blo 10f                   // if d0 < dConstE7
+
+    ldr d1,dConstE256
+    fcmp d0,d1
+    blo 1f
+    fdiv d0,d0,d1
+    adds x0,x0,#256
+1:
+
+    ldr d1,dConstE128
+    fcmp d0,d1
+    blo 1f
+    fdiv d0,d0,d1
+    adds x0,x0,#128
+1:
+    ldr d1,dConstE64
+    fcmp d0,d1
+    blo 1f
+    fdiv d0,d0,d1
+    adds x0,x0,#64
+1:
+    ldr d1,dConstE32
+    fcmp d0,d1
+    blo 1f
+    fdiv d0,d0,d1
+    adds x0,x0,#32
+1:
+    ldr d1,dConstE16
+    fcmp d0,d1
+    blo 2f
+    fdiv d0,d0,d1
+    adds x0,x0,#16
+2:
+    ldr d1,dConstE8
+    fcmp d0,d1
+    blo 3f
+    fdiv d0,d0,d1
+    adds x0,x0,#8
+3:
+    ldr d1,dConstE4
+    fcmp d0,d1
+    blo 4f
+    fdiv d0,d0,d1
+    adds x0,x0,#4
+4:
+    ldr d1,dConstE2
+    fcmp d0,d1
+    blo 5f
+    fdiv d0,d0,d1
+    adds x0,x0,#2
+5:
+    ldr d1,dConstE1
+    fcmp d0,d1
+    blo 10f
+    fdiv d0,d0,d1
+    adds x0,x0,#1
+
+10:
+    ldr d1,dConstME5        // pas de normalisation pour les valeurs > 1E-5
+    fcmp d0,d1
+    bhi 100f                 // fin
+
+    ldr d1,dConstME255
+    fcmp d0,d1
+    bhi 11f
+    ldr d1,dConstE256
+
+    fmul d0,d0,d1
+    subs x0,x0,#256
+11:
+
+    ldr d1,dConstME127
+    fcmp d0,d1
+    bhi 11f
+    ldr d1,dConstE128
+
+    fmul d0,d0,d1
+    subs x0,x0,#128
+11:
+
+    ldr d1,dConstME63
+    fcmp d0,d1
+    bhi 11f
+    ldr d1,dConstE64
+
+    fmul d0,d0,d1
+    subs x0,x0,#64
+11:
+
+    ldr d1,dConstME31
+    fcmp d0,d1
+    bhi 11f
+    ldr d1,dConstE32
+
+    fmul d0,d0,d1
+    subs x0,x0,#32
+11:
+    ldr d1,dConstME15
+    fcmp d0,d1
+    bhi 12f
+    ldr d1,dConstE16
+    fmul d0,d0,d1
+    subs x0,x0,#16
+12:
+    ldr d1,dConstME7
+    fcmp d0,d1
+    bhi 13f
+    ldr d1,dConstE8
+    fmul d0,d0,d1
+    subs x0,x0,#8
+13:
+    ldr d1,dConstME3
+    fcmp d0,d1
+    bhi 14f
+    ldr d1,dConstE4
+    fmul d0,d0,d1
+    subs x0,x0,#4
+14:
+    ldr d1,dConstME1
+    fcmp d0,d1
+    bhi 15f
+    ldr d1,dConstE2
+    fmul d0,d0,d1
+    subs x0,x0,#2
+15:
+    ldr d1,dConstE0
+    fcmp d0,d1
+    bhi 100f
+    ldr d1,dConstE1
+    fmul d0,d0,d1
+    subs x0,x0,#1
+
+100:                       // fin standard de la fonction
+    ldp x1,lr,[sp],16           // restaur registres
+    ret
+.align 2
+dConstE7:             .double 0f1E7
+dConstE256:           .double 0f1E256
+dConstE128:           .double 0f1E128
+dConstE64:            .double 0f1E64
+dConstE32:            .double 0f1E32
+dConstE16:            .double 0f1E16
+dConstE8:             .double 0f1E8
+dConstE4:             .double 0f1E4
+dConstE2:             .double 0f1E2
+dConstE1:             .double 0f1E1
+dConstME5:            .double 0f1E-5
+dConstME255:          .double 0f1E-255
+dConstME127:          .double 0f1E-127
+dConstME63:           .double 0f1E-63
+dConstME31:           .double 0f1E-31
+dConstME15:           .double 0f1E-15
+dConstME7:            .double 0f1E-7
+dConstME3:            .double 0f1E-3
+dConstME1:            .double 0f1E-1
+dConstE0:             .double 0f1E0
+
+/******************************************************************/
+/*     Décimal Conversion                                         */
+/******************************************************************/
+/* x0 contain value et x1 address conversion area   */
+conversion10SP:
+    stp x1,lr,[sp,-16]!         // save  registers
+    stp x2,x3,[sp,-16]!         // save  registers
+    stp x4,x5,[sp,-16]!         // save  registers
+    mov x5,x1
+    mov x4,#16
+    mov x2,x0
+    mov x1,#10                  // décimal conversion
+1:                              // conversion loop
+    mov x0,x2                   // copy begin number or quotient
+    udiv x2,x0,x1               // division by 10
+    msub x3,x1,x2,x0            // compute remainder
+    add x3,x3,#48               // compute digit
+    strb w3,[x5,x4]             // store byte address area (x5) + offset (x4)
+    subs x4,x4,#1               // position precedente
+    bge 1b
+    strb wzr,[x5,16]            // 0 final
+100:
+    ldp x4,x5,[sp],16           // restaur  registers
+    ldp x2,x3,[sp],16           // restaur  registers
+    ldp x1,lr,[sp],16           // restaur registers
+    ret
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../includeARM64.inc"

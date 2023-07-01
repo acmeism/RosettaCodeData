@@ -1,0 +1,6 @@
+local socket = require("socket")
+io.write("Input a number of seconds to sleep: ")
+local input = io.read("*number")
+print("Sleeping")
+socket.sleep(input)
+print("Awake!")

@@ -1,0 +1,12 @@
+(defun special-variables ()
+  (flet ((special-var-p (s)
+           (and (char= (aref s 0) #\*)
+                (find-if-not (lambda (x) (char= x #\*)) s)
+                (char= (aref s (1- (length s))) #\*))))
+    (let ((lst '()))
+      (do-symbols (s (find-package 'cl))
+        (when (special-var-p (symbol-name s))
+          (push s lst)))
+      lst)))
+
+(format t "~a~%" (sort (special-variables) #'string<))

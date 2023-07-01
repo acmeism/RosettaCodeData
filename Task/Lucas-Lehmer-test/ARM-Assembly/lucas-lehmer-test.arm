@@ -1,0 +1,214 @@
+/* ARM assembly Raspberry PI  */
+/*  program lucaslehmer.s   */
+/* use library gmp     */
+/* link with gcc option -lgmp */
+
+/* Constantes    */
+.equ STDOUT, 1                           @ Linux output console
+.equ EXIT,   1                           @ Linux syscall
+.equ WRITE,  4                           @ Linux syscall
+
+.equ NBRECH,          30
+
+/* Initialized data */
+.data
+szMessResult:       .ascii "Prime : M"
+sMessValeur:        .fill 11, 1, ' '            @ size => 11
+                    .asciz "\n"
+
+szCarriageReturn:   .asciz "\n"
+szformat:           .asciz "nombre= %Zd\n"
+
+/* UnInitialized data */
+.bss
+.align 4
+spT:                .skip 100
+mpT:                .skip 100
+Deux:               .skip 100
+snT:                .skip 100
+/*  code section */
+.text
+.global main
+main:
+    ldr r0,iAdrDeux                       @ create big number = 2
+    mov r1,#2
+    bl __gmpz_init_set_ui
+    ldr r0,iAdrspT                        @ init big number
+    bl __gmpz_init
+    ldr r0,iAdrmpT                        @ init big number
+    bl __gmpz_init
+    mov r5,#3                             @ start number
+    mov r6,#0                             @ result counter
+1:
+    ldr r0,iAdrspT                        @ conversion integer in big number gmp
+    mov r1,r5
+    bl __gmpz_set_ui
+    ldr r0,iAdrspT                        @ control if exposant is prime !
+    ldr r0,iAdrspT
+    mov r1,#25
+    bl __gmpz_probab_prime_p
+    cmp r0,#0
+    beq 5f
+
+2:
+    //ldr r1,iAdrspT                      @ example number display
+    //ldr r0,iAdrszformat
+    //bl __gmp_printf
+/******** Compute (2 pow p) - 1   ******/
+    ldr r0,iAdrmpT                        @ compute 2 pow p
+    ldr r1,iAdrDeux
+    mov r2,r5
+    bl __gmpz_pow_ui
+    ldr r0,iAdrmpT
+    ldr r1,iAdrmpT
+    mov r2,#1
+    bl __gmpz_sub_ui                      @ then (2 pow p) - 1
+
+    ldr r0,iAdrsnT
+    mov r1,#4
+    bl __gmpz_init_set_ui                 @ init big number with 4
+
+/**********  Test lucas_lehner  *******/
+    mov r4,#2                             @ loop counter
+3:                                        @ begin loop
+    ldr r0,iAdrsnT
+    ldr r1,iAdrsnT
+    mov r2,#2
+    bl __gmpz_pow_ui                      @ compute square big number
+
+    ldr r0,iAdrsnT
+    ldr r1,iAdrsnT
+    mov r2,#2
+    bl __gmpz_sub_ui                      @ = (sn *sn) - 2
+
+    ldr r0,iAdrsnT                        @ compute remainder -> sn
+    ldr r1,iAdrsnT                        @ sn
+    ldr r2,iAdrmpT                        @ p
+    bl __gmpz_tdiv_r
+
+    //ldr r1,iAdrsnT                      @ display number for control
+    //ldr r0,iAdrszformat
+    //bl __gmp_printf
+
+    add r4,#1                             @ increment counter
+    cmp r4,r5                             @ end ?
+    blt 3b                                @ no -> loop
+                                          @ compare result with zero
+    ldr r0,iAdrsnT
+    mov r1,#0
+    bl __gmpz_cmp_d
+    cmp r0,#0
+    bne 5f
+/********* is prime display result      *********/
+    mov r0,r5
+    ldr r1,iAdrsMessValeur                @ display value
+    bl conversion10                       @ call conversion decimal
+    ldr r0,iAdrszMessResult               @ display message
+    bl affichageMess
+    add r6,#1                             @ increment counter result
+    cmp r6,#NBRECH
+    bge 10f
+5:
+    add r5,#2                             @ increment number by two
+    b 1b                                  @ and loop
+
+10:
+    ldr r0,iAdrDeux                       @ clear memory big number
+    bl __gmpz_clear
+    ldr r0,iAdrsnT
+    bl __gmpz_clear
+    ldr r0,iAdrmpT
+    bl __gmpz_clear
+    ldr r0,iAdrspT
+   bl __gmpz_clear
+100:                                      @ standard end of the program
+    mov r0, #0                            @ return code
+    mov r7, #EXIT                         @ request to exit program
+    svc 0                                 @ perform system call
+iAdrszMessResult:         .int szMessResult
+iAdrsMessValeur:          .int sMessValeur
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszformat:             .int szformat
+iAdrspT:                  .int spT
+iAdrmpT:                  .int mpT
+iAdrDeux:                 .int Deux
+iAdrsnT:                  .int snT
+/******************************************************************/
+/*     display text with size calculation                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+affichageMess:
+    push {r0,r1,r2,r7,lr}                       @ save  registers
+    mov r2,#0                                   @ counter length */
+1:                                              @ loop length calculation
+    ldrb r1,[r0,r2]                             @ read octet start position + index
+    cmp r1,#0                                   @ if 0 its over
+    addne r2,r2,#1                              @ else add 1 in the length
+    bne 1b                                      @ and loop
+                                                @ so here r2 contains the length of the message
+    mov r1,r0                                   @ address message in r1
+    mov r0,#STDOUT                              @ code to write to the standard output Linux
+    mov r7, #WRITE                              @ code call system "write"
+    svc #0                                      @ call system
+    pop {r0,r1,r2,r7,lr}                        @ restaur registers
+    bx lr                                       @ return
+/******************************************************************/
+/*     Converting a register to a decimal unsigned                */
+/******************************************************************/
+/* r0 contains value and r1 address area   */
+/* r0 return size of result (no zero final in area) */
+/* area size => 11 bytes          */
+.equ LGZONECAL,   10
+conversion10:
+    push {r1-r4,lr}                                 @ save registers
+    mov r3,r1
+    mov r2,#LGZONECAL
+
+1:                                                  @ start loop
+    bl divisionpar10U                               @ unsigned  r0 <- dividende. quotient ->r0 reste -> r1
+    add r1,#48                                      @ digit
+    strb r1,[r3,r2]                                 @ store digit on area
+    cmp r0,#0                                       @ stop if quotient = 0
+    subne r2,#1                                     @ else previous position
+    bne 1b                                          @ and loop
+                                                    @ and move digit from left of area
+    mov r4,#0
+2:
+    ldrb r1,[r3,r2]
+    strb r1,[r3,r4]
+    add r2,#1
+    add r4,#1
+    cmp r2,#LGZONECAL
+    ble 2b
+                                                      @ and move spaces in end on area
+    mov r0,r4                                         @ result length
+    mov r1,#' '                                       @ space
+3:
+    strb r1,[r3,r4]                                   @ store space in area
+    add r4,#1                                         @ next position
+    cmp r4,#LGZONECAL
+    ble 3b                                            @ loop if r4 <= area size
+
+100:
+    pop {r1-r4,lr}                                    @ restaur registres
+    bx lr                                             @return
+
+/***************************************************/
+/*   division par 10   unsigned                    */
+/***************************************************/
+/* r0 dividende   */
+/* r0 quotient */	
+/* r1 remainder  */
+divisionpar10U:
+    push {r2,r3,r4, lr}
+    mov r4,r0                                          @ save value
+    //mov r3,#0xCCCD                                   @ r3 <- magic_number lower  raspberry 3
+    //movt r3,#0xCCCC                                  @ r3 <- magic_number higter raspberry 3
+    ldr r3,iMagicNumber                                @ r3 <- magic_number    raspberry 1 2
+    umull r1, r2, r3, r0                               @ r1<- Lower32Bits(r1*r0) r2<- Upper32Bits(r1*r0)
+    mov r0, r2, LSR #3                                 @ r2 <- r2 >> shift 3
+    add r2,r0,r0, lsl #2                               @ r2 <- r0 * 5
+    sub r1,r4,r2, lsl #1                               @ r1 <- r4 - (r2 * 2)  = r4 - (r0 * 10)
+    pop {r2,r3,r4,lr}
+    bx lr                                              @ leave function
+iMagicNumber:  	.int 0xCCCCCCCD

@@ -1,0 +1,94 @@
+bits 32
+
+section .data
+
+program db "Program: ", 0
+programlen equ $-program
+
+nl db "", 13, 10, 0
+nllen equ $-nl
+
+stdouthandle equ -11
+
+section .bss
+
+stdout resd 1
+
+charswritten resd 1
+
+env resd 1
+argc resd 1
+argv resd 255
+
+scriptname resd 1
+scriptnamelen resd 1
+
+section .text
+
+global Start
+extern GetStdHandle
+extern __getmainargs
+extern WriteConsoleA
+extern ExitProcess
+
+strlen:				; eax: a string ending in 0
+	push eax			; cache eax
+
+	.strloop:
+		mov bl, byte [eax]
+		cmp bl, 0
+		je .strret			; return len if bl == 0
+		inc eax				; else eax++
+		jmp .strloop
+
+	.strret:
+		pop ebx				; ebx = cached eax
+		sub eax, ebx		; eax -= ebx
+		ret					; eax = len
+
+Start:
+	push 0
+	push env
+	push argv
+	push argc
+	call __getmainargs
+	mov eax, [argv]
+	mov eax, [eax]
+	mov [scriptname], eax
+	add esp, 4 * 4
+
+	push stdouthandle
+	call GetStdHandle
+	mov [stdout], eax
+	add esp, 4 * 1
+
+	push 0
+	push charswritten
+	push programlen
+	push program
+	push dword [stdout]
+	call WriteConsoleA
+	add esp, 4 * 5
+
+	mov eax, [scriptname]
+	call strlen
+	mov [scriptnamelen], eax
+
+	push 0
+	push charswritten
+	push dword [scriptnamelen]
+	push dword [scriptname]
+	push dword [stdout]
+	call WriteConsoleA
+	add esp, 4 * 5
+
+	push 0
+	push charswritten
+	push nllen
+	push nl
+	push dword [stdout]
+	call WriteConsoleA
+	add esp, 4 * 5
+
+	push 0
+	call ExitProcess

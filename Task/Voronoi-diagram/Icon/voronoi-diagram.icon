@@ -1,0 +1,71 @@
+link graphics,printf,strings
+
+record site(x,y,colour)  # site data position and colour
+invocable all            # needed for string metrics
+
+procedure main(A)  # voronoi
+
+&window := open("Voronoi","g","bg=black") | stop("Unable to open window")
+
+WAttrib("canvas=hidden")   # figure out maximal size width & height
+WAttrib(sprintf("size=%d,%d",WAttrib("displaywidth"),WAttrib("displayheight")))
+WAttrib("canvas=maximal")
+height := WAttrib("height")
+width  := WAttrib("width")
+
+metrics := ["hypot","taxi","taxi3"]  # different metrics
+
+while case a := get(A) of {          # command line arguments
+  "--sites"  | "-s" : sites  := 0 < integer(a := get(A)) | runerr(205,a)
+  "--height" | "-h" : height := 0 < (height >= integer(a := get(A))) | runerr(205,a)
+  "--width"  | "-w" : width  := 0 < (width  >= integer(a := get(A))) | runerr(205,a)
+  "--metric" | "-m" : metric := ((a := get(A)) == !metrics) | runerr(205,a)
+  "--help"   | "-?" : write("Usage:\n voronoi [[--sites|-s] n] ",
+			    "[[--height|-h] pixels] [[--width|-w] pixels]",
+			    "[[--metric|-m] metric_procedure]",
+			    "[--help|-?]\n\n")
+  }
+
+/metric := metrics[1]                     # default to normal
+/sites := ?(r := integer(.1*width)) + r   # sites = random .1 to .2 of width if not given
+
+WAttrib(sprintf("label=Voronoi %dx%d %d %s",width,height,sites,metric))
+WAttrib(sprintf("size=%d,%d",width,height))
+
+x := "0123456789abcdef"    # hex for random sites (colour)
+siteL := []
+every 1 to sites do        # random sites
+  put(siteL, site(?width,?height,cat("#",?x,?x,?x,?x,?x,?x)))
+
+VoronoiDiagram(width,height,siteL,metric)  # Voronoi-ize it
+WDone()
+end
+
+procedure hypot(x,y,site)  # normal metric
+return sqrt((x-site.x)^2 + (y-site.y)^2)
+end
+
+procedure taxi(x,y,site)   # "taxi" metric
+return abs(x-site.x)+abs(y-site.y)
+end
+
+procedure taxi3(x,y,site)  # copied from a commented out version (TCL)
+return (abs(x-site.x)^3+abs(y-site.y)^3)^(.3)
+end
+
+procedure VoronoiDiagram(width,height,siteL,metric)
+   /metric := hypot
+   every y := 1 to height & x := 1 to width do {
+      dist := width+height         # anything larger than diagonal
+      every site := !siteL do {
+         if dist < (dt :=  metric(x,y,site)) then next  # skip
+         else if dist >:= dt then Fg(site.colour)       # site
+         else Fg("#000000")                             # unowned
+         DrawPoint(x,y)
+         }
+      }
+
+   Fg("Black")
+   every site := !siteL do                              # mark sites
+      DrawCircle(site.x,site.y,1)
+end

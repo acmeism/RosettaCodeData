@@ -1,0 +1,3 @@
+class
+    CAMERA
+end

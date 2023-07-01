@@ -1,0 +1,110 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program factorial64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessLargeNumber:   .asciz "Number N to large. \n"
+szMessNegNumber:     .asciz "Number N is negative. \n"
+
+szMessResult:        .asciz "Resultat =  @ \n"      // message result
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:         .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                      // entry of program
+
+    mov x0,#-5
+    bl factorial
+    mov x0,#10
+    bl factorial
+    mov x0,#20
+    bl factorial
+    mov x0,#30
+    bl factorial
+
+100:                      // standard end of the program
+    mov x0,0              // return code
+    mov x8,EXIT           // request to exit program
+    svc 0                 // perform the system call
+
+/********************************************/
+/*     calculation                         */
+/********************************************/
+/* x0 contains number N */
+factorial:
+    stp x1,lr,[sp,-16]!            // save  registers
+    cmp x0,#0
+    blt 99f
+    beq 100f
+    cmp x0,#1
+    beq 100f
+    bl calFactorial
+    cmp x0,#-1                      // overflow ?
+    beq 98f
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc          // insert result at @ character
+    bl affichageMess               // display message
+    b 100f
+
+98:                               // display error message
+    ldr x0,qAdrszMessLargeNumber
+    bl affichageMess
+    b 100f
+99:                               // display error message
+    ldr x0,qAdrszMessNegNumber
+    bl affichageMess
+
+100:
+    ldp x1,lr,[sp],16             // restaur  2 registers
+    ret                           // return to address lr x30
+
+qAdrszMessNegNumber:       .quad szMessNegNumber
+qAdrszMessLargeNumber:     .quad szMessLargeNumber
+qAdrsZoneConv:             .quad sZoneConv
+qAdrszMessResult:          .quad szMessResult
+/******************************************************************/
+/*     calculation                         */
+/******************************************************************/
+/* x0 contains the number N */
+calFactorial:
+    cmp x0,1                // N = 1 ?
+    beq 100f                // yes -> return
+    stp x20,lr,[sp,-16]!    // save  registers
+    mov x20,x0              // save N in x20
+    sub x0,x0,1             // call function with N - 1
+    bl calFactorial
+    cmp x0,-1               // error overflow ?
+    beq 99f                 // yes -> return
+    mul x10,x20,x0          // multiply result by N
+    umulh x11,x20,x0        // x11 is the hi rd  if <> 0 overflow
+    cmp x11,0
+    mov x11,-1              // if overflow  -1 -> x0
+    csel x0,x10,x11,eq      // else x0 = x10
+
+99:
+    ldp x20,lr,[sp],16      // restaur  2 registers
+100:
+    ret                     // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

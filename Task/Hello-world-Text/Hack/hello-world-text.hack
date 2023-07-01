@@ -1,0 +1,1 @@
+<?hh echo 'Hello world!'; ?>

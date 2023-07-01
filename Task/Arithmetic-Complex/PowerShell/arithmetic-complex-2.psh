@@ -1,0 +1,16 @@
+function show([System.Numerics.Complex]$c) {
+    if(0 -le $c.Imaginary) {
+        return "$($c.Real)+$($c.Imaginary)i"
+    } else {
+        return "$($c.Real)$($c.Imaginary)i"
+    }
+  }
+$m = [System.Numerics.Complex]::new(3, 4)
+$n = [System.Numerics.Complex]::new(7, 6)
+"`$m: $(show $m)"
+"`$n: $(show $n)"
+"`$m + `$n: $(show ([System.Numerics.Complex]::Add($m,$n)))"
+"`$m * `$n: $(show ([System.Numerics.Complex]::Multiply($m,$n)))"
+"negate `$m: $(show ([System.Numerics.Complex]::Negate($m)))"
+"1/`$m: $(show ([System.Numerics.Complex]::Reciprocal($m)))"
+"conjugate `$m: $(show ([System.Numerics.Complex]::Conjugate($m)))"

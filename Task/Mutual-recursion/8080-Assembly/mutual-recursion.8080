@@ -1,0 +1,68 @@
+	org	100h
+	jmp	test
+	;;; Implementation of F(A).
+F:	ana	a	; Zero?
+	jz	one	; Then set A=1
+	mov	b,a	; Otherwise, set B=A,
+	push	b	; And put it on the stack
+	dcr	a	; Set A=A-1
+	call	F	; Set A=F(A-1)
+	call	M 	; Set A=M(F(A-1))
+	pop	b	; Retrieve input value
+	cma		; (-A)+B is actually one cycle faster
+	inr	a	; than C=A;A=B;A-=B, and equivalent
+	add	b
+	ret
+one:	mvi	a,1	; Set A to 1,
+	ret		; and return.
+	;;; Implementation of M(A).
+M:	ana	a	; Zero?
+	rz		; Then keep it that way and return.
+	mov	b,a
+	push	b	; Otherwise, same deal as in F,
+	dcr	a	; but M and F are called in opposite
+	call	M 	; order.
+	call	F
+	pop	b
+	cma
+	inr	a
+	add	b
+	ret
+	;;; Demonstration code.
+test:	lhld	6	; Set stack pointer to highest usable
+	sphl		; memory.
+	;;; Print F([0..15])
+	lxi	d,fpfx	; Print "F: "
+	mvi 	c,9	
+	call	5
+	xra	a	; Start with N=0
+floop:	push	psw	; Keep N
+	call	F	; Get value for F(N)
+	call	pdgt	; Print it
+	pop	psw	; Restore N
+	inr 	a	; Next N
+	cpi	16	; Done yet?
+	jnz	floop
+	;;; Print M([0..15])
+	lxi	d,mpfx	; Print "\r\nM: "
+	mvi	c,9
+	call	5
+	xra	a	; Start with N=0
+mloop:	push	psw	; same deal as above
+	call	M
+	call	pdgt
+	pop	psw	; Restore N
+	inr	a
+	cpi	16
+	jnz	mloop
+	rst	0	; Explicit exit, we got rid of system stack
+	;;; Print digit and space
+pdgt:	adi	'0'	; ASCII
+	mov	e,a
+	mvi	c,2
+	call	5
+	mvi	e,' '	; Space
+	mvi	c,2
+	jmp	5	; Tail call optimization
+fpfx:	db	'F: $'
+mpfx:	db	13,10,'M: $'

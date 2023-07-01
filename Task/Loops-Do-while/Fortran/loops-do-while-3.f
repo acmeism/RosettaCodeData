@@ -1,0 +1,7 @@
+      IVALUE = 0
+   10 CONTINUE
+        IVALUE=IVALUE+1
+        WRITE(6,301) IVALUE
+  301   FORMAT(I5)
+      IF(MOD(IVALUE,6).NE.0) GOTO 10
+      END

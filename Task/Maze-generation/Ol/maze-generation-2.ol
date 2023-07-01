@@ -1,0 +1,22 @@
+; maze printing:
+(display "+")
+(for-each (lambda (?) (display "--+")) (iota WIDTH))
+(print)
+(for-each (lambda (l)
+            ; left wall (always)
+            (display "|")
+            ; draw right wall
+            (for-each (lambda (x)
+                        (display "  ")
+                        (display (if (zero? (band x #b10)) " " "|")))
+               l)
+            (print)
+            (display "+")
+            ; draw bottom wall
+            (for-each (lambda (x)
+                        (display (if (zero? (band x #b01)) "  " "--"))
+                        (display "+"))
+               l)
+            (print))
+   maze)
+(print)

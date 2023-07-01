@@ -1,0 +1,54 @@
+ClearAll[MakePathFunction]
+MakePathFunction[{path_, acumpath_}] :=
+ Module[{f1, f2, f3, pf, n = Length[path]},
+  f1 = MapThread[{#1/2, #2 + 0.5 < z <= #2 + 1} &, {acumpath,
+     n - Range[n + 1]}];
+  f2 = MapThread[{#1/2 + #2 Sqrt[1/4 - (z - #3)^2], #3 <
+       z <= #3 + 1/2} &, {acumpath // Most, path, n - Range[n]}];
+  f3 = {{acumpath[[-1]]/2, z <= 0}};
+  pf = Piecewise[Evaluate[Join[f1, f2, f3]], 0];
+  pf
+  ]
+MakeScene[pfs_List, zfinals_List, n_Integer, t_] :=
+ Module[{durations, accumduration, if, part, fixed, relt},
+  durations = n - zfinals;
+  accumduration = Accumulate[Prepend[durations, 0]];
+  if = Interpolation[{accumduration, Range[Length[zfinals] + 1]} //
+     Transpose, InterpolationOrder -> 1];
+  part = Floor[if[t]];
+  If[part > 0,
+   fixed = Table[{pfs[[i]], z} /. z -> zfinals[[i]], {i, part - 1}];
+   ,
+   fixed = {};
+   ];
+  relt = t - accumduration[[part]];
+  relt = n - relt;
+  Append[fixed, {pfs[[part]] /. z -> relt, relt}]
+  ]
+SeedRandom[1234];
+n = 6;
+m = 150;
+r = 0.25; (* fixed *)
+dots =
+ Catenate@Table[{# - i/2 - 1/2, n - i} & /@ Range[i], {i, n}];
+g = Graphics[Disk[#, r] & /@ dots, Axes -> True];
+
+paths = RandomChoice[{-1, 1}, {m, n}];
+paths = {#, Accumulate[Prepend[#, 0]]} & /@ paths;
+xfinals = paths[[All, 2, -1]];
+types = DeleteDuplicates[xfinals];
+zfinals = ConstantArray[0, Length[paths]];
+Do[
+  pos = Flatten[Position[xfinals, t]];
+  zfinals[[pos]] += 0.5 Range[Length[pos]];
+  ,
+  {t, types}
+  ];
+max = Max[zfinals] + 1;
+zfinals -= max;
+pfs = MakePathFunction /@ paths;
+Manipulate[
+ Graphics[{Disk[#, r] & /@ dots, Red,
+   Disk[#, r] & /@ MakeScene[pfs, zfinals, n, t]},
+  PlotRange -> {{-n, n}, {Min[zfinals] - 1, n + 2}},
+  ImageSize -> 150], {t, 0, Total[n - zfinals] - 0.001}]

@@ -1,0 +1,59 @@
+//
+// example: solve ODE for pendulum
+//
+
+// we first define the first derivative function for the solver
+dudt = function(t, u, p)
+{
+  // t-> time
+  // u->[theta, dtheta/dt ]
+  // p-> g/L, parameter
+  rval = zeros(2,1);
+  rval[1] =  u[2];
+  rval[2] = -p[1] * sin(u[1]);
+  return rval;
+};
+
+// now we solve the problem
+// physical parameters
+L  = 5;  // (m), the length of the arm of the pendulum
+p  = mks.g / L;  // RLaB has a built-in list 'mks' which contains large number of physical constants and conversion factors
+T0 = 2*const.pi*sqrt(L/mks.g); // approximate period of the pendulum
+
+// initial conditions
+theta0 = 30;  // degrees, initial angle of deflection of pendulum
+u0 = [theta0*const.pi/180, 0];  // RLaB has a built-in list 'const' of mathematical constants.
+
+// times at which we want solution
+t = [0:4:1/64] * T0;  // solve for 4 approximate periods with at time points spaced at T0/64
+
+// prepare ODEIV solver
+optsode = <<>>;
+optsode.eabs   = 1e-6;      // relative error for step size
+optsode.erel   = 1e-6;      // absolute error for step size
+optsode.delta_t = 1e-6;     // maximum dt that code is allowed
+optsode.stdout = stderr();  // open the text console and in it print the results of each step of calculation
+optsode.imethod = 5;        // use method No. 5 from the odeiv toolkit, Runge-Kutta 8th order Prince-Dormand method
+//optsode.phase_space = 0;    // the solver returns [t, u1(t), u2(t)] which is default behavior
+optsode.phase_space = 1;    // the solver returns [t, u1(t), u2(t), d(u1)/dt(t), d(u2)/dt]
+
+// solver do my bidding
+y = odeiv(dudt, p, t, u0, optsode);
+
+// Make an animation. We choose to use 'pgplot' rather then 'gnuplot' interface because the former is
+// faster and thus less cache-demanding, while the latter can be very cache-demanding (it may slow your
+// linux system quite down if one sends lots of plots for gnuplot to plot).
+plwins (1); // we will use one pgplot-window
+
+plwin(1);  // plot to pgplot-window No. 1; necessary if using more than one pgplot window
+plimits (-L,L, -1.25*L, 0.25*L);
+xlabel ("x-coordinate");
+ylabel ("z-coordinate");
+plegend ("Arm");
+for (i in 1:y.nr)
+{
+  // plot a line between the pivot point at (0,0) and the current position of the pendulum
+  arm_line = [0,0; L*sin(y[i;2]), -L*cos(y[i;2])]; // this is because theta is between the arm and the z-coordinate
+  plot  (arm_line);
+  sleep (0.1); // sleep 0.1 seconds between plots
+}

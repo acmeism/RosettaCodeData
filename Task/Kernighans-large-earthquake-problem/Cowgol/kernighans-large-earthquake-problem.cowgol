@@ -1,0 +1,82 @@
+include "cowgol.coh";
+include "file.coh";
+
+# Process a file line by line
+interface LineCb(line: [uint8]);
+sub ForEachLine(fcb: [FCB], cb: LineCb) is
+    var buf: uint8[256];
+    var ptr := &buf[0];
+
+    var length := FCBExt(fcb);
+    while length != 0 loop
+        var ch := FCBGetChar(fcb);
+        [ptr] := ch;
+        ptr := @next ptr;
+        if ch == '\n' then
+            [ptr] := 0;
+            ptr := &buf[0];
+            cb(&buf[0]);
+        end if;
+        length := length - 1;
+    end loop;
+end sub;
+
+# Get magnitude from line
+# Cowgol does not support floating point arithmetic, so the integer and
+# fractional parts are returned separately
+sub magnitude(line: [uint8]): (i: uint8, frac: uint8) is
+    i := 0;
+    frac := 0;
+    var col: uint8 := 1;
+    var space: uint8 := 0;
+    # scan ahead to 3rd column
+    while col < 3 loop
+        var ch := [line];
+        line := @next line;
+        if ch == 0 then break; end if;
+        if ch <= ' ' then
+            while ch <= ' ' and ch != 0 loop
+                ch := [line];
+                line := @next line;
+            end loop;
+            col := col + 1;
+        end if;
+    end loop;
+    if ch == 0 then
+        return; # no 3rd column
+    end if;
+    line := @prev line;
+
+    var n: int32;
+    var pos: [uint8];
+    # grab integer part
+    (n, pos) := AToI(line);
+    if pos == line then
+        return; # no value
+    end if;
+    i := n as uint8;
+    if [pos] == '.' then
+        # grab fractional part
+        (n, pos) := AToI(@next pos);
+        frac := n as uint8;
+    end if;
+end sub;
+
+# Print any line that has a magnitude > 6
+sub PrintIfGt6 implements LineCb is
+    var i: uint8;
+    var frac: uint8;
+    (i, frac) := magnitude(line);
+    if i > 6 or (i == 6 and frac > 0) then
+        print(line);
+    end if;
+end sub;
+
+# Open "data.txt" and scan each line
+var quakes: FCB;
+if FCBOpenIn(&quakes, "data.txt") != 0 then
+    print("Error!\n");
+    ExitWithError();
+end if;
+
+ForEachLine(&quakes, PrintIfGt6);

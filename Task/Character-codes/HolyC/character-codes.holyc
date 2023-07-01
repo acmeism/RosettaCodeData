@@ -1,0 +1,2 @@
+Print("%d\n", 'a'); /* prints "97" */
+Print("%c\n", 97);  /* prints "a" */

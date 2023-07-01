@@ -1,0 +1,89 @@
+' version 03-11-2016
+' compile with: fbc -s console
+
+#Include Once "gmp.bi"
+
+Sub partitions(max As ULong, p() As MpZ_ptr)
+    ' based on Numericana code example
+    Dim As ULong a, b, i, k
+    Dim As Long j
+
+    Dim As Mpz_ptr s = Allocate(Len(__mpz_struct)) : Mpz_init(s)
+
+    Mpz_set_ui(p(0), 1)
+
+    For i = 1 To max
+        j = 1 : k = 1 : b = 2 : a = 5
+        While j > 0
+            ' j = i - (3*k*k+k) \ 2
+            j = i - b : b = b + a : a = a + 3
+            If j >= 0 Then
+                If k And 1 Then Mpz_add(s, s, p(j)) Else Mpz_sub(s, s, p(j))
+            End If
+            j = j + k
+            If j >= 0 Then
+                If k And 1 Then Mpz_add(s, s, p(j)) Else Mpz_sub(s, s, p(j))
+            End If
+            k = k +1
+        Wend
+        Mpz_swap(p(i), s)
+    Next
+
+    Mpz_clear(s)
+
+End Sub
+
+' ------=< MAIN >=------
+
+Dim As ULong n, k, max = 25              ' with max > 416 the numbers become
+Dim As ULongInt p(max, max)              ' to big for a 64bit unsigned integer
+
+p(1, 1) = 1                              ' fill the first 3 rows
+p(2, 1) = 1 : p(2, 2) = 1
+p(3, 1) = 1 : p(3, 2) = 1 : p(3, 3) = 1
+
+For n = 4 To max                         ' fill the rest
+    For k = 1 To n
+        If k * 2 > n  Then
+           p(n,k)= p(n-1,k-1)
+        Else
+           p(n,k) = p(n-1,k-1) + p(n-k, k)
+        End If
+    Next
+Next
+
+For n = 1 To 25                          ' print the triangle
+    Print Space((max - n) * 2);
+    For k = 1 To n
+        Print Using "####"; p(n, k);
+    Next
+    Print
+Next
+Print : print
+
+                                         ' calculate the integer partition
+max = 123456                             ' 1234567 takes about ten minutes
+Dim As ZString Ptr ans
+
+ReDim big_p(max) As Mpz_ptr
+For n = 0 To max
+    big_p(n) = Allocate(Len(__mpz_struct)) : Mpz_init(big_p(n))
+Next
+
+partitions(max, big_p())
+
+For n = 1 To Len(Str(max))
+    k = Val(Left(Str(max), n))
+    ans = Mpz_get_str (0, 10, big_p(k))
+    Print Space(10 - n); "P("; Str(k); ") = "; *ans
+Next
+
+For n = 0 To max
+    Mpz_clear(big_p(n))
+Next
+
+' empty keyboard buffer
+While InKey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

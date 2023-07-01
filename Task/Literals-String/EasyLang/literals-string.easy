@@ -1,0 +1,2 @@
+print "EasyLang"
+print "简"

@@ -1,0 +1,26 @@
+SUB inicio(identity())
+    FOR i = LBOUND(identity,1) TO UBOUND(identity,1)
+        FOR j = LBOUND(identity,2) TO UBOUND(identity,2)
+            LET identity(i,j) = 0
+        NEXT j
+        LET identity(i,i) = 1
+    NEXT i
+END SUB
+
+SUB mostrar(identity())
+    FOR i = LBOUND(identity,1) TO UBOUND(identity,1)
+        FOR j = LBOUND(identity,2) TO UBOUND(identity,2)
+            PRINT identity(i,j);
+        NEXT j
+        PRINT
+    NEXT i
+END SUB
+
+DO
+    INPUT "Enter size of matrix "; n
+LOOP UNTIL n > 0
+
+DIM identity(1 TO n, 1 TO n)
+
+CALL inicio(identity())
+CALL mostrar(identity())

@@ -1,0 +1,123 @@
+[setup]
+    nomainwin
+
+    speed=50
+
+    prompt "Number of balls to drop: ";cycleMax
+    cycleMax=abs(int(cycleMax))
+
+'create window
+    WindowWidth=400
+    WindowHeight=470
+    UpperLeftX=1
+    UpperLeftY=1
+    graphicbox #1.gb, 10, 410,370,25
+    open "Galton Machine" for graphics_nf_nsb as #1
+    #1 "trapclose [q];down;fill black;flush"
+    #1.gb "font courier_new 12"
+
+'Create graphical sprites
+    #1 "getbmp bg 1 1 400 600"
+    #1 "place 0 0; color white;backcolor white;boxfilled 17 17;place 8 8;color black;backcolor black;circlefilled 8;"
+    #1 "place 8 25;color white;backcolor white;circlefilled 8;"
+    #1 "getbmp ball 0 0 17 34"
+    #1 "place 8 25;color red;backcolor red;circlefilled 8;"
+    #1 "getbmp pin 0 0 17 34"
+    #1 "background bg"
+
+'add sprites to program
+    for pinCount = 1 to 28
+        #1 "addsprite pin";pinCount;" pin;spriteround pin";pinCount
+    next pinCount
+
+    for ballCount = 1 to 7
+        #1 "addsprite ball";ballCount;" ball;spriteround ball";ballCount
+    next ballCount
+
+'place pins on page
+    for y = 1 to 7
+        for x = 1 to y
+            pin=pin+1
+            xp=200-x*50+y*25
+            yp=y*35+100
+            #1 "spritexy pin";pin;" ";xp;" ";yp
+            #1 "drawsprites"
+        next x
+    next y
+
+'set balls in motion
+    for a = 1 to 7
+        #1 "spritexy ball";a;" 174 ";a*60-350
+        #1 "spritemovexy ball";a;" 0 5"
+    next a
+
+[start] 'update every 50ms - lower number means faster updates
+    timer speed, [move]
+    wait
+
+[move] 'cycle through the sprites to check for contact with pins or dropping off board
+    #1 "drawsprites"
+    for ballNum = 1 to 7
+        gosub [checkCollide]
+    next ballNum
+    timer speed, [move]
+    wait
+
+[checkCollide] 'check for contact with pins or dropping off board
+    timer 0
+    #1 "spritexy? ball";ballNum;" x y" 'get current ball position
+    #1 "spritecollides ball";ballNum;" hits$" 'collect any collisions
+    if hits$<>"" then 'any collisions? if so...
+        direction = rnd(1)
+        'randomly bounce either left or right
+        if direction >0.4999999 then #1 "spritexy ball";ballNum;" ";x+25;" ";y else #1 "spritexy ball";ballNum;" ";x-25;" ";y
+        #1 "spritemovexy ball";ballNum;" 0 5"'set ball in motion again
+    end if
+    #1 "spritexy? ball";ballNum;" x y" 'get current ball position
+    if y > 400 then 'if ball has dropped off board, then...
+        select case 'figure out which slot it has landed in and increment the counter for that slot
+            case x<49
+                slot(1)=slot(1)+1
+            case x=49
+                slot(2)=slot(2)+1
+            case x=99
+                slot(3)=slot(3)+1
+            case x=149
+                slot(4)=slot(4)+1
+            case x=199
+                slot(5)=slot(5)+1
+            case x=249
+                slot(6)=slot(6)+1
+            case x=299
+                slot(7)=slot(7)+1
+            case x>299
+                slot(8)=slot(8)+1
+        end select
+        for a = 1 to 8 'write the slot counts in the small graphic box
+            update$="place "+str$((a-1)*48+1)+" 20;\"+str$(slot(a))
+            #1.gb, update$
+        next a
+        #1 "spritexy ball";ballNum;" 174 ";0-10 'reposition the sprite just off the top of the screen
+        #1 "spritemovexy ball";ballNum;" 0 5" 'set the ball in motion again
+        cycles = cycles + 1 'increment the fallen ball count
+        if cycles >= cycleMax then
+            timer 0 'stop animation
+            'make the visible balls go away
+            for a = 1 to 7
+                #1 "spritexy ball";a;" 174 700"
+                #1 "spritemovexy ball";a;" 0 0"
+            next a
+            #1 "drawsprites"
+            notice "Complete"
+            wait
+        end if
+    end if
+return
+
+[q]
+    close #1
+    'It is IMPORTANT to unload the bitmaps and clear memory
+    unloadbmp "pin"
+    unloadbmp "ball"
+    unloadbmp "bg"
+    end

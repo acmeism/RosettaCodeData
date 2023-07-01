@@ -1,0 +1,145 @@
+\The computer marks its moves with an "O" and the player uses an "X". The
+\ numeric keypad is used to make the player's move.
+\
+\                         7 | 8 | 9
+\                        ---+---+---
+\                         4 | 5 | 6
+\                        ---+---+---
+\                         1 | 2 | 3
+\
+\The player always goes first, but the 0 key is used to skip a move. Thus
+\ it can be used to let the computer play first. Esc terminates program.
+
+inc     c:\cxpl\codes;  \intrinsic routine declarations
+def     X0=16, Y0=10;   \coordinates of character in upper-left square
+int     I0,
+        PMove,          \player's move (^0..^9)
+        Key;            \keystroke
+int     X, O;           \bit arrays for player and computer
+                        \ bit 0 corresponds to playing square 1, etc.
+
+
+proc    HLine(X, Y);    \Draw a horizontal line
+int     X, Y;
+int     I;
+[Cursor(X, Y);
+for I:= 0 to 10 do ChOut(0, ^Ä);
+];      \HLine
+
+
+proc    VLine(X, Y);    \Draw a vertical line over the above horizontal line
+int     X, Y;
+int     I;
+[for I:= 0 to 4 do
+        [Cursor(X, Y+I);
+        ChOut(0, if I&1 then ^Å else ^³);
+        ];
+];      \VLine
+
+
+func    Won(p);         \Return 'true' if player P has won
+int     P;
+int     T, I;
+[T:= [$007, $038, $1C0, $049, $092, $124, $111, $054];
+for I:= 0 to 7 do       \check if player matches a bit pattern for 3 in a row
+    if (P & T(I)) = T(I) then return true;
+return false;
+];      \Won
+
+
+func    Cats;           \Return 'true' if no more moves available (Cat's game)
+[if (X ! O) = $1FF then \all bit positions played
+        [Cursor(17, 20);
+        Text(0, "A draw!");
+        return true;
+        ];
+return false;
+];      \Cats
+
+
+proc    DoMove(P, M, Ch); \Make move in player's bit array and display it
+int     P,              \address of player's bit array
+        M,              \index 0..8 where bit is placed
+        Ch;
+int     I, X, Y;
+[P(0):= P(0) ! 1<<M;    \make move
+
+I:= M / 3;              \display move
+X:= Rem(0) * 4;
+Y:= (2-I) * 2;
+Cursor(X+X0, Y+Y0);
+ChOut(0, Ch);
+];      \DoMove
+
+
+func    Try(P);         \Return the value of the best node for player P
+int     P;              \address of player's bit array
+int     P1, I, I0, V, V0;
+[P1:= if P = addr X then addr O else addr X;
+
+if Won(P1(0)) then return -1;
+if (X ! O) = $1FF then return 0;
+
+V0:= -1;                                \assume the worst
+for I:= 0 to 8 do                       \for all of the squares...
+    if ((O!X) & 1<<I) = 0 then          \if square is unused
+        [P(0):= P(0) ! 1<<I;            \make tenative move
+        V:= -(extend(Try(P1)));         \get value
+        if V > V0 then                  \save best value
+                [V0:= V;  I0:= I];
+        P(0):= P(0) & ~(1<<I);          \undo tenative move
+        ];
+return V0 & $FF ! I0<<8;
+];      \Try
+
+
+proc    PlayGame;       \Play one game
+[ChOut(0, $0C\FF\);     \clear screen with a form feed
+HLine(X0-1, Y0+1);      \draw grid (#)
+HLine(X0-1, Y0+3);
+VLine(X0+2, Y0);
+VLine(X0+6, Y0);
+
+X:= 0;  O:= 0;          \initialize player's bit arrays to empty
+loop    [loop   [PMove:= ChIn(1);               \GET PLAYER'S MOVE (X)
+                if PMove = $1B\Esc\ then
+                        [SetVid(3);  exit];     \restore display and end program
+                if PMove = ^0 then quit;
+                if PMove>=^1 & PMove<=^9 &      \check for legal move
+                   ((X!O) & 1<<(PMove-^1)) = 0 then quit;
+                ChOut(0, 7\Bel\);               \beep the dude
+                ];
+        if PMove # ^0 then
+                [DoMove(addr X, PMove-^1, ^X);
+                if Won(X) then
+                        [Cursor(17, 20);
+                        Text(0, "X wins!");
+                        quit;
+                        ];
+                ];
+        if Cats then quit;
+
+        I0:= Try(addr O) >>8;                   \GET COMPUTER'S MOVE (O)
+        DoMove(addr O, I0, ^O);                 \do best move
+        if Won(O) then
+                [Cursor(17, 20);
+                Text(0, "O wins!");
+                quit;
+                ];
+        if Cats then quit;
+        ];
+];      \PlayGame
+
+
+int     CpuReg;
+[SetVid(1);                             \set 40x25 text mode
+CpuReg:= GetReg;                        \turn off annoying flashing cursor
+CpuReg(0):= $0100;                      \ with BIOS interrupt 10h, function 01h
+CpuReg(2):= $2000;                      \set cursor type to disappear
+SoftInt($10);
+loop    [PlayGame;
+        Key:= ChIn(1);                  \keep playing games until Esc key is hit
+        if Key = $1B\Esc\ then
+                [SetVid(3);  exit];     \clear screen & restore normal text mode
+        ];
+]

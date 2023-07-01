@@ -1,0 +1,12 @@
+; Mac OSX, BSDs or Linux only, not Windows
+(setq start-time (now))
+
+(signal 2 (lambda()
+            (println
+             (format "Program has run for %d seconds"
+                     (- (apply date-value (now))
+                        (apply date-value start-time))))
+            (exit 0)))
+
+(while (println (++ i))
+  (sleep 500))

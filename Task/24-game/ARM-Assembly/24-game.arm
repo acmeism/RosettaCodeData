@@ -1,0 +1,453 @@
+/* ARM assembly Raspberry PI  */
+/*  program game24.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+.equ STDIN,      0       @ Linux input console
+.equ READ,       3       @ Linux syscall
+.equ NBDIGITS,   4       @ digits number
+.equ TOTAL,      24
+.equ BUFFERSIZE, 100
+.equ STACKSIZE,  10      @ operator and digits number items in stacks
+
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessRules:         .ascii "24 Game\n"
+                    .ascii "The program will display four randomly-generated \n"
+                    .ascii "single-digit numbers and will then prompt you to enter\n"
+                    .ascii "an arithmetic expression followed by <enter> to sum \n"
+                    .ascii "the given numbers to 24.\n"
+                    .asciz "Exemple : 9+8+3+4   or (7+5)+(3*4) \n\n"
+
+szMessExpr:         .asciz "Enter your expression (or type (q)uit to exit or (n) for other digits): \n"
+//szMessErrChoise:    .asciz "invalid choice.\n "
+szMessDigits:       .asciz "The four digits are @ @ @ @ and the score is 24. \n"
+szMessNoDigit:      .asciz "Error : One digit is not in digits list !! \n"
+szMessSameDigit:    .asciz "Error : Two digits are same !! \n"
+szMessOK:           .asciz "It is OK. \n"
+szMessNotOK:        .asciz "Error, it is not ok  total = @ \n"
+szMessErrOper:      .asciz "Unknow Operator (+,-,$,/,(,)) \n"
+szMessNoparen:      .asciz "no opening parenthesis !! \n"
+szMessErrParen:     .asciz "Error parenthesis number !! \n"
+szMessNoalldigits:  .asciz "One or more digits not used !!\n"
+szMessNewGame:      .asciz "New game (y/n) ? \n"
+szCarriageReturn:   .asciz "\n"
+.align 4
+iGraine:  .int 123456
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+sBuffer:          .skip BUFFERSIZE
+iTabDigit:        .skip 4 * NBDIGITS
+iTabTopDigit:     .skip 4 * NBDIGITS
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 @ entry of program
+
+    ldr r0,iAdrszMessRules            @ display rules
+    bl affichageMess
+1:
+    mov r3,#0
+    ldr r12,iAdriTabDigit
+    ldr r11,iAdriTabTopDigit
+    ldr r5,iAdrszMessDigits
+2:                                    @ loop generate random digits
+    mov r0,#8
+    bl genereraleas
+    add r0,r0,#1
+    str r0,[r12,r3,lsl #2]            @ store in table
+    mov r1,#0
+    str r1,[r11,r3,lsl #2]            @ raz top table
+    ldr r1,iAdrsZoneConv
+    bl conversion10                   @ call decimal conversion
+    mov r2,#0
+    strb r2,[r1,r0]                   @ reduce size display area with zéro final
+    mov r0,r5
+    ldr r1,iAdrsZoneConv              @ insert conversion in message
+    bl strInsertAtCharInc
+    mov r5,r0
+    add r3,r3,#1
+    cmp r3,#NBDIGITS                  @ end ?
+    blt 2b                            @ no -> loop
+    mov r0,r5
+    bl affichageMess
+3:                                    @ loop human entry
+    ldr r0,iAdrszMessExpr
+    bl affichageMess
+    bl saisie                         @ entry
+    cmp r0,#'q'
+    beq 100f
+    cmp r0,#'Q'
+    beq 100f
+    cmp r0,#'n'
+    beq 1b
+    cmp r0,#'N'
+    beq 1b
+
+    bl evalExpr                      @ expression evaluation
+    cmp r0,#0                        @ ok ?
+    bne 3b                           @ no - > loop
+
+10:                                  @ display new game ?
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    ldr r0,iAdrszMessNewGame
+    bl affichageMess
+    bl saisie
+    cmp r0,#'y'
+    beq 1b
+    cmp r0,#'Y'
+    beq 1b
+
+100:                                  @ standard end of the program
+    mov r0, #0                        @ return code
+    mov r7, #EXIT                     @ request to exit program
+    svc #0                            @ perform the system call
+
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszMessRules:          .int szMessRules
+iAdrszMessDigits:         .int szMessDigits
+iAdrszMessExpr:           .int szMessExpr
+iAdrszMessNewGame:        .int szMessNewGame
+iAdrsZoneConv:            .int sZoneConv
+iAdriTabDigit:            .int iTabDigit
+iAdriTabTopDigit:         .int iTabTopDigit
+/******************************************************************/
+/*            evaluation expression                                       */
+/******************************************************************/
+/* r0 return 0 if ok -1 else */
+evalExpr:
+    push {r1-r11,lr}           @ save registers
+
+    mov r0,#0
+    ldr r1,iAdriTabTopDigit
+    mov r2,#0
+1:                             @ loop init table top digits
+    str r0,[r1,r2,lsl #2]
+    add r2,r2,#1
+    cmp r2,#NBDIGITS
+    blt 1b
+
+    sub sp,sp,#STACKSIZE * 4   @ stack operator
+    mov fp,sp
+    sub sp,sp,#STACKSIZE * 4   @ stack digit
+    mov r1,sp
+    ldr r10,iAdrsBuffer
+    mov r8,#0                  @ indice character in buffer
+    mov r7,#0                  @ indice digits stack
+    mov r2,#0                  @ indice operator stack
+1:                             @ begin loop
+    ldrb r9,[r10,r8]
+    cmp r9,#0xA               @ end expression ?
+    beq 90f
+    cmp r9,#' '               @ space  ?
+    addeq r8,r8,#1             @ loop
+    beq 1b
+    cmp r9,#'('               @ left parenthesis -> store in operator stack
+    streq r9,[fp,r2,lsl #2]
+    addeq r2,r2,#1
+    addeq r8,r8,#1             @ and loop
+    beq 1b
+    cmp r9,#')'               @ right parenthesis ?
+    bne 3f
+    mov r0,fp                  @ compute operator stack until left parenthesis
+    sub r2,r2,#1
+2:
+    ldr r6,[fp,r2,lsl #2]
+    cmp r6,#'('                @ left parenthesis
+    addeq r8,r8,#1             @ end ?
+    beq 1b                     @ and loop
+    sub r7,r7,#1               @ last digit
+    mov r3,r7
+    bl compute
+    sub r2,r2,#1
+    cmp r2,#0
+    bge 2b
+    ldr r0,iAdrszMessNoparen   @ no left parenthesis in stack
+    bl affichageMess
+    mov r0,#-1
+    b 100f
+3:
+    cmp r9,#'+'               @ addition
+    beq 4f
+    cmp r9,#'-'               @ soustraction
+    beq 4f
+    cmp r9,#'*'               @ multiplication
+    beq 4f
+    cmp r9,#'/'               @ division
+    beq 4f
+
+    b 5f                       @ not operator
+
+4:                             @ control priority and depile stacks
+    mov r0,fp
+    mov r3,r7
+    mov r4,r9
+    bl depileOper
+    mov r7,r3
+    add r8,r8,#1
+    b 1b                       @ and loop
+
+5:                             @  digit
+    sub r9,r9,#0x30
+    mov r0,r9
+    bl digitControl
+    cmp r0,#0                  @ error ?
+    bne 100f
+    str r9,[r1,r7,lsl #2]     @ store digit in digits stack
+    add r7,r7,#1
+
+    add r8,r8,#1
+    beq 1b
+
+    b 100f
+90:                            @ compute all stack operators
+    mov r0,fp
+    sub r7,r7,#1
+91:
+    subs r2,r2,#1
+    blt 92f
+    mov r3,r7
+    bl compute
+    sub r7,r7,#1
+    b 91b
+92:
+    ldr r0,[r1]                 @ total = first value on digits stack
+    cmp r0,#TOTAL               @ control total
+    beq 93f                     @ ok
+    ldr r1,iAdrsZoneConv
+    bl conversion10             @ call decimal conversion
+    mov r2,#0
+    strb r2,[r1,r0]
+    ldr r0,iAdrszMessNotOK
+    ldr r1,iAdrsZoneConv        @ insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+    mov r0,#-1
+    b 100f
+93:                             @ control use all digits
+    ldr r1,iAdriTabTopDigit
+    mov r2,#0
+94:                             @ begin loop
+    ldr r0,[r1,r2,lsl #2]       @ load top
+    cmp r0,#0
+    bne 95f
+    ldr r0,iAdrszMessNoalldigits
+    bl affichageMess
+    mov r0,#-1
+    b 100f
+95:
+    add r2,r2,#1
+    cmp r2,#NBDIGITS
+    blt 94b
+96:                             @ display message OK
+    ldr r0,iAdrszMessOK
+    bl affichageMess
+    mov r0,#0
+    b 100f
+
+100:
+    add sp,sp,#80               @ stack algnement
+    pop {r1-r11,lr}
+    bx lr                       @ return
+iAdrszMessNoparen:        .int szMessNoparen
+iAdrszMessNotOK:          .int szMessNotOK
+iAdrszMessOK:             .int szMessOK
+iAdrszMessNoalldigits:    .int szMessNoalldigits
+/******************************************************************/
+/*            depile operator                                     */
+/******************************************************************/
+/* r0 operator stack address  */
+/* r1 digits stack address */
+/* r2 operator indice */
+/* r3 digits indice */
+/* r4 operator */
+/* r2 return a new operator indice */
+/* r3 return a new digits indice */
+depileOper:
+    push {r4-r8,lr}        @ save registers
+    cmp r2,#0              @ first operator ?
+    beq 60f
+    sub r5,r2,#1
+1:
+    ldr r6,[r0,r5,lsl #2]  @ load stack operator
+    cmp r6,r4              @ same operators
+    beq 50f
+    cmp r6,#'*'            @ multiplication
+    beq 50f
+    cmp r6,#'/'            @ division
+    beq 50f
+    cmp r6,#'-'            @ soustraction
+    beq 50f
+
+    b 60f
+50:                        @ depile operators stack and compute
+    sub r2,r2,#1
+    sub r3,r3,#1
+    bl compute
+    sub r5,r5,#1
+    cmp r5,#0
+    bge 1b
+60:
+    str r4,[r0,r2,lsl #2]  @ add operator in stack
+    add r2,r2,#1
+
+100:
+    pop {r4-r8,lr}
+    bx lr                  @ return
+/******************************************************************/
+/*            compute                                             */
+/******************************************************************/
+/* r0 operator stack address  */
+/* r1 digits stack address */
+/* r2 operator indice */
+/* r3 digits indice */
+compute:
+    push {r1-r8,lr}        @ save registers
+    ldr r6,[r1,r3,lsl #2]  @ load second digit
+    sub r5,r3,#1
+    ldr r7,[r1,r5,lsl #2]  @ load first digit
+
+    ldr r8,[r0,r2,lsl #2]  @ load operator
+    cmp r8,#'+'
+    bne 1f
+    add r7,r7,r6           @ addition
+    str r7,[r1,r5,lsl #2]
+    b 100f
+1:
+    cmp r8,#'-'
+    bne 2f
+    sub r7,r7,r6           @ soustaction
+    str r7,[r1,r5,lsl #2]
+    b 100f
+2:
+    cmp r8,#'*'
+    bne 3f                 @ multiplication
+    mul r7,r6,r7
+    str r7,[r1,r5,lsl #2]
+    b 100f
+3:
+    cmp r8,#'/'
+    bne 4f
+    udiv r7,r7,r6          @ division
+    str r7,[r1,r5,lsl #2]
+    b 100f
+4:
+    cmp r8,#'('            @ left parenthesis ?
+    bne 5f
+    ldr r0,iAdrszMessErrParen @  error
+    bl affichageMess
+    mov r0,#-1
+    b 100f
+5:
+    ldr r0,iAdrszMessErrOper
+    bl affichageMess
+    mov r0,#-1
+100:
+    pop {r1-r8,lr}
+    bx lr                   @ return
+iAdrszMessErrOper:   .int szMessErrOper
+iAdrszMessErrParen:  .int szMessErrParen
+/******************************************************************/
+/*            control digits                                       */
+/******************************************************************/
+/* r0 return 0 if OK 1 if  not digit   */
+digitControl:
+    push {r1-r4,lr}        @ save registers
+    ldr r1,iAdriTabTopDigit
+    ldr r2,iAdriTabDigit
+    mov r3,#0
+1:
+    ldr r4,[r2,r3,lsl #2]  @ load digit
+    cmp r0,r4              @ equal ?
+    beq 2f                 @ yes
+    add r3,r3,#1           @ no -> loop
+    cmp r3,#NBDIGITS       @ end ?
+    blt 1b
+    ldr r0,iAdrszMessNoDigit @ error
+    bl affichageMess
+    mov r0,#1
+    b 100f
+2:                         @ control prev use
+    ldr r4,[r1,r3,lsl #2]
+    cmp r4,#0
+    beq 3f
+    add r3,r3,#1
+    cmp r3,#NBDIGITS
+    blt 1b
+    ldr r0,iAdrszMessSameDigit
+    bl affichageMess
+    mov r0,#1
+    b 100f
+3:
+    mov r4,#1
+    str r4,[r1,r3,lsl #2]
+    mov r0,#0
+100:
+    pop {r1-r4,lr}
+    bx lr                   @ return
+iAdrszMessNoDigit:     .int szMessNoDigit
+iAdrszMessSameDigit:   .int szMessSameDigit
+/******************************************************************/
+/*            string entry                                       */
+/******************************************************************/
+/* r0 return the first character of human entry */
+saisie:
+    push {r1-r7,lr}        @ save registers
+    mov r0,#STDIN          @ Linux input console
+    ldr r1,iAdrsBuffer     @ buffer address
+    mov r2,#BUFFERSIZE     @ buffer size
+    mov r7,#READ           @ request to read datas
+    svc 0                  @ call system
+    ldr r1,iAdrsBuffer     @ buffer address
+    ldrb r0,[r1]           @ load first character
+100:
+    pop {r1-r7,lr}
+    bx lr                   @ return
+iAdrsBuffer:         .int sBuffer
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* r0 contains limit  */
+genereraleas:
+    push {r1-r4,lr}         @ save registers
+    ldr r4,iAdriGraine
+    ldr r2,[r4]
+    ldr r3,iNbDep1
+    mul r2,r3,r2
+    ldr r3,iNbDep2
+    add r2,r2,r3
+    str r2,[r4]             @ maj de la graine pour l appel suivant
+    cmp r0,#0
+    beq 100f
+    add r1,r0,#1            @ divisor
+    mov r0,r2               @ dividende
+    bl division
+    mov r0,r3               @ résult = remainder
+
+100:                        @ end function
+    pop {r1-r4,lr}          @ restaur registers
+    bx lr                   @ return
+/*****************************************************/
+iAdriGraine: .int iGraine
+iNbDep1:     .int 0x343FD
+iNbDep2:     .int 0x269EC3
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

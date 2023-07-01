@@ -1,0 +1,124 @@
+Terminator equ 0      ;null terminator
+PrintChar equ &BB5A   ;Amstrad CPC BIOS call, prints accumulator to screen as an ASCII character.
+
+        org &8000
+
+	ld hl,String1
+	ld de,String2
+	call CompareStringLengths
+	
+	jp nc, Print_HL_First
+		ex de,hl
+Print_HL_First:
+	push bc
+		push hl
+			call PrintString
+		pop hl
+		push hl
+			ld a,' '
+			call PrintChar
+			call getStringLength
+			ld a,b
+			call ShowHex_NoLeadingZeroes
+			call NewLine
+		pop hl
+	pop bc
+	
+	ex de,hl
+	push bc
+		push hl
+			call PrintString
+		pop hl
+		push hl
+			ld a,' '
+			call PrintChar
+			call getStringLength
+			ld a,b
+			call ShowHex_NoLeadingZeroes
+			call NewLine
+		pop hl
+	pop bc	
+ReturnToBasic:
+	RET
+
+String1:
+	byte "Hello",Terminator
+String2:
+	byte "Goodbye",Terminator
+
+;;;;;; RELEVANT SUBROUTINES - PRINTSTRING AND NEWLINE CREATED BY KEITH S. OF CHIBIAKUMAS
+CompareStringLengths:
+	;HL = string 1
+	;DE = string 2
+	;CLOBBERS A,B,C
+	push hl
+	push de
+	ex de,hl
+	call GetStringLength
+	ld b,c
+	
+	ex de,hl
+	call GetStringLength
+	ld a,b
+	cp c
+	pop de
+	pop hl
+	ret
+	;returns carry set if HL < DE, zero set if equal, zero & carry clear if HL >= DE
+	;returns len(DE) in C, and len(HL) in B.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+GetStringLength:
+		ld b,0
+loop_getStringLength:
+		ld a,(hl)
+		cp Terminator
+		ret z
+		inc hl
+		inc b
+		jr loop_getStringLength
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+NewLine:
+	push af
+	ld a,13		;Carriage return
+	call PrintChar
+	ld a,10		;Line Feed
+	call PrintChar
+	pop af
+	ret
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PrintString:
+	ld a,(hl)	
+	cp Terminator
+	ret z
+	inc hl
+	call PrintChar
+	jr PrintString
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ShowHex_NoLeadingZeroes:
+;useful for printing values where leading zeroes don't make sense,
+; 	such as money etc.
+	push af
+		and %11110000
+		ifdef gbz80      ;game boy
+			swap a
+		else             ;zilog z80
+			rrca
+			rrca
+			rrca
+			rrca
+		endif
+		or a
+		call nz,PrintHexChar
+		;if top nibble of A is zero, don't print it.
+	pop af
+	and %00001111
+	or a
+	ret z	;if bottom nibble of A is zero, don't print it!
+	jp PrintHexChar
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PrintHexChar:
+	or a	  ;Clear Carry Flag
+	daa
+	add a,&F0
+	adc a,&40 ;This sequence converts a 4-bit hex digit to its ASCII equivalent.
+	jp PrintChar

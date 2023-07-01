@@ -1,0 +1,37 @@
+program AnonCompose;
+
+{$APPTYPE CONSOLE}
+
+type
+  TFunc = reference to function(Value: Integer): Integer;
+  // Alternative: TFunc = TFunc<Integer,Integer>;
+
+function Compose(F, G: TFunc): TFunc;
+begin
+  Result:= function(Value: Integer): Integer
+  begin
+    Result:= F(G(Value));
+  end
+end;
+
+var
+  Func1, Func2, Func3: TFunc;
+
+begin
+  Func1:=
+    function(Value: Integer): Integer
+    begin
+      Result:= Value * 2;
+    end;
+
+  Func2:=
+    function(Value: Integer): Integer
+    begin
+      Result:= Value * 3;
+    end;
+
+  Func3:= Compose(Func1, Func2);
+
+  Writeln(Func3(6));    // 36 = 6 * 3 * 2
+  Readln;
+end.

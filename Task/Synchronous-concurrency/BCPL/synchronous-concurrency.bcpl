@@ -1,0 +1,139 @@
+// This is a BCPL implementation of the Rosettacode synchronous
+// concurrency test using BCPL coroutines and a coroutine implementation
+// of a Occum-style channels.
+// BCPL is freely available from www.cl.cam.ac.uk/users/mr10
+
+SECTION "coinout"
+
+GET "libhdr.h"
+
+GLOBAL {
+  tracing: ug
+}
+
+LET start() = VALOF
+{ LET argv = VEC 50
+  LET in_co, out_co = 0, 0
+  LET channel = 0
+  LET filename = "input.txt"
+
+  UNLESS rdargs("-f,-t/S", argv, 50) DO
+  { writef("Bad arguments for coinout*n")
+    RESULTIS 0
+  }
+
+  IF argv!0 DO filename := argv!0  // -f     the source file
+  tracing := argv!1                // -t/S   tracing option
+
+  in_co  := initco(infn,  500, @channel)
+  out_co := initco(outfn, 500, @channel)
+
+  UNLESS in_co & out_co DO
+  { writef("Trouble creating the coroutines*n")
+    GOTO fin
+  }
+
+  IF tracing DO writef("*nBoth in and out coroutines created*n*n")
+
+  callco(in_co, filename)
+
+fin:
+  IF in_co  DO deleteco(in_co)
+  IF out_co DO deleteco(out_co)
+
+  IF tracing DO writef("Both in and out coroutines deleted*n*n")
+
+  RESULTIS 0
+}
+
+AND readline(line) = VALOF
+{ LET ch, i = 0, 0
+  line%0 := 0
+
+  { ch := rdch()
+    IF ch=endstreamch RESULTIS FALSE
+    i := i+1
+    line%0, line%i := i, ch
+    IF ch='*n' | i=255 BREAK
+  } REPEAT
+
+  RESULTIS TRUE
+}
+
+AND infn(args) BE
+{ LET channelptr = args!0
+  LET name = cowait()  // Get the file name
+  LET instream = findinput(name)
+  LET line = VEC 256/bytesperword
+
+  UNLESS instream DO
+  { writef("*nTrouble with file: %s*n", name)
+    RETURN
+  }
+
+  selectinput(instream)
+
+  { LET ok = readline(line)
+    UNLESS ok BREAK
+    IF tracing DO
+      writef("inco:  Sending a line to outco*n")
+    cowrite(channelptr, line)
+  } REPEAT
+
+  IF tracing DO
+    writef("inco:  Sending zero to outco*n")
+
+  writef("*nNumber of lines written was %n*n", cowrite(channelptr, 0))
+
+  endstream(instream)
+}
+
+AND outfn(args) BE
+{ LET channelptr = args!0
+  LET linecount = 0
+
+  { LET line = coread(channelptr)
+    UNLESS line BREAK
+    IF tracing DO writef("outfn: Received a line*n")
+    writes(line)
+    linecount := linecount + 1
+  } REPEAT
+
+  IF tracing DO
+    writef("outfn: Received zero, so sent count=%n back to inco*n",
+            linecount)
+
+  cowait(linecount)
+}
+
+// The following functions are a  implementation of Occum-style channels
+// using coroutines.
+
+// The first coroutine to request a transfer through a channel becomes
+// suspended and the second causes the data to be transfers and then allows
+// both coroutines to resume (in some order). The channel word is either
+// zero or points to a suspended (read or write) cocoutine.
+
+// The use of resumeco in coread is somewhat subtle!
+
+AND coread(ptr) = VALOF
+{ LET cptr = !ptr
+  TEST cptr
+  THEN { !ptr := 0         // Clear the channel word
+         RESULTIS resumeco(cptr, currco)
+       }
+  ELSE { !ptr := currco    // Set channel word to this coroutine
+         RESULTIS cowait() // Wait for value from cowrite
+       }
+}
+
+AND cowrite(ptr, val) BE
+{ LET cptr = !ptr
+  TEST cptr
+  THEN { !ptr := 0
+         callco(cptr, val) // Send val to coread
+       }
+  ELSE { !ptr := currco
+          callco(cowait(), val)
+       }
+}

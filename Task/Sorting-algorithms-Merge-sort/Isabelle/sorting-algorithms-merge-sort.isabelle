@@ -1,0 +1,97 @@
+theory Mergesort
+  imports Main
+begin
+
+fun merge :: "int list ⇒ int list ⇒ int list" where
+  "merge [] ys = ys"
+| "merge xs [] = xs"
+| "merge (x#xs) (y#ys) = (if x ≤ y
+                          then x # merge xs (y#ys)
+                          else y # merge (x # xs) ys)"
+
+text‹example:›
+lemma "merge [1,3,6] [1,2,5,8] = [1,1,2,3,5,6,8]" by simp
+
+lemma merge_set: "set (merge xs ys) = set xs ∪ set ys"
+  by(induction xs ys rule: merge.induct) auto
+
+lemma merge_sorted:
+  "sorted xs ⟹ sorted ys ⟹ sorted (merge xs ys)"
+proof(induction xs ys rule: merge.induct)
+  case (1 ys)
+  then show "sorted (merge [] ys)" by simp
+next
+  case (2 x xs)
+  then show "sorted (merge (x # xs) [])" by simp
+next
+  case (3 x xs y ys)
+  assume premx: "sorted (x # xs)"
+     and premy: "sorted (y # ys)"
+     and IHx: "x ≤ y ⟹ sorted xs ⟹ sorted (y # ys) ⟹
+                 sorted (merge xs (y # ys))"
+     and IHy: "¬ x ≤ y ⟹ sorted (x # xs) ⟹ sorted ys ⟹
+                 sorted (merge (x # xs) ys)"
+  then show "sorted (merge (x # xs) (y # ys))"
+  proof(cases "x ≤ y")
+    case True
+    with premx IHx premy have IH: "sorted (merge xs (y # ys))" by simp
+    from ‹x ≤ y› premx premy merge_set have
+      "∀z ∈ set (merge xs (y # ys)). x ≤ z" by fastforce
+    with ‹x ≤ y› IH show "sorted (merge (x # xs) (y # ys))" by(simp)
+  next
+    case False
+    with premy IHy premx have IH: "sorted (merge (x # xs) ys)" by simp
+    from ‹¬x ≤ y› premx premy merge_set have
+      "∀z ∈ set (merge (x # xs) ys). y ≤ z" by fastforce
+    with ‹¬x ≤ y› IH show "sorted (merge (x # xs) (y # ys))" by(simp)
+  qed
+qed
+
+fun mergesort :: "int list ⇒ int list" where
+  "mergesort [] = []"
+| "mergesort [x] = [x]"
+| "mergesort xs = merge (mergesort (take (length xs div 2) xs))
+                        (mergesort (drop (length xs div 2) xs))"
+
+theorem mergesort_set: "set xs = set (mergesort xs)"
+proof(induction xs rule: mergesort.induct)
+  case 1
+  show "set [] = set (mergesort [])" by simp
+next
+  case (2 x)
+  show "set [x] = set (mergesort [x])" by simp
+next
+  case (3 x1 x2 xs)
+  from 3 have IH_simplified_take:
+    "set (mergesort (x1 # take (length xs div 2) (x2 # xs))) =
+     insert x1 (set (take (length xs div 2) (x2 # xs)))"
+  and IH_simplified_drop:
+    "set (mergesort (drop (length xs div 2) (x2 # xs))) =
+     set (drop (length xs div 2) (x2 # xs))" by simp+
+
+  have "(set (take n as) ∪ set (drop n as)) = set as"
+    for n and as::"int list"
+  proof -
+    from set_append[of "take n as" "drop n as"] have
+      "(set (take n as) ∪ set (drop n as)) =
+       set (take n as @ drop n as)" by simp
+    moreover have
+      "set (take n as @ drop n as) =
+       set as" using append_take_drop_id by simp
+    ultimately show ?thesis by simp
+  qed
+  hence "(set (take (length xs div 2) (x2 # xs)) ∪
+        set (drop (length xs div 2) (x2 # xs))) =
+        set (x2 # xs)"by(simp)
+  with IH_simplified_take IH_simplified_drop show
+    "set (x1 # x2 # xs) = set (mergesort (x1 # x2 # xs))"
+    by(simp add: merge_set)
+qed
+
+theorem mergesort_sorted: "sorted (mergesort xs)"
+  by(induction xs rule: mergesort.induct) (simp add: merge_sorted)+
+
+text‹example:›
+lemma "mergesort [42, 5, 1, 3, 67, 3, 9, 0, 33, 32] =
+                 [0, 1, 3, 3, 5, 9, 32, 33, 42, 67]" by simp
+end

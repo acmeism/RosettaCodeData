@@ -1,0 +1,7 @@
+(de quicksort (L)
+   (if (cdr L)
+      (let Pivot (car L)
+          (append (quicksort (filter '((A) (< A Pivot)) (cdr L)))
+                             (filter '((A) (= A Pivot))      L )
+                  (quicksort (filter '((A) (> A Pivot)) (cdr L)))) )
+      L) )

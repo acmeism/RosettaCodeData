@@ -1,0 +1,11 @@
+      INTEGER FUNCTION MFACT(N)
+      INTEGER N,I,FACT
+      FACT=1
+      IF (N.EQ.0) GOTO 20
+      DO 10 I=1,N
+        FACT=FACT*I
+10    CONTINUE
+20    CONTINUE
+      MFACT = FACT
+      RETURN
+      END

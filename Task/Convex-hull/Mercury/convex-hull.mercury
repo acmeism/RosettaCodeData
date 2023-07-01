@@ -1,0 +1,150 @@
+:- module convex_hull_task.
+
+:- interface.
+:- import_module io.
+:- pred main(io, io).
+:- mode main(di, uo) is det.
+
+:- implementation.
+:- import_module exception.
+:- import_module float.
+:- import_module int.
+:- import_module list.
+:- import_module pair.
+:- import_module string.
+:- import_module version_array.
+
+%%--------------------------------------------------------------------
+
+%% fetch_items/3 for version_array, similar to the library function
+%% for regular array.
+:- func fetch_items(version_array(T), int, int) = list(T).
+fetch_items(Arr, I, J) = fetch_items_(Arr, I, J, []).
+
+:- func fetch_items_(version_array(T), int, int, list(T)) = list(T).
+fetch_items_(Arr, I, J, Lst0) = Lst :-
+  if (J < I) then (Lst = Lst0)
+  else (J1 = J - 1,
+        Lst = fetch_items_(Arr, I, J1, [Arr^elem(J) | Lst0])).
+
+%%--------------------------------------------------------------------
+
+:- type point == pair(float).
+:- type point_list == list(point).
+:- type point_array == version_array(point).
+
+:- pred point_comes_before(point, point).
+:- mode point_comes_before(in, in) is semidet.
+point_comes_before(P, Q) :-
+  (fst(P) < fst(Q); fst(P) - fst(Q) = (0.0),
+                    snd(P) < snd(Q)).
+
+:- pred point_compare(point, point, comparison_result).
+:- mode point_compare(in, in, out) is det.
+point_compare(P, Q, Cmp) :-
+  if (point_comes_before(P, Q)) then (Cmp = (<))
+  else if (point_comes_before(Q, P)) then (Cmp = (>))
+  else (Cmp = (=)).
+
+:- func point_subtract(point, point) = point.
+point_subtract(P, Q) = pair(fst(P) - fst(Q),
+                            snd(P) - snd(Q)).
+
+:- func point_cross_product(point, point) = float.
+point_cross_product(P, Q) = (fst(P) * snd(Q)) - (snd(P) * fst(Q)).
+
+:- func point_to_string(point) = string.
+point_to_string(P) = ("(" ++ from_float(fst(P)) ++
+                      " " ++ from_float(snd(P)) ++ ")").
+
+%%--------------------------------------------------------------------
+
+:- func convex_hull(point_list) = point_list.
+convex_hull(Pt) = Hull :-
+  Pt1 = unique_points_sorted(Pt),
+  (if (Pt1 = []; Pt1 = [_]; Pt1 = [_, _]) then (Hull = Pt1)
+   else (Hull = construct_hull(Pt1))).
+
+:- func unique_points_sorted(point_list) = point_list.
+unique_points_sorted(Pt0) = Pt :-
+  sort_and_remove_dups(point_compare, Pt0, Pt).
+
+:- func construct_hull(point_list) = point_list.
+construct_hull(Pt) = (construct_lower_hull(Pt) ++
+                      construct_upper_hull(Pt)).
+
+:- func construct_lower_hull(point_list) = point_list.
+construct_lower_hull(Pt) = Hull :-
+  if (Pt = [P0, P1 | Rest])
+  then (N = length(Pt),
+        Arr0 = (version_array.init(N, P0)),
+        Arr1 = (Arr0^elem(1) := P1),
+        hull_construction(Rest, Arr1, Arr2, 1, N_Hull),
+        %% In the fetch_items/3 call, we leave out the last item. It
+        %% is redundant with the first item of the upper hull.
+        N_Hull2 = N_Hull - 2,
+        Hull = fetch_items(Arr2, 0, N_Hull2))
+  else throw("construct_lower_hull expects list of length >= 3").
+
+:- func construct_upper_hull(point_list) = point_list.
+%% An upper hull is merely a lower hull for points going the other
+%% way.
+construct_upper_hull(Pt) = construct_lower_hull(reverse(Pt)).
+
+:- pred hull_construction(point_list, point_array, point_array,
+                          int, int).
+:- mode hull_construction(in, in, out, in, out) is det.
+hull_construction([], Arr0, Arr, J, N_Hull) :-
+  Arr = Arr0,
+  N_Hull = J + 1.
+hull_construction([P | Rest], Arr0, Arr, J, N_Hull) :-
+  if cross_test(P, Arr0, J)
+  then (J1 = J + 1,
+        Arr1 = (Arr0^elem(J1) := P),
+        hull_construction(Rest, Arr1, Arr, J1, N_Hull))
+  else (J1 = J - 1,
+        hull_construction([P | Rest], Arr0, Arr, J1, N_Hull)).
+
+:- pred cross_test(point, point_array, int).
+:- mode cross_test(in, in, in) is semidet.
+cross_test(P, Arr, J) :-
+  if (J = 0) then true
+  else (Elem_J = Arr^elem(J),
+        J1 = J - 1,
+        Elem_J1 = Arr^elem(J1),
+        0.0 < point_cross_product(point_subtract(Elem_J, Elem_J1),
+                                  point_subtract(P, Elem_J1))).
+
+%%--------------------------------------------------------------------
+
+main(!IO) :-
+  Example_points = [pair(16.0, 3.0),
+                    pair(12.0, 17.0),
+                    pair(0.0, 6.0),
+                    pair(-4.0, -6.0),
+                    pair(16.0, 6.0),
+                    pair(16.0, -7.0),
+                    pair(16.0, -3.0),
+                    pair(17.0, -4.0),
+                    pair(5.0, 19.0),
+                    pair(19.0, -8.0),
+                    pair(3.0, 16.0),
+                    pair(12.0, 13.0),
+                    pair(3.0, -4.0),
+                    pair(17.0, 5.0),
+                    pair(-3.0, 15.0),
+                    pair(-3.0, -9.0),
+                    pair(0.0, 11.0),
+                    pair(-9.0, -3.0),
+                    pair(-4.0, -2.0),
+                    pair(12.0, 10.0)],
+  Hull = convex_hull(Example_points),
+  HullStr = join_list(" ", map(point_to_string, Hull)),
+  write_string(HullStr, !IO),
+  nl(!IO).
+
+%%%-------------------------------------------------------------------
+%%% local variables:
+%%% mode: mercury
+%%% prolog-indent-width: 2
+%%% end:

@@ -1,0 +1,219 @@
+(********************************************************************)
+(*
+
+  GCD of two integers, by Stein’s algorithm:
+  https://en.wikipedia.org/w/index.php?title=Binary_GCD_algorithm&oldid=1072393147
+
+  This is an implementation with proof of termination.
+
+  The implementations shown here require the GCC builtin functions
+  for ‘count trailing zeros’. If your C compiler is GCC or another
+  that supports those functions, you are fine. Otherwise, one could
+  easily substitute other C code.
+
+  Compile with ‘patscc -o gcd gcd.dats’.
+
+*)
+
+#define ATS_EXTERN_PREFIX "rosettacode_gcd_"
+#define ATS_DYNLOADFLAG 0       (* No initialization is needed. *)
+
+#include "share/atspre_define.hats"
+#include "share/atspre_staload.hats"
+
+(********************************************************************)
+(*                                                                  *)
+(* Declarations of the functions.                                   *)
+(*                                                                  *)
+
+(* g1uint_gcd_stein will be the generic template function for
+   unsigned integers. *)
+extern fun {tk : tkind}
+g0uint_gcd_stein :
+  (g0uint tk, g0uint tk) -<> g0uint tk
+
+(* g0int_gcd_stein will be the generic template function for
+   signed integers, giving an unsigned result. *)
+extern fun {tk_signed, tk_unsigned : tkind}
+g0int_gcd_stein :
+  (g0int tk_signed, g0int tk_signed) -<> g0uint tk_unsigned
+
+(* Let us call these functions ‘gcd_stein’ or just ‘gcd’. *)
+overload gcd_stein with g0uint_gcd_stein
+overload gcd_stein with g0int_gcd_stein
+overload gcd with gcd_stein
+
+(********************************************************************)
+(*                                                                  *)
+(* The implementations.                                             *)
+(*                                                                  *)
+
+%{^
+
+/*
+
+  We will need a ‘count trailing zeros of a positive number’ function,
+  but this is not provided in the ATS prelude. Here are
+  implementations using GCC builtin functions. For fast alternatives
+  in standard C, see
+  https://www.chessprogramming.org/index.php?title=BitScan&oldid=22495#Trailing_Zero_Count
+
+*/
+
+ATSinline() atstype_uint
+rosettacode_gcd_g0uint_ctz_uint (atstype_uint x)
+{
+  return __builtin_ctz (x);
+}
+
+ATSinline() atstype_ulint
+rosettacode_gcd_g0uint_ctz_ulint (atstype_ulint x)
+{
+  return __builtin_ctzl (x);
+}
+
+ATSinline() atstype_ullint
+rosettacode_gcd_g0uint_ctz_ullint (atstype_ullint x)
+{
+  return __builtin_ctzll (x);
+}
+
+%}
+
+extern fun g0uint_ctz_uint : uint -<> int = "mac#%"
+extern fun g0uint_ctz_ulint : ulint -<> int = "mac#%"
+extern fun g0uint_ctz_ullint : ullint -<> int = "mac#%"
+
+(* A generic template function for ‘count trailing zeros’ of
+   non-dependent unsigned integers. *)
+extern fun {tk : tkind} g0uint_ctz : g0uint tk -<> int
+
+(* Link the implementations to the template function. *)
+implement g0uint_ctz<uint_kind> (x) = g0uint_ctz_uint x
+implement g0uint_ctz<ulint_kind> (x) = g0uint_ctz_ulint x
+implement g0uint_ctz<ullint_kind> (x) = g0uint_ctz_ullint x
+
+(* Let one call the function simply ‘ctz’. *)
+overload ctz with g0uint_ctz
+
+(* Now the actual implementation of g0uint_gcd_stein, the template
+   function for the gcd of two unsigned integers. *)
+implement {tk}
+g0uint_gcd_stein (u, v) =
+  let
+    (* Make ‘t’ a shorthand for the unsigned integer types. *)
+    typedef t = g0uint tk
+    typedef t (i : int) = g1uint (tk, i)
+
+    (* Use this macro to fake proof that an int is non-negative. *)
+    macdef nonneg (n) = $UNSAFE.cast{intGte 0} ,(n)
+
+    (* Looping is done by tail recursion. The value of (x_odd + y)
+       must decrease towards zero, to prove termination. *)
+    fun {tk : tkind}
+    main_loop {x_odd, y : pos} .<x_odd + y>.
+              (x_odd : t (x_odd), y : t (y)) :<>
+        [d : pos] t (d) =
+      let
+
+        (* Remove twos from y, giving an odd number. Note
+           gcd(x_odd,y_odd) = gcd(x_odd,y).  We do not have a
+           dependent-type version of the following operation, so let
+           us do it with non-dependent types. *)
+        val [y_odd : int] y_odd =
+          g1ofg0 ((g0ofg1 y) >> nonneg (ctz (g0ofg1 y)))
+
+        (* Assert some things we know without proof. (You could also
+           use assertloc, which inserts a runtime check.) *)
+        prval _ = $UNSAFE.prop_assert {0 < y_odd} ()
+        prval _ = $UNSAFE.prop_assert {y_odd <= y} ()
+      in
+        if x_odd = y_odd then
+          x_odd
+        else if y_odd < x_odd then
+          main_loop (y_odd, x_odd - y_odd)
+        else
+          main_loop (x_odd, y_odd - x_odd)
+      end
+
+    fn
+    u_and_v_both_positive (u : t, v : t) :<> t =
+      let
+        (* n = the number of common factors of two in u and v. *)
+        val n = ctz (u lor v)
+
+        (* Remove the common twos from u and v, giving x and y. *)
+        val x = (u >> nonneg n)
+        val y = (v >> nonneg n)
+
+        (* Remove twos from x, giving an odd number.
+           Note gcd(x_odd,y) = gcd(x,y). *)
+        val x_odd = (x >> nonneg (ctz x))
+
+        (* To prove termination of main_loop, we have to
+           convert x_odd and y to a dependent type. *)
+        val [x_odd : int] x_odd = g1ofg0 x_odd
+        val [y : int] y = g1ofg0 y
+
+        (* Assert that they are positive. (One could also use
+           assertloc, which inserts a runtime check.) *)
+        prval _ = $UNSAFE.prop_assert {0 < x_odd} ()
+        prval _ = $UNSAFE.prop_assert {0 < y} ()
+
+        val z = main_loop (x_odd, y)
+
+        (* Convert back to the non-dependent type. *)
+        val z = g0ofg1 z
+      in
+        (* Put the common factors of two back in. *)
+        (z << nonneg n)
+      end
+
+    (* If v < u then swap u and v. This operation does not
+       affect the gcd. *)
+    val u = min (u, v)
+    and v = max (u, v)
+  in
+    if iseqz u then
+      v
+    else
+      u_and_v_both_positive (u, v)
+  end
+
+(* The implementation of g0int_gcd_stein, the template function for
+   the gcd of two signed integers, giving an unsigned result. *)
+implement {signed_tk, unsigned_tk}
+g0int_gcd_stein (u, v) =
+  let
+    val abs_u = $UNSAFE.cast{g0uint unsigned_tk} (abs u)
+    val abs_v = $UNSAFE.cast{g0uint unsigned_tk} (abs v)
+  in
+    g0uint_gcd_stein<unsigned_tk> (abs_u, abs_v)
+  end
+
+(********************************************************************)
+(* A demonstration program. *)
+
+implement
+main0 () =
+  begin
+    (* Unsigned integers. *)
+    assertloc (gcd (0U, 10U) = 10U);
+    assertloc (gcd (9UL, 6UL) = 3UL);
+    assertloc (gcd (40902ULL, 24140ULL) = 34ULL);
+
+    (* Signed integers. *)
+    assertloc (gcd (0, 10) = gcd (0U, 10U));
+    assertloc (gcd (~10, 0) = gcd (0U, 10U));
+    assertloc (gcd (~6L, ~9L) = 3UL);
+    assertloc (gcd (40902LL, 24140LL) = 34ULL);
+    assertloc (gcd (40902LL, ~24140LL) = 34ULL);
+    assertloc (gcd (~40902LL, 24140LL) = 34ULL);
+    assertloc (gcd (~40902LL, ~24140LL) = 34ULL);
+    assertloc (gcd (24140LL, 40902LL) = 34ULL);
+    assertloc (gcd (~24140LL, 40902LL) = 34ULL);
+    assertloc (gcd (24140LL, ~40902LL) = 34ULL);
+    assertloc (gcd (~24140LL, ~40902LL) = 34ULL)
+  end
+
+(********************************************************************)

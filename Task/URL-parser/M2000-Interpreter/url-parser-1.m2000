@@ -1,0 +1,166 @@
+Module checkit {
+      any=lambda (z$)->{=lambda z$ (a$)->instr(z$,a$)>0}
+      one=lambda (z$)->{=lambda z$ (a$)->z$=a$}
+      number$="0123456789"
+
+      series=Lambda  -> {
+                  func=Array([])
+                  =lambda  func (&line$, &res$)->{
+                        if line$="" then exit
+                        k=each(func)
+                        def p=0,ok as boolean
+                        while k {
+                              ok=false :  p++ :  f=array(k)
+                              if not f(mid$(line$,p,1)) then exit
+                              ok=true
+                        }
+                        if ok then res$=left$(line$, p) : line$=mid$(line$, p+1)
+                        =ok
+                  }
+      }
+
+      is_any=lambda series, any  (c$) ->series(any(c$))
+      is_one=lambda series, one  (c$) ->series(one(c$))
+      Is_Alpha=series(lambda (a$)-> a$ ~ "[a-zA-Z]")
+      Is_digit=series(any(number$))
+      Is_hex=any(number$+"abcdefABCDEF")
+
+      optionals=Lambda  -> {
+                  func=Array([])
+                  =lambda  func (&line$, &res$)->{
+                        k=each(func)
+                        def ok as boolean
+                        while k {
+                              f=array(k)
+                              if f(&line$,&res$) then ok=true : exit
+                        }
+                        =ok
+                  }
+      }
+      repeated=Lambda  (func)-> {
+                  =lambda  func (&line$, &res$)->{
+                        def ok as boolean, a$
+                        res$=""
+                        do {
+                              sec=len(line$)
+                              if not func(&line$,&a$) then exit
+                              res$+=a$
+                              ok=true
+                        } until line$="" or sec=len(line$)
+                        =ok
+                  }
+      }
+
+      oneAndoptional=lambda (func1, func2) -> {
+            =lambda  func1, func2 (&line$, &res$)->{
+                              def ok as boolean, a$
+                              res$=""
+                              if not func1(&line$,&res$) then exit
+                              if func2(&line$,&a$) then res$+=a$
+                              =True
+                        }
+      }
+      many=Lambda  -> {
+                  func=Array([])
+                  =lambda  func (&line$, &res$)->{
+                        k=each(func)
+                        def p=0,ok as boolean, acc$
+                        oldline$=line$
+                        while k  {
+                              ok=false
+                              res$=""
+                              if line$="" then exit
+                              f=array(k)
+                              if not f(&line$,&res$) then exit
+                              acc$+=res$
+                              ok=true
+                         }
+                        if not ok then {line$=oldline$}  else res$=acc$
+                        =ok
+                  }
+      }
+      is_safe=series(any("$-_@.&"))
+      Is_extra=series(any("!*'(),"+chr$(34)))
+      Is_Escape=series(any("%"), is_hex, is_hex)
+      \\Is_reserved=series(any("=;/#?: "))
+      is_xalpha=optionals(Is_Alpha, is_digit, is_safe, is_extra, is_escape)
+      is_xalphas=oneAndoptional(is_xalpha,repeated(is_xalpha))
+      is_xpalpha=optionals(is_xalpha, is_one("+"))
+      is_xpalphas=oneAndoptional(is_xpalpha,repeated(is_xpalpha))
+      Is_ialpha=oneAndoptional(Is_Alpha,repeated(is_xpalphas))
+      is_fragmentid=lambda is_xalphas (&lines$, &res$) -> {
+            =is_xalphas(&lines$, &res$)
+      }
+      is_search=oneAndoptional(is_xalphas, repeated(many(series(one("+")), is_xalphas)))
+      is_void=lambda (f)-> {
+            =lambda f (&oldline$, &res$)-> {
+                  line$=oldline$
+                  if f(&line$, &res$) then {oldline$=line$ } else res$=""
+                  =true
+            }
+      }
+      is_scheme=is_ialpha
+      is_path=repeated(oneAndoptional(is_void(is_xpalphas), series(one("/"))))
+      is_uri=oneAndoptional(many(is_scheme, series(one(":")), is_path), many(series(one("?")),is_search))
+      is_fragmentaddress=oneAndoptional(is_uri, many(series(one("#")),is_fragmentid ))
+
+      data "foo://example.com:8042/over/there?name=ferret#nose"
+      data "urn:example:animal:ferret:nose"
+      data "jdbc:mysql://test_user:ouupppssss@localhost:3306/sakila?profileSQL=true "
+      data "ftp://ftp.is.co.za/rfc/rfc1808.txt"
+      data "http://www.ietf.org/rfc/rfc2396.txt#header1"
+      data "ldap://[2001:db8::7]/c=GB?objectClass=one&objectClass=two"
+      data "mailto:John.Doe@example.com"
+      data "tel:+1-816-555-1212"
+      data "telnet://192.0.2.16:80/"
+      data "urn:oasis:names:specification:docbook:dtd:xml:4.1.2"
+
+      while not empty {
+            read What$
+            pen 15 {
+                  Print What$
+            }
+            a$=""
+            If is_scheme(&What$, &a$) Then  Print "Scheme=";a$ : What$=mid$(What$,2)
+            If is_path(&What$, &a$) Then {
+                  count=0
+                  while left$(a$, 1)="/" { a$=mid$(a$,2): count++}
+                  if count>1 then {
+                        domain$=leftpart$(a$+"/", "/")
+                        a$=rightpart$(a$,"/")
+                        if domain$<>"" Then Print "Domain:";Domain$
+                        if a$<>"" Then Print "Path:";a$
+                  } else.if  left$(What$,1) =":" then {
+                        Print "path:";a$+What$: What$=""
+                  } Else Print  "Data:"; a$
+
+            }
+
+            if left$(What$,1) =":" then {
+                  is_number=repeated(is_digit)
+                  What$=mid$(What$,2): If is_number(&What$, &a$) Then Print "Port:";a$
+                  if not left$(What$,1)="/" then  exit
+                  If is_path(&What$, &a$) Then {
+                        while left$(a$, 1)="/" { a$=mid$(a$,2)}
+                        if a$<>"" Then Print "Path:";a$
+                  }
+            }
+            if left$(What$, 1)="?" then {
+                        What$=mid$(What$,2)
+                        If is_search(&What$, &a$) Then  {
+                        v$=""
+                        if left$(What$, 1)="=" then {
+                              What$=mid$(What$,2)
+                              If is_search(&What$, &v$) Then  Print "Query:";a$;"=";v$
+                        }  else Print "Query:";a$
+                        }
+            }
+            While  left$(What$, 1)="#"  {
+            What$=mid$(What$,2)
+            if not is_xalphas(&What$, &a$) Then exit
+            Print "fragment:";a$
+            }
+            if What$<>"" Then Print "Data:"; What$
+      }
+}
+Checkit

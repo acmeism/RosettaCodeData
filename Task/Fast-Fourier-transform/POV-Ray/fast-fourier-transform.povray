@@ -1,0 +1,97 @@
+//cmd: +w0 +h0 -F -D
+//Stockham algorithm
+//Inspiration: http://wwwa.pikara.ne.jp/okojisan/otfft-en/optimization1.html
+
+#version 3.7;
+global_settings{ assumed_gamma 1.0 }
+#default{ finish{ ambient 1 diffuse 0 emission 0}}
+
+#macro Cstr(Comp)
+  concat("<",vstr(2, Comp,", ",0,-1),"j>")
+#end
+
+#macro CdebugArr(data)
+  #for(i,0, dimension_size(data, 1)-1)
+    #debug concat(Cstr(data[i]), "\n")
+  #end
+#end
+
+#macro R2C(Real) <Real, 0> #end
+
+#macro CmultC(C1, C2) <C1.x * C2.x - C1.y * C2.y, C1.y * C2.x + C1.x * C2.y>#end
+
+#macro Conjugate(Comp) <Comp.x, -Comp.y> #end
+
+#macro IsPowOf2(X)
+  bitwise_and((X > 0), (bitwise_and(X, (X - 1)) = 0))
+#end
+
+#macro _FFT0(X, Y, N, Stride, EO)
+  #local M = div(N, 2);
+  #local Theta = 2 * pi / N;
+  #if(N = 1)
+    #if(EO)
+      #for(Q, 0, Stride-1)
+        #local Y[Q] = X[Q];
+      #end
+    #end
+  #else
+    #for(P, 0, M-1)
+      #local Fp = P * Theta;
+      #local Wp = <cos(Fp), -sin(Fp)>;
+      #for(Q, 0, Stride-1)
+        #local A = X[Q + Stride * (P + 0)];
+        #local B = X[Q + Stride * (P + M)];
+        #local Y[Q + Stride * (2 * P + 0)] = A + B;
+        #local Y[Q + Stride * (2 * P + 1)] = CmultC((A-B), Wp);
+      #end
+    #end
+    _FFT0(Y, X, div(N, 2), 2 * Stride, !EO)
+  #end
+#end
+
+ #macro FFT(X)
+  #local N = dimension_size(X, 1);
+  #if(IsPowOf2(N)=0)
+    #error "length of input is not a power of two"
+  #end
+  #local Y = array[N];
+  _FFT0(X, Y, N, 1, false)
+  #undef Y
+#end
+
+#macro IFFT(X)
+  #local N = dimension_size(X,1);
+  #local Fn = R2C(1/N);
+  #for(P, 0, N-1)
+    #local X[P] = Conjugate(CmultC(X[P],Fn));
+  #end
+  #local Y = array[N];
+  _FFT0(X, Y, N, 1, false)
+  #undef Y
+  #for(P, 0, N-1)
+    #local X[P] = Conjugate(X[P]);
+  #end
+#end
+
+#declare data = array[8]{1.0,1.0,1.0,1.0,0.0,0.0,0.0,0.0};
+#declare cdata = array[8];
+#debug "\n\nData\n"
+#for(i,0,dimension_size(data,1)-1)
+  #declare cdata[i] = R2C(data[i]);
+  #debug concat(Cstr(cdata[i]), "\n")
+#end
+
+#debug "\n\nFFT\n"
+FFT(cdata)
+CdebugArr(cdata)
+
+#debug "\nPower\n"
+#for(i,0,dimension_size(cdata,1)-1)
+  #debug concat(str(cdata[i].x * cdata[i].x + cdata[i].y * cdata[i].y, 0, -1), "\n")
+#end
+
+#debug "\nIFFT\n"
+IFFT(cdata)
+CdebugArr(cdata)
+#debug "\n"

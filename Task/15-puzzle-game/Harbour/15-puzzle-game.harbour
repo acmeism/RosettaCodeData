@@ -1,0 +1,183 @@
+#include "inkey.ch"
+#include "Box.ch"
+
+
+procedure Main()
+    // console init
+    SET SCOREBOARD OFF
+    SetMode(30,80)
+    ret := 0
+
+    // main loop
+    yn := .F.
+    DO WHILE yn == .F.
+        // draw console
+        cls
+        @ 0, 0 TO MaxRow(), MaxCol() DOUBLE
+        SetColor("BG+/B,W/N")
+        @ 0, 4 SAY "  Slidng puzzle game  "
+        SetColor()
+
+        // input size of grid
+        tam := 0
+        @ MaxRow() - 2, 4 SAY "Size of grid: " GET tam PICTURE "9"
+        READ
+
+        // Initialize numbers
+        lista := ARRAY (tam * tam)
+        FOR z := 1 TO tam * tam
+            lista[z] := z
+        NEXT
+        lista1 := lista
+        grid := ARRAY (tam,tam)
+
+        // populate grid with numbers
+        FOR i := 1 TO tam
+            FOR j := 1 TO tam
+                grid[i,j] := lista1[ (i-1) * tam + j]
+            NEXT
+        NEXT
+        Mostra(@grid)
+        InKey(0)
+
+        // initialize the game
+        n := 0
+        t := 0
+        lista := lista1     // lista for scrambling, lista1 preserve numbers in order
+        DO WHILE .T.
+            // scrambling numbers
+            FOR i := 1 TO tam*tam
+                n := Int ( ft_Rand1(tam * tam - 1) + 1 )
+                t := lista[n]
+                lista[n] := lista[i]
+                lista[i] := t
+            NEXT
+            // have solution?
+            possp := 0
+            invct := 0  // change counter
+            FOR i := 1 TO tam * tam -1
+                IF lista[i] != tam*tam
+                    FOR j := i + 1 TO tam * tam
+                        IF lista[j] != tam*tam
+                            IF lista[i] > lista[j]
+                                invct++
+                            ENDIF
+                        ENDIF
+                    NEXT
+                ELSE
+                    possp := i
+                ENDIF
+            NEXT
+            linv := If( ( (invct % 2) == 0 ), .T., .F.)
+            lkin := If( ( (tam - Int( (possp -1) / tam )) % 2) == 0, .T., .F. )
+
+            IF ( (tam % 2) != 0)    // if grid size is odd
+                IF linv                 // if number of positions changes is even, solvable
+                    EXIT
+                ELSE
+                    LOOP                // if is odd, not solvable, scramble more
+                ENDIF               // if grid size is even
+            ELSE
+                                        // If changes is even and space position is in odd line
+                                        // or changes is odd and space position is in even line
+                                        // (XOR condition) is solvable
+                IF (linv .AND. !lkin) .OR. (!linv .AND. lkin) // XOR !!!
+                    EXIT
+                ElSE                    // else scramble more
+                    LOOP
+                ENDIF
+            ENDIF
+
+        ENDDO
+
+        // populate the grid with scrambled numbers
+        FOR i := 1 TO tam
+            FOR j := 1 TO tam
+                grid[i,j] := lista[ (i-1) * tam + j]
+            NEXT
+        NEXT
+        ret := Mostra(@grid)
+
+    // play
+        key := 0
+        DO WHILE LastKey() != K_ESC
+            key := 0
+            // find the space coords
+            xe := 0
+            ye := 0
+            lv := tam*tam
+            FOR i := 1 TO tam
+                FOR j := 1 TO tam
+                    IF grid[i,j] == lv
+                        xe :=i
+                        ye :=j
+                    ENDIF
+                NEXT
+            NEXT
+            // the direction keys
+            key := inkey(0)
+            DO CASE
+                CASE key == K_UP
+                    IF xe > 1
+                        grid[xe,ye] := grid[xe-1,ye]
+                        grid[xe-1,ye] := lv
+                    ENDIF
+                    ret := Mostra(@grid)
+                CASE key == K_DOWN
+                    IF xe < tam
+                        grid[xe,ye] := grid[xe+1,ye]
+                        grid[xe+1,ye] := lv
+                    ENDIF
+                    ret := Mostra(@grid)
+                CASE key == K_LEFT
+                    IF ye > 1
+                        grid[xe,ye] := grid[xe,ye-1]
+                        grid[xe,ye-1] := lv
+                    ENDIF
+                    ret := Mostra(@grid)
+                CASE key == K_RIGHT
+                    IF ye < tam
+                        grid[xe,ye] := grid[xe,ye+1]
+                        grid[xe,ye+1] := lv
+                    ENDIF
+                    ret := Mostra(@grid)
+            ENDCASE
+            IF ret == tam*tam-1                             // ret is qtty numbers in position
+                @ MaxRow() - 3, 4 SAY "Fim de jogo!"        // if ret == (size*size) -1
+                key := K_ESC                                // all numbers in position
+                EXIT                                        // game solved
+            ENDIF
+        ENDDO
+        @ MaxRow() - 2, 4 SAY "Deseja sair? (yn): " GET yn PICTURE "Y"
+        READ
+        @ MaxRow() - 3, 4 SAY "              "
+    ENDDO
+return NIL
+
+FUNCTION Mostra(grid)
+    // Show the gris
+    fim := 0                                                    // how many numbers in position?
+    SetColor("BG+/B,W/N")
+    @ 5,10 , 5 + tam * 2, 9 + tam * 4 BOX B_SINGLE + Space(1)
+    i := 0
+    FOR y := 1 TO tam
+        FOR x := 1 TO tam
+            IF grid[x,y] == tam * tam                           // show space
+                SetColor(" B/GR+, W/N")
+                @ x*2 + 4, i + 11 SAY "  "
+                SetColor("BG+/B,W/N")
+            ELSE
+                IF ( (x-1) * tam + y ) == grid[x,y]             // show number in position
+                    SetColor("W/G,W/N")
+                    @ x*2 + 4, i + 11 SAY grid[x,y] PICTURE "99"
+                    fim++
+                ELSE                                            // show number out position
+                    SetColor("BG+/B,W/N")
+                    @ x*2 + 4, i + 11 SAY grid[x,y] PICTURE "99"
+                ENDIF
+            ENDIF
+        NEXT
+        i = i + 4
+    NEXT
+    SetColor(" W/N, BG+/B")
+RETURN fim

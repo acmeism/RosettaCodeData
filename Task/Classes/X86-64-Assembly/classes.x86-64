@@ -1,0 +1,73 @@
+option casemap:none
+
+ifndef __SOMECLASS_CLASS__
+__SOMECLASS_CLASS__   equ 1
+
+  ;; Once again, HeapAlloc/Free is REQUIRED by the class extention for windows.
+  ;; Malloc/Free are used by Linux and OSX. So the function prototypes have to
+  ;; be defined somewhere. If you have include files where they're defined, just
+  ;; include them in the usual way and remove the option dllimports.
+  if @Platform eq 1             ;; Windows 64
+    ;; include windows.inc
+    ;; includelib kernel32.lib
+    option dllimport:<kernel32>
+      HeapAlloc       proto :qword, :dword, :qword
+      HeapFree        proto :qword, :dword, :qword
+      ExitProcess     proto :dword
+      GetProcessHeap  proto
+    option dllimport:none
+      exit            equ ExitProcess
+  elseif @Platform eq 3         ;; Linux 64
+    ;;include libc.inc
+    malloc            proto SYSTEMV :qword
+    free              proto SYSTEMV :qword
+    exit              proto SYSTEMV :dword
+  endif
+
+  printf              proto :qword, :VARARG
+
+  CLASS someClass
+    CMETHOD someMethod
+  ENDMETHODS
+    var dd ?
+  ENDCLASS
+
+  ;; The OS' ABI has an effect on this class extention. That is, the class self pointetr
+  ;; is usually refferenced in the first arg register. So for Windows it would be rcx and
+  ;; Linux would be rdi. So to write code that will assemble on both we use a register
+  ;; that ISN'T used to pass arguments in either ABI(Not sure about OSX's ABI however)
+  METHOD someClass, Init, <VOIDARG>, <>, a:dword
+    mov rbx, thisPtr
+    assume rbx:ptr someClass
+    mov [rbx].var, a
+    mov rax, rbx
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+  METHOD someClass, someMethod, <dword>, <>
+    mov rbx, thisPtr
+    assume rbx:ptr someClass
+    mov eax, [rbx].var
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+  METHOD someClass, Destroy, <VOIDARG>, <>
+    ret
+  ENDMETHOD
+endif                         ;; __CLASS_CLASS_
+
+.code
+main proc
+  local meh:ptr someClass
+  ;; Create a new instance of someClass with an arg of 7
+  mov meh, _NEW(someClass, 7)
+  meh->someMethod()              ;;Get meh->var value and return it in RAX
+  invoke printf, CSTR("class->someMethod = %i",10), rax
+  _DELETE(meh)                   ;; DIIIIIIIE!
+  invoke exit, 0                 ;; Crashy crashy without it.
+  ret
+main endp
+
+end

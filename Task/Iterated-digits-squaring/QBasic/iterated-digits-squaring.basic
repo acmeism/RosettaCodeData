@@ -1,0 +1,18 @@
+REM Version 1: Brute force
+
+T = TIMER
+n1 = 0
+FOR i = 1 TO 10000000
+    j = i
+    DO
+        k = 0
+        DO
+            k = INT(k + (j MOD 10) ^ 2)
+            j = INT(j / 10)
+        LOOP WHILE j <> 0
+        j = k
+    LOOP UNTIL j = 89 OR j = 1
+    IF j > 1 THEN n1 = n1 + 1
+NEXT i
+PRINT USING "Version 1: ####### in ##.### seconds."; n1; (TIMER - T)
+END

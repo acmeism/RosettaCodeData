@@ -1,0 +1,68 @@
+argc     IS $0
+argv     IS $1
+
+         LOC Data_Segment
+DataSeg  GREG @
+
+          LOC @+1000
+ItsPalStr IS @-Data_Segment
+          BYTE "It's palindrome",10,0
+          LOC @+(8-@)&7
+NoPalStr  IS  @-Data_Segment
+          BYTE "It is not palindrome",10,0
+
+         LOC #100
+         GREG @
+% input: $255 points to where the string to be checked is
+% returns $255 0 if not palindrome, not zero otherwise
+% trashs: $0,$1,$2,$3
+% return address $4
+DetectPalindrome LOC @
+         ADDU $1,$255,0      % $1 = $255
+2H       LDB  $0,$1,0        % get byte at $1
+         BZ   $0,1F          % if zero, end (length)
+         INCL $1,1           % $1++
+         JMP  2B             % loop
+1H       SUBU $1,$1,1        % ptr last char of string
+         ADDU $0,DataSeg,0   % $0 to data seg.
+3H       CMP  $3,$1,$255     % is $0 == $255?
+         BZ   $3,4F          % then jump
+         LDB  $3,$1,0        % otherwise get the byte
+         STB  $3,$0,0        % and copy it
+         INCL $0,1           % $0++
+         SUB  $1,$1,1        % $1--
+         JMP  3B
+4H       LDB  $3,$1,0
+         STB  $3,$0,0        % copy the last byte
+% now let us compare reversed string and straight string
+         XOR  $0,$0,$0       % index
+         ADDU $1,DataSeg,0
+6H       LDB  $2,$1,$0       % pick char from rev str
+         LDB  $3,$255,$0     % pick char from straight str
+         BZ   $3,PaliOk      % finished as palindrome
+         CMP  $2,$2,$3       % == ?
+         BNZ  $2,5F          % if not, exit
+         INCL $0,1           % $0++
+         JMP  6B
+5H       XOR  $255,$255,$255
+         GO   $4,$4,0        % return false
+PaliOk   NEG  $255,0,1
+         GO   $4,$4,0        % return true
+
+% The Main for testing the function
+% run from the command line
+% $ mmix ./palindrome.mmo ingirumimusnocteetconsumimurigni
+Main     CMP  argc,argc,2    % argc > 2?
+         BN   argc,3F        % no -> not enough arg
+         ADDU $1,$1,8        % argv+1
+         LDOU $255,$1,0      % argv[1]
+         GO   $4,DetectPalindrome
+         BZ   $255,2F        % if not palindrome, jmp
+         SETL $0,ItsPalStr   % pal string
+         ADDU $255,DataSeg,$0
+         JMP  1F
+2H       SETL $0,NoPalStr    % no pal string
+         ADDU $255,DataSeg,$0
+1H       TRAP 0,Fputs,StdOut % print
+3H       XOR  $255,$255,$255
+         TRAP 0,Halt,0       % exit(0)

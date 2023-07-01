@@ -1,0 +1,4 @@
+VAR
+	str1: ARRAY 128 OF CHAR;
+	str2: ARRAY 32 OF CHAR;
+	str3: ARRAY 25 OF CHAR;

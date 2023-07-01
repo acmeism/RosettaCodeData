@@ -1,0 +1,3 @@
+      INTEGER XLAST,XDIGIT(66),XFIELD(67)
+      EQUIVALENCE (XFIELD(1),XLAST)	!The count at the start.
+      EQUIVALENCE (XFIELD(3),XDIGIT(1))	!Followed by XDIGIT(0)

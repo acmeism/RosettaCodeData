@@ -1,0 +1,4 @@
+s$ = "alphaBETA"
+PRINT "Original string: "; s$
+PRINT "To Lower case:   "; LCASE$(s$)
+PRINT "To Upper case:   "; UCASE$(s$)

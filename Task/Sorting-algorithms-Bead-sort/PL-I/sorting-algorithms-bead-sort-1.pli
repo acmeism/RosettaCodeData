@@ -1,0 +1,73 @@
+/* Handles both negative and positive values. */
+
+maxval: procedure (z) returns (fixed binary);
+   declare z(*) fixed binary;
+   declare (maxv initial (0), i) fixed binary;
+   do i = lbound(z,1) to hbound(z,1);
+      maxv = max(z(i), maxv);
+   end;
+   put skip data (maxv); put skip;
+   return (maxv);
+end maxval;
+minval: procedure (z) returns (fixed binary);
+   declare z(*) fixed binary;
+   declare (minv initial (0), i) fixed binary;
+
+   do i = lbound(z,1) to hbound(z,1);
+      if z(i) < 0 then minv = min(z(i), minv);
+   end;
+   put skip data (minv); put skip;
+   return (minv);
+end minval;
+
+/* To deal with negative values, array elements are incremented */
+/* by the greatest (in magnitude) negative value, thus making   */
+/* them positive. The resultant values are stored in an         */
+/* unsigned array (PL/I provides both signed and unsigned data  */
+/* types). At procedure end, the array values are restored to   */
+/* original values.                                             */
+
+(subrg, fofl, size, stringrange, stringsize):
+beadsort: procedure (z);                        /* 8-1-2010 */
+   declare (z(*)) fixed binary;
+   declare b(maxval(z)-minval(z)+1) bit (maxval(z)-minval(z)+1) aligned;
+   declare (i, j, k, m, n) fixed binary;
+   declare a(hbound(z,1)) fixed binary unsigned;
+   declare offset fixed binary initial (minval(z));
+
+   PUT SKIP LIST('CHECKPOINT A'); PUT SKIP;
+   n = hbound(z,1);
+   m = hbound(b,1);
+
+   if offset < 0 then
+      a = z - offset;
+   else
+      a = z;
+
+   b = '0'b;
+
+   do i = 1 to n;
+      substr(b(i), 1, a(i)) = copy('1'b, a(i));
+   end;
+   do j = 1 to m; put skip list (b(j)); end;
+
+   do j = 1 to m;
+      k = 0;
+      do i =1 to n;
+         if substr(b(i), j, 1) then k = k + 1;
+      end;
+      do i = 1 to n;
+         substr(b(i), j, 1) = (i <= k);
+      end;
+   end;
+   put skip;
+   do j = 1 to m; put skip list (b(j)); end;
+
+   do i = 1 to n;
+      k = 0;
+      do j = 1 to m; k = k + substr(b(i), j, 1); end;
+      a(i) = k;
+   end;
+   if offset < 0 then z = a + offset; else z = a;
+
+end beadsort;

@@ -1,0 +1,83 @@
+// Playing Cards, main program
+
+Call("CREATE_DECK")
+Call("SHUFFLE_DECK")
+#21 = Buf_Switch(Buf_Free)        // #21 = players hand, 1st player
+#1 = 5; Call("DEAL_CARDS")        // deal 5 cards to player 1
+#22 = Buf_Switch(Buf_Free)        // #22 = players hand, 2nd player
+#1 = 5; Call("DEAL_CARDS")        // deal 5 cards to player 2
+Buf_Switch(#10) BOF               // display the deck
+Return
+
+///////////////////////////////////////////////////////////////////////////
+//
+//  Create a deck into a new edit buffer. One text line for each card.
+//
+:CREATE_DECK:
+#10 = Buf_Switch(Buf_Free)        // Buffer @(#10) = the deck
+
+RS(1, "Diamonds")
+RS(2, "Spades")
+RS(3, "Hearts")
+RS(4, "Clubs")
+
+RS(11, " Jack")
+RS(12, "Queen")
+RS(13, " King")
+RS(14, "  Ace")
+
+for (#1=1; #1<5; #1++) {
+    for (#2=2; #2<15; #2++) {
+        if (#2 < 11) {
+            Num_Ins(#2, NOCR)     // pip (2 to 10) as numeric
+        } else {
+            IT(@(#2))             // pip (11 to 14) as a word
+        }
+        IT(" of ")
+        IT(@(#1)) IN              // suit
+    }
+}
+Return
+
+///////////////////////////////////////////////////////////////////////////
+//
+//  Shuffle the deck using Fisher-Yates algorithm
+//
+:SHUFFLE_DECK:
+Buf_Switch(#10)                   // the deck
+#90 = Time_Tick                   // seed for random number generator
+#91 = 51                          // random numbers in range 0 to 50
+for (#1=1; #1<52; #1++) {
+    Call("RANDOM")
+    Goto_Line(Return_Value+1)
+    Block_Copy(#1, #1, LINESET+DELETE)
+    Reg_Copy(9, 1, DELETE)
+    Goto_Line(#1)
+    Reg_Ins(9)
+}
+Return
+
+//--------------------------------------------------------------
+// Generate random numbers in range 0 <= Return_Value < #91
+//  #90 = Seed    (0 to 0x7fffffff)
+//  #91 = Scaling (0 to 0x10000)
+
+:RANDOM:
+#92 = 0x7fffffff / 48271
+#93 = 0x7fffffff % 48271
+#90 = (48271 * (#90 % #92) - #93 * (#90 / #92)) & 0x7fffffff
+Return ((#90 & 0xffff) * #91 / 0x10000)
+
+
+///////////////////////////////////////////////////////////////////////////
+//
+//  Deal #1 cards: move the cards from deck to current edit buffer
+//
+:DEAL_CARDS:
+#11 = Buf_Num                     // this buffer (players hand)
+Buf_Switch(#10)                   // the deck
+BOF
+Reg_Copy(9, #1, DELETE)           // pull the first #1 cards from the deck
+Buf_Switch(#11)                   // players hand
+Reg_ins(9)                        // insert the cards here
+Return

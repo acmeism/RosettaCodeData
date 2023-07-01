@@ -1,0 +1,81 @@
+#!/usr/bin/env jsish
+/* 4 bit adder simulation, in Jsish */
+function not(a) { return a == 1 ? 0 : 1; }
+function and(a, b) { return a + b < 2 ? 0 : 1; }
+function nand(a, b) { return not(and(a, b)); }
+function or(a, b) { return nand(nand(a,a), nand(b,b)); }
+function xor(a, b) { return nand(nand(nand(a,b), a), nand(nand(a,b), b)); }
+
+function halfAdder(a, b) { return { carry: and(a, b), sum: xor(a, b) }; }
+function fullAdder(a, b, c) {
+    var h0 = halfAdder(a, b),
+        h1 = halfAdder(h0.sum, c);
+    return {carry: or(h0.carry, h1.carry), sum: h1.sum };
+}
+
+function fourBitAdder(a, b) {
+    // set to width 4, pad with 0 if too short and truncate right if too long
+    var inA = Array(4),
+        inB = Array(4),
+        out = Array(4),
+        i = 4,
+        pass;
+
+    if (a.length < 4) a = '0'.repeat(4 - a.length) + a;
+    a = a.slice(-4);
+    if (b.length < 4) b = '0'.repeat(4 - b.length) + b;
+    b = b.slice(-4);
+    while (i--) {
+        var re = /0|1/;
+        if (a[i] && !re.test(a[i])) throw('bad bit at a[' + i + '] of ' + quote(a[i]));
+        if (b[i] && !re.test(b[i])) throw('bad bit at b[' + i + '] of ' + quote(b[i]));
+        inA[i] = a[i] != 1 ? 0 : 1;
+        inB[i] = b[i] != 1 ? 0 : 1;
+    }
+
+    printf('%s + %s = ', a, b);
+
+    // now we can start adding... connecting the constructive blocks
+    pass = halfAdder(inA[3], inB[3]);
+    out[3] = pass.sum;
+    pass = fullAdder(inA[2], inB[2], pass.carry);
+    out[2] = pass.sum;
+    pass = fullAdder(inA[1], inB[1], pass.carry);
+    out[1] = pass.sum;
+    pass = fullAdder(inA[0], inB[0], pass.carry);
+    out[0] = pass.sum;
+
+    var result = parseInt(pass.carry + out.join(''), 2);
+    printf('%s  %d\n', out.join('') + ' carry ' + pass.carry, result);
+    return result;
+}
+
+if (Interp.conf('unitTest')) {
+    var bits = [['0000', '0000'], ['0000', '0001'], ['1000', '0001'],
+                ['1010', '0101'], ['1000', '1000'], ['1100', '1100'],
+                ['1111', '1111']];
+    for (var pair of bits) {
+        fourBitAdder(pair[0], pair[1]);
+    }
+;   fourBitAdder('1', '11');
+;   fourBitAdder('10001', '01110');
+;// fourBitAdder('0002', 'b');
+}
+
+/*
+=!EXPECTSTART!=
+0000 + 0000 = 0000 carry 0  0
+0000 + 0001 = 0001 carry 0  1
+1000 + 0001 = 1001 carry 0  9
+1010 + 0101 = 1111 carry 0  15
+1000 + 1000 = 0000 carry 1  16
+1100 + 1100 = 1000 carry 1  24
+1111 + 1111 = 1110 carry 1  30
+fourBitAdder('1', '11') ==> 0001 + 0011 = 0100 carry 0  4
+4
+fourBitAdder('10001', '01110') ==> 0001 + 1110 = 1111 carry 0  15
+15
+fourBitAdder('0002', 'b') ==>
+PASS!: err = bad bit at a[3] of "2"
+=!EXPECTEND!=
+*/

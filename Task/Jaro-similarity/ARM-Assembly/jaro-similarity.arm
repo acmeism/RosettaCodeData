@@ -1,0 +1,350 @@
+/* ARM assembly Raspberry PI  */
+/*  program jarodist.s   */
+
+
+/* Constantes    */
+.equ BUFFERSIZE,   100
+.equ STDIN,  0                                              @ Linux input console
+.equ STDOUT, 1                                              @ Linux output console
+.equ EXIT,   1                                              @ Linux syscall
+.equ READ,   3                                              @ Linux syscall
+.equ WRITE,  4                                              @ Linux syscall
+
+.equ SIZESTRING,   256
+/* Initialized data */
+.data
+szCarriageReturn:  .asciz "\n"
+szMessResult:       .ascii " Jaro distance * 1000 = "   @ message result
+sMessValeur:        .fill 12, 1, ' '
+                       .asciz "\n"
+szMessDeb:           .asciz "For : "
+szMessSep:           .asciz " and "
+szString1:           .asciz  "DWAYNE"
+szString1A:           .asciz  "DUANE"
+szString2:           .asciz  "MARTHA"
+szString2A:           .asciz  "MARHTA"
+szString3:           .asciz  "DIXON"
+szString3A:           .asciz  "DICKSONX"
+szString4:           .asciz   "JELLYFISH"
+szString4A:           .asciz  "SMELLYFISH"
+/* UnInitialized data */
+.bss
+iTabString1:        .skip 4 * SIZESTRING
+iTabString2:        .skip 4 * SIZESTRING
+sBuffer:    .skip    BUFFERSIZE
+
+/*  code section */
+.text
+.global main
+main:                                               @ entry of program
+
+    ldr r0,iAdrszString1                            @ address string 1
+    ldr r1,iAdrszString1A                           @ address string 2
+    bl preparation                                  @ compute jaro distance
+
+    ldr r0,iAdrszString2                            @ address string 1
+    ldr r1,iAdrszString2A                           @ address string 2
+    bl preparation                                  @ compute jaro distance
+
+    ldr r0,iAdrszString3                            @ address string 1
+    ldr r1,iAdrszString3A                           @ address string 2
+    bl preparation                                  @ compute jaro distance
+
+    ldr r0,iAdrszString4                            @ address string 1
+    ldr r1,iAdrszString4A                           @ address string 2
+    bl preparation                                  @ compute jaro distance
+100:                                                @ standard end of the program
+    mov r0, #0                                      @ return code
+    pop {fp,lr}                                     @restaur 2 registers
+    mov r7, #EXIT                                   @ request to exit program
+    swi 0                                           @ perform the system call
+
+iAdrsMessValeur:        .int sMessValeur
+iAdrsBuffer:             .int sBuffer
+iAdrszMessResult:       .int szMessResult
+iAdrszCarriageReturn:  .int szCarriageReturn
+iAdrszMessDeb:           .int szMessDeb
+iAdrszMessSep:           .int szMessSep
+iAdrszString1:           .int szString1
+iAdrszString1A:           .int szString1A
+iAdrszString2:           .int szString2
+iAdrszString2A:           .int szString2A
+iAdrszString3:           .int szString3
+iAdrszString3A:           .int szString3A
+iAdrszString4:           .int szString4
+iAdrszString4A:           .int szString4A
+/******************************************************************/
+/*     preparation compute                                       */
+/******************************************************************/
+/* r0 contains the address of the first string */
+/* r1 contains the address of the second string */
+preparation:
+    push {r2,lr}                                   @ save  registers
+    mov r2,r0                                      @ save first address
+    ldr r0,iAdrszMessDeb                           @ display the two strings
+    bl affichageMess
+    mov r0,r2
+    bl affichageMess
+    ldr r0,iAdrszMessSep
+    bl affichageMess
+    mov r0,r1
+    bl affichageMess
+    mov r0,r2                                       @ address string 1
+                                                    @ and r1 contains address string 2
+    bl jaroDistance                                 @ compute jaro distance
+
+    @ conversion register to string
+    ldr r1,iAdrsMessValeur
+    bl conversion10                                  @ conversion register to string
+    ldr r0,iAdrszMessResult
+    bl affichageMess                                 @ display message
+100:
+    pop {r2,lr}                                      @ restaur registers
+    bx lr                                            @ return
+/******************************************************************/
+/*     Compute Jaro distance                                      */
+/******************************************************************/
+/* r0 contains the address of the first string */
+/* r1 contains the address of the second string */
+/* r0 returns jaro distance * 1000 because not use float compute !!!  */
+jaroDistance:
+    push {r1-r11,lr}                                @ save  registers
+    mov r6,r0                                       @ save address string 1
+    bl strLength                                    @ size string
+    cmp r0,#0                                       @ empty string ?
+    beq 100f
+    mov r4,r0
+    mov r0,r1
+    bl strLength                                    @ size string 2
+    cmp r0,#0                                       @ empty string ?
+    beq 100f
+    mov r5,r0
+    mov r2,#0                                       @ initialisation tables 1 and 2
+    mov r3,#0
+    ldr r7,iadriTabString1
+    ldr r8,iadriTabString2
+1:                                                  @loop start
+    str r3,[r7,r2,lsl #2]
+    str r3,[r8,r2,lsl #2]
+    add r2,#1
+    cmp r2,#SIZESTRING
+    blt 1b
+
+    cmp r4,r5                                      @ compute match distance
+    lsrle   r3,r5,#1                               @ length max / 2
+    lsrgt   r3,r4,#1
+    sub r3,#1                                       @ - 1
+    sub r4,#1                                       @ last index string 1
+    sub r5,#1                                       @ last index string 2
+    mov r11,#0                                      @ match counter
+    mov r2,#0                                       @ index loop
+
+2:                                                  @ loop match
+    subs r7,r2,r3
+    movlt r7,#0                                     @ compute start
+    add r8,r2,r3
+    add r8,#1
+    cmp r8,r5
+    movgt r8,r5                                      @ compute end
+3:
+    ldr r10,iadriTabString2                          @ load element table 2 at location r7
+    ldr r9,[r10,r7,lsl #2]
+    cmp r9,#0                                        @ if not zero continue
+    bne 4f
+    ldrb r9,[r6,r2]                                  @ compare characters of two strings
+    ldrb r10,[r1,r7]
+    cmp r9,r10
+    bne 4f                                           @ not equal
+
+    ldr r10,iadriTabString2                           @ match
+    mov r9,#1                                         @ store 1 in two tables
+    str r9,[r10,r7,lsl #2]
+    ldr r10,iadriTabString1
+    str r9,[r10,r2,lsl #2]
+    add r11,#1                                        @ increment counter match
+    b 5f                                             @ end loop 2
+4:
+    add r7,#1                                         @ following character string 2
+    cmp r7,r8                                         @ end ?
+    ble 3b
+5:
+    add r2,#1                                         @ following character string 1
+    cmp r2,r4                                         @ end string ?
+    ble 2b
+
+    cmp r11,#0                                        @ return if 0 match
+    moveq r0,#0
+    beq 100f
+
+    /* compute transposition */
+    mov r2,#0                                         @ loop indice
+    mov r3,#0                                         @ indice string 2
+    mov r7,#0                                         @ counter transposition
+6:
+    ldr r10,iadriTabString1                           @ character match ?
+    ldr r9,[r10,r2,lsl #2]
+    cmp r9,#0
+    beq 8f                                             @ no
+    ldr r10,iadriTabString2
+7:
+    ldr r9,[r10,r3,lsl #2]                             @ yes, search match in table 2
+    cmp r9,#0
+    addeq r3,#1
+    beq 7b
+    ldrb r9,[r6,r2]                                    @ compare characters
+    ldrb r10,[r1,r3]
+    cmp r9,r10
+    addne r7,#1                                        @ not equals add 1 to counter
+
+    add r3,#1                                          @ following characters string 2
+8:
+    add r2,#1                                          @ following characters string 1
+    cmp r2,r4                                          @ end string ?
+    ble 6b                                             @ no loop
+    lsr r7,#1                                          @ counter / 2
+    /* Final */
+    mov r6,#1000                                       @ factor 1000 for not use float compute !!!
+    mul r9,r6,r11                                      @ compute match * 1000
+    mul r7,r6,r7                                       @ compute transposition * 1000
+    mov r0,r9                                          @ match
+    add r1,r4,#1                                       @ size string 1
+    bl division
+    mov r8,r2
+    mov r0,r9                                          @ match
+    add r1,r5,#1                                       @ size string 2
+    bl division
+    add r8,r2
+    sub r0,r9,r7                                       @ compute match - transposition
+    mov r1,r11                                         @ match
+    bl division
+    add r8,r2
+    mov r0,r8                                          @ division total / 3
+    mov r1,#3
+    bl division
+    mov r0,r2                                          @ return value
+100:
+    pop {r1-r11,lr}                                    @ restaur registers
+    bx lr                                              @ return
+iadriTabString1:      .int iTabString1
+iadriTabString2:      .int iTabString2
+/******************************************************************/
+/*     display text with size calculation                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+affichageMess:
+    push {r0,r1,r2,r7,lr}                           @ save  registres
+    mov r2,#0                                       @ counter length
+1:                                                  @ loop length calculation
+    ldrb r1,[r0,r2]                                 @ read octet start position + index
+    cmp r1,#0                                       @ if 0 its over
+    addne r2,r2,#1                                  @ else add 1 in the length
+    bne 1b                                          @ and loop
+                                                    @ so here r2 contains the length of the message
+    mov r1,r0                                       @ address message in r1
+    mov r0,#STDOUT                                  @ code to write to the standard output Linux
+    mov r7, #WRITE                                  @ code call system "write"
+    svc #0                                          @ call systeme
+    pop {r0,r1,r2,r7,lr}                            @ restaur des  2 registres */
+    bx lr                                           @ return
+/******************************************************************/
+/*     Converting a register to a decimal unsigned                */
+/******************************************************************/
+/* r0 contains value and r1 address area   */
+/* r0 return size of result (no zero final in area) */
+/* area size => 11 bytes          */
+.equ LGZONECAL,   10
+conversion10:
+    push {r1-r4,lr}                                      @ save registers
+    mov r3,r1
+    mov r2,#LGZONECAL
+
+1:	                                                 @ start loop
+    bl divisionpar10U                                    @unsigned  r0 <- dividende. quotient ->r0 reste -> r1
+    add r1,#48                                           @ digit
+    strb r1,[r3,r2]                                      @ store digit on area
+    cmp r0,#0                                            @ stop if quotient = 0
+    subne r2,#1                                          @ else previous position
+    bne 1b	                                         @ and loop
+                                                         @ and move digit from left of area
+    mov r4,#0
+2:
+    ldrb r1,[r3,r2]
+    strb r1,[r3,r4]
+    add r2,#1
+    add r4,#1
+    cmp r2,#LGZONECAL
+    ble 2b
+                                                       @ and move spaces in end on area
+    mov r0,r4                                          @ result length
+    mov r1,#' '                                        @ space
+3:
+    strb r1,[r3,r4]                                    @ store space in area
+    add r4,#1                                          @ next position
+    cmp r4,#LGZONECAL
+    ble 3b                                             @ loop if r4 <= area size
+
+100:
+    pop {r1-r4,lr}                                     @ restaur registres
+    bx lr                                              @return
+
+/***************************************************/
+/*   division par 10   unsigned                    */
+/***************************************************/
+/* r0 dividende   */
+/* r0 quotient */	
+/* r1 remainder  */
+divisionpar10U:
+    push {r2,r3,r4, lr}
+    mov r4,r0                                          @ save value
+    //mov r3,#0xCCCD                                   @ r3 <- magic_number lower  raspberry 3
+    //movt r3,#0xCCCC                                  @ r3 <- magic_number higter raspberry 3
+    ldr r3,iMagicNumber                                @ r3 <- magic_number    raspberry 1 2
+    umull r1, r2, r3, r0                               @ r1<- Lower32Bits(r1*r0) r2<- Upper32Bits(r1*r0)
+    mov r0, r2, LSR #3                                 @ r2 <- r2 >> shift 3
+    add r2,r0,r0, lsl #2                               @ r2 <- r0 * 5
+    sub r1,r4,r2, lsl #1                               @ r1 <- r4 - (r2 * 2)  = r4 - (r0 * 10)
+    pop {r2,r3,r4,lr}
+    bx lr                                              @ leave function
+iMagicNumber:  	.int 0xCCCCCCCD
+/***************************************************/
+/*   calcul size string                            */
+/***************************************************/
+/* r0 string address                 */
+/* r0 returns size string            */
+strLength:
+    push {r1,r2,lr}
+    mov r1,#0                                         @ init counter
+1:
+   ldrb r2,[r0,r1]                                    @ load byte of string index r1
+   cmp r2,#0                                          @ end string ?
+   addne r1,#1                                        @ no -> +1 counter
+   bne 1b                                             @ and loop
+
+100:
+    mov r0,r1
+    pop {r1,r2,lr}
+    bx lr
+/***************************************************/
+/* integer division unsigned                       */
+/***************************************************/
+division:
+    /* r0 contains dividend */
+    /* r1 contains divisor */
+    /* r2 returns quotient */
+    /* r3 returns remainder */
+    push {r4, lr}
+    mov r2, #0                                         @ init quotient
+    mov r3, #0                                         @ init remainder
+    mov r4, #32                                        @ init counter bits
+    b 2f
+1:                                                     @ loop
+    movs r0, r0, LSL #1                                @ r0 <- r0 << 1 updating cpsr (sets C if 31st bit of r0 was 1)
+    adc r3, r3, r3                                     @ r3 <- r3 + r3 + C. This is equivalent to r3 ? (r3 << 1) + C
+    cmp r3, r1                                         @ compute r3 - r1 and update cpsr
+    subhs r3, r3, r1                                   @ if r3 >= r1 (C=1) then r3 <- r3 - r1
+    adc r2, r2, r2                                     @ r2 <- r2 + r2 + C. This is equivalent to r2 <- (r2 << 1) + C
+2:
+    subs r4, r4, #1                                    @ r4 <- r4 - 1
+    bpl 1b                                             @ if r4 >= 0 (N=0) then loop
+    pop {r4, lr}
+    bx lr

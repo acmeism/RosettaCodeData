@@ -1,0 +1,2 @@
+let allEqual = !(=)
+let ascending = !(<)

@@ -1,0 +1,217 @@
+*process source attributes xref or(!);
+ mgg: Proc Options(main);
+ /* REXX ***************************************************************
+ * 04.09.2013 Walter Pachl translated from REXX version 3
+ **********************************************************************/
+ Dcl (MIN,MOD,RANDOM,REPEAT,SUBSTR) Builtin;
+ Dcl SYSIN    STREAM INPUT;
+ Dcl print Print;
+ Dcl imax Bin Fixed(31) init(10);
+ Dcl jmax Bin Fixed(31) init(15);
+ Dcl seed Bin Fixed(31) init(4711);
+ Get File(sysin) Data(imax,jmax,seed);
+ Dcl ii   Bin Fixed(31);
+ Dcl jj   Bin Fixed(31);
+ Dcl id   Bin Fixed(31);
+ Dcl jd   Bin Fixed(31);
+ id=2*imax+1;                        /* vertical dimension of a.i.j   */
+ jd=2*jmax+1;                        /* horizontal dimension of a.i.j */
+ Dcl c Char(2000) Var;
+ c=repeat('123456789'!!'abcdefghijklmnopqrstuvwxyz'!!
+                       'ABCDEFGHIJKLMNOPQRSTUVWXYZ',20);
+ Dcl x Bin Float(53);
+ x=random(seed);
+ Dcl ps Bin Fixed(31) Init(1);         /* first position             */
+ Dcl na Bin Fixed(31) Init(1);         /* number of points used      */
+ Dcl si Bin Fixed(31);                 /* loop to compute paths      */
+ Begin;
+ Dcl a(id,jd) Bin Fixed(15);
+ Dcl p(imax,jmax) Char(1);
+ Dcl 1 pl(imax*jmax),
+      2 ic Bin Fixed(15),
+      2 jc Bin Fixed(15);
+ Dcl 1 np(imax*jmax),
+      2 ic Bin Fixed(15),
+      2 jc Bin Fixed(15);
+ Dcl 1 pos(imax*jmax),
+      2 ic Bin Fixed(15),
+      2 jc Bin Fixed(15);
+ Dcl npl Bin Fixed(31) Init(0);
+ a=1;                                   /* mark all borders present   */
+ p='.';                                 /* Initialize all grid points */
+ ii=rnd(imax);                          /* find a start position      */
+ jj=rnd(jmax);
+ Do si=1 To 1000;                       /* Do Forever - see Leave     */
+   Call path(ii,jj);              /* compute a path starting at ii/jj */
+   If na=imax*jmax Then                 /* all points used            */
+     Leave;                             /* we are done                */
+   Call select_next(ii,jj);             /* get a new start from a path*/
+   End;
+ Call show;
+ Return;
+
+ path: Procedure(ii,jj);
+ /**********************************************************************
+ * compute a path starting from point (ii,jj)
+ **********************************************************************/
+ Dcl ii   Bin Fixed(31);
+ Dcl jj   Bin Fixed(31);
+ Dcl nb   Bin Fixed(31);
+ Dcl ch   Bin Fixed(31);
+ Dcl pp   Bin Fixed(31);
+   p(ii,jj)='1';
+   pos.ic(ps)=ii;
+   pos.jc(ps)=jj;
+   Do pp=1 to 50;               /* compute a path of maximum length 50*/
+     nb=neighbors(ii,jj);               /* number of free neighbors   */
+     Select;
+       When(nb=1)                       /* just one                   */
+         Call advance((1),ii,jj);       /* go for it                  */
+       When(nb>0) Do;                   /* more Than 1                */
+         ch=rnd(nb);                    /* choose one possibility     */
+         Call advance(ch,ii,jj);        /* and go for that            */
+         End;
+       Otherwise                        /* none available             */
+         Leave;
+       End;
+     End;
+   End;
+
+ neighbors: Procedure(i,j) Returns(Bin Fixed(31));
+ /**********************************************************************
+ * count the number of free neighbors of point (i,j)
+ **********************************************************************/
+ Dcl i    Bin Fixed(31);
+ Dcl j    Bin Fixed(31);
+ Dcl in   Bin Fixed(31);
+ Dcl jn   Bin Fixed(31);
+ Dcl nb   Bin Fixed(31) Init(0);
+   in=i-1; If in>0     Then Call check(in,j,nb);
+   in=i+1; If in<=imax Then Call check(in,j,nb);
+   jn=j-1; If jn>0     Then Call check(i,jn,nb);
+   jn=j+1; If jn<=jmax Then Call check(i,jn,nb);
+   Return(nb);
+ End;
+
+ check: Procedure(i,j,n);
+ /**********************************************************************
+ * check if point (i,j) is free and note it as possible successor
+ **********************************************************************/
+ Dcl i    Bin Fixed(31);
+ Dcl j    Bin Fixed(31);
+ Dcl n    Bin Fixed(31);
+   If p(i,j)='.' Then Do;               /* point is free              */
+     n+=1;                              /* number of free neighbors   */
+     np.ic(n)=i;                        /* note it as possible choice */
+     np.jc(n)=j;
+     End;
+ End;
+
+ advance: Procedure(ch,ii,jj);
+ /**********************************************************************
+ * move to the next point of the current path
+ **********************************************************************/
+ Dcl ch   Bin Fixed(31);
+ Dcl ii   Bin Fixed(31);
+ Dcl jj   Bin Fixed(31);
+ Dcl ai   Bin Fixed(31);
+ Dcl aj   Bin Fixed(31);
+ Dcl pii  Bin Fixed(31) Init((ii));
+ Dcl pjj  Bin Fixed(31) Init((jj));
+ Dcl z    Bin Fixed(31);
+   ii=np.ic(ch);
+   jj=np.jc(ch);
+   ps+=1;                               /* position number            */
+   pos.ic(ps)=ii;                       /* note its coordinates       */
+   pos.jc(ps)=jj;
+   p(ii,jj)=substr(c,ps,1);             /* mark the point as used     */
+   ai=pii+ii;                           /* vertical border position   */
+   aj=pjj+jj;                           /* horizontal border position */
+   a(ai,aj)=0;                          /* tear the border down       */
+   na+=1;                               /* number of used positions   */
+   z=npl+1;                             /* add the point to the list  */
+   pl.ic(z)=ii;                         /* of follow-up start pos.    */
+   pl.jc(z)=jj;
+   npl=z;
+   End;
+
+ show: Procedure;
+ /*********************************************************************
+ * Show the resulting maze
+ *********************************************************************/
+ Dcl i Bin Fixed(31);
+ Dcl j Bin Fixed(31);
+ Dcl ol Char(300) Var;
+   Put File(print) Edit('mgg',imax,jmax,seed)(Skip,a,3(f(4)));
+   Put File(print) Skip Data(na);
+   Do i=1 To id;
+     ol='';
+     Do j=1 To jd;
+       If mod(i,2)=1 Then Do;            /* odd lines                 */
+         If a(i,j)=1 Then Do;            /* border to be drawn        */
+           If mod(j,2)=0 Then
+             ol=ol!!'---';               /* draw the border           */
+           Else
+             ol=ol!!'+';
+           End;
+         Else Do;                        /* border was torn down      */
+           If mod(j,2)=0 Then
+             ol=ol!!'   ';               /* blanks instead of border  */
+           Else
+             ol=ol!!'+';
+           End;
+         End;
+       Else Do;                          /* even line                 */
+         If a(i,j)=1 Then Do;
+           If mod(j,2)=0 Then            /* even column               */
+             ol=ol!!'   ';               /* moving space              */
+           Else                          /* odd column                */
+             ol=ol!!'!';                 /* draw the border           */
+           End;
+         Else                            /* border was torn down      */
+           ol=ol!!' ';                   /* blank instead of border   */
+         End;
+       End;
+     Select;
+       When(i=6) substr(ol,11,1)='A';
+       When(i=8) substr(ol, 3,1)='B';
+       Otherwise;
+       End;
+     Put File(print) Edit(ol,i)(Skip,a,f(3));
+     End;
+   End;
+
+ select_next: Procedure(is,js);
+ /**********************************************************************
+ * look for a point to start the nnext path
+ **********************************************************************/
+ Dcl is Bin Fixed(31);
+ Dcl js Bin Fixed(31);
+ Dcl n  Bin Fixed(31);
+ Dcl nb Bin Fixed(31);
+ Dcl s  Bin Fixed(31);
+   Do Until(nb>0);                       /* loop until one is found   */
+     n=npl;                              /* number of points recorded */
+     s=rnd(n);                           /* pick a random index       */
+     is=pl.ic(s);                        /* its coordinates           */
+     js=pl.jc(s);
+     nb=neighbors(is,js);                /* count free neighbors      */
+     If nb=0 Then Do;                    /* if there is none          */
+       pl.ic(s)=pl.ic(n);                /* remove this point         */
+       pl.jc(s)=pl.jc(n);
+       npl-=1;
+       End;
+     End;
+ End;
+
+ rnd: Proc(n) Returns(Bin Fixed(31));
+ /*********************************************************************
+ * return a pseudo-random integer between 1 and n
+ *********************************************************************/
+ dcl (r,n) Bin Fixed(31);
+ r=min(random()*n+1,n);
+ Return(r);
+ End;
+
+ End;
+ End;

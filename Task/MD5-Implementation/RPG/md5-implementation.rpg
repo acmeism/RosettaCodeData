@@ -1,0 +1,243 @@
+**FREE
+Ctl-opt MAIN(Main);
+Ctl-opt DFTACTGRP(*NO) ACTGRP(*NEW);
+
+dcl-pr QDCXLATE EXTPGM('QDCXLATE');
+  dataLen         packed(5 : 0) CONST;
+  data            char(32767) options(*VARSIZE);
+  conversionTable char(10) CONST;
+end-pr;
+
+dcl-c MASK32 CONST(4294967295);
+dcl-s SHIFT_AMTS int(3) dim(16) CTDATA PERRCD(16);
+dcl-s MD5_TABLE_T int(20) dim(64) CTDATA PERRCD(4);
+
+dcl-proc Main;
+  dcl-s inputData char(45);
+  dcl-s inputDataLen int(10) INZ(0);
+  dcl-s outputHash char(16);
+  dcl-s outputHashHex char(32);
+
+  DSPLY 'Input: ' '' inputData;
+  inputData = %trim(inputData);
+  inputDataLen = %len(%trim(inputData));
+  DSPLY ('Input=' + inputData);
+  DSPLY ('InputLen=' + %char(inputDataLen));
+
+  // Convert from EBCDIC to ASCII
+  if inputDataLen > 0;
+    QDCXLATE(inputDataLen : inputData : 'QTCPASC');
+  endif;
+  CalculateMD5(inputData : inputDataLen : outputHash);
+  // Convert to hex
+  ConvertToHex(outputHash : 16 : outputHashHex);
+  DSPLY ('MD5: ' + outputHashHex);
+  return;
+end-proc;
+
+dcl-proc CalculateMD5;
+  dcl-pi *N;
+    message    char(65535) options(*VARSIZE) CONST;
+    messageLen int(10) value;
+    outputHash char(16);
+  end-pi;
+  dcl-s numBlocks int(10);
+  dcl-s padding char(72);
+  dcl-s a int(20) INZ(1732584193);
+  dcl-s b int(20) INZ(4023233417);
+  dcl-s c int(20) INZ(2562383102);
+  dcl-s d int(20) INZ(271733878);
+  dcl-s buffer int(20) dim(16) INZ(0);
+  dcl-s i int(10);
+  dcl-s j int(10);
+  dcl-s k int(10);
+  dcl-s multiplier int(20);
+  dcl-s index int(10);
+  dcl-s originalA int(20);
+  dcl-s originalB int(20);
+  dcl-s originalC int(20);
+  dcl-s originalD int(20);
+  dcl-s div16 int(10);
+  dcl-s f int(20);
+  dcl-s tempInt int(20);
+  dcl-s bufferIndex int(10);
+  dcl-ds byteToInt QUALIFIED;
+    n int(5) INZ(0);
+    c char(1) OVERLAY(n : 2);
+  end-ds;
+
+  numBlocks = (messageLen + 8) / 64 + 1;
+  MD5_FillPadding(messageLen : numBlocks : padding);
+  for i = 0 to numBlocks - 1;
+    index = i * 64;
+
+    // Read message as little-endian 32-bit words
+    for j = 1 to 16;
+      multiplier = 1;
+      for k = 1 to 4;
+        index += 1;
+        if index <= messageLen;
+          byteToInt.c = %subst(message : index : 1);
+        else;
+          byteToInt.c = %subst(padding : index - messageLen : 1);
+        endif;
+        buffer(j) += multiplier * byteToInt.n;
+        multiplier *= 256;
+      endfor;
+    endfor;
+
+    originalA = a;
+    originalB = b;
+    originalC = c;
+    originalD = d;
+
+    for j = 0 to 63;
+      div16 = j / 16;
+      select;
+        when div16 = 0;
+          f = %bitor(%bitand(b : c) : %bitand(%bitnot(b) : d));
+          bufferIndex = j;
+
+        when div16 = 1;
+          f = %bitor(%bitand(b : d) : %bitand(c : %bitnot(d)));
+          bufferIndex = %bitand(j * 5 + 1 : 15);
+
+        when div16 = 2;
+          f = %bitxor(b : %bitxor(c : d));
+          bufferIndex = %bitand(j * 3 + 5 : 15);
+
+        when div16 = 3;
+          f = %bitxor(c : %bitor(b : Mask32Bit(%bitnot(d))));
+          bufferIndex = %bitand(j * 7 : 15);
+      endsl;
+      tempInt = Mask32Bit(b + RotateLeft32Bit(a + f + buffer(bufferIndex + 1) + MD5_TABLE_T(j + 1) :
+                                              SHIFT_AMTS(div16 * 4 + %bitand(j : 3) + 1)));
+      a = d;
+      d = c;
+      c = b;
+      b = tempInt;
+    endfor;
+    a = Mask32Bit(a + originalA);
+    b = Mask32Bit(b + originalB);
+    c = Mask32Bit(c + originalC);
+    d = Mask32Bit(d + originalD);
+  endfor;
+
+  for i = 0 to 3;
+    if i = 0;
+      tempInt = a;
+    elseif i = 1;
+      tempInt = b;
+    elseif i = 2;
+      tempInt = c;
+    else;
+      tempInt = d;
+    endif;
+
+    for j = 0 to 3;
+      byteToInt.n = %bitand(tempInt : 255);
+      %subst(outputHash : i * 4 + j + 1 : 1) = byteToInt.c;
+      tempInt /= 256;
+    endfor;
+  endfor;
+  return;
+end-proc;
+
+dcl-proc MD5_FillPadding;
+  dcl-pi *N;
+    messageLen int(10);
+    numBlocks int(10);
+    padding char(72);
+  end-pi;
+  dcl-s totalLen int(10);
+  dcl-s paddingSize int(10);
+  dcl-ds *N;
+    messageLenBits int(20);
+    mlb_bytes char(8) OVERLAY(messageLenBits);
+  end-ds;
+  dcl-s i int(10);
+
+  %subst(padding : 1 : 1) = X'80';
+  totalLen = numBlocks * 64;
+  paddingSize = totalLen - messageLen; // 9 to 72
+  messageLenBits = messageLen;
+  messageLenBits *= 8;
+  for i = 1 to 8;
+    %subst(padding : paddingSize - i + 1 : 1) = %subst(mlb_bytes : i : 1);
+  endfor;
+  for i = 2 to paddingSize - 8;
+    %subst(padding : i : 1) = X'00';
+  endfor;
+  return;
+end-proc;
+
+dcl-proc RotateLeft32Bit;
+  dcl-pi *N int(20);
+    n int(20) value;
+    amount int(3) value;
+  end-pi;
+  dcl-s i int(3);
+
+  n = Mask32Bit(n);
+  for i = 1 to amount;
+    n *= 2;
+    if n >= 4294967296;
+      n -= MASK32;
+    endif;
+  endfor;
+  return n;
+end-proc;
+
+dcl-proc Mask32Bit;
+  dcl-pi *N int(20);
+    n int(20) value;
+  end-pi;
+  return %bitand(n : MASK32);
+end-proc;
+
+dcl-proc ConvertToHex;
+  dcl-pi *N;
+    inputData    char(32767) options(*VARSIZE) CONST;
+    inputDataLen int(10) value;
+    outputData   char(65534) options(*VARSIZE);
+  end-pi;
+  dcl-c HEX_CHARS CONST('0123456789ABCDEF');
+  dcl-s i int(10);
+  dcl-s outputOffset int(10) INZ(1);
+  dcl-ds dataStruct QUALIFIED;
+    numField int(5) INZ(0);
+    // IBM i is big-endian
+    charField char(1) OVERLAY(numField : 2);
+  end-ds;
+
+  for i = 1 to inputDataLen;
+    dataStruct.charField = %BitAnd(%subst(inputData : i : 1) : X'F0');
+    dataStruct.numField /= 16;
+    %subst(outputData : outputOffset : 1) = %subst(HEX_CHARS : dataStruct.numField + 1 : 1);
+    outputOffset += 1;
+    dataStruct.charField = %BitAnd(%subst(inputData : i : 1) : X'0F');
+    %subst(outputData : outputOffset : 1) = %subst(HEX_CHARS : dataStruct.numField + 1 : 1);
+    outputOffset += 1;
+  endfor;
+  return;
+end-proc;
+
+**CTDATA SHIFT_AMTS
+  7 12 17 22  5  9 14 20  4 11 16 23  6 10 15 21
+**CTDATA MD5_TABLE_T
+          3614090360          3905402710           606105819          3250441966
+          4118548399          1200080426          2821735955          4249261313
+          1770035416          2336552879          4294925233          2304563134
+          1804603682          4254626195          2792965006          1236535329
+          4129170786          3225465664           643717713          3921069994
+          3593408605            38016083          3634488961          3889429448
+           568446438          3275163606          4107603335          1163531501
+          2850285829          4243563512          1735328473          2368359562
+          4294588738          2272392833          1839030562          4259657740
+          2763975236          1272893353          4139469664          3200236656
+           681279174          3936430074          3572445317            76029189
+          3654602809          3873151461           530742520          3299628645
+          4096336452          1126891415          2878612391          4237533241
+          1700485571          2399980690          4293915773          2240044497
+          1873313359          4264355552          2734768916          1309151649
+          4149444226          3174756917           718787259          3951481745

@@ -1,0 +1,1 @@
+ssq:{sum x*x}

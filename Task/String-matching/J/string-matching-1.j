@@ -1,0 +1,3 @@
+startswith=: ] -: ({.~ #)
+contains=: +./@:E.~
+endswith=: ] -: ({.~ -@#)

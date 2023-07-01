@@ -1,0 +1,109 @@
+def     Width=40, Height=25-1,          \playing area including border
+        StartLength = 10,               \starting length of snake including head
+        Morsels = 10;                   \number of food items constantly offered
+int     Heading;                        \direction snake is heading
+def     Up, Down, Left, Right;
+int     Length,                         \current length of snake including head
+        Score;                          \number of food items eaten
+char    SnakeX(10000),                  \location of each segment including head
+        SnakeY(10000),                  \ample room to grow
+        FoodX(Morsels), FoodY(Morsels); \location of each food item
+def     Black, Blue, Green, Cyan, Red, Magenta, Brown, White,  \attribute colors
+        Gray, LBlue, LGreen, LCyan, LRed, LMagenta, Yellow, BWhite; \EGA palette
+
+proc    PlaceFood(N);                   \Place Nth food item in playing area
+int     N;
+[FoodX(N):= Ran(Width-3) + 1;           \pick random location inside borders
+ FoodY(N):= Ran(Height-3) + 1;
+Cursor(FoodX(N), FoodY(N));             \show food
+Attrib(Red<<4+LRed);
+ChOut(6, ^@);
+];      \PlaceFood
+
+
+int     X, Y, I, C;
+[SetVid($01);                           \set 40x25 text mode
+ShowCursor(false);                      \turn off flashing cursor
+
+Attrib(Blue<<4+LBlue);                  \show borders
+Cursor(0, 0);
+for X:= 0 to Width-1 do ChOut(6, ^+);
+Cursor(0, Height-1);
+for X:= 0 to Width-1 do ChOut(6, ^+);
+for Y:= 0 to Height-1 do
+    [Cursor(0, Y);  ChOut(6, ^+);
+     Cursor(Width-1, Y);  ChOut(6, ^+);
+    ];
+Attrib(Black<<4+White);                 \show initial score
+Cursor(0, 24);
+Text(6, "Score: 0");
+Score:= 0;
+
+SnakeX(0):= Width/2;                    \start snake head at center
+SnakeY(0):= Height/2;
+Heading:= Left;
+Length:= StartLength;
+for I:= 1 to Length-1 do                \segments follow head to the right
+    [SnakeX(I):= SnakeX(I-1) + 1;
+     SnakeY(I):= SnakeY(I-1);
+    ];
+for I:= 0 to Morsels-1 do PlaceFood(I); \sow some tasty food
+
+\Continuously move snake
+loop \--------------------------------------------------------------------------
+[Attrib(Black<<4+White);                \remove tail-end segment
+Cursor(SnakeX(Length-1), SnakeY(Length-1));
+ChOut(6, ^ );
+Attrib(Green<<4+Yellow);                \add segment at head location
+Cursor(SnakeX(0), SnakeY(0));
+ChOut(6, ^#);
+
+\Shift coordinates toward tail (+1 in case a segment gets added)
+for I:= Length downto 1 do              \segment behind head gets head's coords
+    [SnakeX(I):= SnakeX(I-1);
+     SnakeY(I):= SnakeY(I-1);
+    ];
+if ChkKey then                          \key hit--get new movement direction
+    [repeat C:= ChIn(1) until C # 0;    \remove arrow keys' prefix byte
+    case C of
+          $1B:  exit;                   \Escape, and scan codes for arrow keys
+          $48:  if Heading # Down then Heading:= Up;
+          $50:  if Heading # Up then Heading:= Down;
+          $4B:  if Heading # Right then Heading:= Left;
+          $4D:  if Heading # Left then Heading:= Right
+    other       [];                     \ignore any other keystrokes
+    ];
+case Heading of                         \move head to its new location
+  Up:   SnakeY(0):= SnakeY(0)-1;
+  Down: SnakeY(0):= SnakeY(0)+1;
+  Left: SnakeX(0):= SnakeX(0)-1;
+  Right:SnakeX(0):= SnakeX(0)+1
+other   [];
+Cursor(SnakeX(0), SnakeY(0));           \show head at its new location
+ChOut(6, ^8);
+
+for I:= 0 to Morsels-1 do
+    if SnakeX(0)=FoodX(I) & SnakeY(0)=FoodY(I) then
+        [Score:= Score+1;               \ate a morsel
+        Attrib(Black<<4+White);
+        Cursor(7, 24);
+        IntOut(6, Score*10);
+        PlaceFood(I);                   \replenish morsel
+        Length:= Length+1;              \grow snake one segment
+        I:= Morsels;                    \over eating can be bad--quit for loop
+        Sound(1, 1, 1500);              \BURP!
+        Sound(1, 1, 1000);
+        ];
+if I = Morsels then Sound(0, 2, 1);     \no sound adds delay of 2/18th second
+
+if SnakeX(0)=0 or SnakeX(0)=Width-1 or
+   SnakeY(0)=0 or SnakeY(0)=Height-1 then
+        quit;                           \snake hit border--game over
+for I:= 1 to Length-1 do
+    if SnakeX(0)=SnakeX(I) & SnakeY(0)=SnakeY(I) then
+        quit;                           \snake bit itself--game over
+]; \loop -----------------------------------------------------------------------
+for I:= 1 to 8 do Sound(1, 1, 4000*I);  \death dirge
+Sound(0, 36, 1);                        \pause 2 seconds to see result
+OpenI(1);                               \flush any pending keystrokes
+]

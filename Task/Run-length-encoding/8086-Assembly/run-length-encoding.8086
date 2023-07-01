@@ -1,0 +1,64 @@
+        .model small       ; 128k .exe file
+        .stack 1024        ; load SP with 0400h
+        .data              ; no data segment needed
+
+	.code
+	
+start:
+
+	mov ax,@code
+	mov ds,ax
+	mov es,ax
+	
+	mov si,offset TestString
+	mov di,offset OutputRam
+	
+	cld
+	
+compressRLE:
+	lodsb
+	cmp al,0                     ;null terminator?
+	jz finished_Compressing      ;if so, exit
+	push di
+	push si
+		mov cx,0FFFFh	;exit after 65536 reps or the run length ends.
+		xchg di,si      ;scasb only works with es:di so we need to exchange
+		repz scasb   	;repeat until [es:di] != AL
+		xchg di,si      ;exchange back
+	pop dx                  ;pop the old SI into DX instead!
+	pop di
+	
+	push si
+		sub si,dx
+		mov dx,si
+	pop si
+	;now the run length is in dx, store it into output ram.
+
+	push ax
+		mov al,dl
+		stosb
+	pop ax
+	stosb    ;store the letter that corresponds to the run
+
+	
+	dec si   ;we're off by one, so we need to correct for that.
+	jmp compressRLE   ;back to start
+	
+finished_Compressing:
+
+	
+	mov bp, offset OutputRam
+	mov bx, 32
+	call doMemDump        ;displays a hexdump of the contents of OutputRam
+
+
+	
+	mov ax,4C00h
+	int 21h		      ;exit DOS
+	
+	
+TestString byte "WWWWWWWWWWWWBWWWWWWWWWWWWBBBWWWWWWWWWWWWWWWWWWWWWWWWBWWWWWWWWWWWWWW",0
+
+OutputRam byte 256 dup (0)
+
+end start

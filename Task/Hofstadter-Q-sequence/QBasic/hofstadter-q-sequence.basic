@@ -1,0 +1,19 @@
+CONST limite = 10000
+DIM Q(limite)
+Q(1) = 1
+Q(2) = 1
+
+cont = 0
+FOR i = 3 TO limite
+    Q(i) = Q(i - Q(i - 1)) + Q(i - Q(i - 2))
+    IF Q(i) < Q(i-1) THEN cont = cont + 1
+NEXT i
+
+PRINT "First 10 terms: ";
+FOR i = 1 TO 10
+    PRINT Q(i); " ";
+NEXT i
+
+PRINT
+PRINT "Term 1000: "; Q(1000)
+PRINT "Terms less than preceding in first 100k: "; cont

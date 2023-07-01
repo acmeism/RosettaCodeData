@@ -1,0 +1,26 @@
+<table>
+  <tr>
+    <td></td>
+    <td>X</td>
+    <td>Y</td>
+    <td>Z</td>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>1358</td>
+    <td>6488</td>
+    <td>6434</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>2477</td>
+    <td>6493</td>
+    <td>1330</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>240</td>
+    <td>3038</td>
+    <td>9849</td>
+  </tr>
+</table>

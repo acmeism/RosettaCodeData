@@ -1,0 +1,1 @@
+$lines = file($filename);

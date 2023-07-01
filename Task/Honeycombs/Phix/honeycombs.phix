@@ -1,0 +1,191 @@
+include ..\arwen\arwen.ew
+include ..\arwen\axtra.ew
+
+constant N = 5, -- columns
+         M = 4, -- rows
+         cLetter = Yellow,  -- initial colour(!)
+         cChosen = Purple,
+         cPlayr2 = Purple,  -- (2 player if!=c_Chosen)
+         cHover  = White,
+         cLines  = Black,
+         cSelect = Black,   -- (text/list of selected letters)
+         cBackgnd = #EFF8FA,
+         letters = shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ")[1..N*M]
+sequence fonts  -- list of {width,handle}, see set_font()
+string chosen = ""
+
+constant main = create(Window, "honeycomb", 0, 0, 20, 20, 520, 540, 0),
+         mainDC = getPrivateDC(main),
+         viewDC = c_func(xCreateCompatibleDC, {NULL}),
+         pSize = allocate_Point()
+
+integer ls,         -- length of a single side
+        dx, dy,     -- bounding rectangle of a sloping side
+        ox, oy,     -- offsets needed to center things
+        lw          -- line width (10% of ls, tweaked)
+
+-- The total bounding rectange of a completed N by M honeycomb is N*(ls+dx)+dx by (2*M+1)*dy.
+--  However, as space for the chosen letters, pretend there is an extra row at the bottom.
+-- Use that to determine the best ls, and hence dx and dy, as the window is resized.
+
+constant cos60 = cos(2*PI*60/360),      -- dx = ls*cos60 (cos60=0.5)
+         sin60 = sin(2*PI*60/360)       -- dy = ls*sin60
+
+function font_info(integer size)
+atom hFont = createFontForDC(viewDC, "Calibri", size, Bold)
+    {} = selectObject(viewDC,hFont)
+    {} = c_func(xGetTextExtentPoint32,{viewDC,"W",1,pSize})
+    return {peek4u(pSize),hFont}
+end function
+fonts = {font_info(1)}
+
+procedure set_font(atom ls)
+    while length(fonts)<=200    -- (arbitrary limit)
+      and fonts[$][1]<ls do     -- until slightly too big
+        fonts = append(fonts,font_info(length(fonts)+1))
+    end while
+    for i=length(fonts) to 1 by -1 do
+        if fonts[i][1]<=ls then
+            {} = selectObject(viewDC,fonts[i][2])
+            exit
+        end if
+    end for
+end procedure
+
+integer mx=0, my=0  -- mouse hover cell
+
+procedure drawHexagon(integer x, integer y)
+integer k = (y-1)*N+x
+integer ch = letters[k]
+string s = letters[k..k]
+sequence points
+    -- calculate position of left mid:
+    atom x0 = (x-1)*(ls+dx) + ox + 5
+    atom y0 = (2*y-mod(x,2))*dy + oy + 10
+    -- and 3 more x co-ords, and above/below y0:
+    atom x1 = x0+dx, x2 = x1+ls, x3 = x2+dx,
+         ya = y0-dy, yb = y0+dy
+    -- points are {{left,top},top,right,btm,btm,home(left)}
+    points = {{x0,y0,x1,ya},{x2,ya},{x3,y0},{x2,yb},{x1,yb},{x0,y0}}
+    k = find(ch,chosen)
+    setPenColor(iff(k?iff(mod(k,2)?cChosen:cPlayr2):iff(x=mx and y=my?cHover:cLetter)))
+    drawPolygonh(viewDC,points)
+    setPenColor(cLines)
+    drawLinesh(viewDC,points)
+    {} = c_func(xGetTextExtentPoint32,{viewDC,s,1,pSize})
+    x0 += dx+ls/2-peek4u(pSize)/2 -- centre-width/2
+    y0 -= peek4u(pSize+4)/2       -- (centre)-height/2
+    wPuts2(viewDC,x0,y0,s)
+end procedure
+
+function xy_to_hex(sequence xy)
+integer x, y, gx, gy, rx, ry, hx=0, hy=0
+
+    if dx!=0 and dy!=0 then -- (avoid divide by 0)
+        x = xy[1]-ox-5
+        y = xy[2]-oy-10+2*dy
+
+        -- Credit: Matt Lewis (hexes.exw)
+        -- (but I basically tilted it on its head
+        --  and tweaked it using trial and error;
+        --  see commented out loop in WM_PAINT.)
+        gx = floor(x/dx)
+        gy = floor((y-dy)/dy)
+        rx = remainder(x,dx)
+        ry = remainder(y,dy)
+
+        hx = floor(gx/3+0.7)
+        if remainder(gx,3)<1 then
+            atom mxb = (dx/dy)*ry
+            -- need to check the slope
+            if remainder(hx,2)!=remainder(gy,2) then
+                mxb = dx-mxb
+            end if
+            hx += (rx>mxb)
+        end if
+        hy = floor((gy+remainder(hx,2))/2)
+    end if
+    return {hx,hy}
+end function
+
+integer dw = 0, dh = 0      -- client area width and height
+atom bmView
+integer vwX = 0, vwY = 0    -- actual size of the view bitmap
+
+function mainHandler(integer id, integer msg, atom wParam, object lParam)
+integer ch
+
+    if msg=WM_SIZE then
+        {{},{},dw,dh} = getClientRect(main)
+        if dw>vwX or dh>vwY then
+            -- we need a bigger bitmap
+            bmView = c_func(xCreateCompatibleBitmap, {mainDC, dw, dh})
+            {} = deleteObject(selectObject(viewDC,bmView))
+            {vwX,vwY} = {dw,dh}
+        end if
+        --  width = N*(ls+dx)+dx = ls*(N*(1+cos60)+cos60),
+        --  height = (2*M+3)*dy = ls*(2*M+3)*sin60, pick whichever fits:
+        ls = min(floor((dw-10)/(N*(1+cos60)+cos60)),
+                 floor((dh-20)/((2*M+3)*sin60)))
+        dx = floor(ls*cos60)    -- (same as ls/2)
+        dy = floor(ls*sin60)
+        ox = floor((dw-((N*(ls+dx))+dx))/2)
+        oy = floor((dh-((2*M+3)*dy))/2)
+        lw = floor((ls-10)/10)+1
+        setPenWidth(lw)
+        set_font(ls)
+    elsif msg=WM_PAINT then
+        setPenColor(cBackgnd)
+        drawRectangleh(viewDC, True, 0, 0, dw, dh)
+        for x=1 to N do
+            for y=1 to M do
+                drawHexagon(x,y)
+            end for
+        end for
+        -- text/list of selected letters goes where (M+2)th row would:
+        setPenColor(cSelect)
+        wPuts2(viewDC,ox+dx+5,oy+(2*M+1)*dy+10,chosen)
+        -- I needed this to get xy_to_hex() working:
+--      for i=1 to 400 do
+--          for j=1 to 400 do
+--              if xy_to_hex({i,j})={1,1} then
+--                  drawRectangleh(viewDC, True, i, j, i+1, j+1)
+--              end if
+--          end for
+--      end for
+        void = c_func(xBitBlt,{mainDC,0,0,dw,dh,viewDC,0,0,SRCCOPY})
+    elsif msg=WM_CHAR then
+        if wParam=VK_ESCAPE then
+            closeWindow(main)
+            if id then end if -- suppress warnings
+--      elsif wParam='!' then
+--          ?9/0
+        else
+            ch = upper(wParam)
+            if find(ch,letters) and not find(ch,chosen) then
+                chosen &= ch
+                repaintWindow(main)
+            end if
+        end if
+    elsif msg=WM_MOUSEMOVE then
+        {mx,my} = xy_to_hex(lParam)
+        repaintWindow(main)
+    elsif msg = WM_LBUTTONDOWN then
+        {mx,my} = xy_to_hex(lParam)
+        if mx>=1 and mx<=N
+        and my>=1 and my<=M then
+            ch = letters[(my-1)*N+mx]
+            if find(ch,letters) and not find(ch,chosen) then
+                chosen &= ch
+                repaintWindow(main)
+            end if
+        end if
+    elsif msg=WM_GETMINMAXINFO then
+        -- below this, things stop working...
+        poke4(lParam+MINMAXINFO_ptMinTrackSize,{188,250})
+    end if
+    return 0
+end function
+setHandler(main,routine_id("mainHandler"))
+
+WinMain(main, SW_NORMAL)

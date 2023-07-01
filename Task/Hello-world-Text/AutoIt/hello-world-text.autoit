@@ -1,0 +1,1 @@
+ConsoleWrite("Hello world!" & @CRLF)

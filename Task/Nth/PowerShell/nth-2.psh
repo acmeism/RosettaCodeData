@@ -1,0 +1,23 @@
+function Get-Nth ([int]$Number)
+{
+    $suffix = "th"
+
+    switch ($Number % 100){
+        11 {$suffix = "th"}
+        12 {$suffix = "th"}
+        13 {$suffix = "th"}
+        default {
+            switch ($Number % 10){
+                1 {$suffix = "st"}
+                2 {$suffix = "nd"}
+                3 {$suffix = "rd"}
+            }
+        }
+    }
+
+    "$Number$suffix"
+}
+
+1..25      | ForEach-Object {Get-Nth $_} | Format-Wide {$_} -Column 5 -Force
+251..265   | ForEach-Object {Get-Nth $_} | Format-Wide {$_} -Column 5 -Force
+1001..1025 | ForEach-Object {Get-Nth $_} | Format-Wide {$_} -Column 5 -Force

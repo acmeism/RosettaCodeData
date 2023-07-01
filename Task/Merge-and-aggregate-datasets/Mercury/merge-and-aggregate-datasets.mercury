@@ -1,0 +1,71 @@
+:- module rosetta.
+
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+
+:- implementation.
+:- import_module list, int, float, string, maybe, solutions.
+
+:- pred patient(int::out, string::out) is multi.
+patient(1001, "Hopper").
+patient(4004, "Wirth").
+patient(3003, "Kemeny").
+patient(2002, "Gosling").
+patient(5005, "Kurtz").
+
+:- func nan = float.
+nan = det_to_float("NaN").
+
+:- type maybe_date ---> date(year::int, month::int, day::int); no.
+
+:- pred visit(int::out, maybe_date::out, float::out) is multi.
+visit(2002, date(2020,09,10), 6.8).
+visit(1001, date(2020,09,17), 5.5).
+visit(4004, date(2020,09,24), 8.4).
+visit(2002, date(2020,10,08), nan).
+visit(1001, no, 6.6).
+visit(3003, date(2020,11,12), nan).
+visit(4004, date(2020,11,05), 7.0).
+visit(1001, date(2020,11,19), 5.3).
+
+%% Utilities
+:- pred bag_aggr(pred(T)::(pred(out) is nondet), pred(T,U,U)::pred(in,in,out) is det,
+		 U::in, U::out) is det.
+:- pred bag_count(pred(T)::(pred(out) is nondet), int::out) is det.
+:- pred bag_sum(pred(float)::(pred(out) is nondet), float::out) is det.
+:- pred bag_avg(pred(float)::(pred(out) is nondet), float::out) is det.
+:- pred bag_max(pred(T)::(pred(out) is nondet), T::in, T::out) is det.
+:- pred bag_max_date(pred(maybe_date)::(pred(out) is nondet), maybe_date::out) is det.
+bag_aggr(Predicate, Aggregator, Initial, Result) :-
+    promise_equivalent_solutions[Result] (
+	unsorted_aggregate(Predicate, Aggregator, Initial, Result)).
+bag_count(Predicate, Count) :-
+    bag_aggr(Predicate, (pred(_X::in,Y::in,Z::out) is det :- Z = Y+1), 0, Count).
+bag_sum(Predicate, Sum) :-
+    bag_aggr(Predicate, (pred(X::in,Y::in,Z::out) is det :- Z = X+Y), 0.0, Sum).
+bag_avg(Predicate, Avg) :-
+    bag_count(Predicate, N),
+    bag_sum(Predicate, Sum),
+    (if N = 0 then Avg = nan else Avg = Sum/float(N)).
+bag_max(Predicate, Initial, Max) :-
+    bag_aggr(Predicate,
+	     (pred(X::in,Y::in,Z::out) is det :-
+		  compare(R,X,Y),
+		  (if R = (>) then Z = X else Z = Y)),
+	     Initial, Max).
+bag_max_date(Predicate, MaxDate) :-
+    bag_max(Predicate, date(0,0,0), MaxDate1),
+    (if MaxDate1 = date(0,0,0) then MaxDate = no else MaxDate = MaxDate1).
+
+main(!IO) :-
+    print_line("{Id, Lastname, SumScores, AvgScores, MaxDate}:", !IO),
+    aggregate((pred({Id,Lastname,Sum,Avg,MaxDate}::out) is nondet :-
+	           patient(Id,Lastname),
+	           Scores = (pred(Score::out) is nondet :- visit(Id,_,Score), \+is_nan(Score)),
+	           bag_avg(Scores, Avg),
+	  	       bag_sum(Scores, Sum),
+	           Dates = (pred(Date::out) is nondet :- visit(Id,Date,_), Date\=no),
+	           bag_max_date(Dates, MaxDate)),
+	      print_line,
+	      !IO).

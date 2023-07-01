@@ -1,0 +1,48 @@
+V WORDS = File(‘linuxwords.txt’).read_lines()
+V MISSPELLINGS = [‘accomodate’,
+                  ‘definately’,
+                  ‘goverment’]
+
+F jaro_winkler_distance(=st1, =st2)
+   I st1.len < st2.len
+      (st1, st2) = (st2, st1)
+   V len1 = st1.len
+   V len2 = st2.len
+   I len2 == 0
+      R 0.0
+   V delta = max(0, len2 I/ 2 - 1)
+   V flag = (0 .< len2).map(_ -> 0B)
+   [Char] ch1_match
+   L(ch1) st1
+      V idx1 = L.index
+      L(ch2) st2
+         V idx2 = L.index
+         I idx2 <= idx1 + delta & idx2 >= idx1 - delta & ch1 == ch2 & !(flag[idx2])
+            flag[idx2] = 1B
+            ch1_match.append(ch1)
+            L.break
+   V matches = ch1_match.len
+   I matches == 0
+      R 1.0
+   V transpositions = 0
+   V idx1 = 0
+   L(ch2) st2
+      V idx2 = L.index
+      I flag[idx2]
+         transpositions += (ch2 != ch1_match[idx1])
+         idx1++
+   V jaro = (Float(matches) / len1 + Float(matches) / len2 + (matches - transpositions / 2) / matches) / 3.0
+   V commonprefix = 0
+   L(i) 0 .< min(4, len2)
+      commonprefix += (st1[i] == st2[i])
+   R 1.0 - (jaro + commonprefix * 0.1 * (1 - jaro))
+
+F within_distance(maxdistance, stri, maxtoreturn)
+   V arr = :WORDS.filter(w -> jaro_winkler_distance(@stri, w) <= @maxdistance)
+   arr.sort(key' x -> jaro_winkler_distance(@stri, x))
+   R I arr.len <= maxtoreturn {arr} E arr[0 .< maxtoreturn]
+
+L(STR) MISSPELLINGS
+   print("\nClose dictionary words ( distance < 0.15 using Jaro-Winkler distance) to \" "STR" \" are:\n        Word   | Distance")
+   L(w) within_distance(0.15, STR, 5)
+      print(‘#14 | #.4’.format(w, jaro_winkler_distance(STR, w)))

@@ -1,0 +1,23 @@
+defmodule MontyHall do
+  def simulate(n) do
+    {stay, switch} = simulate(n, 0, 0)
+    :io.format "Staying wins   ~w times (~.3f%)~n", [stay,   100 * stay   / n]
+    :io.format "Switching wins ~w times (~.3f%)~n", [switch, 100 * switch / n]
+  end
+
+  defp simulate(0, stay, switch), do: {stay, switch}
+  defp simulate(n, stay, switch) do
+    doors = Enum.shuffle([:goat, :goat, :car])
+    guess = :rand.uniform(3) - 1
+    [choice] = [0,1,2] -- [guess, shown(doors, guess)]
+    if Enum.at(doors, choice) == :car, do: simulate(n-1, stay, switch+1),
+                                     else: simulate(n-1, stay+1, switch)
+  end
+
+  defp shown(doors, guess) do
+    [i, j] = Enum.shuffle([0,1,2] -- [guess])
+    if Enum.at(doors, i) == :goat, do: i, else: j
+  end
+end
+
+MontyHall.simulate(10000)

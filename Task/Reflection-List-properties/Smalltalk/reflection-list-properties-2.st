@@ -1,0 +1,1 @@
+someObject class allInstVarNames

@@ -1,0 +1,1 @@
+'alphabeta' asUppercaseFirst "-> 'Alphabeta' "

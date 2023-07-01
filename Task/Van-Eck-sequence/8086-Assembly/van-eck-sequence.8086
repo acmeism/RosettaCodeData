@@ -1,0 +1,62 @@
+LIMIT:	equ	1000
+	cpu	8086
+	org	100h
+section	.text
+	mov	di,eck		; Zero out the memory
+	xor	ax,ax
+	mov	cx,LIMIT
+	rep	stosw
+	mov	bx,eck		; Base address
+	mov	cx,LIMIT	; Limit
+	xor	ax,ax
+	mov	si,-1		; Outer loop index
+outer:	inc	si		
+	dec	cx
+	jcxz	done
+	mov	di,si		; Inner loop index
+inner:	dec	di
+	js	outer
+	shl	si,1		; Shift the loop indices (each entry is 2 bytes)
+	shl	di,1
+	mov	ax,[si+bx]	; Find a match?
+	cmp	ax,[di+bx]
+	je	match
+	shr	si,1		; If not, shift SI and DI back and keep going
+	shr	di,1
+	jmp	inner
+match:	mov	ax,si		; Calculate the new value
+	sub	ax,di
+	shr	ax,1		; Compensate for shift
+	mov	[si+bx+2],ax	; Store value
+	shr	si,1		; Shift SI back and calculate next value
+	jmp	outer
+done:	xor	si,si		; Print first 10 elements
+	call	p10
+	mov	si,LIMIT-10	; Print last 10 elements⌈
+p10:	mov	cx,10		; Print 10 elements starting at SI
+	shl	si,1		; Items are 2 bytes wide
+	add	si,eck
+.item:	lodsw			; Retrieve item
+	call	printn		; Print it
+	loop	.item
+	mov	dx,nl		; Print a newline afterwards
+	jmp	prints
+printn:	mov	bx,buf		; Print AX
+	mov	bp,10
+.digit:	xor	dx,dx		; Extract digit
+	div	bp
+	add	dl,'0'		; ASCII digit
+	dec	bx	
+	mov	[bx],dl		; Store in buffer
+	test	ax,ax		; Any more digits?
+	jnz	.digit
+	mov	dx,bx
+prints:	mov	ah,9		; Print string in buffer
+	int	21h
+	ret
+section	.data
+nl:	db	13,10,'$'
+	db	'.....'
+buf:	db	' $'
+section	.bss
+eck:	resw	LIMIT

@@ -1,0 +1,137 @@
+/* ARM assembly Raspberry PI  */
+/*  program sumandproduct.s   */
+
+ /* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessSum:            .asciz "Sum = "
+szMessProd:           .asciz "Product = "
+szMessStart:          .asciz "Program 32 bits start.\n"
+szCarriageReturn:     .asciz "\n"
+szMessErreur:         .asciz "Overflow ! \n"
+
+tabArray:       .int  2, 11, 19, 90, 55,1000
+.equ TABARRAYSIZE,    (. - tabArray) / 4
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:             .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            @ entry of program
+    ldr r0,iAdrszMessStart
+    bl affichageMess
+    ldr r2,iAdrtabArray
+    mov r1,#0                    @ indice
+    mov r0,#0                    @ sum init
+1:
+    ldr r3,[r2,r1,lsl #2]
+    adds r0,r0,r3
+    bcs 99f
+    add r1,r1,#1
+    cmp r1,#TABARRAYSIZE
+    blt 1b
+
+    ldr r1,iAdrsZoneConv
+    bl conversion10              @ decimal conversion
+    mov r3,#0
+    strb r3,[r1,r0]
+    mov r0,#3                   @ number string to display
+    ldr r1,iAdrszMessSum
+    ldr r2,iAdrsZoneConv         @ insert conversion in message
+    ldr r3,iAdrszCarriageReturn
+    bl displayStrings            @ display message
+
+    ldr r2,iAdrtabArray
+    mov r1,#0                    @ indice
+    mov r0,#1                    @ product init
+2:
+    ldr r3,[r2,r1,lsl #2]
+    umull r0,r4,r3,r0
+    cmp r4,#0
+    bne 99f
+    add r1,r1,#1
+    cmp r1,#TABARRAYSIZE
+    blt 2b
+
+    ldr r1,iAdrsZoneConv
+    bl conversion10              @ decimal conversion
+    mov r3,#0
+    strb r3,[r1,r0]
+    mov r0,#3                   @ number string to display
+    ldr r1,iAdrszMessProd
+    ldr r2,iAdrsZoneConv         @ insert conversion in message
+    ldr r3,iAdrszCarriageReturn
+    bl displayStrings            @ display message
+    b 100f
+99:
+    ldr r0,iAdrszMessErreur
+    bl affichageMess
+100:                              @ standard end of the program
+    mov r0, #0                    @ return code
+    mov r7, #EXIT                 @ request to exit program
+    svc #0                        @ perform the system call
+iAdrszCarriageReturn:        .int szCarriageReturn
+iAdrsZoneConv:               .int sZoneConv
+iAdrszMessSum:               .int szMessSum
+iAdrszMessProd:              .int szMessProd
+iAdrszMessErreur:            .int szMessErreur
+iAdrszMessStart:             .int szMessStart
+iAdrtabArray:                .int tabArray
+
+/***************************************************/
+/*   display multi strings                    */
+/***************************************************/
+/* r0  contains number strings address */
+/* r1 address string1 */
+/* r2 address string2 */
+/* r3 address string3 */
+/* other address on the stack */
+/* thinck to add  number other address * 4 to add to the stack */
+displayStrings:            @ INFO:  displayStrings
+    push {r1-r4,fp,lr}     @ save des registres
+    add fp,sp,#24          @ save paraméters address (6 registers saved * 4 bytes)
+    mov r4,r0              @ save strings number
+    cmp r4,#0              @ 0 string -> end
+    ble 100f
+    mov r0,r1              @ string 1
+    bl affichageMess
+    cmp r4,#1              @ number > 1
+    ble 100f
+    mov r0,r2
+    bl affichageMess
+    cmp r4,#2
+    ble 100f
+    mov r0,r3
+    bl affichageMess
+    cmp r4,#3
+    ble 100f
+    mov r3,#3
+    sub r2,r4,#4
+1:                         @ loop extract address string on stack
+    ldr r0,[fp,r2,lsl #2]
+    bl affichageMess
+    subs r2,#1
+    bge 1b
+100:
+    pop {r1-r4,fp,pc}
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

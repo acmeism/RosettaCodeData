@@ -1,0 +1,90 @@
+        .org 0x08000000                        ;cartridge ROM begins here
+
+        b ProgramStart                         ;branch around the cartridge header
+
+        ;;;; cartridge header goes here
+
+	.equ SCREEN_WIDTH,240                  ;some labels for convenience
+	.equ SCREEN_HEIGHT,160
+
+ProgramStart:
+	mov sp,#0x03000000			;set up stack pointer (we won't be using it but it's a good practice to do so anyway
+	
+	mov r4,#0x04000000  		        ;DISPCNT (LCD Control Register)
+	mov r2,#0x403    			;4= Layer 2 on / 3= ScreenMode 3 (Bitmap Graphics, vram at 0x06000000)
+
+	str r2,[r4]         	                ;now the screen is visible.
+	
+	mov r0,#0x06000000			;VRAM BASE (2 BYTES PER PIXEL)
+	mov r1,#0				;COLOR TO STORE (INIT TO ZERO, WILL GET FILLED IN LATER)
+
+	adr r4,palArray				;get address of palette
+	mov r5,#0				;index into palArray
+	mov r6,#19200				;this is one quarter of the screen
+	
+	add r7,r0,r6				;MOV R7, #0x06004B00
+	add r8,r7,r6				;MOV R8, #0x06009600
+	add r9,r8,r6				;MOV R9, #0x0600E100
+	add r10,r9,r6				;MOV R10,#0x06012C00
+	
+	
+loop_pinstripe_firstQuarter:
+	ldrH r1,[r4,r5]
+	strH r1,[r0],#2				;store into video memory and post-inc by 2.
+	add r5,r5,#2                            ;next color in palette
+	and r5,r5,#0x0F				;prevents indexing out of bounds
+	cmp r0,r7                               ;have we reached the end of this quarter of the screen?
+	blt loop_pinstripe_firstQuarter         ;if not, keep drawing
+	
+loop_pinstripe_secondQuarter:
+	ldrH r1,[r4,r5]
+	strH r1,[r0],#2				;post-inc by 2 after the store
+	strH r1,[r0],#2				;post-inc by 2 after the store
+	add r5,r5,#2
+	and r5,r5,#0x0F
+	cmp r0,r8
+	blt loop_pinstripe_secondQuarter
+	
+loop_pinstripe_thirdQuarter:
+	ldrH r1,[r4,r5]
+	strH r1,[r0],#2				;post-inc by 2 after the store
+	strH r1,[r0],#2				
+	strH r1,[r0],#2				
+	add r5,r5,#2
+	and r5,r5,#0x0F
+	cmp r0,r9
+	blt loop_pinstripe_thirdQuarter
+	
+	;	the last quarter works differently. We'll need to use a different
+	;	loop counter to get the last pinstripe
+	mov r2,#SCREEN_WIDTH/4				;inner loop counter
+	mov r3,#48							;outer loop counter
+	
+loop_pinstripe_lastQuarter:
+	ldrH r1,[r4,r5]
+	strH r1,[r0],#2				
+	strH r1,[r0],#2				
+	strH r1,[r0],#2				
+	strH r1,[r0],#2				
+	add r5,r5,#2
+	and r5,r5,#0x0F
+	subs r2,r2,#1
+	bne loop_pinstripe_lastQuarter
+		mov r5,#0				;reset the palette pointer
+		mov r2,#SCREEN_WIDTH/4			;reset the inner loop counter
+		subs r3,r3,#1				;decrement the outer loop counter
+		bne loop_pinstripe_lastQuarter          ;if we're not done, keep going
+
+forever:
+	b forever					;end of program
+	
+palArray:	;GAME BOY ADVANCE USES 15-BIT COLOR. WE WON'T USE THE TOP BIT.
+
+	.word 0x0000			;black
+	.word 0b0000000000011111	;red
+	.word 0b0000001111100000	;green
+	.word 0b0111110000000000	;blue
+	.word 0b0111110000011111	;magenta
+	.word 0b0111111111100000	;cyan
+	.word 0b0000001111111111	;yellow
+	.word 0x7FFF			;white

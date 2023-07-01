@@ -1,0 +1,44 @@
+use fmt;
+use net::ip;
+use strings;
+
+export fn main() void = {
+	const array = ["87.70.141.1/22",
+		"36.18.154.103/12",
+		"62.62.197.11/29",
+		"67.137.119.181/4",
+		"161.214.74.21/24",
+		"184.232.176.184/18"];
+
+	for (let i = 0z; i < len(array); i += 1) {
+		match (canonicalizecidr(array[i])) {
+		case let s: str =>
+			fmt::printfln("{:-18} => {}", array[i], s)!;
+			free(s);
+		case net::ip::invalid =>
+			fmt::errorfln("Error: invalid item: {}", array[i])!;
+		};
+	};
+};
+
+fn canonicalizecidr(a: str) (str | net::ip::invalid) = {
+	const sub = net::ip::parsecidr(a)?;
+	match (sub.addr) {
+	case let addr4: net::ip::addr4 => void;
+	case net::ip::addr6 => return net::ip::invalid;
+	};
+
+	const net = sub.addr as [4]u8;
+	const msk = sub.mask as [4]u8;
+
+	const net: u32 = net[0]: u32 << 24 | net[1]: u32 << 16 | net[2]: u32 << 8 | net[3]: u32;
+	const msk: u32 = msk[0]: u32 << 24 | msk[1]: u32 << 16 | msk[2]: u32 << 8 | msk[3]: u32;
+
+	const result: u32 = net & msk;
+	return fmt::asprintf("{}.{}.{}.{}/{}",
+		result >> 24,
+		0xff & result >> 16,
+		0xff & result >> 8,
+		0xff & result,
+		strings::cut(a, "/").1);
+};

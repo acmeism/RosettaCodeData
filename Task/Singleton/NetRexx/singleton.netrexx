@@ -1,0 +1,97 @@
+/* NetRexx */
+options replace format comments java crossref symbols binary
+
+import java.util.random
+
+class RCSingleton public
+
+  method main(args = String[]) public static
+    RCSingleton.Testcase.main(args)
+    return
+
+  -- ---------------------------------------------------------------------------
+  class RCSingleton.Instance public
+
+    properties private static
+      _instance = Instance()
+
+    properties private
+      _refCount = int
+      _random   = Random
+
+    method Instance() private
+      this._refCount = 0
+      this._random = Random()
+      return
+
+    method getInstance public static returns RCSingleton.Instance
+      return _instance
+
+  method getRandom public returns Random
+    return _random
+
+    method addRef public protect
+      _refCount = _refCount + 1
+      return
+
+    method release public protect
+      if _refCount > 0 then
+        _refCount = _refCount - 1
+      return
+
+    method getRefCount public protect returns int
+      return _refCount
+
+  -- ---------------------------------------------------------------------------
+  class RCSingleton.Testcase public implements Runnable
+
+  properties private
+    _instance = RCSingleton.Instance
+
+  method run public
+    say threadInfo'|-'
+    thud = Thread.currentThread
+    _instance = RCSingleton.Instance.getInstance
+    thud.yield
+    _instance.addRef
+    say threadInfo'|'_instance.getRefCount
+    thud.yield
+    do
+      thud.sleep(_instance.getRandom.nextInt(1000))
+    catch ex = InterruptedException
+      ex.printStackTrace
+      end
+    _instance.release
+    say threadInfo'|'_instance.getRefCount
+    return
+
+  method main(args = String[]) public static
+    threads = [ Thread -
+      Thread(Testcase()), Thread(Testcase()), Thread(Testcase()), -
+      Thread(Testcase()), Thread(Testcase()), Thread(Testcase()) ]
+    say threadInfo'|-'
+    mn = Testcase()
+    mn._instance = RCSingleton.Instance.getInstance
+    say mn.threadInfo'|'mn._instance.getRefCount
+    mn._instance.addRef
+    say mn.threadInfo'|'mn._instance.getRefCount
+    do
+      loop tr over threads
+        (Thread tr).start
+        end tr
+      Thread.sleep(400)
+    catch ex = InterruptedException
+      ex.printStackTrace
+      end
+    mn._instance.release
+    say mn.threadInfo'|'mn._instance.getRefCount
+    return
+
+  method threadInfo public static returns String
+    trd = Thread.currentThread
+    tid = trd.getId
+    hc  = trd.hashCode
+    info = Rexx(trd.getName).left(16, '_')':' -
+        || Rexx(Long.toString(tid)).right(10, 0)':' -
+        || '@'Rexx(Integer.toHexString(hc)).right(8, 0)
+    return info

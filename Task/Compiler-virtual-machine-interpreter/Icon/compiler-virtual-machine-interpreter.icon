@@ -1,0 +1,375 @@
+# -*- Icon -*-
+#
+# The Rosetta Code virtual machine in Icon. Migrated from the
+# ObjectIcon.
+#
+# See https://rosettacode.org/wiki/Compiler/virtual_machine_interpreter
+#
+
+record VirtualMachine(code, global_data, strings, stack, pc)
+
+global opcode_names
+global opcode_values
+global op_halt
+global op_add
+global op_sub
+global op_mul
+global op_div
+global op_mod
+global op_lt
+global op_gt
+global op_le
+global op_ge
+global op_eq
+global op_ne
+global op_and
+global op_or
+global op_neg
+global op_not
+global op_prtc
+global op_prti
+global op_prts
+global op_fetch
+global op_store
+global op_push
+global op_jmp
+global op_jz
+
+global whitespace_chars
+
+procedure main(args)
+  local f_inp, f_out
+  local vm
+
+  whitespace_chars := ' \t\n\r\f\v'
+  initialize_opcodes()
+
+  if 3 <= *args then {
+    write("Usage: ", &progname, " [INPUT_FILE [OUTPUT_FILE]]")
+    exit(1)
+  }
+
+  if 1 <= *args then {
+    f_inp := open(args[1], "r") | {
+      write(&errout, "Failed to open ", args[1], " for reading.")
+      exit(1)
+    }
+  } else {
+    f_inp := &input
+  }
+
+  if 2 <= *args then {
+    f_out := open(args[2], "w") | {
+      write(&errout, "Failed to open ", args[2], " for writing.")
+      exit(1)
+    }
+  } else {
+    f_out := &output
+  }
+
+  vm := VirtualMachine()
+  read_assembly_code(f_inp, vm)
+  run_vm(f_out, vm)
+end
+
+procedure initialize_opcodes()
+  local i
+
+  opcode_names :=
+      ["halt", "add", "sub", "mul", "div",
+       "mod", "lt", "gt", "le", "ge",
+       "eq", "ne", "and", "or", "neg",
+       "not", "prtc", "prti", "prts", "fetch",
+       "store", "push", "jmp", "jz"]
+
+  opcode_values := table()
+  every i := 1 to *opcode_names do
+      opcode_values[opcode_names[i]] := char(i)
+
+  op_halt := opcode_values["halt"]
+  op_add := opcode_values["add"]
+  op_sub := opcode_values["sub"]
+  op_mul := opcode_values["mul"]
+  op_div := opcode_values["div"]
+  op_mod := opcode_values["mod"]
+  op_lt := opcode_values["lt"]
+  op_gt := opcode_values["gt"]
+  op_le := opcode_values["le"]
+  op_ge := opcode_values["ge"]
+  op_eq := opcode_values["eq"]
+  op_ne := opcode_values["ne"]
+  op_and := opcode_values["and"]
+  op_or := opcode_values["or"]
+  op_neg := opcode_values["neg"]
+  op_not := opcode_values["not"]
+  op_prtc := opcode_values["prtc"]
+  op_prti := opcode_values["prti"]
+  op_prts := opcode_values["prts"]
+  op_fetch := opcode_values["fetch"]
+  op_store := opcode_values["store"]
+  op_push := opcode_values["push"]
+  op_jmp := opcode_values["jmp"]
+  op_jz := opcode_values["jz"]
+end
+
+procedure int2bytes (n)
+  local bytes
+
+  # The VM is little-endian.
+
+  bytes := "****"
+  bytes[1] := char (iand(n, 16rFF))
+  bytes[2] := char(iand(ishift(n, -8), 16rFF))
+  bytes[3] := char(iand(ishift(n, -16), 16rFF))
+  bytes[4] := char(iand(ishift(n, -24), 16rFF))
+  return bytes
+end
+
+procedure bytes2int(bytes, i)
+  local n0, n1, n2, n3, n
+
+  # The VM is little-endian.
+
+  n0 := ord(bytes[i])
+  n1 := ishift(ord(bytes[i + 1]), 8)
+  n2 := ishift(ord(bytes[i + 2]), 16)
+  n3 := ishift(ord(bytes[i + 3]), 24)
+  n := ior (n0, ior (n1, ior (n2, n3)))
+
+  # Do not forget to extend the sign bit.
+  return (if n3 <= 16r7F then n else ior(n, icom(16rFFFFFFFF)))
+end
+
+procedure read_assembly_code(f, vm)
+  local data_size, number_of_strings
+  local line, ch
+  local i
+  local address
+  local opcode
+
+  # Read the header line.
+  line := read(f) | bad_vm()
+  line ? {
+    tab(many(whitespace_chars))
+    tab(match("Datasize")) | bad_vm()
+    tab(many(whitespace_chars))
+    tab(any(':')) | bad_vm()
+    tab(many(whitespace_chars))
+    data_size :=
+        integer(tab(many(&digits))) | bad_vm()
+    tab(many(whitespace_chars))
+    tab(match("Strings")) | bad_vm()
+    tab(many(whitespace_chars))
+    tab(any(':')) | bad_vm()
+    tab(many(whitespace_chars))
+    number_of_strings :=
+        integer(tab(many(&digits))) | bad_vm()
+  }
+
+  # Read the strings.
+  vm.strings := list(number_of_strings)
+  every i := 1 to number_of_strings do {
+    vm.strings[i] := ""
+    line := read(f) | bad_vm()
+    line ? {
+      tab(many(whitespace_chars))
+      tab(any('"')) | bad_vm()
+      while ch := tab(any(~'"')) do {
+        if ch == '\\' then {
+          ch := tab(any('n\\')) | bad_vm()
+          vm.strings[i] ||:=
+              (if (ch == "n") then "\n" else "\\")
+        } else {
+          vm.strings[i] ||:= ch
+        }
+      }
+    }
+  }
+
+  # Read the code.
+  vm.code := ""
+  while line := read(f) do {
+    line ? {
+      tab(many(whitespace_chars))
+      address := integer(tab(many(&digits))) | bad_vm()
+      tab(many(whitespace_chars))
+      opcode := tab(many(~whitespace_chars)) | bad_vm()
+      vm.code ||:= opcode_values[opcode]
+      case opcode of {
+        "push": {
+          tab(many(whitespace_chars))
+          vm.code ||:=
+              int2bytes(integer(tab(many(&digits)))) |
+              int2bytes(integer(tab(any('-')) ||
+                                tab(many(&digits)))) |
+              bad_vm()
+        }
+        "fetch" | "store": {
+          tab(many(whitespace_chars))
+          tab(any('[')) | bad_vm()
+          tab(many(whitespace_chars))
+          vm.code ||:=
+              int2bytes(integer(tab(many(&digits)))) |
+              bad_vm()
+          tab(many(whitespace_chars))
+          tab(any(']')) | bad_vm()
+        }
+        "jmp" | "jz": {
+          tab(many(whitespace_chars))
+          tab(any('(')) | bad_vm()
+          tab(many(whitespace_chars))
+          vm.code ||:=
+              int2bytes(integer(tab(many(&digits)))) |
+              int2bytes(integer(tab(any('-')) ||
+                                tab(many(&digits)))) |
+              bad_vm()
+          tab(many(whitespace_chars))
+          tab(any(')')) | bad_vm()
+          tab(many(whitespace_chars))
+          tab(many(&digits)) | bad_vm()
+        }
+        default: {
+          # Do nothing
+        }
+      }
+    }
+  }
+
+  # Create a global data area.
+  vm.global_data := list(data_size, &null)
+
+  initialize_vm(vm)
+end
+
+procedure run_vm(f_out, vm)
+  initialize_vm(vm)
+  continue_vm(f_out, vm)
+end
+
+procedure continue_vm(f_out, vm)
+  while vm.code[vm.pc] ~== op_halt do
+      step_vm(f_out, vm)
+end
+
+procedure step_vm(f_out, vm)
+  local opcode
+
+  opcode := vm.code[vm.pc]
+  vm.pc +:= 1
+  case opcode of {
+    op_add:   binop(vm, "+")
+    op_sub:   binop(vm, "-")
+    op_mul:   binop(vm, "*")
+    op_div:   binop(vm, "/")
+    op_mod:   binop(vm, "%")
+    op_lt:    comparison(vm, "<")
+    op_gt:    comparison(vm, ">")
+    op_le:    comparison(vm, "<=")
+    op_ge:    comparison(vm, ">=")
+    op_eq:    comparison(vm, "=")
+    op_ne:    comparison(vm, "~=")
+    op_and:   logical_and(vm)
+    op_or:    logical_or(vm)
+    op_neg:   negate(vm)
+    op_not:   logical_not(vm)
+    op_prtc:  printc(f_out, vm)
+    op_prti:  printi(f_out, vm)
+    op_prts:  prints(f_out, vm)
+    op_fetch: fetch_global(vm)
+    op_store: store_global(vm)
+    op_push:  push_argument(vm)
+    op_jmp:   jump(vm)
+    op_jz:    jump_if_zero(vm)
+    default:  bad_opcode()
+  }
+end
+
+procedure negate(vm)
+  vm.stack[1] := -vm.stack[1]
+end
+
+procedure binop(vm, func)
+  vm.stack[2] := func(vm.stack[2], vm.stack[1])
+  pop(vm.stack)
+end
+
+procedure comparison(vm, func)
+  vm.stack[2] := (if func(vm.stack[2], vm.stack[1]) then 1 else 0)
+  pop(vm.stack)
+end
+
+procedure logical_and(vm)
+  vm.stack[2] :=
+      (if vm.stack[2] ~= 0 & vm.stack[1] ~= 0 then 1 else 0)
+  pop(vm.stack)
+end
+
+procedure logical_or(vm)
+  vm.stack[2] :=
+      (if vm.stack[2] ~= 0 | vm.stack[1] ~= 0 then 1 else 0)
+  pop(vm.stack)
+end
+
+procedure logical_not(vm)
+  vm.stack[1] := (if vm.stack[1] ~= 0 then 0 else 1)
+end
+
+procedure printc(f_out, vm)
+  writes(f_out, char(pop(vm.stack)))
+end
+
+procedure printi(f_out, vm)
+  writes(f_out, pop(vm.stack))
+end
+
+procedure prints(f_out, vm)
+  writes(f_out, vm.strings[pop(vm.stack) + 1])
+end
+
+procedure fetch_global(vm)
+  push(vm.stack, vm.global_data[get_argument(vm) + 1])
+  vm.pc +:= 4
+end
+
+procedure store_global(vm)
+  vm.global_data[get_argument(vm) + 1] := pop(vm.stack)
+  vm.pc +:= 4
+end
+
+procedure push_argument(vm)
+  push(vm.stack, get_argument(vm))
+  vm.pc +:= 4
+end
+
+procedure jump(vm)
+  vm.pc +:= get_argument(vm)
+end
+
+procedure jump_if_zero(vm)
+  if pop(vm.stack) = 0 then
+      vm.pc +:= get_argument(vm)
+  else
+      vm.pc +:= 4
+end
+
+procedure get_argument(vm)
+  return bytes2int(vm.code, vm.pc)
+end
+
+procedure initialize_vm(vm)
+  # The program counter starts at 1, for convenient indexing into
+  # the code[] array. Icon indexing starts at 1 (for a *very* good
+  # reason, but that’s a topic for another day).
+  vm.pc := 1
+  vm.stack := []
+end
+
+procedure bad_vm()
+  write(&errout, "Bad VM.")
+  exit(1)
+end
+
+procedure bad_opcode()
+  write(&errout, "Bad opcode.")
+  exit(1)
+end

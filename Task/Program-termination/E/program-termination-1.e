@@ -1,0 +1,3 @@
+if (true) {
+    interp.exitAtTop()
+}

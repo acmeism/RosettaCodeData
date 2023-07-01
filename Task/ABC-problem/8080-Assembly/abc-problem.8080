@@ -1,0 +1,77 @@
+		org	100h
+		jmp	test
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Subroutine 'blocks': takes a $-terminated string in
+		;;; DE containing a word, and checks whether it can be
+		;;; written with the blocks.
+		;;; Returns: carry flag set if word is accepted.
+		;;; Uses registers: A, B, D, E, H, L
+blocks:		push	d		; Store string pointer
+		lxi	h,blockslist	; At the start, all blocks are
+		lxi	d,blocksavail	; available
+		mvi	b,40
+blocksinit:	mov	a,m
+		stax	d
+		inx	h
+		inx	d
+		dcr	b
+		jnz	blocksinit
+		pop	d		; Restore string pointer
+blockschar:	ldax	d		; Get current character
+		cpi	'$'		; End of string?
+		stc			; Set carry flag (accept string)
+		rz			; And then we're done
+		ani	0DFh		; Make uppercase
+		lxi	h,blocksavail	; Is it available?
+		mvi	b,40
+blockscheck:	cmp	m
+		jz	blocksaccept	; Yes, we found it
+		inx	h		; Try next available char
+		dcr	b
+		jnz	blockscheck
+		ana	a		; Char unavailable, clear
+		ret			; carry and stop.
+blocksaccept:	mvi	m,0		; We've now used this char
+		mov	a,l		; And its blockmate
+		xri	1
+		mov	l,a
+		mvi	m,0
+		inx	d		; Try next char in string
+		jmp	blockschar
+		;; Note: 'blocksavail' must not cross page boundary
+blockslist:	db	'BOXKDQCPNAGTRETGQDFSJWHUVIANOBERFSLYPCZM'
+blocksavail:	ds	40
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Test code: run the subroutine on the given words.
+test:		lxi	h,words
+doword:		mov	e,m		; Get pointer to next word
+		inx	h
+		mov	d,m
+		inx	h
+		mov	a,e		; If zero, end of word list
+		ora	d
+		rz
+		push	h		; Save pointer to list
+		push	d		; Save pointer to word
+		mvi	c,9		; Write word to console
+		call	5
+		pop	d		; Retrieve word ponter
+		call	blocks		; Run the 'blocks' routine
+		lxi	d,yes		; Say 'yes',
+		jc	yesno		; if the carry is set.
+		lxi	d,no		; Otherwise, say 'no'.
+yesno:		mvi	c,9
+		call	5
+		pop	h		; Restore list pointer
+		jmp	doword		; Do next word
+yes:		db	': Yes',13,10,'$'
+no:		db	': No',13,10,'$'
+words:		dw	wrda,wrdbark,wrdbook,wrdtreat,wrdcommon
+		dw	wrdsquad,wrdconfuse,0
+wrda:		db	'A$'
+wrdbark:	db	'BARK$'
+wrdbook:	db	'BOOK$'
+wrdtreat:	db	'TREAT$'
+wrdcommon:	db	'COMMON$'
+wrdsquad:	db	'SQUAD$'
+wrdconfuse:	db	'CONFUSE$'

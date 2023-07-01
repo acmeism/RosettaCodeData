@@ -1,0 +1,289 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program notes64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../includeConstantesARM64.inc"
+.equ BUFFERSIZE,  10000
+.equ O_APPEND,    0x400
+.equ GETTIME,     0xa9                       // call system linux gettimeofday
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* example structure  time  */
+    .struct  0
+timeval_sec:                     //
+    .struct  timeval_sec + 8
+timeval_usec:                     //
+    .struct  timeval_usec + 8
+timeval_end:
+    .struct  0
+timezone_min:                     //
+    .struct  timezone_min + 8
+timezone_dsttime:                 //
+    .struct  timezone_dsttime + 8
+timezone_end:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szCarriageReturn:   .asciz "\n"
+szSpace:            .asciz " "
+szLibNoFile:        .asciz "no file notes.txt in this directory\n"
+szFileName:         .asciz "notes.txt"
+szMessAnoRead:      .asciz "Error read file \n"
+szMessAnoTime:      .asciz "Error call time \n"
+szMessAnoWrite:     .asciz "Error file write \n"
+szMessDate:         .asciz " @/@/@  @:@:@ \n"  // message time
+.align 8
+tbDayMonthYear:    .quad  0,  31,  60,  91, 121, 152, 182, 213, 244, 274, 305, 335
+                   .quad 366, 397, 425, 456, 486, 517, 547, 578, 609, 639, 670, 700
+                   .quad 731, 762, 790, 821, 851, 882, 912, 943, 974,1004,1035,1065
+                   .quad 1096,1127,1155,1186,1216,1247,1277,1308,1339,1369,1400,1430
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+stTVal:           .skip timeval_end
+stTZone:          .skip timezone_end
+sBuffer:          .skip BUFFERSIZE
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 // entry of program
+    mov fp,sp                         // stack address
+    ldr x20,[fp]                      // load number of parameters command line
+    cmp x20,#1                        // >1  insertion text
+    bgt 10f
+    mov x0,AT_FDCWD
+    ldr x1,qAdrszFileName             // file name
+    mov x2,#O_RDONLY                  // flags
+    mov x3,#0                         // mode in octal
+    mov x8,#OPEN                      // open file, create if not exist
+    svc 0
+    cmp x0,#0                         // error open
+    ble 99f                           // file no exists ?
+    mov x19,x0                        // save FD and if file exist display text
+    ldr x1,qAdrsBuffer                // buffer address
+    ldr x2,#iBufferSize               // buffersize
+    mov x8,READ
+    svc 0
+    cmp x0,#0                         // error read ?
+    blt 98f
+    ldr x0,qAdrsBuffer                // buffer address
+    bl affichageMess                  // and display
+    b 50f
+10:                                   // multiple parameters in command line
+    mov x0,AT_FDCWD
+    ldr x1,qAdrszFileName             // file name
+    ldr x2,iFlag                      // flags
+    mov x3,#0644                      // mode in octal
+    mov x8,#OPEN                      // open file, create if not exist
+    svc 0
+    cmp x0,#0                         // error open
+    ble 96f
+    mov x19,x0                         // save FD
+    ldr x0,qAdrstTVal
+    ldr x1,qAdrstTZone
+    mov x8,#GETTIME                   // call system function time
+    svc 0
+    cmp x0,#-1                        // error ?
+    beq 97f
+    ldr x1,qAdrstTVal
+    ldr x0,[x1,timeval_sec]           // timestamp in second
+    bl formatTime                     // format date and hour
+    mov x1,x0
+    mov x2,#0
+11:                                   // compute length of time message
+    ldrb w3,[x1,x2]
+    cmp w3,#0
+    beq 12f
+    add x2,x2,#1
+    b 11b
+12:
+    mov x0,x19                         // write time message
+    mov x8,#WRITE
+    svc 0
+    cmp x0,#0                          // error ?
+    ble 96f
+    mov x5,#2                          // start parameters command line
+13:
+    mov x0,x19                         // file FD
+    ldr x1,[fp,x5,lsl #3]              // load parameter address
+    mov x2,#0
+14:                                    // compute parameter length
+    ldrb w3,[x1,x2]
+    cmp w3,#0
+    beq 15f
+    add x2,x2,#1
+    b 14b
+15:                                    // write parameter
+    mov x8,#WRITE
+    svc 0
+    cmp x0,#0                          // error ?
+    ble 96f
+    mov x0,x19                         // file FD
+    ldr x1,iadrszSpace                 // write a space betwin parameters
+    mov x2,#1
+    mov x8,#WRITE
+    svc 0
+    add x5,x5,#1                        // increment indixe
+    cmp x5,x20                          // parameters maxi ?
+    ble 13b                             // no -> loop
+    mov x0,x19
+    ldr x1,qAdrszCarriageReturn         // write line end
+    mov x2,#1
+    mov x7,#WRITE
+    svc 0
+
+50:                                     // close the file
+    mov x0,x19
+    mov x8,CLOSE
+    svc 0
+    b 100f
+
+96:                                     // error write
+    ldr x0,qAdrszMessAnoWrite
+    bl affichageMess
+    b 100f
+97:                                     // error function time
+    ldr x0,qAdrszMessAnoTime
+    bl affichageMess
+    b 100f
+98:                                     // error read
+    ldr x0,qAdrszMessAnoRead
+    bl affichageMess
+    b 100f
+
+99:                                     // display message no file in this directory
+    ldr x0,qAdrszLibNoFile
+    bl affichageMess
+100:                                    // standard end of the program
+    mov x0, #0                          // return code
+    mov x8,EXIT
+    svc #0                              // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsZoneConv:            .quad sZoneConv
+qAdrszFileName:           .quad szFileName
+qAdrszLibNoFile:          .quad szLibNoFile
+qAdrsBuffer:              .quad sBuffer
+iBufferSize:              .quad BUFFERSIZE
+qAdrszMessAnoRead:        .quad szMessAnoRead
+qAdrszMessAnoTime:        .quad szMessAnoTime
+qAdrszMessAnoWrite:       .quad szMessAnoWrite
+iFlag:                    .quad O_RDWR|O_APPEND|O_CREAT
+qAdrstTVal:               .quad stTVal
+qAdrstTZone:              .quad stTZone
+iadrszSpace:              .quad szSpace
+/***************************************************/
+/*      formatting time area                       */
+/***************************************************/
+// x0 contains time area
+// x0 return address result string
+formatTime:
+    stp x2,lr,[sp,-16]!           // save  registers
+    ldr x2,qSecJan2020
+    sub x3,x0,x2                  // total secondes to 01/01/2020
+    mov x4,60
+    udiv x5,x3,x4
+    msub x6,x5,x4,x3              // compute secondes
+    udiv x3,x5,x4
+    msub x7,x3,x4,x5              // compute minutes
+    mov x4,24
+    udiv x5,x3,x4
+    msub x8,x5,x4,x3              // compute hours
+    mov x4,(365 * 4 + 1)
+    udiv x9,x5,x4
+    lsl x9,x9,2                   // multiply by 4 = year1
+    udiv x12,x5,x4
+    msub x10,x12,x4,x5
+    ldr x11,qAdrtbDayMonthYear
+    mov x12,3
+    mov x13,12
+1:
+    mul x14,x13,x12
+    ldr x15,[x11,x14,lsl 3]       // load days by year
+    cmp x10,x15
+    bge 2f
+    sub x12,x12,1
+    cmp x12,0
+    cbnz x12,1b
+2:                                 // x12 = year2
+    mov x16,11
+    mul x15,x13,x12
+    lsl x15,x15,3                  // * par 8
+    add x14,x15,x11
+3:
+    ldr x15,[x14,x16,lsl 3]        // load days by month
+    cmp x10,x15
+    bge 4f
+    sub x16,x16,1
+    cmp x16,0
+    cbnz x16,3b
+4:                                 // x16 = month - 1
+    mul x15,x13,x12
+    add x15,x15,x16
+    ldr x1,qAdrtbDayMonthYear
+    ldr x3,[x1,x15,lsl 3]
+    sub x0,x10,x3
+    add x0,x0,1                    // final compute day
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrszMessDate
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc          // insert result at first @ character
+    mov x2,x0
+    add x0,x16,1                   // final compute month
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,x2
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc          // insert result at next @ character
+    mov x2,x0
+    add x0,x9,2020
+    add x0,x0,x12                  // final compute year = 2020 + year1 + year2
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,x2
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc          // insert result at next @ character
+    mov x2,x0
+    mov x0,x8                      // hours
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,x2
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc          // insert result at next @ character
+    mov x2,x0
+    mov x0,x7                      // minutes
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,x2
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc          // insert result at next @ character
+    mov x2,x0
+    mov x0,x6                      // secondes
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x4,#0                      // store zero final
+    strb w4,[x1,x0]
+    mov x0,x2
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc          // insert result at next // character
+100:
+    ldp x2,lr,[sp],16              // restaur  registers
+    ret
+qAdrszMessDate:           .quad szMessDate
+qSecJan2020:              .quad 1577836800
+qAdrtbDayMonthYear:       .quad tbDayMonthYear
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../includeARM64.inc"

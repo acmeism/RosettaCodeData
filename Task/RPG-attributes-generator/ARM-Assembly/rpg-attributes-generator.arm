@@ -1,0 +1,321 @@
+/* ARM assembly Raspberry PI  */
+/*  program rpg.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+.equ STDOUT, 1     @ Linux output console
+.equ EXIT,   1     @ Linux syscall
+.equ WRITE,  4     @ Linux syscall
+
+.equ NBTIRAGES,     4
+.equ NBTIRAGESOK,   3
+.equ NBVALUES,      6
+.equ TOTALMIN,      75
+.equ MAXVALUE,      15
+.equ NBMAXVALUE,    2
+/*******************************************/
+/* Fichier des macros                       */
+/********************************************/
+.include "../../ficmacros.s"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessResult:        .ascii "Value  = "
+sMessValeur:        .fill 11, 1, ' '            @ size => 11
+szCarriageReturn:   .asciz "\n"
+sMessResultT:       .ascii "Total  = "
+sMessValeurT:       .fill 11, 1, ' '            @ size => 11
+                    .asciz "\n"
+sMessResultQ:       .ascii "Values above 15  = "
+sMessValeurQ:       .fill 11, 1, ' '            @ size => 11
+                    .asciz "\n"
+
+.align 4
+iGraine:  .int 123456
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+tiTirages:               .skip  4 * NBTIRAGES
+tiValues:                .skip  4 * NBVALUES
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                             @ entry of program
+
+1:                                                @ begin loop 1
+    mov r2,#0                                     @ counter value >15
+    mov r4,#0                                     @ loop indice
+    mov r5,#0                                     @ total
+    ldr r3,iAdrtiValues                           @ table values address
+2:
+    bl genValue                                   @ call generate value
+    str r0,[r3,r4,lsl #2]                         @ store in table
+    add r5,r0                                     @ compute total
+    cmp r0,#MAXVALUE                                    @ count value > 15
+    addge r2,#1
+    add r4,#1                                     @ increment indice
+    cmp r4,#NBVALUES                              @ end ?
+    blt 2b
+    cmp r5,#TOTALMIN                              @ compare 75
+    blt 1b                                        @ < loop
+    cmp r2,#NBMAXVALUE                                     @ compare value > 15
+    blt 1b                                        @ < loop
+    ldr r0,iAdrtiValues                           @ display values
+    bl displayTable
+    mov r0,r5                                     @ total
+    ldr r1,iAdrsMessValeurT                       @ display value
+    bl conversion10                               @ call conversion decimal
+    ldr r0,iAdrsMessResultT
+    bl affichageMess                              @ display message
+
+     mov r0,r2                                    @ counter value > 15
+    ldr r1,iAdrsMessValeurQ                       @ display value
+    bl conversion10                               @ call conversion decimal
+    ldr r0,iAdrsMessResultQ
+    bl affichageMess                              @ display message
+
+100:                                              @ standard end of the program
+    mov r0, #0                                    @ return code
+    mov r7, #EXIT                                 @ request to exit program
+    svc #0                                        @ perform the system call
+
+iAdrsMessValeur:          .int sMessValeur
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrsMessResult:          .int sMessResult
+iAdrsMessValeurT:         .int sMessValeurT
+iAdrsMessResultT:         .int sMessResultT
+iAdrsMessValeurQ:         .int sMessValeurQ
+iAdrsMessResultQ:         .int sMessResultQ
+iAdrtiValues:             .int tiValues
+/******************************************************************/
+/*     generate value                                  */
+/******************************************************************/
+/* r0 returns the value             */
+genValue:
+    push {r1-r4,lr}                           @ save registers
+    mov r4,#0                                 @ indice loop
+    ldr r1,iAdrtiTirages                      @ table tirage address
+1:
+    mov r0,#6
+    bl genereraleas                           @ result 0 to 5
+    add r0,#1                                 @ for 1 to 6
+    str r0,[r1,r4,lsl #2]                     @ store tirage
+    add r4,#1                                 @ increment indice
+    cmp r4,#NBTIRAGES                         @ end ?
+    blt 1b                                    @ no -> loop
+    ldr r0,iAdrtiTirages                      @ table tirage address
+    mov r1,#0                                 @ first item
+    mov r2,#NBTIRAGES                         @ number of tirages
+    bl shellSort                              @ sort table decreasing
+    mov r4,#0                                 @ raz indice loop
+    mov r0,#0                                 @ total
+    ldr r1,iAdrtiTirages                      @ table tirage address
+2:
+    ldr r2,[r1,r4,lsl #2]                     @ read tirage
+    add r0,r2                                 @ compute sum
+    add r4,#1                                 @ inrement indice
+    cmp r4,#NBTIRAGESOK                       @ end ?
+    blt 2b
+100:
+    pop {r1-r4,lr}
+    bx lr                                     @ return
+iAdrtiTirages:           .int tiTirages
+/***************************************************/
+/*   shell Sort  decreasing                                  */
+/***************************************************/
+/* r0 contains the address of table */
+/* r1 contains the first element but not use !!   */
+/*   this routine use first element at index zero !!!  */
+/* r2 contains the number of element */
+shellSort:
+    push {r0-r7,lr}              @save registers
+
+    sub r2,#1                    @ index last item
+    mov r1,r2                    @ init gap = last item
+1:                               @ start loop 1
+    lsrs r1,#1                   @ gap = gap / 2
+    beq 100f                     @ if gap = 0 -> end
+    mov r3,r1                    @ init loop indice 1
+2:                               @ start loop 2
+    ldr r4,[r0,r3,lsl #2]        @ load first value
+    mov r5,r3                    @ init loop indice 2
+3:                               @ start loop 3
+    cmp r5,r1                    @ indice < gap
+    blt 4f                       @ yes -> end loop 2
+    sub r6,r5,r1                 @ index = indice - gap
+    ldr r7,[r0,r6,lsl #2]        @ load second value
+    cmp r4,r7                    @ compare values
+    strgt r7,[r0,r5,lsl #2]      @ store if >
+    subgt r5,r1                  @ indice = indice - gap
+    bgt 3b                       @ and loop
+4:                               @ end loop 3
+    str r4,[r0,r5,lsl #2]        @ store value 1 at indice 2
+    add r3,#1                    @ increment indice 1
+    cmp r3,r2                    @ end ?
+    ble 2b                       @ no -> loop 2
+    b 1b                         @ yes loop for new gap
+
+100:                             @ end function
+    pop {r0-r7,lr}               @ restaur registers
+    bx lr                        @ return
+
+
+/******************************************************************/
+/*      Display table elements                                */
+/******************************************************************/
+/* r0 contains the address of table */
+displayTable:
+    push {r0-r3,lr}                                    @ save registers
+    mov r2,r0                                          @ table address
+    mov r3,#0
+1:                                                     @ loop display table
+    ldr r0,[r2,r3,lsl #2]
+    ldr r1,iAdrsMessValeur                             @ display value
+    bl conversion10                                    @ call function
+    ldr r0,iAdrsMessResult
+    bl affichageMess                                   @ display message
+    add r3,#1
+    cmp r3,#NBVALUES - 1
+    ble 1b
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+100:
+    pop {r0-r3,lr}
+    bx lr
+/******************************************************************/
+/*     display text with size calculation                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+affichageMess:
+    push {r0,r1,r2,r7,lr}                          @ save  registres
+    mov r2,#0                                      @ counter length
+1:                                                 @ loop length calculation
+    ldrb r1,[r0,r2]                                @ read octet start position + index
+    cmp r1,#0                                      @ if 0 its over
+    addne r2,r2,#1                                 @ else add 1 in the length
+    bne 1b                                         @ and loop
+                                                   @ so here r2 contains the length of the message
+    mov r1,r0                                      @ address message in r1
+    mov r0,#STDOUT                                 @ code to write to the standard output Linux
+    mov r7, #WRITE                                 @ code call system "write"
+    svc #0                                         @ call systeme
+    pop {r0,r1,r2,r7,lr}                           @ restaur des  2 registres */
+    bx lr                                          @ return
+/******************************************************************/
+/*     Converting a register to a decimal unsigned                */
+/******************************************************************/
+/* r0 contains value and r1 address area   */
+/* r0 return size of result (no zero final in area) */
+/* area size => 11 bytes          */
+.equ LGZONECAL,   10
+conversion10:
+    push {r1-r4,lr}                                 @ save registers
+    mov r3,r1
+    mov r2,#LGZONECAL
+
+1:                                                  @ start loop
+    bl divisionpar10U                               @ unsigned  r0 <- dividende. quotient ->r0 reste -> r1
+    add r1,#48                                      @ digit
+    strb r1,[r3,r2]                                 @ store digit on area
+    cmp r0,#0                                       @ stop if quotient = 0
+    subne r2,#1                                     @ else previous position
+    bne 1b                                          @ and loop
+                                                    @ and move digit from left of area
+    mov r4,#0
+2:
+    ldrb r1,[r3,r2]
+    strb r1,[r3,r4]
+    add r2,#1
+    add r4,#1
+    cmp r2,#LGZONECAL
+    ble 2b
+                                                      @ and move spaces in end on area
+    mov r0,r4                                         @ result length
+    mov r1,#' '                                       @ space
+3:
+    strb r1,[r3,r4]                                   @ store space in area
+    add r4,#1                                         @ next position
+    cmp r4,#LGZONECAL
+    ble 3b                                            @ loop if r4 <= area size
+
+100:
+    pop {r1-r4,lr}                                    @ restaur registres
+    bx lr                                             @return
+
+/***************************************************/
+/*   division par 10   unsigned                    */
+/***************************************************/
+/* r0 dividende   */
+/* r0 quotient */	
+/* r1 remainder  */
+divisionpar10U:
+    push {r2,r3,r4, lr}
+    mov r4,r0                                          @ save value
+    //mov r3,#0xCCCD                                   @ r3 <- magic_number lower  raspberry 3
+    //movt r3,#0xCCCC                                  @ r3 <- magic_number higter raspberry 3
+    ldr r3,iMagicNumber                                @ r3 <- magic_number    raspberry 1 2
+    umull r1, r2, r3, r0                               @ r1<- Lower32Bits(r1*r0) r2<- Upper32Bits(r1*r0)
+    mov r0, r2, LSR #3                                 @ r2 <- r2 >> shift 3
+    add r2,r0,r0, lsl #2                               @ r2 <- r0 * 5
+    sub r1,r4,r2, lsl #1                               @ r1 <- r4 - (r2 * 2)  = r4 - (r0 * 10)
+    pop {r2,r3,r4,lr}
+    bx lr                                              @ leave function
+iMagicNumber:  	.int 0xCCCCCCCD
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* r0 contains limit  */
+genereraleas:
+    push {r1-r4,lr}                                    @ save registers
+    ldr r4,iAdriGraine
+    ldr r2,[r4]
+    ldr r3,iNbDep1
+    mul r2,r3,r2
+    ldr r3,iNbDep1
+    add r2,r2,r3
+    str r2,[r4]                                        @ maj de la graine pour appel suivant
+    cmp r0,#0
+    beq 100f
+    mov r1,r0                                          @ divisor
+    mov r0,r2                                          @ dividende
+    bl division
+    mov r0,r3                                          @ résult = remainder
+
+100:                                                   @ end function
+    pop {r1-r4,lr}                                     @ restaur registers
+    bx lr                                              @ return
+/*****************************************************/
+iAdriGraine: .int iGraine
+iNbDep1: .int 0x343FD
+iNbDep2: .int 0x269EC3
+/***************************************************/
+/* integer division unsigned                       */
+/***************************************************/
+division:
+    /* r0 contains dividend */
+    /* r1 contains divisor */
+    /* r2 returns quotient */
+    /* r3 returns remainder */
+    push {r4, lr}
+    mov r2, #0                                         @ init quotient
+    mov r3, #0                                         @ init remainder
+    mov r4, #32                                        @ init counter bits
+    b 2f
+1:                                                     @ loop
+    movs r0, r0, LSL #1                                @ r0 <- r0 << 1 updating cpsr (sets C if 31st bit of r0 was 1)
+    adc r3, r3, r3                                     @ r3 <- r3 + r3 + C. This is equivalent to r3 ? (r3 << 1) + C
+    cmp r3, r1                                         @ compute r3 - r1 and update cpsr
+    subhs r3, r3, r1                                   @ if r3 >= r1 (C=1) then r3 <- r3 - r1
+    adc r2, r2, r2                                     @ r2 <- r2 + r2 + C. This is equivalent to r2 <- (r2 << 1) + C
+2:
+    subs r4, r4, #1                                    @ r4 <- r4 - 1
+    bpl 1b                                             @ if r4 >= 0 (N=0) then loop
+    pop {r4, lr}
+    bx lr

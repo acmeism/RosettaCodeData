@@ -1,0 +1,5 @@
+println isPalindrome("")
+println isPalindrome("a")
+println isPalindrome("abcdefgfedcba")
+println isPalindrome("abcdeffedcba")
+println isPalindrome("abcedfgfedcb")

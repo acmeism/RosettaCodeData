@@ -1,0 +1,74 @@
+*        Strip a set of characters from a string  07/07/2016
+STRIPCH  CSECT
+         USING  STRIPCH,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    prolog
+         ST     R13,4(R15)         " <-
+         ST     R15,8(R13)         " ->
+         LR     R13,R15            " addressability
+         LA     R1,PARMLIST        parameter list
+         BAL    R14,STRIPCHR       c3=stripchr(c1,c2)
+         LA     R2,PG              @pg
+         LH     R3,C3              length(c3)
+         LA     R4,C3+2            @c3
+         LR     R5,R3              length(c3)
+         MVCL   R2,R4              pg=c3
+         XPRNT  PG,80              print buffer
+         L      R13,4(0,R13)       epilog
+         LM     R14,R12,12(R13)    " restore
+         XR     R15,R15            " rc=0
+         BR     R14                exit
+PARMLIST DC     A(C3)              @c3
+         DC     A(C1)              @c1
+         DC     A(C2)              @c2
+C1       DC     H'43',CL62'She was a soul stripper. She took my heart!'
+C2       DC     H'3',CL14'aei'     c2      [varchar(14)]
+C3       DS     H,CL62             c3      [varchar(62)]
+PG       DC     CL80' '            buffer  [char(80)]
+*------- stripchr -----------------------------------------------------
+STRIPCHR L      R9,0(R1)           @parm1
+         L      R2,4(R1)           @parm2
+         L      R3,8(R1)           @parm3
+         MVC    PHRASE(64),0(R2)   phrase=parm2
+         MVC    REMOVE(16),0(R3)   remove=parm3
+         SR     R8,R8              k=0
+         LA     R6,1               i=1
+LOOPI    CH     R6,PHRASE          do i=1 to length(phrase)
+         BH     ELOOPI             "
+         LA     R4,PHRASE+1          @phrase
+         AR     R4,R6                +i
+         MVC    CI(1),0(R4)          ci=substr(phrase,i,1)
+         MVI    OK,X'01'             ok='1'B
+         LA     R7,1                 j=1
+LOOPJ    CH     R7,REMOVE            do j=1 to length(remove)
+         BH     ELOOPJ               "
+         LA     R4,REMOVE+1            @remove
+         AR     R4,R7                  +j
+         MVC    CJ,0(R4)               cj=substr(remove,j,1)
+         CLC    CI,CJ                  if ci=cj
+         BNE    CINECJ                 then
+         MVI    OK,X'00'                 ok='0'B
+         B      ELOOPJ                   leave j
+CINECJ   LA     R7,1(R7)               j=j+1
+         B      LOOPJ                end do j
+ELOOPJ   CLI    OK,X'01'             if ok
+         BNE    NOTOK                then
+         LA     R8,1(R8)               k=k+1
+         LA     R4,RESULT+1            @result
+         AR     R4,R8                  +k
+         MVC    0(1,R4),CI             substr(result,k,1)=ci
+NOTOK    LA     R6,1(R6)           i=i+1
+         B      LOOPI              end do i
+ELOOPI   STH    R8,RESULT          length(result)=k
+         MVC    0(64,R9),RESULT    return(result)
+         BR     R14                return to caller
+CI       DS     CL1                ci      [char(1)]
+CJ       DS     CL1                cj      [char(1)]
+OK       DS     X                  ok      [boolean]
+PHRASE   DS     H,CL62             phrase  [varchar(62)]
+REMOVE   DS     H,CL14             remove  [varchar(14)]
+RESULT   DS     H,CL62             result  [varchar(62)]
+*        ----   -------------------------------------------------------
+         YREGS
+         END    STRIPCH

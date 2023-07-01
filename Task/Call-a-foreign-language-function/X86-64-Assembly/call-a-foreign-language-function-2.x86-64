@@ -1,0 +1,246 @@
+option casemap:none
+
+windows64     equ 1
+linux64       equ 3
+
+ifndef __LUA_CLASS__
+__LUA_CLASS__   equ 1
+
+
+  LUA_OK        equ 0
+  LUA_YEILD     equ 1
+  LUA_ERRRUN    equ 2
+  LUA_ERRSYNTAX equ 3
+  LUA_ERRMEM    equ 4
+  ;; Lua variable types - defined in lua.h
+  LUA_TNONE     equ -1
+  LUA_TNIL      equ 0
+  LUA_TBOOL     equ 1
+  LUA_TNUMB     equ 3
+  LUA_TSTRING   equ 4
+  LUA_TFUNC     equ 6
+  LUA_MULTRET   equ -1
+
+  ;; to pop or not to pop, that is the question..
+  DO_POP        equ 1
+  NO_POP        equ 0
+
+  if @Platform eq windows64
+    option dllimport:<kernel32>
+      GetProcessHeap  proto
+      ExitProcess     proto :dword
+      HeapAlloc       proto :qword, :dword, :qword
+      HeapFree        proto :qword, :dword, :qword
+    option dllimport:none
+      exit            equ ExitProcess
+  elseif @Platform eq linux64
+    malloc            proto SYSTEMV :qword
+    free              proto SYSTEMV :qword
+  endif
+
+  printf              proto :qword, :vararg
+  exit                proto :dword
+  ;; Lua.h funcs
+  luaL_newstate       proto                         ;; lua_State *luaL_newstate();
+  lua_gettop          proto :qword                  ;; int lua_getopt(lua_State *L);
+  lua_close           proto :qword                  ;; void lua_close(lua_State *L);
+  luaL_openlibs       proto :qword                  ;; int luaL_openlibs(lua_State *L);
+  lua_pushnil         proto :qword                  ;; void lua_pushnil(lua_State *L);
+  lua_pushinteger     proto :qword, :qword          ;; void lua_pushinteger(lua_State *L, lua_Integer arg);
+  lua_settop          proto :qword, :dword          ;; int lua_setopt(lua_State *L, int idx);
+  lua_setglobal       proto :qword, :qword          ;; void lua_setglobal(lua_State *L, const char  *var);
+  lua_getglobal       proto :qword, :qword          ;; int lua_getglobal(lua_State *L, const char *gn);
+  luaL_loadstring     proto :qword, :qword          ;; int to_loadstring(lua_state *L, const char *string);
+  lua_pushstring      proto :qword, :qword          ;; const char *pushstring(lua_State *L, const char *var);
+  lua_pushboolean     proto :qword, :dword          ;; void lua_pushboolean(lua_State *L, int b)
+  lua_isinteger       proto :qword, :dword          ;; lua_Integer lua_isinteger(lua_State *L, int idx);
+  lua_tointegerx      proto :qword, :dword,:dword   ;; lua_Integer lua_tointeger(lua_State *L, int n);
+  luaL_loadfilex      proto :qword, :qword,:dword  ;; int luaL_loadfile(lua_State *L, const char *fn, const char *m)
+  ;; void lua_pushcclosure(lua_State *L, lua_CFunction f, int n);
+  lua_pushccloure     proto :qword, :qword, :dword
+  ;; int lua_pcallk(lua_State *L, int argcnt, int results, int errfunc, int context, lua_CFunction k);
+  lua_pcallk          proto :qword, :dword, :dword, :dword, :dword, :dword
+
+  CLASS lua_class
+    CMETHOD run
+    CMETHOD loadstring
+    CMETHOD loadfile
+    CMETHOD setglobal
+    CMETHOD getglobal
+    CMETHOD getstate
+  ENDMETHODS
+    lua_state     qword 0
+  ENDCLASS
+
+  METHOD lua_class, Init, <VOIDARG>, <>
+    mov rbx, thisPtr
+    assume rbx:ptr lua_class
+    invoke luaL_newstate
+    mov [rbx].lua_state, rax
+    invoke luaL_openlibs, [rbx].lua_state
+    .if rax != LUA_OK
+      invoke printf, CSTR("---> Lua failed to open libs",10)
+      jmp _ext
+    .endif
+
+    _ext:
+      mov rax, rbx
+      assume rbx:nothing
+      ret
+  ENDMETHOD
+
+  ;; dopop = pop off the virtual stack.
+  METHOD lua_class, run, <VOIDARG>, <>, narg:dword, nret:dword, dopop:word
+    mov rbx, thisPtr
+    assume rbx:ptr lua_class
+    invoke lua_pcallk, [rbx].lua_state, narg, nret, 0, 0, 0
+    .if rax != LUA_OK
+      invoke printf, CSTR("--> lua_pcallk failed with %i",10), rax
+    .else
+      ;; In some cases, we want to pop the top off the stack. But not always
+      ;; so, DO_POP or NO_POP depending..
+      .if dopop == DO_POP
+        invoke lua_gettop, [rbx].lua_state
+        not eax
+        invoke lua_settop, [rbx].lua_state, eax
+      .endif
+     .endif
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+  METHOD lua_class, loadstring, <VOIDARG>, <>, s:qword
+    invoke luaL_loadstring, [thisPtr].lua_class.lua_state, s
+    ret
+  ENDMETHOD
+
+  METHOD lua_class, loadfile, <VOIDARG>, <>, fn:qword
+    mov rbx, thisPtr
+    assume rbx:ptr lua_class
+    invoke luaL_loadfilex, [rbx].lua_class.lua_state, fn, 0
+    invoke lua_pcallk, [rbx].lua_state, 0, LUA_MULTRET, 0, 0, 0
+    .if rax == LUA_OK
+      invoke lua_gettop, [rbx].lua_state
+      not eax
+      invoke lua_settop, [rbx].lua_state, eax
+    .endif
+    mov rax, 0
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+  ;; lua_class.setglobals(qword ArumentVar, qword ArgumentReferenceName, dword LUA_TTYPE)
+  ;; arg = String(char *) or boolean or integer.
+  ;; an = argument reference name - The name used to reference arg1 from Lua code.
+  ;; t = defined type of argument used.
+  METHOD lua_class, setglobal, <VOIDARG>, <>, arg:qword, an:qword, t:dword
+    local targ:qword
+    local ttype:dword
+    local tan:qword
+
+    mov rbx, thisPtr
+    assume rbx:ptr lua_class
+    mov targ, arg
+    mov ttype, t
+    mov tan, an
+    .if ttype == LUA_TNIL
+      invoke lua_pushnil, [rbx].lua_state
+    .elseif ttype ==  LUA_TBOOL
+      mov rax, targ
+      invoke lua_pushboolean, [rbx].lua_state, eax
+    .elseif ttype ==  LUA_TSTRING
+      invoke lua_pushstring, [rbx].lua_state, targ
+    .elseif ttype == LUA_TFUNC
+      ;; Used for a lua function call.. But I'm lazy so, check the
+      ;; Lua docs for info about that...
+    .else
+      ;; Assumes it's an Integer type. Lua's integers are int or long sized(set in luaconfig.h).
+      ;; so qword sized variable to be safe.
+      invoke lua_pushinteger, [rbx].lua_state, targ
+    .endif
+    invoke lua_setglobal, [rbx].lua_state, tan
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+  METHOD lua_class, getglobal, <VOIDARG>, <>, gn:qword
+    invoke lua_getglobal, [thisPtr].lua_class.lua_state, gn
+    ret
+  ENDMETHOD
+
+  METHOD lua_class, getstate, <VOIDARG>, <>
+    mov rax, [thisPtr].lua_class.lua_state
+    ret
+  ENDMETHOD
+
+  METHOD lua_class, Destroy, <VOIDARG>, <>
+    mov rbx, thisPtr
+    assume rbx:ptr lua_class
+    .if [rbx].lua_state != 0
+      invoke lua_close, [rbx].lua_state
+    .endif
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+endif         ;; __LUA_CLASS__
+
+.data
+d1    dq 1342
+d2    dq 1551
+pFile db "addition.lua",0
+
+.code
+main proc
+  local lvm:ptr lua_class
+  local state:qword
+
+  invoke printf, CSTR("-> Attempting to init Lua...",10)
+  mov lvm, _NEW(lua_class)
+  lvm->getstate()
+  mov state, rax
+  invoke printf, CSTR("-> LVM started, Using loadstring..",10)
+  lvm->loadstring(CSTR("print('---> Goodbye, world from Lua..')"))
+  lvm->run(0,0, DO_POP)
+  lvm->setglobal(CSTR("A string that's global"), CSTR("teststr"), LUA_TSTRING)
+  lvm->setglobal(12, CSTR("numb"), LUA_TNONE)
+  lvm->loadstring(CSTR("print('---> Global str: ' .. teststr .. '\n---> Global int: ' .. numb)"))
+  lvm->run(0, 0, DO_POP)
+  invoke printf, CSTR("-> Loading lua file...",10)
+  lea rax, pFile
+  lvm->loadfile(rax)
+  .if rax != LUA_OK
+    invoke printf, CSTR("-> Failed loadfile, returned with: %i",10), rax
+    jmp _ext
+  .endif
+  lvm->getglobal(CSTR("addition"))
+  .if rax != LUA_TFUNC
+    invoke printf, CSTR("-> Global wasn't a function",10,"-> Type retruned is: %d",10), rax
+    jmp _ext
+  .endif
+  ;; We're just pushing the ints onto the Virtual stack for arguments
+  invoke lua_pushinteger, state, d1
+  invoke lua_pushinteger, state, d2
+  lvm->run(2,1,NO_POP)
+  .if rax == LUA_OK
+    invoke lua_isinteger, state, -1
+    .if rax != 1
+      invoke printf, CSTR("-> Value is NOT an integer..",10)
+      jmp _ext
+    .endif
+    invoke lua_tointegerx, state, -1, 0
+    push rax
+    ;; Set the top of the virtual stack to our return value..
+    invoke lua_settop, state, 1
+    pop rax
+    invoke printf, CSTR("-> Return from lua func: %i",10), eax
+  .else
+    invoke printf, CSTR("-> lvm->run() failed to call func returned: %i",10), rax
+  .endif
+  _ext:
+    _DELETE(lvm)
+    mov rax, 0
+    invoke exit, 0
+main endp
+
+end

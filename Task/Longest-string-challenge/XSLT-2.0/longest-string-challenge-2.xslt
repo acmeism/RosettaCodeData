@@ -1,0 +1,9 @@
+<t>
+ <s>a</s>
+ <s>bb</s>
+ <s>ccc</s>
+ <s>ddd</s>
+ <s>ee</s>
+ <s>f</s>
+ <s>ggg</s>
+</t>

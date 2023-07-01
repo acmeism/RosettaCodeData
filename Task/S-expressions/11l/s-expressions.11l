@@ -1,0 +1,135 @@
+T Token
+   T.enum Kind
+      INT
+      FLOAT
+      STRING
+      IDENT
+      LPAR
+      RPAR
+      END
+
+   Kind kind
+   String val
+
+   F (kind, val = ‘’)
+      .kind = kind
+      .val = val
+
+F lex(input_str)
+   [Token] result
+   V pos = 0
+
+   F current()
+      R I @pos < @input_str.len {@input_str[@pos]} E Char("\0")
+
+   L pos < input_str.len
+      V ch = input_str[pos]
+      I ch == ‘(’
+         pos++
+         result.append(Token(Token.Kind.LPAR))
+      E I ch == ‘)’
+         pos++
+         result.append(Token(Token.Kind.RPAR))
+      E I ch C ‘0’..‘9’
+         V num = ‘’
+         V kind = Token.Kind.INT
+         L current() C ‘0’..‘9’
+            num ‘’= current()
+            pos++
+         I current() == ‘.’
+            num ‘’= current()
+            kind = FLOAT
+            pos++
+            L current() C ‘0’..‘9’
+               num ‘’= current()
+               pos++
+         result.append(Token(kind, num))
+      E I ch C (‘ ’, "\t", "\n", "\r")
+         pos++
+      E I ch == ‘"’
+         V str = ‘’
+         pos++
+         L current() != ‘"’
+            str ‘’= current()
+            pos++
+         pos++
+         result.append(Token(Token.Kind.STRING, str))
+      E
+         V BannedChars = Set([‘ ’, "\t", ‘"’, ‘(’, ‘)’, ‘;’])
+         V ident = ‘’
+         L current() !C BannedChars
+            ident ‘’= current()
+            pos++
+         result.append(Token(Token.Kind.IDENT, ident))
+
+   result.append(Token(Token.Kind.END))
+   R result
+
+F indent(s, count)
+   R (count * ‘ ’)‘’s.replace("\n", "\n"(count * ‘ ’))
+
+T SExpr
+   T.enum Kind
+      INT
+      FLOAT
+      STRING
+      IDENT
+      LIST
+
+   Kind kind
+   String val
+   [SExpr] children
+
+   F (kind, val = ‘’)
+      .kind = kind
+      .val = val
+
+   F to_str()
+      I .kind C (SExpr.Kind.INT, SExpr.Kind.FLOAT, SExpr.Kind.IDENT)
+         R .val
+      E I .kind == STRING
+         R ‘"’(.val)‘"’
+      E I .kind == LIST
+         V result = ‘(’
+         L(i, ex) enumerate(.children)
+            I ex.kind == LIST & ex.children.len > 1
+               result ‘’= "\n"
+               result ‘’= indent(ex.to_str(), 2)
+            E
+               I i > 0
+                  result ‘’= ‘ ’
+               result ‘’= ex.to_str()
+         R result‘)’
+      assert(0B)
+
+V input_str = ‘
+((data "quoted data" 123 4.5)
+ (data (!@# (4.5) "(more" "data)")))
+’
+V tokens = lex(input_str)
+V pos = 0
+
+F current()
+   R I :pos < :tokens.len {:tokens[:pos]} E Token(Token.Kind.END)
+
+F parse() -> SExpr
+   V token = current()
+   :pos++
+   I token.kind == INT
+      R SExpr(SExpr.Kind.INT, token.val)
+   E I token.kind == FLOAT
+      R SExpr(SExpr.Kind.FLOAT, token.val)
+   E I token.kind == STRING
+      R SExpr(SExpr.Kind.STRING, token.val)
+   E I token.kind == IDENT
+      R SExpr(SExpr.Kind.IDENT, token.val)
+   E I token.kind == LPAR
+      V result = SExpr(SExpr.Kind.LIST)
+      L current().kind !C (Token.Kind.RPAR, Token.Kind.END)
+         result.children.append(parse())
+      assert(current().kind != END, ‘Missing right paren ')'’)
+      :pos++
+      R result
+   assert(0B)
+
+print(parse().to_str())

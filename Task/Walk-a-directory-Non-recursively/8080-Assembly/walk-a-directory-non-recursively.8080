@@ -1,0 +1,44 @@
+exit:	equ	0	; CP/M syscall to exit
+puts:	equ	9	; CP/M syscall to print a string
+sfirst:	equ	17	; 'Find First' CP/M syscall
+snext:	equ	18	; 'Find Next' CP/M syscall
+FCB:	equ	5Ch	; Location of FCB for file given on command line
+	org	100h	
+	lxi	d,FCB	; CP/M parses the command line for us automatically
+	mvi	c,sfirst; and prepares an FCB which we can pass to SFIRST
+	call	5	; immediately.
+	lxi	d,emsg	; If SFIRST returns an error, there is no file,
+	mvi	c,puts	; so we should print an error message.
+loop:	inr	a	; A=FF = error
+	jz	5
+	dcr	a	; If we _do_ have a file, the directory entry
+	rrc		; is located at DTA (80h) + A * 32. 0<=A<=3.
+	rrc		; Rotate right twice, moving low bits into high bits,
+	stc		; then finally rotate a 1 bit into the top bit.
+	rar		; The effect is 000000AB -> 1AB00000.
+	inr	a	; Finally the filename is at offset 1 in the dirent.
+	mvi	h,0	; Set HL = pointer to the filename
+	mov	l,a	
+	lxi	d,fname	; The filename is stored as 'FILENAMEEXT', but let's
+	mvi	b,8	; be nice and print 'FILENAME.EXT\r\n'.
+	call	memcpy	; Copy filename (wihtout extension) into placeholder
+	inx	d	; Skip the '.' in the placeholder
+	mvi	b,3	; Then copy the extension
+	call	memcpy
+	lxi	d,fname	; Then print the formatted filename
+	mvi	c,puts
+	call	5
+	lxi	d,FCB	; Find the next file matching the pattern in the FCB
+	mvi	c,snext ; The result is the same as for SFIRST, so we can
+	call	5	; loop back here, except FF means no more files.
+	mvi	c,exit	; Arrange for the error routine to instead exit cleanly
+	jmp	loop
+memcpy:	mov	a,m	; Copy B bytes from HL to DE
+	stax	d
+	inx	h
+	inx	d
+	dcr 	b
+	jnz	memcpy
+	ret	
+emsg:	db	'Not Found$'
+fname:	db	'XXXXXXXX.XXX',13,10,'$'	; Filename placeholder

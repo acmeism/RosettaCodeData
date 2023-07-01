@@ -1,0 +1,18 @@
+FUNCTION Horner (coeffs(), x)
+    acumulador = 0
+    FOR i = UBOUND(coeffs) TO LBOUND(coeffs) STEP -1
+        acumulador = (acumulador * x) + coeffs(i)
+    NEXT i
+    Horner = acumulador
+END FUNCTION
+
+x = 3
+DIM coeffs(3)
+DATA -19, 7, -4, 6
+FOR a = LBOUND(coeffs) TO UBOUND(coeffs)
+READ coeffs(a)
+NEXT a
+
+PRINT "Horner's algorithm for the polynomial 6*x^3 - 4*x^2 + 7*x - 19 when x = 3 is: ";
+PRINT Horner(coeffs(), x)
+END

@@ -1,0 +1,148 @@
+require('DateTime')
+
+var month_names = %w(
+  Vendémiaire Brumaire Frimaire  Nivôse   Pluviôse  Ventôse
+  Germinal    Floréal  Prairial  Messidor Thermidor Fructidor
+)
+
+var intercalary = [
+                   'Fête de la vertu',
+                   'Fête du génie',
+                   'Fête du travail',
+                   "Fête de l'opinion",
+                   'Fête des récompenses',
+                   'Fête de la Révolution',
+                  ]
+
+var i_cal_month = 13
+var epoch = %O<DateTime>.new(year => 1792, month => 9, day => 22)
+
+var month_nums = Hash(month_names.kv.map {|p| [p[1], p[0]+1] }.flat...)
+var i_cal_nums = Hash(intercalary.kv.map {|p| [p[1], p[0]+1] }.flat...)
+
+func is_republican_leap_year(Number year) -> Bool {
+    var y = (year + 1)
+    !!(4.divides(y) && (!100.divides(y) || 400.divides(y)))
+}
+
+func Republican_to_Gregorian(String rep_date) -> String {
+    static months   = month_names.map { .escape }.join('|')
+    static intercal = intercalary.map { .escape }.join('|')
+    static re       = Regex("^
+        \\s* (?:
+                (?<ic> #{intercal})
+              | (?<day> \\d+) \\s+ (?<month> #{months})
+            )
+        \\s+ (?<year> \\d+)
+        \\s*
+      \\z", 'x')
+
+    var m = (rep_date =~ re)
+    m || die "Republican date not recognized: '#{rep_date}'"
+
+    var ncap = m.named_captures
+
+    var day1   = Number(ncap{:ic}    ? i_cal_nums{ncap{:ic}}    : ncap{:day})
+    var month1 = Number(ncap{:month} ? month_nums{ncap{:month}} : i_cal_month)
+    var year1  = Number(ncap{:year})
+
+    var days_since_epoch = (365*(year1 - 1) + 30*(month1 - 1) + (day1 - 1))
+
+    var leap_days = (1 ..^ year1 -> grep { is_republican_leap_year(_) })
+    epoch.clone.add(days => (days_since_epoch + leap_days)).strftime("%Y-%m-%d")
+}
+
+func Gregorian_to_Republican(String greg_date) -> String {
+    var m = (greg_date =~ /^(\d{4})-(\d{2})-(\d{2})\z/)
+    m || die "Gregorian date not recognized: '#{greg_date}'"
+
+    var g = %O<DateTime>.new(year => m[0], month => m[1], day => m[2])
+    var days_since_epoch = epoch.delta_days(g).in_units('days')
+    days_since_epoch < 0 && die "unexpected error"
+    var (year, days) = (1, days_since_epoch)
+
+    loop {
+        var year_length = (365 + (is_republican_leap_year(year) ? 1 : 0))
+        days < year_length && break
+        days -= year_length
+        year += 1;
+    }
+
+    var day0   = (days % 30)
+    var month0 = (days - day0)/30
+
+    var (day1, month1) = (day0 + 1, month0 + 1)
+
+    (month1 == i_cal_month
+        ? "#{intercalary[day0]} #{year}"
+        : "#{day1} #{month_names[month0]} #{year}")
+}
+
+for line in DATA {
+
+    line.sub!(/\s*\#.+\R?\z/, '')
+
+    var m = (line =~ /^(\d{4})-(\d{2})-(\d{2})\s+(\S.+?\S)\s*$/)
+    m || die "error for: #{line.dump}"
+
+    var g = "#{m[0]}-#{m[1]}-#{m[2]}"
+    var r = m[3]
+
+    var r2g = Republican_to_Gregorian(r)
+    var g2r = Gregorian_to_Republican(g)
+
+    #say "#{r} -> #{r2g}"
+    #say "#{g} -> #{g2r}"
+
+    if ((g2r != r) || (r2g != g)) {
+        die "1-way error"
+    }
+
+    if ((Gregorian_to_Republican(r2g) != r) ||
+        (Republican_to_Gregorian(g2r) != g)
+    ) {
+        die "2-way error"
+    }
+}
+
+say 'All tests successful.'
+
+__DATA__
+1792-09-22  1 Vendémiaire 1
+1795-05-20  1 Prairial 3
+1799-07-15  27 Messidor 7
+1803-09-23  Fête de la Révolution 11
+1805-12-31  10 Nivôse 14
+1871-03-18  27 Ventôse 79
+1944-08-25  7 Fructidor 152
+2016-09-19  Fête du travail 224
+1871-05-06  16 Floréal 79   # Paris Commune begins
+1871-05-23  3 Prairial 79   # Paris Commune ends
+1799-11-09  18 Brumaire 8   # Revolution ends by Napoléon coup
+1804-12-02  11 Frimaire 13  # Republic   ends by Napoléon coronation
+1794-10-30  9 Brumaire 3    # École Normale Supérieure established
+1794-07-27  9 Thermidor 2   # Robespierre falls
+1799-05-27  8 Prairial 7    # Fromental Halévy born
+1792-09-22  1 Vendémiaire 1
+1793-09-22  1 Vendémiaire 2
+1794-09-22  1 Vendémiaire 3
+1795-09-23  1 Vendémiaire 4
+1796-09-22  1 Vendémiaire 5
+1797-09-22  1 Vendémiaire 6
+1798-09-22  1 Vendémiaire 7
+1799-09-23  1 Vendémiaire 8
+1800-09-23  1 Vendémiaire 9
+1801-09-23  1 Vendémiaire 10
+1802-09-23  1 Vendémiaire 11
+1803-09-24  1 Vendémiaire 12
+1804-09-23  1 Vendémiaire 13
+1805-09-23  1 Vendémiaire 14
+1806-09-23  1 Vendémiaire 15
+1807-09-24  1 Vendémiaire 16
+1808-09-23  1 Vendémiaire 17
+1809-09-23  1 Vendémiaire 18
+1810-09-23  1 Vendémiaire 19
+1811-09-24  1 Vendémiaire 20
+2015-09-23  1 Vendémiaire 224
+2016-09-22  1 Vendémiaire 225
+2017-09-22  1 Vendémiaire 226

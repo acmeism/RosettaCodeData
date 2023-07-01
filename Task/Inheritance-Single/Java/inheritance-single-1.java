@@ -1,0 +1,3 @@
+public class Animal{
+   //functions go here...
+}

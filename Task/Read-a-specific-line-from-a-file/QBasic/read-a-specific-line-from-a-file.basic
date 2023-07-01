@@ -1,0 +1,15 @@
+f = FREEFILE
+OPEN "input.txt" FOR INPUT AS #f
+
+lineapedida = 7
+cont = 0
+DO WHILE NOT EOF(f)
+   LINE INPUT #f, linea$
+   cont = cont + 1
+   IF cont = lineapedida THEN
+      IF linea$ = "" THEN PRINT "The 7th line is empty" ELSE PRINT linea$
+      EXIT DO
+   END IF
+LOOP
+IF cont < lineapedida THEN PRINT "There are only "; cont; " lines in the file"
+CLOSE #1

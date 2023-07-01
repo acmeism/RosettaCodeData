@@ -1,0 +1,102 @@
+      *FLOAT64
+      PRINT FNsha1("Rosetta Code")
+      END
+
+      DEF FNsha1(message$)
+      LOCAL a%, b%, c%, d%, e%, f%, i%, j%, k%, l%, t%
+      LOCAL h0%, h1%, h2%, h3%, h4%, w%()
+
+      REM Initialize variables:
+      h0% = &67452301
+      h1% = &EFCDAB89
+      h2% = &98BADCFE
+      h3% = &10325476
+      h4% = &C3D2E1F0
+
+      l% = LEN(message$)*8
+
+      REM Pre-processing:
+      REM append the bit '1' to the message:
+      message$ += CHR$&80
+
+      REM append k bits '0', where k is the minimum number >= 0 such that
+      REM the resulting message length (in bits) is congruent to 448 (mod 512)
+      WHILE (LEN(message$) MOD 64) <> 56
+        message$ += CHR$0
+      ENDWHILE
+
+      REM append length of message (before pre-processing), in bits, as
+      REM 64-bit big-endian integer
+      FOR i% = 56 TO 0 STEP -8
+        message$ += CHR$(l% >>> i%)
+      NEXT
+
+      REM Process the message in successive 512-bit chunks:
+      REM break message into 512-bit chunks, for each chunk
+      REM break chunk into sixteen 32-bit big-endian words w[i], 0 <= i <= 15
+
+      DIM w%(79)
+      FOR j% = 0 TO LEN(message$) DIV 64 - 1
+
+        FOR i% = 0 TO 15
+          w%(i%) = !(!^message$ + 64*j% + 4*i%)
+          SWAP ?(^w%(i%)+0),?(^w%(i%)+3)
+          SWAP ?(^w%(i%)+1),?(^w%(i%)+2)
+        NEXT i%
+
+        REM Extend the sixteen 32-bit words into eighty 32-bit words:
+        FOR i% = 16 TO 79
+          w%(i%) = w%(i%-3) EOR w%(i%-8) EOR w%(i%-14) EOR w%(i%-16)
+          w%(i%) = (w%(i%) << 1) OR (w%(i%) >>> 31)
+        NEXT i%
+
+        REM Initialize hash value for this chunk:
+        a% = h0%
+        b% = h1%
+        c% = h2%
+        d% = h3%
+        e% = h4%
+
+        REM Main loop:
+        FOR i% = 0 TO 79
+          CASE TRUE OF
+            WHEN 0 <= i% AND i% <= 19
+              f% = (b% AND c%) OR ((NOT b%) AND d%)
+              k% = &5A827999
+            WHEN 20 <= i% AND i% <= 39
+              f% = b% EOR c% EOR d%
+              k% = &6ED9EBA1
+            WHEN 40 <= i% AND i% <= 59
+              f% = (b% AND c%) OR (b% AND d%) OR (c% AND d%)
+              k% = &8F1BBCDC
+            WHEN 60 <= i% AND i% <= 79
+              f% = b% EOR c% EOR d%
+              k% = &CA62C1D6
+          ENDCASE
+
+          t% = FN32(((a% << 5) OR (a% >>> 27)) + f% + e% + k% + w%(i%))
+          e% = d%
+          d% = c%
+          c% = (b% << 30) OR (b% >>> 2)
+          b% = a%
+          a% = t%
+
+        NEXT i%
+
+        REM Add this chunk's hash to result so far:
+        h0% = FN32(h0% + a%)
+        h1% = FN32(h1% + b%)
+        h2% = FN32(h2% + c%)
+        h3% = FN32(h3% + d%)
+        h4% = FN32(h4% + e%)
+
+      NEXT j%
+
+      = FNhex(h0%) + FNhex(h1%) + FNhex(h2%) + FNhex(h3%) + FNhex(h4%)
+
+      DEF FNhex(A%) = RIGHT$("0000000"+STR$~A%,8)
+
+      DEF FN32(n#)
+      WHILE n# > &7FFFFFFF : n# -= 2^32 : ENDWHILE
+      WHILE n# < &80000000 : n# += 2^32 : ENDWHILE
+      = n#

@@ -1,0 +1,3 @@
+for run(«find -iname *.txt -print0», :nl«\0», :out).out.lines -> $filename {
+    ...
+}

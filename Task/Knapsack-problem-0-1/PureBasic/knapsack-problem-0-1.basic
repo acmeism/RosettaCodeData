@@ -1,0 +1,116 @@
+Structure item
+  name.s
+  weight.i ;units are dekagrams (dag)
+  Value.i
+EndStructure
+
+Structure memo
+  Value.i
+  List picked.i()
+EndStructure
+
+Global itemCount = 0 ;this will be increased as needed to match count
+Global Dim items.item(itemCount)
+
+Procedure addItem(name.s, weight, Value)
+  If itemCount >= ArraySize(items())
+    Redim items.item(itemCount + 10)
+  EndIf
+  With items(itemCount)
+    \name = name
+    \weight = weight
+    \Value = Value
+  EndWith
+  itemCount + 1
+EndProcedure
+
+;build item list
+addItem("map", 9, 150)
+addItem("compass", 13, 35)
+addItem("water", 153, 200)
+addItem("sandwich", 50, 160)
+addItem("glucose", 15, 60)
+addItem("tin", 68, 45)
+addItem("banana", 27, 60)
+addItem("apple", 39, 40)
+addItem("cheese", 23, 30)
+addItem("beer", 52, 10)
+addItem("suntan cream", 11, 70)
+addItem("camera", 32, 30)
+addItem("t-shirt", 24, 15)
+addItem("trousers", 48, 10)
+addItem("umbrella", 73, 40)
+addItem("waterproof trousers", 42, 70)
+addItem("waterproof overclothes", 43, 75)
+addItem("note-case", 22, 80)
+addItem("sunglasses", 7, 20)
+addItem("towel", 18, 12)
+addItem("socks", 4, 50)
+addItem("book", 30, 10)
+
+Procedure knapsackSolveFast(Array item.item(1), i, aw, Map m.memo())
+  Protected.memo without_i, with_i, result, *tmp, memoIndex.s = Hex((i << 16) + aw, #PB_Long)
+  If FindMapElement(m(), memoIndex)
+    ProcedureReturn @m()
+  Else
+    If i = 0
+      If item(0)\weight <= aw
+        ;item fits
+        m(memoIndex)\Value = item(0)\Value ;memo this item's value
+        AddElement(m()\picked())
+        m()\picked() = 0 ;memo item's index also
+      Else
+        ;item doesn't fit, memo a zero Value
+        m(memoIndex)\Value = 0
+      EndIf
+      ProcedureReturn @m()
+    EndIf
+
+    ;test if a greater value results with or without item included
+    *tmp = knapsackSolveFast(item(), i - 1, aw, m()) ;find value without this item
+    CopyStructure(*tmp, @without_i, memo)
+    If item(i)\weight > aw
+      ;item weighs too much, memo without including this item
+      m(memoIndex) = without_i
+      ProcedureReturn @m()
+    Else
+      *tmp = knapsackSolveFast(item(), i - 1, aw - item(i)\weight, m()) ;find value when item is included
+      CopyStructure(*tmp, @with_i, memo)
+      with_i\Value + item(i)\Value
+      AddElement(with_i\picked())
+      with_i\picked() = i ;add item to with's picked list
+    EndIf
+
+    ;set the result to the larger value
+    If with_i\Value > without_i\Value
+      result = with_i
+    Else
+      result = without_i
+    EndIf
+
+    m(memoIndex) = result ;memo the result
+    ProcedureReturn @m()
+  EndIf
+EndProcedure
+
+Procedure.s knapsackSolve(Array item.item(1), i, aw)
+  Protected *result.memo, output.s, totalWeight
+  NewMap m.memo()
+  *result = knapsackSolveFast(item(), i, aw, m())
+  output = "Knapsack:" + #CRLF$
+  ForEach *result\picked()
+    output + LSet(item(*result\picked())\name, 24) + RSet(Str(item(*result\picked())\weight), 5) + RSet(Str(item(*result\picked())\Value), 5) + #CRLF$
+    totalWeight + item(*result\picked())\weight
+  Next
+  output + LSet("TOTALS:", 24) + RSet(Str(totalWeight), 5) + RSet(Str(*result\Value), 5)
+  ProcedureReturn output
+EndProcedure
+
+If OpenConsole()
+  #maxWeight = 400
+  Define *result.memo
+  PrintN(knapsackSolve(items(), itemCount - 1, #maxWeight))
+
+  Print(#CRLF$ + #CRLF$ + "Press ENTER to exit"): Input()
+  CloseConsole()
+EndIf

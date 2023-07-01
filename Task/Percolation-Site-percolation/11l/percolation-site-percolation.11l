@@ -1,0 +1,68 @@
+UInt32 seed = 0
+F nonrandom()
+   :seed = 1664525 * :seed + 1013904223
+   R Int(:seed >> 16) / Float(FF'FF)
+
+V (M, nn, t) = (15, 15, 100)
+
+V cell2char = ‘ #abcdefghijklmnopqrstuvwxyz’
+V NOT_VISITED = 1
+
+T PercolatedException
+   (Int, Int) t
+
+   F (t)
+      .t = t
+
+F newgrid(p)
+   R (0 .< :nn).map(n -> (0 .< :M).map(m -> Int(nonrandom() < @@p)))
+
+F pgrid(cell, percolated)
+   L(n) 0 .< :nn
+      print(‘#.)  ’.format(n % 10)‘’(0 .< :M).map(m -> :cell2char[@cell[@n][m]]).join(‘ ’))
+   I percolated != (-1, -1)
+      V where = percolated[0]
+      print(‘!)  ’(‘  ’ * where)‘’:cell2char[cell[:nn - 1][where]])
+
+F walk_maze(m, n, &cell, indx) -> N
+   cell[n][m] = indx
+   I n < :nn - 1 & cell[n + 1][m] == :NOT_VISITED
+      walk_maze(m, n + 1, &cell, indx)
+   E I n == :nn - 1
+      X PercolatedException((m, indx))
+   I m & cell[n][m - 1] == :NOT_VISITED
+      walk_maze(m - 1, n, &cell, indx)
+   I m < :M - 1 & cell[n][m + 1] == :NOT_VISITED
+      walk_maze(m + 1, n, &cell, indx)
+   I n & cell[n - 1][m] == :NOT_VISITED
+      walk_maze(m, n - 1, &cell, indx)
+
+F check_from_top(&cell) -> (Int, Int)?
+   V (n, walk_index) = (0, 1)
+   X.try
+      L(m) 0 .< :M
+         I cell[n][m] == :NOT_VISITED
+            walk_index++
+            walk_maze(m, n, &cell, walk_index)
+   X.catch PercolatedException ex
+      R ex.t
+   R N
+
+V sample_printed = 0B
+[Float = Int] pcount
+L(p10) 11
+   V p = p10 / 10.0
+   pcount[p] = 0
+   L(tries) 0 .< t
+      V cell = newgrid(p)
+      (Int, Int)? percolated = check_from_top(&cell)
+      I percolated != N
+         pcount[p]++
+         I !sample_printed
+            print("\nSample percolating #. x #., p = #2.2 grid\n".format(M, nn, p))
+            pgrid(cell, percolated)
+            sample_printed = 1B
+print("\n p: Fraction of #. tries that percolate through\n".format(t))
+
+L(p, c) sorted(pcount.items())
+   print(‘#.1: #.’.format(p, c / Float(t)))

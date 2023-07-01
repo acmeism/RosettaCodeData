@@ -1,0 +1,123 @@
+	bits	16
+	cpu	8086
+MRATE:	equ	26		; Mutation rate (MRATE/256)
+COPIES:	equ	100		; Amount of copies to make
+gettim:	equ	02Ch		; MS-DOS get time function
+pstr:	equ	9		; MS-DOS print string
+section	.text
+	org	100h
+	;;;	Use MS-DOS time to set random seed
+	mov	ah,gettim
+	int	21h
+	mov	[rnddat],cx
+	mov	[rnddat+2],dx
+	;;;	Make first parent (random characters)
+	mov	di,parent
+	mov	cx,target.size-1
+getchr:	call	rndchr		; Get random character
+	stosb			; Store in parent
+	loop	getchr
+	mov	al,'$'		; Write string terminator
+	stosb
+	;;;	Main loop.
+loop:	mov	bx,parent	; Print current parent
+	mov	dx,bx
+	call	puts
+	call	fitnes		; Check fitness
+	test	cl,cl		; If zero, we're done
+	jnz	nxmut		; If not, do another mutation
+	ret			; Quit to DOS
+nxmut:	mov	dl,0FFh		; DL = best fitness yet
+	mov	di,kids		; Set DI to start of memory for children
+	mov	ch,COPIES	; CH = amount of copies to make
+	xor	bp,bp
+	;;;	Make copy, mutate, and test fitness
+copy:	mov	bx,di		; Let BX = where next copy will go
+	call	mutcpy		; Make the copy (and adjust DI)
+	call	fitnes		; Check fitness
+	cmp	cl,dl		; Is it better than the previous best one?
+	ja	next		; If not, just do the next one,
+	mov	dl,cl		; Otherwise, this is now the best one
+	lea	bp,[di-target.size]	; Store a pointer to it in BP
+next:	dec	ch		; One copy less
+	jnz	copy		; Make another copy if we need to
+	mov	si,bp		; We're done, the best child becomes
+	mov	di,parent	; the parent for the next generation
+	mov	cx,target.size
+	rep	movsb
+	jmp	loop		; Next generation
+	;;;	Make copy of parent, mutating as we go, and store at [DI]
+mutcpy:	mov	si,parent
+.loop:	lodsb			; Get byte from parent
+	stosb			; Store in copy
+	cmp	al,'$'		; Is it '$'?
+	je	.out		; Then we're done
+	call	rand		; Otherwise, should we mutate?
+	cmp	al,MRATE
+	ja	.loop		; If not, do next character
+	call	rndchr		; But if so, get random character,
+	mov	[di-1],al	; and overwrite the current character.
+	jmp	.loop		; Then do the next character.
+.out:	ret
+	;;;	Get fitness of character in [BX]
+fitnes:	mov	si,target
+	xor	cl,cl		; Fitness
+.loop:	lodsb			; Get target character
+	cmp 	al,'$'		; Done?
+	je	.out		; Then stop
+	cmp	al,[bx]		; Equal to character under [BX]?
+	lahf			; Keep flags
+	inc	bx		; Increment BX
+	sahf			; Restore flags (was al=[bx]?)
+	je	.loop		; If equal, do next character
+	inc	cx		; Otherwise, count this as a mismatch
+	jmp	.loop
+.out:	ret
+	;;;	Generate random character, [A-Z] or space.
+rndchr:	call	rand		; Get random number
+	and	al,31		; Lower five bits
+	cmp	al,27		; One of 27 characters?
+	jae	rndchr		; If not, get new random number
+	add	al,'A'		; Make uppercase letter
+	cmp	al,'Z'		; More than 'Z'?
+	jbe	.out		; If not, it's OK
+	mov	al,' '		; Otherwise, give a space
+.out:	ret
+	;;;	Random number generator using XABC algorithm
+	;;;	Returns random byte in AL
+rand:	push	cx
+	push	dx
+	mov	cx,[rnddat]	; CH=X CL=A
+	mov	dx,[rnddat+2]	; DH=B DL=C
+	inc	ch		; X++
+	xor	cl,ch		; A ^= X
+	xor	cl,dl		; A ^= C
+	add	dh,cl		; B += A
+	mov	al,dh		; C' = B
+	shr	al,1		; C' >>= 1
+	xor	al,cl		; C' ^= A
+	add	al,dl		; C' += C
+	mov	dl,al		; C = C'
+	mov	[rnddat],cx
+	mov	[rnddat+2],dx
+	pop	dx
+	pop	cx
+	ret
+	;;;	Print string in DX, plus a newline, saving registers
+puts:	push	ax
+	push	dx
+	mov	ah,pstr
+	int	21h
+	mov	dx,nl
+	int	21h
+	pop	dx
+	pop	ax
+	ret
+section	.data
+nl:	db	13,10,'$'
+target:	db	'METHINKS IT IS LIKE A WEASEL$'
+.size:	equ	$-target
+section	.bss
+rnddat:	resb	4		; RNG state
+parent:	resb	target.size	; Place to store current parent
+kids:	resb	COPIES*target.size	; Place to store children

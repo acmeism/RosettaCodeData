@@ -1,0 +1,28 @@
+var [const] YAJL=Import("zklYAJL")[0], CURL=Import("zklCurl");
+
+fcn getTasks(language){
+   continueValue,tasks:="",Data(0,String);  // "nm\0nm\0...."
+   do{
+      page:=CURL().get(("http://rosettacode.org/mw/api.php?"
+         "action=query&cmlimit=500"
+	 "&format=json"
+	 "&list=categorymembers"
+	 "&cmtitle=Category:%s"
+	 "&cmcontinue=%s").fmt(language,continueValue));
+      page=page[0].del(0,page[1]);  // get rid of HTML header
+      json:=YAJL().write(page).close();
+      json["query"]["categorymembers"].pump(tasks,T("get","title"));
+      continueValue=json.find("continue") //continue:-||,cmcontinue:page|954|19)
+          .toList().apply("concat","=").concat("&");
+   }while(continueValue);
+   tasks
+}
+re:=RegExp(0'!\s+==\s*{{\s*header\s*\|!);  // == {{ header | zkl
+foreach task in (getTasks("Programming_Tasks")){
+   page:=CURL().get(
+      "http://www.rosettacode.org/mw/index.php?title=%s&action=raw"
+      .fmt(CURL.urlEncode(task)));
+   page=page[0].del(0,page[1]);  // get rid of HTML header
+   cnt,n:=0,0;  while(re.search(page,True,n)){ cnt+=1; n=re.matched[0].sum(0); }
+   "%4d: %s".fmt(cnt,task).println();
+}

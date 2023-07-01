@@ -1,0 +1,35 @@
+DECLARE user$ ASSOC STRING
+DECLARE connect ASSOC long
+OPEN "localhost:51000" FOR SERVER AS mynet
+WHILE TRUE
+    IF WAIT(mynet, 30) THEN
+        fd = ACCEPT(mynet)
+        connect(GETPEER$(fd)) = fd
+        SEND "Enter your name: " TO fd
+    ELSE
+        FOR con$ IN OBTAIN$(connect)
+            IF WAIT(connect(con$), 10) THEN
+                RECEIVE in$ FROM connect(con$)
+                IF user$(GETPEER$(connect(con$))) = "" THEN
+                    user$(GETPEER$(connect(con$))) = CHOP$(in$)
+                    chat$ = chat$ & user$(GETPEER$(connect(con$))) & " joined the chat." & NL$
+                    SEND "Welcome, " & CHOP$(in$) & "!" & NL$ TO connect(con$)
+                ELIF LEFT$(in$, 4) = "quit" THEN
+                    SEND "You're disconnected!" & NL$ TO connect(con$)
+                    chat$ = chat$ & user$(GETPEER$(connect(con$))) & " left the chat." & NL$
+                    FREE user$(GETPEER$(connect(con$)))
+                    FREE connect(con$)
+                    CLOSE SERVER connect(con$)
+                ELIF LEFT$(in$, 4) = "say " THEN
+                    chat$ = chat$ & user$(GETPEER$(connect(con$))) & " said: " & MID$(in$, 5)
+                ENDIF
+            ENDIF
+        NEXT
+        IF LEN(chat$) > 0 THEN
+            FOR con$ IN OBTAIN$(connect)
+                IF user$(GETPEER$(connect(con$))) <> "" THEN SEND chat$ TO connect(con$)
+            NEXT
+            chat$ = ""
+        ENDIF
+    ENDIF
+WEND

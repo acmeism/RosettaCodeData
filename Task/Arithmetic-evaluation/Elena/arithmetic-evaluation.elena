@@ -1,0 +1,341 @@
+import system'routines;
+import extensions;
+import extensions'text;
+
+class Token
+{
+    object theValue;
+
+    rprop int Level;
+
+    constructor new(int level)
+    {
+        theValue := new StringWriter();
+        Level := level + 9;
+    }
+
+    append(ch)
+    {
+        theValue.write(ch)
+    }
+
+    Number = theValue.toReal();
+}
+
+class Node
+{
+    prop object Left;
+    prop object Right;
+    rprop int Level;
+
+    constructor new(int level)
+    {
+        Level := level
+    }
+}
+
+class SummaryNode : Node
+{
+    constructor new(int level)
+        <= new(level + 1);
+
+    Number = Left.Number + Right.Number;
+}
+
+class DifferenceNode : Node
+{
+    constructor new(int level)
+        <= new(level + 1);
+
+    Number = Left.Number - Right.Number;
+}
+
+class ProductNode : Node
+{
+    constructor new(int level)
+        <= new(level + 2);
+
+    Number = Left.Number * Right.Number;
+}
+
+class FractionNode : Node
+{
+    constructor new(int level)
+        <= new(level + 2);
+
+    Number = Left.Number / Right.Number;
+}
+
+class Expression
+{
+    rprop int Level;
+    prop object Top;
+
+    constructor new(int level)
+    {
+        Level := level
+    }
+
+    Right
+    {
+        get() = Top;
+
+        set(object node)
+        {
+            Top := node
+        }
+    }
+
+    get Number() => Top;
+}
+
+singleton operatorState
+{
+    eval(ch)
+    {
+        ch =>
+            $40 {      // (
+                ^ __target.newBracket().gotoStarting()
+            }
+            : {
+                ^ __target.newToken().append(ch).gotoToken()
+            }
+    }
+}
+
+singleton tokenState
+{
+    eval(ch)
+    {
+        ch =>
+            $41 {      // )
+                ^ __target.closeBracket().gotoToken()
+            }
+            $42 {      // *
+                ^ __target.newProduct().gotoOperator()
+            }
+            $43 {      // +
+                ^ __target.newSummary().gotoOperator()
+            }
+            $45 {      // -
+                ^ __target.newDifference().gotoOperator()
+            }
+            $47 {      // /
+                ^ __target.newFraction().gotoOperator()
+            }
+            : {
+                ^ __target.append:ch
+            }
+    }
+}
+
+singleton startState
+{
+    eval(ch)
+    {
+        ch =>
+            $40 {      // (
+                ^ __target.newBracket().gotoStarting()
+            }
+            $45 { // -
+                ^ __target.newToken().append("0").newDifference().gotoOperator()
+            }
+            : {
+                ^ __target.newToken().append:ch.gotoToken()
+            }
+    }
+}
+
+class Scope
+{
+    object theState;
+    int    theLevel;
+    object theParser;
+    object theToken;
+    object theExpression;
+
+    constructor new(parser)
+    {
+        theState := startState;
+        theLevel := 0;
+        theExpression := Expression.new(0);
+        theParser := parser
+    }
+
+    newToken()
+    {
+        theToken := theParser.appendToken(theExpression, theLevel)
+    }
+
+    newSummary()
+    {
+        theToken := nil;
+
+        theParser.appendSummary(theExpression, theLevel)
+    }
+
+    newDifference()
+    {
+        theToken := nil;
+
+        theParser.appendDifference(theExpression, theLevel)
+    }
+
+    newProduct()
+    {
+        theToken := nil;
+
+        theParser.appendProduct(theExpression, theLevel)
+    }
+
+    newFraction()
+    {
+        theToken := nil;
+
+        theParser.appendFraction(theExpression, theLevel)
+    }
+
+    newBracket()
+    {
+        theToken := nil;
+
+        theLevel := theLevel + 10;
+
+        theParser.appendSubexpression(theExpression, theLevel)
+    }
+
+    closeBracket()
+    {
+        if (theLevel < 10)
+            { InvalidArgumentException.new:"Invalid expression".raise() };
+
+        theLevel := theLevel - 10
+    }
+
+    append(ch)
+    {
+        if(ch >= $48 && ch < $58)
+        {
+            theToken.append:ch
+        }
+        else
+        {
+            InvalidArgumentException.new:"Invalid expression".raise()
+        }
+    }
+
+    append(string s)
+    {
+        s.forEach:(ch){ self.append:ch }
+    }
+
+    gotoStarting()
+    {
+        theState := startState
+    }
+
+    gotoToken()
+    {
+        theState := tokenState
+    }
+
+    gotoOperator()
+    {
+        theState := operatorState
+    }
+
+    get Number() => theExpression;
+
+    dispatch() => theState;
+}
+
+class Parser
+{
+    appendToken(object expression, int level)
+    {
+        var token := Token.new(level);
+
+        expression.Top := self.append(expression.Top, token);
+
+        ^ token
+    }
+
+    appendSummary(object expression, int level)
+    {
+        expression.Top := self.append(expression.Top, SummaryNode.new(level))
+    }
+
+    appendDifference(object expression, int level)
+    {
+        expression.Top := self.append(expression.Top, DifferenceNode.new(level))
+    }
+
+    appendProduct(object expression, int level)
+    {
+        expression.Top := self.append(expression.Top, ProductNode.new(level))
+    }
+
+    appendFraction(object expression, int level)
+    {
+        expression.Top := self.append(expression.Top, FractionNode.new(level))
+    }
+
+    appendSubexpression(object expression, int level)
+    {
+        expression.Top := self.append(expression.Top, Expression.new(level))
+    }
+
+    append(lastNode, newNode)
+    {
+        if(nil == lastNode)
+            { ^ newNode };
+
+        if (newNode.Level <= lastNode.Level)
+            { newNode.Left := lastNode; ^ newNode };
+
+        var parent := lastNode;
+        var current := lastNode.Right;
+        while (nil != current && newNode.Level > current.Level)
+            { parent := current; current := current.Right };
+
+        if (nil == current)
+        {
+            parent.Right := newNode
+        }
+        else
+        {
+            newNode.Left := current; parent.Right := newNode
+        };
+
+        ^ lastNode
+    }
+
+    run(text)
+    {
+        var scope := Scope.new(self);
+
+        text.forEach:(ch){ scope.eval:ch };
+
+        ^ scope.Number
+    }
+}
+
+public program()
+{
+    var text := new StringWriter();
+    var parser := new Parser();
+
+    while (console.readLine().saveTo(text).Length > 0)
+    {
+        try
+        {
+            console.printLine("=",parser.run:text)
+        }
+        catch(Exception e)
+        {
+            console.writeLine:"Invalid Expression"
+        };
+
+        text.clear()
+    }
+}

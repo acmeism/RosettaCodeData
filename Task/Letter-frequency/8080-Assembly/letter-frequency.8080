@@ -1,0 +1,115 @@
+bdos:		equ	5	; CP/M syscalls
+putch:		equ	2	; Print a character
+puts:		equ	9	; Print a string
+fopen:		equ	15	; Open a file
+fread:		equ	20	; Read a file
+fcb:		equ	5ch	; FCB for file given on command line
+dma:		equ	80h	; Default DMA
+		org	100h	; CP/M loads the program starting at page 1
+		;; Zero out pages two and three (to keep a 16-bit counter
+		;; for each possible byte in the file).
+		;; We can do this because this program is small enough to
+		;; fit in page 1 in its entirety.
+		xra	a	; Zero A.
+		mov	b,a	; Zero B too (make it loop 256 times)
+		lxi	d,200h	; Start of page two
+zero:		stax	d	; Zero out a byte (store A, which is zero)
+		inx	d	; Next byte
+		stax	d	; Zero out another byte
+		inx	d	; Next byte
+		dcr	b	; Decrement the loop counter.
+		jnz	zero	; Continue until B comes back to zero.
+		;; Open the file given on the command line.
+		lxi	d,fcb	; CP/M always tries to parse the command line,
+		mvi	c,fopen	; and gives us a file "object" in page zero.
+		call	bdos	; We can just call fopen on it.
+		inr	a	; It sets A=FF on error, so if incrementing A
+		jz	error	; rolls back over to 0, that's an error.
+		;; Process the file record by record.
+		;; In CP/M, each file consists of a number of 128-byte
+		;; records. An exact size is not kept.
+		;; If a text file is not an exact multiple of 128 bytes
+		;; long, the last record will contain a ^Z (26 decimal),
+		;; and anything after that byte should be ignored.
+read:		lxi	d,fcb	; From the file control block (the "object"),
+		mvi	c,fread	; read one record. By default it ends up in
+		call	bdos	; the last half of page zero.
+		ana	a	; Zero carry flag.
+		rar		; Low bit says if end reached
+		jc	output	; If so, go print the table
+		ana	a	; If any other bits are set, that's a
+		jnz	error	; read error.
+		;; Count the characters in the current record.
+		lxi	d,dma-1	; Set DE to point just before the record
+byte:		inr	e	; Go to the next byte.
+		jz	read	; If end of record, go get next record.
+		ldax	d	; Grab the current byte
+		cpi	26	; If it is EOF, we're done.
+		jz	output	; Go print the table
+		mov	l,a	; Otherwise, increment the counter for this
+		mvi	h,2	; character: the low byte is kept in page 2.
+		inr	m	; 'm' means the value in memory at HL.
+		jnz	byte	; If no rollover, we're done; count next byte
+		inr	h	; But we're keeping a 16-bit counter, so
+		inr	m	; if there is rollover, increment high byte.
+		jmp	byte	; The high byte is in page 3 -unorthodox, but
+				; it's easy to access here.
+		;; We've done the whole file. For each printable
+		;; ASCII character (32..126), print the character and
+		;; the count.
+output:		mvi	a,32	; Start at 32.
+		;; Print a character and its counter
+char:		mov	l,a	; Load 16-bit counter into DE. Low byte
+		mvi	h,2	; is in page 2 at a;
+		mov	e,m
+		inr	h	; And the high byte is in page 3.
+		mov	d,m
+		mov	a,d	; Test if the counter is zero
+		ora	e
+		mov	a,l	; Put the character back in A
+		jz	next	; If zero, don't print anything.
+		push	psw	; If not, push the character,
+		push	d	; and the counter.
+		mvi	c,putch	; Print the current character
+		mov	e,a
+		call	bdos	
+		lxi	d,separator	; Then print ': '
+		call 	outs
+		;; Then convert the counter to ASCII
+		pop	d 	; Retrieve the counter
+		lxi	h,numend	; Get pointer to end of digit string
+		push	h	; And put it on the stack
+dgtloop:	xchg		; Put counter in HL (16-bit accumulator)
+		lxi	b,-10	; Dividend is 10
+		mov	d,b	; Start quotient at -1 (we'll loop once
+		mov	e,b	; too many, this corrects for it)
+divloop:	inx	d	; Increment the quotient,
+		dad	b	; subtract 10 from the dividend,
+		jc	divloop	; and keep doing it until it goes negative
+		lxi	b,10+'0'	; Add 10 back to get the remainder,
+		dad	b		; plus '0' to make it ASCII.
+		mov	a,l	
+		pop	h	; Retrieve digit pointer
+		dcx	h	; Decrement it (to point at current digit)
+		mov	m,a	; Store the digit
+		push	h	; And store the new pointer
+		mov	a,d	; Check if the quotient is now zero
+		ora	e
+		jnz	dgtloop	; If not, do the next digit.
+		pop	d	; Set DE to point at the first digit
+		call	outs	; And output it as a string.
+		pop	psw	; Restore the character
+next:		inr	a	; Increment it
+		cpi	127	; Did we just do the last character?
+		jnz	char	; If not, go do the next character.
+		ret		; If so, we're done.
+		;; Print the error message
+error:		lxi	d,errmsg
+		;; Print string
+outs:		mvi	c,puts
+		jmp	bdos
+		;; Strings
+errmsg:		db	'?$'	; "Error message" (if file error)
+separator:	db	': $'	; Goes in between character and number
+number:		db	'00000'	; Space to keep ASCII representation of
+numend:		db	13,10,'$'	; a 16-bit number, plus newline.

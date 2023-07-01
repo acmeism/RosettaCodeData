@@ -1,0 +1,303 @@
+		bits	16
+		cpu	8086
+		;;; MS-DOS PSP locations
+arglen:		equ	80h
+argstart:	equ	82h
+		;;; MS-DOS system calls
+getch:		equ	1h
+putch:		equ	2h
+puts:		equ	9h
+time:		equ	2Ch
+section		.text
+		org	100h
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Read board size from command line
+		cmp	byte [arglen],0	; Command line empty?
+		je	printusage	; Then print usage and stop
+		mov	al,[argstart]	; Get first byte on command line
+		cmp	al,'3'		; <3?
+		jb	printusage	; Then print usage and stop
+		cmp	al,'8'		; >8?
+		ja	printusage	; Then print usage and stop
+		sub	al,'0'		; Make number from ASCII
+		mov	[boardsz],al	; Store the board size
+		mov	ah,puts		; If we made it here, print the
+		mov	dx,welcome	; welcome banner.
+		int	21h
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Generate random board
+		call	xabcinit	; Initialize the RNG with system time
+		mov	si,board
+		xor	bx,bx
+genboard:	call 	xabcrand	; Get random byte
+		mov	ah,al
+		call	xabcrand	; Get another
+		and	ax,0101h	; Keep only the low bit of each byte
+		mov	[si+bx],ax	; And store them
+		inc	bx		; Two bytes onward
+		inc	bx
+		cmp 	bl,64		; Are we done?
+		jne	genboard	
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Copy the board into the goal
+		mov	si,board	; Source is board
+		mov	di,goal		; Destination is goal
+		mov	bx,0		; Start at the beginning
+copyboard:	mov	ax,[si+bx]	; Load word from board
+		mov	[di+bx],ax	; Store word in goal
+		inc	bx		; We've copied two bytes
+		inc	bx
+		cmp 	bl,64		; Are we done yet?
+		jne 	copyboard
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Make an amount of random flips
+		call	xabcrand	; Random number
+		and	al,15		; [0..15]
+		add	al,5		; [5..20]
+		mov	[sysflips],al	; Store in memory
+		mov	cl,al		; Flip doesn't touch CL
+		xor	ch,ch		; Set high byte zero
+randflips:	call	xabcrand	; Random number
+		call 	flip		; Do a flip (unused bits are ignored)
+		loop 	randflips
+		mov	byte [usrflips],0	; Initialize user flips to 0
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Print game status (moves, goal moves)
+status:		mov	ah,puts
+		mov	dx,smoves
+		int	21h
+		mov	al,[usrflips]
+		call	printal
+		mov	ah,puts
+		mov	dx,sgoal
+		int	21h
+		mov	al,[sysflips]
+		call	printal
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Print the game board and goal board
+		mov	ah,puts		; Print the header
+		mov	dx,sboardhdr
+		int	21h
+		mov	cl,2		; Print two headers
+		mov	ah,putch	; Indent columns
+		;;; Print column headers
+colheader:	mov	dl,' '
+		int	21h
+		int	21h
+		mov	bh,0		; Offset
+		mov	bl,'A'		; First letter		
+.curcol:	cmp 	bh,[boardsz]
+		mov	dl,bl		; Print letter
+		jb	.printcol
+		mov	dl,' '		; Print space if column not used
+.printcol:	call	dlspace		; Print DL + separator space
+		inc	bl
+		inc	bh
+		cmp 	bh,8		; Done yet?
+		jb	.curcol
+		mov	dl,9		; Separate the boards with a TAB
+		int	21h
+		dec	cl		; We need two headers (board and goal)
+		jnz	colheader
+		mov	ah,puts		; Print a newline afterwards
+		mov	dx,newline
+		int	21h
+		;;; Print the rows of the boards
+		xor	bh,bh		; Zero high byte of BX
+		xor	cl,cl		; Row index
+boardrow:	mov	ch,2		; Two rows, board and goal
+		mov	si,board	; Start by printing the game board
+.oneboard:	xor	dh,dh		; Column index
+		mov	dl,cl		; Print row number
+		add	dl,'1'
+		call	dlspace
+.curpos:	cmp	dh,[boardsz]	; Column in use?
+		mov	dl,' '		; If not, print a space
+		jae	.printpos
+		mov	bl,cl		; Row index
+		shl	bl,1		; * 8
+		shl 	bl,1
+		shl 	bl,1
+		add	bl,dh		; Add column index
+		mov	dl,[bx+si]	; Get position from board
+		add	dl,'0'		; Print as ASCII 0 or 1
+.printpos:	call	dlspace
+		inc	dh		; Increment column index
+		cmp	dh,8		; Are we there yet?
+		jb	.curpos		; If not, print next position
+		mov	dl,9		; Separate the boards with a TAB
+		int	21h
+		dec	ch		; Have we printed the goal yet?
+		mov	si,goal		; If not, print the goal next
+		jnz	.oneboard
+		mov	ah,puts		; Print a newline
+		mov	dx,newline
+		int	21h
+		inc	cl		; Next row
+		cmp	cl,[boardsz]	; Are we there yet?
+		jb	boardrow	; If not, print the next row.
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Ask the user for a move
+		mov	ah,puts		; Write the prompt
+		mov	dx,prompt
+		int	21h
+readmove:	mov	ah,getch 	; Read a character
+		int	21h
+		or	al,32		; Make letters lowercase
+		cmp 	al,'q'		; Quit?
+		je	quit
+		cmp	al,'9'		; Numeric (row) input?
+		jbe	.nummove	; If not, alphabetic (column) input
+		;;; Letter input (column)
+		sub	al,'a'		; Subtract 'a'
+		jc	invalid		; If it was <'a', invalid input
+		cmp 	al,[boardsz]	; Is it on the board?
+		jae	invalid
+		or	al,128		; Set high bit, for column flip
+		call	flip		; Flip the column
+		jmp	checkwin	; See if the user has won
+		;;; Number input (row)
+.nummove:	sub	al,'1'		; Rows start at 1.
+		jc	invalid		; If <'1', then invalid
+		cmp	al,[boardsz]	; Is it on the board?
+		jae	invalid
+		call	flip		; Flip the row
+		;;; Check if the user has won the game
+checkwin:	xor	bh,bh		; Zero high byte of array index
+		mov	dl,[boardsz]
+		xor	ch,ch		; Row coordinate
+.row:		xor	cl,cl		; Column coordinate
+.pos:		mov	bl,ch		; BL = row*8 + col
+		shl	bl,1
+		shl	bl,1
+		shl 	bl,1
+		add	bl,cl
+		mov 	al,[board+bx]	; Get position from board
+		cmp	al,[goal+bx]	; Compare with corresponding goal pos
+		jne	.nowin		; Not equal: the user hasn't won
+		inc	cl
+		cmp	cl,dl		; Done all positions on row?
+		jb	.pos		; If not, do next.
+		inc	ch
+		cmp	ch,dl 		; Done all rows?
+		jb	.row		; If not, do next.
+		;;; If we get here, the user has won
+		mov	ah,puts
+		mov	dx,win
+		int	21h
+		ret
+		;;; The user hasn't won
+.nowin:		inc	byte [usrflips]	; Record that the user has made a move
+		jmp	status		; Print status and board, get new move
+		;;; Invalid input
+invalid:	mov	ah,puts
+		mov	dx,nope
+		int	21h
+		jmp	readmove
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Flip the line or column in AL. If bit 7 set, flip column.
+flip:		mov	si,board	; SI = board
+		test	al,al		; This sets sign flag if bit 7 set
+		js	.column		; If so, flip column.
+		and	al,7		; We only need the first 3 bits
+		shl	al,1		; Multiply by 8
+		shl	al,1		; 8086 does not support 'shl al,3'
+		shl 	al,1
+		xor	ah,ah 		; High byte 0
+		mov	bx,ax		; BX = offset
+		mov	ah,4		; 4 words
+.rowloop	xor	word [si+bx],0101h	; Flip two bytes at once
+		inc	bx
+		inc	bx
+		dec	ah
+		jnz	.rowloop
+		ret
+.column:	and	al,7		; Flip a column.
+		xor	ah,ah
+		mov	bx,ax		; BX = row offset
+		mov	ah,8		; 8 bytes (need to do it byte by byte)
+.colloop:	xor	byte [si+bx],01h	; Flip position
+		add	bx,8
+		dec	ah
+		jnz	.colloop
+quit:		ret
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Print usage and stop
+printusage:	mov	ah,puts
+		mov	dx,usage
+		int	21h
+		ret	
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Print the character in DL followed by a space
+dlspace:	mov	ah,putch
+		int	21h
+		mov	dl,' '
+		int	21h
+		ret
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Initialize the random number generator using the system
+		;;; time.
+xabcinit:	mov	ah,time
+		int	21h
+		mov	bx,xabcdat
+		xor	[bx],cx
+		xor	[bx+2],dx
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; The "X ABC" random number generator
+		;;; Return random byte in AL
+xabcrand:	push	bx		; Save registers
+		push	cx		
+		push	dx
+		mov	bx,xabcdat	; RNG state pointer
+		mov	cx,[bx]		; CL=x CH=a
+		mov	dx,[bx+2]	; DL=b DH=c
+		inc 	cl		; X++
+		xor	ch,dh		; A^=C
+		xor	ch,cl		; A^=X
+		add	dl,ch		; B+=A
+		mov	al,dl
+		shr	al,1		; B>>1
+		xor	al,ch		; ^A
+		add	al,dh		; +C
+		mov	dh,al		; ->C
+		mov	[bx],cx		; Store new RNG state
+		mov	[bx+2],dx
+		pop	dx		; Restore registers
+		pop 	cx
+		pop 	bx
+		ret
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Print the byte in AL as a decimal number
+printal:	mov	di,decnum + 3	; Room in memory for decimal number
+		mov	dl,10		; Divide by 10
+.loop:		xor	ah,ah		; Zero remainder
+		div	dl		; Divide by 10
+		add	ah,'0'		; Add ASCII 0 to remainder
+		dec	di
+		mov	[di],ah		; Store digit in memory
+		and	al,al		; Done yet?
+		jnz	.loop		; If not, next digit
+		mov	dx,di		; DX = number string
+		mov	ah,puts		; Print the string
+		int	21h
+		ret
+section		.data
+decnum:		db	'***$'	; Decimal number placeholder
+usage:		db	'Usage: FLIP [3..8], number is board size.$' 		
+welcome:	db	'*** FLIP THE BITS *** ',13,10
+		db	'--------------------- ',
+newline:	db	13,10,'$'
+smoves:		db	13,10,13,10,'Your flips: $'
+sgoal:		db	9,'Goal: $'
+sboardhdr:	db	13,10,10,'--Board------------'
+		db	9,'--Goal-------------',13,10,'$'
+prompt:		db	13,10,'Press line or column to flip, or Q to quit: $'
+nope:		db	8,32,8,7,'$'	; Beep and erase input
+win:		db	13,10,7,7,7,'You win!$'
+section		.bss
+boardsz:	resb 	1	; Board size
+sysflips:	resb	1	; Amount of flips that the system does
+usrflips:	resb	1	; Amount of flips that the user does
+xabcdat:	resb	4	; Four byte RNG state
+board:		resb	64	; 8*8 board
+goal:		resb	64	; 8*8 goal

@@ -1,0 +1,149 @@
+$CHECKING:OFF
+' Warning: Keep the above line commented out until you know your newly edited code works.
+'          You can NOT stop a program in mid run (using top right x button) with checkng off.
+'
+_TITLE "Rosetta Code Anagrams: mod #7 Best times yet w/o memory techniques by bplus 2017-12-12"
+' This program now below .4 secs for average time to do 100 loops compared to 92 secs for 1
+' loop on my "dinosaur" when I first coded a successful run.
+'
+' Steve McNeil at QB64.net has +7000 loops per sec on his machine with help of using
+' memory techniques.  see page 3 @  http://www.qb64.net/forum/index.php?topic=14622.30
+'
+' Thanks Steve! I learned allot and am NOW very motivated to learn memory techniques.
+'
+' This program has timings for 1 loop broken into sections currently commented out and another
+' set of timings for multiple loop testing currently set, now at 100 tests for a sort of average.
+' But average is misleading, the first test is usually always the longest and really only one test
+' is necessary to get the results from a data file that does not change.
+'
+' Breaking code into logical sections and timing those can help spot trouble areas or the difference
+' in a small or great change.
+'
+' Here is review of speed tips commented as they occur in code:
+'
+DEFINT A-Z 'there are 25,105 words in the unixdict.txt file so main array index
+'           and pointers in sort can all be integers.
+
+' The letters from a word read in from the dictionary file (really just a word list in alpha order)
+' are to be counted and coded into an alpha order sequence of letters:
+'       eg.  eilv is the same code for words: evil, levi, live, veil, vile
+' The longest word in the file had 22 letters, they are all lower case but there are other symbols
+' in file like ' and digits we want to filter out.
+TYPE wordData
+    code AS STRING * 22
+    theWord AS STRING * 22
+END TYPE
+' I originally was coding a word into the whole list (array) of letter counts as a string.
+' Then realized I could drop all the zeros if I converted the numbers back to letters.
+' I then attached THE word to the end of the coded word using ! to separate the 2 sections.
+' That was allot of manipulation with INSTR to find the ! separator and then MID$ to extract the
+' code or THE word when I needed the value. All this extra manipulation ended by using TYPE with
+' the code part and the word part sharing the same index. Learned from Steve's example!
+
+' Pick the lowest number type needed to cover the problem
+DIM SHARED w(25105) AS wordData '  the main array
+DIM anagramSetsCount AS _BYTE ' the Rosetta Code Challenge was to find only the largest sets of Anagrams
+DIM codeCount AS _BYTE ' counting number of words with same code
+DIM wordIndex AS _BYTE
+DIM wordLength AS _BYTE
+DIM flag AS _BIT 'flag used as true or false
+DIM letterCounts(1 TO 26) AS _BYTE 'stores letter counts for coding word
+' b$  always stands for building a string.
+' For long and strings, I am using the designated suffix
+
+t1# = TIMER: loops = 100
+FOR test = 1 TO loops
+    'reset these for multiple loop tests
+    indexTop = 0 'indexTop for main data array
+    anagramSetsCount = 0 'anagrams count if exceed 4 for any one code
+    anagramList$ = "" 'list of anagrams
+
+    'get the file data loaded in one pop, disk access is slow!
+    OPEN "unixdict.txt" FOR BINARY AS #1
+    ' http://wiki.puzzlers.org/pub/wordlists/unixdict.txt
+    ' note: when I downloaded this file line breaks were by chr$(10) only.
+    ' Steve had coded for either chr$(13) + chr$(10) or just chr$(10)
+
+    fileLength& = LOF(1): buf$ = SPACE$(fileLength&)
+    GET #1, , buf$
+    CLOSE #1
+    ' Getting the data into a big long string saved allot of time as compared to
+    ' reading from the file line by line.
+
+    'Process the file data by extracting the word from the long file string and then
+    'coding each word of interest, loading up the w() array.
+    filePosition& = 1
+    WHILE filePosition& < fileLength&
+        nextPosition& = INSTR(filePosition&, buf$, CHR$(10))
+        wd$ = MID$(buf$, filePosition&, nextPosition& - filePosition&)
+        wordLength = LEN(wd$)
+        IF wordLength > 2 THEN
+            'From Steve's example, changing from REDIM to ERASE saved an amzing amount of time!
+            ERASE letterCounts: flag = 0: wordIndex = 1
+            WHILE wordIndex <= wordLength
+                'From Steve's example, I was not aware of this version of ASC with MID$ built-in
+                ansciChar = ASC(wd$, wordIndex) - 96
+                IF 0 < ansciChar AND ansciChar < 27 THEN letterCounts(ansciChar) = letterCounts(ansciChar) + 1 ELSE flag = 1: EXIT WHILE
+                wordIndex = wordIndex + 1
+            WEND
+            'don't code and store a word unless all letters, no digits or apostrophes
+            IF flag = 0 THEN
+                b$ = "": wordIndex = 1
+                WHILE wordIndex < 27
+                    IF letterCounts(wordIndex) THEN b$ = b$ + STRING$(letterCounts(wordIndex), CHR$(96 + wordIndex))
+                    wordIndex = wordIndex + 1
+                WEND
+                indexTop = indexTop + 1
+                w(indexTop).code = b$
+                w(indexTop).theWord = wd$
+            END IF
+        END IF
+        IF nextPosition& THEN filePosition& = nextPosition& + 1 ELSE filePosition& = fileLength&
+    WEND
+    't2# = TIMER
+    'PRINT t2# - t1#; " secs to load word array."
+
+    'Sort using a recursive Quick Sort routine on the code key of wordData Type defined.
+    QSort 0, indexTop
+    't3# = TIMER
+    'PRINT t3# - t2#; " secs to sort array."
+
+    'Now find all the anagrams, word permutations, from the same word "code" that we sorted by.
+    flag = 0: j = 0
+    WHILE j < indexTop
+        'Does the sorted code key match the next one on the list?
+        IF w(j).code <> w(j + 1).code THEN ' not matched so stop counting and add to report
+            IF codeCount > 4 THEN ' only want the largest sets of anagrams 5 or more
+                anagramList$ = anagramList$ + b$ + CHR$(10)
+                anagramSetsCount = anagramSetsCount + 1
+            END IF
+            codeCount = 0: b$ = "": flag = 0
+        ELSEIF flag THEN ' match and match flag set so just add to count and build set
+            b$ = b$ + ", " + RTRIM$(w(j + 1).theWord)
+            codeCount = codeCount + 1
+        ELSE ' no flag means first match, start counting and building a new set
+            b$ = RTRIM$(w(j).theWord) + ", " + RTRIM$(w(j + 1).theWord)
+            codeCount = 2: flag = 1
+        END IF
+        j = j + 1
+    WEND
+    't4# = TIMER
+    'PRINT t4# - t3#; " secs to count matches from array."
+NEXT
+PRINT "Ave time per loop"; (TIMER - t1#) / loops; " secs, there were"; anagramSetsCount; " anagrams sets of 5 or more words."
+PRINT anagramList$
+
+'This sub modified for wordData Type, to sort by the .code key, the w() array is SHARED
+SUB QSort (Start, Finish)
+    i = Start: j = Finish: x$ = w(INT((i + j) / 2)).code
+    WHILE i <= j
+        WHILE w(i).code < x$: i = i + 1: WEND
+        WHILE w(j).code > x$: j = j - 1: WEND
+        IF i <= j THEN
+            SWAP w(i), w(j)
+            i = i + 1: j = j - 1
+        END IF
+    WEND
+    IF j > Start THEN QSort Start, j
+    IF i < Finish THEN QSort i, Finish
+END SUB

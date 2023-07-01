@@ -1,0 +1,94 @@
+P:	equ	929		; P for 2^P-1
+	cpu	8086
+	bits	16
+	org	100h
+section	.text
+	mov	ax,P		; Is P prime?
+	call	prime
+	mov	dx,notprm
+	jc	msg		; If not, say so and stop.
+	xor	bp,bp		; Let BP hold k
+test_k:	inc	bp		; k += 1
+	mov	ax,P		; Calculate 2kP + 1
+	mul	bp		; AX = kP
+	shl	ax,1		; AX = 2kP
+	inc	ax		; AX = 2kP + 1
+	mov	dx,ovfl		; If AX overflows (16 bits), say so and stop
+	jc 	msg
+	mov	bx,ax		; What is 2^P mod (2kP+1)?
+	mov	cx,P
+	call	modpow
+	dec	ax		; If it is 1, we're done
+	jnz	test_k		; If not, increment K and try again
+	mov	dx,factor	; If so, we found a factor
+	call	msg
+prbx:	mov	ax,10		; The factor is still in BX
+	xchg	bx,ax		; Put factor in AX and divisor (10) in BX
+	mov	di,number	; Generate ASCII representation of number
+digit:	xor	dx,dx
+	div	bx		; Divide current number by 10,
+	add	dl,'0'		; add '0' to remainder,
+	dec	di		; move pointer back,
+	mov	[di],dl		; store digit,
+	test	ax,ax		; and if there are more digits,
+	jnz	digit		; find the next digit.
+	mov	dx,di		; Finally, print the number.
+	jmp	msg
+	;;;	Calculate 2^CX mod BX
+	;;;	Output: AX
+	;;;	Destroyed: CX, DX
+modpow:	shl	cx,1		; Shift CX left until top bit in high bit
+	jnc	modpow		; Keep shifting while carry zero
+	rcr	cx,1		; Put the top bit back into CX
+	mov	ax,1		; Start with square = 1
+.step:	mul	ax		; Square (result is 32-bit, goes in DX:AX)
+	shl	cx,1		; Grab a bit from CX
+	jnc	.nodbl		; If zero, don't multiply by two
+	shl	ax,1		; Shift DX:AX left (mul by two)
+	rcl	dx,1
+.nodbl:	div	bx		; Divide DX:AX by BX (putting modulus in DX)
+	mov	ax,dx		; Continue with modulus
+	jcxz	.done		; When CX reaches 0, we're done
+	jmp	.step		; Otherwise, do the next step
+.done:	ret
+	;;;	Is AX prime?
+	;;;	Output: carry clear if prime, set if not prime.
+	;;;	Destroyed: AX, BX, CX, DX, SI, DI, BP
+prime:	mov	cx,[prcnt]	; See if AX is already in the list of primes
+	mov	di,primes
+	repne	scasw		; If so, return
+	je	modpow.done	; Reuse the RET just above here (carry clear)
+	mov	bp,ax		; Move AX out of the way
+	mov	bx,[di-2]	; Start generating new primes
+.sieve:	inc	bx		; BX = last prime + 2
+	inc	bx
+	cmp	bp,bx		; If BX higher than number to test,
+	jb	modpow.done	; stop, number is not prime. (carry set)
+	mov	cx,[prcnt]	; CX = amount of current primes
+	mov	si,primes	; SI = start of primes
+.try:	mov	ax,bx		; BX divisible by current prime?
+	xor	dx,dx
+	div	word [si]
+	test	dx,dx		; If so, BX is not prime.
+	jz	.sieve
+	inc	si
+	inc	si
+	loop	.try		; Otherwise, try next prime.
+	mov	ax,bx		; If we get here, BX _is_ prime
+	stosw			; So add it to the list
+	inc	word [prcnt]	; We have one more prime
+	cmp	ax,bp		; Is it the prime we are looking for?
+	jne	.sieve		; If not, try next prime
+	ret
+	;;;	Print message in DX
+msg:	mov	ah,9
+	int	21h
+	ret
+section	.data
+	db	"*****"		; Placeholder for number
+number:	db	"$"
+notprm:	db	"P is not prime.$"
+ovfl:	db	"Range of factor exceeded (max 16 bits)."
+factor:	db	"Found factor: $"
+prcnt:	dw	2		; Amount of primes currently in list
+primes:	dw	2, 3		; List of primes to be extended

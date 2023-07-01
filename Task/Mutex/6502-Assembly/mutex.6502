@@ -1,0 +1,58 @@
+;assume that the NES's screen is active and NMI occurs at the end of every frame.
+
+mutex equ $01              ;these addresses in zero page memory will serve as the global variables.
+vblankflag equ $02
+
+main:
+;if your time-sensitive function has parameters, pre-load them into global memory here.
+;The only thing the NMI should have to do is write the data to the hardware registers.
+
+jsr waitframe
+LDA #$01         ;there's not enough time for a second vblank to occur between these two calls to waitframe().
+STA mutex        ;release the mutex. the next NMI will service the function we just unlocked.
+jsr waitframe
+
+halt:
+jmp halt         ;we're done - trap the cpu. NMI will still occur but nothing of interest happens since the mutex is locked.
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+nmi:   ;every 1/60th of a second the CPU jumps here automatically.
+pha
+txa
+pha
+tya
+pha    ;pushAll
+
+;for simplicity's sake the needs of the hardware are going to be omitted. A real NES game would perform sprite DMA here.
+
+LDA mutex
+BEQ exit_nmi
+
+; whatever you wanted to gatekeep behind your mutex goes here.
+; typically it would be something like a text box printer, etc.
+; Something that needs to update the video RAM and do so ASAP.
+
+LDA #$00
+STA mutex  ;lock the mutex again.
+
+exit_nmi:
+LDA #$01
+STA vblankflag  ;allow waitframe() to exit
+
+pla
+tay
+pla
+tax
+pla   ;popAll
+rti
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+waitframe:
+pha
+LDA #0
+sta vblankflag
+.again:
+LDA vblankflag
+BEQ again           ;this would loop infinitely if it weren't for vblankflag being set during NMI
+pla
+rts

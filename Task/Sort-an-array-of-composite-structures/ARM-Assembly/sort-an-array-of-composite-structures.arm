@@ -1,0 +1,290 @@
+/* ARM assembly Raspberry PI  */
+/*  program compositeSort.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* city structure      */
+    .struct  0
+city_name:                             @
+    .struct  city_name + 4
+city_habitants:                             @
+    .struct  city_habitants + 4
+city_end:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessResult:        .asciz "Name : @  number habitants : @ \n"
+szMessSortHab:      .asciz "Sort table for number of habitants :\n"
+szMessSortName:     .asciz "Sort table for name of city :\n"
+szCarriageReturn:   .asciz "\n"
+
+// cities name
+szCeret:           .asciz "Ceret"
+szMaureillas:      .asciz "Maureillas"
+szTaillet:         .asciz "Taillet"
+szReynes:          .asciz "Reynes"
+szVives:           .asciz "Vivés"
+szBoulou:          .asciz "Le Boulou"
+szSaintJean:       .asciz "Saint Jean Pla de Corts"
+szCluses:          .asciz "Les Cluses"
+szAlbere:          .asciz "L'Albère"
+szPerthus:         .asciz "Le Perthus"
+.align 4
+
+TableCities:
+                 .int szCluses         @ address name string
+                 .int 251              @ number of habitants
+                 .int szCeret
+                 .int 7705
+                 .int szMaureillas
+                 .int 2596
+                 .int szBoulou
+                 .int 5554
+                 .int szSaintJean
+                 .int 2153
+                 .int szAlbere
+                 .int 83
+                 .int szVives
+                 .int 174
+                 .int szTaillet
+                 .int 115
+                 .int szPerthus
+                 .int 586
+                 .int szReynes
+                 .int 1354
+.equ NBELEMENTS,  (. - TableCities) / city_end
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                             @ entry of program
+
+    ldr r0,iAdrszMessSortHab
+    bl affichageMess
+
+    ldr r0,iAdrTableCities                        @ address city table
+    mov r1,#0                                     @ not use in routine
+    mov r2,#NBELEMENTS                            @ number of élements
+    mov r3,#city_habitants                        @ sort by number habitants
+    mov r4,#'N'                                   @ Alphanumeric
+    bl shellSort
+    ldr r0,iAdrTableCities                        @ address number table
+    bl displayTable
+
+    ldr r0,iAdrszMessSortName
+    bl affichageMess
+
+    ldr r0,iAdrTableCities                        @ address city table
+    mov r1,#0                                     @ not use in routine
+    mov r2,#NBELEMENTS                            @ number of élements
+    mov r3,#city_name                             @ sort by name
+    mov r4,#'A'                                   @ Alphanumeric
+    bl shellSort
+    ldr r0,iAdrTableCities                        @ address number table
+    bl displayTable
+
+100:                                              @ standard end of the program
+    mov r0, #0                                    @ return code
+    mov r7, #EXIT                                 @ request to exit program
+    svc #0                                        @ perform the system call
+
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrsMessResult:          .int sMessResult
+iAdrTableCities:          .int TableCities
+iAdrszMessSortHab:        .int szMessSortHab
+iAdrszMessSortName:       .int szMessSortName
+/***************************************************/
+/*   shell Sort                                    */
+/***************************************************/
+
+/* r0 contains the address of table */
+/* r1 contains the first element but not use !!   */
+/*   this routine use first element at index zero !!!  */
+/* r2 contains the number of element */
+/* r3 contains the offset of sort zone */
+/* r4 contains type of sort zone N = numeric A = alphanumeric */
+shellSort:
+    push {r0-r12,lr}             @ save registers
+    sub sp,#city_end             @ reserve area on stack
+    mov fp,sp                    @ frame pointer = stack
+    mov r8,r3                    @ save offser area sort
+    mov r9,r4                    @ save type sort
+    mov r7,#city_end             @ element size
+    //vidregtit debut
+    sub r12,r2,#1                @ index last item
+    mov r6,r12                   @ init gap = last item
+1:                               @ start loop 1
+    lsrs r6,#1                   @ gap = gap / 2
+    beq 100f                     @ if gap = 0 -> end
+    mov r3,r6                    @ init loop indice 1
+2:                               @ start loop 2
+    mul r1,r3,r7                 @ offset élement
+    mov r2,fp                    @ save on stack
+    bl saveElement
+    add r1,r8                    @ + offset sort zone
+    ldr r4,[r0,r1]               @ load first value
+    mov r5,r3                    @ init loop indice 2
+3:                               @ start loop 3
+    cmp r5,r6                    @ indice < gap
+    blt 8f                       @ yes -> end loop 2
+    sub r10,r5,r6                @ index = indice - gap
+    mul r1,r10,r7                @ offset élement
+    add r10,r1,r8                @ + offset sort zone
+    ldr r2,[r0,r10]              @ load second value
+    push {r3,r5}                 @ save registrars because not enought register
+    cmp r9,#'A'                  @ sort area alapha ?
+    beq 4f                       @ yes
+    cmp r4,r2                    @  else compare numeric values
+    bge 7f                       @ highter
+    b 6f                         @ lower
+4:                               @ compare area alphanumeric
+    mov r10,#0                   @ counter
+5:
+    ldrb r3,[r4,r10]             @ byte string 1
+    ldrb r5,[r2,r10]             @ byte string 2
+    cmp r3,r5
+    bgt 7f
+    blt 6f
+
+    cmp r3,#0                    @  end string 1
+    beq 7f                       @ ens comparaison
+    add r10,r10,#1               @ else add 1 in counter
+    b 5b                         @ and loop
+
+6:
+    pop {r3,r5}                  @ restaur registers
+    mul r2,r5,r7                 @ offset élement
+    bl copyElement               @ copy element r1 to element r2
+    sub r5,r6                    @ indice = indice - gap
+    b 3b                         @ and loop
+7:
+    pop {r3,r5}
+8:                               @ end loop 3
+    mul r1,r5,r7                 @ offset destination élement
+    mov r2,fp                    @ restaur element in table
+    bl restaurElement
+    add r3,#1                    @ increment indice 1
+    cmp r3,r12                   @ end ?
+    ble 2b                       @ no -> loop 2
+    b 1b                         @ yes loop for new gap
+
+100:                             @ end function
+    add sp,#city_end
+    pop {r0-r12,lr}              @ restaur registers
+    bx lr                        @ return
+/******************************************************************/
+/*      copy table element                                */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 offset origin element */
+/* r2 offset destination element */
+copyElement:
+    push {r0-r4,lr}                                    @ save registers
+    //vidregtit copy
+    mov r3,#0
+    add r1,r0
+    add r2,r0
+1:
+    ldrb r4,[r1,r3]
+    strb r4,[r2,r3]
+    add r3,#1
+    cmp r3,#city_end
+    blt 1b
+100:
+    pop {r0-r4,lr}
+    bx lr
+/******************************************************************/
+/*      save element                                */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 offset origin element */
+/* r2 address destination  */
+saveElement:
+    push {r0-r4,lr}                                    @ save registers
+    mov r3,#0
+    add r1,r0
+1:
+    ldrb r4,[r1,r3]
+    strb r4,[r2,r3]
+    add r3,#1
+    cmp r3,#city_end
+    blt 1b
+100:
+    pop {r0-r4,lr}
+    bx lr
+/******************************************************************/
+/*      restaur element                                */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 offset destination element */
+/* r2 address origine  */
+restaurElement:
+    push {r0-r4,lr}                                    @ save registers
+    mov r3,#0
+    add r1,r0
+1:
+    ldrb r4,[r2,r3]
+    strb r4,[r1,r3]
+    add r3,#1
+    cmp r3,#city_end
+    blt 1b
+100:
+    pop {r0-r4,lr}
+    bx lr
+/******************************************************************/
+/*      Display table elements                                */
+/******************************************************************/
+/* r0 contains the address of table */
+displayTable:
+    push {r0-r6,lr}              @ save registers
+    mov r2,r0                    @ table address
+    mov r3,#0
+    mov r6,#city_end
+1:                               @ loop display table
+    mul r4,r3,r6
+    add r4,#city_name
+    ldr r1,[r2,r4]
+    ldr r0,iAdrsMessResult
+    bl strInsertAtCharInc        @ put name in message
+    mov r5,r0                    @ save address of new message
+    mul r4,r3,r6
+    add r4,#city_habitants       @ and load value
+    ldr r0,[r2,r4]
+    ldr r1,iAdrsZoneConv
+    bl conversion10              @ call decimal conversion
+    mov r0,r5
+    ldr r1,iAdrsZoneConv         @ insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess             @ display message
+    add r3,#1
+    cmp r3,#NBELEMENTS - 1
+    ble 1b
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+100:
+    pop {r0-r6,lr}
+    bx lr
+iAdrsZoneConv:      .int sZoneConv
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

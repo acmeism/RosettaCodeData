@@ -1,0 +1,260 @@
+ [Hailstone (or Collatz) task for Rosetta Code.
+  EDSAC program, Initial Orders 2.]
+
+ [This program shows how subroutines can be called via the
+  phi, H, N, ..., V parameters, so that the code doesn't have
+  to be changed if the subroutines are moved about in store.
+  See Wilkes, Wheeler and Gill, 1951 edition, page 18.]
+
+ [Library subroutine P7, prints long strictly positive integer;
+  10 characters, right justified, padded left with spaces.
+  Input: 0D = integer to be printed.
+  Closed, even; 35 storage locations; working position 4D.]
+            T   55 K  [call subroutine via V parameter]
+            P   56 F  [address of subroutine]
+            E   25 K
+            T      V
+   GKA3FT26@H28#@NDYFLDT4DS27@TFH8@S8@T1FV4DAFG31@SFLDUFOFFFSFL4F
+   T4DA1FA27@G11@XFT28#ZPFT27ZP1024FP610D@524D!FO30@SFL8FE22@
+
+  [Subroutine to print a string placed after the subroutine call.
+  One location per character, with character in top 5 bits.
+  Last character flagged by having bit 0 set.
+  17 locations, workspace 0F.]
+            T   54 K  [call subroutine via C parameter]
+            P   91 F  [address of subroutine]
+            E   25 K
+            T      C
+   GKH16@A2FG4@A6@A2FT6@AFTFOFCFSFE3@A6@A3FT15@EFV2047F
+
+ [************ Rosetta Code task ************
+  Subroutine to generate and optionally store the hailstone
+  (Collatz) sequence for the passed-in initial term n.
+  Input:  4D = n, 35-bit positive integer
+          6F = start address of sequence if stored;
+               must be even; 0 = don't store
+  Output: 7F = number of terms in sequence, or -1 if error
+  Workspace: 0D (general), 8D (term of sequence)
+  Must be loaded at an even address.]
+            T   45 K  [call subroutine via H parameter]
+            P  108 F  [address of subroutine]
+            E   25 K
+            T      H
+            G      K
+            A    3 F
+            T   46 @
+            H   54#@  [mult reg := 1 to test odd/even]
+            A    4 D  [load n passed in by caller]
+            T    8 D  [term := n]
+            A   54 @  [load 1 (single)]
+            T    7 F  [include initial term in count]
+            A    6 F  [load address for store]
+            S   56 @  [test for 0; allow for pre-inc]
+            G   11 @  [skip next if storing not wanted]
+            A   12 @  [make 'T addr D' order]
+     [11]   T   21 @  [plant T order, or -ve value if not storing
+                         (note that a T order is +ve as an integer)]
+        [Loop: deal with current term in sequence
+         First store it, if user requested that]
+     [12]   T      D  [clear acc; also serves to make 'T addr D' order]
+            A   21 @  [load T order to store term]
+            G   22 @  [jump if caller doesn't want store]
+            A   56 @  [pre-inc the address]
+            U   21 @  [update T order]
+            S   51 @  [check not gone beyond max EDSAC address]
+            E   47 @  [error exit if it has]
+            T      F  [clear acc]
+            A    8 D  [load term]
+     [21]   T      D  [store]
+     [22]   T      F  [clear acc]
+            A   54#@  [load 1 (double)]
+            S    8 D  [1 - term]
+            E   46 @  [if term = 1, jump out with acc = 0]
+            T      F  [clear acc]
+            C    8 D  [acc := term AND 1]
+            S   54#@  [test whether 0 or 1]
+            G   38 @  [jump if term is even]
+         [Here if term is odd; acc = 0]
+            A    8 D  [load term]
+            S   52#@  [guard against numeric overflow]
+            E   47 @  [jump if overflow]
+            A   52#@  [restore term after test]
+            L      D  [term*2]
+            A    8 D  [term*3]
+            A   54#@  [plus 1]
+            E   41 @  [join common code]
+         [Here if term is even]
+     [38]   T      F  [clear acc]
+            A    8 D  [load term]
+            R      D  [term/2]
+         [Common code, acc = new term]
+     [41]   T    8 D  [store new term]
+            A    7 F  [load count]
+            A   54 @  [add 1]
+            T    7 F  [update count]
+            E   12 @  [loop back]
+        [Here when sequence has reached 1
+         Assume jump here with acc = 0]
+     [46]   E      F  [return with acc = 0]
+     [47]   T      F  [here on error]
+            S   54 F  [acc := -1]
+            T    7 F  [return that as count]
+            E   46 @
+   [Arrange the following to ensure even addresses for 35-bit values]
+     [51]   T 1024 F  [for checking valid address]
+     [52]   H  682 DT  682 D  [(2^34 - 1)/3]
+     [54]   P      DP      F  [1]
+     [56]   P    2 F  [to change addresses by 2]
+
+        [Program to demonstrate Rosetta Code subroutine]
+            T  180 K
+            G      K
+  [Double constants]
+           [P 500 F  P F]  [maximum n = 1000"]
+      [0]   & 848 F PF     [maximum n = 100000]
+      [2]   P  13 D PF     [n = 27 as demo of sequence]
+      [4]   P     D PF     [1]
+  [Double variables]
+      [6]   P  F P F  [n, start of Collatz sequence]
+      [8]   P  F P F  [n with maximum count]
+  [Single constants]
+     [10]   P  400 F  [where to store sequence]
+     [11]   P    2 F  [to change addresses by 2]
+     [12]   @      F  [carriage return]
+     [13]   &      F  [line feed]
+     [14]   K 4096 F  [null char]
+     [15]   A      D  [used for maiking 'A addr D' order]
+     [16]   P    8 F  [ used for adding 8 to address]
+  [Single variables]
+     [17]   P      F  [maximum number of terms]
+     [18]   P      F  [temporary store]
+     [19]   P      F  [marks end of printing]
+
+ [Subroutine to print 4 numbers starting at address in 6F.
+  Prints new line (CR, LF) at end.]
+     [20]   A    3 F  [plant link for return]
+            T   40 @
+            A    6 F  [load start address]
+            A   15 @  [make 'A addr D' order]
+            A   16 @  [inc address by 8 (4 double values)]
+            U   19 @  [store as test for end]
+            S   16 @  [restore 'A addr D' order for start]
+     [27]   U   31 @  [plant 'A addr D' order in code]
+            S   19 @  [test for end]
+            E   38 @  [out if so]
+            T      F  [clear acc]
+     [31]   A      D  [load number]
+            T      D  [to 0D for printing]
+     [33]   A   33 @  [call print subroutine]
+            G      V
+            A   31 @  [load 'A addr D' order]
+            A   11 @  [inc address to next double value]
+            G   27 @  [loop back]
+     [38]   O   12 @  [here when done, print CR LF]
+            O   13 @
+     [40]   E      F  [return]
+
+         [Enter with acc = 0]
+         [PART 1]
+     [41]   A    2#@  [load demo value of n]
+            T    4 D  [to 4D for subroutine]
+            A   10 @  [address to store sequence]
+            T    6 F  [to 6F for subroutine]
+     [45]   A   45 @  [call subroutine to generate sequence]
+            G      H
+            A    7 F  [load length of sequence]
+            G  198 @  [out if error]
+            T   18 @
+         [Print result]
+     [50]   A   50 @  [print 'start' message]
+            G      C
+            K2048F SF TF AF RF TF !F !F #D
+            A    2#@  [load demo value of n]
+            T      D  [to 0D for printing]
+     [63]   A   63 @  [print demo n]
+            G      V
+     [65]   A   65 @  [print 'length' string]
+            G      C
+            K2048F @F &F LF EF NF GF TF HF !F #D
+            T      D  [ensure 1F and sandwich bit are 0]
+            A   18 @  [load length]
+            T      F  [to 0F (effectively 0D) for printing]
+     [81]   A   81 @
+            G      V
+     [83]   A   83 @  [print 'first and last four' string]
+            G      C
+            K2048F @F &F FF IF RF SF TF !F AF NF DF !F LF AF SF TF !F FF OF UF RF @F &F #D
+            A   18 @  [load length of sequence]
+            L    1 F  [times 4]
+            A    6 F  [make address of last 4]
+            S   16 @
+            T   18 @  [store address of last 4]
+    [115]   A  115 @  [print first 4 terms]
+            G   20 @
+            A   18 @  [retrieve address of last 4]
+            T    6 F  [pass as parameter]
+    [119]   A  119 @  [print last 4 terms]
+            G   20 @
+
+         [PART 2]
+            T      F
+            T   17 @  [max count := 0]
+            T    6#@  [n := 0]
+         [Loop: update n, start new sequence]
+    [124]   T      F  [clear acc]
+            A    6#@  [load n]
+            A    4#@  [add 1 (double)]
+            U    6#@  [update n]
+            T    4 D  [n to 4D for subroutine]
+            T    6 F  [say no store]
+    [130]   A  130 @  [call subroutine to generate sequence]
+            G      H
+            A    7 F  [load count returned by subroutine]
+            G  198 @  [out if error]
+            S   17 @  [compare with max count so far]
+            G  140 @  [skip if less]
+            A   17 @  [restore count after test]
+            T   17 @  [update max count]
+            A    6#@  [load n]
+            T    8#@  [remember n that gave max count]
+    [140]   T      F  [clear acc]
+            A    6#@  [load n just done]
+            S     #@  [compare with max(n)]
+            G  124 @  [loop back if n < max(n)
+                       else fall through with acc = 0]
+         [Here whan reached maximum n. Print result.]
+    [144]   A  144 @  [print 'max n' message]
+            G      C
+            K2048F MF AF XF !F NF !F !F #D
+            A     #@  [load maximum n]
+            T      D  [to 0D for printing]
+    [157]   A  157 @  [call print subroutine]
+            G      V
+    [159]   A  159 @  [print 'max len' message]
+            G      C
+            K2048F @F &F MF AF XF !F LF EF NF #D
+            T      D  [clear 1F and sandwich bit]
+            A   17 @  [load max count (single)]
+            T      F  [to 0F, effectively to 0D]
+    [175]   A  175 @  [call print subroutine]
+            G      V
+    [177]   A  177 @  [print 'at n =' message]
+            G      C
+            K2048F @F &F AF TF !F NF !F #F VF !D
+            A    8#@  [load n for which max count occurred]
+            T      D  [to 0D for printing]
+    [192]   A  192 @  [call print subroutine]
+            G      V
+    [194]   O   12 @  [print CR, LF]
+            O   13 @
+            O   14 @  [print null to flush teleprinter buffer]
+            Z      F  [stop]
+        [Here if term would overflow EDSAC 35-bit value.
+         With a maximum n of 100,000 this doesn't happen.]
+    [198]   A  198 @  [print 'overflow' message]
+            G      C
+            K2048F @F &F OF VF EF RF FF LF OF WD
+            E  194 @  [jump to exit]
+
+            E   41 Z  [define entry point]
+            P      F  [acc = 0 on entry]

@@ -1,0 +1,18 @@
+' Enumerations
+' Start at zero
+ENUM
+    cat, dog, parrot
+END ENUM
+PRINT "Dogs are #", dog
+
+' Set value
+ENUM
+    Sunday=1, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday
+END ENUM
+PRINT Sunday, " ", Wednesday, " ", Saturday
+
+' Change values, ENUM names must be unique
+ENUM
+    sunday=7, monday=1, tuesday, wednesday, thursday, friday, saturday
+END ENUM
+PRINT sunday, " ", wednesday, " ", saturday

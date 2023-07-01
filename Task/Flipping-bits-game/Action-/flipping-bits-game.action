@@ -1,0 +1,139 @@
+BYTE boardX=[13],boardY=[10],goalX=[22]
+
+PROC UpdateBoard(BYTE ARRAY board BYTE side,x0,y0)
+  BYTE x,y
+
+  FOR y=0 TO side-1
+  DO
+    Position(x0,y0+2+y)
+    Put(y+'1)
+    FOR x=0 TO side-1
+    DO
+      IF y=0 THEN
+        Position(x0+2+x,y0)
+        Put(x+'A)
+      FI
+      Position(x0+2+x,y0+2+y)
+      PrintB(board(x+y*side))
+    OD
+  OD
+RETURN
+
+PROC Randomize(BYTE ARRAY board BYTE len)
+  BYTE i
+
+  FOR i=0 TO len-1
+  DO
+    board(i)=Rand(2)
+  OD
+RETURN
+
+BYTE FUNC Solved(BYTE ARRAY goal,board BYTE side)
+  BYTE i,len
+
+  len=side*side
+  FOR i=0 TO len-1
+  DO
+    IF goal(i)#board(i) THEN
+      RETURN (0)
+    FI
+  OD
+RETURN (1)
+
+PROC FlipRow(BYTE ARRAY board BYTE side,row)
+  BYTE i,ind
+
+  IF row>=side THEN RETURN FI
+  FOR i=0 TO side-1
+  DO
+    ind=i+row*side
+    board(ind)=1-board(ind)
+  OD
+  UpdateBoard(board,side,boardX,boardY)
+RETURN
+
+PROC FlipColumn(BYTE ARRAY board BYTE side,column)
+  BYTE i,ind
+
+  IF column>=side THEN RETURN FI
+  FOR i=0 TO side-1
+  DO
+    ind=column+i*side
+    board(ind)=1-board(ind)
+  OD
+  UpdateBoard(board,side,boardX,boardY)
+RETURN
+
+PROC Wait(BYTE frames)
+  BYTE RTCLOK=$14
+  frames==+RTCLOK
+  WHILE frames#RTCLOK DO OD
+RETURN
+
+PROC UpdateStatus(BYTE ARRAY goal,board BYTE side)
+  Position(9,3) Print("Game status: ")
+  IF Solved(goal,board,side) THEN
+    Print("SOLVED !")
+    Sound(0,100,10,5) Wait(5)
+    Sound(0,60,10,5) Wait(5)
+    Sound(0,40,10,5) Wait(5)
+    Sound(0,0,0,0)
+  ELSE
+    Print("Shuffled")
+  FI
+RETURN
+
+PROC Init(BYTE ARRAY goal,board BYTE side)
+  BYTE size,i,n
+
+  size=side*side
+  Randomize(goal,size)
+  MoveBlock(board,goal,size)
+  UpdateBoard(goal,side,goalX,boardY)
+
+  WHILE Solved(goal,board,side)
+  DO
+    FOR i=1 TO 20
+    DO
+      n=Rand(side)
+      IF Rand(2)=0 THEN
+        FlipRow(board,side,n)
+      ELSE
+        FlipColumn(board,side,n)
+      FI
+    OD
+  OD
+RETURN
+
+PROC Main()
+  DEFINE SIDE="3"
+  DEFINE SIZE="9"
+  BYTE ARRAY board(SIZE),goal(SIZE)
+  BYTE CRSINH=$02F0 ;Controls visibility of cursor
+  BYTE k,CH=$02FC ;Internal hardware value for last key pressed
+
+  Graphics(0)
+  SetColor(2,0,2)
+  CRSINH=1 ;hide cursor
+  Position(boardX,boardY-2) Print("Board")
+  Position(goalX+1,boardY-2) Print("Goal")
+  Position(9,19) Print("Space bar - shuffle")
+  Init(goal,board,SIDE)
+  UpdateStatus(goal,board,side)
+
+  DO
+    k=CH
+    IF k#$FF THEN
+      CH=$FF
+      IF k=31 THEN FlipRow(board,SIDE,0)
+      ELSEIF k=30 THEN FlipRow(board,SIDE,1)
+      ELSEIF k=26 THEN FlipRow(board,SIDE,2)
+      ELSEIF k=63 THEN FlipColumn(board,SIDE,0)
+      ELSEIF k=21 THEN FlipColumn(board,SIDE,1)
+      ELSEIF k=18 THEN FlipColumn(board,SIDE,2)
+      ELSEIF k=33 THEN Init(goal,board,SIDE) FI
+
+      UpdateStatus(goal,board,SIDE)
+    FI
+  OD
+RETURN

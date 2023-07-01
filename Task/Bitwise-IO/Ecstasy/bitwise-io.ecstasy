@@ -1,0 +1,79 @@
+module BitwiseIO {
+    class BitReader {
+        construct(Byte[] bytes) {
+            this.bits = bytes.toBitArray();
+        }
+
+        private Bit[] bits;
+        private Int   index;
+
+        Int offset {        // readable & writable property "offset"
+            @Override
+            Int get() {
+                return index;
+            }
+
+            @Override
+            void set(Int offset) {
+                assert 0 <= offset < size;
+                index = offset;
+            }
+        }
+
+        Int size.get() {    // read-only property "size"
+            return bits.size;
+        }
+
+        Boolean eof.get() { // read-only property "eof"
+            return index >= size;
+        }
+
+        Bit readBit() {
+            return eof ? assert:bounds : bits[index++];
+        }
+
+        Byte readByte() {
+            assert:bounds index + 8 <= size as $"eof (offset={index}, size={size}";
+            Int start = index;
+            index += 8;
+            return bits[start ..< index].toByte();
+        }
+    }
+
+    class BitWriter {
+        private Bit[] bits = new Bit[];
+
+        BitWriter writeBit(Bit bit) {
+            bits.add(bit);
+            return this;
+        }
+
+        BitWriter writeByte(Byte byte) {
+            bits.addAll(byte.toBitArray());
+            return this;
+        }
+
+        Byte[] bytes.get() {
+            // "zero fill" the bits to the next byte boundary: if the bits don't currently stop at
+            // a byte boundary, then calc the number of "extra" bits (bits.size & 0x7) and append
+            // "fill bits" from the end slice of the array of bits in the byte=0
+            bits += bits.size & 0x7 == 0 ? [] : Byte:0.toBitArray() [bits.size & 0x7 ..< 8];
+            return bits.toByteArray();
+        }
+    }
+
+    @Inject Console console;
+    void run() {
+        Bit[] orig = [0,1,0,1,0,1,1,1,0,1,0,1,0]; // hexadecimal 57 50 (with LSB padding)
+
+        val out = new BitWriter();
+        orig.forEach(bit -> out.writeBit(bit));
+
+        val bytes = out.bytes;
+        console.print($"bytes written={bytes}");  // 0x5750
+
+        val in = new BitReader(bytes);
+        val test = new Bit[orig.size]((Int i) -> in.readBit());
+        assert test == orig;
+    }
+}

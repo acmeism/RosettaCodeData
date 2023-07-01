@@ -1,0 +1,1 @@
+Dim dblDistance as Double

@@ -1,0 +1,84 @@
+      INSTALL @lib$+"SOCKLIB"
+
+      Server$ = "smtp.gmail.com"
+      From$   = "sender@somewhere"
+      To$     = "recipient@elsewhere"
+      CC$     = "another@nowhere"
+      Subject$ = "Rosetta Code"
+      Message$ = "This is a test of sending email."
+
+      PROCsendmail(Server$, From$, To$, CC$, "", Subject$, "", Message$)
+      END
+
+      DEF PROCsendmail(smtp$,from$,to$,cc$,bcc$,subject$,replyto$,body$)
+      LOCAL D%, S%, skt%, reply$
+      DIM D% LOCAL 31, S% LOCAL 15
+
+      SYS "GetLocalTime", S%
+      SYS "GetDateFormat", 0, 0, S%, "ddd, dd MMM yyyy ", D%, 18
+      SYS "GetTimeFormat", 0, 0, S%, "HH:mm:ss +0000", D%+17, 15
+      D%?31 = 13
+
+      PROC_initsockets
+      skt% = FN_tcpconnect(smtp$,"mail")
+      IF skt% <= 0 skt% = FN_tcpconnect(smtp$,"25")
+      IF skt% <= 0 ERROR 100, "Failed to connect to SMTP server"
+      IF FN_readlinesocket(skt%, 1000, reply$)
+      WHILE FN_readlinesocket(skt%, 10, reply$) > 0 : ENDWHILE
+
+      PROCsend(skt%,"HELO "+FN_gethostname)
+      PROCmail(skt%,"MAIL FROM: ",from$)
+      IF to$<>"" PROClist(skt%,to$)
+      IF cc$<>"" PROClist(skt%,cc$)
+      IF bcc$<>"" PROClist(skt%,bcc$)
+      PROCsend(skt%, "DATA")
+
+      IF FN_writelinesocket(skt%, "Date: "+$D%)
+      IF FN_writelinesocket(skt%, "From: "+from$)
+      IF FN_writelinesocket(skt%, "To: "+to$)
+      IF cc$<>"" IF FN_writelinesocket(skt%, "Cc: "+cc$)
+      IF subject$<>"" IF FN_writelinesocket(skt%, "Subject: "+subject$)
+      IF replyto$<>"" IF FN_writelinesocket(skt%, "Reply-To: "+replyto$)
+      IF FN_writelinesocket(skt%, "MIME-Version: 1.0")
+      IF FN_writelinesocket(skt%, "Content-type: text/plain; charset=US-ASCII")
+
+      IF FN_writelinesocket(skt%, "")
+      IF FN_writelinesocket(skt%, body$)
+      IF FN_writelinesocket(skt%, ".")
+
+      PROCsend(skt%,"QUIT")
+
+      PROC_exitsockets
+      ENDPROC
+
+      DEF PROClist(skt%,list$)
+      LOCAL comma%
+      REPEAT
+        WHILE ASClist$=32 list$=MID$(list$,2):ENDWHILE
+        comma% = INSTR(list$,",")
+        IF comma% THEN
+          PROCmail(skt%,"RCPT TO: ",LEFT$(list$,comma%-1))
+          list$ = MID$(list$,comma%+1)
+        ELSE
+          PROCmail(skt%,"RCPT TO: ",list$)
+        ENDIF
+      UNTIL comma% = 0
+      ENDPROC
+
+      DEF PROCmail(skt%,cmd$,mail$)
+      LOCAL I%,J%
+      I% = INSTR(mail$,"<")
+      J% = INSTR(mail$,">",I%)
+      IF I% IF J% THEN
+        PROCsend(skt%, cmd$+MID$(mail$,I%,J%-I%+1))
+      ELSE
+        PROCsend(skt%, cmd$+"<"+mail$+">")
+      ENDIF
+      ENDPROC
+
+      DEF PROCsend(skt%,cmd$)
+      LOCAL reply$
+      IF FN_writelinesocket(skt%,cmd$) < 0 THEN ERROR 100, "Send failed"
+      IF FN_readlinesocket(skt%, 200, reply$)
+      WHILE FN_readlinesocket(skt%, 10, reply$) > 0 : ENDWHILE
+      ENDPROC

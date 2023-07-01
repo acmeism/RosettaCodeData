@@ -1,0 +1,27 @@
+(defun string-of-brackets (n)
+  (let* ((len (* 2 n))
+         (res (make-string len))
+         (opening (/ len 2))
+         (closing (/ len 2)))
+    (dotimes (i len res)
+      (setf (aref res i)
+            (cond ((zerop opening) #\])
+                  ((zerop closing) #\[)
+                  (t (if (= (random 2) 0)
+                         (progn (decf opening) #\[)
+                         (progn (decf closing) #\]))))))))
+
+(defun balancedp (string)
+  (zerop (reduce (lambda (nesting bracket)
+                   (ecase bracket
+                     (#\] (if (= nesting 0)
+                              (return-from balancedp nil)
+                              (1- nesting)))
+                     (#\[ (1+ nesting))))
+                 string
+                 :initial-value 0)))
+
+(defun show-balanced-brackets ()
+  (dotimes (i 10)
+    (let ((s (string-of-brackets i)))
+      (format t "~3A: ~A~%" (balancedp s) s))))

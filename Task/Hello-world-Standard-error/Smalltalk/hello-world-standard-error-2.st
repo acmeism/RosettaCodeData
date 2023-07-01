@@ -1,0 +1,1 @@
+Transcript show: 'Goodbye, World!'

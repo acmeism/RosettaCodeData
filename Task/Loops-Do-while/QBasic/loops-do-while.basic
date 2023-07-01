@@ -1,0 +1,5 @@
+a = 0
+DO
+  a = a + 1
+  PRINT a;
+LOOP WHILE a MOD 6 <> 0

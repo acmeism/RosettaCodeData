@@ -1,0 +1,33 @@
+using Printf, DataStructures
+
+function funcfreqs(expr::Expr)
+    cnt = counter(Symbol)
+    expr.head == :call &&
+        push!(cnt, expr.args[1])
+    for e in expr.args
+        e isa Expr && merge!(cnt, funcfreqs(e))
+    end
+    return cnt
+end
+
+function parseall(str::AbstractString)
+    exs = Any[]
+    pos = start(str)
+    while !done(str, pos)
+        ex, pos = parse(str, pos) # returns next starting point as well as expr
+        ex.head == :toplevel ? append!(exs, ex.args) : push!(exs, ex)
+    end
+    if isempty(exs)
+        throw(ParseError("end of input"))
+    elseif length(exs) == 1
+        return exs[1]
+    else
+        return Expr(:block, exs...)
+    end
+end
+
+freqs = readstring("src/Function_frequency.jl") |> parseall |> funcfreqs
+
+for (v, f) in freqs
+    @printf("%10s → %i\n", v, f)
+end

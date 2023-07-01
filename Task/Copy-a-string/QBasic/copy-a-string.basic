@@ -1,0 +1,4 @@
+src$ = "Hello"  ' is the original string
+dst$ = src$     ' is the copy
+src$ = " world..."
+PRINT dst$; src$

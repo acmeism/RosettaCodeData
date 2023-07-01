@@ -1,0 +1,194 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program complength64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeConstantesARM64.inc"
+
+/************************************/
+/* structures                       */
+/************************************/
+   .struct  0
+list_string:                             // string address
+    .struct  list_string + 8
+list_length:                             // string length
+    .struct  list_length + 8
+list_end:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResult:       .asciz "@ length : @\n"
+szCarriageReturn:   .asciz "\n"
+szLibSort:          .asciz "\nAfter sort\n"
+szString1:          .asciz "abcd"
+szString2:          .asciz "123456789"
+szString3:          .asciz "abcdef"
+szString4:          .asciz "1234567"
+
+.align 4
+tabStrings:        .quad szString1           // string address array
+                   .quad 0
+                   .quad szString2
+                   .quad 0
+                   .quad szString3
+                   .quad 0
+                   .quad szString4
+                   .quad 0
+.equ NBTABSTRINGS, (. - tabStrings) / list_end  // compute items number
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 // entry of program
+    ldr x4,qAdrtabStrings             // string array address
+    mov x5,#0                         // indice
+    mov x6,#list_end                  // structure size
+1:                                    // item loop
+    madd x3,x5,x6,x4                   // compute item address
+    ldr x0,[x3,#list_string]          // load string address
+    bl stringRoutine                  // length string compute
+    str x0,[x3,#list_length]          // store result in array
+    add x5,x5,#1                         // increment indice
+    cmp x5,#NBTABSTRINGS              // end ?
+    blt 1b                            // no -> loop
+
+    mov x0,x4                         // string array address
+    mov x1,#0                         // first item
+    mov x2,#NBTABSTRINGS              // item number
+    bl insertionSort                  // sort
+
+    ldr x0,qAdrszLibSort
+    bl affichageMess
+    mov x0,x4                         // string array address
+    mov x5,#0                         // indice
+    mov x6,#list_end
+2:                                    // item loop
+    madd x3,x5,x6,x4
+    ldr x0,[x3,#list_string]
+    bl stringRoutine                  // use same routine for display result after sort
+    add x5,x5,#1
+    cmp x5,#NBTABSTRINGS              // end ?
+    blt 2b                            // no -> loop
+
+100:                                  // standard end of the program
+    mov x0, #0                        // return code
+    mov x8,EXIT
+    svc #0                            // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszMessResult:         .quad szMessResult
+qAdrsZoneConv:            .quad sZoneConv
+qAdrtabStrings:           .quad tabStrings
+qAdrszLibSort:            .quad szLibSort
+/***************************************************/
+/*      string exec               */
+/***************************************************/
+// x0 contains string address
+// x0 return length
+stringRoutine:
+    stp x1,lr,[sp,-16]!         // save  registers
+    stp x2,x3,[sp,-16]!         // save  registers
+    mov x3,x0                   // save string address
+    mov x1,x0
+    ldr x0,qAdrszMessResult
+    bl strInsertAtCharInc       // insert string in result message
+    mov x2,x0                   // save new message address
+    mov x0,x3                   // restaur string address
+    bl stringlength             // compute length
+    mov x3,x0
+    ldr x1,qAdrsZoneConv
+    bl conversion10             // call decimal conversion
+    mov x0,x2
+    ldr x1,qAdrsZoneConv        // insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess            // display result message
+    mov x0,x3
+100:
+    ldp x2,x3,[sp],16           // restaur  registers
+    ldp x1,lr,[sp],16           // restaur  registers
+    ret
+/***************************************************/
+/*     compute string length               */
+/***************************************************/
+// x0 contains string address
+stringlength:
+    stp x1,lr,[sp,-16]!         // save  registers
+    stp x2,x3,[sp,-16]!         // save  registers
+    mov x1,#-1                  // init counter
+1:                              // loop
+    add x1,x1,#1                   // increment counter
+    ldrb w2,[x0,x1]             // load byte string
+    cmp w2,#0                   // zero final ?
+    bne 1b                      // no -> loop
+    mov x0,x1                   // return length
+100:
+    ldp x2,x3,[sp],16           // restaur  registers
+    ldp x1,lr,[sp],16           // restaur  registers
+    ret
+
+/******************************************************************/
+/*         insertion sort                                              */
+/******************************************************************/
+/* x0 contains the address of table */
+/* x1 contains the first element    */
+/* x2 contains the number of element */
+insertionSort:
+    stp x1,lr,[sp,-16]!                // save  registers
+    stp x2,x3,[sp,-16]!                // save  registers
+    stp x4,x5,[sp,-16]!                // save  registers
+    stp x6,x7,[sp,-16]!                // save  registers
+    stp x8,x9,[sp,-16]!                // save  registers
+    stp x10,x11,[sp,-16]!              // save  registers
+    mov x6,x0
+    mov x7,#list_end
+    add x3,x1,#1                       // start index i
+1:                                     // start loop
+    madd x8,x7,x3,x6
+    ldr x10,[x8,#list_length]          // load value A[i]
+    ldr x0,[x8,#list_string]           // load string address A[i]
+    sub x5,x3,#1                       // index j
+2:
+    madd x9,x7,x5,x6
+    ldr x4,[x9,#list_length]           // load value A[j]
+    cmp x4,x10                         // compare value
+    bge 3f
+    add x5,x5,#1                          // increment index j
+    madd x8,x7,x5,x6
+    str x4,[x8,#list_length]           // store value A[j+1]
+    ldr x4,[x9,#list_string]           // load string address
+    str x4,[x8,#list_string]           // store string address
+    subs x5,x5,#2                         // j = i - 1
+    cmp x5,x1                          // compare with first item
+    bge 2b                             // loop if j >= first item
+3:
+    add x5,x5,#1                          // increment index j
+    madd x9,x7,x5,x6
+    str x10,[x9,#list_length]          // store value A[i] in A[j+1]
+    str x0,[x9,#list_string]           // and store string address
+    add x3,x3,#1                          // increment index i
+    cmp x3,x2                          // end ?
+    blt 1b                             // no -> loop
+
+100:
+    ldp x10,x11,[sp],16                // restaur  registers
+    ldp x8,x9,[sp],16                  // restaur  registers
+    ldp x6,x7,[sp],16                  // restaur  registers
+    ldp x4,x5,[sp],16                  // restaur  registers
+    ldp x2,x3,[sp],16                  // restaur  registers
+    ldp x1,lr,[sp],16                  // restaur  registers
+    ret
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

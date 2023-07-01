@@ -1,0 +1,70 @@
+% This program needs to be merged with PCLU's "misc" library
+% to use the random number generator.
+%
+% pclu -merge $CLUHOME/lib/misc.lib -compile rpg_gen.clu
+
+% Seed the random number generator with the current time
+init_rng = proc ()
+    d: date := now()
+    seed: int := ((d.hour*60) + d.minute)*60 + d.second
+    random$seed(seed)
+end init_rng
+
+character = cluster is generate
+    rep = null
+
+    % Roll a die
+    roll_die = proc () returns (int)
+        return (1 + random$next(6))
+    end roll_die
+
+    % Roll four dice and get the sum of the highest three rolls
+    roll_four_times = proc () returns (int)
+        lowest: int := 7 % higher than any dice roll
+        sum: int := 0
+        for i: int in int$from_to(1,4) do
+            roll: int := roll_die()
+            sum := sum + roll
+            if roll < lowest then lowest := roll end
+        end
+        return (sum - lowest)
+    end roll_four_times
+
+    % Try to generate a character by rolling six values
+    try_generate = proc () returns (sequence[int])
+        rolls: sequence[int] := sequence[int]$[]
+        for i: int in int$from_to(1,6) do
+            rolls := sequence[int]$addh(rolls, roll_four_times())
+        end
+        return (rolls)
+    end try_generate
+
+    % See if a character is valid
+    valid = proc (c: sequence[int]) returns (bool)
+        total: int := 0
+        at_least_15: int := 0
+        for i: int in sequence[int]$elements(c) do
+            total := total + i
+            if i >= 15 then at_least_15 := at_least_15 + 1 end
+        end
+        return (total >= 75 & at_least_15 >= 2)
+    end valid
+
+    % Generate a character
+    generate = proc () returns (sequence[int])
+        while true do
+            c: sequence[int] := try_generate()
+            if valid(c) then return(c) end
+        end
+    end generate
+end character
+
+% Generate a character and display the six values
+start_up = proc ()
+    po: stream := stream$primary_output()
+    init_rng()
+    hero: sequence[int] := character$generate()
+    for stat: int in sequence[int]$elements(hero) do
+        stream$putright(po, int$unparse(stat), 4)
+    end
+end start_up

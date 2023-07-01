@@ -1,0 +1,96 @@
+STRING PROC FNStringGetExpressionRegularCharacterMetaEscapeS( STRING inS )
+ STRING s[255] = inS
+ s = StrReplace( "\", s, "\\", "gn" )
+ s = StrReplace( "{", s, "\{", "gn" )
+ s = StrReplace( "[", s, "\[", "gn" )
+ s = StrReplace( "}", s, "\}", "gn" )
+ s = StrReplace( "]", s, "\]", "gn" )
+ s = StrReplace( "*", s, "\*", "gn" )
+ s = StrReplace( "+", s, "\+", "gn" )
+ s = StrReplace( "@", s, "\@", "gn" )
+ s = StrReplace( ".", s, "\.", "gn" )
+ s = StrReplace( "^", s, "\^", "gn" )
+ s = StrReplace( "$", s, "\$", "gn" )
+ s = StrReplace( "|", s, "\|", "gn" )
+ s = StrReplace( "?", s, "\?", "gn" )
+ s = StrReplace( "#", s, "\#", "gn" )
+ RETURN( s )
+END
+//
+INTEGER PROC FNBlockGetAbbreviationLengthMinimumToBufferB( INTEGER buffer1I )
+ INTEGER B = FALSE
+ INTEGER downB = TRUE
+ STRING s[255] = ""
+ INTEGER foundB = FALSE
+ INTEGER minI = 1
+ INTEGER I = 0
+ INTEGER buffer2I = 0
+ STRING s1[255] = ""
+ INTEGER lineColumnStartI = 4 // change this
+ Set( BREAK, ON )
+ PushPosition()
+ PushBlock()
+ GotoBlockBegin()
+ WHILE ( ( IsCursorInBlock() ) AND ( downB ) )
+  IF NOT LFind( "^$", "cgx" )
+   I = minI - 1
+   REPEAT
+    I = I + 1
+    PushPosition()
+    buffer2I = CreateTempBuffer()
+    PopPosition()
+    BegLine()
+    REPEAT
+     IF ( LFind( "{.*}{{[ ]#}|$}\c", "cx" ) )
+      s = GetFoundText( 1 )
+      s = Trim( s )
+      s1 = LeftStr( s, I )
+      PushPosition()
+      PushBlock()
+      GotoBufferId( buffer2I )
+      foundB = LFind( Format( "^", FNStringGetExpressionRegularCharacterMetaEscapeS( s1 ), "$" ), "gx" )
+      IF NOT foundB
+       EndFile()
+       AddLine( s1 )
+      ENDIF
+      PopBlock()
+      PopPosition()
+     ENDIF
+    UNTIL ( ( ( CurrChar() == _AT_EOL_ ) OR ( CurrChar() == _BEYOND_EOL_ ) ) OR ( foundB ) )
+    AbandonFile( buffer2I )
+   UNTIL ( NOT ( foundB ) )
+  ENDIF
+  IF NOT foundB
+   PushPosition()
+   PushBlock()
+   BegLine()
+   UnMarkBlock()
+   MarkStream()
+   EndLine()
+   Left()
+   MarkStream()
+   Copy()
+   GotoBufferId( buffer1I )
+   EndFile()
+   AddLine( Str( I ) )
+   GotoColumn( lineColumnStartI )
+   Paste()
+   PopBlock()
+   PopPosition()
+  ENDIF
+  downB = Down()
+ ENDWHILE
+ B = TRUE
+ PopPosition()
+ PopBlock()
+ RETURN( B )
+END
+//
+PROC Main()
+ INTEGER bufferI = 0
+ PushPosition()
+ bufferI = CreateTempBuffer()
+ PopPosition()
+ Message( FNBlockGetAbbreviationLengthMinimumToBufferB( bufferI ) )
+ GotoBufferId( bufferI )
+END

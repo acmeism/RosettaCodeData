@@ -1,0 +1,80 @@
+(defvar vi)  ;; visited hash
+(defvar pa)  ;; path connectivity hash
+(defvar sc)  ;; count, derived from straightness fator
+
+(defun rnd-pick (list)
+  (if list [list (rand (length list))]))
+
+(defun neigh (loc)
+  (let ((x (from loc))
+        (y (to loc)))
+    (list (- x 1)..y (+ x 1)..y
+          x..(- y 1) x..(+ y 1))))
+
+(defun make-maze-impl (cu)
+  (let ((q (list cu))
+        (c sc))
+    (set [vi cu] t)
+    (while q
+      (let* ((cu (first q))
+             (ne (rnd-pick (remove-if vi (neigh cu)))))
+        (cond (ne (set [vi ne] t)
+                  (push ne [pa cu])
+                  (push cu [pa ne])
+                  (push ne q)
+                  (cond ((<= (dec c) 0)
+                         (set q (shuffle q))
+                         (set c sc))))
+              (t (pop q)))))))
+
+(defun make-maze (w h sf)
+  (let ((vi (hash :equal-based))
+        (pa (hash :equal-based))
+        (sc (max 1 (trunc (* sf w h) 100))))
+    (each ((x (range -1 w)))
+      (set [vi x..-1] t)
+      (set [vi x..h] t))
+    (each ((y (range* 0 h)))
+      (set [vi -1..y] t)
+      (set [vi w..y] t))
+    (make-maze-impl 0..0)
+    pa))
+
+(defun print-tops (pa w j)
+  (each ((i (range* 0 w)))
+    (if (memqual i..(- j 1) [pa i..j])
+      (put-string "+    ")
+      (put-string "+----")))
+  (put-line "+"))
+
+(defun print-sides (pa w j)
+  (let ((str ""))
+    (each ((i (range* 0 w)))
+      (if (memqual (- i 1)..j [pa i..j])
+        (set str `@str     `)
+        (set str `@str|    `)))
+    (put-line `@str|\n@str|`)))
+
+(defun print-maze (pa w h)
+  (each ((j (range* 0 h)))
+    (print-tops pa w j)
+    (print-sides pa w j))
+  (print-tops pa w h))
+
+(defun usage ()
+  (let ((invocation (ldiff *full-args* *args*)))
+    (put-line "usage: ")
+    (put-line `@invocation <width> <height> [<straightness>]`)
+    (put-line "straightness-factor is a percentage, defaulting to 15")
+    (exit 1)))
+
+(let ((args [mapcar int-str *args*])
+      (*random-state* (make-random-state nil)))
+  (if (memq nil args)
+    (usage))
+  (tree-case args
+    ((w h s ju . nk) (usage))
+    ((w h : (s 15)) (set w (max 1 w))
+                    (set h (max 1 h))
+                    (print-maze (make-maze w h s) w h))
+    (else (usage))))

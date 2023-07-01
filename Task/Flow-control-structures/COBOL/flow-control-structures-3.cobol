@@ -1,0 +1,13 @@
+           EVALUATE Thing-To-Do
+               WHEN 1
+*                  *> Do first thing...
+
+               WHEN 2
+*                  *> Do second thing...
+
+               WHEN 3
+*                  *> Do third thing...
+
+               WHEN OTHER
+*                  *> Handle invalid thing...
+           END-EVALUATE

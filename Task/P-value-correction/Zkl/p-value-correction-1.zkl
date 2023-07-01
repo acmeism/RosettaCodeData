@@ -1,0 +1,65 @@
+fcn bh(pvalues){	// Benjamini-Hochberg
+   psz,pszf := pvalues.len(), psz.toFloat();
+   n_i      := psz.pump(List,'wrap(n){ pszf/(psz - n) }); # N/(N-0),N/(N-1),..
+   o,ro     := order(pvalues,True),order(o,False); # sort pvalues, sort indices
+   in	    := psz.pump(List,'wrap(n){ n_i[n]*pvalues[o[n]] });
+   pmin     := cummin(in).apply((1.0).min); # (min(1,c[0]),min(1,c[1]),...)
+   ro.apply(pmin.get);		# (pmin[ro[0]],pmin[ro[1]],...)
+}
+
+fcn by(pvalues){	// Benjamini & Yekutieli
+   psz,pszf := pvalues.len(), psz.toFloat();
+   o,ro     := order(pvalues,True),order(o,False); # sort pvalues, sort indices
+   n_i      := psz.pump(List,'wrap(n){ pszf/(psz - n) }); # N/(N-0),N/(N-1),..
+   q	    := [1..psz].reduce(fcn(q,n){ q+=1.0/n },0.0);
+   in	    := psz.pump(List,'wrap(n){ q * n_i[n] * pvalues[o[n]] });
+   cummin(in).apply((1.0).min) : ro.apply(_.get);
+}
+
+fcn hochberg(pvalues){
+   psz,pszf := pvalues.len(), psz.toFloat();
+   o,ro     := order(pvalues,True),order(o,False); # sort pvalues, sort indices
+   n_i      := psz.pump(List,'wrap(n){ pszf/(psz - n) }); # N/(N-0),N/(N-1),..
+   in	    := psz.pump(List,'wrap(n){ pvalues[o[n]]*(n + 1) });
+   cummin(in).apply((1.0).min) : ro.apply(_.get);
+}
+
+fcn cummin(pvalues){  // R's cumulative minima --> list of mins
+   out,m := List.createLong(pvalues.len()), pvalues[0];
+   foreach pv in (pvalues){ out.append(m=m.min(pv)) }
+   out
+}
+fcn order(list,downUp){  // True==increasing, --> List(int) sorted indices
+   f:=(downUp) and fcn(a,b){ a[1]>b[1] } or fcn(a,b){ a[1]<b[1] };
+   [0..].zip(list).pump(List()).sort(f).pump(List,T("get",0))
+}
+
+fcn bonferroni(pvalues){  // -->List
+   sz,r := pvalues.len(),List();
+   foreach pv in (pvalues){
+      b:=pv*sz;
+      if(b>=1.0) r.append(1.0);
+      else if(0.0<=b<1.0) r.append(b);
+      else throw(Exception.ValueError(
+	 "%g is outside of the interval I planned.".fmt(b)));
+   }
+   r
+}
+
+fcn hommel(pvalues){
+   psz,indices := pvalues.len(), [1..psz].walk();	// 1,2,3,4...
+   o,ro        := order(pvalues,False),order(o,False); # sort pvalues, sort indices
+   p           := o.apply('wrap(n){ pvalues[n] }).copy(); // pvalues[*o]
+   npi         := [1..].zip(p).apply('wrap([(n,p)]){ p*psz/n });
+   min	       := (0.0).min(npi);	 // min value in npi
+   pa,q	       := List.createLong(psz,min), pa.copy(); #(min,min,,,)
+   foreach j in ([psz - 1..2,-1]){
+      ij:=[0..psz - j].walk();
+      i2:=(j - 1).pump(List,'+(psz - j + 1));
+      q1:=(0.0).min((j-1).pump(List,'wrap(n){ p[i2[n]]*j/(2 + n) }));
+      foreach i in (psz - j + 1){ q[ij[i]] = q1.min(p[ij[i]]*j) }
+      foreach i in (j - 1){ q[i2[i]] = q[psz - j] }
+      foreach i in (psz){ pa[i] = pa[i].max(q[i]) }
+   }
+   psz.pump(List,'wrap(n){ pa[ro[n]] }); // Hommel q-values
+}

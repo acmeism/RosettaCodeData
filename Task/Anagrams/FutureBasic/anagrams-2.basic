@@ -1,0 +1,76 @@
+include "NSLog.incl"
+
+#plist NSAppTransportSecurity @{NSAllowsArbitraryLoads:YES}
+
+local fn Dictionary as CFArrayRef
+  CFURLRef url = fn URLWithString( @"http://wiki.puzzlers.org/pub/wordlists/unixdict.txt" )
+  CFStringRef string = fn StringWithContentsOfURL( url, NSUTF8StringEncoding, NULL )
+end fn = fn StringComponentsSeparatedByCharactersInSet( string, fn CharacterSetNewlineSet )
+
+local fn TestIndexes( array as CFArrayRef, obj as CFTypeRef, index as NSUInteger, stp as ^BOOL, userData as ptr ) as BOOL
+end fn = fn StringIsEqual( obj, userData )
+
+void local fn IndexSetEnumerator( set as IndexSetRef, index as NSUInteger, stp as ^BOOL, userData as ptr )
+  NSLog(@"\t%@\b",fn ArrayObjectAtIndex( userData, index ))
+end fn
+
+void local fn DoIt
+  CFArrayRef             words
+  CFMutableArrayRef      sortedWords, letters
+  CFStringRef            string, sortedString
+  IndexSetRef            indexes
+  long                   i, j, count, indexCount, maxCount = 0, length
+  CFMutableDictionaryRef anagrams
+  CFTimeInterval         ti
+
+  ti = fn CACurrentMediaTime
+
+  NSLog(@"Searching...")
+
+  // create another word list with sorted letters
+  words = fn Dictionary
+  count = len(words)
+  sortedWords = fn MutableArrayWithCapacity(count)
+  for string in words
+    length = len(string)
+    letters = fn MutableArrayWithCapacity(length)
+    for i = 0 to length - 1
+      MutableArrayAddObject( letters, mid(string,i,1) )
+    next
+    MutableArraySortUsingSelector( letters, @"compare:" )
+    sortedString = fn ArrayComponentsJoinedByString( letters, @"" )
+    MutableArrayAddObject( sortedWords, sortedString )
+  next
+
+  // search for identical sorted words
+  anagrams = fn MutableDictionaryWithCapacity(0)
+  for i = 0 to count - 2
+    j = i + 1
+    indexes = fn ArrayIndexesOfObjectsAtIndexesPassingTest( sortedWords, fn IndexSetWithIndexesInRange( fn CFRangeMake(j,count-j) ), NSEnumerationConcurrent, @fn TestIndexes, (ptr)sortedWords[i] )
+    indexCount = len(indexes)
+    if ( indexCount > maxCount )
+      maxCount = indexCount
+      MutableDictionaryRemoveAllObjects( anagrams )
+    end if
+    if ( indexCount == maxCount )
+      MutableDictionarySetValueForKey( anagrams, indexes, words[i] )
+    end if
+  next
+
+  // show results
+  NSLogClear
+  for string in anagrams
+    NSLog(@"%@\b",string)
+    indexes = anagrams[string]
+    IndexSetEnumerateIndexes( indexes, @fn IndexSetEnumerator, (ptr)words )
+    NSLog(@"")
+  next
+
+  NSLog(@"\nCalculated in %0.6fs",fn CACurrentMediaTime - ti)
+end fn
+
+dispatchglobal
+  fn DoIt
+dispatchend
+
+HandleEvents

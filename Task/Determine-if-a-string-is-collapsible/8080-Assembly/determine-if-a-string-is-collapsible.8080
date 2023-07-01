@@ -1,0 +1,101 @@
+bdos:	equ	5
+puts:	equ	9
+	org	100h
+	jmp	main
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Collapse the $-terminated string at [HL]
+colaps:	mov	b,m	; B = last character seen
+	inx	h	; First character never collapses
+	mov	d,h	; DE = output pointer
+	mov	e,l
+	mov	a,b	; Empty string?
+	cpi	'$'
+	rz		; Then do nothing
+cloop:	mov	a,m	; Get character
+	inx	h	; Advance pointer
+	cmp	b	; Same as last one?
+	jz	cloop	; Then keep scanning
+	mov	b,a	; Otherwise, it is a new one
+	stax	d	; Store it,
+	inx	d	; and increment output pointer.
+	cpi	'$'	; Reached the end?
+	jnz	cloop	; If not, next character
+	ret
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Code to print the output in the required format
+main:	lxi	h,strs	; List of string pointers
+loop:	mov	e,m	; DE = string pointer
+	inx	h
+	mov	d,m
+	inx	h
+	mov	a,e	; If zero, end
+	ora	d
+	rz
+	push	h	; Keep the list pointer
+	push	d	; Keep the string pointer
+	call	brstr	; Print original string in brackets
+	pop	h	; Retrieve string pointer
+	push	h
+	call	colaps	; Collapse the string
+	pop	d	; Retrieve string pointer
+	call	brstr	; Print the collapsed string in brackets
+	pop	h	; Retrieve the list pointer
+	jmp	loop	; Next string
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Print string at DE in brackets with length
+brstr:	push	d	; Store string pointer
+	mvi	c,puts	; Print opening brackets
+	lxi	d,open
+	call	bdos
+	pop	d	; Print original string
+	push	d
+	mvi	c,puts
+	call	bdos
+	mvi	c,puts	; Print closing brackets
+	lxi	d,close
+	call	bdos
+	pop	h
+	call	strlen	; Find string length
+	mov	a,b
+	jmp	prnum	; Print string length
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Figure out the length of a string (max 255)
+strlen:	mvi	b,0	; Counter
+	mvi	a,'$'	; Terminator
+sloop:	cmp	m	; Reached the end yet?
+	rz		; If so, stop
+	inr	b	; If not, increment counter,
+	inx	h	; and pointer,
+	jmp	sloop	; and check next byte.
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Print number in A as decimal
+prnum:	lxi	d,num	; End of number string
+prdgt:	mvi	b,-1	; Quotient
+ploop:	inr	b	; Increment quotient
+	sui	10	; Subtract 10
+	jnc	ploop	; Subtract until negative
+	adi	'0'+10	; Make ASCII digit
+	dcx	d	; Store in number string
+	stax	d
+	mov	a,b	; If more digits,
+	ana	a
+	jnz	prdgt	; find next digit
+	mvi	c,puts	; When done, print string
+	jmp	bdos
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Formatting strings
+open:	db	'<<<$'
+close:	db	'>>> $'
+	db	'***'
+num:	db	13,10,'$'
+	;;;	Input strings
+strs:	dw	str1,str2,str3,str4,str5,0
+str1:	db	'$'	; Empty string
+str2:	db	'"If I were two-faced, would I be wearing '
+	db	'this one?" --- Abraham Lincoln $'
+str3:	db	'..111111111111111111111111111111111111111'
+	db	'1111111111111111111111117777888$'
+str4:	db	'I never give ',39,'em hell, I just tell the truth, '
+	db	'and they think it',39,'s hell. $'
+str5:	db	'                                              '
+	db	'      --- Harry S Truman  $'

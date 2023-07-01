@@ -1,0 +1,64 @@
+;; API
+(defun brace-expand (str)
+  (bexp-expand (bexp-parse str)))
+
+;; parser
+(defstruct bexp-parse-ctx ()
+  str
+  toks)
+
+(defun bexp-parse (str)
+  (let ((ctx (new bexp-parse-ctx
+                   str str
+                   ;; tokenizer
+                   toks (remqual "" (tok #/([{},]|{}|\\\\|\\.)/ t str)))))
+    (build
+      (whilet ((next (pop ctx.toks)))
+        (add
+          (if (equal next "{")
+            (bexp-parse-brace ctx)
+            next))))))
+
+(defun bexp-parse-brace (ctx)
+  (buildn
+    (let ((orig-toks ctx.toks))
+      (caseq (whilet ((next (pop ctx.toks)))
+               (casequal next
+                 ("{" (add (bexp-parse-brace ctx)))
+                 ("}" (return :ok))
+                 (t (add next))))
+        (:ok
+          (cond
+            ((memqual "," (get))
+             (flow (get)
+               (split* @1 (op where (op equal ",")))
+               (cons '/)))
+            (t
+              (add* "{")
+              (add "}")
+              (get))))
+        (nil
+          (add* "{")
+          (get))))))
+
+;; expander
+(defun bexp-expand (tree : (path (new list-builder)))
+  (build
+    (match-case tree
+      (() (add (cat-str path.(get))))
+      (((/ . @alt) . @rest)
+       (let ((saved-path path.(get)))
+         (each ((elem alt))
+           path.(oust saved-path)
+           (pend (bexp-expand (cons elem rest) path)))))
+      ((@(consp @succ) . @rest)
+       (pend (bexp-expand (append succ rest) path)))
+      ((@head . @rest)
+       path.(add head)
+       (pend (bexp-expand rest path))))))
+
+;; Tests
+(tprint (brace-expand "~/{Downloads,Pictures}/*.{jpg,gif,png}"))
+(tprint (brace-expand "It{{em,alic}iz,erat}e{d,}, please."))
+(tprint (brace-expand "{,{,gotta have{ ,\\, again\\, }}more }cowbell!"))
+(tprint (brace-expand "{}} some }{,{\\\\{ edge, edge} \\,}{ cases, {here} \\\\\\\\\\}"))

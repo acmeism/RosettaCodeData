@@ -1,0 +1,16 @@
+make-queue constant q1
+make-queue constant q2
+q1 empty? .
+5 q1 enqueue
+q1 empty? .
+7 q1 enqueue
+9 q1 enqueue
+q2 empty? .
+3 q2 enqueue
+q2 empty? .
+q1 dequeue .
+q1 dequeue .
+q1 dequeue .
+q1 empty? .
+q2 dequeue .
+q2 empty? .

@@ -1,0 +1,45 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/1999/REC-html401-19991224/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Rosetta Code: Create an HTML table (XSLT)</title>
+</head>
+<body><table>
+<tr>
+<th></th>
+<th>X</th>
+<th>Y</th>
+<th>Z</th>
+</tr>
+<tr>
+<th>1</th>
+<td>1578</td>
+<td>4828</td>
+<td>1154</td>
+</tr>
+<tr>
+<th>2</th>
+<td>4950</td>
+<td>6497</td>
+<td>2355</td>
+</tr>
+<tr>
+<th>3</th>
+<td>9341</td>
+<td>1927</td>
+<td>8720</td>
+</tr>
+<tr>
+<th>4</th>
+<td>4490</td>
+<td>1218</td>
+<td>6675</td>
+</tr>
+<tr>
+<th>5</th>
+<td>8181</td>
+<td>1403</td>
+<td>4637</td>
+</tr>
+</table></body>
+</html>

@@ -1,0 +1,265 @@
+output file "Wordiff" ' 27 november 2022 '
+
+begin enum 1
+  _playerLabel : _playerInput : _wordLabel : _wordInPlay : _playsLabel
+  _scrlView : _textView
+  _resignBtn :  _againBtn : _quitBtn
+end enum
+
+begin globals
+CFMutableArrayRef gWords, gNames, gUsed
+gWords = fn MutableArrayWithCapacity( 0 )
+gNames = fn MutableArrayWithCapacity( 0 )
+gUsed = fn MutableArrayWithCapacity( 0 )
+CFMutableStringRef gTxt
+gTxt = fn MutableStringWithCapacity( 0 )
+end globals
+
+void local fn BuildInterface
+  window 1, @"Wordiff", ( 0, 0, 400, 450 ), NSWindowStyleMaskTitled + NSWindowStyleMaskClosable
+  // Fields for labels and input
+  textlabel _playerLabel, @"The players:", ( 0, 370, 148, 24 )
+  textlabel _wordLabel, @"Word in play:", ( 68, 409, 100, 24 )
+  textlabel _playsLabel, , ( 113, 370, 150, 24 )
+  textfield _playerInput, Yes, , ( 160, 372, 150, 24 )
+  textfield _wordInPlay, No, @". . .", ( 160, 412, 148, 24 )
+  ControlSetAlignment( _playerLabel, NSTextAlignmentRight )
+  ControlSetAlignment( _playerInput, NSTextAlignmentCenter )
+  ControlSetAlignment( _wordInPlay, NSTextAlignmentCenter )
+  ControlSetFormat( _playerInput, @"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", YES, 8, _formatCapitalize )
+  TextFieldSetTextColor( _wordLabel, fn ColorLightGray )
+  TextFieldSetTextColor( _wordInPlay, fn ColorLightGray )
+  TextFieldSetSelectable( _wordInPlay, No )
+  // Fields for computer feedback
+  scrollview _scrlView, ( 20, 60, 356, 300 ), NSBezelBorder
+  textview _textView, , _scrlView, , 1
+  ScrollViewSetHasVerticalScroller( _scrlView, YES )
+  TextViewSetTextContainerInset( _textView, fn CGSizeMake( 3, 3 ) )
+  TextSetFontWithName( _textView, @"Menlo", 12 )
+  TextSetColor( _textView, fn colorLightGray )
+  TextSetString( _textView, @"First, enter the name of each player and press Return to confirm. ¬
+  When done, press Return to start the game." )
+  // Buttons and menus
+  button _resignBtn, No, , @"Resign", ( 251, 15, 130, 32 )
+  button _againBtn, No, , @"New game", ( 114, 15, 130, 32 )
+  button _quitBtn, Yes, , @"Quit", ( 15, 15, 92, 32 )
+  filemenu 1 : menu 1, , No ' Nothing to file
+  editmenu 2 : menu 2, , No ' Nothing to edit
+  WindowMakeFirstResponder( 1, _playerInput ) ' Activate player input field
+end fn
+
+void local fn LoadWords
+  CFURLRef url
+  CFStringRef words, string
+  CFArrayRef tmp
+  CFRange range
+  // Fill the gWords list with just the lowercase words in unixdict
+  url = fn URLWithString( @"http://wiki.puzzlers.org/pub/wordlists/unixdict.txt" )
+  words = fn StringWithContentsOfURL( url, NSUTF8StringEncoding, NULL )
+  tmp = fn StringComponentsSeparatedByCharactersInSet( ( words ), fn CharacterSetNewlineSet )
+  for string in tmp
+    range = fn StringRangeOfStringWithOptions( string, @"^[a-z]+$", NSRegularExpressionSearch )
+    if range.location != NSNotFound then MutableArrayAddObject( gWords, string )
+  next
+end fn
+
+void local fn Say(str1 as CFStringRef, str2 as CFStringRef )
+  // Add strings to the computer feedback
+  fn MutableStringAppendString( gTxt, str1 )
+  fn MutableStringAppendString( gTxt, str2 )
+  TextSetString( _textView, gTxt )
+  TextScrollRangeToVisible( _textView, fn CFRangeMake( len( fn TextString( _textView ) ), 0) )
+end fn
+
+local fn CompareEqual( wrd1 as CFStringRef, wrd2 as CFStringRef ) as short
+  NSInteger i, k
+  CFStringRef a, b
+  //Find the number of differences in two strings
+  k = 0
+  for i = 0 to len( wrd1 ) - 1
+    a = mid( wrd1, i, 1 ) : b = mid( wrd2, i, 1 )
+    if fn StringIsEqual( a, b ) == No then k++
+  next
+end fn = k
+
+
+local fn ChopAndStitch( sShort as CFStringRef, sLong as CFStringRef ) as CFStringRef
+  NSInteger i, k
+  CFStringRef a, b
+  // Find the extra letter in the long string and remove it
+  k = 0
+  for i = 0 to len( sLong ) - 1
+    a = mid( sShort, i, 1 ) : b = mid( sLong, i, 1 )
+    if fn StringIsEqual( a, b ) == No then k = i : break ' Found it
+  next
+  a = left( sLong, k ) : b = mid( sLong, k + 1 ) 'Removed it
+end fn = fn StringByAppendingString( a, b )
+
+
+local fn WordiffWords( wrd1 as CFStringRef, wrd2 as CFStringRef ) as short
+  Short err = 0
+  // If a letter was added or removed, the strings should be identical after
+  // we remove the extra letter from the longest string.
+  // If they are the same length, the strings may differ at just one place.
+  select case
+    case len( wrd2 ) > len( wrd1 )
+      wrd2 = fn ChopAndStitch( wrd1, wrd2 )
+      if fn CompareEqual( wrd1, wrd2 ) != 0 then err = 1 ' Words identical?
+    case len( wrd1 ) > len( wrd2 )
+      wrd1 = fn ChopAndStitch( wrd2, wrd1 )
+      if fn CompareEqual( wrd1, wrd2 ) != 0 then err = 2
+    case len( wrd2 ) = len( wrd1 )
+      if fn CompareEqual( wrd1, wrd2 ) != 1 then err = 3 ' Only one change?
+  end select
+end fn = err
+
+local fn CheckWord( wrd1 as CFStringRef, wrd2 as CFStringRef ) as short
+  Short err = 0
+  // Preliminary tests to generate error codes
+  select case
+    case fn StringIsEqual( wrd1, wrd2 ) : err = 1
+    case len( wrd2 ) < 3 : err = 2
+    case len( wrd2 ) - len( wrd1 ) > 1 : err = 3
+    case len( wrd1 ) - len( wrd2 ) > 1 : err = 4
+    case fn ArrayContainsObject( gUsed, wrd2   ) == Yes : err = 5
+    case fn ArrayContainsObject( gWords, wrd2 ) == No : err = 6
+  end select
+  // Report error. If no error, check against Wordiff rules
+  select err
+    case 1 : fn Say( @"Don't be silly.", @"\n" )
+    case 2 : fn Say( @"New word must be three or more letters.", @"\n" )
+    case 3 : fn Say( @"Add just one letter, please.", @"\n" )
+    case 4 : fn Say( @"Delete just one letter, please.", @"\n" )
+    case 5 : fn Say( fn StringCapitalizedString( wrd2 ), @" was already used.\n" )
+    case 6 : fn Say( fn StringCapitalizedString( wrd2 ), @" is not in the dictionary.\n")
+    case 0
+      err = fn WordiffWords ( wrd1, wrd2 )
+      select err
+        case 1 : fn Say( @"Either change or add a letter.", @"\n" )
+        case 2 : fn Say( @"Either change or delete a letter.", @"\n" )
+        case 3 : fn Say( @"Don't change more than one letter.", @"\n")
+      end select
+  end select
+end fn = err
+
+void local fn ShowAllPossible
+  CFMutableArrayRef poss
+  CFStringRef wrd1, wrd2
+  NSUInteger i
+  // Check all words in dictionary, ignore error messages
+  poss = fn MutableArrayWithCapacity( 0 )
+  wrd1 = fn ControlStringValue( _wordInPlay )
+  for i = 0 to fn ArrayCount( gWords ) - 1
+    wrd2 = fn ArrayObjectAtIndex( gWords, i )
+    if fn fabs( len( wrd1 ) - len( wrd2 ) ) < 2 ' Not too long or short?
+      if len( wrd2 ) > 2 ' Has more than 2 chars?
+        if fn ArrayContainsObject( gUsed, wrd2 ) == No ' Not used before?
+          if ( fn WordiffWords( wrd1, wrd2 ) == 0 ) ' According to rules?
+            MutableArrayAddObject( poss, wrd2 )  ' Legal, so add to the pot
+          end if
+        end if
+      end if
+    end if
+  next
+  // Display legal words
+  fn Say( @"\n", fn ControlStringValue( _playerLabel ) )
+  if fn ArrayCount( poss ) > 0 ' Any words left?
+    fn Say( @" resigns, but could have chosen:", @"\n" )
+    fn MutableStringAppendString( gTxt, fn ArrayComponentsJoinedByString( poss, @", or " ) )
+    TextSetString( _textView, gTxt )
+  else
+    fn Say(@" resigns, there were no words left to play. ", @"New game?\n" )
+  end if
+  textfield _playerInput, No ' Just to be safe
+end fn
+
+void local fn Play
+  CFStringRef old, new, name
+  NSUInteger n
+  // Gather the info
+  name = fn ControlStringValue( _playerLabel )
+  new = fn ControlStringValue( _playerInput )
+  old = fn ArrayLastObject( gUsed )
+  if len( new ) == 0 then exit fn ' Just to be safe
+  fn Say(new, @"\n" )
+  if fn CheckWord( old, new ) == 0
+    // Input OK, so get ready next player
+    n = ( ( fn ArrayIndexOfObject( gNames, name ) + 1 ) mod fn ArrayCount( gNames ) )
+    name = fn ArrayObjectAtIndex( gNames, n )
+    textlabel _playerLabel, name
+    textfield _wordInPlay, , new
+    MutableArrayAddObject( gUsed, new )
+  end if
+  fn Say( name, @" plays: " )
+  textfield _playerInput, , @""
+end fn
+
+void local fn StartNewGame
+  CFStringRef name, wrd
+  NSUInteger n
+  // Pick a first player
+  n = rnd( fn ArrayCount( gNames ) )
+  name = fn ArrayObjectAtIndex( gNames, n - 1 )
+  // Pick a first word
+  MutableArrayRemoveAllObjects( gUsed )
+  do
+    n = rnd( fn ArrayCount( gWords ) ) - 1
+    wrd = fn ArrayObjectAtIndex( gWords, n )
+  until ( len( wrd ) = 3 ) or ( len( wrd ) = 4 )
+  MutableArrayAddObject( gUsed, wrd )
+  // Update window
+  ControlSetFormat( _playerInput, @"abcdefghijklmnopqrstuvwxyz", YES, 0, _formatLowercase )
+  fn Say( @"\n", @"Word in play: " ) : fn Say( wrd, @"\n" )
+  fn Say( name, @" plays: " )
+  textfield _wordInPlay, Yes, wrd
+  textlabel _playerLabel, name, (0, 370, 110, 24 )
+  textlabel _playsLabel, @"plays:"
+  textfield _playerInput, Yes
+  button _againBtn, Yes
+  button _resignBtn, Yes
+  WindowMakeFirstResponder( 1, _playerInput )
+end fn
+
+void local fn AskNames
+  CFStringRef name
+  name = fn ControlStringValue( _playerInput )
+  if len( name ) > 0                        ' Another player?
+    MutableArrayAddObject( gNames, name )
+    fn Say( @"Welcome, ", name )
+    fn Say( @"!", @"\n" )
+    textfield _playerInput, YES, @""
+  else
+    if fn ArrayFirstObject( gNames ) != Null ' Just to be safe
+      fn StartNewGame
+    end if
+  end if
+end fn
+
+void local fn DoDialog( evt as Long, tag as Long )
+  select evt
+    case _btnClick
+      select tag
+        case _againBtn
+          fn MutableStringSetString( gTxt, @"" )
+          fn StartNewGame
+        case _resignBtn
+          button _resignBtn, No
+          fn ShowAllPossible
+        case _quitBtn : end
+      end select
+    case _textFieldDidEndEditing
+      if fn ArrayCount( gUsed ) == 0
+        fn AskNames
+      else
+        fn Play
+      end if
+    case _windowShouldClose : end
+  end select
+end fn
+
+on dialog fn DoDialog
+
+fn BuildInterface
+fn LoadWords
+
+handleevents

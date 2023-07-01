@@ -1,0 +1,60 @@
+# Load the IO module
+# Replace "<pathToIO.lm>" with the location where the io.lm Lang module was installed to without "<" and ">"
+ln.loadModule(<pathToIO.lm>)
+
+
+fp.fileSizeDistribution = (&sizes, $[totalSize], $file) -> {
+	if([[io]]::fp.isDirectory($file)) {
+		&fileNames = [[io]]::fp.listFilesAndDirectories($file)
+		$path = [[io]]::fp.getCanonicalPath($file)
+		if($path == /) {
+			$path = \e
+		}
+		
+		$fileName
+		foreach($[fileName], &fileNames) {
+			$innerFile = [[io]]::fp.openFile($path/$fileName)
+			
+			$innerTotalSize = 0L
+			fp.fileSizeDistribution(&sizes, $innerTotalSize, $innerFile)
+			$*totalSize += $innerTotalSize
+			
+			[[io]]::fp.closeFile($innerFile)
+		}
+	}else {
+		$len = [[io]]::fp.getSize($file)
+		if($len == null) {
+			return
+		}
+		
+		$*totalSize += $len
+		
+		if($len == 0) {
+			&sizes[0] += 1
+		}else {
+			$index = fn.int(fn.log10($len))
+			&sizes[$index] += 1
+		}
+	}
+}
+
+$path $= @&LANG_ARGS == 1?&LANG_ARGS[0]:{{{./}}}
+
+&sizes = fn.arrayMake(12)
+fn.arraySetAll(&sizes, 0)
+
+$file = [[io]]::fp.openFile($path)
+
+$totalSize = 0L
+
+fp.fileSizeDistribution(&sizes, $totalSize, $file)
+
+[[io]]::fp.closeFile($file)
+
+fn.println(File size distribution for "$path":)
+$i
+repeat($[i], @&sizes) {
+	fn.printf(10 ^% 3d bytes: %d%n, $i, parser.op(&sizes[$i]))
+}
+fn.println(Number of files: fn.arrayReduce(&sizes, 0, fn.add))
+fn.println(Total file size: $totalSize)

@@ -1,0 +1,154 @@
+Module CheckIt {
+	print "Universal Turing Machine"
+	print "------------------------"
+	class Machine {
+	private:
+		Head=1, Symbols=(,), States=(,)
+		Initial_State$, Terminating_state$, Blank_Symbol$
+		BS=0, Rules=list, caption$
+		tp$="{0:4} {1} {2} {3:5} {4:4}"
+	public:
+		Module States {
+			.States<=array([])
+		}
+		Module Symbols {
+			.Symbols<=array([])
+		}
+		Module Reset (.Initial_State$, .Terminating_state$, .Blank_Symbol$) {
+			if len(.States)=0 then error "No States defined"
+			if len(.Symbols)=0 then error "No Symbols defined"
+			if .States#nothave(.Initial_State$) then error "Initial State Not Exist"
+			if .States#nothave(.Terminating_state$) then error "Terminating State Not Exist"
+			it=.Symbols#pos(.Blank_Symbol$) : if it=-1 then error "Blank symbol not exist"
+			.BS<=it
+			.Rules<=List
+		}
+		Module Init (.caption$) {
+			flush  // empty stack
+			print .caption$
+		}
+		Module AddRule (state$, read_symbol$, write_symbol$, action$, end_state$) {
+			
+			if .States#nothave(state$) then Error "State not exist"
+			if .symbols#nothave(read_symbol$) then Error "Read Symbol not exist"
+			if .symbols#nothave(write_symbol$) then Error "Read Symbol not exist"
+			if ("right","left","stay")#nothave(action$) then Error "Action not exist"
+			if .States#nothave(end_state$) then Error "End state not exist"
+			try ok {
+				tuple=(.symbols#pos(write_symbol$), action$, end_state$)
+				Append .rules, state$+"_"+read_symbol$:=tuple
+			}
+			if not ok then error "rule "+ state$+"_"+read_symbol$+" already exist "
+			Pen 11 {
+				Print format$(.tp$, state$, read_symbol$, write_symbol$, action$, end_state$)
+			}
+			if stack.size>=5 then loop
+		}
+		Module Tape {
+			s=[]
+			m=each(s)
+			while m
+				it= .Symbols#pos(stackitem$(m))
+				if it=-1 then error "Tape symbol not exist at position ";m^
+				data it
+			end while
+		}
+		Module Run (steps as long, display as boolean) {
+			if len(.rules)=0 then error "No rules found"
+			if .Initial_State$="" or .Terminating_state$="" or .Blank_Symbol$="" then
+				error "Reset the machine please"
+			end if
+			if empty then push .BS
+			curState$=.Initial_State$
+			cont=true
+			.head<=1
+			dim inst$() : link inst$() to inst()
+			while curState$<>.Terminating_state$
+				if display then pen 15 {showstack()}		
+				steps--
+				theRule$=curState$+"_"+.symbols#val$(stackitem(.head))
+				if not exist(.Rules, theRule$) then error "Undefined "+theRule$
+				inst$()=.Rules(theRule$)
+				shift .head : drop :push inst(0): shiftback .head
+				select case inst$(1)
+				case "right"
+					.head++ : if .head>stack.size then data .BS
+				case "left"
+					if .head<=1 then push .BS else .head--
+				else case
+					cont=false
+				end select
+				// change state
+				curState$=inst$(2)
+				// Show Stack
+				if steps=0  or not cont then exit
+			end while
+			if steps=0 then print over
+			Pen 12 {showstack()}
+			print "tape length: ";stack.size : flush
+			Refresh
+			sub showstack()
+				local d$=format$("{0:-5} {1::-5} ", curState$, .head)
+				local i: for i=1 to min.data(stack.size, 60): d$+=.symbols#val$(stackitem(i)):Next
+				print d$
+			end sub
+		}
+	}
+	Turing1=Machine()
+	For Turing1 {
+		.init "Simple incrementer"
+		.States "q0", "qf"
+		.Symbols "B", "1"
+		.Reset "q0", "qf", "B"    // initial state, terminating state, blank symbol
+		.AddRule "q0", "1", "1", "right", "q0"
+		.AddRule "q0", "B", "1", "stay", "qf"
+		.tape  "1", "1", "1"
+		.Run 100, true
+	}
+	Turing2=Machine()
+	For Turing2 {
+		.init "Three-state busy beaver"
+		.States "a", "b", "c", "halt"
+		.Symbols "0", "1"
+		.Reset "a", "halt", "0"
+		.AddRule "a", "0", "1", "right", "b",	"a", "1", "1", "left", "c"
+		.AddRule "b", "0", "1", "left", "a",	"b", "1", "1", "right", "b"
+		.AddRule "c", "0", "1", "left", "b", 	"c", "1", "1", "stay", "halt"
+		.Run 1000, true
+	}
+	
+	For Turing1 {
+		.init "Sorter"
+		.States "A","B","C","D","E","X"
+		.Symbols "a","b","B","*"
+		.Reset "A", "X", "*"
+		.AddRule "A", "a", "a", "right", "A", 	"A", "b", "B", "right", "B"
+		.AddRule "A", "*", "*", "left", "E",  	"B", "a", "a", "right", "B"
+		.AddRule "B", "b", "b", "right", "B", 	"B", "*", "*", "left", "C"
+		.AddRule "C", "a", "b", "left", "D",  	"C", "b", "b", "left", "C"
+		.AddRule "C", "B", "b", "left", "E",  	"D", "a", "a", "left", "D"
+		.AddRule "D", "b", "b", "left", "D", 	"D", "B", "a", "right", "A"
+		.AddRule "E", "a", "a", "left", "E", 	 "E", "*", "*", "right", "X"
+		.tape "b", "a", "b","b","b","a","a"
+		.Run 100, false
+	}
+	Turing1.tape "b","b","b","a","b","a","b","a","a","a","b","b","a"
+	Turing1.Run 1000, false
+	
+	Turing3=Machine()
+	for Turing3 {
+		.init "5-state, 2-symbol probable Busy Beaver machine from Wikipedia"
+		.States "A","B","C","D", "E", "H"
+		.Symbols "0", "1"
+		.Reset "A", "H", "0"
+		.AddRule "A", "0", "1", "right", "B", 	"A", "1", "1", "left", "C"
+		.AddRule "B", "0", "1", "right", "C", 	"B", "1", "1", "right", "B"
+		.AddRule "C", "0", "1", "right", "D", 	"C", "1", "1", "left", "E"
+		.AddRule "D", "0", "1", "left", "A",	"D", "1", "1", "left", "D"
+		.AddRule "E", "0", "1", "stay", "H", 	"E", "1", "0", "left", "A"
+		profiler
+		.Run 470, false //000000, false
+		Print round(timecount/1000,2);"s"    // estimated 12.5 hours for 47000000 steps
+	}
+}
+CheckIt

@@ -1,0 +1,280 @@
+ DIM LZW(1, 1)
+ DIM JDlzw(1)
+ DIM JDch$(1)
+ LET maxBits = 20          ' maximum bit width of the dictionary: minimum=12; maximum=21
+ LET resetDictionary = 1   ' flag to reset the dictionary when it gets full: 1=TRUE; 0=FALSE
+ LET printDictionary = 0   ' output encoding and decoding dictionaries to files
+ LET maxChunkSize = 2 ^ 14 ' maximum size of the data buffer
+ LET dSize = 2 ^ maxBits   ' maximum dictionary size
+ LET JDext$ = ".lzw"       ' file extension used for created archives
+ FILEDIALOG "Select a file to test LZW...", "*.*", inputName$
+ IF inputName$ = "" THEN END
+ DO ' get fullPath\ and fileName.ext
+    P = X
+    X = INSTR(inputName$, "\", (X + 1))
+ LOOP UNTIL X = 0
+ filePath$ = LEFT$(inputName$, P)
+ fileName$ = MID$(inputName$, (P + 1))
+ DO ' get fileName and .ext
+    P = X
+    X = INSTR(fileName$, ".", (X + 1))
+ LOOP UNTIL X = 0
+ fileExt$ = MID$(fileName$, P)
+ fileName$ = LEFT$(fileName$, (P - 1))
+
+ GOSUB [lzwEncode]
+ GOSUB [lzwDecode]
+
+ END
+
+''''''''''''''''''''''''''''''''''''''''
+' Start LZW Encoder ''''''''''''''''''''
+[lzwEncode]
+ REDIM LZW(dSize, 4)
+ LET EMPTY=-1:PREFIX=0:BYTE=1:FIRST=2:LESS=3:MORE=4:bmxCorrect=1
+ LET bitsRemain=0:remainIndex=0:tagCount=0:currentBitSize=8:fileTag$=""
+ FOR dNext = 0 TO 255                                       ' initialize dictionary for LZW
+ '  LZW(dNext, PREFIX) = EMPTY                              ' prefix index of '<index>' <B>
+ '  LZW(dNext, BYTE)   = dNext                              ' byte value of <index> '<B>'
+    LZW(dNext, FIRST)  = EMPTY                              ' first index to use <index><B> as prefix
+ '  LZW(dNext, LESS)   = EMPTY                              ' lesser index of binary search tree for <B>
+ '  LZW(dNext, MORE)   = EMPTY                              ' greater index of binary search tree for <B>
+ NEXT dNext
+ OPEN inputName$ FOR INPUT AS #lzwIN
+ IF LOF(#lzwIN) < 2 THEN
+    CLOSE #lzwIN
+    END
+ END IF
+ OPEN fileName$ + fileExt$ + JDext$ FOR OUTPUT AS #lzwOUT
+ GOSUB [StartFileChunk]
+ chnkPoint = 1
+ IF maxBits < 12 THEN maxBits = 12
+ IF maxBits > 21 THEN maxBits = 21
+ settings = maxBits - 12                                    ' setting for dictionary size; 1st decimal +12
+ IF resetDictionary THEN settings = settings + 100          ' setting for dictionary type; 2nd decimal even=static, odd=adaptive
+ #lzwOUT, CHR$(settings);                                   ' save settings as 1st byte of output
+ orgIndex = ASC(LEFT$(fileChunk$, 1))                       ' read 1st byte into <index>
+ WHILE fileChunk$ <> ""                                     ' while the buffer is not empty
+    DO                                                      ' begin the main encoder loop
+        chnkPoint = chnkPoint + 1
+        savIndex = FIRST                                    ' initialize the save-to index
+        prvIndex = orgIndex                                 ' initialize the previous index in search
+        newByte = ASC(MID$(fileChunk$, chnkPoint, 1))       ' read <B>
+        dSearch = LZW(orgIndex, FIRST)                      ' first search index for this <index> in the dictionary
+        WHILE (dSearch > EMPTY)                             ' while <index> is present in the dictionary
+            IF LZW(dSearch, BYTE) = newByte THEN EXIT WHILE ' if <index><B> is found
+            IF newByte < LZW(dSearch, BYTE) THEN            ' else if new <B> is less than <index><B>
+                savIndex = LESS                             ' follow lesser binary tree
+            ELSE
+                savIndex = MORE                             ' else follow greater binary tree
+            END IF
+            prvIndex = dSearch                              ' set previous <index>
+            dSearch = LZW(dSearch, savIndex)                ' read next search <index> from binary tree
+        WEND
+        IF dSearch = EMPTY THEN                             ' if <index><B> was not found in the dictionary
+            GOSUB [WriteIndex]                              ' write <index> to the output
+            IF dNext < dSize THEN                           ' save <index><B> into the dictionary
+                LZW(prvIndex, savIndex) = dNext
+                LZW(dNext, PREFIX) = orgIndex
+                LZW(dNext, BYTE)   = newByte
+                LZW(dNext, FIRST)  = EMPTY
+                LZW(dNext, LESS)   = EMPTY
+                LZW(dNext, MORE)   = EMPTY
+                IF dNext = (2 ^ currentBitSize) THEN currentBitSize = currentBitSize + 1
+                dNext = dNext + 1
+            ELSE                                            ' else reset the dictionary... or maybe not
+                IF resetDictionary THEN
+                    GOSUB [PrintEncode]
+                    REDIM LZW(dSize, 4)
+                    FOR dNext = 0 TO 255
+                        LZW(dNext, FIRST)  = EMPTY
+                    NEXT dNext
+                    currentBitSize = 8
+                    bmxCorrect = 0
+                END IF
+            END IF
+            orgIndex = newByte                              ' set <index> = <B>
+        ELSE                                                ' if <index><B> was found in the dictionary,
+            orgIndex = dSearch                              ' then set <index> = <index><B>
+        END IF
+    LOOP WHILE chnkPoint < chunk                            ' loop until the chunk has been processed
+    GOSUB [GetFileChunk]                                    ' refill the buffer
+ WEND                                                       ' loop until the buffer is empty
+ GOSUB [WriteIndex]
+ IF bitsRemain > 0 THEN #lzwOUT, CHR$(remainIndex);
+ CLOSE #lzwOUT
+ CLOSE #lzwIN
+ IF bmxCorrect THEN ' correct the settings, if needed
+    IF (currentBitSize < maxBits) OR resetDictionary THEN
+        IF currentBitSize < 12 THEN currentBitSize = 12
+        OPEN fileName$ + fileExt$ + JDext$ FOR BINARY AS #lzwOUT
+        #lzwOUT, CHR$(currentBitSize - 12);
+        CLOSE #lzwOUT
+    END IF
+ END IF
+ GOSUB [PrintEncode]
+ REDIM LZW(1, 1)
+ RETURN
+
+[WriteIndex]
+ X = orgIndex                             ' add remaining bits to input
+ IF bitsRemain > 0 THEN X = remainIndex + (X * (2 ^ bitsRemain))
+ bitsRemain = bitsRemain + currentBitSize ' add current bit size to output stack
+ WHILE bitsRemain > 7                     ' if 8 or more bits are to be written
+    #lzwOUT, CHR$(X MOD 256);             ' attatch lower 8 bits to output string
+    X = INT(X / 256)                      ' shift input value down by 2^8
+    bitsRemain = bitsRemain - 8           ' adjust counters
+ WEND
+ remainIndex = X                          ' retain trailing bits for next write
+ RETURN
+
+' End LZW Encoder ''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''
+
+[StartFileChunk]
+ sizeOfFile = LOF(#lzwIN)    ' set EOF marker
+ bytesRemaining = sizeOfFile ' set EOF counter
+ chunk = maxChunkSize        ' set max buffer size
+[GetFileChunk]
+ fileChunk$ = ""
+ IF bytesRemaining < 1 THEN RETURN
+ IF chunk > bytesRemaining THEN chunk = bytesRemaining
+ bytesRemaining = bytesRemaining - chunk
+ fileChunk$ = INPUT$(#lzwIN, chunk)
+ chnkPoint = 0
+ RETURN
+
+''''''''''''''''''''''''''''''''''''''''
+' Start LZW Decoder ''''''''''''''''''''
+[lzwDecode]
+ LET EMPTY=-1:bitsRemain=0:tagCount=0:fileTag$=""
+ OPEN fileName$ + fileExt$ + JDext$ FOR INPUT AS #lzwIN
+ OPEN fileName$ + ".Copy" + fileExt$ FOR OUTPUT AS #lzwOUT
+ GOSUB [StartFileChunk]
+ chnkPoint = 2
+ settings = ASC(fileChunk$)
+ maxBits  = VAL(RIGHT$(STR$(settings), 1)) + 12
+ dSize = 2 ^ maxBits
+ IF settings > 99 THEN resetDictionary = 1
+ GOSUB [ResetLZW]
+ oldIndex = orgIndex
+ WHILE fileChunk$ <> ""
+    ' decode current index and write to file
+    GOSUB [GetIndex]
+    IF JDch$(orgIndex) = "" THEN
+        tmpIndex = oldIndex
+        tmp$ = JDch$(tmpIndex)
+        WHILE JDlzw(tmpIndex) > EMPTY
+            tmpIndex = JDlzw(tmpIndex)
+            tmp$ = JDch$(tmpIndex) + tmp$
+        WEND
+        tmp$ = tmp$ + LEFT$(tmp$, 1)
+    ELSE
+        tmpIndex = orgIndex
+        tmp$ = JDch$(tmpIndex)
+        WHILE JDlzw(tmpIndex) > EMPTY
+            tmpIndex = JDlzw(tmpIndex)
+            tmp$ = JDch$(tmpIndex) + tmp$
+        WEND
+    END IF
+    #lzwOUT, tmp$;
+    ' add next dictionary entry or reset dictionary
+    IF dNext < dSize THEN
+        JDlzw(dNext) = oldIndex
+        JDch$(dNext) = LEFT$(tmp$, 1)
+        dNext = dNext + 1
+        IF dNext = (2 ^ currentBitSize) THEN
+            IF maxBits > currentBitSize THEN
+                currentBitSize = currentBitSize + 1
+            ELSE
+                IF resetDictionary THEN
+                    GOSUB [PrintDecode]
+                    GOSUB [ResetLZW]
+                END IF
+            END IF
+        END IF
+    END IF
+    oldIndex = orgIndex
+ WEND
+ CLOSE #lzwOUT
+ CLOSE #lzwIN
+ GOSUB [PrintDecode]
+ REDIM JDlzw(1)
+ REDIM JDch$(1)
+ RETURN
+
+[GetIndex]
+ byteCount = 0:orgIndex = 0
+ bitsToGrab = currentBitSize - bitsRemain
+ IF bitsRemain > 0 THEN
+    orgIndex = lastByte
+    byteCount = 1
+ END IF
+ WHILE bitsToGrab > 0
+    lastByte = ASC(MID$(fileChunk$, chnkPoint, 1))
+    orgIndex = orgIndex + (lastByte * (2 ^ (byteCount * 8)))
+    IF chnkPoint = chunk THEN GOSUB [GetFileChunk]
+    chnkPoint = chnkPoint + 1
+    byteCount = byteCount + 1
+    bitsToGrab = bitsToGrab - 8
+ WEND
+ IF bitsRemain > 0 THEN orgIndex = orgIndex / (2 ^ (8 - bitsRemain))
+ orgIndex = orgIndex AND ((2 ^ currentBitSize) - 1)
+ bitsRemain = bitsToGrab * (-1)
+ RETURN
+
+[ResetLZW]
+ REDIM JDlzw(dSize)
+ REDIM JDch$(dSize)
+ FOR dNext = 0 TO 255
+    JDlzw(dNext) = EMPTY       ' Prefix index
+    JDch$(dNext) = CHR$(dNext) ' New byte value
+ NEXT dNext
+ currentBitSize = 8
+ GOSUB [GetIndex]
+ #lzwOUT, JDch$(orgIndex);
+ currentBitSize = 9
+ RETURN
+
+' End LZW Decoder ''''''''''''''''''''''
+''''''''''''''''''''''''''''''''''''''''
+
+''''''''''''''''''''''''''''''''''''''''
+[PrintEncode]
+ IF printDictionary < 1 THEN RETURN
+ OPEN "Encode_" + fileTag$ + fileName$ + ".txt" FOR OUTPUT AS #dictOUT
+ FOR X = 0 TO 255
+    LZW(X, PREFIX) = EMPTY
+    LZW(X, BYTE)   = X
+ NEXT X
+ FOR X = dNext TO 0 STEP -1
+    tmpIndex = X
+    tmp$ = CHR$(LZW(tmpIndex, BYTE))
+    WHILE LZW(tmpIndex, PREFIX) > EMPTY
+        tmpIndex = LZW(tmpIndex, PREFIX)
+        tmp$ = CHR$(LZW(tmpIndex, BYTE)) + tmp$
+    WEND
+    #dictOUT, X; ":"; tmp$
+ NEXT X
+ CLOSE #dictOUT
+ tagCount = tagCount + 1
+ fileTag$ = STR$(tagCount) + "_"
+ RETURN
+
+[PrintDecode]
+ IF printDictionary < 1 THEN RETURN
+ OPEN "Decode_" + fileTag$ + fileName$ + ".txt" FOR OUTPUT AS #dictOUT
+ FOR X = dNext TO 0 STEP -1
+    tmpIndex = X
+    tmp$ = JDch$(tmpIndex)
+    WHILE JDlzw(tmpIndex) > EMPTY
+        tmpIndex = JDlzw(tmpIndex)
+        tmp$ = JDch$(tmpIndex) + tmp$
+    WEND
+    #dictOUT, X; ":"; tmp$
+ NEXT X
+ CLOSE #dictOUT
+ tagCount = tagCount + 1
+ fileTag$ = STR$(tagCount) + "_"
+ RETURN
+''''''''''''''''''''''''''''''''''''''''

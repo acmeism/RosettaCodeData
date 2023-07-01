@@ -1,0 +1,162 @@
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+(* Interface                                                        *)
+
+extern fn {a : vt@ype}          (* The "less than" template. *)
+insertion_sort$lt : (&a, &a) -<> bool (* Arguments by reference. *)
+
+extern fn {a : vt@ype}
+insertion_sort
+          {n   : int}
+          (arr : &array (a, n) >> _,
+           n   : size_t n)
+    :<!wrt> void
+
+(*------------------------------------------------------------------*)
+(* Implementation                                                   *)
+
+implement {a}
+insertion_sort {n} (arr, n) =
+  let
+    macdef lt = insertion_sort$lt<a>
+
+    fun
+    sort {i     : int | 1 <= i; i <= n}
+         {p_arr : addr}
+         .<n - i>.
+         (pf_arr : !array_v (a, p_arr, n) >> _ |
+          p_arr  : ptr p_arr,
+          i      : size_t i)
+        :<!wrt> void =
+      if i <> n then
+        let
+          val pi = ptr_add<a> (p_arr, i)
+
+          fun
+          find_new_position
+                    {j : nat | j <= i}
+                    .<j>.
+                    (pf_left : !array_v (a, p_arr, j) >> _,
+                     pf_i    : !a @ (p_arr + (i * sizeof a)) |
+                     j       : size_t j)
+              :<> [j : nat | j <= i] size_t j =
+            if j = i2sz 0 then
+              j
+            else
+              let
+                prval @(pf_left1, pf_k) = array_v_unextend pf_left
+
+                val k = pred j
+                val pk = ptr_add<a> (p_arr, k)
+              in
+                if ~((!pi) \lt (!pk)) then
+                  let
+                    prval () = pf_left :=
+                      array_v_extend (pf_left1, pf_k)
+                  in
+                    j
+                  end
+                else
+                  let
+                    val new_pos =
+                      find_new_position (pf_left1, pf_i | k)
+                    prval () = pf_left :=
+                      array_v_extend (pf_left1, pf_k)
+                  in
+                    new_pos
+                  end
+              end
+
+        prval @(pf_left, pf_right) =
+          array_v_split {a} {p_arr} {n} {i} pf_arr
+        prval @(pf_i, pf_rest) = array_v_uncons pf_right
+
+        val j = find_new_position (pf_left, pf_i | i)
+
+        prval () = pf_arr :=
+          array_v_unsplit (pf_left, array_v_cons (pf_i, pf_rest))
+      in
+        if j < i then
+          array_subcirculate<a> (!p_arr, j, i);
+        sort (pf_arr | p_arr, succ i)
+      end
+
+    prval () = lemma_array_param arr
+  in
+    if n <> i2sz 0 then
+      sort (view@ arr | addr@ arr, i2sz 1)
+  end
+
+(*------------------------------------------------------------------*)
+
+(* The demonstration converts random numbers to linear strings, then
+   sorts the elements by their first character. Thus here is a simple
+   demonstration that the sort can handle elements of linear type, and
+   also that the sort is stable. *)
+
+implement
+main0 () =
+  let
+    implement
+    insertion_sort$lt<Strptr1> (x, y) =
+      let
+        val sx = $UNSAFE.castvwtp1{string} x
+        and sy = $UNSAFE.castvwtp1{string} y
+        val cx = $effmask_all $UNSAFE.string_get_at (sx, 0)
+        and cy = $effmask_all $UNSAFE.string_get_at (sy, 0)
+      in
+        cx < cy
+      end
+
+    implement
+    array_initize$init<Strptr1> (i, x) =
+      let
+        #define BUFSIZE 10
+        var buffer : array (char, BUFSIZE)
+
+        val () = array_initize_elt<char> (buffer, i2sz BUFSIZE, '\0')
+        val _ = $extfcall (int, "snprintf", addr@ buffer,
+                           i2sz BUFSIZE, "%d",
+                           $extfcall (int, "rand") % 100)
+        val () = buffer[BUFSIZE - 1] := '\0'
+      in
+        x := string0_copy ($UNSAFE.cast{string} buffer)
+      end
+
+    implement
+    array_uninitize$clear<Strptr1> (i, x) =
+      strptr_free x
+
+    #define SIZE 30
+    val @(pf_arr, pfgc_arr | p_arr) =
+      array_ptr_alloc<Strptr1> (i2sz SIZE)
+    macdef arr = !p_arr
+
+    var i : [i : nat] int i
+  in
+    array_initize<Strptr1> (arr, i2sz SIZE);
+
+    for (i := 0; i < SIZE; i := succ i)
+      let
+        val p = ptr_add<Strptr1> (p_arr, i)
+        val s = $UNSAFE.ptr0_get<string> p
+      in
+        print! (" ", s)
+      end;
+    println! ();
+
+    insertion_sort<Strptr1> (arr, i2sz SIZE);
+
+    for (i := 0; i < SIZE; i := succ i)
+      let
+        val p = ptr_add<Strptr1> (p_arr, i)
+        val s = $UNSAFE.ptr0_get<string> p
+      in
+        print! (" ", s)
+      end;
+    println! ();
+
+    array_uninitize<Strptr1> (arr, i2sz SIZE);
+    array_ptr_free (pf_arr, pfgc_arr | p_arr)
+  end

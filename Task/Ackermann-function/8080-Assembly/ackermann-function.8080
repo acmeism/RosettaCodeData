@@ -1,0 +1,81 @@
+	org	100h
+	jmp	demo
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	ACK(M,N); DE=M, HL=N, return value in HL.
+ack:	mov	a,d	; M=0?
+	ora	e
+	jnz	ackm
+	inx	h	; If so, N+1.
+	ret
+ackm:	mov	a,h	; N=0?
+	ora	l
+	jnz	ackmn
+	lxi	h,1	; If so, N=1,
+	dcx	d	; N-=1,
+	jmp	ack	; A(M,N) - tail recursion
+ackmn:	push	d	; M>0 and N>0: store M on the stack
+	dcx	h	; N-=1
+	call	ack	; N = ACK(M,N-1)
+	pop	d	; Restore previous M
+	dcx	d	; M-=1
+	jmp	ack	; A(M,N) - tail recursion
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Print table of ack(m,n)
+MMAX:	equ	4	; Size of table to print. Note that math is done in
+NMAX:	equ	9	; 16 bits.
+demo:	lhld	6	; Put stack pointer at top of available memory
+	sphl
+	lxi	b,0	; let B,C hold 8-bit M and N.
+acknum:	xra	a	; Set high bit of M and N to zero
+	mov	d,a	; DE = B (M)
+	mov	e,b
+	mov	h,a	; HL = C (N)
+	mov	l,c
+	call	ack	; HL = ack(DE,HL)
+	call	prhl	; Print the number
+	inr	c	; N += 1
+	mvi	a,NMAX	; Time for next line?
+	cmp	c
+	jnz	acknum	; If not, print next number
+	push	b	; Otherwise, save BC
+	mvi	c,9	; Print newline
+	lxi	d,nl
+	call	5
+	pop	b	; Restore BC
+	mvi	c,0	; Set N to 0
+	inr	b	; M += 1
+	mvi	a,MMAX	; Time to stop?
+	cmp	b
+	jnz	acknum	; If not, print next number
+	rst	0
+	;;;	Print HL as ASCII number.
+prhl:	push	h	; Save all registers
+	push	d
+	push	b
+	lxi	b,pnum	; Store pointer to num string on stack
+	push	b
+	lxi	b,-10	; Divisor
+prdgt:	lxi	d,-1
+prdgtl:	inx	d	; Divide by 10 through trial subtraction
+	dad	b
+	jc	prdgtl
+	mvi	a,'0'+10
+	add	l	; L = remainder - 10
+	pop	h	; Get pointer from stack
+	dcx	h	; Store digit
+	mov	m,a
+	push	h	; Put pointer back on stack
+	xchg		; Put quotient in HL
+	mov	a,h	; Check if zero
+	ora	l
+	jnz	prdgt	; If not, next digit
+	pop	d	; Get pointer and put in DE
+	mvi	c,9	; CP/M print string
+	call	5
+	pop	b	; Restore registers
+	pop	d
+	pop	h
+	ret
+	db	'*****'	; Placeholder for number
+pnum:	db	9,'$'
+nl:	db	13,10,'$'

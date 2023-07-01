@@ -1,0 +1,8 @@
+CREATE OR REPLACE FUNCTION fib(n INTEGER) RETURNS INTEGER AS $$
+BEGIN
+  IF (n < 2) THEN
+    RETURN n;
+  END IF;
+  RETURN fib(n - 1) + fib(n - 2);
+END;
+$$ LANGUAGE plpgsql;

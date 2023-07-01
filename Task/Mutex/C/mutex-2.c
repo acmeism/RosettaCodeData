@@ -1,0 +1,1 @@
+WaitForSingleObject(hMutex, INFINITE);

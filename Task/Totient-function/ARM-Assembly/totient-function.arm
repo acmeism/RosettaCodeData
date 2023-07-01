@@ -1,0 +1,357 @@
+/* ARM assembly Raspberry PI or android with termux */
+/*  program totient.s   */
+
+ /* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+.equ MAXI,      25
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessNumber:       .asciz " number @ totient @  @ \n"
+szCarriageReturn:   .asciz "\n"
+szMessPrime:        .asciz " is prime."
+szMessSpace:        .asciz " "
+szMessCounterPrime: .asciz "Number of primes to @ : @ \n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:           .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    mov r4,#1                   @ start number
+1:
+    mov r0,r4
+    bl totient                  @ compute totient
+    mov r5,r0
+    mov r0,r4
+    bl isPrime                  @ control if number is prime
+    mov r6,r0
+    mov r0,r4                   @ display result
+    ldr r1,iAdrsZoneConv
+    bl conversion10             @ call décimal conversion
+    ldr r0,iAdrszMessNumber
+    ldr r1,iAdrsZoneConv        @ insert conversion in message
+    bl strInsertAtCharInc
+    mov r7,r0
+    mov r0,r5
+    ldr r1,iAdrsZoneConv
+    bl conversion10             @ call décimal conversion
+    mov r0,r7
+    ldr r1,iAdrsZoneConv        @ insert conversion in message
+    bl strInsertAtCharInc
+    mov r7,r0
+    cmp r6,#1
+    ldreq r1,iAdrszMessPrime
+    ldrne r1,iAdrszMessSpace
+    mov r0,r7
+    bl strInsertAtCharInc
+    bl affichageMess             @ display message
+
+    add r4,r4,#1                 @ increment number
+    cmp r4,#MAXI                 @ maxi ?
+    ble 1b                       @ and loop
+
+    mov r4,#2                    @ first number
+    mov r5,#0                    @ prime counter
+    ldr r6,iCst1000              @ load constantes
+    ldr r7,iCst10000
+    ldr r8,iCst100000
+2:
+    mov r0,r4
+    bl isPrime
+    cmp r0,#0
+    beq 3f
+    add r5,r5,#1
+3:
+    add r4,r4,#1
+    cmp r4,#100
+    bne 4f
+    mov r0,#100
+    mov r1,r5
+    bl displayCounter
+    b 7f
+4:
+    cmp r4,r6        @ 1000
+    bne 5f
+    mov r0,r6
+    mov r1,r5
+    bl displayCounter
+    b 7f
+5:
+    cmp r4,r7        @ 10000
+    bne 6f
+    mov r0,r7
+    mov r1,r5
+    bl displayCounter
+    b 7f
+6:
+    cmp r4,r8        @ 100000
+    bne 7f
+    mov r0,r8
+    mov r1,r5
+    bl displayCounter
+7:
+    cmp r4,r8
+    ble 2b                      @ and loop
+
+100:                            @ standard end of the program
+    mov r0, #0                  @ return code
+    mov r7, #EXIT               @ request to exit program
+    svc #0                      @ perform the system call
+iAdrszCarriageReturn:    .int szCarriageReturn
+iAdrsZoneConv:           .int sZoneConv
+iAdrszMessNumber:        .int szMessNumber
+iAdrszMessCounterPrime:  .int szMessCounterPrime
+iAdrszMessPrime:         .int szMessPrime
+iAdrszMessSpace:         .int szMessSpace
+iCst1000:                .int 1000
+iCst10000:               .int 10000
+iCst100000:              .int 100000
+/******************************************************************/
+/*    display counter                                             */
+/******************************************************************/
+/* r0 contains limit  */
+/* r1 contains counter */
+displayCounter:
+    push {r1-r3,lr}           @ save  registers
+    mov r2,r1
+    ldr r1,iAdrsZoneConv
+    bl conversion10             @ call décimal conversion
+    ldr r0,iAdrszMessCounterPrime
+    ldr r1,iAdrsZoneConv        @ insert conversion in message
+    bl strInsertAtCharInc
+    mov r3,r0
+    mov r0,r2
+    ldr r1,iAdrsZoneConv
+    bl conversion10             @ call décimal conversion
+    mov r0,r3
+    ldr r1,iAdrsZoneConv        @ insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+100:
+    pop {r1-r3,pc}             @ restaur registers
+/******************************************************************/
+/*     compute totient of number                                  */
+/******************************************************************/
+/* r0 contains number  */
+totient:
+    push {r1-r5,lr}           @ save  registers
+    mov r4,r0                 @ totient
+    mov r5,r0                 @ save number
+    mov r1,#0                 @ for first divisor
+1:                            @ begin loop
+    mul r3,r1,r1              @ compute square
+    cmp r3,r5                 @ compare number
+    bgt 4f                    @ end
+    add r1,r1,#2              @ next divisor
+    mov r0,r5
+    bl division
+    cmp r3,#0                 @ remainder null ?
+    bne 3f
+2:                            @ begin loop 2
+    mov r0,r5
+    bl division
+    cmp r3,#0
+    moveq r5,r2               @ new value = quotient
+    beq 2b
+
+    mov r0,r4                 @ totient
+    bl division
+    sub r4,r4,r2              @ compute new totient
+3:
+    cmp r1,#2                 @ first divisor ?
+    moveq r1,#1               @ divisor = 1
+    b 1b                      @ and loop
+4:
+    cmp r5,#1                 @ final value > 1
+    ble 5f
+    mov r0,r4                 @ totient
+    mov r1,r5                 @ divide by value
+    bl division
+    sub r4,r4,r2              @ compute new totient
+5:
+
+    mov r0,r4
+100:
+    pop {r1-r5,pc}             @ restaur registers
+
+/***************************************************/
+/*   check if a number is prime              */
+/***************************************************/
+/* r0 contains the number            */
+/* r0 return 1 if prime  0 else */
+@2147483647
+@4294967297
+@131071
+isPrime:
+    push {r1-r6,lr}    @ save registers
+    cmp r0,#0
+    beq 90f
+    cmp r0,#17
+    bhi 1f
+    cmp r0,#3
+    bls 80f            @ for 1,2,3 return prime
+    cmp r0,#5
+    beq 80f            @ for 5 return prime
+    cmp r0,#7
+    beq 80f            @ for 7 return prime
+    cmp r0,#11
+    beq 80f            @ for 11 return prime
+    cmp r0,#13
+    beq 80f            @ for 13 return prime
+    cmp r0,#17
+    beq 80f            @ for 17 return prime
+1:
+    tst r0,#1          @ even ?
+    beq 90f            @ yes -> not prime
+    mov r2,r0          @ save number
+    sub r1,r0,#1       @ exposant n - 1
+    mov r0,#3          @ base
+    bl moduloPuR32     @ compute base power n - 1 modulo n
+    cmp r0,#1
+    bne 90f            @ if <> 1  -> not prime
+
+    mov r0,#5
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#7
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#11
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#13
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#17
+    bl moduloPuR32
+    cmp r0,#1
+    bne 90f
+80:
+    mov r0,#1        @ is prime
+    b 100f
+90:
+    mov r0,#0        @ no prime
+100:                 @ fin standard de la fonction
+    pop {r1-r6,lr}   @ restaur des registres
+    bx lr            @ retour de la fonction en utilisant lr
+/********************************************************/
+/*   Calcul modulo de b puissance e modulo m  */
+/*    Exemple 4 puissance 13 modulo 497 = 445         */
+/*                                             */
+/********************************************************/
+/* r0  nombre  */
+/* r1 exposant */
+/* r2 modulo   */
+/* r0 return result  */
+moduloPuR32:
+    push {r1-r7,lr}    @ save registers
+    cmp r0,#0          @ verif <> zero
+    beq 100f
+    cmp r2,#0          @ verif <> zero
+    beq 100f           @ TODO: vérifier les cas erreur
+1:
+    mov r4,r2          @ save modulo
+    mov r5,r1          @ save exposant
+    mov r6,r0          @ save base
+    mov r3,#1          @ start result
+
+    mov r1,#0          @ division de r0,r1 par r2
+    bl division32R
+    mov r6,r2          @ base <- remainder
+2:
+    tst r5,#1          @  exposant even or odd
+    beq 3f
+    umull r0,r1,r6,r3
+    mov r2,r4
+    bl division32R
+    mov r3,r2          @ result <- remainder
+3:
+    umull r0,r1,r6,r6
+    mov r2,r4
+    bl division32R
+    mov r6,r2          @ base <- remainder
+
+    lsr r5,#1          @ left shift 1 bit
+    cmp r5,#0          @ end ?
+    bne 2b
+    mov r0,r3
+100:                   @ fin standard de la fonction
+    pop {r1-r7,lr}     @ restaur des registres
+    bx lr              @ retour de la fonction en utilisant lr
+
+/***************************************************/
+/*   division number 64 bits in 2 registers by number 32 bits */
+/***************************************************/
+/* r0 contains lower part dividende   */
+/* r1 contains upper part dividende   */
+/* r2 contains divisor   */
+/* r0 return lower part quotient    */
+/* r1 return upper part quotient    */
+/* r2 return remainder               */
+division32R:
+    push {r3-r9,lr}    @ save registers
+    mov r6,#0          @ init upper upper part remainder  !!
+    mov r7,r1          @ init upper part remainder with upper part dividende
+    mov r8,r0          @ init lower part remainder with lower part dividende
+    mov r9,#0          @ upper part quotient
+    mov r4,#0          @ lower part quotient
+    mov r5,#32         @ bits number
+1:                     @ begin loop
+    lsl r6,#1          @ shift upper upper part remainder
+    lsls r7,#1         @ shift upper  part remainder
+    orrcs r6,#1
+    lsls r8,#1         @ shift lower  part remainder
+    orrcs r7,#1
+    lsls r4,#1         @ shift lower part quotient
+    lsl r9,#1          @ shift upper part quotient
+    orrcs r9,#1
+                       @ divisor sustract  upper  part remainder
+    subs r7,r2
+    sbcs  r6,#0        @ and substract carry
+    bmi 2f             @ négative ?
+
+                       @ positive or equal
+    orr r4,#1          @ 1 -> right bit quotient
+    b 3f
+2:                     @ negative
+    orr r4,#0          @ 0 -> right bit quotient
+    adds r7,r2         @ and restaur remainder
+    adc  r6,#0
+3:
+    subs r5,#1         @ decrement bit size
+    bgt 1b             @ end ?
+    mov r0,r4          @ lower part quotient
+    mov r1,r9          @ upper part quotient
+    mov r2,r7          @ remainder
+100:                   @ function end
+    pop {r3-r9,lr}     @ restaur registers
+    bx lr
+
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

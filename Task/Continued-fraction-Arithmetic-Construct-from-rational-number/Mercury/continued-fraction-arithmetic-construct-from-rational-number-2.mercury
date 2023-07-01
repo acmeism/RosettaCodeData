@@ -1,0 +1,148 @@
+%%%-------------------------------------------------------------------
+
+:- module continued_fraction_from_rational_lazy.
+
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+
+:- implementation.
+:- import_module exception.
+:- import_module integer.       % Arbitrary-precision integers.
+:- import_module lazy.          % Lazy evaluation.
+:- import_module list.
+:- import_module string.
+
+%% NOTE: There IS a "rational" module, for arbitrary-precision
+%% rational numbers, but I wrote this example for plain "integer"
+%% type. One could easily add "rational" support.
+
+%%%-------------------------------------------------------------------
+%%%
+%%% The following lazy list implementation is suggested in the Mercury
+%%% Library Reference.
+%%%
+
+:- type lazy_list(T)
+   ---> lazy_list(lazy(list_cell(T))).
+
+:- type list_cell(T)
+   ---> cons(T, lazy_list(T))
+   ;    nil.
+
+:- type cf == lazy_list(integer).
+
+%%%-------------------------------------------------------------------
+%%%
+%%% r2cf takes numerator and denominator of a fraction, and returns a
+%%% continued fraction as a lazy list of terms.
+%%%
+
+:- func r2cf(integer, integer) = cf.
+r2cf(Numerator, Denominator) = CF :-
+  (if (Denominator = zero)
+   then (CF = lazy_list(delay((func) = nil)))
+   else (CF = lazy_list(delay(Cons)),
+         ((func) = Cell :-
+            (Cell = cons(Quotient, r2cf(Denominator, Remainder)),
+             %% What follows is division with truncation towards zero.
+             divide_with_rem(Numerator, Denominator,
+                             Quotient, Remainder))) = Cons)).
+
+%%%-------------------------------------------------------------------
+%%%
+%%% cf2string and cf2string_with_max_terms convert a continued
+%%% fraction to a printable string.
+%%%
+
+:- func cf2string(cf) = string.
+cf2string(CF) = cf2string_with_max_terms(CF, integer(1000)).
+
+:- func cf2string_with_max_terms(cf, integer) = string.
+cf2string_with_max_terms(CF, MaxTerms) = S :-
+  S = cf2string_loop(CF, MaxTerms, zero, "[").
+
+:- func cf2string_loop(cf, integer, integer, string) = string.
+cf2string_loop(CF, MaxTerms, I, Accum) = S :-
+  (CF = lazy_list(ValCell),
+   force(ValCell) = Cell,
+   (if (Cell = cons(Term, Tail))
+    then (if (I = MaxTerms) then (S = Accum ++ ",...]")
+          else ((Separator = (if (I = zero) then ""
+                              else if (I = one) then ";"
+                              else ",")),
+                TermStr = to_string(Term),
+                S = cf2string_loop(Tail, MaxTerms, I + one,
+                                   Accum ++ Separator ++ TermStr)))
+    else (S = Accum ++ "]"))).
+
+%%%-------------------------------------------------------------------
+%%%
+%%% example takes a fraction, as a string, or as separate numerator
+%%% and denominator strings, and prints a line of output.
+%%%
+
+:- pred example(string::in, io::di, io::uo) is det.
+:- pred example(string::in, string::in, io::di, io::uo) is det.
+example(Fraction, !IO) :-
+  split_at_char(('/'), Fraction) = Split,
+  (if (Split = [Numerator])
+   then example_(Fraction, Numerator, "1", !IO)
+   else if (Split = [Numerator, Denominator])
+   then example_(Fraction, Numerator, Denominator, !IO)
+   else throw("Not an integer or fraction: \"" ++ Fraction ++ "\"")).
+example(Numerator, Denominator, !IO) :-
+  example_(Numerator ++ "/" ++ Denominator,
+           Numerator, Denominator, !IO).
+
+:- pred example_(string::in, string::in, string::in, io::di, io::uo)
+   is det.
+example_(Fraction, Numerator, Denominator, !IO) :-
+  (N = integer.det_from_string(Numerator)),
+  (D = integer.det_from_string(Denominator)),
+  print(Fraction, !IO),
+  print(" => ", !IO),
+  print(cf2string(r2cf(N, D)), !IO),
+  nl(!IO).
+
+%%%-------------------------------------------------------------------
+
+main(!IO) :-
+  example("1/2", !IO),
+  example("3", !IO),
+  example("23/8", !IO),
+  example("13/11", !IO),
+  example("22/7", !IO),
+  example("-151/77", !IO),
+
+  %% I made "example" overloaded, so it can take separate numerator
+  %% and denominator strings.
+  example("151", "-77", !IO),
+
+  example("14142/10000", !IO),
+  example("141421/100000", !IO),
+  example("1414214/1000000", !IO),
+  example("14142136/10000000", !IO),
+
+  %% Decimal expansion of sqrt(2): see https://oeis.org/A002193
+  example("141421356237309504880168872420969807856967187537694807317667973799073247846210703885038753432764157/100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", !IO),
+
+  example("31/10", !IO),
+  example("314/100", !IO),
+  example("3142/1000", !IO),
+  example("31428/10000", !IO),
+  example("314285/100000", !IO),
+  example("3142857/1000000", !IO),
+  example("31428571/10000000", !IO),
+  example("314285714/100000000", !IO),
+
+  %% Decimal expansion of pi: see https://oeis.org/A000796
+  example("314159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214/100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", !IO),
+
+  true.
+
+%%%-------------------------------------------------------------------
+%%% local variables:
+%%% mode: mercury
+%%% prolog-indent-width: 2
+%%% end:

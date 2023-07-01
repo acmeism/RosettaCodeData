@@ -1,0 +1,71 @@
+Factorial:
+;input: D0.W: number you wish to get the factorial of.
+;output: D0.L
+	CMP.W #0,D0
+	BEQ .isZero
+	CMP.W #1,D0
+	BEQ .isOne
+	MOVEM.L D4-D5,-(SP)
+		MOVE.W D0,D4
+		MOVE.W D0,D5
+		SUBQ.W #2,D5		;D2 = LOOP COUNTER.
+		;Since DBRA stops at FFFF we can't use it as our multiplier.
+		;If we did, we'd always return 0!
+.loop:
+		SUBQ.L #1,D4
+                      MOVE.L D1,-(SP)
+		      MOVE.L D4,D1
+		      JSR MULU_48		;multiplies D0.L by D1.W
+		      EXG D0,D1                 ;output is in D1 so we need to put it in D0
+                MOVE.L (SP)+,D1
+		DBRA D5,.loop
+	MOVEM.L (SP)+,D4-D5
+	RTS
+.isZero:
+.isOne:
+	MOVEQ #1,D0
+	RTS
+MULU_48:
+        ;"48-BIT" MULTIPLICATION.
+	;OUTPUTS HIGH LONG IN D0, LOW LONG IN D1
+	;INPUT: D0.L, D1.W = FACTORS
+	MOVEM.L D2-D7,-(SP)
+	SWAP D1
+	CLR.W D1
+	SWAP D1				;CLEAR THE TOP WORD OF D1.
+	
+	MOVE.L D1,D2
+	EXG D0,D1			;D1 IS OUR BASE VALUE, WE'LL USE BIT SHIFTS TO REPEATEDLY MULTIPLY.
+	MOVEQ #0,D0			;CLEAR UPPER LONG OF PRODUCT
+	MOVE.L D1,D3		;BACKUP OF "D1" (WHICH USED TO BE D0)
+	
+	;EXAMPLE: $40000000*$225 = ($40000000 << 9) + ($40000000 << 5) + ($40000000 << 2) + $40000000
+	;FACTOR OUT AS MANY POWERS OF 2 AS POSSIBLE.
+	
+	MOVEQ #0,D0
+	LSR.L #1,D2
+	BCS .wasOdd			;if odd, leave D1 alone. Otherwise, clear it. This is our +1 for an odd second operand.
+		MOVEQ #0,D1
+.wasOdd:
+		MOVEQ #31-1,D6		;30 BITS TO CHECK
+		MOVEQ #1-1,D7		;START AT BIT 1, MINUS 1 IS FOR DBRA CORRECTION FACTOR
+.shiftloop:
+		LSR.L #1,D2
+		BCC .noShift
+		MOVE.W D7,-(SP)
+			MOVEQ #0,D4
+			MOVE.L D3,D5
+.innershiftloop:
+			ANDI #%00001111,CCR       ;clear extend flag
+			ROXL.L D5
+			ROXL.L D4
+			DBRA D7,.innershiftloop
+			ANDI #%00001111,CCR
+			ADDX.L D5,D1
+			ADDX.L D4,D0
+		MOVE.W (SP)+,D7
+.noShift:
+	addq.l #1,d7
+	dbra d6,.shiftloop
+	MOVEM.L (SP)+,D2-D7
+	RTS

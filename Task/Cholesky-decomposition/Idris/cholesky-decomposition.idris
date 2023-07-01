@@ -1,0 +1,67 @@
+module Main
+
+import Data.Vect
+
+Matrix : Nat -> Nat -> Type -> Type
+Matrix m n t = Vect m (Vect n t)
+
+
+zeros : (m : Nat) -> (n : Nat) -> Matrix m n Double
+zeros m n = replicate m (replicate n 0.0)
+
+
+indexM : (Fin m, Fin n) -> Matrix m n t -> t
+indexM (i, j) a = index j (index i a)
+
+
+replaceAtM : (Fin m, Fin n) -> t -> Matrix m n t -> Matrix m n t
+replaceAtM (i, j) e a = replaceAt i (replaceAt j e (index i a)) a
+
+
+get : Matrix m m Double -> Matrix m m Double -> (Fin m, Fin m) -> Double
+get a l (i, j) {m} =  if i == j then sqrt $ indexM (j, j) a - dot
+             else if i > j  then (indexM (i, j) a - dot) / indexM (j, j) l
+             else 0.0
+
+  where
+        -- Obtain indicies 0 to j -1
+        ks : List (Fin m)
+        ks = case (findIndices (\_ => True) a) of
+          [] => []
+          (x::xs) => init (x::xs)
+
+        dot : Double
+        dot = sum [(indexM (i, k) l) * (indexM (j, k) l) | k <- ks]
+
+
+updateL : Matrix m m Double -> Matrix m m Double -> (Fin m, Fin m) -> Matrix m m Double
+updateL a l idx = replaceAtM idx (get a l idx) l
+
+
+cholesky : Matrix m m Double -> Matrix m m Double
+cholesky a {m} =
+    foldl (\l',i =>
+        foldl (\l'',j => updateL a l'' (i, j)) l' (js i))
+          l is
+  where  l = zeros m m
+
+         is : List (Fin m)
+         is = findIndices (\_ => True) a
+
+         js : Fin m -> List (Fin m)
+         js n = filter (<= n) is
+
+
+ex1 : Matrix 3 3 Double
+ex1 = cholesky [[25.0, 15.0, -5.0], [15.0, 18.0, 0.0], [-5.0, 0.0, 11.0]]
+
+ex2 : Matrix 4 4 Double
+ex2 = cholesky [[18.0, 22.0, 54.0, 42.0], [22.0, 70.0, 86.0, 62.0],
+                [54.0, 86.0, 174.0, 134.0], [42.0, 62.0, 134.0, 106.0]]
+
+main : IO ()
+main = do
+  print ex1
+  putStrLn "\n"
+  print ex2
+  putStrLn "\n"

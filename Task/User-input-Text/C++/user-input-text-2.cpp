@@ -1,0 +1,1 @@
+ cin >> string_input;

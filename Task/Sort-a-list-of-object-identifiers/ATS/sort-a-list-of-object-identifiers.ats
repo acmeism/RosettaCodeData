@@ -1,0 +1,191 @@
+(* Sort a list of object identifiers (OID). *)
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+%{^
+#include <alloca.h>  /* ATS2 exceptions require alloca(3). */
+%}
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+infixl ( :: ) :::
+#define VNIL list_vt_nil ()
+#define :::  list_vt_cons
+
+exception Exc_not_an_oid of (string, string)
+exception Exc_internal_error of (string)
+macdef not_an_oid (s) = $raise Exc_not_an_oid ($mylocation, ,(s))
+macdef internal_error () = $raise Exc_internal_error ($mylocation)
+
+fn
+oid_explode
+          {n : int}
+          (s : string n)
+    :<!exnwrt> List0_vt String1 =
+  let
+    fun
+    loop      {i : nat | i <= n}
+              .<n - i>.
+              (lst : &list_vt (String1, 0) >> List0_vt String1,
+               i   : size_t i)
+        :<!exnwrt> void =
+      if ~string_is_atend (s, i) then
+        let
+          fun
+          scan_number
+                    {j : int | i <= j; j <= n}
+                    .<n - j>.
+                    (j : size_t j)
+              :<> [j : int | i <= j; j <= n]
+                  size_t j =
+            if string_is_atend (s, j) then
+              j
+            else if ~isdigit s[j] then
+              j
+            else
+              scan_number (succ j)
+
+          val j = scan_number i
+        in
+          if j = i then
+            not_an_oid s
+          else if string_is_atend (s, j) then
+            let
+              val t =
+                strnptr2string (string_make_substring (s, i, j - i))
+              val+ ~ VNIL = lst
+            in
+              lst := t ::: VNIL
+            end
+          else if s[j] <> '.' then
+            not_an_oid s
+          else if string_is_atend (s, succ j) then
+            not_an_oid s
+          else
+            let
+              val+ ~ VNIL = lst
+              val t =
+                strnptr2string
+                  (string_make_substring (s, i, j - i))
+              val () = lst := t ::: VNIL
+              val+ @ _ ::: tail = lst
+              val () = loop (tail, succ j)
+              prval () = fold@ lst
+            in
+            end
+        end
+
+    prval () = lemma_string_param s
+
+    var lst : List0_vt String1 = VNIL
+  in
+    if string_is_empty s then
+      not_an_oid s;
+    loop (lst, i2sz 0);
+    lst
+  end
+
+fn
+oid_field_cmp
+          (x : String0,
+           y : String0)
+    :<!exn> int =
+  let
+    fun
+    to_number {n : nat}
+              {i : nat | i <= n}
+              .<n - i>.
+              (s     : string n,
+               i     : size_t i,
+               accum : ullint)
+        :<!exn> ullint =
+      if string_is_atend (s, i) then
+        accum
+      else if ~isdigit s[i] then
+        internal_error ()
+      else
+        let
+          val digit = $UN.cast{ullint} s[i] - $UN.cast '0'
+        in
+          to_number (s, succ i, (10ULL * accum) + digit)
+        end
+
+    val nx = to_number (x, i2sz 0, 0ULL)
+    and ny = to_number (y, i2sz 0, 0ULL)
+  in
+    compare (nx, ny)
+  end
+
+fn
+oid_cmp   (x : String0,
+           y : String0)
+    :<!exnwrt> int =
+  let
+    fun
+    loop      {m, n : nat}
+              .<m, n>.
+              (xs : list (String1, m),
+               ys : list (String1, n))
+        :<!exnwrt> int =
+      case+ ys of
+      | NIL => if iseqz xs then 0 else 1
+      | yhead :: ytail =>
+        begin
+          case+ xs of
+          | NIL => ~1
+          | xhead :: xtail =>
+            let
+              val cmp = oid_field_cmp (xhead, yhead)
+            in
+              if cmp = 0 then
+                loop (xtail, ytail)
+              else
+                cmp
+            end
+        end
+
+    val xs = list_vt2t (oid_explode x)
+    and ys = list_vt2t (oid_explode y)
+  in
+    loop (xs, ys)
+  end
+
+fn
+oid_list_sort
+          {n   : int}
+          (lst : list (String0, n))
+    :<!exnwrt> list_vt (String0, n) =
+  list_mergesort_fun<String0>
+    (lst, lam (x, y) => $effmask_all oid_cmp (x, y))
+
+implement
+main0 () =
+  try
+    let
+      val oid_list =
+        $list ("1.3.6.1.4.1.11.2.17.19.3.4.0.10",
+               "1.3.6.1.4.1.11.2.17.5.2.0.79",
+               "1.3.6.1.4.1.11.2.17.19.3.4.0.4",
+               "1.3.6.1.4.1.11150.3.4.0.1",
+               "1.3.6.1.4.1.11.2.17.19.3.4.0.1",
+               "1.3.6.1.4.1.11150.3.4.0")
+      val oid_sorted = list_vt2t (oid_list_sort oid_list)
+
+      var p : List0 String0
+    in
+      for (p := oid_sorted; isneqz p; p := list_tail p)
+        println! (list_head p)
+    end
+  with
+  | ~ Exc_not_an_oid (loc, s) =>
+    begin
+      println! ("Not a UID: \"", s, "\" (exception raised at ", loc, ")");
+      exit 1
+    end
+  | ~ Exc_internal_error loc =>
+    begin
+      println! ("Internal error (exception raised at ", loc, ")");
+      exit 1
+    end

@@ -1,0 +1,86 @@
+UInt32 seed = 0
+F nonrandom_choice(lst)
+   :seed = 1664525 * :seed + 1013904223
+   R lst[:seed % UInt32(lst.len)]
+
+V board = Array(‘123456789’)
+V wins = ([0, 1, 2], [3, 4, 5], [6, 7, 8],
+          [0, 3, 6], [1, 4, 7], [2, 5, 8],
+          [0, 4, 8], [2, 4, 6])
+
+F printboard()
+   print([0, 3, 6].map(x -> (:board[x .+ 3]).join(‘ ’)).join("\n"))
+
+F score(board = board) -> (Char, [Int])?
+   L(w) :wins
+      V b = board[w[0]]
+      I b C ‘XO’ & all(w.map(i -> @board[i] == @b))
+         R (b, w.map(i -> i + 1))
+   R N
+
+F finished()
+   R all(:board.map(b -> b C ‘XO’))
+
+F space(board = board)
+   R board.filter(b -> b !C ‘XO’)
+
+F my_turn(xo, &board)
+   V options = space()
+   V choice = nonrandom_choice(options)
+   board[Int(choice) - 1] = xo
+   R choice
+
+F my_better_turn(xo, &board)
+   ‘Will return a next winning move or block your winning move if possible’
+   V ox = I xo == ‘X’ {Char(‘O’)} E Char(‘X’)
+   Int? oneblock
+   V options = space(board).map(s -> Int(s) - 1)
+   Int choice
+   L(chc) options
+      V brd = copy(board)
+      brd[chc] = xo
+      I score(brd) != N
+         choice = chc
+         L.break
+      I oneblock == N
+         brd[chc] = ox
+         I score(brd) != N
+            oneblock = chc
+   L.was_no_break
+      choice = oneblock ? nonrandom_choice(options)
+   board[choice] = xo
+   R choice + 1
+
+F your_turn(xo, &board)
+   V options = space()
+   L
+      V choice = input("\nPut your #. in any of these positions: #. ".format(xo, options.join(‘’))).trim((‘ ’, "\t", "\r", "\n"))
+      I choice C options
+         board[Int(choice) - 1] = xo
+         R choice
+      print(‘Whoops I don't understand the input’)
+
+F me(xo = Char(‘X’))
+   printboard()
+   print("\nI go at "my_better_turn(xo, &:board))
+   R score()
+
+F you(xo = Char(‘O’))
+   printboard()
+   print("\nYou went at "my_turn(xo, &:board))
+   R score()
+
+L !finished()
+   (Char, [Int])? s = me(Char(‘X’))
+   I s != N
+      printboard()
+      print("\n#. wins along #.".format(s[0], s[1]))
+      L.break
+   I !finished()
+      s = you(Char(‘O’))
+      I s != N
+         printboard()
+         print("\n#. wins along #.".format(s[0], s[1]))
+         L.break
+L.was_no_break
+   print("\nA draw")

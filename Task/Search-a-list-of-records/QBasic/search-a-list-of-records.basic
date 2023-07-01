@@ -1,0 +1,23 @@
+DIM cities$(10, 10)
+cities$(1, 1) = "Lagos": cities$(1, 2) = "21.0"
+cities$(2, 1) = "Cairo": cities$(2, 2) = "15.2"
+cities$(3, 1) = "Kinshasa-Brazzaville": cities$(3, 2) = "11.3"
+cities$(4, 1) = "Greater Johannesburg": cities$(4, 2) = "7.55"
+cities$(5, 1) = "Mogadishu": cities$(5, 2) = "5.85"
+cities$(6, 1) = "Khartoum-Omdurman": cities$(6, 2) = "4.98"
+cities$(7, 1) = "Dar Es Salaam": cities$(7, 2) = "4.7"
+cities$(8, 1) = "Alexandria": cities$(8, 2) = "4.58"
+cities$(9, 1) = "Abidjan": cities$(9, 2) = "4.4"
+cities$(10, 1) = "Casablanca": cities$(10, 2) = "3.98"
+
+FOR n = 1 TO UBOUND(cities$)
+    IF cities$(n, 1) = "Dar Es Salaam" THEN PRINT n - 1
+NEXT n
+
+FOR n = 1 TO UBOUND(cities$)
+    IF VAL(cities$(n, 2)) < 5! THEN PRINT cities$(n, 1): EXIT FOR
+NEXT n
+
+FOR n = 1 TO UBOUND(cities$)
+    IF LEFT$(cities$(n, 1), 1) = "A" THEN PRINT cities$(n, 2): EXIT FOR
+NEXT n

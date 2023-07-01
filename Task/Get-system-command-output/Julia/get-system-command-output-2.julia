@@ -1,0 +1,1 @@
+ll = readlines(`ls -l`)

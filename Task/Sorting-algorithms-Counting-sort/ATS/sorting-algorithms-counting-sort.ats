@@ -1,0 +1,188 @@
+#include "share/atspre_staload.hats"
+
+(* My ATS solution to the radix sort task includes a counting sort for
+   values in 0..255. Here, I will write an implementation that works
+   with a given range of keys. *)
+
+(* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - *)
+(* Interface                                                        *)
+
+exception counting_sort_exception of (string)
+
+extern fn {a  : t@ype}
+          {tk : tkind}
+counting_sort
+          {n      : int}
+          {keymin, keymax : int | keymin <= keymax}
+          (arr    : &array (a, n) >> _,
+           n      : size_t n,
+           keymin : g1int (tk, keymin),
+           keymax : g1int (tk, keymax))
+    :<!exn,!wrt> void
+
+extern fn {a  : t@ype}
+          {tk : tkind}
+counting_sort$key : a -<> g1int tk
+
+(* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - *)
+(* Implementation                                                   *)
+
+fn {a  : t@ype}
+   {tk : tkind}
+count_entries
+          {n        : int}
+          {keymin, keymax : int | keymin <= keymax}
+          (arr      : &array (a, n),
+           n        : size_t n,
+           keymin   : g1int (tk, keymin),
+           keymax   : g1int (tk, keymax),
+           bins     : &array (size_t, keymax - keymin + 1))
+    :<!exn,!wrt> void =
+  $effmask_ntm                (* The for-loop obviously terminates. *)
+    begin
+      let
+        prval () = lemma_array_param arr
+        var i : [i : nat | i <= n] size_t i
+      in
+        for (i := i2sz 0; i <> n; i := succ i)
+          let
+            val key = counting_sort$key<a> arr[i]
+          in
+            if key < keymin then
+              $raise counting_sort_exception ("key too low")
+            else if keymax < key then
+              $raise counting_sort_exception ("key too high")
+            else
+              bins[key - keymin] := succ bins[key - keymin]
+          end
+      end
+    end
+
+fn {}
+bin_sizes_to_indices
+          {num_bins : int}
+          (bins     : &array (size_t, num_bins) >> _,
+           num_bins : size_t num_bins)
+    :<!wrt> void =
+  let
+    fun
+    loop {i     : nat | i <= num_bins}
+         {accum : int}
+         .<num_bins - i>.
+         (bins  : &array (size_t, num_bins) >> _,
+          i     : size_t i,
+          accum : size_t accum)
+        :<!wrt> void =
+      if i <> num_bins then
+        let
+          prval () = lemma_g1uint_param i
+          val elem = g1ofg0 bins[i]
+        in
+          if elem = i2sz 0 then
+            loop (bins, succ i, accum)
+          else
+            begin
+              bins[i] := accum;
+              loop (bins, succ i, accum + elem)
+            end
+        end
+
+    prval () = lemma_array_param bins
+  in
+    loop (bins, i2sz 0, i2sz 0)
+  end
+
+fn {a  : t@ype}
+   {tk : tkind}
+rearrange {n : int}
+          {keymin, keymax : int | keymin <= keymax}
+          (arr    : &array (a, n) >> _,
+           temp   : &array (a, n),
+           n      : size_t n,
+           keymin : g1int (tk, keymin),
+           keymax : g1int (tk, keymax),
+           bins   : &array (size_t, keymax - keymin + 1))
+    :<!wrt> void =
+  let
+    prval () = lemma_array_param arr
+
+    fun
+    loop {i : nat | i <= n}
+         .<n - i>.
+         (arr  : &array (a, n) >> _,
+          temp : &array (a, n),
+          bins : &array (size_t, keymax - keymin + 1),
+          i    : size_t i)
+        :<!wrt> void =
+      if i <> n then
+        let
+          val key = counting_sort$key<a><tk> temp[i]
+          val () = $effmask_exn assertloc (keymin <= key)
+          val () = $effmask_exn assertloc (key <= keymax)
+          val index = g1ofg0 bins[key - keymin]
+          prval () = lemma_g1uint_param index
+          val () = $effmask_exn assertloc (index < n)
+          val () = arr[index] := temp[i]
+          val () = bins[key - keymin] := succ index
+        in
+          loop (arr, temp, bins, succ i)
+        end
+  in
+    loop (arr, temp, bins, i2sz 0)
+  end
+
+implement {a} {tk}
+counting_sort {n} {keymin, keymax} (arr, n, keymin, keymax) =
+  if n <> i2sz 0 then
+    let
+      stadef num_bins = keymax - keymin + 1
+      val num_bins : size_t num_bins = succ (g1i2u (keymax - keymin))
+
+      val @(pf_bins, pfgc_bins | p_bins) =
+        array_ptr_alloc<size_t> num_bins
+      macdef bins = !p_bins
+      val () = array_initize_elt<size_t> (bins, num_bins, i2sz 0)
+
+      val () = count_entries<a><tk> (arr, n, keymin, keymax, bins)
+      val () = bin_sizes_to_indices<> (bins, num_bins)
+
+      val @(pf_temp, pfgc_temp | p_temp) = array_ptr_alloc<a> n
+      macdef temp = !p_temp
+      val () = array_copy<a> (temp, arr, n)
+      val () = rearrange<a><tk> (arr, temp, n, keymin, keymax, bins)
+      val () = array_ptr_free (pf_temp, pfgc_temp | p_temp)
+
+      val () = array_ptr_free (pf_bins, pfgc_bins | p_bins)
+    in
+    end
+
+(* -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - *)
+
+typedef record = [i : int | 1 <= i; i <= 9] '(int i, string)
+
+implement
+counting_sort$key<record><intknd> entry =
+  entry.0
+
+implement
+main0 () =
+  let
+    val data =
+      $list{record}
+        ('(8, "eight001"),
+         '(6, "six00001"),
+         '(6, "six00002"),
+         '(8, "eight002"),
+         '(1, "one00001"),
+         '(4, "four0001"),
+         '(2, "two00001"),
+         '(8, "eight003"))
+    var arr : @[record][8]
+    val () = array_initize_list<record> (arr, 8, data)
+    val () = counting_sort<record> (arr, i2sz 8, 1, 9)
+
+    var i : [i : nat | i <= 8] int i
+  in
+    for (i := 0; i <> 8; i := succ i)
+      println! (arr[i].0, " -> ", arr[i].1)
+  end

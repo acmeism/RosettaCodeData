@@ -1,0 +1,207 @@
+	;;; I before E, except after C
+fcb1:	equ	5Ch	; FCB 1 (populated by file on command line)
+dma:	equ	80h	; Standard DMA location
+bdos:	equ	5	; CP/M entry point
+puts:	equ	9	; CP/M call to write a string to the console
+fopen:	equ	0Fh	; CP/M call to open a file
+fread:	equ	14h	; CP/M call to read from a file
+CR:	equ	13
+LF:	equ	10
+EOF:	equ	26
+	org	100h
+	;;;	Open the file given on the command line
+	lxi	d,fcb1
+	mvi	c,fopen
+	call	bdos
+	inr	a		; FF = error
+	jz	die
+	;;;	We can only read one 128-byte block at a time, and the file
+	;;;	will not fit in memory (max 64 k). So there are two things
+	;;;	going on here: we copy from the block into a word buffer
+	;;;	until we see the end of a line, at which point we process
+	;;;	the word. In the meantime, if while copying we reach the end
+	;;;	of the block, we read the next block.
+	lxi	b,curwrd	; Word pointer
+block:	push	b		; Keep word pointer while reading
+	lxi	d,fcb1		; Read a block from the file
+	mvi	c,fread
+	call	bdos
+	pop	b		; Restore word pointer
+	dcr	a		; 1 = EOF
+	jz	done
+	inr	a		; otherwise, <>0 = error
+	jnz	die
+	lxi	h,dma		; Start reading at DMA
+char:	mov	a,m		; Get character
+	cpi	EOF		; If it's an EOF character, we're done
+	jz	done
+	stax	b		; Store character in current word
+	inx	b
+	cpi	LF		; If it's LF, then we've got a full word
+	cz	word		; Process the word
+	inr 	l		; Go to next character
+	jz	block		; If we're done with this block, get next one
+	jmp	char		
+	;;;	When done, report the statistics
+done:	lxi	d,scie		; CIE
+	call	sout
+	lhld	cie
+	call	puthl
+	lxi	d,sxie		; xIE
+	call	sout
+	lhld	xie
+	call	puthl
+	lxi	d,scei		; CEI
+	call	sout
+	lhld	cei
+	call	puthl
+	lxi	d,sxei		; xEI
+	call	sout
+	lhld	xei
+	call	puthl
+	;;;	Then say what is and isn't plausible
+	lxi 	d,s_ienc	; I before E when not preceded by C
+	call	sout		; plausible if 2*xIE>CIE
+	lhld	cie
+	xchg
+	lhld	xie
+	call	pplaus
+	lxi	d,s_eic		; E before I when preceded by C
+	call	sout		; plausible if 2*CEI>xEI
+	lhld	xei
+	xchg
+	lhld	cei
+	;;;	If HL = amount of words with feature, and
+	;;;	DE = amount of words with opposit feature, then print
+	;;;	'(not) plausible', as appropriate.
+pplaus:	dad	h		; 2 * feature
+	mov	a,d		; Compare high byte
+	cmp	h
+	jc	plaus		; If 2*H>D then plausible
+	mov	a,e		; Otherwise, compare low byte
+	cmp	l
+	jc	plaus		; If 2*L>E then plausible
+	lxi	d,snop		; Otherwise, not plausible
+	jmp	sout
+plaus:	lxi	d,splau
+	jmp	sout
+	;;;	Process a word
+word:	push	h		; Save file read address
+	xra	a		; Zero out end of word
+	stax	b
+	dcx	b
+	lxi	h,curwrd	; Scan word
+start:	mov	a,m		; Get current character
+	inx	h		; Move pointer ahead
+	ana	a		; If zero,
+	jz	w_end		; we're done
+	cpi	'c'		; Did we find a 'c'?
+	jz	findc
+	cpi	'e'		; Otherwise, did we find 'e'?
+	jz	finde
+	cpi	'i'		; Otherwise, did we find 'i'?
+	jz	findi
+	jmp	start		; Otherwise, keep going
+	;;;	We found an 'e'
+finde:	mov	a,m		; Get following character
+	cpi	'i'		; Is it 'i'?
+	jnz	start		; If not, keep going
+	inx	h		; Otherwise, move past it,
+	xchg			; keep pointer in DE,
+	lhld	xie		; We found ie without c
+	inx	h
+	shld	xie
+	xchg
+	jmp	start
+	;;;	We found an 'i'
+findi:	mov	a,m		; Get following character
+	cpi	'e'		; Is it 'e'?
+	jnz	start		; If not, keep going
+	inx	h		; Otherwise, move past it,
+	xchg			; keep pointer in DE,
+	lhld	xei		; We found ei without c
+	inx	h
+	shld	xei
+	xchg
+	jmp	start
+	;;;	We found a 'c'
+findc:	mov	a,m		; Get following character
+	cpi	'e'		; Is it 'e'?
+	jz	findce		; Then we have 'ce'
+	cpi	'i'		; Is it 'i'?
+	jz	findci		; Then we have 'ci'
+	jmp	start		; Otherwise, just keep going
+findce:	mov	d,h		; set DE = start of 'e?'
+	mov	e,l
+	inx	d		; Get next character
+	ldax	d
+	cpi	'i'		; Is it 'i'?
+	jnz	start		; If not, do nothing
+	lhld	cei		; But if so, we found 'cei'
+	inx	h		; Increment the counter
+	shld	cei
+	xchg			; Keep scanning _after_ the 'cei'
+	inx	h
+	jmp	start
+findci:	mov	d,h		; set DE = start of 'i?'
+	mov	e,l
+	inx	d		; Get next character
+	ldax	d
+	cpi	'e'		; Is it 'e'?
+	jnz	start		; If not, do nothing
+	lhld	cie		; But if so, we found 'cie'
+	inx	h		; Increment the counter
+	shld	cie
+	xchg			; Keep scanning _after_ the 'cie'
+	inx	h
+	jmp	start	
+w_end:	lxi	b,curwrd	; Set word pointer to beginning
+	pop	h		; Restore file read address
+	ret
+	;;;	Print error message and stop the program
+die:	lxi	d,errmsg
+	mvi	c,puts
+	call	bdos
+	rst	0
+	;;;	Print string
+sout:	mvi	c,puts
+	jmp	bdos
+	;;;	Print HL to the console as a decimal number
+puthl:	push	h
+	lxi	h,num
+	xthl
+	lxi	b,-10
+dgt:	lxi	d,-1
+clcdgt:	inx	d
+	dad	b
+	jc	clcdgt
+	mov	a,l
+	adi	10+'0'
+	xthl
+	dcx	h
+	mov	m,a
+	xthl
+	xchg
+	mov	a,h
+	ora	l
+	jnz	dgt
+	pop	d
+	mvi	c,puts
+	jmp	bdos	
+errmsg:	db	'Error$'	; Good enough
+s_ienc:	db	'I before E when not preceded by C:$'
+s_eic:	db	'E before I when preceded by C:$'
+snop:	db	' not'
+splau:	db	' plausible',CR,LF,'$'
+scie:	db	'CIE: $'	; Report strings
+sxie:	db	'xIE: $'	
+scei:	db	'CEI: $'
+sxei:	db	'xEI: $'
+	db	'00000'
+num:	db	CR,LF,'$'	; Space for number
+	;;;	Counters
+xie:	dw	0		; I before E when not preceded by C
+cie:	dw	0		; I before E when preceded by C
+cei:	dw	0		; E before I when preceded by C
+xei:	dw	0		; E before I when not preceded by C
+curwrd:	equ	$		; Current word stored here

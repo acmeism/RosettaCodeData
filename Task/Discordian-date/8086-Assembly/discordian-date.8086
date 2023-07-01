@@ -1,0 +1,203 @@
+		;; DDATE for MS-DOS (assembles using nasm)
+		bits	16		
+		cpu	8086
+tlength:	equ	80h
+cmdtail:	equ	81h
+putch:		equ	2
+puts:		equ	9
+getdate:	equ	2Ah
+		org	100h
+section		.text
+		;; Check if a date was given
+		mov	bl,[tlength]	; Length of command line
+		and	bl,bl		; Is it zero?
+		jz	gettoday	; Then get today's date
+		;; Parse the date given on the command line
+		cmp	bl,10+1		; MM/DD/YYYY is ten characters long
+		jne	printusage	; If it doesn't match, print usage.
+		xor	bh,bh
+		add 	bx,cmdtail
+		mov	byte [bx],0	; Zero terminate the date
+		mov	si,cmdtail+1	; Get month,
+		call	atoi
+		mov	dh,al		; store in DH,
+		inc	si		; get day,
+		call	atoi
+		mov 	dl,al		; store in DL,
+		inc	si		; get year,
+		call	atoi
+		mov	cx,ax		; and store in CX.
+		jmp	convertdate
+		;; Ask MS-DOS for the date
+gettoday:	mov	ah,puts		; Prefix output with 'Today is '
+		mov	dx,todayis
+		int	21h
+		mov	ah,getdate	; And get the current date.
+		int	21h
+		;; Convert the date to the Discordian calendar
+		;; (DL=day, DH=month, CX=year)
+convertdate:	add	cx,1166		; Erisian year is 1166 years onwards.
+		cmp 	dx,21dh		; Is it St. Tib's Day?
+		jne	notibs
+		mov	dx,tibsday 	; If yes, print "St. Tib's Day"
+		mov	ah,puts
+		int	21h
+		;; Print "in the YOLD NNNN" and then end.
+intheyold:	mov	dx,yold		; In the YOLD
+		mov	ah,puts
+		int	21h
+		mov	ax,cx		; print the year
+		call	printn
+		ret			; If Tibs, this ends the program.
+		;; It isn't St. Tib's Day.
+notibs:		cmp	dh,1		; Month < 1 = error
+		jb	printinval
+		cmp	dl,1		; Day < 1 = error
+		jb	printinval
+		cmp	dh,12		; Month > 12 = error
+		ja	printinval
+		mov	bx,monthlengths-1
+		xor	ah,ah		; Day higher than it should be
+		mov	al,dh		; (according to month table)
+		add	bx,ax		; = error
+		cmp	dl,[bx]
+		ja	printinval
+		mov	bx,monthdays-2	; Calculate day of year
+		mov	al,dh		; Cumulative months
+		sal	al,1		; Multiply by 2 (2 bits per entry)
+		add	bx,ax
+		mov	ax,[bx]		; Days since start of month
+		xor	dh,dh
+		add	dx,ax		; Add day of month
+		dec	dx		; Start at 0 (For array lookup)
+		mov	ax,dx		; Get weekday
+		mov	bl,5		; Divide by 5
+		div	bl		; AH = weekday (modulo)
+		mov	bl,ah
+		mov	di,weekdays
+		call	strselect	; Print the weekday
+		mov	bx,dx		; Keep day of year in bx for now
+		mov	dx,commaday	; ... ', day '
+		call	printstr
+		mov	dl,73		; Each season is 73 days long
+		mov	ax,bx		; Divide day of year by 73
+		div	dl		; DH=AH=day of season (modulo)	
+		mov	dx,ax		; DL=AL=season number
+		xor	ah,ah		; Print day of season
+		mov	al,dh
+		inc	al		; One more (days do start at 1)
+		call	printn
+		mov	bx,dx		; Store day and season in bx
+		mov	dx,of		; Print ... ' of '
+		call	printstr
+		mov	dx,bx		; Day and season in dx again
+		mov	di,seasons	; Print season
+		call	strselect	; BL is still season number
+		mov	bx,dx		; Day and season in BX again.
+		call	intheyold	; Print the year
+		cmp	bh,5-1		; Something to celebrate?
+		je	party		; (Day 5 or 50?
+		cmp	bh,50-1
+		je	party
+		ret			; If not, stop.
+party:		mov	al,bh		; Day in AL.
+		mov	bx,holydays5	; Day 5 holydays.
+		mov	cx,xday	
+		cmp	al,50-1		; Unless it's 50
+		jne	holyday
+		mov	bx,holydays50	; Then we need day 50 holydays.
+		mov	cx,xflux
+holyday:	mov	dx,celebrate	; Print ... ', celebrate: '
+		call	printstr
+		mov	dx,bx
+		call	printstr
+		mov	dx,cx
+		jmp	printstr
+		;; Print "invalid date".
+printinval:	mov	dx,inval
+		jmp	printstr
+		;; Print usage.
+printusage:	mov	dx,usage
+		;; Print DX.
+printstr:	mov	ah,puts
+		int	21h
+		ret
+		;; Subroutine: print the BL'th string from DI
+strselect:	inc	bl		; Counter the 'dec bl' later
+		mov	al,'$'		; String end
+		push	cx		; Keep registers
+		push	dx
+.search		dec	bl		; Are we there yet?
+		jz	.found
+		mov	cx,-1		
+		repne	scasb 		; Scan to end of string
+		jmp	.search
+.found		mov	dx,di		; Found the string, print it
+		mov	ah,puts
+		int	21h
+		pop	dx		; Restore registers
+		pop	cx
+		ret
+		;; Subroutine: print number in AX.
+printn:		push	cx		; Don't trample registers
+		push	dx
+		mov	si,numend 	; End of number string.
+		mov	cx,10 		; Divisor, ten.
+.loop		xor	dx,dx		; Zero DX.
+		dec	si		; Back up one digit.
+		div	cx		; Divide AX by ten.
+		add	dl,'0'		; Remainder is now in DX; make ASCII
+		mov	[si],dl		; and store.
+		and	ax,ax		; Quotient is in AX, check if zero
+		jnz	.loop 		; loop for next digit if there is one.
+		mov	dx,si		; Print SI - move it to DX,
+		mov	ah,puts		; and then call the DOS print function
+		int	21h
+		pop	dx		; Restore the registers
+		pop	cx
+		ret
+		;; Subroutine: parse number at [SI], store in AX.
+atoi:		push	bx		; Don't trample registers
+		push	cx
+		push	dx
+		xor	ax,ax		; Zero AX.
+		xor	bh,bh		; BH as well.
+		mov	cx,10		; Multiplier, ten.
+.loop		mov	bl,[si]		; Current number.
+		sub	bl,'0'		; Subtract '0'.
+		jc	.done		; If <0, then done.
+		cmp	bl,9		; If it's higher than 9,
+		jnbe	.done		; also done.
+		mul	cx		; Multiply accumulator by 10
+		add	ax,bx		; Add the digit in.
+		inc	si		; Next digit
+		jmp	.loop
+.done		pop	dx		; Restore registers
+		pop	cx
+		pop	bx
+		ret
+section		.data		
+		;; Accumulated days at start of Gregorian months
+monthdays:	dw	0,31,59,90,120,151,181,212,243,273,304,334
+		;; Days per month
+monthlengths:	db	31,28,31,30,31,30,31,31,30,31,30,31
+		;; Strings
+inval:		db	'Invalid date.$'
+usage:		db	`DDATE [MM/DD/YYYY]\r\n`
+		db	`\r\n\tPrint today's date or the given date in the`
+		db	` Discordian calendar.$`
+number:		db	'00000'
+numend:		db	'$'		
+todayis:	db	'Today is $'
+weekdays:	db	'Sweetmorn$Boomtime$Pungenday$Prickle-Prickle$'
+		db	'Setting Orange$'
+commaday:	db	', day $'
+of:		db	' of $'
+seasons:	db	'Chaos$Discord$Confusion$Bureaucracy$The Aftermath$'
+celebrate:	db	': celebrate $'
+holydays5:	db	'Mung$Mojo$Sya$Zara$Mala$'
+xday:		db	'day!$'
+holydays50:	db	'Chao$Disco$Confu$Bure$Af$'		
+xflux:		db	'flux!$'
+tibsday:	db	"Saint Tib's Day$"
+yold:		db	' in the YOLD $'

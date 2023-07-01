@@ -1,0 +1,4 @@
+;this example uses VASM syntax, your assembler may not use the # before constants or the semicolon for comments
+MOV R1,#0x04000000
+MOV R0,#0x403
+STR R0,[R1] ;store 0x403 into memory address 0x04000000.

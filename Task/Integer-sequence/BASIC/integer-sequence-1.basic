@@ -1,0 +1,4 @@
+10 LET A = 0
+20 LET A = A + 1
+30 PRINT A
+40 GO TO 20

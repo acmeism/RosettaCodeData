@@ -1,0 +1,240 @@
+/* ARM assembly Raspberry PI  */
+/*  program strMatching.s   */
+
+/* Constantes    */
+.equ STDOUT, 1                           @ Linux output console
+.equ EXIT,   1                           @ Linux syscall
+.equ WRITE,  4                           @ Linux syscall
+
+/* Initialized data */
+.data
+szMessFound:             .asciz "String found. \n"
+szMessNotFound:          .asciz "String not found. \n"
+szString:                .asciz "abcdefghijklmnopqrstuvwxyz"
+szString2:               .asciz "abc"
+szStringStart:           .asciz "abcd"
+szStringEnd:             .asciz "xyz"
+szStringStart2:          .asciz "abcd"
+szStringEnd2:            .asciz "xabc"
+szCarriageReturn:        .asciz "\n"
+
+/* UnInitialized data */
+.bss
+
+/*  code section */
+.text
+.global main
+main:
+
+    ldr r0,iAdrszString                         @ address input string
+    ldr r1,iAdrszStringStart                    @ address search string
+
+    bl searchStringDeb                          @ Determining if the first string starts with second string
+    cmp r0,#0
+    ble 1f
+    ldr r0,iAdrszMessFound                      @ display message
+    bl affichageMess
+    b 2f
+1:
+    ldr r0,iAdrszMessNotFound
+    bl affichageMess
+2:
+    ldr r0,iAdrszString                         @ address input string
+    ldr r1,iAdrszStringEnd                      @ address search string
+    bl searchStringFin                          @ Determining if the first string ends with the second string
+    cmp r0,#0
+    ble 3f
+    ldr r0,iAdrszMessFound                      @ display message
+    bl affichageMess
+    b 4f
+3:
+    ldr r0,iAdrszMessNotFound
+    bl affichageMess
+4:
+    ldr r0,iAdrszString2                        @ address input string
+    ldr r1,iAdrszStringStart2                   @ address search string
+
+    bl searchStringDeb                          @
+    cmp r0,#0
+    ble 5f
+    ldr r0,iAdrszMessFound                      @ display message
+    bl affichageMess
+    b 6f
+5:
+    ldr r0,iAdrszMessNotFound
+    bl affichageMess
+6:
+    ldr r0,iAdrszString2                        @ address input string
+    ldr r1,iAdrszStringEnd2                     @ address search string
+    bl searchStringFin
+    cmp r0,#0
+    ble 7f
+    ldr r0,iAdrszMessFound                      @ display message
+    bl affichageMess
+    b 8f
+7:
+    ldr r0,iAdrszMessNotFound
+    bl affichageMess
+8:
+    ldr r0,iAdrszString                         @ address input string
+    ldr r1,iAdrszStringEnd                      @ address search string
+    bl searchSubString                          @ Determining if the first string contains the second string at any location
+    cmp r0,#0
+    ble 9f
+    ldr r0,iAdrszMessFound                      @ display message
+    bl affichageMess
+    b 10f
+9:
+    ldr r0,iAdrszMessNotFound                   @ display substring result
+    bl affichageMess
+10:
+
+100:                                            @ standard end of the program
+    mov r0, #0                                  @ return code
+    mov r7, #EXIT                               @ request to exit program
+    svc 0                                       @ perform system call
+iAdrszMessFound:          .int szMessFound
+iAdrszMessNotFound:       .int szMessNotFound
+iAdrszString:             .int szString
+iAdrszString2:            .int szString2
+iAdrszStringStart:        .int szStringStart
+iAdrszStringEnd:          .int szStringEnd
+iAdrszStringStart2:       .int szStringStart2
+iAdrszStringEnd2:         .int szStringEnd2
+iAdrszCarriageReturn:     .int szCarriageReturn
+/******************************************************************/
+/*     search substring at begin of input string                  */
+/******************************************************************/
+/* r0 contains the address of the input string */
+/* r1 contains the address of substring */
+/* r0 returns 1 if find or 0 if not or -1 if error */
+searchStringDeb:
+    push {r1-r4,lr}                             @ save  registers
+    mov r3,#0                                   @ counter byte  string
+    ldrb r4,[r1,r3]                             @ load first byte of substring
+    cmp r4,#0                                   @ empty string ?
+    moveq r0,#-1                                @ error
+    beq 100f
+1:
+    ldrb r2,[r0,r3]                             @ load byte string input
+    cmp r2,#0                                   @ zero final ?
+    moveq r0,#0                                 @ not find
+    beq 100f
+    cmp r4,r2                                   @ bytes equals ?
+    movne r0,#0                                 @ no not find
+    bne 100f
+    add r3,#1                                   @ increment counter
+    ldrb r4,[r1,r3]                             @ and load next byte of substring
+    cmp r4,#0                                   @ zero final ?
+    bne 1b                                      @ no -> loop
+    mov r0,#1                                   @ yes is ok
+100:
+    pop {r1-r4,lr}                              @ restaur registers
+    bx lr                                       @ return
+
+/******************************************************************/
+/*     search substring at end of input string                    */
+/******************************************************************/
+/* r0 contains the address of the input string */
+/* r1 contains the address of substring */
+/* r0 returns 1 if find or 0 if not or -1 if error */
+searchStringFin:
+    push {r1-r5,lr}                             @ save  registers
+    mov r3,#0                                   @ counter byte  string
+                                                @ search the last character of substring
+1:
+    ldrb r4,[r1,r3]                             @ load byte of substring
+    cmp r4,#0                                   @ zero final ?
+    addne r3,#1                                 @ no increment counter
+    bne 1b                                      @ and loop
+    cmp r3,#0                                   @ empty string ?
+    moveq r0,#-1                                @ error
+    beq 100f
+    sub r3,#1                                   @ index of last byte
+    ldrb r4,[r1,r3]                             @ load last byte of substring
+                                                @ search the last character of string
+    mov r2,#0                                   @ index last character
+2:
+    ldrb r5,[r0,r2]                             @ load first byte of substring
+    cmp r5,#0                                   @ zero final ?
+    addne r2,#1                                 @ no -> increment counter
+    bne 2b                                      @ and loop
+    cmp r2,#0                                   @ empty input string ?
+    moveq r0,#0                                 @ yes -> not found
+    beq 100f
+    sub r2,#1                                   @ index last character
+3:
+    ldrb r5,[r0,r2]                             @ load byte string input
+    cmp r4,r5                                   @ bytes equals ?
+    movne r0,#0                                 @ no -> not found
+    bne 100f
+    subs r3,#1                                  @ decrement counter
+    movlt r0,#1                                 @ if zero -> ok found
+    blt 100f
+    subs r2,#1                                  @ decrement counter input string
+    movlt r0,#0                                 @ if zero -> not found
+    blt 100f
+    ldrb r4,[r1,r3]                             @ load previous byte of substring
+    b 3b                                        @ and loop
+
+100:
+    pop {r1-r5,lr}                              @ restaur registers
+    bx lr                                       @ return
+
+/******************************************************************/
+/*   search a substring in the string                            */
+/******************************************************************/
+/* r0 contains the address of the input string */
+/* r1 contains the address of substring */
+/* r0 returns index of substring in string or -1 if not found */
+searchSubString:
+    push {r1-r6,lr}                       @ save registers
+    mov r2,#0                             @ counter byte input string
+    mov r3,#0                             @ counter byte string
+    mov r6,#-1                            @ index found
+    ldrb r4,[r1,r3]
+1:
+    ldrb r5,[r0,r2]                       @ load byte string
+    cmp r5,#0                             @ zero final ?
+    moveq r0,#-1                          @ yes returns error
+    beq 100f
+    cmp r5,r4                             @ compare character
+    beq 2f
+    mov r6,#-1                            @ no equals - > raz index
+    mov r3,#0                             @ and raz counter byte
+    add r2,#1                             @ and increment counter byte
+    b 1b                                  @ and loop
+2:                                        @ characters equals
+    cmp r6,#-1                            @ first characters equals ?
+    moveq r6,r2                           @ yes -> index begin in r6
+    add r3,#1                             @ increment counter substring
+    ldrb r4,[r1,r3]                       @ and load next byte
+    cmp r4,#0                             @ zero final ?
+    beq 3f                                @ yes -> end search
+    add r2,#1                             @ else increment counter string
+    b 1b                                  @ and loop
+3:
+    mov r0,r6
+100:
+    pop {r1-r6,lr}                        @ restaur registers
+    bx lr
+
+/******************************************************************/
+/*     display text with size calculation                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+affichageMess:
+    push {r0,r1,r2,r7,lr}                       @ save  registers
+    mov r2,#0                                   @ counter length */
+1:                                              @ loop length calculation
+    ldrb r1,[r0,r2]                             @ read octet start position + index
+    cmp r1,#0                                   @ if 0 its over
+    addne r2,r2,#1                              @ else add 1 in the length
+    bne 1b                                      @ and loop
+                                                @ so here r2 contains the length of the message
+    mov r1,r0                                   @ address message in r1
+    mov r0,#STDOUT                              @ code to write to the standard output Linux
+    mov r7, #WRITE                              @ code call system "write"
+    svc #0                                      @ call system
+    pop {r0,r1,r2,r7,lr}                        @ restaur registers
+    bx lr                                       @ return

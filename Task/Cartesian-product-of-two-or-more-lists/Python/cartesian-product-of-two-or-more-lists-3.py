@@ -1,0 +1,1 @@
+ap(map(Tuple, xs))

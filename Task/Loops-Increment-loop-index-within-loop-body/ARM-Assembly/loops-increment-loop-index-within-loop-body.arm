@@ -1,0 +1,496 @@
+/* ARM assembly Raspberry PI  */
+/*  program loopinc96.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+.equ STDOUT, 1     @ Linux output console
+.equ EXIT,   1     @ Linux syscall
+.equ WRITE,  4     @ Linux syscall
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessMultOver:     .asciz "Multiplication 64 : Dépassement de capacité.\n"
+sMessResult:        .ascii "Index  : "
+sMessIndex:         .fill 11, 1, ' '            @ size => 11
+                    .ascii "Value  : "
+sMessValeur:        .fill 21, 1, ' '            @ size => 21
+szCarriageReturn:   .asciz "\n"
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                              @ entry of program
+    mov r7,#0                                      @ counter
+    mov r5,#42                                     @ start index low bits
+    mov r6,#0                                      @ start index high bits
+1:                                                 @ begin loop
+    mov r0,r5
+    mov r1,r6
+    bl isPrime                                     @ prime ?
+    bcs 100f                                       @ error overflow ?
+    cmp r0,#1                                      @ is prime ?
+    beq 2f                                         @ yes
+    adds r5,#1                                     @ no -> increment index
+    addcs r6,#1
+    b 1b                                           @ and loop
+2:                                                 @ display index and prime
+    add r7,#1                                      @ increment counter
+    mov r0,r7
+    ldr r1,iAdrsMessIndex                          @ conversion index
+    bl conversion10
+    mov r0,r5
+    mov r1,r6                                      @ conversion value
+    ldr r2,iAdrsMessValeur
+    bl conversionRegDoubleU                        @ conversion double -> ascii
+    ldr r0,iAdrsMessResult
+    bl affichageMess
+
+    adds r5,r5
+    add r6,r6
+    addcs r6,#1
+    cmp r7,#42                                     @ end ?
+    blt 1b                                         @ no loop
+
+100:                                               @ standard end of the program
+    mov r0, #0                                     @ return code
+    mov r7, #EXIT                                  @ request to exit program
+    svc #0                                         @ perform the system call
+
+iAdrsMessIndex:           .int sMessIndex
+iAdrsMessValeur:          .int sMessValeur
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrsMessResult:          .int sMessResult
+
+
+/******************************************************************/
+/*     display text with size calculation                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+affichageMess:
+    push {r0,r1,r2,r7,lr}                          @ save  registres
+    mov r2,#0                                      @ counter length
+1:                                                 @ loop length calculation
+    ldrb r1,[r0,r2]                                @ read octet start position + index
+    cmp r1,#0                                      @ if 0 its over
+    addne r2,r2,#1                                 @ else add 1 in the length
+    bne 1b                                         @ and loop
+                                                   @ so here r2 contains the length of the message
+    mov r1,r0                                      @ address message in r1
+    mov r0,#STDOUT                                 @ code to write to the standard output Linux
+    mov r7, #WRITE                                 @ code call system "write"
+    svc #0                                         @ call systeme
+    pop {r0,r1,r2,r7,lr}                           @ restaur des  2 registres */
+    bx lr                                          @ return
+/******************************************************************/
+/*     Converting a register to a decimal unsigned                */
+/******************************************************************/
+/* r0 contains value and r1 address area   */
+/* r0 return size of result (no zero final in area) */
+/* area size => 11 bytes          */
+.equ LGZONECAL,   10
+conversion10:
+    push {r1-r4,lr}                                   @ save registers
+    mov r3,r1
+    mov r2,#LGZONECAL
+1:                                                    @ start loop
+    bl divisionpar10U                                 @ unsigned  r0 <- dividende. quotient ->r0 reste -> r1
+    add r1,#48                                        @ digit
+    strb r1,[r3,r2]                                   @ store digit on area
+    cmp r0,#0                                         @ stop if quotient = 0
+    subne r2,#1                                       @ else previous position
+    bne 1b                                            @ and loop
+                                                      @ and move digit from left of area
+    mov r4,#0
+2:
+    ldrb r1,[r3,r2]
+    strb r1,[r3,r4]
+    add r2,#1
+    add r4,#1
+    cmp r2,#LGZONECAL
+    ble 2b
+                                                      @ and move spaces in end on area
+    mov r0,r4                                         @ result length
+    mov r1,#' '                                       @ space
+3:
+    strb r1,[r3,r4]                                   @ store space in area
+    add r4,#1                                         @ next position
+    cmp r4,#LGZONECAL
+    ble 3b                                            @ loop if r4 <= area size
+
+100:
+    pop {r1-r4,lr}                                    @ restaur registres
+    bx lr                                             @return
+
+/***************************************************/
+/*   division par 10   unsigned                    */
+/***************************************************/
+/* r0 dividende   */
+/* r0 quotient   */	
+/* r1 remainder  */
+divisionpar10U:
+    push {r2,r3,r4, lr}
+    mov r4,r0                                          @ save value
+    //mov r3,#0xCCCD                                   @ r3 <- magic_number lower  raspberry 3
+    //movt r3,#0xCCCC                                  @ r3 <- magic_number higter raspberry 3
+    ldr r3,iMagicNumber                                @ r3 <- magic_number    raspberry 1 2
+    umull r1, r2, r3, r0                               @ r1<- Lower32Bits(r1*r0) r2<- Upper32Bits(r1*r0)
+    mov r0, r2, LSR #3                                 @ r2 <- r2 >> shift 3
+    add r2,r0,r0, lsl #2                               @ r2 <- r0 * 5
+    sub r1,r4,r2, lsl #1                               @ r1 <- r4 - (r2 * 2)  = r4 - (r0 * 10)
+    pop {r2,r3,r4,lr}
+    bx lr                                              @ leave function
+iMagicNumber:  	.int 0xCCCCCCCD
+/***************************************************/
+/*   number is prime ?              */
+/***************************************************/
+/* r0 contains low bytes of double */
+/* r1 contains high bytes of double */
+/* r0 returns 1 if prime else 0  */
+@2147483647
+@4294967297
+@131071
+isPrime:
+    push {r1-r5,lr}                      @ save registers
+    mov r4,r0                            @ save double
+    mov r5,r1
+    subs r2,r0,#1                        @ exposant n - 1
+    sbcs r3,r1,#0
+
+    mov r0,#2                            @ base  2
+    mov r1,#0
+    bl moduloPuR96                       @ compute modulo
+    bcs 100f                             @ overflow error
+    cmp r0,#1                            @ modulo <> 1 -> no prime
+    bne 90f
+
+    mov r0,#3                            @ base 3
+    mov r1,#0
+    bl moduloPuR96
+    bcs 100f                             @ overflow error
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#5                            @ base 5
+    mov r1,#0
+    bl moduloPuR96
+    bcs 100f                             @ overflow error
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#7                            @ base 7
+    mov r1,#0
+    bl moduloPuR96
+    bcs 100f                             @ overflow error
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#11                           @ base 11
+    mov r1,#0
+    bl moduloPuR96
+    bcs 100f                             @ overflow error
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#13                           @ base 13
+    mov r1,#0
+    bl moduloPuR96
+    bcs 100f                             @ overflow error
+    cmp r0,#1
+    bne 90f
+
+    mov r0,#17                           @ base 17
+    mov r1,#0
+    bl moduloPuR96
+    bcs 100f                             @ overflow error
+    cmp r0,#1
+    bne 90f
+    mov r0,#1                            @ is prime
+    msr     cpsr_f, #0                   @ no error overflow zero -> flags
+    b 100f
+90:
+    mov r0,#0                            @ no prime
+    msr     cpsr_f, #0                   @ no error overflow zero -> flags
+100:                                     @ fin standard de la fonction
+    pop {r1-r5,lr}                       @ restaur registers
+    bx lr                                @ return
+
+
+/********************************************************/
+/*   compute  b pow e modulo m  */
+/*                                             */
+/********************************************************/
+/* r0 base double low bits */
+/* r1 base double high bits */
+/* r2 exposant low bitss  */
+/* r3 exposant high bits */
+/* r4 modulo low bits */
+/* r5 modulo high bits */
+/* r0 returns result low bits */
+/* r1 returns result high bits */
+/* if overflow , flag carry is set else is clear */
+moduloPuR96:
+    push {r2-r12,lr}                       @ save registers
+    cmp r0,#0                              @ control low byte <> zero
+    bne 1f
+    cmp r1,#0                              @ control high bytes <> zero
+    beq 100f
+1:
+    mov r9,r4                              @ modulo PB
+    mov r10,r5                             @ modulo PH
+    mov r5,r2                              @ exposant **
+    mov r6,r3                              @ exposant
+    mov r7,r0                              @ base PB
+    mov r8,r1                              @ base PH
+    mov r2,#0
+    mov r3,r9
+    mov r4,r10
+    mov r11,#1                             @ result PB
+    mov r12,#0                             @ result PH
+/* r0 contient partie basse dividende */
+/* r1 contient partie moyenne dividende */
+/* r2 contient partie haute du diviseur */
+/* r3 contient partie basse diviseur  */
+/* r4 contient partie haute diviseur  */
+/* r0 retourne partie basse du quotient */
+/* r1 retourne partie moyenne du quotient */
+/* r2 retourne partie haute du quotient */
+/* r3 retourne partie basse du reste */
+/* r4 retourne partie haute du reste */
+    bl divisionReg96DU
+    mov r7,r3                               @ base <- remainder
+    mov r8,r4
+2:
+    tst r5,#1                               @ test du bit 0
+    beq 3f
+    mov r0,r7
+    mov r1,r8
+    mov r2,r11
+    mov r3,r12
+    bl multiplicationR96U
+    bcs 100f                                @ error overflow
+    mov r3,r9
+    mov r4,r10
+    bl divisionReg96DU
+    mov r11,r3                              @ result <- remainder
+    mov r12,r4
+3:
+    mov r0,r7
+    mov r1,r8
+    mov r2,r7
+    mov r3,r8
+    bl multiplicationR96U
+    bcs 100f                                @ error overflow
+    mov r3,r9
+    mov r4,r10
+    bl divisionReg96DU
+    mov r7,r3                               @ base <- remainder
+    mov r8,r4
+
+    lsr r5,#1
+    lsrs r6,#1
+    orrcs r5,#0x80000000
+    cmp r5,#0
+    bne 2b
+    cmp r6,#0
+    bne 2b
+    mov r0,r11
+    mov r1,r12
+    msr     cpsr_f, #0                       @ no error overflow zero -> flags
+100:                                         @ end function
+   	pop {r2-r12,lr}                          @ restaur registers
+    bx lr                                    @ return
+/***************************************************/
+/*   multiplication 2 registers (64 bits) unsigned */
+/*   result in 3 registers 96 bits                 */
+/***************************************************/
+/* r0 low bits number 1    */
+/* r1 high bits number 1    */
+/* r2 low bits number 2    */
+/* r3 high bits number 2    */
+/* r0 returns low bits résult   */
+/* r1 returns median bits résult */
+/* r2 returns high bits résult  */
+/* if overflow , flag carry is set else is clear */
+multiplicationR96U:
+    push {r3-r8,lr}           @ save registers
+    umull r5,r6,r0,r2         @ mult low bits
+    umull r4,r8,r0,r3         @ mult low bits 1 high bits 2
+    mov r0,r5                 @ result low bits ok
+    adds r4,r6                @ add results
+    addcs  r8,#1              @ carry
+    umull r6,r7,r1,r2         @ mult high bits 1 low bits 2
+    adds r4,r6                @ add results
+    addcs  r8,#1              @ carry
+    adds r8,r7                @ add results
+    bcs 99f                   @ overflow ?
+    umull r6,r7,r1,r3         @ mult high bits 1 high bits 2
+    cmp r7,#0                 @ error overflow ?
+    bne 99f
+    adds r8,r6                @ add results
+    bcs 99f                   @ error overflow
+    mov r1,r4                 @ return median bytes
+    mov r2,r8                 @ return high bytes
+    msr cpsr_f, #0            @ no error overflow zero -> flags
+    b 100f
+99:                           @ display message overflow
+	ldr r0,iAdrszMessMultOver @
+	bl affichageMess
+    mov r0,#0
+    mov r1,#0
+    msr cpsr_f, #1<<29        @ maj flag carry à 1  et tous les autres à 0
+100:                          @ end function
+   	pop {r3-r8,lr}            @ restaur registers
+    bx lr                     @ return
+iAdrszMessMultOver:         .int szMessMultOver
+/***************************************************/
+/*   division number (3 registers) 92 bits by number (2 registers) 64 bits */
+/*           unsigned                            */
+/***************************************************/
+/* r0 low bits dividende */
+/* r1 median bits dividende */
+/* r2 high bits dividende */
+/* r3 low bits divisor  */
+/* r4 high bits divis0r  */
+/* r0 returns low bits quotient */
+/* r1 returns median bits quotient */
+/* r2 returns high bits quotien */
+/* r3 returns low bits remainder */
+/* r4 returns high bits remainder */
+/* remainder do not is 3 registers */
+divisionReg96DU:
+    push {r5-r10,lr}    @ save registers
+    mov r7,r3           @ low bits divisor
+    mov r8,r4           @ high bits divisor
+    mov r4,r0           @ low bits dividende -> low bits quotient
+    mov r5,r1           @ median bits dividende  -> median bits quotient
+    mov r6,r2           @ high bits dividende -> high bits quotient
+
+                        @
+    mov r0,#0           @ low bits remainder
+    mov r1,#0           @ median bits remainder
+    mov r2,#0           @ high bits remainder (not useful)
+    mov r9,#96          @ counter loop (32 bits * 3)
+    mov r10,#0          @ last bit
+1:
+    lsl   r2,#1         @ shift left high bits remainder
+    lsls  r1,#1         @ shift left median bits remainder
+    orrcs r2,#1         @ left bit median -> right bit high
+    lsls r0,#1          @ shift left low bits remainder
+    orrcs r1,#1         @ left bit low -> right bit median
+    lsls r6,#1          @ shift left high bits quotient
+    orrcs r0,#1         @ left bit high -> right bit low remainder
+    lsls r5,#1          @ shift left median bits quotient
+    orrcs r6,#1         @ left bit median -> right bit high
+    lsls r4,#1          @ shift left low bits quotient
+    orrcs r5,#1         @ left bit low -> right bit median
+    orr r4,r10          @ last bit -> bit 0 quotient
+    mov r10,#0          @ raz du bit
+                        @ compare  remainder and divisor
+    cmp r2,#0           @ high bit remainder
+    bne 2f
+    cmp r1,r8           @ compare median bits
+    blo 3f              @ lower
+    bhi 2f              @ highter
+    cmp r0,r7           @ equal -> compare low bits
+    blo 3f              @ lower
+2:                      @ remainder > divisor
+    subs r0,r7          @ sub divisor of remainder
+    sbcs r1,r8
+    mov r10,#0          @ reuse ponctuelle  r10
+    sbc r2,r2,r10       @ carry
+    mov r10,#1          @ last bit à 1
+3:
+    subs r9,#1          @ increment counter loop
+    bgt 1b              @ and loop
+    lsl r6,#1           @ shift left high bits quotient
+    lsls r5,#1          @ shift left median bits quotient
+    orrcs r6,#1         @ left bit median -> right bit high
+    lsls r4,#1          @ shift left low bits quotient
+    orrcs r5,#1         @ left bit low -> right bit median
+    orr r4,r10          @ last bit -> bit 0 quotient
+    mov r3,r0           @ low bits remainder
+    mov r0,r4           @ low bits quotient
+    mov r4,r1           @ high bits remainder
+    mov r1,r5           @ median bits quotient
+    //mov r5,r2
+    mov r2,r6           @ high bits quotient
+
+100:                    @ end function
+   	pop {r5-r10,lr}     @ restaur registers
+    bx lr               @ return
+
+/***************************************************/
+/*   Conversion double integer 64bits in ascii     */
+/***************************************************/
+/* r0 contains low bits     */
+/* r1 contains high bits    */
+/* r2 contains address area */
+conversionRegDoubleU:
+    push {r0-r5,lr}         @ save registers
+    mov r5,r2
+    mov r4,#19              @ start location
+    mov r2,#10              @ conversion decimale
+1:                          @ begin loop
+    bl divisionReg64U       @ division by 10
+    add r3,#48              @ -> digit ascii
+    strb r3,[r5,r4]         @ store digit in area index r4
+    sub r4,r4,#1            @ decrement index
+    cmp r0,#0               @ low bits quotient = zero ?
+    bne 1b	                @ no -> loop
+    cmp r1,#0               @ high bits quotient = zero ?
+    bne 1b                  @ no -> loop
+                            @ spaces -> begin area
+    mov r3,#' '             @ space
+2:
+    strb r3,[r5,r4]         @ store space in area
+    subs r4,r4,#1           @ decrement index
+    bge 2b                  @ and loop if > zéro
+
+100:                        @ end fonction
+   	pop {r0-r5,lr}          @ restaur registers
+    bx lr                   @ return
+/***************************************************/
+/*   division number 64 bits / number 32 bits      */
+/***************************************************/
+/* r0 contains low bits dividende  */
+/* r1 contains high bits dividente */
+/* r2 contains divisor             */
+/* r0 returns low bits quotient    */
+/* r1 returns high bits quotient   */
+/* r3 returns remainder            */
+divisionReg64U:
+    push {r4,r5,lr}    @ save registers
+    mov r5,#0          @ raz remainder R
+    mov r3,#64         @ loop counter
+    mov r4,#0          @ last bit
+1:
+    lsl r5,#1          @ shift left remainder one bit
+    lsls r1,#1         @ shift left high bits quotient one bit
+    orrcs r5,#1        @ and bit -> remainder
+    lsls r0,#1         @ shift left low bits quotient one bit
+    orrcs r1,#1        @ and left bit -> high bits
+    orr r0,r4          @ last bit  quotient
+    mov r4,#0          @ raz last bit
+    cmp r5,r2          @ compare remainder divisor
+    subhs r5,r2        @ if highter sub divisor of remainder
+    movhs r4,#1        @  and 1 -> last bit
+3:
+    subs r3,#1         @ decrement counter loop
+    bgt 1b             @ and loop if not zero
+    lsl r1,#1          @ else shift left higt bits quotient
+    lsls r0,#1         @ and shift  left low bits
+    orrcs r1,#1
+    orr r0,r4          @ last bit quotient
+    mov r3,r5
+100:                   @ end function
+    pop {r4,r5,lr}     @ restaur registers
+    bx lr              @ return

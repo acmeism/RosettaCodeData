@@ -1,0 +1,52 @@
+IMPORT JAVA.TEXT.*
+IMPORT JAVA.UTIL.*
+IMPORT JAVA.IO.PRINTSTREAM
+
+INTERNAL FUN PRINTSTREAM.PRINTCALENDAR(YEAR: INT, NCOLS: BYTE, LOCALE: LOCALE?) {
+    IF (NCOLS < 1 || NCOLS > 12)
+        THROW ILLEGALARGUMENTEXCEPTION("ILLEGAL COLUMN WIDTH.")
+    VAL W = NCOLS * 24
+    VAL NROWS = MATH.CEIL(12.0 / NCOLS).TOINT()
+
+    VAL DATE = GREGORIANCALENDAR(YEAR, 0, 1)
+    VAR OFFS = DATE.GET(CALENDAR.DAY_OF_WEEK) - 1
+
+    VAL DAYS = DATEFORMATSYMBOLS(LOCALE).SHORTWEEKDAYS.SLICE(1..7).MAP { IT.SLICE(0..1) }.JOINTOSTRING(" ", " ")
+    VAL MONS = ARRAY(12) { ARRAY(8) { "" } }
+    DATEFORMATSYMBOLS(LOCALE).MONTHS.SLICE(0..11).FOREACHINDEXED { M, NAME ->
+        VAL LEN = 11 + NAME.LENGTH / 2
+        VAL FORMAT = MESSAGEFORMAT.FORMAT("%{0}S%{1}S", LEN, 21 - LEN)
+        MONS[M][0] = STRING.FORMAT(FORMAT, NAME, "")
+        MONS[M][1] = DAYS
+        VAL DIM = DATE.GETACTUALMAXIMUM(CALENDAR.DAY_OF_MONTH)
+        FOR (D IN 1..42) {
+            VAL ISDAY = D > OFFS && D <= OFFS + DIM
+            VAL ENTRY = IF (ISDAY) STRING.FORMAT(" %2S", D - OFFS) ELSE "   "
+            IF (D % 7 == 1)
+                MONS[M][2 + (D - 1) / 7] = ENTRY
+            ELSE
+                MONS[M][2 + (D - 1) / 7] += ENTRY
+        }
+        OFFS = (OFFS + DIM) % 7
+        DATE.ADD(CALENDAR.MONTH, 1)
+    }
+
+    PRINTF("%" + (W / 2 + 10) + "S%N", "[SNOOPY PICTURE]")
+    PRINTF("%" + (W / 2 + 4) + "S%N%N", YEAR)
+
+    FOR (R IN 0..NROWS - 1) {
+        FOR (I IN 0..7) {
+            VAR C = R * NCOLS
+            WHILE (C < (R + 1) * NCOLS && C < 12) {
+                PRINTF("   %S", MONS[C][I].TOUPPERCASE())  // ORIGINAL CHANGED TO PRINT IN UPPER CASE
+                C++
+            }
+            PRINTLN()
+        }
+        PRINTLN()
+    }
+}
+
+FUN MAIN(ARGS: ARRAY<STRING>) {
+    SYSTEM.OUT.PRINTCALENDAR(1969, 3, LOCALE.US)
+}

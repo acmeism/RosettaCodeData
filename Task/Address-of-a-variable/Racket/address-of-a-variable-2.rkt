@@ -1,0 +1,6 @@
+(ptr-ref (madness +) _short)
+(ptr-ref (madness (/ 4 3)) _short)
+(ptr-ref (madness 3.2) _short)
+(ptr-ref (madness (sqrt -2)) _short)
+(ptr-ref (madness #\a) _short)
+(ptr-ref (madness 'foo) _short)

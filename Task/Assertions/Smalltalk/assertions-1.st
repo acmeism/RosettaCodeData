@@ -1,0 +1,3 @@
+foo := 41.
+...
+self assert: (foo == 42).

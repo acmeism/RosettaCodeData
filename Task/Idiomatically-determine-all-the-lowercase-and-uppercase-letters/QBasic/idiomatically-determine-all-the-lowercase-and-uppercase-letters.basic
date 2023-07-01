@@ -1,0 +1,9 @@
+10 CLS : REM  10 HOME for Applesoft BASIC
+20 FOR J = ASC("a") TO ASC("z")
+30     PRINT CHR$(J);
+40 NEXT J
+50 PRINT
+60 FOR J = ASC("A") TO ASC("Z")
+70     PRINT CHR$(J);
+80 NEXT J
+90 END

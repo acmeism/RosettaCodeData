@@ -1,0 +1,300 @@
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+%{^
+#include <float.h>
+#include <math.h>
+%}
+
+typedef color = double
+
+typedef drawing_surface (u0 : int, v0 : int,
+                         u1 : int, v1 : int) =
+  [u0 <= u1; v0 <= v1]
+  '{
+    u0 = int u0,
+    v0 = int v0,
+    u1 = int u1,
+    v1 = int v1,
+    pixels = matrixref (color, (u1 - u0) + 1, (v1 - v0) + 1)
+  }
+
+fn
+drawing_surface_make
+          {u0, v0, u1, v1 : int | u0 <= u1; v0 <= v1}
+          (u0 : int u0,
+           v0 : int v0,
+           u1 : int u1,
+           v1 : int v1)
+    : drawing_surface (u0, v0, u1, v1) =
+  let
+    val w = succ (u1 - u0) and h = succ (v1 - v0)
+  in
+    '{
+      u0 = u0,
+      v0 = v0,
+      u1 = u1,
+      v1 = v1,
+      pixels = matrixref_make_elt (i2sz w, i2sz h, 0.0)
+    }
+  end
+
+fn
+drawing_surface_get_at
+          {u0, v0, u1, v1 : int | u0 <= u1; v0 <= v1}
+          (s : drawing_surface (u0, v0, u1, v1),
+           x : int,
+           y : int)
+    : color =
+  let
+    val '{ u0 = u0, v0 = v0, u1 = u1, v1 = v1, pixels = pixels } = s
+    and x = g1ofg0 x and y = g1ofg0 y
+  in
+    if (u0 <= x) * (x <= u1) * (v0 <= y) * (y <= v1) then
+      (* Notice there are THREE values in the square brackets. The
+         matrixref does not store its dimensions and so we have to
+         specify a stride as the second value. The value must,
+         however, be the CORRECT stride. This is checked at compile
+         time. (Here ATS is striving to be efficient rather than
+         convenient!) *)
+      pixels[x - u0, succ (v1 - v0), v1 - y]
+    else
+      $extval (double, "nan (\"0\")")
+  end
+
+fn
+drawing_surface_set_at
+          {u0, v0, u1, v1 : int | u0 <= u1; v0 <= v1}
+          (s : drawing_surface (u0, v0, u1, v1),
+           x : int,
+           y : int,
+           c : color)
+    : void =
+  let
+    val '{ u0 = u0, v0 = v0, u1 = u1, v1 = v1, pixels = pixels } = s
+    and x = g1ofg0 x and y = g1ofg0 y
+  in
+    if (u0 <= x) * (x <= u1) * (v0 <= y) * (y <= v1) then
+      pixels[x - u0, succ (v1 - v0), v1 - y] := c
+  end
+
+(* Indices outside the drawing_surface are allowed. They are handled
+   by treating them as if you were trying to draw on the air. *)
+overload [] with drawing_surface_get_at
+overload [] with drawing_surface_set_at
+
+fn
+write_PGM {u0, v0, u1, v1 : int | u0 <= u1; v0 <= v1}
+          (outf : FILEref,
+           s    : drawing_surface (u0, v0, u1, v1))
+    : void =
+  (* Write a Portable Grayscale Map. *)
+  let
+    val '{ u0 = u0, v0 = v0, u1 = u1, v1 = v1, pixels = pixels } = s
+
+    stadef w = (u1 - u0) + 1
+    stadef h = (v1 - v0) + 1
+    val w : int w = succ (u1 - u0)
+    and h : int h = succ (v1 - v0)
+
+    fun
+    loop {x, y : int | 0 <= x; x <= w; 0 <= y; y <= h}
+         .<h - y, w - x>.
+         (x : int x,
+          y : int y) : void =
+      if y = h then
+        ()
+      else if x = w then
+        loop (0, succ y)
+      else
+        let
+          (* I do no gamma correction, but gamma correction can be
+             done afterwards by running the output through "pnmgamma
+             -lineartobt709" *)
+          val intensity = 1.0 - pixels[x, h, y]
+          val pgm_value : int =
+            g0f2i ($extfcall (double, "rint", 65535 * intensity))
+          val more_significant_byte = pgm_value / 256
+          and less_significant_byte = pgm_value mod 256
+          val msbyte = int2uchar0 more_significant_byte
+          and lsbyte = int2uchar0 less_significant_byte
+        in
+          fprint_val<uchar> (outf, msbyte);
+          fprint_val<uchar> (outf, lsbyte);
+          loop (succ x, y)
+        end
+  in
+    fprintln! (outf, "P5");
+    fprintln! (outf, w, " ", h);
+    fprintln! (outf, "65535");
+    loop (0, 0)
+  end
+
+fn
+ipart (x : double) : int =
+  g0f2i ($extfcall (double, "floor", x))
+
+fn
+iround (x : double) : int =
+  ipart (x + 0.5)
+
+fn
+fpart (x : double) : double =
+  x - $extfcall (double, "floor", x)
+
+fn
+rfpart (x : double) : double =
+  1.0 - fpart (x)
+
+fn
+plot {u0, v0, u1, v1 : int | u0 <= u1; v0 <= v1}
+     (s : drawing_surface (u0, v0, u1, v1),
+      x : int,
+      y : int,
+      c : color)
+    : void =
+  let
+    (* One might prefer a more sophisticated function than mere
+       addition. *)
+    val combined_color = s[x, y] + c
+  in
+    s[x, y] := min (combined_color, 1.0)
+  end
+
+fn
+_drawln {u0, v0, u1, v1 : int | u0 <= u1; v0 <= v1}
+        (s     : drawing_surface (u0, v0, u1, v1),
+         x0    : double,
+         y0    : double,
+         x1    : double,
+         y1    : double,
+         steep : bool)
+    : void =
+  let
+    val dx = x1 - x0 and dy = y1 - y0
+    val gradient = (if dx = 0.0 then 1.0 else dy / dx) : double
+
+    (* Handle the first endpoint. *)
+    val xend = iround x0
+    val yend = y0 + (gradient * (g0i2f xend - x0))
+    val xgap = rfpart (x0 + 0.5)
+    val xpxl1 = xend and ypxl1 = ipart yend
+    val () =
+      if steep then
+        begin
+          plot (s, ypxl1, xpxl1, rfpart yend * xgap);
+          plot (s, succ ypxl1, xpxl1, fpart yend * xgap)
+        end
+      else
+        begin
+          plot (s, xpxl1, ypxl1, rfpart yend * xgap);
+          plot (s, xpxl1, succ ypxl1, fpart yend * xgap)
+        end
+
+    (* The first y-intersection. Notice it is a "var" (a variable)
+       instead of a "val" (an immutable value). There is no need to
+       box it as a "ref", the way one must typically do in an ML
+       dialect. We could have done so, but the following treats the
+       variable as an ordinary C automatic variable, and is more
+       efficient. *)
+    var intery : double = yend + gradient
+
+    (* Handle the second endpoint. *)
+    val xend = iround (x1)
+    val yend = y1 + (gradient * (g0i2f xend - x1))
+    val xgap = fpart (x1 + 0.5)
+    val xpxl2 = xend and ypxl2 = ipart yend
+    val () =
+      if steep then
+        begin
+          plot (s, ypxl2, xpxl2, rfpart yend * xgap);
+          plot (s, succ ypxl2, xpxl2, fpart yend * xgap)
+        end
+      else
+        begin
+          plot (s, xpxl2, ypxl2, rfpart yend * xgap);
+          plot (s, xpxl2, succ ypxl2, fpart yend * xgap)
+      end
+  in
+    (* Loop over the rest of the points. I use procedural "for"-loops
+       instead of the more usual (for ATS) tail recursion. *)
+    if steep then
+      let
+        var x : int
+      in
+        for (x := succ xpxl1; x <> xpxl2; x := succ x)
+          begin
+            plot (s, ipart intery, x, rfpart intery);
+            plot (s, succ (ipart intery), x, fpart intery);
+            intery := intery + gradient
+          end
+      end
+    else
+      let
+        var x : int
+      in
+        for (x := succ xpxl1; x <> xpxl2; x := succ x)
+          begin
+            plot (s, x, ipart intery, rfpart intery);
+            plot (s, x, succ (ipart intery), fpart intery);
+            intery := intery + gradient
+          end
+      end
+  end
+
+fn
+draw_line {u0, v0, u1, v1 : int | u0 <= u1; v0 <= v1}
+          (s  : drawing_surface (u0, v0, u1, v1),
+           x0 : double,
+           y0 : double,
+           x1 : double,
+           y1 : double)
+    : void =
+  let
+    val xdiff = abs (x1 - x0) and ydiff = abs (y1 - y0)
+  in
+    if ydiff <= xdiff then
+      begin
+        if x0 <= x1 then
+          _drawln (s, x0, y0, x1, y1, false)
+        else
+          _drawln (s, x1, y1, x0, y0, false)
+      end
+    else
+      begin
+        if y0 <= y1 then
+          _drawln (s, y0, x0, y1, x1, true)
+        else
+          _drawln (s, y1, x1, y0, x0, true)
+      end
+  end
+
+implement
+main0 () =
+  let
+    macdef M_PI = $extval (double, "M_PI")
+
+    val u0 = 0 and v0 = 0
+    and u1 = 639 and v1 = 479
+
+    val s = drawing_surface_make (u0, v0, u1, v1)
+
+    fun
+    loop (theta : double) : void =
+      if theta < 360.0 then
+        let
+          val cos_theta = $extfcall (double, "cos",
+                                     theta * (M_PI / 180.0))
+          and sin_theta = $extfcall (double, "sin",
+                                     theta * (M_PI / 180.0))
+          and x0 = 380.0 and y0 = 130.0
+          val x1 = x0 + (cos_theta * 1000.0)
+          and y1 = y0 + (sin_theta * 1000.0)
+        in
+          draw_line (s, x0, y0, x1, y1);
+          loop (theta + 5.0)
+        end
+  in
+    loop 0.0;
+    write_PGM (stdout_ref, s)
+  end

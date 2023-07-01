@@ -1,0 +1,17 @@
+print "  X|   1   2   3   4   5   6   7   8   9  10  11  12"
+print "---+------------------------------------------------"
+
+for i = 1 to 12
+    nums$ = right$("  " + str$(i), 3) + "|"
+    for j = 1 to 12
+        if i <= j then
+            if j >= 1 then
+                nums$ = nums$ + left$("    ", (4 - len(str$(i * j))))
+            end if
+            nums$ = nums$ + str$(i * j)
+        else
+            nums$ = nums$ + "    "
+        end if
+    next j
+    print nums$
+next i

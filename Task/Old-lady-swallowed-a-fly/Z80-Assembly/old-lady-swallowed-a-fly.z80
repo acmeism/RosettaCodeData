@@ -1,0 +1,170 @@
+waitChar equ &BB06
+PrintChar equ &BB5A
+
+org &8000
+
+	ld ix,VerseTable
+	ld iy,OldLadyLookup
+	ld b,8                 ;8 verses total
+
+
+outerloop_song:
+	    push bc
+		    ld a,(ix+0)
+		    ld c,a        ;get the low byte of verse ptr
+		    ld a,(ix+1)
+		    ld b,a        ;get the high byte
+		    ;bc = the memory location of Verse1
+		    call loop_meta_PrintString
+		    inc ix
+		    inc ix  ;next verse
+	    pop bc
+
+	    call WaitChar   ;wait for user to press any key before continuing so they
+                            ;    have time to read it.
+
+	djnz outerloop_song
+
+ReturnToBasic:
+		ret		
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SUBROUTINES ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+loop_meta_PrintString:
+		ld a,(bc)
+		or a		;compare A to 0. 0 is the null terminator for verses.
+		ret z
+		cp 255		;255 means "goto the verse specified after the 255"
+		jr z,GotoPreviousVerse
+		ld (smc_loop_meta_PrintString_alpha+2),a
+		;use self modifying code to point IY's offset to the correct
+		;	song line, without changing IY itself.
+		inc a
+		ld (smc_loop_meta_PrintString_beta+2),a
+smc_loop_meta_PrintString_alpha:
+		ld a,(iy+0)	;the "+0" gets clobbered with the desired lyric low byte
+		ld L,a
+smc_loop_meta_PrintString_beta:
+		ld a,(iy+0)	;the "+0" gets clobbered with the desired lyric high byte
+		ld H,a
+		call PrintString	;now print the string in HL.
+		inc bc
+		jp loop_meta_PrintString
+;;;;;;;;;;;;;;;;;;;;;;;	
+GotoPreviousVerse:
+	inc bc		;advance past &FF opcode
+	ld a,(bc)       ;get low byte
+	ld e,a
+	inc bc		;advance to high byte
+	ld a,(bc)
+	ld d,a
+	push de
+	pop bc
+	inc bc		;advance past "There was an old lady who..."
+	jp loop_meta_PrintString
+	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
+PrintString:
+	ld a,(hl)
+	or a
+	ret z
+	call PrintChar
+	inc hl
+	jr PrintString
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	DATA     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+VerseTable:
+	word Verse1,Verse2,Verse3,Verse4,Verse5,Verse6,Verse7,Verse8
+Verse1:
+	byte 2,4,40,6,40,0				;fly
+Verse2:
+	byte 2,8,40,10,40,36,8,38,255			;spider
+	word Verse1
+Verse3:
+	byte 2,12,40,14,40,36,12,38,255			;bird
+	word Verse2
+Verse4:
+	byte 2,16,40,18,40,36,16,38,255			;cat
+	word Verse3
+Verse5:
+	byte 2,20,40,22,40,36,20,38,255			;dog
+	word Verse4
+Verse6:
+	byte 2,24,40,26,40,36,24,38,255			;goat
+	word Verse5
+Verse7:
+	byte 2,28,40,30,40,36,28,38,255			;cow
+	word Verse6
+Verse8:
+	byte 2,32,40,34,0				;horse
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
+
+OldLadyLookup:
+		word null		;0
+		word OldLady		;2
+		word Fly		;4
+		word Fly2		;6
+		word Spider		;8
+		
+		word Spider2		;10
+		word Bird		;12
+		word Bird2		;14
+		word Cat		;16
+		word Cat2		;18
+		
+		word Dog		;20
+		word Dog2		;22
+		word Goat		;24
+		word Goat2		;26
+		word Cow		;28
+		
+		word Cow2		;30
+		word Horse		;32
+		word Horse2		;34
+		word Catch1		;36
+		word Catch2		;38
+		
+		word Song_NewLine	;40
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;		
+null:
+		byte 0
+OldLady:
+		byte "There was an old lady who swallowed a ",0
+Fly:
+		byte "fly",0
+Fly2:
+		byte "I don't know why she swallowed a fly, perhaps she'll die.",0
+Spider:
+       		byte "spider",0
+Spider2:
+		byte "It wiggled and jiggled and tickled inside her.",0
+Bird:
+        	byte "bird",0
+Bird2:
+		byte "How absurd, to swallow a bird.",0
+Cat:
+        	byte "cat",0
+Cat2:
+		byte "Imagine that, she swallowed a cat.",0
+Dog:
+       		byte "dog",0
+Dog2:
+		byte "What a hog, to swallow a dog.",0
+Goat:
+        	byte "goat",0
+Goat2:
+		byte "She just opened her throat and swallowed a goat.",0
+Cow:
+        	byte "cow",0
+Cow2:
+		byte "I don't know how she swallowed a cow.",0
+Horse:
+        	byte "horse",0
+Horse2:
+		byte "She's dead, of course.",0
+Catch1:	
+		byte "She swallowed the ",0
+Catch2:
+		byte " to catch the ",0
+Song_NewLine:
+		byte 13,10,0		;control codes for a new line.

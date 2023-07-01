@@ -1,0 +1,173 @@
+*        Levenshtein distance      - 22/04/2020
+LEVENS   CSECT
+         USING  LEVENS,R13         base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         SAVE   (14,12)            save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R8,1               ii=1
+       DO WHILE=(C,R8,LE,NN)       do ii=1 to nn
+         LR     R1,R8                ii
+         SLA    R1,5                 *32
+         LA     R4,SS-32(R1)         @ss(ii,1)
+         MVC    S1,0(R4)             s1=ss(ii,1)
+         LR     R1,R8                ii
+         SLA    R1,1                 *2
+         LA     R1,1(R1)             +1
+         SLA    R1,4                 *16
+         LA     R4,SS-32(R1)         @ss(ii,2)
+         MVC    S2,0(R4)             s2=ss(ii,2)
+         LA     R1,S1                @s1
+         BAL    R14,LENGTHST         call length
+         AH     R0,=H'1'             +1
+         ST     R0,N1                n1=length(s1)+1
+         LA     R1,S2                @s2
+         BAL    R14,LENGTHST         call length
+         AH     R0,=H'1'             +1
+         ST     R0,N2                n2=length(s2)+1
+         L      R4,N1                n1
+       IF     C,R4,EQ,=F'1' THEN     if n1=1 then
+         L      R3,N2                  n2
+         BCTR   R3,0                   lev=n2-1
+         B      RET                    goto ret
+       ENDIF    ,                    endif
+         L      R4,N2                n2
+       IF     C,R4,EQ,=F'1' THEN     if n2=1 then
+         L      R3,N1                  n1
+         BCTR   R3,0                   lev=n1-1
+         B      RET                    goto ret
+       ENDIF    ,                    endif
+         LA     R6,1                 i=1
+       DO WHILE=(C,R6,LE,N1)         do i=1 to n1
+         LR     R2,R6                  i
+         BCTR   R2,0                   -1
+         LR     R1,R6                  i
+         SLA    R1,6                   *64
+         ST     R2,D-64(R1)            d(i,1)=i-1
+         LA     R6,1(R6)               i++
+       ENDDO    ,                    enddo i
+         LA     R7,1                 j=1
+       DO WHILE=(C,R7,LE,N2)         do j=1 to n2
+         LR     R2,R7                  j
+         BCTR   R2,0                   j-1
+         LR     R1,R7                  j
+         SLA    R1,2                   *4
+         ST     R2,D-4(R1)             d(1,j)=j-1
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+         LA     R6,2                 i=2
+       DO WHILE=(C,R6,LE,N1)         do i=2 to n1
+         LA     R4,S1-2                @s1-2
+         AR     R4,R6                  +i
+         MVC    C1(1),0(R4)            c1=substr(s1,i-1,1)
+         LA     R7,2                   j=2
+       DO WHILE=(C,R7,LE,N2)           do j=2 to n2
+         LA     R4,S2-2                  @s2-2
+         AR     R4,R7                    +j
+         MVC    C2(1),0(R4)              c2=substr(s2,j-1,1)
+         LR     R1,R6                    i
+         SH     R1,=H'2'                 -2
+         SLA    R1,4                     *16
+         AR     R1,R7                    +j
+         SLA    R1,2                     *4
+         L      R2,D-4(R1)               d(i-1,j)
+         LA     R2,1(R2)                 +1
+         ST     R2,D1                    d1=d(i-1,j)+1
+         LR     R2,R7                    j
+         BCTR   R2,0                     -1
+         LR     R1,R6                    i
+         BCTR   R1,0                     -1
+         SLA    R1,4                     *16
+         AR     R1,R2                    +(j-1)
+         SLA    R1,2                     *4
+         L      R2,D-4(R1)               d(i,j-1)
+         LA     R2,1(R2)                 +1
+         ST     R2,D2                    d2=d(i,j-1)+1
+       IF   CLC,C1,NE,C2 THEN            if c1<>c2 then
+         LA     R9,1                       x=1
+       ELSE     ,                        else
+         SR     R9,R9                      x=0
+       ENDIF    ,                        endif
+         LR     R1,R6                    i
+         SH     R1,=H'2'                 i-2
+         LR     R2,R7                    j
+         BCTR   R2,0                     j-1
+         SLA    R1,4                     *16
+         AR     R1,R2                    +(j-1)
+         SLA    R1,2                     *4
+         L      R2,D-4(R1)               d(i-1,j-1)
+         AR     R2,R9                    +x
+         ST     R2,D3                    d3=d(i-1,j-1)+x
+         L      R4,D1                    d1
+       IF     C,R4,LT,D2 THEN            if d1<d2 then
+       IF     C,R4,LT,D3 THEN              if d1<d3 then
+         L      R10,D1                       dd=d1
+       ELSE     ,                          else
+         L      R10,D3                       dd=d3
+       ENDIF    ,                          endif
+       ELSE     ,                        else
+         L      R4,D2                      d2
+       IF     C,R4,LT,D3 THEN              if d2<d3 then
+         L      R10,D2                       dd=d2
+       ELSE     ,                          else
+         L      R10,D3                       dd=d3
+       ENDIF    ,                          endif
+       ENDIF    ,                        endif
+         LR     R1,R6                    i
+         BCTR   R1,0                     i-1
+         SLA    R1,4                     *16
+         AR     R1,R7                    +j
+         SLA    R1,2                     *4
+         ST     R10,D-4(R1)              d(i,j)=dd
+         LA     R7,1(R7)                 j++
+       ENDDO    ,                      enddo j
+         LA     R6,1(R6)               i++
+       ENDDO    ,                    enddo i
+         L      R1,N1                n1
+         BCTR   R1,0                 -1
+         SLA    R1,4                 *16
+         A      R1,N2                +n2
+         SLA    R1,2                 *4
+         L      R3,D-4(R1)           lev=d(n1,n2)
+RET      MVC    PG,=CL80' '          clear buffer
+         MVC    PG(16),S1            output s1
+         MVC    PG+17(16),S2         output s2
+         XDECO  R3,XDEC              edit lev
+         MVC    PG+34(5),XDEC+7      output lev
+         XPRNT  PG,L'PG              print bufffer
+         LA     R8,1(R8)             ii++
+       ENDDO    ,                  enddo ii
+         L      R13,4(0,R13)       restore previous savearea pointer
+         RETURN (14,12),RC=0       restore registers from calling save
+LENGTHST CNOP   0,4                function lengthst(c)
+         LA     R0,16              i=16
+         LA     R1,15(R1)          @ci
+LENGTHS1 LTR    R0,R0              while i>0
+         BZ     LENGTHS2           ..
+         CLI    0(R1),C' '           if Mid(c,i,1)=" "
+         BNE    LENGTHS2             then  exit while
+         BCTR   R1,0                 @ci--
+         BCTR   R0,0                 i--
+         B      LENGTHS1           endwhile
+LENGTHS2 BR     R14                return to caller
+SS       DC     CL16'kitten',CL16'sitting'
+         DC     CL16'rosettacode',CL16'raisethysword'
+         DC     CL16'saturday',CL16'sunday'
+         DC     CL16'sleep',CL16'fleeting'
+NN       DC     A((NN-SS)/(2*L'SS))
+N1       DS     F                  n1
+N2       DS     F                  n2
+S1       DS     CL16               s1
+S2       DS     CL16               s2
+D        DS     256F               d(16,16)
+D1       DS     F                  d1
+D2       DS     F                  d2
+D3       DS     F                  d3
+C1       DS     CL1                c1
+C2       DS     CL1                c2
+PG       DS     CL80               buffer
+XDEC     DS     CL12               temp fo xdeco
+         REGEQU
+         END    LEVENS

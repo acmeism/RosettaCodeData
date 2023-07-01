@@ -1,0 +1,124 @@
+(* The algorithm is borrowed from Wikipedia. The graphics is a
+   modification of the display made by the JavaScript entry. Output
+   from the program is a Portable Pixmap file. *)
+
+#include "share/atspre_staload.hats"
+staload "libats/libc/SATS/math.sats"
+staload _ = "libats/libc/DATS/math.dats"
+
+fn
+mandel_iter {max_iter : nat}
+            (cx       : double,
+             cy       : double,
+             max_iter : int max_iter)
+    :<> intBtwe (0, max_iter) =
+  let
+    fun
+    loop {iter : nat | iter <= max_iter}
+         .<max_iter - iter>.
+         (x    : double,
+          y    : double,
+          iter : int iter) :<> intBtwe (0, max_iter) =
+      if iter = max_iter then
+        iter
+      else if 2.0 * 2.0 < (x * x) + (y * y) then
+        iter
+      else
+        let
+          val x = (x * x) - (y * y) + cx
+          and y = (2.0 * x * y) + cy
+        in
+          loop (x, y, succ iter)
+        end
+  in
+    loop (0.0, 0.0, 0)
+  end
+
+fn                (* Write a Portable Pixmap of the Mandelbrot set. *)
+write_mandelbrot_ppm (outf       : FILEref,
+                      width      : intGte 0,
+                      height     : intGte 0,
+                      xmin       : double,
+                      xmax       : double,
+                      ymin       : double,
+                      ymax       : double,
+                      max_iter : intGte 0) : void =
+  let
+    prval [width : int] EQINT () = eqint_make_gint width
+    prval [height : int] EQINT () = eqint_make_gint height
+
+    macdef output (r, g, b) =
+      let
+        val r = min ($UNSAFE.cast{int} ,(r), 255)
+        and g = min ($UNSAFE.cast{int} ,(g), 255)
+        and b = min ($UNSAFE.cast{int} ,(b), 255)
+      in
+        fprint_val<uchar> (outf, $UNSAFE.cast r);
+        fprint_val<uchar> (outf, $UNSAFE.cast g);
+        fprint_val<uchar> (outf, $UNSAFE.cast b);
+      end
+
+    val xscale = (xmax - xmin) / g0i2f width
+    and yscale = (ymax - ymin) / g0i2f height
+
+    fun
+    loop_y {iy : nat | iy <= height}
+           .<height - iy>.
+           (iy : int iy) : void =
+      if iy <> height then
+        let
+          fun
+          loop_x {ix : nat | ix <= width}
+                 .<width - ix>.
+                 (ix : int ix) : void =
+            if ix <> width then
+              let
+                (* We want to go from top to bottom, left to right. *)
+                val x = xmin + (xscale * g0i2f ix)
+                and y = ymin + (yscale * g0i2f (height - iy))
+                val i = mandel_iter (x, y, max_iter)
+
+                (* We can PROVE that "i" is no greater than
+                  "max_iter". *)
+                prval [i : int] EQINT () = eqint_make_gint i
+                prval [max_iter : int] EQINT () = eqint_make_gint max_iter
+                prval () = prop_verify {i <= max_iter} ()
+
+                val c = (4.0 * log (g0i2f i)) / log (g0i2f max_iter)
+              in
+                if i = max_iter then
+                  output (0, 0, 0)
+                else if c < 1.0 then
+                  output (0, 0, 255.0 * (c - 1.0))
+                else if c < 2.0 then
+                  output (0, 255.0 * (c - 1.0), 255)
+                else
+                  output (255.0 * (c - 2.0), 255, 255);
+                loop_x (succ ix)
+              end
+        in
+          loop_x 0;
+          loop_y (succ iy)
+        end
+  in
+    fprintln! (outf, "P6");
+    fprintln! (outf, width, " ", height);
+    fprintln! (outf, 255);
+    loop_y 0
+  end
+
+implement
+main0 () =
+  let
+    val outf = stdout_ref
+    val width = 1024
+    val height = 1024
+    val xmin = ~2.25
+    val xmax = 0.75
+    val ymin = ~1.5
+    val ymax = 1.5
+    val max_iter = 1000
+  in
+    write_mandelbrot_ppm (outf, width, height, xmin, xmax,
+                          ymin, ymax, max_iter)
+  end

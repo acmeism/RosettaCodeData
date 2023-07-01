@@ -1,0 +1,65 @@
+(* You will need
+   https://sourceforge.net/p/chemoelectric/ats2-xprelude/ *)
+
+#include "share/atspre_staload.hats"
+
+#include "xprelude/HATS/xprelude.hats"
+staload "xprelude/SATS/exrat.sats"
+staload _ = "xprelude/DATS/exrat.dats"
+
+val a = exrat_make_string_exn "2988348162058574136915891421498819466320163312926952423791023078876139"
+val b = exrat_make_string_exn "2351399303373464486466122544523690094744975233415544072992656881240319"
+
+val modulus = exrat_make (10, 1) ** 40
+
+(* xprelude/SATS/exrat.sats includes the "exrat_numerator_modular_pow"
+   function, based on GMP's mpz_powm. *)
+val result1 = exrat_numerator_modular_pow (a, b, modulus)
+
+(* But that was too easy. Here is the right-to-left binary method,
+   https://en.wikipedia.org/w/index.php?title=Modular_exponentiation&oldid=1136216610#Right-to-left_binary_method
+*)
+val result2 =
+  (lam (base     : exrat,
+        exponent : exrat,
+        modulus  : exrat) : exrat =>
+    let
+      val zero = exrat_make (0, 1)
+      and one = exrat_make (1, 1)
+      and two = exrat_make (2, 1)
+      macdef divrem = exrat_numerator_euclid_division
+      macdef rem = exrat_numerator_euclid_remainder
+    in
+      if modulus = one then
+        zero
+      else
+        let
+          fun
+          loop (result   : exrat,
+                base     : exrat,
+                exponent : exrat) : exrat =
+            if iseqz exponent then
+              result
+            else
+              let
+                val @(exponent, remainder) = exponent \divrem two
+                val result =
+                  if remainder = one then
+                    (result * base) \rem modulus
+                  else
+                    result
+                val base = (base * base) \rem modulus
+              in
+                loop (result, base, exponent)
+              end
+        in
+          loop (one, base \rem modulus, exponent)
+        end
+    end) (a, b, modulus)
+
+implement
+main0 () =
+  begin
+    println! result1;
+    println! result2
+  end

@@ -1,0 +1,10 @@
+U16 a, b;
+while (1) {
+  a = RandU16 % 20;
+  Print("%d\n", a);
+
+  if (a == 10) break;
+
+  b = RandU16 % 20;
+  Print("%d\n", b);
+}

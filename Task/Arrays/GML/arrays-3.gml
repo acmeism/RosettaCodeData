@@ -1,0 +1,12 @@
+array[1,1] = 1
+array[1,2] = 2
+array[1,3] = 3
+array[1,4] = 4
+array[2,1] = 2
+array[2,2] = 4
+array[2,3] = 6
+array[2,4] = 8
+array[3,1] = 3
+array[3,2] = 6
+array[3,3] = 9
+array[3,4] = 12

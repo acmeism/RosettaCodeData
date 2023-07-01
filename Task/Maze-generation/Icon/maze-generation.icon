@@ -1,0 +1,93 @@
+link printf
+
+procedure main(A)                               # generate rows x col maze
+   /mh := \A[1] | 12                            # or take defaults 12 x 16
+   /mw := \A[2] | 16
+   mz := DisplayMaze(GenerateMaze(mh,mw))
+   WriteImage(mz.filename)                      # save file
+   WAttrib(mz.window,"canvas=normal")           # show maze in hidden window
+   until Event() == &lpress                     # wait for left mouse press
+   close(mz.window)
+end
+
+$define FINISH 64 # exit
+$define START  32 # entrance
+$define PATH  128
+$define SEEN   16 # bread crumbs for generator
+$define NORTH   8 # sides ...
+$define EAST    4
+$define SOUTH   2
+$define WEST    1
+$define EMPTY   0 # like new
+
+procedure GenerateMaze(r,c)                     #: Depth First Maze Generation
+static maze,h,w,rd
+   if /maze then {                              # BEGING - No maze yet
+      /h := integer(1 < r) | runerr(r,205)      # valid size 2x2 or better
+      /w := integer(1 < c) | runerr(r,205)
+      every !(maze := list(h)) := list(w,EMPTY) # shinny new empty maze
+      start  := [?h,?w,?4-1,START]              # random [r,c] start & finish
+      finish := [?h,?w,(start[3]+2)%4,FINISH]   # w/ opposite side exponent
+      every x := start | finish do {
+         case x[3] := 2 ^ x[3] of {             # get side from exponent and
+            NORTH : x[1] := 1                   # project r,c to selected edge
+            EAST  : x[2] := w
+            SOUTH : x[1] := h
+            WEST  : x[2] := 1
+            }
+         maze[x[1],x[2]] +:= x[3] + x[4]        # transcribe s/f to maze
+         }
+      rd := [NORTH, EAST, SOUTH, WEST]          # initial list of directions
+      GenerateMaze(start[1],start[2])           # recurse through maze
+      return 1(.maze,maze := &null)             # return maze, reset for next
+   }
+   else {         # ----------------------- recursed to clear insize of maze
+      if iand(maze[r,c],SEEN) = 0 then {        # in bounds and not SEEN yet?
+         maze[r,c] +:= SEEN                     # Mark current cell as visited
+         every !rd :=: ?rd                      # randomize list of directions
+         every d := !rd do
+            case d of {                         # try all, succeed & clear wall
+               NORTH :  maze[r,c] +:= ( GenerateMaze(r-1,c), NORTH)
+               EAST  :  maze[r,c] +:= ( GenerateMaze(r,c+1),  EAST)
+               SOUTH :  maze[r,c] +:= ( GenerateMaze(r+1,c), SOUTH)
+               WEST  :  maze[r,c] +:= ( GenerateMaze(r,c-1),  WEST)
+               }
+         return                                 # signal success to caller
+         }
+   }
+end
+
+$define CELL   20                                   # cell size in pixels
+$define BORDER 30                                   # border size in pixels
+
+record mazeinfo(window,maze,filename)               # keepers
+
+procedure DisplayMaze(maze)                         #: show it off
+if CELL < 8 then runerr(205,CELL)                   # too small
+
+wh := (ch := (mh := *maze  ) * CELL) + 2 * BORDER   # win, cell, maze height
+ww := (cw := (mw := *maze[1]) * CELL) + 2 * BORDER  # win, cell, maze width
+
+wparms := [ sprintf("Maze %dx%d",*maze,*maze[1]),   # window parameters
+            "g","bg=white","canvas=hidden",
+            sprintf("size=%d,%d",ww,wh),
+            sprintf("dx=%d",BORDER),
+            sprintf("dy=%d",BORDER)]
+
+&window := open!wparms | stop("Unable to open Window")
+
+Fg("black")                                         # Draw full grid
+every DrawLine(x := 0 to cw by CELL,0,x,ch+1)       # . verticals
+every DrawLine(0,y := 0 to ch by CELL,cw+1,y)       # . horizontals
+
+Fg("white")                                         # Set to erase lines
+every y := CELL*((r := 1 to mh)-1) & x := CELL*((c := 1 to mw)-1) do {
+   WAttrib("dx="||x+BORDER,"dy="||y+BORDER)         # position @ cell r,c
+   if iand(maze[r,c],NORTH) > 0 then DrawLine(2,0,CELL-1,0)
+   if iand(maze[r,c],EAST)  > 0 then DrawLine(CELL,2,CELL,CELL-1)
+   if iand(maze[r,c],SOUTH) > 0 then DrawLine(2,CELL,CELL-1,CELL)
+   if iand(maze[r,c],WEST)  > 0 then DrawLine(0,2,0,CELL-1)
+   }
+
+return mazeinfo(&window,maze,sprintf("maze-%dx%d-%d.gif",r,c,&now))
+end

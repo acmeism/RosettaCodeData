@@ -1,0 +1,21 @@
+   3 5 7 ('Fizz';'Buzz';'Baxx')genfb 20
+1
+2
+Fizz
+4
+Buzz
+Fizz
+Baxx
+8
+Fizz
+Buzz
+11
+Fizz
+13
+Baxx
+FizzBuzz
+16
+17
+Fizz
+19
+Buzz

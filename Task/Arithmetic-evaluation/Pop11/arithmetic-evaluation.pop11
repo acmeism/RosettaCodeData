@@ -1,0 +1,149 @@
+/* Scanner routines */
+/* Uncomment the following to parse data from standard input
+
+vars itemrep;
+incharitem(charin) -> itemrep;
+
+*/
+
+;;; Current symbol
+vars sym;
+
+define get_sym();
+    itemrep() -> sym;
+enddefine;
+
+define expect(x);
+    lvars x;
+    if x /= sym then
+        printf(x, 'Error, expected %p\n');
+        mishap(sym, 1, 'Example parser error');
+    endif;
+    get_sym();
+enddefine;
+
+lconstant res_list = [( ) + * ];
+
+lconstant reserved = newproperty(
+  maplist(res_list, procedure(x); [^x ^(true)]; endprocedure),
+    20, false, "perm");
+
+/*
+  Parser for arithmetic expressions
+*/
+/*
+expr: term
+   | expr "+" term
+   | expr "-" term
+   ;
+*/
+
+define do_expr() -> result;
+    lvars result = do_term(), op;
+    while sym = "+" or sym = "-" do
+        sym -> op;
+        get_sym();
+        [^op ^result ^(do_term())] -> result;
+    endwhile;
+enddefine;
+
+/*
+term: factor
+   | term "*" factor
+   | term "/" factor
+   ;
+*/
+
+define do_term() -> result;
+    lvars result = do_factor(), op;
+    while sym = "*" or sym = "/" do
+        sym -> op;
+        get_sym();
+        [^op ^result ^(do_factor())] -> result;
+    endwhile;
+enddefine;
+
+/*
+factor: word
+   | constant
+   | "(" expr ")"
+   ;
+*/
+
+define do_factor() -> result;
+    if sym = "(" then
+        get_sym();
+        do_expr() -> result;
+        expect(")");
+    elseif isinteger(sym) or isbiginteger(sym) then
+        sym -> result;
+        get_sym();
+    else
+        if reserved(sym) then
+            printf(sym, 'unexpected symbol %p\n');
+            mishap(sym, 1, 'Example parser syntax error');
+        endif;
+        sym -> result;
+        get_sym();
+    endif;
+enddefine;
+
+/* Expression evaluator, returns false on error (currently only
+   division by 0 */
+
+define arith_eval(expr);
+    lvars op, arg1, arg2;
+    if not(expr) then
+        return(expr);
+    endif;
+    if isinteger(expr) or isbiginteger(expr) then
+        return(expr);
+    endif;
+    expr(1) -> op;
+    arith_eval(expr(2)) -> arg1;
+    arith_eval(expr(3)) -> arg2;
+    if not(arg1) or not(arg2) then
+        return(false);
+    endif;
+    if op = "+" then
+        return(arg1 + arg2);
+    elseif op = "-" then
+        return(arg1 - arg2);
+    elseif op = "*" then
+        return(arg1 * arg2);
+    elseif op = "/" then
+        if arg2 = 0 then
+            return(false);
+        else
+            return(arg1 div arg2);
+        endif;
+    else
+        printf('Internal error\n');
+        return(false);
+    endif;
+enddefine;
+
+/* Given list, create item repeater.  Input list is stored in a
+   closure are traversed when new item is requested. */
+
+define listitemrep(lst);
+    procedure();
+        lvars item;
+        if lst = [] then
+            termin;
+        else
+            front(lst) -> item;
+            back(lst) -> lst;
+            item;
+         endif;
+     endprocedure;
+enddefine;
+
+/* Initialise scanner */
+
+listitemrep([(3 + 50) * 7 - 100 / 10]) -> itemrep;
+
+get_sym();
+
+;;; Test it
+arith_eval(do_expr()) =>

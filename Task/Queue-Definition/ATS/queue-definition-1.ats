@@ -1,0 +1,181 @@
+(*------------------------------------------------------------------*)
+
+#define ATS_DYNLOADFLAG 0
+
+#include "share/atspre_staload.hats"
+
+staload UN = "prelude/SATS/unsafe.sats"
+
+(*------------------------------------------------------------------*)
+
+vtypedef queue_vt (vt : vt@ype+, n : int) =
+  (* A list that forms the queue, and a pointer to its last node. *)
+  @(list_vt (vt, n), ptr)
+
+#define NIL list_vt_nil ()
+#define :: list_vt_cons
+
+fn {}
+queue_vt_nil {vt : vt@ype}
+            () :
+    queue_vt (vt, 0) =
+  @(NIL, the_null_ptr)
+
+fn {}
+queue_vt_is_empty
+          {n  : int}
+          {vt : vt@ype}
+          (q  : !queue_vt (vt, n)) :
+    [is_empty : bool | is_empty == (n == 0)]
+    bool is_empty =
+  case+ q.0 of
+  | NIL => true
+  | _ :: _ => false
+
+fn {vt : vt@ype}
+queue_vt_enqueue
+          {n : int}
+          (q : queue_vt (vt, n),
+           x : vt) :
+    (* Returns the new queue. *)
+    [m : int | 1 <= m; m == n + 1]
+    queue_vt (vt, m) =
+  let
+    val @(lst, tail_ptr) = q
+    prval _ = lemma_list_vt_param lst
+  in
+    case+ lst of
+    | ~ NIL =>
+      let
+        val lst = x :: NIL
+        val tail_ptr = $UN.castvwtp1{ptr} lst
+      in
+        @(lst, tail_ptr)
+      end
+    | _ :: _ =>
+      let
+        val old_tail = $UN.castvwtp0{list_vt (vt, 1)} tail_ptr
+        val+ @ (hd :: tl) = old_tail
+
+        (* Extend the list by one node, at its tail end. *)
+        val new_tail : list_vt (vt, 1) = x :: NIL
+        val tail_ptr = $UN.castvwtp1{ptr} new_tail
+        prval _ = $UN.castvwtp0{void} tl
+        val _ = tl := new_tail
+
+        prval _ = fold@ old_tail
+        prval _ = $UN.castvwtp0{void} old_tail
+
+        (* Let us cheat and simply *assert* (rather than prove) that
+           the list has grown by one node. *)
+        val lst = $UN.castvwtp0{list_vt (vt, n + 1)} lst
+      in
+        @(lst, tail_ptr)
+      end
+  end
+
+(* The dequeue routine simply CANNOT BE CALLED with an empty queue.
+   It requires a queue of type queue_vt (vt, n) where n is positive. *)
+fn {vt : vt@ype}
+queue_vt_dequeue
+          {n : int | 1 <= n}
+          (q : queue_vt (vt, n)) :
+    (* Returns a tuple: the dequeued element and the new queue. *)
+    [m : int | 0 <= m; m == n - 1]
+    @(vt, queue_vt (vt, m)) =
+  case+ q.0 of
+  | ~ (x :: lst) => @(x, @(lst, q.1))
+
+(* queue_vt is a linear type that must be freed. *)
+extern fun {vt : vt@ype}
+queue_vt$element_free : vt -> void
+fn {vt : vt@ype}
+queue_vt_free {n : int}
+              (q : queue_vt (vt, n)) :
+    void =
+  let
+    fun
+    loop {n : nat} .<n>. (lst : list_vt (vt, n)) : void =
+      case+ lst of
+      | ~ NIL => begin end
+      | ~ (hd :: tl) =>
+        begin
+          queue_vt$element_free<vt> hd;
+          loop tl
+        end
+    prval _ = lemma_list_vt_param (q.0)
+  in
+    loop (q.0)
+  end
+
+(*------------------------------------------------------------------*)
+(* An example: a queue of nonlinear strings. *)
+
+vtypedef strq_vt (n : int) = queue_vt (string, n)
+
+fn {}                  (* A parameterless template, for efficiency. *)
+strq_vt_nil () : strq_vt 0 =
+  queue_vt_nil ()
+
+fn {}                  (* A parameterless template, for efficiency. *)
+strq_vt_is_empty {n : int} (q : !strq_vt n) :
+    [is_empty : bool | is_empty == (n == 0)] bool is_empty =
+  queue_vt_is_empty<> q
+
+fn
+strq_vt_enqueue {n : int} (q : strq_vt n, x : string) :
+    [m : int | 1 <= m; m == n + 1] strq_vt m =
+  queue_vt_enqueue<string> (q, x)
+
+fn (* Impossible to...     VVVVVV   ...call with an empty queue. *)
+strq_vt_dequeue {n : int | 1 <= n} (q : strq_vt n) :
+    [m : int | 0 <= m; m == n - 1] @(string, strq_vt m) =
+  queue_vt_dequeue<string> q
+
+fn
+strq_vt_free {n : int} (q : strq_vt n) : void =
+  let
+    implement
+    queue_vt$element_free<string> x =
+      (* A nonlinear string will be allowed to leak. (It might be
+         collected as garbage, however.) *)
+      begin end
+  in
+    queue_vt_free<string> q
+  end
+
+macdef qnil = strq_vt_nil ()
+overload iseqz with strq_vt_is_empty
+overload << with strq_vt_enqueue
+overload pop with strq_vt_dequeue
+overload free with strq_vt_free
+
+implement
+main0 () =
+  {
+    val q = qnil
+    val _ = println! ("val q = qnil")
+    val _ = println! ("iseqz q = ", iseqz q)
+    val _ = println! ("val q = q << \"one\" << \"two\" << \"three\"")
+    val q = q << "one" << "two" << "three"
+    val _ = println! ("iseqz q = ", iseqz q)
+    val _ = println! ("val (x, q) = pop q")
+    val (x, q) = pop q
+    val _ = println! ("x = ", x)
+    val _ = println! ("val (x, q) = pop q")
+    val (x, q) = pop q
+    val _ = println! ("x = ", x)
+    val _ = println! ("val q = q << \"four\"")
+    val q = q << "four"
+    val _ = println! ("val (x, q) = pop q")
+    val (x, q) = pop q
+    val _ = println! ("x = ", x)
+    val _ = println! ("val (x, q) = pop q")
+    val (x, q) = pop q
+    val _ = println! ("x = ", x)
+    val _ = println! ("iseqz q = ", iseqz q)
+    //val (x, q) = pop q  // If you uncomment this you cannot compile!
+    val _ = free q
+  }
+
+(*------------------------------------------------------------------*)

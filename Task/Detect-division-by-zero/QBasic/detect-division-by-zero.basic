@@ -1,0 +1,9 @@
+ON ERROR GOTO TratoError
+PRINT 2 / 3
+PRINT 3 / 5
+PRINT 4 / 0
+END
+
+TratoError:
+PRINT "Error"; ERR; "in the line"; ERL
+IF ERR = 11 THEN PRINT "Division by zero in line"; ERL: RESUME NEXT

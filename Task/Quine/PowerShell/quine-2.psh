@@ -1,0 +1,1 @@
+$MyInvocation.MyCommand.ScriptContents

@@ -1,0 +1,1 @@
+[] | lexically_equal #=> true

@@ -1,0 +1,3 @@
+handle := ExternalBytes new:size
+...
+handle free

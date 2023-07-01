@@ -1,0 +1,221 @@
+(phixonline)-->
+ <span style="color: #000080;font-style:italic;">-- demo\rosetta\Arithmetic_evaluation.exw</span>
+ <span style="color: #008080;">with</span> <span style="color: #008080;">javascript_semantics</span>
+
+ <span style="color: #004080;">sequence</span> <span style="color: #000000;">opstack</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{}</span>       <span style="color: #000080;font-style:italic;">-- atom elements are literals,
+                             -- sequence elements are subexpressions
+                             -- on completion length(opstack) should be 1</span>
+ <span style="color: #004080;">object</span> <span style="color: #000000;">token</span>
+
+ <span style="color: #008080;">constant</span> <span style="color: #000000;">op_p_p</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">1</span>         <span style="color: #000080;font-style:italic;">--  1: expressions stored as op,p1,p2
+     --   p_op_p             --  0: expressions stored as p1,op,p2
+     --   p_p_op             -- -1: expressions stored as p1,p2,op</span>
+
+ <span style="color: #004080;">object</span> <span style="color: #000000;">op</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>   <span style="color: #000080;font-style:italic;">-- 0 if none, else "+", "-", "*", "/", "^", "%", or "u-"</span>
+
+ <span style="color: #004080;">string</span> <span style="color: #000000;">s</span>        <span style="color: #000080;font-style:italic;">-- the expression being parsed</span>
+ <span style="color: #004080;">integer</span> <span style="color: #000000;">ch</span>
+ <span style="color: #004080;">integer</span> <span style="color: #000000;">sidx</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">err</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">msg</span><span style="color: #0000FF;">)</span>
+     <span style="color: #7060A8;">printf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"%s\n%s^ %s\n\nPressEnter..."</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">s</span><span style="color: #0000FF;">,</span><span style="color: #7060A8;">repeat</span><span style="color: #0000FF;">(</span><span style="color: #008000;">' '</span><span style="color: #0000FF;">,</span><span style="color: #000000;">sidx</span><span style="color: #0000FF;">-</span><span style="color: #000000;">1</span><span style="color: #0000FF;">),</span><span style="color: #000000;">msg</span><span style="color: #0000FF;">})</span>
+     <span style="color: #0000FF;">{}</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">wait_key</span><span style="color: #0000FF;">()</span>
+     <span style="color: #7060A8;">abort</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">nxtch</span><span style="color: #0000FF;">(</span><span style="color: #004080;">object</span> <span style="color: #000000;">msg</span><span style="color: #0000FF;">=</span><span style="color: #008000;">"eof"</span><span style="color: #0000FF;">)</span>
+     <span style="color: #000000;">sidx</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">1</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">sidx</span><span style="color: #0000FF;">></span><span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">s</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span>
+         <span style="color: #008080;">if</span> <span style="color: #004080;">string</span><span style="color: #0000FF;">(</span><span style="color: #000000;">msg</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span> <span style="color: #000000;">err</span><span style="color: #0000FF;">(</span><span style="color: #000000;">msg</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #000000;">ch</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">-</span><span style="color: #000000;">1</span>
+     <span style="color: #008080;">else</span>
+         <span style="color: #000000;">ch</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">s</span><span style="color: #0000FF;">[</span><span style="color: #000000;">sidx</span><span style="color: #0000FF;">]</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">skipspaces</span><span style="color: #0000FF;">()</span>
+     <span style="color: #008080;">while</span> <span style="color: #7060A8;">find</span><span style="color: #0000FF;">(</span><span style="color: #000000;">ch</span><span style="color: #0000FF;">,{</span><span style="color: #008000;">' '</span><span style="color: #0000FF;">,</span><span style="color: #008000;">'\t'</span><span style="color: #0000FF;">,</span><span style="color: #008000;">'\r'</span><span style="color: #0000FF;">,</span><span style="color: #008000;">'\n'</span><span style="color: #0000FF;">})!=</span><span style="color: #000000;">0</span> <span style="color: #008080;">do</span> <span style="color: #000000;">nxtch</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">get_token</span><span style="color: #0000FF;">()</span>
+ <span style="color: #004080;">atom</span> <span style="color: #000000;">n</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">fraction</span>
+ <span style="color: #004080;">integer</span> <span style="color: #000000;">dec</span>
+     <span style="color: #000000;">skipspaces</span><span style="color: #0000FF;">()</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">ch</span><span style="color: #0000FF;">=-</span><span style="color: #000000;">1</span> <span style="color: #008080;">then</span> <span style="color: #000000;">token</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">"eof"</span> <span style="color: #008080;">return</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">ch</span><span style="color: #0000FF;">>=</span><span style="color: #008000;">'0'</span> <span style="color: #008080;">and</span> <span style="color: #000000;">ch</span><span style="color: #0000FF;"><=</span><span style="color: #008000;">'9'</span> <span style="color: #008080;">then</span>
+         <span style="color: #000000;">n</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">ch</span><span style="color: #0000FF;">-</span><span style="color: #008000;">'0'</span>
+         <span style="color: #008080;">while</span> <span style="color: #000000;">1</span> <span style="color: #008080;">do</span>
+             <span style="color: #000000;">nxtch</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+             <span style="color: #008080;">if</span> <span style="color: #000000;">ch</span><span style="color: #0000FF;"><</span><span style="color: #008000;">'0'</span> <span style="color: #008080;">or</span> <span style="color: #000000;">ch</span><span style="color: #0000FF;">></span><span style="color: #008000;">'9'</span> <span style="color: #008080;">then</span> <span style="color: #008080;">exit</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+             <span style="color: #000000;">n</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">n</span><span style="color: #0000FF;">*</span><span style="color: #000000;">10</span><span style="color: #0000FF;">+</span><span style="color: #000000;">ch</span><span style="color: #0000FF;">-</span><span style="color: #008000;">'0'</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">ch</span><span style="color: #0000FF;">=</span><span style="color: #008000;">'.'</span> <span style="color: #008080;">then</span>
+             <span style="color: #000000;">dec</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">1</span>
+             <span style="color: #000000;">fraction</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+             <span style="color: #008080;">while</span> <span style="color: #000000;">1</span> <span style="color: #008080;">do</span>
+                 <span style="color: #000000;">nxtch</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+                 <span style="color: #008080;">if</span> <span style="color: #000000;">ch</span><span style="color: #0000FF;"><</span><span style="color: #008000;">'0'</span> <span style="color: #008080;">or</span> <span style="color: #000000;">ch</span><span style="color: #0000FF;">></span><span style="color: #008000;">'9'</span> <span style="color: #008080;">then</span> <span style="color: #008080;">exit</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+                 <span style="color: #000000;">fraction</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">fraction</span><span style="color: #0000FF;">*</span><span style="color: #000000;">10</span> <span style="color: #0000FF;">+</span> <span style="color: #000000;">ch</span><span style="color: #0000FF;">-</span><span style="color: #008000;">'0'</span>
+                 <span style="color: #000000;">dec</span> <span style="color: #0000FF;">*=</span> <span style="color: #000000;">10</span>
+             <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+             <span style="color: #000000;">n</span> <span style="color: #0000FF;">+=</span> <span style="color: #000000;">fraction</span><span style="color: #0000FF;">/</span><span style="color: #000000;">dec</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #000080;font-style:italic;">--      if find(ch,"eE") then   -- you get the idea
+ --      end if</span>
+         <span style="color: #000000;">token</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">n</span>
+         <span style="color: #008080;">return</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">if</span> <span style="color: #7060A8;">find</span><span style="color: #0000FF;">(</span><span style="color: #000000;">ch</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"+-/*()^%"</span><span style="color: #0000FF;">)=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #000000;">err</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"syntax error"</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #000000;">token</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">s</span><span style="color: #0000FF;">[</span><span style="color: #000000;">sidx</span><span style="color: #0000FF;">..</span><span style="color: #000000;">sidx</span><span style="color: #0000FF;">]</span>
+     <span style="color: #000000;">nxtch</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">return</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">Match</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">t</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">token</span><span style="color: #0000FF;">!=</span><span style="color: #000000;">t</span> <span style="color: #008080;">then</span> <span style="color: #000000;">err</span><span style="color: #0000FF;">(</span><span style="color: #000000;">t</span><span style="color: #0000FF;">&</span><span style="color: #008000;">" expected"</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #000000;">get_token</span><span style="color: #0000FF;">()</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">PopFactor</span><span style="color: #0000FF;">()</span>
+     <span style="color: #004080;">object</span> <span style="color: #000000;">p1</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">p2</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">opstack</span><span style="color: #0000FF;">[$]</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">op</span><span style="color: #0000FF;">=</span><span style="color: #008000;">"u-"</span> <span style="color: #008080;">then</span>
+         <span style="color: #000000;">p1</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+     <span style="color: #008080;">else</span>
+         <span style="color: #000000;">opstack</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">opstack</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">..$-</span><span style="color: #000000;">1</span><span style="color: #0000FF;">]</span>
+         <span style="color: #000000;">p1</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">opstack</span><span style="color: #0000FF;">[$]</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">op_p_p</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">then</span>
+         <span style="color: #000000;">opstack</span><span style="color: #0000FF;">[$]</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">op</span><span style="color: #0000FF;">,</span><span style="color: #000000;">p1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">p2</span><span style="color: #0000FF;">}</span>  <span style="color: #000080;font-style:italic;">-- op_p_p</span>
+     <span style="color: #008080;">elsif</span> <span style="color: #000000;">op_p_p</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span>
+         <span style="color: #000000;">opstack</span><span style="color: #0000FF;">[$]</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">p1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">op</span><span style="color: #0000FF;">,</span><span style="color: #000000;">p2</span><span style="color: #0000FF;">}</span>  <span style="color: #000080;font-style:italic;">-- p_op_p</span>
+     <span style="color: #008080;">else</span> <span style="color: #000080;font-style:italic;">-- -1</span>
+         <span style="color: #000000;">opstack</span><span style="color: #0000FF;">[$]</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">p1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">p2</span><span style="color: #0000FF;">,</span><span style="color: #000000;">op</span><span style="color: #0000FF;">}</span>  <span style="color: #000080;font-style:italic;">-- p_p_op</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #000000;">op</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">PushFactor</span><span style="color: #0000FF;">(</span><span style="color: #004080;">atom</span> <span style="color: #000000;">t</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">op</span><span style="color: #0000FF;">!=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #000000;">PopFactor</span><span style="color: #0000FF;">()</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #000000;">opstack</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">append</span><span style="color: #0000FF;">(</span><span style="color: #000000;">opstack</span><span style="color: #0000FF;">,</span><span style="color: #000000;">t</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">PushOp</span><span style="color: #0000FF;">(</span><span style="color: #004080;">string</span> <span style="color: #000000;">t</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">op</span><span style="color: #0000FF;">!=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #000000;">PopFactor</span><span style="color: #0000FF;">()</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #000000;">op</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">t</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">forward</span> <span style="color: #008080;">procedure</span> <span style="color: #000000;">Expr</span><span style="color: #0000FF;">(</span><span style="color: #004080;">integer</span> <span style="color: #000000;">p</span><span style="color: #0000FF;">)</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">Factor</span><span style="color: #0000FF;">()</span>
+     <span style="color: #008080;">if</span> <span style="color: #004080;">atom</span><span style="color: #0000FF;">(</span><span style="color: #000000;">token</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span>
+         <span style="color: #000000;">PushFactor</span><span style="color: #0000FF;">(</span><span style="color: #000000;">token</span><span style="color: #0000FF;">)</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">ch</span><span style="color: #0000FF;">!=-</span><span style="color: #000000;">1</span> <span style="color: #008080;">then</span>
+             <span style="color: #000000;">get_token</span><span style="color: #0000FF;">()</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">elsif</span> <span style="color: #000000;">token</span><span style="color: #0000FF;">=</span><span style="color: #008000;">"+"</span> <span style="color: #008080;">then</span> <span style="color: #000080;font-style:italic;">-- (ignore)</span>
+         <span style="color: #000000;">nxtch</span><span style="color: #0000FF;">()</span>
+         <span style="color: #000000;">Factor</span><span style="color: #0000FF;">()</span>
+     <span style="color: #008080;">elsif</span> <span style="color: #000000;">token</span><span style="color: #0000FF;">=</span><span style="color: #008000;">"-"</span> <span style="color: #008080;">then</span>
+         <span style="color: #000000;">get_token</span><span style="color: #0000FF;">()</span>
+ <span style="color: #000080;font-style:italic;">--      Factor()</span>
+         <span style="color: #000000;">Expr</span><span style="color: #0000FF;">(</span><span style="color: #000000;">3</span><span style="color: #0000FF;">)</span> <span style="color: #000080;font-style:italic;">-- makes "-3^2" yield -9 (ie -(3^2)) not 9 (ie (-3)^2).</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">op</span><span style="color: #0000FF;">!=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #000000;">PopFactor</span><span style="color: #0000FF;">()</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #008080;">if</span> <span style="color: #004080;">integer</span><span style="color: #0000FF;">(</span><span style="color: #000000;">opstack</span><span style="color: #0000FF;">[$])</span> <span style="color: #008080;">then</span>
+             <span style="color: #000000;">opstack</span><span style="color: #0000FF;">[$]</span> <span style="color: #0000FF;">=</span> <span style="color: #0000FF;">-</span><span style="color: #000000;">opstack</span><span style="color: #0000FF;">[$]</span>
+         <span style="color: #008080;">else</span>
+             <span style="color: #000000;">PushOp</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"u-"</span><span style="color: #0000FF;">)</span>
+         <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">elsif</span> <span style="color: #000000;">token</span><span style="color: #0000FF;">=</span><span style="color: #008000;">"("</span> <span style="color: #008080;">then</span>
+         <span style="color: #000000;">get_token</span><span style="color: #0000FF;">()</span>
+         <span style="color: #000000;">Expr</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+         <span style="color: #000000;">Match</span><span style="color: #0000FF;">(</span><span style="color: #008000;">")"</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">else</span>
+         <span style="color: #000000;">err</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"syntax error"</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">constant</span> <span style="color: #0000FF;">{</span><span style="color: #000000;">operators</span><span style="color: #0000FF;">,</span>
+           <span style="color: #000000;">precedence</span><span style="color: #0000FF;">,</span>
+           <span style="color: #000000;">associativity</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">columnize</span><span style="color: #0000FF;">({{</span><span style="color: #008000;">"^"</span><span style="color: #0000FF;">,</span><span style="color: #000000;">3</span><span style="color: #0000FF;">,</span><span style="color: #000000;">0</span><span style="color: #0000FF;">},</span>
+                                       <span style="color: #0000FF;">{</span><span style="color: #008000;">"%"</span><span style="color: #0000FF;">,</span><span style="color: #000000;">2</span><span style="color: #0000FF;">,</span><span style="color: #000000;">1</span><span style="color: #0000FF;">},</span>
+                                       <span style="color: #0000FF;">{</span><span style="color: #008000;">"*"</span><span style="color: #0000FF;">,</span><span style="color: #000000;">2</span><span style="color: #0000FF;">,</span><span style="color: #000000;">1</span><span style="color: #0000FF;">},</span>
+                                       <span style="color: #0000FF;">{</span><span style="color: #008000;">"/"</span><span style="color: #0000FF;">,</span><span style="color: #000000;">2</span><span style="color: #0000FF;">,</span><span style="color: #000000;">1</span><span style="color: #0000FF;">},</span>
+                                       <span style="color: #0000FF;">{</span><span style="color: #008000;">"+"</span><span style="color: #0000FF;">,</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">1</span><span style="color: #0000FF;">},</span>
+                                       <span style="color: #0000FF;">{</span><span style="color: #008000;">"-"</span><span style="color: #0000FF;">,</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #000000;">1</span><span style="color: #0000FF;">},</span>
+                                       <span style="color: #0000FF;">$})</span>
+
+ <span style="color: #008080;">procedure</span> <span style="color: #000000;">Expr</span><span style="color: #0000FF;">(</span><span style="color: #004080;">integer</span> <span style="color: #000000;">p</span><span style="color: #0000FF;">)</span>
+ <span style="color: #000080;font-style:italic;">--
+ -- Parse an expression, using precedence climbing.
+ --
+ -- p is the precedence level we should parse to, eg/ie
+ --      4: Factor only (may as well just call Factor)
+ --      3: "" and ^
+ --      2: "" and *,/,%
+ --      1: "" and +,-
+ --      0: full expression (effectively the same as 1)
+ --  obviously, parentheses override any setting of p.
+ --</span>
+ <span style="color: #004080;">integer</span> <span style="color: #000000;">k</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">thisp</span>
+     <span style="color: #000000;">Factor</span><span style="color: #0000FF;">()</span>
+     <span style="color: #008080;">while</span> <span style="color: #000000;">1</span> <span style="color: #008080;">do</span>
+         <span style="color: #000000;">k</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">find</span><span style="color: #0000FF;">(</span><span style="color: #000000;">token</span><span style="color: #0000FF;">,</span><span style="color: #000000;">operators</span><span style="color: #0000FF;">)</span> <span style="color: #000080;font-style:italic;">-- *,/,+,-</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">k</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #008080;">exit</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #000000;">thisp</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">precedence</span><span style="color: #0000FF;">[</span><span style="color: #000000;">k</span><span style="color: #0000FF;">]</span>
+         <span style="color: #008080;">if</span> <span style="color: #000000;">thisp</span><span style="color: #0000FF;"><</span><span style="color: #000000;">p</span> <span style="color: #008080;">then</span> <span style="color: #008080;">exit</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+         <span style="color: #000000;">get_token</span><span style="color: #0000FF;">()</span>
+         <span style="color: #000000;">Expr</span><span style="color: #0000FF;">(</span><span style="color: #000000;">thisp</span><span style="color: #0000FF;">+</span><span style="color: #000000;">associativity</span><span style="color: #0000FF;">[</span><span style="color: #000000;">k</span><span style="color: #0000FF;">])</span>
+         <span style="color: #000000;">PushOp</span><span style="color: #0000FF;">(</span><span style="color: #000000;">operators</span><span style="color: #0000FF;">[</span><span style="color: #000000;">k</span><span style="color: #0000FF;">])</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">while</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">procedure</span>
+
+ <span style="color: #008080;">function</span> <span style="color: #000000;">evaluate</span><span style="color: #0000FF;">(</span><span style="color: #004080;">object</span> <span style="color: #000000;">s</span><span style="color: #0000FF;">)</span>
+ <span style="color: #004080;">object</span> <span style="color: #000000;">lhs</span><span style="color: #0000FF;">,</span> <span style="color: #000000;">rhs</span>
+ <span style="color: #004080;">string</span> <span style="color: #000000;">op</span>
+     <span style="color: #008080;">if</span> <span style="color: #004080;">atom</span><span style="color: #0000FF;">(</span><span style="color: #000000;">s</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span>
+         <span style="color: #008080;">return</span> <span style="color: #000000;">s</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">op_p_p</span><span style="color: #0000FF;">=</span><span style="color: #000000;">1</span> <span style="color: #008080;">then</span>            <span style="color: #000080;font-style:italic;">-- op_p_p</span>
+         <span style="color: #0000FF;">{</span><span style="color: #000000;">op</span><span style="color: #0000FF;">,</span><span style="color: #000000;">lhs</span><span style="color: #0000FF;">,</span><span style="color: #000000;">rhs</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">s</span>
+     <span style="color: #008080;">elsif</span> <span style="color: #000000;">op_p_p</span><span style="color: #0000FF;">=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span>         <span style="color: #000080;font-style:italic;">-- p_op_p</span>
+         <span style="color: #0000FF;">{</span><span style="color: #000000;">lhs</span><span style="color: #0000FF;">,</span><span style="color: #000000;">op</span><span style="color: #0000FF;">,</span><span style="color: #000000;">rhs</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">s</span>
+     <span style="color: #008080;">else</span> <span style="color: #000080;font-style:italic;">-- -1                  -- p_p_op</span>
+         <span style="color: #0000FF;">{</span><span style="color: #000000;">lhs</span><span style="color: #0000FF;">,</span><span style="color: #000000;">rhs</span><span style="color: #0000FF;">,</span><span style="color: #000000;">op</span><span style="color: #0000FF;">}</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">s</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">if</span> <span style="color: #004080;">sequence</span><span style="color: #0000FF;">(</span><span style="color: #000000;">lhs</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span> <span style="color: #000000;">lhs</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">evaluate</span><span style="color: #0000FF;">(</span><span style="color: #000000;">lhs</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">if</span> <span style="color: #004080;">sequence</span><span style="color: #0000FF;">(</span><span style="color: #000000;">rhs</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">then</span> <span style="color: #000000;">rhs</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">evaluate</span><span style="color: #0000FF;">(</span><span style="color: #000000;">rhs</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+     <span style="color: #008080;">if</span> <span style="color: #000000;">op</span><span style="color: #0000FF;">=</span><span style="color: #008000;">"+"</span> <span style="color: #008080;">then</span>
+         <span style="color: #008080;">return</span> <span style="color: #000000;">lhs</span><span style="color: #0000FF;">+</span><span style="color: #000000;">rhs</span>
+     <span style="color: #008080;">elsif</span> <span style="color: #000000;">op</span><span style="color: #0000FF;">=</span><span style="color: #008000;">"-"</span> <span style="color: #008080;">then</span>
+         <span style="color: #008080;">return</span> <span style="color: #000000;">lhs</span><span style="color: #0000FF;">-</span><span style="color: #000000;">rhs</span>
+     <span style="color: #008080;">elsif</span> <span style="color: #000000;">op</span><span style="color: #0000FF;">=</span><span style="color: #008000;">"*"</span> <span style="color: #008080;">then</span>
+         <span style="color: #008080;">return</span> <span style="color: #000000;">lhs</span><span style="color: #0000FF;">*</span><span style="color: #000000;">rhs</span>
+     <span style="color: #008080;">elsif</span> <span style="color: #000000;">op</span><span style="color: #0000FF;">=</span><span style="color: #008000;">"/"</span> <span style="color: #008080;">then</span>
+         <span style="color: #008080;">return</span> <span style="color: #000000;">lhs</span><span style="color: #0000FF;">/</span><span style="color: #000000;">rhs</span>
+     <span style="color: #008080;">elsif</span> <span style="color: #000000;">op</span><span style="color: #0000FF;">=</span><span style="color: #008000;">"^"</span> <span style="color: #008080;">then</span>
+         <span style="color: #008080;">return</span> <span style="color: #7060A8;">power</span><span style="color: #0000FF;">(</span><span style="color: #000000;">lhs</span><span style="color: #0000FF;">,</span><span style="color: #000000;">rhs</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">elsif</span> <span style="color: #000000;">op</span><span style="color: #0000FF;">=</span><span style="color: #008000;">"%"</span> <span style="color: #008080;">then</span>
+         <span style="color: #008080;">return</span> <span style="color: #7060A8;">remainder</span><span style="color: #0000FF;">(</span><span style="color: #000000;">lhs</span><span style="color: #0000FF;">,</span><span style="color: #000000;">rhs</span><span style="color: #0000FF;">)</span>
+     <span style="color: #008080;">elsif</span> <span style="color: #000000;">op</span><span style="color: #0000FF;">=</span><span style="color: #008000;">"u-"</span> <span style="color: #008080;">then</span>
+         <span style="color: #008080;">return</span> <span style="color: #0000FF;">-</span><span style="color: #000000;">rhs</span>
+     <span style="color: #008080;">else</span>
+         <span style="color: #0000FF;">?</span><span style="color: #000000;">9</span><span style="color: #0000FF;">/</span><span style="color: #000000;">0</span>
+     <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #008080;">end</span> <span style="color: #008080;">function</span>
+
+ <span style="color: #000000;">s</span> <span style="color: #0000FF;">=</span> <span style="color: #008000;">"3+4+5+6*7/1*5^2^3"</span>     <span style="color: #000080;font-style:italic;">-- 16406262</span>
+ <span style="color: #000000;">sidx</span> <span style="color: #0000FF;">=</span> <span style="color: #000000;">0</span>
+ <span style="color: #000000;">nxtch</span><span style="color: #0000FF;">()</span>
+ <span style="color: #000000;">get_token</span><span style="color: #0000FF;">()</span>
+ <span style="color: #000000;">Expr</span><span style="color: #0000FF;">(</span><span style="color: #000000;">0</span><span style="color: #0000FF;">)</span>
+ <span style="color: #008080;">if</span> <span style="color: #000000;">op</span><span style="color: #0000FF;">!=</span><span style="color: #000000;">0</span> <span style="color: #008080;">then</span> <span style="color: #000000;">PopFactor</span><span style="color: #0000FF;">()</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #008080;">if</span> <span style="color: #7060A8;">length</span><span style="color: #0000FF;">(</span><span style="color: #000000;">opstack</span><span style="color: #0000FF;">)!=</span><span style="color: #000000;">1</span> <span style="color: #008080;">then</span> <span style="color: #000000;">err</span><span style="color: #0000FF;">(</span><span style="color: #008000;">"some error"</span><span style="color: #0000FF;">)</span> <span style="color: #008080;">end</span> <span style="color: #008080;">if</span>
+ <span style="color: #7060A8;">printf</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"expression: \"%s\"\n"</span><span style="color: #0000FF;">,{</span><span style="color: #000000;">s</span><span style="color: #0000FF;">})</span>
+ <span style="color: #7060A8;">puts</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"AST (flat): "</span><span style="color: #0000FF;">)</span>
+ <span style="color: #0000FF;">?</span><span style="color: #000000;">opstack</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">]</span>
+ <span style="color: #7060A8;">puts</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"AST (tree):\n"</span><span style="color: #0000FF;">)</span>
+ <span style="color: #7060A8;">ppEx</span><span style="color: #0000FF;">(</span><span style="color: #000000;">opstack</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">],{</span><span style="color: #004600;">pp_Nest</span><span style="color: #0000FF;">,</span><span style="color: #000000;">9999</span><span style="color: #0000FF;">})</span>
+ <span style="color: #7060A8;">puts</span><span style="color: #0000FF;">(</span><span style="color: #000000;">1</span><span style="color: #0000FF;">,</span><span style="color: #008000;">"result: "</span><span style="color: #0000FF;">)</span>
+ <span style="color: #0000FF;">?</span><span style="color: #000000;">evaluate</span><span style="color: #0000FF;">(</span><span style="color: #000000;">opstack</span><span style="color: #0000FF;">[</span><span style="color: #000000;">1</span><span style="color: #0000FF;">])</span>
+ <span style="color: #0000FF;">{}</span> <span style="color: #0000FF;">=</span> <span style="color: #7060A8;">wait_key</span><span style="color: #0000FF;">()</span>
+<!--

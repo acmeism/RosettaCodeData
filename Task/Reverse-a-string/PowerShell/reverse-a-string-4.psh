@@ -1,0 +1,1 @@
+[array]::Reverse($s)

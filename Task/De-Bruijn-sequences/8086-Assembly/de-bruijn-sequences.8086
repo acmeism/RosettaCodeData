@@ -1,0 +1,200 @@
+putch:	equ	2	; Print character
+puts:	equ	9	; Print string
+	cpu	8086
+	bits	16
+section	.text
+	org	100h
+	;;;	Calculate de_bruijn(10, 4) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	xor	ax,ax		; zero a[]
+	mov	di,arr
+	mov	cx,20		; 20 words = 40 bytes
+	rep	stosw
+	mov	di,seq		; start of sequence
+	mov	dx,0101h	; db(1,1)
+	call	db_
+	mov	si,seq		; Add first 3 to end for wrapping
+	mov	cx,3
+	rep	movsb
+	lea	bp,[di-1]	; Store pointer to last digit in BP
+	;;;	Print length ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	mov	ah,puts		; Print "Length:"
+	mov	dx,slen
+	int	21h
+	mov	ax,di		; Length = end - start
+	sub	ax,seq
+	call	putax		; Print length
+	;;;	Print first and last 130 characters and verify ;;;;;;;;;;;;;;;;
+	mov	ah,puts		; Print "First 130..."
+	mov	dx,sfrst
+	int	21h
+	mov	si,seq		; print first 130 digits
+	call	p130
+	mov	ah,puts		; Print "Last 130..."
+	mov	dx,slast
+	int 	21h
+	mov	si,di		; print last 130 digit
+	sub	si,130
+	call	p130
+	call	verify
+	;;;;	Reverse the sequence and verify ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	mov	ah,puts		; Print "Reversing..."
+	mov	dx,srev
+	int	21h
+	mov	si,seq		; SI = first digit in sequence
+	mov	di,bp		; DI = last digit in sequence
+	call	rvrs		; Reverse
+	call	verify		; Verify
+	mov	si,seq		; Reverse again, putting it back
+	mov	di,bp
+	call	rvrs
+	;;;	Set seq[4444] to '.' and verify ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	mov	ah,puts		; Print "set seq[4444] to '.'"
+	mov	dx,s4444
+	int	21h
+	mov	[seq+4444],byte '.'
+	call	verify		; Verify
+	ret
+	;;;	db(t, p); t=dh p=dl, di=seq ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+db_:	cmp	dh,4		; t>n? (n=4)
+	jbe	.els
+	cmp	dl,3		; for p in {1,2,3,4}, 4%p==0 iff p=3
+	je	.out
+	mov	si,arr+1	; add DL=P bytes from a[1..] to sequence
+	mov	cl,dl
+	xor 	ch,ch
+	rep	movsb
+	jmp	.out
+.els:	xor	bh,bh
+	mov	bl,dh
+	sub	bl,dl		; t - p
+	mov	al,[arr+bx]	; al = a[t-p]
+	mov	bl,dh		; t
+	mov	[arr+bx],al	; a[t] = al
+	push	dx		; keep arguments
+	inc	dh		; db(++t,p)
+	call	db_			
+	pop	dx		; restore arguments
+	mov	bl,dh		; al = a[t-p]
+	sub	bl,dl
+	mov	al,[arr+bx]
+.loop:	inc	al		; al++
+	cmp	al,10		; when al>=k,
+	jae	.out		; then stop.
+	mov	bl,dh
+	mov	[arr+bx],al	; a[t] = j
+	push	ax		; keep state
+	push	dx
+	mov	dl,dh		; db(t+1, t)
+	inc	dh
+	call	db_
+	pop	dx
+	pop	ax
+	jmp	.loop
+.out:	ret
+	;;;	Verify that all numbers are there ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+verify:	mov	ah,puts		; Print "verifying..."
+	mov	dx,sver
+	int	21h
+	mov	di,val		; Zero validation array
+	mov	cx,5000		; 10000 bytes = 5000 words
+	xor	ax,ax
+	rep	stosw
+	mov	di,val
+	mov	si,seq		; Pointer to start of sequence
+	mov	cx,6409h	; CH=100 (multiplier), CL=9 (highest digit)
+.num:	mov	ax,[si]		; Read first two digits
+	cmp	ah,cl		; Check that they are valid
+	ja	.inval
+	cmp	al,cl
+	ja	.inval
+	xchg	al,ah		; High digit * 10 + low digit
+	aad
+	mul	ch		; Multiply by 100 (to add in next two)
+	mov	bx,ax
+	mov	ax,[si+2]	; Read last two digits
+	cmp	ah,cl		; Check that they are valid
+	ja	.inval
+	cmp	al,cl
+	ja	.inval
+	xchg	al,ah		; High digit * 10 + low digit
+	aad
+	add	bx,ax		; BX = final 4-digit number
+	inc	byte [di+bx]	; Mark this 4-digit number as seen
+.inval:	inc	si		; Next digit
+	cmp	si,seq+10000	; Are we at the end yet?
+	jne	.num		; If not, do next number
+	mov	si,val		; For each number < 10000, check if it's there
+	xor	cl,cl		; Will be set if a number is missing
+.test:	lodsb			; Do we have this number?
+	test	al,al
+	jnz	.tnext		; If so, try next number
+	mov	ax,si		; Otherwise, print the missing number
+	sub	ax,val
+	call	putax
+	mov	cl,1		; And set CL
+.tnext:	cmp	si,val+10000	; Are we at the end yet?
+	jne	.test
+	test	cl,cl
+	mov	dx,smiss	; Print "... missing"
+	jnz	.print		; if CL is set
+	mov	dx,snone	; or "none missing" otherwise.
+.print:	mov	ah,puts
+	int	21h
+	ret
+	;;;	Subroutines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Print number in AX
+putax:	push	ax		; Keep registers we're changing
+	push	dx		
+	push	bx
+	push	di
+	mov	di,numbuf	; Pointer to number buffer
+	mov	bx,10		; Divisor
+.digit:	xor	dx,dx		; Divide AX by 10
+	div	bx
+	add	dl,'0'		; Add '0' to remainder (digit)
+	dec	di		; Store digit in buffer
+	mov	[di],dl
+	test	ax,ax		; Any more digits?
+	jnz	.digit		; If so, do next digits
+	mov	dx,di		; At the end, print the string
+	mov	ah,puts
+	int	21h
+	pop	di		; Restore registers
+	pop	bx
+	pop	dx
+	pop	ax
+	ret
+	;;;	Print 130 digits starting at SI
+p130:	mov	cx,130		; 130 characters
+	mov	ah,putch	; Print characters
+.loop:	lodsb			; Get digit
+	add	al,'0'		; Make ASCII
+	mov	dl,al		; Print digit
+	int	21h
+	loop 	.loop
+	ret
+	;;;	Reverse memory starting at SI and ending at DI
+rvrs:	mov	al,[si]		; Load [SI],
+	mov	ah,[di]		; Load [DI],
+	mov	[di],al		; Set [DI] = old [SI]
+	mov	[si],ah		; Set [SI] = old [DI]
+	inc	si		; Increment bottom pointer
+	dec	di		; Decrement top pointer
+	cmp	si,di		; If SI >= DI, we're done
+	jb	rvrs
+	ret
+section	.data
+slen:	db	'Length: $'
+sfrst:	db	13,10,'First 130: $'
+slast:	db	13,10,'Last 130: $'
+srev:	db	13,10,'Reversing... $'
+s4444:	db	13,10,'Set seq[4444] to `.`...$'
+sver:	db	13,10,'Verifying... $'
+snone:	db	'none '
+smiss:	db	'missing.$'
+	db	'00000'
+numbuf:	db	' $'
+section	.bss
+arr:	resb	40		; a[]
+val:	resb	10000		; validation array
+seq:	equ	$

@@ -1,0 +1,18 @@
+SUB establecePixel (x AS INTEGER, y AS INTEGER, c AS INTEGER)
+    PSET (x, y), cyan
+END SUB
+
+SUB rellenar (c AS INTEGER)
+    SHARED w, h
+    LINE (0, 0)-(w / 3, h / 3), red, BF
+END SUB
+
+SCREEN 13
+w = 320: h = 200
+CONST cyan = 3, red = 4
+
+rellenar (12)
+CALL establecePixel(10, 10, cyan)
+LOCATE 12
+PRINT "pixel 10,10 is "; POINT(10, 10)
+PRINT "pixel 20,20 is "; POINT(20, 10)

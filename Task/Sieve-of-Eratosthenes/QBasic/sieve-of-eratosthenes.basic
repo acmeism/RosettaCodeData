@@ -1,0 +1,19 @@
+limit = 120
+
+DIM flags(limit)
+FOR n = 2 TO limit
+    flags(n) = 1
+NEXT n
+
+PRINT "Prime numbers less than or equal to "; limit; " are: "
+FOR n = 2 TO SQR(limit)
+    IF flags(n) = 1 THEN
+        FOR i = n * n TO limit STEP n
+            flags(i) = 0
+    NEXT i
+    END IF
+NEXT n
+
+FOR n = 1 TO limit
+    IF flags(n) THEN PRINT USING "####"; n;
+NEXT n

@@ -1,0 +1,217 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program inputXml64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+/* program constantes    */
+.equ XML_ELEMENT_NODE,          1
+.equ    XML_ATTRIBUTE_NODE,     2
+ .equ   XML_TEXT_NODE,          3
+.equ    XML_CDATA_SECTION_NODE, 4
+.equ    XML_ENTITY_REF_NODE,    5
+.equ    XML_ENTITY_NODE,        6
+.equ    XML_PI_NODE,            7
+.equ    XML_COMMENT_NODE,       8
+.equ    XML_DOCUMENT_NODE,      9
+.equ    XML_DOCUMENT_TYPE_NODE, 10
+.equ    XML_DOCUMENT_FRAG_NODE, 11
+.equ    XML_NOTATION_NODE,      12
+.equ    XML_HTML_DOCUMENT_NODE, 13
+.equ    XML_DTD_NODE,           14
+.equ    XML_ELEMENT_DECL,       15
+.equ    XML_ATTRIBUTE_DECL,     16
+.equ    XML_ENTITY_DECL,        17
+.equ    XML_NAMESPACE_DECL,     18
+.equ    XML_XINCLUDE_START,     19
+.equ    XML_XINCLUDE_END,       20
+.equ    XML_DOCB_DOCUMENT_NODE, 21
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure xmlNode  */
+    .struct  0
+xmlNode_private:                         // application data
+    .struct  xmlNode_private + 8
+xmlNode_type:                            // type number, must be second !
+    .struct  xmlNode_type + 8
+xmlNode_name:                            // the name of the node, or the entity
+    .struct  xmlNode_name + 8
+xmlNode_children:                        // parent->childs link
+    .struct  xmlNode_children + 8
+xmlNode_last:                            // last child link
+    .struct  xmlNode_last + 8
+xmlNode_parent:                          // child->parent link
+    .struct  xmlNode_parent + 8
+xmlNode_next:                            // next sibling link
+    .struct  xmlNode_next + 8
+xmlNode_prev:                            // previous sibling link
+    .struct  xmlNode_prev + 8
+xmlNode_doc:                             // the containing document
+    .struct  xmlNode_doc + 8
+xmlNode_ns:                              // pointer to the associated namespace
+    .struct  xmlNode_ns + 8
+xmlNode_content:                         // the content
+    .struct  xmlNode_content + 8
+xmlNode_properties:                      // properties list
+    .struct  xmlNode_properties + 8
+xmlNode_nsDef:                           // namespace definitions on this node
+    .struct  xmlNode_nsDef + 8
+xmlNode_psvi:                            // for type/PSVI informations
+    .struct  xmlNode_psvi + 8
+xmlNode_line:                            // line number
+    .struct  xmlNode_line + 4
+xmlNode_extra:                           // extra data for XPath/XSLT
+    .struct  xmlNode_extra + 4
+xmlNode_fin:
+
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessEndpgm:      .asciz "Normal end of program.\n"
+szMessError:       .asciz "Error detected !!!!. \n"
+szText:            .ascii "<Students>\n"
+                   .ascii "<Student Name=\"April\" Gender=\"F\" DateOfBirth=\"1989-01-02\" />\n"
+                   .ascii "<Student Name=\"Bob\" Gender=\"M\"  DateOfBirth=\"1990-03-04\" />\n"
+                   .ascii "<Student Name=\"Chad\" Gender=\"M\"  DateOfBirth=\"1991-05-06\" />\n"
+                   .ascii "<Student Name=\"Dave\" Gender=\"M\"  DateOfBirth=\"1992-07-08\">\n"
+                   .ascii "<Pet Type=\"dog\" Name=\"Rover\" />\n"
+                   .ascii "</Student>\n"
+                   .ascii "<Student DateOfBirth=\"1993-09-10\" Gender=\"F\" Name=\"&#x00C9;mily\" />\n"
+                   .asciz "</Students>"
+.equ LGSZTEXT,   . - szText            // compute text size (. is current address)
+
+szLibExtract:      .asciz "Student"
+szLibName:         .asciz "Name"
+szCarriageReturn:  .asciz "\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                     // entry of program
+    ldr x0,qAdrszText                     // text buffer
+    mov x1,#LGSZTEXT                      // text size
+    mov x2,#0                             // param 3
+    mov x3,#0                             // param 4
+    mov x4,#0                             // param 5
+    bl xmlReadMemory                      // read text in document
+    cmp x0,#0                             // error ?
+    beq 99f
+    mov x19,x0                            // doc address
+    mov x0,x19
+    bl xmlDocGetRootElement               // search root return in x0
+    bl affElement                         // display elements
+    mov x0,x19
+    bl xmlFreeDoc
+
+    bl xmlCleanupParser
+    ldr x0,qAdrszMessEndpgm
+    bl affichageMess
+    b 100f
+99:                                        // error
+    ldr x0,qAdrszMessError
+    bl affichageMess
+100:                                       // standard end of the program
+    mov x0,0                               // return code
+    mov x8,EXIT                            // request to exit program
+    svc 0                                  // perform the system call
+
+qAdrszMessError:          .quad szMessError
+qAdrszMessEndpgm:         .quad szMessEndpgm
+qAdrszText:               .quad szText
+qAdrszCarriageReturn:     .quad szCarriageReturn
+
+/******************************************************************/
+/*     display name of student                             */
+/******************************************************************/
+/* x0 contains the address of node */
+affElement:
+    stp x24,lr,[sp,-16]!               // save  registers
+    mov x24,x0                         // save node
+1:
+    ldr x12,[x24,#xmlNode_type]         // type ?
+    cmp x12,#XML_ELEMENT_NODE
+    bne 2f
+    ldr x0,[x24,#xmlNode_name]         // name = "Student" ?
+    ldr x1,qAdrszLibExtract
+    bl comparString
+    cmp x0,#0
+    bne 2f                            // no
+    mov x0,x24
+    ldr x1,qAdrszLibName              // load property of "Name"
+    bl xmlHasProp
+    cmp x0,#0
+    beq 2f
+    ldr x1,[x0,#xmlNode_children]     // children node of property name
+    ldr x0,[x1,#xmlNode_content]      // and address of content
+    bl affichageMess                  // for display
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+2:
+    ldr x0,[x24,#xmlNode_children]     // node have children ?
+    cbz x0,3f
+    bl affElement                   // yes -> call procedure
+3:
+    ldr x1,[x24,#xmlNode_next]         // other element ?
+    cmp x1,#0
+    beq 100f                          // no -> end procedure
+
+    mov x24,x1                         // else loop with next element
+    b 1b
+
+100:
+    ldp x24,lr,[sp],16                 // restaur  2 registers
+    ret                               // return to address lr x30
+qAdrszLibName:              .quad szLibName
+qAdrszLibExtract:           .quad szLibExtract
+/************************************/
+/* Strings comparaison              */
+/************************************/
+/* x0 et x1 contains strings addresses */
+/* x0 return 0 dans x0 if equal */
+/* return -1 if string x0 < string x1 */
+/* return 1  if string x0 > string x1 */
+comparString:
+    stp x2,lr,[sp,-16]!            // save  registers
+    stp x3,x4,[sp,-16]!            // save  registers
+    mov x2,#0                   // indice
+1:
+    ldrb w3,[x0,x2]             // one byte string 1
+    ldrb w4,[x1,x2]             // one byte string 2
+    cmp w3,w4
+    blt 2f                      // less
+    bgt 3f                      // greather
+    cmp w3,#0                   // 0 final
+    beq 4f                      // equal and end
+    add x2,x2,#1                //
+    b 1b                        // else loop
+2:
+    mov x0,#-1                  // less
+    b 100f
+3:
+    mov x0,#1                   // greather
+    b 100f
+4:
+    mov x0,#0                   // equal
+    b 100f
+100:
+    ldp x3,x4,[sp],16           // restaur  2 registers
+    ldp x2,lr,[sp],16           // restaur  2 registers
+    ret                         // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

@@ -1,0 +1,2 @@
+PRINT "a - > "; ASC("a")
+PRINT "98 -> "; CHR$(98)

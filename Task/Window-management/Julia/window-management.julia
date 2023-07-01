@@ -1,0 +1,43 @@
+using Gtk
+
+function controlwindow(win, lab)
+    sleep(4)
+    set_gtk_property!(lab, :label, "Hiding...")
+    sleep(1)
+    println("Hiding widow")
+    set_gtk_property!(win, :visible, false)
+    sleep(5)
+    set_gtk_property!(lab, :label, "Showing...")
+    println("Showing window")
+    set_gtk_property!(win, :visible, true)
+    sleep(5)
+    set_gtk_property!(lab, :label, "Resizing...")
+    println("Resizing window")
+    resize!(win, 300, 300)
+    sleep(4)
+    set_gtk_property!(lab, :label, "Maximizing...")
+    println("Maximizing window")
+    sleep(1)
+    maximize(win)
+    set_gtk_property!(lab, :label, "Closing...")
+    sleep(5)
+    println("Closing window")
+    destroy(win)
+    sleep(2)
+    exit(0)
+end
+
+function runwindow()
+    win = GtkWindow("Window Control Test", 500, 30) |> (GtkFrame() |> (vbox = GtkBox(:v)))
+    lab = GtkLabel("Window under external control")
+    push!(vbox, lab)
+    @async(controlwindow(win, lab))
+
+    cond = Condition()
+    endit(w) = notify(cond)
+    signal_connect(endit, win, :destroy)
+    showall(win)
+    wait(cond)
+end
+
+runwindow()

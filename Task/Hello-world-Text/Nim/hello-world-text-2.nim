@@ -1,0 +1,1 @@
+stdout.writeLine("Hello World!")

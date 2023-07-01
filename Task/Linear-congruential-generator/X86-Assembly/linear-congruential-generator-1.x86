@@ -1,0 +1,188 @@
+;x86-64 assembly code for Microsoft Windows
+;Tested in windows 7 Enterprise Service Pack 1 64 bit
+;With the AMD FX(tm)-6300 processor
+;Assembled with NASM version 2.11.06
+;Linked to C library with gcc version 4.9.2 (x86_64-win32-seh-rev1, Built by MinGW-W64 project)
+
+;Assembled and linked with the following commands:
+;nasm -f win64 <filename>.asm -o <filename>.obj
+;gcc <filename>.obj -o <filename>
+
+;Takes number of iterations to run RNG loop as command line parameter.
+
+extern printf,puts,atoi,exit,time,malloc
+
+section .data
+align 64
+errmsg_argnumber: db "There should be no more than one argument.",0
+align 64
+errmsg_noarg: db "Number of iterations was not specified.",0
+align 64
+errmsg_zeroiterations: db "Zero iterations of RNG loop specified.",0
+
+align 64
+errmsg_timefail: db "Unable to retrieve calender time.",0
+align 64
+errmsg_mallocfail: db "Unable to allocate memory for array of random numbers.",0
+
+align 64
+fmt_random: db "The %u number generated is %d",0xa,0xd,0
+
+section .bss
+
+section .text
+global main
+
+main:
+
+;check for argument
+cmp rcx,1
+jle err_noarg
+
+;ensure that only one argument was entered
+cmp rcx,2
+jg err_argnumber
+
+
+;get number of times to iterate get_random
+mov rcx,[rdx + 8]
+call atoi
+
+
+;ensure that number of iterations is greater than 0
+cmp rax,0
+jle err_zeroiterations
+mov rcx,rax
+
+
+;calculate space needed for an array containing the random numbers
+shl rcx,2
+
+;move size of array into r14
+mov r14,rcx
+
+;reserve memory for array of random numbers with malloc
+call malloc
+
+cmp rax,0
+jz err_mallocfail
+
+;pointer to array in r15
+mov r15,rax
+
+
+;seed the RNG using time()
+xor rcx,rcx
+call time
+
+;ensure that time returns valid output
+cmp rax,-1
+jz err_timefail
+
+;calculate address of end of array in r14
+add r14,r15
+
+
+;pointer to array of random numbers in r15
+;address of end of array in r14
+;current address in array in rdi
+;multiplier in rbx
+;seed in rax
+;current random number in rcx
+
+
+;prepare random number generator
+
+mov rdi,r15
+
+mov rbx,214013
+
+
+get_random:
+
+;multiply by 214013 and add 2561011 to get next state
+mul ebx
+add eax,2531011
+
+;shr by 16 and AND with 0x7FFF to get current random number
+mov ecx,eax
+shr ecx,16
+and ecx,0x7fff
+
+;store random number in array
+mov [rdi],ecx
+
+add rdi,4
+cmp rdi,r14
+jl get_random
+
+
+;pointer to array of random numbers in r15
+;address of end of array in r14
+;current address in array in rdi
+;array index in rsi
+
+
+xor rsi,rsi
+mov rdi,r15
+
+print_random:
+
+mov rcx,fmt_random
+mov rdx,rsi
+mov r8d,[rdi]
+call printf
+
+add rsi,1
+add rdi,4
+cmp rdi,r14
+jl print_random
+
+xor rcx,rcx
+call exit
+
+
+;;;;;;;;;;ERROR MESSAGES;;;;;;;;;;;;;;;;
+
+err_argnumber:
+
+mov rcx,errmsg_argnumber
+call puts
+
+jmp exit_one
+
+
+err_noarg:
+
+mov rcx,errmsg_noarg
+call puts
+
+jmp exit_one
+
+
+err_zeroiterations:
+
+mov rcx,errmsg_zeroiterations
+call puts
+
+jmp exit_one
+
+
+err_timefail:
+
+mov rcx,errmsg_timefail
+call puts
+
+jmp exit_one
+
+
+err_mallocfail:
+
+mov rcx,errmsg_mallocfail
+call puts
+
+
+exit_one:
+
+mov rcx,1
+call exit

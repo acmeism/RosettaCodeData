@@ -1,0 +1,214 @@
+DEFINE BOARDSIZE="16"
+DEFINE X0="13"
+DEFINE Y0="6"
+DEFINE ITEMW="3"
+DEFINE ITEMH="2"
+
+BYTE ARRAY board(BOARDSIZE)
+BYTE emptyX,emptyY,solved,first=[1]
+
+BYTE FUNC Index(BYTE x,y)
+RETURN (x+y*4)
+
+PROC UpdateItem(BYTE x,y)
+  BYTE item
+
+  Position(X0+x*ITEMW+1,Y0+y*ITEMH+1)
+  item=board(Index(x,y))
+  IF item=0 THEN
+    Print("  ")
+  ELSEIF item<10 THEN
+    Put(160) Put(item+176)
+  ELSE
+    Put(item/10+176)
+    Put(item MOD 10+176)
+  FI
+RETURN
+
+PROC UpdateBoard()
+  BYTE x,y
+
+  FOR y=0 TO 3
+  DO
+    FOR x=0 TO 3
+    DO
+      UpdateItem(x,y)
+    OD
+  OD
+RETURN
+
+PROC DrawGrid()
+  CHAR ARRAY
+    top=[13 17 18 18 23 18 18 23 18 18 23 18 18 5],
+    row=[13 124 32 32 124 32 32 124 32 32 124 32 32 124],
+    mid=[13 1 18 18 19 18 18 19 18 18 19 18 18 4],
+    bot=[13 26 18 18 24 18 18 24 18 18 24 18 18 3]
+  BYTE y,i
+
+  y=Y0
+  Position(X0,y) Print(top) y==+1
+  Position(X0,y) Print(row) y==+1
+  FOR i=0 TO 2
+  DO
+    Position(X0,y) Print(mid) y==+1
+    Position(X0,y) Print(row) y==+1
+  OD
+  Position(X0,y) Print(bot)
+RETURN
+
+PROC DrawBoard()
+  DrawGrid()
+  UpdateBoard()
+RETURN
+
+PROC FindEmpty()
+  BYTE i
+
+  FOR i=0 TO BOARDSIZE-1
+  DO
+    IF board(i)=0 THEN
+      emptyX=i MOD 4
+      emptyY=i/4
+    FI
+  OD
+RETURN
+
+PROC Wait(BYTE frames)
+  BYTE RTCLOK=$14
+  frames==+RTCLOK
+  WHILE frames#RTCLOK DO OD
+RETURN
+
+PROC UpdateStatus()
+  Position(9,3) Print("Game status: ")
+  IF solved THEN
+    Print("SOLVED !")
+    IF first=0 THEN
+      Sound(0,100,10,5) Wait(5)
+      Sound(0,60,10,5) Wait(5)
+      Sound(0,40,10,5) Wait(5)
+      Sound(0,0,0,0)
+    FI
+    first=0
+  ELSE
+    Print("Shuffled")
+  FI
+RETURN
+
+PROC InitBoard()
+  BYTE i
+
+  FOR i=1 TO BOARDSIZE
+  DO
+    board(i-1)=i MOD 16
+  OD
+  FindEmpty()
+  solved=1
+  UpdateStatus()
+RETURN
+
+BYTE FUNC IsSolved()
+  BYTE i
+
+  FOR i=1 TO BOARDSIZE
+  DO
+    IF board(i-1)#i MOD 16 THEN
+      RETURN (0)
+    FI
+  OD
+RETURN (1)
+
+PROC CheckStatus()
+  BYTE tmp
+
+  tmp=IsSolved()
+  IF solved#tmp THEN
+    solved=tmp
+    UpdateStatus()
+  FI
+RETURN
+
+PROC Swap(BYTE x1,y1,x2,y2)
+  BYTE tmp,i1,i2
+
+  i1=Index(x1,y1)
+  i2=Index(x2,y2)
+  tmp=board(i1)
+  board(i1)=board(i2)
+  board(i2)=tmp
+  UpdateItem(x1,y1)
+  UpdateItem(x2,y2)
+  CheckStatus()
+RETURN
+
+PROC Shuffle()
+  BYTE i,j,tmp
+
+  i=BOARDSIZE-1
+  WHILE i>0
+  DO
+    j=Rand(i)
+    tmp=board(i)
+    board(i)=board(j)
+    board(j)=tmp
+    i==-1
+  OD
+  FindEmpty()
+  UpdateBoard()
+  CheckStatus()
+RETURN
+
+PROC MoveLeft()
+  IF emptyX=0 THEN RETURN FI
+  Swap(emptyX,emptyY,emptyX-1,emptyY)
+  emptyX==-1
+RETURN
+
+PROC MoveRight()
+  IF emptyX=3 THEN RETURN FI
+  Swap(emptyX,emptyY,emptyX+1,emptyY)
+  emptyX==+1
+RETURN
+
+PROC MoveUp()
+  IF emptyY=0 THEN RETURN FI
+  Swap(emptyX,emptyY,emptyX,emptyY-1)
+  emptyY==-1
+RETURN
+
+PROC MoveDown()
+  IF emptyY=3 THEN RETURN FI
+  Swap(emptyX,emptyY,emptyX,emptyY+1)
+  emptyY==+1
+RETURN
+
+PROC Main()
+  BYTE k,lastStick=[255],currStick,
+    CH=$02FC, ;Internal hardware value for last key pressed
+    CRSINH=$02F0 ;Controls visibility of cursor
+
+  Graphics(0)
+  SetColor(2,0,2)
+  CRSINH=1 ;hide cursor
+  Position(10,18) Print("Joystick - move tiles")
+  Position(9,19) Print("Space bar - shuffle")
+  Position(15,20) Print("ESC - exit")
+  InitBoard()
+  DrawBoard()
+  DO
+    currStick=Stick(0)
+    IF currStick#lastStick THEN
+      IF currStick=11 THEN MoveRight()
+      ELSEIF currStick=7 THEN MoveLeft()
+      ELSEIF currStick=13 THEN MoveUp()
+      ELSEIF currStick=14 THEN MoveDown()
+      FI
+    FI
+    lastStick=currStick
+    k=CH
+    IF k#$FF THEN CH=$FF FI
+    IF k=33 THEN Shuffle()
+    ELSEIF k=28 THEN EXIT
+    FI
+  OD
+RETURN

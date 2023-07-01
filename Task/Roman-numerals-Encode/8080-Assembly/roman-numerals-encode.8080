@@ -1,0 +1,99 @@
+		org	100h
+		jmp	test
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Takes a 16-bit integer in HL, and stores it
+		;; as a 0-terminated string starting at BC.
+		;; On exit, all registers destroyed; BC pointing at
+		;; end of string.
+mkroman:	push	h	; put input on stack
+		lxi	h,mkromantab
+mkromandgt:	mov	a,m	; scan ahead to next entry
+		ana	a
+		inx	h
+		jnz	mkromandgt
+		xthl		; load number
+		mov	a,h	; if zero, we're done
+		ora	l
+		jz	mkromandone
+		xthl		; load next entry from table
+		mov	e,m	; de = number
+		inx	h
+		mov	d,m
+		inx	h
+		xthl		; load number
+		xra	a	; find how many we need
+subtract:	inr	a	; with trial subtraction
+		dad	d
+		jc	subtract
+		push	psw	; keep counter
+		mov	a,d	; we subtracted one too many
+		cma		; so we need to add one back
+		mov	d,a
+		mov	a,e
+		cma
+		mov	e,a
+		inx	d
+		dad	d
+		pop	d	; restore counter (into D)
+		xthl		; load table pointer
+stringouter:	dcr	d	; do we need to include one?
+		jz	mkromandgt
+		push	h	; keep string location
+stringinner:	mov	a,m	; copy string into target
+		stax	b
+		ana	a	; done yet?
+		jz	stringdone
+		inx	h
+		inx	b	; copy next character
+		jmp	stringinner
+stringdone:	pop	h	; restore string location
+		jmp	stringouter
+mkromandone:	pop	d	; remove temporary variable from stack
+		ret
+mkromantab:	db	0
+		db	18h,0fch,'M',0		; The value for each entry
+		db	7ch,0fch,'CM',0		; is stored already negated
+		db	0ch,0feh,'D',0		; so that it can be immediately
+		db	70h,0feh,'CD',0		; added using `dad'.
+		db	9ch,0ffh,'C',0		; This also has the convenient
+		db	0a6h,0ffh,'XC',0	; property of not having any
+		db	0ceh,0ffh,'L',0		; zero bytes except the string
+		db	0d8h,0ffh,'XL',0	; and row terminators.
+		db	0f6h,0ffh,'X',0
+		db	0f7h,0ffh,'IX',0
+		db	0fbh,0ffh,'V',0
+		db	0fch,0ffh,'IV',0
+		db	0ffh,0ffh,'I',0
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Test code
+test:		mvi	c,10	; read string from console
+		lxi	d,dgtbufdef
+		call	5
+		lxi	h,0	; convert to integer
+		lxi	b,dgtbuf
+readdgt:	ldax	b
+		ana	a
+		jz	convert
+		dad	h	; hl *= 10
+		mov	d,h
+		mov	e,l
+		dad	h
+		dad	h
+		dad	d
+		sui	'0'
+		mov	e,a
+		mvi	d,0
+		dad	d
+		inx	b
+		jmp	readdgt
+convert:	lxi	b,romanbuf	; convert to roman
+		call	mkroman
+		mvi	a,'$'	; switch string terminator
+		stax	b
+		mvi	c,9	; output result
+		lxi	d,romanbuf
+		jmp	5
+nl:		db	13,10,'$'
+dgtbufdef:	db	5,0
+dgtbuf:		ds	6
+romanbuf:

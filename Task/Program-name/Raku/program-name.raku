@@ -1,0 +1,1 @@
+say $*PROGRAM-NAME;

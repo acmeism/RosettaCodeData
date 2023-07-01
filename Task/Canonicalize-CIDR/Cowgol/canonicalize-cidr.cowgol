@@ -1,0 +1,82 @@
+include "cowgol.coh";
+
+typedef IP is uint32;
+
+record CIDR is
+    ip: IP;
+    len: uint8;
+end record;
+
+sub ParseIP(buffer: [uint8]): (result: IP, ptr: [uint8]) is
+    var parts: uint8 := 4;
+    var part: int32;
+    result := 0;
+    loop
+        (part, buffer) := AToI(buffer);
+        parts := parts - 1;
+        result := result | ((part as IP & 0xFF) << (parts * 8));
+        if parts == 0 then break;
+        else buffer := @next buffer;
+        end if;
+    end loop;
+    ptr := buffer;
+end sub;
+
+sub ParseCIDR(buffer: [uint8], cidr: [CIDR]) is
+    var len: int32;
+    (cidr.ip, buffer) := ParseIP(buffer);
+    (len, buffer) := AToI(@next buffer);
+    cidr.len := len as uint8;
+end sub;
+
+sub Canonicalize(cidr: [CIDR]) is
+    var mask: IP := 0;
+    var ones: uint8 := cidr.len;
+    var len: uint8 := 32;
+    while ones != 0 loop
+        mask := (mask << 1) | 1;
+        ones := ones - 1;
+        len := len - 1;
+    end loop;
+    while len != 0 loop;
+        mask := mask << 1;
+        len := len - 1;
+    end loop;
+    cidr.ip := cidr.ip & mask;
+end sub;
+
+sub FormatIP(ip: IP, buffer: [uint8]): (ptr: [uint8]) is
+    ptr := buffer;
+    ptr := UIToA((ip >> 24) & 0xFF, 10, ptr);
+    [ptr] := '.';
+    ptr := UIToA((ip >> 16) & 0xFF, 10, @next ptr);
+    [ptr] := '.';
+    ptr := UIToA((ip >> 8) & 0xFF, 10, @next ptr);
+    [ptr] := '.';
+    ptr := UIToA(ip & 0xFF, 10, @next ptr);
+    [ptr] := 0;
+end sub;
+
+sub FormatCIDR(cidr: [CIDR], buffer: [uint8]) is
+    buffer := FormatIP(cidr.ip, buffer);
+    [buffer] := '/';
+    buffer := UIToA(cidr.len as uint32, 10, @next buffer);
+end sub;
+
+var buffer: uint8[256];
+var string := &buffer[0];
+var cidr: CIDR;
+
+ParseCIDR("87.70.141.1/22", &cidr);
+FormatCIDR(&cidr, string);
+
+print("Before canonicalization: ");
+print(string);
+print_nl();
+
+Canonicalize(&cidr);
+FormatCIDR(&cidr, string);
+
+print(" After canonicalization: ");
+print(string);
+print_nl();

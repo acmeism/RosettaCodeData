@@ -1,0 +1,117 @@
+' version 31-03-2017
+' compile with: fbc -s console
+
+' Myrvold and Ruskey
+#Include Once "gmp.bi"
+' next two gmp integer are made shared to make things a little easier
+Dim Shared As Mpz_ptr _tmp1_, _tmp2_
+_tmp1_ = Allocate(Len( __mpz_struct)) : Mpz_init(_tmp1_)
+_tmp2_ = Allocate(Len( __mpz_struct)) : Mpz_init(_tmp2_)
+
+Sub unrank1(n As ULong, rank As Mpz_ptr, pi As String)
+
+    If n > 0 Then
+        ' _tmp1_ = quotient, _tmp2_ = remainder
+        Mpz_fdiv_qr_ui(_tmp1_, _tmp2_, rank, n)
+        Dim As UInteger r = Mpz_get_ui(_tmp2_)
+        Swap pi[n -1], pi[r]
+        unrank1(n -1, _tmp1_, pi)
+    End If
+
+End Sub
+
+Function rank1(n As ULong, pi As String, pi_inv As String) As Mpz_ptr
+
+    Dim As Mpz_ptr ret_val = Allocate( Len( __mpz_struct)) : Mpz_init(ret_val)
+
+    If n = 1 Then Return ret_val ' ret_val = 0
+
+    Dim As UByte s = pi[n -1]
+
+    Swap pi[n -1], pi[pi_inv[n -1]]
+    Swap pi_inv[s], pi_inv[n -1]
+
+    _tmp1_ = rank1(n -1, pi, pi_inv)
+    Mpz_mul_ui(_tmp1_, _tmp1_, n)
+    Mpz_add_ui(_tmp1_, _tmp1_, s)
+
+    Return _tmp1_
+
+End Function
+
+' ------=< MAIN >=------
+Dim As Mpz_ptr rank_nr = Allocate( Len( __mpz_struct)) : Mpz_init(rank_nr)
+Dim As Mpz_ptr max_nr  = Allocate( Len( __mpz_struct)) : Mpz_init(max_nr)
+
+Dim As ULong i, j, n = 144
+Dim As String tmp, pi_start, pi = Space(144), pi_inv = pi
+Dim As ZString Ptr gmp_str : gmp_str = Allocate(1000)
+
+Mpz_fac_ui(max_nr, n)
+
+Randomize Timer
+Dim Shared As __gmp_randstate_struct rnd_
+Gmp_randinit_mt(@rnd_) ' Mersenne Twister
+
+For i = 0 To 200 ' create seed
+    tmp += Str(Int(Rnd * 10))
+Next
+
+Mpz_set_str(_tmp1_, tmp, 10)
+Gmp_randseed(@rnd_, _tmp1_)   ' seed the random generator
+
+' set random generator give number from 0 to max_nr -1
+Mpz_fac_ui(max_nr, n)
+
+' setup the starting position
+For j = 0 To n -1
+    pi[j] = j
+Next
+
+pi_start = pi
+
+For i = 1 To 4
+
+    pi = pi_start
+
+    Mpz_urandomm(rank_nr, @rnd_, max_nr)
+    ' comment out the next 2 lines if you don't want the rank number
+    gmp_str = Mpz_get_str(0, 10, rank_nr)
+    Print *gmp_str
+
+    unrank1(n, rank_nr, pi)
+    For j = 0 To n -1
+        Print pi[j]; " ";
+    Next
+    Print : Print
+
+Next
+
+' test rank1
+For j = 0 To n -1
+    pi_inv[pi[j]] = j
+Next
+
+Print "Calculate rank from last return of unrank1" : Print
+
+_tmp2_ = rank1(n, pi, pi_inv)
+gmp_str = Mpz_get_str(0, 10, _tmp2_)
+Print *gmp_str
+
+Print
+If Mpz_cmp(rank_nr, _tmp2_) = 0 Then
+    Print "Both numbers are equal"
+Else
+    Print "Oh no, they are different"
+End If
+
+' clean up
+Gmp_randclear(@rnd_): DeAllocate(gmp_str)
+Mpz_clear(_tmp1_)  : Mpz_clear(_tmp2_)
+Mpz_clear(rank_nr) : Mpz_clear(max_nr)
+
+' empty keyboard buffer
+While InKey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

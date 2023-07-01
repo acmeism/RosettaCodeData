@@ -1,0 +1,109 @@
+use System.IO.Net;
+use System.Concurrency;
+use Collection;
+
+bundle Default {
+  class ChatServer {
+    @clients : StringMap;
+    @clients_mutex : ThreadMutex;
+
+    New() {
+      @clients := StringMap->New();
+      @clients_mutex := ThreadMutex->New("clients_mutex");
+    }
+
+    method : ValidLogin(login_name : String, clients : StringMap) ~ Bool {
+      if(clients->Has(login_name)) {
+        return false;
+      };
+
+      return true;
+    }
+
+    function : Main(args : String[]) ~ Nil {
+      chat_server := ChatServer->New();
+      chat_server->Run();
+    }
+
+    method : public : Broadcast(message : String, sender : Client) ~ Nil {
+      client_array : Vector;
+      critical(@clients_mutex) {
+        client_array := @clients->GetValues();
+      };
+      each(i : client_array) {
+        client := client_array->Get(i)->As(Client);
+        if(client <> sender) {
+          client->Send(message);
+        };
+      };
+    }
+
+    method : public : Disconnect(sender : Client) ~ Nil {
+      send_name := sender->GetName();
+      Broadcast("+++ {$send_name} has left +++", sender);
+      critical(@clients_mutex) {
+        @clients->Remove(sender->GetName());
+      };
+      sender->Close();
+    }
+
+    method : public : Run() ~ Nil {
+      server := TCPSocketServer->New(4661);
+      if(server->Listen(5)) {
+        while(true) {
+          client_sock := server->Accept();
+          critical(@clients_mutex) {
+            client_sock->WriteString("login: ");
+            login_name := client_sock->ReadString();
+            if(ValidLogin(login_name, @clients)) {
+              client := Client->New(login_name, client_sock, @self);
+              @clients->Insert(client->GetName(), client);
+              client->Execute(Nil);
+            }
+            else {
+              client_sock->WriteString("+++ login in use +++\r\n");
+              client_sock->Close();
+            };
+          };
+        };
+      };
+      server->Close();
+    }
+  }
+
+  class Client from Thread {
+    @client_sock : TCPSocket;
+    @server : ChatServer;
+
+    New(login_name : String, client_sock : TCPSocket, server : ChatServer) {
+      Parent(login_name);
+      @client_sock := client_sock;
+      @server := server;
+    }
+
+    method : public : Close() ~ Nil {
+      @client_sock->Close();
+    }
+
+    method : public : Send(message : String) ~ Nil {
+      if(@client_sock->IsOpen() & message->Size() > 0) {
+        @client_sock->WriteString("{$message}\r\n");
+      }
+      else {
+        @server->Disconnect(@self);
+      };
+    }
+
+    method : public : Run(param : Base) ~ Nil {
+      client_name := GetName();
+      @server->Broadcast("+++ {$client_name} has arrived +++", @self);
+
+      message := @client_sock->ReadString();
+      while(message->Size() > 0 & message->Equals("/quit") = false) {
+        @server->Broadcast("{$client_name}> {$message}", @self);
+        message := @client_sock->ReadString();
+      };
+      @server->Disconnect(@self);
+    }
+  }
+}

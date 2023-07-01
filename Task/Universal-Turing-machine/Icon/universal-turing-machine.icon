@@ -1,0 +1,118 @@
+record TM(start,final,delta,tape,blank)
+record delta(old_state, input_symbol, new_state, output_symbol, direction)
+
+global start_tape
+global show_count, full_display, trace_list  # trace flags
+
+procedure main(args)
+    init(args)
+    runTuringMachine(get_tm())
+end
+
+procedure init(args)
+    trace_list := ":"
+    while arg := get(args) do {
+        if arg == "-f" then full_display := "yes"
+        else if match("-t",arg) then trace_list ||:= arg[3:0]||":"
+        else show_count := integer(arg)
+        }
+end
+
+procedure get_tm()
+    D := table()
+
+    writes("What is the start state? ")
+    start := !&input
+    writes("What are the final states (colon separated)? ")
+    finals := !&input
+    (finals||":") ? every insert(fStates := set(), 1(tab(upto(':')),move(1)))
+    writes("What is the tape blank symbol?")
+    blank := !&input
+
+    write("Enter the delta mappings, using the following format:")
+    write("\tenter delta(curState,tapeSymbol) = (newState,newSymbol,direct) as")
+    write("\t   curState:tapeSymbol:newState:newSymbol:direct");
+    write("\t\twhere direct is left, right, stay, or halt")
+    write("End with a blank line.")
+    write("")
+    every line := !&input do {
+        if *line = 0 then break
+        line ?
+             if (os := tab(upto(':')), move(1), ic := tab(upto(':')), move(1),
+                 ns := tab(upto(':')), move(1), oc := tab(upto(':')), move(1),
+                 d  := map(tab(0))) then D[os||":"||ic] := delta(os,ic,ns,oc,d)
+             else write(line, " is in bad form, correct it")
+        }
+    if /start_tape then {
+        write("Enter the input tape")
+        start_tape := !&input
+        }
+    return TM(start,fStates,D,start_tape,blank)
+end
+
+procedure runTuringMachine(tm)
+    trans := tm.delta
+    rightside := tm.tape
+    if /rightside | (*rightside = 0) then rightside := tm.blank
+    leftside := ""
+
+    cur_state := tm.start
+    write("Machine starts in ",cur_state," with tape:")
+    show_tape(tm,leftside,rightside)
+    while mapping := \trans[cur_state||":"||rightside[1]] do {
+        rightside[1] := mapping.output_symbol
+        case mapping.direction of {
+            "left" : {
+                 if *leftside = 0 then leftside := tm.blank
+                 rightside := leftside[-1] || rightside
+                 leftside[-1] := ""
+                 }
+            "right" : {
+                 leftside ||:= rightside[1]
+                 rightside[1] := ""
+                 if *rightside = 0 then rightside := tm.blank
+                 }
+            "halt" : break
+            }
+        cur_state := mapping.new_state
+        if member(tm.final,cur_state) then break
+        trace(tm,cur_state,leftside,rightside)
+        }
+    write()
+    write("Machine halts in ",cur_state," with tape:")
+    show_tape(tm,leftside,rightside)
+end
+
+procedure trace(tm,cs,ls,rs)
+    static count, last_state
+    initial {
+       count := 0
+       last_state := ""
+       }
+
+    count +:= 1
+    if \show_count & (count % show_count = 0) then show_tape(tm,ls,rs)
+    if find(":"||cs||":",trace_list) & (last_state ~== cs) then {
+        writes("\tnow in state: ",cs," ")
+        if \full_display then show_delta(tm.delta[cs||":"||rs[1]])
+        else write()
+        }
+    last_state := cs
+    return
+end
+
+procedure show_delta(m)
+    if /m then write("NO MOVE!")
+    else {
+        writes("\tnext move is ")
+        writes("delta(",m.old_state,",",m.input_symbol,") ::= ")
+        write("(",m.new_state,",",m.output_symbol,",",m.direction,")")
+        }
+end
+
+procedure show_tape(tm,l,r)
+    l := reverse(trim(reverse(l),tm.blank))
+    r := trim(r,tm.blank)
+    write(l,r)
+    write(repl(" ",*l),"^")
+end

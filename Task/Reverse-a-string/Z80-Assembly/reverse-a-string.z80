@@ -1,0 +1,65 @@
+PrintChar equ $BB5A ;Amstrad CPC bios call
+Terminator equ 0    ;null terminator for strings
+
+
+org $8000
+ld hl, StringA
+call ReverseString
+
+ld hl, StringA
+call PrintString
+
+ret                  ;return to basic
+
+StringA:
+byte "12345678",0
+
+;;;; SUBROUTINES
+GetStringLength:
+;HL = STRING. RETURNS LENGTH IN B. LENGTH IS ONE-INDEXED AND DOES NOT INCLUDE TERMINATOR.
+		ld b,0                    ;clear B
+loop_getStringLength:
+		ld a,(hl)                 ;read the next char
+		cp Terminator             ;is it the terminator?
+		ret z                     ;if so, exit
+		inc hl                    ;point HL to next character
+		inc b                     ;increase tally
+		jr loop_getStringLength   ;repeat
+
+ReverseString:
+	;reverse the order of letters in a text string.
+	;e.g. "ABCD" -> "DCBA"
+	;the terminator stays put.
+	;INPUT: HL = SOURCE ADDRESS OF STRING
+	push de
+		push hl
+			push hl
+		             call GetStringLength
+			pop hl
+		pop de		            ;LD DE,HL
+		LD a,b                      ;LOAD B INTO A
+		LD (SMC_ReverseString+1),a  ;STORE IT LATER IN THE CODE SO WE CAN RETRIEVE IT.
+		
+; TO RECAP, BOTH HL AND DE POINT TO THE BEGINNING OF THE STRING WE WANT TO REVERSE. B EQUALS THE LENGTH OF THE STRING.
+; B HAS BEEN BACKED UP WITHOUT USING THE STACK BY STORING IT AS THE OPERAND OF A LATER INSTRUCTION THAT LOADS B WITH A NUMERIC VALUE.
+; PUSH BC WOULD NOT HAVE WORKED SINCE THE PROGRAM NEEDS TO PUSH EACH LETTER OF THE STRING DURING THE LOOP.
+
+LOOP_REVERSESTRING_PUSH:
+;start at the beginning of the string and push each letter in it, except the terminator.
+		ld a,(de)
+		push af
+		inc de
+		djnz LOOP_REVERSESTRING_PUSH
+		
+SMC_ReverseString:
+		ld b,$42	;LETS US PRESERVE B WITHOUT PUSHING IT. THE $42 IS OVERWRITTEN WITH THE STRING'S LENGTH.
+		
+LOOP_REVERSESTRING_POP:
+;Starting at the beginning of the string, pop A off the stack and store it into the string. This puts the letters back in the reverse
+;   order.
+		pop af
+		ld (hl),a
+		inc hl
+		djnz LOOP_REVERSESTRING_POP
+	pop de
+	ret

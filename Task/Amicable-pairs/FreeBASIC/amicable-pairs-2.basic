@@ -1,0 +1,38 @@
+' version 04-10-2016
+' compile with: fbc -s console
+' replaced the function with 2 FOR NEXT loops
+
+#Define max 20000      ' test for pairs below max
+#Define max_1 max -1
+
+Dim As String u_str = String(Len(Str(max))+1,"#")
+Dim As UInteger n, f
+Dim Shared As UInteger sum(max_1)
+
+For n = 2 To max_1
+  sum(n) = 1
+Next
+
+For n = 2 To max_1 \ 2
+  For f  = n * 2 To max_1 Step n
+    sum(f) += n
+  Next
+Next
+
+Print
+Print Using " The pairs of amicable numbers below" & u_str & ", are :"; max
+Print
+
+For n = 1 To max_1 -1
+  f = Sum(n)
+  If f <= n OrElse f > max Then Continue For
+  If f = sum(n) AndAlso n = sum(f) Then
+    Print Using u_str & " and" & u_str ; n; f
+  End If
+Next
+
+' empty keyboard buffer
+While Inkey <> "" : Wend
+Print : Print : Print " Hit any key to end program"
+Sleep
+End

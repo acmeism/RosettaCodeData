@@ -1,0 +1,1 @@
+  result = first(lambda: "second")

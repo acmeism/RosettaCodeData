@@ -1,0 +1,155 @@
+	;;;	Display pinstripes on an MSX, using Z80 assembly.
+	;;;	We'll use the monochrome 'text' mode to do it, by changing
+	;;;	a few characters in the VDP font. This program will use
+	;;;	either low resolution mode (240x192) or high resolution
+	;;;	mode (480x192) depending on which is already active.
+	;;;	(In MSX-DOS, `MODE 40` and `MODE 80` switch between them.)
+	;;;
+	;;;	The characters are 6x8, stored row-wise, and the low two
+	;;;	bits are ignored. This means that one-pixel alternating
+	;;;	pinstripes are created using the following pattern:
+onep:	equ	0A8h	; 1 0 1 0 1 0 (0 0)
+	;;;	A 2-pixel pattern needs two alternating characters:
+twop1:	equ	0CCh	; 1 1 0 0 1 1 (0 0)
+twop2:	equ	030h	; 0 0 1 1 0 0 (0 0)
+	;;;	3 * 2 = 6, so the 3-pixel pattern fits in one character:
+threep:	equ	0E0h	; 1 1 1 0 0 0 (0 0)
+	;;;	And we need four characters for the 4-pixel pattern:
+fourp1:	equ	0F0h	; 1 1 1 1 0 0 (0 0)
+fourp2:	equ	03Ch	; 0 0 1 1 1 1 (0 0)
+fourp3:	equ	0Ch	; 0 0 0 0 1 1 (0 0)
+fourp4:	equ	0C0h	; 1 1 0 0 0 0 (0 0)
+	;;;	-------------------------------------------------------------
+bdos:	equ	5	; Use the BDOS routine to wait for a keypress
+dirio:	equ	6	; after the drawing is done
+	;;;	MSX ROM calls
+calslt:	equ	1Ch	; Interslot call
+rom:	equ	0FCC0h	; Main ROM slot
+initxt:	equ	6Ch	; Initialize text mode
+	;;;	RAM location
+linlen:	equ	0F3B0h	; Contains line length, if <=40 we're in low res mode
+	;;;	VDP data
+vreg:	equ	99h	; Port on which the VDP registers are accessed
+vdata:	equ	98h	; Port on which the VRAM is accessed
+VWRITE:	equ	40h	; Bit 6 in VDP address = enable writing
+	;;;	(these are for low-res mode, high-res mode has them doubled)
+font:	equ	0800h	; Location of start of font data
+qrtr:	equ	240	; Amount of bytes that fill a quarter of the screen
+	;;;	-------------------------------------------------------------
+	org	100h
+	;;;	Redefine characters 0-7 to the eight characters we need
+	ld	hl,font		; Get VDP font location
+	call	reshl		; Correct for hires mode if necessary
+	call	setadr		; Set the VDP to read from that address
+	ld	hl,pats		; Pattern data
+	ld	c,8		; Write 8 characters
+wrpats:	ld	b,8		; 8 lines per character
+	ld 	a,(hl)		; Load current pattern byte
+wrpat:	out	(vdata),a	; Write it to the VDP,
+	djnz	wrpat		; 8 times.
+	inc	hl		; Next pattern
+	dec	c		; Any patterns left?
+	jr	nz,wrpats	; If so, write next pattern
+	ld	hl,0		; Set the VDP to write to address 0
+	call	setadr		; which is the beginning of the text screen.
+	;;;	Figure out how big a quarter of the screen is
+	ld	hl,qrtr		; Get value for low resolution,
+	call	reshl		; Correct for high res mode if necessary
+	push	hl		; Store number on the stack
+	;;;	Write the first quarter of the screen: 1-pixel stripes
+	;;;	(character 0).
+	ld	b,0
+	call	qrtrch
+	;;;	Write the second quarter of the screen: 2-pixel stripes
+	;;;	(characters 1 and 2 alternating).
+	pop	hl		; Load size from the stack
+	push	hl
+	or	a		; Clear carry
+	rr	h		; Divide by 2
+	rr	l
+q2loop:	ld	a,1		; Character 1,
+	out	(vdata),a
+	inc	a		; and character 2.
+	nop			; Slowdown to make sure the VDP can keep up
+	nop
+	out	(vdata),a
+	dec	hl
+	ld 	a,h		; HL = 0?
+	or	l
+	jr	nz,q2loop	; If not, next 2 bytes
+	;;;	Write the third quarter of the screen: 3-pixel stripes
+	;;;	(character 3)
+	ld	b,3
+	call	qrtrch
+	;;;	Write the fourth quarter of the screen: 4-pixel stripes
+	;;;	(characters 4, 5, 6, and 7 alternating)
+	pop	hl		; Load size from stack
+	or	a		; Divide by 4
+	rr	h
+	rr	l
+	or	a
+	rr	h
+	rr	l
+q4loop:	ld	a,4		; Character 4
+	ld	b,a		; 4 characters at a time
+q4out:	out	(vdata),a	; Write the character,
+	inc	a		; Next character,
+	djnz	q4out		; 4 times.
+	dec 	hl
+	ld	a,h		; Done yet?
+	or	l
+	jr	nz,q4loop	; If not, next 4 bytes
+	;;;	-------------------------------------------------------------	
+	;;;	We're done, now wait for a keypress.
+clear:	ld	c,dirio		; First, wait while a key IS pressed
+	ld	e,0FFh 		; (so we don't quit immediately if the user
+	call	bdos		; has held the enter key a bit too long)
+	and	a		
+	jr	nz,clear
+wait:	ld	c,dirio		; Then, wait while a key is NOT pressed
+	ld	e,0FFh
+	call	bdos
+	and	a
+	jr	z,wait
+	;;;	Afterwards, use a BIOS routine to reinitialize the screen
+	;;;	(this will reload the default font).
+	ld	iy,rom		; BIOS call to initialize text mode
+	ld	ix,initxt
+	jp	calslt
+	;;;	-------------------------------------------------------------	
+	;;;	Subroutine: write character in B to a quarter of the screen
+qrtrch:	pop	de		; Return address
+	pop	hl		; Load size from the stack
+	push	hl
+	push	de		; Put return address back
+qloop:	ld	a,b		; Write character in B
+	out	(vdata),a
+	dec	hl		; One fewer byte left
+	ld	a,h		; Done yet?
+	or	l
+	jr	nz,qloop	; If not, next byte
+	ret
+	;;;	-------------------------------------------------------------	
+	;;;	Subroutine: double HL if we are in high resolution mode	
+reshl:	ld	a,(linlen)	; Check which mode we're in
+	cp	41		; Higher than 40?
+	ret	c		; If not, we're not in hires mode
+	add	hl,hl		; We are in hires mode, so double HL
+	ret
+	;;;	-------------------------------------------------------------	
+	;;;	Subroutine: set the VDP to write to address HL.
+setadr:	di			; No interrupts while we're messing with VDP
+	xor	a		; High address bits for MSX-2 VDP are all 0
+	out	(vreg),a	; (MSX-1 VDP will just ignore the zeroes)
+	ld	a,14|128	; Write to register 14
+	out	(vreg),a
+	ld	a,l		; Write the low address byte
+	out	(vreg),a
+	ld	a,h
+	or	VWRITE		; High address bits bits (5..0)
+	out	(vreg),a	; Write high addr bits and write flag
+	ei			; Reenable interrupts
+	ret
+	;;;	Patterns to replace the first characters with
+pats:	db	onep,twop1,twop2,threep
+	db	fourp1,fourp2,fourp3,fourp4

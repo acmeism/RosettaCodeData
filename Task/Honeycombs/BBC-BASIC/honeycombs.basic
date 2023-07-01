@@ -1,0 +1,84 @@
+      ALTERNATE = 1
+      VDU 23,22,252;252;8,16,16,128
+      *FONT Arial,24,B
+
+      Letters$ = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      Letters% = !^Letters$
+      FOR i% = 0 TO 24
+        SWAP Letters%?i%, Letters%?(i%+RND(26-i%)-1)
+      NEXT
+
+      DIM xpos%(20), ypos%(20), hrgn%(20)
+      C% = 1
+      FOR Y% = 36 TO 192 STEP 52
+        FOR X% = 35 TO 215 STEP 90
+          xpos%(C%) = X%
+          ypos%(C%) = Y%
+          C% += 1
+        NEXT
+        FOR X% = 80 TO 170 STEP 90
+          xpos%(C%) = X%
+          ypos%(C%) = Y%+26
+          C% += 1
+        NEXT
+      NEXT
+
+      REM Plot the hexagons:
+      FOR C% = 1 TO 20
+        hrgn%(C%) = FNplothexagon(xpos%(C%), ypos%(C%), &00FFFF, \
+        \           MID$(Letters$,C%,1), &0000FF)
+      NEXT
+      SYS "InvalidateRect", @hwnd%, 0, 0
+
+      REM Initialise word selected:
+      Word$ = ""
+
+      REM Monitor mouse clicks:
+      ON MOUSE PROCmouse(@wparam%,@lparam%) : RETURN
+
+      REM Monitor keypresses:
+      REPEAT
+        key$ = INKEY$(1)
+        IF key$ >= "a" key$ = CHR$(ASCkey$-32)
+        C% = INSTR(Letters$, key$)
+        IF C% IF C%<21 IF hrgn%(C%) PROCselect(C%)
+      UNTIL FALSE
+      END
+
+      REM Select a hexagon with the keyboard or mouse:
+      DEF PROCselect(C%)
+      hrgn%(C%) = 0 * FNplothexagon(xpos%(C%), ypos%(C%), &FF00FF, \
+      \               MID$(Letters$,C%,1), &000000)
+      SYS "InvalidateRect", @hwnd%, 0, 0
+      Word$ += MID$(Letters$, C%, 1)
+      SYS "SetWindowText", @hwnd%, Word$
+      ENDPROC
+
+      DEF PROCmouse(W%, L%)
+      LOCAL C%, R%
+      IF W%<>1 ENDPROC
+      FOR C% = 1 TO 20
+        SYS "PtInRegion", hrgn%(C%), L% AND &FFFF, L% >>> 16 TO R%
+        IF R% PROCselect(C%)
+      NEXT
+      ENDPROC
+
+      DEF FNplothexagon(x%, y%, hcol%, text$, tcol%)
+      LOCAL brush%, pen%, hrgn%, pt%(), size{}
+      DIM pt%(5,1), size{dx%,dy%}
+      pt%() = x%-30,y%,x%-15,y%+26,x%+15,y%+26,x%+30,y%,x%+15,y%-26,x%-15,y%-26
+      SYS "CreatePen", 0, 3, 0 TO pen%
+      SYS "CreateSolidBrush", hcol% TO brush%
+      SYS "SelectObject", @memhdc%, pen% TO pen%
+      SYS "SelectObject", @memhdc%, brush% TO brush%
+      SYS "Polygon", @memhdc%, ^pt%(0,0), 6
+      SYS "SelectObject", @memhdc%, pen% TO pen%
+      SYS "SelectObject", @memhdc%, brush% TO brush%
+      SYS "DeleteObject", pen%
+      SYS "DeleteObject", brush%
+      SYS "GetTextExtentPoint32", @memhdc%, text$, LEN(text$), size{}
+      SYS "SetTextColor", @memhdc%, tcol%
+      SYS "SetBkColor", @memhdc%, hcol%
+      SYS "TextOut", @memhdc%, x%-size.dx%/2, y%-size.dy%/2, text$, LEN(text$)
+      SYS "CreatePolygonRgn", ^pt%(0,0), 6, ALTERNATE TO hrgn%
+      = hrgn%

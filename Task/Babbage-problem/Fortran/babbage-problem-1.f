@@ -1,0 +1,6 @@
+      DO 3 N=1,99736
+      IF(MODF(N*N,1000000)-269696)3,4,3
+ 3    CONTINUE
+ 4    PRINT 5,N
+ 5    FORMAT(I6)
+      STOP

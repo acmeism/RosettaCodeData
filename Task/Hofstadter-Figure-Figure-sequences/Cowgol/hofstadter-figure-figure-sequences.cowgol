@@ -1,0 +1,143 @@
+include "cowgol.coh";
+include "strings.coh";
+include "malloc.coh";
+
+# An uint16 is big enough to deal with the figures from the task,
+# but it is good practice to allow it to be easily redefined.
+typedef N is uint16;
+
+# There is no extensible vector type included in the standard library,
+# so it is necessary to define one.
+record VecR is
+    len: intptr;
+    alloc: intptr;
+    data: [N];
+end record;
+
+typedef Vec is [VecR];
+
+sub NewVec(): (v: Vec) is
+    v := Alloc(@bytesof VecR) as Vec;
+    MemZero(v as [uint8], @bytesof VecR);
+    v.alloc := 256;
+    v.data := Alloc(@bytesof N * 256) as [N];
+    MemZero(v.data as [uint8], @bytesof N * 256);
+end sub;
+
+sub VecGet(v: Vec, i: intptr): (r: N) is
+    if i >= v.len then
+        print("index error\n");
+        ExitWithError();
+    end if;
+    r := [v.data + i * @bytesof N];
+end sub;
+
+sub VecSet(v: Vec, i: intptr, n: N) is
+    if i >= v.alloc then
+        var newsize := v.alloc;
+        while i >= newsize loop
+            newsize := newsize + 256;
+        end loop;
+        var newbytes := newsize * @bytesof N;
+        var oldbytes := v.alloc * @bytesof N;
+        var newdata := Alloc(newbytes) as [N];
+        MemCopy(v.data as [uint8], oldbytes, newdata as [uint8]);
+        MemZero(newdata as [uint8] + oldbytes, newbytes - oldbytes);
+        Free(v.data as [uint8]);
+        v.data := newdata;
+        v.alloc := newsize;
+    end if;
+    [v.data + i * @bytesof N] := n;
+    if i >= v.len then
+        v.len := i+1;
+    end if;
+end sub;
+
+sub Last(v: Vec): (r: N) is r := VecGet(v, v.len-1); end sub;
+sub Append(v: Vec, n: N) is VecSet(v, v.len, n); end sub;
+
+# We also need to define a flag array, to avoid taking up 1K of memory
+# for a thousand bit flags.
+sub GetFlag(bitarr: [uint8], n: intptr): (s: uint8) is
+    s := ([bitarr + (n >> 3)] >> (n as uint8 & 7)) & 1;
+end sub;
+sub SetFlag(bitarr: [uint8], n: intptr) is
+    var p := bitarr + (n >> 3);
+    var f: uint8 := 1;
+    [p] := [p] | (f << (n as uint8 & 7));
+end sub;
+
+# Define and initialize vectors holding the R and S sequences
+var R := NewVec(); Append(R, 1);
+var S := NewVec(); Append(S, 2);
+
+# Extend the sequences until R(n) is known.
+sub Extend(n: intptr) is
+    while n > R.len loop
+        var newR := Last(R) + VecGet(S, R.len-1);
+        Append(R, newR);
+        while Last(S) < newR - 1 loop
+            Append(S, Last(S) + 1);
+        end loop;
+        Append(S, newR + 1);
+    end loop;
+end sub;
+
+# Get R
+sub ffr(n: intptr): (r: N) is
+    Extend(n);
+    r := VecGet(R, n-1);
+end sub;
+
+# Get S
+sub ffs(n: intptr): (s: N) is
+    while n > S.len loop
+        Extend(R.len + 1);
+    end loop;
+    s := VecGet(S, n-1);
+end sub;
+
+# Print the first 10 values of R.
+print("R(1 .. 10): ");
+var n: intptr := 1;
+while n <= 10 loop
+    print_i32(ffr(n) as uint32);
+    print_char(' ');
+    n := n + 1;
+end loop;
+print_nl();
+
+
+print("Checking that (1 .. 1000) are in R(1 .. 40) U S(1 .. 960)...\n");
+# Reserve 1000 bits to use as flags, and set them all to zero
+var flags: uint8[1000 / 8];
+MemZero(&flags[0], @bytesof flags);
+
+# Set the flags corresponding to FFR(1 .. 40) and FFS(1 .. 960)
+n := 1;
+while n <= 40 loop
+    SetFlag(&flags[0], (ffr(n)-1) as intptr);
+    n := n + 1;
+end loop;
+
+n := 1;
+while n <= 960 loop
+    SetFlag(&flags[0], (ffs(n)-1) as intptr);
+    n := n + 1;
+end loop;
+
+# Check all flags
+var ok: uint8 := 1;
+n := 1;
+while n <= 1000 loop
+    if GetFlag(&flags[0], (n-1) as intptr) == 0 then
+        print_i32(n as uint32);
+        print(" not found!\n");
+        ok := 0;
+    end if;
+    n := n + 1;
+end loop;
+
+if ok != 0 then
+    print("All numbers 1 .. 1000 found!\n");
+end if;

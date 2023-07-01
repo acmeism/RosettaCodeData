@@ -1,0 +1,12 @@
+FUNCTION wilsonprime(n)
+    fct = 1
+    FOR i = 2 TO n - 1
+        fct = (fct * i) MOD n
+    NEXT i
+    IF fct = n - 1 THEN wilsonprime = 1 ELSE wilsonprime = 0
+END FUNCTION
+
+PRINT "Primes below 100"; CHR$(10)
+FOR i = 2 TO 100
+    IF wilsonprime(i) THEN PRINT i; "   ";
+NEXT i

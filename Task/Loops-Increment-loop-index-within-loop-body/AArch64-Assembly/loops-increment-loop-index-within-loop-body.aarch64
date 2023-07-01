@@ -1,0 +1,249 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program loopinc64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessOverflow:     .asciz "Error: overflow !!!!"
+sMessResult:        .asciz "Index  : @ Value  : @ \n"
+szCarriageReturn:   .asciz "\n"
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:                .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                             // entry of program
+    mov x20,0                     // counter
+    mov x21,42                    // start index
+1:                                // begin loop
+    mov x0,x21
+    bl isPrime                    // prime ?
+    bcs 100f                      // error overflow ?
+    cbnz x0,2f                    // is prime ?
+    add x21,x21,1                 // no -> increment index
+    b 1b                          // and loop
+2:                                // display index and prime
+    add x20,x20,1                 // increment counter
+    mov x0,x20
+    ldr x1,qAdrsZoneConv          // conversion index
+    bl conversion10
+    ldr x0,qAdrsMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc         // insert result at first @ character
+    mov x10,x0
+    mov x0,x21                    // conversion value
+    ldr x1,qAdrsZoneConv
+    bl conversion10               // decimal conversion  ascii
+    mov x0,x10
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc         // insert result at second @ character
+    bl affichageMess
+
+    add x21,x21,x21
+    cmp x20,42                    // end ?
+    blt 1b                        // no loop
+
+100:                              // standard end of the program
+    mov x0,0                      // return code
+    mov x8,EXIT                   // request to exit program
+    svc 0                         // perform the system call
+
+qAdrsZoneConv:            .quad sZoneConv
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsMessResult:          .quad sMessResult
+/***************************************************/
+/*   Verification si un nombre est premier         */
+/***************************************************/
+/* x0 contient le nombre à verifier */
+/* x0 retourne 1 si premier  0 sinon */
+isPrime:
+    stp x1,lr,[sp,-16]!        // save  registres
+    stp x2,x3,[sp,-16]!        // save  registres
+    mov x2,x0
+    sub x1,x0,#1
+    cmp x2,0
+    beq 99f                    // retourne zéro
+    cmp x2,2                   // pour 1 et 2 retourne 1
+    ble 2f
+    mov x0,#2
+    bl moduloPuR64
+    bcs 100f                   // erreur overflow
+    cmp x0,#1
+    bne 99f                    // Pas premier
+    cmp x2,3
+    beq 2f
+    mov x0,#3
+    bl moduloPuR64
+    blt 100f                   // erreur overflow
+    cmp x0,#1
+    bne 99f
+
+    cmp x2,5
+    beq 2f
+    mov x0,#5
+    bl moduloPuR64
+    bcs 100f                   // erreur overflow
+    cmp x0,#1
+    bne 99f                    // Pas premier
+
+    cmp x2,7
+    beq 2f
+    mov x0,#7
+    bl moduloPuR64
+    bcs 100f                   // erreur overflow
+    cmp x0,#1
+    bne 99f                    // Pas premier
+
+    cmp x2,11
+    beq 2f
+    mov x0,#11
+    bl moduloPuR64
+    bcs 100f                   // erreur overflow
+    cmp x0,#1
+    bne 99f                    // Pas premier
+
+    cmp x2,13
+    beq 2f
+    mov x0,#13
+    bl moduloPuR64
+    bcs 100f                   // erreur overflow
+    cmp x0,#1
+    bne 99f                    // Pas premier
+2:
+    cmn x0,0                   // carry à zero pas d'erreur
+    mov x0,1                   // premier
+    b 100f
+99:
+    cmn x0,0                   // carry à zero pas d'erreur
+    mov x0,#0                  // Pas premier
+100:
+    ldp x2,x3,[sp],16          // restaur des  2 registres
+    ldp x1,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+
+/********************************************************/
+/*   Calcul modulo de b puissance e modulo m  */
+/*    Exemple 4 puissance 13 modulo 497 = 445         */
+/********************************************************/
+/* x0  nombre  */
+/* x1 exposant */
+/* x2 modulo   */
+moduloPuR64:
+    stp x1,lr,[sp,-16]!        // save  registres
+    stp x3,x4,[sp,-16]!        // save  registres
+    stp x5,x6,[sp,-16]!        // save  registres
+    stp x7,x8,[sp,-16]!        // save  registres
+    stp x9,x10,[sp,-16]!       // save  registres
+    cbz x0,100f
+    cbz x1,100f
+    mov x8,x0
+    mov x7,x1
+    mov x6,1                   // resultat
+    udiv x4,x8,x2
+    msub x9,x4,x2,x8           // contient le reste
+1:
+    tst x7,1
+    beq 2f
+    mul x4,x9,x6
+    umulh x5,x9,x6
+    mov x6,x4
+    mov x0,x6
+    mov x1,x5
+    bl divisionReg128U
+    cbnz x1,99f                 // overflow
+    mov x6,x3
+2:
+    mul x8,x9,x9
+    umulh x5,x9,x9
+    //cbnz x5,99f
+    mov x0,x8
+    mov x1,x5
+    bl divisionReg128U
+    cbnz x1,99f                 // overflow
+    mov x9,x3
+    lsr x7,x7,1
+    cbnz x7,1b
+    mov x0,x6                  // result
+    cmn x0,0                   // carry à zero pas d'erreur
+    b 100f
+99:
+    ldr x0,qAdrszMessOverflow
+    bl   affichageMess
+    cmp x0,0                   // carry à un car erreur
+    mov x0,-1                  // code erreur
+
+100:
+    ldp x9,x10,[sp],16         // restaur des  2 registres
+    ldp x7,x8,[sp],16          // restaur des  2 registres
+    ldp x5,x6,[sp],16          // restaur des  2 registres
+    ldp x3,x4,[sp],16          // restaur des  2 registres
+    ldp x1,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+qAdrszMessOverflow:         .quad  szMessOverflow
+/***************************************************/
+/*   division d un nombre de 128 bits par un nombre de 64 bits */
+/***************************************************/
+/* x0 contient partie basse dividende */
+/* x1 contient partie haute dividente */
+/* x2 contient le diviseur */
+/* x0 retourne partie basse quotient */
+/* x1 retourne partie haute quotient */
+/* x3 retourne le reste */
+divisionReg128U:
+    stp x6,lr,[sp,-16]!        // save  registres
+    stp x4,x5,[sp,-16]!        // save  registres
+    mov x5,#0                  // raz du reste R
+    mov x3,#128                // compteur de boucle
+    mov x4,#0                  // dernier bit
+1:
+    lsl x5,x5,#1               // on decale le reste de 1
+    tst x1,1<<63               // test du bit le plus à gauche
+    lsl x1,x1,#1               // on decale la partie haute du quotient de 1
+    beq 2f
+    orr  x5,x5,#1              // et on le pousse dans le reste R
+2:
+    tst x0,1<<63
+    lsl x0,x0,#1               // puis on decale la partie basse
+    beq 3f
+    orr x1,x1,#1               // et on pousse le bit de gauche dans la partie haute
+3:
+    orr x0,x0,x4               // position du dernier bit du quotient
+    mov x4,#0                  // raz du bit
+    cmp x5,x2
+    blt 4f
+    sub x5,x5,x2                // on enleve le diviseur du reste
+    mov x4,#1                   // dernier bit à 1
+4:
+                               // et boucle
+    subs x3,x3,#1
+    bgt 1b
+    lsl x1,x1,#1               // on decale le quotient de 1
+    tst x0,1<<63
+    lsl x0,x0,#1               // puis on decale la partie basse
+    beq 5f
+    orr x1,x1,#1
+5:
+    orr x0,x0,x4                  // position du dernier bit du quotient
+    mov x3,x5
+100:
+    ldp x4,x5,[sp],16          // restaur des  2 registres
+    ldp x6,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

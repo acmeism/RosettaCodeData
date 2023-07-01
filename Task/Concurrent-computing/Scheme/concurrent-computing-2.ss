@@ -1,0 +1,5 @@
+(import (srfi 18))
+(define (parallel-execute . thunks)
+ (let ((threads (map make-thread thunks)))
+  (for-each thread-start! threads)
+  (for-each thread-join! threads)))

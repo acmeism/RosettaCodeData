@@ -1,0 +1,5 @@
+(prinl "Calling custom so/dll library...")
+(set 'A NIL)
+(set 'A (native "./duptest.so" "duptest" 'S "abc"))
+(prinl "A=" A)
+(when (not (= A NIL)) (prinl "Success!"))

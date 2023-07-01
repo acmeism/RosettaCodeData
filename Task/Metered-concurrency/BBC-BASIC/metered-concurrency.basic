@@ -1,0 +1,61 @@
+      INSTALL @lib$+"TIMERLIB"
+      DIM tID%(6)
+
+      REM Two workers may be concurrent
+      DIM Semaphore%(2)
+
+      tID%(6) = FN_ontimer(11, PROCtimer6, 1)
+      tID%(5) = FN_ontimer(10, PROCtimer5, 1)
+      tID%(4) = FN_ontimer(11, PROCtimer4, 1)
+      tID%(3) = FN_ontimer(10, PROCtimer3, 1)
+      tID%(2) = FN_ontimer(11, PROCtimer2, 1)
+      tID%(1) = FN_ontimer(10, PROCtimer1, 1)
+
+      ON CLOSE PROCcleanup : QUIT
+      ON ERROR PRINT REPORT$ : PROCcleanup : END
+
+      sc% = 0
+      REPEAT
+        oldsc% = sc%
+        sc% = -SUM(Semaphore%())
+        IF sc%<>oldsc% PRINT "Semaphore count now ";sc%
+        WAIT 0
+      UNTIL FALSE
+
+      DEF PROCtimer1 : PROCtask(1) : ENDPROC
+      DEF PROCtimer2 : PROCtask(2) : ENDPROC
+      DEF PROCtimer3 : PROCtask(3) : ENDPROC
+      DEF PROCtimer4 : PROCtask(4) : ENDPROC
+      DEF PROCtimer5 : PROCtask(5) : ENDPROC
+      DEF PROCtimer6 : PROCtask(6) : ENDPROC
+
+      DEF PROCtask(n%)
+      LOCAL i%, temp%
+      PRIVATE delay%(), sem%()
+      DIM delay%(6), sem%(6)
+      IF delay%(n%) THEN
+        delay%(n%) -= 1
+        IF delay%(n%) = 0 THEN
+          SWAP Semaphore%(sem%(n%)),temp%
+          delay%(n%) = -1
+          PRINT "Task " ; n% " released semaphore"
+        ENDIF
+        ENDPROC
+      ENDIF
+      FOR i% = 1 TO DIM(Semaphore%(),1)
+        temp% = TRUE
+        SWAP Semaphore%(i%),temp%
+        IF NOT temp% EXIT FOR
+      NEXT
+      IF temp% THEN ENDPROC : REM Waiting to acquire semaphore
+      sem%(n%) = i%
+      delay%(n%) = 200
+      PRINT "Task "; n% " acquired semaphore"
+      ENDPROC
+
+      DEF PROCcleanup
+      LOCAL i%
+      FOR i% = 1 TO 6
+        PROC_killtimer(tID%(i%))
+      NEXT
+      ENDPROC

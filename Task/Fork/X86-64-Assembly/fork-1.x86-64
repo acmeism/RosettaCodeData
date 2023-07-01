@@ -1,0 +1,103 @@
+option casemap:none
+
+windows64     equ 1
+linux64       equ 3
+
+ifndef __THREAD_CLASS__
+__THREAD_CLASS__      equ 1
+
+  if @Platform eq windows64
+    option dllimport:<kernel32>
+      CreateThread    proto :qword, :qword, :qword, :qword, :dword, :qword
+      HeapAlloc       proto :qword, :dword, :qword
+      HeapFree        proto :qword, :dword, :qword
+      ExitProcess     proto :dword
+      GetProcessHeap  proto
+    option dllimport:<none>
+      exit            equ ExitProcess
+  elseif @Platform eq linux64
+    pthread_create    proto :qword, :qword, :qword, :qword
+    malloc            proto :qword
+    free              proto :qword
+    exit              proto :dword
+  endif
+
+  printf              proto :qword, :vararg
+
+  CLASS thread
+    CMETHOD createthread
+  ENDMETHODS
+    tid     dq ?
+    hThread dq ?
+  ENDCLASS
+
+  METHOD thread, Init, <VOIDARG>, <>
+    mov rax, thisPtr
+    ret
+  ENDMETHOD
+
+  METHOD thread, createthread, <VOIDARG>, <>, lpCode:qword, arg:qword
+    local z:qword,x:qword
+
+    mov rbx, thisPtr
+    assume rbx:ptr thread
+    mov z, lpCode
+    mov x, 0
+    .if arg != 0
+      mov x, arg
+    .endif
+    if @Platform eq windows64
+      invoke CreateThread, 0, 0, z, x, 0, addr [rbx].tid
+      .if rax == 0
+        mov rax, -1
+        ret
+      .endif
+    elseif @Platform eq linux64
+      invoke pthread_create, addr [rbx].tid, 0, z, x
+      .if rax != 0
+        mov rax, -1
+        ret
+      .endif
+    endif
+    mov [rbx].hThread, rax
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+  METHOD thread, Destroy, <VOIDARG>, <>
+    ;; We should close all thread handles here..
+    ;; But I don't care. In this example, exit does it for me. :]
+    ret
+  ENDMETHOD
+
+endif               ;;__THREAD_CLASS__
+
+thChild             proto
+
+.data
+
+.code
+main proc
+  local pThread:ptr thread
+
+  mov pThread, _NEW(thread)
+  invoke printf, CSTR("--> Main thread spwaning child thread...",10)
+  lea rax, thChild
+  pThread->createthread(rax, 0)
+  _DELETE(pThread)
+  ;; Just a loop so Exit doesn't foobar the program.
+  ;; No reason to include and call Sleep just for this.. -.-
+  mov rcx, 20000
+  @@:
+    add rax, 1
+  loop @B
+  invoke exit, 0
+  ret
+main endp
+
+thChild proc
+  invoke printf, CSTR("--> Goodbye, World! from a child.... thread.",10)
+  mov rax, 0
+  ret
+thChild endp
+end

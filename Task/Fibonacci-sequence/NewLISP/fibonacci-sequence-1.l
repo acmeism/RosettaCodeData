@@ -1,0 +1,5 @@
+(define (fibonacci n)
+    (let (L '(0 1))
+        (dotimes (i n)
+            (setq L (list (L 1) (apply + L))))
+        (L 1)) )

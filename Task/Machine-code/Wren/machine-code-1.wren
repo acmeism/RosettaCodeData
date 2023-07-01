@@ -1,0 +1,20 @@
+/* machine_code.wren */
+
+class C {
+    // pass the machine code in string form to the host
+    foreign static runMachineCode(s, a, b)
+}
+
+var a = 7
+var b = 12
+
+// x64 opcodes for this task
+var m = [
+    0x55, 0x48, 0x89, 0xe5, 0x89, 0x7d,
+    0xfc, 0x89, 0x75, 0xf8, 0x8b, 0x75,
+    0xfc, 0x03, 0x75, 0xf8, 0x89, 0x75,
+    0xf4, 0x8b, 0x45, 0xf4, 0x5d, 0xc3
+]
+
+var s = m.map { |byte| String.fromByte(byte) }.join()
+System.print("%(a) + %(b) = %(C.runMachineCode(s, a, b))")

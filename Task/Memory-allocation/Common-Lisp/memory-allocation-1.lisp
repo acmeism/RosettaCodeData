@@ -1,0 +1,5 @@
+(defun show-allocation ()
+  (let ((a (cons 1 2))
+        (b (cons 1 2)))
+    (declare (dynamic-extent b))
+    (list a b)))

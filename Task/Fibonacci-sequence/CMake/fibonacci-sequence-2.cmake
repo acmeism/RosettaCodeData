@@ -1,0 +1,12 @@
+# Test program: print 0th to 9th and 25th to 30th Fibonacci numbers.
+set(s "")
+foreach(i RANGE 0 9)
+  fibonacci(f ${i})
+  set(s "${s} ${f}")
+endforeach(i)
+set(s "${s} ... ")
+foreach(i RANGE 25 30)
+  fibonacci(f ${i})
+  set(s "${s} ${f}")
+endforeach(i)
+message(${s})

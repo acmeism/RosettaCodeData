@@ -1,0 +1,1 @@
+perl -MList::Util="first" -E "@c[0..10**6]=(0..10**6);say for grep{$e=eval;$c[$e]=undef if $e>=0;$h{$e}++;eval $_==100}glob'{-,}'.join'{+,-,}',1..9;END{say for(sort{$h{$b}<=>$h{$a}}grep{$_>=0}keys %h)[0],first{defined $_}@c;say for(sort{$b<=>$a}grep{$_>0}keys %h)[0..9]}"

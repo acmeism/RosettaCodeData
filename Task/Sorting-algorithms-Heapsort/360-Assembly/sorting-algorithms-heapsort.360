@@ -1,0 +1,135 @@
+*        Heap sort                     22/06/2016
+HEAPS    CSECT
+         USING  HEAPS,R13              base register
+         B      72(R15)                skip savearea
+         DC     17F'0'                 savearea
+         STM    R14,R12,12(R13)        prolog
+         ST     R13,4(R15)             "
+         ST     R15,8(R13)             "
+         LR     R13,R15                "
+         L      R1,N                   n
+         BAL    R14,HEAPSORT           call heapsort(n)
+         LA     R3,PG                  pgi=0
+         LA     R6,1                   i=1
+         DO WHILE=(C,R6,LE,N)          for i=1 to n
+         LR     R1,R6                    i
+         SLA    R1,2                     .
+         L      R2,A-4(R1)               a(i)
+         XDECO  R2,XDEC                  edit a(i)
+         MVC    0(4,R3),XDEC+8           output a(i)
+         LA     R3,4(R3)                 pgi=pgi+4
+         LA     R6,1(R6)                 i=i+1
+         ENDDO  ,                      end for
+         XPRNT  PG,80                  print buffer
+         L      R13,4(0,R13)           epilog
+         LM     R14,R12,12(R13)        "
+         XR     R15,R15                "
+         BR     R14                    exit
+PG       DC     CL80' '                local data
+XDEC     DS     CL12                   "
+*------- heapsort(icount)----------------------------------------------
+HEAPSORT ST     R14,SAVEHPSR           save return addr
+         ST     R1,ICOUNT              icount
+         BAL    R14,HEAPIFY            call heapify(icount)
+         MVC    IEND,ICOUNT            iend=icount
+         DO WHILE=(CLC,IEND,GT,=F'1')  while iend>1
+         L      R1,IEND                  iend
+         LA     R2,1                     1
+         BAL    R14,SWAP                 call swap(iend,1)
+         LA     R1,1                     1
+         L      R2,IEND                  iend
+         BCTR   R2,0                     -1
+         ST     R2,IEND                  iend=iend-1
+         BAL    R14,SIFTDOWN             call siftdown(1,iend)
+         ENDDO  ,                      end while
+         L      R14,SAVEHPSR           restore return addr
+         BR     R14                    return to caller
+SAVEHPSR DS     A                      local data
+ICOUNT   DS     F                      "
+IEND     DS     F                      "
+*------- heapify(count)------------------------------------------------
+HEAPIFY  ST     R14,SAVEHPFY           save return addr
+         ST     R1,COUNT               count
+         SRA    R1,1                   /2
+         ST     R1,ISTART              istart=count/2
+         DO WHILE=(C,R1,GE,=F'1')      while istart>=1
+         L      R1,ISTART                istart
+         L      R2,COUNT                 count
+         BAL    R14,SIFTDOWN             call siftdown(istart,count)
+         L      R1,ISTART                istart
+         BCTR   R1,0                     -1
+         ST     R1,ISTART                istart=istart-1
+         ENDDO  ,                      end while
+         L      R14,SAVEHPFY           restore return addr
+         BR     R14                    return to caller
+SAVEHPFY DS     A                      local data
+COUNT    DS     F                      "
+ISTART   DS     F                      "
+*------- siftdown(jstart,jend)-----------------------------------------
+SIFTDOWN ST     R14,SAVESFDW           save return addr
+         ST     R1,JSTART              jstart
+         ST     R2,JEND                jend
+         ST     R1,ROOT                root=jstart
+         LR     R3,R1                  root
+         SLA    R3,1                   root*2
+         DO WHILE=(C,R3,LE,JEND)       while root*2<=jend
+         ST     R3,CHILD                 child=root*2
+         MVC    SW,ROOT                  sw=root
+         L      R1,SW                    sw
+         SLA    R1,2                     .
+         L      R2,A-4(R1)               a(sw)
+         L      R1,CHILD                 child
+         SLA    R1,2                     .
+         L      R3,A-4(R1)               a(child)
+         IF     CR,R2,LT,R3 THEN         if a(sw)<a(child) then
+         MVC    SW,CHILD                   sw=child
+         ENDIF  ,                        end if
+         L      R2,CHILD                 child
+         LA     R2,1(R2)                 +1
+         L      R1,SW                    sw
+         SLA    R1,2                     .
+         L      R3,A-4(R1)               a(sw)
+         L      R1,CHILD                 child
+         LA     R1,1(R1)                 +1
+         SLA    R1,2                     .
+         L      R4,A-4(R1)               a(child+1)
+         IF    C,R2,LE,JEND,AND,         if child+1<=jend and          X
+               CR,R3,LT,R4 THEN             a(sw)<a(child+1) then
+         L      R2,CHILD                   child
+         LA     R2,1(R2)                   +1
+         ST     R2,SW                      sw=child+1
+         ENDIF  ,                        end if
+         IF     CLC,SW,NE,ROOT THEN      if sw^=root then
+         L      R1,ROOT                    root
+         L      R2,SW                      sw
+         BAL    R14,SWAP                   call swap(root,sw)
+         MVC    ROOT,SW                    root=sw
+         ELSE   ,                        else
+         B      RETSFDW                    return
+         ENDIF  ,                        end if
+         L      R3,ROOT                  root
+         SLA    R3,1                     root*2
+         ENDDO  ,                      end while
+RETSFDW  L      R14,SAVESFDW           restore return addr
+         BR     R14                    return to caller
+SAVESFDW DS     A                      local data
+JSTART   DS     F                      "
+ROOT     DS     F                      "
+JEND     DS     F                      "
+CHILD    DS     F                      "
+SW       DS     F                      "
+*------- swap(x,y)-----------------------------------------------------
+SWAP     SLA    R1,2                   x
+         LA     R1,A-4(R1)             @a(x)
+         SLA    R2,2                   y
+         LA     R2,A-4(R2)             @a(y)
+         L      R3,0(R1)               temp=a(x)
+         MVC    0(4,R1),0(R2)          a(x)=a(y)
+         ST     R3,0(R2)               a(y)=temp
+         BR     R14                    return to caller
+*------- ------ -------------------------------------------------------
+A     DC F'4',F'65',F'2',F'-31',F'0',F'99',F'2',F'83',F'782',F'1'
+      DC F'45',F'82',F'69',F'82',F'104',F'58',F'88',F'112',F'89',F'74'
+N        DC     A((N-A)/L'A)           number of items
+         YREGS
+         END    HEAPS

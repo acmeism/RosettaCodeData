@@ -1,0 +1,179 @@
+:- module zebra.
+:- interface.
+
+:- import_module io.
+
+:- pred main(io, io).
+:- mode main(di, uo) is cc_multi.   % or det for all-solutions
+
+:- implementation.
+
+:- import_module list.
+:- import_module solutions.
+
+% perm
+
+:- pred my_perm(list(T), list(T)).
+:- mode my_perm(in, out) is multi.
+
+my_perm([], []).
+my_perm([X | Xs], Perm) :-
+    my_perm(Xs, PermXs),
+    my_insert(X, PermXs, Perm).
+
+:- pred my_insert(T, list(T), list(T)).
+:- mode my_insert(in, in, out) is multi.
+
+my_insert(X, [], [X]).
+my_insert(X, [Y | Ys], Zs) :-
+    (
+        Zs = [X, Y | Ys]
+    ;
+        my_insert(X, Ys, Zs0),
+        Zs = [Y | Zs0]
+    ).
+
+% The puzzle
+
+:- type person
+  --->    english
+  ;       spanish
+  ;       ukrainian
+  ;       norwegian
+  ;       japanese.
+
+:- pred left_of(list(T), T, T).
+:- mode left_of(in, in, in) is semidet.
+
+left_of([A, B | _], A, B).
+left_of([_ | List], A, B) :- left_of(List, A, B).
+
+:- pred next_to(list(T), T, T).
+:- mode next_to(in, in, in) is semidet.
+
+next_to(List, A, B) :-
+    ( left_of(List, A, B)
+    ; left_of(List, B, A)
+    ).
+
+:- pred puzzle({list(person), list(person), list(person), list(person),
+    list(person)}).
+:- mode puzzle(out) is nondet.
+
+puzzle({Houses, Colours, Pets, Drinks, Smokes}) :-
+    % 10. The Norwegian lives in the first house.
+    First = norwegian,
+    perm([english, spanish, ukrainian, japanese],
+        [Second, Third, Fourth, Fifth]),
+
+    % 2. The Englishman lives in the red house.
+    Red = english,
+    perm([spanish, ukrainian, norwegian, japanese],
+        [Green, Ivory, Yellow, Blue]),
+
+    % 10. The Norwegian lives in the first house.
+    % 15. The Norwegian lives next to the blue house.
+    Second = Blue,
+
+    % 6. The green house is immediately to the right of the ivory house.
+    left_of(Houses, Ivory, Green),
+
+    % 3. The Spaniard owns the dog.
+    Dog = spanish,
+    perm([english, ukrainian, norwegian, japanese],
+        [Snails, Fox, Horse, Zebra]),
+
+    % 4. Coffee is drunk in the green house.
+    Green = Coffee,
+
+    % 5. The Ukrainian drinks tea.
+    Tea = ukrainian,
+
+    % 9. Milk is drunk in the middle house.
+    Milk = Third,
+
+    perm([english, spanish, norwegian, japanese],
+        [Coffee, Milk, Juice, Water]),
+
+    % 7. The Old Gold smoker owns snails.
+    Snails = OldGold,
+
+    % 8. Kools are smoked in the yellow house.
+    Kools = Yellow,
+
+    % 13. The Lucky Strike smoker drinks orange juice.
+    LuckyStrike = Juice,
+
+    % 14. The Japanese smokes Parliaments.
+    Parliament = japanese,
+
+    perm([english, spanish, ukrainian, norwegian],
+        [OldGold, Kools, Chesterfield, LuckyStrike]),
+
+    % 11. The man who smokes Chesterfields lives in the house
+    % next to the man with the fox.
+    next_to(Houses, Chesterfield, Fox),
+
+    % 12. Kools are smoked in the house next to the house
+    % where the horse is kept.
+    next_to(Houses, Kools, Horse),
+
+    Houses = [First, Second, Third, Fourth, Fifth],
+    Colours = [Red, Green, Ivory, Yellow, Blue],
+    Pets = [Dog, Snails, Fox, Horse, Zebra],
+    Drinks = [Coffee, Tea, Milk, Juice, Water],
+    Smokes = [OldGold, Kools, Chesterfield, LuckyStrike, Parliament].
+
+% Printing a solution
+
+:- pred write_solution({list(person), list(person), list(person),
+    list(person), list(person)}::in, io::di, io::uo) is det.
+
+write_solution({Houses, Colours, Pets, Drinks, Smokes}, !IO) :-
+    write_string("--------\n", !IO),
+    write_assignments(["1st", "2nd", "3rd", "4th", "5th"],
+        Houses, !IO),
+    write_assignments(["red", "green", "ivory", "yellow", "blue"],
+        Colours, !IO),
+    write_assignments(["dog", "snails", "fox", "horse", "zebra"],
+        Pets, !IO),
+    write_assignments(["coffee", "tea", "milk", "juice", "water"],
+        Drinks, !IO),
+    write_assignments(["oldgold", "kools", "chesterfield",
+        "luckystrike", "parliament"], Smokes, !IO).
+
+:- pred write_assignments(list(string)::in, list(person)::in,
+    io::di, io::uo) is det.
+
+write_assignments(Labels, Persons, !IO) :-
+    foldl_corresponding(write_assignment, Labels, Persons, !IO),
+    nl(!IO).
+
+:- pred write_assignment(string::in, person::in, io::di, io::uo) is det.
+
+write_assignment(Label, Person, !IO) :-
+    write_string(Label, !IO),
+    write_string(" - ", !IO),
+    write(Person, !IO),
+    write_string("\n", !IO).
+
+% main
+
+main(!IO) :-
+    % Print all solutions.
+    /*
+    solutions(puzzle, Solutions),
+    foldl(write_solution, Solutions, !IO).
+    */
+
+    % Print solutions as they are found.
+    /*
+    unsorted_aggregate(puzzle, write_solution, !IO).
+    */
+
+    % Print one solution.
+    ( if puzzle(Solution) then
+        write_solution(Solution, !IO)
+    else
+        write_string("No solution found.\n", !IO)
+    ).

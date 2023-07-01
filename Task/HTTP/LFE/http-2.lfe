@@ -1,0 +1,13 @@
+(: inets start)
+(let* ((method 'get)
+       (url '"http://lfe.github.io")
+       (headers ())
+       (request-data (tuple url headers))
+       (http-options ())
+       (request-options (list (tuple 'sync 'false))))
+  (: httpc request method request-data http-options request-options)
+  (receive
+    ((tuple 'http (tuple request-id (tuple 'error reason)))
+     (: io format '"Error: ~p~n" (list reason)))
+    ((tuple 'http (tuple request-id result))
+     (: io format '"Result: ~p~n" (list result))))))

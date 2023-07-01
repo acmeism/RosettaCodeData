@@ -1,0 +1,217 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program xpathXml64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ NBMAXELEMENTS,    100
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure xmlNode*/
+    .struct  0
+xmlNode_private:                         // application data
+    .struct  xmlNode_private + 8
+xmlNode_type:                            // type number, must be second !
+    .struct  xmlNode_type + 8
+xmlNode_name:                            // the name of the node, or the entity
+    .struct  xmlNode_name + 8
+xmlNode_children:                        // parent->childs link
+    .struct  xmlNode_children + 8
+xmlNode_last:                            // last child link
+    .struct  xmlNode_last + 8
+xmlNode_parent:                          // child->parent link
+    .struct  xmlNode_parent + 8
+xmlNode_next:                            // next sibling link
+    .struct  xmlNode_next + 8
+xmlNode_prev:                            // previous sibling link
+    .struct  xmlNode_prev + 8
+xmlNode_doc:                             // the containing document
+    .struct  xmlNode_doc + 8
+xmlNode_ns:                              // pointer to the associated namespace
+    .struct  xmlNode_ns + 8
+xmlNode_content:                         // the content
+    .struct  xmlNode_content + 8
+xmlNode_properties:                      // properties list
+    .struct  xmlNode_properties + 8
+xmlNode_nsDef:                           // namespace definitions on this node
+    .struct  xmlNode_nsDef + 8
+xmlNode_psvi:                            // for type/PSVI informations
+    .struct  xmlNode_psvi + 8
+xmlNode_line:                            // line number
+    .struct  xmlNode_line + 4
+xmlNode_extra:                           // extra data for XPath/XSLT
+    .struct  xmlNode_extra + 4
+xmlNode_fin:
+/********************************************/
+/* structure xmlNodeSet*/
+    .struct  0
+xmlNodeSet_nodeNr:                       // number of nodes in the set
+    .struct  xmlNodeSet_nodeNr + 4
+xmlNodeSet_nodeMax:                      // size of the array as allocated
+    .struct  xmlNodeSet_nodeMax + 4
+xmlNodeSet_nodeTab:                      // array of nodes in no particular order
+    .struct  xmlNodeSet_nodeTab + 8
+xmlNodeSet_fin:
+/********************************************/
+/* structure xmlXPathObject*/
+    .struct  0
+xmlPathObj_type:                         //
+    .struct  xmlPathObj_type + 8
+xmlPathObj_nodesetval:                   //
+    .struct  xmlPathObj_nodesetval + 8
+xmlPathObj_boolval:                      //
+    .struct  xmlPathObj_boolval + 8
+xmlPathObj_floatval:                     //
+    .struct  xmlPathObj_floatval + 8
+xmlPathObj_stringval:                    //
+    .struct  xmlPathObj_stringval + 8
+xmlPathObj_user:                         //
+    .struct  xmlPathObj_user + 8
+xmlPathObj_index:                        //
+    .struct  xmlPathObj_index + 8
+xmlPathObj_usex2:                        //
+    .struct  xmlPathObj_usex2 + 8
+xmlPathObj_index2:                       //
+    .struct  xmlPathObj_index2 + 8
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessEndpgm:      .asciz "\nNormal end of program.\n"
+szMessDisVal:      .asciz "\nDisplay set values.\n"
+szMessDisArea:     .asciz "\nDisplay area values.\n"
+szFileName:        .asciz "testXml.xml"
+szMessError:       .asciz "Error detected !!!!. \n"
+
+
+szLibName:         .asciz "name"
+szLibPrice:        .asciz "//price"
+szLibExtName:      .asciz "//name"
+szCarriageReturn:  .asciz "\n"
+
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+tbExtract:          .skip 8 * NBMAXELEMENTS      // result extract area
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                     // entry of program
+    ldr x0,qAdrszFileName
+    bl xmlParseFile                       // create doc
+    cbz x0,99f                            // error ?
+    mov x19,x0                            // doc address
+    mov x0,x19                            // doc
+    bl xmlDocGetRootElement               // get root
+    bl xmlFirstElementChild               // get first section
+    bl xmlFirstElementChild               // get first item
+    bl xmlFirstElementChild               // get first name
+    bl xmlNodeGetContent                  // extract content
+    bl affichageMess                      // for display
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    ldr x0,qAdrszMessDisVal
+    bl affichageMess
+    mov x0,x19
+    ldr x1,qAdrszLibPrice                 // extract prices
+    bl extractValue
+    mov x0,x19
+    ldr x1,qAdrszLibExtName               // extract names
+    bl extractValue
+    ldr x0,qAdrszMessDisArea
+    bl affichageMess
+    mov x4,#0                             // display string result area
+    ldr x5,qAdrtbExtract
+1:
+    ldr x0,[x5,x4,lsl #3]
+    cbz x0,2f
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    add x4,x4,1
+    b 1b
+2:
+    mov x0,x19
+    bl xmlFreeDoc
+    bl xmlCleanupParser
+    ldr x0,qAdrszMessEndpgm
+    bl affichageMess
+    b 100f
+99:                                       // error
+    ldr x0,qAdrszMessError
+    bl affichageMess
+100:                                      // standard end of the program
+    mov x0,0                              // return code
+    mov x8,EXIT                           // request to exit program
+    svc 0                                 // perform the system call
+
+qAdrszMessError:          .quad szMessError
+qAdrszMessEndpgm:         .quad szMessEndpgm
+qAdrszLibName:            .quad szLibName
+qAdrszLibPrice:           .quad szLibPrice
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszFileName:           .quad szFileName
+qAdrszLibExtName:         .quad szLibExtName
+qAdrtbExtract:            .quad tbExtract
+qAdrszMessDisVal:          .quad szMessDisVal
+qAdrszMessDisArea:         .quad szMessDisArea
+/******************************************************************/
+/*     extract value of set                                       */
+/******************************************************************/
+/* x0 contains the doc address
+/* x1 contains the address of the libel to extract */
+extractValue:
+    stp x19,lr,[sp,-16]!                 // save  registers
+    stp x20,x21,[sp,-16]!                // save  registers
+    stp x22,x23,[sp,-16]!                // save  registers
+    mov x20,x1                           // save address libel
+    mov x19,x0                           // save doc
+    bl xmlXPathNewContext                // create context
+    mov x23,x0                           // save context
+    mov x1,x0
+    mov x0,x20
+    bl xmlXPathEvalExpression
+    mov x21,x0
+    mov x0,x23
+    bl xmlXPathFreeContext               // free context
+    cmp x21,#0
+    beq 100f
+    ldr x14,[x21,#xmlPathObj_nodesetval] // values set
+    ldr w23,[x14,#xmlNodeSet_nodeNr]     // set size
+    mov x22,#0                           // index
+    ldr x20,[x14,#xmlNodeSet_nodeTab]    // area of nodes
+    ldr x21,qAdrtbExtract
+1:                                       // start loop
+    ldr x3,[x20,x22,lsl #3]              // load node
+    mov x0,x19
+    ldr x1,[x3,#xmlNode_children]        // load string value
+    mov x2,#1
+    bl xmlNodeListGetString
+    str x0,[x21,x22,lsl #3]              // store string pointer in area
+    bl affichageMess                     // and display string result
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    add x22,x22,1
+    cmp x22,x23
+    blt 1b
+100:
+    ldp x22,x23,[sp],16                  // restaur  2 registers
+    ldp x20,x21,[sp],16                  // restaur  2 registers
+    ldp x19,lr,[sp],16                   // restaur  2 registers
+    ret                                  // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

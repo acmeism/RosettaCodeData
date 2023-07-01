@@ -1,0 +1,234 @@
+/* ARM assembly Raspberry PI  */
+/*  program prisonniers.s   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+.equ NBDOORS,   100
+.equ NBLOOP, 1000
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessResult:        .asciz "Random strategie  : @ sur 1000 \n"
+sMessResultOPT:     .asciz "Optimal strategie : @ sur 1000 \n"
+szCarriageReturn:   .asciz "\n"
+.align 4
+iGraine:  .int 123456
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:        .skip 24
+tbDoors:          .skip 4 * NBDOORS
+tbTest:           .skip 4 * NBDOORS
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 @ entry of program
+
+    ldr r1,iAdrtbDoors
+    mov r2,#0
+1:                                    @ loop init doors table
+    add r3,r2,#1
+    str r3,[r1,r2,lsl #2]
+    add r2,r2,#1
+    cmp r2,#NBDOORS
+    blt 1b
+
+    mov r9,#0                         @ loop counter
+    mov r10,#0                        @ counter successes random strategie
+    mov r11,#0                        @ counter successes optimal strategie
+2:
+    ldr r0,iAdrtbDoors
+    mov r1,#NBDOORS
+    bl knuthShuffle
+
+    ldr r0,iAdrtbDoors
+    bl aleaStrategie
+    cmp r0,#NBDOORS
+    addeq r10,r10,#1
+
+    ldr r0,iAdrtbDoors
+    bl optimaStrategie
+    cmp r0,#NBDOORS
+    addeq r11,r11,#1
+
+    add r9,r9,#1
+    cmp r9,#NBLOOP
+    blt 2b
+
+    mov r0,r10                        @ result display
+    ldr r1,iAdrsZoneConv
+    bl conversion10                   @ call decimal conversion
+    ldr r0,iAdrsMessResult
+    ldr r1,iAdrsZoneConv              @ insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+
+    mov r0,r11                        @ result display
+    ldr r1,iAdrsZoneConv
+    bl conversion10                   @ call decimal conversion
+    ldr r0,iAdrsMessResultOPT
+    ldr r1,iAdrsZoneConv              @ insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess
+
+100:                                  @ standard end of the program
+    mov r0, #0                        @ return code
+    mov r7, #EXIT                     @ request to exit program
+    svc #0                            @ perform the system call
+
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrsMessResult:          .int sMessResult
+iAdrsMessResultOPT:        .int sMessResultOPT
+iAdrtbDoors:              .int tbDoors
+iAdrtbTest:               .int tbTest
+iAdrsZoneConv:            .int sZoneConv
+/******************************************************************/
+/*            random door test strategy                           */
+/******************************************************************/
+/* r0 contains the address of table */
+aleaStrategie:
+    push {r1-r7,lr}              @ save registers
+    ldr r6,iAdrtbTest            @ table doors tests address
+    mov r1,r0                    @ save table doors address
+    mov r4,#0                    @ counter number of successes
+    mov r2,#0                    @ prisonners indice
+1:
+    bl razTable                  @ zero to table doors tests
+    mov r5,#0                    @ counter of door tests
+    add r7,r2,#1
+2:
+    mov r0,#NBDOORS - 1
+    bl genereraleas              @ random test
+    add r0,r0,#1
+    ldr r3,[r6,r0,lsl #2]        @ doors also tested ?
+    cmp r3,#0
+    bne 2b                       @ yes
+    ldr r3,[r1,r0,lsl #2]        @ load N° door
+    cmp r3,r7                    @ compar N° door N° prisonner
+    addeq r4,r4,#1               @ succes
+    beq 3f
+    mov r3,#1                    @ top test table item
+    str r3,[r6,r0,lsl #2]
+    add r5,r5,#1
+    cmp r5,#NBDOORS / 2          @ number tests maxi ?
+    blt 2b                       @ no -> loop
+3:
+    add r2,r2,#1                 @ other prisonner
+    cmp r2,#NBDOORS
+    blt 1b
+
+    mov r0,r4                    @ return number of successes
+100:
+    pop {r1-r7,lr}
+    bx lr                        @ return
+/******************************************************************/
+/*     raz test table                                             */
+/******************************************************************/
+razTable:
+    push {r0-r2,lr}              @ save registers
+    ldr r0,iAdrtbTest
+    mov r1,#0                    @ item indice
+    mov r2,#0
+1:
+    str r2,[r0,r1,lsl #2]        @ store zero à item
+    add r1,r1,#1
+    cmp r1,#NBDOORS
+    blt 1b
+100:
+    pop {r0-r2,lr}
+    bx lr                        @ return
+/******************************************************************/
+/*            random door test strategy                           */
+/******************************************************************/
+/* r0 contains the address of table */
+optimaStrategie:
+    push {r1-r7,lr}              @ save registers
+    mov r4,#0                    @ counter number of successes
+    mov r2,#0                    @ counter prisonner
+1:
+    mov r5,#0                    @ counter test
+    mov r1,r2                    @ first test = N° prisonner
+2:
+    ldr r3,[r0,r1,lsl #2]        @ load N° door
+    cmp r3,r2
+    addeq r4,r4,#1               @ equal -> succes
+    beq 3f
+    mov r1,r3                    @ new test with N° door
+    add r5,r5,#1
+    cmp r5,#NBDOORS / 2          @ test number maxi ?
+    blt 2b
+3:
+    add r2,r2,#1                 @ other prisonner
+    cmp r2,#NBDOORS
+    blt 1b
+
+    mov r0,r4
+100:
+    pop {r1-r7,lr}
+    bx lr                        @ return
+/******************************************************************/
+/*     knuth Shuffle                                  */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains the number of elements */
+knuthShuffle:
+    push {r2-r5,lr}                   @ save registers
+    mov r5,r0                         @ save table address
+    mov r2,#0                         @ start index
+1:
+    mov r0,r2                         @ generate aleas
+    bl genereraleas
+    ldr r3,[r5,r2,lsl #2]             @ swap number on the table
+    ldr r4,[r5,r0,lsl #2]
+    str r4,[r5,r2,lsl #2]
+    str r3,[r5,r0,lsl #2]
+    add r2,#1                         @ next number
+    cmp r2,r1                         @ end ?
+    blt 1b                            @ no -> loop
+100:
+    pop {r2-r5,lr}
+    bx lr                             @ return
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* r0 contains limit  */
+genereraleas:
+    push {r1-r4,lr}                   @ save registers
+    ldr r4,iAdriGraine
+    ldr r2,[r4]
+    ldr r3,iNbDep1
+    mul r2,r3,r2
+    ldr r3,iNbDep1
+    add r2,r2,r3
+    str r2,[r4]                       @ maj de la graine pour l appel suivant
+    cmp r0,#0
+    beq 100f
+    mov r1,r0                         @ divisor
+    mov r0,r2                         @ dividende
+    bl division
+    mov r0,r3                         @ résult = remainder
+
+100:                                  @ end function
+    pop {r1-r4,lr}                    @ restaur registers
+    bx lr                             @ return
+/*****************************************************/
+iAdriGraine: .int iGraine
+iNbDep1:     .int 0x343FD
+iNbDep2:     .int 0x269EC3
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

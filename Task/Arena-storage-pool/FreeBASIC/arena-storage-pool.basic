@@ -1,0 +1,121 @@
+/' FreeBASIC admite tres tipos básicos de asignación de memoria:
+- La asignación estática se produce para variables estáticas y globales.
+La memoria se asigna una vez cuando el programa se ejecuta y persiste durante
+toda la vida del programa.
+- La asignación de pila se produce para parámetros de procedimiento y variables
+locales. La memoria se asigna cuando se ingresa el bloque correspondiente y se
+libera cuando se deja el bloque, tantas veces como sea necesario.
+- La asignación dinámica es el tema de este artículo.
+
+La asignación estática y la asignación de pila tienen dos cosas en común:
+- El tamaño de la variable debe conocerse en el momento de la compilación.
+- La asignación y desasignación de memoria ocurren automáticamente (cuando se
+crea una instancia de la variable y luego se destruye). El usuario no puede
+anticipar la destrucción de dicha variable.
+
+La mayoría de las veces, eso está bien. Sin embargo, hay situaciones en las que
+una u otra de estas restricciones causan problemas (cuando la memoria necesaria
+depende de la entrada del usuario, el tamaño solo se puede determinar durante el
+tiempo de ejecución).
+
+1) Palabras clave para la asignación de memoria dinámica:
+Hay dos conjuntos de palabras clave para la asignación / desasignación dinámica:
+*  Allocate / Callocate / Reallocate / Deallocate: para la asignación de
+memoria bruta y luego la desasignación, para tipos simples predefinidos
+o búferes de usuario.
+*  New / Delete: para asignación de memoria + construcción, luego
+destrucción + desasignación.
+Se desaconseja encarecidamente mezclar palabras clave entre estos dos
+conjuntos cuando se gestiona un mismo bloque de memoria.
+
+2) Variante usando Redim / Erase:
+FreeBASIC también admite matrices dinámicas (matrices de longitud variable).
+La memoria utilizada por una matriz dinámica para almacenar sus elementos se
+asigna en tiempo de ejecución en el montón. Las matrices dinámicas pueden
+contener tipos simples y objetos complejos.
+Al usar Redim, el usuario no necesita llamar al Constructor / Destructor
+porque Redim lo hace automáticamente cuando agrega / elimina un elemento.
+Erase luego destruye todos los elementos restantes para liberar completamente
+la memoria asignada a ellos.
+
+'/
+
+Type UDT
+    Dim As String S = "FreeBASIC"              '' induce an implicit constructor and destructor
+End Type
+
+' 3 then 4 objects: Callocate, Reallocate, Deallocate, (+ .constructor + .destructor)
+Dim As UDT Ptr p1 = Callocate(3, Sizeof(UDT))  '' allocate cleared memory for 3 elements (string descriptors cleared,
+''     but maybe useless because of the constructor's call right behind)
+For I As Integer = 0 To 2
+    p1[I].Constructor()                        '' call the constructor on each element
+Next I
+For I As Integer = 0 To 2
+    p1[I].S &= Str(I)                          '' add the element number to the string of each element
+Next I
+For I As Integer = 0 To 2
+    Print "'" & p1[I].S & "'",                 '' print each element string
+Next I
+Print
+p1 = Reallocate(p1, 4 * Sizeof(UDT))           '' reallocate memory for one additional element
+Clear p1[3], 0, 3 * Sizeof(Integer)            '' clear the descriptor of the additional element,
+''     but maybe useless because of the constructor's call right behind
+p1[3].Constructor()                            '' call the constructor on the additional element
+p1[3].S &= Str(3)                              '' add the element number to the string of the additional element
+For I As Integer = 0 To 3
+    Print "'" & p1[I].S & "'",                 '' print each element string
+Next I
+Print
+For I As Integer = 0 To 3
+    p1[I].Destructor()                         '' call the destructor on each element
+Next I
+Deallocate(p1)                                 '' deallocate the memory
+Print
+
+' 3 objects: New, Delete
+Dim As UDT Ptr p2 = New UDT[3]                 '' allocate memory and construct 3 elements
+For I As Integer = 0 To 2
+    p2[I].S &= Str(I)                          '' add the element number to the string of each element
+Next I
+For I As Integer = 0 To 2
+    Print "'" & p2[I].S & "'",                 '' print each element string
+Next I
+Print
+Delete [] p2                                   '' destroy the 3 element and deallocate the memory
+Print
+
+' 3 objects: Placement New, (+ .destructor)
+Redim As Byte array(0 To 3 * Sizeof(UDT) - 1)  '' allocate buffer for 3 elements
+Dim As Any Ptr p = @array(0)
+Dim As UDT Ptr p3 = New(p) UDT[3]              '' only construct the 3 elements in the buffer (placement New)
+For I As Integer = 0 To 2
+    p3[I].S &= Str(I)                          '' add the element number to the string of each element
+Next I
+For I As Integer = 0 To 2
+    Print "'" & p3[I].S & "'",                 '' print each element string
+Next I
+Print
+For I As Integer = 0 To 2
+    p3[I].Destructor()                         '' call the destructor on each element
+Next I
+Erase array                                    '' deallocate the buffer
+Print
+
+' 3 then 4 objects: Redim, Erase
+Redim As UDT p4(0 To 2)                        '' define a dynamic array of 3 elements
+For I As Integer = 0 To 2
+    p4(I).S &= Str(I)                          '' add the element number to the string of each element
+Next I
+For I As Integer = 0 To 2
+    Print "'" & p4(I).S & "'",                 '' print each element string
+Next I
+Print
+Redim Preserve p4(0 To 3)                      '' resize the dynamic array for one additional element
+p4(3).S &= Str(3)                              '' add the element number to the string of the additional element
+For I As Integer = 0 To 3
+    Print "'" & p4(I).S & "'",                 '' print each element string
+Next I
+Print
+Erase p4                                       '' erase the dynamic array
+Print
+Sleep

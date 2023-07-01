@@ -1,0 +1,199 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program loopnrange64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResult:      .asciz "@ \n"                    // message result
+szCarriageReturn:  .asciz "\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+qSum:                      .skip 8         // this program store sum and product in memory
+qProd:                     .skip 8         // it is possible to use registers x22 and x28
+sZoneConv:                 .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                       // entry of program
+    ldr x0,qAdrqProd
+    mov x1,1
+    str x1,[x0]                             // init product
+    ldr x0,qAdrqSum
+    mov x1,0
+    str x1,[x0]                             // init sum
+
+    mov x25,5                               // x
+    mov x24,-5                              // y
+    mov x26,-2                              // z
+    mov x21,1                               // one
+    mov x23,3                               // three
+    mov x27,7                               // seven
+
+                                            // loop one
+    mov x0,3
+    mov x1,3
+    bl computePow                           // compute 3 pow 3
+    mov x20,x0                              // save result
+    mvn x9,x23                              // x9 = - three
+    add x9,x9,1
+1:
+    mov x0,x9
+    bl computeSumProd
+    add x9,x9,x23                           // increment with three
+    cmp x9,x20
+    ble 1b
+                                            // loop two
+    mvn x9,x27                              // x9 = - seven
+    add x9,x9,1
+2:
+    mov x0,x9
+    bl computeSumProd
+    add x9,x9,x25                           // increment with x
+    cmp x9,x27                              // compare to seven
+    ble 2b
+
+                                            // loop three
+    mov x9,#550
+    sub x20,x9,x24                          // x20 = 550 - y
+    mov x9,#555
+3:
+    mov x0,x9
+    bl computeSumProd
+    add x9,x9,#1
+    cmp x9,x20
+    ble 3b
+                                            // loop four
+    mov x9,#22
+4:
+    mov x0,x9
+    bl computeSumProd
+    sub x9,x9,x23                           // decrement with three
+    cmp x9,#-28
+    bge 4b
+                                            // loop five
+    mov x9,1927
+    mov x20,1939
+5:
+    mov x0,x9
+    bl computeSumProd
+    add x9,x9,1
+    cmp x9,x20
+    ble 5b
+                                            // loop six
+    mov x9,x25                              // x9 = x
+    mvn x20,x26                             // x20 = - z
+    add x20,x20,1
+6:
+    mov x0,x9
+    bl computeSumProd
+    sub x9,x9,x20
+    cmp x9,x24
+    bge 6b
+                                            // loop seven
+    mov x0,x25
+    mov x1,11
+    bl computePow                           // compute 11 pow x
+    add x20,x0,x21                          // + one
+    mov x9,x0
+7:
+    mov x0,x9
+    bl computeSumProd
+    add x9,x9,1
+    cmp x9,x20
+    ble 7b
+                                            // display result
+    ldr x0,qAdrqSum
+    ldr x0,[x0]
+    ldr x1,qAdrsZoneConv                    // signed conversion value
+    bl conversion10S                        // decimal conversion
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc                   // insert result at @ character
+    bl affichageMess                        // display message
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess                        // display return line
+    ldr x0,qAdrqProd
+    ldr x0,[x0]
+    ldr x1,qAdrsZoneConv                    // conversion value
+    bl conversion10S                        // signed decimal conversion
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc                   // insert result at  @ character
+    bl affichageMess                        // display message
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess                        // display return line
+
+
+100:                                        // standard end of the program
+    mov x0,0                                // return code
+    mov x8,EXIT                             // request to exit program
+    svc 0                                   // perform the system call
+
+qAdrsZoneConv:            .quad sZoneConv
+qAdrszMessResult:         .quad szMessResult
+qAdrszCarriageReturn:     .quad szCarriageReturn
+/******************************************************************/
+/*     compute the sum and prod                         */
+/******************************************************************/
+/* x0 contains the number  */
+computeSumProd:
+    stp x1,lr,[sp,-16]!          // save  registers
+    asr x10,x0,#63
+    eor x12,x10,x0
+    sub x12,x12,x10             // compute absolue value
+    ldr x13,qAdrqSum            // load sum
+    ldr x11,[x13]
+    add x11,x11,x12             // add sum
+    str x11,[x13]               // store sum
+    cmp x0,#0                   // j = 0 ?
+    beq 100f                    // yes
+    ldr x13,qAdrqProd
+    ldr x11,[x13]
+    asr x12,x11,#63             // compute absolute value of prod
+    eor x14,x11,x12
+    sub x12,x14,x12
+    ldr x10,qVal2P27
+    cmp x12,x10                 // compare 2 puissance 27
+    bgt 100f
+    mul x11,x0,x11
+    str x11,[x13]               // store prod
+100:
+    ldp x1,lr,[sp],16           // restaur  2 registers
+    ret                         // return to address lr x230
+qAdrqSum:                .quad qSum
+qAdrqProd:               .quad qProd
+qVal2P27:                .quad 1<<27
+/******************************************************************/
+/*     compute pow                         */
+/******************************************************************/
+/* x0 contains pow  */
+/* x1 contains number */
+computePow:
+    stp x1,lr,[sp,-16]!          // save  registers
+    mov x12,x0
+    mov x0,#1
+1:
+    cmp x12,#0
+    ble 100f
+    mul x0,x1,x0
+    sub x12,x12,#1
+    b 1b
+100:
+    ldp x1,lr,[sp],16           // restaur  2 registers
+    ret                         // return to address lr x230
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

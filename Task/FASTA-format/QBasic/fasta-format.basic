@@ -1,0 +1,30 @@
+FUNCTION checkNoSpaces (s$)
+    FOR i = 1 TO LEN(s$) - 1
+        IF MID$(s$, i, 1) = CHR$(32) OR MID$(s$, i, 1) = CHR$(9) THEN checkNoSpaces = 0
+    NEXT i
+    checkNoSpaces = 1
+END FUNCTION
+
+OPEN "input.fasta" FOR INPUT AS #1
+
+first = 1
+
+DO WHILE NOT EOF(1)
+    LINE INPUT #1, ln$
+    IF LEFT$(ln$, 1) = ">" THEN
+        IF NOT first THEN PRINT
+        PRINT MID$(ln$, 2); ": ";
+        IF first THEN first = 0
+    ELSEIF first THEN
+        PRINT : PRINT "Error : File does not begin with '>'"
+        EXIT DO
+    ELSE
+        IF checkNoSpaces(ln$) THEN
+            PRINT ln$;
+        ELSE
+            PRINT : PRINT "Error : Sequence contains space(s)"
+            EXIT DO
+        END IF
+    END IF
+LOOP
+CLOSE #1

@@ -1,0 +1,58 @@
+:- module turing.
+
+:- interface.
+
+:- import_module list.
+:- import_module set.
+
+:- type config(State, Symbol)
+    ---> config(initial_state  :: State,
+                halting_states :: set(State),
+                blank          :: Symbol ).
+
+:- type action ---> left ; stay ; right.
+
+:- func turing(config(State, Symbol),
+               pred(State, Symbol, Symbol, action, State),
+               list(Symbol)) = list(Symbol).
+:- mode turing(in,
+               pred(in, in, out, out, out) is semidet,
+               in) = out is det.
+
+:- implementation.
+
+:- import_module pair.
+:- import_module require.
+
+turing(Config@config(Start, _, _), Rules, Input) = Output :-
+    (Left-Right) = perform(Config, Rules, Start, ([]-Input)),
+    Output = append(reverse(Left), Right).
+
+:- func perform(config(State, Symbol),
+                pred(State, Symbol, Symbol, action, State),
+                State, pair(list(Symbol))) = pair(list(Symbol)).
+:- mode perform(in, pred(in, in, out, out, out) is semidet,
+                in, in) = out is det.
+perform(Config@config(_, Halts, Blank), Rules, State,
+        Input@(LeftInput-RightInput)) = Output :-
+    symbol(RightInput, Blank, RightNew, Symbol),
+    ( set.member(State, Halts) ->
+        Output = Input
+    ; Rules(State, Symbol, NewSymbol, Action, NewState) ->
+        NewLeft  = pair(LeftInput, [NewSymbol|RightNew]),
+        NewRight = action(Action, Blank, NewLeft),
+        Output   = perform(Config, Rules, NewState, NewRight)
+    ;
+        error("an impossible state has apparently become possible") ).
+
+:- pred symbol(list(Symbol), Symbol, list(Symbol), Symbol).
+:- mode symbol(in, in, out, out) is det.
+symbol([],        Blank, [],  Blank).
+symbol([Sym|Rem], _,     Rem, Sym).
+
+:- func action(action, State, pair(list(State))) = pair(list(State)).
+action(left,  Blank, ([]-Right))            = ([]-[Blank|Right]).
+action(left,  _,     ([Left|Lefts]-Rights)) = (Lefts-[Left|Rights]).
+action(stay,  _,     Tape)                  = Tape.
+action(right, Blank, (Left-[]))             = ([Blank|Left]-[]).
+action(right, _,     (Left-[Right|Rights])) = ([Right|Left]-Rights).

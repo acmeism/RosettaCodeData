@@ -1,0 +1,13 @@
+(de cal (Year)
+   (prinl "====== " Year " ======")
+   (for Dat (range (date Year 1 1) (date Year 12 31))
+      (let D (date Dat)
+         (tab (3 3 4 8)
+            (when (= 1 (caddr D))
+               (get *Mon (cadr D)) )
+            (caddr D)
+            (day Dat *Day)
+            (when (=0 (% (inc Dat) 7))
+               (pack "Week " (week Dat)) ) ) ) ) )
+
+(cal 1969)

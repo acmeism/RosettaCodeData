@@ -1,0 +1,11 @@
+define(`s',`Hello,How,Are,You,Today')
+define(`set',`define(`$1[$2]',`$3')')
+define(`get',`defn($1[$2])')
+define(`n',0)
+define(`fill',
+   `set(a,n,$1)`'define(`n',incr(n))`'ifelse(eval($#>1),1,`fill(shift($@))')')
+fill(s)
+define(`j',0)
+define(`show',
+   `ifelse(eval(j<n),1,`get(a,j).`'define(`j',incr(j))`'show')')
+show

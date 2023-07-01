@@ -1,0 +1,61 @@
+' version 25-06-2015
+' compile with: fbc -s console
+
+Function calc_entropy(source As String, base_ As Integer) As Double
+
+    Dim As Integer i, sourcelen = Len(source), totalchar(255)
+    Dim As Double prop, entropy
+
+    For i = 0 To sourcelen -1
+        totalchar(source[i]) += 1
+    Next
+
+    For i = 0 To 255
+        If totalchar(i) = 0 Then Continue For
+        prop = totalchar(i) / sourcelen
+        entropy = entropy - (prop * Log (prop) / Log(base_))
+    Next
+
+    Return entropy
+
+End Function
+
+' ------=< MAIN >=------
+
+Dim As String fw1 = "1" , fw2 = "0", fw3
+Dim As Integer i, n
+
+Print"   N     Length  Entropy           Word"
+n = 1
+Print Using " ###";n; : Print Using " ###########"; Len(fw1);
+Print Using " ##.############### "; calc_entropy(fw1,2);
+Print fw1
+n = 2
+Print Using " ###";n ;: Print Using " ###########"; Len(fw2);
+Print Using " ##.############### "; calc_entropy(fw2,2);
+Print  fw2
+
+
+For n = 1 To 35
+
+    fw1 = "1" : fw2 = "0" ' construct string
+    For i = 1 To n
+        fw3 = fw2 + fw1
+        Swap fw1, fw2    ' swap pointers of fw1 and fw2
+        Swap fw2, fw3    ' swap pointers of fw2 and fw3
+    Next
+    fw1 = "" : fw3 = ""  ' free up memory
+
+    Print Using " ### ########### ##.############### "; n +2; Len(fw2);_
+                                                  calc_entropy(fw2, 2);
+    If Len(fw2) < 55 Then Print fw2 Else Print
+
+Next
+
+Print
+
+' empty keyboard buffer
+While InKey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

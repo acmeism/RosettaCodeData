@@ -1,0 +1,218 @@
+%----------------------------------------------------------------------%
+:- module primality.
+
+:- interface.
+
+:- import_module integer.
+:- pred is_prime(integer::in, integer::out) is multi.
+
+%----------------------------------------------------------------------%
+:- implementation.
+
+:- import_module bool, int, list, math, require, string.
+
+%----------------------------------------------------------------------%
+        %    is_prime/2 implements a Miller-Rabin primality test, is
+        %    deterministic for N < 3.415e+14, and is probabilistic for
+        %    larger N. Returns integer(0) if not prime, integer(1) if prime,
+        %    and -integer(1) if fails.
+
+% :- pred is_prime(integer::in, integer::out) is multi.
+	
+is_prime(N, P) :-
+	N < integer(2), P = integer(0).
+is_prime(N, P) :-
+	N = integer(2), P = integer(1).
+is_prime(N, P) :-
+	N = integer(3), P = integer(1).
+is_prime(N, P) :-      %% even numbers > 3: false
+	N > integer(3),
+	(N mod integer(2)) = integer(0),
+	P = integer(0).
+		%%-------------deterministic--------
+is_prime(N, P) :-      %% 3 < odd number < 3.415e+14
+	N > integer(3),
+	(N mod integer(2)) = integer(1),
+	N < integer(341550071728321),
+	deterministic_witnesses(N, DList),
+	is_mr_prime(N, DList, R),
+	P = R.
+		%%-------------probabilistic--------
+is_prime(N, P) :-      %% 3.415e+14 =< odd number
+	N > integer(3),
+	(N mod integer(2)) = integer(1),
+	N >= integer(341550071728321),
+	random_witnesses(N, 20, RList),
+	is_mr_prime(N, RList, R),
+	P = R.
+is_prime(_N, P) :- P = -integer(1).
+	
+%----------------------------------------------------------------------%
+% returns list of deterministic witnesses
+
+:- pred deterministic_witnesses(integer::in,
+        list(integer)::out) is multi.
+
+deterministic_witnesses(N, L) :- N < integer(1373653),
+	L = [integer(2), integer(3)].
+deterministic_witnesses(N, L) :- N < integer(9080191),
+	L = [integer(31), integer(73)].
+deterministic_witnesses(N, L) :- N < integer(25326001),
+	L = [integer(2), integer(3), integer(5)].
+deterministic_witnesses(N, L) :- N < integer(3215031751),
+	L = [integer(2), integer(3), integer(5), integer(7)].
+deterministic_witnesses(N, L) :- N < integer(4759123141),
+	L = [integer(2), integer(7), integer(61)].
+deterministic_witnesses(N, L) :- N < integer(1122004669633),
+	L = [integer(2), integer(13), integer(23), integer(1662803)].
+deterministic_witnesses(N, L) :- N < integer(2152302898747),
+	L = [integer(2), integer(3), integer(5), integer(7), integer(11)].
+deterministic_witnesses(N, L) :- N < integer(3474749660383),
+	L = [integer(2), integer(3), integer(5), integer(7), integer(11),
+                  integer(13)].
+deterministic_witnesses(N, L) :- N < integer(341550071728321),
+	L = [integer(2), integer(3), integer(5), integer(7),
+	        integer(11), integer(13), integer(17)].
+deterministic_witnesses(_N, L) :- L = [].     %% signals failure
+
+%----------------------------------------------------------------------%
+	%% random_witnesses/3 receives an integer, X, an int, K, and
+	%%   returns a list, P, of K pseudo-random integers in a range
+	%%   1 to X-1.
+	
+:- pred random_witnesses(integer::in, int::in,
+        list(integer)::out) is det.
+
+random_witnesses(X, K, P) :-
+	A = integer(6364136223846793005),
+	B = integer(1442695040888963407),
+	C = X - integer(2),
+	rw_loop(X, A, B, C, K, [], P).
+	
+:- pred rw_loop(integer::in, integer::in, integer::in, integer::in,
+        int::in, list(integer)::in, list(integer)::out) is det.
+					
+rw_loop(X, A, B, C, K, L, P) :-
+	X1 = (((X * A) + B) mod C) + integer(1),
+	( if K = 0 then P = L
+	  else rw_loop(X1, A, B, C, K-1, [X1|L], P)
+	).
+
+%----------------------------------------------------------------------%
+	% is_mr_prime/2 receives integer N and list As and returns true if
+	%    N is probably prime, and false otherwise
+	
+:- pred is_mr_prime(integer::in, list(integer)::in, integer::out) is nondet.
+
+is_mr_prime(N, As, R) :-
+    find_ds(N, L),
+    L = [D|T],
+    T = [S|_],
+    outer_loop(N, As, D, S, R).
+
+:- pred outer_loop(integer::in, list(integer)::in, integer::in,
+        integer::in, integer::out) is nondet.
+							
+outer_loop(N, As, D, S, R) :-
+    As = [A|At],
+    Base = powm(A, D, N),   %% = A^D mod N
+    inner_loop(Base, N, integer(0), S, U),
+	(  if U = integer(0) then R = integer(0)
+	   else ( if At = [] then R = integer(1)
+                    else            outer_loop(N, At, D, S, R)
+                  )
+	).
+
+:- pred inner_loop(integer::in, integer::in, integer::in,
+        integer::in, integer::out) is multi.
+							
+inner_loop(Base, N, Loop, S, U) :-
+    Next_Base = (Base * Base) mod N,
+    Next_Loop = Loop + integer(1),
+	( if Loop = integer(0) then
+	  	  ( if Base = integer(1)          then U = integer(1) % true
+                    else if Base = N - integer(1) then U = integer(1) % true
+                    else if Next_Loop = S         then U = integer(0) % false
+                    else               inner_loop(Next_Base, N, Next_Loop, S, U)
+                  )
+	  else if Base = N - integer(1)       then U = integer(1) % true
+	  else if Next_Loop = S               then U = integer(0) % false
+	  else                     inner_loop(Next_Base, N, Next_Loop, S, U)
+	).
+
+%----------------------------------------------------------------------%
+	% find_ds/2 receives odd integer N
+	%    and returns [D, S] such that N-1 = 2^S * D
+	
+:- pred find_ds(integer::in, list(integer)::out) is multi.
+
+find_ds(N, L) :-
+        A = N - integer(1),
+        find_ds1(A, integer(0), L).
+
+:- pred find_ds1(integer::in, integer::in, list(integer)::out) is multi.
+
+find_ds1(D, S, L) :-
+	D mod integer(2) = integer(0),
+	P = D div integer(2),
+	Q = S + integer(1),
+	find_ds1(P, Q, L).
+find_ds1(D, S, L) :-
+	L = [D, S].
+	
+%----------------------------------------------------------------------%
+:- func powm(integer, integer, integer) = integer.
+
+	% computes A^D mod N
+
+powm(A, D, N) =			
+        ( if   D = integer(0) then integer(1)
+          else ( if  (D mod integer(2)) = integer(0) then
+                       (integer.pow(powm(A, (D div integer(2)), N),
+                            integer(2))) mod N
+                    else (A * powm(A, D - integer(1), N)) mod N
+                 )
+	).
+
+%----------------------------------------------------------------------%
+:- end_module primality.
+
+% A means of testing the predicate is_prime/2
+%----------------------------------------------------------------------%
+
+:- module test_is_prime.
+
+:- interface.
+
+:- import_module io.
+:- pred main(io::di, io::uo) is cc_multi.
+
+%----------------------------------------------------------------------%
+
+:- implementation.
+
+:- import_module bool, char, int, integer, list, math, require, string.
+:- import_module primality.
+
+%----------------------------------------------------------------------%
+            % TEST THE IS_PRIME PREDICATE
+            % $ ./test_is_prime <integer>
+       %---------------------------------------------%
+
+main(!IO) :-
+    command_line_arguments(Args, !IO),
+    filter(is_all_digits, Args, CleanArgs),
+    Arg1 = list.det_index0(CleanArgs, 0),
+    M = integer.det_from_string(Arg1),
+	is_prime(M,P),
+	io.format("   is_prime(%s) = ", [s(integer.to_string(M))], !IO),
+	( if      P = integer(0) then io.write_string("false.\n", !IO)
+	  else if P = integer(1) then io.write_string("true.\n", !IO)
+	  else if P = -integer(1) then
+                             io.write_string("N fails all tests.\n", !IO)
+	  else io.write_string("Has reported neither true nor false
+                            nor any error condition.\n", !IO)
+	).
+	
+%----------------------------------------------------------------------%
+:- end_module test_is_prime.

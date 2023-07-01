@@ -1,0 +1,24 @@
+using Printf
+
+const tcode = (Regex=>Char)[r"A|B|C|Ä|Å|Á|Â|Ç" => '2',
+                            r"D|E|F|È|Ê|É" => '3',
+                            r"G|H|I|Í" => '4',
+                            r"J|K|L" => '5',
+                            r"M|N|O|Ó|Ö|Ô|Ñ" => '6',
+                            r"P|Q|R|S" => '7',
+                            r"T|U|V|Û|Ü" => '8',
+                            r"W|X|Y|Z" => '9']
+
+function tpad(str::IOStream)
+    tnym = (String=>Array{String,1})[]
+    for w in eachline(str)
+        w = chomp(w)
+        t = uppercase(w)
+        for (k,v) in tcode
+            t = replace(t, k, v)
+        end
+        t = replace(t, r"\D", '1')
+        tnym[t] = [get(tnym, t, String[]), w]
+    end
+    return tnym
+end

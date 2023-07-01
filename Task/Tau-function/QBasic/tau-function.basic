@@ -1,0 +1,15 @@
+PRINT "The tau functions for the first 100 positive integers are:": PRINT
+
+FOR N = 1 TO 100
+    IF N < 3 THEN
+        T = N
+    ELSE
+        T = 2
+        FOR A = 2 TO (N + 1) \ 2
+            IF N MOD A = 0 THEN T = T + 1
+        NEXT A
+    END IF
+    PRINT USING "###"; T;
+    IF N MOD 10 = 0 THEN PRINT
+NEXT N
+END

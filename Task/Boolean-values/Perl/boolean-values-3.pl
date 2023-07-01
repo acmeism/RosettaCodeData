@@ -1,0 +1,5 @@
+print (7 && 2);  # 2, rather than 1(true)
+print (2 && 7);  # 7, rather than 1(true)
+print (7 xor 2); # empty string, rather than 0(false)
+print ('apples' && 'pears');  # pears, rather than 1(true)
+print ('apples' xor 'pears'); # empty string, rather than 0(false)

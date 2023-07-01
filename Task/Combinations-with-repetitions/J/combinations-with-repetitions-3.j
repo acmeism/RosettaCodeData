@@ -1,0 +1,2 @@
+require 'stats'
+rcomb=: (combrep #) { ]

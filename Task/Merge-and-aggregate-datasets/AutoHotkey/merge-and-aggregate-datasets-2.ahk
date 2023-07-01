@@ -1,0 +1,25 @@
+patients =
+(
+PATIENT_ID,LASTNAME
+1001,Hopper
+4004,Wirth
+3003,Kemeny
+2002,Gosling
+5005,Kurtz
+)
+
+visits =
+(
+PATIENT_ID,VISIT_DATE,SCORE
+2002,2020-09-10,6.8
+1001,2020-09-17,5.5
+4004,2020-09-24,8.4
+2002,2020-10-08,
+1001,,6.6
+3003,2020-11-12,
+4004,2020-11-05,7.0
+1001,2020-11-19,5.3
+)
+
+MsgBox % Merge_and_aggregate(patients, visits)
+return

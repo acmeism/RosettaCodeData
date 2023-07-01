@@ -1,0 +1,8 @@
+' FB 1.05.0 Win64
+
+Dim fruit(1) As String = {"apple", "orange"}
+Dim length As Integer = UBound(fruit) - LBound(fruit) + 1
+Print "The length of the fruit array is"; length
+Print
+Print "Press any key to quit the program"
+Sleep

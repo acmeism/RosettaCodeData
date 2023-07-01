@@ -1,0 +1,83 @@
+		org	100h
+		jmp	demo
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Given a list of strings in HL, and a pointer in DE, write
+		;; the resulting string starting at DE.
+quibble:	mvi	a,'{'		; Write the first {,
+		stax	d
+		inx 	d		; And increment the pointer
+		push	h		; Keep start of list
+		call	strseqlen	; Get length of list
+		pop	h		; Restore start of list
+		xra	a		; Is the list empty?
+		ora	b
+		jz	quibend		; If empty list, we're done.
+quibcopy:	call	strcpy		; Copy current string into output
+		inx	h		; Advance input pointer to next string
+		dcr	b		; Decrement counter
+		jz	quibend		; If zero, that was the last string
+		push	h		; Push input pointer
+		mov	a,b		; Is the counter 1 now?
+		cpi	1
+		lxi	h,quibcomma 	; Add a comma and space,
+		jnz	quibsep		; unless the counter was 1,
+		lxi	h,quiband	; then use " and "
+quibsep:	call	strcpy		; Copy the separator into the output
+		pop	h		; Restore the input pointer
+		jmp	quibcopy	; Do the next string in the list
+quibend:	mvi	a,'}'		; Write the final '}'
+		stax	d
+		inx	d
+		mvi	a,'$'		; And write a string terminator
+		stax 	d
+		ret
+quibcomma:	db	', $'
+quiband:	db	' and $'	
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Copy the string under HL to DE until the terminator $.
+		;; The terminator is not copied; HL and DE are left one byte
+		;; beyond the last byte copied.
+strcpy:		mov	a,m		; Get byte from input
+		cpi	'$'		; Are we at the end?
+		rz			; Then stop.
+		stax	d		; Otherwise, store byte at output
+		inx	h		; Increment the pointers
+		inx	d
+		jmp	strcpy		; Copy next byte.
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Return in B the amount of strings in the string list in HL
+strseqlen:	mvi	a,'$'		; String end
+		mvi	b,0		; String counter
+count:		cmp 	m		; Empty string?
+		rz			; Then we're done
+		inr	b		; Otherwise, we have a string
+strsrch:	cmp	m		; Find the end of the string
+		inx 	h
+		jnz	strsrch
+		jmp	count		
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Demo code: run 'quibble' on the examples
+demo:		mvi	c,4		; Four examples
+		lxi	h,examples	; Pointer to first example
+example:	push	b		; Push example count
+		lxi	d,buffer	; Into the buffer,
+		call	quibble		; write the output of comma-quibbling
+		inx	h		; Point to next example
+		push	h		; Save pointer to next example
+		lxi	d,buffer	; Write the output to the console
+		mvi	c,9
+		call	5
+		lxi	d,newline	; Write a newline to the console
+		mvi	c,9
+		call	5
+		pop	h		; Restore example pointer
+		pop	b		; Restore example counter
+		dcr	c		; If not zero,
+		jnz 	example		; do the next example.
+		ret
+newline:	db	10,13,'$'				
+examples:	db	'$'
+		db	'ABC$$'
+		db	'ABC$DEF$$'
+		db	'ABC$DEF$G$H$$'
+buffer:

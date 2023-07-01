@@ -1,0 +1,62 @@
+var[const] uppercase=["A".."Z"].pump(String),
+   english_frequences=T( // A..Z
+        0.08167, 0.01492, 0.02782, 0.04253, 0.12702, 0.02228, 0.02015,
+        0.06094, 0.06966, 0.00153, 0.00772, 0.04025, 0.02406, 0.06749,
+        0.07507, 0.01929, 0.00095, 0.05987, 0.06327, 0.09056, 0.02758,
+        0.00978, 0.02360, 0.00150, 0.01974, 0.00074);
+
+fcn vigenere_decrypt(target_freqs, input){ // ( (float,...), string)
+   nchars,ordA   :=uppercase.len(),"A".toAsc();
+   sorted_targets:=target_freqs.sort();
+
+   frequency:='wrap(input){  // (n,n,n,n,...), n is ASCII index ("A"==65)
+      result:=uppercase.pump(List(),List.fp1(0)); // ( ("A",0),("B",0) ...)
+      foreach c in (input){ result[c - ordA][1] += 1 }
+      result   // --> mutable list of mutable lists ( ("A",Int)...("Z",Int) )
+   };
+   correlation:='wrap(input){  // (n,n,n,n,...), n is ASCII index ("A"==65)
+      result,freq:=0.0, frequency(input);
+      freq.sort(fcn([(_,a)],[(_,b)]){ a<b });  // sort letters by frequency
+      foreach i,f in (freq.enumerate()){ result+=sorted_targets[i]*f[1] }
+      result	// -->Float
+   };
+
+   cleaned:=input.toUpper().pump(List,uppercase.holds,Void.Filter,"toAsc");
+
+   best_len,best_corr := 0,-100.0;
+    # Assume that if there are less than 20 characters
+    # per column, the key's too long to guess
+   foreach i in ([2..cleaned.len()/20]){
+      pieces:=(i).pump(List,List.copy);		// ( (),() ... )
+      foreach c in (cleaned){ pieces[__cWalker.idx%i].append(c) }
+
+        # The correlation seems to increase for smaller
+        # pieces/longer keys, so weigh against them a little
+      corr:=-0.5*i + pieces.apply(correlation).sum(0.0);
+      if(corr>best_corr) best_len,best_corr=i,corr;
+   }
+   if(best_len==0) return("Text is too short to analyze", "");
+
+   pieces:=best_len.pump(List,List.copy);
+   foreach c in (cleaned){ pieces[__cWalker.idx%best_len].append(c) }
+
+   key,freqs := "",pieces.apply(frequency);
+   foreach fr in (freqs){
+      fr.sort(fcn([(_,a)],[(_,b)]){ a>b });  // reverse sort by freq
+      m,max_corr := 0,0.0;
+      foreach j in (nchars){
+         corr,c := 0.0,ordA + j;
+	 foreach frc in (fr){
+	    d:=(frc[0].toAsc() - c + nchars) % nchars;
+ 	    corr+=target_freqs[d]*frc[1];
+	    if(corr>max_corr) m,max_corr=j,corr;
+	 }
+      }
+      key+=(m + ordA).toChar();
+   }
+
+   cleaned.enumerate().apply('wrap([(i,c])){
+      ( (c - (key[i%best_len]).toAsc() + nchars)%nchars + ordA ).toChar()
+   }).concat() :
+   T(key,_);
+}

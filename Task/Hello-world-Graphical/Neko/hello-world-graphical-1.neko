@@ -1,0 +1,117 @@
+/*
+  Tectonics:
+    gcc -shared -fPIC -o nekoagar.ndll nekoagar.c `agar-config --cflags --libs`
+*/
+
+/* Neko primitives for libAgar http://www.libagar.org */
+#include <stdio.h>
+#include <neko.h>
+#include <agar/core.h>
+#include <agar/gui.h>
+
+#define val_widget(v)       ((AG_Widget *)val_data(v))
+DEFINE_KIND(k_agar_widget);
+
+/* Initialize Agar Core given appname and flags */
+value agar_init_core(value appname, value flags) {
+#ifdef DEBUG
+  if (!val_is_null(appname))  val_check(appname, string);
+  val_check(flags, int);
+#endif
+  if (AG_InitCore(val_string(appname), val_int(flags)) == -1)  return alloc_bool(0);
+  return alloc_bool(1);
+}
+DEFINE_PRIM(agar_init_core, 2);
+
+/* Initialize Agar GUI given graphic engine driver */
+value agar_init_gui(value driver) {
+#ifdef DEBUG
+  if (!val_is_null(driver))  val_check(driver, string);
+#endif
+  if (AG_InitGraphics(val_string(driver)) == -1)  return alloc_bool(0);
+  AG_BindStdGlobalKeys();
+  return alloc_bool(1);
+}
+DEFINE_PRIM(agar_init_gui, 1);
+
+/* Initialize Agar given appname, flags and GUI driver */
+value agar_init(value appname, value flags, value driver) {
+#ifdef DEBUG
+  if (!val_is_null(appname))  val_check(appname, string);
+  val_check(flags, int);
+  if (!val_is_null(driver))  val_check(driver, string);
+#endif
+  if (!val_bool(agar_init_core(appname, flags)))  return alloc_bool(0);
+  if (!val_bool(agar_init_gui(driver)))  return alloc_bool(0);
+  return alloc_bool(1);
+}
+DEFINE_PRIM(agar_init, 3);
+
+
+/* end the Agar event loop on window-close */
+void rundown(AG_Event *event) {
+  AG_Terminate(0);
+}
+
+
+/* Create an Agar window, given UInt flags (which might use 32 bits...) */
+value agar_window(value flags) {
+#ifdef DEBUG
+  val_check(flags, int);
+#endif
+  AG_Window *win;
+  win = AG_WindowNew(val_int(flags));
+  AG_SetEvent(win, "window-close", rundown, "%p", win);
+
+  if ( win == NULL) return alloc_bool(0);
+  return alloc_abstract(k_agar_widget, win);
+}
+DEFINE_PRIM(agar_window, 1);
+
+
+/* Show a window */
+value agar_window_show(value w) {
+  AG_Window *win;
+
+#ifdef DEBUG
+  val_check_kind(w, k_agar_widget);
+#endif
+  win = (AG_Window *)val_widget(w);
+  AG_WindowShow(win);
+  return alloc_bool(1);
+}
+DEFINE_PRIM(agar_window_show, 1);
+
+
+/* New box */
+value agar_box(value parent, value type, value flags) {
+  AG_Box *b;
+
+#ifdef DEBUG
+  val_check_kind(parent, k_agar_widget);
+#endif
+  b = AG_BoxNew(val_widget(parent), val_int(type), val_int(flags));
+  return alloc_abstract(k_agar_widget, b);
+}
+DEFINE_PRIM(agar_box, 3);
+
+/* New label */
+value agar_label(value parent, value flags, value text) {
+  AG_Label *lw;
+
+#ifdef DEBUG
+  val_check_kind(parent, k_agar_widget);
+#endif
+  lw = AG_LabelNewS(val_widget(parent), val_int(flags), val_string(text));
+  return alloc_abstract(k_agar_widget, lw);
+}
+DEFINE_PRIM(agar_label, 3);
+
+
+/* Event Loop */
+value agar_eventloop(void) {
+  int rc;
+  rc = AG_EventLoop();
+  return alloc_int(rc);
+}
+DEFINE_PRIM(agar_eventloop, 0);

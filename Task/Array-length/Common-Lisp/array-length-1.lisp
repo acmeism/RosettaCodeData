@@ -1,0 +1,1 @@
+(print (length #("apple" "orange")))

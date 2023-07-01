@@ -1,0 +1,371 @@
+/* ARM assembly Raspberry PI  or android 32 bits */
+/*  program hashmap.s   */
+
+/*      */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+.equ MAXI, 10                   @ size hashmap
+.equ HEAPSIZE,20000
+.equ LIMIT, 10                  @ key characters number for compute index
+.equ COEFF, 80                  @ filling rate 80 = 80%
+
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure hashMap   */
+    .struct  0
+hash_count:                       //  stored values counter
+    .struct  hash_count + 4
+hash_key:                         //  key
+    .struct  hash_key + (4 * MAXI)
+hash_data:                        // data
+    .struct  hash_data + (4 * MAXI)
+hash_fin:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessFin:          .asciz "End program.\n"
+szCarriageReturn:   .asciz "\n"
+szMessNoP:          .asciz "Key not found !!!\n"
+szKey1:             .asciz "one"
+szData1:            .asciz "Ceret"
+szKey2:             .asciz "two"
+szData2:            .asciz "Maureillas"
+szKey3:             .asciz "three"
+szData3:            .asciz "Le Perthus"
+szKey4:             .asciz "four"
+szData4:            .asciz "Le Boulou"
+
+.align 4
+iptZoneHeap:    .int sZoneHeap            // start heap address
+iptZoneHeapEnd: .int sZoneHeap + HEAPSIZE // end heap address
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+//sZoneConv:        .skip 24
+tbHashMap1:       .skip hash_fin         @ hashmap
+sZoneHeap:        .skip HEAPSIZE         @ heap
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                          @ entry of program
+
+    ldr r0,iAdrtbHashMap1
+    bl hashInit                @ init hashmap
+    ldr r0,iAdrtbHashMap1
+    ldr r1,iAdrszKey1          @ store key one
+    ldr r2,iAdrszData1
+    bl hashInsert
+    cmp r0,#0                  @ error ?
+    bne 100f
+    ldr r0,iAdrtbHashMap1
+    ldr r1,iAdrszKey2          @ store key two
+    ldr r2,iAdrszData2
+    bl hashInsert
+    cmp r0,#0
+    bne 100f
+    ldr r0,iAdrtbHashMap1
+    ldr r1,iAdrszKey3          @ store key three
+    ldr r2,iAdrszData3
+    bl hashInsert
+    cmp r0,#0
+    bne 100f
+    ldr r0,iAdrtbHashMap1
+    ldr r1,iAdrszKey4          @ store key four
+    ldr r2,iAdrszData4
+    bl hashInsert
+    cmp r0,#0
+    bne 100f
+
+    ldr r0,iAdrtbHashMap1
+    ldr r1,iAdrszKey2          @ remove key two
+    bl hashRemoveKey
+    cmp r0,#0
+    bne 100f
+
+    ldr r0,iAdrtbHashMap1
+    ldr r1,iAdrszKey1         @ search key
+    bl searchKey
+    cmp r0,#-1
+    beq 1f
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    b 2f
+1:
+    ldr r0,iAdrszMessNoP
+    bl affichageMess
+2:
+    ldr r0,iAdrtbHashMap1
+    ldr r1,iAdrszKey2
+    bl searchKey
+    cmp r0,#-1
+    beq 3f
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    b 4f
+3:
+    ldr r0,iAdrszMessNoP
+    bl affichageMess
+4:
+    ldr r0,iAdrtbHashMap1
+    ldr r1,iAdrszKey4
+    bl searchKey
+    cmp r0,#-1
+    beq 5f
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    b 6f
+5:
+    ldr r0,iAdrszMessNoP
+    bl affichageMess
+6:
+    ldr r0,iAdrszMessFin
+    bl affichageMess
+
+100:                                  @ standard end of the program
+    mov r0, #0                        @ return code
+    mov r7, #EXIT                     @ request to exit program
+    svc #0                            @ perform the system call
+
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszMessFin:            .int szMessFin
+iAdrtbHashMap1:           .int tbHashMap1
+iAdrszKey1:               .int szKey1
+iAdrszData1:              .int szData1
+iAdrszKey2:               .int szKey2
+iAdrszData2:              .int szData2
+iAdrszKey3:               .int szKey3
+iAdrszData3:              .int szData3
+iAdrszKey4:               .int szKey4
+iAdrszData4:              .int szData4
+iAdrszMessNoP:            .int szMessNoP
+/***************************************************/
+/*     init hashMap               */
+/***************************************************/
+// r0 contains address to hashMap
+hashInit:
+    push {r1-r3,lr}             @ save  registers
+    mov r1,#0
+    mov r2,#0
+    str r2,[r0,#hash_count]      @ init counter
+    add r0,r0,#hash_key         @ start zone key/value
+1:
+    lsl r3,r1,#3
+    add r3,r3,r0
+    str r2,[r3,#hash_key]
+    str r2,[r3,#hash_data]
+    add r1,r1,#1
+    cmp r1,#MAXI
+    blt 1b
+100:
+    pop {r1-r3,pc}             @ restaur registers
+/***************************************************/
+/*     insert key/datas               */
+/***************************************************/
+// r0 contains address to hashMap
+// r1 contains address to key
+// r2 contains address to datas
+hashInsert:
+    push {r1-r8,lr}             @ save  registers
+    mov r6,r0                   @ save address
+    bl hashIndex                @ search void key or identical key
+    cmp r0,#0                   @ error ?
+    blt 100f
+
+    ldr r3,iAdriptZoneHeap
+    ldr r3,[r3]
+    ldr r8,iAdriptZoneHeapEnd
+    ldr r8,[r8]
+    sub r8,r8,#50
+    lsl r0,r0,#2               @ 4 bytes
+    add r7,r6,#hash_key        @ start zone key/value
+    ldr r4,[r7,r0]
+    cmp r4,#0                  @ key already stored ?
+    bne 1f
+    ldr r4,[r6,#hash_count]    @ no -> increment counter
+    add r4,r4,#1
+    cmp r4,#(MAXI * COEFF / 100)
+    bge 98f
+    str r4,[r6,#hash_count]
+1:
+    str r3,[r7,r0]
+    mov r4,#0
+2:                            @ copy key loop in heap
+    ldrb r5,[r1,r4]
+    strb r5,[r3,r4]
+    cmp r5,#0
+    add r4,r4,#1
+    bne 2b
+    add r3,r3,r4
+    cmp r3,r8
+    bge 99f
+    add r7,r6,#hash_data
+    str r3,[r7,r0]
+    mov r4,#0
+3:                            @ copy data loop in heap
+    ldrb r5,[r2,r4]
+    strb r5,[r3,r4]
+    cmp r5,#0
+    add r4,r4,#1
+    bne 3b
+    add r3,r3,r4
+    cmp r3,r8
+    bge 99f
+    ldr r0,iAdriptZoneHeap
+    str r3,[r0]               @ new heap address
+
+    mov r0,#0                 @ insertion OK
+    b 100f
+98:                           @ error hashmap
+    adr r0,szMessErrInd
+    bl affichageMess
+    mov r0,#-1
+    b 100f
+99:                           @ error heap
+    adr r0,szMessErrHeap
+    bl affichageMess
+    mov r0,#-1
+100:
+    pop {r1-r8,lr}             @ restaur registers
+    bx lr                      @ return
+szMessErrInd:          .asciz "Error : HashMap size Filling rate Maxi !!\n"
+szMessErrHeap:         .asciz "Error : Heap size  Maxi !!\n"
+.align 4
+iAdriptZoneHeap:       .int iptZoneHeap
+iAdriptZoneHeapEnd:    .int iptZoneHeapEnd
+/***************************************************/
+/*     search void index in hashmap              */
+/***************************************************/
+// r0 contains hashMap address
+// r1 contains key address
+hashIndex:
+    push {r1-r4,lr}       @ save  registers
+    add r4,r0,#hash_key
+    mov r2,#0             @ index
+    mov r3,#0             @ characters sum
+1:                        @ loop to compute characters sum
+    ldrb r0,[r1,r2]
+    cmp r0,#0             @ string end ?
+    beq 2f
+    add r3,r3,r0          @ add to sum
+    add r2,r2,#1
+    cmp r2,#LIMIT
+    blt 1b
+2:
+    mov r5,r1             @ save key address
+    mov r0,r3
+    mov r1,#MAXI
+    bl division           @ compute remainder -> r3
+    mov r1,r5             @ key address
+
+3:
+    ldr r0,[r4,r3,lsl #2] @ loak key for computed index
+    cmp r0,#0             @ void key ?
+    beq 4f
+    bl comparStrings      @ identical key ?
+    cmp r0,#0
+    beq 4f                @ yes
+    add r3,r3,#1          @ no search next void key
+    cmp r3,#MAXI          @ maxi ?
+    movge r3,#0           @ restart to index 0
+    b 3b
+4:
+    mov r0,r3             @ return index void array or key equal
+100:
+    pop {r1-r4,pc}        @ restaur registers
+
+/***************************************************/
+/*     search key in hashmap              */
+/***************************************************/
+// r0 contains hash map address
+// r1 contains key address
+searchKey:
+    push {r1-r2,lr}           @ save  registers
+    mov r2,r0
+    bl hashIndex
+    lsl r0,r0,#2
+    add r1,r0,#hash_key
+    ldr r1,[r2,r1]
+    cmp r1,#0
+    moveq r0,#-1
+    beq 100f
+    add r1,r0,#hash_data
+    ldr r0,[r2,r1]
+100:
+    pop {r1-r2,pc}            @ restaur registers
+/***************************************************/
+/*     remove key in hashmap              */
+/***************************************************/
+// r0 contains hash map address
+// r1 contains key address
+hashRemoveKey:                  @ INFO: hashRemoveKey
+    push {r1-r3,lr}             @ save  registers
+    mov r2,r0
+    bl hashIndex
+    lsl r0,r0,#2
+    add r1,r0,#hash_key
+    ldr r3,[r2,r1]
+    cmp r3,#0
+    beq  2f
+    add r3,r2,r1
+    mov r1,#0                   @ raz key address
+    str r1,[r3]
+    add r1,r0,#hash_data
+    add r3,r2,r1
+    mov r1,#0
+    str r1,[r3]                 @ raz datas address
+    mov r0,#0
+    b 100f
+2:
+    adr r0,szMessErrRemove
+    bl affichageMess
+    mov r0,#-1
+100:
+    pop {r1-r3,pc}            @ restaur registers
+szMessErrRemove:         .asciz "\033[31mError remove key !!\033[0m\n"
+.align 4
+/************************************/
+/* Strings case sensitive comparisons  */
+/************************************/	
+/* r0 et r1 contains the address of strings */
+/* return 0 in r0 if equals */
+/* return -1 if string r0 < string r1 */
+/* return 1  if string r0 > string r1 */
+comparStrings:
+    push {r1-r4}         @ save des registres
+    mov r2,#0            @ characters counter
+1:
+    ldrb r3,[r0,r2]      @ byte string 1
+    ldrb r4,[r1,r2]      @ byte string 2
+    cmp r3,r4
+    movlt r0,#-1         @ smaller
+    movgt r0,#1	         @ greather
+    bne 100f             @ not equals
+    cmp r3,#0            @ 0 end string ?
+    moveq r0,#0          @ equals
+    beq 100f             @ end string
+    add r2,r2,#1         @ else add 1 in counter
+    b 1b                 @ and loop
+100:
+    pop {r1-r4}
+    bx lr
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

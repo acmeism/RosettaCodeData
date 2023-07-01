@@ -1,0 +1,61 @@
+	org	100h
+	jmp 	demo
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Check if the 0-terminated string at HL passes the Luhn test.
+	;;;	Returns with carry clear if the string passes, carry set
+	;;;	if the string fails.
+luhn:	mvi	b,0	; Counter
+	mov	d,b	; D = S1+S2 (we don't need to keep them separate)
+lscan:	mov	a,m	; Get byte
+	inx 	h	; Increment pointer
+	inr	b	; Increment counter
+	ana	a	; Is it 0?
+	jnz	lscan	; If not, try next byte
+	dcx	h	; Go to the byte before the 0
+	dcx	h
+	dcr	b	; Decrement counter
+	rz		; If 0, the string was empty, return.
+lloop:	mvi	c,'0'	; ASCII zero
+	mov	a,d	; Add odd digit to the total
+	add	m
+	sub	c	; Subtract ASCII zero
+	mov	d,a
+	dcr	b	; If last digit, we're done
+	jz	ldone
+	dcx	h	; Go back one byte
+	mov	a,m	; Get even digit
+	sub	c	; Subtract ASCII zero
+	add	a	; Multiply by two
+	mvi	c,9	; 10-1, compensate for extra subtraction loop
+ldiv:	inr	c	; Find two digits using trial subtraction
+	sui	10		
+	jnc	ldiv
+	add	c	; Add the possible second digit in
+	add	d	; Add it to the total
+	mov	d,a
+	dcx	h	; Go back one byte
+	dcr	b	; Done yet?
+	jnz	lloop
+ldone:	mov	a,d	; See if total is divisible by 10
+	mvi	b,10
+lchk:	sub	b	; Trial subtraction, subtract 10
+	rz		; If zero, it is divisible, return (carry clear)
+	rc		; If carry, it is not divisible, return (carry set)
+	jmp	lchk
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;	Run the routine on the argument given on the CP/M command line
+demo:	lxi	h,80h	; Zero-terminate the command line argument
+	mov	a,m
+	add	l
+	mov	l,a
+	inr	l
+	mvi	m,0
+	mvi	l,82h	; Run the 'luhn' subroutine
+	call 	luhn
+	mvi	c,9
+	lxi	d,pass	; Carry clear = print 'Pass'
+	jnc	5
+	lxi	d,fail	; Carry set = print 'Fail'
+	jmp	5
+pass:	db	'Pass$'
+fail:	db	'Fail$'

@@ -1,0 +1,125 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program totientPerfect64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../includeConstantesARM64.inc"
+.equ MAXI,      20
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessNumber:       .asciz " @ "
+szCarriageReturn:   .asciz "\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:           .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:
+    mov x4,#2                   // start number
+    mov x6,#0                   // line counter
+    mov x7,#0                   // result counter
+1:
+    mov x0,x4
+    mov x5,#0                   // totient sum
+2:
+    bl totient                  // compute totient
+    add x5,x5,x0                // add totient
+    cmp x0,#1
+    beq 3f
+    b 2b
+3:
+    cmp x5,x4                   // compare number and totient sum
+    bne 4f
+    mov x0,x4                   // display result if equals
+    ldr x1,qAdrsZoneConv
+    bl conversion10             // call décimal conversion
+    ldr x0,qAdrszMessNumber
+    ldr x1,qAdrsZoneConv        // insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess            // display message
+    add x7,x7,#1
+    add x6,x6,#1                // increment indice line display
+    cmp x6,#5                   // if = 5  new line
+    bne 4f
+    mov x6,#0
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+4:
+    add x4,x4,#1                 // increment number
+    cmp x7,#MAXI                 // maxi ?
+    blt 1b                       // and loop
+
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+100:                            // standard end of the program
+    mov x0, #0                  // return code
+    mov x8,EXIT
+    svc #0                      // perform the system call
+qAdrszCarriageReturn:    .quad szCarriageReturn
+qAdrsZoneConv:           .quad sZoneConv
+qAdrszMessNumber:        .quad szMessNumber
+/******************************************************************/
+/*     compute totient of number                                  */
+/******************************************************************/
+/* x0 contains number  */
+totient:
+    stp x1,lr,[sp,-16]!       // save  registers
+    stp x2,x3,[sp,-16]!       // save  registers
+    stp x4,x5,[sp,-16]!       // save  registers
+    mov x4,x0                 // totient
+    mov x5,x0                 // save number
+    mov x1,#0                 // for first divisor
+1:                            // begin loop
+    mul x3,x1,x1              // compute square
+    cmp x3,x5                 // compare number
+    bgt 4f                    // end
+    add x1,x1,#2              // next divisor
+    udiv x2,x5,x1
+    msub x3,x1,x2,x5          // compute remainder
+    cmp x3,#0                 // remainder null ?
+    bne 3f
+2:                            // begin loop 2
+    udiv x2,x5,x1
+    msub x3,x1,x2,x5          // compute remainder
+    cmp x3,#0
+    csel x5,x2,x5,eq          // new value = quotient
+    beq 2b
+
+    udiv x2,x4,x1             // divide totient
+    sub x4,x4,x2              // compute new totient
+3:
+    cmp x1,#2                 // first divisor ?
+    mov x0,1
+    csel x1,x0,x1,eq          // divisor = 1
+    b 1b                      // and loop
+4:
+    cmp x5,#1                 // final value > 1
+    ble 5f
+    mov x0,x4                 // totient
+    mov x1,x5                 // divide by value
+    udiv x2,x4,x5             // totient divide by value
+    sub x4,x4,x2              // compute new totient
+5:
+
+    mov x0,x4
+100:
+    ldp x4,x5,[sp],16         // restaur  registers
+    ldp x2,x3,[sp],16         // restaur  registers
+    ldp x1,lr,[sp],16         // restaur  registers
+    ret
+
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../includeARM64.inc"

@@ -1,0 +1,150 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program permutation64.s  */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeConstantesARM64.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+
+sMessResult:        .asciz "Value  : @\n"
+sMessCounter:       .asciz "Permutations =  @ \n"
+szCarriageReturn:   .asciz "\n"
+
+.align 4
+TableNumber:       .quad   1,2,3
+                   .equ NBELEMENTS, (. - TableNumber) / 8
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:            .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 //entry of program
+    ldr x0,qAdrTableNumber            //address number table
+    mov x1,NBELEMENTS                 //number of élements
+    mov x10,0                         //counter
+    bl heapIteratif
+    mov x0,x10                        //display counter
+    ldr x1,qAdrsZoneConv              //
+    bl conversion10S                  //décimal conversion
+    ldr x0,qAdrsMessCounter
+    ldr x1,qAdrsZoneConv              //insert conversion
+    bl strInsertAtCharInc
+    bl affichageMess                  //display message
+
+100:                                  //standard end of the program
+    mov x0,0                          //return code
+    mov x8,EXIT                       //request to exit program
+    svc 0                             //perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrsMessResult:          .quad sMessResult
+qAdrTableNumber:          .quad TableNumber
+qAdrsMessCounter:         .quad sMessCounter
+/******************************************************************/
+/*     permutation by heap iteratif (wikipedia)                                   */
+/******************************************************************/
+/* x0 contains the address of table */
+/* x1 contains the eléments number  */
+heapIteratif:
+    stp x2,lr,[sp,-16]!             // save  registers
+    stp x3,x4,[sp,-16]!             // save  registers
+    stp x5,x6,[sp,-16]!             // save  registers
+    stp x7,fp,[sp,-16]!             // save  registers
+    tst x1,1                        // odd ?
+    add x2,x1,1
+    csel x2,x2,x1,ne                // the stack must be a multiple of 16
+    lsl x7,x2,3                     // 8 bytes by count
+    sub sp,sp,x7
+    mov fp,sp
+    mov x3,#0
+    mov x4,#0                       // index
+1:                                  // init area counter
+    str x4,[fp,x3,lsl 3]
+    add x3,x3,#1
+    cmp x3,x1
+    blt 1b
+
+    bl displayTable
+    add x10,x10,#1
+    mov x3,#0                       // index
+2:
+    ldr x4,[fp,x3,lsl 3]            // load count [i]
+    cmp x4,x3                       // compare with i
+    bge 5f
+    tst x3,#1                       // even ?
+    bne 3f
+    ldr x5,[x0]                     // yes load value A[0]
+    ldr x6,[x0,x3,lsl 3]            // and swap with value A[i]
+    str x6,[x0]
+    str x5,[x0,x3,lsl 3]
+    b 4f
+3:
+    ldr x5,[x0,x4,lsl 3]           // load value A[count[i]]
+    ldr x6,[x0,x3,lsl 3]           // and swap with value A[i]
+    str x6,[x0,x4,lsl 3]
+    str x5,[x0,x3,lsl 3]
+4:
+    bl displayTable
+    add x10,x10,1
+    add x4,x4,1                    // increment count i
+    str x4,[fp,x3,lsl 3]           // and store on stack
+    mov x3,0                       // raz index
+    b 2b                           // and loop
+5:
+    mov x4,0                       // raz count [i]
+    str x4,[fp,x3,lsl 3]
+    add x3,x3,1                    // increment index
+    cmp x3,x1                      // end ?
+    blt 2b                         // no -> loop
+
+    add sp,sp,x7                   // stack alignement
+100:
+    ldp x7,fp,[sp],16              // restaur  2 registers
+    ldp x5,x6,[sp],16              // restaur  2 registers
+    ldp x3,x4,[sp],16              // restaur  2 registers
+    ldp x2,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*      Display table elements                                */
+/******************************************************************/
+/* x0 contains the address of table */
+displayTable:
+    stp x1,lr,[sp,-16]!              // save  registers
+    stp x2,x3,[sp,-16]!              // save  registers
+    mov x2,x0                        // table address
+    mov x3,#0
+1:                                   // loop display table
+    ldr x0,[x2,x3,lsl 3]
+    ldr x1,qAdrsZoneConv
+    bl conversion10S                 // décimal conversion
+    ldr x0,qAdrsMessResult
+    ldr x1,qAdrsZoneConv             // insert conversion
+    bl strInsertAtCharInc
+    bl affichageMess                 // display message
+    add x3,x3,1
+    cmp x3,NBELEMENTS - 1
+    ble 1b
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    mov x0,x2
+100:
+    ldp x2,x3,[sp],16                // restaur  2 registers
+    ldp x1,lr,[sp],16                // restaur  2 registers
+    ret                              // return to address lr x30
+qAdrsZoneConv:           .quad sZoneConv
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

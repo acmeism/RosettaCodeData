@@ -1,0 +1,78 @@
+.model small
+.stack 1024
+
+.data
+UserRam BYTE 256 DUP(0)
+xorshift32_state_lo equ UserRam
+xorshift32_state_hi equ UserRam+2
+
+Ans0 byte "It is certain.",0
+Ans1 byte "It is decidedly so.",0
+Ans2 byte "Signs point to yes.",0
+Ans3 byte "You can rely on it.",0
+Ans4 byte "Most likely.",0
+Ans5 byte "Cannot predict now.",0
+Ans6 byte "Reply hazy, try again.",0
+Ans7 byte "Outlook not so good.",0
+Ans8 byte "My sources say no.",0
+Ans9 byte "Very doubtful.",0
+AnsA byte "Without a doubt.",0
+AnsB byte "Outlook good.",0
+AnsC byte "Ask again later.",0
+AnsD byte "Better not tell you now.",0
+AnsE byte "Don't count on it.",0
+AnsF byte "Yes.",0
+
+AnswerLookup word Ans0,Ans1,Ans2,Ans3,Ans4,Ans5,Ans6,Ans7
+	     word Ans8,Ans9,AnsA,AnsB,AnsC,AnsD,AnsE,AnsF
+.code
+
+start:
+
+	mov ax,@data
+	mov ds,ax
+	
+	mov ax,@code
+	mov es,ax
+
+	
+	CLD	;have LODSB,MOVSB,STOSB,etc. auto-increment
+	
+	mov ax,03h
+	int 10h        ;sets video mode to MS-DOS text mode. Which the program is already in, so this just clears the screen.
+	
+	mov ah,2Ch
+	int 21h         ;returns hour:minute in cx, second:100ths of second in dx
+        mov word ptr [ds:xorshift32_state_lo],dx
+        mov word ptr [ds:xorshift32_state_hi],cx
+	
+	call doXorshift32 ;uses the above memory locations as input. Do it three times just to mix it up some more
+	call doXorshift32
+	call doXorshift32
+	
+	mov ax,word ptr[ds:xorshift32_state_lo] ;get the random output from the RNG
+	and al,0Fh		
+	;keep only the bottom nibble of al, there are only 16 possible messages.
+	mov bx,offset AnswerLookup
+	call XLATW
+	;translates AX using a table of words as a lookup table.
+	mov si,ax         ;use this looked-up value as the source index for our text.
+	call PrintString  ;print to the screen
+	
+	mov ax,4C00h
+	int 21h        ;return to DOS
+
+XLATW:
+;input: ds:bx = the table you wish to look up
+;AL= the raw index into this table as if it were byte data.
+;So don't left shift prior to calling this.
+;AH is destroyed.
+		SHL AL,1
+		mov ah,al	;copy AL to AH
+		XLAT		;returns low byte in al
+		inc ah
+		xchg al,ah	;XLAT only works with AL
+		XLAT		;returns high byte in al (old ah)
+		xchg al,ah
+		;now the word is loaded into ax, big-endian.
+		ret

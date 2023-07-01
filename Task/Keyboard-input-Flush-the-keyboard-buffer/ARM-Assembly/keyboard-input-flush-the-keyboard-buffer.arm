@@ -1,0 +1,308 @@
+/* Programme assembleur ARM Raspberry */
+/* modèle B 512MO   */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+.equ STDIN,     0     @ Linux input console
+.equ STDOUT,    1     @ Linux output console
+.equ EXIT,      1     @ Linux syscall
+.equ READ,      3     @ Linux syscall
+.equ WRITE,     4     @ Linux syscall
+.equ IOCTL,     0x36  @ Linux syscall
+.equ SIGACTION, 0x43  @ Linux syscall
+.equ SYSPOLL,   0xA8  @ Linux syscall
+
+.equ TCGETS,    0x5401
+.equ TCSETS,    0x5402
+.equ ICANON,    2
+.equ ECHO,     10
+.equ POLLIN,    1
+
+.equ SIGINT,   2    @ Issued if the user sends an interrupt signal (Ctrl + C)
+.equ SIGQUIT,  3    @ Issued if the user sends a quit signal (Ctrl + D)
+.equ SIGTERM, 15    @ Software termination signal (sent by kill by default)
+.equ SIGTTOU, 22    @
+
+.equ BUFSIZE,   80
+
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure termios see doc linux*/
+    .struct  0
+term_c_iflag:                    @ input modes
+    .struct  term_c_iflag + 4
+term_c_oflag:                    @ output modes
+    .struct  term_c_oflag + 4
+term_c_cflag:                    @ control modes
+    .struct  term_c_cflag + 4
+term_c_lflag:                    @ local modes
+    .struct  term_c_lflag + 4
+term_c_cc:                       @ special characters
+    .struct  term_c_cc + 20      @ see length if necessary
+term_fin:
+
+/* structure sigaction see doc linux */
+    .struct  0
+sa_handler:
+    .struct  sa_handler + 4
+sa_mask:
+    .struct  sa_mask + 4
+sa_flags:
+    .struct  sa_flags + 4
+sa_sigaction:
+    .struct  sa_sigaction + 4
+sa_fin:
+
+/* structure poll see doc linux */
+    .struct  0
+poll_fd:                            @   File Descriptor
+    .struct  poll_fd + 4
+poll_events:                        @  events mask
+    .struct  poll_events + 4
+poll_revents:                       @ events returned
+    .struct  poll_revents + 4
+poll_fin:
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessPgmOk:        .asciz "End program OK.\n"
+szMessErreur:       .asciz "Error detected.\n"
+sMessResult:        .ascii "Value  : "
+sMessValeur:        .fill 11, 1, ' '            @ size => 11
+szCarriageReturn:   .asciz "\n"
+
+
+.align 4
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+iEnd:           .skip 4                          @ 0 loop  1 = end loop
+iTouche:        .skip BUFSIZE                    @ value key pressed
+stOldtio:       .skip term_fin                   @ old terminal state
+stCurtio:       .skip term_fin                   @ current terminal state
+stSigAction:    .skip sa_fin                     @ area signal structure
+stSigAction1:   .skip sa_fin
+stPoll1:        .skip poll_fin                   @ area poll structure
+stPoll2:        .skip poll_fin
+
+szBuffer:       .skip BUFSIZE
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                            @ entry of program
+    bl initTerm                                  @ terminal init
+    mov r2,#0
+    ldr r3,iAdrszBuffer
+1:
+    bl getKey                                    @ read one key
+    cmp r0,#113                                  @ saisie q ?
+    beq 3f
+    cmp r0,#81                                   @ saisie Q ?
+    beq 3f
+    cmp r0,#0xA                                  @ <enter> ?
+    beq 2f
+    strb r0,[r3,r2]                              @ store byte in buffer
+    add r2,#1
+    b 1b
+2:                                               @ display buffer
+    mov r0,#0                                    @ store 0 final
+    strb r0,[r3,r2]
+    mov r0,r3
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    mov r2,#0
+    b 1b
+3:
+    bl restauTerm                                 @ terminal restaur
+    ldr r0,iAdrszMessPgmOk                        @ display end message
+    bl affichageMess
+100:                                              @ standard end of the program
+    mov r0, #0                                    @ return code
+    mov r7, #EXIT                                 @ request to exit program
+    svc #0                                        @ perform the system call
+iAdrszBuffer:         .int szBuffer
+/*********************************/
+/* init terminal state            */
+/*********************************/
+initTerm:
+    push {r0,r1,r2,r7,lr}
+    /* read terminal state */
+    mov r0,#STDIN                                @ input console
+    mov r1,#TCGETS
+    ldr r2,iAdrstOldtio
+    mov r7, #IOCTL                               @ call system Linux
+    svc #0
+    cmp r0,#0                                    @ error ?
+    beq 1f
+    ldr r1,iAdrszMessErreur                      @ error message
+    bl   displayError
+    b 100f
+1:
+    adr r0,sighandler                            @ adresse routine traitement signal
+    ldr r1,iAdrstSigAction                       @ adresse structure sigaction
+    str r0,[r1,#sa_handler]                      @ maj handler
+    mov r0,#SIGINT                               @ signal type
+    ldr r1,iAdrstSigAction
+    mov r2,#0                                    @ NULL
+    mov r7, #SIGACTION                           @ call system
+    svc #0
+    cmp r0,#0                                    @ error ?
+    bne 98f
+    mov r0,#SIGQUIT
+    ldr r1,iAdrstSigAction
+    mov r2,#0                                    @ NULL
+    mov r7, #SIGACTION                           @ call system
+    svc #0
+    cmp r0,#0                                    @ error ?
+    bne 98f
+    mov r0,#SIGTERM
+    ldr r1,iAdrstSigAction
+    mov r2,#0                                    @ NULL
+    mov r7, #SIGACTION                           @ appel systeme
+    svc #0
+    cmp r0,#0
+    bne 98f
+    @
+    adr r0,iAdrSIG_IGN                           @ address signal igonre function
+    ldr r1,iAdrstSigAction1
+    str r0,[r1,#sa_handler]
+    mov r0,#SIGTTOU                              @invalidate other process signal
+    ldr r1,iAdrstSigAction1
+    mov r2,#0                                    @ NULL
+    mov r7,#SIGACTION                            @ call system
+    svc #0
+    cmp r0,#0
+    bne 98f
+    @
+    /* read terminal current state  */
+    mov r0,#STDIN
+    mov r1,#TCGETS
+    ldr r2,iAdrstCurtio                          @ address current termio
+    mov r7,#IOCTL                                @ call systeme
+    svc #0
+    cmp r0,#0                                    @ error ?
+    bne 98f
+    mov r2,#ICANON | ECHO                        @ no key pressed echo on display
+    mvn r2,r2                                    @ and one key
+    ldr r1,iAdrstCurtio
+    ldr r3,[r1,#term_c_lflag]
+    and r3,r2                                    @ add flags
+    str r3,[r1,#term_c_lflag]                    @ and store
+    mov r0,#STDIN                                @ maj terminal current state
+    mov r1,#TCSETS
+    ldr r2,iAdrstCurtio
+    mov r7, #IOCTL                               @ call system
+    svc #0
+    cmp r0,#0
+    beq 100f
+98:                                               @ error display
+    ldr r1,iAdrszMessErreur                       @ error message
+    bl   displayError
+100:
+    pop {r0,r1,r2,r7,lr}
+    bx lr
+
+/*********************************/
+/* read key                      */
+/*********************************/
+getKey:
+    push {r1,r2,r7,lr}
+    ldr r2,iAdriTouche                           @ key address
+    mov r0,#0                                    @ raz key
+    str r0,[r2]
+1:
+    ldr r0,iAdriEnd                              @ if signal ctrl-c  -> end
+    ldr r0,[r0]
+    cmp r0,#0
+    bne 100f
+    ldr r0,iAdrstPoll1                            @ address structure poll
+    mov r1,#STDIN
+    str r1,[r0,#poll_fd]                          @ maj FD
+    mov r1,#POLLIN                                @ action code
+    str r1,[r0,#poll_events]
+    mov r1,#1                                     @ items number structure poll
+    mov r2,#0                                     @ timeout = 0
+    mov r7,#SYSPOLL                               @ call system POLL
+    svc #0
+    cmp r0,#0                                     @ key pressed ?
+    ble 1b                                        @ no key pressed -> loop
+                                                  @ read key
+    mov r0,#STDIN                                 @ File Descriptor
+    ldr r1,iAdriTouche                            @ buffer address
+    mov r2,#BUFSIZE                               @ buffer size
+    mov r7,#READ                                  @ read key
+    svc #0
+    cmp r0,#0                                     @ error ?
+    ble 98f
+    ldr r2,iAdriTouche                            @ key address
+    ldr r0,[r2]
+    b 100f
+98:                                               @ error display
+    ldr r1,iAdrszMessErreur                       @ error message
+    bl   displayError
+100:
+    pop {r1,r2,r7,lr}
+    bx lr
+
+/*********************************/
+/* restaur terminal state        */
+/*********************************/
+restauTerm:
+    push {r0,r1,r7,lr}
+    mov r0,#STDIN                                 @ end then restaur begin state terminal
+    mov r1,#TCSETS
+    ldr r2,iAdrstOldtio
+    mov r7,#IOCTL                                 @ call system
+    svc #0
+    cmp r0,#0
+    beq 100f
+    ldr r1,iAdrszMessErreur                       @ error message
+    bl   displayError
+100:
+    pop {r1,r2,r7,lr}
+    bx lr
+
+iAdrsMessValeur:          .int sMessValeur
+iAdrszMessErreur:         .int szMessErreur
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrstOldtio:             .int stOldtio
+iAdrstCurtio:             .int stCurtio
+iAdrstSigAction:          .int stSigAction
+iAdrstSigAction1:         .int stSigAction1
+iAdrszMessPgmOk:          .int szMessPgmOk
+iAdrsMessResult:          .int sMessResult
+iAdrSIG_IGN:              .int 1
+iAdriEnd:                 .int iEnd
+iAdrstPoll1:              .int stPoll1
+iAdriTouche:              .int iTouche
+
+/******************************************************************/
+/*     signal processing                                     */
+/******************************************************************/
+sighandler:
+    push {r0,r1}
+    ldr r0,iAdriEnd
+    mov r1,#1                 @ maj zone end
+    str r1,[r0]
+    pop {r0,r1}
+    bx lr
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

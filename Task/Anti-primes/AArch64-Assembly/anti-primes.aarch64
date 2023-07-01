@@ -1,0 +1,114 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program antiprime64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../includeConstantesARM64.inc"
+
+.equ NMAXI,      20
+.equ MAXLINE,     5
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessResult:        .asciz " @ "
+szCarriageReturn:   .asciz "\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:                  .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                             // entry of program
+    ldr x3,qNMaxi                 // load limit
+    mov x5,#0                     // maxi
+    mov x6,#0                     // result counter
+    mov x7,#0                     // display counter
+    mov x4,#1                     // number begin
+1:
+    mov x0,x4                     // number
+    bl decFactor                  // compute number factors
+    cmp x0,x5                     // maxi ?
+    cinc x4,x4,le                 // no -> increment indice
+    //addle x4,x4,#1                // no -> increment indice
+    ble 1b                        // and loop
+    mov x5,x0
+    mov x0,x4
+    bl displayResult
+    add x7,x7,#1                  // increment display counter
+    cmp x7,#MAXLINE               // line maxi ?
+    blt 2f
+    mov x7,#0
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess              // display message
+2:
+    add x6,x6,#1                  // increment result counter
+    add x4,x4,#1                  // increment number
+    cmp x6,x3                     // end ?
+    blt 1b
+
+100:                              // standard end of the program
+    mov x0, #0                    // return code
+    mov x8,EXIT
+    svc #0                        // perform the system call
+qAdrszCarriageReturn:        .quad szCarriageReturn
+qNMaxi:                       .quad NMAXI
+/***************************************************/
+/*   display message number                        */
+/***************************************************/
+/* x0 contains number 1           */
+/* x1 contains number 2               */
+displayResult:
+    stp x1,lr,[sp,-16]!        // save  registers
+    ldr x1,qAdrsZoneConv
+    bl conversion10            // call décimal conversion
+    ldr x0,qAdrsMessResult
+    ldr x1,qAdrsZoneConv       // insert conversion in message
+    bl strInsertAtCharInc
+
+    bl affichageMess           // display message
+    ldp x1,lr,[sp],16          // restaur  registers
+    ret
+qAdrsMessResult:     .quad sMessResult
+qAdrsZoneConv:       .quad sZoneConv
+/***************************************************/
+/*   compute factors sum                        */
+/***************************************************/
+/* x0 contains the number            */
+decFactor:
+    stp x1,lr,[sp,-16]!       // save  registers
+    stp x2,x3,[sp,-16]!       // save  registers
+    stp x4,x5,[sp,-16]!       // save  registers
+    mov x5,#0                 // init number factors
+    mov x4,x0                 // save number
+    mov x1,#1                 // start factor -> divisor
+1:
+    mov x0,x4                 // dividende
+    udiv x2,x0,x1
+    msub x3,x2,x1,x0
+    cmp x1,x2                 // divisor > quotient ?
+    bgt 3f
+    cmp x3,#0                 // remainder = 0 ?
+    bne 2f
+    add x5,x5,#1              // increment counter factors
+    cmp x1,x2                 // divisor = quotient ?
+    beq 3f                    // yes -> end
+    add x5,x5,#1              // no -> increment counter factors
+2:
+    add x1,x1,#1              // increment factor
+    b 1b                      // and loop
+3:
+    mov x0,x5                 // return counter
+    ldp x4,x5,[sp],16 // restaur  registers
+    ldp x2,x3,[sp],16 // restaur  registers
+    ldp x1,lr,[sp],16  // restaur  registers
+    ret
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../includeARM64.inc"

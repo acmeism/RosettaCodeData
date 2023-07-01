@@ -1,0 +1,95 @@
+INCLUDE "H6:LOADPPM5.ACT"
+INCLUDE "D2:SORT.ACT" ;from the Action! Tool Kit
+
+DEFINE HISTSIZE="256"
+
+PROC PutBigPixel(INT x,y BYTE col)
+  IF x>=0 AND x<=79 AND y>=0 AND y<=47 THEN
+    y==LSH 2
+    col==RSH 4
+    IF col<0 THEN col=0
+    ELSEIF col>15 THEN col=15 FI
+    Color=col
+    Plot(x,y)
+    DrawTo(x,y+3)
+  FI
+RETURN
+
+PROC DrawImage(GrayImage POINTER image INT x,y)
+  INT i,j
+  BYTE c
+
+  FOR j=0 TO image.gh-1
+  DO
+    FOR i=0 TO image.gw-1
+    DO
+      c=GetGrayPixel(image,i,j)
+      PutBigPixel(x+i,y+j,c)
+    OD
+  OD
+RETURN
+
+INT FUNC Clamp(INT x,min,max)
+  IF x<min THEN
+    RETURN (min)
+  ELSEIF x>max THEN
+    RETURN (max)
+  FI
+RETURN (x)
+
+BYTE FUNC Median(BYTE ARRAY a BYTE len)
+  SortB(a,len,0)
+  len==RSH 1
+RETURN (a(len))
+
+PROC Median3x3(GrayImage POINTER src,dst)
+  INT x,y,i,j,ii,jj,index,sum
+  BYTE ARRAY arr(9)
+  BYTE c
+
+  FOR j=0 TO src.gh-1
+  DO
+    FOR i=0 TO src.gw-1
+    DO
+      sum=0 index=0
+      FOR jj=-1 TO 1
+      DO
+        y=Clamp(j+jj,0,src.gh-1)
+        FOR ii=-1 TO 1
+        DO
+          x=Clamp(i+ii,0,src.gw-1)
+          c=GetGrayPixel(src,x,y)
+          arr(index)=c
+          index==+1
+        OD
+      OD
+      c=Median(arr,9)
+      SetGrayPixel(dst,i,j,c)
+    OD
+  OD
+RETURN
+
+PROC Main()
+  BYTE CH=$02FC ;Internal hardware value for last key pressed
+  BYTE ARRAY dataIn(900),dataOut(900)
+  GrayImage in,out
+  INT size=[30],x,y
+
+  Put(125) PutE() ;clear the screen
+
+  InitGrayImage(in,size,size,dataIn)
+  InitGrayImage(out,size,size,dataOut)
+  PrintE("Loading source image...")
+  LoadPPM5(in,"H6:LENA30G.PPM")
+  PrintE("Median filter...")
+  Median3x3(in,out)
+
+  Graphics(9)
+  x=(40-size)/2
+  y=(48-size)/2
+  DrawImage(in,x,y)
+  DrawImage(out,x+40,y)
+
+  DO UNTIL CH#$FF OD
+  CH=$FF
+RETURN

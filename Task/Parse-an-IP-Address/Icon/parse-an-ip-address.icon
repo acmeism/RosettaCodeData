@@ -1,0 +1,81 @@
+link printf, hexcvt
+
+procedure main()
+   L := ["192.168.0.1",                                # private
+         "127.0.0.1",                                  # loop back
+         "127.0.0.1:80",                               # loop back +port
+         "2001:db8:85a3:0:0:8a2e:370:7334",            # doc, IPv6 for 555-1234
+         "2001:db8:85a3::8a2e:370:7334",               # doc
+         "::1",                                        # loop back
+         "[::1]:80",                                   # loop back +port
+         "::",                                         # unspecified
+         "::ffff:192.168.0.1",                         # transition
+         "2605:2700:0:3::4713:93e3",                   # RC
+         "[2605:2700:0:3::4713:93e3]:80",              # RC
+         "::ffff:71.19.147.227",                       # RC transition
+         "[::ffff:71.19.147.227]:80",                  # RC transition  +port
+         "[2001:db8:85a3:8d3:1319:8a2e:370:7348]:443", # doc +port
+         "256.0.0.0",                                  # invalid
+         "g::1"]                                       # invalid
+
+   every x := !L do {
+      if x ?  (ip := ipmatch(), port := portmatch(), pos(0)) then {
+         if i := IPv4decode(ip) then
+            printf("%s is the IPv4 address = x'%s'",x,i)
+         else if i := IPv6decode(ip) then
+               printf("%s is the IPv6 address = x'%s'",x,i)
+         else {
+            printf("%s is not a valid IP address\n",x)
+            next
+            }
+         if \port then printf(" port=%s\n",port) else printf("\n")
+         }
+      else printf("%s is not an IP address\n",x)
+      }
+end
+
+
+procedure ipmatch()                                #: match an ip v4/v6 address
+static c4,c6
+initial {
+   c4 := &digits ++ '.'
+   c6 := &digits ++ 'abcdef:'
+   }
+   suspend (="[" || ( (="::ffff:" || tab(many(c4))) | tab(many(c6)) ) || ="]") |
+           ( ="::ffff:" || tab(many(c4))) |  tab(many(c6|c4))
+end
+
+procedure portmatch()                              #: match a port number
+   return (=":",0 < (65536 > tab(many(&digits)))) | &null
+end
+
+procedure IPv4decode(s)                            #: match IPv4 to hex string
+   s ? ( ip  := (0 <= (256 > tab(many(&digits)))), ip *:= 256, =".",
+         ip +:= (0 <= (256 > tab(many(&digits)))), ip *:= 256, =".",
+         ip +:= (0 <= (256 > tab(many(&digits)))), ip *:= 256, =".",
+         ip +:= (0 <= (256 > tab(many(&digits)))),
+         return right(hexstring(ip,,&lcase),8) )
+end
+
+procedure IPv6decode(s)                            #: IPv6 to hex string
+   s ?:=  2(="[", tab(-1), ="]")                         # remove any []
+   if find(".",s) then                                   # transitional
+      s ? ( tab(many(':0')), ="ffff:",
+            return right("ffff" || IPv4decode(tab(0)),32,"0") )
+   else {
+      h := t := ""
+      s ? {
+         while x := tab(find(":")) do {                  # head
+            if *x <= 4 then h ||:= right(x,4,"0")
+            if ="::" then break
+            else move(1)
+            }
+         while x := tab(find(":")|0) do {                # tail
+            if *x <= 4 then t ||:= right(x,4,"0")
+            move(1) | break
+            }
+         if x := h || repl("0",32-(*h+*t)) || t then     # and insides
+            return x
+         }
+      }
+end

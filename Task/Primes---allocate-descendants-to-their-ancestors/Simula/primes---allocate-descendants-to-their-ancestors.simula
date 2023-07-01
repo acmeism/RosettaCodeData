@@ -1,0 +1,290 @@
+COMMENT cim --memory-pool-size=512 allocate-descendants-to-their-ancestors.sim ;
+BEGIN
+
+
+    COMMENT ABSTRACT FRAMEWORK CLASSES ;
+
+    CLASS ITEM;
+    BEGIN
+    END ITEM;
+
+    CLASS ITEMLIST;
+    BEGIN
+
+        CLASS ITEMARRAY(N); INTEGER N;
+        BEGIN REF(ITEM) ARRAY DATA(0:N-1);
+        END ITEMARRAY;
+
+        PROCEDURE EXPAND(N); INTEGER N;
+        BEGIN
+            INTEGER I;
+            REF(ITEMARRAY) TEMP;
+            TEMP :- NEW ITEMARRAY(N);
+            FOR I := 0 STEP 1 UNTIL SIZE-1 DO
+                TEMP.DATA(I) :- ITEMS.DATA(I);
+            ITEMS :- TEMP;
+        END EXPAND;
+
+        PROCEDURE APPEND(RI); REF(ITEM) RI;
+        BEGIN
+            IF SIZE + 1 > CAPACITY THEN
+            BEGIN
+                CAPACITY := 2 * CAPACITY;
+                EXPAND(CAPACITY);
+            END;
+            ITEMS.DATA(SIZE) :- RI;
+            SIZE := SIZE + 1;
+        END APPEND;
+
+        PROCEDURE APPENDALL(IL); REF(ITEMLIST) IL;
+        BEGIN
+            INTEGER I;
+            FOR I := 0 STEP 1 UNTIL IL.SIZE-1 DO
+                APPEND(IL.ELEMENT(I));
+        END APPENDALL;
+
+        REF(ITEM) PROCEDURE ELEMENT(I); INTEGER I;
+        BEGIN
+            IF I < 0 OR I > SIZE-1 THEN ERROR("ELEMENT: INDEX OUT OF BOUNDS");
+            ELEMENT :- ITEMS.DATA(I);
+        END ELEMENT;
+
+        REF(ITEM) PROCEDURE SETELEMENT(I, IT); INTEGER I; REF(ITEM) IT;
+        BEGIN
+            IF I < 0 OR I > SIZE-1 THEN ERROR("SETELEMENT: INDEX OUT OF BOUNDS");
+            ITEMS.DATA(I) :- IT;
+        END SETELEMENT;
+
+        REF(ITEM) PROCEDURE POP;
+        BEGIN
+            REF(ITEM) RESULT;
+            IF SIZE=0 THEN ERROR("POP: EMPTY ITEMLIST");
+            RESULT :- ITEMS.DATA(SIZE-1);
+            ITEMS.DATA(SIZE-1) :- NONE;
+            SIZE := SIZE-1;
+            POP :- RESULT;
+        END POP;
+
+        PROCEDURE SORT(COMPARE_PROC);
+            PROCEDURE COMPARE_PROC IS
+                INTEGER PROCEDURE COMPARE_PROC(IT1,IT2); REF(ITEM) IT1,IT2;;
+        BEGIN
+            PROCEDURE SWAP(I,J); INTEGER I,J;
+            BEGIN
+               REF(ITEM) T;
+               T :- ITEMS.DATA(I);
+               ITEMS.DATA(I) :- ITEMS.DATA(J);
+               ITEMS.DATA(J) :- T;
+            END SWAP;
+            PROCEDURE QUICKSORT(L,R); INTEGER L,R;
+            BEGIN
+               REF(ITEM) PIVOT;
+               INTEGER I, J;
+               PIVOT :- ITEMS.DATA((L+R)//2); I := L; J := R;
+               WHILE I <= J DO
+               BEGIN
+                  WHILE COMPARE_PROC(ITEMS.DATA(I), PIVOT) < 0 DO I := I+1;
+                  WHILE COMPARE_PROC(PIVOT, ITEMS.DATA(J)) < 0 DO J := J-1;
+                  IF I <= J THEN
+                  BEGIN SWAP(I,J); I := I+1; J := J-1;
+                  END;
+               END;
+               IF L < J THEN QUICKSORT(L, J);
+               IF I < R THEN QUICKSORT(I, R);
+            END QUICKSORT;
+            IF SIZE >= 2 THEN
+               QUICKSORT(0,SIZE-1);
+        END SORT;
+
+        INTEGER CAPACITY;
+        INTEGER SIZE;
+        REF(ITEMARRAY) ITEMS;
+
+        CAPACITY := 20;
+        SIZE := 0;
+        EXPAND(CAPACITY);
+    END ITEMLIST;
+
+
+    COMMENT PROBLEM SPECIFIC PART ;
+
+
+    ITEM CLASS REALITEM(X); LONG REAL X;
+    BEGIN
+    END REALITEM;
+
+    ITEMLIST CLASS LIST_OF_REAL;
+    BEGIN
+        LONG REAL PROCEDURE ELEMENT(I); INTEGER I;
+            ELEMENT := ITEMS.DATA(I) QUA REALITEM.X;
+
+        PROCEDURE APPEND(X); LONG REAL X;
+            THIS ITEMLIST.APPEND(NEW REALITEM(X));
+
+        PROCEDURE SORT;
+        BEGIN
+            INTEGER PROCEDURE CMP(IT1,IT2); REF(ITEM) IT1,IT2;
+                CMP := IF IT1 QUA REALITEM.X < IT2 QUA REALITEM.X THEN -1 ELSE
+                       IF IT1 QUA REALITEM.X > IT2 QUA REALITEM.X THEN +1 ELSE 0;
+            THIS ITEMLIST.SORT(CMP);
+        END SORT;
+
+        PROCEDURE OUTLIST;
+        BEGIN
+            INTEGER I;
+            TEXT FMT;
+            OUTTEXT("[");
+            FMT :- BLANKS(20);
+            FOR I := 0 STEP 1 UNTIL SIZE-1 DO
+            BEGIN
+                IF I < 3 OR I > SIZE-1-3 THEN BEGIN
+                    IF I > 0 THEN OUTTEXT(", ");
+                    FMT.PUTFIX(ELEMENT(I), 0);
+                    FMT.SETPOS(1);
+                    WHILE FMT.MORE DO
+                    BEGIN
+                        CHARACTER C;
+                        C := FMT.GETCHAR;
+                        IF C <> ' ' THEN OUTCHAR(C);
+                    END
+                END ELSE BEGIN OUTTEXT(", ..."); I := SIZE-1-3; END;
+            END;
+            OUTTEXT("]");
+        END OUTLIST;
+    END LIST_OF_REAL;
+
+
+    ITEM CLASS REALLISTITEM(LRL); REF(LIST_OF_REAL) LRL;
+    BEGIN
+    END REALLISTITEM;
+
+    ITEMLIST CLASS LIST_OF_REALLIST;
+    BEGIN
+        REF(LIST_OF_REAL) PROCEDURE ELEMENT(I); INTEGER I;
+            ELEMENT :- ITEMS.DATA(I) QUA REALLISTITEM.LRL;
+
+        PROCEDURE APPEND(LRL); REF(LIST_OF_REAL) LRL;
+            THIS ITEMLIST.APPEND(NEW REALLISTITEM(LRL));
+
+        PROCEDURE OUTLIST;
+        BEGIN
+            INTEGER I;
+            OUTTEXT("[");
+            FOR I := 0 STEP 1 UNTIL SIZE-1 DO
+            BEGIN
+                IF I > 0 THEN OUTTEXT(", ");
+                ELEMENT(I).OUTLIST;
+            END;
+            OUTTEXT("]");
+        END OUTLIST;
+    END LIST_OF_REALLIST;
+
+    REF(LIST_OF_REAL) PROCEDURE GET_PRIMES(MAX);
+        INTEGER MAX;
+    BEGIN
+        REF(LIST_OF_REAL) LPRIMES;
+        LPRIMES :- NEW LIST_OF_REAL;
+        IF MAX < 2 THEN
+            GOTO RETURN
+        ELSE
+        BEGIN
+            INTEGER X;
+            LPRIMES.APPEND(2);
+            FOR X := 3 STEP 2 UNTIL MAX DO BEGIN
+                INTEGER I;
+                LONG REAL P;
+                FOR I := 0 STEP 1 UNTIL LPRIMES.SIZE-1 DO BEGIN
+                    P := LPRIMES.ELEMENT(I);
+                    IF (X / P) = ENTIER(X / P) THEN GOTO BREAK;
+                END;
+                LPRIMES.APPEND(X);
+            BREAK:
+            END;
+        END;
+    RETURN:
+        GET_PRIMES :- LPRIMES;
+    END GET_PRIMES;
+
+    INTEGER MAXSUM, I, S, PRI, TOTAL, DI;
+    REF(LIST_OF_REALLIST) DESCENDANTS, ANCESTORS;
+    REF(LIST_OF_REAL) PRIMES, LR, LRS;
+    LONG REAL P, D, PR;
+    BOOLEAN TAKEWHILE;
+    MAXSUM := 99;
+
+    DESCENDANTS :- NEW LIST_OF_REALLIST;
+    ANCESTORS   :- NEW LIST_OF_REALLIST;
+    FOR I := 0 STEP 1 UNTIL MAXSUM DO BEGIN
+        DESCENDANTS.APPEND(NEW LIST_OF_REAL);
+        ANCESTORS  .APPEND(NEW LIST_OF_REAL);
+    END;
+
+    PRIMES :- GET_PRIMES(MAXSUM);
+
+    FOR I := 0 STEP 1 UNTIL PRIMES.SIZE-1 DO
+    BEGIN
+        P := PRIMES.ELEMENT(I);
+        DESCENDANTS.ELEMENT(P).APPEND(P);
+        FOR S := 1 STEP 1 UNTIL DESCENDANTS.SIZE-P-1 DO
+        BEGIN
+            LRS :- DESCENDANTS.ELEMENT(S);
+            FOR PRI := 0 STEP 1 UNTIL LRS.SIZE-1 DO
+            BEGIN
+                PR := LRS.ELEMENT(PRI);
+                DESCENDANTS.ELEMENT(S + P).APPEND(P * PR);
+            END;
+        END;
+    END;
+
+    FOR I := 0 STEP 1 UNTIL PRIMES.SIZE-1 DO
+    BEGIN
+        P := PRIMES.ELEMENT(I);
+        DESCENDANTS.ELEMENT(P).POP;
+    END;
+    DESCENDANTS.ELEMENT(4).POP;
+
+    TOTAL := 0;
+    FOR S := 1 STEP 1 UNTIL MAXSUM DO
+    BEGIN
+        LRS :- DESCENDANTS.ELEMENT(S);
+        LRS.SORT;
+        FOR DI := 0 STEP 1 UNTIL LRS.SIZE-1 DO
+        BEGIN
+            D := LRS.ELEMENT(DI);
+            IF D <= MAXSUM THEN
+            BEGIN
+                REF(LIST_OF_REAL) ANCD;
+                ANCD :- NEW LIST_OF_REAL;
+                ANCD.APPENDALL(ANCESTORS.ELEMENT(S));
+                ANCD.APPEND(S);
+                ANCESTORS.SETELEMENT(D, NEW REALLISTITEM(ANCD));
+            END
+            ELSE GOTO BREAK;
+        END;
+        BREAK:
+
+        OUTTEXT("[");
+        OUTINT(S, 0);
+        OUTTEXT("] LEVEL: ");
+        OUTINT(ANCESTORS.ELEMENT(S).SIZE, 0);
+        OUTIMAGE;
+
+        OUTTEXT("ANCESTORS: ");
+        ANCESTORS.ELEMENT(S).OUTLIST;
+        OUTIMAGE;
+
+        OUTTEXT("DESCENDANTS: ");
+        OUTINT(LRS.SIZE,0);
+        OUTIMAGE;
+
+        LRS.OUTLIST;
+        OUTIMAGE;
+
+        OUTIMAGE;
+        TOTAL := TOTAL + LRS.SIZE;
+    END;
+
+    OUTTEXT("TOTAL DESCENDANTS ");
+    OUTINT(TOTAL, 0);
+    OUTIMAGE;
+END.

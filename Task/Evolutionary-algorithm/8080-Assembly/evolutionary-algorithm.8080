@@ -1,0 +1,162 @@
+MRATE:	equ	26	; Chance of mutation (MRATE/256)
+COPIES:	equ	100	; Amount of copies to make
+fname1:	equ	5Dh	; First filename on command line (used for RNG seed)
+fname2:	equ	6Dh	; Second filename (also used for RNG seed)
+	org	100h
+	;;;	Make random seed from the two CP/M 'filenames'
+	lxi	b,rnddat
+	lxi	h,fname1
+	xra	a
+	call	seed	; First four bytes from fn1 make X
+	call	seed	; Second four bytes from fn1 make A
+	mvi	l,fname2
+	call	seed	; First four bytes from fn2 make B
+	call	seed	; Second four bytes from fn2 make C
+	;;;	Create the first parent (random string)
+	lxi	h,parent
+	mvi	e,tgtsz-1
+genchr:	call	rndchr	; Get random character
+	mov	m,a	; Store it
+	inx	h
+	dcr	e
+	jnz	genchr
+	mvi	m,'$'	; CP/M string terminator
+	;;;	Main loop
+loop:	lxi	d,parent
+	push	d
+	call	puts	; Print current parent
+	pop	h	; Calculate fitness
+	call	fitnes
+	xra	a	; If it is 0, all characters match,
+	ora	d
+	rz		; So we stop.
+	lxi	h,kids	; Otherwise, set HL to start of children,
+	mvi	a,0FFh	; Initialize maximum fitness value
+	sta	maxfit
+	mvi	a,COPIES	; Initialize copy counter
+	sta	copies
+	;;;	Make copies
+copy:	push	h	; Store the place where the copy will go
+	call	mutcpy	; Make a mutated copy of the parent
+	pop	h	; Get the place where the copy went
+	push	h	; But keep it on the stack
+	call	fitnes	; Calculate the fitness of that copy
+	pop	h	; Get place where copy went
+	lda	maxfit	; Get current best fitness
+	cmp	d	; Compare to fitness of current copy
+	jc	next	; If it wasn't better, next copy
+	shld	maxptr	; If it was better, store pointer
+	mov	a,d
+	sta	maxfit	; And new max fitness
+next:	lxi	b,tgtsz	; Get place for next copy
+	dad 	b
+	xchg		; Keep in DE
+	lxi	h,copies
+	dcr	m	; Any copies left to make?
+	xchg		
+	jnz	copy	; Then make another copy
+	lhld	maxptr	; Otherwise, get location of copy with best fitness
+	lxi	b,parent	; Make that the new parent
+pcopy:	mov	a,m	; Get character from copy
+	inx	h
+	stax	b	; Store into location of parent
+	inx	b
+	cpi	'$'	; Check for string terminator
+	jnz	pcopy	; If it isn't, copy next character
+	jmp	loop	; Otherwise, mutate new parent
+	;;;	Make a copy of the parent, mutate it, and store it at [HL].
+mutcpy:	lxi	b,parent
+mcloop:	ldax	b	; Get current character
+	inx	b
+	mov	m,a	; Write it to new location
+	inx	h
+	cpi	'$'	; Was it the string terminator?
+	rz		; Then stop
+	call	rand	; Otherwise, get random value
+	cpi	MRATE	; Should we mutate this character?
+	jnc	mcloop	; If not, just copy next character
+	call	rndchr	; Otherwise, get a random character
+	dcx	h	; And store it instead of the character we had
+	mov	m,a
+	inx	h
+	jmp	mcloop
+	;;;	Calculate fitness of candidate under [HL], fitness is
+	;;;	returned in D. Fitness is "inverted", i.e. a fitness of 0
+	;;;	means everything matches.
+fitnes:	lxi	b,target
+	lxi	d,tgtsz	; E=counter, D=fitness
+floop:	dcr	e	; Done yet?
+	rz		; If so, return.
+	ldax	b	; Get target character
+	inx	b
+	cmp	m	; Compare to current character
+	inx	h	
+	jz	floop	; If they match, don't do anything
+	inr	d	; If they don't match, count this
+	jmp	floop
+	;;;	Generate a random uppercase letter, or a space
+	;;;	Return in A, other registers preserved
+rndchr:	call	rand	; Get a random value
+	ani	31	; from 0 to 31
+	cpi	28	; If 28 or higher,
+	jnc	rndchr	; get another value
+	adi	'A'	; Make uppercase letter
+	cpi	'Z'+1	; If the result is 'Z' or lower,
+	rc		; then return it,
+	mvi	a,' '	; otherwise return a space
+	ret
+	;;;	Load 4 bytes from [HL] and use them, plus A, as part of seed
+	;;;	in [BC]
+seed:	mvi	e,4	; 4 bytes
+sloop:	xra	m	
+	inx	h
+	dcr	e
+	jnz	sloop
+	stax	b
+	inx	b
+	ret
+	;;;	Random number generator using XABC algorithm
+rand:	push	h
+	lxi	h,rnddat
+	inr	m	; X++
+	mov	a,m	; X
+	inx	h
+	xra	m	; ^ C
+	inx	h
+	xra	m	; ^ A
+	mov	m,a	; -> A
+	inx	h
+	add	m	; + B
+	mov	m,a	; -> B
+	rar		; >>1 (ish)
+	dcx	h
+	xra	m	; ^ A
+	dcx	h
+	add	m	; + C
+	mov	m,a	; -> C
+	pop	h
+	ret
+	;;;	Print string to console using CP/M, saving all registers
+puts:	push	h
+	push	d
+	push	b
+	push	psw
+	mvi	c,9	; CP/M print string
+	call	5
+	lxi	d,nl	; Print a newline as well
+	mvi	c,9
+	call	5
+	pop	b
+	pop	d
+	pop	h
+	pop	psw
+	ret
+nl:	db	13,10,'$'
+target:	db	'METHINKS IT IS LIKE A WEASEL$'
+tgtsz:	equ	$-target
+rnddat:	ds	4	; RNG state
+copies:	ds	1	; Copies left to make
+maxfit:	ds	1	; Best fitness seen
+maxptr:	ds	2	; Pointer to copy with best fitness
+parent:	equ	$	; Store current parent here
+kids:	equ	$+tgtsz	; Store mutated copies here

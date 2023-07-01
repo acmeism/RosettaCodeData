@@ -1,0 +1,567 @@
+//
+// Convex hulls by Andrew's monotone chain algorithm.
+//
+// For a description of the algorithm, see
+// https://en.wikibooks.org/w/index.php?title=Algorithm_Implementation/Geometry/Convex_hull/Monotone_chain&stableid=40169
+//
+//
+// The implementation is designed for use with a garbage collector.
+// In other words, some of the memory is allowed to leak.
+//
+// Sometimes, where it is slightly easier if one does so, we do try to
+// free memory. Boehm GC sometimes cannot free allocated memory
+// itself, so perhaps it is just as well if an ATS program explicitly
+// frees some of its memory.
+//
+
+#include "share/atspre_staload.hats"
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+(* Make the floating point type big, so use of a boxed representation
+   for points makes some sense. *)
+typedef floatpt = ldouble
+
+extern castfn int2floatpt : int -<> floatpt
+overload i2fp with int2floatpt
+
+(*------------------------------------------------------------------*)
+//
+// Enough plane geometry for our purpose.
+//
+
+(* Let us make the point type boxed. Here is one way to do that. The
+   name of the type will be "plane_point_t". The constructor will be
+   named "plane_point". *)
+datatype plane_point_t =
+| plane_point of (floatpt, floatpt)
+
+fn {}
+plane_point_x (p : plane_point_t) :<> floatpt =
+  let
+    val+ plane_point (x, _) = p
+  in
+    x
+  end
+
+fn {}
+plane_point_y (p : plane_point_t) :<> floatpt =
+  let
+    val+ plane_point (_, y) = p
+  in
+    y
+  end
+
+fn {}
+plane_point_eq (p : plane_point_t,
+                q : plane_point_t) :<> bool =
+  let
+    val+ plane_point (xp, yp) = p
+    val+ plane_point (xq, yq) = q
+  in
+    xp = xq && yp = yq
+  end
+
+(* Impose a total order on points, making it one that will work for
+   Andrew's monotone chain algorithm. *)
+fn {}
+plane_point_order (p : plane_point_t,
+                   q : plane_point_t) :<> bool =
+  let
+    val+ plane_point (xp, yp) = p
+    val+ plane_point (xq, yq) = q
+  in
+    xp < xq || (xp = xq && yp < yq)
+  end
+
+(* Subtraction is really a vector or multivector operation. *)
+fn {}
+plane_point_sub (p : plane_point_t,
+                 q : plane_point_t) :<> plane_point_t =
+  let
+    val+ plane_point (xp, yp) = p
+    val+ plane_point (xq, yq) = q
+  in
+    plane_point (xp - xq, yp - yq)
+  end
+
+(* Cross product is really a multivector operation. *)
+fn {}
+plane_point_cross (p : plane_point_t,
+                   q : plane_point_t) :<> floatpt =
+  let
+    val+ plane_point (xp, yp) = p
+    val+ plane_point (xq, yq) = q
+  in
+    (xp * yq) - (yp * xq)
+  end
+
+overload .x with plane_point_x
+overload .y with plane_point_y
+overload = with plane_point_eq
+overload order with plane_point_order
+overload < with plane_point_order
+overload - with plane_point_sub
+
+(* Make "cross" a left-associative infix operator with the same
+   precedence as "*". *)
+infixl ( * ) cross
+overload cross with plane_point_cross
+
+(*------------------------------------------------------------------*)
+//
+// Sorting an array of points.
+//
+
+fn
+plane_point_array_sort
+          {n   : int}
+          (arr : &(@[plane_point_t][n]) >> _,
+           n   : size_t n) :<!wrt> void =
+  let
+    (* The comparison will be inlined by template expansion. *)
+    implement
+    array_quicksort$cmp<plane_point_t> (p, q) =
+      if order (p, q) then    (* An overload for plane_point_order. *)
+        ~1
+      else if q < p then (* Another overload for plane_point_order. *)
+        1
+      else
+        0
+  in
+    (* The following sort routine is in the ATS2 prelude. *)
+    array_quicksort<plane_point_t> (arr, n)
+  end
+
+(*------------------------------------------------------------------*)
+//
+// Removing duplicates from a sorted array. Returns a new array.
+//
+
+extern fun {a : t@ype}
+array_delete_neighbor_dups$eq (p : a, q : a) :<> bool
+
+fn {a : t@ype}
+array_delete_neighbor_dups
+          {n   : int}
+          (arr : &(@[a][n]),
+           n   : size_t n)
+     :<!wrt> [m       : nat | m <= n]
+             [parr1   : addr]
+             @(@[a][m] @ parr1,
+               mfree_gc_v parr1 |
+               ptr parr1,
+               size_t m) =
+  let
+    macdef eq = array_delete_neighbor_dups$eq<a>
+
+    fn
+    nondups_list {n   : int}
+                 (arr : &(@[a][n]),
+                  n   : size_t n)
+        :<> [m : nat | m <= n] list (a, m) =
+      let
+        fun
+        loop {i : nat | i < n}
+             {k : nat | k < n - i}
+             .<i>.              (* <-- proof of termination. *)
+             (arr : &(@[a][n]),
+              i   : size_t i,
+              lst : list (a, k))
+            :<> [m : nat | m <= n] list (a, m) =
+          (* Cons a list of non-duplicates, going backwards through
+             the array so the list will be in forwards order. (The
+             order does not really matter in ATS, though, because in
+             the prelude there are both array_initize_list *and*
+             array_initize_rlist. *)
+          if i = i2sz 0 then
+            arr[i] :: lst
+          (* The "\" in the following line makes eq temporarily
+             infix. *)
+          else if arr[i - 1] \eq arr[i] then
+            loop (arr, pred i, lst)
+          else
+            loop (arr, pred i, arr[i] :: lst)
+
+        prval () = lemma_array_param arr
+      in
+        if n = i2sz 0 then
+          NIL
+        else
+          loop (arr, pred n, NIL)
+      end
+
+    val lst = nondups_list (arr, n)
+    prval () = lemma_list_param lst
+    val m = i2sz (length lst)
+
+    val @(pfarr1, pfgc1 | parr1) = array_ptr_alloc<a> (m)
+    val () = array_initize_list<a> (!parr1, sz2i m, lst)
+  in
+    @(pfarr1, pfgc1 | parr1, m)
+  end
+
+(*------------------------------------------------------------------*)
+//
+// Removing duplicates from a sorted plane_point_t array. Returns a
+// new array.
+//
+
+fn
+plane_point_array_delete_neighbor_dups
+          {n  : int}
+          (arr : &(@[plane_point_t][n]),
+           n   : size_t n)
+     :<!wrt> [m       : nat | m <= n]
+             [parr1   : addr]
+             @(@[plane_point_t][m] @ parr1,
+               mfree_gc_v parr1 |
+               ptr parr1,
+               size_t m) =
+  let
+    implement
+    array_delete_neighbor_dups$eq<plane_point_t> (p, q) =
+      p = q            (* Here = is an overload for plane_point_eq. *)
+  in
+    array_delete_neighbor_dups<plane_point_t> (arr, n)
+  end
+
+(*------------------------------------------------------------------*)
+//
+// The convex hull algorithm.
+//
+
+fn
+cross_test {m, k : int | 1 <= k; k < m}
+           (pt_i : plane_point_t,
+            hull : &(@[plane_point_t][m]),
+            k    : size_t k) :<> bool =
+  let
+    val hull_k = hull[k]
+    and hull_k1 = hull[k - 1]
+  in
+    i2fp 0 < (hull_k - hull_k1) cross (pt_i - hull_k1)
+  end
+
+fn
+construct_lower_hull {n  : int | 2 <= n}
+                     (pt : &(@[plane_point_t][n]),
+                      n  : size_t n)
+    :<!wrt> [m     : int | 2 <= m; m <= n]
+            [phull : addr]
+            @(@[plane_point_t][n] @ phull,
+              mfree_gc_v phull |
+              ptr phull,
+              size_t m) =
+  let
+    val @(pfhull, pfgc | phull) = array_ptr_alloc<plane_point_t> n
+
+    (* It is easier to work with an array if it is fully
+       initialized. (Yes, there are also ways to cheat and so merely
+       pretend the array has been initialized.)  *)
+    val arbitrary_point = plane_point (i2fp 0, i2fp 0)
+    val () = array_initize_elt<plane_point_t> (!phull, n,
+                                               arbitrary_point)
+
+    (* The macro "hull" can be used with index notation "[]". *)
+    macdef hull = !phull
+
+    val () = hull[0] := pt[0]
+    val () = hull[1] := pt[1]
+
+    fun
+    outer_loop {i    : int | 0 <= i; i <= n}
+               {j    : int | 1 <= j; j < n}
+               .<n - i>.        (* <-- proof of termination. *)
+               (pt   : &(@[plane_point_t][n]),
+                hull : &(@[plane_point_t][n]),
+                i    : size_t i,
+                j    : size_t j)
+        :<!wrt> [m : int | 2 <= m; m <= n] size_t m =
+      if i = n then
+        succ j
+      else
+        let
+          val pt_i = pt[i]
+
+          fun
+          inner_loop {k : int | 0 <= k; k < n - 1}
+                     .<k>.      (* <-- proof of termination. *)
+                     (hull : &(@[plane_point_t][n]),
+                      k    : size_t k)
+              :<!wrt> [j : int | 1 <= j; j < n] size_t j =
+            if k = i2sz 0 then
+              begin
+                hull[succ k] := pt_i;
+                succ k
+              end
+            else if cross_test (pt_i, hull, k) then
+              begin
+                hull[succ k] := pt_i;
+                succ k
+              end
+            else
+              inner_loop (hull, pred k)
+
+          (* I do not know how to write a proof of the following, so
+             let us test it at runtime. *)
+          val () = $effmask_exn assertloc (j < n - 1)
+        in
+          outer_loop (pt, hull, succ i, inner_loop (hull, j))
+        end
+
+    val hull_size = outer_loop (pt, hull, i2sz 2, i2sz 1)
+  in
+    @(pfhull, pfgc | phull, hull_size)
+  end
+
+fn
+construct_upper_hull {n  : int | 2 <= n}
+                     (pt : &(@[plane_point_t][n]),
+                      n  : size_t n)
+    :<!wrt> [m     : int | 2 <= m; m <= n]
+            [phull : addr]
+            @(@[plane_point_t][n] @ phull,
+              mfree_gc_v phull |
+              ptr phull,
+              size_t m) =
+  let
+    val @(pfhull, pfgc | phull) = array_ptr_alloc<plane_point_t> n
+
+    (* It is easier to work with an array if it is fully
+       initialized. (Yes, there are also ways to cheat and so merely
+       pretend the array has been initialized.)  *)
+    val arbitrary_point = plane_point (i2fp 0, i2fp 0)
+    val () = array_initize_elt<plane_point_t> (!phull, n,
+                                               arbitrary_point)
+
+    (* The macro "hull" can be used with index notation "[]". *)
+    macdef hull = !phull
+
+    val () = hull[0] := pt[n - 1]
+    val () = hull[1] := pt[n - 2]
+
+    fun
+    outer_loop {i1   : int | 0 <= i1; i1 <= n - 2}
+               {j    : int | 1 <= j; j < n}
+               .<i1>.           (* <-- proof of termination. *)
+               (pt   : &(@[plane_point_t][n]),
+                hull : &(@[plane_point_t][n]),
+                i1   : size_t i1,
+                j    : size_t j)
+        :<!wrt> [m : int | 2 <= m; m <= n] size_t m =
+      if i1 = i2sz 0 then
+        succ j
+      else
+        let
+          val i = pred i1
+          val pt_i = pt[i]
+
+          fun
+          inner_loop {k : int | 0 <= k; k < n - 1}
+                     .<k>.      (* <-- proof of termination. *)
+                     (hull : &(@[plane_point_t][n]),
+                      k    : size_t k)
+              :<!wrt> [j : int | 1 <= j; j < n] size_t j =
+            if k = i2sz 0 then
+              begin
+                hull[succ k] := pt_i;
+                succ k
+              end
+            else if cross_test (pt_i, hull, k) then
+              begin
+                hull[succ k] := pt_i;
+                succ k
+              end
+            else
+              inner_loop (hull, pred k)
+
+          (* I do not know how to write a proof of the following, so
+             let us test it at runtime. *)
+          val () = $effmask_exn assertloc (j < n - 1)
+        in
+          outer_loop (pt, hull, pred i1, inner_loop (hull, j))
+        end
+
+    val hull_size = outer_loop (pt, hull, n - i2sz 2, i2sz 1)
+  in
+    @(pfhull, pfgc | phull, hull_size)
+  end
+
+fn
+construct_hull {n  : int | 2 <= n}
+               (pt : &(@[plane_point_t][n]),
+                n  : size_t n)
+    :<!wrt> [hull_size : int | 2 <= hull_size]
+            [phull     : addr]
+            @(@[plane_point_t][hull_size] @ phull,
+              mfree_gc_v phull |
+              ptr phull,
+              size_t hull_size) =
+
+  (* The following implementation demonstrates slightly complicated
+     "safe" initialization. By "safe" I mean so one never *reads* from
+     an uninitialized entry. Elsewhere in the program I did this more
+     simply, with prelude routines.
+
+     I also demonstrate freeing of a linear object. If you remove the
+     calls to array_ptr_free, you cannot compile the program. *)
+
+  let
+    (* Side note: Construction of the lower and upper hulls can be
+       done in parallel. *)
+    val [lower_hull_size : int]
+        [p_lower_hull : addr]
+        @(pf_lower_hull, pfgc_lower | p_lower_hull, lower_hull_size) =
+      construct_lower_hull (pt, n)
+    and [upper_hull_size : int]
+        [p_upper_hull : addr]
+        @(pf_upper_hull, pfgc_upper | p_upper_hull, upper_hull_size) =
+      construct_upper_hull (pt, n)
+
+    stadef hull_size = lower_hull_size + upper_hull_size - 2
+    val hull_size : size_t hull_size =
+      lower_hull_size + upper_hull_size - i2sz 2
+
+    val [phull : addr] @(pfhull, pfgc_hull | phull) =
+      array_ptr_alloc<plane_point_t> hull_size
+
+    (* Split off the part of each partial hull's view that we actually
+       will use. *)
+    prval @(pf_lower, pf_lower_rest) =
+      array_v_split {plane_point_t} {p_lower_hull} {n}
+                    {lower_hull_size - 1}
+                    pf_lower_hull
+    prval @(pf_upper, pf_upper_rest) =
+      array_v_split {plane_point_t} {p_upper_hull} {n}
+                    {upper_hull_size - 1}
+                    pf_upper_hull
+
+    (* Split the new array's view in two. The question mark means
+       that the array elements are uninitialized. *)
+    prval @(pfleft, pfright) =
+      array_v_split {plane_point_t?} {phull} {hull_size}
+                    {lower_hull_size - 1}
+                    pfhull
+
+    (* Copy the lower hull, thus initializing the left side of the new
+       array. *)
+    val () = array_copy<plane_point_t> (!phull, !p_lower_hull,
+                                        pred lower_hull_size)
+
+    (* Copy the upper hull, thus initializing the left side of the new
+       array. *)
+    val phull_right =
+      ptr_add<plane_point_t> (phull, pred lower_hull_size)
+    val () = array_copy<plane_point_t> (!phull_right, !p_upper_hull,
+                                        pred upper_hull_size)
+
+    (* Join the views of the initialized halves. *)
+    prval pfhull = array_v_unsplit (pfleft, pfright)
+
+    (* Restore the views of the partial hulls. *)
+    prval () = pf_lower_hull :=
+      array_v_unsplit (pf_lower, pf_lower_rest)
+    prval () = pf_upper_hull :=
+      array_v_unsplit (pf_upper, pf_upper_rest)
+
+    (* We do not need the lower and upper hulls anymore, and so can
+       free them. (Of course, if there is a garbage collector, you
+       could make freeing be a no-operation.) *)
+    val () = array_ptr_free (pf_lower_hull, pfgc_lower | p_lower_hull)
+    val () = array_ptr_free (pf_upper_hull, pfgc_upper | p_upper_hull)
+  in
+    @(pfhull, pfgc_hull | phull, hull_size)
+  end
+
+fn
+plane_convex_hull {num_points : int}
+                  (points_lst : list (plane_point_t, num_points))
+    :<!wrt> [hull_size : int | 0 <= hull_size]
+            [phull     : addr]
+            @(@[plane_point_t][hull_size] @ phull,
+              mfree_gc_v phull |
+              ptr phull,
+              size_t hull_size) =
+  (* Takes an arbitrary list of points, which may be in any order and
+     may contain duplicates. Returns an ordered array of points that
+     make up the convex hull. If the initial list of points is empty,
+     the returned array is empty. *)
+  let
+    prval () = lemma_list_param points_lst
+    val num_points = i2sz (length points_lst)
+
+    (* Copy the list to an array. *)
+    val @(pf_points, pfgc_points | p_points) =
+      array_ptr_alloc<plane_point_t> num_points
+    val () =
+      array_initize_list<plane_point_t> (!p_points, sz2i num_points,
+                                         points_lst)
+
+    (* Sort the array. *)
+    val () = plane_point_array_sort (!p_points, num_points)
+
+    (* Create a new sorted array that has the duplicates removed. *)
+    val @(pf_pt, pfgc_pt | p_pt, n) =
+      plane_point_array_delete_neighbor_dups (!p_points, num_points)
+
+    (* The original array no longer is needed. *)
+    val () = array_ptr_free (pf_points, pfgc_points | p_points)
+  in
+    if n <= 2 then
+      @(pf_pt, pfgc_pt | p_pt, n)
+    else
+      let
+        val @(pfhull, pfgc_hull | phull, hull_size) =
+          construct_hull (!p_pt, n)
+        val () = array_ptr_free (pf_pt, pfgc_pt | p_pt)
+      in
+        @(pfhull, pfgc_hull | phull, hull_size)
+      end
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+main0 () =
+  {
+    val example_points =
+      $list (plane_point (i2fp 16, i2fp 3),
+             plane_point (i2fp 12, i2fp 17),
+             plane_point (i2fp 0, i2fp 6),
+             plane_point (i2fp ~4, i2fp ~6),
+             plane_point (i2fp 16, i2fp 6),
+             plane_point (i2fp 16, i2fp ~7),
+             plane_point (i2fp 16, i2fp ~3),
+             plane_point (i2fp 17, i2fp ~4),
+             plane_point (i2fp 5, i2fp 19),
+             plane_point (i2fp 19, i2fp ~8),
+             plane_point (i2fp 3, i2fp 16),
+             plane_point (i2fp 12, i2fp 13),
+             plane_point (i2fp 3, i2fp ~4),
+             plane_point (i2fp 17, i2fp 5),
+             plane_point (i2fp ~3, i2fp 15),
+             plane_point (i2fp ~3, i2fp ~9),
+             plane_point (i2fp 0, i2fp 11),
+             plane_point (i2fp ~9, i2fp ~3),
+             plane_point (i2fp ~4, i2fp ~2),
+             plane_point (i2fp 12, i2fp 10))
+
+    val (pf_hull, pfgc_hull | p_hull, hull_size) =
+      plane_convex_hull example_points
+
+    macdef hull = !p_hull
+
+    val () =
+      let
+        var i : [i : nat] size_t i
+      in
+        for (i := i2sz 0; i < hull_size; i := succ i)
+          println! ("(", hull[i].x(), " ", hull[i].y(), ")")
+      end
+
+    val () = array_ptr_free (pf_hull, pfgc_hull | p_hull)
+  }
+
+(*------------------------------------------------------------------*)

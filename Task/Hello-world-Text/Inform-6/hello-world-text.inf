@@ -1,0 +1,3 @@
+[Main;
+  print "Hello world!^";
+];

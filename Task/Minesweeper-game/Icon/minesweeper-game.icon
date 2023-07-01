@@ -1,0 +1,181 @@
+global DEFARGS,MF
+
+record minefield(mask,grid,rows,cols,mines,density,marked)
+
+$define _DEFAULTS  [6,  4, .2, .6]  # task defaults
+#$define _DEFAULTS  [6, 7, .05, .1]   # defaults for debugging
+$define _INDENT    6
+$define _MINE      "Y"
+$define _TRUEMINE  "Y"
+$define _FALSEMINE "N"
+$define _MASK      "."
+$define _MARK      "?"
+$define _TOGGLE1   ".?"
+$define _TOGGLE2   "?."
+
+procedure main(arglist)                           #: play the game
+static trace
+initial trace := -1
+
+DEFARGS := _DEFAULTS
+if *arglist = 0 then arglist := DEFARGS
+
+newgame!arglist
+while c := trim(read()) do {
+   c ? {  tab(many(' '))
+          case move(1) of {
+                                                 # required commands
+            "c": clear() & showgrid()            #   c  clear 1 sq and show
+            "m": mark()                          #   m flag/unflag a mine
+            "p": showgrid()                      #   p show the mine field
+            "r": endgame("Resigning.")           #   r resign this game
+                                                 # optional commands
+            "n": newgame!arglist                 #   n new game grid
+            "k": clearunmarked() & showgrid()    #   k clears adjecent unmarked cells if #flags = count
+            "x": clearallunmarked()              #   x clears every unflagged cell at once win/loose fast
+            "q": stop("Quitting")                #   q quit
+            "t": &trace :=: trace                #   t toggle tracing for debugging
+            default: usage()
+            }}
+   testforwin(g)
+   }
+end
+
+procedure newgame(r,c,l,h)                       #: start a new game
+local i,j,t
+
+MF := minefield()
+
+MF.rows := 0 < integer(\r) | DEFARGS[1]
+MF.cols := 0 < integer(\c) | DEFARGS[2]
+
+every !(MF.mask := list(MF.rows)) := list(MF.cols,_MASK)  # set mask
+every !(MF.grid := list(MF.rows)) := list(MF.cols,0)      # default count
+
+l := 1 > (0 < real(\l))  | DEFARGS[3]
+h := 1 > (0 < real(\h))  | DEFARGS[4]
+if l > h then l :=: h
+
+until MF.density := l <= ( h >= ?0 )                      # random density between l:h
+MF.mines := integer(MF.rows * MF.cols * MF.density)       # mines needed
+MF.marked := 0
+
+write("Creating ",r,"x",c," mine field with ",MF.mines," (",MF.density * 100,"%).")
+every 1 to MF.mines do until \MF.grid[r := ?MF.rows, c := ?MF.cols] := &null                # set mines
+every \MF.grid[i := 1 to MF.rows,j:= 1 to MF.cols] +:= (/MF.grid[i-1 to i+1,j-1 to j+1], 1) # set counts
+
+showgrid()
+return
+end
+
+procedure usage()                                         #: show usage
+return write(
+"h or ? - this help\n",
+"n      - start a new game\n",
+"c i j  - clears x,y and displays the grid\n",
+"m i j  - marks (toggles) x,y\n",
+"p      - displays the grid\n",
+"k i j  - clears adjecent unmarked cells if #marks = count\n",
+"x      - clears ALL unmarked flags at once\n",
+"r      - resign the game\n",
+"q      - quit the game\n",
+"where i is the (vertical) row number and j is the (horizontal) column number." )
+end
+
+procedure getn(n)                                         #: command parsing
+  tab(many(' '))
+  if n := n >= ( 0 < integer(tab(many(&digits)))) then return n
+  else write("Invalid or out of bounds grid square.")
+end
+
+procedure showgrid()                                      #: show grid
+local r,c,x
+
+   write(right("",_INDENT),"   ",repl("----+----|",MF.cols / 10 + 1)[1+:MF.cols])
+   every r := 1 to *MF.mask do {
+      writes(right(r,_INDENT)," : ")
+      every c := 1 to *MF.mask[r] do
+         writes( \MF.mask[r,c] | map(\MF.grid[r,c],"0"," ") | _MINE)
+      write()
+      }
+   write(MF.marked," marked mines and ",MF.mines - MF.marked," mines left to be marked.")
+end
+
+procedure mark()                                          #: mark/toggle squares
+local i,j
+
+   if \MF.mask[i := getn(MF.rows), j :=getn(MF.cols)] := map(MF.mask[i,j],_TOGGLE1,_TOGGLE2) then {
+      case MF.mask[i,j] of {
+         _MASK : MF.marked -:= 1
+         _MARK : MF.marked +:= 1
+         }
+      }
+end
+
+procedure clear()                                         #: clear a square
+local i,j
+
+   if ( i := getn(MF.rows) ) & ( j :=getn(MF.cols) ) then
+      if /MF.mask[i,j] then
+         write(i," ",j," was already clear")
+      else if /MF.grid[i,j] then endgame("KABOOM! You lost.")
+         else return revealclearing(i,j)
+end
+
+procedure revealclearing(i,j)                             #: reaveal any clearing
+
+   if \MF.mask[i,j] := &null then {
+      if MF.grid[i,j] = 0 then
+         every revealclearing(i-1 to i+1,j-1 to j+1)
+      return
+      }
+end
+
+procedure clearunmarked()                                 #: clears adjecent unmarked cells if #flags = count
+local i,j,k,m,n
+
+   if ( i := getn(MF.rows) ) & ( j :=getn(MF.cols) ) then
+      if /MF.mask[i,j] & ( k := 0 < MF.grid[i,j] ) then {
+         every (\MF.mask[i-1 to i+1,j-1 to j+1] == _MARK) & ( k -:= 1)
+         if k = 0 then {
+            every (m := i-1 to i+1) & ( n := j-1 to j+1) do
+               if \MF.mask[m,n] == _MASK then MF.mask[m,n] := &null
+            revealclearing(i,j)
+            return
+            }
+         else
+            write("Marked squares must match adjacent mine count.")
+            }
+      else write("Must be adjecent to one or more marks to clear surrounding squares.")
+end
+
+procedure clearallunmarked()                             #: fast win or loose
+local i,j,k
+
+   every (i := 1 to MF.rows) & (j := 1 to MF.cols) do {
+      if \MF.mask[i,j] == _MASK then {
+         MF.mask[i,j] := &null
+         if /MF.grid[i,j] then k := 1
+         }
+      }
+   if \k then endgame("Kaboom - you loose.")
+end
+
+procedure testforwin()                                  #: win when rows*cols-#_MARK-#_MASK are clear and no Kaboom
+local t,x
+
+   t :=  MF.rows * MF.cols - MF.mines
+   every x := !!MF.mask do if /x then t -:= 1
+   if t = 0 then endgame("You won!")
+end
+
+procedure endgame(tag)                                  #: end the game
+local i,j,m
+
+   every !(m := list(MF.rows)) := list(MF.cols)         # new mask
+   every (i := 1 to MF.rows) & (j := 1 to MF.cols) do
+      if \MF.mask[i,j] == _MARK then
+         m[i,j] := if /MF.grid[i,j] then _TRUEMINE else _FALSEMINE
+   MF.mask := m
+   write(tag) & showgrid()
+end

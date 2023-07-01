@@ -1,0 +1,38 @@
+defmodule LastLetter_FirstLetter do
+  def search(names) do
+    first = Enum.group_by(names, &String.first/1)
+    sequences = Enum.reduce(names, [], fn name,acc -> add_name(first, acc, [name]) end)
+    max = Enum.max_by(sequences, &length/1) |> length
+    max_seqs = Enum.filter(sequences, fn seq -> length(seq) == max end)
+    IO.puts "there are #{length(sequences)} possible sequences"
+    IO.puts "the longest is #{max} names long"
+    IO.puts "there are #{length(max_seqs)} such sequences. one is:"
+    hd(max_seqs) |> Enum.with_index |>
+    Enum.each(fn {name, idx} ->
+      :io.fwrite "  ~2w ~s~n", [idx+1, name]
+    end)
+  end
+
+  defp add_name(first, sequences, seq) do
+    last_letter = String.last(hd(seq))
+    potentials = Map.get(first, last_letter, []) -- seq
+    if potentials == [] do
+      [Enum.reverse(seq) | sequences]
+    else
+      Enum.reduce(potentials, sequences, fn name, acc -> add_name(first, acc, [name | seq]) end)
+    end
+  end
+end
+
+names = ~w(
+  audino bagon baltoy banette bidoof braviary bronzor carracosta charmeleon
+  cresselia croagunk darmanitan deino emboar emolga exeggcute gabite
+  girafarig gulpin haxorus heatmor heatran ivysaur jellicent jumpluff kangaskhan
+  kricketune landorus ledyba loudred lumineon lunatone machamp magnezone mamoswine
+  nosepass petilil pidgeotto pikachu pinsir poliwrath poochyena porygon2
+  porygonz registeel relicanth remoraid rufflet sableye scolipede scrafty seaking
+  sealeo silcoon simisear snivy snorlax spoink starly tirtouga trapinch treecko
+  tyrogue vigoroth vulpix wailord wartortle whismur wingull yamask
+)
+
+LastLetter_FirstLetter.search(names)

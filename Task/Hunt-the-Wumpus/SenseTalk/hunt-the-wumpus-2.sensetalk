@@ -1,0 +1,455 @@
+#!/usr/local/bin/shale
+
+// This is an implementation of the old game called Hunt the Wumpus.
+//
+// You can read about it here: https://en.wikipedia.org/wiki/Hunt_the_Wumpus
+//
+// Here's a quick summary:
+//
+// You are in a maze of 20 rooms, numbered 1 through 20. Each room is connected to
+// 3 other rooms. There is no light in the maze, and the game will tell you which
+// rooms are connected to the one you're in. The maze layout and numbering is the
+// same for every game. At the time of writing, the Wikipedia page above has an
+// image showing the layout and numbering.
+//
+// In the maze is a Wumpus, 2 bottomless pits and 2 super bats. You will die if you
+// are in the same room as the Wumpus or if you fall into one of the pits.
+// If you enter a room where a super bat is you will be transported to another
+// random room.
+//
+// You can move about the maze by entering one of the connecting rooms.
+// If a connecting room contains the Wumpus, a pit or a super bat, the game
+// will let you know that they are around but not which room they are in.
+//
+// To win you need to kill the Wumpus. You have 5 arrows at your disposal that
+// may be shot through up to 5 connected rooms, and if your arrow passes through
+// the room containing the Wumpus then it dies and you win. If your arrow
+// misses it will wake the Wumpus up and it will move randomly through the maze.
+
+maths library
+file library
+string library
+
+playerRoom var
+wumpusRoom var
+pit1Room var
+pit2Room var
+bat1Room var
+bat2Room var
+arrows var
+wumpusIsAwake var
+showStats var
+statPlayer var
+statWumpus var
+statPit var
+statArrow var
+
+haveWon var
+haveDied var
+
+// Initialises the maze.
+init dup var {
+  i dup var 1 =
+
+  { i 20 <= } {
+    0 i.value:: room:: var
+    1 i.value:: room:: var
+    2 i.value:: room:: var
+    i++
+  } while
+
+  0  1:: room::  2 =
+  1  1:: room::  5 =
+  2  1:: room::  8 =
+  0  2:: room::  1 =
+  1  2:: room::  3 =
+  2  2:: room:: 10 =
+  0  3:: room::  2 =
+  1  3:: room::  4 =
+  2  3:: room:: 12 =
+  0  4:: room::  3 =
+  1  4:: room::  5 =
+  2  4:: room:: 14 =
+  0  5:: room::  1 =
+  1  5:: room::  4 =
+  2  5:: room::  6 =
+  0  6:: room::  5 =
+  1  6:: room::  7 =
+  2  6:: room:: 15 =
+  0  7:: room::  6 =
+  1  7:: room::  8 =
+  2  7:: room:: 17 =
+  0  8:: room::  1 =
+  1  8:: room::  7 =
+  2  8:: room::  9 =
+  0  9:: room::  8 =
+  1  9:: room:: 10 =
+  2  9:: room:: 18 =
+  0 10:: room::  2 =
+  1 10:: room::  9 =
+  2 10:: room:: 11 =
+  0 11:: room:: 10 =
+  1 11:: room:: 12 =
+  2 11:: room:: 19 =
+  0 12:: room::  3 =
+  1 12:: room:: 11 =
+  2 12:: room:: 13 =
+  0 13:: room:: 12 =
+  1 13:: room:: 14 =
+  2 13:: room:: 20 =
+  0 14:: room::  4 =
+  1 14:: room:: 13 =
+  2 14:: room:: 15 =
+  0 15:: room::  6 =
+  1 15:: room:: 14 =
+  2 15:: room:: 16 =
+  0 16:: room:: 15 =
+  1 16:: room:: 17 =
+  2 16:: room:: 20 =
+  0 17:: room::  7 =
+  1 17:: room:: 16 =
+  2 17:: room:: 18 =
+  0 18:: room::  9 =
+  1 18:: room:: 17 =
+  2 18:: room:: 19 =
+  0 19:: room:: 11 =
+  1 19:: room:: 18 =
+  2 19:: room:: 20 =
+  0 20:: room:: 13 =
+  1 20:: room:: 16 =
+  2 20:: room:: 19 =
+} =
+
+// Couple of funciton to return various random numbers needed
+// for different tasks.
+getRandomRoom dup var {
+  random maths::() 8 >> 20 % 1 +
+} =
+
+getRandomConnectingRoom dup var {
+  random maths::() 12 >> 3 % swap :: room:: value
+} =
+
+getRandomWumpusMove dup var {
+  random maths::() 8 >> 4 % 0 >       // 3 in 4 chance the Wumpus moves.
+} =
+
+// Randomise the starting locations.
+chooseStartingRooms dup var {
+  playerRoom getRandomRoom() =
+  wumpusRoom getRandomRoom() =
+  { wumpusRoom playerRoom == } {
+    wumpusRoom getRandomRoom() =
+  } while
+  pit1Room getRandomRoom() =
+  pit1Room playerRoom == { pit1Room wumpusRoom == } or {
+    pit1Room getRandomRoom() =
+  } ifthen
+  pit2Room getRandomRoom() =
+  pit2Room playerRoom == { pit2Room wumpusRoom == { pit2Room pit1Room == } or } or {
+    pit2Room getRandomRoom() =
+  } ifthen
+  bat1Room getRandomRoom() =
+  bat1Room playerRoom == { bat1Room wumpusRoom == } or {
+    bat1Room getRandomRoom() =
+  } ifthen
+  bat2Room getRandomRoom() =
+  bat2Room playerRoom == { bat2Room wumpusRoom == { bat2Room bat1Room == } or } or {
+    bat2Room getRandomRoom() =
+  } ifthen
+} =
+
+// Details the connected rooms and whether the Wumpus, a pit or a bat is in a connected room.
+showPlayerRoom dup var {
+  pitNearby dup var false =
+  batsNearby dup var false =
+
+  2 playerRoom.value:: room:: 1 playerRoom.value:: room:: 0 playerRoom.value:: room:: playerRoom "You are in room %d, with connections to rooms %d, %d and %d\n" printf
+  0 playerRoom.value:: room:: wumpusRoom == { 1 playerRoom.value:: room:: wumpusRoom == { 2 playerRoom.value:: room:: wumpusRoom == } or } or {
+    "You smell a dreadful stench!" println
+  } ifthen
+  0 playerRoom.value:: room:: pit1Room == { 1 playerRoom.value:: room:: pit1Room == { 2 playerRoom.value:: room:: pit1Room == } or } or {
+    pitNearby true =
+  } ifthen
+  pitNearby not {
+    0 playerRoom.value:: room:: pit2Room == { 1 playerRoom.value:: room:: pit2Room == { 2 playerRoom.value:: room:: pit2Room == } or } or {
+      pitNearby true =
+    } ifthen
+  } ifthen
+  pitNearby {
+    "You feel a draft." println
+  } ifthen
+  0 playerRoom.value:: room:: bat1Room == { 1 playerRoom.value:: room:: bat1Room == { 2 playerRoom.value:: room:: bat1Room == } or } or {
+    batsNearby true =
+  } ifthen
+  batsNearby not {
+    0 playerRoom.value:: room:: bat2Room == { 1 playerRoom.value:: room:: bat2Room == { 2 playerRoom.value:: room:: bat2Room == } or } or {
+      batsNearby true =
+    } ifthen
+  } ifthen
+  batsNearby {
+    "There are bats nearby." println
+  } ifthen
+  "" println
+} =
+
+getAnswer dup var {
+  haveAnswer dup var false =
+
+  { haveAnswer not } {
+    stdin file:: fgets file::() {
+      dup
+      "xyzzy" equals string::() {
+        showStats showStats not =
+        pop
+      } {
+        atoi string::()
+        haveAnswer true =
+      } if
+    } {
+      0 exit
+    } if
+  } while
+} =
+
+// Handles the process of moving to a connected room.
+move dup var {
+  haveRoom dup var false =
+  req var
+
+  { haveRoom not } {
+    2 playerRoom.value:: room:: 1 playerRoom.value:: room:: 0 playerRoom.value:: room:: "Move to room (%d, %d or %d): " printf
+    req getAnswer() =
+    req 0 playerRoom.value:: room:: == { req 1 playerRoom.value:: room:: == { req 2 playerRoom.value:: room:: == } or } or {
+      playerRoom req =
+      haveRoom true =
+    } {
+      "That is not a connected room." println
+    } if
+  } while
+  "" println
+} =
+
+// Handles the process of shooting an arrow.
+shoot dup var {
+  haveAnswer var
+  req var
+  rooms var
+  lastRoom var
+  i var
+  gotKilled var
+  gotTheWumpus var
+
+  "" println
+  arrows 1 == { "" } { "s" } if arrows "You have %d arrow%s remaining.\n" printf
+  "How many rooms will your arrow pass through (1 to 5): " print
+  lastRoom playerRoom =
+  gotKilled false =
+  gotTheWumpus false =
+  haveAnswer false =
+  { haveAnswer not } {
+    req getAnswer() =
+    req 1 >= req 5 <= and {
+      rooms req =
+      haveAnswer true =
+    } {
+      "You must specify 1, 2, 3, 4 or 5." println
+    } if
+  } while
+
+  i 1 =
+  { i rooms <= } {
+    haveAnswer false =
+    { haveAnswer not } {
+      2 lastRoom.value:: room:: 1 lastRoom.value:: room:: 0 lastRoom.value:: room::
+      i rooms == {
+        rooms 1 == { "Only room" } { "Last room" } if
+      } {
+        i 1 == { "1st room" } ifthen
+        i 2 == { "2nd room" } ifthen
+        i 3 == { "3rd room" } ifthen
+        i 4 == { "4th room" } ifthen
+      } if
+      "%s (%d, %d or %d): " printf
+
+      req getAnswer() =
+      req 0 lastRoom.value:: room:: == { req 1 lastRoom.value:: room:: == { req 2 lastRoom.value:: room:: == } or } or {
+        req playerRoom == {
+          gotKilled true =
+        } ifthen
+        req wumpusRoom == {
+          gotTheWumpus true =
+        } ifthen
+        lastRoom req =
+        haveAnswer true =
+      } ifthen
+    } while
+
+    i++
+  } while
+  arrows--
+
+  "" println
+  gotKilled {
+    "You were killed by your own arrow." println
+    haveDied true =
+    statArrow++
+  } {
+    gotTheWumpus {
+      "Congratulations, you killed the Wumpus." println
+      haveWon true =
+      statPlayer++
+    } {
+      arrows 0 == {
+        "Your arrow missed and you have died because you have no arrows left." println
+        haveDied true =
+        statArrow++
+      } {
+        wumpusIsAwake {
+          "Your arrow missed." println
+        } {
+          "Your arrow missed and you've woken up the Wumpus." println
+          wumpusIsAwake true =
+        } if
+      } if
+    } if
+  } if
+} =
+
+// The player's turn, move or shoot.
+playerTurn dup var {
+  turnOver dup var false =
+  req  var
+
+  { turnOver not } {
+    showPlayerRoom()
+    "1 - move" println
+    "2 - shoot" println
+    "> " print
+    req getAnswer() =
+    req 1 == {
+      move()
+      turnOver true =
+    } ifthen
+    req 2 == {
+      shoot()
+      turnOver true =
+    } ifthen
+  } while
+} =
+
+// The game's turn, whether to move the Wumpus or not.
+gameTurn dup var {
+  wumpusIsAwake {
+    getRandomWumpusMove() {
+      wumpusRoom wumpusRoom.value getRandomConnectingRoom() =
+    } ifthen
+  } ifthen
+} =
+
+// Check if something bad happened to the player.
+checkSituationAfterPlayerMove dup var {
+  playerRoom wumpusRoom == {
+    "You have died, eaten by the Wumpus." println
+    haveDied true =
+    statWumpus++
+  } {
+    playerRoom pit1Room == playerRoom pit2Room == or {
+      "You have died by falling into a pit." println
+      haveDied true =
+      statPit++
+    } ifthen
+  } if
+  haveDied not {
+    playerRoom bat1Room == {
+      playerRoom getRandomRoom() =
+      { playerRoom bat1Room == playerRoom bat2Room == or } {
+        playerRoom getRandomRoom() =
+      } while
+      bat1Room getRandomRoom() =
+      { bat1Room playerRoom == bat1Room bat2Room == or } {
+        bat1Room getRandomRoom() =
+      } while
+      playerRoom "You have been moved to room %d.\n" printf
+      checkSituationAfterPlayerMove()
+    } {
+      playerRoom bat2Room == {
+        playerRoom getRandomRoom() =
+        { playerRoom bat1Room == playerRoom bat2Room == or } {
+          playerRoom getRandomRoom() =
+        } while
+        bat2Room getRandomRoom() =
+        { bat2Room playerRoom == bat2Room bat1Room == or } {
+          bat2Room getRandomRoom() =
+        } while
+        playerRoom "You have been moved to room %d.\n" printf
+        checkSituationAfterPlayerMove()
+      } ifthen
+    } if
+  } ifthen
+} =
+
+// Check if something bad happened to the player.
+checkSituationAfterGameMove dup var {
+  playerRoom wumpusRoom == {
+    "You have died, eaten by the Wumpus." println
+    haveDied true =
+    statWumpus++
+  } ifthen
+} =
+
+// Take turns between the player and the game.
+play dup var {
+  haveWon false =
+  haveDied false =
+  wumpusIsAwake false =
+  arrows 5 =
+
+  chooseStartingRooms()
+  "" println
+  { haveWon not haveDied not and } {
+    playerTurn()
+    checkSituationAfterPlayerMove()
+    haveWon not haveDied not and {
+      gameTurn()
+      checkSituationAfterGameMove()
+    } ifthen
+  } while
+} =
+
+toplevel dup var {
+  haveAnswer var
+  req var
+
+  showStats false =
+  statPlayer 0 =
+  statWumpus 0 =
+  statPit 0 =
+  statArrow 0 =
+
+  { true } {
+    haveAnswer false =
+    { haveAnswer not } {
+      showStats {
+        statArrow statPit statWumpus statPlayer "\nPlayer %d, Wumpus %d, Pit %d, Arrow %d\n" printf
+      } ifthen
+
+      "" println
+      "1 - play game" println
+      "2 - quit" println
+      "> " print
+      req getAnswer() =
+      req 2 == {
+        0 exit
+      } ifthen
+      req 1 == {
+        haveAnswer true =
+      } ifthen
+    } while
+
+    play()
+  } while
+} =
+
+init()
+toplevel()

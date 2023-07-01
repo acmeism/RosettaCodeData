@@ -1,0 +1,100 @@
+% This program uses the RNG included in PCLU's "misc.lib".
+
+pig = cluster is play
+    rep = null
+    own pi: stream := stream$primary_input()
+    own po: stream := stream$primary_output()
+
+    own scores: array[int] := array[int]$[0,0]
+
+    % Seed the RNG with the current time
+    init_rng = proc ()
+        d: date := now()
+        random$seed(d.second + 60*(d.minute + 60*d.hour))
+    end init_rng
+
+    % Roll die
+    roll = proc () returns (int)
+        return(random$next(6) + 1)
+    end roll
+
+    % Read keypresses until one of the keys in 's' is pressed
+    accept = proc (s: string) returns (char)
+        own beep: string := string$ac2s(array[char]$[char$i2c(7), char$i2c(8)])
+
+        while true do
+            c: char := stream$getc(pi)
+            if string$indexc(c,s) ~= 0 then
+                stream$putl(po, "")
+                return(c)
+            end
+            stream$puts(po, beep)
+        end
+    end accept
+
+    % Print the current scores
+    print_scores = proc ()
+        stream$puts(po, "\nCurrent scores: ")
+        for p: int in array[int]$indexes(scores) do
+            stream$puts(po, "Player " || int$unparse(p)
+                        || " = " || int$unparse(scores[p]) || "\t")
+        end
+        stream$putl(po, "")
+    end print_scores
+
+    % Player P's turn
+    turn = proc (p: int)
+        stream$putl(po, "\nPlayer " || int$unparse(p) || "'s turn.")
+        t: int := 0
+        while true do
+            r: int := roll()
+            stream$puts(po, "Score: " || int$unparse(scores[p]))
+            stream$puts(po, " Turn: " || int$unparse(t))
+            stream$puts(po, " Roll: " || int$unparse(r))
+
+            if r=1 then
+                % Rolled a 1, turn is over, no points.
+                stream$putl(po, " - Too bad!")
+                break
+            end
+
+            % Add this roll to the score for this turn
+            t := t + r
+
+            stream$puts(po, "\tR)oll again, or H)old? ")
+            if accept("rh") = 'h' then
+                % The player stops, and receives the points for this turn.
+                scores[p] := scores[p] + t
+                break
+            end
+        end
+        stream$putl(po, "Player " || int$unparse(p) || "'s turn ends.")
+    end turn
+
+    % Play the game
+    play = proc ()
+        stream$putl(po, "Game of Pig\n---- -- ----")
+        init_rng()
+        scores[1] := 0  % Both players start out with 0 points
+        scores[2] := 0
+
+        % Players take turns until one of them has a score >= 100
+        p: int := 1
+        while scores[1] < 100 & scores[2] < 100 do
+            print_scores()
+            turn(p) p := 3-p
+        end
+
+        print_scores()
+        for i: int in array[int]$indexes(scores) do
+            if scores[i] >= 100 then
+                stream$putl(po, "Player " || int$unparse(i) || " wins!")
+                break
+            end
+        end
+    end play
+end pig
+
+start_up = proc()
+    pig$play()
+end start_up

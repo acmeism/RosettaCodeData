@@ -1,0 +1,22 @@
+DECLARE FUNCTION pancake! (n)
+
+FOR i = 0 TO 3
+    FOR j = 1 TO 5
+        n = (i * 5) + j
+        c = c + 1
+        PRINT USING "p(##) = ##  "; n; pancake(n);
+        IF c MOD 5 = 0 THEN PRINT
+    NEXT j
+NEXT i
+
+FUNCTION pancake (n)
+    gap = 2
+    sum = 2
+    adj = -1
+    WHILE sum < n
+        adj = adj + 1
+        gap = (gap * 2) - 1
+        sum = sum + gap
+    WEND
+    pancake = n + adj
+END FUNCTION

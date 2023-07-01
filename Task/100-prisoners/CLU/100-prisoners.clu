@@ -1,0 +1,101 @@
+% This program needs to be merged with PCLU's "misc" library
+% to use the random number generator.
+%
+% pclu -merge $CLUHOME/lib/misc.lib -compile prisoners.clu
+
+% Seed the random number generator with the current time
+init_rng = proc ()
+    d: date := now()
+    seed: int := ((d.hour*60) + d.minute)*60 + d.second
+    random$seed(seed)
+end init_rng
+
+% Place cards in drawers randomly
+make_drawers = proc (n: int) returns (sequence[int])
+    d: array[int] := array[int]$predict(1,n)
+
+    % place each card in its own drawer
+    for i: int in int$from_to(1,n) do
+        array[int]$addh(d,i)
+    end
+
+    % shuffle the cards
+    for i: int in int$from_to_by(n,2,-1) do
+        j: int := random$next(i)+1
+        t: int := d[i]
+        d[i] := d[j]
+        d[j] := t
+    end
+    return(sequence[int]$a2s(d))
+end make_drawers
+
+% Random strategy
+rand_strat = proc (p, tries: int, d: sequence[int]) returns (bool)
+    n: int := sequence[int]$size(d)
+    for i: int in int$from_to(1,tries) do
+        if p = d[random$next(n)+1] then return(true) end
+    end
+    return(false)
+end rand_strat
+
+% Optimal strategy
+opt_strat = proc (p, tries: int, d: sequence[int]) returns (bool)
+    last: int := p
+    for i: int in int$from_to(1,tries) do
+        if d[last]=p then return(true) end
+        last := d[last]
+    end
+    return(false)
+end opt_strat
+
+% Run one simulation given a strategy
+simulate = proc (n, tries: int,
+                 strat: proctype (int,int,sequence[int]) returns (bool))
+           returns (bool)
+    d: sequence[int] := make_drawers(n)
+    for p: int in int$from_to(1,n) do
+        % If one prisoner fails, they all hang
+        if ~strat(p,tries,d) then return(false) end
+    end
+    return(true)
+end simulate
+
+% Run many simulations and count the successes
+run_simulations = proc (amount, n, tries: int,
+                        strat: proctype (int,int,sequence[int]) returns (bool))
+                  returns (int)
+    ok: int := 0
+    for i: int in int$from_to(1,amount) do
+        if simulate(n,tries,strat) then
+            ok := ok + 1
+        end
+    end
+    return(ok)
+end run_simulations
+
+% Run simulations and show the results
+show = proc (title: string,
+             amount, n, tries: int,
+             strat: proctype (int,int,sequence[int]) returns (bool))
+    po: stream := stream$primary_output()
+    stream$puts(po, title || ": ")
+
+    ok: int := run_simulations(amount, n, tries, strat)
+    perc: real := real$i2r(ok)*100.0/real$i2r(amount)
+
+    stream$putright(po, int$unparse(ok), 7)
+    stream$puts(po, " out of ")
+    stream$putright(po, int$unparse(amount), 7)
+    stream$putl(po, ", " || f_form(perc, 3, 2) || "%")
+end show
+
+start_up = proc ()
+    prisoners   = 100
+    tries       = 50
+    simulations = 50000
+
+    init_rng()
+
+    show(" Random", simulations, prisoners, tries, rand_strat)
+    show("Optimal", simulations, prisoners, tries, opt_strat)
+end start_up

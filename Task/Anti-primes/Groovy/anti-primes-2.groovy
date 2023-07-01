@@ -1,0 +1,1 @@
+println (getAntiPrimes(20))

@@ -1,0 +1,31 @@
+        .cr  6800
+        .tf  gbye6800.obj,AP1
+        .lf  gbye6800
+;=====================================================;
+;        Hello world! for the Motorola 6800        ;
+;                 by barrym 2013-03-17                ;
+;-----------------------------------------------------;
+; Prints the message "Hello world!" to an ascii    ;
+;   terminal (console) connected to a 1970s vintage   ;
+;   SWTPC 6800 system, which is the target device for ;
+;   this assembly.                                    ;
+; Many thanks to:                                     ;
+;   swtpc.com for hosting Michael Holley's documents! ;
+;   sbprojects.com for a very nice assembler!         ;
+;   swtpcemu.com for a very capable emulator!         ;
+; reg x is the string pointer                         ;
+; reg a holds the ascii char to be output             ;
+;-----------------------------------------------------;
+outeee   =   $e1d1      ;ROM: console putchar routine
+        .or  $0f00
+;-----------------------------------------------------;
+main    ldx  #string    ;Point to the string
+        bra  puts       ;  and print it
+outs    jsr  outeee     ;Emit a as ascii
+        inx             ;Advance the string pointer
+puts    ldaa ,x         ;Load a string character
+        bne  outs       ;Print it if non-null
+        swi             ;  else return to the monitor
+;=====================================================;
+string  .as  "Hello world!",#13,#10,#0
+        .en

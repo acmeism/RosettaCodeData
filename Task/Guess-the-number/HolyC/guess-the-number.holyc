@@ -1,0 +1,17 @@
+U8 n, *g;
+
+n = 1 + RandU16 % 10;
+
+Print("I'm thinking of a number between 1 and 10.\n");
+Print("Try to guess it:\n");
+
+while(1) {
+  g = GetStr;
+
+  if (Str2I64(g) == n) {
+    Print("Correct!\n");
+    break;
+  }
+
+  Print("That's not my number. Try another guess:\n");
+}

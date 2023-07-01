@@ -1,0 +1,83 @@
+fcn solvePyramid([List]vl,[Dictionary]cnstr){  //ListOfLists,Hash-->zip
+   vl=vl.reverse();
+   constraints:=L(cnstr);
+   lvls:=vl.len();
+   foreach lvln in ([1..lvls-1]){
+      lvd:=vl[lvln];
+      foreach k in (lvls-lvln){
+         sn:=lvd[k];
+	 ll:=vl[lvln-1];
+	 vn:=combine(ll[k], ll[k+1]);
+	 if(Void==sn) lvd[k]=vn;
+	 else constraints.append(constrainK(sn,vn));
+      }
+   }
+   println("Constraint Equations:");
+   constraints.pump(Console.println,fcn(hash){
+      hash.pump(List,fcn([(k,v)]){"%d*%s".fmt(v,k)}).concat(" + ") + " = 0"
+   });
+
+   mtx,vmap:=makeMatrix(constraints);
+   mtxSolve(mtx);
+
+   d:=vmap.len();
+   foreach j in (d){ println(vmap[j]," = ", mtx[j][d]); }
+}
+
+fcn [mixin=Dictionary] constrainK([Int]nsum,[Dictionary]vn){ //-->new hash of old hash, sum K
+   nn:=vn.copy(); nn["1"]=nn.find("1",0) - nsum;
+   return(nn.makeReadOnly());
+}
+
+fcn combine(snl,snr){ //Int|String|Hash *2 --> new Hash
+   cl:=Dictionary();
+   if(snl.isInstanceOf(Int))         cl["1"]=snl;
+   else if(snl.isInstanceOf(String)) cl[snl]=1;
+   else				     cl     =snl.copy();
+
+   if(snr.isInstanceOf(Int))         cl["1"]=cl.find("1",0) + snr;
+   else if(snr.isInstanceOf(String)) cl[snr]=cl.find(snr,0) + 1;
+   else{ foreach k,v in (snr){ 	     cl[k]  =cl.find(k,0)   + v; } }
+   return(cl.makeReadOnly())
+}
+
+    //-->(listMatrix(row(X,Y,Z,c),row...),List("X","Y","Z"))
+fcn makeMatrix([Dictionary]constraints){
+   vmap:=Dictionary();// create a sorted list of the variable names in constraints
+   foreach c in (constraints){ vmap.extend(c) }  // no duplicate names
+   vmap.del("1"); vmap=vmap.keys.sort();  # sort here so output is in sorted order
+
+   mtx:=constraints.pump(List,'wrap(c){ // create list of [writeable] rows
+      vmap.pump(List, c.find.fp1(0),"toFloat").copy()
+      .append(-c.find("1",0).toFloat())
+   }).copy();
+
+   nvars:=vmap.len();
+   if(constraints.len()==nvars) println("System appears solvable");
+   else if(constraints.len()<nvars)
+      println("System is not solvable - needs more constraints.");
+   return(mtx,vmap);
+}
+
+fcn mtxSolve([List]mtx){ //munge mtx	# Simple Matrix solver...
+   mDim:=mtx.len();			# num rows
+   foreach j in (mDim){
+      rw0:=mtx[j];
+      f:=1.0/rw0[j];
+      foreach k in ([j..mDim]){ rw0[k]=rw0[k]*f }
+      foreach l in ([j+1..mDim-1]){
+         rwl:=mtx[l]; f:=-rwl[j];
+	 foreach k in ([j..mDim]){ rwl[k]+=f*rw0[k] }
+      }
+   }
+   # backsolve part ---
+   foreach j1 in ([1..mDim-1]){
+      j:=mDim - j1; rw0:=mtx[j];
+      foreach l in (j){
+	 rwl:=mtx[l]; f:=-rwl[j];
+	 rwl[j]   +=f*rw0[j];
+	 rwl[mDim]+=f*rw0[mDim];
+      }
+   }
+   return(mtx);
+}

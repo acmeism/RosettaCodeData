@@ -1,0 +1,155 @@
+PROGRAM "fifteenpuzzlegame"
+VERSION "0.0001"
+
+IMPORT "xst"
+
+DECLARE FUNCTION Entry()
+INTERNAL FUNCTION PrintPuzzle(d%[])
+INTERNAL FUNCTION IntroAndLevel(shCnt%[])
+INTERNAL FUNCTION BuildBoard(d%[], shCnt%[], level%)
+INTERNAL FUNCTION IsMoveValid(d%[], piece%, piecePos%, emptyPos%)
+INTERNAL FUNCTION IsPuzzleComplete(d%[])
+INTERNAL FUNCTION PiecePosition(d%[], piece%)
+
+' Pseudo-random number generator
+' Based on the rand, srand functions from Kernighan & Ritchie's book
+' 'The C Programming Language'
+DECLARE FUNCTION Rand()
+DECLARE FUNCTION SRand(seed%%)
+
+FUNCTION Entry()
+  DIM d%[15]
+  DIM shCnt%[2]
+  BuildBoard(@d%[], @shCnt%[], IntroAndLevel(@shCnt%[]))
+  PrintPuzzle(@d%[])
+  DO
+    x% = SSHORT(INLINE$("To move a piece, enter its number: "))
+    DO WHILE IsMoveValid(@d%[], x%, @y%, @z%) = 0
+      PRINT "Wrong move."
+      PrintPuzzle(@d%[])
+      x% = SSHORT(INLINE$("To move a piece, enter its number: "))
+    LOOP
+    d%[z% - 1] = x%
+    d%[y% - 1] = 0
+    PrintPuzzle(@d%[])
+  LOOP UNTIL IsPuzzleComplete(@d%[])
+  PRINT "YOU WON!"
+END FUNCTION
+
+FUNCTION PrintPuzzle(d%[])
+  DIM ds$[15] ' Board pieces
+  FOR p%% = 0 TO 15
+    IF d%[p%%] = 0 THEN
+      ds$[p%%] = "     "
+    ELSE
+      ds$[p%%] = FORMAT$("###  ", d%[p%%])
+    END IF
+  NEXT p%%
+  PRINT "+-----+-----+-----+-----+"
+  PRINT "|"; ds$[0]; "|"; ds$[1]; "|"; ds$[2]; "|"; ds$[3]; "|"
+  PRINT "+-----+-----+-----+-----+"
+  PRINT "|"; ds$[4]; "|"; ds$[5]; "|"; ds$[6]; "|"; ds$[7]; "|"
+  PRINT "+-----+-----+-----+-----+"
+  PRINT "|"; ds$[8]; "|"; ds$[9]; "|"; ds$[10]; "|"; ds$[11]; "|"
+  PRINT "+-----+-----+-----+-----+"
+  PRINT "|"; ds$[12]; "|"; ds$[13]; "|"; ds$[14]; "|"; ds$[15]; "|"
+  PRINT "+-----+-----+-----+-----+"
+END FUNCTION
+
+FUNCTION IntroAndLevel(shCnt%[])
+  XstClearConsole()
+  shCnt%[0] = 10
+  shCnt%[1] = 50
+  shCnt%[2] = 100
+  PRINT "15 PUZZLE GAME"
+  PRINT
+  PRINT
+  PRINT "Please enter level of difficulty,"
+  DO
+    level% = SSHORT(INLINE$("1 (easy), 2 (medium) or 3 (hard): "))
+  LOOP UNTIL (level% >= 1) && (level% <= 3)
+END FUNCTION level%
+
+FUNCTION BuildBoard(d%[], shCnt%[], level%)
+  ' Set pieces in correct order first
+  FOR p%% = 1 TO 15
+    d%[p%% - 1] = p%%
+  NEXT p%%
+  d%[15] = 0 ' 0 = empty piece/slot
+  z% = 16 ' z% = empty position
+  PRINT
+  PRINT "Shuffling pieces";
+  XstGetSystemTime (@msec)
+  SRand(INT(msec) MOD 32768)
+  FOR n% = 1 TO shCnt%[level% - 1]
+    PRINT ".";
+    DO
+      x% = INT(Rand() / 32768.0 * 4.0) + 1
+      PRINT x%
+      SELECT CASE x%
+        CASE 1:
+          r% = z% - 4
+        CASE 2:
+          r% = z% + 4
+        CASE 3:
+          IF (z% - 1) MOD 4 <> 0 THEN
+            r% = z% - 1
+          END IF
+        CASE 4:
+          IF z% MOD 4 <> 0 THEN
+            r% = z% + 1
+          END IF
+      END SELECT
+    LOOP UNTIL (r% >= 1) && (r% <= 16)
+    d%[z% - 1] = d%[r% - 1]
+    z% = r%
+    d%[z% - 1] = 0
+  NEXT n%
+  XstClearConsole()
+END FUNCTION
+
+FUNCTION IsMoveValid(d%[], piece%, piecePos%, emptyPos%)
+  mv% = 0
+  IF (piece% >= 1) && (piece% <= 15) THEN
+    piecePos% = PiecePosition(@d%[], piece%)
+    emptyPos% = PiecePosition(@d%[], 0)
+    ' Check if empty piece is above, below, left or right to piece
+    IF (piecePos% - 4 = emptyPos%) || (piecePos% + 4 = emptyPos%) || ((piecePos% - 1 = emptyPos%) && (emptyPos% MOD 4 <> 0)) || ((piecePos% + 1 = emptyPos%) && (piecePos% MOD 4 <> 0)) THEN
+      mv% = 1
+    END IF
+  END IF
+END FUNCTION mv%
+
+FUNCTION PiecePosition(d%[], piece%)
+  p%% = 0
+  DO WHILE d%[p%%] <> piece%
+    INC p%%
+    IF p%% > 15 THEN
+      PRINT "UH OH!"
+      QUIT(1)
+    END IF
+  LOOP
+END FUNCTION p%% + 1
+
+FUNCTION IsPuzzleComplete(d%[])
+  pc% = 0
+  p%% = 1
+  DO WHILE (p%% < 16) && (d%[p%% - 1] = p%%)
+    INC p%%
+  LOOP
+  IF p%% = 16 THEN
+    pc% = 1
+  END IF
+END FUNCTION pc%
+
+' Return pseudo-random integer on 0..32767
+FUNCTION Rand()
+  #next&& = #next&& * 1103515245 + 12345
+END FUNCTION USHORT(#next&& / 65536) MOD 32768
+
+' Set seed for Rand()
+FUNCTION SRand(seed%%)
+  #next&& = seed%%
+END FUNCTION
+
+END PROGRAM

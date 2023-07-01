@@ -1,0 +1,2 @@
+> (lists:reverse "asdf")
+"fdsa"

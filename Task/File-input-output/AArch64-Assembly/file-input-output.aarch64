@@ -1,0 +1,150 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program readwrtFile64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ TAILLEBUF,  1000
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessErreur:  .asciz "Error open input file.\n"
+szMessErreur4: .asciz "Error open output file.\n"
+szMessErreur1: .asciz "Error close file.\n"
+szMessErreur2: .asciz "Error read file.\n"
+szMessErreur3: .asciz "Error write output file.\n"
+
+/*************************************************/
+szMessCodeErr: .asciz "Error code décimal :  @ \n"
+
+szNameFileInput:     .asciz "input.txt"
+szNameFileOutput:    .asciz "output.txt"
+
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+sBuffer:        .skip TAILLEBUF
+sZoneConv:      .skip 24
+/**********************************************/
+/* -- Code section                            */
+/**********************************************/
+.text
+.global main
+main:                            // entry of program
+    mov x0,AT_FDCWD
+    ldr x1,qAdrszNameFileInput   // file name
+    mov x2,#O_RDWR               //  flags
+    mov x3,#0                    // mode
+    mov x8,#OPEN                 // call system OPEN
+    svc #0
+    cmp x0,0                     // open error ?
+    ble erreur
+    mov x19,x0                   // save File Descriptor
+    ldr x1,qAdrsBuffer           // buffer address
+    mov x2,TAILLEBUF             // buffer size
+    mov x8,READ                  // call system  READ
+    svc 0
+    cmp x0,0                     // read error ?
+    ble erreur2
+    mov x20,x0                    // length read characters
+                                 // close imput file
+    mov x0,x19                   // Fd
+    mov x8,CLOSE                 // call system CLOSE
+    svc 0
+    cmp x0,0                     // close error ?
+    blt erreur1
+
+                                 // create output file
+    mov x0,AT_FDCWD
+    ldr x1,qAdrszNameFileOutput  // file name
+    mov x2,O_CREAT|O_RDWR        //  flags
+    ldr x3,qFicMask1             // Mode
+    mov x8,OPEN                  // call system open file
+    svc 0
+    cmp x0,#0                    // create error ?
+    ble erreur4
+    mov x19,x0                   // file descriptor
+    ldr x1,qAdrsBuffer
+    mov x2,x20                   // length to write
+    mov x8, #WRITE               // select system call 'write'
+    svc #0                       // perform the system call
+    cmp x0,#0                    // error write ?
+    blt erreur3
+
+                                 // close output file
+    mov x0,x19                   // Fd  fichier
+    mov x8, #CLOSE               //  call system CLOSE
+    svc #0
+    cmp x0,#0                    // error close ?
+    blt erreur1
+    mov x0,#0                    // return code OK
+    b 100f
+erreur:
+    ldr x1,qAdrszMessErreur
+    bl  displayError
+    mov x0,#1                   // error return code
+    b 100f
+erreur1:
+    ldr x1,qAdrszMessErreur1
+    bl  displayError
+    mov x0,#1                   // error return code
+    b 100f
+erreur2:
+    ldr x1,qAdrszMessErreur2
+    bl  displayError
+    mov x0,#1                  // error return code
+    b 100f
+erreur3:
+    ldr x1,qAdrszMessErreur3
+    bl  displayError
+    mov x0,#1                 // error return code
+    b 100f
+erreur4:
+    ldr x1,qAdrszMessErreur4
+    bl  displayError
+    mov x0,#1                 // error return code
+    b 100f
+
+100:                          // end program
+    mov x8,EXIT
+    svc 0
+qAdrszNameFileInput:    .quad szNameFileInput
+qAdrszNameFileOutput:   .quad szNameFileOutput
+qAdrszMessErreur:       .quad szMessErreur
+qAdrszMessErreur1:      .quad szMessErreur1
+qAdrszMessErreur2:      .quad szMessErreur2
+qAdrszMessErreur3:      .quad szMessErreur3
+qAdrszMessErreur4:      .quad szMessErreur4
+qAdrsBuffer:            .quad sBuffer
+qFicMask1:              .quad 0644
+/******************************************************************/
+/*     display error message                                      */
+/******************************************************************/
+/* x0 contains error code */
+/* x1 contains address error message    */
+displayError:
+    stp x2,lr,[sp,-16]!            // save  registers
+    mov x2,x0                      // save error code
+    mov x0,x1                      // display message error
+    bl affichageMess
+    mov x0,x2
+    ldr x1,qAdrsZoneConv           // conversion error code
+    bl conversion10S               // decimal conversion
+    ldr x0,qAdrszMessCodeErr
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc          // insert result at @ character
+    bl affichageMess               // display message final
+    ldp x2,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrsZoneConv:        .quad sZoneConv
+qAdrszMessCodeErr:    .quad szMessCodeErr
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

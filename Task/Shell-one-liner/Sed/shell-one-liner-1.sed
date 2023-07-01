@@ -1,0 +1,1 @@
+$ sed q /proc/meminfo

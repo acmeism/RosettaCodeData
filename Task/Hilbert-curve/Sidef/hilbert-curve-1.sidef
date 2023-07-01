@@ -1,0 +1,108 @@
+require('Image::Magick')
+
+class Turtle(
+    x      = 500,
+    y      = 500,
+    angle  = 0,
+    scale  = 1,
+    mirror = 1,
+    xoff   = 0,
+    yoff   = 0,
+    color  = 'black',
+) {
+
+    has im = %O<Image::Magick>.new(size => "#{x}x#{y}")
+
+    method init {
+        angle.deg2rad!
+        im.ReadImage('canvas:white')
+    }
+
+    method forward(r) {
+        var (newx, newy) = (x + r*sin(angle), y + r*-cos(angle))
+
+        im.Draw(
+            primitive => 'line',
+            points    => join(' ',
+                           round(x    * scale + xoff),
+                           round(y    * scale + yoff),
+                           round(newx * scale + xoff),
+                           round(newy * scale + yoff),
+                        ),
+            stroke      => color,
+            strokewidth => 1,
+        )
+
+        (x, y) = (newx, newy)
+    }
+
+    method save_as(filename) {
+        im.Write(filename)
+    }
+
+    method turn(theta) {
+        angle += theta*mirror
+    }
+
+    method state {
+        [x, y, angle, mirror]
+    }
+
+    method setstate(state) {
+        (x, y, angle, mirror) = state...
+    }
+
+    method mirror {
+        mirror.neg!
+    }
+}
+
+class LSystem(
+    angle  = 90,
+    scale  = 1,
+    xoff   = 0,
+    yoff   = 0,
+    len    = 5,
+    color  = 'black',
+    width  = 500,
+    height = 500,
+    turn   = 0,
+) {
+    method execute(string, repetitions, filename, rules) {
+
+        var theta  = angle.deg2rad
+        var turtle = Turtle(
+            x:     width,
+            y:     height,
+            angle: turn,
+            scale: scale,
+            color: color,
+            xoff:  xoff,
+            yoff:  yoff,
+        )
+
+        var stack = []
+        var table = Hash(
+            '+' => { turtle.turn(theta) },
+            '-' => { turtle.turn(-theta) },
+            ':' => { turtle.mirror },
+            '[' => { stack.push(turtle.state) },
+            ']' => { turtle.setstate(stack.pop) },
+        )
+
+        repetitions.times {
+            string.gsub!(/(.)/, {|c| rules{c} \\ c })
+        }
+
+        string.each_char { |c|
+            if (table.contains(c)) {
+                table{c}.run
+            }
+            elsif (c.is_uppercase) {
+                turtle.forward(len)
+            }
+        }
+
+        turtle.save_as(filename)
+    }
+}

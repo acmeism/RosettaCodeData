@@ -1,0 +1,54 @@
+		bits	16
+		cpu	8086
+puts:		equ	9h	; MS/DOS system call to print a string
+nmemb:		equ	15	; Change this to print more or fewer members
+section		.text
+		org	100h
+		mov	cx,nmemb	; CX = how many members to print
+outloop:	mov	dx,memb		; Print current member
+		mov	ah,puts
+		int	21h
+		mov	dx,newline	; Print newline
+		int	21h
+		mov	di,memb		; Generate next member
+		call	looksay
+		loop	outloop		; Decrease CX, and loop until zero.
+		ret			; Go back to DOS.
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;;; Given a look and say string in ES:DI, generate the next
+		;;; one in place. Assumption: DS = ES.
+looksay:	push	cx		; Keep the counter register
+		mov	si,di		; Store pointer to string begin in SI
+		mov	bx,di		; And another in BX
+		mov	al,'$'		; Find the end of the string
+		xor	cx,cx		; Max. 65535 tries
+		dec	cx
+		repne	scasb		; The 8086 has dedicated string search
+		mov	dx,di		; Store copy of start of new str in DX
+		;;; Process one character
+.procchar:	mov	al,'0'		; Set counter to ASCII 0
+		mov	ah,[bx]		; Get current character of string
+		cmp	ah,'$'		; Done?
+		je	.done
+.samechar:	inc	bx 		; Increment pointer
+		inc	al		; Increment counter
+		cmp	ah,[bx]		; Still the same character?
+		je	.samechar	; If yes, test next character
+		mov	[di],ax		; Store counter and character
+		inc	di		; Move ahead two characters
+		inc	di
+		jmp	.procchar	; Do next character
+		;;; Copy new string into old location
+.done:		mov	byte [di],'$'	; Terminate the string
+		mov	cx,di		; Calculate how many bytes to copy
+		sub	cx,dx		; end + 1 - start, so one too few here
+		shr 	cx,1		; Divide by 2 = words
+		inc	cx		; Compensate for the missing +1
+		mov	di,dx		; Pointer to begin of new string
+		xchg	si,di		; Set SI = new string and DI = old
+		rep	movsw		; Copy 16 bits at a time
+		pop	cx		; Restore counter register
+		ret
+section		.data
+newline:	db	13,10,'$'	; Newline to print in between members
+memb:		db	'1$'	; This is where the current member is stored

@@ -1,0 +1,235 @@
+#---------------------------------------------------------------------
+#
+# Patience sorting.
+#
+
+procedure patience_sort (less, lst)
+  local piles
+
+  piles := deal (less, lst)
+  return k_way_merge (less, piles)
+end
+
+procedure deal (less, lst)
+  local piles
+  local x
+  local i
+
+  piles := []
+  every x := !lst do {
+    i := find_pile (less, x, piles)
+    if i = *piles + 1 then {
+      # Start a new pile after the existing ones.
+      put (piles, [x])
+    } else {
+      # Push the new value onto the top of an existing pile.
+      push (piles[i], x)
+    }
+  }
+  return piles
+end
+
+procedure find_pile (less, x, piles)
+  local i, j, k
+
+  #
+  # Do a Bottenbruch search for the leftmost pile whose top is greater
+  # than or equal to x. Return an index such that:
+  #
+  #   * if x is greater than the top element at the far right, then
+  #     the index returned will be num-piles.
+  #
+  #   * otherwise, x is greater than every top element to the left of
+  #     index, and less than or equal to the top elements at index and
+  #     to the right of index.
+  #
+  # References:
+  #
+  #   * H. Bottenbruch, "Structure and use of ALGOL 60", Journal of
+  #     the ACM, Volume 9, Issue 2, April 1962, pp.161-221.
+  #     https://doi.org/10.1145/321119.321120
+  #
+  #     The general algorithm is described on pages 214 and 215.
+  #
+  #   * https://en.wikipedia.org/w/index.php?title=Binary_search_algorithm&oldid=1062988272#Alternative_procedure
+  #
+
+  j := 0
+  k := *piles - 1
+  until j = k do {
+    i := (j + k) / 2
+    if less (piles[j + 1][1], x) then {
+      j := i + 1
+    } else {
+      k := i
+    }
+  }
+  if j = *piles - 1 & less (piles[j + 1][1], x) then {
+    # We need a new pile.
+    j +:= 1
+  }
+  return j + 1
+end
+
+#---------------------------------------------------------------------
+#
+# k-way merge by tournament tree.
+#
+# See Knuth, volume 3, and also
+# https://en.wikipedia.org/w/index.php?title=K-way_merge_algorithm&oldid=1047851465#Tournament_Tree
+#
+# However, I store a winners tree instead of the recommended losers
+# tree. If the tree were stored as linked nodes, it would probably be
+# more efficient to store a losers tree. However, I am storing the
+# tree as an Icon list, and one can find an opponent quickly by simply
+# toggling the least significant bit of a competitor's array index.
+#
+
+record infinity ()
+
+procedure is_infinity (x)
+  return type (x) == "infinity"
+end
+
+procedure k_way_merge (less, lists)
+  local merged_list
+
+  # Return the merge as a list, which is guaranteed to be freshly
+  # allocated.
+
+  every put (merged_list := [], generate_k_way_merge (less, lists))
+  return merged_list
+end
+
+procedure generate_k_way_merge (less, lists)
+
+  # Generate the results of the merge.
+
+  case *lists of {
+    0 : fail
+    1 : every suspend !(lists[1])
+    default : every suspend generate_merged_lists (less, lists)
+  }
+end
+
+procedure generate_merged_lists (less, lists)
+  local indices
+  local winners
+  local winner, winner_index
+  local i
+  local next_value
+
+  indices := list (*lists, 2)
+  winners := build_tree (less, lists)
+  until is_infinity (winners[1][1]) do {
+    suspend winners[1][1]
+    winner_index := winners[1][2]
+    next_value := get_next (lists, indices, winner_index)
+    i := ((*winners + 1) / 2) + winner_index - 1
+    winners[i] := [next_value, winner_index]
+    replay_games (less, winners, i)
+  }
+end
+
+procedure build_tree (less, lists)
+  local total_external_nodes
+  local total_nodes
+  local winners
+  local i, j
+  local istart
+  local i1, i2
+  local elem1, elem2
+  local iwinner, winner
+
+  total_external_nodes := next_power_of_two (*lists)
+  total_nodes := (2 * total_external_nodes) - 1
+  winners := list (total_nodes)
+  every i := 1 to total_external_nodes do {
+    j := total_external_nodes + (i - 1)
+    if *lists < i | *(lists[i]) = 0 then {
+      winners[j] := [infinity (), i]
+    } else {
+      winners[j] := [lists[i][1], i]
+    }
+  }
+  istart := total_external_nodes
+  while istart ~= 1 do {
+    every i := istart to (2 * istart) - 1 by 2 do {
+      i1 := i
+      i2 := ixor (i, 1)
+      elem1 := winners[i1][1]
+      elem2 := winners[i2][1]
+      iwinner := (if play_game (less, elem1, elem2) then i1 else i2)
+      winner := winners[iwinner]
+      winners[i / 2] := winner
+    }
+    istart /:= 2
+  }
+  return winners
+end
+
+procedure replay_games (less, winners, i)
+  local i1, i2
+  local elem1, elem2
+  local iwinner, winner
+
+  until i = 1 do {
+    i1 := i
+    i2 := ixor (i1, 1)
+    elem1 := winners[i1][1]
+    elem2 := winners[i2][1]
+    iwinner := (if play_game (less, elem1, elem2) then i1 else i2)
+    winner := winners[iwinner]
+    i /:= 2
+    winners[i] := winner
+  }
+  return
+end
+
+procedure play_game (less, x, y)
+  if is_infinity (x) then fail
+  if is_infinity (y) then return
+  if less (y, x) then fail
+  return
+end
+
+procedure get_next (lists, indices, i)
+  local next_value
+
+  if *(lists[i]) < indices[i] then {
+    next_value := infinity ()
+  } else {
+    next_value := lists[i][indices[i]]
+    indices[i] +:= 1
+  }
+  return next_value
+end
+
+procedure next_power_of_two (n)
+  local i
+
+  # This need not be a fast implementation. Also, it need not return
+  # any value less than 2; a single list requires no merge.
+  i := 2
+  while i < n do i +:= i
+  return i
+end
+
+#---------------------------------------------------------------------
+
+procedure main ()
+  local example_numbers
+
+  example_numbers := [22, 15, 98, 82, 22, 4, 58, 70, 80, 38, 49, 48,
+                      46, 54, 93, 8, 54, 2, 72, 84, 86, 76, 53, 37,
+                      90]
+
+  writes ("unsorted  ")
+  every writes (" ", !example_numbers)
+  write ()
+  writes ("sorted    ")
+  every writes (" ", !patience_sort ("<", example_numbers))
+  write ()
+end
+
+#---------------------------------------------------------------------

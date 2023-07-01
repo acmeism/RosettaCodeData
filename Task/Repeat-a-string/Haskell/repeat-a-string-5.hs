@@ -1,0 +1,1 @@
+replicate 5 '*'

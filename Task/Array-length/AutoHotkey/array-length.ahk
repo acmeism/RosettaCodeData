@@ -1,0 +1,1 @@
+MsgBox % ["apple","orange"].MaxIndex()

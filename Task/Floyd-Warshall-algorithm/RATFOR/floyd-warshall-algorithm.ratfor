@@ -1,0 +1,254 @@
+#
+# Floyd-Warshall algorithm.
+#
+# See https://en.wikipedia.org/w/index.php?title=Floyd%E2%80%93Warshall_algorithm&oldid=1082310013
+#
+
+#
+# A C programmer might take note that the most rapid stride in an
+# array is on the *leftmost* index, rather than the *rightmost* as in
+# C.
+#
+# (In other words, Fortran has "column-major order", whereas C has
+# "row-major order". I prefer to think of it in terms of strides. For
+# one thing, in my opinion, which index is for a "column" and which
+# for a "row" should be considered arbitrary unless dictated by
+# context.)
+#
+
+# VLIMIT = the maximum number of vertices the program can handle.
+define(VLIMIT, 100)
+
+# NILVTX = the nil vertex.
+define(NILVTX, 0)
+
+# STRSZ = a buffer size used in some character-handling routines.
+define(STRSZ, 300)
+
+# BUFSZ = a buffer size used in some character-handling routines.
+define(BUFSZ, 20)
+
+function maxvtx (numedg, edges)
+
+  # Find the maximum vertex number.
+
+  implicit none
+
+  integer numedg
+  real edges(1:3, 1:numedg)     # Notice Fortran's column-major order!
+  integer maxvtx
+
+  integer n, i
+
+  n = 1
+  for (i = 1; i <= numedg; i = i + 1)
+    {
+      n = max (n, int (edges(1, i)))
+      n = max (n, int (edges(3, i)))
+    }
+  maxvtx = n
+end
+
+subroutine floyd (numedg, edges, n, dist, nxtvtx)
+
+  # Floyd-Warshall.
+
+  implicit none
+
+  integer numedg
+  real edges(1:3, 1:numedg)     # Notice Fortran's column-major order!
+  integer n
+  real dist(1:VLIMIT, 1:VLIMIT)
+  integer nxtvtx(1:VLIMIT, 1:VLIMIT)
+
+  #
+  # This implementation does NOT initialize elements of "dist" that
+  # would be set "infinite" in the original Fortran 90. Such elements
+  # are left uninitialized. Instead you should use the "nxtvtx" array
+  # to determine whether there exists a finite path from one vertex to
+  # another.
+  #
+  # See also the Icon and Object Icon implementations that use "&null"
+  # as a stand-in for "infinity". This implementation is similar to
+  # those. In this Ratfor, the nil entry in "nxtvtx" is used instead
+  # of one in "dist".
+  #
+
+  integer i, j, k
+  integer u, v
+  real dstikj
+
+  # Initialization.
+
+  for (i = 1; i <= n; i = i + 1)
+    for (j = 1; j <= n; j = j + 1)
+      nxtvtx(i, j) = NILVTX
+  for (i = 1; i <= numedg; i = i + 1)
+    {
+      u = int (edges(1, i))
+      v = int (edges(3, i))
+      dist(u, v) = edges(2, i)
+      nxtvtx(u, v) = v
+    }
+  for (i = 1; i <= n; i = i + 1)
+    {
+      dist(i, i) = 0.0          # Distance from a vertex to itself.
+      nxtvtx(i, i) = i
+    }
+
+  # Perform the algorithm.
+
+  for (k = 1; k <= n; k = k + 1)
+    for (i = 1; i <= n; i = i + 1)
+      for (j = 1; j <= n; j = j + 1)
+        if (nxtvtx(i, k) != NILVTX && nxtvtx(k, j) != NILVTX)
+          {
+            dstikj = dist(i, k) + dist(k, j)
+            if (nxtvtx(i, j) == NILVTX)
+              {
+                dist(i, j) = dstikj
+                nxtvtx(i, j) = nxtvtx(i, k)
+              }
+            else if (dstikj < dist(i, j))
+              {
+                dist(i, j) = dstikj
+                nxtvtx(i, j) = nxtvtx(i, k)
+              }
+          }
+end
+
+subroutine cpy (chr, str, j)
+
+  # A helper subroutine for pthstr.
+
+  implicit none
+
+  character*BUFSZ chr
+  character str*STRSZ
+  integer j
+
+  integer i
+
+  i = 1
+  while (chr(i:i) == ' ')
+    {
+      if (i == BUFSZ)
+        {
+          write (*, *) "character* boundary exceeded in cpy"
+          stop
+        }
+      i = i + 1
+    }
+  while (i <= BUFSZ)
+    {
+      if (STRSZ < j)
+        {
+          write (*, *) "character* boundary exceeded in cpy"
+          stop
+        }
+      str(j:j) = chr(i:i)
+      j = j + 1
+      i = i + 1
+    }
+end
+
+subroutine pthstr (nxtvtx, u, v, str, k)
+
+  # Construct a string for a path from u to v. Start at str(k).
+
+  implicit none
+
+  integer nxtvtx(1:VLIMIT, 1:VLIMIT)
+  integer u, v
+  character str*STRSZ
+  integer k
+
+  integer i, j
+  character*BUFSZ chr
+  character*25 fmt10
+  character*25 fmt20
+
+  write (fmt10, '(''(I'', I15, '')'')') BUFSZ - 1
+  write (fmt20, '(''(A'', I15, '')'')') BUFSZ
+
+  if (nxtvtx(u, v) != NILVTX)
+    {
+      j = k
+      i = u
+      chr = ' '
+      write (chr, fmt10) i
+      call cpy (chr, str, j)
+      while (i != v)
+        {
+          write (chr, fmt20) "-> "
+          call cpy (chr, str, j)
+          i = nxtvtx(i, v)
+          write (chr, fmt10) i
+          call cpy (chr, str, j)
+        }
+    }
+end
+
+function trimr (str)
+
+  # Find the length of a character*, if one ignores trailing spaces.
+
+  implicit none
+
+  character str*STRSZ
+  integer trimr
+
+  logical done
+
+  trimr = STRSZ
+  done = .false.
+  while (!done)
+    {
+      if (trimr == 0)
+        done = .true.
+      else if (str(trimr:trimr) != ' ')
+        done = .true.
+      else
+        trimr = trimr - 1
+    }
+end
+
+program demo
+  implicit none
+
+  integer maxvtx
+  integer trimr
+
+  integer exmpsz
+  real exampl(1:3, 1:5)
+  integer n
+  real dist(1:VLIMIT, 1:VLIMIT)
+  integer nxtvtx(1:VLIMIT, 1:VLIMIT)
+  character str*STRSZ
+  integer u, v
+  integer j
+
+  exmpsz = 5
+  data exampl / 1, -2.0, 3,   _
+                3, +2.0, 4,   _
+                4, -1.0, 2,   _
+                2, +4.0, 1,   _
+                2, +3.0, 3 /
+
+  n = maxvtx (exmpsz, exampl)
+  call floyd (exmpsz, exampl, n, dist, nxtvtx)
+
+1000 format (I2, ' ->', I2, 5X, F4.1, 6X)
+
+  write (*, '(''  pair     distance    path'')')
+  write (*, '(''---------------------------------------'')')
+  for (u = 1; u <= n; u = u + 1)
+    for (v = 1; v <= n; v = v + 1)
+      if (u != v)
+        {
+          str = ' '
+          write (str, 1000) u, v, dist(u, v)
+          call pthstr (nxtvtx, u, v, str, 23)
+          write (* , '(1000A1)') (str(j:j), j = 1, trimr (str))
+        }
+end

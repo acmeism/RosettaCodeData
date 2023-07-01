@@ -1,0 +1,359 @@
+Randomize Timer ' OK getting a good puzzle every time
+
+#Macro TrmSS (n)
+    LTrim(Str(n))
+#EndMacro
+
+'overhauled
+Dim Shared As ULong LengthLimit(3 To 10) 'reset in Initialize, track and limit longer words
+
+'LoadWords opens file of words and sets
+Dim Shared As ULong NWORDS 'set in LoadWords, number of words with length: > 2 and < 11  and just letters
+
+' word file words (shuffled) to be fit into puzzle and index position
+Dim Shared As String WORDSSS(1 To 24945), CWORDSSS(1 To 24945)
+Dim Shared As ULong WORDSINDEX 'the file has 24945 words but many are unsuitable
+
+'words placed in Letters grid, word itself (WSS) x, y head (WX, WY) and direction (WD), WI is the index to all these
+Dim Shared As String WSS(1 To 100)
+Dim Shared As ULong WX(1 To 100), WY(1 To 100), WD(1 To 100), WI
+
+' letters grid and direction arrays
+Dim Shared As String LSS(0 To 9, 0 To 9)
+Dim Shared As Long DX(0 To 7), DY(0 To 7)
+DX(0) = 1: DY(0) = 0
+DX(1) = 1: DY(1) = 1
+DX(2) = 0: DY(2) = 1
+DX(3) = -1: DY(3) = 1
+DX(4) = -1: DY(4) = 0
+DX(5) = -1: DY(5) = -1
+DX(6) = 0: DY(6) = -1
+DX(7) = 1: DY(7) = -1
+
+'to store all the words found embedded in the grid LSS()
+Dim Shared As String ALLSS(1 To 200)
+Dim Shared As ULong AllX(1 To 200), AllY(1 To 200), AllD(1 To 200) 'to store all the words found embedded in the grid LSS()
+Dim Shared As ULong ALLindex
+
+' signal successful fill of puzzle
+Dim Shared FILLED As Boolean
+Dim Shared As ULong try = 1
+
+Sub LoadWords
+    Dim As String wdSS
+    Dim As ULong i, m, ff = FreeFile
+    Dim ok As Boolean
+
+    Open "unixdict.txt" For Input As #ff
+    If Err > 0 Then
+        Print !"\n unixdict.txt not found, program will end"
+        Sleep 5000
+        End
+    End If
+    While Eof(1) = 0
+        Input #ff, wdSS
+        If Len(wdSS) > 2 And Len(wdSS) < 11 Then
+            ok = TRUE
+            For m = 1 To Len(wdSS)
+                If Asc(wdSS, m) < 97 Or Asc(wdSS, m) > 122 Then ok = FALSE: Exit For
+            Next
+            If ok Then i += 1: WORDSSS(i) = wdSS: CWORDSSS(i) = wdSS
+        End If
+    Wend
+    Close #ff
+    NWORDS = i
+End Sub
+
+Sub Shuffle
+    Dim As ULong i, r
+    For i = NWORDS To 2 Step -1
+        r = Int(Rnd * i) + 1
+        Swap WORDSSS(i), WORDSSS(r)
+    Next
+End Sub
+
+Sub Initialize
+    Dim As ULong r, c'', x, y, d
+    Dim As String wdSS
+
+    FILLED = FALSE
+    For r = 0 To 9
+        For c = 0 To 9
+            LSS(c, r) = " "
+        Next
+    Next
+
+    'reset word arrays by resetting the word index back to zero
+    WI = 0
+
+    'fun stuff for me but doubt others would like that much fun!
+    'pluggin "basic", 0, 0, 2
+    'pluggin "plus", 1, 0, 0
+
+    'to assure the spreading of ROSETTA CODE
+    LSS(Int(Rnd * 5) + 5, 0) = "R": LSS(Int(Rnd * 9) + 1, 1) = "O"
+    LSS(Int(Rnd * 9) + 1, 2) = "S": LSS(Int(Rnd * 9) + 1, 3) = "E"
+    LSS(1, 4) = "T": LSS(9, 4) = "T": LSS(Int(10 * Rnd), 5) = "A"
+    LSS(Int(10 * Rnd), 6) = "C": LSS(Int(10 * Rnd), 7) = "O"
+    LSS(Int(10 * Rnd), 8) = "D": LSS(Int(10 * Rnd), 9) = "E"
+
+    'reset limits
+    LengthLimit(3) = 200
+    LengthLimit(4) = 6
+    LengthLimit(5) = 3
+    LengthLimit(6) = 2
+    LengthLimit(7) = 1
+    LengthLimit(8) = 0
+    LengthLimit(9) = 0
+    LengthLimit(10) = 0
+
+    'reset word order
+    Shuffle
+End Sub
+
+'for fun plug-in of words
+Sub pluggin (wdSS As String, x As Long, y As Long, d As Long)
+
+    For i As ULong = 0 To Len(wdSS) - 1
+        LSS(x + i * DX(d), y + i * DY(d)) = Mid(wdSS, i + 1, 1)
+    Next
+    WI += WI
+    WSS(WI) = wdSS: WX(WI) = x: WY(WI) = y: WD(WI) = d
+End Sub
+
+' Function TrmSS (n As Integer) As String
+'     TrmSS = RTrim(LTrim(Str(n)))
+' End Function
+
+'used in PlaceWord
+Function CountSpaces () As ULong
+    Dim As ULong x, y, count
+
+    For y = 0 To 9
+        For x = 0 To 9
+            If LSS(x, y) = " " Then count += 1
+        Next
+    Next
+    CountSpaces = count
+End Function
+
+Sub ShowPuzzle
+    Dim As ULong i, x, y
+    'Dim As String wateSS
+
+    Cls
+    Print "    0 1 2 3 4 5 6 7 8 9"
+    Locate 3, 1
+    For i = 0 To 9
+        Print TrmSS(i)
+    Next
+    For y = 0 To 9
+        For x = 0 To 9
+            Locate y + 3, 2 * x + 5: Print LSS(x, y)
+        Next
+    Next
+    For i = 1 To WI
+        If i < 21 Then
+            Locate i + 1, 30: Print TrmSS(i); " "; WSS(i)
+        ElseIf i < 41 Then
+            Locate i - 20 + 1, 45: Print TrmSS(i); " "; WSS(i)
+        ElseIf i < 61 Then
+            Locate i - 40 + 1, 60: Print TrmSS(i); " "; WSS(i)
+        End If
+    Next
+    Locate 18, 1: Print "Spaces left:"; CountSpaces
+    Locate 19, 1: Print NWORDS
+    Locate 20, 1: Print Space(16)
+    If WORDSINDEX Then Locate 20, 1: Print TrmSS(WORDSINDEX); " "; WORDSSS(WORDSINDEX)
+    'LOCATE 15, 1: INPUT "OK, press enter... "; wateSS
+End Sub
+
+'used in PlaceWord
+Function Match (word As String, template As String) As Long
+    Dim i As ULong
+    Dim c As String
+    Match = 0
+    If Len(word) <> Len(template) Then Exit Function
+    For i = 1 To Len(template)
+        If Asc(template, i) <> 32 And (Asc(word, i) <> Asc(template, i)) Then Exit Function
+    Next
+    Match = -1
+End Function
+
+'heart of puzzle builder
+Sub PlaceWord
+    ' place the words randomly in the grid
+    ' start at random spot and work forward or back 100 times = all the squares
+    ' for each open square try the 8 directions for placing the word
+    ' even if word fits Rossetta Challenge task requires leaving 11 openings to insert ROSETTA CODE,
+    ' exactly 11 spaces needs to be left, if/when this occurs FILLED will be set true to signal finished to main loop
+    ' if place a word update LSS, WI, WSS(WI), WX(WI), WY(WI), WD(WI)
+
+    Dim As String wdSS, templateSS
+    Dim As Long rdir
+    Dim As ULong wLen, spot, testNum
+    Dim As ULong x, y, d, dNum, rdd,  i, j
+
+    Dim As Boolean b1, b2
+
+    wdSS = WORDSSS(WORDSINDEX) ' the right side is all shared
+    ' skip too many long words
+    If LengthLimit(Len(wdSS)) Then LengthLimit(Len(wdSS)) += 1 Else Exit Sub 'skip long ones
+    wLen = Len(wdSS) - 1  '   from the spot there are this many letters to check
+    spot = Int(Rnd * 100) '   a random spot on grid
+    testNum = 1           '   when this hits 100 we've tested all possible spots on grid
+    If Rnd < .5 Then rdir = -1 Else rdir = 1 ' go forward or back from spot for next test
+    While testNum < 101
+        y = spot \ 10
+        x = spot Mod 10
+        If LSS(x, y) = Mid(wdSS, 1, 1) Or LSS(x, y) = " " Then
+            d = Int(8 * Rnd)
+            If Rnd < .5 Then rdd = -1 Else rdd = 1
+            dNum = 1
+            While dNum < 9
+                'will wdSS fit? from  at x, y
+                templateSS = ""
+                b1 = wLen * DX(d) + x >= 0 And wLen * DX(d) + x <= 9
+                b2 = wLen * DY(d) + y >= 0 And wLen * DY(d) + y <= 9
+                If b1 And b2 Then 'build the template of letters and spaces from Letter grid
+                    For i = 0 To wLen
+                        templateSS += LSS(x + i * DX(d), y + i * DY(d))
+                    Next
+                    If Match(wdSS, templateSS) Then 'the word will fit but does it fill anything?
+                        For j = 1 To Len(templateSS)
+                            If Asc(templateSS, j) = 32 Then 'yes a space to fill
+                                For i = 0 To wLen
+                                    LSS(x + i * DX(d), y + i * DY(d)) = Mid(wdSS, i + 1, 1)
+                                Next
+                                WI += 1
+                                WSS(WI) = wdSS: WX(WI) = x: WY(WI) = y: WD(WI) = d
+                                ShowPuzzle
+                                If CountSpaces = 0 Then FILLED = TRUE
+                                Exit Sub 'get out now that word is loaded
+                            End If
+                        Next
+                        'if still here keep looking
+                    End If
+                End If
+                d = (d + 8 + rdd) Mod 8
+                dNum += 1
+            Wend
+        End If
+        spot = (spot + 100 + rdir) Mod 100
+        testNum += 1
+    Wend
+End Sub
+
+Sub FindAllWords
+    Dim As String wdSS, templateSS, wateSS
+    Dim As ULong wLen, x, y, d, j
+    Dim As Boolean b1, b2
+
+    For i As ULong = 1 To NWORDS
+        wdSS = CWORDSSS(i)
+        wLen = Len(wdSS) - 1
+        For y = 0 To 9
+            For x = 0 To 9
+                If LSS(x, y) = Mid(wdSS, 1, 1) Then
+                    For d = 0 To 7
+                        b1 = wLen * DX(d) + x >= 0 And wLen * DX(d) + x <= 9
+                        b2 = wLen * DY(d) + y >= 0 And wLen * DY(d) + y <= 9
+                        If b1 And b2 Then 'build the template of letters and spaces from Letter grid
+                            templateSS = ""
+                            For j = 0 To wLen
+                                templateSS += LSS(x + j * DX(d), y + j * DY(d))
+                            Next
+                            If templateSS = wdSS Then 'found a word
+                                'store it
+                                ALLindex += 1
+                                ALLSS(ALLindex) = wdSS: AllX(ALLindex) = x: AllY(ALLindex) = y: AllD(ALLindex) = d
+                                'report it
+                                Locate 22, 1: Print Space(50)
+                                Locate 22, 1: Print "Found: "; wdSS; " ("; TrmSS(x); ", "; TrmSS(y); ") >>>---> "; TrmSS(d);
+                                Input " Press enter...", wateSS
+                            End If
+                        End If
+                    Next
+                End If
+            Next
+        Next
+    Next
+End Sub
+
+Sub FilePuzzle
+    Dim As ULong i, r, c, ff = FreeFile
+    Dim As String bSS
+
+    Open "WS Puzzle.txt" For Output As #ff
+    Print #ff, "    0 1 2 3 4 5 6 7 8 9"
+    Print #ff,
+    For r = 0 To 9
+        bSS = TrmSS(r) + "   "
+        For c = 0 To 9
+            bSS += LSS(c, r) + " "
+        Next
+        Print #ff, bSS
+    Next
+    Print #ff,
+    Print #ff, "Directions >>>---> 0 = East, 1 = SE, 2 = South, 3 = SW, 4 = West, 5 = NW, 6 = North, 7 = NE"
+    Print #ff,
+    Print #ff, "              These are the items from unixdict.txt used to build the puzzle:"
+    Print #ff,
+    For i = 1 To WI Step 2
+        Print #ff, Right(Space(7) + TrmSS(i), 7); ") "; Right(Space(7) + WSS(i), 10); " ("; TrmSS(WX(i)); ", "; TrmSS(WY(i)); ") >>>---> "; TrmSS(WD(i));
+        If i + 1 <= WI Then
+            Print #ff, Right(Space(7) + TrmSS(i + 1), 7); ") "; Right(Space(7) + WSS(i + 1), 10); " ("; TrmSS(WX(i + 1)); ", "; TrmSS(WY(i + 1)); ") >>>---> "; TrmSS(WD(i + 1))
+        Else
+            Print #ff,
+        End If
+    Next
+    Print #ff,
+    Print #ff, "            These are the items from unixdict.txt found embedded in the puzzle:"
+    Print #ff,
+    For i = 1 To ALLindex Step 2
+        Print #ff, Right(Space(7) + TrmSS(i), 7); ") "; Right(Space(7) + ALLSS(i), 10); " ("; TrmSS(AllX(i)); ", "; TrmSS(AllY(i)); ") >>>---> "; TrmSS(AllD(i));
+        If i + 1 <= ALLindex Then
+            Print #ff, Right(Space(7) + TrmSS(i + 1), 7); ") "; Right(Space(7) + ALLSS(i + 1), 10); " ("; TrmSS(AllX(i + 1)); ", "; TrmSS(AllY(i + 1)); ") >>>---> "; TrmSS(AllD(i + 1))
+        Else
+            Print #ff, ""
+        End If
+    Next
+    Print #ff,
+    Print #ff, "On try #" + TrmSS(try) + " a successful puzzle was built and filed."
+    Close #ff
+End Sub
+
+
+LoadWords 'this sets NWORDS count to work with
+
+While try < 11
+    Initialize
+    ShowPuzzle
+    For WORDSINDEX = 1 To NWORDS
+        PlaceWord
+        ' ShowPuzzle
+        If FILLED Then Exit For
+    Next
+    If Not filled And WI > 24 Then ' we have 25 or more words
+        For y As ULong = 0 To 9    ' fill spaces with random letters
+            For x As ULong = 0 To 9
+                If LSS(x, y) = " " Then LSS(x, y) = Chr(Int(Rnd * 26) + 1 + 96)
+            Next
+        Next
+        filled = TRUE
+        ShowPuzzle
+    End If
+    If FILLED And WI > 24 Then
+        FindAllWords
+        FilePuzzle
+        Locate 23, 1: Print "On try #"; TrmSS(try); " a successful puzzle was built and filed."
+        Exit While
+    Else
+        try += 1
+    End If
+Wend
+
+If Not FILLED Then Locate 23, 1: Print "Sorry, 10 tries and no success."
+
+Sleep
+End

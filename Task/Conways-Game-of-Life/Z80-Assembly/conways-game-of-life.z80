@@ -1,0 +1,157 @@
+;MSX Bios calls
+CHPUT     equ 000A2H          ;print character A
+CHGET     equ 0009FH          ;wait for keyboard input
+INITXT    equ 0006CH          ;init TEXT1 mode (40 x 24), based on TXTNAM,TXTCGP and LINL40
+LDIRVM    equ 0005CH          ;write BC times MEM(HL++) to VRAM(DE++)
+
+;MSX system variables
+TXTNAM    equ 0F3B3H          ;pattern name table
+TXTCGP    equ 0F3B7H          ;pattern generator table
+LINL40    equ 0F3AEH          ;line length
+
+;defines
+LIFE_CHAR equ 0xDB            ;MSX all-pixels-on character
+
+;variables
+screen    equ 0E000H          ;40x24 bytes
+scratch   equ screen+(40*24)  ;table for calculations
+
+
+          org 04000H
+;*********************************************************************
+HEADER    ;first 16 bytes of the rom. (as specified by MSX standard)
+;*********************************************************************
+          db "AB"             ;id
+          dw Main             ;init
+          dw 0                ;statement
+          dw 0                ;device
+          dw 0                ;text
+          dw 0                ;reserved
+          dw 0                ;reserved
+          dw 0                ;reserved
+
+init_tab1 db 0x18
+          dc 7, 0x17
+          db " Conway's Game Of Life "
+          dc 8, 0x17
+          db 0x19
+          db 0x16
+          dc 38, " "
+          db 0x16, 0x1A
+          dc 38, 0x17
+          db 0x1B
+init_tab2 dc 41, 0x80
+          dc 38, 0
+          dc 41, 0x80
+
+INITLINES equ 10
+init_tab3 db "                                        "
+          db "                          X             "
+          db "                        X X             "
+          db "              XX      XX            XX  "
+          db "             X   X    XX            XX  "
+          db "  XX        X     X   XX                "
+          db "  XX        X   X XX    X X             "
+          db "            X     X       X             "
+          db "             X   X                      "
+          db "              XX                        "
+
+Expand    ld bc, 40
+          ldir                ;copy top line
+          push de
+          ld bc, 40
+          ldir                ;copy first middle line
+          ex (sp), hl
+          ld bc, 40*21
+          ldir                ;repeat middle line
+          pop hl
+          ld bc, 40           ;copy bottom line
+          ldir
+          ret
+
+InitGOL   ;create empty screen
+          ld hl, init_tab1
+          ld de, screen
+          call Expand
+          ;Now add intial pattern
+if INITLINES
+          ld hl, init_tab3    ;glider gun start pattern
+          ld de, init_tab3    ;de=hl, so ldi does not change RAM
+          ld bc, 40*INITLINES
+          ld ix, screen+40
+InitGOLl  ld a, (hl)
+          cp 'X'
+          jr nz, InitGOLe
+          ld (ix), LIFE_CHAR
+InitGOLe  inc ix
+          ldi                 ;hl++ and bc-- (with flag!)
+          jp pe, InitGOLl
+else
+          ld hl, screen+(4*40)+18
+          ld a, LIFE_CHAR     ;blinker start pattern
+          ld (hl), a
+          inc hl
+          ld (hl), a
+          inc hl
+          ld (hl), a
+endif
+          ret
+
+DoGOL     ld hl, init_tab2    ;initialize scratchpad (sums to zero, borders marked)
+          ld de, scratch
+          call Expand
+          ;first loop: create sums in scratchpad
+          ld bc, 40*24
+          ld hl, screen
+          ld de, screen       ;de=hl, so ldi does not change RAM
+          ld ix, scratch
+DoGOLsuml ld a, (hl)
+          cp LIFE_CHAR        ;if cell is alive increase sums of all surrounding cells
+          jr nz, DoGOLsume
+          inc (ix-41)
+          inc (ix-40)
+          inc (ix-39)
+          inc (ix-1)
+          inc (ix+1)
+          inc (ix+39)
+          inc (ix+40)
+          inc (ix+41)
+DoGOLsume inc ix
+          ldi                 ;hl++, bc-- (with flag!)
+          jp pe, DoGOLsuml
+          ;second loop: update cell based on current state and sum
+          ld bc, 40*24
+          ld hl, screen
+          ld de, screen       ;de=hl, so ldi does not change RAM
+          ld ix, scratch
+DoGOLupdl ld a, (ix)
+          cp 0x7f             ;border -> keep the same
+          jr nc, DoGOLupde
+          cp 3                ;3 neighbors-> always live
+          jr z, DoGOLlive
+          cp 2
+          jr z, DoGOLupde     ;2 -> stay the same
+DoGOLdie  ld (hl), 0x20       ;1,4,5,6,7,8 -> always die
+          jr DoGoLupde
+DoGOLlive ld (hl), LIFE_CHAR
+DoGOLupde inc ix
+          ldi                 ;hl++, bc-- (with flag!)
+          jp pe, DoGOLupdl
+          ret
+
+;*********************************************************************
+Main
+;*********************************************************************
+          call INITXT
+          call InitGOL
+Mainloop  ld hl, screen
+          ld de, (TXTNAM)
+          ld bc, 40*24
+          call LDIRVM
+          ;call CHGET
+          call DoGOL
+          jr Mainloop
+
+          ;force 16k ROM size binary output
+EndOfCode dc 0x8000 - EndOfCode, 0xFF
+          end

@@ -1,0 +1,76 @@
+; Sierpinski carpet in Z80 assembly (for CP/M OS - you can use `tnylpo` or `z88dk-ticks` on PC)
+    OPT --syntax=abf : OUTPUT "sierpinc.com"    ; asm syntax for z00m's variant of sjasmplus
+    ORG $100
+    ; start for n=0, total size is 1x1 (just '#'), show five carpets for n=0,1,2,3,4
+    ld h,%00000001      ; 3**0 = 1 in BCT form (0t0001)
+carpets_loop:           ; n == 4 is maximum for 8bit BCT math (3**4 = 81 = 0x100 as BCT value)
+    call show_carpet
+    ld a,h              ; do ++n -> H = 3**n in BCT form, ie. `H <<= 2;` in binary way
+    add a,a
+    jp z,0              ; return to CP/M if the biggest carpet for n=4 (H==0) was already displayed
+    add a,a
+    ld h,a              ; zero for n=4, which will correctly wrap to 0t2222 in base3_dec_a
+    jr carpets_loop
+
+show_carpet:
+    ld l,h              ; L = 3**n (row counter and Y coordinate)
+.rows:
+    ld a,l
+    call base3_dec_a
+    ld l,a              ; --L for this row
+    ld b,h              ; B = 3**n (char counter and X coordinate)
+.chars:
+    ld a,b
+    call base3_dec_a
+    ld b,a              ; --B
+    and l               ; check if X and Y coordinate have digit "1" at same position(s) in ternary
+    and %01010101       ; non-zero if both coordinates have digit "1" at same position(s)
+    ld e,'#'
+    jr z,.fill_char
+    ld e,' '
+.fill_char:
+    call print_char
+    inc b
+    djnz .chars         ; loop chars until B==0 was displayed
+    call print_crlf
+    ld a,l
+    or a
+    jr nz,.rows         ; loop rows until L==0 was displayed
+    ; fallthrough into print_crlf for extra empty line after each carpet is finished
+print_crlf:
+    ld e,10
+    call print_char
+    ld e,13
+print_char:
+    push bc
+    push hl
+    ld c,2
+    call 5
+    pop hl
+    pop bc
+    ret
+
+; in: A = BCT value (Binary-coded Ternary = pair of bits for ternary digit 0,1,2 (3 not allowed))
+; out: A-1 in BCT encoding, modifies C and F (ZF signals zero result, 0t0000-1 = 0t2222 (0xAA))
+base3_dec_a:
+    dec a               ; --A (%00 digits may become %11 when involved in decrement)
+    ld c,a
+    rra
+    and c
+    and %01010101       ; %11 bit-pairs to %01, anything else to %00
+    xor c               ; fix %11 -> %10 in result to have only 0,1,2 digits
+    ret
+
+/* ;;; bonus routine ;;;
+; in: A = BCT value (Binary-coded Ternary = pair of bits for ternary digit 0,1,2 (3 not allowed))
+; out: A+1 in BCT encoding, modifies C and F (ZF signals zero result, ie. 0t2222+1 = 0t0000)
+base3_inc_a:
+    add a,%01'01'01'10  ; +1 to every digit (0,1,2 -> 1,2,3), and +1 overall to increment
+    ld c,a
+    rra
+    or c
+    and %01'01'01'01    ; 00,01,10,11 -> 00,01,01,01
+    neg
+    add a,c             ; revert digits 3,2,1 back to 2,1,0 (0 -> 0)
+    ret
+*/

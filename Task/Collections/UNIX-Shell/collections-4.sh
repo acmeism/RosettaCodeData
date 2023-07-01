@@ -1,0 +1,1 @@
+typeset -A

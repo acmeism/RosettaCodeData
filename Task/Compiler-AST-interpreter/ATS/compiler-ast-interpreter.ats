@@ -1,0 +1,842 @@
+(* The Rosetta Code AST interpreter in ATS2.
+
+   This implementation reuses the AST loader of my Code Generator
+   implementation. *)
+
+(* Usage: gen [INPUTFILE [OUTPUTFILE]]
+   If INPUTFILE or OUTPUTFILE is "-" or missing, then standard input
+   or standard output is used, respectively. *)
+
+(* Note: you might wish to add code to catch exceptions and print nice
+   messages. *)
+
+(*------------------------------------------------------------------*)
+
+#define ATS_DYNLOADFLAG 0
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+#define NIL list_vt_nil ()
+#define ::  list_vt_cons
+
+%{^
+/* alloca(3) is needed for ATS exceptions. */
+#include <alloca.h>
+%}
+
+exception internal_error of ()
+exception bad_ast_node_type of string
+exception premature_end_of_input of ()
+exception bad_number_field of string
+exception missing_identifier_field of ()
+exception bad_quoted_string of string
+
+(* Some implementations that are likely missing from the prelude. *)
+implement g0uint2uint<sizeknd, ullintknd> x = $UN.cast x
+implement g0uint2uint<ullintknd, sizeknd> x = $UN.cast x
+implement g0uint2int<ullintknd, llintknd> x = $UN.cast x
+implement g0int2uint<llintknd, sizeknd> x = $UN.cast x
+implement g0int2int<llintknd, intknd> x = $UN.cast x
+
+(*------------------------------------------------------------------*)
+
+extern fn {}
+skip_characters$skipworthy (c : char) :<> bool
+
+fn {}
+skip_characters {n : int}
+                {i : nat | i <= n}
+                (s : string n,
+                 i : size_t i)
+    :<> [j : int | i <= j; j <= n]
+        size_t j =
+  let
+    fun
+    loop {k : int | i <= k; k <= n}
+         .<n - k>.
+         (k : size_t k)
+        :<> [j : int | k <= j; j <= n]
+            size_t j =
+      if string_is_atend (s, k) then
+        k
+      else if ~skip_characters$skipworthy (s[k]) then
+        k
+      else
+        loop (succ k)
+  in
+    loop i
+  end
+
+fn
+skip_whitespace {n : int}
+                {i : nat | i <= n}
+                (s : string n,
+                 i : size_t i)
+    :<> [j : int | i <= j; j <= n]
+        size_t j =
+  let
+    implement
+    skip_characters$skipworthy<> c =
+      isspace c
+  in
+    skip_characters<> (s, i)
+  end
+
+fn
+skip_nonwhitespace {n : int}
+                   {i : nat | i <= n}
+                   (s : string n,
+                    i : size_t i)
+    :<> [j : int | i <= j; j <= n]
+        size_t j =
+  let
+    implement
+    skip_characters$skipworthy<> c =
+      ~isspace c
+  in
+    skip_characters<> (s, i)
+  end
+
+fn
+skip_nonquote {n : int}
+              {i : nat | i <= n}
+              (s : string n,
+               i : size_t i)
+    :<> [j : int | i <= j; j <= n]
+        size_t j =
+  let
+    implement
+    skip_characters$skipworthy<> c =
+      c <> '"'
+  in
+    skip_characters<> (s, i)
+  end
+
+fn
+skip_to_end {n : int}
+            {i : nat | i <= n}
+            (s : string n,
+             i : size_t i)
+    :<> [j : int | i <= j; j <= n]
+        size_t j =
+  let
+    implement
+    skip_characters$skipworthy<> c =
+      true
+  in
+    skip_characters<> (s, i)
+  end
+
+(*------------------------------------------------------------------*)
+
+fn
+substring_equals {n    : int}
+                 {i, j : nat | i <= j; j <= n}
+                 (s    : string n,
+                  i    : size_t i,
+                  j    : size_t j,
+                  t    : string)
+    :<> bool =
+  let
+    val m = strlen t
+  in
+    if j - i <> m then
+      false                   (* The substring is the wrong length. *)
+    else
+      let
+        val p_s = ptrcast s
+        and p_t = ptrcast t
+      in
+        0 = $extfcall (int, "strncmp",
+                       ptr_add<char> (p_s, i), p_t, m)
+      end
+  end
+
+(*------------------------------------------------------------------*)
+
+datatype node_type_t =
+| NullNode
+| Identifier
+| String
+| Integer
+| Sequence
+| If
+| Prtc
+| Prts
+| Prti
+| While
+| Assign
+| Negate
+| Not
+| Multiply
+| Divide
+| Mod
+| Add
+| Subtract
+| Less
+| LessEqual
+| Greater
+| GreaterEqual
+| Equal
+| NotEqual
+| And
+| Or
+
+#define ARBITRARY_NODE_ARG 1234
+
+datatype ast_node_t =
+| ast_node_t_nil
+| ast_node_t_nonnil of node_contents_t
+where node_contents_t =
+  @{
+    node_type = node_type_t,
+    node_arg = ullint,
+    node_left = ast_node_t,
+    node_right = ast_node_t
+  }
+
+fn
+get_node_type {n : int}
+              {i : nat | i <= n}
+              (s : string n,
+               i : size_t i)
+    : [j : int | i <= j; j <= n]
+      @(node_type_t,
+        size_t j) =
+  let
+    val i_start = skip_whitespace (s, i)
+    val i_end = skip_nonwhitespace (s, i_start)
+
+    macdef eq t =
+      substring_equals (s, i_start, i_end, ,(t))
+
+    val node_type =
+      if eq ";" then
+        NullNode
+      else if eq "Identifier" then
+        Identifier
+      else if eq "String" then
+        String
+      else if eq "Integer" then
+        Integer
+      else if eq "Sequence" then
+        Sequence
+      else if eq "If" then
+        If
+      else if eq "Prtc" then
+        Prtc
+      else if eq "Prts" then
+        Prts
+      else if eq "Prti" then
+        Prti
+      else if eq "While" then
+        While
+      else if eq "Assign" then
+        Assign
+      else if eq "Negate" then
+        Negate
+      else if eq "Not" then
+        Not
+      else if eq "Multiply" then
+        Multiply
+      else if eq "Divide" then
+        Divide
+      else if eq "Mod" then
+        Mod
+      else if eq "Add" then
+        Add
+      else if eq "Subtract" then
+        Subtract
+      else if eq "Less" then
+        Less
+      else if eq "LessEqual" then
+        LessEqual
+      else if eq "Greater" then
+        Greater
+      else if eq "GreaterEqual" then
+        GreaterEqual
+      else if eq "Equal" then
+        Equal
+      else if eq "NotEqual" then
+        NotEqual
+      else if eq "And" then
+        And
+      else if eq "Or" then
+        Or
+      else
+        let
+          val s_bad =
+            strnptr2string
+              (string_make_substring (s, i_start, i_end - i_start))
+        in
+          $raise bad_ast_node_type s_bad
+        end
+  in
+    @(node_type, i_end)
+  end
+
+fn
+get_unsigned {n : int}
+             {i : nat | i <= n}
+             (s : string n,
+              i : size_t i)
+    : [j : int | i <= j; j <= n]
+      @(ullint,
+        size_t j) =
+  let
+    val i = skip_whitespace (s, i)
+    val [j : int] j = skip_nonwhitespace (s, i)
+  in
+    if j = i then
+      $raise bad_number_field ""
+    else
+      let
+        fun
+        loop {k : int | i <= k; k <= j}
+             (k : size_t k,
+              v : ullint)
+            : ullint =
+          if k = j then
+            v
+          else
+            let
+              val c = s[k]
+            in
+              if ~isdigit c then
+                let
+                  val s_bad =
+                    strnptr2string
+                      (string_make_substring (s, i, j - i))
+                in
+                  $raise bad_number_field s_bad
+                end
+              else
+                let
+                  val digit = char2int1 c - char2int1 '0'
+                  val () = assertloc (0 <= digit)
+                in
+                  loop (succ k, (g1i2u 10 * v) + g1i2u digit)
+                end
+            end
+      in
+        @(loop (i, g0i2u 0), j)
+      end
+  end
+
+fn
+get_identifier
+          {n : int}
+          {i : nat | i <= n}
+          (s : string n,
+           i : size_t i)
+    : [j : int | i <= j; j <= n]
+      @(string,
+        size_t j) =
+  let
+    val i = skip_whitespace (s, i)
+    val j = skip_nonwhitespace (s, i)
+  in
+    if i = j then
+      $raise missing_identifier_field ()
+    else
+      let
+        val ident =
+          strnptr2string (string_make_substring (s, i, j - i))
+      in
+        @(ident, j)
+      end
+  end
+
+fn
+get_quoted_string
+          {n : int}
+          {i : nat | i <= n}
+          (s : string n,
+           i : size_t i)
+    : [j : int | i <= j; j <= n]
+      @(string,
+        size_t j) =
+  let
+    val i = skip_whitespace (s, i)
+  in
+    if string_is_atend (s, i) then
+      $raise bad_quoted_string ""
+    else if s[i] <> '"' then
+      let
+        val j = skip_to_end (s, i)
+        val s_bad =
+          strnptr2string (string_make_substring (s, i, j - i))
+      in
+        $raise bad_quoted_string s_bad
+      end
+    else
+      let
+        val j = skip_nonquote (s, succ i)
+      in
+        if string_is_atend (s, j) then
+          let
+            val s_bad =
+              strnptr2string (string_make_substring (s, i, j - i))
+          in
+            $raise bad_quoted_string s_bad
+          end
+        else
+          let
+            val quoted_string =
+              strnptr2string
+                (string_make_substring (s, i, succ j - i))
+          in
+            @(quoted_string, succ j)
+          end
+      end
+  end
+
+fn
+collect_string
+          {n       : int}
+          (str     : string,
+           strings : &list_vt (string, n) >> list_vt (string, m))
+    : #[m : int | m == n || m == n + 1]
+       [str_num : nat | str_num <= m]
+       size_t str_num =
+  (* This implementation uses ‘list_vt’ instead of ‘list’, so
+     appending elements to the end of the list will be both efficient
+     and safe. It would also have been reasonable to build a ‘list’
+     backwards and then make a reversed copy. *)
+  let
+    fun
+    find_or_extend
+              {i : nat | i <= n}
+              .<n - i>.
+              (strings1 : &list_vt (string, n - i)
+                            >> list_vt (string, m),
+               i        : size_t i)
+        : #[m : int | m == n - i || m == n - i + 1]
+           [j  : nat | j <= n]
+          size_t j =
+      case+ strings1 of
+      | ~ NIL =>
+        let            (* The string is not there. Extend the list. *)
+          prval () = prop_verify {i == n} ()
+        in
+          strings1 := (str :: NIL);
+          i
+        end
+      | @ (head :: tail) =>
+        if head = str then
+          let                   (* The string is found. *)
+            prval () = fold@ strings1
+          in
+            i
+          end
+        else
+          let                   (* Continue looking. *)
+            val j = find_or_extend (tail, succ i)
+            prval () = fold@ strings1
+          in
+            j
+          end
+
+    prval () = lemma_list_vt_param strings
+    val n = i2sz (length strings)
+    and j = find_or_extend (strings, i2sz 0)
+  in
+    j
+  end
+
+fn
+load_ast (inpf    : FILEref,
+          idents  : &List_vt string >> _,
+          strings : &List_vt string >> _)
+    : ast_node_t =
+  let
+    fun
+    recurs (idents  : &List_vt string >> _,
+            strings : &List_vt string >> _)
+        : ast_node_t =
+      if fileref_is_eof inpf then
+        $raise premature_end_of_input ()
+      else
+        let
+          val s = strptr2string (fileref_get_line_string inpf)
+          prval () = lemma_string_param s (* String length >= 0. *)
+
+          val i = i2sz 0
+          val @(node_type, i) = get_node_type (s, i)
+        in
+          case+ node_type of
+          | NullNode () => ast_node_t_nil ()
+          | Integer () =>
+            let
+              val @(number, _) = get_unsigned (s, i)
+            in
+              ast_node_t_nonnil
+                @{
+                  node_type = node_type,
+                  node_arg = number,
+                  node_left = ast_node_t_nil,
+                  node_right = ast_node_t_nil
+                }
+            end
+          | Identifier () =>
+            let
+              val @(ident, _) = get_identifier (s, i)
+              val arg = collect_string (ident, idents)
+            in
+              ast_node_t_nonnil
+                @{
+                  node_type = node_type,
+                  node_arg = g0u2u arg,
+                  node_left = ast_node_t_nil,
+                  node_right = ast_node_t_nil
+                }
+            end
+          | String () =>
+            let
+              val @(quoted_string, _) = get_quoted_string (s, i)
+              val arg = collect_string (quoted_string, strings)
+            in
+              ast_node_t_nonnil
+                @{
+                  node_type = node_type,
+                  node_arg = g0u2u arg,
+                  node_left = ast_node_t_nil,
+                  node_right = ast_node_t_nil
+                }
+            end
+          | _ =>
+            let
+              val node_left = recurs (idents, strings)
+              val node_right = recurs (idents, strings)
+            in
+              ast_node_t_nonnil
+                @{
+                  node_type = node_type,
+                  node_arg = g1i2u ARBITRARY_NODE_ARG,
+                  node_left = node_left,
+                  node_right = node_right
+                }
+            end
+        end
+  in
+    recurs (idents, strings)
+  end
+
+(*------------------------------------------------------------------*)
+
+macdef void_value = 0LL
+
+fn
+bool2llint (b : bool)
+    :<> llint =
+  if b then 1LL else 0LL
+
+fun
+dequote_into_array
+          {p : addr}
+          {n : int | 2 <= n}
+          {i : nat | i <= n - 1}
+          {j : int | 1 <= j; j <= n - 1}
+          .<n + 1 - j>.
+          (pf : !array_v (char, p, n - 1) |
+           p  : ptr p,
+           n  : size_t n,
+           i  : size_t i,
+           s  : string n,
+           j  : size_t j)
+    : void =
+  if (j <> pred n) * (succ i < pred n) then
+    let
+      macdef t = !p
+    in
+      if s[j] = '\\' then
+        begin
+          if succ j = pred n then
+            $raise bad_quoted_string s
+          else if s[succ j] = 'n' then
+            begin
+              t[i] := '\n';
+              dequote_into_array (pf | p, n, succ i, s, j + i2sz 2)
+            end
+          else if s[succ j] = '\\' then
+            begin
+              t[i] := '\\';
+              dequote_into_array (pf | p, n, succ i, s, j + i2sz 2)
+            end
+          else
+            $raise bad_quoted_string s
+        end
+      else
+        begin
+          t[i] := s[j];
+          dequote_into_array (pf | p, n, succ i, s, succ j)
+        end
+    end
+
+fn
+dequote {n : int}
+        (s : string n)
+    : string =
+  let
+    val n = strlen s
+    prval [n : int] EQINT () = eqint_make_guint n
+
+    val () = assertloc (i2sz 2 <= n)
+
+    val () = assertloc (s[0] = '"')
+    and () = assertloc (s[pred n] = '"')
+
+    val @(pf, pfgc | p) = array_ptr_alloc<char> (pred n)
+    val () = array_initize_elt<char> (!p, pred n, '\0')
+    val () = dequote_into_array (pf | p, n, i2sz 0, s, i2sz 1)
+    val retval = strptr2string (string0_copy ($UN.cast{string} p))
+    val () = array_ptr_free (pf, pfgc | p)
+  in
+    retval
+  end
+
+fn
+fill_string_pool (string_pool : arrszref string,
+                  strings     : List string)
+    : void =
+  let
+    #define NIL list_nil ()
+    #define ::  list_cons
+
+    fun
+    loop {n : nat}
+         .<n>.
+         (strings : list (string, n),
+          i       : size_t)
+        : void =
+      case+ strings of
+      | NIL => ()
+      | head :: tail =>
+        begin
+          string_pool[i] := dequote (g1ofg0 head);
+          loop (tail, succ i)
+        end
+
+    prval () = lemma_list_param strings
+  in
+    loop (strings, i2sz 0)
+  end
+
+fn
+interpret_ast (outf     : FILEref,
+               ast      : ast_node_t,
+               datasize : size_t,
+               strings  : List string)
+    : llint =
+  let
+    prval () = lemma_list_param strings
+    val num_strings = i2sz (length strings)
+
+    val data = arrszref_make_elt<llint> (datasize, void_value)
+    and string_pool = arrszref_make_elt<string> (num_strings, "")
+
+    val () = fill_string_pool (string_pool, strings)
+
+    fnx
+    traverse (ast : ast_node_t)
+        : llint =
+      case+ ast of
+      | ast_node_t_nil () => void_value
+      | ast_node_t_nonnil contents =>
+        begin
+          case- contents.node_type of
+          | NullNode () => $raise internal_error ()
+
+          | If () => if_then contents
+          | While () => while_do contents
+
+          | Sequence () =>
+            let
+              val _ = traverse contents.node_left
+              val _ = traverse contents.node_right
+            in
+              void_value
+            end
+
+          | Assign () =>
+            let
+              val- ast_node_t_nonnil contents1 = contents.node_left
+              val i = contents1.node_arg
+              val x = traverse contents.node_right
+            in
+              data[i] := x;
+              void_value
+            end
+
+          | Identifier () => data[contents.node_arg]
+
+          | Integer () => g0u2i (contents.node_arg)
+          | String () => g0u2i (contents.node_arg)
+
+          | Prtc () =>
+            let
+              val i = traverse contents.node_left
+            in
+              fprint! (outf, int2char0 (g0i2i i));
+              void_value
+            end
+          | Prti () =>
+            let
+              val i = traverse contents.node_left
+            in
+              fprint! (outf, i);
+              void_value
+            end
+          | Prts () =>
+            let
+              val i = traverse contents.node_left
+            in
+              fprint! (outf, string_pool[i]);
+              void_value
+            end
+
+          | Negate () => unary_op (g0int_neg, contents)
+          | Not () =>
+            unary_op (lam x => bool2llint (iseqz x), contents)
+
+          | Multiply () => binary_op (g0int_mul, contents)
+          | Divide () => binary_op (g0int_div, contents)
+          | Mod () => binary_op (g0int_mod, contents)
+          | Add () => binary_op (g0int_add, contents)
+          | Subtract () => binary_op (g0int_sub, contents)
+          | Less () =>
+            binary_op (lam (x, y) => bool2llint (x < y), contents)
+          | LessEqual () =>
+            binary_op (lam (x, y) => bool2llint (x <= y), contents)
+          | Greater () =>
+            binary_op (lam (x, y) => bool2llint (x > y), contents)
+          | GreaterEqual () =>
+            binary_op (lam (x, y) => bool2llint (x >= y), contents)
+          | Equal () =>
+            binary_op (lam (x, y) => bool2llint (x = y), contents)
+          | NotEqual () =>
+            binary_op (lam (x, y) => bool2llint (x <> y), contents)
+          | And () =>
+            binary_op (lam (x, y) =>
+                         bool2llint ((isneqz x) * (isneqz y)),
+                       contents)
+          | Or () =>
+            binary_op (lam (x, y) =>
+                         bool2llint ((isneqz x) + (isneqz y)),
+                       contents)
+        end
+    and
+    if_then (contents : node_contents_t)
+        : llint =
+      case- (contents.node_right) of
+      | ast_node_t_nonnil contents1 =>
+        let
+          val condition = (contents.node_left)
+          and true_branch = (contents1.node_left)
+          and false_branch = (contents1.node_right)
+
+          val branch =
+            if isneqz (traverse condition) then
+              true_branch
+            else
+              false_branch
+
+          val _ = traverse branch
+        in
+          void_value
+        end
+    and
+    while_do (contents : node_contents_t)
+        : llint =
+      let
+        val condition = contents.node_left
+        and body = contents.node_right
+
+        fun
+        loop () : void =
+          if isneqz (traverse condition) then
+            let
+              val _ = traverse body
+            in
+              loop ()
+            end
+      in
+        loop ();
+        void_value
+      end
+    and
+    unary_op (operation : llint -> llint,
+              contents  : node_contents_t)
+        : llint =
+      let
+        val x = traverse contents.node_left
+      in
+        operation x
+      end
+    and
+    binary_op (operation : (llint, llint) -> llint,
+               contents  : node_contents_t)
+        : llint =
+      let
+        val x = traverse contents.node_left
+        val y = traverse contents.node_right
+      in
+        x \operation y
+      end
+  in
+    traverse ast
+  end
+
+(*------------------------------------------------------------------*)
+
+fn
+main_program (inpf : FILEref,
+              outf : FILEref)
+    : int =
+  let
+    var idents : List_vt string = NIL
+    var strings : List_vt string = NIL
+
+    val ast = load_ast (inpf, idents, strings)
+
+    prval () = lemma_list_vt_param idents
+    val datasize = i2sz (length idents)
+    val () = free idents
+
+    val strings = list_vt2t strings
+
+    val _ = interpret_ast (outf, ast, datasize, strings)
+  in
+    0
+  end
+
+implement
+main (argc, argv) =
+  let
+    val inpfname =
+      if 2 <= argc then
+        $UN.cast{string} argv[1]
+      else
+        "-"
+    val outfname =
+      if 3 <= argc then
+        $UN.cast{string} argv[2]
+      else
+        "-"
+    val inpf =
+      if (inpfname : string) = "-" then
+        stdin_ref
+      else
+        fileref_open_exn (inpfname, file_mode_r)
+
+    val outf =
+      if (outfname : string) = "-" then
+        stdout_ref
+      else
+        fileref_open_exn (outfname, file_mode_w)
+  in
+    main_program (inpf, outf)
+  end
+
+(*------------------------------------------------------------------*)

@@ -1,0 +1,1 @@
+New> MyClass  value newInstance

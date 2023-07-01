@@ -1,0 +1,198 @@
+\ ========================================================================================
+\ You are given a collection of ABC blocks
+\ There are twenty blocks with two letters on each block.
+\ A complete alphabet is guaranteed amongst all sides of the blocks.
+\
+\ Write a function that takes a string (word) and determines whether
+\ the word can be spelled with the given collection of blocks.
+\
+\ Rules:
+\ 1. Once a letter on a block is used that block cannot be used again
+\ 2. The function should be case-insensitive
+\ 3. Show the output on this page for the following 7 words in the following example
+\    can_make_word(???) where ??? is resp.:
+\        "BARK", "BOOK", "TREAT", "COMMON", "SQUAD", "CONFUSE"
+\
+\ NOTE:
+\ to make the program readable for even n00bs, I have a comment at the end of each line.
+\ The comments take the form of:
+\                    \ <stack> | <rstack>
+\ in order to be able to follow exactly what the program does.
+\ ========================================================================================
+
+["BO","XK","DQ","CP","NA","GT","RE","TG","QD","FS","JW","HU","VI","AN","OB","ER","FS","LY","PC","ZM"] var, blks
+["a", "AbBa", "BARK", "BOOK", "TREAT", "COMMON", "SQUAD", "CONFUSE"] var, chkwrds
+
+needs stack/rstack
+
+a:new var, paths \ Keeps the combinatory explosion of letter paths
+var wrd
+var success
+var ix
+
+: uni2char "" swap s:+ ;
+
+: char2uni 0 s:@ nip ;
+
+: rreset rstack st:clear drop ;
+
+: addoneletter \ ix path --                   \ ix path | letter
+  r@                                          \ ix path letter | letter
+  s:+                                         \ ix newpath | letter
+  paths @                                     \ ix newpath paths | letter
+  -rot                                        \ paths ix newval | letter
+  a:!                                         \ paths | letter
+  drop                                        \ | letter
+  ;
+
+: oneletter \ letter --                       \ letter
+  >r                                          \ | letter
+  paths @ ' addoneletter a:each drop          \ | letter
+  ;
+
+: addtwoletters \ ix path --                  \ ix path | letter1 letter2 halflen
+  swap                                        \ path ix | letter1 letter2 halflen
+  dup                                         \ path ix ix | letter1 letter2 halflen
+  r@                                          \ path ix ix halflen | letter1 letter2 halflen
+  n:<                                         \ path ix bool | letter1 letter2 halflen
+  if                                          \ path ix | letter1 letter2 halflen
+    swap                                      \ ix path | letter1 letter2 halflen
+    1 rpick                                   \ ix path letter | letter1 letter2 halflen
+  else
+    swap                                      \ ix path | letter1 letter2 halflen
+    2 rpick                                   \ ix path letter | letter1 letter2 halflen
+  then
+  s:+                                         \ ix newpath | letter1 letter2 halflen
+  paths @                                     \ ix newpath paths | letter1 letter2 halflen
+  -rot                                        \ paths ix newpath | letter1 letter2 halflen
+  a:!                                         \ paths | letter1 letter2 halflen
+  drop                                        \ | letter1 letter2 halflen
+  ;
+
+: twoletters \ letters --                     \ letters
+  \ fetch the 2 letters
+  dup                                         \ letters letters
+  1 s:lsub                                    \ letters letter1
+  >r                                          \ letters | letter1
+  1 s:rsub                                    \ letter2 | letter1
+  >r                                          \ | letter1 letter2
+  \ duplicate paths in itself
+  paths @ dup a:+                             \ paths | letter1 letter2
+  \ halfway length of array
+  a:len                                       \ paths len | letter1 letter2
+  2 /                                         \ paths halflen | letter1 letter2
+  >r                                          \ paths | letter1 letter2 halflen
+  \ add letters to paths
+  ' addtwoletters a:each drop                 \ | letter1 letter2 halflen
+  rreset                                      \
+  ;
+
+: chkletter \ letter -- letter                \ letter
+  dup                                         \ letter letter
+  wrd @                                       \ letter letter word
+  swap uni2char                               \ letter word letter
+  s:search                                    \ letter word index
+  null?                                       \ letter word index bool
+  nip                                         \ letter word bool
+  if                                          \ letter word
+    2drop                                     \
+    ""                                        \ letter
+  else                                        \ letter word
+    drop                                      \ letter
+  then                                        \
+  ;
+
+: buildpaths \ ix blk --                      \ ix blk
+  nip                                         \ blk
+  ' chkletter s:map                           \ resultletters
+  s:len                                       \ resultletters len
+  dup                                         \ resultletters len len
+  0                                           \ resultletters len len 0
+  n:=                                         \ resultletters len bool
+  if                                          \ resultletters len
+    \ This block contains no letters of current word
+    2drop                                     \
+    ;;                                        \ exit word
+  then                                        \ resultletters len
+  1                                           \ resultletters len 1
+  n:=                                         \ resultletters bool
+  if                                          \ resultletters
+    oneletter                                 \
+  else                                        \ resultletters
+    twoletters                                \
+  then
+  ;
+
+: chkokpath \ ix wrdch --                     \ ix wrdch | path
+  swap                                        \ wrdch ix | path
+  ix !                                        \ wrdch | path
+  r@                                          \ wrdch path | path
+  dup                                         \ wrdch path path | path
+  ""                                          \ wrdch path path "" | path
+  s:=                                         \ wrdch path bool | path
+  if                                          \ wrdch path | path
+    \ Path is empty - no match
+    2drop                                     \ | path
+    break                                     \ | path
+    ;;                                        \ | path
+  then
+  swap                                        \ path wrdch | path
+  uni2char                                    \ path wrdch | path
+  s:search                                    \ path pos | path
+  null?                                       \ path pos bool | path
+  if                                          \ path pos | path
+    \ Letter not found in path - no match
+    2drop                                     \ | path
+    break                                     \ | path
+  else                                        \ path pos | path
+    wrd @                                     \ path pos wrd | path
+    s:len                                     \ path pos wrd len | path
+    nip                                       \ path pos len | path
+    n:1-                                      \ path pos cix | path
+    ix @                                      \ path pos cix ix | path
+    n:=                                       \ path pos bool | path
+    if                                        \ path pos | path
+      \ We have a match!
+      true success !                          \ path pos | path
+      2drop                                   \ | path
+      break                                   \ | path
+    else                                      \ path pos | path
+      1                                       \ path pos len | path
+      s:-                                     \ restpath | path
+      rdrop >r                                \ | restpath
+    then
+  then
+  ;
+
+: chkpath \ ix path --                        \ ix path
+  nip                                         \ path
+  >r                                          \ | path
+  wrd @                                       \ wrd | path
+  ' chkokpath s:each                          \ | path
+  rdrop                                       \
+  success @                                   \ success
+	if                                          \
+	  break                                     \
+  then
+  ;
+
+: chkwrd \ ix wrd --                          \ ix wrd
+  nip                                         \ wrd
+  s:uc                                        \ wrdupper
+  "Word=" . dup .                             \ wrdupper
+  wrd !                                       \
+  \ other word - clear paths
+  paths @ a:clear "" a:push drop              \
+  \ create path tree for this word
+  blks @ ' buildpaths a:each drop             \
+  \ check if word can be made from a path
+  false success !                             \
+  paths @ ' chkpath a:each drop               \
+  success @                                   \ success
+  "\t\t" . . cr                               \
+  ;
+
+: app:main
+  chkwrds @ ' chkwrd a:each drop              \ check if word can be made
+  bye
+  ;

@@ -1,0 +1,4 @@
+TYPE Point
+   x AS INTEGER
+   y AS INTEGER
+ END TYPE

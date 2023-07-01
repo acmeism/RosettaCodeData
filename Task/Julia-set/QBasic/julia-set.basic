@@ -1,0 +1,25 @@
+escala = 1 / 81
+zeroX = 160
+zeroY = 100
+maxiter = 32
+
+CR = -.798
+CI = .1618
+
+SCREEN 13
+FOR x = 0 TO 2 * zeroX - 1
+    FOR y = 0 TO 2 * zeroY - 1
+        zreal = (x - zeroX) * escala
+        zimag = (zeroY - y) * escala
+        FOR iter = 1 TO maxiter
+            BR = CR + zreal * zreal - zimag * zimag
+            zimag = CI + 2 * zreal * zimag
+            zreal = BR
+            IF zreal * zreal + zimag * zimag > 4 THEN
+                PSET (x, y), 1 + (iter MOD 16)
+                EXIT FOR
+            END IF
+        NEXT iter
+    NEXT y
+NEXT x
+END

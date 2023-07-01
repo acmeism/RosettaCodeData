@@ -1,0 +1,224 @@
+Module CodeGenerator (s$){
+	Function code$(op$) {
+		=format$("{0::-6} {1}", pc, op$)
+		pc++
+	}
+	Function code2$(op$, n$) {
+		=format$("{0::-6} {1} {2}", pc, op$, n$)
+		pc+=5
+	}
+	Function code3$(op$,pc, st, ed) {
+		=format$("{0::-6} {1} ({2}) {3}", pc, op$, ed-st-1, ed)
+	}
+	
+	Enum tok {
+		gneg, gnot, gmul, gdiv, gmod, gadd, gle, gsub, glt
+		gle, ggt, gge, geq, gne, gand, gor, gprtc, gprti, gprts,
+		gif, gwhile, gAssign, gSeq, gstring, gidentifier, gint, gnone
+	}
+
+	\\ Inventories are lists with keys, or keys/data (key must be unique)
+	\\ there is one type more the Invetory Queue which get same keys.
+	\\ But here not used.
+	Inventory symb="Multiply":=gmul, "Divide":=gdiv, "Mod":=gmod, "Add":=gadd
+	Append  symb, "Negate":=gneg, "Not":=gnot,"Less":=glt,"Subtract":=gsub
+	Append  symb, "LessEqual":=gle, "Greater":=ggt, "GreaterEqual":=gge, "Sequence":=gSeq
+	Append  symb, "Equal":=geq, "NotEqual":=gne,  "And":=gand, "Or":=gor, "While":=gwhile
+	Append  symb, "Prtc":=gprtc,"Prti":=gprti,"Prts":=gprts, "Assign":=gAssign, "If":=gif
+	Append  symb, "String":=gstring, "Identifier":=gidentifier, "Integer":=gint, ";", gnone
+
+	Inventory DataSet
+	\\ We set string as key. key maybe an empty string, a string or a number.
+	\\ so we want eash string to saved one time only.
+	Inventory Strings
+	
+	Const nl$=chr$(13)+chr$(10), Ansi=3
+	Def z$, lim, line$, newvar_ok, i=0
+	Document message$=nl$
+	Global pc     \\ functions have own scope, so we make it global, for this module, and childs.
+
+	Dim lines$()
+	s$=filter$(s$,chr$(9))   \\ exclude tabs
+	Lines$()=piece$(s$,nl$) \\ break to lines
+	lim=len(Lines$())
+	Flush ' empty stack (there is a current stack of values which we use here)
+	
+	Load_Ast()
+	If not stack.size=1 Then Flush : Error "Ast not loaded"
+	AST=array   \\ pop the array from stack
+	Document Assembly$, Header$
+
+	\\ all lines of assembly goes to stack. Maybe not in right order.
+	\\ Push statement push to top, Data statement push to bottom of stack
+	
+	CodeGenerator(Ast)
+	Data  code$("halt") ' append to end of stack
+	\\ So now we get all data (letters) from stack
+	While not empty
+		Assembly$=letter$+nl$
+	end while
+	\\ So now we have to place them in order
+	Sort Assembly$
+	
+	\\ Let's make the header
+	Header$=format$("Datasize: {0} Strings: {1}", Len(Dataset),Len(strings))
+	\\ we use an iterator object, str^ is the counter, readonly, but Eval$() use it from object.
+	str=each(strings)
+	While str
+		Header$=nl$+Eval$(str)
+	End while
+	Assembly$=nl$
+	\\ insert to line 1 the Header
+	Insert 1 Assembly$=Header$
+	\\ Also we check for warnings
+	If len(message$)>2 then Assembly$="Warnings: "+nl$+message$
+	\\ So now we get a report
+	\\ (at each 3/4 of window's lines, the printing stop and wait for user response, any key)
+	Report Assembly$
+	Clipboard Assembly$
+	Save.Doc Assembly$, "code.t", Ansi
+	End
+	\\ subs have 10000 limit for recursion but can be extended to 1000000 or more.
+	Sub CodeGenerator(t)
+	
+		If len(t)=3 then
+			select case  t#val(0)
+			Case gSeq
+				CodeGenerator(t#val(1)) : CodeGenerator(t#val(2))
+			Case gwhile
+			{
+				local spc=pc
+				CodeGenerator(t#val(1))
+				local pc1=pc
+				pc+=5 ' room for jz
+				CodeGenerator(t#val(2))
+				data code3$("jz",pc1, pc1, pc+5)
+				data code3$("jmp",pc,  pc, spc)
+				pc+=5  ' room for jmp
+			}
+			Case gif
+			{
+				CodeGenerator(t#val(1))
+				local pc1=pc, pc2
+				pc+=5
+				CodeGenerator(t#val(2)#val(1))
+				If len(t#val(2)#val(2))>0 then
+					pc2=pc
+					pc+=5
+					data code3$("jz",pc1, pc1, pc)
+					CodeGenerator(t#val(2)#val(2))
+					data code3$("jmp",pc2, pc2, pc)
+				else
+					data code3$("jz",pc1, pc1, pc)
+				end If		
+			}
+			Case gAssign
+			{
+				CodeGenerator(t#val(2))
+				local newvar_ok=true
+				CodeGenerator(t#val(1))
+			}
+			case gneg to gnot, gprtc to gprts
+				CodeGenerator(t#val(1)) : data code$(mid$(eval$(t#val(0)),2))
+			case gmul to gor
+			{
+				CodeGenerator(t#val(1))
+				CodeGenerator(t#val(2))
+				data code$(mid$(eval$(t#val(0)),2))
+			}
+			End select
+		Else.if len(t)=2 then
+			select case  t#val(0)
+			Case gString
+			{
+				local spos
+				If exist(strings,t#val$(1)) then
+					spos=eval(strings!)
+				else
+					append strings, t#val$(1)		
+					spos=len(strings)-1
+				end If
+				Push code2$("push",str$(spos,0))
+			}
+			Case gInt
+				Push code2$("push",t#val$(1), pc)
+			Case gIdentifier
+			{
+				local ipos
+				If exist(dataset,t#val$(1)) then
+					ipos=Eval(dataset!)  ' return position
+				else.if newvar_ok then
+					Append dataset, t#val$(1)
+					ipos=len(dataset)-1
+				else
+					message$="Variable "+t#val$(1)+" not initialized"+nl$
+					
+				end If
+				If newvar_ok then
+					Push code2$("store","["+str$(ipos, 0)+"]")
+				else
+					Push code2$("fetch","["+str$(ipos, 0)+"]")
+				end If
+			}
+			end select
+		End If
+	End Sub
+	Sub Load_Ast()
+			If i>=lim then Push (,) : exit sub
+			do
+			line$=Trim$(lines$(i))
+			I++
+			tok$=piece$(line$," ")(0)
+			until line$<>"" or i>=lim
+			If tok$="Identifier" then
+				Push (gidentifier,trim$(Mid$(line$,11)))
+			else.if tok$="Integer" then
+				long n=Val(Mid$(line$,8))  ' check overflow
+				Push (gint, Trim$(Mid$(line$,8)))
+			else.if tok$="String" then
+				Push (gstring,Trim$(Mid$(line$,7)))
+			else.if tok$=";" then
+				Push (,)
+			Else
+				local otok=symb(tok$)
+				Load_Ast()
+				Load_Ast()
+				Shift 2
+				Push (otok,array, array)
+			End If
+	End Sub
+}
+
+CodeGenerator {
+	Sequence
+	Sequence
+	;
+	Assign
+	Identifier    count
+	Integer       1
+	While
+	Less
+	Identifier    count
+	Integer       10
+	Sequence
+	Sequence
+	;
+	Sequence
+	Sequence
+	Sequence
+	;
+	Prts
+	String        "count is: "
+	;
+	Prti
+	Identifier    count
+	;
+	Prts
+	String        "\n"
+	;
+	Assign
+	Identifier    count
+	Add
+	Identifier    count
+	Integer       1
+}

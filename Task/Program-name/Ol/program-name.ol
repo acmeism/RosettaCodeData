@@ -1,0 +1,1 @@
+(print (car *vm-args*))

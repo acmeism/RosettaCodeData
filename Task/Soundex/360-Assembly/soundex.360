@@ -1,0 +1,81 @@
+*        Soundex                   02/04/2017
+SOUNDEX  CSECT
+         USING  SOUNDEX,R13        base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R6,1               i=1
+       DO WHILE=(C,R6,LE,=A(NTT))  do i=1 to hbound(tt)
+         LR     R1,R6                i
+         BCTR   R1,0                 -1
+         MH     R1,=AL2(L'TT)        *length(tt)
+         LA     R4,TT(R1)            @tt(i)
+         MVC    S,0(R4)              s=tt(i)
+         LA     R1,S                 @s
+         LA     R2,L'S               length(s)
+LOOP     OI     0(R1),C' '           loop s[l]=ucase(s[l])
+         LA     R1,1(R1)               @s++
+         BCT    R2,LOOP              endloop
+         MVC    CODE,=C'0000'        code='0000'
+         MVC    CODE(1),S            code[1]=s[1]
+         LA     R8,1                 k=1
+         LA     R7,1                 j=1
+       DO WHILE=(C,R7,LE,=A(L'S))    do j=1 to length(s)
+         LA     R4,S-1                 @s[0]
+         AR     R4,R7                  +j
+         MVC    CCUR,0(R4)             ccur=s[j]
+         TR     CCUR,TABLE             ccur=translate(ccur,table)
+       IF C,R7,EQ,=F'1' THEN           if j=1 then
+         MVC    CPREV,CCUR               cprev=ccur
+       ELSE     ,                      else
+*                                        if ccur<>' ' and ccur<>'-'
+       IF CLI,CCUR,NE,C' ',AND,CLI,CCUR,NE,C'-',                       *
+               AND,CLC,CCUR,NE,CPREV THEN  and ccur<>cprev then
+       IF C,R8,LT,=F'4' THEN               if k<4 then
+         LA     R8,1(R8)                     k=k+1
+         LA     R4,CODE-1(R8)                @code[k]
+         MVC    0(1,R4),CCUR                 code[k]=ccur
+       ENDIF    ,                          endif
+       ENDIF    ,                        endif
+       IF CLI,CCUR,NE,C'-' THEN          if ccur<>'-' then
+         MVC    CPREV,CCUR                 cprev=ccur
+       ENDIF    ,                        endif
+       ENDIF    ,                      endif
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+         XDECO  R6,XDEC              edit i
+         MVC    PG(2),XDEC+10        i
+         MVC    PG+3(L'S),S          s
+         MVC    PG+15(L'CODE),CODE   code
+         XPRNT  PG,L'PG              print
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         L      R13,4(0,R13)       restore previous savearea pointer
+         LM     R14,R12,12(R13)    restore previous context
+         XR     R15,R15            rc=0
+         BR     R14                exit
+TT       DC     CL12'ashcraft',CL12'ashcroft',CL12'gauss',CL12'ghosh'
+         DC     CL12'hilbert',CL12'heilbronn',CL12'lee',CL12'lloyd'
+         DC     CL12'moses',CL12'pfister',CL12'robert',CL12'rupert'
+         DC     CL12'rubin',CL12'tymczak',CL12'soundex',CL12'example'
+TTEND    EQU    *
+NTT      EQU    (TTEND-TT)/L'TT    hbound(tt)
+S        DS     CL12
+CCUR     DS     CL1                current
+CPREV    DS     CL1                previous
+CODE     DS     CL4
+PG       DC     CL80' '
+XDEC     DS     CL12
+TABLE    DC     CL256' '           translation table
+         ORG    TABLE+C'A'
+         DC     CL9' 123 12- '     ABCDEFGHI
+         ORG    TABLE+C'J'
+         DC     CL9'22455 126'     JKLMNOPQR
+         ORG    TABLE+C'S'
+         DC     CL9'23 1-2 2'      STUVWXYZ
+         ORG
+         YREGS
+         END    SOUNDEX

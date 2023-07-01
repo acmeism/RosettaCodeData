@@ -1,0 +1,172 @@
+Module Virtual_Machine_Interpreter (a$){
+	\\ function to extract string, replacing escape codes.
+	Function GetString$(a$) {
+		s=instr(a$, chr$(34))
+		m=rinstr(a$,chr$(34))-s
+		if m>1 then
+			\\ process escape codes
+			=format$(mid$(a$, s+1, m-1))
+		else
+			=""
+		end if
+	}
+	\\ module to print a string to console using codes, 13, 10, 9
+	Module printsrv (a$) {
+		for i=1 to len(a$)
+			select case chrcode(Mid$(a$,i,1))
+			case 13
+				cursor 0
+			case 10
+				cursor 0 : Print
+			case 9
+				cursor ((pos+tab) div tab)*tab
+			else case
+			{
+				m=pos :if pos>=width then Print : m=pos
+				Print Mid$(a$,i,1);
+				if m<=width then cursor m+1
+			}
+			end select
+		next i
+	}
+	const nl$=chr$(13)+chr$(10)
+	\\ we can set starting value to any number  n where 0<=n<=232
+	enum op {	halt_=232, add_, sub_, mul_, div_, mod_, not_, neg_, and_, or_, lt_,
+		    	gt_, le_, ge_, ne_, eq_, prts_, prti_, prtc_, store_, fetch_, push_,
+			jmp_, jz_
+    	}
+	Rem : Form 120, 60 ' change console width X height to run Ascii Mandlebrot examlpe
+	Report "Virtual Assembly Code:"+{
+	}+a$
+	Print "Prepare Byte Code"
+	
+	\\ get datasize
+	a$=rightpart$(a$, "Datasize:")
+	m=0
+	data_size=val(a$, "int", m)
+	a$=mid$(a$, m)
+	\\ make stack
+	if data_size>0 then Buffer Clear stack_ as long*data_size
+	\\ dim or redim buffer append 1000 long as is.
+	Buffer stack_ as long*(1000+data_size)
+	\\ get strings
+	a$=rightpart$(a$, "Strings:")
+	m=0
+	strings=val(a$, "int", m)
+	a$=rightpart$(a$, nl$)
+	
+	if strings>0 then
+		Dim strings$(strings)
+		for i=0 to strings-1
+			strings$(i)=GetString$(leftpart$(a$, nl$))
+			a$=rightpart$(a$, nl$)
+		Next i
+	End if
+	buffer clear code_ as byte*1000
+	do
+		m=0
+		offset=val(a$,"int", m)
+		if m<0 then exit
+		a$=mid$(a$,m)
+		line$=trim$(leftpart$(a$,nl$))
+		if line$="" then line$=trim$(a$) else a$=trim$(rightpart$(a$, nl$))
+		op$=if$(instr(line$," ")>0->leftpart$(line$," "), line$)
+		if not valid(eval(op$+"_")) then exit
+		opc=eval(op$+"_")
+		Return code_, offset:=opc
+		if opc>=store_ then
+			line$=rightpart$(line$," ")
+			select case opc
+			case store_, fetch_
+				Return code_, offset+1:=val(rightpart$(leftpart$(line$,"]"),"[")) as long : offset+=4
+			case push_
+				Return code_, offset+1:=uint(val(line$)) as long : offset+=4
+			case jz_, jmp_
+				Return code_, offset+1:=val(rightpart$(line$,")")) as long : offset+=4
+			end select
+		end if
+	Always
+	Print "Press any key" : Push key$ : Drop
+	\\ Prepare VM
+	let pc=0, sp=len(stack_) div 4
+	do {
+		func=eval(code_, pc)
+		pc++
+		select case func
+		case halt_
+			exit
+		case push_
+			sp--:return stack_, sp:=eval(code_, pc as long):pc+=4
+		case jz_
+			sp++: if eval(stack_, sp-1)=0 then pc=eval(code_, pc as long) else pc+=4
+		case jmp_
+			pc=eval(code_, pc as long)
+		case fetch_
+			sp--:Return stack_, sp:=eval(stack_, eval(code_, pc as long)):pc+=4
+		case store_
+			Return stack_, eval(code_, pc as long):=eval(stack_, sp):sp++:pc+=4
+		case add_
+			Return stack_, sp+1:=uint(sint(eval(stack_, sp+1))+sint(eval(stack_, sp))):sp++
+		case sub_
+			Return stack_, sp+1:=uint(sint(eval(stack_, sp+1))-sint(eval(stack_, sp))):sp++
+		case mul_
+			Return stack_, sp+1:=uint(sint(eval(stack_, sp+1))*sint(eval(stack_, sp))):sp++
+		case div_
+			Return stack_, sp+1:=uint(sint(eval(stack_, sp+1)) div sint(eval(stack_, sp))):sp++
+		case mod_
+			Return stack_, sp+1:=uint(sint(eval(stack_, sp+1)) mod sint(eval(stack_, sp))) :sp++
+		case not_
+			Return stack_, sp:=if(eval(stack_, sp)=0->uint(-1),0)
+		case neg_  \\ we can use neg(sint(value))+1 or uint(-sint(value))
+			Return stack_, sp:=uint(-sint(eval(stack_, sp)))
+		case and_
+			Return stack_, sp+1:=binary.and(eval(stack_, sp+1),eval(stack_, sp)):sp++	
+		case or_
+			Return stack_, sp+1:=binary.or(eval(stack_, sp+1),eval(stack_, sp)):sp++	
+		case lt_
+			Return stack_, sp+1:=uint(if(sint(eval(stack_, sp+1))<sint(eval(stack_, sp))->-1, 0)):sp++
+		case gt_
+			Return stack_, sp+1:=uint(if(sint(eval(stack_, sp+1))>sint(eval(stack_, sp))->-1, 0)):sp++
+		case le_
+			Return stack_, sp+1:=uint(if(sint(eval(stack_, sp+1))<=sint(eval(stack_, sp))->-1, 0)):sp++
+		case ge_
+			Return stack_, sp+1:=uint(if(sint(eval(stack_, sp+1))>=sint(eval(stack_, sp))->-1, 0)):sp++
+		case ne_
+			Return stack_, sp+1:=uint(if(eval(stack_, sp+1)<>eval(stack_, sp)->-1, 0)):sp++
+		case eq_
+			Return stack_, sp+1:=uint(if(eval(stack_, sp+1)=eval(stack_, sp)->-1, 0)):sp++
+		case prts_
+			printsrv strings$(eval(stack_,sp)):sp++
+		case prti_
+			printsrv str$(sint(eval(stack_,sp)),0):sp++
+		case prtc_
+			printsrv chrcode$(eval(stack_,sp)):sp++
+		else case
+			Error "Unkown op "+str$(func)
+		end select			
+	} always
+	Print "done"
+}
+Virtual_Machine_Interpreter {
+Datasize: 1 Strings: 2
+"count is: "
+"\n"
+    0 push  1
+    5 store [0]
+   10 fetch [0]
+   15 push  10
+   20 lt
+   21 jz     (43) 65
+   26 push  0
+   31 prts
+   32 fetch [0]
+   37 prti
+   38 push  1
+   43 prts
+   44 fetch [0]
+   49 push  1
+   54 add
+   55 store [0]
+   60 jmp    (-51) 10
+   65 halt
+}

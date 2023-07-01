@@ -1,0 +1,188 @@
+#Include "crt.bi"  'for rounding only
+
+Type vector
+    Dim As Double element(Any)
+End Type
+
+Type matrix
+    Dim As Double element(Any,Any)
+    Declare Function inverse() As matrix
+    Declare Function transpose() As matrix
+    private:
+    Declare Function GaussJordan(As vector) As vector
+End Type
+
+'mult operators
+Operator *(m1 As matrix,m2 As matrix) As matrix
+    Dim rows As Integer=Ubound(m1.element,1)
+    Dim columns As Integer=Ubound(m2.element,2)
+    If Ubound(m1.element,2)<>Ubound(m2.element,1) Then
+        Print "Can't do"
+        Exit Operator
+    End If
+    Dim As matrix ans
+    Redim ans.element(rows,columns)
+    Dim rxc As Double
+    For r As Integer=1 To rows
+        For c As Integer=1 To columns
+            rxc=0
+            For k As Integer = 1 To Ubound(m1.element,2)
+                rxc=rxc+m1.element(r,k)*m2.element(k,c)
+            Next k
+            ans.element(r,c)=rxc
+        Next c
+    Next r
+    Operator= ans
+End Operator
+
+Operator *(m1 As matrix,m2 As vector) As vector
+    Dim rows As Integer=Ubound(m1.element,1)
+    Dim columns As Integer=Ubound(m2.element,2)
+    If Ubound(m1.element,2)<>Ubound(m2.element) Then
+        Print "Can't do"
+        Exit Operator
+    End If
+    Dim As vector ans
+    Redim ans.element(rows)
+    Dim rxc As Double
+    For r As Integer=1 To rows
+        rxc=0
+        For k As Integer = 1 To Ubound(m1.element,2)
+            rxc=rxc+m1.element(r,k)*m2.element(k)
+        Next k
+        ans.element(r)=rxc
+    Next r
+    Operator= ans
+End Operator
+
+Function matrix.transpose() As matrix
+    Dim As matrix b
+    Redim b.element(1 To Ubound(this.element,2),1 To Ubound(this.element,1))
+    For i As Long=1 To Ubound(this.element,1)
+        For j As Long=1 To Ubound(this.element,2)
+            b.element(j,i)=this.element(i,j)
+        Next
+    Next
+    Return b
+End Function
+
+Function matrix.GaussJordan(rhs As vector) As vector
+    Dim As Integer n=Ubound(rhs.element)
+    Dim As vector ans=rhs,r=rhs
+    Dim As matrix b=This
+    #macro pivot(num)
+        For p1 As Integer  = num To n - 1
+            For p2 As Integer  = p1 + 1 To n
+                If Abs(b.element(p1,num))<Abs(b.element(p2,num)) Then
+                    Swap r.element(p1),r.element(p2)
+                    For g As Integer=1 To n
+                        Swap b.element(p1,g),b.element(p2,g)
+                    Next g
+                End If
+            Next p2
+        Next p1
+    #endmacro
+    For k As Integer=1 To n-1
+        pivot(k)
+        For row As Integer =k To n-1
+            If b.element(row+1,k)=0 Then Exit For
+            Var f=b.element(k,k)/b.element(row+1,k)
+            r.element(row+1)=r.element(row+1)*f-r.element(k)
+            For g As Integer=1 To n
+                b.element((row+1),g)=b.element((row+1),g)*f-b.element(k,g)
+            Next g
+        Next row
+    Next k
+    'back substitute
+    For z As Integer=n To 1 Step -1
+        ans.element(z)=r.element(z)/b.element(z,z)
+        For j As Integer = n To z+1 Step -1
+            ans.element(z)=ans.element(z)-(b.element(z,j)*ans.element(j)/b.element(z,z))
+        Next j
+    Next    z
+    Function = ans
+End Function
+
+Function matrix.inverse() As matrix
+    Var ub1=Ubound(this.element,1),ub2=Ubound(this.element,2)
+    Dim As matrix ans
+    Dim As vector temp,null_
+    Redim temp.element(1 To ub1):Redim null_.element(1 To ub1)
+    Redim ans.element(1 To ub1,1 To ub2)
+    For a As Integer=1 To ub1
+        temp=null_
+        temp.element(a)=1
+        temp=GaussJordan(temp)
+        For b As Integer=1 To ub1
+            ans.element(b,a)=temp.element(b)
+        Next b
+    Next a
+    Return ans
+End Function
+
+'vandermode of x
+Function vandermonde(x_values() As Double,w As Long) As matrix
+    Dim As matrix mat
+    Var n=Ubound(x_values)
+    Redim mat.element(1 To n,1 To w)
+    For a As Integer=1 To n
+        For b As Integer=1 To w
+            mat.element(a,b)=x_values(a)^(b-1)
+        Next b
+    Next a
+    Return mat
+End Function
+
+'main preocedure
+Sub regress(x_values() As Double,y_values() As Double,ans() As Double,n As Long)
+    Redim ans(1 To Ubound(x_values))
+    Dim As matrix m1= vandermonde(x_values(),n)
+    Dim As matrix T=m1.transpose
+    Dim As vector y
+    Redim y.element(1 To Ubound(ans))
+    For n As Long=1 To Ubound(y_values)
+        y.element(n)=y_values(n)
+    Next n
+    Dim As vector result=(((T*m1).inverse)*T)*y
+    Redim Preserve ans(1 To n)
+    For n As Long=1 To Ubound(ans)
+        ans(n)=result.element(n)
+    Next n
+End Sub
+
+'Evaluate a polynomial at x
+Function polyeval(Coefficients() As Double,Byval x As Double) As Double
+    Dim As Double acc
+    For i As Long=Ubound(Coefficients) To Lbound(Coefficients) Step -1
+        acc=acc*x+Coefficients(i)
+    Next i
+    Return acc
+End Function
+
+Function CRound(Byval x As Double,Byval precision As Integer=30) As String
+    If precision>30 Then precision=30
+    Dim As zstring * 40 z:Var s="%." &str(Abs(precision)) &"f"
+    sprintf(z,s,x)
+    If Val(z) Then Return Rtrim(Rtrim(z,"0"),".")Else Return "0"
+End Function
+
+Function show(a() As Double,places as long=10) As String
+    Dim As String s,g
+    For n As Long=Lbound(a) To Ubound(a)
+        If n<3 Then g="" Else g="^"+Str(n-1)
+        if val(cround(a(n),places))<>0 then
+            s+= Iif(Sgn(a(n))>=0,"+","")+cround(a(n),places)+ Iif(n=Lbound(a),"","*x"+g)+" "
+        end if
+    Next n
+    Return s
+End Function
+
+
+dim as double x(1 to ...)={0,  1,  2,  3,  4,  5,  6,   7,   8,   9,   10}
+dim as double y(1 to ...)={1,  6,  17, 34, 57, 86, 121, 162, 209, 262, 321}
+
+Redim As Double ans()
+regress(x(),y(),ans(),3)
+
+print show(ans())
+sleep

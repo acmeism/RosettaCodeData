@@ -1,0 +1,270 @@
+''
+''
+''   FTP class (Public Domain code - enjoy).
+''   Windows only. Uses WinInet system functions.
+''   Paul Squires of PlanetSquires Software (August 2015)
+''
+''   Compiler:  FreeBASIC 1.03 (32-bit) (64-bit)
+''
+
+#Include Once "windows.bi"
+#Include Once "\win\wininet.bi"
+
+' //
+' //
+' //
+Type clsFTP
+    Private:
+    m_hSession    As HINTERNET
+    m_hConnection As HINTERNET
+    m_LastError   As Integer
+    m_ServerPort  As Integer
+    m_ServerName  As String
+    m_UserName    As String
+    m_Password    As String
+
+    Public:
+    Declare Constructor
+    Declare Destructor
+    Declare Property hSession() As HINTERNET
+    Declare Property hSession(Byval nValue As HINTERNET)
+    Declare Property hConnection() As HINTERNET
+    Declare Property hConnection(Byval nValue As HINTERNET)
+    Declare Property LastError() As Integer
+    Declare Property ServerPort(Byval nValue As Integer)
+    Declare Property ServerPort() As Integer
+    Declare Property LastError(Byval nValue As Integer)
+    Declare Property ServerName() As String
+    Declare Property ServerName(Byval sValue As String)
+    Declare Property UserName() As String
+    Declare Property UserName(Byval sValue As String)
+    Declare Property Password() As String
+    Declare Property Password(Byval sValue As String)
+    Declare Function Connect Overload() As WINBOOL
+    Declare Function Connect Overload(Byval sServerName As String, _
+    Byval sServerPort As Integer, _
+    Byval sUserName As String, _
+    Byval sPassword As String) As WINBOOL
+    Declare Sub      Disconnect()
+    Declare Function SetCurrentFolder(Byval sFolderName As String) As WINBOOL
+    Declare Function GetCurrentFolder() As String
+    Declare Function RenameFile(Byval sOldFilename As String, _
+    Byval sNewFilename As String) As WINBOOL
+    Declare Function UploadFile(Byval sLocal As String, _
+    Byval sRemote As String) As WINBOOL
+    Declare Function DownloadFile(Byval sLocal As String, _
+    Byval sRemote As String) As WINBOOL
+    Declare Function KillFile(Byval sRemote As String) As WINBOOL
+End Type
+
+
+''
+''  Initialize the class
+''
+Constructor clsFTP
+    m_ServerPort = INTERNET_DEFAULT_FTP_PORT   ' port 21
+End Constructor
+
+
+''
+''  Close any open connection and session
+''
+Destructor clsFTP
+    this.Disconnect
+End Destructor
+
+
+''
+''  hSession (Property)
+''
+Property clsFTP.hSession() As HINTERNET
+    Property = this.m_hSession
+End Property
+
+Property clsFTp.hSession(Byval nValue As HINTERNET)
+    this.m_hSession = nValue
+End Property
+
+
+''
+''  hConnection (Property)
+''
+Property clsFTP.hConnection() As HINTERNET
+    Property = this.m_hConnection
+End Property
+
+Property clsFTp.hConnection(Byval nValue As HINTERNET)
+    this.m_hConnection = nValue
+End Property
+
+
+''
+''  LastError (Property)
+''
+Property clsFTP.LastError() As Integer
+    Property = this.m_LastError
+End Property
+
+Property clsFTp.LastError(Byval nValue As Integer)
+    this.m_LastError = nValue
+End Property
+
+
+''
+''  ServerPort (Property)
+''
+Property clsFTP.ServerPort() As Integer
+    Property = this.m_ServerPort
+End Property
+
+Property clsFTp.ServerPort(Byval nValue As Integer)
+    this.m_ServerPort = nValue
+End Property
+
+
+''
+''  ServerName (Property)
+''
+Property clsFTP.ServerName() As String
+    Property = this.m_ServerName
+End Property
+
+Property clsFTp.ServerName(Byval sValue As String)
+    this.m_ServerName = sValue
+End Property
+
+
+''
+''  UserName (Property)
+''
+Property clsFTP.UserName() As String
+    Property = this.m_UserName
+End Property
+
+Property clsFTp.UserName(Byval sValue As String)
+this.m_UserName = sValue
+End Property
+
+
+''
+''  Password (Property)
+''
+Property clsFTP.Password() As String
+    Property = this.m_Password
+End Property
+
+Property clsFTp.Password(Byval sValue As String)
+    this.m_Password = sValue
+End Property
+
+
+''
+''  Close current connection and end session
+''
+Sub clsFTP.Disconnect()
+    InternetCloseHandle this.hConnection
+    InternetCloseHandle this.hSession
+    this.hConnection = 0: this.hSession = 0
+End Sub
+
+
+''
+''  Connect to an ftp host (overload). Returns TRUE if successful.
+''
+Function clsFTP.Connect Overload() As WINBOOL
+    this.hSession = InternetOpen("ftpClass", INTERNET_OPEN_TYPE_DIRECT, "", "", 0)
+    If this.hSession = 0 Then
+        this.LastError = GetLastError
+        Function = False: Exit Function
+    End If
+
+    this.hConnection = InternetConnect(_
+    this.hSession, this.ServerName, this.ServerPort, _
+    this.UserName, this.Password, _
+    INTERNET_SERVICE_FTP, INTERNET_FLAG_PASSIVE, 0)
+
+    If this.hConnection = 0 Then
+        this.LastError = GetLastError
+        InternetCloseHandle(this.hSession)
+        Function = False: Exit Function
+    End If
+
+    Function = True
+End Function
+
+
+''
+''  Connect to an ftp host (overload). Returns TRUE if successful.
+''
+Function clsFTP.Connect Overload (Byval sServerName As String, _
+    Byval nServerPort As Integer, _
+    Byval sUserName   As String, _
+    Byval sPassword   As String) As WINBOOL
+
+    this.ServerName = sServerName
+    this.ServerPort = nServerPort
+    this.UserName   = sUserName
+    this.Password   = sPassword
+
+    Function = this.Connect
+End Function
+
+
+''
+''  Change to a folder on the server. Returns TRUE if successful.
+''
+Function clsFTP.SetCurrentFolder(Byval sFolderName As String) As WINBOOL
+    Function = FtpSetCurrentDirectory(this.hConnection, sFolderName)
+    this.LastError = GetLastError
+End Function
+
+
+''
+''  Retrieves the name of current folder on the server.
+''
+Function clsFTP.GetCurrentFolder() As String
+    Dim zBuffer As ZString * MAX_PATH
+    Dim nLength As Integer = MAX_PATH
+
+    FtpGetCurrentDirectory(this.hConnection, zBuffer, Cast(LPDWORD, @nLength))
+    this.LastError = GetLastError
+
+    Function = zBuffer
+End Function
+
+
+''
+''  Rename a file on the server. Returns TRUE if successful.
+''
+Function clsFTP.RenameFile(Byval sOldFilename As String, Byval sNewFilename As String) As WINBOOL
+    Function = FtpRenameFile(this.hConnection, sOldFilename, sNewFilename)
+    this.LastError = GetLastError
+End Function
+
+
+''
+''  Upload a file to the server. Returns TRUE if successful.
+''
+Function clsFTP.UploadFile(Byval sLocal As String, Byval sRemote As String) As WINBOOL
+    Function = FtpPutFile(this.hConnection, sLocal, sRemote, FTP_TRANSFER_TYPE_BINARY, 0)
+    this.LastError = GetLastError
+End Function
+
+
+''
+''  Download a file from the server. Returns TRUE if successful.
+''
+Function clsFTP.DownloadFile(Byval sLocal As String, Byval sRemote As String) As WINBOOL
+    Function = FtpGetFile(this.hConnection, sRemote, sLocal, False, _
+    FILE_ATTRIBUTE_NORMAL, FTP_TRANSFER_TYPE_BINARY Or INTERNET_FLAG_RELOAD, 0)
+    this.LastError = GetLastError
+End Function
+
+
+''
+''  Remove a file from the server. Returns TRUE if successful.
+''
+Function clsFTP.KillFile(Byval sRemote As String) As WINBOOL
+    Function = FtpDeleteFile(this.hConnection, sRemote)
+    this.LastError = GetLastError
+End Function

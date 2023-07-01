@@ -1,0 +1,1233 @@
+######################################################################
+#
+# The Rosetta Code code virtual machine in Ratfor 77.
+#
+# The implementation assumes your FORTRAN compiler supports 1-byte
+# INTEGER*1 and 4-byte INTEGER*4. Integer storage will be
+# native-endian, achieved via EQUIVALENCE. (GNU Fortran and f2c both
+# should work.)
+#
+#
+# How to deal with FORTRAN 77 input is a problem. I use formatted
+# input, treating each line as an array of type CHARACTER--regrettably
+# of no more than some predetermined, finite length. It is a very
+# simple method and presents no significant difficulties, aside from
+# the restriction on line length of the input.
+#
+#
+# On a POSIX platform, the program can be compiled with f2c and run
+# somewhat as follows:
+#
+#    ratfor77 vm-in-ratfor.r > vm-in-ratfor.f
+#    f2c -C -Nc40 vm-in-ratfor.f
+#    cc vm-in-ratfor.c -lf2c
+#    ./a.out < compiler-tests/primes.vm
+#
+# With gfortran, a little differently:
+#
+#    ratfor77 vm-in-ratfor.r > vm-in-ratfor.f
+#    gfortran -fcheck=all -std=legacy vm-in-ratfor.f
+#    ./a.out < compiler-tests/primes.vm
+#
+#
+# I/O is strictly from default input and to default output, which, on
+# POSIX systems, usually correspond respectively to standard input and
+# standard output. (I did not wish to have to deal with unit numbers;
+# these are now standardized in ISO_FORTRAN_ENV, but that is not
+# available in FORTRAN 77.)
+#
+#---------------------------------------------------------------------
+
+# Some parameters you may wish to modify.
+
+define(LINESZ, 256)           # Size of an input line.
+define(OUTLSZ, 1024)          # Size of an output line.
+define(STRNSZ, 4096)          # Size of the string pool.
+define(STCKSZ, 4096)          # Size of stacks.
+define(MAXVAR, 256)           # Maximum number of variables.
+define(MAXSTR, 256)           # Maximum number of strings.
+define(CODESZ, 16384)         # Maximum size of a compiled program.
+
+define(STRSZ, 2)           # Size of an entry in the VM strings array.
+define(STRI,  1)           # Index of the string within strngs.
+define(STRN,  2)           # Length of the string.
+
+#---------------------------------------------------------------------
+
+define(NEWLIN, 10)            # The Unix newline character (ASCII LF).
+define(DQUOTE, 34)            # The double quote character.
+define(BACKSL, 92)            # The backslash character.
+
+#---------------------------------------------------------------------
+
+define(OPHALT,  1)
+define(OPADD,   2)
+define(OPSUB,   3)
+define(OPMUL,   4)
+define(OPDIV,   5)
+define(OPMOD,   6)
+define(OPLT,    7)
+define(OPGT,    8)
+define(OPLE,    9)
+define(OPGE,   10)
+define(OPEQ,   11)
+define(OPNE,   12)
+define(OPAND,  13)
+define(OPOR,   14)
+define(OPNEG,  15)
+define(OPNOT,  16)
+define(OPPRTC, 17)
+define(OPPRTI, 18)
+define(OPPRTS, 19)
+define(OPFTCH, 20)
+define(OPSTOR, 21)
+define(OPPUSH, 22)
+define(OPJMP,  23)
+define(OPJZ,   24)
+
+#---------------------------------------------------------------------
+
+function issp (c)
+
+  # Is a character a space character?
+
+  implicit none
+
+  character c
+  logical issp
+
+  integer ic
+
+  ic = ichar (c)
+  issp = (ic == 32 || (9 <= ic && ic <= 13))
+end
+
+function isalph (c)
+
+  # Is c character code for a letter?
+
+  implicit none
+
+  integer c
+  logical isalph
+
+  #
+  # The following is correct for ASCII and Unicode, but not for
+  # EBCDIC.
+  #
+  isalph = (ichar ('a') <= c && c <= ichar ('z')) _
+             || (ichar ('A') <= c && c <= ichar ('Z'))
+end
+
+function isdgt (c)
+
+  # Is c character code for a digit?
+
+  implicit none
+
+  integer c
+  logical isdgt
+
+  isdgt = (ichar ('0') <= c && c <= ichar ('9'))
+end
+
+function skipsp (str, i, imax)
+
+  # Skip past spaces in a string.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer imax
+  integer skipsp
+
+  logical issp
+
+  logical done
+
+  skipsp = i
+  done = .false.
+  while (!done)
+    {
+      if (imax <= skipsp)
+        done = .true.
+      else if (!issp (str(skipsp)))
+        done = .true.
+      else
+        skipsp = skipsp + 1
+    }
+end
+
+function skipns (str, i, imax)
+
+  # Skip past non-spaces in a string.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer imax
+  integer skipns
+
+  logical issp
+
+  logical done
+
+  skipns = i
+  done = .false.
+  while (!done)
+    {
+      if (imax <= skipns)
+        done = .true.
+      else if (issp (str(skipns)))
+        done = .true.
+      else
+        skipns = skipns + 1
+    }
+end
+
+function trimrt (str, n)
+
+  # Find the length of a string, if one ignores trailing spaces.
+
+  implicit none
+
+  character str(*)
+  integer n
+  integer trimrt
+
+  logical issp
+
+  logical done
+
+  trimrt = n
+  done = .false.
+  while (!done)
+    {
+      if (trimrt == 0)
+        done = .true.
+      else if (!issp (str(trimrt)))
+        done = .true.
+      else
+        trimrt = trimrt - 1
+    }
+end
+
+function skipal (str, i, imax)
+
+  # Skip past alphabetic characters in a string.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer imax
+  integer skipal
+
+  logical isalph
+
+  logical done
+
+  skipal = i
+  done = .false.
+  while (!done)
+    {
+      if (imax <= skipal)
+        done = .true.
+      else if (!isalph (ichar (str(skipal))))
+        done = .true.
+      else
+        skipal = skipal + 1
+    }
+end
+
+function skipdg (str, i, imax)
+
+  # Skip past digits in a string.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer imax
+  integer skipdg
+
+  logical isdgt
+
+  logical done
+
+  skipdg = i
+  done = .false.
+  while (!done)
+    {
+      if (imax <= skipdg)
+        done = .true.
+      else if (!isdgt (ichar (str(skipdg))))
+        done = .true.
+      else
+        skipdg = skipdg + 1
+    }
+end
+
+function skipnd (str, i, imax)
+
+  # Skip past nondigits in a string.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer imax
+  integer skipnd
+
+  logical isdgt
+
+  logical done
+
+  skipnd = i
+  done = .false.
+  while (!done)
+    {
+      if (imax <= skipnd)
+        done = .true.
+      else if (isdgt (ichar (str(skipnd))))
+        done = .true.
+      else
+        skipnd = skipnd + 1
+    }
+end
+
+function skipd1 (str, i, imax)
+
+  # Skip past digits and '-' in a string.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer imax
+  integer skipd1
+
+  logical isdgt
+
+  logical done
+
+  skipd1 = i
+  done = .false.
+  while (!done)
+    {
+      if (imax <= skipd1)
+        done = .true.
+      else if (!isdgt (ichar (str(skipd1))) && str(skipd1) != '-')
+        done = .true.
+      else
+        skipd1 = skipd1 + 1
+    }
+end
+
+function skipn1 (str, i, imax)
+
+  # Skip past nondigits in a string, except '-'.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer imax
+  integer skipn1
+
+  logical isdgt
+
+  logical done
+
+  skipn1 = i
+  done = .false.
+  while (!done)
+    {
+      if (imax <= skipn1)
+        done = .true.
+      else if (isdgt (ichar (str(skipn1))) || str(skipn1) == '-')
+        done = .true.
+      else
+        skipn1 = skipn1 + 1
+    }
+end
+
+function tolowr (c)
+
+  implicit none
+
+  character c
+  character tolowr
+
+  integer ic
+
+  # The following is correct for ASCII, and will work with Unicode
+  # code points, but is incorrect for EBCDIC.
+
+  ic = ichar (c)
+  if (ichar ('A') <= ic && ic <= ichar ('Z'))
+    ic = ic - ichar('A') + ichar('a')
+  tolowr = char (ic)
+end
+
+#---------------------------------------------------------------------
+
+subroutine addstq (strngs, istrng, src, i0, n0, i, n)
+
+  # Add a quoted string to the string pool.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character src(*)              # Source string.
+  integer i0, n0                # Index and length in source string.
+  integer i, n                  # Index and length in string pool.
+
+  integer j
+  logical done
+
+1000 format ('attempt to treat an unquoted string as a quoted string')
+
+  if (src(i0) != char (DQUOTE) || src(i0 + n0 - 1) != char (DQUOTE))
+    {
+      write (*, 1000)
+      stop
+    }
+
+  i = istrng
+
+  n = 0
+  j = i0 + 1
+  done = .false.
+  while (j != i0 + n0 - 1)
+    if (i == STRNSZ)
+      {
+        write (*, '(''string pool exhausted'')')
+        stop
+      }
+    else if (src(j) == char (BACKSL))
+      {
+        if (j == i0 + n0 - 1)
+          {
+            write (*, '(''incorrectly formed quoted string'')')
+            stop
+          }
+        if (src(j + 1) == 'n')
+          strngs(istrng) = char (NEWLIN)
+        else if (src(j + 1) == char (BACKSL))
+          strngs(istrng) = src(j + 1)
+        else
+          {
+            write (*, '(''unrecognized escape sequence'')')
+            stop
+          }
+        istrng = istrng + 1
+        n = n + 1
+        j = j + 2
+      }
+    else
+      {
+        strngs(istrng) = src(j)
+        istrng = istrng + 1
+        n = n + 1
+        j = j + 1
+      }
+end
+
+#---------------------------------------------------------------------
+
+subroutine push (stack, sp, i)
+
+  implicit none
+
+  integer stack(STCKSZ)
+  integer sp                    # Stack pointer.
+  integer i                     # Value to push.
+
+  if (sp == STCKSZ)
+    {
+      write (*, '(''stack overflow in push'')')
+      stop
+    }
+  stack(sp) = i
+  sp = sp + 1
+end
+
+function pop (stack, sp)
+
+  implicit none
+
+  integer stack(STCKSZ)
+  integer sp                    # Stack pointer.
+  integer pop
+
+  if (sp == 1)
+    {
+      write (*, '(''stack underflow in pop'')')
+      stop
+    }
+  sp = sp - 1
+  pop = stack(sp)
+end
+
+function nstack (sp)
+
+  implicit none
+
+  integer sp                    # Stack pointer.
+  integer nstack
+
+  nstack = sp - 1               # Current cardinality of the stack.
+end
+
+#---------------------------------------------------------------------
+
+subroutine flushl (outbuf, noutbf)
+
+  # Flush a line from the output buffer.
+
+  implicit none
+
+  character outbuf(OUTLSZ)      # Output line buffer.
+  integer noutbf                # Number of characters in outbuf.
+
+  character*20 fmt
+  integer i
+
+  if (noutbf == 0)
+    write (*, '()')
+  else
+    {
+      write (fmt, 1000) noutbf
+1000  format ('(', I10, 'A)')
+      write (*, fmt) (outbuf(i), i = 1, noutbf)
+      noutbf = 0
+    }
+end
+
+subroutine wrtchr (outbuf, noutbf, ch)
+
+  # Write a character to output.
+
+  implicit none
+
+  character outbuf(OUTLSZ)      # Output line buffer.
+  integer noutbf                # Number of characters in outbuf.
+  character ch                  # The character to output.
+
+  # This routine silently truncates anything that goes past the buffer
+  # boundary.
+
+  if (ch == char (NEWLIN))
+    call flushl (outbuf, noutbf)
+  else if (noutbf < OUTLSZ)
+    {
+      noutbf = noutbf + 1
+      outbuf(noutbf) = ch
+    }
+end
+
+subroutine wrtstr (outbuf, noutbf, str, i, n)
+
+  # Write a substring to output.
+
+  implicit none
+
+  character outbuf(OUTLSZ)      # Output line buffer.
+  integer noutbf                # Number of characters in outbuf.
+  character str(*)              # The string from which to output.
+  integer i, n                  # Index and length of the substring.
+
+  integer j
+
+  for (j = 0; j < n; j = j + 1)
+    call wrtchr (outbuf, noutbf, str(i + j))
+end
+
+subroutine wrtint (outbuf, noutbf, ival, colcnt)
+
+  # Write an integer to output.
+
+  implicit none
+
+  character outbuf(OUTLSZ)    # Output line buffer.
+  integer noutbf              # Number of characters in outbuf.
+  integer ival                # The non-negative integer to print.
+  integer colcnt              # Column count, or zero for free format.
+
+  integer skipsp
+
+  character*40 buf
+  integer i, j
+
+  write (buf, '(I40)') ival
+  i = skipsp (buf, 1, 41)
+  if (0 < colcnt)
+    for (j = 1; j < colcnt - (40 - i); j = j + 1)
+      call wrtchr (outbuf, noutbf, ' ')
+  while (i <= 40)
+    {
+      call wrtchr (outbuf, noutbf, buf(i:i))
+      i = i + 1
+    }
+end
+
+#---------------------------------------------------------------------
+
+function strnat (str, i, n)
+
+  # Convert a string to a non-negative integer.
+
+  implicit none
+
+  character str(*)
+  integer i, n
+  integer strnat
+
+  integer j
+
+  strnat = 0
+  for (j = 0; j < n; j = j + 1)
+    strnat = (10 * strnat) + (ichar (str(i + j)) - ichar ('0'))
+end
+
+function strint (str, i, n)
+
+  # Convert a string to an integer
+
+  implicit none
+
+  character str(*)
+  integer i, n
+  integer strint
+
+  integer strnat
+
+  if (str(i) == '-')
+    strint = -strnat (str, i + 1, n - 1)
+  else
+    strint = strnat (str, i, n)
+end
+
+#---------------------------------------------------------------------
+
+subroutine put1 (code, i, opcode)
+
+  # Store a 1-byte operation.
+
+  implicit none
+
+  integer*1 code(0 : CODESZ - 1) # Byte code.
+  integer i                      # Address to put the code at.
+  integer*1 opcode
+
+  if (CODESZ - i < 1)
+    {
+      write (*, '(''address beyond the size of memory'')')
+      stop
+    }
+  code(i) = opcode
+end
+
+subroutine put5 (code, i, opcode, ival)
+
+  # Store a 5-byte operation.
+
+  implicit none
+
+  integer*1 code(0 : CODESZ - 1) # Byte code.
+  integer i                      # Address to put the code at.
+  integer*1 opcode               #
+  integer ival                   # Immediate integer value.
+
+  integer*4 ival32
+  integer*1 ival8(4)
+  equivalence (ival32, ival8)
+
+  if (CODESZ - i < 5)
+    {
+      write (*, '(''address beyond the size of memory'')')
+      stop
+    }
+  code(i) = opcode
+
+  # Native-endian storage.
+  ival32 = ival
+  code(i + 1) = ival8(1)
+  code(i + 2) = ival8(2)
+  code(i + 3) = ival8(3)
+  code(i + 4) = ival8(4)
+end
+
+function getimm (code, i)
+
+  # Get an immediate value from the code, at address i.
+
+  implicit none
+
+  integer*1 code(0 : CODESZ - 1) # Byte code.
+  integer i                    # Address at which the integer resides.
+  integer getimm               # Immediate integer value.
+
+  integer*4 ival32
+  integer*1 ival8(4)
+  equivalence (ival32, ival8)
+
+  if (i < 0 || CODESZ <= i + 3)
+    {
+      write (*, '(''code address out of range'')')
+      stop
+    }
+
+  # Native-endian storage.
+  ival8(1) = code(i)
+  ival8(2) = code(i + 1)
+  ival8(3) = code(i + 2)
+  ival8(4) = code(i + 3)
+  getimm = ival32
+end
+
+#---------------------------------------------------------------------
+
+subroutine rdhead (datsiz, strsiz)
+
+  # Read the header line.
+
+  implicit none
+
+  integer datsiz
+  integer strsiz
+
+  integer skipnd
+  integer skipdg
+  integer strnat
+
+  character line(LINESZ)
+  character*20 fmt
+  integer i1, j1, i2, j2
+
+  # Read a line of text as an array of characters.
+  write (fmt, '(''('', I10, ''A)'')') LINESZ
+  read (*, fmt) line
+
+  i1 = skipnd (line, 1, LINESZ + 1)
+  j1 = skipdg (line, i1, LINESZ + 1)
+  i2 = skipnd (line, j1, LINESZ + 1)
+  j2 = skipdg (line, i2, LINESZ + 1)
+  if (i1 == j1 || i2 == j2)
+    {
+      write (*, '(''bad header line'')')
+      stop
+    }
+  datsiz = strnat (line, i1, j1 - i1)
+  strsiz = strnat (line, i2, j2 - i2)
+end
+
+subroutine rdstrs (strs, strsiz, strngs, istrng)
+
+  implicit none
+
+  integer strs(1:STRSZ, 0 : MAXSTR - 1)
+  integer strsiz
+  character strngs(STRNSZ)       # String pool.
+  integer istrng                 # String pool's next slot.
+
+  integer trimrt
+  integer skipsp
+
+  character line(LINESZ)
+  character*20 fmt
+  integer j
+  integer i, n
+  integer i0, n0
+
+  # Read lines of text as an array of characters.
+  write (fmt, '(''('', I10, ''A)'')') LINESZ
+
+  for (j = 0; j < strsiz; j = j + 1)
+    {
+      read (*, fmt) line
+      n0 = trimrt (line, LINESZ)
+      i0 = skipsp (line, 1, n0 + 1)
+      if (i0 == n0 + 1)
+        {
+          write (*, '(''blank line where a string should be'')')
+          stop
+        }
+      call addstq (strngs, istrng, line, i0, n0 - i0 + 1, i, n)
+      strs(STRI, j) = i
+      strs(STRN, j) = n
+    }
+end
+
+function stropc (str, i, n)
+
+  # Convert substring to an opcode.
+
+  implicit none
+
+  character str(*)
+  integer i, n
+  integer*1 stropc
+
+  stropc = -1
+  if (n == 2)
+    {
+      if (str(i) == 'l')
+        {
+          if (str(i + 1) == 't')
+            stropc = OPLT
+          else if (str(i + 1) == 'e')
+            stropc = OPLE
+        }
+      else if (str(i) == 'g')
+        {
+          if (str(i + 1) == 't')
+            stropc = OPGT
+          else if (str(i + 1) == 'e')
+            stropc = OPGE
+        }
+      else if (str(i) == 'e' && str(i + 1) == 'q')
+        stropc = OPEQ
+      else if (str(i) == 'n' && str(i + 1) == 'e')
+        stropc = OPNE
+      else if (str(i) == 'o' && str(i + 1) == 'r')
+        stropc = OPOR
+      else if (str(i) == 'j' && str(i + 1) == 'z')
+        stropc = OPJZ
+    }
+  else if (n == 3)
+    {
+      if (str(i) == 'a')
+        {
+          if (str(i + 1) == 'd' && str(i + 2) == 'd')
+            stropc = OPADD
+          else if (str(i + 1) == 'n' && str(i + 2) == 'd')
+            stropc = OPAND
+        }
+      else if (str(i) == 'm')
+        {
+          if (str(i + 1) == 'o' && str(i + 2) == 'd')
+            stropc = OPMOD
+          else if (str(i + 1) == 'u' && str(i + 2) == 'l')
+            stropc = OPMUL
+        }
+      else if (str(i) == 'n')
+        {
+          if (str(i + 1) == 'e' && str(i + 2) == 'g')
+            stropc = OPNEG
+          else if (str(i + 1) == 'o' && str(i + 2) == 't')
+            stropc = OPNOT
+        }
+      else if (str(i) == 's' && str(i + 1) == 'u' _
+                 && str(i + 2) == 'b')
+        stropc = OPSUB
+      else if (str(i) == 'd' && str(i + 1) == 'i' _
+                 && str(i + 2) == 'v')
+        stropc = OPDIV
+      else if (str(i) == 'j' && str(i + 1) == 'm' _
+                 && str(i + 2) == 'p')
+        stropc = OPJMP
+    }
+  else if (n == 4)
+    {
+      if (str(i) == 'p')
+        {
+          if (str(i + 1) == 'r' && str(i + 2) == 't')
+            {
+              if (str(i + 3) == 'c')
+                stropc = OPPRTC
+              else if (str(i + 3) == 'i')
+                stropc = OPPRTI
+              else if (str(i + 3) == 's')
+                stropc = OPPRTS
+            }
+          if (str(i + 1) == 'u' && str(i + 2) == 's' _
+                && str(i + 3) == 'h')
+            stropc = OPPUSH
+        }
+      else if (str(i) == 'h' && str(i + 1) == 'a' _
+                 && str(i + 2) == 'l' && str(i + 3) == 't')
+        stropc = OPHALT
+    }
+  else if (n == 5)
+    {
+      if (str(i) == 'f' && str(i + 1) == 'e' && str(i + 2) == 't' _
+            && str(i + 3) == 'c' && str(i + 4) == 'h')
+        stropc = OPFTCH
+      if (str(i) == 's' && str(i + 1) == 't' && str(i + 2) == 'o' _
+            && str(i + 3) == 'r' && str(i + 4) == 'e')
+        stropc = OPSTOR
+    }
+  if (stropc == -1)
+    {
+      write (*, '(''unrecognized opcode name'')')
+      stop
+    }
+end
+
+subroutine rdops (code)
+
+  # Read the opcodes and their immediate values.
+
+  implicit none
+
+  integer*1 code(0 : CODESZ - 1) # The byte code.
+
+  integer trimrt
+  integer skipsp
+  integer skipal
+  integer skipdg
+  integer skipd1
+  integer skipn1
+  integer strnat
+  integer strint
+  integer*1 stropc
+  character tolowr
+
+  character line(LINESZ)
+  character*20 fmt
+  integer stat
+  integer n
+  integer j
+  integer iaddr, jaddr          # Address index and size.
+  integer iopnm, jopnm          # Opcode name index and size.
+  integer iarg, jarg
+  integer addr
+  integer arg
+  integer*1 opcode
+
+  # Read lines of text as an array of characters.
+  write (fmt, '(''('', I10, ''A)'')') LINESZ
+
+  read (*, fmt, iostat = stat) line
+  while (stat == 0)
+    {
+      n = trimrt (line, LINESZ)
+
+      for (j = 1; j <= n; j = j + 1)
+        line(j) = tolowr (line(j))
+
+      iaddr = skipsp (line, 1, n + 1)
+      jaddr = skipdg (line, iaddr, n + 1)
+      addr = strnat (line, iaddr, jaddr - iaddr)
+
+      iopnm = skipsp (line, jaddr, n + 1)
+      jopnm = skipal (line, iopnm, n + 1)
+      opcode = stropc (line, iopnm, jopnm - iopnm)
+
+      if (opcode == OPPUSH || opcode == OPFTCH || opcode == OPSTOR _
+            || opcode == OPJMP || opcode == OPJZ)
+        {
+          iarg = skipn1 (line, jopnm, n + 1)
+          jarg = skipd1 (line, iarg, n + 1)
+          arg = strint (line, iarg, jarg - iarg)
+          call put5 (code, addr, opcode, arg)
+        }
+      else
+        call put1 (code, addr, opcode)
+
+      read (*, fmt, iostat = stat) line
+    }
+end
+
+subroutine rdcode (strs, strngs, istrng, code)
+
+  # Read and parse the "assembly" code.
+
+  implicit none
+
+  integer strs(1:STRSZ, 0 : MAXSTR - 1)
+  character strngs(STRNSZ)       # String pool.
+  integer istrng                 # String pool's next slot.
+  integer*1 code(0 : CODESZ - 1) # The byte code.
+
+  integer datsiz
+  integer strsiz
+
+  call rdhead (datsiz, strsiz)
+  if (MAXVAR < datsiz)
+    {
+      write (*, '(''too many variables'')')
+      stop
+    }
+  if (MAXSTR < strsiz)
+    {
+      write (*, '(''too many strings'')')
+      stop
+    }
+
+  call rdstrs (strs, strsiz, strngs, istrng)
+  call rdops (code)
+end
+
+#---------------------------------------------------------------------
+
+subroutine stkbin (sp)
+
+  implicit none
+
+  integer sp
+
+  if (sp < 3)
+    {
+      write (*, '(''stack underflow in binary operation'')')
+      stop
+    }
+end
+
+subroutine stkun (sp)
+
+  implicit none
+
+  integer sp
+
+  if (sp < 2)
+    {
+      write (*, '(''stack underflow in unary operation'')')
+      stop
+    }
+end
+
+function logl2i (b)
+
+  implicit none
+
+  logical b
+  integer logl2i
+
+  if (b)
+    logl2i = 1
+  else
+    logl2i = 0
+end
+
+subroutine rncode (strs, strngs, code, outbuf, noutbf)
+
+  # Run the code.
+
+  implicit none
+
+  integer strs(1:STRSZ, 0 : MAXSTR - 1)
+  character strngs(STRNSZ)       # String pool.
+  integer*1 code(0 : CODESZ - 1) # The byte code.
+  character outbuf(OUTLSZ)       # Output line buffer.
+  integer noutbf                 # Number of characters in outbuf.
+
+  integer logl2i
+  integer getimm
+  integer pop
+
+  integer stack(STCKSZ)
+  integer data(0 : MAXVAR - 1)
+  integer sp                    # Stack pointer.
+
+  integer pc                    # Program counter.
+  integer ip                    # Instruction pointer.
+  equivalence (pc, ip)          # LOL, use either name. :)
+
+  integer i, n
+  integer*1 opcode
+  logical done
+
+  sp = 1
+  ip = 0
+
+  done = .false.
+  while (!done)
+    {
+      if (ip < 0 || CODESZ <= ip)
+        {
+          write (*, '(''code address out of range'')')
+          stop
+        }
+      opcode = code(ip)
+      ip = ip + 1
+      if (opcode == OPADD)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = stack (sp - 1) + stack(sp)
+        }
+      else if (opcode == OPSUB)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = stack (sp - 1) - stack(sp)
+        }
+      else if (opcode == OPMUL)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = stack (sp - 1) * stack(sp)
+        }
+      else if (opcode == OPDIV)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = stack (sp - 1) / stack(sp)
+        }
+      else if (opcode == OPMOD)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = mod (stack (sp - 1), stack(sp))
+        }
+      else if (opcode == OPLT)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = logl2i (stack (sp - 1) < stack(sp))
+        }
+      else if (opcode == OPGT)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = logl2i (stack (sp - 1) > stack(sp))
+        }
+      else if (opcode == OPLE)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = logl2i (stack (sp - 1) <= stack(sp))
+        }
+      else if (opcode == OPGE)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = logl2i (stack (sp - 1) >= stack(sp))
+        }
+      else if (opcode == OPEQ)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = logl2i (stack (sp - 1) == stack(sp))
+        }
+      else if (opcode == OPNE)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = logl2i (stack (sp - 1) != stack(sp))
+        }
+      else if (opcode == OPAND)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = _
+            logl2i (stack (sp - 1) != 0 && stack(sp) != 0)
+        }
+      else if (opcode == OPOR)
+        {
+          call stkbin (sp)
+          sp = sp - 1
+          stack(sp - 1) = _
+            logl2i (stack (sp - 1) != 0 || stack(sp) != 0)
+        }
+      else if (opcode == OPNEG)
+        {
+          call stkun (sp)
+          stack(sp - 1) = -stack(sp - 1)
+        }
+      else if (opcode == OPNOT)
+        {
+          call stkun (sp)
+          stack(sp - 1) = logl2i (stack(sp - 1) == 0)
+        }
+      else if (opcode == OPPRTC)
+        {
+          call wrtchr (outbuf, noutbf, char (pop (stack, sp)))
+        }
+      else if (opcode == OPPRTI)
+        {
+          call wrtint (outbuf, noutbf, pop (stack, sp), 0)
+        }
+      else if (opcode == OPPRTS)
+        {
+          i = pop (stack, sp)
+          if (i < 0 || MAXSTR <= i)
+            {
+              write (*, '(''string address out of range'')')
+              stop
+            }
+          n = strs(STRN, i)
+          i = strs(STRI, i)
+          call wrtstr (outbuf, noutbf, strngs, i, n)
+        }
+      else if (opcode == OPFTCH)
+        {
+          i = getimm (code, ip)
+          ip = ip + 4
+          if (i < 0 || MAXVAR <= i)
+            {
+              write (*, '(''data address out of range'')')
+              stop
+            }
+          call push (stack, sp, data(i))
+        }
+      else if (opcode == OPSTOR)
+        {
+          i = getimm (code, ip)
+          ip = ip + 4
+          if (i < 0 || MAXVAR <= i)
+            {
+              write (*, '(''data address out of range'')')
+              stop
+            }
+          data(i) = pop (stack, sp)
+        }
+      else if (opcode == OPPUSH)
+        {
+          call push (stack, sp, getimm (code, ip))
+          ip = ip + 4
+        }
+      else if (opcode == OPJMP)
+        {
+          ip = ip + getimm (code, ip)
+        }
+      else if (opcode == OPJZ)
+        {
+          if (pop (stack, sp) == 0)
+            ip = ip + getimm (code, ip)
+          else
+            ip = ip + 4
+        }
+      else
+        {
+          # Halt on OPHALT or any unrecognized code.
+          done = .true.
+        }
+    }
+end
+
+#---------------------------------------------------------------------
+
+program vm
+
+  implicit none
+
+  integer strs(1:STRSZ, 0 : MAXSTR - 1)
+  character strngs(STRNSZ)       # String pool.
+  integer istrng                 # String pool's next slot.
+  integer*1 code(0 : CODESZ - 1) # The byte code.
+  character outbuf(OUTLSZ)       # Output line buffer.
+  integer noutbf                 # Number of characters in outbuf.
+
+  integer j
+
+  istrng = 1
+  noutbf = 0
+
+  for (j = 0; j < CODESZ; j = j + 1)
+    code(j) = OPHALT
+
+  call rdcode (strs, strngs, istrng, code)
+  call rncode (strs, strngs, code, outbuf, noutbf)
+
+  if (noutbf != 0)
+    call flushl (outbuf, noutbf)
+end
+
+######################################################################

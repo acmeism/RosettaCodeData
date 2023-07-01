@@ -1,0 +1,87 @@
+	LOC	Data_Segment
+	GREG	@
+buf	OCTA	0,0
+
+	GREG	@
+NL	BYTE	#a,0
+errh	BYTE	"Sorry, number ",0
+errt	BYTE	"is a quare.",0
+prtOk	BYTE	"No squares found below 1000000.",0
+
+i	IS	$1		% loop var.
+x	IS	$2		% computations
+y	IS	$3		%   ..
+z	IS	$4		%   ..
+t	IS	$5		% temp
+Ja	IS	$127		% return address
+
+	LOC	#100		% locate program
+	GREG	@
+
+// print integer of max. 7 digits to StdOut
+// primarily used to show the first 22 non squares
+// in advance the end of the buffer is filled with ' 0 '
+// reg x contains int to be printed
+bp	IS	$71
+0H	GREG	#0000000000203020
+prtInt	STO	0B,buf		% initialize buffer
+	LDA	bp,buf+7	% points after LSD
+				% REPEAT
+1H	SUB	bp,bp,1		%  move buffer pointer
+	DIV	x,x,10		%  divmod (x,10)
+	GET	t,rR		%  get remainder
+	INCL	t,'0'		%  make char digit
+	STB	t,bp		%  store digit
+	PBNZ	x,1B		% UNTIL no more digits
+	LDA	$255,bp
+	TRAP	0,Fputs,StdOut	% print integer
+	GO	Ja,Ja,0		% 'return'
+
+// function calculates non square
+// x = RF ( i )
+RF	FLOT	x,i		% convert i to float
+	FSQRT	x,0,x		% x = floor ( 0.5 + sqrt i )
+	FIX	x,x		% convert float to int
+	ADD	x,x,i		% x = i + floor ( 0.5 + sqrt i )
+	GO	Ja,Ja,0		% 'return'
+
+				% main (argc, argv) {
+// generate the first 22 non squares
+Main	SET	i,1		%  for ( i=1; i<=22; i++){
+1H	GO	Ja,RF		%   x =  RF (i)
+	GO	Ja,prtInt	%   print non square
+	INCL	i,1		%   i++
+	CMP	t,i,22		%   i<=22 ?
+	PBNP	t,1B		%  }
+	LDA	$255,NL
+	TRAP	0,Fputs,StdOut
+
+// check if RF (i) is a square for 0 < i < 1000000
+	SET	i,1000
+	MUL	i,i,i
+	SUB	i,i,1		% for ( i = 999999; i>0; i--)
+3H	GO	Ja,RF		%  x = RF ( i )
+// square test
+	FLOT	y,x		%  convert int x to float
+	FSQRT	z,3,y		%  z = floor ( sqrt ( int (x) ) )
+	FIX	z,z		%  z = cint z
+	MUL	z,z,z		%  z = z^2
+	CMP	t,x,z		%  x != (int sqrt x)^2 ?
+	PBNZ	t,2F		%  if yes then continue
+// it should not happen, but if a square is found
+	LDA	$255,errh	%  else print err-message
+	TRAP	0,Fputs,StdOut
+	GO	Ja,prtInt	%  show trespasser
+	LDA	$255,errt
+	TRAP	0,Fputs,StdOut
+	LDA	$255,NL
+	TRAP	0,Fputs,StdOut
+	TRAP	0,Halt,0
+
+2H	SUB	i,i,1		%  i--
+	PBNZ	i,3B		%  i>0? }
+	LDA	$255,prtOk	%
+	TRAP	0,Fputs,StdOut
+	LDA	$255,NL
+	TRAP	0,Fputs,StdOut
+	TRAP	0,Halt,0	% }

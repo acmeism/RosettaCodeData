@@ -1,0 +1,433 @@
+(*------------------------------------------------------------------*)
+
+#define ATS_DYNLOADFLAG 0
+#define ATS_PACKNAME "Rosetta_Code.bitmap_read_ppm_task"
+
+#include "share/atspre_staload.hats"
+
+staload "bitmap_task.sats"
+
+(* You need to staload bitmap_task.dats, so the ATS compiler will have
+   access to its implementations of templates. But we staload it
+   anonymously, so the programmer will not have access. *)
+staload _ = "bitmap_task.dats"
+
+staload "bitmap_read_ppm_task.sats"
+
+(*------------------------------------------------------------------*)
+
+datavtype magic_number_vt =
+| Netpbm_magic_number of int
+| Unknown_magic_number of ()
+
+fn {}
+read_magic_number (inpf : FILEref) : magic_number_vt =
+  let
+    val i = fileref_getc inpf
+  in
+    if i <> char2int0 'P' then
+      Unknown_magic_number ()
+    else
+      let
+        val i = fileref_getc inpf
+      in
+        if i < char2int0 '1' && char2int0 '7' < i then
+          Unknown_magic_number ()
+        else
+          Netpbm_magic_number (i - char2int0 '0')
+      end
+  end
+
+fn {}
+get_next_char (inpf : FILEref) : int =
+  let
+    fnx
+    get_next () : int =
+      let
+        val i = fileref_getc inpf
+      in
+        if i = char2int0 '#' then
+          skip_through_newline ()
+        else
+          i
+      end
+    and
+    skip_through_newline () : int =
+      let
+        val i = fileref_getc inpf
+      in
+        if i < 0 then
+          i
+        else if i = char2int0 '\n' then
+          get_next ()
+        else
+          skip_through_newline ()
+      end
+  in
+    get_next ()
+  end
+
+(* The only tokens we need to scan for, in P1 through P6, are unsigned
+   integers. P7 headers (Portable Arbitrary Map) have a completely
+   different arrangement, but we are not handling that. *)
+fn {}
+get_next_integer (inpf : FILEref)
+    (* A negative return value means we have reached the end. We do
+       not distinguish whitespace characters from anything else that
+       is not a digit or '#'. (Really I want to use intmax_t here,
+       rather than llint, but there is no intmax_t support in the
+       prelude. The ats2-xprelude package has support, but I am
+       avoiding the dependency. *)
+    : llint =
+  let
+    fnx
+    look_for_digit () : llint =
+      let
+        val i = get_next_char inpf
+      in
+        if i < char2int0 '0' || char2int0 '9' < i then
+          look_for_digit ()
+        else
+          read_digits (g0i2i (i - char2int0 '0'))
+      end
+    and
+    read_digits (x : llint) : llint =
+      let
+        val i = get_next_char inpf
+      in
+        if i < char2int0 '0' || char2int0 '9' < i then
+          (* I cannot find an "ungetc" in prelude/SATS/filebas.sats,
+             so I will use the foreign function interface directly. *)
+          let
+            typedef FILEstar = $extype"FILE *"
+            extern castfn FILEref2star : FILEref -<> FILEstar
+          in
+            ignoret ($extfcall (int, "ungetc", i, FILEref2star inpf));
+            x
+          end
+        else
+          let
+            val digit : llint = g0i2i (i - char2int0 '0')
+          in
+            read_digits ((10LL * x) + digit)
+          end
+      end
+  in
+    look_for_digit ()
+  end
+
+fn {}
+read_ppm_header (inpf : FILEref)
+    : Option_vt @(ullint, ullint, ullint) =
+  let
+    val width = get_next_integer inpf
+  in
+    if width < 0LL then
+      None_vt ()
+    else
+      let
+        val height = get_next_integer inpf
+      in
+        if height < 0LL then
+          None_vt ()
+        else
+          let
+            val maxval = get_next_integer inpf
+          in
+            if maxval < 0LL then
+              None_vt ()
+            else
+              begin
+                (* There is supposed to be a whitespace character (or
+                   comments and whitespace character) after the
+                   MAXVAL. We will accept anything, whitespace or
+                   not. *)
+                ignoret (fileref_getc inpf);
+
+                Some_vt @(g0i2u width, g0i2u height, g0i2u maxval)
+              end
+          end
+      end
+  end
+
+fn {}
+get_next_single_byte (inpf : FILEref) : llint =
+  let
+    val i = fileref_getc inpf
+  in
+    if i < 0 then
+      ~1LL
+    else
+      g0i2i i
+  end
+
+fn {}
+get_next_double_byte (inpf : FILEref) : llint =
+  let
+    val i1 = fileref_getc inpf
+  in
+    if i1 < 0 then
+      ~1LL
+    else
+      let
+        val i0 = fileref_getc inpf
+      in
+        if i0 < 0 then
+          ~1LL
+        else
+          let
+            val i1 : llint = g0i2i i1
+            and i0 : llint = g0i2i i0
+          in
+            (i1 * 256LL) + i0
+          end
+      end
+  end
+
+(*------------------------------------------------------------------*)
+(* Implementation is provided only for rgb24. *)
+
+extern castfn ull2sz : {i : int} ullint i -<> size_t i
+extern castfn ull2u : {i : int} ullint i -<> uint i
+extern castfn ull2u8 : ullint -<> uint8
+
+extern fn {}
+read_raw_ppm_rgb24 : $d2ctype (pixmap_read_ppm<rgb24>)
+
+extern fn {}
+read_plain_ppm_rgb24 : $d2ctype (pixmap_read_ppm<rgb24>)
+
+extern fn {}
+read_general_ppm_rgb24 : $d2ctype (pixmap_read_ppm<rgb24>)
+
+extern fn {}
+read_general$width () : [i : pos] size_t i
+
+extern fn {}
+read_general$height () : [i : pos] size_t i
+
+extern fn {}
+read_general$maxval () : [i : pos | i <= 65535] uint i
+
+extern fn {}
+read_general$next_value : FILEref -> llint
+
+implement
+pixmap_read_ppm<rgb24> inpf =
+  case+ read_magic_number inpf of
+  | ~ Unknown_magic_number () => None_vt ()
+  | ~ Netpbm_magic_number num =>
+    begin
+      case+ num of
+      | 6 => read_raw_ppm_rgb24 inpf
+      | 3 => read_plain_ppm_rgb24 inpf
+      | _ => None_vt
+    end
+
+implement {}
+read_raw_ppm_rgb24 inpf =
+  case+ read_ppm_header inpf of
+  | ~ None_vt () => None_vt ()
+  | ~ Some_vt @(width, height, maxval) =>
+    let
+      val width = g1ofg0 width
+      and height = g1ofg0 height
+      and maxval = g1ofg0 maxval
+    in
+      if (width < 1LLU) + (height < 1LLU) +
+            (maxval < 1LLU) + (65535LLU < maxval) then
+        None_vt ()
+      else
+        let
+          val w : Size_t = ull2sz width
+          val h : Size_t = ull2sz height
+          val maxval : uInt = ull2u maxval
+        in
+          if maxval = 255u then
+            let
+              val @(pfgc | pix) = pixmap_make<rgb24> (w, h)
+              val success =
+                load<rgb24> (inpf, pix, rgb24_make (255, 0, 0))
+            in
+              if ~success then
+                begin
+                  free (pfgc | pix);
+                  None_vt ()
+                end
+              else
+                Some_vt @(pfgc | pix)
+            end
+          else if maxval < 256u then
+            let
+              implement read_general$width<> () = w
+              implement read_general$height<> () = h
+              implement read_general$maxval<> () = maxval
+              implement
+              read_general$next_value<> inpf =
+                get_next_single_byte inpf
+            in
+              read_general_ppm_rgb24<> inpf
+            end
+          else
+            let
+              implement read_general$width<> () = w
+              implement read_general$height<> () = h
+              implement read_general$maxval<> () = maxval
+              implement
+              read_general$next_value<> inpf =
+                get_next_double_byte inpf
+            in
+              read_general_ppm_rgb24<> inpf
+            end
+        end
+    end
+
+implement {}
+read_plain_ppm_rgb24 inpf =
+  case+ read_ppm_header inpf of
+  | ~ None_vt () => None_vt ()
+  | ~ Some_vt @(width, height, maxval) =>
+    let
+      val width = g1ofg0 width
+      and height = g1ofg0 height
+      and maxval = g1ofg0 maxval
+    in
+      if (width < 1LLU) + (height < 1LLU) +
+            (maxval < 1LLU) + (65535LLU < maxval) then
+        None_vt ()
+      else
+        let
+          val w : Size_t = ull2sz width
+          val h : Size_t = ull2sz height
+          val maxval : uInt = ull2u maxval
+          implement read_general$width<> () = w
+          implement read_general$height<> () = h
+          implement read_general$maxval<> () = maxval
+          implement
+            read_general$next_value<> inpf =
+              get_next_integer inpf
+        in
+          read_general_ppm_rgb24<> inpf
+        end
+    end
+
+implement {}
+read_general_ppm_rgb24 inpf =
+  let
+    val [w : int] w = read_general$width<> ()
+    and [h : int] h = read_general$height<> ()
+    and maxval = read_general$maxval<> ()
+
+    fn
+    scale_value (v : ullint) : uint8 =
+      if maxval = 255u then
+        ull2u8 v
+      else
+        let
+          val maxval : ullint = g0u2u maxval
+          val v = 255LLU * v
+          val v1 = v / maxval
+          and v0 = v mod maxval
+        in
+          if v0 + v0 < maxval then
+            ull2u8 v1
+          else if maxval < v0 + v0 then
+            ull2u8 (succ v1)
+          else if v1 mod 2LLU = 0LLU then
+            ull2u8 v1
+          else
+            ull2u8 (succ v1)
+        end
+
+    (* For easier programming, start with a fully initialized
+       pixmap. The routine probably is I/O-bound, anyway. *)
+    val @(pfgc | pix) =
+      pixmap_make<rgb24> (w, h, rgb24_make (255, 0, 0))
+
+    macdef between (i, j, v) =
+      let
+        val v = ,(v)
+      in
+        (,(i) <= v) * (v <= ,(j))
+      end
+
+    fun
+    loop {x, y : nat | x <= w; y <= h}
+         .<h - y, w - x>.
+         (pix : !pixmap (rgb24, w, h),
+          x   : size_t x,
+          y   : size_t y)
+        : bool (* success *) =
+      if y = h then
+        true
+      else if x = w then
+        loop (pix, i2sz 0, succ y)
+      else
+        let
+          val maxv : llint = g0u2i maxval
+          val vr = read_general$next_value<> inpf
+        in
+          if ~between (0LL, maxv, vr) then
+            false
+          else
+            let
+              val vg = read_general$next_value<> inpf
+            in
+              if ~between (0LL, maxv, vg) then
+                false
+              else
+                let
+                  val vb = read_general$next_value<> inpf
+                in
+                  if ~between (0LL, maxv, vb) then
+                    false
+                  else
+                    let
+                      val r = scale_value (g0i2u vr)
+                      and g = scale_value (g0i2u vg)
+                      and b = scale_value (g0i2u vb)
+                    in
+                      pix[x, y] := rgb24_make @(r, g, b);
+                      loop (pix, succ x, y)
+                    end
+                end
+            end
+        end
+
+    val success = loop (pix, i2sz 0, i2sz 0)
+  in
+    if ~success then
+      begin
+        free (pfgc | pix);
+        None_vt ()
+      end
+    else
+      Some_vt @(pfgc | pix)
+  end
+
+(*------------------------------------------------------------------*)
+
+#ifdef BITMAP_READ_PPM_TASK_TEST #then
+
+staload "bitmap_write_ppm_task.sats"
+staload _ = "bitmap_write_ppm_task.dats"
+
+(* The test program converts a PPM at standard input to a raw PPM with
+   MAXVAL 255. *)
+implement
+main0 () =
+  let
+    val pix_opt = pixmap_read_ppm<rgb24> stdin_ref
+  in
+    case+ pix_opt of
+    | ~ None_vt () => ()
+    | ~ Some_vt @(pfgc | pix) =>
+      begin
+        ignoret (pixmap_write_ppm (stdout_ref, pix));
+        free (pfgc | pix)
+      end
+  end
+
+#endif
+
+(*------------------------------------------------------------------*)

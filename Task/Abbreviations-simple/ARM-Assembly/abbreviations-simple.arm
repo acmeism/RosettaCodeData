@@ -1,0 +1,409 @@
+/* ARM assembly Raspberry PI  */
+/*  program abbrSimple.s   */
+/* store list of command in a file */
+/* and run the program  abbrSimple command.file */
+
+/* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+.equ STDIN,  0     @ Linux input console
+.equ STDOUT, 1     @ Linux output console
+.equ EXIT,   1     @ Linux syscall
+.equ READ,   3     @ Linux syscall
+.equ WRITE,  4     @ Linux syscall
+.equ OPEN,   5     @ Linux syscall
+.equ CLOSE,  6     @ Linux syscall
+
+.equ O_RDWR,    0x0002        @ open for reading and writing
+
+.equ BUFFERSIZE,   1000
+.equ NBMAXIELEMENTS, 100
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* command structure      */
+    .struct  0
+command_name_address:                   @ name
+    .struct  command_name_address + 4
+command_min:                            @ minimum letters
+    .struct  command_min + 4
+command_end:
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessTitre:            .asciz "Nom du fichier : "
+szCarriageReturn:      .asciz "\n"
+szMessErreur:          .asciz "Error detected.\n"
+szMessErrBuffer:       .asciz "buffer size too less !!"
+szMessCtrlCom:         .asciz "Command : @   minimum : @ \n"
+szMessErrorAbr:        .asciz "*error*"
+szMessInput:           .asciz "Enter command (or <ctrl-c> to stop) : "
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+sZoneConv:      .skip 24
+iAdrFicName:    .skip 4
+iTabAdrCmd:     .skip command_end * NBMAXIELEMENTS
+sBufferCmd:     .skip BUFFERSIZE
+sBuffer:        .skip BUFFERSIZE
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            @ INFO: main
+    mov r0,sp                    @ stack address for load parameter
+    bl traitFic                  @ read file and store value in array
+    cmp r0,#-1
+    beq 100f                     @ error ?
+    ldr r0,iAdriTabAdrCmd
+    bl controlLoad
+
+1:
+    ldr r0,iAdrszMessInput       @ display input message
+    bl affichageMess
+    mov r0,#STDIN                @ Linux input console
+    ldr r1,iAdrsBuffer           @ buffer address
+    mov r2,#BUFFERSIZE           @ buffer size
+    mov r7, #READ                @ request to read datas
+    svc 0                        @ call system
+    sub r0,r0,#1
+    mov r2,#0
+    strb r2,[r1,r0]              @ replace character 0xA by zéro final
+    cmp r0,#0                    @ null string ?
+    moveq r0,r1
+    beq 2f
+    ldr r0,iAdrsBuffer
+    ldr r1,iAdriTabAdrCmd
+    bl controlCommand            @ control text command
+2:
+    mov r2,r0                    @ display result
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    b 1b                         @ loop
+
+99:
+    ldr r0,iAdrszMessErrBuffer
+    bl affichageMess
+100:                                 @ standard end of the program
+    mov r0, #0                       @ return code
+    mov r7, #EXIT                    @ request to exit program
+    svc #0                           @ perform the system call
+
+iAdrszCarriageReturn:      .int szCarriageReturn
+iAdrszMessErrBuffer:       .int szMessErrBuffer
+iAdrsZoneConv:             .int sZoneConv
+iAdrszMessInput:           .int szMessInput
+/******************************************************************/
+/*      control abbrevation command                               */
+/******************************************************************/
+/* r0 contains string input command */
+/* r1 contains address table string command */
+controlCommand:                   @ INFO: controlCommand
+    push {r1-r8,lr}               @ save  registers
+    mov r8,r0
+    mov r9,r1
+    mov r10,#command_end          @ length item
+    bl computeLength              @ length input command
+    mov r4,r0                     @ save length input
+    mov r2,#0                     @ indice
+    mov r3,#0                     @ find counter
+1:
+    mov r0,r8
+    mla r6,r2,r10,r9              @ compute address
+    ldr r1,[r6,#command_name_address]         @ load a item
+    cmp r1,#0                     @ end ?
+    beq 5f
+    bl comparStringSpe            @
+    cmp r0,#0                     @ no found other search
+    beq 4f
+    ldr r5,[r6,#command_min]
+    cmp r5,#0                     @ minimum = zéro ?
+    ble 2f
+    cmp r4,r5                     @ input < command minimum letters
+    blt 4f                        @ no correct
+
+    add r3,r3,#1                  @ else increment counter
+    mov r7,r1                     @ and save address command
+    b 4f
+2:
+    mov r0,r1
+    bl computeLength              @ length input command
+    cmp r4,r0                     @ length command input = length command
+    bne 4f                        @ no correct
+    add r3,r3,#1                  @ else increment counter
+    mov r7,r1                     @ and save address command
+4:
+    add r2,r2,#1                  @ increment indice
+    b 1b                          @ and loop
+5:
+    cmp r3,#1                     @ no find or multiple find ?
+    bne 99f                       @ error
+                                  @ one find
+    mov r0,r7                     @ length command table
+    bl computeLength
+    cmp r4,r0                     @ length input > command ?
+    bgt 99f                       @ error
+
+    mov r4,#0x20                  @ 5 bit to 1
+    mov r2,#0
+6:
+    ldrb r3,[r7,r2]
+    cmp r3,#0
+    beq 7f
+    bic r3,r3,r4                  @ convert to capital letter
+    strb r3,[r8,r2]
+    add r2,r2,#1
+    b 6b
+7:
+    strb r3,[r8,r2]
+    mov r0,r8                     @ return string input address
+    b 100f
+99:
+    ldr r0,iAdrszMessErrorAbr     @ return string "error"
+100:
+    pop {r1-r8,lr}                @ restaur registers
+    bx lr                         @return
+iAdrszMessErreur:           .int szMessErreur
+iAdrszMessErrorAbr:         .int szMessErrorAbr
+/******************************************************************/
+/*     comparaison first letters String                                          */
+/******************************************************************/
+/* r0 contains first String   */
+/* r1 contains second string */
+/* r0 return 0 if not find else returns number letters OK */
+comparStringSpe:
+    push {r1-r6,lr}           @ save  register
+    mov r2,#0
+1:
+    ldrb r3,[r0,r2]           @ input
+    orr r4,r3,#0x20           @ convert capital letter
+    ldrb r5,[r1,r2]           @ table
+    orr r6,r5,#0x20           @ convert capital letter
+    cmp r4,r6
+    bne 2f
+    cmp r3,#0
+    beq 3f
+    add r2,r2,#1
+    b 1b
+2:
+   cmp r3,#0                  @ fist letters Ok
+   beq 3f
+   mov r0,#0                  @ no ok
+   b 100f
+3:
+   mov r0,r2
+100:
+    pop {r1-r6,lr}                     @ restaur registers
+    bx lr                        @return
+/******************************************************************/
+/*     compute length  String                                          */
+/******************************************************************/
+/* r0 contains  String   */
+/* r0 return length */
+computeLength:                   @ INFO: functionFN
+    push {r1-r2,lr}              @ save  register
+    mov r1,#0
+1:
+    ldrb r2,[r0,r1]
+    cmp r2,#0                    @ end ?
+    moveq r0,r1                  @ return length in r0
+    beq 100f
+    add r1,r1,#1
+    b 1b
+100:
+    pop {r1-r2,lr}               @ restaur registers
+    bx lr                        @return
+
+/******************************************************************/
+/*     read file                                                   */
+/******************************************************************/
+/* r0 contains address stack begin           */
+traitFic:                             @ INFO: traitFic
+    push {r1-r8,fp,lr}                @ save  registers
+    mov fp,r0                         @  fp <- start address
+    ldr r4,[fp]                       @ number of Command line arguments
+    cmp r4,#1
+    movle r0,#-1
+    ble 99f
+    add r5,fp,#8                      @ second parameter address
+    ldr r5,[r5]
+    ldr r0,iAdriAdrFicName
+    str r5,[r0]
+    ldr r0,iAdrszMessTitre
+    bl affichageMess                  @ display string
+    mov r0,r5
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess                  @ display carriage return
+
+    mov r0,r5                         @ file name
+    mov r1,#O_RDWR                    @ flags
+    mov r2,#0                         @ mode
+    mov r7, #OPEN                     @ call system OPEN
+    svc 0
+    cmp r0,#0                         @ error ?
+    ble 99f
+    mov r8,r0                         @ File Descriptor
+    ldr r1,iAdrsBufferCmd             @ buffer address
+    mov r2,#BUFFERSIZE                @ buffer size
+    mov r7,#READ                      @ read file
+    svc #0
+    cmp r0,#0                         @ error ?
+    blt 99f
+    @ extraction datas
+    ldr r1,iAdrsBufferCmd             @ buffer address
+    add r1,r0
+    mov r0,#0                         @ store zéro final
+    strb r0,[r1]
+    ldr r0,iAdriTabAdrCmd             @ key string command table
+    ldr r1,iAdrsBufferCmd             @ buffer address
+    bl extracDatas
+                                      @ close file
+    mov r0,r8
+    mov r7, #CLOSE
+    svc 0
+    mov r0,#0
+    b 100f
+99:                                   @ error
+    ldr r1,iAdrszMessErreur           @ error message
+    bl   displayError
+    mov r0,#-1
+100:
+    pop {r1-r8,fp,lr}                 @ restaur registers
+    bx lr                             @return
+iAdriAdrFicName:              .int iAdrFicName
+iAdrszMessTitre:              .int szMessTitre
+iAdrsBuffer:                  .int sBuffer
+iAdrsBufferCmd:               .int sBufferCmd
+iAdriTabAdrCmd:               .int iTabAdrCmd
+/******************************************************************/
+/*     extrac digit file buffer                                   */
+/******************************************************************/
+/* r0 contains strings address           */
+/* r1 contains buffer address         */
+extracDatas:                     @ INFO: extracDatas
+    push {r1-r8,lr}              @ save  registers
+    mov r7,r0
+    mov r6,r1
+    mov r8,#0                    @ top command name
+    mov r2,#0                    @ string buffer indice
+    mov r4,r1                    @ start string
+    mov r5,#0                    @ string index
+1:
+    ldrb r3,[r6,r2]
+    cmp r3,#0
+    beq 4f                       @ end
+    cmp r3,#0xA
+    beq 2f
+    cmp r3,#' '                  @ end string
+    beq 3f
+    add r2,#1
+    b 1b
+2:
+    mov r3,#0
+    strb r3,[r6,r2]
+    ldrb r3,[r6,r2]
+    cmp r3,#0xD
+    addeq r2,#2
+    addne r2,#1
+    b 4f
+
+3:
+    mov r3,#0
+    strb r3,[r6,r2]
+    add r2,#1
+4:
+    mov r0,r4
+    ldrb r1,[r0]                @ load first byte
+    cmp r1,#'0'                 @ it is à digit ?
+    blt 5f
+    cmp r1,#'9'
+    bgt 5f
+    mov r0,r1
+    mov r1,#command_end
+    mla r1,r5,r1,r7              @ compute address to store
+    mov r0,r4
+    bl conversionAtoD            @ conversion ascii digit
+    str r0,[r1,#command_min]     @ and store in minimum
+    mov r8,#0                    @ line command ok
+    add r5,#1                    @ increment indice
+    b 7f
+5:
+    cmp r8,#0                    @ other name ?
+    beq 6f
+    mov r0,#0                    @ yes store zéro in minimum in prec
+    mov r1,#command_end
+    mla r1,r5,r1,r7
+    add r1,r1,#command_min
+    str r0,[r1]
+    add r5,#1                    @ and increment indice
+6:
+    mov r8,#1                    @ load name
+    mov r1,#command_end
+    mla r1,r5,r1,r7              @ store name in table
+    str r4,[r1,#command_name_address]
+7:                               @ loop suppress spaces
+    ldrb r3,[r6,r2]
+    cmp r3,#0
+    beq 100f
+    cmp r3,#' '
+    addeq r2,r2,#1
+    beq 7b
+
+    add r4,r6,r2                 @ new start address
+    b 1b
+100:
+    pop {r1-r8,lr}               @ restaur registers
+    bx lr                        @return
+/******************************************************************/
+/*     control load                                      */
+/******************************************************************/
+/* r0 contains string table           */
+controlLoad:
+    push {r1-r6,lr}              @ save  registers
+    mov r5,r0
+    mov r6,#0
+    mov r2,#command_end
+1:
+    mla r3,r6,r2,r5             @ compute item address
+    ldr r1,[r3,#command_name_address]
+    cmp r1,#0
+    beq 100f
+    ldr r0,iAdrszMessCtrlCom
+    bl strInsertAtCharInc
+    mov r4,r0
+    ldr r0,[r3,#command_min]
+    ldr r1,iAdrsZoneConv
+    bl conversion10              @ call decimal conversion
+    mov r0,r4
+    ldr r1,iAdrsZoneConv         @ insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess             @ display message
+
+    add r6,r6,#1
+    b 1b
+
+100:
+    pop {r1-r6,lr}               @ restaur registers
+    bx lr                        @return
+iAdrszMessCtrlCom:       .int szMessCtrlCom
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

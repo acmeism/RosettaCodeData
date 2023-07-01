@@ -1,0 +1,12 @@
+SCREEN 12
+WINDOW (-2.67, -2!)-(2.67, 2!)
+PI = 4 * ATN(1)
+H = PI / 40
+A = .2: B = .05
+PSET (A, 0)
+FOR I = 0 TO 400
+    T = I * H
+    X = (A + B * T) * COS(T)
+    Y = (A + B * T) * SIN(T)
+    LINE -(X, Y)
+NEXT

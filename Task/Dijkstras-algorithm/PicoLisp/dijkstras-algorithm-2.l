@@ -1,0 +1,11 @@
+(neighbor 'a 'b 7)
+(neighbor 'a 'c 9)
+(neighbor 'a 'f 14)
+(neighbor 'b 'c 10)
+(neighbor 'b 'd 15)
+(neighbor 'c 'd 11)
+(neighbor 'c 'f 2)
+(neighbor 'd 'e 6)
+(neighbor 'e 'f 9)
+
+(dijkstra 'a 'e)

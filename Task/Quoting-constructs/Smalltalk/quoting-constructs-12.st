@@ -1,0 +1,4 @@
+#{
+    foo:  <someConstant>
+    bar:  <someConstant>
+}

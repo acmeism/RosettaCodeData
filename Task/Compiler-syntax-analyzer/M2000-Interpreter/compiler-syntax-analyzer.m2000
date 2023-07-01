@@ -1,0 +1,372 @@
+Module syntax_analyzer(b$){
+	enum tokens {
+		Op_add, Op_subtract, Op_not=5, Op_multiply=10, Op_divide, Op_mod,
+		Op_negate,  Op_less, Op_lessequal, Op_greater, Op_greaterequal,
+		Op_equal, Op_notequal, Op_and, Op_or, Op_assign=100, Keyword_if=110,
+		Keyword_else, Keyword_while, Keyword_print, Keyword_putc, LeftParen, RightParen,
+		LeftBrace, RightBrace, Semicolon, Comma, Identifier, Integer, String, End_of_input
+	}
+	
+	Inventory precedence=Op_multiply:=13, Op_divide:=13, Op_mod:=13, Op_add:=12, Op_subtract:=12
+	Append  precedence, Op_negate:=14, Op_not:=14, Op_less:=10, Op_lessequal:=10, Op_greater:=10
+	Append  precedence, Op_greaterequal:=10, Op_equal:=9, Op_notequal:=9, Op_assign:=-1, Op_and:=5
+	Append  precedence, Op_or:=4
+	
+	Inventory symbols=Op_multiply:="Multiply", Op_divide:="Divide", Op_mod:="Mod", Op_add:="Add"
+	Append  symbols, Op_negate:="Negate", Op_not:="Not", Op_less:="Less", Op_subtract:="Subtract"
+	Append  symbols, Op_lessequal:="LessEqual", Op_greater:="Greater", Op_greaterequal:="GreaterEqual"
+	Append  symbols, Op_equal:="Equal", Op_notequal:="NotEqual",  Op_and:="And", Op_or:="Or"
+	
+	def lineNo, ColumnNo, m, line$, a, lim, cur=-1
+	const nl$=chr$(13)+chr$(10), Ansi=3
+	Dim lex$()
+	lex$()=piece$(b$,chr$(13)+chr$(10))
+	lim=dimension(lex$(),1)-1
+	op=End_of_input
+	flush
+	k=0
+	Try {
+		push (,)   ' Null
+		getone(&op)
+		repeat
+		stmt(&op)
+		shift 2  ' swap two top items
+		push ("Sequence", array, array)
+		k++
+		until op=End_of_Input
+	}
+	er$=error$
+	if er$<>"" then print er$ : flush: break
+	Print "Ast"
+	Document Output$
+	prt_ast()
+	clipboard Output$
+	Save.Doc Output$, "parse.t", Ansi
+	document parse$
+	Load.Doc parse$,"parse.t", Ansi
+	Report parse$
+	
+	sub prt_ast(t)
+		if len(t)<1 then
+			Output$=";"+nl$
+		else.if len(t)=3 then
+			Output$=t#val$(0) +nl$
+			prt_ast(t#val(1)) : prt_ast(t#val(2))
+		else
+			Output$=t#val$(0) +nl$
+		end if
+	end sub
+	sub expr(p)   ' only a number
+		local x=(,), prev=op
+		if  op>=Identifier then
+			x=(line$,)
+			getone(&op)
+		else.if op=LeftParen then
+			paren_exp()
+			x=array
+		else.if op<10 then
+			getone(&op)
+			expr(precedence(int(Op_negate)))
+			read local y
+			if prev=Op_add then
+				x=y
+			else
+				if prev=Op_subtract then prev=Op_negate
+				x=(symbols(prev), y,(,))
+			End if
+		else
+			 {error "??? "+eval$(op)}
+		end if
+		local prec
+		while exist(precedence, int(op))
+			prev=op : prec=eval(precedence)
+			if prec<14 and prec>=p else exit
+			getone(&op)
+			expr(prec+1)  ' all operators are left associative (use prec for right a.)
+			x=(symbols(int(prev)), x, array)
+		End While
+		Push x
+	end sub
+	sub paren_exp()
+		expected(LeftParen)
+		getone(&op)
+		expr(0)
+		expected(RightParen)
+		getone(&op)
+	end sub
+	sub stmt(&op)
+		local t=(,)
+		if op=Identifier then
+			t=(line$)
+			getone(&op)
+			expected(Op_assign)
+			getone(&op)
+			expr(0)
+			read local rightnode
+			Push ("Assign",t,rightnode)
+			expected(Semicolon)
+			getone(&op)
+		else.if op=Semicolon then
+			getone(&op)
+			Push (";",)
+		else.if op=Keyword_print then
+			getone(&op)
+			expected(LeftParen)
+			repeat
+				getone(&op)
+				if op=String then
+					Push ("Prts",(line$,),(,))
+					getone(&op)
+				else
+					expr(0)
+					Push ("Prti", array,(,))
+				end if
+				t=("Sequence", t, array)
+			until op<>Comma
+			expected(RightParen)
+			getone(&op)
+			expected(Semicolon)
+			getone(&op)
+			push t
+		else.if op=Keyword_while then
+			getone(&op)
+			paren_exp()
+			stmt(&op)
+			shift 2
+			Push ("While",array, array)
+		else.if op=Keyword_if then
+			getone(&op)
+			paren_exp()
+			stmt(&op)
+			local s2=(,)
+			if op=Keyword_else then
+				getone(&op)
+				stmt(&op)
+				read s2
+			end if
+			shift 2
+			Push ("If",array ,("If",array,s2))
+		else.if op=Keyword_putc then
+			getone(&op)
+			paren_exp()
+			Push ("Prtc",array,t)
+			expected(Semicolon)
+			getone(&op)
+		else.if op=LeftBrace then
+			Brace()
+		else
+			error "Unkown Op"	
+		end if
+	end sub
+	Sub Brace()
+			getone(&op)
+			while op<>RightBrace and op<>End_of_input
+				stmt(&op)
+				t=("Sequence", t, array)
+			end while
+			expected(RightBrace)
+			getone(&op)
+			push t
+	End Sub
+	Sub expected(what)
+		if not op=what then {Error "Expected "+eval$(what)+str$(LineNo)+","+Str$(ColumnNo)}
+	End Sub
+	sub getone(&op)
+		op=End_of_input
+		while cur<lim
+		cur++
+		line$=trim$(lex$(cur))
+		if line$<>"" then exit
+		end while
+		if cur=lim then exit sub
+		LineNo=Val(line$,"int",m)
+		line$=mid$(line$, m)
+		ColumnNo=Val(line$,"int",m)
+		line$=trim$(mid$(line$, m))
+		Rem : Print LineNo, ColumnNo
+		m=instr(line$," ")
+		if m>0 then op=Eval("."+leftpart$(line$, " ")) else op=Eval("."+line$)
+	end sub
+}
+
+syntax_analyzer {
+         1         1 LeftBrace
+         5         5 Identifier left_edge
+         5        17 Op_assign
+         5        19 Op_subtract
+         5        20 Integer 420
+         5        23 Semicolon
+         6         5 Identifier right_edge
+         6        17 Op_assign
+         6        20 Integer 300
+         6        23 Semicolon
+         7         5 Identifier top_edge
+         7        17 Op_assign
+         7        20 Integer 300
+         7        23 Semicolon
+         8         5 Identifier bottom_edge
+         8        17 Op_assign
+         8        19 Op_subtract
+         8        20 Integer 300
+         8        23 Semicolon
+         9         5 Identifier x_step
+         9        17 Op_assign
+         9        22 Integer 7
+         9        23 Semicolon
+        10         5 Identifier y_step
+        10        17 Op_assign
+        10        21 Integer 15
+        10        23 Semicolon
+        12         5 Identifier max_iter
+        12        17 Op_assign
+        12        20 Integer 200
+        12        23 Semicolon
+        14         5 Identifier y0
+        14         8 Op_assign
+        14        10 Identifier top_edge
+        14        18 Semicolon
+        15         5 Keyword_while
+        15        11 LeftParen
+        15        12 Identifier y0
+        15        15 Op_greater
+        15        17 Identifier bottom_edge
+        15        28 RightParen
+        15        30 LeftBrace
+        16         9 Identifier x0
+        16        12 Op_assign
+        16        14 Identifier left_edge
+        16        23 Semicolon
+        17         9 Keyword_while
+        17        15 LeftParen
+        17        16 Identifier x0
+        17        19 Op_less
+        17        21 Identifier right_edge
+        17        31 RightParen
+        17        33 LeftBrace
+        18        13 Identifier y
+        18        15 Op_assign
+        18        17 Integer 0
+        18        18 Semicolon
+        19        13 Identifier x
+        19        15 Op_assign
+        19        17 Integer 0
+        19        18 Semicolon
+        20        13 Identifier the_char
+        20        22 Op_assign
+        20        24 Integer 32
+        20        27 Semicolon
+        21        13 Identifier i
+        21        15 Op_assign
+        21        17 Integer 0
+        21        18 Semicolon
+        22        13 Keyword_while
+        22        19 LeftParen
+        22        20 Identifier i
+        22        22 Op_less
+        22        24 Identifier max_iter
+        22        32 RightParen
+        22        34 LeftBrace
+        23        17 Identifier x_x
+        23        21 Op_assign
+        23        23 LeftParen
+        23        24 Identifier x
+        23        26 Op_multiply
+        23        28 Identifier x
+        23        29 RightParen
+        23        31 Op_divide
+        23        33 Integer 200
+        23        36 Semicolon
+        24        17 Identifier y_y
+        24        21 Op_assign
+        24        23 LeftParen
+        24        24 Identifier y
+        24        26 Op_multiply
+        24        28 Identifier y
+        24        29 RightParen
+        24        31 Op_divide
+        24        33 Integer 200
+        24        36 Semicolon
+        25        17 Keyword_if
+        25        20 LeftParen
+        25        21 Identifier x_x
+        25        25 Op_add
+        25        27 Identifier y_y
+        25        31 Op_greater
+        25        33 Integer 800
+        25        37 RightParen
+        25        39 LeftBrace
+        26        21 Identifier the_char
+        26        30 Op_assign
+        26        32 Integer 48
+        26        36 Op_add
+        26        38 Identifier i
+        26        39 Semicolon
+        27        21 Keyword_if
+        27        24 LeftParen
+        27        25 Identifier i
+        27        27 Op_greater
+        27        29 Integer 9
+        27        30 RightParen
+        27        32 LeftBrace
+        28        25 Identifier the_char
+        28        34 Op_assign
+        28        36 Integer 64
+        28        39 Semicolon
+        29        21 RightBrace
+        30        21 Identifier i
+        30        23 Op_assign
+        30        25 Identifier max_iter
+        30        33 Semicolon
+        31        17 RightBrace
+        32        17 Identifier y
+        32        19 Op_assign
+        32        21 Identifier x
+        32        23 Op_multiply
+        32        25 Identifier y
+        32        27 Op_divide
+        32        29 Integer 100
+        32        33 Op_add
+        32        35 Identifier y0
+        32        37 Semicolon
+        33        17 Identifier x
+        33        19 Op_assign
+        33        21 Identifier x_x
+        33        25 Op_subtract
+        33        27 Identifier y_y
+        33        31 Op_add
+        33        33 Identifier x0
+        33        35 Semicolon
+        34        17 Identifier i
+        34        19 Op_assign
+        34        21 Identifier i
+        34        23 Op_add
+        34        25 Integer 1
+        34        26 Semicolon
+        35        13 RightBrace
+        36        13 Keyword_putc
+        36        17 LeftParen
+        36        18 Identifier the_char
+        36        26 RightParen
+        36        27 Semicolon
+        37        13 Identifier x0
+        37        16 Op_assign
+        37        18 Identifier x0
+        37        21 Op_add
+        37        23 Identifier x_step
+        37        29 Semicolon
+        38         9 RightBrace
+        39         9 Keyword_putc
+        39        13 LeftParen
+        39        14 Integer 10
+        39        18 RightParen
+        39        19 Semicolon
+        40         9 Identifier y0
+        40        12 Op_assign
+        40        14 Identifier y0
+        40        17 Op_subtract
+        40        19 Identifier y_step
+        40        25 Semicolon
+        41         5 RightBrace
+        42         1 RightBrace
+        43         1 End_of_Input
+}

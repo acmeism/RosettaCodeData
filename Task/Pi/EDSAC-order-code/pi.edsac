@@ -1,0 +1,219 @@
+[EDSAC program, Initial Orders 2.
+ Calculates digits of pi by spigot algorithm.
+ Easily edited to calculate digits of e (see "if pi" and "if e" in comments).
+ Based on http://pi314.net/eng/goutte.php
+ See also https://www.cut-the-knot.org/Curriculum/Algorithms/SpigotForPi.shtml
+
+ Uses 17-bit values throughout.
+ Array index and counters are stored in the address field,
+   i.e. with the least significant bit in bit 1.
+ For integer arithmetic, the least significant bit is bit 0.
+
+ Variables don't need to be initialized at load time, so they overwrite
+ locations 6..12 of initial orders to save space.]
+      [6]   P      F  [index into remainder array]
+      [7]   P      F  [carry in the spigot algorithm]
+      [8]   P      F  [negative count of digits]
+      [9]   P      F  [pending digit, always < 9]
+     [10]   P      F  [negative count of pending 9's]
+     [11]   P      F  [9 or 0 in top 5 bits, for printing]
+     [12]   P      F  [negative count of characters in current line]
+
+[Array corresponding to Remainder row on http://pi314.net/eng/goutte.php]
+            T   53 K  [refer to array via B parameter]
+            P   13 F  [start array immediately after variables]
+
+ [Subroutine for short (17-bit) integer division.
+  Input:  dividend at 4F, divisor at 5F.
+  Output: remainder at 4F, quotient at 5F.
+  Working locations 0F, 1F.  37 locations.]
+            T  987 K
+  GKA3FT34@A5FUFT35@A4FRDS35@G13@T1FA35@LDE4@T1FT5FA4FS35@G22@
+  T4FA5FA36@T5FT1FAFS35@E34@T1FA35@RDT35@A5FLDT5FE15@EFPFPD
+
+            T  845 K
+            G      K
+ [Constants]
+ [Enter the editable numbers as addresses, e.g. P 100 F for 100.
+  Reducing the maximum array index will make the program take less time.
+  A maximum index of 831 (i.e. using all available memory) will give
+  252 correct digits of pi, or 2070 correct digits of e.]
+      [0]   P  831 F  [maximum array index <-- EDIT HERE, don't exceed 831]
+      [1]   P  252 F  [number of digits    <-- EDIT HERE]
+      [2]   P   72 F  [digits per line     <-- EDIT HERE]
+      [3]   P      D  [short-value 1]
+      [4]   P    5 F  [short-value 10]
+      [5]   J      F  [10*(2^12)]
+      [6]   X      F  [add to T order to make V order]
+      [7]   M      F  [used to convert T order to A order]
+      [8]   #      F  [figures shift (for printer)]
+      [9]   @      F  [carriage return]
+     [10]   &      F  [line feed]
+
+ [Main routine. Enter with acc = 0.]
+     [11]   O    8 @  [set printer to figures; also used to print '9']
+            S    2 @  [load negative characters per line]
+            T   12 F  [initialize character count]
+            S    1 @  [load negated number of digits]
+            T    8 F  [initialize digit count]
+            T   10 F  [clear negative count of 9's]
+            S    2 F  [load -2 (any value < -1 would do)]
+            T    9 F  [initialize digit buffer]
+       [Start algorithm: fill the remainder array with 2's (or 1's for e)
+        The code is a bit neater if we work backwards.]
+            A      @  [maximum index]
+     [20]   A   81 @  [make T order for array entry]
+            T   23 @  [plant in code]
+[if pi]     A    2 F  [acc := 2]
+[if e]     [A    3 @] [acc := 1]
+     [23]   T      F  [store in array entry]
+            A   23 @  [dec address in array]
+            S    2 F
+            S   81 @  [finished array?]
+            E   20 @  [loop back if not
+
+        Outer loop. Here for next digit.]
+     [28]   T      F  [clear acc]
+        [Multiply remainder array by 10.
+         NB To preserve integer scaling, we need product times 2^16.]
+            H    5 @  [mult reg := 10*(2^12)]
+            A      @  [acc := maximum index]
+     [31]   A   81 @  [make T order for array entry]
+            U   37 @  [plant in code]
+            A    6 @  [convert to V order, same address]
+            T   35 @  [plant in code]
+     [35]   V      F  [acc := array entry * 10*(2^12)]
+            L    4 F  [shift to complete mult by 10*(2^16)]
+     [37]   T      F  [store result in array]
+            A   37 @  [load T order]
+            S    2 F  [dec address]
+            S   81 @  [test for done]
+            E   31 @  [loop back if not]
+            T      F  [clear acc]
+            T    7 F  [clear carry]
+            A      @  [acc := maximum index]
+            T    6 F  [initialize array index]
+       [Inner loop to get next digit.
+        Work backwards through remainder array.]
+     [46]   T      F  [clear acc]
+            A    6 F  [load index]
+            A   81 @  [make T order for array entry]
+            U   61 @  [plant in code]
+            A    7 @  [convert to A order]
+            T   52 @  [plant in code]
+     [52]   A      F  [load array element]
+            A    7 F  [add carry from last time round loop]
+            T    4 F  [sum to 4F for division routine]
+            A    6 F  [acc := index as address = 2*(index as integer)]
+[if pi]     A    3 @  [plus 1]
+[if e]     [R      D] [shift right, address --> integer]
+            T    5 F  [to 5F for division routine (for e, 5F = index/2)]
+     [58]   A   58 @  [call routine to divide 4F by 5F]
+            G  987 F
+            A    4 F  [load remainder]
+     [61]   T      F  [update element of remainder array]
+[if pi: 4 orders]
+            H    5 F  [mult reg := quotient]
+            V    6 F  [multiply by index
+                         NB need to shift 15 left to preserve integer scaling]
+            L      F  [shift 13 left]
+            L    1 F  [shift 2 more left (for e, just use quotient)
+[if e: 1 order, plus 3 no-ops to keep addresses the same]
+           [A    5 F] [load quotient]
+           [XF XF XF]
+            T    7 F  [update carry for next time round loop]
+            A    6 F  [load index]
+            S    2 F  [decrement]
+            U    6 F  [store back]
+       [We want to terminate after doing index = 1]
+            S    2 F  [dec again]
+            E   46 @  [jump back if index >= 1]
+       [Treatment of index = 0 is different]
+            T      F  [clear acc]
+            A      B  [load rem{0)]
+            A    7 F  [add carry]
+            T    4 F  [sum to 4F for division routine]
+            A    4 @  [load 10]
+            T    5 F  [to 5F for division routine]
+     [78]   A   78 @  [call division routine]
+            G  987 F
+            A    4 F  [load remainder]
+     [81]   T      B  [store in rem{0}; also used to manufacture orders]
+     [82]   A   82 @  [call subroutine to deal with quotient (clears acc)]
+            G   93 @
+            A    8 F  [load negative digit count]
+            A    2 F  [increment]
+            U    8 F  [store back]
+            G   28 @  [if not yet 0, loop for next digit]
+       [Fake a zero digit to flush the last genuine digit(s)]
+            T    5 F  [store fake digit 0 in 5F]
+     [89]   A   89 @  [call subroutine to deal with digit]
+            G   93 @
+            O    8 @  [set figures: dummy character to flush print buffer]
+            Z      F  [stop]
+
+       [Subroutine to handle buffering and printing of digits.
+        Here with quotient from spigot algorithm still in 5F.
+        The quotient at 5F is usually the new decimal digit.
+        But the quotient can be 10, in which case we must treat it as 0
+          and ripple a carry through the previously-computed digits.
+        Hence the need for buffering.]
+     [93]   A    3 F  [make and plant return link]
+            T  130 @
+            A    5 F  [load quotient]
+            S    4 @  [subtract 10]
+            E  105 @  [jump if quotient >= 10]
+            A    3 @  [add 1]
+            G  109 @  [jump if quotient < 9]
+       [Here if quotient = 9. Update count of 9's,
+        don't do anything with the buffer.]
+            T      F  [clear acc]
+            A   10 F  [load negative count of 9's]
+            S    2 F  [subtract 1]
+            T   10 F  [update count]
+            E  130 @  [exit with acc = 0]
+       [Here if quotient >= 10. Take digit = quotient - 10,
+        and ripple a carry through the buffered digits.]
+    [105]   T    5 F  [store (quotient - 10) formed above]
+            T   11 F  [store 0 to print '0' not '9']
+            A    3 @  [add 1 to buffered digit]
+            E  112 @  [join common code]
+       [Here if quotient < 9. Flush the stored digits.]
+    [109]   T      F  [clear acc]
+            A   11 @  [load any O order (code for O is 9)]
+            T   11 F  [store to print '9']
+    [112]   A    9 F  [load buffered digit, plus 1 if quotient >= 10]
+            G  118 @  [skip printing if buffer is empty]
+            L 1024 F  [shift digits to top 5 bits]
+            T    1 F  [store in 1F for printing]
+    [116]   A  116 @  [call print routine]
+            G  131 @
+    [118]   T      F  [clear acc]
+            A    5 F  [load quotient (possibly modified as above)]
+            T    9 F  [store in buffer]
+    [121]   A   10 F  [load negative count of 9's]
+            E  130 @  [if none, exit with acc = 0]
+            A    2 F  [inc count]
+            T   10 F
+            A   11 F  [load 9 (or 0 if there's a carry)]
+            T    1 F  [to 1F for printing]
+    [127]   A  127 @  [call print routine  (clears acc)]
+            G  131 @
+            E  121 @  [jump back (always)]
+    [130]   E      F  [return to caller]
+
+       [Subroutine to print character at 1F.
+        Also prints CR LF if necessary.]
+    [131]   A    3 F [make and plant link for return]
+            T  141 @
+            A   12 F  [load negative character count]
+            G  138 @  [jump if not end of line]
+            S    2 @  [reset character count]
+            O    9 @  [print CR LF]
+            O   10 @
+    [138]   O    1 F  [print character]
+            A    2 F  [add 1]
+            T   12 F
+    [141]   E      F
+            E   11 Z  [define entry point]
+            P      F  [acc = 0 on entry]

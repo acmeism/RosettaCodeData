@@ -1,0 +1,67 @@
+FCB1:	equ	5Ch	; FCB for first command line argument	
+puts:	equ	9	; CP/M syscall to print a string
+fopen:	equ	15	; CP/M syscall to open a file
+fread:	equ	20	; CP/M syscall to read a block from a file
+dta:	equ	80h	; Default disk transfer address
+	org	100h
+	lxi	d,FCB1	; Try to open the file given on the command line
+	mvi	c,fopen
+	call	5
+	inr	a	; A = 0 = error
+	jz	err	
+	lxi	h,line	; Start of line buffer
+block:	push	h	; Keep line buffer pointer
+	lxi	d,FCB1	; Read a block from the file
+	mvi	c,fread
+	call	5
+	pop	h	; Restore line buffer pointer
+	dcr	a	; A = 1 = end of file (done)
+	rz
+	inr	a	; otherwise, A <> 0 = read error
+	jnz	err
+	lxi	d,dta	; Start of block
+char:	ldax	d	; Grab character from block
+	mov	m,a	; Store in line buffer
+	inx	h	; Advance line buffer pointer
+	cpi	10	; End of line?
+	cz	doline	; Then handle the line
+	inr	e	; Next character in block
+	jz	block	; Rollover = get new block
+	jmp	char 	; Otherwise = get next char
+	;;;	Handle a line
+doline:	push	d	; Keep block pointer
+	mvi	m,'$'	; Terminate line buffer with CP/M end-of-string marker
+	mvi	a,32
+scan1:	dcx	h	; Scan backwards from end of line until we find
+	cmp	m	; a non-control/whitespace character
+	jnc	scan1	; (this makes it newline-format agnostic)
+scan2:	dcx	h	; Then scan backwards until we _do_ find whitespace
+	cmp	m	; This should leave us pointing right before the number
+	jc	scan2
+	inx	h	; First digit - we can cheat a little since we know
+	mov	a,m	; earthquakes >=10 are physically impossible
+	cpi	'7'	; If 7 or larger we know we should print it
+	jnc	print
+	cpi	'6' 	; If smaller than 6 we know we mustn't print it
+	jc	next
+	inx	h	; If 6, we must check fractional part
+	mov	a,m
+	cpi	'.'	; If no fractional part, then it is exactly 6 so
+	jnz	next	; we shouldn't print it
+scan3:	inx	h
+	mov	a,m
+	cpi	'$'	; If we reach the end, don't print it
+	jz	next
+	cpi	'1' 	; But if fractional part > 0, do print it
+	jc	scan3
+print:	lxi	d,line	; Print the line
+	mvi	c,puts
+	call	5
+next:	pop	d	; Restore block pointer
+	lxi	h,line	; Put line buffer pointer back at beginning
+	ret
+err:	lxi	d,emsg	; Print error message and stop
+	mvi	c,puts
+	jmp	5
+emsg:	db	'Error!$'
+line:	equ	$	; Line buffer after program

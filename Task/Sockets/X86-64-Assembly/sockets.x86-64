@@ -1,0 +1,174 @@
+option casemap:none
+option literals:on
+
+ifndef __SOCKET_CLASS__
+__SOCKET_CLASS__ equ 1
+
+if @Platform eq windows64
+
+  WSADATA struct
+    wVersion        dw ?
+    wHighVersion    dw ?
+    iMaxSockets     dw ?
+    iMaxUdpDg       dw ?
+    szDescription   db 256 dup (?)
+    szSystemStatus  db 128 dup (?)
+    lpVendorInfo    dq ?
+  WSADATA ends
+
+  option dllimport:<kernel32>
+    ExitProcess     proto :word
+    HeapAlloc       proto :qword, :dword, :qword
+    HeapFree        proto :qword, :dword, :qword
+    GetProcessHeap  proto
+
+  option dllimport:<ws2_32>
+    WSAStartup      proto :word, :qword
+    WSACleanup      proto :qword
+    closesocket     proto :dword
+
+  option dllimport:none
+    exit            equ ExitProcess
+    close           equ closesocket
+
+elseif @Platform eq linux64
+  malloc            proto SYSTEMV :qword
+  free              proto SYSTEMV :qword
+  close             proto SYSTEMV :dword
+  exit              proto SYSTEMV :dword
+
+endif
+
+  memset            proto :qword, :dword, :dword
+  printf            proto :qword, :vararg
+  strlen            proto :qword
+  getaddrinfo       proto :qword, :qword, :qword, :qword
+  gai_strerror      proto :dword
+  send              proto :dword, :qword, :qword, :dword
+  socket            proto :dword, :dword, :dword
+  connect           proto :dword, :qword, :dword
+  freeaddrinfo      proto :qword
+
+  CLASS socket_class
+    CMETHOD conn
+    CMETHOD write
+  ENDMETHODS
+    if @Platform eq windows64
+      wsa       WSADATA <?>
+    endif
+    sock        dd 0
+    pai         dq 0
+    hostname    dq ?
+    port        dq ?
+  ENDCLASS
+
+  METHOD socket_class, Init, <VOIDARG>, <>, h:qword, p:qword
+    mov rbx, thisPtr
+    assume rbx:ptr socket_class
+    mov rax, h
+    mov [rbx].hostname, rax
+    mov rax, p
+    mov [rbx].port, rax
+    mov rax, rbx
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+  METHOD socket_class, conn, <dword>, <>
+    local ht:qword
+
+    mov rbx, thisPtr
+    assume rbx:ptr socket_class
+    invoke printf, CSTR("--> Attempting connection to %s on %s",10), [rbx].hostname ,[rbx].port
+    if @Platform eq windows64
+      invoke WSAStartup, 202h, addr [rbx].wsa
+    endif
+    invoke memset, ht, 0, 0x30            ;; sizeof(struct addrinfo)
+    mov rax, ht
+    mov dword ptr [rax], 0                ;; ai_flags
+    mov dword ptr [rax+4], AF_INET
+    mov dword ptr [rax+8], SOCK_STREAM
+    invoke getaddrinfo, [rbx].hostname, [rbx].port, ht, addr [rbx].pai
+    .if rax != 0
+      invoke gai_strerror, eax
+      invoke printf, CSTR("--> Gai_strerror returned: %s",10), rax
+      mov rax, -1
+      jmp _exit
+    .endif
+    mov rax, [rbx].pai
+    mov edx, dword ptr [rax + 0XC]        ;; pai.ai_protocol
+    mov ecx, dword ptr [rax + 8]          ;; pai.ai_socktype
+    mov eax, dword ptr [rax + 4]          ;; pai.ai_family
+    invoke socket, eax, ecx, edx
+    .if rax == -1
+      mov rax, -1
+      jmp _exit
+    .endif
+    mov [rbx].sock, eax
+    invoke printf, CSTR("--> Socket created as: %d",10), [rbx].sock
+    mov rax, [rbx].pai
+    mov edx, dword ptr [rax + 0x10]         ;; pai.ai_addrlen
+    mov rcx, qword ptr [rax + 0x18]         ;; pai.ai_addr
+    invoke connect, [rbx].sock, rcx, edx
+    .if rax == -1
+      invoke printf, CSTR("--> connect failed.. %i",10), rax
+      mov rax, -1
+      jmp _exit
+    .endif
+    mov rax, 0
+
+    _exit:
+      assume rbx:nothing
+      ret
+  ENDMETHOD
+
+  METHOD socket_class, write, <dword>, <>, b:qword
+    local tmp:qword
+
+    mov rbx, thisPtr
+    assume rbx:ptr socket_class
+    mov rax, b
+    mov tmp, rax
+    invoke strlen, tmp
+    invoke send, [rbx].sock, tmp, rax, 0
+    .if eax == -1
+      invoke printf, CSTR("--> Error in send..%d",10), rax
+      ret
+    .endif
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+
+  METHOD socket_class, Destroy, <VOIDARG>, <>
+    mov rbx, thisPtr
+    assume rbx:ptr socket_class
+    invoke close, [rbx].sock
+    if @Platform eq windows64
+      invoke WSACleanup, addr [rbx].wsa
+    endif
+    .if [rbx].pai != 0
+      invoke freeaddrinfo, [rbx].pai
+    .endif
+    assume rbx:nothing
+    ret
+  ENDMETHOD
+endif         ;; __SOCKET_CLASS__
+
+.code
+main proc
+  local lpSocket:ptr socket_class
+
+  mov lpSocket, _NEW(socket_class, CSTR("localhost"), CSTR("256"))
+  lpSocket->conn()
+  .if rax == -1
+    invoke exit, 0
+    ret
+  .endif
+  invoke printf, CSTR("-> Connected, sending data.",10)
+  lpSocket->write(CSTR("Goodbye, socket world!",10))
+  _DELETE(lpSocket)
+  invoke exit, 0
+  ret
+main endp
+
+end

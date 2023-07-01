@@ -1,0 +1,430 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program game24Solvex64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ NBDIGITS,   4       // digits number
+.equ TOTAL,      24
+.equ BUFFERSIZE, 80
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessRules:        .ascii "24 Game\n"
+                    .ascii "The program will display four randomly-generated \n"
+                    .asciz "single-digit numbers and search a solution for a total to 24\n\n"
+
+szMessDigits:       .asciz "The four digits are @ @ @ @ and the score is 24. \n"
+szMessOK:           .asciz "Solution : \n"
+szMessNotOK:        .asciz "No solution for this problem !! \n"
+szMessNewGame:      .asciz "New game (y/n) ? \n"
+szMessErrOper:      .asciz "Error opérator in display result !!!"
+szCarriageReturn:   .asciz "\n"
+.align 4
+qGraine:            .quad 123456
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+sZoneConv:        .skip 24
+sBuffer:          .skip BUFFERSIZE
+qTabDigit:        .skip 8 * NBDIGITS // digits table
+qTabOperand1:     .skip 8 * NBDIGITS // operand 1 table
+qTabOperand2:     .skip 8 * NBDIGITS // operand 2 table
+qTabOperation:    .skip 8 * NBDIGITS // operator table
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                 // entry of program
+
+    ldr x0,qAdrszMessRules            // display rules
+    bl affichageMess
+1:
+    mov x3,#0
+    ldr x12,qAdrqTabDigit
+    ldr x5,qAdrszMessDigits
+2:                                    // loop generate random digits
+    mov x0,#8
+    bl genereraleas
+    add x0,x0,#1
+    str x0,[x12,x3,lsl 3]             // store in table
+    ldr x1,qAdrsZoneConv
+    bl conversion10                   // call decimal conversion
+    mov x0,x5
+    ldr x1,qAdrsZoneConv              // insert conversion in message
+    bl strInsertAtCharInc
+    mov x5,x0
+    add x3,x3,#1
+    cmp x3,#NBDIGITS                  // end ?
+    blt 2b                            // no -> loop
+    mov x0,x5
+    bl affichageMess
+
+    mov x0,#0                         // start leval
+    mov x1,x12                        // address digits table
+    bl searchSoluce
+    cmp x0,#-1                        // solution ?
+    bne 3f                            // no
+    ldr x0,qAdrszMessOK
+    bl affichageMess
+    bl writeSoluce                    // yes -> write solution in buffer
+    ldr x0,qAdrsBuffer                // and display buffer
+    bl affichageMess
+    b 10f
+3:                                    // display message no solution
+    ldr x0,qAdrszMessNotOK
+    bl affichageMess
+
+
+10:                                   // display new game ?
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    ldr x0,qAdrszMessNewGame
+    bl affichageMess
+    bl saisie
+    cmp x0,#'y'
+    beq 1b
+    cmp x0,#'Y'
+    beq 1b
+
+100:                                  // standard end of the program
+    mov x0,0                          // return code
+    mov x8,EXIT                       // request to exit program
+    svc 0                             // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrszMessRules:          .quad szMessRules
+qAdrszMessDigits:         .quad szMessDigits
+qAdrszMessNotOK:          .quad szMessNotOK
+qAdrszMessOK:             .quad szMessOK
+qAdrszMessNewGame:        .quad szMessNewGame
+qAdrsZoneConv:            .quad sZoneConv
+qAdrqTabDigit:            .quad qTabDigit
+/******************************************************************/
+/*            recherche solution                                       */
+/******************************************************************/
+/* x0 level   */
+/* x1 table value address */
+/* x0 return -1 if ok     */
+searchSoluce:
+    stp x1,lr,[sp,-16]!             // save  registres
+    stp x2,x3,[sp,-16]!             // save  registres
+    stp x4,x5,[sp,-16]!             // save  registres
+    stp x6,x7,[sp,-16]!             // save  registres
+    stp x8,x9,[sp,-16]!             // save  registres
+    stp x10,x11,[sp,-16]!           // save  registres
+    stp x12,fp,[sp,-16]!            // save  registres
+    sub sp,sp,#8* NBDIGITS          // reserve size new digits table
+    mov fp,sp                       // frame pointer = address stack
+    mov x10,x1                      // save table
+    add x9,x0,#1                    // new  level
+    mov x13,#NBDIGITS
+    sub x3,x13,x9                   // last element digits table
+    ldr x4,[x1,x3,lsl 3]            // load last element
+    cmp x4,#TOTAL                   // equal to total to search ?
+    bne 0f                          // no
+    cmp x9,#NBDIGITS                // all digits are used ?
+    bne 0f                          // no
+    mov x0,#-1                      // yes -> it is ok -> end
+    b 100f
+0:
+    mov x5,#0                       // indice loop 1
+1:                                  // begin loop 1
+    cmp x5,x3
+    bge 9f
+    ldr x4,[x10,x5,lsl 3]           // load first operand
+    ldr x8,qAdrqTabOperand1
+    str x4,[x8,x9,lsl 3]            // and store in operand1 table
+    add x6,x5,#1                    // indice loop 2
+2:                                  // begin loop 2
+    cmp x6,x3
+    bgt 8f
+    ldr x12,[x10,x6,lsl 3]          // load second operand
+    ldr x8,qAdrqTabOperand2
+    str x12,[x8,x9,lsl 3]           // and store in operand2 table
+    mov x7,#0   // k
+    mov x8,#0   // n
+3:
+    cmp x7,x5
+    beq 4f
+    cmp x7,x6
+    beq 4f
+    ldr x0,[x10,x7,lsl 3]           // copy other digits in new table on stack
+    str x0,[fp,x8,lsl 3]
+    add x8,x8,#1
+4:
+    add x7,x7,#1
+    cmp x7,x3
+    ble 3b
+
+    add x7,x4,x12                   // addition test
+    str x7,[fp,x8,lsl 3]            // store result of addition
+    mov x7,#'+'
+    ldr x0,qAdrqTabOperation
+    str x7,[x0,x9,lsl 3]            // store operator
+    mov x0,x9                       // pass new level
+    mov x1,fp                       // pass new table address on stack
+    bl searchSoluce
+    cmp x0,#0
+    blt 100f
+                                    // soustraction test
+    sub x13,x4,x12
+    sub x14,x12,x4
+    cmp x4,x12
+    csel x7,x13,x14,gt
+    str x7,[fp,x8,lsl 3]
+    mov x7,#'-'
+    ldr x0,qAdrqTabOperation
+    str x7,[x0,x9,lsl 3]
+    mov x0,x9
+    mov x1,fp
+    bl searchSoluce
+    cmp x0,#0
+    blt 100f
+
+    mul x7,x4,x12                    // multiplication test
+    str x7,[fp,x8,lsl 3]
+    mov x7,#'*'
+    ldr x0,qAdrqTabOperation
+    str x7,[x0,x9,lsl 3]
+    mov x0,x9
+    mov x1,fp
+    bl searchSoluce
+    cmp x0,#0
+    blt 100f
+5:                                    // division test
+    udiv x13,x4,x12
+    msub x14,x13,x12,x4
+    cmp x14,#0
+    bne 6f
+    str x13,[fp,x8,lsl 3]
+    mov x7,#'/'
+    ldr x0,qAdrqTabOperation
+    str x7,[x0,x9,lsl 3]
+    mov x0,x9
+    mov x1,fp
+    bl searchSoluce
+    b 7f
+6:
+    udiv x13,x12,x4
+    msub x14,x13,x4,x12
+    cmp x14,#0
+    bne 7f
+    str x13,[fp,x8,lsl 3]
+    mov x7,#'/'
+    ldr x0,qAdrqTabOperation
+    str x7,[x0,x9,lsl 3]
+    mov x0,x9
+    mov x1,fp
+    bl searchSoluce
+7:
+    cmp x0,#0
+    blt 100f
+
+    add x6,x6,#1                // increment indice loop 2
+    b 2b
+
+8:
+    add x5,x5,#1                // increment indice loop 1
+    b 1b
+9:
+
+100:
+    add sp,sp,8* NBDIGITS       // stack alignement
+    ldp x12,fp,[sp],16          // restaur des  2 registres
+    ldp x10,x11,[sp],16         // restaur des  2 registres
+    ldp x8,x9,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+qAdrqTabOperand1:         .quad qTabOperand1
+qAdrqTabOperand2:         .quad qTabOperand2
+qAdrqTabOperation:        .quad qTabOperation
+/******************************************************************/
+/*            write solution                                      */
+/******************************************************************/
+writeSoluce:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,x9,[sp,-16]!          // save  registres
+    stp x10,x11,[sp,-16]!        // save  registres
+    stp x12,fp,[sp,-16]!         // save  registres
+    ldr x6,qAdrqTabOperand1
+    ldr x7,qAdrqTabOperand2
+    ldr x8,qAdrqTabOperation
+    ldr x10,qAdrsBuffer
+    mov x4,#0                    // buffer indice
+    mov x9,#1
+1:
+    ldr x13,[x6,x9,lsl 3]        // operand 1
+    ldr x11,[x7,x9,lsl 3]        // operand  2
+    ldr x12,[x8,x9,lsl 3]        // operator
+    cmp x12,#'-'
+    beq 2f
+    cmp x12,#'/'
+    beq 2f
+    b 3f
+2:                               // if division or soustraction
+    cmp x13,x11                  // reverse operand if operand 1 is < operand 2
+    bge 3f
+    mov x2,x13
+    mov x13,x11
+    mov x11,x2
+3:                               // conversion operand 1 = x13
+    mov x1,#10
+    udiv x2,x13,x1
+    msub x3,x1,x2,x13
+    cmp x2,#0
+    beq 31f
+    add x2,x2,#0x30
+    strb w2,[x10,x4]
+    add x4,x4,#1
+31:
+    add x3,x3,#0x30
+    strb w3,[x10,x4]
+    add x4,x4,#1
+    ldr x2,[x7,x9,lsl 3]
+
+    strb w12,[x10,x4]           // operator
+    add x4,x4,#1
+
+    mov x1,#10                  // conversion operand  2 = x11
+    udiv x2,x11,x1
+    msub x3,x2,x1,x11
+    cmp x2,#0
+    beq 32f
+    add x2,x2,#0x30
+    strb w2,[x10,x4]
+    add x4,x4,#1
+32:
+    add x3,x3,#0x30
+    strb w3,[x10,x4]
+    add x4,x4,#1
+
+    mov x0,#'='
+    strb w0,[x10,x4]             // compute sous total
+    add x4,x4,#1
+    cmp x12,'+'                  // addition
+    bne 33f
+    add x0,x13,x11
+    b 37f
+33:
+    cmp x12,'-'                  // soustraction
+    bne 34f
+    sub x0,x13,x11
+    b 37f
+34:
+    cmp x12,'*'                 // multiplication
+    bne 35f
+    mul x0,x13,x11
+    b 37f
+35:
+    cmp x12,'/'                 // division
+    bne 36f
+    udiv x0,x13,x11
+    b 37f
+36:                             // error
+    ldr x0,qAdrszMessErrOper
+    bl affichageMess
+    b 100f
+37:                             // and conversion ascii
+    mov x1,#10
+    udiv x2,x0,x1
+    msub x3,x2,x1,x0
+    cmp x2,#0
+    beq 36f
+    add x2,x2,#0x30
+    strb w2,[x10,x4]
+    add x4,x4,#1
+36:
+    add x3,x3,#0x30
+    strb w3,[x10,x4]
+    add x4,x4,#1
+    mov x0,#'\n'
+    strb w0,[x10,x4]
+    add x4,x4,#1
+
+    add x9,x9,1
+    cmp x9,#NBDIGITS
+    blt 1b
+    mov x1,#0
+    strb w1,[x10,x4]            // store 0 final
+
+100:
+    ldp x12,fp,[sp],16          // restaur des  2 registres
+    ldp x10,x11,[sp],16         // restaur des  2 registres
+    ldp x8,x9,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+qAdrsBuffer:         .quad sBuffer
+qAdrszMessErrOper:   .quad szMessErrOper
+/******************************************************************/
+/*            string entry                                       */
+/******************************************************************/
+/* x0 return the first character of human entry */
+saisie:
+    stp x1,lr,[sp,-16]!    // save  registres
+    stp x2,x8,[sp,-16]!    // save  registres
+    mov x0,#STDIN          // Linux input console
+    ldr x1,qAdrsBuffer     // buffer address
+    mov x2,#BUFFERSIZE     // buffer size
+    mov x8,#READ           // request to read datas
+    svc 0                  // call system
+    ldr x1,qAdrsBuffer     // buffer address
+    ldrb w0,[x1]           // load first character
+100:
+    ldp x2,x8,[sp],16      // restaur des  2 registres
+    ldp x1,lr,[sp],16      // restaur des  2 registres
+    ret
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* x0 contains limit  */
+genereraleas:
+    stp x1,lr,[sp,-16]!     // save  registres
+    stp x2,x3,[sp,-16]!     // save  registres
+    stp x4,x5,[sp,-16]!     // save  registres
+    ldr x4,qAdrqGraine
+    ldr x2,[x4]
+    ldr x3,qNbDep1
+    mul x2,x3,x2
+    ldr x3,qNbDep2
+    add x2,x2,x3
+    str x2,[x4]             // maj de la graine pour l appel suivant
+    cmp x0,#0
+    beq 100f
+    add x1,x0,#1            // divisor
+    mov x0,x2               // dividende
+    udiv x3,x2,x1
+    msub x0,x3,x1,x0        // résult = remainder
+
+100:                        // end function
+
+    ldp x4,x5,[sp],16       // restaur des  2 registres
+    ldp x2,x3,[sp],16       // restaur des  2 registres
+    ldp x1,lr,[sp],16       // restaur des  2 registres
+    ret
+/*****************************************************/
+qAdrqGraine: .quad qGraine
+qNbDep1:     .quad 0x0019660d
+qNbDep2:     .quad 0x3c6ef35f
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

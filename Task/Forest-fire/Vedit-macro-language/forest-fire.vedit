@@ -1,0 +1,75 @@
+#1 = 25         // height of the grid
+#2 = 60         // width of the grid
+#3 = 2          // probability of random fire, per 1000
+#4 = 40         // probability of new tree, per 1000
+
+#5 = #2+2+Newline_Chars                 // total length of a line
+#90 = Time_Tick                         // seed for random number generator
+#91 = 1000                              // get random numbers in range 0 to 999
+
+// Fill the grid and draw border
+Buf_Switch(Buf_Free)
+Ins_Char('-', COUNT, #2+2)
+Ins_Newline
+for (#11=0; #11<#1; #11++) {
+    Ins_Char('|')
+    for (#12=0; #12<#2; #12++) {
+        Call("RANDOM")
+        if (Return_Value < 500) {               // 50% propability for a tree
+            Ins_Char('♠')
+        } else {
+            Ins_Char(' ')
+        }
+    }
+    Ins_Char('|')
+    Ins_Newline
+}
+Ins_Char('-', COUNT, #2+2)
+
+#8=1
+Repeat(10) {
+    BOF
+    Update()
+    // calculate one generation
+    for (#11=1; #11<#1+2; #11++) {
+        Goto_Line(#11)
+        for (#12=1; #12<#2+2; #12++) {
+            Goto_Col(#12)
+            #14=Cur_Pos
+            Call("RANDOM")
+            #10 = Return_Value
+            if (Cur_Char == '♠') {                      // tree?
+                if (#10 < #3) {
+                    Ins_Char('*', OVERWRITE)            // random combustion
+                } else {
+                    if (Search_Block("░", CP-#5-1, CP+#5+2, COLUMN+BEGIN+NOERR)) {
+                        Goto_Pos(#14)
+                        Ins_Char('*', OVERWRITE)        // combustion
+                    }
+                }
+            } else {
+                if (Cur_Char == ' ') {                  // empty space?
+                    if (#10 < #4) {
+                        Ins_Char('+', OVERWRITE)        // new tree
+                    }
+                }
+            }
+        }
+    }
+    // convert tmp symbols
+    Replace("░"," ", BEGIN+ALL+NOERR)           // old fire goes out
+    Replace("*","░", BEGIN+ALL+NOERR)           // new fire
+    Replace("+","♠", BEGIN+ALL+NOERR)           // new tree
+}
+Return
+
+//--------------------------------------------------------------
+// Generate random numbers in range 0 <= Return_Value < #91
+//  #90 = Seed    (0 to 0x7fffffff)
+//  #91 = Scaling (0 to 0xffff)
+
+:RANDOM:
+#92 = 0x7fffffff / 48271
+#93 = 0x7fffffff % 48271
+#90 = (48271 * (#90 % #92) - #93 * (#90 / #92)) & 0x7fffffff
+return ((#90 & 0xffff) * #91 / 0x10000)

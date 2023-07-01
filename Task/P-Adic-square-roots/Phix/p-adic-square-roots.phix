@@ -1,0 +1,336 @@
+constant EMX  = 48       // exponent maximum (if indexing starts at -EMX)
+constant DMX  = 1e5     // approximation loop maximum
+constant AMX  = 700000 // argument maximum
+constant PMAX = 32749   // prime maximum
+
+// global variables
+integer p1 = 0
+integer p  = 7    // default prime
+integer k  = 11   // precision
+
+type Ratio(sequence r)
+    return length(r)=2 and integer(r[1]) and integer(r[2])
+end type
+
+class Padic
+    integer v = 0
+    sequence d = repeat(0,EMX*2)
+
+    function square_root(Ratio g, integer sw)
+        -- p-adic square root of g = a/b
+        integer {a,b} = g
+        atom f, q, pk, x
+        integer f1, r, s, t, i, res = 0
+
+        if b = 0 then return 1 end if
+        if b < 0 then
+            b = -b
+            a = -a
+        end if
+        if p < 2 or k < 1 then return 1 end if
+
+        -- max. short prime
+        p = min(p, PMAX)
+        if sw then
+            -- numerator, denominator, prime, precision
+            printf(1,"%d/%d + O(%d^%d)\n",{a,b,p,k})
+        end if
+
+        -- initialize
+        v = 0
+        p1 = p - 1
+        sequence ntd = repeat(0,2*EMX) -- (new this.d)
+        if a = 0 then return 0 end if
+
+        -- valuation
+        while remainder(b,p)=0 do
+            b /= p
+            v -= 1
+        end while
+        while remainder(a,p)=0 do
+            a /= p
+            v += 1
+        end while
+
+        if remainder(v,2) then
+            -- odd valuation
+            printf(1,"(1)non-residue mod %d\n",p)
+            return -1
+        end if
+
+        -- max. array length
+        k = min(k + v, EMX - 1) - v
+        v = floor(v/2)
+
+        if abs(a) > AMX or b > AMX then return -1 end if
+
+        if p = 2 then
+            --1 / b = b (mod 8)
+            --a / b = 1 (mod 8)
+            t = a * b
+            if mod(t,8)-1 then
+                printf(1,"(2)non-residue mod 8\n")
+                return -1
+             end if
+
+        else
+            -- find root for small p
+            for r = 1 to p1 do
+                f = b * r * r - a
+                if mod(f,p) = 0 then exit end if
+            end for
+
+            if r = p then
+                printf(1,"(3)non-residue mod %d\n", p)
+                return -1
+            end if
+
+            -- f'(r) = 2br
+            t = b * r * 2
+
+            s = 0
+            t = mod(t,p)
+            -- modular inverse for small p
+            for f1 = 1 to p1 do
+                s += t
+                if s > p1 then s -= p end if
+                if s = 1 then exit end if
+            end for
+
+            if f1 = p then
+                printf(1,"impossible inverse mod\n")
+                return -1
+            end if
+        end if
+
+        if p = 2 then
+            -- initialize
+            x = 1
+            ntd[v+EMX+1] = 1
+            ntd[v+EMX+2] = 0
+
+            pk = 4
+            for i = v+2 to k-1+v do
+                pk *= 2
+                f = b * x * x - a
+                q = floor(f/pk)
+                -- overflow
+                if f != q * pk then exit end if
+                -- next digit
+                ntd[i+EMX+1] = and_bits(q,1)
+                -- lift x
+                x += ntd[i+EMX+1] * floor(pk/2)
+            end for
+
+        else
+            -- -1 / f'(x) mod p
+            f1 = p - f1
+            x = r
+            ntd[v+EMX+1] = x
+
+            pk = 1
+            for i = v+1 to k-1 do
+                pk *= p
+                f = b * x * x - a
+                q = floor(f/pk)
+                -- overflow
+                if f - q * pk then exit end if
+                r = mod(q*f1,p)
+                if r < 0 then r += p end if
+                ntd[i+EMX+1] = r
+                x += r * pk
+            end for
+        end if
+        this.d = ntd
+        k = i-v
+
+        if sw then
+            printf(1,"lift: %d mod %d^%d\n",{x,p,k})
+        end if
+        return 0
+    end function
+
+    function square()
+        integer c = 0
+        Padic r = new()
+        r.v = this.v * 2
+        sequence td = this.d,
+                 rd = r.d
+        for i=0 to k do
+            for j=0 to i do
+                c += td[v+j+EMX+1] * td[v+i-j+EMX+1]
+            end for
+            // Euclidean step
+            integer q = floor(c/p)
+            rd[r.v+i+EMX+1] = c - q*p
+            c = q
+        end for
+        r.d = rd
+        return r
+    end function
+
+    function complement()
+        integer c = 1
+        Padic r = new({v})
+        sequence rd = r.d
+        for i=v to k+v do
+            integer dx = i+EMX+1
+            c += p1 - this.d[dx]
+            if c>p1 then
+                rd[dx] = c - p
+                c = 1
+            else
+                rd[dx] = c
+                c = 0
+            end if
+        end for
+        r.d = rd
+        return r
+    end function
+
+    function crat(integer sw)
+        -- rational reconstruction
+        integer i, j, t = min(v, 0)
+        Ratio r
+        atom f
+        integer x, y
+        atom p1,pk, q, s
+
+        -- weighted digit sum
+        s = 0
+        pk = 1
+        for i = t to k-1+v do
+            p1 = pk
+            pk *= p
+            if floor(pk/p1) - p then
+                -- overflow
+                pk = p1
+                exit
+            end if
+            s += d[i+EMX+1] * p1 --(mod pk)
+        end for
+
+        -- lattice basis reduction
+        sequence m = {pk, s},
+                 n = {0, 1}
+        i = 1
+        j = 2
+        s = s * s + 1 -- norm(v)^2
+
+        -- Lagrange's algorithm
+        while true do
+            f = (m[i] * m[j] + n[i] * n[j]) / s
+
+            -- Euclidean step
+            q = floor(f +.5)
+            m[i] -= q * m[j]
+            n[i] -= q * n[j]
+
+            q = s
+            s = m[i] * m[i] + n[i] * n[i]
+            -- compare norms
+            if s < q then
+                -- interchange vectors
+                {i,j} = {j,i}
+            else
+                exit
+            end if
+        end while
+
+        x = m[j]
+        y = n[j]
+        if y < 0 then
+            y = -y
+            x = -x
+        end if
+
+        -- check determinant
+        t = abs(m[i] * y - x * n[i]) == pk
+
+        if not t then
+            printf(1,"crat: fail\n")
+            x = 0
+            y = 1
+        else
+            -- negative powers
+            for i = v to -1 do
+                y *= p
+            end for
+
+            if sw then
+--              printf(1,iff(y=1?"%d":"%d/%d"),{x*sgn,y})
+                printf(1,iff(y=1?"%d\n":"%d/%d\n"),{x,y})
+            end if
+        end if
+
+        r = {x,y}
+        return r
+    end function
+
+    procedure prntf(bool sw)
+        -- print expansion
+        integer t = min(v, 0)
+        for i=k-1+t to t by -1 do
+            printf(1,"%d",d[i+EMX+1])
+            printf(1,iff(i=0 and v<0?". ":" "))
+        end for
+        printf(1,"\n")
+        // rational approximation
+        if sw then crat(sw) end if
+    end procedure
+end class
+
+constant tests = {
+    {{-7,1},2,7},
+--/*
+    {{9,1},2,8},
+    {{17,1},2,9},
+    {{497,10496},2,18},
+    {{10496,497},2,19},
+
+    {{3141,5926},3,17},
+    {{2718,281},3,15},
+
+    {{-1,1},5,8},
+    {{86,25},5,8},
+    {{2150,1},5,10},
+
+    {{2,1},7,8},
+    {{-2645,28518},7,9},
+    {{3029,4821},7,9},
+    {{379,449},7,8},
+
+    {{717,8},11,7},
+    {{1414,213},41,5},
+--*/
+    {{-255,256},257,3}
+}
+
+Padic a = new(), c
+Ratio q, r
+
+for i=1 to length(tests) do
+   {q,p,k} = tests[i]
+
+   integer sw = a.square_root(q, 1)
+   if sw=1 then exit end if
+   if sw=0 then
+       printf(1,"square_root +/-\n")
+       printf(1,"... ")
+       a.prntf(0)
+       a = a.complement()
+       printf(1,"... ")
+       a.prntf(0)
+
+       c = a.square()
+       printf(1,"square_root^2\n")
+       printf(1,"    ")
+       c.prntf(0)
+       r = c.crat(1)
+
+       if q[1] * r[2] - r[1] * q[2] then
+          printf(1,"fail: square_root^2\n")
+       end if
+   end if
+   printf(1,"\n")
+end for

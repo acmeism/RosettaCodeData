@@ -1,0 +1,5 @@
+SUB main
+    PRINT "Hello from main!"
+END SUB
+
+main

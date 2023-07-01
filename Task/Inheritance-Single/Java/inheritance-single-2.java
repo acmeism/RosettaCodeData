@@ -1,0 +1,3 @@
+public class Dog extends Animal{
+   //functions go here...
+}

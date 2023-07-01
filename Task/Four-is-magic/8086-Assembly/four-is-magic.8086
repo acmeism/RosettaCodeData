@@ -1,0 +1,203 @@
+puts:		equ	9h	; MS-DOS syscall to print a string
+		cpu	8086
+		bits	16
+		org	100h
+section		.text
+		;;;	Read number from the MS-DOS command line
+		;;;	The task says numbers up to 999999 need to be
+		;;;	supported, so we can't get away with using MUL.
+		mov	cl,[80h]	; Is there an argument?
+		test	cl,cl
+		jnz	havearg
+		mov	ah,puts		; If not, print "no input"
+		mov	dx,errinput
+		int	21h
+		ret			; And stop.
+havearg:	mov	si,82h		; Start of argument string
+		xor	ch,ch		; CX = argument length
+		dec	cx		; Minus one (space before argument)
+		xor	ax,ax		; Accumulator starts out at 0
+		xor	dx,dx
+numloop:	mov	bp,ax		; DX:AX *= 10
+		mov	di,dx
+		add	ax,ax		; ... *2
+		adc	dx,dx		
+		add	ax,ax		; ... *4
+		adc	dx,dx
+		add	ax,bp		; ... *5
+		adc	dx,di
+		add	ax,ax		; ... *10
+		adc	dx,dx
+		mov	bx,ax
+		lodsb			; Get digit
+		sub	al,'0'
+		xor	ah,ah
+		add	ax,bx		; Add digit
+		adc	dx,0
+		loop	numloop		; Next digit if there is one
+		;;;	DX:AX now contains the binary representation of
+		;;;	the decimal input.
+		cmp	dx,0Fh		; Check that DX:AX <= 999999
+		jb	donum
+		cmp	ax,4240h	; 0F4240h = 1000000
+		jb	donum
+		mov	ah,puts		; Otherwise, print error message
+		mov	dx,errhigh
+		int	21h
+		ret
+		;;;	DX:AX = current number
+donum:		push	dx		; Keep number
+		push	ax
+		mov	di,numstring	; Create the string for the number
+		call	cardinal
+		mov	[di],byte '$'
+		xor	[numstring],byte 32	; Capitalize first letter
+.print:		mov	dx,numstring	; Print the string
+		mov	ah,puts
+		int	21h
+		mov	dx,is		; print ' is ',
+		int	21h
+		pop	ax		; Retrieve number
+		pop	dx
+		test	dx,dx		; DX:AX = 4 = magic
+		jnz	.nomagic	; DX <> 0 = not magic
+		cmp	ax,4		; If AX=4 then magic
+		je	.magic
+.nomagic:	sub	di,numstring	; Calculate length of string
+		xor	dx,dx		; Set DX:AX to DI
+		mov	ax,di
+		push	dx		; Store new number on stack
+		push	ax
+		mov	di,numstring	; Make string for new number
+		call	cardinal
+		mov	[di],byte '$'
+		mov	dx,numstring	; Print the string
+		mov	ah,puts
+		int	21h
+		mov	dx,commaspace	; Print comma and space
+		int	21h
+		jmp 	.print		; Then use next number as input
+.magic:		mov	dx,magic 	; print "magic.",
+		mov	ah,puts
+		int	21h
+		ret			; and stop
+		;;;	Subroutine: assuming 0 <= DX:AX <= 999999, write
+		;;;	cardinal representation at ES:DI.
+cardinal:	mov	bp,ax
+		or	bp,dx
+		jz	.zero		; If it is zero, return 'Zero'
+		mov	bp,1000		; Otherwise, get 1000s part
+		div	bp
+		test	ax,ax		; Above 1000?
+		jz	.hundreds_dx	; If not, just find hundreds
+		push	dx		; Otherwise, save <1000s part,
+		call	.hundreds	; get string for how many thousands,
+		mov	si,thousand	; Then add ' thousand',
+		call	stradd
+		pop	dx		; Restore <1000 part,
+		test	dx,dx		; Even thousands?
+		jnz	.hundreds_spc	; Then add hundreds
+		ret			; Otherwise we're done
+.hundreds_spc:	mov	al,' '		; Add space betweeen thousand and rest
+		stosb
+.hundreds_dx:	mov	ax,dx		
+.hundreds:	mov	bp,100		; Get hundreds part
+		xor	dx,dx
+		div	bp		; AX=100s
+		test	ax,ax		; If zero, no hundreds
+		jz	.tens_dx
+		dec	ax		; Otherwise, look up in singles
+		shl	ax,1		; table,
+		mov	bx,ax
+		mov	si,[single+bx]
+		call	stradd		; Add to the output string,
+		mov	si,hundred	; Add ' hundred',
+		call	stradd
+		test	dx,dx		; Is there any more?
+		jne	.tens_spc	; If so, add tens
+		ret			; Otherwise we're done
+.tens_spc:	mov	al,' '		; Add space between 'hundred' and tens
+		stosb
+.tens_dx:	mov	ax,dx		; Tens in AX (from hundreds)
+.tens:		aam			; AH=10s digit, AL=1s digit
+		test	ah,ah		; If 10s digit is 0, single digit
+		jz	.ones
+		cmp	ah,1		; If 10s digit is 1, teens
+		jz	.teens
+		mov	bl,ah		; Look up tens digit in tens table
+		sub	bl,2
+		shl	bl,1
+		xor	bh,bh
+		mov	si,[tens+bx]	; Add to the output string
+		call	stradd
+		test	al,al		; Ones digit left?
+		jne	.ones_dash	; If so, add dash and ones digit
+		ret			; Otherwise we're done
+.ones_dash:	mov	[di],byte '-'
+		inc	di
+.ones:		mov	bl,al		; Look up ones digit in ones table
+		dec	bl
+		shl	bl,1
+		xor	bh,bh
+		mov	si,[single+bx]
+		jmp	stradd
+.teens:		mov	bl,al		; Look up ones digit in teens table
+		shl	bl,1
+		xor	bh,bh
+		mov	si,[teens+bx]
+		jmp	stradd
+.zero:		mov	si,zero
+		;;;	Copy $-terminated string at DS:SI to ES:DI, except
+		;;;	the terminator.
+stradd:		push	ax		; Keep AX register
+.loop:		lodsb			; Get byte from DS:SI
+		cmp 	al,'$'		; Are we there yet?
+		je	.out		; If so, stop
+		stosb			; Otherwise, store at ES:DI
+		jmp	.loop
+.out:		pop	ax
+		ret
+section		.data
+single:		dw	one,two,three,four
+		dw	five,six,seven,eight,nine
+teens:		dw	ten,eleven,twelve,thirteen,fourteen
+		dw	fifteen,sixteen,seventeen,eighteen,nineteen
+tens:		dw	twenty,thirty,forty,fifty
+		dw	sixty,seventy,eighty,ninety
+zero:		db	'zero$'
+one:		db	'one$'
+two:		db	'two$'
+three:		db	'three$'
+four:		db	'four$'
+five:		db	'five$'
+six:		db	'six$'
+seven:		db	'seven$'
+eight:		db	'eight$'
+nine:		db	'nine$'
+ten:		db	'ten$'
+eleven:		db	'eleven$'
+twelve:		db	'twelve$'
+thirteen:	db	'thirteen$'
+fourteen:	db	'fourteen$'
+fifteen:	db	'fifteen$'
+sixteen:	db	'sixteen$'
+seventeen:	db	'seventeen$'
+eighteen:	db	'eighteen$'
+nineteen:	db	'nineteen$'
+twenty:		db	'twenty$'
+thirty:		db	'thirty$'
+forty:		db	'forty$'
+fifty:		db	'fifty$'
+sixty:		db	'sixty$'
+seventy:	db	'seventy$'
+eighty:		db	'eighty$'
+ninety:		db	'ninety$'
+hundred:	db	' hundred$'
+thousand:	db	' thousand$'
+is:		db	' is $'
+magic:		db	'magic.$'
+commaspace:	db	', $'
+errinput:	db	'No input$'
+errhigh:	db	'Max input 999999$'
+section		.bss
+numstring:	resb	1024

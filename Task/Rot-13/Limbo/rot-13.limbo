@@ -1,0 +1,73 @@
+implement Rot13;
+
+include "sys.m"; sys: Sys;
+include "draw.m";
+
+Rot13: module
+{
+	init:	fn(ctxt: ref Draw->Context, argv: list of string);
+};
+
+stdout: ref Sys->FD;
+tab: array of int;
+
+init(nil: ref Draw->Context, args: list of string)
+{
+	sys = load Sys Sys->PATH;
+	stdout = sys->fildes(1);
+	inittab();
+	args = tl args;
+	if(args == nil)
+		args = "-" :: nil;
+	for(; args != nil; args = tl args){
+		file := hd args;
+		if(file != "-"){
+			fd := sys->open(file, Sys->OREAD);
+			if(fd == nil){
+				sys->fprint(sys->fildes(2), "rot13: cannot open %s: %r\n", file);
+				raise "fail:bad open";
+			}
+			rot13cat(fd, file);
+		}else
+			rot13cat(sys->fildes(0), "<stdin>");
+	}
+}
+
+inittab()
+{
+	tab = array[256] of int;
+	for(i := 0; i < 256; i++)
+		tab[i] = i;
+
+	for(i = 'a'; i <= 'z'; i++)
+		tab[i] = (((i - 'a') + 13) % 26) + 'a';
+	for(i = 'A'; i <= 'Z'; i++)
+		tab[i] = (((i - 'A') + 13) % 26) + 'A';
+}
+
+
+rot13(s: string): string
+{
+	for(i := 0; i < len s; i++) {
+		if(s[i] < 256)
+			s[i] = tab[s[i]];
+	}
+	return s;
+}
+
+rot13cat(fd: ref Sys->FD, file: string)
+{
+	buf := array[Sys->ATOMICIO] of byte;
+
+	while((n := sys->read(fd, buf, len buf)) > 0) {
+		obuf := array of byte (rot13(string buf));
+		if(sys->write(stdout, obuf, n) < n) {
+			sys->fprint(sys->fildes(2), "rot13: write error: %r\n");
+			raise "fail:write error";
+		}
+	}
+	if(n < 0) {
+		sys->fprint(sys->fildes(2), "rot13: error reading %s: %r\n", file);
+		raise "fail:read error";
+	}
+}

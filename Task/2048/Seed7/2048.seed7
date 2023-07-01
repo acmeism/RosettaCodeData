@@ -1,0 +1,190 @@
+$ include "seed7_05.s7i";
+  include "console.s7i";
+  include "keybd.s7i";
+
+const integer: boardLength is 4;
+const integer: boardSize is boardLength * boardLength;
+const integer: target is 2048;
+
+const type: stateType is new struct
+    var integer: fieldsOccupied is 0;
+    var integer: largestNumber is 0;
+    var integer: score is 0;
+    var array array integer: board is boardLength times boardLength times 0;
+  end struct;
+
+const proc: addTile (inout stateType: state) is func
+  local
+    var integer: row is 0;
+    var integer: col is 0;
+    var integer: field is 2;
+  begin
+    if state.fieldsOccupied < boardSize then
+      repeat
+        col := rand(1, boardLength);
+        row := rand(1, boardLength);
+      until state.board[row][col] = 0;
+      if rand(1, 10) = 10 then
+        field := 4;
+      end if;
+      state.board[row][col] := field;
+      incr(state.fieldsOccupied);
+      state.largestNumber := max(field, state.largestNumber);
+    end if;
+  end func;
+
+const proc: showBoard (in stateType: state) is func
+  local
+    var integer: row is 0;
+    var integer: field is 0;
+  begin
+    writeln("┌────┬────┬────┬────┐");
+    for key row range state.board do
+      for field range state.board[row] do
+        if field = 0 then
+          write("│    ");
+        else
+          write("│" <& field lpad (5 + length(str(field))) div 2 rpad 4);
+        end if;
+      end for;
+      writeln("│");
+      if row < maxIdx(state.board) then
+        writeln("├────┼────┼────┼────┤");
+      end if;
+    end for;
+    writeln("└────┴────┴────┴────┘");
+  end func;
+
+const func boolean: doMove (inout stateType: state, in integer: startRow,
+    in integer: startCol, in integer: deltaRow, in integer: deltaCol, in boolean: doMerge) is func
+  result
+    var boolean: boardChanged is FALSE;
+  local
+    const set of integer: boardRange is {1 .. boardLength};
+    var integer: row is 1;
+    var integer: col is 1;
+    var integer: nextRow is 0;
+    var integer: nextCol is 0;
+  begin
+    row := startRow;
+    col := startCol;
+    while row in boardRange and col in boardRange do
+      while row in boardRange and col in boardRange do
+        nextRow := row + deltaRow;
+        nextCol := col + deltaCol;
+        if state.board[row][col] = 0 and
+            nextRow in boardRange and nextCol in boardRange and
+            state.board[nextRow][nextCol] <> 0 then
+          boardChanged := TRUE;
+          state.board[row][col] := state.board[nextRow][nextCol];
+          state.board[nextRow][nextCol] := 0;
+          if row - deltaRow in boardRange and col - deltaCol in boardRange then
+            nextRow := row - deltaRow;
+            nextCol := col - deltaCol;
+          end if;
+        end if;
+        row := nextRow;
+        col := nextCol;
+      end while;
+
+      if doMerge then
+        if deltaRow <> 0 then
+          row := startRow;
+        elsif deltaCol <> 0 then
+          col := startCol;
+        end if;
+        while row in boardRange and col in boardRange do
+          nextRow := row + deltaRow;
+          nextCol := col + deltaCol;
+          if state.board[row][col] <> 0 and
+              nextRow in boardRange and nextCol in boardRange and
+              state.board[nextRow][nextCol] = state.board[row][col] then
+            boardChanged := TRUE;
+            state.board[row][col] *:= 2;
+            state.largestNumber := max(state.board[row][col], state.largestNumber);
+            state.score +:= state.board[row][col];
+            state.board[nextRow][nextCol] := 0;
+            decr(state.fieldsOccupied);
+          end if;
+          row := nextRow;
+          col := nextCol;
+        end while;
+      end if;
+
+      if deltaRow = 0 then
+        incr(row);
+        col := startCol;
+      elsif deltaCol = 0 then
+        incr(col);
+        row := startRow;
+      end if;
+    end while;
+    if doMerge and boardChanged then
+      ignore(doMove(state, startRow, startCol, deltaRow, deltaCol, FALSE));
+    end if;
+  end func;
+
+const func boolean: canMove (in stateType: state) is func
+  result
+    var boolean: canMove is FALSE;
+  local
+    var integer: row is 0;
+    var integer: col is 0;
+  begin
+    for row range 1 to boardLength until canMove do
+      for col range 1 to boardLength until canMove do
+        canMove := state.board[row][col] = 0 or
+            (row < boardLength and state.board[row][col] = state.board[succ(row)][col]) or
+            (col < boardLength and state.board[row][col] = state.board[row][succ(col)]);
+      end for;
+    end for;
+  end func;
+
+const proc: main is func
+  local
+    var stateType: state is stateType.value;
+    var integer: highscore is 0;
+    var char: command is ' ';
+    var boolean: quit is FALSE;
+    var boolean: moveOkay is FALSE;
+  begin
+    OUT := open(CONSOLE);
+    addTile(state);
+    repeat
+      setPos(STD_CONSOLE, 1, 1);
+      showBoard(state);
+      highscore := max(highscore, state.score);
+      writeln("Score = " <& state.score <& "  Highscore = " <& highscore);
+      if canMove(state) and state.largestNumber < target then
+        writeln("Press arrow keys to move, R to Restart, Q to Quit");
+      elsif state.largestNumber >= target then
+        writeln("You win! Press R to Restart, Q to Quit           ");
+      else
+        writeln("Game over! Press R to Restart, Q to Quit         ");
+      end if;
+      repeat
+        moveOkay := FALSE;
+        command := getc(KEYBOARD);
+        case command of
+          when {'r', 'R'}:
+            state := stateType.value;
+            clear(STD_CONSOLE);
+            moveOkay := TRUE;
+          when {'q', 'Q'}:
+            moveOkay := TRUE;
+            quit := TRUE;
+          when {KEY_LEFT}:
+            moveOkay := doMove(state,           1,           1,  0,  1, TRUE);
+          when {KEY_RIGHT}:
+            moveOkay := doMove(state,           1, boardLength,  0, -1, TRUE);
+          when {KEY_UP}:
+            moveOkay := doMove(state,           1,           1,  1,  0, TRUE);
+          when {KEY_DOWN}:
+            moveOkay := doMove(state, boardLength,           1, -1,  0, TRUE);
+        end case;
+	if moveOkay and not quit then
+	  addTile(state);
+        end if;
+      until moveOkay;
+    until quit;
+  end func;

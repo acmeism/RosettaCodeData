@@ -1,0 +1,10 @@
+(string-downcase "alphaBETA")
+    → "alphabeta"
+(string-upcase "alphaBETA")
+    → "ALPHABETA"
+(string-titlecase "alphaBETA")
+    → "Alphabeta"
+(string-randcase "alphaBETA")
+    → "alphaBEtA"
+(string-randcase "alphaBETA")
+    → "AlPHaBeTA"

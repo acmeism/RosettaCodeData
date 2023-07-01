@@ -1,0 +1,1 @@
+@show gamma(1)

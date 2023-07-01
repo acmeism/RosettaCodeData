@@ -1,0 +1,122 @@
+	org	100h
+	;;;	Calculate proper divisors of 2..20000
+	lxi	h,pdiv + 4	; 2 bytes per entry
+	lxi	d,19999		; [2 .. 20000] means 19999 entries
+	lxi	b,1		; Initialize each entry to 1
+init:	mov	m,c
+	inx	h
+	mov	m,b
+	inx	h
+	dcx	d
+	mov	a,d
+	ora	e
+	jnz	init	
+	lxi	b,1		; BC = outer loop variable
+iouter:	inx	b
+	lxi	h,-10001	; Are we there yet?
+	dad	b
+	jc	idone		; If so, we've calculated all of them
+	mov	h,b
+	mov	l,c
+	dad	h
+	xchg			; DE = inner loop variable
+iinner:	push	d		; save DE
+	xchg
+	dad 	h		; calculate *pdiv[DE]
+	lxi	d,pdiv
+	dad	d
+	mov	e,m		; DE = pdiv[DE]
+	inx	h
+	mov	d,m
+	xchg			; pdiv[DE] += BC
+	dad 	b
+	xchg			; store it back
+	mov	m,d
+	dcx	h
+	mov	m,e
+	pop	h		; restore DE (into HL)
+	dad	b		; add BC
+	lxi	d,-20001	; are we there yet?
+	dad	d
+	jc	iouter		; then continue with outer loop
+	lxi	d,20001		; otherwise continue with inner loop
+	dad	d
+	xchg
+	jmp	iinner
+idone:	lxi	b,1		; BC = outer loop variable
+touter:	inx	b
+	lxi	h,-20001	; Are we there yet?
+	dad	b
+	rc			; If so, stop
+	mov	d,b		; DE = outer loop variable
+	mov	e,c
+tinner:	inx	d
+	lxi	h,-20001	; Are we there yet?
+	dad	d
+	jc	touter		; If so continue with outer loop
+	push	d		; Store the variables
+	push	b
+	mov	h,b		; find *pdiv[BC]
+	mov	l,c
+	dad 	b
+	lxi	b,pdiv
+	dad	b
+	mov	a,m		; Compare low byte (to E)
+	cmp	e
+	jnz	tnext1		; Not equal = not amicable
+	inx	h
+	mov	a,m
+	cmp	d		; Compare high byte (to B)
+	jnz	tnext1		; Not equal = not amicable
+	pop	b		; Restore BC
+	xchg			; find *pdiv[DE]
+	dad	h
+	lxi	d,pdiv
+	dad	d
+	mov	a,m		; Compare low byte (to C)
+	cmp	c
+	jnz	tnext2		; Not equal = not amicable
+	inx	h
+	mov	a,m		; Compare high byte (to B)
+	cmp 	b
+	jnz	tnext2		; Not equal = not amicable
+	pop	d		; Restore DE
+	push	d		; Save them both on the stack again
+	push	b
+	push 	d
+	mov	h,b		; Print the first number
+	mov	l,c
+	call	prhl
+	pop 	h		; And the second number
+	call	prhl
+	lxi	d,nl		; And a newline
+	mvi	c,9
+	call 	5
+tnext1:	pop	b		; Restore B
+tnext2:	pop	d		; Restore D
+	jmp	tinner		; Continue
+	;;;	Print the number in HL
+prhl:	lxi	d,nbuf		; Store buffer pointer on stack
+	push 	d
+	lxi	b,-10		; Divisor
+pdgt:	lxi	d,-1		; Quotient
+pdivlp:	inx	d
+	dad	b
+	jc	pdivlp
+	mvi	a,'0'+10	; Make ASCII digit
+	add	l
+	pop	h		; Store in output buffer
+	dcx	h
+	mov	m,a
+	push	h
+	xchg			; Keep going with rest of number
+	mov	a,h		; if not zero
+	ora	l
+	jnz	pdgt
+	mvi	c,9		; CP/M call to print string
+	pop	d		; Get buffer pointer
+	jmp	5
+	db	'*****'
+nbuf:	db	' $'
+nl:	db	13,10,'$'
+pdiv:	equ	$		; base

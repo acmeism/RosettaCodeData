@@ -1,0 +1,341 @@
+# Truth table generator in Cowgol
+# -
+# This program will generate a truth table for the Boolean expression
+# given on the command line.
+#
+# The expression is in infix notation, and operator precedence is impemented,
+# i.e., the following expression:
+#       A & B | C & D => E
+# is parsed as:
+#       ((A & B) | (C & D)) => E.
+#
+# Syntax:
+#   * Variables are single letters (A-Z). They are case-insensitive.
+#   * 0 and 1 can be used as constant true or false.
+#   * Operators are ~ (not), & (and), | (or), ^ (xor), and => (implies).
+#   * Parentheses may be used to override the normal precedence.
+
+include "cowgol.coh";
+include "strings.coh";
+include "argv.coh";
+ArgvInit();
+
+# Concatenate all command line arguments together, skipping whitespace
+var code: uint8[512];
+var codeptr := &code[0];
+loop
+    var argmt := ArgvNext();
+    if argmt == 0 as [uint8] then break; end if;
+    loop
+        var char := [argmt];
+        argmt := @next argmt;
+        if char == 0 then break;
+        elseif char == ' ' then continue;
+        end if;
+        [codeptr] := char;
+        codeptr := @next codeptr;
+    end loop;
+end loop;
+[codeptr] := 0;
+
+# If no code given, print an error and stop
+if StrLen(&code[0]) == 0 then
+    print("Error: no boolean expression given\n");
+    ExitWithError();
+end if;
+
+interface TokenReader(str: [uint8]): (next: [uint8], tok: uint8);
+
+# Operators
+interface OpFn(l: uint8, r: uint8): (v: uint8);
+sub And  implements OpFn is v := l & r; end sub;
+sub Or   implements OpFn is v := l | r; end sub;
+sub Xor  implements OpFn is v := l ^ r; end sub;
+sub Not  implements OpFn is v := ~l; end sub;
+sub Impl implements OpFn is
+    if l == 0 then v := 1;
+    else v := r;
+    end if;
+end sub;
+record Operator is
+    fn: OpFn;
+    name: [uint8];
+    val: uint8;
+    prec: uint8;
+end record;
+var ops: Operator[] := {
+    {Not,  "~",  1, 5},
+    {And,  "&",  2, 4},
+    {Or,   "|",  2, 3},
+    {Xor,  "^",  2, 3},
+    {Impl, "=>", 2, 2}
+};
+
+const TOKEN_MASK := (1<<5)-1;
+const TOKEN_OP := 1<<5;
+sub ReadOp implements TokenReader is
+    tok := 0;
+    next := str;
+    while tok < @sizeof ops loop
+        var find := ops[tok].name;
+        while [find] == [next] loop
+            next := @next next;
+            find := @next find;
+        end loop;
+        if [find] == 0 then
+            tok := tok | TOKEN_OP;
+            return;
+        end if;
+        next := str;
+        tok := tok + 1;
+    end loop;
+    tok := 0;
+end sub;
+
+
+# Values (constants, variables)
+const TOKEN_VAR := 2<<5;
+const TOKEN_CONST := 3<<5;
+const CONST_TRUE := 0;
+const CONST_FALSE := 1;
+sub ReadValue implements TokenReader is
+    var cur := [str];
+    next := str;
+    tok := 0;
+    if cur == '0' or cur == '1' then
+        next := @next str;
+        tok := TOKEN_CONST | cur - '0';
+    elseif (cur >= 'A' and cur <= 'Z') or (cur >= 'a' and cur <= 'z') then
+        next := @next str;
+        tok := TOKEN_VAR | (cur | 32) - 'a';
+    end if;
+end sub;
+
+# Parentheses
+const TOKEN_PAR := 4<<5;
+const PAR_OPEN := 0;
+const PAR_CLOSE := 1;
+sub ReadParen implements TokenReader is
+    case [str] is
+        when '(': next := @next str; tok := TOKEN_PAR | PAR_OPEN;
+        when ')': next := @next str; tok := TOKEN_PAR | PAR_CLOSE;
+        when else: next := str; tok := 0;
+    end case;
+end sub;
+
+# Read next token
+sub NextToken(str: [uint8]): (next: [uint8], tok: uint8) is
+    var toks: TokenReader[] := {ReadOp, ReadValue, ReadParen};
+    var i: uint8 := 0;
+    while i < @sizeof toks loop
+        (next, tok) := (toks[i]) (str);
+        if tok != 0 then return; end if;
+        i := i + 1;
+    end loop;
+    # Invalid token
+    print("cannot tokenize: ");
+    print(str);
+    print_nl();
+    ExitWithError();
+end sub;
+
+# Use shunting yard algorithm to parse the input
+var expression: uint8[512];
+var oprstack: uint8[512];
+var expr_ptr := &expression[0];
+var ostop := &oprstack[0];
+var varmask: uint32 := 0; # mark which variables are in use
+var one: uint32 := 1; # cannot shift constant by variable
+
+sub GetOp(o: uint8): (r: [Operator]) is
+    r := &ops[o];
+end sub;
+
+codeptr := &code[0];
+while [codeptr] != 0 loop
+    var tok: uint8;
+    (codeptr, tok) := NextToken(codeptr);
+    var toktype := tok & ~TOKEN_MASK;
+    var tokval := tok & TOKEN_MASK;
+    case toktype is
+        # constants and variables get pushed to output queue
+        when TOKEN_CONST:
+            [expr_ptr] := tok; expr_ptr := @next expr_ptr;
+        when TOKEN_VAR:
+            [expr_ptr] := tok; expr_ptr := @next expr_ptr;
+            varmask := varmask | one << tokval;
+        # operators
+        when TOKEN_OP:
+            if ops[tokval].val == 1 then
+                # unary operator binds immediately
+                [ostop] := tok; ostop := @next ostop;
+            else
+                while ostop > &oprstack[0]
+                and   [@prev ostop] != TOKEN_PAR|PAR_OPEN
+                and   [GetOp([@prev ostop] & TOKEN_MASK)].prec
+                   >= ops[tokval].prec
+                loop
+                    ostop := @prev ostop;
+                    [expr_ptr] := [ostop];
+                    expr_ptr := @next expr_ptr;
+                end loop;
+                [ostop] := tok;
+                ostop := @next ostop;
+            end if;
+        # parenthesis
+        when TOKEN_PAR:
+            if tokval == PAR_OPEN then
+                # push left parenthesis onto operator stack
+                [ostop] := tok; ostop := @next ostop;
+            else
+                # pop whole operator stack until left parenthesis
+                while ostop > &oprstack[0]
+                and   [@prev ostop] != TOKEN_PAR|PAR_OPEN
+                loop
+                    ostop := @prev ostop;
+                    [expr_ptr] := [ostop];
+                    expr_ptr := @next expr_ptr;
+                end loop;
+                # if we run out of stack, mismatched parenthesis
+                if ostop == &oprstack[0] then
+                   print("Error: missing (");
+                   print_nl();
+                   ExitWithError();
+                else
+                   ostop := @prev ostop;
+                end if;
+            end if;
+    end case;
+end loop;
+
+# push remaining operators onto expression
+while ostop != &oprstack[0] loop
+    ostop := @prev ostop;
+    [expr_ptr] := [ostop];
+    if [expr_ptr] & ~TOKEN_MASK == TOKEN_PAR then
+        print("Error: missing )");
+        print_nl();
+        ExitWithError();
+    end if;
+    expr_ptr := @next expr_ptr;
+end loop;
+
+# terminate expression
+[expr_ptr] := 0;
+
+# Evaluate expression given set of variables
+sub Eval(varset: uint32): (r: uint8) is
+    # We can reuse the operator stack as the evaluation stack
+    var ptr := &oprstack[0];
+    var exp := &expression[0];
+    var one: uint32 := 1;
+
+    while [exp] != 0 loop
+        var toktype := [exp] & ~TOKEN_MASK;
+        var tokval := [exp] & TOKEN_MASK;
+        case toktype is
+            when TOKEN_CONST:
+                [ptr] := tokval;
+                ptr := @next ptr;
+            when TOKEN_VAR:
+                [ptr] := ((varset & (one << tokval)) >> tokval) as uint8;
+                ptr := @next ptr;
+            when TOKEN_OP:
+                var op := GetOp(tokval);
+                ptr := ptr - ([op].val as intptr);
+                if ptr < &oprstack[0] then
+                    # not enough values on the stack
+                    print("Missing operand\n");
+                    ExitWithError();
+                end if;
+                [ptr] := ([op].fn)([ptr], [@next ptr]) & 1;
+                ptr := @next ptr;
+            when else:
+                # wrong token left in the expression
+                print("invalid expression token ");
+                print_hex_i8([exp]);
+                print_nl();
+                ExitWithError();
+        end case;
+        exp := @next exp;
+    end loop;
+
+    # There should be exactly one item on the stack
+    ptr := @prev ptr;
+    if ptr != &oprstack[0] then
+        print("Too many operands\n");
+        ExitWithError();
+    else
+        r := [ptr];
+    end if;
+end sub;
+
+var v := Eval(0); # evaluate once to catch errors
+
+# Print header and count variables
+var ch: uint8 := 'A';
+var vcount: uint8 := 0;
+var vars := varmask;
+
+while vars != 0 loop
+    if vars & 1 != 0 then
+        print_char(ch);
+        print_char(' ');
+        vcount := vcount + 1;
+    end if;
+    ch := ch + 1;
+    vars := vars >> 1;
+end loop;
+print("| ");
+print(&code[0]);
+print_nl();
+
+ch := 2 + vcount * 2 + StrLen(&code[0]) as uint8;
+while ch != 0 loop
+    print_char('-');
+    ch := ch - 1;
+end loop;
+print_nl();
+
+# Given configuration number, generate variable configuration
+sub distr(val: uint32): (r: uint32) is
+    var vars := varmask;
+    r := 0;
+    var n: uint8 := 0;
+    while vars != 0 loop
+        r := r >> 1;
+        if vars & 1 != 0 then
+            r := r | ((val & 1) << 31);
+            val := val >> 1;
+        end if;
+        vars := vars >> 1;
+        n := n + 1;
+    end loop;
+    r := r >> (32-n);
+end sub;
+
+vars := 0; # start with F F F F F
+var bools: uint8[] := {'F', 'T'};
+while vars != one << vcount loop
+    var dist := distr(vars);
+    var rslt := Eval(dist);
+
+    # print configuration
+    var vmask := varmask;
+    while vmask != 0 loop
+        if vmask & 1 != 0 then
+            print_char(bools[(dist & 1) as uint8]);
+            print_char(' ');
+        end if;
+        vmask := vmask >> 1;
+        dist := dist >> 1;
+    end loop;
+
+    # print result
+    print("| ");
+    print_char(bools[rslt]);
+    print_nl();
+
+    # next configuration
+    vars := vars + 1;
+end loop;

@@ -1,0 +1,12 @@
+SUB comp(A$, B$)
+    IF LEN(A$) >= LEN(B$) THEN
+       PRINT A$, LEN(A$)
+       PRINT B$, LEN(B$)
+    ELSE
+       PRINT B$, LEN(B$)
+       PRINT A$, LEN(A$)
+    END IF
+END SUB
+
+CALL comp("abcd", "123456789")
+END

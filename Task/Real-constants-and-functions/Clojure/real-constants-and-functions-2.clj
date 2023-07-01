@@ -1,0 +1,6 @@
+(ns user (:require [clojure.contrib.math :as math]))
+(math/sqrt x)
+(math/abs x)
+(math/floor x)
+(math/ceil x)
+(math/expt x y)

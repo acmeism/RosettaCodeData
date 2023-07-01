@@ -1,0 +1,58 @@
+;; Syntactic sugar for calling reduce-left
+(defmacro reduce-with ((acc init item sequence) . body)
+  ^(reduce-left (lambda (,acc ,item) ,*body) ,sequence ,init))
+
+ ;; Macro similar to clojure's ->> and ->
+(defmacro opchain (val . ops)
+  ^[[chain ,*[mapcar [iffi consp (op cons 'op)] ops]] ,val])
+
+;; Reduce integer to a list of integers representing its decimal digits.
+(defun digits (n)
+  (if (< n 10)
+    (list n)
+    (opchain n tostring list-str (mapcar (op - @1 #\0)))))
+
+(defun dcount (ds)
+  (digits (length ds)))
+
+;; Perform a look-say step like (1 2 2) --"one 1, two 2's"-> (1 1 2 2).
+(defun summarize-prev (ds)
+  (opchain ds copy (sort @1 >) (partition-by identity)
+           (mapcar [juxt dcount first]) flatten))
+
+;; Take a starting digit string and iterate the look-say steps,
+;; to generate the whole sequence, which ends when convergence is reached.
+(defun convergent-sequence (ds)
+  (reduce-with (cur-seq nil ds [giterate true summarize-prev ds])
+    (if (member ds cur-seq)
+      (return-from convergent-sequence cur-seq)
+      (nconc cur-seq (list ds)))))
+
+;; A candidate sequence is one which begins with montonically
+;; decreasing digits. We don't bother with (9 0 9 0) or (9 0 0 9);
+;; which yield identical sequences to (9 9 0 0).
+(defun candidate-seq (n)
+  (let ((ds (digits n)))
+    (if [apply >= ds]
+      (convergent-sequence ds))))
+
+;; Discover the set of longest sequences.
+(defun find-longest (limit)
+  (reduce-with (max-seqs nil new-seq [mapcar candidate-seq (range 1 limit)])
+    (let ((cmp (- (opchain max-seqs first length) (length new-seq))))
+      (cond ((> cmp 0) max-seqs)
+            ((< cmp 0) (list new-seq))
+            (t (nconc max-seqs (list new-seq)))))))
+
+(defvar *results* (find-longest 1000000))
+
+(each ((result *results*))
+  (flet ((strfy (list) ;; (strfy '((1 2 3 4) (5 6 7 8))) -> ("1234" "5678")
+           (mapcar [chain (op mapcar tostring) cat-str] list)))
+    (let* ((seed (first result))
+           (seeds (opchain seed perm uniq (remove-if zerop @1 first))))
+      (put-line `Seed value(s): @(strfy seeds)`)
+      (put-line)
+      (put-line `Iterations: @(length result)`)
+      (put-line)
+      (put-line `Sequence: @(strfy result)`))))

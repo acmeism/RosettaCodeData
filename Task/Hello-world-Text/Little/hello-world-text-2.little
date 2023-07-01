@@ -1,0 +1,1 @@
+puts(nonewline: "Hello world!");

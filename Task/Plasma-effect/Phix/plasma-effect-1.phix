@@ -1,0 +1,100 @@
+-- demo\rosetta\plasma.exw
+include pGUI.e
+
+Ihandle dlg, canvas
+cdCanvas cddbuffer, cdcanvas
+
+sequence plasma
+integer pw = 0, ph = 0
+
+procedure createPlasma(integer w, h)
+    plasma = repeat(repeat(0,w),h)
+    for y=1 to h do
+        for x=1 to w do
+            atom v = sin(x/16)
+            v += sin(y/8)
+            v += sin((x+y)/16)
+            v += sin(sqrt(x*x + y*y)/8)
+            v += 4 -- shift range from -4 .. 4 to 0 .. 8
+            v /= 8 -- bring range down to 0 .. 1
+            plasma[y][x] = v
+        end for
+    end for
+    pw = w
+    ph = h
+end procedure
+
+atom hueShift = 0
+
+procedure drawPlasma(integer w, h)
+    hueShift = remainder(hueShift + 0.02,1)
+    sequence rgb3 = repeat(repeat(0,w*h),3)
+    integer cx = 1
+    for y=1 to h do
+        for x=1 to w do
+            atom hue = hueShift + remainder(plasma[y][x],1)
+            integer i = floor(hue * 6)
+            atom t = 255,
+                 f = (hue * 6 - i)*t,
+                 q = t - f,
+                 r, g, b
+            switch mod(i,6) do
+                case 0: r = t; g = f; b = 0
+                case 1: r = q; g = t; b = 0
+                case 2: r = 0; g = t; b = f
+                case 3: r = 0; g = q; b = t
+                case 4: r = f; g = 0; b = t
+                case 5: r = t; g = 0; b = q
+            end switch
+            rgb3[1][cx] = r
+            rgb3[2][cx] = g
+            rgb3[3][cx] = b
+            cx += 1
+        end for
+    end for
+    cdCanvasPutImageRectRGB(cddbuffer, w, h, rgb3, 0, 0, 0, 0, 0, 0, 0, 0)
+end procedure
+
+function redraw_cb(Ihandle /*ih*/, integer /*posx*/, integer /*posy*/)
+    atom {w,h} = IupGetIntInt(canvas, "DRAWSIZE")
+    if pw!=w or ph!=h then
+        createPlasma(w,h)
+    end if
+    cdCanvasActivate(cddbuffer)
+    drawPlasma(w,h)
+    cdCanvasFlush(cddbuffer)
+    return IUP_DEFAULT
+end function
+
+function timer_cb(Ihandle /*ih*/)
+    IupUpdate(canvas)
+    return IUP_IGNORE
+end function
+
+function map_cb(Ihandle ih)
+    cdcanvas = cdCreateCanvas(CD_IUP, ih)
+    cddbuffer = cdCreateCanvas(CD_DBUFFER, cdcanvas)
+    cdCanvasSetBackground(cddbuffer, CD_WHITE)
+    cdCanvasSetForeground(cddbuffer, CD_GRAY)
+    return IUP_DEFAULT
+end function
+
+procedure main()
+    IupOpen()
+
+    canvas = IupCanvas(NULL)
+    IupSetAttribute(canvas, "RASTERSIZE", "450x300")
+    IupSetCallback(canvas, "MAP_CB", Icallback("map_cb"))
+    IupSetCallback(canvas, "ACTION", Icallback("redraw_cb"))
+
+    dlg = IupDialog(canvas)
+    IupSetAttribute(dlg, "TITLE", "Plasma")
+
+    IupShow(dlg)
+    IupSetAttribute(canvas, "RASTERSIZE", NULL)
+    Ihandle timer = IupTimer(Icallback("timer_cb"), 50)
+    IupMainLoop()
+    IupClose()
+end procedure
+
+main()

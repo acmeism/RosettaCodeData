@@ -1,0 +1,125 @@
+(* Shell sort with both the gap sequence and the order predicate
+   selected by templates. *)
+
+(* This version is only for arrays of non-linear elements (whose
+   values may freely be copied). Thus the code looks more like what
+   one would write in most other programming languages. *)
+
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+(* Interface                                                        *)
+
+extern fn {a : t@ype}           (* The "less than" template. *)
+shell_sort2$lt : (a, a) -<> bool
+
+extern fn {}                  (* Maps array size to a gap sequence. *)
+shell_sort2$gaps : {n : int} size_t n -<> List1 ([i : pos] size_t i)
+
+extern fn {a : t@ype}
+shell_sort2 {n   : int}
+            (arr : &array (a, n) >> _,
+             n   : size_t n)
+    :<!wrt> void
+
+(*------------------------------------------------------------------*)
+(* Implementation                                                   *)
+
+implement {a}
+shell_sort2 {n} (arr, n) =
+  let
+    macdef lt = shell_sort2$lt<a>
+
+    fun
+    gapped_sort {gap : pos | gap < n}
+                {i   : int | gap <= i; i <= n}
+                .<n - i>.
+                (arr : &array (a, n) >> _,
+                 gap : size_t gap,
+                 i   : size_t i)
+        :<!wrt> void =
+      if i <> n then
+        let
+          fun
+          move_elems {j : nat | j <= i}
+                     .<j>.
+                     (arr  : &array (a, n) >> _,
+                      temp : a,
+                      j    : size_t j)
+              :<!wrt> void =
+            if j < gap then
+              arr[j] := temp
+            else if ~(temp \lt arr[j - gap]) then
+              arr[j] := temp
+            else
+              begin
+                arr[j] := arr[j - gap];
+                move_elems (arr, temp, j - gap)
+              end
+      in
+        move_elems (arr, arr[i], i);
+        gapped_sort (arr, gap, succ i)
+      end
+
+    fun
+    go_through_gaps
+              {num_gaps : nat}
+              .<num_gaps>.
+              (arr  : &array (a, n) >> _,
+               gaps : list ([i : pos] size_t i, num_gaps))
+        :<!wrt> void =
+      case+ gaps of
+      | list_nil () => ()
+      | list_cons (gap, more_gaps) =>
+        if n <= gap then
+          go_through_gaps (arr, more_gaps)
+        else
+          begin
+            gapped_sort (arr, gap, gap);
+            go_through_gaps (arr, more_gaps)
+          end
+  in
+    go_through_gaps (arr, shell_sort2$gaps<> n)
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+shell_sort2$lt<int> (x, y) =
+  x < y
+
+implement
+main0 () =
+  let
+    (* Gaps by Marcin Ciura. https://oeis.org/A102549 *)
+    val ciura_gaps =
+      $list{[i : pos] size_t i}
+        (i2sz 1750,
+         i2sz 701, i2sz 301,
+         i2sz 132, i2sz 57,
+         i2sz 23, i2sz 10,
+         i2sz 4, i2sz 1)
+
+    implement
+    shell_sort2$gaps<> n =
+      (* Use Ciura's gaps, regardless of array size. *)
+      ciura_gaps
+
+    #define SIZE 30
+    var i : [i : nat] int i
+    var arr : array (int, SIZE)
+  in
+    array_initize_elt<int> (arr, i2sz SIZE, 0);
+    for (i := 0; i < SIZE; i := succ i)
+      arr[i] := $extfcall (int, "rand") % 10;
+
+    for (i := 0; i < SIZE; i := succ i)
+      print! (" ", arr[i]);
+    println! ();
+
+    shell_sort2<int> (arr, i2sz SIZE);
+
+    for (i := 0; i < SIZE; i := succ i)
+      print! (" ", arr[i]);
+    println! ()
+  end

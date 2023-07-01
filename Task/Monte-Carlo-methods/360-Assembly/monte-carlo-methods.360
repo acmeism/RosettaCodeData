@@ -1,0 +1,82 @@
+*        Monte Carlo methods       08/03/2017
+MONTECAR CSECT
+         USING  MONTECAR,R13       base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R8,1000            isamples=1000
+         LA     R6,4               i=4
+       DO WHILE=(C,R6,LE,=F'7')    do i=4 to 7
+         MH     R8,=H'10'            isamples=isamples*10
+         ZAP    HITS,=P'0'           hits=0
+         LA     R7,1                 j=1
+       DO WHILE=(CR,R7,LE,R8)        do j=1 to isamples
+         BAL    R14,RNDPK              call random
+         ZAP    X,RND                  x=rnd
+         BAL    R14,RNDPK              call random
+         ZAP    Y,RND                  y=rnd
+         ZAP    WP,X                   x
+         MP     WP,X                   x**2
+         DP     WP,ONE                 ~
+         ZAP    XX,WP(8)               x**2   normalized
+         ZAP    WP,Y                   y
+         MP     WP,Y                   y**2
+         DP     WP,ONE                 ~
+         ZAP    YY,WP(8)               y**2   normalized
+         AP     XX,YY                  xx=x**2+y**2
+       IF CP,XX,LT,ONE THEN            if x**2+y**2<1 then
+         AP     HITS,=P'1'               hits=hits+1
+       ENDIF    ,                      endif
+         LA     R7,1(R7)               j++
+       ENDDO    ,                    enddo j
+         CVD    R8,PSAMPLES          psamples=isamples
+         ZAP    WP,=P'4'             4
+         MP     WP,ONE               ~
+         MP     WP,HITS              *hits
+         DP     WP,PSAMPLES          /psamples
+         ZAP    MCPI,WP(8)           mcpi=4*hits/psamples
+         XDECO  R6,WC                edit i
+         MVC    PG+4(1),WC+11        output i
+         MVC    WC,MASK              load mask
+         ED     WC,PSAMPLES          edit psamples
+         MVC    PG+6(8),WC+8         output psamples
+         UNPK   WC,MCPI              unpack mcpi
+         OI     WC+15,X'F0'          zap sign
+         MVC    PG+31(1),WC+6        output mcpi
+         MVC    PG+33(6),WC+7        output mcpi decimals
+         XPRNT  PG,L'PG              print buffer
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         L      R13,4(0,R13)       restore previous savearea pointer
+         LM     R14,R12,12(R13)    restore previous context
+         XR     R15,R15            rc=0
+         BR     R14                exit
+RNDPK    EQU    *             ---- random number generator
+         ZAP    WP,RNDSEED         w=seed
+         MP     WP,RNDCNSTA        w*=cnsta
+         AP     WP,RNDCNSTB        w+=cnstb
+         MVC    RNDSEED,WP+8       seed=w mod 10**15
+         MVC    RND,=PL8'0'        0<=rnd<1
+         MVC    RND+3(5),RNDSEED+3 return rnd
+         BR     R14           ---- return
+PSAMPLES DS     0D,PL8             F(15,0)
+RNDSEED  DC     PL8'613058151221121'  linear congruential constant
+RNDCNSTA DC     PL8'944021285986747'  "
+RNDCNSTB DC     PL8'852529586767995'  "
+RND      DS     PL8                fixed(15,9)
+ONE      DC     PL8'1.000000000'   1 fixed(15,9)
+HITS     DS     PL8                fixed(15,0)
+X        DS     PL8                fixed(15,9)
+Y        DS     PL8                fixed(15,9)
+MCPI     DS     PL8                fixed(15,9)
+XX       DS     PL8                fixed(15,9)
+YY       DS     PL8                fixed(15,9)
+PG       DC     CL80'10**x xxxxxxxx samples give Pi=x.xxxxxx'  buffer
+MASK     DC     X'40202020202020202020202020202120'  mask CL16 15num
+WC       DS     PL16               character 16
+WP       DS     PL16               packed decimal 16
+         YREGS
+         END    MONTECAR

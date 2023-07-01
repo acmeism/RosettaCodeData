@@ -1,0 +1,8 @@
+   4095 13 5 6144 4096 'ID Opcode RCODE ARCOUNT QDCOUNT' set start
+4095 0 13 0 0 0 0 0 5 4096 0 0 6144
+   pack 4095 13 5 6144 4096 'ID Opcode RCODE ARCOUNT QDCOUNT' set start
+15 255 104 5 16 0 0 0 0 0 24 0
+   unpack 0 10 56 128 0 0 0 0 0 0 0 255
+10 0 7 0 0 0 1 0 0 0 0 0 255
+   'Opcode' get unpack 0 10 56 128 0 0 0 0 0 0 0 255
+7

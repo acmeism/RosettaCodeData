@@ -1,0 +1,3 @@
+package CameraPhone;
+use base qw/Camera MobilePhone/;
+#functions go here...

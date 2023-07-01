@@ -1,0 +1,16 @@
+(defun man-or-boy (x)
+ (a x (lambda () 1)
+      (lambda () -1)
+      (lambda () -1)
+      (lambda () 1)
+      (lambda () 0)))
+
+(defun a (k x1 x2 x3 x4 x5)
+  (labels ((b ()
+             (decf k)
+             (a k #'b x1 x2 x3 x4)))
+    (if (<= k 0)
+        (+ (funcall x4) (funcall x5))
+        (b))))
+
+(man-or-boy 10)

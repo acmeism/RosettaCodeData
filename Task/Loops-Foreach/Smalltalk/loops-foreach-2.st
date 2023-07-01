@@ -1,0 +1,1 @@
+aCollection do:#displayNl.

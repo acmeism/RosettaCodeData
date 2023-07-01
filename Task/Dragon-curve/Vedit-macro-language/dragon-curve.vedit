@@ -1,0 +1,100 @@
+File_Open("|(USER_MACRO)\dragon.bmp", OVERWRITE+NOEVENT)
+BOF Del_Char(ALL)
+
+#11 = 640		// width of the image
+#12 = 480		// height of the image
+Call("CREATE_BMP")
+
+#1 = 384		// dx
+#2 = 0			// dy
+#3 = 6			// depth of recursion
+#4 = 1			// flip
+#5 = 150		// x
+#6 = 300		// y
+Call("DRAGON")
+Buf_Close(NOMSG)
+
+Sys(`start "" "|(USER_MACRO)\dragon.bmp"`, DOS+SUPPRESS+SIMPLE+NOWAIT)
+return
+
+/////////////////////////////////////////////////////////////////////
+//
+//  Dragon fractal, recursive
+//
+:DRAGON:
+if (#3 == 0) {
+    Call("DRAW_LINE")
+} else {
+    #1 /= 2
+    #2 /= 2
+    #3--
+    if (#4) {
+	Num_Push(1,4) #4=1; #7=#1; #1=#2; #2=-#7; Call("DRAGON") Num_Pop(1,4)
+	Num_Push(1,4) #4=0; Call("DRAGON") Num_Pop(1,4)
+	Num_Push(1,4) #4=1; #7=#1; #1=-#2; #2=#7; Call("DRAGON") Num_Pop(1,4)
+	Num_Push(1,4) #4=0; Call("DRAGON") Num_Pop(1,4)
+    } else {
+	Num_Push(1,4) #4=1; Call("DRAGON") Num_Pop(1,4)
+	Num_Push(1,4) #4=0; #7=#1; #1=-#2; #2=#7; Call("DRAGON") Num_Pop(1,4)
+	Num_Push(1,4) #4=1; Call("DRAGON") Num_Pop(1,4)
+	Num_Push(1,4) #4=0; #7=#1; #1=#2; #2=-#7; Call("DRAGON") Num_Pop(1,4)
+    }
+}
+return
+
+/////////////////////////////////////////////////////////////////////
+//
+//  Daw a horizontal, vertical or diagonal line. #1 = dx, #2 = dy
+//
+:DRAW_LINE:
+while (#1 || #2 ) {
+    #21 = (#1>0) - (#1<0)
+    #22 = (#2>0) - (#2<0)
+    #5 += #21; #1 -= #21
+    #6 += #22; #2 -= #22
+    Goto_Pos(1078 + #5 + #6*#11)
+    IC(255, OVERWRITE)		// plot a pixel
+}
+return
+
+/////////////////////////////////////////////////////////////////////
+//
+//  Create a bitmap file
+//
+:CREATE_BMP:
+
+// BITMAPFILEHEADER:
+IT("BM")			// bfType
+#10 = 1078+#11*#12		// file size
+Call("INS_4BYTES")
+IC(0, COUNT, 4)			// reserved
+#10 = 1078; Call("INS_4BYTES")	// offset to bitmap data
+
+// BITMAPINFOHEADER:
+#10 = 40;  Call("INS_4BYTES")	// size of BITMAPINFOHEADER
+#10 = #11; Call("INS_4BYTES")	// width of image
+#10 = #12; Call("INS_4BYTES")	// height of image
+IC(1) IC(0)			// number of bitplanes = 1
+IC(8) IC(0)			// bits/pixel = 8
+IC(0, COUNT, 24)		// compression, number of colors etc.
+
+// Color table - create greyscale palette
+for (#1 = 0; #1 < 256; #1++) {
+  IC(#1) IC(#1) IC(#1) IC(0)
+}
+
+// Pixel data - init to black
+for (#1 = 0; #1 < #12; #1++) {
+  IC(0, COUNT, #11)
+}
+return
+
+//
+//  Write 32 bit binary value from #10 in the file
+//
+:INS_4BYTES:
+for (#1 = 0; #1 < 4; #1++) {
+  Ins_Char(#10 & 0xff)
+  #10 = #10 >> 8
+}	
+return

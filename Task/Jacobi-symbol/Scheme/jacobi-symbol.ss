@@ -1,0 +1,13 @@
+(define jacobi (lambda (a n)
+		 (let ((a-mod-n (modulo a n)))
+		   (if (zero? a-mod-n)
+		       (if (= n 1)
+			   1
+			   0)
+		       (if (even? a-mod-n)
+			   (case (modulo n 8)
+			     ((3 5) (- (jacobi (/ a-mod-n 2) n)))
+			     ((1 7) (jacobi (/ a-mod-n 2) n)))
+			   (if (and (= (modulo a-mod-n 4) 3) (= (modulo n 4) 3))
+			       (- (jacobi n a-mod-n))
+			       (jacobi n a-mod-n)))))))

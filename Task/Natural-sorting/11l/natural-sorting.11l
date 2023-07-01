@@ -1,0 +1,109 @@
+T.enum Kind
+   STRING
+   NUMBER
+
+T KeyItem
+   Kind kind
+   String s
+   Int num
+
+F natOrderKey(=s)
+   // Remove leading and trailing white spaces.
+   s = s.trim((‘ ’, "\t", "\r", "\n"))
+
+   // Make all whitespace characters equivalent and remove adjacent spaces.
+   s = s.replace(re:‘\s+’, ‘ ’)
+
+   // Switch to lower case.
+   s = s.lowercase()
+
+   // Remove leading "the ".
+   I s.starts_with(‘the ’) & s.len > 4
+      s = s[4..]
+
+   // Split into fields.
+   [KeyItem] result
+   V idx = 0
+   L idx < s.len
+      V e = idx
+      L e < s.len & !s[e].is_digit()
+         e++
+      I e > idx
+         V ki = KeyItem()
+         ki.kind = Kind.STRING
+         ki.s = s[idx .< e]
+         result.append(ki)
+         idx = e
+      L e < s.len & s[e].is_digit()
+         e++
+      I e > idx
+         V ki = KeyItem()
+         ki.kind = Kind.NUMBER
+         ki.num = Int(s[idx .< e])
+         result.append(ki)
+         idx = e
+   R result
+
+F scmp(s1, s2)
+   I s1 < s2 {R -1}
+   I s1 > s2 {R  1}
+   R 0
+
+F naturalCmp(String sa, String sb)
+   V a = natOrderKey(sa)
+   V b = natOrderKey(sb)
+
+   L(i) 0 .< min(a.len, b.len)
+      V ai = a[i]
+      V bi = b[i]
+      I ai.kind == bi.kind
+         V result = I ai.kind == STRING {scmp(ai.s, bi.s)} E ai.num - bi.num
+         I result != 0
+            R result
+      E
+         R I ai.kind == STRING {1} E -1
+
+   R I a.len < b.len {-1} E (I a.len == b.len {0} E 1)
+
+F test(title, list)
+   print(title)
+   print(sorted(list, key' cmp_to_key(naturalCmp)).map(s -> ‘'’s‘'’).join("\n"))
+   print()
+
+test(‘Ignoring leading spaces.’,
+    [‘ignore leading spaces:  2-2’,
+     ‘ ignore leading spaces:  2-1’,
+     ‘  ignore leading spaces:  2+0’,
+     ‘   ignore leading spaces:  2+1’])
+
+test(‘Ignoring multiple adjacent spaces (MAS).’,
+    [‘ignore MAS spaces:  2-2’,
+     ‘ignore MAS  spaces:  2-1’,
+     ‘ignore MAS   spaces:  2+0’,
+     ‘ignore MAS    spaces:  2+1’])
+
+test(‘Equivalent whitespace characters.’,
+    [‘Equiv.  spaces:     3-3’,
+     "Equiv. \rspaces:    3-2",
+     "Equiv. \x0cspaces:  3-1",
+     "Equiv. \x0bspaces:  3+0",
+     "Equiv. \nspaces:    3+1",
+     "Equiv. \tspaces:    3+2"])
+
+test(‘Case Independent sort.’,
+    [‘cASE INDEPENDENT:  3-2’,
+     ‘caSE INDEPENDENT:  3-1’,
+     ‘casE INDEPENDENT:  3+0’,
+     ‘case INDEPENDENT:  3+1’])
+
+test(‘Numeric fields as numerics.’,
+    [‘foo100bar99baz0.txt’,
+     ‘foo100bar10baz0.txt’,
+     ‘foo1000bar99baz10.txt’,
+     ‘foo1000bar99baz9.txt’])
+
+test(‘Title sorts.’,
+    [‘The Wind in the Willows’,
+     ‘The 40th step more’,
+     ‘The 39 steps’,
+     ‘Wanda’])

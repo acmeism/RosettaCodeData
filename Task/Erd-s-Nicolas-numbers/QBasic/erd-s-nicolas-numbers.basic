@@ -1,0 +1,19 @@
+limite = 50000
+DIM DSum(limite + 1), DCount(limite + 1)
+
+FOR i = 0 TO limite
+    DSum(i) = 1
+    DCount(i) = 1
+NEXT i
+
+FOR i = 2 TO limite
+    j = i + i
+    WHILE j <= limite
+        IF DSum(j) = j THEN
+            PRINT USING "######## equals the sum of its first ### divisors"; j; DCount(j)
+        END IF
+        DSum(j) = DSum(j) + i
+        DCount(j) = DCount(j) + 1
+        j = j + i
+    WEND
+NEXT i

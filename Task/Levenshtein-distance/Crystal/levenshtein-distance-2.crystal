@@ -1,0 +1,23 @@
+module Levenshtein
+
+  def self.distance(a, b)
+    a, b = a.downcase, b.downcase
+    costs = (0..b.size).to_a
+    (1..a.size).each do |i|
+      costs[0], nw = i, i - 1  # j == 0; nw is lev(i-1, j)
+      (1..b.size).each do |j|
+        costs[j], nw = [costs[j] + 1, costs[j-1] + 1, a[i-1] == b[j-1] ? nw : nw + 1].min, costs[j]
+      end
+    end
+    costs[b.size]
+  end
+
+  def self.test
+    %w{kitten sitting saturday sunday rosettacode raisethysword}.each_slice(2) do |(a, b)| #or do |pair| a, b = pair
+      puts "distance(#{a}, #{b}) = #{distance(a, b)}"
+    end
+  end
+
+end
+
+Levenshtein.test

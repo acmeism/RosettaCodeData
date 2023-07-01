@@ -1,0 +1,63 @@
+;; alias for circumflex, which is reserved syntax
+(defvar exp (intern "^"))
+
+(defvar *prec* ^((,exp . 4) (* . 3) (/ . 3) (+ . 2) (- . 2)))
+
+(defvar *asso* ^((,exp . :right) (* . nil)
+                 (/ . :left) (+ . nil) (- . :left)))
+
+(defun debug-print (label val)
+  (format t "~a: ~a\n" label val)
+  val)
+
+(defun rpn-to-lisp (rpn)
+  (let (stack)
+    (each ((term rpn))
+      (if (symbolp (debug-print "rpn term" term))
+        (let ((right (pop stack))
+              (left (pop stack)))
+          (push ^(,term ,left ,right) stack))
+        (push term stack))
+      (debug-print "stack" stack))
+    (if (rest stack)
+      (return-from error "*excess stack elements*"))
+      (debug-print "lisp" (pop stack))))
+
+(defun prec (term)
+  (or (cdr (assoc term *prec*)) 99))
+
+(defun asso (term dfl)
+  (or (cdr (assoc term *asso*)) dfl))
+
+(defun inf-term (op term left-or-right)
+  (if (atom term)
+    `@term`
+    (let ((pt (prec (car term)))
+          (po (prec op))
+          (at (asso (car term) left-or-right))
+          (ao (asso op left-or-right)))
+      (cond
+        ((< pt po) `(@(lisp-to-infix term))`)
+        ((> pt po) `@(lisp-to-infix term)`)
+        ((and (eq at ao) (eq left-or-right ao)) `@(lisp-to-infix term)`)
+        (t `(@(lisp-to-infix term))`)))))
+
+(defun lisp-to-infix (lisp)
+  (tree-case lisp
+    ((op left right) (let ((left-inf (inf-term op left :left))
+                           (right-inf (inf-term op right :right)))
+                       `@{left-inf} @op @{right-inf}`))
+    (()              (return-from error "*stack underflow*"))
+    (else            `@lisp`)))
+
+(defun string-to-rpn (str)
+  (debug-print "rpn"
+    (mapcar (do if (int-str @1) (int-str @1) (intern @1))
+            (tok-str str #/[^ \t]+/))))
+
+(debug-print "infix"
+  (block error
+     (tree-case *args*
+       ((a b . c) "*excess args*")
+       ((a) (lisp-to-infix (rpn-to-lisp (string-to-rpn a))))
+       (else "*arg needed*"))))

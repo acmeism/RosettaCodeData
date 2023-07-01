@@ -1,0 +1,63 @@
+.include "\SrcAll\Header.asm"   ;defines the UserRam label (address 0xA0001000 on N64)
+.include "\SrcAll\BasicMacros.asm"
+.include "\SrcALL\AdvancedMacros.asm"
+.include "\SrcALL\MemoryMap.asm"
+
+CursorX equ 0x100 ;offset from label UserRam, used for tracking where to print to the tv screen
+CursorY equ 0x101 ;offset from label UserRam, used for tracking where to print to the tv screen
+main:
+	;copy the string to ram.
+	la $t0,0x00393939	;store 0,0x39,0x39,0x39 ;n64 is big-endian
+	la $t1,0x31000000	
+	
+	la $t2,UserRam
+	sw $t0,0($t2)
+	nop
+	sw $t1,4($t2)
+	nop
+	
+	;string ram now looks like this:
+	;	byte 0
+	;	byte "9991"
+	;	byte 0
+	; it was more convenient to store the numeric string little-endian,
+        ; the leading terminator lets us easily print it in reverse.
+	
+
+	la $t1,UserRam+1	;read past the terminator placed at the front.
+	li $t2,0x3A
+incStr:
+	lbu $t0,($t1)
+	beqz $t0,display
+	nop
+	addiu $t0,1
+	bltu $t0,$t2,noCarry
+	nop
+	;carry it forward
+	li $t0,0x30
+	sb $t0,($t1)
+	addiu $t1,1
+	j incStr
+	nop
+	
+noCarry:
+	sb $t0,($t1)
+	addiu $t1,1
+	j incStr
+	
+display:
+	la $t1,UserRam+4
+display_loop:
+	lbu $t0,($t1)
+	beqz $t0,shutdown
+	nop
+	move $a1,$t0
+	jal PrintChar       ;takes $a1 as argument, prints the ascii character in $a1 to the television screen
+	nop
+	subiu $t1,1
+	j display_loop
+        nop
+shutdown:
+	nop                 ;not required on real hardware, but project 64 throws a fit if I don't have this.
+	b shutdown
+	nop

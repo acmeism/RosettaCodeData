@@ -1,0 +1,90 @@
+	cpu	8086
+	bits	16
+	org	100h
+section	.text
+	;;;	Calculate hamming weights of 3^0 to 3^29.
+	;;;	3^29 needs a 48-bit representation, which
+	;;;	we'll put in BP:SI:DI.
+	xor	bp,bp		; BP:SI:DI = 1
+	xor	si,si
+	xor	di,di
+	inc	di
+	mov	cx,30
+	;;;	Calculate pop count of BP:SI:DI
+pow3s:	push	bp		; Keep state
+	push	si
+	push	di
+	xor	ax,ax		; AL = counter
+ham48:	rcl	bp,1
+	rcl	si,1
+	rcl	di,1
+	adc	al,ah
+	mov	dx,bp
+	or	dx,si
+	or	dx,di
+	jnz	ham48
+	pop	di		; Restore state
+	pop	si
+	pop	bp
+	call	outal		; Output
+	;;;	Multiply by 3
+	push	bp		; Keep state
+	push	si
+	push	di
+	add	di,di 		; Mul by two (add to itself)
+	adc	si,si
+	adc	bp,bp
+	pop	ax		; Add original (making x3)
+	add	di,ax
+	pop	ax
+	adc	si,ax
+	pop	ax
+	adc	bp,ax
+	loop	pow3s
+	call	outnl
+	;;;	Print first 30 evil numbers
+	;;;	This is much easier, since they fit in a byte,
+	;;;	and we only need to know whether the Hamming weight
+	;;;	is odd or even, which is the same as the built-in
+	;;;	parity check
+	mov	cl,30
+	xor	bx,bx
+	dec	bx
+evil:	inc	bx		; Increment number to test
+	jpo	.next		; If parity is odd, number is not evil
+	mov	al,bl		; Otherwise, output the number
+	call	outal
+	dec	cx		; One fewer left
+.next:	test	cx,cx
+	jnz	evil		; Next evil number
+	call	outnl
+	;;;	For the odious numbers it is the same
+	mov	cl,30
+	xor	bx,bx
+	dec	bx
+odious:	inc	bx
+	jpe	.next 		; Except this time we skip the evil numbers
+	mov	al,bl
+	call	outal
+	dec	cx
+.next:	test	cx,cx
+	jnz	odious
+	;;;	Print newline
+outnl:	mov	ah,2
+	mov	dl,13
+	int	21h
+	mov	dl,10
+	int	21h
+	ret
+	;;;	Print 2-digit number in AL
+outal:	aam
+	add 	ax,3030h
+	xchg	dx,ax
+	xchg	dl,dh
+	mov	ah,2
+	int	21h
+	xchg	dl,dh
+	int	21h
+	mov 	dl,' '
+	int	21h
+	ret

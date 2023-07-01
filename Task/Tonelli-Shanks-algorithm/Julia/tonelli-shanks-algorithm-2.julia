@@ -1,0 +1,7 @@
+@show TonelliShanks.solve(10, 13)
+@show TonelliShanks.solve(56, 101)
+@show TonelliShanks.solve(1030, 10009)
+@show TonelliShanks.solve(44402, 100049)
+@show TonelliShanks.solve(665820697, 1000000009)
+@show TonelliShanks.solve(881398088036, 1000000000039)
+@show TonelliShanks.solve(41660815127637347468140745042827704103445750172002, big"10" ^ 50 + 577)

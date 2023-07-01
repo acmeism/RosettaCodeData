@@ -1,0 +1,13 @@
+i = 1024
+WHILE i > 0
+   PRINT i
+   i = INT(i / 2)
+WEND
+PRINT
+
+i = 1024
+DO WHILE i > 0
+   PRINT i
+   i = i \ 2
+LOOP
+END

@@ -1,0 +1,120 @@
+	;
+	; Towers of Hanoi using Z80 assembly language
+	;
+	; Runs under CP/M 3.1 on YAZE-AG-2.51.2 Z80 emulator
+	; Assembled with zsm4 on same emulator/OS, uses macro capabilities of said assembler
+	; Created with vim under Windows
+	;
+	; 2023-05-29 Xorph
+	;
+
+	;
+	; Useful definitions
+	;
+
+	bdos	equ 05h		; Call to CP/M BDOS function
+	strdel	equ 6eh		; Set string delimiter
+	wrtstr	equ 09h		; Write string to console
+
+	nul	equ 00h		; ASCII control characters
+	cr	equ 0dh
+	lf	equ 0ah
+
+	cnull	equ '0'		; ASCII character constants
+	ca	equ 'A'
+	cb	equ 'B'
+	cc	equ 'C'
+
+	disks	equ 4		; Number of disks to move
+
+	;
+	; Macros for BDOS calls
+	;
+
+setdel 	macro	char		; Set string delimiter to char
+	ld	c,strdel
+	ld	e,char
+	call	bdos
+	endm
+
+print 	macro	msg		; Output string to console
+	ld	c,wrtstr
+	ld	de,msg
+	call	bdos
+	endm
+
+pushall	macro			; Save required registers to stack
+	push	af
+	push	bc
+	push	de
+	endm
+
+popall	macro			; Recall required registers from stack
+	pop	de
+	pop	bc
+	pop	af
+	endm
+
+	;
+	; =====================
+	; Start of main program
+	; =====================
+	;
+
+	cseg
+
+	setdel	nul		; Set string delimiter to 00h
+
+	ld	a,disks		; Initialization:
+	ld	b,ca		; Tower A is source
+	ld	c,cb		; Tower B is target
+	ld	d,cc		; Tower C is intermediate
+
+hanoi:
+	;
+	; Parameters in registers:
+	; Move a disks from b (source) to c (target) via d (intermediate)
+	;
+
+	or	a		; If 0 disks to move, return
+	ret	z
+
+	dec	a		; Move all but lowest disk from source to intermediate via target
+	pushall			; Save registers
+	ld	e,c		; Exchange c and d (target and intermediate)
+	ld	c,d
+	ld	d,e
+	call	hanoi		; First recursion
+	popall			; Restore registers
+
+	ld	hl,source	; Print move of lowest disk from source to target, save registers during BDOS call
+	ld	(hl),b		; Source is still in b
+	ld	hl,target
+	ld	(hl),c		; Target is back in c due to popall
+
+	pushall
+	print	movement
+	popall
+
+	ld	e,b		; Now move stack from intermediate to target via source
+	ld	b,d		; Source is still in b, target in c and intermediate in d
+	ld	d,e
+	jr	hanoi		; Optimize tail recursion
+
+	;
+	; ================
+	; Data definitions
+	; ================
+	;
+
+	dseg
+
+movement:
+	defb	'Move disk from tower '
+source:
+	defs	1
+	defb	' to tower '
+target:
+	defs	1
+crlf:
+	defb	cr,lf,nul

@@ -1,0 +1,90 @@
+% Read numbers from a stream
+read_nums = iter (s: stream) yields (int)
+    while true do
+        c: char := stream$getc(s)
+        while c~='-' & ~(c>='0' & c<='9') do
+            c := stream$getc(s)
+        end
+        acc: int := 0
+        neg: bool
+        if c='-' then
+            neg := true
+            c := stream$getc(s)
+        else
+            neg := false
+        end
+        while c>='0' & c<='9' do
+            acc := acc*10 + char$c2i(c) - char$c2i('0')
+            c := stream$getc(s)
+            except when end_of_file: break end
+        end
+        if neg then acc := -acc end
+        yield(acc)
+    end except when end_of_file: end
+end read_nums
+
+% Auto-resizing array
+mem = cluster is new, load, fetch, store
+    rep = array[int]
+
+    new = proc () returns (cvt)
+        return(rep$predict(0,2**9))
+    end new
+
+    fill_to = proc (a: rep, lim: int)
+        while rep$high(a) < lim do rep$addh(a,0) end
+    end fill_to
+
+    fetch = proc (a: cvt, n: int) returns (int) signals (bounds)
+        fill_to(a,n)
+        return(a[n]) resignal bounds
+    end fetch
+
+    store = proc (a: cvt, n: int, v: int) signals (bounds)
+        fill_to(a,n)
+        a[n] := v resignal bounds
+    end store
+
+    load = proc (a: cvt, s: stream)
+        i: int := 0
+        for n: int in read_nums(s) do
+            up(a)[i] := n
+            i := i + 1
+        end
+    end load
+end mem
+
+% Run a Subleq program
+subleq = proc (m: mem, si, so: stream)
+    ip: int := 0
+    while ip >= 0 do
+        a: int := m[ip]
+        b: int := m[ip+1]
+        c: int := m[ip+2]
+        ip := ip + 3
+        if a=-1 then m[b] := char$c2i(stream$getc(si))
+        elseif b=-1 then stream$putc(so,char$i2c(m[a] // 256))
+        else
+            m[b] := m[b] - m[a]
+            if m[b] <= 0 then ip := c end
+        end
+    end
+end subleq
+
+start_up = proc ()
+    pi: stream := stream$primary_input()
+    po: stream := stream$primary_output()
+
+    args: sequence[string] := get_argv()
+    if sequence[string]$size(args) ~= 1 then
+        stream$putl(stream$error_output(), "Usage: subleq file_name")
+        return
+    end
+
+    fname: file_name := file_name$parse(sequence[string]$bottom(args))
+    file: stream := stream$open(fname, "read")
+    m: mem := mem$new()
+    mem$load(m, file)
+    stream$close(file)
+    subleq(m, pi, po)
+end start_up

@@ -1,0 +1,104 @@
+*        Spigot algorithm do the digits of PI  02/07/2016
+PISPIG   CSECT
+         USING  PISPIG,R13         base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    prolog
+         ST     R13,4(R15)         "
+         ST     R15,8(R13)         "
+         LR     R13,R15            "
+         SR     R0,R0              0
+         ST     R0,MORE            more=0
+         LA     R6,1               i=1
+LOOPI1   C      R6,=A(NBUF)        do i=1 to hbound(buf)
+         BH     ELOOPI1            "
+         SR     R9,R9                karray=0
+         L      R7,=A(NVECT)         j=hbound(vect)
+         LR     R1,R7                  j
+         SLA    R1,2                   .
+         LA     R10,VECT-4(R1)       r10=@vect(j)
+LOOPJ    EQU    *                    do j=hbound(vect) to 1 by -1
+         L      R5,=F'100000'            100000
+         M      R4,0(R10)                *vect(j)
+         LR     R2,R5                    r2=100000*vect(j)
+         LR     R5,R9                    karray
+         MR     R4,R7                    karray*j
+         AR     R2,R5                    r2+karray*j
+         LR     R11,R2                 n=100000*vect(j)+karray*j
+         LR     R3,R7                    j
+         SLA    R3,1                     2*j
+         BCTR   R3,0                     2*j-1)
+         LR     R4,R11                   n
+         SRDA   R4,32                    .
+         DR     R4,R3                    n/(2*j-1)
+         LR     R9,R5                  karray=n/(2*j-1)
+         LR     R5,R9                    karray
+         MR     R4,R3                    karray*(2*j-1)
+         LR     R1,R11                   n
+         SR     R1,R5                    n-karray*(2*j-1)
+         ST     R1,0(R10)              vect(j)=n-karray*(2*j-1)
+         SH     R10,=H'4'              r10=@vect(j)
+         BCT    R7,LOOPJ             end do j
+         LR     R4,R9                karray
+         SRDA   R4,32                .
+         D      R4,=F'100000'        karray/100000
+         LR     R11,R5               k=karray/100000
+         L      R2,MORE              more
+         AR     R2,R11               +k
+         LR     R1,R6                i
+         SLA    R1,2                 .
+         ST     R2,BUF-4(R1)         buf(i)=more+k
+         LR     R5,R11                 k
+         M      R4,=F'100000'          *100000
+         LR     R1,R9                  karray
+         SR     R1,R5                  -k*100000
+         ST     R1,MORE              more=karray-k*100000
+         LA     R6,1(R6)             i=i+1
+         B      LOOPI1             end do i
+ELOOPI1  L      R1,BUF             buf(1)
+         CVD    R1,PACKED          convert buf(1) to packed decimal
+         OI     PACKED+7,X'0F'     prepare unpack
+         UNPK   PG(1),PACKED       packed decimal to zoned printable
+         MVI    PG+1,C'.'          output '.'
+         XPRNT  PG,80              print buffer
+         MVC    PG,=CL80' '        clear buffer
+         LA     R3,PG              pgi=0
+         LA     R6,2               i=2
+LOOPI2   C      R6,=A(NBUF)        do i=2 to hbound(buf)
+         BH     ELOOPI2            "
+         MVC    0(1,R3),=C' '        output ' '
+         LA     R3,1(R3)             pgi=pgi+1
+         LR     R1,R6                i
+         SLA    R1,2                 .
+         L      R2,BUF-4(R1)         buf(i)
+         CVD    R2,PACKED            convert v to packed decimal
+         OI     PACKED+7,X'0F'       prepare unpack
+         UNPK   XDEC,PACKED          packed decimal to zoned printable
+         MVC    0(5,R3),XDEC+7       output buf(i) with 5 decimals
+         LA     R3,5(R3)             pgi=pgi+5
+         LR     R4,R6                i
+         BCTR   R4,0                 i-1
+         SRDA   R4,32                .
+         D      R4,=F'10'            (i-1)/10
+         LTR    R4,R4                if (i-1)//10=0
+         BNZ    NOSKIP               then
+         XPRNT  PG,80                  print buffer
+         LA     R3,PG                  pgi=0
+         MVC    PG,=CL80' '            clear buffer
+NOSKIP   LA     R6,1(R6)             i=i+1
+         B      LOOPI2             end do i
+ELOOPI2  L      R13,4(0,R13)       epilog
+         LM     R14,R12,12(R13)    "
+         XR     R15,R15            "
+         BR     R14                exit
+         LTORG
+MORE     DS     F                  more
+PACKED   DS     0D,PL8             packed decimal
+PG       DC     CL80' '            buffer
+XDEC     DS     CL12               temp
+BUF      DC     (NBUF)F'0'         buf(nbuf)
+VECT     DC     (NVECT)F'2'        vect(nvect) init 2
+         YREGS
+NBUF     EQU    201                number of 5 decimals
+NVECT    EQU    3350               nvect=ceil(nbuf*50/3)
+         END    PISPIG

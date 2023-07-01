@@ -1,0 +1,73 @@
+report = cluster is new, classify, results
+    rep = record[cie, xie, cei, xei, words: int]
+
+    new = proc () returns (cvt)
+        return(rep${cie: 0, xie: 0, cei: 0, xei: 0, words: 0})
+    end new
+
+    classify = proc (r: cvt, word: string)
+        r.words := r.words + 1
+        if string$indexs("ie", word) ~= 0 then
+            if string$indexs("cie", word) ~= 0
+                then r.cie := r.cie + 1
+                else r.xie := r.xie + 1
+            end
+        elseif string$indexs("ei", word) ~= 0 then
+            if string$indexs("cei", word) ~= 0
+                then r.cei := r.cei + 1
+                else r.xei := r.xei + 1
+            end
+        end
+    end classify
+
+    stat = proc (s: stream, name: string, val: int)
+        stream$puts(s, name)
+        stream$puts(s, ": ")
+        stream$putl(s, int$unparse(val))
+    end stat
+
+    plausible = proc (s: stream, feature: string, match, nomatch: int)
+                returns (bool)
+        stream$puts(s, feature)
+        stream$puts(s, ": ")
+        plaus: bool := 2 * match > nomatch;
+        if ~plaus then stream$puts(s, "not ") end
+        stream$putl(s, "plausible.");
+        return(plaus)
+    end plausible
+
+    results = proc (r: cvt) returns (string)
+        ss: stream := stream$create_output()
+        stat(ss, "Amount of words", r.words)
+        stat(ss, "CIE", r.cie)
+        stat(ss, "xIE", r.xie)
+        stat(ss, "CEI", r.cei)
+        stat(ss, "xEI", r.xei)
+        stream$putl(ss, "")
+        xie_p: bool := plausible(ss, "I before E when not preceded by C", r.xie, r.cie)
+        cei_p: bool := plausible(ss, "E before I when preceded by C", r.cei, r.xei)
+        stream$puts(ss, "I before E, except after C: ")
+        if ~(xie_p & cei_p) then stream$puts(ss, "not ") end
+        stream$putl(ss, "plausible.")
+        return(stream$get_contents(ss))
+    end results
+end report
+
+lines = iter (s: stream) yields (string)
+    while true do
+        yield(stream$getl(s))
+        except when end_of_file: break end
+    end
+end lines
+
+start_up = proc ()
+    po: stream := stream$primary_output()
+    file: file_name := file_name$parse("unixdict.txt")
+    fstream: stream := stream$open(file, "read")
+    r: report := report$new()
+    for line: string in lines(fstream) do
+        report$classify(r, line)
+    end
+    stream$close(fstream)
+    stream$puts(po, report$results(r))
+end start_up

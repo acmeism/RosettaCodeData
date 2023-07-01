@@ -1,0 +1,195 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program addAetB.s   */
+
+/*******************************************/
+/* Constantes                              */
+/*******************************************/
+.equ STDOUT, 1                // linux output
+.equ WRITE,  64               // call system Linux 64 bits
+.equ EXIT,   93               // call system Linux 64 bits
+
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessError:     .asciz "Error : addAetB <number1> <number2>\n"
+szMessResult:  .asciz "Result = "
+szRetourLigne: .asciz "\n"
+/*******************************************/
+/* Uninitialized data                       */
+/*******************************************/
+.bss
+sZoneConv:                   .skip 100
+.text
+.global main
+main:
+    mov fp,sp                     // fp <- adresse début
+    ldr x0,[fp]                   // load parameters number in command line
+    cmp x0,3                      // number in command line
+    blt 99f                       // no -> error
+    ldr x0,[fp,16]                // recup address of number 1 in command line
+    bl conversionAtoD             // convert string in number in registre x0
+    mov x1,x0                     // save number1
+    ldr x0,[fp,24]                // recup address of number 2 in command line
+    bl conversionAtoD             // convert string in number in registre x0
+    mov x2,x0                     // save number2
+
+    add x0,x1,x2                  // addition number1 number2
+    ldr x1,qAdrsZoneConv
+    bl conversion10S              // result decimal conversion
+    ldr x0,qAdrszMessResult
+    bl affichageMess              // call function display
+    ldr x0,qAdrsZoneConv
+    bl affichageMess              // call function display
+    ldr x0, qAdrszRetourLigne
+    bl affichageMess
+    mov x0,0                      // return code OK
+    b 100f
+99:
+    ldr x0, qAdrszMessError       // adresse of message
+    bl affichageMess              // call function
+    mov x0,1                      // return code error
+100:                              // standard end programm
+    mov x8,EXIT                   // request to exit program
+    svc 0                         // perform the system call
+qAdrszMessError:             .quad szMessError
+qAdrszMessResult:            .quad szMessResult
+qAdrsZoneConv:               .quad sZoneConv
+qAdrszRetourLigne:           .quad szRetourLigne
+/******************************************************************/
+/*     String display with  size compute                          */
+/******************************************************************/
+/* x0 contains string address (string ended with zero binary) */
+affichageMess:
+    stp x0,x1,[sp,-16]!        // save  registers
+    stp x2,x8,[sp,-16]!        // save  registers
+    mov x2,0                   // size counter
+1:                             // loop start
+    ldrb w1,[x0,x2]            // load a byte
+    cbz w1,2f                  // if zero -> end string
+    add x2,x2,#1               // else increment counter
+    b 1b                       // and loop
+2:                             // x2 =  string size
+    mov x1,x0                  // string address
+    mov x0,STDOUT              // output Linux standard
+    mov x8,WRITE               // code call system "write"
+    svc 0                      // call systeme Linux
+    ldp x2,x8,[sp],16          // restaur  2 registres
+    ldp x0,x1,[sp],16          // restaur  2 registres
+    ret                        // retour adresse lr x30
+/******************************************************************/
+/*     Decimal conversion signed                             */
+/******************************************************************/
+/* x0 contains the value  */
+/* x1 contains the address of receiving area  length >= 21 */
+/* the receiving area return a string ascii left aligned */
+/* et avec un zero final */
+/* x0 return length string whitout zero final  */
+.equ LGZONECONV,   21
+conversion10S:
+    stp x5,lr,[sp,-16]!        // save  registers
+    stp x3,x4,[sp,-16]!        // save  registers
+    stp x1,x2,[sp,-16]!        // save  registers
+    cmp x0,0                   // is negative ?
+    bge 11f                    // no
+    mov x3,'-'                 // yes
+    neg x0,x0                  // number inversion
+    b 12f
+11:
+    mov x3,'+'                 // positive number
+12:
+    strb w3,[x1]
+    mov x4,#LGZONECONV         // position last digit
+    mov x5,#10                 // decimal conversion
+1:                             // loop conversion start
+    mov x2,x0                  // copy starting number or successive quotients
+    udiv x0,x2,x5              // division by ten
+    msub x3,x0,x5,x2           //compute remainder
+    add x3,x3,#48              // conversion ascii
+    sub x4,x4,#1               // previous position
+    strb w3,[x1,x4]            // store digit
+    cbnz x0,1b                 // end if quotient = zero
+
+    mov x2,LGZONECONV          // compute string length (21 - dernière position)
+    sub x0,x2,x4               // no instruction rsb in 64 bits !!!
+                               // move result to area begin
+    cmp x4,1
+    beq 3f                     // full area ?
+    mov x2,1                   // no -> begin area
+2:
+    ldrb w3,[x1,x4]            // load a digit
+    strb w3,[x1,x2]            // and store at begin area
+    add x4,x4,#1               // last position
+    add x2,x2,#1               // et begin last postion
+    cmp x4,LGZONECONV - 1      // end ?
+    ble 2b                     // no -> loop
+3:
+    mov w3,0
+    strb w3,[x1,x2]            // zero final
+    add x0,x0,1                // string length must take into account the sign
+100:
+    ldp x1,x2,[sp],16          // restaur  2 registers
+    ldp x3,x4,[sp],16          // restaur  2 registers
+    ldp x5,lr,[sp],16          // restaur  2 registers
+    ret                        // return address lr x30
+/******************************************************************/
+/*     conversion ascii string to number                          */
+/******************************************************************/
+/* x0 contains string address ended by 0x0 or 0xA */
+/* x0 return the number  */
+conversionAtoD:
+    stp x5,lr,[sp,-16]!        // save  registers
+    stp x3,x4,[sp,-16]!        // save  registers
+    stp x1,x2,[sp,-16]!        // save  registers
+    mov x1,#0
+    mov x2,#10             // factor ten
+    mov x4,x0              // save address in x4
+    mov x3,#0              // positive signe by default
+    mov x0,#0              // init résult to zéro
+    mov x5,#0
+1:                         // loop to remove space at begin of string
+    ldrb w5,[x4],1         // load in w5 string octet
+    cbz w5,100f            // string end -> end routine
+    cmp w5,#0x0A           // string end -> end routine
+    beq 100f
+    cmp w5,#' '            // space ?
+    beq 1b                 // yes -> loop
+2:
+    cmp x5,#'-'            // first character is -
+    bne 3f
+    mov x3,#1              // negative number
+    b 4f                   // previous position
+3:                         // begin loop compute digit
+    cmp x5,#'0'            // character not a digit
+    blt 4f
+    cmp x5,#'9'            // character not a digit
+    bgt 4f
+                           // character is a digit
+    sub w5,w5,#48
+
+    mul x0,x2,x0           // multiply last result by factor
+    smulh x1,x2,x0         // hight
+    cbnz x1,99f            // overflow ?
+    add x0,x0,x5           // no -> add to result
+4:
+    ldrb w5,[x4],1         // load new octet and increment to one
+    cbz w5,5f              // string end -> end routine
+    cmp w5,#0xA            // string end ?
+    bne 3b                 // no -> loop
+5:
+    cmp x3,#1              // test register x3 for signe
+    cneg x0,x0,eq          // if equal egal negate value
+    cmn x0,0               // carry to zero no error
+    b 100f
+99:                        // overflow
+    adr x0,szMessErrDep
+    bl  affichageMess
+    cmp x0,0               // carry to one  error
+    mov x0,#0              // if error return zéro
+100:
+    ldp x1,x2,[sp],16      // restaur  2 registers
+    ldp x3,x4,[sp],16      // restaur  2 registers
+    ldp x5,lr,[sp],16      // restaur  2 registers
+    ret                    // retur address lr x30
+szMessErrDep:      .asciz "Number too large: overflow of 64 bits. :\n"
+.align 4                   // instruction to realign the following routines

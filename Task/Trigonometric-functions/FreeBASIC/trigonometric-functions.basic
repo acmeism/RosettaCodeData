@@ -1,0 +1,21 @@
+' FB 1.05.0 Win64
+
+Const pi As Double = 4 * Atn(1)
+Dim As Double radians = pi / 4
+Dim As Double degrees = 45.0 '' equivalent in degrees
+Dim As Double temp
+
+Print "Radians     : "; radians, " ";
+Print "Degrees     : "; degrees
+Print
+Print "Sine        : "; Sin(radians), Sin(degrees * pi / 180)
+Print "Cosine      : "; Cos(radians), Cos(degrees * pi / 180)
+Print "Tangent     : "; Tan(radians), Tan(degrees * pi / 180)
+Print
+temp = ASin(Sin(radians))
+Print "Arc Sine    : "; temp, temp * 180 / pi
+temp = ACos(Cos(radians))
+Print "Arc Cosine  : "; temp, temp * 180 / pi
+temp = Atn(Tan(radians))
+Print "Arc Tangent : "; temp, temp * 180 / pi
+Sleep

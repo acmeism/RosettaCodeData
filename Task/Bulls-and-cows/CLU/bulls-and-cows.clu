@@ -1,0 +1,132 @@
+% This program needs to be merged with PCLU's "misc" library
+% to use the random number generator.
+%
+% pclu -merge $CLUHOME/lib/misc.lib -compile bulls_cows.clu
+
+% Seed the random number generator with the current time
+init_rng = proc ()
+    d: date := now()
+    seed: int := ((d.hour*60) + d.minute)*60 + d.second
+    random$seed(seed)
+end init_rng
+
+% Generate a secret
+make_secret = proc () returns (sequence[int])
+    secret: array[int] := array[int]$[0,0,0,0]
+    for i: int in int$from_to(1,4) do
+        digit: int
+        valid: bool := false
+        while ~valid do
+            digit := 1+random$next(9)
+            valid := true
+            for j: int in int$from_to(1, i-1) do
+                if secret[i] = digit then
+                    valid := false
+                    break
+                end
+            end
+        end
+        secret[i] := digit
+    end
+    return(sequence[int]$a2s(secret))
+end make_secret
+
+% Count the bulls
+bulls = proc (secret, input: sequence[int]) returns (int)
+    n_bulls: int := 0
+    for i: int in int$from_to(1,4) do
+        if secret[i] = input[i] then n_bulls := n_bulls + 1 end
+    end
+    return(n_bulls)
+end bulls
+
+% Count the cows
+cows = proc (secret, input: sequence[int]) returns (int)
+    n_cows: int := 0
+    for i: int in int$from_to(1,4) do
+        for j: int in int$from_to(1,4) do
+            if i ~= j cand secret[i] = input[j] then
+                n_cows := n_cows + 1
+            end
+        end
+    end
+    return(n_cows)
+end cows
+
+% Read a guess
+player_guess = proc () returns (sequence[int])
+    pi: stream := stream$primary_input()
+    po: stream := stream$primary_output()
+
+    while true do       % we will keep reading until the guess is valid
+        stream$puts(po, "Guess? ")
+        guess: string := stream$getl(pi)
+
+        % check length
+        if string$size(guess) ~= 4 then
+            stream$putl(po, "Invalid guess: need four digits.")
+            continue
+        end
+
+        % get and check digits
+        valid: bool := true
+        digits: sequence[int] := sequence[int]$[]
+        for c: char in string$chars(guess) do
+            i: int := char$c2i(c) - 48
+            if ~(i>=1 & i<=9) then
+                valid := false
+                break
+            end
+            digits := sequence[int]$addh(digits,i)
+        end
+        if ~valid then
+            stream$putl(po, "Invalid guess: each position needs to be a digit 1-9.")
+            continue
+        end
+
+        % check that there are no duplicates
+        valid := true
+        for i: int in int$from_to(1,4) do
+            for j: int in int$from_to(i+1,4) do
+                if digits[i] = digits[j] then
+                    valid := false
+                    break
+                end
+            end
+        end
+        if ~valid then
+            stream$putl(po, "Invalid guess: there must be no duplicate digits.")
+            continue
+        end
+
+        return(digits)
+    end
+end player_guess
+
+% Play a game
+play_game = proc (secret: sequence[int])
+    po: stream := stream$primary_output()
+    n_guesses: int := 0
+    while true do
+        n_guesses := n_guesses + 1
+        guess: sequence[int] := player_guess()
+
+        n_bulls: int := bulls(secret, guess)
+        n_cows: int := cows(secret, guess)
+
+        stream$putl(po, "Bulls: " || int$unparse(n_bulls)
+                    || ", cows: " || int$unparse(n_cows))
+        if n_bulls = 4 then
+            stream$putl(po, "Congratulations! You won in "
+                     || int$unparse(n_guesses) || " tries.")
+            break
+        end
+    end
+end play_game
+
+start_up = proc ()
+    po: stream := stream$primary_output()
+    init_rng()
+    stream$putl(po, "Bulls and cows\n----- --- ----\n")
+    play_game(make_secret())
+end start_up

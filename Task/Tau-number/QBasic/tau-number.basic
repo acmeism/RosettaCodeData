@@ -1,0 +1,18 @@
+PRINT "The first 100 tau numbers are:"
+
+n = 0
+num = 0
+limit = 100
+DO
+      n = n + 1
+      tau = 0
+      FOR m = 1 TO n
+          IF n MOD m = 0 THEN tau = tau + 1
+      NEXT m
+      IF n MOD tau = 0 THEN
+         num = num + 1
+         IF num MOD 10 = 1 THEN PRINT
+         PRINT USING " ####"; n; '""; n; " ";
+      END IF
+LOOP WHILE num < limit
+END

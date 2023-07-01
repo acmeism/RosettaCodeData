@@ -1,0 +1,1 @@
+.error~lineout("Goodbye, World!")

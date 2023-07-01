@@ -1,0 +1,86 @@
+use System.IO.File;
+use System.Time;
+use Collection;
+
+class Duplicate {
+  function : Main(args : String[]) ~ Nil {
+    if(args->Size() = 2) {
+      file_sets := SortDups(GetDups(args[0], args[1]->ToInt()));
+      each(i : file_sets) {
+        file_set := file_sets->Get(i)->As(Vector);
+        if(file_set->Size() > 1) {
+          "Duplicates:"->PrintLine();
+          "----"->PrintLine();
+          each(j : file_set) {
+            file_set->Get(j)->As(FileMeta)->ToString()->PrintLine();
+          };
+        };
+        '\n'->Print();
+      };
+    };
+  }
+
+  function : SortDups(unsorted : Vector) ~ Vector {
+    sorted := IntMap->New();
+
+    each(i : unsorted) {
+      value := unsorted->Get(i)->As(Vector);
+      key := value->Get(0)->As(FileMeta)->GetSize();
+      sorted->Insert(key, value);
+    };
+
+    return sorted->GetValues();
+  }
+
+  function : GetDups(dir : String, size : Int) ~ Vector {
+    duplicates := StringMap->New();
+
+    files := Directory->List(dir);
+    each(i : files) {
+      file_name := String->New(dir);
+      file_name += '/';
+      file_name += files[i];
+
+      file_size := File->Size(file_name);
+      if(file_size >= size) {
+        file_date := File->ModifiedTime(file_name);
+        file_hash := file_size->ToString();
+        file_hash += ':';
+        file_hash += Encryption.Hash->MD5(FileReader->ReadBinaryFile(file_name))->ToString();
+        file_meta := FileMeta->New(file_name, file_size, file_date, file_hash);
+
+        file_set := duplicates->Find(file_hash)->As(Vector);
+        if(file_set = Nil) {
+          file_set := Vector->New();
+          duplicates->Insert(file_hash, file_set);
+        };
+        file_set->AddBack(file_meta);
+      };
+    };
+
+    return duplicates->GetValues();
+  }
+}
+
+class FileMeta {
+  @name : String;
+  @size : Int;
+  @date : Date;
+  @hash : String;
+
+  New(name : String, size : Int, date : Date, hash : String) {
+    @name := name;
+    @size := size;
+    @date := date;
+    @hash := hash;
+  }
+
+  method : public : GetSize() ~ Int {
+    return @size;
+  }
+
+  method : public : ToString() ~ String {
+    date_str := @date->ToShortString();
+    return "{$@name}, {$@size}, {$date_str}";
+  }
+}

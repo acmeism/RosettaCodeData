@@ -1,0 +1,16 @@
+HAI 1.3
+
+HOW IZ I Faktorial YR Number
+  BOTH SAEM 1 AN BIGGR OF Number AN 1
+  O RLY?
+   YA RLY
+    FOUND YR 1
+   NO WAI
+    FOUND YR PRODUKT OF Number AN I IZ Faktorial YR DIFFRENCE OF Number AN 1 MKAY
+  OIC
+IF U SAY SO
+
+IM IN YR Loop UPPIN YR Index WILE DIFFRINT Index AN 13
+  VISIBLE Index "! = " I IZ Faktorial YR Index MKAY
+IM OUTTA YR Loop
+KTHXBYE

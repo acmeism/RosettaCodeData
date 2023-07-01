@@ -1,0 +1,28 @@
+       *> -*- mode: cobol -*-
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. GOLDEN_RATIO_CONVERGENCE.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 PHI0 PIC 9(1)V9(12).
+       01 PHI1 PIC 9(1)V9(12).
+       01 DIFF PIC S9(1)V9(12).
+       01 ERR PIC S9(1)V9(12).
+       01 NOMINAL-VALUE PIC 9(1)V9(12).
+       01 ITER PIC 9(2).
+
+       PROCEDURE DIVISION.
+           MOVE 0 TO ITER
+           MOVE 1.0 TO PHI0.
+       LOOP.
+           COMPUTE PHI1 = 1.0 + (1.0 / PHI0)
+           COMPUTE DIFF = FUNCTION ABS (PHI1 - PHI0)
+           MOVE PHI1 TO PHI0
+           ADD 1 TO ITER
+           IF 100000 * DIFF > 1.0
+               GO TO LOOP
+           END-IF
+           DISPLAY 'RESULT: ' PHI1 ' AFTER ' ITER ' ITERATIONS'
+           MOVE 1.61803398874989 TO NOMINAL-VALUE
+           COMPUTE ERR = PHI1 - NOMINAL-VALUE
+           DISPLAY 'THE ERROR IS APPROXIMATELY ' ERR.

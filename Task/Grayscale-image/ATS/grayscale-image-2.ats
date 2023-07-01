@@ -1,0 +1,308 @@
+(*------------------------------------------------------------------*)
+
+#define ATS_DYNLOADFLAG 0
+#define ATS_PACKNAME "Rosetta_Code.bitmap_grayscale_task"
+
+#include "share/atspre_staload.hats"
+
+staload "bitmap_task.sats"
+
+(* You need to staload bitmap_task.dats, so the ATS compiler will have
+   access to its implementations of templates. But we staload it
+   anonymously, so the programmer will not have access. *)
+staload _ = "bitmap_task.dats"
+
+staload "bitmap_grayscale_task.sats"
+
+(*------------------------------------------------------------------*)
+
+assume gray8 = uint8
+
+implement {tk}
+gray8_make_uint i =
+  let
+    (* Define some type conversions we are likely to want, but which
+       the prelude might not have implemented. (The ats2-xprelude
+       package will have these conversions, but I am avoiding
+       dependencies.) *)
+
+    extern castfn g0uint2uint_uint8_uint8 : uint8 -<> uint8
+    extern castfn g0uint2uint_uint_uint8 : uint -<> uint8
+
+    implement
+    g0uint2uint<uint8knd,uint8knd> i = g0uint2uint_uint8_uint8 i
+
+    implement
+    g0uint2uint<uintknd,uint8knd> i = g0uint2uint_uint_uint8 i
+  in
+    g0u2u i
+  end
+
+implement {tk}
+gray8_make_int i =
+  let
+    (* Define a type conversion we are likely to want, but which the
+       prelude might not have implemented. (The ats2-xprelude package
+       will have the conversion, but I am avoiding dependencies.) *)
+
+    extern castfn g0int2uint_int_uint8 : int -<> uint8
+
+    implement
+    g0int2uint<intknd,uint8knd> i = g0int2uint_int_uint8 i
+  in
+    g0i2u i
+  end
+
+implement {}
+gray8_value gray = gray
+
+(*------------------------------------------------------------------*)
+
+implement {}
+rgb24_to_gray8 rgb =
+  (* There is no need for floating point here, although equivalent
+     integer calculations are a bit longer to write out. *)
+  let
+    extern castfn i2u32 : int -<> uint32
+    extern castfn u8_to_u32 : uint8 -<> uint32
+    extern castfn u32_to_u8 : uint32 -<> uint8
+
+    val @(r, g, b) = rgb24_values rgb
+    val r = u8_to_u32 r
+    and g = u8_to_u32 g
+    and b = u8_to_u32 b
+
+    val Y = (i2u32 2126 * r) + (i2u32 7152 * g) + (i2u32 722 * b)
+    val Y1 = Y / i2u32 10000
+    and Y0 = Y mod (i2u32 10000)
+  in
+    if Y0 < i2u32 5000 then
+      gray8_make (u32_to_u8 Y1)
+    else if i2u32 5000 < Y0 then
+      gray8_make (succ (u32_to_u8 Y1))
+    else if Y0 mod (i2u32 2) = i2u32 0 then
+      gray8_make (u32_to_u8 Y1)
+    else
+      gray8_make (succ (u32_to_u8 Y1))
+  end
+
+implement {}
+gray8_to_rgb24 gray =
+  rgb24_make @(gray, gray, gray)
+
+implement {}
+rgb24_to_rgb24 rgb = rgb
+
+implement {}
+gray8_to_gray8 gray = gray
+
+(*------------------------------------------------------------------*)
+
+implement {a, b}
+pixmap_convert_copy {w, h} (pix_a, arr_b) =
+  let
+    val w : size_t w = width pix_a
+    and h : size_t h = height pix_a
+    prval () = lemma_g1uint_param w
+    prval () = lemma_g1uint_param h
+  in
+    if w = i2sz 0 then
+      let
+        prval () = mul_isfun (mul_make {w, h} (), mul_make {0, h} ())
+        prval () = view@ arr_b := array_v_unnil_nil{b?,b} (view@ arr_b)
+      in
+      end
+    else if h = i2sz 0 then
+      let
+        prval () = mul_isfun (mul_make {w, h} (), mul_make {w, 0} ())
+        prval () = view@ arr_b := array_v_unnil_nil{b?,b} (view@ arr_b)
+      in
+      end
+    else
+      let
+        stadef n = w * h
+
+        val n = w * h
+        prval () = mul_gte_gte_gte {w, h} ()
+
+        val p = addr@ arr_b
+        prval [p : addr] EQADDR () = eqaddr_make_ptr p
+
+        fun
+        loop {i : nat | i <= n}
+             .<i>.
+             (pf_b  : !array_v (b?, p, i) >> array_v (b, p, i) |
+              pix_a : !pixmap (a, w, h),
+              i     : size_t i)
+            : void =
+          if i = i2sz 0 then
+            let
+              prval () = pf_b := array_v_unnil_nil pf_b
+            in
+            end
+          else
+            let
+              val i1 = pred i
+
+              (* An exercise for a reader with nothing better to do:
+                 write a proof that i1/w < h, so that the "mod h" can
+                 be removed. It is there solely to provide a proof
+                 that y < h. *)
+              val x = i1 mod w
+              and y = (i1 / w) mod h
+
+              prval @(pf_b1, pf_elt) = array_v_unextend pf_b
+              val elt = pixmap$pixel_convert<a,b> pix_a[x, y]
+              val () = ptr_set<b> (pf_elt | ptr_add<b> (p, i1), elt)
+              val () = loop (pf_b1 | pix_a, i1)
+              prval () = pf_b := array_v_extend (pf_b1, pf_elt)
+            in
+            end
+      in
+        loop (view@ arr_b | pix_a, n)
+      end
+  end
+
+implement {a, b}
+pixmap_convert_alloc {w, h} pix_a =
+  let
+    val w : size_t w = width pix_a
+    and h : size_t h = height pix_a
+    prval () = lemma_g1uint_param w
+    prval () = lemma_g1uint_param h
+
+    stadef n = w * h
+    val n = w * h
+    prval () = mul_gte_gte_gte {w, h} ()
+
+    val @(pf, pfgc | p) = array_ptr_alloc<b> n
+    val () = pixmap_convert<a,b> (pix_a, !p);
+
+    val pix_b = pixmap_make<b> (pf | w, h, p)
+  in
+    @(pfgc | pix_b)
+  end
+
+(*------------------------------------------------------------------*)
+(* Implementations of pixmap$pixel_convert for conversions between
+   gray8 and rgb24. The template system will inline these
+   implementations into the code. *)
+
+implement
+pixmap$pixel_convert<rgb24,gray8> rgb =
+  rgb24_to_gray8 rgb
+
+implement
+pixmap$pixel_convert<gray8,rgb24> gray =
+  gray8_to_rgb24 gray
+
+implement
+pixmap$pixel_convert<rgb24,rgb24> rgb =
+  rgb24_to_rgb24 rgb  (* For using pixmap_convert to COPY a pixmap. *)
+
+implement
+pixmap$pixel_convert<gray8,gray8> gray =
+  gray8_to_gray8 gray (* For using pixmap_convert to COPY a pixmap. *)
+
+(*------------------------------------------------------------------*)
+(* Support for dump and load. The bytes will be written in a way
+   that is directly usable in PGM and PAM files. *)
+
+typedef FILEstar = $extype"FILE *"
+extern castfn FILEref2star : FILEref -<> FILEstar
+
+implement
+pixmap$pixels_dump<gray8> (outf, pixels, n) =
+  let
+    val num_written =
+      $extfcall (size_t, "fwrite", addr@ pixels, sizeof<gray8>, n,
+                 FILEref2star outf)
+  in
+    num_written = n
+  end
+
+implement
+pixmap$pixels_load<gray8> (inpf, pixels, n, elt) =
+  let
+    prval [n : int] EQINT () = eqint_make_guint n
+    val num_read =
+      $extfcall (size_t, "fread", addr@ pixels, sizeof<gray8>, n,
+                 FILEref2star inpf)
+  in
+    if num_read = n then
+      let
+        prval () = $UNSAFE.castvwtp2void{@[gray8][n]} pixels
+      in
+        true
+      end
+    else
+      begin
+        array_initize_elt<gray8> (pixels, n, elt);
+        false
+      end
+  end
+
+(*------------------------------------------------------------------*)
+
+#ifdef BITMAP_GRAYSCALE_TASK_TEST #then
+
+implement
+main0 () =
+  let
+    val failure_color = rgb24_make (255, 0, 0)
+
+    stadef w = 512
+    stadef h = 512
+    val w : size_t w = i2sz 512
+    and h : size_t h = i2sz 512
+
+    val @(pfgc1 | pix1) = pixmap_make<rgb24> (w, h)
+    val inpf = fileref_open_exn ("4.2.07.raw", file_mode_r)
+    val success = load<rgb24> (inpf, pix1, failure_color)
+    val () = fileref_close inpf
+    val- true = success
+
+    val @(pfgc2 | pix2) = pixmap_convert<rgb24,gray8> pix1
+    val @(pfgc3 | pix3) = pixmap_convert<gray8,rgb24> pix2
+
+    (* Write a Portable Pixel Map. *)
+    val outf = fileref_open_exn ("image-color.ppm", file_mode_w)
+    val () =
+      begin
+        fprintln! (outf, "P6");
+        fprintln! (outf, w, " ", h);
+        fprintln! (outf, "255");
+        ignoret (dump<rgb24> (outf, pix1))
+      end
+    val () = fileref_close outf
+
+    (* Write a Portable Gray Map. *)
+    val outf = fileref_open_exn ("image-gray.pgm", file_mode_w)
+    val () =
+      begin
+        fprintln! (outf, "P5");
+        fprintln! (outf, w, " ", h);
+        fprintln! (outf, "255");
+        ignoret (dump<gray8> (outf, pix2))
+      end
+    val () = fileref_close outf
+
+    (* Write a Portable Pixel Map. *)
+    val outf = fileref_open_exn ("image-gray.ppm", file_mode_w)
+    val () =
+      begin
+        fprintln! (outf, "P6");
+        fprintln! (outf, w, " ", h);
+        fprintln! (outf, "255");
+        ignoret (dump<rgb24> (outf, pix3))
+      end
+    val () = fileref_close outf
+  in
+    free (pfgc1 | pix1);
+    free (pfgc2 | pix2);
+    free (pfgc3 | pix3)
+  end
+
+#endif
+
+(*------------------------------------------------------------------*)

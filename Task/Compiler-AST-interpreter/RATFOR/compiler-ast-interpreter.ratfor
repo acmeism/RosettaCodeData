@@ -1,0 +1,1285 @@
+######################################################################
+#
+# The Rosetta Code AST interpreter in Ratfor 77.
+#
+#
+# In FORTRAN 77 and therefore in Ratfor 77, there is no way to specify
+# that a value should be put on a call stack. Therefore there is no
+# way to implement recursive algorithms in Ratfor 77 (although see the
+# Ratfor for the "syntax analyzer" task, where a recursive language is
+# implemented *in* Ratfor). Thus we cannot simply follow the
+# recursive pseudocode, and instead use non-recursive algorithms.
+#
+# How to deal with FORTRAN 77 input is another problem. I use
+# formatted input, treating each line as an array of type
+# CHARACTER--regrettably of no more than some predetermined, finite
+# length. It is a very simple method and presents no significant
+# difficulties, aside from the restriction on line length of the
+# input.
+#
+# Output is a bigger problem. If one uses gfortran, "advance='no'" is
+# available, but not if one uses f2c. The method employed here is to
+# construct the output in lines--regrettably, again, of fixed length.
+#
+#
+# On a POSIX platform, the program can be compiled with f2c and run
+# somewhat as follows:
+#
+#    ratfor77 interp-in-ratfor.r > interp-in-ratfor.f
+#    f2c -C -Nc80 interp-in-ratfor.f
+#    cc interp-in-ratfor.c -lf2c
+#    ./a.out < compiler-tests/primes.ast
+#
+# With gfortran, a little differently:
+#
+#    ratfor77 interp-in-ratfor.r > interp-in-ratfor.f
+#    gfortran -fcheck=all -std=legacy interp-in-ratfor.f
+#    ./a.out < compiler-tests/primes.ast
+#
+#
+# I/O is strictly from default input and to default output, which, on
+# POSIX systems, usually correspond respectively to standard input and
+# standard output. (I did not wish to have to deal with unit numbers;
+# these are now standardized in ISO_FORTRAN_ENV, but that is not
+# available in FORTRAN 77.)
+#
+#---------------------------------------------------------------------
+
+# Some parameters you may wish to modify.
+
+define(LINESZ, 256)           # Size of an input line.
+define(OUTLSZ, 1024)          # Size of an output line.
+define(STRNSZ, 4096)          # Size of the string pool.
+define(NODSSZ, 4096)          # Size of the nodes pool.
+define(STCKSZ, 4096)          # Size of stacks.
+define(MAXVAR, 256)           # Maximum number of variables.
+
+#---------------------------------------------------------------------
+
+define(NEWLIN, 10)            # The Unix newline character (ASCII LF).
+define(DQUOTE, 34)            # The double quote character.
+define(BACKSL, 92)            # The backslash character.
+
+#---------------------------------------------------------------------
+
+define(NODESZ, 3)
+define(NNEXTF, 1)               # Index for next-free.
+define(NTAG,   1)               # Index for the tag.
+                                # For an internal node --
+define(NLEFT,  2)               #   Index for the left node.
+define(NRIGHT, 3)               #   Index for the right node.
+                                # For a leaf node --
+define(NITV,   2)               #   Index for the string pool index.
+define(NITN,   3)               #   Length of the value.
+
+define(NIL, -1)                 # Nil node.
+
+define(RGT, 10000)
+define(STAGE2, 20000)
+
+# The following all must be less than RGT.
+define(NDID,    0)
+define(NDSTR,   1)
+define(NDINT,   2)
+define(NDSEQ,   3)
+define(NDIF,    4)
+define(NDPRTC,  5)
+define(NDPRTS,  6)
+define(NDPRTI,  7)
+define(NDWHIL,  8)
+define(NDASGN,  9)
+define(NDNEG,  10)
+define(NDNOT,  11)
+define(NDMUL,  12)
+define(NDDIV,  13)
+define(NDMOD,  14)
+define(NDADD,  15)
+define(NDSUB,  16)
+define(NDLT,   17)
+define(NDLE,   18)
+define(NDGT,   19)
+define(NDGE,   20)
+define(NDEQ,   21)
+define(NDNE,   22)
+define(NDAND,  23)
+define(NDOR,   24)
+
+#---------------------------------------------------------------------
+
+function issp (c)
+
+  # Is a character a space character?
+
+  implicit none
+
+  character c
+  logical issp
+
+  integer ic
+
+  ic = ichar (c)
+  issp = (ic == 32 || (9 <= ic && ic <= 13))
+end
+
+function skipsp (str, i, imax)
+
+  # Skip past spaces in a string.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer imax
+  integer skipsp
+
+  logical issp
+
+  logical done
+
+  skipsp = i
+  done = .false.
+  while (!done)
+    {
+      if (imax <= skipsp)
+        done = .true.
+      else if (!issp (str(skipsp)))
+        done = .true.
+      else
+        skipsp = skipsp + 1
+    }
+end
+
+function skipns (str, i, imax)
+
+  # Skip past non-spaces in a string.
+
+  implicit none
+
+  character str(*)
+  integer i
+  integer imax
+  integer skipns
+
+  logical issp
+
+  logical done
+
+  skipns = i
+  done = .false.
+  while (!done)
+    {
+      if (imax <= skipns)
+        done = .true.
+      else if (issp (str(skipns)))
+        done = .true.
+      else
+        skipns = skipns + 1
+    }
+end
+
+function trimrt (str, n)
+
+  # Find the length of a string, if one ignores trailing spaces.
+
+  implicit none
+
+  character str(*)
+  integer n
+  integer trimrt
+
+  logical issp
+
+  logical done
+
+  trimrt = n
+  done = .false.
+  while (!done)
+    {
+      if (trimrt == 0)
+        done = .true.
+      else if (!issp (str(trimrt)))
+        done = .true.
+      else
+        trimrt = trimrt - 1
+    }
+end
+
+#---------------------------------------------------------------------
+
+subroutine addstq (strngs, istrng, src, i0, n0, i, n)
+
+  # Add a quoted string to the string pool.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character src(*)              # Source string.
+  integer i0, n0                # Index and length in source string.
+  integer i, n                  # Index and length in string pool.
+
+  integer j
+  logical done
+
+1000 format ('attempt to treat an unquoted string as a quoted string')
+
+  if (src(i0) != char (DQUOTE) || src(i0 + n0 - 1) != char (DQUOTE))
+    {
+      write (*, 1000)
+      stop
+    }
+
+  i = istrng
+
+  n = 0
+  j = i0 + 1
+  done = .false.
+  while (j != i0 + n0 - 1)
+    if (i == STRNSZ)
+      {
+        write (*, '(''string pool exhausted'')')
+        stop
+      }
+    else if (src(j) == char (BACKSL))
+      {
+        if (j == i0 + n0 - 1)
+          {
+            write (*, '(''incorrectly formed quoted string'')')
+            stop
+          }
+        if (src(j + 1) == 'n')
+          strngs(istrng) = char (NEWLIN)
+        else if (src(j + 1) == char (BACKSL))
+          strngs(istrng) = src(j + 1)
+        else
+          {
+            write (*, '(''unrecognized escape sequence'')')
+            stop
+          }
+        istrng = istrng + 1
+        n = n + 1
+        j = j + 2
+      }
+    else
+      {
+        strngs(istrng) = src(j)
+        istrng = istrng + 1
+        n = n + 1
+        j = j + 1
+      }
+end
+
+subroutine addstu (strngs, istrng, src, i0, n0, i, n)
+
+  # Add an unquoted string to the string pool.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character src(*)              # Source string.
+  integer i0, n0                # Index and length in source string.
+  integer i, n                  # Index and length in string pool.
+
+  integer j
+
+  if (STRNSZ < istrng + (n0 - 1))
+    {
+      write (*, '(''string pool exhausted'')')
+      stop
+    }
+  for (j = 0; j < n0; j = j + 1)
+    strngs(istrng + j) = src(i0 + j)
+  i = istrng
+  n = n0
+  istrng = istrng + n0
+end
+
+subroutine addstr (strngs, istrng, src, i0, n0, i, n)
+
+  # Add a string (possibly given as a quoted string) to the string
+  # pool.
+
+  implicit none
+
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  character src(*)              # Source string.
+  integer i0, n0                # Index and length in source string.
+  integer i, n                  # Index and length in string pool.
+
+  if (n0 == 0)
+    {
+      i = 0
+      n = 0
+    }
+  else if (src(i0) == char (DQUOTE))
+    call addstq (strngs, istrng, src, i0, n0, i, n)
+  else
+    call addstu (strngs, istrng, src, i0, n0, i, n)
+end
+
+#---------------------------------------------------------------------
+
+subroutine push (stack, sp, i)
+
+  implicit none
+
+  integer stack(STCKSZ)
+  integer sp                    # Stack pointer.
+  integer i                     # Value to push.
+
+  if (sp == STCKSZ)
+    {
+      write (*, '(''stack overflow in push'')')
+      stop
+    }
+  stack(sp) = i
+  sp = sp + 1
+end
+
+function pop (stack, sp)
+
+  implicit none
+
+  integer stack(STCKSZ)
+  integer sp                    # Stack pointer.
+  integer pop
+
+  if (sp == 1)
+    {
+      write (*, '(''stack underflow in pop'')')
+      stop
+    }
+  sp = sp - 1
+  pop = stack(sp)
+end
+
+function nstack (sp)
+
+  implicit none
+
+  integer sp                    # Stack pointer.
+  integer nstack
+
+  nstack = sp - 1               # Current cardinality of the stack.
+end
+
+#---------------------------------------------------------------------
+
+subroutine initnd (nodes, frelst)
+
+  # Initialize the nodes pool.
+
+  implicit none
+
+  integer nodes (NODESZ, NODSSZ)
+  integer frelst                # Head of the free list.
+
+  integer i
+
+  for (i = 1; i < NODSSZ; i = i + 1)
+    nodes(NNEXTF, i) = i + 1
+  nodes(NNEXTF, NODSSZ) = NIL
+  frelst = 1
+end
+
+subroutine newnod (nodes, frelst, i)
+
+  # Get the index for a new node taken from the free list.
+
+  integer nodes (NODESZ, NODSSZ)
+  integer frelst                # Head of the free list.
+  integer i                     # Index of the new node.
+
+  integer j
+
+  if (frelst == NIL)
+    {
+      write (*, '(''nodes pool exhausted'')')
+      stop
+    }
+  i = frelst
+  frelst = nodes(NNEXTF, frelst)
+  for (j = 1; j <= NODESZ; j = j + 1)
+    nodes(j, i) = 0
+end
+
+subroutine frenod (nodes, frelst, i)
+
+  # Return a node to the free list.
+
+  integer nodes (NODESZ, NODSSZ)
+  integer frelst                # Head of the free list.
+  integer i                     # Index of the node to free.
+
+  nodes(NNEXTF, i) = frelst
+  frelst = i
+end
+
+function strtag (str, i, n)
+
+  implicit none
+
+  character str(*)
+  integer i, n
+  integer strtag
+
+  character*16 s
+  integer j
+
+  for (j = 0; j < 16; j = j + 1)
+    if (j < n)
+      s(j + 1 : j + 1) = str(i + j)
+    else
+      s(j + 1 : j + 1) = ' '
+
+  if (s == "Identifier      ")
+    strtag = NDID
+  else if (s == "String          ")
+    strtag = NDSTR
+  else if (s == "Integer         ")
+    strtag = NDINT
+  else if (s == "Sequence        ")
+    strtag = NDSEQ
+  else if (s == "If              ")
+    strtag = NDIF
+  else if (s == "Prtc            ")
+    strtag = NDPRTC
+  else if (s == "Prts            ")
+    strtag = NDPRTS
+  else if (s == "Prti            ")
+    strtag = NDPRTI
+  else if (s == "While           ")
+    strtag = NDWHIL
+  else if (s == "Assign          ")
+    strtag = NDASGN
+  else if (s == "Negate          ")
+    strtag = NDNEG
+  else if (s == "Not             ")
+    strtag = NDNOT
+  else if (s == "Multiply        ")
+    strtag = NDMUL
+  else if (s == "Divide          ")
+    strtag = NDDIV
+  else if (s == "Mod             ")
+    strtag = NDMOD
+  else if (s == "Add             ")
+    strtag = NDADD
+  else if (s == "Subtract        ")
+    strtag = NDSUB
+  else if (s == "Less            ")
+    strtag = NDLT
+  else if (s == "LessEqual       ")
+    strtag = NDLE
+  else if (s == "Greater         ")
+    strtag = NDGT
+  else if (s == "GreaterEqual    ")
+    strtag = NDGE
+  else if (s == "Equal           ")
+    strtag = NDEQ
+  else if (s == "NotEqual        ")
+    strtag = NDNE
+  else if (s == "And             ")
+    strtag = NDAND
+  else if (s == "Or              ")
+    strtag = NDOR
+  else if (s == ";               ")
+    strtag = NIL
+  else
+    {
+      write (*, '(''unrecognized input line: '', A16)') s
+      stop
+    }
+end
+
+subroutine readln (strngs, istrng, tag, iarg, narg)
+
+  # Read a line of the AST input.
+
+  implicit none
+
+  character strngs(STRNSZ) # String pool.
+  integer istrng           # String pool's next slot.
+  integer tag              # The node tag or NIL.
+  integer iarg             # Index of an argument in the string pool.
+  integer narg             # Length of an argument in the string pool.
+
+  integer trimrt
+  integer strtag
+  integer skipsp
+  integer skipns
+
+  character line(LINESZ)
+  character*20 fmt
+  integer i, j, n
+
+  # Read a line of text as an array of characters.
+  write (fmt, '(''('', I10, ''A)'')') LINESZ
+  read (*, fmt) line
+
+  n = trimrt (line, LINESZ)
+
+  i = skipsp (line, 1, n + 1)
+  j = skipns (line, i, n + 1)
+  tag = strtag (line, i, j - i)
+
+  i = skipsp (line, j, n + 1)
+  call addstr (strngs, istrng, line, i, (n + 1) - i, iarg, narg)
+end
+
+function hasarg (tag)
+
+  implicit none
+
+  integer tag
+  logical hasarg
+
+  hasarg = (tag == NDID || tag == NDINT || tag == NDSTR)
+end
+
+subroutine rdast (strngs, istrng, nodes, frelst, iast)
+
+  # Read in the AST. A non-recursive algorithm is used.
+
+  implicit none
+
+  character strngs(STRNSZ)       # String pool.
+  integer istrng                 # String pool's next slot.
+  integer nodes (NODESZ, NODSSZ) # Nodes pool.
+  integer frelst                 # Head of the free list.
+  integer iast                   # Index of root node of the AST.
+
+  integer nstack
+  integer pop
+  logical hasarg
+
+  integer stack(STCKSZ)
+  integer sp                    # Stack pointer.
+  integer tag, iarg, narg
+  integer i, j, k
+
+  sp = 1
+
+  call readln (strngs, istrng, tag, iarg, narg)
+  if (tag == NIL)
+    iast = NIL
+  else
+    {
+      call newnod (nodes, frelst, i)
+      iast = i
+      nodes(NTAG, i) = tag
+      nodes(NITV, i) = 0
+      nodes(NITN, i) = 0
+      if (hasarg (tag))
+        {
+          nodes(NITV, i) = iarg
+          nodes(NITN, i) = narg
+        }
+      else
+        {
+          call push (stack, sp, i + RGT)
+          call push (stack, sp, i)
+          while (nstack (sp) != 0)
+            {
+              j = pop (stack, sp)
+              k = mod (j, RGT)
+              call readln (strngs, istrng, tag, iarg, narg)
+              if (tag == NIL)
+                i = NIL
+              else
+                {
+                  call newnod (nodes, frelst, i)
+                  nodes(NTAG, i) = tag
+                  if (hasarg (tag))
+                    {
+                      nodes(NITV, i) = iarg
+                      nodes(NITN, i) = narg
+                    }
+                  else
+                    {
+                      call push (stack, sp, i + RGT)
+                      call push (stack, sp, i)
+                    }
+                }
+              if (j == k)
+                nodes(NLEFT, k) = i
+              else
+                nodes(NRIGHT, k) = i
+            }
+        }
+    }
+end
+
+#---------------------------------------------------------------------
+
+subroutine flushl (outbuf, noutbf)
+
+  # Flush a line from the output buffer.
+
+  implicit none
+
+  character outbuf(OUTLSZ)      # Output line buffer.
+  integer noutbf                # Number of characters in outbuf.
+
+  character*20 fmt
+  integer i
+
+  if (noutbf == 0)
+    write (*, '()')
+  else
+    {
+      write (fmt, 1000) noutbf
+1000  format ('(', I10, 'A)')
+      write (*, fmt) (outbuf(i), i = 1, noutbf)
+      noutbf = 0
+    }
+end
+
+subroutine wrtchr (outbuf, noutbf, ch)
+
+  # Write a character to output.
+
+  implicit none
+
+  character outbuf(OUTLSZ)      # Output line buffer.
+  integer noutbf                # Number of characters in outbuf.
+  character ch                  # The character to output.
+
+  # This routine silently truncates anything that goes past the buffer
+  # boundary.
+
+  if (ch == char (NEWLIN))
+    call flushl (outbuf, noutbf)
+  else if (noutbf < OUTLSZ)
+    {
+      noutbf = noutbf + 1
+      outbuf(noutbf) = ch
+    }
+end
+
+subroutine wrtstr (outbuf, noutbf, str, i, n)
+
+  # Write a substring to output.
+
+  implicit none
+
+  character outbuf(OUTLSZ)      # Output line buffer.
+  integer noutbf                # Number of characters in outbuf.
+  character str(*)              # The string from which to output.
+  integer i, n                  # Index and length of the substring.
+
+  integer j
+
+  for (j = 0; j < n; j = j + 1)
+    call wrtchr (outbuf, noutbf, str(i + j))
+end
+
+subroutine wrtint (outbuf, noutbf, ival)
+
+  # Write a non-negative integer to output.
+
+  implicit none
+
+  character outbuf(OUTLSZ)      # Output line buffer.
+  integer noutbf                # Number of characters in outbuf.
+  integer ival                  # The non-negative integer to print.
+
+  integer skipsp
+
+  character*40 buf
+  integer i
+
+  # Using "write" probably is the slowest way one could think of to do
+  # this, but people do formatted output all the time, anyway. :) The
+  # reason, of course, is that output tends to be slow anyway.
+  write (buf, '(I40)') ival
+  for (i = skipsp (buf, 1, 41); i <= 40; i = i + 1)
+    call wrtchr (outbuf, noutbf, buf(i:i))
+end
+
+#---------------------------------------------------------------------
+
+define(VARSZ,  3)
+define(VNAMEI, 1)          # Variable name's index in the string pool.
+define(VNAMEN, 2)          # Length of the name.
+define(VVALUE, 3)          # Variable's value.
+
+function fndvar (vars, numvar, strngs, istrng, i0, n0)
+
+  implicit none
+
+  integer vars(VARSZ, MAXVAR)   # Variables.
+  integer numvar                # Number of variables.
+  character strngs(STRNSZ)      # String pool.
+  integer istrng                # String pool's next slot.
+  integer i0, n0                # Index and length in the string pool.
+  integer fndvar                # The location of the variable.
+
+  integer j, k
+  integer i, n
+  logical done1
+  logical done2
+
+  j = 1
+  done1 = .false.
+  while (!done1)
+    if (j == numvar + 1)
+      done1 = .true.
+    else if (n0 == vars(VNAMEN, j))
+      {
+        k = 0
+        done2 = .false.
+        while (!done2)
+          if (n0 <= k)
+            done2 = .true.
+          else if (strngs(i0 + k) == strngs(vars(VNAMEI, j) + k))
+            k = k + 1
+          else
+            done2 = .true.
+        if (k < n0)
+          j = j + 1
+        else
+          {
+            done2 = .true.
+            done1 = .true.
+          }
+      }
+    else
+      j = j + 1
+
+  if (j == numvar + 1)
+    {
+      if (numvar == MAXVAR)
+        {
+          write (*, '(''too many variables'')')
+          stop
+        }
+      numvar = numvar + 1
+      call addstu (strngs, istrng, strngs, i0, n0, i, n)
+      vars(VNAMEI, numvar) = i
+      vars(VNAMEN, numvar) = n
+      vars(VVALUE, numvar) = 0
+      fndvar = numvar
+    }
+  else
+    fndvar = j
+end
+
+function strint (strngs, i, n)
+
+  # Convert a string to a non-negative integer.
+
+  implicit none
+
+  character strngs(STRNSZ)       # String pool.
+  integer i, n
+  integer strint
+
+  integer j
+
+  strint = 0
+  for (j = 0; j < n; j = j + 1)
+    strint = (10 * strint) + (ichar (strngs(i + j)) - ichar ('0'))
+end
+
+function logl2i (u)
+
+  # Convert LOGICAL to INTEGER.
+
+  implicit none
+
+  logical u
+  integer logl2i
+
+  if (u)
+    logl2i = 1
+  else
+    logl2i = 0
+end
+
+subroutine run (vars, numvar, _
+                strngs, istrng, _
+                nodes, frelst, _
+                outbuf, noutbf, iast)
+
+  # Run (interpret) the AST. The algorithm employed is non-recursive.
+
+  implicit none
+
+  integer vars(VARSZ, MAXVAR)    # Variables.
+  integer numvar                 # Number of variables.
+  character strngs(STRNSZ)       # String pool.
+  integer istrng                 # String pool's next slot.
+  integer nodes (NODESZ, NODSSZ) # Nodes pool.
+  integer frelst                 # Head of the free list.
+  character outbuf(OUTLSZ)       # Output line buffer.
+  integer noutbf                 # Number of characters in outbuf.
+  integer iast                   # Root node of the AST.
+
+  integer fndvar
+  integer logl2i
+  integer nstack
+  integer pop
+  integer strint
+
+  integer dstack(STCKSZ)        # Data stack.
+  integer idstck                # Data stack pointer.
+  integer xstack(STCKSZ)        # Execution stack.
+  integer ixstck                # Execution stack pointer.
+  integer i
+  integer i0, n0
+  integer tag
+  integer ivar
+  integer ival1, ival2
+  integer inode1, inode2
+
+  idstck = 1
+  ixstck = 1
+  call push (xstack, ixstck, iast)
+  while (nstack (ixstck) != 0)
+    {
+      i = pop (xstack, ixstck)
+      if (i == NIL)
+        tag = NIL
+      else
+        tag = nodes(NTAG, i)
+      if (tag == NIL)
+        continue
+      else if (tag == NDSEQ)
+        {
+          if (nodes(NRIGHT, i) != NIL)
+            call push (xstack, ixstck, nodes(NRIGHT, i))
+          if (nodes(NLEFT, i) != NIL)
+            call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDID)
+        {
+          # Push the value of a variable.
+          i0 = nodes(NITV, i)
+          n0 = nodes(NITN, i)
+          ivar = fndvar (vars, numvar, strngs, istrng, i0, n0)
+          call push (dstack, idstck, vars(VVALUE, ivar))
+        }
+      else if (tag == NDINT)
+        {
+          # Push the value of an integer literal.
+          i0 = nodes(NITV, i)
+          n0 = nodes(NITN, i)
+          call push (dstack, idstck, strint (strngs, i0, n0))
+        }
+      else if (tag == NDNEG)
+        {
+          # Evaluate the argument and prepare to negate it.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDNEG + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDNEG + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Negate the evaluated argument.
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, -ival1)
+        }
+      else if (tag == NDNOT)
+        {
+          # Evaluate the argument and prepare to NOT it.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDNOT + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDNOT + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # NOT the evaluated argument.
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, logl2i (ival1 == 0))
+        }
+      else if (tag == NDAND)
+        {
+          # Evaluate the arguments and prepare to AND them.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDAND + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDAND + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # AND the evaluated arguments.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, _
+                     logl2i (ival1 != 0 && ival2 != 0))
+        }
+      else if (tag == NDOR)
+        {
+          # Evaluate the arguments and prepare to OR them.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDOR + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDOR + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # OR the evaluated arguments.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, _
+                     logl2i (ival1 != 0 || ival2 != 0))
+        }
+      else if (tag == NDADD)
+        {
+          # Evaluate the arguments and prepare to add them.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDADD + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDADD + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Add the evaluated arguments.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, ival1 + ival2)
+        }
+      else if (tag == NDSUB)
+        {
+          # Evaluate the arguments and prepare to subtract them.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDSUB + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDSUB + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Subtract the evaluated arguments.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, ival1 - ival2)
+        }
+      else if (tag == NDMUL)
+        {
+          # Evaluate the arguments and prepare to multiply them.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDMUL + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDMUL + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Multiply the evaluated arguments.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, ival1 * ival2)
+        }
+      else if (tag == NDDIV)
+        {
+          # Evaluate the arguments and prepare to compute the quotient
+          # after division.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDDIV + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDDIV + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Divide the evaluated arguments.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, ival1 / ival2)
+        }
+      else if (tag == NDMOD)
+        {
+          # Evaluate the arguments and prepare to compute the
+          # remainder after division.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDMOD + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDMOD + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # MOD the evaluated arguments.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, mod (ival1, ival2))
+        }
+      else if (tag == NDEQ)
+        {
+          # Evaluate the arguments and prepare to test their equality.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDEQ + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDEQ + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Test for equality.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, logl2i (ival1 == ival2))
+        }
+      else if (tag == NDNE)
+        {
+          # Evaluate the arguments and prepare to test their
+          # inequality.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDNE + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDNE + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Test for inequality.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, logl2i (ival1 != ival2))
+        }
+      else if (tag == NDLT)
+        {
+          # Evaluate the arguments and prepare to test their
+          # order.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDLT + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDLT + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Do the test.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, logl2i (ival1 < ival2))
+        }
+      else if (tag == NDLE)
+        {
+          # Evaluate the arguments and prepare to test their
+          # order.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDLE + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDLE + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Do the test.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, logl2i (ival1 <= ival2))
+        }
+      else if (tag == NDGT)
+        {
+          # Evaluate the arguments and prepare to test their
+          # order.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDGT + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDGT + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Do the test.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, logl2i (ival1 > ival2))
+        }
+      else if (tag == NDGE)
+        {
+          # Evaluate the arguments and prepare to test their
+          # order.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDGE + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDGE + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Do the test.
+          ival2 = pop (dstack, idstck)
+          ival1 = pop (dstack, idstck)
+          call push (dstack, idstck, logl2i (ival1 >= ival2))
+        }
+      else if (tag == NDASGN)
+        {
+          # Prepare a new node to do the actual assignment.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDASGN + STAGE2
+          nodes(NITV, inode1) = nodes(NITV, nodes(NLEFT, i))
+          nodes(NITN, inode1) = nodes(NITN, nodes(NLEFT, i))
+          call push (xstack, ixstck, inode1)
+          # Evaluate the expression.
+          call push (xstack, ixstck, nodes(NRIGHT, i))
+        }
+      else if (tag == NDASGN + STAGE2)
+        {
+          # Do the actual assignment, and free the STAGE2 node.
+          i0 = nodes(NITV, i)
+          n0 = nodes(NITN, i)
+          call frenod (nodes, frelst, i)
+          ival1 = pop (dstack, idstck)
+          ivar = fndvar (vars, numvar, strngs, istrng, i0, n0)
+          vars(VVALUE, ivar) = ival1
+        }
+      else if (tag == NDIF)
+        {
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDIF + STAGE2
+          # The "then" and "else" clauses, respectively:
+          nodes(NLEFT, inode1) = nodes(NLEFT, nodes(NRIGHT, i))
+          nodes(NRIGHT, inode1) = nodes(NRIGHT, nodes(NRIGHT, i))
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDIF + STAGE2)
+        {
+          inode1 = nodes(NLEFT, i)  # "Then" clause.
+          inode2 = nodes(NRIGHT, i) # "Else" clause.
+          call frenod (nodes, frelst, i)
+          ival1 = pop (dstack, idstck)
+          if (ival1 != 0)
+            call push (xstack, ixstck, inode1)
+          else if (inode2 != NIL)
+            call push (xstack, ixstck, inode2)
+        }
+      else if (tag == NDWHIL)
+        {
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDWHIL + STAGE2
+          nodes(NLEFT, inode1) = nodes(NRIGHT, i) # Loop body.
+          nodes(NRIGHT, inode1) = i               # Top of loop.
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDWHIL + STAGE2)
+        {
+          inode1 = nodes(NLEFT, i)  # Loop body.
+          inode2 = nodes(NRIGHT, i) # Top of loop.
+          call frenod (nodes, frelst, i)
+          ival1 = pop (dstack, idstck)
+          if (ival1 != 0)
+            {
+              call push (xstack, ixstck, inode2) # Top of loop.
+              call push (xstack, ixstck, inode1) # The body.
+            }
+        }
+      else if (tag == NDPRTS)
+        {
+          # Print a string literal. (String literals occur only--and
+          # always--within Prts nodes; therefore one need not devise a
+          # way push strings to the stack.)
+          i0 = nodes(NITV, nodes(NLEFT, i))
+          n0 = nodes(NITN, nodes(NLEFT, i))
+          call wrtstr (outbuf, noutbf, strngs, i0, n0)
+        }
+      else if (tag == NDPRTC)
+        {
+          # Evaluate the argument and prepare to print it.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDPRTC + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDPRTC + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Print the evaluated argument.
+          ival1 = pop (dstack, idstck)
+          call wrtchr (outbuf, noutbf, char (ival1))
+        }
+      else if (tag == NDPRTI)
+        {
+          # Evaluate the argument and prepare to print it.
+          call newnod (nodes, frelst, inode1)
+          nodes(NTAG, inode1) = NDPRTI + STAGE2
+          call push (xstack, ixstck, inode1)
+          call push (xstack, ixstck, nodes(NLEFT, i))
+        }
+      else if (tag == NDPRTI + STAGE2)
+        {
+          # Free the STAGE2 node.
+          call frenod (nodes, frelst, i)
+          # Print the evaluated argument.
+          ival1 = pop (dstack, idstck)
+          call wrtint (outbuf, noutbf, ival1)
+        }
+    }
+end
+
+#---------------------------------------------------------------------
+
+program interp
+
+  implicit none
+
+  integer vars(VARSZ, MAXVAR)    # Variables.
+  integer numvar                 # Number of variables.
+  character strngs(STRNSZ)       # String pool.
+  integer istrng                 # String pool's next slot.
+  integer nodes (NODESZ, NODSSZ) # Nodes pool.
+  integer frelst                 # Head of the free list.
+  character outbuf(OUTLSZ)       # Output line buffer.
+  integer noutbf                 # Number of characters in outbuf.
+  integer iast                   # Root node of the AST.
+
+  numvar = 0
+  istrng = 1
+  noutbf = 0
+
+  call initnd (nodes, frelst)
+  call rdast (strngs, istrng, nodes, frelst, iast)
+
+  call run (vars, numvar, _
+            strngs, istrng, _
+            nodes, frelst, _
+            outbuf, noutbf, iast)
+
+  if (noutbf != 0)
+    call flushl (outbuf, noutbf)
+end
+
+######################################################################

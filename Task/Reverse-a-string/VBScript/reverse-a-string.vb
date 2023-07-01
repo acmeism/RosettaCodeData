@@ -1,0 +1,1 @@
+WScript.Echo StrReverse("asdf")

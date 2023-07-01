@@ -1,0 +1,145 @@
+'[RC]MD5
+    'from tsh73's January 2008 code
+
+    text$="The quick brown fox jumps over the lazy dog"
+    checkSum$="9e107d9d372bb6826bd81d3542a419d6"
+
+    print text$
+    print checkSum$
+
+    test$=md5$(text$)
+
+    if test$=checkSum$ then
+        print "passed"
+        print test$
+    else
+        print "failed"
+    end if
+    end
+
+    function md5$(text$)
+
+        dim r(64)
+        dim k(64)
+        dim w(16)
+        global two32
+        two32=2^32
+
+        'prepare the MD5 checksum table
+        restore [perRoundShiftAmounts]
+        for i=0 to 63
+            read x
+            r(i)=x
+        next
+
+        'prepare constants
+        for i=0 to 63
+            k(i) =  int(abs(sin(i+1)) * two32)
+        next
+
+        'initialise variables
+        h0 = HEXDEC("67452301")
+        h1 = HEXDEC("EFCDAB89")
+        h2 = HEXDEC("98BADCFE")
+        h3 = HEXDEC("10325476")
+
+        'find num bits in message
+        numbits=len(text$)*8
+
+        'add bits "10000000"
+        text$=text$+chr$(128)
+
+        'add bits "00000000"
+        while len(text$) mod 64 <> 56
+            text$=text$+chr$(0)
+        wend
+
+        'add original length in bits
+        text$=text$+dec2asc$(numbits)
+
+        'MD5 rounds
+        'process in 64 byte chunks 512bits
+        for chunk = 1 to len(text$) step 64
+            chunk$ = mid$(text$, chunk, 64)
+            for word = 0 TO 15
+                'invert byte order
+                b0 = asc(mid$(chunk$, word*4+1, 1))
+                b1 = asc(mid$(chunk$, word*4+2, 1))
+                b2 = asc(mid$(chunk$, word*4+3, 1))
+                b3 = asc(mid$(chunk$, word*4+4, 1))
+                w(word) = ((b3*256+b2)*256+b1)*256+b0
+            next word
+            a = h0
+            b = h1
+            c = h2
+            d = h3
+            for i = 0 to 63
+                select case
+                    case 0 <= i and i <= 15
+                        f = (b and c) or (bitNot(b) and d)
+                        g = i
+                    case 16 <= i and i <= 31
+                        f = (d and b) or (bitNot(d) and c)
+                        g = (5 * i + 1) mod 16
+                    case 32 <= i and i <= 47
+                        f = b xor c xor d
+                        g = (3 * i + 5) mod 16
+                    case 48 <= i and i <= 63
+                        f = c xor (b or bitNot(d))
+                        g = (7 * i) mod 16
+                end select
+                temp = d
+                d = c
+                c = b
+                b=b+leftrotate(a + f + k(i) + w(g),r(i))
+                b = b mod two32
+                a = temp
+            next i
+            h0 = (h0 + a) mod two32
+            h1 = (h1 + b) mod two32
+            h2 = (h2 + c) mod two32
+            h3 = (h3 + d) mod two32
+        next chunk
+
+        md5$ =  revOrd$(DECHEX$(h0))+_
+                revOrd$(DECHEX$(h1))+_
+                revOrd$(DECHEX$(h2))+_
+                revOrd$(DECHEX$(h3))
+
+        [perRoundShiftAmounts]
+        DATA 7,12,17,22, 7,12,17,22, 7,12,17,22, 7,12,17,22
+        DATA 5, 9,14,20, 5, 9,14,20, 5, 9,14,20, 5, 9,14,20
+        DATA 4,11,16,23, 4,11,16,23, 4,11,16,23, 4,11,16,23
+        DATA 6,10,15,21, 6,10,15,21, 6,10,15,21, 6,10,15,21
+
+    end function
+
+
+    ' dec2asc: dec to 8 byte asc
+    function dec2asc$(n)
+        h$ = ""
+        for i = 1 to 8
+            h$ = h$ + chr$(n mod 256)
+            n = int(n/256)
+        next
+        dec2asc$= h$
+    end function
+
+    ' bitNot
+    function bitNot(num)
+        bitNot = two32 -1 -num
+    end function
+
+    ' leftrotate: spins bits left n times
+    function leftrotate(num,times)
+        num=num mod two32
+        r = (num*2^times) mod two32
+        l = int(num/(2^(32-times)))
+        leftrotate = r+l
+    end function
+
+    ' reverse the HEXDEC$ order
+    function revOrd$(a$)
+        a$=left$("00000000", 8-len(a$))+a$
+        revOrd$ = lower$(mid$(a$,7,2)+mid$(a$,5,2)+mid$(a$,3,2)+mid$(a$,1,2))
+    end function

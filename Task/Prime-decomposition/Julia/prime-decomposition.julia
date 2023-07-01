@@ -1,0 +1,3 @@
+julia> Pkg.add("Primes")
+julia> factor(8796093022207)
+[9719=>1,431=>1,2099863=>1]

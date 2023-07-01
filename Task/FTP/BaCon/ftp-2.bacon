@@ -1,0 +1,46 @@
+FUNCTION interact$(command$, connection, use_pasv)
+
+    LOCAL pasv$, data$, response$
+    LOCAL port, passive
+
+    IF use_pasv THEN
+        SEND "PASV" & NL$ TO connection
+        RECEIVE data$ FROM connection
+        pasv$ = INBETWEEN$(data$, "(", ")")
+        port = VAL(TOKEN$(pasv$, 5, ","))*256 + VAL(TOKEN$(pasv$, 6, ","))
+        OPEN "localhost:" & STR$(port) FOR NETWORK AS passive
+    ENDIF
+
+    IF LEN(command$) THEN SEND command$ & NL$ TO connection
+
+    WHILE WAIT(connection, 50)
+        RECEIVE data$ FROM connection
+        IF LEN(data$) = 0 THEN BREAK
+        response$ = response$ & data$
+    WEND
+
+    IF use_pasv THEN
+        WHILE WAIT(passive, 50)
+            RECEIVE data$ FROM passive
+            IF LEN(data$) = 0 THEN BREAK
+            response$ = response$ & data$
+        WEND
+        CLOSE NETWORK passive
+    ENDIF
+
+    RETURN response$
+
+ENDFUNC
+
+OPEN "localhost:21" FOR NETWORK AS ftp
+
+PRINT interact$("", ftp, 0)
+PRINT interact$("USER anonymous", ftp, 0)
+PRINT interact$("PASS ", ftp, 0)
+PRINT interact$("CWD pub", ftp, 0)
+PRINT interact$("LIST", ftp, 1)
+PRINT interact$("TYPE I", ftp, 0)
+PRINT interact$("RETR data.txt", ftp, 1)
+PRINT interact$("QUIT", ftp, 0)
+
+CLOSE NETWORK ftp

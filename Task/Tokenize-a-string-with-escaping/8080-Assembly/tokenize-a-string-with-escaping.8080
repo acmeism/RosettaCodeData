@@ -1,0 +1,74 @@
+	org	100h
+	jmp	demo
+	;;;	Routine to split a 0-terminated string
+	;;;	Input: B=separator, C=escape, HL=string pointer.
+	;;;	Output: DE=end of list of strings
+	;;;	The split strings are stored in place.
+split:	mov	d,h	; Set DE = output pointer
+	mov	e,l
+snext:	mov	a,m	; Get current input character
+	inx	h	; Advance input pointer
+	stax	d	; Write character at output pointer
+	ana	a	; If zero, we are done
+	rz
+	cmp	c	; Is it the escape character?
+	jz	sesc
+	cmp	b	; Is it the separator character?
+	jz	ssep
+	inx	d	; Otherwise, advance output pointer,
+	jmp	snext	; and get the next character
+sesc:	mov	a,m	; Store the escaped character without
+	inx	h	; checking for anything except zero.
+	stax	d
+	inx	d
+	ana	a	; Zero is still end of string
+	rz
+	jmp	snext
+ssep:	xra 	a	; End of string, write zero terminator
+	stax	d
+	inx	d
+	jmp	snext
+	;;;	Use the routine to split the test-case string
+demo:	mvi	b,'|'	; Separator character
+	mvi	c,'^'	; Escape character
+	lxi	h,test	; Pointer to test string
+	call	split
+	;;;	Print each string on its own line
+	lxi	h,test
+str:	call	puts	; Print string
+	call	cmp16	; Are we there yet?
+	jnc	str	; If not, print the next string
+	ret
+	;;;	16-bit compare
+cmp16:	mov	a,d
+	cmp	h
+	rnz
+	mov	a,e
+	cmp	l
+	ret
+	;;;	Print zero-terminated string with newline
+puts:	push	d	; Keep DE registers
+	push	h	; Keep pointer
+	lxi 	d,pfx	; Print prefix
+	mvi	c,9
+	call	5
+	pop	h	; Restore pointer
+ploop:	mov	e,m	; Get current character
+	push	h	; Keep pointer
+	mvi	c,2	; CP/M print character
+	call	5
+	pop	h	; Restore pointer
+	mov	a,m	; Is character zero?
+	ora	a
+	inx	h	; Increment pointer
+	jnz	ploop	; If not, there are more characters
+	push	h	; Keep pointer
+	lxi	d,nl	; Write newline
+	mvi	c,9	; CP/M print string
+	call	5
+	pop	h
+	pop	d	; Restore DE registers
+	ret
+pfx:	db	'> $'	; Prefix to make the output more obvious
+nl:	db	13,10,'$'
+test:	db	'one^|uno||three^^^^|four^^^|^cuatro|',0

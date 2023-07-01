@@ -1,0 +1,1 @@
+String.make 5 '*'

@@ -1,0 +1,7 @@
+U0 PrintLogic(Bool a, Bool b) {
+  Print("a and b is %d\n", a && b);
+  Print("a or b is %d\n", a || b);
+  Print("not a is %d\n", !a);
+}
+
+PrintLogic(TRUE, FALSE);

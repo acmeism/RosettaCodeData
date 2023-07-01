@@ -1,0 +1,7 @@
+EKG 2 |> Seq.take 45 |> Seq.iter(printf "%2d, ")
+EKG 3 |> Seq.take 45 |> Seq.iter(printf "%2d, ")
+EKG 5 |> Seq.take 45 |> Seq.iter(printf "%2d, ")
+EKG 7 |> Seq.take 45 |> Seq.iter(printf "%2d, ")
+EKG 9 |> Seq.take 45 |> Seq.iter(printf "%2d, ")
+EKG 10 |> Seq.take 45 |> Seq.iter(printf "%2d, ")
+printfn "%d" (let n,_,_,_=EKGconv 2 5|>Seq.last in ((Set.count n)+1)

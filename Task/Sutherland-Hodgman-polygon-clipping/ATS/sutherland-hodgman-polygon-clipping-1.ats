@@ -1,0 +1,376 @@
+(*------------------------------------------------------------------*)
+(* Sutherland-Hodgman polygon clipping. *)
+
+#include "share/atspre_staload.hats"
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+(*------------------------------------------------------------------*)
+
+typedef coordinate = double
+
+fn {tk : tkind}
+coord_make_g0int (x : g0int tk)
+    :<> coordinate =
+  g0i2f x
+
+fn {tk : tkind}
+coord_make_g0float (x : g0float tk)
+    :<> coordinate =
+  g0f2f x
+
+overload coord with coord_make_g0int
+overload coord with coord_make_g0float
+
+(*------------------------------------------------------------------*)
+
+datatype point = point of (coordinate, coordinate)
+datatype closedpoly = closedpoly of (arrszref point)
+
+fn
+fprint_coordinate (outf : FILEref,
+                   x    : coordinate)
+    : void =
+  let
+    val _ = $extfcall (int, "fprintf", outf, "%g", x)
+  in
+  end
+
+fn
+fprint_point (outf : FILEref,
+              pt   : point) =
+  let
+
+    val+ point (x, y) = pt
+  in
+    fprint! (outf, "(");
+    fprint_coordinate (outf, x);
+    fprint! (outf, ",");
+    fprint_coordinate (outf, y);
+    fprint! (outf, ")")
+  end
+
+overload fprint with fprint_point
+
+fn
+fprint_closedpoly
+          (outf : FILEref,
+           poly : closedpoly)
+    : void =
+  let
+    val+ closedpoly points = poly
+    val n = size points
+    var i : size_t
+  in
+    for (i := i2sz 0; i <> n; i := succ i)
+      fprint! (outf, points[i], "---");
+    fprint! (outf, "cycle")
+  end
+
+fn
+print_closedpoly (poly : closedpoly) =
+  fprint_closedpoly (stdout_ref, poly)
+
+overload fprint with fprint_closedpoly
+
+fn
+closedpoly_make_list
+          (points : List point)
+    : closedpoly =
+  closedpoly (arrszref_make_list<point> points)
+
+(*------------------------------------------------------------------*)
+
+fn
+evaluate_line (x1 : coordinate,
+               y1 : coordinate,
+               x2 : coordinate,
+               y2 : coordinate,
+               x  : coordinate)
+    :<> coordinate =
+  let
+    val dy = y2 - y1
+    and dx = x2 - x1
+    val slope = dy / dx
+    and intercept = ((dx * y1) - (dy * x1)) / dx
+  in
+    (slope * x) + intercept
+  end
+
+fn
+intersection_of_lines
+          (x1 : coordinate,
+           y1 : coordinate,
+           x2 : coordinate,
+           y2 : coordinate,
+           x3 : coordinate,
+           y3 : coordinate,
+           x4 : coordinate,
+           y4 : coordinate)
+    :<> point =
+  if x1 = x2 then
+    point (x1, evaluate_line (x3, y3, x4, y4, x1))
+  else if x3 = x4 then
+    point (x3, evaluate_line (x1, y1, x2, y2, x3))
+  else
+    let
+      val denominator =
+        ((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4))
+      and x1y2_y1x2 = (x1 * y2) - (y1 * x2)
+      and x3y4_y3x4 = (x3 * y4) - (y3 * x4)
+
+      val xnumerator = (x1y2_y1x2 * (x3 - x4)) - ((x1 - x2) * x3y4_y3x4)
+      and ynumerator = (x1y2_y1x2 * (y3 - y4)) - ((y1 - y2) * x3y4_y3x4)
+    in
+      point (xnumerator / denominator,
+             ynumerator / denominator)
+    end
+
+fn
+intersection_of_edges
+          (e1 : @(point, point),
+           e2 : @(point, point))
+    :<> point =
+  let
+    val+ @(point (x1, y1), point (x2, y2)) = e1
+    and  @(point (x3, y3), point (x4, y4)) = e2
+  in
+    intersection_of_lines (x1, y1, x2, y2, x3, y3, x4, y4)
+  end
+
+fn
+point_is_left_of_edge
+          (pt   : point,
+           edge : @(point, point))
+    :<> bool =
+  let
+    val+ point (x, y) = pt
+    and  @(point (x1, y1), point (x2, y2)) = edge
+  in
+    (* Outer product of the vectors (x1,y1)-->(x,y) and
+       (x1,y1)-->(x2,y2). *)
+    ((x - x1) * (y2 - y1)) - ((x2 - x1) * (y - y1)) < coord 0
+  end
+
+fn
+clip_subject_edge
+          (subject_edge : @(point, point),
+           clip_edge    : @(point, point),
+           accum        : List0 point)
+    : List0 point =
+  let
+    macdef left_of = point_is_left_of_edge
+    macdef intersection =
+      intersection_of_edges (subject_edge, clip_edge)
+
+    val @(s1, s2) = subject_edge
+    val s2_is_inside = s2 \left_of clip_edge
+    and s1_is_inside = s1 \left_of clip_edge
+  in
+    case+ (s2_is_inside, s1_is_inside) of
+    | (true, true) => s2 :: accum
+    | (true, false) => s2 :: intersection :: accum
+    | (false, true) => intersection :: accum
+    | (false, false) => accum
+  end
+
+fun
+for_each_subject_edge
+          (i              : size_t,
+           subject_points : arrszref point,
+           clip_edge      : @(point, point),
+           accum          : List0 point)
+    : arrszref point =
+  let
+    val n = size subject_points
+  in
+    if i = n then
+      arrszref_make_rlist accum
+    else
+      let
+        val s2 = subject_points[i]
+        and s1 =
+          begin
+            if i = 0 then
+              subject_points[pred n]
+            else
+              subject_points[pred i]
+          end
+        val accum = clip_subject_edge (@(s1, s2), clip_edge, accum)
+      in
+        for_each_subject_edge (succ i, subject_points, clip_edge,
+                               accum)
+      end
+  end
+
+fun
+for_each_clip_edge
+          (i              : size_t,
+           subject_points : arrszref point,
+           clip_points    : arrszref point)
+    : arrszref point =
+  let
+    val n = size clip_points
+  in
+    if i = n then
+      subject_points
+    else
+      let
+        val c2 = clip_points[i]
+        and c1 =
+          begin
+            if i = 0 then
+              clip_points[pred n]
+            else
+              clip_points[pred i]
+          end
+
+        val subject_points =
+          for_each_subject_edge
+            (i2sz 0, subject_points, @(c1, c2), NIL)
+      in
+        for_each_clip_edge (succ i, subject_points, clip_points)
+      end
+  end
+
+fn
+clip_closedpoly_closedpoly
+          (subject_poly : closedpoly,
+           clip_poly    : closedpoly)
+    : closedpoly =
+  let
+    val+ closedpoly subject_points = subject_poly
+    and  closedpoly clip_points = clip_poly
+    val result_points =
+      for_each_clip_edge (i2sz 0, subject_points, clip_points)
+  in
+    closedpoly result_points
+  end
+
+overload clip with clip_closedpoly_closedpoly
+
+(*------------------------------------------------------------------*)
+(* A function to create an EPS file. *)
+
+(* The EPS code is based on that which is generated by the C
+   implementation of this task. *)
+
+fn
+write_eps (outf         : FILEref,
+           subject_poly : closedpoly,
+           clip_poly    : closedpoly,
+           result_poly  : closedpoly)
+    : void =
+  let
+    fn
+    moveto (pt : point)
+        : void =
+      let
+        val+ point (x, y) = pt
+      in
+        fprintln! (outf, x, " ", y, " moveto");
+      end
+
+    fn
+    lineto (pt : point)
+        : void =
+      let
+        val+ point (x, y) = pt
+      in
+        fprintln! (outf, x, " ", y, " lineto");
+      end
+
+    fn
+    setrgbcolor (rgb : string)
+        : void =
+      fprintln! (outf, rgb, " setrgbcolor")
+
+    fn closepath () : void = fprintln! (outf, "closepath")
+    fn fill () : void = fprintln! (outf, "fill")
+    fn stroke () : void = fprintln! (outf, "stroke")
+    fn gsave () : void = fprintln! (outf, "gsave")
+    fn grestore () : void = fprintln! (outf, "grestore")
+
+    fn
+    showpoly (poly       : closedpoly,
+              line_color : string,
+              fill_color : string)
+        : void =
+      let
+        val+ closedpoly p = poly
+        val n = size p
+
+        var i : size_t
+      in
+        moveto p[0];
+        for (i := i2sz 1; i <> n; i := succ i)
+          lineto p[i];
+        closepath ();
+        setrgbcolor line_color;
+        gsave ();
+        setrgbcolor fill_color;
+        fill ();
+        grestore ();
+        stroke ()
+      end
+  in
+    fprintln! (outf, "%!PS-Adobe-3.0 EPSF-3.0");
+    fprintln! (outf, "%%BoundingBox: 40 40 360 360");
+    fprintln! (outf, "0 setlinewidth ");
+    showpoly (clip_poly, ".5 0 0", "1 .7 .7");
+    showpoly (subject_poly, "0 .2 .5", ".4 .7 1");
+    fprintln! (outf, "2 setlinewidth");
+    fprintln! (outf, "[10 8] 0 setdash");
+    showpoly (result_poly, ".5 0 .5", ".7 .3 .8");
+    fprintln! (outf, "%%EOF")
+  end
+
+fn
+write_eps_to_file
+          (outfile      : string,
+           subject_poly : closedpoly,
+           clip_poly    : closedpoly,
+           result_poly  : closedpoly)
+    : void =
+  let
+    val outf = fileref_open_exn (outfile, file_mode_w)
+  in
+    write_eps (outf, subject_poly, clip_poly, result_poly);
+    fileref_close outf
+  end
+
+(*------------------------------------------------------------------*)
+
+implement
+main0 () =
+  let
+    val outf = stdout_ref
+
+    val subject_poly =
+      closedpoly_make_list
+        $list (point (coord 50, coord 150),
+               point (coord 200, coord 50),
+               point (coord 350, coord 150),
+               point (coord 350, coord 300),
+               point (coord 250, coord 300),
+               point (coord 200, coord 250),
+               point (coord 150, coord 350),
+               point (coord 100, coord 250),
+               point (coord 100, coord 200))
+    val clip_poly =
+      closedpoly_make_list
+        $list (point (coord 100, coord 100),
+               point (coord 300, coord 100),
+               point (coord 300, coord 300),
+               point (coord 100, coord 300))
+
+    val result_poly = clip (subject_poly, clip_poly)
+  in
+    fprintln! (outf, result_poly);
+    write_eps_to_file ("sutherland-hodgman.eps",
+                       subject_poly, clip_poly, result_poly);
+    fprintln! (outf, "Wrote sutherland-hodgman.eps")
+  end
+
+(*------------------------------------------------------------------*)

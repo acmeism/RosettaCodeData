@@ -1,0 +1,65 @@
+include "strings.coh";
+include "malloc.coh";
+
+# Define types. The calling code is expected to provide a QueueData type.
+record QueueItem is
+    data: QueueData;
+    next: [QueueItem];
+end record;
+
+record QueueMeta is
+    head: [QueueItem];
+    tail: [QueueItem];
+end record;
+
+typedef Queue is [QueueMeta];
+const Q_NONE := 0 as [QueueItem];
+
+# Allocate and free the queue datastructure.
+sub MakeQueue(): (q: Queue) is
+    q := Alloc(@bytesof QueueMeta) as Queue;
+    q.head := Q_NONE;
+    q.tail := Q_NONE;
+end sub;
+
+sub FreeQueue(q: Queue) is
+    var cur := q.head;
+    while cur != Q_NONE loop
+        var next := cur.next;
+        Free(cur as [uint8]);
+        cur := next;
+    end loop;
+    Free(q as [uint8]);
+end sub;
+
+# Check if queue is empty.
+sub QueueEmpty(q: Queue): (r: uint8) is
+    r := 0;
+    if q.head == Q_NONE then
+        r := 1;
+    end if;
+end sub;
+
+# Enqueue and dequeue data. Cowgol has no exceptions, so the calling code
+# should check QueueEmpty first.
+sub Enqueue(q: Queue, d: QueueData) is
+    var item := Alloc(@bytesof QueueItem) as [QueueItem];
+    item.data := d;
+    item.next := Q_NONE;
+    if q.head == Q_NONE then
+        q.head := item;
+    else
+        q.tail.next := item;
+    end if;
+    q.tail := item;
+end sub;
+
+sub Dequeue(q: Queue): (d: QueueData) is
+    d := q.head.data;
+    var cur := q.head;
+    q.head := q.head.next;
+    Free(cur as [uint8]);
+    if q.head == Q_NONE then
+        q.tail := Q_NONE;
+    end if;
+end sub;

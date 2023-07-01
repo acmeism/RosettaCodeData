@@ -1,0 +1,123 @@
+zhang: procedure options (main);        /* 8 July 2014 */
+
+   declare pic(10) bit(32) initial (
+      '00000000000000000000000000000000'b,
+      '01111111110000000111111110000000'b,
+      '01110001111000001111001111000000'b,
+      '01110000111000001110000111000000'b,
+      '01110001111000001110000000000000'b,
+      '01111111110000001110000000000000'b,
+      '01110111100000001110000111000000'b,
+      '01110011110011101111001111011100'b,
+      '01110001111011100111111110011100'b,
+      '00000000000000000000000000000000'b );
+   declare image  (10,32) bit(1) defined pic;
+   declare status (10,32) fixed decimal (1);
+   declare changes bit(1);
+   declare (i, j, k, m, n) fixed binary;
+
+   m = hbound(image,1); n = hbound(image,2);
+
+   call display;
+
+   /* Pixel labelling for pixels surrounding P1, co-ordinates (i,j). */
+   /* P9 P2 P3 */
+   /* P8 P1 P4 */
+   /* P7 P6 P5 */
+
+   do k = 1 to 10 until (^changes);
+      changes = '0'b;
+      /* Set conditions as follows: */
+      /*   (0) The pixel is black and has eight neighbours */
+      /*   (1) 2 < = B(P1) < = 6                           */
+      /*   (2) A(P1) = 1                                   */
+      /*   (3) At least one of P2 and P4 and P6 is white   */
+      /*   (4) At least one of P4 and P6 and P8 is white   */
+      status = -1;
+      do i = 2 to m-1;
+         do j = 2 to n-1;
+            if image(i,j) then
+               if B(i,j) >= 2 & B(i,j) <= 6 then
+                  if A(i,j) = 1 then
+                     if ^image(i-1,j) | ^image(i,j+1) | ^image(i+1,j) then
+                        if ^image(i,j+1) | ^image(i+1,j) | ^image(i,j-1) then
+                           status(i,j) = 4;
+         end;
+      end;
+      /* Having determined a status for every bit in the image,   */
+      /* change those bits to white.                              */
+      do i = 2 to m-1;
+         do j = 2 to n-1;
+            if status(i,j) ^= -1 then do; image(i,j) = '0'b; changes = '1'b; end;
+         end;
+      end;
+
+      /* Set conditions as follows: */
+      /*   (0) The pixel is black and has eight neighbours */
+      /*   (1) 2 < = B(P1) < = 6                           */
+      /*   (2) A(P1) = 1                                   */
+      /*   (3) At least one of P2 and P4 and P8 is white   */
+      /*   (4) At least one of P2 and P6 and P8 is white   */
+      status = -1;
+      do i = 2 to m-1;
+         do j = 2 to n-1;
+            if image(i,j) then
+               if B(i,j) >= 2 & B(i,j) <= 6 then
+                  if A(i,j) = 1 then
+                     if ^image(i-1,j) | ^image(i,j+1) | ^image(i,j-1) then
+                        if ^image(i-1,j) | ^image(i+1,j) | ^image(i,j-1) then
+                           status(i,j) = 4;
+         end;
+      end;
+      /* Having determined a status for every bit in the image,   */
+      /* change those bits to white.                              */
+      do i = 2 to m-1;
+         do j = 2 to n-1;
+            if status(i,j) ^= -1 then do; image(i,j) = '0'b; changes = '1'b; end;
+         end;
+      end;
+
+   end; /* of the "until" loop */
+
+   put skip list ('Final image after ' || trim(k) || ' iterations:');
+   call display;
+
+display: procedure;
+   declare (i, j) fixed binary;
+   declare c character (1);
+
+   do i = 1 to m;
+      put skip edit ('row:', i) (A, F(3));
+      do j = 1 to n;
+         if image(i,j) then c = '.'; else c = ' ';
+         put edit (c) (A);
+      end;
+   end;
+   put skip;
+end;
+
+/* Returns the number of transitions from white to black from P2 through P9 and P2. */
+A: procedure (i,j) returns (fixed binary);
+   declare (i,j) fixed binary nonassignable;
+   declare n(2:10) bit(1);
+
+   n(2)  = image(i-1,j);  n(3) = image(i-1,j+1);
+   n(4)  = image(i, j+1); n(5) = image(i+1,j+1);
+   n(6)  = image(i+1,j);  n(7) = image(i+1,j-1);
+   n(8)  = image(i,j-1);  n(9) = image(i-1,j-1);
+   n(10) = image(i-1,j);
+
+   return ( tally(string(n), '01'b) );
+end A;
+
+/* Count the pixel neighbors of P1 that are black */
+B: procedure (i, j) returns (fixed binary);
+   declare (i,j) fixed binary nonassignable;
+   declare s fixed binary;
+
+   s = image(i-1,j-1) + image(i-1,j) + image(i-1,j+1);
+   s = s + image(i,j-1) + image(i,j+1);
+   return ( s + image(i+1,j-1) + image(i+1,j) + image(i+1,j+1) );
+end B;
+
+end zhang;

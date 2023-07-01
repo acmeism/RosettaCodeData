@@ -1,0 +1,295 @@
+(* The program is compiled to C and the integer types have C
+   semantics. This means ordinary unsigned arithmetic is already
+   modular!  However, the modulus is fixed at 2**n, where n is the
+   number of bits in the unsigned integer type.
+
+   Below, I let a "modulus" of zero mean to use 2**n as the
+   modulus. *)
+
+(*------------------------------------------------------------------*)
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+(*------------------------------------------------------------------*)
+
+(* An abstract type, the size of @(g0uint tk, g1uint (tk, modulus)) *)
+abst@ype modular_g0uint (tk : tkind, modulus : int) =
+  @(g0uint tk, g1uint (tk, modulus))
+
+(* Because the type is abstract, we need a constructor: *)
+extern fn {tk : tkind}
+modular_g0uint_make
+          {m : int}             (* "For any integer m" *)
+          (a : g0uint tk,
+           m : g1uint (tk, m))
+    :<> modular_g0uint (tk, m)
+
+(* A deconstructor: *)
+extern fn {tk : tkind}
+modular_g0uint_unmake
+          {m : int}
+          (a : modular_g0uint (tk, m))
+    :<> @(g0uint tk, g1uint (tk, m))
+
+extern fn {tk : tkind}
+modular_g0uint_succ     (* "Successor" *)
+          {m : int}
+          (a : modular_g0uint (tk, m))
+    :<> modular_g0uint (tk, m)
+
+extern fn {tk : tkind}  (* This won't be used, but let us write it. *)
+modular_g0uint_pred     (* "Predecessor" *)
+          {m : int}
+          (a : modular_g0uint (tk, m))
+    :<> modular_g0uint (tk, m)
+
+extern fn {tk : tkind}   (* This won't be used, but let us write it.*)
+modular_g0uint_neg
+          {m : int}
+          (a : modular_g0uint (tk, m))
+    :<> modular_g0uint (tk, m)
+
+extern fn {tk : tkind}
+modular_g0uint_add
+          {m : int}
+          (a : modular_g0uint (tk, m),
+           b : modular_g0uint (tk, m))
+    :<> modular_g0uint (tk, m)
+
+extern fn {tk : tkind}   (* This won't be used, but let us write it.*)
+modular_g0uint_sub
+          {m : int}
+          (a : modular_g0uint (tk, m),
+           b : modular_g0uint (tk, m))
+    :<> modular_g0uint (tk, m)
+
+extern fn {tk : tkind}
+modular_g0uint_mul
+          {m : int}
+          (a : modular_g0uint (tk, m),
+           b : modular_g0uint (tk, m))
+    :<> modular_g0uint (tk, m)
+
+extern fn {tk : tkind}
+modular_g0uint_npow
+          {m : int}
+          (a : modular_g0uint (tk, m),
+           i : intGte 0)
+    :<> modular_g0uint (tk, m)
+
+overload succ with modular_g0uint_succ
+overload pred with modular_g0uint_pred
+overload ~ with modular_g0uint_neg
+overload + with modular_g0uint_add
+overload - with modular_g0uint_sub
+overload * with modular_g0uint_mul
+overload ** with modular_g0uint_npow
+
+(*------------------------------------------------------------------*)
+
+local
+
+  (* We make the type be @(g0uint tk, g1uint (tk, modulus)).
+     The first element is the least residue, the second is the
+     modulus. A modulus of 0 indicates that the modulus is 2**n, where
+     n is the number of bits in the typekind. *)
+  typedef _modular_g0uint (tk : tkind, modulus : int) =
+    @(g0uint tk, g1uint (tk, modulus))
+
+in (* local *)
+
+  assume modular_g0uint (tk, modulus) = _modular_g0uint (tk, modulus)
+
+  implement {tk}
+  modular_g0uint_make (a, m) =
+    if m = g1i2u 0 then
+      @(a, m)
+    else
+      @(a mod m, m)
+
+  implement {tk}
+  modular_g0uint_unmake a =
+    a
+
+  implement {tk}
+  modular_g0uint_succ a =
+    let
+      val @(a, m) = a
+    in
+      if (m = g1i2u 0) || (succ a <> m) then
+        @(succ a, m)
+      else
+        @(g1i2u 0, m)
+    end
+
+  implement {tk}
+  modular_g0uint_pred a =
+    let
+      val @(a, m) = a
+      prval () = lemma_g1uint_param m
+    in
+      (* An exercise for the advanced reader: how come in
+         modular_g0uint_succ I could use "||", but here I have to use
+         "+" instead? *)
+      if (m = g1i2u 0) + (a <> g1i2u 0) then
+        @(pred a, m)
+      else
+        @(pred m, m)
+    end
+
+  implement {tk}
+  modular_g0uint_neg a =
+    let
+      val @(a, m) = a
+    in
+      if m = g1i2u 0 then
+        @(succ (lnot a), m)       (* Two's complement. *)
+      else if a = g0i2u 0 then
+        @(a, m)
+      else
+        @(m - a, m)
+    end
+
+  implement {tk}
+  modular_g0uint_add (a, b) =
+    let
+      (* The modulus of b WILL be same as that of a. The type system
+         guarantees this at compile time. *)
+      val @(a, m) = a
+      and @(b, _) = b
+    in
+      if m = g1i2u 0 then
+        @(a + b, m)
+      else
+        @((a + b) mod m, m)
+    end
+
+  implement {tk}
+  modular_g0uint_mul (a, b) =
+    (* For multiplication there is a complication, which is that the
+       product might overflow the register and so end up reduced
+       modulo the 2**(wordsize). Approaches to that problem are
+       discussed here:
+       https://en.wikipedia.org/w/index.php?title=Modular_arithmetic&oldid=1145603919#Example_implementations
+
+       However, what I will do is inline some C, and use a GNU C
+       extension for an integer type that (on AMD64, at least) is
+       twice as large as uintmax_t.
+
+       In so doing, perhaps I help demonstrate how suitable ATS is for
+       low-level systems programming. Inlining the C is very easy to
+       do. *)
+    let
+      val @(a, m) = a
+      and @(b, _) = b
+    in
+      if m = g1i2u 0 then
+        @(a * b, m)
+      else
+        let
+          typedef big = $extype"unsigned __int128"
+
+          (* A call to _modular_g0uint_mul will actually be a call to
+             a C function or macro, which happens also to be named
+             _modular_g0uint_mul. *)
+          extern fn
+          _modular_g0uint_mul
+                    (a : big,
+                     b : big,
+                     m : big)
+              :<> big = "mac#_modular_g0uint_mul"
+        in
+          (* The following will work only as long as the C compiler
+             itself knows how to cast the integer types. There are
+             safer methods of casting, but, for this task, let us
+             ignore that. *)
+          @($UN.cast (_modular_g0uint_mul ($UN.cast a,
+                                           $UN.cast b,
+                                           $UN.cast m)),
+            m)
+        end
+    end
+
+(* The following puts a static inline function _modular_g0uint_mul
+   near the top of the C source file. *)
+%{^
+
+ATSinline() unsigned __int128
+_modular_g0uint_mul (unsigned __int128 a,
+                     unsigned __int128 b,
+                     unsigned __int128 m)
+{
+  return ((a * b) % m);
+}
+
+%}
+
+end (* local *)
+
+implement {tk}
+modular_g0uint_sub (a, b) =
+  a + (~b)
+
+implement {tk}
+modular_g0uint_npow {m} (a, i) =
+  (* To compute a power, the multiplication implementation devised
+     above can be used. The algorithm here is simply the squaring
+     method:
+     https://en.wikipedia.org/w/index.php?title=Exponentiation_by_squaring&oldid=1144956501 *)
+  let
+    fun
+    repeat {i : nat}     (* <-- This number consistently shrinks. *)
+           .<i>.         (* <-- Proof the recursion will terminate. *)
+           (accum : modular_g0uint (tk, m), (* "Accumulator" *)
+            base  : modular_g0uint (tk, m),
+            i     : int i)
+        :<> modular_g0uint (tk, m) =
+      if i = 0 then
+        accum
+      else
+        let
+          val i_halved = half i (* Integer division. *)
+          and base_squared = base * base
+        in
+          if i_halved + i_halved = i then
+            repeat (accum, base_squared, i_halved)
+          else
+            repeat (base * accum, base_squared, i_halved)
+        end
+
+    val @(_, m) = modular_g0uint_unmake<tk> a
+  in
+    repeat (modular_g0uint_make<tk> (g0i2u 1, m), a, i)
+  end
+
+(*------------------------------------------------------------------*)
+
+extern fn {tk : tkind}
+f : {m : int} modular_g0uint (tk, m) -<> modular_g0uint (tk, m)
+
+(* Using the "successor" function below means that, to add 1, we do
+   not need to know the modulus. That is why I added "succ". *)
+implement {tk}
+f(x) = succ (x**100 + x)
+
+(* Using a macro, and thanks to operator overloading, we can use the
+   same code for modular integers, floating point, etc. *)
+macdef g(x) =
+  let
+    val x_ = ,(x)               (* Evaluate the argument just once. *)
+  in
+    succ (x_**100 + x_)
+  end
+
+implement
+main0 () =
+  let
+    val x = modular_g0uint_make (10U, 13U)
+  in
+    println! ((modular_g0uint_unmake (f(x))).0);
+    println! ((modular_g0uint_unmake (g(x))).0);
+    println! (g(10.0))
+  end
+
+(*------------------------------------------------------------------*)

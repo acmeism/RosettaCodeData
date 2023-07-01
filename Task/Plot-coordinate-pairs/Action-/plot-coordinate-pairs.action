@@ -1,0 +1,192 @@
+INCLUDE "D2:REAL.ACT" ;from the Action! Tool Kit
+
+DEFINE PTR="CARD"
+DEFINE BUF_SIZE="100"
+DEFINE REAL_SIZE="3"
+
+TYPE Settings=[
+  INT xMin,xMax,xStep,yMin,yMax,yStep
+  INT xLeft,xRight,yTop,yBottom
+  INT tickLength]
+
+BYTE ARRAY xs(BUF_SIZE),ys(BUF_SIZE)
+BYTE count=[0]
+
+PTR FUNC GetXPtr(BYTE i)
+RETURN (xs+3*i)
+
+PTR FUNC GetYPtr(BYTE i)
+RETURN (ys+3*i)
+
+PROC AddPoint(CHAR ARRAY xstr,ystr)
+  REAL POINTER p
+
+  p=GetXPtr(count) ValR(xstr,p)
+  p=GetYPtr(count) ValR(ystr,p)
+  count==+1
+RETURN
+
+PROC InitData()
+  AddPoint("0.0","2.7")
+  AddPoint("1.0","2.8")
+  AddPoint("2.0","31.4")
+  AddPoint("3.0","38.1")
+  AddPoint("4.0","58.0")
+  AddPoint("5.0","76.2")
+  AddPoint("6.0","100.5")
+  AddPoint("7.0","130.0")
+  AddPoint("8.0","149.3")
+  AddPoint("9.0","180.0")
+RETURN
+
+INT FUNC GetXPos(Settings POINTER s INT x)
+  INT res
+
+  res=x*(s.xRight-s.xLeft)/(s.xMax-s.xMin)+s.xLeft
+RETURN (res)
+
+INT FUNC GetYPos(Settings POINTER s INT y)
+  INT res
+
+  res=y*(s.yTop-s.yBottom)/(s.yMax-s.yMin)+s.yBottom
+RETURN (res)
+
+INT FUNC GetXPosR(Settings POINTER s REAL POINTER x)
+  REAL nom,denom,div,tmp
+  INT res
+
+  IntToReal(s.xRight-s.xLeft,tmp)
+  RealMult(tmp,x,nom)
+  IntToReal(s.xMax-s.xMin,denom)
+  RealDiv(nom,denom,div)
+  res=RealToInt(div)+s.xLeft
+RETURN (res)
+
+INT FUNC GetYPosR(Settings POINTER s REAL POINTER y)
+  REAL nom,denom,div,tmp
+  INT res
+
+  IntToReal(s.yBottom-s.yTop,tmp)
+  RealMult(tmp,y,nom)
+  IntToReal(s.yMax-s.yMin,denom)
+  RealDiv(nom,denom,div)
+  res=-RealToInt(div)+s.yBottom
+RETURN (res)
+
+BYTE FUNC AtasciiToInternal(CHAR c)
+  BYTE c2
+
+  c2=c&$7F
+  IF c2<32 THEN
+    RETURN (c+64)
+  ELSEIF c2<96 THEN
+    RETURN (c-32)
+  FI
+RETURN (c)
+
+PROC CharOut(INT x,y CHAR c)
+  BYTE i,j,v
+  PTR addr
+
+  addr=$E000+AtasciiToInternal(c)*8;
+  FOR j=0 TO 7
+  DO
+    v=Peek(addr)
+    i=8
+    WHILE i>0
+    DO
+      IF v&1 THEN
+        Plot(x+i,y+j)
+      FI
+
+      v=v RSH 1
+      i==-1
+    OD
+    addr==+1
+  OD
+RETURN
+
+PROC TextOut(INT x,y CHAR ARRAY text)
+  BYTE i
+
+  FOR i=1 TO text(0)
+  DO
+    CharOut(x,y,text(i))
+    x==+8
+  OD
+RETURN
+
+PROC DrawAxes(Settings POINTER s)
+  INT i,x,y
+  CHAR ARRAY t(10)
+
+  Plot(s.xLeft,s.yTop)
+  DrawTo(s.xLeft,s.yBottom)
+  DrawTo(s.xRight,s.yBottom)
+
+  FOR i=s.xMin TO s.xMax STEP s.xStep
+  DO
+    x=GetXPos(s,i)
+    Plot(x,s.yBottom)
+    DrawTo(x,s.yBottom+s.tickLength)
+    StrI(i,t)
+    TextOut(x-t(0)*4,s.yBottom+s.tickLength+1,t)
+  OD
+
+  FOR i=s.yMin TO s.yMax STEP s.yStep
+  DO
+    y=GetYPos(s,i)
+    Plot(s.xLeft-s.tickLength,y)
+    DrawTo(s.xLeft,y)
+    StrI(i,t)
+    TextOut(s.xLeft-s.tickLength-1-t(0)*8,y-4,t)
+  OD
+RETURN
+
+PROC DrawPoint(INT x,y)
+  Plot(x-1,y-1) DrawTo(x+1,y-1)
+  DrawTo(x+1,y+1) DrawTo(x-1,y+1)
+  DrawTo(x-1,y-1)
+RETURN
+
+PROC DrawSeries(Settings POINTER s)
+  INT i,x,y,prevX,prevY
+  REAL POINTER p
+
+  FOR i=0 TO count-1
+  DO
+    p=GetXPtr(i) x=GetXPosR(s,p)
+    p=GetYPtr(i) y=GetYPosR(s,p)
+    DrawPoint(x,y)
+    IF i>0 THEN
+      Plot(prevX,prevY)
+      DrawTo(x,y)
+    FI
+    prevX=x prevY=y
+  OD
+RETURN
+
+PROC DrawPlot(Settings POINTER s)
+  DrawAxes(s)
+  DrawSeries(s)
+RETURN
+
+PROC Main()
+  BYTE CH=$02FC,COLOR1=$02C5,COLOR2=$02C6
+  Settings s
+
+  Graphics(8+16)
+  Color=1
+  COLOR1=$0C
+  COLOR2=$02
+
+  InitData()
+  s.xMin=0 s.xMax=9 s.xStep=1
+  s.yMin=0 s.yMax=180 s.yStep=20
+  s.xLeft=30 s.xRight=311 s.yTop=8 s.yBottom=177
+  s.tickLength=3
+  DrawPlot(s)
+
+  DO UNTIL CH#$FF OD
+  CH=$FF
+RETURN

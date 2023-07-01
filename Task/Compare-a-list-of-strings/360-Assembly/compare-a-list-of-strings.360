@@ -1,0 +1,88 @@
+*        Compare a list of strings 31/01/2017
+COMPLIST CSECT
+         USING  COMPLIST,R13       base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    prolog
+         ST     R13,4(R15)         " <-
+         ST     R15,8(R13)         " ->
+         LR     R13,R15            " addressability
+         MVC    SNAME,=C'ABC'
+         LA     R1,SNAME
+         LA     R2,ABC
+         BAL    R14,TEST           call test('ABC',abc)
+         MVC    SNAME,=C'AAA'
+         LA     R1,SNAME
+         LA     R2,AAA
+         BAL    R14,TEST           call test('AAA',aaa)
+         MVC    SNAME,=C'ACB'
+         LA     R1,SNAME
+         LA     R2,ACB
+         BAL    R14,TEST           call test('ACB',acb)
+         L      R13,4(0,R13)       epilog
+         LM     R14,R12,12(R13)    " restore
+         XR     R15,R15            " rc=0
+         BR     R14                exit
+*------- ----   test(name,xlist) -----------------------
+TEST     MVC    NAME,0(R1)         store argument #1
+         MVC    XLIST(6),0(R2)     store argument #2
+         MVI    ALLEQ,X'01'        alleq=true
+         MVI    INCRE,X'01'        incre=true
+         LA     R6,1               i=1
+LOOPI    LA     R2,NXLIST          hbound(xlist)
+         BCTR   R2,0               -1
+         CR     R6,R2              do i to hbound(xlist)-1
+         BH     ELOOPI
+         MVC    XBOOL,ALLEQ
+         OC     XBOOL,INCRE        or
+         CLI    XBOOL,X'01'        and while alleq or incre
+         BNE    ELOOPI
+         LA     R2,1(R6)           i+1
+         SLA    R2,1               *2
+         LA     R3,XLIST-2(R2)     @xlist(i+1)
+         LR     R1,R6              i
+         SLA    R1,1               *2
+         LA     R4,XLIST-2(R1)     @xlist(i)
+         CLC    0(2,R3),0(R4)      if xlist(i+1)=xlist(i)
+         BNE    SEL1B
+         MVI    INCRE,X'00'        incre=false
+         B      SEL1END
+SEL1B    CLC    0(2,R3),0(R4)      if xlist(i+1)<xlist(i)
+         BNL    SEL1OTH
+         MVI    INCRE,X'00'        incre=false
+         MVI    ALLEQ,X'00'        alleq=false
+         B      SEL1END
+SEL1OTH  MVI    ALLEQ,X'00'        alleq=false
+SEL1END  LA     R6,1(R6)           i=i+1
+         B      LOOPI
+ELOOPI   CLI    ALLEQ,X'01'        if alleq
+         BNE    SEL2B
+         MVC    TXT,=CL40'all elements are equal'
+         B      SEL2END
+SEL2B    CLI    INCRE,X'01'        if incre
+         BNE    SEL2OTH
+         MVC    TXT,=CL40'elements are in increasing order'
+         B      SEL2END
+SEL2OTH  MVC    TXT,=CL40'neither equal nor in increasing order'
+SEL2END  MVI    PG,C' '
+         MVC    PG+1(79),PG        clear buffer
+         MVC    PG(3),NAME
+         MVC    PG+3(3),=C' : '
+         MVC    PG+6(40),TXT
+         XPRNT  PG,L'PG
+         BR     R14                return to caller
+*        ----   ----------------------------------------
+SNAME    DS     CL3
+ABC      DC     CL2'AA',CL2'BB',CL2'CC'
+AAA      DC     CL2'AA',CL2'AA',CL2'AA'
+ACB      DC     CL2'AA',CL2'CC',CL2'BB'
+NAME     DS     CL3
+XLIST    DS     3CL2
+NXLIST   EQU    (*-XLIST)/L'XLIST
+ALLEQ    DS     X
+INCRE    DS     X
+TXT      DS     CL40
+XBOOL    DS     X
+PG       DS     CL80
+         YREGS
+         END    COMPLIST

@@ -1,0 +1,9 @@
+OPEN "test.txt" FOR INPUT AS #1
+
+WHILE NOT EOF(1)
+    INPUT #1, linea$
+    PRINT linea$	' echo to the console
+WEND
+
+CLOSE #1
+END

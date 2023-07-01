@@ -1,0 +1,192 @@
+	cpu	8086
+	bits	16
+	;;;	I/O ports
+KBB:	equ	61h	; Keyboard controller port B (also controls speaker)
+PITC2:	equ	42h	; Programmable Interrupt Timer, channel 2 (frequency)
+PITCTL:	equ	43h	; PIT control port.
+	;;;	Control bits
+SPKR:	equ	3	; Lower two bits of KBB determine speaker on/off
+CTR:	equ	6	; Counter select offset in PIT control byte
+CBITS:	equ	4	; Size select offset in PIT control byte
+B16:	equ	3	; 16-bit mode for the PIT counter
+MODE:	equ	1	; Offset of mode in PIT control byte
+SQWV:	equ	3	; Square wave mode
+	;;;	Software interrupts
+CLOCK:	equ	1Ah	; BIOS clock function interrupt
+DOS:	equ	21h	; MS-DOS syscall interrupt
+	;;;	MS-DOS syscalls
+read:	equ	3Fh	; Read from file
+section	.text
+	org	100h
+	;;;	Set up the PIT to generate a 'C' note
+	cli
+	mov	al,(2<<CTR)|(B16<<CBITS)|(SQWV<<MODE)
+	out	PITCTL,al
+	mov	ax,2280		; Divisor of main oscillator frequency
+	out	PITC2,al	; Output low byte first,
+	xchg	al,ah
+	out	PITC2,al	; Then high byte.
+	sti
+	;;;	Read from stdin and sound as morse
+input:	mov	ah,read		; Read
+	xor	bx,bx		; from STDIN
+	mov	cx,buf.size	; into the buffer
+	mov	dx,buf
+	int	DOS
+	jc	stop		; Carry set = error, stop
+	test	ax,ax		; Did we get any characters?
+	jnz	go		; If not, we're done, so stop
+stop:	ret
+go:	mov	cx,ax		; Loop counter = how many characters we have
+	mov	si,buf		; Start at buffer size
+dochar:	lodsb			; Get current character
+	cmp	al,26		; End of file?
+	je	stop		; Then stop
+	push	cx		; Save pointer and counter
+	push	si
+	call	char		; Sound out this character
+	pop	si		; Restore pointer and counter
+	pop	cx
+	loop	dochar		; If more characters, do the next one
+	jmp	input		; Afterwards, try to get more input
+	;;;	Sound ASCII character in AL
+char:	and	al,127		; 7-bit ASCII
+	sub	al,32		; Word separator? (<=32)
+	ja	.snd		; If not, look up in table
+	mov	bx,4		; Otherwise, 'sound' a word space
+	jmp	delay		; (4 more ticks to form 7-tick delay)
+.snd:	mov	bx,morse	; Find offset in morse pulse table
+	xlatb
+	test	al,al		; If it is zero, we want to ignore it
+	jz	.out
+	xor	ah,ah		; Otherwise, find its address
+	mov	bx,ax
+	lea	si,[bx+morse.P]	; and store it in SI.
+	xor	bh,bh		; BX = BL in the following code
+.byte:	lodsb			; Get pulse byte
+	mov	cx,4		; Four pulses per byte
+.pulse:	mov	bl,3		; Load low pulse in BL
+	and	bl,al
+	test	bl,bl		; If it is zero,
+	jz	.out		; We're done
+	mov	bp,ax		; Otherwise, keep AX
+	call	pulse		; Sound the pulse
+	mov	ax,bp		; Restore AX
+	shr	al,1		; Next pulse
+	shr 	al,1
+	loop	.pulse
+	jmp	.byte		; If no zero pulse seen yet, next byte
+.out:	mov	bl,2		; 2 ticks more delay to form inter-char space
+	jmp	delay
+	;;;	Sound morse code pulse w/delay
+pulse:	cli			; Turn off interrupts
+	in	al,KBB		; Read current configuration
+	or	al,SPKR		; Turn speaker on
+	out	KBB,al		; Write configuration back
+	sti			; Turn interrupts back on
+	call	delay		; Delay for BX ticks
+	cli			; Turn off interrupts
+	in	al,KBB		; Read current configuration
+	and	al,~SPKR	; Turn speaker off
+	out	KBB,al		; Write configuration back
+	sti			; Turn interrupts back on
+	mov	bx,1		; Intra-character delay = 1 tick
+	;;;	Delay for BX ticks
+delay:	push	bx		; Keep the registers we alter
+	push	cx		
+	push	dx
+	xor	ah,ah		; Clock function 0 = get ticks
+	int	CLOCK		; Get current ticks (in CX:DX)
+	add	bx,dx		; BX = time for which to wait
+.wait:	int	CLOCK		; Wait for that time to occur
+	cmp	dx,bx		; Are we there yet?
+	jbe	.wait		; If not, try again
+	pop	dx		; Restore the registers
+	pop	cx
+	pop 	bx
+	ret
+section	.data
+morse:	;;;	Printable ASCII to pulse mapping (32-122)
+	db	.n_-.P,		.excl-.P,	.dquot-.P,	.n_-.P	; !"#
+	db	.dolar-.P,	.n_-.P,		.amp-.P,	.quot-.P;$%&'
+	db	.open-.P,	.close-.P,	.n_-.P,		.plus-.P;()*+
+	db	.comma-.P,	.minus-.P,	.dot-.P,	.slsh-.P;,-./
+	db	.n0-.P,		.n1-.P,		.n2-.P,		.n3-.P	;0123
+	db	.n4-.P,		.n5-.P,		.n6-.P,		.n7-.P	;4567
+	db	.n8-.P,		.n9-.P,		.colon-.P,	.semi-.P;89:;
+	db	.n_-.P,		.eq-.P,		.n_-.P,		.qm-.P 	;<=>?
+	db	.at-.P,		.a-.P,		.b-.P,		.c-.P	;@ABC
+	db	.d-.P,		.e-.P,		.f-.P,		.g-.P	;DEFG
+	db	.h-.P,		.i-.P,		.j-.P,		.k-.P	;HIJK
+	db	.l-.P,		.m-.P,		.n-.P,		.o-.P	;LMNO
+	db	.p-.P,		.q-.P,		.r-.P,		.s-.P	;PQRS
+	db	.t-.P,		.u-.P,		.v-.P,		.w-.P	;TUVW
+	db	.x-.P,		.y-.P,		.z-.P,		.n_-.P	;XYZ[
+	db	.n_-.P,		.n_-.P,		.n_-.P,		.uscr-.P;\]^_
+	db	.n_-.P,		.a-.P,		.b-.P,		.c-.P	;`abc
+	db	.d-.P,		.e-.P,		.f-.P,		.g-.P	;defg
+	db	.h-.P,		.i-.P,		.j-.P,		.k-.P	;hijk
+	db	.l-.P,		.m-.P,		.n-.P,		.o-.P	;lmno
+	db	.p-.P,		.q-.P,		.r-.P,		.s-.P	;pqrs
+	db	.t-.P,		.u-.P,		.v-.P,		.w-.P	;tuvw
+	db	.x-.P,		.y-.P,		.z-.P,		.n_-.P	;xyz{
+	db	.n_-.P,		.n_-.P,		.n_-.P,		.n_-.P	;|}~
+.P:	;;;	Morse pulses are stored four to a byte, lowest bits first
+.n_:	db	0	; To ignore undefined characters
+.a:	db	0Dh
+.b:	db	57h,0
+.c:	db	77h,0
+.d:	db	17h
+.e:	db	1h
+.f:	db	75h,0
+.g:	db	1Fh
+.h:	db	55h,0
+.i:	db	5h
+.j:	db	0FDh,0
+.k:	db	37h
+.l:	db	5Dh,0
+.m:	db	0Fh
+.n:	db	7h
+.o:	db	3Fh
+.p:	db	7Dh,0
+.q:	db	0DFh,0
+.r:	db	1Dh
+.s:	db	15h
+.t:	db	3h
+.u:	db	35h
+.v:	db	0D5h,0
+.w:	db	3Dh
+.x:	db	0D7h,0
+.y:	db	0F7h,0
+.z:	db	5Fh,0
+.n0:	db	0FFh,3
+.n1:	db	0FDh,3
+.n2:	db	0F5h,3
+.n3:	db	0D5h,3
+.n4:	db	55h,3
+.n5:	db	55h,1
+.n6:	db	57h,1
+.n7:	db	5Fh,1
+.n8:	db	7Fh,1
+.n9:	db	0FFh,1
+.dot:	db	0DDh,0Dh
+.comma:	db	5Fh,0Fh
+.qm:	db	0F5h,5
+.quot:	db	0FDh,7
+.excl:	db	77h,0Fh
+.slsh:	db	0D7h,1
+.open:	db	0F7h,1
+.close:	db	0F7h,0Dh
+.amp:	db	5Dh,1
+.colon:	db	7Fh,5
+.semi:	db	77h,7
+.eq:	db	57h,3
+.plus:	db	0DDh,1
+.minus:	db	57h,0Dh
+.uscr:	db	0F5h,0Dh
+.dquot:	db	5Dh,7
+.dolar:	db	0D5h,35h
+.at:	db	7Dh,7
+section	.bss
+buf:	resb	1024		; 1K buffer
+.size:	equ	$-buf

@@ -1,0 +1,107 @@
+	.model small
+	.stack 1024
+	
+        .data
+
+        ;no data needed
+	
+	.code
+	
+start:
+	mov ax,@code
+        mov ds,ax
+	
+	call PRIMM
+	BYTE "Exit program and return to MS-DOS? (Y/N)",0
+	
+	mov ax,0C00h
+	int 21h			;flush keyboard buffer
+
+forever:	
+	call waitKey
+	;returns ASCII code in AL
+	
+	and AL,11011111b         ;ignore case
+	cmp al,"Y"
+	jz ReturnToMSDOS
+	
+	cmp al,"N"
+	jz forever
+	;normally this would jump somewhere else but for simplicity it will wait
+	;for a yes response.
+	jnz forever
+	
+ReturnToMSDOS:
+	mov ax,0C00h
+	int 21h			  ;flush keyboard buffer
+	
+	mov ax,4C00h
+	int 21h			  ;end program
+;-------------------------------------------------------------------
+;  SUBROUTINES
+;-------------------------------------------------------------------
+waitKey:
+	mov ah,01h
+	int 16h
+	jz waitKey
+	ret
+	;waits until a key is pressed.
+	;return:
+	; AL = ASCII CODE
+	; AH = SCAN CODE (???)
+	
+;-------------------------------------------------------------------
+PrintString:			;Print null-terminated strings
+;input: string address = ds:si
+
+	lodsb			;Load a letter
+	cmp al,0		;Was that letter the terminator?
+	jz PrintString_Done	;Yes? then RET
+	call PrintChar		;Print to screen
+	jmp PrintString		;Repeat
+PrintString_Done:
+	ret	
+;-------------------------------------------------------------------
+PrintChar:
+	push ax
+		mov ah,0Eh
+		int 10h			;print AL to the screen.
+	pop ax
+	ret
+;-------------------------------------------------------------------
+
+PrintSpace:		
+	mov al,' '
+	jmp PrintChar	;JMP avoids a tail call.
+	;ret		;"PrintChar"'s ret will do this for us.
+	
+;-------------------------------------------------------------------
+NewLine:	
+	push dx
+	push ax
+		mov	ah, 02h	
+		mov	dl, 13	;CR
+		int	21h		
+		mov	dl, 10	;LF
+		int	21h		
+	pop ax
+	pop dx
+	ret
+;-------------------------------------------------------------------
+PRIMM:
+	pop si	
+	push ax
+	;get return address in si, this is the source offset for
+	;the string that will be printed.
+	;String must be null terminated.
+	          call PrintString
+	pop ax
+	push si
+	;PrintString adjusts the return address for us, it is now
+	;just after the null terminator. So put it back on the stack.
+	ret
+	
+;-------------------------------------------------------------------
+
+	
+	end start

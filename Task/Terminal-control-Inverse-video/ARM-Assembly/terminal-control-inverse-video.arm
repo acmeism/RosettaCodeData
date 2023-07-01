@@ -1,0 +1,136 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
+; Program Start
+
+	.equ ramarea, 0x02000000
+	.equ CursorX,ramarea		
+	.equ CursorY,ramarea+1
+
+	
+ProgramStart:
+	mov sp,#0x03000000			;Init Stack Pointer
+	
+	mov r4,#0x04000000  		        ;DISPCNT -LCD Control
+	mov r2,#0x403    			;4= Layer 2 on / 3= ScreenMode 3
+	str r2,[r4]         	
+	bl ResetTextCursors			;set text cursors to top left of screen
+		
+	adr r1,HelloWorld
+	mov r2,#0x7FFF
+	mov r11,#1
+	bl PrintString
+	
+	adr r1,HelloWorld
+	mov r2,#0x7FFF
+	mov r11,#0
+	bl PrintString
+	
+
+forever:
+	b forever
+BitmapFont:
+        .include "M:\SrcAll\BitmapFont.asm"
+	
+HelloWorld:
+	.byte "HELLO",255
+	.align 4
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PrintString:					;Print 255 terminated string
+	STMFD sp!,{r0-r12, lr}
+PrintStringAgain:
+		ldrB r0,[r1],#1
+		cmp r0,#255
+		beq PrintStringDone		;Repeat until 255
+		bl printchar 			;Print Char
+		b PrintStringAgain
+PrintStringDone:
+	LDMFD sp!,{r0-r12, lr}
+	bx lr
+	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PrintChar:
+	;input: R1 = ADDR OF TEXT
+	;	R2 = DESIRED COLOR (ABBBBBGGGGGRRRRR   A=Alpha)
+	;	CursorX = X POS OF WHERE TO DRAW
+	;	CursorY = Y POS OF WHERE TO DRAW
+        ;       R11 = 1 FOR INVERTED TEXT, 0 FOR NORMAL TEXT
+
+	STMFD sp!,{r4-r12, lr}
+
+		mov r4,#0
+		mov r5,#0
+		
+		mov r3,#CursorX
+		ldrB r4,[r3]			;X pos
+		mov r3,#CursorY
+		ldrB r5,[r3]			;Y pos
+		
+		mov r3,#0x06000000 		;VRAM base
+		
+		mov r6,r4,lsl #4		;Xpos, 2 bytes per pixel, 8 bytes per char
+		add r3,r3,r6
+		
+	;Ypos, 240 pixels per line,2 bytes per pixel, 8 lines per char
+		
+		mov r4,r5,lsl #4		
+		mov r5,r5,lsl #8
+		sub r6,r5,r4
+		mov r6,r6,lsl #4		;ypos * 240 * 8 * 2 = ((((ypos << 8)-(ypos << 4)) << 3)<< 1
+		add r3,r3,r6
+		
+		adr r4,BitmapFont 		;Font source
+		
+		subs r0,r0,#32			;First Char is 32 (space)
+		beq LineDone			;if it's a space, just move the cursor without actually writing anything
+		add r4,r4,r0,asl #3		;8 bytes per char
+		
+		mov r6,#8			;8 lines
+DrawLine:
+		mov r7,#8 			;8 pixels per line
+		ldrb r8,[r4],#1			;Load this piece of the letter
+		cmp r11,#1			;does r11 = 1?
+		mvneq r8,r8			;if so, flip the bits of r8 before printing.
+		mov r9,#0b100000000		;Bit Mask for testing whether to fill
+				
+DrawPixel:
+		tst r8,r9			;Is bit 1?
+		strneh r2,[r3]			;Yes? then fill pixel (HalfWord)
+		add r3,r3,#2
+		mov r9,r9,ror #1		;Bitshift Mask
+		subs r7,r7,#1
+		bne DrawPixel			;Next Hpixel
+		
+		add r3,r3,#480-16	        ;Move Down a line (240 pixels * 2 bytes)
+		subs r6,r6,#1			;-1 char (16 px)
+		bne DrawLine			;Next Vline
+		
+LineDone:	
+		mov r3,#CursorX
+		ldrB r0,[r3]	
+		add r0,r0,#1			;Move across screen
+		strB r0,[r3]	
+		mov r10,#30
+		cmp r0,r10
+		bleq NewLine
+	LDMFD sp!,{r4-r12, lr}
+	bx lr
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+NewLine:
+	STMFD sp!,{r0-r12, lr}
+		mov r3,#CursorX
+		mov r0,#0
+		strB r0,[r3]
+		mov r4,#CursorY
+		ldrB r0,[r4]
+		add r0,r0,#1
+		strB r0,[r4]
+	LDMFD sp!,{r0-r12, pc}
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ResetTextCursors:
+	STMFD sp!,{r4-r6,lr}
+		mov r4,#0
+		mov r5,#CursorX
+		mov r6,#CursorY
+		strB r4,[r5]
+		strB r4,[r6]
+	LDMFD sp!,{r4-r6,lr}
+	bx lr

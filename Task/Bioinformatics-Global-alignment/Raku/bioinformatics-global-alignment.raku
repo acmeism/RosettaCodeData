@@ -1,0 +1,56 @@
+# 20210209 Raku programming solution
+
+sub printCounts(\seq) {
+   my $bases = seq.comb.Bag ;
+   say "\nNucleotide counts for ", seq, " :";
+   say $bases.kv, " and total length = ", $bases.total
+}
+
+sub stringCentipede(\s1, \s2) {
+   loop ( my $offset = 0, my \S1 = $ = '' ; ; $offset++ ) {
+      S1 = s1.substr: $offset ;
+      with S1.index(s2.substr(0,1)) -> $p { $offset += $p } else { return False }
+      return s1.chars - $offset if s2.starts-with: s1.substr: $offset
+   }
+}
+
+sub deduplicate {
+   my @sorted = @_.unique.sort: *.chars; # by length
+   gather while ( my $target = shift @sorted ) {
+      take $target unless @sorted.grep: { .contains: $target }
+   }
+}
+
+sub shortestCommonSuperstring {
+   my \ß = $ = [~] my @ss = deduplicate @_ ;           # ShortestSuper
+   for @ss.permutations -> @perm {
+      my \sup = $ = @perm[0];
+      for @perm.rotor(2 => -1) { sup ~= @_[1].substr: stringCentipede |@_ }
+      ß = sup if sup.chars < ß.chars ;
+   }
+   ß
+}
+
+.&shortestCommonSuperstring.&printCounts for (
+
+   <TA AAG TA GAA TA>,
+
+   <CATTAGGG ATTAG GGG TA>,
+
+   <AAGAUGGA GGAGCGCAUC AUCGCAAUAAGGA> ,
+
+   <ATGAAATGGATGTTCTGAGTTGGTCAGTCCCAATGTGCGGGGTTTCTTTTAGTACGTCGGGAGTGGTATTAT
+    GGTCGATTCTGAGGACAAAGGTCAAGATGGAGCGCATCGAACGCAATAAGGATCATTTGATGGGACGTTTCGTCGACAAAGT
+    CTATGTTCTTATGAAATGGATGTTCTGAGTTGGTCAGTCCCAATGTGCGGGGTTTCTTTTAGTACGTCGGGAGTGGTATTATA
+    TGCTTTCCAATTATGTAAGCGTTCCGAGACGGGGTGGTCGATTCTGAGGACAAAGGTCAAGATGGAGCGCATC
+    AACGCAATAAGGATCATTTGATGGGACGTTTCGTCGACAAAGTCTTGTTTCGAGAGTAACGGCTACCGTCTT
+    GCGCATCGAACGCAATAAGGATCATTTGATGGGACGTTTCGTCGACAAAGTCTTGTTTCGAGAGTAACGGCTACCGTC
+    CGTTTCGTCGACAAAGTCTTGTTTCGAGAGTAACGGCTACCGTCTTCGATTCTGCTTATAACACTATGTTCT
+    TGCTTTCCAATTATGTAAGCGTTCCGAGACGGGGTGGTCGATTCTGAGGACAAAGGTCAAGATGGAGCGCATC
+    CGTAAAAAATTACAACGTCCTTTGGCTATCTCTTAAACTCCTGCTAAATGCTCGTGC
+    GATGGAGCGCATCGAACGCAATAAGGATCATTTGATGGGACGTTTCGTCGACAAAGTCTTGTTTCGAGAGTAACGGCTACCGTCTTCGATT
+    TTTCCAATTATGTAAGCGTTCCGAGACGGGGTGGTCGATTCTGAGGACAAAGGTCAAGATGGAGCGCATC
+    CTATGTTCTTATGAAATGGATGTTCTGAGTTGGTCAGTCCCAATGTGCGGGGTTTCTTTTAGTACGTCGGGAGTGGTATTATA
+    TCTCTTAAACTCCTGCTAAATGCTCGTGCTTTCCAATTATGTAAGCGTTCCGAGACGGGGTGGTCGATTCTGAGGACAAAGGTCAAGA
+   >,
+)

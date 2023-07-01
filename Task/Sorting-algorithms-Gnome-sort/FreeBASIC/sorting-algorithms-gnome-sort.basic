@@ -1,0 +1,51 @@
+' version 21-10-2016
+' compile with: fbc -s console
+' for boundry checks on array's compile with: fbc -s console -exx
+
+Sub gnomesort(gnome() As Long)
+    ' sort from lower bound to the highter bound
+    ' array's can have subscript range from -2147483648 to +2147483647
+    Dim As Long lb = LBound(gnome)
+    Dim As Long ub = UBound(gnome)
+    Dim As Long i = lb +1, j = lb +2
+
+    While i < (ub +1)
+        ' replace "<=" with ">=" for downwards sort
+        If gnome(i -1) <= gnome(i) Then
+            i = j
+            j += 1
+        Else
+            Swap gnome(i -1), gnome(i)
+            i -= 1
+            If i = lb Then
+                i = j
+                j += 1
+            End If
+        End If
+    Wend
+
+End Sub
+
+' ------=< MAIN >=------
+
+Dim As Long i, array(-7 To 7)
+
+Dim As Long a = LBound(array), b = UBound(array)
+
+Randomize Timer
+For i = a To b : array(i) = i  : Next
+For i = a To b ' little shuffle
+    Swap array(i), array(Int(Rnd * (b - a +1)) + a)
+Next
+
+Print "unsort ";
+For i = a To b : Print Using "####"; array(i); : Next : Print
+gnomesort(array())  ' sort the array
+Print "  sort ";
+For i = a To b : Print Using "####"; array(i); : Next : Print
+
+' empty keyboard buffer
+While Inkey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

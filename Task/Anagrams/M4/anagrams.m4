@@ -1,0 +1,46 @@
+divert(-1)
+changequote(`[',`]')
+define([for],
+   [ifelse($#,0,[[$0]],
+   [ifelse(eval($2<=$3),1,
+   [pushdef([$1],$2)$4[]popdef([$1])$0([$1],incr($2),$3,[$4])])])])
+define([_bar],include(t.txt))
+define([eachlineA],
+   [ifelse(eval($2>0),1,
+      [$3(substr([$1],0,$2))[]eachline(substr([$1],incr($2)),[$3])])])
+define([eachline],[eachlineA([$1],index($1,[
+]),[$2])])
+define([removefirst],
+   [substr([$1],0,$2)[]substr([$1],incr($2))])
+define([checkfirst],
+   [ifelse(eval(index([$2],substr([$1],0,1))<0),1,
+      0,
+      [ispermutation(substr([$1],1),
+            removefirst([$2],index([$2],substr([$1],0,1))))])])
+define([ispermutation],
+   [ifelse([$1],[$2],1,
+      eval(len([$1])!=len([$2])),1,0,
+      len([$1]),0,0,
+      [checkfirst([$1],[$2])])])
+define([_set],[define($1<$2>,$3)])
+define([_get],[defn([$1<$2>])])
+define([_max],1)
+define([_n],0)
+define([matchj],
+   [_set([count],$2,incr(_get([count],$2)))[]ifelse(eval(_get([count],$2)>_max),
+         1,[define([_max],incr(_max))])[]_set([list],$2,[_get([list],$2) $1])])
+define([checkwordj],
+   [ifelse(ispermutation([$1],_get([word],$2)),1,[matchj([$1],$2)],
+         [addwordj([$1],incr($2))])])
+define([_append],
+   [_set([word],_n,[$1])[]_set([count],_n,1)[]_set([list],_n,
+         [$1 ])[]define([_n],incr(_n))])
+define([addwordj],
+   [ifelse($2,_n,[_append([$1])],[checkwordj([$1],$2)])])
+define([addword],
+   [addwordj([$1],0)])
+divert
+eachline(_bar,[addword])
+_max
+for([x],1,_n,[ifelse(_get([count],x),_max,[_get([list],x)
+])])

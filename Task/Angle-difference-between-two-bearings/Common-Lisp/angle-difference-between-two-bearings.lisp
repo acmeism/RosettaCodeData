@@ -1,0 +1,7 @@
+(defun angle-difference (b1 b2)
+	   (let ((diff (mod (- b2 b1) 360)))
+	     (if (< diff -180)
+		 (incf diff 360)
+		 (if (> diff 180)
+		     (decf diff 360)
+		     diff))))

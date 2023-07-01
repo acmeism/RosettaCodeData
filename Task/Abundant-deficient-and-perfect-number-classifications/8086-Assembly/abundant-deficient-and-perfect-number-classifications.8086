@@ -1,0 +1,81 @@
+LIMIT:	equ	20000
+	cpu	8086
+	org	100h
+	mov	ax,data		; Set DS and ES to point right after the
+	mov	cl,4		; program, so we can store the array there
+	shr	ax,cl
+	mov	dx,cs
+	add	ax,dx
+	inc	ax
+	mov	ds,ax
+	mov	es,ax
+	mov	ax,1		; Set each element to 1 at the beginning
+	xor	di,di
+	mov	cx,LIMIT+1
+	rep	stosw
+	mov	[2],cx		; Except the value for 1, which is 0
+	mov 	bp,LIMIT/2	; BP = limit / 2 - keep values ready in regs
+	mov	di,LIMIT	; DI = limit
+oloop:	inc	ax		; Let AX be the outer loop counter (divisor)
+	cmp	ax,bp		; Are we there yet?
+	ja	clsfy		; If so, stop
+	mov	dx,ax		; Let DX be the inner loop counter (number)
+iloop:	add	dx,ax
+	cmp	dx,di		; Are we there yet?
+	ja	oloop		; Loop
+	mov	bx,dx		; Each entry is 2 bytes wide
+	shl	bx,1
+	add 	[bx],ax		; Add divisor to number
+	jmp	iloop
+clsfy:	xor	bp,bp		; BP = deficient number counter
+	xor	dx,dx		; DX = perfect number counter
+	xor	cx,cx 		; CX = abundant number counter
+	xor	bx,bx		; BX = current number under consideration
+	mov	si,2		; SI = pointer to divsum of current number
+cloop:	inc	bx		; Next number
+	cmp	bx,di		; Are we done yet?
+	ja	done		; If so, stop
+	lodsw			; Otherwise, get divsum of current number
+	cmp	ax,bx		; Compare to current number
+	jb	defic		; If smaller, the number is deficient
+	je	prfct		; If equal, the number is perfect
+	inc	cx		; Otherwise, the number is abundant
+	jmp	cloop
+defic:	inc	bp
+	jmp	cloop
+prfct:	inc	dx
+	jmp	cloop
+done:	mov	ax,cs		; Set DS and ES back to the code segment
+	mov	ds,ax
+	mov	es,ax
+	mov	di,dx		; Move the perfect numbers to DI
+	mov	dx,sdef		; Print "Deficient"
+	call	prstr
+	mov	ax,bp		; Print amount of deficient numbers
+	call	prnum
+	mov	dx,sper		; Print "Perfect"
+	call	prstr
+	mov	ax,di		; Print amount of perfect numbers
+	call	prnum
+	mov	dx,sabn		; Print "Abundant"
+	call 	prstr
+	mov	ax,cx		; Print amount of abundant numbers
+prnum:	mov	bx,snum		; Print number in AX
+pdgt:	xor	dx,dx
+	div	word [ten]	; Extract digit
+	dec	bx		; Move pointer
+	add	dl,'0'
+	mov	[bx],dl		; Store digit
+	test	ax,ax		; Any more digits?
+	jnz	pdgt
+	mov	dx,bx		; Print string
+prstr:	mov	ah,9
+	int	21h
+	ret	
+ten:	dw	10		; Divisor for number output routine	
+sdef:	db	'Deficient: $'
+sper:	db	'Perfect: $'
+sabn:	db	'Abundant: $'
+	db	'.....'
+snum:	db	13,10,'$'
+data:	equ	$

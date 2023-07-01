@@ -1,0 +1,12 @@
+(defun mid3 (n)
+  (let ((a (abs n))
+        (hmd)) ; how many digits
+    (labels ((give (fmt &optional x y) (return-from mid3 (format nil fmt x y)))
+             (need (x) (give "Need ~a digits, not ~d." x hmd))
+             (nbr (n) (give "~3,'0d" n)))
+      (when (zerop n) (give "Zero is 1 digit"))
+      (setq hmd (truncate (1+ (log a 10))))
+      (cond ((< hmd 3) (need "3+"))
+            ((= hmd 3) (nbr a))
+            ((evenp hmd) (need "odd number of"))
+            (t (nbr (mod (truncate a (expt 10 (/ (- hmd 3) 2))) 1000)))))))

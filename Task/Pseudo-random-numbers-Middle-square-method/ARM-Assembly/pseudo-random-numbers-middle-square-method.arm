@@ -1,0 +1,124 @@
+/* ARM assembly Raspberry PI or android with termux */
+/*  program pRandom.s   */
+
+ /* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+sMessResult:        .asciz " @ \n"
+szCarriageReturn:   .asciz "\n"
+
+iSeed:              .int 675248
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:                  .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                             @ entry of program
+
+    ldr r0,iAdriSeed
+    ldr r3,[r0]
+    mov r2,#5
+1:
+    mov r0,r3
+    bl computePseudo
+    mov r3,r0
+    ldr r1,iAdrsZoneConv
+    bl conversion10               @ call décimal conversion
+    ldr r0,iAdrsMessResult
+    ldr r1,iAdrsZoneConv          @ insert conversion in message
+    bl strInsertAtCharInc
+    bl affichageMess              @ display message
+    subs r2,r2,#1
+    bgt 1b
+
+100:                              @ standard end of the program
+    mov r0, #0                    @ return code
+    mov r7, #EXIT                 @ request to exit program
+    svc #0                        @ perform the system call
+iAdrszCarriageReturn:   .int szCarriageReturn
+iAdrsMessResult:        .int sMessResult
+iAdrsZoneConv:          .int sZoneConv
+iAdriSeed:              .int iSeed
+/***************************************************/
+/*   compute pseudo random number                  */
+/***************************************************/
+/* r0 contains the number            */
+computePseudo:
+    push {r1-r2,lr}           @ save registers
+    mov r2,r0
+    umull r0,r1,r2,r2
+    ldr r2,idiv
+    bl division32R
+    ldr r2,idiv2
+    bl division32R
+    mov r0,r2
+    pop {r1-r2,pc}            @ restaur registers
+idiv:            .int 1000
+idiv2:           .int 1000000
+/***************************************************/
+/*   division number 64 bits in 2 registers by number 32 bits */
+/***************************************************/
+/* r0 contains lower part dividende   */
+/* r1 contains upper part dividende   */
+/* r2 contains divisor   */
+/* r0 return lower part quotient    */
+/* r1 return upper part quotient    */
+/* r2 return remainder               */
+division32R:
+    push {r3-r9,lr}    @ save registers
+    mov r6,#0          @ init upper upper part remainder  !!
+    mov r7,r1          @ init upper part remainder with upper part dividende
+    mov r8,r0          @ init lower part remainder with lower part dividende
+    mov r9,#0          @ upper part quotient
+    mov r4,#0          @ lower part quotient
+    mov r5,#32         @ bits number
+1:                     @ begin loop
+    lsl r6,#1          @ shift upper upper part remainder
+    lsls r7,#1         @ shift upper  part remainder
+    orrcs r6,#1
+    lsls r8,#1         @ shift lower  part remainder
+    orrcs r7,#1
+    lsls r4,#1         @ shift lower part quotient
+    lsl r9,#1          @ shift upper part quotient
+    orrcs r9,#1
+                       @ divisor sustract  upper  part remainder
+    subs r7,r2
+    sbcs  r6,#0        @ and substract carry
+    bmi 2f             @ négative ?
+
+                       @ positive or equal
+    orr r4,#1          @ 1 -> right bit quotient
+    b 3f
+2:                     @ negative
+    orr r4,#0          @ 0 -> right bit quotient
+    adds r7,r2         @ and restaur remainder
+    adc  r6,#0
+3:
+    subs r5,#1         @ decrement bit size
+    bgt 1b             @ end ?
+    mov r0,r4          @ lower part quotient
+    mov r1,r9          @ upper part quotient
+    mov r2,r7          @ remainder
+100:                   @ function end
+    pop {r3-r9,lr}     @ restaur registers
+    bx lr
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

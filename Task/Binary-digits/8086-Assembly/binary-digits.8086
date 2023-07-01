@@ -1,0 +1,85 @@
+        .model small
+        .stack 1024
+        .data
+
+TestData0 byte 5,255			;255 is the terminator
+TestData1 byte 5,0,255		
+TestData2 byte 9,0,0,0,255
+	
+	.code
+	
+start:
+
+	mov ax,@data		
+	mov ds,ax						
+	
+	cld				;String functions are set to auto-increment
+	
+	mov ax,2			;clear screen by setting video mode to 0
+	int 10h				;select text mode - We're already in it, so this clears the screen
+	
+	
+	mov si,offset TestData0
+	call PrintBinary_NoLeadingZeroes
+
+	mov si,offset TestData1
+	call PrintBinary_NoLeadingZeroes
+
+	mov si,offset TestData2
+	call PrintBinary_NoLeadingZeroes
+	
+ExitDOS:			
+	mov ax,4C00h		;return to dos
+	int 21h
+	
+PrintBinary_NoLeadingZeroes proc
+;input: DS:SI = seg:offset of a 255-terminated sequence of unpacked BCD digits, stored big-endian
+	;setup
+	mov bx,8000h	
+	;bl will be our "can we print zeroes yet" flag.
+	;bh is the "revolving bit mask" - we'll compare each bit to it, then rotate it right once.
+        ;     It's very handy because it's a self-resetting loop counter as well!
+
+NextDigit:
+	lodsb
+	cmp al,255
+	je Terminated
+NextBit:
+	test al,bh		;is the bit we're testing right now set?
+	jz PrintZero
+	;else, print one
+	push ax
+		mov dl,'1'	;31h
+		mov ah,2
+		int 21h		;prints the ascii code in DL
+	pop ax
+	or bl,1			;set "we've printed a one" flag
+	jmp predicate
+	
+PrintZero:
+	test bl,bl
+	jz predicate
+	push ax
+		mov dl,'0'	;30h
+		mov ah,2
+		int 21h
+	pop ax
+	
+predicate:
+	ror bh,1
+	jnc NextBit	
+	;if the carry is set, we've rotated BH back to 10000000b,
+	;	so move on to the next digit in that case.
+	jmp NextDigit
+	
+	
+Terminated:
+	push ax
+		mov ah,2
+		mov dl,13		;carriage return
+		int 21h
+		mov dl,10		;linefeed
+		int 21h
+	pop ax
+	ret
+PrintBinary_NoLeadingZeroes endp

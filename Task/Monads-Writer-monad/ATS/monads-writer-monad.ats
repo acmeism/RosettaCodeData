@@ -1,0 +1,144 @@
+#include "share/atspre_staload.hats"
+
+%{^
+#include <math.h>
+%}
+
+#define NIL list_nil ()
+#define ::  list_cons
+
+(* The log is a list of strings. For efficiency, it is ordered
+   most-recent-first. The static value "n" represents the number of
+   entries in the log. (It exists and is used only during the
+   typechecking phase.) *)
+datatype Writer (a : t@ype+, n : int) =
+| Writer of (a, list (string, n))
+typedef Writer (a : t@ype+) = [n : int] Writer (a, n)
+
+prfn
+lemma_Writer_param {a : t@ype}
+                   {n : int}
+                   (m : Writer (a, n))
+    :<prf> [0 <= n] void =
+  let
+    val+ Writer (_, log) = m
+  in
+    lemma_list_param log
+  end
+
+fn {a : t@ype}
+unit_Writer (x : a) : Writer (a, 1) =
+  let
+    val msg = string_append ("unit_Writer (",
+                             tostring_val<a> x, ")")
+    val msg = strptr2string msg
+  in
+    Writer (x, msg :: NIL)
+  end
+
+overload return with unit_Writer
+
+fn {a, b : t@ype}
+bind_Writer {n : int}
+            (m : Writer (a, n),
+             f : a -<cloref1> Writer b)
+    : [n1 : int | n <= n1] Writer (b, n1) =
+  let
+    val+ Writer (x, log) = m
+    val y = f (x)
+    prval () = lemma_Writer_param y
+    val+ Writer (y, entries) = y
+  in
+    Writer (y, list_append (entries, log))
+  end
+
+infixl 0 >>=
+overload >>= with bind_Writer
+
+fn {a, b, c : t@ype}
+compose_Writer (f : a -<cloref1> Writer b,
+                g : b -<cloref1> Writer c)
+    : a -<cloref1> Writer c =
+  lam m => f m >>= g
+
+infixl 0 >=>
+overload >=> with compose_Writer
+
+(* "make_Writer_closure_from_fun" wraps an ordinary function from a to
+   b, resulting in a closure that will produce exactly one log
+   entry. *)
+fn {a, b : t@ype}
+make_Writer_closure_from_fun (func     : a -> b,
+                              make_msg : (a, b) -<cloref1> string)
+    : a -<cloref1> Writer (b, 1) =
+  lam x =>
+    let
+      val y = func x
+    in
+      Writer (y, make_msg (x, y) :: NIL)
+    end
+
+overload make_Writer_closure with make_Writer_closure_from_fun
+
+(* A note regarding "root": interfaces to the C math library are
+   available, even within the Postiats distribution, but I shall
+   simply make a foreign function call to sqrt(3). The Postiats
+   prelude itself provides no (or very little) interface to libm. *)
+fn root (x : double) : double = $extfcall (double, "sqrt", x)
+fn addOne (x : double) : double = succ x
+fn half (x : double) : double = 0.5 * x
+
+fn {a, b : t@ype}
+make_logging (func     : a -> b,
+              notation : string)
+    : a -<cloref1> Writer (b, 1) =
+  let
+    fn
+    make_msg (x : a, y : b) :<cloref1> string =
+      let
+        val msg = string_append ("(", tostring_val<a> x,
+                                 " |> ", notation, ") --> ",
+                                 tostring_val<b> y)
+      in
+        strptr2string msg
+      end
+  in
+    make_Writer_closure<a,b> (func, make_msg)
+  end
+
+val logging_root = make_logging<double,double> (root, "sqrt")
+val logging_addOne = make_logging<double,double> (addOne, "(+ 1.0)")
+val logging_half = make_logging<double,double> (half, "(0.5 *)")
+
+val the_big_whatchamacallit =
+  logging_root >=> logging_addOne >=> logging_half
+
+fn
+print_log (log : List string) : void =
+  let
+    fun
+    loop (lst : List0 string) : void =
+      case+ lst of
+      | NIL => ()
+      | hd :: tl =>
+        begin
+          println! ("  ", hd);
+          loop tl
+        end
+
+    prval () = lemma_list_param log
+  in
+    loop (list_vt2t (list_reverse log))
+  end
+
+implement
+main0 () =
+  let
+    val x = 5.0
+    val m = return<double> x
+    val+ Writer (y, log) = m >>= the_big_whatchamacallit
+  in
+    println! ("(1 + sqrt(", x : double, "))/2 = ", y : double);
+    println! ("log:");
+    print_log log
+  end

@@ -1,0 +1,731 @@
+% -*- mercury -*-
+%
+% Compile with maybe something like:
+%   mmc -O4 --intermod-opt -E --make --warn-non-tail-recursion self-and-mutual lex
+%
+
+:- module lex.
+
+:- interface.
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+
+:- implementation.
+:- import_module char.
+:- import_module exception.
+:- import_module int.
+:- import_module list.
+:- import_module stack.
+:- import_module string.
+
+:- type token_t
+   ---> token_ELSE
+   ;    token_IF
+   ;    token_PRINT
+   ;    token_PUTC
+   ;    token_WHILE
+   ;    token_MULTIPLY
+   ;    token_DIVIDE
+   ;    token_MOD
+   ;    token_ADD
+   ;    token_SUBTRACT
+   ;    token_NEGATE
+   ;    token_LESS
+   ;    token_LESSEQUAL
+   ;    token_GREATER
+   ;    token_GREATEREQUAL
+   ;    token_EQUAL
+   ;    token_NOTEQUAL
+   ;    token_NOT
+   ;    token_ASSIGN
+   ;    token_AND
+   ;    token_OR
+   ;    token_LEFTPAREN
+   ;    token_RIGHTPAREN
+   ;    token_LEFTBRACE
+   ;    token_RIGHTBRACE
+   ;    token_SEMICOLON
+   ;    token_COMMA
+   ;    token_IDENTIFIER
+   ;    token_INTEGER
+   ;    token_STRING
+   ;    token_END_OF_INPUT.
+
+:- type ch_t                 % The type of a fetched character.
+   ---> {int,                % A character or `eof', stored as an int.
+         int,                % The line number.
+         int}.               % The column number.
+
+:- type inp_t            % The `inputter' type. Fetches one character.
+   ---> inp_t(inpf :: text_input_stream,
+              line_no :: int,
+              column_no :: int,
+              pushback :: stack(ch_t)).
+
+:- type toktup_t      % The type of a scanned token with its argument.
+   ---> {token_t,     % The token kind.
+         string,      % An argument. (May or may not be meaningful.)
+         int,         % The starting line number.
+         int}.        % The starting column number.
+
+main(!IO) :-
+    command_line_arguments(Args, !IO),
+    (
+        if (Args = [])
+        then (InpF_filename = "-",
+              OutF_filename = "-",
+              main_program(InpF_filename, OutF_filename, !IO))
+        else if (Args = [F1])
+        then (InpF_filename = F1,
+              OutF_filename = "-",
+              main_program(InpF_filename, OutF_filename, !IO))
+        else if (Args = [F1, F2])
+        then (InpF_filename = F1,
+              OutF_filename = F2,
+              main_program(InpF_filename, OutF_filename, !IO))
+        else usage_error(!IO)
+    ).
+
+:- pred main_program(string::in, string::in, io::di, io::uo) is det.
+main_program(InpF_filename, OutF_filename, !IO) :-
+    open_InpF(InpF, InpF_filename, !IO),
+    open_OutF(OutF, OutF_filename, !IO),
+    init(InpF, Inp0),
+    scan_text(OutF, Inp0, _, !IO).
+
+:- pred open_InpF(text_input_stream::out, string::in,
+                  io::di, io::uo) is det.
+open_InpF(InpF, InpF_filename, !IO) :-
+    if (InpF_filename = "-")
+    then (InpF = io.stdin_stream)
+    else
+    (
+        open_input(InpF_filename, InpF_result, !IO),
+        (
+            if (InpF_result = ok(F))
+            then (InpF = F)
+            else throw("Error: cannot open " ++ InpF_filename ++
+                       " for input")
+        )
+    ).
+
+:- pred open_OutF(text_output_stream::out, string::in,
+                  io::di, io::uo) is det.
+open_OutF(OutF, OutF_filename, !IO) :-
+    if (OutF_filename = "-")
+    then (OutF = io.stdout_stream)
+    else
+    (
+        open_output(OutF_filename, OutF_result, !IO),
+        (
+            if (OutF_result = ok(F))
+            then (OutF = F)
+            else throw("Error: cannot open " ++ OutF_filename ++
+                       " for output")
+        )
+    ).
+
+:- pred usage_error(io::di, io::uo) is det.
+usage_error(!IO) :-
+    progname("lex", ProgName, !IO),
+    (io.format("Usage: %s [INPUT_FILE [OUTPUT_FILE]]\n",
+               [s(ProgName)], !IO)),
+    (io.write_string("If INPUT_FILE is \"-\" or not present then standard input is used.\n",
+                     !IO)),
+    (io.write_string("If OUTPUT_FILE is \"-\" or not present then standard output is used.\n",
+                     !IO)),
+    set_exit_status(1, !IO).
+
+:- pred scan_text(text_output_stream::in, inp_t::in, inp_t::out,
+                  io::di, io::uo) is det.
+scan_text(OutF, !Inp, !IO) :-
+    get_next_token(TokTup, !Inp, !IO),
+    print_token(TokTup, OutF, !IO),
+    {Tok, _, _, _} = TokTup,
+    (
+        if (Tok = token_END_OF_INPUT)
+        then true
+        else scan_text(OutF, !Inp, !IO)
+    ).
+
+:- pred print_token(toktup_t::in, text_output_stream::in,
+                    io::di, io::uo) is det.
+print_token(TokTup, OutF, !IO) :-
+    {Tok, Arg, Line_no, Column_no} = TokTup,
+    token_name(Tok) = TokName,
+    (io.format(OutF, "%5d %5d  %s",
+               [i(Line_no), i(Column_no), s(TokName)],
+               !IO)),
+    (
+        if (Tok = token_IDENTIFIER)
+        then (io.format(OutF, "     %s", [s(Arg)], !IO))
+        else if (Tok = token_INTEGER)
+        then (io.format(OutF, "        %s", [s(Arg)], !IO))
+        else if (Tok = token_STRING)
+        then (io.format(OutF, "         %s", [s(Arg)], !IO))
+        else true
+    ),
+    (io.format(OutF, "\n", [], !IO)).
+
+:- func token_name(token_t) = string is det.
+:- pred token_name(token_t::in, string::out) is det.
+token_name(Tok) = Str :- token_name(Tok, Str).
+token_name(token_ELSE, "Keyword_else").
+token_name(token_IF, "Keyword_if").
+token_name(token_PRINT, "Keyword_print").
+token_name(token_PUTC, "Keyword_putc").
+token_name(token_WHILE, "Keyword_while").
+token_name(token_MULTIPLY, "Op_multiply").
+token_name(token_DIVIDE, "Op_divide").
+token_name(token_MOD, "Op_mod").
+token_name(token_ADD, "Op_add").
+token_name(token_SUBTRACT, "Op_subtract").
+token_name(token_NEGATE, "Op_negate").
+token_name(token_LESS, "Op_less").
+token_name(token_LESSEQUAL, "Op_lessequal").
+token_name(token_GREATER, "Op_greater").
+token_name(token_GREATEREQUAL, "Op_greaterequal").
+token_name(token_EQUAL, "Op_equal").
+token_name(token_NOTEQUAL, "Op_notequal").
+token_name(token_NOT, "Op_not").
+token_name(token_ASSIGN, "Op_assign").
+token_name(token_AND, "Op_and").
+token_name(token_OR, "Op_or").
+token_name(token_LEFTPAREN, "LeftParen").
+token_name(token_RIGHTPAREN, "RightParen").
+token_name(token_LEFTBRACE, "LeftBrace").
+token_name(token_RIGHTBRACE, "RightBrace").
+token_name(token_SEMICOLON, "Semicolon").
+token_name(token_COMMA, "Comma").
+token_name(token_IDENTIFIER, "Identifier").
+token_name(token_INTEGER, "Integer").
+token_name(token_STRING, "String").
+token_name(token_END_OF_INPUT, "End_of_input").
+
+:- pred get_next_token(toktup_t::out, inp_t::in, inp_t::out,
+                       io::di, io::uo) is det.
+get_next_token(TokTup, !Inp, !IO) :-
+    skip_spaces_and_comments(!Inp, !IO),
+    get_ch(Ch, !Inp, !IO),
+    {IChar, Line_no, Column_no} = Ch,
+    LN = Line_no,
+    CN = Column_no,
+    (
+        if (IChar = eof)
+        then
+        (
+            TokTup = {token_END_OF_INPUT, "", LN, CN}
+        )
+        else
+        (
+            Char = det_from_int(IChar),
+            (
+                if (Char = (','))
+                then (TokTup = {token_COMMA, ",", LN, CN})
+                else if (Char = (';'))
+                then (TokTup = {token_SEMICOLON, ";", LN, CN})
+                else if (Char = ('('))
+                then (TokTup = {token_LEFTPAREN, "(", LN, CN})
+                else if (Char = (')'))
+                then (TokTup = {token_RIGHTPAREN, ")", LN, CN})
+                else if (Char = ('{'))
+                then (TokTup = {token_LEFTBRACE, "{", LN, CN})
+                else if (Char = ('}'))
+                then (TokTup = {token_RIGHTBRACE, "}", LN, CN})
+                else if (Char = ('*'))
+                then (TokTup = {token_MULTIPLY, "*", LN, CN})
+                else if (Char = ('/'))
+                then (TokTup = {token_DIVIDE, "/", LN, CN})
+                else if (Char = ('%'))
+                then (TokTup = {token_MOD, "%", LN, CN})
+                else if (Char = ('+'))
+                then (TokTup = {token_ADD, "+", LN, CN})
+                else if (Char = ('-'))
+                then (TokTup = {token_SUBTRACT, "-", LN, CN})
+                else if (Char = ('<'))
+                then
+                (
+                    get_ch(Ch1, !Inp, !IO),
+                    Ch1 = {IChar1, _, _},
+                    (
+                        if (IChar1 = to_int('='))
+                        then
+                        (
+                            TokTup = {token_LESSEQUAL, "<=", LN, CN}
+                        )
+                        else
+                        (
+                            push_back(Ch1, !Inp),
+                            TokTup = {token_LESS, "<", LN, CN}
+                        )
+                    )
+                )
+                else if (Char = ('>'))
+                then
+                (
+                    get_ch(Ch1, !Inp, !IO),
+                    Ch1 = {IChar1, _, _},
+                    (
+                        if (IChar1 = to_int('='))
+                        then
+                        (
+                            TokTup = {token_GREATEREQUAL, ">=", LN, CN}
+                        )
+                        else
+                        (
+                            push_back(Ch1, !Inp),
+                            TokTup = {token_GREATER, ">", LN, CN}
+                        )
+                    )
+                )
+                else if (Char = ('='))
+                then
+                (
+                    get_ch(Ch1, !Inp, !IO),
+                    Ch1 = {IChar1, _, _},
+                    (
+                        if (IChar1 = to_int('='))
+                        then
+                        (
+                            TokTup = {token_EQUAL, "==", LN, CN}
+                        )
+                        else
+                        (
+                            push_back(Ch1, !Inp),
+                            TokTup = {token_ASSIGN, "=", LN, CN}
+                        )
+                    )
+                )
+                else if (Char = ('!'))
+                then
+                (
+                    get_ch(Ch1, !Inp, !IO),
+                    Ch1 = {IChar1, _, _},
+                    (
+                        if (IChar1 = to_int('='))
+                        then
+                        (
+                            TokTup = {token_NOTEQUAL, "!=", LN, CN}
+                        )
+                        else
+                        (
+                            push_back(Ch1, !Inp),
+                            TokTup = {token_NOT, "!", LN, CN}
+                        )
+                    )
+                )
+                else if (Char = ('&'))
+                then
+                (
+                    get_ch(Ch1, !Inp, !IO),
+                    Ch1 = {IChar1, _, _},
+                    (
+                        if (IChar1 = to_int('&'))
+                        then
+                        (
+                            TokTup = {token_AND, "&&", LN, CN}
+                        )
+                        else throw("Error: unexpected character '" ++
+                                   from_char(Char) ++ "' at " ++
+                                   from_int(LN) ++ ":" ++
+                                   from_int(CN))
+                    )
+                )
+                else if (Char = ('|'))
+                then
+                (
+                    get_ch(Ch1, !Inp, !IO),
+                    Ch1 = {IChar1, _, _},
+                    (
+                        if (IChar1 = to_int('|'))
+                        then
+                        (
+                            TokTup = {token_OR, "||", LN, CN}
+                        )
+                        else throw("Error: unexpected character '" ++
+                                   from_char(Char) ++ "' at " ++
+                                   from_int(LN) ++ ":" ++
+                                   from_int(CN))
+                    )
+                )
+                else if (Char = ('"'))
+                then
+                (
+                    push_back(Ch, !Inp),
+                    scan_string_literal(TokTup, !Inp, !IO)
+                )
+                else if (Char = ('\''))
+                then
+                (
+                    push_back(Ch, !Inp),
+                    scan_character_literal(TokTup, !Inp, !IO)
+                )
+                else if (is_alpha(Char))
+                then
+                (
+                    push_back(Ch, !Inp),
+                    scan_identifier_or_reserved_word(
+                        TokTup, !Inp, !IO)
+                )
+                else if (is_digit(Char))
+                then
+                (
+                    push_back(Ch, !Inp),
+                    scan_integer_literal(TokTup, !Inp, !IO)
+                )
+                else
+                (
+                    throw("Error: unexpected character '" ++
+                          from_char(Char) ++ "' at " ++
+                          from_int(LN) ++ ":" ++
+                          from_int(CN))
+                )
+            )
+        )
+    ).
+
+
+:- pred skip_spaces_and_comments(inp_t::in, inp_t::out,
+                                 io::di, io::uo) is det.
+skip_spaces_and_comments(!Inp, !IO) :-
+    get_ch(Ch, !Inp, !IO),
+    Ch = {IChar, _, _},
+    (
+        if (IChar = eof)
+        then push_back(Ch, !Inp)
+        else
+        if (is_whitespace(det_from_int(IChar)))
+        then skip_spaces_and_comments(!Inp, !IO)
+        else if (IChar = to_int('/'))
+        then
+        (
+            get_ch(Ch1, !Inp, !IO),
+            Ch1 = {IChar1, Line_no, Column_no},
+            (
+                if (IChar1 = to_int('*'))
+                then
+                (
+                    scan_comment(Line_no, Column_no,
+                                 !Inp, !IO),
+                    skip_spaces_and_comments(!Inp, !IO)
+                )
+                else
+                (
+                    push_back(Ch1, !Inp),
+                    push_back(Ch, !Inp)
+                )
+            )
+        )
+        else push_back(Ch, !Inp)
+    ).
+
+:- pred scan_comment(int::in, int::in, % line and column nos.
+                     inp_t::in, inp_t::out,
+                     io::di, io::uo) is det.
+scan_comment(Line_no, Column_no, !Inp, !IO) :-
+    get_ch(Ch, !Inp, !IO),
+    {IChar, _, _} = Ch,
+    (
+        if (IChar = eof)
+        then throw("Error: unterminated comment " ++
+                   "starting at " ++ from_int(Line_no) ++ ":" ++
+                   from_int(Column_no))
+        else
+        (
+            det_from_int(IChar) = Char,
+            (
+                if (Char = ('*'))
+                then
+                (
+                    get_ch(Ch1, !Inp, !IO),
+                    {IChar1, _, _} = Ch1,
+                    (
+                        if (IChar1 = to_int('/'))
+                        then true % End of comment has been reached.
+                        else
+                        (
+                            push_back(Ch1, !Inp),
+                            scan_comment(Line_no, Column_no, !Inp,
+                                         !IO)
+                        )
+                    )
+                )
+                else scan_comment(Line_no, Column_no, !Inp, !IO)
+            )
+        )
+    ).
+
+:- pred scan_character_literal(toktup_t::out,
+                               inp_t::in, inp_t::out,
+                               io::di, io::uo) is det.
+scan_character_literal(TokTup, !Inp, !IO) :-
+    get_ch(Ch, !Inp, !IO),
+    Ch = {OpenQuote, Line_no, Column_no},
+    CloseQuote = OpenQuote,
+    scan_char_lit_contents(CodePoint, Line_no, Column_no,
+                           !Inp, !IO),
+    check_char_lit_end(CloseQuote, Line_no, Column_no, !Inp, !IO),
+    Arg = from_int(CodePoint),
+    TokTup = {token_INTEGER, Arg, Line_no, Column_no}.
+
+:- pred scan_char_lit_contents(int::out, int::in, int::in,
+                               inp_t::in, inp_t::out,
+                               io::di, io::uo) is det.
+scan_char_lit_contents(CodePoint, Line_no, Column_no,
+                       !Inp, !IO) :-
+    get_ch(Ch1, !Inp, !IO),
+    Ch1 = {IChar1, Line_no1, Column_no1},
+    (
+        if (IChar1 = eof)
+        then throw("Error: end of input in character literal " ++
+                   "starting at " ++ from_int(Line_no) ++ ":" ++
+                   from_int(Column_no))
+        else if (IChar1 = to_int('\\'))
+        then
+        (
+            get_ch(Ch2, !Inp, !IO),
+            Ch2 = {IChar2, _, _},
+            (if (IChar2 = eof)
+             then throw("Error: end of input in character literal " ++
+                        "starting at " ++ from_int(Line_no) ++ ":" ++
+                        from_int(Column_no))
+             else if (IChar2 = to_int('n'))
+             then (CodePoint = to_int('\n'))
+             else if (IChar2 = to_int('\\'))
+             then (CodePoint = to_int('\\'))
+             else throw("Error: unsupported escape \\" ++
+                        from_char(det_from_int(IChar2)) ++
+                        " at " ++ from_int(Line_no1) ++
+                        ":" ++ from_int(Column_no1))
+            )
+        )
+        else (CodePoint = IChar1)
+    ).
+
+:- pred check_char_lit_end(int::in, int::in, int::in,
+                           inp_t::in, inp_t::out,
+                           io::di, io::uo) is det.
+check_char_lit_end(CloseQuote, Line_no, Column_no, !Inp, !IO) :-
+    get_ch(Ch1, !Inp, !IO),
+    Ch1 = {IChar1, _, _},
+    (
+        if (IChar1 = CloseQuote)
+        then true
+        else find_bad_char_lit_end(CloseQuote, Line_no, Column_no,
+                                   !Inp, !IO)
+    ).
+
+:- pred find_bad_char_lit_end(int::in, int::in, int::in,
+                              inp_t::in, inp_t::out,
+                              io::di, io::uo) is det.
+find_bad_char_lit_end(CloseQuote, Line_no, Column_no, !Inp, !IO) :-
+    get_ch(Ch2, !Inp, !IO),
+    Ch2 = {IChar2, _, _},
+    (
+        if (IChar2 = CloseQuote)
+        then throw("Error: unsupported multicharacter literal " ++
+                   " at " ++ from_int(Line_no) ++ ":" ++
+                   from_int(Column_no))
+        else if (IChar2 = eof)
+        then throw("Error: end of input in character literal " ++
+                   " at " ++ from_int(Line_no) ++ ":" ++
+                   from_int(Column_no))
+        else find_bad_char_lit_end(CloseQuote, Line_no, Column_no,
+                                   !Inp, !IO)
+    ).
+
+:- pred scan_string_literal(toktup_t::out,
+                            inp_t::in, inp_t::out,
+                            io::di, io::uo) is det.
+scan_string_literal(TokTup, !Inp, !IO) :-
+    get_ch(Ch, !Inp, !IO),
+    Ch = {OpenQuote, Line_no, Column_no},
+    CloseQuote = OpenQuote,
+    scan_string_lit_contents("", Str, CloseQuote,
+                             Line_no, Column_no,
+                             !Inp, !IO),
+    Arg = from_char(det_from_int(OpenQuote)) ++
+          Str ++ from_char(det_from_int(CloseQuote)),
+    TokTup = {token_STRING, Arg, Line_no, Column_no}.
+
+:- pred scan_string_lit_contents(string::in, string::out, int::in,
+                                 int::in, int::in,
+                                 inp_t::in, inp_t::out,
+                                 io::di, io::uo) is det.
+scan_string_lit_contents(Str0, Str, CloseQuote, Line_no, Column_no,
+                         !Inp, !IO) :-
+    get_ch(Ch1, !Inp, !IO),
+    Ch1 = {IChar1, Line_no1, Column_no1},
+    (
+        if (IChar1 = CloseQuote)
+        then (Str = Str0)
+        else if (IChar1 = eof)
+        then throw("Error: end of input in string literal " ++
+                   "starting at " ++ from_int(Line_no) ++ ":" ++
+                   from_int(Column_no))
+        else if (IChar1 = to_int('\n'))
+        then throw("Error: end of line in string literal " ++
+                   "starting at " ++ from_int(Line_no) ++ ":" ++
+                   from_int(Column_no))
+        else if (IChar1 = to_int('\\'))
+        then
+        (
+            get_ch(Ch2, !Inp, !IO),
+            Ch2 = {IChar2, _, _},
+            (
+                if (IChar2 = to_int('n'))
+                then
+                (
+                    Str1 = Str0 ++ "\\n",
+                    scan_string_lit_contents(Str1, Str, CloseQuote,
+                                             Line_no, Column_no,
+                                             !Inp, !IO)
+                )
+                else if (IChar2 = to_int('\\'))
+                then
+                (
+                    Str1 = Str0 ++ "\\\\",
+                    scan_string_lit_contents(Str1, Str, CloseQuote,
+                                             Line_no, Column_no,
+                                             !Inp, !IO)
+                )
+                else if (IChar2 = eof)
+                then throw("Error: end of input in string literal " ++
+                           "starting at " ++ from_int(Line_no) ++
+                           ":" ++ from_int(Column_no))
+                else if (IChar2 = to_int('\n'))
+                then throw("Error: end of line in string literal " ++
+                           "starting at " ++ from_int(Line_no) ++
+                           ":" ++ from_int(Column_no))
+                else throw("Error: unsupported escape \\" ++
+                           from_char(det_from_int(IChar2)) ++
+                           " at " ++ from_int(Line_no1) ++
+                           ":" ++ from_int(Column_no1))
+            )
+        )
+        else
+        (
+            Char1 = det_from_int(IChar1),
+            Str1 = Str0 ++ from_char(Char1),
+            scan_string_lit_contents(Str1, Str, CloseQuote,
+                                     Line_no, Column_no, !Inp, !IO)
+        )
+    ).
+
+:- pred scan_identifier_or_reserved_word(toktup_t::out,
+                                         inp_t::in, inp_t::out,
+                                         io::di, io::uo) is det.
+scan_identifier_or_reserved_word(TokTup, !Inp, !IO) :-
+    scan_integer_or_word(Str, Line_no, Column_no, !Inp, !IO),
+    (
+        if (Str = "if")
+        then (TokTup = {token_IF, Str, Line_no, Column_no})
+        else if (Str = "else")
+        then (TokTup = {token_ELSE, Str, Line_no, Column_no})
+        else if (Str = "while")
+        then (TokTup = {token_WHILE, Str, Line_no, Column_no})
+        else if (Str = "print")
+        then (TokTup = {token_PRINT, Str, Line_no, Column_no})
+        else if (Str = "putc")
+        then (TokTup = {token_PUTC, Str, Line_no, Column_no})
+        else (TokTup = {token_IDENTIFIER, Str, Line_no, Column_no})
+    ).
+
+:- pred scan_integer_literal(toktup_t::out, inp_t::in, inp_t::out,
+                             io::di, io::uo) is det.
+scan_integer_literal(TokTup, !Inp, !IO) :-
+    scan_integer_or_word(Str, Line_no, Column_no, !Inp, !IO),
+    (
+        if (not is_all_digits(Str))
+        then throw("Error: not a valid integer literal: " ++ Str)
+        else (TokTup = {token_INTEGER, Str, Line_no, Column_no})
+    ).
+
+:- pred scan_integer_or_word(string::out, int::out, int::out,
+                             inp_t::in, inp_t::out,
+                             io::di, io::uo) is det.
+scan_integer_or_word(Str, Line_no, Column_no, !Inp, !IO) :-
+    get_ch({IChar, Line_no, Column_no}, !Inp, !IO),
+    (
+        if (IChar = eof)
+        then throw("internal error")
+        else
+        (
+            Char = det_from_int(IChar),
+            (if (not is_alnum_or_underscore(Char))
+             then throw("internal error")
+             else scan_int_or_word(from_char(Char), Str, !Inp, !IO))
+        )
+    ).
+
+:- pred scan_int_or_word(string::in, string::out,
+                         inp_t::in, inp_t::out,
+                         io::di, io::uo) is det.
+scan_int_or_word(Str0, Str, !Inp, !IO) :-
+    get_ch(CharTup, !Inp, !IO),
+    {IChar, _, _} = CharTup,
+    (
+        if (IChar = eof)
+        then
+        (
+            push_back(CharTup, !Inp),
+            Str = Str0
+        )
+        else
+        (
+            Char = det_from_int(IChar),
+            (
+                if (not is_alnum_or_underscore(Char))
+                then
+                (
+                    push_back(CharTup, !Inp),
+                    Str = Str0
+                )
+                else scan_int_or_word(Str0 ++ from_char(Char), Str,
+                                      !Inp, !IO)
+            )
+        )
+    ).
+
+:- pred init(text_input_stream::in, inp_t::out) is det.
+init(Inpf, Inp) :-
+    Inp = inp_t(Inpf, 1, 1, init).
+
+
+:- pred get_ch(ch_t::out, inp_t::in, inp_t::out,
+               io::di, io::uo) is det.
+get_ch(Ch, Inp0, Inp, !IO) :-
+    if (pop(Ch1, Inp0^pushback, Pushback))
+    then
+    (
+        Ch = Ch1,
+        Inp = (Inp0^pushback := Pushback)
+    )
+    else
+    (
+        inp_t(Inpf, Line_no, Column_no, Pushback) = Inp0,
+        read_char_unboxed(Inpf, Result, Char, !IO),
+        (
+            if (Result = ok)
+            then
+            (
+                Ch = {to_int(Char), Line_no, Column_no},
+                Inp =
+                (if (Char = ('\n'))
+                 then inp_t(Inpf, Line_no + 1, 1, Pushback)
+                 else inp_t(Inpf, Line_no, Column_no + 1, Pushback))
+            )
+            else
+            (
+                Ch = {eof, Line_no, Column_no},
+                Inp = Inp0
+            )
+        )
+    ).
+
+:- pred push_back(ch_t::in, inp_t::in, inp_t::out) is det.
+push_back(Ch, Inp0, Inp) :-
+    Inp = (Inp0^pushback := push(Inp0^pushback, Ch)).
+
+:- func eof = int is det.
+eof = -1.

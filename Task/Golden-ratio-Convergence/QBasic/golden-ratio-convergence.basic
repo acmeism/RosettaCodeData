@@ -1,0 +1,16 @@
+SUB iterate
+    iter = 0
+    phi0 = 1!
+    DO
+        phi1 = 1! + (1! / phi0)
+        diff = ABS(phi1 - phi0)
+        phi0 = phi1
+        iter = iter + 1
+    LOOP UNTIL (.00001 > diff)
+
+    PRINT "Result: "; phi1; " after "; iter; " iterations"
+    PRINT "The error is approximately "; phi1 - (.5 * (1! + SQR(5!)))
+END SUB
+
+CALL iterate
+END

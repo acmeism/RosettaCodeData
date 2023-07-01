@@ -1,0 +1,5 @@
+puts [zeckendorf add "10100" "1010"]
+puts [zeckendorf sub "10100" "1010"]
+puts [zeckendorf mul "10100" "1010"]
+puts [zeckendorf div "10100" "1010"]
+puts [zeckendorf div [zeckendorf mul "10100" "1010"] "1010"]

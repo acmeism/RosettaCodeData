@@ -1,0 +1,136 @@
+/* Plays the game of 24. */
+
+TWENTYFOUR: procedure options (main);            /* 14 August 2010 */
+
+CTP: procedure (E) returns (character(50) varying);
+   declare E character (*) varying;
+   declare OUT character (length(E)) varying;
+   declare S character (length(E)) varying controlled;
+   declare c character (1);
+   declare i fixed binary;
+
+/* This procedure converts an arithmetic expression to Reverse Polish Form. */
+/* A push-down pop-up stack is used for operators. */
+priority: procedure (a) returns (fixed decimal (1));
+   declare a character (1);
+   declare ops character (10) initial ('#+-*/') varying static;
+   declare pri(6) fixed decimal (1) initial (1,2,2,3,3,4) static;
+   declare i fixed binary;
+
+   i = index(ops,a);
+   return (pri(i));
+end priority;
+
+   allocate S; S = '#'; out = '';
+   do i = 1 to length(E);
+      c = substr(E, i, 1);
+      if index('+-*/', c) > 0 then
+         do;
+            /* Copy any higher priority operators on the stack to the output. */
+            do while ( priority(c) <= priority((S)) );
+               out = out || S;
+               free S;
+            end;
+            /* Copy the input character to the stack. */
+            allocate S; S = c;
+         end;
+
+      if index('123456789', c) > 0 then
+         out = out || c;
+   end;
+   do while (allocation(S) > 1);
+      out = out || s;
+      free S;
+   end;
+   return (out);
+end CTP;
+
+/* Given a push-down pop-up stack, and an expresion in  */
+/* Reverse Polish notation, evaluate the expression.    */
+EVAL: procedure (E) returns (fixed decimal(15));
+   declare E character (*) varying;
+   declare S fixed decimal (15) controlled;
+   declare (a, b) fixed decimal (15);
+   declare c character (1);
+   declare p fixed binary;
+   declare (empty_stack, invalid_expression) condition;
+
+   on condition (empty_stack) begin;
+      put skip list ('Your expression is not valid.');
+      stop;
+   end;
+   on condition (invalid_expression) begin;
+      put skip list ('Your expression is not valid.');
+      stop;
+   end;
+
+   do p = 1 to length(E);
+      c = substr(E, p, 1);
+      if index('123456789', c) > 0 then
+         do; allocate S; S = c; end;
+      else
+         do;
+            if allocation(S) = 0 then signal condition (empty_stack);
+            b = S; free S;
+            if allocation(S) = 0 then signal condition (empty_stack);
+            a = S;
+            select (c);
+               when ('+') S = a + b;
+               when ('-') S = a - b;
+               when ('*') S = a * b;
+               when ('/') S = a / b;
+               when ('^') S = a ** b;
+               otherwise signal condition (invalid_expression);
+            end;
+         end;
+   end;
+   if allocation(S) ^= 1 then signal condition (invalid_expression);
+   return (S);
+END eval;
+
+/* Check that the player has used every digit and no others. */
+VALIDATE: procedure (E);
+   declare E character (*) varying;
+   declare E2 character (length(E)), (i, j) fixed binary;
+   declare digits(9) character (1) static initial
+      ('1', '2', '3', '4', '5', '6', '7', '8', '9');
+
+   E2 = translate(E, '    ', '+-*/' );
+   do i = 1 to 4;
+      j = index(E2, digits(k(i)));
+      if j > 0 then
+         substr(E2, j, 1) = ' ';
+      else
+         do; put skip list ('You must use the digits supplied.'); stop; end;
+   end;
+   if E2 ^= '' then
+      do; put skip list ('You must use every digit supplied, and no others.'); stop; end;
+end VALIDATE;
+
+   declare E character (40) varying;
+   declare k(4) fixed decimal;
+   declare (time, random) builtin;
+   declare V fixed decimal (15);
+
+   k = random(TIME);
+   k = 9*random() + 1;
+   put skip edit ('Here are four integers:', k) (a);
+   put skip list ('With these integers, make up an arithmetic expression' ||
+      ' that evaluates to 24.');
+   put skip list ('You can use any of the operators +, -, *, and /');
+   put skip list ('E.g., Given the integers 1, 3, 7, and 6,' ||
+      ' the expression 6*3+7-1 evaluates to 24.');
+
+   put skip list ('Please type an arithmetic expression :');
+   get edit (E) (L) COPY;
+
+   CALL VALIDATE (E); /* Check that the player has used every digit and no others. */
+
+   E = CTP(E);
+   V = EVAL (E);
+   if V = 24 then
+      put skip list ('Congratulations: the expression evaluates to 24.');
+   else
+      put skip edit ('The result is ', trim(V), ' which is not correct') (a);
+
+end TWENTYFOUR;

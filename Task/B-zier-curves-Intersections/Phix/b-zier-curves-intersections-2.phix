@@ -1,0 +1,293 @@
+-- -*- mode: indented-text; tab-width: 2; -*-
+
+enum X, Y
+enum C0, C1, C2
+enum CURV, T0, T1, ENDPT0, ENDPT1
+
+function normlength (atom a_x, a_y)
+  -- A "length" according to our chosen norm (which happens to be the
+  -- max norm). Here (a_x,a_y) is a vector used as measuring rod.
+  return max (abs (a_x), abs (a_y))
+end function
+
+function compare_normlengths (atom a_x, a_y, b_x, b_y)
+  -- Here is a general implementation for comparison of two
+  -- "normlength". For the euclidean norm, you might wish to skip
+  -- taking square roots.
+  atom len_a = normlength (a_x, a_y),
+       len_b = normlength (b_x, b_y),
+       cmpval = 0
+  if len_a < len_b then
+    cmpval = -1
+  elsif len_a > len_b then
+    cmpval = 1
+  end if
+  return cmpval
+end function
+
+function controls_to_spower (sequence controls)
+  -- Convert from control points (that is, Bernstein basis) to the
+  -- symmetric power basis.
+  sequence pt0 = controls[1],
+           pt1 = controls[2],
+           pt2 = controls[3]
+  return {{pt0[X], (2 * pt1[X]) - pt0[X] - pt2[X], pt2[X]},
+          {pt0[Y], (2 * pt1[Y]) - pt0[Y] - pt2[Y], pt2[Y]}}
+end function
+
+function spower_eval (sequence spow, atom t)
+  -- Evaluate an s-power spline at t.
+  return (spow[C0] + (spow[C1] * t)) * (1 - t) + (spow[C2] * t)
+end function
+
+function curve_eval (sequence curv, atom t)
+  -- Evaluate a curve at t.
+  return {spower_eval (curv[X], t),
+          spower_eval (curv[Y], t)}
+end function
+
+function spower_center_coef (sequence spow, atom t0, t1)
+  -- Return the center coefficient for the [t0,t1] portion of an
+  -- s-power spline. (The endpoint coefficients can be found with
+  -- spower_eval.) }
+  return spow[C1] * ((t1 - t0 - t0) * t1 + (t0 * t0))
+end function
+
+function spower_critical_pt (sequence spow)
+  -- Return t in (0,1) where p is at a critical point, else return -1.
+  atom crit_pt = -1
+  if spow[C1] != 0 then   -- If c1 is zero, then the spline is linear.
+    if spow[C1] = spow[C2] then
+      crit_pt = 0.5             -- The spline is "pulse-like".
+    else
+      -- The critical point is the root of the derivative.
+      atom t = (0.5 * (spow[C2] + spow[C1] - spow[C0])) / spow[C1]
+      if (0 < t) and (t < 1) then
+        crit_pt = t
+      end if
+    end if
+  end if
+  return crit_pt
+end function
+
+function bisect_portion (sequence port)
+  -- Bisect a portion and pre-compute the new shared endpoint.
+  atom t_mid = 0.5 * (port[T0] + port[T1])
+  sequence pt_mid = curve_eval (port[CURV], t_mid)
+  return {{port[CURV], port[T0], t_mid, port[ENDPT0], pt_mid},
+          {port[CURV], t_mid, port[T1], pt_mid, port[ENDPT1]}}
+end function
+
+function rectangles_overlap (sequence a0, a1, b0, b1)
+  -- Do the rectangles with corners at (a0,a1) and (b0,b1) overlap at
+  -- all?
+  return ((min (a0[X], a1[X]) <= max (b0[X], b1[X]))
+          and (min (b0[X], b1[X]) <= max (a0[X], a1[X]))
+          and (min (a0[Y], a1[Y]) <= max (b0[Y], b1[Y]))
+          and (min (b0[Y], b1[Y]) <= max (a0[Y], a1[Y])))
+end function
+
+function segment_parameters (sequence a0, a1, b0, b1)
+  -- Return the respective [0,1] parameters of line segments (a0,a1)
+  -- and (b0,b1), for their intersection point. If there are not two
+  -- such parameters, return -1 for both values.
+  atom axdiff = a1[X] - a0[X],
+       aydiff = a1[Y] - a0[Y],
+       bxdiff = b1[X] - b0[X],
+       bydiff = b1[Y] - b0[Y],
+       denom = (axdiff * bydiff) - (aydiff * bxdiff),
+       anumer = ((bxdiff * a0[Y]) - (bydiff * a0[X])
+                  + (b0[X] * b1[Y]) - (b1[X] * b0[Y])),
+       ta = anumer / denom,
+       tb = -1
+  if (ta < 0.0) or (1.0 < ta) then
+    ta = -1
+  else
+    atom bnumer = -((axdiff * b0[Y]) - (aydiff * b0[X])
+                      + (a0[X] * a1[Y]) - (a1[X] * a0[Y]))
+    tb = bnumer / denom
+    if (tb < 0.0) or (1.0 < tb) then
+      ta = -1
+      tb = -1
+    end if
+  end if
+  return {ta, tb}
+end function
+
+function flat_enough (sequence port, atom tol)
+  -- Is a curve portion flat enough to be treated as a line segment
+  -- between its endpoints?
+
+  -- The degree-2 s-power polynomials are 1-t, t(1-t), t. We want to
+  -- remove the terms in t(1-t). The maximum of t(1-t) is 1/4, reached
+  -- at t=1/2. That accounts for the 1/4=0.25 in the following.
+
+  atom xcentercoef = spower_center_coef (port[CURV][X], port[T0],
+                                         port[T1]),
+       ycentercoef = spower_center_coef (port[CURV][Y], port[T0],
+                                         port[T1]),
+       xlen = port[ENDPT1][X] - port[ENDPT0][X],
+       ylen = port[ENDPT1][Y] - port[ENDPT0][Y]
+  return (compare_normlengths (0.25 * xcentercoef,
+                               0.25 * ycentercoef,
+                               tol * xlen, tol * ylen) <= 0)
+end function
+
+function find_portion_intersections (sequence pportion, qportion,
+                                     atom tol)
+  -- Find intersections between portions of two curves. Return pairs
+  -- of t-parameters. There may be duplicates and (due to truncation
+  -- error) near-intersections.
+  sequence intersections = {}
+  if rectangles_overlap (pportion[ENDPT0], pportion[ENDPT1],
+                         qportion[ENDPT0], qportion[ENDPT1]) then
+    if flat_enough (pportion, tol) then
+      if flat_enough (qportion, tol) then
+        atom tp, tq
+        {tp, tq} = segment_parameters (pportion[ENDPT0],
+                                       pportion[ENDPT1],
+                                       qportion[ENDPT0],
+                                       qportion[ENDPT1])
+        if 0 <= tp then
+          tp = (1 - tp) * pportion[T0] + tp * pportion[T1]
+          tq = (1 - tq) * qportion[T0] + tq * qportion[T1]
+          intersections &= {{tp, tq}}
+        end if
+      else
+        sequence qport1, qport2
+        {qport1, qport2} = bisect_portion (qportion)
+        intersections &=
+            find_portion_intersections (pportion, qport1, tol)
+        intersections &=
+            find_portion_intersections (pportion, qport2, tol)
+      end if
+    else
+      if flat_enough (qportion, tol) then
+        sequence pport1, pport2
+        {pport1, pport2} = bisect_portion (pportion)
+        intersections &=
+            find_portion_intersections (pport1, qportion, tol)
+        intersections &=
+            find_portion_intersections (pport2, qportion, tol)
+      else
+        sequence pport1, pport2
+        sequence qport1, qport2
+        {pport1, pport2} = bisect_portion (pportion)
+        {qport1, qport2} = bisect_portion (qportion)
+        intersections &=
+            find_portion_intersections (pport1, qport1, tol)
+        intersections &=
+            find_portion_intersections (pport1, qport2, tol)
+        intersections &=
+            find_portion_intersections (pport2, qport1, tol)
+        intersections &=
+            find_portion_intersections (pport2, qport2, tol)
+      end if
+    end if
+  end if
+  return intersections
+end function
+
+function find_intersections (sequence p, q, atom tol)
+  -- Find intersections in [0,1]. Return pairs of t-parameters.
+  -- There may be duplicates and (due to truncation error)
+  -- near-intersections.
+
+  -- Break the curves at critical points, so one can assume the
+  -- portion between two endpoints is monotonic along both axes.
+
+  sequence tp = {0, 1}
+  atom tpx = spower_critical_pt (p[X]),
+       tpy = spower_critical_pt (p[Y])
+  if 0 < tpx then
+    tp &= {tpx}
+  end if
+  if 0 < tpy and tpy != tpx then
+    tp &= {tpy}
+  end if
+  tp = sort (tp)
+  sequence tq = {0, 1}
+
+  sequence pvals = {}
+  for t in tp do
+    pvals &= {curve_eval (p, t)}
+  end for
+
+  atom tqx = spower_critical_pt (q[X]),
+       tqy = spower_critical_pt (q[Y])
+  if 0 < tqx then
+    tq &= {tqx}
+  end if
+  if 0 < tqy and tqy != tqx then
+    tq &= {tqy}
+  end if
+  tq = sort (tq)
+
+  sequence qvals = {}
+  for t in tq do
+    qvals &= {curve_eval (q, t)}
+  end for
+
+  -- Find intersections in the cartesian product of the monotonic
+  -- portions of the two curves.
+  sequence intersections = {}
+  for i = 1 to length (tp) - 1 do
+    for j = 1 to length (tq) - 1 do
+      sequence pportion = {p, tp[i], tp[i + 1],
+                           pvals[i], pvals[i + 1]},
+               qportion = {q, tq[j], tq[j + 1],
+                           qvals[j], qvals[j + 1]}
+      intersections &=
+        find_portion_intersections (pportion, qportion, tol)
+    end for
+  end for
+
+  return intersections
+end function
+
+sequence pcontrols = {{-1, 0}, {0, 10}, {1, 0}},
+         qcontrols = {{2, 1}, {-8, 2}, {2, 3}},
+         p = controls_to_spower (pcontrols),
+         q = controls_to_spower (qcontrols)
+
+atom flatness_tolerance = 0.0001
+
+--
+-- With this algorithm and its extension to higher degrees:
+--
+-- I suspect (albeit VERY, VERY, VERY weakly) merely removing exact
+-- duplicates from the returned pairs of t-parameters will suffice to
+-- eliminate repeated detections, because (aside from intersections
+-- with multiplicities) these SHOULD occur only at endpoints, which
+-- adjacent portions share, and where the t-parameters are exact zeros
+-- and ones.
+--
+-- In any case, comparing t-parameters is certainly an alternative to
+-- comparing point distances, especially if you want to let
+-- intersections have multiplicity (as can easily happen with
+-- cubics). Scheme's SRFI-1 has "delete-duplicates", which lets one
+-- specify an equivalence predicate other than the default "equal?"--
+-- the predicate can be defined as a closure to test closeness to
+-- within some tolerance. That is how the code below SHOULD be
+-- written.
+--
+-- But I do not know how to do the same thing so simply in Phix, and
+-- thus will merely say "unique" here and let others update the code
+-- if they wish. :)
+--
+sequence t_pairs =
+  unique (find_intersections (p, q, flatness_tolerance))
+
+printf (1, "\n")
+printf (1, "          convex up                ")
+printf (1, "                    convex left\n")
+for tt in t_pairs do
+  atom tp, tq
+  {tp, tq} = tt
+  sequence ppoint = curve_eval (p, tp),
+           qpoint = curve_eval (q, tq)
+  printf
+    (1, " %11.8f   (%11.8f, %11.8f)     %11.8f   (%11.8f, %11.8f)\n",
+     {tp, ppoint[X], ppoint[Y], tq, qpoint[X], qpoint[Y]})
+end for
+printf (1, "\n")

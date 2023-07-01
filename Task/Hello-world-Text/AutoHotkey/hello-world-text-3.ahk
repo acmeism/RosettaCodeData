@@ -1,0 +1,1 @@
+SendInput Hello world!{!}

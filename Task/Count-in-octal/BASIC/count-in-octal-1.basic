@@ -1,0 +1,4 @@
+DIM n AS LONG
+FOR n = 0 TO &h7FFFFFFF
+    PRINT OCT$(n)
+NEXT

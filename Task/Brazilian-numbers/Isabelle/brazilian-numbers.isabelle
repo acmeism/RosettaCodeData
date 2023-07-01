@@ -1,0 +1,228 @@
+theory Brazilian
+imports Main
+begin
+
+function (sequential) base :: "nat ⇒ nat ⇒ nat list" where
+  "base n 0 = undefined"
+| "base n (Suc 0) = replicate n 1"
+| "base n b = (if n < b then [n]
+               else (base (n div b) b) @ [n mod b]
+              )"
+  by pat_completeness auto
+termination base
+  apply(relation "measure (λ(n,b). n div b)", simp)
+  using div_greater_zero_iff by auto
+
+lemma base_simps:
+  "b > 1 ⟹ base n b = (if n < b then [n] else base (n div b) b @ [n mod b])"
+  by (metis One_nat_def base.elims nat_neq_iff not_less_zero)
+
+lemma "base 123 10 = [1, 2, 3]"
+  and "base 65536 2 = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"
+  and "base 65535 2 =    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]"
+  and "base 123 100 = [1, 23]"
+  and "base 69 100 = [69]"
+  and "base 255 16 = [15, 15]"
+  by(simp add: base_simps)+
+
+lemma "base 5 1 = [1, 1, 1, 1, 1]"
+  by (simp add: eval_nat_numeral(3) numeral_Bit0)
+
+lemma base_2_numbers: "a < b ⟹ c < b ⟹ a > 0 ⟹ base (a * b + c) b = [a, c]"
+  apply(simp add: base_simps)
+  using mult_eq_if by auto
+
+lemma base_half_minus_one: "even n ⟹ n ≥ 8 ⟹ base n (n div 2 - 1) = [2, 2]"
+proof -
+  assume "even n" and "n ≥ 8"
+  have n: "(2 * (n div 2 - 1) + 2) = n"
+    using ‹n ≥ 8› ‹even n› add.commute dvd_mult_div_cancel le_0_eq by auto
+  from ‹n ≥ 8› base_2_numbers[where b="n div 2 - 1" and a=2 and c=2] have
+    "base (2 * (n div 2 - 1) + 2) (n div 2 - 1) = [2, 2]" by simp
+  with n show ?thesis by simp
+qed
+
+lemma base_rs_numbers: "r > 0 ⟹ s - 1 > r ⟹ base (r*s) (s - 1) = [r, r]"
+proof -
+  assume "r > 0" and "s - 1 > r"
+  from ‹s - 1 > r› have "r*s = r*(s - 1) + r"
+    by (metis add.commute gr_implies_not0 less_diff_conv mult.commute mult_eq_if)
+  from base_2_numbers[where a=r and b="s - 1" and c=r] have
+    "s - 1 > r ⟹ 0 < r ⟹ base (r * (s - 1) + r) (s - 1) = [r, r]" .
+  with ‹s - 1 > r› ‹r > 0› have "base (r * (s - 1) + r) (s - 1) = [r, r]" by(simp)
+  with ‹r * s = r * (s - 1) + r› show "base (r*s) (s - 1) = [r, r]" by (simp)
+qed
+
+definition all_equal :: "nat list ⇒ bool" where
+  "all_equal xs ≡ ∀x∈set xs. ∀y∈set xs. x = y"
+
+lemma all_equal_alt:
+  "all_equal xs ⟷ replicate (length xs) (hd xs) = xs"
+  unfolding all_equal_def
+  apply(induction xs)
+   apply(simp)
+  apply(simp)
+  by (metis in_set_replicate replicate_eqI)
+
+definition brazilian :: "nat set" where
+  "brazilian ≡ {n. ∃b. 1 < b ∧ Suc b < n ∧ all_equal (base n b)}"
+
+
+lemma "0 ∉ brazilian"
+  and "1 ∉ brazilian"
+  and "2 ∉ brazilian"
+  and "3 ∉ brazilian"
+  by (simp add: brazilian_def)+
+
+lemma "4 ∉ brazilian"
+  apply (simp add: brazilian_def all_equal_def)
+  apply(intro allI impI)
+  apply(case_tac "b = 1", simp)
+  apply(case_tac "b = 2", simp add: base_simps, blast)
+  by(simp)
+
+lemma "5 ∉ brazilian"
+  apply (simp add: brazilian_def all_equal_def)
+  apply(intro allI impI)
+  apply(case_tac "b = 1", simp)
+  apply(case_tac "b = 2", simp add: base_simps, blast)
+  apply(case_tac "b = 3", simp add: base_simps, blast)
+  by(simp)
+
+lemma "6 ∉ brazilian"
+  apply (simp add: brazilian_def all_equal_def)
+  apply(intro allI impI)
+  apply(case_tac "b = 1", simp)
+  apply(case_tac "b = 2", simp add: base_simps, blast)
+  apply(case_tac "b = 3", simp add: base_simps, blast)
+  apply(case_tac "b = 4", simp add: base_simps, blast)
+  by(simp)
+
+lemma "7 ∈ brazilian"
+  apply(simp add: brazilian_def)
+  apply(rule exI[where x=2])
+  by(simp add: base_simps all_equal_def)
+
+lemma "8 ∈ brazilian"
+  apply(simp add: brazilian_def)
+  apply(rule exI[where x=3])
+  by(simp add: base_simps all_equal_def)
+
+lemma "9 ∉ brazilian"
+  apply (simp add: brazilian_def all_equal_def)
+  apply(intro allI impI)
+  apply(case_tac "b = 1", simp)
+  apply(case_tac "b = 2", simp add: base_simps, blast)
+  apply(case_tac "b = 3", simp add: base_simps, blast)
+  apply(case_tac "b = 4", simp add: base_simps, blast)
+  apply(case_tac "b = 5", simp add: base_simps, blast)
+  apply(case_tac "b = 6", simp add: base_simps, blast)
+  apply(case_tac "b = 7", simp add: base_simps, blast)
+  by(simp)
+
+theorem "even n ⟹ n ≥ 8 ⟹ n ∈ brazilian"
+  apply(simp add: brazilian_def)
+  apply(rule_tac x="n div 2 - 1" in exI)
+  by(simp add: base_half_minus_one[simplified] all_equal_def)
+
+(*
+The problem description on Rosettacode was broken.
+Fortunately, we found the error when proving it correct with Isabelle.
+Rosettacode claimed:
+"all integers, that factor decomposition is R*S >= 8, with S+1 > R,
+ are Brazilian because R*S = R(S-1) + R, which is RR in base S-1"
+This is wrong. Here are some counterexamples:
+
+r = 3
+s = 3
+r*s = 9 ≥ 8
+s+1 = 4 > 3 = r
+But (s*r) = 9 ∉ brazilian
+
+The correct precondition would be s-1>r instead of s+1>r.
+
+But this is not enough.
+
+Also, r > 1 is needed additionally, because
+r=1
+s=9
+r*s = 9 ≥ 8
+s+1 = 10 > 1 = r or s-1 = 8 > 1 = r
+But (s*r) = 9 ∉ brazilian
+
+Doing the proof, we also learn that the precondition r*s ≥ 8 is not required.
+*)
+theorem "r > 1 ⟹ s-1 > r ⟹ r*s ∈ brazilian"
+  apply(simp add: brazilian_def)
+  apply(rule_tac x="s - 1" in exI)
+  apply(subst base_rs_numbers[of r s])
+    using not_numeral_le_zero apply fastforce
+   apply(simp; fail)
+    by(simp add: all_equal_def)
+
+
+fun is_brazilian_for_base :: "nat ⇒ nat ⇒ bool" where
+  "is_brazilian_for_base n 0 ⟷ False"
+| "is_brazilian_for_base n (Suc 0) ⟷ False"
+| "is_brazilian_for_base n (Suc b) ⟷ all_equal (base n (Suc b)) ∨ is_brazilian_for_base n b"
+
+lemma "is_brazilian_for_base 7 2" and "is_brazilian_for_base 8 3" by code_simp+
+
+lemma is_brazilian_for_base_Suc_simps:
+  "is_brazilian_for_base n (Suc b) ⟷ b ≠ 0 ∧ (all_equal (base n (Suc b)) ∨ is_brazilian_for_base n b)"
+  by(cases b)(simp)+
+
+lemma is_brazilian_for_base:
+  "is_brazilian_for_base n b ⟷ (∃w ∈ {2..b}. all_equal (base n w))"
+proof(induction b)
+  case 0
+  show "is_brazilian_for_base n 0 = (∃w∈{2..0}. all_equal (base n w))" by simp
+next
+  case (Suc b)
+  assume IH: "is_brazilian_for_base n b = (∃w∈{2..b}. all_equal (base n w))"
+  show "is_brazilian_for_base n (Suc b) = (∃w∈{2..Suc b}. all_equal (base n w))"
+    apply(simp add: is_brazilian_for_base_Suc_simps IH)
+    using le_Suc_eq by fastforce
+qed
+
+
+lemma is_brazilian_for_base_is:
+  "Suc (Suc n) ∈ brazilian ⟷ is_brazilian_for_base (Suc (Suc n)) n"
+  apply(simp add: brazilian_def is_brazilian_for_base)
+  using less_Suc_eq_le by force
+
+definition brazilian_executable :: "nat ⇒ bool" where
+  "brazilian_executable n ≡ n > 1 ∧ is_brazilian_for_base n (n - 2)"
+
+lemma brazilian_executable[code_unfold]:
+  "n ∈ brazilian ⟷ brazilian_executable n"
+  apply(simp add: brazilian_executable_def)
+  apply(cases "n = 0 ∨ n = 1")
+   apply(simp add: brazilian_def)
+   apply(blast)
+  apply(simp)
+  apply(case_tac n, simp, simp, rename_tac n2)
+  apply(case_tac n2, simp, simp, rename_tac n3)
+  apply(subst is_brazilian_for_base_is[symmetric])
+  apply(simp)
+  done
+
+text‹
+In Isabelle/HOl, functions must be total, i.e. they must terminate.
+Therefore, we cannot simply write a function which enumerates the infinite
+set of natural numbers and stops when we found 20 Brazilian numbers,
+since it is not guaranteed that 20 Brazilian numbers exist and that the
+function will terminate.
+We could prove that and then write that function, but here is the lazy solution:
+›
+
+lemma "[n ← upt 0 34. n ∈ brazilian] =
+       [7,8,10,12,13,14,15,16,18,20,21,22,24,26,27,28,30,31,32,33]"
+  by(code_simp)
+lemma "[n ← upt 0 80. odd n ∧ n ∈ brazilian] =
+       [7,13,15,21,27,31,33,35,39,43,45,51,55,57,63,65,69,73,75,77]"
+  by code_simp
+
+(*TODO: the first 20 prime Brazilian numbers*)
+
+end

@@ -1,0 +1,9 @@
+I8 *s;
+
+s = "10";
+s = Str2I64(s) + 1;
+Print("%d\n", s);
+
+s = "-10";
+s = Str2I64(s) + 1;
+Print("%d\n", s);

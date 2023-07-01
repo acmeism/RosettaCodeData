@@ -1,0 +1,155 @@
+module Main
+
+import Data.Vect
+
+Matrix : Nat -> Nat -> Type -> Type
+Matrix m n t = Vect m (Vect n t)
+
+-- Creates list from 0 to n (not including n)
+upTo : (m : Nat) -> Vect m (Fin m)
+upTo Z = []
+upTo (S n) = 0 :: (map FS (upTo n))
+
+-- Creates list from 0 to n-1  (not including n-1)
+upToM1 : (m : Nat) -> (sz ** Vect sz (Fin m))
+upToM1 m = case (upTo m) of
+                  (y::ys) => (_ ** init(y::ys))
+                  [] => (_ ** [])
+
+-- Creates list from i to n (not including n)
+fromUpTo : {n : Nat} -> Fin n -> (sz ** Vect sz (Fin n))
+fromUpTo {n} m = filter (>= m) (upTo n)
+
+-- Creates list from i+1 to n (not including n)
+fromUpTo1 : {n : Nat} -> Fin n -> (sz ** Vect sz (Fin n))
+fromUpTo1 {n} m with (fromUpTo m)
+  | (_ ** xs) = case xs of
+                  (y::ys) => (_ ** ys)
+                  [] => (_ ** [])
+
+
+-- Create Zero Matrix of size m by n
+zeros : (m : Nat) -> (n : Nat) -> Matrix m n Double
+zeros m n = replicate m (replicate n 0.0)
+
+replaceAtM : (Fin m, Fin n) -> t -> Matrix m n t -> Matrix m n t
+replaceAtM (i, j) e a = replaceAt i (replaceAt j e (index i a)) a
+
+-- Create Identity Matrix of size m by m
+eye : (m : Nat) -> Matrix m m Double
+eye m = map create1Vec (upTo m)
+  where
+    set1 : Vect m Double -> Fin m -> Vect m Double
+    set1 a n = replaceAt n 1.0 a
+
+    create1Vec : Fin m -> Vect m Double
+    create1Vec n = set1 (replicate m 0.0) n
+
+
+indexM : (Fin m, Fin n) -> Matrix m n t -> t
+indexM (i, j) a = index j (index i a)
+
+
+-- Obtain index for the row containing the
+-- largest absolute value for the given column
+colAbsMaxIndex : Fin m -> Fin m -> Matrix m m Double -> Fin m
+colAbsMaxIndex startRow col a {m} with (fromUpTo startRow)
+  | (_ ** xs) =
+    snd $ foldl (\(absMax, idx), curIdx =>
+          let curAbsVal = abs(indexM (curIdx, col) a) in
+            if (curAbsVal > absMax)
+              then (curAbsVal, curIdx)
+              else (absMax, idx)
+        ) (0.0, startRow) xs
+
+
+-- Swaps two rows in a given matrix
+swapRows : Fin m -> Fin m -> Matrix m n t -> Matrix m n t
+swapRows r1 r2 a = replaceAt r2 tempRow $ replaceAt r1 (index r2 a) a
+  where tempRow = index r1 a
+
+
+-- Swaps two individual values in a matrix
+swapValues : (Fin m, Fin m) -> (Fin m, Fin m) -> Matrix m m Double -> Matrix m m Double
+swapValues (i1, j1) (i2, j2) m = replaceAtM (i2, j2) v1 $ replaceAtM (i1, j1) v2 m
+  where
+      v1 = indexM (i1, j1) m
+      v2 = indexM (i2, j2) m
+
+-- Perform row Swap on Lower Triangular Matrix
+lSwapRow : Fin m -> Fin m -> Matrix m m Double -> Matrix m m Double
+lSwapRow row1 row2 l {m} with (filter (< row1) (upTo m))
+  | (_ ** xs) =  foldl (\l',col => swapValues (row1, col) (row2, col) l') l xs
+
+
+rowSwap : Fin m -> (Matrix m m Double,  Matrix m m Double, Matrix m m Double) ->
+                        (Matrix m m Double, Matrix m m Double, Matrix m m Double)
+rowSwap col (l,u,p) = (lSwapRow col row l, swapRows col row u, swapRows col row p)
+      where row = colAbsMaxIndex col col u
+
+
+calc : (Fin m) -> (Fin m) -> (Matrix m m Double, Matrix m m Double) ->
+                                (Matrix m m Double, Matrix m m Double)
+calc i j (l, u) {m} = (l', u')
+   where
+         l' : Matrix m m Double
+         l' = replaceAtM (j, i) ((indexM (j, i) u) / indexM (i, i) u) l
+
+         u'' : (Fin m) -> (Matrix m m Double) -> (Matrix m m Double)
+         u'' k u = replaceAtM (j, k) ((indexM (j, k) u) -
+                  ((indexM (j, i) l') * (indexM (i, k) u))) u
+
+         u' : (Matrix m m Double)
+         u' with (fromUpTo i) | (_ ** xs) = foldl (\curU, idx => u'' idx curU) u xs
+
+
+-- Perform a single iteration of the algorithm for the given column
+iteration : Fin m -> (Matrix m m Double, Matrix m m Double, Matrix m m Double) ->
+                        (Matrix m m Double, Matrix m m Double, Matrix m m Double)
+iteration i lup {m} = iterate' (rowSwap i lup)
+
+          where
+                modify : (Matrix m m Double, Matrix m m Double) ->
+                            (Matrix m m Double, Matrix m m Double)
+                modify lu with (fromUpTo1 i) | (_ ** xs) =
+                                            foldl (\lu',j => calc i j lu') lu xs
+
+                iterate' : (Matrix m m Double, Matrix m m Double, Matrix m m Double) ->
+                              (Matrix m m Double, Matrix m m Double, Matrix m m Double)
+                iterate' (l, u, p) with (modify (l, u)) | (l', u') = (l', u', p)
+
+
+-- Generate L, U, P matricies from a given square matrix.
+-- Where L * U = A, and P is the permutation matrix
+luDecompose : Matrix m m Double -> (Matrix m m Double, Matrix m m Double, Matrix m m Double)
+luDecompose a {m} with (upToM1 m)
+  | (_ ** xs) = foldl (\lup,idx => iteration idx lup) (eye m,a,eye m) xs
+
+
+
+ex1 : (Matrix 3 3 Double, Matrix 3 3 Double, Matrix 3 3 Double)
+ex1 = luDecompose [[1, 3, 5], [2, 4, 7], [1, 1, 0]]
+
+ex2 : (Matrix 4 4 Double, Matrix 4 4 Double, Matrix 4 4 Double)
+ex2 = luDecompose [[11, 9, 24, 2], [1, 5, 2, 6], [3, 17, 18, 1], [2, 5, 7, 1]]
+
+printEx : (Matrix n n Double, Matrix n n Double, Matrix n n Double) -> IO ()
+printEx (l, u, p) = do
+  putStr "l:"
+  print l
+  putStrLn "\n"
+
+  putStr "u:"
+  print u
+  putStrLn "\n"
+
+  putStr "p:"
+  print p
+  putStrLn "\n"
+
+main : IO()
+main = do
+  putStrLn "Solution 1:"
+  printEx ex1
+  putStrLn "Solution 2:"
+  printEx ex2

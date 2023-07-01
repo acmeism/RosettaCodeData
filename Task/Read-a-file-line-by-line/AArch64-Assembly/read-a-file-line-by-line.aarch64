@@ -1,0 +1,178 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program readfile64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ BUFFERSIZE,          1000
+.equ LINESIZE,            100
+
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure read file*/
+    .struct  0
+readfile_Fd:                           // File descriptor
+    .struct  readfile_Fd + 8
+readfile_buffer:                       // read buffer
+    .struct  readfile_buffer + 8
+readfile_buffersize:                   // buffer size
+    .struct  readfile_buffersize + 8
+readfile_line:                         // line buffer
+    .struct  readfile_line + 8
+readfile_linesize:                     // line buffer size
+    .struct  readfile_linesize + 8
+readfile_pointer:
+    .struct  readfile_pointer + 8      // read pointer  (init to buffer size + 1)
+readfile_end:
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szFileName:              .asciz "fictest.txt"
+szCarriageReturn:        .asciz "\n"
+/* datas error display */
+szMessError:           .asciz "Error detected : @ \n"
+
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+sBuffer:             .skip BUFFERSIZE             // buffer result
+szLineBuffer:        .skip LINESIZE
+.align 4
+stReadFile:          .skip readfile_end
+sZoneConv:           .skip 24
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:
+    mov x0,AT_FDCWD
+    ldr x1,qAdrszFileName              // File name
+    mov x2,O_RDWR                      //  flags
+    mov x3,0                           // mode
+    mov x8,OPEN                        // open file
+    svc 0
+    cmp x0,0                           // error ?
+    ble error
+    ldr x21,qAdrstReadFile              // init struture readfile
+    str x0,[x21,readfile_Fd]            // save FD in structure
+    ldr x0,qAdrsBuffer                 // buffer address
+    str x0,[x21,readfile_buffer]
+    mov x0,BUFFERSIZE                  // buffer size
+    str x0,[x21,readfile_buffersize]
+    ldr x0,qAdrszLineBuffer            // line buffer address
+    str x0,[x21,readfile_line]
+    mov x0,LINESIZE                    // line buffer size
+    str x0,[x21,readfile_linesize]
+    mov x0,BUFFERSIZE + 1              // init read pointer
+    str x0,[x21,readfile_pointer]
+1:                                     // begin read loop
+    mov x0,x21
+    bl readLineFile
+    cmp x0,0
+    beq end                             // end loop
+    blt error
+
+    ldr x0,qAdrszLineBuffer             //  display line
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn         // display line return
+    bl affichageMess
+    b 1b                                // and loop
+
+end:
+    ldr x1,qAdrstReadFile
+    ldr x0,[x1,readfile_Fd]            // load FD to structure
+    mov x8,CLOSE                        // call system close file
+    svc 0
+    cmp x0,0
+    blt error
+    mov x0,0                           // return code
+    b 100f
+error:
+    ldr x1,qAdrsZoneConv
+    bl conversion10S
+    ldr x0,qAdrszMessError             // error message
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc               // insert result at @ character
+    bl  affichageMess
+    mov x0,1                           // return error code
+100:                                    // standard end of the program
+    mov x8,EXIT                       // request to exit program
+    svc 0                               // perform system call
+qAdrsBuffer:               .quad sBuffer
+qAdrszFileName:            .quad szFileName
+qAdrszMessError:           .quad szMessError
+qAdrsZoneConv:             .quad sZoneConv
+qAdrszCarriageReturn:      .quad szCarriageReturn
+qAdrstReadFile:            .quad stReadFile
+qAdrszLineBuffer:          .quad szLineBuffer
+/******************************************************************/
+/*     sub strings  index start  number of characters             */
+/******************************************************************/
+/* x0 contains the address of the structure */
+/* x0 returns number of characters or -1 if error */
+readLineFile:
+    stp x1,lr,[sp,-16]!                        // save  registers
+    mov x14,x0                                 // save structure
+    ldr x11,[x14,#readfile_buffer]
+    ldr x12,[x14,#readfile_buffersize]
+    ldr x15,[x14,#readfile_pointer]
+    ldr x16,[x14,#readfile_linesize]
+    ldr x18,[x14,#readfile_buffersize]
+    ldr x10,[x14,#readfile_line]
+    mov x13,0
+    strb wzr,[x10,x13]                          // store zéro in line buffer
+    cmp x15,x12                                 // pointer buffer < buffer size ?
+    ble 2f                                      // no file read
+1:                                              // loop read file
+    ldr x0,[x14,#readfile_Fd]
+    mov x1,x11                                  // buffer address
+    mov x2,x12                                  // buffer size
+    mov x8,READ                                 // call system read file
+    svc 0
+    cmp x0,#0                                   // error read or end ?
+    ble 100f
+    mov x18,x0                                  // number of read characters
+    mov x15,#0                                  // init buffer pointer
+
+2:                                              // begin loop copy characters
+    ldrb w0,[x11,x15]                           // load 1 character read buffer
+    cmp x0,0x0A                                 // end line ?
+    beq 4f
+    strb w0,[x10,x13]                           // store character in line buffer
+    add x13,x13,1                               // increment pointer line
+    cmp x13,x16
+    bgt 99f                                      // error
+    add x15,x15,1                                // increment buffer pointer
+    cmp x15,x12                                  // end buffer ?
+    bge 1b                                       // yes new read
+    cmp x15,x18                                  // read characters ?
+    blt 2b                                       // no loop
+                                                 // final
+    cmp x13,0                                    // no characters in line buffer ?
+    beq 100f
+4:
+    strb wzr,[x10,x13]                           // store zéro final
+    add x15,x15,#1
+    str x15,[x14,#readfile_pointer]              // store pointer in structure
+    str x18,[x14,#readfile_buffersize]           // store number of last characters
+    mov x0,x13                                   // return length of line
+    b 100f
+99:
+    mov x0,#-2                                   // line buffer too small -> error
+100:
+
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

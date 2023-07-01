@@ -1,0 +1,2 @@
+result = value
+return

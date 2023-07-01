@@ -1,0 +1,13 @@
+(list
+ (point 300 300)
+ (point 250 300)
+ (point 200 250)
+ (point 175 300)
+ (point 125 300)
+ (point 100 250)
+ (point 100 200)
+ (point 100 200)
+ (point 100 350/3)
+ (point 125 100)
+ (point 275 100)
+ (point 300 350/3))

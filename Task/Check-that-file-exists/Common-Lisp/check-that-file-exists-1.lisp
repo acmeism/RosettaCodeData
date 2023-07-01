@@ -1,0 +1,11 @@
+(if (probe-file (make-pathname :name "input.txt"))
+    (print "rel file exists"))
+(if (probe-file (make-pathname :directory '(:absolute "") :name "input.txt"))
+    (print "abs file exists"))
+
+(if (directory (make-pathname :directory '(:relative "docs")))
+    (print "rel directory exists")
+    (print "rel directory is not known to exist"))
+(if (directory (make-pathname :directory '(:absolute "docs")))
+    (print "abs directory exists")
+    (print "abs directory is not known to exist"))

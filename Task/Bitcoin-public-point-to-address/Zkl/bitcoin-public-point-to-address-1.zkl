@@ -1,0 +1,27 @@
+var [const] MsgHash=Import.lib("zklMsgHash"); // SHA-256, etc
+
+const symbols = "123456789"  // 58 characters: no cap i,o; ell, zero
+		"ABCDEFGHJKLMNPQRSTUVWXYZ"
+		"abcdefghijkmnopqrstuvwxyz";
+
+fcn base58Encode(bytes){ //Data-->String
+   bytes=bytes.copy(); sink:=Sink(String);
+   do(33){
+      bytes.len().reduce('wrap(n,idx){
+         n=n*256 + bytes[idx];
+         bytes[idx]=(n/58);
+         n%58;
+      },0) : symbols[_] : sink.write(_)
+   }
+   sink.close().reverse();
+}
+
+const COIN_VER=0;
+
+fcn coinEncode(x,y){ // throws if x or y not hex or (x+y) not even length
+   bytes:=(x+y).pump(Data,Void.Read,fcn(a,b){ (a+b).toInt(16) }).insert(0,4);
+   (MsgHash.SHA256(bytes,1,bytes) : MsgHash.RIPEMD160(_,1,bytes))
+	 .insert(0,COIN_VER);  // we are using bytes for in and out
+   d,chkSum := Data(), MsgHash.SHA256(bytes,1,d) : MsgHash.SHA256(_,1,d);
+   base58Encode(bytes.append(chkSum.del(4,*))); // first 4 bytes of hashed hash
+}

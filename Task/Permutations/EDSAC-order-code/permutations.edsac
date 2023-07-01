@@ -1,0 +1,207 @@
+[Permutations task for Rosetta Code.]
+[EDSAC program, Initial Orders 2.]
+
+    T51K P200F [G parameter: start address of subroutines]
+    T47K P100F [M parameter: start address of main routine]
+
+[====================== G parameter: Subroutines =====================]
+            E25K TG GK
+[Constants used in the subroutines]
+      [0]   AF  [add to address to make A order for that address]
+      [1]   SF  [add to address to make S order for that address]
+      [2]   UF  [(1) add to address to make U order for that address]
+                [(2) subtract from S order to make T order, same address]
+      [3]   OF  [add to A order to make T order, same address]
+
+[-----------------------------------------------------------
+Subroutine to initialize an array of n short (17-bit) words
+to 0, 1, 2, ..., n-1 (in the address field).
+Parameters: 4F = address of array; 5F = n = length of array.
+Workspace: 0F, 1F.]
+      [4]   A3F     [plant return link as usual]
+            T19@
+            A4F     [address of array]
+            A2@     [make U order for that address]
+            T1F     [store U order in 1F]
+            A5F     [load n = number of elements (in address field)]
+            S2F     [make n-1]
+[Start of loop; works backwards, n-1 to 0]
+     [11]   UF      [store array element in 0F]
+            A1F     [make order to store element in array]
+            T15@    [plant that order in code]
+            AF      [pick up element fron 0F]
+     [15]   UF      [(planted) store element in array]
+            S2F     [dec to next element]
+            E11@    [loop if still >= 0]
+            TF      [clear acc. before return]
+     [19]   ZF      [overwritten by jump back to caller]
+
+[-------------------------------------------------------------------
+Subroutine to get next permutation in lexicographic order.
+Uses same 4-step algorithm as Wikipedia article "Permutations",
+but notation in comments differs from that in Wikipedia.
+Parameters: 4F = address of array; 5F = n = length of array.
+            0F is returned as 0 for success, < 0 if passed-in
+               permutation is the last.
+Workspace: 0F, 1F.]
+     [20]   A3F     [plant return link as usual]
+            T103@
+
+[Step 1: Find the largest index k such that a{k} > a{k-1}.
+ If no such index exists, the passed-in permutation is the last.]
+            A4F     [load address of a{0}]
+            A@      [make A order for a{0}]
+            U1F     [store as test for end of loop]
+            A5F     [make A order for a{n}]
+            U96@    [plant in code below]
+            S2F     [make A order for a{n-1}]
+            T43@    [plant in code below]
+            A4F     [load address of a{0}]
+            A5F     [make address of a{n}]
+            A1@     [make S order for a{n}]
+            T44@    [plant in code below]
+[Start of loop for comparing a{k} with a{k-1}]
+     [33]   TF      [clear acc]
+            A43@    [load A order for a{k}]
+            S2F     [make A order for a{k-1}]
+            S1F     [tested all yet?]
+            G102@   [if yes, jump to failed (no more permutations)]
+            A1F     [restore accumulator after test]
+            T43@    [plant updated A order]
+            A44@    [dec address in S order]
+            S2F
+            T44@
+     [43]   SF      [(planted) load a{k-1}]
+     [44]   AF      [(planted) subtract a{k}]
+            E33@    [loop back if a{k-1} > a{k}]
+
+[Step 2: Find the largest index j >= k such that a{j} > a{k-1}.
+ Such an index j exists, because j = k is an instance.]
+            TF      [clear acc]
+            A4F     [load address of a{0}]
+            A5F     [make address of a{n}]
+            A1@     [make S order for a{n}]
+            T1F     [save as test for end of loop]
+            A44@    [load S order for a{k}]
+            T64@    [plant in code below]
+            A43@    [load A order for a{k-1}]
+            T63@    [plant in code below]
+[Start of loop]
+     [55]   TF      [clear acc]
+            A64@    [load S order for a{j} (initially j = k)]
+            U75@    [plant in code below]
+            A2F     [inc address (in effect inc j)]
+            S1F     [test for end of array]
+            E66@    [jump out if so]
+            A1F     [restore acc after test]
+            T64@    [update S order]
+     [63]   AF      [(planted) load a{k-1}]
+     [64]   SF      [(planted) subtract a{j}]
+            G55@    [loop back if a{j} still > a{k-1}]
+     [66]
+[Step 3: Swap a{k-1} and a{j}]
+            TF      [clear acc]
+            A63@    [load A order for a{k-1}]
+            U77@    [plant in code below, 2 places]
+            U94@
+            A3@     [make T order for a{k-1}]
+            T80@    [plant in code below]
+            A75@    [load S order for a{j}]
+            S2@     [make T order for a{j}]
+            T78@    [plant in code below]
+     [75]   SF      [(planted) load -a{j}]
+            TF      [park -a{j} in 0F]
+     [77]   AF      [(planted) load a{k-1}]
+     [78]   TF      [(planted) store a{j}]
+            SF      [load a{j} by subtracting -a{j}]
+     [80]   TF      [(planted) store in a{k-1}]
+
+[Step 4: Now a{k}, ..., a{n-1} are in decreasing order.
+ Change to increasing order by repeated swapping.]
+     [81]   A96@    [counting down from a{n} (exclusive end of array)]
+            S2F     [make A order for a{n-1}]
+            U96@    [plant in code]
+            A3@     [make T order for a{n-1}]
+            T99@    [plant]
+            A94@    [counting up from a{k-1} (exclusive)]
+            A2F     [make A order for a{k}]
+            U94@    [plant]
+            A3@     [make T order for a{k}]
+            U97@    [plant]
+            S99@    [swapped all yet?]
+            E101@   [if yes, jump to exit from subroutine]
+[Swapping two array elements, initially a{k} and a{n-1}]
+            TF      [clear acc]
+     [94]   AF      [(planted) load 1st element]
+            TF      [park in 0F]
+     [96]   AF      [(planted) load 2nd element]
+     [97]   TF      [(planted) copy to 1st element]
+            AF      [load old 1st element]
+     [99]   TF      [(planted) copy to 2nd element]
+            E81@    [always loop back]
+    [101]   TF      [done, return 0 in location 0F]
+    [102]   TF      [return status to caller in 0F; also clears acc]
+    [103]   ZF      [(planted) jump back to caller]
+
+[==================== M parameter: Main routine ==================]
+[Prints all 120 permutations of the letters in 'EDSAC'.]
+            E25K TM GK
+[Constants used in the main routine]
+      [0]   P900F   [address of permutation array]
+      [1]   P5F     [number of elements in permutation (in address field)]
+[Array of letters in 'EDSAC', in alphabetical order]
+      [2]   AF CF DF EF SF
+      [7]   O2@     [add to index to make O order for letter in array]
+      [8]   P12F    [permutations per printed line (in address field)]
+      [9]   AF      [add to address to make A order for that address]
+[Teleprinter characters]
+     [10]   K2048F  [set letters mode]
+     [11]   !F      [space]
+     [12]   @F      [carriage return]
+     [13]   &F      [line feed]
+     [14]   K4096F  [null]
+
+[Entry point, with acc = 0.]
+     [15]   O10@    [set teleprinter to letters]
+            S8@     [intialize -ve count of permutations per line]
+            T7F     [keep count in 7F]
+            A@      [pass address of permutation array in 4F]
+            T4F
+            A1@     [pass number of elements in 5F]
+            T5F
+     [22]   A22@    [call subroutine to initialize permutation array]
+            G4G
+[Loop: print current permutation, then get next (if any)]
+     [24]   A4F     [address]
+            A9@     [make A order]
+            T29@    [plant in code]
+            S5F     [initialize -ve count of array elements]
+     [28]   T6F     [keep count in 6F]
+     [29]   AF      [(planted) load permutation element]
+            A7@     [make order to print letter from table]
+            T32@    [plant in code]
+     [32]   OF      [(planted) print letter from table]
+            A29@    [inc address in permutation array]
+            A2F
+            T29@
+            A6F     [inc -ve count of array elements]
+            A2F
+            G28@    [loop till count becomes 0]
+            A7F     [inc -ve count of perms per line]
+            A2F
+            E44@    [jump if end of line]
+            O11@    [else print a space]
+            G47@    [join common code]
+     [44]   O12@    [print CR]
+            O13@    [print LF]
+            S8@
+     [47]   T7F     [update -ve count of permutations in line]
+     [48]   A48@    [call subroutine for next permutation (if any)]
+            G20G
+            AF      [test 0F: got a new permutation?]
+            E24@    [if so, loop to print it]
+            O14@    [no more, output null to flush teleprinter buffer]
+            ZF      [halt program]
+            E15Z    [define entry point]
+            PF      [enter with acc = 0]
+[end]

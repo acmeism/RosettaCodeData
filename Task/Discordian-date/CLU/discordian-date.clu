@@ -1,0 +1,200 @@
+% This program needs to be merged with PCLU's "useful.lib",
+% so it can use get_argv to read the command line.
+%
+% pclu -merge $CLUHOME/lib/useful.lib -compile cmdline.clu
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Represent a day in the Discordian calendar %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+eris_date = cluster is from_greg_y_m_d,
+                       from_date,
+                       get_year,
+                       get_day,
+                       get_season,
+                       get_weekday,
+                       get_day_name,
+                       get_holyday,
+                       get_format
+    greyface = 1166
+
+    % A Discordian day is either St. Tib's day
+    % or a day in a season
+    season_day = struct[season, day: int]
+    eris_day = oneof[st_tibs: null, season_day: season_day]
+
+    % A Discordian date is a day in a year
+    rep = struct[year: int, day: eris_day]
+
+    % Offset of each Gregorian month in a non-leap year
+    own month_offset: sequence[int] := sequence[int]$[
+        0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
+    ]
+
+    % Length of each Gregorian month in a non-leap year
+    own month_length: sequence[int] := sequence[int]$[
+        31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+    ]
+
+    own week_days: sequence[string] := sequence[string]$[
+        "Sweetmorn", "Boomtime", "Pungenday", "Prickle-Prickle",
+        "Setting Orange"
+    ]
+
+    own seasons: sequence[string] := sequence[string]$[
+        "Chaos", "Discord", "Confusion", "Bureacuracy",
+        "The Aftermath"
+    ]
+
+    own apostle_holydays: sequence[string] := sequence[string]$[
+        "Mungday", "Mojoday", "Syaday", "Zaraday", "Maladay"
+    ]
+
+    own season_holydays: sequence[string] := sequence[string]$[
+        "Chaoflux", "Discoflux", "Confuflux", "Bureflux", "Afflux"
+    ]
+
+    % Check if a Gregorian year is a leap year
+    is_leap = proc (year: int) returns (bool)
+        if year // 4 ~= 0 then return(false)
+        elseif year // 100 ~= 0 then return(true)
+        elseif year // 400 ~= 0 then return(false)
+        else return(true)
+        end
+    end is_leap
+
+    % Convert a Gregorian date to a Discordian date
+    from_greg_y_m_d = proc (year, month, day: int)
+                      returns (cvt) signals (invalid)
+        % Make sure the month is valid
+        if month<1 cor month>12 then signal invalid end
+
+        % Saint Tib's Day?
+        if month=2 cand day=29 then
+            % Only valid in leap years
+            if ~is_leap(year) then signal invalid end
+            return(rep${year: year+greyface, day: eris_day$make_st_tibs(nil)})
+        end
+
+        % If not, make sure the day of the month is valid
+        if day<1 cor day>month_length[month] then signal invalid end
+
+        % The Discordian calendar doesn't consider Saint Tib's Day
+        % part of a season, so we can use the day number for a non-leap
+        % year even in a leap year
+        year_day: int := (day + month_offset[month]) - 1
+        sd: season_day := season_day${
+            season: year_day / 73 + 1,
+            day: year_day // 73 + 1
+        }
+        return(rep${year: year+greyface,
+                    day: eris_day$make_season_day(sd)})
+    end from_greg_y_m_d
+
+    % Convert a CLU 'date' object to a Discordian date (ignoring the time)
+    from_date = proc (d: date) returns (cvt) signals (invalid)
+        return(down(from_greg_y_m_d(d.year, d.month, d.day)))
+        resignal invalid
+    end from_date
+
+    % Retrieve year, season, day, weekday number
+    get_year = proc (d: cvt) returns (int) return(d.year) end get_year
+
+    get_day = proc (d: cvt) returns (int) signals (st_tibs)
+        tagcase d.day
+            tag st_tibs: signal st_tibs
+            tag season_day (s: season_day): return(s.day)
+        end
+    end get_day
+
+    get_season = proc (d: cvt) returns (int) signals (st_tibs)
+        tagcase d.day
+            tag st_tibs: signal st_tibs
+            tag season_day (s: season_day): return(s.season)
+        end
+    end get_season
+
+    get_weekday = proc (d: cvt) returns (int) signals (st_tibs)
+        day: int := up(d).day resignal st_tibs
+        season: int := up(d).season resignal st_tibs
+        weekday: int := ( (season-1)*73 + (day-1) ) // 5 + 1
+        return( weekday )
+    end get_weekday
+
+    % Retrieve formatted day in year
+    get_day_name = proc (d: cvt) returns (string)
+        begin
+            fmt: stream := stream$create_output()
+            stream$puts(fmt, week_days[up(d).weekday])
+            stream$puts(fmt, ", day " || int$unparse(up(d).day))
+            stream$puts(fmt, " of " || seasons[up(d).season])
+            return(stream$get_contents(fmt))
+        end except when st_tibs:
+            return("St. Tib's Day")
+        end
+    end get_day_name
+
+    % Retrieve holyday name if there is one
+    get_holyday = proc (d: cvt) returns (string) signals (no_holyday)
+        begin
+            if up(d).day = 5 then return(apostle_holydays[up(d).season])
+            elseif up(d).day = 50 then return(season_holydays[up(d).season])
+            else signal no_holyday
+            end
+        end except when st_tibs:
+            signal no_holyday  % St. Tib's Day is not a normal holyday
+        end
+    end get_holyday
+
+    % Retrieve long format
+    get_format = proc (d: cvt) returns (string)
+        fmt: stream := stream$create_output()
+        stream$puts(fmt, up(d).day_name)
+        stream$puts(fmt, " in the YOLD ")
+        stream$puts(fmt, int$unparse(up(d).year))
+        stream$puts(fmt, ": celebrate " || up(d).holyday) except when no_holyday: end
+        return(stream$get_contents(fmt))
+    end get_format
+end eris_date
+
+% Parse a date string (MM/DD/YYYY) and return a date object
+parse_date = proc (s: string) returns (date) signals (bad_format)
+    begin
+        parts: array[int] := array[int]$[]
+        while true do
+            slash: int := string$indexc('/', s)
+            if slash=0 then
+                array[int]$addh(parts, int$parse(s))
+                break
+            else
+                array[int]$addh(parts, int$parse(string$substr(s, 1, slash-1)))
+                s := string$rest(s, slash+1)
+            end
+        end
+        if array[int]$size(parts) ~= 3 then signal bad_format end
+        return(date$create(parts[2], parts[1], parts[3], 0, 0, 0))
+    end resignal bad_format
+end parse_date
+
+% Read date(s) from the command line, or use the current date,
+% and convert to the Discordian date
+start_up = proc ()
+    po: stream := stream$primary_output()
+    args: sequence[string] := get_argv()
+    dates: array[date] := array[date]$[]
+
+    if sequence[string]$empty(args) then
+        % No argument - use today's date
+        stream$puts(po, "Today is ")
+        array[date]$addh(dates, now())
+    else
+        % There are argument(s) - parse each of them
+        for arg: string in sequence[string]$elements(args) do
+            array[date]$addh(dates, parse_date(arg))
+        end
+    end
+
+    % Convert all dates
+    for d: date in array[date]$elements(dates) do
+        stream$putl(po, eris_date$from_date(d).format)
+    end
+end start_up

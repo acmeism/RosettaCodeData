@@ -1,0 +1,10 @@
+(de perfectShuffle (Lst)
+   (mapcan '((B A) (list A B))
+      (cdr (nth Lst (/ (length Lst) 2)))
+      Lst ) )
+
+(for N (8 24 52 100 1020 1024 10000)
+   (let (Lst (range 1 N)  L Lst  Cnt 1)
+      (until (= Lst (setq L (perfectShuffle L)))
+         (inc 'Cnt) )
+      (tab (5 6) N Cnt) ) )

@@ -1,0 +1,8 @@
+(ns user (:require [clojure.contrib.generic.math-functions :as generic]))
+(generic/sqrt x)
+(generic/log x)
+(generic/exp x)
+(generic/abs x)
+(generic/floor x)
+(generic/ceil x)
+(generic/pow x y)

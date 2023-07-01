@@ -1,0 +1,226 @@
+use 'format import '[format].
+use 'random.
+
+Pos := Object clone tap {
+
+  self x := 0.
+  self y := 0.
+
+  self move := {
+    localize.
+    case ($1) do {
+      when 'left  do { pos (this x - 1, this y). }.
+      when 'right do { pos (this x + 1, this y). }.
+      when 'down  do { pos (this x, this y + 1). }.
+      when 'up    do { pos (this x, this y - 1). }.
+    }.
+  }.
+
+  self == := {
+    (self x == $1 x) and (self y == $1 y).
+  }.
+
+  self inBounds? := {
+    (self x >= 0) and (self x < 4) and (self y >= 0) and (self y < 4).
+  }.
+
+  self toString := {
+    format "pos (~S, ~S)" call (self x, self y).
+  }.
+
+}.
+
+pos := {
+  takes '[x, y].
+  Pos clone tap {
+    self x := x.
+    self y := y.
+  }.
+}.
+
+allSquares := [] tap {
+  localize.
+  0 upto 4 visit {
+    takes '[y].
+    0 upto 4 visit {
+      takes '[x].
+      this pushBack (pos (x, y)).
+    }.
+  }.
+}.
+
+sample := {
+  $1 nth (random nextInt mod ($1 length)).
+}.
+
+Grid ::= Object clone tap {
+
+  self grid := 16 times to (Array) map { 0. }.
+
+  self clone := {
+    Parents above (parent self, 'clone) call tap {
+      self grid := self grid clone.
+    }.
+  }.
+
+  toIndex := {
+    $1 x + 4 * $1 y.
+  }.
+
+  self at := {
+    self grid nth (toIndex).
+  }.
+
+  self at= := {
+    self grid nth= (toIndex).
+  }.
+
+  self isBlank? := {
+    self at == 0.
+  }.
+
+  self spawnNew := {
+    localize.
+    candidates := allSquares filter { this isBlank?. } to (Array).
+    if (candidates empty?) then {
+      'gameover.
+    } else {
+      p := sample (candidates).
+      this at (p) = if (random nextInt mod 10 == 0) then 4 else 2.
+      'okay.
+    }.
+  }.
+
+  canMoveCell := {
+    takes '[grid, src, dir].
+    dest := src move (dir).
+    if (dest inBounds?) then {
+      vs := grid at (src).
+      vd := grid at (dest).
+      (vs /= 0) and ((vd == 0) or (vs == vd)).
+    } else {
+      False.
+    }.
+  }.
+
+  self canMove := {
+    localize.
+    takes '[dir].
+    allSquares any { canMoveCell (this, $1, dir). }.
+  }.
+
+  self validMoves := {
+    '[left, right, up, down] filter { parent self canMove. } to (Array).
+  }.
+
+  ;; Calculates the order of iteration for performing the moves
+  axisCalc := {
+    takes '[dir, major, minor].
+    case (dir) do {
+      when 'left do { pos (major, minor). }.
+      when 'right do { pos (3 - major, minor). }.
+      when 'up do { pos (minor, major). }.
+      when 'down do { pos (minor, 3 - major). }.
+    }.
+  }.
+
+  moveFrom := {
+    takes '[grid, src, dir, locked].
+    dest := src move (dir).
+    local 'result = Nil.
+    dest inBounds? ifTrue {
+      locked contains (dest) ifFalse {
+        vs := grid at (src).
+        vd := grid at (dest).
+        cond {
+          when (vd == 0) do {
+            grid at (dest) = vs.
+            grid at (src) = 0.
+            result = moveFrom (grid, dest, dir, locked).
+          }.
+          when (vd == vs) do {
+            grid at (dest) = vs + vd.
+            grid at (src) = 0.
+            result = moveFrom (grid, dest, dir, locked).
+            ;; We merged, so lock the final result cell.
+            locked pushBack (result).
+          }.
+        }.
+      }.
+    }.
+    (result) or (src).
+  }.
+
+  self doMove := {
+    localize.
+    takes '[dir].
+    locked := [].
+    0 upto 4 do {
+      takes '[major].
+      0 upto 4 do {
+        takes '[minor].
+        src := axisCalc (dir, major, minor).
+        moveFrom: this, src, dir, locked.
+      }.
+    }.
+  }.
+
+  self pretty := {
+    localize.
+    lines := [].
+    row := "+----+----+----+----+".
+    lines pushBack (row).
+    0 upto 4 visit {
+      takes '[y].
+      local 'line = "|".
+      0 upto 4 visit {
+        takes '[x].
+        n := this at (pos (x, y)).
+        if (n == 0) then {
+          line = line ++ "    |".
+        } else {
+          line = line ++ n toString padRight (" ", 4) ++ "|".
+        }.
+      }.
+      lines pushBack (line).
+      lines pushBack (row).
+    }.
+    lines joinText "\n".
+  }.
+
+  self toArray := {
+    allSquares map { parent self at. }.
+  }.
+
+}.
+
+grid := Grid clone.
+endgame := loop* {
+  ;; Check for victory
+  (grid toArray any { $1 >= 2048. }) ifTrue {
+    last 'victory.
+  }.
+  ;; Check for game over
+  result := grid spawnNew.
+  (result == 'gameover) ifTrue {
+    last 'gameover.
+  }.
+  valid := grid validMoves.
+  valid empty? ifTrue {
+    last 'gameover.
+  }.
+  $stdout putln: grid pretty.
+  move := loop* {
+    $stdout puts: "Your move (left, right, up, down)> ".
+    move := $stdin readln intern.
+    valid contains (move) ifTrue { last (move). }.
+  }.
+  grid doMove (move).
+}.
+$stdout putln: grid pretty.
+
+if (endgame == 'victory) then {
+  $stdout putln: "You win!".
+} else {
+  $stdout putln: "Better luck next time!".
+}.

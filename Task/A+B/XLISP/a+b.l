@@ -1,0 +1,7 @@
+(DEFUN A-PLUS-B ()
+    (DISPLAY "Enter two numbers separated by a space.")
+    (NEWLINE)
+    (DISPLAY "> ")
+    (DEFINE A (READ))
+    (DEFINE B (READ))
+    (+ A B))

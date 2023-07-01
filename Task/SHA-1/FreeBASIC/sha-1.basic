@@ -1,0 +1,106 @@
+' version 18-10-2016
+' started with SHA-1/FIPS-180-1
+' but used the BBC BASIC native version to finish.
+' compile with: fbc -s console
+
+Function SHA_1(test_str As String) As String
+
+  Dim As String message = test_str   ' strings are passed as ByRef's
+
+  Dim As Long i, j
+  Dim As UByte Ptr ww1
+  Dim As UInteger<32> Ptr ww4
+
+  Dim As ULongInt l = Len(message)
+  ' set the first bit after the message to 1
+  message = message + Chr(1 Shl 7)
+  ' add one char to the length
+  Dim As ULong padding = 64 - ((l +1) Mod (512 \ 8)) ' 512 \ 8 = 64 char.
+
+  ' check if we have enough room for inserting the length
+  If padding < 8 Then padding = padding + 64
+
+  message = message + String(padding, Chr(0))   ' adjust length
+  Dim As ULong l1 = Len(message)                ' new length
+
+  l = l * 8    ' orignal length in bits
+  ' create ubyte ptr to point to l ( = length in bits)
+  Dim As UByte Ptr ub_ptr = Cast(UByte Ptr, @l)
+
+  For i = 0 To 7  'copy length of message to the last 8 bytes
+    message[l1 -1 - i] = ub_ptr[i]
+  Next
+
+  Dim As UInteger<32> A, B, C, D, E, k, temp, W(0 To 79)
+  Dim As UInteger<32> H0 = &H67452301
+  Dim As UInteger<32> H1 = &HEFCDAB89
+  Dim As UInteger<32> H2 = &H98BADCFE
+  Dim As UInteger<32> H3 = &H10325476
+  Dim As UInteger<32> H4 = &HC3D2E1F0
+
+
+  For j = 0 To (l1 -1) \ 64 ' split into block of 64 bytes
+    ww1 = Cast(Ubyte Ptr, @message[j * 64])
+    ww4 = Cast(UInteger<32> Ptr, @message[j * 64])
+
+    For i = 0 To 60 Step 4  'little endian -> big endian
+      Swap ww1[i   ], ww1[i +3]
+      Swap ww1[i +1], ww1[i +2]
+    Next
+
+    For i = 0 To 15    ' copy the 16 32bit block into the array
+      W(i) = ww4[i]
+    Next
+
+    For i = 16 To 79   ' fill the rest of the array
+      temp = W(i -3) Xor W(i -8) Xor W(i -14) Xor W(i -16)
+      temp = temp Shl 1 + temp Shr 31
+      W(i) = temp
+    Next
+
+    A = h0 : B = h1 : C = h2 : D = h3 : E = h4
+
+    For i = 0 To 79
+      Select Case As Const i
+        Case 0 To 19
+          temp = (B And C) or ((Not B) And D)
+          k = &H5A827999
+        Case 20 To 39
+          temp = B Xor C Xor D
+          k = &H6ED9EBA1
+        Case 40 To 59
+          temp = (B And C) Or (B And D) Or (C And D)
+          k = &H8F1BBCDC
+        Case 60 To 79
+          temp = B Xor C Xor D
+          k = &hCA62C1D6
+      End Select
+
+      temp = A Shl 5 + A Shr 27 + temp + E + k + W(i)
+      E = D
+      D = C
+      C = (B Shl 30) or (B Shr 2)
+      B = A
+      A = temp
+
+    Next
+
+    h0 += A : h1 += B : h2 += C : h3 += D : h4 += E
+
+  Next
+
+  Return Hex(h0, 8) + Hex(h1, 8) + Hex(h2, 8) + Hex(h3, 8) + Hex(h4, 8)
+
+End Function
+
+' ------=< MAIN >=------
+
+Dim As String test = "Rosetta Code"
+Print test; " => "; SHA_1(test)
+
+
+' empty keyboard buffer
+While InKey <> "" : Wend
+Print : Print "hit any key to end program"
+Sleep
+End

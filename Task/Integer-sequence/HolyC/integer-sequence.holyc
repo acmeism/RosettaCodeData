@@ -1,0 +1,2 @@
+U64 i = 0;
+while (++i) Print("%d\n", i);

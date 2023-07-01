@@ -1,0 +1,179 @@
+/* ARM assembly Raspberry PI  */
+/*  program comparString.s   */
+
+/* Constantes    */
+.equ STDOUT, 1     @ Linux output console
+.equ EXIT,   1     @ Linux syscall
+.equ WRITE,  4     @ Linux syscall
+/* Initialized data */
+.data
+szMessStringEqu: .asciz "The strings are equals.\n"
+szMessStringNotEqu: .asciz "The strings are not equals.\n"
+szCarriageReturn:  .asciz "\n"
+
+szString1:  .asciz "ABCDE"
+szString2:  .asciz "ABCDE"
+szString3:  .asciz "ABCFG"
+szString4:   .asciz "ABC"
+szString5:   .asciz "abcde"
+
+/* UnInitialized data */
+.bss
+
+/*  code section */
+.text
+.global main
+main:                /* entry of program  */
+    push {fp,lr}    /* saves 2 registers */
+
+    ldr r0,iAdrszString1
+    ldr r1,iAdrszString2
+    bl Comparaison
+
+    ldr r0,iAdrszString1
+    ldr r1,iAdrszString3
+    bl Comparaison
+
+    ldr r0,iAdrszString1
+    ldr r1,iAdrszString4
+    bl Comparaison
+	
+    @ case sensitive comparisons ABCDE et abcde
+    ldr r0,iAdrszString1
+    ldr r1,iAdrszString5
+    bl Comparaison
+	
+    @ case insensitive comparisons  ABCDE et abcde
+    ldr r0,iAdrszString1
+    ldr r1,iAdrszString5
+    bl comparStringsInsensitive
+    cmp r0,#0
+    bne 1f
+    ldr r0,iAdrszMessStringEqu
+    bl affichageMess
+    b 2f
+1:
+    ldr r0,iAdrszMessStringNotEqu
+    bl affichageMess
+	
+2:
+
+100:   /* standard end of the program */
+    mov r0, #0                  @ return code
+    pop {fp,lr}                 @restaur 2 registers
+    mov r7, #EXIT              @ request to exit program
+    swi 0                       @ perform the system call
+iAdrszString1: .int szString1
+iAdrszString2: .int szString2
+iAdrszString3: .int szString3
+iAdrszString4: .int szString4
+iAdrszString5: .int szString5
+iAdrszMessStringEqu:  .int szMessStringEqu
+iAdrszMessStringNotEqu:  .int szMessStringNotEqu
+iAdrszCarriageReturn:  .int  szCarriageReturn
+/*********************************************/
+/* comparaison                               */
+/*********************************************/
+/* r0 contains address String 1           */
+/* r1 contains address String 2         */
+Comparaison:
+    push {fp,lr}    			/* save  registres */
+    bl comparStrings
+    cmp r0,#0
+    bne 1f
+    ldr r0,iAdrszMessStringEqu
+    bl affichageMess
+    b 2f
+1:
+    ldr r0,iAdrszMessStringNotEqu
+    bl affichageMess
+	
+2:
+    pop {fp,lr}    				/* restaur des  2 registres */
+    bx lr	        			/* return  */
+/******************************************************************/
+/*     display text with size calculation                         */
+/******************************************************************/
+/* r0 contains the address of the message */
+affichageMess:
+    push {fp,lr}    			/* save  registres */
+    push {r0,r1,r2,r7}    		/* save others registers */
+    mov r2,#0   				/* counter length */
+1:      	/* loop length calculation */
+    ldrb r1,[r0,r2]  			/* read octet start position + index */
+    cmp r1,#0       			/* if 0 its over */
+    addne r2,r2,#1   			/* else add 1 in the length */
+    bne 1b          			/* and loop */
+                                /* so here r2 contains the length of the message */
+    mov r1,r0        			/* address message in r1 */
+    mov r0,#STDOUT      		/* code to write to the standard output Linux */
+    mov r7, #WRITE             /* code call system "write" */
+    swi #0                      /* call systeme */
+    pop {r0,r1,r2,r7}     		/* restaur others registers */
+    pop {fp,lr}    				/* restaur des  2 registres */
+    bx lr	        			/* return  */
+/************************************/	
+/* Strings case sensitive comparisons  */
+/************************************/	
+/* r0 et r1 contains the address of strings */
+/* return 0 in r0 if equals */
+/* return -1 if string r0 < string r1 */
+/* return 1  if string r0 > string r1 */
+comparStrings:
+    push {r1-r4}  /* save des registres */
+    mov r2,#0   /* counter */
+1:	
+    ldrb r3,[r0,r2]   /* byte string 1 */
+    ldrb r4,[r1,r2]   /* byte string 2 */
+    cmp r3,r4
+    movlt r0,#-1	 /* small */ 	
+    movgt r0,#1	 /* greather */ 	
+    bne 100f     /* not equals */
+    cmp r3,#0   /* 0 end string */
+    moveq r0,#0    /* equals */ 	
+    beq 100f     /*  end string */
+    add r2,r2,#1 /* else add 1 in counter */
+    b 1b         /* and loop */
+100:
+    pop {r1-r4}
+    bx lr
+	
+/************************************/	
+/* Strings case insensitive comparisons    */
+/************************************/	
+/* r0 et r1 contains the address of strings */
+/* return 0 in r0 if equals */
+/* return -1 if string r0 < string r1 */
+/* return 1  if string r0 > string r1 */
+comparStringsInsensitive:
+    push {r1-r4}  /* save des registres */
+    mov r2,#0   /* counter */
+
+1:	
+    ldrb r3,[r0,r2]   /* byte string 1 */
+    ldrb r4,[r1,r2]   /* byte string 2 */
+    @ majuscules --> minuscules  byte 1
+    cmp r3,#65
+    blt 2f
+    cmp r3,#90
+    bgt 2f
+    add r3,#32
+2:   	@ majuscules --> minuscules  byte 2
+    cmp r4,#65
+    blt 3f
+    cmp r4,#90
+    bgt 3f
+    add r4,#32
+3:	
+    cmp r3,r4
+    movlt r0,#-1	 /* small */ 	
+    movgt r0,#1	 /* greather */ 	
+    bne 100f     /* not equals */
+    cmp r3,#0   /* 0 end string */
+    moveq r0,#0    /* equal */ 	
+    beq 100f     /* end strings */
+    add r2,r2,#1 /* else add 1 in counter */
+    b 1b         /* and loop */
+100:
+    pop {r1-r4}
+    bx lr   	/* end procedure */

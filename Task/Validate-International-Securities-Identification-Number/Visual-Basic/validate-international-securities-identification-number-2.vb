@@ -1,0 +1,10 @@
+Sub Main()
+  Debug.Assert IsValidISIN("US0378331005")
+  Debug.Assert Not IsValidISIN("US0373831005")
+  Debug.Assert Not IsValidISIN("U50378331005")
+  Debug.Assert Not IsValidISIN("US03378331005")
+  Debug.Assert IsValidISIN("AU0000XVGZA3")
+  Debug.Assert IsValidISIN("AU0000VXGZA3")
+  Debug.Assert IsValidISIN("FR0000988040")
+  Debug.Assert Not IsValidISIN("FR000098804O")
+End Sub

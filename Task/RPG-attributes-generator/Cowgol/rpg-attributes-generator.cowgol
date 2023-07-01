@@ -1,0 +1,98 @@
+include "cowgol.coh";
+include "argv.coh";
+
+# There is no random number generator in the standard library (yet?)
+# There is also no canonical source of randomness, and indeed,
+# on some target platforms (like CP/M) there is no guaranteed
+# source of randomness at all. Therefore, I implement the "X ABC"
+# random number generator, and ask for a seed on the command line.
+
+record RandState is
+    x @at(0): uint8;
+    a @at(1): uint8;
+    b @at(2): uint8;
+    c @at(3): uint8;
+end record;
+
+sub RandByte(s: [RandState]): (r: uint8) is
+    s.x := s.x + 1;
+    s.a := s.a ^ s.c ^ s.x;
+    s.b := s.b + s.a;
+    s.c := s.c + (s.b >> 1) ^ s.a;
+    r := s.c;
+end sub;
+
+# Roll a d6
+typedef D6 is int(1, 6);
+sub Roll(s: [RandState]): (r: D6) is
+    var x: uint8;
+    loop
+        x := RandByte(s) & 7;
+        if x < 6 then break; end if;
+    end loop;
+    r := x + 1;
+end sub;
+
+# Roll 4 D6es and get the sum of the 3 highest
+sub Roll4(s: [RandState]): (r: uint8) is
+    r := 0;
+    var lowest: uint8 := 0;
+    var n: uint8 := 4;
+    while n > 0 loop
+        var roll := Roll(s);
+        r := r + roll;
+        if lowest > roll then
+            lowest := roll;
+        end if;
+        n := n - 1;
+    end loop;
+    r := r - lowest;
+end sub;
+
+# Read random seed from command line
+var randState: RandState;
+
+ArgvInit();
+var argmt := ArgvNext();
+if argmt == (0 as [uint8]) then
+    print("Please give random seed on command line.\n");
+    ExitWithError();
+end if;
+([&randState as [int32]], argmt) := AToI(argmt);
+
+var total: uint8;
+var attrs: uint8[6];
+var i: @indexof attrs;
+loop
+    var at15: uint8 := 0;
+    i := 0;
+    total := 0;
+
+    # generate 6 attributes
+    while i < 6 loop
+        attrs[i] := Roll4(&randState);
+        total := total + attrs[i];
+        # count how many are higher than or equal to 15
+        if attrs[i] >= 15 then
+            at15 := at15 + 1;
+        end if;
+        i := i + 1;
+    end loop;
+
+    # if the requirements are met, then stop
+    if total >= 75 and at15 >= 2 then
+        break;
+    end if;
+end loop;
+
+# Show the generated values
+print("Attributes: ");
+i := 0;
+while i < 6 loop
+    print_i8(attrs[i]);
+    print_char(' ');
+    i := i + 1;
+end loop;
+print("\nTotal: ");
+print_i8(total);
+print_nl();

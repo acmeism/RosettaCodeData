@@ -1,0 +1,209 @@
+DEFINE LINES_COUNT="10"
+DEFINE COLUMNS_COUNT="20"
+DEFINE WORDS_COUNT="100"
+DEFINE BUFFER_SIZE="2000"
+DEFINE LINE_WIDTH="40"
+DEFINE PTR="CARD"
+
+PTR ARRAY lines(LINES_COUNT)
+BYTE ARRAY wordStart(WORDS_COUNT)
+BYTE ARRAY wordLen(WORDS_COUNT)
+BYTE ARRAY firstWordInLine(LINES_COUNT)
+BYTE ARRAY wordsInLine(LINES_COUNT)
+BYTE ARRAY colWidths(COLUMNS_COUNT)
+BYTE ARRAY buffer(BUFFER_SIZE)
+BYTE lineCount,colCount,wordCount
+
+CHAR sep=['$]
+
+PROC AddLine(CHAR ARRAY line)
+  lines(lineCount)=line
+  lineCount==+1
+RETURN
+
+PROC InitData()
+  lineCount=0
+  AddLine("Given$a$text$file$of$many$lines,$where$fields$within$a$line$")
+  AddLine("are$delineated$by$a$single$'dollar'$character,$write$a$program")
+  AddLine("that$aligns$each$column$of$fields$by$ensuring$that$words$in$each$")
+  AddLine("column$are$separated$by$at$least$one$space.")
+  AddLine("Further,$allow$for$each$word$in$a$column$to$be$either$left$")
+  AddLine("justified,$right$justified,$or$center$justified$within$its$column.")
+RETURN
+
+PROC ProcessData()
+  BYTE i,pos,len,start,w,col
+  CHAR ARRAY line
+
+  colCount=0 wordCount=0
+  FOR i=0 TO lineCount-1
+  DO
+    line=lines(i)
+    len=line(0)
+    firstWordInLine(i)=wordCount
+    wordsInLine(i)=0
+    pos=1 col=0
+    WHILE pos<=len
+    DO
+      start=pos
+      WHILE pos<=len AND line(pos)#sep
+      DO pos==+1 OD
+      w=pos-start
+      wordStart(wordCount)=start
+      wordLen(wordCount)=w
+      wordCount==+1
+      wordsInLine(i)==+1
+      IF col=colCount THEN
+        colWidths(col)=w
+        colCount==+1
+      ELSEIF w>colWidths(col) THEN
+        colWidths(col)=w
+      FI
+      col==+1
+      pos==+1
+    OD
+  OD
+RETURN
+
+BYTE FUNC GetBufLineLength()
+  BYTE i,res
+
+  res=0
+  FOR i=0 TO colCount-1
+  DO
+    res==+colWidths(i)+1
+  OD
+  res==+1
+RETURN (res)
+
+BYTE FUNC AtasciiToInternal(CHAR c)
+  BYTE c2
+
+  c2=c&$7F
+  IF c2<32 THEN
+    RETURN (c+64)
+  ELSEIF c2<96 THEN
+    RETURN (c-32)
+  FI
+RETURN (c)
+
+PROC GenerateLine(BYTE index BYTE align BYTE POINTER p)
+  BYTE wordIndex,last,left,right,start,len,colW
+  INT i,j
+  CHAR ARRAY line
+
+  line=lines(index)
+  wordIndex=firstWordInLine(index)
+  last=wordIndex+wordsInLine(index)-1
+  FOR i=0 TO colCount-1
+  DO
+    colW=colWidths(i)
+
+    p^=124 p==+1
+    IF wordIndex<=last THEN
+      start=wordStart(wordIndex)
+      len=wordLen(wordIndex)
+
+      IF align=0 THEN
+        left=0
+        right=colW-len
+      ELSEIF align=1 THEN
+        left=(colW-len)/2
+        right=colW-left-len
+      ELSE
+        left=colW-len
+        right=0
+      FI
+
+      p==+left
+      for j=start TO start+len-1
+      DO
+        p^=AtasciiToInternal(line(j))
+        p==+1
+      OD
+      p==+right
+    ELSE
+      p==+colW
+    FI
+
+    wordIndex==+1
+  OD
+  p^=124
+RETURN
+
+PROC FillBuffer(BYTE lineWidth)
+  BYTE i,align
+  BYTE POINTER p
+
+  p=buffer
+  Zero(p,BUFFER_SIZE)
+  FOR align=0 TO 2
+  DO
+    FOR i=0 TO lineCount-1
+    DO
+      GenerateLine(i,align,p)
+      p==+lineWidth
+    OD
+  OD
+RETURN
+
+BYTE FUNC GetMaxOffset()
+  BYTE res
+
+  res=GetBufLineLength()-LINE_WIDTH
+RETURN (res)
+
+PROC Update(BYTE offset,lineWidth)
+  BYTE POINTER srcPtr,dstPtr
+  BYTE i
+
+  srcPtr=buffer+offset
+  dstPtr=PeekC(88)+3*LINE_WIDTH
+  FOR i=0 TO 3*lineCount-1
+  DO
+    MoveBlock(dstPtr,srcPtr,LINE_WIDTH)
+    srcPtr==+lineWidth
+    dstPtr==+LINE_WIDTH
+    IF i=lineCount-1 OR i=2*lineCount-1 THEN
+      dstPtr==+LINE_WIDTH
+    FI
+  OD
+RETURN
+
+PROC Main()
+  BYTE
+    lineWidth,offset,maxOffset,k,
+    CH=$02FC, ;Internal hardware value for last key pressed
+    CRSINH=$02F0 ;Controls visibility of cursor
+
+  CRSINH=1 ;hide cursor
+
+  InitData()
+  ProcessData()
+  lineWidth=GetBufLineLength()
+  FillBuffer(lineWidth)
+
+  Position(2,1)
+  Print("Press left/right arrow key to scroll")
+
+  maxOffset=lineWidth-LINE_WIDTH
+  offset=0
+  Update(offset,lineWidth)
+  DO
+    k=CH
+    IF k#$FF THEN
+      CH=$FF
+    FI
+
+    IF k=134 AND offset>0 THEN
+      offset==-1
+      Update(offset,lineWidth)
+    ELSEIF k=135 AND offset<maxOffset THEN
+      offset==+1
+      Update(offset,lineWidth)
+    ELSEIF k=28 THEN
+      EXIT
+    FI
+  OD
+
+RETURN

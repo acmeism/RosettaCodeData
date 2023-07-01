@@ -1,0 +1,90 @@
+class PPM{  // (0,0) is logically bottom left
+   fcn init(width,height,rgb=0){
+      sz:=width*height;
+      var [const]
+         data=Data(sz*3).fill(rgb.toBigEndian(3).toData()),  // initialize to 24bit Black (RGB=000)
+	 w=width, h=height;
+   }
+   fcn fill(rgb){ data.fill(rgb.toBigEndian(3).toData()) }
+   fcn __sGet(x,y)    { data.toBigEndian(3*y*w + 3*x,3); }	  //ppm[x,y]
+   fcn __sSet(rgb,x,y){	data[3*y*w + x*3,3]=rgb.toBigEndian(3); rgb } //ppm[x,y]=rgb
+   fcn write(out,raw=False){   // write bottom to top to move (0,0) from top left to bottom left
+      out.write("P6\n#rosettacode PPM\n%d %d\n255\n".fmt(w,h));
+      if(raw) out.write(data);
+      else [h-1..0, -1].pump(out,'wrap(h){ data.seek(3*h*w); data.read(3*w) });
+   }
+   fcn writeJPGFile(fname){	// Linux, using imagemagick
+      System.popen(0'|convert ppm:- jpg:"%s"|.fmt(fname),"w") :
+      write(_,vm.pasteArgs(1));
+   }
+   fcn readJPGFile(fileName){	// Linux, using imagemagick
+      p:=System.popen("convert \"%s\" ppm:-".fmt(fileName),"r");
+	 img:=PPM.readPPM(p);
+      p.close();
+      img
+   }
+   fcn readPPMFile(fileName){
+      f:=File(fileName,"rb"); ppm:=readPPM(f); f.close();
+      ppm
+   }
+   fcn readPPM(image){ // image is a PPM byte stream
+      // header is "P6\n[#comment\n]<w> <h>\nmaxPixelValue\n
+      image.readln();  // "P6"
+      while("#"==(text:=image.readln().strip())[0]){}
+      w,h:=text.split().apply("toInt");
+      image.readln(); // max pixel value
+      ppm,sz,buffer:=PPM(w,h), 3*w, Data(sz);
+      ppm.data.clear(); // gonna write file image data
+      // image is stored upside down in my data structure
+      do(h){ ppm.data.insert(0, image.read(sz,buffer)) }
+      ppm
+   }
+   fcn circle(x0,y0,r,rgb){
+      x:=r; y:=0; radiusError:=1-x;
+      while(x >= y){
+         __sSet(rgb, x + x0,  y + y0);
+	 __sSet(rgb, y + x0,  x + y0);
+	 __sSet(rgb,-x + x0,  y + y0);
+	 __sSet(rgb,-y + x0,  x + y0);
+	 self[-x + x0, -y + y0]=rgb;	// or do it this way, __sSet gets called as above
+	 self[-y + x0, -x + y0]=rgb;
+	 self[ x + x0, -y + y0]=rgb;
+	 self[ y + x0, -x + y0]=rgb;
+	 y+=1;
+	 if (radiusError<0) radiusError+=2*y + 1;
+	 else{ x-=1; radiusError+=2*(y - x + 1); }
+      }
+   }
+   fcn cross(x,y,rgb=0xff|00,len=10){
+      a:=len/2; b:=len-a;
+      line(x-a,y, x+b,y,rgb); line(x,y-a, x,y+b,rgb);
+   }
+   fcn line(x0,y0, x1,y1, rgb){
+      dx:=(x1-x0).abs();
+      dy:=(y1-y0).abs();
+      if(x0 < x1) sx:=1 else sx:=-1;
+      if(y0 < y1) sy:=1 else sy:=-1;
+      err:=dx - dy;
+      while(1){
+	 __sSet(rgb,x0,y0);
+	 if(x0==x1 and y0==y1) break;
+	 e2:=2*err;
+	 if(e2 > -dy){ err=err - dy; x0=x0 + sx; }
+	 if(e2 < dx) { err=err + dx; y0=y0 + sy; }
+      }
+   }
+   fcn flood(x,y, repl){  // slow!
+      targ:=self[x,y];
+      (stack:=List.createLong(10000)).append(T(x,y));
+      while(stack){
+	 x,y:=stack.pop();
+	 if((0<=y<h) and (0<=x<w)){
+	    p:=self[x,y];
+	    if(p==targ){
+	       self[x,y]=repl;
+	       stack.append( T(x-1,y), T(x+1,y), T(x, y-1), T(x, y+1) );
+	    }
+	 }
+      }
+   }
+}

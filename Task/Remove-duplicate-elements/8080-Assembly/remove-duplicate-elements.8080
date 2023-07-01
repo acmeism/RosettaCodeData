@@ -1,0 +1,56 @@
+		org	100h
+		jmp	test
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Given an array of bytes starting at HL with length BC,
+		;; remove all duplicates in the array. The new end of the array
+		;; is returned in HL. A page of memory (256 bytes) is required
+		;; to mark which bytes have been seen.
+uniqpage:	equ	3	; Page to use - a compile-time constant.
+				; This would need to be set to a page that
+				; the rest of the program doesn't need.
+uniq:		xra	a	; Zero out the page
+		lxi	d,uniqpage * 256
+uniqzero:	stax	d	; Zero out a byte
+		inr	e	; And do the next byte
+		jnz	uniqzero
+		mov	d,h	; Keep a second pointer to the array in DE
+		mov	e,l
+uniqpos:	ldax	d	; Read from high pointer
+		mov	m,a	; Write to low pointer
+		inx	d	; Increment the high pointer
+		push	h	; Keep low pointer around
+		mvi	h,uniqpage	
+		mov	l,a	; Have we seen this byte yet?
+		cmp	m	
+		mov	m,a	; No matter what, we've certainly seen it now
+		pop	h	; Bring back the low pointer
+		jz	uniqno	; If we already had it, don't increment low ptr
+		inx	h	; IF we didn't, do increment it
+uniqno:		dcx	b	; One fewer byte left
+		mov	a,b	; If there are zero bytes left,
+		ora	c
+		rz		; Then return to caller
+		jmp	uniqpos	; Otherwise, do the next byte
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Testing code: read a string from the CP/M console, run
+		;; uniq, then print the output.
+test:		lxi	d,bufdef	; Read a string
+		mvi	c,10
+		call	5
+		lxi	d,nl		; Output on new line
+		mvi	c,9
+		call	5
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		lda	bufdef+1	; Length of input string
+		mov	c,a		; Extend to 16-bit (since uniq supports
+		mvi	b,0		; long arrays)
+		lxi	h,buf		; Location of input string
+		call	uniq		; Only the unique bytes
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		mvi	m,'$'		; Mark the (string) end with '$'
+		lxi 	d,buf		; Print the string, which now has had
+		mvi	c,9		; all duplicates removed.
+		jmp	5
+nl:		db	13,10,'$'
+bufdef:		db	127,0
+buf:

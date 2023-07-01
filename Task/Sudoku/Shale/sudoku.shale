@@ -1,0 +1,529 @@
+#!/usr/local/bin/shale
+
+time library
+
+// This solves a sudoku with:
+//  row/column/3x3box constraints (standard sudoku)
+//  row/column/irregular, or jigsaw, region constraints
+// optionally with a Chess Knight's move constraint.
+// It is based on the python code from the Computerphile video
+//  https://www.youtube.com/watch?v=G_UYXzGuqvM
+// The sudoku example from this video is used below, along with
+// a couple of Cracking The Cryptic examples and one from Andrew Stuart.
+
+// The sudoku grid is stored in a multi-dimensional array under the grid:: namespace.
+// The row and column of each cell is represented by:
+//
+//  row column:: grid::
+//
+// A 0 value represents an empty cell, and a 1 to 9 value represents a cell value.
+
+// You can specify which of the sudokus to solve by specifying s={n} on the command line.
+// If it is not specified then you get a text explaining how to specify an option
+// and what the options are and the default (s=1) option is solved.
+
+startTime dup var now time::() =
+
+whichSudoku var
+
+s initialised {
+  whichSudoku s =
+} {
+  "You can choose to solve one of several sudokus by adding s=n to the command line," println
+  "where n is" println
+  "  1: standard sudoku from Computerphile (the default)" println
+  "  2: standard sudoku from Cracking The Cryptic" println
+  "  3: standard sudoku from Cracking The Cryptic, with Knight's move constraint" println
+  "  4: standard sudoku from Cracking The Cryptic" println
+  "  5: irregular sudoku from Cracking The Cryptic" println
+  "  6: irregular sudoku from Andrew Stuart" println
+  "" println
+  "You can also enable colour output by adding colour=true or color=true to the command line." println
+  "" println
+  "For example," println
+  file arg:: shale:: "  %s s=3 colour=true\n" printf
+  "will solve the CTC sudoku with the Knight's move constraint" println
+  "" println
+  whichSudoku 1 =
+} if
+
+// Prints the sudoku grid.
+printGrid dup var {
+  r var
+  c var
+  doColour var
+  irregular var
+  region var
+
+  colour initialised {
+    doColour colour =
+  } {
+    color initialised {
+      doColour color =
+    } {
+      doColour false =
+    } if
+  } if
+  irregular 0 0:: regions:: initialised =
+
+  r 0 =
+  { r 9 < } {
+    c 0 =
+    { c 9 < } {
+      doColour {
+        irregular {
+          region r.value c.value:: regions:: =
+          region.value colour:: 0x1b "%c[1;%dm" printf
+        } {
+          r 3 / c 3 / + 1 + 2 % 3 * 31 + 0x1b "%c[1;%dm" printf
+        } if
+      } ifthen
+      r.value c.value:: grid:: dup 0 == { pop " ." } { " %d" } if printf
+      doColour {
+        0x1b "%c[0m" printf
+      } ifthen
+      c++
+    } while
+    "" println
+    r++
+  } while
+} =
+
+// This sets up the colour map for irregular sudokus.
+1 colour:: dup var 30 =
+2 colour:: dup var 31 =
+3 colour:: dup var 32 =
+4 colour:: dup var 33 =
+5 colour:: dup var 34 =
+6 colour:: dup var 35 =
+7 colour:: dup var 36 =
+8 colour:: dup var 30 =   // skip 37 (too light) and reuse 30 and 31 (with luck they won't be close to regions 1 and 2).
+9 colour:: dup var 31 =
+
+// Assign the cell values to one row of the grid.
+setRow dup var {
+  8$ dup var swap =   // cell 9 of the row
+  7$ dup var swap =   // cell 8 of the row
+  6$ dup var swap =   // ...
+  5$ dup var swap =
+  4$ dup var swap =
+  3$ dup var swap =
+  2$ dup var swap =
+  1$ dup var swap =   // ...
+  0$ dup var swap =   // cell 1 of the row
+  r dup var swap =    // the row number
+  ns dup var swap &=  // the namespace to use
+  i var               // loop counter
+
+  r 0 < r 8 > or {
+    r "Illegal row %d\n" printf
+    1 exit
+  } ifthen
+
+  i 0 =
+  { i 9 < } {
+    i.value$ 0 < i.value$ 9 > or {
+      i r i.value$ "Illegal value %d specified for r%dc%d\n" printf
+      1 exit
+    } ifthen
+    r.value i.value:: ns->:: defined not {    // define this grid cell if not already defined
+      r.value i.value:: ns->:: var
+    } ifthen
+    r.value i.value:: ns->:: i.value$ =       // assign the value to the grid cell
+    i++
+  } while
+} =
+
+// Standard 3x3 box region checker.
+// This only works when called from within possible().
+standardRegions dup var {
+  r0 var
+  c0 var
+
+  r0 r 3 / 3 * =
+  c0 c 3 / 3 * =
+  i 0 =
+  { i 3 < } {
+    j 0 =
+    { j 3 < } {
+      r0 i + c0 j +:: grid:: n == {
+        false return
+      } ifthen
+      j++
+    } while
+    i++
+  } while
+} =
+
+// Irregular region checker.
+// This only works when called from within possible().
+irregularRegions dup var {
+  region var
+  i var
+
+  region r.value c.value:: regions:: =   // The region we are in.
+
+  i 0 =
+  { i 9 < } {
+    i.value r:: region.value:: region:: value i.value c:: region.value:: region:: value:: grid:: n == {
+      false return
+    } ifthen
+    i++
+  } while
+} =
+
+// Convert the regions:: namespace into something a little more cpu-time friendly.
+// Only optimise if there are irregular regions defined.
+optimiseRegions dup var {
+  0 0:: regions:: initialised {
+    region var
+    r var
+    c var
+    i var
+
+    region 1 =
+    { region 10 < } {
+      i 0 =
+      r 0 =
+      { r 9 < } {
+        c 0 =
+        { c 9 < } {
+          r.value c.value:: regions:: region == {
+            i.value r:: region.value:: region:: dup var r =
+            i.value c:: region.value:: region:: dup var c =
+            i++
+          } ifthen
+          c++
+        } while
+        r++
+      } while
+      i 9 != {
+        i region "Region %d contains the wrong number of cells (%d)\n" printf
+        1 exit
+      } ifthen
+      region++
+    } while
+  } ifthen
+} =
+
+// Is it possible to place a digit in a given cell?
+possible dup var { function
+  n dup var swap =
+  c dup var swap =
+  r dup var swap =
+  i var
+  j var
+
+  // Check the column doesn't already contain this value.
+  i 0 =
+  { i 9 < } {
+    r.value i.value:: grid:: n == {
+      false return
+    } ifthen
+    i++
+  } while
+
+  // Check the row doesn't already contain this value.
+  i 0 =
+  { i 9 < } {
+    i.value c.value:: grid:: n == {
+      false return
+    } ifthen
+    i++
+  } while
+
+  // Check that the region doesn't already contain this value.
+  regionChecker()
+
+  // Check for any other constraint.
+  constraint initialised { r c n constraint() not } and {
+    false return
+  } ifthen
+
+  true
+} =
+
+// This is a Knight's move constraint.
+knightsMoveConstraint dup var { function
+  0$ dup var swap =  // n
+  1$ dup var swap =  // column
+  2$ dup var swap =  // row
+  nr var
+  nc var
+
+  // Check Knight's move 2 left and 1 up and down.
+  nc 1$ 2 - =
+  nc 0 >= {
+    nr 2$ 1 - =
+    nr 0 >= {
+      nr.value nc.value:: grid:: 0$ == {
+        false return
+      } ifthen
+    } ifthen
+    nr 2$ 1 + =
+    nr 9 < {
+      nr.value nc.value:: grid:: 0$ == {
+        false return
+      } ifthen
+    } ifthen
+  } ifthen
+
+  // Check Knight's move 1 left and 2 up and down.
+  nc 1$ 1 - =
+  nc 0 >= {
+    nr 2$ 2 - =
+    nr 0 >= {
+      nr.value nc.value:: grid:: 0$ == {
+        false return
+      } ifthen
+    } ifthen
+    nr 2$ 2 + =
+    nr 9 < {
+      nr.value nc.value:: grid:: 0$ == {
+        false return
+      } ifthen
+    } ifthen
+  } ifthen
+
+  // Check Knight's move 1 right and 2 up and down.
+  nc 1$ 1 + =
+  nc 9 < {
+    nr 2$ 2 - =
+    nr 0 >= {
+      nr.value nc.value:: grid:: 0$ == {
+        false return
+      } ifthen
+    } ifthen
+    nr 2$ 2 + =
+    nr 9 < {
+      nr.value nc.value:: grid:: 0$ == {
+        false return
+      } ifthen
+    } ifthen
+  } ifthen
+
+  // Check Knight's move 2 right and 1 up and down.
+  nc 1$ 2 + =
+  nc 9 < {
+    nr 2$ 1 - =
+    nr 0 >= {
+      nr.value nc.value:: grid:: 0$ == {
+        false return
+      } ifthen
+    } ifthen
+    nr 2$ 1 + =
+    nr 9 < {
+      nr.value nc.value:: grid:: 0$ == {
+        false return
+      } ifthen
+    } ifthen
+  } ifthen
+
+  true
+} =
+
+// Set this to standardRegions for the usual 3x3 boxes,
+// or irregularRegions to handle irregular, or jigsaw, regions.
+regionChecker var
+
+// Leave this undefined to get the standard sudoku rules, or set this
+// to constraint code such as knightsMoveConstraint defined above.
+constraint var
+
+solve dup var { function
+  r var
+  c var
+  n var
+
+  r 0 =
+  { r 9 < } {
+    c 0 =
+    { c 9 < } {
+      r.value c.value:: grid:: dup 0 == {   // dup r.value c.value:: grid:: so we don't have to recalculate it in the inner loop.
+        n 1 =
+        { n 10 < } {
+          r.value c.value n.value possible() {
+            dup n =   // picking up r.value c.value:: grid:: again.
+            solve()
+            dup 0 =   // picking up r.value c.value:: grid:: again.
+          } ifthen
+          n++
+        } while
+        pop   // get rid of r.value c.value:: grid::
+        return
+      } ifthen
+      pop   // get rid of r.value c.value:: grid::
+      c++
+    } while
+    r++
+  } while
+
+  "" println
+  printGrid()
+  now time::() startTime - 1000.0 / "Solution in %0.3f seconds\n" printf
+} =
+
+found var
+found false =
+
+// As mentioned above, this is the example taken from the Computerphile video.
+// Raspberry Pi3 Model A time: 17s to the solution, 19s to finish.
+// The time spent between the solution and the finish is the script searching
+// of other, non-existant, soultion.
+whichSudoku 1 == {
+  found true =
+  "From Computerphile: https://www.youtube.com/watch?v=G_UYXzGuqvM" println
+  regionChecker standardRegions =
+  grid 0 5 3 0 0 7 0 0 0 0 setRow()
+  grid 1 6 0 0 1 9 5 0 0 0 setRow()
+  grid 2 0 9 8 0 0 0 0 6 0 setRow()
+  grid 3 8 0 0 0 6 0 0 0 3 setRow()
+  grid 4 4 0 0 8 0 3 0 0 1 setRow()
+  grid 5 7 0 0 0 2 0 0 0 6 setRow()
+  grid 6 0 6 0 0 0 0 2 8 0 setRow()
+  grid 7 0 0 0 4 1 9 0 0 5 setRow()
+  grid 8 0 0 0 0 8 0 0 7 9 setRow()
+} ifthen
+
+// From https://www.youtube.com/watch?v=MXUgYxHmKq4&t=0s
+// This sudoku was featured on Cracking The Cryptic, and takes considerably longer than the one above.
+// Pi3 Model A time: 3m 23s to the solution, 15m 11s to finish.
+whichSudoku 2 == {
+  found true =
+  "From Cracking The Cryptic: https://www.youtube.com/watch?v=MXUgYxHmKq4&t=0s" println
+  regionChecker standardRegions =
+  grid 0 0 6 8 0 0 0 0 1 3 setRow()
+  grid 1 0 0 0 9 0 1 0 0 0 setRow()
+  grid 2 0 0 0 0 0 8 0 0 4 setRow()
+  grid 3 0 1 0 0 4 0 5 0 0 setRow()
+  grid 4 0 3 0 0 0 9 0 0 0 setRow()
+  grid 5 0 8 5 0 0 0 0 7 0 setRow()
+  grid 6 0 2 0 0 0 7 3 0 0 setRow()
+  grid 7 0 0 0 0 9 4 0 0 6 setRow()
+  grid 8 4 0 0 0 6 0 0 0 0 setRow()
+} ifthen
+
+// From https://www.youtube.com/watch?v=rQHV-gIAG_0
+// Another Cracking The Cryptic video, this one with a Knight's move constraint.
+// Pi3 Model A time: 48s to the solution, 6m 10s to finish.
+whichSudoku 3 == {
+  found true =
+  "From Cracking The Cryptic: https://www.youtube.com/watch?v=rQHV-gIAG_0" println
+  "This includes a Chess Knight's move constraint." println
+  regionChecker standardRegions =
+  constraint knightsMoveConstraint =
+  grid 0 0 0 0 0 0 6 0 0 0 setRow()
+  grid 1 0 0 3 0 0 0 0 0 7 setRow()
+  grid 2 2 0 0 3 0 0 4 9 0 setRow()
+  grid 3 6 0 0 0 0 0 0 4 5 setRow()
+  grid 4 0 0 2 0 0 0 8 0 0 setRow()
+  grid 5 0 0 0 1 0 0 0 0 0 setRow()
+  grid 6 3 0 0 0 0 0 0 0 0 setRow()
+  grid 7 7 0 0 0 0 1 0 0 9 setRow()
+  grid 8 0 0 0 0 0 0 5 0 0 setRow()
+} ifthen
+
+// Another CTC sudoku: https://www.youtube.com/watch?v=vH-JooV8RA4&t=0s
+// Pi3 Model A time: 1m 6s to the solution, 48m 35s to finish.
+whichSudoku 4 == {
+  found true =
+  "From Cracking The Cryptic: https://www.youtube.com/watch?v=vH-JooV8RA4&t=0s" println
+  regionChecker standardRegions =
+  grid 0 0 0 0 0 0 0 0 0 0 setRow()
+  grid 1 0 0 9 8 0 0 0 0 7 setRow()
+  grid 2 0 8 0 0 6 0 0 5 0 setRow()
+  grid 3 0 5 0 0 4 0 0 3 0 setRow()
+  grid 4 0 0 7 9 0 0 0 0 2 setRow()
+  grid 5 0 0 0 0 0 0 0 0 0 setRow()
+  grid 6 0 0 2 7 0 0 0 0 9 setRow()
+  grid 7 0 4 0 0 5 0 0 6 0 setRow()
+  grid 8 3 0 0 0 0 6 2 0 0 setRow()
+} ifthen
+
+// Another Cracking The Cryptic sudoku: https://www.youtube.com/watch?v=eJIu8w3ZXo8
+// This is an irregular (jigsaw) sudoku.
+// Pi3 Model A time: 2m 5s to the solution, 7m 5s to finish.
+whichSudoku 5 == {
+  found true =
+  "From Cracking The Cryptic: https://www.youtube.com/watch?v=eJIu8w3ZXo8" println
+  "An irregular sudoku." println
+  regionChecker irregularRegions =
+  regions 0 1 1 1 1 1 2 2 2 2 setRow()
+  regions 1 1 3 3 3 6 6 2 2 2 setRow()
+  regions 2 1 3 3 3 6 7 7 7 2 setRow()
+  regions 3 1 3 3 3 6 7 7 7 2 setRow()
+  regions 4 1 6 6 6 6 7 7 7 8 setRow()
+  regions 5 9 6 4 4 4 8 8 8 8 setRow()
+  regions 6 9 9 4 4 4 8 5 5 5 setRow()
+  regions 7 9 9 4 4 4 8 5 5 5 setRow()
+  regions 8 9 9 9 9 8 8 5 5 5 setRow()
+  grid 0 3 0 0 0 0 0 0 0 1 setRow()
+  grid 1 0 9 0 1 7 2 0 0 0 setRow()
+  grid 2 0 0 3 0 0 0 9 0 0 setRow()
+  grid 3 0 7 0 0 0 0 0 4 0 setRow()
+  grid 4 0 4 0 0 3 0 0 6 0 setRow()
+  grid 5 0 5 0 0 0 0 0 9 0 setRow()
+  grid 6 0 0 6 0 0 0 5 0 0 setRow()
+  grid 7 0 0 0 8 5 6 0 2 0 setRow()
+  grid 8 7 0 0 0 0 0 0 0 8 setRow()
+} ifthen
+
+// This is taken from Andrew Stuart's web site https://www.sudokuwiki.org/Daily_Jigsaw_Sudoku
+// No. 4294, dated 13 Nov 2020. It is rated 5-star out of 6: Diabolical.
+// The archived version is here: https://www.sudokuwiki.org/Print_Daily_Jigsaw.asp?day=13/11/2020
+// At the time of writing, Andrew only archives sudoku's for 31 days, then they are deleted.
+// The region layout is called "Andrew Stuart 24" and the numbering is taken directly
+// from Andrew's solver page. A big thanks goes to Andrew for giving me permission to include this sudoku.
+// The region numbers must be between 1 and 9 inclusive.
+// Pi3 Model A time: 26m 23s to the solution, 1h 15m 20s to finish.
+whichSudoku 6 == {
+  found true =
+  "From Andrew Stuart's web page: https://www.sudokuwiki.org/Daily_Jigsaw_Sudoku" println
+  "No. 4294, dated 13 Nov 2020" println
+  regionChecker irregularRegions =
+  regions 0 1 1 2 2 2 2 3 3 4 setRow()
+  regions 1 1 1 2 2 2 3 3 3 4 setRow()
+  regions 2 1 1 1 2 3 3 3 4 4 setRow()
+  regions 3 1 1 5 2 3 7 4 4 4 setRow()
+  regions 4 5 5 5 6 6 7 7 4 4 setRow()
+  regions 5 5 5 5 6 6 7 7 7 9 setRow()
+  regions 6 8 5 5 6 6 7 7 7 9 setRow()
+  regions 7 8 8 6 6 6 9 9 9 9 setRow()
+  regions 8 8 8 8 8 8 8 9 9 9 setRow()
+  grid 0 0 0 0 0 0 0 0 9 0 setRow()
+  grid 1 5 0 0 0 8 1 0 0 0 setRow()
+  grid 2 0 0 0 9 0 4 5 0 0 setRow()
+  grid 3 0 0 0 0 0 0 0 0 5 setRow()
+  grid 4 0 1 0 0 0 8 0 0 0 setRow()
+  grid 5 7 0 6 0 0 0 0 0 0 setRow()
+  grid 6 0 0 0 1 0 0 6 0 0 setRow()
+  grid 7 1 0 0 7 2 0 0 0 0 setRow()
+  grid 8 0 9 0 0 0 0 0 0 0 setRow()
+} ifthen
+
+// If you want to add your own sudoku, add it here.
+whichSudoku 7 == {
+  found true =
+  // add it here
+  // regionChecker standardRegions =          // Include a region checker
+  // regionChecker irregularRegions =
+  // constraint knightsMoveConstraint =       // Include any extra contraints, as appropriate
+} ifthen
+
+// Don't change anything from here to the end.
+
+found {
+  optimiseRegions()
+
+  "" println
+  "Initial grid" println
+  printGrid()
+
+  solve()
+
+  now time::() startTime - 1000.0 / "Total runtime was %0.3f seconds\n" printf
+} {
+  whichSudoku "Sudoku %d not found\n" printf
+} if
+
+// I'd like to see an irregular sudoku with a knight's move constraint. Any takers...

@@ -1,0 +1,54 @@
+      INSTALL @lib$+"SOCKLIB"
+      PROC_initsockets
+
+      maxSess% = 8
+      DIM sock%(maxSess%-1), rcvd$(maxSess%-1), Buffer% 255
+
+      ON ERROR PRINT REPORT$ : PROC_exitsockets : END
+      ON CLOSE PROC_exitsockets : QUIT
+
+      crlf$ = CHR$13 + CHR$10
+      port$ = "12321"
+      host$ = FN_gethostname
+      PRINT "Host name is " host$
+
+      listen% = FN_tcplisten(host$, port$)
+      PRINT "Listening on port ";port$
+
+      REPEAT
+        socket% = FN_check_connection(listen%)
+        IF socket% THEN
+          FOR i% = 0 TO maxSess%-1
+            IF sock%(i%) = 0 THEN
+              sock%(i%) = socket%
+              rcvd$(i%) = ""
+              PRINT "Connection on socket "; sock%(i%) " opened"
+              EXIT FOR
+            ENDIF
+          NEXT i%
+          listen% = FN_tcplisten(host$, port$)
+        ENDIF
+
+        FOR i% = 0 TO maxSess%-1
+          IF sock%(i%) THEN
+            res% = FN_readsocket(sock%(i%), Buffer%, 256)
+            IF res% >= 0 THEN
+              Buffer%?res% = 0
+              rcvd$(i%) += $$Buffer%
+              crlf% = INSTR(rcvd$(i%), crlf$)
+              IF crlf% THEN
+                echo$ = LEFT$(rcvd$(i%), crlf%-1)
+                res% = FN_writelinesocket(sock%(i%), echo$)
+                rcvd$(i%) = MID$(rcvd$(i%), crlf%+2)
+              ENDIF
+            ELSE
+              PROC_closesocket(sock%(i%))
+              PRINT "Connection on socket " ; sock%(i%) " closed"
+              sock%(i%) = 0
+            ENDIF
+          ENDIF
+        NEXT i%
+
+        WAIT 0
+      UNTIL FALSE
+      END

@@ -1,0 +1,96 @@
+	.string "PRG"
+
+	lcd_ptr .req r4
+	active_fb .req r5
+	inactive_fb .req r6
+	offset_r .req r7
+	backup_fb .req r8
+
+	@ start
+	push {r4-r10, r12, lr}
+	
+	ldr lcd_ptr, =0xC0000000 @ address of the LCD controller
+	adr offset_r, offsets
+	ldrh r0, [offset_r, #6] @ 0xffff is already in memory because -1 is in the offsets table
+	str r0, [lcd_ptr, #0x200] @ set up paletted colors: 1 is black, 0 is white
+	
+	ldr r2, [lcd_ptr, #0x18] @ load lcd configuration
+	bic r2, #14
+	orr r2, #6 @ Set color mode to 8 bpp, paletted
+	str r2, [lcd_ptr, #0x18]
+	
+	ldr backup_fb, [lcd_ptr, #0x10] @ Save address of OS framebuffer
+	
+	@ allocate a buffer for game state / framebuffer
+	ldr r0, =153600 @ 320 * 240 * 2
+	add r0, #8
+	svc #5 @ malloc
+	push {r0}
+	orr inactive_fb, r0, #7
+	add inactive_fb, #1
+	add active_fb, inactive_fb, #76800
+	
+	@ fill buffer with random ones and zeroes
+	ldr r10, =76800
+	mov r9, #0
+1:	subs r10, r10, #1
+	strb r9, [active_fb, r10] @ zero other framebuffer
+	svc #206 @ rand syscall
+	and r0, r0, #1
+	strb r0, [inactive_fb, r10]
+	bne 1b
+	
+	@ set first and last rows to zero
+	mov r2, #320
+	mov r1, #0
+	mov r0, inactive_fb
+	push {r1,r2}
+	svc #7 @ memset
+	pop {r1,r2}
+	ldr r3, =76480
+	add r0, r0, r3
+	svc #7
+	
+	@ beginning of main loop, swap framebuffers
+3:	ldr r0, =76480 @ 320 * 239
+	str inactive_fb, [lcd_ptr, #0x10]
+	mov inactive_fb, active_fb
+	ldr active_fb, [lcd_ptr, #0x10]
+	
+	@ per-pixel loop
+2:	mov r1, #16 @ 8 * 2
+	mov r2, #0
+	sub r0, #1
+	
+	@ loop to count up neighboring living cells
+1:	subs r1, #2
+	ldrsh r3, [offset_r, r1] @ cant use lsl #1
+	add r3, r3, r0
+	ldrb r3, [active_fb, r3]
+	add r2, r2, r3
+	bne 1b @ at end of loop, r1 and r3 can be discarded
+	
+	@ decides whether the cell should live or die based on neighbors
+	ldrb r1, [active_fb, r0]
+	add r2, r2, r1
+	teq r2, #3
+	moveq r1, #1
+	teqne r2, #4
+	movne r1, #0
+	strb r1, [inactive_fb, r0]
+	teq r0, #320
+	bne 2b
+	
+	@ checks if the escape key is pressed
+	ldr r0, =0x900E001C
+	ldr r1, [r0]
+	tst r1, #0x80
+	beq 3b
+	
+	str backup_fb, [lcd_ptr, #0x10] @ restores OS framebuffer
+	
+	pop {r0}
+	svc #6 @ free buffer
+	pop {r4-r10, r12, pc}
+offsets:
+	.hword -321, -320, -319, -1, 1, 319, 320, 321

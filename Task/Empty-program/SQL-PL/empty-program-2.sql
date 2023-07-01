@@ -1,0 +1,5 @@
+--#SET TERMINATOR @
+
+CREATE PROCEDURE myProc ()
+ BEGIN
+ END @

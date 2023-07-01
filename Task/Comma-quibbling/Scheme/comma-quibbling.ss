@@ -1,0 +1,15 @@
+(define (quibble . args)
+  (display "{")
+  (do ((rem args (cdr rem)))
+    ((null? rem) (display "}\n"))
+    (display (car rem))
+    (cond ((= 1 (length rem)) )
+          ((= 2 (length rem))
+           (display " and "))
+          (else
+            (display ", ")))))
+
+(quibble)
+(quibble "ABC")
+(quibble "ABC" "DEF")
+(quibble "ABC" "DEF" "G" "H")

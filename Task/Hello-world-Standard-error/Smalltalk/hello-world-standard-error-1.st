@@ -1,0 +1,1 @@
+Stderr nextPutAll: 'Goodbye, World!'

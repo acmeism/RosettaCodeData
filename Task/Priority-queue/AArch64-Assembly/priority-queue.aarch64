@@ -1,0 +1,371 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program priorQueue64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ  NBMAXIELEMENTS,    100
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* example structure  item  */
+    .struct  0
+item_priority:                     // priority
+    .struct  item_priority + 8
+item_address:                      // string address
+    .struct  item_address + 8
+item_fin:
+/* example structure heap  */
+    .struct  0
+heap_size:                         // heap size
+    .struct  heap_size + 8
+heap_items:                        // structure of items
+    .struct  heap_items + (item_fin * NBMAXIELEMENTS)
+heap_fin:
+
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessEmpty:       .asciz "Empty queue. \n"
+szMessNotEmpty:    .asciz "Not empty queue. \n"
+szMessError:       .asciz "Error detected !!!!. \n"
+szMessResult:      .asciz "Priority : @ : @ \n"          // message result
+
+szString1:         .asciz "Clear drains"
+szString2:         .asciz "Feed cat"
+szString3:         .asciz "Make tea"
+szString4:         .asciz "Solve RC tasks"
+szString5:         .asciz "Tax return"
+szCarriageReturn:  .asciz "\n"
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+sZoneConv:             .skip 24
+Queue1:                .skip heap_fin      // queue memory place
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                       // entry of program
+    ldr x0,qAdrQueue1                       // queue structure address
+    bl isEmpty
+    cbz x0,1f
+    ldr x0,qAdrszMessEmpty
+    bl affichageMess                        // display message empty
+    b 2f
+1:
+    ldr x0,qAdrszMessNotEmpty
+    bl affichageMess                        // display message not empty
+2:
+    // init item 1
+    ldr x0,qAdrQueue1                       // queue structure address
+    mov x1,#3                               // priority
+    ldr x2,qAdrszString1
+    bl pushQueue                            // add item in queue
+    cmp x0,#-1                              // error ?
+    beq 99f
+
+    ldr x0,qAdrQueue1                       // queue structure address
+    bl isEmpty
+    cbz x0,3f                               // not empty
+    ldr x0,qAdrszMessEmpty
+    bl affichageMess                        // display message empty
+    b 4f
+3:
+    ldr x0,qAdrszMessNotEmpty
+    bl affichageMess                        // display message not empty
+
+4:
+    // init item 2
+    ldr x0,qAdrQueue1                       // queue structure address
+    mov x1,#4                               // priority
+    ldr x2,qAdrszString2
+    bl pushQueue                            // add item in queue
+    cmp x0,#-1                              // error ?
+    beq 99f
+    // init item 3
+    ldr x0,qAdrQueue1                       // queue structure address
+    mov x1,#5                               // priority
+    ldr x2,qAdrszString3
+    bl pushQueue                            // add item in queue
+    cmp x0,#-1                              // error ?
+    beq 99f
+    // init item 4
+    ldr x0,qAdrQueue1                       // queue structure address
+    mov x1,#1                               // priority
+    ldr x2,qAdrszString4
+    bl pushQueue                            // add item in queue
+    cmp x0,#-1                              // error ?
+    beq 99f
+    // init item 5
+    ldr x0,qAdrQueue1                       // queue structure address
+    mov x1,#2                               // priority
+    ldr x2,qAdrszString5
+    bl pushQueue                            // add item in queue
+    cmp x0,#-1                              // error ?
+    beq 99f
+5:
+    ldr x0,qAdrQueue1                       // queue structure address
+    bl popQueue                             // return item
+    cmp x0,#-1                              // end ?
+    beq 100f
+    mov x2,x1                               // save string address
+    ldr x1,qAdrsZoneConv                    // conversion priority
+    bl conversion10                         // decimal conversion
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc
+    mov x1,x2                               // string address
+    bl strInsertAtCharInc
+    bl affichageMess                        // display message
+
+    b 5b                                    // loop
+99:                                         // error
+    ldr x0,qAdrszMessError
+    bl affichageMess
+100:                                        // standard end of the program
+    mov x0, #0                              // return code
+    mov x8, #EXIT                           // request to exit program
+    svc #0                                  // perform the system call
+
+qAdrQueue1:               .quad Queue1
+qAdrszString1:            .quad szString1
+qAdrszString2:            .quad szString2
+qAdrszString3:            .quad szString3
+qAdrszString4:            .quad szString4
+qAdrszString5:            .quad szString5
+qAdrszMessError:          .quad szMessError
+qAdrszMessEmpty:          .quad szMessEmpty
+qAdrszMessNotEmpty:       .quad szMessNotEmpty
+qAdrszMessResult:         .quad szMessResult
+qAdrszCarriageReturn:     .quad szCarriageReturn
+//qAdrsMessPriority:        .quad sMessPriority
+qAdrsZoneConv:            .quad sZoneConv
+/******************************************************************/
+/*     test if queue empty                                        */
+/******************************************************************/
+/* x0 contains the address of queue structure */
+isEmpty:
+    stp x1,lr,[sp,-16]!       // save  registres
+    ldr x1,[x0,#heap_size]    // heap size
+    cmp x1,#0
+    cset x0,eq
+    ldp x1,lr,[sp],16         // restaur des  2 registres
+    ret
+/******************************************************************/
+/*     add item  in queue                                         */
+/******************************************************************/
+/* x0 contains the address of queue structure */
+/* x1 contains the priority of item           */
+/* x2 contains the string address             */
+pushQueue:
+    stp x1,lr,[sp,-16]!                     // save  registres
+    stp x2,x3,[sp,-16]!                     // save  registres
+    stp x4,x5,[sp,-16]!                     // save  registres
+    stp x6,x7,[sp,-16]!                     // save  registres
+    stp x8,x9,[sp,-16]!                     // save  registres
+    ldr x3,[x0,#heap_size]                  // heap size
+    cbnz x3,1f                              // heap empty ?
+    add x4,x0,#heap_items                   // address of item structure
+    str x1,[x4,#item_priority]              // store in first item
+    str x2,[x4,#item_address]
+    mov x3,#1                               // heap size
+    str x3,[x0,#heap_size]                  // new heap size
+    b 100f
+1:
+    mov x4,x3                               // maxi index
+    lsr x5,x4,#1                            // current index = maxi / 2
+    mov x8,x1                               // save priority
+    mov x9,x2                               // save string address
+2:                                          // insertion loop
+    cmp x4,#0                               // end loop ?
+    ble 3f
+    mov x6,#item_fin                        // item size
+    madd x6,x5,x6,x0                        // item shift
+    add x6,x6,#heap_items                      // compute address item
+    ldr x7,[x6,#item_priority]              // load priority
+    cmp x7,x8                               // compare priority
+    ble 3f                                  // <=  end loop
+    mov x1,x4                               // last index
+    mov x2,x5                               // current index
+    bl exchange
+    mov x4,x5                               // last index = current index
+    lsr x5,x5,#1                               // current index / 2
+    b 2b
+3:                                          // store item at last index find
+    mov x6,#item_fin                        // item size
+    madd x6,x4,x6,x0                        // item shift
+    add x6,x6,#heap_items                   // item address
+    str x8,[x6,#item_priority]
+    str x9,[x6,#item_address]
+    add x3,x3,#1                               // increment heap size
+    cmp x3,#NBMAXIELEMENTS                  // maxi ?
+    bge 99f                                // yes -> error
+    str x3,[x0,#heap_size]                  // store new size
+    b 100f
+99:
+    mov x0,#-1                              // error
+100:
+    ldp x8,x9,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+/******************************************************************/
+/*     swap two elements of table                                  */
+/******************************************************************/
+/* x0 contains the address of table */
+/* x1 contains the first index */
+/* x2 contains the second index */
+exchange:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    add x5,x0,#heap_items        // address items begin
+    mov x3,#item_fin             // item size
+    madd x4,x1,x3,x5             // compute item 1 address
+    madd x6,x2,x3,x5             // compute item 2 address
+    ldr x5,[x4,#item_priority]   // exchange
+    ldr x3,[x6,#item_priority]
+    str x3,[x4,#item_priority]
+    str x5,[x6,#item_priority]
+    ldr x5,[x4,#item_address]
+    ldr x3,[x6,#item_address]
+    str x5,[x6,#item_address]
+    str x3,[x4,#item_address]
+
+100:
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+/******************************************************************/
+/*     move one element of table                                  */
+/******************************************************************/
+/* x0 contains the address of table */
+/* x1 contains the origin index */
+/* x2 contains the destination index */
+moveItem:
+    stp x1,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    add x5,x0,#heap_items        // address items begin
+    mov x3,#item_fin             // item size
+    madd x4,x1,x3,x5             // compute item 1 address
+    madd x6,x2,x3,x5             // compute item 2 address
+    ldr x5,[x4,#item_priority]   // exchange
+    str x5,[x6,#item_priority]
+    ldr x5,[x4,#item_address]
+    str x5,[x6,#item_address]
+
+100:
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x1,lr,[sp],16           // restaur des  2 registres
+    ret
+
+/******************************************************************/
+/*     pop queue                                                  */
+/******************************************************************/
+/* x0 contains the address of queue structure */
+/* x0 return priority        */
+/* x1 return string address   */
+popQueue:
+    stp x10,lr,[sp,-16]!          // save  registres
+    stp x2,x3,[sp,-16]!          // save  registres
+    stp x4,x5,[sp,-16]!          // save  registres
+    stp x6,x7,[sp,-16]!          // save  registres
+    stp x8,x9,[sp,-16]!          // save  registres
+    mov x1,x0                    // save address queue
+    bl isEmpty                   // control if empty queue
+    cmp x0,#1                    // yes -> error
+    beq 99f
+
+    mov x0,x1                   // restaur address queue
+    add x4,x0,#heap_items       // address of item structure
+    ldr x8,[x4,#item_priority]  // save priority first item
+    ldr x9,[x4,#item_address]   // save address string first item
+    ldr x3,[x0,#heap_size]      // heap size
+    sub x7,x3,#1                // last item
+    mov x1,x7
+    mov x2,#0                   // first item
+    bl moveItem                 // move last item in first item
+
+    cmp x7,#1                   // one only item ?
+    beq 10f                     // yes -> end
+    mov x4,#0                   // first  index
+1:
+    cmp x4,x7                   // = last index
+    bge 10f                     // yes -> end
+    mov x5,x7                   // last index
+    cmp x4,#0                   // init current index
+    mov x6,#1                   // = 1
+    lsl x1,x4,#1                // else = first index * 2
+    csel x6,x6,x1,eq
+    cmp x6,x7                   // current index > last index
+    bgt 2f                      // yes
+                                // no compar priority current item last item
+    mov x1,#item_fin
+    madd x1,x6,x1,x0
+    add x1,x1,#heap_items       // address of current item structure
+    ldr x1,[x1,#item_priority]
+    mov x10,#item_fin
+    madd x10,x5,x10,x0
+    add x10,x10,#heap_items     // address of last item structure
+    ldr x10,[x10,#item_priority]
+    cmp x1,x10
+    csel x5,x6,x5,lt
+2:
+    add x10,x6,#1               // increment current index
+    cmp x10,x7                  // end ?
+    bgt 3f                      // yes
+    mov x1,#item_fin            // no compare priority
+    madd x1,x10,x1,x0
+    add x1,x1,#heap_items       // address of item structure
+    ldr x1,[x1,#item_priority]
+    mov x2,#item_fin
+    madd x2,x5,x2,x0
+    add x2,x2,#heap_items       // address of item structure
+    ldr x2,[x2,#item_priority]
+    cmp x1,x2
+    csel x5,x10,x5,lt
+3:
+    mov x1,x5                   // move item
+    mov x2,x4
+    bl moveItem
+    mov x4,x5
+    b 1b                        // and loop
+10:
+    sub x3,x3,#1
+    str x3,[x0,#heap_size]      // new heap size
+    mov x0,x8                   // return priority
+    mov x1,x9                   // return string address
+    b 100f
+99:
+    mov x0,#-1                  // error
+100:
+    ldp x8,x9,[sp],16           // restaur des  2 registres
+    ldp x6,x7,[sp],16           // restaur des  2 registres
+    ldp x4,x5,[sp],16           // restaur des  2 registres
+    ldp x2,x3,[sp],16           // restaur des  2 registres
+    ldp x10,lr,[sp],16          // restaur des  2 registres
+    ret
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

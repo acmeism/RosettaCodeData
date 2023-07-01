@@ -1,0 +1,93 @@
+:- module rot13.
+
+:- interface.
+
+:- import_module io.
+:- pred main(io::di, io::uo) is det.
+
+:- implementation.
+
+:- import_module string, set, list, char, int.
+:- type transition == {character, character}.
+:- type transitions == set(transition).
+:- type rot_kind
+    --->    encrypt
+    ;       decrypt.
+
+:- pred build_transition(int::in, rot_kind::in, int::in, int::in, character::in,
+    transitions::in, transitions::out) is det.
+build_transition(Offset, Kd, Lb, Ub, Ch, St, Rs) :-
+    (
+        Kd = encrypt,
+        Diff = to_int(Ch) + Offset
+    ;
+        Kd = decrypt,
+        Diff = to_int(Ch) - Offset
+    ),
+    (if (Diff >= (Ub + 0x01))
+        then Ct = {Ch, det_from_int(Lb + (Diff - Ub) - 0x01) `with_type` char}
+    else if (Diff =< (Lb - 0x01))
+        then Ct = {Ch, det_from_int(Ub - (Lb - Diff) + 0x01) `with_type` char}
+        else Ct = {Ch, det_from_int(Diff) `with_type` char}),
+    union(St, make_singleton_set(Ct), Rs).
+
+:- pred generate_alpha_transition(int::in, rot_kind::in, transitions::out) is det.
+generate_alpha_transition(N, Kd, Ts) :-
+    Offset = N mod 0x1A,
+    to_char_list("abcdefghijklmnopqrstuvwxyz", Lower),
+    to_char_list("ABCDEFGHIJKLMNOPQRSTUVWXYZ", Upper),
+    foldl(build_transition(Offset, Kd, 0x61, 0x7A), Lower, init, Ts0),
+    foldl(build_transition(Offset, Kd, 0x41, 0x5A), Upper, Ts0, Ts).
+
+:- pred rot(transitions::in, string::in, string::out) is det.
+rot(Ts, Base, Result) :-
+    to_char_list(Base, Fragment),
+    map((pred(Ch::in, Rs::out) is det :-
+        promise_equivalent_solutions [Rs]
+            (if member({Ch, Nx}, Ts)
+                then Rs = Nx
+                else Rs = Ch)
+    ), Fragment, Result0),
+    from_char_list(Result0, Result).
+
+:- pred invoke_line(transitions::in, string::in, text_input_stream::in, io::di, io::uo) is det.
+invoke_line(Ts, File, Stream, !IO) :-
+    read_line_as_string(Stream, Line, !IO),
+    (
+        Line = ok(Base),
+        rot(Ts, Base, Rot),
+        write_string(Rot, !IO),
+        invoke_line(Ts, File, Stream, !IO)
+    ;
+        Line = error(_),
+        format("Can't read correctly the file %s.\n", [s(File)], !IO)
+    ;
+        Line = eof
+    ).
+
+:- pred handle_files(transitions::in, list(string)::in, io::di, io::uo) is det.
+handle_files(_, [], !IO).
+handle_files(Ts, [Head|Tail], !IO) :-
+    open_input(Head, Result, !IO),
+    (
+        Result = ok(Stream),
+        invoke_line(Ts, Head, Stream, !IO),
+        close_input(Stream, !IO)
+    ;
+        Result = error(_),
+        format("Can't open the file %s.\n", [s(Head)], !IO)
+    ),
+    handle_files(Ts, Tail, !IO).
+
+main(!IO) :-
+    generate_alpha_transition(0x0D, encrypt, Table),
+    command_line_arguments(Args, !IO),
+    (
+        Args = [_|_],
+        handle_files(Table, Args, !IO)
+    ;
+        Args = [],
+        invoke_line(Table, "<stdin>", stdin_stream, !IO)
+    ).
+
+:- end_module rot13.

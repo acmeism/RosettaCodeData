@@ -1,0 +1,5 @@
+(define *black* (list   0   0   0))
+(define *white* (list 255 255 255))
+(define *red*   (list 255   0   0))
+(define *green* (list   0 255   0))
+(define *blue*  (list   0   0 255))

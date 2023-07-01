@@ -1,0 +1,144 @@
+ [Demo of EDSAC library subroutine G1: Runge-Kutta solution of differential equations.
+  Full description is in Wilkes, Wheeler & Gill, 1951 edn, pages 32-34, 86-87, 132-134.
+
+  Before using G1, we need to fix n, m, a, b, c, d, as defined in WWG pages 86-87:
+  n = number of equations (2 for the Rosetta Code example).
+  2^m = multiplier for the hy', as large as possible without causing numeric overflow;
+    with the scaling chosen here, m = 5.
+  Variables y are stored in n consecutive long locations, the last of which is aD.
+  Scaled derivatives (2^m)hy' in n consecutive long locations, the last of which is bD.
+  G1 uses working variables in n consecutive long locations, the last of which is cD.
+  d = address of user-supplied auxiliary subroutine, which calculates the (2^m)hy'.
+
+  For convenience, keep G1 and its storage together. Start at (say) 400 and place:
+      variables y at 400D, 402D;
+      scaled derivatives at 404D, 406D;
+      workspace for G1 at 408D, 410D;
+      G1 itself at 412.
+  If the base address is placed in location 51 at load time, all the above
+    addresses can be accessed via the G parameter:]
+            T   51 K
+            P  400 F
+ [Now set up the 6 preset parameters specified in WWG:]
+            T   45 K
+            P    2#G [H parameter: P a D]
+            P    4 F [N parameter: P 2n F]
+            P    4 F [M parameter: P (b-a) F, or V (2048-a+b) F if a > b]
+            P    4 F [& parameter: P (c-b) F, or V (2048-b+c) F if b > c]
+            P    8 F [L parameter: P 2^(m-2) F]
+            P  300 F [X parameter: P d F]
+ [For other addresses in the program we can optionally use some more parameters:]
+            T   52 K
+            P  120 F [A parameter: main routine]
+            P   56 F [B parameter: print subroutine P1 from EDSAC library]
+            P  350 F [C parameter: constants for Rosetta code example]
+            P   78 F [V parameter: square root subroutine]
+
+ [Library subroutine to read constants; runs at load time and is then overwritten.
+  R5, for decimal fractions, seems to be unavailable (lost?), so the values are
+    here read in as 35-bit integers (i.e. times 2^34) by R2.
+  Values are: 0.001, initial value of y
+              (2^23)/(10^7) and 25/(2^10) for use in calculations
+              0.5/(10^9) for rounding to 9 d.p. (print routine P1 doesn't do this)]
+    GKT20FVDL8FA40DUDTFI40FA40FS39FG@S2FG23FA5@T5@E4@E13Z
+            T#C
+    17179869F14411518808F419430400F9#
+            TZ
+
+ [Library subroutine M3; prints header at load time and is then overwritten.]
+    PFGKIFAFRDLFUFOFE@A6FG@E8FEZPF
+    *SCALED!FOR!EDSAC@&!!TIME!!!!!!!!!Y!VIA!RK!!!!!Y!DIRECT@&
+            ....PK  [end text with some blank tape]
+
+ [Runge-Kutta: auxiliary subroutine to calculate (2^m)*h*(dy1/dt) and (2^m)*h*(dy2/dt)
+    from y1, y2, where y1 is the function y in Rosetta Code (but scaled) and y2 = t.
+  For the Rosetta code example we're using  m = 5, h = 2^(-7)]
+          E25K  TX   GK
+          A3F  T20@           [set up return as usual]
+          H2#G  V2#G  TD      [acc := t^2, temp store in 0D]
+          H#G  VD  LD  YF  TD [y1 times t^2, shift left, round, temp store in 0D]
+          H2#C  VD  YF  T4D   [times (2^23)/(10^7), round, to 4D for square root]
+     [14] A14@  GV  A4D  T4#G [call square root, result in 4D, copy to (2^m)hy']
+          A21@  T6#G          [1/4, i.e. (2^m)h with m and h as above, to (2^m)ht']
+     [20] ZF                  [overwritten by jump back to caller]
+     [21] RF                  [constant 1/4]
+
+  [Main routine, with two subroutines in the same address block as the main routine.]
+          E25K  TA  GK
+      [0] #F                  [figures shift on teleprinter]
+      [1] MF                  [decimal point (in figures mode)]
+      [2] !F  @F  &F          [space, carriage return, line feed,]
+      [5] K4096F              [null char]
+      [6] P100F               [constant: nr of Runge-Kutta steps (in address field)]
+      [7] PF                  [negative count of Runge-Kutta steps]
+      [8] P10F                [constant: number of steps between printed values]
+      [9] PF                  [negative count of steps between printed values]
+     [Enter with acc = 0]
+     [10] O@                  [set teleprinter to figures]
+          S6@  T7@            [init negative count of R-K steps]
+          S8@  T9@            [init negative count of print steps]
+     [Before using library subroutine G1, clear its working registers (WWG page 33)]
+          T8#G  T10#G
+     [Set up initial values of y1 and y2 (where y2 = t)]
+          A#C  T#G            [load 0.001 from constants section, store in y1]
+          T2#G                [y2 = t = 0]
+     [20] A20@  G40@          [call subroutine to print initial values]
+     [Loop round Runge-Kutta steps]
+     [22] TF  A23@  G12G      [clear accumulator, call G1 for Runge-Kutta step]
+          A9@  A2F  U9@       [update negative print count]
+          G33@                [skip printing if not reached 0]
+          S8@  T9@            [reset negative print count]
+          A31@  G40@          [call subroutine to print values]
+     [33] TF                  [clear accumulator]
+          A7@  A2F  U7@       [increment negative count of Runge-Kutta steps]
+          G22@                [loop till count = 0]
+          O5@  ZF             [flush teleprinter buffer; stop]
+
+ [Subroutine to print y1 as calculated (1) by Runge-Kutta (2) direct from formula]
+     [40] A3F  T71@           [set up return as usual]
+          A2#G  TD            [latest t (= y2) from Runge-Kutta, to 0D for printing]
+     [44] A44@  G72@          [call subroutine to print t]
+          O2@  O2@            [followed by 2 spaces]
+          A#G  TD             [latest y1 from Runge-Kutta, to 0D for printing]
+     [50] A50@  G72@          [call subroutine to print y1]
+          O2@  O2@            [followed by 2 spaces]
+          A    4#C            [load constant 25/(2^10)]
+          H2#G  V2#G  TD      [add t^2, temp store result in 0D]
+          HD  VD  LD  YF  TD  [square, shift 1 left, round, result to 0D]
+          H2#C  VD  YF  TD    [times (2^23)/(10^7), round, to 0D for printing]
+     [67] A67@  G72@          [call subroutine to print y]
+          O3@  O4@            [print CR, LF]
+     [71] ZF                  [overwritten by jump back to caller]
+
+ [Second-level subroutine to print number in 0D to 9 decimal places]
+     [72] A3F  T82@           [set up return as usual]
+          AD  A6#C  TD        [load number, add decimal rounding, to 0D for printing]
+          O81@  O1@           [print '0.' since P1 doesn't do so]
+          A79@  GB            [call library subroutine P1 for printing]
+     [81] P9F                 [parameter for P1, 9 decimals]
+     [82] ZF                  [overwritten by jump back to caller]
+
+ [Library subroutine G1 for Runge-Kutta process. 66 locations, even address.]
+            E25K  T12G
+    GKT4#ZH682DT6#ZPNT12#Z!1405DT14#ZTHT16#ZT2HTZA3FT61@A31@G63@&FT6ZPN
+    T8ZMMO&H4@A20@E23@T14ZAHT16ZA2HT18ZH12#@S12#@T12#@E28@H4#@T4DUFS38@
+    A25@T38@S6#@A16#@U46#@A8@U37@A9@U55@A24@T39@ZFR1057#@ZFYFU6DV6DRLYF
+    UDZFZFADLDADLLS6DN4DYFZFA46#@S14#@G29@A65@S11@ZFA35@U65@GXZF
+
+ [Replacement for library routine S2 (square root). 38 locations, even address.
+  Advantages: More accurate for small values of the argument.
+              Calculates sqrt(0) without going into an infinite loop.
+  Disadvantages: Longer and slower than S2 (calculates one bit at a time).]
+            E25K  TV
+    GKA3FT31@A4DG32@A33@T36#@T4DA33@RDU34#@RDS4DS33@A36#@G22@T36#@A4DS34#@
+    T4DA36#@A33@G25@TFA36#@S33@A36#@T36#@A34#@RDYFG9@ZFZFK4096FPFPFPFPF
+
+ [Library subroutine P1 - print a single positive number. 21 locations.
+  Prints number in 0D to n places of decimals, where
+  n is specified by 'P n F' pseudo-order after subroutine call.]
+            E25K  TB
+    GKA18@U17@S20@T5@H19@PFT5@VDUFOFFFSFL4FTDA5@A2FG6@EFU3FJFM1F
+
+  [Define entry point in main routine]
+            E25K  TA  GK
+            E10Z  PF  [enter at relative address 10 with accumulator = 0]

@@ -1,0 +1,34 @@
+class OutOfInk(Exception.IOError){
+   const TEXT="Out of ink";
+   text=TEXT;	// rename IOError to OutOfInk for this first/mother class
+   fcn init{ IOError.init(TEXT) }  // this renames instances
+}
+class Printer{
+   var id, ink;
+   fcn init(_id,_ink){ id,ink=vm.arglist }
+   fcn print(line){
+      if(not ink) throw(OutOfInk);
+      println("%s: %s".fmt(id,line));
+      Atomic.sleep((0.0).random(0.01));  // don't let one thread dominate
+      ink-=1;
+   }
+}
+class RendezvousPrinter{  // the choke point between printers and tasks
+   var printers=Thread.List();  // a thread safe list
+   fcn init(_printers){ printers.extend(vm.arglist) }
+   fcn print(line){  // caller waits for print job to finish
+      var lines=Thread.List(); // fcn local [static] variable, the print queue
+      lines.write(line);	// thread safe, stalls when full
+      // lines is racy - other threads are modifing it, length is suspect here
+      while(True){  // this thread can print that threads job
+	 critical{  // creates a [global] mutex, automatically unlocks on exception
+	    if(not printers) throw(OutOfInk); // No more printers to try
+	    if(not lines) break; // only remove jobs in this serialized section
+	    try{
+	       printers[0].print(lines[0]);  // can throw
+	       lines.del(0);  // successful print, remove job from queue
+	    }catch(OutOfInk){ printers.del(0) } // Switch to the next printer
+	 }
+      }
+   }
+}

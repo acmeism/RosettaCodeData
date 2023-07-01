@@ -1,0 +1,1 @@
+(find-symbol "FOO" "BAR")

@@ -1,0 +1,39 @@
+import java.math.BigInteger
+
+interface NumberGenerator {
+    val numbers: Array<BigInteger>
+}
+
+class Benford(ng: NumberGenerator) {
+    override fun toString() = str
+
+    private val firstDigits = IntArray(9)
+    private val count = ng.numbers.size.toDouble()
+    private val str: String
+
+    init {
+        for (n in ng.numbers) {
+            firstDigits[n.toString().substring(0, 1).toInt() - 1]++
+        }
+
+        str = with(StringBuilder()) {
+            for (i in firstDigits.indices) {
+                append(i + 1).append('\t').append(firstDigits[i] / count)
+                append('\t').append(Math.log10(1 + 1.0 / (i + 1))).append('\n')
+            }
+
+            toString()
+        }
+    }
+}
+
+object FibonacciGenerator : NumberGenerator {
+    override val numbers: Array<BigInteger> by lazy {
+        val fib = Array<BigInteger>(1000, { BigInteger.ONE })
+        for (i in 2 until fib.size)
+            fib[i] = fib[i - 2].add(fib[i - 1])
+        fib
+    }
+}
+
+fun main(a: Array<String>) = println(Benford(FibonacciGenerator))

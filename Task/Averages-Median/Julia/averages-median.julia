@@ -1,0 +1,15 @@
+using Statistics
+function median2(n)
+	s = sort(n)
+	len = length(n)
+	if len % 2 == 0
+		return (s[floor(Int, len / 2) + 1] + s[floor(Int, len / 2)]) / 2
+	else
+		return  s[floor(Int, len / 2) + 1]
+	end
+end
+
+a = [4.1, 5.6, 7.2, 1.7, 9.3, 4.4, 3.2]
+b = [4.1, 7.2, 1.7, 9.3, 4.4, 3.2]
+
+@show a b median2(a) median(a) median2(b) median(b)

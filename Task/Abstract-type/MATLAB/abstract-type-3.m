@@ -1,0 +1,3 @@
+properties (Abstract)
+   AbsProp
+end

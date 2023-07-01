@@ -1,0 +1,213 @@
+( ( Holy-Knight
+  =     begin colWidth crumbs non-empty pairs path parseLine
+      , display isolateStartCell minDistance numberElementsAndSort
+      , parseBoard reverseList rightAlign solve strlen
+    .   "'non-empty' is a pattern that is used several times in bigger patterns."
+      & ( non-empty
+        =
+        =   %@
+          : ~( "."
+             | "-"
+             | " "
+             | \t
+             | \r
+             | \n
+             )
+        )
+      & ( reverseList
+        =   a L
+          .   :?L
+            & whl'(!arg:%?a ?arg&!a !L:?L)
+            & !L
+        )
+      & (strlen=e.@(!arg:? [?e)&!e)
+      & ( rightAlign
+        =   string width
+          .   !arg:(?width,?string)
+            & !width+-1*strlen$!string:?width
+            &   whl
+              ' ( !width+-1:~<0:?width
+                & " " !string:?string
+                )
+            & str$!string
+        )
+      & ( minDistance
+        =   board pat1 pat2 minWidth pos1 pos2 pattern
+          .   !arg:(?board,(=?pat1),(=?pat2))
+            & -1:?minWidth
+            & "Construct a pattern using a template.
+            The pattern finds the smallest distance between any two columns in the input.
+            Assumption: all columns have the same width and columns are separated by one or
+            more spaces. The function can also be used to find the width of the first column
+            by letting pat1 match a new line."
+            &
+                ' ( ?
+                    (   $pat1
+                        [?pos1
+                        (? " "|`)
+                        ()$pat2
+                        [?pos2
+                        ?
+                    &   !pos2+-1*!pos1
+                      : ( <!minWidth
+                        | ?&!minWidth:<0
+                        )
+                      : ?minWidth
+                    & ~
+                    )
+                  )
+              : (=?pattern)
+            & "'pattern', by design, always fails. The interesting part is a side effect:
+               the column width."
+            & (@(!board:!pattern)|!minWidth)
+        )
+      & ( numberElementsAndSort
+        =   a sum n
+          .   0:?sum:?n
+            & "An evaluated sum is always sorted. The terms are structured so the sorting
+               order is by row and then by column (both part of 'a')."
+            &   whl
+              ' ( !arg:%?a ?arg
+                & 1+!n:?n
+                & (!a,!n)+!sum:?sum
+                )
+            & "return the sorted list (sum) and also the size of a field that can contain
+               the highest number."
+            & (!sum.strlen$!n+1)
+        )
+      & ( parseLine
+        =     line row columnWidth width col
+            , bins val A M Z cell validPat
+          .   !arg:(?line,?row,?width,?columnWidth,?bins)
+            & 0:?col
+            & "Find the cells and create a pair [row,col] for each. Put each pair in a bin.
+               There are as many bins as there are different values in cells."
+            &   '(? ($!non-empty:?val) ?)
+              : (=?validPat)
+            &   whl
+              ' ( @(!line:?cell [!width ?line)
+                & (   @(!cell:!validPat)
+                    &   (   !bins:?A (!val.?M) ?Z
+                          & !A (!val.(!row.!col) !M) !Z
+                        | (!val.!row.!col) !bins
+                        )
+                      : ?bins
+                  |
+                  )
+                & !columnWidth:?width
+                & 1+!col:?col
+                )
+            & !bins
+        )
+      & ( parseBoard
+        =   board firstColumnWidth columnWidth,row bins line
+          .   !arg:?board
+            &   (   minDistance
+                  $ (str$(\r \n !arg),(=\n),!non-empty)
+                , minDistance$(!arg,!non-empty,!non-empty)
+                )
+              : (?firstColumnWidth,?columnWidth)
+            & 0:?row
+            & :?bins
+            &   whl
+              ' ( @(!board:?line \n ?board)
+                &     parseLine
+                    $ (!line,!row,!firstColumnWidth,!columnWidth,!bins)
+                  : ?bins
+                & (!bins:|1+!row:?row)
+                )
+            &     parseLine
+                $ (!board,!row,!firstColumnWidth,!columnWidth,!bins)
+              : ?bins
+        )
+      & "Find the first bin with only one pair. Return this pair and the combined pairs in
+         all remaining bins."
+      & ( isolateStartCell
+        =   A begin Z valuedPairs pairs
+          .   !arg:?A (?.? [1:?begin) ?Z
+            & !A !Z:?arg
+            & :?pairs
+            &   whl
+              ' ( !arg:(?.?valuedPairs) ?arg
+                & !valuedPairs !pairs:?pairs
+                )
+            & (!begin.!pairs)
+        )
+      & ( display
+        =   board solution row col x y n colWidth
+          .   !arg:(?board,?solution,?colWidth)
+            & out$!board
+            & 0:?row
+            & -1:?col
+            &   whl
+              ' ( !solution:((?y.?x),?n)+?solution
+                &   whl
+                  ' ( !row:<!y
+                    & 1+!row:?row
+                    & -1:?col
+                    & put$\n
+                    )
+                &   whl
+                  ' ( 1+!col:?col:<!x
+                    & put$(rightAlign$(!colWidth,))
+                    )
+                & put$(rightAlign$(!colWidth,!n))
+                )
+            & put$\n
+        )
+      & ( solve
+        =   A Z x y crumbs pairs X Y solution
+          .   !arg:((?y.?x),?crumbs,?pairs)
+            & ( !pairs:&(!y.!x) !crumbs
+              |     !pairs
+                  :   ?A
+                      ( (?Y.?X) ?Z
+                      &   (!x+-1*!X)*(!y+-1*!Y)
+                        : (2|-2)
+                      &     solve
+                          $ ( (!Y.!X)
+                            , (!y.!x) !crumbs
+                            , !A !Z
+                            )
+                        : ?solution
+                      )
+                & !solution
+              )
+        )
+      & ( isolateStartCell$(parseBoard$!arg):(?begin.?pairs)
+        | out$"Sorry, I cannot identify a start cell."&~
+        )
+      & solve$(!begin,,!pairs):?crumbs
+      &   numberElementsAndSort$(reverseList$!crumbs)
+        : (?path.?colWidth)
+      & display$(!arg,!path,!colWidth)
+  )
+&     "
+
+      0 0 0
+      0   0 0
+      0 0 0 0 0 0 0
+    0 0 0     0   0
+    0   0     0 0 0
+    1 0 0 0 0 0 0
+        0 0   0
+          0 0 0
+          "
+      "
+-----1-0-----
+-----0-0-----
+----00000----
+-----000-----
+--0--0-0--0--
+00000---00000
+--00-----00--
+00000---00000
+--0--0-0--0--
+-----000-----
+----00000----
+-----0-0-----
+-----0-0-----"
+  : ?boards
+& whl'(!boards:%?board ?boards&Holy-Knight$!board)
+& done
+);

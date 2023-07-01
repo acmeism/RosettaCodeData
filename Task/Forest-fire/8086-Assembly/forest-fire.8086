@@ -1,0 +1,189 @@
+	;;;	Simulation settings (probabilities are P/65536)
+probF:	equ	7		; P(spontaneous combustion) ~= 0.0001
+probP:	equ	655		; P(spontaneous growth) ~= 0.01
+HSIZE:	equ	320 		; Field width (320x200 fills CGA screen)
+VSIZE:	equ	200		; Field height
+FSIZE:	equ	HSIZE*VSIZE	; Field size
+FPARA:	equ	FSIZE/16+1	; Field size in paragraphs
+	;;;	Field values
+EMPTY:	equ	0 		; Empty cell (also CGA black)
+TREE:	equ	1		; Tree cell (also CGA green)
+FIRE:	equ	2		; Burning cell (also CGA red)
+	;;;	MS-DOS system calls and values
+TOPSEG:	equ	2		; First unavailable segment
+puts:	equ	9		; Print a string
+time:	equ	2Ch		; Get system time
+exit:	equ	4Ch		; Exit to DOS
+	;;;	BIOS calls and values
+palet:	equ	0Bh		; Set CGA color pallette
+vmode:	equ	0Fh		; Get current video mode
+keyb:	equ	1		; Get keyboard status
+CGALO:	equ	4		; Low-res (4-color) CGA graphics mode
+MDA:	equ	7		; MDA monochrome text mode
+CGASEG:	equ	0B800h		; CGA memory segment
+	cpu	8086
+	org	100h
+section	.text
+	;;;	Program set-up (check memory size and set video mode)
+	mov	sp,stack.top	; Move stack inwards
+	mov	bp,sp		; Set BP to first available paragraph
+	mov	cl,4
+	shr	bp,cl
+	inc	bp
+	mov	dx,cs
+	add	bp,dx
+	mov	bx,[TOPSEG]	; Get first unavailable segment
+	sub	bx,bp		; Get amount of available memory
+	cmp	bx,FPARA*2	; Enough to fit two fields?
+	ja	mem_ok
+	mov	dx,errmem	; If not, print error message
+err:	mov	ah,puts
+	int	21h
+	mov	ah,exit		; And stop
+	int	21h
+mem_ok:	mov	ah,vmode	; Get current video mode
+	int	10h
+	push	ax		; Keep on stack for later retrieval
+	cmp	al,MDA		; MDA card does not support CGA graphics,
+	mov	dx,errcga	; so print an error and quit.
+	je	err
+	mov	ax,CGALO	; Otherwise, switch to 320x200 CGA mode
+	int	10h
+	mov	ah,palet	; And set the black/green/red/brown palette
+	mov	bx,0100h
+	int	10h
+	mov	ah,time		; Get the system time
+	int	21h
+	mov	[rnddat],cx	; Use it as the RNG seed
+	mov	[rnddat+2],dx
+	;;;	Initialize the field (place trees randomly)
+	mov	es,bp		; ES = field segment
+	xor	di,di		; Start at first field
+	mov	cx,FSIZE	; CX = how many cells to initialize
+	mov	ah,TREE
+ptrees:	call	random		; Get random byte
+	and	al,ah 		; Place a tree 50% of the time
+	stosb
+	loop	ptrees
+	mov	ds,bp		; DS = field segment
+	;;;	Write field to CGA display
+disp:	xor	si,si		; Start at beginning
+	mov	dx,CGASEG	; ES = CGA memory segment
+.scrn:	mov	es,dx
+	xor	di,di		; Start of segment
+.line:	mov	cx,HSIZE/8	; 8 pixels per word
+.word:	xor	bx,bx		; BX will hold CGA word
+	xor	ah,ah		; Set high byte to zero
+%rep 	7			; Unroll this loop for speed
+	lodsb			; Get cell
+	or	bx,ax		; Put it in low 2 bits of BX
+	shl	bx,1		; Shift BX to make room for next field
+	shl	bx,1
+%endrep
+	lodsb			; No shift needed for final cell
+	or	ax,bx
+	stosw			; Store word in CGA memory
+	loop	.word		; Do next byte of line
+	add	si,HSIZE	; Even and odd lines stored separately
+	cmp	si,FSIZE	; Done yet?
+	jb	.line		; If not, do next line
+	add	dx,200h		; Move to next segment
+	cmp	dx,CGASEG+200h	; If we still need to do the odd lines,
+	mov	si,HSIZE	; then do them
+	jbe	.scrn		
+	;;;	Stop the program if a key is pressed
+	mov	ah,1		; Check if a key is pressed
+	int	16h
+	jz 	calc		; If not, calculate next field state
+	pop	ax		; Otherwise, restore the old video mode,
+	cbw
+	int	10h
+	mov	ah,exit		; and exit to DOS.
+	int	21h
+	;;;	Calculate next field state
+calc:	mov	ax,ds		; Set ES = new field segment
+	add	ax,FPARA
+	mov	es,ax
+	xor	di,di		; Start at beginning
+	xor	si,si
+.cell:	lodsb			; Get cell
+	dec	al		; A=1 = tree
+	jz	.tree
+	dec	al		; A=2 = fire
+	jz	.fire
+	call	rand16		; An empty space fills with a tree
+	cmp	ax,probP	; with probability P.
+	jc	.mtree		; Otherwise it stays empty
+.fire:	xor	al,al		; A burning tree turns into an empty cell
+	stosb
+	jmp	.cnext
+.mtree:	mov	al,TREE
+	stosb
+.cnext:	cmp	si,FSIZE	; Are we there yet?
+	jne	.cell		; If not, do next cell
+	push	es		; Done - set ES=old field, DS=new field,
+	push	ds
+	pop	es
+	pop	ds
+	mov	cx,FSIZE/2
+	xor	si,si
+	xor	di,di
+	rep	movsw		; copy the new field to the old field,
+	push	es		; set DS to be the field to draw,
+	pop	ds
+	xor	di,di		; Instead of doing edge case handling in the
+	xor	ax,ax		; Moore neighbourhood calculation, just zero
+	mov	cx,HSIZE/2	; out the borders for a slightly smaller image
+	rep	stosw		; Upper border,
+	mov	di,FSIZE-HSIZE
+	mov	cx,HSIZE/2
+	rep	stosw		; lower border,
+	mov	di,HSIZE-5	; right border.
+	mov	cx,VSIZE-1	
+.bordr:	stosb
+	add	di,HSIZE-1
+	loop	.bordr
+	jmp	disp		; and update the display.
+.tree:	mov	ax,[si-HSIZE-2] ; Load Moore neighbourhood
+	or	al,[si-HSIZE]
+	or	ax,[si-2]
+	or	al,[si]
+	or	ax,[si+HSIZE-2]
+	or	al,[si+HSIZE]
+	or	al,ah
+	test	al,FIRE		; Are any of the trees on fire?
+	jnz	.tburn		; Then set this tree on fire too
+	call	rand16		; Otherwise, spontaneous combustion?
+	cmp	ax,probF
+	jc	.tburn
+	mov	al,TREE		; If not, the tree remains a tree
+	stosb
+	jmp	.cnext
+.tburn:	mov	al,FIRE		; Set the tree on fire
+	stosb
+	jmp	.cnext
+	;;;	Get a random word in AX
+rand16:	call	random
+	xchg	al,ah
+	;;;	Get a random byte in AL. BX and DX destroyed.
+random:	mov	bx,[cs:rnddat]	; BL=X BH=A
+	mov	dx,[cs:rnddat+2]	; DL=B DH=C
+	inc	bl		; X++
+	xor	bh,dh		; A ^= C
+	xor	bh,bl		; A ^= X
+	add	dl,bh		; B += A
+	mov	al,dl		; C' = B
+	shr	al,1		; C' >>= 1
+	add	al,dh		; C' += C
+	xor	al,bh		; C' ^= A
+	mov	dh,al		; C = C'
+	mov	[cs:rnddat+2],dx	; Update RNG state
+	mov	[cs:rnddat],bx
+	ret
+section	.data	
+errcga:	db	'CGA mode not supported.$'
+errmem:	db	'Not enough memory.$'
+section	.bss
+rnddat:	resb	4		; RNG state
+stack:	resw	128		; Stack space
+.top:	equ	$

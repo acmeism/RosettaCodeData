@@ -1,0 +1,93 @@
+% This program uses the 'bigint' cluster from
+% the 'misc.lib' included with PCLU.
+
+isqrt = proc (s: int) returns (int)
+    x0: int := s/2
+    if x0=0 then return(s) end
+    x1: int := (x0 + s/x0)/2
+    while x1 < x0 do
+        x0 := x1
+        x1 := (x0 + s/x0)/2
+    end
+    return(x0)
+end isqrt
+
+sieve = proc (n: int) returns (array[bool])
+    prime: array[bool] := array[bool]$fill(0,n+1,true)
+    prime[0] := false
+    prime[1] := false
+    for p: int in int$from_to(2, isqrt(n)) do
+        if prime[p] then
+            for c: int in int$from_to_by(p*p,n,p) do
+                prime[c] := false
+            end
+        end
+    end
+    return(prime)
+end sieve
+
+% Calculate the N'th primorial given a boolean array denoting primes
+primorial = proc (n: int, prime: array[bool])
+            returns (bigint) signals (out_of_primes)
+    % 0'th primorial = 1
+    p: bigint := bigint$i2bi(1)
+    for i: int in array[bool]$indexes(prime) do
+        if ~prime[i] then continue end
+        if n=0 then break end
+        p := p * bigint$i2bi(i)
+        n := n-1
+    end
+    if n>0 then signal out_of_primes end
+    return(p)
+end primorial
+
+% Find the length in digits of a bigint without converting it to a string.
+% The naive way takes over an hour to count the digits for p(100000),
+% this one ~5 minutes.
+n_digits = proc (n: bigint) returns (int)
+    own zero: bigint := bigint$i2bi(0)
+    own ten: bigint := bigint$i2bi(10)
+
+    digs: int := 1
+    dstep: int := 1
+    tenfac: bigint := ten
+    step: bigint := ten
+
+    while n >= tenfac do
+        digs := digs + dstep
+        step := step * ten
+        dstep := dstep + 1
+        next: bigint := tenfac*step
+        if n >= next then
+            tenfac := next
+        else
+            step, dstep := ten, 1
+            tenfac := tenfac*step
+        end
+    end
+    return(digs)
+end n_digits
+
+start_up = proc ()
+    po: stream := stream$primary_output()
+
+    % Sieve a million primes
+    prime: array[bool] := sieve(15485863)
+
+    % Show the first 10 primorials
+    for i: int in int$from_to(0,9) do
+        stream$puts(po, "primorial(" || int$unparse(i) || ") = ")
+        stream$putright(po, bigint$unparse(primorial(i, prime)), 15)
+        stream$putl(po, "")
+    end
+
+    % Show the length of some bigger primorial numbers
+    for tpow: int in int$from_to(1,5) do
+        p_ix: int := 10**tpow
+        stream$puts(po, "length of primorial(")
+        stream$putright(po, int$unparse(p_ix), 7)
+        stream$puts(po, ") = ")
+        stream$putright(po, int$unparse(n_digits(primorial(p_ix, prime))), 7)
+        stream$putl(po, "")
+    end
+end start_up

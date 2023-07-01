@@ -1,0 +1,56 @@
+# This is a general purpose AMB function that takes a two-argument failure function and
+# arbitrary number of iterable objects and returns the first solution found as an array
+# this function is in essence an iterative backtracking solver
+
+function amb(failure, itrs...)
+    n = length(itrs)
+    if n == 1 return end
+    states = Vector(n)
+    values = Vector(n)
+    # starting point, we put down the first value from the first iterable object
+    states[1] = start(itrs[1])
+    values[1], states[1] = next(itrs[1], states[1])
+    i = 1
+    # main solver loop
+    while true
+        # test for failure
+        if i > 1 && failure(values[i-1], values[i])
+            # loop for generating a new value upon failure
+            # in fact this would be way more readable using goto, but Julia doesn't seem to have that :(
+            while true
+                # if we failed, we must generate a new value, but first we must check whether there is any
+                if done(itrs[i], states[i])
+                    # backtracking step with sanity check in case we ran out of values from the current generator
+                    if i == 1
+                        return
+                    else
+                        i -= 1
+                        continue
+                    end
+                else
+                    # if there is indeed a new value, generate it
+                    values[i], states[i] = next(itrs[i], states[i])
+                    break
+                end
+            end
+        else
+            # no failure branch
+            # if solution is ready (i.e. all generators are used) just return it
+            if i == n return values end
+            # else start up the next generator
+            i += 1
+            states[i] = start(itrs[i])
+            values[i], states[i] = next(itrs[i], states[i])
+        end
+    end
+end
+
+# Call our generic AMB function according to the task description and
+# form the solution sentence from the returned array of words
+amb((s1,s2) -> s1[end] != s2[1], # failure function
+    ["the", "that", "a"],
+    ["frog", "elephant", "thing"],
+    ["walked", "treaded", "grows"],
+    ["slowly", "quickly"]) |>
+    x -> join(x, " ") |>
+    println

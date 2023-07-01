@@ -1,0 +1,110 @@
+	LOC	Data_Segment
+	GREG	@
+Buf	OCTA	0,0,0,0         integer print buffer
+Char	BYTE	0,0             single char print buffer
+task	BYTE	"WWWWWWWWWWWWBWWWWWWWWWWWWBBBWWWWWW"
+	BYTE    "WWWWWWWWWWWWWWWWWWBWWWWWWWWWWWWWW",0
+len	GREG	@-1-task
+
+// task should become this
+tEnc	BYTE	"12W1B12W3B24W1B14W",0
+
+	GREG	@
+// tuple array for encoding purposes
+// each tuple is a tetra (4 bytes long or 2 wydes long)
+// (c,l) in which c is a char and l = number of chars c
+// high wyde of the tetra contains the char
+// low wyde  .. ..  ..    contains the length
+RLE	TETRA	0
+
+	LOC	#100            locate program
+	GREG	@
+// print number to stdout
+// destroys input arg $3 !
+Prt64	LDA	$255,Buf+23    points to LSD
+//			       do
+2H	DIV	$3,$3,10        (N,R) = divmod (N,10)
+	GET	$13,rR          get remainder
+	INCL	$13,'0'         convert to ascii
+	STBU	$13,$255        store ascii digit
+	BZ	$3,3F
+	SUB	$255,$255,1     move pointer down
+	JMP	2B             While N !=0
+3H	TRAP	0,Fputs,StdOut print number to standard out
+	GO	$127,$127,0    return
+
+	GREG	@
+// print char to stdout
+PChar	LDA	$255,Char
+	STBU	$4,$255
+	TRAP	0,Fputs,StdOut
+	GO	$127,$127,0
+
+	GREG	@
+// encode routine
+// $0 string pointer
+// $1 index var
+// $2 pointer to tuple array
+// $11 temp var tuple
+Encode	SET	$1,0        initialize index = 0
+	SET	$11,0       postion in string = 0
+	LDBU	$3,$0,$1    get first char
+	ADDU	$6,$3,0     remember it
+                            do
+1H	INCL	$1,1          repeat  incr index
+	LDBU	$3,$0,$1              get a char
+	BZ	$3,2F                 if EOS then finish
+	CMP	$7,$3,$6
+	PBZ	$7,1B         while new == old
+	XOR	$4,$4,$4      new tuple
+	ADDU	$4,$6,0
+	SLU	$4,$4,16      old char to tuple -> (c,_)
+	SUB	$7,$1,$11     length = index - previous position
+	ADDU	$11,$1,0      incr position
+	OR	$4,$4,$7      length l to tuple -> (c,l)
+	STT	$4,$2         put tuple in array
+	ADDU	$6,$3,0       remember new char
+	INCL	$2,4          incr 'tetra' pointer
+	JMP	1B          loop
+2H	XOR	$4,$4,$4    put last tuple in array
+	ADDU	$4,$6,0
+	SLU	$4,$4,16
+	SUB	$7,$1,$11
+	ADDU	$11,$1,0
+	OR	$4,$4,$7
+	STT	$4,$2		
+	GO	$127,$127,0 return
+
+	GREG	@
+Main	LDA	$0,task      pointer uncompressed string
+	LDA	$2,RLE	     pointer tuple array
+	GO	$127,Encode  encode string
+	LDA	$2,RLE	     points to start tuples
+	SET	$5,#ffff     mask for extracting length
+1H	LDTU	$3,$2        while not End of Array
+	BZ	$3,2F
+	SRU	$4,$3,16      char   = (c,_)
+	AND	$3,$3,$5      length = (_,l)
+	GO	$127,Prt64    print length
+	GO	$127,PChar    print char
+	INCL	$2,4          incr tuple pointer
+	JMP	1B           wend
+2H	SET	$4,#a        print NL
+	GO	$127,PChar
+
+// decode using the RLE tuples
+	LDA	$2,RLE	     pointer tuple array
+	SET	$5,#ffff     mask
+1H	LDTU	$3,$2        while not End of Array
+	BZ	$3,2F
+	SRU	$4,$3,16      char   = (c,_)
+	AND	$3,$3,$5      length = (_,l)
+//                            for (i=0;i<length;i++) {
+3H	GO	$127,PChar      print a char
+	SUB	$3,$3,1
+	PBNZ	$3,3B
+	INCL	$2,4
+	JMP	1B            }
+2H	SET	$4,#a        print NL
+	GO	$127,PChar
+	TRAP	0,Halt,0     EXIT

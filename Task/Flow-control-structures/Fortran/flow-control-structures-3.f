@@ -1,0 +1,6 @@
+      SUBROUTINE FRED(X,*,*)     !With placeholders for unusual parameters.
+        ...
+        RETURN          !Normal return from FRED.
+        ...
+        RETURN 2        !Return to the second label.
+      END

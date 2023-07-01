@@ -1,0 +1,130 @@
+(typedef LRESULT int-ptr-t)
+(typedef LPARAM int-ptr-t)
+(typedef WPARAM uint-ptr-t)
+
+(typedef UINT uint32)
+(typedef LONG int32)
+(typedef WORD uint16)
+(typedef DWORD uint32)
+(typedef LPVOID cptr)
+(typedef BOOL (bool int32))
+(typedef BYTE uint8)
+
+(typedef HWND (cptr HWND))
+(typedef HINSTANCE (cptr HINSTANCE))
+(typedef HICON (cptr HICON))
+(typedef HCURSOR (cptr HCURSOR))
+(typedef HBRUSH (cptr HBRUSH))
+(typedef HMENU (cptr HMENU))
+(typedef HDC (cptr HDC))
+
+(typedef ATOM WORD)
+(typedef LPCTSTR wstr)
+
+(defvarl NULL cptr-null)
+
+(typedef WNDCLASS (struct WNDCLASS
+                    (style UINT)
+                    (lpfnWndProc closure)
+                    (cbClsExtra int)
+                    (cbWndExtra int)
+                    (hInstance HINSTANCE)
+                    (hIcon HICON)
+                    (hCursor HCURSOR)
+                    (hbrBackground HBRUSH)
+                    (lpszMenuName LPCTSTR)
+                    (lpszClassName LPCTSTR)))
+
+(defmeth WNDCLASS :init (me)
+  (zero-fill (ffi WNDCLASS) me))
+
+(typedef POINT (struct POINT
+                 (x LONG)
+                 (y LONG)))
+
+(typedef MSG (struct MSG
+               (hwnd HWND)
+               (message UINT)
+               (wParam WPARAM)
+               (lParam LPARAM)
+               (time DWORD)
+               (pt POINT)))
+
+(typedef RECT (struct RECT
+                (left LONG)
+                (top LONG)
+                (right LONG)
+                (bottom LONG)))
+
+(typedef PAINTSTRUCT (struct PAINTSTRUCT
+                       (hdc HDC)
+                       (fErase BOOL)
+                       (rcPaint RECT)
+                       (fRestore BOOL)
+                       (fIncUpdate BOOL)
+                       (rgbReserved (array 32 BYTE))))
+
+(defvarl CW_USEDEFAULT #x-80000000)
+(defvarl WS_OVERLAPPEDWINDOW #x00cf0000)
+
+(defvarl SW_SHOWDEFAULT 5)
+
+(defvarl WM_DESTROY 2)
+(defvarl WM_PAINT 15)
+
+(defvarl COLOR_WINDOW 5)
+
+(deffi-cb wndproc-fn LRESULT (HWND UINT LPARAM WPARAM))
+
+(with-dyn-lib "kernel32.dll"
+  (deffi GetModuleHandle "GetModuleHandleW" HINSTANCE (wstr)))
+
+(with-dyn-lib "user32.dll"
+  (deffi RegisterClass "RegisterClassW" ATOM ((ptr-in WNDCLASS)))
+  (deffi CreateWindowEx "CreateWindowExW" HWND (DWORD
+                                               LPCTSTR LPCTSTR
+                                               DWORD
+                                               int int int int
+                                               HWND HMENU HINSTANCE
+                                               LPVOID))
+  (deffi ShowWindow "ShowWindow" BOOL (HWND int))
+  (deffi GetMessage "GetMessageW"  BOOL ((ptr-out MSG) HWND UINT UINT))
+  (deffi TranslateMessage "TranslateMessage"  BOOL ((ptr-in MSG)))
+  (deffi DispatchMessage "DispatchMessageW"  LRESULT ((ptr-in MSG)))
+  (deffi PostQuitMessage "PostQuitMessage" void (int))
+  (deffi DefWindowProc "DefWindowProcW" LRESULT (HWND UINT LPARAM WPARAM))
+  (deffi BeginPaint "BeginPaint" HDC (HWND (ptr-out PAINTSTRUCT)))
+  (deffi EndPaint "EndPaint" BOOL (HWND (ptr-in PAINTSTRUCT)))
+  (deffi FillRect "FillRect" int (HDC (ptr-in RECT) HBRUSH)))
+
+(defun WindowProc (hwnd uMsg wParam lParam)
+  (caseql* uMsg
+    (WM_DESTROY
+      (PostQuitMessage 0)
+      0)
+    (WM_PAINT
+      (let* ((ps (new PAINTSTRUCT))
+             (hdc (BeginPaint hwnd ps)))
+        (FillRect hdc ps.rcPaint (cptr-int (succ COLOR_WINDOW) 'HBRUSH))
+        (EndPaint hwnd ps)
+        0))
+    (t (DefWindowProc hwnd uMsg wParam lParam))))
+
+(let* ((hInstance (GetModuleHandle nil))
+       (wc (new WNDCLASS
+                lpfnWndProc [wndproc-fn WindowProc]
+                hInstance hInstance
+                lpszClassName "Sample Window Class")))
+  (RegisterClass wc)
+  (let ((hwnd (CreateWindowEx 0 wc.lpszClassName "Learn to Program Windows"
+                              WS_OVERLAPPEDWINDOW
+                              CW_USEDEFAULT CW_USEDEFAULT
+                              CW_USEDEFAULT CW_USEDEFAULT
+                              NULL NULL hInstance NULL)))
+    (unless (equal hwnd NULL)
+      (ShowWindow hwnd SW_SHOWDEFAULT)
+
+      (let ((msg (new MSG)))
+        (while (GetMessage msg NULL 0 0)
+          (TranslateMessage msg)
+          (DispatchMessage msg))))))

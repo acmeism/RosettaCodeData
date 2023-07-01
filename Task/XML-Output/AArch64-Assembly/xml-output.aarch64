@@ -1,0 +1,166 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program outputXml64.s   */
+/* use special library libxml2   */
+/* special link gcc with options -I/usr/include/libxml2 -lxml2 */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessEndpgm:      .asciz "Normal end of program.\n"
+szFileName:        .asciz "file2.xml"
+szFileMode:        .asciz "w"
+szMessError:       .asciz "Error detected !!!!. \n"
+szName1:           .asciz "April"
+szName2:           .asciz "Tam O'Shanter"
+szName3:           .asciz "Emily"
+szRemark1:         .asciz "Bubbly: I'm > Tam and <= Emily"
+szRemark2:         .asciz "Burns: \"When chapman billies leave the street ...\""
+szRemark3:         .asciz "Short & shrift"
+szVersDoc:         .asciz "1.0"
+szLibCharRem:      .asciz "CharacterRemarks"
+szLibChar:         .asciz "Character"
+
+szLibName:         .asciz "Name"
+szCarriageReturn:  .asciz "\n"
+
+tbNames:           .quad szName1              // area of pointer string name
+                   .quad szName2
+                   .quad szName3
+                   .quad 0                    // area end
+tbRemarks:         .quad szRemark1            // area of pointer string remark
+                   .quad szRemark2
+                   .quad szRemark3
+                   .quad 0                    // area end
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+.align 4
+
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                     // entry of program
+    ldr x0,qAdrszVersDoc
+    bl xmlNewDoc                          // create doc
+    mov x19,x0                            // doc address
+    mov x0,#0
+    ldr x1,qAdrszLibCharRem
+    bl xmlNewNode                         // create root node
+    mov x20,x0                            // node characterisation address
+    mov x0,x19                            // doc
+    mov x1,x20                            // node root
+    bl xmlDocSetRootElement
+    ldr x22,qAdrtbNames
+    ldr x23,qAdrtbRemarks
+    mov x24,#0                            // loop counter
+1:                                        // start loop
+    mov x0,#0
+    ldr x1,qAdrszLibChar                  // create node
+    bl xmlNewNode
+    mov x21,x0                            // node character
+                                          // x0 = node address
+    ldr x1,qAdrszLibName
+    ldr x2,[x22,x24,lsl #3]               // load name string address
+    bl xmlNewProp
+    ldr x0,[x23,x24,lsl #3]               // load remark string address
+    bl xmlNewText
+    mov x1,x0
+    mov x0,x21
+    bl xmlAddChild
+    mov x0,x20
+    mov x1,x21
+    bl xmlAddChild
+    add x24,x24,#1
+    ldr x2,[x22,x24,lsl #3]                // load name string address
+    cmp x2,#0                              // = zero ?
+    bne 1b                                 // no -> loop
+
+    ldr x0,qAdrszFileName
+    ldr x1,qAdrszFileMode
+    bl fopen                               // file open
+    cmp x0,#0
+    blt 99f
+    mov x24,x0                              //FD
+    mov x1,x19
+    mov x2,x20
+    bl xmlDocDump                          // write doc on the file
+
+    mov x0,x24                             // close file
+    bl fclose
+    mov x0,x19                             // close document
+    bl xmlFreeDoc
+    bl xmlCleanupParser
+    ldr x0,qAdrszMessEndpgm
+    bl affichageMess
+    b 100f
+99:                                        // error
+    ldr x0,qAdrszMessError
+    bl affichageMess
+100:                                       // standard end of the program
+    mov x0,0                               // return code
+    mov x8,EXIT                            // request to exit program
+    svc 0                                  // perform the system call
+
+qAdrszMessError:          .quad szMessError
+qAdrszMessEndpgm:         .quad szMessEndpgm
+qAdrszVersDoc:            .quad szVersDoc
+qAdrszLibCharRem:         .quad szLibCharRem
+qAdrszLibChar:            .quad szLibChar
+qAdrszLibName:            .quad szLibName
+qAdrtbNames:              .quad tbNames
+qAdrtbRemarks:            .quad tbRemarks
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qStdout:                  .quad STDOUT
+qAdrszFileName:           .quad szFileName
+qAdrszFileMode:           .quad szFileMode
+
+/************************************/
+/* Strings comparaison              */
+/************************************/
+/* x0 et x1 contains strings addresses */
+/* x0 return 0 dans x0 if equal */
+/* return -1 if string x0 < string x1 */
+/* return 1  if string x0 > string x1 */
+comparString:
+    stp x2,lr,[sp,-16]!            // save  registers
+    stp x3,x4,[sp,-16]!            // save  registers
+    mov x2,#0                   // indice
+1:
+    ldrb w3,[x0,x2]             // one byte string 1
+    ldrb w4,[x1,x2]             // one byte string 2
+    cmp w3,w4
+    blt 2f                      // less
+    bgt 3f                      // greather
+    cmp w3,#0                   // 0 final
+    beq 4f                      // equal and end
+    add x2,x2,#1                //
+    b 1b                        // else loop
+2:
+    mov x0,#-1                  // less
+    b 100f
+3:
+    mov x0,#1                   // greather
+    b 100f
+4:
+    mov x0,#0                   // equal
+    b 100f
+100:
+    ldp x3,x4,[sp],16           // restaur  2 registers
+    ldp x2,lr,[sp],16           // restaur  2 registers
+    ret                         // return to address lr x30
+
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

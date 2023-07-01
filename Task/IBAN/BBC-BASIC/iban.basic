@@ -1,0 +1,93 @@
+      REM Used the following as official standard:
+      REM  http://www.cnb.cz/cs/platebni_styk/iban/download/EBS204.pdf
+
+      REM Pairs of ISO 3166 country code & expected IBAN length for this country
+      COULEN$="AL28 AD24 AT20 AZ28 BE16 BH22 BA20 BR29 BG22 CR21 HR21 CY28 CZ24 DK18 DO28 EE20 "+\
+      \       "FO18 FI18 FR27 GE22 DE22 GI23 GR27 GL18 GT28 HU28 IS26 IE22 IL23 IT27 KZ20 KW30 "+\
+      \       "LV21 LB28 LI21 LT20 LU20 MK19 MT31 MR27 MU30 MC27 MD24 ME22 NL18 NO15 PK24 PS29 "+\
+      \       "PL28 PT25 RO24 SM27 SA24 RS22 SK24 SI19 ES24 SE24 CH21 TN24 TR26 AE23 GB22 VG24"
+
+      PROCIBANcheck("GB82 WEST 1234 5698 7654 32"):REM Paper IBAN notation (with the spaces)
+      PROCIBANcheck("GB82WEST12345698765432")     :REM Digital IBAN notation (without the spaces)
+      PROCIBANcheck("gb82 west 1234 5698 7654 32")
+      PROCIBANcheck("GB82 TEST 1234 5698 7654 32")
+      PROCIBANcheck("GR16 0110 1250 0000 0001 2300 695")
+      PROCIBANcheck("GB29 NWBK 6016 1331 9268 19")
+      PROCIBANcheck("SA03 8000 0000 6080 1016 7519")
+      PROCIBANcheck("CH93 0076 2011 6238 5295 7")
+      PROCIBANcheck("IL62 0108 0000 0009 9999 999")
+      PROCIBANcheck("IL62-0108-0000-0009-9999-999")
+      PROCIBANcheck("US12 3456 7890 0987 6543 210")
+      PROCIBANcheck("GR16 0110 1250 0000 0001 2300 695X")
+      END
+
+      DEF PROCIBANcheck(iban$)
+      LOCAL err$,i%,match%,explen%,digiban$,tmpiban$,bignum$,c%,kk%
+
+      REM Search for country code and fetch expected length
+      i%=1:explen%=0
+      WHILE explen%=0 AND i%<LENCOULEN$
+        IF LEFT$(iban$,2)=MID$(COULEN$,i%,2) explen%=VALMID$(COULEN$,i%+2,2)
+        i%+=5
+      ENDWHILE
+      match%=explen%>0
+
+      REM Continue if country code found
+      IF match% THEN
+        REM Remove space = convert to digital IBAN
+        digiban$=""
+        FOR i%=1TOLENiban$
+          IF MID$(iban$,i%,1)>" " digiban$+=MID$(iban$,i%,1)
+        NEXT
+        REM Compare length with expected length
+        match%=explen%=LENdigiban$
+
+        REM Continue if length is correct
+        IF match% THEN
+          REM Create temporary string with country code appended
+          tmpiban$=MID$(digiban$,5)+MID$(digiban$,1,2)
+          REM Make big number, replacing letters by numbers using next conversion table: A=10 ... Z=35
+          bignum$=""
+          FOR i%=1TOLENtmpiban$
+            c%=ASCMID$(tmpiban$,i%,1)
+            IF c%>57 bignum$+=STR$(c%-55) ELSE bignum$+=STR$(c%-48)
+          NEXT
+          REM MOD 97 on bignum$+"00" and subtract result from 98 to obtain control number
+          kk%=98-FNmod97(bignum$+"00")
+          REM Compare with control number in IBAN
+          match%=VALMID$(iban$,3,2)=kk%
+
+          REM Continue if control number matches
+          IF match% THEN
+            REM Append kk% to bignum$ and determine if MOD 97 results in 1
+            match%=FNmod97(bignum$+RIGHT$("0"+STR$kk%,2))=1
+
+            REM Continue if MOD 97
+            IF match% THEN
+              REM Was last test
+            ELSE
+              err$="result from modulo 97"
+            ENDIF
+          ELSE
+            err$="check digits, should be: "+STR$kk%
+          ENDIF
+        ELSE
+          err$="code length, expected length: "+STR$explen%
+        ENDIF
+      ELSE
+        err$="country code: "+LEFT$(iban$,2)
+      ENDIF
+
+      IF match% PRINT "  "; ELSE PRINT "in";:err$="***error!*** invalid "+err$
+      PRINT "valid IBAN: ";iban$TAB(50)err$
+      ENDPROC
+
+      DEF FNmod97(num$)
+      LOCAL mod$
+      mod$=LEFT$(num$,2)
+      num$=MID$(num$,3)
+      WHILE num$>""
+        mod$=RIGHT$("0"+STR$(VAL(mod$+LEFT$(num$,7))MOD97),2)
+        num$=MID$(num$,8)
+      ENDWHILE
+      =VALmod$

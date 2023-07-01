@@ -1,0 +1,89 @@
+	bits	16
+	cpu	8086
+putch:	equ	2h
+time:	equ	2ch
+	org	100h
+section	.text
+	mov	ah,time		; Retrieve system time from MS-DOS
+	int	21h
+	call	rseed		; Seed the RNG
+rolls:	xor	ah,ah		; AH=0 (running total)
+	mov	dx,6		; DH=0 (amount >=15), DL=6 (counter)
+	mov	di,attrs
+attr:	call	roll4		; Roll an attribute
+	mov	al,14
+	cmp	al,bh		; Set carry if BH=15 or more
+	mov	al,bh		; AL = roll
+	sbb	bh,bh		; BH=0 if no carry, -1 if carry
+	sub	dh,bh		; DH+=1 if >=15
+	add	ah,al		; Add to running total
+	mov	[di],al		; Save roll
+	inc	di		; Next memory address
+	dec	dl		; One fewer roll left
+	jnz	attr
+	cmp	ah,75		; Rolling total < 75?
+	jb	rolls		; Then roll again.
+	cmp	dh,2		; Fewer than 2 attrs < 15?
+	jb	rolls		; Then roll again.
+	;;;	Print the attributes
+	mov	cx,6		; 6 attributes
+p2:	mov	bl,10		; divide by 10 to get digits
+	mov	di,attrs
+print:	xor	ah,ah		; AX = attribute
+	mov	al,[di]
+	div	bl		; divide by 10
+	add	ax,3030h	; add '0' to quotient (AH) and remainder (AL)
+	mov	dx,ax
+	mov	ah,putch	
+	int	21h		; print quotient first
+	mov	dl,dh		; then remainder
+	int	21h
+	mov	dl,' '		; then a space
+	int	21h
+	inc	di		; Next attribute
+	loop	print
+	ret			; Back to DOS 	
+	;;;	Do 4 rolls, and get result of max 3
+roll4:	xor	bx,bx		; BH = running total
+	dec	bl		; BL = lowest value
+	mov	cx,4		; Four times
+.roll:	call	d6		; Roll D6
+	cmp 	al,bl		; Lower than current lowest value?
+	jnb	.high		; If so,
+	mov	bl,al		; Set new lowest value
+.high:	add	bh,al		; Add to running total
+	loop	.roll		; If not 4 rolls yet, loop back
+	sub	bh,bl		; Subtract lowest value (giving sum of high 3)
+	ret
+	;;;	Roll a D6
+d6:	call	rand		; Get random number
+	and	al,7		; Between 0 and 7
+	cmp	al,6		; If 6 or higher,
+	jae	d6		; Then get new random number
+	inc	al		; [1..6] instead of [0..5]
+	ret
+	;;;	Seed the random number generator with 4 bytes
+rseed:	xor	[rnddat],cx
+	xor	[rnddat+2],dx
+	;;;	"X ABC" random number generator
+	;;;	Generates 8-bit random number in AL
+rand:	push	cx		; Keep registers
+	push	dx
+	mov	cx,[rnddat]	; CL=X CH=A
+	mov	dx,[rnddat+2]	; DL=B DH=C
+	xor	ch,dh		; A ^= C
+	xor	ch,cl		; A ^= X
+	add	dl,ch		; B += A
+	mov	al,dl		; R = B
+	shr	al,1		; R >>= 1
+	xor	al,ch		; R ^= A
+	add	al,dh		; R += C
+	mov	dh,al		; C = R
+	mov	[rnddat],cx	; Store new state
+	mov	[rnddat+2],dx
+	pop	dx		; Restore registers
+	pop	cx
+	ret
+section	.bss
+rnddat:	resb	4		; RNG state
+attrs:	resb	6		; Rolled attributes

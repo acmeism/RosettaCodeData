@@ -1,0 +1,102 @@
+:- module fifteen.
+:- interface.
+:- use_module random, io.
+
+:- type board.
+:- type invalid_board
+    --->    invalid_board(board).
+:- type move
+    --->    up
+    ;       down
+    ;       left
+    ;       right.
+
+    % init(Board):
+    % Board is fifteen game in its initial state
+    %
+:- pred init(board::out) is det.
+
+    % print(Board, !IO)
+:- pred print(board::in, io.io::di, io.io::uo) is det.
+
+    % Shuffled(Board, !RS):
+    % Board is a fifteen game in a random (but valid) state.
+    %
+:- pred shuffled(board::out, random.supply::mdi, random.supply::muo) is det.
+
+    % space(Board) = I:
+    % I is the index of the blank space in the board.
+    % Throws invalid_board iff there is no blank.
+    %
+:- func space(board) = int.
+
+    % move(Move, !Board):
+    % Move the blank space in a board in the given direction.
+    % Fails if this is an invalid move to make.
+    %
+:- pred move(move::in, board::in, board::out) is semidet.
+
+:- implementation.
+:- import_module bt_array, int, list, string.
+:- use_module array, exception.
+
+:- type board == bt_array(int).
+
+init(B) :- from_list(0, (1 .. 15) ++ [0], B).
+
+print(B, !IO) :-
+    Tile = (func(N) = ( if N = 0 then s("  ") else s(string.format("%2d", [i(N)])) )),
+    io.format("\
+|----+----+----+----|
+| %s | %s | %s | %s |
+| %s | %s | %s | %s |
+| %s | %s | %s | %s |
+| %s | %s | %s | %s |
+|----+----+----+----|
+",
+        map(Tile, to_list(B)), !IO).
+
+shuffled(!:B, !RS) :-
+    init(!:B),
+    some [!A] (
+        array.from_list(to_list(!.B), !:A),
+        array.random_permutation(!A, !RS),
+        from_list(0, array.to_list(!.A), !:B)
+    ).
+
+space(Board) = I :- space(0, Board, I).
+
+:- pred space(int::in, board::in, int::out) is det.
+space(N, Board, I) :-
+    ( if semidet_lookup(Board, N, X) then
+        ( if X = 0 then
+            N = I
+        else
+            space(N + 1, Board, I)
+        )
+    else
+        exception.throw(invalid_board(Board))
+    ).
+
+:- pred swap(int::in, int::in, board::in, board::out) is det.
+swap(I, J, !B) :-
+    X = !.B ^ elem(I),
+    Y = !.B ^ elem(J),
+    !B ^ elem(I) := Y,
+    !B ^ elem(J) := X.
+
+move(M, !B) :- move(space(!.B), M, !B).
+
+:- pred move(int::in, move::in, board::in, board::out) is semidet.
+move(I, up, !B) :-
+    I >= 4,
+    swap(I, I - 4, !B).
+move(I, down, !B) :-
+    I < 12,
+    swap(I, I + 4, !B).
+move(I, left, !B) :-
+    not (I = 0 ; I = 4 ; I = 8 ; I = 12),
+    swap(I, I - 1, !B).
+move(I, right, !B) :-
+    not (I = 3 ; I = 7 ; I = 11 ; I = 15),
+    swap(I, I + 1, !B).

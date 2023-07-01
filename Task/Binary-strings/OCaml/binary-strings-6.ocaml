@@ -1,0 +1,2 @@
+# str ^ "!" ;;
+- : string = "Some text!"

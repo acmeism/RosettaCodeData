@@ -1,0 +1,12 @@
+CALL LCS("thisisatest", "testing123testing")
+END
+
+SUB LCS (a$, b$)
+    IF LEN(a$) = 0 OR LEN(b$) = 0 THEN PRINT "": EXIT SUB
+    WHILE LEN(b$)
+        FOR j = LEN(b$) TO 1 STEP -1
+            IF INSTR(a$, LEFT$(b$, j)) THEN PRINT LEFT$(b$, j): EXIT SUB
+        NEXT j
+        b$ = MID$(b$, 2)
+    WEND
+END SUB

@@ -1,0 +1,6 @@
+fn main() {
+  for i in (2..=8).step_by(2) {
+    print!("{}", i);
+  }
+  println!("who do we appreciate?!");
+}

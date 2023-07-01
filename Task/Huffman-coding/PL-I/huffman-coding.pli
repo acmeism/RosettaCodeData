@@ -1,0 +1,258 @@
+*process source attributes xref or(!);
+ hencode: Proc Options(main);
+ /*--------------------------------------------------------------------
+ * 28.12.013 Walter Pachl  translated from REXX
+ *-------------------------------------------------------------------*/
+ Dcl debug Bit(1) Init('0'b);
+ Dcl (i,j,k) Bin Fixed(15);
+ Dcl c Char(1);
+ Dcl s Char(100) Var Init('this is an example for huffman encoding');
+ Dcl sc Char(1000) Var Init('');
+ Dcl sr Char(100)  Var Init('');
+ Dcl 1 cocc(100),
+      2 c  Char(1),
+      2 occ Bin Fixed(31);
+ Dcl cocc_n Bin Fixed(15) Init(0);
+ dcl 1 node,
+      2 id      Bin Fixed(15),         /* Node id               */
+      2 c       Char(1),               /* character             */
+      2 occ     Bin Fixed(15),         /* number of occurrences */
+      2 left    Bin Fixed(15),         /* left child            */
+      2 rite    Bin Fixed(15),         /* right child           */
+      2 father  Bin Fixed(15),         /* father                */
+      2 digit   Pic'9',                /* digit (0 or 1)        */
+      2 term    Pic'9';                /* 1=terminal node       */
+ node='';
+ Dcl 1 m(100) Like node;
+ Dcl m_n Bin Fixed(15) Init(0);
+ Dcl father(100) Bin Fixed(15);
+
+ Dcl 1 t(100),
+      2 char Char(1),
+      2 code Char(20) Var;
+ Dcl t_n Bin Fixed(15) Init(0);
+
+ Do i=1 To length(s);               /* first collect used characters */
+   c=substr(s,i,1);                 /* and number of occurrences     */
+   Do j=1 To cocc_n;
+     If cocc(j).c=c Then Leave;
+     End;
+   If j<= cocc_n Then
+     cocc(j).occ+=1;
+   Else Do;
+     cocc(j).c=c;
+     cocc(j).occ=1;
+     cocc_n+=1;
+     End;
+   End;
+
+ Do j=1 To cocc_n;                     /* create initial node list   */
+   node.id+=1;
+   node.c=cocc(j).c;
+   node.occ=cocc(j).occ;
+   node.term=1;
+   Call add_node;
+   End;
+
+ If debug Then
+   Call show;
+
+ Do While(pairs());  /* while there is more than one fatherless node */
+   Call mk_node;                       /* create a father node       */
+   If debug Then
+     Call show;
+   End;
+
+ Call show;                            /* show the node table        */
+
+ Call mk_trans;                        /* create the translate table */
+ Put Edit('The translate table:')(Skip,a);
+ Do i=1 To t_n;                        /* show it                    */
+   Put Edit(t(i).char,' -> ',t(i).code)(Skip,a,a,a);
+   End;
+
+ Call encode;                          /* encode the string s -> sc  */
+
+ Put Edit('length(sc)=',length(sc))    /* show it                    */
+         (Skip,a,f(3));
+ Do i=1 By 70 To length(sc);
+   Put Edit(substr(sc,i,70))(Skip,a);
+   End;
+
+ Call decode;                          /* decode the string sc -> sr */
+ Put Edit('input : ',s)(skip,a,a);
+ Put Edit('result: ',sr)(skip,a,a);
+ Return;
+
+ add_node: Proc;
+ /*--------------------------------------------------------------------
+ * Insert the node according to increasing occurrences
+ *-------------------------------------------------------------------*/
+ il:
+   Do i=1 To m_n;
+     If m(i).occ>=node.occ Then Do;
+       Do k=m_n To i By -1;
+         m(k+1)=m(k);
+         End;
+       Leave il;
+       End;
+     End;
+   m(i)=node;
+   m_n+=1;
+ End;
+
+ show: Proc;
+ /*--------------------------------------------------------------------
+ * Show the contents of the node table
+ *-------------------------------------------------------------------*/
+ Put Edit('The list of nodes:')(Skip,a);
+ Put Edit('id c oc  l  r  f d  t')(Skip,a);
+ Do i=1 To m_n;
+   Put Edit(m(i).id,m(i).c,m(i).occ,
+            m(i).left,m(i).rite,m(i).father,m(i).digit,m(i).term)
+           (Skip,f(2),x(1),a,4(f(3)),f(2),f(3));
+   End;
+ End;
+
+ mk_node: Proc;
+ /*--------------------------------------------------------------------
+ * construct and store a new intermediate node or the top node
+ *-------------------------------------------------------------------*/
+ Dcl z Bin Fixed(15);
+ node='';
+ node.id=m_n+1;                /* the next node id                   */
+ node.c='*';
+ ni=m_n+1;
+ loop:
+ Do i=1 To m_n;                /* loop over node lines               */
+  If m(i).father=0 Then Do;    /* a fatherless node                  */
+    z=m(i).id;                 /* its id                             */
+    If node.left=0 Then Do;    /* new node has no left child         */
+       node.left=z;            /* make this the lect child           */
+       node.occ=m(i).occ;      /* occurrences                        */
+       m(i).father=ni;         /* store father info                  */
+       m(i).digit=0;           /* digit 0 to be used                 */
+       father(z)=ni;           /* remember z's father (redundant)    */
+       End;
+     Else Do;                  /* New node has already left child    */
+       node.rite=z;            /* make this the right child          */
+       node.occ=node.occ+m(i).occ;  /* add in the occurrences        */
+       m(i).father=ni;         /* store father info                  */
+       m(i).digit=1;           /* digit 1 to be used                 */
+       father(z)=ni;           /* remember z's father (redundant)    */
+       Leave loop;
+       End;
+     End;
+   End;
+ Call add_node;
+ End;
+
+ pairs: Proc Returns(Bit(1));
+ /*--------------------------------------------------------------------
+ * Return true if there are at least 2 fatherless nodes
+ *-------------------------------------------------------------------*/
+ Dcl i   Bin Fixed(15);
+ Dcl cnt Bin Fixed(15) Init(0);
+ Do i=1 To m_n;
+   If m(i).father=0 Then Do;
+     cnt+=1;
+     If cnt>1 Then
+       Return('1'b);
+     End;
+   End;
+ Return('0'b);
+ End;
+
+ mk_trans: Proc;
+ /*--------------------------------------------------------------------
+ * Compute the codes for all terminal nodes (characters)
+ * and store the relation char -> code in array t(*)
+ *-------------------------------------------------------------------*/
+ Dcl (i,fi,fid,fidz,node,z) Bin Fixed(15);
+ Dcl code Char(20) Var;
+ Do i=1 To m_n;     /* now we loop over all lines representing nodes */
+   If m(i).term Then Do;   /* for each terminal node                 */
+     code=m(i).digit;      /* its digit is the last code digit       */
+     node=m(i).id;         /* its id                                 */
+     Do fi=1 To 1000;      /* actually Forever                       */
+       fid=father(node);   /* id of father                           */
+       If fid>0 Then Do;   /* father exists                          */
+         fidz=zeile(fid);  /* line that contains the father          */
+         code=m(fidz).digit!!code;    /* prepend the digit           */
+         node=fid;         /* look for next father                   */
+         End;
+       Else                /* no father (we reached the top          */
+         Leave;
+       End;
+     If length(code)>1 Then /* more than one character in input      */
+       code=substr(code,2); /* remove the the top node's 0           */
+     call dbg(m(i).c!!' -> '!!code); /* character is encoded this way*/
+ ti_loop:
+     Do ti=1 To t_n;
+       If t(ti).char>m(i).c Then Do;
+         Do tj=t_n To ti By -1
+           t(tj+1)=t(tj);
+           End;
+         Leave ti_loop;
+         End;
+       End;
+     t(ti).char=m(i).c;
+     t(ti).code=code;
+     t_n+=1;
+     Call dbg(t(ti).char!!' -> '!!t(ti).code);
+     End;
+   End;
+ End;
+
+ zeile: Proc(nid) Returns(Bin Fixed(15));
+ /*--------------------------------------------------------------------
+ * find and return line number containing node-id
+ *-------------------------------------------------------------------*/
+ Dcl (nid,i) Bin Fixed(15);
+ do i=1 To m_n;
+   If m(i).id=nid Then
+     Return(i);
+   End;
+ Stop;
+ End;
+
+ dbg: Proc(txt);
+ /*--------------------------------------------------------------------
+ * Show text if debug is enabled
+ *-------------------------------------------------------------------*/
+ Dcl txt Char(*);
+ If debug Then
+   Put Skip List(txt);
+ End;
+
+ encode: Proc;
+ /*--------------------------------------------------------------------
+ * encode the string s -> sc
+ *-------------------------------------------------------------------*/
+ Dcl (i,j) Bin Fixed(15);
+ Do i=1 To length(s);
+   c=substr(s,i,1);
+   Do j=1 To t_n;
+     If c=t(j).char Then
+       Leave;
+     End;
+   sc=sc!!t(j).code;
+   End;
+ End;
+
+ decode: Proc;
+ /*--------------------------------------------------------------------
+ * decode the string sc -> sr
+ *-------------------------------------------------------------------*/
+ Dcl (i,j) Bin Fixed(15);
+ Do While(sc>'');
+   Do j=1 To t_n;
+     If substr(sc,1,length(t(j).code))=t(j).code Then
+       Leave;
+     End;
+   sr=sr!!t(j).char;
+   sc=substr(sc,length(t(j).code)+1);
+   End;
+ End;
+
+ End;

@@ -1,0 +1,107 @@
+! A CONCURRENT PRIME SIEVE ;
+
+BEGIN
+
+BOOLEAN DEBUG;
+
+CLASS FILTER(INPUT, OUTPUT, PRIME); REF(FILTER) INPUT, OUTPUT; INTEGER PRIME;
+BEGIN
+    INTEGER NUM;
+    IF PRIME = 0 AND INPUT == NONE THEN
+    BEGIN
+        ! SEND THE SEQUENCE 2, 3, 4, ... TO CHANNEL 'CH'. ;
+        DETACH;
+        NUM := 2;
+        WHILE TRUE DO
+        BEGIN
+            IF OUTPUT == NONE THEN
+            BEGIN
+                IF DEBUG THEN
+                BEGIN
+                    OUTTEXT("GENERATE SENDS ");
+                    OUTINT(NUM, 0);
+                    OUTIMAGE;
+                END;
+                DETACH; ! SEND 'NUM' ;
+            END ELSE
+            BEGIN
+                IF DEBUG THEN
+                BEGIN
+                    OUTTEXT("GENERATE SENDS ");
+                    OUTINT(NUM, 0);
+                    OUTTEXT(" TO FILTER("); OUTINT(OUTPUT.PRIME, 0);
+                    OUTTEXT(")");
+                    OUTIMAGE;
+                END;
+                OUTPUT.NUM := NUM;
+                RESUME(OUTPUT);
+            END;
+            NUM := NUM + 1;
+        END;
+    END ELSE
+    BEGIN
+        ! COPY THE VALUES FROM CHANNEL 'IN' TO CHANNEL 'OUT', ;
+        ! REMOVING THOSE DIVISIBLE BY 'PRIME'. ;
+        DETACH;
+        ! FILTER ;
+        WHILE TRUE DO
+        BEGIN
+            INTEGER I;
+            RESUME(INPUT);
+            I := INPUT.NUM; ! RECEIVE VALUE FROM 'INPUT'. ;
+            IF DEBUG THEN
+            BEGIN
+                OUTTEXT("FILTER("); OUTINT(PRIME, 0); OUTTEXT(") RECEIVES ");
+                OUTINT(I, 0);
+                OUTIMAGE;
+            END;
+            IF NOT MOD(I, PRIME) = 0 THEN
+            BEGIN
+                IF OUTPUT == NONE THEN
+                BEGIN
+                    IF DEBUG THEN
+                    BEGIN
+                        OUTTEXT("FILTER("); OUTINT(PRIME, 0);
+                        OUTTEXT(") SENDS ");
+                        OUTINT(I, 0);
+                        OUTIMAGE;
+                    END;
+                    DETACH;
+                END ELSE
+                BEGIN
+                    IF DEBUG THEN
+                    BEGIN
+                        OUTTEXT("FILTER("); OUTINT(PRIME, 0);
+                        OUTTEXT(") SENDS ");
+                        OUTINT(I, 0);
+                        OUTTEXT(" TO FILTER("); OUTINT(OUTPUT.PRIME, 0);
+                        OUTTEXT(")");
+                        OUTIMAGE;
+                    END;
+                    OUTPUT.NUM := I; ! SEND 'I' TO 'OUT'. ;
+                    RESUME(OUTPUT);
+                END;
+            END;
+        END;
+    END;
+END;
+
+! THE PRIME SIEVE: DAISY-CHAIN FILTER PROCESSES. ;
+! MAIN BLOCK ;
+    REF(FILTER) CH;
+    INTEGER I, PRIME;
+    DEBUG := TRUE;
+    CH :- NEW FILTER(NONE, NONE, 0); ! LAUNCH GENERATE GOROUTINE. ;
+    FOR I := 1 STEP 1 UNTIL 5 DO
+    BEGIN
+        REF(FILTER) CH1;
+        RESUME(CH);
+        PRIME := CH.NUM;
+        IF DEBUG THEN OUTTEXT("MAIN BLOCK RECEIVES ");
+        OUTINT(PRIME,0);
+        OUTIMAGE;
+        CH1 :- NEW FILTER(CH, NONE, PRIME);
+        CH.OUTPUT :- CH1;
+        CH :- CH1;
+    END;
+END;

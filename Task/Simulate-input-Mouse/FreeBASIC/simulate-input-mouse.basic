@@ -1,0 +1,150 @@
+#include "fbgfx.bi"
+#define rect 4
+
+Windowtitle "Mouse events"
+Screen 19,32
+Dim Shared As Integer xres, yres
+Screeninfo xres, yres
+
+Type box
+    As Single x, y, z
+    As String caption
+    As Uinteger textcol, boxcol
+End Type
+
+Dim Shared As box label(rect,1)
+Dim Shared As box button(rect,1)
+Dim Shared As Boolean flag
+Dim Shared As fb.event e
+Dim As Uinteger background = Rgb(100,100,100)
+
+Sub thickline(x1 As Double, y1 As Double, x2 As Double, y2 As Double,_
+    thickness As Double, colour As Uinteger, im As Any Pointer = 0)
+    Dim p As Uinteger = Rgb(255, 255, 254)
+    If thickness < 2 Then
+        Line(x1,y1)-(x2,y2), colour
+    Else
+        Dim As Double h = Sqr((x2-x1)^2+(y2-y1)^2), s = (y1-y2)/h, c = (x2-x1)/h
+        For x As Integer = 1 To 2
+            Line im,(x1+s*thickness/2,y1+c*thickness/2)-(x2+s*thickness/2,y2+c*thickness/2),p
+            Line im,(x1-s*thickness/2,y1-c*thickness/2)-(x2-s*thickness/2,y2-c*thickness/2),p
+            Line im,(x1+s*thickness/2,y1+c*thickness/2)-(x1-s*thickness/2,y1-c*thickness/2),p
+            Line im,(x2+s*thickness/2,y2+c*thickness/2)-(x2-s*thickness/2,y2-c*thickness/2),p
+            Paint im,((x1+x2)/2, (y1+y2)/2), p, p
+            p = colour
+        Next x
+    End If
+End Sub
+
+Function inbox(p1() As box, p2 As box) As Integer
+    Type pt2d : As Single x, y : End Type
+    Type ln2d : As pt2d v1, v2 : End Type
+    #macro isleft(L,p)
+        -Sgn((L.v1.x-L.v2.x)*(p.y-L.v2.y) - (p.x-L.v2.x)*(L.v1.y-L.v2.y))
+    #endmacro
+    Dim As Single n1 = p1(rect,0).z
+    Dim As Integer index, nextindex
+    Dim send As ln2d
+    Dim As Integer n, wn = 0
+    For n = 1 To 4
+        index = n Mod 5 : nextindex = (n+1) Mod 5
+        If nextindex = 0 Then nextindex = 1
+        send.v1.x = p1(index,n1).x : send.v2.x = p1(nextindex,n1).x
+        send.v1.y = p1(index,n1).y : send.v2.y = p1(nextindex,n1).y
+        If p1(index,n1).y <= p2.y Then
+            If p1(nextindex,n1).y > p2.y Then
+                If isleft(send,p2) > 0 Then wn += 1
+            End If
+        Else
+            If p1(nextindex,n1).y <= p2.y Then
+                If isleft(send,p2) < 0 Then wn -= 1
+            End If
+        End If
+    Next n
+    Return wn
+End Function
+
+Sub draw_box(p() As box, col As Uinteger, pnt As String = "paint", im As Any Pointer = 0)
+    Dim As Integer index, nextindex
+    Dim As Single n1 = p(rect,0).z
+    Dim As Double xc, yc
+    For n As Integer = 1 To 4
+        xc += p(n,n1).x : yc += p(n,n1).y
+        index = n Mod 5 : nextindex = (n+1) Mod 5
+        If nextindex = 0 Then nextindex = 1
+        thickline(p(index,n1).x,p(index,n1).y, p(nextindex,n1).x,p(nextindex,n1).y,4,col,im)
+    Next n
+    xc /= Ubound(p) : yc /= Ubound(p)
+    If pnt = "paint" Then Paint(xc,yc), col, col
+End Sub
+
+Sub highlightbox(box() As box, mp As box, col As Uinteger)
+    box(rect,0).z = 1
+    If inbox(box(),mp) Then draw_box(box(),col,"dont_paint")
+End Sub
+
+Sub checkbox(box() As box,mp As box)
+    flag = True
+    label(rect,1).caption = box(rect,1).caption
+    label(rect,1).textcol = box(rect,1).textcol
+    label(rect,1).boxcol  = box(rect,1).boxcol
+End Sub
+
+Sub drawbox(x As Integer, y As Integer, box()As box, boxlength As Integer, _
+    boxheight As Integer, col As Uinteger, highlight As Uinteger, caption As String)
+    Dim As box startpoint
+    startpoint.x = x : startpoint.y = y
+    Dim As Integer mmx, mmy
+    Getmouse mmx, mmy
+    Dim As box mouse
+    mouse.x = mmx : mouse.y = mmy
+    box(rect,1).boxcol = col
+    box(rect,1).caption = caption
+    Dim As Uinteger outline, count = 1
+    outline = Rgb(255,255,255)
+    For x As Integer = 1 To 4
+        Select Case x
+        Case 1
+            box(1,count).x = startpoint.x
+            box(1,count).y = startpoint.y
+        Case 2
+            box(2,count).x = box(1,count).x + boxlength
+            box(2,count).y = box(1,count).y
+        Case 3
+            box(3,count).x = box(2,count).x
+            box(3,count).y = box(2,count).y + boxheight
+        Case 4
+            box(4,count).x = box(3,count).x - boxlength
+            box(4,count).y = box(3,count).y
+        End Select
+    Next x
+    box(rect,0).z = 1
+    draw_box(box(),col)
+    draw_box(box(),outline,"nopaint")
+    If inbox(box(),mouse) Then
+        highlightbox(box(),mouse,highlight)
+        If (Screenevent(@e)) Then
+            If e.type = fb.EVENT_MOUSE_BUTTON_PRESS Then checkbox(box(),mouse)
+        End If
+    End If
+    Draw String(box(1,1).x+5,box(1,1).y+5), box(rect,1).caption,box(rect,1).textcol
+End Sub
+
+' ---------- Main Program ----------
+Do
+    Screenlock
+    Cls
+    Paint(0,0), background
+    Draw String(300,50), "BUTTON CLICK TEST", Rgb(0,0,200)
+
+    drawbox(100,100,button(),100,50,Rgb(200,200,0),Rgb(00,0,200),"Box 1")
+    drawbox(100,200,button(),100,50,Rgb(200,0,190),Rgb(00,0,200),"Box 2")
+    drawbox(100,300,button(),100,50,Rgb(0,200,190),Rgb(00,0,200),"Box 3")
+
+    If flag Then drawbox(400,100,label(),250,250,label(rect,1).boxcol,Rgb(255,255,255),label(rect,1).caption)
+    If (Screenevent(@e)) Then
+        If e.type=13 Then End
+    End If
+    Screenunlock
+    Sleep 1, 1
+Loop Until Inkey = Chr(27)

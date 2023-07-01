@@ -1,0 +1,77 @@
+flags:	equ	2	; 256-byte page in which to keep track of cycles
+puts:	equ	9	; CP/M print string
+bdos:	equ	5 	; CP/M entry point
+	org	100h
+	lxi	d,0108h	; D=current number to test, E=amount of numbers
+	;;;	Is D happy?
+number:	mvi	a,1	; We haven't seen any numbers yet, set flags to 1
+	lxi	h,256*flags
+init:	mov	m,a
+	inr	l
+	jnz	init
+	mov	a,d	; Get digits
+step:	call	digits
+	mov	l,a	; L = D1 * D1
+	mov	h,a
+	xra	a
+sqr1:	add	h
+	dcr	l
+	jnz	sqr1
+	mov	l,a
+	mov	h,b	; L += D10 * D10
+	xra	a
+sqr10:	add	h
+	dcr 	b
+	jnz	sqr10
+	add	l
+	mov	l,a
+	mov	h,c	; L += D100 * D100
+	xra	a
+sqr100:	add	h
+	dcr	c
+	jnz	sqr100
+	add	l
+	mov	l,a
+	mvi	h,flags	; Look up corresponding flag
+	dcr	m 	; Will give 0 the first time and not-0 afterwards
+	mov	a,l	; If we haven't seen the number before, another step
+	jz 	step
+	dcr	l	; If we _had_ seen it, then is it 1?
+	jz	happy	; If so, it is happy
+next:	inr	d	; Afterwards, try next number
+	jmp	number
+happy:	mov	a,d	; D is happy - get its digits (for output)
+	lxi	h,string+3
+	call	digits	; Write digits into string for output
+	call	sdgt	; Ones digit,
+	mov	a,b	; Tens digit,
+	call	sdgt
+	mov	a,c	; Hundreds digit
+	call	sdgt
+	push	d	; Keep counters on stack
+	mvi	c,puts	; Print string using CP/M call
+	xchg	
+	call	bdos
+	pop	d	; Restore counters
+	dcr	e	; One fewer happy number left
+	jnz	next	; If we need more, do the next one
+	ret
+	;;;	Store A as ASCII digit in [HL] and go to previous digit
+sdgt:	adi	'0'
+	dcx	h
+	mov	m,a
+	ret
+	;;;	Get digits of 8-bit number in A.
+	;;;	Input: A = number
+	;;;	Output: C=100s digit, B=10s digit, A=1s digit
+digits:	lxi	b,-1	; Set B and C to -1 (correct for extra loop cycle)
+d100:	inr	c	; Calculate hundreds digit
+	sui	100	; By trial subtraction of 100
+	jnc	d100	; Until underflow occurs
+	adi	100	; Loop runs one cycle too many, so add 100 back
+d10:	inr	b	; Calculate 10s digit in the same way
+	sui	10
+	jnc	d10
+	adi	10
+	ret		; 1s digit is left in A afterwards
+string:	db	'000',13,10,'$'

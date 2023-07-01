@@ -1,0 +1,170 @@
+DEFINE PTR="CARD"
+DEFINE RESOK="255"
+DEFINE RESUPSIDEDOWN="254"
+DEFINE RESINVALID="253"
+DEFINE DIGITCOUNT="12"
+DEFINE DIGITLEN="7"
+
+PTR ARRAY ldigits(10),rdigits(10)
+CHAR ARRAY marker="# #",midmarker=" # # "
+
+PROC Init()
+  ldigits(0)="   ## #" ldigits(1)="  ##  #"
+  ldigits(2)="  #  ##" ldigits(3)=" #### #"
+  ldigits(4)=" #   ##" ldigits(5)=" ##   #"
+  ldigits(6)=" # ####" ldigits(7)=" ### ##"
+  ldigits(8)=" ## ###" ldigits(9)="   # ##"
+  rdigits(0)="###  # " rdigits(1)="##  ## "
+  rdigits(2)="## ##  " rdigits(3)="#    # "
+  rdigits(4)="# ###  " rdigits(5)="#  ### "
+  rdigits(6)="# #    " rdigits(7)="#   #  "
+  rdigits(8)="#  #   " rdigits(9)="### #  "
+RETURN
+
+BYTE FUNC DecodeMarker(CHAR ARRAY s BYTE POINTER pos CHAR ARRAY marker)
+  CHAR ARRAY tmp(6)
+  BYTE x
+
+  x=pos^+marker(0)
+  IF x>s(0) THEN
+    RETURN (RESINVALID)
+  ELSE
+    SCopyS(tmp,s,pos^,pos^+marker(0)-1)
+    pos^==+marker(0)
+    IF SCompare(tmp,marker)#0 THEN
+      RETURN (RESINVALID)
+    FI
+  FI
+RETURN (RESOK)
+
+BYTE FUNC DecodeDigit(CHAR ARRAY s BYTE POINTER pos PTR ARRAY digits)
+  CHAR ARRAY tmp(DIGITLEN+1)
+  BYTE i,x
+
+  x=pos^+DIGITLEN
+  IF x>s(0) THEN
+    RETURN (RESINVALID)
+  ELSE
+    SCopyS(tmp,s,pos^,pos^+DIGITLEN-1)
+    pos^==+DIGITLEN
+    FOR i=0 TO 9
+    DO
+      IF SCompare(tmp,digits(i))=0 THEN
+        RETURN (i)
+      FI
+    OD
+  FI
+RETURN (RESINVALID)
+
+BYTE FUNC Validation(BYTE ARRAY code)
+  BYTE ARRAY mult=[3 1 3 1 3 1 3 1 3 1 3 1]
+  BYTE i
+  INT sum
+
+  sum=0
+  FOR i=0 TO DIGITCOUNT-1
+  DO
+    sum==+code(i)*mult(i)
+  OD
+  IF sum MOD 10=0 THEN
+    RETURN (RESOK)
+  FI
+RETURN (RESINVALID)
+
+BYTE FUNC DecodeInternal(CHAR ARRAY s BYTE ARRAY code)
+  BYTE res,pos,i
+
+  pos=1
+  WHILE pos<=s(0) AND s(pos)=32
+  DO pos==+1 OD
+
+  res=DecodeMarker(s,@pos,marker)
+  IF res=RESINVALID THEN RETURN (res) FI
+
+  FOR i=0 TO 5
+  DO
+    res=DecodeDigit(s,@pos,ldigits)
+    IF res=RESINVALID THEN RETURN (res) FI
+    code(i)=res
+  OD
+
+  res=DecodeMarker(s,@pos,midmarker)
+  IF res=RESINVALID THEN RETURN (res) FI
+
+  FOR i=6 TO 11
+  DO
+    res=DecodeDigit(s,@pos,rdigits)
+    IF res=RESINVALID THEN RETURN (res) FI
+    code(i)=res
+  OD
+
+  res=DecodeMarker(s,@pos,marker)
+  IF res=RESINVALID THEN RETURN (res) FI
+  res=Validation(code)
+RETURN (res)
+
+PROC Reverse(CHAR ARRAY src,dst)
+  BYTE i,j
+
+  i=1 j=src(0) dst(0)=j
+  WHILE j>0
+  DO
+    dst(j)=src(i)
+    i==+1 j==-1
+  OD
+RETURN
+
+BYTE FUNC Decode(CHAR ARRAY s BYTE ARRAY code)
+  CHAR ARRAY tmp(256)
+  BYTE res
+
+  res=DecodeInternal(s,code)
+  IF res=RESOK THEN RETURN (res) FI
+  Reverse(s,tmp)
+  res=DecodeInternal(tmp,code)
+  IF res=RESINVALID THEN RETURN (res) FI
+RETURN (RESUPSIDEDOWN)
+
+PROC Test(BYTE id CHAR ARRAY s)
+  BYTE ARRAY code(DIGITCOUNT)
+  BYTE res,i
+
+  res=Decode(s,code)
+  IF id<10 THEN Put(32) FI
+  PrintF("%B: ",id)
+  IF res=RESINVALID THEN
+    PrintE("invalid")
+  ELSE
+    FOR i=0 TO DIGITCOUNT-1
+    DO
+      PrintB(code(i))
+    OD
+    IF res=RESUPSIDEDOWN THEN
+      PrintE(" valid (upside down)")
+    ELSE
+      PrintE(" valid")
+    FI
+  FI
+RETURN
+
+PROC Main()
+  PTR ARRAY codes(10)
+  BYTE i
+
+  Init()
+  codes(0)="         # #   # ##  #  ## #   ## ### ## ### ## #### # # # ## ##  #   #  ##  ## ###  # ##  ## ### #  # #       "
+  codes(1)="        # # #   ##   ## # #### #   # ## #   ## #   ## # # # ###  # ###  ##  ## ###  # #  ### ###  # # #         "
+  codes(2)="         # #    # # #  ###  #   #    # #  #   #    # # # # ## #   ## #   ## #   ##   # # #### ### ## # #         "
+  codes(3)="       # # ##  ## ##  ##   #  #   #  # ###  # ##  ## # # #   ## ##  #  ### ## ## #   # #### ## #   # #        "
+  codes(4)="         # # ### ## #   ## ## ###  ##  # ##   #   # ## # # ### #  ## ##  #    # ### #  ## ##  #      # #          "
+  codes(5)="          # #  #   # ##  ##  #   #   #  # ##  ##  #   # # # # #### #  ##  # #### #### # #  ##  # #### # #         "
+  codes(6)="         # #  #  ##  ##  # #   ## ##   # ### ## ##   # # # #  #   #   #  #  ### # #    ###  # #  #   # #        "
+  codes(7)="        # # #    # ##  ##   #  # ##  ##  ### #   #  # # # ### ## ## ### ## ### ### ## #  ##  ### ## # #         "
+  codes(8)="         # # ### ##   ## # # #### #   ## # #### # #### # # #   #  # ###  #    # ###  # #    # ###  # # #       "
+  codes(9)="        # # # #### ##   # #### # #   ## ## ### #### # # # #  ### # ###  ###  # # ###  #    # #  ### # #         "
+
+  FOR i=0 TO 9
+  DO
+    Test(i+1,codes(i))
+  OD
+RETURN

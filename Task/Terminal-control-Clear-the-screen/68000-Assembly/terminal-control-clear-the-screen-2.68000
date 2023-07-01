@@ -1,0 +1,55 @@
+dma_fill:
+	;input:
+	;D2.L = what address to write to.
+	;D1.W = DMA LENGTH (measured in words)
+	;D0 = WHAT DATA TO USE TO FILL VRAM
+
+        vdp_data equ $C00000
+        vdp_ctrl equ $C00004
+
+        MOVE.L #$40000003,D2                            ;VDP sees this as VRAM address $C000
+        MOVE.W #$2000,D1                                ;fill $2000 words ($4000 bytes)
+        MOVEQ #0,D0                                     ;with zeroes.
+	MOVE SR,-(SP)
+	MOVEM.L D3-D7,-(SP)
+	
+		MOVE #$2700,SR                          ;disable interrupts
+		MOVEQ.L #-109,D3 			;quickly move #$FFFFFF93 into D3
+		LSL.W #8,D3
+		OR.B D1,D3					
+		;d3 contains $93xx where xx is the low byte of dma length
+		;this is the correct command to give the vdp
+		
+		
+		LSR.W #8,D1	;shift high byte of dma length down to low byte
+		
+		MOVEQ.L #-108,D4			;quickly move #$FFFFFF94 into d4
+		LSL.W #8,D4					;D4 = #$FFFF9400
+		OR.B D1,D4
+		;d3 contains $94xx where xx is the high byte of dma length
+		;this is the correct command to give the vdp
+		
+		OR.L #$20,D2		;tells the vdp the next write is a DMA write
+		
+.wait:
+;waiting until vblank is optional, however DMA is much faster if performed during vblank so might as well.
+
+		move.w VDP_ctrl,d7
+		and.w #%0000000000001000,d7		;See if vblank is running
+		bne .wait				;wait until it is
+		
+		MOVE.W #($8100|%01110100),(VDP_CTRL)	;ENABLE DMA
+		move.w #$8F01,(vdp_ctrl)				;set auto-inc to 1
+		MOVE.W #$9780,(vdp_ctrl)				;enable dma vram fill
+		MOVE.W D3,(vdp_ctrl)					;set dma length low byte
+		MOVE.W D4,(vdp_ctrl)					;set dma length high byte
+		MOVE.L D2,(vdp_ctrl)					;set destination address
+		
+		MOVE.W D0,(vdp_data)					
+                ;at this point the 68000 halts until DMA is finished.
+
+
+		move.w #($8100|%01100100),(VDP_CTRL)	;DISABLE DMA
+		move.w #$8F02,(vdp_ctrl)		;set auto-inc back to 2
+	MOVEM.L (SP)+,D3-D7
+	RTR

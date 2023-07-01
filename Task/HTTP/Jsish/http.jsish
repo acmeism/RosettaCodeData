@@ -1,0 +1,108 @@
+#!/usr/bin/env jsish
+function httpGet(fileargs:array|string, conf:object=void) {
+
+    var options = { // Web client for downloading files from url
+        headers     : [],           // Header fields to send.
+        nowait      : false,        // Just return object: caller will call update.
+        onDone      : null,         // Callback when done.
+        wsdebug     : 0             // WebSockets debug level.
+    };
+
+    var self = {
+        address     : '',
+        done        : false,
+        path        : '',
+        port        : -1,
+        post        : '',           // Post file upload (UNIMPL).
+        scheme      : 'http',       // Url scheme
+        protocol    : 'get',
+        url         : null,
+        response    : ''
+    };
+
+    parseOpts(self, options, conf);
+
+    if (self.port === -1)
+        self.port = 80;
+
+    function WsRecv(ws:userobj, id:number, str:string) {
+        LogDebug("LEN: "+str.length);
+        LogTrace("DATA", str);
+        self.response += str;
+    }
+
+    function WsClose(ws:userobj|null, id:number) {
+        LogDebug("CLOSE");
+        self.done = true;
+        if (self.onDone)
+            self.onDone(id);
+    }
+
+    function main() {
+        if (self.Debug)
+            debugger;
+        if (typeof(fileargs) === 'string')
+            fileargs = [fileargs];
+        if (!fileargs || fileargs.length !== 1)
+            throw("expected a url arg");
+        self.url = fileargs[0];
+        var m = self.url.match(/^([a-zA-Z]+):\/\/([^\/]*+)(.*)$/);
+        if (!m)
+            throw('invalid url: '+self.url);
+        self.scheme = m[1];
+        self.address = m[2];
+        self.path = m[3];
+        var as = self.address.split(':');
+        if (as.length==2) {
+            self.port = parseInt(as[1]);
+            self.address = as[0];
+        } else  if (as.length != 1)
+            throw('bad port in address: '+self.address);
+        if (self.path=='')
+            self.path = '/index.html';
+        if (self.post.length)
+            self.protocol = 'post';
+
+        var wsopts = {
+            client:true,
+            onRecv:WsRecv,
+            onClose:WsClose,
+            debug:self.wsdebug,
+            rootdir:self.path,
+            port:self.port,
+            address:self.address,
+            protocol:self.protocol,
+            clientHost:self.address
+        };
+        if (self.post.length)
+            wsopts.post = self.post;
+        if (self.headers.length)
+            wsopts.headers = self.headers;
+        if (self.scheme === 'https') {
+            if (!Interp.conf('hasOpenSSL'))
+                puts('SSL is not compiled in: falling back to http:');
+            else {
+                if (self.port === 80)
+                    wsopts.port = 441;
+                wsopts.use_ssl = true;
+            }
+        }
+        LogDebug("Starting:", conf, wsopts);
+        self.ws = new WebSocket( wsopts );
+        if (self.nowait)
+            return self;
+        while (!self.done) {
+            update(200);
+            LogTrace("UPDATE");
+        }
+        delete self.ws;
+        return self.response;
+    }
+
+    return main();
+}
+
+provide(httpGet, "0.60");
+
+if (isMain())
+    runModule(httpGet);

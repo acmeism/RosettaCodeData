@@ -1,0 +1,28 @@
+DEFINT A-Z
+
+DIM diag(1 TO 5, 1 TO 5)
+lenDiag = UBOUND(diag)
+ind = lenDiag
+sumDiag = 0
+
+FOR x = 1 TO lenDiag
+    FOR y = 1 TO lenDiag
+        READ diag(x, y)
+    NEXT y
+NEXT x
+
+FOR x = 1 TO lenDiag
+    FOR y = 1 TO lenDiag - ind
+        sumDiag = sumDiag + diag(x, y)
+    NEXT y
+    ind = ind - 1
+NEXT x
+
+PRINT "Sum of elements below main diagonal of matrix is"; sumDiag
+END
+
+DATA 1, 3, 7, 8,10
+DATA 2, 4,16,14, 4
+DATA 3, 1, 9,18,11
+DATA 12,14,17,18,20
+DATA 7, 1, 3, 9, 5

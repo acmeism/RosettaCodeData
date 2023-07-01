@@ -1,0 +1,176 @@
+;;  libc stuff..
+extern printf
+extern exit
+extern malloc
+extern free
+extern fopen
+extern fclose
+extern fread
+extern fseek
+extern ftell
+extern rewind
+
+;; Wren stuff..
+extern wrenNewVM
+extern wrenInterpret
+extern wrenFreeVM
+extern wrenGetSlotString
+extern wrenSetSlotString
+extern wrenInitConfiguration
+
+%define WREN_RESULT_SUCCESS       0
+%define WREN_RESULT_COMPILE_ERROR 1
+%define WREN_RESULT_RUNTIME_ERROR 2
+
+;; Stuff...
+extern C_strdup
+
+;; time saver 'macros' for PIC(mmm, PIE..)
+;; These Macros basically end up being exactly what they look
+;; like in code, there's very little preprocessing in NASM,
+;; unlike M/UASM's macro systems.(Still more than Gas doe..)
+%macro xlea 2
+  lea %1, [rel %2]
+%endmacro
+
+%macro xcall 1
+  call [rel %1 wrt ..got]
+%endmacro
+
+section .bss
+wrenConfig    resb 84
+wrenVM        resq 1
+
+section .rodata
+szmsg         db "--> Starting and configuring WrenVM",10,0
+sznoargs      db "--> ! No args passed. Supply a filename.",10,0
+sznofile      db "--> ! Invaild file passed.",10,0
+szothererr     db "--> ! Wren Error, check script...",10,0
+szmod         db "main",0
+pfmt          db "%s",0
+szread        db "r",0                  ;; Why does this have to be a string? Seriously.
+
+;; Let this freakshow begin..
+section .text
+  global main
+
+  main:
+    push rbp
+    mov rbp, rsp
+    sub rsp, 16
+    cmp edi, 1                          ;; argc
+    jle _main_noargs                    ;; if(argc <= 1)
+    mov rax, qword [rsi+1*8]            ;; argv[1] - dun dun dunnnn
+    mov qword [rbp-8], rax
+    xlea rdi, szmsg
+    xcall printf
+    xlea rdi, wrenConfig
+    xcall wrenInitConfiguration
+    xlea rax, wrenConfig
+    xlea rbx, bindfn
+    mov qword [rax+24], rbx             ;; wrenconfig.WrenBindForeignFn
+    xlea rbx, writefn
+    mov qword [rax+40], rbx             ;; wrenconfig.WrenWriteFn
+    xlea rbx, errfn
+    mov qword [rax+48], rbx             ;; wrenconfig.WrenErrorFn
+    xlea rdi, wrenConfig
+    xcall wrenNewVM
+    mov [rel wrenVM], rax
+    mov rdi, qword [rbp-8]
+    call srcread
+    mov qword [rbp-16], rax             ;; char *wrenScript;
+    mov rdx, qword [rbp-16]
+    xlea rsi, szmod
+    mov esi, 0
+    mov rdi, [rel wrenVM]
+    xcall wrenInterpret
+    cmp rax, WREN_RESULT_SUCCESS
+    jg _main_noargs
+
+    jmp _main_exit                      ;; Let's gtfo of dodge.
+
+    _main_noargs:
+      xlea rdi, sznoargs
+      xcall printf
+
+    ;; At this point we should free the mem but
+    ;; the program ends so who gives a ....
+    _main_exit:
+      add rsp, 16
+      pop rbp
+      xor rdi, rdi
+      xcall exit
+    ret
+
+  ;; We only care about the file name once, So.. No keepy keepy.
+  srcread:
+    push rbp
+    mov rbp, rsp
+    sub rsp, 32
+    xlea rsi,szread
+    xcall fopen
+    cmp rax, 0
+    jle _srcread_nofile
+    mov qword [rbp-8], rax              ;; file handle.
+    mov edx, 2                          ;; SEEK_END
+    mov esi, 0
+    mov rdi, qword [rbp-8]
+    xcall fseek
+    mov rdi, qword [rbp-8]
+    xcall ftell
+    mov qword [rbp-16], rax
+    mov rdi, qword [rbp-8]
+    xcall rewind
+    mov rax, qword [rbp-16]
+    add rax, 1
+    mov rdi, rax
+    xcall malloc
+    mov qword [rbp-24], rax
+    mov rcx, qword [rbp-8]              ;; file handle
+    mov rdx, qword [rbp-16]             ;; size
+    mov esi, 1
+    mov rdi, qword [rbp-24]             ;; buffer
+    xcall fread
+    mov rdi, qword [rbp-8]
+    xcall fclose
+    mov rcx, qword [rbp-16]
+    mov rax, qword [rbp-24]
+    add rax, rcx
+    mov byte [rax], 0
+    jmp _srcread_exit
+
+    _srcread_nofile:
+      xlea rdi, sznofile
+      xcall printf
+
+    _srcread_exit:
+      mov rax, qword [rbp-24]
+      add rsp, 32
+      pop rbp
+    ret
+
+  ;; Just prints whatever's given to it's one argument.
+  writefn:
+    push rbp
+    mov rbp, rsp
+    xlea rdi, pfmt
+    xcall printf
+    pop rbp
+    ret
+
+  errfn:
+    push rbp
+    mov rbp, rsp
+    xlea rdi, szothererr
+    xcall printf
+    pop rbp
+    ret
+
+  ;; Still to lazy to do those if checks... -.-
+  ;; I'll do it properly one day, I promise. :]
+  bindfn:
+    push rbp
+    mov rbp, rsp
+    xlea rax, C_strdup
+    pop rbp
+    ret

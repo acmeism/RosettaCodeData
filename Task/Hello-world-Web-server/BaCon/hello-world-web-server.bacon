@@ -1,0 +1,43 @@
+' Define HTTP constants
+CONST New$ = CHR$(13) & NL$
+CONST Sep$ = CHR$(13) & NL$ & CHR$(13) & NL$
+CONST Msg$ = "<html><head>BaCon web greeting</head><body><h2>Goodbye, World!</h2></body></html>"
+
+' Get our IP
+Ip$ = "localhost"
+PRINT "Connect from browser '", Ip$, ":8080'."
+
+' Ignore child signals to avoid zombie processes
+SIGNAL SIG_IGN, SIGCHLD
+
+' Open listening port
+OPEN Ip$ & ":8080" FOR SERVER AS mynet
+
+' Keep receiving requests
+WHILE TRUE
+
+    ' Handle for newly incoming connection
+    fd = ACCEPT(mynet)
+
+    ' Incoming connection -> create background process
+    spawn = FORK
+
+    ' We are in the child
+    IF spawn = 0 THEN
+
+        ' Get the request
+        REPEAT
+            RECEIVE dat$ FROM fd
+            PRINT dat$
+        UNTIL RIGHT$(dat$, 4) = Sep$
+
+        ' Reply that we're OK
+        SEND "HTTP/1.1 200 Ok" & New$ & "Content-Length: " & STR$(LEN(Msg$)) & Sep$ & Msg$ TO fd
+
+        ' Close connection
+        CLOSE SERVER fd
+
+        ' End this process
+        ENDFORK
+    ENDIF
+WEND

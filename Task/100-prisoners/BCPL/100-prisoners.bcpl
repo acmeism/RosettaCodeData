@@ -1,0 +1,72 @@
+get "libhdr"
+
+manifest $(
+    seed = 12345   // for pseudorandom number generator
+    size = 100     // amount of drawers and prisoners
+    tries = 50     // amount of tries each prisoner may make
+    simul = 2000   // amount of simulations to run
+$)
+
+let randto(n) = valof
+$(  static $( state = seed $)
+    let mask = 1
+    mask := (mask<<1)|1 repeatuntil mask > n
+    state := random(state) repeatuntil ((state >> 8) & mask) < n
+    resultis (state >> 8) & mask
+$)
+
+// initialize drawers
+let placeCards(d, n) be
+$(  for i=0 to n-1 do d!i := i;
+    for i=0 to n-2 do
+    $(  let j = i+randto(n-i)
+        let k = d!i
+        d!i := d!j
+        d!j := k
+    $)
+$)
+
+// random strategy (prisoner 'p' tries to find his own number)
+let randoms(d, p, t) = valof
+$(  for n = 1 to t do
+        if d!randto(size) = p then resultis true
+    resultis false
+$)
+
+// optimal strategy
+let optimal(d, p, t) = valof
+$(  let last = p
+    for n = 1 to t do
+        test d!last = p
+            then resultis true
+            else last := d!last
+    resultis false
+$)
+
+// run a simulation given a strategy
+let simulate(d, strat, n, t) = valof
+$(  placeCards(d, n)
+    for p = 0 to n-1 do
+        if not strat(d, p, t) then resultis false
+    resultis true
+$)
+
+// run many simulations and count the successes
+let runSimulations(d, strat, n, amt, t) = valof
+$(  let succ = 0
+    for i = 1 to amt do
+        if simulate(d, strat, n, t) do
+            succ := succ + 1
+    resultis succ
+$)
+
+let run(d, name, strat, n, amt, t) be
+$(  let s = runSimulations(d, strat, n, amt, t);
+    writef("%S: %I5 of %I5, %N percent.*N", name, s, amt, s*10/(amt/10))
+$)
+
+let start() be
+$(  let d = vec size-1
+    run(d, " Random", randoms, size, simul, tries)
+    run(d, "Optimal", optimal, size, simul, tries)
+$)

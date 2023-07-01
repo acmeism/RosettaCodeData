@@ -1,0 +1,326 @@
+(*
+
+This program has to be compiled without -std=c99, which patscc will
+insert unless you override the setting.
+
+##myatsccdef=\
+patscc \
+  -atsccomp gcc \
+  -I"${PATSHOME}" \
+  -I"${PATSHOME}/ccomp/runtime" \
+  -L"${PATSHOME}/ccomp/atslib/lib" \
+  -DATS_MEMALLOC_LIBC \
+  -o $fname($1) $1
+
+*)
+
+(* The code below is largely C, but the ATS interface enforces memory
+   management. For instance, try removing the call to "addrinfo_free",
+   and see what happens. You will get an error message from the
+   compiler. *)
+
+#include "share/atspre_staload.hats"
+staload UN = "prelude/SATS/unsafe.sats"
+
+#define ATS_EXTERN_PREFIX "rosetta_code_"
+
+%{^
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
+ATSinline() atstype_int
+rosetta_code__getaddrinfo (atstype_ptr node,
+                           atstype_ptr service,
+                           atstype_int ai_flags,
+                           atstype_int ai_family,
+                           atstype_int ai_socktype,
+                           atstype_int ai_protocol,
+                           atstype_ptr res)
+{
+  struct addrinfo hints;
+  memset (&hints, 0, sizeof hints);
+  hints.ai_flags = ai_flags;
+  hints.ai_family = ai_family;
+  hints.ai_socktype = ai_socktype;
+  hints.ai_protocol = ai_protocol;
+  return getaddrinfo ((const char *) node,
+                      (const char *) service,
+                      &hints,
+                      (struct addrinfo **) res);
+}
+
+ATSinline() atstype_void
+rosetta_code__freeaddrinfo (atstype_ptr res)
+{
+  freeaddrinfo ((struct addrinfo *) res);
+}
+
+ATSinline() atstype_string
+rosetta_code__gai_strerror (atstype_int errcode)
+{
+  return (atstype_string) gai_strerror (errcode);
+}
+
+ATSinline() atstype_ptr
+rosetta_code__ai_next (atstype_ptr p)
+{
+  return (atstype_ptr) ((struct addrinfo *) p)->ai_next;
+}
+
+ATSinline() void
+rosetta_code__ai_get_numeric_host (atstype_ptr addrinfo,
+                                   atstype_ptr host,
+                                   atstype_ptr errcode)
+{
+  struct addrinfo *p_addrinfo = (struct addrinfo *) addrinfo;
+  char **p_host = (char **) host;
+  int *p_errcode = (int *) errcode;
+
+  char buf[NI_MAXHOST];
+  *p_errcode = getnameinfo (p_addrinfo->ai_addr,
+                            p_addrinfo->ai_addrlen,
+                            buf, sizeof buf, NULL, 0,
+                            NI_NUMERICHOST);
+  *p_host = ( *p_errcode == 0 ) ? (strdup (buf)) : NULL;
+}
+
+%}
+
+#define NIL list_vt_nil ()
+#define ::  list_vt_cons
+
+implement list_vt_freelin$clear<Strptr1> s = strptr_free s
+
+macdef AF_UNSPEC = $extval (int, "AF_UNSPEC")
+macdef SOCK_DGRAM = $extval (int, "SOCK_DGRAM")
+
+absview addrinfo_v (p        : addr,
+                    freeable : bool)
+
+vtypedef addrinfo (p        : addr,
+                   freeable : bool) =
+  [null < p]
+  @(addrinfo_v (p, freeable) |
+    ptr p)
+
+vtypedef addrinfo (p : addr) =
+  [freeable : bool]
+  addrinfo (p, freeable)
+
+vtypedef addrinfo (freeable : bool) =
+  [p : addr]
+  addrinfo (p, freeable)
+
+vtypedef addrinfo =
+  [p : addr]
+  [freeable : bool]
+  addrinfo (p, freeable)
+
+vtypedef freeable_addrinfo (p : addr) = addrinfo (p, true)
+vtypedef freeable_addrinfo = addrinfo true
+vtypedef unfreeable_addrinfo (p : addr) = addrinfo (p, false)
+vtypedef unfreeable_addrinfo = addrinfo false
+
+fn
+addrinfo_strerror (errcode : int)
+    : string =
+  let
+    extern fn _gai_strerror : int -<> string = "mac#%"
+  in
+    _gai_strerror errcode
+  end
+
+fn
+addrinfo_fetch (node        : !Strptr0,
+                service     : !Strptr0,
+                ai_flags    : int,
+                ai_family   : int,
+                ai_socktype : int,
+                ai_protocol : int,
+                error       : &int? >> int)
+    : Option_vt ([p : agz] addrinfo (p, true)) =
+  let
+    extern fn
+    _getaddrinfo (node        : !Strptr0,
+                  service     : !Strptr0,
+                  ai_flags    : int,
+                  ai_family   : int,
+                  ai_socktype : int,
+                  ai_protocol : int,
+                  result      : &ptr? >> ptr p)
+        : #[p : addr]
+          int = "mac#%"
+
+    var p : ptr
+    val err = _getaddrinfo (node, service, ai_flags, ai_family,
+                            ai_socktype, ai_protocol, p)
+    prval [p : addr] EQADDR () = eqaddr_make_ptr p
+  in
+    error := err;
+    if (err = 0) * (isneqz p) then
+      let
+        extern praxi make_view : () -<prf> addrinfo_v (p, true)
+      in
+        Some_vt @(make_view () | p)
+      end
+    else
+      None_vt ()
+  end
+
+fn
+addrinfo_free {p : addr}
+              (addrinfo : freeable_addrinfo p)
+    : void =
+  let
+    extern fn _freeaddrinfo : ptr -> void = "mac#%"
+    extern praxi consume_view : addrinfo_v (p, true) -<prf> void
+
+    val @(pf | p) = addrinfo
+    prval () = consume_view pf
+  in
+    _freeaddrinfo p
+  end
+
+prfn
+unfreeable_addrinfo_finalize {p : addr}
+                             (addrinfo : unfreeable_addrinfo p)
+    :<prf> void =
+  let
+    extern praxi consume_view : addrinfo_v (p, false) -<prf> void
+  in
+    consume_view (addrinfo.0)
+  end
+
+fn
+addrinfo_next (addrinfo : !addrinfo)
+    :<> Option_vt (addrinfo false) =
+  let
+    extern fn _ai_next : ptr -<> [q : agez] ptr q = "mac#%"
+    val [q : addr] q = _ai_next (addrinfo.1)
+  in
+    if iseqz q then
+      None_vt ()
+    else
+      let
+        extern praxi make_view : () -<prf> addrinfo_v (q, false)
+      in
+        Some_vt @(make_view () | q)
+      end
+  end
+
+fn
+addrinfo_get_numeric_host (addrinfo : !addrinfo,
+                           errcode  : &int? >> int)
+    : Option_vt Strptr1 =
+  let
+    extern fn
+    _ai_get_numeric_host (addrinfo : Ptr,
+                          host     : &ptr? >> Ptr,
+                          errcode  : &int? >> int)
+        : void = "mac#%"
+
+    var host : ptr
+  in
+    _ai_get_numeric_host (addrinfo.1, host, errcode);
+    if (errcode = 0) * (isneqz host) then
+      Some_vt ($UN.castvwtp0 host)
+    else
+      None_vt ()
+  end
+
+fn
+get_numeric_hosts (addrinfo : !freeable_addrinfo)
+    : Option_vt (List1_vt Strptr1) =
+  let
+    fun
+    loop (ainfo : !unfreeable_addrinfo,
+          accum : List1_vt Strptr1)
+        : Option_vt (List1_vt Strptr1) =
+      let
+        var errcode : int
+        val ai_opt = addrinfo_get_numeric_host (ainfo, errcode)
+      in
+        case+ ai_opt of
+        | ~ None_vt () =>
+          begin
+            list_vt_freelin<Strptr1> accum;
+            fprintln! (stderr_ref, "Error: ",
+                       addrinfo_strerror errcode);
+            None_vt ()
+          end
+        | ~ Some_vt host =>
+          let
+            val next_ai_opt = addrinfo_next ainfo
+            and accum = host :: accum
+          in
+            case+ next_ai_opt of
+            | ~ None_vt () => Some_vt (list_vt_reverse accum)
+            | ~ Some_vt next_ai =>
+              let
+                val retval = loop (next_ai, accum)
+                prval () = unfreeable_addrinfo_finalize next_ai
+              in
+                retval
+              end
+          end
+      end
+
+    var errcode : int
+    val ai_opt = addrinfo_get_numeric_host (addrinfo, errcode)
+  in
+    case+ ai_opt of
+    | ~ None_vt () =>
+      begin
+        fprintln! (stderr_ref, "Error: ", addrinfo_strerror errcode);
+        None_vt ()
+      end
+    | ~ Some_vt host =>
+      let
+        val next_ai_opt = addrinfo_next addrinfo
+        and accum = host :: NIL
+      in
+        case+ next_ai_opt of
+        | ~ None_vt () => Some_vt accum
+        | ~ Some_vt next_ai =>
+          let
+            val retval = loop (next_ai, accum)
+            prval () = unfreeable_addrinfo_finalize next_ai
+          in
+            retval
+          end
+      end
+  end
+
+implement
+main0 () =
+  let
+    val hostname = string0_copy "www.kame.net"
+    val service = strptr_null ()
+    var errcode : int
+    val ai_opt = addrinfo_fetch (hostname, service, 0, AF_UNSPEC,
+                                 SOCK_DGRAM, 0, errcode)
+    val () = strptr_free hostname
+    prval () = strptr_free_null service
+  in
+    case+ ai_opt of
+    | ~ None_vt () =>
+      begin
+        fprintln! (stderr_ref, "Error: ", addrinfo_strerror errcode);
+        exit 1
+      end
+    | ~ Some_vt addrinfo =>
+      let
+        val hosts_opt = get_numeric_hosts addrinfo
+      in
+        addrinfo_free addrinfo;
+        case+ hosts_opt of
+        | ~ None_vt () => exit 1
+        | ~ Some_vt hosts =>
+          begin
+            println! ($UN.castvwtp1{List1 string} hosts);
+            list_vt_freelin hosts
+          end
+      end
+  end

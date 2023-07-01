@@ -1,0 +1,94 @@
+*        Jewels and stones - 24/04/2023
+JEWELS   CSECT
+         USING  JEWELS,R13         base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         SAVE   (14,12)            save previous context
+         ST     R13,4(R15)         link backward
+         ST     R15,8(R13)         link forward
+         LR     R13,R15            set addressability
+         LA     R7,EX1             @ex(1,1)
+         LA     R6,1               i=1
+       DO WHILE=(CH,R6,LE,N)       do i=1 to n
+         MVC    CSTO,0(R7)           csto=ex(i,1)
+         MVC    CJEW,16(R7)          cjew=ex(i,2)
+         BAL    R14,COUNT            r0=count(csto,cjew)
+         LR     R1,R0                count
+         XDECO  R1,XDEC              edit count
+         MVC    PG(6),XDEC+6         output count
+         XPRNT  PG,L'PG              print buffer
+         LA     R7,32(R7)            @ex+=32
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+FIN      L      R13,4(0,R13)       restore previous savearea pointer
+         RETURN (14,12),RC=0       restore registers from calling save
+*
+COUNT    CNOP   0,4                count(csto,cjew) -------------------
+         STM    R2,R14,COUNTSA     save context
+         MVC    CC,CSTO            cc=csto
+         BAL    R14,LENGTH         call length(csto)
+         STH    R0,LCSTO           lcsto=length(csto)
+         MVC    CC,CJEW            cc=cjew
+         BAL    R14,LENGTH         call length(cjew)
+         STH    R0,LCJEW           lcjew=length(cjew)
+         XR     R3,R3              ret=0
+         LA     R6,1               i=1
+       DO WHILE=(CH,R6,LE,LCSTO)   do i=1 to length(csto)
+         LA     R2,CSTO-1            @csto-1
+         AR     R2,R6                @csto-1+i
+         MVC    C,0(R2)              c=substr(csto,i,1)
+         SR     R1,R1                k=0 ....index(cjew,c)...........
+         LA     R7,1                 j=1                            |
+       DO WHILE=(CH,R7,LE,LCJEW)     do j=1 to length(cjew)         |
+         LA     R9,CJEW-1              @cjew-1                      |
+         AR     R9,R7                  @cjew-1+j                    |
+       IF   CLC,0(1,R9),EQ,C THEN      if substr(cjew,j,1)=c then   |
+         LR     R1,R7                    k=j                        |
+       ENDIF    ,                      endif                        |
+         LA     R7,1(R7)               j++                          |
+       ENDDO    ,                    enddo j ........................
+       IF   LTR,R1,NZ,R1 THEN        if index(cjew,c)<>0 then
+         LA     R3,1(R3)               ret=ret+1
+       ENDIF    ,                    endif
+         LA     R6,1(R6)             i++
+       ENDDO    ,                  enddo i
+         LR     R0,R3              return value ret
+         LM     R2,R14,COUNTSA     restore context
+         BR     R14                return
+COUNTSA  DS     14A                context store -- end count ---------
+*
+LENGTH   CNOP   0,4                length(cc) -------------------------
+         STM    R2,R14,LENGTSA     save context
+         LA     R10,0              l=0
+         LA     R9,CC              @cc
+         LA     R8,1               k=1
+       DO WHILE=(C,R8,LE,=A(16))   do k=1 to 16
+         MVC    C,0(R9)              c=subsctr(cc,k,1)
+       IF   CLC,C,NE,=C' ' THEN      if c<>' ' then
+         LA     R10,1(R10)             l=l+1
+       ELSE     ,                    else
+         B      LEAVEK                 leave k
+       ENDIF    ,                    endif
+         LA     R9,1(R9)             @cc++
+         LA     R8,1(R8)             k++
+       ENDDO    ,                  enddo k
+LEAVEK   LR     R0,R10             set return value
+         LM     R2,R14,LENGTSA     restore context
+         BR     R14                return
+LENGTSA  DS     14A                context store -- end length --------
+*
+N        DC     H'2'               n
+EX1      DC     CL16'aAAbbbb'      stones(1)
+         DC     CL16'aA'           jewels(1)
+EX2      DC     CL16'ZZ'           stones(2)
+         DC     CL16'z'            jewels(2)
+CSTO     DS     CL16               csto
+CJEW     DS     CL16               cjew
+LCSTO    DS     H                  length of csto
+LCJEW    DS     H                  length of cjew
+CC       DS     CL16               cc
+C        DS     CL1                c
+PG       DC     CL80' '            buffer
+XDEC     DS     CL12               temp for xdeco
+         REGEQU
+         END    JEWELS

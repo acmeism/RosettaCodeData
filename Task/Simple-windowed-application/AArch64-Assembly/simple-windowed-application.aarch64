@@ -1,0 +1,445 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program simpleWin64.s   link with X11 library */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/* constantes X11 */
+.equ KeyPressed,    2
+.equ ButtonPress,   4
+.equ ClientMessage, 33
+.equ KeyPressMask,  1
+.equ ButtonPressMask,     4
+.equ ButtonReleaseMask,   8
+.equ ExposureMask,        1<<15
+.equ StructureNotifyMask, 1<<17
+.equ EnterWindowMask,     1<<4
+.equ LeaveWindowMask,     1<<5
+
+/*******************************************/
+/* Structures                              */
+/********************************************/
+/* Button structure */
+    .struct  0
+BT_cbdata:
+    .struct BT_cbdata  + 8
+BT_adresse:
+    .struct BT_adresse + 8
+BT_GC:
+    .struct BT_GC + 8
+BT_Font:
+    .struct BT_Font + 8
+BT_fin:
+/***************************************************/
+/* structure XButtonEvent    */
+    .struct  0
+XBE_type:                          //event type
+    .struct XBE_type + 8
+XBE_serial:                       // No  last request processed  server */
+    .struct XBE_serial + 8
+XBE_send_event:                   // true if this came from a SendEvent request */
+    .struct XBE_send_event + 8
+XBE_display:                      // Display the event was read from
+    .struct XBE_display + 8
+XBE_window:                       // "event" window it is reported relative to
+    .struct XBE_window + 8
+XBE_root:                         // root window that the event occurred on
+    .struct XBE_root + 8
+XBE_subwindow:                    // child window
+    .struct XBE_subwindow + 8
+XBE_time:                         // milliseconds
+    .struct XBE_time + 8
+XBE_x:                            // pointer x, y coordinates in event window
+    .struct XBE_x + 8
+XBE_y:
+    .struct XBE_y + 8
+XBE_x_root:                       // coordinates relative to root
+    .struct XBE_x_root + 8
+XBE_y_root:
+    .struct XBE_y_root + 8
+XBE_state:                        // key or button mask
+    .struct XBE_state + 8
+XBE_button:                       // detail
+    .struct XBE_button + 8
+XBE_same_screen:                  // same screen flag
+    .struct XBE_same_screen + 8
+XBE_fin:
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szRetourligne:      .asciz  "\n"
+szMessErreur:       .asciz "Server X11 not found.\n"
+szMessErrfen:       .asciz "Error create X11 window.\n"
+szMessErrGC:        .asciz "Error create Graphic Context.\n"
+szMessErrButton:    .asciz "Error create button.\n"
+szMessErrButtonGC:  .asciz "Error create button Graphic Context.\n"
+szMessGoodBye:      .asciz "There have been no clicks yet"
+
+szTextButton:       .asciz "Click me"
+szMessResult:       .asciz "You clicked me @ times       "
+
+szLibDW:            .asciz "WM_DELETE_WINDOW"      // message close window
+
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+.align 4
+qDisplay:        .skip 8           // Display address
+qDefScreen:      .skip 8           // Default screen address
+identWin:        .skip 8           // window ident
+qCounterClic:    .skip 8           // counter clic button
+sZoneConv:       .skip 24
+wmDeleteMessage: .skip 16          // ident close message
+stEvent:         .skip 400         // provisional size
+
+stButton:        .skip BT_fin
+buffer:          .skip 500
+
+/**********************************************/
+/* -- Code section                            */
+/**********************************************/
+.text
+.global main                   // program entry
+main:
+    mov x0,#0                  // open server X
+    bl XOpenDisplay
+    cmp x0,#0
+    beq erreur
+                               //  Ok return Display address
+    ldr x1,qAdrqDisplay
+    str x0,[x1]                // store Display address for future use
+    mov x28,x0                 // and in register 28
+                               // load default screen
+    ldr x2,[x0,#264]           // at location 264
+    ldr x1,qAdrqDefScreen
+    str x2,[x1]                //store default_screen
+    mov x2,x0
+    ldr x0,[x2,#232]           // screen list
+
+                               //screen areas
+    ldr x5,[x0,#+88]           // white pixel
+    ldr x3,[x0,#+96]           // black pixel
+    ldr x4,[x0,#+56]           // bits par pixel
+    ldr x1,[x0,#+16]           // root windows
+                               // create window x11
+    mov x0,x28                 //display
+    mov x2,#0                  // position X
+    mov x3,#0                  // position Y
+    mov x4,600                 // weight
+    mov x5,400                 // height
+    mov x6,0                   // bordure ???
+    ldr x7,0                   // ?
+    ldr x8,qBlanc              // background
+    str x8,[sp,-16]!           // argument fot stack
+    bl XCreateSimpleWindow
+    add sp,sp,16               // for stack alignement
+    cmp x0,#0                  // error ?
+    beq erreurF
+    ldr x1,qAdridentWin
+    str x0,[x1]                // store window ident for future use
+    mov x27,x0                 // and in register 27
+
+                               // Correction of window closing error
+    mov x0,x28                 // Display address
+    ldr x1,qAdrszLibDW         // atom name address
+    mov x2,#1                  // False  create atom if not exist
+    bl XInternAtom
+    cmp x0,#0
+    ble erreurF
+    ldr x1,qAdrwmDeleteMessage // address message
+    str x0,[x1]
+    mov x2,x1                  // address atom create
+    mov x0,x28                 // display address
+    mov x1,x27                 // window ident
+    mov x3,#1                  // number of protocoles
+    bl XSetWMProtocols
+    cmp x0,#0
+    ble erreurF
+                               // authorization of seizures
+    mov x0,x28                 // display address
+    mov x1,x27                 // window ident
+    ldr x2,qFenetreMask        // mask
+    bl XSelectInput
+    cmp x0,#0
+    ble 99f
+                               // create Graphic Context
+    mov x0,x28                 // display address
+    mov x1,x27                 // window ident
+    bl createGC                // GC address -> x26
+    cbz x0,erreurF
+                               // create Graphic Context 1
+    mov x0,x28                 // display address
+    mov x1,x27                 // window ident
+    bl createGC1                // GC address -> x25
+    cbz x0,erreurF
+                               // Display window
+    mov x1,x27                 // ident window
+    mov x0,x28                 // Display address
+    bl XMapWindow
+
+    ldr x0,qAdrszMessGoodBye   // display text
+    bl displayText
+
+    bl createButton            // create button on screen
+1:                             // events loop
+    mov x0,x28                 // Display address
+    ldr x1,qAdrstEvent         // events structure address
+    bl XNextEvent
+    ldr x0,qAdrstEvent         // events structure address
+    ldr w0,[x0]                // type in 4 first bytes
+    cmp w0,#ClientMessage      // message for close window
+    beq 2f                     // yes -> end
+    cmp w0,#ButtonPress        // clic mouse button
+    beq 3f
+                               // other events
+    b 1b                       // and loop
+2:
+    ldr x0,qAdrstEvent         // events structure address
+    ldr x1,[x0,56]             // location message code
+    ldr x2,qAdrwmDeleteMessage // equal ?
+    ldr x2,[x2]
+    cmp x1,x2
+    bne 1b                     // no loop
+    mov x0,0                   // end Ok
+    b 100f
+    //TODO: close ??
+
+3:
+    ldr x0,qAdrstEvent         // events structure address
+    bl evtButtonMouse
+    b 1b
+
+erreurF:                       // error create window
+    ldr x0,qAdrszMessErrfen
+    bl affichageMess
+    mov x0,1
+    b 100f
+erreur:                        // error no server x11 active
+    ldr x0,qAdrszMessErreur
+    bl affichageMess
+    mov x0,1
+100:                           // program standard end
+    mov x8,EXIT
+    svc 0
+qBlanc:              .quad 0xF0F0F0F0
+qAdrqDisplay:        .quad qDisplay
+qAdrqDefScreen:      .quad qDefScreen
+qAdridentWin:        .quad identWin
+qAdrstEvent:         .quad stEvent
+qAdrszMessErrfen:    .quad szMessErrfen
+qAdrszMessErreur:    .quad szMessErreur
+qAdrwmDeleteMessage: .quad wmDeleteMessage
+qAdrszLibDW:         .quad szLibDW
+qAdrszMessGoodBye:   .quad szMessGoodBye
+qFenetreMask:        .quad  KeyPressMask|ButtonPressMask|StructureNotifyMask|ExposureMask|EnterWindowMask
+/******************************************************************/
+/*     create Graphic Context                                     */
+/******************************************************************/
+/* x0 contains the Display address */
+/* x1 contains the ident Window */
+createGC:
+    stp x20,lr,[sp,-16]!       // save  registers
+    mov x20,x0                 // save display address
+    mov x2,#0
+    mov x3,#0
+    bl XCreateGC
+    cbz x0,99f
+    mov x26,x0                 // save GC
+    mov x0,x20                 // display address
+    mov x1,x26
+    ldr x2,qRed                // code RGB color
+    bl XSetForeground
+    cbz x0,99f
+    mov x0,x26                 // return GC
+    b 100f
+99:
+    ldr x0,qAdrszMessErrGC
+    bl affichageMess
+    mov x0,0
+100:
+    ldp x20,lr,[sp],16         // restaur  2 registers
+    ret                        // return to address lr x30
+qAdrszMessErrGC:             .quad szMessErrGC
+qRed:                        .quad 0xFF0000
+qGreen:                      .quad 0xFF00
+qBlue:                       .quad 0xFF
+qBlack:                      .quad 0x0
+/******************************************************************/
+/*     create Graphic Context 1                                    */
+/******************************************************************/
+/* x0 contains the Display address */
+/* x1 contains the ident Window */
+createGC1:
+    stp x20,lr,[sp,-16]!       // save  registers
+    mov x20,x0                 // save display address
+    mov x2,#0
+    mov x3,#0
+    bl XCreateGC
+    cbz x0,99f
+    mov x25,x0                 // save GC
+    mov x0,x20                 // display address
+    mov x1,x25
+    ldr x2,qBlanc              // code RGB color
+    bl XSetForeground
+    cbz x0,99f
+    mov x0,x25                 // return GC1
+    b 100f
+99:
+    ldr x0,qAdrszMessErrGC
+    bl affichageMess
+    mov x0,0
+100:
+    ldp x20,lr,[sp],16         // restaur  2 registers
+    ret                        // return to address lr x30
+/******************************************************************/
+/*     create button on screen                                     */
+/******************************************************************/
+createButton:
+    stp x21,lr,[sp,-16]!       // save  registers
+                               // create button window
+    mov x0,x28                 // display address
+    mov x1,x27                 // ident window
+    mov x2,80                 // X position
+    mov x3,150                 // Y position
+    mov x4,60                  // weight
+    mov x5,30                  // height
+    mov x6,2                   // border
+    ldr x7,qBlack
+    ldr x8,qBlanc              // background
+    str x8,[sp,-16]!           // argument fot stack
+    bl XCreateSimpleWindow
+    add sp,sp,16               // for stack alignement
+    cmp x0,#0                  // error ?
+    beq 99f
+    ldr x21,qAdrstButton
+    str x0,[x21,BT_adresse]    // save ident button
+    str xzr,[x21,BT_cbdata]    // for next use
+
+                              // autorisation des saisies
+    mov x0,x28                // display address
+    ldr x1,[x21,BT_adresse]   // button address
+    ldr x2,qButtonMask        // mask
+    bl XSelectInput
+                              // create Graphic Contexte of button
+    mov x0,x28                // display address
+    ldr x1,[x21,BT_adresse]   // button ident
+    mov x2,#0
+    mov x3,#0
+    bl XCreateGC
+    cmp x0,#0
+    beq 98f
+    str x0,[x21,BT_GC]        // store GC
+                              // display button
+    mov x0,x28                // display address
+    ldr x1,[x21,BT_adresse]   // button address
+    bl XMapWindow
+    ldr x5,qAdrszTextButton   // text address
+    mov x6,0                  // text size
+1:                            // loop compute text size
+    ldrb w10,[x5,x6]          // load text byte
+    cbz x10,2f                // zero -> end
+    add x6,x6,1               // increment size
+    b 1b                      // and loop
+2:
+    mov x0,x28                // display address
+    ldr x1,[x21,BT_adresse]   // button address
+    ldr x2,[x21,BT_GC]        // GC address
+    mov x3,#8                 // position x
+    mov x4,#15                // position y
+    bl XDrawString
+
+    b 100f
+98:
+    ldr x0,qAdrszMessErrButtonGC
+    bl affichageMess
+    b 100f
+99:
+    ldr x0,qAdrszMessErrButton
+    bl affichageMess
+100:
+    ldp x1,lr,[sp],16      // restaur  2 registers
+    ret                    // return to address lr x30
+qAdrstButton:           .quad stButton
+qAdrszTextButton:       .quad szTextButton
+qAdrszMessErrButtonGC:  .quad szMessErrButtonGC
+qAdrszMessErrButton:    .quad szMessErrButton
+qButtonMask:            .quad  ButtonPressMask|ButtonReleaseMask|StructureNotifyMask|ExposureMask|LeaveWindowMask|EnterWindowMask
+
+/******************************************************************/
+/*     display text on screen                                     */
+/******************************************************************/
+/* x0 contains the address of text */
+displayText:
+    stp x1,lr,[sp,-16]!    // save  registers
+    mov x5,x0              // text address
+    mov x6,0               // text size
+1:                         // loop compute text size
+    ldrb w10,[x5,x6]       // load text byte
+    cbz x10,2f             // zero -> end
+    add x6,x6,1            // increment size
+    b 1b                   // and loop
+2:
+    mov x0,x28             // display address
+    mov x1,x27             // ident window
+    mov x2,x26             // GC address
+    mov x3,#50             // position x
+    mov x4,#100            // position y
+    bl XDrawString
+100:
+    ldp x1,lr,[sp],16      // restaur  2 registers
+    ret                    // return to address lr x30
+/******************************************************************/
+/*     events clic mouse button                                      */
+/******************************************************************/
+/* x0 contains the address of event */
+evtButtonMouse:
+    stp x1,lr,[sp,-16]!         // save  registers
+    ldr x10,[x0,XBE_window]     //  windows of event
+    ldr x11,qAdrstButton        // load button ident
+    ldr x12,[x11,BT_adresse]
+    cmp x10,x12                 // equal ?
+    bne 100f                    // no
+    bl eraseText                // yes erase the text
+    ldr x10,qAdrqCounterClic    // load counter clic
+    ldr x0,[x10]
+    add x0,x0,1                 // and increment
+    str x0,[x10]
+    ldr x1,qAdrsZoneConv        // and decimal conversion
+    bl conversion10
+    ldr x0,qAdrszMessResult
+    ldr x1,qAdrsZoneConv
+    bl strInsertAtCharInc       // and insert result at @ character
+    bl displayText              // and display new text
+
+100:
+    ldp x1,lr,[sp],16           // restaur  2 registers
+    ret                         // return to address lr x30
+qAdrqCounterClic:         .quad qCounterClic
+qAdrsZoneConv:            .quad sZoneConv
+qAdrszMessResult:         .quad szMessResult
+/******************************************************************/
+/*     erase text                                      */
+/******************************************************************/
+eraseText:
+    stp x1,lr,[sp,-16]!    // save  registers
+    mov x0,x28             // display address
+    mov x1,x27             // ident window
+    mov x2,x25             // GC1 address
+    mov x3,20              // position x
+    mov x4,70              // position y
+    mov x5,400
+    mov x6,50
+    bl XFillRectangle
+100:
+    ldp x1,lr,[sp],16      // restaur  2 registers
+    ret                    // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

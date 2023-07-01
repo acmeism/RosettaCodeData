@@ -1,0 +1,31 @@
+DECLARE SUB d (p!, s!, x!, y!)
+DIM t(80)
+FOR i = 1 TO 80
+    t(i) = INT(-50 * RND)
+NEXT
+s = TIMER
+
+CLS
+WHILE 1
+    FOR i = 1 TO 80
+        IF t(i) > 28 THEN t(i) = 0
+        t(i) = t(i) + 1
+        y = t(i)
+        d 0, 0, i, y - 6
+        d 2, 0, i, y - 5
+        d 2, 0, i, y - 4
+        d 10, 0, i, y - 3
+        d 10, 0, i, y - 2
+        d 11, 0, i, y - 1
+        d 0, 2, i, y
+    NEXT
+
+    l = TIMER
+    WHILE l = TIMER
+    WEND
+WEND
+
+SUB d (p, s, x, y)
+    COLOR p, s
+    IF y > 0 AND y < 24 THEN LOCATE y, x: PRINT CHR$(33 + (x * y) MOD 200);
+END SUB

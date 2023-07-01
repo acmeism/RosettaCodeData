@@ -1,0 +1,219 @@
+#! /bin/sh
+exec huginn -E "${0}" "${@}"
+#! huginn
+
+import Algorithms as algo;
+import Mathematics as math;
+import OperatingSystem as os;
+
+class Color { r = 0.; g = 0.; b = 0.; }
+class Point { x = 0.; y = 0.; group = -1; }
+
+k_means_initial_centroids( points_, clusterCount_ ) {
+	centroids = [];
+	discreteRng = math.Randomizer( math.Randomizer.DISTRIBUTION.DISCRETE, 0, size( points_ ) - 1 );
+	uniformRng = math.Randomizer( math.Randomizer.DISTRIBUTION.UNIFORM, 0.0, 1.0 );
+	centroids.push( copy( points_[discreteRng.next()] ) );
+	for ( i : algo.range( clusterCount_ - 1 ) ) {
+		distances = [];
+		sum = 0.0;
+		for ( p : points_ ) {
+			shortestDist = math.INFINITY;
+			for ( c : centroids ) {
+				dx = c.x - p.x;
+				dy = c.y - p.y;
+				d = dx * dx + dy * dy;
+				if ( d < shortestDist ) {
+					shortestDist = d;
+				}
+			}
+			distances.push( ( shortestDist, p ) );
+			sum += shortestDist;
+		}
+		sum *= uniformRng.next();
+		for ( d : distances ) {
+			sum -= d[0];
+			if ( sum <= 0.0 ) {
+				centroids.push( copy( d[1] ) );
+				break;
+			}
+		}
+	}
+	for ( i, c : algo.enumerate( centroids ) ) {
+		c.group = i;
+	}
+	return ( centroids );
+}
+
+k_means( points_, clusterCount_, maxError_ = 0.001, maxIter_ = 100 ) {
+	centroids = k_means_initial_centroids( points_, clusterCount_ );
+	pointCount = real( size( points_ ) );
+	for ( iter : algo.range( maxIter_ ) ) {
+		updated = 0.0;
+		for ( p : points_ ) {
+			shortestDist = math.INFINITY;
+			g = 0;
+			for ( c : centroids ) {
+				dx = c.x - p.x;
+				dy = c.y - p.y;
+				dist = dx * dx + dy * dy;
+				if ( dist < shortestDist ) {
+					shortestDist = dist;
+					g = c.group;
+				}
+			}
+			if ( p.group != g ) {
+				p.group = g;
+				updated += 1.0;
+			}
+		}
+		for ( c : centroids ) {
+			n = 0;
+			c.x = 0.;
+			c.y = 0.;
+			for ( p : points_ ) {
+				if ( p.group == c.group ) {
+					c.x += p.x;
+					c.y += p.y;
+					n += 1;
+				}
+			}
+			if ( n > 0 ) {
+				c.x /= real( n );
+				c.y /= real( n );
+			}
+		}
+		err = updated / pointCount;
+		os.stderr().write_line( "err = {}\n".format( err ) );
+		if ( err < maxError_ ) {
+			os.stderr().write_line( "done in {} iterations\n".format( iter ) );
+			break;
+		}
+	}
+	return ( centroids );
+}
+
+gen_points( numPoints_ ) {
+	phiGen = math.Randomizer( math.Randomizer.DISTRIBUTION.UNIFORM, 0., 2. * math.pi( real ) );
+	rGen = math.Randomizer( math.Randomizer.DISTRIBUTION.TRIANGLE, 0., 1., 1. );
+	points = [];
+	for ( i : algo.range( numPoints_ ) ) {
+		phi = phiGen.next();
+		r = rGen.next();
+		points.push( Point( r * math.cosinus( phi ), r * math.sinus( phi ) ) );
+	}
+	return ( points );
+}
+
+import ProgramOptions as po;
+
+main( argv_ ) {
+	poh = po.Handler( "k-means++", "k-means++ clustering algorithm demo" );
+	poh.add_option(
+		name: "numPoints,N",
+		requirement: po.VALUE_REQUIREMENT.REQUIRED,
+		help: "number of points",
+		conversion: integer,
+		valueName: "num",
+		defaultValue: 30000
+	);
+	poh.add_option(
+		name: "numClusters,C",
+		requirement: po.VALUE_REQUIREMENT.REQUIRED,
+		help: "number of custers",
+		conversion: integer,
+		valueName: "num",
+		defaultValue: 7
+	);
+	poh.add_option(
+		name: "maxIterations,I",
+		requirement: po.VALUE_REQUIREMENT.REQUIRED,
+		help: "maximum number of iterations for the algorithm to run",
+		conversion: integer,
+		valueName: "num",
+		defaultValue: 100
+	);
+	poh.add_option(
+		name: "maxInvalidRatio,R",
+		requirement: po.VALUE_REQUIREMENT.REQUIRED,
+		help: "maximum ratio of points that are still assigned to invalid centroids",
+		conversion: real,
+		valueName: "num",
+		defaultValue: 0.001
+	);
+	poh.add_option(
+		name: "help,H",
+		requirement: po.VALUE_REQUIREMENT.NONE,
+		help: "show help information and stop"
+	);
+	poh.add_option(
+		name: "verbose,v",
+		requirement: po.VALUE_REQUIREMENT.NONE,
+		help: "show more info about program execution"
+	);
+	parsed = poh.command_line( argv_ );
+	if ( parsed == none ) {
+		return ( 1 );
+	}
+	if ( parsed.options["help"] ) {
+		print( poh.help_string() + "\n" );
+		return ( 0 );
+	}
+	if ( parsed.options["verbose"] ) {
+		os.stderr().write_line( string( parsed ) + "\n" );
+	}
+	points = gen_points( parsed.options["numPoints"] );
+	print_eps(
+		points,
+		k_means(
+			points,
+			parsed.options["numClusters"],
+			parsed.options["maxInvalidRatio"],
+			parsed.options["maxIterations"]
+		)
+	);
+}
+
+print_eps( points, cluster_centers, W = 400, H = 400 ) {
+	colors = [];
+	for ( i : algo.range( size( cluster_centers ) ) ) {
+		ii = real( i );
+		colors.push(
+			Color(
+				( 3. * ( ii + 1. ) % 11. ) / 11.0,
+				( 7. * ii % 11. ) / 11.0,
+				( 9. * ii % 11. ) / 11.0
+			)
+		);
+	}
+	max_x = max_y = - math.INFINITY;
+	min_x = min_y = math.INFINITY;
+	for ( p : points ) {
+		if ( max_x < p.x ) { max_x = p.x; }
+		if ( min_x > p.x ) { min_x = p.x; }
+		if ( max_y < p.y ) { max_y = p.y; }
+		if ( min_y > p.y ) { min_y = p.y; }
+	}
+	scale = math.min( real( W ) / ( max_x - min_x ), real( H ) / ( max_y - min_y ) );
+	cx = ( max_x + min_x ) / 2.;
+	cy = ( max_y + min_y ) / 2.;
+	print( "%!PS-Adobe-3.0\n%%BoundingBox: -5 -5 {} {}\n".format( W + 10, H + 10 ) );
+	print(
+		"/l {rlineto} def /m {rmoveto} def\n"
+		"/c { .25 sub exch .25 sub exch .5 0 360 arc fill } def\n"
+		"/s { moveto -2 0 m 2 2 l 2 -2 l -2 -2 l closepath "
+		"   gsave 1 setgray fill grestore gsave 3 setlinewidth"
+		" 1 setgray stroke grestore 0 setgray stroke }def\n"
+	);
+	for ( i, cc : algo.enumerate( cluster_centers ) ) {
+		print( "{} {} {} setrgbcolor\n".format( colors[i].r, colors[i].g, colors[i].b ) );
+		for ( p : points ) {
+			if ( p.group != i ) {
+				continue;
+			}
+			print( "{:.3f} {:.3f} c\n".format( ( p.x - cx ) * scale + real( W ) / 2., ( p.y - cy ) * scale + real( H ) / 2. ) );
+		}
+		print("\n0 setgray {} {} s\n".format( ( cc.x - cx ) * scale + real( W ) / 2., ( cc.y - cy ) * scale + real( H ) / 2. ) );
+	}
+	print( "\n%%%%EOF\n" );
+}

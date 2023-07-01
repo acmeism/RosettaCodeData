@@ -1,0 +1,145 @@
+templates deduceRemainingDigits
+  templates findOpenPosition
+    @:{options: 10"1"};
+    $ -> \[i;j](when <[]?($::length <..~$@findOpenPosition.options::raw>)> do @findOpenPosition: {row: $i, col: $j, options: ($::length)"1"}; \) -> !VOID
+    $@ !
+  end findOpenPosition
+
+  templates selectFirst&{pos:}
+    def digit: $($pos.row;$pos.col) -> $(1);
+    $ -> \[i;j](
+      when <?($i <=$pos.row>)?($j <=$pos.col>)> do $digit !
+      when <[]?($i <=$pos.row>)
+      |[]?($j <=$pos.col>)
+      |[]?(($i::raw-1)~/3 <=($pos.row::raw-1)~/3>)?(($j::raw-1)~/3 <=($pos.col::raw-1)~/3>)> do [$... -> \(when <~=$digit> do $! \)] !
+      when <> do $ !
+    \) !
+  end selectFirst
+
+  @: $;
+  $ -> findOpenPosition -> #
+  when <{options: <=0"1">}> do row´1:[] !
+  when <{options: <=10"1">}> do $@ !
+  when <> do def next: $;
+     $@ -> selectFirst&{pos: $next} -> deduceRemainingDigits
+        -> \(when <~=row´1:[]> do @deduceRemainingDigits: $; {options: 10"1"} !
+          when <=row´1:[]> do ^@deduceRemainingDigits($next.row;$next.col;1)
+               -> { $next..., options: $next.options-1"1"} ! \) -> #
+end deduceRemainingDigits
+
+test 'internal solver'
+  def sample: row´1:[
+    col´1:[5,3,4,6,7,8,9,1,2],
+    col´1:[6,7,2,1,9,5,3,4,8],
+    col´1:[1,9,8,3,4,2,5,6,7],
+    col´1:[8,5,9,7,6,1,4,2,3],
+    col´1:[4,2,6,8,5,3,7,9,1],
+    col´1:[7,1,3,9,2,4,8,5,6],
+    col´1:[9,6,1,5,3,7,2,8,4],
+    col´1:[2,8,7,4,1,9,6,3,5],
+    col´1:[3,4,5,2,8,6,1,7,9]
+  ];
+
+  assert $sample -> deduceRemainingDigits <=$sample> 'completed puzzle unchanged'
+
+  assert row´1:[
+    col´1:[[5],3,4,6,7,8,9,1,2],
+    $sample(row´2..last)...] -> deduceRemainingDigits <=$sample> 'final digit gets placed'
+
+  assert row´1:[
+    col´1:[[],3,4,6,7,8,9,1,2],
+    $sample(row´2..last)...] -> deduceRemainingDigits <=row´1:[]> 'no remaining options returns empty'
+
+  assert row´1:[
+    col´1:[[5],3,4,6,[2,5,7],8,9,1,[2,5]],
+    $sample(row´2..last)...] -> deduceRemainingDigits <=$sample> 'solves 3 digits on row'
+
+  assert row´1:[
+    col´1:[5,3,4,6,7,8,9,1,2],
+    col´1:[[6,7,9],7,2,1,9,5,3,4,8],
+    col´1:[1,9,8,3,4,2,5,6,7],
+    col´1:[8,5,9,7,6,1,4,2,3],
+    col´1:[4,2,6,8,5,3,7,9,1],
+    col´1:[[7],1,3,9,2,4,8,5,6],
+    col´1:[[7,9],6,1,5,3,7,2,8,4],
+    col´1:[2,8,7,4,1,9,6,3,5],
+    col´1:[3,4,5,2,8,6,1,7,9]
+  ] -> deduceRemainingDigits <=$sample> 'solves 3 digits on column'
+
+  assert row´1:[
+    col´1:[5,3,[4,6],6,7,8,9,1,2],
+    col´1:[[6],7,2,1,9,5,3,4,8],
+    col´1:[1,[4,6,9],8,3,4,2,5,6,7],
+    $sample(row´4..last)...
+  ] -> deduceRemainingDigits <=$sample> 'solves 3 digits in block'
+
+  // This gives a contradiction if 3 gets chosen out of [3,5]
+  assert row´1:[
+    col´1:[[3,5],[3,4,6],[3,4,6],[3,4,6],7,8,9,1,2],
+    $sample(row´2..last)...] -> deduceRemainingDigits <=$sample> 'contradiction is backtracked'
+end 'internal solver'
+
+composer parseSudoku
+  row´1:[<section>=3]
+  rule section: <row>=3 (<'-+'>? <WS>?)
+  rule row: col´1:[<triple>=3] (<WS>?)
+  rule triple: <digit|dot>=3 (<'\|'>?)
+  rule digit: [<'\d'>]
+  rule dot: <'\.'> -> [1..9 -> '$;']
+end parseSudoku
+
+test 'input sudoku'
+def parsed:
+'53.|.7.|...
+ 6..|195|...
+ .98|...|.67
+ -----------
+ 8..|.6.|..3
+ 4..|8.3|..1
+ 7..|.2.|..6
+ -----------
+ .6.|...|28.
+ ...|419|..5
+ ...|.8.|.79' -> parseSudoku;
+
+  assert $parsed <[<[<[]>=9](9)>=9](9)> 'parsed sudoku has 9 rows containing 9 columns of lists'
+  assert $parsed(row´1;col´1) <=['5']> 'a digit'
+  assert $parsed(row´1;col´3) <=['1','2','3','4','5','6','7','8','9']> 'a dot'
+end 'input sudoku'
+
+templates solveSudoku
+  $ -> parseSudoku -> deduceRemainingDigits -> #
+  when <=row´1:[]> do 'No result found' !
+  when <> do $ -> \[i](
+       '$(col´1..col´3)...;|$(col´4..col´6)...;|$(col´7..col´9)...;$#10;' !
+       $i -> \(when <=row´3|=row´6> do '-----------$#10;' !\) !
+     \) -> '$...;' !
+end solveSudoku
+
+test 'sudoku solver'
+  assert
+'53.|.7.|...
+ 6..|195|...
+ .98|...|.67
+ -----------
+ 8..|.6.|..3
+ 4..|8.3|..1
+ 7..|.2.|..6
+ -----------
+ .6.|...|28.
+ ...|419|..5
+ ...|.8.|.79'
+  -> solveSudoku <=
+'534|678|912
+672|195|348
+198|342|567
+-----------
+859|761|423
+426|853|791
+713|924|856
+-----------
+961|537|284
+287|419|635
+345|286|179
+'> 'solves sudoku and outputs pretty solution'
+end 'sudoku solver'

@@ -1,0 +1,280 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program areaPlot64.s   */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ HAUTEUR, 22
+.equ LARGEUR, 50
+.equ MARGEGAUCHE, 10
+
+/*******************************************/
+/* Structures                               */
+/********************************************/
+/* structure  for points  */
+    .struct  0
+point_posX:
+    .struct  point_posX + 8
+point_posY:
+    .struct  point_posY + 8
+point_end:
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessError:        .asciz "Number of points too large !! \n"
+szCarriageReturn:  .asciz "\n"
+szMessMovePos:      .ascii "\033["          // cursor position
+posY:                .byte '0'
+                     .byte '6'
+                    .ascii ";"
+posX:                .byte '0'
+                     .byte '3'
+                    .asciz "H*"
+szMessEchelleX:     .asciz  "Y^ X="
+szClear1:                  .byte 0x1B
+                           .byte 'c'        // other console clear
+                           .byte 0
+szMessPosEch:      .ascii "\033["           // scale cursor position
+posY1:                .byte '0'
+                     .byte '0'
+                    .ascii ";"
+posX1:                .byte '0'
+                     .byte '0'
+                    .asciz "H"
+
+//x = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+//y = {2.7, 2.8, 31.4, 38.1, 58.0, 76.2, 100.5, 130.0, 149.3, 180.0};
+
+/* areas points  */
+tbPoints:   .quad 0      // 1
+            .quad 27     //    Data * 10 for integer operation
+            .quad 1      // 2
+            .quad 28
+            .quad 2      // 3
+            .quad 314
+            .quad 3      // 4
+            .quad 381
+            .quad 4      // 5
+            .quad 580
+            .quad 5      // 6
+            .quad 762
+            .quad 6      // 7
+            .quad 1005
+            .quad 7      // 8
+            .quad 1300
+            .quad 8      // 9
+            .quad 1493
+            .quad 9      // 10
+            .quad 1800
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+sZoneConv:       .skip 30
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                      // entry of program
+    ldr x0,qAdrtbPoints    // area address
+    mov x1,10              // size
+    mov x2,LARGEUR
+    mov x3,HAUTEUR
+    bl plotArea
+    b 100f
+
+100:                       // standard end of the program
+    mov x0,  0             // return code
+    mov x8,EXIT            // request to exit program
+    svc 0                  // perform the system call
+
+qAdrsZoneConv:          .quad sZoneConv
+qAdrszCarriageReturn:   .quad szCarriageReturn
+qAdrtbPoints:           .quad tbPoints
+/************************************/
+/* create graph                     */
+/************************************/
+/* x0 contains area points address */
+/* x1 contains number points */
+/* x2 contains graphic weight  */
+/* x3 contains graphic height  */
+/* REMARK : no save x9-x20  registers */
+plotArea:
+    stp x2,lr,[sp,-16]!         // save  registers
+    stp x3,x4,[sp,-16]!         // save  registers
+    cmp x1,x2
+    bge 99f
+    mov x9,x0
+    mov x4,x1
+    ldr x10,qAdrposX
+    ldr x11,qAdrposY
+    mov x12,#0                   // indice
+    mov x13,point_end            // element area size
+    mov x17,0                    // Y maxi
+    mov x19,-1                   // Y Mini
+1:                               //search mini maxi
+    madd x14,x12,x13,x0          // load coord Y
+    ldr x15,[x14,point_posY]
+    cmp x15,x17
+    csel x17,x15,x17,hi          // maxi ?
+    cmp x15,x19
+    csel x19,x15,x19,lo          // mini ?
+    add x12,x12,#1
+    cmp x12,x1                   // end ?
+    blt 1b                       // no -> loop
+                                 // compute ratio
+    udiv x15,x17,x3              // ratio = maxi / height
+    add x15,x15,1                // for adjust
+    ldr x0,qAdrszClear1          // clear screen
+    bl affichageMess
+    udiv x20,x2,x4               // compute interval X = weight / number points
+    mov x12,0                    // indice
+2:                               // loop begin for display point
+    madd x14,x12,x13,x9          // charge X coord point
+    ldr x16,[x14,point_posX]
+    mul x16,x20,x12              // interval * indice
+    add x0,x16,MARGEGAUCHE       // + left margin
+    mov x1,x10                   // conversion ascii and store
+    bl convPos
+
+    ldr x18,[x14,point_posY]              // charge Y coord point
+    udiv x18,x18,x15             // divide by ratio
+    sub x0,x3,x18                // inversion position ligne
+    mov x1,x11                   // conversion ascii and store
+    bl convPos
+
+    ldr x0,qAdrszMessMovePos     // display * at position X,Y
+    bl affichageMess
+    add x12,x12,1                // next point
+    cmp x12,x4                   // end ?
+    blt 2b                       // no -> loop
+                                 // display left scale
+                                 // display Y Mini
+    mov x0,0
+    ldr x1,qAdrposX1
+    bl convPos
+    mov x0,HAUTEUR
+    ldr x1,qAdrposY1
+    bl convPos
+    ldr x0,qAdrszMessPosEch
+    bl affichageMess
+    mov x0,x19
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+                                 // display Y Maxi
+    mov x0,0
+    ldr x1,qAdrposX1
+    bl convPos
+    mov x0,0
+    ldr x1,qAdrposY1
+    bl convPos
+    ldr x0,qAdrszMessPosEch
+    bl affichageMess
+    mov x0,x17
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+                                 // display average value
+    mov x0,0
+    ldr x1,qAdrposX1
+    bl convPos
+    mov x0,HAUTEUR/2
+    add x0,x0,#1
+    ldr x1,qAdrposY1
+    bl convPos
+    ldr x0,qAdrszMessPosEch
+    bl affichageMess
+    lsr x0,x17,#1
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+
+                                // display X scale
+    mov x0,0
+    ldr x1,qAdrposX1
+    bl convPos
+    mov x0,HAUTEUR+1
+    ldr x1,qAdrposY1
+    bl convPos
+    ldr x0,qAdrszMessPosEch
+    bl affichageMess
+    ldr x0,qAdrszMessEchelleX
+    bl affichageMess
+
+
+    mov x12,0                       // indice
+    mov x19,MARGEGAUCHE
+10:
+    udiv x20,x2,x4
+    madd x0,x20,x12,x19
+    ldr x1,qAdrposX1
+    bl convPos
+    mov x0,HAUTEUR+1
+    ldr x1,qAdrposY1
+    bl convPos
+    ldr x0,qAdrszMessPosEch
+    bl affichageMess
+    madd x14,x12,x13,x9             // load X coord point
+    ldr x0,[x14,point_posX]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    add x12,x12,1
+    cmp x12,x4
+    blt 10b
+
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    mov x0,0                    // return code
+    b 100f
+99:                             // error
+    ldr x0,qAdrszMessError
+    bl affichageMess
+    mov x0,-1                   // return code
+100:
+    ldp x3,x4,[sp],16           // restaur  2 registers
+    ldp x2,lr,[sp],16           // restaur  2 registers
+    ret                         // return to address lr x30
+qAdrszMessMovePos:         .quad szMessMovePos
+qAdrszClear1:              .quad szClear1
+qAdrposX:                  .quad posX
+qAdrposY:                  .quad posY
+qAdrposX1:                 .quad posX1
+qAdrposY1:                 .quad posY1
+qAdrszMessEchelleX:        .quad szMessEchelleX
+qAdrszMessPosEch:          .quad szMessPosEch
+qAdrszMessError:           .quad szMessError
+/************************************/
+/* conv position in ascii and store at address */
+/************************************/
+/* x0 contains position */
+/* x1 contains string address */
+convPos:
+    stp x2,lr,[sp,-16]!      // save  registers
+    stp x3,x4,[sp,-16]!      // save  registers
+    mov x2,10
+    udiv x3,x0,x2
+    add x4,x3,48             // convert in ascii
+    strb w4,[x1]             // store posX
+    msub x4,x3,x2,x0
+    add x4,x4,48
+    strb w4,[x1,1]
+100:
+    ldp x3,x4,[sp],16        // restaur  2 registers
+    ldp x2,lr,[sp],16        // restaur  2 registers
+    ret                      // return to address lr x30
+/********************************************************/
+/*        File Include fonctions                        */
+/********************************************************/
+/* for this file see task include a file in language AArch64 assembly */
+.include "../includeARM64.inc"

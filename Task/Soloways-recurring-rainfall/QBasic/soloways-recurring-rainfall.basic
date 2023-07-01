@@ -1,0 +1,15 @@
+n = 0
+sum = 0
+
+DO
+    INPUT "Enter integral rainfall (99999 to quit): ", i
+    IF i = 99999 THEN
+        EXIT DO
+    ELSEIF (i < 0) OR (i <> INT(i)) THEN
+        PRINT "Must be an integer no less than 0, try again."
+    ELSE
+        n = n + 1
+        sum = sum + i
+        PRINT "  The current average rainfall is"; sum / n
+    END IF
+LOOP

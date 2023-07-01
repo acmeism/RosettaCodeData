@@ -1,0 +1,89 @@
+V dict_fname = ‘unixdict.txt’
+
+F load_dictionary(String fname = dict_fname)
+   ‘Return appropriate words from a dictionary file’
+   R Set(File(fname).read().split("\n").filter(word -> re:‘[a-z]{3,}’.match(word)))
+
+F get_players()
+   V names = input(‘Space separated list of contestants: ’)
+   R names.trim(‘ ’).split(‘ ’, group_delimiters' 1B).map(n -> n.capitalize())
+
+F is_wordiff_removal(word, String prev; comment = 1B)
+   ‘Is word derived from prev by removing one letter?’
+   V ans = word C Set((0 .< prev.len).map(i -> @prev[0 .< i]‘’@prev[i + 1 ..]))
+   I !ans
+      I comment
+         print(‘Word is not derived from previous by removal of one letter.’)
+   R ans
+
+F counter(s)
+   DefaultDict[Char, Int] d
+   L(c) s
+      d[c]++
+   R d
+
+F is_wordiff_insertion(String word, prev; comment = 1B) -> Bool
+   ‘Is word derived from prev by adding one letter?’
+   V diff = counter(word)
+   L(c) prev
+      I --diff[c] <= 0
+         diff.pop(c)
+   V diffcount = sum(diff.values())
+   I diffcount != 1
+      I comment
+         print(‘More than one character insertion difference.’)
+      R 0B
+
+   V insert = Array(diff.keys())[0]
+   V ans = word C Set((0 .. prev.len).map(i -> @prev[0 .< i]‘’@insert‘’@prev[i ..]))
+   I !ans
+      I comment
+         print(‘Word is not derived from previous by insertion of one letter.’)
+   R ans
+
+F is_wordiff_change(String word, String prev; comment = 1B) -> Bool
+   ‘Is word derived from prev by changing exactly one letter?’
+   V diffcount = sum(zip(word, prev).map((w, p) -> Int(w != p)))
+   I diffcount != 1
+      I comment
+         print(‘More or less than exactly one character changed.’)
+      R 0B
+   R 1B
+
+F is_wordiff(wordiffs, word, dic, comment = 1B)
+   ‘Is word a valid wordiff from wordiffs[-1] ?’
+   I word !C dic
+      I comment
+         print(‘That word is not in my dictionary’)
+      R 0B
+   I word C wordiffs
+      I comment
+         print(‘That word was already used.’)
+      R 0B
+   I word.len < wordiffs.last.len
+      R is_wordiff_removal(word, wordiffs.last, comment)
+   E I word.len > wordiffs.last.len
+      R is_wordiff_insertion(word, wordiffs.last, comment)
+
+   R is_wordiff_change(word, wordiffs.last, comment)
+
+F could_have_got(wordiffs, dic)
+   R (dic - Set(wordiffs)).filter(word -> is_wordiff(@wordiffs, word, @dic, comment' 0B))
+
+V dic = load_dictionary()
+V dic_3_4 = dic.filter(word -> word.len C (3, 4))
+V start = random:choice(dic_3_4)
+V wordiffs = [start]
+V players = get_players()
+V cur_player = 0
+L
+   V name = players[cur_player]
+   cur_player = (cur_player + 1) % players.len
+
+   V word = input(name‘: Input a wordiff from '’wordiffs.last‘': ’).trim(‘ ’)
+   I is_wordiff(wordiffs, word, dic)
+      wordiffs.append(word)
+   E
+      print(‘YOU HAVE LOST ’name‘!’)
+      print(‘Could have used: ’(could_have_got(wordiffs, dic)[0.<10]).join(‘, ’)‘ ...’)
+      L.break

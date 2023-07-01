@@ -1,0 +1,179 @@
+/*
+Basic Tempo Markings from slowest to fastest:
+
+• Larghissimo – very, very slow (24 bpm and under)
+• Grave – very slow (25–45 bpm)
+• Largo – broadly (40–60 bpm)
+• Lento – slowly (45–60 bpm)
+• Larghetto – rather broadly (60–66 bpm)
+• Adagio – slow & (literally (66–76 bpm)
+• Adagietto – slower than andante (72–76 bpm)
+• Andante – walking pace (76–108 bpm)
+• Andantino – slightly faster (80–108 bpm)
+• Marcia moderato – moderately, a march (83–85 bpm)
+• Andante moderato – between andante and moderato (92–112 bpm)
+• Moderato – moderately (108–120 bpm)
+• Allegretto – moderately fast (112–120 bpm)
+• Allegro moderato – not quite allegro (116–120 bpm)
+• Allegro – fast, quick, bright (120–168 bpm)
+• Vivace – lively and fast (168–176 bpm)
+• Vivacissimo – very fast and lively (172–176 bpm)
+• Allegrissimo – very fast (172–176 bpm)
+• Presto – very, very fast (168–200 bpm)
+• Prestissimo – even faster (200 bpm and over)
+*/
+
+output file "Metronome"
+
+include "Tlbx AVFoundation.incl"
+
+// Uncomment next line to use external sound file, and make necessary adjustments in fn RunMetronome
+// include resources "toc.wav"
+
+begin enum
+_mApplication
+_mFile
+_mEdit
+_mColor
+end enum
+
+begin enum 1
+_iSeparator
+_iPreferences
+end enum
+
+begin enum
+_iClose
+end enum
+
+_window = 1
+begin enum 1
+_slider = 30
+_bpmIndicator
+end enum
+
+_initialBPM = 100
+
+void local fn BuildMenus
+'~'1
+// application
+menu _mApplication, _iSeparator
+menu _mApplication, _iPreferences,, @"Preferences…", @","
+
+// file
+menu _mFile, -1,, @"File"
+menu _mFile, _iClose,, @"Close", @"w"
+MenuItemSetAction( _mFile, _iClose, @"performClose:" )
+
+editmenu _mEdit
+end fn
+
+
+void local fn BuildWindow
+'~'1
+NSUInteger i
+
+CGRect r = fn CGRectMake( 0, 0, 200, 500 )
+window _window, @"Metronome", r, NSWindowStyleMaskTitled + NSWindowStyleMaskClosable + NSWindowStyleMaskMiniaturizable
+
+r = fn CGRectMake( 160, 20, 32, 465 )
+slider _slider, YES, _initialBPM, r, 20, 190, _window
+
+r = fn CGRectMake( 25, 458, 24, 24 )
+colorwell _bpmIndicator, YES, fn ColorGreen, r, NO, _window
+ColorWellSetBordered( _bpmIndicator, NO )
+
+CFArrayRef tempo = @[¬
+@"Prestissimo", @"Presto", @"Allegrissimo", @"Vivacissimo", @"Vivace",¬
+@"Allegro", @"Allegro moderato", @"Allegretto", @"Moderato", @"Andante moderato",¬
+@"Marcia moderato", @"Andantino", @"Andante", @"Adagietto", @"Adagio", @"Larghetto",¬
+@"Lento", @"Largo", @"Grave", @"Larghissimo"]
+
+r = fn CGRectMake( 10, 460, 140, 22 )
+for i = 1 to 20
+textlabel i, tempo[i-1], r, _window
+ControlSetAlignment( i, NSTextAlignmentRight )
+ControlSetFontWithName( i, @"Menlo", 11.5 )
+r = fn CGRectOffset( r, 0, -23.2 )
+next
+end fn
+
+
+local fn StopTimer
+'~'1
+CFRunLoopTimerRef t = (CFRunLoopTimerRef)fn AppProperty( @"timer" )
+if ( fn TimerIsValid( t ) )
+TimerInvalidate( t )
+ColorWellSetColor( _bpmIndicator, fn ColorGreen )
+end if
+end fn
+
+
+local fn RunMetronome( bpm as CFTimeInterval )
+'~'1
+
+// Uncomment these lines to use an external sound file name toc.wave
+// CFURLRef soundURL = fn BundleURLForSoundResource( fn BundleMain, @"toc.wav" )
+// SoundRef tocSound = fn SoundWithContentsOfURL( soundURL, NO )
+
+// Comment this line out to use external sound file for tock sound
+SoundRef tocSound = fn SoundNamed( @"Pop" )
+
+CFTimeInterval interval = 60.0 / bpm
+CFRunLoopTimerRef tocTimer = timerbegin 0.0, interval, YES
+ColorRef color
+if ( fn ObjectIsEqual( fn ColorWellColor( _bpmIndicator ), fn ColorGreen ) )
+color = fn ColorGray
+ColorWellSetColor( _bpmIndicator, color )
+else
+color = fn ColorGreen
+ColorWellSetColor( _bpmIndicator, color )
+end if
+
+fn SoundStop( tocSound )
+fn SoundPlay( tocSound )
+timerend
+AppSetProperty( @"timer", tocTimer )
+end fn
+
+
+void local fn DoAppEvent( ev as long )
+'~'1
+select (ev)
+case _appDidFinishLaunching
+fn BuildMenus
+fn BuildWindow
+fn RunMetronome( _initialBPM )
+
+case _appShouldTerminateAfterLastWindowClosed
+AppEventSetBool(YES)
+end select
+end fn
+
+
+void local fn DoMenu( menuID as long, itemID as long )
+'~'1
+select (menuID)
+case _mApplication
+select (itemID)
+case _iPreferences
+end select
+end select
+end fn
+
+
+void local fn DoDialog( ev as long, tag as long, wnd as long )
+'~'1
+select ( ev )
+case _btnClick
+select ( tag )
+case _slider : fn StopTimer : fn RunMetronome( fn ControlIntegerValue( tag ) )
+end select
+end select
+end fn
+
+on AppEvent fn DoAppEvent
+on menu fn DoMenu
+on dialog fn DoDialog
+
+HandleEvents

@@ -1,0 +1,46 @@
+V debug = 0B
+V datePat = re:‘\d{4}-\d{2}-\d{2}’
+V valuPat = re:‘[-+]?\d+\.\d+’
+V statPat = re:‘-?\d+’
+V totalLines = 0
+Set[String] dupdate
+Set[String] badform
+Set[String] badlen
+V badreading = 0
+Set[String] datestamps
+
+L(line) File(‘readings.txt’).read().rtrim("\n").split("\n")
+   totalLines++
+   V fields = line.split("\t")
+   V date = fields[0]
+   V pairs = (1 .< fields.len).step(2).map(i -> (@fields[i], @fields[i + 1]))
+
+   V lineFormatOk = datePat.match(date)
+      & all(pairs.map(p -> :valuPat.match(p[0])))
+      & all(pairs.map(p -> :statPat.match(p[1])))
+   I !lineFormatOk
+      I debug
+         print(‘Bad formatting ’line)
+      badform.add(date)
+
+   I pairs.len != 24 | any(pairs.map(p -> Int(p[1]) < 1))
+      I debug
+         print(‘Missing values ’line)
+   I pairs.len != 24
+      badlen.add(date)
+   I any(pairs.map(p -> Int(p[1]) < 1))
+      badreading++
+
+   I date C datestamps
+      I debug
+         print(‘Duplicate datestamp ’line)
+      dupdate.add(date)
+
+   datestamps.add(date)
+
+print("Duplicate dates:\n  "sorted(Array(dupdate)).join("\n  "))
+print("Bad format:\n  "sorted(Array(badform)).join("\n  "))
+print("Bad number of fields:\n  "sorted(Array(badlen)).join("\n  "))
+print("Records with good readings: #. = #2.2%\n".format(
+   totalLines - badreading, (totalLines - badreading) / Float(totalLines) * 100))
+print(‘Total records:  ’totalLines)

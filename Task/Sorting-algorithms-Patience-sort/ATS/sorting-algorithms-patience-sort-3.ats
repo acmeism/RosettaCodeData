@@ -1,0 +1,372 @@
+//--------------------------------------------------------------------
+//
+//  A patience sort for 32-bit signed integers.
+//
+//  This implementation proves that result is sorted, though it
+//  does not prove that the result is of the same length as the
+//  original.
+//
+//--------------------------------------------------------------------
+
+#include "share/atspre_staload.hats"
+
+(*------------------------------------------------------------------*)
+
+#define ENTIER_MAX 2147483647
+
+(* We do not include the most negative two's-complement number. *)
+stadef entier (i : int) = ~ENTIER_MAX <= i && i <= ENTIER_MAX
+sortdef entier          = {i : int | entier i}
+
+typedef entier (i : int) = [entier i] int i
+typedef entier           = [i : entier] entier i
+
+datatype sorted_entier_list (int, int) =
+| sorted_entier_list_nil (0, ENTIER_MAX)
+| {n : nat}
+  {i, j : entier | ~(j < i)}
+  sorted_entier_list_cons (n + 1, i) of
+    (entier i, sorted_entier_list (n, j))
+typedef sorted_entier_list (n : int) =
+  [i : entier] sorted_entier_list (n, i)
+typedef sorted_entier_list =
+  [n : int] sorted_entier_list n
+
+infixr ( :: ) :::
+#define NIL  list_nil ()
+#define ::   list_cons
+#define SNIL sorted_entier_list_nil ()
+#define :::  sorted_entier_list_cons
+
+(*------------------------------------------------------------------*)
+
+extern prfn
+lemma_sorted_entier_list_param
+          {n   : int}
+          (lst : sorted_entier_list n)
+    :<prf> [0 <= n] void
+
+extern fn
+sorted_entier_list_merge
+          {m, n : int}
+          {i, j : entier}
+          (lst1 : sorted_entier_list (m, i),
+           lst2 : sorted_entier_list (n, j))
+    :<> sorted_entier_list (m + n, min (i, j))
+
+extern fn
+entier_list_patience_sort
+          {n   : int}
+          (lst : list (entier, n)) (* An ordinary list. *)
+    :<!wrt> sorted_entier_list     (* No proof of the length. *)
+
+extern fn
+sorted_entier_list2list
+          {n   : int}
+          (lst : sorted_entier_list n)
+    :<> list (entier, n)
+
+overload merge with sorted_entier_list_merge
+overload patience_sort with entier_list_patience_sort
+overload to_list with sorted_entier_list2list
+
+(*------------------------------------------------------------------*)
+
+primplement
+lemma_sorted_entier_list_param {n} lst =
+  case+ lst of
+  | SNIL => ()
+  | _ ::: _ => ()
+
+implement
+sorted_entier_list_merge (lst1, lst2) =
+  (* This implementation is *NOT* tail recursive. It will use O(m+n)
+     stack space. *)
+  let
+    fun
+    recurs {m, n : nat}
+           {i, j : entier} .<m + n>.
+           (lst1 : sorted_entier_list (m, i),
+            lst2 : sorted_entier_list (n, j))
+        :<> sorted_entier_list (m + n, min (i, j)) =
+      case+ lst1 of
+      | SNIL => lst2
+      | i ::: tail1 =>
+        begin
+          case+ lst2 of
+          | SNIL => lst1
+          | j ::: tail2 =>
+            if ~(j < i) then
+              i ::: recurs (tail1, lst2)
+            else
+              j ::: recurs (lst1, tail2)
+        end
+
+    prval () = lemma_sorted_entier_list_param lst1
+    prval () = lemma_sorted_entier_list_param lst2
+  in
+    recurs (lst1, lst2)
+  end
+
+implement
+entier_list_patience_sort {n} lst =
+  let
+    prval () = lemma_list_param lst
+    val n : int n = length lst
+  in
+    if n = 0 then
+      SNIL
+    else if n = 1 then
+      let
+        val+ head :: NIL = lst
+      in
+        head ::: SNIL
+      end
+    else
+      let
+        val @(pf, pfgc | p) =
+          array_ptr_alloc<sorted_entier_list> (i2sz n)
+        macdef piles = !p
+        val () = array_initize_elt (piles, i2sz n, SNIL)
+
+        fn
+        find_pile {m         : nat | m <= n}
+                  {x         : entier}
+                  (num_piles : int m,
+                   piles     : &array (sorted_entier_list, n),
+                   x         : entier x)
+            :<> [i   : nat | i < n]
+                [len : int]
+                [y   : entier | ~(y < x)]
+                @(int i, sorted_entier_list (len, y)) =
+          //
+          // Bottenbruch search for the leftmost pile whose top is
+          // greater than or equal to some element x.
+          //
+          // References:
+          //
+          // * H. Bottenbruch, "Structure and use of ALGOL 60",
+          //   Journal of the ACM, Volume 9, Issue 2, April 1962,
+          //   pp.161-221. https://doi.org/10.1145/321119.321120
+          //
+          //   The general algorithm is described on pages 214
+          //   and 215.
+          //
+          // * https://en.wikipedia.org/w/index.php?title=Binary_search_algorithm&oldid=1062988272#Alternative_procedure
+          //
+          let
+            fun
+            loop {j, k  : nat | j < k; k < m}
+                 {x     : entier} .<k - j>.
+                 (piles : &array (sorted_entier_list, n),
+                  j     : int j,
+                  k     : int k,
+                  x     : entier x)
+                :<> [i   : nat | i < n]
+                    [len : int]
+                    [y   : entier | ~(y < x)]
+                    @(int i, sorted_entier_list (len, y)) =
+              let
+                val i = j + g1int_ndiv (k - j, 2)
+                val pile = piles[i]
+                val- head ::: _ = pile
+              in
+                if head < x then
+                  begin
+                    if succ i <> k then
+                      loop (piles, succ i, k, x)
+                    else
+                      let
+                        val pile1 = piles[k]
+                      in
+                        case- pile1 of
+                        | head1 ::: _ =>
+                          if head1 < x then
+                            let
+                              (* Runtime check for buffer overrun. *)
+                              val () =
+                                $effmask_exn assertloc (k + 1 < n)
+                            in
+                              (* No pile satisfies the binary search.
+                                 Start a new pile. *)
+                              @(k + 1, SNIL)
+                            end
+                          else
+                            @(k, pile1)
+                      end
+                  end
+                else
+                  begin
+                    if j <> i then
+                      loop (piles, j, i, x)
+                    else
+                      @(j, pile)
+                  end
+              end
+          in
+            if 1 < num_piles then
+              let
+                prval () = prop_verify {m >= 1} ()
+              in
+                loop (piles, 0, pred num_piles, x)
+              end
+            else if num_piles = 1 then
+              let
+                prval () = prop_verify {m == 1} ()
+                val pile = piles[0]
+              in
+                case- pile of
+                | head ::: _ =>
+                  if head < x then
+                    @(1, SNIL)
+                  else
+                    @(0, pile)
+              end
+            else
+              let
+                prval () = prop_verify {m == 0} ()
+              in
+                @(0, SNIL)
+              end
+          end
+
+        fun
+        deal {m         : nat | m <= n}
+             {j         : nat | j <= n} .<m>.
+             (num_piles : &int j >> int k,
+              piles     : &array (sorted_entier_list, n) >> _,
+              lst       : list (entier, m))
+            :<!wrt> #[k : nat | j <= k; k <= n] void =
+          (* This implementation verifies at compile time that the
+             piles are sorted. *)
+          case+ lst of
+          | NIL => ()
+          | head :: tail =>
+            let
+              val @(i, pile) = find_pile (num_piles, piles, head)
+              prval () = lemma_sorted_entier_list_param pile
+            in
+              piles[i] := head ::: pile;
+              num_piles := max (num_piles, succ i);
+              deal (num_piles, piles, tail);
+            end
+
+        fun
+        make_list_of_piles
+                  {num_piles, i : nat | num_piles <= n;
+                                        i <= num_piles}
+                  .<num_piles - i>.
+                  (num_piles : int num_piles,
+                   piles     : &array (sorted_entier_list, n),
+                   i         : int i)
+            :<> [m : nat] @(list (sorted_entier_list, m), int m) =
+          (* I do NOT bother to make this implementation tail
+             recursive. *)
+          if i = num_piles then
+            @(NIL, 0)
+          else
+            let
+              val @(lst, m) =
+                make_list_of_piles (num_piles, piles, succ i)
+            in
+              @(piles[i] :: lst, succ m)
+            end
+
+        var num_piles : Int = 0
+        val () = deal (num_piles, piles, lst)
+        val @(list_of_piles, m) =
+          make_list_of_piles (num_piles, piles, 0)
+
+        val () = array_ptr_free (pf, pfgc | p)
+
+        fun
+        merge_piles {m             : nat} .<m>.
+                    (list_of_piles : list (sorted_entier_list, m),
+                     m             : int m)
+            :<!wrt> sorted_entier_list =
+          (* This is essentially the same algorithm as a
+             NON-tail-recursive mergesort. *)
+          if m = 1 then
+            let
+              val+ sorted_lst :: NIL = list_of_piles
+            in
+              sorted_lst
+            end
+          else if m = 0 then
+            SNIL
+          else
+            let
+              val m_left = m \g1int_ndiv 2
+              val m_right = m - m_left
+              val @(left, right) =
+                list_split_at (list_of_piles, m_left)
+              val left = merge_piles (list_vt2t left, m_left)
+              and right = merge_piles (right, m_right)
+            in
+              left \merge right
+            end
+      in
+        merge_piles (list_of_piles, m)
+      end
+  end
+
+implement
+sorted_entier_list2list lst =
+  (* This implementation is *NOT* tail recursive. It will use O(n)
+     stack space. *)
+  let
+    fun
+    recurs {n   : nat} .<n>.
+           (lst : sorted_entier_list n)
+        :<> list (entier, n) =
+      case+ lst of
+      | SNIL => NIL
+      | head ::: tail => head :: recurs tail
+
+    prval () = lemma_sorted_entier_list_param lst
+  in
+    recurs lst
+  end
+
+(*------------------------------------------------------------------*)
+
+fn
+print_Int_list
+          {n   : int}
+          (lst : list (Int, n))
+    : void =
+  let
+    fun
+    loop {n   : nat} .<n>.
+         (lst : list (Int, n))
+        : void =
+      case+ lst of
+      | NIL => ()
+      | head :: tail =>
+        begin
+          print! (" ");
+          print! (head);
+          loop tail
+        end
+    prval () = lemma_list_param lst
+  in
+    loop lst
+  end
+
+implement
+main0 () =
+  let
+    val example_list =
+      $list (22, 15, 98, 82, 22, 4, 58, 70, 80, 38, 49, 48, 46, 54,
+             93, 8, 54, 2, 72, 84, 86, 76, 53, 37, 90)
+    val sorted_list = patience_sort example_list
+  in
+    print! ("unsorted  ");
+    print_Int_list example_list;
+    println! ();
+    print! ("sorted    ");
+    print_Int_list (to_list sorted_list);
+    println! ()
+  end
+
+(*------------------------------------------------------------------*)

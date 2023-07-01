@@ -1,0 +1,1 @@
+ datestr(now)

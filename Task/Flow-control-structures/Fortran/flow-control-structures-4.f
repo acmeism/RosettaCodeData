@@ -1,0 +1,9 @@
+      XX:DO WHILE(condition)
+           statements...
+        NN:DO I = 1,N
+             statements...
+             IF (...) EXIT XX
+             IF (...) CYCLE NN
+             statements...
+           END DO NN
+         END DO XX

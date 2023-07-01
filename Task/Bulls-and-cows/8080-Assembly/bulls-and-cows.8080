@@ -1,0 +1,206 @@
+bdos		equ	5
+putchar		equ	2
+rawio		equ	6
+puts		equ	9
+cstat		equ	11
+reads		equ	10
+
+		org	100h
+		mvi	c,puts
+		lxi	d,signon	; Print name
+		call	bdos
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Initialize the RNG with keyboard input
+		mvi	c,puts
+		lxi	d,entropy	; Ask for randomness
+		call	bdos
+		mvi	b,9		; 9 times,
+randloop:	mvi	c,3		; read 3 keys.
+		lxi	h,xabcdat + 1
+randkey:	push	b		; Read a key
+		push	h
+randkeywait:	mvi	c,rawio
+		mvi	e,0FFh
+		call	bdos
+		ana	a
+		jz	randkeywait
+		pop	h
+		pop	b
+		xra	m		; XOR it with the random memory
+		mov	m,a
+		inx	h
+		dcr	c
+		jnz	randkey		; Go get more characters
+		dcr	b
+		jnz	randloop
+		mvi	c,puts
+		lxi 	d,done		; Tell the user we're done
+		call	bdos
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Generate 4-digit secret code
+		lxi	h,secret
+		mvi	b,4
+gencode:	push	h
+		push	b
+		call	randcode
+		pop	b
+		pop	h
+		mov	m,a
+		inx	h
+		dcr	b
+		jnz	gencode
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; User makes a guess		
+readguess:	mvi	c,puts		; Ask for guess
+		lxi	d,guess
+		call	bdos
+		mvi	c,reads		; Read guess
+		lxi	d,bufdef
+		call	bdos
+		call	newline		; Print newline
+		mvi	b,4		; Check input
+		lxi	h,buf
+validate:	mov	a,m
+		cpi	'9' + 1		; >9?
+		jnc	inval		; = invalid
+		cpi	'1'		; <1?
+		jc	inval		; = invalid
+		sui	'0'		; Make ASCII digit into number
+		mov	m,a
+		inx	h
+		dcr	b
+		jnz	validate
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Count bulls
+		mvi	c,puts		
+		lxi	d,bulls		; Output "Bulls:"
+		call	bdos
+		lxi	d,secret
+		lxi	h,buf
+		lxi	b,4		; No bulls, counter = 4
+bullloop:	ldax	d		; Get secret digit
+		cmp	m		; Match to buffer digit
+		cz	countmatch
+		inx	h
+		inx	d
+		dcr	c
+		jnz	bullloop
+		push	b		; Keep bulls for cow count,
+		push	b		; and for final check.
+		call	printcount
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Count cows
+		mvi	c,puts
+		lxi	d,cows		; Output ", Cows:"
+		call	bdos
+		pop	psw		; Retrieve the bulls (into A reg)
+		cma			; Negate amount of bulls
+		inr	a
+		mov	b,a		; Use it as start of cow count
+		mvi	d,4		; For all 4 secret digits..
+		lxi	h,secret	
+cowouter:	mov	a,m		; Grab secret digit to test
+		push	h		; Store secret position
+		mvi	e,4		; For all 4 input digits...
+		lxi	h,buf
+cowinner:	cmp	m		; Compare to current secret digit
+		cz	countmatch
+		inx	h
+		dcr	e		; While there are more digits in buf
+		jnz	cowinner	; Test next digit
+		pop	h		; Restore secret position
+		inx	h		; Look at next secret digit
+		dcr	d		; While there are digits left
+		jnz	cowouter
+		push	b		; Keep cow count
+		call	printcount
+		call	newline
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Check win condition
+		pop	psw		; Cow count (in A)
+		pop	b		; Bull count (in B)
+		ana	a		; To win, there must be 0 cows...
+		jnz	readguess
+		mvi	a,4		; And 4 bulls.
+		cmp	b
+		jnz	readguess
+		mvi	c,puts
+		lxi	d,win
+		jmp	bdos
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Increment bull/cow counter
+countmatch:	inr	b
+		ret
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Print a newline
+newline:	mvi	c,puts
+		lxi	d,nl
+		jmp 	bdos
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Output counter as ASCII
+printcount:	mvi	a,'0'
+		add	b
+		mvi	c,putchar
+		mov	e,a
+		jmp	bdos
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; User entered invalid input
+inval:		mvi	c,puts
+		lxi	d,invalid
+		call	bdos
+		jmp	readguess
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Generate random number 1-9 that isn't in key
+randcode:	call	xabcrand
+		ani	0fh	; Low nybble
+		ana	a	; 0 = invalid
+		jz	randcode
+		cpi	10	; >9 = invalid
+		jnc	randcode
+		;; Check if it is a duplicate
+		mvi	b,4
+		lxi	h,secret
+checkdup:	cmp	m
+		jz	randcode
+		inx	h
+		dcr	b
+		jnz	checkdup
+		ret
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; The "X ABC" 8-bit random number generator
+		;; (Google that to find where it came from)
+xabcrand:       lxi     h,xabcdat
+                inr     m       ; X++
+                mov     a,m     ; X,
+                inx     h       ;
+                xra     m       ; ^ C,
+                inx     h       ;
+                xra     m       ; ^ A,
+                mov     m,a     ; -> A
+                inx     h
+                add     m       ; + B,
+                mov     m,a     ; -> B
+                rar             ; >>1
+                dcx     h
+                xra     m       ; ^ A,
+                dcx     h
+                add     m       ; + C
+                mov     m,a     ; -> C
+                ret
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Strings
+signon:		db	'Bulls and Cows',13,10,'$'
+entropy:	db	'Please mash the keyboard to generate entropy...$'
+done:		db	'done.',13,10,13,10,'$'
+bulls:		db	'Bulls: $'
+cows:		db	', Cows: $'
+guess:		db	'Guess: $'
+invalid: 	db	'Invalid input.',13,10,'$'
+win:		db	'You win!',13,10,'$'
+nl:		db	13,10,'$'
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		;; Variables
+xabcdat:	ds	4	; RNG state
+secret:		ds	4	; Holds the secret code
+bufdef:		db	4,0	; User input buffer
+buf:		ds	4

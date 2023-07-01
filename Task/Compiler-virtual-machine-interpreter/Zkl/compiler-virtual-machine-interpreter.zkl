@@ -1,0 +1,62 @@
+// This is a little endian machine
+const WORD_SIZE=4;
+const{ var _n=-1; var[proxy]N=fcn{ _n+=1 } }  // enumerator
+const FETCH=N, STORE=N, PUSH=N, ADD=N, SUB=N, MUL=N, DIV=N, MOD=N,
+   LT=N, GT=N, LE=N, GE=N, EQ=N, NE=N, AND=N, OR=N, NEG=N, NOT=N,
+   JMP=N, JZ=N, PRTC=N, PRTS=N, PRTI=N, HALT=N;
+
+var [const]
+   bops=Dictionary(ADD,'+, SUB,'-, MUL,'*, DIV,'/, MOD,'%,
+		   LT,'<, GT,'>, LE,'<=, GE,'>=, NE,'!=, EQ,'==, NE,'!=),
+   strings=List();  // filled in by the loader
+;
+
+   // do a binary op
+fcn bop(stack,op){ a,b:=stack.pop(),stack.pop(); stack.append(bops[op](b,a)) }
+
+fcn run_vm(code,stackSz){
+   stack,pc := List.createLong(stackSz,0), 0;
+   while(True){
+      op:=code[pc]; pc+=1;
+      switch(op){
+         case(FETCH){
+	    stack.append(stack[code.toLittleEndian(pc,WORD_SIZE,False)]);
+            pc+=WORD_SIZE;
+	 }
+	 case(STORE){
+	    stack[code.toLittleEndian(pc,WORD_SIZE)]=stack.pop();
+	    pc+=WORD_SIZE;
+	 }
+         case(PUSH){
+	    stack.append(code.toLittleEndian(pc,WORD_SIZE,False));  // signed
+	    pc+=WORD_SIZE;
+	 }
+	 case(ADD,SUB,MUL,DIV,MOD,LT,GT,LE,GE,EQ,NE) { bop(stack,op) }
+	 case(AND){ stack[-2] = stack[-2] and stack[-1]; stack.pop() }
+	 case(OR) { stack[-2] = stack[-2] or  stack[-1]; stack.pop() }
+	 case(NEG){ stack[-1] = -stack[-1]    }
+	 case(NOT){ stack[-1] = not stack[-1] }
+	 case(JMP){ pc+=code.toLittleEndian(pc,WORD_SIZE,False); }  // signed
+	 case(JZ) {
+	    if(stack.pop()) pc+=WORD_SIZE;
+	    else            pc+=code.toLittleEndian(pc,WORD_SIZE,False);
+	 }
+	 case(PRTC){ }	// not implemented
+	 case(PRTS){ print(strings[stack.pop()]) }
+	 case(PRTI){ print(stack.pop()) }
+	 case(HALT){ break }
+	 else{ throw(Exception.AssertionError(
+		"Bad op code (%d) @%d".fmt(op,pc-1))) }
+      }
+   }
+}
+
+code:=File(vm.nthArg(0)).read();	// binary code file
+    // the string table is prepended to the code:
+    //    66,1 byte len,text, no trailing '\0' needed
+while(code[0]==66){	// read the string table
+   sz:=code[1];
+   strings.append(code[2,sz].text);
+   code.del(0,sz+2);
+}
+run_vm(code,1000);

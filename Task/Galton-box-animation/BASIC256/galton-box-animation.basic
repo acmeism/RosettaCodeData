@@ -1,0 +1,116 @@
+graphsize 150,125
+fastgraphics
+color black
+rect 0,0,graphwidth,graphheight
+refresh
+
+N = 10		# number of balls
+M = 5		# number of pins in last row
+dim ball(N,5)	# (pos_x to center, level, x, y, direction}
+dim cnt(M+1)
+
+rad = 6
+slow = 0.3
+diamond = {0,rad,rad,0,0,-rad,-rad,0}
+stepx = {rad/sqr(2),rad/2,rad/2,(1-1/sqr(2))*rad,0}
+stepy = {(1-1/sqr(2))*rad,rad/2,rad/2,rad/sqr(2),rad}
+CX = graphwidth/2 : CY = graphheight/2
+iters = 0
+
+# Draw pins
+for i = 1 to M
+	y = 3*rad*i
+	for j = 1 to i
+		dx = (j-i\2-1)*4*rad + ((i-1)%2)*2*rad
+		color purple
+		stamp CX+dx,y,1.0,diamond
+		color darkpurple
+		stamp CX+dx,y,0.6,diamond
+	next j
+next i
+gosub saverefresh
+
+R = 0 : C = 0
+font "Tahoma",10,50
+do
+	# Release ball
+	if R<N then
+		R = R + 1
+		ball[R-1,2] = CX : ball[R-1,3] = rad*(1-stepx[?]) : ball[R-1,4] = 0
+		# How many balls are released
+		color black
+		text 5,5,(R-1)+" balls"
+		color green
+		text 5,5,(R)+" balls"
+	end if
+	# Animate balls on this step
+	for it = 0 to stepx[?]-1
+		for b = 0 to R-1
+			gosub moveball
+		next b
+		gosub saverefresh
+		pause slow/stepx[?]
+	next it
+	# Where to go on the next step?
+	for b = 0 to R-1
+		ball[b,1] = ball[b,1] + 1
+		if ball[b,1]<=M then
+			if rand>=0.5 then
+				ball[b,4] = 1
+			else
+				ball[b,4] = -1
+			end if
+			ball[b,0] = ball[b,0] + ball[b,4]
+		else
+			if ball[b,4]<>0 then
+				gosub eraseball
+				i = (ball[b,0]+M)/2
+				cnt[i] = cnt[i] + 1
+				ball[b,4] = 0
+				C = C + 1
+			end if
+		end if
+	next b
+	# Draw counter
+	color green
+	y = 3*rad*(M+1)
+	for j = 0 to M
+		dx = (j-(M+1)\2)*4*rad + (M%2)*2*rad
+		stamp CX+dx,y,{-1.2*rad,0,1.2*rad,0,1.2*rad,2*cnt[j],-1.2*rad,2*cnt[j]}
+	next j
+	gosub saverefresh
+until C >= N
+end
+
+moveball:
+	if ball[b,1]>M then return
+	gosub eraseball
+	if ball[b,4]<>0.0 then
+		ball[b,2] = ball[b,2]+ball[b,4]*stepx[it]
+		ball[b,3] = ball[b,3]+stepy[it]
+	else
+		ball[b,3] = ball[b,3]+rad
+	end if
+	gosub drawball
+
+drawball:
+	color darkgreen
+	circle ball[b,2],ball[b,3],rad-1
+	color green
+	circle ball[b,2],ball[b,3],rad-2
+	return
+
+eraseball:
+	color black
+	circle ball[b,2],ball[b,3],rad-1
+	return
+
+saverefresh:
+	num$ = string(iters)	
+	for k = 1 to 4-length(num$)
+		num$ = "0"+num$
+	next k
+	imgsave num$+"-Galton_box_BASIC-256.png", "PNG"
+	iters = iters + 1
+	refresh
+	return

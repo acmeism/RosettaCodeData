@@ -1,0 +1,13 @@
+(defun guess-the-number (&optional (max 1000) (min 0))
+  (labels ((guess-loop (min max)
+             (let ((guess (floor (+ min max) 2)))
+               (format t "I choose ~a.~%" guess)
+               (case (read)
+                 (greater (guess-loop guess max))
+                 (lower   (guess-loop min guess))
+                 (correct (write-line "I got it!"))
+                 (otherwise
+                   (write-line "Please answer greater, lower, or correct.")
+                   (guess-loop min max))))))
+    (format t "Think of a number between ~a and ~a.~%" min max)
+    (guess-loop min max)))

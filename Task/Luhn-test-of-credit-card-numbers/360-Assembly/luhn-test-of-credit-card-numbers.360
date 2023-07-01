@@ -1,0 +1,122 @@
+*        Luhn test of credit card numbers        22/05/2016
+LUHNTEST CSECT
+         USING  LUHNTEST,R13       base register
+         B      72(R15)            skip savearea
+         DC     17F'0'             savearea
+         STM    R14,R12,12(R13)    prolog
+         ST     R13,4(R15)         "
+         ST     R15,8(R13)         "
+         LR     R13,R15            "
+         LA     R9,T               @t(k)
+         LA     R8,N               for n
+LOOPK    EQU    *                  for k=1 to n
+         LR     R4,R9              @t(k),@s[1]
+         LA     R6,1               from i=1
+         LA     R7,M               to m
+LOOPI1   CR     R6,R7              for i=1 to m
+         BH     ELOOPI1            leave i
+         CLI    0(R4),C' '           if mid(s,i,1)=" "
+         BNE    ITERI1               then
+         BCTR   R6,0                   i-1
+         ST     R6,L                   l=i-1
+         B      ELOOPI1                exit for
+*                                    end if
+ITERI1   LA     R4,1(R4)             next @s[i]
+         LA     R6,1(R6)             i=i+1
+         B      LOOPI1             next i
+ELOOPI1  EQU    *                  out of loop i
+         MVC    W,BLANK            w=" "
+         LA     R4,W               iw=@w
+         LR     R5,R9              is=@s
+         A      R5,L               is=@s+l
+         BCTR   R5,0               is=s+l-1
+         L      R6,L               i=l
+         LA     R7,1               to 1
+LOOPI2   CR     R6,R7              for i=l to 1 by -1
+         BL     ELOOPI2            leave i
+         MVC    0(1,R4),0(R5)        mid(w,iw,1)=mid(s,is,1)
+         LA     R4,1(R4)             iw=iw+1
+         BCTR   R5,0                 is=is-1
+         BCTR   R6,0                 i=i-1
+         B      LOOPI2             next i
+ELOOPI2  EQU    *                  out of loop i
+         LA     R11,0              s1=0
+         LA     R12,0              s2=0
+         LA     R6,1               i=1
+         L      R7,L               to l
+LOOPI3   CR     R6,R7              for i=1 to l
+         BH     ELOOPI3            leave i
+         LA     R2,W-1             @w-1
+         AR     R2,R6              w[i]
+         MVC    CI,0(R2)           ci=mid(w,i,1)
+         NI     CI,X'0F'           zap upper half byte
+         LR     R4,R6              i
+         SRDA   R4,32              >>32
+         D      R4,=F'2'           i/2
+         LTR    R4,R4              if mod(i,2)>0
+         BNH    NOTMOD             then
+         XR     R2,R2                clear
+         IC     R2,CI                z=cint(mid(w,i,1))
+         AR     R11,R2               s1=s1+cint(mid(w,i,1))
+         B      EIFMOD             else
+NOTMOD   XR     R2,R2                clear
+         IC     R2,CI                cint(mid(w,i,1))
+         SLA    R2,1                 *2
+         ST     R2,Z                 z=cint(mid(w,i,1))*2
+         C      R2,=F'10'            if z<10
+         BNL    GE10                 then
+         A      R12,Z                  s2=s2+z
+         B      EIF10                else
+GE10     L      R2,Z                   z
+         CVD    R2,PL8                 binary to packed
+         UNPK   CL16,PL8               packed to zoned
+         OI     CL16+15,X'F0'          zoned to char (zap sign)
+         MVC    X(1),CL16+15           x=right(cstr(z),1)
+         NI     X,X'0F'                zap upper half byte
+         XR     R2,R2                  r2=0
+         IC     R2,X                   r2=cint(right(cstr(z),1))
+         AR     R12,R2                 s2=s2+r2
+         LA     R12,1(R12)             s2=s2+cint(right(cstr(z),1))+1
+EIF10    EQU    *                    end if
+EIFMOD   EQU    *                  end if
+         LA     R6,1(R6)           i=i+1
+         B      LOOPI3             next i
+ELOOPI3  EQU    *                  out of loop i
+         LR     R1,R11             s1
+         AR     R1,R12             s1+s2
+         CVD    R1,PL8             binary to packed
+         UNPK   CL16,PL8           packed to zoned
+         CLI    CL16+15,X'C0'      if right(cstr(s1+s2),1)="0"
+         BNE    NOTZERO            then
+         MVC    R,=CL8'Valid'        r="Valid"
+         B      ECLI               else
+NOTZERO  MVC    R,=CL8'Invalid'      r="Invalid"
+ECLI     EQU    *                  end if
+         MVC    PG(M),0(R9)        t(k)
+         MVC    PG+M+1(L'R),R      r
+         XPRNT  PG,L'PG            print buffer
+         LA     R9,M(R9)           at=at+m
+         BCT    R8,LOOPK           next k
+         L      R13,4(0,R13)       epilog
+         LM     R14,R12,12(R13)    "
+         XR     R15,R15            "
+         BR     R14                exit
+N        EQU    (TEND-T)/L'T
+M        EQU    20
+T        DC     CL(M)'49927398716         '
+         DC     CL(M)'49927398717         '
+         DC     CL(M)'1234567812345678    '
+         DC     CL(M)'1234567812345670    '
+TEND     DS     0C
+W        DS     CL(M)
+BLANK    DC     CL(M)' '
+L        DS     F
+Z        DS     F
+PL8      DS     PL8
+CL16     DS     CL16
+CI       DS     C
+X        DS     C
+R        DS     CL8
+PG       DC     CL80' '            buffer
+         YREGS
+         END    LUHNTEST

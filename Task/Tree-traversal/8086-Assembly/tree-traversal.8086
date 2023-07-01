@@ -1,0 +1,114 @@
+        cpu     8086
+        org     100h
+section .text
+        jmp     demo
+        ;;;     Traverse tree at SI. Call routine at CX with values in AX.
+        ;;;     CX must preserve BX, CX, SI, DI.
+        ;;;     Preorder traversal
+preo:   test    si,si
+        jz      pdone           ; Zero pointer = done
+        lodsw                   ; Load value
+        call    cx              ; Handle value
+        push    si              ; Keep value
+        mov     si,[si]         ; Load left node
+        call    preo            ; Traverse left node
+        pop     si
+        mov     si,[si+2]       ; Load right node
+        jmp     preo            ; Traverse right node
+        ;;;     Inorder traversal
+ino:    test    si,si
+        jz      pdone           ; Zero pointer = done
+        push    si
+        mov     si,[si+2]       ; Load left node
+        call    ino             ; Traverse left node
+        pop     si
+        lodsw                   ; Load value
+        call    cx              ; Handle value
+        mov     si,[si+2]       ; Load right node
+        jmp     ino             ; Traverse right node
+        ;;;     Postorder traversal
+posto:  test    si,si
+        jz      pdone           ; Zero pointer = done
+        push    si
+        mov     si,[si+2]       ; Load left node
+        call    posto           ; Traverse left node
+        pop     si
+        push    si
+        mov     si,[si+4]       ; Load right node
+        call    posto
+        pop     si              ; Load value
+        lodsw
+        jmp     cx              ; Handle value
+pdone:  ret
+        ;;;     Level-order traversal
+lvlo:   mov     di,queue        ; DI = queue end pointer
+        mov     ax,si
+        mov     si,di           ; SI = queue start pointer
+        stosw
+.step:  cmp     di,si           ; If end == start, done
+        je      pdone
+        lodsw                   ; Get next item
+        test    ax,ax           ; Null?
+        jz      .step
+        mov     bx,si           ; Keep start pointer in BX
+        mov     si,ax           ; Load item
+        lodsw                   ; Get value
+        call    cx              ; Handle value
+        lodsw                   ; Copy nodes to queue
+        stosw
+        lodsw
+        stosw
+        mov     si,bx           ; Put start pointer back
+        jmp     .step
+
+        ;;;     Demo code
+demo:   mov     si,orders
+.loop:  lodsw                   ; Load next order
+        test    ax,ax
+        jz      .done
+        mov     dx,ax           ; Print order name
+        mov     ah,9
+        int     21h
+        lodsw                   ; Load order routine
+        mov     bp,si           ; Keep SI
+        mov     si,tree         ; Traverse the tree
+        mov     cx,pdgt         ; Printing the digits
+        call    ax
+        mov     si,bp
+        jmp     .loop
+.done:  ret
+
+        ;;;     Callback: print single digit
+pdgt:   add     al,'0'
+        mov     [.str],al
+        mov     ah,9
+        mov     dx,.str
+        int     21h
+        ret
+.str:   db      '* $'
+
+section .data
+        ;;;     List of orders
+orders: dw      .preo,preo
+        dw      .ino,ino
+        dw      .posto,posto
+        dw      .lvlo,lvlo
+        dw      0
+.preo:  db      'Preorder:    $'
+.ino:   db      13,10,'Inorder:     $'
+.posto: db      13,10,'Postorder:   $'
+.lvlo:  db      13,10,'Level-order: $'
+
+        ;;;     Exampe tree
+tree:   dw      1,.n2,.n3
+.n2:    dw      2,.n4,.n5
+.n3:    dw      3,.n6,0
+.n4:    dw      4,.n7,0
+.n5:    dw      5,0,0
+.n6:    dw      6,.n8,.n9
+.n7:    dw      7,0,0
+.n8:    dw      8,0,0
+.n9:    dw      9,0,0
+
+section .bss
+queue:  resw    256

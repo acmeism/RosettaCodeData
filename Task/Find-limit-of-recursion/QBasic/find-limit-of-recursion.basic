@@ -1,0 +1,7 @@
+FUNCTION Recursion (i)
+PRINT i
+ext = Recursion(i + 1)
+Recursion = 0
+END FUNCTION
+
+ext = Recursion(0)

@@ -1,0 +1,177 @@
+Module PPMbinaryP6 {
+      If Version<9.4 then 1000
+      If Version=9.4 Then if Revision<19 then 1000
+      Module Checkit {
+            Function Bitmap  {
+                  def x as long, y as long
+                  If match("NN") then {
+                       Read x, y
+                  } else.if Match("N") Then  {
+                        E$="Not a ppm file"
+                        Read f as long
+                        buffer whitespace as byte
+                        if not Eof(f) then {
+                              get #f, whitespace : iF eof(f) then Error E$
+                              P6$=eval$(whitespace)
+                              get #f, whitespace : iF eof(f) then Error E$
+                              P6$+=eval$(whitespace)
+                              def boolean getW=true, getH=true, getV=true
+                              def long v
+                              \\ str$("P6") has 2 bytes. "P6" has 4 bytes
+                              If p6$=str$("P6") Then {
+                                    do {
+                                          get #f, whitespace
+                                          if Eval$(whitespace)=str$("#") then {
+                                                do {
+                                                      iF eof(f) then Error E$
+                                                      get #f, whitespace
+                                                } until eval(whitespace)=10
+                                          } else  {
+                                               select case eval(whitespace)
+                                                case 32, 9, 13, 10
+                                                {
+                                                      if getW and x<>0 then {
+                                                            getW=false
+                                                      } else.if getH  and y<>0 then {
+                                                            getH=false
+                                                      } else.if getV and v<>0 then {
+                                                            getV=false
+                                                      }
+                                                }
+                                                case 48 to 57
+                                                {
+                                                      if getW then {
+                                                           x*=10
+                                                           x+=eval(whitespace, 0)-48
+                                                      } else.if getH then {
+                                                           y*=10
+                                                           y+=eval(whitespace, 0)-48
+                                                      } else.if getV then {
+                                                           v*=10
+                                                           v+=eval(whitespace, 0)-48
+                                                      }
+                                                }
+                                                End Select
+                                          }
+                                          iF eof(f) then Error E$
+                                    } until getV=false
+                              }  else Error "Not a P6 ppm"
+                        }
+                  } else Error "No proper arguments"
+                  if x<1 or y<1 then  Error "Wrong dimensions"
+                  structure rgb {
+                        red as byte
+                        green as byte
+                        blue as byte
+                  }
+                  m=len(rgb)*x mod 4
+                  if m>0 then m=4-m  ' add some bytes to raster line
+                  m+=len(rgb) *x
+                  Structure rasterline {
+                        {
+                              pad as byte*m
+                        }
+                        \\ union pad+hline
+                        hline as rgb*x
+                  }
+                  \\ we use union linesB and lines
+                  \\ so we can address linesb as bytes
+                  Structure Raster {
+                        magic as integer*4
+                        w as integer*4
+                        h as integer*4
+                        {
+                              linesB as byte*len(rasterline)*y
+                        }
+                        lines as rasterline*y
+                  }
+                  Buffer Clear Image1 as Raster
+                  \\ 24 chars as header to be used from bitmap render build in functions
+                  Return Image1, 0!magic:="cDIB", 0!w:=Hex$(x,2), 0!h:=Hex$(y, 2)
+                  \\ fill white (all 255)
+                  \\ Str$(string) convert to ascii, so we get all characters from words  width to byte width
+                  if not valid(f) then  Return Image1, 0!lines:=Str$(String$(chrcode$(255), Len(rasterline)*y))
+                  Buffer Clear Pad as Byte*4
+                  SetPixel=Lambda Image1, Pad,aLines=Len(Raster)-Len(Rasterline), blines=-Len(Rasterline) (x, y, c) ->{
+                        where=alines+3*x+blines*y
+                        if c>0 then c=color(c)
+                        c-!
+                        Return Pad, 0:=c as long
+                        Return Image1, 0!where:=Eval(Pad, 2) as byte, 0!where+1:=Eval(Pad, 1) as byte, 0!where+2:=Eval(Pad, 0) as byte
+                  }
+                  GetPixel=Lambda Image1,aLines=Len(Raster)-Len(Rasterline), blines=-Len(Rasterline) (x,y) ->{
+                        where=alines+3*x+blines*y
+                        =color(Eval(image1, where+2 as byte), Eval(image1, where+1 as byte), Eval(image1, where as byte))
+                  }
+                  StrDib$=Lambda$ Image1, Raster -> {
+                        =Eval$(Image1, 0, Len(Raster))
+                  }
+                  CopyImage=Lambda Image1 (image$) -> {
+                        if left$(image$,12)=Eval$(Image1, 0, 24 ) Then  {
+                               Return Image1, 0:=Image$
+                        } Else Error "Can't Copy Image"
+                  }
+                  Export2File=Lambda Image1, x, y (f) -> {
+                        \\ use this between open and close
+                        Print #f, "P6";chr$(10);
+                        Print #f,"# Created using M2000 Interpreter";chr$(10);
+                        Print #f, x;" ";y;" 255";chr$(10);
+                        x2=x-1
+                        where=0
+                        Buffer pad as byte*3
+                        For y1= 0 to y-1 {
+                              For x1=0 to x2 {
+                                    \\ use linesB which is array of bytes
+                                   Return pad, 0:=eval$(image1, 0!linesB!where, 3)
+                                   Push Eval(pad, 2)
+                                   Return pad, 2:=Eval(pad, 0), 0:=Number
+                                   Put #f, pad
+                                   where+=3
+                              }
+                              m=where mod 4
+                              if m<>0 then where+=4-m
+                        }
+                  }
+                  if valid(F) then {
+                        x0=x-1
+                        where=0
+                        Buffer Pad1 as byte*3
+                              For y1=y-1 to 0 {
+                                    For x1=0 to x0 {
+                                          Get #f, Pad1  ' Read binary
+                                          \\ reverse rgb
+                                          Push Eval(pad1, 2)
+                                          Return pad1, 2:=Eval(pad1, 0), 0:=Number
+                                          Return Image1, 0!linesB!where:=Eval$(Pad1)
+                                          where+=3
+                                    }
+                                    m=where mod 4
+                                    if m<>0 then where+=4-m
+                              }
+                  }
+                  Group Bitmap {
+                        SetPixel=SetPixel
+                        GetPixel=GetPixel
+                        Image$=StrDib$
+                        Copy=CopyImage
+                        ToFile=Export2File
+                  }
+                  =Bitmap
+            }
+            A=Bitmap(10, 10)
+            Call A.SetPixel(5,5, color(128,0,255))
+            Open "A.PPM" for Output as #F
+                  Call A.ToFile(F)
+            Close #f
+
+            Print "Saved"
+            Open "A.PPM" for Input as #F
+                  C=Bitmap(f)
+                  Copy 400*twipsx,200*twipsy use C.Image$()
+            Close #f
+         }
+      Checkit
+      End
+      1000  Error "Need Version 9.4, Revision 19 or higher"
+}
+PPMbinaryP6

@@ -1,0 +1,13 @@
+(defun quickselect (n _list)
+  (let* ((ys (remove-if (lambda (x) (< (car _list) x)) (cdr _list)))
+         (zs (remove-if-not (lambda (x) (< (car _list) x)) (cdr _list)))
+         (l (length ys))
+         )
+    (cond ((< n l) (quickselect n ys))
+          ((> n l) (quickselect (- n l 1) zs))
+          (t (car _list)))
+    )
+  )
+
+(defparameter a '(9 8 7 6 5 0 1 2 3 4))
+(format t "~a~&" (mapcar (lambda (x) (quickselect x a)) (loop for i from 0 below (length a) collect i)))

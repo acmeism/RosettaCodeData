@@ -1,0 +1,112 @@
+#UTF8_codePointMaxByteCount = 4 ;UTF-8 encoding uses only a maximum of 4 bytes to encode a codepoint
+
+Procedure UTF8_encode(x, Array encoded_codepoint.a(1)) ;x is codepoint to encode, the array will contain output
+  ;Array encoded_codepoint() is used for output.
+  ;After encode element zero holds the count of significant bytes in elements 1 to 4
+  If ArraySize(encoded_codepoint()) < #UTF8_codePointMaxByteCount
+    ReDim encoded_codepoint.a(#UTF8_codePointMaxByteCount)
+  EndIf
+
+  Select x
+    Case 0 To $7F
+      encoded_codepoint(0) = 1
+      encoded_codepoint(1) = x ;all 7 bits
+    Case $80 To $7FF
+      encoded_codepoint(0) = 2
+      encoded_codepoint(2) = (x & %00111111) | %10000000         ;lowest 6 bits
+      encoded_codepoint(1) = (x >> 6) | %11000000                ;highest bits 7 -> 11
+    Case $800 To $FFFF
+      encoded_codepoint(0) = 3
+      encoded_codepoint(3) = (x & %00111111) | %10000000         ;lowest 6 bits
+      encoded_codepoint(2) = ((x >> 6) & %00111111) | %10000000  ;bits 7 -> 12
+      encoded_codepoint(1) = (x >> 12) | %11100000               ;highest bits 13 -> 16
+
+    Case $10000 To $10FFFF
+      encoded_codepoint(0) = 4
+      encoded_codepoint(4) = (x & %00111111) | %10000000         ;lowest 6 bits
+      encoded_codepoint(3) = ((x >> 6) & %00111111) | %10000000  ;bits 7 -> 12
+      encoded_codepoint(2) = ((x >> 12) & %00111111) | %10000000 ;bits 13 -> 18
+      encoded_codepoint(1) = (x >> 18) | %11110000               ;highest bits 19 -> 21
+    Default
+      encoded_codepoint(0) = 0  ;error, codepoint is not valid and can't be encoded
+  EndSelect
+EndProcedure
+
+Procedure UTF8_decode(Array encoded_codepoint.a(1))
+  ;Array encoded_codepoint() holds the UTF-8 encoding in elements 1 to 4, element zero isn't used for decoding.
+  Protected x = -1 ;initialzie with error value for possible improper encoding
+
+  If ArraySize(encoded_codepoint()) < #UTF8_codePointMaxByteCount
+    ProcedureReturn x ;Input array was not dimensioned properly.
+  EndIf
+
+  ;Determine the number of bytes in the UTF8 encoding by looking at first byte
+  ;and then proceeding accordingly.
+  Select encoded_codepoint(1)
+    Case %00000000 To %01111111 ;1 byte encoding
+      x = encoded_codepoint(1)
+    Case %11000000 To %11011111 ;2 byte encoding
+      x = (encoded_codepoint(1) & %00011111) << 6 ;last 5 bits only
+      x | (encoded_codepoint(2) & %00111111)
+    Case %11100000 To %11101111 ;3 byte encoding
+      x = (encoded_codepoint(1) & %00001111) << 6 ;last 4 bits only
+      x << 6 + (encoded_codepoint(2) & %00111111)
+      x << 6 + (encoded_codepoint(3) & %00111111)
+    Case %11110000 To %11110111 ;4 byte encoding
+      x = (encoded_codepoint(1) & %00000111) << 6 ;last 3 bits only
+      x << 6 + (encoded_codepoint(2) & %00111111)
+      x << 6 + (encoded_codepoint(3) & %00111111)
+      x << 6 + (encoded_codepoint(4) & %00111111)
+  EndSelect
+
+  ProcedureReturn x
+EndProcedure
+
+;helper procedure to format output for this example
+Procedure.s formatOutput(c$, c, Array encoded_utf.a(1), dcp) ;character, codepooint, UTf8 encoding, decoded codepoint
+  Protected o$, i, encoding$
+
+  o$ = "   " + LSet(c$, 8) + LSet("U+" + RSet(Hex(c), 5, "0"), 10)
+  For i = 1 To encoded_utf(0)
+    encoding$ + RSet(Hex(encoded_utf(i)), 2, "0") + " "
+  Next
+  o$ + "  " + LSet(encoding$, 11, " ") + "   " + RSet(Hex(dcp), 5, "0")
+
+  ProcedureReturn o$
+EndProcedure
+
+DataSection
+  ;unicode code points in hex
+  unicode_codepoints:
+  Data.i 5, $41, $F6, $416, $20AC, $1D11E
+  ;The names for these codepoints are: latin capital letter a; latin small letter o With diaeresis
+  ;cyrillic capital letter zhe; euro sign; musical symbol g clef.
+EndDataSection
+
+;read initial unicode codepoint values
+Restore unicode_codepoints
+Read num_codepoints
+num_codepoints - 1
+
+Dim codepoint(num_codepoints)
+For i = 0 To num_codepoints
+  Read codepoint(i)
+Next
+
+;This array is used for input and output from the UTF8 encode and decode procedures.  After encoding its elements
+;hold the byte count of the encoding followed by the respective bytes.  For decoding element zero is not used and
+;elements 1 To 4 holds the bytes to be decoded.
+Dim encoded_codepoint.a(#UTF8_codePointMaxByteCount)
+If OpenConsole("", #PB_UTF8)
+  PrintN(LSet("", 11) + LSet("Unicode", 12) + LSet("UTF-8",14) + LSet("Decoded",12))
+  PrintN(LSet("Character", 11) + LSet("Code Point", 12) + LSet("Encoding",14) + LSet("Code Point",12))
+  PrintN(LSet("---------", 11) + LSet("----------", 12) + LSet("-----------",14) + LSet("-----------",12))
+
+  For i = 0 To num_codepoints
+    UTF8_encode(codepoint(i), encoded_codepoint())
+    dcp = UTF8_decode(encoded_codepoint()) ;Decoded UTF-8 encoding should match original codepoint that was encoded.
+    PrintN(formatOutput(Chr(codepoint(i)), codepoint(i), encoded_codepoint(), dcp))
+  Next
+  Print(#CRLF$ + #CRLF$ + "Press ENTER to exit"): Input()
+  CloseConsole()
+EndIf

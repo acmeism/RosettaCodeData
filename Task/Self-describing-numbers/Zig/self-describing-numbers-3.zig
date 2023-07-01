@@ -3,6 +3,6 @@ pub fn main() anyerror!void {
 
     for (0..100_000_000) |number| {
         if (isSelfDescribing(@intCast(number)))
-            _ = try stdout.print("{}\n", .{number});
+            try stdout.print("{}\n", .{number});
     }
 }

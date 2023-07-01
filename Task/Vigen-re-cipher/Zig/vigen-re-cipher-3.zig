@@ -14,9 +14,9 @@ pub fn main() anyerror!void {
 
     const encoded = try vigenere(allocator, text, key, true);
     defer allocator.free(encoded);
-    _ = try stdout.print("{s}\n", .{encoded});
+    try stdout.print("{s}\n", .{encoded});
 
     const decoded = try vigenere(allocator, encoded, key, false);
     defer allocator.free(decoded);
-    _ = try stdout.print("{s}\n", .{decoded});
+    try stdout.print("{s}\n", .{decoded});
 }

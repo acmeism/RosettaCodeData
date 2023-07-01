@@ -1,7 +1,7 @@
 require "prime"
 
 def 𝜑(n)
-  n.prime_division.inject(1) {|res, (pr, exp)| res *= (pr-1) * pr**(exp-1) }
+  n.prime_division.inject(1){|res, (pr, exp)| res * (pr-1) * pr**(exp-1) }
 end
 
 1.upto 25 do |n|

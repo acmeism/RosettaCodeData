@@ -7,10 +7,10 @@ fn sierpinski_triangle(allocator: Allocator, writer: anytype, n: u8) !void {
 
     b[len >> 1] = '*';
 
-    _ = try writer.print("{s}\n", .{b});
+    try writer.print("{s}\n", .{b});
 
     for (0..len / 2 - 1) |_| {
         try rule_90(allocator, b);
-        _ = try writer.print("{s}\n", .{b});
+        try writer.print("{s}\n", .{b});
     }
 }

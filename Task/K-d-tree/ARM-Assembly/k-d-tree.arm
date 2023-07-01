@@ -1,0 +1,690 @@
+/* ARM assembly Raspberry PI  */
+/*  program kdtree.s   */
+
+ /* REMARK 1 : this program use routines in a include file
+   see task Include a file language arm assembly
+   for the routine affichageMess conversion10
+   see at end of this program the instruction include */
+ /* REMARK 2 : In order not to use floating point numbers,
+ the coordinates of the points are integers numbers.
+ The displayed distance represents the square of the distance between 2 points */
+
+ /* This program draws heavily from the published C program. Thanks to its creator. */
+
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+.equ MAXI,   3
+.equ NBPOINTSRAND,   2000
+.equ MAXCOORD,       10000
+
+.include "../../ficmacros32.inc"
+
+/***********************************************/
+/* structures                                  */
+/**********************************************/
+/* Définition node */
+    .struct  0
+nodeKD_val:                       //     value array
+    .struct  nodeKD_val + (4  * MAXI)
+nodeKD_left:                      //    left pointer
+    .struct  nodeKD_left + 4
+nodeKD_right:                     //   right pointer
+    .struct  nodeKD_right + 4
+nodeKD_end:
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessAddressTree:    .asciz "Node address : "
+szMessTreeValue:      .asciz " Value : "
+szMessLeft:           .asciz "         Left : "
+szMessRight:          .asciz "Right : "
+szMessResult:         .asciz "Nearest point = "
+szMessRandCoor:       .asciz "\n\nRandom point coordonnés = "
+szMessVisited:        .asciz "Node visited = "
+szMessDistance:       .asciz "square distance :"
+szMessStart:          .asciz "Program 32 bits start.\n"
+szCarriageReturn:     .asciz "\n"
+.align 4
+tabPoint1:            .int 2,3, 5,4, 9,6, 4,7, 8,1, 7,2
+//tabPoint1:            .int 1,7, 3,4, 4,6, 6,2, 8,12, 10,9, 12,3, 14,1
+//tabPoint1:            .int 3,5, 1,3, 2,8, 4,6, 5,4
+.equ NBPOINTS,         (. - tabPoint1) / 4
+
+tabPoint2:            .int 9,2
+//tabPoint2:              .int 3,7
+.equ NBPOINTS2,         (. - tabPoint2) / 4
+iGraine:  .int 123456         // random init
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+stNode1:               .skip nodeKD_end
+KDtree1:               .skip nodeKD_end * NBPOINTS
+KDtree2:               .skip nodeKD_end * NBPOINTS2
+KdtreeRand:            .skip nodeKD_end * NBPOINTSRAND
+tabPointsRand:         .skip nodeKD_end
+sZoneConv:             .skip 24           // conversion buffer
+sZoneConv1:            .skip 24           // conversion buffer
+sBufferConv16:         .skip 16
+iDistance:             .skip 4            // best distance
+stNearest:             .skip nodeKD_end   // best node
+nbNodeVi:              .skip 4            // visited node
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            @ entry of program
+    ldr r0,iAdrszMessStart
+    bl affichageMess
+
+    ldr r0,iAdrtabPoint1         @ points array address
+    ldr r1,iAdrKDtree1           @ KD tree address
+    mov r2,#NBPOINTS             @ array points size
+    mov r3,#2                    @ domension 2
+    bl initKDTree                @ init tree
+    ldr r0,iAdrKDtree1           @ KD tree address
+    mov r1,#0                    @ start index
+    mov r2,#NBPOINTS / 2         @ end = array points size
+    mov r3,#0                    @ level
+    mov r4,#2                    @ dimension 2
+    bl createTree
+    mov r8,r0                    @ save median
+    cmp r0,#-1
+    beq 100f
+    ldr r0,iAdrKDtree1           @ KD tree address
+    mov r1,#2                    @ dimension 2
+    bl displayTree
+    ldr r0,iAdrtabPoint2         @ points array address
+    ldr r1,iAdrKDtree2           @ search KDtree address
+    mov r2,#NBPOINTS2            @ search array points size
+    mov r3,#2                    @ dimension 2
+    bl initKDTree                @ init search tree
+    ldr r0,iAdrKDtree1           @ KDtree address
+    mov r1,#nodeKD_end
+    mla r0,r8,r1,r0              @ compute median address
+    ldr r1,iAdrKDtree2           @ search KDtree address
+    mov r2,#0                    @ first index
+    mov r3,#2                    @ dimension 2
+    bl searchNearest             @ search nearest point
+    ldr r0,iAdrszMessResult      @ display résult
+    bl affichageMess
+    ldr r0,iAdrstNearest         @ nearest point address
+    ldr r0,[r0]
+    mov r1,#2
+    bl displayCoord              @ coordonnés display
+    ldr r0,iAdrnbNodeVi          @ visited nodes
+    ldr r0,[r0]
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r0,#3
+    ldr r1,iAdrszMessVisited
+    ldr r2,iAdrsZoneConv
+    ldr r3,iAdrszCarriageReturn
+    bl displayStrings
+    ldr r0,iAdriDistance         @ best distance address
+    ldr r0,[r0]
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r0,#3
+    ldr r1,iAdrszMessDistance
+    ldr r2,iAdrsZoneConv
+    ldr r3,iAdrszCarriageReturn
+    bl displayStrings
+
+    bl traitRandom
+
+100:                             @ standard end of the program
+    mov r0, #0                   @ return code
+    mov r7, #EXIT                @ request to exit program
+    svc #0                       @ perform the system call
+
+iAdrszCarriageReturn:        .int szCarriageReturn
+iAdrsZoneConv:               .int sZoneConv
+iAdrszMessDistance:          .int szMessDistance
+iAdrszMessResult:            .int szMessResult
+iAdrszMessVisited:           .int szMessVisited
+iAdrszMessStart:             .int szMessStart
+iAdrtabPoint1:               .int tabPoint1
+iAdrtabPoint2:               .int tabPoint2
+iAdrKDtree1:                 .int KDtree1
+iAdrKDtree2:                 .int KDtree2
+/***************************************************/
+/*   traitement random points                    */
+/***************************************************/
+/* r0  array tree address */
+/* r2  points number      */
+/* r3  dimension */
+traitRandom:
+    push {r1-r10,lr}             @ save des registres
+    ldr r8,iAdrKdtreeRand        @ KD tree address
+    mov r7,#nodeKD_end
+    ldr r10,iNbPointsRand
+    mov r3,#0
+1:                               @ loop generate random coordonnes
+    mov r0,#MAXCOORD
+    bl genereraleas              @ X
+    mov r4,r0
+    mov r0,#MAXCOORD
+    bl genereraleas              @ Y
+    mov r5,r0
+    mov r0,#MAXCOORD
+    bl genereraleas              @ Z
+    mov r6,r0
+    mla r0,r3,r7,r8
+    add r1,r0,#nodeKD_val        @ node address
+    str r4,[r1]                  @ store X,Y,Z
+    str r5,[r1,#4]
+    str r6,[r1,#8]
+    mov r4,#-1                   @ init pointer left and right
+    str r4,[r0,#nodeKD_left]
+    str r4,[r0,#nodeKD_right]
+    add r3,r3,#1
+    cmp r3,r10
+    blt 1b
+
+    mov r0,r8                   @ KD tree address
+    mov r1,#0                   @ start indice
+    mov r2,r10                  @ array points size
+    mov r3,#0                   @ level
+    mov r4,#3                   @ dimension 2
+    bl createTree
+    mov r9,r0                   @ save median
+                                @ create random search point
+    mov r0,#MAXCOORD
+    bl genereraleas
+    mov r4,r0
+    mov r0,#MAXCOORD
+    bl genereraleas
+    mov r5,r0
+    mov r0,#MAXCOORD
+    bl genereraleas
+    mov r6,r0
+    ldr r3,iAdrtabPointsRand
+    add r0,r3,#nodeKD_val
+    str r4,[r0]
+    str r5,[r0,#4]
+    str r6,[r0,#8]
+    ldr r0,iAdrszMessRandCoor
+    bl affichageMess
+    mov r0,r3
+    mov r1,#3
+    bl displayCoord              @ search
+    ldr r0,iAdriDistance         @ init best distance address
+    mov r1,#0
+    str r1,[r0]
+
+    mla r0,r9,r7,r8              @ median KD tree address
+    mov r1,r3                    @ search point address
+    mov r2,#0                    @ index
+    mov r3,#3                    @ dimension 2
+    bl searchNearest
+    ldr r0,iAdrszMessResult
+    bl affichageMess
+    ldr r0,iAdrstNearest
+    ldr r0,[r0]
+    mov r1,#3
+    bl displayCoord
+    ldr r0,iAdrnbNodeVi
+    ldr r0,[r0]
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r0,#3
+    ldr r1,iAdrszMessVisited
+    ldr r2,iAdrsZoneConv
+    ldr r3,iAdrszCarriageReturn
+    bl displayStrings
+    ldr r0,iAdriDistance         @ best distance address
+    ldr r0,[r0]
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r0,#3
+    ldr r1,iAdrszMessDistance
+    ldr r2,iAdrsZoneConv
+    ldr r3,iAdrszCarriageReturn
+    bl displayStrings
+100:
+    pop {r1-r10,pc}
+iAdrKdtreeRand:           .int KdtreeRand
+iAdrtabPointsRand:        .int tabPointsRand
+iAdrszMessRandCoor:       .int szMessRandCoor
+iNbPointsRand:            .int NBPOINTSRAND
+/***************************************************/
+/*   init KN tree                    */
+/***************************************************/
+/* r0  array points */
+/* r1  array tree address */
+/* r2  points number      */
+/* r3  dimension */
+initKDTree:
+    push {r1-r9,lr}              @ save des registres
+    mov r8,#0                    @ points indice
+    mov r4,#0                    @ node tree indice
+    mov r6,#nodeKD_end           @ structure size
+1:
+    mla r5,r4,r6,r1              @ compute node address
+    mov r9,#0                    @ index value
+2:
+    ldr r7,[r0,r8,lsl #2]        @ load one point coord
+    str r7,[r5,r9,lsl #2]        @ store in node value
+    add r8,r8,#1                 @ next point
+    add r9,r9,#1                 @ next node value
+    cmp r9,r3                    @ = dimension ?
+    blt 2b                       @ no loop
+    mov r7,#-1                   @ init pointer left and right
+    str r7,[r5,#nodeKD_left]
+    str r7,[r5,#nodeKD_right]
+    add r4,r4,#1                 @ increment node tree indice
+    cmp r8,r2                    @ end points ?
+    blt 1b
+100:
+    pop {r1-r9,pc}
+/***************************************************/
+/*   create KD tree                    */
+/***************************************************/
+/* r0  array tree address */
+/* r1  start index */
+/* r2  end index
+/* r3 level  */
+/* r4 dimention */
+createTree:
+    push {r1-r12,lr}            @ save des registres
+    cmp r1,r2                   @ if start = end -> return -1
+    movge r0,#-1
+    bge 100f
+    add r5,r1,#1                @ if start + 1 = end -> return start
+    cmp r5,r2
+    moveq r0,r1
+    beq 100f
+    mov r8,r0                   @ save address
+    mov r7,r1                   @ save start index
+    mov r12,r2                  @ save end index
+    mov r5,r3                   @ save level
+    mov r10,r4                  @ save dimension
+    mov r9,#nodeKD_end          @ node structure size
+    mov r1,r7                   @ start
+    mov r2,r12                  @ end
+    bl findMedian
+    cmp r0,#0                   @
+    movlt r0,#-1
+    blt 100f
+    mov r6,r0                   @ save indice median
+    add r5,r5,#1                @ compute new value index
+    cmp r5,r10                  @ => dimension ?
+    movge r5,#0
+    mov r0,r8                   @ tree address
+    mov r1,r7                   @ start
+    mov r2,r6                   @ end = median
+    mov r3,r5                   @ index
+    mov r4,r10                  @ dimension
+    bl createTree
+    mla r1,r6,r9,r8             @ compute median address
+    cmp r0,#-1                  @ left address is ok ?
+    mlane r0,r9,r0,r8           @ yes compute address
+    str r0,[r1,#nodeKD_left]    @ and store
+    mov r0,r8                   @ KDtree address
+    add r1,r6,#1                @ start = indice median + 1
+    mov r2,r12                  @ end
+    mov r3,r5                   @ index
+    mov r4,r10                  @ dimension
+    bl createTree
+    mla r1,r6,r9,r8             @ compute median address
+    cmp r0,#-1                  @ indice right ok ?
+    mlane r0,r9,r0,r8           @ yes compute address
+    str r0,[r1,#nodeKD_right]   @ and store in pointer
+    mov r0,r6                   @ return indice median node
+100:
+    pop {r1-r12,pc}
+/***************************************************/
+/*   find median and sort points                  */
+/***************************************************/
+/* r0  tree address */
+/* r1  start tree indice
+/* r2  end tree indice   */
+/* r3 indice  */
+/* r0 return median point index   */
+findMedian:
+    push {r1-r12,lr}         @ save des registres
+    cmp r2,r1
+    movle r0,#-1
+    ble 100f
+    mov r7,#nodeKD_end       @ node size
+    add r5,r1,#1             @ next node address
+    cmp r2,r5                @ equal to end ?
+    moveq r0,r1
+    beq 100f                @ yes return
+    mov r8,r1               @ save start
+    mov r12,r0              @ save tree address
+    add r4,r2,r1            @ end + start
+    lsr r9,r4,#1            @ divide by 2 = median index
+    mla r10,r7,r9,r0        @ mediam md address
+    lsl r5,r3,#2            @ index * 4
+1:
+    cmp r2,r8               @ end <= start
+    movle r0,r2             @ stop ?
+    ble 100f
+    add r6,r10,#nodeKD_val
+    add r11,r6,r5           @ add shift index
+    ldr r6,[r11]            @ load pivot value
+    mov r0,r10              @ median address
+    sub r1,r2,#1            @ compute address end - 1
+    mul r1,r7,r1
+    add r1,r1,r12
+    bl inversion            @ inversion median and end - 1
+    mov r11,r8              @ store=indice start
+    mov r4,r8               @ p =indice start
+
+2:
+    cmp r4,r2               @ compare p and end
+    bge 5f
+    mla r3,r4,r7,r12        @ compute p address
+    add r3,r3,r5            @ add shift index
+    ldr r0,[r3]             @ load value
+    cmp r0,r6               @ compare to pivot
+    bge 4f
+    cmp r4,r11              @ compare p et store
+    beq 3f
+    mla r0,r4,r7,r12        @ compute p address
+    mla r1,r11,r7,r12       @ compute store address
+    bl inversion            @ inversion p and store
+3:
+    add r11,r11,#1          @ increment store
+4:
+    add r4,r4,#1            @ increment p
+    b 2b
+5:
+    moveq r0,r9             @ equal return median index
+    beq 100f
+    mla r0,r11,r7,r12       @ store address
+    sub r1,r2,#1            @ end - 1
+    mla r1,r7,r1,r12        @ compute address
+    bl inversion            @ inversion store and end - 1
+    ldr r0,[r0,#nodeKD_val] @ load store value
+    add r0,r0,r5            @ add shift index
+    ldr r1,[r10,#nodeKD_val] @ load median value
+    add r1,r1,r5            @ add shift index
+    cmp r0,r1               @ compare values
+    moveq r0,r9             @ equal return median index
+    beq 100f
+    cmp r11,r9              @ compare index store and median
+    movgt r2,r11            @ new end
+    movle r8,r11            @ new start
+    b 1b                    @ and loop
+
+100:
+    pop {r1-r12,pc}
+/***************************************************/
+/*   compute distance into 2 points                */
+/***************************************************/
+/* r0  tree node address */
+/* r1  search points address */
+/* r2 dimension    */
+distance:
+    push {r3-r7,lr}              @ save des registres
+    add r0,#nodeKD_val           @ root node values array address
+    add r1,#nodeKD_val           @ search node values array addresse
+    mov r3,#0                    @ first value index
+    mov r7,#0                    @ init distance
+1:
+    ldr  r4,[r0,r3,lsl #2]       @ load  value
+    ldr  r5,[r1,r3,lsl #2]       @ load  value
+    sub r6,r5,r4                 @ différence
+    add r3,r3,#1
+    mla r7,r6,r6,r7              @ compute square TODO: overflow
+    cmp r3,r2                    @ end ?
+    blt 1b                       @ no -> loop
+    mov r0,r7                    @ return distance
+100:
+    pop {r3-r7,pc}
+/***************************************************/
+/*   search nearest point                   */
+/***************************************************/
+/* r0  tree address */
+/* r1  search points address */
+/* r2 index  */
+/* r3 dimension    */
+searchNearest:
+    push {r1-r12,lr}            @ save des registres
+    cmp r0,#-1
+    beq 100f
+    mov r7,r0                   @ start with median
+    mov r8,r1                   @ save serach point address
+    lsl r9,r2,#2                @ shift index
+    mov r10,r3                  @ save dimension
+    mov r2,r3                   @ dimension
+    bl distance                 @ compute distance
+    mov r11,r0
+    ldr r1,[r7,r9]
+    ldr r12,[r8,r9]
+    sub r12,r1
+    mul r6,r12,r12              @ distance axis
+    ldr r4,iAdriDistance
+    ldr r5,[r4]
+    cmp r5,#0                   @ first distance ?
+    moveq r5,r11                @ new best distance
+    moveq r3,r7                 @ new best node
+    beq 1f
+    cmp r11,r5                  @ compare new distance and best distance
+    bgt 2f
+    mov r5,r11                  @ new best distance
+    mov r3,r7                   @ new best node
+1:
+    str r5,[r4]                 @ store new best distance
+    ldr r4,iAdrstNearest        @ and store best node address
+    str r3,[r4]
+2:
+    ldr r1,iAdrnbNodeVi         @ increment visited node
+    ldr r3,[r1]
+    add r3,r3,#1
+    str r3,[r1]
+    cmp r5,#0                   @ distance = 0 -> end    @
+    beq 100f
+    cmp r12,#0                  @ else search in childen tree
+    ldrlt r0,[r7,#nodeKD_left]
+    ldrge r0,[r7,#nodeKD_right]
+    mov r1,r8
+    lsr r2,r9,#2
+    add r2,r2,#1
+    cmp r2,r10
+    movge r2,#0
+    mov r3,r10
+    bl searchNearest
+    ldr r4,iAdriDistance      @ best distance
+    ldr r5,[r4]
+    cmp r6,r5                 @ compare distance
+    bge 100f
+    cmp r12,#0                @ else search in childen tree
+    ldrge r0,[r7,#nodeKD_left]
+    ldrlt r0,[r7,#nodeKD_right]
+    bl searchNearest
+
+100:
+    pop {r1-r12,pc}
+iAdrstNearest:          .int stNearest
+iAdriDistance:          .int iDistance
+iAdrnbNodeVi:           .int nbNodeVi
+/***************************************************/
+/*   inversion                   */
+/***************************************************/
+/* r0  tree address */
+/* r1  tree */
+inversion:
+    push {r0-r4,lr}              @ save des registres
+    add r0,#nodeKD_val
+    add r1,#nodeKD_val
+    mov r2,#0
+1:
+    ldr  r4,[r0,r2,lsl #2]
+    ldr  r3,[r1,r2,lsl #2]
+    str  r3,[r0,r2,lsl #2]
+    str  r4,[r1,r2,lsl #2]
+    add r2,r2,#1
+    cmp r2,#MAXI
+    blt 1b
+100:
+    pop {r0-r4,pc}
+/***************************************************/
+/*   display tree                   */
+/***************************************************/
+/* r0  tree address */
+/* r1 dimension */
+displayTree:
+    push {r2-r12,lr}              @ save des registres
+    mov r10,r0
+    mov r7,r1
+    mov r11,#0
+    mov r12,#nodeKD_end
+1:
+    mla r9,r12,r11,r10
+    mov r0,r9
+    ldr r1,iAdrsBufferConv16
+    bl conversion16
+    mov r0,#2
+    ldr r1,iAdrszMessAddressTree
+    ldr r2,iAdrsBufferConv16
+    bl displayStrings
+    mov r8,#0
+2:
+    add r4,r9,#nodeKD_val
+    ldr r0,[r4,r8,lsl #2]
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r0,#2
+    ldr r1,iAdrszMessTreeValue
+    ldr r2,iAdrsZoneConv
+    bl displayStrings
+    add r8,r8,#1
+    cmp r8,r7
+    blt 2b
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    add r0,r9,#nodeKD_left
+    ldr r0,[r0]
+    ldr r1,iAdrsZoneConv
+    bl conversion16
+    add r0,r9,#nodeKD_right
+    ldr r0,[r0]
+    ldr r1,iAdrsZoneConv1
+    bl conversion16
+    mov r0,#5
+    ldr r1,iAdrszMessLeft
+    ldr r2,iAdrsZoneConv
+    ldr r3,iAdrszMessRight
+    ldr r4,iAdrsZoneConv1
+    push {r4}
+    ldr r4,iAdrszCarriageReturn
+    push {r4}
+    bl displayStrings
+    add sp,sp,#8
+    add r11,r11,#1
+    cmp r11,#NBPOINTS / 2
+    blt 1b
+
+100:
+    pop {r2-r12,pc}
+iAdrszMessAddressTree:    .int szMessAddressTree
+iAdrszMessTreeValue:      .int szMessTreeValue
+iAdrsBufferConv16:        .int sBufferConv16
+iAdrszMessLeft:           .int szMessLeft
+iAdrszMessRight:          .int szMessRight
+iAdrsZoneConv1:           .int sZoneConv1
+/***************************************************/
+/*   display node coordonnées                   */
+/***************************************************/
+/* r0  node address */
+/* r1 dimension */
+displayCoord:
+    push {r1-r5,lr}          @ save des registres
+    add r4,r0,#nodeKD_val
+    mov r3,r1          @ save dimension
+    mov r5,#0
+1:
+    ldr r0,[r4,r5,lsl #2]
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    mov r0,#2
+    ldr r1,iAdrszMessTreeValue
+    ldr r2,iAdrsZoneConv
+    bl displayStrings
+    add r5,r5,#1
+    cmp r5,r3
+    blt 1b
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+100:
+    pop {r1-r5,pc}
+/***************************************************/
+/*   display multi strings                    */
+/***************************************************/
+/* r0  contains number strings address */
+/* r1 address string1 */
+/* r2 address string2 */
+/* r3 address string3 */
+/* other address on the stack */
+/* thinck to add  number other address * 4 to add to the stack */
+displayStrings:            @ INFO:  displayStrings
+    push {r1-r4,fp,lr}     @ save des registres
+    add fp,sp,#24          @ save paraméters address (6 registers saved * 4 bytes)
+    mov r4,r0              @ save strings number
+    cmp r4,#0              @ 0 string -> end
+    ble 100f
+    mov r0,r1              @ string 1
+    bl affichageMess
+    cmp r4,#1              @ number > 1
+    ble 100f
+    mov r0,r2
+    bl affichageMess
+    cmp r4,#2
+    ble 100f
+    mov r0,r3
+    bl affichageMess
+    cmp r4,#3
+    ble 100f
+    mov r3,#3
+    sub r2,r4,#4
+1:                         @ loop extract address string on stack
+    ldr r0,[fp,r2,lsl #2]
+    bl affichageMess
+    subs r2,#1
+    bge 1b
+100:
+    pop {r1-r4,fp,pc}
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* r0 contains limit  */
+genereraleas:
+    push {r1-r4,lr}                   @ save registers
+    ldr r4,iAdriGraine
+    ldr r2,[r4]
+    ldr r3,iNbDep1
+    mul r2,r3,r2
+    ldr r3,iNbDep1
+    add r2,r2,r3
+    str r2,[r4]                       @ maj de la graine pour l appel suivant
+    cmp r0,#0
+    beq 100f
+    mov r1,r0                         @ divisor
+    mov r0,r2                         @ dividende
+    bl division
+    mov r0,r3                         @ résult = remainder
+
+100:                                  @ end function
+    pop {r1-r4,lr}                    @ restaur registers
+    bx lr                             @ return
+iAdriGraine: .int iGraine
+iNbDep1:     .int 0x343FD
+iNbDep2:     .int 0x269EC3
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../affichage.inc"

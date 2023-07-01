@@ -1,0 +1,93 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. TOTIENT-FUNCTION.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 TOTIENT-CALCULATION.
+          03 N               PIC 9(6).
+          03 TOTIENT         PIC 9(6).
+          03 DIVISOR         PIC 9(6).
+          03 DIV-SQUARE      PIC 9(6).
+          03 MODULUS         PIC 9(6).
+
+       01 LOOP-VARS.
+          03 PRIME-COUNT     PIC 9(4).
+          03 CURRENT-N       PIC 9(6).
+          03 PRIME-TOTIENT   PIC 9(6).
+
+       01 OUTPUTFORMAT.
+          03 HEADER          PIC X(20) VALUE " N  Totient  Prime?".
+          03 TOTIENT-ROW.
+             05 OUT-N        PIC Z9.
+             05 FILLER       PIC XX VALUE SPACES.
+             05 OUT-TOTIENT  PIC Z(6)9.
+             05 FILLER       PIC XX VALUE SPACES.
+             05 OUT-PRIME    PIC X(5).
+          03 PRIME-COUNT-ROW.
+             05 FILLER       PIC X(22) VALUE "Number of primes up to".
+             05 OUT-PRMTO    PIC Z(5)9.
+             05 FILLER       PIC XX VALUE ": ".
+             05 OUT-PRMCNT   PIC ZZZ9.
+
+       PROCEDURE DIVISION.
+       BEGIN.
+           MOVE ZERO TO PRIME-COUNT.
+           DISPLAY HEADER.
+           PERFORM SHOW-SMALL-TOTIENT
+               VARYING CURRENT-N FROM 1 BY 1
+               UNTIL CURRENT-N IS GREATER THAN 25.
+           MOVE 25 TO OUT-PRMTO.
+           MOVE PRIME-COUNT TO OUT-PRMCNT.
+           DISPLAY PRIME-COUNT-ROW.
+           PERFORM COUNT-PRIMES
+               VARYING CURRENT-N FROM 26 BY 1
+               UNTIL CURRENT-N IS GREATER THAN 10000.
+           STOP RUN.
+
+       SHOW-SMALL-TOTIENT.
+           MOVE CURRENT-N TO N.
+           PERFORM CALCULATE-TOTIENT.
+           MOVE CURRENT-N TO OUT-N.
+           MOVE TOTIENT TO OUT-TOTIENT.
+           MOVE "No" TO OUT-PRIME.
+           SUBTRACT 1 FROM CURRENT-N GIVING PRIME-TOTIENT.
+           IF TOTIENT IS EQUAL TO PRIME-TOTIENT,
+               MOVE "Yes" TO OUT-PRIME,
+               ADD 1 TO PRIME-COUNT.
+           DISPLAY TOTIENT-ROW.
+
+       COUNT-PRIMES.
+           MOVE CURRENT-N TO N.
+           PERFORM CALCULATE-TOTIENT.
+           SUBTRACT 1 FROM CURRENT-N GIVING PRIME-TOTIENT.
+           IF TOTIENT IS EQUAL TO PRIME-TOTIENT, ADD 1 TO PRIME-COUNT.
+           IF CURRENT-N IS EQUAL TO 100 OR 1000 OR 10000,
+               MOVE CURRENT-N TO OUT-PRMTO,
+               MOVE PRIME-COUNT TO OUT-PRMCNT,
+               DISPLAY PRIME-COUNT-ROW.
+
+       CALCULATE-TOTIENT.
+           MOVE N TO TOTIENT.
+           MOVE 2 TO DIVISOR.
+           MOVE 4 TO DIV-SQUARE.
+           PERFORM DIVIDE-STEP.
+           PERFORM DIVIDE-STEP
+               VARYING DIVISOR FROM 3 BY 2
+               UNTIL DIV-SQUARE IS GREATER THAN N.
+           IF N IS GREATER THAN 1,
+               COMPUTE TOTIENT = TOTIENT - TOTIENT / N.
+
+       DIVIDE-STEP.
+           MULTIPLY DIVISOR BY DIVISOR GIVING DIV-SQUARE.
+           DIVIDE N BY DIVISOR GIVING MODULUS.
+           MULTIPLY DIVISOR BY MODULUS.
+           SUBTRACT MODULUS FROM N GIVING MODULUS.
+           IF MODULUS IS ZERO,
+               PERFORM DIVIDE-OUT UNTIL MODULUS IS NOT ZERO,
+               COMPUTE TOTIENT = TOTIENT - TOTIENT / DIVISOR.
+
+       DIVIDE-OUT.
+           DIVIDE DIVISOR INTO N.
+           DIVIDE N BY DIVISOR GIVING MODULUS.
+           MULTIPLY DIVISOR BY MODULUS.
+           SUBTRACT MODULUS FROM N GIVING MODULUS.

@@ -6,8 +6,8 @@ pub fn main() !void {
     var y = size;
     while (y > 0) {
         y -= 1;
-        for (0..y) |_| _ = try stdout.writeByte(' ');
-        for (0..size - y) |x| _ = try stdout.writeAll(if (x & y != 0) "  " else "* ");
-        _ = try stdout.writeByte('\n');
+        for (0..y) |_| try stdout.writeByte(' ');
+        for (0..size - y) |x| try stdout.writeAll(if (x & y != 0) "  " else "* ");
+        try stdout.writeByte('\n');
     }
 }

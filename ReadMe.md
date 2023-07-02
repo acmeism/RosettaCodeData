@@ -81,6 +81,8 @@ pages.
 
 * Fix bugs
 
+* Correct the 100s of guessed file extensions in `Conf/lang.yaml`
+
 * Ability to only fetch cache pages since last pushed data update
 
 * Support names with non-ascii characters

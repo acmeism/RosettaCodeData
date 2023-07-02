@@ -81,6 +81,8 @@ pages.
 
 * Fix bugs
 
+* Ability to only fetch cache pages since last pushed data update
+
 * Support names with non-ascii characters
 
 * Add more bin tools

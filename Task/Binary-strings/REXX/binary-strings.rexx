@@ -14,6 +14,7 @@ otherB= other'$'                                 /*same as above,  but with less
    new= changeStr('A' , other, "Z")              /*change the upper  letter  A  ──►  Z. */
     tt= changeStr('~~', other, ";")              /*change two tildes ──►  one semicolon.*/
 joined= dingsta || dingsta2                      /*join two strings together (concat).  */
+say joined c2b(joined)
 exit                                             /*stick a fork in it,  we're all done. */
 /*──────────────────────────────────────────────────────────────────────────────────────*/
-c2b:       return x2b( c2x( arg(1) ) )           /*return the string as a binary string.*/
+c2b: Return x2b(c2x(arg(1)))                     /*return the string as a binary string.*/

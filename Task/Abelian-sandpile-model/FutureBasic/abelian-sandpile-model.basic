@@ -1,0 +1,151 @@
+_mFile = 1
+begin enum
+  _iClose
+end enum
+
+_window = 1
+begin enum 1
+  _gridView
+  _gridSizeLabel
+  _gridSizeFld
+  _centerNumLabel
+  _centerNumFld
+  _colorRadio
+  _monoRadio
+  _avalancheBtn
+end enum
+
+
+void local fn BuildMenu
+  menu _mFile,,, @"File"
+  menu _mFile, _iClose,, @"Close", @"w"
+  MenuItemSetAction( _mFile, _iClose, @"performClose:" )
+end fn
+
+
+void local fn BuildWindow
+  window _window, @"Abelian Sandpile Model", (0,0,513,360), NSWindowStyleMaskTitled + NSWindowStyleMaskClosable + NSWindowStyleMaskMiniaturizable
+
+  subclass view _gridView, (20,20,320,320)
+
+  textlabel _gridSizeLabel, @"Grid size:", (385,322,61,16)
+  textfield _gridSizeFld,, @"5", (452,319,41,21)
+  ControlSetFormat( _gridSizeFld, @"0123456789", YES, 4, 0 )
+
+  textlabel _centerNumLabel, @"Center number:", (347,285,99,16)
+  textfield _centerNumFld,, @"32", (452,282,41,21)
+  ControlSetFormat( _centerNumFld, @"0123456789", YES, 4, 0 )
+
+  radiobutton _colorRadio,, NSControlStateValueOn, @"Color", (367,249,59,18)
+  radiobutton _monoRadio,, NSControlStateValueOff, @"Mono", (432,249,61,18)
+
+  button _avalancheBtn,,, @"Avalanche", (375,13,96,32)
+
+  WindowMakeFirstResponder( _window, _gridSizeFld )
+end fn
+
+
+void local fn ViewDrawRect
+  long gridSize = fn ControlIntegerValue(_gridSizeFld)
+  CGRect bounds = fn ViewBounds( _gridView )
+  CGFloat cellSize = bounds.size.width/gridSize
+  ColorRef col0 = fn ColorWhite, col1, col2, col3
+  long r, c, value
+  CGFloat x = 0, y = 0
+  ColorRef color
+
+  if ( fn ButtonState( _colorRadio ) == NSControlStateValueOn )
+    col1 = fn ColorRed
+    col2 = fn ColorGreen
+    col3 = fn ColorBlue
+  else
+    col1 = fn ColorWithRGB( 0.25, 0.25, 0.25, 1.0 )
+    col2 = fn ColorWithRGB( 0.5, 0.5, 0.5, 1.0 )
+    col3 = fn ColorWithRGB( 0.75, 0.75, 0.75, 1.0 )
+  end if
+
+  for r = 0 to gridSize-1
+    for c = 0 to gridSize-1
+      value = mda_integer(r,c)
+      select ( value )
+        case 1    : color = col1
+        case 2    : color = col2
+        case 3    : color = col3
+        case else : color = col0
+      end select
+
+      BezierPathFillRect( fn CGRectMake( x, y, cellSize, cellSize ), color )
+      x += cellSize
+    next
+    x = 0
+    y += cellSize
+  next
+end fn
+
+
+void local fn AvalancheAction
+  long r, c, gridSize = fn ControlIntegerValue(_gridSizeFld)
+  long centerNum = fn ControlIntegerValue(_centerNumFld)
+  long midNum = gridSize/2
+  long limit = gridSize-1
+  BOOL stable = NO
+  long value
+
+  // initialize array
+  mda_kill
+  for r = 0 to gridSize-1
+    for c = 0 to gridSize-1
+      mda(r,c) = 0
+    next
+  next
+  mda(midNum,midNum) = centerNum
+
+  // collapse
+  while ( stable == NO )
+    stable = YES
+    for r = 0 to gridSize-1
+      for c = 0 to gridSize-1
+        value = mda_integer(r,c)
+        if ( value > 3 )
+          mda(r,c) = @(mda_integer(r,c)-4)
+          if ( r > 0 ) then mda(r-1,c) = @(mda_integer(r-1,c) + 1)
+          if ( r < limit ) then mda(r+1,c) = @(mda_integer(r+1,c) + 1)
+          if ( c > 0 ) then mda(r,c-1) = @(mda_integer(r,c-1) + 1)
+          if ( c < limit ) then mda(r,c+1) = @(mda_integer(r,c+1) + 1)
+          stable = NO : break
+        end if
+      next
+      if ( stable == NO ) then break
+    next
+  wend
+
+  ViewSetNeedsDisplay( _gridView )
+end fn
+
+
+void local fn DoAppEvent( ev as long )
+  select ( ev )
+    case _appWillFinishLaunching
+      fn BuildMenu
+      fn BuildWindow
+      fn AvalancheAction
+    case _appShouldTerminateAfterLastWindowClosed : AppEventSetBool(YES)
+  end select
+end fn
+
+void local fn DoDialog( ev as long, tag as long, wnd as long, obj as CFTypeRef )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case _avalancheBtn : fn AvalancheAction
+        case _gridSizeFld, _centerNumFld  : fn AvalancheAction
+        case _colorRadio, _monoRadio : ViewSetNeedsDisplay( _gridView )
+      end select
+    case _viewDrawRect : fn ViewDrawRect
+  end select
+end fn
+
+on appevent fn DoAppEvent
+on dialog fn DoDialog
+
+HandleEvents

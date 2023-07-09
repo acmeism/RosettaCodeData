@@ -1,14 +1,16 @@
 with Ada.Text_IO;  use Ada.Text_IO;
+with System;
 
 procedure Array_Length is
+
    Fruits : constant array (Positive range <>) of access constant String
       := (new String'("orange"),
           new String'("apple"));
 
-begin
-   for Fruit of Fruits loop
-      Ada.Text_IO.Put (Integer'Image (Fruit'Length));
-   end loop;
+   Memory_Size : constant Integer := Fruits'Size / System.Storage_Unit;
 
-   Ada.Text_IO.Put_Line ("  Array Size : " & Integer'Image (Fruits'Length));
+begin
+   Put_Line ("Number of elements : " & Fruits'Length'Image);
+   Put_Line ("Array memory Size  : " & Memory_Size'Image & " bytes" );
+   Put_Line ("                     " & Integer'Image (Memory_Size * System.Storage_Unit / System.Word_Size) & " words" );
 end Array_Length;

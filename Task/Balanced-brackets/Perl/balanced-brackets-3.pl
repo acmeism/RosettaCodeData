@@ -1,5 +1,4 @@
-use Regexp::Common 'balanced';
-my $re = qr/^$RE{balanced}{-parens=>'[]'}$/;
+use Regexp::Common 'RE_balanced';
 sub balanced {
-  return shift =~ $re;
+    return shift =~ RE_balanced(-parens=>'[]')
 }

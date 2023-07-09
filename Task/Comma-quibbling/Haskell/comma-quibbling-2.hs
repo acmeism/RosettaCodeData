@@ -1,15 +1,25 @@
 import Data.List (intercalate)
 
-quibble :: [String] -> String
-quibble ws
-  | length ws > 1 =
-    intercalate
-      " and "
-      ([intercalate ", " . reverse . tail, head] <*> [reverse ws])
-  | otherwise = concat ws
+--------------------- COMMA QUIBBLING --------------------
 
+quibble :: [String] -> String
+quibble ws@(_ : _ : _) =
+  intercalate
+    " and "
+    ( [intercalate ", " . reverse . tail, head]
+        <*> [reverse ws]
+    )
+quibble xs = concat xs
+
+--------------------------- TEST -------------------------
 main :: IO ()
 main =
   mapM_ (putStrLn . (`intercalate` ["{", "}"]) . quibble) $
-  [[], ["ABC"], ["ABC", "DEF"], ["ABC", "DEF", "G", "H"]] ++
-  (words <$> ["One two three four", "Me myself I", "Jack Jill", "Loner"])
+    [[], ["ABC"], ["ABC", "DEF"], ["ABC", "DEF", "G", "H"]]
+      <> ( words
+             <$> [ "One two three four",
+                   "Me myself I",
+                   "Jack Jill",
+                   "Loner"
+                 ]
+         )

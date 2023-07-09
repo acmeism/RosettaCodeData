@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include <array>
@@ -31,7 +32,7 @@ const std::array<const std::array<int32_t, 10>, 8> permutation_table = { {
     { 7, 0, 4, 6, 9, 1, 3, 2, 5, 8 }
 } };
 
-int32_t verhoeff_checksum(std::string number, bool doValidation, bool doDisplay) {
+int32_t verhoeff_checksum(std::string number, const bool doValidation, const bool doDisplay) {
 	if ( doDisplay ) {
 		std::string calculationType = doValidation ? "Validation" : "Check digit";
 		std::cout << calculationType << " calculations for " << number << "\n" << std::endl;
@@ -67,12 +68,12 @@ int main( ) {
 	const std::array<data, 3> tests = {
 		std::make_pair("123", true), std::make_pair("12345", true), std::make_pair("123456789012", false) };
 
-	for ( data test : tests ) {
+	for ( const data& test : tests ) {
 		int32_t digit = verhoeff_checksum(test.first, false, test.second);
 		std::cout << "The check digit for " << test.first << " is " << digit << "\n" << std::endl;
 
 		std::string numbers[2] = { test.first + std::to_string(digit), test.first + "9" };
-		for ( std::string number : numbers ) {
+		for ( const std::string& number : numbers ) {
 			digit = verhoeff_checksum(number, true, test.second);
 			std::string result = ( digit == 1 ) ? "correct" : "incorrect";
 			std::cout << "The validation for " << number << " is " << result << ".\n" << std::endl;

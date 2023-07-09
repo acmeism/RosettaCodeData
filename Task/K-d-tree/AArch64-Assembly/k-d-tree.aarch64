@@ -1,0 +1,807 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program kdtree64.s   */
+
+/* the coordinates of the points are integers numbers.
+ The displayed distance represents the square of the distance between 2 points */
+
+ /* This program draws heavily from the published C program. Thanks to its creator. */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../includeConstantesARM64.inc"
+
+.equ MAXI,   3
+.equ NBPOINTSRAND,   2000
+.equ MAXCOORD,       10000
+
+
+/***********************************************/
+/* structures                                  */
+/**********************************************/
+/* Définition node */
+    .struct  0
+nodeKD_val:                       //     value array
+    .struct  nodeKD_val + (8  * MAXI)
+nodeKD_left:                      //    left pointer
+    .struct  nodeKD_left + 8
+nodeKD_right:                     //   right pointer
+    .struct  nodeKD_right + 8
+nodeKD_end:
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessAddressTree:    .asciz "Node address : "
+szMessTreeValue:      .asciz " Value : "
+szMessLeft:           .asciz "                Left : "
+szMessRight:          .asciz " Right : "
+szMessResult:         .asciz "Nearest point = "
+szMessRandCoor:       .asciz "\n\nRandom point coordonnés = "
+szMessVisited:        .asciz "Node visited = "
+szMessDistance:       .asciz "square distance :"
+szMessStart:          .asciz "Program 64 bits start.\n"
+szCarriageReturn:     .asciz "\n"
+.align 4
+tabPoint1:            .quad 2,3, 5,4, 9,6, 4,7, 8,1, 7,2
+//tabPoint1:            .quad 1,7, 3,4, 4,6, 6,2, 8,12, 10,9, 12,3, 14,1
+//tabPoint1:            .quad 3,5, 1,3, 2,8, 4,6, 5,4
+.equ NBPOINTS,         (. - tabPoint1) / 8
+
+tabPoint2:            .quad 9,2
+//tabPoint2:              .quad 3,7
+.equ NBPOINTS2,         (. - tabPoint2) / 8
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+stNode1:               .skip nodeKD_end
+KDtree1:               .skip nodeKD_end * NBPOINTS
+KDtree2:               .skip nodeKD_end * NBPOINTS2
+KdtreeRand:            .skip nodeKD_end * NBPOINTSRAND
+tabPointsRand:         .skip nodeKD_end
+sZoneConv:             .skip 24           // conversion buffer
+sZoneConv1:            .skip 24           // conversion buffer
+sBufferConv16:         .skip 24
+iDistance:             .skip 8            // best distance
+stNearest:             .skip nodeKD_end   // best node
+nbNodeVi:              .skip 8            // visited node
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+
+    ldr x0,qAdrtabPoint1         // points array address
+    ldr x1,qAdrKDtree1           // KD tree address
+    mov x2,#NBPOINTS             // array points size
+    mov x3,#2                    // domension 2
+    bl initKDTree                // init tree
+    ldr x0,qAdrKDtree1           // KD tree address
+    mov x1,#0                    // start index
+    mov x2,#NBPOINTS / 2         // end = array points size
+    mov x3,#0                    // level
+    mov x4,#2                    // dimension 2
+    bl createTree
+    mov x8,x0                    // save median
+    cmp x0,#-1
+    beq 100f
+
+    ldr x0,qAdrKDtree1           // KD tree address
+    mov x1,#2                    // dimension 2
+    bl displayTree
+    ldr x0,qAdrtabPoint2         // points array address
+    ldr x1,qAdrKDtree2           // search KDtree address
+    mov x2,#NBPOINTS2            // search array points size
+    mov x3,#2                    // dimension 2
+    bl initKDTree                // init search tree
+    ldr x0,qAdrKDtree1           // KDtree address
+    mov x1,#nodeKD_end
+    madd x0,x8,x1,x0              // compute median address
+    ldr x1,qAdrKDtree2           // search KDtree address
+    mov x2,#0                    // first index
+    mov x3,#2                    // dimension 2
+    bl searchNearest             // search nearest point
+    ldr x0,qAdrszMessResult      // display résult
+    bl affichageMess
+    ldr x0,qAdrstNearest         // nearest point address
+    ldr x0,[x0]
+    mov x1,#2
+    bl displayCoord              // coordonnés display
+    ldr x0,qAdrnbNodeVi          // visited nodes
+    ldr x0,[x0]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,#3
+    ldr x1,qAdrszMessVisited
+    ldr x2,qAdrsZoneConv
+    ldr x3,qAdrszCarriageReturn
+    bl displayStrings
+    ldr x0,qAdriDistance         // best distance address
+    ldr x0,[x0]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,#3
+    ldr x1,qAdrszMessDistance
+    ldr x2,qAdrsZoneConv
+    ldr x3,qAdrszCarriageReturn
+    bl displayStrings
+
+    bl traitRandom
+
+100:                             // standard end of the program
+    mov x0, #0                   // return code
+    mov x8,EXIT
+    svc #0                       // perform the system call
+
+qAdrszCarriageReturn:        .quad szCarriageReturn
+qAdrsZoneConv:               .quad sZoneConv
+qAdrszMessDistance:          .quad szMessDistance
+qAdrszMessResult:            .quad szMessResult
+qAdrszMessVisited:           .quad szMessVisited
+qAdrszMessStart:             .quad szMessStart
+qAdrtabPoint1:               .quad tabPoint1
+qAdrtabPoint2:               .quad tabPoint2
+qAdrKDtree1:                 .quad KDtree1
+qAdrKDtree2:                 .quad KDtree2
+/***************************************************/
+/*   traitement random points                    */
+/***************************************************/
+traitRandom:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    ldr x8,qAdrKdtreeRand        // KD tree address
+    mov x7,#nodeKD_end
+    ldr x10,iNbPointsRand
+    mov x3,#0
+1:                               // loop generate random coordonnes
+    mov x0,0
+    mov x1,#MAXCOORD
+    bl extRandom                 // X
+    mov x4,x0
+    mov x0,0
+    mov x1,#MAXCOORD
+    bl extRandom              // Y
+    mov x5,x0
+    mov x0,0
+    mov x1,#MAXCOORD
+    bl extRandom              // Z
+    mov x6,x0
+    madd x0,x3,x7,x8
+    add x1,x0,#nodeKD_val        // node address
+    str x4,[x1]                  // store X,Y,Z
+    str x5,[x1,#8]
+    str x6,[x1,#16]
+    mov x4,#-1                   // init pointer left and right
+    str x4,[x0,#nodeKD_left]
+    str x4,[x0,#nodeKD_right]
+    add x3,x3,#1
+    cmp x3,x10
+    blt 1b
+
+    mov x0,x8                   // KD tree address
+    mov x1,#0                   // start indice
+    mov x2,x10                  // array points size
+    mov x3,#0                   // level
+    mov x4,#3                   // dimension 2
+    bl createTree
+    mov x9,x0                   // save median
+                                // create random search point
+    mov x0,0
+    mov x1,#MAXCOORD
+    bl extRandom
+    mov x4,x0
+    mov x0,0
+    mov x1,#MAXCOORD
+    bl extRandom
+    mov x5,x0
+    mov x0,0
+    mov x1,#MAXCOORD
+    bl extRandom
+    mov x6,x0
+    ldr x3,qAdrtabPointsRand
+    add x0,x3,#nodeKD_val
+    str x4,[x0]
+    str x5,[x0,#8]
+    str x6,[x0,#16]
+    ldr x0,qAdrszMessRandCoor
+    bl affichageMess
+    mov x0,x3
+    mov x1,#3
+    bl displayCoord              // search
+    ldr x0,qAdriDistance         // init best distance address
+    mov x1,#0
+    str x1,[x0]
+
+    madd x0,x9,x7,x8              // median KD tree address
+    mov x1,x3                    // search point address
+    mov x2,#0                    // index
+    mov x3,#3                    // dimension 2
+    bl searchNearest
+    ldr x0,qAdrszMessResult
+    bl affichageMess
+    ldr x0,qAdrstNearest
+    ldr x0,[x0]
+    mov x1,#3
+    bl displayCoord
+    ldr x0,qAdrnbNodeVi
+    ldr x0,[x0]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,#3
+    ldr x1,qAdrszMessVisited
+    ldr x2,qAdrsZoneConv
+    ldr x3,qAdrszCarriageReturn
+    bl displayStrings
+    ldr x0,qAdriDistance         // best distance address
+    ldr x0,[x0]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,#3
+    ldr x1,qAdrszMessDistance
+    ldr x2,qAdrsZoneConv
+    ldr x3,qAdrszCarriageReturn
+    bl displayStrings
+100:
+    ldp x2,x3,[sp],16            // restaur  registers
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+qAdrKdtreeRand:           .quad KdtreeRand
+qAdrtabPointsRand:        .quad tabPointsRand
+qAdrszMessRandCoor:       .quad szMessRandCoor
+iNbPointsRand:            .quad NBPOINTSRAND
+/***************************************************/
+/*   init KN tree                    */
+/***************************************************/
+/* x0  array points */
+/* x1  array tree address */
+/* x2  points number      */
+/* x3  dimension */
+initKDTree:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    stp x6,x7,[sp,-16]!          // save  registers
+    stp x8,x9,[sp,-16]!          // save  registers
+    mov x8,#0                    // points indice
+    mov x4,#0                    // node tree indice
+    mov x6,#nodeKD_end           // structure size
+1:
+    madd x5,x4,x6,x1             // compute node address
+    mov x9,#0                    // index value
+2:
+    ldr x7,[x0,x8,lsl #3]        // load one point coord
+    str x7,[x5,x9,lsl #3]        // store in node value
+    add x8,x8,#1                 // next point
+    add x9,x9,#1                 // next node value
+    cmp x9,x3                    // = dimension ?
+    blt 2b                       // no loop
+    mov x7,#-1                   // init pointer left and right
+    str x7,[x5,#nodeKD_left]
+    str x7,[x5,#nodeKD_right]
+    add x4,x4,#1                 // increment node tree indice
+    cmp x8,x2                    // end points ?
+    blt 1b
+100:
+    ldp x8,x9,[sp],16            // restaur  registers
+    ldp x6,x7,[sp],16            // restaur  registers
+    ldp x4,x5,[sp],16            // restaur  registers
+    ldp x2,x3,[sp],16            // restaur  registers
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+/***************************************************/
+/*   create KD tree                    */
+/***************************************************/
+/* x0  array tree address */
+/* x1  start index */
+/* x2  end index
+/* x3 level  */
+/* x4 dimention */
+createTree:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    stp x6,x7,[sp,-16]!          // save  registers
+    stp x8,x9,[sp,-16]!          // save  registers
+    stp x10,x11,[sp,-16]!          // save  registers
+    stp x12,x13,[sp,-16]!          // save  registers
+    cmp x1,x2                   // if start = end -> return -1
+    mov x5,-1
+    csel x0,x5,x0,ge
+    //movge x0,#-1
+    bge 100f
+    add x5,x1,#1                // if start + 1 = end -> return start
+    cmp x5,x2
+    csel x0,x1,x0,eq
+    //moveq x0,x1
+    beq 100f
+    mov x8,x0                   // save address
+    mov x7,x1                   // save start index
+    mov x12,x2                  // save end index
+    mov x5,x3                   // save level
+    mov x10,x4                  // save dimension
+    mov x9,#nodeKD_end          // node structure size
+    mov x1,x7                   // start
+    mov x2,x12                  // end
+    bl findMedian
+    cmp x0,#0                   //
+    mov x6,-1
+    csel x0,x6,x0,lt
+    //movlt x0,#-1
+    blt 100f
+    mov x6,x0                   // save indice median
+    add x5,x5,#1                // compute new value index
+    cmp x5,x10                  // => dimension ?
+    csel x5,xzr,x5,ge
+    //movge x5,#0
+    mov x0,x8                   // tree address
+    mov x1,x7                   // start
+    mov x2,x6                   // end = median
+    mov x3,x5                   // index
+    mov x4,x10                  // dimension
+    bl createTree
+    madd x1,x6,x9,x8             // compute median address
+    cmp x0,#-1                  // left address is ok ?
+    beq 1f
+    madd x0,x9,x0,x8           // yes compute address
+1:
+    str x0,[x1,#nodeKD_left]    // and store
+    mov x0,x8                   // KDtree address
+    add x1,x6,#1                // start = indice median + 1
+    mov x2,x12                  // end
+    mov x3,x5                   // index
+    mov x4,x10                  // dimension
+    bl createTree
+    madd x1,x6,x9,x8             // compute median address
+    cmp x0,#-1                  // indice right ok ?
+    beq 2f
+    madd x0,x9,x0,x8           // yes compute address
+2:
+    str x0,[x1,#nodeKD_right]   // and store in pointer
+    mov x0,x6                   // return indice median node
+100:
+    ldp x12,x13,[sp],16            // restaur  registers
+    ldp x10,x11,[sp],16            // restaur  registers
+    ldp x8,x9,[sp],16            // restaur  registers
+    ldp x6,x7,[sp],16            // restaur  registers
+    ldp x4,x5,[sp],16            // restaur  registers
+    ldp x2,x3,[sp],16            // restaur  registers
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+/***************************************************/
+/*   find median and sort points                  */
+/***************************************************/
+/* x0  tree address */
+/* x1  start tree indice
+/* x2  end tree indice   */
+/* x3 indice  */
+/* x0 return median point index   */
+findMedian:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    stp x6,x7,[sp,-16]!          // save  registers
+    stp x8,x9,[sp,-16]!          // save  registers
+    stp x10,x11,[sp,-16]!          // save  registers
+    stp x12,x13,[sp,-16]!          // save  registers
+    cmp x2,x1
+    mov x7,-1
+    csel x0,x7,x0,le
+    //movle x0,#-1
+    ble 100f
+    mov x7,#nodeKD_end       // node size
+    add x5,x1,#1             // next node address
+    cmp x2,x5                // equal to end ?
+    csel x0,x1,x0,eq
+    //moveq x0,x1
+    beq 100f                // yes return
+    mov x8,x1               // save start
+    mov x12,x0              // save tree address
+    add x4,x2,x1            // end + start
+    lsr x9,x4,#1            // divide by 2 = median index
+    madd x10,x7,x9,x0        // mediam md address
+    lsl x5,x3,#2            // index * 4
+1:
+    cmp x2,x8               // end <= start
+    csel x0,x2,x0,le        // stop ?
+    //movle x0,x2             // stop ?
+    ble 100f
+    add x6,x10,#nodeKD_val
+    add x11,x6,x5           // add shift index
+    ldr x6,[x11]            // load pivot value
+    mov x0,x10              // median address
+    sub x1,x2,#1            // compute address end - 1
+    mul x1,x7,x1
+    add x1,x1,x12
+    bl inversion            // inversion median and end - 1
+    mov x11,x8              // store=indice start
+    mov x4,x8               // p =indice start
+
+2:
+    cmp x4,x2               // compare p and end
+    bge 5f
+    madd x3,x4,x7,x12       // compute p address
+    add x3,x3,x5            // add shift index
+    ldr x0,[x3]             // load value
+    cmp x0,x6               // compare to pivot
+    bge 4f
+    cmp x4,x11              // compare p et store
+    beq 3f
+    madd x0,x4,x7,x12        // compute p address
+    madd x1,x11,x7,x12       // compute store address
+    bl inversion            // inversion p and store
+3:
+    add x11,x11,#1          // increment store
+4:
+    add x4,x4,#1            // increment p
+    b 2b
+5:
+    csel x0,x9,x0,eq        // equal return median index
+    //moveq x0,x9             // equal return median index
+    beq 100f
+    madd x0,x11,x7,x12       // store address
+    sub x1,x2,#1            // end - 1
+    madd x1,x7,x1,x12        // compute address
+    bl inversion            // inversion store and end - 1
+    ldr x0,[x0,#nodeKD_val] // load store value
+    add x0,x0,x5            // add shift index
+    ldr x1,[x10,#nodeKD_val] // load median value
+    add x1,x1,x5            // add shift index
+    cmp x0,x1               // compare values
+    csel x0,x9,x0,eq        // equal return median index
+   // moveq x0,x9             // equal return median index
+    beq 100f
+    cmp x11,x9              // compare index store and median
+    csel x2,x11,x2,gt       // new end
+    csel x8,x11,x8,le       // new start
+    //movgt x2,x11            // new end
+    //movle x8,x11            // new start
+    b 1b                    // and loop
+
+100:
+    ldp x12,x13,[sp],16            // restaur  registers
+    ldp x10,x11,[sp],16            // restaur  registers
+    ldp x8,x9,[sp],16            // restaur  registers
+    ldp x6,x7,[sp],16            // restaur  registers
+    ldp x4,x5,[sp],16            // restaur  registers
+    ldp x2,x3,[sp],16            // restaur  registers
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+/***************************************************/
+/*   compute distanceo 2                        */
+/***************************************************/
+/* x0  tree node address */
+/* x1  search points address */
+/* x2 dimension    */
+distance:
+    stp x3,lr,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    stp x6,x7,[sp,-16]!          // save  registers
+    add x0,x0,#nodeKD_val        // root node values array address
+    add x1,x1,#nodeKD_val        // search node values array addresse
+    mov x3,#0                    // first value index
+    mov x7,#0                    // init distance
+1:
+    ldr  x4,[x0,x3,lsl #3]       // load  value
+    ldr  x5,[x1,x3,lsl #3]       // load  value
+    sub x6,x5,x4                 // différence
+    add x3,x3,#1
+    madd x7,x6,x6,x7              // compute square TODO: overflow
+    cmp x3,x2                    // end ?
+    blt 1b                       // no -> loop
+    mov x0,x7                    // return distance
+100:
+    ldp x6,x7,[sp],16            // restaur  registers
+    ldp x4,x5,[sp],16            // restaur  registers
+    ldp x3,lr,[sp],16            // restaur  registers
+    ret
+/***************************************************/
+/*   search nearest point                   */
+/***************************************************/
+/* x0  tree address */
+/* x1  search points address */
+/* x2 index  */
+/* x3 dimension    */
+searchNearest:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    stp x6,x7,[sp,-16]!          // save  registers
+    stp x8,x9,[sp,-16]!          // save  registers
+    stp x10,x11,[sp,-16]!          // save  registers
+    stp x12,x13,[sp,-16]!          // save  registers
+    cmp x0,#-1
+    beq 100f
+    mov x7,x0                   // start with median
+    mov x8,x1                   // save serach point address
+    lsl x9,x2,#2                // shift index
+    mov x10,x3                  // save dimension
+    mov x2,x3                   // dimension
+    bl distance                 // compute distance
+    mov x11,x0
+    ldr x1,[x7,x9]
+    ldr x12,[x8,x9]
+    sub x12,x12,x1
+    mul x6,x12,x12              // distance axis
+    ldr x4,qAdriDistance
+    ldr x5,[x4]
+    cmp x5,#0                   // first distance ?
+    csel x5,x11,x5,eq
+    csel x3,x7,x3,eq
+    //moveq x5,x11                // new best distance
+    //moveq x3,x7                 // new best node
+    beq 1f
+    cmp x11,x5                  // compare new distance and best distance
+    bgt 2f
+    mov x5,x11                  // new best distance
+    mov x3,x7                   // new best node
+1:
+    str x5,[x4]                 // store new best distance
+    ldr x4,qAdrstNearest        // and store best node address
+    str x3,[x4]
+2:
+    ldr x1,qAdrnbNodeVi         // increment visited node
+    ldr x3,[x1]
+    add x3,x3,#1
+    str x3,[x1]
+    cmp x5,#0                   // distance = 0 -> end    //
+    beq 100f
+    cmp x12,#0                  // else search in childen tree
+    bge 3f
+    ldr x0,[x7,#nodeKD_left]
+    b 4f
+3:
+    ldr x0,[x7,#nodeKD_right]
+4:
+    mov x1,x8
+    lsr x2,x9,#2
+    add x2,x2,#1
+    cmp x2,x10
+    csel x2,xzr,x2,ge
+    //movge x2,#0
+    mov x3,x10
+    bl searchNearest
+    ldr x4,qAdriDistance      // best distance
+    ldr x5,[x4]
+    cmp x6,x5                 // compare distance
+    bge 100f
+    cmp x12,#0                // else search in childen tree
+    blt 5f
+    ldr x0,[x7,#nodeKD_left]
+    b 6f
+5:
+    ldr x0,[x7,#nodeKD_right]
+6:
+    bl searchNearest
+
+100:
+    ldp x12,x13,[sp],16            // restaur  registers
+    ldp x10,x11,[sp],16            // restaur  registers
+    ldp x8,x9,[sp],16            // restaur  registers
+    ldp x6,x7,[sp],16            // restaur  registers
+    ldp x4,x5,[sp],16            // restaur  registers
+    ldp x2,x3,[sp],16            // restaur  registers
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+qAdrstNearest:          .quad stNearest
+qAdriDistance:          .quad iDistance
+qAdrnbNodeVi:           .quad nbNodeVi
+/***************************************************/
+/*   inversion                   */
+/***************************************************/
+/* x0  tree address */
+/* x1  tree */
+inversion:
+    stp x2,lr,[sp,-16]!         // save  registers
+    stp x3,x4,[sp,-16]!         // save  registers
+    add x0,x0,#nodeKD_val
+    add x1,x1,#nodeKD_val
+    mov x2,#0
+1:
+    ldr  x4,[x0,x2,lsl #3]
+    ldr  x3,[x1,x2,lsl #3]
+    str  x3,[x0,x2,lsl #3]
+    str  x4,[x1,x2,lsl #3]
+    add x2,x2,#1
+    cmp x2,#MAXI
+    blt 1b
+100:
+    ldp x3,x4,[sp],16         // restaur  registers
+    ldp x2,lr,[sp],16         // restaur  registers
+    ret
+/***************************************************/
+/*   display tree                   */
+/***************************************************/
+/* x0  tree address */
+/* x1 dimension */
+displayTree:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    stp x6,x7,[sp,-16]!          // save  registers
+    stp x8,x9,[sp,-16]!          // save  registers
+    stp x10,x11,[sp,-16]!          // save  registers
+    stp x12,x13,[sp,-16]!          // save  registers
+    mov x10,x0
+    mov x7,x1
+    mov x11,#0
+    mov x12,#nodeKD_end
+1:
+    madd x9,x12,x11,x10
+    mov x0,x9
+    ldr x1,qAdrsBufferConv16
+    bl conversion16
+    mov x0,#2
+    ldr x1,qAdrszMessAddressTree
+    ldr x2,qAdrsBufferConv16
+    bl displayStrings
+    mov x8,#0
+2:
+    add x4,x9,#nodeKD_val
+    ldr x0,[x4,x8,lsl #3]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,#2
+    ldr x1,qAdrszMessTreeValue
+    ldr x2,qAdrsZoneConv
+    bl displayStrings
+    add x8,x8,#1
+    cmp x8,x7
+    blt 2b
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    add x0,x9,#nodeKD_left
+    ldr x0,[x0]
+    ldr x1,qAdrsZoneConv
+    bl conversion16
+    add x0,x9,#nodeKD_right
+    ldr x0,[x0]
+    ldr x1,qAdrsZoneConv1
+    bl conversion16
+    mov x0,#5
+    ldr x1,qAdrszMessLeft
+    ldr x2,qAdrsZoneConv
+    ldr x3,qAdrszMessRight
+    ldr x4,qAdrsZoneConv1
+    ldr x5,qAdrszCarriageReturn
+    bl displayStrings
+    add x11,x11,#1
+    cmp x11,#NBPOINTS / 2
+    blt 1b
+
+100:
+    ldp x12,x13,[sp],16            // restaur  registers
+    ldp x10,x11,[sp],16            // restaur  registers
+    ldp x8,x9,[sp],16            // restaur  registers
+    ldp x6,x7,[sp],16            // restaur  registers
+    ldp x4,x5,[sp],16            // restaur  registers
+    ldp x2,x3,[sp],16            // restaur  registers
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+qAdrszMessAddressTree:    .quad szMessAddressTree
+qAdrszMessTreeValue:      .quad szMessTreeValue
+qAdrsBufferConv16:        .quad sBufferConv16
+qAdrszMessLeft:           .quad szMessLeft
+qAdrszMessRight:          .quad szMessRight
+qAdrsZoneConv1:           .quad sZoneConv1
+/***************************************************/
+/*   display node coordonnées                   */
+/***************************************************/
+/* x0  node address */
+/* x1 dimension */
+displayCoord:
+    stp x1,lr,[sp,-16]!          // save  registers
+    stp x2,x3,[sp,-16]!          // save  registers
+    stp x4,x5,[sp,-16]!          // save  registers
+    add x4,x0,#nodeKD_val
+    mov x3,x1          // save dimension
+    mov x5,#0
+1:
+    ldr x0,[x4,x5,lsl #3]
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    mov x0,#2
+    ldr x1,qAdrszMessTreeValue
+    ldr x2,qAdrsZoneConv
+    bl displayStrings
+    add x5,x5,#1
+    cmp x5,x3
+    blt 1b
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+100:
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x2,x3,[sp],16        // restaur  registers
+    ldp x1,lr,[sp],16            // restaur  registers
+    ret
+ /***************************************************/
+/*   display multi strings                         */
+/*   new version 24/05/2023                        */
+/***************************************************/
+/* x0  contains number strings address */
+/* x1 address string1 */
+/* x2 address string2 */
+/* x3 address string3 */
+/* x4 address string4 */
+/* x5 address string5 */
+/* x6 address string5 */
+/* x7 address string6 */
+displayStrings:            // INFO:  displayStrings
+    stp x8,lr,[sp,-16]!    // save  registers
+    stp x2,fp,[sp,-16]!    // save  registers
+    add fp,sp,#32          // save paraméters address (4 registers saved * 8 bytes)
+    mov x8,x0              // save strings number
+    cmp x8,#0              // 0 string -> end
+    ble 100f
+    mov x0,x1              // string 1
+    bl affichageMess
+    cmp x8,#1              // number > 1
+    ble 100f
+    mov x0,x2
+    bl affichageMess
+    cmp x8,#2
+    ble 100f
+    mov x0,x3
+    bl affichageMess
+    cmp x8,#3
+    ble 100f
+    mov x0,x4
+    bl affichageMess
+    cmp x8,#4
+    ble 100f
+    mov x0,x5
+    bl affichageMess
+    cmp x8,#5
+    ble 100f
+    mov x0,x6
+    bl affichageMess
+    cmp x8,#6
+    ble 100f
+    mov x0,x7
+    bl affichageMess
+
+100:
+    ldp x2,fp,[sp],16        // restaur  registers
+    ldp x8,lr,[sp],16        // restaur  registers
+    ret
+/******************************************************************/
+/*     random number                                          */
+/******************************************************************/
+/*  x0 contains inferior value */
+/*  x1 contains maxi value */
+/*  x0 return random number */
+extRandom:
+    stp x1,lr,[sp,-16]!        // save  registers
+    stp x2,x8,[sp,-16]!        // save  registers
+    stp x19,x20,[sp,-16]!      // save  registers
+    sub sp,sp,16               // reserve 16 octets on stack
+    mov x19,x0
+    add x20,x1,1
+    mov x0,sp                  // store result on stack
+    mov x1,8                   // length 8 bytes
+    mov x2,0
+    mov x8,278                 //  call system Linux 64 bits Urandom
+    svc 0
+    mov x0,sp                  // load résult on stack
+    ldr x0,[x0]
+    sub x2,x20,x19             // calculation of the range of values
+    udiv x1,x0,x2              // calculation range modulo
+    msub x0,x1,x2,x0
+    add  x0,x0,x19             // and add inferior value
+100:
+    add sp,sp,16               // alignement stack
+    ldp x19,x20,[sp],16        // restaur  2 registers
+    ldp x2,x8,[sp],16          // restaur  2 registers
+    ldp x1,lr,[sp],16          // restaur  2 registers
+    ret                        // retour adresse lr x30
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../includeARM64.inc"

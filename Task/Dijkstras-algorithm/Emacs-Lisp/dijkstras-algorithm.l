@@ -1,93 +1,62 @@
-;; Path format: (start-point end-point previous-point distance)
-(setq path-list `(
-		  (a b ,nil 7)
-		  (a c ,nil 9)
-		  (a f ,nil 14)
-		  (b c ,nil 10)
-		  (b d ,nil 15)
-		  (c d ,nil 11)
-		  (c f ,nil 2)
-		  (d e ,nil 6)
-		  (e f ,nil 9)
-		  ))
+(defvar path-list '((a b 7)
+		    (a c 9)
+		    (a f 14)
+		    (b c 10)
+		    (b d 15)
+		    (c d 11)
+		    (c f 2)
+		    (d e 6)
+		    (e f 9)))
 
-(defun calculate-shortest-path ()
-  (let ((shortest-path '())
-	(head-point (nth 0 (nth 0 path-list))))
-
-    (defun combine-new-path (path1 path2)
-      (list (nth 0 path1) (nth 1 path2) (nth 0 path2)
-	    (+ (nth 3 path1) (nth 3 path2))) )
-
-    (defun find-shortest-path (start end)
-      (seq-find (lambda (item)
-		  (and (eq (nth 0 item) start) (eq (nth 1 item) end)))
-		shortest-path)
-      )
-
-    (defun add-shortest-path (item)
-      (add-to-list 'shortest-path item) )
-
-
-    (defun process-path (path)
-
-      (if (eq head-point (nth 0 path))
-	  (add-to-list 'shortest-path path)
-	(progn
-	  (dolist (spath shortest-path)
-	    (when (eq (nth 1 spath) (nth 0 path))
-	      (let* ((new-path (combine-new-path spath path))
-		     (spath-found (find-shortest-path (nth 0 new-path)
-						      (nth 1 new-path))))
-		(if spath-found
-		    (when (< (nth 3 new-path) (nth 3 spath-found))
-		      (setcdr (nthcdr 1 spath-found) (list (nth 2 new-path) (nth 3 new-path)))
-		      )
-
-		  (add-shortest-path new-path)) ) ) ) ) ) )
-
-
-    (defun find-shortest-route (start end)
-      (let ((point-list '())
-	    (end-point end)
-	    path-found)
-	(add-to-list 'point-list end)
-	(catch 'no-more-path
-	  (while 't
-	    (setq path-found (find-shortest-path start end-point))
-	    (if (or (not path-found) (not (nth 2 path-found)))
-		(throw 'no-more-path nil)
-	      (progn
-		(add-to-list 'point-list (nth 2 path-found))
-		(setq end-point (nth 2 path-found)) )
-	      )
-	    )
-	  )
-	(add-to-list 'point-list start)
-	)
-      )
-
-    (defun show-shortest-path (start end)
-      (let ((path-found (find-shortest-path start end))
-	    (route-found (find-shortest-route start end)))
-	(if path-found
-	    (progn
-	      (message "shortest distance: %s" (nth 3 path-found))
-	      (message "shortest route: %s" route-found) )
-	  (message "shortest path not found") )
-	)
-      (message "--") )
-
-    ;; Process each path
+(defun calculate-shortest-path (path-list)
+  (let (shortest-path)
     (dolist (path path-list)
-      (process-path path) )
+      (add-to-list 'shortest-path (list (nth 0 path)
+                                        (nth 1 path)
+                                        nil
+                                        (nth 2 path))
+                   't))
 
-    (message "from %s to %s:" 'a 'e)
-    (show-shortest-path 'a 'e)
-    (message "from %s to %s:" 'a 'f)
-    (show-shortest-path 'a 'f)
+    (dolist (path path-list)
+      (dolist (short-path shortest-path)
 
-    )
-  )
+        (when (equal (nth 0 path) (nth 1 short-path))
+          (let ((test-path (list (nth 0 short-path)
+                                 (nth 1 path)
+                                 (nth 0 path)
+                                 (+ (nth 2 path) (nth 3 short-path))))
+                is-path-found)
 
-(calculate-shortest-path)
+            (dolist (short-path1 shortest-path)
+              (when (equal (seq-take test-path 2)
+                           (seq-take short-path1 2))
+                (setq is-path-found 't)
+                (when (> (nth 3 short-path1) (nth 3 test-path))
+                  (setcdr (cdr short-path1) (cddr test-path)))))
+
+            (when (not is-path-found)
+              (add-to-list 'shortest-path test-path 't))))))
+
+    shortest-path))
+
+(defun find-shortest-route (from to path-list)
+  (let ((shortest-path-list (calculate-shortest-path path-list))
+        point-list matched-path distance)
+    (add-to-list 'point-list to)
+    (setq matched-path
+          (seq-find (lambda (path) (equal (list from to) (seq-take path 2)))
+                    shortest-path-list))
+    (setq distance (nth 3 matched-path))
+    (while (nth 2 matched-path)
+      (add-to-list 'point-list (nth 2 matched-path))
+      (setq to (nth 2 matched-path))
+      (setq matched-path
+            (seq-find (lambda (path) (equal (list from to) (seq-take path 2)))
+                      shortest-path-list)))
+    (if matched-path
+        (progn
+          (add-to-list 'point-list from)
+          (list 'route point-list 'distance distance))
+      nil)))
+
+(format "%S" (find-shortest-route 'a 'e path-list))

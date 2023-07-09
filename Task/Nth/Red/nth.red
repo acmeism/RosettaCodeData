@@ -2,7 +2,8 @@ Red[]
 
 nth: function [n][
     d: n % 10
-    suffix: either any [d < 1 d > 4 1 = to-integer n / 10] [4] [d]
+    dd: n % 100
+    suffix: either any [ all [ dd > 3 dd < 20 ] d < 1 d > 4 1 = to-integer n / 10] [4] [d]
     rejoin [n pick ["st" "nd" "rd" "th"] suffix]
 ]
 

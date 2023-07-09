@@ -571,11 +571,6 @@ procedure bezier_intersections is
     pt1    : dpoint;
     pt2    : opoint;
   begin
-    --
-    -- NOTE FOR THE FUTURE: This operation is a change of HOMOGENEOUS
-    --                      coordinates. Here we are still using
-    --                      regular euclidean coordinates, however.
-    --
     pt0 := eval (gcurve, t0);
     pt1 := ((t1 - t0 - t0) * t1 + (t0 * t0)) * gcurve.pt1;
     pt2 := eval (gcurve, t1);

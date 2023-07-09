@@ -56,7 +56,7 @@ public final class BioinformaticsGlobalAlignment {
 		return shortest;		
 	}
 
-	// Remove duplicate words and words which are substrings of other words in the given list.
+	// Remove duplicate strings and strings which are substrings of other strings in the given list.
 	private static List<String> deduplicate(List<String> aList) {
 		List<String> unique = aList.stream().distinct().collect(Collectors.toList());
 		List<String> result = new ArrayList<String>(unique);
@@ -99,7 +99,7 @@ public final class BioinformaticsGlobalAlignment {
 		        i = 0;
 		    } else {
 		        indexes[i] = 0;
-		        i++;
+		        i += 1;
 		    }
 		}	
 		return result;

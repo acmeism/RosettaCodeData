@@ -23,7 +23,7 @@ func PrimeSieve(out chan int) {
     go PrimeSieve(primes)
 
     var p int
-    p = <-primes
+    <-primes
     p = <-primes
 
     sieve := make(map[int]int)

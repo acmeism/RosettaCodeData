@@ -1,0 +1,172 @@
+(* The principle employed here is to treat the triangle as a convex
+   hull oriented counterclockwise. Then a point is inside the hull if
+   it is to the left of every side of the hull.
+
+   This will prove easy to determine. Because the sine is positive in
+   quadrants 1 and 2 and negative in quadrants 3 and 4, the ‘sideness’
+   of a point can be determined by the sign of an outer product of
+   vectors. Or you can use any such trigonometric method, including
+   those that employ an inner product.
+
+   Suppose one side of the triangle goes from point p0 to point p1,
+   and that the point we are testing for ‘leftness’ is p2. Then we
+   compute the geometric outer product
+
+      (p1 - p0)∧(p2 - p0)
+
+   (or equivalently the cross product of Gibbs vector analysis) and
+   test the sign of its grade-2 component (or the sign of the
+   right-hand-rule Gibbs pseudovector along the z-axis). If the sign
+   is positive, then p2 is left of the side, because the sine of the
+   angle between the vectors is positive.
+
+   The algorithm considers the vertices and sides of the triangle as
+   as NOT inside the triangle.
+
+   Our algorithm is the same as that of the Common Lisp. We merely
+   have dressed it up in prêt-à-porter fashion and costume jewelry. *)
+
+#include "share/atspre_staload.hats"
+
+#define COUNTERCLOCKWISE 1
+#define COLLINEAR 0
+#define CLOCKWISE ~1
+
+(* We will use some simple Euclidean geometric algebra. *)
+
+typedef vector =
+  (* This type will represent either a point relative to the origin or
+     the difference between two points. The e1 component is the x-axis
+     and the e2 component is the y-axis. *)
+  @{e1 = double, e2 = double}
+
+typedef rotor =
+  (* This type is analogous to a pseudovectors, complex numbers, and
+     so forth. It will be used to represent the outer product. *)
+  @{scalar = double, e1_e2 = double}
+
+typedef triangle = @(vector, vector, vector)
+
+fn
+vector_sub (a : vector, b : vector) : vector =
+  @{e1 = a.e1 - b.e1, e2 = a.e2 - b.e2}
+
+overload - with vector_sub
+
+fn
+outer_product (a : vector, b : vector) : rotor =
+  @{scalar = 0.0,               (* The scalar term vanishes. *)
+    e1_e2 = a.e1 * b.e2 - a.e2 * b.e1}
+
+fn
+is_left_of (pt        : vector,
+            side      : @(vector, vector)) =
+  let
+    val r = outer_product (side.1 - side.0, pt - side.0)
+  in
+    r.e1_e2 > 0.0
+  end
+
+fn
+orient_triangle {orientation : int | abs (orientation) == 1}
+                (t           : triangle,
+                 orientation : int orientation) : triangle =
+  (* Return an equivalent triangle that is definitely either
+     counterclockwise or clockwise, unless the original was
+     collinear. If the original was collinear, return it unchanged. *)
+  let
+    val @(p1, p2, p3) = t
+    (* If the triangle is counterclockwise, the grade-2 component of
+       the following outer product will be positive. *)
+    val r = outer_product (p2 - p1, p3 - p1)
+  in
+    if r.e1_e2 = 0.0 then
+      t
+    else
+      let
+        val sign =
+          (if r.e1_e2 > 0.0 then COUNTERCLOCKWISE else CLOCKWISE)
+            : [sign : int | abs sign == 1] int sign
+      in
+        if orientation = sign then t else @(p1, p3, p2)
+      end
+  end
+
+fn
+is_inside_triangle (pt : vector,
+                    t  : triangle) : bool =
+  let
+    val @(p1, p2, p3) = orient_triangle (t, COUNTERCLOCKWISE)
+  in
+    is_left_of (pt, @(p1, p2))
+      && is_left_of (pt, @(p2, p3))
+      && is_left_of (pt, @(p3, p1))
+  end
+
+fn
+fprint_vector (outf : FILEref,
+               v    : vector) : void =
+  fprint! (outf, "(", v.e1, ",", v.e2, ")")
+
+fn
+fprint_triangle (outf : FILEref,
+                 t    : triangle) : void =
+  begin
+    fprint_vector (outf, t.0);
+    fprint! (outf, "--");
+    fprint_vector (outf, t.1);
+    fprint! (outf, "--");
+    fprint_vector (outf, t.2);
+    fprint! (outf, "--cycle")
+  end
+
+fn
+try_it (outf : FILEref,
+        pt   : vector,
+        t    : triangle) : void =
+  begin
+    fprint_vector (outf, pt);
+    fprint! (outf, " is inside ");
+    fprint_triangle (outf, t);
+    fprintln! (outf);
+    fprintln! (outf, is_inside_triangle (pt, t))
+  end
+
+implement
+main () =
+  let
+    val outf = stdout_ref
+    val t1 = @(@{e1 =  1.5, e2 =  2.4},
+               @{e1 =  5.1, e2 = ~3.1},
+               @{e1 = ~3.8, e2 =  1.2})
+    val p1 = @{e1 = 0.0, e2 = 0.0}
+    val p2 = @{e1 = 0.0, e2 = 1.0}
+    val p3 = @{e1 = 3.0, e2 = 1.0}
+    val p4 = @{e1 = 1.5, e2 = 2.4}
+
+    val p5 = @{e1 = 5.414286, e2 = 14.349206}
+    val t2 = @(@{e1 =  0.100000, e2 =  0.111111},
+               @{e1 = 12.500000, e2 = 33.333333},
+               @{e1 = 25.000000, e2 = 11.111111})
+    val t3 = @(@{e1 =   0.100000, e2 =  0.111111},
+               @{e1 =  12.500000, e2 = 33.333333},
+               @{e1 = ~12.500000, e2 = 16.666667})
+  in
+    try_it (outf, p1, t1);
+    try_it (outf, p2, t1);
+    try_it (outf, p3, t1);
+    try_it (outf, p4, t1);
+
+    fprintln! (outf);
+    try_it (outf, p5, t2);
+
+    fprintln! (outf);
+    fprintln! (outf, "Some programs are returning TRUE for ",
+               "the following. The Common Lisp uses");
+    fprintln! (outf, "the same",
+               " algorithm we do (presented differently),",
+               " and returns FALSE.");
+    fprintln! (outf);
+    try_it (outf, p5, t3);
+    0
+  end

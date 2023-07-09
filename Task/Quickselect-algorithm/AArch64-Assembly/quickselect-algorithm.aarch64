@@ -1,0 +1,212 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program quickSelection64.s   */
+/* look pseudo code in wikipedia  quickselect */
+
+/*******************************************/
+/* Constantes file                         */
+/*******************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResultIndex:        .asciz "index  : "
+szMessResultValue:        .asciz " value  : "
+szCarriageReturn:         .asciz "\n"
+szMessStart:          .asciz "Program 64 bits start.\n"
+.align 4
+TableNumber:	          .quad   9, 8, 7, 6, 5, 0, 1, 2, 3, 4
+.equ NBELEMENTS,      (. - TableNumber) / 8
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:             .skip 24
+sZoneConv1:            .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                    // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+    mov x6,#0
+1:
+    ldr x0,qAdrTableNumber               // address number table
+    mov x1,#0                            // index first item
+    mov x2,#NBELEMENTS -1                // index last item
+    mov x3,x6                            // search index
+    bl select                            // call selection
+    ldr x1,qAdrsZoneConv
+    bl conversion10                      // convert result to decimal
+    mov x0,x6
+    ldr x1,qAdrsZoneConv1
+    bl conversion10                      // convert index to decimal
+    mov x0,#5                            // and display result
+    ldr x1,qAdrszMessResultIndex
+    ldr x2,qAdrsZoneConv1
+    ldr x3,qAdrszMessResultValue
+    ldr x4,qAdrsZoneConv
+    ldr x5,qAdrszCarriageReturn
+    bl displayStrings
+    add x6,x6,#1
+    cmp x6,#NBELEMENTS
+    blt 1b
+
+100:                                     // standard end of the program
+    mov x0, #0                           // return code
+    mov x8, #EXIT                        // request to exit program
+    svc #0                               // perform the system call
+
+qAdrszCarriageReturn:     .quad szCarriageReturn
+qAdrTableNumber:          .quad TableNumber
+qAdrsZoneConv:            .quad sZoneConv
+qAdrsZoneConv1:           .quad sZoneConv1
+qAdrszMessResultIndex:    .quad szMessResultIndex
+qAdrszMessResultValue:    .quad szMessResultValue
+qAdrszMessStart:          .quad szMessStart
+/***************************************************/
+/*   Appel récursif selection                      */
+/***************************************************/
+/* x0 contains the address of table */
+/* x1 contains index of first item  */
+/* x2 contains index of last item   */
+/* x3 contains search index */
+select:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    stp x4,x5,[sp,-16]!            // save  registers
+    stp x6,x7,[sp,-16]!            // save  registers
+    mov x6,x3                      // save search index
+    cmp x1,x2                      // first = last ?
+    bne 1f
+    ldr x0,[x0,x1,lsl #3]          // return value of first index
+    b 100f                         // yes -> end
+1:
+    add x3,x1,x2
+    lsr x3,x3,#1                   // compute median pivot
+    mov x4,x0                      // save x0
+    mov x5,x2                      // save x2
+    bl partition                   // cutting.quado 2 parts
+    cmp x6,x0                      // pivot is ok ?
+    bne 2f
+    ldr x0,[x4,x0,lsl #3]          // yes -> return value
+    b 100f
+ 2:
+    bgt 3f
+    sub x2,x0,#1                   // index partition  - 1
+    mov x0,x4                      // array address
+    mov x3,x6                      // search index
+    bl select                      // select lower part
+    b 100f
+3:
+    add x1,x0,#1                   // index begin = index partition + 1
+    mov x0,x4                      // array address
+    mov x2,x5                      // last item
+    mov x3,x6                      // search index
+    bl select                      // select higter part
+
+ 100:                              // end function
+    ldp x6,x7,[sp],16              // restaur  2 registers
+    ldp x4,x5,[sp],16              // restaur  2 registers
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+/******************************************************************/
+/*      Partition table elements                                */
+/******************************************************************/
+/* x0 contains the address of table */
+/* x1 contains index of first item  */
+/* x2 contains index of last item   */
+/* x3 contains index of pivot */
+partition:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    stp x4,x5,[sp,-16]!            // save  registers
+    stp x6,x7,[sp,-16]!            // save  registers
+    ldr x4,[x0,x3,lsl #3]          // load value of pivot
+    ldr x5,[x0,x2,lsl #3]          // load value last index
+    str x5,[x0,x3,lsl #3]          // swap value of pivot
+    str x4,[x0,x2,lsl #3]          // and value last index
+    mov x3,x1                      // init with first index
+1:                                 // begin loop
+    ldr x6,[x0,x3,lsl #3]          // load value
+    cmp x6,x4                      // compare loop value and pivot value
+    bge 2f
+    ldr x5,[x0,x1,lsl #3]          // if < swap value table
+    str x6,[x0,x1,lsl #3]
+    str x5,[x0,x3,lsl #3]
+    add x1,x1,#1                   // and increment index 1
+2:
+    add x3,x3,#1                   // increment index 2
+    cmp x3,x2                      // end ?
+    blt 1b                         // no loop
+    ldr x5,[x0,x1,lsl #3]          // swap value
+    str x4,[x0,x1,lsl #3]
+    str x5,[x0,x2,lsl #3]
+    mov x0,x1                      // return index partition
+100:
+    ldp x6,x7,[sp],16              // restaur  2 registers
+    ldp x4,x5,[sp],16              // restaur  2 registers
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+
+ /***************************************************/
+/*   display multi strings                         */
+/*   new version 24/05/2023                        */
+/***************************************************/
+/* x0  contains number strings address */
+/* x1 address string1 */
+/* x2 address string2 */
+/* x3 address string3 */
+/* x4 address string4 */
+/* x5 address string5 */
+/* x6 address string5 */
+/* x7 address string6 */
+displayStrings:            // INFO:  displayStrings
+    stp x8,lr,[sp,-16]!    // save  registers
+    stp x2,fp,[sp,-16]!    // save  registers
+    add fp,sp,#32          // save paraméters address (4 registers saved * 8 bytes)
+    mov x8,x0              // save strings number
+    cmp x8,#0              // 0 string -> end
+    ble 100f
+    mov x0,x1              // string 1
+    bl affichageMess
+    cmp x8,#1              // number > 1
+    ble 100f
+    mov x0,x2
+    bl affichageMess
+    cmp x8,#2
+    ble 100f
+    mov x0,x3
+    bl affichageMess
+    cmp x8,#3
+    ble 100f
+    mov x0,x4
+    bl affichageMess
+    cmp x8,#4
+    ble 100f
+    mov x0,x5
+    bl affichageMess
+    cmp x8,#5
+    ble 100f
+    mov x0,x6
+    bl affichageMess
+    cmp x8,#6
+    ble 100f
+    mov x0,x7
+    bl affichageMess
+
+100:
+    ldp x2,fp,[sp],16        // restaur  registers
+    ldp x8,lr,[sp],16        // restaur  registers
+    ret
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

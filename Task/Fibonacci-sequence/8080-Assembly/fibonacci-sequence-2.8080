@@ -1,0 +1,96 @@
+	;-------------------------------------------------------
+	; useful equates
+	;-------------------------------------------------------
+bdos	equ 	5	; BDOS entry
+cr	    equ 	13	; ASCII carriage return
+lf	    equ 	10	; ASCII line feed
+space	equ	    32	; ASCII space char
+conout	equ 	2	; BDOS console output function
+putstr	equ	    9	; BDOS print string function
+	;-------------------------------------------------------
+	; program code begins here
+	;-------------------------------------------------------
+	org	    100h    ; load point under CP/M
+	lxi	    h,0		; save command processor's stack
+	dad	    sp
+	shld	oldstk
+	lxi	    sp,stack	; set our own stack
+	lxi	    d,signon	; print signon message
+	mvi	    c,putstr
+	call	bdos
+	mvi 	a,1		; test by displaying first 20
+mloop:	push	a		; save our count (putdec will trash)	
+	call 	fib
+	call	putdec
+	mvi	    a,space		; separate the numbers
+	call	putchr
+	pop	    a		; get our count back
+	inr	    a		; increase it by one
+	cpi	    20+1		; have we reached our limit?
+	jnz	    mloop		; not yet; do another
+	lhld	oldstk		; we're done - get CP/M's stack back
+	sphl			; restore it
+	ret			    ; back to command processor
+	;-------------------------------------------------------
+	;  calculate nth Fibonacci number
+	;  entry: A = n
+	;  exit:  HL = Fib(n)
+	;-------------------------------------------------------
+fib:	mov 	c,a	; C holds n
+	lxi 	d,0	; initial value for Fib(n-2)
+	lxi 	h,1	; intiial value for Fib(n-1)
+fib2:	dcr	c
+	jz	fib3	; we're done
+	push 	h	; save Fib(n-1)
+	dad 	d	; HL holds Fib(n)
+	pop 	d	; Former Fib(n-1) now Fib(n-2)
+	jmp 	fib2	; loop until done
+fib3:	ret
+	;-------------------------------------------------------
+	; console output of char in A register
+	;-------------------------------------------------------
+putchr:	
+    push	h
+	push	d
+	push	b
+	mov	    e,a
+	mvi	    c,conout
+	call	bdos
+	pop	b
+	pop	d
+	pop	h
+	ret
+	;---------------------------------------------------------
+	; Output decimal number to console
+	; HL holds 16-bit unsigned binary number to print
+	;---------------------------------------------------------
+putdec: push	b
+	push	d
+	push	h
+	lxi	    b,-10
+	lxi	    d,-1
+putdec2:
+	dad	    b
+	inx	    d
+	jc	    putdec2
+	lxi	    b,10
+	dad	    b
+	xchg
+	mov	    a,h
+	ora	    l
+	cnz	    putdec		; recursive call
+	mov	    a,e
+	adi	    '0'
+	call	putchr
+	pop	h
+	pop	d
+	pop	b
+	ret
+	;-------------------------------------------------------
+	; message and data area
+	;-------------------------------------------------------
+signon: db	'First 20 Fibonacci numbers:',cr,lf,'$'
+oldstk:	dw	0
+stack	equ	$+128		; 64-level stack
+	;
+	end

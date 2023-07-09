@@ -1,0 +1,220 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program subscipher64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ BUFFSIZE,     50000      // buffer size
+.equ O_RDWR,    0x0002        // open for reading and writing
+
+/************************************/
+/* Initialized data                 */
+/************************************/
+.data
+szMessInst:          .asciz "use : subscipher inputfile outpufile E (encryt) or D (decript).\n"
+szMessCode:          .asciz "Code operation not = E or D !!\n"
+szMessErrorOpen:     .asciz "Error  open input file .\n"
+szMessErrorCreate:   .asciz "Error create output file.\n"
+szMessErrorClose:    .asciz "Error close file.\n"
+szMessErrorRead:     .asciz "Error read file.\n"
+szMessErrorWrite:    .asciz "Write error to output file.\n"
+szMessTrtOK:         .asciz "Encoding/decoding OK.\n"
+szCarriageReturn:    .asciz "\n"
+                         // ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ _`abcdefghijklmnopqrstuvwxyz
+szBufferKey:        .asciz "VsciBjedgrzyHalvXZKtUPumGf[\]^ _`IwJxqOCFRApnDhQWobLkESYMTN"
+.equ LGBUFFERKEY,   . - szBufferKey
+/************************************/
+/* UnInitialized data               */
+/************************************/
+.bss
+.align 4
+qAdrFicInput:                .skip 8
+qAdrFicOutput:               .skip 8
+sBufferRead:                 .skip BUFFSIZE
+sBufferWrite:                .skip BUFFSIZE
+/************************************/
+/*  code section                    */
+/************************************/
+.text
+.global main
+main:
+    mov fp,sp                        //  fp <- start address
+    ldr x4,[fp]                      // number of Command line arguments
+    cmp x4,#4                        // test if number is ok
+    beq 1f
+    ldr x0,qAdrszMessInst            // no -> display error
+    bl affichageMess
+    b 100f
+1:
+    ldr x6,[fp,#16]                   // address input file name
+    ldr x20,[fp,#24]                 // address output file name
+    ldr x5,[fp,#32]                  // address code operation
+    ldrb w21,[x5]                     // loaf first code character
+    cmp x21,#'E'                      // control if code is OK
+    beq 2f
+    cmp x21,#'D'
+    beq 2f
+    ldr x0,qAdrszMessCode            // no -> display error
+    bl affichageMess
+    b 100f
+2:
+    mov x0,AT_FDCWD
+    mov x1,x6                        // file name
+    mov x2,#O_RDWR                   //  flags
+    mov x3,#0                        // mode
+    mov x8,#OPEN                     // call system OPEN
+    svc #0
+    cmp x0,#0                        // open error ?
+    ble 99f
+    mov x19,x0                        // save FD
+    // file read
+    ldr x1,qAdrsBufferRead           // buffer address
+    mov x2,#BUFFSIZE                 // buffer size
+    mov x8,READ
+    svc 0
+    cmp x0,#0                        // read error ?
+    ble 98f
+    mov x22,x0                        // length read characters
+    mov x0,x19                        // Fd
+    mov x8,CLOSE
+    svc 0
+    cmp x0,#0                        // close error ?
+    blt 97f
+    ldr x0,qAdrsBufferRead
+    mov x1,x22                        // length read characters
+    ldr x2,qAdrszBufferKey
+    mov x3,#LGBUFFERKEY
+    ldr x4,qAdrsBufferWrite
+    mov x5,x21                        // and x5 contains E or D
+    bl traitement
+                                     // write output file
+    mov x0,AT_FDCWD
+    mov x1,x20                       // file output name
+    mov x2,O_CREAT|O_RDWR            //  flags
+    ldr x3,qFicMask1
+    mov x8, #OPEN                  // call system open file
+    svc 0
+    cmp x0,#0                        // create error ?
+    ble 96f
+    mov x19,x0                        // file descriptor
+    ldr x1,qAdrsBufferWrite
+    mov x2,x22                        // length read characters
+    mov x8, #WRITE                   // select system call 'write'
+    svc #0                           // perform the system call
+    cmp x0,#0                        // error write ?
+    blt 95f
+    mov x0,x19                        // Fd output file
+    mov x8,CLOSE
+    svc 0
+    cmp x0,#0                        // close error ?
+    blt 97f
+    ldr x0,qAdrszMessTrtOK           // end message
+    bl affichageMess
+    b 100f
+95:                                  // errors
+    ldr x0,qAdrszMessErrorWrite
+    bl affichageMess
+    b 100f
+96:
+    ldr x0,qAdrszMessErrorCreate
+    bl affichageMess
+    b 100f
+97:
+    ldr x0,qAdrszMessErrorClose
+    bl affichageMess
+    b 100f
+98:
+    ldr x0,qAdrszMessErrorRead
+    bl affichageMess
+    b 100f
+99:
+    ldr x0,qAdrszMessErrorOpen
+    bl affichageMess
+100:                                    // standard end of the program
+    mov x0, #0                          // return code
+    mov x8,EXIT
+    svc 0                               // perform the system call
+
+qAdrszCarriageReturn:    .quad szCarriageReturn
+qAdrszMessInst:          .quad szMessInst
+qAdrszMessCode:          .quad szMessCode
+qAdrsBufferRead:         .quad sBufferRead
+qAdrsBufferWrite:        .quad sBufferWrite
+qAdrszBufferKey:         .quad szBufferKey
+qAdrszMessErrorOpen:     .quad szMessErrorOpen
+qAdrszMessErrorRead:     .quad szMessErrorRead
+qAdrszMessErrorClose:    .quad szMessErrorClose
+qAdrszMessErrorWrite:    .quad szMessErrorWrite
+qAdrszMessErrorCreate:   .quad szMessErrorCreate
+qAdrszMessTrtOK:         .quad szMessTrtOK
+qFicMask1:               .quad 0644
+/******************************************************************/
+/*     encoding or decoding buffer                         */
+/******************************************************************/
+/* x0 contains input file address */
+/* x1 contains length buffer */
+/* x2 contanis key buffer address */
+/* x3 contains key buffer length */
+/* x4 contains output file address */
+/* x5 contains code E or D  */
+traitement:
+    stp x5,lr,[sp,-16]!          // save  registers
+    stp x6,x7,[sp,-16]!          // save  registers
+    stp x8,x9,[sp,-16]!          // save  registers
+    cmp x5,#'D'                   // code ?
+    beq decoding
+    mov x5,#0                     // init indice
+1:                                // loop read characters buffer
+    ldrb w6,[x0,x5]               // load une character
+    sub x6,x6,#0x41                  // conv ascii -> numeric
+    cmp x6,#0                     // < A
+    blt 2f
+    cmp x6,#0x3A                  // > z
+    bgt 2f
+    ldrb w7,[x2,x6]               // load key character at index
+    b 3f
+2:
+    add x7,x6,#0x41               // conv numeric -> ascii
+3:
+    strb w7,[x4,x5]               // store encoded character in output buffer
+    add x5,x5,#1                  // increment indice
+    cmp x5,x1                     // end ?
+    ble 1b
+    b 100f
+decoding:
+    mov x5,#0                     // init indice
+4:
+    ldrb w6,[x0,x5]               // load one character
+    cmp x6,#0x41                  // < A
+    blt 6f
+    cmp x6,#0x7A                  // > z
+    bgt 6f
+    mov x8,#0                     // init key indice
+5:
+    ldrb w7,[x2,x8]               // load key character
+    cmp x7,x6                     // compare character
+    add x9,x8,#0x41               // if equal convert indice to ascii
+    csel x7,x9,x7,eq
+    beq 7f
+    add x8,x8,#1                  // else increment key indice
+    cmp x8,x3                     // end key ?
+    ble 5b                        // no -> loop
+6:
+    mov x7,x6                     // move input character in output
+7:
+    strb w7,[x4,x5]               // store decoded character in output buffer
+    add x5,x5,#1                  // increment indice
+    cmp x5,x1                     // end buffer ?
+    ble 4b
+100:
+    ldp x8,x9,[sp],16             // restaur  registers
+    ldp x6,x7,[sp],16             // restaur  registers
+    ldp x5,lr,[sp],16             // restaur  registers
+    ret
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

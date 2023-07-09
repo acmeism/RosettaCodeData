@@ -1,0 +1,215 @@
+/* ARM assembly Raspberry PI  */
+/*  program subscipher.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for constantes see task include a file in arm assembly */
+.include "../constantes.inc"
+.equ BUFFSIZE,     50000      @ buffer size
+.equ READ,   3
+.equ OPEN,   5
+.equ CLOSE,  6
+.equ CREATE,  8
+.equ O_RDWR,    0x0002        @ open for reading and writing
+
+/************************************/
+/* Initialized data                 */
+/************************************/
+.data
+szMessInst:          .asciz "use : subscipher inputfile outpufile E (encryt) or D (decript).\n"
+szMessCode:          .asciz "Code operation not = E or D !!\n"
+szMessErrorOpen:     .asciz "Error  open input file .\n"
+szMessErrorCreate:   .asciz "Error create output file.\n"
+szMessErrorClose:    .asciz "Error close file.\n"
+szMessErrorRead:     .asciz "Error read file.\n"
+szMessErrorWrite:    .asciz "Write error to output file.\n"
+szMessTrtOK:         .asciz "Encoding/decoding OK.\n"
+szCarriageReturn:    .asciz "\n"
+                         // ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^ _`abcdefghijklmnopqrstuvwxyz
+szBufferKey:        .asciz "VsciBjedgrzyHalvXZKtUPumGf[\]^ _`IwJxqOCFRApnDhQWobLkESYMTN"
+.equ LGBUFFERKEY,   . - szBufferKey
+/************************************/
+/* UnInitialized data               */
+/************************************/
+.bss
+.align 4
+iAdrFicInput:                .skip 4
+iAdrFicOutput:               .skip 4
+sBufferRead:                 .skip BUFFSIZE
+sBufferWrite:                .skip BUFFSIZE
+/************************************/
+/*  code section                    */
+/************************************/
+.text
+.global main
+main:
+    mov fp,sp                        @  fp <- start address
+    ldr r4,[fp]                      @ number of Command line arguments
+    cmp r4,#4                        @ test if number is ok
+    beq 1f
+    ldr r0,iAdrszMessInst            @ no -> display error
+    bl affichageMess
+    b 100f
+1:
+    ldr r6,[fp,#8]                   @ address input file name
+    ldr r10,[fp,#12]                 @ address output file name
+    ldr r5,[fp,#16]                  @ address code operation
+    ldrb r5,[r5]                     @ loaf first code character
+    cmp r5,#'E'                      @ control if code is OK
+    beq 2f
+    cmp r5,#'D'
+    beq 2f
+    ldr r0,iAdrszMessCode            @ no -> display error
+    bl affichageMess
+    b 100f
+2:
+    mov r0,r6                        @ file name
+    mov r1,#O_RDWR                   @  flags
+    mov r2,#0                        @ mode
+    mov r7,#OPEN                     @ call system OPEN
+    svc #0
+    cmp r0,#0                        @ open error ?
+    ble 99f
+    mov r8,r0                        @ save FD
+    // file read
+    ldr r1,iAdrsBufferRead           @ buffer address
+    mov r2,#BUFFSIZE                 @ buffer size
+    mov r7, #READ                    @ call system  READ
+    svc 0
+    cmp r0,#0                        @ read error ?
+    ble 98f
+    mov r9,r0                        @ length read characters
+    mov r0,r8                        @ Fd
+    mov r7,#CLOSE                    @ call system CLOSE
+    svc 0
+    cmp r0,#0                        @ close error ?
+    blt 97f
+    ldr r0,iAdrsBufferRead
+    mov r1,r9                        @ length read characters
+    ldr r2,iAdrszBufferKey
+    mov r3,#LGBUFFERKEY
+    ldr r4,iAdrsBufferWrite
+                                     @ and r5 contains E or D
+    bl traitement
+                                     @ write output file
+    mov r0,r10                       @ file output name
+    ldr r1,iFicMask1                 @ flags
+    mov r7, #CREATE                  @ call system create file
+    svc 0
+    cmp r0,#0                        @ create error ?
+    ble 96f
+    mov r8,r0                        @ file descriptor
+    ldr r1,iAdrsBufferWrite
+    mov r2,r9                        @ length read characters
+    mov r7, #WRITE                   @ select system call 'write'
+    svc #0                           @ perform the system call
+    cmp r0,#0                        @ error write ?
+    blt 95f
+    mov r0,r8                        @ Fd output file
+    mov r7,#CLOSE                    @ call system CLOSE
+    svc 0
+    cmp r0,#0                        @ close error ?
+    blt 97f
+    ldr r0,iAdrszMessTrtOK           @ end message
+    bl affichageMess
+    b 100f
+95:                                  @ errors
+    ldr r0,iAdrszMessErrorWrite
+    bl affichageMess
+    b 100f
+96:
+    ldr r0,iAdrszMessErrorCreate
+    bl affichageMess
+    b 100f
+97:
+    ldr r0,iAdrszMessErrorClose
+    bl affichageMess
+    b 100f
+98:
+    ldr r0,iAdrszMessErrorRead
+    bl affichageMess
+    b 100f
+99:
+    ldr r0,iAdrszMessErrorOpen
+    bl affichageMess
+100:                                    @ standard end of the program
+    mov r0, #0                          @ return code
+    mov r7, #EXIT                       @ request to exit program
+    svc 0                               @ perform the system call
+
+iAdrszCarriageReturn:    .int szCarriageReturn
+iAdrszMessInst:          .int szMessInst
+iAdrszMessCode:          .int szMessCode
+iAdrsBufferRead:         .int sBufferRead
+iAdrsBufferWrite:        .int sBufferWrite
+iAdrszBufferKey:         .int szBufferKey
+iAdrszMessErrorOpen:     .int szMessErrorOpen
+iAdrszMessErrorRead:     .int szMessErrorRead
+iAdrszMessErrorClose:    .int szMessErrorClose
+iAdrszMessErrorWrite:    .int szMessErrorWrite
+iAdrszMessErrorCreate:   .int szMessErrorCreate
+iAdrszMessTrtOK:         .int szMessTrtOK
+iFicMask1:               .octa 0644
+/******************************************************************/
+/*     encoding or decoding buffer                         */
+/******************************************************************/
+/* r0 contains input file address */
+/* r1 contains length buffer */
+/* r2 contanis key buffer address */
+/* r3 contains key buffer length */
+/* r4 contains output file address */
+/* r5 contains code E or D  */
+traitement:
+    push {r6-r8,lr}               @ save  registres
+    cmp r5,#'D'                   @ code ?
+    beq decoding
+    mov r5,#0                     @ init indice
+1:                                @ loop read characters buffer
+    ldrb r6,[r0,r5]               @ load une character
+    sub r6,#0x41                  @ conv ascii -> numeric
+    cmp r6,#0                     @ < A
+    blt 2f
+    cmp r6,#0x3A                  @ > z
+    bgt 2f
+    ldrb r7,[r2,r6]               @ load key character at index
+    b 3f
+2:
+    add r7,r6,#0x41               @ conv numeric -> ascii
+3:
+    strb r7,[r4,r5]               @ store encoded character in output buffer
+    add r5,r5,#1                  @ increment indice
+    cmp r5,r1                     @ end ?
+    ble 1b
+    b 100f
+decoding:
+    mov r5,#0                     @ init indice
+4:
+    ldrb r6,[r0,r5]               @ load one character
+    cmp r6,#0x41                  @ < A
+    blt 6f
+    cmp r6,#0x7A                  @ > z
+    bgt 6f
+    mov r8,#0                     @ init key indice
+5:
+    ldrb r7,[r2,r8]               @ load key character
+    cmp r7,r6                     @ compare character
+    addeq r7,r8,#0x41             @ if equal convert indice to ascii
+    beq 7f
+    add r8,r8,#1                  @ else increment key indice
+    cmp r8,r3                     @ end key ?
+    ble 5b                        @ no -> loop
+6:
+    mov r7,r6                     @ move input character in output
+7:
+    strb r7,[r4,r5]               @ store decoded character in output buffer
+    add r5,r5,#1                  @ increment indice
+    cmp r5,r1                     @ end buffer ?
+    ble 4b
+100:
+    pop {r6-r8,pc}                           @ restaur 2 registres
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language ARM assembly*/
+.include "../affichage.inc"

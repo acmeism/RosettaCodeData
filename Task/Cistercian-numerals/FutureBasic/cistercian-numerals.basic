@@ -1,0 +1,125 @@
+_window = 1
+begin enum 1
+  _numView
+  _numFld
+end enum
+
+_numHeight = 54
+_lineLength = _numHeight/3
+
+
+void local fn BuildWindow
+  window _window, @"Cistercian Numerals",, NSWindowStyleMaskTitled + NSWindowStyleMaskClosable + NSWindowStyleMaskMiniaturizable
+  subclass view _numView, (237,153,76,94)
+  ViewSetFlipped( _numView, YES )
+  textfield _numFld,, @"0", (237,20,76,21)
+  ControlSetAlignment( _numFld, NSTextAlignmentCenter )
+  ControlSetFormat( _numFld, @"0123456789", YES, 4, 0 )
+  WindowMakeFirstResponder( _window, _numFld )
+end fn
+
+
+void local fn PathDraw( path as BezierPathRef, lines as CFStringRef, x as CGFloat, y as CGFloat )
+  CGPoint pt1, pt2
+  long i
+  for i = 0 to 4
+    if ( intval(mid(lines,i,1)) )
+      select ( i )
+        case 0
+          pt1 = fn CGPointMake( x + _lineLength, y )
+          pt2 = fn CGPointMake( x + _lineLength, y + _lineLength )
+        case 1
+          pt1 = fn CGPointMake( x, y + _lineLength )
+          pt2 = fn CGPointMake( x + _lineLength, y )
+        case 2
+          pt1 = fn CGPointMake( x, y )
+          pt2 = fn CGPointMake( x + _lineLength, y + _lineLength )
+        case 3
+          pt1 = fn CGPointMake( x, y + _lineLength )
+          pt2 = fn CGPointMake( x + _lineLength, y + _lineLength )
+        case 4
+          pt1 = fn CGPointMake( x, y )
+          pt2 = fn CGPointMake( x + _lineLength, y )
+      end select
+      BezierPathMoveToPoint( path, pt1 )
+      BezierPathLineToPoint( path, pt2 )
+    end if
+  next
+end fn
+
+
+void local fn ViewDrawRect
+  CFArrayRef lines = @[@"00001",@"00010",@"00100",@"01000",@"01001",@"10000",@"10001",@"10010",@"10011"]
+  CFStringRef numString = fn ViewProperty( _numView, @"num" )
+  if ( numString )
+    CGFloat x = 38, y = 20
+
+    long i
+    for i = 0 to 3
+      BezierPathRef path = fn BezierPathWithRect( fn ViewBounds(_numView) )
+      BezierPathMoveToPoint( path, fn CGPointMake( x, y ) )
+      BezierPathLineToPoint( path, fn CGPointMake( x, y + _numHeight ) )
+
+      long num = intval( mid( numString, i, 1 ) )
+      if ( num )
+        fn PathDraw( path, lines[num-1], x, y )
+        if ( i < 3 )
+          CGFloat xScale = 1.0, yScale = 1.0
+          select ( i )
+            case 0 : xScale = -1.0 : yScale = -1.0 // 1000
+            case 1 : yScale = -1.0                 // 100
+            case 2 : xScale = -1.0                 // 10
+          end select
+
+          CGRect bounds = fn BezierPathBounds( path )
+          AffineTransformRef tx = fn AffineTransformInit
+          AffineTransformScaleXY( tx, xScale, yScale )
+          if ( xScale < 0.0 ) then AffineTransformTranslate( tx, -bounds.origin.x-bounds.size.width, 0.0 )
+          if ( yScale < 0.0 ) then AffineTransformTranslate( tx, 0.0, -bounds.size.height )
+
+          BezierPathTransformUsingAffineTranform( path, tx )
+        end if
+      end if
+
+      BezierPathStroke( path )
+    next
+  end if
+end fn
+
+
+void local fn DrawAction
+  CFStringRef string = fn StringWithFormat( @"%.4ld", fn ControlIntegerValue( _numFld ) )
+  ViewSetProperty( _numView, @"num", string )
+  ViewSetNeedsDisplay( _numView )
+end fn
+
+
+void local fn DoAppEvent( ev as long )
+  select ( ev )
+    case _appDidFinishLaunching
+      fn BuildWindow
+      fn DrawAction
+    case _appShouldTerminateAfterLastWindowClosed : AppEventSetBool(YES)
+  end select
+end fn
+
+
+void local fn DoDialog( ev as long, tag as long, wnd as long )
+  select ( ev )
+    case _btnClick
+      select ( tag )
+        case _numFld : fn DrawAction
+      end select
+
+    case _viewDrawRect
+      select ( tag )
+        case _numView : fn ViewDrawRect
+      end select
+  end select
+end fn
+
+
+on appevent fn DoAppEvent
+on dialog fn DoDialog
+
+HandleEvents

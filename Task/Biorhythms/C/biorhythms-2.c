@@ -3,4 +3,3 @@ gcc -o cbio cbio.c -lm
 Age: 10717 days
     Physical cycle: -27%
    Emotional cycle: -100%
-Intellectual cycle: -100%

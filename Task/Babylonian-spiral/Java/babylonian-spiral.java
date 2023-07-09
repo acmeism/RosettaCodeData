@@ -20,29 +20,30 @@ public final class BabylonianSpiral {
 				"(" + points.get(i).x + ", " + points.get(i).y + ")", ( ++column % 10 == 0 ) ? "\n" : " "));
 		}
 		System.out.println();
-		
+	
 		String text = svgText(points, 800);		
-    	Files.write(Paths.get("BabylonianSpiralJava.svg"), text.getBytes());
+		Files.write(Paths.get("C:/Users/psnow/Desktop/BabylonianSpiralJava.svg"), text.getBytes());
 	}
 	
 	private static List<Point> babylonianSpiral(int aStepCount) {
+		final double tau = 2 * Math.PI;
 		List<Integer> squares = IntStream.rangeClosed(0, aStepCount).map( i -> i * i ).boxed().toList();
-		List<Point> deltas = Stream.of( new Point(0, 0), new Point(0, 1) ).collect(Collectors.toList());
-		long norm = 1;
+		List<Point> points = Stream.of( new Point(0, 0), new Point(0, 1) ).collect(Collectors.toList());
+		int norm = 1;
 		
 		for ( int step = 0; step < aStepCount - 2; step++ ) {
-		    Point previousPoint = deltas.get(deltas.size() - 1);
+		    Point previousPoint = points.get(points.size() - 1);
 		    final double theta = Math.atan2(previousPoint.y, previousPoint.x);
 		    Set<Point> candidates = new HashSet<Point>();
 		    while ( candidates.isEmpty() ) {
 		    	norm += 1;
 			    for ( int i = 0; i < aStepCount; i++ ) {
-			        long a = squares.get(i);
+			        int a = squares.get(i);
 			        if ( a > norm / 2 ) {
 			        	break;
 			        }
 			        for ( int j = (int) Math.sqrt(norm) + 1; j >= 0; j-- ) {
-			        	long b = squares.get(j);	
+			        	int b = squares.get(j);	
 			        	if ( a + b < norm ) {
 			        		break;
 			        	}
@@ -56,16 +57,16 @@ public final class BabylonianSpiral {
 		    }
 		
 		    Comparator<Point> comparatorPoint = (one, two) -> Double.compare(
-		    	( theta - Math.atan2(one.y, one.x) + TAU ) % TAU, ( theta - Math.atan2(two.y, two.x) + TAU ) % TAU);
+		    	( theta - Math.atan2(one.y, one.x) + tau ) % tau, ( theta - Math.atan2(two.y, two.x) + tau ) % tau);
 		
 		    Point minimum = candidates.stream().min(comparatorPoint).get();
-		    deltas.add(minimum);
+		    points.add(minimum);
 		}
 		
-		for ( int i = 0; i < deltas.size() - 1; i++ ) {
-			deltas.set(i + 1, new Point(deltas.get(i).x + deltas.get(i + 1).x, deltas.get(i).y + deltas.get(i + 1).y));
-		}		
-		return deltas;
+		for ( int i = 0; i < points.size() - 1; i++ ) {
+			points.set(i + 1, new Point(points.get(i).x + points.get(i + 1).x, points.get(i).y + points.get(i + 1).y));
+		}
+		return points;
 	}
 
 	private static String svgText(List<Point> aPoints, int aSize) {
@@ -82,7 +83,5 @@ public final class BabylonianSpiral {
 
         return text.toString();
     }
-	
-	private static final double TAU = 2 * Math.PI;
 	
 }

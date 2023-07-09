@@ -1,0 +1,188 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program caresarcode64.s   */
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ KEY,                 23
+.equ STRINGSIZE,          500
+/************************************/
+/* Initialized data                 */
+/************************************/
+.data
+szMessString:            .asciz "String :\n"
+szMessEncrip:            .asciz "\nEncrypted :\n"
+szMessDecrip:            .asciz "\nDecrypted :\n"
+szString1:               .asciz "The quick brown fox jumps over the lazy dog."
+
+szCarriageReturn:        .asciz "\n"
+/************************************/
+/* UnInitialized data               */
+/************************************/
+.bss
+szString2:                .skip  STRINGSIZE
+szString3:                .skip  STRINGSIZE
+/************************************/
+/*  code section                    */
+/************************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessString                     // display message
+    bl affichageMess
+    ldr x0,qAdrszString1                        // display string
+    bl affichageMess
+    ldr x0,qAdrszString1
+    ldr x1,qAdrszString2
+    mov x2,#KEY                                 // key
+    bl encrypt
+    ldr x0,qAdrszMessEncrip
+    bl affichageMess
+    ldr x0,qAdrszString2                        // display string
+    bl affichageMess
+    ldr x0,qAdrszString2
+    ldr x1,qAdrszString3
+    mov x2,#KEY                                 // key
+    bl decrypt
+    ldr x0,qAdrszMessDecrip
+    bl affichageMess
+    ldr x0,qAdrszString3                        // display string
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+100:                                            // standard end of the program
+    mov x0, #0                                  // return code
+    mov x8,EXIT
+    svc 0                                       // perform system call
+qAdrszMessString:         .quad szMessString
+qAdrszMessDecrip:         .quad szMessDecrip
+qAdrszMessEncrip:         .quad szMessEncrip
+qAdrszString1:            .quad szString1
+qAdrszString2:            .quad szString2
+qAdrszString3:            .quad szString3
+qAdrszCarriageReturn:     .quad szCarriageReturn
+/******************************************************************/
+/*     encrypt strings                         */
+/******************************************************************/
+/* x0 contains the address of the string1 */
+/* x1 contains the address of the encrypted string */
+/* x2 contains the key (1-25)                     */
+encrypt:
+    stp x3,lr,[sp,-16]!       // save  registers
+    stp x4,x5,[sp,-16]!       // save  registers
+    mov x3,#0                 // counter byte string 1
+1:
+    ldrb w4,[x0,x3]           // load byte string 1
+    cmp w4,#0                 // zero final ?
+    bne 2f
+    strb w4,[x1,x3]
+    mov x0,x3
+    b 100f
+2:
+    cmp w4,#65                // < A ?
+    bge 3f
+    strb w4,[x1,x3]
+    add x3,x3,#1
+    b 1b                      // and loop
+3:
+    cmp x4,#90                // > Z
+    bgt 4f
+    add x4,x4,x2              // add key
+    cmp x4,#90                // > Z
+    sub x5,x4,26
+    csel x4,x5,x4,gt
+    //subgt x4,#26
+    strb w4,[x1,x3]
+    add x3,x3,#1
+    b 1b
+4:
+    cmp x4,#97                // < a ?
+    bge 5f
+    strb w4,[x1,x3]
+    add x3,x3,#1
+    b 1b
+5:
+    cmp x4,#122               //> z
+    ble 6f
+    strb w4,[x1,x3]
+    add x3,x3,#1
+    b 1b
+6:
+    add x4,x4,x2
+    cmp x4,#122
+    sub x5,x4,26
+    csel x4,x5,x4,gt
+    //subgt x4,#26
+    strb w4,[x1,x3]
+    add x3,x3,#1
+    b 1b
+
+100:
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x3,lr,[sp],16            // restaur  registers
+    ret
+/******************************************************************/
+/*     decrypt strings                                           */
+/******************************************************************/
+/* x0 contains the address of the encrypted string1 */
+/* x1 contains the address of the decrypted string */
+/* x2 contains the key (1-25)                     */
+decrypt:
+    stp x3,lr,[sp,-16]!      // save  registers
+    stp x4,x5,[sp,-16]!      // save  registers
+    mov x3,#0                // counter byte string 1
+1:
+    ldrb w4,[x0,x3]          // load byte string 1
+    cmp x4,#0                // zero final ?
+    bne 2f
+    strb w4,[x1,x3]
+    mov x0,x3
+    b 100f
+2:
+    cmp x4,#65               // < A ?
+    bge 3f
+    strb w4,[x1,x3]
+    add x3,x3,#1
+    b 1b                     // and loop
+3:
+    cmp x4,#90               // > Z
+    bgt 4f
+    sub x4,x4,x2             // substract key
+    cmp x4,#65               // < A
+    add x5,x4,26
+    csel x4,x5,x4,lt
+    //addlt x4,#26
+    strb w4,[x1,x3]
+    add x3,x3,#1
+    b 1b
+4:
+    cmp x4,#97               // < a ?
+    bge 5f
+    strb w4,[x1,x3]
+    add x3,x3,#1
+    b 1b
+5:
+    cmp x4,#122              // > z
+    ble 6f
+    strb w4,[x1,x3]
+    add x3,x3,#1
+    b 1b
+6:
+    sub x4,x4,x2                // substract key
+    cmp x4,#97               // < a
+    add x5,x4,26
+    csel x4,x5,x4,lt
+    //addlt x4,#26
+    strb w4,[x1,x3]
+    add x3,x3,#1
+    b 1b
+
+100:
+    ldp x4,x5,[sp],16        // restaur  registers
+    ldp x3,lr,[sp],16        // restaur  registers
+    ret
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../includeARM64.inc"

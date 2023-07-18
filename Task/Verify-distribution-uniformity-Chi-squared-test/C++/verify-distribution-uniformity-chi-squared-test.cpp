@@ -5,7 +5,7 @@
 
 void print_vector(const std::vector<int32_t>& list) {
 	std::cout << "[";
-	for ( uint64_t i = 0; i < list.size(); ++i ) {
+	for ( uint64_t i = 0; i < list.size() - 1; ++i ) {
 		std::cout << list[i] << ", ";
 	}
 	std::cout << list.back() << "]" << std::endl;

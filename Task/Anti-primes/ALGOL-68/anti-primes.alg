@@ -1,19 +1,20 @@
 BEGIN # find some anti-primes: numbers with more divisors than the     #
       # previous numbers                                               #
-    INT max number   := 10 000;
+    REF[]INT ndc     := HEAP[ 1 : 0 ]INT; # table of divisor counts    #
     INT max divisors := 0;
-    # construct a table of the divisor counts                          #
-    [ 1 : max number ]INT ndc; FOR i FROM 1 TO UPB ndc DO ndc[ i ] := 1 OD;
-    FOR i FROM 2 TO UPB ndc DO
-        FOR j FROM i BY i TO UPB ndc DO ndc[ j ] +:= 1 OD
-    OD;
-    # show the numbers with more divisors than their predecessors      #
-    INT a count := 0;
-    FOR i TO UPB ndc WHILE a count < 20 DO
-        INT divisor count = ndc[ i ];
-        IF divisor count > max divisors THEN
-            print( ( " ", whole( i, 0 ) ) );
-            max divisors := divisor count;
+    INT a count      := 0;
+    FOR n WHILE a count < 20 DO
+        IF n > UPB ndc THEN
+            # need a bigger table of divisor counts                    #
+            ndc := HEAP[ 1 : UPB ndc + 5 000 ]INT;
+            FOR i FROM 1 TO UPB ndc DO ndc[ i ] := 1 OD;
+            FOR i FROM 2 TO UPB ndc DO
+                FOR j FROM i BY i TO UPB ndc DO ndc[ j ] +:= 1 OD
+            OD
+        FI;
+        IF ndc[ n ] > max divisors THEN
+            print( ( " ", whole( n, 0 ) ) );
+            max divisors := ndc[ n ];
             a count     +:= 1
         FI
     OD;

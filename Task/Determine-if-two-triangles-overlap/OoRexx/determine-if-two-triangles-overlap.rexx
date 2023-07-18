@@ -3,9 +3,9 @@
 * Fully (?) tested with integer coordinates of the 6 corners
 * This was/is an exercise with ooRexx
 * Removed the fraction arithmetic
+* add test for triangles' validity
 *-------------------------------------------------------------------*/
 Parse Version v
-
 oid='trioo.txt'; 'erase' oid
 Call o v
 case=0
@@ -21,6 +21,8 @@ Call trio_test '0 0 5 0 2.5 5 0 4 2.5 -1 5 4'
 Call trio_test '0 0 1 1 0 2 2 1 3 0 3 2'
 Call trio_test '0 0 1 1 0 2 2 1 3 -2 3 4'
 Call trio_test '0 0 1 0 0 1 1 0 2 0 1 1'
+Call trio_test '0 0   0 0   2 2   1 1   2  1   1 2' -- two points are identical
+Call trio_test '0 0   0 3   2 2   1 1   2  2   3 3' -- three points on a line
 Exit
 /* Other test cases */
 Call trio_test '0 0   0 4   4 0   0 2   2  2   2 0'
@@ -54,6 +56,7 @@ Parse Arg tlist
 cc+=1
 tlist=space(tlist)
 tl1=tlist                              ; Call trio_t tl1
+If result=-1 Then Return
 tl2=reversex(tlist)                    ; Call trio_t tl2
 tl3=''
 tl=tlist
@@ -64,13 +67,19 @@ Do While tl<>''
                                          Call trio_t tl3
 tl4=reversex(tl3)                      ; Call trio_t tl4
 tl5=subword(tl4,7) subword(tl4,1,6)    ; Call trio_t tl5
-tl6=subword(tl5,7) subword(tl5,1,6)    ; Call trio_t tl6
+tl6=''
+tl=tlist
+Do While tl<>''
+  Parse Var tl x y tl
+  tl6=tl6 y x
+  End
+                                         Call trio_t tl6
 Return
 
 trio_t:
 Parse Arg tlist
 tlist=space(tlist)
-Say tlist
+Say '>' tlist
 case+=1
 Parse Arg ax ay bx by cx cy dx dy ex ey fx fy
 /*---------------------------------------------------------------------
@@ -78,6 +87,14 @@ Parse Arg ax ay bx by cx cy dx dy ex ey fx fy
 *--------------------------------------------------------------------*/
 a=.point~new(ax,ay); b=.point~new(bx,by); c=.point~new(cx,cy)
 d=.point~new(dx,dy); e=.point~new(ex,ey); f=.point~new(fx,fy)
+If area(a,b,c)=0 Then Do
+   Say a b c 'is not a valid triangle'
+   Return  -1
+   End
+If area(d,e,f)=0 Then Do
+   Say d e f 'is not a valid triangle'
+   Return  -1
+   End
 abc=.triangle~new(a,b,c)
 def=.triangle~new(d,e,f)
 Call o 'Triangle: ABC:' abc ,1
@@ -282,6 +299,10 @@ Return
 ::method init
   expose point edge
   use arg p1,p2,p3
+  If area(p1,p2,p3)=0 Then Do
+    Say p1 p2 p3 'is not a valid triangle!'
+    Return .nil
+    End
   point=.array~new
   point[1]=p1
   point[2]=p2
@@ -545,3 +566,26 @@ Return
     res=res word(list,i)
     End
   Return res
+
+::ROUTINE distpp  PUBLIC --Compute the distance between the points A and B
+/***********************************************************************
+* Compute the distance between the points A and B
+***********************************************************************/
+  Use Arg A,B
+  ax=A~x; ay=A~y; bx=B~x; by=B~y
+  res=rxCalcsqrt((bx-ax)**2+(by-ay)**2)
+  Return res
+
+::ROUTINE area   PUBLIC --Compute the area of the triangla A B C
+/***********************************************************************
+* Compute the area of the triangla A B C
+***********************************************************************/
+  Use Arg A,B,C
+  ax=A~x; ay=A~y; bx=B~x; by=B~y; cx=C~x; cy=C~y
+  ab=distpp(A,B)
+  bc=distpp(B,C)
+  ca=distpp(C,A)
+  s=(ab+bc+ca)/2
+  area=rxCalcsqrt(s*(s-ab)*(s-bc)*(s-ca))
+  Return area
+::REQUIRES rxMath Library

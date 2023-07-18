@@ -1,9 +1,9 @@
 class Wireworld {
     has @.line;
-    method height () { @!line.elems }
-    has int $.width;
+    method height returns Int { @!line.elems }
+    method width  returns Int { max @!line».chars }
 
-    multi method new(@line) { samewith :@line, :width(max @line».chars) }
+    multi method new(@line) { samewith :@line }
     multi method new($str ) { samewith $str.lines }
 
     method gist { join "\n", @.line }
@@ -21,7 +21,7 @@ class Wireworld {
         my @succ;
         for ^$.height X ^$.width -> ($i, $j) {
             @succ[$i] ~=
-            do given @!line[$i].comb[$j] {
+            do given @.line[$i].comb[$j] {
                 when 'H' { 't' }
                 when 't' { '.' }
                 when '.' {
@@ -50,13 +50,17 @@ multi sub MAIN (
     Numeric:D :$interval = 1/4,
     Bool      :$stop-on-repeat,
 ) {
-    run-loop :$interval, :$stop-on-repeat, Wireworld.new: Q:to/END/
-    tH.........
-    .   .
-       ...
-    .   .
-    Ht.. ......
-    END
+    run-loop
+      :$interval,
+      :$stop-on-repeat,
+      Wireworld.new:
+	Q:to/§/
+	tH.........
+	.   .
+	   ...
+	.   .
+	Ht.. ......
+	§
 }
 
 sub run-loop (
@@ -66,16 +70,11 @@ sub run-loop (
 ){
     my %seen is SetHash;
 
+    print "\e7";                # save cursor position
     for $initial ...^ * eqv * { # generate a sequence (uses .succ)
-        print "\e[2J";
-        say '#' x $initial.width;
-        .say;
-        say '#' x $initial.width;
-
-        if $stop-on-repeat {
-            last if %seen{ .gist }++;
-        }
-
-        sleep $interval;
+      print "\e8";              # restore cursor position
+      .say;
+      last if $stop-on-repeat and %seen{ .gist }++;
+      sleep $interval;
     }
 }

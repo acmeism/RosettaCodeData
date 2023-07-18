@@ -1,7 +1,11 @@
-(unless (= (* 2 2) 4) (print "unless: non equal"))
-(unless (= (* 2 2) 6) (print "unless: i don't know"))
-(unless (= (* 2 2) 4) (print "unless: non equal") (print "unless: equal"))
-(unless (= (* 2 2) 6) (print "unless: i don't know") (print "unless: non equal"))
-; ==> unless: i don't know
-; ==> unless: equal
-; ==> unless: i don't know
+(when (= (* 2 2) 4)
+   (print "when: ..just do something..")
+   (print "when: equal"))
+; ==> when: ..just do something..
+; ==> when: equal
+
+(unless (= (* 2 2) 6)
+   (print "unless: ..just do something..")
+   (print "unless: not equal"))
+; ==> unless: ..just do something..
+; ==> unless: not equal

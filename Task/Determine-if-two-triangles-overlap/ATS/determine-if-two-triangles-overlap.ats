@@ -1,0 +1,341 @@
+(* Given that the context is collision detection, we will consider
+   containment of one triangle entirely inside the other as ‘overlap’
+   and test for that, as well as for overlap of the triangle sides
+   themselves. One must agree that, if one triangle has become buried
+   entirely inside another, then the two have collided. There are
+   consequences for the conservation of momentum.
+
+   Besides, the full set of overlap tests, INCLUDING containment of
+   one polygonal hull inside another, is relevant to the problem of
+   finding intersections of Bézier curves. See
+   https://rosettacode.org/wiki/B%C3%A9zier_curves/Intersections
+
+   This code specifically tests for overlapping vertices, in case the
+   main tests fail to catch such overlaps. Approximate equality is
+   employed rather than exact floating-point equality. *)
+
+#include "share/atspre_staload.hats"
+
+%{^
+#include <math.h>
+#include <float.h>
+%}
+
+macdef dbl_epsilon = $extval (double, "DBL_EPSILON")
+
+(* We will use some simple homogeneous geometric algebra. *)
+
+typedef point =
+  @{e1 = double,
+    e2 = double,
+    e0 = double}
+
+macdef Pt (x, y) =    (* Shorthand for creating a normalized point. *)
+  @{e1 = ,(x),
+    e2 = ,(y),
+    e0 = 1.0} : point
+
+typedef line =
+  @{e0_e1 = double,
+    e0_e2 = double,
+    e1_e2 = double}
+
+typedef triangle = @(point, point, point)
+
+fn
+outer_product_point_point (a : point, b : point) : line =
+  @{e0_e1 = ~(~a.e0 * b.e1 + a.e1 * b.e0),
+    e0_e2 = ~(~a.e0 * b.e2 + a.e2 * b.e0),
+    e1_e2 = (a.e1 * b.e2 - a.e2 * b.e1)}
+
+fn
+left_contraction_point_line (a : point, b : line) : point =
+  @{e1 = (a.e0 * b.e0_e1 - a.e2 * b.e1_e2),
+    e2 = (a.e0 * b.e0_e2 + a.e1 * b.e1_e2),
+    e0 = (~a.e1 * b.e0_e1 - a.e2 * b.e0_e2)}
+
+fn
+left_contraction_point_point (a : point, b : point) : double =
+  (* This is the same as the scalar product but saves us having to add
+     an operator for which I cannot think of a good symbol. *)
+  (a.e1 * b.e1) + (a.e2 * b.e2) + (a.e0 * b.e0)
+
+fn
+dual_line (a : line) : point =
+  @{e1 = ~a.e0_e2,
+    e2 = a.e0_e1,
+    e0 = a.e1_e2}
+
+overload outer_product with outer_product_point_point
+overload left_contraction with left_contraction_point_line
+overload left_contraction with left_contraction_point_point
+overload dual with dual_line    (* Orthogonal complement. *)
+infixl ( * ) ^ .|
+overload ^ with outer_product
+overload .| with left_contraction
+
+fn
+intersection_line_line (a : line, b : line) : point =
+  let
+    val p = dual a .| b
+  in
+    if p.e0 = 0.0 then
+      (* The lines are parallel (or coincident, if p is all zeros). *)
+      p
+    else
+      (* Normalize the intersection point. *)
+      @{e1 = p.e1 / p.e0,
+        e2 = p.e2 / p.e0,
+        e0 = 1.0}
+  end
+
+fn
+which_side_point_line (a : point, b : line) : Sgn =
+  (* 1 = left, 0 = lies on the line, ~1 = right *)
+  let
+    val x = dual b .| a
+  in
+    if x < 0.0 then
+      ~1
+    else if x > 0.0 then
+      1
+    else
+      0
+  end
+
+overload intersection with intersection_line_line
+overload which_side with which_side_point_line
+
+fn
+orientation_triangle (t : triangle) : Sgn =
+  (* 1 = counterclockwise, 0 = collinear, ~1 = clockwise *)
+  which_side (t.2, t.0 ^ t.1)
+
+overload orientation with orientation_triangle
+
+fn
+set_orientation_triangle {s : int | abs s == 1}
+                         (t : triangle, s : int s) : triangle =
+  (* 1 = counterclockwise, ~1 = clockwise. If the triangle is
+     collinear, leave it unchanged. If the triangle does need
+     rearrangement, do so by swapping vertices t.1 and t.2. *)
+  let
+    val s0 = orientation t
+  in
+    if (s = 0) + (s = s0) then
+      t
+    else
+      @(t.0, t.2, t.1)
+  end
+
+overload set_orientation with set_orientation_triangle
+
+fn
+overlap_triangle_triangle (t1 : triangle, t2 : triangle) : bool =
+  let
+    val t1 = set_orientation (t1, 1)
+    and t2 = set_orientation (t2, 1)
+
+    (* The lines that form the sides of the triangles. *)
+    val s1 = @(t1.0 ^ t1.1, t1.1 ^ t1.2, t1.2 ^ t1.0)
+    val s2 = @(t2.0 ^ t2.1, t2.1 ^ t2.2, t2.2 ^ t2.0)
+
+    fn
+    sides_intersect (pa : point, pb : point, ln_p : line,
+                     qa : point, qb : point, ln_q : line) : bool =
+      let
+        val x = intersection (ln_p, ln_q)
+      in
+        if x.e0 <> 0.0 then
+          let
+            val px_min = min (pa.e1, pb.e1)
+            and px_max = max (pa.e1, pb.e1)
+            and py_min = min (pa.e2, pb.e1)
+            and py_max = max (pa.e2, pb.e1)
+
+            val px_min2 = px_min + px_min
+            and px_max2 = px_max + px_max
+            and py_min2 = py_min + py_min
+            and py_max2 = py_max + py_max
+
+            val px_min_eps = abs (px_min) * dbl_epsilon
+            and px_max_eps = abs (px_max) * dbl_epsilon
+            val py_min_eps = abs (py_min) * dbl_epsilon
+            and py_max_eps = abs (py_max) * dbl_epsilon
+          in
+            if px_min2 - px_min_eps <= x.e1 + x.e1
+                && x.e1 + x.e1 <= px_max2 + px_max_eps
+                && py_min2 - py_min_eps <= x.e2 + x.e2
+                && x.e2 + x.e2 <= py_max2 + py_max_eps then
+              let
+                val qx_min = min (qa.e1, qb.e1)
+                and qx_max = max (qa.e1, qb.e1)
+                and qy_min = min (qa.e2, qb.e1)
+                and qy_max = max (qa.e2, qb.e1)
+
+                val qx_min2 = qx_min + qx_min
+                and qx_max2 = qx_max + qx_max
+                and qy_min2 = qy_min + qy_min
+                and qy_max2 = qy_max + qy_max
+
+                val qx_min_eps = abs (qx_min) * dbl_epsilon
+                and qx_max_eps = abs (qx_max) * dbl_epsilon
+                val qy_min_eps = abs (qy_min) * dbl_epsilon
+                and qy_max_eps = abs (qy_max) * dbl_epsilon
+              in
+                qx_min2 - qx_min_eps <= x.e1 + x.e1
+                  && x.e1 + x.e1 <= qx_max2 + qx_max_eps
+                  && qy_min2 - qy_min_eps <= x.e2 + x.e2
+                  && x.e2 + x.e2 <= qy_max2 + qy_max_eps
+              end
+            else
+              false
+          end
+        else if x.e1 = 0.0 && x.e2 = 0.0 then
+          (* The lines are coincident *)
+          ~(max (qa.e1, qb.e1) < min (pa.e1, pb.e1)
+              || max (pa.e1, pb.e1) < min (qa.e1, qb.e1))
+            && ~(max (qa.e2, qb.e2) < min (pa.e2, pb.e2)
+                  || max (pa.e2, pb.e2) < min (qa.e2, qb.e2))
+        else
+          (* The lines are parallel. *)
+          false
+      end
+
+    fn
+    sides_intersection_tests () : bool =
+           sides_intersect (t1.0, t1.1, s1.0, t2.0, t2.1, s2.0)
+        || sides_intersect (t1.0, t1.1, s1.0, t2.1, t2.2, s2.1)
+        || sides_intersect (t1.0, t1.1, s1.0, t2.2, t2.0, s2.2)
+        || sides_intersect (t1.1, t1.2, s1.1, t2.0, t2.1, s2.0)
+        || sides_intersect (t1.1, t1.2, s1.1, t2.1, t2.2, s2.1)
+        || sides_intersect (t1.1, t1.2, s1.1, t2.2, t2.0, s2.2)
+        || sides_intersect (t1.2, t1.0, s1.2, t2.0, t2.1, s2.0)
+        || sides_intersect (t1.2, t1.0, s1.2, t2.1, t2.2, s2.1)
+        || sides_intersect (t1.2, t1.0, s1.2, t2.2, t2.0, s2.2)
+
+    fn
+    points_approx_equal (p : point, q : point) : bool =
+      let
+        val @{e1 = px, e2 = py, e0 = _} = p
+        and @{e1 = qx, e2 = qy, e0 = _} = q
+
+        val x_max_eps = max (abs px, abs qx) * dbl_epsilon
+        and y_max_eps = max (abs py, abs py) * dbl_epsilon
+      in
+        abs ((px + px) - (qx + qx)) <= x_max_eps
+          && abs ((py + py) - (qy + qy)) <= y_max_eps
+      end
+
+    fn
+    vertex_vertex_tests () : bool =
+           points_approx_equal (t1.0, t2.0)
+        || points_approx_equal (t1.0, t2.1)
+        || points_approx_equal (t1.0, t2.2)
+        || points_approx_equal (t1.1, t2.0)
+        || points_approx_equal (t1.1, t2.1)
+        || points_approx_equal (t1.1, t2.2)
+        || points_approx_equal (t1.2, t2.0)
+        || points_approx_equal (t1.2, t2.1)
+        || points_approx_equal (t1.2, t2.2)
+
+    fn
+    is_inside (a : point, b : @(line, line, line)) : bool =
+           which_side (a, b.0) = 1
+        && which_side (a, b.1) = 1
+        && which_side (a, b.2) = 1
+
+    fn
+    vertex_insideness_tests () : bool =
+           is_inside (t1.0, s2)
+        || is_inside (t1.1, s2)
+        || is_inside (t1.2, s2)
+        || is_inside (t2.0, s1)
+        || is_inside (t2.1, s1)
+        || is_inside (t2.2, s1)
+  in
+    sides_intersection_tests ()
+      || vertex_vertex_tests ()
+      || vertex_insideness_tests ()
+  end
+
+overload overlap with overlap_triangle_triangle
+
+fn
+println_triangle (t : triangle) : void =
+  println! ("(", t.0.e1, ",", t.0.e2, ")--(",
+            t.1.e1, ",", t.1.e2, ")--(",
+            t.2.e1, ",", t.2.e2, ")--cycle")
+
+fn
+test_triangles (t1 : triangle, t2 : triangle) : void =
+  begin
+    println_triangle t1;
+    println_triangle t2;
+    println! ("  overlap: ", overlap (t1, t2))
+  end
+
+implement
+main () =
+  begin
+    println! ();
+    test_triangles (@(Pt (0.0, 0.0),
+                      Pt (5.0, 0.0),
+                      Pt (0.0, 5.0)),
+                    @(Pt (0.0, 0.0),
+                      Pt (5.0, 0.0),
+                      Pt (0.0, 6.0)));
+    test_triangles (@(Pt (0.0, 0.0),
+                      Pt (0.0, 5.0),
+                      Pt (5.0, 0.0)),
+                    @(Pt (0.0, 0.0),
+                      Pt (0.0, 5.0),
+                      Pt (5.0, 0.0)));
+    test_triangles (@(Pt (0.0, 0.0),
+                      Pt (5.0, 0.0),
+                      Pt (0.0, 5.0)),
+                    @(Pt (~10.0, 0.0),
+                      Pt ( ~5.0, 0.0),
+                      Pt ( ~1.0, 6.0)));
+    test_triangles (@(Pt (0.0, 0.0),
+                      Pt (5.0, 0.0),
+                      Pt (2.5, 5.0)),
+                    @(Pt (0.0,  4.0),
+                      Pt (2.5, ~1.0),
+                      Pt (5.0,  4.0)));
+    test_triangles (@(Pt (0.0, 0.0),
+                      Pt (1.0, 1.0),
+                      Pt (0.0, 2.0)),
+                    @(Pt (2.0, 1.0),
+                      Pt (3.0, 0.0),
+                      Pt (3.0, 2.0)));
+    test_triangles (@(Pt (0.0, 0.0),
+                      Pt (1.0, 1.0),
+                      Pt (0.0, 2.0)),
+                    @(Pt (2.0,  1.0),
+                      Pt (3.0, ~2.0),
+                      Pt (3.0,  4.0)));
+    test_triangles (@(Pt (0.0, 0.0),
+                      Pt (1.0, 0.0),
+                      Pt (0.0, 1.0)),
+                    @(Pt (1.0, 0.0),
+                      Pt (2.0, 0.0),
+                      Pt (1.0, 1.0)));
+
+    println! ();
+    println! ("What follows is a test where one triangle is ",
+              "contained entirely");
+    println! ("inside the other. Without such a test, our ",
+              "algorithm would have");
+    println! ("one of its features undemonstrated.");
+    println! ();
+    test_triangles (@(Pt ( 0.0,  0.0),
+                      Pt (10.0,  0.0),
+                      Pt ( 5.0, 10.0)),
+                    @(Pt ( 4.0,  1.0),
+                      Pt ( 5.0,  2.0),
+                      Pt ( 6.0,  1.0)));
+    println! ();
+
+    0
+  end

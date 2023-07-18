@@ -23,15 +23,15 @@ armstrong(Exp, PSum):-
 	  Min is 10^(Exp - 1)
 	  ; Min is 0
 	),
-	Max is 10^Exp,
+	Max is 10^Exp - 1,
 	combi(Exp, DigList, Comb),
 	powSum(Comb, Exp, 0, PSum),
 	between(Min, Max, PSum),
 	digits(PSum, DList),
 	sort(0, @=<, DList, DSort),	% hold equal digits
-	( PSum =:= 0, Comb = [0] ->	% special case because
-	  true		% DList in digits(0, DList) is [] and not [0]
-	  ; DSort = Comb
+	( DSort = Comb;
+      PSum =:= 0,	% special case because
+	  Comb = [0]	% DList in digits(0, DList) is [] and not [0]
 	).
 	
 do:-between(1, 7, Exp),

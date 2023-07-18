@@ -1,1 +1,1 @@
- say(BEGIN [*] 2..10);
+ say BEGIN [*] 2..10;

@@ -1,0 +1,97 @@
+100H: /* DISPLAY THE CONTENTS OF A FASTA FORMT FILE                          */
+
+   DECLARE FALSE    LITERALLY '0', TRUE LITERALLY '0FFH';
+   DECLARE NL$CHAR  LITERALLY '0AH';                     /* NEWLINE: CHAR 10 */
+   DECLARE CR$CHAR  LITERALLY '0DH';             /* CARRIAGE RETURN, CHAR 13 */
+   DECLARE EOF$CHAR LITERALLY '26';                      /* EOF: CTRL-Z      */
+   /* CP/M BDOS SYSTEM CALL, RETURNS A VALUE                                 */
+   BDOS: PROCEDURE( FN, ARG )BYTE; DECLARE FN BYTE, ARG ADDRESS; GOTO 5; END;
+   /* CP/M BDOS SYSTEM CALL, NO RETURN VALUE */
+   BDOS$P: PROCEDURE( FN, ARG );   DECLARE FN BYTE, ARG ADDRESS; GOTO 5; END;
+   EXIT:      PROCEDURE; CALL BDOS$P( 0, 0 ); END;      /* CP/M SYSTEM RESET */
+   PR$CHAR:   PROCEDURE( C ); DECLARE C BYTE;    CALL BDOS$P( 2, C );    END;
+   PR$STRING: PROCEDURE( S ); DECLARE S ADDRESS; CALL BDOS$P( 9, S );    END;
+   PR$NL:     PROCEDURE; CALL PR$STRING( .( 0DH, NL$CHAR, '$' ) );       END;
+   FL$EXISTS: PROCEDURE( FCB )BYTE; /* RETURNS TRUE IF THE FILE NAMED IN THE */
+      DECLARE FCB ADDRESS;          /*                 FCB EXISTS            */
+      RETURN ( BDOS( 17, FCB ) < 4 );
+   END FL$EXISTS ;
+   FL$OPEN:   PROCEDURE( FCB )BYTE; /* OPEN THE FILE WITH THE SPECIFIED FCB  */
+      DECLARE FCB ADDRESS;
+      RETURN ( BDOS( 15, FCB ) < 4 );
+   END FL$OPEN;
+   FL$READ:   PROCEDURE( FCB )BYTE; /* READ THE NEXT RECORD FROM FCB         */
+      DECLARE FCB ADDRESS;
+      RETURN ( BDOS( 20, FCB ) = 0 );
+   END FL$READ;
+   FL$CLOSE:  PROCEDURE( FCB )BYTE; /* CLOSE THE FILE WITH THE SPECIFIED FCB */
+      DECLARE FCB ADDRESS;
+      RETURN ( BDOS( 16, FCB ) < 4 );
+   END FL$CLOSE;
+
+   /* I/O USES FILE CONTROL BLOCKS CONTAINING THE FILE-NAME, POSITION, ETC.  */
+   /* WHEN THE PROGRAM IS RUN, THE CCP WILL FIRST PARSE THE COMMAND LINE AND */
+   /* PUT THE FIRST PARAMETER IN FCB1, THE SECOND PARAMETER IN FCB2          */
+   /* BUT FCB2 OVERLAYS THE END OF FCB1 AND THE DMA BUFFER OVERLAYS THE END  */
+   /* OF FCB2                                                                */
+
+   DECLARE FCB$SIZE      LITERALLY '36';  /* SIZE OF A FCB                   */
+   DECLARE FCB1          LITERALLY '5CH'; /* ADDRESS OF FIRST  FCB           */
+   DECLARE FCB2          LITERALLY '6CH'; /* ADDRESS OF SECOND FCB           */
+   DECLARE DMA$BUFFER    LITERALLY '80H'; /* DEFAULT DMA BUFFER ADDRESS      */
+   DECLARE DMA$SIZE      LITERALLY '128'; /* SIZE OF THE DMA BUFFER          */
+
+   DECLARE F$PTR ADDRESS, F$CHAR BASED F$PTR BYTE;
+
+   /* CLEAR THE PARTS OF FCB1 OVERLAYED BY FCB2                              */
+   DO F$PTR = FCB1 + 12 TO FCB1 + ( FCB$SIZE - 1 );
+      F$CHAR = 0;
+   END;
+
+   /* SHOW THE FASTA DATA, IF THE FILE EXISTS                                */
+   IF NOT FL$EXISTS( FCB1 ) THEN DO;    /* THE FILE DOES NOT EXIST           */
+      CALL PR$STRING( .'FILE NOT FOUND$' );CALL PR$NL;
+      END;
+   ELSE IF NOT FL$OPEN( FCB1 ) THEN DO; /* UNABLE TO OPEN THE FILE           */
+      CALL PR$STRING( .'UNABLE TO OPEN THE FILE$' );CALL PR$NL;
+      END;
+   ELSE DO; /* FILE EXISTS AND OPENED OK - ATTEMPT TO SHOW THE DATA          */
+      DECLARE ( BOL, GOT$RCD, IS$HEADING ) BYTE, DMA$END ADDRESS;
+      DMA$END    = DMA$BUFFER + ( DMA$SIZE - 1 );
+      GOT$RCD    = FL$READ( FCB1 );                  /* GET THE FIRST RECORD */
+      F$PTR      = DMA$BUFFER;
+      BOL        = TRUE;
+      IS$HEADING = FALSE;
+      DO WHILE GOT$RCD;
+         IF F$PTR > DMA$END THEN DO;                        /* END OF BUFFER */
+            GOT$RCD = FL$READ( FCB1 );               /* GET THE NEXT RECORDD */
+            F$PTR   = DMA$BUFFER;
+            END;
+         ELSE IF F$CHAR = NL$CHAR THEN DO;                    /* END OF LINE */
+            IF IS$HEADING THEN DO;
+                CALL PR$STRING( .': $' );
+                IS$HEADING = FALSE;
+            END;
+            BOL = TRUE;
+            END;
+         ELSE IF F$CHAR = CR$CHAR THEN DO; END;    /* IGNORE CARRIAGE RETURN */
+         ELSE IF F$CHAR = EOF$CHAR THEN GOT$RCD  = FALSE;     /* END OF FILE */
+         ELSE DO;                                  /* HAVE ANOTHER CHARACTER */
+             IF NOT BOL THEN CALL PR$CHAR( F$CHAR );  /* NOT FIRST CHARACTER */
+             ELSE DO;          /* FIRST CHARACTER - CHECK FOR A HEADING LINE */
+                 BOL = FALSE;
+                 IF IS$HEADING := F$CHAR = '>' THEN CALL PR$NL;
+                 ELSE                               CALL PR$CHAR( F$CHAR );
+             END;
+         END;
+         F$PTR = F$PTR + 1;
+      END;
+      /* CLOSE THE FILE                                                      */
+      IF NOT FL$CLOSE( FCB1 ) THEN DO;
+         CALL PR$STRING( .'UNABLE TO CLOSE THE FILE$' ); CALL PR$NL;
+      END;
+   END;
+
+   CALL EXIT;
+
+EOF

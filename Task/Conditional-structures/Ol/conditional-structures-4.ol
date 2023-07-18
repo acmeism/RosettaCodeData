@@ -1,10 +1,23 @@
-(case (* 2 2)
-   (3
-      (print "case: 3"))
-   (4
-      (print "case: 4"))
-   ((5 6 7)
-      (print "case: 5 or 6 or 7"))
-   (else
-      (print "case: i don't know")))
-; ==> case: 4
+(if (= (* 2 2) 4)
+   (print "if-then-else*: equal")
+else
+   (print "if-then-else*: ..just do something..")
+   (print "if-then-else*: non equal"))
+; ==> if-then-else*: equal
+
+(if (= (* 2 2) 4)
+then
+   (print "if-then-else*: ..just do something..")
+   (print "if-then-else*: equal")
+else
+   (print "if-then-else*: ..just do something..")
+   (print "if-then-else*: non equal"))
+; ==> if-then-else*: ..just do something..
+; ==> if-then-else*: equal
+
+(if (= (* 2 2) 4) ; same as `when`
+then
+   (print "if-then-else*: ..just do something..")
+   (print "if-then-else*: equal"))
+; ==> if-then-else*: ..just do something..
+; ==> if-then-else*: equal

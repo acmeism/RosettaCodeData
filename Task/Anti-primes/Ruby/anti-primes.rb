@@ -1,6 +1,6 @@
 require 'prime'
 def num_divisors(n)
-  n.prime_division.inject(1){|prod, (_p,n)| prod *= (n + 1) }
+  n.prime_division.inject(1){|prod, (_p,n)| prod * (n + 1) }
 end
 
 anti_primes = Enumerator.new do |y| # y is the yielder

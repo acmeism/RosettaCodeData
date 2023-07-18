@@ -7,7 +7,7 @@ std::vector<uint32_t> count(8, 0);
 std::vector<bool> used(10, false);
 uint32_t largest = 0;
 
-bool is_colorful(uint32_t number) {
+bool is_colorful(const uint32_t& number) {
 	if ( number > 98'765'432 ) {
 		return false;
 	}
@@ -42,7 +42,7 @@ bool is_colorful(uint32_t number) {
 	return true;
 }
 
-void count_colorful(uint32_t taken, uint32_t number, uint32_t digits) {
+void count_colorful(const uint32_t& taken, const uint32_t& number, const uint32_t& digits) {
 	if ( taken == 0 ) {
 		for ( uint32_t digit = 0; digit < 10; ++digit ) {
 			used[digit] = true;

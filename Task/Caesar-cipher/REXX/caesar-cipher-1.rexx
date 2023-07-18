@@ -1,22 +1,35 @@
-/*REXX program supports the  Caesar cypher for the Latin alphabet only,  no punctuation */
-/*──────────── or blanks allowed,  all lowercase Latin letters are treated as uppercase.*/
-parse arg key .;    arg . p                      /*get key & uppercased text to be used.*/
-p= space(p, 0)                                   /*elide any and all spaces (blanks).   */
-                    say 'Caesar cypher key:' key /*echo the Caesar cypher key to console*/
-                    say '       plain text:' p   /*  "   "       plain text    "    "   */
-y= Caesar(p, key);  say '         cyphered:' y   /*  "   "    cyphered text    "    "   */
-z= Caesar(y,-key);  say '       uncyphered:' z   /*  "   "  uncyphered text    "    "   */
-if z\==p  then say  "plain text doesn't match uncyphered cyphered text."
-exit 0                                           /*stick a fork in it,  we're all done. */
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-Caesar: procedure; arg s,k;  @= 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        ak= abs(k)                               /*obtain the absolute value of the key.*/
-        L= length(@)                             /*obtain the length of the  @  string. */
-        if ak>length(@)-1  |  k==0  then  call err k  'key is invalid.'
-        _= verify(s, @)                          /*any illegal characters specified ?   */
-        if _\==0  then call err 'unsupported character:'   substr(s, _, 1)
-        if k>0    then ky= k + 1                 /*either cypher it,  or ···            */
-                  else ky= L + 1 - ak            /*     decypher it.                    */
-        return translate(s, substr(@ || @,  ky,  L),   @)   /*return the processed text.*/
-/*──────────────────────────────────────────────────────────────────────────────────────*/
-err:    say;      say '***error***';       say;          say arg(1);      say;     exit 13
+/*REXX program supports the Caesar cipher for the Latin alphabet only,  */
+/* no punctuation or blanks allowed, lowercase is treated as uppercase. */
+Parse Upper Arg key text     /* get key & uppercased text to be ciphered*/
+text=space(text,0)           /* elide any and blanks                    */
+Say 'Caesar cipher key:' key      /* echo the Caesar cipher key         */
+Say '       plain text:' text     /*   "   "       plain text           */
+code=caesar(text,key)
+Say '         ciphered:' code     /*   "   "    ciphered text           */
+back=caesar(code,-key)
+Say '       unciphered:' back     /*   "   "  unciphered text           */
+If back\==text Then
+  Say "unciphered text doesn't match plain text."
+Exit                              /* stick a fork in it,  we're all done*/
+/*----------------------------------------------------------------------*/
+caesar: Procedure
+  Parse Arg text,key
+  abc='ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  If abs(key)>length(abc)-1|key==0 Then
+    Call err 'key ('key') is invalid.'
+  badpos=verify(text,abc)          /* any illegal character in the text */
+  If badpos\==0 Then
+    Call err 'unsupported character:' substr(text,badpos,1)
+  If key>0 Then                        /* cipher                        */
+    key2=key+1
+  Else                                 /* decipher                      */
+    key2=length(abc)+key+1
+  Return translate(text,substr(abc||abc,key2,length(abc)),abc)
+/*----------------------------------------------------------------------*/
+err:
+  Say
+  Say '***error***'
+  Say
+  Say arg(1)
+  Say
+  Exit 13

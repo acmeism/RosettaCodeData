@@ -1,0 +1,493 @@
+/* ARM assembly Raspberry PI  */
+/*  program averageMed.s   */
+/* use quickselect look pseudo code in wikipedia  quickselect */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for constantes see task include a file in arm assembly */
+.include "../constantes.inc"
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szMessResultValue:        .asciz "Result  : "
+szCarriageReturn:         .asciz "\n"
+
+.align 4
+TableNumber:              .float 4.1, 5.6, 7.2, 1.7, 9.3, 4.4, 3.2
+.equ NBELEMENTS,      (. - TableNumber) / 4
+TableNumber2:	          .float 4.1, 7.2, 1.7, 9.3, 4.4, 3.2
+.equ NBELEMENTS2,      (. - TableNumber2) / 4
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sZoneConv:             .skip 24
+sZoneConv1:            .skip 24
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                                    @ entry of program
+
+    ldr r0,iAdrTableNumber               @ address number table
+    mov r1,#0                            @ index first item
+    mov r2,#NBELEMENTS -1                @ index last item
+    bl searchMedian
+    ldr r0,iAdrTableNumber2               @ address number table 2
+    mov r1,#0                             @ index first item
+    mov r2,#NBELEMENTS2 -1                @ index last item
+    bl searchMedian
+
+100:                                     @ standard end of the program
+    mov r0, #0                           @ return code
+    mov r7, #EXIT                        @ request to exit program
+    svc #0                               @ perform the system call
+
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrTableNumber:          .int TableNumber
+iAdrTableNumber2:         .int TableNumber2
+iAdrsZoneConv:            .int sZoneConv
+iAdrszMessResultValue:    .int szMessResultValue
+/***************************************************/
+/*   search median term in float array                       */
+/***************************************************/
+/* r0 contains the address of table */
+/* r1 contains index of first item  */
+/* r2 contains index of last item   */
+searchMedian:
+    push {r1-r5,lr}                @ save registers
+    mov r5,r0                      @ save array address
+    add r4,r1,r2
+    add r4,r4,#1                   @ sum numbers terms
+    tst r4,#1                      @ odd ?
+    bne 1f
+    lsr r3,r4,#1                   @ compute median index
+    bl select                      @ call selection
+    vmov s0,r0                     @ save first result
+    sub r3,r3,#1                   @ second term
+    mov r0,r5
+    bl select                      @ call selection
+    vmov s1,r0                     @ save 2ieme résult
+    vadd.f32 s0,s1                 @ compute average two résults
+    mov r0,#2
+    vmov s1,r0
+    vcvt.f32.u32 s1,s1             @ conversion integer -> float
+    vdiv.f32 s0,s0,s1
+    b 2f
+1:                                 @ even
+    lsr r3,r4,#1
+    bl select                      @ call selection
+    vmov s0,r0
+2:
+    ldr r0,iAdrsZoneConv           @ conversion float in decimal string
+    bl convertirFloat
+    mov r0,#3                      @ and display result
+    ldr r1,iAdrszMessResultValue
+    ldr r2,iAdrsZoneConv
+    ldr r3,iAdrszCarriageReturn
+    bl displayStrings
+100:                               @ end function
+    pop {r1-r5,pc}                 @ restaur  register
+/***************************************************/
+/*   Appel récursif selection                      */
+/***************************************************/
+/* r0 contains the address of table */
+/* r1 contains index of first item  */
+/* r2 contains index of last item   */
+/* r3 contains search index */
+/* r0 return final value in float */
+/* remark : the final result is a float returned in r0 register */
+select:
+    push {r1-r6,lr}                @ save registers
+    mov r6,r3                      @ save search index
+    cmp r1,r2                      @ first = last ?
+    ldreq r0,[r0,r1,lsl #2]        @ return value of first index
+    beq 100f                       @ yes -> end
+    add r3,r1,r2
+    lsr r3,r3,#1                   @ compute median pivot
+    mov r4,r0                      @ save r0
+    mov r5,r2                      @ save r2
+    bl partition                   @ cutting into 2 parts
+    cmp r6,r0                      @ pivot is ok ?
+    ldreq r0,[r4,r0,lsl #2]        @ return value
+    beq 100f
+    bgt 1f
+    sub r2,r0,#1                   @ index partition  - 1
+    mov r0,r4                      @ array address
+    mov r3,r6                      @ search index
+    bl select                      @ select lower part
+    b 100f
+1:
+    add r1,r0,#1                   @ index begin = index partition + 1
+    mov r0,r4                      @ array address
+    mov r2,r5                      @ last item
+    mov r3,r6                      @ search index
+    bl select                      @ select higter part
+ 100:                              @ end function
+    pop {r1-r6,pc}                 @ restaur  register
+/******************************************************************/
+/*      Partition table elements                                */
+/******************************************************************/
+/* r0 contains the address of table */
+/* r1 contains index of first item  */
+/* r2 contains index of last item   */
+/* r3 contains index of pivot */
+partition:
+    push {r1-r6,lr}                                    @ save registers
+    ldr r4,[r0,r3,lsl #2]                              @ load value of pivot
+    ldr r5,[r0,r2,lsl #2]                              @ load value last index
+    str r5,[r0,r3,lsl #2]                              @ swap value of pivot
+    str r4,[r0,r2,lsl #2]                              @ and value last index
+    mov r3,r1                                          @ init with first index
+1:                                                     @ begin loop
+    ldr r6,[r0,r3,lsl #2]                              @ load value
+    cmp r6,r4                                          @ compare loop value and pivot value
+    ldrlt r5,[r0,r1,lsl #2]                            @ if < swap value table
+    strlt r6,[r0,r1,lsl #2]
+    strlt r5,[r0,r3,lsl #2]
+    addlt r1,#1                                        @ and increment index 1
+    add r3,#1                                          @ increment index 2
+    cmp r3,r2                                          @ end ?
+    blt 1b                                             @ no loop
+    ldr r5,[r0,r1,lsl #2]                              @ swap value
+    str r4,[r0,r1,lsl #2]
+    str r5,[r0,r2,lsl #2]
+    mov r0,r1                                          @ return index partition
+100:
+    pop {r1-r6,pc}
+
+/***************************************************/
+/*   display multi strings                    */
+/***************************************************/
+/* r0  contains number strings address */
+/* r1 address string1 */
+/* r2 address string2 */
+/* r3 address string3 */
+/* other address on the stack */
+/* thinck to add  number other address * 4 to add to the stack */
+displayStrings:            @ INFO:  displayStrings
+    push {r1-r4,fp,lr}     @ save des registres
+    add fp,sp,#24          @ save paraméters address (6 registers saved * 4 bytes)
+    mov r4,r0              @ save strings number
+    cmp r4,#0              @ 0 string -> end
+    ble 100f
+    mov r0,r1              @ string 1
+    bl affichageMess
+    cmp r4,#1              @ number > 1
+    ble 100f
+    mov r0,r2
+    bl affichageMess
+    cmp r4,#2
+    ble 100f
+    mov r0,r3
+    bl affichageMess
+    cmp r4,#3
+    ble 100f
+    mov r3,#3
+    sub r2,r4,#4
+1:                         @ loop extract address string on stack
+    ldr r0,[fp,r2,lsl #2]
+    bl affichageMess
+    subs r2,#1
+    bge 1b
+100:
+    pop {r1-r4,fp,pc}
+/******************************************************************/
+/*     Conversion Float                                            */
+/******************************************************************/
+/* s0  contains Float */
+/* r0 contains address conversion area  mini 20 charactèrs*/
+/* r0 return result length */
+convertirFloat:
+    push {r1-r7,lr}
+    vpush {s0-s2}
+    mov r6,r0                 @ save area address
+    vmov r0,s0
+    mov r1,#0
+    vmov s1,r1
+    movs r7,#0                @ result length
+    movs r3,#'+'
+    strb r3,[r6]              @ sign + forcing
+    mov r2,r0
+    lsls r2,#1                @ extraction bit 31
+    bcc 1f                    @ positive ?
+    lsrs r0,r2,#1             @ raz sign if negative
+    movs r3,#'-'              @ sign -
+    strb r3,[r6]
+1:
+    adds r7,#1                @ next position
+    cmp r0,#0                 @ case of positive or negative 0
+    bne 2f
+    movs r3,#'0'
+    strb r3,[r6,r7]           @ store character 0
+    adds r7,#1                @ next position
+    movs r3,#0
+    strb r3,[r6,r7]           @ store  0 final
+    mov r0,r7                 @ return length
+    b 100f                    @ and end
+2:
+    ldr r2,iMaskExposant
+    mov r1,r0
+    ands r1,r2                @ exposant = 255 ?
+    cmp r1,r2
+    bne 4f
+    lsls r0,#10               @ bit 22 à 0 ?
+    bcc 3f                    @ yes
+    movs r2,#'N'              @ case of Nan. store byte, if not possible store int
+    strb r2,[r6]              @ area no aligned
+    movs r2,#'a'
+    strb r2,[r6,#1]
+    movs r2,#'n'
+    strb r2,[r6,#2]
+    movs r2,#0                @ 0 final
+    strb r2,[r6,#3]
+    movs r0,#3                @ return length 3
+    b 100f
+3:                            @ case infini positive or négative
+    movs r2,#'I'
+    strb r2,[r6,r7]
+    adds r7,#1
+    movs r2,#'n'
+    strb r2,[r6,r7]
+    adds r7,#1
+    movs r2,#'f'
+    strb r2,[r6,r7]
+    adds r7,#1
+    movs r2,#0
+    strb r2,[r6,r7]
+    mov r0,r7
+    b 100f
+4:
+    bl normaliserFloat
+    mov r5,r0                @ save exposant
+    VCVT.U32.f32  s2,s0      @ integer value of  integer part
+    vmov r0,s2               @ integer part
+    VCVT.F32.U32  s1,s2      @ conversion float
+    vsub.f32 s1,s0,s1        @ extraction fract part
+    vldr s2,iConst1
+    vmul.f32 s1,s2,s1        @ to crop it in full
+
+    VCVT.U32.f32  s1,s1      @ integer conversion
+    vmov r4,s1               @ fract value
+                             @ integer conversion in  r0
+    mov r2,r6                @ save address area begin
+    adds r6,r7
+    mov r1,r6
+    bl conversion10
+    add r6,r0
+    movs r3,#','
+    strb r3,[r6]
+    adds r6,#1
+
+    mov r0,r4                @ conversion fractional part
+    mov r1,r6
+    bl conversion10SP        @ spécial routine with conservation begin 0
+    add r6,r0
+    subs r6,#1
+                             @ remove trailing zeros
+5:
+    ldrb r0,[r6]
+    cmp r0,#'0'
+    bne 6f
+    subs r6,#1
+    b 5b
+6:
+    cmp r0,#','
+    bne 7f
+    subs r6,#1
+7:
+    adds r6,#1
+    movs r3,#'E'
+    strb r3,[r6]
+    adds r6,#1
+    mov r0,r5                  @ conversion exposant
+    mov r3,r0
+    lsls r3,#1
+    bcc 4f
+    rsbs r0,r0,#0
+    movs r3,#'-'
+    strb r3,[r6]
+    adds r6,#1
+4:
+    mov r1,r6
+    bl conversion10
+    add r6,r0
+
+    movs r3,#0
+    strb r3,[r6]
+    adds r6,#1
+    mov r0,r6
+    subs r0,r2                 @ return length result
+    subs r0,#1                 @ - 0 final
+
+100:
+    vpop {s0-s2}
+    pop {r1-r7,pc}
+iMaskExposant:            .int 0xFF<<23
+iConst1:                  .float 0f1E9
+
+/***************************************************/
+/*   normaliser float                              */
+/***************************************************/
+/* r0 contain float value (always positive value and <> Nan) */
+/* s0 return new value  */
+/* r0 return exposant */
+normaliserFloat:
+    push {lr}               @ save  registre
+    vmov s0,r0              @ value float
+    movs r0,#0              @ exposant
+    vldr s1,iConstE7        @ no normalisation for value < 1E7
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 10f                 @ if s0  < iConstE7
+
+    vldr s1,iConstE32
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 1f
+    vldr s1,iConstE32
+    vdiv.f32 s0,s0,s1
+    adds r0,#32
+1:
+    vldr s1,iConstE16
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 2f
+    vldr s1,iConstE16
+    vdiv.f32 s0,s0,s1
+    adds r0,#16
+2:
+    vldr s1,iConstE8
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 3f
+    vldr s1,iConstE8
+    vdiv.f32 s0,s0,s1
+    adds r0,#8
+3:
+    vldr s1,iConstE4
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 4f
+    vldr s1,iConstE4
+    vdiv.f32 s0,s0,s1
+    adds r0,#4
+4:
+    vldr s1,iConstE2
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 5f
+    vldr s1,iConstE2
+    vdiv.f32 s0,s0,s1
+    adds r0,#2
+5:
+    vldr s1,iConstE1
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    blo 10f
+    vldr s1,iConstE1
+    vdiv.f32 s0,s0,s1
+    adds r0,#1
+
+10:
+    vldr s1,iConstME5        @ pas de normalisation pour les valeurs > 1E-5
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 100f
+    vldr s1,iConstME31
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 11f
+    vldr s1,iConstE32
+
+    vmul.f32 s0,s0,s1
+    subs r0,#32
+11:
+    vldr s1,iConstME15
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 12f
+    vldr s1,iConstE16
+    vmul.f32 s0,s0,s1
+    subs r0,#16
+12:
+    vldr s1,iConstME7
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 13f
+    vldr s1,iConstE8
+    vmul.f32 s0,s0,s1
+    subs r0,#8
+13:
+    vldr s1,iConstME3
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 14f
+    vldr s1,iConstE4
+    vmul.f32 s0,s0,s1
+    subs r0,#4
+14:
+    vldr s1,iConstME1
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 15f
+    vldr s1,iConstE2
+    vmul.f32 s0,s0,s1
+    subs r0,#2
+15:
+    vldr s1,iConstE0
+    vcmp.f32 s0,s1
+    vmrs APSR_nzcv,FPSCR
+    bhi 100f
+    vldr s1,iConstE1
+    vmul.f32 s0,s0,s1
+    subs r0,#1
+
+100:                       @ fin standard de la fonction
+    pop {pc}               @ restaur des registres
+.align 2
+iConstE7:             .float 0f1E7
+iConstE32:            .float 0f1E32
+iConstE16:            .float 0f1E16
+iConstE8:             .float 0f1E8
+iConstE4:             .float 0f1E4
+iConstE2:             .float 0f1E2
+iConstE1:             .float 0f1E1
+iConstME5:            .float 0f1E-5
+iConstME31:           .float 0f1E-31
+iConstME15:           .float 0f1E-15
+iConstME7:            .float 0f1E-7
+iConstME3:            .float 0f1E-3
+iConstME1:            .float 0f1E-1
+iConstE0:             .float 0f1E0
+/******************************************************************/
+/*     Décimal Conversion                                         */
+/******************************************************************/
+/* r0 contain value et r1 address conversion area   */
+conversion10SP:
+    push {r1-r6,lr}            @ save  registers
+    mov r5,r1
+    mov r4,#8
+    mov r2,r0
+    mov r1,#10                 @ conversion decimale
+1:                             @ begin loop
+    mov r0,r2                  @ copy number or quotients
+    bl division                @ r0 dividende r1 divisor r2 quotient r3 remainder
+    add r3,#48                 @ compute digit
+    strb r3,[r5,r4]            @ store byte area address (r5) + offset (r4)
+    subs r4,r4,#1              @ position précedente
+    bge 1b                     @ and loop if not < zero
+    mov r0,#8
+    mov r3,#0
+    strb r3,[r5,r0]            @ store 0 final
+100:
+    pop {r1-r6,pc}             @ restaur registers
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language ARM assembly */
+.include "../affichage.inc"

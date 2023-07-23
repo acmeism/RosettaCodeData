@@ -4,17 +4,16 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class EulerMullinSequence {
+public final class EulerMullinSequence {
 
 	public static void main(String[] aArgs) {
 		primes = listPrimesUpTo(1_000_000);
 		
 		System.out.println("The first 27 terms of the Euler-Mullin sequence:");
-		System.out.println(2);
+		System.out.print(2 + "  ");
 		for ( int i = 1; i < 27; i++ ) {
-			System.out.println(nextEulerMullin());
+			System.out.print(String.format("%s%s", nextEulerMullin(), ( i == 14 || i == 27 ) ? "\n" : "  "));
 		}
-
 	}
 	
 	private static BigInteger nextEulerMullin() {
@@ -25,7 +24,7 @@ public class EulerMullinSequence {
 	}
 	
 	private static BigInteger smallestPrimeFactor(BigInteger aNumber) {
-		if ( aNumber.isProbablePrime(probabilityLevel) ) {
+		if ( aNumber.isProbablePrime(CERTAINTY_LEVEL) ) {
 			return aNumber;
 		}
 		
@@ -86,6 +85,6 @@ public class EulerMullinSequence {
 	private static BigInteger product = BigInteger.TWO;
 	private static ThreadLocalRandom random = ThreadLocalRandom.current();
 	
-	private static final int probabilityLevel = 20;
+	private static final int CERTAINTY_LEVEL = 20;
 
 }

@@ -1,20 +1,16 @@
-#!/usr/bin/env luajit
-local to=arg[1] or tonumber(arg[1]) or 100
-local CF,CB=3,5
-local cf,cb=CF,CB
-for i=1,to do
-	cf,cb=cf-1,cb-1
-	if cf~=0 and cb~=0 then
-		io.write(i)
-	else
-		if cf==0 then
-			cf=CF
-			io.write("Fizz")
-		end
-		if cb==0 then
-			cb=CB
-			io.write("Buzz")
-		end
-	end
-	io.write(", ")
-end
+local mt = {
+	__newindex = (function (t, k, v)
+		if type(k) ~= "number" then	rawset(t, k, v)
+		elseif 0 == (k % 15) then	rawset(t, k, "fizzbuzz")
+		elseif 0 == (k % 5) then	rawset(t, k, "fizz")
+		elseif 0 == (k % 3) then	rawset(t, k, "buzz")
+		else 						rawset(t, k, k) end
+		return t[k]
+end)
+}
+
+local fizzbuzz = {}
+setmetatable(fizzbuzz, mt)
+
+for i=1,100 do fizzbuzz[i] = i end
+for i=1,100 do print(fizzbuzz[i]) end

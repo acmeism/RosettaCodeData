@@ -11,7 +11,7 @@ class Bifid {
 public:
 	Bifid(const int32_t n, std::string_view text) {
 		if ( text.length() != n * n ) {
-			throw new std::invalid_argument("Incorrect length of text");
+			throw std::invalid_argument("Incorrect length of text");
 		}
 
 		grid.resize(n);

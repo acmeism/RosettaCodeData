@@ -22,7 +22,7 @@ CONFIG DEFINITIONS                                         \ put things in the n
 : RESET   ( addr --) false swap ! ;
 : #        ( -- )      1 PARSE 2DROP ;                     \ parse line and throw away
 : =        ( addr --)  1 PARSE trim ROT PLACE ;            \ string assignment operator
-synonym ;  #                                               \ 2nd comment operator is simple
+' # alias ;                                                \ 2nd comment operator is simple
 
 FORTH DEFINITIONS
 \ this command reads and interprets the config.txt file

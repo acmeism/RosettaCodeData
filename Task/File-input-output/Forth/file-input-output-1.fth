@@ -3,8 +3,8 @@
     r/o open-file throw >r
     w/o create-file throw r>
     begin
-        pad maxstring  2 pick  read-file throw
-    ?dup while
+        pad 84  2 pick  read-file throw
+        ?dup while
         pad swap  3 pick  write-file throw
     repeat
     close-file throw

@@ -10,9 +10,10 @@ public final class Chess960SPID {
 		String[] positions = { "QNRBBNKR", "RNBQKBNR", "RQNBBKRN", "RNQBBKRN" };
 		
 		createKnightsTable();
+		createCorrectPieces();
 		
 		for ( String position : positions ) {		
-			validate("RQNBBKRN");
+			validate(position);
 			System.out.println("Position " + position + " has Chess960 SP-ID = " + calculateSPID(position));
 		}
 	}
@@ -26,8 +27,7 @@ public final class Chess960SPID {
 		for ( char ch : aPosition.toCharArray() ) {
 			pieces.merge(ch, 1, (oldV, newV) -> oldV + 1);
 		}
-		Set<Map.Entry<Character, Integer>> correctPieces =
-			Set.of(Map.entry('R', 2), Map.entry('N', 2), Map.entry('B', 2), Map.entry('Q', 1), Map.entry('K', 1));
+		
 		if ( ! pieces.entrySet().equals(correctPieces) ) {
 			throw new AssertionError("Chess position contains incorrect pieces.");
 		}
@@ -78,8 +78,14 @@ public final class Chess960SPID {
 		knightsTable.put(List.of(2, 3), 7);
 		knightsTable.put(List.of(2, 4), 8);
 		knightsTable.put(List.of(3, 4), 9);
-	}	
+	}
+	
+	private static void createCorrectPieces() {
+		correctPieces = Set.of(
+			Map.entry('R', 2), Map.entry('N', 2), Map.entry('B', 2), Map.entry('Q', 1), Map.entry('K', 1) );
+	}
 	
 	private static Map<List<Integer>, Integer> knightsTable;
+	private static Set<Map.Entry<Character, Integer>> correctPieces;
 
 }

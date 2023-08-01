@@ -11,3 +11,4 @@ repeat with n from 2 to 99999
         set end of nums to n
     end if
 end repeat
+return {|number(s) giving longest sequence length|:nums, |length of sequence|:longestLength}

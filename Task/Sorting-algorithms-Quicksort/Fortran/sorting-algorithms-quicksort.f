@@ -53,7 +53,7 @@ CONTAINS
        END IF
 
        CALL QSort(A(:marker-1),marker-1)
-       CALL QSort(A(marker:),nA-marker+1)
+       CALL QSort(A(marker:),nA-marker+1)  WARNING CAN GO BEYOND END OF ARRAY DO NOT USE THIS IMPLEMENTATION
 
     END IF
 

@@ -15,7 +15,7 @@ var (
     five  = big.NewInt(5)
     six   = big.NewInt(6)
     ten   = big.NewInt(10)
-    max   = big.NewInt(100000)
+    k100  = big.NewInt(100000)
 )
 
 func pollardRho(n, c *big.Int) *big.Int {
@@ -51,7 +51,7 @@ func pollardRho(n, c *big.Int) *big.Int {
     return d
 }
 
-func smallestPrimeFactorWheel(n *big.Int) *big.Int {
+func smallestPrimeFactorWheel(n, max *big.Int) *big.Int {
     if n.ProbablyPrime(15) {
         return n
     }
@@ -82,13 +82,13 @@ func smallestPrimeFactorWheel(n *big.Int) *big.Int {
 }
 
 func smallestPrimeFactor(n *big.Int) *big.Int {
-    s := smallestPrimeFactorWheel(n)
+    s := smallestPrimeFactorWheel(n, k100)
     if s != nil {
         return s
     }
     c := big.NewInt(1)
     s = new(big.Int).Set(n)
-    for n.Cmp(max) > 0 {
+    for {
         d := pollardRho(n, c)
         if d.Cmp(zero) == 0 {
             if c.Cmp(ten) == 0 {
@@ -96,20 +96,21 @@ func smallestPrimeFactor(n *big.Int) *big.Int {
             }
             c.Add(c, one)
         } else {
-            // can't be sure PR will find the smallest prime factor first
-            if d.Cmp(s) < 0 {
-                s.Set(d)
-            }
-            n.Quo(n, d)
-            if n.ProbablyPrime(5) {
-                if n.Cmp(s) < 0 {
-                    return n
+            // get the smallest prime factor of 'd'
+            factor := smallestPrimeFactorWheel(d, d)
+            // check whether n/d has a smaller prime factor
+            s = smallestPrimeFactorWheel(n.Quo(n, d), factor)
+            if s != nil {
+                if s.Cmp(factor) < 0 {
+                    return s
+                } else {
+                    return factor
                 }
-                return s
+            } else {
+                return factor
             }
         }
     }
-    return s
 }
 
 func main() {

@@ -2,7 +2,7 @@ begin
 
 comment - return n mod m;
 integer procedure mod(n, m);
-  value n, q; integer n, m;
+  value n, m; integer n, m;
 begin
   mod := n - m * entier(n / m);
 end;

@@ -1,7 +1,6 @@
 import std::io;
 
-fn int main()
+fn void main()
 {
-    io::println("Hello, World!");
-    return 0;
+    io::printn("Hello, World!");
 }

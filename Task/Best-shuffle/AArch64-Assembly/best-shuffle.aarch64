@@ -1,0 +1,195 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program shuffleperf64.s   */
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+/************************************/
+/* Initialized data                 */
+/************************************/
+.data
+szMessString:            .asciz "String :\n"
+szString1:               .asciz "abracadabra"
+.equ LGSTRING1,        . - szString1 - 1
+szString2:               .asciz "seesaw"
+.equ LGSTRING2,        . - szString2 - 1
+szString3:               .asciz "elk"
+.equ LGSTRING3,        . - szString3 - 1
+szString4:               .asciz "grrrrrr"
+.equ LGSTRING4,        . - szString4 - 1
+szString5:               .asciz "up"
+.equ LGSTRING5,        . - szString5 - 1
+szString6:               .asciz "a"
+.equ LGSTRING6,        . - szString6 - 1
+szCarriageReturn:       .asciz "\n"
+szMessStart:            .asciz "Program 64 bits start.\n"
+.align 4
+qGraine:                .quad  123456789
+/************************************/
+/* UnInitialized data               */
+/************************************/
+.bss
+sZoneConv:              .skip 24
+sBuffer:                .skip 80
+/************************************/
+/*  code section                    */
+/************************************/
+.text
+.global main
+main:
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+    ldr x0,qAdrszString1             // string address
+    mov x1,#LGSTRING1                // string length
+    ldr x2,qAdrsBuffer               // result address
+    bl testshuffle                   // call test
+    ldr x0,qAdrszString2
+    mov x1,#LGSTRING2
+    ldr x2,qAdrsBuffer
+    bl testshuffle
+    ldr x0,qAdrszString3
+    mov x1,#LGSTRING3
+    ldr x2,qAdrsBuffer
+    bl testshuffle
+    ldr x0,qAdrszString4
+    mov x1,#LGSTRING4
+    ldr x2,qAdrsBuffer
+    bl testshuffle
+    ldr x0,qAdrszString5
+    mov x1,#LGSTRING5
+    ldr x2,qAdrsBuffer
+    bl testshuffle
+    ldr x0,qAdrszString6
+    mov x1,#LGSTRING6
+    ldr x2,qAdrsBuffer
+    bl testshuffle
+100:                                 // standard end of the program
+    mov x0, #0                       // return code
+    mov x8, #EXIT                    // request to exit program
+    svc 0                            // perform system call
+qAdrszMessString:         .quad  szMessString
+qAdrsBuffer:              .quad  sBuffer
+qAdrszString1:            .quad  szString1
+qAdrszString2:            .quad  szString2
+qAdrszString3:            .quad  szString3
+qAdrszString4:            .quad  szString4
+qAdrszString5:            .quad  szString5
+qAdrszString6:            .quad  szString6
+qAdrszCarriageReturn:     .quad  szCarriageReturn
+qAdrszMessStart:          .quad  szMessStart
+/******************************************************************/
+/*     test shuffle strings                                       */
+/******************************************************************/
+/* x0 contains the address of the string */
+/* x1 contains string length */
+/* x2 contains result area */
+testshuffle:
+    stp x1,lr,[sp,-16]!          // register save
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    mov x3,x0                    // display string
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    mov x0,x3
+    bl shufflestrings
+    mov x0,x2                    // display result string
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    mov x4,#0                    // string index
+    mov x0,#0                    // score
+ 1:                              // compute score loop
+    ldrb w6,[x3,x4]
+    ldrb w5,[x2,x4]
+    cmp x6,x5
+    add x6,x0,1
+    csel x0,x6,x0,eq             // equal -> increment score
+    add x4,x4,#1
+    cmp x4,x1
+    blt 1b
+    ldr x1,qAdrsZoneConv
+    bl conversion10              // conversion score in decimal
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+100:
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+qAdrsZoneConv:       .quad  sZoneConv
+/******************************************************************/
+/*     shuffle strings  algorithme Fisher-Yates                   */
+/******************************************************************/
+/* x0 contains the address of the string */
+/* x1 contains string length */
+/* x2 contains address result string */
+shufflestrings:
+    stp x1,lr,[sp,-16]!               // TODO: save à completer
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    mov x3,#0
+1:                            // loop copy string in result
+    ldrb w4,[x0,x3]
+    strb w4,[x2,x3]
+    add x3,x3,#1
+    cmp x3,x1
+    ble 1b
+    sub x1,x1,#1              // last element
+2:
+    mov x0,x1
+    bl genereraleas           // call random
+    ldrb w4,[x2,x1]           // load byte string index loop
+    ldrb w3,[x2,x0]           // load byte string random index
+    strb w3,[x2,x1]           // and exchange
+    strb w4,[x2,x0]
+    subs x1,x1,#1
+    cmp x1,#1
+    bge 2b
+
+100:
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* x0 contains limit  */
+genereraleas:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    ldr x1,qAdrqGraine
+    ldr x2,[x1]
+    ldr x3,qNbDep1
+    mul x2,x3,x2
+    ldr x3,qNbDep2
+    add x2,x2,x3
+    str x2,[x1]                    // maj de la graine pour l appel suivant
+    cmp x0,#0
+    beq 100f
+    udiv x3,x2,x0
+    msub x0,x3,x0,x2               // résult = remainder
+
+100:                               // end function
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrqGraine: .quad qGraine
+qNbDep1:     .quad 0x0019660d
+qNbDep2:     .quad 0x3c6ef35f
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

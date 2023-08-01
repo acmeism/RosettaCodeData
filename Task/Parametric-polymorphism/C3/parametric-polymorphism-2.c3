@@ -1,7 +1,7 @@
-define IntTree = tree<int>::Tree;
+import tree;
 
 fn void test()
 {
-    IntTree inttree;
-    inttree.replaceAll(3);
+    Tree(<int>) inttree;
+    inttree.replace_all(3);
 }

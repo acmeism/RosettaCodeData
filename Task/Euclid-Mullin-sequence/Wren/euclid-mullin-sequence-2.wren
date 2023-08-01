@@ -2,45 +2,38 @@
 
 import "./gmp" for Mpz
 
-var max = Mpz.from(100000)
+var k100 = Mpz.from(100000)
 
-var smallestPrimeFactorWheel = Fn.new { |n|
+var smallestPrimeFactorTrial = Fn.new { |n, max|
     if (n.probPrime(15) > 0) return n
-    if (n.isEven) return Mpz.two
-    if (n.isDivisibleUi(3)) return Mpz.three
-    if (n.isDivisibleUi(5)) return Mpz.five
-    var k = Mpz.from(7)
-    var i = 0
-    var inc = [4, 2, 4, 2, 4, 6, 2, 6]
+    var k = Mpz.one
     while (k * k <= n) {
-        if (n.isDivisible(k)) return k
-        k.add(inc[i])
+        k.nextPrime
         if (k > max) return null
-        i = (i + 1) % 8
+        if (n.isDivisible(k)) return k
     }
 }
 
 var smallestPrimeFactor = Fn.new { |n|
-    var s = smallestPrimeFactorWheel.call(n)
+    var s = smallestPrimeFactorTrial.call(n, k100)
     if (s) return s
     var c = Mpz.one
-    s = n.copy()
-    while (n > max) {
+    while (true) {
         var d = Mpz.pollardRho(n, 2, c)
         if (d.isZero) {
             if (c == 100) Fiber.abort("Pollard Rho doesn't appear to be working.")
             c.inc
         } else {
-            // can't be sure PR will find the smallest prime factor first
-            s.min(d)
-            n.div(d)
-            if (n.probPrime(5) > 0) return Mpz.min(s, n)
+            // get the smallest prime factor of 'd'
+            var factor = smallestPrimeFactorTrial.call(d, d)
+            // check whether n/d has a smaller prime factor
+            s = smallestPrimeFactorTrial.call(n/d, factor)
+            return s ? Mpz.min(s, factor) : factor
         }
     }
-    return s
 }
 
-var k = 19
+var k = 27
 System.print("First %(k) terms of the Euclid–Mullin sequence:")
 System.print(2)
 var prod = Mpz.two

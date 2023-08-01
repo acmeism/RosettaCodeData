@@ -1,4 +1,4 @@
-module tree<Type>;
+module tree(<Type>);
 
 struct Tree
 {
@@ -7,9 +7,9 @@ struct Tree
     Tree* right;
 }
 
-fn void Tree.replaceAll(Tree* a_tree, Type new_value)
+fn void Tree.replace_all(&self, Type new_value)
 {
-    a_tree.value = new_value;
-    if (a_tree.left) a_tree.left.replaceAll(new_value);
-    if (a_tree.right) a_tree.right.replaceAll(new_value);
+    self.value = new_value;
+    if (self.left) self.left.replace_all(new_value);
+    if (self.right) self.right.replace_all(new_value);
 }

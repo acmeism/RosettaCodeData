@@ -32,3 +32,9 @@ D[N] = np.log(abs(Z[N])) * abs(Z[N]) / abs(dZ[N])
 
 plt.imshow(D ** 0.1, cmap=plt.cm.twilight_shifted, origin="lower")
 plt.savefig("Mandelbrot_set_3.png", dpi=200)
+
+N, thickness = D > 0, 0.01  # boundary detection and interpolation
+D[N] = np.maximum(1 - D[N] / thickness, 0)
+
+plt.imshow(D ** 2.0, cmap=plt.cm.binary, origin="lower")
+plt.savefig("Mandelbrot_set_4.png", dpi=200)

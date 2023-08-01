@@ -1,0 +1,176 @@
+/* ARM assembly Raspberry PI  */
+/*  program shuffleperf.s   */
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language ARM assembly*/
+.include "../constantes.inc"
+
+/************************************/
+/* Initialized data                 */
+/************************************/
+.data
+szMessString:            .asciz "String :\n"
+szString1:               .asciz "abracadabra"
+.equ LGSTRING1,        . - szString1 - 1
+szString2:               .asciz "seesaw"
+.equ LGSTRING2,        . - szString2 - 1
+szString3:               .asciz "elk"
+.equ LGSTRING3,        . - szString3 - 1
+szString4:               .asciz "grrrrrr"
+.equ LGSTRING4,        . - szString4 - 1
+szString5:               .asciz "up"
+.equ LGSTRING5,        . - szString5 - 1
+szString6:               .asciz "a"
+.equ LGSTRING6,        . - szString6 - 1
+szCarriageReturn:       .asciz "\n"
+.align 4
+iGraine:                .int 1234567
+/************************************/
+/* UnInitialized data               */
+/************************************/
+.bss
+sZoneConv:              .skip 24
+sBuffer:                .skip 80
+/************************************/
+/*  code section                    */
+/************************************/
+.text
+.global main
+main:
+    ldr r0,iAdrszString1             @ string address
+    mov r1,#LGSTRING1                @ string length
+    ldr r2,iAdrsBuffer               @ result address
+    bl testshuffle                   @ call test
+    ldr r0,iAdrszString2
+    mov r1,#LGSTRING2
+    ldr r2,iAdrsBuffer
+    bl testshuffle
+    ldr r0,iAdrszString3
+    mov r1,#LGSTRING3
+    ldr r2,iAdrsBuffer
+    bl testshuffle
+    ldr r0,iAdrszString4
+    mov r1,#LGSTRING4
+    ldr r2,iAdrsBuffer
+    bl testshuffle
+    ldr r0,iAdrszString5
+    mov r1,#LGSTRING5
+    ldr r2,iAdrsBuffer
+    bl testshuffle
+    ldr r0,iAdrszString6
+    mov r1,#LGSTRING6
+    ldr r2,iAdrsBuffer
+    bl testshuffle
+100:                                 @ standard end of the program
+    mov r0, #0                       @ return code
+    mov r7, #EXIT                    @ request to exit program
+    svc 0                            @ perform system call
+iAdrszMessString:         .int szMessString
+iAdrsBuffer:              .int sBuffer
+iAdrszString1:            .int szString1
+iAdrszString2:            .int szString2
+iAdrszString3:            .int szString3
+iAdrszString4:            .int szString4
+iAdrszString5:            .int szString5
+iAdrszString6:            .int szString6
+iAdrszCarriageReturn:     .int szCarriageReturn
+/******************************************************************/
+/*     test shuffle strings                                       */
+/******************************************************************/
+/* r0 contains the address of the string */
+/* r1 contains string length */
+/* r2 contains result area */
+testshuffle:
+    push {r1-r6,lr}              @ save  registers
+    mov r3,r0                    @ display string
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    mov r0,r3
+    bl shufflestrings
+    mov r0,r2                    @ display result string
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    mov r4,#0                    @ string index
+    mov r0,#0                    @ score
+ 1:                              @ compute score loop
+    ldrb r6,[r3,r4]
+    ldrb r5,[r2,r4]
+    cmp r6,r5
+    addeq r0,r0,#1               @ equal -> increment score
+    add r4,r4,#1
+    cmp r4,r1
+    blt 1b
+    ldr r1,iAdrsZoneConv
+    bl conversion10              @ conversion score in decimal
+    ldr r0,iAdrsZoneConv
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+100:
+    pop {r1-r6,pc}                @ restaur registers
+iAdrsZoneConv:       .int sZoneConv
+/******************************************************************/
+/*     shuffle strings  algorithme Fisher-Yates                   */
+/******************************************************************/
+/* r0 contains the address of the string */
+/* r1 contains string length */
+/* r2 contains address result string */
+shufflestrings:
+    push {r1-r4,lr}           @ save  registers
+    mov r3,#0
+1:                            @ loop copy string in result
+    ldrb r4,[r0,r3]
+    strb r4,[r2,r3]
+    add r3,r3,#1
+    cmp r3,r1
+    ble 1b
+    sub r1,r1,#1              @ last element
+2:
+    mov r0,r1                 @ limit random number
+    bl genereraleas           @ call random
+    ldrb r4,[r2,r1]           @ load byte string index loop
+    ldrb r3,[r2,r0]           @ load byte string random index
+    strb r3,[r2,r1]           @ and exchange
+    strb r4,[r2,r0]
+    subs r1,r1,#1
+    cmp r1,#1
+    bge 2b
+
+100:
+    pop {r1-r4,pc}            @ restaur registers
+
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* r0 contains limit  */
+genereraleas:
+    push {r1-r4,lr}                   @ save registers
+    ldr r4,iAdriGraine
+    ldr r2,[r4]
+    ldr r3,iNbDep1
+    mul r2,r3,r2
+    ldr r3,iNbDep1
+    add r2,r2,r3
+    str r2,[r4]                       @ maj de la graine pour l appel suivant
+    cmp r0,#0
+    beq 100f
+    mov r1,r0                         @ divisor
+    mov r0,r2                         @ dividende
+    bl division
+    mov r0,r3                         @ résult = remainder
+
+100:                                  @ end function
+    pop {r1-r4,pc}                    @ restaur registers
+iAdriGraine: .int iGraine
+iNbDep1:     .int 0x343FD
+iNbDep2:     .int 0x269EC3
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language ARM assembly*/
+.include "../affichage.inc"

@@ -7,11 +7,12 @@ BEGIN # find amicable pairs p1, p2 where each is equal to the other's proper div
         OD
     OD;
     # find the amicable pairs up to 20 000                            #
-    FOR p1 TO UPB pd sum DO
-        FOR p2 FROM p1 + 1 TO UPB pd sum DO
-            IF pd sum[ p1 ] = p2 AND pd sum[ p2 ] = p1 THEN
-                print( ( whole( p1, -6 ), " and ", whole( p2, -6 ), " are an amicable pair", newline ) )
+    FOR p1 TO UPB pd sum - 1 DO
+        INT pd sum p1 = pd sum[ p1 ];
+        IF pd sum p1 > p1 AND pd sum p1 <= UPB pd sum THEN
+            IF pd sum[ pd sum p1 ] = p1 THEN
+                print( ( whole( p1, -6 ), " and ", whole( pd sum p1, -6 ), " are an amicable pair", newline ) )
             FI
-        OD
+        FI
     OD
 END

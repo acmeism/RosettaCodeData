@@ -39,12 +39,12 @@ def JordanPolya($lim; $mx):
   | .mx = ($mx // $lim)
   | until(.k > .mx or .t > $lim;
         .t *= .k
-	| if .t <= $lim
+        | if .t <= $lim
           then reduce JordanPolya(($lim/.t)|floor; .t)[] as $rest (.;
                  .v += [.t * $rest] )
           | .k += 1
-	  else .
-	  end)
+	      else .
+	      end)
   | .v	
   | unique
   end;
@@ -72,7 +72,7 @@ def Decompose($n; $start):
             .f += [$i]
             | .m = (.m / .factorial[$i])
             | if .m == 1 then .emit = .f else . end)
-	| if .emit then ., break $out else . end)
+        | if .emit then ., break $out else . end)
   | if .emit then .emit
     elif .i == 2 then Decompose($n; .start-1)
     else empty

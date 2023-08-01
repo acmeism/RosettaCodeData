@@ -1,0 +1,1 @@
+for(;;) io::printn("SPAM");

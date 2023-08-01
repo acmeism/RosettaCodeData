@@ -1,0 +1,19 @@
+FUNCTION amicable (nr)
+     suma = 1
+     FOR d = 2 TO SQR(nr)
+	 IF nr MOD d = 0 THEN suma = suma + d + nr / d
+     NEXT
+	 amicable = suma
+END FUNCTION
+
+PRINT "The pairs of amicable numbers below 20,000 are :"
+PRINT
+
+size = 18500
+FOR n = 1 TO size
+    m = amicable(n)
+    IF m > n AND amicable(m) = n THEN
+	PRINT USING "##### and #####"; n; m
+	END IF
+NEXT
+END

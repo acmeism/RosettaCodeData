@@ -1,10 +1,15 @@
-: read-lines' ( max addr len -- )
-  r/w open-file throw >r
+: read-lines' ( filename-addr filename-len -- )
+  r/o open-file throw ( buffer-len wfileid )
+  over 2 +  \ Add space for up to two line terminators after the buffer.
+  allocate throw  ( buffer-len wfileid buffer-addr )
+  -rot 2>r ( buffer-addr )
   begin
-    pad over r@ read-line throw
+    dup 2r@ read-line throw  ( buffer bytes-read flag )
   while
-    pad swap  ( c-addr u )
-    cr type
-  repeat r> close-file throw 2drop ;
+      ( buffer-addr bytes-read )
+      over swap type cr
+  repeat
+  drop free throw
+  2r> close-file throw  drop ;
 
-4096 s" /Users/johnSmith/input.f" read-lines'
+4096 s" infile.txt" read-lines'

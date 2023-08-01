@@ -2,28 +2,6 @@ BEGIN # find some Pell numbers - trans FreeBASIC ( which is trans Phix )     #
 
     PR read "primes.incl.a68" PR
 
-    PROC is prime = ( LONG INT v )BOOL:
-         IF v < 2 THEN FALSE
-         ELIF v MOD 2 = 0 THEN v = 2
-         ELIF v MOD 3 = 0 THEN v = 3
-         ELSE
-             LONG INT  d := 5;
-             BOOL result := TRUE;
-             WHILE result AND d * d <= v DO
-                IF v MOD d = 0
-                THEN result := FALSE
-                ELSE
-                    d +:= 2;
-                    IF v MOD d = 0
-                    THEN result := FALSE
-                    ELSE d +:= 4
-                    FI
-                FI
-            OD;
-            result
-         FI # is prime # ;
-
-    INT n;
     [ 0 : 90 ]LONG INT p, pl;
     p[  0 ] := 0; p[  1 ] := 1;
     pl[ 0 ] := 2; pl[ 1 ] := 2;
@@ -45,21 +23,19 @@ BEGIN # find some Pell numbers - trans FreeBASIC ( which is trans Phix )     #
     OD;
 
     print( ( newline, "First 10 Pell primes:", newline, "index Pell prime", newline ) );
-    INT pdx := 2;
-    INT c   := 0;
-    WHILE
+    INT c := 0;
+    FOR pdx FROM 2 WHILE c < 10 DO
         IF is probably prime( p[ pdx ] ) THEN
             print( ( whole( pdx, -5 ), " ", whole( p[ pdx ], 0 ), newline ) );
             c +:= 1
-        FI;
-        pdx +:= 1;
-        c < 10
-    DO SKIP OD;
+        FI
+    OD;
 
-    [ 0 : 20 ]LONG INT nsw;
-    FOR n FROM 0 TO 19 DO nsw[ n ] := p[ 2 * n ] + p[ 2 * n + 1 ] OD;
     print( ( newline, newline, "First 20 Newman-Shank-Williams numbers:", newline ) );
-    FOR n FROM 0 TO 19 DO print( ( " ", whole( nsw[ n ], 0 ) ) ); IF n = 13 THEN print( ( newline ) ) FI OD;
+    FOR n FROM 0 TO 19 DO
+        LONG INT nsw = p[ 2 * n ] + p[ 2 * n + 1 ];
+        print( ( " ", whole( nsw, 0 ) ) ); IF n = 13 THEN print( ( newline ) ) FI
+    OD;
 
     print( ( newline, newline, "First 20 near isosceles right triangles:", newline ) );
     LONG INT i0 := 0, i1 := 1, t := 1, found := 0;

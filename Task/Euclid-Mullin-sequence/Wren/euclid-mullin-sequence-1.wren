@@ -4,33 +4,9 @@ var zero = BigInt.zero
 var one  = BigInt.one
 var two  = BigInt.two
 var ten  = BigInt.ten
-var max  = BigInt.new(100000)
+var k100 = BigInt.new(100000)
 
-var pollardRho = Fn.new { |n, c|
-    var g = Fn.new { |x, y| (x*x + c) % n }
-    var x = two
-    var y = two
-    var z = one
-    var d = max + one
-    var count = 0
-    while (true) {
-        x = g.call(x, n)
-        y = g.call(g.call(y, n), n)
-        d = (x - y).abs % n
-        z = z * d
-        count = count + 1
-        if (count == 100) {
-            d = BigInt.gcd(z, n)
-            if (d != one) break
-            z = one
-            count = 0
-        }
-    }
-    if (d == n) return zero
-    return d
-}
-
-var smallestPrimeFactorWheel = Fn.new { |n|
+var smallestPrimeFactorWheel = Fn.new { |n, max|
     if (n.isProbablePrime(5)) return n
     if (n % 2 == zero) return BigInt.two
     if (n % 3 == zero) return BigInt.three
@@ -47,23 +23,22 @@ var smallestPrimeFactorWheel = Fn.new { |n|
 }
 
 var smallestPrimeFactor = Fn.new { |n|
-    var s = smallestPrimeFactorWheel.call(n)
+    var s = smallestPrimeFactorWheel.call(n, k100)
     if (s) return s
     var c = one
-    s = n
-    while (n > max) {
-        var d = pollardRho.call(n, c)
+    while (true) {
+        var d = BigInt.pollardRho(n, 2, c)
         if (d == 0) {
             if (c == ten) Fiber.abort("Pollard Rho doesn't appear to be working.")
             c = c + one
         } else {
-            // can't be sure PR will find the smallest prime factor first
-            s = BigInt.min(s, d)
-            n = n / d
-            if (n.isProbablePrime(2)) return BigInt.min(s, n)
+            // get the smallest prime factor of 'd'
+            var factor = smallestPrimeFactorWheel.call(d, d)
+            // check whether n/d has a smaller prime factor
+            s = smallestPrimeFactorWheel.call(n/d, factor)
+            return s ? BigInt.min(s, factor) : factor
         }
     }
-    return s
 }
 
 var k = 16

@@ -20,7 +20,7 @@ func toFractions(fractList: string): seq[Rat] =
   for f in fractList.split():
     result.add(newRat(f))
 
-proc run(progStr: string; init, maxSteps: Natural = 0) =
+proc run(progStr: string; init: Natural; maxSteps: Natural = 0) =
   ## Run the program described by string "progStr" with initial value "init",
   ## stopping after "maxSteps" (0 means for ever).
   ## Display the value after each step.
@@ -39,7 +39,7 @@ iterator primes(n: Natural): int =
   for val in prog.values(2):
     if isZero(val and (val - 1)):
       # This is a power of two.
-      yield val.digits(2) - 1   # Compute the exponent as number of binary digits minus one.
+      yield val.digits(2).int - 1   # Compute the exponent as number of binary digits minus one.
       inc count
       if count == n:
         break

@@ -1,13 +1,16 @@
+      *> Tectonics: cobc -xj ring-terminal-bell.cob -std=cobol85
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. mf-bell.
+       PROGRAM-ID. ring-ascii-bell.
 
-       DATA DIVISION.
-       WORKING-STORAGE SECTION.
-       01  bell-code              PIC X USAGE COMP-X VALUE 22.
-       01  dummy-param            PIC X.
+       ENVIRONMENT DIVISION.
+       CONFIGURATION SECTION.
+       OBJECT-COMPUTER.
+           PROGRAM COLLATING SEQUENCE IS ASCII.
+       SPECIAL-NAMES.
+           ALPHABET ASCII IS STANDARD-1.
 
        PROCEDURE DIVISION.
-           CALL X"AF" USING bell-code, dummy-param
+           DISPLAY FUNCTION CHAR(8) WITH NO ADVANCING
+           STOP RUN.
 
-           GOBACK
-           .
+       END PROGRAM ring-ascii-bell.

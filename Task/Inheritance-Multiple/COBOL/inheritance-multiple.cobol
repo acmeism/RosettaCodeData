@@ -1,12 +1,16 @@
+       IDENTIFICATION DIVISION.
        CLASS-ID. Camera.
            *> ...
        END CLASS Camera.
 
+       IDENTIFICATION DIVISION.
        CLASS-ID. Mobile-Phone.
            *> ...
        END CLASS Mobile-Phone.
 
-       CLASS-ID. Camera-Phone INHERITS Camera, Mobile-Phone.
+       IDENTIFICATION DIVISION.
+       CLASS-ID. Camera-Phone
+           INHERITS FROM Camera, Mobile-Phone.
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
        REPOSITORY.

@@ -1,0 +1,174 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program cptletters64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ BUFFERSIZE, 300000
+
+/************************************/
+/* Initialized data                 */
+/************************************/
+.data
+szMessOpen:           .asciz "File open error.\n"
+szMessStat:           .asciz "File information error.\n"
+szMessRead:           .asciz "File read error.\n"
+szMessClose:          .asciz "File close error.\n"
+szMessDecryptText:    .asciz "Decrypted text :\n"
+szMessCryptText:      .asciz "Encrypted text :\n"
+szMessErrorChar:      .asciz "Character text not Ok!\n"
+szFileName:           .asciz "unixdict.txt"
+//szFileName:           .asciz "test1.txt"
+szMessResult:         .asciz "Result:    = "
+szCarriageReturn:     .asciz "\n"
+szMessStart:          .asciz "Program 64 bits start.\n"
+/************************************/
+/* UnInitialized data               */
+/************************************/
+.bss
+sZoneConv:            .skip 24
+tabCptLetters:        .skip 8 * 52         // (A-Z a-z) counter array
+sBuffer:              .skip BUFFERSIZE     // file buffer
+/************************************/
+/*  code section                    */
+/************************************/
+.text
+.global main
+main:                        // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+    mov x0,AT_FDCWD
+    ldr x1,qAdrszFileName    // file name
+    mov x2,#O_RDWR           // flags
+    mov x3,#0                // mode
+    mov x8,#OPEN             // file open
+    svc 0
+    cmp x0,#0                // error ?
+    ble 99f
+    mov x9,x0                // FD save
+
+    mov x0,x9
+    ldr x1,qAdrsBuffer
+    ldr x2,#iBufferSize
+    mov x8,#READ             // call system read file
+    svc 0
+    cmp x0,#0                // error read ?
+    blt 97f
+    mov x6,x0                // file size
+    mov x0,x9
+    mov x8,#CLOSE            // call system close file
+    svc 0
+    cmp x0,#0                // error close ?
+    blt 96f
+    ldr x0,qAdrsBuffer
+    mov x1,x6
+    bl cptLetters
+
+    b 100f
+96:
+    ldr x0,qAdrszMessClose
+    bl affichageMess
+    mov x0,#-1               // error
+    b 100f
+97:
+    ldr x0,qAdrszMessRead
+    bl affichageMess
+    mov x0,#-1               // error
+    b 100f
+99:
+    ldr x0,qAdrszMessOpen
+    bl  affichageMess
+    mov x0,#-1               // error
+
+100:                         // standard end of the program
+    mov x0, #0               // return code
+    mov x8, #EXIT            // request to exit program
+    svc 0                    // perform the system call
+
+qAdrsZoneConv:            .quad  sZoneConv
+qAdrszMessResult:         .quad  szMessResult
+qAdrszCarriageReturn:     .quad  szCarriageReturn
+qAdrszMessStart:          .quad  szMessStart
+qAdrszFileName:           .quad  szFileName
+qAdrszMessOpen:           .quad  szMessOpen
+qAdrszMessRead:           .quad  szMessRead
+qAdrszMessStat:           .quad  szMessStat
+qAdrszMessClose:          .quad  szMessClose
+qAdrsBuffer:              .quad  sBuffer
+iBufferSize:              .quad  BUFFERSIZE
+/***************************************************/
+/*   letters frequency                   */
+/***************************************************/
+/* r0 contains a file buffer */
+/* r1 contains string length */
+cptLetters:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    ldr x4,qAdrtabCptLetters   // counter array
+    mov x3,#0              // index string
+1:
+    ldrb w2,[x0,x3]        // load byte of string
+    cmp x2,#'A'            // select alpha characters lower or upper
+    blt 5f
+    cmp x2,#'Z'
+    bgt 2f
+    sub x5,x2,#65          // convert ascii upper in index array (0-25)
+    b 3f
+2:
+    cmp x2,#'z'
+    bgt 5f
+    cmp x2,#'a'
+    blt 5f
+    sub x5,x2,#97 - 26     // convert ascii lower in index array (26,52]
+3:
+    ldr x7,[x4,x5,lsl #3]  // load counter of load character
+    add x7,x7,#1           // increment counter
+    str x7,[x4,x5,lsl #3]  // and store
+5:
+    add x3,x3,#1           // increment text index
+    cmp x3,x1              // end ?
+    blt 1b                 // and loop
+
+    ldr x7,qAdrszMessResult
+    mov x2,65              // for upper ascci character
+    mov x3,#0
+6:                         // result display
+    ldr x1,[x4,x3,lsl #3]  // load counter
+    cmp x1,#0              // if zero not display
+    beq 7f
+    cmp x3,#25             // upper ?
+    add x2,x3,65           // for upper ascci character
+    add x8,x3,#97 - 26     // lower
+    csel x6,x2,x8,le       // compute ascii character
+    strb w6,[x7,#9]        // store in message
+    mov x0,x1              // convert count in decimal
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrszMessResult // and display
+    bl affichageMess
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+7:
+    add x3,x3,#1
+    cmp x3,#52
+    blt 6b
+
+
+ 100:
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16                 // TODO: retaur à completer
+    ret
+qAdrtabCptLetters:      .quad  tabCptLetters
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

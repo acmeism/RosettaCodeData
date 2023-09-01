@@ -6,5 +6,5 @@ main =
     ["apple", "orange"]
       |> Array.fromList
       |> Array.length
-      |> Basics.toString
+      |> String.fromInt
       |> Html.text

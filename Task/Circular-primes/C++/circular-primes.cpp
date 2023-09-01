@@ -1,7 +1,6 @@
 #include <cstdint>
 #include <algorithm>
 #include <iostream>
-#include <sstream>
 #include <gmpxx.h>
 
 typedef mpz_class integer;
@@ -10,16 +9,10 @@ bool is_prime(const integer& n, int reps = 50) {
     return mpz_probab_prime_p(n.get_mpz_t(), reps);
 }
 
-std::string to_string(const integer& n) {
-    std::ostringstream out;
-    out << n;
-    return out.str();
-}
-
 bool is_circular_prime(const integer& p) {
     if (!is_prime(p))
         return false;
-    std::string str(to_string(p));
+    std::string str = p.get_str();
     for (size_t i = 0, n = str.size(); i + 1 < n; ++i) {
         std::rotate(str.begin(), str.begin() + 1, str.end());
         integer p2(str, 10);
@@ -63,7 +56,7 @@ int main() {
     std::cout << '\n';
     std::cout << "Next 4 circular primes:\n";
     p = next_repunit(p);
-    std::string str(to_string(p));
+    std::string str = p.get_str();
     int digits = str.size();
     for (int count = 0; count < 4; ) {
         if (is_prime(p, 15)) {

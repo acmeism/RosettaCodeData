@@ -1,0 +1,39 @@
+include "NSLog.incl"
+
+// For remote uses like curl
+// #plist NSAppTransportSecurity @{NSAllowsArbitraryLoads:YES}
+
+local fn RunTerminalCommand( cmd as CFStringRef ) as CFStringRef
+————————————————————————————————————————————————————————————————————————————————————————————————————
+  ErrorRef          err = NULL
+  CFStringRef outputStr = NULL
+
+  TaskRef task = fn TaskInit
+  TaskSetExecutableURL( task, fn URLFileURLWithPath( @"/bin/zsh" ) )
+  CFStringRef cmdStr = fn StringWithFormat( @"%@", cmd )
+  CFArrayRef    args = fn ArrayWithObjects( @"-c", cmdStr, NULL )
+  TaskSetArguments( task, args )
+
+  PipeRef p = fn PipeInit
+  TaskSetStandardOutput( task, p )
+  TaskSetStandardError(  task, p )
+  FileHandleRef fh = fn PipeFileHandleForReading( p )
+
+  fn TaskLaunch( task, NULL )
+  TaskWaitUntilExit( task )
+
+  CFDataRef dta = fn FileHandleReadDataToEndOfFile( fh, @err )
+  if err then NSLog( @"Error reading file: %@", fn ErrorLocalizedDescription( err ) ) : exit fn
+
+  fn FileHandleClose( fh, @err )
+  if err then NSLog( @"Error closing file: %@", fn ErrorLocalizedDescription( err ) ) : exit fn
+
+  outputStr = fn StringWithData( dta, NSUTF8StringEncoding )
+end fn = outputStr
+
+CFStringRef cmd
+
+cmd = @"cal 2023"
+NSLog( @"%@", fn RunTerminalCommand( cmd ) )
+
+HandleEvents

@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 d, h = 200, 1200  # pixel density (= image width) and image height
 n, r = 8000, 10000  # number of iterations and escape radius (r > 2)
 
-a = -.743643887037158704752191506114774  # try: a, b, n = -1.748764520194788535, 3e-13, 800
-b = 0.131825904205311970493132056385139  # https://mathr.co.uk/web/m-location-analysis.html
+a = -.743643887037158704752191506114774  # https://mathr.co.uk/web/m-location-analysis.html
+b = 0.131825904205311970493132056385139  # try: a, b, n = -1.748764520194788535, 3e-13, 800
 
 x = np.linspace(0, 2, num=d+1)
 y = np.linspace(0, 2 * h / d, num=h+1)

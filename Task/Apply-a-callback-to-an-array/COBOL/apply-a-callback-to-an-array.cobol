@@ -1,23 +1,20 @@
-       IDENTIFICATION DIVISION.
-       PROGRAM-ID. Map.
+       >>SOURCE FORMAT IS FREE
+IDENTIFICATION DIVISION.
+PROGRAM-ID. map.
 
-       DATA DIVISION.
-       WORKING-STORAGE SECTION.
-       01  Table-Size CONSTANT 30.
+DATA DIVISION.
+LOCAL-STORAGE SECTION.
+01  i                  USAGE IS INDEX.
+01  table-size         CONSTANT AS 30.
+LINKAGE SECTION.
+01  table-param.
+    03 table-values    USAGE IS FLOAT-LONG, OCCURS table-size TIMES.
+01  func-ptr           USAGE IS PROGRAM-POINTER.
 
-       LOCAL-STORAGE SECTION.
-       01  I USAGE UNSIGNED-INT.
+PROCEDURE DIVISION USING BY REFERENCE table-param, BY VALUE func-ptr.
+    PERFORM VARYING i FROM 1 BY 1 UNTIL i IS GREATER THAN table-size
+        CALL func-ptr USING BY REFERENCE table-values(i)
+    END-PERFORM
+    GOBACK.
 
-       LINKAGE SECTION.
-       01  Table-Param.
-           03  Table-Values USAGE COMP-2 OCCURS Table-Size TIMES.
-
-       01  Func-Id PIC X(30).
-
-       PROCEDURE DIVISION USING Table-Param Func-Id.
-           PERFORM VARYING I FROM 1 BY 1 UNTIL Table-Size < I
-               CALL Func-Id USING BY REFERENCE Table-Values (I)
-           END-PERFORM
-
-           GOBACK
-           .
+END PROGRAM map.

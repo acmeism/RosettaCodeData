@@ -1,8 +1,11 @@
+       IDENTIFICATION DIVISION.
        CLASS-ID. Animal.
            *> ...
        END CLASS Animal.
 
-       CLASS-ID. Dog INHERITS Animal.
+       IDENTIFICATION DIVISION.
+       CLASS-ID. Dog
+           INHERITS FROM Animal.
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
        REPOSITORY.
@@ -11,7 +14,9 @@
            *> ...
        END CLASS Dog.
 
-       CLASS-ID. Cat INHERITS Animal.
+       IDENTIFICATION DIVISION.
+       CLASS-ID. Cat
+           INHERITS FROM Animal.
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
        REPOSITORY.
@@ -20,7 +25,9 @@
            *> ...
        END CLASS Cat.
 
-       CLASS-ID. Lab INHERITS Dog.
+       IDENTIFICATION DIVISION.
+       CLASS-ID. Lab
+           INHERITS FROM Dog.
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
        REPOSITORY.
@@ -29,7 +36,9 @@
            *> ...
        END CLASS Lab.
 
-       CLASS-ID. Collie INHERITS Dog.
+       IDENTIFICATION DIVISION.
+       CLASS-ID. Collie
+           INHERITS FROM Dog.
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
        REPOSITORY.

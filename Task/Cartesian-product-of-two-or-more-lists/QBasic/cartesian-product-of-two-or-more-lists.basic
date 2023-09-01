@@ -1,0 +1,36 @@
+DECLARE SUB cartesian (arr!())
+
+CLS
+DIM array(2, 2)
+array(1, 1) = 1: array(1, 2) = 2
+array(2, 1) = 3: array(2, 2) = 4
+CALL cartesian(array())
+array(1, 1) = 3: array(1, 2) = 4
+array(2, 1) = 1: array(2, 2) = 2
+CALL cartesian(array())
+END
+
+SUB cartesian (arr())
+u1 = 2: u2 = 2
+FOR i = 1 TO u1
+  PRINT "{";
+  FOR j = 1 TO u2
+    PRINT arr(i, j);
+    IF j < u1 THEN PRINT ",";
+  NEXT j
+  PRINT "}";
+  IF i < u2 THEN PRINT " x ";
+NEXT i
+PRINT " = {";
+FOR i = 1 TO u1
+  FOR j = 1 TO u2
+    PRINT "{"; arr(1, i); ","; arr(2, j); "}";
+    IF i < u2 THEN
+      PRINT ", ";
+    ELSE
+      IF j < u1 THEN PRINT ", ";
+    END IF
+  NEXT j
+NEXT i
+PRINT "}"
+END SUB

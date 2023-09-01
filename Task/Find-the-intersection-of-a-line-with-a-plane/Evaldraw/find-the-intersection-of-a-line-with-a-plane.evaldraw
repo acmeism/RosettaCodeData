@@ -1,0 +1,108 @@
+struct vec{x,y,z;};
+enum{GRIDRES=3} // Keep a NxN grid of intersection results.
+static vec intersections[GRIDRES][GRIDRES];
+static vec ipos = {0,5,-15};
+static vec ileft = {-1,0,0};
+static vec iup   = {0,-1,0};
+static vec ifor  = {0,0,1};
+()
+{
+  cls(0); clz(1e32);
+
+  setcam( ipos.x, ipos.y, ipos.z,
+    ileft.x, ileft.y, ileft.z, // flip right basis to left
+    iup.x, iup.y, iup.z, // flip down basis to up
+    ifor.x, ifor.y, ifor.z);
+
+  t=klock(0);
+  vec planePoint = {0,5,0};   // Plane Position
+  vec pN = {cos(t),1,sin(t)}; // PlaneNormal, un-normalized
+  normalize(pN);
+
+  for(x=0; x<GRIDRES; x++)
+  for(z=0; z<GRIDRES; z++)
+  {
+     scale = 4.5; halfgrid = scale*(GRIDRES-1)/2;
+     vec lineVector = {0,1,0}; // Direction of line
+     vec linePoint ={-halfgrid+scale*x, 5, -halfgrid+scale*z};
+
+     if (vecdot( lineVector, pN ) == 0 )
+     {
+       moveto(0,0); printf("Line and Plane dont intersect.");
+     } else {
+       vec isect;
+       isect_time = intersectionPoint(lineVector, linePoint, pN, planePoint, isect);
+       intersections[x][z] = isect; // Store for drawing grid
+
+       //setcol(255,255,0);  drawsph(isect.x, isect.y, isect.z, .1);
+       setcol(255,0,0); line(linePoint, isect);
+       unproject(isect);
+       setfont(8,12); setcol(255,255,255); printf("t=%2.1f", isect_time);
+     }
+  }
+  // drawgridPlane
+  setcol(255,0,255);
+  for(i=0; i<GRIDRES; i++)
+  for(j=0; j<GRIDRES; j++) {
+    vec p00 = intersections[i][j];
+    vec p10 = intersections[(i+1)%GRIDRES][j];
+    vec p01 = intersections[i][(j+1)%GRIDRES]; // oob wraps to 0 anyhow
+    line(p00,p10);
+    line(p00,p01);
+  }
+  setcol(192,192,192); moveto(0,0); printf("Line vs Plane intersection");
+}
+intersectionPoint(vec lineVector, vec linePoint, vec planeNormal, vec planePoint, vec isect){
+   vec diff; vecsub(diff,linePoint,planePoint);
+   vec pd; vecadd(pd, diff,planePoint);
+   t = -vecdot(diff,planeNormal) / vecdot(lineVector,planeNormal);
+   vec scaledVec; vecscalar(scaledVec, lineVector, t);
+   vecadd(isect, pd, scaledVec);
+   return t;
+}
+line(vec a, vec b) { moveto(a.x,a.y,a.z); lineto(b.x,b.y,b.z); }
+// -------------------------------------- VECTOR MATH
+vecScalar( vec out, vec a, s ) {
+   out.x = a.x * s;
+   out.y = a.y * s;
+   out.z = a.z * s;
+}
+vecAdd( vec out, vec a, vec b) {
+   out.x = a.x + b.x;
+   out.y = a.y + b.y;
+   out.z = a.z + b.z;
+}
+vecAdd( vec out, vec b) {
+   out.x += b.x;
+   out.y += b.y;
+   out.z += b.z;
+}
+vecSub( vec out, vec a, vec b) {
+   out.x = a.x - b.x;
+   out.y = a.y - b.y;
+   out.z = a.z - b.z;
+}
+vecCross( vec out, vec a, vec b) {
+   out.x = a.y*b.z - a.z*b.y;
+   out.y = a.z*b.x - a.x*b.z;
+   out.z = a.x*b.y - a.y*b.x;
+}
+vecDot( vec a, vec b) {
+   return a.x*b.x + a.y*b.y + a.z*b.z;
+}
+length( vec v ) {
+   return sqrt( vecdot(v,v) );
+}
+normalize( vec v ) {
+   len = length(v);
+   if ( len ) { v.x /= len; v.y /= len; v.z /= len; }
+}
+unproject(vec pt) { // unproject a 3D screenpoint
+  vec from_eye; vecsub(from_eye, pt, ipos);
+  nx = vecdot(from_eye, ileft);
+  ny = vecdot(from_eye, iup);
+  nz = vecdot(from_eye, ifor);
+  if (nz <= 0.5) return; // behind eye
+  f = xres/2/nz; // 90 degree projection
+  moveto(nx*f + xres/2, ny*f + yres/2 );
+}

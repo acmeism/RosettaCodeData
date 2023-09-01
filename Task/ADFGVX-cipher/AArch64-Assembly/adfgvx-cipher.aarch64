@@ -1,0 +1,792 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program adfgvx64.s   */
+/* remark 1 : At each launch, the random values are identical.
+   To change them, modify the value of the seed (graine) */
+/* remark 2 : this program not run in android with termux
+              because the call system stats is not find */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ SIZE,   6
+.equ SIZEC,  SIZE * SIZE
+.equ KEYSIZE,   9
+.equ FSTAT,        80
+.equ O_RDWR,  0x0002         // open for reading and writing
+
+/*******************************************/
+/* Structures                          **/
+/*******************************************/
+/* structure de type   stat 64 bits : infos fichier  */
+    .struct  0
+Stat_dev_t:                  // ID of device containing file
+    .struct Stat_dev_t + 8
+Stat_ino_t:                  // inode
+    .struct Stat_ino_t + 4
+Stat_mode_t:                 // File type and mode
+    .struct Stat_mode_t + 4
+Stat_nlink_t:                // Number of hard links
+    .struct Stat_nlink_t + 4
+Stat_uid_t:                  // User ID of owner
+    .struct Stat_uid_t + 8
+Stat_gid_t:                  // Group ID of owner
+    .struct Stat_gid_t + 8
+Stat_rdev_t:                 // Device ID (if special file)
+    .struct Stat_rdev_t + 8
+Stat_size_deb:               // la taille est sur 8 octets si gros fichiers
+     .struct Stat_size_deb + 4
+Stat_size_t:                 // Total size, in bytes
+    .struct Stat_size_t + 4
+Stat_blksize_t:              // Block size for filesystem I/O
+    .struct Stat_blksize_t + 4
+Stat_blkcnt_t:               // Number of 512B blocks allocated
+    .struct Stat_blkcnt_t + 4
+Stat_atime:                  // date et heure fichier
+    .struct Stat_atime + 8
+Stat_mtime:                  // date et heure modif fichier
+    .struct Stat_atime + 8
+Stat_ctime:                  // date et heure creation fichier
+    .struct Stat_atime + 8
+Stat_Fin:
+
+
+/*********************************/
+/* Initialized data              */
+/*********************************/
+.data
+szText:               .asciz "ATTACKAT1200AM"
+//szText:               .asciz "ABCDEFGHIJ"
+szMessOpen:           .asciz "File open error.\n"
+szMessStat:           .asciz "File information error.\n"
+szMessRead:           .asciz "File read error.\n"
+szMessClose:          .asciz "File close error.\n"
+szMessDecryptText:    .asciz "Decrypted text :\n"
+szMessCryptText:      .asciz "Encrypted text :\n"
+szMessErrorChar:      .asciz "Character text not Ok!\n"
+szFileName:           .asciz "unixdict.txt"
+szMessPolybius:       .asciz "6 x 6 Polybius square:\n"
+szTitle:              .asciz "  | A D F G V X\n---------------\n"
+szLine1:              .asciz "A |            \n"
+szLine2:              .asciz "D |            \n"
+szLine3:              .asciz "F |            \n"
+szLine4:              .asciz "G |            \n"
+szLine5:              .asciz "V |            \n"
+szLine6:              .asciz "X |            \n"
+szListCharCode:       .asciz "ADFGVX"
+szListChar:           .asciz "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+.equ LGLISTCHAR,      . - szListChar - 1
+szMessStart:          .asciz "Program 64 bits start.\n"
+szCarriageReturn:     .asciz "\n"
+.align 4
+
+qGraine:  .quad  1234567         // random init
+
+/*********************************/
+/* UnInitialized data            */
+/*********************************/
+.bss
+sKeyWord:              .skip 16
+sKeyWordSorted:        .skip 16
+tabPolybius:           .skip SIZE * SIZE + 4
+sBuffer:               .skip 1000
+sBuffex1:              .skip 1000
+sBuffex2:              .skip 1000
+tabPosit:              .skip 16
+tabPositInv:           .skip 16
+/*********************************/
+/*  code section                 */
+/*********************************/
+.text
+.global main
+main:                            // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+    bl createPolybius            // create 6*6 polybius
+
+    ldr x0,qAdrsKeyWord
+    bl generateKey               // generate key
+    cmp x0,#-1                   // file error ?
+    beq 100f
+    bl affichageMess             // display key
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    ldr x0,qAdrszMessCryptText
+    bl affichageMess
+    ldr x0,qAdrszText             // text encrypt
+    ldr x1,qAdrtabPolybius
+    ldr x2,qAdrsKeyWord
+    ldr x3,qAdrsBuffer            // result buffer
+    bl encryption
+    cmp x0,#-1                    // error if unknow character in text
+    beq 100f
+    bl affichageMess              // display text encrypted
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    ldr x0,qAdrszMessDecryptText
+    bl affichageMess
+    ldr x0,qAdrsBuffer            // text decrypt
+    ldr x1,qAdrtabPolybius
+    ldr x2,qAdrsKeyWord
+    ldr x3,qAdrsBuffex1           // result buffer
+    bl decryption
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+100:                             // standard end of the program
+    mov x0, #0                   // return code
+    mov x8, #EXIT                // request to exit program
+    svc #0                       // perform the system call
+
+qAdrszCarriageReturn:        .quad  szCarriageReturn
+qAdrszMessDecryptText:       .quad  szMessDecryptText
+qAdrszMessCryptText:         .quad  szMessCryptText
+qAdrszMessStart:             .quad  szMessStart
+qAdrsKeyWord:                .quad  sKeyWord
+qAdrszText:                  .quad  szText
+/***************************************************/
+/*   create 6 * 6 polybius                    */
+/***************************************************/
+createPolybius:
+    stp x1,lr,[sp,-16]!          // save registers
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    ldr x0,qAdrszListChar        // character list address
+    mov x1,#LGLISTCHAR           // character list size
+    ldr x2,qAdrtabPolybius
+    bl shufflestrings            // shuffle list
+    ldr x0,qAdrszMessPolybius
+    bl affichageMess
+    ldr x0,qAdrszTitle           // display polybius lines
+    bl affichageMess
+    ldr x0,qAdrszLine1
+    mov x3,#0
+    mov x4,#4
+1:
+    ldrb w1,[x2,x3]
+    strb w1,[x0,x4]
+    add x4,x4,#2
+    add x3,x3,#1
+    cmp x3,#SIZE
+    blt 1b
+    bl affichageMess
+    ldr x0,qAdrszLine2
+    mov x3,#SIZE
+    mov x4,#4
+2:
+    ldrb w1,[x2,x3]
+    strb w1,[x0,x4]
+    add x4,x4,#2
+    add x3,x3,#1
+    cmp x3,#SIZE * 2
+    blt 2b
+    bl affichageMess
+    ldr x0,qAdrszLine3
+    mov x3,#SIZE * 2
+    mov x4,#4
+3:
+    ldrb w1,[x2,x3]
+    strb w1,[x0,x4]
+    add x4,x4,#2
+    add x3,x3,#1
+    cmp x3,#SIZE * 3
+    blt 3b
+    bl affichageMess
+    ldr x0,qAdrszLine4
+    mov x3,#SIZE * 3
+    mov x4,#4
+4:
+    ldrb w1,[x2,x3]
+    strb w1,[x0,x4]
+    add x4,x4,#2
+    add x3,x3,#1
+    cmp x3,#SIZE * 4
+    blt 4b
+    bl affichageMess
+    ldr x0,qAdrszLine5
+    mov x3,#SIZE * 4
+    mov x4,#4
+5:
+    ldrb w1,[x2,x3]
+    strb w1,[x0,x4]
+    add x4,x4,#2
+    add x3,x3,#1
+    cmp x3,#SIZE * 5
+    blt 5b
+    bl affichageMess
+    ldr x0,qAdrszLine6
+    mov x3,#SIZE * 5
+    mov x4,#4
+6:
+    ldrb w1,[x2,x3]
+    strb w1,[x0,x4]
+    add x4,x4,#2
+    add x3,x3,#1
+    cmp x3,#SIZE * 6
+    blt 6b
+    bl affichageMess
+
+100:
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+qAdrszListChar:           .quad  szListChar
+qAdrtabPolybius:          .quad  tabPolybius
+qAdrszMessPolybius:       .quad  szMessPolybius
+qAdrszTitle:              .quad  szTitle
+qAdrszLine1:              .quad  szLine1
+qAdrszLine2:              .quad  szLine2
+qAdrszLine3:              .quad  szLine3
+qAdrszLine4:              .quad  szLine4
+qAdrszLine5:              .quad  szLine5
+qAdrszLine6:              .quad  szLine6
+/***************************************************/
+/*  generate key word                              */
+/***************************************************/
+/* x0  key word address */
+generateKey:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    stp x10,x11,[sp,-16]!
+    stp x12,x13,[sp,-16]!
+    mov x9,x0
+    mov x0,AT_FDCWD
+    ldr x1,qAdrszFileName    // file name
+    mov x2,#O_RDWR           // flags
+    mov x3,#0                // mode
+    mov x8,#OPEN             // file open
+    svc 0
+    cmp x0,#0                // error ?
+    ble 99f
+    mov x11,x0               // FD save
+    ldr x1,qAdrsBuffer       // buffer address
+    mov x8, #FSTAT           // call systeme NEWFSTAT
+    svc 0
+    cmp x0,#0
+    blt 98f
+                             //  load file size
+    ldr x1,qAdrsBuffer       // buffer address
+    ldr w6,[x1,#Stat_size_t] // file size
+    //ldr w6,[x1,mbox_data_size]
+    lsr x12,x6,#5            // align size to multiple 16 for stack alignement
+    lsl x12,x12,#5
+    add x12,x12,#32          // add for great buffer
+    sub sp,sp,x12            // reserve buffer on stack
+    mov fp,sp                // address save
+    mov x0,x11
+    mov x1,fp
+    mov x2,x12
+    mov x8,#READ             // call system read file
+    svc 0
+    cmp x0,#0                // error read ?
+    blt 97f
+    mov x0,x11
+    mov x8,#CLOSE            // call system close file
+    svc 0
+    cmp x0,#0                // error close ?
+    blt 96f
+    sub sp,sp,#0x1000        // create array word address on stack
+    mov x10,sp               // save address array
+    mov x1,#0
+    mov x2,fp
+    mov x5,#0                // index word ok
+    mov x3,#0                // word length
+1:
+    ldrb w4,[fp,x1]          // load character
+    cmp w4,#0x0D             // end word ?
+    beq 2f                   // yes
+    add x1,x1,#1
+    add x3,x3,#1
+    b 1b
+2:
+    cmp x3,#KEYSIZE          // word length = key length ?
+    bne 3f                   // no ?
+    mov x0,x2
+    bl wordControl           // contril if all letters are diffÃ©rent ?
+    cmp x0,#1
+    bne 3f
+    str x2,[x10,x5,lsl #3]   // if ok store word address in array on stack
+    add x5,x5,#1             // increment word counter
+3:
+    add x1,x1,#2
+    cmp x1,x6                // end ?
+    beq 4f
+    add x2,fp,x1             // new word begin
+    mov x3,#0                // init word length
+    b 1b                     // and loop
+4:
+    mov x0,x5                // number random to total words
+    bl genereraleas
+    ldr x2,[x10,x0,lsl #3]   // load address word
+    mov x1,#0
+5:                           // copy random word in word result
+    ldrb w3,[x2,x1]
+    strb w3,[x9,x1]
+    add x1,x1,#1
+    cmp x1,#KEYSIZE
+    blt 5b
+    strb wzr,[x9,x1]         // zero final
+    mov x0,x9
+    b 100f
+                             // display errors
+96:
+    ldr x0,qAdrszMessClose
+    bl affichageMess
+    mov x0,#-1               // error
+    b 100f
+97:
+    ldr x0,qAdrszMessRead
+    bl affichageMess
+    mov x0,#-1               // error
+    b 100f
+98:
+    ldr x0,qAdrszMessStat
+    bl  affichageMess
+    mov x0,#-1               // error
+    b 101f
+99:
+    ldr x0,qAdrszMessOpen
+    bl  affichageMess
+    mov x0,#-1               // error
+    b 101f
+100:
+    add sp,sp,x12
+    add sp,sp,#0x1000
+101:
+    ldp x12,x13,[sp],16
+    ldp x10,x11,[sp],16
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+qAdrszFileName:     .quad  szFileName
+qAdrszMessOpen:     .quad  szMessOpen
+qAdrszMessRead:     .quad  szMessRead
+qAdrszMessStat:     .quad  szMessStat
+qAdrszMessClose:    .quad  szMessClose
+qAdrsBuffer:        .quad  sBuffer
+/******************************************************************/
+/*     control if letters are diferents                  */
+/******************************************************************/
+/* x0 contains the address of the string */
+/* x0 return 1 if Ok else return 0 */
+wordControl:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    mov x1,#0                 // init index 1
+1:
+    ldrb w3,[x0,x1]           // load one character
+    cmp x3,#0x0D              // end word ?
+    mov x5,#1
+    csel x0,x5,x0,eq          // yes is ok
+    //moveq x0,#1               // yes is ok
+    beq 100f                  // -> end
+    add x2,x1,#1              // init index two
+2:
+    ldrb w4,[x0,x2]           // load one character
+    cmp w4,#0x0D              // end word ?
+    add x5,x1,1
+    csel x1,x5,x1,eq          // yes increment index 1
+    beq 1b                    // and loop1
+    cmp x3,x4                 // caracters equals ?
+    csel x0,xzr,x0,eq         // yes is not good
+    beq 100f                  // and end
+    add x2,x2,#1              // else increment index 2
+    b 2b                      // and loop 2
+100:
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+/******************************************************************/
+/*         key sort by insertion sort                                              */
+/******************************************************************/
+/* x0 contains the address of String */
+/* x1 contains the first element    */
+/* x2 contains the number of element */
+/* x3 contains result address */
+keySort:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    stp x10,x11,[sp,-16]!
+    ldr x7,qAdrtabPosit
+    mov x10,x3
+    mov x3,#0
+0:                            // init position array and copy key
+    strb w3,[x7,x3]           // in result array
+    ldrb w4,[x0,x3]
+    strb w4,[x10,x3]
+    add x3,x3,#1
+    cmp x3,#KEYSIZE
+    blt 0b
+
+    add x3,x1,#1              // start index i
+1:                            // start loop
+    ldrb w4,[x10,x3]          // load value A[i]
+    ldrb w8,[x7,x3]           // load position
+    sub x5,x3,#1              // index j
+2:
+    ldrb w6,[x10,x5]          // load value A[j]
+    ldrb w9,[x7,x5]           // load position
+    cmp x6,x4                 // compare value
+    ble 3f
+    add x5,x5,#1                 // increment index j
+    strb w6,[x10,x5]          // store value A[j+1]
+    strb w9,[x7,x5]           // store position
+    subs x5,x5,#2                // j = j - 1
+    bge 2b                    // loop if j >= 0
+3:
+    add x5,x5,#1              // increment index j
+    strb w4,[x10,x5]          // store value A[i] in A[j+1]
+    strb w8,[x7,x5]
+    add x3,x3,#1                 // increment index i
+    cmp x3,x2                 // end ?
+    blt 1b                    // no -> loop
+
+    ldr x1,qAdrtabPositInv    // inverse position
+    mov x2,#0                 // index
+4:
+    ldrb w3,[x7,x2]           // load position index
+    strb w2,[x1,x3]           // store index in position
+    add x2,x2,#1              // increment index
+    cmp x2,#KEYSIZE           // end ?
+    blt 4b
+    mov x0,x10
+100:
+    ldp x10,x11,[sp],16
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16                 // TODO: retaur à completer
+    ret
+qAdrtabPosit:        .quad  tabPosit
+qAdrtabPositInv:     .quad  tabPositInv
+/******************************************************************/
+/*         text encryption                                        */
+/******************************************************************/
+/* x0 contains the address of text */
+/* x1 contains polybius address
+/* x2 contains the key address   */
+/* x3 contains result buffer address */
+encryption:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    stp x10,x11,[sp,-16]!
+    mov x9,x0                  // save text address
+    mov x8,x3
+    mov x10,x1                 // save address polybius
+    mov x0,x2                  // key address
+    mov x1,#0                  // first character
+    mov x2,#KEYSIZE            // key length
+    ldr x3,qAdrsKeyWordSorted  // result address
+    bl keySort                 // sort leters of key
+   // bl affichageMess         // if you want display sorted key
+  //  ldr x0,qAdrszCarriageReturn
+  //  bl affichageMess
+    ldr x3,qAdrsBuffex1
+    mov x5,#0                  // init text index
+    mov x4,#0                  // init result index
+1:
+    ldrb w0,[x9,x5]            // load a byte to text
+    cmp x0,#0                  // end ?
+    beq 4f
+    mov x6,#0                  // init index polybius
+2:
+    ldrb w7,[x10,x6]           // load character polybius
+    cmp x7,x0                  // equal ?
+    beq 3f
+    add x6,x6,#1               // increment index
+    cmp x6,#SIZEC              // not find -> error
+    bge 99f
+    b 2b                       // and loop
+3:
+    mov x0,x6
+    bl convPosCode             // convert position in code character
+    strb w0,[x3,x4]            // line code character
+    add x4,x4,#1
+    strb w1,[x3,x4]            // column code character
+    add x4,x4,#1
+
+    add  x5,x5,#1              // increment text index
+    b 1b
+4:
+    mov x0,#0                  // zero final -> text result
+    strb w0,[x3,x4]
+    mov x5,x3
+    mov x1,#0                  // index position column
+    mov x7,#0                  // index text
+    ldr x2,qAdrtabPositInv
+5:
+    ldrb w0,[x2,x1]           // load position text
+7:                            // loop to characters transposition
+
+    ldrb w6,[x5,x0]           // load character
+    strb w6,[x8,x7]           // store position final
+    add x7,x7,#1              // increment final index
+    add x0,x0,#KEYSIZE        // add size key
+    cmp x0,x4                 // end ?
+    blt 7b
+    add x1,x1,#1              // add index column
+    cmp x1,#KEYSIZE           // < key size
+    blt 5b                    // yes -> loop
+
+    mov x6,#0                 // zero final
+    strb w6,[x8,x7]
+    mov x0,x8                 // return address encrypted text
+
+    b 100f
+99:                           // display error
+    ldr x0,qAdrszMessErrorChar
+    bl affichageMess
+    mov x0,#-1
+100:
+    ldp x10,x11,[sp],16
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+qAdrsBuffex1:        .quad  sBuffex1
+qAdrsKeyWordSorted:  .quad  sKeyWordSorted
+qAdrszMessErrorChar: .quad  szMessErrorChar
+/******************************************************************/
+/*         text decryption                                              */
+/******************************************************************/
+/* x0 contains the address of text */
+/* x1 contains polybius address
+/* x2 contains the key    */
+/* x3 contains result buffer */
+/* x0 return decoded text */
+decryption:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    stp x10,x11,[sp,-16]!
+    stp x12,x13,[sp,-16]!
+    mov x4,#0
+1:                              // compute text length
+    ldrb w5,[x0,x4]
+    cmp x5,#0
+    add x11,x4,1
+    csel x4,x11,x4,ne
+    bne 1b
+    mov x12,x0
+    mov x11,x1
+    mov x10,x2
+    mov x13,x3
+                                 // compute line number and remainder
+    mov x1,#KEYSIZE              // compute line number and remainder
+    udiv x8,x4,x1                // line number
+    msub x7,x8,x1,x4             // remainder characters last line
+    mov x0,x10                   // key address
+    mov x1,#0                    // first character
+    mov x2,#KEYSIZE              // size
+    ldr x3,qAdrsKeyWordSorted    // result address
+    bl keySort                   // sort key
+    ldr x10,qAdrtabPositInv      // inverse position
+    mov x2,#0                    // index colonne tabposit
+    mov x5,#0                    // text index
+    mov x0,#0                    // index line store text
+    mov x1,#0                    // counter line
+
+    ldr x9,qAdrsBuffex2
+1:
+    ldrb w3,[x10,x2]             // load position
+    ldrb w6,[x12,x5]             // load text character
+    add x3,x3,x0                 // compute position with index line
+    strb w6,[x9,x3]              // store character in good position
+
+    add x5,x5,#1                 // increment index text
+    cmp x5,x4                    // end ?
+    bge 4f
+    add x1,x1,#1                 // increment line
+    cmp x1,x8                    // line < line size
+    blt 2f
+    bgt 11f                      // line = line size
+    sub x3,x3,x0                 // restaure position column
+    cmp x3,x7                    // position < remainder  so add character other line
+    blt 2f
+11:
+    mov x1,#0                    // init ligne
+    mov x0,#0                    // init line shift
+    add x2,x2,#1                 // increment index array position inverse
+    cmp x2,#KEYSIZE              // end ?
+    csel x2,xzr,x2,ge            // init index
+    b 3f
+2:
+    add x0,x0,#KEYSIZE
+3:
+    b 1b
+4:                               // convertir characters with polybius
+    mov x3,#0
+    mov x5,#0
+
+5:
+    mov x0,x11
+    ldrb w1,[x9,x3]              // load a first character
+    add x3,x3,#1
+    ldrb w2,[x9,x3]              // load a 2ieme character
+    bl decodPosCode              // decode
+    strb w0,[x13,x5]              // store result in final result
+    add x5,x5,#1                 // increment final result index
+    add x3,x3,#1                 // increment index text
+    cmp x3,x4                    // end ?
+    blt 5b
+    mov x0,#0                    // final zero
+    strb w0,[x13,x5]
+    mov x0,x13                    // return final result address
+100:
+    ldp x12,x13,[sp],16
+    ldp x10,x11,[sp],16
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16                 // TODO: retaur à completer
+    ret
+qAdrsBuffex2:      .quad    sBuffex2
+/******************************************************************/
+/*         convertir position en code                                              */
+/******************************************************************/
+/* x0 contains the position in polybius */
+/* x0 return code1 */
+/* x1 return code2 */
+convPosCode:
+    stp x2,lr,[sp,-16]!
+    stp x3,x4,[sp,-16]!
+    ldr x4,qAdrszListCharCode
+    mov x1,#SIZE
+    udiv x2,x0,x1
+    msub x3,x2,x1,x0
+    //bl division
+    ldrb w0,[x4,x2]
+    ldrb w1,[x4,x3]
+100:
+    ldp x3,x4,[sp],16
+    ldp x2,lr,[sp],16
+    ret
+qAdrszListCharCode:   .quad  szListCharCode
+/******************************************************************/
+/*         convertir code en character                                              */
+/******************************************************************/
+/* x0  polybius address */
+/* x1 code 1 */
+/* x2 code 2 */
+/* x0 return character */
+decodPosCode:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    ldr x4,qAdrszListCharCode
+    mov x3,#0
+1:
+    ldrb w5,[x4,x3]
+    cmp x5,#0
+    beq 2f
+    cmp x5,x1
+    csel x1,x3,x1,eq
+    cmp x5,x2
+    csel x2,x3,x2,eq
+    add x3,x3,#1
+    b 1b
+2:
+    mov x5,#SIZE
+    mul x1,x5,x1
+    add x1,x1,x2
+    ldrb w0,[x0,x1]
+100:
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+
+/******************************************************************/
+/*     shuffle strings  algorithme Fisher-Yates                   */
+/******************************************************************/
+/* x0 contains the address of the string */
+/* x1 contains string length */
+/* x2 contains address result string */
+shufflestrings:
+    stp x1,lr,[sp,-16]!               // TODO: save à completer
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    mov x3,#0
+1:                            // loop copy string in result
+    ldrb w4,[x0,x3]
+    strb w4,[x2,x3]
+    add x3,x3,#1
+    cmp x3,x1
+    ble 1b
+    sub x1,x1,#1              // last element
+2:
+    mov x0,x1
+    bl genereraleas           // call random
+    ldrb w4,[x2,x1]           // load byte string index loop
+    ldrb w3,[x2,x0]           // load byte string random index
+    strb w3,[x2,x1]           // and exchange
+    strb w4,[x2,x0]
+    subs x1,x1,#1
+    cmp x1,#1
+    bge 2b
+
+100:
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* x0 contains limit  */
+genereraleas:
+    stp x1,lr,[sp,-16]!            // save  registers
+    stp x2,x3,[sp,-16]!            // save  registers
+    ldr x1,qAdrqGraine
+    ldr x2,[x1]
+    ldr x3,qNbDep1
+    mul x2,x3,x2
+    ldr x3,qNbDep2
+    add x2,x2,x3
+    str x2,[x1]                    // maj de la graine pour l appel suivant
+    cmp x0,#0
+    beq 100f
+    udiv x3,x2,x0
+    msub x0,x3,x0,x2               // résult = remainder
+
+100:                               // end function
+    ldp x2,x3,[sp],16              // restaur  2 registers
+    ldp x1,lr,[sp],16              // restaur  2 registers
+    ret                            // return to address lr x30
+qAdrqGraine: .quad qGraine
+qNbDep1:     .quad 0x0019660d
+qNbDep2:     .quad 0x3c6ef35f
+
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+.include "../includeARM64.inc"

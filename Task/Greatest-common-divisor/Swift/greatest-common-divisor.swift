@@ -1,8 +1,9 @@
 // Iterative
 
-func gcd(var a: Int, var b: Int) -> Int {
+func gcd(a: Int, b: Int) -> Int {
 
-    a = abs(a); b = abs(b)
+    var a = abs(a)
+    var b = abs(b)
 
     if (b > a) { swap(&a, &b) }
 
@@ -13,9 +14,10 @@ func gcd(var a: Int, var b: Int) -> Int {
 
 // Recursive
 
-func gcdr (var a: Int, var b: Int) -> Int {
+func gcdr (a: Int, b: Int) -> Int {
 
-    a = abs(a); b = abs(b)
+    var a = abs(a)
+    var b = abs(b)
 
     if (b > a) { swap(&a, &b) }
 

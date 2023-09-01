@@ -1,0 +1,100 @@
+import std/num/random
+import std/os/readline
+struct board
+  cells: vector<vector<int>>
+  hole-pos: (int, int)
+  size: (int, int)
+
+type move
+  MUp
+  MDown
+  MLeft
+  MRight
+
+fun delta(move: move): (int, int)
+  match move
+    MUp -> (0, 1)
+    MDown -> (0, -1)
+    MLeft -> (1, 0)
+    MRight -> (-1, 0)
+
+inline extern unsafe-assign : forall<a> ( v : vector<a>, i : ssize_t, x : a ) -> total ()
+  c "kk_vector_unsafe_assign"
+
+fun update(game: board, move: move): exn board
+  val (dx, dy) = move.delta
+  val (hx, hy) = game.hole-pos
+  val (nx, ny) = (hx + dx, hy + dy)
+  val (w, h) = game.size
+  if nx >= 0 && nx < w && ny >= 0 && ny < h then
+    game.cells[hx].unsafe-assign(hy.ssize_t, game.cells[nx][ny])
+    game.cells[nx].unsafe-assign(ny.ssize_t, 0)
+    game(hole-pos=(nx, ny))
+  else
+    game
+
+val num_shuffles = 100
+
+fun random-move(): random move
+  match random-int() % 4
+    0 -> MUp
+    1 -> MDown
+    2 -> MLeft
+    _ -> MRight
+
+fun setup(size: (int, int)): <exn,random> board
+  val (w, h) = size
+  val cells = vector-init(w, fn(x) vector-init(h, fn(y) x*h + y + 1))
+  var game := Board(cells, (w - 1, h - 1), size)
+  for(0,num_shuffles) fn(_)
+    game := game.update(random-move())
+  game
+
+effect break<a>
+  final ctl break(a: a) : b
+
+fun finished(game: board): exn bool
+  val (w, h) = game.size
+  var i := 1
+  with final ctl break(a:bool)
+    a
+  for(0,w - 1) fn(x)
+    for(0,h - 1) fn(y)
+      if game.cells[x][y] != i then
+        break(False)
+      else
+        i := i + 1
+  True
+
+fun display(game: board): <console,exn> ()
+  println("")
+  val (w, h) = game.size
+  for(0, h - 1) fn(y)
+    for(0, w - 1) fn(x)
+      val c = game.cells[x][y]
+      if c == 0 then
+        print("    ")
+      else
+        print(" " ++ c.show ++ " ")
+    println("")
+  println("")
+
+fun get_move(): <div,console,exn,break<string>> move
+  val c = readline()
+  match c.trim()
+    "w" -> MUp
+    "s" -> MDown
+    "a" -> MLeft
+    "d" -> MRight
+    "q" -> break("Finished")
+    _ -> get_move()
+
+fun main()
+  var game := setup((4, 4))
+  with final ctl break(a:string)
+    a.println
+  while {!game.finished}
+    game.display
+    val move = get_move()
+    game := game.update(move)
+  println("You won!")

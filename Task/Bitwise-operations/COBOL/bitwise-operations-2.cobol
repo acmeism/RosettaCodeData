@@ -4,7 +4,6 @@
        DATA DIVISION.
        LOCAL-STORAGE SECTION.
        01  result                  USAGE BINARY-LONG.
-
        78  arg-len                 VALUE LENGTH OF result.
 
        LINKAGE SECTION.
@@ -37,5 +36,6 @@
            CALL "CBL_IMP" USING a, result, VALUE arg-len
            DISPLAY "Logical implication of a and b is " result
 
-           GOBACK
-           .
+           GOBACK.
+
+       END PROGRAM mf-bitwise-ops.

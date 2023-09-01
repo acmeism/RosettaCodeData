@@ -1,5 +1,6 @@
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 interface ModifierInterface {	
@@ -13,7 +14,7 @@ public final class ModifiedRandomDistribution222 {
 		final int binCount = 20;
 		final double binSize = 1.0 / binCount;
 		
-		List<Integer> bins = Stream.generate( () -> 0 ).limit(binCount).toList();
+		List<Integer> bins = Stream.generate( () -> 0 ).limit(binCount).collect(Collectors.toList());
 		
 	    for ( int i = 0; i < sampleSize; i++ ) {
 	    	double random = modifiedRandom(modifier);

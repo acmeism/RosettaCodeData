@@ -1,8 +1,8 @@
 OP +:= = (REF FLEX []INT a, INT b) VOID:
    BEGIN
-      [⌈a + 1] INT c;
-      c[:⌈a] := a;
-      c[⌈a+1:] := b;
+      [UPB a + 1] INT c;
+      c[:UPB a] := a;
+      c[UPB a+1:] := b;
       a := c
    END;
 

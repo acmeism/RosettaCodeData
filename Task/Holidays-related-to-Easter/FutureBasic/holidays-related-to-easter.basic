@@ -1,0 +1,80 @@
+begin enum 1
+  _window : _scroll :  _showOff
+  _clmYear : _clmEaster : _lblYear : _lblEaster
+  _inField : _outField
+end enum
+
+void local fn buildInterface
+  window _window, @"Easter dates", ( 0, 0, 200, 200 ), 3
+  scrollview _scroll, ( 20, 80, 170, 91 )
+  textview _showOff, , _scroll
+  textlabel _clmYear, @"Year", ( 21, 168, 60, 22 )
+  textlabel _clmEaster, @"Easter", ( 92, 168, 140, 22 )
+  textlabel _lblYear, @"Year:", ( 40, 40, 100, 22 )
+  textlabel _lblEaster, @"Easter:", ( 31, 10, 100, 22 )
+  textlabel _outField, @"14 April", ( 87, 10, 100, 22 )
+  textfield _inField, , @"14250", ( 85, 42, 70, 22 )
+  ControlSetFormat ( _inField, @"0123456789", YES, 7, 0 )
+  TextSetFont( _showOff, fn FontMonospacedDigitSystemFontOfSize( 12 , 0 ) )
+  menu 1, , , @"File" : menu 1, 0, , @"Close", @"w"
+  MenuItemSetAction(1, 0, @"performClose:")
+  editmenu 2
+  WindowMakeFirstResponder( _window, _inField )
+end fn
+
+clear local fn easter( year as NSInteger) as CFStringRef
+  NSInteger goldenNumber, leapDays, century, epact
+  NSInteger moonAdjust, leapAdjust,fullMoon, easter
+  CFStringRef s = @""
+  goldenNumber = year mod 19 + 1 ' moon phase on 1 Jan
+  if year < 1583
+    // Algorithm by Dionysius Exiguus, 525
+    leapDays = 5 * year / 4 ' one leap year every four years
+    epact = ( 11 * goldenNumber - 4 ) mod 30 ' moon phase on 22 March
+  else
+    // Algorithm by Christoph Clavius, 1582 (see D. Knuth: CACM 1962;5:209)
+    century = int( year / 100 ) + 1
+    leapAdjust = int( ( 3 * century / 4 ) - 12 ) ' correct leap years
+    leapDays = int( 5 * year / 4 ) - leapAdjust - 10 ' new calculation of leap days
+    moonAdjust = int( ( 8 * century + 5 ) / 25 ) - 5 ' correct moon cycle
+    epact = ( 11 * goldenNumber + moonAdjust - leapAdjust + 20 ) mod 30 ' new calculation of moon phase
+    if epact < 0 then epact += 30
+    if ( epact  = 24 or ( epact = 25 and goldenNumber > 11 ) ) then epact ++ ' final tweaks
+  end if
+  fullMoon = 44 - epact ' find first full moon in March
+  if fullMoon < 21 then fullMoon += 30 ' not before 21 March
+  easter = fullMoon + 7 - ( ( leapDays + fullMoon ) mod 7 ) ' find Sunday after first full moon in March
+  if easter < 32
+    s = fn StringWithFormat( @"%u March", easter )
+  else
+    s = fn StringWithFormat( @"%u April", easter - 31 )
+  end if
+end fn = s
+
+void local fn showOff
+  NSInteger year
+  CFMutableStringRef s = @"", t
+  for year = 532 to 2100 ' 532 is first year of Dionysius' tables
+    t = fn StringWithFormat( @"%u%@%@\n", year, @"            ", fn easter( year) )
+    s = fn StringByAppendingString( s, t )
+  next
+  s = left( s, len( s ) - 1 ) ' cosmetic: remove last line feed
+  TextSetString( _showOff, s )
+end fn
+
+void local fn doEvents( evt as Long, tag as Long )
+  NSInteger t
+  select evt
+    case _textFieldDidChange
+      ControlSetStringValue ( _outField, @"" )
+      t = fn ControlIntegerValue( _inField )
+      if t > 531 then ControlSetStringValue ( _outField, fn easter( t ) )
+    case _windowShouldClose : end
+  end select
+end fn
+
+fn buildInterface
+fn showOff
+on dialog fn doEvents
+
+handleevents

@@ -1,10 +1,10 @@
-$ cat toto
-1
-2
-4
-8
-16
-$ cat toto toto | paste -sd*
-1*2*4*8*16*1*2*4*8*16
-$ cat toto toto | paste -sd* | bc -l
-1048576
+sum_squares () {
+        _r=0
+        for _n
+        do
+                : "$((_r += _n * _n))"
+        done
+        echo "$_r"
+}
+
+sum_squares 3 1 4 1 5 9

@@ -28,7 +28,7 @@ def brilliantSemiPrimes(limit: Int): Seq[Int] = {
     val (bril, index) = brilliantSemiPrimes((limit * 1.25).toInt)
             .zipWithIndex
             .dropWhile((b, _i) => b < limit)
-            .take(1).head
+            .head
     val duration = System.currentTimeMillis - start
     println(f"first >= $limit%7d is $bril%7d at position ${index+1}%5d [time(ms) $duration%2d]")
   }

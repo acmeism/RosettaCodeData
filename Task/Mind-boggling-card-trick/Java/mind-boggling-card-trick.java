@@ -45,8 +45,8 @@ public final class MindBogglingCardTrick {
 
 	    System.out.println(System.lineSeparator() + "Number of cards are to be swapped: " + choice);
 	    System.out.println("The respective zero-based indices of the cards to be swapped are:");
-	    System.out.println("    Red    : " + redChosenIndexes);
-	    System.out.println("    Black  : " + blackChosenIndexes);
+	    System.out.println("    Red  : " + redChosenIndexes);
+	    System.out.println("    Black: " + blackChosenIndexes);
 		
 	    for ( int i = 0; i < choice; i++ ) {
 	        final char temp = redPile.get(redChosenIndexes.get(i));
@@ -54,9 +54,9 @@ public final class MindBogglingCardTrick {
 	        blackPile.set(blackChosenIndexes.get(i), temp);
 	    }
 	
-	    System.out.println(System.lineSeparator() + "After swapping cards the state of the red and black piless is:");
-	    System.out.println("    Red    : " + redPile);
-	    System.out.println("    Black  : " + blackPile);
+	    System.out.println(System.lineSeparator() + "After swapping cards the state of the red and black piles is:");
+	    System.out.println("    Red  : " + redPile);
+	    System.out.println("    Black: " + blackPile);
 	
 	    int redCount = 0;
 	    for ( char ch : redPile ) {
@@ -75,9 +75,9 @@ public final class MindBogglingCardTrick {
 	    System.out.println(System.lineSeparator() + "The number of red cards in the red pile: " + redCount);
 	    System.out.println("The number of black cards in the black pile: " + blackCount);
 	    if ( redCount == blackCount ) {
-	    	System.out.println("So the asssertion is correct.");
+	    	System.out.println("So the assertion is correct.");
 	    } else {
-	    	System.out.println("So the asssertion is incorrect.");
+	    	System.out.println("So the assertion is incorrect.");
 	    }		
 	}
 

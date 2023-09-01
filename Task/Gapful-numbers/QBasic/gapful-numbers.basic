@@ -1,0 +1,26 @@
+FUNCTION isGapful (n)
+    m = n
+    l = n MOD 10
+    WHILE (m >= 10)
+        m = INT(m / 10)
+    WEND
+    isGapful = (m * 10) + l
+END FUNCTION
+
+SUB muestraGapful (n, gaps)
+    inc = 0
+    PRINT "First "; gaps; "gapful numbers >= "; n; ":"
+    WHILE inc < gaps
+        IF n MOD isGapful(n) = 0 THEN
+            PRINT ; n; " ";
+            inc = inc + 1
+        END IF
+        n = n + 1
+    WEND
+    PRINT CHR$(10)
+END SUB
+
+CALL muestraGapful(100, 30)
+CALL muestraGapful(1000000, 15)
+CALL muestraGapful(1000000000, 10)
+CALL muestraGapful(7123, 25)

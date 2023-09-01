@@ -1,7 +1,5 @@
+include "NSLog.incl"
 include "Tlbx AVKit.incl"
-
-toolbox fn sinf(float) = float
-
 
 #define VOLUME         0.2
 #define HZ_FREQUENCY 440.0
@@ -11,138 +9,131 @@ _spcDelay = 300
 
 
 void local fn PlayCodeDone( ref as AVAudioPlayerNodeRef, userData as ptr )
-'~'1
-NSLog(@"%@\b",userData)
+  NSLog(@"%@\b",userData)
 end fn
 
 
 local fn PlayFrequency( frequency as float, amplitude as float, character as CFStringRef ) as AVAudioPlayerNodeRef
-'~'1
-static AVAudioEngineRef audioEngine
+  static AVAudioEngineRef audioEngine
 
-audioEngine = fn AVAudioEngineInit
-AVAudioPlayerNodeRef player = fn AVAudioPlayerNodeInit
+  audioEngine = fn AVAudioEngineInit
+  AVAudioPlayerNodeRef player = fn AVAudioPlayerNodeInit
 
-AVAudioMixerNodeRef           mixer = fn AVAudioEngineMainMixerNode( audioEngine )
-float                    sampleRate = fn AVAudioFormatSampleRate( fn AVAudioNodeOutputFormatForBus( mixer, 0 ) )
-AVAudioFrameCount frameBufferLength = fn floorf( sampleRate / frequency ) * 1
-AVAudioPCMBufferRef          buffer = fn AVAudioPCMBufferWithFormat( fn AVAudioNodeOutputFormatForBus( player, 0 ), frameBufferLength )
-AVAudioPCMBufferSetFrameLength( buffer, frameBufferLength )
-NSInteger              channelCount = fn AVAudioFormatChannelCount( fn AVAudioNodeOutputFormatForBus( mixer, 0 ) )
-AVAudioFrameCount       frameLength = fn AVAudioPCMBufferFrameLength( buffer )
+  AVAudioMixerNodeRef           mixer = fn AVAudioEngineMainMixerNode( audioEngine )
+  float                    sampleRate = fn AVAudioFormatSampleRate( fn AVAudioNodeOutputFormatForBus( mixer, 0 ) )
+  AVAudioFrameCount frameBufferLength = fn floorf( sampleRate / frequency ) * 1
+  AVAudioPCMBufferRef          buffer = fn AVAudioPCMBufferWithFormat( fn AVAudioNodeOutputFormatForBus( player, 0 ), frameBufferLength )
+  AVAudioPCMBufferSetFrameLength( buffer, frameBufferLength )
+  NSInteger              channelCount = fn AVAudioFormatChannelCount( fn AVAudioNodeOutputFormatForBus( mixer, 0 ) )
+  AVAudioFrameCount       frameLength = fn AVAudioPCMBufferFrameLength( buffer )
 
-ptr p = (ptr)fn AVAudioPCMBufferFloatChannelData(buffer)
-xref floatChannelData(100) as ^float
-floatChannelData = p
+  ptr p = (ptr)fn AVAudioPCMBufferFloatChannelData(buffer)
+  xref floatChannelData(100) as ^float
+  floatChannelData = p
 
-long  i, channelNumber
-float theta, value
-^float channelBuffer
+  long  i, channelNumber
+  float theta, value
+  ^float channelBuffer
 
-for i = 0 to frameLength - 1
-theta = frequency * i * 2.0 * M_PI / sampleRate
-value = fn sinf(theta)
-for channelNumber = 0 to channelCount - 1
-channelBuffer = floatChannelData(channelNumber)
-cln channelBuffer[i] = value * amplitude;
-next
-next
+  for i = 0 to frameLength - 1
+    theta = frequency * i * 2.0 * M_PI / sampleRate
+    value = fn sinf(theta)
+    for channelNumber = 0 to channelCount - 1
+      channelBuffer = floatChannelData(channelNumber)
+      cln channelBuffer[i] = value * amplitude;
+    next
+  next
 
-AVAudioEngineAttachNode( audioEngine, player )
-AVAudioEngineConnect(    audioEngine, player, mixer, fn AVAudioNodeOutputFormatForBus( player, 0 ) )
-fn AVAudioEngineStart(   audioEngine, NULL )
-AVAudioPlayerNodePlay( player )
-AVAudioPlayerNodeScheduleBufferAtTime( player, buffer, NULL, AVAudioPlayerNodeBufferLoops, @fn PlayCodeDone, (ptr)character )
+  AVAudioEngineAttachNode( audioEngine, player )
+  AVAudioEngineConnect(    audioEngine, player, mixer, fn AVAudioNodeOutputFormatForBus( player, 0 ) )
+  fn AVAudioEngineStart(   audioEngine, NULL )
+  AVAudioPlayerNodePlay( player )
+  AVAudioPlayerNodeScheduleBufferAtTime( player, buffer, NULL, AVAudioPlayerNodeBufferLoops, @fn PlayCodeDone, (ptr)character )
 end fn = player
 
 
 void local fn PlayMorseCode( play as BOOL, character as CFStringRef )
-'~'1
-static AVAudioPlayerNodeRef player
+  static AVAudioPlayerNodeRef player
 
-select ( play )
-case YES : player = fn PlayFrequency( HZ_FREQUENCY, VOLUME, character )
-case NO  : AVAudioPlayerNodeStop( player )  // : AppRemoveAllProperties
-end select
+  select ( play )
+    case YES : player = fn PlayFrequency( HZ_FREQUENCY, VOLUME, character )
+    case NO  : AVAudioPlayerNodeStop( player )  // : AppRemoveAllProperties
+  end select
 end fn
 
 
 local fn ParseCodeAndPlay( character as CFStringRef )
-'~'1
-dispatchmain
-if fn StringIsEqual( character, @"."  ) then timerbegin : fn PlayMorseCode( YES, character ) : delay _ditDelay : fn PlayMorseCode( NO, NULL ) : timerend
-if fn StringIsEqual( character, @"-"  ) then timerbegin : fn PlayMorseCode( YES, character ) : delay _dahDelay : fn PlayMorseCode( NO, NULL ) : timerend
-if fn StringIsEqual( character, @" "  ) then timerbegin : NSLog(@" \b") : delay _spcDelay : timerend
-if fn StringIsEqual( character, @"\n" ) then timerbegin : NSLog(@"") : timerend
-dispatchend
+  dispatchmain
+    if fn StringIsEqual( character, @"."  ) then timerbegin : fn PlayMorseCode( YES, character ) : delay _ditDelay : fn PlayMorseCode( NO, NULL ) : timerend
+    if fn StringIsEqual( character, @"-"  ) then timerbegin : fn PlayMorseCode( YES, character ) : delay _dahDelay : fn PlayMorseCode( NO, NULL ) : timerend
+    if fn StringIsEqual( character, @" "  ) then timerbegin : NSLog(@" \b") : delay _spcDelay : timerend
+    if fn StringIsEqual( character, @"\n" ) then timerbegin : NSLog(@"") : timerend
+  dispatchend
 end fn
 
 
 local fn MorseCharacter( letter as CFStringRef ) as CFStringRef
-CFDictionaryRef morseDict = @{
-@"a":@".-",     @"b":@"-...",   @"c":@"-.-.",
-@"d":@"-..",    @"e":@".",      @"f":@"..-.",
-@"g":@"--.",    @"h":@"....",   @"i":@"..",
-@"j":@".---",   @"k":@"-.-",    @"l":@".-..",
-@"m":@"--",     @"n":@"-.",     @"o":@"---",
-@"p":@".--.",   @"q":@"--.-",   @"r":@".-.",
-@"s":@"...",    @"t":@"-",      @"u":@"..-",
-@"v":@"...-",   @"w":@".--",    @"x":@"-..-",
-@"y":@"-.--",   @"z":@"--..",   @"0":@"-----",
-@"1":@".----",  @"2":@"..---",  @"3":@"...--",
-@"4":@"....-",  @"5":@".....",  @"6":@"-....",
-@"7":@"--...",  @"8":@"---..",  @"9":@"----."}
+  CFDictionaryRef morseDict = @{
+  @"a":@".-",     @"b":@"-...",   @"c":@"-.-.",
+  @"d":@"-..",    @"e":@".",      @"f":@"..-.",
+  @"g":@"--.",    @"h":@"....",   @"i":@"..",
+  @"j":@".---",   @"k":@"-.-",    @"l":@".-..",
+  @"m":@"--",     @"n":@"-.",     @"o":@"---",
+  @"p":@".--.",   @"q":@"--.-",   @"r":@".-.",
+  @"s":@"...",    @"t":@"-",      @"u":@"..-",
+  @"v":@"...-",   @"w":@".--",    @"x":@"-..-",
+  @"y":@"-.--",   @"z":@"--..",   @"0":@"-----",
+  @"1":@".----",  @"2":@"..---",  @"3":@"...--",
+  @"4":@"....-",  @"5":@".....",  @"6":@"-....",
+  @"7":@"--...",  @"8":@"---..",  @"9":@"----."}
 end fn = morseDict[letter]
 
 
 local fn BuildMorseString( asciiStr as CFStringRef ) as CFStringRef
-'~'1
-NSInteger i
+  NSInteger i
 
-CFStringRef processStr = fn StringLowerCaseString( asciiStr )
-CFMutableStringRef mutStr = fn MutableStringWithCapacity(0)
+  CFStringRef processStr = fn StringLowerCaseString( asciiStr )
+  CFMutableStringRef mutStr = fn MutableStringWithCapacity(0)
 
-NSInteger length = len( processStr )
-for i = 0 to length - 1
-CFStringRef temp = mid( processStr, i, 1 )
-select ( temp )
-case @"\n", @"\r"
-MutableStringAppendString( mutStr, @"\n" )
-case else
-CFStringRef code = fn MorseCharacter( temp )
-if ( code != NULL )
-MutableStringAppendString( mutStr, fn StringByAppendingString( code, @" " ) )
-else
-MutableStringAppendString( mutStr, @" " )
-end if
-end select
-next
+  NSInteger length = len( processStr )
+  for i = 0 to length - 1
+    CFStringRef temp = mid( processStr, i, 1 )
+    select ( temp )
+      case @"\n", @"\r"
+        MutableStringAppendString( mutStr, @"\n" )
+      case else
+        CFStringRef code = fn MorseCharacter( temp )
+        if ( code != NULL )
+          MutableStringAppendString( mutStr, fn StringByAppendingString( code, @" " ) )
+        else
+          MutableStringAppendString( mutStr, @" " )
+        end if
+    end select
+  next
 end fn = fn StringWithString( mutStr )
 
 
 local fn MorseCodeAudio( morseStr as CFStringRef )
-'~'1
-NSInteger i
+  NSInteger i
 
-NSInteger length = len( morseStr )
-for i = 0 to length - 1
-CFStringRef temp = mid( morseStr, i, 1 )
-fn ParseCodeAndPlay( temp )
-next
+  NSInteger length = len( morseStr )
+  for i = 0 to length - 1
+    CFStringRef temp = mid( morseStr, i, 1 )
+    fn ParseCodeAndPlay( temp )
+  next
 end fn
 
 
 local fn OutputMorseCode( morseStr as CFStringRef )
-'~'1
-NSLog( @"\nSample ham radio Morse Code transmission:\n\n%@", morseStr )
-CFStringRef codeStr = fn BuildMorseString( morseStr )
-NSLog( @"\n\nMorse Code:\n\n%@", codeStr )
+  NSLog( @"\nSample ham radio Morse Code transmission:\n\n%@", morseStr )
+  CFStringRef codeStr = fn BuildMorseString( morseStr )
+  NSLog( @"\n\nMorse Code:\n\n%@", codeStr )
 
-NSLog( @"\n\nAudio playing...\n" )
+  NSLog( @"\n\nAudio playing...\n" )
 
-dispatchglobal
-fn MorseCodeAudio( codeStr )
-dispatchend
+  dispatchglobal
+    fn MorseCodeAudio( codeStr )
+  dispatchend
 end fn
 
 CFStringRef morseStr = @"CQ CQ CQ DE K1XYZ K1XYZ K TRANSMIT K1XYZ DE W1ZZZ TKS FOR CALL UR RST 479 479 NAME KEN KEN QTH NR KENTUCKY KENTUCKY G3ZZY DE W1ZZZ K"

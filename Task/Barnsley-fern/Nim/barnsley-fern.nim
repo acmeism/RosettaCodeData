@@ -1,4 +1,4 @@
-import nimPNG, random
+import nimPNG, std/random
 
 randomize()
 
@@ -46,7 +46,7 @@ proc drawPixel(x,y:float) =
 var x, y: float = 0.0
 
 for i in 1..iterations:
-  var r = random(101)
+  var r = rand(101)
   var nx, ny: float
   if r <= 85:
     nx = 0.85 * x + 0.04 * y

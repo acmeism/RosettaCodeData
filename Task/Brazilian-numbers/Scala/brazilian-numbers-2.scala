@@ -31,6 +31,6 @@ object Brazilian extends App {
     println(s"$listStr: " + stream.filter(isBrazilian(_)).take(limit).toList)
 
   println("be a little patient, it will take some time")
-  val bigElement = LazyList.from(7).filter(isBrazilian(_)).drop(bigLimit - 1).take(1).head
+  val bigElement = LazyList.from(7).filter(isBrazilian(_)).drop(bigLimit - 1).head
   println(s"brazilian($bigLimit): $bigElement")
 }

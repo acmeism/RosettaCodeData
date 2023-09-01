@@ -1,3 +1,3 @@
-FORALL index IN collection DO
-  print((collection[index]," "))
+FORALL c IN collection DO
+  print((c," "))
 OD

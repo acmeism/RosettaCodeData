@@ -1,5 +1,5 @@
-a = zeros(100,1);
-for counter = 1:sqrt(100);
-  a(counter^2) = 1;
+doors   = zeros(1,100); // 0: closed 1: open
+for i = 1:100
+    doors(i:i:100) = 1-doors(i:i:100)
 end
-a
+doors

@@ -1,2 +1,2 @@
-       01  ptr                     USAGE POINTER TO Some-Type.
-       01  prog-ptr                USAGE PROGRAM-POINTER "some-program". *> TO is optional
+01  ptr      USAGE IS POINTER TO Some-Type.
+01  prog-ptr USAGE IS PROGRAM-POINTER TO "some-program".

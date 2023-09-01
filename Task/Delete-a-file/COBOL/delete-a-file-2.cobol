@@ -1,23 +1,12 @@
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. Delete-Files-2.
-
-       ENVIRONMENT DIVISION.
-       INPUT-OUTPUT SECTION.
-       FILE-CONTROL.
-           SELECT Local-File ASSIGN TO "input.txt".
-           SELECT Root-File  ASSIGN TO "/input.txt".
-
-       DATA DIVISION.
-       FILE SECTION.
-       FD  Local-File.
-       01  Local-Record PIC X.
-
-       FD  Root-File.
-       01  Root-Record  PIC X.
+       PROGRAM-ID. Delete-Files.
 
        PROCEDURE DIVISION.
-           DELETE FILE Local-File
-           DELETE FILE Root-File
+           CALL "CBL_DELETE_FILE" USING "input.txt"
+           CALL "CBL_DELETE_DIR"  USING "docs"
+           CALL "CBL_DELETE_FILE" USING "/input.txt"
+           CALL "CBL_DELETE_DIR"  USING "/docs"
 
-           GOBACK
-           .
+           GOBACK.
+
+       END PROGRAM Delete-Files.

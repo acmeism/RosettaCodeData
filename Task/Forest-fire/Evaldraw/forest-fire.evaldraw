@@ -1,0 +1,99 @@
+enum{XSIZ=255, YSIZ=XSIZ} // size of forest
+enum{EMPTY=0, TREE=1, BURN=2} // possible states of a cell
+static prob_ignite = .000001; // very rare, but remember we have many trees.
+static prob_spread = .25; // Fire spread speed/probability if neighbor on fire
+static prob_sprout = 0.25; // probability of new tree to sprout
+static MAX_NEIGHBORS = 6; // tree refuses to sprout if overcrowded
+static forest[2][YSIZ][XSIZ]; // state of pixel
+static fuel[2][YSIZ][XSIZ]; // stores fuel (wood) 0-255
+static heat[2][YSIZ][XSIZ]; // tree refuses to spout if heat!=0, also, sets draw color.
+static arr_numburn[YSIZ][XSIZ]; // number of burning trees for this cell
+static arr_numtree[YSIZ][XSIZ]; // number of neighbor trees for this cell
+static xoff[8] = {-1,+0,+1,-1,/*NA*/1,-1,+0,+1}; // offsets to find 8-connected neighbors
+static yoff[8] = {-1,-1,-1,+0,/*NA*/0,+1,+1,+1};
+() { // Main in evaldraw scripts is a unnamed function.
+   static otim;
+   tim = klock(); // Time since program start in seconds.
+   dt=tim-otim; // Deltatime. 1/dt is FPS. 0 in first frame.
+   otim=tim; // store old time for next dt.
+   simulate(); // simulate and draw are coupled, since draw also ping-pongs state.
+   draw();
+   setcol(0); fillrect(0,YSIZ,XSIZ,15);
+   setcol(0xffffff); moveto(0,YSIZ); printf("%4.0ffps generation %5.0f", 1 /dt, numframes);
+   if (bstatus>0) setFire(mousx,mousy);
+}// end main
+
+draw() {
+   for(y=0; y<YSIZ; y++)
+   for(x=0; x<XSIZ; x++)
+   {
+     cell = forest[1][y][x];
+     if     (cell == EMPTY) setcol(0);
+     else if(cell==BURN) setcol(511-.25*fuel[0][y][x],255-3*heat[0][y][x],33);
+     else if(cell==TREE) setcol(0,64+fuel[0][y][x],0);
+     setpix(x,y);
+     // Transfer next simulation state into current ready for next frame
+     forest[0][y][x] = forest[1][y][x];
+     heat[0][y][x] = heat[1][y][x];
+     fuel[0][y][x] = fuel[1][y][x];
+
+     // Count neighbors burning and not
+     numburn = 0; numtree = 0;
+
+     for(n=0; n<8; n++) {
+       ypos=y+yoff[n];
+       xpos=x+xoff[n];
+       if (xpos<0 || xpos > XSIZ-1)continue;
+       if (ypos<0 || ypos > YSIZ-1)continue;
+       cell = forest[1][ypos][xpos];
+       if (cell==BURN) numburn++;
+       else if (cell==TREE) numtree++;
+     }
+     arr_numburn[y][x] = numburn;
+     arr_numtree[y][x] = numtree;
+   }
+}
+
+fillrect(x0,y0,w,h) {
+   x0=int(x0); y0=int(y0); w=int(w) + 1; h=int(h);
+   for(y=y0;y<=y0+h;y++) { moveto(x0,y); lineto(x0+w,y); }
+}
+
+simulate() {
+   for(y=0; y<YSIZ; y++)
+   for(x=0; x<XSIZ; x++) {
+     cell = forest[0][y][x];
+     cellfuel = fuel[0][y][x];
+     celltemp = heat[0][y][x];
+     rand=rnd;
+     numburn = arr_numburn[y][x];
+     numtree = arr_numtree[y][x];
+
+     if (cell == BURN) {
+       if (cellfuel <= 0) {
+         forest[1][y][x] = EMPTY;
+       }
+       else {
+         fuel[1][y][x] = cellfuel - 1;
+         heat[1][y][x] = celltemp + 1;
+       }
+     }
+     else if (cell == TREE) {
+       if (numburn == 0 && rand < prob_ignite) setFire(x,y);
+       else if (numburn > 0 && rand < prob_spread) setFire(x,y);
+       else if(cellfuel < 255) fuel[1][y][x] = cellfuel + 1;
+     }
+     else if (cell == EMPTY) {
+       if ( celltemp > 0 ) heat[1][y][x] = celltemp - 1;
+       else if (numburn==0 && rand < prob_sprout && numtree <= MAX_NEIGHBORS) setTree(x,y);
+     }
+   }
+} // end sim
+
+setFire(x,y) {
+ forest[1][y][x] = BURN;
+}
+
+setTree(x,y) {
+ forest[1][y][x] = TREE;
+}

@@ -30,7 +30,7 @@ public final class CompositeNumbersK {
 	}
 	
 	private static List<Integer> primeFactors(int aK) {		
-		ArrayList<Integer> result = new ArrayList<Integer>();
+		List<Integer> result = new ArrayList<Integer>();
 		if ( aK <= 1 ) {
 			return result;
 		}
@@ -41,7 +41,7 @@ public final class CompositeNumbersK {
 			return result;
 		}
 		
-		int divisor = pollardsRho(bigK).intValueExact();
+		final int divisor = pollardsRho(bigK).intValueExact();
 		result.addAll(primeFactors(divisor));
 		result.addAll(primeFactors(aK / divisor));
 		Collections.sort(result);

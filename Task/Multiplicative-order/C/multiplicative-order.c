@@ -57,7 +57,7 @@ ulong multi_order(ulong a, ulong m)
 int main()
 {
 	sieve();
-	printf("%lu\n", multi_order(37, 1000));
-	printf("%lu\n", multi_order(54, 100001));
+	printf("The multiplicative order of %d related to %d is %lu \n", 37, 1000, multi_order(37, 1000));
+	printf("The multiplicative order of %d related to %d is %lu \n", 54, 100001, multi_order(54, 100001));
 	return 0;
 }

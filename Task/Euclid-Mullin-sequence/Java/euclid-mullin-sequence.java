@@ -4,19 +4,19 @@ import java.util.BitSet;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-public final class EulerMullinSequence {
+public final class EuclidMullinSequence {
 
 	public static void main(String[] aArgs) {
 		primes = listPrimesUpTo(1_000_000);
 		
-		System.out.println("The first 27 terms of the Euler-Mullin sequence:");
+		System.out.println("The first 27 terms of the Euclid-Mullin sequence:");
 		System.out.print(2 + "  ");
 		for ( int i = 1; i < 27; i++ ) {
-			System.out.print(String.format("%s%s", nextEulerMullin(), ( i == 14 || i == 27 ) ? "\n" : "  "));
+			System.out.print(String.format("%s%s", nextEuclidMullin(), ( i == 14 || i == 27 ) ? "\n" : "  "));
 		}
 	}
 	
-	private static BigInteger nextEulerMullin() {
+	private static BigInteger nextEuclidMullin() {
 		BigInteger smallestPrime = smallestPrimeFactor(product.add(BigInteger.ONE));
 		product = product.multiply(smallestPrime);
 		
@@ -66,8 +66,7 @@ public final class EulerMullinSequence {
 		BitSet sieve = new BitSet(aLimit + 1);
 		sieve.set(2, aLimit + 1);
 		
-		final int squareRoot = (int) Math.sqrt(aLimit);
-		for ( int i = 2; i <= squareRoot; i = sieve.nextSetBit(i + 1) ) {
+		for ( int i = 2; i * i <= aLimit; i = sieve.nextSetBit(i + 1) ) {
 			for ( int j = i * i; j <= aLimit; j = j + i ) {
 				sieve.clear(j);
 			}

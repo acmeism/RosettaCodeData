@@ -1,20 +1,22 @@
 USING: io formatting locals kernel math sequences unicode.case ;
 IN: balanced-brackets
 
-: map-braces ( -- qout )
-  [
-    {
-      { "[" [ drop  1 ] }
-      { "]" [ drop -1 ] }
-            [ drop  0 ]
-    } case
-  ]
-;
+:: balanced ( str -- )
+   0 :> counter!
+   1 :> ok!
+   str
+   [ dup length 0 > ]
+   [ 1 cut swap
+     "[" = [ counter 1 + counter! ] [ counter 1 - counter! ] if
+     counter 0 < [ 0 ok! ] when
+   ]
+   while
+   drop
+   ok 0 =
+   [ "NO" ]
+   [ counter 0 > [ "NO" ] [ "YES" ] if ]
+   if
+   print ;
 
-: balanced? ( str -- ? )
-  map-braces map sum 0 =
-;
-
-"[1+2*[3+4*[5+6]-3]*4-[3*[3+3]]]" balanced?
--- Data stack:
-t
+readln
+balanced

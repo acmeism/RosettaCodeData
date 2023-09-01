@@ -296,7 +296,10 @@ begin % syntax analyser %
             stmtNode := null;
             while begin
                 if tkType = tString then begin
-                    stmtNode  := opNode( nSequence, stmtNode, opNode( nPrts, operandNode( nString, tkIntegerValue ), null ) );
+                    stmtNode := opNode( nSequence
+                                      , stmtNode
+                                      , opNode( nPrts, operandNode( nString, tkIntegerValue ), null )
+                                      );
                     readToken
                     end
                 else stmtNode := opNode( nSequence, stmtNode, opNode( nPrti, parseExpr( 0 ), null ) );
@@ -325,23 +328,26 @@ begin % syntax analyser %
     reference(node) procedure parseStatementList ( integer value terminator ) ; begin
         reference(node) listNode;
         listNode := null;
-        while tkType not = terminator and tkType not = tEnd_of_input do listNode := opNode( nSequence, listNode, parseStatement );
+        while tkType not = terminator
+          and tkType not = tEnd_of_input do listNode := opNode( nSequence, listNode, parseStatement );
         listNode
     end parseStatementList ;
 
-    nIdentifier      :=  1; ndName( nIdentifier      ) := "Identifier";   nString    :=  2; ndName( nString   ) := "String";
-    nInteger         :=  3; ndName( nInteger         ) := "Integer";      nSequence  :=  4; ndName( nSequence ) := "Sequence";
-    nIf              :=  5; ndName( nIf              ) := "If";           nPrtc      :=  6; ndName( nPrtc     ) := "Prtc";
-    nPrts            :=  7; ndName( nPrts            ) := "Prts";         nPrti      :=  8; ndName( nPrti     ) := "Prti";
-    nWhile           :=  9; ndName( nWhile           ) := "While";        nAssign    := 10; ndName( nAssign   ) := "Assign";
-    nNegate          := 11; ndName( nNegate          ) := "Negate";       nNot       := 12; ndName( nNot      ) := "Not";
-    nMultiply        := 13; ndName( nMultiply        ) := "Multiply";     nDivide    := 14; ndName( nDivide   ) := "Divide";
-    nMod             := 15; ndName( nMod             ) := "Mod";          nAdd       := 16; ndName( nAdd      ) := "Add";
-    nSubtract        := 17; ndName( nSubtract        ) := "Subtract";     nLess      := 18; ndName( nLess     ) := "Less";
-    nLessEqual       := 19; ndName( nLessEqual       ) := "LessEqual"  ;  nGreater   := 20; ndName( nGreater  ) := "Greater";
-    nGreaterEqual    := 21; ndName( nGreaterEqual    ) := "GreaterEqual"; nEqual     := 22; ndName( nEqual    ) := "Equal";
-    nNotEqual        := 23; ndName( nNotEqual        ) := "NotEqual";     nAnd       := 24; ndName( nAnd      ) := "And";
-    nOr              := 25; ndName( nOr              ) := "Or";
+    % sets a node code and name %
+    procedure setNode ( integer result nd; integer value ndCode; string(14) value name ) ;
+        begin nd := ndCode; ndName( ndCode ) := name end;
+
+    setNode( nIdentifier,    1, "Identifier"   ); setNode( nString,     2, "String"    );
+    setNode( nInteger,       3, "Integer"      ); setNode( nSequence,   4, "Sequence"  ); setNode( nIf,   5, "If"  );
+    setNode( nPrtc,          6, "Prtc"         ); setNode( nPrts,       7, "Prts"      );
+    setNode( nPrti,          8, "Prti"         ); setNode( nWhile,      9, "While"     );
+    setNode( nAssign,       10, "Assign"       ); setNode( nNegate,    11, "Negate"    ); setNode( nNot, 12, "Not" );
+    setNode( nMultiply,     13, "Multiply"     ); setNode( nDivide,    14, "Divide"    ); setNode( nMod, 15, "Mod" );
+    setNode( nAdd,          16, "Add"          ); setNode( nSubtract,  17, "Subtract"  );
+    setNode( nLess,         18, "Less"         ); setNode( nLessEqual, 19, "LessEqual" );
+    setNode( nGreater,      20, "Greater"      );
+    setNode( nGreaterEqual, 21, "GreaterEqual" ); setNode( nEqual,     22, "Equal"     );
+    setNode( nNotEqual,     23, "NotEqual"     ); setNode( nAnd,       24, "And"       ); setNode( nOr,  25, "Or"  );
     tOp_multiply     :=  1; tkName( tOp_multiply     ) := "Op_multiply";     tkPrec( tOp_multiply     ) :=  5;
     tOp_divide       :=  2; tkName( tOp_divide       ) := "Op_divide";       tkPrec( tOp_divide       ) :=  5;
     tOp_mod          :=  3; tkName( tOp_mod          ) := "Op_mod";          tkPrec( tOp_mod          ) :=  5;
@@ -377,7 +383,8 @@ begin % syntax analyser %
     for tkPos := 1 until MAX_TOKEN_TYPE do tkNode( tkPos ) := - tkPos;
     tkNode( tOp_multiply     ) := nMultiply;  tkNode( tOp_divide   ) := nDivide;   tkNode( tOp_mod          ) := nMod;
     tkNode( tOp_add          ) := nAdd;       tkNode( tOp_subtract ) := nSubtract; tkNode( tOp_less         ) := nLess;
-    tkNode( tOp_lessequal    ) := nLessEqual; tkNode( tOp_greater  ) := nGreater;  tkNode( tOp_greaterequal ) := nGreaterEqual;
+    tkNode( tOp_lessequal    ) := nLessEqual; tkNode( tOp_greater  ) := nGreater;
+    tkNode( tOp_greaterequal ) := nGreaterEqual;
     tkNode( tOp_equal        ) := nEqual;     tkNode( tOp_notequal ) := nNotEqual; tkNode( tOp_not          ) := nNot;
     tkNode( tOp_and          ) := nAnd;       tkNode( tOp_or       ) := nOr;
     stList := idList := null;

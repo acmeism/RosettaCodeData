@@ -3,16 +3,13 @@
 
        DATA DIVISION.
        WORKING-STORAGE SECTION.
-       01  Seconds-To-Sleep       USAGE COMP-2.
+       01  Seconds-To-Sleep       USAGE IS FLOAT-LONG.
 
        PROCEDURE DIVISION.
            ACCEPT Seconds-To-Sleep
-
            DISPLAY "Sleeping..."
-
-           CALL "C$SLEEP" USING BY CONTENT Seconds-To-Sleep
-
+           CONTINUE AFTER Seconds-To-Sleep SECONDS
            DISPLAY "Awake!"
+           GOBACK.
 
-           GOBACK
-           .
+       END PROGRAM Sleep-In-Seconds.

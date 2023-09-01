@@ -1,33 +1,33 @@
       *>
       *> Tectonics: ./kerighan-earth-quakes <quakes.txt
-       identification division.
-       program-id. quakes.
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. quakes.
 
-       data division.
+       DATA DIVISION.
 
-       working-storage section.
-       01 data-line pic x(32768).
-          88 no-more value high-values.
+       WORKING-STORAGE SECTION.
+       01 data-line             PICTURE IS X(32768).
+          88 no-more            VALUE IS HIGH-VALUES.
 
-       01 date-time pic x(10).
-       01 quake pic x(20).
-       01 magnitude pic 99v99.
+       01 date-time             PICTURE IS X(10).
+       01 quake                 PICTURE IS X(20).
+       01 magnitude             PICTURE IS 99V99.
 
-       procedure division.
+       PROCEDURE DIVISION.
        show-big-ones.
 
-       accept data-line on exception set no-more to true end-accept
-       perform until no-more
-           unstring data-line delimited by all spaces
-              into date-time quake magnitude
-           end-unstring
+       ACCEPT data-line ON EXCEPTION SET no-more TO TRUE END-ACCEPT
+       PERFORM UNTIL no-more
+           UNSTRING data-line DELIMITED BY ALL SPACES
+              INTO date-time quake magnitude
+           END-UNSTRING
 
-           if magnitude greater than 6
-               display date-time space quake space magnitude
-           end-if
+           IF magnitude IS GREATER THAN 6
+               DISPLAY date-time SPACE quake SPACE magnitude
+           END-IF
 
-           accept data-line on exception set no-more to true end-accept
-       end-perform
+           ACCEPT data-line ON EXCEPTION SET no-more TO TRUE END-ACCEPT
+       END-PERFORM
 
-       goback.
-       end program quakes.
+       GOBACK.
+       END PROGRAM quakes.

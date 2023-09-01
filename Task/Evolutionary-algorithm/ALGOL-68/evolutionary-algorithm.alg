@@ -34,7 +34,7 @@ PROC evolve = VOID:
    [100]FLEX[UPB target]CHAR kid;
    INT iters := 0;
    kid[LWB kid] := LOC[UPB target]CHAR;
-   REAL mutate rate;
+   REAL mutate rate = 0.05;
 
    #  initialize  #
    FOR i FROM LWB parent TO UPB parent DO
@@ -42,10 +42,9 @@ PROC evolve = VOID:
    OD;
 
    fits := fitness(parent);
-   WHILE fits < 100.0 DO
+   WHILE
       INT j;
       REAL kf;
-      mutate rate := 1.0  - exp(- (100.0 - fits)/400.0);
       FOR j FROM LWB kid TO UPB kid DO
          mutate(kid[j], parent, mutate rate)
       OD;
@@ -56,9 +55,9 @@ PROC evolve = VOID:
             parent := kid[j]
          FI
       OD;
-      IF iters MOD 100 = 0 THEN
-         kewe( parent, iters, fits, mutate rate )
-      FI;
+      fits < 100.0
+   DO
+      kewe( parent, iters, fits, mutate rate );
       iters+:=1
    OD;
    kewe( parent, iters, fits, mutate rate )

@@ -1,23 +1,18 @@
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. Sleep-In-Nanoseconds.
+       PROGRAM-ID. Sleep-In-Seconds.
 
        DATA DIVISION.
        WORKING-STORAGE SECTION.
-       01  Seconds-To-Sleep       USAGE COMP-2.
-       01  Nanoseconds-To-Sleep   USAGE COMP-2.
-       01  Nanoseconds-Per-Second CONSTANT 1000000000.
+       01  Seconds-To-Sleep       USAGE IS COMP-2.
+      *>   Note: COMP-2, while supported on most implementations, is
+      *>   non-standard. FLOAT-SHORT is the proper USAGE for Native
+      *>   IEEE 754 Binary64 Floating-point data items.
 
        PROCEDURE DIVISION.
            ACCEPT Seconds-To-Sleep
-           MULTIPLY Seconds-To-Sleep BY Nanoseconds-Per-Second
-               GIVING Nanoseconds-To-Sleep
-
            DISPLAY "Sleeping..."
-
-           CALL "CBL_OC_NANOSLEEP"
-               USING BY CONTENT Nanoseconds-To-Sleep
-
+           CALL "C$SLEEP" USING BY CONTENT Seconds-To-Sleep
            DISPLAY "Awake!"
+           GOBACK.
 
-           GOBACK
-           .
+       END PROGRAM Sleep-In-Seconds.

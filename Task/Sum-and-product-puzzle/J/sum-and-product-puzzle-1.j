@@ -1,13 +1,11 @@
-(X=. 0&{"1) (Y=. 1&{"1)
-(S=. X + Y) (P=. X * Y)
+(S=. X + Y) (P=. X * Y) (X=. 0&{"1) (Y=. 1&{"1)
+(sd=. S </. ]) (pd=. P </. ])       NB. sum and product decompositions
 
 candidates=. ([ echo o (' candidates' ,~ ": (o=. @:) #))
 constraints=. (([ >: S o ]) and ((1 < X) and (1 < Y) (and=. *.) (X < Y)) o ])
 filter0=. candidates o (constraints # ])
 
-(sd=. S </. ]) (pd=. P </. ]) NB. sum and product decompositions
-
-patesd=. S (< o P)/. ]  NB. products associated to each sum decomposition
+patesd=. S (< o P)/. ]              NB. products associated to each sum decomposition
 pmtod=. P o ; o (pd #~ 1 < P #/. ]) NB. products with more than one decomposition
 filter1=. candidates o ((patesd ('' -: -.)&>"0 _ < o pmtod) ; o # sd)
 

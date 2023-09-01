@@ -1,0 +1,239 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/*  program cptAdn64.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+.equ LIMIT,    30
+.equ SHIFT,     8
+
+//.include "../../ficmacros64.inc"    // use for debugging
+/************************************/
+/* Initialized data                 */
+/************************************/
+.data
+szMessResult:         .asciz "Result: "
+szDNA1:               .ascii "CGTAAAAAATTACAACGTCCTTTGGCTATCTCTTAAACTCCTGCTAAATG"
+                      .ascii "CTCGTGCTTTCCAATTATGTAAGCGTTCCGAGACGGGGTGGTCGATTCTG"
+                      .ascii "AGGACAAAGGTCAAGATGGAGCGCATCGAACGCAATAAGGATCATTTGAT"
+                      .ascii "GGGACGTTTCGTCGACAAAGTCTTGTTTCGAGAGTAACGGCTACCGTCTT"
+                      .ascii "CGATTCTGCTTATAACACTATGTTCTTATGAAATGGATGTTCTGAGTTGG"
+                      .ascii "TCAGTCCCAATGTGCGGGGTTTCTTTTAGTACGTCGGGAGTGGTATTATA"
+                      .ascii "TTTAATTTTTCTATATAGCGATCTGTATTTAAGCAATTCATTTAGGTTAT"
+                      .ascii "CGCCGCGATGCTCGGTTCGGACCGCCAAGCATCTGGCTCCACTGCTAGTG"
+                      .ascii "TCCTAAATTTGAATGGCAAACACAAATAAGATTTAGCAATTCGTGTAGAC"
+                      .asciz "GACCGGGGACTTGCATGATGGGAGCAGCTTTGTTAAACTACGAACGTAAT"
+
+szCarriageReturn:     .asciz "\n"
+szMessStart:          .asciz "Program 64 bits start.\n"
+szMessCounterA:       .asciz "Base A : "
+szMessCounterC:       .asciz "Base C : "
+szMessCounterG:       .asciz "Base G : "
+szMessCounterT:       .asciz "Base T : "
+szMessTotal:          .asciz "Total  : "
+sPrintLine:           .fill LIMIT + SHIFT + 2,1,' '  // init line with spaces
+/************************************/
+/* UnInitialized data               */
+/************************************/
+.bss
+sZoneConv:            .skip 24
+/************************************/
+/*  code section                    */
+/************************************/
+.text
+.global main
+main:                      // entry of program
+    ldr x0,qAdrszMessStart
+    bl affichageMess
+
+    ldr x0,qAdrszDNA1
+    bl printDNA
+    ldr x0,qAdrszDNA1
+    bl countBase
+
+
+100:                       // standard end of the program
+    mov x0, #0             // return code
+    mov x8, #EXIT          // request to exit program
+    svc 0                  // perform the system call
+qAdrszDNA1:               .quad  szDNA1
+qAdrsZoneConv:            .quad  sZoneConv
+qAdrszMessResult:         .quad  szMessResult
+qAdrszCarriageReturn:     .quad  szCarriageReturn
+qAdrszMessStart:          .quad  szMessStart
+/***************************************************/
+/*   count dna line and print                  */
+/***************************************************/
+/* x0 contains dna string address */
+printDNA:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    mov x8,x0            // save address
+    mov x4,#0            // counter
+    mov x3,#0            // index string
+    mov x4,#0            // byte line counter
+    mov x5,#1            // start line value
+    ldr x7,qAdrsPrintLine
+    ldr x9,qAdrsZoneConv
+1:
+    ldrb w6,[x8,x3]      // load byte of dna
+    cmp x6,#0            // end string ?
+    beq 4f               // yes -> end
+    add x1,x7,#SHIFT
+    strb w6,[x1,x4]      // store byte in display line
+    add x4,x4,#1         // increment index line
+    cmp x4,#LIMIT        // end line ?
+    blt 3f
+    mov x0,x5            // convert decimal counter base
+    mov x1,x9
+    bl conversion10
+    mov x2,xzr
+2:                       // copy decimal conversion in display line
+    ldrb w6,[x9,x2]
+    strb w6,[x7,x2]
+    add x2,x2,1
+    cmp x2,x0
+    blt 2b
+
+    mov x0,#0            // Zero final
+    add x1,x7,#LIMIT
+    add x1,x1,#SHIFT + 1
+    strb w0,[x1]
+    mov x0,x7            // line display
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    add x5,x5,#LIMIT     // add line size to counter
+    mov x4,#0            // and init line index
+3:
+    add x3,x3,#1         // increment index string
+    b 1b                 // and loop
+4:                       // display end line if line contains base
+    cmp x4,#0
+    beq 100f
+    mov x0,x5
+    mov x1,x9
+    bl conversion10
+    mov x2,xzr
+5:                       // copy decimal conversion in display line
+    ldrb w6,[x9,x2]
+    strb w6,[x7,x2]
+    add x2,x2,1
+    cmp x2,x0
+    blt 5b
+
+    mov x0,#0            // Zero final
+    add x1,x7,x4
+    add x1,x1,#SHIFT
+    strb w0,[x1]
+    mov x0,x7            // last line display
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+ 100:
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16
+    ret
+ qAdrsPrintLine:      .quad  sPrintLine
+ /***************************************************/
+/*   count bases                                    */
+/***************************************************/
+/* x0 contains dna string address */
+countBase:
+    stp x1,lr,[sp,-16]!
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    mov x2,#0            // string index
+    mov x3,#0            // A counter
+    mov x4,#0            // C counter
+    mov x5,#0            //  G counter
+    mov x6,#0            //  T counter
+1:
+    ldrb w1,[x0,x2]      // load byte of dna
+    cmp x1,#0            // end string ?
+    beq 2f
+    cmp x1,#'A'
+    cinc x3,x3,eq
+    cmp x1,#'C'
+    cinc x4,x4,eq
+    cmp x1,#'G'
+    cinc x5,x5,eq
+    cmp x1,#'T'
+    cinc x6,x6,eq
+
+    add x2,x2,#1
+    b 1b
+2:
+    mov x0,x3            // convert decimal counter A
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrszMessCounterA
+    bl affichageMess
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    mov x0,x4            // convert decimal counter C
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrszMessCounterC
+    bl affichageMess
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    mov x0,x5            // convert decimal counter G
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrszMessCounterG
+    bl affichageMess
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+    mov x0,x6            // convert decimal counter T
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrszMessCounterT
+    bl affichageMess
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+
+    add x0,x3,x4            // convert decimal total
+    add x0,x0,x5
+    add x0,x0,x6
+    ldr x1,qAdrsZoneConv
+    bl conversion10
+    ldr x0,qAdrszMessTotal
+    bl affichageMess
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    ldr x0,qAdrszCarriageReturn
+    bl affichageMess
+100:
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16                 // TODO: retaur à completer
+    ret
+qAdrszMessCounterA:     .quad  szMessCounterA
+qAdrszMessCounterC:     .quad  szMessCounterC
+qAdrszMessCounterG:     .quad  szMessCounterG
+qAdrszMessCounterT:     .quad  szMessCounterT
+qAdrszMessTotal:        .quad  szMessTotal
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeARM64.inc"

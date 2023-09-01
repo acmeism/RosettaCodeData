@@ -1,0 +1,116 @@
+struct vec{ x, y; };
+enum{MAX_POLY_VERTS=32};
+enum{NUM_RECT_VERTS=4, NUM_SUBJECT_VERTS=9}
+struct poly_t{
+  len; // number of vertices
+  vec v[MAX_POLY_VERTS]; // wrap array of vertices inside struct
+};
+()
+{
+  vec subject_verts[NUM_SUBJECT_VERTS] = { 50,150, 200,50, 350,150, 350,300,250,300,200,250, 150,350,100,250,100,200 };
+  vec rectangle_vertices[NUM_RECT_VERTS] = {100,100, 300,100, 300,300, 100,300};
+
+  poly_t clipper; // This polygon will define the valid area
+  clipper.len = 0;
+  for(i=0; i<NUM_RECT_VERTS; i++) {
+    poly_append( clipper, rectangle_vertices[i] );
+  }
+
+  poly_t subject; // This polygon will be clipped so its contained within the valid area.
+  subject.len = 0;
+  for(i=0; i<NUM_SUBJECT_VERTS; i++) {
+    poly_append( subject, subject_verts[i] );
+  }
+  poly_t clipped_result; poly_clip(subject, clipper, clipped_result);
+
+  cls(0);
+  setcol(255,255,255); drawpoly(clipper, 0);
+  setcol(255,0,255);   drawpoly(subject, 0);
+  setcol(255,255,0);   drawpoly(clipped_result, 1);
+  moveto(0,0); printf("%g in\n%2.0f out", subject.len, clipped_result.len);
+}
+poly_clip(poly_t subject, poly_t clip, poly_t pout) {
+   dir = poly_winding(clip);
+
+   // Clip all subject edges against first edge in clipper
+   poly_t p0; // current set of clipped edges
+   poly_t p1; // next set of clipped edges
+   p1.len = 0; // Clear p1
+   poly_edge_clip(subject, clip.v[clip.len - 1], clip.v[0], dir, p1);
+
+   for (i = 0; i < clip.len - 1; i++) { // Visit each edge in the clip polygon
+      poly_copy(p1,p0); // Copy p1 into p0. We could also have done p0=p1.
+      p1.len = 0; // Clear p1
+      poly_edge_clip(p0, clip.v[i], clip.v[i+1], dir, p1);
+      if(p1.len == 0) break; // no vertices in output, finished.
+   }
+   pout = p1;
+}
+poly_winding(poly_t p) {
+   return left_of(p.v[0], p.v[1], p.v[2]);
+}
+poly_edge_clip(poly_t subject, vec clip0, vec clip1, left, poly_t res) {
+   vec v0; v0 = subject.v[subject.len - 1];
+   if (res.len != 0) errno(200); // Expect empty result so far
+
+   side0 = left_of(clip0, clip1, v0);
+   if (side0 != -left) { poly_append(res, v0); }
+
+   // Intersect subject edge v0-v1 against clipper edge clip0-clip1
+   for (i = 0; i < subject.len; i++) {
+      vec v1; v1 = subject.v[i];
+      side1 = left_of(clip0, clip1, v1);
+      // side0+side1==0 means v0 and v1 cross the edge. v0 is inside.
+      if ( (side0 + side1 == 0) && side0) {
+         vec isect; if (line_sect(clip0, clip1, v0, v1, isect)) poly_append(res, isect);
+      }
+      if (i == subject.len - 1) break; // Back to last, finished
+      if (side1 != -left) { poly_append(res, v1); } // add v1 to poly
+      v0 = v1;
+      side0 = side1;
+   }
+}
+poly_append(poly_t p, vec v) {
+   p.v[p.len++] = v;
+   if(p.len>MAX_POLY_VERTS) errno(100);
+}
+poly_copy(poly_t src, poly_t dst) { // This improves on assigning dst to src as
+  for(i=0; i<src.len; i++) {        // only necessary amount of vertices are copied.
+    dst.v[i] = src.v[i];
+  }
+  dst.len = src.len;
+}
+left_of(vec a, vec b, vec c) {
+   vec ab; vsub(ab, b, a);
+   vec bc; vsub(bc, c, b);
+   return sgn( cross2D(ab, bc) ); // return 1 if ab is left side of c. -1 if right. 0 if colinear.
+}
+line_sect(vec a0, vec a1, vec b0, vec b1, vec isect) {
+   vec da; vsub(da,a1,a0);
+   vec db; vsub(db,b1,b0);
+   vec d;  vsub(d,a0, b0);
+   /* a0+t da = b0+s db -> a0 X da = b0 X da + s db X da -> s = (a0 - b0) X da / (db X da) */
+   double dbXda = cross2D(db, da);
+   if (!dbXda) return 0;
+   s = cross2D(&d, &da) / dbXda;
+   if (s <= 0 || s >= 1) return 0;
+   isect.x = b0.x + s * db.x;
+   isect.y = b0.y + s * db.y;
+   return 1;
+}
+errno(code) { // Since we dont have asserts, halt and print an error code
+  while(1) {
+    cls(32,32,32); setcol(200,0,0); moveto(0,0);
+    printf("errno(%g)", code); refresh(); sleep(1);
+  }
+}
+drawpoly(poly_t p, show_verts) {
+  for(i=0; i<p.len+1; i++) {
+    vec v = p.v[i%p.len];
+    if (show_verts) for(j=0; j<32; j++) { setpix( v.x+nrnd, v.y+nrnd); }
+    if(i==0) moveto(v.x,v.y); else lineto(v.x,v.y);
+  }
+}
+// 2D cross product - also known as directed area product.
+cross2D(vec a, vec b) { return a.x * b.y - a.y * b.x; }
+vsub(vec c, vec a, vec b) { c.x = a.x - b.x; c.y = a.y - b.y; }

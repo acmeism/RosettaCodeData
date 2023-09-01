@@ -69,8 +69,8 @@ int main() {
 		0.721, 0.104, -0.729, 0.650, -1.103, 0.154, -1.720, 0.051, -0.385, 0.477, 1.537, -0.901, 0.939, -0.411,
 		0.341, -0.411, 0.106, 0.224, -0.947, -1.424, -0.542, -1.032 };
 
-	 experiment("Rule 1:", pseudo_random_xs, pseudo_random_ys, [](double z, double dz) -> double { return 0.0; });
-	 experiment("Rule 2:", pseudo_random_xs, pseudo_random_ys, [](double z, double dz) -> double { return -dz; });
-	 experiment("Rule 3:", pseudo_random_xs, pseudo_random_ys, [](double z, double dz) -> double { return -( z + dz ); });
-	 experiment("Rule 4:", pseudo_random_xs, pseudo_random_ys, [](double z, double dz) -> double { return z + dz; });
+	experiment("Rule 1:", pseudo_random_xs, pseudo_random_ys, [](double z, double dz) -> double { return 0.0; });
+	experiment("Rule 2:", pseudo_random_xs, pseudo_random_ys, [](double z, double dz) -> double { return -dz; });
+	experiment("Rule 3:", pseudo_random_xs, pseudo_random_ys, [](double z, double dz) -> double { return -(z + dz); });
+	experiment("Rule 4:", pseudo_random_xs, pseudo_random_ys, [](double z, double dz) -> double { return z + dz; });
 }

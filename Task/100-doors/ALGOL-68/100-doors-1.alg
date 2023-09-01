@@ -1,7 +1,4 @@
-# declare some constants #
-INT limit = 100;
-
-PROC doors = VOID:
+PROC doors = (INT limit)VOID:
 (
   MODE DOORSTATE = BOOL;
   BOOL closed = FALSE;
@@ -12,14 +9,12 @@ PROC doors = VOID:
   FOR i FROM LWB the doors TO UPB the doors DO the doors[i]:=closed OD;
 
   FOR i FROM LWB the doors TO UPB the doors DO
-    FOR j FROM LWB the doors TO UPB the doors DO
-      IF j MOD i = 0 THEN
-        the doors[j] :=  NOT the doors[j]
-      FI
+    FOR j FROM LWB the doors BY i TO UPB the doors DO
+      the doors[j] := NOT the doors[j]
     OD
   OD;
   FOR i FROM LWB the doors TO UPB the doors DO
-    printf(($g" is "gl$,i,(the doors[i]|"opened"|"closed")))
+    print((whole(i,-12)," is ",(the doors[i]|"opened"|"closed"),newline))
   OD
 );
-doors;
+doors(100)

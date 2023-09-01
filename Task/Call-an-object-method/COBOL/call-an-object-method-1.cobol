@@ -1,7 +1,11 @@
-*> INVOKE
-INVOKE FooClass "someMethod" RETURNING bar        *> Factory object
-INVOKE foo-instance "anotherMethod" RETURNING bar *> Instance object
+*> INVOKE statements.
+INVOKE my-class "some-method"          *> Factory object
+    USING BY REFERENCE some-parameter
+    RETURNING foo
+INVOKE my-instance "another-method"    *> Instance object
+    USING BY REFERENCE some-parameter
+    RETURNING foo
 
-*> Inline method invocation
-MOVE FooClass::"someMethod" TO bar        *> Factory object
-MOVE foo-instance::"anotherMethod" TO bar *> Instance object
+*> Inline method invocation.
+MOVE my-class::"some-method"(some-parameter) TO foo       *> Factory object
+MOVE my-instance::"another-method"(some-parameter) TO foo *> Instance object

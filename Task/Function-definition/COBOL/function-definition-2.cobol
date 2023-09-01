@@ -6,8 +6,8 @@
            FUNCTION myMultiply.
        DATA DIVISION.
        WORKING-STORAGE SECTION.
-       01  x   PIC 9(3) VALUE 3.
-       01  y   PIC 9(3) VALUE 2.
+       01  x   PICTURE IS 9(3) VALUE IS 3.
+       01  y   PICTURE IS 9(3) VALUE IS 2.
        PROCEDURE DIVISION.
            DISPLAY myMultiply(x, y).
            STOP RUN.
@@ -17,10 +17,10 @@
        FUNCTION-ID. myMultiply.
        DATA DIVISION.
        LINKAGE SECTION.
-       01  x   PIC 9(3).
-       01  y   PIC 9(3).
-       01  z   pic 9(9).
+       01  x   PICTURE IS 9(3).
+       01  y   PICTURE IS 9(3).
+       01  z   PICTURE IS 9(9).
        PROCEDURE DIVISION USING x, y RETURNING z.
            MULTIPLY x BY y GIVING z.
-           EXIT FUNCTION.
+           GOBACK.
        END FUNCTION myMultiply.

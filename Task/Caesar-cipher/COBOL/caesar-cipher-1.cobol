@@ -1,37 +1,36 @@
-       identification division.
-       program-id. caesar.
-       data division.
-       1 msg pic x(50)
-           value "The quick brown fox jumped over the lazy dog.".
-       1 offset binary pic 9(4) value 7.
-       1 from-chars pic x(52).
-       1 to-chars pic x(52).
-       1 tabl.
-        2 pic x(26) value "abcdefghijklmnopqrstuvwxyz".
-        2 pic x(26) value "ABCDEFGHIJKLMNOPQRSTUVWXYZ".
-        2 pic x(26) value "abcdefghijklmnopqrstuvwxyz".
-        2 pic x(26) value "ABCDEFGHIJKLMNOPQRSTUVWXYZ".
-       procedure division.
-       begin.
-           display msg
-           perform encrypt
-           display msg
-           perform decrypt
-           display msg
-           stop run
-           .
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. CAESAR.
 
-       encrypt.
-           move tabl (1:52) to from-chars
-           move tabl (1 + offset:52) to to-chars
-           inspect msg converting from-chars
-               to to-chars
-           .
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01  MSG        PIC X(50)
+           VALUE "The quick brown fox jumped over the lazy dog.".
+       01  OFFSET     PIC 9(4) VALUE 7 USAGE BINARY.
+       01  FROM-CHARS PIC X(52).
+       01  TO-CHARS   PIC X(52).
+       01  TABL.
+           02         PIC X(26) VALUE "abcdefghijklmnopqrstuvwxyz".
+           02         PIC X(26) VALUE "ABCDEFGHIJKLMNOPQRSTUVWXYZ".
+           02         PIC X(26) VALUE "abcdefghijklmnopqrstuvwxyz".
+           02         PIC X(26) VALUE "ABCDEFGHIJKLMNOPQRSTUVWXYZ".
 
-       decrypt.
-           move tabl (1 + offset:52) to from-chars
-           move tabl (1:52) to to-chars
-           inspect msg converting from-chars
-               to to-chars
-           .
-       end program caesar.
+       PROCEDURE DIVISION.
+       BEGIN.
+           DISPLAY MSG
+           PERFORM ENCRYPT
+           DISPLAY MSG
+           PERFORM DECRYPT
+           DISPLAY MSG
+           STOP RUN.
+
+       ENCRYPT.
+           MOVE TABL (1:52) TO FROM-CHARS
+           MOVE TABL (1 + OFFSET:52) TO TO-CHARS
+           INSPECT MSG CONVERTING FROM-CHARS TO TO-CHARS.
+
+       DECRYPT.
+           MOVE TABL (1 + OFFSET:52) TO FROM-CHARS
+           MOVE TABL (1:52) TO TO-CHARS
+           INSPECT MSG CONVERTING FROM-CHARS TO TO-CHARS.
+
+       END PROGRAM CAESAR.

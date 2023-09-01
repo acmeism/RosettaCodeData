@@ -1,1 +1,1 @@
-       01  obj                     USAGE OBJECT-REFERENCE "some-object".
+01  obj USAGE IS OBJECT-REFERENCE "some-object".

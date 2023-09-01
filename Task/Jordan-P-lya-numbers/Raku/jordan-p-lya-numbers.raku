@@ -14,7 +14,7 @@ sub JordanPolya (\limit) {
          loop {
             my \p = @res.keys.first: { @res[$_] >= kl } # performance
             if p < @res.elems and @res[p] != kl {
-               @res = |@res[^p], kl, |@res[p..*]
+               @res.splice: p, 0, kl
             } elsif p == @res.elems {
                @res.append: kl
             }

@@ -1,0 +1,66 @@
+&& SQL-like INSERT command (note the variable number of arguments)
+#xcommand INSERT INTO <table> ( <uField1>[, <uFieldN> ] ) VALUES ( <uVal1>[, <uValN> ] ) => ;
+   <table>->(dbAppend()); <table>-><uField1> := <uVal1> [; <table>-><uFieldN> := <uValN> ]
+
+PROCEDURE Main()
+LOCAL pStruct, vStruct, rStruct, xCurId, aAgg
+
+   SET DATE FORMAT "yyyy-mm-dd"
+   SET SOFTSEEK ON
+
+   && create and populate the patient table
+   pStruct := {{"patient_id", "n", 8, 0}, {"lastname", "c", 10, 0 }}
+   dbCreate( "patient", pStruct,, .T., "patient" )
+   INSERT INTO patient (patient_id, lastname) VALUES (1001, "Hopper")
+   INSERT INTO patient (patient_id, lastname) VALUES (2002, "Wirth")
+   INSERT INTO patient (patient_id, lastname) VALUES (3003, "Kemeny")
+   INSERT INTO patient (patient_id, lastname) VALUES (4004, "Gosling")
+   INSERT INTO patient (patient_id, lastname) VALUES (5005, "Kurtz")
+   INDEX ON patient_id TO pat_id
+
+   && create and populate the visit table
+   vStruct := {{"patient_id", "n", 8, 0}, {"visit_date", "d", 10, 0}, {"score", "n", 8, 1}}
+   dbCreate( "visit", vStruct,, .T., "visit" )
+   INSERT INTO visit (patient_id, visit_date, score) VALUES (2002, ctod("2020-09-10"), 6.8)
+   INSERT INTO visit (patient_id, visit_date, score) VALUES (1001, ctod("2020-09-07"), 5.5)
+   INSERT INTO visit (patient_id, visit_date, score) VALUES (4004, ctod("2020-09-24"), 8.4)
+   INSERT INTO visit (patient_id, visit_date) VALUES (2002, ctod("2020-10-08"))
+   INSERT INTO visit (patient_id, score) VALUES (1001, 6.6)
+   INSERT INTO visit (patient_id, visit_date) VALUES (3003, ctod("2020-11-12"))
+   INSERT INTO visit (patient_id, visit_date, score) VALUES (4004, ctod("2020-11-12"), 7.0)
+   INSERT INTO visit (patient_id, visit_date, score) VALUES (1001, ctod("2020-11-19"), 5.3)
+   INDEX ON patient_id TO visit_id
+
+   && create the result table
+   rStruct := { {"patient_id", "n", 8, 0}, {"lastname", "c", 10, 0}, ;
+      {"n", "i", 8, 0}, {"sum_score", "n", 8, 1}, ;
+      {"avg_score", "n", 8, 1}, {"max_date", "d", 10, 0}}
+   dbCreate("report", rStruct,, .T., "report")
+
+   && left join: for each patient
+   SELECT patient
+   DO WHILE ! Eof()
+      xCurId := patient_id && grouping variable
+      SELECT visit
+      LOCATE FOR patient_id==xCurId
+      IF found()
+	    && aggregate within visits for a given patient
+	    aAgg := {0, 0.0, ctod("19000101")} && initial values
+	    DO WHILE ! Eof() .AND. xCurId == patient_id
+	       aAgg := {1+aAgg[1], score+aAgg[2], max(visit_date, aAgg[3])} && update
+	       SKIP
+	    ENDDO
+	    INSERT INTO report (patient_id, lastname, n, sum_score, avg_score, max_date) ;
+	       VALUES (xCurId, patient->lastname, aAgg[1], aAgg[2], aAgg[2]/aAgg[1], aAgg[3])
+      ELSE
+	    INSERT INTO report (patient_id, lastname) VALUES (xCurId, patient->lastname)
+      END IF
+      SELECT patient
+      SKIP
+   ENDDO
+
+   SELECT report
+   ? "NUM", "PATIENT_ID", "LASTNAME", "N", "SUM_SCORE", "AVG_SCORE", "MAX_DATE"
+   LIST patient_id, lastname, n, sum_score, avg_score, max_date
+
+   RETURN

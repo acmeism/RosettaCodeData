@@ -1,0 +1,205 @@
+/* ARM assembly Raspberry PI  */
+/*  program cptAdn.s   */
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language ARM assembly*/
+.include "../constantes.inc"
+.equ LIMIT,    50
+.equ SHIFT,     11
+
+/************************************/
+/* Initialized data                 */
+/************************************/
+.data
+szMessResult:         .asciz "Result: "
+szDNA1:               .ascii "CGTAAAAAATTACAACGTCCTTTGGCTATCTCTTAAACTCCTGCTAAATG"
+                      .ascii "CTCGTGCTTTCCAATTATGTAAGCGTTCCGAGACGGGGTGGTCGATTCTG"
+                      .ascii "AGGACAAAGGTCAAGATGGAGCGCATCGAACGCAATAAGGATCATTTGAT"
+                      .ascii "GGGACGTTTCGTCGACAAAGTCTTGTTTCGAGAGTAACGGCTACCGTCTT"
+                      .ascii "CGATTCTGCTTATAACACTATGTTCTTATGAAATGGATGTTCTGAGTTGG"
+                      .ascii "TCAGTCCCAATGTGCGGGGTTTCTTTTAGTACGTCGGGAGTGGTATTATA"
+                      .ascii "TTTAATTTTTCTATATAGCGATCTGTATTTAAGCAATTCATTTAGGTTAT"
+                      .ascii "CGCCGCGATGCTCGGTTCGGACCGCCAAGCATCTGGCTCCACTGCTAGTG"
+                      .ascii "TCCTAAATTTGAATGGCAAACACAAATAAGATTTAGCAATTCGTGTAGAC"
+                      .asciz "GACCGGGGACTTGCATGATGGGAGCAGCTTTGTTAAACTACGAACGTAAT"
+
+szCarriageReturn:     .asciz "\n"
+szMessStart:          .asciz "Program 32 bits start.\n"
+szMessCounterA:       .asciz "Base A : "
+szMessCounterC:       .asciz "Base C : "
+szMessCounterG:       .asciz "Base G : "
+szMessCounterT:       .asciz "Base T : "
+szMessTotal:          .asciz "Total  : "
+/************************************/
+/* UnInitialized data               */
+/************************************/
+.bss
+sZoneConv:            .skip 24
+sPrintLine:           .skip LIMIT + SHIFT + 2
+/************************************/
+/*  code section                    */
+/************************************/
+.text
+.global main
+main:                      @ entry of program
+    ldr r0,iAdrszMessStart
+    bl affichageMess
+
+    ldr r0,iAdrszDNA1
+    bl printDNA
+    ldr r0,iAdrszDNA1
+    bl countBase
+
+
+100:                       @ standard end of the program
+    mov r0, #0             @ return code
+    mov r7, #EXIT          @ request to exit program
+    svc 0                  @ perform the system call
+iAdrszDNA1:               .int szDNA1
+iAdrsZoneConv:            .int sZoneConv
+iAdrszMessResult:         .int szMessResult
+iAdrszCarriageReturn:     .int szCarriageReturn
+iAdrszMessStart:          .int szMessStart
+/***************************************************/
+/*   count dna line and print                  */
+/***************************************************/
+/* r0 contains dna string address */
+printDNA:
+    push {r1-r8,lr}      @ save registers
+    mov r8,r0            @ save address
+    mov r4,#0            @ counter
+    mov r3,#0            @ index stone
+    mov r4,#0
+    mov r5,#1
+    ldr r7,iAdrsPrintLine
+1:
+    ldrb r6,[r8,r3]      @ load byte of dna
+    cmp r6,#0            @ end string ?
+    beq 4f
+    add r1,r7,#SHIFT
+    strb r6,[r1,r4]      @ store byte in display line
+    add r4,r4,#1         @ increment index line
+    cmp r4,#LIMIT        @ end line ?
+    blt 3f
+    mov r0,r5            @ convert decimal counter base
+    mov r1,r7
+    bl conversion10
+    mov r0,#0            @ Zero final
+    add r1,r7,#LIMIT
+    add r1,r1,#SHIFT + 1
+    strb r0,[r1]
+    mov r0,r7            @ line display
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    add r5,r5,#LIMIT     @ add line size to counter
+    mov r4,#0            @ and init line index
+3:
+    add r3,r3,#1         @ increment index string
+    b 1b                 @ and loop
+4:                       @ display end line if line contains base
+    cmp r4,#0
+    beq 100f
+    mov r0,r5
+    mov r1,r7
+    bl conversion10
+    mov r0,#0               @ Zero final
+    add r1,r7,r4
+    add r1,r1,#SHIFT
+    strb r0,[r1]
+    mov r0,r7               @ last line display
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+ 100:
+    pop {r1-r8,pc}
+ iAdrsPrintLine:      .int sPrintLine
+ /***************************************************/
+/*   count bases                                    */
+/***************************************************/
+/* r0 contains dna string address */
+countBase:
+    push {r1-r6,lr}      @ save registers
+    mov r2,#0            @ string index
+    mov r3,#0            @ A counter
+    mov r4,#0            @ C counter
+    mov r5,#0            @  G counter
+    mov r6,#0            @  T counter
+1:
+    ldrb r1,[r0,r2]      @ load byte of dna
+    cmp r1,#0            @ end string ?
+    beq 2f
+    cmp r1,#'A'
+    addeq r3,r3,#1
+    cmp r1,#'C'
+    addeq r4,r4,#1
+    cmp r1,#'G'
+    addeq r5,r5,#1
+    cmp r1,#'T'
+    addeq r6,r6,#1
+
+    add r2,r2,#1
+    b 1b
+2:
+    mov r0,r3            @ convert decimal counter A
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    ldr r0,iAdrszMessCounterA
+    bl affichageMess
+    ldr r0,iAdrsZoneConv
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    mov r0,r4            @ convert decimal counter C
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    ldr r0,iAdrszMessCounterC
+    bl affichageMess
+    ldr r0,iAdrsZoneConv
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    mov r0,r5            @ convert decimal counter G
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    ldr r0,iAdrszMessCounterG
+    bl affichageMess
+    ldr r0,iAdrsZoneConv
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+    mov r0,r6            @ convert decimal counter T
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    ldr r0,iAdrszMessCounterT
+    bl affichageMess
+    ldr r0,iAdrsZoneConv
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+
+    add r0,r3,r4            @ convert decimal total
+    add r0,r0,r5
+    add r0,r0,r6
+    ldr r1,iAdrsZoneConv
+    bl conversion10
+    ldr r0,iAdrszMessTotal
+    bl affichageMess
+    ldr r0,iAdrsZoneConv
+    bl affichageMess
+    ldr r0,iAdrszCarriageReturn
+    bl affichageMess
+100:
+    pop {r1-r6,pc}
+iAdrszMessCounterA:     .int szMessCounterA
+iAdrszMessCounterC:     .int szMessCounterC
+iAdrszMessCounterG:     .int szMessCounterG
+iAdrszMessCounterT:     .int szMessCounterT
+iAdrszMessTotal:        .int szMessTotal
+/***************************************************/
+/*      ROUTINES INCLUDE                           */
+/***************************************************/
+/* for this file see task include a file in language ARM assembly*/
+.include "../affichage.inc"

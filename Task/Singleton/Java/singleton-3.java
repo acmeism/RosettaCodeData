@@ -1,20 +1,15 @@
-class Singleton
-{
-    private static Singleton myInstance;
-    public static Singleton getInstance()
-    {
-        if (myInstance == null)
-        {
-            myInstance = new Singleton();
-        }
+public enum Singleton {
+    INSTANCE;
 
-        return myInstance;
+    // Fields, constructors and methods...
+    private int value;
+    Singleton() {
+        value = 0;
     }
-
-    protected Singleton()
-    {
-        // Constructor code goes here.
+    public int getValue() {
+        return value;
     }
-
-    // Any other methods
+    public void setValue(int value) {
+        this.value = value;
+    }
 }

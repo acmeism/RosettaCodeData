@@ -1,0 +1,286 @@
+/* ARM assembly Raspberry PI  */
+/* program testmiller.s   */
+
+/* for constantes see task include a file in arm assembly */
+/************************************/
+/* Constantes                       */
+/************************************/
+.include "../constantes.inc"
+
+.equ NBDIVISORS,             2000
+
+//.include "../../ficmacros32.inc"        @ use for developper debugging
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessStartPgm:          .asciz "Program 32 bits start \n"
+szMessEndPgm:            .asciz "Program normal end.\n"
+szMessErrorArea:         .asciz "\033[31mError : area divisors too small.\n"
+szMessPrime:             .asciz " is prime !!!.\n"
+szMessNotPrime:          .asciz " is not prime !!!.\n"
+szCarriageReturn:        .asciz "\n"
+
+.align 4
+iGraine:                 .int 123456
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+.align 4
+sZoneConv:               .skip 24
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                            @ program start
+    ldr r0,iAdrszMessStartPgm    @ display start message
+    bl affichageMess
+    ldr r4,iStart                @ start number
+    ldr r5,iLimit                @ end number
+    tst r4,#1
+    addeq r4,#1                  @ start with odd number
+1:
+    mov r0,r4
+    ldr r1,iAdrsZoneConv
+    bl conversion10              @ decimal conversion
+    ldr r0,iAdrsZoneConv
+    bl affichageMess
+    mov r0,r4
+    bl isPrimeMiller             @ test miller rabin
+    cmp r0,#0
+    beq 2f
+    ldr r0,iAdrszMessPrime
+    bl affichageMess
+    b 3f
+2:
+    ldr r0,iAdrszMessNotPrime
+    bl affichageMess
+3:
+    add r4,r4,#2
+    cmp r4,r5
+    ble 1b
+
+    ldr r0,iAdrszMessEndPgm         @ display end message
+    bl affichageMess
+
+100:                                @ standard end of the program
+    mov r0, #0                      @ return code
+    mov r7, #EXIT                   @ request to exit program
+    svc 0                           @ perform system call
+iAdrszMessStartPgm:        .int szMessStartPgm
+iAdrszMessEndPgm:          .int szMessEndPgm
+iAdrszCarriageReturn:      .int szCarriageReturn
+iAdrsZoneConv:             .int sZoneConv
+iAdrszMessPrime:           .int szMessPrime
+iAdrszMessNotPrime:        .int szMessNotPrime
+iStart:                    .int 4294967270
+iLimit:                    .int 4294967295
+
+
+/***************************************************/
+/*   check if a number is prime  test miller rabin  */
+/***************************************************/
+/* r0 contains the number            */
+/* r0 return 1 if prime  0 else */
+@2147483647
+@4294967297
+@131071
+isPrimeMiller:
+    push {r1-r6,lr}   @ save registers
+    cmp r0,#1         @ control 0 or 1
+    movls r0,#0
+    bls 100f
+    cmp r0,#2         @ control = 2
+    moveq r0,#1
+    beq 100f
+    tst r0,#1
+    moveq r0,#0       @ even
+    beq 100f
+    mov r1,#5         @ loop number
+    bl testMiller
+100:
+    pop {r1-r6,pc}
+/***************************************************/
+/*   test miller rabin  algorithme wikipedia       */
+/*   unsigned                                      */
+/***************************************************/
+/* r0 contains number   */
+/* r1 contains parameter   */
+/* r0 return 1 if prime 0 if composite    */
+testMiller:
+    push {r1-r9,lr}    @ save registers
+    mov r4,r0          @ N
+    mov r7,r1          @ loop maxi
+    sub r3,r0,#1       @ D
+    mov r2,#2
+    mov r6,#0          @ S
+1:                     @ compute D * 2 power S
+    lsr r3,#1          @ D= D/2
+    add r6,r6,#1       @ increment S
+    tst r3,#1          @ D even ?
+    beq 1b
+2:
+    mov r8,#0          @ loop counter
+    sub r5,r0,#3
+3:
+    mov r0,r5
+    bl genereraleas
+    add r0,r0,#2       @ alea (entre 2 et n-1)
+    mov r1,r3          @ exposant = D
+    mov r2,r4          @ modulo N
+    bl moduloPuR32
+    cmp r0,#1
+    beq 5f
+    sub r1,r4,#1       @ n -1
+    cmp r0,r1
+    beq 5f
+    sub r9,r6,#1       @ S - 1
+4:
+    mov r2,r0
+    umull r0,r1,r2,r0  @ compute square
+    mov r2,r4          @ and compute modulo N
+    bl division32R2023
+    mov r0,r2
+    cmp r0,#1
+    moveq r0,#0        @ composite
+    beq 100f
+    sub r1,r4,#1       @ n -1
+    cmp r0,r1
+    beq 5f
+    subs r9,r9,#1
+    bge 4b
+    mov r0,#0          @ composite
+    b 100f
+5:
+    add r8,r8,#1
+    cmp r8,r7
+    blt 3b
+    mov r0,#1          @ prime
+100:
+    pop {r1-r9,pc}
+/********************************************************/
+/*   Calcul modulo de b puissance e modulo m  */
+/*    Exemple 4 puissance 13 modulo 497 = 445         */
+/*                                             */
+/********************************************************/
+/* r0  nombre  */
+/* r1 exposant */
+/* r2 modulo   */
+/* r0 return result  */
+moduloPuR32:
+    push {r1-r6,lr}    @ save registers
+    cmp r0,#0          @ control <> zero
+    beq 100f
+    cmp r2,#0          @ control <> zero
+    beq 100f
+1:
+    mov r4,r2          @ save modulo
+    mov r5,r1          @ save exposant
+    mov r6,r0          @ save base
+    mov r3,#1          @ start result
+
+    mov r1,#0          @ division r0,r1 by r2
+    bl division32R2023
+    mov r6,r2          @ base <- remainder
+2:
+    tst r5,#1          @  exposant even or odd
+    beq 3f
+    umull r0,r1,r6,r3  @ multiplication base
+    mov r2,r4          @ and compute modulo N
+    bl division32R2023
+    mov r3,r2          @ result <- remainder
+3:
+    umull r0,r1,r6,r6  @ compute base square
+    mov r2,r4          @ and compute modulo N
+    bl division32R2023
+    mov r6,r2          @ base <- remainder
+
+    lsr r5,#1          @ left shift 1 bit
+    cmp r5,#0          @ end ?
+    bne 2b
+    mov r0,r3
+100:
+    pop {r1-r6,pc}
+
+/***************************************************/
+/*   division number 64 bits in 2 registers by number 32 bits */
+/*   unsigned */
+/***************************************************/
+/* r0 contains lower part dividende   */
+/* r1 contains upper part dividende   */
+/* r2 contains divisor   */
+/* r0 return lower part quotient    */
+/* r1 return upper part quotient    */
+/* r2 return remainder               */
+division32R2023:
+    push {r3-r6,lr}    @ save registers
+    mov r4,r2          @ save divisor
+    mov r5,#0          @ init upper part divisor
+    mov r2,r0          @ save dividende
+    mov r3,r1
+    mov r0,#0          @ init result
+    mov r1,#0
+    mov r6,#0          @ init shift counter
+1:                     @ loop shift divisor
+    cmp r5,#0          @ upper divisor <0
+    blt 2f
+    cmp r5,r3
+    cmpeq r4,r2
+    bhs 2f             @ new divisor > dividende
+    lsl r5,#1          @ shift left one bit upper divisor
+    lsls r4,#1         @ shift left one bit lower divisor
+    orrcs r5,r5,#1     @ move bit 31 lower on upper
+    add r6,r6,#1       @ increment shift counter
+    b 1b
+2:                     @ loop 2
+    lsl r1,#1          @ shift left one bit upper quotient
+    lsls r0,#1         @ shift left one bit lower quotient
+    orrcs r1,#1        @ move bit 31 lower on upper
+    cmp r5,r3          @ compare divisor and dividende
+    cmpeq r4,r2
+    bhi 3f
+    subs r2,r2,r4      @ <  sub divisor from dividende lower
+    sbc r3,r3,r5       @ and upper
+    orr r0,r0,#1       @ move 1 on quotient
+3:
+    lsr r4,r4,#1       @ shift right one bit upper divisor
+    lsrs r5,#1         @ and lower
+    orrcs r4,#0x80000000 @ move bit 0 upper to  31 bit lower
+    subs r6,#1         @ decrement shift counter
+    bge 2b             @ if > 0 loop 2
+
+100:
+    pop {r3-r6,pc}
+
+
+/***************************************************/
+/*   Generation random number                  */
+/***************************************************/
+/* r0 contains limit  */
+genereraleas:
+    push {r1-r4,lr}                   @ save registers
+    ldr r4,iAdriGraine
+    ldr r2,[r4]
+    ldr r3,iNbDep1
+    mul r2,r3,r2
+    ldr r3,iNbDep1
+    add r2,r2,r3
+    str r2,[r4]                       @ save seed for next call
+    cmp r0,#0
+    beq 100f
+    mov r1,r0                         @ divisor
+    mov r0,r2                         @ dividende
+    bl division
+    mov r0,r3                         @ résult = remainder
+
+100:                                  @ end function
+    pop {r1-r4,pc}                    @ restaur registers
+iAdriGraine: .int iGraine
+iNbDep1:     .int 0x343FD
+iNbDep2:     .int 0x269EC3
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../affichage.inc"

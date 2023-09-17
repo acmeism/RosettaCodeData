@@ -1,5 +1,5 @@
 import "random" for Random
-import "/fmt" for Fmt
+import "./fmt" for Fmt
 
 var nmax = 20
 var rand = Random.new()
@@ -35,10 +35,6 @@ System.print("===  =========  ============  =========")
 for (n in 1..nmax) {
     var a = avg.call(n)
     var b = ana.call(n)
-    var ns = Fmt.d(3, n)
-    var as = Fmt.f(9, a, 4)
-    var bs = Fmt.f(12, b, 4)
     var e = (a - b).abs/ b * 100
-    var es = Fmt.f(6, e, 2)
-    System.print("%(ns) %(as)  %(bs)   (%(es)\%)")
+    Fmt.print("$3d $9.4f  $12.4f   ($6.2f\%)", n, a, b, e)
 }

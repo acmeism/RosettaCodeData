@@ -1,4 +1,4 @@
-include FMS-SI.f
+include FMS2VT.f
 
 \ A singleton is created by using normal Forth data
 \ allocation words such as value or variable as instance variables.

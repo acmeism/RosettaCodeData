@@ -1,11 +1,12 @@
 const std = @import("std");
 const assert = std.debug.assert;
-const stdout = std.io.getStdOut().writer();
 
 pub fn main() !void {
+    const stdout = std.io.getStdOut().writer();
+
     var i: u6 = 0;
     while (i < 8) : (i += 1)
-        try showBinomial(i);
+        try showBinomial(stdout, i);
 
     try stdout.print("\nThe primes upto 50 (via AKS) are: ", .{});
     i = 2;
@@ -14,26 +15,26 @@ pub fn main() !void {
     try stdout.print("\n", .{});
 }
 
-fn showBinomial(n: u6) !void {
+fn showBinomial(writer: anytype, n: u6) !void {
     const row = binomial(n).?;
     var sign: u8 = '+';
     var exp = row.len;
-    try stdout.print("(x - 1)^{} =", .{n});
+    try writer.print("(x - 1)^{} =", .{n});
     for (row) |coef| {
-        try stdout.print(" ", .{});
+        try writer.print(" ", .{});
         if (exp != row.len)
-            try stdout.print("{c} ", .{sign});
+            try writer.print("{c} ", .{sign});
         exp -= 1;
         if (coef != 1 or exp == 0)
-            try stdout.print("{}", .{coef});
+            try writer.print("{}", .{coef});
         if (exp >= 1) {
-            try stdout.print("x", .{});
+            try writer.print("x", .{});
             if (exp > 1)
-                try stdout.print("^{}", .{exp});
+                try writer.print("^{}", .{exp});
         }
         sign = if (sign == '+') '-' else '+';
     }
-    try stdout.print("\n", .{});
+    try writer.print("\n", .{});
 }
 
 fn aksPrime(n: u6) bool {
@@ -54,6 +55,7 @@ pub fn binomial(n: u32) ?[]const u64 {
 
 const rmax = 68;
 
+// evaluated and created at compile-time
 const pascal = build: {
     @setEvalBranchQuota(100_000);
     var coefficients: [(rmax * (rmax + 1)) / 2]u64 = undefined;

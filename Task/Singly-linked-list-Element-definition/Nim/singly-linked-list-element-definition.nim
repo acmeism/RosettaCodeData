@@ -1,5 +1,6 @@
-type
+import std/strutils # for join
 
+type
   Node[T] = ref object
     next: Node[T]
     data: T
@@ -44,4 +45,4 @@ var list: SinglyLinkedList[int]
 
 for i in 1..5: list.append(i)
 for i in 6..10: list.prepend(i)
-echo "List: ", list
+echo "List: ", $list

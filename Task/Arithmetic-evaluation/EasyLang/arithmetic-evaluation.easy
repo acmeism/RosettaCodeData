@@ -1,0 +1,142 @@
+subr nch
+   if inp_ind > len inp$[]
+      ch$ = strchar 0
+   else
+      ch$ = inp$[inp_ind]
+      inp_ind += 1
+   .
+   ch = strcode ch$
+.
+#
+subr ntok
+   while ch$ = " "
+      nch
+   .
+   if ch >= 48 and ch <= 58
+      tok$ = "n"
+      s$ = ""
+      while ch >= 48 and ch <= 58 or ch$ = "."
+         s$ &= ch$
+         nch
+      .
+      tokv = number s$
+   elif ch = 0
+      tok$ = "end of text"
+   else
+      tok$ = ch$
+      nch
+   .
+.
+subr init0
+   astop$[] = [ ]
+   astleft[] = [ ]
+   astright[] = [ ]
+   err = 0
+.
+proc init s$ . .
+   inp$[] = strchars s$
+   inp_ind = 1
+   nch
+   ntok
+   init0
+.
+proc ast_print nd . .
+   write "AST:"
+   for i to len astop$[]
+      write " ( "
+      write astop$[i] & " "
+      write astleft[i] & " "
+      write astright[i]
+      write " )"
+   .
+   print " Start: " & nd
+.
+func node .
+   astop$[] &= ""
+   astleft[] &= 0
+   astright[] &= 0
+   return len astop$[]
+.
+#
+funcdecl parse_expr .
+#
+func parse_factor .
+   if tok$ = "n"
+      nd = node
+      astop$[nd] = "n"
+      astleft[nd] = tokv
+      ntok
+   elif tok$ = "("
+      ntok
+      nd = parse_expr
+      if tok$ <> ")"
+         err = 1
+         print "error: ) expected, got " & tok$
+      .
+      ntok
+   else
+      err = 1
+      print "error: factor expected, got " & tok$
+   .
+   return nd
+.
+func parse_term .
+   ndx = parse_factor
+   while tok$ = "*" or tok$ = "/"
+      nd = node
+      astleft[nd] = ndx
+      astop$[nd] = tok$
+      ntok
+      astright[nd] = parse_factor
+      ndx = nd
+   .
+   return ndx
+.
+func parse_expr .
+   ndx = parse_term
+   while tok$ = "+" or tok$ = "-"
+      nd = node
+      astleft[nd] = ndx
+      astop$[nd] = tok$
+      ntok
+      astright[nd] = parse_term
+      ndx = nd
+   .
+   return ndx
+.
+func parse s$ .
+   init s$
+   return parse_expr
+.
+func eval nd .
+   if astop$[nd] = "n"
+      return astleft[nd]
+   .
+   le = eval astleft[nd]
+   ri = eval astright[nd]
+   a$ = astop$[nd]
+   if a$ = "+"
+      return le + ri
+   elif a$ = "-"
+      return le - ri
+   elif a$ = "*"
+      return le * ri
+   elif a$ = "/"
+      return le / ri
+   .
+.
+repeat
+   inp$ = input
+   until inp$ = ""
+   print "Inp: " & inp$
+   nd = parse inp$
+   ast_print nd
+   if err = 0
+      print "Eval: " & eval nd
+   .
+   print ""
+.
+input_data
+4 *
+4.2 * ((5.3+8)*3 + 4)
+2.5 * 2 + 2 * 3.14

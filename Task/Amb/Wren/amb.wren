@@ -23,7 +23,7 @@ var wordsets = [
     [ "frog", "elephant", "thing" ],
     [ "walked", "treaded", "grows" ],
     [ "slowly", "quickly" ]
-}
+]
 
 if (amb.call(wordsets, [])) {
     System.print(finalRes.join(" "))

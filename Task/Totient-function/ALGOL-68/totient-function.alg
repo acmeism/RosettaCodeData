@@ -24,7 +24,10 @@ BEGIN
     print( ( " n  phi(n) remarks", newline ) );
     FOR n TO 25 DO
         INT tn = totient( n );
-        print( ( whole( n, -2 ), ": ", whole( tn, -5 ), IF tn = n - 1 AND tn /= 0 THEN "  n is prime" ELSE "" FI, newline ) )
+        print( ( whole( n, -2 ), ": ", whole( tn, -5 )
+               , IF tn = n - 1 AND tn /= 0 THEN "  n is prime" ELSE "" FI, newline
+               )
+             )
     OD;
     # use the totient function to count primes #
     INT n100 := 0, n1000 := 0, n10000 := 0, n100000 := 0;

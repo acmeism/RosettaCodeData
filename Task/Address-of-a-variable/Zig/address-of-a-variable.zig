@@ -5,5 +5,5 @@ pub fn main() !void {
     var i: i32 = undefined;
     var address_of_i: *i32 = &i;
 
-    try stdout.print("{x}\n", .{@ptrToInt(address_of_i)});
+    try stdout.print("{x}\n", .{@intFromPtr(address_of_i)});
 }

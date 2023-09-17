@@ -1,7 +1,9 @@
-my $RED = "\e[1;31m";
-my $YELLOW = "\e[1;33m";
-my $GREEN = "\e[1;32m";
-my $CLEAR = "\e[0m";
+constant $RED = "\e[1;31m";
+constant $YELLOW = "\e[1;33m";
+constant $GREEN = "\e[1;32m";
+constant $CLEAR = "\e[0m";
+# make sure we clear colors at the end
+END print $CLEAR;
 
 enum Cell-State <Empty Tree Heating Burning>;
 my @pix = '  ', $GREEN ~ '木', $YELLOW ~ '木', $RED ~ '木';

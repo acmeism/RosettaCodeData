@@ -41,7 +41,7 @@ public final class QRDecomposition {
 		Matrix z1 = new Matrix(rowCount, columnCount);
 		
 		for ( int k = 0; k < columnCount && k < rowCount - 1; k++ ) {
-			Matrix vectorE = new Matrix( new double[rowCount][1] );		
+			Matrix vectorE = new Matrix(rowCount, 1);		
 		    z1 = z.minor(k);
 		    Matrix vectorX = z1.column(k);	    	
 		    double magnitudeX = vectorX.magnitude();
@@ -52,8 +52,7 @@ public final class QRDecomposition {
 		    for ( int i = 0; i < vectorE.size(); i++ ) {
 		        vectorE.setEntry(i, 0, ( i == k ) ? 1 : 0);
 		    }			
-		    vectorE = vectorE.scalarMultiply(magnitudeX).add(vectorX);
-		    vectorE = vectorE.unit();		
+		    vectorE = vectorE.scalarMultiply(magnitudeX).add(vectorX).unit();	
 		    versionsOfQ.add(householderFactor(vectorE));
 		    z = versionsOfQ.get(k).multiply(z1);
 		}
@@ -74,17 +73,17 @@ public final class QRDecomposition {
         }
     	
     	final int size = aVector.size();
-    	double[][] newData = new double[size][size];
+    	Matrix result = new Matrix(size, size);
 	    for ( int i = 0; i < size; i++ ) {
 	        for ( int j = 0; j < size; j++ ) {
-	        	newData[i][j] = -2 * aVector.getEntry(i, 0) * aVector.getEntry(j, 0);
+	        	result.setEntry(i, j, -2 * aVector.getEntry(i, 0) * aVector.getEntry(j, 0));
 	        }
 	    }
 	
 	    for ( int i = 0; i < size; i++ ) {
-	        newData[i][i] += 1;
+	    	result.setEntry(i, i, result.getEntry(i, i) + 1.0);
 	    }
-	    return new Matrix(newData);
+	    return result;
     }
 	
 	private static Matrix fitPolynomial(Matrix aX, Matrix aY, int aPolynomialDegree) {
@@ -137,8 +136,8 @@ final class Matrix {
     	this(aMatrix.data);
     }
 
-    public Matrix(int aRows, int aCols) {
-        this( new double[aRows][aCols] );
+    public Matrix(int aRowCount, int aColumnCount) {
+        this( new double[aRowCount][aColumnCount] );
     }
 
     public Matrix add(Matrix aOther) {
@@ -195,10 +194,10 @@ final class Matrix {
         return result;
     }	
 	
-	public Matrix column(int aColumn) {
+	public Matrix column(int aIndex) {
 		Matrix result = new Matrix(rowCount, 1);
 		for ( int i = 0; i < rowCount; i++ ) {
-		    result.setEntry(i, 0, data[i][aColumn]);
+		    result.setEntry(i, 0, data[i][aIndex]);
 		}
 		return result;		
 	}
@@ -209,7 +208,7 @@ final class Matrix {
 		}
 		
 		Matrix result = new Matrix(rowCount, columnCount);
-		for ( int i = 0; i < data.length; i++ ) {
+		for ( int i = 0; i < rowCount; i++ ) {
 		    result.data[i][0] = data[i][0] * aValue;
 	    }
 		return result;
@@ -222,7 +221,7 @@ final class Matrix {
 		
 		final double magnitude = magnitude();
 		Matrix result = new Matrix(rowCount, columnCount);
-		for ( int i = 0; i < data.length; i++ ) {
+		for ( int i = 0; i < rowCount; i++ ) {
 		    result.data[i][0] = data[i][0] / magnitude;
 	    }
 		return result;
@@ -244,7 +243,7 @@ final class Matrix {
 		if ( columnCount != 1 ) { 			
 			throw new IllegalArgumentException("Incompatible matrix dimensions.");
 		}
-		return data.length;
+		return rowCount;
 	}
 	
 	public void display(String aTitle) {
@@ -258,12 +257,12 @@ final class Matrix {
 		System.out.println();
 	}
 	
-    public double getEntry(int aRow, int aCol) {
-    	return data[aRow][aCol];
+    public double getEntry(int aRow, int aColumn) {
+    	return data[aRow][aColumn];
     }
 
-    public void setEntry(int aRow, int aCol, double aValue) {
-    	data[aRow][aCol] = aValue;
+    public void setEntry(int aRow, int aColumn, double aValue) {
+    	data[aRow][aColumn] = aValue;
     }
 
     public int getRowCount() {

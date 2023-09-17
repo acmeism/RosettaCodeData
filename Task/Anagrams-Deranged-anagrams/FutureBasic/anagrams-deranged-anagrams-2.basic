@@ -1,0 +1,100 @@
+#plist NSAppTransportSecurity @{NSAllowsArbitraryLoads:YES}
+defstr long
+begin globals
+xref   xwords( 210000 ) as char
+long   gAvatars( 26000 )
+uint32 gwordNum, gfilen, gcount = 0, gOffset( 26000 )
+uint16 gndx( 26000 ), deranged( 600, 1 )
+long   sh : sh = system( _scrnHeight ) -100
+long   sw : sw = (system( _scrnWidth ) -360 ) / 2
+CFTimeInterval t
+_len = 56
+end globals
+
+local fn loadDictionary
+  CFURLRef url = fn URLWithString( @"http://wiki.puzzlers.org/pub/wordlists/unixdict.txt" )
+  CFStringRef dictStr = fn StringWithContentsOfURL( url, NSUTF8StringEncoding, NULL )
+  dictStr = fn StringByAppendingString( @" ", dictStr )
+  xwords  = fn StringUTF8String(  dictstr )
+  gfilen  = len(dictstr)
+end fn
+
+local fn deranagrams
+  uint64 ch, p, wordStart = 0
+  long   avatar = 0
+  uint32 med, bot, top
+  byte   chk, L
+
+  for p = 1 to gfilen
+    ch = xwords(p)                              //build avatar
+    if ch > _" " then avatar += (long) 1 << ( ch and 31 ) * 2: continue
+
+    avatar += (long)(p - wordStart - 1) << _len //complete avatar by adding word length
+    gAvatars(gWordNum) = avatar                 //store the avatar in list
+    gOffset( gWordNum) = wordStart              //store offset to the word
+
+    //Insert into ordered list of avatars
+    bot = 0 : top = gwordNum                    //quick search for place to insert
+    while (top - bot) > 1
+      med = ( top + bot ) >> 1
+      if avatar > gAvatars(gndx(med)) then bot = med else top = med
+    wend
+    blockmove( @gndx( top ), @gndx( top + 1 ), ( gwordNum - top ) * 2 )
+    gndx(top) = gWordNum
+
+    gwordNum++ : wordStart = p : avatar = 0     //ready for new word
+  next p
+
+  //Check for matching avatars
+  for p = gWordNum to 1 step -1
+    chk = 1  //to make sure each word is compared with all matching avatars
+    while gAvatars( gndx( p ) ) == gAvatars( gndx( p - chk ) )
+
+      // found anagram; now check for chars in same position
+      L = ( gAvatars( gndx( p ) ) >> _len )  //get word length
+      while L
+        if xwords(gOffset(gndx(p)) +L) == xwords(gOffset(gndx(p-chk)) +L) then break
+        L--
+      wend
+      if L == 0
+
+        //no matching chars: found Deranged Anagram!
+        deranged( gcount, 0 ) = gndx( p       )
+        deranged( gcount, 1 ) = gndx( p - chk )
+        gcount++
+      end if
+      chk++
+    wend
+  next
+end fn
+
+local fn printPair( ndx as uint32, chrsToCntr as byte )
+  ptr   p : str255 pair : pair = ""
+  short n = ( gAvatars( deranged( ndx, 0 ) ) >> _len )
+  if n < chrsToCntr then print string$( chrsToCntr - n, " " );
+  p     = xwords + gOffset( deranged( ndx, 0 ) )
+  p.0`` = n : print p.0$; "   ";
+  p     = xwords + gOffset( deranged( ndx, 1 ) )
+  p.0`` = n : print p.0$
+end fn
+
+local fn doDialog(evt as long)
+  if evt == _btnclick
+    long r
+    button -1 : window 1,,(sw,50,335,sh-50)
+    for r = 1 to gcount-1
+      fn printPair( r, 21 )
+    next
+  end if
+end fn
+
+fn loadDictionary : t = fn CACurrentMediaTime
+fn deranagrams    : t = fn CACurrentMediaTime - t
+
+window 1, @"Deranged Anagrams in FutureBasic",(sw,sh-130,335,130)
+printf @"\n     %u deranged anagrams found among \n   %u words ¬
+in %.2f ms.\n", gcount, gWordNum, t * 1000
+print  "  Longest:";: fn printPair( 0, 11 )
+button 1,,,fn StringWithFormat(@"Show remaining %u deranged anagrams.",gcount-1),(24,20,285,34)
+on dialog fn doDialog
+handleevents

@@ -1,0 +1,84 @@
+#plist NSAppTransportSecurity @{NSAllowsArbitraryLoads:YES}
+
+include "NSLog.incl"
+
+local fn ConvertHexToInt( hexNumberStr as CFStringRef ) as NSUInteger
+  NSUInteger  outVal = 0
+  ScannerRef scanner = fn ScannerWithString( hexNumberStr )
+  fn ScannerScanHexInt( scanner, @outVal )
+end fn = outVal
+
+
+local fn DigitalRoot( n as NSUInteger ) as NSUInteger
+  while ( n > 9 )
+    NSUInteger tot = 0
+    while ( n > 0 )
+      tot += n mod 10
+      n = fn floor( n / 10 )
+    wend
+    n = tot
+  wend
+end fn = n
+
+
+local fn HasDistinctLetters( hexNumberStr as CFStringRef ) as BOOL
+  NSUInteger A = 0, B = 0, C = 0, D = 0, E = 0, F = 0, length = len( hexNumberStr )
+
+  while ( length > 0 )
+    length--
+    unichar aChar = fn StringCharacterAtIndex( hexNumberStr, length )
+    select ( aChar )
+      case _"a" : if A = 0 then A = 1
+      case _"b" : if B = 0 then B = 1
+      case _"c" : if C = 0 then C = 1
+      case _"d" : if D = 0 then D = 1
+      case _"e" : if E = 0 then E = 1
+      case _"f" : if F = 0 then F = 1
+    end select
+  wend
+  if ( A + B + C + D + E + F ) > 3 then exit fn = YES
+end fn = NO
+
+
+local fn ParseDictionaryHexWords as CFArrayRef
+  CFURLRef              url = fn URLWithString( @"http://wiki.puzzlers.org/pub/wordlists/unixdict.txt" )
+  CFStringRef        string = lcase( fn StringWithContentsOfURL( url, NSUTF8StringEncoding, NULL ) )
+  CFArrayRef        tempArr = fn StringComponentsSeparatedByCharactersInSet( string, fn CharacterSetNewlineSet )
+  CFMutableArrayRef dictArr = fn MutableArrayNew
+  CFStringRef       tempStr
+
+  for tempStr in tempArr
+    if ( fn StringLength( tempStr ) > 3 )  // Keep four letter words and longer
+      CFRange range = fn StringRangeOfStringWithOptions( tempStr, @"^[a-f]+$", NSRegularExpressionSearch ) // Keep wordss with letters a to f
+      if range.location != NSNotFound then MutableArrayAddObject( dictArr, tempStr )
+    end if
+  next
+end fn = fn ArrayWithArray( dictArr )
+
+
+local fn ConvertWordsToHexValues as CFStringRef
+  CFArrayRef  hexWordArray = fn ParseDictionaryHexWords
+  CFStringRef wordStr
+  CFMutableArrayRef mutArr = fn MutableArrayNew //fn MutableStringWithString( @"Root   Word      Base 10\n ---------------------------\n" )
+  CFMutableArrayRef lngArr = fn MutableArrayNew
+
+  for wordStr in hexWordArray
+    NSUInteger uintFromHex = fn ConvertHexToInt( wordStr )
+    NSUInteger digitalRoot = fn DigitalRoot( uintFromHex )
+    CFStringREf formatStr = fn StringWithFormat( @"%2lu     %-8s  %lu", digitalRoot, fn StringUTF8String( wordStr ), uintFromHex )
+    MutableArrayAddObject( mutArr, formatStr )
+    if ( fn HasDistinctLetters( wordStr ) == YES )
+      MutableArrayAddObject( lngArr, formatStr )
+    end if
+  next
+  CFStringRef headerStr = @"\nRoot   Word      Base 10\n ---------------------------\n"
+  CFArrayRef  resultArr = fn ArraySortedArrayUsingSelector( mutArr, @"localizedCompare:" )
+  CFStringRef resultStr = fn ArrayComponentsJoinedByString( resultArr, @"\n" )
+  CFArrayRef uniquetArr = fn ArraySortedArrayUsingSelector( lngArr, @"localizedCompare:" )
+  CFStringRef uniqueStr = fn ArrayComponentsJoinedByString( uniquetArr, @"\n" )
+  CFStringRef  finalStr = fn StringWithFormat( @"%@%@\n\nHex words with 3 > distinct letters:%@%@", headerStr, resultStr, headerStr, uniqueStr )
+end fn = finalStr
+
+NSLog( @"%@", fn ConvertWordsToHexValues )
+
+HandleEvents

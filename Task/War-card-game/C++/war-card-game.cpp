@@ -89,7 +89,7 @@ private:
 
 int main() {
 	war_game wargame;
-
+    srand((unsigned) time(NULL));
 	while ( ! wargame.game_over() ) {
 		wargame.next_turn();
 	}

@@ -10,3 +10,4 @@ sub fitness(Str $string) { [+] $string.comb Zeq target.comb }
 printf "\r%6d: '%s'", $++, $_ for
   @alphabet.roll(target.chars).join,
   { max :by(&fitness), mutate($_, .001) xx C } ... target;
+print "\n";

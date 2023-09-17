@@ -108,7 +108,8 @@ double nearestDistance(POINT * pt, POINT * cent, int n_cluster)
   greater than the search value passed as a parameter.
 
   This code is adapted from code by Andy Allinger given to the public
-  domain.
+  domain, which was in turn adapted from public domain code for spline
+  evaluation by Rondall Jones (Sandia National Laboratories).
 
   Input:
 		x	A pointer to an array of values in increasing order to be searched.
@@ -153,7 +154,7 @@ int bisectionSearch(double *x, int n, double v)
 } /* end of bisectionSearch */
 
 /*-------------------------------------------------------
-	kppAllinger
+	kppFaster
 	
 	This function uses the K-Means++ method to select
 	the cluster centroids.
@@ -170,7 +171,7 @@ int bisectionSearch(double *x, int n, double v)
 	Output:
 		centroids	A pointer to the array of centroids found.	
 -------------------------------------------------------*/
-void kppAllinger(POINT * pts, int num_pts, POINT * centroids,
+void kppFaster(POINT * pts, int num_pts, POINT * centroids,
 		 int num_clusters)
 {
 	int j;
@@ -230,7 +231,7 @@ void kppAllinger(POINT * pts, int num_pts, POINT * centroids,
 	free(cumulativeDistances);
 
 	return;
-}	/* end, kppAllinger */
+}	/* end, kppFaster */
 
 /*-------------------------------------------------------
 	kpp
@@ -327,8 +328,8 @@ POINT * lloyd(POINT * pts, int num_pts, int num_clusters, int maxTimes)
 /* Original version
 	kpp(pts, num_pts, centroids, num_clusters);
 */
-	/* Faster Allinger version */
-	kppAllinger(pts, num_pts, centroids, num_clusters);
+	/* Faster version */
+	kppFaster(pts, num_pts, centroids, num_clusters);
 
 	do {
 		/* Calculate the centroid of each cluster.

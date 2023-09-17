@@ -23,8 +23,3 @@
 	    w )))
    (writeln 'pairs '→ (length semordnilap))
    (writeln 'longest '→ (take semordnilap 5)))
-
-{{out}}
-(task)
-    pairs       →     345
-    longest     →     (rengager tresser strasse reveler retrace)

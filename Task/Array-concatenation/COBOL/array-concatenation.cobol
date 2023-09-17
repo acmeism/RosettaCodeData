@@ -1,57 +1,47 @@
-       identification division.
-       program-id. array-concat.
+IDENTIFICATION DIVISION.
+PROGRAM-ID. array-concat.
 
-       environment division.
-       configuration section.
-       repository.
-           function all intrinsic.
+DATA DIVISION.
+WORKING-STORAGE SECTION.
+01  table-one.
+    05  int-field PIC 999 OCCURS 0 TO 5 TIMES DEPENDING ON t1.
+01  table-two.
+    05  int-field PIC 9(4) OCCURS 0 TO 10 TIMES DEPENDING ON t2.
+77  tally         USAGE IS INDEX.
+77  t1            PIC 99.
+77  t2            PIC 99.
+77  show          PIC Z(4) USAGE IS DISPLAY.
 
-       data division.
-       working-storage section.
-       01 table-one.
-          05 int-field pic 999 occurs 0 to 5 depending on t1.
-       01 table-two.
-          05 int-field pic 9(4) occurs 0 to 10 depending on t2.
+PROCEDURE DIVISION.
+array-concat-main.
+    PERFORM initialize-tables
+    PERFORM concatenate-tables
+    PERFORM display-result
+    GOBACK.
 
-       77 t1           pic 99.
-       77 t2           pic 99.
+initialize-tables.
+    MOVE 4 TO t1
+    PERFORM VARYING tally FROM 1 BY 1 UNTIL tally > t1
+        COMPUTE int-field OF table-one(tally) = tally * 3
+    END-PERFORM
+    MOVE 3 TO t2
+    PERFORM VARYING tally FROM 1 BY 1 UNTIL tally > t2
+        COMPUTE int-field OF table-two(tally) = tally * 6
+    END-PERFORM.
 
-       77 show         pic z(4).
+concatenate-tables.
+    PERFORM VARYING tally FROM 1 BY 1 UNTIL tally > t1
+        ADD 1 TO t2
+        MOVE int-field OF table-one(tally)
+          TO int-field OF table-two(t2)
+    END-PERFORM.
 
-       procedure division.
-       array-concat-main.
-       perform initialize-tables
-       perform concatenate-tables
-       perform display-result
-       goback.
+display-result.
+    PERFORM VARYING tally FROM 1 BY 1 UNTIL tally = t2
+        MOVE int-field OF table-two(tally) TO show
+        DISPLAY FUNCTION TRIM(show) ", " WITH NO ADVANCING
+    END-PERFORM
+    MOVE int-field OF table-two(tally) TO show
+    DISPLAY FUNCTION TRIM(show).
 
-       initialize-tables.
-           move 4 to t1
-           perform varying tally from 1 by 1 until tally > t1
-               compute int-field of table-one(tally) = tally * 3
-           end-perform
-
-           move 3 to t2
-           perform varying tally from 1 by 1 until tally > t2
-               compute int-field of table-two(tally) = tally * 6
-           end-perform
-       .
-
-       concatenate-tables.
-           perform varying tally from 1 by 1 until tally > t1
-               add 1 to t2
-               move int-field of table-one(tally)
-                 to int-field of table-two(t2)
-           end-perform
-       .
-
-       display-result.
-           perform varying tally from 1 by 1 until tally = t2
-               move int-field of table-two(tally) to show
-               display trim(show) ", " with no advancing
-           end-perform
-           move int-field of table-two(tally) to show
-           display trim(show)
-       .
-
-       end program array-concat.
+END PROGRAM array-concat.

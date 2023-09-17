@@ -1,7 +1,8 @@
 const std = @import("std");
-const stdout = std.io.getStdOut().outStream();
 
 pub fn main() !void {
+    const stdout = std.io.getStdOut().writer();
+
     var n: u32 = 1;
     while (n <= 15) : (n += 1) {
         const row = binomial(n * 2).?;
@@ -20,6 +21,7 @@ pub fn binomial(n: u32) ?[]const u64 {
 
 const rmax = 68;
 
+// evaluated and created at compile-time
 const pascal = build: {
     @setEvalBranchQuota(100_000);
     var coefficients: [(rmax * (rmax + 1)) / 2]u64 = undefined;

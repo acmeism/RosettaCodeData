@@ -1,4 +1,4 @@
-const assert = @import("std").debug.assert;
+const testing = @import("std").testing;
 
 pub const ID = struct {
     name: []const u8,
@@ -28,6 +28,7 @@ test "call an object method" {
         .age = 20,
     };
 
-    assert(person1.getAge() == 18);
-    assert(ID.getAge(person2) == 20);
+    // test getAge() method call
+    try testing.expectEqual(@as(u7, 18), person1.getAge());
+    try testing.expectEqual(@as(u7, 20), ID.getAge(person2));
 }

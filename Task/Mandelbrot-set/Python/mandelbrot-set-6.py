@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 d, h = 800, 500  # pixel density (= image width) and image height
 n, r = 200, 500  # number of iterations and escape radius (r > 2)
 
-direction, height = 45, 1.5  # direction and height of the light
+direction, height = 45.0, 1.5  # direction and height of the light
 density, intensity = 4.0, 0.5  # density and intensity of the stripes
 
 x = np.linspace(0, 2, num=d+1)

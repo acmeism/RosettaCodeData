@@ -18,8 +18,8 @@ multi infix:<**> (FatRat $base, FatRat $exp where * <  1 --> FatRat) {
 
     while (abs($mid - $exp) > ε) {
       $sqr = sqrt($sqr);
-      if ($mid <= $exp) { $low  = $mid; $acc *=   $sqr }
-      else              { $high = $mid; $acc *= 1/$sqr }
+      if ($mid <= $exp) { $low  = $mid; $acc ×=   $sqr }
+      else              { $high = $mid; $acc ××= 1/$sqr }
       $mid = ($low + $high) / 2;
     }
     $acc.substr(0, D).FatRat;
@@ -33,8 +33,8 @@ sub π (--> FatRat) {
     my $pi;
 
     for ^d {
-        given [ ($a + $g)/2, sqrt $a * $g ] {
-            $z -= (.[0] - $a)**2 * $n;
+        given [ ($a + $g)/2, sqrt $a × $g ] {
+            $z -= (.[0] - $a)**2 × $n;
             $n += $n;
             ($a, $g) = @$_;
             $pi = ($a ** 2 / $z).substr: 0, 2 + D;
@@ -44,7 +44,7 @@ sub π (--> FatRat) {
 }
 
 multi sqrt(FatRat $r --> FatRat) {
-    FatRat.new: sqrt($r.nude[0] * 10**(D*2) div $r.nude[1]), 10**D;
+    FatRat.new: sqrt($r.nude[0] × 10**(D×2) div $r.nude[1]), 10**D;
 }
 
 # integer roots
@@ -59,7 +59,7 @@ multi sqrt(Int $n) {
 sub prefix:<√> (Int $n) { sqrt($n.FatRat) }
 
 # calculation of 𝑒
-sub postfix:<!> (Int $n) { (constant f = 1, |[\*] 1..*)[$n] }
+sub postfix:<!> (Int $n) { (constant f = 1, |[\×] 1..*)[$n] }
 sub 𝑒 (--> FatRat) { sum map { FatRat.new(1,.!) }, ^D }
 
 # inputs, and their difference, formatted decimal-aligned
@@ -77,14 +77,14 @@ sub format ($a,$b) {
 constant π = &π();
 constant 𝑒 = &𝑒();
 
-my $Ramanujan = 𝑒**(π*√163);
+my $Ramanujan = 𝑒**(π × √163);
 say "Ramanujan's constant to 32 decimal places:\nActual:     " ~
     "262537412640768743.99999999999925007259719818568888\n" ~
     "Calculated: ", $Ramanujan.precise(32, :z), "\n";
 
 say "Heegner numbers yielding 'almost' integers";
 for 19, 96, 43, 960, 67, 5280, 163, 640320 -> $heegner, $x {
-    my $almost = 𝑒**(π*√$heegner);
+    my $almost = 𝑒**(π × √$heegner);
     my $exact  = $x³ + 744;
     say format($exact, $almost);
 }

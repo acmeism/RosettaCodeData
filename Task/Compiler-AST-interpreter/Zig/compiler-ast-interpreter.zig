@@ -63,7 +63,7 @@ pub const ASTInterpreter = struct {
                 },
                 .prts => _ = try self.out("{s}", .{(try self.interp(t.left)).?.string}),
                 .prti => _ = try self.out("{d}", .{(try self.interp(t.left)).?.integer}),
-                .prtc => _ = try self.out("{c}", .{@intCast(u8, (try self.interp(t.left)).?.integer)}),
+                .prtc => _ = try self.out("{c}", .{@as(u8, @intCast((try self.interp(t.left)).?.integer))}),
                 .string => return t.value,
                 .integer => return t.value,
                 .unknown => {
@@ -82,7 +82,7 @@ pub const ASTInterpreter = struct {
 
     fn binOp(
         self: *Self,
-        func: fn (a: i32, b: i32) i32,
+        comptime func: fn (a: i32, b: i32) i32,
         a: ?*Tree,
         b: ?*Tree,
     ) ASTInterpreterError!i32 {
@@ -93,22 +93,22 @@ pub const ASTInterpreter = struct {
     }
 
     fn less(a: i32, b: i32) i32 {
-        return @boolToInt(a < b);
+        return @intFromBool(a < b);
     }
     fn less_equal(a: i32, b: i32) i32 {
-        return @boolToInt(a <= b);
+        return @intFromBool(a <= b);
     }
     fn greater(a: i32, b: i32) i32 {
-        return @boolToInt(a > b);
+        return @intFromBool(a > b);
     }
     fn greater_equal(a: i32, b: i32) i32 {
-        return @boolToInt(a >= b);
+        return @intFromBool(a >= b);
     }
     fn equal(a: i32, b: i32) i32 {
-        return @boolToInt(a == b);
+        return @intFromBool(a == b);
     }
     fn not_equal(a: i32, b: i32) i32 {
-        return @boolToInt(a != b);
+        return @intFromBool(a != b);
     }
     fn add(a: i32, b: i32) i32 {
         return a + b;
@@ -126,10 +126,10 @@ pub const ASTInterpreter = struct {
         return @mod(a, b);
     }
     fn @"or"(a: i32, b: i32) i32 {
-        return @boolToInt((a != 0) or (b != 0));
+        return @intFromBool((a != 0) or (b != 0));
     }
     fn @"and"(a: i32, b: i32) i32 {
-        return @boolToInt((a != 0) and (b != 0));
+        return @intFromBool((a != 0) and (b != 0));
     }
 };
 
@@ -138,13 +138,13 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    var arg_it = std.process.args();
-    _ = try arg_it.next(allocator) orelse unreachable; // program name
-    const file_name = arg_it.next(allocator);
+    var arg_it = try std.process.argsWithAllocator(allocator);
+    _ = arg_it.next() orelse unreachable; // program name
+    const file_name = arg_it.next();
     // We accept both files and standard input.
     var file_handle = blk: {
         if (file_name) |file_name_delimited| {
-            const fname: []const u8 = try file_name_delimited;
+            const fname: []const u8 = file_name_delimited;
             break :blk try std.fs.cwd().openFile(fname, .{});
         } else {
             break :blk std.io.getStdIn();
@@ -260,7 +260,7 @@ fn loadAST(
 
 fn loadASTHelper(
     allocator: std.mem.Allocator,
-    line_it: *std.mem.SplitIterator(u8),
+    line_it: *std.mem.SplitIterator(u8, std.mem.DelimiterType.sequence),
     string_pool: *std.ArrayList([]const u8),
 ) LoadASTError!?*Tree {
     if (line_it.next()) |line| {

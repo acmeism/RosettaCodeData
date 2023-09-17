@@ -1,5 +1,6 @@
 identification division.
 program-id. game-of-life-program.
+
 data division.
 working-storage section.
 01  grid.
@@ -18,6 +19,7 @@ working-storage section.
     05 neighbour-cell pic 9.
     05 check-row pic s9.
     05 check-cell pic s9.
+
 procedure division.
 control-paragraph.
     perform blinker-paragraph varying current-cell from 2 by 1
@@ -67,3 +69,5 @@ check-cell-paragraph.
     if cell(neighbour-row,neighbour-cell) is equal to '#',
     and check-cell is not equal to zero or check-row is not equal to zero,
     then add 1 to living-neighbours.
+
+end program game-of-life-program.

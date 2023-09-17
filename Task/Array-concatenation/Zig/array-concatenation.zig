@@ -1,16 +1,23 @@
 const std = @import("std");
-fn concat(allocator: std.mem.Allocator, a: []const u32, b: []const u32) ![]u32 {
-  const result = try allocator.alloc(u32, a.len + b.len);
-  std.mem.copy(u32, result, a);
-  std.mem.copy(u32, result[a.len..], b);
-  return result;
-}
 
-pub fn main() void {
-  var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
-  const gpa = general_purpose_allocator.allocator();
-  var array1 = [_]u32{ 1, 2, 3, 4, 5 };
-  var array2 = [_]u32{ 6, 7, 8, 9, 10, 11, 12 };
-  const array3 = concat(gpa, &array1, &array2);
-  std.debug.print("Array 1: {any}\nArray 2: {any}\nArray 3: {any}", .{ array1, array2, array3 });
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+
+    const allocator = gpa.allocator();
+
+    var array1 = [_]u32{ 1, 2, 3, 4, 5 };
+    var array2 = [_]u32{ 6, 7, 8, 9, 10, 11, 12 };
+
+    const slice3 = try std.mem.concat(allocator, u32, &[_][]const u32{ &array1, &array2 });
+    defer allocator.free(slice3);
+
+    // Same result, alternative syntax
+    const slice4 = try std.mem.concat(allocator, u32, &[_][]const u32{ array1[0..], array2[0..] });
+    defer allocator.free(slice4);
+
+    std.debug.print(
+        "Array 1: {any}\nArray 2: {any}\nSlice 3: {any}\nSlice 4: {any}\n",
+        .{ array1, array2, slice3, slice4 },
+    );
 }

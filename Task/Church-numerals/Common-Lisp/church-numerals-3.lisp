@@ -1,0 +1,10 @@
+(defun pred (n)
+  (flet ((value (v) (lambda (h) (funcall h v)))
+         (extract (k) (funcall k (lambda (u) u))))
+    (lambda (f x)
+      (let ((inc (lambda (g) (value (funcall g f))))
+            (const (lambda (u) x)))
+        (extract (funcall n inc const))))))
+
+(defun minus (m n)
+  (funcall n #'pred m))

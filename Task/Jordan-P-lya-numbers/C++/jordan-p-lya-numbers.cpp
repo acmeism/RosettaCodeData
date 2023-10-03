@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-constexpr int64_t LIMIT = pow(2, 53);
+constexpr int64_t LIMIT = static_cast<uint64_t>(1) << 53;
 
 std::set<int64_t> jordan_polya_set;
 std::unordered_map<int64_t, std::map<int32_t, int32_t>> decompositions;

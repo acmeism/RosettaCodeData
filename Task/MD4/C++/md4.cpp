@@ -133,10 +133,10 @@ private:
 	}
 
 	int32_t unsigned_right_shift(const int32_t& base, const int32_t& shift) {
-		if ( base == 0 || shift >= 32 ) {
+		if ( shift < 0 || shift >= 32 || base == 0 ) {
 			return 0;
 		}
-		return ( base > 0 ) ? base >> shift : ( base + TWO_POWER_32 ) >> shift;
+		return ( base > 0 ) ? base >> shift : static_cast<uint32_t>(base) >> shift;
 	}
 
 	int32_t rotate(const int32_t& t, const int32_t& s) {
@@ -164,7 +164,6 @@ private:
     std::vector<int8_t> buffer;
 
     const int32_t BLOCK_LENGTH = 64;
-    const int64_t TWO_POWER_32 = 4'294'967'296;
 };
 
 int main() {

@@ -1,0 +1,7 @@
+(-> (for i (range 16)
+         j (range (+ i 32) 128 16)
+      (let k (match j 32 "Spc" 127 "Del" (str (char-code j) "  ")))
+      (strn ((< j 100) " ") j " : " k))
+    (partition 6)
+    (map (join "   "))
+    (join "\n"))

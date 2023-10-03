@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <iostream>
 
-uint64_t power_modulus(uint64_t base, uint64_t exponent, uint64_t modulus) {
+uint64_t power_modulus(uint64_t base, uint64_t exponent, const uint64_t& modulus) {
 	if ( modulus == 1 ) {
 		return 0;
 	}
@@ -11,7 +11,7 @@ uint64_t power_modulus(uint64_t base, uint64_t exponent, uint64_t modulus) {
 	base %= modulus;
 	uint64_t result = 1;
 	while ( exponent > 0 ) {
-		if ( ( exponent  & 1 ) == 1 ) {
+		if ( ( exponent & 1 ) == 1 ) {
 			result = ( result * base ) % modulus;
 		}
 		base = ( base * base ) % modulus;
@@ -20,7 +20,7 @@ uint64_t power_modulus(uint64_t base, uint64_t exponent, uint64_t modulus) {
 	return result;
 }
 
-bool is_deceptive(uint32_t n) {
+bool is_deceptive(const uint32_t& n) {
 	if ( n % 2 != 0 && n % 3 != 0 && n % 5 != 0 && power_modulus(10, n - 1, n) == 1 ) {
 		for ( uint32_t divisor = 7; divisor < sqrt(n); divisor += 6 ) {
 			if ( n % divisor == 0 || n % ( divisor + 4 ) == 0 ) {

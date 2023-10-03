@@ -14,11 +14,11 @@ final class RIPEMD160 {
 	public static String messageDigest(String aMessage) {
 		int[] state = { 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0 };
 		
-		byte[] bytes = addPadding(aMessage);
+		byte[] bytes = addPadding(aMessage);	
 		for ( int i = 0; i < bytes.length / BLOCK_LENGTH; i++ ) {			
 			int[] schedule = new int[16];
             for ( int j = 0; j < BLOCK_LENGTH; j++ ) {
-                schedule[j / 4] |= ( bytes[i + j] & 0xff ) << ( j % 4 * 8 );
+                schedule[j / 4] |= ( bytes[i * BLOCK_LENGTH + j] & 0xff ) << ( j % 4 * 8 );
             }
 			
 			int a = state[0], b = state[1], c = state[2], d = state[3], e = state[4];
@@ -29,7 +29,7 @@ final class RIPEMD160 {
 		    	int jj = j / 16;
 		    	t = Integer.rotateLeft(a + ff(jj + 1, b, c, d) + schedule[RL[j]] + KL[jj], SL[j]) + e;
  		        tt = Integer.rotateLeft(aa + ff(5 - jj, bb, cc, dd) + schedule[RR[j]] + KR[jj], SR[j]) + ee;
- 		
+ 		    		
  		        a = e; e = d; d = Integer.rotateLeft(c, 10); c = b; b = t;
 		    	aa = ee; ee = dd; dd = Integer.rotateLeft(cc, 10); cc = bb; bb = tt;
 		     }
@@ -40,7 +40,7 @@ final class RIPEMD160 {
 		     state[3] = state[4] + a + bb;
 		     state[4] = state[0] + b + cc;
 		     state[0] = t;
-		}
+		}	
 
         String result = "";
         for ( int i = 0; i < state.length * 4; i++ ) {
@@ -52,16 +52,15 @@ final class RIPEMD160 {
 	private static byte[] addPadding(String aMessage) {
 		byte[] bytes = aMessage.getBytes(StandardCharsets.UTF_8);
 		bytes = Arrays.copyOf(bytes, bytes.length + 1);
-		bytes[bytes.length - 1] = (byte) 0x80;
-		
-		final int length = aMessage.length();		
-		int padding = BLOCK_LENGTH - ( (length + 1 ) % BLOCK_LENGTH );
+		bytes[bytes.length - 1] = (byte) 0x80;		
+				
+		int padding = BLOCK_LENGTH - ( bytes.length % BLOCK_LENGTH );
 		if ( padding < 8 ) {
 			padding += BLOCK_LENGTH;			
 		}	
 		bytes = Arrays.copyOf(bytes, bytes.length + padding);
 		
-		final long bitLength = 8 * length;
+		final long bitLength = aMessage.length() * 8;
 		for ( int i = 0; i < 8; i++ ) {
 			bytes[bytes.length - 8 + i] = (byte) ( bitLength >>> ( 8 * i ) );
 		}

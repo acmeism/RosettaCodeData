@@ -1,3 +1,2 @@
->> montyHall(3,100000)
-Switch win percentage: 66.705972%
-Stay win percentage: 33.420062%
+chance to win for staying:  33.334694 %
+chance to win for changing: 66.665306 %

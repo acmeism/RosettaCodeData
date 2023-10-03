@@ -1,0 +1,298 @@
+/* ARM assembly AARCH64 Raspberry PI 3B */
+/* program testmiller64B.s   */
+// optimisation : one routine
+
+/************************************/
+/* Constantes                       */
+/************************************/
+/* for this file see task include a file in language AArch64 assembly*/
+.include "../includeConstantesARM64.inc"
+
+.equ NBLOOP,             5              // loop number change this if necessary
+                                        // if modify, thinck to add test to little prime value
+                                        // in routine
+//.include "../../ficmacros64.inc"        // use for developper debugging
+/*******************************************/
+/* Initialized data                        */
+/*******************************************/
+.data
+szMessStartPgm:          .asciz "Program 64 bits start \n"
+szMessEndPgm:            .asciz "Program normal end.\n"
+szMessPrime:             .asciz " is prime !!!.\n"
+szMessNotPrime:          .asciz " is not prime !!!.\n"
+szCarriageReturn:        .asciz "\n"
+
+/*******************************************/
+/* UnInitialized data                      */
+/*******************************************/
+.bss
+.align 4
+sZoneConv:               .skip 24
+/*******************************************/
+/*  code section                           */
+/*******************************************/
+.text
+.global main
+main:                            // program start
+    ldr x0,qAdrszMessStartPgm    // display start message
+    bl affichageMess
+    ldr x4,iStart                // start number
+    ldr x5,iLimit                // end number
+    tst x4,#1
+    cinc x4,x4,eq                // start with odd number
+1:
+    mov x0,x4
+    bl isPrimeMiller             // test miller rabin
+    cmp x0,#0
+    beq 2f
+    mov x0,x4
+    ldr x1,qAdrsZoneConv
+    bl conversion10              // decimal conversion
+    ldr x0,qAdrsZoneConv
+    bl affichageMess
+    ldr x0,qAdrszMessPrime
+    bl affichageMess
+    b 3f
+2:
+    ldr x0,qAdrszMessNotPrime
+   // bl affichageMess
+3:
+    add x4,x4,#2
+    cmp x4,x5
+    blo 1b
+
+    ldr x0,qAdrszMessEndPgm         // display end message
+    bl affichageMess
+
+100:                                // standard end of the program
+    mov x0, #0                      // return code
+    mov x8, #EXIT                   // request to exit program
+    svc 0                           // perform system call
+qAdrszMessStartPgm:        .quad  szMessStartPgm
+qAdrszMessEndPgm:          .quad  szMessEndPgm
+qAdrszCarriageReturn:      .quad  szCarriageReturn
+qAdrsZoneConv:             .quad  sZoneConv
+qAdrszMessPrime:           .quad  szMessPrime
+qAdrszMessNotPrime:        .quad  szMessNotPrime
+//iStart:                    .quad  0x0
+//iLimit:                    .quad  0x100
+iStart:                    .quad  0xFFFFFFFFFFFFFF00
+iLimit:                    .quad  0xFFFFFFFFFFFFFFF0
+//iStart:                    .quad 341550071728360
+//iLimit:                    .quad 341550071728380
+//359341550071728361
+
+/***************************************************/
+/*   test miller rabin  algorithme wikipedia       */
+/*   unsigned                                      */
+/***************************************************/
+/* x0 contains number   */
+/* x1 contains parameter   */
+/* x0 return 1 if prime 0 if composite    */
+isPrimeMiller:
+    stp x1,lr,[sp,-16]!               // TODO: save à completer
+    stp x2,x3,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    stp x8,x9,[sp,-16]!
+    cmp x0,#1          // control 0 or 1
+    csel x0,xzr,x0,ls
+    bls 100f
+    cmp x0,#2          // control = 2
+    mov x1,1
+    csel x0,x1,x0,eq
+    beq 100f
+    cmp x0,#3          // control = 3
+    csel x0,x1,x0,eq
+    beq 100f
+    cmp x0,#5          // control = 5
+    csel x0,x1,x0,eq
+    beq 100f
+    cmp x0,#7          // control = 7
+    csel x0,x1,x0,eq
+    beq 100f
+    cmp x0,#11          // control = 11
+    csel x0,x1,x0,eq
+    beq 100f
+    tst x0,#1
+    csel x0,xzr,x0,eq  // even
+    beq 100f
+    mov x4,x0          // N
+    sub x3,x0,#1       // D
+    mov x2,#2
+    mov x6,#0          // S
+1:                     // compute D * 2 power S
+    lsr x3,x3,#1       // D= D/2
+    add x6,x6,#1       // increment S
+    tst x3,#1          // D even ?
+    beq 1b
+2:
+    mov x8,#0          // loop counter
+    sub x5,x0,#3
+    mov x7,3
+3:
+    mov x0,x7
+    mov x1,x3          // exposant = D
+    mov x2,x4          // modulo N
+    bl moduloPur64
+    cmp x0,#1
+    beq 5f
+    sub x1,x4,#1       // n -1
+    cmp x0,x1
+    beq 5f
+    sub x9,x6,#1       // S - 1
+4:
+    mov x2,x0
+
+    mul x0,x2,x2       // compute square lower
+    umulh x1,x2,x2     // compute square upper
+    mov x2,x4          // and compute modulo N
+    bl division64R2023
+    mov x0,x2
+    cmp x0,#1
+    csel x0,xzr,x0,eq  // composite
+    beq 100f
+    sub x1,x4,#1       // n -1
+    cmp x0,x1
+    beq 5f
+    subs x9,x9,#1
+    bge 4b
+    mov x0,#0          // composite
+    b 100f
+5:
+    add x7,x7,2
+    add x8,x8,#1
+    cmp x8,NBLOOP
+    blt 3b
+    mov x0,#1          // prime
+100:
+    ldp x8,x9,[sp],16
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x2,x3,[sp],16
+    ldp x1,lr,[sp],16                 // TODO: retaur à completer
+    ret
+/********************************************************/
+/*   Calcul modulo de b puissance e modulo m  */
+/*    Exemple 4 puissance 13 modulo 497 = 445         */
+/********************************************************/
+/* x0  nombre  */
+/* x1 exposant */
+/* x2 modulo   */
+moduloPur64:
+    stp x1,lr,[sp,-16]!        // save  registres
+    stp x3,x4,[sp,-16]!        // save  registres
+    stp x5,x6,[sp,-16]!        // save  registres
+    stp x7,x8,[sp,-16]!        // save  registres
+    stp x9,x10,[sp,-16]!       // save  registres
+    cbz x0,100f
+    cbz x1,100f
+    mov x8,x0
+    mov x7,x1
+    mov x10,x2                 // modulo
+    mov x6,1                   // resultat
+    udiv x4,x8,x10
+    msub x9,x4,x10,x8          // contient le reste
+1:
+    tst x7,1
+    beq 2f
+    mul x4,x9,x6
+    umulh x5,x9,x6
+    mov x6,x4
+    mov x0,x6
+    mov x1,x5
+    mov x2,x10
+    bl division64R2023
+    mov x6,x2
+2:
+    mul x8,x9,x9
+    umulh x5,x9,x9
+    mov x0,x8
+    mov x1,x5
+    mov x2,x10
+    bl division64R2023
+    mov x9,x2
+    lsr x7,x7,1
+    cbnz x7,1b
+    mov x0,x6                  // result
+    cmn x0,0                   // clear carry not error
+
+100:
+    ldp x9,x10,[sp],16          // restaur des  2 registres
+    ldp x7,x8,[sp],16          // restaur des  2 registres
+    ldp x5,x6,[sp],16          // restaur des  2 registres
+    ldp x3,x4,[sp],16          // restaur des  2 registres
+    ldp x1,lr,[sp],16          // restaur des  2 registres
+    ret                        // retour adresse lr x30
+/***************************************************/
+/*   division number 128 bits in 2 registers by number 64 bits */
+/*   unsigned */
+/***************************************************/
+/* x0 contains lower part dividende   */
+/* x1 contains upper part dividende   */
+/* x2 contains divisor   */
+/* x0 return lower part quotient    */
+/* x1 return upper part quotient    */
+/* x2 return remainder               */
+division64R2023:
+    stp x3,lr,[sp,-16]!
+    stp x4,x5,[sp,-16]!
+    stp x6,x7,[sp,-16]!
+    mov x4,x2          // save divisor
+    mov x5,#0          // init upper part divisor
+    mov x2,x0          // save dividende
+    mov x3,x1
+    mov x0,#0          // init result
+    mov x1,#0
+    mov x6,#0          // init shift counter
+1:                     // loop shift divisor
+    cmp x5,#0          // upper divisor <0
+    blt 2f
+    cmp x5,x3
+    bhi 2f
+    blo 11f
+    cmp x4,x2
+    bhi 2f             // new divisor > dividende
+11:
+    lsl x5,x5,#1       // shift left one bit upper divisor
+    tst x4,#0x8000000000000000
+    lsl x4,x4,#1       // shift left one bit lower divisor
+    orr x7,x5,#1
+    csel x5,x7,x5,ne   // move bit 63 lower on upper
+    add x6,x6,#1       // increment shift counter
+    b 1b
+
+2:                     // loop 2
+    lsl x1,x1,#1       // shift left one bit upper quotient
+    tst x0,#0x8000000000000000
+    lsl x0,x0,#1       // shift left one bit lower quotient
+    orr x7,x1,#1
+    csel x1,x7,x1,ne   // move bit 63 lower on upper
+    cmp x5,x3          // compare divisor and dividende
+    bhi 3f
+    blo 21f
+    cmp x4,x2
+    bhi 3f
+21:
+    subs x2,x2,x4      // <  sub divisor from dividende lower
+    sbc x3,x3,x5       // and upper
+    orr x0,x0,#1       // move 1 on quotient
+3:
+    lsr x4,x4,#1       // shift right one bit upper divisor
+    tst x5,1
+    lsr x5,x5,#1       // and lower
+    orr x7,x4,#0x8000000000000000 // move bit 0 upper to  31 bit lower
+    csel x4,x7,x4,ne   // move bit 0 upper to  63 bit lower
+    subs x6,x6,#1      // decrement shift counter
+    bge 2b             // if > 0 loop 2
+
+100:
+    ldp x6,x7,[sp],16
+    ldp x4,x5,[sp],16
+    ldp x3,lr,[sp],16
+    ret
+
+/***************************************************/
+/*      ROUTINES INCLUDE                 */
+/***************************************************/
+.include "../includeARM64.inc"

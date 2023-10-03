@@ -1,1 +1,1 @@
-01  Foo CONSTANT AS "Foo".
+       01  Foo CONSTANT AS "Foo".

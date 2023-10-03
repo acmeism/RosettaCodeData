@@ -1,4 +1,4 @@
-      *> Tectonics: cobc -xj ring-terminal-bell.cob -std=cobol85
+      *> Tectonics: cobc -xj ring-terminal-bell.cob --std=cobol85
        IDENTIFICATION DIVISION.
        PROGRAM-ID. ring-ascii-bell.
 
@@ -10,7 +10,8 @@
            ALPHABET ASCII IS STANDARD-1.
 
        PROCEDURE DIVISION.
-           DISPLAY FUNCTION CHAR(8) WITH NO ADVANCING
+           DISPLAY FUNCTION CHAR(8) WITH NO ADVANCING.
+      *>   COBOL indexes starting from 1.
            STOP RUN.
 
        END PROGRAM ring-ascii-bell.

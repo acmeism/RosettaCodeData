@@ -1,2 +1,2 @@
-CONSTANT SECTION.
-01  Foo VALUE "Foo".
+       CONSTANT SECTION.
+       01  Foo VALUE "Foo".

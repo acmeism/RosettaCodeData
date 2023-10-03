@@ -6,12 +6,13 @@ my int @sieve;
 
 @sieve[$k] = 0;
 
-hyper for 1 .. $k -> \i {
-    my int $j = i;
-    while (my int $l = i + $j + 2 * i * $j) < $k {
+race for (1 .. $k).batch(1000) -> @i {
+  for @i -> int $i {
+    my int $j = $i;
+    while (my int $l = $i + $j + 2 * $i * $j++) < $k {
         @sieve[$l] = 1;
-        $j = $j + 1;
     }
+  }
 }
 
 @sieve[0] = 1;

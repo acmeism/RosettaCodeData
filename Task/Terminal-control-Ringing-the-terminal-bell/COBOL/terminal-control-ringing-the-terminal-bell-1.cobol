@@ -6,7 +6,7 @@
        01  ringer BELL.
 
        PROCEDURE DIVISION.
-           DISPLAY ringer
+           DISPLAY ringer.
            STOP RUN.
 
        END PROGRAM ring-terminal-bell.

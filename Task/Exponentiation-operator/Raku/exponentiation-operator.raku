@@ -1,12 +1,11 @@
-subset Natural of Int where { $^n >= 0 }
+proto pow (Real, Int --> Real) {*}
+multi pow (0,     0)         { fail '0**0 is undefined' }
+multi pow ($base, UInt $exp) { [*] $base xx $exp }
+multi pow ($base, $exp)  { 1 / samewith $base, -$exp }
 
-multi pow (0,     0)            { fail '0**0 is undefined' }
-multi pow ($base, Natural $exp) { [*] $base xx $exp }
-multi pow ($base, Int $exp)     { 1 / pow $base, -$exp }
-
-sub infix:<***> ($a, $b) { pow $a, $b }
+multi infix:<**> (Real $a, Int $b) { pow $a, $b }
 
 # Testing
 
 say pow .75, -5;
-say .75 *** -5;
+say .75 ** -5;

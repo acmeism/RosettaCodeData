@@ -22,5 +22,5 @@ toList :: Ord a => Tree a -> [a]
 toList Nil = []
 toList (Node x l r) = x : toList (merge l r)
 
-mergeSort :: Ord a => [a] -> [a]
-mergeSort = toList . fromList
+heapSort :: Ord a => [a] -> [a]
+heapSort = toList . fromList

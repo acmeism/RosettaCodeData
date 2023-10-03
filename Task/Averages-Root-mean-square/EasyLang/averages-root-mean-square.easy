@@ -1,0 +1,8 @@
+func rms v[] .
+   for v in v[]
+      sum += v * v
+   .
+   return sqrt (sum / len v[])
+.
+v[] = [ 1 2 3 4 5 6 7 8 9 10 ]
+print rms v[]

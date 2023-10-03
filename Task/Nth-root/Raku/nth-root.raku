@@ -1,11 +1,7 @@
-sub nth-root ($n, $A, $p=1e-9)
-{
-    my $x0 = $A / $n;
-    loop {
-        my $x1 = (($n-1) * $x0 + $A / ($x0 ** ($n-1))) / $n;
-        return $x1 if abs($x1-$x0) < abs($x0 * $p);
-        $x0 = $x1;
-    }
+sub infix:<√>($n, $A) {
+    .tail given $A / $n, { (($n-1) * $_+ $A / ($_** ($n-1))) / $n } ... * ≅ *;
 }
 
-say nth-root(3,8);
+use Test;
+plan 9;
+is-approx ($_√pi)**$_, pi for 2 .. 10;

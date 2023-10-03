@@ -1,8 +1,9 @@
-constant MAX-ITERATIONS = 1000;
+constant MAX-ITERATIONS = 64;
 my $width = +(@*ARGS[0] // 800);
 my $height = $width + $width %% 2;
-say "P1";
+say "P2";
 say "$width $height";
+say MAX-ITERATIONS;
 
 sub cut(Range $r, UInt $n where $n > 1 --> Seq) {
     $r.min, * + ($r.max - $r.min) / ($n - 1) ... $r.max
@@ -14,9 +15,9 @@ my @im = cut( 0 .. 5/4, 1 + ($height div 2)) X* 1i;
 sub mandelbrot(Complex $z is copy, Complex $c --> Int) {
     for 1 .. MAX-ITERATIONS {
         $z = $z*$z + $c;
-        return 0 if $z.abs > 2;
+        return $_ if $z.abs > 2;
     }
-    return 1;
+    return 0;
 }
 
 my @lines = hyper for @im X+ @re {
